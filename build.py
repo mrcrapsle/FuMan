@@ -1,21 +1,14 @@
 #!/usr/bin/env python3
 """
-Build-Skript für Anstoß Mobile Pro - FM13
-Setzt aus den modularen Quelldateien (index.html + css/ + js/)
-eine einzelne, in sich geschlossene HTML-Datei zusammen, die sich
-auch per Dateimanager (content://-URI) auf dem Handy öffnen lässt.
-
-Aufruf:  python3 build.py
-Ausgabe: dist/anstoss-fm13-standalone.html
+Baut aus der modularen Struktur (index.html + css/styles.css + js/*.js) eine einzelne
+standalone HTML-Datei, die überall (auch als lokale Datei auf Android) läuft.
 """
 import re
-import os
 
-SRC_HTML = "index.html"
-OUT_DIR = "dist"
-OUT_FILE = os.path.join(OUT_DIR, "anstoss-fm13-standalone.html")
+HTML_FILE = "index.html"
+CSS_FILE = "css/styles.css"
+OUTPUT_FILE = "dist/anstoss-fm13-standalone.html"
 
-# Reihenfolge der JS-Module ist wichtig (Ladereihenfolge wie im Original)
 JS_ORDER = [
     "js/audio.js",
     "js/utils.js",
@@ -58,10 +51,9 @@ JS_ORDER = [
     "js/history.js",
     "js/match.js",
     "js/admin.js",
+    "js/premium.js",
     "js/save.js",
 ]
-
-CSS_FILE = "css/styles.css"
 
 
 def read(path):
@@ -69,10 +61,10 @@ def read(path):
         return f.read()
 
 
-def main():
-    html = read(SRC_HTML)
+def build():
+    html = read(HTML_FILE)
 
-    # 1. <link rel="stylesheet" href="css/styles.css"> durch <style>...</style> ersetzen
+    # 1. CSS einbetten
     css_content = read(CSS_FILE)
     html = re.sub(
         r'<link rel="stylesheet" href="css/styles\.css">',
@@ -89,12 +81,12 @@ def main():
             continue
         html = html.replace(tag, f"<script>\n{js_content}\n</script>")
 
-    os.makedirs(OUT_DIR, exist_ok=True)
-    with open(OUT_FILE, "w", encoding="utf-8") as f:
+    import os
+    os.makedirs("dist", exist_ok=True)
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         f.write(html)
-
-    print(f"Fertig: {OUT_FILE} ({len(html)} Zeichen)")
+    print(f"Fertig: {OUTPUT_FILE} ({len(html)} Zeichen)")
 
 
 if __name__ == "__main__":
-    main()
+    build()

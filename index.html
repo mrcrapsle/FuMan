@@ -47,7 +47,7 @@
 <div id="app-toast" class="app-toast"></div>
 <div id="tutorial-overlay" class="tutorial-overlay">
     <div class="tutorial-box">
-        <div id="tutorial-title" style="font-size:16px; font-weight:900; color:var(--accent); margin-bottom:8px;">⚽ Willkommen beim Lok Leipzig!</div>
+        <div id="tutorial-title" style="font-size:16px; font-weight:900; color:var(--accent); margin-bottom:8px;">⚽ Willkommen beim 1.FC Moritz Leipzig!</div>
         <div id="tutorial-body" style="font-size:12px; line-height:1.6; margin-bottom:12px;"></div>
         <div id="tutorial-dots" style="text-align:center; margin-bottom:12px;"></div>
         <div style="display:flex; justify-content:space-between; gap:8px;">
@@ -402,14 +402,15 @@
 <div class="app-layout">
     <!-- HEADER -->
     <header class="app-header">
+        <button class="hamburger-btn" onclick="toggleMenuDrawer()" id="hamburger-menu-btn">☰</button>
         <div class="club-brand">
             <div class="club-logo" id="club-logo-display" style="position:relative;">
-                <span id="club-logo-symbol-text">LL</span>
+                <span id="club-logo-symbol-text">FCM</span>
                 <span id="club-logo-pattern-badge" style="display:none; position:absolute; bottom:-3px; right:-3px; width:16px; height:16px; background:#0d1220; border-radius:50%; align-items:center; justify-content:center; font-size:9px; border:1px solid rgba(255,255,255,0.3);"></span>
                 <span id="club-logo-animal-badge" style="display:none; position:absolute; top:-3px; left:-3px; width:16px; height:16px; background:#0d1220; border-radius:50%; align-items:center; justify-content:center; font-size:9px; border:1px solid rgba(255,255,255,0.3);"></span>
             </div>
             <div>
-                <div class="club-name">Lok Leipzig</div>
+                <div class="club-name">1.FC Moritz Leipzig</div>
                 <div class="club-league"><span id="head-league-name">4. Liga (Regionalliga)</span> • <span id="head-season">Saison 1</span></div>
             </div>
         </div>
@@ -440,8 +441,9 @@
     </header>
 
     <div class="main-wrapper">
+        <div class="menu-backdrop" id="menu-backdrop" onclick="closeMenuDrawer()"></div>
         <!-- SIDEBAR -->
-        <nav class="app-sidebar">
+        <nav class="app-sidebar" id="app-sidebar">
             <div class="nav-category">Hauptzentrale</div>
             <button class="nav-btn active" onclick="showScreen('screen-dashboard')">📊 FM13 Dashboard</button>
             <button class="nav-btn" onclick="showScreen('screen-calendar')">📅 Kalender & Termine</button>
@@ -496,7 +498,7 @@
                 <div id="st-not-founded-box" class="panel">
                     <div class="panel-header">🥈 ZWEITE MANNSCHAFT GRÜNDEN</div>
                     <div class="box">
-                        Gründe einen zweiten, eigenständigen Klub ("Lok Leipzig II"), der ganz unten in der niedrigsten Liga startet und sich - komplett unabhängig von deiner ersten Mannschaft - über die Spielzeiten nach oben arbeiten kann. Du verwaltest Kader, Formation & Spielstil; die Spiele selbst laufen automatisch wie bei allen anderen Vereinen der Liga.<br><br>
+                        Gründe einen zweiten, eigenständigen Klub ("1.FC Moritz Leipzig II"), der ganz unten in der niedrigsten Liga startet und sich - komplett unabhängig von deiner ersten Mannschaft - über die Spielzeiten nach oben arbeiten kann. Du verwaltest Kader, Formation & Spielstil; die Spiele selbst laufen automatisch wie bei allen anderen Vereinen der Liga.<br><br>
                         Kosten: <strong style="color:var(--accent);" id="st-found-cost">350.000 €</strong><br>
                         Voraussetzung: Manager-Level <strong style="color:var(--accent);" id="st-found-req">3</strong>
                     </div>
@@ -505,7 +507,7 @@
 
                 <div id="st-active-box" style="display:none;">
                     <div class="panel">
-                        <div class="panel-header"><span id="st-name">Lok Leipzig II</span></div>
+                        <div class="panel-header"><span id="st-name">1.FC Moritz Leipzig II</span></div>
                         <div class="box">
                             Liga: <strong style="color:var(--teal);" id="st-league-name">-</strong> · Team-Stärke: <strong id="st-strength">-</strong><br>
                             <span id="st-rank">-</span>
@@ -575,6 +577,28 @@
 
             <!-- 1. DASHBOARD -->
             <div id="screen-dashboard">
+                <div class="dashboard-hero-sky">
+                    <div class="dashboard-hero-club">
+                        <div class="crest-fallback" id="dash-hero-crest" style="display:flex; align-items:center; justify-content:center; font-size:16px;">🦁</div>
+                        <div>
+                            <div style="font-size:13px; font-weight:900; color:#fff;">1.FC Moritz Leipzig</div>
+                            <div style="font-size:9px; color:rgba(255,255,255,0.75);" id="dash-hero-subline">6. Liga · Spieltag 1</div>
+                        </div>
+                    </div>
+                    <div class="dashboard-hero-bowl-wrapper">
+                        <div class="dashboard-hero-floodlight" style="top:2%; left:6%;"></div>
+                        <div class="dashboard-hero-floodlight" style="top:2%; right:6%;"></div>
+                        <div class="dashboard-hero-floodlight" style="bottom:2%; left:6%;"></div>
+                        <div class="dashboard-hero-floodlight" style="bottom:2%; right:6%;"></div>
+                        <div class="dashboard-hero-bowl">
+                            <div class="dashboard-hero-stand" style="grid-column:2/4; grid-row:1;"></div>
+                            <div class="dashboard-hero-stand" style="grid-column:1; grid-row:1/4;"></div>
+                            <div class="dashboard-hero-stand" style="grid-column:4; grid-row:1/4;"></div>
+                            <div class="dashboard-hero-stand" style="grid-column:2/4; grid-row:3;"></div>
+                            <div class="dashboard-hero-pitch"></div>
+                        </div>
+                    </div>
+                </div>
                 <div id="dash-offers-alert" class="panel box-offer" style="display:none; border-color:var(--blue); margin-bottom:10px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <span>📩 <strong>Transfer-Zentrale:</strong> Du hast <strong id="dash-offers-alert-count" style="color:var(--accent);">0</strong> offene Transferangebote für deine Spieler!</span>
@@ -589,7 +613,7 @@
                     </div>
                     <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(0,0,0,0.3); border-radius:8px; margin-bottom:8px;">
                         <div style="text-align:center; flex:1;">
-                            <div style="font-size:14px; font-weight:900; color:var(--primary);">Lok Leipzig</div>
+                            <div style="font-size:14px; font-weight:900; color:var(--primary);">1.FC Moritz Leipzig</div>
                             <div style="font-size:9px; color:var(--text-muted);">Heimteam (Str: <span id="dash-our-str">60</span>)</div>
                         </div>
                         <div style="font-size:16px; font-weight:900; color:var(--accent);">VS</div>
@@ -642,6 +666,7 @@
                     <div id="save-slot-2" class="box" style="margin-bottom:6px;"></div>
                     <div id="save-slot-3" class="box"></div>
                     <button onclick="tutorialPage = 0; renderTutorialPage(); document.getElementById('tutorial-overlay').classList.add('show')" class="btn-secondary" style="margin-top:8px;">❓ Kurzanleitung erneut anzeigen</button>
+                    <div style="text-align:center; font-size:8px; color:var(--text-muted); margin-top:10px;" id="game-version-tag">Version wird geladen...</div>
                 </div>
             </div>
 
@@ -663,7 +688,7 @@
                     <div class="panel-header" style="color:var(--accent);"><span>🛡️ VEREINS-WAPPEN</span></div>
                     <div style="display:flex; justify-content:center; margin-bottom:12px;">
                         <div id="crest-preview-large" style="position:relative; width:96px; height:96px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:38px; font-weight:900; color:#1a1200; border:2px solid rgba(255,255,255,0.85);">
-                            <span id="crest-preview-symbol-text">LL</span>
+                            <span id="crest-preview-symbol-text">FCM</span>
                             <span id="crest-preview-pattern-badge" style="display:none; position:absolute; bottom:-2px; right:-2px; width:28px; height:28px; background:#0d1220; border-radius:50%; align-items:center; justify-content:center; font-size:15px; border:1px solid rgba(255,255,255,0.3);"></span>
                             <span id="crest-preview-animal-badge" style="display:none; position:absolute; top:-2px; left:-2px; width:28px; height:28px; background:#0d1220; border-radius:50%; align-items:center; justify-content:center; font-size:15px; border:1px solid rgba(255,255,255,0.3);"></span>
                         </div>
@@ -1191,7 +1216,7 @@
                 </div>
                 <div class="panel">
                     <div class="panel-header">🥅 ELFMETERKILLER-FÖRDERPROGRAMM</div>
-                    <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Nur für Torhüter - Chance auf die seltene Eigenschaft "Elfmeter-Killer" [12.000 €].</div>
+                    <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Nur für erfahrene Torhüter (mind. 80 Pflichtspiel-Einsätze) - Chance auf die seltene Eigenschaft "Elfmeter-Killer" [12.000 €].</div>
                     <select id="penalty-killer-select" class="input-inline" style="width:100%; margin-bottom:6px;">
                         <option value="">Torhüter wählen...</option>
                     </select>
@@ -1219,6 +1244,26 @@
                 <button onclick="showScreen('screen-real-estate')" id="hubtab-btn-screen-real-estate" class="btn-secondary" style="font-size:10px; padding:6px 4px;">Immobilien</button>
             </div>
             <div id="screen-stadium" style="display:none;">
+                <div class="stadium-hero-metrics-row" id="stadium-hero-metrics-row"></div>
+                <div class="stadium-condition-card" id="stadium-condition-card"></div>
+                <div class="stadium-hero-visual-wrapper">
+                    <div class="dashboard-hero-sky">
+                        <div class="stadium-hero-name-overlay" id="stadium-hero-name-overlay">Vereinsstadion</div>
+                        <div class="dashboard-hero-bowl-wrapper">
+                            <div class="dashboard-hero-floodlight" style="top:2%; left:6%;"></div>
+                            <div class="dashboard-hero-floodlight" style="top:2%; right:6%;"></div>
+                            <div class="dashboard-hero-floodlight" style="bottom:2%; left:6%;"></div>
+                            <div class="dashboard-hero-floodlight" style="bottom:2%; right:6%;"></div>
+                            <div class="dashboard-hero-bowl" id="stadium-hero-bowl">
+                                <div class="dashboard-hero-stand" style="grid-column:2/4; grid-row:1;"></div>
+                                <div class="dashboard-hero-stand" style="grid-column:1; grid-row:1/4;"></div>
+                                <div class="dashboard-hero-stand" style="grid-column:4; grid-row:1/4;"></div>
+                                <div class="dashboard-hero-stand" style="grid-column:2/4; grid-row:3;"></div>
+                                <div class="dashboard-hero-pitch"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div class="panel">
                     <div class="panel-header" style="color:var(--gold);">📊 KENNZAHLEN</div>
                     <div id="stadium-name-header" style="text-align:center; font-size:14px; font-weight:900; color:var(--accent); margin-bottom:8px;">Vereinsstadion</div>
@@ -1268,6 +1313,15 @@
                 <div class="panel">
                     <div class="panel-header">SPEZIAL-INSTALLATIONEN</div>
                     <div id="special-installs-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--gold);">📊 GESAMTÜBERSICHT DER STADION-BONI</div>
+                    <div id="stadium-upgrades-summary"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--gold);">🏗️ STADION-ERWEITERUNGEN (20 NEU)</div>
+                    <div class="box" style="font-size:9px; margin-bottom:6px;">Zusätzliche Anlagen für Sicherheit, Komfort, Einnahmen und mehr - jede mit einer echten, spürbaren Wirkung.</div>
+                    <div id="stadium-upgrades-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;"></div>
                 </div>
             </div>
             <div id="screen-campus" style="display:none;">
@@ -1412,6 +1466,7 @@
                         <button onclick="setTransferTab('offers')" id="btn-tab-tr-offers" class="btn-action">📩 Angebote (<span id="tab-offers-badge">0</span>)</button>
                         <button onclick="setTransferTab('market')" id="btn-tab-tr-market" class="btn-secondary">Transfermarkt</button>
                         <button onclick="setTransferTab('free')" id="btn-tab-tr-free" class="btn-secondary">Vereinslose</button>
+                        <button onclick="setTransferTab('loan')" id="btn-tab-tr-loan" class="btn-secondary">📋 Leihe</button>
                         <button onclick="setTransferTab('sell')" id="btn-tab-tr-sell" class="btn-secondary">Kader verkaufen</button>
                     </div>
 
@@ -1424,6 +1479,17 @@
 
                     <div id="transfer-tab-market" style="display:none;"><div id="market-list"></div></div>
                     <div id="transfer-tab-free" style="display:none;"><div id="free-agents-list"></div></div>
+                    <div id="transfer-tab-loan" style="display:none;">
+                        <div class="panel">
+                            <div class="panel-header" style="color:var(--gold);">📋 EIGENE LEIHSPIELER</div>
+                            <div id="active-loans-in-list"></div>
+                        </div>
+                        <div class="panel">
+                            <div class="panel-header">Verfügbare Leihspieler</div>
+                            <div class="box" style="font-size:9px;">Günstiger als ein Kauf, mit optionaler Kaufoption für später - der Spieler kehrt nach der Saison zum Mutterverein zurück, falls die Option nicht gezogen wird.</div>
+                        </div>
+                        <div id="loan-market-list"></div>
+                    </div>
                     <div id="transfer-tab-sell" style="display:none;"><div id="sell-list"></div></div>
                 </div>
             </div>
@@ -1452,14 +1518,18 @@
                     <div class="box">Akademie-Stufe: <strong id="youth-lvl-disp">1</strong></div>
                     <div class="box" id="youth-capacity-box">Kapazität: 0 / 5</div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
-                        <button onclick="upgradeYouthAcademy()" class="btn-secondary">Akademie ausbauen [35.000 €]</button>
+                        <button onclick="upgradeYouthAcademy()" id="btn-upgrade-youth-academy" class="btn-secondary">Akademie ausbauen [35.000 €]</button>
                         <button onclick="scoutYouthTalent()" class="btn-action">🌟 Nachwuchs sichten [8.000 €]</button>
-                        <button onclick="expandYouthCapacity()" class="btn-secondary">🏠 Kapazität erweitern</button>
+                        <button onclick="expandYouthCapacity()" id="btn-expand-youth-capacity" class="btn-secondary">🏠 Kapazität erweitern</button>
                         <button onclick="holdYouthTournament()" class="btn-secondary">🏆 Jugendturnier [4.000 €]</button>
                     </div>
                     <div id="youth-talents-list" style="margin-top:8px;"></div>
                 </div>
                 <div class="panel" id="youth-poach-box" style="display:none; border: 1px solid var(--danger);"></div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--gold);">🏆 JUGENDLIGA</div>
+                    <div id="youth-league-table-box"></div>
+                </div>
                 <div class="panel">
                     <div class="panel-header">📊 JUGEND-BESTENLISTE</div>
                     <div id="youth-leaderboard-box"></div>
@@ -1601,9 +1671,10 @@
 
             <!-- 24. PRIVATLEBEN -->
             <div id="screen-hub-spezial" style="display:none;">
-            <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(2, 1fr); gap:4px; margin-bottom:8px;">
+            <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:8px;">
                 <button onclick="showScreen('screen-private')" id="hubtab-btn-screen-private" class="btn-action hubtab-btn tab-gold" style="font-size:10px; padding:6px 4px;">Privatleben</button>
                 <button onclick="showScreen('screen-underworld')" id="hubtab-btn-screen-underworld" class="btn-secondary hubtab-btn tab-red" style="font-size:10px; padding:6px 4px;">Unterwelt</button>
+                <button onclick="showScreen('screen-premium')" id="hubtab-btn-screen-premium" class="btn-secondary hubtab-btn" style="font-size:10px; padding:6px 4px;">💎 Premium</button>
             </div>
             <div id="screen-private" style="display:none;">
                 <div class="panel">
@@ -1682,6 +1753,28 @@
                     <button onclick="placeUnderworldInsiderBet()" id="btn-uw-insiderbet" class="btn-secondary" style="margin-top:6px;">💰 Insider-Wett-Coup [10.000 € Einsatz]</button>
                 </div>
             </div>
+
+            <!-- 24b. PREMIUM-SHOP -->
+            <div id="screen-premium" style="display:none;">
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--gold);">💎 PREMIUM-SHOP</div>
+                    <div class="box" style="font-size:9px;">
+                        ⚠️ <strong>Hinweis:</strong> Dies ist eine reine Offline-App ohne echte Zahlungsanbindung. "Käufe" hier sind simuliert und buchen kein echtes Geld ab - die Premium-Punkte werden direkt gutgeschrieben.
+                    </div>
+                    <div style="text-align:center; margin:8px 0;">
+                        <div style="font-size:10px; color:var(--text-muted);">Dein Guthaben</div>
+                        <div style="font-size:22px; font-weight:900; color:var(--accent);">💎 <span id="premium-points-display">0</span></div>
+                    </div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">Premium-Punkte "kaufen" (simuliert)</div>
+                    <div id="premium-packages-box" style="display:grid; grid-template-columns:1fr 1fr; gap:6px;"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">Booster einlösen</div>
+                    <div id="premium-boosters-box"></div>
+                </div>
+            </div>
             </div>
 
             <!-- 25. UNTERWELT -->
@@ -1697,6 +1790,7 @@
                         <span>🛠️ ADMIN-DIAGNOSE & LIVE-INSPECTOR</span>
                         <span style="font-size:10px; color:#fff;">Entwickler-Konsole Aktiv</span>
                     </div>
+                    <div style="text-align:center; font-size:9px; color:var(--text-muted); margin-bottom:6px;" id="admin-version-tag">Version wird geladen...</div>
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:6px; font-size:10px;" id="admin-inspector-grid">
                         <div class="kpi-chip"><span>Liga-Level</span><strong id="adm-ins-league">4. Liga</strong></div>
                         <div class="kpi-chip"><span>Kaderstärke Ø</span><strong id="adm-ins-str">55</strong></div>
@@ -1727,6 +1821,7 @@
                         <button onclick="adminHealAndBoostSquad()" class="btn-primary">✨ 100% Fitness & 100% Moral & Geheilt</button>
                         <button onclick="adminUpgradeEntireSquad(5)" class="btn-action">⚡ Alle Spieler im Kader +5 Stärke</button>
                         <button onclick="adminMaxOutEntireSquad()" class="btn-danger" style="background:#7c2d12;">🌟 GESAMTES TEAM AUF MAXIMALWERT (99 überall!)</button>
+                        <button onclick="adminGrantPremiumPoints()" class="btn-gold" style="margin-top:6px;">💎 Admin: +5.000 Premium-Punkte kostenlos</button>
                         <button onclick="adminBoostSquadStrengthBy5()" class="btn-secondary" style="margin-top:6px;">📈 Kaderstärke um 5 Schritte erhöhen</button>
                         <button onclick="adminMaxOutYouthAndSecondTeam()" class="btn-secondary">🌟 Auch Jugend & zweite Mannschaft maximieren</button>
                         <button onclick="adminUnlockAllCosmetics()" class="btn-secondary">🎖️ Alle kosmetischen Extras freischalten</button>
@@ -1818,11 +1913,15 @@
             <div id="screen-matchday" style="display:none;">
                 <div class="panel">
                     <div class="panel-header" id="match-title">Livespiel</div>
-                    <div class="pitch-3d-wrapper">
+                    <div class="live-stadium-frame">
+                        <div class="live-stadium-floodlight" style="top:2%; left:3%;"></div>
+                        <div class="live-stadium-floodlight" style="top:2%; right:3%;"></div>
+                        <div class="pitch-3d-wrapper">
                         <div class="soccer-pitch" id="live-pitch">
                             <div class="pitch-center-line"></div>
                             <div class="pitch-center-circle"></div>
                             <div id="live-ball-indicator">⚽</div>
+                        </div>
                         </div>
                     </div>
                     <div style="text-align:center; font-size:14px; font-weight:900; color:var(--accent); margin:6px 0;">
@@ -1927,6 +2026,7 @@
 <script src="js/history.js"></script>
 <script src="js/match.js"></script>
 <script src="js/admin.js"></script>
+<script src="js/premium.js"></script>
 <script src="js/save.js"></script>
 <script>
     // Sichere Storage-Zugriffe: manche Android-Dateimanager öffnen HTML-Dateien in stark
@@ -2003,5 +2103,13 @@
         }
     };
 </script>
+    <!-- BOTTOM-NAVIGATION (NEU): Schnellzugriff auf die 5 wichtigsten Bereiche -->
+    <nav class="bottom-nav-bar">
+        <button class="nav-btn bottom-nav-item active" onclick="showScreen('screen-dashboard')"><span class="bn-icon">📊</span>Start</button>
+        <button class="nav-btn bottom-nav-item" onclick="showScreen('screen-squad')"><span class="bn-icon">⚽</span>Kader</button>
+        <button class="nav-btn bottom-nav-item" onclick="showScreen('screen-transfer')"><span class="bn-icon">🤝</span>Transfer</button>
+        <button class="nav-btn bottom-nav-item" onclick="showScreen('screen-finances')"><span class="bn-icon">🏦</span>Finanzen</button>
+        <button class="nav-btn bottom-nav-item" onclick="showScreen('screen-inbox')"><span class="bn-icon">📬</span>Postfach</button>
+    </nav>
 </body>
 </html>
