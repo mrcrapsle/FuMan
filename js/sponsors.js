@@ -1,3 +1,4 @@
+
     // ==========================================
     // SPONSOREN: HAUPTSPONSOR, AUSRÜSTER, ÄRMEL & BANDEN - ALLE MIT ECHTEN VERHANDLUNGEN,
     // VARIABLEN LAUFZEITEN, ABLAUF & ERFOLGSABHÄNGIGEN BONI (POKAL/AUFSTIEG)
@@ -686,3 +687,4 @@
                 : `<div class="box" style="font-size:10px;"><strong style="color:var(--teal);">📢 ${activeCount} aktive Bandensponsoren</strong> · Gesamt: ${formatVal(totalIncomePerHome)}/Heimspiel</div>`;
         }
     }
+

@@ -1,3 +1,4 @@
+
     // Zuschauerranking: die Top-Heimspiele nach Zuschauerzahl über die gesamte Karriere,
     // damit sichtbar wird, welche Spiele die volleren Ränge gebracht haben.
     // Zuschauerentwicklung als Diagramm: einfacher Balkenverlauf der letzten Heimspiele,
@@ -45,6 +46,17 @@
                 <strong style="color:var(--accent);">${e.attendance.toLocaleString('de-DE')} (${pct}%)</strong>
             </div>`;
         }).join('');
+    }
+
+    // Reiter-Navigation (NEU): teilt den bisher sehr langen Fans-Screen in 3 Reiter auf.
+    function setFansTab(tab) {
+        playSound('click');
+        ['sicherheit', 'gruppen', 'programme'].forEach(t => {
+            let el = document.getElementById('fans-tab-' + t);
+            if (el) el.style.display = (t === tab) ? 'block' : 'none';
+            let btn = document.getElementById('btn-tab-fan-' + t);
+            if (btn) btn.className = (t === tab) ? 'btn-action' : 'btn-secondary';
+        });
     }
 
     function renderFansView() {
@@ -513,3 +525,4 @@
             ? '<div class="box" style="font-size:10px; color:var(--text-muted);">Noch keine Fan-Ereignisse.</div>'
             : feed.slice(0, 10).map(e => `<div class="box" style="font-size:10px;"><span style="color:var(--text-muted);">S${e.season}/${e.matchday}:</span> ${e.text}</div>`).join('');
     }
+

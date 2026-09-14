@@ -1,3 +1,4 @@
+
     function renderHoldingView() {
         document.getElementById('holding-balance-val').innerText = formatVal(holdingCompany.money);
         let bList = document.getElementById('b2b-contracts-list');
@@ -62,3 +63,4 @@
         renderHoldingView();
         updateUI();
     }
+

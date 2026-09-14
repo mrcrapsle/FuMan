@@ -1,3 +1,4 @@
+
     // ==========================================
     // IMMOBILIEN-PORTFOLIO (NEU)
     // ==========================================
@@ -107,3 +108,4 @@
             summaryBox.innerHTML = `<div class="box" style="font-size:10px;">🏢 <strong>${ownedCount}</strong> Objekte im Portfolio · Gesamteinnahmen: <strong style="color:var(--gold);">+${formatVal(totalIncome)}</strong> pro Spieltag</div>`;
         }
     }
+

@@ -1,3 +1,4 @@
+
     // Onboarding: erscheint nur, solange dieses Gerät die Kurzanleitung noch nie gesehen hat
     // (unabhängig von Speicherständen - wer schon spielt, kennt sich bereits aus).
     function maybeShowTutorial() {
@@ -22,7 +23,7 @@
     let tutorialPage = 0;
     const TUTORIAL_PAGES = [
         {
-            title: "⚽ Willkommen beim Lok Leipzig!",
+            title: "⚽ Willkommen beim 1.FC Moritz Leipzig!",
             body: `Du übernimmst als Manager einen Klub in der <strong>6. Liga (Kreisklasse)</strong>. Dein Ziel: aufsteigen, den Verein ausbauen und irgendwann den Champions Cup holen.<br><br>
                 <strong style="color:var(--primary);">Die Bereiche im Menü:</strong><br>
                 ⚽ Kader &amp; Taktik · 🏟️ Ausbau &amp; Infrastruktur · 🏦 Finanzen &amp; Kapitalmarkt · 🏆 Wettbewerbe · 🎩 Spezial<br><br>
@@ -89,7 +90,7 @@
         'screen-hub-ausbau': ['screen-stadium', 'screen-campus', 'screen-staff', 'screen-fans', 'screen-real-estate'],
         'screen-hub-kaderplanung': ['screen-transfer', 'screen-scouting-global', 'screen-youth', 'screen-contracts'],
         'screen-hub-wettbewerbe': ['screen-league', 'screen-europe', 'screen-history'],
-        'screen-hub-spezial': ['screen-private', 'screen-underworld']
+        'screen-hub-spezial': ['screen-private', 'screen-underworld', 'screen-premium']
     };
     // Kehrt HUB_MEMBERS um: Mitglieds-Screen -> zugehöriger Hub
     const SUB_SCREEN_TO_HUB = {};
@@ -200,6 +201,18 @@
         });
     }
 
+    // Slide-In-Menü (NEU): öffnet/schließt die Navigation als Overlay-Drawer statt eines
+    // permanenten Grids - schafft deutlich mehr Platz für den eigentlichen Bildschirminhalt.
+    function toggleMenuDrawer() {
+        playSound('click');
+        document.getElementById('app-sidebar').classList.toggle('menu-open');
+        document.getElementById('menu-backdrop').classList.toggle('menu-open');
+    }
+    function closeMenuDrawer() {
+        document.getElementById('app-sidebar').classList.remove('menu-open');
+        document.getElementById('menu-backdrop').classList.remove('menu-open');
+    }
+
     function showScreen(screenId) {
         playSound('click');
         const screens = [
@@ -229,6 +242,8 @@
                 btn.classList.remove('active');
             }
         });
+        // Slide-In-Menü (NEU): automatisch schließen, sobald ein Ziel ausgewählt wurde.
+        closeMenuDrawer();
 
         if (screenId === 'screen-dashboard') renderDashboardView();
         if (screenId === 'screen-calendar') renderCalendarView();
@@ -262,6 +277,7 @@
         if (screenId === 'screen-contracts') renderContractsView();
         if (screenId === 'screen-private') renderPrivateLifeView();
         if (screenId === 'screen-underworld') renderUnderworldView();
+        if (screenId === 'screen-premium' && typeof renderPremiumShopView === 'function') renderPremiumShopView();
         if (screenId === 'screen-history') renderHistoryView();
         if (screenId === 'screen-admin') renderAdminView();
         updateUI();
@@ -296,3 +312,4 @@
             else { inboxBadge.style.display = 'none'; }
         }
     }
+

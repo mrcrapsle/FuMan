@@ -1,3 +1,4 @@
+
     // ==========================================
     // KARRIERE-RÜCKBLICK & RUHESTAND
     // ==========================================
@@ -67,7 +68,7 @@
         document.getElementById('career-certificate-content').innerHTML = `
             <div style="text-align:center; margin-bottom:12px;">
                 <div style="font-size:16px; font-weight:900; color:var(--gold);">🏆 KARRIERE-URKUNDE 🏆</div>
-                <div style="font-size:11px; color:#94a3b8;">${game.season} Saison(en) als Manager von Lok Leipzig</div>
+                <div style="font-size:11px; color:#94a3b8;">${game.season} Saison(en) als Manager von 1.FC Moritz Leipzig</div>
             </div>
             <div class="modal-field-grid">
                 <span class="label">Höchstes Manager-Level:</span><span class="val">${managerRPG.level} (${managerRPG.xp} XP)</span>
@@ -115,7 +116,7 @@
         ctx.fillText('🏆 KARRIERE-URKUNDE 🏆', canvas.width / 2, 100);
         ctx.fillStyle = '#94a3b8';
         ctx.font = '20px Arial';
-        ctx.fillText(`${game.season} Saison(en) als Manager von Lok Leipzig`, canvas.width / 2, 140);
+        ctx.fillText(`${game.season} Saison(en) als Manager von 1.FC Moritz Leipzig`, canvas.width / 2, 140);
 
         let y = 210;
         const line = (label, value, color = '#ffffff') => {
@@ -171,7 +172,7 @@
         ctx.textAlign = 'center';
         ctx.fillStyle = '#1a1200';
         ctx.font = 'bold 32px Arial';
-        ctx.fillText(game.clubCrestSymbol || 'LL', canvas.width / 2, y + 72);
+        ctx.fillText(game.clubCrestSymbol || 'FCM', canvas.width / 2, y + 72);
 
         // Wappen-Historie als kleine Zeitleiste unter dem aktuellen Wappen.
         if (crestHistory.length > 0) {
@@ -219,3 +220,4 @@
         safeSessionSet('anstoss_fm13_force_new_game', '1');
         location.reload();
     }
+

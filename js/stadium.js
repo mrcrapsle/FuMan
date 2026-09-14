@@ -1,9 +1,72 @@
+
     // ---------- STADIONNAME & NAMENSRECHTE ----------
     // Stadion-Kostenskalierung (NEU): deutlich steiler als der generische Liga-Faktor, damit
     // ein Kreisligist sich keine Bundesliga-Arena leisten muss, ein Spitzenklub aber echte
     // zweistellige Millionenbeträge zahlt (wie in der Realität) - Index = leagueLevel
     // (0 = höchste Liga).
     const STADIUM_COST_SCALE = [1.0, 0.55, 0.28, 0.14, 0.07, 0.035];
+    // Stadion-Größenstufe (NEU): das 3D-Design verändert sich jetzt sichtbar mit der
+    // tatsächlichen Kapazität, statt bei jeder Stadiongröße gleich auszusehen -
+    // von der kompakten Amateurarena bis zum Mega-Stadion mit Dach-Silhouette.
+    function getStadiumVisualTier() {
+        let cap = stadium.total || 16000;
+        if (cap < 15000) return 'small';
+        if (cap < 35000) return 'medium';
+        if (cap < 60000) return 'large';
+        return 'mega';
+    }
+    // Generiert die komplette innere Stadion-Struktur abhängig von der Größenstufe (NEU,
+    // überarbeitet): nicht mehr nur ein CSS-Klassenwechsel auf starrer Struktur, sondern
+    // echte strukturelle Unterschiede - Anzahl Flutlichter, Tribünenbreite, zweiter Rang,
+    // Dach - damit der Ausbau auch bei mittleren Kapazitäten sichtbar etwas verändert.
+    const STADIUM_TIER_CONFIG = {
+        small: { floodlights: 2, standSize: 'thin', secondTier: false, roof: false, crowdDensity: 'low' },
+        medium: { floodlights: 4, standSize: 'normal', secondTier: false, roof: false, crowdDensity: 'medium' },
+        large: { floodlights: 6, standSize: 'wide', secondTier: true, roof: false, crowdDensity: 'high' },
+        mega: { floodlights: 8, standSize: 'wide', secondTier: true, roof: true, crowdDensity: 'full' }
+    };
+    function generateStadiumBowlHTML(tier) {
+        let cfg = STADIUM_TIER_CONFIG[tier] || STADIUM_TIER_CONFIG.medium;
+        let floodlightPositions = {
+            2: [['bottom:2%;left:6%'], ['bottom:2%;right:6%']],
+            4: [['top:2%;left:6%'], ['top:2%;right:6%'], ['bottom:2%;left:6%'], ['bottom:2%;right:6%']],
+            6: [['top:2%;left:6%'], ['top:2%;right:6%'], ['top:38%;left:1%'], ['top:38%;right:1%'], ['bottom:2%;left:6%'], ['bottom:2%;right:6%']],
+            8: [['top:2%;left:6%'], ['top:2%;right:6%'], ['top:30%;left:0%'], ['top:30%;right:0%'], ['bottom:30%;left:0%'], ['bottom:30%;right:0%'], ['bottom:2%;left:6%'], ['bottom:2%;right:6%']]
+        };
+        let lights = (floodlightPositions[cfg.floodlights] || floodlightPositions[4])
+            .map(pos => `<div class="dashboard-hero-floodlight tier-fl-${tier}" style="${pos[0]}"></div>`).join('');
+        let standClass = `dashboard-hero-stand stand-${cfg.standSize}`;
+        let secondTierMarkup = cfg.secondTier ? '<div class="stand-second-tier-band"></div>' : '';
+        let roofMarkup = cfg.roof ? '<div class="stand-roof-canopy"></div>' : '';
+        let crowdMarkup = `<div class="stand-crowd-texture crowd-${cfg.crowdDensity}"></div>`;
+        let bowl = `
+            <div class="dashboard-hero-bowl tier-${tier}">
+                ${roofMarkup}
+                <div class="${standClass}" style="grid-column:2/4; grid-row:1;">${secondTierMarkup}${crowdMarkup}</div>
+                <div class="${standClass}" style="grid-column:1; grid-row:1/4;">${secondTierMarkup}${crowdMarkup}</div>
+                <div class="${standClass}" style="grid-column:4; grid-row:1/4;">${secondTierMarkup}${crowdMarkup}</div>
+                <div class="${standClass}" style="grid-column:2/4; grid-row:3;">${secondTierMarkup}${crowdMarkup}</div>
+                <div class="dashboard-hero-pitch"></div>
+            </div>`;
+        return lights + bowl;
+    }
+    function applyStadiumVisualTier(wrapperSelector) {
+        let el = document.querySelector(wrapperSelector);
+        if (!el) return;
+        let tier = getStadiumVisualTier();
+        // Komplett neu generieren statt nur eine CSS-Klasse zu wechseln - dadurch ändern sich
+        // Flutlicht-Anzahl, Tribünenbreite, zweiter Rang und Dach wirklich strukturell.
+        el.innerHTML = generateStadiumBowlHTML(tier);
+    }
+    // Einfacher Klassenwechsel (bestehendes Verhalten) für Strukturen, die NICHT komplett neu
+    // generiert werden - Live-Spiel-Rahmen und das funktionale Block-Raster im Stadion-Screen.
+    function applyStadiumVisualTierClass(selector) {
+        let el = document.querySelector(selector);
+        if (!el) return;
+        let tier = getStadiumVisualTier();
+        el.classList.remove('tier-small', 'tier-medium', 'tier-large', 'tier-mega');
+        el.classList.add('tier-' + tier);
+    }
     function getStadiumCostScale() {
         return STADIUM_COST_SCALE[game.leagueLevel] ?? 0.035;
     }
@@ -156,8 +219,8 @@
             let teams = leaguesData[game.leagueLevel];
             let inPromotionZone = false;
             if (teams) {
-                let sorted = [...teams].sort((a, b) => b.points - a.points);
-                let myRank = sorted.findIndex(t => t.name === "Lok Leipzig") + 1;
+                let sorted = [...teams].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+                let myRank = sorted.findIndex(t => t.name === "1.FC Moritz Leipzig") + 1;
                 inPromotionZone = myRank > 0 && myRank <= 2;
             }
             let urgencyNote = (game.matchday >= 30 && inPromotionZone)
@@ -218,6 +281,64 @@
             <div class="box" style="margin-top:4px;"><div style="font-size:8px; color:var(--text-muted);">BAUWERT (INVESTIERTE SUMME)</div><div style="font-size:15px; font-weight:900; color:var(--industry);">${((stadium.totalInvested||0)/1000000).toFixed(2)} Mio €</div></div>
         `;
         renderAttendanceChart('stadium-attendance-chart-box');
+        renderStadiumImmersiveHero();
+    }
+
+    // Immersive Stadion-Hero (NEU): große 3D-Ansicht mit schwebenden Kennzahlen-Karten und
+    // einer berechneten "Stadion-Zustand"-Einschätzung, angelehnt an moderne Management-
+    // Spiele-Referenzen - nutzt echte Spieldaten statt Platzhaltertexten.
+    function getStadiumConditionRating() {
+        let totalPossibleUpgrades = Object.keys(STADIUM_UPGRADES).length;
+        let ownedCount = stadium.upgrades ? Object.keys(stadium.upgrades).filter(k => stadium.upgrades[k]).length : 0;
+        let specialCount = ['flutlicht', 'rasenheizung', 'videowalls', 'dach'].filter(k => stadium[k]).length;
+        let totalRatio = (ownedCount + specialCount) / (totalPossibleUpgrades + 4);
+        if (totalRatio >= 0.6) return { label: 'Hervorragend', color: 'var(--primary)' };
+        if (totalRatio >= 0.3) return { label: 'Gut', color: 'var(--accent)' };
+        if (totalRatio >= 0.1) return { label: 'Ausbaufähig', color: 'var(--industry)' };
+        return { label: 'Sanierungsbedürftig', color: 'var(--danger)' };
+    }
+    function findNextStadiumSuggestion() {
+        // Günstigste noch nicht gebaute Erweiterung vorschlagen, sonst nächster Block-Ausbau.
+        if (stadium.upgrades) {
+            let candidates = Object.keys(STADIUM_UPGRADES).filter(k => !stadium.upgrades[k]).map(k => ({ key: k, cost: getStadiumUpgradeCost(k), name: STADIUM_UPGRADES[k].name }));
+            if (candidates.length > 0) {
+                candidates.sort((a, b) => a.cost - b.cost);
+                return { label: candidates[0].name, cost: candidates[0].cost, action: `buyStadiumUpgrade('${candidates[0].key}')` };
+            }
+        }
+        return null;
+    }
+    function renderStadiumImmersiveHero() {
+        let metricsBox = document.getElementById('stadium-hero-metrics-row');
+        if (!metricsBox) return;
+        let lastAttendance = (game.attendanceHistory || []).length > 0 ? game.attendanceHistory[game.attendanceHistory.length - 1].attendance : 0;
+        let capacity = stadium.total || 16000;
+        let utilization = capacity > 0 ? Math.round((lastAttendance / capacity) * 100) : 0;
+        let lastTicketIncome = (game.attendanceHistory || []).length > 0
+            ? Math.round(lastAttendance * 0.5 * game.ticketPrices.steh + lastAttendance * 0.45 * game.ticketPrices.sitz + (stadium.vipTotal || 50) * game.ticketPrices.vip)
+            : 0;
+        metricsBox.innerHTML = `
+            <div class="stadium-hero-metric-chip"><div class="shm-label">Kapazität</div><div class="shm-value">${capacity.toLocaleString('de-DE')}</div></div>
+            <div class="stadium-hero-metric-chip"><div class="shm-label">Auslastung</div><div class="shm-value" style="color:${utilization>=70?'var(--primary)':'var(--accent)'};">${utilization}%</div></div>
+            <div class="stadium-hero-metric-chip"><div class="shm-label">Einnahmen (Spieltag)</div><div class="shm-value" style="color:var(--gold); font-size:12px;">${formatVal(lastTicketIncome)}</div></div>
+        `;
+        let condBox = document.getElementById('stadium-condition-card');
+        if (condBox) {
+            let cond = getStadiumConditionRating();
+            let suggestion = findNextStadiumSuggestion();
+            condBox.innerHTML = `
+                <div style="font-size:9px; color:var(--text-muted);">STADION-ZUSTAND</div>
+                <div style="font-size:14px; font-weight:900; color:${cond.color}; margin-bottom:6px;">${cond.label}</div>
+                ${suggestion ? `
+                    <div style="font-size:9px; color:var(--text-muted);">NÄCHSTE AUSBAUSTUFE</div>
+                    <div style="font-size:11px; margin-bottom:6px;">${suggestion.label} (${formatVal(suggestion.cost)})</div>
+                    <button onclick="${suggestion.action}" class="btn-action">Ausbau Planen</button>
+                ` : '<div style="font-size:10px; color:var(--primary);">Alle Erweiterungen bereits gebaut! ✓</div>'}
+            `;
+        }
+        let nameOverlay = document.getElementById('stadium-hero-name-overlay');
+        if (nameOverlay) nameOverlay.innerText = stadium.name || 'Vereinsstadion';
+        if (typeof applyStadiumVisualTier === 'function') applyStadiumVisualTier('#stadium-hero-bowl-wrapper');
     }
 
     // Spezial-Installationen: deutlich realistischere Basiskosten (NEU), skaliert mit der
@@ -225,6 +346,139 @@
     // Millionenbeträge, nicht ein paar hunderttausend Euro.
     const SPECIAL_INSTALL_BASE_COSTS = { flutlicht: 3500000, rasenheizung: 2200000, videowalls: 4000000, dach: 28000000 };
     const SPECIAL_INSTALL_LABELS = { flutlicht: '💡 Flutlicht-Masten', rasenheizung: '🔥 Rasenheizung', videowalls: '📺 Digitale Anzeigen / HD-Videowalls', dach: '🏗️ Komplett-Überdachung' };
+
+    // ==========================================
+    // 20 NEUE STADION-ERWEITERUNGEN (NEU)
+    // ==========================================
+    // Jede Erweiterung gehört zu einer von mehreren Wirkungs-Kategorien, die direkt in
+    // bestehende Formeln einfließen (Komfort/Zuschauerzahl, Sicherheit, Verletzungsrisiko,
+    // Medienimage, Sponsoreneinnahmen, Heimvorteil, oder eine feste Einnahme pro Heimspiel) -
+    // dadurch hat jede einzelne, frei kaufbare Anlage eine echte, spürbare Auswirkung statt
+    // nur eine Zahl im Stadionwert zu sein.
+    const STADIUM_UPGRADES = {
+        sicherheitstechnik: { name: '📹 Kameras & Zutrittskontrolle', cost: 1800000, category: 'security', desc: 'Senkt das Ausschreitungsrisiko dauerhaft um 15%.' },
+        evakuierung: { name: '🚨 Notfall-Evakuierungssystem', cost: 2200000, category: 'security', desc: 'Senkt das Ausschreitungsrisiko dauerhaft um 15% und verbessert die Sicherheitsbilanz.' },
+        medizinzentrum: { name: '🏥 Medizinisches Behandlungszentrum', cost: 3200000, category: 'injury', desc: 'Senkt das Verletzungsrisiko bei Heimspielen um 12%.' },
+        rasenpflege_hightech: { name: '🌱 High-Tech-Rasenpflegesystem', cost: 2600000, category: 'injury', desc: 'Senkt das Verletzungsrisiko bei Heimspielen um 12%.' },
+        klimaanlage: { name: '❄️ Klimaanlage & Belüftung', cost: 3800000, category: 'weather', desc: 'Neutralisiert die negativen Effekte von Hitze-Wetter komplett.' },
+        vip_lounges: { name: '🥂 VIP-Business-Lounges', cost: 4500000, category: 'income', incomeBase: 8000, desc: 'Feste Zusatzeinnahmen pro Heimspiel.' },
+        public_viewing: { name: '📽️ Public-Viewing-Zone', cost: 1500000, category: 'income', incomeBase: 3500, desc: 'Feste Zusatzeinnahmen pro Heimspiel.' },
+        ladestationen: { name: '🔌 E-Auto-Ladestationen', cost: 900000, category: 'income', incomeBase: 1800, desc: 'Feste Zusatzeinnahmen pro Heimspiel.' },
+        flagship_store: { name: '🛍️ Merchandising-Flagship-Store', cost: 3600000, category: 'merch', desc: 'Erhöht den Fanartikel-Absatz im Stadion dauerhaft um 15%.' },
+        stadion_app: { name: '📱 Digitale Stadion-App', cost: 1600000, category: 'merch', desc: 'Erhöht den Fanartikel-Absatz im Stadion dauerhaft um 10%.' },
+        wlan: { name: '📶 Öffentliches WLAN', cost: 1100000, category: 'comfort', desc: 'Erhöht den Zuschauerkomfort dauerhaft.' },
+        komfort_wc: { name: '🚿 Modernisierte Sanitäranlagen', cost: 1400000, category: 'comfort', desc: 'Erhöht den Zuschauerkomfort dauerhaft.' },
+        bahnanbindung: { name: '🚉 Verbesserte ÖPNV-Anbindung', cost: 5200000, category: 'comfort', desc: 'Erhöht den Zuschauerkomfort spürbar dauerhaft.' },
+        familienbereich: { name: '🎠 Familien-Erlebnisbereich', cost: 1900000, category: 'fans', desc: 'Erhöht die Fan-Zufriedenheit dauerhaft.' },
+        stadion_museum: { name: '🏛️ Stadion-internes Museum', cost: 2100000, category: 'fans', desc: 'Erhöht die Fan-Zufriedenheit dauerhaft.' },
+        lichtshow: { name: '✨ Lichtshow-System', cost: 2400000, category: 'media', desc: 'Erhöht dein Manager-Medienimage bei jedem Heimspiel leicht.' },
+        pressezentrum: { name: '🎙️ Modernes Pressezentrum', cost: 2000000, category: 'media', desc: 'Erhöht dein Manager-Medienimage bei jedem Heimspiel leicht.' },
+        beschallung: { name: '🔊 Profi-Beschallungsanlage', cost: 1700000, category: 'homeadvantage', desc: 'Verstärkt den Heimvorteil (Teamstärke bei Heimspielen).' },
+        solaranlage: { name: '☀️ Solaranlage aufs Dach', cost: 3300000, category: 'sponsor', desc: 'Erhöht die laufenden Sponsoreneinnahmen dauerhaft um 8% UND senkt die Stromkosten-Komponente der Betriebskosten um 20%.' },
+        business_center: { name: '🏢 Business-Center für Firmenkunden', cost: 4800000, category: 'sponsor', desc: 'Erhöht die laufenden Sponsoreneinnahmen dauerhaft um 8%.' }
+    };
+
+    function getStadiumUpgradeCost(key) {
+        let scale = getStadiumCostScale();
+        return Math.round(STADIUM_UPGRADES[key].cost * scale);
+    }
+    function buyStadiumUpgrade(key) {
+        if (!stadium.upgrades) stadium.upgrades = {};
+        if (stadium.upgrades[key]) return;
+        let cost = getStadiumUpgradeCost(key);
+        let u = STADIUM_UPGRADES[key];
+        queueStadiumConstruction('stadiumUpgrade', { key }, cost, getConstructionDays(cost), u.name);
+    }
+    // Kategorie-Summen: wie viele der gekauften Erweiterungen zu einer Kategorie gehören -
+    // mehrere Erweiterungen derselben Kategorie addieren sich (mit sinnvoller Obergrenze).
+    function countOwnedUpgradesInCategory(category) {
+        if (!stadium.upgrades) return 0;
+        return Object.keys(STADIUM_UPGRADES).filter(k => stadium.upgrades[k] && STADIUM_UPGRADES[k].category === category).length;
+    }
+    function getStadiumSecurityBonus() { return Math.min(0.4, countOwnedUpgradesInCategory('security') * 0.15); }
+    function getStadiumInjuryReduction() { return Math.min(0.3, countOwnedUpgradesInCategory('injury') * 0.12); }
+    function getStadiumComfortBonus() { return Math.min(0.15, countOwnedUpgradesInCategory('comfort') * 0.03); }
+    function getStadiumMerchBonus() {
+        if (!stadium.upgrades) return 0;
+        let bonus = 0;
+        if (stadium.upgrades.flagship_store) bonus += 0.15;
+        if (stadium.upgrades.stadion_app) bonus += 0.10;
+        return bonus;
+    }
+    function getStadiumFanBonusOnce(key) {
+        // Wird beim Bau-Abschluss einmalig als Fan-Sockel-Erhöhung angewendet (siehe
+        // tickStadiumConstruction), nicht laufend neu berechnet.
+        return 3;
+    }
+    function getStadiumHomeAdvantageBonus() { return countOwnedUpgradesInCategory('homeadvantage') * 1.2; }
+    function getStadiumSponsorBonus() { return Math.min(0.24, countOwnedUpgradesInCategory('sponsor') * 0.08); }
+    function getStadiumMediaImageMatchdayBonus() { return countOwnedUpgradesInCategory('media') * 0.4; }
+    function getStadiumMatchdayIncome() {
+        if (!stadium.upgrades) return 0;
+        let scale = getStadiumCostScale();
+        return Object.keys(STADIUM_UPGRADES).filter(k => stadium.upgrades[k] && STADIUM_UPGRADES[k].category === 'income')
+            .reduce((sum, k) => sum + Math.round(STADIUM_UPGRADES[k].incomeBase * scale), 0);
+    }
+
+    // Zusammenfassungs-Übersicht (NEU): fasst alle Kategorie-Boni der 20 Stadion-Erweiterungen
+    // an einer Stelle zusammen, mit Fortschrittsbalken relativ zum jeweils maximal
+    // erreichbaren Wert (nicht der willkürlichen Sicherheits-Obergrenze im Code, sondern dem
+    // tatsächlich mit den vorhandenen Anlagen erreichbaren Maximum) - damit auf einen Blick
+    // sichtbar ist, wie viel Prozent von 100% bereits erreicht sind.
+    function renderStadiumUpgradesSummary() {
+        let box = document.getElementById('stadium-upgrades-summary');
+        if (!box) return;
+        let bar = (label, current, max, unit = '%', extra = '') => {
+            let pct = max > 0 ? Math.min(100, Math.round((current / max) * 100)) : 0;
+            let displayCurrent = unit === '%' ? Math.round(current * 100) : Math.round(current);
+            let displayMax = unit === '%' ? Math.round(max * 100) : Math.round(max);
+            return `
+                <div style="margin-bottom:8px;">
+                    <div style="display:flex; justify-content:space-between; font-size:9px; margin-bottom:2px;">
+                        <span>${label}</span>
+                        <strong style="color:var(--accent);">${displayCurrent}${unit === '%' ? '%' : ''} / ${displayMax}${unit === '%' ? '%' : ''} maximal${extra}</strong>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.06); border-radius:999px; height:7px; overflow:hidden;">
+                        <div style="width:${pct}%; height:100%; background:linear-gradient(90deg, var(--primary), var(--accent)); border-radius:999px;"></div>
+                    </div>
+                </div>`;
+        };
+        let scale = getStadiumCostScale();
+        box.innerHTML = `
+            ${bar('🛡️ Sicherheit (Ausschreitungsrisiko-Senkung)', getStadiumSecurityBonus(), 0.30)}
+            ${bar('🏥 Verletzungsrisiko-Senkung (Heimspiele)', getStadiumInjuryReduction(), 0.24)}
+            ${bar('📶 Zuschauerkomfort-Bonus', getStadiumComfortBonus(), 0.09)}
+            ${bar('🛍️ Fanartikel-Absatz-Bonus', getStadiumMerchBonus(), 0.25)}
+            ${bar('📈 Sponsoreneinnahmen-Bonus', getStadiumSponsorBonus(), 0.24)}
+            ${bar('⚡ Heimvorteil (Teamstärke-Punkte)', getStadiumHomeAdvantageBonus(), 1.2, 'pt')}
+            ${bar('🎤 Medienimage pro Heimspiel', getStadiumMediaImageMatchdayBonus(), 0.8, 'pt')}
+            <div class="box" style="font-size:10px; margin-top:4px;">💰 Feste Zusatzeinnahmen pro Heimspiel: <strong style="color:var(--gold);">${formatVal(getStadiumMatchdayIncome())}</strong> (max. ${formatVal(Math.round((8000+3500+1800)*scale))})</div>
+            <div class="box" style="font-size:10px;">☀️/❄️ Wetterschutz: <strong>${stadium.upgrades?.klimaanlage ? 'Hitze neutralisiert ✓' : 'Klimaanlage fehlt noch'}</strong></div>
+        `;
+    }
+
+    function renderStadiumUpgradesGrid() {
+        let grid = document.getElementById('stadium-upgrades-grid');
+        if (!grid) return;
+        if (!stadium.upgrades) stadium.upgrades = {};
+        grid.innerHTML = Object.keys(STADIUM_UPGRADES).map(key => {
+            let u = STADIUM_UPGRADES[key];
+            let cost = getStadiumUpgradeCost(key);
+            let owned = stadium.upgrades[key];
+            let queued = (game.stadiumConstructionQueue || []).find(p => p.type === 'stadiumUpgrade' && p.params.key === key);
+            let buttonHtml = owned
+                ? '<button class="btn-action" disabled>Vorhanden ✓</button>'
+                : queued
+                    ? `<button class="btn-secondary" disabled>🏗️ Im Bau... (noch ${queued.daysLeft} SpT)</button>`
+                    : `<button onclick="buyStadiumUpgrade('${key}')" class="btn-secondary">Bauen [${formatVal(cost)}] · ${getConstructionDays(cost)} SpT</button>`;
+            return `<div class="panel">
+                <div class="panel-header" style="font-size:10px;">${u.name}</div>
+                <div style="font-size:9px; color:#aaa; margin-bottom:4px;">${u.desc}</div>
+                ${buttonHtml}
+            </div>`;
+        }).join('');
+    }
+
     function renderSpecialInstallsGrid() {
         let grid = document.getElementById('special-installs-grid');
         if (!grid) return;
@@ -239,9 +493,12 @@
     }
 
     function renderStadiumView() {
+        applyStadiumVisualTierClass('.stadium-bowl');
         renderStadiumConstructionBox();
         renderStadiumKeyFigures();
         renderSpecialInstallsGrid();
+        renderStadiumUpgradesSummary();
+        renderStadiumUpgradesGrid();
         renderCrowdFavoriteMonument();
         renderDfbLicensingStatus();
         renderStadiumSpecialVisuals();
@@ -375,7 +632,7 @@
         if (game.money < downPayment) { showToast(`Nicht genug Geld für die Anzahlung! Benötigt: ${formatVal(downPayment)}`, 'error'); return; }
         playSound('click');
         game.money -= downPayment;
-        if (type !== 'campusBuilding' && type !== 'realEstate') stadium.totalInvested = (stadium.totalInvested || 0) + downPayment;
+        if (type !== 'campusBuilding' && type !== 'realEstate' && type !== 'staffTraining') stadium.totalInvested = (stadium.totalInvested || 0) + downPayment;
         game.stadiumConstructionQueue.push({ type, params, totalCost, downPayment, remainingPayment: totalCost - downPayment, daysLeft: buildDays, totalDays: buildDays, label });
         addInboxMessage('vertrag', `🏗️ Bauprojekt gestartet: ${label}`, `Anzahlung von ${formatVal(downPayment)} geleistet. Fertigstellung in ${buildDays} Spieltagen, Restzahlung dann ${formatVal(totalCost - downPayment)}.`, 'screen-stadium');
         showToast(`🏗️ Baustelle eröffnet: ${label} (fertig in ${buildDays} SpT)`, 'success');
@@ -424,6 +681,31 @@
                 // stadium.totalInvested (separates Investitionsvehikel).
                 let re = realEstatePortfolio[proj.params.key];
                 if (re) { re.owned = true; re.lvl++; }
+            } else if (proj.type === 'staffTraining' && typeof ensureStaffMeta === 'function') {
+                // Personal-Weiterbildung (NEU): eigener, kürzerer Baustellen-Typ für
+                // Schulungen statt Bauprojekte - ebenfalls getrennt von stadium.totalInvested.
+                let meta = ensureStaffMeta(proj.params.key);
+                meta.level++;
+                if (typeof staffMembers !== 'undefined' && staffMembers[proj.params.key]) {
+                    addInboxMessage('vertrag', `⭐ Weiterbildung abgeschlossen: ${staffMembers[proj.params.key].name}`, `Jetzt auf Ausbaustufe ${meta.level}.`, 'screen-staff');
+                }
+            } else if (proj.type === 'stadiumUpgrade' && typeof STADIUM_UPGRADES !== 'undefined') {
+                // 20 neue Stadion-Erweiterungen (NEU): schalten sich beim Bau-Abschluss frei.
+                if (!stadium.upgrades) stadium.upgrades = {};
+                stadium.upgrades[proj.params.key] = true;
+                let u = STADIUM_UPGRADES[proj.params.key];
+                if (u.category === 'fans' && typeof boostFanBaseFloor === 'function') {
+                    boostFanBaseFloor(getStadiumFanBonusOnce(proj.params.key), `Der Bau von "${u.name}"`);
+                }
+                addInboxMessage('vertrag', `🏗️ Stadion-Erweiterung fertig: ${u.name}!`, u.desc, 'screen-stadium');
+            } else if (proj.type === 'youthAcademyLvl') {
+                // Jugendakademie-Ausbau (NEU): jetzt mit echter Bauzeit statt Sofort-Ausbau.
+                game.youthAcademyLvl++;
+                addInboxMessage('vertrag', '🎓 Jugendakademie ausgebaut!', `Die Nachwuchsakademie ist jetzt auf Stufe ${game.youthAcademyLvl} - bessere Talente und höheres Potenzial bei künftigen Sichtungen.`, 'screen-youth');
+            } else if (proj.type === 'youthCapacity') {
+                // Jugendkader-Kapazität (NEU): jetzt mit echter Bauzeit statt Sofort-Ausbau.
+                game.youthCapacityBonus = (game.youthCapacityBonus || 0) + 1;
+                addInboxMessage('vertrag', '🏠 Jugendkader-Kapazität erweitert!', `Platz für jetzt ${getYouthAcademyCapacity()} Nachwuchsspieler in der Akademie.`, 'screen-youth');
             }
             game.boardSat = Math.min(100, game.boardSat + 2);
             addInboxMessage('vertrag', `🏗️ Bauprojekt fertiggestellt: ${proj.label}!`, `Die Bauarbeiten sind abgeschlossen, Restzahlung von ${formatVal(proj.remainingPayment)} beglichen. Der Effekt ist ab sofort wirksam.`, 'screen-stadium');
@@ -489,12 +771,26 @@
         // Digitale Anzeigen (Videowalls): sorgen für Stimmung und Unterhaltung im Stadion und
         // geben einen kleinen zusätzlichen Komfort-Bonus, unabhängig von den Block-Ausbauten.
         if (stadium.videowalls) avgComfortBonus += 0.05;
+        // Stadion-Erweiterungen (NEU): WLAN/Sanitär/ÖPNV-Anbindung erhöhen den Komfort weiter.
+        if (typeof getStadiumComfortBonus === 'function') avgComfortBonus += getStadiumComfortBonus();
         // Parkhaus & Shuttle-Bahnhof (Campus): erleichtert die Anreise und verbessert dadurch
         // die Stadionauslastung spürbar (war bisher nur Text ohne tatsächliche Wirkung).
         if (campusBuildings.parkhaus?.lvl > 0) avgComfortBonus += campusBuildings.parkhaus.lvl * 0.015;
         // Wetterabhängige Zuschauerzahlen (NEU): bei schlechtem Wetter bleiben spürbar mehr
         // Fans zu Hause - besonders bei Sturm.
         if (typeof currentWeather !== 'undefined' && currentWeather.attendanceMult) avgComfortBonus *= currentWeather.attendanceMult;
+        // Aktuelle Form (NEU): eine laufende Siegesserie zieht spürbar mehr Zuschauer an,
+        // eine Pleitenserie schreckt Fans ab - genau wie im echten Fußball üblich.
+        let ourTeamObj = leaguesData[game.leagueLevel]?.find(t => t.name === "1.FC Moritz Leipzig");
+        if (ourTeamObj && Array.isArray(ourTeamObj.recentForm) && ourTeamObj.recentForm.length > 0) {
+            let formScore = ourTeamObj.recentForm.reduce((s, r) => s + (r === 'W' ? 1 : (r === 'L' ? -1 : 0)), 0);
+            avgComfortBonus += formScore * 0.02; // bis zu ±10% bei 5/5 Siegen bzw. Niederlagen
+        }
+        // Publikumsliebling (NEU): steht der amtierende Publikumsliebling in der aktuellen
+        // Startelf, kommen zusätzliche Fans gezielt, um ihn spielen zu sehen.
+        if (typeof lineup !== 'undefined' && Array.isArray(lineup) && squad.some(p => p.isCrowdFavorite && lineup.includes(p.id))) {
+            avgComfortBonus += 0.04;
+        }
         // rawFactor bleibt die reine Fan-Stimmungs-/Komfort-Kennzahl (0.3-1.2, "1.0" = Standard
         // bei 100% Fans ohne Komfort-Bonus). Die Liga-Obergrenze skaliert diese Kennzahl dann
         // auf einen realistischen Auslastungsanteil der Stadionkapazität herunter.
@@ -502,3 +798,4 @@
         let ceiling = LEAGUE_ATTENDANCE_CEILING[game.leagueLevel] ?? LEAGUE_ATTENDANCE_CEILING[LEAGUE_ATTENDANCE_CEILING.length - 1];
         return ceiling * (rawFactor / 0.75);
     }
+

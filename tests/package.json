@@ -1,7 +1,12 @@
 {
   "name": "anstoss-fm13-tests",
+  "version": "1.0.0",
   "private": true,
+  "description": "Automatisierte Playwright-Testsuite fuer Anstoss Mobile Pro - FM13",
   "scripts": {
     "test": "node run-tests.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.40.0"
   }
 }

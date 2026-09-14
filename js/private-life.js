@@ -1,3 +1,4 @@
+
     // ==========================================
     // TRAINER-PRIVATLEBEN: GEHALT, LIFESTYLE, HOBBYS, EINKOMMENSQUELLEN
     // ==========================================
@@ -223,3 +224,4 @@
             privateLife.stress = Math.max(0, privateLife.stress - 3);
         }
     }
+

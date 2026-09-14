@@ -1,9 +1,11 @@
+
 // ==========================================
 // TRANSFERMARKT & KI-ANGEBOTE
 // ==========================================
     function refreshTransferMarket() {
         marketPlayers = [];
         freeAgentPlayers = [];
+        loanablePlayers = [];
         let discount = 1.0 - (staffMembers.scout.hired ? 0.15 : 0);
         // Personal-Synergie "Verhandlungsprofis": Chef-Scout + Sportdirektor zusammen geben
         // weitere 5% Rabatt bei Transfers.
@@ -22,6 +24,69 @@
             p.signOnFee = Math.round(p.wage * 6);
             freeAgentPlayers.push(p);
         }
+        // Leihspieler (NEU): eingehende Leihen von anderen Vereinen - deutlich günstiger als
+        // ein Kauf, mit optionaler Kaufoption für eine dauerhafte Verpflichtung später.
+        for (let i = 0; i < 3; i++) {
+            let p = createPlayer(["TW", "ABW", "MIT", "ST"][Math.floor(Math.random() * 4)], minStr - 2, maxStr + 4);
+            p.loanParentClub = INTERNATIONAL_CLUB_NAMES[Math.floor(Math.random() * INTERNATIONAL_CLUB_NAMES.length)];
+            p.loanFee = Math.max(1000, Math.round(p.marketValue * 0.12));
+            p.loanBuyOptionFee = Math.round(p.marketValue * 0.85);
+            p.loanDurationMatchdays = 34;
+            loanablePlayers.push(p);
+        }
+    }
+
+    // ==========================================
+    // EINGEHENDE LEIHSPIELER (NEU)
+    // ==========================================
+    function signLoanPlayer(idx) {
+        let p = loanablePlayers[idx];
+        if (!p) return;
+        if (game.money < p.loanFee) { alert(`Nicht genug Geld für die Leihgebühr! Benötigt: ${formatVal(p.loanFee)}`); return; }
+        if (squad.length >= 22) { showToast('Kader bereits voll (22 Spieler)!', 'error'); return; }
+        playSound('whistle');
+        game.money -= p.loanFee;
+        p.isLoanedIn = true;
+        p.contracts = 1;
+        squad.push(p);
+        incomingLoans.push({ playerId: p.id, parentClub: p.loanParentClub, matchdaysLeft: p.loanDurationMatchdays, buyOptionFee: p.loanBuyOptionFee });
+        loanablePlayers.splice(idx, 1);
+        addInboxMessage('vertrag', `📋 ${p.name} ausgeliehen!`, `${p.name} kommt für diese Saison von ${p.loanParentClub} auf Leihbasis - Kaufoption: ${formatVal(p.loanBuyOptionFee)}.`, 'screen-squad');
+        showToast(`📋 ${p.name} von ${p.loanParentClub} ausgeliehen!`, 'success');
+        renderTransferView();
+        updateUI();
+    }
+    function exerciseLoanBuyOption(playerId) {
+        let loan = incomingLoans.find(l => l.playerId === playerId);
+        let p = squad.find(x => x.id === playerId);
+        if (!loan || !p) return;
+        if (game.money < loan.buyOptionFee) { alert(`Nicht genug Geld für die Kaufoption! Benötigt: ${formatVal(loan.buyOptionFee)}`); return; }
+        if (game.transferBudget < loan.buyOptionFee) { alert("Transferbudget reicht nicht aus!"); return; }
+        playSound('goal');
+        game.money -= loan.buyOptionFee;
+        game.transferBudget -= loan.buyOptionFee;
+        p.isLoanedIn = false;
+        p.contracts = 3;
+        incomingLoans = incomingLoans.filter(l => l.playerId !== playerId);
+        addInboxMessage('vertrag', `✅ Kaufoption gezogen: ${p.name}!`, `${p.name} wechselt dauerhaft von ${loan.parentClub} zum Verein!`, 'screen-squad');
+        showToast(`✅ ${p.name} dauerhaft verpflichtet!`, 'success');
+        renderContractsView();
+        updateUI();
+    }
+    // Wird jeden Spieltag geprüft: läuft die Leihe ab, kehrt der Spieler zum Mutterverein
+    // zurück, sofern die Kaufoption nicht vorher gezogen wurde.
+    function tickIncomingLoans() {
+        incomingLoans.forEach(loan => { loan.matchdaysLeft--; });
+        let expired = incomingLoans.filter(l => l.matchdaysLeft <= 0);
+        expired.forEach(loan => {
+            let p = squad.find(x => x.id === loan.playerId);
+            if (p) {
+                squad = squad.filter(x => x.id !== loan.playerId);
+                addInboxMessage('vertrag', `📋 Leihe beendet: ${p.name}`, `${p.name} kehrt wie vereinbart zu ${loan.parentClub} zurück.`, 'screen-squad');
+                showToast(`📋 ${p.name} kehrt zu ${loan.parentClub} zurück.`, 'error');
+            }
+        });
+        incomingLoans = incomingLoans.filter(l => l.matchdaysLeft > 0);
     }
 
     function checkIncomingTransferOffers() {
@@ -190,6 +255,63 @@
         renderTransferView();
     }
 
+    // ==========================================
+    // WEITERVERKAUFSBETEILIGUNG (NEU)
+    // ==========================================
+    // Beim Verkauf eines Spielers kann statt der vollen Sofortsumme eine
+    // Weiterverkaufsbeteiligung ausgehandelt werden: der Verein zahlt etwas weniger sofort,
+    // dafür bekommst du einen Anteil, falls der kaufende Verein den Spieler später mit
+    // Gewinn weiterverkauft - eine reale, bekannte Fußball-Transfermechanik.
+    function acceptTransferOfferWithClause(offerId) {
+        let oIdx = incomingOffers.findIndex(o => o.id === offerId);
+        if (oIdx === -1) return;
+        let offer = incomingOffers[oIdx];
+        if (squad.length <= 11) { alert("❌ Transfer unzulässig: Dein Kader muss mindestens 11 Spieler umfassen!"); return; }
+        let pIdx = squad.findIndex(p => p.id === offer.playerId);
+        if (pIdx === -1) { alert("Spieler befindet sich nicht mehr im Kader!"); incomingOffers.splice(oIdx, 1); renderTransferView(); return; }
+        if (!checkHighChemistryBeforeSale(squad[pIdx])) return;
+        playSound('goal');
+        let clausePercent = 15;
+        // Der kaufende Verein zahlt für die Weiterverkaufsbeteiligung 6% weniger sofort.
+        let reducedBid = Math.round(offer.currentBid * 0.94);
+        if (managerRPG.perks.negotiator) reducedBid = Math.round(reducedBid * 1.15);
+        let agentFee = getAgentFee(squad[pIdx], reducedBid);
+        game.money += reducedBid - agentFee;
+        game.transferBudget += Math.round(reducedBid * 0.85);
+        if (!Array.isArray(game.sellOnClauses)) game.sellOnClauses = [];
+        game.sellOnClauses.push({ playerName: squad[pIdx].name, buyingClub: offer.clubName, percent: clausePercent, originalSaleValue: reducedBid });
+        checkFriendshipDeparture(squad[pIdx]);
+        recordNotablePastPlayer(squad[pIdx]);
+        checkCrowdFavoriteDeparture(squad[pIdx]);
+        squad.splice(pIdx, 1);
+        lineup = lineup.filter(id => id !== offer.playerId);
+        incomingOffers.splice(oIdx, 1);
+        addManagerXP(120);
+        alert(`🤝 TRANSFER MIT WEITERVERKAUFSBETEILIGUNG!\n${offer.playerName} wechselt für ${formatVal(reducedBid)} zu ${offer.clubName} - dazu ${clausePercent}% von jedem künftigen Weiterverkauf.`);
+        updateUI();
+        renderTransferView();
+    }
+    // Wird jeden Spieltag geprüft: löst gelegentlich einen simulierten Weiterverkauf eines
+    // ehemaligen Spielers durch den kaufenden Verein aus und zahlt die vereinbarte Beteiligung aus.
+    function checkSellOnClausePayouts() {
+        if (!Array.isArray(game.sellOnClauses) || game.sellOnClauses.length === 0) return;
+        // Bugfix (im eigenen Entwurf sofort entdeckt): forEach + splice() während der
+        // Iteration überspringt Elemente, wenn mehrere Klauseln gleichzeitig auslösen -
+        // stattdessen rückwärts iterieren, damit das Entfernen die noch ausstehenden
+        // Indizes nicht verschiebt.
+        for (let i = game.sellOnClauses.length - 1; i >= 0; i--) {
+            let clause = game.sellOnClauses[i];
+            if (Math.random() < 0.015) {
+                let resaleValue = Math.round(clause.originalSaleValue * (1.3 + Math.random() * 1.2));
+                let payout = Math.round(resaleValue * (clause.percent / 100));
+                game.money += payout;
+                addInboxMessage('vertrag', `💰 Weiterverkaufsbeteiligung ausgezahlt!`, `${clause.buyingClub} hat ${clause.playerName} für ${formatVal(resaleValue)} weiterverkauft - deine ${clause.percent}%-Beteiligung: ${formatVal(payout)}!`, 'screen-finances');
+                showToast(`💰 +${formatVal(payout)} Weiterverkaufsbeteiligung für ${clause.playerName}!`, 'success');
+                game.sellOnClauses.splice(i, 1);
+            }
+        }
+    }
+
     function rejectTransferOffer(offerId) {
         playSound('click');
         let oIdx = incomingOffers.findIndex(o => o.id === offerId);
@@ -306,6 +428,7 @@
     }
 
     function renderTransferView() {
+        renderLoanMarketView();
         renderWinterWindowBanner();
         let offList = document.getElementById('incoming-offers-list');
         offList.innerHTML = '';
@@ -344,6 +467,7 @@
                         <button onclick="acceptTransferOffer('${o.id}')" class="btn-primary" style="font-size:10px;">✔ Annehmen (${formatVal(o.currentBid)})</button>
                         <button onclick="rejectTransferOffer('${o.id}')" class="btn-danger" style="font-size:10px;">✖ Ablehnen</button>
                     </div>
+                    <button onclick="acceptTransferOfferWithClause('${o.id}')" class="btn-gold" style="font-size:9px; margin-bottom:4px;">📜 Mit 15% Weiterverkaufsbeteiligung (${formatVal(Math.round(o.currentBid*0.94))} sofort)</button>
                     <button onclick="openNegotiationStepper('${o.id}')" class="btn-secondary" style="font-size:10px; margin-top:4px;">🔧 Nachverhandeln (Schrittweite-Angebot)</button>
                 `;
                 offList.appendChild(card);
@@ -411,12 +535,40 @@
 
     function setTransferTab(tab) {
         playSound('click');
-        ['offers', 'market', 'free', 'sell'].forEach(t => {
+        ['offers', 'market', 'free', 'loan', 'sell'].forEach(t => {
             let el = document.getElementById('transfer-tab-' + t);
             if (el) el.style.display = (t === tab) ? 'block' : 'none';
             let btn = document.getElementById('btn-tab-tr-' + t);
             if (btn) btn.className = (t === tab) ? 'btn-action' : 'btn-secondary';
         });
+    }
+
+    function renderLoanMarketView() {
+        let box = document.getElementById('loan-market-list');
+        if (!box) return;
+        if (loanablePlayers.length === 0) { box.innerHTML = '<div class="box">Aktuell keine Leihspieler verfügbar.</div>'; return; }
+        box.innerHTML = loanablePlayers.map((p, idx) => `
+            <div class="panel">
+                <div class="panel-header"><span>${p.name} (${p.pos}, Str ${p.strength})</span><span style="color:var(--text-muted); font-size:9px;">von ${p.loanParentClub}</span></div>
+                <div style="font-size:9px; color:#aaa; margin-bottom:4px;">Leihgebühr: <strong style="color:var(--accent);">${formatVal(p.loanFee)}</strong> · Kaufoption später: <strong>${formatVal(p.loanBuyOptionFee)}</strong> · Dauer: Saisonende</div>
+                <button onclick="signLoanPlayer(${idx})" class="btn-action">Ausleihen</button>
+            </div>
+        `).join('');
+        let activeBox = document.getElementById('active-loans-in-list');
+        if (activeBox) {
+            if (incomingLoans.length === 0) { activeBox.innerHTML = '<div class="box" style="font-size:9px; color:var(--text-muted);">Aktuell keine eigenen Leihspieler im Kader.</div>'; }
+            else {
+                activeBox.innerHTML = incomingLoans.map(loan => {
+                    let p = squad.find(x => x.id === loan.playerId);
+                    if (!p) return '';
+                    return `<div class="panel">
+                        <div class="panel-header" style="font-size:10px;"><span>${p.name}</span><span style="color:var(--text-muted); font-size:8px;">von ${loan.parentClub}</span></div>
+                        <div style="font-size:9px; margin-bottom:4px;">Restlaufzeit: ${loan.matchdaysLeft} SpT · Kaufoption: ${formatVal(loan.buyOptionFee)}</div>
+                        <button onclick="exerciseLoanBuyOption('${p.id}')" class="btn-gold">Kaufoption ziehen</button>
+                    </div>`;
+                }).join('');
+            }
+        }
     }
 
     // Bieterwettstreit (NEU): bei begehrten Spielern (Stärke 65+) steigt gelegentlich ein
@@ -535,3 +687,4 @@
             updateUI();
         }
     }
+

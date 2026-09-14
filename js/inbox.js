@@ -1,3 +1,4 @@
+
     // ==========================================
     // POSTFACH: zentrales Nachrichtensystem für Transferangebote, Verletzungen,
     // auslaufende Verträge, Finanzwarnungen, Scouting-Ergebnisse & Spielanalysen.
@@ -131,3 +132,4 @@
                 </div>`;
         }).join('');
     }
+

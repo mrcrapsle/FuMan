@@ -1,3 +1,4 @@
+
     function renderCampusView() {
         renderStadiumConstructionBox('campus-construction-box', 'campusBuilding');
         let container = document.getElementById('campus-buildings-list');
@@ -242,7 +243,12 @@
                     </div>
                     ${onLeave ? `<div class="box" style="border-left-color:var(--danger); font-size:9px; margin-top:4px;">🤒 Fällt noch ${meta.onLeave} SpT aus.${meta.interimActive ? ' (Interims-Ersatz aktiv)' : ` <button onclick="hireEmergencyInterim('${key}')" class="btn-secondary" style="width:auto; font-size:8px;">Interim buchen [${formatVal(s.wage*3)}]</button>`}</div>` : ''}
                     <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:3px; margin-top:4px;">
-                        <button onclick="upgradeStaffMember('${key}')" class="btn-secondary" style="font-size:8px;" ${meta.level>=3?'disabled':''}>⭐ Weiterbilden [${formatVal(Math.round(s.cost*STAFF_UPGRADE_COST_FACTOR*meta.level))}]</button>
+                        ${(() => {
+                            let trainingQueued = (game.stadiumConstructionQueue || []).find(q => q.type === 'staffTraining' && q.params.key === key);
+                            if (meta.level >= 3) return `<button class="btn-secondary" disabled style="font-size:8px;">⭐ Max. Stufe ✓</button>`;
+                            if (trainingQueued) return `<button class="btn-secondary" disabled style="font-size:8px;">🎓 In Weiterbildung (noch ${trainingQueued.daysLeft} SpT)</button>`;
+                            return `<button onclick="upgradeStaffMember('${key}')" class="btn-secondary" style="font-size:8px;">⭐ Weiterbilden [${formatVal(Math.round(s.cost*STAFF_UPGRADE_COST_FACTOR*meta.level))}]</button>`;
+                        })()}
                         <button onclick="renewStaffContract('${key}')" class="btn-secondary" style="font-size:8px;">📄 Verlängern [${formatVal(Math.round(s.cost*0.4))}]</button>
                         <button onclick="giveStaffRaise('${key}')" class="btn-secondary" style="font-size:8px;">💰 Gehaltserhöhung [${formatVal(s.wage*5)}]</button>
                     </div>
@@ -369,6 +375,15 @@
         let meta = ensureStaffMeta(key);
         if (meta.level >= 3) { showToast('Maximale Ausbaustufe bereits erreicht!', 'error'); return; }
         let cost = Math.round(s.cost * STAFF_UPGRADE_COST_FACTOR * meta.level);
+        // Bugfix: Weiterbildungen wurden bisher sofort abgeschlossen, ganz ohne Zeitaufwand -
+        // unrealistisch für eine echte Fortbildung/Schulung. Läuft jetzt über dieselbe
+        // Baustellen-Logik wie Stadion/Campus/Immobilien, aber mit einer kürzeren, zu einer
+        // Schulung passenden Dauer statt einer mehrwöchigen Bauzeit.
+        if (typeof queueStadiumConstruction === 'function') {
+            let days = Math.max(3, Math.min(8, Math.round(cost / 8000)));
+            queueStadiumConstruction('staffTraining', { key }, cost, days, `Weiterbildung: ${s.name} (Stufe ${meta.level + 1})`);
+            return;
+        }
         if (game.money < cost) { showToast(`Nicht genug Geld! Benötigt: ${formatVal(cost)}`, 'error'); return; }
         playSound('goal');
         game.money -= cost;
@@ -581,3 +596,4 @@
             }
         }
     }
+

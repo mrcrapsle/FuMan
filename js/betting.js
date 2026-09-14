@@ -1,3 +1,4 @@
+
     // ==========================================
     // WETTBÜRO: FIKTIVER BUCHMACHER MIT ECHTEN QUOTEN
     // ==========================================
@@ -27,11 +28,11 @@
         if (!fixs) return null;
         let ourFixture = fixs.find(f => {
             let h = leaguesData[game.leagueLevel][f.home].name, a = leaguesData[game.leagueLevel][f.away].name;
-            return (h === "Lok Leipzig" || a === "Lok Leipzig");
+            return (h === "1.FC Moritz Leipzig" || a === "1.FC Moritz Leipzig");
         });
         if (!ourFixture || ourFixture.played) return null;
 
-        let isHome = leaguesData[game.leagueLevel][ourFixture.home].name === "Lok Leipzig";
+        let isHome = leaguesData[game.leagueLevel][ourFixture.home].name === "1.FC Moritz Leipzig";
         let ourStr = calcTeamStrength(isHome);
         let oppName = isHome ? leaguesData[game.leagueLevel][ourFixture.away].name : leaguesData[game.leagueLevel][ourFixture.home].name;
         let oppObj = leaguesData[game.leagueLevel].find(t => t.name === oppName);
@@ -173,8 +174,8 @@
             renderBetHistory();
             return;
         }
-        let homeLabel = odds.isHome ? 'Lok Leipzig' : odds.oppName;
-        let awayLabel = odds.isHome ? odds.oppName : 'Lok Leipzig';
+        let homeLabel = odds.isHome ? '1.FC Moritz Leipzig' : odds.oppName;
+        let awayLabel = odds.isHome ? odds.oppName : '1.FC Moritz Leipzig';
         box.innerHTML = `
             <div class="box" style="font-size:11px; margin-bottom:6px;">
                 Nächstes Spiel: <strong>${homeLabel}</strong> vs <strong>${awayLabel}</strong><br>
@@ -208,3 +209,4 @@
             ? '<div style="font-size:9px; color:var(--text-muted);">Noch keine abgeschlossenen Wetten.</div>'
             : hist.slice(0, 8).map(b => `<div class="box" style="font-size:9px; display:flex; justify-content:space-between; ${b.won ? 'border-left-color:var(--primary);' : 'border-left-color:var(--danger);'}"><span>S${b.season}/${b.matchday}: ${formatVal(b.stake)} @ ${b.odds}</span><span style="color:${b.won ? 'var(--primary)' : 'var(--danger)'};">${b.won ? '+' + formatVal(b.payout) : 'Verloren'}</span></div>`).join('');
     }
+

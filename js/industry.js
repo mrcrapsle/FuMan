@@ -1,3 +1,4 @@
+
     function renderIndustryView() {
         document.getElementById('ind-holding-money').innerText = formatVal(holdingCompany.money);
         renderProductionQueueBox();
@@ -315,3 +316,4 @@
         renderIndustryView();
         updateUI();
     }
+

@@ -1,7 +1,10 @@
+
     // ==========================================
     // MANAGER RPG & TALENTBAUM ENGINE
     // ==========================================
     function addManagerXP(amt) {
+        // XP-Doppler (Premium-Booster, NEU): verdoppelt eingehende XP für begrenzte Zeit.
+        if (game.xpDoublerMatchdaysLeft > 0) amt *= 2;
         managerRPG.xp += amt;
         while (managerRPG.xp >= managerRPG.maxXp) {
             managerRPG.xp -= managerRPG.maxXp;
@@ -216,4 +219,5 @@
         let veteranText = veterans.length > 0 ? ` Weggefährten wie ${veterans.join(', ')} werden in Interviews erwähnt.` : '';
         addInboxMessage('vertrag', '🎉 Zeremonie: Der Verein feiert deine Karriere!', `Eine improvisierte Feier vor der Geschäftsstelle würdigt deine außergewöhnliche Laufbahn als Manager - Vorstand, Mannschaft und Fans applaudieren gemeinsam.${veteranText}`, 'screen-manager-tree');
     }
+
 

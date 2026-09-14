@@ -1,3 +1,4 @@
+
     function formatVal(val) {
         if (Math.abs(val) >= 1000000) {
             return (val / 1000000).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 2 }) + ' Mio. €';
@@ -43,3 +44,4 @@
         oppXg = Math.max(0.1, oppXg);
         return { myGoals: poissonRandom(myXg), oppGoals: poissonRandom(oppXg) };
     }
+
