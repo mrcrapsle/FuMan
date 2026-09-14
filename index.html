@@ -6,7 +6,7 @@
     <title>Anstoß Mobile Pro - FM13 Industrial & European Master Edition</title>
     <link rel="stylesheet" href="css/styles.css">
 </head>
-<body>
+<body class="office-bg">
 <!-- Sichtbarer Fehlerbanner: fängt JEDEN unerwarteten JavaScript-Fehler ab und zeigt ihn
      direkt auf dem Bildschirm an, statt dass er nur in einer für den Nutzer unsichtbaren
      Konsole verschwindet. Unverzichtbar für Fehlerberichte von Geräten, die sich nicht per
@@ -479,7 +479,7 @@
             <div id="screen-inbox" style="display:none;">
                 <div class="panel">
                     <div class="panel-header">📬 POSTFACH<span id="inbox-unread-summary" style="font-size:10px; color:#94a3b8; font-weight:normal;"></span></div>
-                    <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:3px; margin-bottom:8px;">
+                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:8px;">
                         <button onclick="setInboxFilter('alle')" id="inbox-filter-alle" class="btn-action" style="font-size:9px;">Alle</button>
                         <button onclick="setInboxFilter('wichtig')" id="inbox-filter-wichtig" class="btn-secondary" style="font-size:9px;">★ Wichtig</button>
                         <button onclick="setInboxFilter('transfer')" id="inbox-filter-transfer" class="btn-secondary" style="font-size:9px;">🤝 Transfer</button>
@@ -533,7 +533,7 @@
 
                     <div class="panel">
                         <div class="panel-header">📋 FORMATION & SPIELSTIL</div>
-                        <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:3px; margin-bottom:6px;">
+                        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:6px;">
                             <button onclick="setSecondTeamFormation('4-4-2')" id="st-f-4-4-2" class="btn-action">4-4-2</button>
                             <button onclick="setSecondTeamFormation('4-3-3')" id="st-f-4-3-3" class="btn-secondary">4-3-3</button>
                             <button onclick="setSecondTeamFormation('3-5-2')" id="st-f-3-5-2" class="btn-secondary">3-5-2</button>
@@ -585,19 +585,7 @@
                             <div style="font-size:9px; color:rgba(255,255,255,0.75);" id="dash-hero-subline">6. Liga · Spieltag 1</div>
                         </div>
                     </div>
-                    <div class="dashboard-hero-bowl-wrapper">
-                        <div class="dashboard-hero-floodlight" style="top:2%; left:6%;"></div>
-                        <div class="dashboard-hero-floodlight" style="top:2%; right:6%;"></div>
-                        <div class="dashboard-hero-floodlight" style="bottom:2%; left:6%;"></div>
-                        <div class="dashboard-hero-floodlight" style="bottom:2%; right:6%;"></div>
-                        <div class="dashboard-hero-bowl">
-                            <div class="dashboard-hero-stand" style="grid-column:2/4; grid-row:1;"></div>
-                            <div class="dashboard-hero-stand" style="grid-column:1; grid-row:1/4;"></div>
-                            <div class="dashboard-hero-stand" style="grid-column:4; grid-row:1/4;"></div>
-                            <div class="dashboard-hero-stand" style="grid-column:2/4; grid-row:3;"></div>
-                            <div class="dashboard-hero-pitch"></div>
-                        </div>
-                    </div>
+                    <div class="dashboard-hero-bowl-wrapper"></div>
                 </div>
                 <div id="dash-offers-alert" class="panel box-offer" style="display:none; border-color:var(--blue); margin-bottom:10px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -729,7 +717,7 @@
 
             <!-- 5. FABRIKEN & PRODUKTION -->
             <div id="screen-hub-wirtschaft" style="display:none;">
-            <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:4px; margin-bottom:8px;">
+            <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:8px;">
                 <button onclick="showScreen('screen-industry')" id="hubtab-btn-screen-industry" class="btn-action hubtab-btn tab-industry" style="font-size:10px; padding:6px 4px;">Fabriken</button>
                 <button onclick="showScreen('screen-raw-materials')" id="hubtab-btn-screen-raw-materials" class="btn-secondary hubtab-btn tab-industry" style="font-size:10px; padding:6px 4px;">Rohstoffe</button>
                 <button onclick="showScreen('screen-holding')" id="hubtab-btn-screen-holding" class="btn-secondary hubtab-btn tab-industry" style="font-size:10px; padding:6px 4px;">Holding & B2B</button>
@@ -1067,6 +1055,18 @@
             <!-- 13. KADER & TAKTIK -->
             <div id="screen-squad" style="display:none;">
                 <div class="panel">
+                    <div class="panel-header" style="color:var(--gold);">📊 KADER-ÜBERBLICK</div>
+                    <div id="squad-overview-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--gold);">📐 KADERTIEFE NACH POSITION</div>
+                    <div id="squad-depth-chart-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--gold);">🏅 KADER-BESTENLISTE</div>
+                    <div id="squad-leaderboard-box"></div>
+                </div>
+                <div class="panel">
                     <div class="panel-header">⚽ KADER & AUFSTELLUNG</div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px; margin-bottom:6px;">
                         <div>Kapitän: <select id="sel-captain" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
@@ -1123,7 +1123,14 @@
                 <div class="panel">
                     <div class="panel-header">KADERLISTE & ATTRIBUTE</div>
                     <div id="role-fit-summary" style="font-size:9px; color:var(--accent); margin-bottom:6px;"></div>
-                    <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:3px; margin-bottom:6px;">
+                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:4px;">
+                        <button onclick="setSquadSort('staerke')" id="ss-staerke" class="btn-action" style="font-size:8px; padding:5px 2px;">Stärke</button>
+                        <button onclick="setSquadSort('alter')" id="ss-alter" class="btn-secondary" style="font-size:8px; padding:5px 2px;">Alter</button>
+                        <button onclick="setSquadSort('marktwert')" id="ss-marktwert" class="btn-secondary" style="font-size:8px; padding:5px 2px;">Marktwert</button>
+                        <button onclick="setSquadSort('moral')" id="ss-moral" class="btn-secondary" style="font-size:8px; padding:5px 2px;">Moral</button>
+                        <button onclick="setSquadSort('name')" id="ss-name" class="btn-secondary" style="font-size:8px; padding:5px 2px;">A-Z</button>
+                    </div>
+                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:6px;">
                         <button onclick="setSquadFilter('alle')" id="sf-alle" class="btn-action" style="font-size:9px; padding:5px 2px;">Alle</button>
                         <button onclick="setSquadFilter('TW')" id="sf-TW" class="btn-secondary" style="font-size:9px; padding:5px 2px;">TW</button>
                         <button onclick="setSquadFilter('ABW')" id="sf-ABW" class="btn-secondary" style="font-size:9px; padding:5px 2px;">ABW</button>
@@ -1136,9 +1143,17 @@
 
             <!-- 14. TRAINING -->
             <div id="screen-training" style="display:none;">
+                <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:8px;">
+                    <button onclick="setTrainingTab('plan')" id="btn-tab-tra-plan" class="btn-action">📅 Wochenplan</button>
+                    <button onclick="setTrainingTab('minigames')" id="btn-tab-tra-minigames" class="btn-secondary">🎮 Minispiele</button>
+                    <button onclick="setTrainingTab('individual')" id="btn-tab-tra-individual" class="btn-secondary">🎯 Individuell</button>
+                    <button onclick="setTrainingTab('special')" id="btn-tab-tra-special" class="btn-secondary">🎥 Spezial</button>
+                </div>
+
+                <div id="training-tab-plan">
                 <div class="panel">
                     <div class="panel-header">🏋️ TEAM-TRAINING & WOCHENPLAN</div>
-                    <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:3px;">
+                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px;">
                         <button onclick="setTeamTraining('kondition')" id="tr-kondition" class="btn-secondary">🏃 Kondition</button>
                         <button onclick="setTeamTraining('taktik')" id="tr-taktik" class="btn-secondary">📋 Taktik</button>
                         <button onclick="setTeamTraining('technik')" id="tr-technik" class="btn-secondary">⚽ Technik</button>
@@ -1149,7 +1164,7 @@
                 </div>
                 <div class="panel">
                     <div class="panel-header">📅 WOCHENPLAN (7 TAGE)</div>
-                    <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:3px; margin-bottom:8px;">
+                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:8px;">
                         <button onclick="applyWeeklyTrainingPreset('ausgeglichen')" class="btn-secondary" style="font-size:9px; padding:5px 2px;">⚖️ Standard</button>
                         <button onclick="applyWeeklyTrainingPreset('kondition')" class="btn-secondary" style="font-size:9px; padding:5px 2px;">🏃 Kondition</button>
                         <button onclick="applyWeeklyTrainingPreset('technik')" class="btn-secondary" style="font-size:9px; padding:5px 2px;">⚽ Technik</button>
@@ -1168,6 +1183,19 @@
                     </div>
                 </div>
                 <div class="panel">
+                    <div class="panel-header">🔥 TRAININGSINTENSITÄT</div>
+                    <div id="training-intensity-buttons" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px;">
+                        <button onclick="setTrainingIntensity('locker')" id="intensity-btn-locker" class="btn-secondary">😌 Locker</button>
+                        <button onclick="setTrainingIntensity('normal')" id="intensity-btn-normal" class="btn-action">⚖️ Normal</button>
+                        <button onclick="setTrainingIntensity('hart')" id="intensity-btn-hart" class="btn-secondary">🔥 Hart</button>
+                    </div>
+                    <div style="font-size:9px; color:var(--text-muted); margin-top:4px;">Hart: mehr Trainingserfolg, mehr Fitnessverlust. Locker: umgekehrt.</div>
+                </div>
+                <div id="congestion-warning-box" style="display:none;"></div>
+                </div>
+
+                <div id="training-tab-minigames" style="display:none;">
+                <div class="panel">
                     <div class="panel-header">🎮 TRAININGS-MINISPIELE</div>
                     <div style="font-size:10px; color:#aaa; margin-bottom:6px;">
                         Trainiere echte Fähigkeiten deiner Spieler direkt im Minispiel. Einheiten heute übrig: <strong id="training-sessions-left" style="color:var(--accent);">2</strong> / 2
@@ -1179,25 +1207,45 @@
                     </div>
                     <select id="minigame-player-select" class="input-inline" style="width:100%; margin-bottom:6px;"></select>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
-                        <button onclick="openPenaltyGame(document.getElementById('minigame-player-select').value)" class="btn-action">⚽ Elfmeterschießen</button>
-                        <button onclick="openCrossingGame(document.getElementById('minigame-player-select').value)" class="btn-action">🎯 Flankentraining</button>
-                        <button onclick="openGoalkeeperGame(document.getElementById('minigame-player-select').value)" class="btn-action" style="grid-column: span 2;">🧤 Elfmeter halten (nur Torhüter)</button>
+                        <button onclick="openPenaltyGame(document.getElementById('minigame-player-select').value)" id="btn-minigame-penalty" class="btn-action">⚽ Elfmeterschießen</button>
+                        <button onclick="openCrossingGame(document.getElementById('minigame-player-select').value)" id="btn-minigame-crossing" class="btn-action">🎯 Flankentraining</button>
+                        <button onclick="openGoalkeeperGame(document.getElementById('minigame-player-select').value)" id="btn-minigame-goalkeeper" class="btn-action" style="grid-column: span 2;">🧤 Elfmeter halten (nur Torhüter)</button>
                     </div>
+                </div>
+                </div>
+
+                <div id="training-tab-individual" style="display:none;">
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--gold);">💪 FÄHIGKEITEN GEZIELT ANTRAINIEREN</div>
+                    <div class="box" style="font-size:9px; margin-bottom:6px;">Ein zugewiesener Trainer bildet einen Spieler über mehrere Spieltage gezielt in einer Fähigkeit fort - kostet Geld und Zeit, aber garantiert eine echte Verbesserung.</div>
+                    <div id="skill-training-active-list" style="margin-bottom:6px;"></div>
+                    <select id="skill-training-player-select" class="input-inline" style="width:100%; margin-bottom:4px;"></select>
+                    <select id="skill-training-stat-select" class="input-inline" style="width:100%; margin-bottom:4px;"></select>
+                    <select id="skill-training-coach-select" class="input-inline" style="width:100%; margin-bottom:6px;"></select>
+                    <button onclick="startSkillTraining()" class="btn-gold">Fähigkeitstraining starten</button>
+                    <button onclick="buyPremiumBooster('skill_training_rush')" class="btn-secondary" style="margin-top:6px; font-size:9px;">💎 Mit Diamanten sofort abschließen (150)</button>
                 </div>
                 <div class="panel">
                     <div class="panel-header">🎯 INDIVIDUELLES SPIELERTRAINING</div>
                     <div id="individual-training-list" style="max-height:220px; overflow-y:auto;"></div>
                 </div>
-                <div id="congestion-warning-box" style="display:none;"></div>
                 <div class="panel">
-                    <div class="panel-header">🔥 TRAININGSINTENSITÄT</div>
-                    <div id="training-intensity-buttons" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px;">
-                        <button onclick="setTrainingIntensity('locker')" id="intensity-btn-locker" class="btn-secondary">😌 Locker</button>
-                        <button onclick="setTrainingIntensity('normal')" id="intensity-btn-normal" class="btn-action">⚖️ Normal</button>
-                        <button onclick="setTrainingIntensity('hart')" id="intensity-btn-hart" class="btn-secondary">🔥 Hart</button>
-                    </div>
-                    <div style="font-size:9px; color:var(--text-muted); margin-top:4px;">Hart: mehr Trainingserfolg, mehr Fitnessverlust. Locker: umgekehrt.</div>
+                    <div class="panel-header">🥅 ELFMETERKILLER-FÖRDERPROGRAMM</div>
+                    <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Nur für erfahrene Torhüter (mind. 80 Pflichtspiel-Einsätze) - Chance auf die seltene Eigenschaft "Elfmeter-Killer" [12.000 €].</div>
+                    <select id="penalty-killer-select" class="input-inline" style="width:100%; margin-bottom:6px;">
+                        <option value="">Torhüter wählen...</option>
+                    </select>
+                    <button onclick="runPenaltyKillerProgram(document.getElementById('penalty-killer-select').value)" class="btn-secondary">🥅 Programm durchführen</button>
                 </div>
+                <div class="panel">
+                    <div class="panel-header">🏃‍♂️ ATHLETIK-TEST</div>
+                    <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Ermittelt die athletischen Werte eines Spielers präziser, kleine Chance auf Tempo-Kick.</div>
+                    <select id="athletic-test-select" class="input-inline" style="width:100%; margin-bottom:6px;"></select>
+                    <button onclick="runAthleticTest(document.getElementById('athletic-test-select').value)" class="btn-secondary">🏃‍♂️ Test durchführen</button>
+                </div>
+                </div>
+
+                <div id="training-tab-special" style="display:none;">
                 <div class="panel">
                     <div class="panel-header">🎥 SPEZIAL-EINHEITEN</div>
                     <button onclick="runVideoAnalysisSession()" id="btn-video-analysis" class="btn-secondary" style="margin-bottom:4px;">🎥 Video-Analyse-Einheit [2.500 €]</button>
@@ -1215,28 +1263,15 @@
                     <div id="youth-hospitant-list"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">🥅 ELFMETERKILLER-FÖRDERPROGRAMM</div>
-                    <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Nur für erfahrene Torhüter (mind. 80 Pflichtspiel-Einsätze) - Chance auf die seltene Eigenschaft "Elfmeter-Killer" [12.000 €].</div>
-                    <select id="penalty-killer-select" class="input-inline" style="width:100%; margin-bottom:6px;">
-                        <option value="">Torhüter wählen...</option>
-                    </select>
-                    <button onclick="runPenaltyKillerProgram(document.getElementById('penalty-killer-select').value)" class="btn-secondary">🥅 Programm durchführen</button>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">🏃‍♂️ ATHLETIK-TEST</div>
-                    <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Ermittelt die athletischen Werte eines Spielers präziser, kleine Chance auf Tempo-Kick.</div>
-                    <select id="athletic-test-select" class="input-inline" style="width:100%; margin-bottom:6px;"></select>
-                    <button onclick="runAthleticTest(document.getElementById('athletic-test-select').value)" class="btn-secondary">🏃‍♂️ Test durchführen</button>
-                </div>
-                <div class="panel">
                     <div class="panel-header">📜 TRAININGS-HISTORIE</div>
                     <div id="training-history-box"></div>
+                </div>
                 </div>
             </div>
 
             <!-- 15. STADION -->
             <div id="screen-hub-ausbau" style="display:none;">
-            <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(5, 1fr); gap:3px; margin-bottom:8px;">
+            <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:8px;">
                 <button onclick="showScreen('screen-stadium')" id="hubtab-btn-screen-stadium" class="btn-action" style="font-size:10px; padding:6px 4px;">Stadion</button>
                 <button onclick="showScreen('screen-campus')" id="hubtab-btn-screen-campus" class="btn-secondary" style="font-size:10px; padding:6px 4px;">Campus</button>
                 <button onclick="showScreen('screen-staff')" id="hubtab-btn-screen-staff" class="btn-secondary" style="font-size:10px; padding:6px 4px;">Personal</button>
@@ -1249,19 +1284,7 @@
                 <div class="stadium-hero-visual-wrapper">
                     <div class="dashboard-hero-sky">
                         <div class="stadium-hero-name-overlay" id="stadium-hero-name-overlay">Vereinsstadion</div>
-                        <div class="dashboard-hero-bowl-wrapper">
-                            <div class="dashboard-hero-floodlight" style="top:2%; left:6%;"></div>
-                            <div class="dashboard-hero-floodlight" style="top:2%; right:6%;"></div>
-                            <div class="dashboard-hero-floodlight" style="bottom:2%; left:6%;"></div>
-                            <div class="dashboard-hero-floodlight" style="bottom:2%; right:6%;"></div>
-                            <div class="dashboard-hero-bowl" id="stadium-hero-bowl">
-                                <div class="dashboard-hero-stand" style="grid-column:2/4; grid-row:1;"></div>
-                                <div class="dashboard-hero-stand" style="grid-column:1; grid-row:1/4;"></div>
-                                <div class="dashboard-hero-stand" style="grid-column:4; grid-row:1/4;"></div>
-                                <div class="dashboard-hero-stand" style="grid-column:2/4; grid-row:3;"></div>
-                                <div class="dashboard-hero-pitch"></div>
-                            </div>
-                        </div>
+                        <div class="dashboard-hero-bowl-wrapper" id="stadium-hero-bowl-wrapper"></div>
                     </div>
                 </div>
                 <div class="panel">
@@ -1351,6 +1374,13 @@
                 </div>
             </div>
             <div id="screen-fans" style="display:none;">
+                <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:8px;">
+                    <button onclick="setFansTab('sicherheit')" id="btn-tab-fan-sicherheit" class="btn-action">🛡️ Sicherheit</button>
+                    <button onclick="setFansTab('gruppen')" id="btn-tab-fan-gruppen" class="btn-secondary">🎨 Fangruppen</button>
+                    <button onclick="setFansTab('programme')" id="btn-tab-fan-programme" class="btn-secondary">📋 Programme</button>
+                </div>
+
+                <div id="fans-tab-sicherheit">
                 <div class="panel">
                     <div class="panel-header">
                         <span>📢 FAN-ZENTRALE & ORDNERDIENST</span>
@@ -1358,11 +1388,11 @@
                     </div>
                     <div class="box">
                         Eingesetzte Ordner: <strong id="stewards-count-disp" style="color:var(--accent);">100</strong> (Sicherheitsquote: <strong id="stewards-safety-disp" style="color:var(--primary);">85%</strong>)
-                        <div style="display:flex; gap:3px; margin-top:4px;">
-                            <button onclick="setStewards(50)" class="btn-secondary">50 (Sparflamme)</button>
-                            <button onclick="setStewards(100)" class="btn-secondary">100 (Standard)</button>
-                            <button onclick="setStewards(200)" class="btn-secondary">200 (Erhöht)</button>
-                            <button onclick="setStewards(350)" class="btn-secondary">350 (Hochsicherheit)</button>
+                        <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:4px; margin-top:4px;">
+                            <button onclick="setStewards(50)" class="btn-secondary" style="font-size:9px;">50 (Sparflamme)</button>
+                            <button onclick="setStewards(100)" class="btn-secondary" style="font-size:9px;">100 (Standard)</button>
+                            <button onclick="setStewards(200)" class="btn-secondary" style="font-size:9px;">200 (Erhöht)</button>
+                            <button onclick="setStewards(350)" class="btn-secondary" style="font-size:9px;">350 (Hochsicherheit)</button>
                         </div>
                     </div>
                 </div>
@@ -1370,6 +1400,17 @@
                     <div class="panel-header">🛡️ EIGENE ORDNER & SICHERHEITSKRÄFTE</div>
                     <div id="security-workforce-box"></div>
                 </div>
+                <div class="panel" id="critical-fan-letter-box" style="display:none; border: 1px solid var(--danger);">
+                    <div class="panel-header" style="color:var(--danger);">✉️ KRITISCHER FAN-BRIEF</div>
+                    <div class="box" style="font-size:10px;">Besorgte Fans fordern eine Reaktion. Wie antwortet der Verein?</div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
+                        <button onclick="respondToCriticalFanLetter('zuhören')" class="btn-secondary">🗣️ Zuhören & Verständnis zeigen</button>
+                        <button onclick="respondToCriticalFanLetter('zurückweisen')" class="btn-secondary">🛡️ Kritik zurückweisen</button>
+                    </div>
+                </div>
+                </div>
+
+                <div id="fans-tab-gruppen" style="display:none;">
                 <div class="panel">
                     <div id="fan-groups-list"></div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px; margin-top:6px;">
@@ -1382,14 +1423,13 @@
                     <div id="attendance-chart-box" style="margin-bottom:10px;"></div>
                     <div id="attendance-ranking-box"></div>
                 </div>
-                <div class="panel" id="critical-fan-letter-box" style="display:none; border: 1px solid var(--danger);">
-                    <div class="panel-header" style="color:var(--danger);">✉️ KRITISCHER FAN-BRIEF</div>
-                    <div class="box" style="font-size:10px;">Besorgte Fans fordern eine Reaktion. Wie antwortet der Verein?</div>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
-                        <button onclick="respondToCriticalFanLetter('zuhören')" class="btn-secondary">🗣️ Zuhören & Verständnis zeigen</button>
-                        <button onclick="respondToCriticalFanLetter('zurückweisen')" class="btn-secondary">🛡️ Kritik zurückweisen</button>
-                    </div>
+                <div class="panel">
+                    <div class="panel-header">📰 FAN-FEED</div>
+                    <div id="fan-feed-box"></div>
                 </div>
+                </div>
+
+                <div id="fans-tab-programme" style="display:none;">
                 <div class="panel">
                     <div class="panel-header">👥 MITGLIEDSCHAFTEN & EVENTS</div>
                     <div id="fan-membership-box" class="box" style="margin-bottom:6px;"></div>
@@ -1409,7 +1449,7 @@
                     <button onclick="toggleFanProject()" id="btn-fan-project" class="btn-secondary" style="margin-bottom:6px;">🤝 Fanprojekt einrichten [4.000 €]</button>
                     <button onclick="toggleFanBusProgram()" id="btn-fan-bus" class="btn-secondary">🚌 Fanbus-Programm einrichten [6.000 €]</button>
                     <div id="tradition-status-box" class="box" style="margin-top:6px; font-size:10px;"></div>
-                    <div style="margin-top:6px; display:flex; gap:4px;">
+                    <div style="margin-top:6px; display:grid; grid-template-columns: repeat(3, 1fr); gap:4px;">
                         <button onclick="setSeasonMoodTarget(60)" class="btn-secondary" style="font-size:9px;">🎯 Ziel: 60%</button>
                         <button onclick="setSeasonMoodTarget(75)" class="btn-secondary" style="font-size:9px;">🎯 Ziel: 75%</button>
                         <button onclick="setSeasonMoodTarget(90)" class="btn-secondary" style="font-size:9px;">🎯 Ziel: 90%</button>
@@ -1420,8 +1460,10 @@
                     <div id="youth-sponsorship-list"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">📰 FAN-FEED</div>
-                    <div id="fan-feed-box"></div>
+                    <div class="panel-header" style="color:var(--gold);">💎 PREMIUM: FAN-BOOST</div>
+                    <div class="box" style="font-size:9px;">Sofortiger Fan-Zufriedenheits-Schub für Diamanten.</div>
+                    <button onclick="buyPremiumBooster('fan_love')" class="btn-secondary">💎 Fan-Zufriedenheit +20 kaufen (90)</button>
+                </div>
                 </div>
             </div>
 
@@ -1449,7 +1491,7 @@
 
             <!-- 19. TRANSFERMARKT MIT KI-ANGEBOTEN -->
             <div id="screen-hub-kaderplanung" style="display:none;">
-            <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:4px; margin-bottom:8px;">
+            <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:8px;">
                 <button onclick="showScreen('screen-transfer')" id="hubtab-btn-screen-transfer" class="btn-action" style="font-size:10px; padding:6px 4px;">Transfermarkt</button>
                 <button onclick="showScreen('screen-scouting-global')" id="hubtab-btn-screen-scouting-global" class="btn-secondary" style="font-size:10px; padding:6px 4px;">Scouting</button>
                 <button onclick="showScreen('screen-youth')" id="hubtab-btn-screen-youth" class="btn-secondary" style="font-size:10px; padding:6px 4px;">Jugend</button>
@@ -1462,7 +1504,7 @@
                         <span>🤝 TRANSFERMARKT, SCOUTING & VERHANDLUNGEN</span>
                         <span id="transfer-offers-summary" style="font-size:10px; color:var(--accent);"></span>
                     </div>
-                    <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:4px; margin-bottom:6px;">
+                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:6px;">
                         <button onclick="setTransferTab('offers')" id="btn-tab-tr-offers" class="btn-action">📩 Angebote (<span id="tab-offers-badge">0</span>)</button>
                         <button onclick="setTransferTab('market')" id="btn-tab-tr-market" class="btn-secondary">Transfermarkt</button>
                         <button onclick="setTransferTab('free')" id="btn-tab-tr-free" class="btn-secondary">Vereinslose</button>
@@ -1536,6 +1578,10 @@
                 </div>
             </div>
             <div id="screen-contracts" style="display:none;">
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--gold);">📅 SAISONPLANUNG</div>
+                    <div id="season-planning-box"></div>
+                </div>
                 <div class="panel">
                     <div class="panel-header">📝 VERTRAGSVERWALTUNG</div>
                     <div id="contracts-list"></div>
@@ -1935,7 +1981,7 @@
                     <!-- LIVE SHOUTS -->
                     <div class="panel" style="margin:4px 0; padding:6px; background:rgba(0,0,0,0.5);">
                         <div style="font-size:9px; font-weight:bold; color:var(--accent); margin-bottom:3px;">📢 LIVE-COACHING ANWEISUNGEN:</div>
-                        <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:3px;">
+                        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px;">
                             <button onclick="setLiveShout('standard')" id="shout-standard" class="btn-action" style="font-size:8px; padding:4px 2px;">⚖️ Standard</button>
                             <button onclick="setLiveShout('brechstange')" id="shout-brechstange" class="btn-secondary" style="font-size:8px; padding:4px 2px;">💥 Brechstange</button>
                             <button onclick="setLiveShout('bus')" id="shout-bus" class="btn-secondary" style="font-size:8px; padding:4px 2px;">🛡️ Bus parken</button>
