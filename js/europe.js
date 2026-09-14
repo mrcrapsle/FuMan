@@ -1,3 +1,4 @@
+
 // ==========================================
 // CHAMPIONS CUP (EUROPAPOKAL)
 // ==========================================
@@ -6,7 +7,7 @@
         // INTERNATIONAL_CLUB_NAMES-Pool statt (wie zuvor fälschlich) exakter echter
         // Vereinsnamen ("Real Madrid", "FC Bayern" etc.) - Konsistenz mit dem Rest des Spiels.
         const topEurope = INTERNATIONAL_CLUB_NAMES.filter(n => n !== 'Liverpol FC').slice(0, 7);
-        let participants = game.inEurope ? ["Lok Leipzig", ...topEurope] : ["Liverpol FC", ...topEurope];
+        let participants = game.inEurope ? ["1.FC Moritz Leipzig", ...topEurope] : ["Liverpol FC", ...topEurope];
         participants.sort(() => Math.random() - 0.5);
 
         europeTournament.groupA = participants.slice(0, 4).map(name => ({ name, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, pts: 0, str: 84 + Math.floor(Math.random() * 6) }));
@@ -21,9 +22,9 @@
     // aber als Gruppen-Auslosung: zeigt alle drei Gruppengegner nacheinander.
     let europeDrawRevealTimer = null;
     function showEuropeDrawCeremony() {
-        let ourGroup = europeTournament.groupA.some(t => t.name === "Lok Leipzig") ? europeTournament.groupA : europeTournament.groupB;
-        let groupLabel = europeTournament.groupA.some(t => t.name === "Lok Leipzig") ? "Gruppe A" : "Gruppe B";
-        let opponents = ourGroup.filter(t => t.name !== "Lok Leipzig").map(t => t.name);
+        let ourGroup = europeTournament.groupA.some(t => t.name === "1.FC Moritz Leipzig") ? europeTournament.groupA : europeTournament.groupB;
+        let groupLabel = europeTournament.groupA.some(t => t.name === "1.FC Moritz Leipzig") ? "Gruppe A" : "Gruppe B";
+        let opponents = ourGroup.filter(t => t.name !== "1.FC Moritz Leipzig").map(t => t.name);
         if (opponents.length === 0) { showToast('Keine Auslosung verfügbar - erst für den Champions Cup qualifizieren!', 'error'); return; }
 
         document.getElementById('europe-draw-round-name').innerText = `Champions Cup - ${groupLabel}`;
@@ -55,9 +56,9 @@
     // 27) - gleiches Reveal-Prinzip wie die Gruppenauslosung.
     function showEuropeKnockoutDraw() {
         if (europeTournament.semiFinals.length === 0) { showToast('Noch keine K.-o.-Paarung bekannt - erst die Gruppenphase abschließen!', 'error'); return; }
-        let ourTie = europeTournament.semiFinals.find(s => s.teamA === "Lok Leipzig" || s.teamB === "Lok Leipzig");
-        if (!ourTie) { showToast('Lok Leipzig ist nicht im Halbfinale vertreten.', 'error'); return; }
-        let opponent = ourTie.teamA === "Lok Leipzig" ? ourTie.teamB : ourTie.teamA;
+        let ourTie = europeTournament.semiFinals.find(s => s.teamA === "1.FC Moritz Leipzig" || s.teamB === "1.FC Moritz Leipzig");
+        if (!ourTie) { showToast('1.FC Moritz Leipzig ist nicht im Halbfinale vertreten.', 'error'); return; }
+        let opponent = ourTie.teamA === "1.FC Moritz Leipzig" ? ourTie.teamB : ourTie.teamA;
 
         document.getElementById('europe-draw-round-name').innerText = 'Champions Cup - Halbfinale';
         document.getElementById('europe-draw-reveal-text').innerText = '🎟️ Die Kugeln rollen...';
@@ -84,8 +85,8 @@
         // Torwarttrainer: bessere Paradenquote unseres Torhüters senkt die Trefferquote des
         // GEGNERS im Elfmeterschießen (war bisher nur Text ohne tatsächliche Wirkung).
         if (staffMembers.twTrainer.hired) {
-            if (teamAName === "Lok Leipzig") successProbB = Math.max(0.4, successProbB - 0.07);
-            else if (teamBName === "Lok Leipzig") successProbA = Math.max(0.4, successProbA - 0.07);
+            if (teamAName === "1.FC Moritz Leipzig") successProbB = Math.max(0.4, successProbB - 0.07);
+            else if (teamBName === "1.FC Moritz Leipzig") successProbA = Math.max(0.4, successProbA - 0.07);
         }
 
         // Elfmeter-Erfolgsquote als Spielerstatistik: bei benannten, echten Spielern unserer
@@ -192,7 +193,7 @@
     }
 
     // ---------- ELFMETERSCHÜTZEN-AUSWAHL ----------
-    // Nur bei LIVE gespielten Partien mit Beteiligung von Lok Leipzig (nicht bei Saison-
+    // Nur bei LIVE gespielten Partien mit Beteiligung von 1.FC Moritz Leipzig (nicht bei Saison-
     // Durchsimulation/Admin-Vorspulen, um die Massensimulation nicht zu blockieren): der
     // Nutzer bestimmt die eigene Schützen-Reihenfolge selbst, statt dass automatisch die
     // besten 5 Schützen nach Schuss-Wert gewählt werden.
@@ -270,7 +271,7 @@
         tie.winner = shootout.winner;
         tie.shootoutLog = shootout.log;
         tie.shootoutScore = `${shootout.scoreA}:${shootout.scoreB}`;
-        if ([tie.teamA, tie.teamB].includes("Lok Leipzig")) showPenaltyShootoutTicker(shootout, tie.teamA, tie.teamB);
+        if ([tie.teamA, tie.teamB].includes("1.FC Moritz Leipzig")) showPenaltyShootoutTicker(shootout, tie.teamA, tie.teamB);
         finalizeTieResult(tie);
     }
 
@@ -279,7 +280,7 @@
     // ist das erzählerisch bemerkenswert genug für eine eigene Notiz in der Rivalen-Bilanz.
     function checkShootoutRivalryIntensity(teamA, teamB) {
         if (!game.permanentRivalName) return;
-        let opponent = teamA === "Lok Leipzig" ? teamB : (teamB === "Lok Leipzig" ? teamA : null);
+        let opponent = teamA === "1.FC Moritz Leipzig" ? teamB : (teamB === "1.FC Moritz Leipzig" ? teamA : null);
         if (opponent !== game.permanentRivalName) return;
         rivalryRecord.shootoutsVsRival = (rivalryRecord.shootoutsVsRival || 0) + 1;
         game.seasonsSinceLastRivalShootout = 0;
@@ -290,10 +291,10 @@
 
     function finalizeTieResult(tie) {
         if (tie.penalties) checkShootoutRivalryIntensity(tie.teamA, tie.teamB);
-        if (tie.teamA === "Lok Leipzig" || tie.teamB === "Lok Leipzig") {
+        if (tie.teamA === "1.FC Moritz Leipzig" || tie.teamB === "1.FC Moritz Leipzig") {
             let aggA = tie.leg1Home + tie.leg2Away;
             let aggB = tie.leg1Away + tie.leg2Home;
-            let weWon = tie.winner === "Lok Leipzig";
+            let weWon = tie.winner === "1.FC Moritz Leipzig";
             let aggText = `Gesamt: ${aggA}:${aggB}${tie.penalties ? ` (n.E. ${tie.shootoutScore})` : ''}`;
             addInboxMessage('vertrag', weWon ? '🎉 Finaleinzug!' : '❌ Halbfinal-Aus', `${tie.teamA} vs. ${tie.teamB} - ${aggText}`, 'screen-europe');
             if (!weWon) alert(`❌ CHAMPIONS CUP HALBFINALE VERLOREN!\n${tie.teamA} vs. ${tie.teamB} - ${aggText}`);
@@ -310,8 +311,8 @@
                 let pairings = (groupMatchIdx % 3 === 0) ? [[t1, t2], [t3, t4]] : ((groupMatchIdx % 3 === 1) ? [[t1, t3], [t2, t4]] : [[t1, t4], [t2, t3]]);
 
                 pairings.forEach(([h, a]) => {
-                    let hStr = h.name === "Lok Leipzig" ? calcTeamStrength(true) : h.str;
-                    let aStr = a.name === "Lok Leipzig" ? calcTeamStrength(false) : a.str;
+                    let hStr = h.name === "1.FC Moritz Leipzig" ? calcTeamStrength(true) : h.str;
+                    let aStr = a.name === "1.FC Moritz Leipzig" ? calcTeamStrength(false) : a.str;
                     let goals = simulateGoals(hStr, aStr);
                     let hg = goals.myGoals;
                     let ag = goals.oppGoals;
@@ -324,8 +325,8 @@
                     else if (hg < ag) { a.won++; a.pts += 3; h.lost++; }
                     else { h.drawn++; h.pts += 1; a.drawn++; a.pts += 1; }
 
-                    if (h.name === "Lok Leipzig" || a.name === "Lok Leipzig") {
-                        let weWon = (h.name === "Lok Leipzig" && hg > ag) || (a.name === "Lok Leipzig" && ag > hg);
+                    if (h.name === "1.FC Moritz Leipzig" || a.name === "1.FC Moritz Leipzig") {
+                        let weWon = (h.name === "1.FC Moritz Leipzig" && hg > ag) || (a.name === "1.FC Moritz Leipzig" && ag > hg);
                         if (weWon) {
                             game.money += 1500000;
                             if (isLiveContext) addManagerXP(300);
@@ -348,8 +349,8 @@
             // fürs Europapokal-Format. Nur das Hinspiel-Tor wird hier simuliert; der Sieger
             // steht erst nach dem Rückspiel (siehe mday===29) fest.
             function simulateLeg(home, away) {
-                let hStr = home.name === "Lok Leipzig" ? calcTeamStrength(true) : home.str;
-                let aStr = away.name === "Lok Leipzig" ? calcTeamStrength(false) : away.str;
+                let hStr = home.name === "1.FC Moritz Leipzig" ? calcTeamStrength(true) : home.str;
+                let aStr = away.name === "1.FC Moritz Leipzig" ? calcTeamStrength(false) : away.str;
                 let goals = simulateGoals(hStr, aStr);
                 return { homeGoals: goals.myGoals, awayGoals: goals.oppGoals };
             }
@@ -362,7 +363,7 @@
                 { teamA: b1.name, teamB: a2.name, leg1Home: tie2Leg1.homeGoals, leg1Away: tie2Leg1.awayGoals, leg2Home: null, leg2Away: null, winner: null, penalties: false }
             ];
 
-            let userInSemis = [a1.name, a2.name, b1.name, b2.name].includes("Lok Leipzig");
+            let userInSemis = [a1.name, a2.name, b1.name, b2.name].includes("1.FC Moritz Leipzig");
             if (userInSemis) {
                 game.money += 8000000;
                 if (isLiveContext) addManagerXP(1000);
@@ -377,11 +378,11 @@
         if (mday === 29 && europeTournament.semiFinals.length > 0) {
             europeTournament.semiFinals.forEach(tie => {
                 let allTeams = [...europeTournament.groupA, ...europeTournament.groupB];
-                let strA = tie.teamA === "Lok Leipzig" ? calcTeamStrength(false) : (allTeams.find(t => t.name === tie.teamA)?.str || 84);
-                let strB = tie.teamB === "Lok Leipzig" ? calcTeamStrength(true) : (allTeams.find(t => t.name === tie.teamB)?.str || 84);
+                let strA = tie.teamA === "1.FC Moritz Leipzig" ? calcTeamStrength(false) : (allTeams.find(t => t.name === tie.teamA)?.str || 84);
+                let strB = tie.teamB === "1.FC Moritz Leipzig" ? calcTeamStrength(true) : (allTeams.find(t => t.name === tie.teamB)?.str || 84);
                 // Rückspiel-Heimvorteil: das entscheidende Spiel zuhause bringt einen kleinen
                 // Motivationsschub, ähnlich der Lokalderby-Atmosphäre (siehe applyMatchdayFinances()).
-                if (tie.teamB === "Lok Leipzig") {
+                if (tie.teamB === "1.FC Moritz Leipzig") {
                     strB += 2;
                     // Zuschauerrekord: das wichtigste Spiel der Saison ist automatisch
                     // ausverkauft, unabhängig von der sonstigen Stadionauslastung (ähnlich
@@ -401,19 +402,19 @@
 
                 if (aggA === aggB) {
                     tie.penalties = true;
-                    let weAreInvolved = tie.teamA === "Lok Leipzig" || tie.teamB === "Lok Leipzig";
+                    let weAreInvolved = tie.teamA === "1.FC Moritz Leipzig" || tie.teamB === "1.FC Moritz Leipzig";
                     if (weAreInvolved && isLiveContext) {
                         // Wartet auf die Schützen-Auswahl des Nutzers - Auflösung erfolgt im
                         // Callback -> resolveShootoutForTie() -> finalizeTieResult().
                         openShooterOrderSelection(null, (names) => {
-                            let ourNamesA = tie.teamA === "Lok Leipzig" ? names : null;
-                            let ourNamesB = tie.teamB === "Lok Leipzig" ? names : null;
+                            let ourNamesA = tie.teamA === "1.FC Moritz Leipzig" ? names : null;
+                            let ourNamesB = tie.teamB === "1.FC Moritz Leipzig" ? names : null;
                             resolveShootoutForTie(tie, strA, strB, ourNamesA, ourNamesB);
                         });
                         return;
                     }
-                    let ourNamesA = tie.teamA === "Lok Leipzig" ? autoSelectShooters() : null;
-                    let ourNamesB = tie.teamB === "Lok Leipzig" ? autoSelectShooters() : null;
+                    let ourNamesA = tie.teamA === "1.FC Moritz Leipzig" ? autoSelectShooters() : null;
+                    let ourNamesB = tie.teamB === "1.FC Moritz Leipzig" ? autoSelectShooters() : null;
                     resolveShootoutForTie(tie, strA, strB, ourNamesA, ourNamesB);
                 } else {
                     tie.winner = aggA > aggB ? tie.teamA : tie.teamB;
@@ -427,17 +428,17 @@
             let final1 = europeTournament.semiFinals[0].winner;
             let final2 = europeTournament.semiFinals[1].winner;
 
-            // Das Finale wird jetzt ebenfalls ECHT simuliert (vorher gewann "Lok Leipzig"
+            // Das Finale wird jetzt ebenfalls ECHT simuliert (vorher gewann "1.FC Moritz Leipzig"
             // automatisch IMMER, sobald man das Finale erreicht hatte - ein zweiter,
             // gravierender Bug, der den Titel praktisch geschenkt hat).
             let allTeams = [...europeTournament.groupA, ...europeTournament.groupB];
-            let getFinalistStrength = name => name === "Lok Leipzig" ? calcTeamStrength(true) : (allTeams.find(t => t.name === name)?.str || 84);
+            let getFinalistStrength = name => name === "1.FC Moritz Leipzig" ? calcTeamStrength(true) : (allTeams.find(t => t.name === name)?.str || 84);
             let str1 = getFinalistStrength(final1);
             let str2 = getFinalistStrength(final2);
             let goals = simulateGoals(str1, str2);
             let hg = goals.myGoals, ag = goals.oppGoals;
             let winner = hg === ag ? (Math.random() < (0.5 + (str1 - str2) * 0.02) ? final1 : final2) : (hg > ag ? final1 : final2);
-            let weWin = winner === "Lok Leipzig";
+            let weWin = winner === "1.FC Moritz Leipzig";
 
             europeTournament.finalMatch = { home: final1, away: final2, score: `${hg} : ${ag}`, winner };
 
@@ -447,8 +448,8 @@
                 boostFanBaseFloor(15, 'Der Champions Cup Sieg');
                 if (isLiveContext) addManagerXP(3000);
                 playSound('goal');
-                alert("👑🏆 EUROPAS KRÖNUNG!\nLok Leipzig gewinnt den CHAMPIONS CUP! +25.000.000 € Siegprämie!");
-            } else if (final1 === "Lok Leipzig" || final2 === "Lok Leipzig") {
+                alert("👑🏆 EUROPAS KRÖNUNG!\n1.FC Moritz Leipzig gewinnt den CHAMPIONS CUP! +25.000.000 € Siegprämie!");
+            } else if (final1 === "1.FC Moritz Leipzig" || final2 === "1.FC Moritz Leipzig") {
                 if (isLiveContext) addManagerXP(500);
                 alert(`❌ FINALE VERLOREN!\nKnapp am Titel vorbeigeschrammt: ${final1} ${hg}:${ag} ${final2}. Dennoch eine herausragende Saison!`);
             }
@@ -465,7 +466,7 @@
             tbody.innerHTML = '';
             let sorted = [...grp].sort((a, b) => b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga));
             sorted.forEach(t => {
-                let isUs = t.name === "Lok Leipzig";
+                let isUs = t.name === "1.FC Moritz Leipzig";
                 tbody.innerHTML += `<tr><td style="text-align:left; ${isUs?'color:var(--primary); font-weight:bold;':''}">${t.name}</td><td>${t.played}</td><td>${t.gf}:${t.ga}</td><td><strong>${t.pts}</strong></td></tr>`;
             });
         };
@@ -499,3 +500,4 @@
             }
         }
     }
+

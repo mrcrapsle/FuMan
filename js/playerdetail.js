@@ -1,3 +1,4 @@
+
     // ==========================================
     // SPIELER-DETAIL-POPUP: wiederverwendbares Modal für Kader, Transfermarkt, Scouting &
     // zweite Mannschaft - im Stil der Referenz-App (Foto, Kerndaten-Grid, 18er-Fähigkeiten-
@@ -134,3 +135,4 @@
         closePlayerDetail();
         updateUI();
     }
+

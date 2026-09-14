@@ -1,6 +1,10 @@
+
 // ==========================================
 // SPIELZUSTAND & DATENMODELLE
 // ==========================================
+    // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
+    // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
+    const GAME_VERSION = { number: '1.9', date: '14.09.2026' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -65,7 +69,7 @@
         // Zweite Mannschaft: eigenständiger, parallel hochspielbarer Klub, der ganz unten
         // in der niedrigsten Liga startet (siehe secondteam.js). isActive statt "active",
         // um Namenskollisionen mit anderen Modulen zu vermeiden.
-        secondTeam: { isActive: false, name: 'Lok Leipzig II', leagueLevel: 5, formation: '4-4-2', tacticStyle: 'ausgeglichen', trainingFocus: 'ausgeglichen' },
+        secondTeam: { isActive: false, name: '1.FC Moritz Leipzig II', leagueLevel: 5, formation: '4-4-2', tacticStyle: 'ausgeglichen', trainingFocus: 'ausgeglichen' },
         permanentRivalName: null,
         rivalHistoryArchive: [],
         winterWindowActive: false,
@@ -117,10 +121,22 @@
         // Erfolge sorgen so langfristig für eine höhere Stammfan-Basis statt nur einem
         // vorübergehenden Stimmungs-Boost.
         recordAttendance: 0,
+        skillTrainingQueue: [],
+        sellOnClauses: [],
+        premiumPoints: 0,
+        xpDoublerMatchdaysLeft: 0,
+        injuryShieldMatchdaysLeft: 0,
+        ticketIncomeBoostNextMatch: false,
+        nextScoutGuaranteed: false,
+        sponsorBoostMatchdaysLeft: 0,
+        merchDoubleNextMatch: false,
+        weatherGuaranteeNextMatch: false,
+        luckyCharmNextMatch: false,
+        securityCalmNextMatch: false,
         recordAttendanceSeason: 0,
         fanBaseFloor: 10,
         clubCrestColor: '#f5b942',
-        clubCrestSymbol: 'LL',
+        clubCrestSymbol: 'FCM',
         clubCrestPattern: 'keins',
         loyaltyDeclineCount: 0,
         legendStatus: false,
@@ -260,6 +276,7 @@
     };
 
     let stadium = {
+        upgrades: {},
         name: null,
         namingRightsSponsor: null,
         namingRightsIncome: 0,
@@ -409,6 +426,8 @@
     let lineup = [];
     let secondTeamSquad = [];
     let secondTeamLineup = [];
+    let youthLeagueTable = [];
+    let youthLeagueMatchday = 0;
     let secondTeamMarketPlayers = [];
     let loanedPlayers = [];
     let loanClubRelationships = {};
@@ -421,6 +440,8 @@
     let fixturesData = [];
     let marketPlayers = [];
     let freeAgentPlayers = [];
+    let loanablePlayers = [];
+    let incomingLoans = []; // { playerId, parentClub, matchdaysLeft, buyOptionFee }
     let youthTalents = [];
 
     let cupTournament = {
@@ -441,3 +462,4 @@
         semiFinals: [],
         finalMatch: null
     };
+

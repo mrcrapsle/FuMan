@@ -1,3 +1,4 @@
+
     function renderUnderworldView() {
         document.getElementById('uw-pressure').innerText = underworld.pressure + '%';
         let acts = [];
@@ -133,3 +134,4 @@
             addInboxMessage('vertrag', '📉 Insider-Wette verpufft', 'Ohne Sieg gab es diesmal keine Auszahlung auf die heimliche Wette - der Einsatz ist verloren.', 'screen-underworld');
         }
     }
+

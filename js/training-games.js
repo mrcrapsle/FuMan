@@ -1,3 +1,4 @@
+
 // ==========================================
 // TRAINING-MINISPIELE (Elfmeterschießen & Flankentraining)
 // ==========================================
@@ -27,10 +28,19 @@ function consumeTrainingSession() {
 // ---------- ELFMETERSCHIESSEN ----------
 let penaltyGameState = null;
 
+function getMinigameCost() {
+    let scale = typeof leagueScaleFactor === 'function' ? leagueScaleFactor() : 1;
+    return Math.max(800, Math.round(2000 * scale));
+}
 function openPenaltyGame(playerId) {
     if (trainingSessionsLeft() <= 0) { showToast('Keine Trainingseinheiten mehr heute übrig!', 'error'); return; }
     let player = squad.find(p => p.id === playerId);
     if (!player) return;
+    // Bugfix (auf Wunsch): Trainings-Minispiele waren bisher komplett kostenlos - jetzt eine
+    // spürbare, aber nicht überteuerte liga-skalierte Trainingsgebühr pro Einheit.
+    let cost = getMinigameCost();
+    if (game.money < cost) { showToast(`Nicht genug Geld für die Trainingseinheit! Benötigt: ${formatVal(cost)}`, 'error'); return; }
+    game.money -= cost;
     playSound('click');
     penaltyGameState = { playerId, shotsTaken: 0, goals: 0, totalShots: 5 };
     document.getElementById('minigame-title').innerText = '⚽ Elfmeterschießen: ' + player.name;
@@ -38,6 +48,7 @@ function openPenaltyGame(playerId) {
     document.getElementById('minigame-crossing').style.display = 'none';
     document.getElementById('minigame-overlay').classList.add('show');
     updatePenaltyGameUI();
+    updateUI();
 }
 
 function updatePenaltyGameUI() {
@@ -114,6 +125,9 @@ function openCrossingGame(playerId) {
     if (trainingSessionsLeft() <= 0) { showToast('Keine Trainingseinheiten mehr heute übrig!', 'error'); return; }
     let player = squad.find(p => p.id === playerId);
     if (!player) return;
+    let cost = getMinigameCost();
+    if (game.money < cost) { showToast(`Nicht genug Geld für die Trainingseinheit! Benötigt: ${formatVal(cost)}`, 'error'); return; }
+    game.money -= cost;
     playSound('click');
     crossingGameState = { playerId, attempts: 0, totalAttempts: 5, score: 0, position: 0, direction: 1 };
     document.getElementById('minigame-title').innerText = '🎯 Flankentraining: ' + player.name;
@@ -122,6 +136,7 @@ function openCrossingGame(playerId) {
     document.getElementById('minigame-overlay').classList.add('show');
     updateCrossingGameUI();
     startCrossingAnimation();
+    updateUI();
 }
 
 function startCrossingAnimation() {
@@ -212,6 +227,9 @@ function openGoalkeeperGame(playerId) {
     let player = squad.find(p => p.id === playerId);
     if (!player) return;
     if (player.pos !== 'TW') { showToast('Dieses Training ist nur für Torhüter gedacht!', 'error'); return; }
+    let cost = getMinigameCost();
+    if (game.money < cost) { showToast(`Nicht genug Geld für die Trainingseinheit! Benötigt: ${formatVal(cost)}`, 'error'); return; }
+    game.money -= cost;
     playSound('click');
     goalkeeperGameState = { playerId, shotsFaced: 0, saves: 0, totalShots: 5 };
     document.getElementById('minigame-title').innerText = '🧤 Elfmeter halten: ' + player.name;
@@ -219,6 +237,7 @@ function openGoalkeeperGame(playerId) {
     document.getElementById('minigame-crossing').style.display = 'none';
     document.getElementById('minigame-goalkeeper').style.display = 'block';
     document.getElementById('minigame-overlay').classList.add('show');
+    updateUI();
     updateGoalkeeperGameUI();
 }
 function updateGoalkeeperGameUI() {
@@ -277,3 +296,4 @@ function finishGoalkeeperGame() {
     renderTrainingView();
     setTimeout(() => closeMinigame(), 1600);
 }
+

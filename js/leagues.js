@@ -1,3 +1,4 @@
+
 // ==========================================
 // LIGA-SYSTEM: INITIALISIERUNG & SPIELPLAN
 // ==========================================
@@ -16,7 +17,7 @@
     }
 
     function getOurLeagueTeam() {
-        return leaguesData[game.leagueLevel]?.find(t => t.name === "Lok Leipzig");
+        return leaguesData[game.leagueLevel]?.find(t => t.name === "1.FC Moritz Leipzig");
     }
 
     function getOurRivalName() {
@@ -47,7 +48,7 @@
         for (let l = 0; l < NUM_LEAGUES; l++) {
             let teams = [];
             for (let t = 0; t < 18; t++) {
-                let name = (l === game.leagueLevel && t === 0) ? "Lok Leipzig" : generateTeamName();
+                let name = (l === game.leagueLevel && t === 0) ? "1.FC Moritz Leipzig" : generateTeamName();
                 let baseStr = 82 - (l * 10) + Math.floor(Math.random() * 6);
                 teams.push({
                     name: name, played: 0, won: 0, drawn: 0, lost: 0,
@@ -76,12 +77,12 @@
         if (!game.permanentRivalName) return;
         let table = leaguesData[game.leagueLevel];
         if (!table) return;
-        let candidates = table.filter(t => t.name !== "Lok Leipzig" && t.name !== game.secondTeam.name);
+        let candidates = table.filter(t => t.name !== "1.FC Moritz Leipzig" && t.name !== game.secondTeam.name);
         if (candidates.length === 0) return;
         let slot = candidates.reduce((min, t) => t.strength < min.strength ? t : min, candidates[0]);
         slot.name = game.permanentRivalName;
-        let ourTeam = table.find(t => t.name === "Lok Leipzig");
-        if (ourTeam) { ourTeam.rivalName = game.permanentRivalName; slot.rivalName = "Lok Leipzig"; }
+        let ourTeam = table.find(t => t.name === "1.FC Moritz Leipzig");
+        if (ourTeam) { ourTeam.rivalName = game.permanentRivalName; slot.rivalName = "1.FC Moritz Leipzig"; }
     }
 
     // ==========================================
@@ -219,7 +220,7 @@
         tbody.innerHTML = '';
         sortedTeams.forEach((t, idx) => {
             let tr = document.createElement('tr');
-            let isUs = (t.name === "Lok Leipzig");
+            let isUs = (t.name === "1.FC Moritz Leipzig");
             let formIcons = { W: '<span style="color:var(--primary);">●</span>', D: '<span style="color:var(--accent);">●</span>', L: '<span style="color:var(--danger);">●</span>' };
             let formHtml = (t.recentForm || []).map(r => formIcons[r] || '').join(' ');
             // Kopf-an-Kopf-Statistik (NEU): Klick auf einen Gegnernamen zeigt die historische
@@ -248,7 +249,7 @@
                 // Zuschauerzahl bei bereits gespielten eigenen Heimspielen anzeigen - aus der
                 // dauerhaften Zuschauerhistorie nachgeschlagen, nicht nur beim allerletzten Spiel.
                 let attendanceTag = '';
-                if (f.played && h === "Lok Leipzig") {
+                if (f.played && h === "1.FC Moritz Leipzig") {
                     let entry = (game.attendanceHistory || []).find(e => e.season === game.season && e.matchday === md && e.opponent === a);
                     if (entry) attendanceTag = `<div style="font-size:9px; color:var(--text-muted); width:100%; text-align:center;">👥 ${entry.attendance.toLocaleString('de-DE')} Zuschauer</div>`;
                 }
@@ -279,3 +280,4 @@
             Letzte Ergebnisse: ${rec.lastResults.join(', ')}
         </div>`;
     }
+

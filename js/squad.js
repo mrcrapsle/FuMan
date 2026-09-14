@@ -1,3 +1,4 @@
+
 // ==========================================
 // KADER-INITIALISIERUNG
 // ==========================================
@@ -415,6 +416,7 @@
     }
 
     let squadFilterPos = 'alle';
+    let squadSortMode = 'staerke'; // NEU: Sortierfunktion für die Kaderliste
     function setSquadFilter(pos) {
         playSound('click');
         squadFilterPos = pos;
@@ -592,7 +594,90 @@
             </div>`;
     }
 
+    function setSquadSort(mode) {
+        squadSortMode = mode;
+        ['staerke', 'alter', 'marktwert', 'moral', 'name'].forEach(m => {
+            let btn = document.getElementById('ss-' + m);
+            if (btn) btn.className = m === mode ? 'btn-action' : 'btn-secondary';
+        });
+        renderSquadView();
+    }
+
+    // KADER-ÜBERBLICK (NEU): Gesamtkennzahlen auf einen Blick - Kaderwert, Durchschnittsalter,
+    // Durchschnittsmoral, Gehaltssumme, Größe - macht den Kader-Screen zu einem echten
+    // Management-Dashboard statt einer reinen Spielerliste.
+    function renderSquadOverviewBox() {
+        let box = document.getElementById('squad-overview-box');
+        if (!box) return;
+        if (squad.length === 0) { box.innerHTML = '<div class="box">Kein Kader vorhanden.</div>'; return; }
+        let totalValue = squad.reduce((s, p) => s + (p.marketValue || 0), 0);
+        let avgAge = (squad.reduce((s, p) => s + p.age, 0) / squad.length).toFixed(1);
+        let avgMorale = Math.round(squad.reduce((s, p) => s + p.morale, 0) / squad.length);
+        let totalWage = squad.reduce((s, p) => s + (p.wage || 0), 0);
+        let avgStrength = Math.round(squad.reduce((s, p) => s + p.strength, 0) / squad.length);
+        let injuredCount = squad.filter(p => (p.injured || 0) > 0).length;
+        let suspendedCount = squad.filter(p => (p.suspended || 0) > 0).length;
+        box.innerHTML = `
+            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px;">
+                <div class="box"><div style="font-size:8px; color:var(--text-muted);">KADERWERT</div><div style="font-size:13px; font-weight:900; color:var(--gold);">${formatVal(totalValue)}</div></div>
+                <div class="box"><div style="font-size:8px; color:var(--text-muted);">Ø ALTER</div><div style="font-size:13px; font-weight:900;">${avgAge} J.</div></div>
+                <div class="box"><div style="font-size:8px; color:var(--text-muted);">Ø STÄRKE</div><div style="font-size:13px; font-weight:900; color:var(--accent);">${avgStrength}</div></div>
+                <div class="box"><div style="font-size:8px; color:var(--text-muted);">Ø MORAL</div><div style="font-size:13px; font-weight:900; color:${avgMorale>=70?'var(--primary)':(avgMorale>=40?'var(--accent)':'var(--danger)')};">${avgMorale}%</div></div>
+                <div class="box"><div style="font-size:8px; color:var(--text-muted);">GEHÄLTER/SPT</div><div style="font-size:13px; font-weight:900; color:var(--industry);">${formatVal(totalWage)}</div></div>
+                <div class="box"><div style="font-size:8px; color:var(--text-muted);">KADERGRÖSSE</div><div style="font-size:13px; font-weight:900;">${squad.length} Spieler</div></div>
+            </div>
+            ${(injuredCount > 0 || suspendedCount > 0) ? `<div class="box" style="margin-top:4px; font-size:9px; color:var(--danger);">⚠️ ${injuredCount} verletzt, ${suspendedCount} gesperrt - nicht einsatzbereit</div>` : ''}
+        `;
+    }
+
+    // KADERTIEFE NACH POSITION (NEU): zeigt auf einen Blick, wo der Kader dünn besetzt ist -
+    // pro Positionsgruppe Anzahl + durchschnittliche Stärke, farblich nach Tiefe markiert.
+    function renderSquadDepthChart() {
+        let box = document.getElementById('squad-depth-chart-box');
+        if (!box) return;
+        const POS_LABELS = { TW: '🧤 Torwart', ABW: '🛡️ Abwehr', MIT: '⚙️ Mittelfeld', ST: '⚡ Sturm' };
+        const MIN_HEALTHY = { TW: 2, ABW: 5, MIT: 5, ST: 3 };
+        box.innerHTML = Object.keys(POS_LABELS).map(pos => {
+            let players = squad.filter(p => p.pos === pos);
+            let fitCount = players.filter(p => (p.injured||0)===0 && (p.suspended||0)===0).length;
+            let avgStr = players.length > 0 ? Math.round(players.reduce((s,p)=>s+p.strength,0)/players.length) : 0;
+            let depthColor = players.length >= MIN_HEALTHY[pos] ? 'var(--primary)' : (players.length >= MIN_HEALTHY[pos]-1 ? 'var(--accent)' : 'var(--danger)');
+            let depthPct = Math.min(100, Math.round((players.length / (MIN_HEALTHY[pos]+1)) * 100));
+            return `
+                <div style="margin-bottom:6px;">
+                    <div style="display:flex; justify-content:space-between; font-size:9px; margin-bottom:2px;">
+                        <span>${POS_LABELS[pos]}</span>
+                        <strong style="color:${depthColor};">${players.length} Spieler (${fitCount} fit) · Ø ${avgStr}</strong>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.06); border-radius:999px; height:6px; overflow:hidden;">
+                        <div style="width:${depthPct}%; height:100%; background:${depthColor}; border-radius:999px;"></div>
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
+    // KADER-BESTENLISTE (NEU): Top-Torschütze, meiste Einsätze, jüngstes/ältestes Talent,
+    // wertvollster Spieler - ein schneller Statistik-Überblick ohne extra Screen wechseln zu müssen.
+    function renderSquadLeaderboardBox() {
+        let box = document.getElementById('squad-leaderboard-box');
+        if (!box) return;
+        if (squad.length === 0) { box.innerHTML = ''; return; }
+        let topScorer = [...squad].sort((a,b) => (b.goalsSeason||0) - (a.goalsSeason||0))[0];
+        let mostAppearances = [...squad].sort((a,b) => (b.appearances||0) - (a.appearances||0))[0];
+        let mostValuable = [...squad].sort((a,b) => (b.marketValue||0) - (a.marketValue||0))[0];
+        let youngest = [...squad].sort((a,b) => a.age - b.age)[0];
+        box.innerHTML = `
+            <div class="box" style="font-size:9px; display:flex; justify-content:space-between;"><span>⚽ Top-Torschütze</span><strong>${topScorer.name} (${topScorer.goalsSeason||0})</strong></div>
+            <div class="box" style="font-size:9px; display:flex; justify-content:space-between;"><span>🎽 Meiste Einsätze</span><strong>${mostAppearances.name} (${mostAppearances.appearances||0})</strong></div>
+            <div class="box" style="font-size:9px; display:flex; justify-content:space-between;"><span>💰 Wertvollster Spieler</span><strong>${mostValuable.name} (${formatVal(mostValuable.marketValue||0)})</strong></div>
+            <div class="box" style="font-size:9px; display:flex; justify-content:space-between;"><span>🌱 Jüngstes Talent</span><strong>${youngest.name} (${youngest.age} J.)</strong></div>
+        `;
+    }
+
     function renderSquadView() {
+        renderSquadOverviewBox();
+        renderSquadDepthChart();
+        renderSquadLeaderboardBox();
         renderFormationCards();
         renderTacticStyleCards();
         renderTacticsBoardStatBar();
@@ -609,6 +694,15 @@
         if (!container) return;
         container.innerHTML = '';
         let filtered = squadFilterPos === 'alle' ? squad : squad.filter(p => p.pos === squadFilterPos);
+        // Sortierfunktion (NEU): nicht mehr nur nach Position filterbar, sondern auch echt sortierbar.
+        filtered = [...filtered].sort((a, b) => {
+            if (squadSortMode === 'staerke') return b.strength - a.strength;
+            if (squadSortMode === 'alter') return a.age - b.age;
+            if (squadSortMode === 'marktwert') return (b.marketValue||0) - (a.marketValue||0);
+            if (squadSortMode === 'moral') return b.morale - a.morale;
+            if (squadSortMode === 'name') return a.name.localeCompare(b.name);
+            return 0;
+        });
         filtered.forEach(p => {
             let isStarting = lineup.includes(p.id);
             let row = document.createElement('div');
@@ -638,12 +732,18 @@
                         ${isStarting ? 'Bank' : 'Startelf'}
                     </button>
                 </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap:2px; font-size:9px; color:#aaa; text-align:center; margin-bottom:6px; background:rgba(228,197,140,0.05); border-radius:4px; padding:4px 0;">
+                <div style="font-size:8px; color:var(--text-muted); margin-bottom:4px; display:flex; justify-content:space-between;">
+                    <span>${p.age} Jahre · ${p.contracts} J. Vertrag</span>
+                    <span>${formatVal(p.marketValue||0)} · ⚽ ${p.goalsSeason||0} Saisontore · 🎽 ${p.appearances||0} Einsätze</span>
+                </div>
+                <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:2px; font-size:8px; color:#aaa; text-align:center; margin-bottom:6px; background:rgba(228,197,140,0.05); border-radius:4px; padding:4px 0;">
                     <div>STR<br><strong style="color:var(--accent); font-size:11px;">${p.strength}</strong></div>
                     <div>PAC<br><strong>${p.pace}</strong></div>
                     <div>SHO<br><strong>${p.shooting}</strong></div>
                     <div>PAS<br><strong>${p.passing}</strong></div>
                     <div>DEF<br><strong>${p.defense}</strong></div>
+                    <div>KOP<br><strong>${p.KOP ?? '-'}</strong></div>
+                    <div>FIT<br><strong>${p.fitness}</strong></div>
                 </div>
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
                     <span style="font-size:9px;">${status}${moraleLine}</span>
@@ -672,6 +772,9 @@
     function render3DPitch(pitchElId = 'soccer-pitch') {
         let pitch = document.getElementById(pitchElId);
         if (!pitch) return;
+        // Stadion-Größenstufe (NEU): nur beim Live-Spielfeld anwenden, das vom Stadion-
+        // Rahmen umgeben ist - die Taktiktafel hat keinen solchen Rahmen.
+        if (pitchElId === 'live-pitch' && typeof applyStadiumVisualTierClass === 'function') applyStadiumVisualTierClass('.live-stadium-frame');
         pitch.querySelectorAll('.player-pin-3d').forEach(el => el.remove());
         let coords = getFormationCoords(game.formation);
         // Die im Wappen-Editor gewählte Vereinsfarbe fließt jetzt auch ins Trikot der
@@ -756,3 +859,4 @@
         if (fk) game.freeKickTakerId = fk.value;
         if (ck) game.cornerTakerId = ck.value;
     }
+

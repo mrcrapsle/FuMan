@@ -1,3 +1,4 @@
+
     // ==========================================
     // 3-KANAL FANSHOP VERTRIEB
     // ==========================================
@@ -25,6 +26,20 @@
                 let merchBooths = Object.values(stadium.blocks || {}).reduce((sum, b) => sum + (b.merchLvl || 0), 0);
                 baseStadium *= (1 + (merchBooths * 0.05));
                 stadiumDemand = Math.round(baseStadium * elast.factor);
+                // Doppelte Fanartikel-Verkäufe (Premium-Booster, NEU) - Flag wird NICHT hier
+                // zurückgesetzt (das würde nur den ersten Artikel der Schleife treffen),
+                // sondern einmalig nach Abschluss der gesamten Funktion.
+                if (game.merchDoubleNextMatch) stadiumDemand *= 2;
+                // Stadion-Erweiterungen (NEU): Flagship-Store/Stadion-App erhöhen den Absatz dauerhaft.
+                if (typeof getStadiumMerchBonus === 'function') stadiumDemand = Math.round(stadiumDemand * (1 + getStadiumMerchBonus()));
+                // Trikot-Ausrüster (NEU): ein prestigeträchtiger Ausrüster (hohe Vertragssumme)
+                // macht die Trikots begehrter - war bisher nur reine Sponsoreneinnahme ohne
+                // jede Rückwirkung auf den tatsächlichen Fanartikel-Absatz.
+                if (key === 'jerseys') {
+                    let kitScale = typeof leagueScaleFactor === 'function' ? leagueScaleFactor() : 1;
+                    let kitPrestigeBonus = Math.min(0.2, Math.max(0, ((game.kitSupplier?.income || 0) / (3000 * kitScale)) * 0.1));
+                    stadiumDemand = Math.round(stadiumDemand * (1 + kitPrestigeBonus));
+                }
             }
 
             let megastoreLvl = campusBuildings.megastore.lvl;
@@ -75,6 +90,9 @@
                 }
             }
         }
+        // Fanartikel-Boost-Flag (NEU): einmalig NACH der kompletten Schleife zurücksetzen,
+        // damit der Bonus für alle Artikel gilt statt nur für den ersten.
+        game.merchDoubleNextMatch = false;
         return totalSalesRevenue;
     }
 
@@ -262,4 +280,5 @@
             }
         }
     }
+
 

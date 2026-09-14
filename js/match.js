@@ -1,3 +1,4 @@
+
     // ---------- WETTER ----------
     // Wird zu Beginn JEDES Spieltags gewürfelt - unabhängig davon, ob live gespielt,
     // die Saison durchsimuliert oder per Admin vorgespult wird (siehe rollWeather()-Aufrufe
@@ -15,6 +16,13 @@
     currentWeather = WEATHER_TYPES[0];
 
     function rollWeather() {
+        // Wettergarantie (Premium-Booster, NEU): erzwingt sonniges Wetter (erster, neutraler
+        // Eintrag in WEATHER_TYPES) statt der normalen Zufallsauswahl.
+        if (game.weatherGuaranteeNextMatch) {
+            currentWeather = WEATHER_TYPES[0];
+            game.weatherGuaranteeNextMatch = false;
+            return currentWeather;
+        }
         let totalWeight = WEATHER_TYPES.reduce((s, w) => s + w.weight, 0);
         let roll = Math.random() * totalWeight;
         for (let w of WEATHER_TYPES) {
@@ -34,6 +42,11 @@
                 if ((w.name === 'Regen' || w.isStorm) && typeof stadium !== 'undefined' && stadium.dach) {
                     currentWeather = { ...w, fitLossMult: 1.0, injuryMult: 1.0, cardMult: 1.0, goalMult: 1.0, attendanceMult: 1.0, neutralizedByRoof: true };
                     addInboxMessage('vertrag', `${w.icon} ${w.name}, aber das Dach hält dicht!`, `Dank der Komplett-Überdachung bleibt das Stadion von den Auswirkungen des ${w.name.toLowerCase()}s komplett verschont.`, 'screen-calendar');
+                }
+                // Klimaanlage (NEU, Stadion-Erweiterung): neutralisiert Hitze-Wetter komplett.
+                if (w.name === 'Hitze' && typeof stadium !== 'undefined' && stadium.upgrades?.klimaanlage) {
+                    currentWeather = { ...w, fitLossMult: 1.0, injuryMult: 1.0, cardMult: 1.0, goalMult: 1.0, attendanceMult: 1.0, neutralizedByAC: true };
+                    addInboxMessage('vertrag', `${w.icon} Hitze, aber die Klimaanlage hält kühl!`, 'Dank der Klimaanlage sind alle negativen Auswirkungen der Hitzewelle neutralisiert.', 'screen-calendar');
                 }
                 // Sturm-Warnung (NEU): dramatische Vorwarnung statt einer echten
                 // Spielverlegung (die den Spielplan strukturell gefährden würde) - viele
@@ -196,6 +209,8 @@
         // Block-spezifische Fan-Kultur (NEU): tief verwurzelte Block-Kulturen geben bei
         // Heimspielen einen kleinen zusätzlichen Atmosphäre-Bonus.
         if (isHomeMatch && typeof getBlockCultureHomeBonus === 'function') bonus += getBlockCultureHomeBonus();
+        // Stadion-Erweiterungen (NEU): Beschallungsanlage verstärkt den Heimvorteil.
+        if (isHomeMatch && typeof getStadiumHomeAdvantageBonus === 'function') bonus += getStadiumHomeAdvantageBonus();
         // Kapitän (NEU): war bisher rein kosmetisch (nur ein Ⓒ-Icon) - steht der ernannte
         // Kapitän tatsächlich auf dem Feld, gibt seine Führungsqualität einen kleinen, aber
         // echten Team-Stärke-Bonus. Ein erfahrener Kapitän (30+) wirkt sich stärker aus.
@@ -316,10 +331,10 @@
     function startMatchdayFlow() {
         if (game.matchday > 34) return;
         let fixtures = fixturesData[game.leagueLevel] ? fixturesData[game.leagueLevel][game.matchday - 1] : null;
-        let ourFixture = fixtures ? fixtures.find(f => leaguesData[game.leagueLevel][f.home]?.name === "Lok Leipzig" || leaguesData[game.leagueLevel][f.away]?.name === "Lok Leipzig") : null;
+        let ourFixture = fixtures ? fixtures.find(f => leaguesData[game.leagueLevel][f.home]?.name === "1.FC Moritz Leipzig" || leaguesData[game.leagueLevel][f.away]?.name === "1.FC Moritz Leipzig") : null;
         if (!ourFixture) { processPostMatchRoutine(); return; }
 
-        let isHome = leaguesData[game.leagueLevel][ourFixture.home].name === "Lok Leipzig";
+        let isHome = leaguesData[game.leagueLevel][ourFixture.home].name === "1.FC Moritz Leipzig";
         let oppName = isHome ? leaguesData[game.leagueLevel][ourFixture.away].name : leaguesData[game.leagueLevel][ourFixture.home].name;
         let oppObj = leaguesData[game.leagueLevel].find(t => t.name === oppName);
         let oppStr = applySabotageToOpponentStrength(oppObj ? oppObj.strength : 60);
@@ -347,7 +362,7 @@
         if (!pendingMatchInfo) { processPostMatchRoutine(); return; }
         let { isHome, oppName, oppStr, ourFixture } = pendingMatchInfo;
         activeLiveShout = 'standard';
-        setupMatch(isHome ? "Lok Leipzig" : oppName, isHome ? oppName : "Lok Leipzig", oppStr, isHome, false, ourFixture);
+        setupMatch(isHome ? "1.FC Moritz Leipzig" : oppName, isHome ? oppName : "1.FC Moritz Leipzig", oppStr, isHome, false, ourFixture);
     }
 
     // "Nur Ergebnisse": schneller als manuelles "Nächste Szene"-Klicken, aber ausführlicher
@@ -359,7 +374,7 @@
         if (!pendingMatchInfo) { processPostMatchRoutine(); return; }
         let { isHome, oppName, oppStr, ourFixture } = pendingMatchInfo;
         activeLiveShout = 'standard';
-        setupMatch(isHome ? "Lok Leipzig" : oppName, isHome ? oppName : "Lok Leipzig", oppStr, isHome, false, ourFixture);
+        setupMatch(isHome ? "1.FC Moritz Leipzig" : oppName, isHome ? oppName : "1.FC Moritz Leipzig", oppStr, isHome, false, ourFixture);
         stopLiveTickerAutoplay(); // Schnellsimulation läuft synchron - kein paralleler Auto-Timer nötig
         simulateRestOfMatch();
     }
@@ -403,7 +418,16 @@
                 let isDerbyKickoff = opponentNameForDerby === game.permanentRivalName || (game.forceDerbyMatchdays || []).includes(game.matchday);
                 let attFactor = getAttendanceFactor();
                 if (isDerbyKickoff && !game.forcedGhostGame) attFactor = Math.min(1.0, attFactor * 2.2);
-                let liveAtt = game.forcedGhostGame ? 0 : Math.round((stadium.total || 16000) * attFactor);
+                else if (!game.forcedGhostGame && currentMatch && (currentMatch.isCup || currentMatch.isEurope)) attFactor = Math.min(1.0, attFactor * 1.4);
+                // Bugfix (Konsistenz): dieselbe Zufallsstreuung wie in applyMatchdayFinances()
+                // anwenden und das Ergebnis merken, damit die beim Anpfiff angezeigte Zahl
+                // exakt der später tatsächlich abgerechneten Zuschauerzahl entspricht, statt
+                // zwei unabhängig gewürfelte Werte zu haben.
+                let isSoldOutKickoff = isDerbyKickoff && (attFactor * 2.2 >= 1.0);
+                let kickoffNoise = isSoldOutKickoff ? 1.0 : (0.92 + Math.random() * 0.16);
+                let liveAtt = game.forcedGhostGame ? 0 : Math.min(stadium.total || 16000, Math.round((stadium.total || 16000) * attFactor * kickoffNoise));
+                currentMatch.finalAttendance = liveAtt;
+                currentMatch.finalAttendanceMatchday = game.matchday;
                 attEl.innerText = game.forcedGhostGame ? '👻 Geisterspiel' : `👥 ${liveAtt.toLocaleString('de-DE')} Zuschauer`;
             } else {
                 attEl.innerText = '✈️ Auswärtsspiel';
@@ -671,6 +695,8 @@
             // Kapitän auf dem Feld (NEU): beruhigt die Mannschaft und senkt das Kartenrisiko
             // leicht - eine der klassischsten Führungsspieler-Aufgaben im echten Fußball.
             if (onPitch.some(p => p.id === game.captainId)) ourCardThreshold *= 0.9;
+            // Glücksbringer (Premium-Booster, NEU): dämpft auch das Kartenrisiko.
+            if (game.luckyCharmNextMatch) ourCardThreshold *= 0.5;
             ourCardThreshold *= currentWeather.cardMult;
             if (game.tackleHardness === 'hart') ourCardThreshold *= 1.5;
             if (game.tackleHardness === 'vorsichtig') ourCardThreshold *= 0.6;
@@ -920,6 +946,10 @@
         // Lokalderby-Atmosphäre: bei Heimspielen gegen den permanenten Rivalen ist das
         // Stadion deutlich stärker ausgelastet als sonst (gedeckelt bei "ausverkauft").
         let derbyBoostActive = isHomeMatch && isDerbyMatch && !ghostGameActive;
+        // Pokal-/Europapokalspiele (NEU): ziehen erfahrungsgemäß mehr Zuschauer an als
+        // gewöhnliche Ligaspiele - besondere Atmosphäre, seltenere Gelegenheit.
+        let isCupOrEuropeMatch = isHomeMatch && !ghostGameActive && typeof currentMatch !== 'undefined' && currentMatch && (currentMatch.isCup || currentMatch.isEurope);
+        let cupBoostActive = isCupOrEuropeMatch && !derbyBoostActive;
         let attFactor = getAttendanceFactor();
         // War die Auslastung schon VOR der Deckelung bei "ausverkauft" (Faktor >= 1.0), ist
         // das Stadion wirklich bis an seine (liga-abhängige) Kapazitätsgrenze gefüllt. Bei
@@ -930,7 +960,29 @@
         // (z.B. unter 1.000 vs. über 2.000) beide als "ausverkauft" gemeldet würden.
         let genuinelySoldOut = derbyBoostActive && (attFactor * 2.2) >= 1.0;
         if (derbyBoostActive) attFactor = Math.min(1.0, attFactor * 2.2);
-        let att = (isHomeMatch && !ghostGameActive) ? Math.round((stadium.total || 16000) * attFactor) : 0;
+        else if (cupBoostActive) attFactor = Math.min(1.0, attFactor * 1.4);
+        // Bugfix: die Zuschauerzahl war bisher komplett deterministisch (nur Fanstimmung,
+        // Komfort, Wetter, Ticketpreis) - bei unveränderten Bedingungen kam über mehrere
+        // Spieltage hinweg exakt dieselbe Zahl heraus, was unrealistisch auffiel. Echte
+        // Zuschauerzahlen schwanken auch bei ansonsten gleichen Bedingungen spürbar (Wochentag,
+        // private Termine, Tagesform der Fans) - jetzt mit einer moderaten Zufallsstreuung von
+        // ±8%, die NICHT in die "ausverkauft"-Erkennung einfließt (die bleibt strukturell).
+        let attendanceNoise = genuinelySoldOut ? 1.0 : (0.92 + Math.random() * 0.16);
+        // Konsistenz-Fix: bei einem LIVE gespielten Match wurde die Zuschauerzahl bereits
+        // beim Anpfiff gewürfelt und in currentMatch.finalAttendance gespeichert - diese
+        // exakt gleiche Zahl hier wiederverwenden, statt einen zweiten, abweichenden
+        // Zufallswert zu erzeugen. Nur bei Batch-Simulation (kein Live-Kontext) wird hier
+        // frisch gewürfelt.
+        let att;
+        if (isHomeMatch && !ghostGameActive) {
+            if (typeof currentMatch !== 'undefined' && currentMatch && currentMatch.finalAttendance !== undefined && currentMatch.finalAttendanceMatchday === game.matchday) {
+                att = currentMatch.finalAttendance;
+            } else {
+                att = Math.min(stadium.total || 16000, Math.round((stadium.total || 16000) * attFactor * attendanceNoise));
+            }
+        } else {
+            att = 0;
+        }
         // Zuschauerzahl des letzten Heimspiels - bisher nirgendwo dauerhaft sichtbar, nur in
         // Sonderfällen (Rekord/Meilenstein) erwähnt. Jetzt fest im Finanzen- und Live-Match-
         // Screen angezeigt.
@@ -974,8 +1026,17 @@
             }
         }
         let ticketIncome = (isHomeMatch && !ghostGameActive) ? Math.round(att * 0.5 * game.ticketPrices.steh + att * 0.45 * game.ticketPrices.sitz + (stadium.vipTotal || 50) * game.ticketPrices.vip) : 0;
+        // Doppelte Ticketeinnahmen (Premium-Booster, NEU).
+        if (isHomeMatch && game.ticketIncomeBoostNextMatch) { ticketIncome *= 2; game.ticketIncomeBoostNextMatch = false; }
         // Medienrechte (NEU): eigener Medienpartner zahlt bei jedem Heimspiel, mit Bonus bei
         // Derbys/Pokalspielen (attraktivere Übertragungen).
+        // Stadion-Erweiterungen (NEU): feste Zusatzeinnahmen der "income"-Kategorie
+        // (VIP-Lounges, Public-Viewing, Ladestationen) sowie ein leichter Medienimage-Schub
+        // durch Lichtshow/Pressezentrum bei jedem Heimspiel.
+        if (isHomeMatch && typeof getStadiumMatchdayIncome === 'function') {
+            game.money += getStadiumMatchdayIncome();
+            game.managerMediaImage = Math.min(100, (game.managerMediaImage ?? 50) + getStadiumMediaImageMatchdayBonus());
+        }
         if (isHomeMatch && typeof tickMediaRightsPayment === 'function') {
             tickMediaRightsPayment(isDerbyMatch, !!(typeof currentMatch !== 'undefined' && currentMatch && currentMatch.isCup));
         }
@@ -983,7 +1044,19 @@
         // Finanz-Ausblick ANGEZEIGT, aber nie tatsächlich abgebucht - ein "Phantom-Posten".
         // Jetzt wird der Pro-Spieltag-Anteil (Monatsschätzung / 4) jeden Spieltag wirklich
         // fällig, egal ob Heim- oder Auswärtsspiel (laufende Kosten fallen immer an).
-        let maintenanceCost = Math.round(((stadium.total || 16000) * 0.45 + Object.values(campusBuildings).reduce((s, b) => s + b.lvl * 650, 0)));
+        let baseStadiumMaintenance = (stadium.total || 16000) * 0.45;
+        // Solaranlage (NEU): senkt die Stromkosten-Komponente der Betriebskosten spürbar,
+        // statt nur eine reine Sponsoren-Einnahmen-Erhöhung zu sein - echte Stromersparnis.
+        if (stadium.upgrades?.solaranlage) baseStadiumMaintenance *= 0.8;
+        // Bugfix: "Modernes Einlass-System" bewarb "Senkt Betriebskosten", trug aber durch
+        // seine eigene Ausbaustufe (650 €/Stufe wie jedes andere Gebäude) sogar selbst zu den
+        // Betriebskosten bei - bei niedrigen Gesamtkosten überstieg dieser Eigenbeitrag sogar
+        // den zunächst angesetzten Rabatt (eigener Rechenfehler beim ersten Versuch entdeckt).
+        // Jetzt zählt die eigene Ausbaustufe gar nicht erst zu den Betriebskosten dazu, PLUS
+        // eine echte Senkung der übrigen Betriebskosten - garantiert immer eine Nettoersparnis.
+        let campusMaintenanceSum = Object.keys(campusBuildings).reduce((s, k) => s + (k === 'turnstiles' ? 0 : campusBuildings[k].lvl * 650), 0);
+        let maintenanceCost = Math.round(baseStadiumMaintenance + campusMaintenanceSum);
+        if (campusBuildings.turnstiles?.lvl > 0) maintenanceCost = Math.round(maintenanceCost * (1 - campusBuildings.turnstiles.lvl * 0.02));
         game.money -= maintenanceCost;
         // Modernes Einlass-System (Campus): verhindert Schwarzmarkt-/Fälschungsverluste bei
         // den Ticketeinnahmen (war bisher nur Text ohne tatsächliche Wirkung).
@@ -1030,6 +1103,11 @@
         // spürbar weniger (nur der Hauptsponsor-Teil, nicht Banden/Ausrüster/Namensrechte).
         let loyaltyMult = typeof getSponsorLoyaltyPaymentMultiplier === 'function' ? getSponsorLoyaltyPaymentMultiplier() : 1;
         let mainSponsorInc = Math.round((game.sponsor.base + (won ? game.sponsor.winBonus : 0) + themedBonus) * loyaltyMult);
+        // Sponsoren-Boost (Premium-Booster, NEU): +50% für begrenzte Zeit.
+        if (game.sponsorBoostMatchdaysLeft > 0) mainSponsorInc = Math.round(mainSponsorInc * 1.5);
+        // Stadion-Erweiterungen (NEU): Solaranlage/Business-Center erhöhen die laufenden
+        // Sponsoreneinnahmen dauerhaft.
+        if (typeof getStadiumSponsorBonus === 'function') mainSponsorInc = Math.round(mainSponsorInc * (1 + getStadiumSponsorBonus()));
         let sponsorInc = mainSponsorInc + (isHomeMatch ? getBandenIncome() + game.kitSupplier.income + (stadium.namingRightsIncome || 0) : 0) + (game.sleeveSponsor?.income || 0);
         // Sponsoren-Ranking: trackt über die gesamte Karriere hinweg, welcher Sponsor (nach
         // Name) am meisten eingebracht hat - sichtbar als kleines Leaderboard im Finanzen-Screen.
@@ -1057,6 +1135,8 @@
             } else {
                 addInboxMessage('vertrag', '🔥 Rekordkulisse beim Lokalderby!', `Das Derby gegen ${game.permanentRivalName} lockte deutlich mehr Zuschauer als sonst an (${att.toLocaleString('de-DE')} Zuschauer) - ${formatVal(ticketIncome)} Ticketeinnahmen! Bei wachsender Fan-Zufriedenheit wird das Stadion künftig noch voller.`, 'screen-finances');
             }
+        } else if (cupBoostActive) {
+            addInboxMessage('vertrag', '🏆 Besondere Pokal-Atmosphäre!', `Das Pokal-/Europapokalspiel lockte mehr Zuschauer als ein gewöhnliches Ligaspiel an (${att.toLocaleString('de-DE')} Zuschauer) - ${formatVal(ticketIncome)} Ticketeinnahmen!`, 'screen-finances');
         }
 
         // Zuschauerrekord: höchste je in der Vereinsgeschichte erzielte Zuschauerzahl - als
@@ -1115,6 +1195,10 @@
         let skillMult = typeof securityWorkforce !== 'undefined' ? (1 + (securityWorkforce.skillLevel - 1) * 0.12) : 1;
         let baseChance = 0.12 * (1 - Math.min(0.92, (effectiveStewards / 100) * 0.8 * skillMult));
         if (staffMembers.fanLiaison.hired) baseChance *= 0.7; // Fanbeauftragter deeskaliert im Vorfeld
+        // Sicherheitslage beruhigen (Premium-Booster, NEU): stark reduziertes Risiko.
+        if (game.securityCalmNextMatch) baseChance *= 0.15;
+        // Stadion-Sicherheitstechnik (NEU): dauerhafte Risikosenkung durch gekaufte Anlagen.
+        if (typeof getStadiumSecurityBonus === 'function') baseChance *= (1 - getStadiumSecurityBonus());
         if (Math.random() >= baseChance) return;
 
         game.riotCount = (game.riotCount || 0) + 1;
@@ -1135,6 +1219,15 @@
         // ans jeweils NÄCHSTE (jetzt vergangene) Spiel gebunden, nicht an den Live-Kontext.
         if (matchResult !== null) resolveUnderworldInsiderBet(matchResult === 'win');
         underworld.spyIntelActive = false;
+        // Zuschauerzahl-Konsistenz-Fix (NEU): finalAttendance nach dem Spiel zurücksetzen,
+        // damit sie nicht versehentlich ins nächste Spiel durchsickert.
+        if (typeof currentMatch !== 'undefined' && currentMatch) currentMatch.finalAttendance = undefined;
+        // Premium-Booster-Flags (NEU): erst NACH dem kompletten Spiel zurücksetzen, da sie
+        // während des gesamten Spielverlaufs (viele Ticks) wirken sollen, nicht nur beim ersten.
+        if (matchResult !== null) {
+            game.luckyCharmNextMatch = false;
+            game.securityCalmNextMatch = false;
+        }
         game.videoAnalysisBoostActive = false; // Video-Analyse-Bonus gilt nur fürs eine Spiel
         // Finanzen & Kapitalmarkt: Festgeld, Rücklagen, Kontoverlauf und Bonität jeden
         // verarbeiteten Spieltag aktualisieren.
@@ -1152,6 +1245,9 @@
                     // Potenzial-Multiplikator & Ausbildungsschwerpunkt (Jugendakademie): stärkere
                     // Talente und passender Fokus entwickeln sich schneller in der Hospitanz.
                     let potMult = typeof getYouthPotentialMultiplier === 'function' ? getYouthPotentialMultiplier(p) : 1;
+                    // Jugend-Mentor (NEU): ein erfahrener Profi als persönlicher Mentor
+                    // beschleunigt die Entwicklung während der Hospitanz zusätzlich spürbar.
+                    if (p.mentorId && squad.some(s => s.id === p.mentorId)) potMult *= 1.35;
                     if (Math.random() < 0.12 * potMult) {
                         let statMap = { torschuss: 'shooting', passspiel: 'passing', zweikampf: 'defense', tempo: 'pace' };
                         let stat = statMap[p.youthFocus];
@@ -1216,8 +1312,15 @@
         individualBoostChance *= (1 + (game.equipmentLevel || 0) * 0.05);
         if (game.doubleTrainingBoostActive) { individualBoostChance *= 1.6; game.doubleTrainingBoostActive = false; }
         let injuryChance = game.teamTraining === 'erholung' ? 0.024 : 0.03;
+        // Premium-Booster (NEU): Verletzungsschutz setzt das Risiko komplett auf 0,
+        // Glücksbringer dämpft es stark.
+        if (game.injuryShieldMatchdaysLeft > 0) injuryChance = 0;
+        else if (game.luckyCharmNextMatch) injuryChance *= 0.4;
         // Verletzungspräventions-Programm (Training & Förderung): dauerhafte Grundrisiko-Senkung.
         if (game.injuryPreventionProgram) injuryChance *= 0.82;
+        // Stadion-Erweiterungen (NEU): Medizinzentrum/Rasenpflege senken das Trainings-
+        // Verletzungsrisiko - wirkt am heimischen Gelände, unabhängig vom letzten Spielort.
+        if (typeof getStadiumInjuryReduction === 'function') injuryChance *= (1 - getStadiumInjuryReduction());
         injuryChance *= currentWeather.injuryMult;
         if (game.tackleHardness === 'hart') injuryChance *= 1.3;
         if (game.tackleHardness === 'vorsichtig') injuryChance *= 0.75;
@@ -1335,8 +1438,8 @@
             let status = checkDfbLicensingStatus();
             if (status.targetLevel !== null && status.missing.length > 0) {
                 let teams = leaguesData[game.leagueLevel];
-                let sorted = teams ? [...teams].sort((a, b) => b.points - a.points) : [];
-                let myRank = sorted.findIndex(t => t.name === "Lok Leipzig") + 1;
+                let sorted = teams ? [...teams].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst)) : [];
+                let myRank = sorted.findIndex(t => t.name === "1.FC Moritz Leipzig") + 1;
                 if (myRank > 0 && myRank <= 2) {
                     addInboxMessage('vertrag', '🚨 DFB-Lizenz-Frühwarnung!', `Du liegst aktuell in Aufstiegsposition, aber die Lizenz für die ${leagueNames[status.targetLevel]} fehlt noch:\n\n${status.missing.map(m => '• ' + m).join('\n')}\n\nNur noch wenige Spieltage bis Saisonende - jetzt nachbessern!`, 'screen-stadium');
                     showToast('🚨 DFB-Lizenz-Frühwarnung: Auflagen für den möglichen Aufstieg noch nicht erfüllt!', 'error');
@@ -1500,7 +1603,7 @@
                 let raidMsg = `🚨 DFB-RAZZIA! Die Staatsanwaltschaft durchsucht die Geschäftsstelle.\nStrafe: -${formatVal(fine)} & drastischer Image-Verlust!`;
                 // Wiederholungstäter werden vom Verband hart bestraft: echter Punktabzug
                 if (underworld.offenseCount >= 2) {
-                    let myTeam = leaguesData[game.leagueLevel].find(t => t.name === "Lok Leipzig");
+                    let myTeam = leaguesData[game.leagueLevel].find(t => t.name === "1.FC Moritz Leipzig");
                     let deduction = Math.min(myTeam.points, 3 * (underworld.offenseCount - 1));
                     myTeam.points -= deduction;
                     raidMsg += `\n⚖️ Als Wiederholungstäter (${underworld.offenseCount}. Vergehen) verhängt der Verband zusätzlich einen Punktabzug von ${deduction} Punkten!`;
@@ -1517,6 +1620,16 @@
         if (typeof runSecChiefAutomation === 'function') runSecChiefAutomation();
         // Immobilien-Portfolio (NEU): laufende Mieteinnahmen unabhängig von Heim-/Auswärtsspiel.
         if (typeof tickRealEstateIncome === 'function') tickRealEstateIncome();
+        if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();
+        if (typeof checkReleaseClauseTriggers === 'function') checkReleaseClauseTriggers();
+        if (typeof tickIncomingLoans === 'function') tickIncomingLoans();
+        // Jugendliga (NEU): alle 4 Spieltage ein automatisches Jugendliga-Spiel.
+        if (game.matchday % 4 === 0 && typeof tickYouthLeague === 'function') tickYouthLeague();
+        if (typeof checkSellOnClausePayouts === 'function') checkSellOnClausePayouts();
+        if (typeof tickSkillTraining === 'function') tickSkillTraining();
+        // Weitere Premium-Booster-Countdowns (NEU).
+        if (game.injuryShieldMatchdaysLeft > 0) game.injuryShieldMatchdaysLeft--;
+        if (game.sponsorBoostMatchdaysLeft > 0) game.sponsorBoostMatchdaysLeft--;
 
         // Kreditraten, Insolvenzrisiko und Wettabrechnung laufen jeden Spieltag automatisch
         processLoanInstallments();
@@ -1633,11 +1746,11 @@
         else { h.drawn++; h.points += 1; a.drawn++; a.points += 1; pushRecentForm(h, 'D'); pushRecentForm(a, 'D'); }
 
         // Kopf-an-Kopf-Statistik (NEU): historische Bilanz gegen JEDEN Ligagegner, nicht nur
-        // den einen festen Erzfeind - nur relevant, wenn Lok Leipzig an dem Spiel beteiligt war.
-        if (h.name === "Lok Leipzig" || a.name === "Lok Leipzig") {
-            let oppName = h.name === "Lok Leipzig" ? a.name : h.name;
-            let ourGoals = h.name === "Lok Leipzig" ? f.homeGoals : f.awayGoals;
-            let oppGoals = h.name === "Lok Leipzig" ? f.awayGoals : f.homeGoals;
+        // den einen festen Erzfeind - nur relevant, wenn 1.FC Moritz Leipzig an dem Spiel beteiligt war.
+        if (h.name === "1.FC Moritz Leipzig" || a.name === "1.FC Moritz Leipzig") {
+            let oppName = h.name === "1.FC Moritz Leipzig" ? a.name : h.name;
+            let ourGoals = h.name === "1.FC Moritz Leipzig" ? f.homeGoals : f.awayGoals;
+            let oppGoals = h.name === "1.FC Moritz Leipzig" ? f.awayGoals : f.homeGoals;
             if (!game.headToHeadRecords[oppName]) game.headToHeadRecords[oppName] = { wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, lastResults: [] };
             let rec = game.headToHeadRecords[oppName];
             rec.goalsFor += ourGoals; rec.goalsAgainst += oppGoals;
@@ -1771,7 +1884,7 @@
     }
 
     // ---------- TRAINER-REPUTATION: ABWERBEVERSUCHE ANDERER KLUBS ----------
-    // Bewusst OHNE echten Vereinswechsel umgesetzt (der Klubname "Lok Leipzig" ist an ~50
+    // Bewusst OHNE echten Vereinswechsel umgesetzt (der Klubname "1.FC Moritz Leipzig" ist an ~50
     // Stellen im Code verankert - eine Umbenennung wäre riskant für dieses Update). Stattdessen
     // nutzt du das Interesse anderer Klubs als Verhandlungshebel beim EIGENEN Vorstand: Geld &
     // Ansehen (annehmen) oder Vereinstreue-Bonus (ablehnen) - beides sind echte, unterschiedliche
@@ -2260,8 +2373,8 @@
                     if (!f.played) {
                         let hTeam = leaguesData[l][f.home];
                         let aTeam = leaguesData[l][f.away];
-                        let hStr = (hTeam.name === "Lok Leipzig") ? calcTeamStrength(true) : (aTeam.name === "Lok Leipzig" ? applySabotageToOpponentStrength(hTeam.strength) : hTeam.strength);
-                        let aStr = (aTeam.name === "Lok Leipzig") ? calcTeamStrength(false) : (hTeam.name === "Lok Leipzig" ? applySabotageToOpponentStrength(aTeam.strength) : aTeam.strength);
+                        let hStr = (hTeam.name === "1.FC Moritz Leipzig") ? calcTeamStrength(true) : (aTeam.name === "1.FC Moritz Leipzig" ? applySabotageToOpponentStrength(hTeam.strength) : hTeam.strength);
+                        let aStr = (aTeam.name === "1.FC Moritz Leipzig") ? calcTeamStrength(false) : (hTeam.name === "1.FC Moritz Leipzig" ? applySabotageToOpponentStrength(aTeam.strength) : aTeam.strength);
 
                         let goals = simulateGoals(hStr, aStr, hTeam, aTeam);
                         f.homeGoals = goals.myGoals;
@@ -2278,7 +2391,7 @@
                             else if (aTeam.name === game.secondTeam.name) attributeGoalsToSecondTeamScorers(f.awayGoals);
                         }
 
-                        if (hTeam.name === "Lok Leipzig") {
+                        if (hTeam.name === "1.FC Moritz Leipzig") {
                             isHome = true;
                             playedOurMatch = true;
                             won = f.homeGoals > f.awayGoals;
@@ -2286,7 +2399,7 @@
                             isHomeDerby = aTeam.name === hTeam.rivalName;
                             opponentNameThisMatch = aTeam.name;
                             ourGoalsThisMatch = f.homeGoals; oppGoalsThisMatch = f.awayGoals;
-                        } else if (aTeam.name === "Lok Leipzig") {
+                        } else if (aTeam.name === "1.FC Moritz Leipzig") {
                             isHome = false;
                             playedOurMatch = true;
                             won = f.awayGoals > f.homeGoals;
@@ -2380,9 +2493,15 @@
         // Kopie statt In-Place-Sortierung, aus Konsistenz mit renderLeagueView() -
         // auch wenn die Saison hier bereits vorbei ist, bleibt so die Originaldatenstruktur
         // unangetastet, falls andere Screens (z.B. Historie) noch darauf zugreifen.
-        let teams = [...leaguesData[game.leagueLevel]].sort((a, b) => b.points - a.points);
-        let myRank = teams.findIndex(t => t.name === "Lok Leipzig") + 1;
-        let myTeamRecord = leaguesData[game.leagueLevel].find(t => t.name === "Lok Leipzig");
+        // Bugfix: die ANGEZEIGTE Tabelle sortiert bei Punktgleichstand nach Tordifferenz
+        // (siehe renderLeagueView() in leagues.js), aber diese Aufstiegs-Berechnung sortierte
+        // bisher NUR nach Punkten - bei einem Punktgleichstand am Saisonende konnte der
+        // tatsächlich berechnete Rang dadurch von dem in der Tabelle angezeigten Rang
+        // abweichen (Einfüge-Reihenfolge statt Tordifferenz entschied). Jetzt identische
+        // Sortierlogik wie in der Tabellenanzeige.
+        let teams = [...leaguesData[game.leagueLevel]].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+        let myRank = teams.findIndex(t => t.name === "1.FC Moritz Leipzig") + 1;
+        let myTeamRecord = leaguesData[game.leagueLevel].find(t => t.name === "1.FC Moritz Leipzig");
 
         // Medienrechte (NEU): Liga-Kollektiv-TV-Ausschüttung zum Saisonende, gestaffelt nach
         // Ligastärke UND Tabellenplatz.
@@ -2626,3 +2745,4 @@
             }).join('')}
         </div>`;
     }
+

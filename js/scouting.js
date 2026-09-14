@@ -1,3 +1,4 @@
+
     // ==========================================
     // WELTWEITES SCOUTING-NETZWERK 2.0 (komplett neu aufgebaut)
     // ==========================================
@@ -88,6 +89,12 @@
             let f = mission.customFilter;
             let minStr = f ? f.minStr : Math.round(cfg.minStr + scout.skill * 0.15);
             let maxStr = f ? f.maxStr : Math.round(cfg.maxStr + scout.skill * 0.1);
+            // Garantierter Top-Fund (Premium-Booster, NEU): erzwingt eine hohe Mindeststärke
+            // für genau diesen Fund, danach wird die Garantie verbraucht.
+            if (game.nextScoutGuaranteed) {
+                minStr = 82; maxStr = 95;
+                game.nextScoutGuaranteed = false;
+            }
             let pos = f ? (f.pos === 'any' ? ["TW", "ABW", "MIT", "ST"][Math.floor(Math.random() * 4)] : f.pos) : cfg.pos;
             let ageRange = f ? [f.minAge, f.maxAge] : null;
             let star = createPlayer(pos, minStr, maxStr, f ? null : cfg.trait, ageRange);
@@ -304,3 +311,4 @@
         renderGlobalScoutingView();
         updateUI();
     }
+

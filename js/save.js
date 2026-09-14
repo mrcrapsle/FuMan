@@ -1,3 +1,4 @@
+
     function restoreGetters() {
         if (!rawMaterials.hasOwnProperty('capacity')) {
             Object.defineProperty(rawMaterials, 'capacity', {
@@ -43,11 +44,17 @@
     }
 
     function buildSaveState() {
-        return { game, managerRPG, incomingOffers, holdingCompany, rawMaterials, factories, merchandise, merchExtras, productionQueue, globalScoutResults, scoutingNetwork, securityWorkforce, mediaRights, realEstatePortfolio, stockMarket, financeCentralState, underworld, stadium, campusBuildings, staffMembers, staffMeta, staffCentralState, fanGroups, fanCentralState, privateLife, bandenSponsors, activeBet, betHistory, squad, lineup, secondTeamSquad, secondTeamLineup, leaguesData, fixturesData, cupTournament, europeTournament, inboxMessages, inboxArchive, rivalryRecord, crestHistory, loanedPlayers };
+        return { game, managerRPG, incomingOffers, holdingCompany, rawMaterials, factories, merchandise, merchExtras, productionQueue, globalScoutResults, scoutingNetwork, securityWorkforce, mediaRights, realEstatePortfolio, stockMarket, financeCentralState, underworld, stadium, campusBuildings, staffMembers, staffMeta, staffCentralState, fanGroups, fanCentralState, privateLife, bandenSponsors, activeBet, betHistory, squad, lineup, secondTeamSquad, secondTeamLineup, youthTalents, activeLoans, loanClubRelationships, loanClubLastInteractionSeason, leaguesData, fixturesData, cupTournament, europeTournament, inboxMessages, inboxArchive, rivalryRecord, crestHistory, loanedPlayers, loanablePlayers, incomingLoans, youthLeagueTable, youthLeagueMatchday };
     }
 
     function applyLoadedState(p) {
         if (p.game) Object.assign(game, p.game);
+        // Migrations-Fix (NEU): game.secondTeam.name wird als verschachteltes Objekt beim
+        // Object.assign oben komplett aus dem alten Spielstand übernommen - falls dort noch
+        // "Lok Leipzig II" gespeichert war, hier konsistent korrigieren.
+        if (game.secondTeam && game.secondTeam.name && game.secondTeam.name.includes('Lok Leipzig')) {
+            game.secondTeam.name = game.secondTeam.name.replace('Lok Leipzig', '1.FC Moritz Leipzig');
+        }
         if (p.managerRPG) Object.assign(managerRPG, p.managerRPG);
         if (p.incomingOffers) incomingOffers = p.incomingOffers;
         if (p.holdingCompany) Object.assign(holdingCompany, p.holdingCompany);
@@ -122,16 +129,43 @@
         if (p.squad) squad = p.squad;
         if (p.lineup) lineup = p.lineup;
         if (p.secondTeamSquad) secondTeamSquad = p.secondTeamSquad;
+        // KRITISCHER BUGFIX: youthTalents fehlte komplett in Speichern/Laden - die gesamte
+        // Jugendakademie (gescoutete Talente, Mentoren, Potenzial-Stufen, individueller
+        // Trainingsfokus) wäre bei jedem Speichern/Laden vollständig verloren gegangen.
+        if (p.youthTalents) youthTalents = p.youthTalents;
+        // WEITERE KRITISCHE BUGFIXES (systematischer Abgleich aller State-Variablen): auch
+        // laufende Bankkredite (samt Ratenzahlungsplan!) und die Leihclub-Beziehungshistorie
+        // fehlten komplett in Speichern/Laden.
+        if (p.activeLoans) activeLoans = p.activeLoans;
+        if (p.loanClubRelationships) loanClubRelationships = p.loanClubRelationships;
+        if (p.loanClubLastInteractionSeason) loanClubLastInteractionSeason = p.loanClubLastInteractionSeason;
         if (p.secondTeamLineup) secondTeamLineup = p.secondTeamLineup;
         if (p.inboxMessages) inboxMessages = p.inboxMessages;
         if (p.inboxArchive) inboxArchive = p.inboxArchive;
         if (p.rivalryRecord) rivalryRecord = p.rivalryRecord;
         if (p.crestHistory) crestHistory = p.crestHistory;
         if (p.loanedPlayers) loanedPlayers = p.loanedPlayers;
+        if (p.loanablePlayers) loanablePlayers = p.loanablePlayers;
+        if (p.youthLeagueTable) youthLeagueTable = p.youthLeagueTable;
+        if (typeof p.youthLeagueMatchday === 'number') youthLeagueMatchday = p.youthLeagueMatchday;
+        if (p.incomingLoans) incomingLoans = p.incomingLoans;
         if (p.leaguesData) leaguesData = p.leaguesData;
         if (p.fixturesData) fixturesData = p.fixturesData;
         if (p.cupTournament) cupTournament = p.cupTournament;
         if (p.europeTournament) europeTournament = p.europeTournament;
+        // Migrations-Fix (NEU): Speicherstände von vor der Vereinsumbenennung hatten den
+        // Namen "Lok Leipzig" noch fest in Liga-Tabellen, Spielplänen und Pokal-Paarungen
+        // gespeichert - der Code sucht seitdem aber überall nach "1.FC Moritz Leipzig".
+        // Dadurch fand keine der Rang-/Aufstiegs-Berechnungen das eigene Team mehr, und in
+        // der Tabelle erschien weiterhin der alte, "verwaiste" Name. Ersetzt pauschal in
+        // allen team-bezogenen Datenstrukturen, egal an welcher Feldposition der Name steht.
+        if (p.leaguesData || p.fixturesData || p.cupTournament || p.europeTournament) {
+            let renameOldClubName = (obj) => JSON.parse(JSON.stringify(obj).split('"Lok Leipzig"').join('"1.FC Moritz Leipzig"'));
+            if (p.leaguesData) leaguesData = renameOldClubName(leaguesData);
+            if (p.fixturesData) fixturesData = renameOldClubName(fixturesData);
+            if (p.cupTournament) cupTournament = renameOldClubName(cupTournament);
+            if (p.europeTournament) europeTournament = renameOldClubName(europeTournament);
+        }
         restoreGetters();
     }
 
@@ -149,7 +183,7 @@
             let state = buildSaveState();
             state.meta = {
                 savedAt: new Date().toLocaleString('de-DE'),
-                clubName: "Lok Leipzig",
+                clubName: "1.FC Moritz Leipzig",
                 league: leagueNames[game.leagueLevel],
                 season: game.season,
                 matchday: Math.min(34, game.matchday),
@@ -206,6 +240,8 @@
     }
 
     function renderSaveSlotsUI() {
+        let versionTag = document.getElementById('game-version-tag');
+        if (versionTag) versionTag.innerText = `Version ${GAME_VERSION.number} · Stand: ${GAME_VERSION.date}`;
         for (let i = 1; i <= SAVE_SLOT_COUNT; i++) {
             let meta = getSlotMeta(i);
             let box = document.getElementById('save-slot-' + i);
@@ -239,7 +275,7 @@
                 let p = JSON.parse(legacy);
                 p.meta = {
                     savedAt: 'Migriert von altem Speicherstand',
-                    clubName: "Lok Leipzig",
+                    clubName: "1.FC Moritz Leipzig",
                     league: (p.game && typeof leagueNames !== 'undefined') ? leagueNames[p.game.leagueLevel] : '',
                     season: p.game ? p.game.season : 1,
                     matchday: p.game ? Math.min(34, p.game.matchday) : 1,
@@ -314,3 +350,4 @@
         safeSessionSet(FORCE_NEW_GAME_FLAG, '1');
         location.reload();
     }
+

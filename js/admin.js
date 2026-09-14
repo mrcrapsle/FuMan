@@ -1,3 +1,4 @@
+
     // Selbsttest-Ergebnis-Archiv: zeigt die letzten Läufe mit Zeitstempel im Admin-Bereich.
     function renderSelfTestArchive() {
         let box = document.getElementById('self-test-archive-box');
@@ -60,6 +61,8 @@
     }
 
     function renderAdminView() {
+        let versionTag = document.getElementById('admin-version-tag');
+        if (versionTag) versionTag.innerText = `Version ${GAME_VERSION.number} · Stand: ${GAME_VERSION.date}`;
         let leagueEl = document.getElementById('adm-ins-league');
         if (leagueEl) leagueEl.innerText = leagueNames[game.leagueLevel];
         renderSelfTestArchive();
@@ -314,8 +317,8 @@
             adminAdvanceMatchdays(step);
             remaining -= step;
             let teams = leaguesData[game.leagueLevel];
-            let myTeam = teams ? teams.find(t => t.name === "Lok Leipzig") : null;
-            let rank = teams && myTeam ? [...teams].sort((a, b) => b.points - a.points).findIndex(t => t.name === "Lok Leipzig") + 1 : '-';
+            let myTeam = teams ? teams.find(t => t.name === "1.FC Moritz Leipzig") : null;
+            let rank = teams && myTeam ? [...teams].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst)).findIndex(t => t.name === "1.FC Moritz Leipzig") + 1 : '-';
             checkpoints.push({ matchday: game.matchday, rank, points: myTeam ? myTeam.points : 0, money: game.money });
             if (game.matchday > 34) break;
         }
@@ -345,17 +348,17 @@
             game.matchday = 30;
             let teams = leaguesData[game.leagueLevel];
             if (teams) {
-                let myTeam = teams.find(t => t.name === "Lok Leipzig");
+                let myTeam = teams.find(t => t.name === "1.FC Moritz Leipzig");
                 if (myTeam) myTeam.points = 62;
-                let sorted = [...teams].sort((a, b) => b.points - a.points);
-                if (sorted[0] && sorted[0].name !== "Lok Leipzig") sorted[0].points = 63;
+                let sorted = [...teams].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+                if (sorted[0] && sorted[0].name !== "1.FC Moritz Leipzig") sorted[0].points = 63;
             }
             alert('🧪 Szenario "Meisterschafts-Endspurt" aktiviert: Spieltag 30, knapper Rückstand auf Platz 1.');
         } else if (scenario === 'abstiegskampf') {
             game.matchday = 30;
             let teams = leaguesData[game.leagueLevel];
             if (teams) {
-                let myTeam = teams.find(t => t.name === "Lok Leipzig");
+                let myTeam = teams.find(t => t.name === "1.FC Moritz Leipzig");
                 if (myTeam) myTeam.points = 28;
             }
             game.fans = 25;
@@ -379,8 +382,8 @@
                 fixs?.forEach(f => {
                     if (!f.played) {
                         let hTeam = leaguesData[l][f.home], aTeam = leaguesData[l][f.away];
-                        let hStr = (hTeam.name === "Lok Leipzig") ? calcTeamStrength(true) : (aTeam.name === "Lok Leipzig" ? applySabotageToOpponentStrength(hTeam.strength) : hTeam.strength);
-                        let aStr = (aTeam.name === "Lok Leipzig") ? calcTeamStrength(false) : (hTeam.name === "Lok Leipzig" ? applySabotageToOpponentStrength(aTeam.strength) : aTeam.strength);
+                        let hStr = (hTeam.name === "1.FC Moritz Leipzig") ? calcTeamStrength(true) : (aTeam.name === "1.FC Moritz Leipzig" ? applySabotageToOpponentStrength(hTeam.strength) : hTeam.strength);
+                        let aStr = (aTeam.name === "1.FC Moritz Leipzig") ? calcTeamStrength(false) : (hTeam.name === "1.FC Moritz Leipzig" ? applySabotageToOpponentStrength(aTeam.strength) : aTeam.strength);
                         let goals = simulateGoals(hStr, aStr, hTeam, aTeam);
                         f.homeGoals = goals.myGoals;
                         f.awayGoals = goals.oppGoals;
@@ -390,12 +393,12 @@
                             if (hTeam.name === game.secondTeam.name) attributeGoalsToSecondTeamScorers(f.homeGoals);
                             else if (aTeam.name === game.secondTeam.name) attributeGoalsToSecondTeamScorers(f.awayGoals);
                         }
-                        if (hTeam.name === "Lok Leipzig") {
+                        if (hTeam.name === "1.FC Moritz Leipzig") {
                             isHome = true; playedOurMatch = true;
                             won = f.homeGoals > f.awayGoals; drawn = f.homeGoals === f.awayGoals;
                             isHomeDerby = aTeam.name === hTeam.rivalName;
                             opponentNameThisMatch = aTeam.name; ourGoalsThisMatch = f.homeGoals; oppGoalsThisMatch = f.awayGoals;
-                        } else if (aTeam.name === "Lok Leipzig") {
+                        } else if (aTeam.name === "1.FC Moritz Leipzig") {
                             isHome = false; playedOurMatch = true;
                             won = f.awayGoals > f.homeGoals; drawn = f.homeGoals === f.awayGoals;
                             opponentNameThisMatch = hTeam.name; ourGoalsThisMatch = f.awayGoals; oppGoalsThisMatch = f.homeGoals;
@@ -473,3 +476,4 @@
     // SAVE_SLOT_PREFIX/SAVE_SLOT_COUNT hat (vorher wurde hier fälschlich nur der längst
     // abgelöste Legacy-Key gelöscht, wodurch der eigentlich aktive Speicherslot 1
     // unangetastet blieb und "Reset" wirkungslos schien).
+

@@ -1,3 +1,4 @@
+
     // Wandelt einen rohen Trophäen-Eintrag in Icon + Kategorie um, für eine chronologische
     // "Ehrengalerie" statt einer schlichten Liste (bringt auch den Legenden-Status sichtbar
     // zur Geltung statt ihn zwischen normalen Pokal-Einträgen untergehen zu lassen).
@@ -100,3 +101,4 @@
             list.innerHTML += `<div class="box" style="border-left-color:var(--blue); margin-top:10px;"><span style="font-size:9px; color:#94a3b8; text-transform:uppercase;">Statistik</span><br><strong style="color:var(--blue);">📊 Zuschauerrekord: ${game.recordAttendance.toLocaleString('de-DE')} (Saison ${game.recordAttendanceSeason})</strong></div>`;
         }
     }
+

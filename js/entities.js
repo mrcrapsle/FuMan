@@ -1,3 +1,4 @@
+
 // ==========================================
 // SPIELER- & TEAM-GENERIERUNG
 // ==========================================
@@ -37,7 +38,7 @@
 
     function generateTeamName() {
         if (Math.random() < 0.35) {
-            let candidates = RECOGNIZABLE_CLUB_NAMES.filter(n => !usedClubNames.has(n) && n !== "Lok Leipzig");
+            let candidates = RECOGNIZABLE_CLUB_NAMES.filter(n => !usedClubNames.has(n) && n !== "1.FC Moritz Leipzig");
             if (candidates.length > 0) {
                 let name = candidates[Math.floor(Math.random() * candidates.length)];
                 usedClubNames.add(name);
@@ -48,7 +49,7 @@
             let pref = prefixPool[Math.floor(Math.random() * prefixPool.length)];
             let city = cityPool[Math.floor(Math.random() * cityPool.length)];
             let name = `${pref} ${city}`;
-            if (!usedClubNames.has(name) && name !== "Lok Leipzig") {
+            if (!usedClubNames.has(name) && name !== "1.FC Moritz Leipzig") {
                 usedClubNames.add(name);
                 return name;
             }
@@ -143,6 +144,8 @@
             squadTenureMatchdays: 0,
             ultimatumCount: 0,
             isCrowdFavorite: false,
+            releaseClause: null,
+            mentorId: null,
             penaltiesTaken: 0,
             penaltiesScored: 0,
             penaltyTrainingBonus: 0,
@@ -212,3 +215,4 @@
             GRU: clamp99(p.physique + r('gru') * 10 - 5)
         };
     }
+

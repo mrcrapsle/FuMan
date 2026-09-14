@@ -1,8 +1,9 @@
+
     // ==========================================
     // VEREINS-WAPPEN-EDITOR
     // ==========================================
     const CREST_COLOR_PRESETS = ['#f5b942', '#3fb6ff', '#ff4d6d', '#22e0a8', '#8b5cf6', '#ff8a5c', '#ffffff', '#c0c0c0'];
-    const CREST_SYMBOL_PRESETS = ['LL', '⚽', '🦁', '🐺', '🦅', '⚡', '🔥', '★'];
+    const CREST_SYMBOL_PRESETS = ['FCM', '⚽', '🦁', '🐺', '🦅', '⚡', '🔥', '★'];
     // Zweite Wappen-Ebene: kleines Muster-Badge in der Ecke, unabhängig vom Hauptsymbol
     // wählbar, für mehr Individualisierung ohne das Hauptsymbol zu ersetzen.
     const CREST_PATTERN_PRESETS = [
@@ -49,9 +50,9 @@
             ? veterans.sort((a, b) => b.strength - a.strength).slice(0, 3).map(v => v.name).join(', ')
             : null;
         let veteranText = veteranNames
-            ? `Vereinslegenden wie ${veteranNames} liefen noch einmal im Trikot von Lok Leipzig auf`
+            ? `Vereinslegenden wie ${veteranNames} liefen noch einmal im Trikot von 1.FC Moritz Leipzig auf`
             : `Ehemalige Vereinslegenden liefen noch einmal für die Alt-Herren-Auswahl auf`;
-        addInboxMessage('vertrag', `🎉 Jubiläums-Traditionsspiel: ${game.season} Jahre Lok Leipzig!`,
+        addInboxMessage('vertrag', `🎉 Jubiläums-Traditionsspiel: ${game.season} Jahre 1.FC Moritz Leipzig!`,
             `${veteranText} - ein emotionaler Nachmittag vor vollen Rängen. Einnahmen: ${formatVal(income)}, spürbarer Stimmungsschub für Fans und Mannschaft!`, 'screen-calendar');
         showToast(`🎉 Jubiläums-Traditionsspiel ausgetragen! +${formatVal(income)}`, 'success');
         pendingMilestoneInterviewType = 'jubilee';
@@ -68,7 +69,7 @@
         if (!el) return;
         let color = game.clubCrestColor || '#f5b942';
         let symbolEl = document.getElementById('club-logo-symbol-text');
-        if (symbolEl) symbolEl.innerText = game.clubCrestSymbol || 'LL';
+        if (symbolEl) symbolEl.innerText = game.clubCrestSymbol || 'FCM';
         // Bewusst OHNE color-mix()/CSS-Farbfunktionen (in älteren Android-WebViews evtl. nicht
         // unterstützt) - stattdessen simpler radialer Verlauf aus per-JS berechneten RGBA-Werten.
         let gradient = `radial-gradient(circle at 35% 30%, ${hexToRgba(color, 0.65)} 0%, ${color} 55%, ${hexToRgba(color, 0.75)} 100%)`;
@@ -107,7 +108,7 @@
         if (preview) {
             preview.style.background = gradient;
             preview.style.boxShadow = hasSponsor ? `0 0 0 5px var(--teal), 0 0 20px rgba(23,201,184,0.5)` : 'none';
-            if (previewSymbol) previewSymbol.innerText = game.clubCrestSymbol || 'LL';
+            if (previewSymbol) previewSymbol.innerText = game.clubCrestSymbol || 'FCM';
             if (previewBadge) {
                 if (pattern && pattern.icon) { previewBadge.innerText = pattern.icon; previewBadge.style.display = 'flex'; }
                 else previewBadge.style.display = 'none';
@@ -242,3 +243,4 @@
             awayColorBox.innerHTML = CREST_COLOR_PRESETS.map(c => `<button onclick="setAwayColor('${c}')" style="width:32px; height:32px; border-radius:50%; background:${c}; border:${game.clubCrestAwayColor === c ? '3px solid #fff' : '1px solid rgba(255,255,255,0.3)'}; cursor:pointer;"></button>`).join('');
         }
     }
+

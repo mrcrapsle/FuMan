@@ -1,6 +1,13 @@
+
     function renderDashboardView() {
         document.getElementById('dash-mday').innerText = Math.min(34, game.matchday);
         document.getElementById('dash-league-name').innerText = leagueNames[game.leagueLevel];
+        // Dashboard-Hero (NEU): Liga & Spieltag auch in der neuen 3D-Stadion-Ansicht anzeigen.
+        let heroSubline = document.getElementById('dash-hero-subline');
+        if (heroSubline) heroSubline.innerText = `${leagueNames[game.leagueLevel]} · Spieltag ${Math.min(34, game.matchday)}/34`;
+        let heroCrest = document.getElementById('dash-hero-crest');
+        if (heroCrest && game.clubCrestAnimal) heroCrest.innerText = game.clubCrestAnimal;
+        if (typeof applyStadiumVisualTier === 'function') applyStadiumVisualTier('.dashboard-hero-bowl-wrapper');
         document.getElementById('dash-transfer-budget').innerText = formatVal(game.transferBudget);
         document.getElementById('dash-wage-budget').innerText = formatVal(game.wageBudget) + " / SpT";
         document.getElementById('dash-holding-cap').innerText = formatVal(holdingCompany.money);
@@ -23,9 +30,9 @@
         let oppName = "Spielfrei";
         let oppStr = 55;
         if (fixtures) {
-            let ourMatch = fixtures.find(f => leaguesData[game.leagueLevel][f.home]?.name === "Lok Leipzig" || leaguesData[game.leagueLevel][f.away]?.name === "Lok Leipzig");
+            let ourMatch = fixtures.find(f => leaguesData[game.leagueLevel][f.home]?.name === "1.FC Moritz Leipzig" || leaguesData[game.leagueLevel][f.away]?.name === "1.FC Moritz Leipzig");
             if (ourMatch) {
-                let isHome = leaguesData[game.leagueLevel][ourMatch.home].name === "Lok Leipzig";
+                let isHome = leaguesData[game.leagueLevel][ourMatch.home].name === "1.FC Moritz Leipzig";
                 oppName = isHome ? leaguesData[game.leagueLevel][ourMatch.away].name : leaguesData[game.leagueLevel][ourMatch.home].name;
                 let oppTeam = leaguesData[game.leagueLevel].find(t => t.name === oppName);
                 if (oppTeam) oppStr = oppTeam.strength;
@@ -76,10 +83,10 @@
         if (!box) return;
         let goals = [];
         let teams = leaguesData[game.leagueLevel];
-        let us = teams ? teams.find(t => t.name === "Lok Leipzig") : null;
+        let us = teams ? teams.find(t => t.name === "1.FC Moritz Leipzig") : null;
         if (us && teams) {
-            let sorted = [...teams].sort((a, b) => b.points - a.points);
-            let ourRank = sorted.findIndex(t => t.name === "Lok Leipzig") + 1;
+            let sorted = [...teams].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+            let ourRank = sorted.findIndex(t => t.name === "1.FC Moritz Leipzig") + 1;
             if (ourRank > 1) {
                 let above = sorted[ourRank - 2];
                 let gap = above.points - us.points;
@@ -108,3 +115,4 @@
             ? '<div style="font-size:9px; color:var(--text-muted);">Keine besonderen Ereignisse in den letzten Spieltagen.</div>'
             : recentMessages.map(m => `<div style="font-size:9px; margin-bottom:3px;">• ${m.title}</div>`).join('');
     }
+

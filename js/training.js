@@ -1,3 +1,4 @@
+
     // ---------- WOCHENPLAN MIT TAGES-ZUWEISUNG ----------
     const WEEKLY_TRAINING_UNITS = {
         ausgeglichen: { label: 'Ausgeglichen', icon: '⚖️', load: 1 },
@@ -133,9 +134,102 @@
             </div>`).join('');
     }
 
+    // Reiter-Navigation (NEU): teilt den bisher sehr langen Trainings-Screen in 4 Reiter auf,
+    // um das ständige Scrollen zu vermeiden.
+    function setTrainingTab(tab) {
+        playSound('click');
+        ['plan', 'minigames', 'individual', 'special'].forEach(t => {
+            let el = document.getElementById('training-tab-' + t);
+            if (el) el.style.display = (t === tab) ? 'block' : 'none';
+            let btn = document.getElementById('btn-tab-tra-' + t);
+            if (btn) btn.className = (t === tab) ? 'btn-action' : 'btn-secondary';
+        });
+    }
+
+    // ==========================================
+    // FÄHIGKEITEN GEZIELT ANTRAINIEREN (NEU)
+    // ==========================================
+    // Ein zugewiesener Trainer (Personal) bildet einen Spieler über mehrere Spieltage gezielt
+    // in einer Fähigkeit fort - kostet echtes Geld UND Zeit, garantiert dafür eine echte,
+    // spürbare Verbesserung statt einer reinen Zufallschance wie beim allgemeinen Training.
+    const SKILL_TRAINING_STATS = { pace: 'Tempo', shooting: 'Schuss', passing: 'Pass', defense: 'Abwehr' };
+    const SKILL_TRAINING_COACHES = {
+        coTrainer: { name: 'Co-Trainer', boost: 3, days: 16 },
+        twTrainer: { name: 'Torwarttrainer (nur Torhüter)', boost: 5, days: 14, restrictToGK: true },
+        setPieceCoach: { name: 'Standards-Spezialist (Schuss/Pass)', boost: 4, days: 14, restrictToStats: ['shooting', 'passing'] }
+    };
+    function populateSkillTrainingSelects() {
+        let playerSel = document.getElementById('skill-training-player-select');
+        let statSel = document.getElementById('skill-training-stat-select');
+        let coachSel = document.getElementById('skill-training-coach-select');
+        if (!playerSel || !statSel || !coachSel) return;
+        playerSel.innerHTML = squad.map(p => `<option value="${p.id}">${p.name} (${p.pos})</option>`).join('');
+        statSel.innerHTML = Object.keys(SKILL_TRAINING_STATS).map(k => `<option value="${k}">${SKILL_TRAINING_STATS[k]}</option>`).join('');
+        let availableCoaches = Object.keys(SKILL_TRAINING_COACHES).filter(k => staffMembers[k] && staffMembers[k].hired);
+        coachSel.innerHTML = availableCoaches.length > 0
+            ? availableCoaches.map(k => `<option value="${k}">${SKILL_TRAINING_COACHES[k].name}</option>`).join('')
+            : '<option value="">Kein geeigneter Trainer eingestellt!</option>';
+    }
+    function getSkillTrainingCost(coachKey) {
+        let scale = typeof leagueScaleFactor === 'function' ? leagueScaleFactor() : 1;
+        let base = { coTrainer: 8000, twTrainer: 10000, setPieceCoach: 9000 }[coachKey] || 8000;
+        return Math.round(base * scale);
+    }
+    function startSkillTraining() {
+        let playerId = document.getElementById('skill-training-player-select').value;
+        let stat = document.getElementById('skill-training-stat-select').value;
+        let coachKey = document.getElementById('skill-training-coach-select').value;
+        let p = squad.find(x => x.id === playerId);
+        let coach = SKILL_TRAINING_COACHES[coachKey];
+        if (!p || !coach) { showToast('Bitte Spieler und Trainer auswählen!', 'error'); return; }
+        if (!staffMembers[coachKey] || !staffMembers[coachKey].hired) { showToast('Dieser Trainer ist nicht eingestellt!', 'error'); return; }
+        if (coach.restrictToGK && p.pos !== 'TW') { showToast('Dieser Trainer bildet nur Torhüter fort!', 'error'); return; }
+        if (coach.restrictToStats && !coach.restrictToStats.includes(stat)) { showToast(`Dieser Trainer kann nur ${coach.restrictToStats.map(s => SKILL_TRAINING_STATS[s]).join('/')} trainieren!`, 'error'); return; }
+        if ((game.skillTrainingQueue || []).some(s => s.playerId === playerId)) { showToast(`${p.name} wird bereits fortgebildet!`, 'error'); return; }
+        let cost = getSkillTrainingCost(coachKey);
+        if (game.money < cost) { showToast(`Nicht genug Geld! Benötigt: ${formatVal(cost)}`, 'error'); return; }
+        playSound('goal');
+        game.money -= cost;
+        if (!game.skillTrainingQueue) game.skillTrainingQueue = [];
+        game.skillTrainingQueue.push({ playerId, playerName: p.name, stat, statLabel: SKILL_TRAINING_STATS[stat], coachKey, coachName: coach.name, boost: coach.boost, matchdaysLeft: coach.days, totalDays: coach.days });
+        addInboxMessage('vertrag', `💪 Fähigkeitstraining gestartet: ${p.name}`, `${coach.name} bildet ${p.name} in "${SKILL_TRAINING_STATS[stat]}" fort - in ${coach.days} Spieltagen +${coach.boost} garantiert.`, 'screen-training');
+        showToast(`💪 Fähigkeitstraining für ${p.name} gestartet!`, 'success');
+        renderTrainingView();
+        updateUI();
+    }
+    // Wird jeden Spieltag ausgewertet: zaehlt herunter, wendet den garantierten Fähigkeits-
+    // Boost bei Abschluss an.
+    function tickSkillTraining() {
+        if (!Array.isArray(game.skillTrainingQueue)) return;
+        game.skillTrainingQueue.forEach(s => { s.matchdaysLeft--; });
+        let done = game.skillTrainingQueue.filter(s => s.matchdaysLeft <= 0);
+        done.forEach(s => {
+            let p = squad.find(x => x.id === s.playerId);
+            if (p) {
+                p[s.stat] = Math.min(99, (p[s.stat] || 0) + s.boost);
+                addInboxMessage('vertrag', `💪 Fähigkeitstraining abgeschlossen: ${p.name}`, `${s.statLabel} von ${p.name} um ${s.boost} Punkte gesteigert (${s.coachName})!`, 'screen-squad');
+                showToast(`💪 ${p.name}: ${s.statLabel} +${s.boost}!`, 'success');
+            }
+        });
+        game.skillTrainingQueue = game.skillTrainingQueue.filter(s => s.matchdaysLeft > 0);
+    }
+    function renderSkillTrainingActiveList() {
+        let box = document.getElementById('skill-training-active-list');
+        if (!box) return;
+        populateSkillTrainingSelects();
+        let queue = game.skillTrainingQueue || [];
+        if (queue.length === 0) { box.innerHTML = ''; return; }
+        box.innerHTML = queue.map(s => `
+            <div class="box" style="font-size:9px; display:flex; justify-content:space-between;">
+                <span>${s.playerName}: ${s.statLabel} (+${s.boost}) mit ${s.coachName}</span>
+                <strong>noch ${s.matchdaysLeft} SpT</strong>
+            </div>`).join('');
+    }
+
     function renderTrainingView() {
         renderWeeklyTrainingPlan();
         renderTrainingExtras();
+        renderSkillTrainingActiveList();
         document.getElementById('cur-team-training').innerText = game.teamTraining.toUpperCase();
 
         // Minispiel-Bereich: Spielerauswahl, verbleibende Einheiten, Bestleistungen
@@ -153,6 +247,14 @@
         }
         let sessionsLeftEl = document.getElementById('training-sessions-left');
         if (sessionsLeftEl) sessionsLeftEl.innerText = trainingSessionsLeft();
+        // Minispiel-Kosten (NEU) dynamisch an den Buttons anzeigen.
+        let mgCost = typeof getMinigameCost === 'function' ? getMinigameCost() : 2000;
+        let btnPenalty = document.getElementById('btn-minigame-penalty');
+        if (btnPenalty) btnPenalty.innerText = `⚽ Elfmeterschießen [${formatVal(mgCost)}]`;
+        let btnCrossing = document.getElementById('btn-minigame-crossing');
+        if (btnCrossing) btnCrossing.innerText = `🎯 Flankentraining [${formatVal(mgCost)}]`;
+        let btnGoalkeeper = document.getElementById('btn-minigame-goalkeeper');
+        if (btnGoalkeeper) btnGoalkeeper.innerText = `🧤 Elfmeter halten (nur Torhüter) [${formatVal(mgCost)}]`;
         let bestPenaltyEl = document.getElementById('best-penalty-score');
         if (bestPenaltyEl) bestPenaltyEl.innerText = (game.bestPenaltyScore || 0) + '/5';
         let bestCrossingEl = document.getElementById('best-crossing-score');
@@ -268,7 +370,7 @@
                 if (fixs) {
                     let ourFixture = fixs.find(f => {
                         let h = leaguesData[game.leagueLevel][f.home].name, a = leaguesData[game.leagueLevel][f.away].name;
-                        return h === "Lok Leipzig" || a === "Lok Leipzig";
+                        return h === "1.FC Moritz Leipzig" || a === "1.FC Moritz Leipzig";
                     });
                     if (ourFixture) {
                         let h = leaguesData[game.leagueLevel][ourFixture.home].name, a = leaguesData[game.leagueLevel][ourFixture.away].name;
@@ -458,6 +560,14 @@
         let p = squad.find(x => x.id === playerId);
         if (!p || p.pos !== 'TW') { showToast('Nur für Torhüter verfügbar!', 'error'); return; }
         if (p.trait === 'Elfmeter-Killer') { showToast('Hat die Eigenschaft bereits!', 'error'); return; }
+        // Bugfix: die seltene Eigenschaft ließ sich bisher schon beim allerersten Versuch
+        // erlernen - unrealistisch für eine Fähigkeit, die sich ein Torhüter eigentlich über
+        // viele Pflichtspiele hinweg erarbeitet. Jetzt erst ab 80 Einsätzen zugänglich.
+        const PENALTY_KILLER_MIN_APPEARANCES = 80;
+        if ((p.appearances || 0) < PENALTY_KILLER_MIN_APPEARANCES) {
+            showToast(`Braucht erst mehr Erfahrung: ${p.appearances || 0} / ${PENALTY_KILLER_MIN_APPEARANCES} Pflichtspielen!`, 'error');
+            return;
+        }
         let cost = 12000;
         if (game.money < cost) { showToast(`Nicht genug Geld! Benötigt: ${formatVal(cost)}`, 'error'); return; }
         playSound('click');
@@ -533,10 +643,12 @@
         let killerSelect = document.getElementById('penalty-killer-select');
         if (killerSelect) {
             let keepers = squad.filter(p => p.pos === 'TW' && p.trait !== 'Elfmeter-Killer');
-            killerSelect.innerHTML = '<option value="">Torhüter wählen...</option>' + keepers.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+            const PENALTY_KILLER_MIN_APPEARANCES = 80;
+            killerSelect.innerHTML = '<option value="">Torhüter wählen...</option>' + keepers.map(p => `<option value="${p.id}">${p.name} (${p.appearances || 0}/${PENALTY_KILLER_MIN_APPEARANCES} Einsätze${(p.appearances||0) >= PENALTY_KILLER_MIN_APPEARANCES ? ' ✓' : ''})</option>`).join('');
         }
         let athleticSelect = document.getElementById('athletic-test-select');
         if (athleticSelect) {
             athleticSelect.innerHTML = squad.map(p => `<option value="${p.id}">${p.name} (${p.pos})${p.athleticTested ? ' ✓' : ''}</option>`).join('');
         }
     }
+

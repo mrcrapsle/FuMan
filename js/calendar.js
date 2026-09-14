@@ -1,3 +1,4 @@
+
     function renderCalendarView() {
         const months = ["August", "September", "Oktober", "November", "Dezember", "Januar", "Februar", "März", "April", "Mai"];
         let monthIdx = Math.min(9, Math.floor((game.matchday - 1) / 3.5));
@@ -100,7 +101,7 @@
         if (won) {
             game.fans = Math.min(100, game.fans + 6);
             squad.forEach(p => { p.morale = Math.min(100, p.morale + 5); });
-            addInboxMessage('vertrag', `🔥 Revanche geglückt gegen ${game.permanentRivalName}!`, `Im Vorbereitungs-Duell gegen den Erzfeind ${game.permanentRivalName} setzt sich Lok Leipzig durch - ein psychologisch wichtiges Zeichen vor dem Saisonstart!`, 'screen-calendar');
+            addInboxMessage('vertrag', `🔥 Revanche geglückt gegen ${game.permanentRivalName}!`, `Im Vorbereitungs-Duell gegen den Erzfeind ${game.permanentRivalName} setzt sich 1.FC Moritz Leipzig durch - ein psychologisch wichtiges Zeichen vor dem Saisonstart!`, 'screen-calendar');
             alert(`🔥 REVANCHE GEGLÜCKT!\nSieg im Testspiel gegen Erzfeind ${game.permanentRivalName}!\nEinnahmen: +${formatVal(income)}\nSpürbarer Moralschub vor dem Saisonstart!`);
         } else {
             game.fans = Math.max(1, game.fans - 2);
@@ -151,3 +152,4 @@
         addInboxMessage('vertrag', `✈️ ${cfg.label} beendet!`, `Team ist topfit & gestärkt. Für die nächsten ${cfg.matches} Spieltage: -${Math.round(cfg.injuryReduction*100)}% Verletzungsrisiko${cfg.strengthBonus>0 ? `, +${cfg.strengthBonus} Teamstärke` : ''}.${sponsorText}`, 'screen-calendar');
         alert(`✈️ ${cfg.label} beendet! Alle Spieler topfit & gestärkt.\n\nBonus für die nächsten ${cfg.matches} Spieltage: -${Math.round(cfg.injuryReduction*100)}% Verletzungsrisiko${cfg.strengthBonus>0 ? `, +${cfg.strengthBonus} Teamstärke` : ''}.${sponsorText}`);
     }
+

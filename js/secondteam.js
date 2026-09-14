@@ -1,3 +1,4 @@
+
     // ==========================================
     // ZWEITE MANNSCHAFT: eigenständiger Klub, der parallel zur ersten Mannschaft ganz
     // unten in der niedrigsten Liga startet und sich unabhängig hocharbeiten kann.
@@ -575,7 +576,7 @@
         if (!game.secondTeam.isActive) return;
         let table = leaguesData[game.secondTeam.leagueLevel];
         if (!table) return;
-        let sorted = [...table].sort((a, b) => b.points - a.points);
+        let sorted = [...table].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
         let rank = sorted.findIndex(t => t.name === game.secondTeam.name) + 1;
 
         if (rank <= 2 && game.secondTeam.leagueLevel > 0) {
@@ -601,3 +602,4 @@
         autoLineupSecondTeam();
         refreshSecondTeamMarket();
     }
+
