@@ -73,15 +73,165 @@
         initEuropeCup();
     }
 
+    // ==========================================
+    // LEBENDE LIGA: ECHTES AUF-/ABSTIEGSSYSTEM FÜR ALLE 108 KI-VEREINE (NEU)
+    // ==========================================
+    // Bisher warf initLeagues() JEDE Saison die komplette Liga-Pyramide weg und würfelte
+    // für alle 6 Ligen x 18 Teams (außer den beiden fest "eingebauten" Sonderplätzen
+    // Zweite Mannschaft & Permanenter Rivale) neue Namen UND neue Zufallsstärken neu aus.
+    // Dadurch gab es de facto keine Gegner mit Vereinsgeschichte - "Kopf-an-Kopf"-Bilanzen
+    // gegen einen Namen waren über Saisongrenzen hinweg reiner Zufall. Diese Funktion ersetzt
+    // den initLeagues()-Aufruf am Saisonende: dieselben 108 Vereinsobjekte bleiben bestehen,
+    // steigen nach echter Tabellenplatzierung symmetrisch auf/ab (2 rauf/2 runter je
+    // Liga-Grenze, dadurch bleiben alle Ligen dauerhaft bei exakt 18 Teams) und werden dabei
+    // von einer kleinen "Transferfenster"-Simulation begleitet, die ihre Stärke je nach
+    // Erfolg der letzten Saison und neuem Liganiveau weiterentwickelt - Vereine können sich
+    // so über mehrere Saisons hinweg wirklich hocharbeiten oder absacken.
+    function evolveAiTeamStrength(team, info) {
+        // Unser eigenes Team wird über den Kader simuliert, nicht über dieses Feld - das
+        // Feld selbst ist für uns nur ein ungenutztes Überbleibsel der Tabellenzeile.
+        if (team.name === "1.FC Moritz Leipzig") return;
+        let newLevel = info.outcome === 'promoted' ? info.level - 1 : (info.outcome === 'relegated' ? info.level + 1 : info.level);
+        let targetBase = 82 - newLevel * 10;
+        // Innerhalb einer Zielband-Breite von ±5 landet der Tabellenerste am oberen, der
+        // Letzte am unteren Ende - Vereine, die ihr Niveau klar dominieren, driften so über
+        // mehrere Saisons weiter nach oben (und irgendwann in die nächste Aufstiegszone).
+        let rankQuality = 1 - (info.rank - 1) / Math.max(1, info.totalTeams - 1);
+        let targetStrength = targetBase - 5 + rankQuality * 10;
+        // Sanfte Annäherung (40% der Distanz) statt Sofort-Sprung, plus etwas Zufallsrauschen
+        // fürs simulierte Transferfenster (mal ein Glücksgriff, mal eine verkorkste Saison).
+        let noise = (Math.random() - 0.5) * 6;
+        let newStrength = team.strength + (targetStrength - team.strength) * 0.4 + noise;
+        team.strength = Math.max(35, Math.min(96, Math.round(newStrength)));
+        team.baseStrength = team.strength;
+    }
+
+    function advanceLeaguesToNewSeason() {
+        // Rang & Auf-/Abstiegs-Ausgang JEDES Vereins anhand der GERADE beendeten Saison
+        // festhalten, bevor irgendetwas verschoben oder zurückgesetzt wird.
+        let standingsPerLevel = leaguesData.map(table =>
+            [...table].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst))
+        );
+        // Unser eigener Auf-/Abstieg wird woanders eigenständig entschieden (inkl. DFB-
+        // Lizenzprüfung - kann vom reinen Tabellenplatz abweichen!) und weiter unten per
+        // insertOurTeamIntoLeagues() zwangsversetzt. Er darf hier keinen der 2 KI-Auf-/
+        // Abstiegsplätze "verbrauchen", sonst würden bei einem Platz-1-Aufstieg nur noch 1
+        // statt 2 KI-Teams mit aufsteigen und eine Liga würde nach und nach schrumpfen.
+        let outcomeOf = new Map();
+        let promotedInto = Array.from({ length: NUM_LEAGUES }, () => []);
+        let relegatedInto = Array.from({ length: NUM_LEAGUES }, () => []);
+        let leaving = new Set();
+        for (let l = 0; l < NUM_LEAGUES; l++) {
+            let standings = standingsPerLevel[l];
+            let aiOnly = standings.filter(t => t.name !== "1.FC Moritz Leipzig");
+            let promoted = l > 0 ? aiOnly.slice(0, 2) : [];
+            let relegated = l < NUM_LEAGUES - 1 ? aiOnly.slice(-2) : [];
+            standings.forEach((t, idx) => {
+                let outcome = promoted.includes(t) ? 'promoted' : (relegated.includes(t) ? 'relegated' : 'stayed');
+                outcomeOf.set(t, { rank: idx + 1, level: l, outcome, totalTeams: standings.length });
+            });
+            promoted.forEach(t => { promotedInto[l - 1].push(t); leaving.add(t); });
+            relegated.forEach(t => { relegatedInto[l + 1].push(t); leaving.add(t); });
+        }
+
+        let newLeaguesData = [];
+        for (let l = 0; l < NUM_LEAGUES; l++) {
+            let stayers = standingsPerLevel[l].filter(t => !leaving.has(t));
+            newLeaguesData.push([...stayers, ...promotedInto[l], ...relegatedInto[l]]);
+        }
+        leaguesData = newLeaguesData;
+
+        // Neuer Verein-News-Ticker (NEU): welche Vereine sind neu in unserer aktuellen Liga -
+        // sonst würde man den vollzogenen Auf-/Abstieg der Konkurrenz nie erfahren.
+        let arrivingInOurLevel = [...promotedInto[game.leagueLevel], ...relegatedInto[game.leagueLevel]]
+            .filter(t => t.name !== "1.FC Moritz Leipzig" && t.name !== game.secondTeam.name);
+        let rivalOutcome = game.permanentRivalName ? [...outcomeOf.entries()].find(([t]) => t.name === game.permanentRivalName) : null;
+
+        leaguesData.forEach((table, l) => {
+            table.forEach(t => {
+                let info = outcomeOf.get(t);
+                if (info) evolveAiTeamStrength(t, info);
+                t.played = 0; t.won = 0; t.drawn = 0; t.lost = 0;
+                t.goalsFor = 0; t.goalsAgainst = 0; t.points = 0; t.recentForm = [];
+                t.rivalName = null; t.friendName = null;
+            });
+            assignRivalriesAndFriendships(table);
+        });
+
+        insertOurTeamIntoLeagues();
+        insertSecondTeamIntoLeagues();
+        insertPermanentRivalIntoLeagues();
+        generateFixtures();
+        initDynamicCup();
+        initEuropeCup();
+
+        if (arrivingInOurLevel.length > 0) {
+            let names = arrivingInOurLevel.map(t => t.name).join(', ');
+            addInboxMessage('vertrag', `📰 Neue Gesichter in der ${leagueNames[game.leagueLevel]}`, `Diese Saison neu in deiner Liga: ${names}.`, 'screen-league');
+        }
+        if (rivalOutcome) {
+            let [, info] = rivalOutcome;
+            if (info.outcome === 'promoted') addInboxMessage('vertrag', `⚔️ ${game.permanentRivalName} steigt auf!`, `Dein Rivale ${game.permanentRivalName} wurde befördert und bekommt dadurch spürbar mehr Substanz.`, 'screen-league');
+            else if (info.outcome === 'relegated') addInboxMessage('vertrag', `⚔️ ${game.permanentRivalName} steigt ab!`, `Dein Rivale ${game.permanentRivalName} ist abgestiegen und dürfte dadurch vorerst schwächer werden.`, 'screen-league');
+        }
+    }
+
+    // Verschiebt den Verein mit diesem Namen in die Ziel-Liga (Positions-Tausch mit dem
+    // schwächsten dortigen Nicht-Sonder-Team) statt ihn wie früher einfach neu zu benennen.
+    // Unter der jetzt PERSISTENTEN Liga-Pyramide (siehe advanceLeaguesToNewSeason) würde
+    // reines Neu-Benennen sonst jede Saison einen zusätzlichen Geister-Verein mit demselben
+    // Namen hinterlassen, weil der alte Namensträger von letzter Saison unverändert
+    // irgendwo liegen bleibt. Gibt es noch KEINEN Träger dieses Namens (z.B. beim
+    // allerersten Aufruf), wird stattdessen wie bisher einfach umbenannt.
+    function relocateNamedTeamToLevel(name, targetLevel, protectedNames) {
+        if (!name) return null;
+        let targetTable = leaguesData[targetLevel];
+        if (!targetTable) return null;
+        let oldLevel = -1, oldIdx = -1;
+        for (let l = 0; l < NUM_LEAGUES; l++) {
+            let idx = leaguesData[l].findIndex(t => t.name === name);
+            if (idx !== -1) { oldLevel = l; oldIdx = idx; break; }
+        }
+        if (oldLevel === targetLevel) return targetTable[oldIdx];
+        let candidates = targetTable.filter(t => t.name !== name && !protectedNames.includes(t.name));
+        if (candidates.length === 0) return null;
+        let weakest = candidates.reduce((min, t) => t.strength < min.strength ? t : min, candidates[0]);
+        if (oldLevel === -1) { weakest.name = name; return weakest; }
+        let targetIdx = targetTable.indexOf(weakest);
+        let existing = leaguesData[oldLevel][oldIdx];
+        leaguesData[oldLevel].splice(oldIdx, 1, weakest);
+        targetTable.splice(targetIdx, 1, existing);
+        return existing;
+    }
+
+    // Setzt unsere eigene Tabellenzeile zwangsweise in game.leagueLevel um, FALLS der
+    // Auf-/Abstiegs-Algorithmus oben (der rein nach Tabellenplatz geht) zu einem anderen
+    // Ergebnis kommt als die tatsächliche, an anderer Stelle bereits getroffene Entscheidung
+    // (z.B. DFB-Lizenz verweigert trotz Platz 1/2 - dann bleiben wir doch in der alten Liga).
+    // Echter Tausch der Array-Positionen zwischen beiden Ligen (wie relocateNamedTeamToLevel
+    // oben) statt simplem Überschreiben - so bleibt der verdrängte KI-Verein erhalten.
+    function insertOurTeamIntoLeagues() {
+        let oldLevel = -1, oldIdx = -1;
+        for (let l = 0; l < NUM_LEAGUES; l++) {
+            let idx = leaguesData[l].findIndex(t => t.name === "1.FC Moritz Leipzig");
+            if (idx !== -1) { oldLevel = l; oldIdx = idx; break; }
+        }
+        if (oldLevel === -1 || oldLevel === game.leagueLevel) return;
+        let targetTable = leaguesData[game.leagueLevel];
+        let candidates = targetTable.filter(t => t.name !== game.secondTeam.name && t.name !== game.permanentRivalName);
+        if (candidates.length === 0) return;
+        let weakest = candidates.reduce((min, t) => t.strength < min.strength ? t : min, candidates[0]);
+        let targetIdx = targetTable.indexOf(weakest);
+        let ourTeam = leaguesData[oldLevel][oldIdx];
+        leaguesData[oldLevel].splice(oldIdx, 1, weakest);
+        targetTable.splice(targetIdx, 1, ourTeam);
+    }
+
     function insertPermanentRivalIntoLeagues() {
         if (!game.permanentRivalName) return;
-        let table = leaguesData[game.leagueLevel];
-        if (!table) return;
-        let candidates = table.filter(t => t.name !== "1.FC Moritz Leipzig" && t.name !== game.secondTeam.name);
-        if (candidates.length === 0) return;
-        let slot = candidates.reduce((min, t) => t.strength < min.strength ? t : min, candidates[0]);
-        slot.name = game.permanentRivalName;
-        let ourTeam = table.find(t => t.name === "1.FC Moritz Leipzig");
+        let slot = relocateNamedTeamToLevel(game.permanentRivalName, game.leagueLevel, ["1.FC Moritz Leipzig", game.secondTeam.name]);
+        if (!slot) return;
+        let ourTeam = leaguesData[game.leagueLevel].find(t => t.name === "1.FC Moritz Leipzig");
         if (ourTeam) { ourTeam.rivalName = game.permanentRivalName; slot.rivalName = "1.FC Moritz Leipzig"; }
     }
 

@@ -2671,7 +2671,7 @@
         processSecondTeamSeasonEnd();
         forceSponsorRenewalAtSeasonStart();
         if (typeof checkSeasonMoodTargetResult === 'function') checkSeasonMoodTargetResult();
-        initLeagues();
+        advanceLeaguesToNewSeason();
         refreshTransferMarket();
         autoLineup();
         updateUI();
