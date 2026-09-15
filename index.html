@@ -667,10 +667,14 @@
                     <div class="panel-header" style="color:var(--accent);">
                         <span>🏷️ VEREINSIDENTITÄT</span>
                     </div>
-                    <div class="box" style="display:flex; justify-content:space-between; align-items:center;">
+                    <div class="box" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
                         <span>Aktueller Vereinsname: <strong id="career-club-name-display" style="color:var(--primary);">1.FC Moritz Leipzig</strong></span>
-                        <button onclick="promptRenameClub()" class="btn-secondary" style="width:auto; padding:5px 10px; font-size:10px;">✏️ Umbenennen</button>
+                        <div style="display:flex; gap:6px;">
+                            <button onclick="promptRenameClub()" class="btn-secondary" style="width:auto; padding:5px 10px; font-size:10px;">✏️ Umbenennen</button>
+                            <button onclick="showClubSwitchOptions()" class="btn-secondary" style="width:auto; padding:5px 10px; font-size:10px;">🔄 Verein wechseln</button>
+                        </div>
                     </div>
+                    <div id="club-switch-box"></div>
                 </div>
                 <div class="panel">
                     <div class="panel-header" style="color:var(--accent);">
