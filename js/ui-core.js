@@ -2,7 +2,7 @@
     // Onboarding: erscheint nur, solange dieses Gerät die Kurzanleitung noch nie gesehen hat
     // (unabhängig von Speicherständen - wer schon spielt, kennt sich bereits aus).
     function maybeShowTutorial() {
-        if (!localStorage.getItem('anstoss_fm13_tutorial_seen')) {
+        if (!safeLocalGet('anstoss_fm13_tutorial_seen')) {
             tutorialPage = 0;
             renderTutorialPage();
             let overlay = document.getElementById('tutorial-overlay');
@@ -13,7 +13,7 @@
     function closeTutorial() {
         let overlay = document.getElementById('tutorial-overlay');
         if (overlay) overlay.classList.remove('show');
-        localStorage.setItem('anstoss_fm13_tutorial_seen', 'true');
+        safeLocalSet('anstoss_fm13_tutorial_seen', 'true');
     }
 
     // Mehrseitiges Tutorial (NEU): erklärt jetzt auch die neueren, komplexeren Systeme
@@ -74,13 +74,13 @@
 
     // Toast-Benachrichtigung: unabhängig von window.alert(), da manche eingebetteten
     // WebViews (z.B. Dateimanager-Vorschauen) native Dialoge unterdrücken können.
-    function showToast(message, type) {
+    function showToast(message, type, duration = 2800) {
         let toast = document.getElementById('app-toast');
         if (!toast) return;
         toast.innerText = message;
         toast.className = 'app-toast show' + (type === 'error' ? ' toast-error' : '');
         clearTimeout(toast._hideTimer);
-        toast._hideTimer = setTimeout(() => { toast.classList.remove('show'); }, 2800);
+        toast._hideTimer = setTimeout(() => { toast.classList.remove('show'); }, duration);
     }
 
     // Ordnet jeden Hub seinen Mitglieds-Screens zu (für Sichtbarkeits- und Tab-Umschaltung)

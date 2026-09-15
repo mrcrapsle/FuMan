@@ -171,7 +171,7 @@
 
     function getSlotMeta(slotNum) {
         try {
-            let raw = localStorage.getItem(SAVE_SLOT_PREFIX + slotNum);
+            let raw = safeLocalGet(SAVE_SLOT_PREFIX + slotNum);
             if (!raw) return null;
             let p = JSON.parse(raw);
             return p.meta || null;
@@ -189,7 +189,15 @@
                 matchday: Math.min(34, game.matchday),
                 money: game.money
             };
-            localStorage.setItem(SAVE_SLOT_PREFIX + slotNum, JSON.stringify(state));
+            // safeLocalSet statt direktem localStorage.setItem: manche Android-WebViews
+            // (Dateivorschau statt echtem Browser) blockieren localStorage bei file://
+            // komplett und werfen schon beim Property-Zugriff ("Access is denied for
+            // this document") - das braucht eine verständliche, konkret hilfreiche
+            // Meldung statt des rohen Browser-Fehlertexts.
+            if (!safeLocalSet(SAVE_SLOT_PREFIX + slotNum, JSON.stringify(state))) {
+                showToast('💾 Speichern nicht möglich: Dieser Browser/diese Ansicht blockiert lokalen Speicher für diese Datei. Öffne die Datei in einem normalen Browser (z.B. "Öffnen mit..." → Chrome), nicht in der Dateivorschau.', 'error', 8000);
+                return;
+            }
             playSound('whistle');
             showToast(`💾 In Slot ${slotNum} gespeichert!`, 'success');
             renderSaveSlotsUI();
@@ -200,7 +208,7 @@
 
     function loadGameFromSlot(slotNum, silent = false) {
         try {
-            let raw = localStorage.getItem(SAVE_SLOT_PREFIX + slotNum);
+            let raw = safeLocalGet(SAVE_SLOT_PREFIX + slotNum);
             if (raw) {
                 let p = JSON.parse(raw);
                 applyLoadedState(p);
@@ -234,7 +242,7 @@
             return;
         }
         clearTimeout(deleteConfirmTimers[slotNum]);
-        localStorage.removeItem(SAVE_SLOT_PREFIX + slotNum);
+        safeLocalRemove(SAVE_SLOT_PREFIX + slotNum);
         showToast(`🗑️ Slot ${slotNum} gelöscht.`, 'success');
         renderSaveSlotsUI();
     }
@@ -269,8 +277,8 @@
     // Rückwärtskompatibilität: alten Einzel-Speicherstand automatisch nach Slot 1 migrieren
     function migrateLegacySave() {
         try {
-            let legacy = localStorage.getItem(LEGACY_SAVE_KEY);
-            let slot1 = localStorage.getItem(SAVE_SLOT_PREFIX + '1');
+            let legacy = safeLocalGet(LEGACY_SAVE_KEY);
+            let slot1 = safeLocalGet(SAVE_SLOT_PREFIX + '1');
             if (legacy && !slot1) {
                 let p = JSON.parse(legacy);
                 p.meta = {
@@ -281,7 +289,7 @@
                     matchday: p.game ? Math.min(34, p.game.matchday) : 1,
                     money: p.game ? p.game.money : 0
                 };
-                localStorage.setItem(SAVE_SLOT_PREFIX + '1', JSON.stringify(p));
+                safeLocalSet(SAVE_SLOT_PREFIX + '1', JSON.stringify(p));
             }
         } catch(e) { console.error('Migration fehlgeschlagen', e); }
     }
@@ -345,8 +353,8 @@
             return;
         }
         clearTimeout(hardResetConfirmTimer);
-        for (let i = 1; i <= SAVE_SLOT_COUNT; i++) localStorage.removeItem(SAVE_SLOT_PREFIX + i);
-        localStorage.removeItem(LEGACY_SAVE_KEY);
+        for (let i = 1; i <= SAVE_SLOT_COUNT; i++) safeLocalRemove(SAVE_SLOT_PREFIX + i);
+        safeLocalRemove(LEGACY_SAVE_KEY);
         safeSessionSet(FORCE_NEW_GAME_FLAG, '1');
         location.reload();
     }

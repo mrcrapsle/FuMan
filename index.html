@@ -2087,6 +2087,33 @@
         try { store.removeItem(key); } catch (e) { /* ignorieren */ }
     }
 
+    // Eigene, in sich geschlossene Wrapper für localStorage (statt safeStorageGet mit
+    // "store"-Parameter): manche Android-WebViews blockieren NUR localStorage (nicht
+    // sessionStorage) bei file://-URLs, und zwar so, dass schon der lesende Zugriff auf
+    // das window.localStorage-Property selbst wirft ("Access is denied for this
+    // document") - nicht erst der Methodenaufruf. Der Zugriff muss daher innerhalb
+    // desselben try-Blocks liegen wie die Methode, sonst bleibt er ungefangen.
+    function safeLocalGet(key) {
+        try { return window.localStorage.getItem(key); } catch (e) { return null; }
+    }
+    function safeLocalSet(key, value) {
+        try { window.localStorage.setItem(key, value); return true; }
+        catch (e) { console.error('LocalStorage nicht verfügbar:', e); return false; }
+    }
+    function safeLocalRemove(key) {
+        try { window.localStorage.removeItem(key); } catch (e) { /* ignorieren */ }
+    }
+    // Einmaliger Fähigkeitstest beim Start: informiert sofort und deutlich sichtbar,
+    // statt dass der Spieler erst nach dem ersten Speicherversuch (evtl. nach längerem
+    // Spielen) von einem kryptischen Browser-Fehlertext überrascht wird.
+    function warnIfStorageBlocked() {
+        if (!safeLocalSet('anstoss_fm13_storage_test', '1')) {
+            showToast('⚠️ Dieser Browser/diese Ansicht blockiert lokalen Speicher für diese Datei - Speichern ist NICHT möglich! Öffne die Datei stattdessen in einem normalen Browser (z.B. über "Öffnen mit..." → Chrome, statt in der Dateivorschau).', 'error', 12000);
+        } else {
+            safeLocalRemove('anstoss_fm13_storage_test');
+        }
+    }
+
     window.onload = function() {
         try {
             restoreGetters();
@@ -2125,6 +2152,7 @@
                 showScreen('screen-dashboard');
             }
             applyClubCrest();
+            warnIfStorageBlocked();
             maybeShowTutorial();
             // Leiser Struktur-Selbsttest im Hintergrund - macht Verschachtelungsfehler wie
             // die kürzlich gefundene fehlende </div> sofort sichtbar (roter Banner), statt
