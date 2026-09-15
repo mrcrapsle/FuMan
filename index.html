@@ -410,7 +410,7 @@
                 <span id="club-logo-animal-badge" style="display:none; position:absolute; top:-3px; left:-3px; width:16px; height:16px; background:#0d1220; border-radius:50%; align-items:center; justify-content:center; font-size:9px; border:1px solid rgba(255,255,255,0.3);"></span>
             </div>
             <div>
-                <div class="club-name">1.FC Moritz Leipzig</div>
+                <div class="club-name" id="header-club-name">1.FC Moritz Leipzig</div>
                 <div class="club-league"><span id="head-league-name">4. Liga (Regionalliga)</span> • <span id="head-season">Saison 1</span></div>
             </div>
         </div>
@@ -581,7 +581,7 @@
                     <div class="dashboard-hero-club">
                         <div class="crest-fallback" id="dash-hero-crest" style="display:flex; align-items:center; justify-content:center; font-size:16px;">🦁</div>
                         <div>
-                            <div style="font-size:13px; font-weight:900; color:#fff;">1.FC Moritz Leipzig</div>
+                            <div style="font-size:13px; font-weight:900; color:#fff;" id="dash-hero-club-name">1.FC Moritz Leipzig</div>
                             <div style="font-size:9px; color:rgba(255,255,255,0.75);" id="dash-hero-subline">6. Liga · Spieltag 1</div>
                         </div>
                     </div>
@@ -601,7 +601,7 @@
                     </div>
                     <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(0,0,0,0.3); border-radius:8px; margin-bottom:8px;">
                         <div style="text-align:center; flex:1;">
-                            <div style="font-size:14px; font-weight:900; color:var(--primary);">1.FC Moritz Leipzig</div>
+                            <div style="font-size:14px; font-weight:900; color:var(--primary);" id="dash-our-club-name">1.FC Moritz Leipzig</div>
                             <div style="font-size:9px; color:var(--text-muted);">Heimteam (Str: <span id="dash-our-str">60</span>)</div>
                         </div>
                         <div style="font-size:16px; font-weight:900; color:var(--accent);">VS</div>
@@ -663,6 +663,15 @@
 
             <!-- 3. MANAGER-RPG & TALENTBAUM -->
             <div id="screen-manager-tree" style="display:none;">
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--accent);">
+                        <span>🏷️ VEREINSIDENTITÄT</span>
+                    </div>
+                    <div class="box" style="display:flex; justify-content:space-between; align-items:center;">
+                        <span>Aktueller Vereinsname: <strong id="career-club-name-display" style="color:var(--primary);">1.FC Moritz Leipzig</strong></span>
+                        <button onclick="promptRenameClub()" class="btn-secondary" style="width:auto; padding:5px 10px; font-size:10px;">✏️ Umbenennen</button>
+                    </div>
+                </div>
                 <div class="panel">
                     <div class="panel-header" style="color:var(--accent);">
                         <span>🏆 KARRIERE-RÜCKBLICK</span>

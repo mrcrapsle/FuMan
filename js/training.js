@@ -370,7 +370,7 @@
                 if (fixs) {
                     let ourFixture = fixs.find(f => {
                         let h = leaguesData[game.leagueLevel][f.home].name, a = leaguesData[game.leagueLevel][f.away].name;
-                        return h === "1.FC Moritz Leipzig" || a === "1.FC Moritz Leipzig";
+                        return h === game.clubName || a === game.clubName;
                     });
                     if (ourFixture) {
                         let h = leaguesData[game.leagueLevel][ourFixture.home].name, a = leaguesData[game.leagueLevel][ourFixture.away].name;

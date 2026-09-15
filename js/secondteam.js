@@ -101,7 +101,7 @@
     // laufen muss.
     function insertSecondTeamIntoLeagues() {
         if (!game.secondTeam.isActive) return;
-        let slot = relocateNamedTeamToLevel(game.secondTeam.name, game.secondTeam.leagueLevel, ["1.FC Moritz Leipzig", game.permanentRivalName]);
+        let slot = relocateNamedTeamToLevel(game.secondTeam.name, game.secondTeam.leagueLevel, [game.clubName, game.permanentRivalName]);
         if (!slot) return;
         slot.strength = calcSecondTeamStrength();
         slot.baseStrength = slot.strength;

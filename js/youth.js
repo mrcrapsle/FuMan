@@ -151,7 +151,7 @@
     const YOUTH_RIVAL_NAMES = ['SC Jugendblitz', 'FC Talentschmiede', 'TuS Nachwuchs 08', 'SV Perspektive', 'Grün-Weiß Youngstars', '1. FC Zukunft', 'Rasenkicker U19'];
     function initYouthLeagueTable() {
         youthLeagueTable = [
-            { name: '1.FC Moritz Leipzig (Jugend)', isOwn: true, played: 0, won: 0, drawn: 0, lost: 0, points: 0, goalsFor: 0, goalsAgainst: 0 },
+            { name: `${game.clubName} (Jugend)`, isOwn: true, played: 0, won: 0, drawn: 0, lost: 0, points: 0, goalsFor: 0, goalsAgainst: 0 },
             ...YOUTH_RIVAL_NAMES.map(n => ({ name: n, isOwn: false, played: 0, won: 0, drawn: 0, lost: 0, points: 0, goalsFor: 0, goalsAgainst: 0, strength: 45 + Math.floor(Math.random() * 25) }))
         ];
         youthLeagueMatchday = 0;

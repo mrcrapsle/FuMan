@@ -9,6 +9,7 @@
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
     let game = {
+        clubName: "1.FC Moritz Leipzig",
         season: 1,
         money: 150000,
         transferBudget: 100000,

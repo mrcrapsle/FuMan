@@ -183,7 +183,7 @@
             let state = buildSaveState();
             state.meta = {
                 savedAt: new Date().toLocaleString('de-DE'),
-                clubName: "1.FC Moritz Leipzig",
+                clubName: game.clubName,
                 league: leagueNames[game.leagueLevel],
                 season: game.season,
                 matchday: Math.min(34, game.matchday),

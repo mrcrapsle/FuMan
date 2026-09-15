@@ -1,5 +1,46 @@
 
     // ==========================================
+    // VEREINSIDENTITÄT: FREIE UMBENENNUNG (NEU)
+    // ==========================================
+    // Der Klubname war bisher an ~120 Stellen im Code hart als "1.FC Moritz Leipzig"
+    // verankert - jetzt läuft jeder dieser Vergleiche über game.clubName, wodurch eine
+    // echte, jederzeit mögliche Umbenennung sicher wird: die Liga-Tabellenzeile, alle
+    // Rivalen-/Freundschafts-Querverweise anderer Vereine auf uns UND (sofern noch nicht
+    // eigenständig umbenannt) die zweite Mannschaft ziehen automatisch mit um.
+    function renameClub(newName) {
+        newName = (newName || '').trim().slice(0, 40);
+        if (!newName || newName === game.clubName) return;
+        let oldName = game.clubName;
+        game.clubName = newName;
+
+        for (let l = 0; l < NUM_LEAGUES; l++) {
+            let row = leaguesData[l]?.find(t => t.name === oldName);
+            if (row) { row.name = newName; break; }
+        }
+        if (game.secondTeam && game.secondTeam.name === `${oldName} II`) {
+            let stOldName = game.secondTeam.name;
+            game.secondTeam.name = `${newName} II`;
+            for (let l = 0; l < NUM_LEAGUES; l++) {
+                let row = leaguesData[l]?.find(t => t.name === stOldName);
+                if (row) { row.name = game.secondTeam.name; break; }
+            }
+        }
+        leaguesData.forEach(table => table.forEach(t => {
+            if (t.rivalName === oldName) t.rivalName = newName;
+            if (t.friendName === oldName) t.friendName = newName;
+        }));
+
+        applyClubCrest();
+        if (typeof renderSaveSlotsUI === 'function') renderSaveSlotsUI();
+        updateUI();
+        showToast(`✅ Verein umbenannt: ${newName}`, 'success');
+    }
+    function promptRenameClub() {
+        let newName = prompt('Neuer Vereinsname:', game.clubName);
+        if (newName !== null) renameClub(newName);
+    }
+
+    // ==========================================
     // KARRIERE-RÜCKBLICK & RUHESTAND
     // ==========================================
     function renderCareerSummary() {
@@ -68,7 +109,7 @@
         document.getElementById('career-certificate-content').innerHTML = `
             <div style="text-align:center; margin-bottom:12px;">
                 <div style="font-size:16px; font-weight:900; color:var(--gold);">🏆 KARRIERE-URKUNDE 🏆</div>
-                <div style="font-size:11px; color:#94a3b8;">${game.season} Saison(en) als Manager von 1.FC Moritz Leipzig</div>
+                <div style="font-size:11px; color:#94a3b8;">${game.season} Saison(en) als Manager von ${game.clubName}</div>
             </div>
             <div class="modal-field-grid">
                 <span class="label">Höchstes Manager-Level:</span><span class="val">${managerRPG.level} (${managerRPG.xp} XP)</span>
@@ -116,7 +157,7 @@
         ctx.fillText('🏆 KARRIERE-URKUNDE 🏆', canvas.width / 2, 100);
         ctx.fillStyle = '#94a3b8';
         ctx.font = '20px Arial';
-        ctx.fillText(`${game.season} Saison(en) als Manager von 1.FC Moritz Leipzig`, canvas.width / 2, 140);
+        ctx.fillText(`${game.season} Saison(en) als Manager von ${game.clubName}`, canvas.width / 2, 140);
 
         let y = 210;
         const line = (label, value, color = '#ffffff') => {

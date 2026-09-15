@@ -23,7 +23,7 @@
     let tutorialPage = 0;
     const TUTORIAL_PAGES = [
         {
-            title: "⚽ Willkommen beim 1.FC Moritz Leipzig!",
+            title: "⚽ Willkommen beim {CLUB}!",
             body: `Du übernimmst als Manager einen Klub in der <strong>6. Liga (Kreisklasse)</strong>. Dein Ziel: aufsteigen, den Verein ausbauen und irgendwann den Champions Cup holen.<br><br>
                 <strong style="color:var(--primary);">Die Bereiche im Menü:</strong><br>
                 ⚽ Kader &amp; Taktik · 🏟️ Ausbau &amp; Infrastruktur · 🏦 Finanzen &amp; Kapitalmarkt · 🏆 Wettbewerbe · 🎩 Spezial<br><br>
@@ -58,7 +58,7 @@
         let dotsEl = document.getElementById('tutorial-dots');
         let nextBtn = document.getElementById('tutorial-next-btn');
         let prevBtn = document.getElementById('tutorial-prev-btn');
-        if (titleEl) titleEl.innerHTML = page.title;
+        if (titleEl) titleEl.innerHTML = page.title.replace('{CLUB}', game.clubName);
         if (bodyEl) bodyEl.innerHTML = page.body;
         if (dotsEl) dotsEl.innerHTML = TUTORIAL_PAGES.map((_, i) => `<span style="display:inline-block; width:6px; height:6px; border-radius:50%; margin:0 2px; background:${i === tutorialPage ? 'var(--accent)' : 'rgba(255,255,255,0.25)'};"></span>`).join('');
         if (prevBtn) prevBtn.style.visibility = tutorialPage === 0 ? 'hidden' : 'visible';

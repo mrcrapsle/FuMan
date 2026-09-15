@@ -331,10 +331,10 @@
     function startMatchdayFlow() {
         if (game.matchday > 34) return;
         let fixtures = fixturesData[game.leagueLevel] ? fixturesData[game.leagueLevel][game.matchday - 1] : null;
-        let ourFixture = fixtures ? fixtures.find(f => leaguesData[game.leagueLevel][f.home]?.name === "1.FC Moritz Leipzig" || leaguesData[game.leagueLevel][f.away]?.name === "1.FC Moritz Leipzig") : null;
+        let ourFixture = fixtures ? fixtures.find(f => leaguesData[game.leagueLevel][f.home]?.name === game.clubName || leaguesData[game.leagueLevel][f.away]?.name === game.clubName) : null;
         if (!ourFixture) { processPostMatchRoutine(); return; }
 
-        let isHome = leaguesData[game.leagueLevel][ourFixture.home].name === "1.FC Moritz Leipzig";
+        let isHome = leaguesData[game.leagueLevel][ourFixture.home].name === game.clubName;
         let oppName = isHome ? leaguesData[game.leagueLevel][ourFixture.away].name : leaguesData[game.leagueLevel][ourFixture.home].name;
         let oppObj = leaguesData[game.leagueLevel].find(t => t.name === oppName);
         let oppStr = applySabotageToOpponentStrength(oppObj ? oppObj.strength : 60);
@@ -362,7 +362,7 @@
         if (!pendingMatchInfo) { processPostMatchRoutine(); return; }
         let { isHome, oppName, oppStr, ourFixture } = pendingMatchInfo;
         activeLiveShout = 'standard';
-        setupMatch(isHome ? "1.FC Moritz Leipzig" : oppName, isHome ? oppName : "1.FC Moritz Leipzig", oppStr, isHome, false, ourFixture);
+        setupMatch(isHome ? game.clubName : oppName, isHome ? oppName : game.clubName, oppStr, isHome, false, ourFixture);
     }
 
     // "Nur Ergebnisse": schneller als manuelles "Nächste Szene"-Klicken, aber ausführlicher
@@ -374,7 +374,7 @@
         if (!pendingMatchInfo) { processPostMatchRoutine(); return; }
         let { isHome, oppName, oppStr, ourFixture } = pendingMatchInfo;
         activeLiveShout = 'standard';
-        setupMatch(isHome ? "1.FC Moritz Leipzig" : oppName, isHome ? oppName : "1.FC Moritz Leipzig", oppStr, isHome, false, ourFixture);
+        setupMatch(isHome ? game.clubName : oppName, isHome ? oppName : game.clubName, oppStr, isHome, false, ourFixture);
         stopLiveTickerAutoplay(); // Schnellsimulation läuft synchron - kein paralleler Auto-Timer nötig
         simulateRestOfMatch();
     }
@@ -1439,7 +1439,7 @@
             if (status.targetLevel !== null && status.missing.length > 0) {
                 let teams = leaguesData[game.leagueLevel];
                 let sorted = teams ? [...teams].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst)) : [];
-                let myRank = sorted.findIndex(t => t.name === "1.FC Moritz Leipzig") + 1;
+                let myRank = sorted.findIndex(t => t.name === game.clubName) + 1;
                 if (myRank > 0 && myRank <= 2) {
                     addInboxMessage('vertrag', '🚨 DFB-Lizenz-Frühwarnung!', `Du liegst aktuell in Aufstiegsposition, aber die Lizenz für die ${leagueNames[status.targetLevel]} fehlt noch:\n\n${status.missing.map(m => '• ' + m).join('\n')}\n\nNur noch wenige Spieltage bis Saisonende - jetzt nachbessern!`, 'screen-stadium');
                     showToast('🚨 DFB-Lizenz-Frühwarnung: Auflagen für den möglichen Aufstieg noch nicht erfüllt!', 'error');
@@ -1603,7 +1603,7 @@
                 let raidMsg = `🚨 DFB-RAZZIA! Die Staatsanwaltschaft durchsucht die Geschäftsstelle.\nStrafe: -${formatVal(fine)} & drastischer Image-Verlust!`;
                 // Wiederholungstäter werden vom Verband hart bestraft: echter Punktabzug
                 if (underworld.offenseCount >= 2) {
-                    let myTeam = leaguesData[game.leagueLevel].find(t => t.name === "1.FC Moritz Leipzig");
+                    let myTeam = leaguesData[game.leagueLevel].find(t => t.name === game.clubName);
                     let deduction = Math.min(myTeam.points, 3 * (underworld.offenseCount - 1));
                     myTeam.points -= deduction;
                     raidMsg += `\n⚖️ Als Wiederholungstäter (${underworld.offenseCount}. Vergehen) verhängt der Verband zusätzlich einen Punktabzug von ${deduction} Punkten!`;
@@ -1747,10 +1747,10 @@
 
         // Kopf-an-Kopf-Statistik (NEU): historische Bilanz gegen JEDEN Ligagegner, nicht nur
         // den einen festen Erzfeind - nur relevant, wenn 1.FC Moritz Leipzig an dem Spiel beteiligt war.
-        if (h.name === "1.FC Moritz Leipzig" || a.name === "1.FC Moritz Leipzig") {
-            let oppName = h.name === "1.FC Moritz Leipzig" ? a.name : h.name;
-            let ourGoals = h.name === "1.FC Moritz Leipzig" ? f.homeGoals : f.awayGoals;
-            let oppGoals = h.name === "1.FC Moritz Leipzig" ? f.awayGoals : f.homeGoals;
+        if (h.name === game.clubName || a.name === game.clubName) {
+            let oppName = h.name === game.clubName ? a.name : h.name;
+            let ourGoals = h.name === game.clubName ? f.homeGoals : f.awayGoals;
+            let oppGoals = h.name === game.clubName ? f.awayGoals : f.homeGoals;
             if (!game.headToHeadRecords[oppName]) game.headToHeadRecords[oppName] = { wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, lastResults: [] };
             let rec = game.headToHeadRecords[oppName];
             rec.goalsFor += ourGoals; rec.goalsAgainst += oppGoals;
@@ -1884,11 +1884,14 @@
     }
 
     // ---------- TRAINER-REPUTATION: ABWERBEVERSUCHE ANDERER KLUBS ----------
-    // Bewusst OHNE echten Vereinswechsel umgesetzt (der Klubname "1.FC Moritz Leipzig" ist an ~50
-    // Stellen im Code verankert - eine Umbenennung wäre riskant für dieses Update). Stattdessen
-    // nutzt du das Interesse anderer Klubs als Verhandlungshebel beim EIGENEN Vorstand: Geld &
-    // Ansehen (annehmen) oder Vereinstreue-Bonus (ablehnen) - beides sind echte, unterschiedliche
-    // Belohnungen für eine sportlich erfolgreiche Zwischenbilanz.
+    // Bleibt bewusst beim Verhandlungshebel-Modell statt den Spieler direkt zum anderen
+    // Klub wechseln zu lassen: game.clubName kann sich zwar inzwischen ändern (siehe
+    // renameClub() in career.js), aber die konkreten AI-Vereine in leaguesData haben keine
+    // eigenen, echten Kader - "übernehmen" hieße nur, einen anderen Namen/eine andere
+    // Liga-Position zu erben, ohne echten Kaderwechsel. Stattdessen nutzt du das Interesse
+    // anderer Klubs als Verhandlungshebel beim EIGENEN Vorstand: Geld & Ansehen (annehmen)
+    // oder Vereinstreue-Bonus (ablehnen) - beides sind echte, unterschiedliche Belohnungen
+    // für eine sportlich erfolgreiche Zwischenbilanz.
     let pendingJobApproach = null;
     function checkJobOfferApproach() {
         if (game.matchday % 6 !== 0) return;
@@ -2373,8 +2376,8 @@
                     if (!f.played) {
                         let hTeam = leaguesData[l][f.home];
                         let aTeam = leaguesData[l][f.away];
-                        let hStr = (hTeam.name === "1.FC Moritz Leipzig") ? calcTeamStrength(true) : (aTeam.name === "1.FC Moritz Leipzig" ? applySabotageToOpponentStrength(hTeam.strength) : hTeam.strength);
-                        let aStr = (aTeam.name === "1.FC Moritz Leipzig") ? calcTeamStrength(false) : (hTeam.name === "1.FC Moritz Leipzig" ? applySabotageToOpponentStrength(aTeam.strength) : aTeam.strength);
+                        let hStr = (hTeam.name === game.clubName) ? calcTeamStrength(true) : (aTeam.name === game.clubName ? applySabotageToOpponentStrength(hTeam.strength) : hTeam.strength);
+                        let aStr = (aTeam.name === game.clubName) ? calcTeamStrength(false) : (hTeam.name === game.clubName ? applySabotageToOpponentStrength(aTeam.strength) : aTeam.strength);
 
                         let goals = simulateGoals(hStr, aStr, hTeam, aTeam);
                         f.homeGoals = goals.myGoals;
@@ -2391,7 +2394,7 @@
                             else if (aTeam.name === game.secondTeam.name) attributeGoalsToSecondTeamScorers(f.awayGoals);
                         }
 
-                        if (hTeam.name === "1.FC Moritz Leipzig") {
+                        if (hTeam.name === game.clubName) {
                             isHome = true;
                             playedOurMatch = true;
                             won = f.homeGoals > f.awayGoals;
@@ -2399,7 +2402,7 @@
                             isHomeDerby = aTeam.name === hTeam.rivalName;
                             opponentNameThisMatch = aTeam.name;
                             ourGoalsThisMatch = f.homeGoals; oppGoalsThisMatch = f.awayGoals;
-                        } else if (aTeam.name === "1.FC Moritz Leipzig") {
+                        } else if (aTeam.name === game.clubName) {
                             isHome = false;
                             playedOurMatch = true;
                             won = f.awayGoals > f.homeGoals;
@@ -2500,8 +2503,8 @@
         // abweichen (Einfüge-Reihenfolge statt Tordifferenz entschied). Jetzt identische
         // Sortierlogik wie in der Tabellenanzeige.
         let teams = [...leaguesData[game.leagueLevel]].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
-        let myRank = teams.findIndex(t => t.name === "1.FC Moritz Leipzig") + 1;
-        let myTeamRecord = leaguesData[game.leagueLevel].find(t => t.name === "1.FC Moritz Leipzig");
+        let myRank = teams.findIndex(t => t.name === game.clubName) + 1;
+        let myTeamRecord = leaguesData[game.leagueLevel].find(t => t.name === game.clubName);
 
         // Medienrechte (NEU): Liga-Kollektiv-TV-Ausschüttung zum Saisonende, gestaffelt nach
         // Ligastärke UND Tabellenplatz.

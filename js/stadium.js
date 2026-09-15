@@ -220,7 +220,7 @@
             let inPromotionZone = false;
             if (teams) {
                 let sorted = [...teams].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
-                let myRank = sorted.findIndex(t => t.name === "1.FC Moritz Leipzig") + 1;
+                let myRank = sorted.findIndex(t => t.name === game.clubName) + 1;
                 inPromotionZone = myRank > 0 && myRank <= 2;
             }
             let urgencyNote = (game.matchday >= 30 && inPromotionZone)
@@ -781,7 +781,7 @@
         if (typeof currentWeather !== 'undefined' && currentWeather.attendanceMult) avgComfortBonus *= currentWeather.attendanceMult;
         // Aktuelle Form (NEU): eine laufende Siegesserie zieht spürbar mehr Zuschauer an,
         // eine Pleitenserie schreckt Fans ab - genau wie im echten Fußball üblich.
-        let ourTeamObj = leaguesData[game.leagueLevel]?.find(t => t.name === "1.FC Moritz Leipzig");
+        let ourTeamObj = leaguesData[game.leagueLevel]?.find(t => t.name === game.clubName);
         if (ourTeamObj && Array.isArray(ourTeamObj.recentForm) && ourTeamObj.recentForm.length > 0) {
             let formScore = ourTeamObj.recentForm.reduce((s, r) => s + (r === 'W' ? 1 : (r === 'L' ? -1 : 0)), 0);
             avgComfortBonus += formScore * 0.02; // bis zu ±10% bei 5/5 Siegen bzw. Niederlagen
