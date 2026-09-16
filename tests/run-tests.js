@@ -916,6 +916,36 @@ async function testAccessibilityContrastAndFontSizes(browser) {
     await page.close();
 }
 
+async function testLanguageToggle(browser) {
+    console.log('\n[14] Sprachumschalter (DE/EN)');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.evaluate(() => closeTutorial());
+
+    const deText = await page.evaluate(() => document.querySelector('[onclick*="screen-calendar"]').textContent.trim());
+    await page.click('#btn-lang-toggle');
+    await page.waitForTimeout(100);
+    const enText = await page.evaluate(() => document.querySelector('[onclick*="screen-calendar"]').textContent.trim());
+    const langStoredAfterToggle = await page.evaluate(() => safeLocalGet('anstoss_fm13_language'));
+    const tutorialNextTextEn = await page.evaluate(() => { tutorialPage = 0; renderTutorialPage(); return document.getElementById('tutorial-next-btn').innerText; });
+
+    await page.reload();
+    await page.waitForTimeout(400);
+    const enTextAfterReload = await page.evaluate(() => document.querySelector('[onclick*="screen-calendar"]').textContent.trim());
+
+    await page.click('#btn-lang-toggle');
+    await page.waitForTimeout(100);
+    const backToDeText = await page.evaluate(() => document.querySelector('[onclick*="screen-calendar"]').textContent.trim());
+
+    assert(deText === '📅 Kalender & Termine', 'Standardsprache beim Start ist Deutsch');
+    assert(enText === '📅 Calendar & Fixtures', 'Klick auf den Sprachumschalter übersetzt die Seitenleiste sofort ins Englische');
+    assert(langStoredAfterToggle === 'en', 'Sprachwahl wird persistiert (localStorage)');
+    assert(tutorialNextTextEn === 'Next →', 'Tutorial-Texte werden ebenfalls über die gewählte Sprache gerendert');
+    assert(enTextAfterReload === '📅 Calendar & Fixtures', 'Sprachwahl überlebt einen Reload');
+    assert(backToDeText === '📅 Kalender & Termine', 'Zurückschalten auf Deutsch funktioniert erneut');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Sprachumschalter-Test');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -948,6 +978,7 @@ async function main() {
         testAchievementsSystem,
         testConfigurableNewGameStart,
         testAccessibilityContrastAndFontSizes,
+        testLanguageToggle,
     ];
 
     for (const suite of suites) {

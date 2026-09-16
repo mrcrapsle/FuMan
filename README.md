@@ -31,3 +31,16 @@ praktisch zum Weitergeben/Teilen. Die normale, lesbare Datei bleibt für
 Entwicklung/Tests unverändert bestehen. mangle ist bewusst deaktiviert, da
 Buttons ihre Funktionen über onclick="..." als HTML-String aufrufen, den ein
 Minifizierer nicht sieht.
+
+## Sprache (DE/EN)
+
+Wörterbuch-basierter Sprachumschalter in `js/i18n.js` (Funktion `t(key)`,
+Umschaltknopf 🌐 DE/EN im Header). Deutsch ist die Quelle der Wahrheit -
+fehlt ein Übersetzungs-Key für Englisch, fällt `t()` automatisch auf den
+deutschen Text zurück statt auf einen leeren/kaputten String.
+
+**Aktueller Umfang:** Header, Seitenmenü und Tutorial sind vollständig
+übersetzt. Die riesige Menge an Bildschirm-Inhalten (Kader, Transfermarkt,
+Finanzen, Stadion, ...) folgt schrittweise in weiteren Ausbaustufen und
+bleibt bis dahin auch bei gewählter Sprache "Englisch" auf Deutsch (dank
+des Fallbacks kein Fehler, nur noch nicht übersetzter Text).

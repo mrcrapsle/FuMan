@@ -449,26 +449,27 @@
 
         <div class="header-kpis">
             <div class="kpi-chip">
-                <span>Vereins-Konto</span>
+                <span data-i18n="header_konto">Vereins-Konto</span>
                 <strong id="top-money">150.000 €</strong>
             </div>
             <div class="kpi-chip">
-                <span>Holding-Konto</span>
+                <span data-i18n="header_holding">Holding-Konto</span>
                 <strong id="top-holding-money" style="color:var(--industry);">50.000 €</strong>
             </div>
             <div class="kpi-chip">
-                <span>Manager-Level</span>
+                <span data-i18n="header_mgr_level">Manager-Level</span>
                 <strong id="top-mgr-lvl" style="color:var(--gold);">Lvl 1 (0 XP)</strong>
             </div>
             <div class="kpi-chip">
-                <span>Fans / Vorstand</span>
+                <span data-i18n="header_fans_board">Fans / Vorstand</span>
                 <strong><span id="top-fans">75%</span> | <span id="top-board">80%</span></strong>
             </div>
             <div class="kpi-chip">
-                <span>Spieltag</span>
+                <span data-i18n="header_matchday">Spieltag</span>
                 <strong id="top-matchday">1 / 34</strong>
             </div>
-            <button id="btn-sound-toggle" class="sound-btn" onclick="toggleMasterSound()">🔇 Sound: AUS</button>
+            <button id="btn-lang-toggle" class="sound-btn" onclick="toggleLanguage()" title="Sprache wechseln / Switch language">🌐 DE/EN</button>
+            <button id="btn-sound-toggle" class="sound-btn" onclick="toggleMasterSound()" data-i18n="sound_off">🔇 Sound: AUS</button>
         </div>
     </header>
 
@@ -476,32 +477,32 @@
         <div class="menu-backdrop" id="menu-backdrop" onclick="closeMenuDrawer()"></div>
         <!-- SIDEBAR -->
         <nav class="app-sidebar" id="app-sidebar">
-            <div class="nav-category">Hauptzentrale</div>
-            <button class="nav-btn active" onclick="showScreen('screen-dashboard')">📊 FM13 Dashboard</button>
-            <button class="nav-btn" onclick="showScreen('screen-calendar')">📅 Kalender & Termine</button>
-            <button class="nav-btn" onclick="showScreen('screen-inbox')" id="nav-btn-inbox">📬 Postfach <span id="sidebar-inbox-badge" class="badge-count" style="display:none; margin-left:auto;">0</span></button>
+            <div class="nav-category" data-i18n="nav_category_main">Hauptzentrale</div>
+            <button class="nav-btn active" onclick="showScreen('screen-dashboard')" data-i18n="nav_dashboard">📊 FM13 Dashboard</button>
+            <button class="nav-btn" onclick="showScreen('screen-calendar')" data-i18n="nav_calendar">📅 Kalender & Termine</button>
+            <button class="nav-btn" onclick="showScreen('screen-inbox')" id="nav-btn-inbox"><span data-i18n="nav_inbox">📬 Postfach</span> <span id="sidebar-inbox-badge" class="badge-count" style="display:none; margin-left:auto;">0</span></button>
 
-            <div class="nav-category">Team & Kader</div>
-            <button class="nav-btn" onclick="showScreen('screen-squad')">⚽ Kader & 3D Taktik</button>
-            <button class="nav-btn" onclick="showScreen('screen-second-team')">🥈 Zweite Mannschaft</button>
-            <button class="nav-btn" onclick="showScreen('screen-training')">🏋️ Training & Förderung</button>
-            <button class="nav-btn" onclick="showScreen('screen-transfer')" id="nav-btn-transfer">🤝 Kaderplanung & Transfers <span id="sidebar-offers-badge" class="badge-count" style="display:none; margin-left:auto;">0</span></button>
+            <div class="nav-category" data-i18n="nav_category_team">Team & Kader</div>
+            <button class="nav-btn" onclick="showScreen('screen-squad')" data-i18n="nav_squad">⚽ Kader & 3D Taktik</button>
+            <button class="nav-btn" onclick="showScreen('screen-second-team')" data-i18n="nav_second_team">🥈 Zweite Mannschaft</button>
+            <button class="nav-btn" onclick="showScreen('screen-training')" data-i18n="nav_training">🏋️ Training & Förderung</button>
+            <button class="nav-btn" onclick="showScreen('screen-transfer')" id="nav-btn-transfer"><span data-i18n="nav_transfer">🤝 Kaderplanung & Transfers</span> <span id="sidebar-offers-badge" class="badge-count" style="display:none; margin-left:auto;">0</span></button>
 
-            <div class="nav-category">Ausbau & Infrastruktur</div>
-            <button class="nav-btn" onclick="showScreen('screen-stadium')">🏟️ Ausbau & Infrastruktur</button>
+            <div class="nav-category" data-i18n="nav_category_infra">Ausbau & Infrastruktur</div>
+            <button class="nav-btn" onclick="showScreen('screen-stadium')" data-i18n="nav_stadium">🏟️ Ausbau & Infrastruktur</button>
 
-            <div class="nav-category">Finanzen & Wirtschaft</div>
-            <button class="nav-btn" onclick="showScreen('screen-finances')">🏦 Finanzen & Kapitalmarkt</button>
-            <button class="nav-btn special-industry" onclick="showScreen('screen-industry')">🏭 Industrie & Merchandising</button>
+            <div class="nav-category" data-i18n="nav_category_finance">Finanzen & Wirtschaft</div>
+            <button class="nav-btn" onclick="showScreen('screen-finances')" data-i18n="nav_finances">🏦 Finanzen & Kapitalmarkt</button>
+            <button class="nav-btn special-industry" onclick="showScreen('screen-industry')" data-i18n="nav_industry">🏭 Industrie & Merchandising</button>
 
-            <div class="nav-category">Wettbewerbe</div>
-            <button class="nav-btn special-europe" onclick="showScreen('screen-league')">🏆 Wettbewerbe & Trophäen</button>
-            <button class="nav-btn special-gold" onclick="showScreen('screen-cup')">🏆 DFB-Pokal</button>
+            <div class="nav-category" data-i18n="nav_category_competitions">Wettbewerbe</div>
+            <button class="nav-btn special-europe" onclick="showScreen('screen-league')" data-i18n="nav_league">🏆 Wettbewerbe & Trophäen</button>
+            <button class="nav-btn special-gold" onclick="showScreen('screen-cup')" data-i18n="nav_cup">🏆 DFB-Pokal</button>
 
-            <div class="nav-category">Karriere & Spezial</div>
-            <button class="nav-btn special-gold" onclick="showScreen('screen-manager-tree')">🌳 Manager-Talentbaum</button>
-            <button class="nav-btn special-red" onclick="showScreen('screen-private')">🎩 Spezial & Privatleben</button>
-            <button class="nav-btn special-gold" onclick="showScreen('screen-admin')">🛠️ Admin & Cheats PRO</button>
+            <div class="nav-category" data-i18n="nav_category_career">Karriere & Spezial</div>
+            <button class="nav-btn special-gold" onclick="showScreen('screen-manager-tree')" data-i18n="nav_manager_tree">🌳 Manager-Talentbaum</button>
+            <button class="nav-btn special-red" onclick="showScreen('screen-private')" data-i18n="nav_private">🎩 Spezial & Privatleben</button>
+            <button class="nav-btn special-gold" onclick="showScreen('screen-admin')" data-i18n="nav_admin">🛠️ Admin & Cheats PRO</button>
         </nav>
 
         <!-- MAIN WORKSPACE -->
@@ -697,7 +698,7 @@
                         <button onclick="document.getElementById('save-import-file-input').click()" class="btn-secondary" style="font-size:10px;">📥 Aus Datei importieren</button>
                     </div>
                     <input type="file" id="save-import-file-input" accept=".json,application/json" style="display:none;" onchange="importSaveFromFile(this)">
-                    <button onclick="tutorialPage = 0; renderTutorialPage(); document.getElementById('tutorial-overlay').classList.add('show')" class="btn-secondary" style="margin-top:8px;">❓ Kurzanleitung erneut anzeigen</button>
+                    <button onclick="tutorialPage = 0; renderTutorialPage(); document.getElementById('tutorial-overlay').classList.add('show')" class="btn-secondary" style="margin-top:8px;" data-i18n="tutorial_replay">❓ Kurzanleitung erneut anzeigen</button>
                     <div style="text-align:center; font-size:8px; color:var(--text-muted); margin-top:10px;" id="game-version-tag">Version wird geladen...</div>
                 </div>
             </div>
@@ -2103,6 +2104,7 @@
 
 <script src="js/audio.js"></script>
 <script src="js/utils.js"></script>
+<script src="js/i18n.js"></script>
 <script src="js/state.js"></script>
 <script src="js/inbox.js"></script>
 <script src="js/entities.js"></script>
@@ -2251,6 +2253,7 @@
                 showScreen('screen-dashboard');
             }
             applyClubCrest();
+            initLanguage();
             warnIfStorageBlocked();
             maybeShowTutorial();
             // Leiser Struktur-Selbsttest im Hintergrund - macht Verschachtelungsfehler wie

@@ -38,7 +38,7 @@
         isMasterSoundOn = !isMasterSoundOn;
         let btn = document.getElementById('btn-sound-toggle');
         if (isMasterSoundOn) {
-            btn.innerText = "🔊 Sound: AN";
+            btn.innerText = t('sound_on');
             btn.classList.add('active');
             musicStep = 0;
             musicInterval = setInterval(() => {
@@ -51,7 +51,7 @@
                 musicStep++;
             }, 180);
         } else {
-            btn.innerText = "🔇 Sound: AUS";
+            btn.innerText = t('sound_off');
             btn.classList.remove('active');
             if (musicInterval) clearInterval(musicInterval);
         }

@@ -21,35 +21,14 @@
     // Grundstruktur der Menüs - bisher blieb ein neuer Spieler bei diesen Tiefensystemen
     // komplett auf sich gestellt.
     let tutorialPage = 0;
+    // Texte selbst liegen im Sprachwörterbuch (js/i18n.js, Keys tutorial_N_title/body) -
+    // hier nur noch die Key-Zuordnung pro Seite, damit t() beim Rendern die aktuell
+    // gewählte Sprache (DE/EN) ziehen kann.
     const TUTORIAL_PAGES = [
-        {
-            title: "⚽ Willkommen beim {CLUB}!",
-            body: `Du übernimmst als Manager einen Klub in der <strong>6. Liga (Kreisklasse)</strong>. Dein Ziel: aufsteigen, den Verein ausbauen und irgendwann den Champions Cup holen.<br><br>
-                <strong style="color:var(--primary);">Die Bereiche im Menü:</strong><br>
-                ⚽ Kader &amp; Taktik · 🏟️ Ausbau &amp; Infrastruktur · 🏦 Finanzen &amp; Kapitalmarkt · 🏆 Wettbewerbe · 🎩 Spezial<br><br>
-                <strong style="color:var(--accent);">Tipp:</strong> "▶ Spieltag starten" für Live-Erlebnis, "⚡ Saison durchsimulieren" für den schnellen Überblick.`
-        },
-        {
-            title: "🌍 Scouting-Netzwerk 2.0",
-            body: `Statt eines einzelnen Chef-Scouts baust du ein <strong>Netzwerk aus Regional-Scouts</strong> auf (Südamerika, Afrika, Westeuropa, Osteuropa).<br><br>
-                Jede Mission dauert echte <strong>Spieltage</strong> (kein Sofort-Ergebnis mehr) - und frisch gefundene Talente zeigen ihre Werte zunächst nur als <strong>ungefähre Spanne</strong>. Beobachte sie weiter oder zahle für eine genauere Auswertung, um Klarheit zu bekommen.<br><br>
-                Alle je entdeckten Spieler landen dauerhaft in der <strong>Talent-Datenbank</strong> zum Nachschlagen.`
-        },
-        {
-            title: "🏗️ Stadion-Baustellen",
-            body: `Stadion-Ausbauten sind keine Sofortkäufe mehr: Du zahlst eine <strong>Anzahlung von 30%</strong>, der Rest wird erst bei Fertigstellung fällig.<br><br>
-                Jedes Projekt hat eine echte <strong>Bauzeit</strong> (mehrere Spieltage) - im Stadion-Screen siehst du unter "Laufende Bauprojekte" den Fortschritt.<br><br>
-                Die Preise skalieren mit deiner Liga: In der Bundesliga kosten große Ausbauten realistische zweistellige Millionenbeträge, in unteren Ligen bleibt es erschwinglich.`
-        },
-        {
-            title: "🤖 Personal-Automatisierung",
-            body: `Mehrere Personal-Rollen können jetzt <strong>eigenständig Aufgaben übernehmen</strong>, wenn du sie im Personal-Screen auf "Automatik" statt "Manuell" stellst:<br><br>
-                🔭 Chef-Scout: entsendet freie Scouts automatisch<br>
-                📋 Sportdirektor: verlängert auslaufende Verträge<br>
-                📈 Marketing-Direktor: nimmt gute Sponsoren-Angebote an<br>
-                🎯 Standards-Spezialist: wählt die besten Elfmeter-/Freistoß-/Eckenschützen<br><br>
-                So bleibt der Verein auch am Laufen, wenn du dich lieber auf Taktik und Transfers konzentrierst.`
-        }
+        { titleKey: 'tutorial_1_title', bodyKey: 'tutorial_1_body' },
+        { titleKey: 'tutorial_2_title', bodyKey: 'tutorial_2_body' },
+        { titleKey: 'tutorial_3_title', bodyKey: 'tutorial_3_body' },
+        { titleKey: 'tutorial_4_title', bodyKey: 'tutorial_4_body' }
     ];
     function renderTutorialPage() {
         let page = TUTORIAL_PAGES[tutorialPage];
@@ -58,11 +37,14 @@
         let dotsEl = document.getElementById('tutorial-dots');
         let nextBtn = document.getElementById('tutorial-next-btn');
         let prevBtn = document.getElementById('tutorial-prev-btn');
-        if (titleEl) titleEl.innerHTML = page.title.replace('{CLUB}', game.clubName);
-        if (bodyEl) bodyEl.innerHTML = page.body;
+        if (titleEl) titleEl.innerHTML = t(page.titleKey).replace('{CLUB}', game.clubName);
+        if (bodyEl) bodyEl.innerHTML = t(page.bodyKey);
         if (dotsEl) dotsEl.innerHTML = TUTORIAL_PAGES.map((_, i) => `<span style="display:inline-block; width:6px; height:6px; border-radius:50%; margin:0 2px; background:${i === tutorialPage ? 'var(--accent)' : 'rgba(255,255,255,0.25)'};"></span>`).join('');
-        if (prevBtn) prevBtn.style.visibility = tutorialPage === 0 ? 'hidden' : 'visible';
-        if (nextBtn) nextBtn.innerText = tutorialPage === TUTORIAL_PAGES.length - 1 ? "Los geht's! ⚽" : 'Weiter →';
+        if (prevBtn) {
+            prevBtn.style.visibility = tutorialPage === 0 ? 'hidden' : 'visible';
+            prevBtn.innerText = t('tutorial_prev');
+        }
+        if (nextBtn) nextBtn.innerText = tutorialPage === TUTORIAL_PAGES.length - 1 ? t('tutorial_start') : t('tutorial_next');
     }
     function tutorialNext() {
         if (tutorialPage < TUTORIAL_PAGES.length - 1) { tutorialPage++; renderTutorialPage(); }

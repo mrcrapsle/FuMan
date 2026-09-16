@@ -12,6 +12,7 @@ OUTPUT_FILE = "dist/anstoss-fm13-standalone.html"
 JS_ORDER = [
     "js/audio.js",
     "js/utils.js",
+    "js/i18n.js",
     "js/state.js",
     "js/inbox.js",
     "js/entities.js",
