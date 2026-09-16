@@ -65,7 +65,7 @@
         // Saisons hinweg derselbe Verein (anders als die zufällig neu gewürfelten normalen
         // Rivalen-Paare oben) - dafür wird er jede Saison explizit in unsere aktuelle Liga
         // "gezwungen", damit die Rivalitäts-Bilanz (siehe rivalryRecord) überhaupt wachsen kann.
-        if (!game.permanentRivalName) game.permanentRivalName = generateTeamName();
+        if (!game.permanentRivalName) { game.permanentRivalName = generateTeamName(); assignRivalManagerPersonality(); }
         insertSecondTeamIntoLeagues();
         insertPermanentRivalIntoLeagues();
         generateFixtures();
@@ -242,6 +242,29 @@
     }
 
     // ==========================================
+    // TRAINERPERSÖNLICHKEIT DES PERMANENTEN RIVALEN (NEU)
+    // ==========================================
+    // Der permanente Rivale war bisher nur ein Vereinsname ohne eigenes Gesicht. Ein Name +
+    // eine feste Persönlichkeit für seinen Trainer machen die Rivalität greifbarer - taucht
+    // im Rivalen-Geschichtsbuch und (beim Rivalenwechsel) im Rivalen-Archiv auf.
+    const RIVAL_MANAGER_PERSONALITIES = [
+        { trait: 'Provokateur', quote: n => `${n} kennt vor dem Anpfiff nur eine Taktik: verbal provozieren.` },
+        { trait: 'Taktik-Fuchs', quote: n => `${n} gilt als taktischer Fuchs - jedes Duell gegen ihn ist ein Schachspiel.` },
+        { trait: 'Eiskalter Analytiker', quote: n => `${n} bleibt auch bei Rückständen eiskalt und analysiert lieber, als zu emotionalisieren.` },
+        { trait: 'Publikumsliebling', quote: n => `${n} ist bei den eigenen Fans hoch angesehen - ein echtes Idol auf der Trainerbank.` },
+        { trait: 'Alte Schule', quote: n => `${n} setzt auf Kampf und Leidenschaft statt auf moderne Spielsysteme.` },
+        { trait: 'Aufsteiger-Talent', quote: n => `${n} gilt als kommendes großes Trainertalent der Liga.` }
+    ];
+    function assignRivalManagerPersonality() {
+        game.rivalManagerName = getRandomName();
+        game.rivalManagerTrait = RIVAL_MANAGER_PERSONALITIES[Math.floor(Math.random() * RIVAL_MANAGER_PERSONALITIES.length)].trait;
+    }
+    function getRivalManagerQuote() {
+        let p = RIVAL_MANAGER_PERSONALITIES.find(x => x.trait === game.rivalManagerTrait);
+        return (p && game.rivalManagerName) ? p.quote(game.rivalManagerName) : null;
+    }
+
+    // ==========================================
     // RIVALITÄTEN: ERZFEIND-WECHSEL-MECHANIK (NEU)
     // ==========================================
     // Wird bei jedem Saisonabschluss geprüft: wird eine Rivalität über viele Spiele hinweg
@@ -259,12 +282,14 @@
         let oldRivalName = game.permanentRivalName;
         game.rivalHistoryArchive.push({
             name: oldRivalName, endedSeason: game.season,
-            record: { ...rivalryRecord }
+            record: { ...rivalryRecord },
+            managerName: game.rivalManagerName, managerTrait: game.rivalManagerTrait
         });
         if (game.rivalHistoryArchive.length > 10) game.rivalHistoryArchive.shift();
 
         let newRivalName = generateTeamName();
         game.permanentRivalName = newRivalName;
+        assignRivalManagerPersonality();
         rivalryRecord = { wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, biggestWin: null, matches: [], shootoutsVsRival: 0 };
         insertPermanentRivalIntoLeagues();
 

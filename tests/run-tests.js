@@ -769,6 +769,45 @@ async function testSeasonPointsChart(browser) {
     await page.close();
 }
 
+async function testRivalManagerPersonality(browser) {
+    console.log('\n[12] Trainerpersönlichkeit des permanenten Rivalen');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        showScreen('screen-history');
+        let html = document.getElementById('rivalry-history-book').innerHTML;
+        let hasManagerFromStart = !!game.rivalManagerName && !!game.rivalManagerTrait;
+        let htmlShowsManagerName = html.includes(game.rivalManagerName);
+
+        // Rivalenwechsel erzwingen (einseitige Bilanz + mehrere Versuche wegen 25%-Zufallschance)
+        rivalryRecord = { wins: 10, draws: 0, losses: 0, goalsFor: 30, goalsAgainst: 0, biggestWin: null, matches: [], shootoutsVsRival: 0 };
+        let oldManager = game.rivalManagerName;
+        let switched = false;
+        for (let i = 0; i < 50 && !switched; i++) {
+            checkRivalChangeEvent();
+            if (game.rivalManagerName !== oldManager) switched = true;
+        }
+        let archived = game.rivalHistoryArchive[game.rivalHistoryArchive.length - 1];
+
+        return {
+            hasManagerFromStart,
+            htmlShowsManagerName,
+            switched,
+            newManagerDiffers: game.rivalManagerName !== oldManager,
+            archiveHasManagerInfo: !!(archived && archived.managerName)
+        };
+    });
+
+    assert(r.hasManagerFromStart, 'Permanenter Rivale bekommt von Anfang an einen Trainernamen + eine Persönlichkeit');
+    assert(r.htmlShowsManagerName, 'Rivalen-Geschichtsbuch zeigt den Trainernamen an');
+    assert(r.switched, 'Rivalenwechsel-Mechanik lässt sich (bei einseitiger Bilanz) auslösen');
+    assert(r.newManagerDiffers, 'Neuer Rivale bekommt einen neuen Trainer zugewiesen');
+    assert(r.archiveHasManagerInfo, 'Alter Trainer wird korrekt ins Rivalen-Archiv übernommen');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei der Trainerpersönlichkeit');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -797,6 +836,7 @@ async function main() {
         testFreeTextInputSanitization,
         testSaveExportImportAndErrorLog,
         testSeasonPointsChart,
+        testRivalManagerPersonality,
     ];
 
     for (const suite of suites) {
