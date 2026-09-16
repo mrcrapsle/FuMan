@@ -373,25 +373,57 @@
     // der Button würde dann scheinbar wirkungslos bleiben. Stattdessen ein dialogfreier
     // Zwei-Klick-Bestätigungsmechanismus direkt am Button selbst (gleiches Muster wie
     // bereits bei deleteSaveSlot() bewährt).
+    // Startbedingungen konfigurierbar (NEU): bisher fest 6. Liga/150.000 € - jetzt wählbar,
+    // BEVOR der eigentliche Reset erfolgt. Übergibt die Wahl über sessionStorage-Marker
+    // (analog zum FORCE_NEW_GAME_FLAG selbst) über den Reload hinweg, da nach dem Reload
+    // ein komplett frisches game-Objekt entsteht (siehe window.onload in index.html).
+    const NEW_GAME_LEVEL_OPTIONS = [
+        { level: 5, label: '6. Liga (Standard)' },
+        { level: 3, label: '4. Liga (Fortgeschritten)' },
+        { level: 0, label: '1. Liga (Profi-Herausforderung)' }
+    ];
+    const NEW_GAME_MONEY_OPTIONS = [
+        { amount: 150000, label: 'Standard (150.000 €)' },
+        { amount: 500000, label: 'Großzügig (500.000 €)' }
+    ];
+    let selectedNewGameLevel = 5;
+    let selectedNewGameMoney = 150000;
     let newGameConfirmTimer = null;
     function startNewGame() {
-        let btn = document.getElementById('btn-new-game');
+        let box = document.getElementById('new-game-setup-box');
+        if (!box) return;
+        let show = box.style.display === 'none';
+        box.style.display = show ? 'block' : 'none';
+        if (show) renderNewGameSetupOptions();
+    }
+    function renderNewGameSetupOptions() {
+        let levelBox = document.getElementById('new-game-level-btns');
+        if (levelBox) {
+            levelBox.innerHTML = NEW_GAME_LEVEL_OPTIONS.map(o =>
+                `<button onclick="selectedNewGameLevel=${o.level}; renderNewGameSetupOptions();" class="${o.level === selectedNewGameLevel ? 'btn-action' : 'btn-secondary'}" style="font-size:9px; padding:5px 2px;">${o.label}</button>`
+            ).join('');
+        }
+        let moneyBox = document.getElementById('new-game-money-btns');
+        if (moneyBox) {
+            moneyBox.innerHTML = NEW_GAME_MONEY_OPTIONS.map(o =>
+                `<button onclick="selectedNewGameMoney=${o.amount}; renderNewGameSetupOptions();" class="${o.amount === selectedNewGameMoney ? 'btn-action' : 'btn-secondary'}" style="font-size:9px; padding:5px 2px;">${o.label}</button>`
+            ).join('');
+        }
+    }
+    function confirmNewGameWithSettings(btn) {
         if (btn && btn.dataset.confirming !== 'true') {
             btn.dataset.confirming = 'true';
             btn.innerText = '⚠️ Wirklich? Fortschritt weg! Nochmal tippen zum Bestätigen';
-            newGameConfirmTimer = setTimeout(() => resetNewGameButton(), 4000);
+            newGameConfirmTimer = setTimeout(() => {
+                if (btn.isConnected) { btn.dataset.confirming = 'false'; btn.innerText = '✅ Neues Spiel mit diesen Einstellungen starten'; }
+            }, 4000);
             return;
         }
         clearTimeout(newGameConfirmTimer);
         safeSessionSet(FORCE_NEW_GAME_FLAG, '1');
+        safeSessionSet('anstoss_fm13_newgame_leaguelevel', String(selectedNewGameLevel));
+        safeSessionSet('anstoss_fm13_newgame_money', String(selectedNewGameMoney));
         location.reload();
-    }
-    function resetNewGameButton() {
-        let btn = document.getElementById('btn-new-game');
-        if (btn) {
-            btn.dataset.confirming = 'false';
-            btn.innerText = '🆕 Neues Spiel starten (frischer Klub)';
-        }
     }
 
     // Kompletter Werksreset: löscht ALLE drei Speicherslots + den alten Einzel-Speicherstand

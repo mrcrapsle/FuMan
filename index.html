@@ -682,6 +682,13 @@
                 <div class="panel">
                     <div class="panel-header">💾 SPEICHERSTÄNDE</div>
                     <button onclick="startNewGame()" id="btn-new-game" data-confirming="false" class="btn-danger" style="margin-bottom:10px;">🆕 Neues Spiel starten (frischer Klub)</button>
+                    <div id="new-game-setup-box" class="box" style="display:none; margin-bottom:10px;">
+                        <div style="font-size:10px; font-weight:800; margin-bottom:4px;">Startliga wählen:</div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin-bottom:8px;" id="new-game-level-btns"></div>
+                        <div style="font-size:10px; font-weight:800; margin-bottom:4px;">Startkapital wählen:</div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-bottom:8px;" id="new-game-money-btns"></div>
+                        <button onclick="confirmNewGameWithSettings(this)" id="btn-confirm-new-game" data-confirming="false" class="btn-danger" style="width:100%;">✅ Neues Spiel mit diesen Einstellungen starten</button>
+                    </div>
                     <div id="save-slot-1" class="box" style="margin-bottom:6px;"></div>
                     <div id="save-slot-2" class="box" style="margin-bottom:6px;"></div>
                     <div id="save-slot-3" class="box"></div>
@@ -2187,7 +2194,32 @@
             let forceNewGame = safeStorageGet(sessionStorage, 'anstoss_fm13_force_new_game');
             if (forceNewGame) {
                 safeStorageRemove(sessionStorage, 'anstoss_fm13_force_new_game');
-                initDefaultSquad();
+                // Startbedingungen konfigurierbar (NEU): nur gesetzt, wenn der Reset über
+                // den "Neues Spiel starten"-Dialog mit Auswahl kam (siehe confirmNewGame
+                // WithSettings() in save.js) - beim Entlassungs-Reload (getSacked()) fehlen
+                // diese Marker, dann bleibt es beim alten Standardverhalten (6. Liga).
+                let chosenLevel = safeStorageGet(sessionStorage, 'anstoss_fm13_newgame_leaguelevel');
+                let chosenMoney = safeStorageGet(sessionStorage, 'anstoss_fm13_newgame_money');
+                safeStorageRemove(sessionStorage, 'anstoss_fm13_newgame_leaguelevel');
+                safeStorageRemove(sessionStorage, 'anstoss_fm13_newgame_money');
+                if (chosenLevel !== null) game.leagueLevel = parseInt(chosenLevel);
+                if (chosenMoney !== null) game.money = parseInt(chosenMoney);
+                if (chosenLevel !== null && parseInt(chosenLevel) !== 5 && typeof generateSquadForLevel === 'function') {
+                    // initDefaultSquad() ist fest auf die unterste Liga kalibriert - für eine
+                    // höhere Startliga braucht es einen entsprechend stärkeren Kader (gleicher
+                    // Generator wie bei switchToClub(), siehe squad.js).
+                    squad = generateSquadForLevel(game.leagueLevel);
+                    game.captainId = squad[8].id;
+                    game.penaltyTakerId = squad[14].id;
+                    game.freeKickTakerId = squad[9].id;
+                    game.cornerTakerId = squad[9].id;
+                    autoLineup();
+                    let leagueFactor = (NUM_LEAGUES - game.leagueLevel) / NUM_LEAGUES;
+                    game.transferBudget = Math.round(2500000 * (1 + leagueFactor * 2.5));
+                    game.wageBudget = Math.round(450000 * (1 + leagueFactor * 2.5));
+                } else {
+                    initDefaultSquad();
+                }
                 initLeagues();
                 refreshTransferMarket();
                 forceSponsorRenewalAtSeasonStart(true);

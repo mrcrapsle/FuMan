@@ -846,6 +846,40 @@ async function testAchievementsSystem(browser) {
     await page.close();
 }
 
+async function testConfigurableNewGameStart(browser) {
+    console.log('\n[12] Konfigurierbare Startbedingungen');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    await page.evaluate(() => closeTutorial());
+
+    await page.click('#btn-new-game');
+    await page.waitForTimeout(150);
+    const boxVisible = await page.evaluate(() => document.getElementById('new-game-setup-box').style.display === 'block');
+
+    await page.evaluate(() => { selectedNewGameLevel = 0; selectedNewGameMoney = 500000; renderNewGameSetupOptions(); });
+    await page.click('#btn-confirm-new-game');
+    await page.waitForTimeout(100);
+    await page.click('#btn-confirm-new-game');
+    await page.waitForTimeout(600);
+
+    const r = await page.evaluate(() => ({
+        leagueLevel: game.leagueLevel,
+        money: game.money,
+        squadSize: squad.length,
+        avgStrength: Math.round(squad.reduce((s, p) => s + p.strength, 0) / squad.length),
+        ourTeamFound: !!getOurLeagueTeam()
+    }));
+
+    assert(boxVisible, 'Klick auf "Neues Spiel starten" öffnet die Einstellungs-Box (statt sofort zu löschen)');
+    assert(r.leagueLevel === 0, 'Gewählte Startliga (1. Liga) wird korrekt übernommen');
+    assert(r.money === 500000, 'Gewähltes Startkapital wird korrekt übernommen');
+    assert(r.squadSize === 18, 'Kader wird vollständig mit 18 Spielern generiert');
+    assert(r.avgStrength >= 70, `Kader ist zur gewählten Top-Liga passend stark kalibriert (Ø ${r.avgStrength})`);
+    assert(r.ourTeamFound, 'Eigenes Team ist nach dem konfigurierten Neustart in der Liga-Pyramide auffindbar');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei konfigurierbaren Startbedingungen');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -876,6 +910,7 @@ async function main() {
         testSeasonPointsChart,
         testRivalManagerPersonality,
         testAchievementsSystem,
+        testConfigurableNewGameStart,
     ];
 
     for (const suite of suites) {
