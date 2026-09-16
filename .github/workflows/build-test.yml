@@ -45,3 +45,12 @@ jobs:
       - name: Run tests
         working-directory: tests
         run: npm test
+
+      - name: Build minified variant
+        run: npm run minify
+
+      - name: Run tests against minified build
+        working-directory: tests
+        run: npm test
+        env:
+          GAME_FILE: anstoss-fm13-standalone.min.html

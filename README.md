@@ -21,3 +21,13 @@ npm run lint
 als EIN zusammengefügter globaler Scope (siehe build.py --lint-bundle),
 damit ESLint keine falschen "undefined"-Meldungen für Funktionen aus
 anderen Dateien wirft.
+
+## Minifizieren (optional)
+python3 build.py
+npm install
+npm run minify
+→ erzeugt zusätzlich dist/anstoss-fm13-standalone.min.html (~30% kleiner) -
+praktisch zum Weitergeben/Teilen. Die normale, lesbare Datei bleibt für
+Entwicklung/Tests unverändert bestehen. mangle ist bewusst deaktiviert, da
+Buttons ihre Funktionen über onclick="..." als HTML-String aufrufen, den ein
+Minifizierer nicht sieht.

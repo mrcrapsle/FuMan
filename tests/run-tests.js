@@ -13,7 +13,9 @@
 const { chromium } = require('playwright');
 const path = require('path');
 
-const GAME_PATH = 'file://' + path.resolve(__dirname, '../dist/anstoss-fm13-standalone.html');
+// GAME_FILE env var erlaubt, dieselbe Suite auch gegen die minifizierte Variante laufen
+// zu lassen (siehe minify.js/CI) - Standard bleibt die normale, lesbare Build-Ausgabe.
+const GAME_PATH = 'file://' + path.resolve(__dirname, '../dist/' + (process.env.GAME_FILE || 'anstoss-fm13-standalone.html'));
 
 let passed = 0;
 let failed = 0;
