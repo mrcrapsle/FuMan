@@ -761,15 +761,35 @@
            Kein Three.js/WebGL: das Spiel bleibt eine einzige offline-fähige HTML-Datei
            (siehe js/office.js). Der Raum ist eine echte 3D-Box aus fünf Ebenen, die
            Kamera sitzt in der Mitte und dreht sich leicht mit der Maus/dem Finger. */
-        .office-viewport {
-            position: relative; width: 100%; aspect-ratio: 900 / 560; max-height: 62vh; min-height: 210px;
-            overflow: hidden; border-radius: 14px; border: 1px solid var(--border);
-            background: #04070d; box-shadow: inset 0 0 90px rgba(0,0,0,0.9);
-        }
+        /* Das Büro ist der Startbildschirm und nimmt bewusst das GANZE Display ein (statt in
+           einem Panel zwischen Kopfzeile und Seitenmenü zu stecken) - es ersetzt in diesem
+           Moment die komplette Bedienoberfläche, ausgewählt wird direkt an den Objekten.
+           z-index liegt über Bottom-Nav (500) und Seitenmenü (900), aber unter Toast (9999)
+           und Tutorial (10000), damit Hinweise weiterhin darüber erscheinen. */
+        #screen-office { position: fixed; inset: 0; z-index: 940; background: #04070d; }
+        .office-viewport { position: absolute; inset: 0; overflow: hidden; background: #04070d; }
         /* Feste Logikgroesse der Szene; #office-scaler wird per JS auf die echte Breite skaliert. */
         #office-scaler { position: absolute; left: 50%; top: 50%; width: 900px; height: 560px; margin: -280px 0 0 -450px; transform-origin: 50% 50%; }
         #office-persp { position: absolute; inset: 0; perspective: 640px; perspective-origin: 50% 48%; }
-        @media (max-width: 560px) { .office-viewport { aspect-ratio: 760 / 560; } }
+
+        /* Bedienleiste über der Kulisse: Vereinsname + Ausstieg in die normale Oberfläche. */
+        .office-hud {
+            position: absolute; top: 0; left: 0; right: 0; z-index: 30; display: flex; gap: 10px;
+            align-items: center; justify-content: space-between; padding: 10px 14px;
+            background: linear-gradient(180deg, rgba(4,7,13,0.92), rgba(4,7,13,0));
+            pointer-events: none;
+        }
+        .office-hud-title { font-size: 13px; font-weight: 900; color: var(--accent); letter-spacing: 0.5px; text-shadow: 0 2px 8px rgba(0,0,0,0.9); }
+        .office-hud-btn-ghost {
+            background: rgba(19, 27, 44, 0.92) !important; color: var(--accent) !important;
+            border: 1px solid rgba(255,213,74,0.4) !important;
+        }
+        .office-hud-btn {
+            pointer-events: auto; width: auto; margin: 0; padding: 7px 13px; border: none; cursor: pointer;
+            border-radius: 999px; font-size: 10px; font-weight: 800; color: #241800;
+            background: linear-gradient(135deg, #ffe27a, var(--accent));
+            box-shadow: 0 6px 16px rgba(0,0,0,0.5);
+        }
         #office-stage { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform 0.5s cubic-bezier(0.4,0,0.2,1); }
         #office-room {
             position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-style: preserve-3d;
@@ -799,10 +819,10 @@
         .office-face-ceiling { background: linear-gradient(180deg, #0a0f1a, #060a12); box-shadow: inset 0 0 120px rgba(0,0,0,0.9); }
 
         .office-desk {
-            position: absolute; left: 50%; top: 50%; width: 520px; height: 130px; transform-style: preserve-3d;
-            background: linear-gradient(180deg, #6a4a2a 0%, #513720 12%, #3c2816 100%);
+            position: absolute; left: 50%; top: 50%; width: 620px; height: 155px; transform-style: preserve-3d;
+            background: linear-gradient(180deg, #8a6338 0%, #6d4a29 15%, #52381f 55%, #402a17 100%);
             border-radius: 12px 12px 5px 5px;
-            box-shadow: 0 34px 70px rgba(0,0,0,0.7), inset 0 2px 0 rgba(255,222,170,0.28);
+            box-shadow: 0 34px 70px rgba(0,0,0,0.7), inset 0 3px 0 rgba(255,228,180,0.4);
         }
         .office-nameplate {
             position: absolute; left: 50%; top: 50%; padding: 5px 14px; border-radius: 3px;
@@ -812,9 +832,16 @@
         }
         .office-lightpool {
             position: absolute; left: 50%; top: 50%; width: 900px; height: 520px; pointer-events: none;
-            transform: translate(-50%,-50%) translate3d(-140px, 40px, -130px);
-            background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255,198,112,0.26), transparent 72%);
+            transform: translate(-50%,-50%) translate3d(-40px, 60px, -95px);
+            background: radial-gradient(ellipse 52% 52% at 50% 50%, rgba(255,198,112,0.3), transparent 72%);
             transition: opacity 0.4s;
+        }
+        .office-rug {
+            position: absolute; left: 20%; top: 26%; width: 60%; height: 48%; border-radius: 6px;
+            background:
+                repeating-linear-gradient(45deg, rgba(0,0,0,0.10) 0px, rgba(0,0,0,0.10) 12px, transparent 12px, transparent 24px),
+                linear-gradient(160deg, #4a2320, #33181a);
+            border: 5px solid #5d2f26; box-shadow: inset 0 0 40px rgba(0,0,0,0.6);
         }
         .office-mote {
             position: absolute; width: 3px; height: 3px; border-radius: 50%; pointer-events: none;
@@ -862,14 +889,28 @@
 
         #office-fade {
             position: absolute; inset: 0; background: #04070d; opacity: 0; pointer-events: none;
-            transition: opacity 0.45s ease-in; z-index: 40; border-radius: 14px;
+            transition: opacity 0.45s ease-in; z-index: 40;
         }
         #office-fade.show { opacity: 1; }
 
+        .office-quicknav {
+            position: absolute; left: 10px; right: 10px; z-index: 30;
+            display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-content: flex-start;
+        }
+        .office-quicknav-btn {
+            width: auto; margin: 0; padding: 7px 11px; cursor: pointer; font-size: 10px; font-weight: 800;
+            color: var(--text-main); background: rgba(19, 27, 44, 0.92); border: 1px solid rgba(255,213,74,0.35);
+            border-radius: 999px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+        .office-quicknav-btn:hover { border-color: var(--accent); color: var(--accent); }
+
         /* Die "Satzzeile" unten - das Markenzeichen der SCUMM-Adventures. */
         .office-sentence {
-            margin-top: 8px; text-align: center; font-size: 11px; font-weight: 700; min-height: 20px;
-            color: var(--text-muted); letter-spacing: 0.3px; transition: color 0.18s;
+            position: absolute; left: 0; right: 0; bottom: 0; z-index: 30; padding: 12px 14px 16px;
+            text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted);
+            letter-spacing: 0.3px; transition: color 0.18s; pointer-events: none;
+            background: linear-gradient(0deg, rgba(4,7,13,0.94), rgba(4,7,13,0));
+            text-shadow: 0 2px 8px rgba(0,0,0,0.9);
         }
         .office-sentence-active { color: var(--accent); }
 

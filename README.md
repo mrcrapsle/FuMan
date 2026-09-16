@@ -37,7 +37,17 @@ Minifizierer nicht sieht.
 `js/office.js` + der CSS-Block "MANAGERBÜRO" in `css/styles.css` bauen den
 Point-and-Click-Startbildschirm: eine begehbare Bürokulisse aus fünf
 CSS-3D-Ebenen mit zehn anklickbaren Objekten, die in die jeweiligen
-Spielbereiche führen.
+Spielbereiche führen. Das Büro liegt als Vollbild-Ebene (`position:fixed`,
+z-index 940) über der übrigen Oberfläche und ist über den Knopf oben im
+Dashboard jederzeit wieder erreichbar; zurück geht es über "Zum Dashboard"
+in der Leiste oben rechts.
+
+Die Szene wird immer für eine feste Logikgröße (900x560) komponiert und als
+Ganzes skaliert - sonst fiele auf schmalen Geräten der komplette
+Seitenwand-Bereich (Tür, Taktiktafel, Tresor, Aktenschrank) aus dem
+Sichtkegel. Bleibt dabei viel Platz über/unter der Kulisse (Hochformat),
+erscheint darunter automatisch eine beschriftete Schnellauswahl derselben
+Ziele, weil die Objekte dort klein zum Antippen sind.
 
 Bewusst **kein Three.js/WebGL** - das Spiel muss eine einzige, offline
 lauffähige HTML-Datei bleiben; eine 3D-Bibliothek wären ~600 KB Fremdcode

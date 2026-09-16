@@ -54,7 +54,7 @@
         },
         {
             id: 'trophy', wall: 'back', target: 'screen-league',
-            pos: 'left:608px; top:88px; width:242px; height:382px;',
+            pos: 'left:608px; top:70px; width:242px; height:300px;',
             art: () => {
                 let count = (game.trophies || []).length;
                 let shelves = [0, 1, 2].map(row => {
@@ -120,7 +120,7 @@
         },
         {
             id: 'monitor', wall: 'room', target: 'screen-dashboard',
-            size: 'width:200px; height:140px;', at: 'translate3d(-78px, 35px, -100px)',
+            size: 'width:200px; height:140px;', at: 'translate3d(-30px, 25px, -70px)',
             art: () => `
                 <div class="off-monitor">
                     <div class="off-monitor-screen">
@@ -133,7 +133,7 @@
         },
         {
             id: 'phone', wall: 'room', target: 'screen-inbox',
-            size: 'width:110px; height:74px;', at: 'translate3d(88px, 68px, -70px)',
+            size: 'width:110px; height:74px;', at: 'translate3d(175px, 58px, -70px)',
             art: () => {
                 let unread = (typeof inboxMessages !== 'undefined') ? inboxMessages.filter(m => !m.read).length : 0;
                 return `<div class="off-phone${unread > 0 ? ' off-phone-ringing' : ''}">
@@ -145,7 +145,7 @@
         },
         {
             id: 'lamp', wall: 'room', action: 'lamp',
-            size: 'width:105px; height:130px;', at: 'translate3d(-208px, 40px, -75px)',
+            size: 'width:105px; height:130px;', at: 'translate3d(-210px, 30px, -70px)',
             art: () => `
                 <div class="off-lamp">
                     <div class="off-lamp-shade"></div>
@@ -191,11 +191,12 @@
 
         let wallHtml = (name) => {
             let items = OFFICE_HOTSPOTS.filter(h => h.wall === name).map(hotspotHtml).join('');
+            if (name === 'floor') items += `<div class="office-rug"></div>`;
             return `<div class="office-face office-face-${name}" style="${faces[name]}">${items}</div>`;
         };
 
-        let desk = `<div class="office-desk" style="transform: translate(-50%,-50%) translate3d(0, 170px, -80px);"></div>`
-            + `<div class="office-nameplate" style="transform: translate(-50%,-50%) translate3d(10px, 120px, -70px);">${game.clubName}</div>`;
+        let desk = `<div class="office-desk" style="transform: translate(-50%,-50%) translate3d(0, 175px, -80px);"></div>`
+            + `<div class="office-nameplate" style="transform: translate(-50%,-50%) translate3d(60px, 112px, -70px);">${game.clubName}</div>`;
         let freeItems = OFFICE_HOTSPOTS.filter(h => h.wall === 'room').map(hotspotHtml).join('');
         let motes = Array.from({ length: 10 }, (_, i) =>
             `<div class="office-mote" style="left:${8 + i * 9}%; top:${15 + (i * 17) % 60}%; animation-delay:${i * 1.3}s;"></div>`).join('');
@@ -209,6 +210,8 @@
         let room = document.getElementById('office-room');
         if (!room) return;
         room.innerHTML = buildOfficeRoom();
+        let title = document.getElementById('office-club-title');
+        if (title) title.innerText = game.clubName;
         officeSetSentence(null);
         applyOfficeLight();
         fitOfficeScale();
@@ -225,10 +228,28 @@
         let rect = viewport.getBoundingClientRect();
         if (!rect.width) return;
         // Auf schmalen Geräten darf die Szene seitlich leicht überstehen (die äußersten
-        // Wandecken sind leer), damit der Raum nicht auf Briefmarkengröße schrumpft.
-        let logicalWidth = rect.width < 520 ? 760 : 900;
+        // Wandecken sind leer), damit der Raum nicht auf Briefmarkengröße schrumpft. Weiter
+        // beschneiden geht nicht: Tür und Aktenschrank sitzen am Rand der Seitenwände und
+        // müssen anklickbar bleiben (siehe testManagerOffice).
+        let logicalWidth = rect.width < 560 ? 760 : 900;
         let k = Math.min(rect.width / logicalWidth, rect.height / 560);
         scaler.style.transform = `scale(${k.toFixed(4)})`;
+        renderOfficeQuickNav(rect.height - 560 * k, (rect.height + 560 * k) / 2);
+    }
+
+    // Auf hohen, schmalen Displays bleibt über und unter der Kulisse viel Platz frei (ein
+    // breiter Raum füllt ein Hochformat nun einmal nicht aus) - und die Objekte sind dort
+    // klein zum Antippen. Dann erscheint darunter dieselbe Auswahl noch einmal als
+    // beschriftete Schaltflächen; auf breiten Displays bleibt sie ausgeblendet.
+    function renderOfficeQuickNav(leftoverSpace, sceneBottom) {
+        let nav = document.getElementById('office-quicknav');
+        if (!nav) return;
+        if (leftoverSpace < 150) { nav.style.display = 'none'; nav.innerHTML = ''; return; }
+        nav.style.display = 'flex';
+        nav.style.top = Math.round(sceneBottom + 14) + 'px';
+        nav.innerHTML = OFFICE_HOTSPOTS.filter(h => h.target).map(h =>
+            `<button class="office-quicknav-btn" onclick="officeEnterHotspot('${h.id}')">${officeHotspotText(h.id)}</button>`
+        ).join('');
     }
 
     function officeSetSentence(id) {

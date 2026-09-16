@@ -923,6 +923,10 @@ async function testLanguageToggle(browser) {
     console.log('\n[14] Sprachumschalter (DE/EN)');
     const { page, consoleErrors } = await freshPage(browser);
     await page.evaluate(() => closeTutorial());
+    // Startbildschirm ist das Managerbüro und deckt das ganze Display ab - für die
+    // Kopfzeilen-/Seitenmenü-Knöpfe muss der Test es zuerst verlassen.
+    await page.evaluate(() => showScreen('screen-dashboard'));
+    await page.waitForTimeout(150);
 
     const deText = await page.evaluate(() => document.querySelector('[onclick*="screen-calendar"]').textContent.trim());
     await page.click('#btn-lang-toggle');
@@ -933,6 +937,8 @@ async function testLanguageToggle(browser) {
 
     await page.reload();
     await page.waitForTimeout(400);
+    await page.evaluate(() => { closeTutorial(); showScreen('screen-dashboard'); });
+    await page.waitForTimeout(150);
     const enTextAfterReload = await page.evaluate(() => document.querySelector('[onclick*="screen-calendar"]').textContent.trim());
 
     await page.click('#btn-lang-toggle');
@@ -956,6 +962,13 @@ async function testManagerOffice(browser) {
 
     const isStartScreen = await page.evaluate(() => document.getElementById('screen-office').style.display === 'block');
     const hotspotIds = await page.evaluate(() => OFFICE_HOTSPOTS.map(h => h.id));
+
+    // Das Büro soll das GANZE Display einnehmen, nicht als kleines Panel zwischen
+    // Kopfzeile und Seitenmenü sitzen.
+    const coversDisplay = await page.evaluate(() => {
+        const r = document.getElementById('screen-office').getBoundingClientRect();
+        return Math.round(r.width) >= window.innerWidth && Math.round(r.height) >= window.innerHeight;
+    });
 
     // Kernabsicherung: JEDER Hotspot muss an seinem eigenen Mittelpunkt auch wirklich sich
     // selbst treffen - im Hover-Zustand. Genau hier lag der schwerste Fehler dieser Ansicht:
@@ -998,6 +1011,16 @@ async function testManagerOffice(browser) {
     await page.waitForTimeout(900);
     const navigated = await page.evaluate(() => document.getElementById('screen-calendar').style.display === 'block');
 
+    // Vom Dashboard aus wieder ins Büro und per HUD-Knopf zurück
+    await page.evaluate(() => showScreen('screen-dashboard'));
+    await page.waitForTimeout(250);
+    await page.click('#screen-dashboard button[data-i18n="office_enter"]');
+    await page.waitForTimeout(250);
+    const backInOffice = await page.evaluate(() => document.getElementById('screen-office').style.display === 'block');
+    await page.click('.office-hud-btn[data-i18n="office_to_dashboard"]');
+    await page.waitForTimeout(250);
+    const leftOffice = await page.evaluate(() => document.getElementById('screen-office').style.display === 'none');
+
     // Telefon zeigt ungelesene Post an
     const phone = await page.evaluate(() => {
         showScreen('screen-office');
@@ -1006,12 +1029,15 @@ async function testManagerOffice(browser) {
     });
 
     assert(isStartScreen, 'Managerbüro ist der Startbildschirm nach dem Laden');
+    assert(coversDisplay, 'Managerbüro nimmt das gesamte Display ein');
     assert(hotspotIds.length === 10, `Alle 10 Objekte im Büro vorhanden (${hotspotIds.length})`);
     assert(unreachable.length === 0, `Jedes Objekt ist an seinem Mittelpunkt anklickbar${unreachable.length ? ' - NICHT erreichbar: ' + unreachable.join(', ') : ''}`);
     assert(sentence === 'Den Terminplan studieren', `Satzzeile zeigt die Aktion des überfahrenen Objekts ("${sentence}")`);
     assert(lampState.dark, 'Schreibtischlampe schaltet das Raumlicht aus');
     assert(lampState.stillInOffice, 'Lampe navigiert NICHT weg (reines Stimmungslicht)');
     assert(navigated, 'Klick auf den Wandkalender öffnet den Kalender-Screen');
+    assert(backInOffice, 'Knopf im Dashboard führt zurück ins Managerbüro');
+    assert(leftOffice, 'Knopf "Zum Dashboard" verlässt das Büro wieder');
     assert(phone.badge === phone.unread && phone.unread > 0, `Telefon zeigt die ungelesene Post an (${phone.badge}/${phone.unread})`);
     assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler im Managerbüro');
     await page.close();

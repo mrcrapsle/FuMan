@@ -511,21 +511,26 @@
 
             <!-- MANAGERBÜRO: Point-and-Click-Startbildschirm (CSS-3D, siehe js/office.js) -->
             <div id="screen-office" style="display:none;">
-                <div class="panel">
-                    <div class="panel-header">🏢 <span data-i18n="office_title">MANAGERBÜRO</span></div>
-                    <div class="office-viewport" id="office-viewport">
-                        <!-- Szene wird immer fuer eine feste Logikgroesse (900x560) komponiert und
-                             dann passend skaliert - sonst faellt auf schmalen Handys der gesamte
-                             Seitenwand-Bereich aus dem Sichtkegel. -->
-                        <div id="office-scaler">
-                            <div id="office-persp">
-                                <div id="office-stage">
-                                    <div id="office-room"></div>
-                                </div>
+                <div class="office-viewport" id="office-viewport">
+                    <!-- Szene wird immer fuer eine feste Logikgroesse (900x560) komponiert und
+                         dann passend skaliert - sonst faellt auf schmalen Handys der gesamte
+                         Seitenwand-Bereich aus dem Sichtkegel. -->
+                    <div id="office-scaler">
+                        <div id="office-persp">
+                            <div id="office-stage">
+                                <div id="office-room"></div>
                             </div>
                         </div>
-                        <div id="office-fade"></div>
                     </div>
+                    <div id="office-fade"></div>
+                    <div class="office-hud">
+                        <div class="office-hud-title">🏢 <span id="office-club-title">1.FC Moritz Leipzig</span></div>
+                        <div style="display:flex; gap:6px; align-items:center;">
+                            <button class="office-hud-btn office-hud-btn-ghost" onclick="toggleLanguage()" title="Sprache wechseln / Switch language">🌐 DE/EN</button>
+                            <button class="office-hud-btn" onclick="showScreen('screen-dashboard')" data-i18n="office_to_dashboard">📊 Zum Dashboard</button>
+                        </div>
+                    </div>
+                    <div class="office-quicknav" id="office-quicknav"></div>
                     <div class="office-sentence" id="office-sentence"></div>
                 </div>
             </div>
@@ -632,6 +637,7 @@
 
             <!-- 1. DASHBOARD -->
             <div id="screen-dashboard">
+                <button onclick="showScreen('screen-office')" class="btn-action" style="margin-bottom:10px;" data-i18n="office_enter">🏢 Ins Managerbüro</button>
                 <div class="dashboard-hero-sky">
                     <div class="dashboard-hero-club">
                         <div class="crest-fallback" id="dash-hero-crest" style="display:flex; align-items:center; justify-content:center; font-size:16px;">🦁</div>
