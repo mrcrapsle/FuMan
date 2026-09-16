@@ -15,16 +15,36 @@
 -->
 <div id="global-error-banner" style="display:none; position:fixed; top:0; left:0; right:0; z-index:999999; background:#5a0a15; color:#fff; padding:10px 12px; font-size:11px; font-family:monospace; max-height:40vh; overflow-y:auto; border-bottom:3px solid #ff4d6d; word-break:break-word;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-        <strong style="color:#ff8a9b;">⚠️ Technischer Fehler (bitte Screenshot an den Entwickler schicken):</strong>
-        <button onclick="document.getElementById('global-error-banner').style.display='none'" style="background:#fff; color:#5a0a15; border:none; border-radius:4px; padding:2px 8px; font-weight:bold;">✕</button>
+        <strong style="color:#ff8a9b;">⚠️ Technischer Fehler (bitte melden):</strong>
+        <div>
+            <button onclick="window.__exportRuntimeErrorLog && window.__exportRuntimeErrorLog()" style="background:#ffe27a; color:#5a0a15; border:none; border-radius:4px; padding:2px 8px; font-weight:bold; margin-right:4px;">📤 Exportieren</button>
+            <button onclick="document.getElementById('global-error-banner').style.display='none'" style="background:#fff; color:#5a0a15; border:none; border-radius:4px; padding:2px 8px; font-weight:bold;">✕</button>
+        </div>
     </div>
     <div id="global-error-content"></div>
 </div>
 <script>
     (function() {
         var shown = 0;
+        // Persistentes Fehlerprotokoll (NEU): bisher verschwanden Laufzeitfehler beim
+        // Schließen des Banners oder einem Reload spurlos - nur der Struktur-Selbsttest
+        // (siehe game.selfTestHistory/admin.js) hatte einen echten, exportierbaren
+        // Verlauf. Läuft bewusst VOR allen js/*.js-Dateien, damit auch ganz frühe
+        // Boot-Fehler erfasst werden, und ist deshalb in sich geschlossen (kein Aufruf
+        // von Funktionen aus anderen Skripten).
+        var runtimeErrorLog = [];
+        try {
+            var stored = window.sessionStorage && window.sessionStorage.getItem('anstoss_fm13_runtime_errors');
+            if (stored) runtimeErrorLog = JSON.parse(stored);
+        } catch (e) { /* sessionStorage evtl. blockiert - Verlauf bleibt dann nur für diese Sitzung im Speicher */ }
+        function persistLog() {
+            try { window.sessionStorage && window.sessionStorage.setItem('anstoss_fm13_runtime_errors', JSON.stringify(runtimeErrorLog.slice(-30))); } catch (e) { /* ignorieren */ }
+        }
         function showError(msg) {
             shown++;
+            runtimeErrorLog.push({ time: new Date().toLocaleString('de-DE'), msg: msg });
+            if (runtimeErrorLog.length > 30) runtimeErrorLog.shift();
+            persistLog();
             if (shown > 8) return;
             var banner = document.getElementById('global-error-banner');
             var content = document.getElementById('global-error-content');
@@ -42,6 +62,18 @@
         window.addEventListener('unhandledrejection', function(e) {
             showError('Promise-Fehler: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason)));
         });
+        window.__exportRuntimeErrorLog = function() {
+            var data = JSON.stringify(runtimeErrorLog, null, 2);
+            var blob = new Blob([data], { type: 'application/json' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'anstoss-fm13-fehlerprotokoll-' + new Date().toISOString().slice(0, 10) + '.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
     })();
 </script>
 <div id="app-toast" class="app-toast"></div>
@@ -653,6 +685,11 @@
                     <div id="save-slot-1" class="box" style="margin-bottom:6px;"></div>
                     <div id="save-slot-2" class="box" style="margin-bottom:6px;"></div>
                     <div id="save-slot-3" class="box"></div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px;">
+                        <button onclick="exportSaveToFile()" class="btn-secondary" style="font-size:10px;">📤 Als Datei exportieren</button>
+                        <button onclick="document.getElementById('save-import-file-input').click()" class="btn-secondary" style="font-size:10px;">📥 Aus Datei importieren</button>
+                    </div>
+                    <input type="file" id="save-import-file-input" accept=".json,application/json" style="display:none;" onchange="importSaveFromFile(this)">
                     <button onclick="tutorialPage = 0; renderTutorialPage(); document.getElementById('tutorial-overlay').classList.add('show')" class="btn-secondary" style="margin-top:8px;">❓ Kurzanleitung erneut anzeigen</button>
                     <div style="text-align:center; font-size:8px; color:var(--text-muted); margin-top:10px;" id="game-version-tag">Version wird geladen...</div>
                 </div>

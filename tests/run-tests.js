@@ -706,6 +706,38 @@ async function testFreeTextInputSanitization(browser) {
     await page.close();
 }
 
+async function testSaveExportImportAndErrorLog(browser) {
+    console.log('\n[12] Spielstand-Export/Import & Fehlerprotokoll-Export');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const [download] = await Promise.all([
+        page.waitForEvent('download'),
+        page.evaluate(() => { game.money = 987654; exportSaveToFile(); })
+    ]);
+    const fs = require('fs');
+    const savedJson = JSON.parse(fs.readFileSync(await download.path(), 'utf-8'));
+    assert(savedJson.game && savedJson.game.money === 987654, 'Export-Datei enthält den korrekten Spielstand');
+    assert(!!savedJson.meta, 'Export-Datei enthält Metadaten (Vereinsname/Saison/...)');
+
+    await page.evaluate(() => { game.money = 111; });
+    await page.setInputFiles('#save-import-file-input', await download.path());
+    await page.waitForTimeout(300);
+    const afterImport = await page.evaluate(() => game.money);
+    assert(afterImport === 987654, 'Import aus Datei stellt den exportierten Spielstand korrekt wieder her');
+
+    const [download2] = await Promise.all([
+        page.waitForEvent('download'),
+        page.evaluate(() => { setTimeout(() => { nichtExistierendeFunktionXYZ(); }, 10); })
+            .then(() => page.waitForTimeout(200)).then(() => page.evaluate(() => window.__exportRuntimeErrorLog()))
+    ]);
+    const errorLog = JSON.parse(fs.readFileSync(await download2.path(), 'utf-8'));
+    assert(errorLog.some(e => e.msg.includes('nichtExistierendeFunktionXYZ')), 'Fehlerprotokoll-Export enthält den tatsächlich aufgetretenen Laufzeitfehler');
+
+    assert(consoleErrors.filter(e => !e.includes('nichtExistierendeFunktionXYZ')).length === 0, 'Keine UNERWARTETEN JS-Konsolenfehler bei Export/Import-Test');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -732,6 +764,7 @@ async function main() {
         testClubRenameAndSwitch,
         testTransferMarketAndClubDossier,
         testFreeTextInputSanitization,
+        testSaveExportImportAndErrorLog,
     ];
 
     for (const suite of suites) {

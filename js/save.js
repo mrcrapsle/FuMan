@@ -223,6 +223,63 @@
         return false;
     }
 
+    // ---------- SPIELSTAND ALS DATEI EXPORTIEREN/IMPORTIEREN (NEU) ----------
+    // Ergänzt die 3 lokalen Slots (localStorage) um eine echte, portable Datei - wichtig
+    // seit klar ist, dass localStorage in manchen Android-Ansichten komplett blockiert
+    // sein kann (siehe safeLocalSet-Absicherung oben) UND weil localStorage grundsätzlich
+    // beim Browser-Cache-Leeren oder App-Neuinstallation verloren gehen kann. Nutzt dasselbe
+    // Blob+<a download>-Muster wie downloadSelfTestArchiveFile() (admin.js).
+    function exportSaveToFile() {
+        try {
+            let state = buildSaveState();
+            state.meta = {
+                savedAt: new Date().toLocaleString('de-DE'),
+                clubName: game.clubName,
+                league: leagueNames[game.leagueLevel],
+                season: game.season,
+                matchday: Math.min(34, game.matchday),
+                money: game.money
+            };
+            let data = JSON.stringify(state);
+            let blob = new Blob([data], { type: 'application/json' });
+            let url = URL.createObjectURL(blob);
+            let a = document.createElement('a');
+            a.href = url;
+            let safeClubName = game.clubName.replace(/[^a-zA-Z0-9äöüÄÖÜß _-]/g, '').trim() || 'Verein';
+            a.download = `anstoss-fm13-${safeClubName}-S${game.season}-SpT${Math.min(34, game.matchday)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('📤 Spielstand als Datei exportiert!', 'success');
+        } catch(e) {
+            showToast('Export-Fehler: ' + e.message, 'error');
+        }
+    }
+    function importSaveFromFile(inputEl) {
+        let file = inputEl.files && inputEl.files[0];
+        if (!file) return;
+        let reader = new FileReader();
+        reader.onload = function() {
+            try {
+                let p = JSON.parse(reader.result);
+                applyLoadedState(p);
+                updateUI();
+                showScreen('screen-dashboard');
+                playSound('whistle');
+                showToast('📥 Spielstand aus Datei importiert!', 'success');
+            } catch(e) {
+                showToast('Import-Fehler: Datei ist kein gültiger Anstoß-Spielstand (' + e.message + ')', 'error');
+            }
+            inputEl.value = ''; // dieselbe Datei muss erneut auswählbar sein
+        };
+        reader.onerror = function() {
+            showToast('Import-Fehler: Datei konnte nicht gelesen werden.', 'error');
+            inputEl.value = '';
+        };
+        reader.readAsText(file);
+    }
+
     let deleteConfirmTimers = {};
     function deleteSaveSlot(slotNum) {
         let btn = document.getElementById('btn-delete-slot-' + slotNum);
