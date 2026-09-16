@@ -69,8 +69,37 @@
         `;
     }
 
+    // Liga-Chronik (NEU): macht die seit der persistenten Liga-Pyramide (siehe
+    // advanceLeaguesToNewSeason() in leagues.js) mitlaufende team.strengthHistory sichtbar -
+    // zeigt die größten Stärke-Gewinner/-Verlierer der letzten Saison über alle 108 Vereine,
+    // statt dass diese Entwicklung nur unsichtbar im Hintergrund abläuft.
+    function renderLeagueChronikBox() {
+        let box = document.getElementById('league-chronik-box');
+        if (!box) return;
+        let deltas = leaguesData.flat()
+            .filter(t => t.name !== game.clubName && t.strengthHistory && t.strengthHistory.length > 0)
+            .map(t => {
+                let prev = t.strengthHistory[t.strengthHistory.length - 1].strength;
+                return { name: t.name, prev, curr: t.strength, delta: t.strength - prev };
+            });
+        if (deltas.length === 0) {
+            box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Die Chronik füllt sich, sobald die erste Saison in der Liga-Pyramide abgeschlossen ist.</div>';
+            return;
+        }
+        let risers = [...deltas].filter(d => d.delta > 0).sort((a, b) => b.delta - a.delta).slice(0, 3);
+        let fallers = [...deltas].filter(d => d.delta < 0).sort((a, b) => a.delta - b.delta).slice(0, 3);
+        let row = d => `<div class="box" style="display:flex; justify-content:space-between; font-size:10px;"><span>${d.name}</span><strong style="color:${d.delta > 0 ? 'var(--primary)' : 'var(--danger)'};">${d.prev} → ${d.curr} (${d.delta > 0 ? '+' : ''}${d.delta})</strong></div>`;
+        box.innerHTML = `
+            <div style="font-size:9px; font-weight:800; color:var(--primary); margin:6px 0 3px;">📈 GRÖSSTE AUFSTEIGER (STÄRKE)</div>
+            ${risers.length === 0 ? '<div style="font-size:9px; color:var(--text-muted);">Keine nennenswerten Aufsteiger diese Saison.</div>' : risers.map(row).join('')}
+            <div style="font-size:9px; font-weight:800; color:var(--danger); margin:6px 0 3px;">📉 GRÖSSTE ABSTEIGER (STÄRKE)</div>
+            ${fallers.length === 0 ? '<div style="font-size:9px; color:var(--text-muted);">Keine nennenswerten Absteiger diese Saison.</div>' : fallers.map(row).join('')}
+        `;
+    }
+
     function renderHistoryView() {
         renderClubRecordsBox();
+        renderLeagueChronikBox();
         if (typeof renderPlayerOfMonthBox === 'function') renderPlayerOfMonthBox();
         if (typeof renderPlayerOfSeasonBox === 'function') renderPlayerOfSeasonBox();
         let list = document.getElementById('trophies-list');

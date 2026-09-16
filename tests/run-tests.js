@@ -552,6 +552,133 @@ async function testTrainingOverhaul(browser) {
 }
 
 // ---------------------------------------------------------------------------
+// [12] LEBENDE LIGA, VEREINSIDENTITÄT & TRANSFERMARKT-ANBINDUNG
+// ---------------------------------------------------------------------------
+// Bisher nur per Wegwerf-Skripten während der Entwicklung verifiziert - jetzt fest in der
+// Suite, damit ein künftiger Change diese Systeme nicht stillschweigend wieder kaputt macht.
+async function testLivingLeaguePersistence(browser) {
+    console.log('\n[12] Lebende Liga: Persistenz über mehrere Saisons');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        try {
+            let seasons = [];
+            for (let i = 0; i < 6; i++) {
+                simulateFullSeason();
+                concludeSeasonAndAdvance();
+                let allNames = new Set();
+                let dupes = 0, sizeIssues = 0;
+                leaguesData.forEach(table => {
+                    if (table.length !== 18) sizeIssues++;
+                    table.forEach(t => { if (allNames.has(t.name)) dupes++; allNames.add(t.name); });
+                });
+                seasons.push({
+                    totalTeams: allNames.size, dupes, sizeIssues,
+                    ourTeamFound: leaguesData[game.leagueLevel].some(t => t.name === game.clubName)
+                });
+            }
+            return { crash: false, seasons };
+        } catch (e) {
+            return { crash: true, error: e.message };
+        }
+    });
+
+    assert(r.crash === false, `6 Saisons Liga-Persistenz ohne Absturz (${r.crash ? r.error : 'ok'})`);
+    if (!r.crash) {
+        assert(r.seasons.every(s => s.totalTeams === 108), 'Immer exakt 108 eindeutige Vereine über alle 6 Saisons');
+        assert(r.seasons.every(s => s.dupes === 0), 'Nie ein Namens-Duplikat über alle 6 Saisons');
+        assert(r.seasons.every(s => s.sizeIssues === 0), 'Jede der 6 Ligen bleibt immer bei genau 18 Teams');
+        assert(r.seasons.every(s => s.ourTeamFound), 'Eigenes Team ist nach jeder Saison im korrekten Liga-Level auffindbar');
+    }
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler während der Mehrsaison-Simulation');
+    await page.close();
+}
+
+async function testClubRenameAndSwitch(browser) {
+    console.log('\n[12] Vereinsumbenennung & Vereinswechsel');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+        let oldName = game.clubName;
+        renameClub('FC Testverifikation');
+        out.renameWorked = game.clubName === 'FC Testverifikation';
+        out.renameUpdatedHeader = document.getElementById('header-club-name').innerText === 'FC Testverifikation';
+        out.renameUpdatedLeagueRow = leaguesData[game.leagueLevel].some(t => t.name === 'FC Testverifikation');
+        out.secondTeamFollowedRename = game.secondTeam.name === 'FC Testverifikation II';
+
+        let target = leaguesData[game.leagueLevel].find(t => t.name !== game.clubName && t.name !== game.secondTeam.name && t.name !== game.permanentRivalName);
+        let switchOk = switchToClub(target.name);
+        out.switchWorked = switchOk && game.clubName === target.name;
+        out.squadRegenerated = squad.length === 18;
+        out.oldClubStillExistsAsAi = leaguesData.flat().some(t => t.name === 'FC Testverifikation');
+        out.ourLeagueTeamMatches = getOurLeagueTeam()?.name === target.name;
+        return out;
+    });
+
+    assert(r.renameWorked, 'renameClub() ändert game.clubName');
+    assert(r.renameUpdatedHeader, 'Umbenennung aktualisiert den Header sofort im DOM');
+    assert(r.renameUpdatedLeagueRow, 'Umbenennung aktualisiert die Liga-Tabellenzeile');
+    assert(r.secondTeamFollowedRename, 'Zweite Mannschaft folgt der Umbenennung automatisch ("<Name> II")');
+    assert(r.switchWorked, 'switchToClub() übernimmt einen bestehenden Verein der Pyramide');
+    assert(r.squadRegenerated, 'Vereinswechsel erzeugt einen vollständigen 18-Spieler-Kader');
+    assert(r.oldClubStillExistsAsAi, 'Alter Verein bleibt nach dem Wechsel als KI-Klub bestehen');
+    assert(r.ourLeagueTeamMatches, 'getOurLeagueTeam() findet uns nach dem Wechsel am neuen Platz');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei Umbenennung/Vereinswechsel');
+    await page.close();
+}
+
+async function testTransferMarketAndClubDossier(browser) {
+    console.log('\n[12] Transfermarkt-Anbindung & Vereinsakte');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        try {
+            let pyramidNames = () => new Set(leaguesData.flat().map(t => t.name));
+
+            squad.forEach(p => { p.strength = 70; }); // sonst gibt es realistisch keine Angebote
+            for (let i = 0; i < 6; i++) triggerNewAITransferOffer();
+            let names = pyramidNames();
+            let offersFromPyramid = incomingOffers.length > 0 && incomingOffers.every(o => names.has(o.clubName));
+
+            let jobOfferFromPyramid = true;
+            for (let i = 0; i < 5; i++) {
+                let clubName = pickRandomOpposingClubName(true);
+                if (!pyramidNames().has(clubName)) jobOfferFromPyramid = false;
+            }
+
+            for (let i = 0; i < 3; i++) { simulateFullSeason(); concludeSeasonAndAdvance(); }
+            let sampleOpp = leaguesData[game.leagueLevel].find(t => t.name !== game.clubName);
+            showHeadToHeadStats(sampleOpp.name);
+            let dossierHtml = document.getElementById('head-to-head-box').innerHTML;
+
+            return {
+                crash: false, offersFromPyramid, jobOfferFromPyramid,
+                strengthHistoryTracked: (sampleOpp.strengthHistory || []).length > 0,
+                dossierShowsFormkurve: dossierHtml.includes('Formkurve'),
+                dossierShowsClubName: dossierHtml.includes(sampleOpp.name)
+            };
+        } catch (e) {
+            return { crash: true, error: e.message };
+        }
+    });
+
+    assert(r.crash === false, `Transfermarkt-/Vereinsakte-Test ohne Absturz (${r.crash ? r.error : 'ok'})`);
+    if (!r.crash) {
+        assert(r.offersFromPyramid, 'Transferangebote für eigene Spieler stammen aus der echten Liga-Pyramide');
+        assert(r.jobOfferFromPyramid, 'Abwerbeversuche um den Manager nennen einen echten Verein der Pyramide');
+        assert(r.strengthHistoryTracked, 'KI-Vereine sammeln über Saisons eine Stärke-Historie (team.strengthHistory)');
+        assert(r.dossierShowsFormkurve, 'Vereinsakte zeigt die Formkurve eines Gegners an');
+        assert(r.dossierShowsClubName, 'Vereinsakte zeigt den korrekten Vereinsnamen an');
+    }
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei Transfermarkt-/Vereinsakte-Test');
+    await page.close();
+}
+
+// ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
 async function main() {
@@ -573,6 +700,9 @@ async function main() {
         testAllScreensRender,
         testOldSaveMigration,
         testTrainingOverhaul,
+        testLivingLeaguePersistence,
+        testClubRenameAndSwitch,
+        testTransferMarketAndClubDossier,
     ];
 
     for (const suite of suites) {
