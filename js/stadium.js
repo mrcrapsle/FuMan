@@ -578,9 +578,9 @@
             <div style="font-size:12px; font-weight:bold; color:var(--accent);">${b.name} (${b.cap.toLocaleString()} Plätze)</div>
             <div>Wohlfühlfaktor: <strong style="color:var(--primary);">${comfort}%</strong> <span style="font-size:8px; color:var(--text-muted);">(wirkt sich stadionweit leicht auf die Zuschauerzahl aus)</span></div>
             <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:3px; margin:4px 0;">
-                <button onclick="upgradeBlockInfra('${blockKey}', 'foodLvl', ${foodCost})" class="btn-secondary" style="font-size:9px;" ${b.foodLvl>=3?'disabled':''}>🌭 Fressbude [${b.foodLvl}/3]<br>${b.foodLvl>=3?'Max. ✓':formatVal(foodCost)}<br><span style="font-size:7px; color:var(--text-muted);">+Komfort → mehr Zuschauer</span></button>
-                <button onclick="upgradeBlockInfra('${blockKey}', 'merchLvl', ${merchCost})" class="btn-secondary" style="font-size:9px;" ${b.merchLvl>=3?'disabled':''}>👕 Merch-Stand [${b.merchLvl}/3]<br>${b.merchLvl>=3?'Max. ✓':formatVal(merchCost)}<br><span style="font-size:7px; color:var(--text-muted);">+5% Fanartikel-Absatz</span></button>
-                <button onclick="upgradeBlockInfra('${blockKey}', 'toiletLvl', ${toiletCost})" class="btn-secondary" style="font-size:9px;" ${b.toiletLvl>=3?'disabled':''}>🚻 Toiletten [${b.toiletLvl}/3]<br>${b.toiletLvl>=3?'Max. ✓':formatVal(toiletCost)}<br><span style="font-size:7px; color:var(--text-muted);">+Komfort → mehr Zuschauer</span></button>
+                <button onclick="upgradeBlockInfra('${blockKey}', 'foodLvl', ${foodCost})" class="btn-secondary" style="font-size:9px;" ${b.foodLvl>=3?'disabled':''}>🌭 Fressbude [${b.foodLvl}/3]<br>${b.foodLvl>=3?'Max. ✓':formatVal(foodCost)}<br><span style="font-size:8px; color:var(--text-muted);">+Komfort → mehr Zuschauer</span></button>
+                <button onclick="upgradeBlockInfra('${blockKey}', 'merchLvl', ${merchCost})" class="btn-secondary" style="font-size:9px;" ${b.merchLvl>=3?'disabled':''}>👕 Merch-Stand [${b.merchLvl}/3]<br>${b.merchLvl>=3?'Max. ✓':formatVal(merchCost)}<br><span style="font-size:8px; color:var(--text-muted);">+5% Fanartikel-Absatz</span></button>
+                <button onclick="upgradeBlockInfra('${blockKey}', 'toiletLvl', ${toiletCost})" class="btn-secondary" style="font-size:9px;" ${b.toiletLvl>=3?'disabled':''}>🚻 Toiletten [${b.toiletLvl}/3]<br>${b.toiletLvl>=3?'Max. ✓':formatVal(toiletCost)}<br><span style="font-size:8px; color:var(--text-muted);">+Komfort → mehr Zuschauer</span></button>
             </div>
             <button onclick="expandBlock('${blockKey}', ${b.addSeats}, ${nextCost})" class="btn-action" style="margin-top:2px;" ${b.expansions >= maxExpansions ? 'disabled' : ''}>
                 ${b.expansions >= maxExpansions ? `Maximaler Ausbau erreicht (${maxExpansions}/${maxExpansions}) ✓` : `+${b.addSeats.toLocaleString()} Plätze ausbauen (${b.expansions}/${maxExpansions}) [${formatVal(nextCost)}]`}
@@ -725,7 +725,7 @@
             return `<div class="box" style="display:flex; align-items:center; gap:10px; padding:8px;">
                 <div style="min-width:40px; text-align:center;">
                     <div style="font-size:20px; font-weight:900; color:var(--accent); line-height:1;">${proj.daysLeft}</div>
-                    <div style="font-size:7px; color:var(--text-muted); text-transform:uppercase;">SpT übrig</div>
+                    <div style="font-size:8px; color:var(--text-muted); text-transform:uppercase;">SpT übrig</div>
                 </div>
                 <div style="flex:1;">
                     <div style="font-size:10px; margin-bottom:4px;">🏗️ ${proj.label}</div>

@@ -35,8 +35,11 @@
             --border-highlight: rgba(62, 224, 138, 0.4);
 
             /* Primäre CTA-Akzente: elektrisches Indigo statt Leder-Braun, sattes
-               Cyan-Petrol statt Waldgrün - passend zur Flutlicht-Nacht-Materialität */
-            --violet: #5a6cff;
+               Cyan-Petrol statt Waldgrün - passend zur Flutlicht-Nacht-Materialität.
+               --violet leicht aufgehellt (Kontrast-Check, NEU): #5a6cff lag als
+               Textfarbe auf --bg-header nur bei 4.15:1 (WCAG AA verlangt 4.5:1 für
+               normalen Text) - #7d8aff schafft auf allen 3 Hintergründen >5.7:1. */
+            --violet: #7d8aff;
             --violet-dark: #3a44b0;
             --violet-glow: rgba(90, 108, 255, 0.4);
             --teal: #22b8b0;
@@ -193,7 +196,10 @@
             box-shadow: 0 6px 18px rgba(255, 213, 74, 0.35);
         }
         .btn-danger {
-            background: linear-gradient(135deg, #ff8a97, var(--danger)); color: #fff; font-weight: 800; border: none;
+            /* Kontrast-Check (NEU): der helle Gradient-Stop #ff8a97 gab weißem Text nur
+               2.25:1 (WCAG AA verlangt 4.5:1) - #c73545/#a82838 halten auf der gesamten
+               Fläche >5:1, bei gleichem "Warnrot"-Charakter. */
+            background: linear-gradient(135deg, #c73545, #a82838); color: #fff; font-weight: 800; border: none;
             padding: 8px 12px; border-radius: 999px; cursor: pointer; width: 100%; margin: 4px 0;
             box-shadow: 0 6px 18px rgba(255, 84, 104, 0.35);
         }
@@ -208,7 +214,10 @@
             box-shadow: 0 6px 18px rgba(255, 145, 66, 0.35);
         }
         .btn-europe {
-            background: linear-gradient(135deg, #a5b4ff, var(--europe)); color: #fff; font-weight: 900; border: none;
+            /* Kontrast-Check (NEU): #a5b4ff vs. weißer Text war nur 1.99:1, var(--europe)
+               (#6f8dff) nur 3.03:1 (WCAG AA verlangt 4.5:1) - #3d54c9/#2c3f9e halten
+               6.34:1/9.08:1, gleicher Blauton, nur dunkler. */
+            background: linear-gradient(135deg, #3d54c9, #2c3f9e); color: #fff; font-weight: 900; border: none;
             padding: 10px 14px; border-radius: 999px; cursor: pointer; width: 100%; margin: 4px 0;
             box-shadow: 0 6px 18px rgba(111, 141, 255, 0.35);
         }
@@ -423,10 +432,10 @@
         .stand-south-outer { grid-column: 2 / 4; grid-row: 5; }
         .stand-west { grid-column: 1; grid-row: 2 / 5; }
         .stand-east { grid-column: 4; grid-row: 2 / 5; }
-        .stand-vip { grid-column: 1; grid-row: 1; font-size: 7px; background: linear-gradient(160deg, rgba(212,169,74,0.55), rgba(120,90,20,0.95)); border-color: var(--accent); }
-        .stand-away { grid-column: 4; grid-row: 5; font-size: 7px; background: linear-gradient(160deg, rgba(127,168,201,0.5), rgba(40,70,95,0.95)); border-color: var(--blue); }
-        .stand-family { grid-column: 4; grid-row: 1; font-size: 7px; background: linear-gradient(160deg, rgba(76,175,122,0.55), rgba(30,80,55,0.95)); border-color: var(--primary); }
-        .stand-press { grid-column: 1; grid-row: 5; font-size: 7px; background: linear-gradient(160deg, rgba(171,143,196,0.5), rgba(70,50,90,0.95)); border-color: var(--purple); }
+        .stand-vip { grid-column: 1; grid-row: 1; font-size: 8px; background: linear-gradient(160deg, rgba(212,169,74,0.55), rgba(120,90,20,0.95)); border-color: var(--accent); }
+        .stand-away { grid-column: 4; grid-row: 5; font-size: 8px; background: linear-gradient(160deg, rgba(127,168,201,0.5), rgba(40,70,95,0.95)); border-color: var(--blue); }
+        .stand-family { grid-column: 4; grid-row: 1; font-size: 8px; background: linear-gradient(160deg, rgba(76,175,122,0.55), rgba(30,80,55,0.95)); border-color: var(--primary); }
+        .stand-press { grid-column: 1; grid-row: 5; font-size: 8px; background: linear-gradient(160deg, rgba(171,143,196,0.5), rgba(70,50,90,0.95)); border-color: var(--purple); }
         .stadium-pitch-mini {
             grid-column: 2 / 4; grid-row: 3; border-radius: 10px; position: relative;
             background: repeating-linear-gradient(90deg, #1f4d3a 0px, #1f4d3a 10%, #235943 10%, #235943 20%);
@@ -453,7 +462,7 @@
             border: 1px solid rgba(79,195,255,0.18); border-radius: 12px; padding: 8px 6px;
             text-align: center; box-shadow: 0 6px 14px rgba(0,0,0,0.4);
         }
-        .stadium-hero-metric-chip .shm-label { font-size: 7px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; }
+        .stadium-hero-metric-chip .shm-label { font-size: 8px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; }
         .stadium-hero-metric-chip .shm-value { font-size: 15px; font-weight: 900; color: var(--text-main); margin-top: 2px; }
         .stadium-condition-card {
             background: linear-gradient(165deg, rgba(28,44,74,0.7), rgba(10,15,28,0.85));
@@ -534,7 +543,7 @@
         /* Infrastruktur direkt in der Stadiongrafik: kleine Icon-Reihe pro Tribüne, die
            Fressbuden/Merch-Stände/Toiletten anzeigt (Anzahl = Ausbaustufe 0-3) statt das nur
            im Text-Popup nach dem Antippen zu verstecken. */
-        .stand-infra-row { display: flex; gap: 1px; justify-content: center; margin-top: 1px; font-size: 6px; line-height: 1; opacity: 0.95; }
+        .stand-infra-row { display: flex; gap: 1px; justify-content: center; margin-top: 1px; font-size: 8px; line-height: 1; opacity: 0.95; }
         .stand-infra-row span { filter: grayscale(0.15); }
 
         .input-inline {
@@ -590,11 +599,11 @@
         .hubtab-btn.tab-industry { color: var(--industry); }
         .hubtab-btn.tab-industry.btn-action { background: linear-gradient(135deg, rgba(255,138,92,0.9), rgba(255,138,92,0.55)); color: #2c0f00; }
         .hubtab-btn.tab-europe { color: #9db4ff; }
-        .hubtab-btn.tab-europe.btn-action { background: linear-gradient(135deg, rgba(91,124,250,0.9), rgba(91,124,250,0.55)); color: #fff; }
+        .hubtab-btn.tab-europe.btn-action { background: linear-gradient(135deg, #3d54c9, #2c3f9e); color: #fff; } /* Kontrast-Check, siehe .btn-europe */
         .hubtab-btn.tab-gold { color: var(--accent); }
         .hubtab-btn.tab-gold.btn-action { background: linear-gradient(135deg, #ffe27a, var(--accent)); color: #241800; }
         .hubtab-btn.tab-red { color: var(--danger); }
-        .hubtab-btn.tab-red.btn-action { background: linear-gradient(135deg, #ff6b85, var(--danger)); color: #fff; }
+        .hubtab-btn.tab-red.btn-action { background: linear-gradient(135deg, #c73545, #a82838); color: #fff; } /* Kontrast-Check, siehe .btn-danger */
 
         /* ONBOARDING-OVERLAY */
         .tutorial-overlay {

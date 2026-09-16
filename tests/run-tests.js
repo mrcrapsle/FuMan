@@ -880,6 +880,42 @@ async function testConfigurableNewGameStart(browser) {
     await page.close();
 }
 
+function wcagContrastRatio(hexA, hexB) {
+    const lum = (hex) => {
+        const n = hex.replace('#', '');
+        const [r, g, b] = [0, 2, 4].map(i => parseInt(n.substr(i, 2), 16) / 255);
+        const chan = (c) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+        const [rr, gg, bb] = [r, g, b].map(chan);
+        return 0.2126 * rr + 0.7152 * gg + 0.0722 * bb;
+    };
+    const [l1, l2] = [lum(hexA), lum(hexB)].sort((a, b) => b - a);
+    return (l1 + 0.05) / (l2 + 0.05);
+}
+
+async function testAccessibilityContrastAndFontSizes(browser) {
+    console.log('\n[13] Kontrast & Schriftgrößen (Barrierefreiheit)');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.evaluate(() => closeTutorial());
+
+    const html = await page.content();
+    const hasTinyFontSizes = /font-size:\s*[1-6]px/.test(html);
+
+    const pairs = {
+        '--violet (#7d8aff) vs. --bg-header (#101a2e)': wcagContrastRatio('#7d8aff', '#101a2e'),
+        '.btn-danger heller Stop (#c73545) vs. weiß': wcagContrastRatio('#c73545', '#ffffff'),
+        '.btn-danger dunkler Stop (#a82838) vs. weiß': wcagContrastRatio('#a82838', '#ffffff'),
+        '.btn-europe heller Stop (#3d54c9) vs. weiß': wcagContrastRatio('#3d54c9', '#ffffff'),
+        '.btn-europe dunkler Stop (#2c3f9e) vs. weiß': wcagContrastRatio('#2c3f9e', '#ffffff'),
+    };
+    const allPass = Object.values(pairs).every(r => r >= 4.5);
+    const failing = Object.entries(pairs).filter(([, r]) => r < 4.5);
+
+    assert(!hasTinyFontSizes, 'Keine Schriftgrößen unter 7px mehr im Build (alte 6px/7px-Ausreißer entfernt)');
+    assert(allPass, `Alle geprüften Text/Hintergrund-Kombinationen erreichen WCAG-AA (>=4.5:1)${failing.length ? ' - fehlgeschlagen: ' + failing.map(([k, r]) => `${k}=${r.toFixed(2)}`).join(', ') : ''}`);
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Kontrast-/Schriftgrößen-Test');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -911,6 +947,7 @@ async function main() {
         testRivalManagerPersonality,
         testAchievementsSystem,
         testConfigurableNewGameStart,
+        testAccessibilityContrastAndFontSizes,
     ];
 
     for (const suite of suites) {
