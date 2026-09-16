@@ -808,6 +808,44 @@ async function testRivalManagerPersonality(browser) {
     await page.close();
 }
 
+async function testAchievementsSystem(browser) {
+    console.log('\n[12] Achievements-System');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        showScreen('screen-history');
+        let beforeHtml = document.getElementById('achievements-box').innerHTML;
+        managerRPG.level = 10;
+        game.money = 1500000;
+        foundSecondTeam();
+        game.youthAcademyLvl = 3;
+        game.timesSacked = 1;
+        checkAchievements();
+        showScreen('screen-history');
+        let afterHtml = document.getElementById('achievements-box').innerHTML;
+        let saved = JSON.parse(JSON.stringify(buildSaveState()));
+        game.achievements = [];
+        applyLoadedState(saved);
+        return {
+            beforeShowsZero: beforeHtml.includes('0 /'),
+            unlockedIds: game.achievements.map(a => a.id),
+            afterShowsFour: afterHtml.includes('4 /'),
+            survivesSaveLoad: game.achievements.length === 4
+        };
+    });
+
+    assert(r.beforeShowsZero, 'Achievements-Box zeigt zu Beginn 0 Freischaltungen');
+    assert(r.unlockedIds.includes('millionaire'), 'Millionär-Achievement schaltet bei 1.000.000 € frei');
+    assert(r.unlockedIds.includes('second-team'), 'Zweite-Mannschaft-Achievement schaltet nach Gründung frei');
+    assert(r.unlockedIds.includes('youth-academy'), 'Talentschmiede-Achievement schaltet bei Jugendakademie-Stufe 3 frei');
+    assert(r.unlockedIds.includes('survived-sacking'), 'Comeback-Manager-Achievement schaltet nach erster Entlassung frei');
+    assert(r.afterShowsFour, 'Achievements-Box zeigt korrekt "4 /" nach den Freischaltungen an');
+    assert(r.survivesSaveLoad, 'Freigeschaltete Achievements überleben Speichern/Laden');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Achievements-Test');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -837,6 +875,7 @@ async function main() {
         testSaveExportImportAndErrorLog,
         testSeasonPointsChart,
         testRivalManagerPersonality,
+        testAchievementsSystem,
     ];
 
     for (const suite of suites) {

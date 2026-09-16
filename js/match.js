@@ -1317,6 +1317,7 @@
             checkContractUltimatum();
         }
         checkFanRadioFeedback();
+        checkAchievements();
         tickContractUltimatum();
         tickLoanedPlayers();
         checkLoanClubRelationshipMaintenance();
