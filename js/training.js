@@ -96,7 +96,9 @@
     // den fünf mitgelieferten Standardplänen.
     function saveCustomWeeklyPlanTemplate() {
         let nameInput = document.getElementById('custom-plan-name-input');
-        let name = (nameInput?.value || '').trim();
+        // Sicherheit: der Name landet ungeprüft in innerHTML (renderCustomWeeklyPlanTemplates())
+        // - dieselbe Absicherung wie bei renameClub() (career.js).
+        let name = (nameInput?.value || '').replace(/[<>&"]/g, '').trim();
         if (!name) { showToast('Bitte einen Namen für die Vorlage eingeben!', 'error'); return; }
         if (!game.customWeeklyPlanTemplates) game.customWeeklyPlanTemplates = [];
         if (game.customWeeklyPlanTemplates.length >= 8) { showToast('Maximal 8 eigene Vorlagen möglich - erst eine löschen.', 'error'); return; }

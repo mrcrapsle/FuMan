@@ -13,3 +13,11 @@ npm install
 npm test
 → prüft die gebaute dist/anstoss-fm13-standalone.html per Playwright gegen
 die Testsuite in `tests/run-tests.js`.
+
+## Linten
+npm install
+npm run lint
+→ lintet alle js/*.js-Module + die inline <script>-Blöcke aus index.html
+als EIN zusammengefügter globaler Scope (siehe build.py --lint-bundle),
+damit ESLint keine falschen "undefined"-Meldungen für Funktionen aus
+anderen Dateien wirft.

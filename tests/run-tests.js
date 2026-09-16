@@ -678,6 +678,34 @@ async function testTransferMarketAndClubDossier(browser) {
     await page.close();
 }
 
+async function testFreeTextInputSanitization(browser) {
+    console.log('\n[12] Absicherung freier Texteingaben (Vereinsname & Trainingsplan-Name)');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        renameClub('<img src=x onerror="window.__pwned=true">FC Böse');
+        let headerSafe = !document.getElementById('header-club-name').innerHTML.includes('<img');
+        let notExecuted = window.__pwned !== true;
+
+        showScreen('screen-training');
+        let input = document.getElementById('custom-plan-name-input');
+        input.value = '<script>window.__pwned2=true</script>Böse Vorlage';
+        saveCustomWeeklyPlanTemplate();
+        let listSafe = !document.getElementById('custom-weekly-templates-list').innerHTML.includes('<script>');
+        let notExecuted2 = window.__pwned2 !== true;
+
+        return { headerSafe, notExecuted, listSafe, notExecuted2 };
+    });
+
+    assert(r.headerSafe, 'Vereinsname mit HTML-Payload landet nicht als rohes Markup im Header');
+    assert(r.notExecuted, 'HTML-Payload im Vereinsnamen wird nicht ausgeführt');
+    assert(r.listSafe, 'Trainingsplan-Name mit HTML-Payload landet nicht als rohes Markup in der Liste');
+    assert(r.notExecuted2, 'HTML-Payload im Trainingsplan-Namen wird nicht ausgeführt');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei der Eingabe-Absicherung');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -703,6 +731,7 @@ async function main() {
         testLivingLeaguePersistence,
         testClubRenameAndSwitch,
         testTransferMarketAndClubDossier,
+        testFreeTextInputSanitization,
     ];
 
     for (const suite of suites) {

@@ -1,0 +1,12 @@
+{
+  "name": "anstoss-fm13",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lint-Tooling fuer Anstoss Mobile Pro - FM13 (Spiel selbst: python3 build.py)",
+  "scripts": {
+    "lint": "python3 build.py --lint-bundle && eslint dist/lint-bundle.js"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0"
+  }
+}

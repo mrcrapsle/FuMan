@@ -13,6 +13,15 @@
         { name: 'Hitze', icon: '🥵', weight: 10, fitLossMult: 1.25, injuryMult: 1.05, cardMult: 1.0, goalMult: 1.0, attendanceMult: 0.96 },
         { name: 'Sturm', icon: '🌪️', weight: 3, fitLossMult: 1.3, injuryMult: 1.35, cardMult: 1.1, goalMult: 0.8, attendanceMult: 0.7, isStorm: true }
     ];
+
+    // Waren bisher nirgends deklariert (nur per Zuweisung ohne let/var/const entstandene
+    // implizite globale Variablen) - ESLint (siehe package.json "lint") meldete das
+    // korrekt als no-undef. Funktional identisch (beides landet im globalen Scope), aber
+    // ein Tippfehler bei einer Zuweisung würde jetzt sofort auffallen statt lautlos eine
+    // neue, nie gelesene Variable zu erzeugen.
+    let currentMatch = null;
+    let currentWeather = null;
+    let substitutionsLeft = 0;
     currentWeather = WEATHER_TYPES[0];
 
     function rollWeather() {

@@ -8,7 +8,12 @@
     // Rivalen-/Freundschafts-Querverweise anderer Vereine auf uns UND (sofern noch nicht
     // eigenständig umbenannt) die zweite Mannschaft ziehen automatisch mit um.
     function renameClub(newName) {
-        newName = (newName || '').trim().slice(0, 40);
+        // Sicherheit: der Vereinsname landet an über einem Dutzend Stellen ungeprüft in
+        // innerHTML-Templates (Tutorial-Titel, Liga-Tabelle, Speicherstand-Anzeige, ...) -
+        // <, >, & und " werden entfernt, damit weder das Markup zerschossen noch beliebiges
+        // HTML/JS über prompt() eingeschleust werden kann. Ein Vereinsname braucht diese
+        // Zeichen ohnehin nicht; Umlaute, Ziffern, Punkte etc. bleiben unangetastet.
+        newName = (newName || '').replace(/[<>&"]/g, '').trim().slice(0, 40);
         if (!newName || newName === game.clubName) return;
         let oldName = game.clubName;
         game.clubName = newName;

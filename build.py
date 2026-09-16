@@ -61,6 +61,24 @@ def read(path):
         return f.read()
 
 
+def build_lint_bundle():
+    """Reine Aneinanderreihung aller js/*.js-Dateien PLUS der inline <script>-Blöcke aus
+    index.html (kein HTML/CSS) für ESLint - alle Module UND die inline Boot-Logik
+    (safeLocalGet() & Co., window.onload) teilen sich zur Laufzeit denselben globalen
+    Scope (siehe build()), einzeln gelintet würde jede Datei fälschlich 'undefined' für
+    jede Funktion aus einer anderen Datei/dem inline Skript melden. Zusammengefügt sieht
+    ESLint den echten globalen Scope und meldet nur noch tatsächliche Tippfehler/
+    undefinierte Referenzen."""
+    html = read(HTML_FILE)
+    inline_scripts = re.findall(r'<script>(.*?)</script>', html, re.DOTALL)
+    content = "\n".join(read(p) for p in JS_ORDER) + "\n" + "\n".join(inline_scripts)
+    import os
+    os.makedirs("dist", exist_ok=True)
+    with open("dist/lint-bundle.js", "w", encoding="utf-8") as f:
+        f.write(content)
+    print(f"Fertig: dist/lint-bundle.js ({len(content)} Zeichen)")
+
+
 def build():
     html = read(HTML_FILE)
 
@@ -89,4 +107,8 @@ def build():
 
 
 if __name__ == "__main__":
-    build()
+    import sys
+    if "--lint-bundle" in sys.argv:
+        build_lint_bundle()
+    else:
+        build()
