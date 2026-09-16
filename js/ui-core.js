@@ -90,7 +90,7 @@
     // sah das Spiel dadurch komplett funktionslos aus, obwohl der komplette JS-Code fehlerfrei
     // lief. Dieser Test hätte das beim nächsten Bauen sofort sichtbar gemacht.
     function runStructuralSelfTest(silent = true) {
-        let topScreens = ['screen-dashboard', 'screen-calendar', 'screen-inbox', 'screen-squad', 'screen-second-team', 'screen-training', 'screen-manager-tree', 'screen-admin', 'screen-prematch-press', 'screen-matchday'];
+        let topScreens = ['screen-office', 'screen-dashboard', 'screen-calendar', 'screen-inbox', 'screen-squad', 'screen-second-team', 'screen-training', 'screen-manager-tree', 'screen-admin', 'screen-prematch-press', 'screen-matchday'];
         let allTestIds = [...topScreens, ...Object.keys(HUB_MEMBERS), ...Object.values(HUB_MEMBERS).flat()];
         let problems = [];
         let originalTopScreen = topScreens.find(s => document.getElementById(s)?.style.display === 'block') || 'screen-dashboard';
@@ -198,6 +198,7 @@
     function showScreen(screenId) {
         playSound('click');
         const screens = [
+            'screen-office',
             'screen-dashboard', 'screen-calendar', 'screen-inbox', 'screen-squad', 'screen-second-team', 'screen-training',
             'screen-manager-tree', 'screen-admin', 'screen-cup',
             'screen-hub-wirtschaft', 'screen-hub-finanzen', 'screen-hub-ausbau',
@@ -227,6 +228,7 @@
         // Slide-In-Menü (NEU): automatisch schließen, sobald ein Ziel ausgewählt wurde.
         closeMenuDrawer();
 
+        if (screenId === 'screen-office') { renderOfficeView(); initOfficeParallax(); }
         if (screenId === 'screen-dashboard') renderDashboardView();
         if (screenId === 'screen-calendar') renderCalendarView();
         if (screenId === 'screen-inbox') renderInboxView();

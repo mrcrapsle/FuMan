@@ -478,7 +478,8 @@
         <!-- SIDEBAR -->
         <nav class="app-sidebar" id="app-sidebar">
             <div class="nav-category" data-i18n="nav_category_main">Hauptzentrale</div>
-            <button class="nav-btn active" onclick="showScreen('screen-dashboard')" data-i18n="nav_dashboard">📊 FM13 Dashboard</button>
+            <button class="nav-btn active" onclick="showScreen('screen-office')" data-i18n="nav_office">🏢 Managerbüro</button>
+            <button class="nav-btn" onclick="showScreen('screen-dashboard')" data-i18n="nav_dashboard">📊 FM13 Dashboard</button>
             <button class="nav-btn" onclick="showScreen('screen-calendar')" data-i18n="nav_calendar">📅 Kalender & Termine</button>
             <button class="nav-btn" onclick="showScreen('screen-inbox')" id="nav-btn-inbox"><span data-i18n="nav_inbox">📬 Postfach</span> <span id="sidebar-inbox-badge" class="badge-count" style="display:none; margin-left:auto;">0</span></button>
 
@@ -507,6 +508,27 @@
 
         <!-- MAIN WORKSPACE -->
         <main class="app-content">
+
+            <!-- MANAGERBÜRO: Point-and-Click-Startbildschirm (CSS-3D, siehe js/office.js) -->
+            <div id="screen-office" style="display:none;">
+                <div class="panel">
+                    <div class="panel-header">🏢 <span data-i18n="office_title">MANAGERBÜRO</span></div>
+                    <div class="office-viewport" id="office-viewport">
+                        <!-- Szene wird immer fuer eine feste Logikgroesse (900x560) komponiert und
+                             dann passend skaliert - sonst faellt auf schmalen Handys der gesamte
+                             Seitenwand-Bereich aus dem Sichtkegel. -->
+                        <div id="office-scaler">
+                            <div id="office-persp">
+                                <div id="office-stage">
+                                    <div id="office-room"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div id="office-fade"></div>
+                    </div>
+                    <div class="office-sentence" id="office-sentence"></div>
+                </div>
+            </div>
 
             <!-- 0. POSTFACH -->
             <div id="screen-inbox" style="display:none;">
@@ -2121,6 +2143,7 @@
 <script src="js/scouting.js"></script>
 <script src="js/commodities.js"></script>
 <script src="js/merchandise.js"></script>
+<script src="js/office.js"></script>
 <script src="js/ui-core.js"></script>
 <script src="js/render-dashboard.js"></script>
 <script src="js/industry.js"></script>
@@ -2243,14 +2266,14 @@
                     showToast('🆕 Neuer Klub gestartet!', 'success');
                 }
                 updateUI();
-                showScreen('screen-dashboard');
+                showScreen('screen-office');
             } else if (!loadGame(true)) {
                 initDefaultSquad();
                 initLeagues();
                 refreshTransferMarket();
                 forceSponsorRenewalAtSeasonStart(true);
                 updateUI();
-                showScreen('screen-dashboard');
+                showScreen('screen-office');
             }
             applyClubCrest();
             initLanguage();

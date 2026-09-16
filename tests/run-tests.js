@@ -852,6 +852,9 @@ async function testConfigurableNewGameStart(browser) {
     page.on('dialog', d => d.accept());
     await page.evaluate(() => closeTutorial());
 
+    // Startbildschirm ist seit dem Managerbüro nicht mehr das Dashboard - der
+    // "Neues Spiel"-Knopf liegt dort und muss erst sichtbar geschaltet werden.
+    await page.evaluate(() => showScreen('screen-dashboard'));
     await page.click('#btn-new-game');
     await page.waitForTimeout(150);
     const boxVisible = await page.evaluate(() => document.getElementById('new-game-setup-box').style.display === 'block');
@@ -946,6 +949,74 @@ async function testLanguageToggle(browser) {
     await page.close();
 }
 
+async function testManagerOffice(browser) {
+    console.log('\n[15] Managerbüro (Point-and-Click-Startbildschirm)');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.evaluate(() => closeTutorial());
+
+    const isStartScreen = await page.evaluate(() => document.getElementById('screen-office').style.display === 'block');
+    const hotspotIds = await page.evaluate(() => OFFICE_HOTSPOTS.map(h => h.id));
+
+    // Kernabsicherung: JEDER Hotspot muss an seinem eigenen Mittelpunkt auch wirklich sich
+    // selbst treffen - im Hover-Zustand. Genau hier lag der schwerste Fehler dieser Ansicht:
+    // filter/opacity und laufende transform-Animationen klappen eine 3D-positionierte Ebene
+    // flach bzw. schieben sie auf eine eigene Compositing-Ebene; das Bild bleibt dabei
+    // unverändert, aber die Trefferfläche wandert weg und die Objekte sind - völlig lautlos -
+    // nicht mehr anklickbar. Ohne diesen Test fällt so etwas erst dem Spieler auf.
+    let unreachable = [];
+    for (const id of hotspotIds) {
+        const box = await page.locator('#office-hs-' + id).boundingBox();
+        if (!box) { unreachable.push(id + ' (nicht sichtbar)'); continue; }
+        const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
+        await page.mouse.move(cx, cy);
+        await page.waitForTimeout(60);
+        const hitsItself = await page.evaluate(({ cx, cy, id }) => {
+            const top = document.elementFromPoint(cx, cy);
+            return !!(top && top.closest('#office-hs-' + id));
+        }, { cx, cy, id });
+        if (!hitsItself) unreachable.push(id);
+    }
+
+    // Satzzeile (das SCUMM-Stilmittel) folgt dem überfahrenen Objekt
+    const calBox = await page.locator('#office-hs-calendar').boundingBox();
+    await page.mouse.move(calBox.x + calBox.width / 2, calBox.y + calBox.height / 2);
+    await page.waitForTimeout(120);
+    const sentence = await page.textContent('#office-sentence');
+
+    // Lampe schaltet nur das Licht, navigiert NICHT weg
+    await page.click('#office-hs-lamp');
+    await page.waitForTimeout(250);
+    const lampState = await page.evaluate(() => ({
+        dark: document.getElementById('screen-office').classList.contains('office-dark'),
+        stillInOffice: document.getElementById('screen-office').style.display === 'block'
+    }));
+    await page.click('#office-hs-lamp');
+    await page.waitForTimeout(250);
+
+    // Klick auf ein Objekt führt in den zugehörigen Screen
+    await page.click('#office-hs-calendar');
+    await page.waitForTimeout(900);
+    const navigated = await page.evaluate(() => document.getElementById('screen-calendar').style.display === 'block');
+
+    // Telefon zeigt ungelesene Post an
+    const phone = await page.evaluate(() => {
+        showScreen('screen-office');
+        const badge = document.querySelector('.off-phone-badge');
+        return { unread: inboxMessages.filter(m => !m.read).length, badge: badge ? parseInt(badge.textContent) : 0 };
+    });
+
+    assert(isStartScreen, 'Managerbüro ist der Startbildschirm nach dem Laden');
+    assert(hotspotIds.length === 10, `Alle 10 Objekte im Büro vorhanden (${hotspotIds.length})`);
+    assert(unreachable.length === 0, `Jedes Objekt ist an seinem Mittelpunkt anklickbar${unreachable.length ? ' - NICHT erreichbar: ' + unreachable.join(', ') : ''}`);
+    assert(sentence === 'Den Terminplan studieren', `Satzzeile zeigt die Aktion des überfahrenen Objekts ("${sentence}")`);
+    assert(lampState.dark, 'Schreibtischlampe schaltet das Raumlicht aus');
+    assert(lampState.stillInOffice, 'Lampe navigiert NICHT weg (reines Stimmungslicht)');
+    assert(navigated, 'Klick auf den Wandkalender öffnet den Kalender-Screen');
+    assert(phone.badge === phone.unread && phone.unread > 0, `Telefon zeigt die ungelesene Post an (${phone.badge}/${phone.unread})`);
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler im Managerbüro');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -979,6 +1050,7 @@ async function main() {
         testConfigurableNewGameStart,
         testAccessibilityContrastAndFontSizes,
         testLanguageToggle,
+        testManagerOffice,
     ];
 
     for (const suite of suites) {

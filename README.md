@@ -32,6 +32,34 @@ Entwicklung/Tests unverändert bestehen. mangle ist bewusst deaktiviert, da
 Buttons ihre Funktionen über onclick="..." als HTML-String aufrufen, den ein
 Minifizierer nicht sieht.
 
+## Managerbüro (Startbildschirm)
+
+`js/office.js` + der CSS-Block "MANAGERBÜRO" in `css/styles.css` bauen den
+Point-and-Click-Startbildschirm: eine begehbare Bürokulisse aus fünf
+CSS-3D-Ebenen mit zehn anklickbaren Objekten, die in die jeweiligen
+Spielbereiche führen.
+
+Bewusst **kein Three.js/WebGL** - das Spiel muss eine einzige, offline
+lauffähige HTML-Datei bleiben; eine 3D-Bibliothek wären ~600 KB Fremdcode
+plus WebGL-Zwang im Android-WebView. Dieselbe CSS-3D-Technik nutzen
+Taktiktafel und Stadionschüssel bereits.
+
+**Fallstricke bei Änderungen an dieser Ansicht** (beide haben hier real
+zugeschlagen und sind von außen unsichtbar - das Bild bleibt korrekt, nur
+die Trefferflächen wandern weg, Objekte sind dann lautlos nicht mehr
+anklickbar):
+
+1. `filter` und `opacity` sind "grouping properties": auf einer
+   3D-positionierten Ebene erzwingen sie `transform-style: flat` und
+   klappen sie in die Elternebene. Zum Abdunkeln/Hervorheben deshalb
+   Hintergrundschichten bzw. `box-shadow` verwenden.
+2. Laufende `transform`-Animationen befördern das Element auf eine eigene
+   Compositing-Ebene und nehmen es aus der Trefferprüfung. Animationen im
+   Raum daher ohne `transform` (z.B. pulsendes `box-shadow`).
+
+`testManagerOffice` in `tests/run-tests.js` prüft genau das ab: jeder
+Hotspot muss an seinem eigenen Mittelpunkt auch sich selbst treffen.
+
 ## Sprache (DE/EN)
 
 Wörterbuch-basierter Sprachumschalter in `js/i18n.js` (Funktion `t(key)`,
