@@ -91,6 +91,12 @@
         // Unser eigenes Team wird über den Kader simuliert, nicht über dieses Feld - das
         // Feld selbst ist für uns nur ein ungenutztes Überbleibsel der Tabellenzeile.
         if (team.name === game.clubName) return;
+        // Stärke-Historie (NEU): analog zu p.strengthHistory beim eigenen Kader - macht die
+        // Formkurve eines Vereins über mehrere Saisons hinweg sichtbar (siehe Vereinsakte in
+        // showHeadToHeadStats()), statt dass nur der aktuelle Wert bekannt ist.
+        if (!team.strengthHistory) team.strengthHistory = [];
+        team.strengthHistory.push({ season: game.season, strength: team.strength });
+        if (team.strengthHistory.length > 8) team.strengthHistory.shift();
         let newLevel = info.outcome === 'promoted' ? info.level - 1 : (info.outcome === 'relegated' ? info.level + 1 : info.level);
         let targetBase = 82 - newLevel * 10;
         // Innerhalb einer Zielband-Breite von ±5 landet der Tabellenerste am oberen, der
@@ -321,6 +327,23 @@
         return 75;
     }
 
+    // Liefert einen ECHTEN Vereinsnamen aus der jetzt persistenten Liga-Pyramide (statt
+    // eines mit generateTeamName() frisch ausgewürfelten, komplett unverbundenen Namens) -
+    // für Systeme, die "irgendein anderer Klub" brauchen (Transferangebote, Abwerbeversuche
+    // um den Manager). So tauchen dieselben Vereine, die man aus der eigenen Liga-Tabelle
+    // kennt, auch dort als handelnde Akteure auf, statt dass jedes Mal ein neuer, nie wieder
+    // auftauchender Fantasiename erscheint.
+    function pickRandomOpposingClubName(preferHigherOrEqualLevel = false) {
+        let excluded = [game.clubName, game.secondTeam.name, game.permanentRivalName];
+        let pool = leaguesData.flatMap((table, l) => table.filter(t => !excluded.includes(t.name)).map(t => ({ team: t, level: l })));
+        if (pool.length === 0) return generateTeamName();
+        if (preferHigherOrEqualLevel) {
+            let higher = pool.filter(p => p.level <= game.leagueLevel); // kleinerer Index = höhere Liga
+            if (higher.length > 0) pool = higher;
+        }
+        return pool[Math.floor(Math.random() * pool.length)].team.name;
+    }
+
     function setLeagueLevel(lvl) {
         game.leagueLevel = lvl;
         for (let i = 0; i < NUM_LEAGUES; i++) {
@@ -414,20 +437,34 @@
 
     // Kopf-an-Kopf-Statistik (NEU): zeigt die historische Bilanz gegen einen bestimmten
     // Ligagegner in einer eigenen Box unterhalb der Tabelle.
+    // Vereinsakte (erweitert seit der persistenten Liga-Pyramide, siehe
+    // advanceLeaguesToNewSeason()): zeigt jetzt zusätzlich zur Kopf-an-Kopf-Bilanz das
+    // aktuelle Liganiveau, die aktuelle Stärke und - sofern schon mindestens eine Saison
+    // vergangen ist - die Formkurve des Vereins über die Zeit, statt nur die reinen
+    // Duell-Ergebnisse gegeneinander.
     function showHeadToHeadStats(oppName) {
         playSound('click');
         let box = document.getElementById('head-to-head-box');
         if (!box) return;
+
+        let levelIdx = leaguesData.findIndex(table => table.some(t => t.name === oppName));
+        let team = levelIdx !== -1 ? leaguesData[levelIdx].find(t => t.name === oppName) : null;
+        let profileLine = team
+            ? `Aktuell: ${leagueNames[levelIdx]} · Stärke ${team.strength}`
+            : 'Aktuell nicht in der Liga-Pyramide vertreten.';
+        let formLine = (team && team.strengthHistory && team.strengthHistory.length > 0)
+            ? `<br>Formkurve (Stärke über die letzten Saisons): ${team.strengthHistory.map(h => h.strength).join(' → ')} → <strong>${team.strength}</strong>`
+            : '';
+
         let rec = game.headToHeadRecords[oppName];
-        if (!rec || (rec.wins + rec.draws + rec.losses) === 0) {
-            box.innerHTML = `<div class="box" style="font-size:10px;">Noch keine Duelle gegen <strong>${oppName}</strong> ausgetragen.</div>`;
-            return;
-        }
-        let total = rec.wins + rec.draws + rec.losses;
+        let h2hLine = (!rec || (rec.wins + rec.draws + rec.losses) === 0)
+            ? `Noch keine Duelle gegen ${oppName} ausgetragen.`
+            : `${rec.wins}S ${rec.draws}U ${rec.losses}N · Tore ${rec.goalsFor}:${rec.goalsAgainst}<br>Letzte Ergebnisse: ${rec.lastResults.join(', ')}`;
+
         box.innerHTML = `<div class="box" style="font-size:10px;">
-            <strong style="color:var(--accent);">Bilanz gegen ${oppName}</strong> (${total} Duelle)<br>
-            ${rec.wins}S ${rec.draws}U ${rec.losses}N · Tore ${rec.goalsFor}:${rec.goalsAgainst}<br>
-            Letzte Ergebnisse: ${rec.lastResults.join(', ')}
+            <strong style="color:var(--accent);">🗂️ Vereinsakte: ${oppName}</strong><br>
+            ${profileLine}${formLine}
+            <div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.12);">${h2hLine}</div>
         </div>`;
     }
 

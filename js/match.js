@@ -1896,7 +1896,7 @@
     function checkJobOfferApproach() {
         if (game.matchday % 6 !== 0) return;
         if (Math.random() > (0.05 + managerRPG.level * 0.01)) return;
-        pendingJobApproach = { clubName: generateTeamName() };
+        pendingJobApproach = { clubName: pickRandomOpposingClubName(true) };
         document.getElementById('joboffer-club-name').innerText = pendingJobApproach.clubName;
         document.getElementById('joboffer-overlay').classList.add('show');
     }
