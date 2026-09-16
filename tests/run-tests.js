@@ -740,6 +740,35 @@ async function testSaveExportImportAndErrorLog(browser) {
     await page.close();
 }
 
+async function testSeasonPointsChart(browser) {
+    console.log('\n[12] Saisonverlauf-Graph');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        try {
+            simulateFullSeason();
+            showScreen('screen-league');
+            let html = document.getElementById('season-points-chart-box').innerHTML;
+            let historyLen = (game.seasonPointsHistory || []).length;
+            concludeSeasonAndAdvance();
+            let historyLenAfterReset = (game.seasonPointsHistory || []).length;
+            return { crash: false, hasChart: html.includes('<polyline'), historyLen, historyLenAfterReset };
+        } catch (e) {
+            return { crash: true, error: e.message };
+        }
+    });
+
+    assert(r.crash === false, `Saisonverlauf-Graph-Test ohne Absturz (${r.crash ? r.error : 'ok'})`);
+    if (!r.crash) {
+        assert(r.historyLen === 34, `Ein Datenpunkt pro Spieltag über die volle Saison gesammelt (${r.historyLen} statt 34)`);
+        assert(r.hasChart, 'Saisonverlauf-Graph rendert eine SVG-Linie');
+        assert(r.historyLenAfterReset === 0, 'Saisonverlauf-Historie wird beim Saisonwechsel zurückgesetzt');
+    }
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Saisonverlauf-Graph-Test');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -767,6 +796,7 @@ async function main() {
         testTransferMarketAndClubDossier,
         testFreeTextInputSanitization,
         testSaveExportImportAndErrorLog,
+        testSeasonPointsChart,
     ];
 
     for (const suite of suites) {

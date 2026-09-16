@@ -380,8 +380,37 @@
             </div>`).join('');
     }
 
+    // Saisonverlauf-Graph (NEU): visualisiert game.seasonPointsHistory (siehe
+    // updateLeagueTable() in match.js) als einfache SVG-Linie - macht den kompletten
+    // Saisonverlauf auf einen Blick sichtbar statt nur die aktuelle Tabellensituation.
+    function renderSeasonPointsChart() {
+        let box = document.getElementById('season-points-chart-box');
+        if (!box) return;
+        let history = game.seasonPointsHistory || [];
+        if (history.length < 2) {
+            box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Der Saisonverlauf-Graph füllt sich mit jedem gespielten Spieltag.</div>';
+            return;
+        }
+        let maxPoints = Math.max(...history.map(h => h.points), 3);
+        let w = 300, h = 70, pad = 4;
+        let stepX = (w - pad * 2) / (history.length - 1);
+        let points = history.map((entry, i) => {
+            let x = pad + i * stepX;
+            let y = h - pad - (entry.points / maxPoints) * (h - pad * 2);
+            return `${x.toFixed(1)},${y.toFixed(1)}`;
+        }).join(' ');
+        let last = history[history.length - 1];
+        box.innerHTML = `
+            <svg viewBox="0 0 ${w} ${h}" style="width:100%; height:70px; display:block;" preserveAspectRatio="none">
+                <polyline points="${points}" fill="none" stroke="var(--primary)" stroke-width="2" />
+            </svg>
+            <div style="font-size:9px; color:var(--text-muted); text-align:center;">Spieltag ${last.matchday} · ${last.points} Punkte · Platz ${last.rank}</div>
+        `;
+    }
+
     function renderLeagueView() {
         renderTopScorersBox();
+        renderSeasonPointsChart();
 
         // WICHTIG: Zwei getrennte Referenzen! fixturesData verweist per Index auf die
         // ORIGINAL-Reihenfolge in leaguesData[level] - die darf nie sortiert werden,

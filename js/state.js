@@ -99,6 +99,7 @@
         playerOfMonthHistory: [],
         potmGoalSnapshot: {},
         headToHeadRecords: {},
+        seasonPointsHistory: [],
         agentRelationships: {},
         pendingSponsorActivation: null,
         teamInstructions: { gegenpressing: false, tiefStehen: false, hoheAV: false },
