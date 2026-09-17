@@ -70,6 +70,24 @@ anklickbar):
 `testManagerOffice` in `tests/run-tests.js` prüft genau das ab: jeder
 Hotspot muss an seinem eigenen Mittelpunkt auch sich selbst treffen.
 
+## Sponsoren & Finanzen
+
+**Bandenwerbung** hängt an den echten Stadionbereichen (`stadium.blocks`): jeder
+Block hat eigene Bandenplätze, deren Anzahl mit seiner Kapazität wächst - jeder
+Stadionausbau schafft also zusätzliche Werbeflächen. Was eine Bande einbringt,
+ergibt sich aus Ligastufe x Sichtbarkeit des Bereichs (`BANDEN_AREA_META` in
+`js/sponsors.js` - Haupttribüne und Gegengerade liegen im Kameraschwenk, die
+Presse-Tribüne im Rücken der Interviews, VIP-Logen erreichen zahlungskräftiges
+Publikum) x Größe des Blocks. Banden aus älteren Spielständen ohne
+Bereichszuordnung werden beim Laden automatisch auf freie Plätze verteilt.
+
+**Steuern**: Auf jede Spieltagseinnahme (Tickets, Fanartikel, Sponsoren) wird
+eine Abgabe fällig (12%, mit Steuerberater 7%, siehe `getTaxRate()` in
+`js/finances.js`, verbucht in `applyMatchdayFinances`). Der Steuerberater kostet
+dafür ein laufendes Honorar, das mit der Ligastufe steigt - unten trägt er sich
+gerade so, oben lohnt er sich deutlich. Zusätzlich mildert er die
+Insolvenz-Eskalationen ab (`checkInsolvencyRisk()`).
+
 ## Sprache (DE/EN)
 
 Wörterbuch-basierter Sprachumschalter in `js/i18n.js` (Funktion `t(key)`,

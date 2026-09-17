@@ -1116,6 +1116,72 @@ async function testTaxAndAdvisor(browser) {
     await page.close();
 }
 
+async function testStadiumWideBanden(browser) {
+    console.log('\n[17] Bandenwerbung im gesamten Stadion');
+    const { page, consoleErrors } = await freshPage(browser);
+
+    const r = await page.evaluate(() => {
+        let out = {};
+        out.bereiche = getBandenAreaKeys().length;
+        out.stadionBloecke = Object.keys(stadium.blocks).length;
+        out.slotsStart = getTotalBandenSlots();
+
+        // Stadionausbau schafft zusätzliche Werbeflächen.
+        stadium.blocks.kurve.cap += 3600;
+        out.slotsNachAusbau = getTotalBandenSlots();
+
+        // Angebote sind einem Stadionbereich zugeordnet und werden dort gebucht.
+        bandenOffers = []; bandenSponsors = [];
+        checkIncomingBandenOffers(true);
+        out.angebotHatBereich = bandenOffers.length > 0 && !!bandenOffers[0].area;
+        let zielBereich = bandenOffers[0].area;
+        acceptBandenOffer(bandenOffers[0].id);
+        out.gebucht = getBandenSponsorsInArea(zielBereich).length === 1;
+        out.zaehltInsEinkommen = getBandenIncome() > 0;
+
+        // Ein voll belegter Bereich bekommt keine weiteren Angebote mehr.
+        let key = 'vipLogen';
+        bandenSponsors = [];
+        for (let i = 0; i < getBandenSlotsForArea(key); i++) {
+            bandenSponsors.push({ id: i, name: 'Test', type: 'Statisch', income: 100, active: true, duration: 10, category: 'Mode', area: key });
+        }
+        out.vollerBereichRaus = !getFreeBandenAreas().includes(key);
+
+        // Sichtbarkeit wirkt: Haupttribüne zahlt bei gleicher Größe mehr als der Gästeblock.
+        stadium.blocks.west.cap = 3000; stadium.blocks.gaeste.cap = 3000;
+        let w = 0, g = 0;
+        for (let i = 0; i < 300; i++) { w += rollBandenIncomeForArea('west', 'LED-Bande', 1); g += rollBandenIncomeForArea('gaeste', 'LED-Bande', 1); }
+        out.schnittWest = Math.round(w / 300);
+        out.schnittGaeste = Math.round(g / 300);
+
+        // Altbestand aus Spielständen ohne Bereichszuordnung wird migriert.
+        bandenSponsors = [{ id: 99, name: 'Alt', type: 'Statisch', income: 500, active: true, duration: 10, category: 'Mode' }];
+        migrateLegacyBandenSponsors();
+        out.altbestandMigriert = !!bandenSponsors[0].area;
+
+        // Überlebt Speichern/Laden samt Bereichszuordnung.
+        let save = JSON.parse(JSON.stringify(buildSaveState()));
+        let bereichVorher = bandenSponsors[0].area;
+        bandenSponsors = [];
+        applyLoadedState(save);
+        out.bereichRestauriert = bandenSponsors[0] && bandenSponsors[0].area === bereichVorher;
+        return out;
+    });
+
+    assert(r.bereiche === r.stadionBloecke, `Jeder der ${r.stadionBloecke} Stadionbereiche bietet Bandenplätze (${r.bereiche})`);
+    assert(r.slotsStart > 8, `Mehr Bandenplätze als die früheren 8 Pauschalplätze (${r.slotsStart})`);
+    assert(r.slotsNachAusbau > r.slotsStart, `Stadionausbau schafft zusätzliche Werbeflächen (${r.slotsStart} → ${r.slotsNachAusbau})`);
+    assert(r.angebotHatBereich, 'Bandenangebote sind einem konkreten Stadionbereich zugeordnet');
+    assert(r.gebucht, 'Angenommene Bande belegt einen Platz im richtigen Bereich');
+    assert(r.zaehltInsEinkommen, 'Gebuchte Bande zählt in die Bandeneinnahmen');
+    assert(r.vollerBereichRaus, 'Ein voll belegter Bereich bekommt keine weiteren Angebote');
+    assert(r.schnittWest > r.schnittGaeste, `Sichtbarkeit wirkt: Haupttribüne zahlt mehr als Gästeblock (${r.schnittWest} € vs. ${r.schnittGaeste} € bei gleicher Größe)`);
+    assert(r.altbestandMigriert, 'Banden aus alten Spielständen bekommen einen Stadionbereich zugewiesen');
+    assert(r.bereichRestauriert, 'Bereichszuordnung überlebt Speichern/Laden');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei der Bandenwerbung');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -1151,6 +1217,7 @@ async function main() {
         testLanguageToggle,
         testManagerOffice,
         testTaxAndAdvisor,
+        testStadiumWideBanden,
     ];
 
     for (const suite of suites) {
