@@ -6,6 +6,26 @@ Modulare Quellcode-Struktur: `index.html` + `css/styles.css` + `js/*.js`.
 python3 build.py
 → erzeugt dist/anstoss-fm13-standalone.html
 
+## Lokal spielen/entwickeln (empfohlen)
+npm run serve            # oder: python3 server.py
+→ baut dist/ und startet einen lokalen Server auf Port 8000. Ausgegeben wird
+auch die Adresse im lokalen Netz - damit lässt sich das Spiel direkt auf dem
+Handy im Browser öffnen, ohne die HTML-Datei zu kopieren.
+
+Das ist nicht nur bequemer: über `file://` blockieren manche Android-WebViews
+den Zugriff auf localStorage komplett (genau daran scheiterte das Speichern in
+der Dateivorschau, siehe `safeLocalSet()` in index.html). Über `http://` tritt
+das Problem nicht auf.
+
+Erreichbar sind:
+- `/` — die modulare Fassung (index.html + css/ + js/), Änderungen sind nach
+  einem Reload sofort sichtbar
+- `/spiel` — die gebaute Standalone-Datei; sie wird automatisch neu gebaut,
+  sobald eine Quelldatei neuer ist als das Build-Ergebnis
+
+Optionen: `--port 5000` für einen anderen Port, `--no-build` zum Starten ohne
+Neubau.
+
 ## Testen
 python3 build.py
 cd tests
