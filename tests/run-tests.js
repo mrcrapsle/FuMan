@@ -1043,6 +1043,79 @@ async function testManagerOffice(browser) {
     await page.close();
 }
 
+async function testTaxAndAdvisor(browser) {
+    console.log('\n[16] Steuern & Steuerberater');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+        out.rateOhne = getTaxRate();
+        financeCentralState.taxAdvisorHired = true;
+        out.rateMit = getTaxRate();
+        out.honorar = getTaxAdvisorFee();
+        out.breakEven = getTaxAdvisorBreakEven();
+
+        // Abgabe wird auf die Spieltagseinnahmen tatsächlich erhoben und mitgeschrieben.
+        financeCentralState.taxAdvisorHired = false;
+        game.money = 500000; game.seasonTaxPaid = 0;
+        applyMatchdayFinances(true, true, false, false, 'Test', '2:0');
+        out.steuerOhne = game.lastMatchdayTax;
+        out.feeOhne = game.lastMatchdayAdvisorFee;
+        out.saisonSumme = game.seasonTaxPaid;
+
+        financeCentralState.taxAdvisorHired = true;
+        applyMatchdayFinances(true, true, false, false, 'Test', '2:0');
+        out.feeMit = game.lastMatchdayAdvisorFee;
+        out.saisonSummeGewachsen = game.seasonTaxPaid > out.saisonSumme;
+
+        // Überlebt Speichern/Laden
+        let save = JSON.parse(JSON.stringify(buildSaveState()));
+        let sumVorher = game.seasonTaxPaid;
+        game.seasonTaxPaid = 0; financeCentralState.taxAdvisorHired = false;
+        applyLoadedState(save);
+        out.summeRestauriert = game.seasonTaxPaid === sumVorher;
+        out.mandatRestauriert = financeCentralState.taxAdvisorHired === true;
+        return out;
+    });
+
+    // Krisen-Abmilderung: identische Ausgangslage, nur das Mandat unterscheidet sich.
+    const krise = await page.evaluate(() => {
+        const lauf = (hired) => {
+            financeCentralState.taxAdvisorHired = hired;
+            managerRPG.perks.crisisProof = false;
+            game.money = -1000; game.negativeStreak = 9;
+            let best = [...squad].sort((a, b) => calculatePlayerMarketValue(b.strength) - calculatePlayerMarketValue(a.strength))[0];
+            let marktwert = calculatePlayerMarketValue(best.strength);
+            let vorher = game.money;
+            checkInsolvencyRisk();
+            let quote = (game.money - vorher) / marktwert;
+
+            let team = getOurLeagueTeam();
+            team.points = 30;
+            game.money = -1000; game.negativeStreak = 14;
+            checkInsolvencyRisk();
+            return { quote, abzug: 30 - team.points };
+        };
+        return { ohne: lauf(false), mit: lauf(true) };
+    });
+
+    assert(r.rateOhne === 0.12, `Ohne Berater gilt der volle Abgabensatz (${Math.round(r.rateOhne * 100)}%)`);
+    assert(r.rateMit === 0.07, `Mit Berater sinkt der Abgabensatz (${Math.round(r.rateMit * 100)}%)`);
+    assert(r.honorar > 0 && r.breakEven > 0, `Honorar (${r.honorar} €/SpT) und Break-even (${r.breakEven} €) werden berechnet`);
+    assert(r.steuerOhne > 0, `Auf die Spieltagseinnahmen wird tatsächlich eine Abgabe erhoben (${r.steuerOhne} €)`);
+    assert(r.feeOhne === 0, 'Ohne Mandat fällt kein Berater-Honorar an');
+    assert(r.feeMit === r.honorar, 'Mit Mandat wird das Honorar pro Spieltag abgebucht');
+    assert(r.saisonSummeGewachsen, 'Abgeführte Abgaben werden über die Saison aufsummiert');
+    assert(r.summeRestauriert && r.mandatRestauriert, 'Mandat und Saisonsumme überleben Speichern/Laden');
+    assert(Math.abs(krise.ohne.quote - 0.6) < 0.001 && Math.abs(krise.mit.quote - 0.75) < 0.001,
+        `Zwangsverkauf bringt mit Berater mehr (${Math.round(krise.ohne.quote * 100)}% → ${Math.round(krise.mit.quote * 100)}% vom Marktwert)`);
+    assert(krise.ohne.abzug === 3 && krise.mit.abzug === 2,
+        `Punktabzug fällt mit Berater geringer aus (${krise.ohne.abzug} → ${krise.mit.abzug} Punkte)`);
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei Steuern/Steuerberater');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -1077,6 +1150,7 @@ async function main() {
         testAccessibilityContrastAndFontSizes,
         testLanguageToggle,
         testManagerOffice,
+        testTaxAndAdvisor,
     ];
 
     for (const suite of suites) {

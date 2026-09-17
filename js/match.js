@@ -1075,7 +1075,17 @@
             bandenSponsors.filter(b => b.active).forEach(b => trackSponsorEarning(b.name, b.income, b.category));
         }
         trackSponsorEarning(game.sleeveSponsor?.name, game.sleeveSponsor?.income || 0, game.sleeveSponsor?.category);
-        let net = ticketIncome + merchIncome + sponsorInc - wages - travelCost;
+        // Steuern & Abgaben (siehe finances.js): echte Abgabe auf die Spieltagseinnahmen.
+        // Der Steuerberater senkt den Satz, kostet dafür aber ein laufendes Honorar - beides
+        // wird hier verbucht und für die Anzeige in der GuV festgehalten.
+        let grossIncome = ticketIncome + merchIncome + sponsorInc;
+        let taxAmount = Math.round(Math.max(0, grossIncome) * getTaxRate());
+        let advisorFee = financeCentralState.taxAdvisorHired ? getTaxAdvisorFee() : 0;
+        game.lastMatchdayTax = taxAmount;
+        game.lastMatchdayAdvisorFee = advisorFee;
+        game.seasonTaxPaid = (game.seasonTaxPaid || 0) + taxAmount + advisorFee;
+
+        let net = grossIncome - taxAmount - advisorFee - wages - travelCost;
         game.money += net;
         if (ghostGameActive) game.forcedGhostGame = false; // Geisterspiel-Auflage ist damit erfüllt
         if (derbyBoostActive) {

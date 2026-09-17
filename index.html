@@ -968,6 +968,7 @@
                             </div>
                             <button onclick="openBusSponsoringNegotiation()" id="btn-bus-sponsoring" class="btn-secondary" style="font-size:9px; margin-bottom:6px;">🚌 Bus-Sponsoring verhandeln</button>
                             <div style="display:flex; justify-content:space-between;"><span>Kreditzinsen:</span><span id="fin-out-interest">0 €</span></div>
+                            <div style="display:flex; justify-content:space-between;"><span id="fin-out-tax-label">Steuern & Abgaben:</span><span id="fin-out-tax">0 €</span></div>
                         </div>
                     </div>
                     <div style="text-align:right; font-size:12px; margin-top:4px;">
@@ -1040,7 +1041,8 @@
                     <div id="credit-rating-box" class="box" style="margin-bottom:6px;"></div>
                     <input type="number" id="expense-limit-input" placeholder="Ausgaben-Warnlimit/SpT" class="input-inline" style="width:100%; margin-bottom:6px;">
                     <button onclick="setExpenseWarningLimit(parseInt(document.getElementById('expense-limit-input').value)||0)" class="btn-secondary" style="margin-bottom:6px;">⚠️ Warnlimit setzen</button>
-                    <button onclick="toggleTaxAdvisor()" id="btn-tax-advisor" class="btn-secondary" style="margin-bottom:6px;">📊 Steuerberater engagieren [15.000 €]</button>
+                    <button onclick="toggleTaxAdvisor()" id="btn-tax-advisor" class="btn-secondary" style="margin-bottom:4px;">📊 Steuerberater engagieren [15.000 €]</button>
+                    <div id="tax-advisor-note" class="box" style="font-size:9px; line-height:1.5; margin-bottom:6px;"></div>
                     <button onclick="acceptStrategicInvestor()" id="btn-strategic-investor" class="btn-secondary">💼 Strategischen Investor aufnehmen [+400.000 €]</button>
                 </div>
             </div>
