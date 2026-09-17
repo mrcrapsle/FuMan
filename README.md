@@ -74,21 +74,31 @@ lauffähige HTML-Datei bleiben; eine 3D-Bibliothek wären ~600 KB Fremdcode
 plus WebGL-Zwang im Android-WebView. Dieselbe CSS-3D-Technik nutzen
 Taktiktafel und Stadionschüssel bereits.
 
-**Fallstricke bei Änderungen an dieser Ansicht** (beide haben hier real
-zugeschlagen und sind von außen unsichtbar - das Bild bleibt korrekt, nur
-die Trefferflächen wandern weg, Objekte sind dann lautlos nicht mehr
-anklickbar):
+**Klicks lösen sich NICHT über die native Trefferprüfung des Browsers auf.**
+`officeHotspotAtPoint()` vergleicht stattdessen selbst die projizierten
+Bildschirmrechtecke (`getBoundingClientRect()`), und ein einzelner
+Click-/Mousemove-Handler am Viewport verteilt daraus Klick, Hervorhebung und
+Satzzeile. Grund: für 3D-transformierte Elemente ist die native Hit-Detection
+je nach Chromium-Version unzuverlässig - in einer neueren Version waren 9 der
+10 Objekte nicht mehr anklickbar, obwohl das Bild unverändert korrekt aussah
+(in der CI aufgefallen, lokal nicht reproduzierbar). Deshalb auch kein
+CSS-`:hover` für die Hervorhebung, sondern eine aus JS gesetzte Klasse.
+
+**Zwei weitere Fallstricke**, die hier real zugeschlagen haben und von außen
+unsichtbar sind (das Bild bleibt korrekt, nur die Geometrie wandert weg):
 
 1. `filter` und `opacity` sind "grouping properties": auf einer
    3D-positionierten Ebene erzwingen sie `transform-style: flat` und
    klappen sie in die Elternebene. Zum Abdunkeln/Hervorheben deshalb
    Hintergrundschichten bzw. `box-shadow` verwenden.
 2. Laufende `transform`-Animationen befördern das Element auf eine eigene
-   Compositing-Ebene und nehmen es aus der Trefferprüfung. Animationen im
-   Raum daher ohne `transform` (z.B. pulsendes `box-shadow`).
+   Compositing-Ebene. Animationen im Raum daher ohne `transform`
+   (z.B. pulsendes `box-shadow`).
 
-`testManagerOffice` in `tests/run-tests.js` prüft genau das ab: jeder
-Hotspot muss an seinem eigenen Mittelpunkt auch sich selbst treffen.
+`testManagerOffice` in `tests/run-tests.js` prüft, dass jeder Hotspot an
+seinem Mittelpunkt korrekt aufgelöst wird, und klickt per Koordinate
+(`mouse.click`) statt per Selektor - `page.click(selektor)` prüft intern
+ebenfalls die native Trefferfläche.
 
 ## Sponsoren & Finanzen
 

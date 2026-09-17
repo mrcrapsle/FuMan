@@ -862,14 +862,14 @@
            sind "grouping properties" und klappen eine 3D-positionierte Ebene flach in die
            Elternebene - Bild und Trefferfläche laufen dann auseinander und Klicks landen im
            Hintergrund. box-shadow lässt die 3D-Position unangetastet. */
-        .office-hotspot:hover { box-shadow: 0 0 0 2px rgba(255,213,74,0.9), 0 0 24px 7px rgba(255,213,74,0.4); border-radius: 4px; }
+        .office-hotspot-hover { box-shadow: 0 0 0 2px rgba(255,213,74,0.9), 0 0 24px 7px rgba(255,213,74,0.4); border-radius: 4px; }
         .office-hotspot-tag {
             position: absolute; left: 50%; bottom: -22px; transform: translateX(-50%);
             background: rgba(6,10,18,0.92); color: var(--accent); border: 1px solid rgba(255,213,74,0.45);
             font-size: 9px; font-weight: 800; white-space: nowrap; padding: 2px 7px; border-radius: 999px;
             opacity: 0; transition: opacity 0.18s; pointer-events: none;
         }
-        .office-hotspot:hover .office-hotspot-tag { opacity: 1; }
+        .office-hotspot-hover .office-hotspot-tag { opacity: 1; }
 
         /* Licht aus (Schreibtischlampe): der ganze Raum fällt in kühles Nachtblau - ebenfalls
            bewusst über Hintergrundschichten statt über filter (siehe Hinweis oben). */

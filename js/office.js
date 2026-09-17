@@ -179,11 +179,7 @@
             let style = isRoom
                 ? `${hs.size} transform: translate(-50%,-50%) ${hs.at};`
                 : hs.pos;
-            return `<div class="office-hotspot ${isRoom ? 'office-hotspot-free' : ''}" id="office-hs-${hs.id}"
-                         style="${style}"
-                         onclick="officeEnterHotspot('${hs.id}')"
-                         onmouseenter="officeSetSentence('${hs.id}')"
-                         onmouseleave="officeSetSentence(null)">
+            return `<div class="office-hotspot ${isRoom ? 'office-hotspot-free' : ''}" id="office-hs-${hs.id}" style="${style}">
                         ${hs.art()}
                         <div class="office-hotspot-tag">${officeHotspotText(hs.id)}</div>
                     </div>`;
@@ -252,6 +248,36 @@
         ).join('');
     }
 
+    // Trefferprüfung bewusst SELBST über die projizierten Bildschirmrechtecke, statt sich auf
+    // die native Hit-Detection des Browsers zu verlassen: für 3D-transformierte Elemente ist
+    // die je nach Chromium-Version unzuverlässig - in einer neueren Version waren 9 der 10
+    // Objekte nicht mehr anklickbar, obwohl das Bild unverändert korrekt aussah (in der CI
+    // aufgefallen). getBoundingClientRect() liefert dagegen versionsübergreifend stabil das
+    // Rechteck, in dem das Objekt tatsächlich auf dem Bildschirm liegt.
+    //
+    // Reihenfolge = Tiefe: freistehende Möbel stehen vor den Wandobjekten, überlappen sie also.
+    function officeHotspotAtPoint(clientX, clientY) {
+        let ordered = [...OFFICE_HOTSPOTS].sort((a, b) => (a.wall === 'room' ? 0 : 1) - (b.wall === 'room' ? 0 : 1));
+        for (let hs of ordered) {
+            let el = document.getElementById('office-hs-' + hs.id);
+            if (!el) continue;
+            let r = el.getBoundingClientRect();
+            if (r.width && clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom) return hs.id;
+        }
+        return null;
+    }
+
+    // Hervorhebung ebenfalls aus JS setzen statt per CSS :hover - :hover hängt an derselben
+    // unzuverlässigen Trefferprüfung wie der Klick.
+    function setOfficeHover(id) {
+        document.querySelectorAll('.office-hotspot').forEach(el => {
+            el.classList.toggle('office-hotspot-hover', el.id === 'office-hs-' + id);
+        });
+        let viewport = document.getElementById('office-viewport');
+        if (viewport) viewport.style.cursor = id ? 'pointer' : '';
+        officeSetSentence(id);
+    }
+
     function officeSetSentence(id) {
         let el = document.getElementById('office-sentence');
         if (!el) return;
@@ -318,13 +344,27 @@
             room.style.setProperty('--office-rx', (ny * 4.5).toFixed(2) + 'deg');
         };
 
-        viewport.addEventListener('mousemove', e => apply(e.clientX, e.clientY));
+        // Bedienelemente über der Kulisse (Leiste, Schnellauswahl) haben eigene Knöpfe und
+        // dürfen nicht zusätzlich als Klick in den Raum gewertet werden.
+        const isOverlayTarget = (e) => !!(e.target.closest && e.target.closest('.office-hud, .office-quicknav'));
+
+        viewport.addEventListener('click', e => {
+            if (isOverlayTarget(e)) return;
+            let id = officeHotspotAtPoint(e.clientX, e.clientY);
+            if (id) officeEnterHotspot(id);
+        });
+
+        viewport.addEventListener('mousemove', e => {
+            apply(e.clientX, e.clientY);
+            setOfficeHover(isOverlayTarget(e) ? null : officeHotspotAtPoint(e.clientX, e.clientY));
+        });
         viewport.addEventListener('touchmove', e => {
             if (e.touches && e.touches[0]) apply(e.touches[0].clientX, e.touches[0].clientY);
         }, { passive: true });
         viewport.addEventListener('mouseleave', () => {
             room.style.setProperty('--office-ry', '0deg');
             room.style.setProperty('--office-rx', '0deg');
+            setOfficeHover(null);
         });
         window.addEventListener('resize', fitOfficeScale);
     }

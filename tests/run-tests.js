@@ -976,38 +976,43 @@ async function testManagerOffice(browser) {
     // flach bzw. schieben sie auf eine eigene Compositing-Ebene; das Bild bleibt dabei
     // unverändert, aber die Trefferfläche wandert weg und die Objekte sind - völlig lautlos -
     // nicht mehr anklickbar. Ohne diesen Test fällt so etwas erst dem Spieler auf.
+    const centerOf = async (id) => {
+        const box = await page.locator('#office-hs-' + id).boundingBox();
+        return box ? { x: box.x + box.width / 2, y: box.y + box.height / 2 } : null;
+    };
+
     let unreachable = [];
     for (const id of hotspotIds) {
-        const box = await page.locator('#office-hs-' + id).boundingBox();
-        if (!box) { unreachable.push(id + ' (nicht sichtbar)'); continue; }
-        const cx = box.x + box.width / 2, cy = box.y + box.height / 2;
-        await page.mouse.move(cx, cy);
+        const c = await centerOf(id);
+        if (!c) { unreachable.push(id + ' (nicht sichtbar)'); continue; }
+        await page.mouse.move(c.x, c.y);
         await page.waitForTimeout(60);
-        const hitsItself = await page.evaluate(({ cx, cy, id }) => {
-            const top = document.elementFromPoint(cx, cy);
-            return !!(top && top.closest('#office-hs-' + id));
-        }, { cx, cy, id });
-        if (!hitsItself) unreachable.push(id);
+        const resolved = await page.evaluate(({ x, y }) => officeHotspotAtPoint(x, y), c);
+        if (resolved !== id) unreachable.push(`${id} (traf: ${resolved})`);
     }
 
     // Satzzeile (das SCUMM-Stilmittel) folgt dem überfahrenen Objekt
-    const calBox = await page.locator('#office-hs-calendar').boundingBox();
-    await page.mouse.move(calBox.x + calBox.width / 2, calBox.y + calBox.height / 2);
+    const calCenter = await centerOf('calendar');
+    await page.mouse.move(calCenter.x, calCenter.y);
     await page.waitForTimeout(120);
     const sentence = await page.textContent('#office-sentence');
 
-    // Lampe schaltet nur das Licht, navigiert NICHT weg
-    await page.click('#office-hs-lamp');
+    // Lampe schaltet nur das Licht, navigiert NICHT weg. Bewusst per mouse.click auf die
+    // Koordinate statt per page.click(selector): letzteres prüft intern die native
+    // Trefferfläche des Browsers - genau die ist für 3D-Elemente je nach Chromium-Version
+    // unzuverlässig, weshalb das Büro seine Treffer selbst auflöst (siehe officeHotspotAtPoint).
+    const lampCenter = await centerOf('lamp');
+    await page.mouse.click(lampCenter.x, lampCenter.y);
     await page.waitForTimeout(250);
     const lampState = await page.evaluate(() => ({
         dark: document.getElementById('screen-office').classList.contains('office-dark'),
         stillInOffice: document.getElementById('screen-office').style.display === 'block'
     }));
-    await page.click('#office-hs-lamp');
+    await page.mouse.click(lampCenter.x, lampCenter.y);
     await page.waitForTimeout(250);
 
     // Klick auf ein Objekt führt in den zugehörigen Screen
-    await page.click('#office-hs-calendar');
+    await page.mouse.click(calCenter.x, calCenter.y);
     await page.waitForTimeout(900);
     const navigated = await page.evaluate(() => document.getElementById('screen-calendar').style.display === 'block');
 
@@ -1031,7 +1036,7 @@ async function testManagerOffice(browser) {
     assert(isStartScreen, 'Managerbüro ist der Startbildschirm nach dem Laden');
     assert(coversDisplay, 'Managerbüro nimmt das gesamte Display ein');
     assert(hotspotIds.length === 10, `Alle 10 Objekte im Büro vorhanden (${hotspotIds.length})`);
-    assert(unreachable.length === 0, `Jedes Objekt ist an seinem Mittelpunkt anklickbar${unreachable.length ? ' - NICHT erreichbar: ' + unreachable.join(', ') : ''}`);
+    assert(unreachable.length === 0, `Jedes Objekt wird an seinem Mittelpunkt korrekt getroffen${unreachable.length ? ' - FEHLER: ' + unreachable.join(', ') : ''}`);
     assert(sentence === 'Den Terminplan studieren', `Satzzeile zeigt die Aktion des überfahrenen Objekts ("${sentence}")`);
     assert(lampState.dark, 'Schreibtischlampe schaltet das Raumlicht aus');
     assert(lampState.stillInOffice, 'Lampe navigiert NICHT weg (reines Stimmungslicht)');
