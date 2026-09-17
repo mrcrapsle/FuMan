@@ -1,5 +1,5 @@
-# This workflow builds the standalone game file and runs the Playwright
-# regression suite against it.
+# This workflow builds the standalone game file, runs the Playwright regression
+# suite against it and - auf main - veroeffentlicht das Ergebnis per GitHub Pages.
 
 name: Build & Test
 
@@ -54,3 +54,49 @@ jobs:
         run: npm test
         env:
           GAME_FILE: anstoss-fm13-standalone.min.html
+
+  # Veroeffentlicht das Spiel unter https://mrcrapsle.github.io/FuMan/.
+  # Bewusst mit "needs: test": so steht nie ein Build oeffentlich, dessen Testsuite auf
+  # demselben Commit rot war. Laeuft nur auf main, nicht auf Pull Requests.
+  deploy:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+
+    steps:
+      - name: Setup repo
+        uses: actions/checkout@v4
+
+      - name: Build standalone game
+        run: python3 build.py
+
+      - name: Assemble site
+        # Die gebaute Standalone-Datei wird zur Startseite: eine einzige Datei ohne
+        # relative Abhaengigkeiten - damit kann beim Ausliefern nichts fehlen.
+        run: |
+          mkdir -p site
+          cp dist/anstoss-fm13-standalone.html site/index.html
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

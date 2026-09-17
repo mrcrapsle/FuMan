@@ -2,6 +2,17 @@
 
 Modulare Quellcode-Struktur: `index.html` + `css/styles.css` + `js/*.js`.
 
+## Spielen
+
+**Online:** https://mrcrapsle.github.io/FuMan/ — wird bei jedem Push auf `main`
+automatisch neu gebaut und veröffentlicht (siehe `deploy`-Job in
+`.github/workflows/build-test.yml`), aber nur wenn die Testsuite auf demselben
+Commit grün war. Läuft auf jedem Gerät, Spielstände werden im Browser gespeichert.
+
+**Offline:** `dist/anstoss-fm13-standalone.html` ist das komplette Spiel in einer
+Datei. Auf Android in einem echten Browser öffnen (Chrome), nicht in der
+Dateivorschau des Dateimanagers - die blockiert den lokalen Speicher.
+
 ## Bauen
 python3 build.py
 → erzeugt dist/anstoss-fm13-standalone.html
