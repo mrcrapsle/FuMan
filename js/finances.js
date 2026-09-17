@@ -80,8 +80,14 @@
             return s ? sum + (s.owned * s.price * s.dividendRate) : sum;
         }, 0));
 
+        // Steuern & Abgaben: fallen auf die Spieltagseinnahmen an (Tickets/Fanartikel/
+        // Sponsoren - NICHT auf Dividenden, die außerhalb der Spieltagsbilanz gutgeschrieben
+        // werden, siehe applyMatchdayFinances). Dazu ggf. das Steuerberater-Honorar.
+        let estTax = Math.round((estTickets + estMerch + estSponsors) * getTaxRate());
+        let estAdvisorFee = financeCentralState.taxAdvisorHired ? getTaxAdvisorFee() * 4 : 0;
+
         let totalIn = estTickets + estMerch + estSponsors + dividends;
-        let totalOut = totalWages + totalStaffWages + maintenance + loanInterest + loanInstallments;
+        let totalOut = totalWages + totalStaffWages + maintenance + loanInterest + loanInstallments + estTax + estAdvisorFee;
         let net = totalIn - totalOut;
 
         document.getElementById('fin-in-tickets').innerText = formatVal(estTickets);
@@ -95,6 +101,13 @@
         document.getElementById('fin-out-maintenance').innerText = formatVal(maintenance);
         document.getElementById('fin-out-stewards').innerText = formatVal(game.stewards * 120 * 2);
         document.getElementById('fin-out-interest').innerText = formatVal(loanInterest + loanInstallments);
+        let taxEl = document.getElementById('fin-out-tax');
+        if (taxEl) taxEl.innerText = formatVal(estTax + estAdvisorFee);
+        let taxLabelEl = document.getElementById('fin-out-tax-label');
+        if (taxLabelEl) {
+            taxLabelEl.innerText = `Steuern & Abgaben (${Math.round(getTaxRate() * 100)}%)`
+                + (financeCentralState.taxAdvisorHired ? ' inkl. Berater-Honorar:' : ':');
+        }
         // Geschätzte Auswärtsfahrtkosten: ~17 Auswärtsspiele/Saison, hochgerechnet auf einen
         // Monat (4 Spieltage) - skaliert wie applyMatchdayFinances() mit Ligastufe & Reisemodus.
         let estTravelCost = Math.round((800 + (NUM_LEAGUES - game.leagueLevel) * 300) * (game.travelMode === 'bus' ? 0.55 : 1)) * 2;
@@ -158,7 +171,22 @@
                 : '<div style="font-size:9px; color:var(--text-muted);">Keine aktive Festgeldanlage.</div>';
         }
         let taxBtn = document.getElementById('btn-tax-advisor');
-        if (taxBtn) taxBtn.innerText = financeCentralState.taxAdvisorHired ? '📊 Steuerberater AKTIV (Mandat beenden)' : '📊 Steuerberater engagieren [15.000 €]';
+        if (taxBtn) {
+            taxBtn.innerText = financeCentralState.taxAdvisorHired
+                ? '📊 Steuerberater AKTIV (Mandat beenden)'
+                : `📊 Steuerberater engagieren [${formatVal(TAX_ADVISOR_SIGNING_FEE)}]`;
+        }
+        // Erklärt direkt am Knopf, was das Mandat konkret bringt und kostet - vorher war
+        // nirgends ersichtlich, dass der Berater überhaupt eine Wirkung hat.
+        let taxNote = document.getElementById('tax-advisor-note');
+        if (taxNote) {
+            let lastTax = (game.lastMatchdayTax || 0) + (game.lastMatchdayAdvisorFee || 0);
+            taxNote.innerHTML = `Auf alle Spieltagseinnahmen (Tickets, Fanartikel, Sponsoren) wird eine Abgabe fällig.<br>`
+                + `Ohne Berater <strong>${Math.round(TAX_RATE_BASE * 100)}%</strong>, mit Berater <strong style="color:var(--primary);">${Math.round(TAX_RATE_WITH_ADVISOR * 100)}%</strong> `
+                + `bei ${formatVal(getTaxAdvisorFee())} Honorar/Spieltag - er trägt sich ab rund <strong>${formatVal(getTaxAdvisorBreakEven())}</strong> Einnahmen pro Spieltag.<br>`
+                + `Außerdem mildert er Finanzkrisen ab: Zwangsverkäufe bringen 75% statt 60% vom Marktwert, Punktabzüge fallen um einen Punkt geringer aus.<br>`
+                + `<span style="color:var(--text-muted);">Letzter Spieltag: ${formatVal(lastTax)} abgeführt · diese Saison insgesamt ${formatVal(game.seasonTaxPaid || 0)}.</span>`;
+        }
         let reserveBox = document.getElementById('reserve-fund-box');
         if (reserveBox) reserveBox.innerHTML = `🐷 Rücklagenfonds: <strong style="color:var(--accent);">${formatVal(financeCentralState.reserveFund)}</strong> ${financeCentralState.autoReserveActive ? `(auto. ${financeCentralState.autoReservePercent}% aktiv)` : ''}`;
         let ratingBox = document.getElementById('credit-rating-box');
@@ -434,14 +462,41 @@
         renderFinancesView();
     }
 
-    // 4. Steuerberater: mildert die Konsequenzen von Insolvenzrisiko-Eskalationen ab
-    // (siehe checkInsolvencyRisk() - Zwangsverkäufe fallen milder aus).
+    // 4. Steuerberater
+    // ------------------------------------------------------------------
+    // Auf jede Spieltagseinnahme (Tickets + Fanartikel + Sponsoren) wird eine Abgabe
+    // fällig - der Steuerberater senkt deren Satz und mildert zusätzlich die
+    // Insolvenz-Eskalationen ab (siehe checkInsolvencyRisk()).
+    //
+    // Er kostet dafür ein laufendes Honorar pro Spieltag, das mit der Ligastufe steigt.
+    // Dadurch ist es eine echte Entscheidung statt eines Selbstläufers: in den unteren
+    // Ligen sind die Einnahmen so klein, dass die Ersparnis das Honorar kaum deckt,
+    // weiter oben rechnet er sich deutlich.
+    const TAX_RATE_BASE = 0.12;
+    const TAX_RATE_WITH_ADVISOR = 0.07;
+    const TAX_ADVISOR_SIGNING_FEE = 15000;
+
+    function getTaxRate() {
+        return financeCentralState.taxAdvisorHired ? TAX_RATE_WITH_ADVISOR : TAX_RATE_BASE;
+    }
+    function getTaxAdvisorFee() {
+        return 250 + 250 * (NUM_LEAGUES - game.leagueLevel);
+    }
+    // Ab welcher Spieltagseinnahme trägt sich das Mandat selbst? (Ersparnis = Honorar)
+    function getTaxAdvisorBreakEven() {
+        return Math.round(getTaxAdvisorFee() / (TAX_RATE_BASE - TAX_RATE_WITH_ADVISOR));
+    }
+
     function toggleTaxAdvisor() {
-        if (!financeCentralState.taxAdvisorHired && game.money < 15000) { showToast('15.000 € Honorar benötigt!', 'error'); return; }
-        if (!financeCentralState.taxAdvisorHired) game.money -= 15000;
+        if (!financeCentralState.taxAdvisorHired && game.money < TAX_ADVISOR_SIGNING_FEE) {
+            showToast(`${formatVal(TAX_ADVISOR_SIGNING_FEE)} Honorar benötigt!`, 'error'); return;
+        }
+        if (!financeCentralState.taxAdvisorHired) game.money -= TAX_ADVISOR_SIGNING_FEE;
         financeCentralState.taxAdvisorHired = !financeCentralState.taxAdvisorHired;
         playSound('click');
-        showToast(financeCentralState.taxAdvisorHired ? '📊 Steuerberater engagiert - mildert künftige Finanzkrisen ab.' : '📊 Steuerberater-Mandat beendet.', 'success');
+        showToast(financeCentralState.taxAdvisorHired
+            ? `📊 Steuerberater engagiert - Abgabensatz sinkt von ${Math.round(TAX_RATE_BASE * 100)}% auf ${Math.round(TAX_RATE_WITH_ADVISOR * 100)}%, Honorar ${formatVal(getTaxAdvisorFee())}/Spieltag.`
+            : '📊 Steuerberater-Mandat beendet - es gilt wieder der volle Abgabensatz.', 'success');
         renderFinancesView();
         updateUI();
     }

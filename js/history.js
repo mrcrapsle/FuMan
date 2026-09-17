@@ -15,11 +15,17 @@
     function renderRivalryHistoryBook() {
         let box = document.getElementById('rivalry-history-book');
         if (!box) return;
+        // Trainerpersönlichkeit (NEU, siehe assignRivalManagerPersonality() in leagues.js):
+        // gibt dem Rivalen ein Gesicht statt nur ein Vereinsname zu sein.
+        let managerQuote = (typeof getRivalManagerQuote === 'function') ? getRivalManagerQuote() : null;
+        let managerLine = (game.permanentRivalName && game.rivalManagerName)
+            ? `<div class="box" style="font-size:10px; border-left-color:var(--purple); margin-bottom:6px;">🎩 Trainer von ${game.permanentRivalName}: <strong>${game.rivalManagerName}</strong> <span style="color:var(--purple);">(${game.rivalManagerTrait})</span>${managerQuote ? `<br><em style="color:#94a3b8;">"${managerQuote}"</em>` : ''}</div>`
+            : '';
         if (!game.permanentRivalName || rivalryRecord.matches.length === 0) {
-            box.innerHTML = '<div class="box" style="font-size:10px; color:#94a3b8;">Noch keine Duelle gegen den permanenten Rivalen ausgetragen.</div>';
+            box.innerHTML = managerLine + '<div class="box" style="font-size:10px; color:#94a3b8;">Noch keine Duelle gegen den permanenten Rivalen ausgetragen.</div>';
             return;
         }
-        box.innerHTML = rivalryRecord.matches.slice().reverse().map(m => {
+        box.innerHTML = managerLine + rivalryRecord.matches.slice().reverse().map(m => {
             let outcome = m.ourGoals > m.oppGoals ? { icon: '🟢', label: 'Sieg' } : (m.ourGoals < m.oppGoals ? { icon: '🔴', label: 'Niederlage' } : { icon: '🟡', label: 'Remis' });
             return `<div class="box" style="display:flex; justify-content:space-between; font-size:10px;"><span>${outcome.icon} Saison ${m.season}, Spieltag ${m.matchday}</span><strong>${m.ourGoals}:${m.oppGoals} (${outcome.label})</strong></div>`;
         }).join('');
@@ -33,7 +39,7 @@
         let archive = game.rivalHistoryArchive || [];
         box.innerHTML = archive.length === 0
             ? '<div style="font-size:9px; color:var(--text-muted);">Noch keine abgelöste Rivalität.</div>'
-            : archive.slice().reverse().map(r => `<div class="box" style="font-size:10px;"><strong>${r.name}</strong> (bis Saison ${r.endedSeason}) - Bilanz: ${r.record.wins}S ${r.record.draws}U ${r.record.losses}N</div>`).join('');
+            : archive.slice().reverse().map(r => `<div class="box" style="font-size:10px;"><strong>${r.name}</strong> (bis Saison ${r.endedSeason}) - Bilanz: ${r.record.wins}S ${r.record.draws}U ${r.record.losses}N${r.managerName ? `<br><span style="color:#94a3b8; font-size:9px;">🎩 Trainer: ${r.managerName} (${r.managerTrait})</span>` : ''}</div>`).join('');
     }
 
     // Generationsübergreifende Legenden-Vergleiche (NEU): gruppiert alle ehemaligen Spieler
@@ -69,8 +75,38 @@
         `;
     }
 
+    // Liga-Chronik (NEU): macht die seit der persistenten Liga-Pyramide (siehe
+    // advanceLeaguesToNewSeason() in leagues.js) mitlaufende team.strengthHistory sichtbar -
+    // zeigt die größten Stärke-Gewinner/-Verlierer der letzten Saison über alle 108 Vereine,
+    // statt dass diese Entwicklung nur unsichtbar im Hintergrund abläuft.
+    function renderLeagueChronikBox() {
+        let box = document.getElementById('league-chronik-box');
+        if (!box) return;
+        let deltas = leaguesData.flat()
+            .filter(t => t.name !== game.clubName && t.strengthHistory && t.strengthHistory.length > 0)
+            .map(t => {
+                let prev = t.strengthHistory[t.strengthHistory.length - 1].strength;
+                return { name: t.name, prev, curr: t.strength, delta: t.strength - prev };
+            });
+        if (deltas.length === 0) {
+            box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Die Chronik füllt sich, sobald die erste Saison in der Liga-Pyramide abgeschlossen ist.</div>';
+            return;
+        }
+        let risers = [...deltas].filter(d => d.delta > 0).sort((a, b) => b.delta - a.delta).slice(0, 3);
+        let fallers = [...deltas].filter(d => d.delta < 0).sort((a, b) => a.delta - b.delta).slice(0, 3);
+        let row = d => `<div class="box" style="display:flex; justify-content:space-between; font-size:10px;"><span>${d.name}</span><strong style="color:${d.delta > 0 ? 'var(--primary)' : 'var(--danger)'};">${d.prev} → ${d.curr} (${d.delta > 0 ? '+' : ''}${d.delta})</strong></div>`;
+        box.innerHTML = `
+            <div style="font-size:9px; font-weight:800; color:var(--primary); margin:6px 0 3px;">📈 GRÖSSTE AUFSTEIGER (STÄRKE)</div>
+            ${risers.length === 0 ? '<div style="font-size:9px; color:var(--text-muted);">Keine nennenswerten Aufsteiger diese Saison.</div>' : risers.map(row).join('')}
+            <div style="font-size:9px; font-weight:800; color:var(--danger); margin:6px 0 3px;">📉 GRÖSSTE ABSTEIGER (STÄRKE)</div>
+            ${fallers.length === 0 ? '<div style="font-size:9px; color:var(--text-muted);">Keine nennenswerten Absteiger diese Saison.</div>' : fallers.map(row).join('')}
+        `;
+    }
+
     function renderHistoryView() {
         renderClubRecordsBox();
+        if (typeof renderAchievementsBox === 'function') renderAchievementsBox();
+        renderLeagueChronikBox();
         if (typeof renderPlayerOfMonthBox === 'function') renderPlayerOfMonthBox();
         if (typeof renderPlayerOfSeasonBox === 'function') renderPlayerOfSeasonBox();
         let list = document.getElementById('trophies-list');

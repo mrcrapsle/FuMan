@@ -7,7 +7,7 @@
         cupTournament.currentRound = 0;
         cupTournament.roundsHistory = [];
 
-        let cupTeams = ["1.FC Moritz Leipzig"];
+        let cupTeams = [game.clubName];
         while (cupTeams.length < 32) {
             let t = generateTeamName();
             if (!cupTeams.includes(t)) cupTeams.push(t);
@@ -34,10 +34,10 @@
     function showCupDrawCeremony() {
         let r = cupTournament.roundsHistory[cupTournament.currentRound];
         if (!r) return;
-        let ourPairing = r.pairings.find(p => p.home === "1.FC Moritz Leipzig" || p.away === "1.FC Moritz Leipzig");
+        let ourPairing = r.pairings.find(p => p.home === game.clubName || p.away === game.clubName);
         if (!ourPairing) return;
-        let opponent = ourPairing.home === "1.FC Moritz Leipzig" ? ourPairing.away : ourPairing.home;
-        let isHome = ourPairing.home === "1.FC Moritz Leipzig";
+        let opponent = ourPairing.home === game.clubName ? ourPairing.away : ourPairing.home;
+        let isHome = ourPairing.home === game.clubName;
 
         document.getElementById('cup-draw-round-name').innerText = r.name;
         document.getElementById('cup-draw-reveal-text').innerText = '🎟️ Die Kugeln rollen...';
@@ -78,7 +78,7 @@
         if (weWon && diff <= -12) {
             game.cupHistory.schrecksVerursacht.unshift({ season: game.season, opponent: oppName, round: roundName, diff: Math.round(-diff) });
             if (game.cupHistory.schrecksVerursacht.length > 10) game.cupHistory.schrecksVerursacht.pop();
-            addInboxMessage('vertrag', '🎉 Sensation gelungen!', `Gegen den favorisierten ${oppName} setzt sich 1.FC Moritz Leipzig in der ${roundName} durch - ein echter Pokalschreck für die Gegenseite!`, 'screen-cup');
+            addInboxMessage('vertrag', '🎉 Sensation gelungen!', `Gegen den favorisierten ${oppName} setzt sich ${game.clubName} in der ${roundName} durch - ein echter Pokalschreck für die Gegenseite!`, 'screen-cup');
         }
     }
     function renderCupOwnStats() {
@@ -107,8 +107,8 @@
                 winners[idx] = (p.homeGoals > p.awayGoals) ? p.home : (p.awayGoals > p.homeGoals ? p.away : p.penaltyWinner);
                 return;
             }
-            let isOurMatch = (p.home === "1.FC Moritz Leipzig" || p.away === "1.FC Moritz Leipzig");
-            let isHome = p.home === "1.FC Moritz Leipzig";
+            let isOurMatch = (p.home === game.clubName || p.away === game.clubName);
+            let isHome = p.home === game.clubName;
             let homeStr = isOurMatch ? (isHome ? calcTeamStrength(true) : getOpponentStrength(p.home)) : (60 + Math.floor(Math.random() * 24));
             let awayStr = isOurMatch ? (!isHome ? calcTeamStrength(false) : getOpponentStrength(p.away)) : (60 + Math.floor(Math.random() * 24));
 
@@ -160,9 +160,9 @@
         r.pairings.forEach((p, idx) => {
             let winTeam = winners[idx];
             if (p.penaltyWinner) checkShootoutRivalryIntensity(p.home, p.away);
-            if (p.home === "1.FC Moritz Leipzig" || p.away === "1.FC Moritz Leipzig") {
-                let weWon = (winTeam === "1.FC Moritz Leipzig");
-                let oppName = p.home === "1.FC Moritz Leipzig" ? p.away : p.home;
+            if (p.home === game.clubName || p.away === game.clubName) {
+                let weWon = (winTeam === game.clubName);
+                let oppName = p.home === game.clubName ? p.away : p.home;
                 // Pokalschreck-Tracking & eigene Pokal-Statistik (NEU)
                 if (typeof recordCupResultStats === 'function') recordCupResultStats(weWon, p.ourStr, p.oppStr, oppName, r.name);
                 if (weWon) {
@@ -179,11 +179,11 @@
                         game.trophies.push(`DFB-Pokalsieger (Saison ${game.season})`);
                         boostFanBaseFloor(10, 'Der DFB-Pokalsieg');
                         game.inEurope = true;
-                        alert("🎉🏆 HISTORISCHER TRIUMPH!\n1.FC Moritz Leipzig ist DFB-POKALSIEGER und für den Champions Cup qualifiziert!");
+                        alert(`🎉🏆 HISTORISCHER TRIUMPH!\n${game.clubName} ist DFB-POKALSIEGER und für den Champions Cup qualifiziert!`);
                     }
                 } else {
                     game.inCup = false;
-                    alert(`❌ DFB-POKAL AUS!\nBittere Niederlage in der ${r.name} gegen ${p.home === "1.FC Moritz Leipzig" ? p.away : p.home}.`);
+                    alert(`❌ DFB-POKAL AUS!\nBittere Niederlage in der ${r.name} gegen ${p.home === game.clubName ? p.away : p.home}.`);
                 }
             }
         });
@@ -227,15 +227,15 @@
         cupTournament.roundsHistory.forEach((r) => {
             let box = document.createElement('div');
             box.className = 'panel';
-            let ourMatch = r.pairings.find(p => p.home === "1.FC Moritz Leipzig" || p.away === "1.FC Moritz Leipzig");
+            let ourMatch = r.pairings.find(p => p.home === game.clubName || p.away === game.clubName);
             let pairingsHtml = r.pairings.map(p => {
-                let isOur = (p.home === "1.FC Moritz Leipzig" || p.away === "1.FC Moritz Leipzig");
+                let isOur = (p.home === game.clubName || p.away === game.clubName);
                 let penStr = p.penaltyWinner ? ` (i.E. ${p.penaltyWinner})` : '';
                 let res = p.played ? `<strong>${p.homeGoals} : ${p.awayGoals}</strong>${penStr}` : 'vs';
                 return `<div class="player-row" style="${isOur ? 'border-color:var(--accent); background:rgba(255,193,7,0.1);' : ''}">
-                    <span style="${p.home==='1.FC Moritz Leipzig'?'color:var(--primary); font-weight:bold;':''}">${p.home}</span>
+                    <span style="${p.home===game.clubName?'color:var(--primary); font-weight:bold;':''}">${p.home}</span>
                     <span>${res}</span>
-                    <span style="${p.away==='1.FC Moritz Leipzig'?'color:var(--primary); font-weight:bold;':''}">${p.away}</span>
+                    <span style="${p.away===game.clubName?'color:var(--primary); font-weight:bold;':''}">${p.away}</span>
                 </div>`;
             }).join('');
 

@@ -96,7 +96,9 @@
     // den fünf mitgelieferten Standardplänen.
     function saveCustomWeeklyPlanTemplate() {
         let nameInput = document.getElementById('custom-plan-name-input');
-        let name = (nameInput?.value || '').trim();
+        // Sicherheit: der Name landet ungeprüft in innerHTML (renderCustomWeeklyPlanTemplates())
+        // - dieselbe Absicherung wie bei renameClub() (career.js).
+        let name = (nameInput?.value || '').replace(/[<>&"]/g, '').trim();
         if (!name) { showToast('Bitte einen Namen für die Vorlage eingeben!', 'error'); return; }
         if (!game.customWeeklyPlanTemplates) game.customWeeklyPlanTemplates = [];
         if (game.customWeeklyPlanTemplates.length >= 8) { showToast('Maximal 8 eigene Vorlagen möglich - erst eine löschen.', 'error'); return; }
@@ -370,7 +372,7 @@
                 if (fixs) {
                     let ourFixture = fixs.find(f => {
                         let h = leaguesData[game.leagueLevel][f.home].name, a = leaguesData[game.leagueLevel][f.away].name;
-                        return h === "1.FC Moritz Leipzig" || a === "1.FC Moritz Leipzig";
+                        return h === game.clubName || a === game.clubName;
                     });
                     if (ourFixture) {
                         let h = leaguesData[game.leagueLevel][ourFixture.home].name, a = leaguesData[game.leagueLevel][ourFixture.away].name;

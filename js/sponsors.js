@@ -14,7 +14,6 @@
     const MAX_PENDING_BANDEN_OFFERS = 2;
     const MAX_PENDING_SLEEVE_OFFERS = 2;
     const MAX_NEGOTIATIONS = 2;
-    const MAX_BANDEN_SLOTS = 8;
 
     // Drei Laufzeit-Modelle, wie bei echten Sponsorenverträgen: kurz = teurer pro Spieltag
     // aber schnell wieder verhandelbar, lang = güntiger pro Spieltag aber dafür mit fetter
@@ -266,35 +265,105 @@
         renderSponsorsView();
     }
 
-    // ---------- BANDENWERBUNG ----------
+    // ---------- BANDENWERBUNG (STADIONWEIT) ----------
+    // Werbeflächen hängen jetzt an den echten Stadionbereichen statt an acht anonymen
+    // Plätzen: jeder Block des Stadions (siehe stadium.blocks) hat eigene Bandenplätze,
+    // deren Anzahl mit seiner Kapazität wächst. Wer das Stadion ausbaut, schafft damit
+    // automatisch neue Werbeflächen - der Ausbau zahlt sich doppelt aus.
+    //
+    // "visibility" bildet ab, wie präsent eine Bande in TV-Bildern und auf Pressefotos ist:
+    // Haupttribüne und Gegengerade liegen im Hauptkamera-Schwenk, die Presse-Tribüne im
+    // Rücken der Interviewpositionen, VIP-Logen erreichen ein zahlungskräftiges Publikum.
+    const BANDEN_AREA_META = {
+        west:      { visibility: 1.35, note: 'Hauptkamera' },
+        gegen:     { visibility: 1.30, note: 'Kameraschwenk' },
+        presse:    { visibility: 1.45, note: 'Pressefotos' },
+        vipLogen:  { visibility: 1.60, note: 'Zahlungskräftiges Publikum' },
+        kurve:     { visibility: 1.15, note: 'Stimmungsbilder' },
+        haupt:     { visibility: 1.10, note: '' },
+        hauptNord: { visibility: 0.95, note: '' },
+        suedOber:  { visibility: 0.95, note: '' },
+        familie:   { visibility: 0.85, note: '' },
+        gaeste:    { visibility: 0.80, note: 'Gästeblock' }
+    };
+
+    function getBandenAreaKeys() {
+        return Object.keys(stadium.blocks || {}).filter(k => BANDEN_AREA_META[k]);
+    }
+    function getBandenAreaName(key) {
+        return stadium.blocks?.[key]?.name || key;
+    }
+    // Anzahl der Bandenplätze eines Bereichs - wächst mit der Kapazität, also mit jedem Ausbau.
+    function getBandenSlotsForArea(key) {
+        let cap = stadium.blocks?.[key]?.cap || 0;
+        return Math.max(1, Math.min(6, Math.round(cap / 1200)));
+    }
+    function getBandenSponsorsInArea(key) {
+        return bandenSponsors.filter(b => b.area === key);
+    }
+    function getTotalBandenSlots() {
+        return getBandenAreaKeys().reduce((s, k) => s + getBandenSlotsForArea(k), 0);
+    }
+    function getFreeBandenAreas() {
+        return getBandenAreaKeys().filter(k => getBandenSponsorsInArea(k).length < getBandenSlotsForArea(k));
+    }
+
+    // Vergütung einer einzelnen Bande: Ligastufe x Sichtbarkeit x Größe des Bereichs.
+    function rollBandenIncomeForArea(key, type, payMult) {
+        let cap = stadium.blocks?.[key]?.cap || 0;
+        let meta = BANDEN_AREA_META[key] || { visibility: 1 };
+        let sizeFactor = 0.5 + Math.min(1.5, cap / 3000);
+        let typeBase = type === 'LED-Bande' ? (900 + Math.random() * 1000) : (350 + Math.random() * 600);
+        return Math.round(typeBase * leagueScaleFactor() * meta.visibility * sizeFactor * payMult / 50) * 50;
+    }
+
+    // Altbestand aus Spielständen vor der stadionweiten Umstellung: Banden ohne Bereich
+    // werden auf freie Plätze verteilt, damit sie nicht als "heimatlos" durchfallen.
+    function migrateLegacyBandenSponsors() {
+        bandenSponsors.forEach(b => {
+            if (b.area && BANDEN_AREA_META[b.area]) return;
+            let free = getFreeBandenAreas();
+            b.area = free.length > 0 ? free[0] : getBandenAreaKeys()[0];
+        });
+    }
+
     function checkIncomingBandenOffers(force = false) {
-        if (bandenSponsors.length >= MAX_BANDEN_SLOTS) return;
         if (bandenOffers.length >= MAX_PENDING_BANDEN_OFFERS) return;
+        let freeAreas = getFreeBandenAreas();
+        if (freeAreas.length === 0) return;
         if (!force && Math.random() > 0.12) return;
-        let lf = leagueScaleFactor();
+        let area = freeAreas[Math.floor(Math.random() * freeAreas.length)];
         let tier = rollDurationTier();
         let types = ["Statisch", "LED-Bande"];
         let type = types[Math.floor(Math.random() * types.length)];
-        let income = Math.round((type === "LED-Bande" ? (900 + Math.random() * 1000) : (350 + Math.random() * 600)) * lf * tier.payMult / 50) * 50;
         let category = rollSponsorCategory();
         bandenOffers.push({
             id: Date.now() + Math.floor(Math.random() * 1000),
             name: generateSponsorName() + " " + ["GmbH", "& Co. KG", "Handel", "Service"][Math.floor(Math.random() * 4)],
-            type, income, category, tierKey: tier.key, tierLabel: tier.label, sp: tier.sp, negotiationsUsed: 0
+            type, income: rollBandenIncomeForArea(area, type, tier.payMult), category,
+            area, areaName: getBandenAreaName(area),
+            tierKey: tier.key, tierLabel: tier.label, sp: tier.sp, negotiationsUsed: 0
         });
     }
 
     function acceptBandenOffer(offerId) {
-        if (bandenSponsors.length >= MAX_BANDEN_SLOTS) { showToast('Alle Bandenplätze sind bereits vergeben!', 'error'); return; }
         let offer = bandenOffers.find(o => o.id === offerId);
         if (!offer) return;
+        // Der Bereich kann zwischenzeitlich belegt worden sein (mehrere offene Angebote).
+        if (getBandenSponsorsInArea(offer.area).length >= getBandenSlotsForArea(offer.area)) {
+            showToast(`Im Bereich "${getBandenAreaName(offer.area)}" ist kein Bandenplatz mehr frei!`, 'error'); return;
+        }
         playSound('whistle');
         let conflict = getExclusivityConflict(offer.category, 'banden');
         let discountFactor = conflict ? 0.7 : 1.0;
-        bandenSponsors.push({ id: Date.now(), name: offer.name, type: offer.type, income: Math.round(offer.income * discountFactor), active: true, duration: offer.sp, category: offer.category });
+        bandenSponsors.push({
+            id: Date.now(), name: offer.name, type: offer.type,
+            income: Math.round(offer.income * discountFactor), active: true,
+            duration: offer.sp, category: offer.category, area: offer.area
+        });
         bandenOffers = bandenOffers.filter(o => o.id !== offerId);
         let conflictNote = conflict ? ` ⚠️ Branchenkonflikt mit bestehendem ${conflict}-Sponsor - Vergütung um 30% reduziert!` : '';
-        showToast(`📢 Neue Bandenwerbung akquiriert (${offer.tierLabel}, ${offer.sp} Spieltage)!${conflictNote}`, conflict ? 'error' : 'success');
+        showToast(`📢 Bandenwerbung an der ${getBandenAreaName(offer.area)} akquiriert (${offer.tierLabel}, ${offer.sp} Spieltage)!${conflictNote}`, conflict ? 'error' : 'success');
         renderSponsorsView(); updateUI();
     }
 
@@ -667,24 +736,53 @@
         let bandenOffersList = document.getElementById('banden-offers-list');
         bandenOffersList.innerHTML = bandenOffers.length === 0
             ? '<div class="box" style="font-size:10px; color:#64748b;">Aktuell keine neuen Bandenwerbe-Angebote.</div>'
-            : bandenOffers.map(o => renderOfferCard(o, 'banden', `Typ: ${o.type} · ${formatVal(o.income)}/Heimspiel${categoryBadgeHtml(o.category, 'banden')}`)).join('');
+            : bandenOffers.map(o => renderOfferCard(o, 'banden', `${o.areaName || 'Stadion'} · ${o.type} · ${formatVal(o.income)}/Heimspiel${categoryBadgeHtml(o.category, 'banden')}`)).join('');
 
+        // Bandenplätze nach Stadionbereich gegliedert: zeigt pro Block die belegten und
+        // freien Werbeflächen, damit erkennbar ist, wo noch Potenzial liegt.
+        migrateLegacyBandenSponsors();
         let bList = document.getElementById('banden-slots-list');
-        bList.innerHTML = '';
-        bandenSponsors.forEach(b => {
-            bList.innerHTML += `<div class="player-row"><span>${b.name} (${b.type}) — ${formatVal(b.income)}/Heimspiel · noch ${b.duration ?? '?'} SpT</span><button onclick="toggleBande(${b.id})" class="btn-secondary" style="width:auto;">${b.active ? 'Aktiv ✓' : 'Inaktiv'}</button></div>`;
-        });
+        bList.innerHTML = getBandenAreaKeys()
+            .sort((a, b) => (BANDEN_AREA_META[b].visibility - BANDEN_AREA_META[a].visibility))
+            .map(key => {
+                let slots = getBandenSlotsForArea(key);
+                let occupants = getBandenSponsorsInArea(key);
+                let meta = BANDEN_AREA_META[key];
+                let areaIncome = occupants.filter(o => o.active).reduce((s, o) => s + o.income, 0);
+                let rows = occupants.map(b =>
+                    `<div class="player-row" style="font-size:9px;"><span>${b.name} (${b.type}) — ${formatVal(b.income)}/Heimspiel · noch ${b.duration ?? '?'} SpT</span>`
+                    + `<button onclick="toggleBande(${b.id})" class="btn-secondary" style="width:auto; font-size:8px;">${b.active ? 'Aktiv ✓' : 'Inaktiv'}</button></div>`).join('');
+                let freeCount = slots - occupants.length;
+                let freeNote = freeCount > 0
+                    ? `<div style="font-size:9px; color:var(--text-muted); padding:2px 0;">${freeCount} freie${freeCount === 1 ? 'r' : ''} Bandenplatz${freeCount === 1 ? '' : 'e'}</div>`
+                    : '';
+                return `<div class="box" style="margin-bottom:5px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; font-weight:800;">
+                            <span>${getBandenAreaName(key)} <span style="color:var(--text-muted); font-weight:400;">${meta.note ? '· ' + meta.note : ''}</span></span>
+                            <span style="color:${occupants.length === slots ? 'var(--primary)' : 'var(--accent)'};">${occupants.length}/${slots}</span>
+                        </div>
+                        ${areaIncome > 0 ? `<div style="font-size:9px; color:var(--teal);">${formatVal(areaIncome)}/Heimspiel</div>` : ''}
+                        ${rows}${freeNote}
+                    </div>`;
+            }).join('');
+
         let slotsNote = document.getElementById('banden-slots-note');
-        if (slotsNote) slotsNote.innerText = bandenSponsors.length >= MAX_BANDEN_SLOTS ? `Alle ${MAX_BANDEN_SLOTS} Bandenplätze im Stadion sind vergeben.` : `${bandenSponsors.length}/${MAX_BANDEN_SLOTS} Bandenplätze belegt.`;
+        if (slotsNote) {
+            let total = getTotalBandenSlots();
+            slotsNote.innerText = bandenSponsors.length >= total
+                ? `Alle ${total} Bandenplätze im Stadion sind vergeben - weitere entstehen durch Stadionausbau.`
+                : `${bandenSponsors.length}/${total} Bandenplätze belegt. Jeder Stadionausbau schafft zusätzliche Werbeflächen.`;
+        }
 
         // Bandensponsor-Portfolio-Übersicht: kompakte Gesamtschau statt nur der Einzelliste.
         let portfolioBox = document.getElementById('banden-portfolio-summary');
         if (portfolioBox) {
             let activeCount = bandenSponsors.filter(b => b.active).length;
             let totalIncomePerHome = bandenSponsors.filter(b => b.active).reduce((s, b) => s + b.income, 0);
+            let areasUsed = new Set(bandenSponsors.filter(b => b.active).map(b => b.area)).size;
             portfolioBox.innerHTML = activeCount === 0
                 ? '<div class="box" style="font-size:10px; color:#94a3b8;">Noch keine aktiven Bandensponsoren.</div>'
-                : `<div class="box" style="font-size:10px;"><strong style="color:var(--teal);">📢 ${activeCount} aktive Bandensponsoren</strong> · Gesamt: ${formatVal(totalIncomePerHome)}/Heimspiel</div>`;
+                : `<div class="box" style="font-size:10px;"><strong style="color:var(--teal);">📢 ${activeCount} aktive Banden in ${areasUsed} Stadionbereichen</strong> · Gesamt: ${formatVal(totalIncomePerHome)}/Heimspiel</div>`;
         }
     }
 

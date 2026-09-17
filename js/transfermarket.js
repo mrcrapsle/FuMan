@@ -158,7 +158,11 @@
         if (validTargets.length === 0) return;
 
         let targetPlayer = validTargets[Math.floor(Math.random() * validTargets.length)];
-        let buyerClub = generateTeamName();
+        // Bietender Klub kommt jetzt aus der echten, persistenten Liga-Pyramide statt aus
+        // einem frisch ausgewürfelten, nie wieder auftauchenden Fantasienamen - bevorzugt
+        // Vereine auf oder über dem eigenen Liganiveau, da eher etablierte Klubs um
+        // Spitzenspieler eines Amateur-/Unterligisten werben.
+        let buyerClub = pickRandomOpposingClubName(true);
         let initialMultiplier = (managerRPG.perks.negotiator ? 1.05 : 0.85) + Math.random() * 0.35;
         let offerSum = Math.max(10000, Math.round((targetPlayer.marketValue * initialMultiplier) / 5000) * 5000);
 

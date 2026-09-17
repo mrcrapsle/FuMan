@@ -28,11 +28,11 @@
         if (!fixs) return null;
         let ourFixture = fixs.find(f => {
             let h = leaguesData[game.leagueLevel][f.home].name, a = leaguesData[game.leagueLevel][f.away].name;
-            return (h === "1.FC Moritz Leipzig" || a === "1.FC Moritz Leipzig");
+            return (h === game.clubName || a === game.clubName);
         });
         if (!ourFixture || ourFixture.played) return null;
 
-        let isHome = leaguesData[game.leagueLevel][ourFixture.home].name === "1.FC Moritz Leipzig";
+        let isHome = leaguesData[game.leagueLevel][ourFixture.home].name === game.clubName;
         let ourStr = calcTeamStrength(isHome);
         let oppName = isHome ? leaguesData[game.leagueLevel][ourFixture.away].name : leaguesData[game.leagueLevel][ourFixture.home].name;
         let oppObj = leaguesData[game.leagueLevel].find(t => t.name === oppName);
@@ -174,8 +174,8 @@
             renderBetHistory();
             return;
         }
-        let homeLabel = odds.isHome ? '1.FC Moritz Leipzig' : odds.oppName;
-        let awayLabel = odds.isHome ? odds.oppName : '1.FC Moritz Leipzig';
+        let homeLabel = odds.isHome ? game.clubName : odds.oppName;
+        let awayLabel = odds.isHome ? odds.oppName : game.clubName;
         box.innerHTML = `
             <div class="box" style="font-size:11px; margin-bottom:6px;">
                 Nächstes Spiel: <strong>${homeLabel}</strong> vs <strong>${awayLabel}</strong><br>

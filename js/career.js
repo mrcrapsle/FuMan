@@ -1,5 +1,133 @@
 
     // ==========================================
+    // VEREINSIDENTITÄT: FREIE UMBENENNUNG (NEU)
+    // ==========================================
+    // Der Klubname war bisher an ~120 Stellen im Code hart als "1.FC Moritz Leipzig"
+    // verankert - jetzt läuft jeder dieser Vergleiche über game.clubName, wodurch eine
+    // echte, jederzeit mögliche Umbenennung sicher wird: die Liga-Tabellenzeile, alle
+    // Rivalen-/Freundschafts-Querverweise anderer Vereine auf uns UND (sofern noch nicht
+    // eigenständig umbenannt) die zweite Mannschaft ziehen automatisch mit um.
+    function renameClub(newName) {
+        // Sicherheit: der Vereinsname landet an über einem Dutzend Stellen ungeprüft in
+        // innerHTML-Templates (Tutorial-Titel, Liga-Tabelle, Speicherstand-Anzeige, ...) -
+        // <, >, & und " werden entfernt, damit weder das Markup zerschossen noch beliebiges
+        // HTML/JS über prompt() eingeschleust werden kann. Ein Vereinsname braucht diese
+        // Zeichen ohnehin nicht; Umlaute, Ziffern, Punkte etc. bleiben unangetastet.
+        newName = (newName || '').replace(/[<>&"]/g, '').trim().slice(0, 40);
+        if (!newName || newName === game.clubName) return;
+        let oldName = game.clubName;
+        game.clubName = newName;
+
+        for (let l = 0; l < NUM_LEAGUES; l++) {
+            let row = leaguesData[l]?.find(t => t.name === oldName);
+            if (row) { row.name = newName; break; }
+        }
+        if (game.secondTeam && game.secondTeam.name === `${oldName} II`) {
+            let stOldName = game.secondTeam.name;
+            game.secondTeam.name = `${newName} II`;
+            for (let l = 0; l < NUM_LEAGUES; l++) {
+                let row = leaguesData[l]?.find(t => t.name === stOldName);
+                if (row) { row.name = game.secondTeam.name; break; }
+            }
+        }
+        leaguesData.forEach(table => table.forEach(t => {
+            if (t.rivalName === oldName) t.rivalName = newName;
+            if (t.friendName === oldName) t.friendName = newName;
+        }));
+
+        applyClubCrest();
+        if (typeof renderSaveSlotsUI === 'function') renderSaveSlotsUI();
+        updateUI();
+        showToast(`✅ Verein umbenannt: ${newName}`, 'success');
+    }
+    function promptRenameClub() {
+        let newName = prompt('Neuer Vereinsname:', game.clubName);
+        if (newName !== null) renameClub(newName);
+    }
+
+    // ==========================================
+    // VEREINSWECHSEL: ZU EINEM BESTEHENDEN VEREIN DER PYRAMIDE WECHSELN (NEU)
+    // ==========================================
+    // Echte Karriere-Mobilität statt nur Umbenennung: übernimmt eine bestehende KI-
+    // Vereinszeile (Name + aktuelles Liganiveau + Tabellenstand) aus der jetzt persistenten
+    // Liga-Pyramide (siehe advanceLeaguesToNewSeason() in leagues.js). Der alte Verein
+    // bleibt unter seinem alten Namen als ganz normaler KI-Klub bestehen - man führt ihn nur
+    // nicht mehr selbst. WICHTIGE EINSCHRÄNKUNG: KI-Vereine haben in leaguesData keinen
+    // echten Kader (nur Name+Stärke+Tabellenstand) - "übernehmen" heißt daher einen frischen,
+    // zum neuen Liganiveau passenden Kader zu bekommen, keinen echten Spielerbestand zu
+    // erben. Stadion/Campus/Personal/Fans bleiben bewusst unverändert (reisen als deine
+    // eigenen Investitionen mit dir mit) - nur Kader und Transfer-/Gehaltsbudget werden neu
+    // auf das Zielniveau kalibriert; Karriere-Level, Trophäen und Vereinskonto bleiben erhalten.
+    function switchToClub(targetName) {
+        let targetLevel = -1;
+        for (let l = 0; l < NUM_LEAGUES; l++) {
+            if (leaguesData[l]?.some(t => t.name === targetName)) { targetLevel = l; break; }
+        }
+        if (targetLevel === -1) return false;
+
+        game.clubName = targetName;
+        game.leagueLevel = targetLevel;
+        squad = generateSquadForLevel(targetLevel);
+        game.captainId = squad[8].id;
+        game.penaltyTakerId = squad[14].id;
+        game.freeKickTakerId = squad[9].id;
+        game.cornerTakerId = squad[9].id;
+        autoLineup();
+
+        // Budgets neu kalibrieren wie beim Saisonwechsel (concludeSeasonAndAdvance), aber
+        // ohne Platzierungsbonus/-malus, da noch keine Saison beim neuen Verein gespielt wurde.
+        let leagueFactor = (NUM_LEAGUES - targetLevel) / NUM_LEAGUES;
+        game.transferBudget = Math.round(2500000 * (1 + leagueFactor * 2.5));
+        game.wageBudget = Math.round(450000 * (1 + leagueFactor * 2.5));
+
+        refreshTransferMarket();
+        applyClubCrest();
+        updateUI();
+        return true;
+    }
+
+    let clubSwitchCandidates = null;
+    function showClubSwitchOptions() {
+        let excluded = [game.clubName, game.secondTeam.name, game.permanentRivalName];
+        let pool = leaguesData.flatMap((table, l) => table.filter(t => !excluded.includes(t.name)).map(t => ({ team: t, level: l })));
+        // Bevorzugt Vereine nahe am aktuellen Liganiveau (±1) - ein Sprung von der
+        // Kreisklasse direkt in die Bundesliga wäre keine plausible Option.
+        let nearLevel = pool.filter(p => Math.abs(p.level - game.leagueLevel) <= 1);
+        let candidatePool = nearLevel.length >= 3 ? nearLevel : pool;
+        clubSwitchCandidates = [...candidatePool].sort(() => Math.random() - 0.5).slice(0, 3)
+            .map(p => ({ name: p.team.name, level: p.level, strength: p.team.strength }));
+        renderClubSwitchOptions();
+    }
+    function renderClubSwitchOptions() {
+        let box = document.getElementById('club-switch-box');
+        if (!box) return;
+        if (!clubSwitchCandidates) { box.innerHTML = ''; return; }
+        box.innerHTML = `
+            <div style="font-size:10px; color:var(--danger); margin:8px 0 4px;">⚠️ Ein Vereinswechsel ersetzt deinen kompletten Kader durch einen frischen, zum neuen Liganiveau passenden Kader. Karriere-Level, Trophäen und Vereinskonto bleiben erhalten.</div>
+            ${clubSwitchCandidates.map(c => `
+                <div class="box" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <span>${c.name} <span style="color:var(--text-muted); font-size:9px;">(${leagueNames[c.level]})</span></span>
+                    <button onclick="confirmClubSwitch('${c.name.replace(/'/g, "\\'")}', this)" data-confirming="false" class="btn-secondary" style="width:auto; padding:4px 10px; font-size:10px;">Übernehmen</button>
+                </div>
+            `).join('')}
+            <button onclick="clubSwitchCandidates = null; renderClubSwitchOptions();" class="btn-secondary" style="margin-top:4px; font-size:10px;">Abbrechen</button>
+        `;
+    }
+    function confirmClubSwitch(targetName, btn) {
+        if (btn && btn.dataset.confirming !== 'true') {
+            btn.dataset.confirming = 'true';
+            btn.innerText = 'Wirklich? Kader weg!';
+            setTimeout(() => { if (btn.isConnected) { btn.dataset.confirming = 'false'; btn.innerText = 'Übernehmen'; } }, 4000);
+            return;
+        }
+        if (switchToClub(targetName)) {
+            clubSwitchCandidates = null;
+            renderClubSwitchOptions();
+            showToast(`🔄 Wechsel vollzogen: jetzt Manager von ${targetName}!`, 'success');
+        }
+    }
+
+    // ==========================================
     // KARRIERE-RÜCKBLICK & RUHESTAND
     // ==========================================
     function renderCareerSummary() {
@@ -68,7 +196,7 @@
         document.getElementById('career-certificate-content').innerHTML = `
             <div style="text-align:center; margin-bottom:12px;">
                 <div style="font-size:16px; font-weight:900; color:var(--gold);">🏆 KARRIERE-URKUNDE 🏆</div>
-                <div style="font-size:11px; color:#94a3b8;">${game.season} Saison(en) als Manager von 1.FC Moritz Leipzig</div>
+                <div style="font-size:11px; color:#94a3b8;">${game.season} Saison(en) als Manager von ${game.clubName}</div>
             </div>
             <div class="modal-field-grid">
                 <span class="label">Höchstes Manager-Level:</span><span class="val">${managerRPG.level} (${managerRPG.xp} XP)</span>
@@ -116,7 +244,7 @@
         ctx.fillText('🏆 KARRIERE-URKUNDE 🏆', canvas.width / 2, 100);
         ctx.fillStyle = '#94a3b8';
         ctx.font = '20px Arial';
-        ctx.fillText(`${game.season} Saison(en) als Manager von 1.FC Moritz Leipzig`, canvas.width / 2, 140);
+        ctx.fillText(`${game.season} Saison(en) als Manager von ${game.clubName}`, canvas.width / 2, 140);
 
         let y = 210;
         const line = (label, value, color = '#ffffff') => {

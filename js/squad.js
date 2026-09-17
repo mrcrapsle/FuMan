@@ -18,6 +18,22 @@
         autoLineup();
     }
 
+    // Wie initDefaultSquad(), aber auf ein BELIEBIGES Liganiveau skaliert statt fest auf die
+    // unterste Liga - wird für switchToClub() (career.js) gebraucht: KI-Vereine in
+    // leaguesData haben keinen echten Kader zum "Erben" (nur Name+Stärke+Tabellenstand), ein
+    // Vereinswechsel in eine höhere Liga bekommt hier stattdessen einen frischen, zum
+    // Niveau passenden Kader nach demselben Muster (82 - Liganiveau*10) wie die KI-Stärke.
+    function generateSquadForLevel(level) {
+        let base = Math.max(25, 82 - level * 10);
+        let mk = (pos, delta, trait) => createPlayer(pos, Math.max(20, base - 6 + delta), base + 8 + delta, trait || null);
+        return [
+            mk("TW", 6, "Elfmeter-Killer"), mk("TW", 0),
+            mk("ABW", 6, "Eisenfuß"), mk("ABW", 5), mk("ABW", 3), mk("ABW", 1), mk("ABW", -1), mk("ABW", -2),
+            mk("MIT", 7, "Leader"), mk("MIT", 5, "Freistoß-Gott"), mk("MIT", 3), mk("MIT", 1), mk("MIT", -1), mk("MIT", -2),
+            mk("ST", 8, "Tor-Instinkt"), mk("ST", 5), mk("ST", 1), mk("ST", -1)
+        ];
+    }
+
     const PLAYER_ROLES = {
         TW: [
             { id: 'abwehrtorwart', name: 'Abwehr-Torwart', statKey: 'defense' },

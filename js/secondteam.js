@@ -101,11 +101,8 @@
     // laufen muss.
     function insertSecondTeamIntoLeagues() {
         if (!game.secondTeam.isActive) return;
-        let table = leaguesData[game.secondTeam.leagueLevel];
-        if (!table) return;
-        let weakestIdx = table.reduce((minIdx, t, idx, arr) => t.strength < arr[minIdx].strength ? idx : minIdx, 0);
-        let slot = table[weakestIdx];
-        slot.name = game.secondTeam.name;
+        let slot = relocateNamedTeamToLevel(game.secondTeam.name, game.secondTeam.leagueLevel, [game.clubName, game.permanentRivalName]);
+        if (!slot) return;
         slot.strength = calcSecondTeamStrength();
         slot.baseStrength = slot.strength;
     }

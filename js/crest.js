@@ -50,9 +50,9 @@
             ? veterans.sort((a, b) => b.strength - a.strength).slice(0, 3).map(v => v.name).join(', ')
             : null;
         let veteranText = veteranNames
-            ? `Vereinslegenden wie ${veteranNames} liefen noch einmal im Trikot von 1.FC Moritz Leipzig auf`
+            ? `Vereinslegenden wie ${veteranNames} liefen noch einmal im Trikot von ${game.clubName} auf`
             : `Ehemalige Vereinslegenden liefen noch einmal für die Alt-Herren-Auswahl auf`;
-        addInboxMessage('vertrag', `🎉 Jubiläums-Traditionsspiel: ${game.season} Jahre 1.FC Moritz Leipzig!`,
+        addInboxMessage('vertrag', `🎉 Jubiläums-Traditionsspiel: ${game.season} Jahre ${game.clubName}!`,
             `${veteranText} - ein emotionaler Nachmittag vor vollen Rängen. Einnahmen: ${formatVal(income)}, spürbarer Stimmungsschub für Fans und Mannschaft!`, 'screen-calendar');
         showToast(`🎉 Jubiläums-Traditionsspiel ausgetragen! +${formatVal(income)}`, 'success');
         pendingMilestoneInterviewType = 'jubilee';
@@ -65,6 +65,14 @@
     }
 
     function applyClubCrest() {
+        // Klubname an allen statischen Stellen im Markup aktualisieren (Header, Dashboard-
+        // Hero, Nächste-Begegnung-Box) - relevant seit renameClub() (career.js) den Namen
+        // zur Laufzeit ändern kann, diese Stellen aber ursprünglich als reines HTML mit dem
+        // Startnamen fest verdrahtet waren.
+        ['header-club-name', 'dash-hero-club-name', 'dash-our-club-name', 'career-club-name-display'].forEach(id => {
+            let nameEl = document.getElementById(id);
+            if (nameEl) nameEl.innerText = game.clubName;
+        });
         let el = document.getElementById('club-logo-display');
         if (!el) return;
         let color = game.clubCrestColor || '#f5b942';

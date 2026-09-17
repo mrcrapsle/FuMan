@@ -101,7 +101,7 @@
         if (won) {
             game.fans = Math.min(100, game.fans + 6);
             squad.forEach(p => { p.morale = Math.min(100, p.morale + 5); });
-            addInboxMessage('vertrag', `🔥 Revanche geglückt gegen ${game.permanentRivalName}!`, `Im Vorbereitungs-Duell gegen den Erzfeind ${game.permanentRivalName} setzt sich 1.FC Moritz Leipzig durch - ein psychologisch wichtiges Zeichen vor dem Saisonstart!`, 'screen-calendar');
+            addInboxMessage('vertrag', `🔥 Revanche geglückt gegen ${game.permanentRivalName}!`, `Im Vorbereitungs-Duell gegen den Erzfeind ${game.permanentRivalName} setzt sich ${game.clubName} durch - ein psychologisch wichtiges Zeichen vor dem Saisonstart!`, 'screen-calendar');
             alert(`🔥 REVANCHE GEGLÜCKT!\nSieg im Testspiel gegen Erzfeind ${game.permanentRivalName}!\nEinnahmen: +${formatVal(income)}\nSpürbarer Moralschub vor dem Saisonstart!`);
         } else {
             game.fans = Math.max(1, game.fans - 2);

@@ -171,7 +171,7 @@
 
     function getSlotMeta(slotNum) {
         try {
-            let raw = localStorage.getItem(SAVE_SLOT_PREFIX + slotNum);
+            let raw = safeLocalGet(SAVE_SLOT_PREFIX + slotNum);
             if (!raw) return null;
             let p = JSON.parse(raw);
             return p.meta || null;
@@ -183,13 +183,21 @@
             let state = buildSaveState();
             state.meta = {
                 savedAt: new Date().toLocaleString('de-DE'),
-                clubName: "1.FC Moritz Leipzig",
+                clubName: game.clubName,
                 league: leagueNames[game.leagueLevel],
                 season: game.season,
                 matchday: Math.min(34, game.matchday),
                 money: game.money
             };
-            localStorage.setItem(SAVE_SLOT_PREFIX + slotNum, JSON.stringify(state));
+            // safeLocalSet statt direktem localStorage.setItem: manche Android-WebViews
+            // (Dateivorschau statt echtem Browser) blockieren localStorage bei file://
+            // komplett und werfen schon beim Property-Zugriff ("Access is denied for
+            // this document") - das braucht eine verständliche, konkret hilfreiche
+            // Meldung statt des rohen Browser-Fehlertexts.
+            if (!safeLocalSet(SAVE_SLOT_PREFIX + slotNum, JSON.stringify(state))) {
+                showToast('💾 Speichern nicht möglich: Dieser Browser/diese Ansicht blockiert lokalen Speicher für diese Datei. Öffne die Datei in einem normalen Browser (z.B. "Öffnen mit..." → Chrome), nicht in der Dateivorschau.', 'error', 8000);
+                return;
+            }
             playSound('whistle');
             showToast(`💾 In Slot ${slotNum} gespeichert!`, 'success');
             renderSaveSlotsUI();
@@ -200,7 +208,7 @@
 
     function loadGameFromSlot(slotNum, silent = false) {
         try {
-            let raw = localStorage.getItem(SAVE_SLOT_PREFIX + slotNum);
+            let raw = safeLocalGet(SAVE_SLOT_PREFIX + slotNum);
             if (raw) {
                 let p = JSON.parse(raw);
                 applyLoadedState(p);
@@ -213,6 +221,63 @@
         } catch(e) { console.error(e); }
         if (!silent) showToast(`Slot ${slotNum} ist leer!`, 'error');
         return false;
+    }
+
+    // ---------- SPIELSTAND ALS DATEI EXPORTIEREN/IMPORTIEREN (NEU) ----------
+    // Ergänzt die 3 lokalen Slots (localStorage) um eine echte, portable Datei - wichtig
+    // seit klar ist, dass localStorage in manchen Android-Ansichten komplett blockiert
+    // sein kann (siehe safeLocalSet-Absicherung oben) UND weil localStorage grundsätzlich
+    // beim Browser-Cache-Leeren oder App-Neuinstallation verloren gehen kann. Nutzt dasselbe
+    // Blob+<a download>-Muster wie downloadSelfTestArchiveFile() (admin.js).
+    function exportSaveToFile() {
+        try {
+            let state = buildSaveState();
+            state.meta = {
+                savedAt: new Date().toLocaleString('de-DE'),
+                clubName: game.clubName,
+                league: leagueNames[game.leagueLevel],
+                season: game.season,
+                matchday: Math.min(34, game.matchday),
+                money: game.money
+            };
+            let data = JSON.stringify(state);
+            let blob = new Blob([data], { type: 'application/json' });
+            let url = URL.createObjectURL(blob);
+            let a = document.createElement('a');
+            a.href = url;
+            let safeClubName = game.clubName.replace(/[^a-zA-Z0-9äöüÄÖÜß _-]/g, '').trim() || 'Verein';
+            a.download = `anstoss-fm13-${safeClubName}-S${game.season}-SpT${Math.min(34, game.matchday)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast('📤 Spielstand als Datei exportiert!', 'success');
+        } catch(e) {
+            showToast('Export-Fehler: ' + e.message, 'error');
+        }
+    }
+    function importSaveFromFile(inputEl) {
+        let file = inputEl.files && inputEl.files[0];
+        if (!file) return;
+        let reader = new FileReader();
+        reader.onload = function() {
+            try {
+                let p = JSON.parse(reader.result);
+                applyLoadedState(p);
+                updateUI();
+                showScreen('screen-dashboard');
+                playSound('whistle');
+                showToast('📥 Spielstand aus Datei importiert!', 'success');
+            } catch(e) {
+                showToast('Import-Fehler: Datei ist kein gültiger Anstoß-Spielstand (' + e.message + ')', 'error');
+            }
+            inputEl.value = ''; // dieselbe Datei muss erneut auswählbar sein
+        };
+        reader.onerror = function() {
+            showToast('Import-Fehler: Datei konnte nicht gelesen werden.', 'error');
+            inputEl.value = '';
+        };
+        reader.readAsText(file);
     }
 
     let deleteConfirmTimers = {};
@@ -234,7 +299,7 @@
             return;
         }
         clearTimeout(deleteConfirmTimers[slotNum]);
-        localStorage.removeItem(SAVE_SLOT_PREFIX + slotNum);
+        safeLocalRemove(SAVE_SLOT_PREFIX + slotNum);
         showToast(`🗑️ Slot ${slotNum} gelöscht.`, 'success');
         renderSaveSlotsUI();
     }
@@ -269,8 +334,8 @@
     // Rückwärtskompatibilität: alten Einzel-Speicherstand automatisch nach Slot 1 migrieren
     function migrateLegacySave() {
         try {
-            let legacy = localStorage.getItem(LEGACY_SAVE_KEY);
-            let slot1 = localStorage.getItem(SAVE_SLOT_PREFIX + '1');
+            let legacy = safeLocalGet(LEGACY_SAVE_KEY);
+            let slot1 = safeLocalGet(SAVE_SLOT_PREFIX + '1');
             if (legacy && !slot1) {
                 let p = JSON.parse(legacy);
                 p.meta = {
@@ -281,7 +346,7 @@
                     matchday: p.game ? Math.min(34, p.game.matchday) : 1,
                     money: p.game ? p.game.money : 0
                 };
-                localStorage.setItem(SAVE_SLOT_PREFIX + '1', JSON.stringify(p));
+                safeLocalSet(SAVE_SLOT_PREFIX + '1', JSON.stringify(p));
             }
         } catch(e) { console.error('Migration fehlgeschlagen', e); }
     }
@@ -308,25 +373,57 @@
     // der Button würde dann scheinbar wirkungslos bleiben. Stattdessen ein dialogfreier
     // Zwei-Klick-Bestätigungsmechanismus direkt am Button selbst (gleiches Muster wie
     // bereits bei deleteSaveSlot() bewährt).
+    // Startbedingungen konfigurierbar (NEU): bisher fest 6. Liga/150.000 € - jetzt wählbar,
+    // BEVOR der eigentliche Reset erfolgt. Übergibt die Wahl über sessionStorage-Marker
+    // (analog zum FORCE_NEW_GAME_FLAG selbst) über den Reload hinweg, da nach dem Reload
+    // ein komplett frisches game-Objekt entsteht (siehe window.onload in index.html).
+    const NEW_GAME_LEVEL_OPTIONS = [
+        { level: 5, label: '6. Liga (Standard)' },
+        { level: 3, label: '4. Liga (Fortgeschritten)' },
+        { level: 0, label: '1. Liga (Profi-Herausforderung)' }
+    ];
+    const NEW_GAME_MONEY_OPTIONS = [
+        { amount: 150000, label: 'Standard (150.000 €)' },
+        { amount: 500000, label: 'Großzügig (500.000 €)' }
+    ];
+    let selectedNewGameLevel = 5;
+    let selectedNewGameMoney = 150000;
     let newGameConfirmTimer = null;
     function startNewGame() {
-        let btn = document.getElementById('btn-new-game');
+        let box = document.getElementById('new-game-setup-box');
+        if (!box) return;
+        let show = box.style.display === 'none';
+        box.style.display = show ? 'block' : 'none';
+        if (show) renderNewGameSetupOptions();
+    }
+    function renderNewGameSetupOptions() {
+        let levelBox = document.getElementById('new-game-level-btns');
+        if (levelBox) {
+            levelBox.innerHTML = NEW_GAME_LEVEL_OPTIONS.map(o =>
+                `<button onclick="selectedNewGameLevel=${o.level}; renderNewGameSetupOptions();" class="${o.level === selectedNewGameLevel ? 'btn-action' : 'btn-secondary'}" style="font-size:9px; padding:5px 2px;">${o.label}</button>`
+            ).join('');
+        }
+        let moneyBox = document.getElementById('new-game-money-btns');
+        if (moneyBox) {
+            moneyBox.innerHTML = NEW_GAME_MONEY_OPTIONS.map(o =>
+                `<button onclick="selectedNewGameMoney=${o.amount}; renderNewGameSetupOptions();" class="${o.amount === selectedNewGameMoney ? 'btn-action' : 'btn-secondary'}" style="font-size:9px; padding:5px 2px;">${o.label}</button>`
+            ).join('');
+        }
+    }
+    function confirmNewGameWithSettings(btn) {
         if (btn && btn.dataset.confirming !== 'true') {
             btn.dataset.confirming = 'true';
             btn.innerText = '⚠️ Wirklich? Fortschritt weg! Nochmal tippen zum Bestätigen';
-            newGameConfirmTimer = setTimeout(() => resetNewGameButton(), 4000);
+            newGameConfirmTimer = setTimeout(() => {
+                if (btn.isConnected) { btn.dataset.confirming = 'false'; btn.innerText = '✅ Neues Spiel mit diesen Einstellungen starten'; }
+            }, 4000);
             return;
         }
         clearTimeout(newGameConfirmTimer);
         safeSessionSet(FORCE_NEW_GAME_FLAG, '1');
+        safeSessionSet('anstoss_fm13_newgame_leaguelevel', String(selectedNewGameLevel));
+        safeSessionSet('anstoss_fm13_newgame_money', String(selectedNewGameMoney));
         location.reload();
-    }
-    function resetNewGameButton() {
-        let btn = document.getElementById('btn-new-game');
-        if (btn) {
-            btn.dataset.confirming = 'false';
-            btn.innerText = '🆕 Neues Spiel starten (frischer Klub)';
-        }
     }
 
     // Kompletter Werksreset: löscht ALLE drei Speicherslots + den alten Einzel-Speicherstand
@@ -345,8 +442,8 @@
             return;
         }
         clearTimeout(hardResetConfirmTimer);
-        for (let i = 1; i <= SAVE_SLOT_COUNT; i++) localStorage.removeItem(SAVE_SLOT_PREFIX + i);
-        localStorage.removeItem(LEGACY_SAVE_KEY);
+        for (let i = 1; i <= SAVE_SLOT_COUNT; i++) safeLocalRemove(SAVE_SLOT_PREFIX + i);
+        safeLocalRemove(LEGACY_SAVE_KEY);
         safeSessionSet(FORCE_NEW_GAME_FLAG, '1');
         location.reload();
     }

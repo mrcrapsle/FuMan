@@ -9,6 +9,7 @@
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
     let game = {
+        clubName: "1.FC Moritz Leipzig",
         season: 1,
         money: 150000,
         transferBudget: 100000,
@@ -98,6 +99,8 @@
         playerOfMonthHistory: [],
         potmGoalSnapshot: {},
         headToHeadRecords: {},
+        seasonPointsHistory: [],
+        achievements: [],
         agentRelationships: {},
         pendingSponsorActivation: null,
         teamInstructions: { gegenpressing: false, tiefStehen: false, hoheAV: false },
@@ -106,6 +109,11 @@
         sponsorEarningsHistory: {},
         sponsorEarningsByCategory: {},
         lastHomeAttendance: 0,
+        // Steuern & Abgaben (siehe applyMatchdayFinances/finances.js): letzter Spieltag
+        // getrennt ausgewiesen, dazu die laufende Saisonsumme für die GuV-Anzeige.
+        lastMatchdayTax: 0,
+        lastMatchdayAdvisorFee: 0,
+        seasonTaxPaid: 0,
         attendanceHistory: [],
         fanProtestActive: false,
         clubCrestAwayColor: '#3fb6ff',

@@ -15,16 +15,36 @@
 -->
 <div id="global-error-banner" style="display:none; position:fixed; top:0; left:0; right:0; z-index:999999; background:#5a0a15; color:#fff; padding:10px 12px; font-size:11px; font-family:monospace; max-height:40vh; overflow-y:auto; border-bottom:3px solid #ff4d6d; word-break:break-word;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-        <strong style="color:#ff8a9b;">⚠️ Technischer Fehler (bitte Screenshot an den Entwickler schicken):</strong>
-        <button onclick="document.getElementById('global-error-banner').style.display='none'" style="background:#fff; color:#5a0a15; border:none; border-radius:4px; padding:2px 8px; font-weight:bold;">✕</button>
+        <strong style="color:#ff8a9b;">⚠️ Technischer Fehler (bitte melden):</strong>
+        <div>
+            <button onclick="window.__exportRuntimeErrorLog && window.__exportRuntimeErrorLog()" style="background:#ffe27a; color:#5a0a15; border:none; border-radius:4px; padding:2px 8px; font-weight:bold; margin-right:4px;">📤 Exportieren</button>
+            <button onclick="document.getElementById('global-error-banner').style.display='none'" style="background:#fff; color:#5a0a15; border:none; border-radius:4px; padding:2px 8px; font-weight:bold;">✕</button>
+        </div>
     </div>
     <div id="global-error-content"></div>
 </div>
 <script>
     (function() {
         var shown = 0;
+        // Persistentes Fehlerprotokoll (NEU): bisher verschwanden Laufzeitfehler beim
+        // Schließen des Banners oder einem Reload spurlos - nur der Struktur-Selbsttest
+        // (siehe game.selfTestHistory/admin.js) hatte einen echten, exportierbaren
+        // Verlauf. Läuft bewusst VOR allen js/*.js-Dateien, damit auch ganz frühe
+        // Boot-Fehler erfasst werden, und ist deshalb in sich geschlossen (kein Aufruf
+        // von Funktionen aus anderen Skripten).
+        var runtimeErrorLog = [];
+        try {
+            var stored = window.sessionStorage && window.sessionStorage.getItem('anstoss_fm13_runtime_errors');
+            if (stored) runtimeErrorLog = JSON.parse(stored);
+        } catch (e) { /* sessionStorage evtl. blockiert - Verlauf bleibt dann nur für diese Sitzung im Speicher */ }
+        function persistLog() {
+            try { window.sessionStorage && window.sessionStorage.setItem('anstoss_fm13_runtime_errors', JSON.stringify(runtimeErrorLog.slice(-30))); } catch (e) { /* ignorieren */ }
+        }
         function showError(msg) {
             shown++;
+            runtimeErrorLog.push({ time: new Date().toLocaleString('de-DE'), msg: msg });
+            if (runtimeErrorLog.length > 30) runtimeErrorLog.shift();
+            persistLog();
             if (shown > 8) return;
             var banner = document.getElementById('global-error-banner');
             var content = document.getElementById('global-error-content');
@@ -42,6 +62,18 @@
         window.addEventListener('unhandledrejection', function(e) {
             showError('Promise-Fehler: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason)));
         });
+        window.__exportRuntimeErrorLog = function() {
+            var data = JSON.stringify(runtimeErrorLog, null, 2);
+            var blob = new Blob([data], { type: 'application/json' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'anstoss-fm13-fehlerprotokoll-' + new Date().toISOString().slice(0, 10) + '.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
     })();
 </script>
 <div id="app-toast" class="app-toast"></div>
@@ -410,33 +442,34 @@
                 <span id="club-logo-animal-badge" style="display:none; position:absolute; top:-3px; left:-3px; width:16px; height:16px; background:#0d1220; border-radius:50%; align-items:center; justify-content:center; font-size:9px; border:1px solid rgba(255,255,255,0.3);"></span>
             </div>
             <div>
-                <div class="club-name">1.FC Moritz Leipzig</div>
+                <div class="club-name" id="header-club-name">1.FC Moritz Leipzig</div>
                 <div class="club-league"><span id="head-league-name">4. Liga (Regionalliga)</span> • <span id="head-season">Saison 1</span></div>
             </div>
         </div>
 
         <div class="header-kpis">
             <div class="kpi-chip">
-                <span>Vereins-Konto</span>
+                <span data-i18n="header_konto">Vereins-Konto</span>
                 <strong id="top-money">150.000 €</strong>
             </div>
             <div class="kpi-chip">
-                <span>Holding-Konto</span>
+                <span data-i18n="header_holding">Holding-Konto</span>
                 <strong id="top-holding-money" style="color:var(--industry);">50.000 €</strong>
             </div>
             <div class="kpi-chip">
-                <span>Manager-Level</span>
+                <span data-i18n="header_mgr_level">Manager-Level</span>
                 <strong id="top-mgr-lvl" style="color:var(--gold);">Lvl 1 (0 XP)</strong>
             </div>
             <div class="kpi-chip">
-                <span>Fans / Vorstand</span>
+                <span data-i18n="header_fans_board">Fans / Vorstand</span>
                 <strong><span id="top-fans">75%</span> | <span id="top-board">80%</span></strong>
             </div>
             <div class="kpi-chip">
-                <span>Spieltag</span>
+                <span data-i18n="header_matchday">Spieltag</span>
                 <strong id="top-matchday">1 / 34</strong>
             </div>
-            <button id="btn-sound-toggle" class="sound-btn" onclick="toggleMasterSound()">🔇 Sound: AUS</button>
+            <button id="btn-lang-toggle" class="sound-btn" onclick="toggleLanguage()" title="Sprache wechseln / Switch language">🌐 DE/EN</button>
+            <button id="btn-sound-toggle" class="sound-btn" onclick="toggleMasterSound()" data-i18n="sound_off">🔇 Sound: AUS</button>
         </div>
     </header>
 
@@ -444,36 +477,63 @@
         <div class="menu-backdrop" id="menu-backdrop" onclick="closeMenuDrawer()"></div>
         <!-- SIDEBAR -->
         <nav class="app-sidebar" id="app-sidebar">
-            <div class="nav-category">Hauptzentrale</div>
-            <button class="nav-btn active" onclick="showScreen('screen-dashboard')">📊 FM13 Dashboard</button>
-            <button class="nav-btn" onclick="showScreen('screen-calendar')">📅 Kalender & Termine</button>
-            <button class="nav-btn" onclick="showScreen('screen-inbox')" id="nav-btn-inbox">📬 Postfach <span id="sidebar-inbox-badge" class="badge-count" style="display:none; margin-left:auto;">0</span></button>
+            <div class="nav-category" data-i18n="nav_category_main">Hauptzentrale</div>
+            <button class="nav-btn active" onclick="showScreen('screen-office')" data-i18n="nav_office">🏢 Managerbüro</button>
+            <button class="nav-btn" onclick="showScreen('screen-dashboard')" data-i18n="nav_dashboard">📊 FM13 Dashboard</button>
+            <button class="nav-btn" onclick="showScreen('screen-calendar')" data-i18n="nav_calendar">📅 Kalender & Termine</button>
+            <button class="nav-btn" onclick="showScreen('screen-inbox')" id="nav-btn-inbox"><span data-i18n="nav_inbox">📬 Postfach</span> <span id="sidebar-inbox-badge" class="badge-count" style="display:none; margin-left:auto;">0</span></button>
 
-            <div class="nav-category">Team & Kader</div>
-            <button class="nav-btn" onclick="showScreen('screen-squad')">⚽ Kader & 3D Taktik</button>
-            <button class="nav-btn" onclick="showScreen('screen-second-team')">🥈 Zweite Mannschaft</button>
-            <button class="nav-btn" onclick="showScreen('screen-training')">🏋️ Training & Förderung</button>
-            <button class="nav-btn" onclick="showScreen('screen-transfer')" id="nav-btn-transfer">🤝 Kaderplanung & Transfers <span id="sidebar-offers-badge" class="badge-count" style="display:none; margin-left:auto;">0</span></button>
+            <div class="nav-category" data-i18n="nav_category_team">Team & Kader</div>
+            <button class="nav-btn" onclick="showScreen('screen-squad')" data-i18n="nav_squad">⚽ Kader & 3D Taktik</button>
+            <button class="nav-btn" onclick="showScreen('screen-second-team')" data-i18n="nav_second_team">🥈 Zweite Mannschaft</button>
+            <button class="nav-btn" onclick="showScreen('screen-training')" data-i18n="nav_training">🏋️ Training & Förderung</button>
+            <button class="nav-btn" onclick="showScreen('screen-transfer')" id="nav-btn-transfer"><span data-i18n="nav_transfer">🤝 Kaderplanung & Transfers</span> <span id="sidebar-offers-badge" class="badge-count" style="display:none; margin-left:auto;">0</span></button>
 
-            <div class="nav-category">Ausbau & Infrastruktur</div>
-            <button class="nav-btn" onclick="showScreen('screen-stadium')">🏟️ Ausbau & Infrastruktur</button>
+            <div class="nav-category" data-i18n="nav_category_infra">Ausbau & Infrastruktur</div>
+            <button class="nav-btn" onclick="showScreen('screen-stadium')" data-i18n="nav_stadium">🏟️ Ausbau & Infrastruktur</button>
 
-            <div class="nav-category">Finanzen & Wirtschaft</div>
-            <button class="nav-btn" onclick="showScreen('screen-finances')">🏦 Finanzen & Kapitalmarkt</button>
-            <button class="nav-btn special-industry" onclick="showScreen('screen-industry')">🏭 Industrie & Merchandising</button>
+            <div class="nav-category" data-i18n="nav_category_finance">Finanzen & Wirtschaft</div>
+            <button class="nav-btn" onclick="showScreen('screen-finances')" data-i18n="nav_finances">🏦 Finanzen & Kapitalmarkt</button>
+            <button class="nav-btn special-industry" onclick="showScreen('screen-industry')" data-i18n="nav_industry">🏭 Industrie & Merchandising</button>
 
-            <div class="nav-category">Wettbewerbe</div>
-            <button class="nav-btn special-europe" onclick="showScreen('screen-league')">🏆 Wettbewerbe & Trophäen</button>
-            <button class="nav-btn special-gold" onclick="showScreen('screen-cup')">🏆 DFB-Pokal</button>
+            <div class="nav-category" data-i18n="nav_category_competitions">Wettbewerbe</div>
+            <button class="nav-btn special-europe" onclick="showScreen('screen-league')" data-i18n="nav_league">🏆 Wettbewerbe & Trophäen</button>
+            <button class="nav-btn special-gold" onclick="showScreen('screen-cup')" data-i18n="nav_cup">🏆 DFB-Pokal</button>
 
-            <div class="nav-category">Karriere & Spezial</div>
-            <button class="nav-btn special-gold" onclick="showScreen('screen-manager-tree')">🌳 Manager-Talentbaum</button>
-            <button class="nav-btn special-red" onclick="showScreen('screen-private')">🎩 Spezial & Privatleben</button>
-            <button class="nav-btn special-gold" onclick="showScreen('screen-admin')">🛠️ Admin & Cheats PRO</button>
+            <div class="nav-category" data-i18n="nav_category_career">Karriere & Spezial</div>
+            <button class="nav-btn special-gold" onclick="showScreen('screen-manager-tree')" data-i18n="nav_manager_tree">🌳 Manager-Talentbaum</button>
+            <button class="nav-btn special-red" onclick="showScreen('screen-private')" data-i18n="nav_private">🎩 Spezial & Privatleben</button>
+            <button class="nav-btn special-gold" onclick="showScreen('screen-admin')" data-i18n="nav_admin">🛠️ Admin & Cheats PRO</button>
         </nav>
 
         <!-- MAIN WORKSPACE -->
         <main class="app-content">
+
+            <!-- MANAGERBÜRO: Point-and-Click-Startbildschirm (CSS-3D, siehe js/office.js) -->
+            <div id="screen-office" style="display:none;">
+                <div class="office-viewport" id="office-viewport">
+                    <!-- Szene wird immer fuer eine feste Logikgroesse (900x560) komponiert und
+                         dann passend skaliert - sonst faellt auf schmalen Handys der gesamte
+                         Seitenwand-Bereich aus dem Sichtkegel. -->
+                    <div id="office-scaler">
+                        <div id="office-persp">
+                            <div id="office-stage">
+                                <div id="office-room"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="office-fade"></div>
+                    <div class="office-hud">
+                        <div class="office-hud-title">🏢 <span id="office-club-title">1.FC Moritz Leipzig</span></div>
+                        <div style="display:flex; gap:6px; align-items:center;">
+                            <button class="office-hud-btn office-hud-btn-ghost" onclick="toggleLanguage()" title="Sprache wechseln / Switch language">🌐 DE/EN</button>
+                            <button class="office-hud-btn" onclick="showScreen('screen-dashboard')" data-i18n="office_to_dashboard">📊 Zum Dashboard</button>
+                        </div>
+                    </div>
+                    <div class="office-quicknav" id="office-quicknav"></div>
+                    <div class="office-sentence" id="office-sentence"></div>
+                </div>
+            </div>
 
             <!-- 0. POSTFACH -->
             <div id="screen-inbox" style="display:none;">
@@ -577,11 +637,12 @@
 
             <!-- 1. DASHBOARD -->
             <div id="screen-dashboard">
+                <button onclick="showScreen('screen-office')" class="btn-action" style="margin-bottom:10px;" data-i18n="office_enter">🏢 Ins Managerbüro</button>
                 <div class="dashboard-hero-sky">
                     <div class="dashboard-hero-club">
                         <div class="crest-fallback" id="dash-hero-crest" style="display:flex; align-items:center; justify-content:center; font-size:16px;">🦁</div>
                         <div>
-                            <div style="font-size:13px; font-weight:900; color:#fff;">1.FC Moritz Leipzig</div>
+                            <div style="font-size:13px; font-weight:900; color:#fff;" id="dash-hero-club-name">1.FC Moritz Leipzig</div>
                             <div style="font-size:9px; color:rgba(255,255,255,0.75);" id="dash-hero-subline">6. Liga · Spieltag 1</div>
                         </div>
                     </div>
@@ -601,7 +662,7 @@
                     </div>
                     <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(0,0,0,0.3); border-radius:8px; margin-bottom:8px;">
                         <div style="text-align:center; flex:1;">
-                            <div style="font-size:14px; font-weight:900; color:var(--primary);">1.FC Moritz Leipzig</div>
+                            <div style="font-size:14px; font-weight:900; color:var(--primary);" id="dash-our-club-name">1.FC Moritz Leipzig</div>
                             <div style="font-size:9px; color:var(--text-muted);">Heimteam (Str: <span id="dash-our-str">60</span>)</div>
                         </div>
                         <div style="font-size:16px; font-weight:900; color:var(--accent);">VS</div>
@@ -650,10 +711,22 @@
                 <div class="panel">
                     <div class="panel-header">💾 SPEICHERSTÄNDE</div>
                     <button onclick="startNewGame()" id="btn-new-game" data-confirming="false" class="btn-danger" style="margin-bottom:10px;">🆕 Neues Spiel starten (frischer Klub)</button>
+                    <div id="new-game-setup-box" class="box" style="display:none; margin-bottom:10px;">
+                        <div style="font-size:10px; font-weight:800; margin-bottom:4px;">Startliga wählen:</div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin-bottom:8px;" id="new-game-level-btns"></div>
+                        <div style="font-size:10px; font-weight:800; margin-bottom:4px;">Startkapital wählen:</div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-bottom:8px;" id="new-game-money-btns"></div>
+                        <button onclick="confirmNewGameWithSettings(this)" id="btn-confirm-new-game" data-confirming="false" class="btn-danger" style="width:100%;">✅ Neues Spiel mit diesen Einstellungen starten</button>
+                    </div>
                     <div id="save-slot-1" class="box" style="margin-bottom:6px;"></div>
                     <div id="save-slot-2" class="box" style="margin-bottom:6px;"></div>
                     <div id="save-slot-3" class="box"></div>
-                    <button onclick="tutorialPage = 0; renderTutorialPage(); document.getElementById('tutorial-overlay').classList.add('show')" class="btn-secondary" style="margin-top:8px;">❓ Kurzanleitung erneut anzeigen</button>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px;">
+                        <button onclick="exportSaveToFile()" class="btn-secondary" style="font-size:10px;">📤 Als Datei exportieren</button>
+                        <button onclick="document.getElementById('save-import-file-input').click()" class="btn-secondary" style="font-size:10px;">📥 Aus Datei importieren</button>
+                    </div>
+                    <input type="file" id="save-import-file-input" accept=".json,application/json" style="display:none;" onchange="importSaveFromFile(this)">
+                    <button onclick="tutorialPage = 0; renderTutorialPage(); document.getElementById('tutorial-overlay').classList.add('show')" class="btn-secondary" style="margin-top:8px;" data-i18n="tutorial_replay">❓ Kurzanleitung erneut anzeigen</button>
                     <div style="text-align:center; font-size:8px; color:var(--text-muted); margin-top:10px;" id="game-version-tag">Version wird geladen...</div>
                 </div>
             </div>
@@ -663,6 +736,19 @@
 
             <!-- 3. MANAGER-RPG & TALENTBAUM -->
             <div id="screen-manager-tree" style="display:none;">
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--accent);">
+                        <span>🏷️ VEREINSIDENTITÄT</span>
+                    </div>
+                    <div class="box" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
+                        <span>Aktueller Vereinsname: <strong id="career-club-name-display" style="color:var(--primary);">1.FC Moritz Leipzig</strong></span>
+                        <div style="display:flex; gap:6px;">
+                            <button onclick="promptRenameClub()" class="btn-secondary" style="width:auto; padding:5px 10px; font-size:10px;">✏️ Umbenennen</button>
+                            <button onclick="showClubSwitchOptions()" class="btn-secondary" style="width:auto; padding:5px 10px; font-size:10px;">🔄 Verein wechseln</button>
+                        </div>
+                    </div>
+                    <div id="club-switch-box"></div>
+                </div>
                 <div class="panel">
                     <div class="panel-header" style="color:var(--accent);">
                         <span>🏆 KARRIERE-RÜCKBLICK</span>
@@ -882,6 +968,7 @@
                             </div>
                             <button onclick="openBusSponsoringNegotiation()" id="btn-bus-sponsoring" class="btn-secondary" style="font-size:9px; margin-bottom:6px;">🚌 Bus-Sponsoring verhandeln</button>
                             <div style="display:flex; justify-content:space-between;"><span>Kreditzinsen:</span><span id="fin-out-interest">0 €</span></div>
+                            <div style="display:flex; justify-content:space-between;"><span id="fin-out-tax-label">Steuern & Abgaben:</span><span id="fin-out-tax">0 €</span></div>
                         </div>
                     </div>
                     <div style="text-align:right; font-size:12px; margin-top:4px;">
@@ -954,7 +1041,8 @@
                     <div id="credit-rating-box" class="box" style="margin-bottom:6px;"></div>
                     <input type="number" id="expense-limit-input" placeholder="Ausgaben-Warnlimit/SpT" class="input-inline" style="width:100%; margin-bottom:6px;">
                     <button onclick="setExpenseWarningLimit(parseInt(document.getElementById('expense-limit-input').value)||0)" class="btn-secondary" style="margin-bottom:6px;">⚠️ Warnlimit setzen</button>
-                    <button onclick="toggleTaxAdvisor()" id="btn-tax-advisor" class="btn-secondary" style="margin-bottom:6px;">📊 Steuerberater engagieren [15.000 €]</button>
+                    <button onclick="toggleTaxAdvisor()" id="btn-tax-advisor" class="btn-secondary" style="margin-bottom:4px;">📊 Steuerberater engagieren [15.000 €]</button>
+                    <div id="tax-advisor-note" class="box" style="font-size:9px; line-height:1.5; margin-bottom:6px;"></div>
                     <button onclick="acceptStrategicInvestor()" id="btn-strategic-investor" class="btn-secondary">💼 Strategischen Investor aufnehmen [+400.000 €]</button>
                 </div>
             </div>
@@ -1615,6 +1703,10 @@
                         <div class="panel-header" style="color:var(--gold);">👑 TOP-TORSCHÜTZEN (Saison)</div>
                         <div id="top-scorers-box"></div>
                     </div>
+                    <div class="panel" style="margin-bottom:8px;">
+                        <div class="panel-header" style="color:var(--primary);">📈 SAISONVERLAUF (PUNKTE)</div>
+                        <div id="season-points-chart-box"></div>
+                    </div>
                     <div id="league-tab-table"><table><thead><tr><th>Pl</th><th>Team</th><th>Sp</th><th>Tore</th><th>Diff</th><th>Pkt</th><th>Form</th></tr></thead><tbody id="league-table-body"></tbody></table>
                         <div id="head-to-head-box" style="margin-top:8px;"></div>
                     </div>
@@ -1664,6 +1756,10 @@
                     <div id="club-records-box"></div>
                 </div>
                 <div class="panel">
+                    <div class="panel-header" style="color:var(--teal);">🎖️ ACHIEVEMENTS</div>
+                    <div id="achievements-box"></div>
+                </div>
+                <div class="panel">
                     <div class="panel-header" style="color:var(--gold);">🌟 SPIELER DES MONATS</div>
                     <div id="player-of-month-box"></div>
                 </div>
@@ -1686,6 +1782,11 @@
                 <div class="panel">
                     <div class="panel-header" style="color:var(--gold);">👑 GENERATIONEN-VERGLEICH</div>
                     <div id="legend-generations-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--blue);">📊 LIGA-CHRONIK</div>
+                    <div style="font-size:9px; color:var(--text-muted); margin-bottom:4px;">Die größten Stärke-Veränderungen der letzten Saison über alle 108 Vereine der Liga-Pyramide hinweg.</div>
+                    <div id="league-chronik-box"></div>
                 </div>
             </div>
             </div>
@@ -2033,6 +2134,7 @@
 
 <script src="js/audio.js"></script>
 <script src="js/utils.js"></script>
+<script src="js/i18n.js"></script>
 <script src="js/state.js"></script>
 <script src="js/inbox.js"></script>
 <script src="js/entities.js"></script>
@@ -2049,6 +2151,7 @@
 <script src="js/scouting.js"></script>
 <script src="js/commodities.js"></script>
 <script src="js/merchandise.js"></script>
+<script src="js/office.js"></script>
 <script src="js/ui-core.js"></script>
 <script src="js/render-dashboard.js"></script>
 <script src="js/industry.js"></script>
@@ -2070,7 +2173,11 @@
 <script src="js/private-life.js"></script>
 <script src="js/underworld.js"></script>
 <script src="js/history.js"></script>
+<script src="js/achievements.js"></script>
+<script src="js/weather.js"></script>
 <script src="js/match.js"></script>
+<script src="js/contract-ultimatum.js"></script>
+<script src="js/season-end.js"></script>
 <script src="js/admin.js"></script>
 <script src="js/premium.js"></script>
 <script src="js/save.js"></script>
@@ -2087,13 +2194,65 @@
         try { store.removeItem(key); } catch (e) { /* ignorieren */ }
     }
 
+    // Eigene, in sich geschlossene Wrapper für localStorage (statt safeStorageGet mit
+    // "store"-Parameter): manche Android-WebViews blockieren NUR localStorage (nicht
+    // sessionStorage) bei file://-URLs, und zwar so, dass schon der lesende Zugriff auf
+    // das window.localStorage-Property selbst wirft ("Access is denied for this
+    // document") - nicht erst der Methodenaufruf. Der Zugriff muss daher innerhalb
+    // desselben try-Blocks liegen wie die Methode, sonst bleibt er ungefangen.
+    function safeLocalGet(key) {
+        try { return window.localStorage.getItem(key); } catch (e) { return null; }
+    }
+    function safeLocalSet(key, value) {
+        try { window.localStorage.setItem(key, value); return true; }
+        catch (e) { console.error('LocalStorage nicht verfügbar:', e); return false; }
+    }
+    function safeLocalRemove(key) {
+        try { window.localStorage.removeItem(key); } catch (e) { /* ignorieren */ }
+    }
+    // Einmaliger Fähigkeitstest beim Start: informiert sofort und deutlich sichtbar,
+    // statt dass der Spieler erst nach dem ersten Speicherversuch (evtl. nach längerem
+    // Spielen) von einem kryptischen Browser-Fehlertext überrascht wird.
+    function warnIfStorageBlocked() {
+        if (!safeLocalSet('anstoss_fm13_storage_test', '1')) {
+            showToast('⚠️ Dieser Browser/diese Ansicht blockiert lokalen Speicher für diese Datei - Speichern ist NICHT möglich! Öffne die Datei stattdessen in einem normalen Browser (z.B. über "Öffnen mit..." → Chrome, statt in der Dateivorschau).', 'error', 12000);
+        } else {
+            safeLocalRemove('anstoss_fm13_storage_test');
+        }
+    }
+
     window.onload = function() {
         try {
             restoreGetters();
             let forceNewGame = safeStorageGet(sessionStorage, 'anstoss_fm13_force_new_game');
             if (forceNewGame) {
                 safeStorageRemove(sessionStorage, 'anstoss_fm13_force_new_game');
-                initDefaultSquad();
+                // Startbedingungen konfigurierbar (NEU): nur gesetzt, wenn der Reset über
+                // den "Neues Spiel starten"-Dialog mit Auswahl kam (siehe confirmNewGame
+                // WithSettings() in save.js) - beim Entlassungs-Reload (getSacked()) fehlen
+                // diese Marker, dann bleibt es beim alten Standardverhalten (6. Liga).
+                let chosenLevel = safeStorageGet(sessionStorage, 'anstoss_fm13_newgame_leaguelevel');
+                let chosenMoney = safeStorageGet(sessionStorage, 'anstoss_fm13_newgame_money');
+                safeStorageRemove(sessionStorage, 'anstoss_fm13_newgame_leaguelevel');
+                safeStorageRemove(sessionStorage, 'anstoss_fm13_newgame_money');
+                if (chosenLevel !== null) game.leagueLevel = parseInt(chosenLevel);
+                if (chosenMoney !== null) game.money = parseInt(chosenMoney);
+                if (chosenLevel !== null && parseInt(chosenLevel) !== 5 && typeof generateSquadForLevel === 'function') {
+                    // initDefaultSquad() ist fest auf die unterste Liga kalibriert - für eine
+                    // höhere Startliga braucht es einen entsprechend stärkeren Kader (gleicher
+                    // Generator wie bei switchToClub(), siehe squad.js).
+                    squad = generateSquadForLevel(game.leagueLevel);
+                    game.captainId = squad[8].id;
+                    game.penaltyTakerId = squad[14].id;
+                    game.freeKickTakerId = squad[9].id;
+                    game.cornerTakerId = squad[9].id;
+                    autoLineup();
+                    let leagueFactor = (NUM_LEAGUES - game.leagueLevel) / NUM_LEAGUES;
+                    game.transferBudget = Math.round(2500000 * (1 + leagueFactor * 2.5));
+                    game.wageBudget = Math.round(450000 * (1 + leagueFactor * 2.5));
+                } else {
+                    initDefaultSquad();
+                }
                 initLeagues();
                 refreshTransferMarket();
                 forceSponsorRenewalAtSeasonStart(true);
@@ -2115,16 +2274,18 @@
                     showToast('🆕 Neuer Klub gestartet!', 'success');
                 }
                 updateUI();
-                showScreen('screen-dashboard');
+                showScreen('screen-office');
             } else if (!loadGame(true)) {
                 initDefaultSquad();
                 initLeagues();
                 refreshTransferMarket();
                 forceSponsorRenewalAtSeasonStart(true);
                 updateUI();
-                showScreen('screen-dashboard');
+                showScreen('screen-office');
             }
             applyClubCrest();
+            initLanguage();
+            warnIfStorageBlocked();
             maybeShowTutorial();
             // Leiser Struktur-Selbsttest im Hintergrund - macht Verschachtelungsfehler wie
             // die kürzlich gefundene fehlende </div> sofort sichtbar (roter Banner), statt

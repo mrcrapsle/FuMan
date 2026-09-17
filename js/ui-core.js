@@ -2,7 +2,7 @@
     // Onboarding: erscheint nur, solange dieses Gerät die Kurzanleitung noch nie gesehen hat
     // (unabhängig von Speicherständen - wer schon spielt, kennt sich bereits aus).
     function maybeShowTutorial() {
-        if (!localStorage.getItem('anstoss_fm13_tutorial_seen')) {
+        if (!safeLocalGet('anstoss_fm13_tutorial_seen')) {
             tutorialPage = 0;
             renderTutorialPage();
             let overlay = document.getElementById('tutorial-overlay');
@@ -13,7 +13,7 @@
     function closeTutorial() {
         let overlay = document.getElementById('tutorial-overlay');
         if (overlay) overlay.classList.remove('show');
-        localStorage.setItem('anstoss_fm13_tutorial_seen', 'true');
+        safeLocalSet('anstoss_fm13_tutorial_seen', 'true');
     }
 
     // Mehrseitiges Tutorial (NEU): erklärt jetzt auch die neueren, komplexeren Systeme
@@ -21,35 +21,14 @@
     // Grundstruktur der Menüs - bisher blieb ein neuer Spieler bei diesen Tiefensystemen
     // komplett auf sich gestellt.
     let tutorialPage = 0;
+    // Texte selbst liegen im Sprachwörterbuch (js/i18n.js, Keys tutorial_N_title/body) -
+    // hier nur noch die Key-Zuordnung pro Seite, damit t() beim Rendern die aktuell
+    // gewählte Sprache (DE/EN) ziehen kann.
     const TUTORIAL_PAGES = [
-        {
-            title: "⚽ Willkommen beim 1.FC Moritz Leipzig!",
-            body: `Du übernimmst als Manager einen Klub in der <strong>6. Liga (Kreisklasse)</strong>. Dein Ziel: aufsteigen, den Verein ausbauen und irgendwann den Champions Cup holen.<br><br>
-                <strong style="color:var(--primary);">Die Bereiche im Menü:</strong><br>
-                ⚽ Kader &amp; Taktik · 🏟️ Ausbau &amp; Infrastruktur · 🏦 Finanzen &amp; Kapitalmarkt · 🏆 Wettbewerbe · 🎩 Spezial<br><br>
-                <strong style="color:var(--accent);">Tipp:</strong> "▶ Spieltag starten" für Live-Erlebnis, "⚡ Saison durchsimulieren" für den schnellen Überblick.`
-        },
-        {
-            title: "🌍 Scouting-Netzwerk 2.0",
-            body: `Statt eines einzelnen Chef-Scouts baust du ein <strong>Netzwerk aus Regional-Scouts</strong> auf (Südamerika, Afrika, Westeuropa, Osteuropa).<br><br>
-                Jede Mission dauert echte <strong>Spieltage</strong> (kein Sofort-Ergebnis mehr) - und frisch gefundene Talente zeigen ihre Werte zunächst nur als <strong>ungefähre Spanne</strong>. Beobachte sie weiter oder zahle für eine genauere Auswertung, um Klarheit zu bekommen.<br><br>
-                Alle je entdeckten Spieler landen dauerhaft in der <strong>Talent-Datenbank</strong> zum Nachschlagen.`
-        },
-        {
-            title: "🏗️ Stadion-Baustellen",
-            body: `Stadion-Ausbauten sind keine Sofortkäufe mehr: Du zahlst eine <strong>Anzahlung von 30%</strong>, der Rest wird erst bei Fertigstellung fällig.<br><br>
-                Jedes Projekt hat eine echte <strong>Bauzeit</strong> (mehrere Spieltage) - im Stadion-Screen siehst du unter "Laufende Bauprojekte" den Fortschritt.<br><br>
-                Die Preise skalieren mit deiner Liga: In der Bundesliga kosten große Ausbauten realistische zweistellige Millionenbeträge, in unteren Ligen bleibt es erschwinglich.`
-        },
-        {
-            title: "🤖 Personal-Automatisierung",
-            body: `Mehrere Personal-Rollen können jetzt <strong>eigenständig Aufgaben übernehmen</strong>, wenn du sie im Personal-Screen auf "Automatik" statt "Manuell" stellst:<br><br>
-                🔭 Chef-Scout: entsendet freie Scouts automatisch<br>
-                📋 Sportdirektor: verlängert auslaufende Verträge<br>
-                📈 Marketing-Direktor: nimmt gute Sponsoren-Angebote an<br>
-                🎯 Standards-Spezialist: wählt die besten Elfmeter-/Freistoß-/Eckenschützen<br><br>
-                So bleibt der Verein auch am Laufen, wenn du dich lieber auf Taktik und Transfers konzentrierst.`
-        }
+        { titleKey: 'tutorial_1_title', bodyKey: 'tutorial_1_body' },
+        { titleKey: 'tutorial_2_title', bodyKey: 'tutorial_2_body' },
+        { titleKey: 'tutorial_3_title', bodyKey: 'tutorial_3_body' },
+        { titleKey: 'tutorial_4_title', bodyKey: 'tutorial_4_body' }
     ];
     function renderTutorialPage() {
         let page = TUTORIAL_PAGES[tutorialPage];
@@ -58,11 +37,14 @@
         let dotsEl = document.getElementById('tutorial-dots');
         let nextBtn = document.getElementById('tutorial-next-btn');
         let prevBtn = document.getElementById('tutorial-prev-btn');
-        if (titleEl) titleEl.innerHTML = page.title;
-        if (bodyEl) bodyEl.innerHTML = page.body;
+        if (titleEl) titleEl.innerHTML = t(page.titleKey).replace('{CLUB}', game.clubName);
+        if (bodyEl) bodyEl.innerHTML = t(page.bodyKey);
         if (dotsEl) dotsEl.innerHTML = TUTORIAL_PAGES.map((_, i) => `<span style="display:inline-block; width:6px; height:6px; border-radius:50%; margin:0 2px; background:${i === tutorialPage ? 'var(--accent)' : 'rgba(255,255,255,0.25)'};"></span>`).join('');
-        if (prevBtn) prevBtn.style.visibility = tutorialPage === 0 ? 'hidden' : 'visible';
-        if (nextBtn) nextBtn.innerText = tutorialPage === TUTORIAL_PAGES.length - 1 ? "Los geht's! ⚽" : 'Weiter →';
+        if (prevBtn) {
+            prevBtn.style.visibility = tutorialPage === 0 ? 'hidden' : 'visible';
+            prevBtn.innerText = t('tutorial_prev');
+        }
+        if (nextBtn) nextBtn.innerText = tutorialPage === TUTORIAL_PAGES.length - 1 ? t('tutorial_start') : t('tutorial_next');
     }
     function tutorialNext() {
         if (tutorialPage < TUTORIAL_PAGES.length - 1) { tutorialPage++; renderTutorialPage(); }
@@ -74,13 +56,13 @@
 
     // Toast-Benachrichtigung: unabhängig von window.alert(), da manche eingebetteten
     // WebViews (z.B. Dateimanager-Vorschauen) native Dialoge unterdrücken können.
-    function showToast(message, type) {
+    function showToast(message, type, duration = 2800) {
         let toast = document.getElementById('app-toast');
         if (!toast) return;
         toast.innerText = message;
         toast.className = 'app-toast show' + (type === 'error' ? ' toast-error' : '');
         clearTimeout(toast._hideTimer);
-        toast._hideTimer = setTimeout(() => { toast.classList.remove('show'); }, 2800);
+        toast._hideTimer = setTimeout(() => { toast.classList.remove('show'); }, duration);
     }
 
     // Ordnet jeden Hub seinen Mitglieds-Screens zu (für Sichtbarkeits- und Tab-Umschaltung)
@@ -108,7 +90,7 @@
     // sah das Spiel dadurch komplett funktionslos aus, obwohl der komplette JS-Code fehlerfrei
     // lief. Dieser Test hätte das beim nächsten Bauen sofort sichtbar gemacht.
     function runStructuralSelfTest(silent = true) {
-        let topScreens = ['screen-dashboard', 'screen-calendar', 'screen-inbox', 'screen-squad', 'screen-second-team', 'screen-training', 'screen-manager-tree', 'screen-admin', 'screen-prematch-press', 'screen-matchday'];
+        let topScreens = ['screen-office', 'screen-dashboard', 'screen-calendar', 'screen-inbox', 'screen-squad', 'screen-second-team', 'screen-training', 'screen-manager-tree', 'screen-admin', 'screen-prematch-press', 'screen-matchday'];
         let allTestIds = [...topScreens, ...Object.keys(HUB_MEMBERS), ...Object.values(HUB_MEMBERS).flat()];
         let problems = [];
         let originalTopScreen = topScreens.find(s => document.getElementById(s)?.style.display === 'block') || 'screen-dashboard';
@@ -216,6 +198,7 @@
     function showScreen(screenId) {
         playSound('click');
         const screens = [
+            'screen-office',
             'screen-dashboard', 'screen-calendar', 'screen-inbox', 'screen-squad', 'screen-second-team', 'screen-training',
             'screen-manager-tree', 'screen-admin', 'screen-cup',
             'screen-hub-wirtschaft', 'screen-hub-finanzen', 'screen-hub-ausbau',
@@ -245,6 +228,7 @@
         // Slide-In-Menü (NEU): automatisch schließen, sobald ein Ziel ausgewählt wurde.
         closeMenuDrawer();
 
+        if (screenId === 'screen-office') { renderOfficeView(); initOfficeParallax(); }
         if (screenId === 'screen-dashboard') renderDashboardView();
         if (screenId === 'screen-calendar') renderCalendarView();
         if (screenId === 'screen-inbox') renderInboxView();

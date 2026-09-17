@@ -30,9 +30,9 @@
         let oppName = "Spielfrei";
         let oppStr = 55;
         if (fixtures) {
-            let ourMatch = fixtures.find(f => leaguesData[game.leagueLevel][f.home]?.name === "1.FC Moritz Leipzig" || leaguesData[game.leagueLevel][f.away]?.name === "1.FC Moritz Leipzig");
+            let ourMatch = fixtures.find(f => leaguesData[game.leagueLevel][f.home]?.name === game.clubName || leaguesData[game.leagueLevel][f.away]?.name === game.clubName);
             if (ourMatch) {
-                let isHome = leaguesData[game.leagueLevel][ourMatch.home].name === "1.FC Moritz Leipzig";
+                let isHome = leaguesData[game.leagueLevel][ourMatch.home].name === game.clubName;
                 oppName = isHome ? leaguesData[game.leagueLevel][ourMatch.away].name : leaguesData[game.leagueLevel][ourMatch.home].name;
                 let oppTeam = leaguesData[game.leagueLevel].find(t => t.name === oppName);
                 if (oppTeam) oppStr = oppTeam.strength;
@@ -83,10 +83,10 @@
         if (!box) return;
         let goals = [];
         let teams = leaguesData[game.leagueLevel];
-        let us = teams ? teams.find(t => t.name === "1.FC Moritz Leipzig") : null;
+        let us = teams ? teams.find(t => t.name === game.clubName) : null;
         if (us && teams) {
             let sorted = [...teams].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
-            let ourRank = sorted.findIndex(t => t.name === "1.FC Moritz Leipzig") + 1;
+            let ourRank = sorted.findIndex(t => t.name === game.clubName) + 1;
             if (ourRank > 1) {
                 let above = sorted[ourRank - 2];
                 let gap = above.points - us.points;
