@@ -67,7 +67,7 @@ Minifizierer nicht sieht.
 
 `js/office.js` + der CSS-Block "MANAGERBÜRO" in `css/styles.css` bauen den
 Point-and-Click-Startbildschirm: eine begehbare Bürokulisse aus fünf
-CSS-3D-Ebenen mit zehn anklickbaren Objekten, die in die jeweiligen
+CSS-3D-Ebenen mit elf anklickbaren Objekten, die in die jeweiligen
 Spielbereiche führen. Das Büro liegt als Vollbild-Ebene (`position:fixed`,
 z-index 940) über der übrigen Oberfläche und ist über den Knopf oben im
 Dashboard jederzeit wieder erreichbar; zurück geht es über "Zum Dashboard"
@@ -80,6 +80,16 @@ Sichtkegel. Bleibt dabei viel Platz über/unter der Kulisse (Hochformat),
 erscheint darunter automatisch eine beschriftete Schnellauswahl derselben
 Ziele, weil die Objekte dort klein zum Antippen sind.
 
+**Der Raum spiegelt den Spielstand.** Der Blick aus dem Fenster wird von
+`getOfficeOutlook()` aus echtem Zustand abgeleitet: Steht ein Heimspiel oder ein
+Pokal-/Europapokaltermin an UND ist eine Flutlichtanlage gebaut
+(`stadium.flutlicht`), brennt draußen das Flutlicht und es ist Abend - ohne
+Anlage wird bei Tageslicht gespielt, der Ausbau verändert also sichtbar die
+Kulisse. Dazu kommt das aktuelle Wetter aus `js/weather.js` (Regen, Schnee,
+Sturm, Hitze). Das gerahmte Vereinswappen an der Wand nutzt exakt dieselben
+Daten wie das Header-Logo (`applyClubCrest()` in `crest.js`) samt Muster-Badge,
+Maskottchen und Sponsorenring.
+
 Bewusst **kein Three.js/WebGL** - das Spiel muss eine einzige, offline
 lauffähige HTML-Datei bleiben; eine 3D-Bibliothek wären ~600 KB Fremdcode
 plus WebGL-Zwang im Android-WebView. Dieselbe CSS-3D-Technik nutzen
@@ -90,8 +100,8 @@ Taktiktafel und Stadionschüssel bereits.
 Bildschirmrechtecke (`getBoundingClientRect()`), und ein einzelner
 Click-/Mousemove-Handler am Viewport verteilt daraus Klick, Hervorhebung und
 Satzzeile. Grund: für 3D-transformierte Elemente ist die native Hit-Detection
-je nach Chromium-Version unzuverlässig - in einer neueren Version waren 9 der
-10 Objekte nicht mehr anklickbar, obwohl das Bild unverändert korrekt aussah
+je nach Chromium-Version unzuverlässig - in einer neueren Version waren 9 von
+10 damaligen Objekten nicht mehr anklickbar, obwohl das Bild unverändert aussah
 (in der CI aufgefallen, lokal nicht reproduzierbar). Deshalb auch kein
 CSS-`:hover` für die Hervorhebung, sondern eine aus JS gesetzte Klasse.
 

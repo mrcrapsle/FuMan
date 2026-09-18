@@ -1035,7 +1035,7 @@ async function testManagerOffice(browser) {
 
     assert(isStartScreen, 'Managerbüro ist der Startbildschirm nach dem Laden');
     assert(coversDisplay, 'Managerbüro nimmt das gesamte Display ein');
-    assert(hotspotIds.length === 10, `Alle 10 Objekte im Büro vorhanden (${hotspotIds.length})`);
+    assert(hotspotIds.length === 11, `Alle 11 Objekte im Büro vorhanden (${hotspotIds.length})`);
     assert(unreachable.length === 0, `Jedes Objekt wird an seinem Mittelpunkt korrekt getroffen${unreachable.length ? ' - FEHLER: ' + unreachable.join(', ') : ''}`);
     assert(sentence === 'Den Terminplan studieren', `Satzzeile zeigt die Aktion des überfahrenen Objekts ("${sentence}")`);
     assert(lampState.dark, 'Schreibtischlampe schaltet das Raumlicht aus');
@@ -1187,6 +1187,78 @@ async function testStadiumWideBanden(browser) {
     await page.close();
 }
 
+async function testOfficeAtmosphereAndCrest(browser) {
+    console.log('\n[18] Büro: Tageszeit, Wetter & Vereinswappen');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.evaluate(() => closeTutorial());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+        // Ohne gebaute Flutlichtanlage wird auch an einem Pokalabend bei Tageslicht gespielt.
+        stadium.flutlicht = false;
+        cupTournament.matchdays = [game.matchday];
+        out.ohneAnlageTag = getOfficeOutlook().night === false;
+        out.statusPokal = getOfficeOutlook().statusLabel;
+        renderOfficeView();
+        out.tagHimmel = !!document.querySelector('#office-hs-window .off-sky-day');
+        out.keineMasten = !document.querySelector('#office-hs-window .off-pylon');
+
+        // Mit Flutlichtanlage wird daraus eine Flutlichtnacht.
+        stadium.flutlicht = true;
+        out.mitAnlageNacht = getOfficeOutlook().night === true;
+        renderOfficeView();
+        out.nachtHimmel = !!document.querySelector('#office-hs-window .off-sky-night');
+        out.mastenLeuchten = !!document.querySelector('#office-hs-window .off-pylon-on');
+
+        // Auswärtsspiel ohne Pokaltermin bleibt hell, trotz Flutlichtanlage.
+        cupTournament.matchdays = [];
+        europeTournament.matchdays = [];
+        let teams = leaguesData[game.leagueLevel];
+        let fixtures = fixturesData[game.leagueLevel][game.matchday - 1];
+        let ourFixture = fixtures.find(f => teams[f.home]?.name === game.clubName || teams[f.away]?.name === game.clubName);
+        out.auswaertsHell = ourFixture && teams[ourFixture.home]?.name === game.clubName
+            ? null                                  // an diesem Spieltag haben wir Heimrecht
+            : getOfficeOutlook().night === false;
+
+        // Das aktuelle Wetter schlägt im Fenster durch.
+        currentWeather = WEATHER_TYPES.find(w => w.name === 'Schnee');
+        renderOfficeView();
+        out.schneeSichtbar = !!document.querySelector('#office-hs-window .off-weather-snow');
+
+        // Das Wappen übernimmt die echten Wappen-Daten aus dem Editor.
+        game.clubCrestSymbol = 'XYZ';
+        game.clubCrestAnimal = '🦅';
+        game.sponsor.base = 4000;
+        renderOfficeView();
+        out.wappenSymbol = document.querySelector('#office-hs-crest .off-crest-symbol')?.textContent;
+        out.wappenTier = !!document.querySelector('#office-hs-crest .off-crest-badge-animal');
+        out.sponsorRing = !!document.querySelector('#office-hs-crest .off-crest-shield')?.classList.contains('off-crest-sponsored');
+        out.wappenName = document.querySelector('#office-hs-crest .off-crest-plate')?.textContent;
+        return out;
+    });
+
+    // Das Wappen ist anklickbar und führt zum Wappen-Editor.
+    const box = await page.locator('#office-hs-crest').boundingBox();
+    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+    await page.waitForTimeout(900);
+    const zumEditor = await page.evaluate(() => document.getElementById('screen-manager-tree').style.display === 'block');
+
+    assert(r.ohneAnlageTag && r.tagHimmel, 'Ohne Flutlichtanlage bleibt der Blick aus dem Fenster hell');
+    assert(r.keineMasten, 'Ohne Flutlichtanlage stehen auch keine Masten im Bild');
+    assert(r.statusPokal === 'Pokalabend', `Fenster benennt den Anlass korrekt ("${r.statusPokal}")`);
+    assert(r.mitAnlageNacht && r.nachtHimmel, 'Mit Flutlichtanlage wird der Pokalabend zur Nacht');
+    assert(r.mastenLeuchten, 'Flutlichtmasten leuchten in der Flutlichtnacht');
+    assert(r.auswaertsHell !== false, 'Ohne Heimspiel/Pokaltermin bleibt es hell');
+    assert(r.schneeSichtbar, 'Aktuelles Wetter (Schnee) ist im Fenster sichtbar');
+    assert(r.wappenSymbol === 'XYZ', `Wandwappen zeigt die eingestellten Initialen ("${r.wappenSymbol}")`);
+    assert(r.wappenTier, 'Wandwappen zeigt das gewählte Maskottchen');
+    assert(r.sponsorRing, 'Wandwappen zeigt den Sponsorenring bei laufendem Hauptsponsor');
+    assert(r.wappenName === '1.FC Moritz Leipzig', `Wandwappen trägt den Vereinsnamen ("${r.wappenName}")`);
+    assert(zumEditor, 'Klick auf das Wappen öffnet den Wappen-Editor');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei Tageszeit/Wappen');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -1223,6 +1295,7 @@ async function main() {
         testManagerOffice,
         testTaxAndAdvisor,
         testStadiumWideBanden,
+        testOfficeAtmosphereAndCrest,
     ];
 
     for (const suite of suites) {
