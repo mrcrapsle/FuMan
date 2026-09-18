@@ -15,6 +15,35 @@
 
     const OFFICE_ROOM = { w: 900, h: 560, d: 640 };
 
+    // Der Blick aus dem Fenster spiegelt den echten Spielzustand: Steht ein Heimspiel oder
+    // ein Pokal-/Europapokalabend an UND ist eine Flutlichtanlage gebaut, brennt draußen das
+    // Flutlicht und es ist Abend. Ohne Flutlichtanlage wird tagsüber gespielt - der Ausbau
+    // verändert also sichtbar die Kulisse. Dazu das aktuelle Wetter (siehe js/weather.js).
+    function getOfficeOutlook() {
+        let md = game.matchday;
+        let isCupNight = typeof cupTournament !== 'undefined' && !!cupTournament.matchdays?.includes(md);
+        let isEuroNight = typeof europeTournament !== 'undefined' && !!europeTournament.matchdays?.includes(md);
+
+        let isHome = false;
+        let teams = (typeof leaguesData !== 'undefined') ? leaguesData[game.leagueLevel] : null;
+        let fixtures = (typeof fixturesData !== 'undefined') ? fixturesData[game.leagueLevel]?.[md - 1] : null;
+        if (teams && fixtures) {
+            let ourFixture = fixtures.find(f => teams[f.home]?.name === game.clubName || teams[f.away]?.name === game.clubName);
+            isHome = !!ourFixture && teams[ourFixture.home]?.name === game.clubName;
+        }
+
+        let hasFloodlights = !!stadium.flutlicht;
+        let isMatchNight = isCupNight || isEuroNight || isHome;
+        let weather = (typeof currentWeather !== 'undefined' && currentWeather) ? currentWeather : { name: 'Sonnig', icon: '☀️' };
+        return {
+            night: isMatchNight && hasFloodlights,
+            hasFloodlights, isHome, isCupNight, isEuroNight, weather,
+            statusLabel: isCupNight ? t('office_outlook_cup')
+                : (isEuroNight ? t('office_outlook_europe')
+                : (isHome ? t('office_outlook_home') : t('office_outlook_away')))
+        };
+    }
+
     let officeLightOn = true;
     let officeIsEntering = false;
 
@@ -24,21 +53,34 @@
     const OFFICE_HOTSPOTS = [
         {
             id: 'window', wall: 'back', target: 'screen-stadium',
-            pos: 'left:40px; top:60px; width:320px; height:215px;',
-            art: () => `
-                <div class="off-window-sky">
-                    <div class="off-moon"></div>
-                    ${[14, 42, 78, 120, 210, 268, 320].map((x, i) => `<div class="off-star" style="left:${x}px; top:${12 + (i % 3) * 16}px;"></div>`).join('')}
-                    <div class="off-stadium-glow"></div>
+            pos: 'left:30px; top:60px; width:300px; height:210px;',
+            art: () => {
+                let o = getOfficeOutlook();
+                let sky = o.night
+                    ? `<div class="off-moon"></div>
+                       ${[14, 42, 78, 120, 200, 252].map((x, i) => `<div class="off-star" style="left:${x}px; top:${12 + (i % 3) * 16}px;"></div>`).join('')}`
+                    : `<div class="off-sun"></div>
+                       ${[30, 150, 230].map((x, i) => `<div class="off-cloud" style="left:${x}px; top:${18 + (i % 2) * 26}px;"></div>`).join('')}`;
+                // Flutlichtmasten stehen nur da, wenn die Anlage auch gebaut ist.
+                let pylons = o.hasFloodlights
+                    ? [22, 250].map(x => `<div class="off-pylon${o.night ? ' off-pylon-on' : ''}" style="left:${x}px;"><div class="off-pylon-head"></div></div>`).join('')
+                    : '';
+                let weatherKey = { 'Regen': 'rain', 'Schnee': 'snow', 'Sturm': 'storm', 'Hitze': 'heat' }[o.weather.name] || '';
+                return `
+                <div class="off-window-sky ${o.night ? 'off-sky-night' : 'off-sky-day'}">
+                    ${sky}
+                    ${o.night ? '<div class="off-stadium-glow"></div>' : ''}
                     <div class="off-stadium-bowl"></div>
-                    ${[30, 300].map(x => `<div class="off-pylon" style="left:${x}px;"><div class="off-pylon-head"></div></div>`).join('')}
+                    ${pylons}
+                    ${weatherKey ? `<div class="off-weather off-weather-${weatherKey}"></div>` : ''}
                 </div>
                 <div class="off-window-frame"></div>
-                <div class="off-window-sill">${formatVal(stadium.total || 0)} ${t('office_label_seats')}</div>`
+                <div class="off-window-sill">${o.weather.icon} ${o.statusLabel} · ${formatVal(stadium.total || 0)} ${t('office_label_seats')}</div>`;
+            }
         },
         {
             id: 'calendar', wall: 'back', target: 'screen-calendar',
-            pos: 'left:395px; top:70px; width:142px; height:158px;',
+            pos: 'left:352px; top:66px; width:128px; height:150px;',
             art: () => {
                 let days = [];
                 for (let i = 1; i <= 24; i++) {
@@ -54,7 +96,7 @@
         },
         {
             id: 'trophy', wall: 'back', target: 'screen-league',
-            pos: 'left:608px; top:70px; width:242px; height:300px;',
+            pos: 'left:642px; top:66px; width:232px; height:290px;',
             art: () => {
                 let count = (game.trophies || []).length;
                 let shelves = [0, 1, 2].map(row => {
@@ -69,6 +111,30 @@
                 }).join('');
                 return `<div class="off-cabinet-glass">${shelves}</div>
                         <div class="off-cabinet-plate">${count} ${t('office_label_trophies')}</div>`;
+            }
+        },
+        {
+            // Gerahmtes Vereinswappen an der Wand - nutzt exakt dieselben Wappen-Daten wie das
+            // Header-Logo (siehe applyClubCrest() in crest.js), zeigt also Farbe, Initialen,
+            // Muster-Badge und Maskottchen so, wie sie im Wappen-Editor eingestellt wurden.
+            id: 'crest', wall: 'back', target: 'screen-manager-tree',
+            pos: 'left:506px; top:74px; width:114px; height:138px;',
+            art: () => {
+                let color = game.clubCrestColor || '#f5b942';
+                let gradient = `radial-gradient(circle at 35% 30%, ${hexToRgba(color, 0.65)} 0%, ${color} 55%, ${hexToRgba(color, 0.75)} 100%)`;
+                let pattern = (typeof CREST_PATTERN_PRESETS !== 'undefined')
+                    ? CREST_PATTERN_PRESETS.find(p => p.key === (game.clubCrestPattern || 'keins')) : null;
+                // Sponsorenring wie am Header-Wappen: sichtbares Zeichen für einen laufenden
+                // Hauptsponsor-Vertrag.
+                let hasSponsor = game.sponsor && game.sponsor.base > 500;
+                return `<div class="off-crest-frame">
+                            <div class="off-crest-shield${hasSponsor ? ' off-crest-sponsored' : ''}" style="background:${gradient};">
+                                <span class="off-crest-symbol">${game.clubCrestSymbol || 'FCM'}</span>
+                                ${pattern && pattern.icon ? `<span class="off-crest-badge off-crest-badge-pattern">${pattern.icon}</span>` : ''}
+                                ${game.clubCrestAnimal ? `<span class="off-crest-badge off-crest-badge-animal">${game.clubCrestAnimal}</span>` : ''}
+                            </div>
+                            <div class="off-crest-plate">${game.clubName}</div>
+                        </div>`;
             }
         },
         {

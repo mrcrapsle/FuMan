@@ -915,13 +915,72 @@
         .office-sentence-active { color: var(--accent); }
 
         /* --- Fenster mit Blick aufs Vereinsgelände --- */
-        .off-window-sky { position: absolute; inset: 0; overflow: hidden; border-radius: 3px; background: linear-gradient(180deg, #08112a 0%, #112047 52%, #1c2f59 100%); }
+        .off-window-sky { position: absolute; inset: 0; overflow: hidden; border-radius: 3px; }
+        /* Abend-/Flutlichtstimmung vs. Tagesansicht - welche gilt, entscheidet der
+           Spielzustand (siehe getOfficeOutlook() in js/office.js). */
+        .off-sky-night { background: linear-gradient(180deg, #08112a 0%, #112047 52%, #1c2f59 100%); }
+        .off-sky-day { background: linear-gradient(180deg, #5b9fd6 0%, #8fc4e8 55%, #c3ddee 100%); }
         .off-moon { position: absolute; right: 44px; top: 24px; width: 32px; height: 32px; border-radius: 50%; background: radial-gradient(circle at 34% 34%, #fff9e4, #e6d9ab); box-shadow: 0 0 28px rgba(255,246,212,0.6); }
+        .off-sun { position: absolute; right: 42px; top: 20px; width: 34px; height: 34px; border-radius: 50%; background: radial-gradient(circle at 36% 34%, #fffbe0, #ffd34a); box-shadow: 0 0 36px rgba(255,220,120,0.85); }
+        .off-cloud { position: absolute; width: 54px; height: 15px; border-radius: 999px; background: rgba(255,255,255,0.75); box-shadow: 14px -7px 0 -3px rgba(255,255,255,0.7), -13px -4px 0 -4px rgba(255,255,255,0.65); }
         .off-star { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: #fff; opacity: 0.75; }
         .off-stadium-glow { position: absolute; left: 0; right: 0; bottom: 0; height: 130px; background: radial-gradient(ellipse 60% 100% at 50% 100%, rgba(130,215,255,0.34), transparent 72%); }
         .off-stadium-bowl { position: absolute; left: 9%; right: 9%; bottom: 0; height: 74px; border-radius: 50% 50% 6px 6px / 64% 64% 6px 6px; background: linear-gradient(180deg, #27456f, #101d33); border-top: 2px solid rgba(150,205,255,0.4); }
+        .off-sky-day .off-stadium-bowl { background: linear-gradient(180deg, #4a6d94, #24364f); border-top-color: rgba(255,255,255,0.5); }
         .off-pylon { position: absolute; bottom: 54px; width: 7px; height: 92px; background: linear-gradient(180deg, #41608f, #182741); }
-        .off-pylon-head { position: absolute; top: -13px; left: -13px; width: 33px; height: 17px; border-radius: 3px; background: linear-gradient(180deg, #fff7d4, #ccd9ee); box-shadow: 0 0 32px rgba(255,249,216,0.9); }
+        /* Mast ohne Betrieb: mattes Metall statt strahlender Leuchte. */
+        .off-pylon-head { position: absolute; top: -13px; left: -13px; width: 33px; height: 17px; border-radius: 3px; background: linear-gradient(180deg, #9aa8bd, #626f83); }
+        .off-pylon-on .off-pylon-head { background: linear-gradient(180deg, #fff7d4, #ccd9ee); box-shadow: 0 0 32px rgba(255,249,216,0.9); }
+
+        /* Wetter im Fenster (aus js/weather.js). Bewusst ohne transform-Animationen, siehe
+           Hinweis oben zum Managerbüro - animiert wird ausschließlich background-position. */
+        .off-weather { position: absolute; inset: 0; pointer-events: none; }
+        .off-weather-rain {
+            background: repeating-linear-gradient(105deg, rgba(190,225,255,0.55) 0px, rgba(190,225,255,0.55) 1px, transparent 1px, transparent 9px);
+            animation: offRain 0.5s linear infinite;
+        }
+        @keyframes offRain { from { background-position: 0 0; } to { background-position: -30px 60px; } }
+        .off-weather-snow {
+            background:
+                radial-gradient(circle, rgba(255,255,255,0.9) 1.4px, transparent 1.6px) 0 0/34px 34px,
+                radial-gradient(circle, rgba(255,255,255,0.7) 1.1px, transparent 1.3px) 14px 18px/26px 26px;
+            animation: offSnow 7s linear infinite;
+        }
+        @keyframes offSnow { from { background-position: 0 0, 14px 18px; } to { background-position: 10px 210px, 22px 190px; } }
+        .off-weather-storm {
+            background:
+                linear-gradient(rgba(10,14,26,0.45), rgba(10,14,26,0.45)),
+                repeating-linear-gradient(120deg, rgba(200,225,255,0.5) 0px, rgba(200,225,255,0.5) 1px, transparent 1px, transparent 7px);
+            animation: offRain 0.32s linear infinite;
+        }
+        .off-weather-heat { background: linear-gradient(180deg, rgba(255,170,60,0.26), rgba(255,120,40,0.12) 60%, transparent); }
+
+        /* --- Vereinswappen an der Bürowand --- */
+        .off-crest-frame {
+            position: absolute; inset: 0; border: 6px solid #3d2c1a; border-radius: 5px;
+            background: linear-gradient(160deg, #1d2740, #10192b);
+            box-shadow: inset 0 0 26px rgba(0,0,0,0.65), 0 10px 22px rgba(0,0,0,0.5);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 8px 6px;
+        }
+        .off-crest-shield {
+            position: relative; width: 60px; height: 60px; border-radius: 50% 50% 46% 46% / 42% 42% 58% 58%;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.55);
+        }
+        .off-crest-sponsored { outline: 2px solid var(--teal); outline-offset: 2px; }
+        .off-crest-symbol { font-size: 15px; font-weight: 900; color: #241800; letter-spacing: 0.5px; }
+        .off-crest-badge {
+            position: absolute; width: 20px; height: 20px; border-radius: 50%; background: #0d1220;
+            display: flex; align-items: center; justify-content: center; font-size: 11px;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        .off-crest-badge-pattern { bottom: -4px; right: -4px; }
+        .off-crest-badge-animal { top: -4px; left: -4px; }
+        .off-crest-plate {
+            max-width: 100%; padding: 2px 6px; border-radius: 3px; font-size: 8px; font-weight: 800;
+            color: #241800; background: linear-gradient(180deg, #ffe89a, #c9962b);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
         .off-window-frame { position: absolute; inset: 0; border: 11px solid #3d2c1a; border-radius: 5px; box-shadow: inset 0 0 44px rgba(0,0,0,0.65); }
         .off-window-frame::before, .off-window-frame::after { content: ''; position: absolute; background: #3d2c1a; }
         .off-window-frame::before { left: 50%; top: 0; bottom: 0; width: 8px; margin-left: -4px; }
