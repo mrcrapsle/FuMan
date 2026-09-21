@@ -70,6 +70,12 @@
         if (countEl) countEl.innerText = game.stewards;
         let safetyEl = document.getElementById('stewards-safety-disp');
         if (safetyEl) safetyEl.innerText = Math.min(99, Math.round(game.stewards / 3.5)) + '%';
+        // Transparenz: bezahlt wird nur der tatsächliche Einsatz beim Heimspiel.
+        let costEl = document.getElementById('stewards-cost-disp');
+        if (costEl) {
+            let att = game.lastHomeAttendance || Math.round((stadium.total || 16000) * getAttendanceFactor());
+            costEl.innerText = `Beim Heimspiel eingesetzt: ${getDeployedStewards(att)} Ordner (1 je 25 Zuschauer) - Kosten ${formatVal(getStewardMatchdayCost(att))} pro Heimspiel. Auswärts stellt der Gastgeber die Ordner.`;
+        }
 
         let list = document.getElementById('fan-groups-list');
         list.innerHTML = '';
@@ -173,13 +179,35 @@
     // Wird jeden Spieltag aufgerufen: berechnet und bucht die tatsächlichen Ordner-Kosten ab
     // (Bugfix: bisher wurde nur im Finanz-Ausblick ein Betrag ANGEZEIGT, aber nie wirklich
     // abgebucht) - feste Ordner kosten dabei spürbar weniger als angemietetes Personal.
-    function getStewardMatchdayCost() {
-        let rentedCost = (game.stewards || 0) * 120 * 2;
+    // Tatsächlich eingesetzte Miet-Ordner: gemietet wird pro Heimspiel nach Bedarf
+    // (Faustregel ~1 Ordner je 25 Zuschauer, mindestens 10), höchstens aber so viele, wie
+    // der Verein vorhält. Vorher wurde IMMER die volle vorgehaltene Zahl abgerechnet -
+    // ein Kreisklassen-Verein mit 600 Zuschauern zahlte so 24.000 € Ordnerdienst pro
+    // Spieltag und konnte niemals schwarze Zahlen schreiben.
+    function getDeployedStewards(attendance = null) {
+        let vorgehalten = game.stewards || 0;
+        let zuschauer = attendance !== null ? attendance : Math.round((stadium.total || 16000) * getAttendanceFactor());
+        let benoetigt = Math.max(10, Math.ceil(zuschauer / 25));
+        return Math.min(vorgehalten, benoetigt);
+    }
+    function getStewardMatchdayCost(attendance = null) {
+        let rentedCost = getDeployedStewards(attendance) * 120 * 2;
         let permanentCost = securityWorkforce.permanentStewards * 90; // güntiger als Miete
         return rentedCost + permanentCost;
     }
-    function tickStewardCosts() {
-        game.money -= getStewardMatchdayCost();
+    // Ordnerdienst fällt NUR bei Heimspielen an - bei Auswärtsspielen stellt der Gastgeber
+    // das Sicherheitspersonal. Vorher wurde an jedem Spieltag kassiert, auch auswärts.
+    function tickStewardCosts(isHomeMatch = true) {
+        if (!isHomeMatch) return;
+        let kosten = getStewardMatchdayCost(game.lastHomeAttendance || null);
+        if (!(kosten > 0)) return;
+        // Der Ordnerdienst ist eine Spieltagsausgabe: als Nachtrag ins Buchungsjournal,
+        // damit er dort neben Gehältern und Unterhalt auftaucht statt als namenlose
+        // "Sonstige Buchung" im Kontoauszug zu landen.
+        setzeBuchungskontext(SPIELTAG_KONTEXT);
+        game.money -= kosten;
+        loescheBuchungskontext();
+        bucheInSpieltagsjournal('🦺 Ordnerdienst', kosten);
     }
 
     // Automatisierung für den Sicherheitschef (NEU): führt Schulungen automatisch durch,

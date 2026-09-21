@@ -891,6 +891,10 @@
 
     function applyMatchdayFinances(isHomeMatch = true, won = false, cleanSheet = false, isDerbyMatch = false, opponentNameForRecord = null, scoreTextForRecord = null) {
         let moneyAtStart = game.money; // für automatische Rücklagenbildung (Finanzen & Kapitalmarkt)
+        // Kontoauszug: die vielen Einzelbuchungen dieses Spieltags werden NICHT einzeln
+        // im Kontoauszug geführt - sie stehen vollständig aufgeschlüsselt im
+        // Buchungsjournal (siehe game.financeLedger weiter unten).
+        setzeBuchungskontext(SPIELTAG_KONTEXT);
         let ghostGameActive = isHomeMatch && game.forcedGhostGame;
         // Lokalderby-Atmosphäre: bei Heimspielen gegen den permanenten Rivalen ist das
         // Stadion deutlich stärker ausgelastet als sonst (gedeckelt bei "ausverkauft").
@@ -1085,8 +1089,47 @@
         game.lastMatchdayAdvisorFee = advisorFee;
         game.seasonTaxPaid = (game.seasonTaxPaid || 0) + taxAmount + advisorFee;
 
-        let net = grossIncome - taxAmount - advisorFee - wages - travelCost;
+        // Bugfix: Personalgehälter wurden nie abgebucht. Die GuV-Prognose (finances.js) und
+        // der Personal-Screen wiesen sie als laufende Kosten aus, tatsächlich arbeitete das
+        // gesamte Personal kostenlos - dadurch ließen sich die angezeigten Zahlen prinzipiell
+        // nicht mit dem Kontostand in Einklang bringen.
+        let staffWages = (typeof getTotalStaffWages === 'function') ? getTotalStaffWages() : 0;
+
+        let net = grossIncome - taxAmount - advisorFee - wages - staffWages - travelCost;
         game.money += net;
+
+        // Buchungsjournal: hält für JEDEN Spieltag fest, woraus sich Einnahmen und Ausgaben
+        // tatsächlich zusammensetzen. Vorher gab es nur eine grobe Monatsprognose mit
+        // Sammelposten, aus der sich nicht ablesen ließ, woher ein Betrag stammt.
+        let einnahmen = [
+            { label: '🎟️ Ticketverkauf', amount: ticketIncome },
+            { label: '👕 Fanartikel', amount: merchIncome },
+            { label: '🤝 Hauptsponsor', amount: mainSponsorInc },
+            { label: '📢 Bandenwerbung', amount: isHomeMatch ? getBandenIncome() : 0 },
+            { label: '🧥 Ausrüster', amount: isHomeMatch ? game.kitSupplier.income : 0 },
+            { label: '🏟️ Namensrechte', amount: isHomeMatch ? (stadium.namingRightsIncome || 0) : 0 },
+            { label: '👔 Ärmelsponsor', amount: game.sleeveSponsor?.income || 0 },
+            { label: '🎫 Mitgliedsbeiträge', amount: membershipIncome },
+            { label: '🏘️ Campus-Anlagen', amount: campusFacilityIncome }
+        ].filter(e => e.amount > 0);
+        let ausgaben = [
+            { label: '⚽ Spielergehälter', amount: wages },
+            { label: '💼 Personalgehälter', amount: staffWages },
+            { label: '🔧 Stadion- & Campus-Unterhalt', amount: maintenanceCost },
+            { label: '🚌 Auswärtsfahrt', amount: travelCost },
+            { label: '🧾 Steuern & Abgaben', amount: taxAmount },
+            { label: '📊 Steuerberater-Honorar', amount: advisorFee }
+        ].filter(e => e.amount > 0);
+
+        if (!game.financeLedger) game.financeLedger = [];
+        game.financeLedger.push({
+            season: game.season, matchday: game.matchday,
+            heimspiel: !!isHomeMatch, zuschauer: att,
+            einnahmen, ausgaben,
+            summeEin: einnahmen.reduce((s, e) => s + e.amount, 0),
+            summeAus: ausgaben.reduce((s, e) => s + e.amount, 0)
+        });
+        if (game.financeLedger.length > 80) game.financeLedger.shift();
         if (ghostGameActive) game.forcedGhostGame = false; // Geisterspiel-Auflage ist damit erfüllt
         if (derbyBoostActive) {
             if (genuinelySoldOut) {
@@ -1115,7 +1158,9 @@
         }
         // Automatische Rücklagenbildung (Finanzen & Kapitalmarkt): zweigt einen Teil des
         // Netto-Überschusses DIESES Spieltags ab, falls aktiviert.
+        setzeBuchungskontext('🏦 Automatische Rücklage');
         if (typeof tickAutoReserve === 'function') tickAutoReserve(game.money - moneyAtStart);
+        loescheBuchungskontext();
     }
 
     // Bestimmte runde Zuschauerzahlen sind erzählerisch bedeutsam genug für eine einmalige
@@ -1576,7 +1621,7 @@
         if (isHomeDerby) checkHooliganIncident();
         // Ordner-Kosten (NEU, echte Abbuchung): bisher wurde nur im Finanz-Ausblick ein
         // Betrag angezeigt, aber nie wirklich abgebucht - ein weiterer "Phantom-Posten".
-        if (typeof tickStewardCosts === 'function') tickStewardCosts();
+        if (typeof tickStewardCosts === 'function') tickStewardCosts(isHomeMatchParam);
         if (typeof runSecChiefAutomation === 'function') runSecChiefAutomation();
         // Immobilien-Portfolio (NEU): laufende Mieteinnahmen unabhängig von Heim-/Auswärtsspiel.
         if (typeof tickRealEstateIncome === 'function') tickRealEstateIncome();

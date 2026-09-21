@@ -139,6 +139,33 @@ dafür ein laufendes Honorar, das mit der Ligastufe steigt - unten trägt er sic
 gerade so, oben lohnt er sich deutlich. Zusätzlich mildert er die
 Insolvenz-Eskalationen ab (`checkInsolvencyRisk()`).
 
+**Buchungsjournal & Kontoauszug** (Finanzen-Screen, Reiter unter der GuV):
+
+* `game.financeLedger` - `applyMatchdayFinances()` schreibt zu JEDEM Spieltag
+  einen echten Buchungssatz mit allen Einzelposten (Ticket, Fanartikel, jeder
+  Sponsor einzeln, Gehälter, Unterhalt, Ordnerdienst, Steuern). Kosten, die erst
+  NACH `applyMatchdayFinances()` anfallen, tragen sich über
+  `bucheInSpieltagsjournal(label, betrag)` nach.
+* `game.kontoauszug` - alle übrigen Kontobewegungen. **Achtung, tragende
+  Konstruktion:** Geld wird an über 150 Stellen direkt über `game.money`
+  verrechnet. Statt jede davon einzeln zu protokollieren, macht
+  `installKontoauszug()` (Ende von `js/finances.js`) aus `game.money` eine
+  Accessor-Property. Jede Zuweisung läuft damit durch einen Kontrollpunkt.
+  Folgen, die man kennen muss:
+  * Beim Laden eines Spielstands (`Object.assign(game, p.game)`) muss die
+    Protokollierung über `kontoauszugPausieren()` / `kontoauszugFortsetzen()`
+    ausgesetzt werden, sonst erscheint der geladene Kontostand als Phantombuchung.
+  * Die Beschriftung einer Buchung kommt aus `aktiverScreen` (gesetzt in
+    `showScreen()`) oder aus einem explizit gesetzten `setzeBuchungskontext()`.
+    Neue Screens gehören deshalb in `SCREEN_BUCHUNGS_LABELS`.
+  * Spieltagsbuchungen laufen unter `SPIELTAG_KONTEXT` und werden bewusst NICHT
+    in den Kontoauszug geschrieben - sie stehen vollständig im Journal.
+
+**Ordnerdienst**: Gemietete Ordner werden pro Heimspiel nach Bedarf gebucht
+(~1 Ordner je 25 Zuschauer, gedeckelt durch die vorgehaltene Zahl, siehe
+`getDeployedStewards()`); auswärts stellt der Gastgeber das Personal. Vorher
+wurde an jedem Spieltag die volle vorgehaltene Zahl abgerechnet.
+
 ## Sprache (DE/EN)
 
 Wörterbuch-basierter Sprachumschalter in `js/i18n.js` (Funktion `t(key)`,

@@ -984,6 +984,17 @@
                 </div>
 
                 <div class="panel">
+                    <div class="panel-header">📒 BUCHUNGSJOURNAL – WOHER KOMMT DAS GELD?</div>
+                    <div style="font-size:10px; color:#94a3b8; margin-bottom:6px;">Jede Spieltagsabrechnung einzeln aufgeschlüsselt. So sehen Sie genau, welcher Posten wie viel gebracht oder gekostet hat.</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin-bottom:8px;">
+                        <button onclick="setLedgerView('letzter')" id="ledger-tab-letzter" class="btn-action" style="font-size:9px; padding:5px 2px;">📄 Letzter Spieltag</button>
+                        <button onclick="setLedgerView('saison')" id="ledger-tab-saison" class="btn-secondary" style="font-size:9px; padding:5px 2px;">📊 Saison gesamt</button>
+                        <button onclick="setLedgerView('konto')" id="ledger-tab-konto" class="btn-secondary" style="font-size:9px; padding:5px 2px;">💳 Kontoauszug</button>
+                    </div>
+                    <div id="finance-ledger-box"></div>
+                </div>
+
+                <div class="panel">
                     <div class="panel-header">💼 BUDGETS & VORSTANDS-VERHANDLUNGEN</div>
                     <div id="insolvency-status-box" class="box" style="display:none; border-color:var(--danger); color:var(--danger); font-size:11px; margin-bottom:6px;"></div>
                     <div style="font-size:11px; margin-bottom:2px;" id="budget-transfer-bar-label">Transferbudget: 0 €</div>
@@ -1482,7 +1493,8 @@
                         <span>Stimmung: <strong id="fan-mood-val" style="color:var(--primary);">75%</strong></span>
                     </div>
                     <div class="box">
-                        Eingesetzte Ordner: <strong id="stewards-count-disp" style="color:var(--accent);">100</strong> (Sicherheitsquote: <strong id="stewards-safety-disp" style="color:var(--primary);">85%</strong>)
+                        Vorgehaltene Ordner: <strong id="stewards-count-disp" style="color:var(--accent);">100</strong> (Sicherheitsquote: <strong id="stewards-safety-disp" style="color:var(--primary);">85%</strong>)
+                        <div id="stewards-cost-disp" style="font-size:9px; color:var(--text-muted); margin-top:2px;"></div>
                         <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:4px; margin-top:4px;">
                             <button onclick="setStewards(50)" class="btn-secondary" style="font-size:9px;">50 (Sparflamme)</button>
                             <button onclick="setStewards(100)" class="btn-secondary" style="font-size:9px;">100 (Standard)</button>

@@ -112,6 +112,10 @@
         // Steuern & Abgaben (siehe applyMatchdayFinances/finances.js): letzter Spieltag
         // getrennt ausgewiesen, dazu die laufende Saisonsumme für die GuV-Anzeige.
         lastAutoSaveMatchday: 0,
+        // Buchungsjournal je Spieltag (siehe applyMatchdayFinances) - Grundlage der
+        // Aufschlüsselung im Finanz-Screen.
+        financeLedger: [],
+        kontoauszug: [],
         lastMatchdayTax: 0,
         lastMatchdayAdvisorFee: 0,
         seasonTaxPaid: 0,

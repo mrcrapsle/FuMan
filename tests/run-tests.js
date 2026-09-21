@@ -1493,6 +1493,113 @@ async function testConfirmBeforeIrreversibleActions(browser) {
     await page.close();
 }
 
+async function testFinanceLedgerAndStatement(browser) {
+    console.log('\n[23] Finanzmenü: Buchungsjournal & Kontoauszug');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+
+        // 1. Buchungsjournal: jeder Spieltag wird einzeln aufgeschlüsselt verbucht.
+        let vorher = (game.financeLedger || []).length;
+        simulateMatchdays(3);
+        let ledger = game.financeLedger || [];
+        out.journalWaechst = ledger.length === vorher + 3;
+        let letzte = ledger[ledger.length - 1];
+        out.journalHatPosten = Array.isArray(letzte.einnahmen) && Array.isArray(letzte.ausgaben)
+            && letzte.ausgaben.length > 0;
+        out.journalSummenStimmen = letzte.summeEin === letzte.einnahmen.reduce((s, e) => s + e.amount, 0)
+            && letzte.summeAus === letzte.ausgaben.reduce((s, e) => s + e.amount, 0);
+
+        // 2. Personalgehälter werden tatsächlich abgebucht (waren zuvor nur Anzeige).
+        Object.values(staffMembers).forEach(s => s.hired = false);
+        staffMembers.marketingDir.hired = true;
+        let kontoVorSpieltag = game.money;
+        simulateMatchdays(1);
+        let spieltag = game.financeLedger[game.financeLedger.length - 1];
+        let personalPosten = spieltag.ausgaben.find(a => a.label.includes('Personalgehälter'));
+        out.personalVerbucht = !!personalPosten && personalPosten.amount === getTotalStaffWages();
+        out.personalWirklichAbgezogen = game.money !== kontoVorSpieltag;
+
+        // 3. Anzeige: alle drei Reiter rendern ohne Fehler und zeigen Inhalte.
+        showScreen('screen-finances');
+        setLedgerView('letzter');
+        let boxLetzter = document.getElementById('finance-ledger-box').innerHTML;
+        out.ansichtLetzter = boxLetzter.includes('EINNAHMEN') && boxLetzter.includes('AUSGABEN');
+        setLedgerView('saison');
+        let boxSaison = document.getElementById('finance-ledger-box').innerHTML;
+        out.ansichtSaison = boxSaison.includes('abgerechnete Spieltage');
+        out.tabAktiv = document.getElementById('ledger-tab-saison').className === 'btn-action'
+            && document.getElementById('ledger-tab-letzter').className === 'btn-secondary';
+
+        // 4. Kontoauszug: Bewegungen AUSSERHALB der Spieltagsabrechnung werden automatisch
+        //    erfasst und dem auslösenden Bereich zugeordnet.
+        game.kontoauszug = [];
+        game.money = 5000000;
+        showScreen('screen-stadium');
+        let kontoVorBau = game.money;
+        game.money -= 120000; // stellvertretend für einen Bauauftrag
+        let buchung = game.kontoauszug[game.kontoauszug.length - 1];
+        out.buchungErfasst = !!buchung && buchung.amount === -120000;
+        out.buchungBereich = !!buchung && buchung.label.includes('Stadionausbau');
+        out.buchungSaldo = !!buchung && buchung.saldo === kontoVorBau - 120000;
+
+        // Spieltagsbuchungen tauchen NICHT im Kontoauszug auf (sie stehen im Journal).
+        let auszugVorSpieltag = game.kontoauszug.length;
+        simulateMatchdays(1);
+        out.spieltagNichtImAuszug = game.kontoauszug.length === auszugVorSpieltag;
+
+        // 4b. Ordnerdienst: nur bei Heimspielen und nur nach tatsaechlichem Einsatz.
+        game.stewards = 100;
+        securityWorkforce.permanentStewards = 0;
+        out.ordnerNurNachBedarf = getDeployedStewards(600) === 24 && getDeployedStewards(100000) === 100;
+        out.ordnerKostenProportional = getStewardMatchdayCost(600) === 24 * 120 * 2;
+        let kontoVorAuswaerts = game.money;
+        tickStewardCosts(false);
+        out.ordnerNurZuhause = game.money === kontoVorAuswaerts;
+        tickStewardCosts(true);
+        out.ordnerZuhauseBezahlt = game.money < kontoVorAuswaerts;
+
+        setLedgerView('konto');
+        let boxKonto = document.getElementById('finance-ledger-box').innerHTML;
+        out.ansichtKonto = boxKonto.includes('NACH BEREICH') && boxKonto.includes('Stadionausbau');
+
+        // 5. Laden eines Spielstands darf keine Phantom-Buchung erzeugen.
+        saveGameToSlot(1);
+        let gespeicherteBuchungen = game.kontoauszug.length;
+        game.money = 1; // grosse Kontoaenderung, die NICHT mitgespeichert wurde
+        loadGameFromSlot(1, true);
+        // Der wiederhergestellte Kontostand darf keine zusaetzliche Buchung erzeugen -
+        // im Auszug steht exakt das, was gespeichert wurde.
+        out.ladenOhnePhantom = game.kontoauszug.length === gespeicherteBuchungen;
+        out.ladenStelltGeldWiederHer = game.money > 1000;
+        return out;
+    });
+
+    assert(r.journalWaechst, 'Jeder Spieltag erzeugt einen Eintrag im Buchungsjournal');
+    assert(r.journalHatPosten, 'Der Eintrag listet Einnahmen und Ausgaben einzeln auf');
+    assert(r.journalSummenStimmen, 'Die gespeicherten Summen stimmen mit den Einzelposten überein');
+    assert(r.personalVerbucht, 'Personalgehälter stehen als eigener Ausgabenposten im Journal');
+    assert(r.personalWirklichAbgezogen, 'Personalgehälter verändern den Kontostand wirklich');
+    assert(r.ansichtLetzter, 'Reiter "Letzter Spieltag" zeigt Einnahmen und Ausgaben');
+    assert(r.ansichtSaison, 'Reiter "Saison gesamt" fasst alle Spieltage zusammen');
+    assert(r.tabAktiv, 'Der aktive Reiter wird hervorgehoben');
+    assert(r.buchungErfasst, 'Kontobewegungen ausserhalb des Spieltags werden automatisch erfasst');
+    assert(r.buchungBereich, 'Eine Buchung wird dem auslösenden Bereich zugeordnet');
+    assert(r.buchungSaldo, 'Der Kontoauszug hält den Kontostand nach jeder Buchung fest');
+    assert(r.spieltagNichtImAuszug, 'Spieltagsposten erscheinen nur im Journal, nicht doppelt im Auszug');
+    assert(r.ordnerNurNachBedarf, 'Es werden nur so viele Ordner eingesetzt wie Zuschauer da sind');
+    assert(r.ordnerKostenProportional, 'Die Ordnerkosten richten sich nach dem tatsächlichen Einsatz');
+    assert(r.ordnerNurZuhause, 'Auswärts fällt kein Ordnerdienst an');
+    assert(r.ordnerZuhauseBezahlt, 'Beim Heimspiel wird der Ordnerdienst abgerechnet');
+    assert(r.ansichtKonto, 'Reiter "Kontoauszug" zeigt Bereiche und Einzelbuchungen');
+    assert(r.ladenOhnePhantom, 'Das Laden eines Spielstands erzeugt keine Phantom-Buchung');
+    assert(r.ladenStelltGeldWiederHer, 'Der Kontostand wird beim Laden korrekt wiederhergestellt');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler im Finanzmenü');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -1534,6 +1641,7 @@ async function main() {
         testBuildingPaymentAndPrices,
         testAutoSaveAndPartialSimulation,
         testConfirmBeforeIrreversibleActions,
+        testFinanceLedgerAndStatement,
     ];
 
     for (const suite of suites) {

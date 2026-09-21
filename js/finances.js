@@ -61,6 +61,7 @@
         renderSponsorLeaderboard();
         renderFinanceForecast();
         renderMoneyHistoryChart();
+        renderFinanceLedger();
         let totalWages = (squad.reduce((s, p) => s + p.wage, 0) + (game.secondTeam.isActive ? secondTeamSquad.reduce((s, p) => s + p.wage, 0) : 0)) * 4;
         let totalStaffWages = Object.values(staffMembers).filter(s => s.hired).reduce((s, st) => s + st.wage, 0) * 4;
         let baseStadiumMaintenanceForecast = (stadium.total || 16000) * 0.45;
@@ -99,7 +100,8 @@
 
         document.getElementById('fin-out-wages').innerText = formatVal(totalWages + totalStaffWages);
         document.getElementById('fin-out-maintenance').innerText = formatVal(maintenance);
-        document.getElementById('fin-out-stewards').innerText = formatVal(game.stewards * 120 * 2);
+        // Hochrechnung: Ordnerdienst nur bei Heimspielen (~2 pro Monat).
+        document.getElementById('fin-out-stewards').innerText = formatVal(getStewardMatchdayCost() * 2);
         document.getElementById('fin-out-interest').innerText = formatVal(loanInterest + loanInstallments);
         let taxEl = document.getElementById('fin-out-tax');
         if (taxEl) taxEl.innerText = formatVal(estTax + estAdvisorFee);
@@ -593,3 +595,259 @@
         updateUI();
     }
 
+
+    // ==========================================
+    // BUCHUNGSJOURNAL: aufgeschlüsselte Ein- und Ausgaben je Spieltag
+    // ==========================================
+    // Die GuV oben ist eine Hochrechnung mit Sammelposten ("Sponsoren, TV & Banden") und
+    // beantwortet deshalb nicht, woher ein konkreter Betrag stammt. applyMatchdayFinances()
+    // schreibt daher bei jeder Spieltagsabrechnung einen echten Buchungssatz nach
+    // game.financeLedger - hier wird er sichtbar gemacht, wahlweise als Einzelspieltag
+    // oder als Saisonsumme je Posten.
+    let ledgerView = 'letzter';
+    function setLedgerView(view) {
+        ledgerView = view;
+        renderFinanceLedger();
+    }
+
+    function ledgerRow(label, amount, maxAmount, color) {
+        let pct = maxAmount > 0 ? Math.round((amount / maxAmount) * 100) : 0;
+        return `
+            <div style="margin-bottom:4px;">
+                <div style="display:flex; justify-content:space-between; gap:4px; font-size:11px;">
+                    <span style="min-width:0;">${label}</span><span style="color:${color}; font-weight:bold; white-space:nowrap;">${formatVal(amount)}</span>
+                </div>
+                <div style="background:#1e293b; border-radius:4px; height:4px; overflow:hidden;">
+                    <div style="height:100%; width:${pct}%; background:${color};"></div>
+                </div>
+            </div>`;
+    }
+
+    function renderFinanceLedger() {
+        let box = document.getElementById('finance-ledger-box');
+        if (!box) return;
+        ['letzter', 'saison', 'konto'].forEach(v => {
+            let btn = document.getElementById('ledger-tab-' + v);
+            if (btn) btn.className = (ledgerView === v) ? 'btn-action' : 'btn-secondary';
+        });
+
+        if (ledgerView === 'konto') { renderKontoauszug(box); return; }
+
+        let ledger = game.financeLedger || [];
+        if (ledger.length === 0) {
+            box.innerHTML = `<div class="box" style="font-size:11px; color:#94a3b8;">Noch keine Spieltagsabrechnung vorhanden. Nach dem ersten Spieltag steht hier jede Buchung einzeln aufgeschlüsselt.</div>`;
+            return;
+        }
+
+        let einnahmen, ausgaben, kopf;
+        if (ledgerView === 'saison') {
+            let saisonEintraege = ledger.filter(e => e.season === game.season);
+            if (saisonEintraege.length === 0) saisonEintraege = ledger.slice(-1);
+            let sumEin = {}, sumAus = {};
+            saisonEintraege.forEach(e => {
+                (e.einnahmen || []).forEach(p => sumEin[p.label] = (sumEin[p.label] || 0) + p.amount);
+                (e.ausgaben || []).forEach(p => sumAus[p.label] = (sumAus[p.label] || 0) + p.amount);
+            });
+            einnahmen = Object.keys(sumEin).map(l => ({ label: l, amount: sumEin[l] })).sort((a, b) => b.amount - a.amount);
+            ausgaben = Object.keys(sumAus).map(l => ({ label: l, amount: sumAus[l] })).sort((a, b) => b.amount - a.amount);
+            kopf = `Saison ${game.season} · ${saisonEintraege.length} abgerechnete Spieltage`;
+        } else {
+            let e = ledger[ledger.length - 1];
+            einnahmen = (e.einnahmen || []).slice().sort((a, b) => b.amount - a.amount);
+            ausgaben = (e.ausgaben || []).slice().sort((a, b) => b.amount - a.amount);
+            kopf = `Saison ${e.season} · Spieltag ${e.matchday} · ${e.heimspiel ? `🏟️ Heimspiel (${(e.zuschauer || 0).toLocaleString('de-DE')} Zuschauer)` : '🚌 Auswärtsspiel'}`;
+        }
+
+        let sumEinGes = einnahmen.reduce((s, p) => s + p.amount, 0);
+        let sumAusGes = ausgaben.reduce((s, p) => s + p.amount, 0);
+        let saldo = sumEinGes - sumAusGes;
+        let maxEin = Math.max(1, ...einnahmen.map(p => p.amount));
+        let maxAus = Math.max(1, ...ausgaben.map(p => p.amount));
+
+        let anteil = (amount, ges) => ges > 0 ? ` <span style="color:#64748b; font-size:9px;">(${Math.round((amount / ges) * 100)}%)</span>` : '';
+
+        let verlauf = '';
+        if (ledgerView === 'letzter' && ledger.length > 1) {
+            verlauf = `<div class="box" style="margin-top:6px;">
+                <strong style="font-size:11px;">📈 LETZTE SPIELTAGE</strong>
+                ${ledger.slice(-6).reverse().map(e => {
+                    let s = (e.summeEin || 0) - (e.summeAus || 0);
+                    return `<div style="display:flex; justify-content:space-between; font-size:10px; margin-top:2px;">
+                        <span>${e.heimspiel ? '🏟️' : '🚌'} ST ${e.matchday} (S${e.season})</span>
+                        <span style="color:#94a3b8;">+${formatVal(e.summeEin || 0)} / -${formatVal(e.summeAus || 0)}</span>
+                        <span style="color:${s >= 0 ? 'var(--primary)' : 'var(--danger)'}; font-weight:bold;">${s >= 0 ? '+' : ''}${formatVal(s)}</span>
+                    </div>`;
+                }).join('')}
+            </div>`;
+        }
+
+        box.innerHTML = `
+            <div style="font-size:10px; color:#94a3b8; margin-bottom:6px;">${kopf}</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
+                <div class="box">
+                    <strong style="color:var(--primary); font-size:11px;">EINNAHMEN ${formatVal(sumEinGes)}</strong>
+                    <div style="margin-top:5px;">
+                        ${einnahmen.length ? einnahmen.map(p => ledgerRow(p.label + anteil(p.amount, sumEinGes), p.amount, maxEin, 'var(--primary)')).join('') : '<span style="font-size:10px; color:#64748b;">Keine Einnahmen verbucht.</span>'}
+                    </div>
+                </div>
+                <div class="box">
+                    <strong style="color:var(--danger); font-size:11px;">AUSGABEN ${formatVal(sumAusGes)}</strong>
+                    <div style="margin-top:5px;">
+                        ${ausgaben.length ? ausgaben.map(p => ledgerRow(p.label + anteil(p.amount, sumAusGes), p.amount, maxAus, 'var(--danger)')).join('') : '<span style="font-size:10px; color:#64748b;">Keine Ausgaben verbucht.</span>'}
+                    </div>
+                </div>
+            </div>
+            <div style="text-align:right; font-size:12px; margin-top:6px;">
+                ${ledgerView === 'saison' ? 'Saison-Saldo' : 'Saldo des Spieltags'}:
+                <strong style="color:${saldo >= 0 ? 'var(--primary)' : 'var(--danger)'};">${saldo >= 0 ? '+' : ''}${formatVal(saldo)}</strong>
+            </div>
+            ${verlauf}`;
+    }
+
+    // ==========================================
+    // KONTOAUSZUG: automatische Erfassung ALLER Kontobewegungen
+    // ==========================================
+    // Geld wird an über 150 Stellen im Spiel direkt über game.money verrechnet (Transfers,
+    // Bauaufträge, Personal, Wetten, Fabriken ...). Statt jede dieser Stellen einzeln zu
+    // protokollieren - was zwangsläufig lückenhaft bliebe - wird game.money hier in eine
+    // Accessor-Property umgewandelt. Jede Änderung läuft damit durch einen einzigen
+    // Kontrollpunkt und landet automatisch im Kontoauszug.
+    let kontoauszugAktiv = false;
+    let kontoauszugPausiert = false;
+    let buchungsKontext = null;
+    const SPIELTAG_KONTEXT = '__spieltag__';
+    const MAX_KONTOAUSZUG = 150;
+
+    const SCREEN_BUCHUNGS_LABELS = {
+        'screen-transfer': '🔁 Transfermarkt',
+        'screen-scouting-global': '🔍 Scouting',
+        'screen-stadium': '🏟️ Stadionausbau',
+        'screen-campus': '🏘️ Vereinsgelände',
+        'screen-staff': '💼 Personal',
+        'screen-youth': '🎓 Jugendarbeit',
+        'screen-training': '🏋️ Training',
+        'screen-fans': '📣 Fanarbeit',
+        'screen-finances': '💰 Finanzen & Kredite',
+        'screen-stocks': '📈 Börse',
+        'screen-industry': '🏭 Fabriken',
+        'screen-holding': '🏢 Holding',
+        'screen-raw-materials': '📦 Rohstoffe',
+        'screen-merch': '👕 Fanshop',
+        'screen-betting': '🎲 Wetten',
+        'screen-sponsors': '🤝 Sponsoren',
+        'screen-contracts': '📝 Vertragsverhandlungen',
+        'screen-calendar': '📅 Terminplanung',
+        'screen-squad': '👥 Kader',
+        'screen-second-team': '🅱️ Zweite Mannschaft',
+        'screen-private': '🏠 Privatleben',
+        'screen-underworld': '🌃 Zwielichtige Geschäfte',
+        'screen-real-estate': '🏢 Immobilien',
+        'screen-europe': '🌍 Europapokal',
+        'screen-cup': '🏆 Pokalwettbewerb',
+        'screen-premium': '💎 Premium',
+        'screen-admin': '🛠️ Admin',
+        'screen-inbox': '📬 Postfach'
+    };
+
+    function buchungsLabelErmitteln() {
+        if (buchungsKontext) return buchungsKontext;
+        let screen = (typeof aktiverScreen === 'string') ? aktiverScreen : '';
+        return SCREEN_BUCHUNGS_LABELS[screen] || '💶 Sonstige Buchung';
+    }
+
+    function protokolliereBuchung(delta, saldo) {
+        if (buchungsKontext === SPIELTAG_KONTEXT) return; // steht bereits im Buchungsjournal
+        if (!game.kontoauszug) game.kontoauszug = [];
+        let label = buchungsLabelErmitteln();
+        let letzte = game.kontoauszug[game.kontoauszug.length - 1];
+        // Aufeinanderfolgende Buchungen derselben Aktion (z.B. Ablöse + Handgeld) werden zu
+        // einer Zeile zusammengefasst, damit der Auszug lesbar bleibt.
+        if (letzte && letzte.label === label && letzte.matchday === game.matchday
+            && letzte.season === game.season && Math.sign(letzte.amount) === Math.sign(delta)) {
+            letzte.amount += delta;
+            letzte.saldo = saldo;
+            return;
+        }
+        game.kontoauszug.push({ season: game.season, matchday: game.matchday, label, amount: delta, saldo });
+        if (game.kontoauszug.length > MAX_KONTOAUSZUG) game.kontoauszug.shift();
+    }
+
+    function installKontoauszug() {
+        if (kontoauszugAktiv) return;
+        let kontostand = game.money;
+        Object.defineProperty(game, 'money', {
+            enumerable: true,
+            configurable: true,
+            get() { return kontostand; },
+            set(neu) {
+                let delta = neu - kontostand;
+                kontostand = neu;
+                if (!kontoauszugPausiert && Math.abs(delta) >= 1) protokolliereBuchung(delta, neu);
+            }
+        });
+        kontoauszugAktiv = true;
+    }
+    // Während des Ladens eines Spielstands (Object.assign auf game) darf nicht protokolliert
+    // werden - sonst erschiene der geladene Kontostand als riesige Phantom-Buchung.
+    function kontoauszugPausieren() { kontoauszugPausiert = true; }
+    function kontoauszugFortsetzen() { kontoauszugPausiert = false; }
+    function setzeBuchungskontext(label) { buchungsKontext = label; }
+
+    // Nachtragsbuchung ins Journal des laufenden Spieltags: einige Spieltagskosten fallen
+    // erst NACH applyMatchdayFinances() an (z.B. der Ordnerdienst in processPostMatchRoutine).
+    // Sie gehören trotzdem in die Spieltagsabrechnung und nicht in den Kontoauszug.
+    function bucheInSpieltagsjournal(label, amount, typ = 'ausgaben') {
+        if (!(amount > 0)) return;
+        let ledger = game.financeLedger || [];
+        let eintrag = ledger[ledger.length - 1];
+        if (!eintrag || eintrag.matchday !== game.matchday || eintrag.season !== game.season) return;
+        let liste = eintrag[typ] || (eintrag[typ] = []);
+        let posten = liste.find(p => p.label === label);
+        if (posten) posten.amount += amount; else liste.push({ label, amount });
+        eintrag[typ === 'einnahmen' ? 'summeEin' : 'summeAus'] = liste.reduce((s, p) => s + p.amount, 0);
+    }
+    function loescheBuchungskontext() { buchungsKontext = null; }
+
+
+    // Kontoauszug-Ansicht: chronologische Liste aller Kontobewegungen ausserhalb der
+    // Spieltagsabrechnung, plus eine Zusammenfassung je Bereich.
+    function renderKontoauszug(box) {
+        let auszug = game.kontoauszug || [];
+        if (auszug.length === 0) {
+            box.innerHTML = `<div class="box" style="font-size:11px; color:#94a3b8;">Noch keine Buchungen ausserhalb der Spieltagsabrechnung. Sobald Sie kaufen, bauen, Personal einstellen oder Kredite aufnehmen, steht hier jede Bewegung mit Bereich und Kontostand.</div>`;
+            return;
+        }
+        let proBereich = {};
+        auszug.forEach(b => {
+            if (!proBereich[b.label]) proBereich[b.label] = { ein: 0, aus: 0 };
+            if (b.amount >= 0) proBereich[b.label].ein += b.amount;
+            else proBereich[b.label].aus += -b.amount;
+        });
+        let bereiche = Object.keys(proBereich)
+            .map(l => ({ label: l, ...proBereich[l], netto: proBereich[l].ein - proBereich[l].aus }))
+            .sort((a, b) => (b.ein + b.aus) - (a.ein + a.aus));
+
+        box.innerHTML = `
+            <div style="font-size:10px; color:#94a3b8; margin-bottom:6px;">Alle Kontobewegungen ausserhalb der Spieltagsabrechnung (letzte ${MAX_KONTOAUSZUG} Buchungen). Die Spieltagsposten finden Sie in den beiden anderen Reitern.</div>
+            <div class="box" style="margin-bottom:6px;">
+                <strong style="font-size:11px;">📊 NACH BEREICH</strong>
+                ${bereiche.map(b => `
+                    <div style="display:flex; justify-content:space-between; font-size:10px; margin-top:3px;">
+                        <span>${b.label}</span>
+                        <span><span style="color:var(--primary);">+${formatVal(b.ein)}</span> / <span style="color:var(--danger);">-${formatVal(b.aus)}</span>
+                        <strong style="color:${b.netto >= 0 ? 'var(--primary)' : 'var(--danger)'};">${b.netto >= 0 ? '+' : ''}${formatVal(b.netto)}</strong></span>
+                    </div>`).join('')}
+            </div>
+            <div class="box">
+                <strong style="font-size:11px;">🧾 EINZELBUCHUNGEN (neueste zuerst)</strong>
+                ${auszug.slice().reverse().map(b => `
+                    <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:10px; margin-top:3px; border-bottom:1px solid #1e293b; padding-bottom:2px;">
+                        <span style="color:#94a3b8;">S${b.season}/ST${b.matchday}</span>
+                        <span style="flex:1; margin:0 6px;">${b.label}</span>
+                        <span style="color:${b.amount >= 0 ? 'var(--primary)' : 'var(--danger)'}; font-weight:bold;">${b.amount >= 0 ? '+' : '-'}${formatVal(Math.abs(b.amount))}</span>
+                        <span style="color:#64748b; margin-left:6px; min-width:58px; text-align:right;">${formatVal(b.saldo)}</span>
+                    </div>`).join('')}
+            </div>`;
+    }
+
+    installKontoauszug();

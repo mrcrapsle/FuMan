@@ -52,6 +52,9 @@
     }
 
     function applyLoadedState(p) {
+        // Kontoauszug pausieren: das Object.assign unten setzt game.money auf den
+        // gespeicherten Wert - ohne Pause erschiene das als gigantische Buchung.
+        if (typeof kontoauszugPausieren === 'function') kontoauszugPausieren();
         if (p.game) Object.assign(game, p.game);
         // Migrations-Fix (NEU): game.secondTeam.name wird als verschachteltes Objekt beim
         // Object.assign oben komplett aus dem alten Spielstand übernommen - falls dort noch
@@ -171,6 +174,7 @@
             if (p.europeTournament) europeTournament = renameOldClubName(europeTournament);
         }
         restoreGetters();
+        if (typeof kontoauszugFortsetzen === 'function') kontoauszugFortsetzen();
     }
 
     function getSlotMeta(slotNum) {
