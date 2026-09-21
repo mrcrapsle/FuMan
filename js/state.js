@@ -116,6 +116,12 @@
         // Aufschlüsselung im Finanz-Screen.
         financeLedger: [],
         kontoauszug: [],
+        // Trainingsstab-Automatik (Premium): laeuft eine begrenzte Zahl von Spieltagen und
+        // startet selbststaendig Foerderprogramme.
+        trainingAutopilotMatchdays: 0,
+        trainingAutopilotLog: [],
+        // Entwicklungsbericht der Reserve: Staerke-Momentaufnahme zum Saisonstart.
+        secondTeamStrengthSnapshot: null,
         lastMatchdayTax: 0,
         lastMatchdayAdvisorFee: 0,
         seasonTaxPaid: 0,
@@ -376,6 +382,18 @@
         pressOfficer: { name: "Pressesprecher", hired: false, wage: 600, cost: 5000, desc: "Dämpft negative Medienwirkung bei schlechten Ergebnissen & Skandalen" },
         setPieceCoach: { name: "Standards-Spezialist", hired: false, wage: 650, cost: 5500, desc: "Verbessert Elfmeter-, Freistoß- und Eckballqualität der Mannschaft" }
     };
+    // Eigener, deutlich kleinerer Trainerstab NUR für die zweite Mannschaft. Bisher lief die
+    // Reserve komplett ohne Betreuung: kein Trainer, keine Physio, keine Nachwuchsarbeit -
+    // der Kader veränderte sich zwischen zwei Saisons überhaupt nicht. Gehälter und
+    // Ablösen liegen bewusst weit unter denen des Profistabs (Amateurbereich).
+    let secondTeamStaff = {
+        chefTrainer: { name: 'Reserve-Cheftrainer', hired: false, wage: 320, cost: 2800, icon: '🎯', desc: '+2 Teamstärke der zweiten Mannschaft in der Liga-Simulation.' },
+        coTrainer: { name: 'Reserve-Co-Trainer', hired: false, wage: 220, cost: 2000, icon: '📋', desc: 'Stellt die Reserve vor jedem Spieltag automatisch bestmöglich auf.' },
+        physio: { name: 'Reserve-Physiotherapeut', hired: false, wage: 240, cost: 2200, icon: '🩹', desc: 'Die Reserve erholt sich nach jedem Spieltag deutlich besser (Fitness).' },
+        talentScout: { name: 'Amateur-Talentspäher', hired: false, wage: 280, cost: 2500, icon: '🔍', desc: 'Deutlich stärkeres Angebot auf dem Amateur-Transfermarkt.' },
+        nachwuchsKoordinator: { name: 'Nachwuchs-Koordinator', hired: false, wage: 300, cost: 2600, icon: '🌱', desc: 'Reserve-Spieler bis 23 Jahre entwickeln sich im Saisonverlauf weiter.' }
+    };
+
     // Für die neuen Personal-Funktionen: Ausbaustufen, Verträge, Zufriedenheit je Mitarbeiter.
     let staffMeta = {};
     function ensureStaffMeta(key) {

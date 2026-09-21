@@ -1097,8 +1097,9 @@
         // gesamte Personal kostenlos - dadurch ließen sich die angezeigten Zahlen prinzipiell
         // nicht mit dem Kontostand in Einklang bringen.
         let staffWages = (typeof getTotalStaffWages === 'function') ? getTotalStaffWages() : 0;
+        let secondTeamStaffWages = (typeof getSecondTeamStaffWages === 'function') ? getSecondTeamStaffWages() : 0;
 
-        let net = grossIncome - taxAmount - advisorFee - wages - staffWages - travelCost;
+        let net = grossIncome - taxAmount - advisorFee - wages - staffWages - secondTeamStaffWages - travelCost;
         game.money += net;
 
         // Buchungsjournal: hält für JEDEN Spieltag fest, woraus sich Einnahmen und Ausgaben
@@ -1118,6 +1119,7 @@
         let ausgaben = [
             { label: '⚽ Spielergehälter', amount: wages },
             { label: '💼 Personalgehälter', amount: staffWages },
+            { label: '🅱️ Reserve-Trainerstab', amount: secondTeamStaffWages },
             { label: '🔧 Stadion- & Campus-Unterhalt', amount: maintenanceCost },
             { label: '🚌 Auswärtsfahrt', amount: travelCost },
             { label: '🧾 Steuern & Abgaben', amount: taxAmount },
@@ -1635,6 +1637,10 @@
         if (game.matchday % 4 === 0 && typeof tickYouthLeague === 'function') tickYouthLeague();
         if (typeof checkSellOnClausePayouts === 'function') checkSellOnClausePayouts();
         if (typeof tickSkillTraining === 'function') tickSkillTraining();
+        // Trainingsstab-Automatik (Premium) und Spieltagsroutine der zweiten Mannschaft -
+        // haengen bewusst hier, damit sie auch beim Durchsimulieren ganzer Saisons greifen.
+        if (typeof runTrainingAutopilotTick === 'function') runTrainingAutopilotTick();
+        if (typeof tickSecondTeamRoutine === 'function') tickSecondTeamRoutine();
         // Weitere Premium-Booster-Countdowns (NEU).
         if (game.injuryShieldMatchdaysLeft > 0) game.injuryShieldMatchdaysLeft--;
         if (game.sponsorBoostMatchdaysLeft > 0) game.sponsorBoostMatchdaysLeft--;

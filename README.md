@@ -180,6 +180,32 @@ gesamter Marktwert. `calculatePlayerWage()` staffelt unten jetzt nach Stärke
 `getDeployedStewards()`); auswärts stellt der Gastgeber das Personal. Vorher
 wurde an jedem Spieltag die volle vorgehaltene Zahl abgerechnet.
 
+## Zweite Mannschaft
+
+Die Reserve hat einen **eigenen, kleinen Trainerstab** (`secondTeamStaff` in
+`js/state.js`), unabhängig vom Profipersonal und mit eigenen Gehältern, die im
+Buchungsjournal als Posten "Reserve-Trainerstab" stehen. Jede Rolle hat eine
+echte Wirkung: Cheftrainer (+2 Teamstärke in der Liga-Simulation), Co-Trainer
+(stellt automatisch auf), Physiotherapeut (Fitnessbilanz), Talentspäher
+(besserer Amateurmarkt), Nachwuchs-Koordinator (U23 entwickeln sich weiter).
+
+`tickSecondTeamRoutine()` hängt an `processPostMatchRoutine()` und läuft
+deshalb in allen drei Spieltag-Pfaden mit, auch beim Durchsimulieren. Ohne
+Personal schwächelt die Reserve langsam (Fitness-Boden 60 %), wird aber nie
+unbrauchbar. Jugendspieler lassen sich wahlweise in den Profikader oder über
+`promoteYouthToSecondTeam()` erst in die Reserve hochziehen.
+
+## Trainingsstab-Automatik (Premium)
+
+`js/training.js`: Das Fähigkeitstraining verlangte bei jedem Durchgang drei
+manuelle Auswahlschritte. `autoPickSkillTraining()` (60 Punkte) füllt die
+Auswahl einmalig optimal aus, `activateTrainingAutopilot()` (500 Punkte,
+10 Spieltage) überlässt die Förderplanung komplett dem Stab.
+`runTrainingAutopilotTick()` hängt ebenfalls an `processPostMatchRoutine()`,
+startet höchstens drei Programme parallel und bucht den Verein nie ins Minus.
+Die Trainingsgebühr zahlt weiterhin das Vereinskonto - Premium kauft die
+Automatik, nicht das Training.
+
 ## Sprache (DE/EN)
 
 Wörterbuch-basierter Sprachumschalter in `js/i18n.js` (Funktion `t(key)`,

@@ -36,7 +36,10 @@
             row.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <span>${p.name} (${p.pos}|Str: ${p.strength}) ${p.trait && p.trait!=='Kein'?`<span class="badge badge-trait">${p.trait}</span>`:''}</span>
-                    <button onclick="promoteYouth(${idx}, this)" class="btn-action" style="width:auto;">In Profikader</button>
+                    <span style="display:flex; gap:4px;">
+                        <button onclick="promoteYouth(${idx}, this)" class="btn-action" style="width:auto; font-size:9px;">In Profikader</button>
+                        ${game.secondTeam.isActive ? `<button onclick="promoteYouthToSecondTeam(${idx}, this)" class="btn-secondary" style="width:auto; font-size:9px; color:var(--teal);" title="Behutsamer Weg: erst Spielpraxis in der Reserve sammeln">In die Reserve</button>` : ''}
+                    </span>
                 </div>
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; font-size:9px;">
                     <span>${potentialHtml}</span>
@@ -353,6 +356,23 @@
         assignYouthPotentialTier(p);
         p.youthFocus = 'allgemein';
         youthTalents.push(p);
+        renderYouthView();
+        updateUI();
+    }
+
+    // Der behutsame Weg: statt direkt in den Profikader zuerst in die zweite Mannschaft,
+    // wo der Spieler echte Spielpraxis bekommt und sich (mit Nachwuchs-Koordinator) weiter
+    // entwickelt, ohne einen Profi-Kaderplatz zu belegen.
+    function promoteYouthToSecondTeam(idx, btn) {
+        if (!game.secondTeam.isActive) { showToast('Dafür muss erst eine zweite Mannschaft gegründet sein.', 'error', 4000); return; }
+        if (!requireConfirm(btn, 'Wirklich in die Reserve?')) return;
+        playSound('click');
+        let p = youthTalents[idx];
+        secondTeamSquad.push(p);
+        youthTalents.splice(idx, 1);
+        if (typeof autoLineupSecondTeam === 'function') autoLineupSecondTeam();
+        addInboxMessage('vertrag', `🅱️ ${p.name} rückt in die Reserve auf`, `${p.name} (${p.pos}, Stärke ${p.strength}) sammelt ab sofort Spielpraxis bei ${game.secondTeam.name}, statt sofort im Profikader zu sitzen.`, 'screen-second-team');
+        showToast(`🅱️ ${p.name} in die zweite Mannschaft befördert!`, 'success');
         renderYouthView();
         updateUI();
     }

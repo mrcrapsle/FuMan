@@ -1676,6 +1676,159 @@ async function testEconomyBalance(browser) {
     await page.close();
 }
 
+async function testSecondTeamAndTrainingAutomation(browser) {
+    console.log('\n[25] Zweite Mannschaft & Trainingsstab-Automatik');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+        managerRPG.level = 5;
+        game.money = 5000000;
+        foundSecondTeam();
+
+        // 1. Eigener Trainerstab: einstellen, Wirkung, Gehalt, Entlassen.
+        let staerkeVorher = calcSecondTeamStrength();
+        hireSecondTeamStaff('chefTrainer');
+        out.chefTrainerWirkt = calcSecondTeamStrength() === staerkeVorher + 2;
+        out.stabKostetAbloese = secondTeamStaff.chefTrainer.hired === true;
+        hireSecondTeamStaff('physio');
+        hireSecondTeamStaff('talentScout');
+        out.gehaltSumme = getSecondTeamStaffWages()
+            === secondTeamStaff.chefTrainer.wage + secondTeamStaff.physio.wage + secondTeamStaff.talentScout.wage;
+
+        // Talentspaeher verbessert den Amateurmarkt.
+        refreshSecondTeamMarket();
+        let mitSpaeher = secondTeamMarketPlayers.length;
+        secondTeamStaff.talentScout.hired = false;
+        refreshSecondTeamMarket();
+        out.spaeherBringtMehr = mitSpaeher > secondTeamMarketPlayers.length;
+        secondTeamStaff.talentScout.hired = true;
+
+        // Entlassen braucht zwei Klicks (keine nativen Dialoge).
+        showScreen('screen-second-team');
+        let entlassen = [...document.querySelectorAll('#second-team-staff-box button')].find(b => b.innerText.trim() === 'Entlassen');
+        entlassen.click();
+        out.entlassenErsterKlick = secondTeamStaff.chefTrainer.hired === true;
+        entlassen.click();
+        out.entlassenZweiterKlick = secondTeamStaff.chefTrainer.hired === false;
+        hireSecondTeamStaff('chefTrainer');
+
+        // 2. Gehaelter des Reserve-Stabs stehen als eigener Posten im Buchungsjournal.
+        simulateMatchdays(1);
+        let posten = game.financeLedger.slice(-1)[0].ausgaben.find(a => a.label.includes('Reserve'));
+        out.reserveGehaltVerbucht = !!posten && posten.amount === getSecondTeamStaffWages();
+
+        // 3. Physiotherapeut dreht die Fitnessbilanz der Reserve ins Plus.
+        secondTeamSquad.forEach(p => p.fitness = 70);
+        simulateMatchdays(4);
+        let mitPhysio = secondTeamSquad.reduce((s, p) => s + p.fitness, 0) / secondTeamSquad.length;
+        secondTeamStaff.physio.hired = false;
+        secondTeamSquad.forEach(p => p.fitness = 70);
+        simulateMatchdays(4);
+        let ohnePhysio = secondTeamSquad.reduce((s, p) => s + p.fitness, 0) / secondTeamSquad.length;
+        out.physioWirkt = mitPhysio > ohnePhysio;
+        out.ohneStabNichtRuiniert = ohnePhysio >= 60;
+        secondTeamStaff.physio.hired = true;
+
+        // 4. Nachwuchs-Koordinator entwickelt junge Reservisten wirklich weiter.
+        hireSecondTeamStaff('nachwuchsKoordinator');
+        secondTeamSquad.forEach(p => { p.age = 20; });
+        let staerkeSumme = secondTeamSquad.reduce((s, p) => s + p.strength, 0);
+        simulateMatchdays(12);
+        out.nachwuchsEntwickeltSich = secondTeamSquad.reduce((s, p) => s + p.strength, 0) > staerkeSumme;
+
+        // 5. Jugendspieler koennen in die Reserve statt in den Profikader.
+        scoutYouthTalent();
+        showScreen('screen-youth');
+        let reserveBtn = [...document.querySelectorAll('#youth-talents-list button')].find(b => b.innerText.includes('Reserve'));
+        let reserveVorher = secondTeamSquad.length, jugendVorher = youthTalents.length;
+        out.reserveKnopfVorhanden = !!reserveBtn;
+        reserveBtn.click();
+        out.jugendReserveErsterKlick = secondTeamSquad.length === reserveVorher;
+        reserveBtn.click();
+        out.jugendReserveZweiterKlick = secondTeamSquad.length === reserveVorher + 1 && youthTalents.length === jugendVorher - 1;
+
+        return out;
+    });
+
+    const t = await page.evaluate(() => {
+        let out = {};
+        // 6. Trainingsstab-Automatik: kostet Premium-Punkte, ist nicht billig, und arbeitet
+        //    auch waehrend einer durchsimulierten Saison weiter.
+        Object.keys(SKILL_TRAINING_COACHES).forEach(k => { if (staffMembers[k]) staffMembers[k].hired = false; });
+        game.premiumPoints = 1000;
+        game.skillTrainingQueue = [];
+        game.trainingAutopilotMatchdays = 0;
+        activateTrainingAutopilot();
+        out.ohneTrainerKeineAutomatik = game.trainingAutopilotMatchdays === 0 && game.premiumPoints === 1000;
+
+        staffMembers.coTrainer.hired = true;
+        activateTrainingAutopilot();
+        out.nichtBillig = TRAINING_AUTOPILOT_COST >= 400;
+        out.punkteAbgezogen = game.premiumPoints === 1000 - TRAINING_AUTOPILOT_COST;
+        out.laufzeit = game.trainingAutopilotMatchdays === TRAINING_AUTOPILOT_DURATION;
+
+        game.money = 5000000;
+        simulateMatchdays(3);
+        out.automatikStartetFoerderung = (game.skillTrainingQueue || []).length > 0;
+        out.automatikProtokolliert = (game.trainingAutopilotLog || []).length > 0;
+        out.laufzeitZaehltRunter = game.trainingAutopilotMatchdays === TRAINING_AUTOPILOT_DURATION - 3;
+        out.hoechstensDreiParallel = game.skillTrainingQueue.length <= 3;
+
+        // Die Automatik bucht den Verein nie ins Minus.
+        game.skillTrainingQueue = [];
+        game.money = 100;
+        let geldVorher = game.money;
+        simulateMatchdays(1);
+        out.keineUeberziehung = game.skillTrainingQueue.length === 0 && game.money <= geldVorher;
+
+        // 7. Einmal-Vorschlag kostet ebenfalls Premium-Punkte und fuellt die Auswahl.
+        showScreen('screen-training');
+        setTrainingTab('individual');
+        game.premiumPoints = 500;
+        autoPickSkillTraining();
+        out.vorschlagKostet = game.premiumPoints === 500 - TRAINING_AUTOPICK_COST;
+        out.vorschlagFuelltAuswahl = !!document.getElementById('skill-training-player-select').value
+            && !!document.getElementById('skill-training-coach-select').value;
+
+        game.premiumPoints = 0;
+        let vorher = document.getElementById('skill-training-player-select').value;
+        autoPickSkillTraining();
+        out.ohneGuthabenKeinVorschlag = game.premiumPoints === 0 && document.getElementById('skill-training-player-select').value === vorher;
+        return out;
+    });
+
+    assert(r.chefTrainerWirkt, 'Reserve-Cheftrainer erhöht die Teamstärke der zweiten Mannschaft');
+    assert(r.stabKostetAbloese, 'Reserve-Personal lässt sich einstellen');
+    assert(r.gehaltSumme, 'Die Gehaltssumme des Reserve-Stabs wird korrekt berechnet');
+    assert(r.spaeherBringtMehr, 'Der Amateur-Talentspäher bringt mehr Spieler auf den Markt');
+    assert(r.entlassenErsterKlick, 'Reserve-Personal entlassen fragt beim ersten Klick nur nach');
+    assert(r.entlassenZweiterKlick, 'Erst der zweite Klick entlässt das Reserve-Personal');
+    assert(r.reserveGehaltVerbucht, 'Der Reserve-Trainerstab steht als eigener Posten im Buchungsjournal');
+    assert(r.physioWirkt, 'Der Reserve-Physiotherapeut verbessert die Fitness der zweiten Mannschaft');
+    assert(r.ohneStabNichtRuiniert, 'Eine unbetreute Reserve schwächelt, wird aber nicht unbrauchbar');
+    assert(r.nachwuchsEntwickeltSich, 'Mit Nachwuchs-Koordinator entwickeln sich junge Reservisten weiter');
+    assert(r.reserveKnopfVorhanden, 'Jugendspieler können in die Reserve statt in den Profikader');
+    assert(r.jugendReserveErsterKlick, 'Der Sprung in die Reserve fragt beim ersten Klick nur nach');
+    assert(r.jugendReserveZweiterKlick, 'Erst der zweite Klick schiebt den Jugendspieler in die Reserve');
+
+    assert(t.ohneTrainerKeineAutomatik, 'Ohne passenden Trainer lässt sich die Automatik nicht kaufen');
+    assert(t.nichtBillig, 'Die Trainingsstab-Automatik ist bewusst teuer (mind. 400 Premium-Punkte)');
+    assert(t.punkteAbgezogen, 'Die Automatik zieht die Premium-Punkte wirklich ab');
+    assert(t.laufzeit, 'Die Automatik läuft die vorgesehene Anzahl Spieltage');
+    assert(t.automatikStartetFoerderung, 'Die Automatik startet selbstständig Förderprogramme');
+    assert(t.automatikProtokolliert, 'Jede automatische Förderung wird protokolliert');
+    assert(t.laufzeitZaehltRunter, 'Die Restlaufzeit zählt pro Spieltag herunter');
+    assert(t.hoechstensDreiParallel, 'Die Automatik startet höchstens drei Förderungen parallel');
+    assert(t.keineUeberziehung, 'Die Automatik bucht den Verein nie ins Minus');
+    assert(t.vorschlagKostet, 'Der Einmal-Vorschlag kostet Premium-Punkte');
+    assert(t.vorschlagFuelltAuswahl, 'Der Einmal-Vorschlag füllt Spieler, Attribut und Trainer aus');
+    assert(t.ohneGuthabenKeinVorschlag, 'Ohne Guthaben passiert nichts und es wird nichts abgezogen');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei Reserve und Trainingsautomatik');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -1719,6 +1872,7 @@ async function main() {
         testConfirmBeforeIrreversibleActions,
         testFinanceLedgerAndStatement,
         testEconomyBalance,
+        testSecondTeamAndTrainingAutomation,
     ];
 
     for (const suite of suites) {
