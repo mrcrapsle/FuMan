@@ -257,7 +257,7 @@
             row.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
                     <div><strong>${s.name}</strong> (${s.hired ? '<span style="color:var(--primary);">Aktiv</span>' : 'Frei'})<br><span style="color:#aaa;">${s.desc}</span></div>
-                    <button onclick="${s.hired ? `toggleStaffMember('${key}')` : `openCandidatePool('${key}')`}" class="${s.hired ? 'btn-danger' : 'btn-action'}" style="width:auto;">${s.hired ? 'Entlassen' : 'Einstellen'}</button>
+                    <button onclick="${s.hired ? `toggleStaffMember('${key}', this)` : `openCandidatePool('${key}')`}" class="${s.hired ? 'btn-danger' : 'btn-action'}" style="width:auto;">${s.hired ? 'Entlassen' : 'Einstellen'}</button>
                 </div>
                 ${taskSelector}
                 ${hiredExtras}
@@ -331,7 +331,9 @@
         `;
     }
 
-    function toggleStaffMember(key) {
+    function toggleStaffMember(key, btn) {
+        // Nur das Entlassen ist folgenreich - beim Einstellen wird nicht nachgefragt.
+        if (staffMembers[key] && staffMembers[key].hired && !requireConfirm(btn, 'Wirklich entlassen?')) return;
         let s = staffMembers[key];
         playSound('click');
         if (s.hired) {

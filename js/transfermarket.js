@@ -530,7 +530,7 @@
         squad.forEach((p) => {
             let row = document.createElement('div');
             row.className = 'player-row';
-            row.innerHTML = `<span>${p.name} (${p.pos}|Str:${p.strength})</span><button onclick="sellPlayer('${p.id}')" class="btn-danger" style="width:auto;">Blitzverkauf [${formatVal(Math.round(p.marketValue*0.80))}]</button>`;
+            row.innerHTML = `<span>${p.name} (${p.pos}|Str:${p.strength})</span><button onclick="sellPlayer('${p.id}', this)" class="btn-danger" style="width:auto;">Blitzverkauf [${formatVal(Math.round(p.marketValue*0.80))}]</button>`;
             sList.appendChild(row);
         });
 
@@ -665,7 +665,8 @@
         return false;
     }
 
-    function sellPlayer(id) {
+    function sellPlayer(id, btn) {
+        if (!requireConfirm(btn, 'Wirklich verkaufen?')) return;
         if (squad.length <= 11) { alert("Kader darf nicht weniger als 11 Spieler umfassen!"); return; }
         let pCheck = squad.find(x => x.id === id);
         if (pCheck && !checkHighChemistryBeforeSale(pCheck)) return;

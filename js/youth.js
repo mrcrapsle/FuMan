@@ -36,7 +36,7 @@
             row.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <span>${p.name} (${p.pos}|Str: ${p.strength}) ${p.trait && p.trait!=='Kein'?`<span class="badge badge-trait">${p.trait}</span>`:''}</span>
-                    <button onclick="promoteYouth(${idx})" class="btn-action" style="width:auto;">In Profikader</button>
+                    <button onclick="promoteYouth(${idx}, this)" class="btn-action" style="width:auto;">In Profikader</button>
                 </div>
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; font-size:9px;">
                     <span>${potentialHtml}</span>
@@ -47,7 +47,7 @@
                         <option value="zweikampf" ${p.youthFocus==='zweikampf'?'selected':''}>Zweikampf</option>
                         <option value="tempo" ${p.youthFocus==='tempo'?'selected':''}>Tempo</option>
                     </select></span>
-                    <button onclick="releaseYouthTalent('${p.id}')" class="btn-secondary" style="width:auto; font-size:8px; color:var(--danger);">Freilassen</button>
+                    <button onclick="releaseYouthTalent('${p.id}', this)" class="btn-secondary" style="width:auto; font-size:8px; color:var(--danger);">Freilassen</button>
                 </div>
                 <div style="margin-top:4px; font-size:9px;">
                     🎓 Mentor: <select class="input-inline" style="font-size:8px; padding:2px;" onchange="this.value ? assignYouthMentor('${p.id}', this.value) : removeYouthMentor('${p.id}')">
@@ -309,7 +309,8 @@
     }
 
     // 8. Jugendtalent freilassen: bisher gab es nur "Befördern", kein Ausmustern.
-    function releaseYouthTalent(playerId) {
+    function releaseYouthTalent(playerId, btn) {
+        if (!requireConfirm(btn, 'Wirklich freilassen?')) return;
         let p = youthTalents.find(y => y.id === playerId);
         if (!p) return;
         youthTalents = youthTalents.filter(y => y.id !== playerId);
@@ -356,7 +357,9 @@
         updateUI();
     }
 
-    function promoteYouth(idx) {
+    function promoteYouth(idx, btn) {
+        // Hochziehen belegt dauerhaft einen Kaderplatz und kostet Gehalt - nicht ohne Rückfrage.
+        if (!requireConfirm(btn, 'Wirklich hochziehen?')) return;
         playSound('click');
         let p = youthTalents[idx];
         squad.push(p);

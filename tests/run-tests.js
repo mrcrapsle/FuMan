@@ -1445,6 +1445,54 @@ async function testAutoSaveAndPartialSimulation(browser) {
     await page.close();
 }
 
+async function testConfirmBeforeIrreversibleActions(browser) {
+    console.log('\n[22] Bestätigung vor folgenreichen Aktionen');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+
+        // Jugendspieler in den Profikader hochziehen
+        scoutYouthTalent(); scoutYouthTalent();
+        showScreen('screen-youth');
+        let hoch = [...document.querySelectorAll('#youth-talents-list button')].find(b => b.innerText.includes('Profikader'));
+        let kaderVorher = squad.length, jugendVorher = youthTalents.length;
+        hoch.click();
+        out.jugendErsterKlick = squad.length === kaderVorher && hoch.innerText.includes('Wirklich');
+        hoch.click();
+        out.jugendZweiterKlick = squad.length === kaderVorher + 1 && youthTalents.length === jugendVorher - 1;
+
+        // Personal entlassen
+        staffMembers.marketingDir.hired = true;
+        showScreen('screen-staff');
+        let entlassen = [...document.querySelectorAll('button')].find(b => b.innerText.trim() === 'Entlassen');
+        entlassen.click();
+        out.personalErsterKlick = staffMembers.marketingDir.hired === true && entlassen.innerText.includes('Wirklich');
+        entlassen.click();
+        out.personalZweiterKlick = staffMembers.marketingDir.hired === false;
+
+        // Einstellen bleibt ohne Rückfrage - nur das Entlassen ist folgenreich.
+        showScreen('screen-staff');
+        let einstellen = [...document.querySelectorAll('button')].find(b => b.innerText.trim() === 'Einstellen');
+        out.einstellenOhneRueckfrage = !!einstellen && einstellen.dataset.confirming !== 'true';
+
+        // Die Absicherung nutzt KEINE nativen Dialoge (in Android-WebViews unterdrückt).
+        out.keineNativenDialoge = !requireConfirm.toString().includes('confirm(')
+            && !promoteYouth.toString().includes('window.confirm');
+        return out;
+    });
+
+    assert(r.jugendErsterKlick, 'Jugendspieler hochziehen fragt beim ersten Klick nur nach');
+    assert(r.jugendZweiterKlick, 'Erst der zweite Klick zieht den Jugendspieler wirklich hoch');
+    assert(r.personalErsterKlick, 'Personal entlassen fragt beim ersten Klick nur nach');
+    assert(r.personalZweiterKlick, 'Erst der zweite Klick entlässt das Personal wirklich');
+    assert(r.einstellenOhneRueckfrage, 'Einstellen läuft weiterhin ohne Rückfrage');
+    assert(r.keineNativenDialoge, 'Die Rückfrage nutzt keine nativen Dialoge');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei den Bestätigungsabfragen');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -1485,6 +1533,7 @@ async function main() {
         testRealisticMerchSales,
         testBuildingPaymentAndPrices,
         testAutoSaveAndPartialSimulation,
+        testConfirmBeforeIrreversibleActions,
     ];
 
     for (const suite of suites) {

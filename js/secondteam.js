@@ -192,7 +192,8 @@
         showToast(`✅ ${candidate.name} (${candidate.pos}, Stärke ${candidate.strength}) für ${formatVal(cost)} verpflichtet!`, 'success');
     }
 
-    function releaseSecondTeamPlayer(id) {
+    function releaseSecondTeamPlayer(id, btn) {
+        if (!requireConfirm(btn, 'Wirklich entlassen?')) return;
         if (secondTeamSquad.length <= 11) { showToast('Mindestens 11 Spieler benötigt!', 'error'); return; }
         secondTeamSquad = secondTeamSquad.filter(p => p.id !== id);
         secondTeamLineup = secondTeamLineup.filter(pid => pid !== id);
@@ -523,7 +524,7 @@
                     <button onclick="promoteToFirstTeam('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:9px; color:var(--primary);" title="In die 1. Mannschaft hochziehen">⬆️</button>
                     <button onclick="loanOutPlayer('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:9px; color:var(--teal);" title="An anderen Klub verleihen">📤</button>
                     <button onclick="sellSecondTeamPlayer('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:9px;" title="Verkaufen">💰</button>
-                    <button onclick="releaseSecondTeamPlayer('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:9px; color:var(--danger);" title="Ablösefrei entlassen">✕</button>
+                    <button onclick="releaseSecondTeamPlayer('${p.id}', this)" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:9px; color:var(--danger);" title="Ablösefrei entlassen">✕</button>
                 `;
                 list.appendChild(row);
             });
