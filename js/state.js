@@ -232,11 +232,15 @@
         get totalStock() { return (this.cotton?.stock||0) + (this.wool?.stock||0) + (this.leather?.stock||0) + (this.plastic?.stock||0); }
     };
 
+    // Eine eigene Fabrik ist eine echte Industrie-Investition, keine Nebenausgabe: die alten
+    // 40.000-75.000 € entsprachen dem Preis eines mittelmäßigen Spielers. Die Beträge sind
+    // jetzt so gesetzt, dass der Einstieg über das Holding-Konto finanziert werden muss
+    // (B2B-Aufträge, Überweisung vom Verein) statt nebenbei aus der Portokasse zu fallen.
     let factories = {
-        textile: { name: "Textilfabrik 'Stoff & Naht'", owned: false, lvl: 1, max: 5, cost: 75000, product: "Trikots", desc: "Produziert Trikots für Baumwoll-Rohstoffkosten" },
-        knitting: { name: "Strickerei 'Maschenwerk'", owned: false, lvl: 1, max: 5, cost: 45000, product: "Schals", desc: "Fertigt Schals für Wolle-Rohstoffkosten" },
-        leatherShop: { name: "Leder- & Ballmanufaktur", owned: false, lvl: 1, max: 5, cost: 60000, product: "Bälle", desc: "Näht Spielbälle für Leder-Rohstoffkosten" },
-        plastics: { name: "Spritzguss- & Zubehörwerk", owned: false, lvl: 1, max: 5, cost: 40000, product: "Caps & Wimpel", desc: "Presst Caps & Wimpel für Kunststoff-Rohstoffkosten" }
+        textile: { name: "Textilfabrik 'Stoff & Naht'", owned: false, lvl: 1, max: 5, cost: 600000, product: "Trikots", desc: "Produziert Trikots für Baumwoll-Rohstoffkosten" },
+        knitting: { name: "Strickerei 'Maschenwerk'", owned: false, lvl: 1, max: 5, cost: 320000, product: "Schals", desc: "Fertigt Schals für Wolle-Rohstoffkosten" },
+        leatherShop: { name: "Leder- & Ballmanufaktur", owned: false, lvl: 1, max: 5, cost: 420000, product: "Bälle", desc: "Näht Spielbälle für Leder-Rohstoffkosten" },
+        plastics: { name: "Spritzguss- & Zubehörwerk", owned: false, lvl: 1, max: 5, cost: 250000, product: "Caps & Wimpel", desc: "Presst Caps & Wimpel für Kunststoff-Rohstoffkosten" }
     };
     let productionQueue = [];
 

@@ -288,7 +288,10 @@ async function testYouthAcademy(browser) {
         // Kapazitaet ausreichend fuer eine vollstaendige Jugendliga-Elf
         results.capacitySufficient = getYouthAcademyCapacity() >= 14;
 
-        // Akademie-Ausbau hat eine echte Bauzeit (frueher sofort)
+        // Akademie-Ausbau hat eine echte Bauzeit (frueher sofort). Seit der Preiskorrektur
+        // kostet die Akademie mindestens 300.000 EUR und wird ohne Deckung gar nicht erst
+        // begonnen - der Testverein braucht dafuer entsprechend Guthaben.
+        game.money = 5000000;
         let lvlBefore = game.youthAcademyLvl;
         upgradeYouthAcademy();
         results.academyUpgradeNotInstant = game.youthAcademyLvl === lvlBefore;
@@ -1322,6 +1325,63 @@ async function testRealisticMerchSales(browser) {
     await page.close();
 }
 
+async function testBuildingPaymentAndPrices(browser) {
+    console.log('\n[20] Bauen: Sofortzahlung, keine Schulden, Preise');
+    const { page, consoleErrors } = await freshPage(browser);
+
+    const r = await page.evaluate(() => {
+        let out = {};
+        // Ohne Deckung darf gar nicht erst gebaut werden.
+        game.money = 50000;
+        game.stadiumConstructionQueue = [];
+        queueStadiumConstruction('campusBuilding', { key: 'hotel' }, 900000, 12, 'Testbau');
+        out.ohneDeckungBlockiert = game.stadiumConstructionQueue.length === 0 && game.money === 50000;
+
+        // Mit Deckung: sofort vollständig bezahlt, keine offene Restzahlung.
+        game.money = 2000000;
+        queueStadiumConstruction('campusBuilding', { key: 'hotel' }, 900000, 12, 'Testbau');
+        let proj = game.stadiumConstructionQueue[0];
+        out.sofortVollBezahlt = game.money === 1100000;
+        out.keineRestzahlung = !!proj && proj.remainingPayment === 0;
+
+        // Bei Fertigstellung darf nichts mehr abgebucht werden.
+        let vorFertigstellung = game.money;
+        for (let i = 0; i < 20; i++) tickStadiumConstruction();
+        out.fertigOhneNachzahlung = game.money === vorFertigstellung;
+
+        // Preise: Fabriken sind echte Investitionen, die Jugendakademie kein Kleingeld mehr.
+        out.fabrikMin = Math.min(...Object.values(factories).map(f => f.cost));
+        game.leagueLevel = 5; game.youthAcademyLvl = 1;
+        out.akademieUnterliga = Math.max(300000, Math.round(600000 * Math.pow(1, 1.4) * getStadiumCostScale()));
+
+        // Fabrikkauf ohne Holding-Guthaben: sichtbar gesperrt statt stumm wirkungslos.
+        holdingCompany.money = 1000;
+        showScreen('screen-industry');
+        let gitter = document.getElementById('factories-grid');
+        let kaufKnopf = [...gitter.querySelectorAll('button')].find(b => b.innerText.includes('Fabrik kaufen'));
+        out.kaufGesperrt = !!kaufKnopf && kaufKnopf.disabled;
+        out.fehlbetragSichtbar = gitter.innerText.includes('es fehlen');
+
+        // Der Wirtschaftsbereich darf keine nativen Dialoge mehr nutzen (werden in manchen
+        // Android-WebViews unterdrückt - der Knopf wirkt dann komplett wirkungslos).
+        out.keinAlertMehr = !buyFactory.toString().includes('alert(')
+            && !startProduction.toString().includes('alert(')
+            && !transferClubToHolding.toString().includes('alert(');
+        return out;
+    });
+
+    assert(r.ohneDeckungBlockiert, 'Ohne ausreichendes Guthaben wird gar nicht erst gebaut');
+    assert(r.sofortVollBezahlt, 'Baukosten werden sofort vollständig abgebucht');
+    assert(r.keineRestzahlung, 'Es bleibt keine Restzahlung bis zur Fertigstellung offen');
+    assert(r.fertigOhneNachzahlung, 'Bei Fertigstellung wird nichts mehr nachgefordert');
+    assert(r.fabrikMin >= 250000, `Fabriken sind echte Investitionen (günstigste: ${r.fabrikMin.toLocaleString('de-DE')} €)`);
+    assert(r.akademieUnterliga >= 300000, `Jugendakademie auch in unteren Ligen kein Kleingeld (${r.akademieUnterliga.toLocaleString('de-DE')} €)`);
+    assert(r.kaufGesperrt && r.fehlbetragSichtbar, 'Fabrikkauf ohne Holding-Guthaben ist sichtbar gesperrt und begründet');
+    assert(r.keinAlertMehr, 'Wirtschaftsbereich meldet Fehler sichtbar statt über native Dialoge');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Bau-/Preis-Test');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -1360,6 +1420,7 @@ async function main() {
         testStadiumWideBanden,
         testOfficeAtmosphereAndCrest,
         testRealisticMerchSales,
+        testBuildingPaymentAndPrices,
     ];
 
     for (const suite of suites) {

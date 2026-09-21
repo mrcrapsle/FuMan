@@ -628,13 +628,19 @@
         // Verhindert doppelte Baustellen für dieselbe Anlage, solange eine noch läuft.
         let alreadyQueued = (game.stadiumConstructionQueue || []).some(p => p.type === type && JSON.stringify(p.params) === JSON.stringify(params));
         if (alreadyQueued) { showToast('Für diese Anlage läuft bereits eine Baustelle!', 'error'); return; }
-        let downPayment = Math.round(totalCost * 0.3);
-        if (game.money < downPayment) { showToast(`Nicht genug Geld für die Anzahlung! Benötigt: ${formatVal(downPayment)}`, 'error'); return; }
+        // Voll bezahlt wird beim Auftrag, nicht erst bei Fertigstellung: die frühere
+        // 30%-Anzahlung mit Restzahlung am Bauende führte dazu, dass man Projekte in
+        // Auftrag geben konnte, die man sich gar nicht leisten kann - die Restzahlung
+        // riss das Konto dann bei Fertigstellung ins Minus.
+        if (game.money < totalCost) {
+            showToast(`Baukosten nicht gedeckt: ${formatVal(game.money)} auf dem Konto, ${formatVal(totalCost)} nötig (es fehlen ${formatVal(totalCost - game.money)}).`, 'error', 5000);
+            return;
+        }
         playSound('click');
-        game.money -= downPayment;
-        if (type !== 'campusBuilding' && type !== 'realEstate' && type !== 'staffTraining') stadium.totalInvested = (stadium.totalInvested || 0) + downPayment;
-        game.stadiumConstructionQueue.push({ type, params, totalCost, downPayment, remainingPayment: totalCost - downPayment, daysLeft: buildDays, totalDays: buildDays, label });
-        addInboxMessage('vertrag', `🏗️ Bauprojekt gestartet: ${label}`, `Anzahlung von ${formatVal(downPayment)} geleistet. Fertigstellung in ${buildDays} Spieltagen, Restzahlung dann ${formatVal(totalCost - downPayment)}.`, 'screen-stadium');
+        game.money -= totalCost;
+        if (type !== 'campusBuilding' && type !== 'realEstate' && type !== 'staffTraining') stadium.totalInvested = (stadium.totalInvested || 0) + totalCost;
+        game.stadiumConstructionQueue.push({ type, params, totalCost, downPayment: totalCost, remainingPayment: 0, daysLeft: buildDays, totalDays: buildDays, label });
+        addInboxMessage('vertrag', `🏗️ Bauprojekt gestartet: ${label}`, `${formatVal(totalCost)} wurden vollständig bezahlt. Fertigstellung in ${buildDays} Spieltagen - danach keine weiteren Kosten.`, 'screen-stadium');
         showToast(`🏗️ Baustelle eröffnet: ${label} (fertig in ${buildDays} SpT)`, 'success');
         // Bugfix: aktualisierte bisher immer nur den Stadion-Screen, auch wenn die Baustelle
         // vom CAMPUS-Screen aus eröffnet wurde - dort blieb die neue Baustelle unsichtbar,
@@ -708,7 +714,11 @@
                 addInboxMessage('vertrag', '🏠 Jugendkader-Kapazität erweitert!', `Platz für jetzt ${getYouthAcademyCapacity()} Nachwuchsspieler in der Akademie.`, 'screen-youth');
             }
             game.boardSat = Math.min(100, game.boardSat + 2);
-            addInboxMessage('vertrag', `🏗️ Bauprojekt fertiggestellt: ${proj.label}!`, `Die Bauarbeiten sind abgeschlossen, Restzahlung von ${formatVal(proj.remainingPayment)} beglichen. Der Effekt ist ab sofort wirksam.`, 'screen-stadium');
+            addInboxMessage('vertrag', `🏗️ Bauprojekt fertiggestellt: ${proj.label}!`,
+                (proj.remainingPayment > 0
+                    ? `Die Bauarbeiten sind abgeschlossen, die offene Restzahlung von ${formatVal(proj.remainingPayment)} wurde beglichen.`
+                    : `Die Bauarbeiten sind abgeschlossen - bezahlt wurde bereits bei Auftragserteilung (${formatVal(proj.totalCost)}).`)
+                + ' Der Effekt ist ab sofort wirksam.', 'screen-stadium');
         });
         game.stadiumConstructionQueue = stillActive;
     }
@@ -730,7 +740,7 @@
                 <div style="flex:1;">
                     <div style="font-size:10px; margin-bottom:4px;">🏗️ ${proj.label}</div>
                     <div style="display:flex; gap:2px;">${segments.map(done => `<div style="flex:1; height:10px; border-radius:2px; background:${done ? 'var(--accent)' : 'rgba(228,197,140,0.15)'};"></div>`).join('')}</div>
-                    <div style="font-size:8px; color:var(--text-muted); margin-top:3px;">Restzahlung bei Fertigstellung: ${formatVal(proj.remainingPayment)}</div>
+                    <div style="font-size:8px; color:var(--text-muted); margin-top:3px;">${proj.remainingPayment > 0 ? `Restzahlung bei Fertigstellung: ${formatVal(proj.remainingPayment)}` : `Vollständig bezahlt: ${formatVal(proj.totalCost)}`}</div>
                 </div>
             </div>`;
         }).join('');

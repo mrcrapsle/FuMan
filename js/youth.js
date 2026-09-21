@@ -13,14 +13,14 @@
         let academyQueued = (game.stadiumConstructionQueue || []).find(q => q.type === 'youthAcademyLvl');
         let btnAcademy = document.getElementById('btn-upgrade-youth-academy');
         if (btnAcademy) {
-            let cost = Math.round(game.youthAcademyLvl * 35000 * (typeof getStadiumCostScale === 'function' ? getStadiumCostScale() : 1));
+            let cost = Math.max(300000, Math.round(600000 * Math.pow(game.youthAcademyLvl, 1.4) * (typeof getStadiumCostScale === 'function' ? getStadiumCostScale() : 1)));
             btnAcademy.innerText = academyQueued ? `🏗️ Im Bau... (noch ${academyQueued.daysLeft} SpT)` : `Akademie ausbauen [${formatVal(cost)}]`;
             btnAcademy.disabled = !!academyQueued;
         }
         let capacityQueued = (game.stadiumConstructionQueue || []).find(q => q.type === 'youthCapacity');
         let btnCapacity = document.getElementById('btn-expand-youth-capacity');
         if (btnCapacity) {
-            let cost = Math.round(25000 * ((game.youthCapacityBonus || 0) + 1) * (typeof getStadiumCostScale === 'function' ? getStadiumCostScale() : 1));
+            let cost = Math.max(80000, Math.round(180000 * ((game.youthCapacityBonus || 0) + 1) * (typeof getStadiumCostScale === 'function' ? getStadiumCostScale() : 1)));
             btnCapacity.innerText = capacityQueued ? `🏗️ Im Bau... (noch ${capacityQueued.daysLeft} SpT)` : `🏠 Kapazität erweitern [${formatVal(cost)}]`;
             btnCapacity.disabled = !!capacityQueued;
         }
@@ -90,8 +90,7 @@
         return 14 + game.youthAcademyLvl * 2 + (game.youthCapacityBonus || 0);
     }
     function expandYouthCapacity() {
-        let cost = Math.round(25000 * ((game.youthCapacityBonus || 0) + 1) * getStadiumCostScale());
-        if (game.money < cost) { showToast(`Nicht genug Geld! Benötigt: ${formatVal(cost)}`, 'error'); return; }
+        let cost = Math.max(80000, Math.round(180000 * ((game.youthCapacityBonus || 0) + 1) * getStadiumCostScale()));
         // Bugfix: ließ sich bisher komplett ohne Wartezeit sofort ausbauen - jetzt über
         // dieselbe Baustellen-Logik wie Stadion/Campus mit echter Bauzeit.
         if (typeof queueStadiumConstruction === 'function') {
@@ -320,8 +319,13 @@
     }
 
     function upgradeYouthAcademy() {
-        let cost = Math.round(game.youthAcademyLvl * 35000 * getStadiumCostScale());
-        if (game.money < cost) return;
+        // Preis-Korrektur: 35.000 € je Stufe war für eine Jugendakademie grotesk niedrig -
+        // billiger als der Foodtruck-Garten (550.000 €), obwohl sie den gesamten Nachwuchs
+        // trägt. Jetzt auf dem Niveau der großen Campus-Bauten (Internat 5,5 Mio,
+        // Reha-Zentrum 4,5 Mio) und mit jeder Stufe deutlich teurer.
+        let cost = Math.max(300000, Math.round(600000 * Math.pow(game.youthAcademyLvl, 1.4) * getStadiumCostScale()));
+        // Kein stummes Abbrechen mehr: die Deckungsprüfung macht queueStadiumConstruction
+        // mit einer klaren Meldung (vorher wurde hier wortlos zurückgesprungen).
         // Bugfix: ließ sich bisher komplett ohne Wartezeit sofort ausbauen - jetzt mit
         // echter Bauzeit über dieselbe Baustellen-Logik wie Stadion/Campus.
         if (typeof queueStadiumConstruction === 'function') {
