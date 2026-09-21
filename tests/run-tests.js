@@ -1259,6 +1259,69 @@ async function testOfficeAtmosphereAndCrest(browser) {
     await page.close();
 }
 
+async function testRealisticMerchSales(browser) {
+    console.log('\n[19] Fanartikel: realistische Absatzmengen');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+        out.sortiment = Object.keys(merchandise).length;
+        for (let k in merchandise) merchandise[k].stock = 100000;   // Bestand darf nicht bremsen
+        game.attendanceHistory = Array.from({ length: 8 }, () => ({ attendance: 950 }));
+
+        const lauf = (att) => {
+            for (let k in merchandise) merchandise[k].stock = 100000;
+            let rev = simulateMerchSales(true, false, att);
+            return { rev, stueck: Object.values(merchandise).reduce((s, m) => s + m.lastSales.total, 0) };
+        };
+
+        // Kleiner Verein: der Absatz muss zur Zuschauerzahl passen.
+        let laeufe = [lauf(950), lauf(950), lauf(950)];
+        out.proZuschauer = laeufe.map(l => l.rev / 950);
+        out.stueckzahlen = laeufe.map(l => l.stueck);
+        out.schwankt = new Set(laeufe.map(l => Math.round(l.rev))).size > 1;
+
+        // Zehnfache Zuschauerzahl muss auch etwa den zehnfachen Absatz bringen.
+        game.attendanceHistory = Array.from({ length: 8 }, () => ({ attendance: 9500 }));
+        let gross = lauf(9500);
+        out.skaliert = gross.stueck > laeufe[0].stueck * 4;
+
+        // Premium-Booster und Perks müssen sich auswirken.
+        game.attendanceHistory = Array.from({ length: 8 }, () => ({ attendance: 950 }));
+        let ohne = lauf(950).rev;
+        game.merchDoubleNextMatch = true;
+        let mit = lauf(950).rev;
+        out.boosterWirkt = mit > ohne * 1.25;
+        out.boosterVerbraucht = game.merchDoubleNextMatch === false;
+
+        // Auswärts wird im Stadion nichts verkauft, Stadt/Online laufen weiter.
+        let aus = simulateMerchSales(false, false, 0);
+        out.auswaertsOhneStadion = Object.values(merchandise).every(m => m.lastSales.stadium === 0) && aus > 0;
+
+        // Verlauf wird mitgeschrieben und überlebt Speichern/Laden.
+        out.verlaufEintraege = merchExtras.salesHistory.length;
+        let save = JSON.parse(JSON.stringify(buildSaveState()));
+        merchExtras.salesHistory = [];
+        applyLoadedState(save);
+        out.verlaufRestauriert = merchExtras.salesHistory.length === out.verlaufEintraege;
+        return out;
+    });
+
+    const proZ = r.proZuschauer.map(v => v.toFixed(2)).join(' / ');
+    assert(r.sortiment >= 24, `Sortiment umfasst mindestens 24 Artikel (${r.sortiment})`);
+    assert(r.proZuschauer.every(v => v > 1.5 && v < 8), `Umsatz je Zuschauer bleibt realistisch (${proZ} € - Recherche: ~3 €)`);
+    assert(r.stueckzahlen.every(v => v < 400), `Bei 950 Zuschauern werden keine Hunderte Artikel verkauft (${r.stueckzahlen.join('/')} Stück)`);
+    assert(r.schwankt, 'Die Absatzmenge schwankt von Spieltag zu Spieltag');
+    assert(r.skaliert, 'Zehnfache Zuschauerzahl bringt deutlich mehr Absatz');
+    assert(r.boosterWirkt, 'Premium-Booster steigert den Absatz spürbar');
+    assert(r.boosterVerbraucht, 'Premium-Booster wird nach dem Spieltag verbraucht');
+    assert(r.auswaertsOhneStadion, 'Auswärts läuft kein Stadionverkauf, Stadt/Online aber schon');
+    assert(r.verlaufEintraege > 0 && r.verlaufRestauriert, 'Verkaufsverlauf wird mitgeschrieben und überlebt Speichern/Laden');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei den Fanartikel-Verkäufen');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -1296,6 +1359,7 @@ async function main() {
         testTaxAndAdvisor,
         testStadiumWideBanden,
         testOfficeAtmosphereAndCrest,
+        testRealisticMerchSales,
     ];
 
     for (const suite of suites) {

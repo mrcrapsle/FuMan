@@ -1031,7 +1031,7 @@
                 if (ultras) ultras.mood = Math.min(100, ultras.mood + campusBuildings.fankneipe.lvl * 0.3);
             }
         }
-        let merchIncome = simulateMerchSales(isHomeMatch && !ghostGameActive, won);
+        let merchIncome = simulateMerchSales(isHomeMatch && !ghostGameActive, won, att);
         let wages = squad.reduce((s, p) => s + p.wage, 0);
         // Bugfix: Gehälter der Zweiten Mannschaft wurden bisher nie abgebucht, obwohl die
         // Spieler reale Gehaltswerte über dieselbe createPlayer()-Fabrik erhalten - "kostenlose

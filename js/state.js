@@ -241,12 +241,35 @@
     let productionQueue = [];
 
     let merchandise = {
-        jerseys: { name: "Heimtrikot 2026/27", stock: 250, cost: 14, price: 65, optimalPrice: 65, reqMat: 'cotton', reqQty: 1.0, factory: 'textile', lastSales: { stadium: 0, city: 0, online: 0, total: 0, revenue: 0, missed: 0 } },
-        scarves: { name: "Fan-Schal 'Tradition'", stock: 500, cost: 4, price: 18, optimalPrice: 18, reqMat: 'wool', reqQty: 0.6, factory: 'knitting', lastSales: { stadium: 0, city: 0, online: 0, total: 0, revenue: 0, missed: 0 } },
-        caps: { name: "Snapback Cap", stock: 300, cost: 5, price: 22, optimalPrice: 22, reqMat: 'plastic', reqQty: 0.5, factory: 'plastics', lastSales: { stadium: 0, city: 0, online: 0, total: 0, revenue: 0, missed: 0 } },
-        balls: { name: "Offizieller Spielball", stock: 150, cost: 9, price: 35, optimalPrice: 35, reqMat: 'leather', reqQty: 1.2, factory: 'leatherShop', lastSales: { stadium: 0, city: 0, online: 0, total: 0, revenue: 0, missed: 0 } }
+        jerseys: { name: "Heimtrikot 2026/27", stock: 250, cost: 14, price: 65, optimalPrice: 65, popularity: 1.0, reqMat: 'cotton', reqQty: 1.0, factory: 'textile', lastSales: { stadium: 0, city: 0, online: 0, total: 0, revenue: 0, missed: 0 } },
+        scarves: { name: "Fan-Schal 'Tradition'", stock: 500, cost: 4, price: 18, optimalPrice: 18, popularity: 1.2, reqMat: 'wool', reqQty: 0.6, factory: 'knitting', lastSales: { stadium: 0, city: 0, online: 0, total: 0, revenue: 0, missed: 0 } },
+        caps: { name: "Snapback Cap", stock: 300, cost: 5, price: 22, optimalPrice: 22, popularity: 0.8, reqMat: 'plastic', reqQty: 0.5, factory: 'plastics', lastSales: { stadium: 0, city: 0, online: 0, total: 0, revenue: 0, missed: 0 } },
+        balls: { name: "Offizieller Spielball", stock: 150, cost: 9, price: 35, optimalPrice: 35, popularity: 0.45, reqMat: 'leather', reqQty: 1.2, factory: 'leatherShop', lastSales: { stadium: 0, city: 0, online: 0, total: 0, revenue: 0, missed: 0 } },
+        awayJersey: { name: "Auswärtstrikot 2026/27", stock: 180, cost: 14, price: 65, optimalPrice: 65, popularity: 0.55, reqMat: 'cotton', reqQty: 1.0, factory: 'textile', lastSales: { stadium: 0, city: 0, online: 0, total: 0, revenue: 0, missed: 0 } },
+        keeperJersey: { name: "Torwarttrikot", stock: 90, cost: 15, price: 69, optimalPrice: 69, popularity: 0.2, reqMat: 'cotton', reqQty: 1.0, factory: 'textile', lastSales: { stadium: 0, city: 0, online: 0, total: 0, revenue: 0, missed: 0 } },
+        trainingTop: { name: "Trainingsshirt", stock: 220, cost: 8, price: 34, optimalPrice: 34, popularity: 0.6, reqMat: 'cotton', reqQty: 0.7, factory: 'textile', lastSales: { stadium: 0, city: 0, online: 0, total: 0, revenue: 0, missed: 0 } },
+        hoodie: { name: "Kapuzenpulli mit Wappen", stock: 200, cost: 16, price: 55, optimalPrice: 55, popularity: 0.7, reqMat: 'cotton', reqQty: 1.3, factory: 'textile', lastSales: { stadium: 0, city: 0, online: 0, total: 0, revenue: 0, missed: 0 } },
+        babyBody: { name: "Baby-Body 'Nachwuchs'", stock: 120, cost: 5, price: 22, optimalPrice: 22, popularity: 0.35, reqMat: 'cotton', reqQty: 0.4, factory: 'textile', lastSales: { stadium: 0, city: 0, online: 0, total: 0, revenue: 0, missed: 0 } },
+        bathrobe: { name: "Bademantel", stock: 60, cost: 22, price: 79, optimalPrice: 79, popularity: 0.15, reqMat: 'cotton', reqQty: 1.8, factory: 'textile', lastSales: { stadium: 0, city: 0, online: 0, total: 0, revenue: 0, missed: 0 } },
+        socks: { name: "Stutzen-Set", stock: 300, cost: 3, price: 14, optimalPrice: 14, popularity: 0.75, reqMat: 'wool', reqQty: 0.4, factory: 'knitting', lastSales: { stadium: 0, city: 0, online: 0, total: 0, revenue: 0, missed: 0 } },
+        beanie: { name: "Wintermütze", stock: 240, cost: 5, price: 19, optimalPrice: 19, popularity: 0.8, reqMat: 'wool', reqQty: 0.5, factory: 'knitting', lastSales: { stadium: 0, city: 0, online: 0, total: 0, revenue: 0, missed: 0 } },
+        gloves: { name: "Fan-Handschuhe", stock: 200, cost: 4, price: 16, optimalPrice: 16, popularity: 0.6, reqMat: 'wool', reqQty: 0.4, factory: 'knitting', lastSales: { stadium: 0, city: 0, online: 0, total: 0, revenue: 0, missed: 0 } },
+        blanket: { name: "Stadion-Decke", stock: 140, cost: 11, price: 39, optimalPrice: 39, popularity: 0.4, reqMat: 'wool', reqQty: 1.4, factory: 'knitting', lastSales: { stadium: 0, city: 0, online: 0, total: 0, revenue: 0, missed: 0 } },
+        scarfAway: { name: "Auswärts-Schal", stock: 260, cost: 4, price: 18, optimalPrice: 18, popularity: 0.7, reqMat: 'wool', reqQty: 0.6, factory: 'knitting', lastSales: { stadium: 0, city: 0, online: 0, total: 0, revenue: 0, missed: 0 } },
+        wallet: { name: "Leder-Geldbörse", stock: 120, cost: 8, price: 29, optimalPrice: 29, popularity: 0.35, reqMat: 'leather', reqQty: 0.5, factory: 'leatherShop', lastSales: { stadium: 0, city: 0, online: 0, total: 0, revenue: 0, missed: 0 } },
+        keychain: { name: "Schlüsselanhänger", stock: 500, cost: 1, price: 8, optimalPrice: 8, popularity: 1.1, reqMat: 'leather', reqQty: 0.1, factory: 'leatherShop', lastSales: { stadium: 0, city: 0, online: 0, total: 0, revenue: 0, missed: 0 } },
+        miniBall: { name: "Mini-Ball für Kinder", stock: 200, cost: 4, price: 15, optimalPrice: 15, popularity: 0.65, reqMat: 'leather', reqQty: 0.4, factory: 'leatherShop', lastSales: { stadium: 0, city: 0, online: 0, total: 0, revenue: 0, missed: 0 } },
+        sportsBag: { name: "Sporttasche", stock: 110, cost: 18, price: 59, optimalPrice: 59, popularity: 0.3, reqMat: 'leather', reqQty: 1.5, factory: 'leatherShop', lastSales: { stadium: 0, city: 0, online: 0, total: 0, revenue: 0, missed: 0 } },
+        pennant: { name: "Wimpel 'Heimspiel'", stock: 400, cost: 2, price: 9, optimalPrice: 9, popularity: 0.9, reqMat: 'plastic', reqQty: 0.2, factory: 'plastics', lastSales: { stadium: 0, city: 0, online: 0, total: 0, revenue: 0, missed: 0 } },
+        mug: { name: "Vereins-Tasse", stock: 320, cost: 3, price: 13, optimalPrice: 13, popularity: 0.85, reqMat: 'plastic', reqQty: 0.4, factory: 'plastics', lastSales: { stadium: 0, city: 0, online: 0, total: 0, revenue: 0, missed: 0 } },
+        bottle: { name: "Trinkflasche", stock: 280, cost: 4, price: 16, optimalPrice: 16, popularity: 0.7, reqMat: 'plastic', reqQty: 0.5, factory: 'plastics', lastSales: { stadium: 0, city: 0, online: 0, total: 0, revenue: 0, missed: 0 } },
+        umbrella: { name: "Regenschirm", stock: 160, cost: 7, price: 25, optimalPrice: 25, popularity: 0.45, reqMat: 'plastic', reqQty: 0.8, factory: 'plastics', lastSales: { stadium: 0, city: 0, online: 0, total: 0, revenue: 0, missed: 0 } },
+        phoneCase: { name: "Handyhülle mit Wappen", stock: 240, cost: 4, price: 18, optimalPrice: 18, popularity: 0.6, reqMat: 'plastic', reqQty: 0.3, factory: 'plastics', lastSales: { stadium: 0, city: 0, online: 0, total: 0, revenue: 0, missed: 0 } }
     };
     let merchExtras = {
+        // Verkaufsverlauf je Spieltag - damit nachvollziehbar bleibt, was sich wann und in
+        // welcher Menge verkauft hat (siehe simulateMerchSales/renderMerchSalesHistory).
+        salesHistory: [],
         limitedEdition: null,
         seasonalCollection: { active: false, boostPercent: 0, expiresMatchday: null },
         jerseySalesByPlayer: {}
