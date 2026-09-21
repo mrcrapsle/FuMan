@@ -111,6 +111,7 @@
         lastHomeAttendance: 0,
         // Steuern & Abgaben (siehe applyMatchdayFinances/finances.js): letzter Spieltag
         // getrennt ausgewiesen, dazu die laufende Saisonsumme für die GuV-Anzeige.
+        lastAutoSaveMatchday: 0,
         lastMatchdayTax: 0,
         lastMatchdayAdvisorFee: 0,
         seasonTaxPaid: 0,

@@ -31,6 +31,10 @@
     }
 
     const SAVE_SLOT_PREFIX = 'anstoss_fm13_save_slot_';
+    // Automatischer Speicherstand in einem EIGENEN Slot: würde die Automatik in Slot 1
+    // schreiben, überschriebe sie ungefragt den von Hand angelegten Spielstand.
+    const AUTOSAVE_KEY = 'anstoss_fm13_autosave';
+    const AUTOSAVE_INTERVAL = 5;
     const LEGACY_SAVE_KEY = 'anstoss_fm13_save_v1';
     const SAVE_SLOT_COUNT = 3;
     const FORCE_NEW_GAME_FLAG = 'anstoss_fm13_force_new_game';
@@ -304,7 +308,67 @@
         renderSaveSlotsUI();
     }
 
+    // Wird nach jedem Spieltag aufgerufen und sichert alle AUTOSAVE_INTERVAL Spieltage.
+    function maybeAutoSave() {
+        let letzter = game.lastAutoSaveMatchday || 0;
+        if (game.matchday - letzter < AUTOSAVE_INTERVAL && game.matchday >= letzter) return;
+        try {
+            let state = buildSaveState();
+            state.meta = {
+                savedAt: new Date().toLocaleString('de-DE'),
+                clubName: game.clubName,
+                league: leagueNames[game.leagueLevel],
+                season: game.season,
+                matchday: Math.min(34, game.matchday),
+                money: game.money
+            };
+            if (safeLocalSet(AUTOSAVE_KEY, JSON.stringify(state))) {
+                game.lastAutoSaveMatchday = game.matchday;
+                showToast(`💾 Automatisch gespeichert (Spieltag ${Math.min(34, game.matchday)}).`, 'success', 2200);
+                renderSaveSlotsUI();
+            }
+        } catch (e) { console.error('Autosave fehlgeschlagen:', e); }
+    }
+
+    function loadAutoSave() {
+        try {
+            let raw = safeLocalGet(AUTOSAVE_KEY);
+            if (!raw) { showToast('Es gibt noch keinen automatischen Spielstand.', 'error'); return false; }
+            applyLoadedState(JSON.parse(raw));
+            updateUI();
+            showScreen('screen-dashboard');
+            playSound('whistle');
+            showToast('📂 Automatischer Spielstand geladen!', 'success');
+            renderSaveSlotsUI();
+            return true;
+        } catch (e) { showToast('Automatischer Spielstand ist beschädigt: ' + e.message, 'error'); return false; }
+    }
+
+    // Schnellspeichern aus der unteren Menüleiste - legt immer in Slot 1 ab.
+    function quickSave() { saveGameToSlot(1); }
+
+    function renderAutoSaveBox() {
+        let box = document.getElementById('save-slot-auto');
+        if (!box) return;
+        let raw = safeLocalGet(AUTOSAVE_KEY);
+        if (!raw) {
+            box.innerHTML = `<div style="font-size:10px; color:#64748b;">🔄 Automatisches Speichern: alle ${AUTOSAVE_INTERVAL} Spieltage - bisher noch keiner angelegt.</div>`;
+            return;
+        }
+        try {
+            let m = JSON.parse(raw).meta || {};
+            box.innerHTML = `
+                <div style="font-weight:bold; color:var(--teal);">🔄 Automatisch: ${m.clubName || '-'}</div>
+                <div style="font-size:10px; color:#94a3b8;">${m.league || '-'} · Saison ${m.season} · Spieltag ${m.matchday}/34 · ${formatVal(m.money || 0)}</div>
+                <div style="font-size:9px; color:#64748b;">Gespeichert: ${m.savedAt || '-'} · wird alle ${AUTOSAVE_INTERVAL} Spieltage erneuert</div>
+                <button onclick="loadAutoSave()" class="btn-secondary" style="font-size:9px; margin-top:4px;">Automatischen Stand laden</button>`;
+        } catch (e) {
+            box.innerHTML = '<div style="font-size:10px; color:var(--danger);">Automatischer Spielstand ist beschädigt.</div>';
+        }
+    }
+
     function renderSaveSlotsUI() {
+        renderAutoSaveBox();
         let versionTag = document.getElementById('game-version-tag');
         if (versionTag) versionTag.innerText = `Version ${GAME_VERSION.number} · Stand: ${GAME_VERSION.date}`;
         for (let i = 1; i <= SAVE_SLOT_COUNT; i++) {

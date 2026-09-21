@@ -673,6 +673,7 @@
                     </div>
                     <div id="dash-match-actions" style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
                         <button onclick="startMatchdayFlow()" class="btn-action" style="font-size:12px;">▶ Spieltag starten (Livespiel)</button>
+                        <button onclick="simulateMatchdays(5)" class="btn-secondary">⏩ 5 Spieltage simulieren</button>
                         <button onclick="simulateFullSeason()" class="btn-primary" style="background:#f59e0b; color:#000;">⚡ Saison durchsimulieren</button>
                     </div>
                     <div id="dash-season-end-actions" style="display:none;">
@@ -721,6 +722,7 @@
                     <div id="save-slot-1" class="box" style="margin-bottom:6px;"></div>
                     <div id="save-slot-2" class="box" style="margin-bottom:6px;"></div>
                     <div id="save-slot-3" class="box"></div>
+                    <div id="save-slot-auto" class="box" style="border-left:3px solid var(--teal);"></div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px;">
                         <button onclick="exportSaveToFile()" class="btn-secondary" style="font-size:10px;">📤 Als Datei exportieren</button>
                         <button onclick="document.getElementById('save-import-file-input').click()" class="btn-secondary" style="font-size:10px;">📥 Aus Datei importieren</button>
@@ -2322,6 +2324,7 @@
         <button class="nav-btn bottom-nav-item" onclick="showScreen('screen-transfer')"><span class="bn-icon">🤝</span>Transfer</button>
         <button class="nav-btn bottom-nav-item" onclick="showScreen('screen-finances')"><span class="bn-icon">🏦</span>Finanzen</button>
         <button class="nav-btn bottom-nav-item" onclick="showScreen('screen-inbox')"><span class="bn-icon">📬</span>Postfach</button>
+        <button class="nav-btn bottom-nav-item" onclick="quickSave()"><span class="bn-icon">💾</span>Speichern</button>
     </nav>
 </body>
 </html>

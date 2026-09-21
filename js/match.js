@@ -1676,6 +1676,7 @@
 
         game.matchday++;
         game.viewingMatchday = Math.min(34, game.matchday);
+        if (typeof maybeAutoSave === 'function') maybeAutoSave();
         updateUI();
     }
 
@@ -2105,9 +2106,16 @@
         }
     }
 
-    function simulateFullSeason() {
-        if (game.matchday > 34) return;
-        while (game.matchday <= 34) {
+    function simulateFullSeason() { simulateMatchdays(35); }
+
+    // Simuliert bis zu "anzahl" Spieltage am Stück. Die ganze Saison ist damit nur noch der
+    // Sonderfall "so viele, wie überhaupt übrig sind" - es gibt keine zweite Schleife, die
+    // beim Ändern der Spieltagslogik vergessen werden könnte.
+    function simulateMatchdays(anzahl) {
+        if (game.matchday > 34) { showToast('Die Saison ist bereits beendet.', 'error'); return; }
+        let simuliert = 0;
+        while (game.matchday <= 34 && simuliert < anzahl) {
+            simuliert++;
             let md = game.matchday;
             let isHome = true;
             let won = false;
@@ -2174,6 +2182,7 @@
         }
         updateUI();
         showScreen('screen-dashboard');
+        showToast(`⚡ ${simuliert} Spieltag${simuliert === 1 ? '' : 'e'} simuliert - jetzt Spieltag ${Math.min(34, game.matchday)}/34.`, 'success', 3500);
     }
 
 

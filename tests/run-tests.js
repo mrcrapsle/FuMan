@@ -1382,6 +1382,69 @@ async function testBuildingPaymentAndPrices(browser) {
     await page.close();
 }
 
+async function testAutoSaveAndPartialSimulation(browser) {
+    console.log('\n[21] Autosave, Schnellspeichern & 5-Spieltage-Simulation');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+        safeLocalRemove('anstoss_fm13_autosave');
+        game.lastAutoSaveMatchday = 0;
+
+        // Nur 5 Spieltage simulieren statt der ganzen Saison.
+        let vorher = game.matchday;
+        simulateMatchdays(5);
+        out.genauFuenf = game.matchday - vorher === 5;
+
+        // Dabei wird automatisch gespeichert - in einem EIGENEN Slot, nicht über Slot 1.
+        out.autoAngelegt = !!safeLocalGet('anstoss_fm13_autosave');
+        let auto = JSON.parse(safeLocalGet('anstoss_fm13_autosave'));
+        out.autoHatMeta = !!(auto.meta && auto.meta.clubName);
+        out.slot1Unberuehrt = !safeLocalGet('anstoss_fm13_save_slot_1');
+
+        // Nicht nach jedem Spieltag erneut, sondern im Fünf-Spieltage-Takt.
+        let stand = safeLocalGet('anstoss_fm13_autosave');
+        simulateMatchdays(2);
+        out.nichtJedenSpieltag = safeLocalGet('anstoss_fm13_autosave') === stand;
+        simulateMatchdays(3);
+        out.nachFuenfErneuert = safeLocalGet('anstoss_fm13_autosave') !== stand;
+
+        // Automatischen Stand laden stellt exakt wieder her.
+        let gespeichert = JSON.parse(safeLocalGet('anstoss_fm13_autosave')).game;
+        game.money = 1; game.matchday = 99;
+        out.autoLaedt = loadAutoSave() && game.money === gespeichert.money && game.matchday === gespeichert.matchday;
+
+        // Schnellspeichern aus der unteren Leiste schreibt in Slot 1.
+        game.money = 777777;
+        quickSave();
+        out.schnellSpeichern = JSON.parse(safeLocalGet('anstoss_fm13_save_slot_1')).game.money === 777777;
+
+        // Nach Saisonende wird nicht weitersimuliert.
+        game.matchday = 35;
+        simulateMatchdays(5);
+        out.saisonendeAbgefangen = game.matchday === 35;
+
+        showScreen('screen-dashboard');
+        out.speicherKnopf = !!document.querySelector('.bottom-nav-item[onclick="quickSave()"]');
+        out.fuenfKnopf = !!document.querySelector('[onclick="simulateMatchdays(5)"]');
+        return out;
+    });
+
+    assert(r.genauFuenf, 'simulateMatchdays(5) simuliert genau 5 Spieltage');
+    assert(r.autoAngelegt && r.autoHatMeta, 'Nach 5 Spieltagen wird automatisch gespeichert (mit Metadaten)');
+    assert(r.slot1Unberuehrt, 'Der Autosave nutzt einen eigenen Slot und überschreibt Slot 1 nicht');
+    assert(r.nichtJedenSpieltag, 'Es wird nicht nach jedem einzelnen Spieltag gespeichert');
+    assert(r.nachFuenfErneuert, 'Nach weiteren 5 Spieltagen wird der Autosave erneuert');
+    assert(r.autoLaedt, 'Automatischer Spielstand lässt sich exakt wieder laden');
+    assert(r.schnellSpeichern, 'Speicher-Knopf der unteren Leiste schreibt in Slot 1');
+    assert(r.saisonendeAbgefangen, 'Nach Saisonende wird nicht weiter simuliert');
+    assert(r.speicherKnopf, 'Speicher-Knopf ist in der unteren Menüleiste vorhanden');
+    assert(r.fuenfKnopf, '5-Spieltage-Knopf ist vorhanden');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei Autosave/Simulation');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -1421,6 +1484,7 @@ async function main() {
         testOfficeAtmosphereAndCrest,
         testRealisticMerchSales,
         testBuildingPaymentAndPrices,
+        testAutoSaveAndPartialSimulation,
     ];
 
     for (const suite of suites) {
