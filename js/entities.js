@@ -78,9 +78,15 @@
     }
 
     function calculatePlayerWage(marketValue, str) {
-        let perMatchday = (str <= 58) ? 300 + (marketValue * 0.008) : (str <= 68 ? 1200 + (marketValue * 0.006) : (str <= 77 ? 5000 + (marketValue * 0.0045) : 25000 + (marketValue * 0.0035)));
+        // Unterste Stufe (Amateur- und Halbprofibereich): frueher ein pauschaler Sockel von
+        // 300 EUR plus Marktwertanteil. Weil der Marktwert bis Staerke 44 konstant 15.000 EUR
+        // betraegt, kostete JEDER Spieler dort exakt 400 EUR pro Spieltag - ein 29er
+        // Kreisklassenkicker genauso viel wie ein 44er Leistungstraeger, und ueber eine
+        // Saison fast so viel wie sein gesamter Marktwert. Jetzt haengt das Gehalt auch
+        // unten an der Staerke, und das Niveau passt zum Amateurbereich.
+        let perMatchday = (str <= 58) ? 60 + str * 3 + (marketValue * 0.004) : (str <= 68 ? 1200 + (marketValue * 0.006) : (str <= 77 ? 5000 + (marketValue * 0.0045) : 25000 + (marketValue * 0.0035)));
         if (managerRPG.perks.negotiator) perMatchday *= 0.8;
-        return Math.max(250, Math.round(perMatchday / 50) * 50);
+        return Math.max(150, Math.round(perMatchday / 50) * 50);
     }
 
     function createPlayer(pos, minStr, maxStr, forceTrait = null, ageRange = null) {

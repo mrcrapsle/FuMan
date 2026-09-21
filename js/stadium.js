@@ -70,6 +70,48 @@
     function getStadiumCostScale() {
         return STADIUM_COST_SCALE[game.leagueLevel] ?? 0.035;
     }
+    // ==========================================
+    // BETRIEBSKOSTEN & STILLGELEGTE RÄNGE
+    // ==========================================
+    // Bisher kostete JEDER Platz 0,45 € pro Spieltag, unabhängig davon, ob dort jemand
+    // sitzt. Ein Sechstligist, der ein geerbtes 15.550-Plätze-Stadion mit 600 Zuschauern
+    // bespielt, zahlte damit 6.998 € pro Spieltag für Ränge, die nie jemand betritt - mehr
+    // als zwei Drittel seiner Gesamteinnahmen - und konnte rechnerisch nie aus den roten
+    // Zahlen kommen (nachgerechnet im neuen Buchungsjournal).
+    // Jetzt gilt, was auch echte Vereine tun: nicht benötigte Ränge werden gesperrt und
+    // kosten nur noch Substanzerhalt und Grundsicherung. Der Rabatt verschwindet von
+    // allein, sobald der Verein wächst und das Stadion füllt - er verbilligt also den
+    // Aufbau, nicht den Profibetrieb.
+    const STADIUM_MAINTENANCE_PER_SEAT = 0.45;
+    const MOTHBALLED_MAINTENANCE_RATE = 0.30;
+    const MIN_ACTIVE_CAPACITY_SHARE = 0.20;
+
+    function getUsedStadiumCapacity() {
+        let total = stadium.total || 16000;
+        let letzte = (game.attendanceHistory || []).slice(-5).map(h => h.attendance).filter(a => a > 0);
+        let schnitt = letzte.length
+            ? Math.round(letzte.reduce((s, a) => s + a, 0) / letzte.length)
+            : Math.round(total * getAttendanceFactor());
+        // 15% Reserve über dem Schnitt, damit ein gut besuchtes Spiel nicht an gesperrten
+        // Rängen scheitert. Ein Fünftel des Stadions bleibt immer in Betrieb (Rasen,
+        // Flutlicht, Haupttribüne, Sicherheitstechnik).
+        return Math.min(total, Math.max(Math.round(total * MIN_ACTIVE_CAPACITY_SHARE), Math.round(schnitt * 1.15)));
+    }
+
+    function getMothballedCapacity() {
+        return Math.max(0, (stadium.total || 16000) - getUsedStadiumCapacity());
+    }
+
+    function getStadiumBaseMaintenance() {
+        let genutzt = getUsedStadiumCapacity();
+        let kosten = genutzt * STADIUM_MAINTENANCE_PER_SEAT
+            + getMothballedCapacity() * STADIUM_MAINTENANCE_PER_SEAT * MOTHBALLED_MAINTENANCE_RATE;
+        // Solaranlage (NEU): senkt die Stromkosten-Komponente der Betriebskosten spürbar,
+        // statt nur eine reine Sponsoren-Einnahmen-Erhöhung zu sein - echte Stromersparnis.
+        if (stadium.upgrades?.solaranlage) kosten *= 0.8;
+        return kosten;
+    }
+
     // Ein Sponsor kann das Stadion umbenennen: einmalige große Ablöse plus laufende
     // Einnahmen pro Heimspiel (siehe applyMatchdayFinances() in match.js für die Auszahlung).
     const NAMING_RIGHTS_SPONSORS = ["Energie Nord AG", "MediaPark Digital", "Volksbank Arena-Partner", "TechFlow Systems", "Landmarkt-Gruppe"];
@@ -279,6 +321,15 @@
                 <div class="box"><div style="font-size:8px; color:var(--text-muted);">STADIONWERT</div><div style="font-size:15px; font-weight:900; color:var(--gold);">${(getStadiumMarketValue()/1000000).toFixed(2)} Mio €</div></div>
             </div>
             <div class="box" style="margin-top:4px;"><div style="font-size:8px; color:var(--text-muted);">BAUWERT (INVESTIERTE SUMME)</div><div style="font-size:15px; font-weight:900; color:var(--industry);">${((stadium.totalInvested||0)/1000000).toFixed(2)} Mio €</div></div>
+            <div class="box" style="margin-top:4px;">
+                <div style="font-size:8px; color:var(--text-muted);">BETRIEBSKOSTEN PRO SPIELTAG</div>
+                <div style="font-size:15px; font-weight:900; color:var(--danger);">${formatVal(Math.round(getStadiumBaseMaintenance()))}</div>
+                <div style="font-size:9px; color:var(--text-muted); margin-top:2px;">
+                    ${getMothballedCapacity() > 0
+                        ? `${getUsedStadiumCapacity().toLocaleString('de-DE')} Plätze in Betrieb, ${getMothballedCapacity().toLocaleString('de-DE')} stillgelegt (nur ${Math.round(MOTHBALLED_MAINTENANCE_RATE * 100)}% Unterhalt). Wächst der Zuschauerschnitt, werden gesperrte Ränge automatisch wieder geöffnet - und teurer.`
+                        : 'Das gesamte Stadion ist in Betrieb.'}
+                </div>
+            </div>
         `;
         renderAttendanceChart('stadium-attendance-chart-box');
         renderStadiumImmersiveHero();

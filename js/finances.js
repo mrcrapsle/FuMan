@@ -64,8 +64,8 @@
         renderFinanceLedger();
         let totalWages = (squad.reduce((s, p) => s + p.wage, 0) + (game.secondTeam.isActive ? secondTeamSquad.reduce((s, p) => s + p.wage, 0) : 0)) * 4;
         let totalStaffWages = Object.values(staffMembers).filter(s => s.hired).reduce((s, st) => s + st.wage, 0) * 4;
-        let baseStadiumMaintenanceForecast = (stadium.total || 16000) * 0.45;
-        if (stadium.upgrades?.solaranlage) baseStadiumMaintenanceForecast *= 0.8;
+        // Dieselbe Rechnung wie in applyMatchdayFinances(), inkl. stillgelegter Ränge.
+        let baseStadiumMaintenanceForecast = getStadiumBaseMaintenance();
         let campusMaintenanceSumForecast = Object.keys(campusBuildings).reduce((s, k) => s + (k === 'turnstiles' ? 0 : campusBuildings[k].lvl * 650), 0);
         let maintenance = Math.round((baseStadiumMaintenanceForecast + campusMaintenanceSumForecast) * 4);
         if (campusBuildings.turnstiles?.lvl > 0) maintenance = Math.round(maintenance * (1 - campusBuildings.turnstiles.lvl * 0.02));

@@ -161,6 +161,20 @@ Insolvenz-Eskalationen ab (`checkInsolvencyRisk()`).
   * Spieltagsbuchungen laufen unter `SPIELTAG_KONTEXT` und werden bewusst NICHT
     in den Kontoauszug geschrieben - sie stehen vollständig im Journal.
 
+**Betriebskosten des Stadions**: Nicht benötigte Ränge gelten als stillgelegt und
+kosten nur 30 % Unterhalt (`getStadiumBaseMaintenance()` in `js/stadium.js`,
+genutzt von `applyMatchdayFinances()`, der GuV-Prognose und dem Dashboard -
+die Formel steht bewusst nur an EINER Stelle). Die genutzte Kapazität ergibt
+sich aus dem Zuschauerschnitt der letzten fünf Heimspiele plus 15 % Reserve,
+mindestens aber einem Fünftel des Stadions. Der Rabatt verschwindet von allein,
+sobald der Verein das Stadion füllt.
+
+**Gehälter im Amateurbereich**: Der Marktwert ist bis Stärke 44 konstant
+15.000 €. Mit dem früheren Pauschalsockel von 300 € kostete dadurch JEDER
+Spieler dort exakt 400 € pro Spieltag - über eine Saison fast so viel wie sein
+gesamter Marktwert. `calculatePlayerWage()` staffelt unten jetzt nach Stärke
+(`60 + str * 3 + Marktwert * 0.004`); ab Stärke 59 ist die Formel unverändert.
+
 **Ordnerdienst**: Gemietete Ordner werden pro Heimspiel nach Bedarf gebucht
 (~1 Ordner je 25 Zuschauer, gedeckelt durch die vorgehaltene Zahl, siehe
 `getDeployedStewards()`); auswärts stellt der Gastgeber das Personal. Vorher

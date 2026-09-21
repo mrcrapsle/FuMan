@@ -1600,6 +1600,82 @@ async function testFinanceLedgerAndStatement(browser) {
     await page.close();
 }
 
+async function testEconomyBalance(browser) {
+    console.log('\n[24] Wirtschaftliche Balance: stillgelegte Ränge, Gehälter, VIP-Logen');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+
+        // 1. Stillgelegte Ränge: wer ein grosses Stadion kaum füllt, zahlt nicht den vollen
+        //    Unterhalt - wer es füllt, schon.
+        let total = stadium.total;
+        game.attendanceHistory = [{ season: 1, matchday: 1, attendance: 600, capacity: total, opponent: 'X' }];
+        let unterhaltLeer = getStadiumBaseMaintenance();
+        let stillgelegtLeer = getMothballedCapacity();
+        game.attendanceHistory = [{ season: 1, matchday: 1, attendance: total, capacity: total, opponent: 'X' }];
+        let unterhaltVoll = getStadiumBaseMaintenance();
+        out.stillgelegtGuenstiger = unterhaltLeer < unterhaltVoll * 0.6;
+        out.stillgelegtErkannt = stillgelegtLeer > total * 0.5;
+        out.vollesStadionVollerPreis = Math.round(unterhaltVoll) === Math.round(total * 0.45)
+            && getMothballedCapacity() === 0;
+        // Mindestens ein Fuenftel bleibt immer in Betrieb.
+        game.attendanceHistory = [{ season: 1, matchday: 1, attendance: 1, capacity: total, opponent: 'X' }];
+        out.grundbetriebBleibt = getUsedStadiumCapacity() >= Math.round(total * 0.2);
+
+        // 2. Spieltagsabrechnung und GuV-Prognose rechnen mit DERSELBEN Formel.
+        game.attendanceHistory = [{ season: 1, matchday: 1, attendance: 600, capacity: total, opponent: 'X' }];
+        showScreen('screen-finances');
+        let unterhaltProSpieltag = getStadiumBaseMaintenance();
+        simulateMatchdays(1);
+        let posten = game.financeLedger.slice(-1)[0].ausgaben.find(a => a.label.includes('Unterhalt'));
+        out.prognoseGleichAbrechnung = !!posten && Math.abs(posten.amount - Math.round(unterhaltProSpieltag)) < 200;
+
+        // 3. Gehälter im Amateurbereich haengen an der Staerke statt an einem Pauschalsockel.
+        let schwach = calculatePlayerWage(calculatePlayerMarketValue(30), 30);
+        let stark = calculatePlayerWage(calculatePlayerMarketValue(44), 44);
+        out.amateurGehaelterGestaffelt = stark > schwach;
+        out.amateurGehaltAngemessen = schwach <= 250;
+        // Profigehaelter bleiben unveraendert hoch.
+        out.profiGehaltUnveraendert = calculatePlayerWage(calculatePlayerMarketValue(70), 70) > 8000;
+
+        // 4. VIP-Logen sind nicht mehr unabhaengig von der Zuschauerzahl ausverkauft.
+        out.vipGekoppelt = !applyMatchdayFinances.toString().includes('(stadium.vipTotal || 50) * game.ticketPrices.vip');
+
+        return out;
+    });
+
+    // 5. Eine komplett passiv gespielte Saison ruiniert den Verein nicht mehr bis zur
+    //    Zahlungsunfaehigkeit - aktives Wirtschaften wirft klar Gewinn ab.
+    const saison = await page.evaluate(() => {
+        sessionStorage.setItem('anstoss_fm13_force_new_game', '1');
+        return true;
+    });
+    await page.reload();
+    await page.waitForTimeout(400);
+    const passiv = await page.evaluate(() => {
+        closeTutorial();
+        let start = game.money;
+        for (let i = 0; i < 7; i++) simulateMatchdays(5);
+        return { start, ende: game.money };
+    });
+    assert(saison && passiv.ende > -100000, 'Eine passiv gespielte Saison endet nicht in der Zahlungsunfähigkeit');
+    assert(passiv.ende < passiv.start, 'Nichtstun bleibt trotzdem ein Verlustgeschäft');
+
+    assert(r.stillgelegtGuenstiger, 'Ein kaum gefülltes Stadion kostet deutlich weniger Unterhalt');
+    assert(r.stillgelegtErkannt, 'Nicht benötigte Ränge werden als stillgelegt erkannt');
+    assert(r.vollesStadionVollerPreis, 'Ein volles Stadion kostet weiterhin den vollen Unterhalt');
+    assert(r.grundbetriebBleibt, 'Ein Fünftel des Stadions bleibt immer in Betrieb');
+    assert(r.prognoseGleichAbrechnung, 'GuV-Prognose und Spieltagsabrechnung nutzen dieselbe Formel');
+    assert(r.amateurGehaelterGestaffelt, 'Amateurgehälter richten sich nach der Spielstärke');
+    assert(r.amateurGehaltAngemessen, 'Ein Kreisklassenspieler kostet nicht mehr 400 € pro Spieltag');
+    assert(r.profiGehaltUnveraendert, 'Profigehälter bleiben unverändert hoch');
+    assert(r.vipGekoppelt, 'VIP-Logen gelten nicht mehr unabhängig von der Zuschauerzahl als ausverkauft');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei der Wirtschaftssimulation');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -1642,6 +1718,7 @@ async function main() {
         testAutoSaveAndPartialSimulation,
         testConfirmBeforeIrreversibleActions,
         testFinanceLedgerAndStatement,
+        testEconomyBalance,
     ];
 
     for (const suite of suites) {

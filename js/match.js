@@ -978,7 +978,12 @@
                 }
             }
         }
-        let ticketIncome = (isHomeMatch && !ghostGameActive) ? Math.round(att * 0.5 * game.ticketPrices.steh + att * 0.45 * game.ticketPrices.sitz + (stadium.vipTotal || 50) * game.ticketPrices.vip) : 0;
+        // Bugfix: die VIP-Logen galten bei JEDEM Heimspiel als voll besetzt, auch wenn nur
+        // 600 Zuschauer im Stadion waren - ein Kreisklassenspiel verdiente so ein Viertel
+        // seiner Ticketeinnahmen mit 50 verkauften Logenplaetzen. Jetzt sind sie wie in der
+        // GuV-Prognose (finances.js) an die tatsaechliche Zuschauerzahl gekoppelt.
+        let vipSold = Math.min(stadium.vipTotal || 50, Math.round(att * 0.05));
+        let ticketIncome = (isHomeMatch && !ghostGameActive) ? Math.round(att * 0.5 * game.ticketPrices.steh + att * 0.45 * game.ticketPrices.sitz + vipSold * game.ticketPrices.vip) : 0;
         // Doppelte Ticketeinnahmen (Premium-Booster, NEU).
         if (isHomeMatch && game.ticketIncomeBoostNextMatch) { ticketIncome *= 2; game.ticketIncomeBoostNextMatch = false; }
         // Medienrechte (NEU): eigener Medienpartner zahlt bei jedem Heimspiel, mit Bonus bei
@@ -997,10 +1002,8 @@
         // Finanz-Ausblick ANGEZEIGT, aber nie tatsächlich abgebucht - ein "Phantom-Posten".
         // Jetzt wird der Pro-Spieltag-Anteil (Monatsschätzung / 4) jeden Spieltag wirklich
         // fällig, egal ob Heim- oder Auswärtsspiel (laufende Kosten fallen immer an).
-        let baseStadiumMaintenance = (stadium.total || 16000) * 0.45;
-        // Solaranlage (NEU): senkt die Stromkosten-Komponente der Betriebskosten spürbar,
-        // statt nur eine reine Sponsoren-Einnahmen-Erhöhung zu sein - echte Stromersparnis.
-        if (stadium.upgrades?.solaranlage) baseStadiumMaintenance *= 0.8;
+        // Betriebskosten inkl. Rabatt für stillgelegte Ränge, siehe js/stadium.js.
+        let baseStadiumMaintenance = getStadiumBaseMaintenance();
         // Bugfix: "Modernes Einlass-System" bewarb "Senkt Betriebskosten", trug aber durch
         // seine eigene Ausbaustufe (650 €/Stufe wie jedes andere Gebäude) sogar selbst zu den
         // Betriebskosten bei - bei niedrigen Gesamtkosten überstieg dieser Eigenbeitrag sogar
