@@ -871,14 +871,20 @@ async function testConfigurableNewGameStart(browser) {
     const r = await page.evaluate(() => ({
         leagueLevel: game.leagueLevel,
         money: game.money,
+        erwartetesStartkapital: getNewGameStartMoney(0, 500000),
+        stadion: stadium.total,
         squadSize: squad.length,
         avgStrength: Math.round(squad.reduce((s, p) => s + p.strength, 0) / squad.length),
+        maxStrength: Math.max(...squad.map(p => p.strength)),
         ourTeamFound: !!getOurLeagueTeam()
     }));
 
     assert(boxVisible, 'Klick auf "Neues Spiel starten" öffnet die Einstellungs-Box (statt sofort zu löschen)');
     assert(r.leagueLevel === 0, 'Gewählte Startliga (1. Liga) wird korrekt übernommen');
-    assert(r.money === 500000, 'Gewähltes Startkapital wird korrekt übernommen');
+    assert(r.money === r.erwartetesStartkapital && r.money > 500000,
+        'Das Startkapital wird auf die gewählte Startliga hochskaliert');
+    assert(r.stadion > 40000, 'Ein Erstliga-Start bekommt ein entsprechend großes Stadion');
+    assert(r.maxStrength <= 93, 'Der Startkader enthält keine Weltklasse-Superstars mehr');
     assert(r.squadSize === 18, 'Kader wird vollständig mit 18 Spielern generiert');
     assert(r.avgStrength >= 70, `Kader ist zur gewählten Top-Liga passend stark kalibriert (Ø ${r.avgStrength})`);
     assert(r.ourTeamFound, 'Eigenes Team ist nach dem konfigurierten Neustart in der Liga-Pyramide auffindbar');
@@ -1829,6 +1835,96 @@ async function testSecondTeamAndTrainingAutomation(browser) {
     await page.close();
 }
 
+async function testLeagueEconomy(browser) {
+    console.log('\n[26] Ligaökonomie: TV-Gelder in Raten, Profi-Startoptionen');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+
+        // 1. TV-Gelder kommen jetzt als Spieltagsrate, nicht mehr als Einmalzahlung.
+        let rate = getTvMoneyInstallment();
+        out.rateVorhanden = rate > 0;
+        out.rateIstNeutral = rate === Math.round(LEAGUE_BASE_TV_MONEY[game.leagueLevel] / MATCHDAYS_PER_SEASON);
+        // Die Rate haengt NICHT am Tabellenplatz - sonst brächte ein zufälliger erster
+        // Platz am ersten Spieltag die ganze Saison über 50 % mehr Geld.
+        let ersterPlatz = calculateCollectiveTvMoney(game.leagueLevel, 1);
+        let letzterPlatz = calculateCollectiveTvMoney(game.leagueLevel, 18);
+        out.platzierungZaehltAmEnde = ersterPlatz > letzterPlatz;
+
+        let gezahltVorher = game.tvMoneyPaidThisSeason || 0;
+        simulateMatchdays(3);
+        out.ratenWerdenGezahlt = (game.tvMoneyPaidThisSeason || 0) === gezahltVorher + rate * 3;
+        let posten = game.financeLedger.slice(-1)[0].einnahmen.find(e => e.label.includes('TV'));
+        out.tvImJournal = !!posten && posten.amount === rate;
+
+        // 2. Die TV-Staffel steigt mit jeder Ligastufe streng monoton.
+        out.staffelMonoton = LEAGUE_BASE_TV_MONEY.every((v, i) => i === 0 || v < LEAGUE_BASE_TV_MONEY[i - 1]);
+
+        // 3. Startkapital und Stadion skalieren mit der gewaehlten Startliga.
+        out.kapitalSkaliert = getNewGameStartMoney(0, 150000) > getNewGameStartMoney(3, 150000)
+            && getNewGameStartMoney(3, 150000) > getNewGameStartMoney(5, 150000)
+            && getNewGameStartMoney(5, 150000) === 150000;
+
+        // 4. Generierte Kader liegen um das Ligamittel statt darueber.
+        [0, 2, 4].forEach(lvl => {
+            let sq = generateSquadForLevel(lvl);
+            let basis = Math.max(25, 82 - lvl * 10);
+            let schnitt = sq.reduce((s, p) => s + p.strength, 0) / sq.length;
+            if (!out.kaderLigadurchschnitt) out.kaderLigadurchschnitt = true;
+            if (Math.abs(schnitt - basis) > 4) out.kaderLigadurchschnitt = false;
+        });
+        return out;
+    });
+
+    // 5. Ein Erstliga-Start ist wirtschaftlich tragfaehig: nach einer aktiv bewirtschafteten
+    //    Saison steht der Verein nicht schlechter da als zu Beginn.
+    await page.evaluate(() => {
+        sessionStorage.setItem('anstoss_fm13_newgame_leaguelevel', '0');
+        sessionStorage.setItem('anstoss_fm13_newgame_money', '150000');
+        sessionStorage.setItem('anstoss_fm13_force_new_game', '1');
+    });
+    await page.reload();
+    await page.waitForTimeout(400);
+    const profi = await page.evaluate(() => {
+        closeTutorial();
+        checkIncomingSponsorOffers(true); acceptSponsorOffer(sponsorOffers[0].id);
+        checkIncomingKitOffers(true); if (kitSupplierOffers[0]) acceptKitOffer(kitSupplierOffers[0].id);
+        for (let i = 0; i < 300 && bandenSponsors.filter(x => x.active).length < 20; i++) {
+            checkIncomingBandenOffers(true);
+            if (bandenOffers[0]) acceptBandenOffer(bandenOffers[0].id);
+        }
+        game.financeLedger = [];
+        let start = game.money;
+        simulateMatchdays(30);
+        let l = game.financeLedger;
+        return {
+            start,
+            ende: game.money,
+            stadion: stadium.total,
+            saldoProSpieltag: Math.round(l.reduce((s, e) => s + e.summeEin - e.summeAus, 0) / l.length),
+            einProSpieltag: Math.round(l.reduce((s, e) => s + e.summeEin, 0) / l.length)
+        };
+    });
+
+    assert(r.rateVorhanden, 'Es gibt eine TV-Spieltagsrate');
+    assert(r.rateIstNeutral, 'Die Rate entspricht dem Ligagrundbetrag geteilt durch die Spieltage');
+    assert(r.platzierungZaehltAmEnde, 'Der Tabellenplatz entscheidet weiterhin über die Gesamthöhe');
+    assert(r.ratenWerdenGezahlt, 'Jeder Spieltag zahlt genau eine Rate aus');
+    assert(r.tvImJournal, 'Die TV-Rate steht als eigener Posten im Buchungsjournal');
+    assert(r.staffelMonoton, 'Die TV-Staffel steigt mit jeder Ligastufe');
+    assert(r.kapitalSkaliert, 'Startkapital skaliert mit der gewählten Startliga, die 6. Liga bleibt unverändert');
+    assert(r.kaderLigadurchschnitt, 'Generierte Startkader liegen um das Ligamittel statt deutlich darüber');
+    assert(profi.stadion > 40000, 'Der Erstliga-Start bekommt ein Stadion passender Größe');
+    assert(profi.saldoProSpieltag > -0.05 * profi.einProSpieltag,
+        `Ein Erstliga-Verein wirtschaftet nicht mehr strukturell ins Minus (Saldo ${profi.saldoProSpieltag} €/Spieltag bei ${profi.einProSpieltag} € Einnahmen)`);
+    assert(profi.ende > 0 && profi.ende > profi.start * 0.8,
+        `Nach 30 aktiv bewirtschafteten Spieltagen ist der Erstligist noch solvent (${Math.round(profi.ende)} € statt ${Math.round(profi.start)} €)`);
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler in der Ligaökonomie');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -1873,6 +1969,7 @@ async function main() {
         testFinanceLedgerAndStatement,
         testEconomyBalance,
         testSecondTeamAndTrainingAutomation,
+        testLeagueEconomy,
     ];
 
     for (const suite of suites) {

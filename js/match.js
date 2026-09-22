@@ -1085,7 +1085,13 @@
         // Steuern & Abgaben (siehe finances.js): echte Abgabe auf die Spieltagseinnahmen.
         // Der Steuerberater senkt den Satz, kostet dafür aber ein laufendes Honorar - beides
         // wird hier verbucht und für die Anzeige in der GuV festgehalten.
-        let grossIncome = ticketIncome + merchIncome + sponsorInc;
+        // TV-Gelder als Spieltagsrate (siehe getTvMoneyInstallment() in media-rights.js):
+        // frueher nur eine Einmalzahlung zum Saisonende, wodurch gerade die oberen Ligen die
+        // gesamte Saison ueber tief im Minus standen.
+        let tvInstallment = (typeof getTvMoneyInstallment === 'function') ? getTvMoneyInstallment() : 0;
+        game.tvMoneyPaidThisSeason = (game.tvMoneyPaidThisSeason || 0) + tvInstallment;
+
+        let grossIncome = ticketIncome + merchIncome + sponsorInc + tvInstallment;
         let taxAmount = Math.round(Math.max(0, grossIncome) * getTaxRate());
         let advisorFee = financeCentralState.taxAdvisorHired ? getTaxAdvisorFee() : 0;
         game.lastMatchdayTax = taxAmount;
@@ -1108,6 +1114,7 @@
         let einnahmen = [
             { label: '🎟️ Ticketverkauf', amount: ticketIncome },
             { label: '👕 Fanartikel', amount: merchIncome },
+            { label: '📺 TV-Gelder (Liga)', amount: tvInstallment },
             { label: '🤝 Hauptsponsor', amount: mainSponsorInc },
             { label: '📢 Bandenwerbung', amount: isHomeMatch ? getBandenIncome() : 0 },
             { label: '🧥 Ausrüster', amount: isHomeMatch ? game.kitSupplier.income : 0 },

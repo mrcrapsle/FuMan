@@ -10,6 +10,13 @@
     //    zusätzliches Geld pro Heimspiel, mit einem Bonus für besonders attraktive Spiele
     //    (Derbys/Pokal), die Sender höher vergüten.
 
+    // Kollektive TV-Gelder je Ligastufe und Saison. Die oberen beiden Ligen lagen deutlich
+    // zu niedrig: ein Erstliga-Kader kostet rund 88 Mio. EUR Gehalt pro Saison, dem standen
+    // 45 Mio. EUR TV-Geld plus wenige Millionen aus Tickets, Sponsoren und Fanartikel
+    // gegenueber - die Startoption "1. Liga" war damit rechnerisch unspielbar.
+    const LEAGUE_BASE_TV_MONEY = [64000000, 8000000, 1000000, 620000, 150000, 100000];
+    const MATCHDAYS_PER_SEASON = 34;
+
     const MEDIA_PARTNER_TIERS = [
         { key: 'regional', label: 'Regional-TV', baseMult: 1.0, duration: 34, prestige: 1, maxLeagueLevel: 5 },
         { key: 'streaming', label: 'Streaming-Plattform', baseMult: 1.6, duration: 26, prestige: 2, maxLeagueLevel: 4 },
@@ -28,10 +35,32 @@
         // Basiswert sinkt mit jeder tieferen Liga deutlich (wie real: Bundesliga-TV-Geld ist
         // um ein Vielfaches höher als Regionalliga-TV-Geld), Tabellenplatz gibt zusätzlich
         // einen Anteil (bessere Platzierung = größerer Anteil am Verteilungs-Topf).
-        const LEAGUE_BASE_TV_MONEY = [45000000, 12000000, 4000000, 1200000, 350000, 100000];
         let base = LEAGUE_BASE_TV_MONEY[leagueLevel] ?? 100000;
         let rankFactor = Math.max(0.4, 1.5 - (finalRank - 1) * 0.055); // Platz 1: 1.5x, Platz 18: ~0.6x
         return Math.round(base * rankFactor);
+    }
+
+    // Die TV-Gelder waren bisher eine reine Einmalzahlung zum Saisonende. In den oberen
+    // Ligen sind sie aber die mit Abstand groesste Einnahmequelle - ein Erstligist stand
+    // dadurch eine ganze Saison lang zweistellig im Minus und wurde erst am letzten
+    // Spieltag schlagartig wieder solvent. Echte Vereine bekommen ihr TV-Geld in Raten,
+    // und genau so laeuft es jetzt: jeden Spieltag ein Vierunddreissigstel, berechnet nach
+    // dem AKTUELLEN Tabellenplatz. Zum Saisonende folgt nur noch die Differenz zum
+    // Endstand (Restausschuettung), der Tabellenplatz bleibt also voll relevant.
+    function getCurrentLeagueRank() {
+        let table = leaguesData[game.leagueLevel] || [];
+        let sorted = [...table].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+        let rank = sorted.findIndex(t => t.name === game.clubName) + 1;
+        return rank > 0 ? rank : Math.max(1, Math.round(sorted.length / 2));
+    }
+
+    // Die Rate ist bewusst platzierungsNEUTRAL (Grundbetrag der Liga geteilt durch die
+    // Spieltage). Zu Saisonbeginn steht die Tabelle noch auf null, ein zufaelliger erster
+    // Platz wuerde sonst die ganze Saison ueber 50 % mehr Geld bringen. Der Tabellenplatz
+    // entscheidet stattdessen vollstaendig ueber die Restausschuettung am Saisonende.
+    function getTvMoneyInstallment() {
+        let base = LEAGUE_BASE_TV_MONEY[game.leagueLevel] ?? 100000;
+        return Math.round(base / MATCHDAYS_PER_SEASON);
     }
 
     // 2. Eigener Medienpartner: Angebote generieren, analog zum Sponsoren-System.

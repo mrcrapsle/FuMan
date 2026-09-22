@@ -88,10 +88,18 @@
         // Medienrechte (NEU): Liga-Kollektiv-TV-Ausschüttung zum Saisonende, gestaffelt nach
         // Ligastärke UND Tabellenplatz.
         if (typeof calculateCollectiveTvMoney === 'function') {
-            let tvPayout = calculateCollectiveTvMoney(game.leagueLevel, myRank);
-            game.money += tvPayout;
-            game.lastLeagueTvPayout = tvPayout;
-            addInboxMessage('vertrag', `📺 Liga-TV-Ausschüttung: ${formatVal(tvPayout)}!`, `Für Platz ${myRank} in der Liga erhält der Verein ${formatVal(tvPayout)} aus dem kollektiven TV-Vertrag der Liga.`, 'screen-finances');
+            // Der Grossteil des TV-Geldes wurde bereits in Spieltagsraten ausgezahlt (siehe
+            // applyMatchdayFinances). Hier folgt nur noch die Differenz zum Anspruch, der
+            // sich aus dem ENDSTAND ergibt - wer sich zum Schluss hin verbessert hat,
+            // bekommt nachgezahlt, wer abgerutscht ist, entsprechend weniger.
+            let tvAnspruch = calculateCollectiveTvMoney(game.leagueLevel, myRank);
+            let bereitsGezahlt = game.tvMoneyPaidThisSeason || 0;
+            let restausschuettung = Math.max(0, tvAnspruch - bereitsGezahlt);
+            game.money += restausschuettung;
+            game.lastLeagueTvPayout = tvAnspruch;
+            game.tvMoneyPaidThisSeason = 0;
+            addInboxMessage('vertrag', `📺 Liga-TV-Abrechnung: ${formatVal(tvAnspruch)} für Platz ${myRank}`,
+                `Der Verein hat für Platz ${myRank} Anspruch auf ${formatVal(tvAnspruch)} aus dem kollektiven TV-Vertrag. Davon wurden ${formatVal(bereitsGezahlt)} bereits in Spieltagsraten ausgezahlt - die Restausschüttung beträgt ${formatVal(restausschuettung)}.`, 'screen-finances');
             mediaRights.seasonTvIncomeTotal = 0;
         }
 

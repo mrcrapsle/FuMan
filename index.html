@@ -2266,7 +2266,14 @@
                 safeStorageRemove(sessionStorage, 'anstoss_fm13_newgame_leaguelevel');
                 safeStorageRemove(sessionStorage, 'anstoss_fm13_newgame_money');
                 if (chosenLevel !== null) game.leagueLevel = parseInt(chosenLevel);
-                if (chosenMoney !== null) game.money = parseInt(chosenMoney);
+                // Startkapital und Stadiongroesse skalieren mit der gewaehlten Startliga
+                // (siehe getNewGameStartMoney()/scaleStadiumForLeague() in save.js).
+                if (chosenMoney !== null) {
+                    game.money = (chosenLevel !== null && typeof getNewGameStartMoney === 'function')
+                        ? getNewGameStartMoney(parseInt(chosenLevel), parseInt(chosenMoney))
+                        : parseInt(chosenMoney);
+                }
+                if (chosenLevel !== null && typeof scaleStadiumForLeague === 'function') scaleStadiumForLeague(parseInt(chosenLevel));
                 if (chosenLevel !== null && parseInt(chosenLevel) !== 5 && typeof generateSquadForLevel === 'function') {
                     // initDefaultSquad() ist fest auf die unterste Liga kalibriert - für eine
                     // höhere Startliga braucht es einen entsprechend stärkeren Kader (gleicher

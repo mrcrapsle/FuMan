@@ -122,6 +122,7 @@
         trainingAutopilotLog: [],
         // Entwicklungsbericht der Reserve: Staerke-Momentaufnahme zum Saisonstart.
         secondTeamStrengthSnapshot: null,
+        tvMoneyPaidThisSeason: 0,
         lastMatchdayTax: 0,
         lastMatchdayAdvisorFee: 0,
         seasonTaxPaid: 0,

@@ -180,6 +180,31 @@ gesamter Marktwert. `calculatePlayerWage()` staffelt unten jetzt nach Stärke
 `getDeployedStewards()`); auswärts stellt der Gastgeber das Personal. Vorher
 wurde an jedem Spieltag die volle vorgehaltene Zahl abgerechnet.
 
+## Ligaökonomie & Startoptionen
+
+**TV-Gelder in Raten**: Die kollektive TV-Ausschüttung war eine Einmalzahlung zum
+Saisonende. In den oberen Ligen ist sie aber die grösste Einnahmequelle - ein
+Erstligist stand dadurch die ganze Saison zweistellig im Minus und wurde erst am
+letzten Spieltag schlagartig solvent. `getTvMoneyInstallment()`
+(`js/media-rights.js`) zahlt jetzt jeden Spieltag ein Vierunddreissigstel des
+Ligagrundbetrags aus, bewusst **platzierungsneutral** (zu Saisonbeginn steht die
+Tabelle auf null, ein zufälliger erster Platz würde sonst die ganze Saison über
+50 % mehr bringen). Der Tabellenplatz entscheidet vollständig über die
+**Restausschüttung** am Saisonende: `max(0, Anspruch(Endplatz) − bereits gezahlt)`.
+
+**Startoptionen**: Startkapital (`NEW_GAME_LEAGUE_MONEY_SCALE`) und
+Stadiongrösse (`NEW_GAME_LEAGUE_STADIUM_SCALE`, beide in `js/save.js`) skalieren
+mit der gewählten Startliga. Die 6. Liga bleibt dabei unverändert (Faktor 1), die
+für sie ausbalancierte Wirtschaft ist also nicht betroffen.
+`scaleStadiumForLeague()` skaliert die Kapazität jedes Blocks einzeln -
+`stadium.total` ist ein Getter über die Blöcke und darf nicht gesetzt werden.
+
+**Startkader**: `generateSquadForLevel()` streute bis zu 8 Punkte über das
+Ligamittel und erzeugte bei einem Erstliga-Start zwei Weltklassespieler mit
+Stärke 96/97, die allein 43 % der Gehaltssumme verschlangen. Ein frisch
+übernommener Klub ist ein Liga-Durchschnittsteam - die Obergrenze liegt jetzt
+bei `base + 3`.
+
 ## Zweite Mannschaft
 
 Die Reserve hat einen **eigenen, kleinen Trainerstab** (`secondTeamStaff` in

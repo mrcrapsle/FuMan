@@ -452,9 +452,30 @@
         { level: 0, label: '1. Liga (Profi-Herausforderung)' }
     ];
     const NEW_GAME_MONEY_OPTIONS = [
-        { amount: 150000, label: 'Standard (150.000 €)' },
-        { amount: 500000, label: 'Großzügig (500.000 €)' }
+        { amount: 150000, label: 'Standard' },
+        { amount: 500000, label: 'Großzügig' }
     ];
+    // Startkapital und Stadiongroesse muessen zur gewaehlten Startliga passen. Vorher galt
+    // fuer JEDE Startliga derselbe Betrag und dasselbe 15.550-Plaetze-Stadion: ein
+    // Erstliga-Start bekam 150.000 EUR Startkapital bei 2,5 Mio. EUR Gehaltskosten PRO
+    // SPIELTAG und ein Stadion, das jede Woche ausverkauft war und trotzdem nur einen
+    // Bruchteil der Gehaelter einspielte. Beides skaliert jetzt mit der Liga.
+    const NEW_GAME_LEAGUE_MONEY_SCALE = [40, 10, 3, 1.6, 1.1, 1];
+    const NEW_GAME_LEAGUE_STADIUM_SCALE = [3.0, 2.0, 1.4, 1.0, 1.0, 1.0];
+
+    function getNewGameStartMoney(level, amount) {
+        return Math.round(amount * (NEW_GAME_LEAGUE_MONEY_SCALE[level] ?? 1));
+    }
+
+    // Skaliert die Kapazitaet JEDES Blocks - stadium.total ist ein Getter ueber die Bloecke
+    // (siehe restoreGetters()), darf also nicht direkt gesetzt werden.
+    function scaleStadiumForLeague(level) {
+        let faktor = NEW_GAME_LEAGUE_STADIUM_SCALE[level] ?? 1;
+        if (faktor === 1) return;
+        Object.values(stadium.blocks || {}).forEach(b => {
+            if (b && typeof b.cap === 'number') b.cap = Math.round(b.cap * faktor / 50) * 50;
+        });
+    }
     let selectedNewGameLevel = 5;
     let selectedNewGameMoney = 150000;
     let newGameConfirmTimer = null;
@@ -475,7 +496,7 @@
         let moneyBox = document.getElementById('new-game-money-btns');
         if (moneyBox) {
             moneyBox.innerHTML = NEW_GAME_MONEY_OPTIONS.map(o =>
-                `<button onclick="selectedNewGameMoney=${o.amount}; renderNewGameSetupOptions();" class="${o.amount === selectedNewGameMoney ? 'btn-action' : 'btn-secondary'}" style="font-size:9px; padding:5px 2px;">${o.label}</button>`
+                `<button onclick="selectedNewGameMoney=${o.amount}; renderNewGameSetupOptions();" class="${o.amount === selectedNewGameMoney ? 'btn-action' : 'btn-secondary'}" style="font-size:9px; padding:5px 2px;">${o.label}<br><span style="font-size:8px; opacity:0.85;">${formatVal(getNewGameStartMoney(selectedNewGameLevel, o.amount))}</span></button>`
             ).join('');
         }
     }

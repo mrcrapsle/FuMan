@@ -25,7 +25,12 @@
     // Niveau passenden Kader nach demselben Muster (82 - Liganiveau*10) wie die KI-Stärke.
     function generateSquadForLevel(level) {
         let base = Math.max(25, 82 - level * 10);
-        let mk = (pos, delta, trait) => createPlayer(pos, Math.max(20, base - 6 + delta), base + 8 + delta, trait || null);
+        // Die Streuung nach oben war zu breit: ein Erstliga-Start (base 82) erzeugte bis zu
+        // zwei Weltklassespieler mit Staerke 96/97, die allein 43 % der gesamten
+        // Gehaltssumme verschlangen - ein frisch uebernommener Klub ist aber ein
+        // Liga-Durchschnittsteam und kein Titelfavorit mit Superstars. Der Kader liegt
+        // jetzt um das Ligamittel herum (die KI-Vereine der Liga haben ebenfalls base).
+        let mk = (pos, delta, trait) => createPlayer(pos, Math.max(20, base - 6 + delta), Math.min(99, base + 3 + delta), trait || null);
         return [
             mk("TW", 6, "Elfmeter-Killer"), mk("TW", 0),
             mk("ABW", 6, "Eisenfuß"), mk("ABW", 5), mk("ABW", 3), mk("ABW", 1), mk("ABW", -1), mk("ABW", -2),
