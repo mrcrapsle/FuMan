@@ -174,16 +174,16 @@
                     // Manager-Talentbaum.
                     if (isLiveContext) addManagerXP(350);
                     playSound('goal');
-                    alert(`🏆 DFB-POKAL SIEG!\nDu hast die ${r.name} gewonnen! Prämie von ${formatVal(r.prize)}${sponsorCupBonus > 0 ? ` + ${formatVal(sponsorCupBonus)} Sponsoren-Bonus` : ''} & +350 Manager-XP erhalten.`);
+                    showNotice('🏆 Pokalsieg!', `Die ${r.name} ist gewonnen.\n\nPrämie ${formatVal(r.prize)}${sponsorCupBonus > 0 ? ` plus ${formatVal(sponsorCupBonus)} Sponsoren-Bonus` : ''}, dazu 350 Manager-Erfahrungspunkte.`);
                     if (roundIdx === 4) {
                         game.trophies.push(`DFB-Pokalsieger (Saison ${game.season})`);
                         boostFanBaseFloor(10, 'Der DFB-Pokalsieg');
                         game.inEurope = true;
-                        alert(`🎉🏆 HISTORISCHER TRIUMPH!\n${game.clubName} ist DFB-POKALSIEGER und für den Champions Cup qualifiziert!`);
+                        showNotice('🎉 Historischer Triumph!', `${game.clubName} ist DFB-Pokalsieger und für den Champions Cup qualifiziert.`);
                     }
                 } else {
                     game.inCup = false;
-                    alert(`❌ DFB-POKAL AUS!\nBittere Niederlage in der ${r.name} gegen ${p.home === game.clubName ? p.away : p.home}.`);
+                    showNotice('❌ Pokal-Aus', `Bittere Niederlage in der ${r.name} gegen ${p.home === game.clubName ? p.away : p.home}.`, { typ: 'warn' });
                 }
             }
         });

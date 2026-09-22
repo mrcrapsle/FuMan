@@ -1226,7 +1226,7 @@
         game.fans = Math.max(game.fanBaseFloor, game.fans - 12);
         game.boardSat = Math.max(10, game.boardSat - 8);
         game.forcedGhostGame = true;
-        alert(`🔥 AUSSCHREITUNGEN IM DERBY!\nRivalisierende Fangruppen liefern sich Straßenschlachten rund ums Stadion.\nStrafe: -${formatVal(fine)}. Der Verband verhängt ein Geisterspiel für die nächste Heimpartie!` + (game.riotCount >= 3 ? "\n⚠️ Wiederholte Vorfälle: der Verband beobachtet euren Klub inzwischen sehr genau." : ""));
+        showNotice('🔥 Ausschreitungen im Derby', `Rivalisierende Fangruppen liefern sich Straßenschlachten rund ums Stadion.\n\nStrafe: ${formatVal(fine)}. Der Verband verhängt ein Geisterspiel für die nächste Heimpartie.` + (game.riotCount >= 3 ? '\n\n⚠️ Wiederholte Vorfälle: der Verband beobachtet euren Klub inzwischen sehr genau.' : ''), { typ: 'warn' });
     }
 
     function processPostMatchRoutine(matchResult = null, isHomeDerby = false, isLiveContext = false, matchMargin = 0, isHomeMatchParam = true, totalGoalsForBets = null) {
@@ -1625,7 +1625,7 @@
                     myTeam.points -= deduction;
                     raidMsg += `\n⚖️ Als Wiederholungstäter (${underworld.offenseCount}. Vergehen) verhängt der Verband zusätzlich einen Punktabzug von ${deduction} Punkten!`;
                 }
-                alert(raidMsg);
+                showNotice('🚨 DFB-Razzia', raidMsg, { typ: 'warn' });
             }
         }
 
@@ -1669,7 +1669,7 @@
                 game.money = Math.max(0, game.money - fine);
                 game.fans = Math.max(game.fanBaseFloor, game.fans - 15);
                 underworld.pressure = Math.min(100, underworld.pressure + 30);
-                alert(`☠️ POSITIVER DOPINGTEST!\n${culprit.name} wurde positiv getestet und für 2 Spiele gesperrt.\nSkandal-Strafe: -${formatVal(fine)}, Fans sind entsetzt!`);
+                showNotice('☠️ Positiver Dopingtest', `${culprit.name} wurde positiv getestet und für zwei Spiele gesperrt.\n\nSkandal-Strafe: ${formatVal(fine)}. Die Fans sind entsetzt.`, { typ: 'warn' });
             }
         }
 
@@ -1982,8 +1982,11 @@
         safeSessionSet('anstoss_fm13_sacked_trophies', JSON.stringify(game.trophies || []));
         safeSessionSet('anstoss_fm13_sacked_times', String((game.timesSacked || 0) + 1));
         safeSessionSet('anstoss_fm13_force_new_game', '1');
-        alert(`🚪 ENTLASSEN!\nDer Vorstand hat genug gesehen und trennt sich mit sofortiger Wirkung von dir. Deine Karriere-Erfahrung und Trophäen nimmst du mit - bei deinem neuen Klub beginnst du aber wieder ganz von unten.`);
-        location.reload();
+        // Der Neustart haengt bewusst an der Bestaetigung: vorher lief er direkt nach dem
+        // alert() - war das unterdrueckt, verschwand der Verein ohne ein Wort der Erklaerung.
+        showNotice('🚪 Entlassen!',
+            'Der Vorstand hat genug gesehen und trennt sich mit sofortiger Wirkung von dir.\n\nDeine Karriere-Erfahrung und deine Trophäen nimmst du mit - bei deinem neuen Klub beginnst du aber wieder ganz von unten.',
+            { typ: 'warn', knopf: 'Neuen Klub suchen', danach: () => location.reload() });
     }
 
     // ---------- NATIONALMANNSCHAFTSBERUFUNGEN ----------

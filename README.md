@@ -121,6 +121,27 @@ seinem Mittelpunkt korrekt aufgelöst wird, und klickt per Koordinate
 (`mouse.click`) statt per Selektor - `page.click(selektor)` prüft intern
 ebenfalls die native Trefferfläche.
 
+## Rückmeldungen an den Spieler: keine nativen Dialoge
+
+**Tragende Projektregel, durch einen Test abgesichert:** Im ausführbaren Code
+steht kein `alert()` und kein `confirm()` mehr. Native Dialoge werden in
+manchen Android-WebViews unterdrückt - der Klick bleibt dann kommentarlos
+wirkungslos, und genau das hat sich mehrfach als Fehlerursache herausgestellt
+(Fabrikbau, Transfers). Drei Wege stehen zur Verfügung:
+
+* `showToast(text, typ, dauer)` - kurze Rückmeldung, vor allem Fehlermeldungen.
+  Die nennen konkrete Zahlen ("250.000 € nötig, 80.000 € verfügbar") statt nur
+  "reicht nicht aus".
+* `showNotice(titel, text, {typ, knopf, danach})` (`js/utils.js`) - ein
+  Meldungsfenster in der Seite für WICHTIGE Ereignisse (Aufstieg, Abstieg,
+  Entlassung, Skandale, Pokalsieg). Anders als `alert()` blockiert es nicht,
+  deshalb sammelt es mehrere Meldungen in einer Schlange und zeigt sie
+  nacheinander - während einer durchsimulierten Saison kommen leicht mehrere
+  zusammen. `danach` läuft erst NACH dem Bestätigen: daran hängt zum Beispiel
+  der Neustart bei einer Entlassung, der vorher direkt nach dem `alert()`
+  passierte und den Verein bei unterdrücktem Dialog wortlos verschwinden ließ.
+* `requireConfirm(btn, frage)` - Zwei-Klick-Bestätigung statt `confirm()`.
+
 ## Büro-Ereignisse (js/office-events.js)
 
 Das Managerbüro war reine Kulisse mit Navigation - alles, was im Verein
@@ -241,6 +262,30 @@ Ligamittel und erzeugte bei einem Erstliga-Start zwei Weltklassespieler mit
 Stärke 96/97, die allein 43 % der Gehaltssumme verschlangen. Ein frisch
 übernommener Klub ist ein Liga-Durchschnittsteam - die Obergrenze liegt jetzt
 bei `base + 3`.
+
+## Europapokal (js/europe.js)
+
+**Teilnehmerfeld**: Früher bekam jeder der acht Teilnehmer pauschal Stärke
+84-89. Das wurde nie gegen die tatsächlich erreichbare Teamstärke geprüft -
+nachgemessen über 20 simulierte Saisons erreichte ein Erstliga-Meister NIE die
+K.o.-Runde (18-mal Gruppenletzter), womit Halbfinale, Finale und der
+25-Millionen-Titel toter Inhalt waren. Das Feld ist jetzt gestaffelt
+(`FELD_STAFFELUNG`, zwei Schwergewichte, dann abfallend) und an das eigene
+Kaderniveau gekoppelt.
+
+**Wichtig dabei**: Bezugsgröße ist der reine **Kaderschnitt**, nicht
+`calcTeamStrength()`. Letzteres schwankt stark mit Fitness, Moral und Form -
+die Auslosung läuft zum Saisonstart, wo der frische Kader dort rund 97 meldet,
+während derselbe Kader ab Spieltag 20 nur noch etwa 74 erreicht. Das Feld war
+also am nie wieder erreichten Bestwert ausgerichtet. Der Abschlag von sechs
+Punkten in `initEuropeCup()` bildet diesen Formverlust über die Saison ab.
+Gemessen über 14 unabhängige Saisons landet ein Erstligist damit 1× auf Platz 1,
+4× auf Platz 2, 5× auf Platz 3 und 4× auf Platz 4.
+
+**Startprämie**: Es gab ausschließlich Siegprämien - wer sich qualifizierte und
+in der Gruppe nichts holte, ging völlig leer aus. Die UEFA-Startprämie ist im
+echten Wettbewerb die größte Einzelzahlung und wird jetzt zum ersten
+Gruppenspieltag fällig, skaliert mit der Ligastufe.
 
 ## Zweite Mannschaft
 

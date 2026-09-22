@@ -296,11 +296,11 @@
 
     function signGlobalScoutPlayer(idx) {
         let p = globalScoutResults[idx];
-        if (game.transferEmbargo) { alert("🚫 Transfersperre aktiv! Erst die Zahlungsfähigkeit wiederherstellen (siehe Finanzen)."); return; }
+        if (game.transferEmbargo) { showToast('🚫 Transfersperre aktiv - erst die Zahlungsfähigkeit wiederherstellen (siehe Finanzen).', 'error', 5000); return; }
         let discount = 1.0 - (staffMembers.scout.hired ? 0.15 : 0);
         if (typeof getActiveStaffSynergies === 'function' && getActiveStaffSynergies().some(s => s.bonusKey === 'transferDiscount')) discount -= 0.05;
         let price = Math.round(p.marketValue * discount);
-        if (game.money < price) { alert("Nicht genug Geld auf dem Vereinskonto!"); return; }
+        if (game.money < price) { showToast(`Vereinskonto reicht nicht: ${formatVal(price)} nötig, ${formatVal(game.money)} vorhanden.`, 'error', 4500); return; }
         playSound('goal');
         game.money -= price;
         squad.push(p);

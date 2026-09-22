@@ -1079,6 +1079,15 @@
         @keyframes officeVisitorPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18); } }
 
         /* Ereignis-Karte: liegt ueber der Kulisse, damit man das Buero nicht verlaesst. */
+        /* Meldungsfenster als Ersatz fuer alert() - siehe showNotice() in js/utils.js. */
+        .app-notice-overlay { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgba(3, 7, 15, 0.8); }
+        .app-notice-card { width: 100%; max-width: 360px; max-height: 84vh; overflow-y: auto; background: var(--bg-panel, #111a2b); border: 2px solid var(--primary); border-radius: 14px; padding: 16px; box-shadow: 0 22px 60px rgba(0,0,0,0.6); text-align: center; }
+        .app-notice-card.app-notice-warn { border-color: var(--danger); }
+        .app-notice-title { font-size: 15px; font-weight: 900; margin-bottom: 8px; }
+        .app-notice-text { font-size: 12px; line-height: 1.55; color: #cbd5e1; margin-bottom: 14px; text-align: left; }
+        .app-notice-card button { width: 100%; }
+        .app-notice-count { font-size: 9px; color: var(--text-muted); margin-top: 8px; }
+
         .office-event-overlay { position: absolute; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(4, 9, 18, 0.72); }
         .office-event-card { width: 100%; max-width: 340px; max-height: 88%; overflow-y: auto; background: var(--bg-panel, #111a2b); border: 2px solid var(--primary); border-radius: 12px; padding: 12px; box-shadow: 0 18px 40px rgba(0,0,0,0.55); }
         .office-event-card button { width: 100%; }

@@ -56,7 +56,7 @@
             box.style.display = 'block';
             box.querySelector('textarea').value = data;
         } else {
-            alert('Zwischenablage nicht verfügbar. Selbsttest-Daten:\n\n' + data.slice(0, 500));
+            showToast('Zwischenablage nicht verfügbar. Selbsttest-Daten:\n\n' + data.slice(0, 500), 'success', 4000);
         }
     }
 
@@ -84,7 +84,7 @@
         if (rawEl) rawEl.innerText = (rawMaterials.totalStock || 0).toLocaleString() + " kg";
     }
 
-    function adminAddClubMoney(amt) { playSound('goal'); game.money += amt; updateUI(); renderAdminView(); alert(`💵 +${formatVal(amt)} Vereinskonto gutgeschrieben!`); }
+    function adminAddClubMoney(amt) { playSound('goal'); game.money += amt; updateUI(); renderAdminView(); showToast(`💵 +${formatVal(amt)} Vereinskonto gutgeschrieben!`, 'success', 4000); }
 
     function adminResetDebt() {
         playSound('goal');
@@ -94,12 +94,12 @@
         activeLoans = [];
         updateUI();
         renderAdminView();
-        alert("🚫 Alle Kreditschulden erlassen!");
+        showToast("🚫 Alle Kreditschulden erlassen!", 'success', 4000);
     }
 
-    function adminSetTransferBudget(amt) { playSound('goal'); game.transferBudget = amt; updateUI(); renderAdminView(); alert(`💼 Transferbudget auf ${formatVal(amt)} gesetzt!`); }
+    function adminSetTransferBudget(amt) { playSound('goal'); game.transferBudget = amt; updateUI(); renderAdminView(); showToast(`💼 Transferbudget auf ${formatVal(amt)} gesetzt!`, 'success', 4000); }
 
-    function adminTriggerTransferOffer() { triggerNewAITransferOffer(); updateUI(); renderTransferView(); alert("📩 KI-Transferangebot erfolgreich erzwungen!"); }
+    function adminTriggerTransferOffer() { triggerNewAITransferOffer(); updateUI(); renderTransferView(); showToast("📩 KI-Transferangebot erfolgreich erzwungen!", 'success', 4000); }
 
     function adminMaxOutAllBuildings() {
         playSound('goal');
@@ -115,7 +115,7 @@
         stadium.flutlicht = true; stadium.rasenheizung = true; stadium.videowalls = true; stadium.dach = true;
         updateUI();
         renderAdminView();
-        alert("🏟️ Mega-Arena & Campus komplett auf Maximalstufe ausgebaut (100.000 Plätze)!");
+        showToast("🏟️ Mega-Arena & Campus komplett auf Maximalstufe ausgebaut (100.000 Plätze)!", 'success', 4000);
     }
 
     function adminMaxMerchHolding() {
@@ -124,7 +124,7 @@
         holdingCompany.money += 50000000;
         updateUI();
         renderAdminView();
-        alert("🏭 Merch-Holding Max: Alle Fabriken Stufe 5 & +50 Mio. € Holding-Kapital!");
+        showToast("🏭 Merch-Holding Max: Alle Fabriken Stufe 5 & +50 Mio. € Holding-Kapital!", 'success', 4000);
     }
 
     function adminMaxWarehouseStocks() {
@@ -136,7 +136,7 @@
         rawMaterials.plastic.stock = 10000;
         updateUI();
         renderAdminView();
-        alert("📦 Zentrallager Stufe 5 freigeschaltet und je 10.000 kg Rohstoffe aufgefüllt!");
+        showToast("📦 Zentrallager Stufe 5 freigeschaltet und je 10.000 kg Rohstoffe aufgefüllt!", 'success', 4000);
     }
 
     function adminHealAndBoostSquad() { 
@@ -144,7 +144,7 @@
         squad.forEach(p => { p.injured = 0; p.suspended = 0; p.fitness = 100; p.morale = 100; }); 
         updateUI(); 
         renderAdminView();
-        alert("✨ Gesamter Kader vollständig fit, geheilt und bei 100% Moral!");
+        showToast("✨ Gesamter Kader vollständig fit, geheilt und bei 100% Moral!", 'success', 4000);
     }
 
     function adminUpgradeEntireSquad(boost) {
@@ -155,7 +155,7 @@
         });
         updateUI();
         renderAdminView();
-        alert(`⚡ Alle Spieler im Kader um +${boost} Stärkepunkte aufgewertet!`);
+        showToast(`⚡ Alle Spieler im Kader um +${boost} Stärkepunkte aufgewertet!`, 'success', 4000);
     }
 
     // Setzt WIRKLICH jeden gameplay-relevanten Wert jedes Spielers auf das absolute
@@ -180,7 +180,7 @@
         });
         updateUI();
         renderAdminView();
-        alert('🌟 GESAMTES TEAM AUF MAXIMALWERT!\nAlle Spieler haben jetzt 99 in jeder Kernfähigkeit, 100% Fitness & Moral, keine Verletzungen/Sperren.');
+        showToast('🌟 GESAMTES TEAM AUF MAXIMALWERT!\nAlle Spieler haben jetzt 99 in jeder Kernfähigkeit, 100% Fitness & Moral, keine Verletzungen/Sperren.', 'success', 4000);
     }
 
     // Kaderstärke in 5er-Schritten erhöhen (NEU): sanftere Alternative zum kompletten
@@ -200,7 +200,7 @@
         });
         updateUI();
         renderAdminView();
-        alert('📈 Kaderstärke um 5 Schritte erhöht!\nAlle Kernwerte jedes Spielers wurden um 5 Punkte angehoben (Obergrenze 99).');
+        showToast('📈 Kaderstärke um 5 Schritte erhöht!\nAlle Kernwerte jedes Spielers wurden um 5 Punkte angehoben (Obergrenze 99).', 'success', 4000);
     }
 
     // Maximiert auch den Jugendkader und die zweite Mannschaft, für den Fall, dass man das
@@ -210,7 +210,7 @@
         youthTalents.forEach(p => { p.strength = 99; p.pace = 99; p.shooting = 99; p.passing = 99; p.defense = 99; });
         secondTeamSquad.forEach(p => { p.strength = 99; p.pace = 99; p.shooting = 99; p.passing = 99; p.defense = 99; p.fitness = 100; p.morale = 100; });
         updateUI();
-        alert('🌟 Jugendkader & zweite Mannschaft ebenfalls auf Maximalwert gesetzt!');
+        showToast('🌟 Jugendkader & zweite Mannschaft ebenfalls auf Maximalwert gesetzt!', 'success', 4000);
     }
 
     // Schaltet sofort alle noch gesperrten kosmetischen Extras frei (Jubiläums-Wappenmuster),
@@ -219,7 +219,7 @@
         playSound('goal');
         game.jubileePatternUnlocked = true;
         renderCrestEditor();
-        alert('🎖️ Alle kosmetischen Extras (Jubiläums-Wappenmuster) sofort freigeschaltet!');
+        showToast('🎖️ Alle kosmetischen Extras (Jubiläums-Wappenmuster) sofort freigeschaltet!', 'success', 4000);
     }
 
     function adminExtendAllContracts(years) {
@@ -227,7 +227,7 @@
         squad.forEach(p => { p.contracts += years; });
         updateUI();
         renderAdminView();
-        alert(`📝 Verträge aller Spieler um +${years} Jahre verlängert!`);
+        showToast(`📝 Verträge aller Spieler um +${years} Jahre verlängert!`, 'success', 4000);
     }
 
     function adminSpawnWonderkid() {
@@ -241,7 +241,7 @@
         if (lineup.length > 11) lineup.pop();
         updateUI();
         renderAdminView();
-        alert(`🌟 95er Ausnahmetalent ${wonderkid.name} [Tor-Instinkt] dem Kader hinzugefügt!`);
+        showToast(`🌟 95er Ausnahmetalent ${wonderkid.name} [Tor-Instinkt] dem Kader hinzugefügt!`, 'success', 4000);
     }
 
     function adminUnlockUEFAPro() { 
@@ -249,7 +249,7 @@
         privateLife.license = 3; 
         updateUI(); 
         renderAdminView();
-        alert("🎓 UEFA Pro Lizenz sofort aktiviert (+4 Stärkebonus im Spiel)!");
+        showToast("🎓 UEFA Pro Lizenz sofort aktiviert (+4 Stärkebonus im Spiel)!", 'success', 4000);
     }
 
     function adminUnlockAllManagerPerks() {
@@ -259,7 +259,7 @@
         if (typeof checkPerkSynergyBonus === 'function') checkPerkSynergyBonus();
         updateUI();
         renderAdminView();
-        alert("🌳 Alle Manager-RPG-Perks freigeschaltet!");
+        showToast("🌳 Alle Manager-RPG-Perks freigeschaltet!", 'success', 4000);
     }
 
     function adminMaxBoardAndFans() {
@@ -268,7 +268,7 @@
         game.fans = 100;
         updateUI();
         renderAdminView();
-        alert("❤️ 100% Fan- und Vorstandszufriedenheit gesetzt!");
+        showToast("❤️ 100% Fan- und Vorstandszufriedenheit gesetzt!", 'success', 4000);
     }
 
     function adminBoostPrivateLife() {
@@ -278,7 +278,7 @@
         privateLife.wage = 50000;
         updateUI();
         renderAdminView();
-        alert("🎩 +5.000.000 € auf Manager-Privatkonto überwiesen & Stress auf 0%!");
+        showToast("🎩 +5.000.000 € auf Manager-Privatkonto überwiesen & Stress auf 0%!", 'success', 4000);
     }
 
     function adminHireAllStaffFree() {
@@ -287,7 +287,7 @@
         for (let k in staffMembers) { staffMembers[k].hired = true; count++; }
         updateUI();
         renderAdminView();
-        alert(`👔 Alle ${count} Stab- und Expertenstellen besetzt!`);
+        showToast(`👔 Alle ${count} Stab- und Expertenstellen besetzt!`, 'success', 4000);
     }
 
     function adminTeleportLeague(targetLevel) {
@@ -298,7 +298,7 @@
         autoLineup();
         updateUI();
         renderAdminView();
-        alert(`🚀 Teleportation erfolgreich!\nDu spielst nun in der ${leagueNames[targetLevel]}.`);
+        showToast(`🚀 Teleportation erfolgreich!\nDu spielst nun in der ${leagueNames[targetLevel]}.`, 'success', 4000);
     }
 
     // ==========================================
@@ -324,7 +324,7 @@
         }
         game.adminCheckpointHistory = checkpoints;
         renderAdminCheckpointHistory();
-        alert(`⏩ Zeitraffer-Simulation abgeschlossen! ${checkpoints.length} Etappen protokolliert (siehe Tabelle im Admin-Screen).`);
+        showToast(`⏩ Zeitraffer-Simulation abgeschlossen! ${checkpoints.length} Etappen protokolliert (siehe Tabelle im Admin-Screen).`, 'success', 4000);
     }
     function renderAdminCheckpointHistory() {
         let box = document.getElementById('admin-checkpoint-history-box');
@@ -343,7 +343,7 @@
             game.money = -5000;
             game.negativeStreak = 8;
             game.loanDebt = 80000;
-            alert('🧪 Szenario "Insolvenz-Test" aktiviert: negativer Kontostand, hohe Schulden, 8 Spieltage im Minus.');
+            showToast('🧪 Szenario "Insolvenz-Test" aktiviert: negativer Kontostand, hohe Schulden, 8 Spieltage im Minus.', 'success', 4000);
         } else if (scenario === 'meisterrennen') {
             game.matchday = 30;
             let teams = leaguesData[game.leagueLevel];
@@ -353,7 +353,7 @@
                 let sorted = [...teams].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
                 if (sorted[0] && sorted[0].name !== game.clubName) sorted[0].points = 63;
             }
-            alert('🧪 Szenario "Meisterschafts-Endspurt" aktiviert: Spieltag 30, knapper Rückstand auf Platz 1.');
+            showToast('🧪 Szenario "Meisterschafts-Endspurt" aktiviert: Spieltag 30, knapper Rückstand auf Platz 1.', 'success', 4000);
         } else if (scenario === 'abstiegskampf') {
             game.matchday = 30;
             let teams = leaguesData[game.leagueLevel];
@@ -362,7 +362,7 @@
                 if (myTeam) myTeam.points = 28;
             }
             game.fans = 25;
-            alert('🧪 Szenario "Abstiegskampf" aktiviert: Spieltag 30, wenige Punkte, angespannte Fan-Stimmung.');
+            showToast('🧪 Szenario "Abstiegskampf" aktiviert: Spieltag 30, wenige Punkte, angespannte Fan-Stimmung.', 'success', 4000);
         }
         updateUI();
         renderAdminView();
@@ -414,7 +414,7 @@
         }
         updateUI();
         renderAdminView();
-        alert(`⏩ ${count} Spieltage vorgespult! Aktueller Spieltag: ${Math.min(34, game.matchday)}`);
+        showToast(`⏩ ${count} Spieltage vorgespult! Aktueller Spieltag: ${Math.min(34, game.matchday)}`, 'success', 4000);
     }
 
     function adminWinCupDirectly() {
@@ -424,7 +424,7 @@
         game.money += 4300000;
         updateUI();
         renderAdminView();
-        alert("🏆 DFB-Pokalsieg gutgeschrieben (+4.300.000 € Prämie & Trophäe)!");
+        showToast("🏆 DFB-Pokalsieg gutgeschrieben (+4.300.000 € Prämie & Trophäe)!", 'success', 4000);
     }
 
     function adminWinEuropeDirectly() {
@@ -434,7 +434,7 @@
         game.money += 25000000;
         updateUI();
         renderAdminView();
-        alert("🌟 Champions Cup Sieg gutgeschrieben (+25.000.000 € Prämie & Trophäe)!");
+        showToast("🌟 Champions Cup Sieg gutgeschrieben (+25.000.000 € Prämie & Trophäe)!", 'success', 4000);
     }
 
     function adminExportSaveJson() {
@@ -451,14 +451,14 @@
                 area.select();
             }
             navigator.clipboard.writeText(json).catch(() => {});
-            alert("📤 Savegame-JSON in Textfeld kopiert & in die Zwischenablage gelegt!");
-        } catch(e) { alert("Exportfehler: " + e.message); }
+            showToast("📤 Savegame-JSON in Textfeld kopiert & in die Zwischenablage gelegt!", 'success', 4000);
+        } catch(e) { showToast("Exportfehler: " + e.message, 'success', 4000); }
     }
 
     function adminImportSaveJson() {
         try {
             let area = document.getElementById('adm-save-json');
-            if (!area || !area.value.trim()) { alert("Bitte erst ein Savegame-JSON in das Textfeld einfügen!"); return; }
+            if (!area || !area.value.trim()) { showToast("Bitte erst ein Savegame-JSON in das Textfeld einfügen!", 'success', 4000); return; }
             let p = JSON.parse(area.value.trim());
 
             // Nutzt jetzt dieselbe zentrale Lade-Funktion wie save.js, statt einer separat
@@ -468,8 +468,8 @@
             applyLoadedState(p);
             updateUI();
             renderAdminView();
-            alert("📥 Spielstand aus JSON erfolgreich importiert und angewendet!");
-        } catch(e) { alert("Importfehler: Ungültiges JSON-Format!\n" + e.message); }
+            showToast("📥 Spielstand aus JSON erfolgreich importiert und angewendet!", 'success', 4000);
+        } catch(e) { showToast("Importfehler: Ungültiges JSON-Format!\n" + e.message, 'success', 4000); }
     }
 
     // adminHardResetGame() wurde nach save.js verschoben, da sie dort direkten Zugriff auf

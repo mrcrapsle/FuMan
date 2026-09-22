@@ -515,7 +515,7 @@
         roundsHistory: []
     };
 
-    let europeTournament = {
+    let europeTournament = { startFeePaid: false,
         active: false,
         matchdays: [3, 7, 11, 15, 19, 23, 27, 29, 31],
         groupA: [],

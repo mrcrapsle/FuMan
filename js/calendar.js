@@ -33,7 +33,7 @@
         squad.forEach(p => { p.fitness = Math.min(100, p.fitness + 5); p.morale = Math.min(100, p.morale + 3); });
         addManagerXP(50);
         updateUI();
-        alert(`⚽ Testspiel absolviert! Einnahmen: +${formatVal(income)}`);
+        showToast(`⚽ Testspiel absolviert - ${formatVal(income)} Einnahmen, Fitness und Moral leicht gestiegen.`, 'success', 5000);
     }
 
     // Auslandsreise für ein prestigeträchtiges Testspiel gegen einen internationalen
@@ -50,7 +50,7 @@
         addManagerXP(80);
         updateUI();
         addInboxMessage('vertrag', `✈️ Auslandsreise: Testspiel gegen ${opponent}`, `Prestigeträchtiges Testspiel absolviert! Einnahmen: ${formatVal(income)}, spürbarer Prestigegewinn bei den Fans - aber die weite Reise fordert etwas Kondition.`, 'screen-calendar');
-        alert(`✈️ Auslandsreise beendet!\nTestspiel gegen ${opponent} absolviert.\nEinnahmen: +${formatVal(income)}\nFan-Prestige gestiegen, aber leichte Reise-Ermüdung.`);
+        showNotice('✈️ Auslandsreise beendet', `Testspiel gegen ${opponent} absolviert.\n\nEinnahmen ${formatVal(income)}, das Fan-Prestige ist gestiegen - die weite Reise hat allerdings Kondition gekostet.`);
     }
 
     // ==========================================
@@ -82,7 +82,7 @@
         addManagerXP(120);
         addInboxMessage('vertrag', '✈️ Vorsaison-Tour abgeschlossen!', `Drei Stationen bereist: ${stopNames.join(', ')}. Gesamteinnahmen: ${formatVal(totalIncome)}, spürbarer Team-Zusammenhalt und Fan-Vorfreude!`, 'screen-calendar');
         updateUI();
-        alert(`✈️ VORSAISON-TOUR ABGESCHLOSSEN!\n${stops} Stationen bereist.\nGesamteinnahmen: +${formatVal(totalIncome)}\nTeam-Moral & Fan-Vorfreude spürbar gestiegen!`);
+        showNotice('✈️ Vorsaison-Tour abgeschlossen', `${stops} Stationen bereist.\n\nGesamteinnahmen ${formatVal(totalIncome)}. Mannschaftsmoral und Fan-Vorfreude sind spürbar gestiegen.`);
     }
 
     // 2. Revanche-Freundschaftsspiel gegen den aktuellen Erzfeind: eigene, emotional
@@ -102,18 +102,18 @@
             game.fans = Math.min(100, game.fans + 6);
             squad.forEach(p => { p.morale = Math.min(100, p.morale + 5); });
             addInboxMessage('vertrag', `🔥 Revanche geglückt gegen ${game.permanentRivalName}!`, `Im Vorbereitungs-Duell gegen den Erzfeind ${game.permanentRivalName} setzt sich ${game.clubName} durch - ein psychologisch wichtiges Zeichen vor dem Saisonstart!`, 'screen-calendar');
-            alert(`🔥 REVANCHE GEGLÜCKT!\nSieg im Testspiel gegen Erzfeind ${game.permanentRivalName}!\nEinnahmen: +${formatVal(income)}\nSpürbarer Moralschub vor dem Saisonstart!`);
+            showNotice('🔥 Revanche geglückt!', `Sieg im Testspiel gegen Erzfeind ${game.permanentRivalName}.\n\nEinnahmen ${formatVal(income)}, dazu ein spürbarer Moralschub vor dem Saisonstart.`);
         } else {
             game.fans = Math.max(1, game.fans - 2);
             addInboxMessage('vertrag', `😤 Niederlage gegen ${game.permanentRivalName}`, `Das Vorbereitungs-Duell gegen den Erzfeind ${game.permanentRivalName} geht verloren - Ansporn für die kommende Saison.`, 'screen-calendar');
-            alert(`😤 Niederlage im Testspiel gegen Erzfeind ${game.permanentRivalName}.\nEinnahmen: +${formatVal(income)}\nDas soll Ansporn für die neue Saison sein!`);
+            showNotice('😤 Niederlage gegen den Erzfeind', `Das Testspiel gegen ${game.permanentRivalName} ging verloren.\n\nImmerhin ${formatVal(income)} Einnahmen - und Ansporn für die neue Saison.`, { typ: 'warn' });
         }
         updateUI();
     }
 
     function bookTrainingCamp(camp) {
         let costs = { algarve: 40000, alps: 25000, dubai: 75000 };
-        if (game.money < costs[camp]) { alert("Nicht genug Geld auf dem Vereinskonto!"); return; }
+        if (game.money < costs[camp]) { showToast(`Vereinskonto reicht nicht: ${formatVal(costs[camp])} nötig, ${formatVal(game.money)} vorhanden.`, 'error', 4500); return; }
         playSound('goal');
         game.money -= costs[camp];
         if (camp === 'alps') squad.forEach(p => { p.fitness = 100; p.strength = Math.min(99, p.strength + 1); });
@@ -150,6 +150,6 @@
 
         updateUI();
         addInboxMessage('vertrag', `✈️ ${cfg.label} beendet!`, `Team ist topfit & gestärkt. Für die nächsten ${cfg.matches} Spieltage: -${Math.round(cfg.injuryReduction*100)}% Verletzungsrisiko${cfg.strengthBonus>0 ? `, +${cfg.strengthBonus} Teamstärke` : ''}.${sponsorText}`, 'screen-calendar');
-        alert(`✈️ ${cfg.label} beendet! Alle Spieler topfit & gestärkt.\n\nBonus für die nächsten ${cfg.matches} Spieltage: -${Math.round(cfg.injuryReduction*100)}% Verletzungsrisiko${cfg.strengthBonus>0 ? `, +${cfg.strengthBonus} Teamstärke` : ''}.${sponsorText}`);
+        showNotice(`✈️ ${cfg.label} beendet`, `Alle Spieler sind topfit und gestärkt zurück.\n\nBonus für die nächsten ${cfg.matches} Spieltage: ${Math.round(cfg.injuryReduction*100)}% weniger Verletzungsrisiko${cfg.strengthBonus>0 ? `, dazu +${cfg.strengthBonus} Teamstärke` : ''}.${sponsorText}`);
     }
 

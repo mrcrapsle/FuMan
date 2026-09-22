@@ -52,13 +52,17 @@
         updateUI();
     }
 
-    function sellRealEstate(key) {
+    function sellRealEstate(key, btn) {
         let p = realEstatePortfolio[key];
         if (!p.owned) return;
         // Verkauf zu 55% des ursprünglichen Investitionswerts (Marktabschlag), wie bei
         // echten Immobilienverkäufen unter Zeitdruck üblich.
         let refund = Math.round(getRealEstateCost(key) === 0 ? 0 : (p.baseCost * p.lvl * getStadiumCostScale() * 0.55));
-        if (!confirm(`${p.name} für ${formatVal(refund)} verkaufen? Die laufenden Mieteinnahmen entfallen dann.`)) return;
+        // Das letzte verbliebene window.confirm() im Spiel - in manchen Android-WebViews
+        // unterdrueckt, der Verkauf waere dort entweder ungefragt durchgelaufen oder gar
+        // nicht. Jetzt dieselbe Zwei-Klick-Bestaetigung wie bei allen anderen folgenreichen
+        // Aktionen.
+        if (!requireConfirm(btn, `Wirklich für ${formatVal(refund)} verkaufen?`)) return;
         game.money += refund;
         p.owned = false;
         p.lvl = 0;
@@ -98,7 +102,7 @@
                     <div style="font-size:9px; color:#aaa; margin-bottom:4px;">${p.desc}</div>
                     ${p.owned ? `<div class="box" style="font-size:10px; margin-bottom:4px;">💰 Laufende Mieteinnahmen: <strong style="color:var(--gold);">+${formatVal(income)}</strong> pro Spieltag</div>` : ''}
                     ${buttonHtml}
-                    ${p.owned ? `<button onclick="sellRealEstate('${key}')" class="btn-secondary" style="margin-top:4px; font-size:9px;">Verkaufen (55% Rückerstattung)</button>` : ''}
+                    ${p.owned ? `<button onclick="sellRealEstate('${key}', this)" class="btn-secondary" style="margin-top:4px; font-size:9px;">Verkaufen (55% Rückerstattung)</button>` : ''}
                 </div>
             `;
         }).join('');

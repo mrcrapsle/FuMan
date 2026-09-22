@@ -355,13 +355,13 @@
     function orderMerchBatch(key, amount) {
         let m = merchandise[key];
         let totalCost = m.cost * amount;
-        if (game.money < totalCost) { alert("Nicht genug Geld auf dem Vereinskonto!"); return; }
+        if (game.money < totalCost) { showToast(`Vereinskonto reicht nicht: ${formatVal(totalCost)} nötig, ${formatVal(game.money)} vorhanden.`, 'error', 4500); return; }
         playSound('click');
         game.money -= totalCost;
         m.stock += amount;
         renderMerchView();
         updateUI();
-        alert(`📦 ${amount}x ${m.name} über Großhandel nachbestellt!`);
+        showToast(`📦 ${amount}x ${m.name} über den Großhandel nachbestellt.`, 'success', 4000);
     }
 
     // ==========================================
