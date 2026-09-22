@@ -13,14 +13,14 @@
         let academyQueued = (game.stadiumConstructionQueue || []).find(q => q.type === 'youthAcademyLvl');
         let btnAcademy = document.getElementById('btn-upgrade-youth-academy');
         if (btnAcademy) {
-            let cost = Math.round(game.youthAcademyLvl * 35000 * (typeof getStadiumCostScale === 'function' ? getStadiumCostScale() : 1));
+            let cost = Math.max(300000, Math.round(600000 * Math.pow(game.youthAcademyLvl, 1.4) * (typeof getStadiumCostScale === 'function' ? getStadiumCostScale() : 1)));
             btnAcademy.innerText = academyQueued ? `🏗️ Im Bau... (noch ${academyQueued.daysLeft} SpT)` : `Akademie ausbauen [${formatVal(cost)}]`;
             btnAcademy.disabled = !!academyQueued;
         }
         let capacityQueued = (game.stadiumConstructionQueue || []).find(q => q.type === 'youthCapacity');
         let btnCapacity = document.getElementById('btn-expand-youth-capacity');
         if (btnCapacity) {
-            let cost = Math.round(25000 * ((game.youthCapacityBonus || 0) + 1) * (typeof getStadiumCostScale === 'function' ? getStadiumCostScale() : 1));
+            let cost = Math.max(80000, Math.round(180000 * ((game.youthCapacityBonus || 0) + 1) * (typeof getStadiumCostScale === 'function' ? getStadiumCostScale() : 1)));
             btnCapacity.innerText = capacityQueued ? `🏗️ Im Bau... (noch ${capacityQueued.daysLeft} SpT)` : `🏠 Kapazität erweitern [${formatVal(cost)}]`;
             btnCapacity.disabled = !!capacityQueued;
         }
@@ -36,7 +36,10 @@
             row.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <span>${p.name} (${p.pos}|Str: ${p.strength}) ${p.trait && p.trait!=='Kein'?`<span class="badge badge-trait">${p.trait}</span>`:''}</span>
-                    <button onclick="promoteYouth(${idx})" class="btn-action" style="width:auto;">In Profikader</button>
+                    <span style="display:flex; gap:4px;">
+                        <button onclick="promoteYouth(${idx}, this)" class="btn-action" style="width:auto; font-size:9px;">In Profikader</button>
+                        ${game.secondTeam.isActive ? `<button onclick="promoteYouthToSecondTeam(${idx}, this)" class="btn-secondary" style="width:auto; font-size:9px; color:var(--teal);" title="Behutsamer Weg: erst Spielpraxis in der Reserve sammeln">In die Reserve</button>` : ''}
+                    </span>
                 </div>
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; font-size:9px;">
                     <span>${potentialHtml}</span>
@@ -47,7 +50,7 @@
                         <option value="zweikampf" ${p.youthFocus==='zweikampf'?'selected':''}>Zweikampf</option>
                         <option value="tempo" ${p.youthFocus==='tempo'?'selected':''}>Tempo</option>
                     </select></span>
-                    <button onclick="releaseYouthTalent('${p.id}')" class="btn-secondary" style="width:auto; font-size:8px; color:var(--danger);">Freilassen</button>
+                    <button onclick="releaseYouthTalent('${p.id}', this)" class="btn-secondary" style="width:auto; font-size:8px; color:var(--danger);">Freilassen</button>
                 </div>
                 <div style="margin-top:4px; font-size:9px;">
                     🎓 Mentor: <select class="input-inline" style="font-size:8px; padding:2px;" onchange="this.value ? assignYouthMentor('${p.id}', this.value) : removeYouthMentor('${p.id}')">
@@ -90,8 +93,7 @@
         return 14 + game.youthAcademyLvl * 2 + (game.youthCapacityBonus || 0);
     }
     function expandYouthCapacity() {
-        let cost = Math.round(25000 * ((game.youthCapacityBonus || 0) + 1) * getStadiumCostScale());
-        if (game.money < cost) { showToast(`Nicht genug Geld! Benötigt: ${formatVal(cost)}`, 'error'); return; }
+        let cost = Math.max(80000, Math.round(180000 * ((game.youthCapacityBonus || 0) + 1) * getStadiumCostScale()));
         // Bugfix: ließ sich bisher komplett ohne Wartezeit sofort ausbauen - jetzt über
         // dieselbe Baustellen-Logik wie Stadion/Campus mit echter Bauzeit.
         if (typeof queueStadiumConstruction === 'function') {
@@ -310,7 +312,8 @@
     }
 
     // 8. Jugendtalent freilassen: bisher gab es nur "Befördern", kein Ausmustern.
-    function releaseYouthTalent(playerId) {
+    function releaseYouthTalent(playerId, btn) {
+        if (!requireConfirm(btn, 'Wirklich freilassen?')) return;
         let p = youthTalents.find(y => y.id === playerId);
         if (!p) return;
         youthTalents = youthTalents.filter(y => y.id !== playerId);
@@ -320,8 +323,13 @@
     }
 
     function upgradeYouthAcademy() {
-        let cost = Math.round(game.youthAcademyLvl * 35000 * getStadiumCostScale());
-        if (game.money < cost) return;
+        // Preis-Korrektur: 35.000 € je Stufe war für eine Jugendakademie grotesk niedrig -
+        // billiger als der Foodtruck-Garten (550.000 €), obwohl sie den gesamten Nachwuchs
+        // trägt. Jetzt auf dem Niveau der großen Campus-Bauten (Internat 5,5 Mio,
+        // Reha-Zentrum 4,5 Mio) und mit jeder Stufe deutlich teurer.
+        let cost = Math.max(300000, Math.round(600000 * Math.pow(game.youthAcademyLvl, 1.4) * getStadiumCostScale()));
+        // Kein stummes Abbrechen mehr: die Deckungsprüfung macht queueStadiumConstruction
+        // mit einer klaren Meldung (vorher wurde hier wortlos zurückgesprungen).
         // Bugfix: ließ sich bisher komplett ohne Wartezeit sofort ausbauen - jetzt mit
         // echter Bauzeit über dieselbe Baustellen-Logik wie Stadion/Campus.
         if (typeof queueStadiumConstruction === 'function') {
@@ -352,7 +360,26 @@
         updateUI();
     }
 
-    function promoteYouth(idx) {
+    // Der behutsame Weg: statt direkt in den Profikader zuerst in die zweite Mannschaft,
+    // wo der Spieler echte Spielpraxis bekommt und sich (mit Nachwuchs-Koordinator) weiter
+    // entwickelt, ohne einen Profi-Kaderplatz zu belegen.
+    function promoteYouthToSecondTeam(idx, btn) {
+        if (!game.secondTeam.isActive) { showToast('Dafür muss erst eine zweite Mannschaft gegründet sein.', 'error', 4000); return; }
+        if (!requireConfirm(btn, 'Wirklich in die Reserve?')) return;
+        playSound('click');
+        let p = youthTalents[idx];
+        secondTeamSquad.push(p);
+        youthTalents.splice(idx, 1);
+        if (typeof autoLineupSecondTeam === 'function') autoLineupSecondTeam();
+        addInboxMessage('vertrag', `🅱️ ${p.name} rückt in die Reserve auf`, `${p.name} (${p.pos}, Stärke ${p.strength}) sammelt ab sofort Spielpraxis bei ${game.secondTeam.name}, statt sofort im Profikader zu sitzen.`, 'screen-second-team');
+        showToast(`🅱️ ${p.name} in die zweite Mannschaft befördert!`, 'success');
+        renderYouthView();
+        updateUI();
+    }
+
+    function promoteYouth(idx, btn) {
+        // Hochziehen belegt dauerhaft einen Kaderplatz und kostet Gehalt - nicht ohne Rückfrage.
+        if (!requireConfirm(btn, 'Wirklich hochziehen?')) return;
         playSound('click');
         let p = youthTalents[idx];
         squad.push(p);

@@ -891,6 +891,10 @@
 
     function applyMatchdayFinances(isHomeMatch = true, won = false, cleanSheet = false, isDerbyMatch = false, opponentNameForRecord = null, scoreTextForRecord = null) {
         let moneyAtStart = game.money; // für automatische Rücklagenbildung (Finanzen & Kapitalmarkt)
+        // Kontoauszug: die vielen Einzelbuchungen dieses Spieltags werden NICHT einzeln
+        // im Kontoauszug geführt - sie stehen vollständig aufgeschlüsselt im
+        // Buchungsjournal (siehe game.financeLedger weiter unten).
+        setzeBuchungskontext(SPIELTAG_KONTEXT);
         let ghostGameActive = isHomeMatch && game.forcedGhostGame;
         // Lokalderby-Atmosphäre: bei Heimspielen gegen den permanenten Rivalen ist das
         // Stadion deutlich stärker ausgelastet als sonst (gedeckelt bei "ausverkauft").
@@ -974,7 +978,12 @@
                 }
             }
         }
-        let ticketIncome = (isHomeMatch && !ghostGameActive) ? Math.round(att * 0.5 * game.ticketPrices.steh + att * 0.45 * game.ticketPrices.sitz + (stadium.vipTotal || 50) * game.ticketPrices.vip) : 0;
+        // Bugfix: die VIP-Logen galten bei JEDEM Heimspiel als voll besetzt, auch wenn nur
+        // 600 Zuschauer im Stadion waren - ein Kreisklassenspiel verdiente so ein Viertel
+        // seiner Ticketeinnahmen mit 50 verkauften Logenplaetzen. Jetzt sind sie wie in der
+        // GuV-Prognose (finances.js) an die tatsaechliche Zuschauerzahl gekoppelt.
+        let vipSold = Math.min(stadium.vipTotal || 50, Math.round(att * 0.05));
+        let ticketIncome = (isHomeMatch && !ghostGameActive) ? Math.round(att * 0.5 * game.ticketPrices.steh + att * 0.45 * game.ticketPrices.sitz + vipSold * game.ticketPrices.vip) : 0;
         // Doppelte Ticketeinnahmen (Premium-Booster, NEU).
         if (isHomeMatch && game.ticketIncomeBoostNextMatch) { ticketIncome *= 2; game.ticketIncomeBoostNextMatch = false; }
         // Medienrechte (NEU): eigener Medienpartner zahlt bei jedem Heimspiel, mit Bonus bei
@@ -993,10 +1002,8 @@
         // Finanz-Ausblick ANGEZEIGT, aber nie tatsächlich abgebucht - ein "Phantom-Posten".
         // Jetzt wird der Pro-Spieltag-Anteil (Monatsschätzung / 4) jeden Spieltag wirklich
         // fällig, egal ob Heim- oder Auswärtsspiel (laufende Kosten fallen immer an).
-        let baseStadiumMaintenance = (stadium.total || 16000) * 0.45;
-        // Solaranlage (NEU): senkt die Stromkosten-Komponente der Betriebskosten spürbar,
-        // statt nur eine reine Sponsoren-Einnahmen-Erhöhung zu sein - echte Stromersparnis.
-        if (stadium.upgrades?.solaranlage) baseStadiumMaintenance *= 0.8;
+        // Betriebskosten inkl. Rabatt für stillgelegte Ränge, siehe js/stadium.js.
+        let baseStadiumMaintenance = getStadiumBaseMaintenance();
         // Bugfix: "Modernes Einlass-System" bewarb "Senkt Betriebskosten", trug aber durch
         // seine eigene Ausbaustufe (650 €/Stufe wie jedes andere Gebäude) sogar selbst zu den
         // Betriebskosten bei - bei niedrigen Gesamtkosten überstieg dieser Eigenbeitrag sogar
@@ -1031,7 +1038,7 @@
                 if (ultras) ultras.mood = Math.min(100, ultras.mood + campusBuildings.fankneipe.lvl * 0.3);
             }
         }
-        let merchIncome = simulateMerchSales(isHomeMatch && !ghostGameActive, won);
+        let merchIncome = simulateMerchSales(isHomeMatch && !ghostGameActive, won, att);
         let wages = squad.reduce((s, p) => s + p.wage, 0);
         // Bugfix: Gehälter der Zweiten Mannschaft wurden bisher nie abgebucht, obwohl die
         // Spieler reale Gehaltswerte über dieselbe createPlayer()-Fabrik erhalten - "kostenlose
@@ -1078,15 +1085,63 @@
         // Steuern & Abgaben (siehe finances.js): echte Abgabe auf die Spieltagseinnahmen.
         // Der Steuerberater senkt den Satz, kostet dafür aber ein laufendes Honorar - beides
         // wird hier verbucht und für die Anzeige in der GuV festgehalten.
-        let grossIncome = ticketIncome + merchIncome + sponsorInc;
+        // TV-Gelder als Spieltagsrate (siehe getTvMoneyInstallment() in media-rights.js):
+        // frueher nur eine Einmalzahlung zum Saisonende, wodurch gerade die oberen Ligen die
+        // gesamte Saison ueber tief im Minus standen.
+        let tvInstallment = (typeof getTvMoneyInstallment === 'function') ? getTvMoneyInstallment() : 0;
+        game.tvMoneyPaidThisSeason = (game.tvMoneyPaidThisSeason || 0) + tvInstallment;
+
+        let grossIncome = ticketIncome + merchIncome + sponsorInc + tvInstallment;
         let taxAmount = Math.round(Math.max(0, grossIncome) * getTaxRate());
         let advisorFee = financeCentralState.taxAdvisorHired ? getTaxAdvisorFee() : 0;
         game.lastMatchdayTax = taxAmount;
         game.lastMatchdayAdvisorFee = advisorFee;
         game.seasonTaxPaid = (game.seasonTaxPaid || 0) + taxAmount + advisorFee;
 
-        let net = grossIncome - taxAmount - advisorFee - wages - travelCost;
+        // Bugfix: Personalgehälter wurden nie abgebucht. Die GuV-Prognose (finances.js) und
+        // der Personal-Screen wiesen sie als laufende Kosten aus, tatsächlich arbeitete das
+        // gesamte Personal kostenlos - dadurch ließen sich die angezeigten Zahlen prinzipiell
+        // nicht mit dem Kontostand in Einklang bringen.
+        let staffWages = (typeof getTotalStaffWages === 'function') ? getTotalStaffWages() : 0;
+        let secondTeamStaffWages = (typeof getSecondTeamStaffWages === 'function') ? getSecondTeamStaffWages() : 0;
+
+        let net = grossIncome - taxAmount - advisorFee - wages - staffWages - secondTeamStaffWages - travelCost;
         game.money += net;
+
+        // Buchungsjournal: hält für JEDEN Spieltag fest, woraus sich Einnahmen und Ausgaben
+        // tatsächlich zusammensetzen. Vorher gab es nur eine grobe Monatsprognose mit
+        // Sammelposten, aus der sich nicht ablesen ließ, woher ein Betrag stammt.
+        let einnahmen = [
+            { label: '🎟️ Ticketverkauf', amount: ticketIncome },
+            { label: '👕 Fanartikel', amount: merchIncome },
+            { label: '📺 TV-Gelder (Liga)', amount: tvInstallment },
+            { label: '🤝 Hauptsponsor', amount: mainSponsorInc },
+            { label: '📢 Bandenwerbung', amount: isHomeMatch ? getBandenIncome() : 0 },
+            { label: '🧥 Ausrüster', amount: isHomeMatch ? game.kitSupplier.income : 0 },
+            { label: '🏟️ Namensrechte', amount: isHomeMatch ? (stadium.namingRightsIncome || 0) : 0 },
+            { label: '👔 Ärmelsponsor', amount: game.sleeveSponsor?.income || 0 },
+            { label: '🎫 Mitgliedsbeiträge', amount: membershipIncome },
+            { label: '🏘️ Campus-Anlagen', amount: campusFacilityIncome }
+        ].filter(e => e.amount > 0);
+        let ausgaben = [
+            { label: '⚽ Spielergehälter', amount: wages },
+            { label: '💼 Personalgehälter', amount: staffWages },
+            { label: '🅱️ Reserve-Trainerstab', amount: secondTeamStaffWages },
+            { label: '🔧 Stadion- & Campus-Unterhalt', amount: maintenanceCost },
+            { label: '🚌 Auswärtsfahrt', amount: travelCost },
+            { label: '🧾 Steuern & Abgaben', amount: taxAmount },
+            { label: '📊 Steuerberater-Honorar', amount: advisorFee }
+        ].filter(e => e.amount > 0);
+
+        if (!game.financeLedger) game.financeLedger = [];
+        game.financeLedger.push({
+            season: game.season, matchday: game.matchday,
+            heimspiel: !!isHomeMatch, zuschauer: att,
+            einnahmen, ausgaben,
+            summeEin: einnahmen.reduce((s, e) => s + e.amount, 0),
+            summeAus: ausgaben.reduce((s, e) => s + e.amount, 0)
+        });
+        if (game.financeLedger.length > 80) game.financeLedger.shift();
         if (ghostGameActive) game.forcedGhostGame = false; // Geisterspiel-Auflage ist damit erfüllt
         if (derbyBoostActive) {
             if (genuinelySoldOut) {
@@ -1115,7 +1170,9 @@
         }
         // Automatische Rücklagenbildung (Finanzen & Kapitalmarkt): zweigt einen Teil des
         // Netto-Überschusses DIESES Spieltags ab, falls aktiviert.
+        setzeBuchungskontext('🏦 Automatische Rücklage');
         if (typeof tickAutoReserve === 'function') tickAutoReserve(game.money - moneyAtStart);
+        loescheBuchungskontext();
     }
 
     // Bestimmte runde Zuschauerzahlen sind erzählerisch bedeutsam genug für eine einmalige
@@ -1576,7 +1633,7 @@
         if (isHomeDerby) checkHooliganIncident();
         // Ordner-Kosten (NEU, echte Abbuchung): bisher wurde nur im Finanz-Ausblick ein
         // Betrag angezeigt, aber nie wirklich abgebucht - ein weiterer "Phantom-Posten".
-        if (typeof tickStewardCosts === 'function') tickStewardCosts();
+        if (typeof tickStewardCosts === 'function') tickStewardCosts(isHomeMatchParam);
         if (typeof runSecChiefAutomation === 'function') runSecChiefAutomation();
         // Immobilien-Portfolio (NEU): laufende Mieteinnahmen unabhängig von Heim-/Auswärtsspiel.
         if (typeof tickRealEstateIncome === 'function') tickRealEstateIncome();
@@ -1587,6 +1644,10 @@
         if (game.matchday % 4 === 0 && typeof tickYouthLeague === 'function') tickYouthLeague();
         if (typeof checkSellOnClausePayouts === 'function') checkSellOnClausePayouts();
         if (typeof tickSkillTraining === 'function') tickSkillTraining();
+        // Trainingsstab-Automatik (Premium) und Spieltagsroutine der zweiten Mannschaft -
+        // haengen bewusst hier, damit sie auch beim Durchsimulieren ganzer Saisons greifen.
+        if (typeof runTrainingAutopilotTick === 'function') runTrainingAutopilotTick();
+        if (typeof tickSecondTeamRoutine === 'function') tickSecondTeamRoutine();
         // Weitere Premium-Booster-Countdowns (NEU).
         if (game.injuryShieldMatchdaysLeft > 0) game.injuryShieldMatchdaysLeft--;
         if (game.sponsorBoostMatchdaysLeft > 0) game.sponsorBoostMatchdaysLeft--;
@@ -1676,6 +1737,7 @@
 
         game.matchday++;
         game.viewingMatchday = Math.min(34, game.matchday);
+        if (typeof maybeAutoSave === 'function') maybeAutoSave();
         updateUI();
     }
 
@@ -2105,9 +2167,16 @@
         }
     }
 
-    function simulateFullSeason() {
-        if (game.matchday > 34) return;
-        while (game.matchday <= 34) {
+    function simulateFullSeason() { simulateMatchdays(35); }
+
+    // Simuliert bis zu "anzahl" Spieltage am Stück. Die ganze Saison ist damit nur noch der
+    // Sonderfall "so viele, wie überhaupt übrig sind" - es gibt keine zweite Schleife, die
+    // beim Ändern der Spieltagslogik vergessen werden könnte.
+    function simulateMatchdays(anzahl) {
+        if (game.matchday > 34) { showToast('Die Saison ist bereits beendet.', 'error'); return; }
+        let simuliert = 0;
+        while (game.matchday <= 34 && simuliert < anzahl) {
+            simuliert++;
             let md = game.matchday;
             let isHome = true;
             let won = false;
@@ -2174,6 +2243,7 @@
         }
         updateUI();
         showScreen('screen-dashboard');
+        showToast(`⚡ ${simuliert} Spieltag${simuliert === 1 ? '' : 'e'} simuliert - jetzt Spieltag ${Math.min(34, game.matchday)}/34.`, 'success', 3500);
     }
 
 

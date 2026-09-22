@@ -24,6 +24,9 @@
         // NEU: Eigene Trainingssteuerung für die zweite Mannschaft, unabhängig vom
         // Profikader-Training - Kondition boostet Fitness-Erhalt, Technik die reine Stärke.
         if (game.secondTeam.trainingFocus === 'technik') avg += 1;
+        // Eigener Trainerstab (NEU): ein Cheftrainer für die Reserve macht sich direkt in
+        // der Liga-Simulation bemerkbar.
+        if (typeof secondTeamStaff !== 'undefined' && secondTeamStaff.chefTrainer.hired) avg += 2;
         return Math.round(avg);
     }
 
@@ -144,6 +147,7 @@
         autoLineupSecondTeam();
         insertSecondTeamIntoLeagues();
         refreshSecondTeamMarket();
+        takeSecondTeamStrengthSnapshot();
         renderSecondTeamView();
         updateUI();
         addInboxMessage('vertrag', 'Zweite Mannschaft gegründet!', `${game.secondTeam.name} startet ab sofort in der ${leagueNames[game.secondTeam.leagueLevel]}.`, 'screen-second-team');
@@ -192,7 +196,8 @@
         showToast(`✅ ${candidate.name} (${candidate.pos}, Stärke ${candidate.strength}) für ${formatVal(cost)} verpflichtet!`, 'success');
     }
 
-    function releaseSecondTeamPlayer(id) {
+    function releaseSecondTeamPlayer(id, btn) {
+        if (!requireConfirm(btn, 'Wirklich entlassen?')) return;
         if (secondTeamSquad.length <= 11) { showToast('Mindestens 11 Spieler benötigt!', 'error'); return; }
         secondTeamSquad = secondTeamSquad.filter(p => p.id !== id);
         secondTeamLineup = secondTeamLineup.filter(pid => pid !== id);
@@ -394,7 +399,11 @@
         secondTeamMarketPlayers = [];
         let minStr = 28 + (NUM_LEAGUES - 1 - game.secondTeam.leagueLevel) * 6;
         let maxStr = minStr + 10;
-        for (let i = 0; i < 5; i++) {
+        // Amateur-Talentspäher (NEU): sichtet gezielt und bringt spürbar bessere sowie mehr
+        // Namen auf die Liste.
+        let hatSpaeher = typeof secondTeamStaff !== 'undefined' && secondTeamStaff.talentScout.hired;
+        if (hatSpaeher) { minStr += 4; maxStr += 6; }
+        for (let i = 0; i < (hatSpaeher ? 8 : 5); i++) {
             let p = createPlayer(["TW", "ABW", "MIT", "ST"][Math.floor(Math.random() * 4)], minStr, maxStr);
             p.marketValue = Math.round(p.marketValue * 0.55);
             secondTeamMarketPlayers.push(p);
@@ -461,6 +470,8 @@
         foundedBox.style.display = 'none';
         activeBox.style.display = 'block';
         renderPerspectivePlayersBox();
+        renderSecondTeamStaffBox();
+        renderSecondTeamDevelopmentReport();
         let rivalBox = document.getElementById('second-team-rival-box');
         if (rivalBox) {
             let rival = getSecondTeamRivalStats();
@@ -523,7 +534,7 @@
                     <button onclick="promoteToFirstTeam('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:9px; color:var(--primary);" title="In die 1. Mannschaft hochziehen">⬆️</button>
                     <button onclick="loanOutPlayer('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:9px; color:var(--teal);" title="An anderen Klub verleihen">📤</button>
                     <button onclick="sellSecondTeamPlayer('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:9px;" title="Verkaufen">💰</button>
-                    <button onclick="releaseSecondTeamPlayer('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:9px; color:var(--danger);" title="Ablösefrei entlassen">✕</button>
+                    <button onclick="releaseSecondTeamPlayer('${p.id}', this)" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:9px; color:var(--danger);" title="Ablösefrei entlassen">✕</button>
                 `;
                 list.appendChild(row);
             });
@@ -598,5 +609,147 @@
         }
         autoLineupSecondTeam();
         refreshSecondTeamMarket();
+        takeSecondTeamStrengthSnapshot();
     }
 
+
+    // ==========================================
+    // EIGENER TRAINERSTAB DER ZWEITEN MANNSCHAFT
+    // ==========================================
+    // Die Reserve wurde bisher gar nicht betreut: zwischen zwei Saisons veränderte sich ihr
+    // Kader überhaupt nicht, Fitness wurde nie verbraucht oder aufgebaut, junge Spieler
+    // entwickelten sich nicht. Ein eigener, kleiner Stab macht daraus eine Mannschaft, die
+    // man wirklich führt - mit eigenen Gehältern, die auch im Buchungsjournal auftauchen.
+    function getSecondTeamStaffWages() {
+        if (!game.secondTeam.isActive) return 0;
+        return Object.values(secondTeamStaff).filter(s => s.hired).reduce((sum, s) => sum + s.wage, 0);
+    }
+
+    function hireSecondTeamStaff(key) {
+        let st = secondTeamStaff[key];
+        if (!st || st.hired) return;
+        if (!game.secondTeam.isActive) { showToast('Erst die zweite Mannschaft gründen!', 'error'); return; }
+        if (game.money < st.cost) {
+            showToast(`Nicht genug Geld: ${formatVal(st.cost)} nötig, ${formatVal(game.money)} auf dem Konto.`, 'error', 4000);
+            return;
+        }
+        playSound('goal');
+        game.money -= st.cost;
+        st.hired = true;
+        addInboxMessage('vertrag', `${st.icon} ${st.name} verpflichtet`, `${st.name} betreut ab sofort die zweite Mannschaft. Ablöse ${formatVal(st.cost)}, Gehalt ${formatVal(st.wage)} pro Spieltag.`, 'screen-second-team');
+        showToast(`${st.icon} ${st.name} eingestellt!`, 'success');
+        renderSecondTeamView();
+        updateUI();
+    }
+
+    function fireSecondTeamStaff(key, btn) {
+        let st = secondTeamStaff[key];
+        if (!st || !st.hired) return;
+        // Entlassen ist folgenreich (Ablöse ist weg) - deshalb Zwei-Klick-Bestätigung.
+        if (!requireConfirm(btn, 'Wirklich entlassen?')) return;
+        playSound('click');
+        st.hired = false;
+        showToast(`${st.name} entlassen.`, 'success');
+        renderSecondTeamView();
+        updateUI();
+    }
+
+    function renderSecondTeamStaffBox() {
+        let box = document.getElementById('second-team-staff-box');
+        if (!box) return;
+        let wages = getSecondTeamStaffWages();
+        box.innerHTML = `
+            <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">
+                Eigener Stab, unabhängig vom Profipersonal. Gehälter laufen über das Vereinskonto
+                und stehen im Buchungsjournal als eigener Posten.
+                Aktuell: <strong style="color:var(--danger);">${formatVal(wages)}</strong> pro Spieltag.
+            </div>
+            ${Object.keys(secondTeamStaff).map(key => {
+                let st = secondTeamStaff[key];
+                return `<div class="box" style="font-size:10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <strong>${st.icon} ${st.name}</strong>
+                        <span style="color:${st.hired ? 'var(--primary)' : 'var(--text-muted)'};">${st.hired ? 'angestellt' : formatVal(st.cost)}</span>
+                    </div>
+                    <div style="color:#94a3b8; margin:2px 0 4px 0;">${st.desc}</div>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:9px; color:var(--text-muted);">Gehalt ${formatVal(st.wage)} / Spieltag</span>
+                        ${st.hired
+                            ? `<button onclick="fireSecondTeamStaff('${key}', this)" class="btn-secondary" style="width:auto; font-size:9px; color:var(--danger);">Entlassen</button>`
+                            : `<button onclick="hireSecondTeamStaff('${key}')" class="btn-action" style="width:auto; font-size:9px;">Einstellen</button>`}
+                    </div>
+                </div>`;
+            }).join('')}`;
+    }
+
+    // Spieltagsroutine der Reserve: läuft in allen drei Spieltag-Pfaden mit (hängt an
+    // processPostMatchRoutine()). Ohne Stab passiert fast nichts - jede Wirkung hier hängt
+    // an einem bezahlten Mitarbeiter.
+    function tickSecondTeamRoutine() {
+        if (!game.secondTeam.isActive || secondTeamSquad.length === 0) return;
+        // Grundbelastung: die Reserve spielt ebenfalls jeden Spieltag.
+        // Ohne Betreuung zehrt der Spielbetrieb langsam an der Mannschaft (Boden bei 60%,
+        // damit eine unbetreute Reserve schwächelt, aber nicht unbrauchbar wird). Ein
+        // Physiotherapeut dreht die Bilanz ins Plus, der Konditionsschwerpunkt hilft dabei.
+        let erholung = secondTeamStaff.physio.hired ? 8 : 4;
+        if (game.secondTeam.trainingFocus === 'kondition') erholung += 3;
+        secondTeamSquad.forEach(p => {
+            p.fitness = Math.max(60, Math.min(100, (p.fitness || 100) - 5 + erholung));
+        });
+        // Nachwuchs-Koordinator: junge Reservisten entwickeln sich wirklich weiter, statt
+        // eine ganze Saison lang auf demselben Stärkewert zu verharren.
+        if (secondTeamStaff.nachwuchsKoordinator.hired) {
+            secondTeamSquad.filter(p => (p.age || 30) <= 23).forEach(p => {
+                let chance = 0.10 + (game.secondTeam.trainingFocus === 'technik' ? 0.05 : 0);
+                if (Math.random() < chance) {
+                    p.strength = Math.min(99, p.strength + 1);
+                    p.marketValue = calculatePlayerMarketValue(p.strength);
+                    pushSecondTeamDevelopmentNote(`🌱 ${p.name} (${p.age} J.) hat sich auf Stärke ${p.strength} verbessert.`);
+                }
+            });
+        }
+        // Co-Trainer: stellt die Reserve selbstständig auf.
+        if (secondTeamStaff.coTrainer.hired) autoLineupSecondTeam();
+    }
+
+    function pushSecondTeamDevelopmentNote(text) {
+        if (!Array.isArray(game.secondTeamDevelopmentLog)) game.secondTeamDevelopmentLog = [];
+        game.secondTeamDevelopmentLog.push({ season: game.season, matchday: game.matchday, text });
+        if (game.secondTeamDevelopmentLog.length > 30) game.secondTeamDevelopmentLog.shift();
+    }
+
+    // Entwicklungsbericht: vergleicht den aktuellen Kader mit der Momentaufnahme vom
+    // Saisonstart, damit sichtbar wird, ob sich die Nachwuchsarbeit überhaupt auszahlt.
+    function takeSecondTeamStrengthSnapshot() {
+        if (!game.secondTeam.isActive) return;
+        game.secondTeamStrengthSnapshot = {
+            season: game.season,
+            spieler: secondTeamSquad.map(p => ({ id: p.id, name: p.name, strength: p.strength }))
+        };
+    }
+
+    function renderSecondTeamDevelopmentReport() {
+        let box = document.getElementById('second-team-development-box');
+        if (!box) return;
+        let snap = game.secondTeamStrengthSnapshot;
+        let log = (game.secondTeamDevelopmentLog || []).slice(-6).reverse();
+        let zeilen = '';
+        if (snap && snap.season === game.season) {
+            let veraendert = secondTeamSquad.map(p => {
+                let alt = snap.spieler.find(s => s.id === p.id);
+                return alt ? { name: p.name, diff: p.strength - alt.strength, jetzt: p.strength } : null;
+            }).filter(e => e && e.diff !== 0).sort((a, b) => b.diff - a.diff);
+            zeilen = veraendert.length === 0
+                ? '<div style="font-size:9px; color:var(--text-muted);">Seit Saisonstart hat sich noch kein Spieler verändert. Ein Nachwuchs-Koordinator beschleunigt die Entwicklung deutlich.</div>'
+                : veraendert.map(e => `<div style="display:flex; justify-content:space-between; font-size:10px;">
+                        <span>${e.diff > 0 ? '📈' : '📉'} ${e.name}</span>
+                        <strong style="color:${e.diff > 0 ? 'var(--primary)' : 'var(--danger)'};">${e.diff > 0 ? '+' : ''}${e.diff} (jetzt ${e.jetzt})</strong>
+                    </div>`).join('');
+        } else {
+            zeilen = '<div style="font-size:9px; color:var(--text-muted);">Der Bericht startet mit der nächsten Saison.</div>';
+        }
+        box.innerHTML = `${zeilen}
+            ${log.length > 0 ? `<div style="margin-top:6px; border-top:1px solid #1e293b; padding-top:4px;">
+                ${log.map(l => `<div style="font-size:9px; color:#94a3b8;">ST ${l.matchday}: ${l.text}</div>`).join('')}
+            </div>` : ''}`;
+    }

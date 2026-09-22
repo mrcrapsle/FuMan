@@ -592,6 +592,16 @@
                     </div>
 
                     <div class="panel">
+                        <div class="panel-header">🧑‍🏫 EIGENER TRAINERSTAB</div>
+                        <div id="second-team-staff-box"></div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="panel-header">📈 ENTWICKLUNGSBERICHT</div>
+                        <div id="second-team-development-box"></div>
+                    </div>
+
+                    <div class="panel">
                         <div class="panel-header">📋 FORMATION & SPIELSTIL</div>
                         <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:6px;">
                             <button onclick="setSecondTeamFormation('4-4-2')" id="st-f-4-4-2" class="btn-action">4-4-2</button>
@@ -673,6 +683,7 @@
                     </div>
                     <div id="dash-match-actions" style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
                         <button onclick="startMatchdayFlow()" class="btn-action" style="font-size:12px;">▶ Spieltag starten (Livespiel)</button>
+                        <button onclick="simulateMatchdays(5)" class="btn-secondary">⏩ 5 Spieltage simulieren</button>
                         <button onclick="simulateFullSeason()" class="btn-primary" style="background:#f59e0b; color:#000;">⚡ Saison durchsimulieren</button>
                     </div>
                     <div id="dash-season-end-actions" style="display:none;">
@@ -721,6 +732,7 @@
                     <div id="save-slot-1" class="box" style="margin-bottom:6px;"></div>
                     <div id="save-slot-2" class="box" style="margin-bottom:6px;"></div>
                     <div id="save-slot-3" class="box"></div>
+                    <div id="save-slot-auto" class="box" style="border-left:3px solid var(--teal);"></div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px;">
                         <button onclick="exportSaveToFile()" class="btn-secondary" style="font-size:10px;">📤 Als Datei exportieren</button>
                         <button onclick="document.getElementById('save-import-file-input').click()" class="btn-secondary" style="font-size:10px;">📥 Aus Datei importieren</button>
@@ -884,6 +896,11 @@
                     <div id="merch-items-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;"></div>
                 </div>
                 <div class="panel">
+                    <div class="panel-header">📊 VERKAUFSVERLAUF & WIRKSAME BONI</div>
+                    <div id="merch-modifiers-box" style="margin-bottom:6px;"></div>
+                    <div id="merch-sales-history"></div>
+                </div>
+                <div class="panel">
                     <div class="panel-header">✨ LIMITIERTE EDITION</div>
                     <div id="limited-edition-box"></div>
                 </div>
@@ -974,6 +991,17 @@
                     <div style="text-align:right; font-size:12px; margin-top:4px;">
                         Erwarteter Monatsüberschuss: <strong id="fin-net-total" style="color:var(--primary);">+0 €</strong>
                     </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">📒 BUCHUNGSJOURNAL – WOHER KOMMT DAS GELD?</div>
+                    <div style="font-size:10px; color:#94a3b8; margin-bottom:6px;">Jede Spieltagsabrechnung einzeln aufgeschlüsselt. So sehen Sie genau, welcher Posten wie viel gebracht oder gekostet hat.</div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin-bottom:8px;">
+                        <button onclick="setLedgerView('letzter')" id="ledger-tab-letzter" class="btn-action" style="font-size:9px; padding:5px 2px;">📄 Letzter Spieltag</button>
+                        <button onclick="setLedgerView('saison')" id="ledger-tab-saison" class="btn-secondary" style="font-size:9px; padding:5px 2px;">📊 Saison gesamt</button>
+                        <button onclick="setLedgerView('konto')" id="ledger-tab-konto" class="btn-secondary" style="font-size:9px; padding:5px 2px;">💳 Kontoauszug</button>
+                    </div>
+                    <div id="finance-ledger-box"></div>
                 </div>
 
                 <div class="panel">
@@ -1312,6 +1340,7 @@
                     <select id="skill-training-coach-select" class="input-inline" style="width:100%; margin-bottom:6px;"></select>
                     <button onclick="startSkillTraining()" class="btn-gold">Fähigkeitstraining starten</button>
                     <button onclick="buyPremiumBooster('skill_training_rush')" class="btn-secondary" style="margin-top:6px; font-size:9px;">💎 Mit Diamanten sofort abschließen (150)</button>
+                    <div id="training-autopilot-box" style="margin-top:8px;"></div>
                 </div>
                 <div class="panel">
                     <div class="panel-header">🎯 INDIVIDUELLES SPIELERTRAINING</div>
@@ -1475,7 +1504,8 @@
                         <span>Stimmung: <strong id="fan-mood-val" style="color:var(--primary);">75%</strong></span>
                     </div>
                     <div class="box">
-                        Eingesetzte Ordner: <strong id="stewards-count-disp" style="color:var(--accent);">100</strong> (Sicherheitsquote: <strong id="stewards-safety-disp" style="color:var(--primary);">85%</strong>)
+                        Vorgehaltene Ordner: <strong id="stewards-count-disp" style="color:var(--accent);">100</strong> (Sicherheitsquote: <strong id="stewards-safety-disp" style="color:var(--primary);">85%</strong>)
+                        <div id="stewards-cost-disp" style="font-size:9px; color:var(--text-muted); margin-top:2px;"></div>
                         <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:4px; margin-top:4px;">
                             <button onclick="setStewards(50)" class="btn-secondary" style="font-size:9px;">50 (Sparflamme)</button>
                             <button onclick="setStewards(100)" class="btn-secondary" style="font-size:9px;">100 (Standard)</button>
@@ -2236,7 +2266,14 @@
                 safeStorageRemove(sessionStorage, 'anstoss_fm13_newgame_leaguelevel');
                 safeStorageRemove(sessionStorage, 'anstoss_fm13_newgame_money');
                 if (chosenLevel !== null) game.leagueLevel = parseInt(chosenLevel);
-                if (chosenMoney !== null) game.money = parseInt(chosenMoney);
+                // Startkapital und Stadiongroesse skalieren mit der gewaehlten Startliga
+                // (siehe getNewGameStartMoney()/scaleStadiumForLeague() in save.js).
+                if (chosenMoney !== null) {
+                    game.money = (chosenLevel !== null && typeof getNewGameStartMoney === 'function')
+                        ? getNewGameStartMoney(parseInt(chosenLevel), parseInt(chosenMoney))
+                        : parseInt(chosenMoney);
+                }
+                if (chosenLevel !== null && typeof scaleStadiumForLeague === 'function') scaleStadiumForLeague(parseInt(chosenLevel));
                 if (chosenLevel !== null && parseInt(chosenLevel) !== 5 && typeof generateSquadForLevel === 'function') {
                     // initDefaultSquad() ist fest auf die unterste Liga kalibriert - für eine
                     // höhere Startliga braucht es einen entsprechend stärkeren Kader (gleicher
@@ -2317,6 +2354,7 @@
         <button class="nav-btn bottom-nav-item" onclick="showScreen('screen-transfer')"><span class="bn-icon">🤝</span>Transfer</button>
         <button class="nav-btn bottom-nav-item" onclick="showScreen('screen-finances')"><span class="bn-icon">🏦</span>Finanzen</button>
         <button class="nav-btn bottom-nav-item" onclick="showScreen('screen-inbox')"><span class="bn-icon">📬</span>Postfach</button>
+        <button class="nav-btn bottom-nav-item" onclick="quickSave()"><span class="bn-icon">💾</span>Speichern</button>
     </nav>
 </body>
 </html>

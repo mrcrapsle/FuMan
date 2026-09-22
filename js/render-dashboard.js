@@ -49,7 +49,7 @@
 
         let totalWages = squad.reduce((s, p) => s + p.wage, 0) * 4;
         let totalStaffWages = Object.values(staffMembers).filter(s => s.hired).reduce((s, st) => s + st.wage, 0) * 4;
-        let maintenance = Math.round(((stadium.total || 16000) * 0.45 + Object.values(campusBuildings).reduce((s, b) => s + b.lvl * 650, 0)) * 4);
+        let maintenance = Math.round((getStadiumBaseMaintenance() + Object.values(campusBuildings).reduce((s, b) => s + b.lvl * 650, 0)) * 4);
         let loanInterest = Math.round(game.loanDebt * 0.04);
         let estAttendance = Math.round((stadium.total || 16000) * getAttendanceFactor());
         let estTickets = Math.round((estAttendance * 0.5 * game.ticketPrices.steh + estAttendance * 0.45 * game.ticketPrices.sitz + Math.min(stadium.vipTotal || 50, estAttendance * 0.05) * game.ticketPrices.vip) * 2);

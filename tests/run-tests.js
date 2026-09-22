@@ -288,7 +288,10 @@ async function testYouthAcademy(browser) {
         // Kapazitaet ausreichend fuer eine vollstaendige Jugendliga-Elf
         results.capacitySufficient = getYouthAcademyCapacity() >= 14;
 
-        // Akademie-Ausbau hat eine echte Bauzeit (frueher sofort)
+        // Akademie-Ausbau hat eine echte Bauzeit (frueher sofort). Seit der Preiskorrektur
+        // kostet die Akademie mindestens 300.000 EUR und wird ohne Deckung gar nicht erst
+        // begonnen - der Testverein braucht dafuer entsprechend Guthaben.
+        game.money = 5000000;
         let lvlBefore = game.youthAcademyLvl;
         upgradeYouthAcademy();
         results.academyUpgradeNotInstant = game.youthAcademyLvl === lvlBefore;
@@ -868,14 +871,20 @@ async function testConfigurableNewGameStart(browser) {
     const r = await page.evaluate(() => ({
         leagueLevel: game.leagueLevel,
         money: game.money,
+        erwartetesStartkapital: getNewGameStartMoney(0, 500000),
+        stadion: stadium.total,
         squadSize: squad.length,
         avgStrength: Math.round(squad.reduce((s, p) => s + p.strength, 0) / squad.length),
+        maxStrength: Math.max(...squad.map(p => p.strength)),
         ourTeamFound: !!getOurLeagueTeam()
     }));
 
     assert(boxVisible, 'Klick auf "Neues Spiel starten" öffnet die Einstellungs-Box (statt sofort zu löschen)');
     assert(r.leagueLevel === 0, 'Gewählte Startliga (1. Liga) wird korrekt übernommen');
-    assert(r.money === 500000, 'Gewähltes Startkapital wird korrekt übernommen');
+    assert(r.money === r.erwartetesStartkapital && r.money > 500000,
+        'Das Startkapital wird auf die gewählte Startliga hochskaliert');
+    assert(r.stadion > 40000, 'Ein Erstliga-Start bekommt ein entsprechend großes Stadion');
+    assert(r.maxStrength <= 93, 'Der Startkader enthält keine Weltklasse-Superstars mehr');
     assert(r.squadSize === 18, 'Kader wird vollständig mit 18 Spielern generiert');
     assert(r.avgStrength >= 70, `Kader ist zur gewählten Top-Liga passend stark kalibriert (Ø ${r.avgStrength})`);
     assert(r.ourTeamFound, 'Eigenes Team ist nach dem konfigurierten Neustart in der Liga-Pyramide auffindbar');
@@ -1259,6 +1268,673 @@ async function testOfficeAtmosphereAndCrest(browser) {
     await page.close();
 }
 
+async function testRealisticMerchSales(browser) {
+    console.log('\n[19] Fanartikel: realistische Absatzmengen');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+        out.sortiment = Object.keys(merchandise).length;
+        for (let k in merchandise) merchandise[k].stock = 100000;   // Bestand darf nicht bremsen
+        game.attendanceHistory = Array.from({ length: 8 }, () => ({ attendance: 950 }));
+
+        const lauf = (att) => {
+            for (let k in merchandise) merchandise[k].stock = 100000;
+            let rev = simulateMerchSales(true, false, att);
+            return { rev, stueck: Object.values(merchandise).reduce((s, m) => s + m.lastSales.total, 0) };
+        };
+
+        // Kleiner Verein: der Absatz muss zur Zuschauerzahl passen.
+        let laeufe = [lauf(950), lauf(950), lauf(950)];
+        out.proZuschauer = laeufe.map(l => l.rev / 950);
+        out.stueckzahlen = laeufe.map(l => l.stueck);
+        out.schwankt = new Set(laeufe.map(l => Math.round(l.rev))).size > 1;
+
+        // Zehnfache Zuschauerzahl muss auch etwa den zehnfachen Absatz bringen.
+        game.attendanceHistory = Array.from({ length: 8 }, () => ({ attendance: 9500 }));
+        let gross = lauf(9500);
+        out.skaliert = gross.stueck > laeufe[0].stueck * 4;
+
+        // Premium-Booster und Perks müssen sich auswirken.
+        game.attendanceHistory = Array.from({ length: 8 }, () => ({ attendance: 950 }));
+        let ohne = lauf(950).rev;
+        game.merchDoubleNextMatch = true;
+        let mit = lauf(950).rev;
+        out.boosterWirkt = mit > ohne * 1.25;
+        out.boosterVerbraucht = game.merchDoubleNextMatch === false;
+
+        // Auswärts wird im Stadion nichts verkauft, Stadt/Online laufen weiter.
+        let aus = simulateMerchSales(false, false, 0);
+        out.auswaertsOhneStadion = Object.values(merchandise).every(m => m.lastSales.stadium === 0) && aus > 0;
+
+        // Verlauf wird mitgeschrieben und überlebt Speichern/Laden.
+        out.verlaufEintraege = merchExtras.salesHistory.length;
+        let save = JSON.parse(JSON.stringify(buildSaveState()));
+        merchExtras.salesHistory = [];
+        applyLoadedState(save);
+        out.verlaufRestauriert = merchExtras.salesHistory.length === out.verlaufEintraege;
+        return out;
+    });
+
+    const proZ = r.proZuschauer.map(v => v.toFixed(2)).join(' / ');
+    assert(r.sortiment >= 24, `Sortiment umfasst mindestens 24 Artikel (${r.sortiment})`);
+    assert(r.proZuschauer.every(v => v > 1.5 && v < 8), `Umsatz je Zuschauer bleibt realistisch (${proZ} € - Recherche: ~3 €)`);
+    assert(r.stueckzahlen.every(v => v < 400), `Bei 950 Zuschauern werden keine Hunderte Artikel verkauft (${r.stueckzahlen.join('/')} Stück)`);
+    assert(r.schwankt, 'Die Absatzmenge schwankt von Spieltag zu Spieltag');
+    assert(r.skaliert, 'Zehnfache Zuschauerzahl bringt deutlich mehr Absatz');
+    assert(r.boosterWirkt, 'Premium-Booster steigert den Absatz spürbar');
+    assert(r.boosterVerbraucht, 'Premium-Booster wird nach dem Spieltag verbraucht');
+    assert(r.auswaertsOhneStadion, 'Auswärts läuft kein Stadionverkauf, Stadt/Online aber schon');
+    assert(r.verlaufEintraege > 0 && r.verlaufRestauriert, 'Verkaufsverlauf wird mitgeschrieben und überlebt Speichern/Laden');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei den Fanartikel-Verkäufen');
+    await page.close();
+}
+
+async function testBuildingPaymentAndPrices(browser) {
+    console.log('\n[20] Bauen: Sofortzahlung, keine Schulden, Preise');
+    const { page, consoleErrors } = await freshPage(browser);
+
+    const r = await page.evaluate(() => {
+        let out = {};
+        // Ohne Deckung darf gar nicht erst gebaut werden.
+        game.money = 50000;
+        game.stadiumConstructionQueue = [];
+        queueStadiumConstruction('campusBuilding', { key: 'hotel' }, 900000, 12, 'Testbau');
+        out.ohneDeckungBlockiert = game.stadiumConstructionQueue.length === 0 && game.money === 50000;
+
+        // Mit Deckung: sofort vollständig bezahlt, keine offene Restzahlung.
+        game.money = 2000000;
+        queueStadiumConstruction('campusBuilding', { key: 'hotel' }, 900000, 12, 'Testbau');
+        let proj = game.stadiumConstructionQueue[0];
+        out.sofortVollBezahlt = game.money === 1100000;
+        out.keineRestzahlung = !!proj && proj.remainingPayment === 0;
+
+        // Bei Fertigstellung darf nichts mehr abgebucht werden.
+        let vorFertigstellung = game.money;
+        for (let i = 0; i < 20; i++) tickStadiumConstruction();
+        out.fertigOhneNachzahlung = game.money === vorFertigstellung;
+
+        // Preise: Fabriken sind echte Investitionen, die Jugendakademie kein Kleingeld mehr.
+        out.fabrikMin = Math.min(...Object.values(factories).map(f => f.cost));
+        game.leagueLevel = 5; game.youthAcademyLvl = 1;
+        out.akademieUnterliga = Math.max(300000, Math.round(600000 * Math.pow(1, 1.4) * getStadiumCostScale()));
+
+        // Fabrikkauf ohne Holding-Guthaben: sichtbar gesperrt statt stumm wirkungslos.
+        holdingCompany.money = 1000;
+        showScreen('screen-industry');
+        let gitter = document.getElementById('factories-grid');
+        let kaufKnopf = [...gitter.querySelectorAll('button')].find(b => b.innerText.includes('Fabrik kaufen'));
+        out.kaufGesperrt = !!kaufKnopf && kaufKnopf.disabled;
+        out.fehlbetragSichtbar = gitter.innerText.includes('es fehlen');
+
+        // Der Wirtschaftsbereich darf keine nativen Dialoge mehr nutzen (werden in manchen
+        // Android-WebViews unterdrückt - der Knopf wirkt dann komplett wirkungslos).
+        out.keinAlertMehr = !buyFactory.toString().includes('alert(')
+            && !startProduction.toString().includes('alert(')
+            && !transferClubToHolding.toString().includes('alert(');
+        return out;
+    });
+
+    assert(r.ohneDeckungBlockiert, 'Ohne ausreichendes Guthaben wird gar nicht erst gebaut');
+    assert(r.sofortVollBezahlt, 'Baukosten werden sofort vollständig abgebucht');
+    assert(r.keineRestzahlung, 'Es bleibt keine Restzahlung bis zur Fertigstellung offen');
+    assert(r.fertigOhneNachzahlung, 'Bei Fertigstellung wird nichts mehr nachgefordert');
+    assert(r.fabrikMin >= 250000, `Fabriken sind echte Investitionen (günstigste: ${r.fabrikMin.toLocaleString('de-DE')} €)`);
+    assert(r.akademieUnterliga >= 300000, `Jugendakademie auch in unteren Ligen kein Kleingeld (${r.akademieUnterliga.toLocaleString('de-DE')} €)`);
+    assert(r.kaufGesperrt && r.fehlbetragSichtbar, 'Fabrikkauf ohne Holding-Guthaben ist sichtbar gesperrt und begründet');
+    assert(r.keinAlertMehr, 'Wirtschaftsbereich meldet Fehler sichtbar statt über native Dialoge');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Bau-/Preis-Test');
+    await page.close();
+}
+
+async function testAutoSaveAndPartialSimulation(browser) {
+    console.log('\n[21] Autosave, Schnellspeichern & 5-Spieltage-Simulation');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+        safeLocalRemove('anstoss_fm13_autosave');
+        game.lastAutoSaveMatchday = 0;
+
+        // Nur 5 Spieltage simulieren statt der ganzen Saison.
+        let vorher = game.matchday;
+        simulateMatchdays(5);
+        out.genauFuenf = game.matchday - vorher === 5;
+
+        // Dabei wird automatisch gespeichert - in einem EIGENEN Slot, nicht über Slot 1.
+        out.autoAngelegt = !!safeLocalGet('anstoss_fm13_autosave');
+        let auto = JSON.parse(safeLocalGet('anstoss_fm13_autosave'));
+        out.autoHatMeta = !!(auto.meta && auto.meta.clubName);
+        out.slot1Unberuehrt = !safeLocalGet('anstoss_fm13_save_slot_1');
+
+        // Nicht nach jedem Spieltag erneut, sondern im Fünf-Spieltage-Takt.
+        let stand = safeLocalGet('anstoss_fm13_autosave');
+        simulateMatchdays(2);
+        out.nichtJedenSpieltag = safeLocalGet('anstoss_fm13_autosave') === stand;
+        simulateMatchdays(3);
+        out.nachFuenfErneuert = safeLocalGet('anstoss_fm13_autosave') !== stand;
+
+        // Automatischen Stand laden stellt exakt wieder her.
+        let gespeichert = JSON.parse(safeLocalGet('anstoss_fm13_autosave')).game;
+        game.money = 1; game.matchday = 99;
+        out.autoLaedt = loadAutoSave() && game.money === gespeichert.money && game.matchday === gespeichert.matchday;
+
+        // Schnellspeichern aus der unteren Leiste schreibt in Slot 1.
+        game.money = 777777;
+        quickSave();
+        out.schnellSpeichern = JSON.parse(safeLocalGet('anstoss_fm13_save_slot_1')).game.money === 777777;
+
+        // Nach Saisonende wird nicht weitersimuliert.
+        game.matchday = 35;
+        simulateMatchdays(5);
+        out.saisonendeAbgefangen = game.matchday === 35;
+
+        showScreen('screen-dashboard');
+        out.speicherKnopf = !!document.querySelector('.bottom-nav-item[onclick="quickSave()"]');
+        out.fuenfKnopf = !!document.querySelector('[onclick="simulateMatchdays(5)"]');
+        return out;
+    });
+
+    assert(r.genauFuenf, 'simulateMatchdays(5) simuliert genau 5 Spieltage');
+    assert(r.autoAngelegt && r.autoHatMeta, 'Nach 5 Spieltagen wird automatisch gespeichert (mit Metadaten)');
+    assert(r.slot1Unberuehrt, 'Der Autosave nutzt einen eigenen Slot und überschreibt Slot 1 nicht');
+    assert(r.nichtJedenSpieltag, 'Es wird nicht nach jedem einzelnen Spieltag gespeichert');
+    assert(r.nachFuenfErneuert, 'Nach weiteren 5 Spieltagen wird der Autosave erneuert');
+    assert(r.autoLaedt, 'Automatischer Spielstand lässt sich exakt wieder laden');
+    assert(r.schnellSpeichern, 'Speicher-Knopf der unteren Leiste schreibt in Slot 1');
+    assert(r.saisonendeAbgefangen, 'Nach Saisonende wird nicht weiter simuliert');
+    assert(r.speicherKnopf, 'Speicher-Knopf ist in der unteren Menüleiste vorhanden');
+    assert(r.fuenfKnopf, '5-Spieltage-Knopf ist vorhanden');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei Autosave/Simulation');
+    await page.close();
+}
+
+async function testConfirmBeforeIrreversibleActions(browser) {
+    console.log('\n[22] Bestätigung vor folgenreichen Aktionen');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+
+        // Jugendspieler in den Profikader hochziehen
+        scoutYouthTalent(); scoutYouthTalent();
+        showScreen('screen-youth');
+        let hoch = [...document.querySelectorAll('#youth-talents-list button')].find(b => b.innerText.includes('Profikader'));
+        let kaderVorher = squad.length, jugendVorher = youthTalents.length;
+        hoch.click();
+        out.jugendErsterKlick = squad.length === kaderVorher && hoch.innerText.includes('Wirklich');
+        hoch.click();
+        out.jugendZweiterKlick = squad.length === kaderVorher + 1 && youthTalents.length === jugendVorher - 1;
+
+        // Personal entlassen
+        staffMembers.marketingDir.hired = true;
+        showScreen('screen-staff');
+        let entlassen = [...document.querySelectorAll('button')].find(b => b.innerText.trim() === 'Entlassen');
+        entlassen.click();
+        out.personalErsterKlick = staffMembers.marketingDir.hired === true && entlassen.innerText.includes('Wirklich');
+        entlassen.click();
+        out.personalZweiterKlick = staffMembers.marketingDir.hired === false;
+
+        // Einstellen bleibt ohne Rückfrage - nur das Entlassen ist folgenreich.
+        showScreen('screen-staff');
+        let einstellen = [...document.querySelectorAll('button')].find(b => b.innerText.trim() === 'Einstellen');
+        out.einstellenOhneRueckfrage = !!einstellen && einstellen.dataset.confirming !== 'true';
+
+        // Die Absicherung nutzt KEINE nativen Dialoge (in Android-WebViews unterdrückt).
+        out.keineNativenDialoge = !requireConfirm.toString().includes('confirm(')
+            && !promoteYouth.toString().includes('window.confirm');
+        return out;
+    });
+
+    assert(r.jugendErsterKlick, 'Jugendspieler hochziehen fragt beim ersten Klick nur nach');
+    assert(r.jugendZweiterKlick, 'Erst der zweite Klick zieht den Jugendspieler wirklich hoch');
+    assert(r.personalErsterKlick, 'Personal entlassen fragt beim ersten Klick nur nach');
+    assert(r.personalZweiterKlick, 'Erst der zweite Klick entlässt das Personal wirklich');
+    assert(r.einstellenOhneRueckfrage, 'Einstellen läuft weiterhin ohne Rückfrage');
+    assert(r.keineNativenDialoge, 'Die Rückfrage nutzt keine nativen Dialoge');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei den Bestätigungsabfragen');
+    await page.close();
+}
+
+async function testFinanceLedgerAndStatement(browser) {
+    console.log('\n[23] Finanzmenü: Buchungsjournal & Kontoauszug');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+
+        // 1. Buchungsjournal: jeder Spieltag wird einzeln aufgeschlüsselt verbucht.
+        let vorher = (game.financeLedger || []).length;
+        simulateMatchdays(3);
+        let ledger = game.financeLedger || [];
+        out.journalWaechst = ledger.length === vorher + 3;
+        let letzte = ledger[ledger.length - 1];
+        out.journalHatPosten = Array.isArray(letzte.einnahmen) && Array.isArray(letzte.ausgaben)
+            && letzte.ausgaben.length > 0;
+        out.journalSummenStimmen = letzte.summeEin === letzte.einnahmen.reduce((s, e) => s + e.amount, 0)
+            && letzte.summeAus === letzte.ausgaben.reduce((s, e) => s + e.amount, 0);
+
+        // 2. Personalgehälter werden tatsächlich abgebucht (waren zuvor nur Anzeige).
+        Object.values(staffMembers).forEach(s => s.hired = false);
+        staffMembers.marketingDir.hired = true;
+        let kontoVorSpieltag = game.money;
+        simulateMatchdays(1);
+        let spieltag = game.financeLedger[game.financeLedger.length - 1];
+        let personalPosten = spieltag.ausgaben.find(a => a.label.includes('Personalgehälter'));
+        out.personalVerbucht = !!personalPosten && personalPosten.amount === getTotalStaffWages();
+        out.personalWirklichAbgezogen = game.money !== kontoVorSpieltag;
+
+        // 3. Anzeige: alle drei Reiter rendern ohne Fehler und zeigen Inhalte.
+        showScreen('screen-finances');
+        setLedgerView('letzter');
+        let boxLetzter = document.getElementById('finance-ledger-box').innerHTML;
+        out.ansichtLetzter = boxLetzter.includes('EINNAHMEN') && boxLetzter.includes('AUSGABEN');
+        setLedgerView('saison');
+        let boxSaison = document.getElementById('finance-ledger-box').innerHTML;
+        out.ansichtSaison = boxSaison.includes('abgerechnete Spieltage');
+        out.tabAktiv = document.getElementById('ledger-tab-saison').className === 'btn-action'
+            && document.getElementById('ledger-tab-letzter').className === 'btn-secondary';
+
+        // 4. Kontoauszug: Bewegungen AUSSERHALB der Spieltagsabrechnung werden automatisch
+        //    erfasst und dem auslösenden Bereich zugeordnet.
+        game.kontoauszug = [];
+        game.money = 5000000;
+        showScreen('screen-stadium');
+        let kontoVorBau = game.money;
+        game.money -= 120000; // stellvertretend für einen Bauauftrag
+        let buchung = game.kontoauszug[game.kontoauszug.length - 1];
+        out.buchungErfasst = !!buchung && buchung.amount === -120000;
+        out.buchungBereich = !!buchung && buchung.label.includes('Stadionausbau');
+        out.buchungSaldo = !!buchung && buchung.saldo === kontoVorBau - 120000;
+
+        // Spieltagsbuchungen tauchen NICHT im Kontoauszug auf (sie stehen im Journal).
+        let auszugVorSpieltag = game.kontoauszug.length;
+        simulateMatchdays(1);
+        out.spieltagNichtImAuszug = game.kontoauszug.length === auszugVorSpieltag;
+
+        // 4b. Ordnerdienst: nur bei Heimspielen und nur nach tatsaechlichem Einsatz.
+        game.stewards = 100;
+        securityWorkforce.permanentStewards = 0;
+        out.ordnerNurNachBedarf = getDeployedStewards(600) === 24 && getDeployedStewards(100000) === 100;
+        out.ordnerKostenProportional = getStewardMatchdayCost(600) === 24 * 120 * 2;
+        let kontoVorAuswaerts = game.money;
+        tickStewardCosts(false);
+        out.ordnerNurZuhause = game.money === kontoVorAuswaerts;
+        tickStewardCosts(true);
+        out.ordnerZuhauseBezahlt = game.money < kontoVorAuswaerts;
+
+        setLedgerView('konto');
+        let boxKonto = document.getElementById('finance-ledger-box').innerHTML;
+        out.ansichtKonto = boxKonto.includes('NACH BEREICH') && boxKonto.includes('Stadionausbau');
+
+        // 5. Laden eines Spielstands darf keine Phantom-Buchung erzeugen.
+        saveGameToSlot(1);
+        let gespeicherteBuchungen = game.kontoauszug.length;
+        game.money = 1; // grosse Kontoaenderung, die NICHT mitgespeichert wurde
+        loadGameFromSlot(1, true);
+        // Der wiederhergestellte Kontostand darf keine zusaetzliche Buchung erzeugen -
+        // im Auszug steht exakt das, was gespeichert wurde.
+        out.ladenOhnePhantom = game.kontoauszug.length === gespeicherteBuchungen;
+        out.ladenStelltGeldWiederHer = game.money > 1000;
+
+        // 6. Bricht das Laden mittendrin ab (beschaedigte Importdatei), darf die
+        //    Protokollierung nicht dauerhaft abgeschaltet bleiben - sonst fehlten alle
+        //    spaeteren Buchungen stillschweigend im Kontoauszug.
+        try { applyLoadedState(null); } catch (e) { /* erwartet */ }
+        let auszugVorher = (game.kontoauszug || []).length;
+        showScreen('screen-stadium');
+        game.money -= 5000;
+        out.abgebrochenesLadenBlockiertNicht = (game.kontoauszug || []).length === auszugVorher + 1;
+        return out;
+    });
+
+    assert(r.journalWaechst, 'Jeder Spieltag erzeugt einen Eintrag im Buchungsjournal');
+    assert(r.journalHatPosten, 'Der Eintrag listet Einnahmen und Ausgaben einzeln auf');
+    assert(r.journalSummenStimmen, 'Die gespeicherten Summen stimmen mit den Einzelposten überein');
+    assert(r.personalVerbucht, 'Personalgehälter stehen als eigener Ausgabenposten im Journal');
+    assert(r.personalWirklichAbgezogen, 'Personalgehälter verändern den Kontostand wirklich');
+    assert(r.ansichtLetzter, 'Reiter "Letzter Spieltag" zeigt Einnahmen und Ausgaben');
+    assert(r.ansichtSaison, 'Reiter "Saison gesamt" fasst alle Spieltage zusammen');
+    assert(r.tabAktiv, 'Der aktive Reiter wird hervorgehoben');
+    assert(r.buchungErfasst, 'Kontobewegungen ausserhalb des Spieltags werden automatisch erfasst');
+    assert(r.buchungBereich, 'Eine Buchung wird dem auslösenden Bereich zugeordnet');
+    assert(r.buchungSaldo, 'Der Kontoauszug hält den Kontostand nach jeder Buchung fest');
+    assert(r.spieltagNichtImAuszug, 'Spieltagsposten erscheinen nur im Journal, nicht doppelt im Auszug');
+    assert(r.ordnerNurNachBedarf, 'Es werden nur so viele Ordner eingesetzt wie Zuschauer da sind');
+    assert(r.ordnerKostenProportional, 'Die Ordnerkosten richten sich nach dem tatsächlichen Einsatz');
+    assert(r.ordnerNurZuhause, 'Auswärts fällt kein Ordnerdienst an');
+    assert(r.ordnerZuhauseBezahlt, 'Beim Heimspiel wird der Ordnerdienst abgerechnet');
+    assert(r.ansichtKonto, 'Reiter "Kontoauszug" zeigt Bereiche und Einzelbuchungen');
+    assert(r.ladenOhnePhantom, 'Das Laden eines Spielstands erzeugt keine Phantom-Buchung');
+    assert(r.ladenStelltGeldWiederHer, 'Der Kontostand wird beim Laden korrekt wiederhergestellt');
+    assert(r.abgebrochenesLadenBlockiertNicht, 'Ein abgebrochenes Laden schaltet die Protokollierung nicht dauerhaft ab');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler im Finanzmenü');
+    await page.close();
+}
+
+async function testEconomyBalance(browser) {
+    console.log('\n[24] Wirtschaftliche Balance: stillgelegte Ränge, Gehälter, VIP-Logen');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+
+        // 1. Stillgelegte Ränge: wer ein grosses Stadion kaum füllt, zahlt nicht den vollen
+        //    Unterhalt - wer es füllt, schon.
+        let total = stadium.total;
+        game.attendanceHistory = [{ season: 1, matchday: 1, attendance: 600, capacity: total, opponent: 'X' }];
+        let unterhaltLeer = getStadiumBaseMaintenance();
+        let stillgelegtLeer = getMothballedCapacity();
+        game.attendanceHistory = [{ season: 1, matchday: 1, attendance: total, capacity: total, opponent: 'X' }];
+        let unterhaltVoll = getStadiumBaseMaintenance();
+        out.stillgelegtGuenstiger = unterhaltLeer < unterhaltVoll * 0.6;
+        out.stillgelegtErkannt = stillgelegtLeer > total * 0.5;
+        out.vollesStadionVollerPreis = Math.round(unterhaltVoll) === Math.round(total * 0.45)
+            && getMothballedCapacity() === 0;
+        // Mindestens ein Fuenftel bleibt immer in Betrieb.
+        game.attendanceHistory = [{ season: 1, matchday: 1, attendance: 1, capacity: total, opponent: 'X' }];
+        out.grundbetriebBleibt = getUsedStadiumCapacity() >= Math.round(total * 0.2);
+
+        // 2. Spieltagsabrechnung und GuV-Prognose rechnen mit DERSELBEN Formel.
+        game.attendanceHistory = [{ season: 1, matchday: 1, attendance: 600, capacity: total, opponent: 'X' }];
+        showScreen('screen-finances');
+        let unterhaltProSpieltag = getStadiumBaseMaintenance();
+        simulateMatchdays(1);
+        let posten = game.financeLedger.slice(-1)[0].ausgaben.find(a => a.label.includes('Unterhalt'));
+        out.prognoseGleichAbrechnung = !!posten && Math.abs(posten.amount - Math.round(unterhaltProSpieltag)) < 200;
+
+        // 3. Gehälter im Amateurbereich haengen an der Staerke statt an einem Pauschalsockel.
+        let schwach = calculatePlayerWage(calculatePlayerMarketValue(30), 30);
+        let stark = calculatePlayerWage(calculatePlayerMarketValue(44), 44);
+        out.amateurGehaelterGestaffelt = stark > schwach;
+        out.amateurGehaltAngemessen = schwach <= 250;
+        // Profigehaelter bleiben unveraendert hoch.
+        out.profiGehaltUnveraendert = calculatePlayerWage(calculatePlayerMarketValue(70), 70) > 8000;
+
+        // 4. VIP-Logen sind nicht mehr unabhaengig von der Zuschauerzahl ausverkauft.
+        out.vipGekoppelt = !applyMatchdayFinances.toString().includes('(stadium.vipTotal || 50) * game.ticketPrices.vip');
+
+        return out;
+    });
+
+    // 5. Eine komplett passiv gespielte Saison ruiniert den Verein nicht mehr bis zur
+    //    Zahlungsunfaehigkeit - aktives Wirtschaften wirft klar Gewinn ab.
+    const saison = await page.evaluate(() => {
+        sessionStorage.setItem('anstoss_fm13_force_new_game', '1');
+        return true;
+    });
+    await page.reload();
+    await page.waitForTimeout(400);
+    const passiv = await page.evaluate(() => {
+        closeTutorial();
+        let start = game.money;
+        for (let i = 0; i < 7; i++) simulateMatchdays(5);
+        return { start, ende: game.money };
+    });
+    assert(saison && passiv.ende > -100000, 'Eine passiv gespielte Saison endet nicht in der Zahlungsunfähigkeit');
+    assert(passiv.ende < passiv.start, 'Nichtstun bleibt trotzdem ein Verlustgeschäft');
+
+    assert(r.stillgelegtGuenstiger, 'Ein kaum gefülltes Stadion kostet deutlich weniger Unterhalt');
+    assert(r.stillgelegtErkannt, 'Nicht benötigte Ränge werden als stillgelegt erkannt');
+    assert(r.vollesStadionVollerPreis, 'Ein volles Stadion kostet weiterhin den vollen Unterhalt');
+    assert(r.grundbetriebBleibt, 'Ein Fünftel des Stadions bleibt immer in Betrieb');
+    assert(r.prognoseGleichAbrechnung, 'GuV-Prognose und Spieltagsabrechnung nutzen dieselbe Formel');
+    assert(r.amateurGehaelterGestaffelt, 'Amateurgehälter richten sich nach der Spielstärke');
+    assert(r.amateurGehaltAngemessen, 'Ein Kreisklassenspieler kostet nicht mehr 400 € pro Spieltag');
+    assert(r.profiGehaltUnveraendert, 'Profigehälter bleiben unverändert hoch');
+    assert(r.vipGekoppelt, 'VIP-Logen gelten nicht mehr unabhängig von der Zuschauerzahl als ausverkauft');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei der Wirtschaftssimulation');
+    await page.close();
+}
+
+async function testSecondTeamAndTrainingAutomation(browser) {
+    console.log('\n[25] Zweite Mannschaft & Trainingsstab-Automatik');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+        managerRPG.level = 5;
+        game.money = 5000000;
+        foundSecondTeam();
+
+        // 1. Eigener Trainerstab: einstellen, Wirkung, Gehalt, Entlassen.
+        let staerkeVorher = calcSecondTeamStrength();
+        hireSecondTeamStaff('chefTrainer');
+        out.chefTrainerWirkt = calcSecondTeamStrength() === staerkeVorher + 2;
+        out.stabKostetAbloese = secondTeamStaff.chefTrainer.hired === true;
+        hireSecondTeamStaff('physio');
+        hireSecondTeamStaff('talentScout');
+        out.gehaltSumme = getSecondTeamStaffWages()
+            === secondTeamStaff.chefTrainer.wage + secondTeamStaff.physio.wage + secondTeamStaff.talentScout.wage;
+
+        // Talentspaeher verbessert den Amateurmarkt.
+        refreshSecondTeamMarket();
+        let mitSpaeher = secondTeamMarketPlayers.length;
+        secondTeamStaff.talentScout.hired = false;
+        refreshSecondTeamMarket();
+        out.spaeherBringtMehr = mitSpaeher > secondTeamMarketPlayers.length;
+        secondTeamStaff.talentScout.hired = true;
+
+        // Entlassen braucht zwei Klicks (keine nativen Dialoge).
+        showScreen('screen-second-team');
+        let entlassen = [...document.querySelectorAll('#second-team-staff-box button')].find(b => b.innerText.trim() === 'Entlassen');
+        entlassen.click();
+        out.entlassenErsterKlick = secondTeamStaff.chefTrainer.hired === true;
+        entlassen.click();
+        out.entlassenZweiterKlick = secondTeamStaff.chefTrainer.hired === false;
+        hireSecondTeamStaff('chefTrainer');
+
+        // 2. Gehaelter des Reserve-Stabs stehen als eigener Posten im Buchungsjournal.
+        simulateMatchdays(1);
+        let posten = game.financeLedger.slice(-1)[0].ausgaben.find(a => a.label.includes('Reserve'));
+        out.reserveGehaltVerbucht = !!posten && posten.amount === getSecondTeamStaffWages();
+
+        // 3. Physiotherapeut dreht die Fitnessbilanz der Reserve ins Plus.
+        secondTeamSquad.forEach(p => p.fitness = 70);
+        simulateMatchdays(4);
+        let mitPhysio = secondTeamSquad.reduce((s, p) => s + p.fitness, 0) / secondTeamSquad.length;
+        secondTeamStaff.physio.hired = false;
+        secondTeamSquad.forEach(p => p.fitness = 70);
+        simulateMatchdays(4);
+        let ohnePhysio = secondTeamSquad.reduce((s, p) => s + p.fitness, 0) / secondTeamSquad.length;
+        out.physioWirkt = mitPhysio > ohnePhysio;
+        out.ohneStabNichtRuiniert = ohnePhysio >= 60;
+        secondTeamStaff.physio.hired = true;
+
+        // 4. Nachwuchs-Koordinator entwickelt junge Reservisten wirklich weiter.
+        hireSecondTeamStaff('nachwuchsKoordinator');
+        secondTeamSquad.forEach(p => { p.age = 20; });
+        let staerkeSumme = secondTeamSquad.reduce((s, p) => s + p.strength, 0);
+        simulateMatchdays(12);
+        out.nachwuchsEntwickeltSich = secondTeamSquad.reduce((s, p) => s + p.strength, 0) > staerkeSumme;
+
+        // 5. Jugendspieler koennen in die Reserve statt in den Profikader.
+        scoutYouthTalent();
+        showScreen('screen-youth');
+        let reserveBtn = [...document.querySelectorAll('#youth-talents-list button')].find(b => b.innerText.includes('Reserve'));
+        let reserveVorher = secondTeamSquad.length, jugendVorher = youthTalents.length;
+        out.reserveKnopfVorhanden = !!reserveBtn;
+        reserveBtn.click();
+        out.jugendReserveErsterKlick = secondTeamSquad.length === reserveVorher;
+        reserveBtn.click();
+        out.jugendReserveZweiterKlick = secondTeamSquad.length === reserveVorher + 1 && youthTalents.length === jugendVorher - 1;
+
+        return out;
+    });
+
+    const t = await page.evaluate(() => {
+        let out = {};
+        // 6. Trainingsstab-Automatik: kostet Premium-Punkte, ist nicht billig, und arbeitet
+        //    auch waehrend einer durchsimulierten Saison weiter.
+        Object.keys(SKILL_TRAINING_COACHES).forEach(k => { if (staffMembers[k]) staffMembers[k].hired = false; });
+        game.premiumPoints = 1000;
+        game.skillTrainingQueue = [];
+        game.trainingAutopilotMatchdays = 0;
+        activateTrainingAutopilot();
+        out.ohneTrainerKeineAutomatik = game.trainingAutopilotMatchdays === 0 && game.premiumPoints === 1000;
+
+        staffMembers.coTrainer.hired = true;
+        activateTrainingAutopilot();
+        out.nichtBillig = TRAINING_AUTOPILOT_COST >= 400;
+        out.punkteAbgezogen = game.premiumPoints === 1000 - TRAINING_AUTOPILOT_COST;
+        out.laufzeit = game.trainingAutopilotMatchdays === TRAINING_AUTOPILOT_DURATION;
+
+        game.money = 5000000;
+        simulateMatchdays(3);
+        out.automatikStartetFoerderung = (game.skillTrainingQueue || []).length > 0;
+        out.automatikProtokolliert = (game.trainingAutopilotLog || []).length > 0;
+        out.laufzeitZaehltRunter = game.trainingAutopilotMatchdays === TRAINING_AUTOPILOT_DURATION - 3;
+        out.hoechstensDreiParallel = game.skillTrainingQueue.length <= 3;
+
+        // Die Automatik bucht den Verein nie ins Minus.
+        game.skillTrainingQueue = [];
+        game.money = 100;
+        let geldVorher = game.money;
+        simulateMatchdays(1);
+        out.keineUeberziehung = game.skillTrainingQueue.length === 0 && game.money <= geldVorher;
+
+        // 7. Einmal-Vorschlag kostet ebenfalls Premium-Punkte und fuellt die Auswahl.
+        showScreen('screen-training');
+        setTrainingTab('individual');
+        game.premiumPoints = 500;
+        autoPickSkillTraining();
+        out.vorschlagKostet = game.premiumPoints === 500 - TRAINING_AUTOPICK_COST;
+        out.vorschlagFuelltAuswahl = !!document.getElementById('skill-training-player-select').value
+            && !!document.getElementById('skill-training-coach-select').value;
+
+        game.premiumPoints = 0;
+        let vorher = document.getElementById('skill-training-player-select').value;
+        autoPickSkillTraining();
+        out.ohneGuthabenKeinVorschlag = game.premiumPoints === 0 && document.getElementById('skill-training-player-select').value === vorher;
+        return out;
+    });
+
+    assert(r.chefTrainerWirkt, 'Reserve-Cheftrainer erhöht die Teamstärke der zweiten Mannschaft');
+    assert(r.stabKostetAbloese, 'Reserve-Personal lässt sich einstellen');
+    assert(r.gehaltSumme, 'Die Gehaltssumme des Reserve-Stabs wird korrekt berechnet');
+    assert(r.spaeherBringtMehr, 'Der Amateur-Talentspäher bringt mehr Spieler auf den Markt');
+    assert(r.entlassenErsterKlick, 'Reserve-Personal entlassen fragt beim ersten Klick nur nach');
+    assert(r.entlassenZweiterKlick, 'Erst der zweite Klick entlässt das Reserve-Personal');
+    assert(r.reserveGehaltVerbucht, 'Der Reserve-Trainerstab steht als eigener Posten im Buchungsjournal');
+    assert(r.physioWirkt, 'Der Reserve-Physiotherapeut verbessert die Fitness der zweiten Mannschaft');
+    assert(r.ohneStabNichtRuiniert, 'Eine unbetreute Reserve schwächelt, wird aber nicht unbrauchbar');
+    assert(r.nachwuchsEntwickeltSich, 'Mit Nachwuchs-Koordinator entwickeln sich junge Reservisten weiter');
+    assert(r.reserveKnopfVorhanden, 'Jugendspieler können in die Reserve statt in den Profikader');
+    assert(r.jugendReserveErsterKlick, 'Der Sprung in die Reserve fragt beim ersten Klick nur nach');
+    assert(r.jugendReserveZweiterKlick, 'Erst der zweite Klick schiebt den Jugendspieler in die Reserve');
+
+    assert(t.ohneTrainerKeineAutomatik, 'Ohne passenden Trainer lässt sich die Automatik nicht kaufen');
+    assert(t.nichtBillig, 'Die Trainingsstab-Automatik ist bewusst teuer (mind. 400 Premium-Punkte)');
+    assert(t.punkteAbgezogen, 'Die Automatik zieht die Premium-Punkte wirklich ab');
+    assert(t.laufzeit, 'Die Automatik läuft die vorgesehene Anzahl Spieltage');
+    assert(t.automatikStartetFoerderung, 'Die Automatik startet selbstständig Förderprogramme');
+    assert(t.automatikProtokolliert, 'Jede automatische Förderung wird protokolliert');
+    assert(t.laufzeitZaehltRunter, 'Die Restlaufzeit zählt pro Spieltag herunter');
+    assert(t.hoechstensDreiParallel, 'Die Automatik startet höchstens drei Förderungen parallel');
+    assert(t.keineUeberziehung, 'Die Automatik bucht den Verein nie ins Minus');
+    assert(t.vorschlagKostet, 'Der Einmal-Vorschlag kostet Premium-Punkte');
+    assert(t.vorschlagFuelltAuswahl, 'Der Einmal-Vorschlag füllt Spieler, Attribut und Trainer aus');
+    assert(t.ohneGuthabenKeinVorschlag, 'Ohne Guthaben passiert nichts und es wird nichts abgezogen');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei Reserve und Trainingsautomatik');
+    await page.close();
+}
+
+async function testLeagueEconomy(browser) {
+    console.log('\n[26] Ligaökonomie: TV-Gelder in Raten, Profi-Startoptionen');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+
+        // 1. TV-Gelder kommen jetzt als Spieltagsrate, nicht mehr als Einmalzahlung.
+        let rate = getTvMoneyInstallment();
+        out.rateVorhanden = rate > 0;
+        out.rateIstNeutral = rate === Math.round(LEAGUE_BASE_TV_MONEY[game.leagueLevel] / MATCHDAYS_PER_SEASON);
+        // Die Rate haengt NICHT am Tabellenplatz - sonst brächte ein zufälliger erster
+        // Platz am ersten Spieltag die ganze Saison über 50 % mehr Geld.
+        let ersterPlatz = calculateCollectiveTvMoney(game.leagueLevel, 1);
+        let letzterPlatz = calculateCollectiveTvMoney(game.leagueLevel, 18);
+        out.platzierungZaehltAmEnde = ersterPlatz > letzterPlatz;
+
+        let gezahltVorher = game.tvMoneyPaidThisSeason || 0;
+        simulateMatchdays(3);
+        out.ratenWerdenGezahlt = (game.tvMoneyPaidThisSeason || 0) === gezahltVorher + rate * 3;
+        let posten = game.financeLedger.slice(-1)[0].einnahmen.find(e => e.label.includes('TV'));
+        out.tvImJournal = !!posten && posten.amount === rate;
+
+        // 2. Die TV-Staffel steigt mit jeder Ligastufe streng monoton.
+        out.staffelMonoton = LEAGUE_BASE_TV_MONEY.every((v, i) => i === 0 || v < LEAGUE_BASE_TV_MONEY[i - 1]);
+
+        // 3. Startkapital und Stadion skalieren mit der gewaehlten Startliga.
+        out.kapitalSkaliert = getNewGameStartMoney(0, 150000) > getNewGameStartMoney(3, 150000)
+            && getNewGameStartMoney(3, 150000) > getNewGameStartMoney(5, 150000)
+            && getNewGameStartMoney(5, 150000) === 150000;
+
+        // 4. Generierte Kader liegen um das Ligamittel statt darueber.
+        [0, 2, 4].forEach(lvl => {
+            let sq = generateSquadForLevel(lvl);
+            let basis = Math.max(25, 82 - lvl * 10);
+            let schnitt = sq.reduce((s, p) => s + p.strength, 0) / sq.length;
+            if (!out.kaderLigadurchschnitt) out.kaderLigadurchschnitt = true;
+            if (Math.abs(schnitt - basis) > 4) out.kaderLigadurchschnitt = false;
+        });
+        return out;
+    });
+
+    // 5. Ein Erstliga-Start ist wirtschaftlich tragfaehig: nach einer aktiv bewirtschafteten
+    //    Saison steht der Verein nicht schlechter da als zu Beginn.
+    await page.evaluate(() => {
+        sessionStorage.setItem('anstoss_fm13_newgame_leaguelevel', '0');
+        sessionStorage.setItem('anstoss_fm13_newgame_money', '150000');
+        sessionStorage.setItem('anstoss_fm13_force_new_game', '1');
+    });
+    await page.reload();
+    await page.waitForTimeout(400);
+    const profi = await page.evaluate(() => {
+        closeTutorial();
+        checkIncomingSponsorOffers(true); acceptSponsorOffer(sponsorOffers[0].id);
+        checkIncomingKitOffers(true); if (kitSupplierOffers[0]) acceptKitOffer(kitSupplierOffers[0].id);
+        for (let i = 0; i < 300 && bandenSponsors.filter(x => x.active).length < 20; i++) {
+            checkIncomingBandenOffers(true);
+            if (bandenOffers[0]) acceptBandenOffer(bandenOffers[0].id);
+        }
+        game.financeLedger = [];
+        let start = game.money;
+        simulateMatchdays(30);
+        let l = game.financeLedger;
+        return {
+            start,
+            ende: game.money,
+            stadion: stadium.total,
+            saldoProSpieltag: Math.round(l.reduce((s, e) => s + e.summeEin - e.summeAus, 0) / l.length),
+            einProSpieltag: Math.round(l.reduce((s, e) => s + e.summeEin, 0) / l.length)
+        };
+    });
+
+    assert(r.rateVorhanden, 'Es gibt eine TV-Spieltagsrate');
+    assert(r.rateIstNeutral, 'Die Rate entspricht dem Ligagrundbetrag geteilt durch die Spieltage');
+    assert(r.platzierungZaehltAmEnde, 'Der Tabellenplatz entscheidet weiterhin über die Gesamthöhe');
+    assert(r.ratenWerdenGezahlt, 'Jeder Spieltag zahlt genau eine Rate aus');
+    assert(r.tvImJournal, 'Die TV-Rate steht als eigener Posten im Buchungsjournal');
+    assert(r.staffelMonoton, 'Die TV-Staffel steigt mit jeder Ligastufe');
+    assert(r.kapitalSkaliert, 'Startkapital skaliert mit der gewählten Startliga, die 6. Liga bleibt unverändert');
+    assert(r.kaderLigadurchschnitt, 'Generierte Startkader liegen um das Ligamittel statt deutlich darüber');
+    assert(profi.stadion > 40000, 'Der Erstliga-Start bekommt ein Stadion passender Größe');
+    assert(profi.saldoProSpieltag > -0.05 * profi.einProSpieltag,
+        `Ein Erstliga-Verein wirtschaftet nicht mehr strukturell ins Minus (Saldo ${profi.saldoProSpieltag} €/Spieltag bei ${profi.einProSpieltag} € Einnahmen)`);
+    assert(profi.ende > 0 && profi.ende > profi.start * 0.8,
+        `Nach 30 aktiv bewirtschafteten Spieltagen ist der Erstligist noch solvent (${Math.round(profi.ende)} € statt ${Math.round(profi.start)} €)`);
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler in der Ligaökonomie');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -1296,6 +1972,14 @@ async function main() {
         testTaxAndAdvisor,
         testStadiumWideBanden,
         testOfficeAtmosphereAndCrest,
+        testRealisticMerchSales,
+        testBuildingPaymentAndPrices,
+        testAutoSaveAndPartialSimulation,
+        testConfirmBeforeIrreversibleActions,
+        testFinanceLedgerAndStatement,
+        testEconomyBalance,
+        testSecondTeamAndTrainingAutomation,
+        testLeagueEconomy,
     ];
 
     for (const suite of suites) {

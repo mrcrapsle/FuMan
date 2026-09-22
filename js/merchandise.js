@@ -11,87 +11,154 @@
         return { factor: Math.max(0.08, Math.pow(1 / ratio, 2.5)), label: "Überteuert (Massiver Absatzeinbruch!)", color: "var(--danger)" };
     }
 
-    function simulateMerchSales(isHomeMatch, won) {
-        let totalSalesRevenue = 0;
-        let att = isHomeMatch ? Math.round((stadium.total || 16000) * getAttendanceFactor()) : 0;
-        let topStrength = Math.max(...squad.map(p => p.strength), 55);
+    // Wie viel ein Besucher am Spieltag im Schnitt für Fanartikel ausgibt. Orientiert an
+    // realen Erhebungen zum Fanartikelverkauf im Stadion (rund 3 € pro Zuschauer; Merchandising
+    // macht in der Bundesliga etwa 5% des Gesamterlöses aus). Vorher war der Absatz von der
+    // Zuschauerzahl praktisch entkoppelt: Stadt- und Online-Nachfrage liefen über feste
+    // Pauschalen je Artikel, sodass ein Verein mit 950 Besuchern dieselben Stückzahlen
+    // verkaufte wie ein ausverkauftes Stadion.
+    const MERCH_SPEND_PER_VISITOR = 3.0;
 
+    // Reichweite außerhalb des Stadions: der Schnitt der letzten Heimspiele ist das
+    // ehrlichste Maß für die tatsächliche Größe der Anhängerschaft. Die Stadionkapazität
+    // allein taugt nicht, weil sie im Spiel von Beginn an fünfstellig ist.
+    function getAverageHomeAttendance() {
+        let hist = (game.attendanceHistory || []).slice(-8).map(h => h.attendance).filter(a => a > 0);
+        if (hist.length === 0) return Math.max(200, Math.round((stadium.total || 1000) * getAttendanceFactor()));
+        return Math.round(hist.reduce((s, a) => s + a, 0) / hist.length);
+    }
+
+    // Sammelt alle Faktoren, die auf den Fanartikel-Absatz wirken - einmal an einer Stelle,
+    // damit sie im Fanshop auch ausgewiesen werden können statt unsichtbar zu bleiben.
+    function getMerchModifiers(won) {
+        let mods = [];
+        let merchBooths = Object.values(stadium.blocks || {}).reduce((sum, b) => sum + (b.merchLvl || 0), 0);
+        if (merchBooths > 0) mods.push({ label: `Merch-Stände (${merchBooths} Stufen)`, mult: 1 + merchBooths * 0.05, channel: 'stadium' });
+        if (typeof getStadiumMerchBonus === 'function' && getStadiumMerchBonus() > 0) {
+            mods.push({ label: 'Stadion-Ausbauten (Flagship-Store/App)', mult: 1 + getStadiumMerchBonus(), channel: 'stadium' });
+        }
+        if (game.merchDoubleNextMatch) mods.push({ label: '⚡ Premium-Booster: doppelter Absatz', mult: 2, channel: 'stadium' });
+        if (campusBuildings.megastore.lvl > 0) mods.push({ label: `Fanshop Megastore (Stufe ${campusBuildings.megastore.lvl})`, mult: 1 + campusBuildings.megastore.lvl * 0.45, channel: 'city' });
+        if (staffMembers.marketingDir.hired) mods.push({ label: 'Marketing-Direktor', mult: 1.6, channel: 'online' });
+        if (managerRPG.perks.tycoon) mods.push({ label: 'Perk "Tycoon"', mult: 1.25, channel: 'alle' });
+        if (merchExtras.seasonalCollection.active) mods.push({ label: `Saisonale Kollektion (+${merchExtras.seasonalCollection.boostPercent}%)`, mult: 1 + merchExtras.seasonalCollection.boostPercent / 100, channel: 'alle' });
+        if (won !== undefined && won !== null) mods.push({ label: won ? 'Sieg-Euphorie' : 'Ergebnis gedämpft', mult: won ? 1.35 : 0.85, channel: 'stadium' });
+        return mods;
+    }
+
+    // Verteilt einen Umsatz-Etat auf die Artikel: begehrtere und passend bepreiste Artikel
+    // bekommen einen größeren Anteil, die Stückzahl ergibt sich dann aus dem Preis. Dadurch
+    // verkauft sich ein 18-€-Schal automatisch häufiger als ein 65-€-Trikot.
+    function distributeMerchBudget(budget, weights) {
+        let totalWeight = Object.values(weights).reduce((s, w) => s + w, 0);
+        let units = {};
+        for (let key in weights) {
+            if (totalWeight <= 0) { units[key] = 0; continue; }
+            let share = (weights[key] / totalWeight) * budget;
+            units[key] = Math.max(0, Math.round(share / Math.max(1, merchandise[key].price)));
+        }
+        return units;
+    }
+
+    function simulateMerchSales(isHomeMatch, won, actualAttendance = null) {
+        let totalSalesRevenue = 0;
+        // Es zählt die TATSÄCHLICHE Zuschauerzahl des Spiels (inkl. Derby-/Pokalzuschlag und
+        // Streuung), nicht mehr eine zweite, davon abweichende Schätzung.
+        let att = isHomeMatch
+            ? (actualAttendance !== null ? actualAttendance : Math.round((stadium.total || 1000) * getAttendanceFactor()))
+            : 0;
+        let avgAtt = getAverageHomeAttendance();
+        let topStrength = Math.max(...squad.map(p => p.strength), 55);
+        let jitter = () => 0.85 + Math.random() * 0.3;   // Spieltag ist nie exakt wie der letzte
+
+        // ---- 1. Wie viel Geld fließt an diesem Spieltag überhaupt in Fanartikel? ----
+        let stadiumBudget = 0;
+        if (isHomeMatch && att > 0) {
+            stadiumBudget = att * MERCH_SPEND_PER_VISITOR * (won ? 1.35 : 0.85) * jitter();
+            let merchBooths = Object.values(stadium.blocks || {}).reduce((sum, b) => sum + (b.merchLvl || 0), 0);
+            stadiumBudget *= (1 + merchBooths * 0.05);
+            if (typeof getStadiumMerchBonus === 'function') stadiumBudget *= (1 + getStadiumMerchBonus());
+            if (game.merchDoubleNextMatch) stadiumBudget *= 2;
+        }
+        // Stadtgeschäft und Onlineshop hängen an der Reichweite des Vereins statt an
+        // festen Pauschalen - ein Sechstligist verkauft dort entsprechend wenig.
+        let cityBudget = avgAtt * 0.8 * (1 + campusBuildings.megastore.lvl * 0.45)
+            * (0.4 + (game.fans / 100) * 0.9) * jitter();
+        let marketingBonus = staffMembers.marketingDir.hired ? 1.6 : 1.0;
+        let starFactor = 1 + Math.max(0, topStrength - 55) * 0.012;
+        let onlineBudget = avgAtt * 0.6 * marketingBonus * starFactor
+            * (0.4 + (game.boardSat / 100) * 0.6) * jitter();
+
+        // Trikot-Ausrüster: ein prestigeträchtiger Ausrüster macht die Trikots begehrter.
+        let kitScale = typeof leagueScaleFactor === 'function' ? leagueScaleFactor() : 1;
+        let kitPrestigeBonus = Math.min(0.2, Math.max(0, ((game.kitSupplier?.income || 0) / (3000 * kitScale)) * 0.1));
+
+        if (managerRPG.perks.tycoon) { stadiumBudget *= 1.25; cityBudget *= 1.25; onlineBudget *= 1.25; }
+        if (merchExtras.seasonalCollection.active) {
+            let f = 1 + merchExtras.seasonalCollection.boostPercent / 100;
+            stadiumBudget *= f; cityBudget *= f; onlineBudget *= f;
+        }
+
+        // ---- 2. Etat auf die Artikel verteilen ----
+        let weights = {};
         for (let key in merchandise) {
             let m = merchandise[key];
             let elast = calculateElasticity(m.price, m.optimalPrice);
+            let w = (m.popularity || 1) * elast.factor;
+            if (key === 'jerseys') w *= (1 + kitPrestigeBonus);
+            weights[key] = Math.max(0, w);
+        }
+        let stadiumUnits = distributeMerchBudget(stadiumBudget, weights);
+        let cityUnits = distributeMerchBudget(cityBudget, weights);
+        let onlineUnits = distributeMerchBudget(onlineBudget, weights);
 
-            let stadiumDemand = 0;
-            if (isHomeMatch) {
-                let baseStadium = (att * 0.018) * (won ? 1.4 : 0.85);
-                let merchBooths = Object.values(stadium.blocks || {}).reduce((sum, b) => sum + (b.merchLvl || 0), 0);
-                baseStadium *= (1 + (merchBooths * 0.05));
-                stadiumDemand = Math.round(baseStadium * elast.factor);
-                // Doppelte Fanartikel-Verkäufe (Premium-Booster, NEU) - Flag wird NICHT hier
-                // zurückgesetzt (das würde nur den ersten Artikel der Schleife treffen),
-                // sondern einmalig nach Abschluss der gesamten Funktion.
-                if (game.merchDoubleNextMatch) stadiumDemand *= 2;
-                // Stadion-Erweiterungen (NEU): Flagship-Store/Stadion-App erhöhen den Absatz dauerhaft.
-                if (typeof getStadiumMerchBonus === 'function') stadiumDemand = Math.round(stadiumDemand * (1 + getStadiumMerchBonus()));
-                // Trikot-Ausrüster (NEU): ein prestigeträchtiger Ausrüster (hohe Vertragssumme)
-                // macht die Trikots begehrter - war bisher nur reine Sponsoreneinnahme ohne
-                // jede Rückwirkung auf den tatsächlichen Fanartikel-Absatz.
-                if (key === 'jerseys') {
-                    let kitScale = typeof leagueScaleFactor === 'function' ? leagueScaleFactor() : 1;
-                    let kitPrestigeBonus = Math.min(0.2, Math.max(0, ((game.kitSupplier?.income || 0) / (3000 * kitScale)) * 0.1));
-                    stadiumDemand = Math.round(stadiumDemand * (1 + kitPrestigeBonus));
-                }
-            }
-
-            let megastoreLvl = campusBuildings.megastore.lvl;
-            let baseCity = (25 + (megastoreLvl * 35)) * (game.fans / 100) * (4 - game.leagueLevel * 0.5);
-            let cityDemand = Math.round(baseCity * elast.factor);
-
-            let marketingBonus = staffMembers.marketingDir.hired ? 1.6 : 1.0;
-            let starBonus = Math.max(0, (topStrength - 50) * 0.9);
-            let baseOnline = (18 + starBonus) * marketingBonus * (game.boardSat / 100);
-            let onlineDemand = Math.round(baseOnline * elast.factor);
-
-            let totalDemand = stadiumDemand + cityDemand + onlineDemand;
-            if (managerRPG.perks.tycoon) totalDemand = Math.round(totalDemand * 1.25);
-            // Saisonale Kollektion (NEU): zeitlich begrenzter Verkaufsschub auf ALLE Artikel.
-            if (merchExtras.seasonalCollection.active) totalDemand = Math.round(totalDemand * (1 + merchExtras.seasonalCollection.boostPercent / 100));
+        // ---- 3. Am Lagerbestand ausliefern ----
+        let matchdayLog = { matchday: game.matchday, season: game.season, items: {}, revenue: 0, attendance: att };
+        for (let key in merchandise) {
+            let m = merchandise[key];
+            let wunschStadion = stadiumUnits[key] || 0;
+            let wunschStadt = cityUnits[key] || 0;
+            let wunschOnline = onlineUnits[key] || 0;
+            let totalDemand = wunschStadion + wunschStadt + wunschOnline;
 
             let actualSold = Math.min(m.stock, totalDemand);
-
             let shareFactor = totalDemand > 0 ? (actualSold / totalDemand) : 0;
-            let soldStadium = Math.round(stadiumDemand * shareFactor);
-            let soldCity = Math.round(cityDemand * shareFactor);
-            let soldOnline = actualSold - soldStadium - soldCity;
-            if (soldOnline < 0) soldOnline = 0;
+            let soldStadium = Math.round(wunschStadion * shareFactor);
+            let soldCity = Math.round(wunschStadt * shareFactor);
+            let soldOnline = Math.max(0, actualSold - soldStadium - soldCity);
 
             m.stock -= actualSold;
             let rev = actualSold * m.price;
             totalSalesRevenue += rev;
 
             m.lastSales = {
-                stadium: soldStadium,
-                city: soldCity,
-                online: soldOnline,
-                total: actualSold,
-                revenue: rev,
+                stadium: soldStadium, city: soldCity, online: soldOnline,
+                total: actualSold, revenue: rev,
                 missed: Math.max(0, totalDemand - actualSold)
             };
+            if (actualSold > 0 || m.lastSales.missed > 0) {
+                matchdayLog.items[key] = { name: m.name, sold: actualSold, revenue: rev, missed: m.lastSales.missed };
+            }
+            matchdayLog.revenue += rev;
 
-            // Spieler-spezifische Trikot-Verkaufszahlen (NEU): ein Teil der Trikot-Verkäufe
-            // wird dem aktuell beliebtesten Spieler (Publikumsliebling, sonst Torjäger)
-            // zugeschrieben - zeigt, wessen Name/Nummer sich gerade am besten verkauft.
+            // Spieler-spezifische Trikot-Verkaufszahlen: ein Teil der Trikot-Verkäufe wird
+            // dem beliebtesten Spieler zugeschrieben.
             if (key === 'jerseys' && actualSold > 0) {
                 let favoritePlayer = squad.find(p => p.isCrowdFavorite) || [...squad].sort((a, b) => (b.shooting || 0) - (a.shooting || 0))[0];
                 if (favoritePlayer) {
-                    let attributedSales = Math.round(actualSold * 0.35); // 35% tragen erkennbar seinen Namen
+                    let attributedSales = Math.round(actualSold * 0.35);
                     if (!merchExtras.jerseySalesByPlayer[favoritePlayer.id]) merchExtras.jerseySalesByPlayer[favoritePlayer.id] = { name: favoritePlayer.name, total: 0 };
-                    merchExtras.jerseySalesByPlayer[favoritePlayer.id].name = favoritePlayer.name; // Namensänderungen nachziehen
+                    merchExtras.jerseySalesByPlayer[favoritePlayer.id].name = favoritePlayer.name;
                     merchExtras.jerseySalesByPlayer[favoritePlayer.id].total += attributedSales;
                 }
             }
         }
-        // Fanartikel-Boost-Flag (NEU): einmalig NACH der kompletten Schleife zurücksetzen,
-        // damit der Bonus für alle Artikel gilt statt nur für den ersten.
+
+        // ---- 4. Verlauf mitschreiben, damit nachvollziehbar bleibt, was sich verkauft hat ----
+        if (!merchExtras.salesHistory) merchExtras.salesHistory = [];
+        merchExtras.salesHistory.push(matchdayLog);
+        if (merchExtras.salesHistory.length > 80) merchExtras.salesHistory.shift();
+
         game.merchDoubleNextMatch = false;
         return totalSalesRevenue;
     }
@@ -148,8 +215,71 @@
             : entries.map((e, i) => `<div class="box" style="display:flex; justify-content:space-between; font-size:9px;"><span>#${i+1} ${e.name}</span><strong>${e.total.toLocaleString('de-DE')} Trikots</strong></div>`).join('');
     }
 
+    // Macht sichtbar, welche Boni gerade tatsächlich auf den Absatz wirken - vorher steckten
+    // Premium-Booster, Mitarbeiter- und Gebäudeboni unsichtbar in der Rechnung.
+    function renderMerchModifiers() {
+        let box = document.getElementById('merch-modifiers-box');
+        if (!box) return;
+        let mods = getMerchModifiers(null);
+        let avgAtt = getAverageHomeAttendance();
+        let kopf = `<div class="box" style="font-size:9px;">Grundlage: <strong>${avgAtt.toLocaleString('de-DE')}</strong> Zuschauer im Schnitt der letzten Heimspiele · `
+            + `rund <strong>${MERCH_SPEND_PER_VISITOR.toFixed(2).replace('.', ',')} €</strong> Fanartikel-Umsatz pro Stadionbesucher.</div>`;
+        if (mods.length === 0) {
+            box.innerHTML = kopf + '<div style="font-size:9px; color:var(--text-muted);">Aktuell wirken keine zusätzlichen Boni auf den Absatz.</div>';
+            return;
+        }
+        box.innerHTML = kopf + mods.map(m => {
+            let pct = Math.round((m.mult - 1) * 100);
+            let farbe = pct >= 0 ? 'var(--primary)' : 'var(--danger)';
+            return `<div class="player-row" style="font-size:9px;"><span>${m.label} <span style="color:var(--text-muted);">(${m.channel})</span></span>`
+                + `<strong style="color:${farbe};">${pct >= 0 ? '+' : ''}${pct}%</strong></div>`;
+        }).join('');
+    }
+
+    // Verkaufsverlauf: beantwortet "was habe ich wann wovon verkauft" - bisher war immer nur
+    // der allerletzte Spieltag je Artikel sichtbar.
+    function renderMerchSalesHistory() {
+        let box = document.getElementById('merch-sales-history');
+        if (!box) return;
+        let hist = (merchExtras.salesHistory || []).slice(-10).reverse();
+        if (hist.length === 0) {
+            box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Noch keine Verkäufe erfasst - nach dem ersten Spieltag erscheint hier der Verlauf.</div>';
+            return;
+        }
+        // Saisonsumme je Artikel über den gesamten mitgeschriebenen Verlauf.
+        let summe = {};
+        (merchExtras.salesHistory || []).forEach(e => {
+            for (let k in e.items) {
+                if (!summe[k]) summe[k] = { name: e.items[k].name, sold: 0, revenue: 0 };
+                summe[k].sold += e.items[k].sold;
+                summe[k].revenue += e.items[k].revenue;
+            }
+        });
+        let summeHtml = Object.values(summe).sort((a, b) => b.revenue - a.revenue).map(v =>
+            `<div class="player-row" style="font-size:9px;"><span>${v.name}</span><span><strong>${v.sold.toLocaleString('de-DE')}</strong> Stk. · <strong style="color:var(--accent);">${formatVal(v.revenue)}</strong></span></div>`
+        ).join('');
+
+        let verlaufHtml = hist.map(e => {
+            let artikel = Object.values(e.items).sort((a, b) => b.sold - a.sold)
+                .map(i => `${i.name.split(' ')[0]}: ${i.sold}`).join(' · ') || 'nichts verkauft';
+            let verpasst = Object.values(e.items).reduce((s, i) => s + i.missed, 0);
+            return `<div class="box" style="font-size:9px; margin-bottom:3px;">
+                        <div style="display:flex; justify-content:space-between;">
+                            <strong>S${e.season} · Spieltag ${e.matchday}${e.attendance > 0 ? ` · ${e.attendance.toLocaleString('de-DE')} Zuschauer` : ' · auswärts'}</strong>
+                            <strong style="color:var(--accent);">${formatVal(e.revenue)}</strong>
+                        </div>
+                        <div style="color:var(--text-muted);">${artikel}${verpasst > 0 ? ` · <span style="color:var(--danger);">${verpasst} mangels Bestand verpasst</span>` : ''}</div>
+                    </div>`;
+        }).join('');
+
+        box.innerHTML = `<div style="font-size:9px; font-weight:800; margin:4px 0;">Bisher verkauft (gesamter Verlauf)</div>${summeHtml}`
+            + `<div style="font-size:9px; font-weight:800; margin:6px 0 4px;">Letzte Spieltage</div>${verlaufHtml}`;
+    }
+
     function renderMerchView() {
         renderJerseySalesLeaderboard();
+        renderMerchModifiers();
+        renderMerchSalesHistory();
         let leBox = document.getElementById('limited-edition-box');
         if (leBox) {
             let le = merchExtras.limitedEdition;

@@ -18,7 +18,7 @@
     }
 
     function transferHoldingToClub(amount) {
-        if (holdingCompany.money < amount) { alert("Nicht genug Geld in der Holding!"); return; }
+        if (holdingCompany.money < amount) { showToast(`Holding-Konto reicht nicht: ${formatVal(holdingCompany.money)} von ${formatVal(amount)}.`, 'error', 4500); return; }
         playSound('goal');
         holdingCompany.money -= amount;
         game.money += amount;
@@ -27,7 +27,7 @@
     }
 
     function transferHoldingToPrivate(amount) {
-        if (holdingCompany.money < amount) { alert("Nicht genug Geld in der Holding!"); return; }
+        if (holdingCompany.money < amount) { showToast(`Holding-Konto reicht nicht: ${formatVal(holdingCompany.money)} von ${formatVal(amount)}.`, 'error', 4500); return; }
         playSound('goal');
         holdingCompany.money -= amount;
         privateLife.money += amount;
@@ -36,7 +36,7 @@
     }
 
     function transferClubToHolding(amount) {
-        if (game.money < amount) { alert("Nicht genug Geld auf dem Vereinskonto!"); return; }
+        if (game.money < amount) { showToast(`Vereinskonto reicht nicht: ${formatVal(game.money)} von ${formatVal(amount)}.`, 'error', 4500); return; }
         playSound('click');
         game.money -= amount;
         holdingCompany.money += amount;
@@ -50,7 +50,7 @@
         let mat = rawMaterials[c.reqMat];
 
         if (mat.stock < c.reqQty) {
-            alert(`Nicht genügend Rohstoffe am Lager (${c.reqQty} kg ${mat.name} benötigt)!`);
+            showToast(`Zu wenig Rohstoff: ${mat.stock} kg ${mat.name} am Lager, ${c.reqQty} kg nötig.`, 'error', 4500);
             return;
         }
 

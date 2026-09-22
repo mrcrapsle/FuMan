@@ -232,6 +232,7 @@
         renderWeeklyTrainingPlan();
         renderTrainingExtras();
         renderSkillTrainingActiveList();
+        renderTrainingAutopilotBox();
         document.getElementById('cur-team-training').innerText = game.teamTraining.toUpperCase();
 
         // Minispiel-Bereich: Spielerauswahl, verbleibende Einheiten, Bestleistungen
@@ -654,3 +655,148 @@
         }
     }
 
+
+    // ==========================================
+    // TRAININGSSTAB-AUTOMATIK (PREMIUM)
+    // ==========================================
+    // Das Fähigkeitstraining verlangte bisher bei JEDEM Durchgang drei manuelle
+    // Auswahlschritte (Spieler, Attribut, Trainer) - über eine Saison hinweg dutzendfach
+    // dieselbe Klickstrecke. Wer will, überlässt das jetzt dem Trainerstab. Weil das echte
+    // Spielzeit spart, kostet es Premium-Punkte und ist bewusst teuer: die Dauer-Automatik
+    // liegt deutlich über dem teuersten regulären Booster (300 Punkte).
+    const TRAINING_AUTOPILOT_COST = 500;
+    const TRAINING_AUTOPILOT_DURATION = 10;
+    const TRAINING_AUTOPICK_COST = 60;
+    const MAX_PARALLEL_SKILL_TRAININGS = 3;
+
+    // Sucht die sinnvollste Kombination aus Spieler, Attribut und Trainer: der schwächste
+    // Wert eines noch untrainierten Spielers, bevorzugt bei jungen Spielern mit Luft nach
+    // oben, und dazu der Trainer, der diese Kombination überhaupt abdecken darf.
+    function findBestSkillTrainingCombo() {
+        let verfuegbar = Object.keys(SKILL_TRAINING_COACHES).filter(k => staffMembers[k] && staffMembers[k].hired);
+        if (verfuegbar.length === 0) return null;
+        let imTraining = (game.skillTrainingQueue || []).map(s => s.playerId);
+        let kandidaten = squad.filter(p => !imTraining.includes(p.id));
+        if (kandidaten.length === 0) return null;
+
+        let beste = null;
+        kandidaten.forEach(p => {
+            Object.keys(SKILL_TRAINING_STATS).forEach(stat => {
+                verfuegbar.forEach(coachKey => {
+                    let coach = SKILL_TRAINING_COACHES[coachKey];
+                    if (coach.restrictToGK && p.pos !== 'TW') return;
+                    if (!coach.restrictToGK && p.pos === 'TW' && coachKey !== 'coTrainer') return;
+                    if (coach.restrictToStats && !coach.restrictToStats.includes(stat)) return;
+                    // Je schwächer das Attribut und je jünger der Spieler, desto höher der
+                    // Nutzen. Der garantierte Boost des Trainers zählt direkt mit.
+                    let schwaeche = 100 - (p[stat] || 50);
+                    let jugendbonus = Math.max(0, 28 - (p.age || 28)) * 2;
+                    let score = schwaeche + jugendbonus + coach.boost * 3;
+                    if (!beste || score > beste.score) {
+                        beste = { score, playerId: p.id, playerName: p.name, stat, coachKey, coachName: coach.name, boost: coach.boost };
+                    }
+                });
+            });
+        });
+        return beste;
+    }
+
+    // Einmalige Auswahlhilfe: füllt die drei Auswahlfelder optimal aus, gestartet wird
+    // danach ganz normal von Hand (und aus dem Vereinskonto bezahlt).
+    function autoPickSkillTraining() {
+        if ((game.premiumPoints || 0) < TRAINING_AUTOPICK_COST) {
+            showToast(`💎 Dafür brauchst du ${TRAINING_AUTOPICK_COST} Premium-Punkte (du hast ${game.premiumPoints || 0}).`, 'error', 4500);
+            return;
+        }
+        let combo = findBestSkillTrainingCombo();
+        if (!combo) { showToast('Kein geeigneter Trainer eingestellt oder alle Spieler bereits in Förderung.', 'error', 4500); return; }
+        game.premiumPoints -= TRAINING_AUTOPICK_COST;
+        playSound('click');
+        populateSkillTrainingSelects();
+        document.getElementById('skill-training-player-select').value = combo.playerId;
+        document.getElementById('skill-training-stat-select').value = combo.stat;
+        document.getElementById('skill-training-coach-select').value = combo.coachKey;
+        showToast(`🤖 Vorschlag des Trainerstabs: ${combo.playerName} - ${SKILL_TRAINING_STATS[combo.stat]} bei ${combo.coachName}.`, 'success', 5000);
+        renderTrainingAutopilotBox();
+        updateUI();
+    }
+
+    function activateTrainingAutopilot() {
+        if ((game.premiumPoints || 0) < TRAINING_AUTOPILOT_COST) {
+            showToast(`💎 Die Automatik kostet ${TRAINING_AUTOPILOT_COST} Premium-Punkte (du hast ${game.premiumPoints || 0}).`, 'error', 4500);
+            return;
+        }
+        if (Object.keys(SKILL_TRAINING_COACHES).every(k => !staffMembers[k] || !staffMembers[k].hired)) {
+            showToast('Ohne passenden Trainer im Stab hat die Automatik niemanden, der fördern könnte.', 'error', 5000);
+            return;
+        }
+        game.premiumPoints -= TRAINING_AUTOPILOT_COST;
+        game.trainingAutopilotMatchdays = (game.trainingAutopilotMatchdays || 0) + TRAINING_AUTOPILOT_DURATION;
+        playSound('goal');
+        addInboxMessage('vertrag', '🤖 Trainingsstab-Automatik aktiviert',
+            `Dein Trainerstab übernimmt für ${TRAINING_AUTOPILOT_DURATION} Spieltage die Förderplanung: Er wählt selbstständig Spieler, Attribut und Trainer und startet die Programme, solange das Vereinskonto sie trägt.`, 'screen-training');
+        showToast(`🤖 Trainingsstab-Automatik für ${TRAINING_AUTOPILOT_DURATION} Spieltage aktiv!`, 'success', 5000);
+        renderTrainingView();
+        updateUI();
+    }
+
+    // Läuft jeden Spieltag mit (hängt an processPostMatchRoutine, damit sie auch beim
+    // Durchsimulieren ganzer Saisons greift).
+    function runTrainingAutopilotTick() {
+        if (!(game.trainingAutopilotMatchdays > 0)) return;
+        game.trainingAutopilotMatchdays--;
+        if ((game.skillTrainingQueue || []).length >= MAX_PARALLEL_SKILL_TRAININGS) return;
+        let combo = findBestSkillTrainingCombo();
+        if (!combo) return;
+        let kosten = getSkillTrainingCost(combo.coachKey);
+        // Die Automatik wirtschaftet vorsichtig: sie stürzt den Verein nie ins Minus.
+        if (game.money - kosten < 0) {
+            pushTrainingAutopilotLog(`⚠️ Förderung von ${combo.playerName} ausgesetzt - ${formatVal(kosten)} nicht gedeckt.`);
+            return;
+        }
+        game.money -= kosten;
+        if (!game.skillTrainingQueue) game.skillTrainingQueue = [];
+        let coach = SKILL_TRAINING_COACHES[combo.coachKey];
+        game.skillTrainingQueue.push({
+            playerId: combo.playerId, playerName: combo.playerName, stat: combo.stat,
+            statLabel: SKILL_TRAINING_STATS[combo.stat], coachKey: combo.coachKey,
+            coachName: combo.coachName, boost: coach.boost, matchdaysLeft: coach.days, totalDays: coach.days
+        });
+        pushTrainingAutopilotLog(`🤖 ${combo.playerName}: ${SKILL_TRAINING_STATS[combo.stat]} bei ${combo.coachName} (${formatVal(kosten)}).`);
+        if (game.trainingAutopilotMatchdays === 0) {
+            addInboxMessage('vertrag', '🤖 Trainingsstab-Automatik ausgelaufen', 'Die Förderplanung liegt wieder bei dir. Laufende Programme werden selbstverständlich zu Ende geführt.', 'screen-training');
+        }
+    }
+
+    function pushTrainingAutopilotLog(text) {
+        if (!Array.isArray(game.trainingAutopilotLog)) game.trainingAutopilotLog = [];
+        game.trainingAutopilotLog.push({ season: game.season, matchday: game.matchday, text });
+        if (game.trainingAutopilotLog.length > 20) game.trainingAutopilotLog.shift();
+    }
+
+    function renderTrainingAutopilotBox() {
+        let box = document.getElementById('training-autopilot-box');
+        if (!box) return;
+        let rest = game.trainingAutopilotMatchdays || 0;
+        let log = (game.trainingAutopilotLog || []).slice(-5).reverse();
+        box.innerHTML = `
+            <div class="box" style="font-size:10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <strong>🤖 Trainingsstab-Automatik</strong>
+                    <span style="color:${rest > 0 ? 'var(--primary)' : 'var(--text-muted)'};">${rest > 0 ? `noch ${rest} Spieltage aktiv` : 'inaktiv'}</span>
+                </div>
+                <div style="color:#94a3b8; margin:3px 0 6px 0;">
+                    Der Trainerstab wählt selbst Spieler, Attribut und Trainer und startet die Förderung -
+                    auch während du ganze Saisons durchsimulierst. Die Trainingsgebühr zahlt weiterhin der Verein,
+                    und die Automatik bucht nie ins Minus.
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
+                    <button onclick="autoPickSkillTraining()" class="btn-secondary" style="font-size:9px;">🎯 Einmal vorschlagen [${TRAINING_AUTOPICK_COST} 💎]</button>
+                    <button onclick="activateTrainingAutopilot()" class="btn-action" style="font-size:9px;">🤖 ${TRAINING_AUTOPILOT_DURATION} Spieltage übernehmen [${TRAINING_AUTOPILOT_COST} 💎]</button>
+                </div>
+                <div style="font-size:9px; color:var(--text-muted); margin-top:4px;">Dein Guthaben: <strong style="color:var(--gold);">${game.premiumPoints || 0} 💎</strong></div>
+                ${log.length > 0 ? `<div style="margin-top:6px; border-top:1px solid #1e293b; padding-top:4px;">
+                    ${log.map(l => `<div style="font-size:9px; color:#94a3b8;">ST ${l.matchday}: ${l.text}</div>`).join('')}
+                </div>` : ''}
+            </div>`;
+    }

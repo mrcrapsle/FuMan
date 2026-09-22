@@ -139,6 +139,98 @@ dafür ein laufendes Honorar, das mit der Ligastufe steigt - unten trägt er sic
 gerade so, oben lohnt er sich deutlich. Zusätzlich mildert er die
 Insolvenz-Eskalationen ab (`checkInsolvencyRisk()`).
 
+**Buchungsjournal & Kontoauszug** (Finanzen-Screen, Reiter unter der GuV):
+
+* `game.financeLedger` - `applyMatchdayFinances()` schreibt zu JEDEM Spieltag
+  einen echten Buchungssatz mit allen Einzelposten (Ticket, Fanartikel, jeder
+  Sponsor einzeln, Gehälter, Unterhalt, Ordnerdienst, Steuern). Kosten, die erst
+  NACH `applyMatchdayFinances()` anfallen, tragen sich über
+  `bucheInSpieltagsjournal(label, betrag)` nach.
+* `game.kontoauszug` - alle übrigen Kontobewegungen. **Achtung, tragende
+  Konstruktion:** Geld wird an über 150 Stellen direkt über `game.money`
+  verrechnet. Statt jede davon einzeln zu protokollieren, macht
+  `installKontoauszug()` (Ende von `js/finances.js`) aus `game.money` eine
+  Accessor-Property. Jede Zuweisung läuft damit durch einen Kontrollpunkt.
+  Folgen, die man kennen muss:
+  * Beim Laden eines Spielstands (`Object.assign(game, p.game)`) muss die
+    Protokollierung über `kontoauszugPausieren()` / `kontoauszugFortsetzen()`
+    ausgesetzt werden, sonst erscheint der geladene Kontostand als Phantombuchung.
+  * Die Beschriftung einer Buchung kommt aus `aktiverScreen` (gesetzt in
+    `showScreen()`) oder aus einem explizit gesetzten `setzeBuchungskontext()`.
+    Neue Screens gehören deshalb in `SCREEN_BUCHUNGS_LABELS`.
+  * Spieltagsbuchungen laufen unter `SPIELTAG_KONTEXT` und werden bewusst NICHT
+    in den Kontoauszug geschrieben - sie stehen vollständig im Journal.
+
+**Betriebskosten des Stadions**: Nicht benötigte Ränge gelten als stillgelegt und
+kosten nur 30 % Unterhalt (`getStadiumBaseMaintenance()` in `js/stadium.js`,
+genutzt von `applyMatchdayFinances()`, der GuV-Prognose und dem Dashboard -
+die Formel steht bewusst nur an EINER Stelle). Die genutzte Kapazität ergibt
+sich aus dem Zuschauerschnitt der letzten fünf Heimspiele plus 15 % Reserve,
+mindestens aber einem Fünftel des Stadions. Der Rabatt verschwindet von allein,
+sobald der Verein das Stadion füllt.
+
+**Gehälter im Amateurbereich**: Der Marktwert ist bis Stärke 44 konstant
+15.000 €. Mit dem früheren Pauschalsockel von 300 € kostete dadurch JEDER
+Spieler dort exakt 400 € pro Spieltag - über eine Saison fast so viel wie sein
+gesamter Marktwert. `calculatePlayerWage()` staffelt unten jetzt nach Stärke
+(`60 + str * 3 + Marktwert * 0.004`); ab Stärke 59 ist die Formel unverändert.
+
+**Ordnerdienst**: Gemietete Ordner werden pro Heimspiel nach Bedarf gebucht
+(~1 Ordner je 25 Zuschauer, gedeckelt durch die vorgehaltene Zahl, siehe
+`getDeployedStewards()`); auswärts stellt der Gastgeber das Personal. Vorher
+wurde an jedem Spieltag die volle vorgehaltene Zahl abgerechnet.
+
+## Ligaökonomie & Startoptionen
+
+**TV-Gelder in Raten**: Die kollektive TV-Ausschüttung war eine Einmalzahlung zum
+Saisonende. In den oberen Ligen ist sie aber die grösste Einnahmequelle - ein
+Erstligist stand dadurch die ganze Saison zweistellig im Minus und wurde erst am
+letzten Spieltag schlagartig solvent. `getTvMoneyInstallment()`
+(`js/media-rights.js`) zahlt jetzt jeden Spieltag ein Vierunddreissigstel des
+Ligagrundbetrags aus, bewusst **platzierungsneutral** (zu Saisonbeginn steht die
+Tabelle auf null, ein zufälliger erster Platz würde sonst die ganze Saison über
+50 % mehr bringen). Der Tabellenplatz entscheidet vollständig über die
+**Restausschüttung** am Saisonende: `max(0, Anspruch(Endplatz) − bereits gezahlt)`.
+
+**Startoptionen**: Startkapital (`NEW_GAME_LEAGUE_MONEY_SCALE`) und
+Stadiongrösse (`NEW_GAME_LEAGUE_STADIUM_SCALE`, beide in `js/save.js`) skalieren
+mit der gewählten Startliga. Die 6. Liga bleibt dabei unverändert (Faktor 1), die
+für sie ausbalancierte Wirtschaft ist also nicht betroffen.
+`scaleStadiumForLeague()` skaliert die Kapazität jedes Blocks einzeln -
+`stadium.total` ist ein Getter über die Blöcke und darf nicht gesetzt werden.
+
+**Startkader**: `generateSquadForLevel()` streute bis zu 8 Punkte über das
+Ligamittel und erzeugte bei einem Erstliga-Start zwei Weltklassespieler mit
+Stärke 96/97, die allein 43 % der Gehaltssumme verschlangen. Ein frisch
+übernommener Klub ist ein Liga-Durchschnittsteam - die Obergrenze liegt jetzt
+bei `base + 3`.
+
+## Zweite Mannschaft
+
+Die Reserve hat einen **eigenen, kleinen Trainerstab** (`secondTeamStaff` in
+`js/state.js`), unabhängig vom Profipersonal und mit eigenen Gehältern, die im
+Buchungsjournal als Posten "Reserve-Trainerstab" stehen. Jede Rolle hat eine
+echte Wirkung: Cheftrainer (+2 Teamstärke in der Liga-Simulation), Co-Trainer
+(stellt automatisch auf), Physiotherapeut (Fitnessbilanz), Talentspäher
+(besserer Amateurmarkt), Nachwuchs-Koordinator (U23 entwickeln sich weiter).
+
+`tickSecondTeamRoutine()` hängt an `processPostMatchRoutine()` und läuft
+deshalb in allen drei Spieltag-Pfaden mit, auch beim Durchsimulieren. Ohne
+Personal schwächelt die Reserve langsam (Fitness-Boden 60 %), wird aber nie
+unbrauchbar. Jugendspieler lassen sich wahlweise in den Profikader oder über
+`promoteYouthToSecondTeam()` erst in die Reserve hochziehen.
+
+## Trainingsstab-Automatik (Premium)
+
+`js/training.js`: Das Fähigkeitstraining verlangte bei jedem Durchgang drei
+manuelle Auswahlschritte. `autoPickSkillTraining()` (60 Punkte) füllt die
+Auswahl einmalig optimal aus, `activateTrainingAutopilot()` (500 Punkte,
+10 Spieltage) überlässt die Förderplanung komplett dem Stab.
+`runTrainingAutopilotTick()` hängt ebenfalls an `processPostMatchRoutine()`,
+startet höchstens drei Programme parallel und bucht den Verein nie ins Minus.
+Die Trainingsgebühr zahlt weiterhin das Vereinskonto - Premium kauft die
+Automatik, nicht das Training.
+
 ## Sprache (DE/EN)
 
 Wörterbuch-basierter Sprachumschalter in `js/i18n.js` (Funktion `t(key)`,

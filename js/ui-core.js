@@ -195,8 +195,13 @@
         document.getElementById('menu-backdrop').classList.remove('menu-open');
     }
 
+    // Merkt sich den zuletzt geoeffneten Screen. Der Kontoauszug (finances.js) leitet
+    // daraus ab, welchem Bereich eine Kontobewegung zuzuordnen ist.
+    let aktiverScreen = 'screen-dashboard';
     function showScreen(screenId) {
         playSound('click');
+        aktiverScreen = screenId;
+        if (typeof loescheBuchungskontext === 'function') loescheBuchungskontext();
         const screens = [
             'screen-office',
             'screen-dashboard', 'screen-calendar', 'screen-inbox', 'screen-squad', 'screen-second-team', 'screen-training',

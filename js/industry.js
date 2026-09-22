@@ -15,10 +15,12 @@
                     <span>${f.owned ? `<strong style="color:var(--primary);">Stufe ${f.lvl}</strong>` : '<span style="color:#aaa;">Nicht im Besitz</span>'}</span>
                 </div>
                 <div style="font-size:10px; color:#aaa; margin-bottom:4px;">${f.desc}${f.owned ? ` · Produktionsdauer: ${getProductionDuration(k)} SpT` : ''}</div>
-                ${f.owned ? 
-                    `<button onclick="upgradeFactory('${k}')" class="btn-industry" ${f.lvl>=f.max?'disabled':''}>${f.lvl>=f.max?'Maximalstufe ✓':`Fabrik ausbauen (Stufe ${f.lvl+1}) [${formatVal(f.cost*(f.lvl+1))}]`}</button>
-                     <button onclick="mergeFactoryWithCompetitor('${k}')" class="btn-secondary" style="margin-top:4px;">🤝 Mit Konkurrent fusionieren [${formatVal(f.cost*1.5)}]</button>` : 
-                    `<button onclick="buyFactory('${k}')" class="btn-action">🏭 Fabrik kaufen [${formatVal(f.cost)}]</button>`
+                ${f.owned ?
+                    `<button onclick="upgradeFactory('${k}')" class="btn-industry" ${f.lvl>=f.max || holdingCompany.money < f.cost*(f.lvl+1) ?'disabled':''}>${f.lvl>=f.max?'Maximalstufe ✓':`Fabrik ausbauen (Stufe ${f.lvl+1}) [${formatVal(f.cost*(f.lvl+1))}]`}</button>
+                     ${f.lvl < f.max && holdingCompany.money < f.cost*(f.lvl+1) ? `<div style="font-size:8px; color:var(--danger);">Es fehlen ${formatVal(f.cost*(f.lvl+1) - holdingCompany.money)} auf dem Holding-Konto.</div>` : ''}
+                     <button onclick="mergeFactoryWithCompetitor('${k}')" class="btn-secondary" style="margin-top:4px;">🤝 Mit Konkurrent fusionieren [${formatVal(f.cost*1.5)}]</button>` :
+                    `<button onclick="buyFactory('${k}')" class="btn-action" ${holdingCompany.money < f.cost ? 'disabled' : ''}>🏭 Fabrik kaufen [${formatVal(f.cost)}]</button>
+                     ${holdingCompany.money < f.cost ? `<div style="font-size:8px; color:var(--danger); margin-top:3px;">Bezahlt wird vom <strong>Holding-Konto</strong> (${formatVal(holdingCompany.money)}) - es fehlen ${formatVal(f.cost - holdingCompany.money)}. Überweise Geld in der Holding-Zentrale.</div>` : ''}`
                 }
             `;
             grid.appendChild(card);
@@ -51,7 +53,7 @@
 
     function buyFactory(key) {
         let f = factories[key];
-        if (holdingCompany.money < f.cost) { alert("Nicht genug Geld auf dem Holding-Konto!"); return; }
+        if (holdingCompany.money < f.cost) { showToast(`Holding-Konto reicht nicht: ${formatVal(holdingCompany.money)} von ${formatVal(f.cost)}. Überweise Geld vom Vereinskonto in die Holding.`, 'error', 5000); return; }
         playSound('goal');
         holdingCompany.money -= f.cost;
         f.owned = true;
@@ -85,8 +87,8 @@
         let mat = rawMaterials[m.reqMat];
         let reqTotal = m.reqQty * amount;
 
-        if (!f.owned) { alert("Du benötigst erst die passende Fabrik für diesen Artikel!"); return; }
-        if (mat.stock < reqTotal) { alert(`Nicht genügend Rohstoffe am Lager! Du benötigst ${reqTotal} kg ${mat.name}.`); return; }
+        if (!f.owned) { showToast(`Dafür fehlt die passende Fabrik: ${factories[m.factory].name}.`, 'error', 4500); return; }
+        if (mat.stock < reqTotal) { showToast(`Zu wenig Rohstoff: ${mat.stock} kg ${mat.name} am Lager, ${reqTotal} kg nötig.`, 'error', 4500); return; }
 
         playSound('click');
         mat.stock -= reqTotal;
@@ -94,7 +96,7 @@
         productionQueue.push({ merchKey, amount, matchdaysLeft: duration, totalMatchdays: duration, materialUsed: reqTotal, materialName: mat.name });
         renderIndustryView();
         updateUI();
-        alert(`⚙️ Produktion gestartet!\n${amount}x ${m.name} - fertig in ${duration} Spieltagen.\n-${reqTotal} kg ${mat.name} sofort verbraucht.`);
+        showToast(`⚙️ Produktion gestartet: ${amount}x ${m.name}, fertig in ${duration} Spieltagen (${reqTotal} kg ${mat.name} verbraucht).`, 'success', 4500);
     }
     // Wird jeden Spieltag aufgerufen: zählt alle laufenden Produktionsaufträge herunter und
     // schließt fertige Chargen ab.
@@ -202,11 +204,11 @@
         let cost = Math.round(r.currentPrice * amount);
 
         if (rawMaterials.totalStock + amount > rawMaterials.capacity) {
-            alert(`Lagerkapazität erschöpft! Baue dein Zentrallager weiter aus.`);
+            showToast('Lagerkapazität erschöpft - bau das Zentrallager weiter aus.', 'error');
             return;
         }
         if (holdingCompany.money < cost) {
-            alert("Nicht genug Geld auf dem Holding-Konto!");
+            showToast('Nicht genug Geld auf dem Holding-Konto.', 'error');
             return;
         }
 
@@ -218,15 +220,15 @@
     }
 
     function upgradeWarehouse() {
-        if (rawMaterials.warehouseLevel >= 5) { alert("Zentrallager ist bereits voll ausgebaut!"); return; }
-        if (holdingCompany.money < 30000) { alert("Nicht genug Holding-Kapital (30.000 € benötigt)!"); return; }
+        if (rawMaterials.warehouseLevel >= 5) { showToast('Zentrallager ist bereits voll ausgebaut.', 'error'); return; }
+        if (holdingCompany.money < 30000) { showToast(`Holding-Konto reicht nicht: ${formatVal(holdingCompany.money)} von 30.000 € nötig.`, 'error', 4500); return; }
 
         playSound('goal');
         holdingCompany.money -= 30000;
         rawMaterials.warehouseLevel++;
         renderRawMaterialsView();
         updateUI();
-        alert(`📦 Zentrallager erweitert! Maximale Lagerkapazität: ${rawMaterials.capacity.toLocaleString()} kg.`);
+        showToast(`📦 Zentrallager erweitert - Kapazität jetzt ${rawMaterials.capacity.toLocaleString('de-DE')} kg.`, 'success');
     }
 
     // ==========================================

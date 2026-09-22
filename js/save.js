@@ -31,6 +31,10 @@
     }
 
     const SAVE_SLOT_PREFIX = 'anstoss_fm13_save_slot_';
+    // Automatischer Speicherstand in einem EIGENEN Slot: würde die Automatik in Slot 1
+    // schreiben, überschriebe sie ungefragt den von Hand angelegten Spielstand.
+    const AUTOSAVE_KEY = 'anstoss_fm13_autosave';
+    const AUTOSAVE_INTERVAL = 5;
     const LEGACY_SAVE_KEY = 'anstoss_fm13_save_v1';
     const SAVE_SLOT_COUNT = 3;
     const FORCE_NEW_GAME_FLAG = 'anstoss_fm13_force_new_game';
@@ -44,10 +48,24 @@
     }
 
     function buildSaveState() {
-        return { game, managerRPG, incomingOffers, holdingCompany, rawMaterials, factories, merchandise, merchExtras, productionQueue, globalScoutResults, scoutingNetwork, securityWorkforce, mediaRights, realEstatePortfolio, stockMarket, financeCentralState, underworld, stadium, campusBuildings, staffMembers, staffMeta, staffCentralState, fanGroups, fanCentralState, privateLife, bandenSponsors, activeBet, betHistory, squad, lineup, secondTeamSquad, secondTeamLineup, youthTalents, activeLoans, loanClubRelationships, loanClubLastInteractionSeason, leaguesData, fixturesData, cupTournament, europeTournament, inboxMessages, inboxArchive, rivalryRecord, crestHistory, loanedPlayers, loanablePlayers, incomingLoans, youthLeagueTable, youthLeagueMatchday };
+        return { game, managerRPG, incomingOffers, holdingCompany, rawMaterials, factories, merchandise, merchExtras, productionQueue, globalScoutResults, scoutingNetwork, securityWorkforce, mediaRights, realEstatePortfolio, stockMarket, financeCentralState, underworld, stadium, campusBuildings, staffMembers, staffMeta, staffCentralState, secondTeamStaff, fanGroups, fanCentralState, privateLife, bandenSponsors, activeBet, betHistory, squad, lineup, secondTeamSquad, secondTeamLineup, youthTalents, activeLoans, loanClubRelationships, loanClubLastInteractionSeason, leaguesData, fixturesData, cupTournament, europeTournament, inboxMessages, inboxArchive, rivalryRecord, crestHistory, loanedPlayers, loanablePlayers, incomingLoans, youthLeagueTable, youthLeagueMatchday };
     }
 
+    // Kontoauszug pausieren: das Object.assign im Rumpf setzt game.money auf den
+    // gespeicherten Wert - ohne Pause erschiene das als gigantische Buchung. Das
+    // Fortsetzen steht in einem finally: bricht das Laden mittendrin ab (z.B. beim
+    // Import einer beschaedigten Datei), bliebe die Protokollierung sonst dauerhaft
+    // abgeschaltet und alle spaeteren Buchungen fehlten stillschweigend im Auszug.
     function applyLoadedState(p) {
+        if (typeof kontoauszugPausieren === 'function') kontoauszugPausieren();
+        try {
+            applyLoadedStateInner(p);
+        } finally {
+            if (typeof kontoauszugFortsetzen === 'function') kontoauszugFortsetzen();
+        }
+    }
+
+    function applyLoadedStateInner(p) {
         if (p.game) Object.assign(game, p.game);
         // Migrations-Fix (NEU): game.secondTeam.name wird als verschachteltes Objekt beim
         // Object.assign oben komplett aus dem alten Spielstand übernommen - falls dort noch
@@ -55,6 +73,7 @@
         if (game.secondTeam && game.secondTeam.name && game.secondTeam.name.includes('Lok Leipzig')) {
             game.secondTeam.name = game.secondTeam.name.replace('Lok Leipzig', '1.FC Moritz Leipzig');
         }
+        if (p.secondTeamStaff) Object.assign(secondTeamStaff, p.secondTeamStaff);
         if (p.managerRPG) Object.assign(managerRPG, p.managerRPG);
         if (p.incomingOffers) incomingOffers = p.incomingOffers;
         if (p.holdingCompany) Object.assign(holdingCompany, p.holdingCompany);
@@ -304,7 +323,67 @@
         renderSaveSlotsUI();
     }
 
+    // Wird nach jedem Spieltag aufgerufen und sichert alle AUTOSAVE_INTERVAL Spieltage.
+    function maybeAutoSave() {
+        let letzter = game.lastAutoSaveMatchday || 0;
+        if (game.matchday - letzter < AUTOSAVE_INTERVAL && game.matchday >= letzter) return;
+        try {
+            let state = buildSaveState();
+            state.meta = {
+                savedAt: new Date().toLocaleString('de-DE'),
+                clubName: game.clubName,
+                league: leagueNames[game.leagueLevel],
+                season: game.season,
+                matchday: Math.min(34, game.matchday),
+                money: game.money
+            };
+            if (safeLocalSet(AUTOSAVE_KEY, JSON.stringify(state))) {
+                game.lastAutoSaveMatchday = game.matchday;
+                showToast(`💾 Automatisch gespeichert (Spieltag ${Math.min(34, game.matchday)}).`, 'success', 2200);
+                renderSaveSlotsUI();
+            }
+        } catch (e) { console.error('Autosave fehlgeschlagen:', e); }
+    }
+
+    function loadAutoSave() {
+        try {
+            let raw = safeLocalGet(AUTOSAVE_KEY);
+            if (!raw) { showToast('Es gibt noch keinen automatischen Spielstand.', 'error'); return false; }
+            applyLoadedState(JSON.parse(raw));
+            updateUI();
+            showScreen('screen-dashboard');
+            playSound('whistle');
+            showToast('📂 Automatischer Spielstand geladen!', 'success');
+            renderSaveSlotsUI();
+            return true;
+        } catch (e) { showToast('Automatischer Spielstand ist beschädigt: ' + e.message, 'error'); return false; }
+    }
+
+    // Schnellspeichern aus der unteren Menüleiste - legt immer in Slot 1 ab.
+    function quickSave() { saveGameToSlot(1); }
+
+    function renderAutoSaveBox() {
+        let box = document.getElementById('save-slot-auto');
+        if (!box) return;
+        let raw = safeLocalGet(AUTOSAVE_KEY);
+        if (!raw) {
+            box.innerHTML = `<div style="font-size:10px; color:#64748b;">🔄 Automatisches Speichern: alle ${AUTOSAVE_INTERVAL} Spieltage - bisher noch keiner angelegt.</div>`;
+            return;
+        }
+        try {
+            let m = JSON.parse(raw).meta || {};
+            box.innerHTML = `
+                <div style="font-weight:bold; color:var(--teal);">🔄 Automatisch: ${m.clubName || '-'}</div>
+                <div style="font-size:10px; color:#94a3b8;">${m.league || '-'} · Saison ${m.season} · Spieltag ${m.matchday}/34 · ${formatVal(m.money || 0)}</div>
+                <div style="font-size:9px; color:#64748b;">Gespeichert: ${m.savedAt || '-'} · wird alle ${AUTOSAVE_INTERVAL} Spieltage erneuert</div>
+                <button onclick="loadAutoSave()" class="btn-secondary" style="font-size:9px; margin-top:4px;">Automatischen Stand laden</button>`;
+        } catch (e) {
+            box.innerHTML = '<div style="font-size:10px; color:var(--danger);">Automatischer Spielstand ist beschädigt.</div>';
+        }
+    }
+
     function renderSaveSlotsUI() {
+        renderAutoSaveBox();
         let versionTag = document.getElementById('game-version-tag');
         if (versionTag) versionTag.innerText = `Version ${GAME_VERSION.number} · Stand: ${GAME_VERSION.date}`;
         for (let i = 1; i <= SAVE_SLOT_COUNT; i++) {
@@ -383,9 +462,30 @@
         { level: 0, label: '1. Liga (Profi-Herausforderung)' }
     ];
     const NEW_GAME_MONEY_OPTIONS = [
-        { amount: 150000, label: 'Standard (150.000 €)' },
-        { amount: 500000, label: 'Großzügig (500.000 €)' }
+        { amount: 150000, label: 'Standard' },
+        { amount: 500000, label: 'Großzügig' }
     ];
+    // Startkapital und Stadiongroesse muessen zur gewaehlten Startliga passen. Vorher galt
+    // fuer JEDE Startliga derselbe Betrag und dasselbe 15.550-Plaetze-Stadion: ein
+    // Erstliga-Start bekam 150.000 EUR Startkapital bei 2,5 Mio. EUR Gehaltskosten PRO
+    // SPIELTAG und ein Stadion, das jede Woche ausverkauft war und trotzdem nur einen
+    // Bruchteil der Gehaelter einspielte. Beides skaliert jetzt mit der Liga.
+    const NEW_GAME_LEAGUE_MONEY_SCALE = [40, 10, 3, 1.6, 1.1, 1];
+    const NEW_GAME_LEAGUE_STADIUM_SCALE = [3.0, 2.0, 1.4, 1.0, 1.0, 1.0];
+
+    function getNewGameStartMoney(level, amount) {
+        return Math.round(amount * (NEW_GAME_LEAGUE_MONEY_SCALE[level] ?? 1));
+    }
+
+    // Skaliert die Kapazitaet JEDES Blocks - stadium.total ist ein Getter ueber die Bloecke
+    // (siehe restoreGetters()), darf also nicht direkt gesetzt werden.
+    function scaleStadiumForLeague(level) {
+        let faktor = NEW_GAME_LEAGUE_STADIUM_SCALE[level] ?? 1;
+        if (faktor === 1) return;
+        Object.values(stadium.blocks || {}).forEach(b => {
+            if (b && typeof b.cap === 'number') b.cap = Math.round(b.cap * faktor / 50) * 50;
+        });
+    }
     let selectedNewGameLevel = 5;
     let selectedNewGameMoney = 150000;
     let newGameConfirmTimer = null;
@@ -406,7 +506,7 @@
         let moneyBox = document.getElementById('new-game-money-btns');
         if (moneyBox) {
             moneyBox.innerHTML = NEW_GAME_MONEY_OPTIONS.map(o =>
-                `<button onclick="selectedNewGameMoney=${o.amount}; renderNewGameSetupOptions();" class="${o.amount === selectedNewGameMoney ? 'btn-action' : 'btn-secondary'}" style="font-size:9px; padding:5px 2px;">${o.label}</button>`
+                `<button onclick="selectedNewGameMoney=${o.amount}; renderNewGameSetupOptions();" class="${o.amount === selectedNewGameMoney ? 'btn-action' : 'btn-secondary'}" style="font-size:9px; padding:5px 2px;">${o.label}<br><span style="font-size:8px; opacity:0.85;">${formatVal(getNewGameStartMoney(selectedNewGameLevel, o.amount))}</span></button>`
             ).join('');
         }
     }
