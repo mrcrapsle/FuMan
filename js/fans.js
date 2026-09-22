@@ -199,6 +199,12 @@
     // das Sicherheitspersonal. Vorher wurde an jedem Spieltag kassiert, auch auswärts.
     function tickStewardCosts(isHomeMatch = true) {
         if (!isHomeMatch) return;
+        // An einem spielfreien Spieltag hat kein Heimspiel stattgefunden, also faellt auch
+        // kein Ordnerdienst an. processPostMatchRoutine() laeuft dort trotzdem und rief
+        // diese Funktion mit dem Standardwert isHomeMatch = true auf - das Geld wurde
+        // abgebucht, tauchte aber WEDER im Buchungsjournal (kein Eintrag fuer diesen
+        // Spieltag) NOCH im Kontoauszug auf (Spieltagskontext), verschwand also spurlos.
+        if (typeof hatSpieltagsabrechnung === 'function' && !hatSpieltagsabrechnung()) return;
         let kosten = getStewardMatchdayCost(game.lastHomeAttendance || null);
         if (!(kosten > 0)) return;
         // Der Ordnerdienst ist eine Spieltagsausgabe: als Nachtrag ins Buchungsjournal,

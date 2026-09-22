@@ -802,11 +802,19 @@
     // Nachtragsbuchung ins Journal des laufenden Spieltags: einige Spieltagskosten fallen
     // erst NACH applyMatchdayFinances() an (z.B. der Ordnerdienst in processPostMatchRoutine).
     // Sie gehören trotzdem in die Spieltagsabrechnung und nicht in den Kontoauszug.
-    function bucheInSpieltagsjournal(label, amount, typ = 'ausgaben') {
-        if (!(amount > 0)) return;
+    // Gibt es fuer den laufenden Spieltag ueberhaupt eine Abrechnung? Nur dann hat auch ein
+    // Spiel stattgefunden: an spielfreien Spieltagen steigt startMatchdayFlow() frueh aus
+    // und ruft processPostMatchRoutine() ohne vorheriges applyMatchdayFinances() auf.
+    function hatSpieltagsabrechnung() {
         let ledger = game.financeLedger || [];
         let eintrag = ledger[ledger.length - 1];
-        if (!eintrag || eintrag.matchday !== game.matchday || eintrag.season !== game.season) return;
+        return !!eintrag && eintrag.matchday === game.matchday && eintrag.season === game.season;
+    }
+
+    function bucheInSpieltagsjournal(label, amount, typ = 'ausgaben') {
+        if (!(amount > 0) || !hatSpieltagsabrechnung()) return;
+        let ledger = game.financeLedger || [];
+        let eintrag = ledger[ledger.length - 1];
         let liste = eintrag[typ] || (eintrag[typ] = []);
         let posten = liste.find(p => p.label === label);
         if (posten) posten.amount += amount; else liste.push({ label, amount });

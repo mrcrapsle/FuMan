@@ -175,6 +175,15 @@ Spieler dort exakt 400 € pro Spieltag - über eine Saison fast so viel wie sei
 gesamter Marktwert. `calculatePlayerWage()` staffelt unten jetzt nach Stärke
 (`60 + str * 3 + Marktwert * 0.004`); ab Stärke 59 ist die Formel unverändert.
 
+**Tragende Regel, durch einen Test abgesichert:** Jeder Euro, der das Konto
+erreicht oder verlässt, steht entweder im Buchungsjournal oder im Kontoauszug -
+die Summe beider muss exakt der Kontostandsänderung entsprechen, und keine
+Buchung darf als "Sonstige Buchung" liegenbleiben. Spieltagskosten, die erst
+nach `applyMatchdayFinances()` anfallen, prüfen deshalb mit
+`hatSpieltagsabrechnung()`, ob für diesen Spieltag überhaupt gespielt wurde: an
+spielfreien Spieltagen läuft `processPostMatchRoutine()` ohne vorherige
+Abrechnung, eine Buchung von dort landete weder im Journal noch im Auszug.
+
 **Ordnerdienst**: Gemietete Ordner werden pro Heimspiel nach Bedarf gebucht
 (~1 Ordner je 25 Zuschauer, gedeckelt durch die vorgehaltene Zahl, siehe
 `getDeployedStewards()`); auswärts stellt der Gastgeber das Personal. Vorher

@@ -1564,8 +1564,18 @@ async function testFinanceLedgerAndStatement(browser) {
         let kontoVorAuswaerts = game.money;
         tickStewardCosts(false);
         out.ordnerNurZuhause = game.money === kontoVorAuswaerts;
-        tickStewardCosts(true);
-        out.ordnerZuhauseBezahlt = game.money < kontoVorAuswaerts;
+        // Abgerechnet wird ueber eine echte Spieltagsabrechnung: tickStewardCosts() bucht
+        // bewusst nur, wenn fuer diesen Spieltag auch wirklich gespielt wurde.
+        let heimspiele = 0, ordnerVerbucht = 0;
+        for (let i = 0; i < 6; i++) {
+            simulateMatchdays(1);
+            let e = game.financeLedger[game.financeLedger.length - 1];
+            if (e && e.heimspiel) {
+                heimspiele++;
+                if (e.ausgaben.some(a => a.label.includes('Ordnerdienst'))) ordnerVerbucht++;
+            }
+        }
+        out.ordnerZuhauseBezahlt = heimspiele > 0 && ordnerVerbucht === heimspiele;
 
         setLedgerView('konto');
         let boxKonto = document.getElementById('finance-ledger-box').innerHTML;
@@ -1607,11 +1617,55 @@ async function testFinanceLedgerAndStatement(browser) {
     assert(r.ordnerNurNachBedarf, 'Es werden nur so viele Ordner eingesetzt wie Zuschauer da sind');
     assert(r.ordnerKostenProportional, 'Die Ordnerkosten richten sich nach dem tatsächlichen Einsatz');
     assert(r.ordnerNurZuhause, 'Auswärts fällt kein Ordnerdienst an');
-    assert(r.ordnerZuhauseBezahlt, 'Beim Heimspiel wird der Ordnerdienst abgerechnet');
+    assert(r.ordnerZuhauseBezahlt, 'Bei jedem Heimspiel steht der Ordnerdienst im Buchungsjournal');
     assert(r.ansichtKonto, 'Reiter "Kontoauszug" zeigt Bereiche und Einzelbuchungen');
     assert(r.ladenOhnePhantom, 'Das Laden eines Spielstands erzeugt keine Phantom-Buchung');
     assert(r.ladenStelltGeldWiederHer, 'Der Kontostand wird beim Laden korrekt wiederhergestellt');
     assert(r.abgebrochenesLadenBlockiertNicht, 'Ein abgebrochenes Laden schaltet die Protokollierung nicht dauerhaft ab');
+
+    // 7. Die tragende Regel des ganzen Finanzmenues: JEDER Euro, der das Konto verlaesst
+    //    oder erreicht, steht entweder im Buchungsjournal oder im Kontoauszug. Ohne diese
+    //    Pruefung kann Geld unbemerkt verschwinden - genau das passierte beim Ordnerdienst
+    //    an spielfreien Spieltagen (weder Journaleintrag noch Auszugszeile).
+    const lueckenlos = await page.evaluate(() => {
+        let out = {};
+        managerRPG.level = 5;
+        game.money = 20000000;
+        game.financeLedger = [];
+        game.kontoauszug = [];
+        let vorher = game.money;
+
+        showScreen('screen-second-team');
+        if (!game.secondTeam.isActive) foundSecondTeam();
+        hireSecondTeamStaff('chefTrainer');
+        showScreen('screen-staff'); toggleStaffMember('coTrainer');
+        showScreen('screen-youth'); scoutYouthTalent(); upgradeYouthAcademy();
+        showScreen('screen-fans'); setStewards(200);
+        showScreen('screen-finances'); takeLoan(200000);
+        simulateMatchdays(6);
+
+        let journal = game.financeLedger.reduce((s, e) => s + e.summeEin - e.summeAus, 0);
+        let auszug = game.kontoauszug.reduce((s, x) => s + x.amount, 0);
+        out.unerklaert = Math.round(game.money - vorher - journal - auszug);
+        out.journalGenutzt = game.financeLedger.length > 0;
+        out.auszugGenutzt = game.kontoauszug.length > 0;
+        out.alleZugeordnet = game.kontoauszug.every(x => !x.label.includes('Sonstige'));
+
+        // Spielfreier Spieltag: processPostMatchRoutine() laeuft ohne vorherige
+        // Spieltagsabrechnung - dabei darf kein Geld abgebucht werden.
+        game.stewards = 100;
+        let geldVorher = game.money;
+        let journalVorher = game.financeLedger.length;
+        processPostMatchRoutine();
+        out.spielfreiKostetNichts = game.money === geldVorher && game.financeLedger.length === journalVorher;
+        return out;
+    });
+
+    assert(lueckenlos.journalGenutzt && lueckenlos.auszugGenutzt, 'Journal und Kontoauszug werden beide befüllt');
+    assert(lueckenlos.unerklaert === 0,
+        `Jeder Euro steht entweder im Journal oder im Kontoauszug (Differenz ${lueckenlos.unerklaert} €)`);
+    assert(lueckenlos.alleZugeordnet, 'Jede Buchung ist einem Bereich zugeordnet, keine bleibt "Sonstige"');
+    assert(lueckenlos.spielfreiKostetNichts, 'An einem spielfreien Spieltag fällt kein Ordnerdienst an');
     assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler im Finanzmenü');
     await page.close();
 }
