@@ -30,6 +30,7 @@ JS_ORDER = [
     "js/commodities.js",
     "js/merchandise.js",
     "js/office.js",
+    "js/office-events.js",
     "js/ui-core.js",
     "js/render-dashboard.js",
     "js/industry.js",

@@ -121,6 +121,34 @@ seinem Mittelpunkt korrekt aufgelöst wird, und klickt per Koordinate
 (`mouse.click`) statt per Selektor - `page.click(selektor)` prüft intern
 ebenfalls die native Trefferfläche.
 
+## Büro-Ereignisse (js/office-events.js)
+
+Das Managerbüro war reine Kulisse mit Navigation - alles, was im Verein
+passierte, landete als Text im Postfach. Jetzt sitzt gelegentlich jemand auf
+dem **Besucherstuhl** vor dem Schreibtisch: Spielerberater, Fan-Delegation,
+Lokalreporter, Platzwart, Nachwuchstrainer, Steuerprüferin,
+Sponsorenvertreterin, Vereinsältester. Jede Begegnung hat mehrere Antworten mit
+unterschiedlichen Folgen - bewusst ohne eine Option, die immer richtig ist
+(Fans gegen Vorstand, Geld gegen Stimmung, Medienimage gegen Ruhe).
+
+Mechanik: `rollOfficeEvent()` hängt an `processPostMatchRoutine()`, es wartet
+immer höchstens einer. Das Gespräch läuft über ein Overlay **innerhalb** des
+Büros (`#office-event-panel`), man verlässt den Raum also nicht. Geldwirkungen
+laufen unter dem Buchungskontext "Bürotermin" und erscheinen damit im
+Kontoauszug. Wer sich nicht kümmert, wird nicht blockiert: nach
+`OFFICE_EVENT_TIMEOUT` Spieltagen gibt der Besucher auf.
+
+Zwei Fallstricke beim Zeichnen der Figur, beide teuer gelernt:
+
+* Die Malreihenfolge im Hotspot-HTML ist die Tiefenreihenfolge. Standen Lehne
+  und Gestell hinter der Figur im Markup, übermalten sie den Besucher und man
+  sah nur den Kopf.
+* Auf schmalen Geräten ist die Schnellauswahl unter der Kulisse der eigentliche
+  Bedienweg. Sie filtert auf Objekte mit Ziel-Screen - ein wartender Besucher
+  wäre dort gar nicht aufgetaucht und nur über den kleinen Stuhl erreichbar
+  gewesen. `renderOfficeQuickNav()` stellt ihm deshalb einen eigenen Eintrag
+  voran.
+
 ## Sponsoren & Finanzen
 
 **Bandenwerbung** hängt an den echten Stadionbereichen (`stadium.blocks`): jeder

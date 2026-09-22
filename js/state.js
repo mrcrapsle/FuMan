@@ -123,6 +123,10 @@
         // Entwicklungsbericht der Reserve: Staerke-Momentaufnahme zum Saisonstart.
         secondTeamStrengthSnapshot: null,
         tvMoneyPaidThisSeason: 0,
+        // Buero-Ereignisse: wer gerade im Besucherstuhl wartet, plus die Entscheidungshistorie.
+        officeEvent: null,
+        officeEventHistory: [],
+        pitchDamaged: false,
         lastMatchdayTax: 0,
         lastMatchdayAdvisorFee: 0,
         seasonTaxPaid: 0,

@@ -1065,4 +1065,22 @@
         .off-lamp-shade { position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 92px; height: 46px; border-radius: 46px 46px 8px 8px; background: linear-gradient(180deg, #d9a23c, #8a5f18); box-shadow: 0 14px 34px rgba(255,198,112,0.45); }
         .office-dark .off-lamp-shade { background: linear-gradient(180deg, #55606f, #2d3440); box-shadow: none; }
         .off-lamp-arm { position: absolute; left: 50%; top: 42px; width: 7px; height: 78px; margin-left: -3.5px; background: linear-gradient(180deg, #7b858f, #3e454f); }
+        /* Besucherstuhl vor dem Schreibtisch - leer, solange niemand wartet. */
+        .office-quicknav-alert { border-color: var(--danger) !important; color: var(--danger) !important; font-weight: 900; animation: officeVisitorPulse 1.8s ease-in-out infinite; }
+        .off-visitor-chair { position: absolute; inset: 0; }
+        .off-chair-back { position: absolute; left: 50%; top: 28px; transform: translateX(-50%); width: 62px; height: 64px; border-radius: 10px 10px 4px 4px; background: linear-gradient(180deg, #4a5462, #333b46); box-shadow: inset 0 2px 0 rgba(255,255,255,0.08); }
+        .off-chair-seat { position: absolute; left: 50%; top: 88px; transform: translateX(-50%); width: 76px; height: 16px; border-radius: 6px; background: linear-gradient(180deg, #56606e, #3a4350); }
+        .off-chair-leg { position: absolute; left: 50%; top: 104px; transform: translateX(-50%); width: 10px; height: 34px; background: linear-gradient(180deg, #6b7683, #333a44); border-radius: 0 0 4px 4px; }
+        .off-chair-leg::after { content: ''; position: absolute; left: 50%; bottom: -5px; transform: translateX(-50%); width: 54px; height: 9px; border-radius: 999px; background: #2b323c; }
+        .off-visitor-person { position: absolute; left: 50%; top: 6px; transform: translateX(-50%); width: 58px; height: 96px; }
+        .off-visitor-head { position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 28px; height: 28px; border-radius: 50%; background: #e2c39c; box-shadow: inset -3px -3px 0 rgba(0,0,0,0.12); }
+        .off-visitor-body { position: absolute; left: 50%; top: 26px; transform: translateX(-50%); width: 54px; height: 70px; border-radius: 16px 16px 6px 6px; background: linear-gradient(180deg, var(--visitor-color, #c084fc), rgba(0,0,0,0.35)); }
+        .off-visitor-badge { position: absolute; right: 4px; top: 0; width: 22px; height: 22px; border-radius: 50%; background: var(--danger); color: #fff; font-size: 13px; font-weight: 900; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 3px rgba(0,0,0,0.35); animation: officeVisitorPulse 1.6s ease-in-out infinite; }
+        @keyframes officeVisitorPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18); } }
+
+        /* Ereignis-Karte: liegt ueber der Kulisse, damit man das Buero nicht verlaesst. */
+        .office-event-overlay { position: absolute; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(4, 9, 18, 0.72); }
+        .office-event-card { width: 100%; max-width: 340px; max-height: 88%; overflow-y: auto; background: var(--bg-panel, #111a2b); border: 2px solid var(--primary); border-radius: 12px; padding: 12px; box-shadow: 0 18px 40px rgba(0,0,0,0.55); }
+        .office-event-card button { width: 100%; }
+
         .off-lamp-foot { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: 76px; height: 12px; border-radius: 999px; background: linear-gradient(180deg, #6b7683, #333a44); }
