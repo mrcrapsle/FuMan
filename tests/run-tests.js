@@ -1044,7 +1044,7 @@ async function testManagerOffice(browser) {
 
     assert(isStartScreen, 'Managerbüro ist der Startbildschirm nach dem Laden');
     assert(coversDisplay, 'Managerbüro nimmt das gesamte Display ein');
-    assert(hotspotIds.length === 11, `Alle 11 Objekte im Büro vorhanden (${hotspotIds.length})`);
+    assert(hotspotIds.length === 12, `Alle 12 Objekte im Büro vorhanden (${hotspotIds.length})`);
     assert(unreachable.length === 0, `Jedes Objekt wird an seinem Mittelpunkt korrekt getroffen${unreachable.length ? ' - FEHLER: ' + unreachable.join(', ') : ''}`);
     assert(sentence === 'Den Terminplan studieren', `Satzzeile zeigt die Aktion des überfahrenen Objekts ("${sentence}")`);
     assert(lampState.dark, 'Schreibtischlampe schaltet das Raumlicht aus');
@@ -1989,6 +1989,279 @@ async function testLeagueEconomy(browser) {
     await page.close();
 }
 
+async function testTransferMarketFairness(browser) {
+    console.log('\n[27] Transfermarkt: Angebote in jeder Liga, sichtbare Rückmeldungen');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+
+        // 1. Auch ein Sechstligist bekommt Angebote fuer seine Leistungstraeger. Die alte
+        //    feste Untergrenze (Staerke 48) lag komplett ueber einem Amateurkader (26-44),
+        //    dort ging deshalb NIE ein Angebot ein.
+        let schnitt = squad.reduce((s, p) => s + p.strength, 0) / squad.length;
+        out.schwelleRelativ = getTransferInterestThreshold() <= Math.round(schnitt) + 2
+            && getTransferInterestThreshold() >= Math.round(schnitt) - 1;
+        out.kaderUnter48 = squad.every(p => p.strength < 48);
+
+        incomingOffers = [];
+        let gesehen = new Set();
+        for (let i = 0; i < 34; i++) {
+            checkIncomingTransferOffers();
+            incomingOffers.forEach(o => gesehen.add(o.id));
+        }
+        out.angeboteKommen = gesehen.size >= 5;
+
+        // 2. Die Angebotshoehe liegt in einem plausiblen Band um den Marktwert.
+        out.angeboteRealistisch = incomingOffers.every(o => o.currentBid >= o.marketValue * 0.5
+            && o.currentBid <= o.marketValue * 2.0);
+
+        // 3. Der Markt rotiert waehrend der Saison, bleibt aber gleich gross.
+        let vorher = marketPlayers.map(p => p.name).join('|');
+        let groesse = marketPlayers.length;
+        for (let i = 0; i < 25; i++) tickTransferMarketRotation();
+        out.marktRotiert = marketPlayers.map(p => p.name).join('|') !== vorher;
+        out.marktGroesseStabil = marketPlayers.length === groesse;
+
+        // 4. Keine nativen Dialoge mehr im Transferpfad - in manchen Android-WebViews
+        //    werden die unterdrueckt, der Klick bliebe dann kommentarlos wirkungslos.
+        out.keineNativenDialoge = [buyPlayer, sellPlayer, signFreeAgent, signLoanPlayer,
+            acceptTransferOffer, exerciseLoanBuyOption]
+            .every(f => !/(^|[^.\w])alert\s*\(/.test(f.toString()));
+
+        // 5. Ein gescheiterter Kauf erklaert sich jetzt sichtbar.
+        game.money = 0;
+        game.transferBudget = 99999999;
+        game.wageBudget = 99999999;
+        let kaderVorher = squad.length;
+        let toast = document.getElementById('app-toast');
+        toast.className = 'app-toast';
+        toast.innerText = '';
+        buyPlayer(0);
+        out.kaufScheitertSichtbar = squad.length === kaderVorher
+            && toast.classList.contains('show')
+            && toast.innerText.length > 10;
+        return out;
+    });
+
+    assert(r.kaderUnter48, 'Ein Sechstliga-Kader liegt komplett unter der alten Interessensschwelle');
+    assert(r.schwelleRelativ, 'Die Interessensschwelle richtet sich nach dem eigenen Kader statt nach einer festen Zahl');
+    assert(r.angeboteKommen, 'Auch in der untersten Liga gehen Transferangebote ein');
+    assert(r.angeboteRealistisch, 'Die Angebotshöhe liegt in einem plausiblen Band um den Marktwert');
+    assert(r.marktRotiert, 'Der Transfermarkt rotiert während der Saison');
+    assert(r.marktGroesseStabil, 'Die Größe der Marktliste bleibt dabei gleich');
+    assert(r.keineNativenDialoge, 'Der Transferpfad nutzt keine nativen Dialoge mehr');
+    assert(r.kaufScheitertSichtbar, 'Ein gescheiterter Kauf erklärt sich sichtbar statt kommentarlos');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler im Transfermarkt');
+    await page.close();
+}
+
+async function testSecondTeamFriendlies(browser) {
+    console.log('\n[28] Zweite Mannschaft: Freundschafts- und Testspiele');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+        managerRPG.level = 5;
+        game.money = 5000000;
+        foundSecondTeam();
+        secondTeamSquad.forEach(p => { p.age = 20; });
+        showScreen('screen-second-team');
+
+        // 1. Freundschaftsspiel: echter Gegner aus der Liga der Reserve, echtes Ergebnis,
+        //    Eintrittsgelder ueber den Organisationskosten.
+        let geldVor = game.money;
+        scheduleReserveFriendly();
+        let eintrag = game.secondTeamMatchLog[game.secondTeamMatchLog.length - 1];
+        out.freundschaftGespielt = !!eintrag && eintrag.art === 'freundschaft';
+        out.echterGegner = !!eintrag && (leaguesData[game.secondTeam.leagueLevel] || []).some(t => t.name === eintrag.gegner);
+        out.ergebnisVorhanden = !!eintrag && /^\d+:\d+$/.test(eintrag.ergebnis);
+        out.ueberschuss = game.money > geldVor;
+        out.saldoStimmt = Math.round(game.money - geldVor) === eintrag.saldo;
+
+        // 2. Sperrfrist: kein Dauerfeuer.
+        out.sperreGesetzt = getReserveFriendlyCooldownLeft() > 0;
+        let geldVor2 = game.money;
+        scheduleReserveFriendly();
+        out.zweiterVersuchPrallt = game.money === geldVor2 && game.secondTeamMatchLog.length === 1;
+
+        // 3. Internes Testspiel: kein Geld, dafuer Kraft und Entwicklung.
+        let fitErsteVor = squad.reduce((s, p) => s + p.fitness, 0) / squad.length;
+        let geldVor3 = game.money;
+        let staerkeVor = secondTeamSquad.reduce((s, p) => s + p.strength, 0);
+        scheduleInternalTestMatch();
+        let intern = game.secondTeamMatchLog[game.secondTeamMatchLog.length - 1];
+        out.internGespielt = !!intern && intern.art === 'intern';
+        out.internOhneGeld = game.money === geldVor3 && intern.saldo === 0;
+        out.internKostetKraft = squad.reduce((s, p) => s + p.fitness, 0) / squad.length < fitErsteVor;
+        out.internEntwickelt = secondTeamSquad.reduce((s, p) => s + p.strength, 0) >= staerkeVor;
+        out.internSperre = getInternalTestCooldownLeft() > 0;
+
+        // 4. Spielpraxis wirkt bei jungen Spielern - dafuer ist eine Reserve da.
+        secondTeamSquad.forEach(p => { p.age = 33; });
+        let alteStaerke = secondTeamSquad.reduce((s, p) => s + p.strength, 0);
+        for (let i = 0; i < 40; i++) applyReserveMatchExperience(0.5);
+        out.alteSpielerLernenNicht = secondTeamSquad.reduce((s, p) => s + p.strength, 0) === alteStaerke;
+        secondTeamSquad.forEach(p => { p.age = 20; });
+        let jungeStaerke = secondTeamSquad.reduce((s, p) => s + p.strength, 0);
+        for (let i = 0; i < 5; i++) applyReserveMatchExperience(0.5);
+        out.jungeSpielerLernen = secondTeamSquad.reduce((s, p) => s + p.strength, 0) > jungeStaerke;
+
+        // 5. Ohne zweite Mannschaft passiert gar nichts.
+        game.secondTeam.isActive = false;
+        let geldVor4 = game.money;
+        let logVor = game.secondTeamMatchLog.length;
+        scheduleReserveFriendly();
+        scheduleInternalTestMatch();
+        out.ohneReserveKeineSpiele = game.money === geldVor4 && game.secondTeamMatchLog.length === logVor;
+        game.secondTeam.isActive = true;
+
+        // 6. Das Protokoll ueberlebt Speichern und Laden.
+        saveGameToSlot(3);
+        let logLaenge = game.secondTeamMatchLog.length;
+        game.secondTeamMatchLog = [];
+        loadGameFromSlot(3, true);
+        out.protokollUeberlebtLaden = game.secondTeamMatchLog.length === logLaenge;
+
+        showScreen('screen-second-team');
+        out.oberflaecheZeigtSpiele = document.getElementById('second-team-friendly-box').innerHTML.includes('Freundschaftsspiel');
+        return out;
+    });
+
+    assert(r.freundschaftGespielt, 'Ein Freundschaftsspiel der Reserve lässt sich vereinbaren');
+    assert(r.echterGegner, 'Der Gegner stammt aus der echten Liga der zweiten Mannschaft');
+    assert(r.ergebnisVorhanden, 'Das Freundschaftsspiel hat ein echtes Ergebnis');
+    assert(r.ueberschuss, 'Eintrittsgelder übersteigen die Organisationskosten');
+    assert(r.saldoStimmt, 'Der protokollierte Saldo stimmt mit der Kontobewegung überein');
+    assert(r.sperreGesetzt, 'Nach einem Freundschaftsspiel greift eine Sperrfrist');
+    assert(r.zweiterVersuchPrallt, 'Während der Sperrfrist passiert nichts und es kostet nichts');
+    assert(r.internGespielt, 'Das interne Testspiel gegen die Erste lässt sich ansetzen');
+    assert(r.internOhneGeld, 'Das interne Testspiel bringt bewusst kein Geld');
+    assert(r.internKostetKraft, 'Das interne Testspiel kostet auch die erste Mannschaft Kraft');
+    assert(r.internEntwickelt, 'Das interne Testspiel entwickelt die Reserve weiter');
+    assert(r.internSperre, 'Auch das interne Testspiel hat eine eigene Sperrfrist');
+    assert(r.alteSpielerLernenNicht, 'Routiniers profitieren nicht mehr von Spielpraxis');
+    assert(r.jungeSpielerLernen, 'Junge Spieler entwickeln sich durch Spielpraxis weiter');
+    assert(r.ohneReserveKeineSpiele, 'Ohne gegründete zweite Mannschaft passiert nichts');
+    assert(r.protokollUeberlebtLaden, 'Das Spielprotokoll überlebt Speichern und Laden');
+    assert(r.oberflaecheZeigtSpiele, 'Der Reserve-Screen zeigt die Spielarten an');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei den Reserve-Spielen');
+    await page.close();
+}
+
+async function testOfficeEvents(browser) {
+    console.log('\n[29] Managerbüro: Besucher mit echten Entscheidungen');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+
+        // 1. Ohne wartenden Besucher ist der Stuhl leer und das Panel zu.
+        game.officeEvent = null;
+        showScreen('screen-office');
+        out.stuhlLeer = !document.getElementById('office-hs-visitor').innerHTML.includes('off-visitor-person');
+        openOfficeEventPanel();
+        out.panelBleibtZu = document.getElementById('office-event-panel').style.display !== 'flex';
+
+        // 2. Jedes Ereignis ist vollstaendig definiert und hat mindestens eine Antwort.
+        out.alleEreignisseVollstaendig = OFFICE_EVENTS.every(e =>
+            e.id && e.person && typeof e.titel === 'function' && typeof e.text === 'function'
+            && Array.isArray(e.optionen) && e.optionen.length >= 1
+            && e.optionen.every(o => o.label && typeof o.wirkung === 'function' && typeof o.hinweis === 'function'));
+        out.ereignisAuswahl = OFFICE_EVENTS.length >= 6;
+
+        // 3. Ein Ereignis taucht auf, besetzt den Stuhl und laesst sich beantworten.
+        let versuche = 0;
+        while (!game.officeEvent && versuche++ < 400) rollOfficeEvent();
+        out.ereignisErscheint = !!game.officeEvent;
+        showScreen('screen-office');
+        out.stuhlBesetzt = document.getElementById('office-hs-visitor').innerHTML.includes('off-visitor-person');
+        out.schnellauswahlZeigtBesuch = document.getElementById('office-quicknav').innerHTML.includes('office-quicknav-alert')
+            || document.getElementById('office-quicknav').style.display === 'none';
+
+        openOfficeEventPanel();
+        let panel = document.getElementById('office-event-panel');
+        out.panelOeffnet = panel.style.display === 'flex';
+        out.panelHatAntworten = panel.querySelectorAll('button[onclick^="resolveOfficeEvent"]').length >= 1;
+        // Das Buero wird dabei NICHT verlassen - das ist der Punkt der ganzen Sache.
+        out.bleibtImBuero = document.getElementById('screen-office').style.display !== 'none';
+
+        // Fuer die Antwort ein Ereignis mit folgenloser erster Option: bei einem zufaellig
+        // gewuerfelten koennte die erste Antwort an fehlendem Geld oder einer leeren
+        // Jugendakademie scheitern, und der Test haenge am Zufall.
+        let journalist = OFFICE_EVENTS.find(e => e.id === 'journalist');
+        game.officeEvent = { id: journalist.id, seit: game.matchday, season: game.season, titel: journalist.titel(), text: journalist.text() };
+        game.officeEventHistory = [];
+        resolveOfficeEvent(0);
+        out.ereignisGeloest = game.officeEvent === null;
+        out.historieGefuehrt = (game.officeEventHistory || []).length === 1
+            && !!game.officeEventHistory[0].wahl;
+
+        // 4. Geldwirkungen landen im Kontoauszug unter einem eigenen Bereich.
+        game.kontoauszug = [];
+        let mitGeld = OFFICE_EVENTS.find(e => e.id === 'berater');
+        game.money = 50000000;
+        game.officeEvent = { id: mitGeld.id, seit: game.matchday, season: game.season, titel: mitGeld.titel(), text: mitGeld.text() };
+        let geldVor = game.money;
+        resolveOfficeEvent(0);
+        out.geldFliesst = game.money < geldVor;
+        out.buchungZugeordnet = (game.kontoauszug || []).some(b => b.label.includes('Bürotermin'));
+
+        // 5. Fehlt das Geld, passiert nichts und das Ereignis bleibt offen.
+        game.money = 0;
+        game.officeEvent = { id: mitGeld.id, seit: game.matchday, season: game.season, titel: mitGeld.titel(), text: mitGeld.text() };
+        resolveOfficeEvent(0);
+        out.ohneGeldBleibtOffen = game.officeEvent !== null && game.money === 0;
+
+        // 6. Wer sich nie kuemmert, wird nicht blockiert: nach der Frist raeumt es sich weg.
+        game.officeEvent.seit = game.matchday - 20;
+        checkOfficeEventTimeout();
+        out.fristRaeumtAuf = game.officeEvent === null;
+
+        // 7. Es wartet immer hoechstens einer.
+        game.officeEvent = null;
+        for (let i = 0; i < 300; i++) rollOfficeEvent();
+        out.immerNurEiner = game.officeEvent === null || typeof game.officeEvent === 'object';
+        out.keinStapel = !Array.isArray(game.officeEvent);
+
+        // 8. Ereignis und Historie ueberleben Speichern und Laden.
+        game.money = 5000000;
+        saveGameToSlot(2);
+        let offenId = game.officeEvent ? game.officeEvent.id : null;
+        let histLaenge = game.officeEventHistory.length;
+        game.officeEvent = null;
+        game.officeEventHistory = [];
+        loadGameFromSlot(2, true);
+        out.ueberlebtLaden = (game.officeEvent ? game.officeEvent.id : null) === offenId
+            && game.officeEventHistory.length === histLaenge;
+        return out;
+    });
+
+    assert(r.stuhlLeer, 'Ohne Besuch bleibt der Besucherstuhl leer');
+    assert(r.panelBleibtZu, 'Ohne Besuch öffnet sich kein Gesprächsfenster');
+    assert(r.ereignisAuswahl, 'Es gibt eine ausreichende Auswahl an Büro-Ereignissen');
+    assert(r.alleEreignisseVollstaendig, 'Jedes Ereignis hat Person, Text und mindestens eine Antwort');
+    assert(r.ereignisErscheint, 'Ein Besucher taucht im Büro auf');
+    assert(r.stuhlBesetzt, 'Der Besucher ist im Raum sichtbar');
+    assert(r.schnellauswahlZeigtBesuch, 'Die Schnellauswahl weist auf den Besuch hin');
+    assert(r.panelOeffnet, 'Das Gespräch lässt sich öffnen');
+    assert(r.panelHatAntworten, 'Das Gespräch bietet Antwortmöglichkeiten');
+    assert(r.bleibtImBuero, 'Das Gespräch findet im Büro statt, ohne es zu verlassen');
+    assert(r.ereignisGeloest, 'Nach der Antwort ist der Besuch erledigt');
+    assert(r.historieGefuehrt, 'Die getroffene Entscheidung wird festgehalten');
+    assert(r.geldFliesst, 'Eine Antwort mit Geldwirkung verändert den Kontostand');
+    assert(r.buchungZugeordnet, 'Die Buchung erscheint im Kontoauszug als Bürotermin');
+    assert(r.ohneGeldBleibtOffen, 'Ohne Deckung passiert nichts und der Besuch bleibt offen');
+    assert(r.fristRaeumtAuf, 'Ein ignorierter Besuch blockiert nicht dauerhaft');
+    assert(r.keinStapel, 'Es wartet immer höchstens ein Besucher');
+    assert(r.ueberlebtLaden, 'Offener Besuch und Historie überleben Speichern und Laden');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei den Büro-Ereignissen');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -2034,6 +2307,9 @@ async function main() {
         testEconomyBalance,
         testSecondTeamAndTrainingAutomation,
         testLeagueEconomy,
+        testTransferMarketFairness,
+        testSecondTeamFriendlies,
+        testOfficeEvents,
     ];
 
     for (const suite of suites) {

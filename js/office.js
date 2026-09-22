@@ -210,6 +210,25 @@
             }
         },
         {
+            // Besucherstuhl vor dem Schreibtisch: leer, solange niemand wartet - sitzt
+            // jemand darauf, hat er ein Anliegen (siehe js/office-events.js).
+            id: 'visitor', wall: 'room', action: 'visitor',
+            size: 'width:170px; height:210px;', at: 'translate3d(-285px, 95px, 80px)',
+            art: () => {
+                let wartet = (typeof getPendingOfficeEvent === 'function') ? getPendingOfficeEvent() : null;
+                return `<div class="off-visitor-chair${wartet ? ' off-visitor-occupied' : ''}">
+                            <div class="off-chair-back"></div>
+                            <div class="off-chair-leg"></div>
+                            <div class="off-chair-seat"></div>
+                            ${wartet ? `<div class="off-visitor-person" style="--visitor-color:${wartet.farbe};">
+                                            <div class="off-visitor-body"></div>
+                                            <div class="off-visitor-head"></div>
+                                        </div>
+                                        <div class="off-visitor-badge">!</div>` : ''}
+                        </div>`;
+            }
+        },
+        {
             id: 'lamp', wall: 'room', action: 'lamp',
             size: 'width:105px; height:130px;', at: 'translate3d(-210px, 30px, -70px)',
             art: () => `
@@ -275,6 +294,7 @@
         let title = document.getElementById('office-club-title');
         if (title) title.innerText = game.clubName;
         officeSetSentence(null);
+        if (typeof renderOfficeEventPanel === 'function') renderOfficeEventPanel();
         applyOfficeLight();
         fitOfficeScale();
     }
@@ -309,9 +329,13 @@
         if (leftoverSpace < 150) { nav.style.display = 'none'; nav.innerHTML = ''; return; }
         nav.style.display = 'flex';
         nav.style.top = Math.round(sceneBottom + 14) + 'px';
-        nav.innerHTML = OFFICE_HOTSPOTS.filter(h => h.target).map(h =>
-            `<button class="office-quicknav-btn" onclick="officeEnterHotspot('${h.id}')">${officeHotspotText(h.id)}</button>`
-        ).join('');
+        let wartet = (typeof getPendingOfficeEvent === 'function') ? getPendingOfficeEvent() : null;
+        nav.innerHTML = (wartet
+            ? `<button class="office-quicknav-btn office-quicknav-alert" onclick="openOfficeEventPanel()">❗ ${wartet.person}</button>`
+            : '')
+            + OFFICE_HOTSPOTS.filter(h => h.target).map(h =>
+                `<button class="office-quicknav-btn" onclick="officeEnterHotspot('${h.id}')">${officeHotspotText(h.id)}</button>`
+            ).join('');
     }
 
     // Trefferprüfung bewusst SELBST über die projizierten Bildschirmrechtecke, statt sich auf
@@ -369,6 +393,7 @@
         let hs = OFFICE_HOTSPOTS.find(h => h.id === id);
         if (!hs) return;
         if (hs.action === 'lamp') { toggleOfficeLamp(); return; }
+        if (hs.action === 'visitor') { openOfficeEventPanel(); return; }
 
         officeIsEntering = true;
         playSound('click');

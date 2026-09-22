@@ -1648,6 +1648,7 @@
         // haengen bewusst hier, damit sie auch beim Durchsimulieren ganzer Saisons greifen.
         if (typeof runTrainingAutopilotTick === 'function') runTrainingAutopilotTick();
         if (typeof tickSecondTeamRoutine === 'function') tickSecondTeamRoutine();
+        if (typeof rollOfficeEvent === 'function') rollOfficeEvent();
         // Weitere Premium-Booster-Countdowns (NEU).
         if (game.injuryShieldMatchdaysLeft > 0) game.injuryShieldMatchdaysLeft--;
         if (game.sponsorBoostMatchdaysLeft > 0) game.sponsorBoostMatchdaysLeft--;
@@ -1686,6 +1687,7 @@
             checkPortfolioMilestones();
         }
         checkIncomingTransferOffers();
+        if (typeof tickTransferMarketRotation === 'function') tickTransferMarketRotation();
         tickContractDurations();
         checkIncomingSponsorOffers();
         checkIncomingKitOffers();
