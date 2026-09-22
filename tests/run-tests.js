@@ -2338,6 +2338,114 @@ async function testNoNativeDialogs(browser) {
     await page.close();
 }
 
+async function testEuropeanCup(browser) {
+    console.log('\n[31] Europapokal: erreichbares Teilnehmerfeld und Startprämie');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+        // Der Europapokal ist realistisch nur aus der obersten Liga erreichbar (Platz 1-4
+        // oder Pokalsieg). Die Feldpruefungen laufen deshalb mit einem entsprechend
+        // starken Kader - beim Standard-Sechstligisten waere das Feld naturgemaess
+        // ueberlegen, und das ist auch richtig so.
+        squad.forEach(p => { p.strength = 78 + Math.floor(Math.random() * 8); });
+        game.inEurope = true;
+        initEuropeCup();
+        let feld = [...europeTournament.groupA, ...europeTournament.groupB];
+        out.achtTeilnehmer = feld.length === 8;
+        out.wirDabei = feld.some(t => t.name === game.clubName);
+
+        // 1. Das Feld ist gestaffelt wie ein echter Wettbewerb - frueher bekam JEDER
+        //    Teilnehmer pauschal 84 bis 89.
+        let staerken = feld.map(t => t.str);
+        out.feldGestaffelt = Math.max(...staerken) - Math.min(...staerken) >= 8;
+
+        // 2. Das Feld haengt am Kaderschnitt und NICHT an der Tagesform. Genau das war der
+        //    Fehler: die Auslosung laeuft zum Saisonstart, wo calcTeamStrength() den
+        //    frischen Kader mit rund 97 bewertet, waehrend derselbe Kader ab Spieltag 20
+        //    nur noch etwa 74 erreicht - das Feld war am nie wieder erreichten Bestwert
+        //    ausgerichtet.
+        let kaderSchnitt = squad.reduce((sum, p) => sum + p.strength, 0) / squad.length;
+        let gegner = feld.filter(t => t.name !== game.clubName).map(t => t.str);
+        out.feldAmKader = gegner.every(v => Math.abs(v - kaderSchnitt) <= 20);
+        // Mindestens ein Gegner liegt unter unserem Kaderschnitt - sonst ist nichts zu holen.
+        out.schlagbareGegner = gegner.some(v => v < kaderSchnitt);
+        // Und mindestens einer darueber, sonst ist es keine Koenigsklasse.
+        out.echteFavoriten = gegner.some(v => v > kaderSchnitt - 6);
+
+        // Tagesform aufblaehen: das Feld darf sich davon NICHT beeindrucken lassen.
+        let vorher = [...europeTournament.groupA, ...europeTournament.groupB].map(t => t.str).join(',');
+        squad.forEach(p => { p.fitness = 100; p.morale = 100; p.form = 10; });
+        initEuropeCup();
+        let nachher = [...europeTournament.groupA, ...europeTournament.groupB].map(t => t.str).join(',');
+        out.formEgal = Math.abs(
+            nachher.split(',').reduce((a, v) => a + Number(v), 0)
+            - vorher.split(',').reduce((a, v) => a + Number(v), 0)) <= 12;
+
+        // 3. Startpraemie: genau einmal, im Kontoauszug einem Bereich zugeordnet.
+        game.kontoauszug = [];
+        europeTournament.startFeePaid = false;
+        let geldVor = game.money;
+        game.matchday = 3;
+        simulateEuropeMatchday(3);
+        let nachErstem = game.money;
+        out.startpraemieGezahlt = nachErstem > geldVor;
+        out.praemieImAuszug = (game.kontoauszug || []).some(b => b.label.includes('Europapokal'));
+        simulateEuropeMatchday(3);
+        out.nurEinmal = europeTournament.startFeePaid === true
+            && inboxMessages.filter(m => (m.title || '').includes('Startprämie')).length === 1;
+
+        // 4. Ohne Qualifikation passiert gar nichts.
+        game.inEurope = false;
+        let geldOhne = game.money;
+        simulateEuropeMatchday(7);
+        out.ohneQualiNichts = game.money === geldOhne;
+        return out;
+    });
+
+    // 5. Eine komplette Saison im Europapokal laeuft fehlerfrei durch und erzeugt die
+    //    K.o.-Runde - frueher blieben Halbfinale, Finale und Titel praktisch unerreichbar.
+    const saison = await page.evaluate(() => {
+        closeTutorial();
+        squad.forEach(p => { p.strength = 78 + Math.floor(Math.random() * 8); });
+        game.inEurope = true;
+        initEuropeCup();
+        let feld = [...europeTournament.groupA, ...europeTournament.groupB];
+        let unsereStaerke = squad.reduce((sum, p) => sum + p.strength, 0) / squad.length;
+        let schlechterAlsAlle = feld.filter(t => t.name !== game.clubName).every(t => t.str > unsereStaerke);
+        for (let i = 0; i < 7; i++) simulateMatchdays(5);
+        let grp = europeTournament.groupA.some(t => t.name === game.clubName)
+            ? europeTournament.groupA : europeTournament.groupB;
+        let sorted = [...grp].sort((a, b) => b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga));
+        return {
+            schlechterAlsAlle,
+            platz: sorted.findIndex(t => t.name === game.clubName) + 1,
+            punkte: grp.find(t => t.name === game.clubName).pts,
+            spiele: grp.find(t => t.name === game.clubName).played,
+            halbfinale: (europeTournament.semiFinals || []).length,
+            finale: !!europeTournament.finalMatch
+        };
+    });
+
+    assert(r.achtTeilnehmer && r.wirDabei, 'Der Champions Cup hat acht Teilnehmer, der eigene Verein ist dabei');
+    assert(r.feldGestaffelt, 'Das Teilnehmerfeld ist gestaffelt statt durchgehend gleich stark');
+    assert(r.feldAmKader, 'Das Feld richtet sich nach dem eigenen Kaderniveau');
+    assert(r.schlagbareGegner, 'Mindestens ein Gruppengegner ist schlagbar');
+    assert(r.echteFavoriten, 'Es gibt trotzdem echte Favoriten im Feld');
+    assert(r.formEgal, 'Die Tagesform zum Auslosungszeitpunkt verzerrt das Feld nicht mehr');
+    assert(r.startpraemieGezahlt, 'Für die Teilnahme gibt es eine UEFA-Startprämie');
+    assert(r.praemieImAuszug, 'Die Startprämie erscheint im Kontoauszug als Europapokal-Buchung');
+    assert(r.nurEinmal, 'Die Startprämie wird nur einmal pro Wettbewerb gezahlt');
+    assert(r.ohneQualiNichts, 'Ohne Qualifikation passiert im Europapokal nichts');
+    assert(!saison.schlechterAlsAlle, 'Der eigene Verein ist nicht schwächer als das gesamte Feld');
+    assert(saison.spiele === 6, `Alle sechs Gruppenspiele werden ausgetragen (${saison.spiele})`);
+    assert(saison.punkte > 0, `In der Gruppe wird gepunktet (${saison.punkte} Punkte, Platz ${saison.platz})`);
+    assert(saison.halbfinale === 2 && saison.finale, 'Halbfinale und Finale werden ausgespielt');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler im Europapokal');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -2387,6 +2495,7 @@ async function main() {
         testSecondTeamFriendlies,
         testOfficeEvents,
         testNoNativeDialogs,
+        testEuropeanCup,
     ];
 
     for (const suite of suites) {

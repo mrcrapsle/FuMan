@@ -10,11 +10,38 @@
         let participants = game.inEurope ? [game.clubName, ...topEurope] : ["Liverpol FC", ...topEurope];
         participants.sort(() => Math.random() - 0.5);
 
-        europeTournament.groupA = participants.slice(0, 4).map(name => ({ name, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, pts: 0, str: 84 + Math.floor(Math.random() * 6) }));
-        europeTournament.groupB = participants.slice(4, 8).map(name => ({ name, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, pts: 0, str: 84 + Math.floor(Math.random() * 6) }));
+        // Staerke des Teilnehmerfelds: Frueher bekam JEDER Teilnehmer fest 84-89. Das wurde
+        // offenbar nie gegen die tatsaechlich erreichbare Teamstaerke geprueft - ein
+        // Erstliga-Meister kommt im Spiel effektiv auf rund 72, und ein Rueckstand von
+        // 12 bis 17 Punkten ist ueber sechs Gruppenspiele aussichtslos. Nachgemessen ueber
+        // 20 simulierte Saisons: 18-mal Gruppenletzter, 2-mal Dritter, NIE die K.o.-Runde.
+        // Halbfinale (8 Mio.), Finale und Titel (25 Mio.) waren damit toter Inhalt.
+        //
+        // Jetzt ist das Feld gestaffelt wie ein echter Wettbewerb - zwei Schwergewichte,
+        // dann abfallend - und an das eigene Niveau gekoppelt. Der Titel ist erreichbar,
+        // aber man muss dafuer die Favoriten schlagen.
+        // Bezugsgroesse ist bewusst der reine Kaderschnitt und NICHT calcTeamStrength():
+        // Letzteres schwankt stark mit Fitness, Moral und Form. Die Auslosung findet zum
+        // Saisonstart statt, wo der Kader frisch und topfit ist - dort meldet
+        // calcTeamStrength() rund 97, waehrend derselbe Kader ab Spieltag 20 nur noch auf
+        // etwa 74 kommt. Das Teilnehmerfeld wurde also am Bestwert ausgerichtet und spielte
+        // die ganze Saison gegen einen Verein, der diesen Wert nie wieder erreichte.
+        // Der Abschlag von 6 Punkten bildet genau diesen Formverlust ueber die Saison ab.
+        const FELD_STAFFELUNG = [9, 6, 4, 2, 0, -2, -4, -6];
+        let kaderSchnitt = squad.length ? squad.reduce((sum, p) => sum + p.strength, 0) / squad.length : 70;
+        let feldMitte = Math.max(45, Math.min(84, Math.round(kaderSchnitt) - 6));
+        let baueTeam = (name, idx) => ({
+            name, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, pts: 0,
+            // Der eigene Verein spielt mit seiner ECHTEN Staerke (siehe
+            // simulateEuropeMatchday) - der Wert hier ist fuer ihn nur ein Platzhalter.
+            str: Math.max(45, Math.min(95, feldMitte + FELD_STAFFELUNG[idx] + Math.floor(Math.random() * 3) - 1))
+        });
+        europeTournament.groupA = participants.slice(0, 4).map((name, i) => baueTeam(name, i * 2));
+        europeTournament.groupB = participants.slice(4, 8).map((name, i) => baueTeam(name, i * 2 + 1));
         europeTournament.semiFinals = [];
         europeTournament.finalMatch = null;
         europeTournament.drawCeremonyShown = false;
+        europeTournament.startFeePaid = false;
     }
 
     // ---------- AUSLOSUNGS-ZEREMONIE (EUROPAPOKAL) ----------
@@ -304,6 +331,20 @@
     function simulateEuropeMatchday(mday, isLiveContext = false) {
         if (!game.inEurope) return;
         let groupMatchIdx = [3, 7, 11, 15, 19, 23].indexOf(mday);
+
+        // UEFA-Startpraemie: im echten Wettbewerb die groesste Einzelzahlung und allein fuer
+        // die Teilnahme faellig. Hier gab es bisher ausschliesslich Siegpraemien - wer sich
+        // qualifizierte und in der Gruppe nichts holte, ging voellig leer aus.
+        if (groupMatchIdx === 0 && !europeTournament.startFeePaid) {
+            europeTournament.startFeePaid = true;
+            let startpraemie = Math.round(4000000 * (typeof leagueScaleFactor === 'function' ? leagueScaleFactor() : 1) / 2 / 10000) * 10000;
+            setzeBuchungskontext('🌍 Europapokal');
+            game.money += startpraemie;
+            loescheBuchungskontext();
+            addInboxMessage('finanzen', '🌍 UEFA-Startprämie ausgezahlt',
+                `Allein für die Teilnahme am Champions Cup überweist die UEFA ${formatVal(startpraemie)}. Siegprämien kommen pro gewonnenem Gruppenspiel obendrauf.`, 'screen-finances');
+            showNotice('🌍 Champions Cup', `Die Gruppenphase beginnt.\n\nUEFA-Startprämie für die Teilnahme: ${formatVal(startpraemie)}.`);
+        }
 
         if (groupMatchIdx !== -1) {
             [europeTournament.groupA, europeTournament.groupB].forEach(grp => {

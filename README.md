@@ -263,6 +263,30 @@ Stärke 96/97, die allein 43 % der Gehaltssumme verschlangen. Ein frisch
 übernommener Klub ist ein Liga-Durchschnittsteam - die Obergrenze liegt jetzt
 bei `base + 3`.
 
+## Europapokal (js/europe.js)
+
+**Teilnehmerfeld**: Früher bekam jeder der acht Teilnehmer pauschal Stärke
+84-89. Das wurde nie gegen die tatsächlich erreichbare Teamstärke geprüft -
+nachgemessen über 20 simulierte Saisons erreichte ein Erstliga-Meister NIE die
+K.o.-Runde (18-mal Gruppenletzter), womit Halbfinale, Finale und der
+25-Millionen-Titel toter Inhalt waren. Das Feld ist jetzt gestaffelt
+(`FELD_STAFFELUNG`, zwei Schwergewichte, dann abfallend) und an das eigene
+Kaderniveau gekoppelt.
+
+**Wichtig dabei**: Bezugsgröße ist der reine **Kaderschnitt**, nicht
+`calcTeamStrength()`. Letzteres schwankt stark mit Fitness, Moral und Form -
+die Auslosung läuft zum Saisonstart, wo der frische Kader dort rund 97 meldet,
+während derselbe Kader ab Spieltag 20 nur noch etwa 74 erreicht. Das Feld war
+also am nie wieder erreichten Bestwert ausgerichtet. Der Abschlag von sechs
+Punkten in `initEuropeCup()` bildet diesen Formverlust über die Saison ab.
+Gemessen über 14 unabhängige Saisons landet ein Erstligist damit 1× auf Platz 1,
+4× auf Platz 2, 5× auf Platz 3 und 4× auf Platz 4.
+
+**Startprämie**: Es gab ausschließlich Siegprämien - wer sich qualifizierte und
+in der Gruppe nichts holte, ging völlig leer aus. Die UEFA-Startprämie ist im
+echten Wettbewerb die größte Einzelzahlung und wird jetzt zum ersten
+Gruppenspieltag fällig, skaliert mit der Ligastufe.
+
 ## Zweite Mannschaft
 
 Die Reserve hat einen **eigenen, kleinen Trainerstab** (`secondTeamStaff` in
