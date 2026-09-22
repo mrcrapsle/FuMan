@@ -1686,6 +1686,7 @@
             checkPortfolioMilestones();
         }
         checkIncomingTransferOffers();
+        if (typeof tickTransferMarketRotation === 'function') tickTransferMarketRotation();
         tickContractDurations();
         checkIncomingSponsorOffers();
         checkIncomingKitOffers();

@@ -42,7 +42,7 @@
     function signLoanPlayer(idx) {
         let p = loanablePlayers[idx];
         if (!p) return;
-        if (game.money < p.loanFee) { alert(`Nicht genug Geld für die Leihgebühr! Benötigt: ${formatVal(p.loanFee)}`); return; }
+        if (game.money < p.loanFee) { showToast(`Leihgebühr nicht gedeckt: ${formatVal(p.loanFee)} nötig, ${formatVal(game.money)} auf dem Konto.`, 'error', 4500); return; }
         if (squad.length >= 22) { showToast('Kader bereits voll (22 Spieler)!', 'error'); return; }
         playSound('whistle');
         game.money -= p.loanFee;
@@ -60,8 +60,8 @@
         let loan = incomingLoans.find(l => l.playerId === playerId);
         let p = squad.find(x => x.id === playerId);
         if (!loan || !p) return;
-        if (game.money < loan.buyOptionFee) { alert(`Nicht genug Geld für die Kaufoption! Benötigt: ${formatVal(loan.buyOptionFee)}`); return; }
-        if (game.transferBudget < loan.buyOptionFee) { alert("Transferbudget reicht nicht aus!"); return; }
+        if (game.money < loan.buyOptionFee) { showToast(`Kaufoption nicht gedeckt: ${formatVal(loan.buyOptionFee)} nötig, ${formatVal(game.money)} auf dem Konto.`, 'error', 4500); return; }
+        if (game.transferBudget < loan.buyOptionFee) { showToast(`Transferbudget reicht nicht: ${formatVal(loan.buyOptionFee)} nötig, ${formatVal(game.transferBudget)} verfügbar.`, 'error', 4500); return; }
         playSound('goal');
         game.money -= loan.buyOptionFee;
         game.transferBudget -= loan.buyOptionFee;
@@ -87,6 +87,28 @@
             }
         });
         incomingLoans = incomingLoans.filter(l => l.matchdaysLeft > 0);
+    }
+
+    // Der Transfermarkt wurde bisher NUR zum Saisonwechsel neu befuellt - dieselben sechs
+    // Namen standen eine komplette Saison lang unveraendert in der Liste. Jetzt rotiert er
+    // langsam: hin und wieder verlaesst ein Spieler den Markt (anderweitig verpflichtet)
+    // und ein neuer taucht auf. Die Listengroesse bleibt gleich, es wird also nicht mehr
+    // oder billiger - der Markt fuehlt sich nur nicht mehr eingefroren an.
+    function tickTransferMarketRotation() {
+        if (!Array.isArray(marketPlayers) || marketPlayers.length === 0) return;
+        if (Math.random() > 0.20) return;
+        let discount = 1.0 - (staffMembers.scout.hired ? 0.15 : 0);
+        if (typeof getActiveStaffSynergies === 'function' && getActiveStaffSynergies().some(sy => sy.bonusKey === 'transferDiscount')) discount -= 0.05;
+        let minStr = 50 + (3 - game.leagueLevel) * 9;
+        let idx = Math.floor(Math.random() * marketPlayers.length);
+        let weg = marketPlayers[idx];
+        let neu = createPlayer(["TW", "ABW", "MIT", "ST"][Math.floor(Math.random() * 4)], minStr, minStr + 9);
+        neu.marketValue = Math.round(neu.marketValue * discount);
+        marketPlayers[idx] = neu;
+        if (weg) {
+            addInboxMessage('transfer', `🔁 ${weg.name} ist vom Markt`,
+                `${weg.name} (${weg.pos}, Stärke ${weg.strength}) hat sich einem anderen Verein angeschlossen. Neu auf der Liste: ${neu.name} (${neu.pos}, Stärke ${neu.strength}, ${formatVal(neu.marketValue)}).`, 'screen-transfer');
+        }
     }
 
     function checkIncomingTransferOffers() {
@@ -153,8 +175,25 @@
     }
     setInterval(() => { if (typeof game !== 'undefined' && game.winterWindowActive) renderWinterWindowBanner(); }, 1000);
 
+    // Welche Spieler sind fuer andere Vereine ueberhaupt interessant? Bisher galt eine
+    // feste Untergrenze von Staerke 48. Ein Sechstliga-Kader liegt mit 26-44 KOMPLETT
+    // darunter, weshalb dort niemals ein Angebot einging (nachgemessen: 60 Versuche, null
+    // Angebote) - die gesamte Verkaufsseite des Transfermarkts war in den unteren beiden
+    // Ligen tot, obwohl Spielerverkaeufe dort eine der wenigen groesseren Einnahmequellen
+    // waeren. Umworben werden jetzt die Leistungstraeger RELATIV zum eigenen Kader, also
+    // auf jeder Ligastufe.
+    function getTransferInterestThreshold() {
+        if (squad.length === 0) return 48;
+        // Bewusst der Schnitt selbst und nicht "Schnitt + 1": bei einem voellig
+        // gleichmaessig besetzten Kader laege sonst KEIN Spieler ueber der Schwelle und es
+        // gaebe wieder gar keine Angebote - derselbe Fehler nur eine Ebene tiefer.
+        let schnitt = squad.reduce((s, p) => s + p.strength, 0) / squad.length;
+        return Math.max(20, Math.round(schnitt));
+    }
+
     function triggerNewAITransferOffer() {
-        let validTargets = squad.filter(p => p.strength >= 48 && !incomingOffers.some(o => o.playerId === p.id));
+        let schwelle = getTransferInterestThreshold();
+        let validTargets = squad.filter(p => p.strength >= schwelle && !incomingOffers.some(o => o.playerId === p.id));
         if (validTargets.length === 0) return;
 
         let targetPlayer = validTargets[Math.floor(Math.random() * validTargets.length)];
@@ -225,13 +264,13 @@
         let offer = incomingOffers[oIdx];
 
         if (squad.length <= 11) {
-            alert("❌ Transfer unzulässig: Dein Kader muss mindestens 11 Spieler umfassen!");
+            showToast('Transfer unzulässig: Der Kader muss mindestens 11 Spieler umfassen.', 'error', 4500);
             return;
         }
 
         let pIdx = squad.findIndex(p => p.id === offer.playerId);
         if (pIdx === -1) {
-            alert("Spieler befindet sich nicht mehr im Kader!");
+            showToast('Dieser Spieler ist nicht mehr im Kader.', 'error', 4000);
             incomingOffers.splice(oIdx, 1);
             renderTransferView();
             return;
@@ -254,7 +293,7 @@
         incomingOffers.splice(oIdx, 1);
 
         addManagerXP(120);
-        alert(`🤝 TRANSFER PERFEKT!\n${offer.playerName} wechselt für ${formatVal(offer.currentBid)} zu ${offer.clubName}.${agentFee > 0 ? `\n(Abzüglich ${formatVal(agentFee)} Beraterprovision)` : ''}`);
+        showToast(`🤝 Transfer perfekt: ${offer.playerName} wechselt für ${formatVal(offer.currentBid)} zu ${offer.clubName}.${agentFee > 0 ? ` Abzüglich ${formatVal(agentFee)} Beraterprovision.` : ''}`, 'success', 6000);
         updateUI();
         renderTransferView();
     }
@@ -270,9 +309,9 @@
         let oIdx = incomingOffers.findIndex(o => o.id === offerId);
         if (oIdx === -1) return;
         let offer = incomingOffers[oIdx];
-        if (squad.length <= 11) { alert("❌ Transfer unzulässig: Dein Kader muss mindestens 11 Spieler umfassen!"); return; }
+        if (squad.length <= 11) { showToast('Transfer unzulässig: Der Kader muss mindestens 11 Spieler umfassen.', 'error', 4500); return; }
         let pIdx = squad.findIndex(p => p.id === offer.playerId);
-        if (pIdx === -1) { alert("Spieler befindet sich nicht mehr im Kader!"); incomingOffers.splice(oIdx, 1); renderTransferView(); return; }
+        if (pIdx === -1) { showToast('Dieser Spieler ist nicht mehr im Kader.', 'error', 4000); incomingOffers.splice(oIdx, 1); renderTransferView(); return; }
         if (!checkHighChemistryBeforeSale(squad[pIdx])) return;
         playSound('goal');
         let clausePercent = 15;
@@ -291,7 +330,7 @@
         lineup = lineup.filter(id => id !== offer.playerId);
         incomingOffers.splice(oIdx, 1);
         addManagerXP(120);
-        alert(`🤝 TRANSFER MIT WEITERVERKAUFSBETEILIGUNG!\n${offer.playerName} wechselt für ${formatVal(reducedBid)} zu ${offer.clubName} - dazu ${clausePercent}% von jedem künftigen Weiterverkauf.`);
+        showToast(`🤝 ${offer.playerName} wechselt für ${formatVal(reducedBid)} zu ${offer.clubName} - dazu ${clausePercent}% von jedem künftigen Weiterverkauf.`, 'success', 6000);
         updateUI();
         renderTransferView();
     }
@@ -580,7 +619,7 @@
     let pendingBiddingWarId = null;
     function buyPlayer(idx) {
         let p = marketPlayers[idx];
-        if (game.transferEmbargo) { alert("🚫 Transfersperre aktiv! Erst die Zahlungsfähigkeit wiederherstellen (siehe Finanzen)."); return; }
+        if (game.transferEmbargo) { showToast('🚫 Transfersperre aktiv - erst die Zahlungsfähigkeit wiederherstellen (siehe Finanzen).', 'error', 5000); return; }
         if (pendingBiddingWarId !== p.id && p.strength >= 65 && Math.random() < 0.15) {
             pendingBiddingWarId = p.id;
             let premium = Math.round(p.marketValue * 0.25);
@@ -592,10 +631,10 @@
         pendingBiddingWarId = null;
         let agentFee = getAgentFee(p, p.marketValue);
         let totalCost = p.marketValue + agentFee;
-        if (game.money < totalCost) { alert(`Nicht genug Geld auf dem Vereinskonto!${agentFee > 0 ? ` (inkl. ${formatVal(agentFee)} Beraterprovision)` : ''}`); return; }
-        if (game.transferBudget < p.marketValue) { alert("Transferbudget reicht nicht aus! Verhandle mit dem Vorstand oder verkaufe erst einen Spieler."); return; }
+        if (game.money < totalCost) { showToast(`Vereinskonto reicht nicht: ${formatVal(totalCost)} nötig${agentFee > 0 ? ` (inkl. ${formatVal(agentFee)} Beraterprovision)` : ''}, ${formatVal(game.money)} vorhanden.`, 'error', 5000); return; }
+        if (game.transferBudget < p.marketValue) { showToast(`Transferbudget reicht nicht: ${formatVal(p.marketValue)} nötig, ${formatVal(game.transferBudget)} verfügbar. Verhandle mit dem Vorstand oder verkaufe erst einen Spieler.`, 'error', 5500); return; }
         let totalWages = squad.reduce((s, pl) => s + pl.wage, 0) + (game.secondTeam.isActive ? secondTeamSquad.reduce((s, pl) => s + pl.wage, 0) : 0);
-        if (totalWages + p.wage > game.wageBudget) { alert("Gehaltsbudget reicht nicht aus für diesen Spieler!"); return; }
+        if (totalWages + p.wage > game.wageBudget) { showToast(`Gehaltsbudget reicht nicht: ${formatVal(totalWages + p.wage)} nach der Verpflichtung, erlaubt sind ${formatVal(game.wageBudget)}.`, 'error', 5000); return; }
         playSound('click');
         game.money -= totalCost;
         game.transferBudget -= p.marketValue;
@@ -613,7 +652,7 @@
     const CHARACTER_TOUGHNESS = { Ehrgeizig: 1.35, Selbstbewusst: 1.2, Emotional: 1.1, Hitzköpfig: 1.15, Ruhig: 0.9, Bescheiden: 0.75 };
     function signFreeAgent(idx) {
         let p = freeAgentPlayers[idx];
-        if (game.transferEmbargo) { alert("🚫 Transfersperre aktiv! Erst die Zahlungsfähigkeit wiederherstellen (siehe Finanzen)."); return; }
+        if (game.transferEmbargo) { showToast('🚫 Transfersperre aktiv - erst die Zahlungsfähigkeit wiederherstellen (siehe Finanzen).', 'error', 5000); return; }
         let toughness = CHARACTER_TOUGHNESS[p.character] || 1.0;
         // Zähe Verhandler (ehrgeizig/selbstbewusst) fordern mit einer gewissen Wahrscheinlichkeit
         // ein höheres Handgeld nach, statt das erste Angebot einfach zu akzeptieren.
@@ -628,9 +667,9 @@
             }
         }
         let finalFee = (pendingFreeAgentNegotiation && pendingFreeAgentNegotiation.playerId === p.id) ? pendingFreeAgentNegotiation.counterFee : p.signOnFee;
-        if (game.money < finalFee) { alert("Nicht genug Geld für das Handgeld!"); return; }
+        if (game.money < finalFee) { showToast(`Handgeld nicht gedeckt: ${formatVal(finalFee)} nötig, ${formatVal(game.money)} auf dem Konto.`, 'error', 4500); return; }
         let totalWages = squad.reduce((s, pl) => s + pl.wage, 0) + (game.secondTeam.isActive ? secondTeamSquad.reduce((s, pl) => s + pl.wage, 0) : 0);
-        if (totalWages + p.wage > game.wageBudget) { alert("Gehaltsbudget reicht nicht aus für diesen Spieler!"); return; }
+        if (totalWages + p.wage > game.wageBudget) { showToast(`Gehaltsbudget reicht nicht: ${formatVal(totalWages + p.wage)} nach der Verpflichtung, erlaubt sind ${formatVal(game.wageBudget)}.`, 'error', 5000); return; }
         playSound('click');
         game.money -= finalFee;
         squad.push(p);
@@ -667,7 +706,7 @@
 
     function sellPlayer(id, btn) {
         if (!requireConfirm(btn, 'Wirklich verkaufen?')) return;
-        if (squad.length <= 11) { alert("Kader darf nicht weniger als 11 Spieler umfassen!"); return; }
+        if (squad.length <= 11) { showToast('Der Kader darf nicht unter 11 Spieler fallen.', 'error', 4000); return; }
         let pCheck = squad.find(x => x.id === id);
         if (pCheck && !checkHighChemistryBeforeSale(pCheck)) return;
         playSound('click');

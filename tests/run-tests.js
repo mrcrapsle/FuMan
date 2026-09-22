@@ -1989,6 +1989,74 @@ async function testLeagueEconomy(browser) {
     await page.close();
 }
 
+async function testTransferMarket(browser) {
+    console.log('\n[27] Transfermarkt: Angebote in jeder Liga, sichtbare Rückmeldungen');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+
+        // 1. Auch ein Sechstligist bekommt Angebote fuer seine Leistungstraeger. Die alte
+        //    feste Untergrenze (Staerke 48) lag komplett ueber einem Amateurkader (26-44),
+        //    dort ging deshalb NIE ein Angebot ein.
+        let schnitt = squad.reduce((s, p) => s + p.strength, 0) / squad.length;
+        out.schwelleRelativ = getTransferInterestThreshold() <= Math.round(schnitt) + 2
+            && getTransferInterestThreshold() >= Math.round(schnitt) - 1;
+        out.kaderUnter48 = squad.every(p => p.strength < 48);
+
+        incomingOffers = [];
+        let gesehen = new Set();
+        for (let i = 0; i < 34; i++) {
+            checkIncomingTransferOffers();
+            incomingOffers.forEach(o => gesehen.add(o.id));
+        }
+        out.angeboteKommen = gesehen.size >= 5;
+
+        // 2. Die Angebotshoehe liegt in einem plausiblen Band um den Marktwert.
+        out.angeboteRealistisch = incomingOffers.every(o => o.currentBid >= o.marketValue * 0.5
+            && o.currentBid <= o.marketValue * 2.0);
+
+        // 3. Der Markt rotiert waehrend der Saison, bleibt aber gleich gross.
+        let vorher = marketPlayers.map(p => p.name).join('|');
+        let groesse = marketPlayers.length;
+        for (let i = 0; i < 25; i++) tickTransferMarketRotation();
+        out.marktRotiert = marketPlayers.map(p => p.name).join('|') !== vorher;
+        out.marktGroesseStabil = marketPlayers.length === groesse;
+
+        // 4. Keine nativen Dialoge mehr im Transferpfad - in manchen Android-WebViews
+        //    werden die unterdrueckt, der Klick bliebe dann kommentarlos wirkungslos.
+        out.keineNativenDialoge = [buyPlayer, sellPlayer, signFreeAgent, signLoanPlayer,
+            acceptTransferOffer, exerciseLoanBuyOption]
+            .every(f => !/(^|[^.\w])alert\s*\(/.test(f.toString()));
+
+        // 5. Ein gescheiterter Kauf erklaert sich jetzt sichtbar.
+        game.money = 0;
+        game.transferBudget = 99999999;
+        game.wageBudget = 99999999;
+        let kaderVorher = squad.length;
+        let toast = document.getElementById('app-toast');
+        toast.className = 'app-toast';
+        toast.innerText = '';
+        buyPlayer(0);
+        out.kaufScheitertSichtbar = squad.length === kaderVorher
+            && toast.classList.contains('show')
+            && toast.innerText.length > 10;
+        return out;
+    });
+
+    assert(r.kaderUnter48, 'Ein Sechstliga-Kader liegt komplett unter der alten Interessensschwelle');
+    assert(r.schwelleRelativ, 'Die Interessensschwelle richtet sich nach dem eigenen Kader statt nach einer festen Zahl');
+    assert(r.angeboteKommen, 'Auch in der untersten Liga gehen Transferangebote ein');
+    assert(r.angeboteRealistisch, 'Die Angebotshöhe liegt in einem plausiblen Band um den Marktwert');
+    assert(r.marktRotiert, 'Der Transfermarkt rotiert während der Saison');
+    assert(r.marktGroesseStabil, 'Die Größe der Marktliste bleibt dabei gleich');
+    assert(r.keineNativenDialoge, 'Der Transferpfad nutzt keine nativen Dialoge mehr');
+    assert(r.kaufScheitertSichtbar, 'Ein gescheiterter Kauf erklärt sich sichtbar statt kommentarlos');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler im Transfermarkt');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -2034,6 +2102,7 @@ async function main() {
         testEconomyBalance,
         testSecondTeamAndTrainingAutomation,
         testLeagueEconomy,
+        testTransferMarket,
     ];
 
     for (const suite of suites) {
