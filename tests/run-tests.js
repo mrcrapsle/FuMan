@@ -2478,6 +2478,52 @@ async function testEuropeanCup(browser) {
     await page.close();
 }
 
+async function testLoadingGuard(browser) {
+    console.log('\n[32] Ladeanzeige: keine Klicks vor dem fertigen Start');
+
+    // Aus einem echten Fehlerprotokoll vom Live-Spiel:
+    //   "Uncaught ReferenceError: showScreen is not defined"
+    // Die Seite bringt ueber ein Megabyte Code inline mit. Bis der geparst war, war das
+    // Dashboard bereits sichtbar UND bedienbar - als einziger Screen ohne display:none.
+    // Ein Tippen in diesem Fenster rief eine Funktion auf, die es noch gar nicht gab.
+    // Mit abgeschaltetem JavaScript ist exakt dieser Zustand nachgestellt.
+    const ctx = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 430, height: 880 } });
+    const page = await ctx.newPage();
+    await page.goto(GAME_PATH);
+    await page.waitForTimeout(200);
+
+    const ladeEbene = await page.$('#app-loading');
+    assert(!!ladeEbene, 'Vor dem Start liegt eine Ladeanzeige über der Seite');
+
+    const box = ladeEbene ? await ladeEbene.boundingBox() : null;
+    assert(!!box && box.width >= 430 && box.height >= 880, 'Die Ladeanzeige deckt das gesamte Ansichtsfenster ab');
+
+    const knopf = await page.$('#screen-dashboard button');
+    assert(!!knopf, 'Der Dashboard-Knopf existiert im Markup (er war der Auslöser)');
+    let erreichbar = false;
+    try { await knopf.click({ timeout: 1200 }); erreichbar = true; } catch (e) { erreichbar = false; }
+    assert(!erreichbar, 'Vor dem fertigen Start ist kein Knopf anklickbar');
+    await ctx.close();
+
+    // Nach dem Laden muss die Ebene restlos verschwinden - sonst waere das Spiel darunter
+    // zwar geladen, aber unbedienbar.
+    const { page: page2, consoleErrors } = await freshPage(browser);
+    const nach = await page2.evaluate(() => ({
+        weg: !document.getElementById('app-loading'),
+        officeSichtbar: document.getElementById('screen-office').style.display !== 'none'
+    }));
+    assert(nach.weg, 'Nach dem Start ist die Ladeanzeige restlos entfernt');
+    assert(nach.officeSichtbar, 'Nach dem Start ist das Managerbüro sichtbar');
+
+    // Und das Entfernen haengt an einem finally: auch ein gescheiterter Start darf die
+    // Ebene nicht liegen lassen.
+    const quelle = await page2.evaluate(() => (window.onload || function () {}).toString());
+    assert(/finally/.test(quelle) && /app-loading/.test(quelle),
+        'Die Ladeanzeige wird in einem finally entfernt, also auf jedem Weg');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Start');
+    await page2.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -2528,6 +2574,7 @@ async function main() {
         testOfficeEvents,
         testNoNativeDialogs,
         testEuropeanCup,
+        testLoadingGuard,
     ];
 
     for (const suite of suites) {

@@ -76,6 +76,18 @@
         };
     })();
 </script>
+<!-- Ladeanzeige: Die Seite ist ueber ein Megabyte gross und bringt ihren gesamten Code
+     inline mit. Bis der geparst ist, war bisher bereits das Dashboard sichtbar UND
+     bedienbar - als einziger Screen ohne display:none. Wer in diesem Fenster auf einen
+     Knopf tippte, loeste "showScreen is not defined" aus (aus einem echten Fehlerprotokoll
+     vom Live-Spiel). Diese Ebene deckt alles ab, bis window.onload fertig ist. -->
+<div id="app-loading" class="app-loading">
+    <div class="app-loading-inner">
+        <div class="app-loading-ball">⚽</div>
+        <div class="app-loading-title">Anstoss Mobile Pro</div>
+        <div class="app-loading-sub">Spiel wird geladen …</div>
+    </div>
+</div>
 <div class="app-notice-overlay" id="app-notice" style="display:none;"></div>
 <div id="app-toast" class="app-toast"></div>
 <div id="tutorial-overlay" class="tutorial-overlay">
@@ -2350,8 +2362,21 @@
                 showScreen('screen-dashboard');
             } catch (fallbackError) {
                 console.error('Auch Fallback-Boot fehlgeschlagen:', fallbackError);
-                alert('Technischer Fehler beim Start: ' + (fallbackError.message || bootError.message || 'Unbekannt'));
+                // Letzte Instanz: hier kann showToast/showNotice selbst kaputt sein, deshalb
+                // wird die Meldung direkt in die Ladeebene geschrieben - alert() waere in
+                // genau den WebViews unsichtbar, in denen dieser Fall am ehesten eintritt.
+                let ladeEbene = document.getElementById('app-loading');
+                if (ladeEbene) {
+                    ladeEbene.innerHTML = '<div class="app-loading-inner"><div class="app-loading-title">Technischer Fehler beim Start</div>'
+                        + '<div class="app-loading-sub">' + ((fallbackError && fallbackError.message) || (bootError && bootError.message) || 'Unbekannt') + '</div></div>';
+                    return;
+                }
             }
+        } finally {
+            // Die Ladeebene verschwindet auf JEDEM Weg - bliebe sie liegen, waere das Spiel
+            // darunter zwar geladen, aber nicht bedienbar.
+            let ladeEbene = document.getElementById('app-loading');
+            if (ladeEbene && ladeEbene.parentNode) ladeEbene.parentNode.removeChild(ladeEbene);
         }
     };
 </script>

@@ -121,6 +121,26 @@ seinem Mittelpunkt korrekt aufgelöst wird, und klickt per Koordinate
 (`mouse.click`) statt per Selektor - `page.click(selektor)` prüft intern
 ebenfalls die native Trefferfläche.
 
+## Start der Seite: die Ladeanzeige
+
+Die fertige Datei ist über ein Megabyte groß und bringt ihren gesamten Code
+inline mit. Bis der geparst ist, vergeht auf dem Handy spürbar Zeit - und in
+diesem Fenster war das Dashboard bereits sichtbar UND bedienbar, denn es war
+der einzige Screen ohne `display:none` im Markup. Wer dort tippte, rief eine
+Funktion auf, die es noch nicht gab (`showScreen is not defined`, aus einem
+echten Fehlerprotokoll vom Live-Spiel).
+
+`#app-loading` liegt deshalb von Anfang an über allem und wird am Ende von
+`window.onload` in einem **`finally`** entfernt - auf jedem Weg, auch wenn der
+Start scheitert, sonst wäre das Spiel darunter geladen, aber unbedienbar.
+Scheitert selbst der Fallback-Boot, wird die Fehlermeldung in die Ladeebene
+geschrieben statt per `alert()` (das wäre in genau den WebViews unsichtbar, in
+denen dieser Fall am ehesten eintritt).
+
+Der Test dazu lädt die Seite mit **abgeschaltetem JavaScript** - das ist exakt
+der Zustand vor dem Ausführen der Skripte - und prüft, dass kein Knopf
+anklickbar ist.
+
 ## Rückmeldungen an den Spieler: keine nativen Dialoge
 
 **Tragende Projektregel, durch einen Test abgesichert:** Im ausführbaren Code
