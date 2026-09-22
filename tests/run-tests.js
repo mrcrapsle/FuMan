@@ -1989,7 +1989,7 @@ async function testLeagueEconomy(browser) {
     await page.close();
 }
 
-async function testTransferMarket(browser) {
+async function testTransferMarketFairness(browser) {
     console.log('\n[27] Transfermarkt: Angebote in jeder Liga, sichtbare Rückmeldungen');
     const { page, consoleErrors } = await freshPage(browser);
     page.on('dialog', d => d.accept());
@@ -2057,6 +2057,100 @@ async function testTransferMarket(browser) {
     await page.close();
 }
 
+async function testSecondTeamFriendlies(browser) {
+    console.log('\n[28] Zweite Mannschaft: Freundschafts- und Testspiele');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+        managerRPG.level = 5;
+        game.money = 5000000;
+        foundSecondTeam();
+        secondTeamSquad.forEach(p => { p.age = 20; });
+        showScreen('screen-second-team');
+
+        // 1. Freundschaftsspiel: echter Gegner aus der Liga der Reserve, echtes Ergebnis,
+        //    Eintrittsgelder ueber den Organisationskosten.
+        let geldVor = game.money;
+        scheduleReserveFriendly();
+        let eintrag = game.secondTeamMatchLog[game.secondTeamMatchLog.length - 1];
+        out.freundschaftGespielt = !!eintrag && eintrag.art === 'freundschaft';
+        out.echterGegner = !!eintrag && (leaguesData[game.secondTeam.leagueLevel] || []).some(t => t.name === eintrag.gegner);
+        out.ergebnisVorhanden = !!eintrag && /^\d+:\d+$/.test(eintrag.ergebnis);
+        out.ueberschuss = game.money > geldVor;
+        out.saldoStimmt = Math.round(game.money - geldVor) === eintrag.saldo;
+
+        // 2. Sperrfrist: kein Dauerfeuer.
+        out.sperreGesetzt = getReserveFriendlyCooldownLeft() > 0;
+        let geldVor2 = game.money;
+        scheduleReserveFriendly();
+        out.zweiterVersuchPrallt = game.money === geldVor2 && game.secondTeamMatchLog.length === 1;
+
+        // 3. Internes Testspiel: kein Geld, dafuer Kraft und Entwicklung.
+        let fitErsteVor = squad.reduce((s, p) => s + p.fitness, 0) / squad.length;
+        let geldVor3 = game.money;
+        let staerkeVor = secondTeamSquad.reduce((s, p) => s + p.strength, 0);
+        scheduleInternalTestMatch();
+        let intern = game.secondTeamMatchLog[game.secondTeamMatchLog.length - 1];
+        out.internGespielt = !!intern && intern.art === 'intern';
+        out.internOhneGeld = game.money === geldVor3 && intern.saldo === 0;
+        out.internKostetKraft = squad.reduce((s, p) => s + p.fitness, 0) / squad.length < fitErsteVor;
+        out.internEntwickelt = secondTeamSquad.reduce((s, p) => s + p.strength, 0) >= staerkeVor;
+        out.internSperre = getInternalTestCooldownLeft() > 0;
+
+        // 4. Spielpraxis wirkt bei jungen Spielern - dafuer ist eine Reserve da.
+        secondTeamSquad.forEach(p => { p.age = 33; });
+        let alteStaerke = secondTeamSquad.reduce((s, p) => s + p.strength, 0);
+        for (let i = 0; i < 40; i++) applyReserveMatchExperience(0.5);
+        out.alteSpielerLernenNicht = secondTeamSquad.reduce((s, p) => s + p.strength, 0) === alteStaerke;
+        secondTeamSquad.forEach(p => { p.age = 20; });
+        let jungeStaerke = secondTeamSquad.reduce((s, p) => s + p.strength, 0);
+        for (let i = 0; i < 5; i++) applyReserveMatchExperience(0.5);
+        out.jungeSpielerLernen = secondTeamSquad.reduce((s, p) => s + p.strength, 0) > jungeStaerke;
+
+        // 5. Ohne zweite Mannschaft passiert gar nichts.
+        game.secondTeam.isActive = false;
+        let geldVor4 = game.money;
+        let logVor = game.secondTeamMatchLog.length;
+        scheduleReserveFriendly();
+        scheduleInternalTestMatch();
+        out.ohneReserveKeineSpiele = game.money === geldVor4 && game.secondTeamMatchLog.length === logVor;
+        game.secondTeam.isActive = true;
+
+        // 6. Das Protokoll ueberlebt Speichern und Laden.
+        saveGameToSlot(3);
+        let logLaenge = game.secondTeamMatchLog.length;
+        game.secondTeamMatchLog = [];
+        loadGameFromSlot(3, true);
+        out.protokollUeberlebtLaden = game.secondTeamMatchLog.length === logLaenge;
+
+        showScreen('screen-second-team');
+        out.oberflaecheZeigtSpiele = document.getElementById('second-team-friendly-box').innerHTML.includes('Freundschaftsspiel');
+        return out;
+    });
+
+    assert(r.freundschaftGespielt, 'Ein Freundschaftsspiel der Reserve lässt sich vereinbaren');
+    assert(r.echterGegner, 'Der Gegner stammt aus der echten Liga der zweiten Mannschaft');
+    assert(r.ergebnisVorhanden, 'Das Freundschaftsspiel hat ein echtes Ergebnis');
+    assert(r.ueberschuss, 'Eintrittsgelder übersteigen die Organisationskosten');
+    assert(r.saldoStimmt, 'Der protokollierte Saldo stimmt mit der Kontobewegung überein');
+    assert(r.sperreGesetzt, 'Nach einem Freundschaftsspiel greift eine Sperrfrist');
+    assert(r.zweiterVersuchPrallt, 'Während der Sperrfrist passiert nichts und es kostet nichts');
+    assert(r.internGespielt, 'Das interne Testspiel gegen die Erste lässt sich ansetzen');
+    assert(r.internOhneGeld, 'Das interne Testspiel bringt bewusst kein Geld');
+    assert(r.internKostetKraft, 'Das interne Testspiel kostet auch die erste Mannschaft Kraft');
+    assert(r.internEntwickelt, 'Das interne Testspiel entwickelt die Reserve weiter');
+    assert(r.internSperre, 'Auch das interne Testspiel hat eine eigene Sperrfrist');
+    assert(r.alteSpielerLernenNicht, 'Routiniers profitieren nicht mehr von Spielpraxis');
+    assert(r.jungeSpielerLernen, 'Junge Spieler entwickeln sich durch Spielpraxis weiter');
+    assert(r.ohneReserveKeineSpiele, 'Ohne gegründete zweite Mannschaft passiert nichts');
+    assert(r.protokollUeberlebtLaden, 'Das Spielprotokoll überlebt Speichern und Laden');
+    assert(r.oberflaecheZeigtSpiele, 'Der Reserve-Screen zeigt die Spielarten an');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei den Reserve-Spielen');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -2102,7 +2196,8 @@ async function main() {
         testEconomyBalance,
         testSecondTeamAndTrainingAutomation,
         testLeagueEconomy,
-        testTransferMarket,
+        testTransferMarketFairness,
+        testSecondTeamFriendlies,
     ];
 
     for (const suite of suites) {

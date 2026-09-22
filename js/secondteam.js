@@ -471,6 +471,7 @@
         activeBox.style.display = 'block';
         renderPerspectivePlayersBox();
         renderSecondTeamStaffBox();
+        renderSecondTeamFriendlyBox();
         renderSecondTeamDevelopmentReport();
         let rivalBox = document.getElementById('second-team-rival-box');
         if (rivalBox) {
@@ -751,5 +752,169 @@
         box.innerHTML = `${zeilen}
             ${log.length > 0 ? `<div style="margin-top:6px; border-top:1px solid #1e293b; padding-top:4px;">
                 ${log.map(l => `<div style="font-size:9px; color:#94a3b8;">ST ${l.matchday}: ${l.text}</div>`).join('')}
+            </div>` : ''}`;
+    }
+
+    // ==========================================
+    // FREUNDSCHAFTSSPIELE DER ZWEITEN MANNSCHAFT
+    // ==========================================
+    // Zwischen den Ligaspieltagen passierte bei der Reserve bisher nichts, was man als
+    // Manager aktiv anstoßen konnte. Zwei Spielarten mit unterschiedlichem Zweck:
+    // ein Freundschaftsspiel gegen einen echten Verein aus ihrer Liga (bringt Geld und
+    // Spielpraxis) und das vereinsinterne Testspiel gegen die erste Mannschaft (bringt
+    // kein Geld, dafür Erkenntnisse über die eigenen Talente).
+    const RESERVE_FRIENDLY_COOLDOWN = 4;
+    const INTERNAL_TEST_COOLDOWN = 6;
+
+    function getReserveFriendlyCooldownLeft() {
+        let letzter = game.secondTeam.lastFriendlyMatchday;
+        if (typeof letzter !== 'number') return 0;
+        return Math.max(0, RESERVE_FRIENDLY_COOLDOWN - (game.matchday - letzter));
+    }
+    function getInternalTestCooldownLeft() {
+        let letzter = game.secondTeam.lastInternalTestMatchday;
+        if (typeof letzter !== 'number') return 0;
+        return Math.max(0, INTERNAL_TEST_COOLDOWN - (game.matchday - letzter));
+    }
+
+    function pushSecondTeamMatchLog(eintrag) {
+        if (!Array.isArray(game.secondTeamMatchLog)) game.secondTeamMatchLog = [];
+        game.secondTeamMatchLog.push({ season: game.season, matchday: game.matchday, ...eintrag });
+        if (game.secondTeamMatchLog.length > 15) game.secondTeamMatchLog.shift();
+    }
+
+    // Spielpraxis wirkt bei jungen Spielern am stärksten - genau dafür ist eine zweite
+    // Mannschaft da. Der Nachwuchs-Koordinator verstärkt den Effekt zusätzlich.
+    function applyReserveMatchExperience(chanceProSpieler) {
+        let entwickelt = [];
+        secondTeamSquad.forEach(p => {
+            let alter = p.age || 30;
+            if (alter > 25) return;
+            let chance = chanceProSpieler * (alter <= 21 ? 1.5 : 1);
+            if (secondTeamStaff.nachwuchsKoordinator.hired) chance *= 1.6;
+            if (Math.random() < chance) {
+                p.strength = Math.min(99, p.strength + 1);
+                p.marketValue = calculatePlayerMarketValue(p.strength);
+                entwickelt.push(p.name);
+            }
+        });
+        return entwickelt;
+    }
+
+    function scheduleReserveFriendly() {
+        if (!game.secondTeam.isActive) { showToast('Dafür muss erst eine zweite Mannschaft gegründet sein.', 'error', 4000); return; }
+        let rest = getReserveFriendlyCooldownLeft();
+        if (rest > 0) { showToast(`Die Mannschaft braucht Erholung - nächstes Freundschaftsspiel in ${rest} Spieltagen möglich.`, 'error', 4500); return; }
+
+        // Gegner kommt aus der echten Liga der Reserve, nicht aus einem Fantasienamen.
+        let liga = leaguesData[game.secondTeam.leagueLevel] || [];
+        let moeglich = liga.filter(t => t.name !== game.secondTeam.name && t.name !== game.clubName);
+        let gegner = moeglich.length > 0 ? moeglich[Math.floor(Math.random() * moeglich.length)] : null;
+        if (!gegner) { showToast('Aktuell ist kein Gegner für ein Freundschaftsspiel verfügbar.', 'error', 4000); return; }
+
+        // Organisationskosten (Schiedsrichter, Ordner, Platzmiete) gegen Eintrittsgelder.
+        let kosten = Math.max(300, Math.round(800 * (NUM_LEAGUES - game.secondTeam.leagueLevel)));
+        if (game.money < kosten) {
+            showToast(`Organisationskosten nicht gedeckt: ${formatVal(kosten)} nötig, ${formatVal(game.money)} auf dem Konto.`, 'error', 4500);
+            return;
+        }
+        playSound('whistle');
+        let einnahmen = Math.round((kosten * 1.6) + Math.random() * kosten);
+        game.money += einnahmen - kosten;
+        game.secondTeam.lastFriendlyMatchday = game.matchday;
+
+        let unsereStaerke = calcSecondTeamStrength();
+        let tore = simulateGoals(unsereStaerke + 2, gegner.strength); // leichter Heimvorteil
+        secondTeamSquad.forEach(p => {
+            p.fitness = Math.max(50, Math.min(100, (p.fitness || 100) - 3));
+            p.morale = Math.min(100, (p.morale || 70) + (tore.myGoals > tore.oppGoals ? 4 : 1));
+        });
+        let entwickelt = applyReserveMatchExperience(0.12);
+
+        pushSecondTeamMatchLog({
+            art: 'freundschaft', gegner: gegner.name,
+            ergebnis: `${tore.myGoals}:${tore.oppGoals}`,
+            saldo: einnahmen - kosten, entwickelt
+        });
+        addInboxMessage('vertrag', `🤝 Freundschaftsspiel: ${game.secondTeam.name} ${tore.myGoals}:${tore.oppGoals} ${gegner.name}`,
+            `Eintrittsgelder ${formatVal(einnahmen)} abzüglich ${formatVal(kosten)} Organisationskosten.`
+            + (entwickelt.length > 0 ? ` Spielpraxis hat sich ausgezahlt: ${entwickelt.join(', ')} ${entwickelt.length === 1 ? 'hat' : 'haben'} sich verbessert.` : ''),
+            'screen-second-team');
+        showToast(`🤝 ${tore.myGoals}:${tore.oppGoals} gegen ${gegner.name} - ${formatVal(einnahmen - kosten)} Überschuss.`, 'success', 5000);
+        renderSecondTeamView();
+        updateUI();
+    }
+
+    // Vereinsinternes Testspiel: bringt bewusst kein Geld. Sein Wert liegt darin, dass sich
+    // Reservisten gegen echtes Profi-Niveau empfehlen können - wer gegen die Erste besteht,
+    // entwickelt sich spürbar. Dafür kostet es beide Mannschaften Kraft.
+    function scheduleInternalTestMatch() {
+        if (!game.secondTeam.isActive) { showToast('Dafür muss erst eine zweite Mannschaft gegründet sein.', 'error', 4000); return; }
+        let rest = getInternalTestCooldownLeft();
+        if (rest > 0) { showToast(`Der Profikader ist noch im Spielrhythmus - nächstes internes Testspiel in ${rest} Spieltagen.`, 'error', 4500); return; }
+        playSound('whistle');
+        game.secondTeam.lastInternalTestMatchday = game.matchday;
+
+        let ersteStaerke = (typeof calcTeamStrength === 'function') ? calcTeamStrength(true) : 50;
+        let zweiteStaerke = calcSecondTeamStrength();
+        let tore = simulateGoals(zweiteStaerke, ersteStaerke);
+        let reserveGewinnt = tore.myGoals > tore.oppGoals;
+        let reserveHaeltMit = tore.myGoals >= tore.oppGoals - 1;
+
+        // Beide Mannschaften verlieren Kraft, die Erste weniger (sie dosiert).
+        squad.forEach(p => { p.fitness = Math.max(40, (p.fitness || 100) - 4); });
+        secondTeamSquad.forEach(p => { p.fitness = Math.max(50, (p.fitness || 100) - 6); });
+
+        // Wer gegen Profi-Niveau besteht, lernt am meisten.
+        let entwickelt = applyReserveMatchExperience(reserveGewinnt ? 0.30 : (reserveHaeltMit ? 0.20 : 0.10));
+
+        // Ein Ausrutscher gegen die eigene Reserve geht dem Profikader an die Moral.
+        if (reserveGewinnt) squad.forEach(p => { p.morale = Math.max(10, (p.morale || 70) - 5); });
+        else squad.forEach(p => { p.morale = Math.min(100, (p.morale || 70) + 2); });
+
+        pushSecondTeamMatchLog({
+            art: 'intern', gegner: game.clubName,
+            ergebnis: `${tore.myGoals}:${tore.oppGoals}`, saldo: 0, entwickelt
+        });
+        addInboxMessage('vertrag', `⚔️ Internes Testspiel: ${game.secondTeam.name} ${tore.myGoals}:${tore.oppGoals} ${game.clubName}`,
+            reserveGewinnt
+                ? `Die Reserve schlägt die Profis! In der Kabine der ersten Mannschaft herrscht Katerstimmung - für den Nachwuchs ist es ein Ritterschlag.`
+                : (reserveHaeltMit
+                    ? `Ein achtbares Ergebnis der Reserve gegen die Profis - mehrere Talente haben sich empfohlen.`
+                    : `Die erste Mannschaft war eine Nummer zu groß, aber der Nachwuchs hat wertvolle Erfahrung gesammelt.`)
+            + (entwickelt.length > 0 ? ` Verbessert: ${entwickelt.join(', ')}.` : ''),
+            'screen-second-team');
+        showToast(`⚔️ Internes Testspiel ${tore.myGoals}:${tore.oppGoals}${entwickelt.length > 0 ? ` - ${entwickelt.length} Talent(e) verbessert!` : ''}`, reserveGewinnt ? 'success' : '', 5500);
+        renderSecondTeamView();
+        updateUI();
+    }
+
+    function renderSecondTeamFriendlyBox() {
+        let box = document.getElementById('second-team-friendly-box');
+        if (!box) return;
+        let restF = getReserveFriendlyCooldownLeft();
+        let restI = getInternalTestCooldownLeft();
+        let kosten = Math.max(300, Math.round(800 * (NUM_LEAGUES - game.secondTeam.leagueLevel)));
+        let log = (game.secondTeamMatchLog || []).slice(-5).reverse();
+        box.innerHTML = `
+            <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">
+                Spielpraxis zwischen den Ligaspieltagen. Junge Spieler entwickeln sich dabei am stärksten -
+                mit Nachwuchs-Koordinator noch deutlicher.
+            </div>
+            <button onclick="scheduleReserveFriendly()" class="${restF > 0 ? 'btn-secondary' : 'btn-action'}" style="font-size:10px; margin-bottom:4px;">
+                🤝 Freundschaftsspiel vereinbaren [${formatVal(kosten)} Organisation]${restF > 0 ? ` - noch ${restF} SpT gesperrt` : ''}
+            </button>
+            <button onclick="scheduleInternalTestMatch()" class="${restI > 0 ? 'btn-secondary' : 'btn-action'}" style="font-size:10px;">
+                ⚔️ Internes Testspiel gegen die Erste${restI > 0 ? ` - noch ${restI} SpT gesperrt` : ''}
+            </button>
+            <div style="font-size:9px; color:var(--text-muted); margin-top:4px;">
+                Das interne Testspiel bringt kein Geld, kostet beide Mannschaften Kraft - dafür lernen die Talente am meisten.
+            </div>
+            ${log.length > 0 ? `<div class="box" style="margin-top:6px;">
+                <strong style="font-size:10px;">LETZTE SPIELE</strong>
+                ${log.map(e => `<div style="display:flex; justify-content:space-between; font-size:9px; margin-top:2px;">
+                    <span>${e.art === 'intern' ? '⚔️' : '🤝'} ST ${e.matchday} vs. ${e.gegner}</span>
+                    <span><strong>${e.ergebnis}</strong>${e.saldo !== 0 ? ` · <span style="color:${e.saldo > 0 ? 'var(--primary)' : 'var(--danger)'};">${e.saldo > 0 ? '+' : ''}${formatVal(e.saldo)}</span>` : ''}${e.entwickelt && e.entwickelt.length ? ` · <span style="color:var(--primary);">+${e.entwickelt.length} 🌱</span>` : ''}</span>
+                </div>`).join('')}
             </div>` : ''}`;
     }
