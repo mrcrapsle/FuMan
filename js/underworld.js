@@ -41,10 +41,10 @@
 
     function buyUnderworldAction(type, cost, press) {
         if (underworld.activeSabotages[type]) {
-            alert("Diese schmutzige Aktion läuft bereits für das nächste Spiel!");
+            showToast('Diese Aktion läuft bereits für das nächste Spiel.', 'error', 4000);
             return;
         }
-        if (game.money < cost) { alert("Nicht genügend Schwarzgeld auf dem Vereinskonto!"); return; }
+        if (game.money < cost) { showToast(`Nicht genug Schwarzgeld: ${formatVal(cost)} nötig, ${formatVal(game.money)} vorhanden.`, 'error', 4500); return; }
         playSound('whistle');
         game.money -= cost;
         underworld.activeSabotages[type] = true;
@@ -53,17 +53,17 @@
         renderUnderworldView();
         updateUI();
         let dangerNote = underworld.pressure >= 70 ? "\n⚠️ WARNUNG: Der Ermittlungsdruck ist alarmierend hoch. Eine Razzia steht kurz bevor!" : "";
-        alert(`🕵️ Im Schatten der Nacht wurde die Operation eingefädelt.\nSie wirkt im nächsten Pflichtspiel. Ermittlungsdruck: ${underworld.pressure}%.${dangerNote}`);
+        showNotice('🕵️ Operation eingefädelt', `Im Schatten der Nacht wurde alles vorbereitet. Die Sache wirkt im nächsten Pflichtspiel.\n\nErmittlungsdruck: ${underworld.pressure}%.${dangerNote}`, { typ: 'warn' });
     }
 
     function hireUnderworldLawyer() {
-        if (game.money < 20000) { alert("20.000 € Schweigegeld für Dr. Gauner benötigt!"); return; }
+        if (game.money < 20000) { showToast(`Dr. Gauner verlangt 20.000 € Schweigegeld - vorhanden sind ${formatVal(game.money)}.`, 'error', 4500); return; }
         playSound('click');
         game.money -= 20000;
         underworld.pressure = Math.max(0, underworld.pressure - 40);
         renderUnderworldView();
         updateUI();
-        alert("🛡️ Dr. Gauner hat unter fragwürdigen Umständen Beweise verschwinden lassen. Ermittlungsdruck um 40% gesenkt — für den Moment.");
+        showNotice('🛡️ Beweise verschwunden', 'Dr. Gauner hat unter fragwürdigen Umständen Beweise verschwinden lassen. Der Ermittlungsdruck sinkt um 40 Prozentpunkte - für den Moment.', { typ: 'warn' });
     }
 
     // ---------- NEUE UNTERWELT-AKTIONEN ----------
@@ -74,29 +74,29 @@
     // zufällig, da die Infos direkt "besorgt" wurden.
     function buyUnderworldSpyIntel() {
         let cost = 15000;
-        if (underworld.spyIntelActive) { alert("Die Spionage-Infos für das nächste Spiel liegen bereits vor!"); return; }
-        if (game.money < cost) { alert(`${formatVal(cost)} für den Informanten benötigt!`); return; }
+        if (underworld.spyIntelActive) { showToast('Die Spionage-Infos für das nächste Spiel liegen bereits vor.', 'error', 4000); return; }
+        if (game.money < cost) { showToast(`Der Informant verlangt ${formatVal(cost)} - vorhanden sind ${formatVal(game.money)}.`, 'error', 4500); return; }
         playSound('whistle');
         game.money -= cost;
         underworld.spyIntelActive = true;
         underworld.pressure = Math.min(100, underworld.pressure + 8);
         renderUnderworldView();
         updateUI();
-        alert(`🕵️ Ein Informant im gegnerischen Verein liefert exklusive Insider-Details fürs nächste Spiel!\nDie Videoanalyse vorm Anpfiff wird dadurch besonders präzise ausfallen. Ermittlungsdruck: ${underworld.pressure}%.`);
+        showNotice('🕵️ Informant angeworben', `Ein Informant im gegnerischen Verein liefert exklusive Details fürs nächste Spiel - die Videoanalyse vor dem Anpfiff fällt dadurch besonders präzise aus.\n\nErmittlungsdruck: ${underworld.pressure}%.`, { typ: 'warn' });
     }
 
     // Schweigegeld direkt zahlen: gezielte Schadensbegrenzung, wenn eine bestimmte
     // Enthüllung droht - günstiger als der Anwalt, dafür mit geringerer Wirkung.
     function payUnderworldHushMoney() {
         let cost = 8000;
-        if (game.money < cost) { alert(`${formatVal(cost)} Schweigegeld benötigt!`); return; }
-        if (underworld.pressure <= 0) { alert("Aktuell besteht kein Ermittlungsdruck, der sich lohnt zu besänftigen."); return; }
+        if (game.money < cost) { showToast(`Schweigegeld nicht gedeckt: ${formatVal(cost)} nötig, ${formatVal(game.money)} vorhanden.`, 'error', 4500); return; }
+        if (underworld.pressure <= 0) { showToast('Aktuell besteht kein Ermittlungsdruck, den es zu besänftigen lohnt.', 'error', 4000); return; }
         playSound('click');
         game.money -= cost;
         underworld.pressure = Math.max(0, underworld.pressure - 15);
         renderUnderworldView();
         updateUI();
-        alert(`🤫 Ein diskretes Kuvert wechselt den Besitzer - der Ermittlungsdruck sinkt leicht auf ${underworld.pressure}%.`);
+        showToast(`🤫 Ein diskretes Kuvert wechselt den Besitzer - der Ermittlungsdruck sinkt auf ${underworld.pressure}%.`, 'success', 5000);
     }
 
     // Insider-Wett-Coup: über Unterwelt-Kanäle wird heimlich auf den eigenen Sieg im
@@ -107,15 +107,15 @@
     function placeUnderworldInsiderBet() {
         let scale = typeof leagueScaleFactor === 'function' ? leagueScaleFactor() : 1;
         let stake = Math.round(10000 * scale * 4 / 1000) * 1000;
-        if (underworld.insiderBetActive) { alert("Für das nächste Spiel liegt bereits eine Insider-Wette vor!"); return; }
-        if (game.money < stake) { alert(`${formatVal(stake)} Einsatz benötigt!`); return; }
+        if (underworld.insiderBetActive) { showToast('Für das nächste Spiel liegt bereits eine Insider-Wette vor.', 'error', 4000); return; }
+        if (game.money < stake) { showToast(`Einsatz nicht gedeckt: ${formatVal(stake)} nötig, ${formatVal(game.money)} vorhanden.`, 'error', 4500); return; }
         playSound('click');
         game.money -= stake;
         underworld.insiderBetActive = true;
         underworld.insiderBetStake = stake;
         renderUnderworldView();
         updateUI();
-        alert(`💰 ${formatVal(stake)} sind heimlich auf den eigenen Sieg im nächsten Spiel gesetzt - bei einem Sieg gibt's die dreifache Summe zurück, ganz ohne zusätzliches Entdeckungsrisiko.`);
+        showNotice('💰 Insider-Wette platziert', `${formatVal(stake)} sind heimlich auf den eigenen Sieg im nächsten Spiel gesetzt.\n\nBei einem Sieg kommt die dreifache Summe zurück - ohne zusätzliches Entdeckungsrisiko.`, { typ: 'warn' });
     }
 
     // Löst die Insider-Wette nach dem Spiel auf - wird aus applyMatchdayFinances() (match.js)

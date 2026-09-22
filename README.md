@@ -121,6 +121,27 @@ seinem Mittelpunkt korrekt aufgelöst wird, und klickt per Koordinate
 (`mouse.click`) statt per Selektor - `page.click(selektor)` prüft intern
 ebenfalls die native Trefferfläche.
 
+## Rückmeldungen an den Spieler: keine nativen Dialoge
+
+**Tragende Projektregel, durch einen Test abgesichert:** Im ausführbaren Code
+steht kein `alert()` und kein `confirm()` mehr. Native Dialoge werden in
+manchen Android-WebViews unterdrückt - der Klick bleibt dann kommentarlos
+wirkungslos, und genau das hat sich mehrfach als Fehlerursache herausgestellt
+(Fabrikbau, Transfers). Drei Wege stehen zur Verfügung:
+
+* `showToast(text, typ, dauer)` - kurze Rückmeldung, vor allem Fehlermeldungen.
+  Die nennen konkrete Zahlen ("250.000 € nötig, 80.000 € verfügbar") statt nur
+  "reicht nicht aus".
+* `showNotice(titel, text, {typ, knopf, danach})` (`js/utils.js`) - ein
+  Meldungsfenster in der Seite für WICHTIGE Ereignisse (Aufstieg, Abstieg,
+  Entlassung, Skandale, Pokalsieg). Anders als `alert()` blockiert es nicht,
+  deshalb sammelt es mehrere Meldungen in einer Schlange und zeigt sie
+  nacheinander - während einer durchsimulierten Saison kommen leicht mehrere
+  zusammen. `danach` läuft erst NACH dem Bestätigen: daran hängt zum Beispiel
+  der Neustart bei einer Entlassung, der vorher direkt nach dem `alert()`
+  passierte und den Verein bei unterdrücktem Dialog wortlos verschwinden ließ.
+* `requireConfirm(btn, frage)` - Zwei-Klick-Bestätigung statt `confirm()`.
+
 ## Büro-Ereignisse (js/office-events.js)
 
 Das Managerbüro war reine Kulisse mit Navigation - alles, was im Verein

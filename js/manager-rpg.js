@@ -12,7 +12,7 @@
             managerRPG.points++;
             managerRPG.maxXp = Math.round(managerRPG.maxXp * 1.35);
             playSound('goal');
-            alert(`🎉 LEVEL-UP! Du hast Manager-Level ${managerRPG.level} erreicht (+1 Skill-Punkt erhalten)!`);
+            showNotice('🎉 Level-Up!', `Manager-Level ${managerRPG.level} erreicht - ein weiterer Skill-Punkt steht zur Verfügung.`);
         }
         updateUI();
     }

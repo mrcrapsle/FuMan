@@ -134,9 +134,9 @@
         betHistory.unshift({ season: game.season, matchday: activeBet.matchday, type: activeBet.type, stake: activeBet.stake, odds: activeBet.odds, won, payout });
         if (betHistory.length > 20) betHistory.pop();
         if (won) {
-            alert(`🎉 WETTE GEWONNEN!\n${BETTING_PROVIDER_NAME} zahlt ${formatVal(payout)} aus (Einsatz ${formatVal(activeBet.stake)} @ ${activeBet.odds}).`);
+            showNotice('🎉 Wette gewonnen', `${BETTING_PROVIDER_NAME} zahlt ${formatVal(payout)} aus.\n\nEinsatz ${formatVal(activeBet.stake)} bei einer Quote von ${activeBet.odds}.`);
         } else {
-            alert(`😢 Wette verloren.\n${BETTING_PROVIDER_NAME} behält den Einsatz von ${formatVal(activeBet.stake)}.`);
+            showNotice('😢 Wette verloren', `${BETTING_PROVIDER_NAME} behält den Einsatz von ${formatVal(activeBet.stake)}.`, { typ: 'warn' });
         }
         activeBet = null;
         renderBettingView();

@@ -526,12 +526,12 @@
     function toggleLineupPlayer(id) {
         playSound('click');
         let player = squad.find(p => p.id === id);
-        if (!player || (player.injured || 0) > 0 || (player.suspended || 0) > 0 || (player.nationalDuty || 0) > 0) { alert("Spieler nicht einsatzbereit!"); return; }
+        if (!player || (player.injured || 0) > 0 || (player.suspended || 0) > 0 || (player.nationalDuty || 0) > 0) { showToast('Dieser Spieler ist nicht einsatzbereit (verletzt, gesperrt oder auf Länderspielreise).', 'error', 4000); return; }
         if (lineup.includes(id)) {
-            if (lineup.length <= 11) { alert("Mindestens 11 Spieler benötigt!"); return; }
+            if (lineup.length <= 11) { showToast('Die Startelf braucht mindestens 11 Spieler.', 'error', 3500); return; }
             lineup = lineup.filter(pid => pid !== id);
         } else {
-            if (lineup.length >= 11) { alert("Startelf bereits voll!"); return; }
+            if (lineup.length >= 11) { showToast('Die Startelf ist voll - erst einen Spieler herausnehmen.', 'error', 3500); return; }
             lineup.push(id);
         }
         renderSquadView();

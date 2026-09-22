@@ -2262,6 +2262,82 @@ async function testOfficeEvents(browser) {
     await page.close();
 }
 
+async function testNoNativeDialogs(browser) {
+    console.log('\n[30] Keine nativen Dialoge mehr im ganzen Spiel');
+    const { page, consoleErrors } = await freshPage(browser);
+
+    // Native Dialoge werden in manchen Android-WebViews unterdrueckt. Taucht hier einer auf,
+    // waere er auf dem Geraet des Spielers unsichtbar - der Klick bliebe wirkungslos.
+    const nativeDialoge = [];
+    page.on('dialog', async d => { nativeDialoge.push(d.type() + ': ' + d.message().slice(0, 80)); await d.dismiss(); });
+
+    const r = await page.evaluate(() => {
+        let out = {};
+
+        // 1. Das Meldungsfenster ersetzt alert(): sichtbar, bestaetigungspflichtig.
+        let box = document.getElementById('app-notice');
+        out.containerDa = !!box;
+        showNotice('Testmeldung', 'Inhalt der Meldung');
+        out.wirdAngezeigt = box.style.display === 'flex' && box.innerHTML.includes('Testmeldung');
+
+        // 2. Mehrere Meldungen ueberschreiben sich nicht, sondern warten in einer Schlange -
+        //    waehrend einer durchsimulierten Saison koennen mehrere zusammenkommen.
+        showNotice('Zweite', 'x');
+        showNotice('Dritte', 'x');
+        out.ersteBleibtVorn = box.innerHTML.includes('Testmeldung');
+        out.zaehlerStimmt = box.innerHTML.includes('Noch 2 weitere');
+        dismissNotice();
+        out.naechsteFolgt = box.innerHTML.includes('Zweite');
+        dismissNotice(); dismissNotice();
+        out.schliesstAmEnde = box.style.display === 'none';
+
+        // 3. Die Folgeaktion laeuft ERST nach dem Bestaetigen. Daran haengt die Entlassung:
+        //    vorher lud sie die Seite direkt nach dem alert() neu, und war das unterdrueckt,
+        //    verschwand der Verein ohne ein Wort der Erklaerung.
+        let gelaufen = false;
+        showNotice('Mit Folge', 'x', { danach: () => { gelaufen = true; } });
+        out.folgeWartet = !gelaufen;
+        dismissNotice();
+        out.folgeLaeuftNachBestaetigung = gelaufen;
+
+        // 4. Die Entlassung nutzt genau diesen Weg und laedt nicht mehr ungefragt neu.
+        out.entlassungMitBestaetigung = getSacked.toString().includes('showNotice')
+            && /danach[\s\S]{0,60}location\.reload/.test(getSacked.toString());
+
+        // 5. Im gesamten Spielcode steht kein alert()/confirm() mehr in ausfuehrbarem Code.
+        let quelle = [buyPlayer, sellPlayer, sellRealEstate, setStewards, toggleStaffMember,
+                      scheduleFriendlyMatch, startSkillTraining, negotiateBoardBudget]
+            .map(f => f.toString()).join('\n');
+        out.keineDialogeImCode = !/(^|[^.\w])(alert|confirm)\s*\(/.test(quelle);
+        return out;
+    });
+
+    // 6. Eine komplett durchsimulierte Saison samt Saisonabschluss darf keinen einzigen
+    //    nativen Dialog ausloesen - dort haengen Aufstieg, Abstieg, Pokal und Europapokal.
+    await page.evaluate(() => {
+        closeTutorial();
+        game.money = 3000000;
+        for (let i = 0; i < 7; i++) simulateMatchdays(5);
+        concludeSeasonAndAdvance();
+    });
+    await page.waitForTimeout(200);
+
+    assert(r.containerDa, 'Das Meldungsfenster ist in der Seite vorhanden');
+    assert(r.wirdAngezeigt, 'Eine Meldung wird sichtbar angezeigt');
+    assert(r.ersteBleibtVorn, 'Eine neue Meldung überschreibt die offene nicht');
+    assert(r.zaehlerStimmt, 'Wartende Meldungen werden mitgezählt');
+    assert(r.naechsteFolgt, 'Nach dem Bestätigen erscheint die nächste Meldung');
+    assert(r.schliesstAmEnde, 'Nach der letzten Meldung schließt sich das Fenster');
+    assert(r.folgeWartet, 'Die Folgeaktion läuft nicht vor der Bestätigung');
+    assert(r.folgeLaeuftNachBestaetigung, 'Die Folgeaktion läuft nach der Bestätigung');
+    assert(r.entlassungMitBestaetigung, 'Die Entlassung lädt erst nach der Bestätigung neu');
+    assert(r.keineDialogeImCode, 'Die geprüften Spielfunktionen nutzen keine nativen Dialoge');
+    assert(nativeDialoge.length === 0,
+        `Eine komplette Saison samt Saisonabschluss löst keinen nativen Dialog aus (${nativeDialoge.join(' | ') || 'keiner'})`);
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Dialog-Test');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -2310,6 +2386,7 @@ async function main() {
         testTransferMarketFairness,
         testSecondTeamFriendlies,
         testOfficeEvents,
+        testNoNativeDialogs,
     ];
 
     for (const suite of suites) {

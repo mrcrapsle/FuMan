@@ -641,7 +641,7 @@
 
     function upgradeBlockInfra(blockKey, infraKey, cost) {
         let b = stadium.blocks[blockKey];
-        if (b[infraKey] >= 3) { alert("Maximalstufe erreicht!"); return; }
+        if (b[infraKey] >= 3) { showToast('Maximalstufe erreicht - hier ist kein weiterer Ausbau möglich.', 'error', 4000); return; }
         let labels = { foodLvl: 'Gastronomie', merchLvl: 'Fanshop', toiletLvl: 'Sanitär' };
         queueStadiumConstruction('blockInfra', { blockKey, infraKey }, cost, getConstructionDays(cost), `${b.name}: ${labels[infraKey]}-Ausbau`);
         selectStadiumBlock(blockKey);
@@ -649,7 +649,7 @@
 
     function expandBlock(blockKey, seats, cost) {
         let b = stadium.blocks[blockKey];
-        if (b.expansions >= 5) { alert("Dieser Block hat die maximale Ausbaustufe erreicht!"); return; }
+        if (b.expansions >= 5) { showToast('Dieser Block hat die maximale Ausbaustufe erreicht.', 'error', 4000); return; }
         queueStadiumConstruction('blockExpand', { blockKey, seats }, cost, getConstructionDays(cost), `Rangerweiterung ${blockKey} (+${seats} Plätze)`);
     }
 

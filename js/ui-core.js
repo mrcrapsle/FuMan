@@ -157,10 +157,10 @@
                 hintLine.textContent = '💡 Tipp: Im Admin-Bereich unter "Struktur-Selbsttest" kannst du diesen Verlauf per Knopfdruck exportieren, um ihn zu melden.';
                 content.appendChild(hintLine);
             }
-            if (!silent) alert(`⚠️ Struktur-Selbsttest fand ${problems.length} Problem(e):\n\n${problems.join('\n')}`);
+            if (!silent) showNotice('⚠️ Struktur-Selbsttest', `${problems.length} Problem(e) gefunden:\n\n${problems.join('\n')}`, { typ: 'warn' });
         } else if (!silent) {
             if (typeof showToast === 'function') showToast(`✅ Struktur-Selbsttest: alle ${allTestIds.length} Screens OK!`, 'success');
-            else alert(`✅ Struktur-Selbsttest: alle ${allTestIds.length} Screens OK!`);
+            else showToast(`✅ Struktur-Selbsttest: alle ${allTestIds.length} Screens in Ordnung.`, 'success', 4000);
         }
         return problems;
     }

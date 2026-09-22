@@ -110,7 +110,7 @@
             game.trophies.push(`Ungeschlagene Saison (Saison ${game.season})`);
             boostFanBaseFloor(12, 'Die historische ungeschlagene Saison');
             addManagerXP(600);
-            alert(`🌟 PERFEKTE SAISON!\nKeine einzige Niederlage in ${myTeamRecord.played} Ligaspielen! Diese historische Leistung wird mit ${formatVal(bonus)}, einer Sonder-Trophäe und dauerhaft mehr Fan-Fundament gewürdigt.`);
+            showNotice('🌟 Perfekte Saison!', `Keine einzige Niederlage in ${myTeamRecord.played} Ligaspielen. Diese historische Leistung wird mit ${formatVal(bonus)}, einer Sonder-Trophäe und dauerhaft mehr Fan-Fundament gewürdigt.`);
         }
 
         holdSeasonEndGala();
@@ -119,7 +119,7 @@
 
         if (game.leagueLevel === 0 && myRank <= 4) {
             game.inEurope = true;
-            alert("🌟 CHAMPIONS CUP QUALIFIKATION!\nDu hast Platz " + myRank + " erreicht und spielst nächste Saison in der europäischen Königsklasse!");
+            showNotice('🌟 Champions-Cup-Qualifikation!', `Platz ${myRank} erreicht - nächste Saison spielt der Verein in der europäischen Königsklasse.`);
         }
 
         if (myRank <= 2 && game.leagueLevel > 0) {
@@ -143,7 +143,7 @@
                 // endgültig für diese Saison.
                 game.dfbGracePeriod = { targetLevel, deadlineMatchday: 3, originalLeagueLevel: game.leagueLevel };
                 addInboxMessage('vertrag', '📋 DFB-Lizenz vorläufig verweigert - Nachfrist eingeräumt!', `Sportlich hättest du den Aufstieg in die ${leagueNames[targetLevel]} geschafft, aber der DFB verweigert vorerst die Lizenz:\n\n${failedReasons.map(r => '• ' + r).join('\n')}\n\nDu hast 3 Spieltage Zeit, die Mängel zu beheben - schaffst du das, wird der Aufstieg nachträglich noch vollzogen!`, 'screen-stadium');
-                alert(`📋 DFB-LIZENZ VORLÄUFIG VERWEIGERT!\nSportlich wäre der Aufstieg in die ${leagueNames[targetLevel]} geschafft - der DFB räumt dir aber erst eine Nachfrist von 3 Spieltagen ein, um die fehlenden Auflagen zu erfüllen:\n\n${failedReasons.map(r => '• ' + r).join('\n')}`);
+                showNotice('📋 DFB-Lizenz vorläufig verweigert', `Sportlich wäre der Aufstieg in die ${leagueNames[targetLevel]} geschafft - der DFB räumt aber erst eine Nachfrist von drei Spieltagen ein, um die fehlenden Auflagen zu erfüllen:\n\n${failedReasons.map(r => '• ' + r).join('\n')}`, { typ: 'warn' });
             } else {
                 game.leagueLevel--;
                 game.money += 1500000;
@@ -151,11 +151,11 @@
                 if (sponsorPromoBonus > 0) game.money += sponsorPromoBonus;
                 addManagerXP(1000);
                 boostFanBaseFloor(6, `Der Aufstieg in die ${leagueNames[game.leagueLevel]}`);
-                alert(`🎉 AUFSTIEG! Glückwunsch zur Beförderung in die ${leagueNames[game.leagueLevel]}! (+1.500.000 € Aufstiegsprämie${sponsorPromoBonus > 0 ? ` + ${formatVal(sponsorPromoBonus)} Sponsoren-Aufstiegsbonus` : ''})`);
+                showNotice('🎉 Aufstieg geschafft!', `Glückwunsch zur Beförderung in die ${leagueNames[game.leagueLevel]}.\n\nAufstiegsprämie 1.500.000 €${sponsorPromoBonus > 0 ? ` plus ${formatVal(sponsorPromoBonus)} Sponsoren-Aufstiegsbonus` : ''}.`);
             }
         } else if (myRank >= 16 && game.leagueLevel < NUM_LEAGUES - 1) {
             game.leagueLevel++;
-            alert("❌ ABSTIEG! Du konntest die Klasse leider nicht halten.");
+            showNotice('❌ Abstieg', 'Die Klasse konnte nicht gehalten werden. Nächste Saison geht es eine Liga tiefer weiter.', { typ: 'warn' });
         }
 
         // Der Vorstand legt zu Saisonbeginn neue Budgets fest - abhängig von Ligastärke
@@ -227,7 +227,7 @@
             emergencyPlan.forEach(pos => { if (existingByPos[pos] > 0) existingByPos[pos]--; else toFill.push(pos); });
             let emergencyBase = Math.max(25, 82 - game.leagueLevel * 10 - 14);
             toFill.forEach(pos => squad.push(createPlayer(pos, emergencyBase, emergencyBase + 8)));
-            alert("⚠️ VERTRAGSKRISE!\nZu viele Spieler haben deinen Verein aufgrund auslaufender Verträge verlassen. Der Notfall-Kader wurde automatisch mit neuen Spielern aufgefüllt. Achte künftig auf die Vertragslaufzeiten deines Kaders!");
+            showNotice('⚠️ Vertragskrise', 'Zu viele Spieler haben den Verein wegen auslaufender Verträge verlassen. Der Kader wurde notdürftig mit neuen Spielern aufgefüllt.\n\nAchte künftig auf die Vertragslaufzeiten.', { typ: 'warn' });
         }
 
         incomingOffers = [];

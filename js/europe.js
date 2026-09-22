@@ -297,7 +297,7 @@
             let weWon = tie.winner === game.clubName;
             let aggText = `Gesamt: ${aggA}:${aggB}${tie.penalties ? ` (n.E. ${tie.shootoutScore})` : ''}`;
             addInboxMessage('vertrag', weWon ? '🎉 Finaleinzug!' : '❌ Halbfinal-Aus', `${tie.teamA} vs. ${tie.teamB} - ${aggText}`, 'screen-europe');
-            if (!weWon) alert(`❌ CHAMPIONS CUP HALBFINALE VERLOREN!\n${tie.teamA} vs. ${tie.teamB} - ${aggText}`);
+            if (!weWon) showNotice('❌ Halbfinale verloren', `${tie.teamA} gegen ${tie.teamB} - ${aggText}`, { typ: 'warn' });
         }
     }
 
@@ -330,7 +330,7 @@
                         if (weWon) {
                             game.money += 1500000;
                             if (isLiveContext) addManagerXP(300);
-                            alert(`🌟 CHAMPIONS CUP SIEG!\n${h.name} ${hg}:${ag} ${a.name}! +1.500.000 € UEFA-Prämie kassiert!`);
+                            showNotice('🌟 Sieg im Champions Cup', `${h.name} ${hg}:${ag} ${a.name}.\n\n1.500.000 € UEFA-Prämie kassiert.`);
                         }
                     }
                 });
@@ -368,7 +368,7 @@
                 game.money += 8000000;
                 if (isLiveContext) addManagerXP(1000);
                 addInboxMessage('vertrag', '🌟 Champions Cup Halbfinal-Hinspiel!', `Das Hinspiel ist gespielt - das Rückspiel entscheidet in ${europeTournament.matchdays[7] - mday} Spieltagen über den Finaleinzug. +8.000.000 € UEFA-Erfolgsprämie für den Halbfinaleinzug bereits erhalten!`, 'screen-europe');
-                alert("🌟 CHAMPIONS CUP HALBFINALE ERREICHT!\n+8.000.000 € UEFA-Erfolgsprämie erhalten! Das Hinspiel ist absolviert, das Rückspiel entscheidet.");
+                showNotice('🌟 Halbfinale erreicht!', 'Das Hinspiel ist absolviert, das Rückspiel entscheidet.\n\n8.000.000 € UEFA-Erfolgsprämie erhalten.');
             }
         }
 
@@ -448,10 +448,10 @@
                 boostFanBaseFloor(15, 'Der Champions Cup Sieg');
                 if (isLiveContext) addManagerXP(3000);
                 playSound('goal');
-                alert(`👑🏆 EUROPAS KRÖNUNG!\n${game.clubName} gewinnt den CHAMPIONS CUP! +25.000.000 € Siegprämie!`);
+                showNotice('👑 Europas Krönung!', `${game.clubName} gewinnt den Champions Cup.\n\n25.000.000 € Siegprämie.`);
             } else if (final1 === game.clubName || final2 === game.clubName) {
                 if (isLiveContext) addManagerXP(500);
-                alert(`❌ FINALE VERLOREN!\nKnapp am Titel vorbeigeschrammt: ${final1} ${hg}:${ag} ${final2}. Dennoch eine herausragende Saison!`);
+                showNotice('❌ Finale verloren', `Knapp am Titel vorbeigeschrammt: ${final1} ${hg}:${ag} ${final2}.\n\nDennoch eine herausragende Saison.`, { typ: 'warn' });
             }
         }
     }

@@ -212,10 +212,10 @@
             if (type === 'transfer') game.transferBudget += amount;
             if (type === 'wage') game.wageBudget += amount;
             game.boardSat = Math.max(10, game.boardSat - 5);
-            alert(`🎉 Verhandlung erfolgreich! +${formatVal(amount)} bewilligt.`);
+            showToast(`🎉 Verhandlung erfolgreich - ${formatVal(amount)} bewilligt.`, 'success', 5000);
         } else {
             game.boardSat = Math.max(10, game.boardSat - 10);
-            alert("❌ Abgelehnt! Der Vorstand hält die Forderung für überzogen.");
+            showToast('❌ Abgelehnt - der Vorstand hält die Forderung für überzogen.', 'error', 5000);
         }
         updateUI();
         renderFinancesView();
@@ -379,12 +379,12 @@
         let streak = game.negativeStreak;
 
         if (streak === 3) {
-            alert("⚠️ FINANZWARNUNG!\nDer Vorstand beobachtet die andauernden roten Zahlen mit wachsender Sorge.");
+            showNotice('⚠️ Finanzwarnung', 'Der Vorstand beobachtet die andauernden roten Zahlen mit wachsender Sorge.', { typ: 'warn' });
             addInboxMessage('finanzen', 'Finanzwarnung', 'Der Vorstand beobachtet die andauernden roten Zahlen mit wachsender Sorge.', 'screen-finances');
         }
         if (streak === 6 && !game.transferEmbargo) {
             game.transferEmbargo = true;
-            alert("🚫 TRANSFERSPERRE!\nWegen anhaltender Zahlungsprobleme verhängt der Vorstand eine Transfersperre, bis das Konto wieder im Plus ist.");
+            showNotice('🚫 Transfersperre', 'Wegen anhaltender Zahlungsprobleme verhängt der Vorstand eine Transfersperre, bis das Konto wieder im Plus ist.', { typ: 'warn' });
             addInboxMessage('finanzen', 'Transfersperre verhängt', 'Wegen anhaltender Zahlungsprobleme verhängt der Vorstand eine Transfersperre, bis das Konto wieder im Plus ist.', 'screen-finances');
         }
         if (streak > 0 && streak % 10 === 0 && squad.length > 11) {
@@ -399,7 +399,7 @@
                 squad.splice(idx, 1);
                 lineup = lineup.filter(id => id !== candidate.id);
                 game.money += value;
-                alert(`💸 ZWANGSVERKAUF!\nUm die Zahlungsfähigkeit zu sichern, verkauft der Vorstand notgedrungen ${candidate.name} für ${formatVal(value)} (unter Marktwert).`);
+                showNotice('💸 Zwangsverkauf', `Um die Zahlungsfähigkeit zu sichern, verkauft der Vorstand notgedrungen ${candidate.name} für ${formatVal(value)} - deutlich unter Marktwert.`, { typ: 'warn' });
                 addInboxMessage('finanzen', 'Zwangsverkauf!', `Der Vorstand hat ${candidate.name} notgedrungen für ${formatVal(value)} verkauft (unter Marktwert).`, 'screen-finances');
             }
         }
@@ -411,7 +411,7 @@
                 // Krisenfest (Krisenmanager-Perk, NEU): mildert auch den Punktabzug ab.
                 if (managerRPG.perks.crisisProof) deduction = Math.max(1, deduction - 1);
                 myTeam.points = Math.max(0, myTeam.points - deduction);
-                alert(`⚖️ PUNKTABZUG!\nWegen anhaltender Zahlungsunfähigkeit verhängt der Verband einen Abzug von ${deduction} Punkten.`);
+                showNotice('⚖️ Punktabzug', `Wegen anhaltender Zahlungsunfähigkeit verhängt der Verband einen Abzug von ${deduction} Punkten.`, { typ: 'warn' });
             }
         }
     }
