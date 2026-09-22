@@ -124,6 +124,8 @@
         secondTeamStrengthSnapshot: null,
         tvMoneyPaidThisSeason: 0,
         // Buero-Ereignisse: wer gerade im Besucherstuhl wartet, plus die Entscheidungshistorie.
+        // Entlassung ausgesprochen, Bestaetigung steht noch aus - solange ruht das Spiel.
+        sackPending: false,
         officeEvent: null,
         officeEventHistory: [],
         pitchDamaged: false,

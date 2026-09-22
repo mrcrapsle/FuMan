@@ -142,6 +142,17 @@ wirkungslos, und genau das hat sich mehrfach als Fehlerursache herausgestellt
   passierte und den Verein bei unterdrücktem Dialog wortlos verschwinden ließ.
 * `requireConfirm(btn, frage)` - Zwei-Klick-Bestätigung statt `confirm()`.
 
+**Fallstrick, teuer gelernt:** `showNotice()` blockiert nicht. Wo vorher ein
+`alert()` stand, lief der Code danach also erst nach dem Klick weiter - jetzt
+läuft er sofort weiter. Bei der Entlassung war das heikel: Der native Dialog
+stoppte die Simulationsschleife, und der direkt folgende Reload beendete alles.
+Ohne Gegenmaßnahme simulierte das Spiel munter weiter, für einen Verein, den man
+gar nicht mehr betreut - und die wichtigste Meldung überhaupt verschwand hinter
+den Spieltagsmeldungen. Deshalb: `game.sackPending` stoppt `simulateMatchdays()`
+und `startMatchdayFlow()`, und die Meldung nutzt `sofort: true`, das sie an den
+Anfang der Warteschlange stellt. Wer eine weitere blockierende Stelle durch
+`showNotice()` ersetzt, muss prüfen, was danach weiterläuft.
+
 ## Büro-Ereignisse (js/office-events.js)
 
 Das Managerbüro war reine Kulisse mit Navigation - alles, was im Verein

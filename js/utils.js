@@ -25,8 +25,13 @@
     let noticeActive = false;
 
     function showNotice(titel, text, optionen = {}) {
-        noticeQueue.push({ titel, text, ...optionen });
-        if (noticeQueue.length > 12) noticeQueue.splice(0, noticeQueue.length - 12);
+        let meldung = { titel, text, ...optionen };
+        // sofort: true stellt die Meldung an den ANFANG der Schlange. Gedacht fuer
+        // Ereignisse, die alles andere beenden - die Entlassung etwa ging sonst zwischen
+        // den uebrigen Spieltagsmeldungen unter, obwohl sie die wichtigste von allen ist.
+        if (meldung.sofort) noticeQueue.unshift(meldung);
+        else noticeQueue.push(meldung);
+        if (noticeQueue.length > 12) noticeQueue.splice(12);
         // Auch wenn schon eine Meldung offen ist, neu zeichnen: sonst bliebe der Hinweis
         // "noch N weitere Meldungen" auf dem Stand von vorhin stehen.
         renderNextNotice();

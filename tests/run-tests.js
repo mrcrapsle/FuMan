@@ -2331,6 +2331,38 @@ async function testNoNativeDialogs(browser) {
     assert(r.folgeWartet, 'Die Folgeaktion läuft nicht vor der Bestätigung');
     assert(r.folgeLaeuftNachBestaetigung, 'Die Folgeaktion läuft nach der Bestätigung');
     assert(r.entlassungMitBestaetigung, 'Die Entlassung lädt erst nach der Bestätigung neu');
+
+    // Das Meldungsfenster blockiert - anders als alert() - den Programmablauf NICHT. Bei der
+    // Entlassung ist das heikel: frueher stoppte der native Dialog die Simulationsschleife
+    // und der direkt folgende Reload beendete alles. Ohne Gegenmassnahme liefe die
+    // Simulation jetzt weiter, fuer einen Verein, den man gar nicht mehr betreut - und die
+    // wichtigste Meldung ueberhaupt verschwaende hinter den Spieltagsmeldungen.
+    const entlassung = await page.evaluate(() => {
+        closeTutorial();
+        // Entlassungen sind erst ab Saison 2 moeglich (siehe checkBoardSatisfaction).
+        game.season = 2;
+        game.boardSat = 1;
+        game.lowBoardSatStreak = 5;
+        let mdVor = game.matchday;
+        simulateMatchdays(5);
+        let box = document.getElementById('app-notice');
+        let mdNach = game.matchday;
+        simulateMatchdays(5);
+        let nochWeiter = game.matchday !== mdNach;
+        return {
+            ausgeloest: game.sackPending === true,
+            spieltage: mdNach - mdVor,
+            simulationGestoppt: !nochWeiter,
+            meldungGanzVorn: box.innerHTML.includes('Entlassen'),
+            nurEinmal: (box.innerHTML.match(/Entlassen/g) || []).length === 1
+        };
+    });
+
+    assert(entlassung.ausgeloest, 'Die Entlassung wird im Testszenario tatsächlich ausgelöst');
+    assert(entlassung.spieltage <= 2, `Nach der Entlassung wird nicht weitersimuliert (${entlassung.spieltage} Spieltag(e))`);
+    assert(entlassung.simulationGestoppt, 'Weitere Simulationsversuche bleiben wirkungslos, bis bestätigt wurde');
+    assert(entlassung.meldungGanzVorn, 'Die Entlassungsmeldung steht vor allen anderen Meldungen');
+    assert(entlassung.nurEinmal, 'Die Entlassung wird nur ein einziges Mal ausgesprochen');
     assert(r.keineDialogeImCode, 'Die geprüften Spielfunktionen nutzen keine nativen Dialoge');
     assert(nativeDialoge.length === 0,
         `Eine komplette Saison samt Saisonabschluss löst keinen nativen Dialog aus (${nativeDialoge.join(' | ') || 'keiner'})`);

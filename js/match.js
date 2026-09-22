@@ -279,6 +279,7 @@
 
     function startMatchdayFlow() {
         if (game.matchday > 34) return;
+        if (game.sackPending) { showToast('Du bist entlassen - bestätige die Meldung, um bei einem neuen Klub anzufangen.', 'error', 5000); return; }
         let fixtures = fixturesData[game.leagueLevel] ? fixturesData[game.leagueLevel][game.matchday - 1] : null;
         let ourFixture = fixtures ? fixtures.find(f => leaguesData[game.leagueLevel][f.home]?.name === game.clubName || leaguesData[game.leagueLevel][f.away]?.name === game.clubName) : null;
         if (!ourFixture) { processPostMatchRoutine(); return; }
@@ -1974,6 +1975,10 @@
     }
 
     function getSacked() {
+        // Mehrfachausloesung verhindern: processPostMatchRoutine() laeuft pro simuliertem
+        // Spieltag, und die Bedingung (lowBoardSatStreak) bleibt ja erfuellt.
+        if (game.sackPending) return;
+        game.sackPending = true;
         playSound('whistle');
         // Karriere (Level/XP/Perks) & Trophäenschrank überleben die Entlassung - alles
         // andere (Kader, Finanzen, Personal, Stadion, Sponsoren, zweite Mannschaft...) wird
@@ -1986,7 +1991,7 @@
         // alert() - war das unterdrueckt, verschwand der Verein ohne ein Wort der Erklaerung.
         showNotice('🚪 Entlassen!',
             'Der Vorstand hat genug gesehen und trennt sich mit sofortiger Wirkung von dir.\n\nDeine Karriere-Erfahrung und deine Trophäen nimmst du mit - bei deinem neuen Klub beginnst du aber wieder ganz von unten.',
-            { typ: 'warn', knopf: 'Neuen Klub suchen', danach: () => location.reload() });
+            { typ: 'warn', sofort: true, knopf: 'Neuen Klub suchen', danach: () => location.reload() });
     }
 
     // ---------- NATIONALMANNSCHAFTSBERUFUNGEN ----------
@@ -2180,7 +2185,11 @@
     function simulateMatchdays(anzahl) {
         if (game.matchday > 34) { showToast('Die Saison ist bereits beendet.', 'error'); return; }
         let simuliert = 0;
-        while (game.matchday <= 34 && simuliert < anzahl) {
+        // Nach einer Entlassung wird nicht weitergespielt. Frueher stoppte das alert() in
+        // getSacked() die Schleife und der direkt folgende Reload beendete alles - mit dem
+        // nicht blockierenden Meldungsfenster lief die Simulation dagegen munter weiter,
+        // fuer einen Verein, den man gar nicht mehr betreut.
+        while (game.matchday <= 34 && simuliert < anzahl && !game.sackPending) {
             simuliert++;
             let md = game.matchday;
             let isHome = true;
