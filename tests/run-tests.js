@@ -1580,6 +1580,15 @@ async function testFinanceLedgerAndStatement(browser) {
         // im Auszug steht exakt das, was gespeichert wurde.
         out.ladenOhnePhantom = game.kontoauszug.length === gespeicherteBuchungen;
         out.ladenStelltGeldWiederHer = game.money > 1000;
+
+        // 6. Bricht das Laden mittendrin ab (beschaedigte Importdatei), darf die
+        //    Protokollierung nicht dauerhaft abgeschaltet bleiben - sonst fehlten alle
+        //    spaeteren Buchungen stillschweigend im Kontoauszug.
+        try { applyLoadedState(null); } catch (e) { /* erwartet */ }
+        let auszugVorher = (game.kontoauszug || []).length;
+        showScreen('screen-stadium');
+        game.money -= 5000;
+        out.abgebrochenesLadenBlockiertNicht = (game.kontoauszug || []).length === auszugVorher + 1;
         return out;
     });
 
@@ -1602,6 +1611,7 @@ async function testFinanceLedgerAndStatement(browser) {
     assert(r.ansichtKonto, 'Reiter "Kontoauszug" zeigt Bereiche und Einzelbuchungen');
     assert(r.ladenOhnePhantom, 'Das Laden eines Spielstands erzeugt keine Phantom-Buchung');
     assert(r.ladenStelltGeldWiederHer, 'Der Kontostand wird beim Laden korrekt wiederhergestellt');
+    assert(r.abgebrochenesLadenBlockiertNicht, 'Ein abgebrochenes Laden schaltet die Protokollierung nicht dauerhaft ab');
     assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler im Finanzmenü');
     await page.close();
 }

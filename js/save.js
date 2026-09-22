@@ -51,10 +51,21 @@
         return { game, managerRPG, incomingOffers, holdingCompany, rawMaterials, factories, merchandise, merchExtras, productionQueue, globalScoutResults, scoutingNetwork, securityWorkforce, mediaRights, realEstatePortfolio, stockMarket, financeCentralState, underworld, stadium, campusBuildings, staffMembers, staffMeta, staffCentralState, secondTeamStaff, fanGroups, fanCentralState, privateLife, bandenSponsors, activeBet, betHistory, squad, lineup, secondTeamSquad, secondTeamLineup, youthTalents, activeLoans, loanClubRelationships, loanClubLastInteractionSeason, leaguesData, fixturesData, cupTournament, europeTournament, inboxMessages, inboxArchive, rivalryRecord, crestHistory, loanedPlayers, loanablePlayers, incomingLoans, youthLeagueTable, youthLeagueMatchday };
     }
 
+    // Kontoauszug pausieren: das Object.assign im Rumpf setzt game.money auf den
+    // gespeicherten Wert - ohne Pause erschiene das als gigantische Buchung. Das
+    // Fortsetzen steht in einem finally: bricht das Laden mittendrin ab (z.B. beim
+    // Import einer beschaedigten Datei), bliebe die Protokollierung sonst dauerhaft
+    // abgeschaltet und alle spaeteren Buchungen fehlten stillschweigend im Auszug.
     function applyLoadedState(p) {
-        // Kontoauszug pausieren: das Object.assign unten setzt game.money auf den
-        // gespeicherten Wert - ohne Pause erschiene das als gigantische Buchung.
         if (typeof kontoauszugPausieren === 'function') kontoauszugPausieren();
+        try {
+            applyLoadedStateInner(p);
+        } finally {
+            if (typeof kontoauszugFortsetzen === 'function') kontoauszugFortsetzen();
+        }
+    }
+
+    function applyLoadedStateInner(p) {
         if (p.game) Object.assign(game, p.game);
         // Migrations-Fix (NEU): game.secondTeam.name wird als verschachteltes Objekt beim
         // Object.assign oben komplett aus dem alten Spielstand übernommen - falls dort noch
@@ -175,7 +186,6 @@
             if (p.europeTournament) europeTournament = renameOldClubName(europeTournament);
         }
         restoreGetters();
-        if (typeof kontoauszugFortsetzen === 'function') kontoauszugFortsetzen();
     }
 
     function getSlotMeta(slotNum) {

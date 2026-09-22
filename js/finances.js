@@ -746,7 +746,13 @@
         'screen-cup': '🏆 Pokalwettbewerb',
         'screen-premium': '💎 Premium',
         'screen-admin': '🛠️ Admin',
-        'screen-inbox': '📬 Postfach'
+        'screen-inbox': '📬 Postfach',
+        'screen-matchday': '⚽ Spieltag',
+        'screen-dashboard': '🏠 Vereinsbüro',
+        'screen-office': '🏠 Vereinsbüro',
+        'screen-league': '🏆 Liga',
+        'screen-history': '📚 Vereinsgeschichte',
+        'screen-manager-tree': '🧑‍💼 Managerkarriere'
     };
 
     function buchungsLabelErmitteln() {
