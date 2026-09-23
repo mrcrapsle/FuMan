@@ -139,7 +139,7 @@
     ];
     const lastNames = [
         "Neuher", "Mullert", "Kroosz", "Kimmig", "Sanee", "Gnabri", "Haferts", "Wernar",
-        "Sulle", "Rudinger", "Gundogun", "ter Stegner", "Musialla", "Wirts", "Schlotterberg", "Kehrerr",
+        "Sulle", "Rudinger", "Gundogun", "Terstegenn", "Musialla", "Wirts", "Schlotterberg", "Kehrerr",
         "Klosterman", "Hummell", "Boatenk", "Howedess", "Klosen", "Podolsky", "Schweinsberger", "Lahmann",
         "Mertesacker", "Ozell", "Kedira", "Schurrler", "Kramerr", "Ballak", "Effenbergh", "Mattheus",
         "Vollers", "Beckenbaur", "Seelers", "Netzers", "Rummenick", "Breitnerr", "Vogtz", "Overath",

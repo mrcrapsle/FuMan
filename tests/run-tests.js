@@ -2706,7 +2706,16 @@ async function testLandesPokal(browser) {
 
     // 4. Der Sieg im Landespokal bringt den Startplatz im DFB-Pokal der Folgesaison.
     const weg = await page.evaluate(() => {
-        squad.forEach(p => { p.strength = 85; p.fitness = 100; p.morale = 100; });
+        // Der Landespokal ist eine reine K.o.-Runde ueber vier Spieltage. Mit echter
+        // Tor-Zufallsstreuung (simulateGoals nutzt Poisson-Verteilung) kann selbst ein
+        // deutlich ueberlegener Verein rein statistisch eine einzelne K.o.-Partie verlieren -
+        // das hat den Test in der CI vereinzelt zum Kippen gebracht, obwohl der Mechanismus
+        // (Sieg -> Trophaee -> Startplatz -> Folgesaison) korrekt arbeitet. Fuer DIESEN Test
+        // geht es nur um genau diesen Mechanismus, nicht um die Spielsimulation selbst -
+        // deshalb wird das Tor-Ergebnis fuer die Dauer des Tests deterministisch anhand der
+        // Staerke entschieden (die staerkere Seite gewinnt klar, kein Unentschieden/Elfmeter).
+        simulateGoals = function(a, b) { return a >= b ? { myGoals: 5, oppGoals: 0 } : { myGoals: 0, oppGoals: 5 }; };
+        squad.forEach(p => { p.strength = 99; p.fitness = 100; p.morale = 100; });
         for (let i = 0; i < 7; i++) simulateMatchdays(5);
         let nachSaison = {
             gewonnen: landesPokal.won,
