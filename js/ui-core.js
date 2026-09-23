@@ -70,7 +70,7 @@
         'screen-hub-wirtschaft': ['screen-industry', 'screen-raw-materials', 'screen-holding', 'screen-merch'],
         'screen-hub-finanzen': ['screen-finances', 'screen-stocks', 'screen-sponsors', 'screen-betting'],
         'screen-hub-ausbau': ['screen-stadium', 'screen-campus', 'screen-staff', 'screen-fans', 'screen-real-estate'],
-        'screen-hub-kaderplanung': ['screen-transfer', 'screen-scouting-global', 'screen-youth', 'screen-contracts'],
+        'screen-hub-kaderplanung': ['screen-transfer', 'screen-scouting-global', 'screen-youth', 'screen-contracts', 'screen-squad-planning'],
         'screen-hub-wettbewerbe': ['screen-league', 'screen-europe', 'screen-history'],
         'screen-hub-spezial': ['screen-private', 'screen-underworld', 'screen-premium']
     };
@@ -264,6 +264,7 @@
         if (screenId === 'screen-cup') renderCupView();
         if (screenId === 'screen-youth') renderYouthView();
         if (screenId === 'screen-contracts') renderContractsView();
+        if (screenId === 'screen-squad-planning') renderSquadPlanningView();
         if (screenId === 'screen-private') renderPrivateLifeView();
         if (screenId === 'screen-underworld') renderUnderworldView();
         if (screenId === 'screen-premium' && typeof renderPremiumShopView === 'function') renderPremiumShopView();

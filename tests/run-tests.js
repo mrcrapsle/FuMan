@@ -3026,6 +3026,101 @@ async function testBonusClauses(browser) {
     await page.close();
 }
 
+async function testSquadPlanningTool(browser) {
+    console.log('\n[38] Kaderplanungstool: Positionstiefe, Altersstruktur und Verträge kombiniert');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+        closeTutorial();
+
+        // 1. Der neue Tab hängt korrekt im Kaderplanungs-Hub und schaltet sichtbar frei.
+        showScreen('screen-squad-planning');
+        out.hubSichtbar = document.getElementById('screen-hub-kaderplanung').style.display === 'block';
+        out.screenSichtbar = document.getElementById('screen-squad-planning').style.display === 'block';
+        out.tabAktiv = document.getElementById('hubtab-btn-screen-squad-planning').className.includes('btn-action');
+        // Die Geschwister-Tabs desselben Hubs sind währenddessen ausgeblendet.
+        out.geschwisterAusgeblendet = document.getElementById('screen-contracts').style.display === 'none';
+
+        // 2. Alle vier Positionsgruppen erscheinen mit echtem Inhalt.
+        let posBox = document.getElementById('squad-planning-position-box').innerHTML;
+        out.alleVierPositionen = ['Torwart', 'Abwehr', 'Mittelfeld', 'Sturm'].every(x => posBox.includes(x));
+
+        // 3. Die Analyse ist vollständig: die Summe über alle Positionsgruppen ergibt exakt
+        //    die Kadergröße (keine Spieler "verlieren" sich zwischen den Gruppen).
+        let analysis = getSquadPlanningAnalysis();
+        out.summeStimmt = analysis.reduce((s, a) => s + a.count, 0) === squad.length;
+
+        // 4. Gezielt eine Position kaputt machen: zu wenige, überaltert - muss als KRITISCH
+        //    erkannt werden, während eine unveränderte Position weiter als unauffällig gilt.
+        squad = squad.filter(p => p.pos !== 'ABW');
+        for (let i = 0; i < 2; i++) {
+            let p = createPlayer('ABW', 70, 75);
+            p.age = 33;
+            p.contracts = 3;
+            squad.push(p);
+        }
+        let analyse2 = getSquadPlanningAnalysis();
+        let abwehr = analyse2.find(a => a.pos === 'ABW');
+        let mittelfeld = analyse2.find(a => a.pos === 'MIT');
+        out.duenneUeberalterteAbwehrErkannt = abwehr.thin && abwehr.agingRisk && abwehr.riskScore >= 2;
+        out.unveraenderteMittelfeldBleibtUnauffaellig = mittelfeld.riskScore < 2;
+
+        renderSquadPlanningView();
+        let warnBox = document.getElementById('squad-planning-warnings-box').innerHTML;
+        out.warnungNenntAbwehrUndKritisch = warnBox.includes('Abwehr') && warnBox.includes('KRITISCH');
+        out.warnungNenntMittelfeldNicht = !warnBox.includes('Mittelfeld');
+
+        // 5. Ein rundum gesunder Kader (jede Position gut besetzt, jung, langfristige Verträge)
+        //    löst gar keine Warnung aus - der GESAMTE Kader wird dafür bewusst durch einen
+        //    vollständig kontrollierten ersetzt, da der zufällig generierte Startkader in
+        //    anderen Positionen bereits eigene, unabhängige Zufallswerte haben kann.
+        squad = [];
+        ['TW', 'ABW', 'MIT', 'ST'].forEach(pos => {
+            let anzahl = { TW: 3, ABW: 8, MIT: 8, ST: 5 }[pos];
+            for (let i = 0; i < anzahl; i++) {
+                let p = createPlayer(pos, 70, 80);
+                p.age = 24;
+                p.contracts = 4;
+                squad.push(p);
+            }
+        });
+        renderSquadPlanningView();
+        let warnBoxGesund = document.getElementById('squad-planning-warnings-box').innerHTML;
+        out.keineWarnungBeiGesundemKader = warnBoxGesund.includes('Keine Position');
+
+        // 6. Die Altersverteilung zeigt echte, vom Kader abhängige Werte (kein Platzhalter).
+        let ageBox = document.getElementById('squad-planning-age-box').innerHTML;
+        out.altersverteilungHatInhalt = ageBox.length > 100;
+
+        // 7. Auslaufende Verträge werden nach Position gruppiert dargestellt, nicht nur als
+        //    unsortierte Gesamtliste (die es schon separat in der Saisonplanung gibt).
+        squad[0].contracts = 0;
+        renderSquadPlanningView();
+        let contractBox = document.getElementById('squad-planning-contract-box').innerHTML;
+        out.vertragsklippeNachPosition = contractBox.includes(squad[0].name);
+
+        return out;
+    });
+
+    assert(r.hubSichtbar, 'Der Kaderplanungs-Hub wird beim Öffnen des neuen Tabs sichtbar');
+    assert(r.screenSichtbar, 'Der Kaderplanungstool-Screen selbst wird sichtbar');
+    assert(r.tabAktiv, 'Der zugehörige Tab-Button wird als aktiv markiert');
+    assert(r.geschwisterAusgeblendet, 'Die anderen Tabs desselben Hubs bleiben dabei ausgeblendet');
+    assert(r.alleVierPositionen, 'Alle vier Positionsgruppen erscheinen mit echtem Inhalt');
+    assert(r.summeStimmt, 'Die Summe der Positionsgruppen entspricht exakt der Kadergröße');
+    assert(r.duenneUeberalterteAbwehrErkannt, 'Eine dünn besetzte, überalterte Position wird korrekt als kritisch erkannt');
+    assert(r.unveraenderteMittelfeldBleibtUnauffaellig, 'Eine unveränderte, gesunde Position bleibt unauffällig');
+    assert(r.warnungNenntAbwehrUndKritisch, 'Die Schwachstellen-Warnung nennt die betroffene Position konkret als kritisch');
+    assert(r.warnungNenntMittelfeldNicht, 'Eine unauffällige Position taucht nicht in den Warnungen auf');
+    assert(r.keineWarnungBeiGesundemKader, 'Ein durchgehend gesunder Kader löst gar keine Warnung aus');
+    assert(r.altersverteilungHatInhalt, 'Die Alterspyramide zeigt echte, kaderabhängige Werte');
+    assert(r.vertragsklippeNachPosition, 'Auslaufende Verträge werden nach Position aufgeschlüsselt angezeigt');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Kaderplanungstool');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -3082,6 +3177,7 @@ async function main() {
         testLandesPokal,
         testFinancialFairplay,
         testBonusClauses,
+        testSquadPlanningTool,
     ];
 
     for (const suite of suites) {

@@ -1638,6 +1638,7 @@
                 <button onclick="showScreen('screen-scouting-global')" id="hubtab-btn-screen-scouting-global" class="btn-secondary" style="font-size:10px; padding:6px 4px;">Scouting</button>
                 <button onclick="showScreen('screen-youth')" id="hubtab-btn-screen-youth" class="btn-secondary" style="font-size:10px; padding:6px 4px;">Jugend</button>
                 <button onclick="showScreen('screen-contracts')" id="hubtab-btn-screen-contracts" class="btn-secondary" style="font-size:10px; padding:6px 4px;">Verträge</button>
+                <button onclick="showScreen('screen-squad-planning')" id="hubtab-btn-screen-squad-planning" class="btn-secondary" style="font-size:10px; padding:6px 4px;">📊 Planungstool</button>
             </div>
             <div id="screen-transfer" style="display:none;">
                 <div id="winter-window-banner" style="display:none; background:linear-gradient(135deg, rgba(63,182,255,0.25), rgba(23,201,184,0.15)); border:1px solid var(--blue); border-radius:10px; padding:8px 12px; margin-bottom:8px; font-size:11px; color:#fff;"></div>
@@ -1727,6 +1728,27 @@
                 <div class="panel">
                     <div class="panel-header">📝 VERTRAGSVERWALTUNG</div>
                     <div id="contracts-list"></div>
+                </div>
+            </div>
+            <div id="screen-squad-planning" style="display:none;">
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--danger);">🚨 KRITISCHE SCHWACHSTELLEN FÜR KOMMENDE SAISONS</div>
+                    <div class="box" style="font-size:9px; margin-bottom:6px;">
+                        Führt Positionstiefe, Altersstruktur und auslaufende Verträge zusammen - eine Position kann bei jedem Wert für sich unauffällig wirken und trotzdem in Kombination zum Problem werden.
+                    </div>
+                    <div id="squad-planning-warnings-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">🧩 POSITIONSTIEFE, ALTER & VERTRÄGE</div>
+                    <div id="squad-planning-position-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">📊 ALTERSPYRAMIDE DES GESAMTKADERS</div>
+                    <div id="squad-planning-age-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">📅 AUSLAUFENDE VERTRÄGE NACH POSITION</div>
+                    <div id="squad-planning-contract-box"></div>
                 </div>
             </div>
             </div>
@@ -2199,6 +2221,7 @@
 <script src="js/entities.js"></script>
 <script src="js/playerdetail.js"></script>
 <script src="js/squad.js"></script>
+<script src="js/squadplanning.js"></script>
 <script src="js/secondteam.js"></script>
 <script src="js/career.js"></script>
 <script src="js/crest.js"></script>
