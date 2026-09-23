@@ -3053,12 +3053,22 @@ async function testSquadPlanningTool(browser) {
         out.summeStimmt = analysis.reduce((s, a) => s + a.count, 0) === squad.length;
 
         // 4. Gezielt eine Position kaputt machen: zu wenige, überaltert - muss als KRITISCH
-        //    erkannt werden, während eine unveränderte Position weiter als unauffällig gilt.
-        squad = squad.filter(p => p.pos !== 'ABW');
+        //    erkannt werden, während eine andere, bewusst gesund gehaltene Position weiter als
+        //    unauffällig gilt. Das Mittelfeld wird dafür EBENFALLS deterministisch neu
+        //    aufgebaut statt aus dem zufällig generierten Startkader übernommen zu werden -
+        //    sonst könnte es je nach Zufallssamen (z.B. in der CI) selbst zufällig knapp
+        //    "BEOBACHTEN" auslösen und die Prüfung flackern lassen.
+        squad = squad.filter(p => p.pos !== 'ABW' && p.pos !== 'MIT');
         for (let i = 0; i < 2; i++) {
             let p = createPlayer('ABW', 70, 75);
             p.age = 33;
             p.contracts = 3;
+            squad.push(p);
+        }
+        for (let i = 0; i < 8; i++) {
+            let p = createPlayer('MIT', 70, 80);
+            p.age = 24;
+            p.contracts = 4;
             squad.push(p);
         }
         let analyse2 = getSquadPlanningAnalysis();
