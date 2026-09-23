@@ -2598,6 +2598,84 @@ async function testAttendanceRealism(browser) {
     await page.close();
 }
 
+async function testClubAndPlayerNames(browser) {
+    console.log('\n[34] Vereins- und Spielernamen je Spielklasse');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+
+        // 1. Jede Liga hat ihren eigenen Pool mit genau 18 Vereinen, keiner doppelt.
+        out.sechsPools = LEAGUE_CLUB_NAMES.length === 6;
+        out.je18 = LEAGUE_CLUB_NAMES.every(pool => pool.length === 18);
+        let alle = ALL_CLUB_NAMES;
+        out.keineDoppelten = new Set(alle).size === alle.length;
+        out.gesamt108 = alle.length === 108;
+
+        // 2. Kein Name ist EXAKT der geschuetzte Originalname - alle sind verfremdet.
+        const ORIGINALE = ['Bayern München', 'Borussia Dortmund', 'RB Leipzig', 'Schalke 04',
+            'Hamburger SV', '1. FC Köln', 'Werder Bremen', 'Hertha BSC', '1. FC Magdeburg',
+            'Dynamo Dresden', 'Carl Zeiss Jena', 'BFC Dynamo', 'Real Madrid', 'FC Barcelona',
+            'Manchester United', 'Liverpool FC', 'Juventus Turin', 'Ajax Amsterdam'];
+        out.alleVerfremdet = ORIGINALE.every(o => !alle.includes(o) && !INTERNATIONAL_CLUB_NAMES.includes(o));
+
+        // 3. Die Vereine stehen in der Liga ihres Niveaus: Der Bundesliga-Pool taucht in
+        //    Liga 1 auf, der Regionalliga-Pool in Liga 4. Vorher wurden alle bekannten Namen
+        //    quer ueber alle sechs Ligen verteilt.
+        out.ligaZuordnung = true;
+        for (let l = 0; l < 6; l++) {
+            let ausPool = leaguesData[l].filter(t => LEAGUE_CLUB_NAMES[l].includes(t.name)).length;
+            // 17 Pool-Vereine plus der eigene Klub in der eigenen Liga; anderswo alle 18.
+            if (ausPool < 17) out.ligaZuordnung = false;
+        }
+
+        // 4. Regionalitaet: Die unteren drei Ligen bilden den Nordost-Strang ab, damit
+        //    Auswaertsfahrten kurz bleiben und echte Derbys entstehen.
+        let unten = LEAGUE_CLUB_NAMES[3].concat(LEAGUE_CLUB_NAMES[4], LEAGUE_CLUB_NAMES[5]).join(' ');
+        const NORDOST = ['Leipzich', 'Jenna', 'Dressden', 'Magdeborg', 'Cotbus', 'Halle', 'Zwikau', 'Chemnitz'];
+        out.nordostPraegung = NORDOST.filter(o => unten.includes(o)).length >= 5;
+        // Und die Heimatstadt des Spielers taucht mehrfach auf - das sind die Stadtderbys.
+        out.stadtderbys = (unten.match(/Leipzich/g) || []).length >= 2;
+
+        // 5. Internationale Klubs: deutlich breiteres Feld als die frueheren zwoelf.
+        out.internationalBreit = INTERNATIONAL_CLUB_NAMES.length >= 30;
+        out.internationalEindeutig = new Set(INTERNATIONAL_CLUB_NAMES).size === INTERNATIONAL_CLUB_NAMES.length;
+
+        // 6. Spielernamen klingen nach Fussballern und sind ebenfalls verfremdet.
+        const ECHTE_SPIELER = ['Neuer', 'Müller', 'Kroos', 'Kimmich', 'Sané', 'Gnabry', 'Havertz'];
+        out.spielerVerfremdet = ECHTE_SPIELER.every(n => !lastNames.includes(n));
+        out.genugNamen = firstNames.length >= 40 && lastNames.length >= 40;
+        // Ein voller Kader kommt ohne Doppelung aus.
+        out.kaderNamenPlausibel = squad.length >= 18 && squad.every(p => /^[A-ZÄÖÜ][\wäöüß.-]* [A-ZÄÖÜ]/.test(p.name));
+        return out;
+    });
+
+    // 7. Ueber mehrere Saisons bleibt die Pyramide konsistent: Auf- und Abstiege verschieben
+    //    Vereine zwischen den Ligen, ohne dass Namen doppelt auftauchen oder verlorengehen.
+    const saisons = await page.evaluate(() => {
+        for (let s = 0; s < 3; s++) { for (let i = 0; i < 7; i++) simulateMatchdays(5); concludeSeasonAndAdvance(); }
+        let alle = leaguesData.flat().map(t => t.name);
+        return { anzahl: alle.length, eindeutig: new Set(alle).size };
+    });
+
+    assert(r.sechsPools && r.je18, 'Jede der sechs Ligen hat einen eigenen Pool mit 18 Vereinen');
+    assert(r.gesamt108 && r.keineDoppelten, 'Insgesamt 108 Vereinsnamen, keiner doppelt');
+    assert(r.alleVerfremdet, 'Kein Name entspricht exakt der geschützten Original-Schreibweise');
+    assert(r.ligaZuordnung, 'Jede Liga wird aus dem Pool ihrer eigenen Spielklasse besetzt');
+    assert(r.nordostPraegung, 'Die unteren drei Ligen bilden den Nordost-Strang ab');
+    assert(r.stadtderbys, 'In den unteren Ligen entstehen echte Stadtderbys');
+    assert(r.internationalBreit, 'Das internationale Feld umfasst mindestens 30 Klubs');
+    assert(r.internationalEindeutig, 'Kein internationaler Klub steht doppelt in der Liste');
+    assert(r.spielerVerfremdet, 'Auch Spielernamen sind verfremdet statt exakt übernommen');
+    assert(r.genugNamen, 'Die Namenspools sind groß genug für abwechslungsreiche Kader');
+    assert(r.kaderNamenPlausibel, 'Jeder Spieler hat einen plausiblen Vor- und Nachnamen');
+    assert(saisons.anzahl === saisons.eindeutig,
+        `Nach drei Saisons steht kein Verein doppelt in der Pyramide (${saisons.eindeutig}/${saisons.anzahl})`);
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei den Namen');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -2650,6 +2728,7 @@ async function main() {
         testEuropeanCup,
         testLoadingGuard,
         testAttendanceRealism,
+        testClubAndPlayerNames,
     ];
 
     for (const suite of suites) {

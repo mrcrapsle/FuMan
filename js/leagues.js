@@ -48,7 +48,7 @@
         for (let l = 0; l < NUM_LEAGUES; l++) {
             let teams = [];
             for (let t = 0; t < 18; t++) {
-                let name = (l === game.leagueLevel && t === 0) ? game.clubName : generateTeamName();
+                let name = (l === game.leagueLevel && t === 0) ? game.clubName : generateTeamName(l);
                 let baseStr = 82 - (l * 10) + Math.floor(Math.random() * 6);
                 teams.push({
                     name: name, played: 0, won: 0, drawn: 0, lost: 0,

@@ -14,37 +14,105 @@
     const agentNamePool = ["Klaus Berger", "Sandra Voigt", "Marco Lindner", "Julia Sommer", "Thomas Krause", "Nina Falk", "Rüdiger Stahl", "Petra Wolff"];
     // Internationale Top-Klubs für Auslands-Testspiele in der Vorbereitung (siehe
     // scheduleForeignFriendly() in calendar.js) - ebenfalls dezent verfremdet.
-    const INTERNATIONAL_CLUB_NAMES = ["Real Madriz", "FC Barcalona", "Manchester Unitad", "Juwentus Turin", "Paris St. Germaine", "Liverpol FC", "AC Millan", "Ajax Amsterdaam", "Inter Milano", "Chelsea FC London", "Atlético Madriz", "FC Porto Portugal"];
+    // Internationale Klubs, nach derselben Regel minimal verfremdet wie die deutschen.
+    // Deutlich breiter als zuvor (12 Namen), damit Auslandsreisen, Europapokal und
+    // Leihgeschäfte nicht immer dieselbe Handvoll Vereine zeigen.
+    const INTERNATIONAL_CLUB_NAMES = [
+        // Spanien
+        "Real Madriz", "FC Barcalona", "Atlético Madriz", "FC Sevillia", "Valencia CFF", "Real Betiss",
+        // England
+        "Manchester Unitad", "Manchester Cyty", "Liverpol FC", "Chelsea FC London", "Arsenall London", "Tottenham Hotspurr",
+        // Italien
+        "Juwentus Turin", "AC Millan", "Inter Milano", "SSC Neapell", "AS Romm", "Lazio Romm",
+        // Frankreich
+        "Paris St. Germaine", "Olympique Marseile", "Olympique Lyonn", "AS Monakko",
+        // Niederlande, Portugal, Belgien
+        "Ajax Amsterdaam", "PSV Eindhofen", "Feyenoordt Rotterdam", "FC Porto Portugal", "Benfika Lissabon",
+        "Sporting Lissabonn", "Club Bruggge",
+        // Übriges Europa
+        "Celtic Glasgoww", "Galatasaray Istanbull", "Fenerbahce Istanbull", "Roter Stern Belgratt",
+        "Schachtar Donezkk", "Zenit St. Petersborg", "RB Salzborg", "Rapid Wienn", "FC Baselll", "Young Boys Bernn"
+    ];
 
     const cityPool = ["München", "Dortmund", "Berlin", "Leipzig", "Hamburg", "Frankfurt", "Stuttgart", "Bremen", "Köln", "Düsseldorf", "Hannover", "Nürnberg", "Kaiserslautern", "Dresden", "Bielefeld", "Bochum", "Augsburg", "Mainz", "Freiburg", "Rostock", "Magdeburg", "Karlsruhe", "Münster", "Essen", "Wiesbaden", "Osnabrück", "Saarbrücken", "Ulm", "Regensburg", "Braunschweig", "Fürth", "Elversberg", "Aachen", "Erfurt", "Halle", "Paderborn", "Kiel", "Sandhausen", "Ingolstadt", "Jena", "Zwickau", "Cottbus", "Chemnitz", "Offenbach", "Würzburg", "Mannheim", "Duisburg", "Oberhausen", "Krefeld", "Lübeck"];
     const prefixPool = ["FC", "SV", "SpVgg", "SC", "VfB", "VfL", "SG", "TSV", "1. FC", "Borussia", "Fortuna", "Dynamo", "Rot-Weiß", "Blau-Weiß", "Eintracht", "Viktoria"];
     let usedClubNames = new Set();
 
-    // Bekannte deutsche Vereine, MINIMAL verfremdet (meist nur ein Umlaut entfernt oder ein
-    // einzelner Buchstabe/eine Zahl leicht geändert, z.B. "Bayern München" -> "Bayern
-    // Munchen") - so bleibt sofort erkennbar, welcher echte Verein gemeint ist, ohne exakt
-    // die Original-Schreibweise zu verwenden. Wird von generateTeamName() mit ~35% Chance
-    // gezogen, damit sich die Liga-Welt "geerdet" und wiedererkennbar anfühlt.
-    const RECOGNIZABLE_CLUB_NAMES = [
-        "Bayern Munchen", "Borussia Dortmunt", "Schalke 05", "Werder Breman",
-        "Hamburger SP", "Eintracht Frankfurth", "RB Leibzig", "Bayer Leverkussen",
-        "VfL Wolfburg", "Borussia Monchengladbach", "1. FC Koln", "VfB Stuttgardt",
-        "TSG Hoffennheim", "SC Freyburg", "Union Berlien", "Mainz 06",
-        "FC Augsburgh", "Hertha BSK", "1. FC Nurnberg", "Hannover 97",
-        "Fortuna Dusseldorf", "FC St. Paulli", "Karlsruher SK", "Dynamo Dressden",
-        "Energie Cotbus", "Arminia Bilefeld", "MSV Duisborg", "1. FC Heidenheimm",
-        "Holstein Kiehl", "SV Darmstadt 99", "SC Padernborn", "Greuther Furth"
+    // ==========================================
+    // VEREINSNAMEN JE SPIELKLASSE
+    // ==========================================
+    // Alle Namen sind MINIMAL verfremdet (ein geänderter Buchstabe, ein entfernter Umlaut,
+    // eine leicht verschobene Jahreszahl), damit sofort erkennbar bleibt, welcher echte
+    // Verein gemeint ist, ohne die geschützte Original-Schreibweise zu verwenden - dieselbe
+    // Konvention, die im Spiel schon für die internationalen Klubs galt.
+    //
+    // Neu ist die Zuordnung nach Spielklasse. Vorher wurden alle bekannten Namen quer über
+    // alle sechs Ligen verteilt, sodass Bayern in der Kreisklasse auftauchen konnte.
+    //
+    // Wichtig ab der 4. Liga: Der deutsche Fußball ist dort REGIONAL geteilt. Der Verein des
+    // Spielers sitzt in Leipzig, deshalb bilden die unteren drei Ligen den Nordost-Strang ab
+    // (Regionalliga Nordost, NOFV-Oberliga Süd, Landesliga Sachsen). Das hat zwei Effekte,
+    // die auch im echten Fußball zusammenhängen: kurze Auswärtsfahrten und echte Derbys
+    // gegen Nachbarvereine.
+    const LEAGUE_CLUB_NAMES = [
+        // 1. Liga - Bundesliga
+        ["Bayern Munchen", "Borussia Dortmunt", "RB Leibzig", "Bayer Leverkussen",
+         "Eintracht Frankfurth", "VfB Stuttgardt", "TSG Hoffennheim", "SC Freyburg",
+         "Union Berlien", "Borussia Monchengladbach", "VfL Wolfburg", "Mainz 06",
+         "FC Augsburgh", "Werder Breman", "VfL Bochumm", "1. FC Heidenheimm",
+         "SV Darmstadt 99", "1. FC Koln"],
+        // 2. Liga - 2. Bundesliga
+        ["Hamburger SP", "Schalke 05", "Hertha BSK", "Fortuna Dusseldorf",
+         "SC Padernborn", "FC St. Paulli", "Holstein Kiehl", "1. FC Nurnberg",
+         "Karlsruher SK", "Hannover 97", "SV Elversbergh", "Greuther Furth",
+         "1. FC Kaiserslauten", "Eintracht Braunschweigh", "Hansa Rostok", "VfL Osnabruk",
+         "SV Wehen Wiesbadn", "SpVgg Furth-Nord"],
+        // 3. Liga - bundesweit
+        ["Dynamo Dressden", "TSV 1861 Munchen", "MSV Duisborg", "FC Ingolstat 04",
+         "1. FC Saarbrukken", "SSV Jahn Regensborg", "SpVgg Unterhachingen", "SC Verll",
+         "SV Sandhausn", "SV Waldhof Manheim", "Rot-Weiss Essn", "Arminia Bilefeld",
+         "Viktoria Kolln", "SC Preussen Munsterr", "VfB Lubek", "Alemannia Aachn",
+         "Stuttgarter Kikkers", "TSV Havelsee"],
+        // 4. Liga - Regionalliga Nordost
+        ["1. FC Magdeborg", "Erzgebirge Aua", "Lokomotiv Leipzich", "Carl Zeiss Jenna",
+         "BFC Dynamoo", "BSG Chemie Leipzich", "FSV Zwikau", "FC Energie Cotbus",
+         "Hallescher FK 96", "Chemnitzer FCC", "ZFC Meussen", "Viktoria Berlien",
+         "VSG Altglienike", "SV Babelsbergh 03", "Greifswalder FCC", "FSV Luckenwaldde",
+         "SV Bischofswerdda", "FC Eilenborg"],
+        // 5. Liga - NOFV-Oberliga Süd
+        ["VfB Auerbah", "SV Schott Jenna", "FC Grimma 1919", "SV Merseburgh 99",
+         "VfB Krieschoww", "Ludwigsfelder FCC", "FSV Budissa Bautzn", "SV Blau-Weiss Zorbigg",
+         "1. FC Lok Stendall", "SG Union Sandersdorff", "VfL Halle 96", "FC Anker Wismarr",
+         "FC Optik Rathenoww", "Tennis Borussia Berlien", "SV Lichtenbergh 47", "FSV Barlebn",
+         "SC Freitall", "SV Blau-Weiss Bad Frankenhausn"],
+        // 6. Liga - Landesliga Sachsen
+        ["SV Blau-Weiss Leipzich", "TSV Grosspostwitzz", "FC Empor Weimarr", "SV Motor Altenborg",
+         "SG Traktor Reichenbah", "FSV Wacker Nordhausn", "SV Einheit Wernigerodde", "SC Concordia Riesaa",
+         "FC Rot-Weiss Mittweidda", "SV Fortuna Trebbinn", "TSV Bernsdorff", "SG Dynamo Hoyerswerdda",
+         "FC Stahl Brandenborg", "SV Motor Zschopauu", "SG Chemie Bohlenn", "FC Grun-Weiss Piesteritzz",
+         "SV Blau-Gelb Grunaa", "TSV Oberwiesenthall"]
     ];
 
-    function generateTeamName() {
-        if (Math.random() < 0.35) {
-            let candidates = RECOGNIZABLE_CLUB_NAMES.filter(n => !usedClubNames.has(n) && n !== game.clubName);
+    // Flache Liste über alle Ligen - gebraucht, wenn der Pool der passenden Liga erschöpft ist
+    // (etwa weil ein Verein per Auf- oder Abstieg längst woanders steht).
+    const ALL_CLUB_NAMES = LEAGUE_CLUB_NAMES.reduce((alle, liga) => alle.concat(liga), []);
+
+    // leagueLevel ist optional: Wird es übergeben, kommt der Name bevorzugt aus dem Pool genau
+    // dieser Spielklasse. Ohne Angabe (Pokalgegner, Leihverein, permanenter Rivale) wird aus
+    // allen Ligen gezogen, weil solche Vereine ligaübergreifend auftreten.
+    function generateTeamName(leagueLevel = null) {
+        let pools = [];
+        if (leagueLevel !== null && LEAGUE_CLUB_NAMES[leagueLevel]) pools.push(LEAGUE_CLUB_NAMES[leagueLevel]);
+        pools.push(ALL_CLUB_NAMES);
+        for (let pool of pools) {
+            let candidates = pool.filter(n => !usedClubNames.has(n) && n !== game.clubName);
             if (candidates.length > 0) {
                 let name = candidates[Math.floor(Math.random() * candidates.length)];
                 usedClubNames.add(name);
                 return name;
             }
         }
+        // Erst wenn alle echten Namen vergeben sind, wird generisch weitergebaut.
         for (let i = 0; i < 150; i++) {
             let pref = prefixPool[Math.floor(Math.random() * prefixPool.length)];
             let city = cityPool[Math.floor(Math.random() * cityPool.length)];
@@ -57,8 +125,27 @@
         return `FC Sportfreunde ${Math.floor(Math.random() * 900 + 100)}`;
     }
 
-    const firstNames = ["Max", "Lukas", "Leon", "Felix", "Jonas", "Elias", "Noah", "Julian", "Tim", "Moritz", "Jan", "Tom", "David", "Paul", "Alexander", "Daniel", "Tobias", "Florian", "Marco", "Kevin", "Nico", "Sven"];
-    const lastNames = ["Müller", "Schmidt", "Schneider", "Fischer", "Weber", "Meyer", "Wagner", "Becker", "Schulz", "Hoffmann", "Schäfer", "Koch", "Bauer", "Richter", "Klein", "Wolf", "Schröder", "Neumann", "Schwarz", "Zimmermann", "Hartmann", "Lange"];
+    // Spielernamen, an bekannte Fussballer angelehnt und nach derselben Regel wie die
+    // Vereinsnamen minimal verfremdet. Vorher waren es beliebige deutsche Allerweltsnamen -
+    // jetzt klingt ein Kader wie ein Kader und nicht wie ein Telefonbuch.
+    const firstNames = [
+        "Manuel", "Thomas", "Toni", "Joshua", "Leroy", "Serge", "Kai", "Timo",
+        "Niklas", "Ilkay", "Jamal", "Florian", "Julian", "Leon", "Robin", "Mats",
+        "Jerome", "Benedikt", "Miroslav", "Lukas", "Bastian", "Philipp", "Per", "Mesut",
+        "Sami", "Christoph", "Max", "Emre", "Nico", "Jonas", "Deniz", "Kevin",
+        "Marco", "Mario", "Matthias", "Oliver", "Michael", "Lothar", "Rudi", "Jurgen",
+        "Berti", "Stefan", "Karl-Heinz", "Gerd", "Franz", "Sepp", "Uwe", "Gunter",
+        "Marc-Andre", "Antonio", "Youssoufa", "Felix", "Nadiem", "Suat", "Malick", "Jannik"
+    ];
+    const lastNames = [
+        "Neuher", "Mullert", "Kroosz", "Kimmig", "Sanee", "Gnabri", "Haferts", "Wernar",
+        "Sulle", "Rudinger", "Gundogun", "ter Stegner", "Musialla", "Wirts", "Schlotterberg", "Kehrerr",
+        "Klosterman", "Hummell", "Boatenk", "Howedess", "Klosen", "Podolsky", "Schweinsberger", "Lahmann",
+        "Mertesacker", "Ozell", "Kedira", "Schurrler", "Kramerr", "Ballak", "Effenbergh", "Mattheus",
+        "Vollers", "Beckenbaur", "Seelers", "Netzers", "Rummenick", "Breitnerr", "Vogtz", "Overath",
+        "Walterr", "Sammerr", "Bierhofff", "Kahnn", "Illgnerr", "Reuss", "Gorezka", "Adeyemmi",
+        "Fullkrugg", "Raumm", "Anderss", "Gross", "Stachh", "Baumgartel", "Wolframm", "Henrichss"
+    ];
 
     function getRandomName() { return firstNames[Math.floor(Math.random() * firstNames.length)] + " " + lastNames[Math.floor(Math.random() * lastNames.length)]; }
 

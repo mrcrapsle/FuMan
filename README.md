@@ -269,6 +269,30 @@ Abrechnung, eine Buchung von dort landete weder im Journal noch im Auszug.
 `getDeployedStewards()`); auswärts stellt der Gastgeber das Personal. Vorher
 wurde an jedem Spieltag die volle vorgehaltene Zahl abgerechnet.
 
+## Vereins- und Spielernamen
+
+Alle Namen sind **minimal verfremdet** - ein geänderter Buchstabe, ein entfernter
+Umlaut, eine leicht verschobene Jahreszahl. So bleibt erkennbar, welcher echte
+Verein gemeint ist, ohne die geschützte Original-Schreibweise zu verwenden.
+Ein Test prüft, dass kein Name exakt einem Original entspricht.
+
+`LEAGUE_CLUB_NAMES` in `js/entities.js` hält **je Spielklasse einen eigenen Pool**
+mit 18 Vereinen (108 insgesamt, keiner doppelt). `generateTeamName(leagueLevel)`
+bedient sich zuerst beim Pool der passenden Liga; ohne Ligaangabe (Pokalgegner,
+Leihverein, permanenter Rivale) wird aus allen gezogen. Vorher wurden alle
+bekannten Namen quer über alle sechs Ligen verteilt, sodass Bayern in der
+Kreisklasse auftauchen konnte.
+
+**Regionalität ab der 4. Liga**: Der deutsche Fußball ist unterhalb der 3. Liga
+regional geteilt. Weil der Verein des Spielers in Leipzig sitzt, bilden die
+unteren drei Ligen den Nordost-Strang ab (Regionalliga Nordost, NOFV-Oberliga
+Süd, Landesliga Sachsen). Das erzeugt zwei Effekte, die auch im echten Fußball
+zusammenhängen: kurze Auswärtsfahrten und echte Derbys gegen Nachbarvereine -
+in Leipzig gleich mehrere.
+
+Wer die Pyramide auf eine andere Region umstellen will (etwa West statt
+Nordost), tauscht die Pools 3 bis 5 aus; der Rest des Spiels hängt nicht daran.
+
 ## Zuschauerzahlen
 
 Zwei Grenzen wirken zusammen, und **beide** werden gebraucht:
