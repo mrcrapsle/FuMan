@@ -53,12 +53,15 @@
                     <button onclick="extendContract('${p.id}')" class="btn-secondary" style="width:auto;">+1 J. [${formatVal(feeDisplay)}]</button>
                 </div>
                 ${isNegotiating ? `<div class="box" style="font-size:9px; margin-top:4px; border-left-color:var(--danger);">💬 ${p.name} verlangt mehr! <button onclick="rejectContractCounter()" class="btn-secondary" style="width:auto; font-size:8px; margin-left:4px;">Ablehnen</button></div>` : ''}
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; font-size:9px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; font-size:9px; flex-wrap:wrap; gap:3px;">
                     ${p.releaseClause
                         ? `<span>📜 Ausstiegsklausel: <strong style="color:var(--accent);">${formatVal(p.releaseClause)}</strong></span><button onclick="removeReleaseClause('${p.id}')" class="btn-secondary" style="width:auto; font-size:8px;">Entfernen</button>`
-                        : `<span style="color:var(--text-muted);">Keine Ausstiegsklausel</span><button onclick="promptSetReleaseClause('${p.id}')" class="btn-secondary" style="width:auto; font-size:8px;">📜 Klausel festlegen</button>`
+                        : `<span style="color:var(--text-muted);">Keine Ausstiegsklausel</span>
+                           <input type="number" id="release-clause-input-${p.id}" placeholder="mind. ${formatVal(Math.round(p.marketValue * 1.1))}" class="input-inline" style="width:110px; font-size:8px;">
+                           <button onclick="confirmSetReleaseClause('${p.id}')" class="btn-secondary" style="width:auto; font-size:8px;">📜 Klausel festlegen</button>`
                     }
                 </div>
+                ${(typeof renderBonusClausesBlock === 'function') ? renderBonusClausesBlock(p) : ''}
             `;
             list.appendChild(row);
         });
@@ -113,13 +116,9 @@
     // Verhandlung abwerben kann - wie im echten Fußball üblich. Eine niedrige Klausel macht
     // den Spieler zufriedener (Sicherheit für seine Karriere), erhöht aber das Risiko eines
     // plötzlichen Abgangs zu einem für dich möglicherweise ungünstigen Preis.
-    function promptSetReleaseClause(playerId) {
-        let p = squad.find(x => x.id === playerId);
-        if (!p) return;
-        let minClause = Math.round(p.marketValue * 1.1);
-        let input = prompt(`Ausstiegsklausel für ${p.name} festlegen (mind. ${formatVal(minClause)}):`, minClause);
-        if (input === null) return;
-        let amount = parseInt(input.replace(/[^\d]/g, ''));
+    function confirmSetReleaseClause(playerId) {
+        let input = document.getElementById(`release-clause-input-${playerId}`);
+        let amount = parseInt(input ? input.value : '');
         if (isNaN(amount)) { showToast('Ungültiger Betrag!', 'error'); return; }
         setReleaseClause(playerId, amount);
     }

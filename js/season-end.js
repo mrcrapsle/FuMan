@@ -72,6 +72,16 @@
     }
 
     function concludeSeasonAndAdvance() {
+        // Erfolgsbasierte Vertragsboni (js/bonusclauses.js): das Aufstiegsbonus-Flag wird
+        // bewusst HIER, ganz am Anfang, zurückgesetzt - nicht in der allgemeinen
+        // Saisonstatistik-Reset-Schleife weiter unten. Der Aufstieg dieser (gerade endenden)
+        // Saison wird erst WEITER UNTEN in dieser Funktion geprüft und ausgezahlt - ein Reset
+        // an dieser Stelle würde die gerade erfolgte Zahlung im selben Funktionsaufruf sofort
+        // wieder unsichtbar machen und, schlimmer, einen erneuten Aufstieg in einer SPÄTEREN
+        // Saison faelschlich blockieren, weil das Flag von der letzten Zahlung an noch "true"
+        // stünde.
+        squad.forEach(p => { if (p.bonusPaidThisSeason) p.bonusPaidThisSeason.promotion = false; });
+
         // Kopie statt In-Place-Sortierung, aus Konsistenz mit renderLeagueView() -
         // auch wenn die Saison hier bereits vorbei ist, bleibt so die Originaldatenstruktur
         // unangetastet, falls andere Screens (z.B. Historie) noch darauf zugreifen.
@@ -151,6 +161,7 @@
                 if (sponsorPromoBonus > 0) game.money += sponsorPromoBonus;
                 addManagerXP(1000);
                 boostFanBaseFloor(6, `Der Aufstieg in die ${leagueNames[game.leagueLevel]}`);
+                if (typeof triggerPromotionBonusClauses === 'function') triggerPromotionBonusClauses();
                 showNotice('🎉 Aufstieg geschafft!', `Glückwunsch zur Beförderung in die ${leagueNames[game.leagueLevel]}.\n\nAufstiegsprämie 1.500.000 €${sponsorPromoBonus > 0 ? ` plus ${formatVal(sponsorPromoBonus)} Sponsoren-Aufstiegsbonus` : ''}.`);
             }
         } else if (myRank >= 16 && game.leagueLevel < NUM_LEAGUES - 1) {
@@ -197,6 +208,14 @@
             p.strengthHistory.push({ season: game.season, strength: p.strength });
             if (p.strengthHistory.length > 15) p.strengthHistory.shift();
             p.goalsSeason = 0;
+            p.appearancesSeason = 0;
+            // Erfolgsbasierte Vertragsboni (js/bonusclauses.js): eine bereits eingelöste
+            // Tor-/Einsatzklausel darf in der neuen Saison erneut ausgezahlt werden, sobald
+            // die Marke wieder erreicht wird - die Klausel selbst (Schwelle/Betrag) bleibt
+            // bestehen, bis sie aktiv entfernt oder neu verhandelt wird. Das Aufstiegsbonus-
+            // Flag wird bewusst NICHT hier zurückgesetzt (siehe Kommentar am Anfang dieser
+            // Funktion), sondern beim naechsten Saisonende - bis dahin bleibt es sichtbar.
+            if (p.bonusPaidThisSeason) { p.bonusPaidThisSeason.goals = false; p.bonusPaidThisSeason.appearances = false; }
         });
         // Bugfix: Spieler mit ausgelaufenem Vertrag verschwanden bisher komplett
         // stillschweigend aus dem Kader - keine Benachrichtigung, keine Rücksicht auf einen

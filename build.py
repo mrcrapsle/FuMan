@@ -50,6 +50,7 @@ JS_ORDER = [
     "js/campus-staff.js",
     "js/fans.js",
     "js/youth.js",
+    "js/bonusclauses.js",
     "js/contracts.js",
     "js/private-life.js",
     "js/underworld.js",

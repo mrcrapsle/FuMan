@@ -233,6 +233,11 @@
             nationalDuty: 0,
             timesInjured: 0,
             appearances: 0,
+            appearancesSeason: 0,
+            // Erfolgsbasierte Vertragsboni (siehe js/bonusclauses.js): Torbonus, Einsatzbonus,
+            // Aufstiegsbonus - jeweils null, solange keine Klausel vereinbart wurde.
+            bonusClauses: { goals: null, appearances: null, promotion: null },
+            bonusPaidThisSeason: { goals: false, appearances: false, promotion: false },
             friendPlayerId: null,
             squadTenureMatchdays: 0,
             ultimatumCount: 0,

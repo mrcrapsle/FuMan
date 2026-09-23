@@ -2882,6 +2882,150 @@ async function testFinancialFairplay(browser) {
     await page.close();
 }
 
+async function testBonusClauses(browser) {
+    console.log('\n[37] Erfolgsbasierte Vertragsboni: Torbonus, Einsatzbonus, Aufstiegsbonus');
+    const { page, consoleErrors } = await freshPage(browser);
+    const nativeDialoge = [];
+    page.on('dialog', async d => { nativeDialoge.push(d.type() + ': ' + d.message().slice(0, 80)); await d.dismiss(); });
+
+    const r = await page.evaluate(() => {
+        let out = {};
+        let p = squad[0];
+
+        // 1. Ein zu niedriger Bonusbetrag wird abgelehnt - der Spieler verlangt ein
+        //    Mindestmaß, das sich am Marktwert orientiert (analog zur Ausstiegsklausel).
+        setBonusClause(p.id, 'goals', 5, 1);
+        out.zuNiedrigAbgelehnt = p.bonusClauses.goals === null;
+
+        // 2. Ein ausreichender Betrag wird akzeptiert, für alle drei Bonustypen.
+        let minGoals = getBonusClauseMinAmount(p, 'goals');
+        let minApp = getBonusClauseMinAmount(p, 'appearances');
+        let minProm = getBonusClauseMinAmount(p, 'promotion');
+        setBonusClause(p.id, 'goals', 3, minGoals + 5000);
+        setBonusClause(p.id, 'appearances', 10, minApp + 3000);
+        setBonusClause(p.id, 'promotion', null, minProm + 5000);
+        out.alleDreiVereinbart = !!p.bonusClauses.goals && !!p.bonusClauses.appearances && !!p.bonusClauses.promotion;
+
+        // 3. Torbonus wird ausgezahlt, sobald die Saisontore die Schwelle erreichen - über den
+        //    normalen Kontoauszug (nicht als anonymer Spieltags-Nachtrag), und zählt zur
+        //    Financial-Fairplay-Bilanz (reguläres operatives Geschäft, keine Ausnahme).
+        game.money = 5000000;
+        game.ffpSeasonNet = 0;
+        let geldVorTor = game.money;
+        p.goalsSeason = 3;
+        checkMatchdayBonusClauses(p);
+        out.torbonusAusgezahlt = p.bonusPaidThisSeason.goals === true;
+        let deltaTor = game.money - geldVorTor;
+        out.torbonusGeldSank = deltaTor < 0 && Math.abs(-deltaTor - p.bonusClauses.goals.amount) <= (p.agent ? p.bonusClauses.goals.amount : 0);
+        out.torbonusImKontoauszug = game.kontoauszug[game.kontoauszug.length - 1].label === '⚽ Torbonus';
+        out.torbonusInFfpBilanz = Math.round(game.ffpSeasonNet) === Math.round(deltaTor);
+
+        // 4. Kein zweites Mal in derselben Saison, auch wenn die Prüfung erneut läuft.
+        let geldVorZweitesMal = game.money;
+        checkMatchdayBonusClauses(p);
+        out.keineDoppelteAuszahlung = game.money === geldVorZweitesMal;
+
+        // 5. Einsatzbonus funktioniert unabhängig vom Torbonus über denselben Mechanismus.
+        p.appearancesSeason = 10;
+        let geldVorEinsatz = game.money;
+        checkMatchdayBonusClauses(p);
+        out.einsatzbonusAusgezahlt = p.bonusPaidThisSeason.appearances === true && game.money < geldVorEinsatz;
+
+        // 6. Eine entfernte Klausel wird nicht mehr ausgezahlt.
+        removeBonusClause(p.id, 'goals');
+        out.klauselEntfernt = p.bonusClauses.goals === null;
+
+        return out;
+    });
+
+    // 7. Aufstiegsbonus: wird bei einem tatsächlichen Aufstieg ausgezahlt, bleibt für die
+    //    Verträge-Ansicht der neuen Saison sichtbar UND funktioniert bei einem erneuten
+    //    Aufstieg in einer späteren Saison ein weiteres Mal (kein "Einmal pro Karriere"-Bug).
+    const aufstieg = await page.evaluate(() => {
+        let p = squad[0];
+        function forcePromotion() {
+            let team = leaguesData[game.leagueLevel].find(t => t.name === game.clubName);
+            team.points = 999;
+            stadium.total = 30000;
+            stadium.flutlicht = true;
+            game.money = 999999999;
+        }
+        forcePromotion();
+        let levelVor1 = game.leagueLevel;
+        concludeSeasonAndAdvance();
+        let ergebnis1 = { aufgestiegen: game.leagueLevel < levelVor1, bonusSichtbar: p.bonusPaidThisSeason.promotion === true };
+
+        forcePromotion();
+        let levelVor2 = game.leagueLevel;
+        concludeSeasonAndAdvance();
+        let ergebnis2 = { aufgestiegen: game.leagueLevel < levelVor2, bonusErneutAusgezahlt: p.bonusPaidThisSeason.promotion === true };
+
+        return { ergebnis1, ergebnis2 };
+    });
+
+    // 8. Speichern und Laden erhält Klauseln, Saisonzähler und Auszahlungsstatus.
+    const laden = await page.evaluate(() => {
+        let p = squad[0];
+        setBonusClause(p.id, 'goals', 8, getBonusClauseMinAmount(p, 'goals') + 4000);
+        p.appearancesSeason = 12;
+        let vorher = { clause: JSON.stringify(p.bonusClauses), appSeason: p.appearancesSeason };
+        saveGameToSlot(4);
+        p.bonusClauses.goals = null;
+        p.appearancesSeason = 0;
+        loadGameFromSlot(4, true);
+        let pNachLaden = squad.find(x => x.id === p.id);
+        return { stimmtUeberein: JSON.stringify(pNachLaden.bonusClauses) === vorher.clause && pNachLaden.appearancesSeason === vorher.appSeason };
+    });
+
+    // 9. Echte DOM-Bedienung statt nur direkter Funktionsaufrufe: die Eingabefelder und
+    //    Buttons in der Verträge-Ansicht müssen tatsächlich funktionieren - inklusive der
+    //    Ausstiegsklausel, die früher über ein natives prompt() lief (siehe "Keine nativen
+    //    Dialoge mehr" - dieser Rest war bei der damaligen Umstellung übersehen worden).
+    await page.evaluate(() => {
+        closeTutorial();
+        // Die vorangegangenen Aufstiegssimulationen (concludeSeasonAndAdvance) legen ein
+        // Saisonrückblick-Overlay sowie ggf. Meldungen über die Seite - beides würde echte
+        // Klicks blockieren (siehe "element intercepts pointer events").
+        let overlay = document.getElementById('season-review-overlay');
+        if (overlay) overlay.classList.remove('show');
+        let box = document.getElementById('app-notice');
+        while (box && box.style.display === 'flex') dismissNotice();
+        showScreen('screen-contracts');
+    });
+    await page.waitForTimeout(150);
+    const spielerId = await page.evaluate(() => squad[1].id);
+    await page.fill(`#bonus-goals-thresh-${spielerId}`, '4');
+    await page.fill(`#bonus-goals-amount-${spielerId}`, '30000');
+    await page.click(`button[onclick="confirmBonusClause('${spielerId}', 'goals')"]`);
+    await page.fill(`#release-clause-input-${spielerId}`, '500000000');
+    await page.click(`button[onclick="confirmSetReleaseClause('${spielerId}')"]`);
+    await page.waitForTimeout(150);
+    const uiErgebnis = await page.evaluate((pid) => {
+        let p = squad.find(x => x.id === pid);
+        return { bonusPerKlickGesetzt: !!p.bonusClauses.goals && p.bonusClauses.goals.threshold === 4, klauselPerKlickGesetzt: p.releaseClause === 500000000 };
+    }, spielerId);
+
+    assert(r.zuNiedrigAbgelehnt, 'Ein zu niedriger Bonusbetrag wird vom Spieler abgelehnt');
+    assert(r.alleDreiVereinbart, 'Torbonus, Einsatzbonus und Aufstiegsbonus lassen sich alle drei vereinbaren');
+    assert(r.torbonusAusgezahlt, 'Der Torbonus wird bei Erreichen der Schwelle ausgezahlt');
+    assert(r.torbonusGeldSank, 'Die Auszahlung entspricht dem vereinbarten Betrag (ggf. zzgl. Beraterprovision)');
+    assert(r.torbonusImKontoauszug, 'Die Auszahlung erscheint klar beschriftet im Kontoauszug');
+    assert(r.torbonusInFfpBilanz, 'Die Auszahlung zählt zur Financial-Fairplay-Bilanz (kein Ausnahme-Schlupfloch)');
+    assert(r.keineDoppelteAuszahlung, 'Derselbe Bonus wird nicht zweimal in derselben Saison ausgezahlt');
+    assert(r.einsatzbonusAusgezahlt, 'Der Einsatzbonus wird unabhängig vom Torbonus ausgezahlt');
+    assert(r.klauselEntfernt, 'Eine entfernte Klausel wird nicht mehr ausgezahlt');
+
+    assert(aufstieg.ergebnis1.aufgestiegen && aufstieg.ergebnis1.bonusSichtbar, 'Der Aufstiegsbonus wird bei einem tatsächlichen Aufstieg ausgezahlt und bleibt sichtbar');
+    assert(aufstieg.ergebnis2.aufgestiegen && aufstieg.ergebnis2.bonusErneutAusgezahlt, 'Ein erneuter Aufstieg in einer späteren Saison zahlt den Bonus ein weiteres Mal aus');
+
+    assert(laden.stimmtUeberein, 'Klauseln, Saisonzähler und Auszahlungsstatus überleben Speichern und Laden');
+    assert(uiErgebnis.bonusPerKlickGesetzt, 'Eine Bonusklausel lässt sich über echte Eingabefelder und einen Klick setzen');
+    assert(uiErgebnis.klauselPerKlickGesetzt, 'Auch die Ausstiegsklausel läuft jetzt über ein Eingabefeld statt über ein natives prompt()');
+    assert(nativeDialoge.length === 0, `Die Bonusklausel-Verwaltung nutzt keine nativen Dialoge (${nativeDialoge.join(' | ') || 'keiner'})`);
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei den Vertragsboni');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -2937,6 +3081,7 @@ async function main() {
         testClubAndPlayerNames,
         testLandesPokal,
         testFinancialFairplay,
+        testBonusClauses,
     ];
 
     for (const suite of suites) {

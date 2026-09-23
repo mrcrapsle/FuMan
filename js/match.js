@@ -1485,6 +1485,7 @@
                 // Mängel rechtzeitig behoben: nachträglicher Aufstieg mitten in der laufenden Saison!
                 game.leagueLevel = game.dfbGracePeriod.targetLevel;
                 game.dfbGracePeriod = null;
+                if (typeof triggerPromotionBonusClauses === 'function') triggerPromotionBonusClauses();
                 addInboxMessage('vertrag', '🎉 Nachträglicher Aufstieg!', `Die DFB-Auflagen wurden rechtzeitig innerhalb der Nachfrist erfüllt - der Aufstieg in die ${leagueNames[game.leagueLevel]} wird nachträglich vollzogen!`, 'screen-stadium');
                 showToast(`🎉 Nachträglicher Aufstieg in die ${leagueNames[game.leagueLevel]}!`, 'success');
             } else {
@@ -1575,6 +1576,10 @@
         // individuelles Risiko - ein sich selbst verstärkender Teufelskreis wie im echten Fußball.
         playedThisMatch.forEach(p => {
             p.appearances = (p.appearances || 0) + 1;
+            p.appearancesSeason = (p.appearancesSeason || 0) + 1;
+            // Erfolgsbasierte Vertragsboni (js/bonusclauses.js): Tor- und Einsatzbonus prüfen -
+            // goalsSeason ist zu diesem Zeitpunkt bereits für dieses Spiel aktualisiert.
+            if (typeof checkMatchdayBonusClauses === 'function') checkMatchdayBonusClauses(p);
             // Bus statt Flugzeug ist unbequemer - kleiner Moraldämpfer bei Auswärtsfahrten
             // (gesponserter Bus mit besserer Ausstattung mildert das etwas ab).
             if (!isHomeMatchParam && game.travelMode === 'bus') p.morale = Math.max(10, p.morale - (game.busSponsorActive ? (game.busSponsorViaBanden ? 1.5 : 1) : 2));
