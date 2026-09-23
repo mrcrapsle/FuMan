@@ -23,6 +23,7 @@ JS_ORDER = [
     "js/crest.js",
     "js/leagues.js",
     "js/cup.js",
+    "js/landescup.js",
     "js/europe.js",
     "js/transfermarket.js",
     "js/manager-rpg.js",

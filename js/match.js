@@ -1605,6 +1605,12 @@
         let cupRoundIdx = cupTournament.matchdays.indexOf(game.matchday);
         if (cupRoundIdx !== -1) simulateCupRound(cupRoundIdx, isLiveContext);
 
+        // Landespokal: eigene Spieltage, damit er sich nicht mit dem DFB-Pokal beisst.
+        if (typeof simulateLandesPokalRound === 'function') {
+            let landesIdx = landesPokal.matchdays.indexOf(game.matchday);
+            if (landesIdx !== -1) simulateLandesPokalRound(landesIdx, isLiveContext);
+        }
+
         if (europeTournament.matchdays.includes(game.matchday)) {
             simulateEuropeMatchday(game.matchday, isLiveContext);
         }

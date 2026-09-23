@@ -2676,6 +2676,82 @@ async function testClubAndPlayerNames(browser) {
     await page.close();
 }
 
+async function testLandesPokal(browser) {
+    console.log('\n[35] Landespokal als Weg in den DFB-Pokal');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+
+        // 1. Unterhalb der 3. Liga ist man NICHT automatisch im DFB-Pokal. Vorher startete
+        //    selbst ein Sechstligist direkt gegen Bundesligisten.
+        out.startLiga = game.leagueLevel;
+        out.nichtImDfbPokal = game.inCup === false;
+        out.landespokalLaeuft = landesPokal.active === true && landesPokal.roundsHistory.length === 1;
+        out.eigenerKlubImLandespokal = landesPokal.roundsHistory[0].pairings
+            .some(p => p.home === game.clubName || p.away === game.clubName);
+        out.nichtImDfbTurnierbaum = !cupTournament.roundsHistory[0].pairings
+            .some(p => p.home === game.clubName || p.away === game.clubName);
+
+        // 2. Die Gegner kommen aus der eigenen Region, nicht aus der Bundesliga.
+        let gegner = landesPokal.roundsHistory[0].pairings.flatMap(p => [p.home, p.away]).filter(n => n !== game.clubName);
+        let regional = leaguesData.slice(3).flat().map(t => t.name);
+        out.regionaleGegner = gegner.every(n => regional.includes(n));
+
+        // 3. Die Spieltage kollidieren nicht mit dem DFB-Pokal.
+        out.keineTerminkollision = landesPokal.matchdays.every(md => !cupTournament.matchdays.includes(md));
+        return out;
+    });
+
+    // 4. Der Sieg im Landespokal bringt den Startplatz im DFB-Pokal der Folgesaison.
+    const weg = await page.evaluate(() => {
+        squad.forEach(p => { p.strength = 85; p.fitness = 100; p.morale = 100; });
+        for (let i = 0; i < 7; i++) simulateMatchdays(5);
+        let nachSaison = {
+            gewonnen: landesPokal.won,
+            startplatz: game.dfbPokalViaLandespokal,
+            trophaee: (game.trophies || []).some(t => t.includes('pokalsieger'))
+        };
+        concludeSeasonAndAdvance();
+        return {
+            ...nachSaison,
+            imDfbPokal: game.inCup,
+            startplatzEingeloest: game.dfbPokalViaLandespokal === false,
+            imTurnierbaum: cupTournament.roundsHistory[0].pairings.some(p => p.home === game.clubName || p.away === game.clubName)
+        };
+    });
+
+    // 5. Ab der 3. Liga entfaellt der Landespokal, dafuer ist man direkt gesetzt.
+    const oben = await page.evaluate(() => {
+        game.leagueLevel = 2;
+        game.dfbPokalViaLandespokal = false;
+        initDynamicCup();
+        initLandesPokal();
+        return {
+            direktQualifiziert: game.inCup === true,
+            keinLandespokal: landesPokal.active === false,
+            imTurnierbaum: cupTournament.roundsHistory[0].pairings.some(p => p.home === game.clubName || p.away === game.clubName)
+        };
+    });
+
+    assert(r.startLiga > 2, 'Das Testszenario startet unterhalb der 3. Liga');
+    assert(r.nichtImDfbPokal, 'Unterhalb der 3. Liga ist man nicht automatisch im DFB-Pokal');
+    assert(r.nichtImDfbTurnierbaum, 'Der eigene Verein steht dann auch nicht im DFB-Pokal-Turnierbaum');
+    assert(r.landespokalLaeuft && r.eigenerKlubImLandespokal, 'Stattdessen läuft der Landespokal mit dem eigenen Verein');
+    assert(r.regionaleGegner, 'Die Landespokal-Gegner kommen aus der eigenen Region');
+    assert(r.keineTerminkollision, 'Landespokal und DFB-Pokal werden an verschiedenen Spieltagen ausgetragen');
+    assert(weg.gewonnen, 'Ein übermächtiger Verein gewinnt den Landespokal');
+    assert(weg.trophaee, 'Der Sieg landet im Trophäenschrank');
+    assert(weg.startplatz, 'Der Sieg sichert den Startplatz im DFB-Pokal');
+    assert(weg.imDfbPokal && weg.imTurnierbaum, 'In der Folgesaison steht der Verein im DFB-Pokal-Turnierbaum');
+    assert(weg.startplatzEingeloest, 'Der Startplatz gilt nur für eine Saison und ist danach eingelöst');
+    assert(oben.direktQualifiziert && oben.imTurnierbaum, 'Ab der 3. Liga ist man direkt für den DFB-Pokal gesetzt');
+    assert(oben.keinLandespokal, 'Ab der 3. Liga wird kein Landespokal mehr gespielt');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Landespokal');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -2729,6 +2805,7 @@ async function main() {
         testLoadingGuard,
         testAttendanceRealism,
         testClubAndPlayerNames,
+        testLandesPokal,
     ];
 
     for (const suite of suites) {

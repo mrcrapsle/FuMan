@@ -173,6 +173,8 @@
         trainingCampBuff: { active: false, matchesLeft: 0, injuryReduction: 0, strengthBonus: 0, campName: '' },
         boardTargets: { minPlace: 6, cupTarget: "2. Runde", minCash: 30000 },
         inCup: true,
+        // Startplatz im DFB-Pokal, erspielt ueber den Landespokal der Vorsaison.
+        dfbPokalViaLandespokal: false,
         inEurope: false,
         captainId: null,
         penaltyTakerId: null,
@@ -515,6 +517,20 @@
         matchdays: [4, 12, 20, 28, 34],
         prizes: [215000, 430000, 860000, 1720000, 4300000],
         roundsHistory: []
+    };
+
+    // Landespokal des eigenen Verbands - der einzige Weg in den DFB-Pokal fuer Vereine
+    // unterhalb der 3. Liga (siehe js/landescup.js). Bewusst auf eigene Spieltage gelegt,
+    // die sich nicht mit dem DFB-Pokal (4, 12, 20, 28, 34) ueberschneiden.
+    let landesPokal = {
+        region: 'Sachsen',
+        active: false,
+        won: false,
+        currentRound: 0,
+        roundNames: ['Achtelfinale', 'Viertelfinale', 'Halbfinale', 'Landespokal-Finale'],
+        matchdays: [6, 14, 22, 30],
+        roundsHistory: [],
+        drawCeremonyShown: false
     };
 
     let europeTournament = { startFeePaid: false,
