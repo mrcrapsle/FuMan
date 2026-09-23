@@ -269,6 +269,32 @@ Abrechnung, eine Buchung von dort landete weder im Journal noch im Auszug.
 `getDeployedStewards()`); auswärts stellt der Gastgeber das Personal. Vorher
 wurde an jedem Spieltag die volle vorgehaltene Zahl abgerechnet.
 
+## Zuschauerzahlen
+
+Zwei Grenzen wirken zusammen, und **beide** werden gebraucht:
+
+* `LEAGUE_ATTENDANCE_CEILING` deckelt den **Anteil** der Kapazität, der überhaupt
+  besetzt wird (Oberliga 6 %).
+* `LEAGUE_MAX_ATTENDANCE` deckelt die **absolute Zahl** (Oberliga 2.800 bei
+  voller Fan-Zufriedenheit), skaliert mit `game.fans`.
+
+Die absolute Grenze fehlte lange, und das war ein echter Modellfehler: Die
+Zuschauerzahl war ausschließlich ein Anteil der Kapazität, also brachte Bauen
+immer mehr Zuschauer - unabhängig von der Liga. Ein auf 113.000 Plätze
+ausgebautes Stadion erzeugte in der Oberliga über 10.000 Zuschauer im Ligaalltag
+und fast 23.000 im Derby (genau so vom Spieler gemeldet). Das Interesse an einem
+Verein hängt aber an seiner Liga und seinem Anhang, nicht an der Zahl der
+gebauten Sitze.
+
+Der Derby-/Pokalbonus wirkt auf die absolute Grenze **gedämpft**
+(`1 + (boost - 1) * 0.6`): Ein Derby steigert das Interesse, aber der Anhang
+eines Vereins verdoppelt sich nicht über Nacht - mit vollem Bonus wäre die
+Grenze ausgerechnet bei den Spielen wirkungslos, für die sie gedacht ist.
+
+`calculateMatchAttendance()` ist die einzige Stelle, an der eine Zuschauerzahl
+entsteht. Vorher stand die Rechnung doppelt im Code (Anpfiff im Live-Spiel und
+Spieltagsabrechnung) und musste von Hand synchron gehalten werden.
+
 ## Ligaökonomie & Startoptionen
 
 **TV-Gelder in Raten**: Die kollektive TV-Ausschüttung war eine Einmalzahlung zum

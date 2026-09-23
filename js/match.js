@@ -375,7 +375,13 @@
                 // zwei unabhängig gewürfelte Werte zu haben.
                 let isSoldOutKickoff = isDerbyKickoff && (attFactor * 2.2 >= 1.0);
                 let kickoffNoise = isSoldOutKickoff ? 1.0 : (0.92 + Math.random() * 0.16);
-                let liveAtt = game.forcedGhostGame ? 0 : Math.min(stadium.total || 16000, Math.round((stadium.total || 16000) * attFactor * kickoffNoise));
+                // Gemeinsame Rechnung mit der Spieltagsabrechnung (siehe
+                // calculateMatchAttendance in stadium.js) - inklusive der absoluten
+                // Ligaobergrenze, die verhindert, dass ein ueberdimensioniertes Stadion
+                // in einer unteren Liga voellig unrealistische Zuschauerzahlen erzeugt.
+                let liveBoost = isDerbyKickoff && !game.forcedGhostGame ? 2.2
+                    : ((!game.forcedGhostGame && currentMatch && (currentMatch.isCup || currentMatch.isEurope)) ? 1.4 : 1);
+                let liveAtt = game.forcedGhostGame ? 0 : calculateMatchAttendance(liveBoost, kickoffNoise);
                 currentMatch.finalAttendance = liveAtt;
                 currentMatch.finalAttendanceMatchday = game.matchday;
                 attEl.innerText = game.forcedGhostGame ? '👻 Geisterspiel' : `👥 ${liveAtt.toLocaleString('de-DE')} Zuschauer`;
@@ -932,7 +938,7 @@
             if (typeof currentMatch !== 'undefined' && currentMatch && currentMatch.finalAttendance !== undefined && currentMatch.finalAttendanceMatchday === game.matchday) {
                 att = currentMatch.finalAttendance;
             } else {
-                att = Math.min(stadium.total || 16000, Math.round((stadium.total || 16000) * attFactor * attendanceNoise));
+                att = calculateMatchAttendance(derbyBoostActive ? 2.2 : (cupBoostActive ? 1.4 : 1), attendanceNoise);
             }
         } else {
             att = 0;

@@ -806,6 +806,40 @@
     // zahlen bei Amateur-Ticketpreisen).
     const LEAGUE_ATTENDANCE_CEILING = [0.90, 0.60, 0.32, 0.14, 0.06, 0.025];
 
+    // ABSOLUTE Obergrenze je Liga. Die Zuschauerzahl war bisher ausschliesslich ein ANTEIL
+    // der Stadionkapazitaet - wer also baute, bekam mehr Zuschauer, egal in welcher Liga.
+    // In der Oberliga fuehrte ein auf 113.000 Plaetze ausgebautes Stadion so zu ueber 10.000
+    // Zuschauern im Ligaalltag und fast 23.000 im Derby (vom Nutzer im Spiel gemeldet).
+    //
+    // Das Interesse an einem Verein haengt aber an seiner Liga und seinem Anhang, nicht an
+    // der Zahl der gebauten Sitze. Real kommen in die Oberliga einige hundert bis wenige
+    // tausend Menschen - auch wenn zufaellig ein grosses Stadion herumsteht. Die Werte
+    // orientieren sich an den tatsaechlichen Zuschauerschnitten der deutschen Ligen.
+    const LEAGUE_MAX_ATTENDANCE = [75000, 45000, 18000, 7000, 2800, 1000];
+
+    function getLeagueAttendanceCap(boostMult = 1) {
+        let basis = LEAGUE_MAX_ATTENDANCE[game.leagueLevel] ?? LEAGUE_MAX_ATTENDANCE[LEAGUE_MAX_ATTENDANCE.length - 1];
+        // Der Anhang waechst mit der Fan-Zufriedenheit: ein geliebter Verein zieht in
+        // derselben Liga deutlich mehr Menschen an als ein ungeliebter.
+        let anhang = 0.35 + (Math.max(0, Math.min(100, game.fans)) / 100) * 0.65;
+        // Ein Derby oder Pokalabend steigert das Interesse, aber nicht im selben Masse wie
+        // die Auslastung eines ohnehin gut besuchten Stadions: Der Anhang eines Vereins
+        // verdoppelt sich nicht ueber Nacht. Der Bonus wirkt hier deshalb gedaempft, sonst
+        // waere die absolute Grenze bei genau den Spielen wirkungslos, fuer die sie gedacht
+        // ist.
+        let gedaempfterBoost = 1 + (boostMult - 1) * 0.6;
+        return Math.round(basis * anhang * gedaempfterBoost);
+    }
+
+    // Einzige Stelle, an der die Zuschauerzahl eines Heimspiels entsteht. Vorher stand die
+    // Rechnung doppelt im Code (Anpfiff im Live-Spiel und Spieltagsabrechnung) und musste
+    // von Hand synchron gehalten werden.
+    function calculateMatchAttendance(boostMult = 1, noise = 1) {
+        let kapazitaet = stadium.total || 16000;
+        let ausKapazitaet = Math.round(kapazitaet * Math.min(1.0, getAttendanceFactor() * boostMult) * noise);
+        return Math.max(0, Math.min(kapazitaet, ausKapazitaet, getLeagueAttendanceCap(boostMult)));
+    }
+
     // Preis-Nachfrage-Zusammenhang für Tickets (NEU): bisher hatte der Ticketpreis KEINERLEI
     // Einfluss auf die Zuschauerzahl - nur auf den Erlös pro Ticket. Jetzt wirkt sich ein zu
     // hoher Preis auch spürbar auf die Auslastung aus, ein günstiger Preis lockt mehr Fans.
