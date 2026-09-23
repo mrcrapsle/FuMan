@@ -40,6 +40,7 @@ JS_ORDER = [
     "js/training.js",
     "js/training-games.js",
     "js/finances.js",
+    "js/ffp.js",
     "js/stocks.js",
     "js/sponsors.js",
     "js/media-rights.js",

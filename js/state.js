@@ -127,6 +127,15 @@
         // Entlassung ausgesprochen, Bestaetigung steht noch aus - solange ruht das Spiel.
         sackPending: false,
         officeEvent: null,
+        // Financial Fairplay: laufender Saison-Akkumulator, Historie der letzten Saisons,
+        // Verstoss-Zaehler, eigene (von der Insolvenz-Sperre getrennte) Transfersperre und
+        // ein vorgemerkter Punktabzug fuer die naechste Saison (siehe js/ffp.js).
+        ffpSeasonNet: 0,
+        ffpHistory: [],
+        ffpStrikes: 0,
+        ffpTransferEmbargo: false,
+        ffpLastResult: null,
+        pendingFfpPointDeduction: 0,
         officeEventHistory: [],
         pitchDamaged: false,
         lastMatchdayTax: 0,

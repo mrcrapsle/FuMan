@@ -296,7 +296,7 @@
 
     function signGlobalScoutPlayer(idx) {
         let p = globalScoutResults[idx];
-        if (game.transferEmbargo) { showToast('🚫 Transfersperre aktiv - erst die Zahlungsfähigkeit wiederherstellen (siehe Finanzen).', 'error', 5000); return; }
+        if (isTransferEmbargoActive()) { showToast(`🚫 Transfersperre aktiv${game.ffpTransferEmbargo ? ' (Financial Fairplay)' : ' - erst die Zahlungsfähigkeit wiederherstellen (siehe Finanzen)'}.`, 'error', 5000); return; }
         let discount = 1.0 - (staffMembers.scout.hired ? 0.15 : 0);
         if (typeof getActiveStaffSynergies === 'function' && getActiveStaffSynergies().some(s => s.bonusKey === 'transferDiscount')) discount -= 0.05;
         let price = Math.round(p.marketValue * discount);

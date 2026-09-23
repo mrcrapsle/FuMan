@@ -231,6 +231,7 @@
         }
 
         incomingOffers = [];
+        if (typeof evaluateFinancialFairplay === 'function') evaluateFinancialFairplay();
         game.season++;
         checkJubileeCrestUnlock();
         // Leihverein-Beziehungen schwächen sich ab, wenn 2+ Saisons kein neues Geschäft mit
@@ -264,6 +265,7 @@
         forceSponsorRenewalAtSeasonStart();
         if (typeof checkSeasonMoodTargetResult === 'function') checkSeasonMoodTargetResult();
         advanceLeaguesToNewSeason();
+        if (typeof applyPendingFfpPointDeduction === 'function') applyPendingFfpPointDeduction();
         refreshTransferMarket();
         autoLineup();
         updateUI();

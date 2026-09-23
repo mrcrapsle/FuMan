@@ -2761,6 +2761,127 @@ async function testLandesPokal(browser) {
     await page.close();
 }
 
+
+async function testFinancialFairplay(browser) {
+    console.log('\n[36] Financial Fairplay: strukturelle Verluste über mehrere Saisons');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+
+        // 1. Exemptions: Infrastruktur-Investitionen und Finanzierungsvorgänge zählen NICHT
+        //    als Verlust, echte Ausgaben (Transfermarkt) schon.
+        out.stadionExempt = isFfpExemptLabel('🏟️ Stadionausbau');
+        out.jugendExempt = isFfpExemptLabel('🎓 Jugendarbeit');
+        out.krediteExempt = isFfpExemptLabel('💰 Finanzen & Kredite');
+        out.transferNichtExempt = !isFfpExemptLabel('🔁 Transfermarkt');
+
+        game.money = 5000000;
+        showScreen('screen-stadium'); game.money -= 300000;
+        showScreen('screen-transfer'); game.money -= 200000;
+        showScreen('screen-finances'); game.money -= 50000;
+        let kontoExempt = game.kontoauszug.filter(b => ['🏟️ Stadionausbau', '💰 Finanzen & Kredite'].includes(b.label)).reduce((s, b) => s + b.amount, 0);
+        let kontoNichtExempt = game.kontoauszug.reduce((s, b) => s + b.amount, 0) - kontoExempt;
+        out.nurNichtExemptesZaehlt = Math.round(game.ffpSeasonNet) === Math.round(kontoNichtExempt);
+
+        // 2. Der Live-Akkumulator stimmt exakt mit der tatsächlichen Kontostandsänderung
+        //    überein, sobald nichts exempt ist (reiner Spielbetrieb über eine Saison).
+        game.ffpSeasonNet = 0;
+        let geldVor = game.money;
+        for (let i = 0; i < 7; i++) simulateMatchdays(5);
+        let deltaGeld = game.money - geldVor;
+        out.akkumulatorStimmtExakt = Math.abs(Math.round(game.ffpSeasonNet) - Math.round(deltaGeld)) <= 1;
+
+        // 3. Ein Nachtrag NACH der Spieltagsabrechnung (Ordnerdienst - siehe
+        //    bucheInSpieltagsjournal in js/finances.js) darf nicht spurlos aus der
+        //    FFP-Bilanz verschwinden, obwohl er im echten Kontostand auftaucht. Dazu wird
+        //    - wie im echten Spielablauf (tickStewardCosts läuft VOR game.matchday++,
+        //    siehe processPostMatchRoutine in js/match.js) - ein frischer Ledger-Eintrag
+        //    für den aktuellen Spieltag simuliert, damit hatSpieltagsabrechnung() zutrifft.
+        game.stewards = 200;
+        game.ffpSeasonNet = 0;
+        if (!game.financeLedger) game.financeLedger = [];
+        game.financeLedger.push({ season: game.season, matchday: game.matchday, heimspiel: true, zuschauer: game.lastHomeAttendance || 5000, einnahmen: [], ausgaben: [], summeEin: 0, summeAus: 0 });
+        let geldVorOrdner = game.money;
+        tickStewardCosts(true);
+        let deltaOrdner = game.money - geldVorOrdner;
+        out.nachtragWirdErfasst = deltaOrdner < 0 && Math.round(game.ffpSeasonNet) === Math.round(deltaOrdner);
+        return out;
+    });
+
+    // 4. Volle Sanktionsleiter: anhaltender struktureller Verlust über mehrere Saisons löst
+    //    Verwarnung, dann Transfersperre, dann Punktabzug aus. Der Verlust wird bewusst
+    //    direkt am Akkumulator erzwungen statt über echte Transferausgaben simuliert, weil
+    //    concludeSeasonAndAdvance() VOR der FFP-Prüfung selbst noch reale, teils hohe
+    //    Saisonend-Zahlungen verbucht (TV-Restausschüttung etc.), die einen realistisch
+    //    kleinen Verlust sonst zufällig wieder ausgleichen könnten - der erzwungene Betrag
+    //    ist absichtlich so groß, dass er jede reale Saisonend-Zahlung überdeckt.
+    const leiter = await page.evaluate(() => {
+        let verlauf = [];
+        for (let s = 0; s < 3; s++) {
+            game.ffpSeasonNet = -50000000;
+            concludeSeasonAndAdvance();
+            verlauf.push({ strikes: game.ffpStrikes, embargo: game.ffpTransferEmbargo, punkte: getOurLeagueTeam()?.points });
+        }
+        return { verlauf };
+    });
+
+    // 5. Die FFP-Sperre ist von der kurzfristigen Insolvenz-Sperre getrennt: eine erholte
+    //    Zahlungsfähigkeit hebt eine bestehende FFP-Sperre NICHT versehentlich mit auf.
+    const trennung = await page.evaluate(() => {
+        game.ffpTransferEmbargo = true;
+        game.transferEmbargo = false;
+        game.money = 10000000;
+        game.transferBudget = 10000000;
+        game.wageBudget = 10000000;
+        let kaderVorher = squad.length;
+        buyPlayer(0);
+        let blockiert = squad.length === kaderVorher;
+
+        game.negativeStreak = 5;
+        game.money = -100;
+        checkInsolvencyRisk();
+        let ueberlebtNegativ = game.ffpTransferEmbargo === true;
+        game.money = 1;
+        checkInsolvencyRisk();
+        return { blockiert, ueberlebtNegativ, ueberlebtErholung: game.ffpTransferEmbargo === true && game.transferEmbargo === false };
+    });
+
+    // 6. Speichern und Laden erhält den FFP-Zustand.
+    const laden = await page.evaluate(() => {
+        game.ffpStrikes = 2;
+        game.ffpTransferEmbargo = true;
+        game.ffpHistory = [-100000, -50000];
+        saveGameToSlot(2);
+        game.ffpStrikes = 0;
+        game.ffpTransferEmbargo = false;
+        game.ffpHistory = [];
+        loadGameFromSlot(2, true);
+        return { strikes: game.ffpStrikes, embargo: game.ffpTransferEmbargo, historyLen: game.ffpHistory.length };
+    });
+
+    assert(r.stadionExempt && r.jugendExempt && r.krediteExempt, 'Infrastruktur- und Finanzierungsvorgänge sind von Financial Fairplay ausgenommen');
+    assert(r.transferNichtExempt, 'Transferausgaben zählen dagegen als reguläre Ausgabe');
+    assert(r.nurNichtExemptesZaehlt, 'Nur nicht ausgenommene Kontoauszug-Buchungen fließen in die FFP-Bilanz ein');
+    assert(r.akkumulatorStimmtExakt, 'Der laufende FFP-Akkumulator stimmt exakt mit der echten Kontostandsänderung überein');
+    assert(r.nachtragWirdErfasst, 'Ein Nachtrag nach der Spieltagsabrechnung (Ordnerdienst) wird in der FFP-Bilanz erfasst');
+
+    assert(leiter.verlauf[0].strikes === 1 && !leiter.verlauf[0].embargo, 'Der erste Verstoß bleibt eine bloße Verwarnung');
+    assert(leiter.verlauf[1].strikes === 2 && leiter.verlauf[1].embargo, 'Der zweite Verstoß in Folge löst eine Transfersperre aus');
+    assert(leiter.verlauf[1].punkte === 0, 'Beim zweiten Verstoß gibt es noch keinen Punktabzug');
+    assert(leiter.verlauf[2].strikes === 3 && leiter.verlauf[2].punkte < 0,
+        `Der dritte Verstoß zieht tatsächlich Punkte ab (${leiter.verlauf[2].punkte})`);
+
+    assert(trennung.blockiert, 'Eine aktive FFP-Transfersperre blockiert reale Transfers');
+    assert(trennung.ueberlebtNegativ, 'Die FFP-Sperre bleibt auch während einer Insolvenzkrise bestehen');
+    assert(trennung.ueberlebtErholung, 'Eine wiederhergestellte Zahlungsfähigkeit hebt die FFP-Sperre NICHT automatisch auf');
+
+    assert(laden.strikes === 2 && laden.embargo && laden.historyLen === 2, 'Der Financial-Fairplay-Zustand überlebt Speichern und Laden');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei Financial Fairplay');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -2815,6 +2936,7 @@ async function main() {
         testAttendanceRealism,
         testClubAndPlayerNames,
         testLandesPokal,
+        testFinancialFairplay,
     ];
 
     for (const suite of suites) {

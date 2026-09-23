@@ -62,6 +62,7 @@
         renderFinanceForecast();
         renderMoneyHistoryChart();
         renderFinanceLedger();
+        if (typeof renderFfpStatusBox === 'function') renderFfpStatusBox();
         let totalWages = (squad.reduce((s, p) => s + p.wage, 0) + (game.secondTeam.isActive ? secondTeamSquad.reduce((s, p) => s + p.wage, 0) : 0)) * 4;
         let totalStaffWages = Object.values(staffMembers).filter(s => s.hired).reduce((s, st) => s + st.wage, 0) * 4;
         // Dieselbe Rechnung wie in applyMatchdayFinances(), inkl. stillgelegter Ränge.
@@ -765,6 +766,12 @@
         if (buchungsKontext === SPIELTAG_KONTEXT) return; // steht bereits im Buchungsjournal
         if (!game.kontoauszug) game.kontoauszug = [];
         let label = buchungsLabelErmitteln();
+        // Financial Fairplay (js/ffp.js): jede Kontoauszug-Buchung zaehlt zum laufenden
+        // Saison-Ergebnis, AUSSER Infrastruktur-Investitionen und reine Finanzierungsvorgaenge
+        // (Kredite/Festgeld) - siehe FFP_EXEMPTE_LABELS dort.
+        if (typeof addToFfpSeasonNet === 'function' && typeof isFfpExemptLabel === 'function' && !isFfpExemptLabel(label)) {
+            addToFfpSeasonNet(delta);
+        }
         let letzte = game.kontoauszug[game.kontoauszug.length - 1];
         // Aufeinanderfolgende Buchungen derselben Aktion (z.B. Ablöse + Handgeld) werden zu
         // einer Zeile zusammengefasst, damit der Auszug lesbar bleibt.
@@ -819,6 +826,12 @@
         let posten = liste.find(p => p.label === label);
         if (posten) posten.amount += amount; else liste.push({ label, amount });
         eintrag[typ === 'einnahmen' ? 'summeEin' : 'summeAus'] = liste.reduce((s, p) => s + p.amount, 0);
+        // Financial Fairplay (js/ffp.js): applyMatchdayFinances() hat sein Saison-Ergebnis
+        // bereits VOR diesem Nachtrag an addToFfpSeasonNet() gemeldet (z.B. der Ordnerdienst
+        // fällt erst in processPostMatchRoutine() an, NACH dem financeLedger.push()) - ohne
+        // diesen Ausgleich hier würde jeder Nachtrag spurlos aus der FFP-Bilanz verschwinden,
+        // obwohl er im sichtbaren Buchungsjournal und im echten Kontostand auftaucht.
+        if (typeof addToFfpSeasonNet === 'function') addToFfpSeasonNet(typ === 'einnahmen' ? amount : -amount);
     }
     function loescheBuchungskontext() { buchungsKontext = null; }
 

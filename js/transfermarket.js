@@ -619,7 +619,7 @@
     let pendingBiddingWarId = null;
     function buyPlayer(idx) {
         let p = marketPlayers[idx];
-        if (game.transferEmbargo) { showToast('🚫 Transfersperre aktiv - erst die Zahlungsfähigkeit wiederherstellen (siehe Finanzen).', 'error', 5000); return; }
+        if (isTransferEmbargoActive()) { showToast(`🚫 Transfersperre aktiv${game.ffpTransferEmbargo ? ' (Financial Fairplay)' : ' - erst die Zahlungsfähigkeit wiederherstellen (siehe Finanzen)'}.`, 'error', 5000); return; }
         if (pendingBiddingWarId !== p.id && p.strength >= 65 && Math.random() < 0.15) {
             pendingBiddingWarId = p.id;
             let premium = Math.round(p.marketValue * 0.25);
@@ -652,7 +652,7 @@
     const CHARACTER_TOUGHNESS = { Ehrgeizig: 1.35, Selbstbewusst: 1.2, Emotional: 1.1, Hitzköpfig: 1.15, Ruhig: 0.9, Bescheiden: 0.75 };
     function signFreeAgent(idx) {
         let p = freeAgentPlayers[idx];
-        if (game.transferEmbargo) { showToast('🚫 Transfersperre aktiv - erst die Zahlungsfähigkeit wiederherstellen (siehe Finanzen).', 'error', 5000); return; }
+        if (isTransferEmbargoActive()) { showToast(`🚫 Transfersperre aktiv${game.ffpTransferEmbargo ? ' (Financial Fairplay)' : ' - erst die Zahlungsfähigkeit wiederherstellen (siehe Finanzen)'}.`, 'error', 5000); return; }
         let toughness = CHARACTER_TOUGHNESS[p.character] || 1.0;
         // Zähe Verhandler (ehrgeizig/selbstbewusst) fordern mit einer gewissen Wahrscheinlichkeit
         // ein höheres Handgeld nach, statt das erste Angebot einfach zu akzeptieren.

@@ -1141,14 +1141,21 @@
         ].filter(e => e.amount > 0);
 
         if (!game.financeLedger) game.financeLedger = [];
+        let ledgerSummeEin = einnahmen.reduce((s, e) => s + e.amount, 0);
+        let ledgerSummeAus = ausgaben.reduce((s, e) => s + e.amount, 0);
         game.financeLedger.push({
             season: game.season, matchday: game.matchday,
             heimspiel: !!isHomeMatch, zuschauer: att,
             einnahmen, ausgaben,
-            summeEin: einnahmen.reduce((s, e) => s + e.amount, 0),
-            summeAus: ausgaben.reduce((s, e) => s + e.amount, 0)
+            summeEin: ledgerSummeEin,
+            summeAus: ledgerSummeAus
         });
         if (game.financeLedger.length > 80) game.financeLedger.shift();
+        // Financial Fairplay (js/ffp.js): die komplette Spieltagsabrechnung zaehlt zum
+        // laufenden Saison-Ergebnis - anders als der Kontoauszug (siehe protokolliereBuchung
+        // in finances.js) gibt es hier keine Ausnahmen, das Spieltagsgeschaeft ist immer
+        // regulaeres Kerngeschaeft.
+        if (typeof addToFfpSeasonNet === 'function') addToFfpSeasonNet(ledgerSummeEin - ledgerSummeAus);
         if (ghostGameActive) game.forcedGhostGame = false; // Geisterspiel-Auflage ist damit erfüllt
         if (derbyBoostActive) {
             if (genuinelySoldOut) {
