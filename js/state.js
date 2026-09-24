@@ -61,7 +61,11 @@
         negativeStreak: 0,
         transferEmbargo: false,
         lastInsolvencyPenaltyAt: 0,
-        ticketPrices: { steh: 12, sitz: 24, vip: 80 },
+        ticketPrices: { steh: 12, sitz: 24, vip: 80, dauerkarte: 90 },
+        // Dauerkarten (NEU, siehe js/stadium.js): Zahl der Inhaber wird einmal pro Saison bei
+        // renewSeasonTickets() neu ermittelt, nicht bei jeder Preisänderung.
+        seasonTicketHolders: 0,
+        seasonTicketPriceInitialized: false,
         stewards: 100,
         youthAcademyLvl: 1,
         sponsor: { name: 'Stadtwerke & Regionalbank', base: 3000, winBonus: 1500, duration: 34, tier: 'standard', cupBonus: 2000, promotionBonus: 20000, themedBonusType: null, themedBonusAmount: 0, category: 'Finanzen' },
@@ -360,7 +364,21 @@
             presse: { name: "Presse-Tribüne", cap: 200, foodLvl: 0, merchLvl: 0, toiletLvl: 0, addSeats: 100, cost: 3000000, expansions: 0 }
         },
         flutlicht: false, rasenheizung: false, videowalls: false, dach: false,
-        get total() { return Object.values(this.blocks || {}).reduce((s, b) => s + (b.cap || 0), 0); },
+        // Sitzplatz-Zusammensetzung (NEU, siehe js/stadium.js): war bisher an mehreren Stellen
+        // fest auf 50%/45%/5% verdrahtet - jetzt ein echter, über Bauprojekte (Sitzplatzumbau/
+        // Stehplatzrückbau) veränderbarer Anteil. Die Standardwerte entsprechen exakt den
+        // alten festen Zahlen, damit sich am Verhalten nichts ändert, bevor ein Projekt
+        // tatsächlich gebaut wurde.
+        stehShare: 0.5, sitzShare: 0.45, vipShare: 0.05,
+        // Zusätzliche Kapazität aus den neuen, namentlichen Ausbauprojekten (Zusatztribüne,
+        // Ränge erweitern, Großausbau, Zweiter Rang, Sitzplatzumbau/-rückbau) - kommt zur
+        // Summe der Block-Kapazitäten hinzu, ohne das bestehende Block-Modell umzubauen.
+        bonusCapacity: 0,
+        // Rasenzustand (NEU): 0-99, nutzt sich durch Heimspiele leicht ab, wird über
+        // maintainPitch() gepflegt. Die Obergrenze steigt mit Rasenheizung/Hybridrasen.
+        pitchCondition: 85,
+        hybridrasen: false,
+        get total() { return Object.values(this.blocks || {}).reduce((s, b) => s + (b.cap || 0), 0) + (this.bonusCapacity || 0); },
         get vipTotal() { return this.blocks?.vipLogen?.cap || 50; }
     };
 

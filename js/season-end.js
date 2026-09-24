@@ -282,6 +282,7 @@
         game.winterWindowActive = false;
         processSecondTeamSeasonEnd();
         forceSponsorRenewalAtSeasonStart();
+        if (typeof renewSeasonTickets === 'function') renewSeasonTickets();
         if (typeof checkSeasonMoodTargetResult === 'function') checkSeasonMoodTargetResult();
         advanceLeaguesToNewSeason();
         if (typeof applyPendingFfpPointDeduction === 'function') applyPendingFfpPointDeduction();

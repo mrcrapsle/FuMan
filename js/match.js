@@ -902,6 +902,9 @@
         // im Kontoauszug geführt - sie stehen vollständig aufgeschlüsselt im
         // Buchungsjournal (siehe game.financeLedger weiter unten).
         setzeBuchungskontext(SPIELTAG_KONTEXT);
+        // Rasenpflege (NEU): das Geläuf nutzt sich durch jedes Heimspiel leicht ab, siehe
+        // tickPitchCondition()/maintainPitch() in stadium.js.
+        if (isHomeMatch && typeof tickPitchCondition === 'function') tickPitchCondition();
         let ghostGameActive = isHomeMatch && game.forcedGhostGame;
         // Lokalderby-Atmosphäre: bei Heimspielen gegen den permanenten Rivalen ist das
         // Stadion deutlich stärker ausgelastet als sonst (gedeckelt bei "ausverkauft").
@@ -989,8 +992,15 @@
         // 600 Zuschauer im Stadion waren - ein Kreisklassenspiel verdiente so ein Viertel
         // seiner Ticketeinnahmen mit 50 verkauften Logenplaetzen. Jetzt sind sie wie in der
         // GuV-Prognose (finances.js) an die tatsaechliche Zuschauerzahl gekoppelt.
-        let vipSold = Math.min(stadium.vipTotal || 50, Math.round(att * 0.05));
-        let ticketIncome = (isHomeMatch && !ghostGameActive) ? Math.round(att * 0.5 * game.ticketPrices.steh + att * 0.45 * game.ticketPrices.sitz + vipSold * game.ticketPrices.vip) : 0;
+        // Dauerkarten (NEU): der Anteil der Zuschauer, der bereits über die Dauerkarte bezahlt
+        // hat (siehe renewSeasonTickets() in stadium.js), wird bei der SPIELTAGS-Einnahme
+        // ausgeklammert - sonst würde er doppelt kassiert. Er zählt aber weiterhin voll zur
+        // Zuschauerzahl (Fanartikel, Rekorde, Auslastung), da diese Fans wirklich im Stadion
+        // stehen/sitzen.
+        let dauerkartenAnwesend = (typeof getSeasonTicketAttendanceFloor === 'function') ? Math.min(att, getSeasonTicketAttendanceFloor()) : 0;
+        let zahlendeAtt = Math.max(0, att - dauerkartenAnwesend);
+        let vipSold = Math.min(stadium.vipTotal || 50, Math.round(zahlendeAtt * (stadium.vipShare ?? 0.05)));
+        let ticketIncome = (isHomeMatch && !ghostGameActive) ? Math.round(zahlendeAtt * (stadium.stehShare ?? 0.5) * game.ticketPrices.steh + zahlendeAtt * (stadium.sitzShare ?? 0.45) * game.ticketPrices.sitz + vipSold * game.ticketPrices.vip) : 0;
         // Doppelte Ticketeinnahmen (Premium-Booster, NEU).
         if (isHomeMatch && game.ticketIncomeBoostNextMatch) { ticketIncome *= 2; game.ticketIncomeBoostNextMatch = false; }
         // Medienrechte (NEU): eigener Medienpartner zahlt bei jedem Heimspiel, mit Bonus bei
@@ -1351,6 +1361,12 @@
         // Stadion-Erweiterungen (NEU): Medizinzentrum/Rasenpflege senken das Trainings-
         // Verletzungsrisiko - wirkt am heimischen Gelände, unabhängig vom letzten Spielort.
         if (typeof getStadiumInjuryReduction === 'function') injuryChance *= (1 - getStadiumInjuryReduction());
+        // Rasenzustand (NEU): unabhängig von den festen Stadion-Erweiterungen oben - ein
+        // gepflegtes Geläuf senkt das Risiko zusätzlich leicht, ein vernachlässigtes erhöht es.
+        // Bei stadium.pitchCondition === 85 (Ausgangswert) ist der Faktor exakt neutral (1.0).
+        if (typeof stadium !== 'undefined' && stadium.pitchCondition !== undefined) {
+            injuryChance *= Math.max(0.9, Math.min(1.2, 1 + (85 - stadium.pitchCondition) / 85 * 0.25));
+        }
         injuryChance *= currentWeather.injuryMult;
         if (game.tackleHardness === 'hart') injuryChance *= 1.3;
         if (game.tackleHardness === 'vorsichtig') injuryChance *= 0.75;

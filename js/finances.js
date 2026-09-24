@@ -55,7 +55,8 @@
     }
 
     function renderFinancesView() {
-        renderTicketPriceSliders();
+        // Ticketpreise (inkl. Dauerkarte) sind jetzt im Stadion-Screen zu finden, dort direkt
+        // neben Kapazität, Rasenpflege und Nebeneinnahmen - siehe renderStadiumView().
         if (typeof renderMediaRightsView === 'function') renderMediaRightsView();
         renderStockTicker();
         renderSponsorLeaderboard();
@@ -231,7 +232,9 @@
     let ticketPricePreview = null; // null = noch keine Änderung, zeigt aktuelle Werte
 
     function getTicketSliderRange(category) {
-        let market = getMarketTicketPrice(category);
+        let market = (category === 'dauerkarte' && typeof getMarketSeasonTicketPrice === 'function')
+            ? getMarketSeasonTicketPrice()
+            : getMarketTicketPrice(category);
         return { min: Math.max(1, Math.round(market * 0.35)), max: Math.round(market * 4) };
     }
 
@@ -250,7 +253,8 @@
         ticketPricePreview = {
             steh: getMarketTicketPrice('steh'),
             sitz: getMarketTicketPrice('sitz'),
-            vip: getMarketTicketPrice('vip')
+            vip: getMarketTicketPrice('vip'),
+            dauerkarte: typeof getMarketSeasonTicketPrice === 'function' ? getMarketSeasonTicketPrice() : game.ticketPrices.dauerkarte
         };
         renderTicketPriceSliders();
     }
@@ -260,6 +264,10 @@
         game.ticketPrices.steh = preview.steh;
         game.ticketPrices.sitz = preview.sitz;
         game.ticketPrices.vip = preview.vip;
+        // Dauerkarte (NEU): der Preis wird sofort übernommen, wirkt sich aber - wie im echten
+        // Fußballgeschäft - erst beim nächsten Saisonverkauf (renewSeasonTickets()) auf die
+        // tatsächliche Zahl der Inhaber aus.
+        if (preview.dauerkarte !== undefined) game.ticketPrices.dauerkarte = preview.dauerkarte;
         ticketPricePreview = null;
         showToast('🎟️ Neue Ticketpreise übernommen!', 'success');
         renderTicketPriceSliders();
@@ -275,13 +283,18 @@
         game.ticketPrices = realPrices; // sofort zurücksetzen
         let capacity = stadium.total || 16000;
         let totalAtt = Math.round(capacity * attFactor);
-        let stehAtt = Math.round(totalAtt * 0.5);
-        let sitzAtt = Math.round(totalAtt * 0.45);
-        let vipAtt = Math.min(stadium.vipTotal || 50, Math.round(totalAtt * 0.05));
+        // Dauerkarten (NEU): der bereits im Voraus bezahlte Anteil zählt zur Zuschauerzahl,
+        // aber nicht zur SPIELTAGS-Einnahme - sonst würde er in dieser Vorschau doppelt
+        // kassiert, obwohl er real nur einmal (beim Saisonverkauf) bezahlt wurde.
+        let dauerkartenAnwesend = (typeof getSeasonTicketAttendanceFloor === 'function') ? Math.min(totalAtt, getSeasonTicketAttendanceFloor()) : 0;
+        let zahlendeAtt = Math.max(0, totalAtt - dauerkartenAnwesend);
+        let stehAtt = Math.round(zahlendeAtt * (stadium.stehShare ?? 0.5));
+        let sitzAtt = Math.round(zahlendeAtt * (stadium.sitzShare ?? 0.45));
+        let vipAtt = Math.min(stadium.vipTotal || 50, Math.round(zahlendeAtt * (stadium.vipShare ?? 0.05)));
         let matchRevenue = Math.round(stehAtt * prices.steh + sitzAtt * prices.sitz + vipAtt * prices.vip);
         let homeMatchesPerSeason = 17;
         return {
-            totalAtt, stehAtt, sitzAtt, vipAtt,
+            totalAtt, stehAtt, sitzAtt, vipAtt, dauerkartenAnwesend,
             utilization: capacity > 0 ? (totalAtt / capacity * 100) : 0,
             matchRevenue,
             seasonProjection: matchRevenue * homeMatchesPerSeason
@@ -316,16 +329,21 @@
                 </div>`;
         };
 
+        let kapazitaet = stadium.total || 16000;
+        let dauerkartenPct = kapazitaet > 0 ? Math.round(((game.seasonTicketHolders || 0) / kapazitaet) * 100) : 0;
+        let marktpreisDauerkarte = typeof getMarketSeasonTicketPrice === 'function' ? getMarketSeasonTicketPrice() : prices.dauerkarte;
         box.innerHTML = `
-            <div style="font-size:9px; color:var(--text-muted); margin-bottom:10px;">Marktüblich: Steh ${getMarketTicketPrice('steh')}€ · Sitz ${getMarketTicketPrice('sitz')}€ · VIP ${getMarketTicketPrice('vip')}€</div>
+            <div style="font-size:9px; color:var(--text-muted); margin-bottom:10px;">Marktüblich: Steh ${getMarketTicketPrice('steh')}€ · Sitz ${getMarketTicketPrice('sitz')}€ · VIP ${getMarketTicketPrice('vip')}€ · Dauerkarte ${marktpreisDauerkarte}€</div>
             ${sliderRow('Stehplatz', 'steh')}
             ${sliderRow('Sitzplatz', 'sitz')}
             ${sliderRow('VIP-Loge', 'vip')}
+            ${sliderRow('Dauerkarte', 'dauerkarte')}
+            <div class="box" style="font-size:9px; margin-bottom:10px;">🎟️ Aktuell <strong>${(game.seasonTicketHolders || 0).toLocaleString('de-DE')}</strong> Dauerkarten (${dauerkartenPct}% der Plätze). Ein neuer Preis wirkt erst beim nächsten Saisonverkauf - die Vorschau rechts zeigt nur das Tagesgeschäft.</div>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin:12px 0;">
-                <div class="box"><div style="font-size:8px; color:var(--text-muted);">ERWARTETE ZUSCHAUER</div><div style="font-size:16px; font-weight:900;">${stats.totalAtt.toLocaleString('de-DE')}</div><div style="font-size:8px; color:var(--text-muted);">Steh ${stats.stehAtt.toLocaleString('de-DE')} · Sitz ${stats.sitzAtt.toLocaleString('de-DE')} · VIP ${stats.vipAtt}</div></div>
+                <div class="box"><div style="font-size:8px; color:var(--text-muted);">ERWARTETE ZUSCHAUER</div><div style="font-size:16px; font-weight:900;">${stats.totalAtt.toLocaleString('de-DE')}</div><div style="font-size:8px; color:var(--text-muted);">Steh ${stats.stehAtt.toLocaleString('de-DE')} · Sitz ${stats.sitzAtt.toLocaleString('de-DE')} · VIP ${stats.vipAtt} · Dauerkarte ${stats.dauerkartenAnwesend.toLocaleString('de-DE')}</div></div>
                 <div class="box"><div style="font-size:8px; color:var(--text-muted);">AUSLASTUNG</div><div style="font-size:16px; font-weight:900; color:${stats.utilization>=70?'var(--primary)':'var(--accent)'};">${stats.utilization.toFixed(1)}%</div></div>
                 <div class="box"><div style="font-size:8px; color:var(--text-muted);">TAGESKASSE JE HEIMSPIEL</div><div style="font-size:16px; font-weight:900; color:var(--gold);">${formatVal(stats.matchRevenue)}</div><div style="font-size:8px; color:${changePercent>=0?'var(--primary)':'var(--danger)'};">${changePercent>=0?'+':''}${changePercent.toFixed(1)}% ggü. jetzt</div></div>
-                <div class="box"><div style="font-size:8px; color:var(--text-muted);">HOCHRECHNUNG SAISON</div><div style="font-size:16px; font-weight:900; color:var(--gold);">${formatVal(stats.seasonProjection)}</div><div style="font-size:8px; color:var(--text-muted);">17 Heimspiele, geschätzt</div></div>
+                <div class="box"><div style="font-size:8px; color:var(--text-muted);">HOCHRECHNUNG SAISON</div><div style="font-size:16px; font-weight:900; color:var(--gold);">${formatVal(stats.seasonProjection)}</div><div style="font-size:8px; color:var(--text-muted);">17 Heimspiele, geschätzt (ohne Dauerkarten-Erlös)</div></div>
             </div>
             <div style="font-size:10px; margin-bottom:10px;">${feedbackText}</div>
             <button onclick="commitTicketPrices()" class="btn-action" style="margin-bottom:6px;">✅ Preise übernehmen</button>

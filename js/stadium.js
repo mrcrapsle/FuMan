@@ -366,7 +366,7 @@
         let capacity = stadium.total || 16000;
         let utilization = capacity > 0 ? Math.round((lastAttendance / capacity) * 100) : 0;
         let lastTicketIncome = (game.attendanceHistory || []).length > 0
-            ? Math.round(lastAttendance * 0.5 * game.ticketPrices.steh + lastAttendance * 0.45 * game.ticketPrices.sitz + (stadium.vipTotal || 50) * game.ticketPrices.vip)
+            ? Math.round(lastAttendance * (stadium.stehShare ?? 0.5) * game.ticketPrices.steh + lastAttendance * (stadium.sitzShare ?? 0.45) * game.ticketPrices.sitz + (stadium.vipTotal || 50) * game.ticketPrices.vip)
             : 0;
         metricsBox.innerHTML = `
             <div class="stadium-hero-metric-chip"><div class="shm-label">Kapazität</div><div class="shm-value">${capacity.toLocaleString('de-DE')}</div></div>
@@ -543,10 +543,269 @@
         }).join('');
     }
 
+    // ==========================================
+    // DAUERKARTEN (NEU)
+    // ==========================================
+    // Eigene Ticketkategorie neben Steh/Sitz/VIP: der Preis lässt sich jederzeit über den
+    // Schieberegler anpassen (siehe finances.js), wirkt sich aber - wie im echten
+    // Fußballgeschäft - erst beim nächsten Saisonverkauf auf die tatsächliche Zahl der
+    // Inhaber aus. Bis dahin bleibt der bestehende Bestand unverändert, garantiert aber schon
+    // jetzt eine Mindestzuschauerzahl (siehe getSeasonTicketAttendanceFloor()).
+    function getMarketSeasonTicketPrice() {
+        // Deutlicher Bündel-Rabatt gegenüber Einzeltickets: eine Dauerkarte sichert rund 17
+        // Heimspiele zum Preis von etwa 8-9 Einzel-Sitzplatztickets.
+        return Math.round(getMarketTicketPrice('sitz') * 8.5);
+    }
+    // Wird einmal pro Saison bei einer echten Saisonwende aufgerufen (siehe
+    // concludeSeasonAndAdvance() in season-end.js) - ermittelt anhand des aktuellen
+    // Dauerkartenpreises per Elastizität (dieselbe Logik wie bei Fanartikel-/
+    // Einzelticketpreisen) die neue Zahl der Inhaber und bucht den Gesamterlös als
+    // einmalige Einnahme. Bewusst NICHT schon beim allerersten Programmstart: ein
+    // brandneuer Verein hat noch keine Dauerkarten verkauft, bevor überhaupt ein Spieltag
+    // vergangen ist - sonst bekäme er zusätzlich zum gewählten Startkapital unerwartet Geld
+    // "aus dem Nichts" (game.seasonTicketHolders bleibt bis zur ersten Saisonwende bei 0,
+    // siehe state.js).
+    function renewSeasonTickets() {
+        let marktpreis = getMarketSeasonTicketPrice();
+        // Der feste Startwert in state.js (90 €) passt naturgemäß nicht zu jeder Liga-Stufe -
+        // beim ALLERERSTEN Verkauf einer neuen Karriere wird der Preis deshalb einmalig exakt
+        // auf den Marktwert dieser Liga kalibriert, statt z.B. einen Sechstligisten mit einem
+        // Bundesliga-Preis (oder umgekehrt) in eine verzerrte Elastizität laufen zu lassen.
+        // Danach ist der Preis vollständig dem Spieler überlassen.
+        if (!game.seasonTicketPriceInitialized) {
+            game.ticketPrices.dauerkarte = marktpreis;
+            game.seasonTicketPriceInitialized = true;
+        }
+        let el = calculateElasticity(game.ticketPrices.dauerkarte || marktpreis, marktpreis);
+        let kapazitaet = stadium.total || 16000;
+        // Zielanteil bei exaktem Marktpreis: 25-55% der Plätze, abhängig von der
+        // Fan-Zufriedenheit - ein beliebter Verein bindet mehr Dauerkarteninhaber.
+        let zielanteilBeiMarktpreis = 0.25 + (Math.max(0, Math.min(100, game.fans)) / 100) * 0.30;
+        let neueDauerkarten = Math.max(0, Math.min(kapazitaet, Math.round(kapazitaet * zielanteilBeiMarktpreis * el.factor)));
+        let erloes = neueDauerkarten * (game.ticketPrices.dauerkarte || 0);
+        game.seasonTicketHolders = neueDauerkarten;
+        if (erloes > 0) {
+            setzeBuchungskontext('🎟️ Dauerkartenverkauf');
+            game.money += erloes;
+            loescheBuchungskontext();
+        }
+        let pct = kapazitaet > 0 ? Math.round((neueDauerkarten / kapazitaet) * 100) : 0;
+        addInboxMessage('vertrag', `🎟️ Dauerkartenverkauf: ${neueDauerkarten.toLocaleString('de-DE')} Stück`,
+            `Zum Saisonstart wurden ${neueDauerkarten.toLocaleString('de-DE')} Dauerkarten (${pct}% der Plätze) zu je ${formatVal(game.ticketPrices.dauerkarte || 0)} verkauft - Gesamterlös ${formatVal(erloes)}.`,
+            'screen-stadium');
+    }
+
+    // ==========================================
+    // RASENPFLEGE (NEU)
+    // ==========================================
+    // Zustand des Geläufs auf einer 0-99-Skala, unabhängig von den festen Stadion-
+    // Erweiterungen (Medizinzentrum/Rasenpflege-System, die das VERLETZUNGSRISIKO senken) -
+    // hier geht es um die tatsächliche Spielfeldqualität, die sich durch Nutzung abnutzt und
+    // aktiv gepflegt werden muss.
+    function getPitchConditionMax() {
+        let max = 94;
+        if (stadium.rasenheizung) max += 3;
+        if (stadium.hybridrasen) max += 10;
+        return Math.min(99, max);
+    }
+    // Wird bei jedem Heimspiel aufgerufen (siehe applyMatchdayFinances in match.js) - nutzt
+    // sich normal moderat ab, stärker bei bereits beschädigtem Rasen (siehe game.pitchDamaged,
+    // Managerbüro-Ereignisse) und bei schlechtem Wetter.
+    function tickPitchCondition() {
+        let verschleiss = 1.2;
+        if (game.pitchDamaged) verschleiss *= 2;
+        if (typeof currentWeather !== 'undefined' && currentWeather && currentWeather.injuryMult > 1) verschleiss *= 1.3;
+        stadium.pitchCondition = Math.max(20, Math.round((stadium.pitchCondition ?? 85) - verschleiss));
+    }
+    function getPitchMaintenanceCost(intensity) {
+        let scale = getStadiumCostScale();
+        return Math.round((3000 + Math.max(0, Math.min(100, intensity)) * 900) * scale * 4);
+    }
+    function getPitchMaintenanceGain(intensity) {
+        let max = getPitchConditionMax();
+        let current = stadium.pitchCondition ?? 85;
+        let potential = Math.max(0, max - current);
+        // Bei Regler 0 ("nur mähen") nur ein kleiner Teil des möglichen Zugewinns, bei 100
+        // ("Komplettsanierung") fast der gesamte Rückstand zur Obergrenze.
+        let anteil = 0.08 + (Math.max(0, Math.min(100, intensity)) / 100) * 0.72;
+        return Math.max(0, Math.round(potential * anteil));
+    }
+    function maintainPitch(intensity) {
+        intensity = Math.max(0, Math.min(100, parseInt(intensity)));
+        let cost = getPitchMaintenanceCost(intensity);
+        if (game.money < cost) { showToast(`Nicht genug Geld für diese Rasenpflege (${formatVal(cost)} nötig).`, 'error', 5000); return; }
+        let gain = getPitchMaintenanceGain(intensity);
+        setzeBuchungskontext('🌱 Rasenpflege');
+        game.money -= cost;
+        loescheBuchungskontext();
+        stadium.pitchCondition = Math.min(getPitchConditionMax(), (stadium.pitchCondition ?? 85) + gain);
+        showToast(`🌱 Rasenpflege abgeschlossen: +${gain} Punkte, jetzt ${stadium.pitchCondition}/${getPitchConditionMax()}.`, 'success');
+        renderPitchMaintenanceBox();
+        updateUI();
+    }
+    // Regler-Zustand der UI (wie ticketPricePreview in finances.js) - bewusst NICHT
+    // gespeichert, reiner Anzeige-/Bedienzustand.
+    let pitchMaintenanceIntensity = 50;
+    function setPitchMaintenanceIntensity(value) {
+        pitchMaintenanceIntensity = parseInt(value);
+        renderPitchMaintenanceBox();
+    }
+    function renderPitchMaintenanceBox() {
+        let box = document.getElementById('pitch-maintenance-box');
+        if (!box) return;
+        let cond = stadium.pitchCondition ?? 85;
+        let max = getPitchConditionMax();
+        let gain = getPitchMaintenanceGain(pitchMaintenanceIntensity);
+        let cost = getPitchMaintenanceCost(pitchMaintenanceIntensity);
+        let color = cond >= max * 0.9 ? 'var(--primary)' : (cond >= max * 0.6 ? 'var(--accent)' : 'var(--danger)');
+        box.innerHTML = `
+            <div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:2px;">
+                <span>Zustand des Geläufs${stadium.rasenheizung && stadium.hybridrasen ? '' : ''}</span>
+                <strong style="color:${color};">${cond} / ${max}</strong>
+            </div>
+            <div style="background:rgba(255,255,255,0.06); border-radius:999px; height:8px; overflow:hidden; margin-bottom:8px;">
+                <div style="width:${Math.min(100, Math.round((cond / 99) * 100))}%; height:100%; background:linear-gradient(90deg, var(--primary), var(--accent)); border-radius:999px;"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:8px; color:var(--text-muted); margin-bottom:2px;">
+                <span>nur mähen</span><span>Komplettsanierung</span>
+            </div>
+            <input type="range" min="0" max="100" value="${pitchMaintenanceIntensity}" oninput="setPitchMaintenanceIntensity(this.value)" style="width:100%;">
+            <div style="font-size:10px; margin:6px 0;">Erwarteter Gewinn: rund ${gain} Punkte auf ${Math.min(max, cond + gain)}. Geschätzte Kosten: ${formatVal(cost)}.</div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
+                <button onclick="maintainPitch(0)" class="btn-secondary" style="font-size:9px;">Nur mähen (leicht)</button>
+                <button onclick="maintainPitch(pitchMaintenanceIntensity)" class="btn-action" style="font-size:9px;">Pflegen [${formatVal(cost)}]</button>
+                <button onclick="maintainPitch(60)" class="btn-secondary" style="font-size:9px;">Gründlich</button>
+                <button onclick="maintainPitch(100)" class="btn-gold" style="font-size:9px;">Komplettsanierung</button>
+            </div>
+        `;
+    }
+
+    // ==========================================
+    // NAMENTLICHE KAPAZITÄTS- & UMBAUPROJEKTE (NEU)
+    // ==========================================
+    // Ergänzt die bisherige, generische Block-für-Block-Erweiterung (expandBlock, siehe oben)
+    // um konkrete, benannte Großprojekte mit eigenem Effekt - inklusive zwei Umbauten, die
+    // erstmals die tatsächliche Sitzplatz-Zusammensetzung (stadium.stehShare/sitzShare)
+    // verändern, statt nur Plätze hinzuzufügen.
+    const STADIUM_CAPACITY_PROJECTS = {
+        zusatztribuene: {
+            name: '🏗️ Zusatztribüne', desc: 'Eine schlichte Stahlrohrtribüne hinter dem Tor. Nicht schön, aber zahlende Plätze mehr.',
+            baseCost: 5500000, seats: 2200, stehDelta: 0.02, sitzDelta: -0.02, fanDelta: 0,
+            gate: () => true, gateText: ''
+        },
+        raenge_erweitern: {
+            name: '🏗️ Ränge erweitern', desc: 'Beide Hintertortribünen aufstocken. Deutlich mehr Plätze - und eine lange Bauzeit.',
+            baseCost: 15000000, seats: 5500, stehDelta: 0, sitzDelta: 0, fanDelta: 0,
+            gate: () => true, gateText: ''
+        },
+        grossausbau: {
+            name: '🏗️ Großausbau', desc: 'Der ganz große Wurf: massiv mehr Plätze rundum. Der Vorstand muss dahinterstehen.',
+            baseCost: 28000000, seats: 9500, stehDelta: 0, sitzDelta: 0, fanDelta: 0,
+            gate: () => (game.boardSat || 0) >= 70, gateText: 'Setzt ein Vorstandsvertrauen von mindestens 70% voraus.'
+        },
+        zweiter_rang: {
+            name: '🏗️ Zweiter Rang', desc: 'Ein kompletter Oberrang auf die Haupttribüne. Steil, hoch, laut.',
+            baseCost: 19500000, seats: 6200, stehDelta: 0, sitzDelta: 0, fanDelta: 0,
+            gate: () => !(STADIUM_TIER_CONFIG[getStadiumVisualTier()] || {}).secondTier, gateText: 'Nur möglich, solange das Stadion noch keinen zweiten Rang hat.'
+        },
+        sitzplatzumbau: {
+            name: '🔧 Sitzplatzumbau', desc: 'Stehplätze werden bestuhlt. Bringt Geld pro Kopf - und garantiert Ärger mit der Kurve.',
+            baseCost: 3600000, seats: -800, stehDelta: -0.08, sitzDelta: 0.08, fanDelta: -4,
+            gate: () => (stadium.stehShare ?? 0.5) > 0.15, gateText: 'Der Stehplatzanteil ist bereits zu gering für einen weiteren Umbau.'
+        },
+        stehplatzrueckbau: {
+            name: '🔧 Stehplatzrückbau', desc: 'Sitze raus, Wellenbrecher rein. Die Kurve jubelt, der Erlös pro Kopf sinkt leicht.',
+            baseCost: 2100000, seats: 900, stehDelta: 0.08, sitzDelta: -0.08, fanDelta: 3,
+            gate: () => (stadium.sitzShare ?? 0.45) > 0.15, gateText: 'Der Sitzplatzanteil ist bereits zu gering für einen weiteren Umbau.'
+        },
+        hybridrasen: {
+            name: '🌱 Hybridrasen', desc: 'Kunstfaser im Naturrasen. Hebt die maximal erreichbare Rasenqualität dauerhaft an.',
+            baseCost: 2600000, seats: 0, stehDelta: 0, sitzDelta: 0, fanDelta: 0,
+            gate: () => !stadium.hybridrasen, gateText: 'Bereits vorhanden.'
+        }
+    };
+    function buyCapacityProject(key) {
+        let proj = STADIUM_CAPACITY_PROJECTS[key];
+        if (!proj) return;
+        if (!proj.gate()) { showToast(`🚫 ${proj.gateText}`, 'error', 5000); return; }
+        let cost = Math.round(proj.baseCost * getStadiumCostScale());
+        queueStadiumConstruction('capacityProject', { key }, cost, getConstructionDays(cost), proj.name);
+    }
+    function renderCapacityProjectsGrid() {
+        let grid = document.getElementById('capacity-projects-grid');
+        if (!grid) return;
+        let scale = getStadiumCostScale();
+        grid.innerHTML = Object.keys(STADIUM_CAPACITY_PROJECTS).map(key => {
+            let p = STADIUM_CAPACITY_PROJECTS[key];
+            let cost = Math.round(p.baseCost * scale);
+            let queued = (game.stadiumConstructionQueue || []).some(q => q.type === 'capacityProject' && q.params.key === key);
+            let gateOk = p.gate();
+            let seatsLabel = p.seats > 0 ? `+${p.seats.toLocaleString('de-DE')} Plätze` : (p.seats < 0 ? `${p.seats.toLocaleString('de-DE')} Plätze` : '');
+            let disabled = queued || !gateOk;
+            return `<div class="panel" style="margin-bottom:4px;">
+                <div class="panel-header" style="font-size:10px;">${p.name}</div>
+                <div style="font-size:9px; color:#aaa; margin-bottom:4px;">${p.desc}</div>
+                ${seatsLabel ? `<div style="font-size:9px; margin-bottom:2px;">${seatsLabel}</div>` : ''}
+                ${!gateOk ? `<div style="font-size:9px; color:var(--danger); margin-bottom:4px;">${p.gateText}</div>` : ''}
+                <button onclick="buyCapacityProject('${key}')" class="btn-secondary" ${disabled ? 'disabled' : ''}>${queued ? '🏗️ Im Bau...' : `Beauftragen [${formatVal(cost)}]`}</button>
+            </div>`;
+        }).join('');
+    }
+
+    // ==========================================
+    // NEBENEINNAHMEN-ÜBERSICHT (NEU)
+    // ==========================================
+    // Rein informative Aufschlüsselung der bereits bestehenden Campus-Einnahmequellen
+    // (Fan-Kneipe/Foodtrucks = Gastronomie, Parkhaus = Parkplätze, VIP-Tagungshotel =
+    // VIP-Bewirtung, Fanshop Megastore = Fanshop) als klare Erlöstabelle direkt im
+    // Stadion-Screen - verändert NICHT die tatsächliche Verbuchung (siehe applyMatchdayFinances
+    // in match.js), sondern zeigt dieselben Formeln nur zusammengefasst an. Die eigentlichen
+    // Ausbaustufen bleiben im Campus-Screen, dorthin verlinkt der Knopf am Ende.
+    function computeAncillaryIncomeEstimate() {
+        let gastronomie = (campusBuildings.fankneipe?.lvl || 0) * 1800 + (campusBuildings.foodtrucks?.lvl || 0) * 2400;
+        let parken = (campusBuildings.parkhaus?.lvl || 0) * 1500;
+        let vipBewirtung = (campusBuildings.hotel?.lvl || 0) * 5000;
+        let att = game.lastHomeAttendance || Math.round((stadium.total || 16000) * getAttendanceFactor());
+        // Grobe Näherung an den stadionbezogenen Anteil des Fanartikelabsatzes (siehe
+        // MERCH_SPEND_PER_VISITOR/simulateMerchSales in merchandise.js für die tatsächliche,
+        // deutlich komplexere 3-Kanal-Berechnung) - hier nur zur Anzeige, nicht zur Buchung.
+        let fanshop = Math.round(att * (typeof MERCH_SPEND_PER_VISITOR !== 'undefined' ? MERCH_SPEND_PER_VISITOR : 3.0) * 0.4 * (1 + (campusBuildings.megastore?.lvl || 0) * 0.1));
+        let summe = gastronomie + parken + vipBewirtung + fanshop;
+        return { gastronomie, parken, vipBewirtung, fanshop, summe, seasonProjection: summe * 17 };
+    }
+    function renderStadiumAncillaryIncomeBox() {
+        let box = document.getElementById('stadium-ancillary-income-box');
+        if (!box) return;
+        let e = computeAncillaryIncomeEstimate();
+        let row = (label, key, lvl, max = 5) => `
+            <div class="box" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px; font-size:9px;">
+                <span>${label} <span style="color:var(--text-muted);">(Campus-Stufe ${lvl}/${max})</span></span>
+                <strong style="color:var(--gold);">${formatVal(e[key])}</strong>
+            </div>`;
+        box.innerHTML = `
+            <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Geschätzte Erlöse je Heimspiel aus den Campus-Gebäuden - die Ausbaustufen werden dort verwaltet.</div>
+            ${row('🍺 Gastronomie', 'gastronomie', (campusBuildings.fankneipe?.lvl || 0) + (campusBuildings.foodtrucks?.lvl || 0), 10)}
+            ${row('🅿️ Parkplätze & Zufahrt', 'parken', campusBuildings.parkhaus?.lvl || 0)}
+            ${row('🥂 VIP-Bewirtung', 'vipBewirtung', campusBuildings.hotel?.lvl || 0)}
+            ${row('🛍️ Fanshop & Museum', 'fanshop', campusBuildings.megastore?.lvl || 0)}
+            <div class="box" style="display:flex; justify-content:space-between; font-weight:800; margin-top:4px;">
+                <span>Summe je Heimspiel</span><strong style="color:var(--gold);">${formatVal(e.summe)}</strong>
+            </div>
+            <div class="box" style="display:flex; justify-content:space-between; font-size:9px;">
+                <span>Hochrechnung Saison (17 Heimspiele)</span><strong>${formatVal(e.seasonProjection)}</strong>
+            </div>
+            <button onclick="showScreen('screen-campus')" class="btn-secondary" style="margin-top:6px;">🏢 Zu den Campus-Ausbauten ▶</button>
+        `;
+    }
+
     function renderStadiumView() {
         applyStadiumVisualTierClass('.stadium-bowl');
         renderStadiumConstructionBox();
         renderStadiumKeyFigures();
+        if (typeof renderTicketPriceSliders === 'function') renderTicketPriceSliders();
+        renderPitchMaintenanceBox();
+        renderCapacityProjectsGrid();
+        renderStadiumAncillaryIncomeBox();
         renderSpecialInstallsGrid();
         renderStadiumUpgradesSummary();
         renderStadiumUpgradesGrid();
@@ -763,6 +1022,28 @@
                 // Jugendkader-Kapazität (NEU): jetzt mit echter Bauzeit statt Sofort-Ausbau.
                 game.youthCapacityBonus = (game.youthCapacityBonus || 0) + 1;
                 addInboxMessage('vertrag', '🏠 Jugendkader-Kapazität erweitert!', `Platz für jetzt ${getYouthAcademyCapacity()} Nachwuchsspieler in der Akademie.`, 'screen-youth');
+            } else if (proj.type === 'capacityProject' && typeof STADIUM_CAPACITY_PROJECTS !== 'undefined') {
+                // Namentliche Kapazitäts-/Umbauprojekte (NEU): Zusatztribüne, Ränge erweitern,
+                // Großausbau, Zweiter Rang, Sitzplatzumbau, Stehplatzrückbau, Hybridrasen.
+                stadium.totalInvested = (stadium.totalInvested || 0) + proj.remainingPayment;
+                let cp = STADIUM_CAPACITY_PROJECTS[proj.params.key];
+                if (cp) {
+                    if (cp.seats) stadium.bonusCapacity = (stadium.bonusCapacity || 0) + cp.seats;
+                    if (cp.stehDelta || cp.sitzDelta) {
+                        stadium.stehShare = Math.max(0.05, Math.min(0.85, (stadium.stehShare ?? 0.5) + (cp.stehDelta || 0)));
+                        stadium.sitzShare = Math.max(0.05, Math.min(0.85, (stadium.sitzShare ?? 0.45) + (cp.sitzDelta || 0)));
+                        // Normiert Steh+Sitz auf den Rest nach Abzug des VIP-Anteils, damit alle
+                        // drei Anteile weiterhin exakt 1 ergeben.
+                        let rest = 1 - (stadium.vipShare ?? 0.05);
+                        let summe = stadium.stehShare + stadium.sitzShare;
+                        if (summe > 0) {
+                            stadium.stehShare = rest * (stadium.stehShare / summe);
+                            stadium.sitzShare = rest * (stadium.sitzShare / summe);
+                        }
+                    }
+                    if (cp.fanDelta) game.fans = Math.max(0, Math.min(100, game.fans + cp.fanDelta));
+                    if (proj.params.key === 'hybridrasen') stadium.hybridrasen = true;
+                }
             }
             game.boardSat = Math.min(100, game.boardSat + 2);
             addInboxMessage('vertrag', `🏗️ Bauprojekt fertiggestellt: ${proj.label}!`,
@@ -837,6 +1118,12 @@
     function calculateMatchAttendance(boostMult = 1, noise = 1) {
         let kapazitaet = stadium.total || 16000;
         let ausKapazitaet = Math.round(kapazitaet * Math.min(1.0, getAttendanceFactor() * boostMult) * noise);
+        // Bewusst KEIN Dauerkarten-Sockel an dieser Stelle: das würde die sorgfältig
+        // kalibrierten Effekte von Fan-Zufriedenheit, Ligadeckel und Derby-Bonus verzerren
+        // bzw. teilweise wirkungslos machen, sobald der Sockel sie überschreitet. Dauerkarten
+        // wirken sich statt auf die ZUSCHAUERZAHL selbst nur auf die ERLÖSVERTEILUNG aus -
+        // siehe getSeasonTicketAttendanceFloor() in match.js/finances.js: der bereits bezahlte
+        // Anteil wird von der reell berechneten Zuschauerzahl abgezogen, nicht draufgelegt.
         return Math.max(0, Math.min(kapazitaet, ausKapazitaet, getLeagueAttendanceCap(boostMult)));
     }
 
@@ -855,8 +1142,19 @@
         let vipEl = calculateElasticity(game.ticketPrices.vip, getMarketTicketPrice('vip'));
         // Gedämpft (0.4-Gewichtung), damit ein Ausreißer die Zuschauerzahl nicht komplett
         // verzerrt - der Ticketpreis ist nur einer von mehreren Einflussfaktoren.
-        let weighted = stehEl.factor * 0.5 + sitzEl.factor * 0.45 + vipEl.factor * 0.05;
+        // Gewichtung folgt jetzt der ECHTEN Sitzplatz-Zusammensetzung (siehe
+        // stadium.stehShare/sitzShare/vipShare, veränderbar über Sitzplatzumbau/
+        // Stehplatzrückbau) statt fest verdrahteter 50/45/5-Anteile.
+        let weighted = stehEl.factor * (stadium.stehShare ?? 0.5) + sitzEl.factor * (stadium.sitzShare ?? 0.45) + vipEl.factor * (stadium.vipShare ?? 0.05);
         return 1 + (weighted - 1) * 0.4;
+    }
+
+    // Garantiert eine Mindestzuschauerzahl unabhängig vom sonstigen Attraktivitäts-Modell:
+    // ein Dauerkarteninhaber hat bereits bezahlt und kommt mit hoher Wahrscheinlichkeit
+    // trotzdem, egal wie Ticketpreis, Form oder Wetter aktuell stehen.
+    function getSeasonTicketAttendanceFloor() {
+        let kapazitaet = stadium.total || 16000;
+        return Math.min(kapazitaet, Math.round((game.seasonTicketHolders || 0) * 0.93));
     }
 
     function getAttendanceFactor() {

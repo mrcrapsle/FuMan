@@ -3131,6 +3131,146 @@ async function testSquadPlanningTool(browser) {
     await page.close();
 }
 
+async function testStadiumAusbau2(browser) {
+    console.log('\n[39] Stadion-Ausbau 2.0: Dauerkarten, Rasenpflege, Kapazitätsprojekte, Nebeneinnahmen');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+
+        // 1. Kein Geld-Windfall beim allerersten Programmstart - vor der ersten echten
+        //    Saisonwende gibt es bewusst noch KEINE Dauerkarten (ein brandneuer Verein hat
+        //    naturgemäß noch keine verkauft). Das war ein echter Bug im ersten Entwurf: ein
+        //    automatischer Verkauf schon beim Bootstrap brachte eine bestehende Prüfung zum
+        //    gewählten Startkapital zum Kippen.
+        out.keineDauerkartenVorErsterSaisonwende = game.seasonTicketHolders === 0;
+
+        // 2. Bei der ersten echten Saisonwende wird der Preis exakt auf den aktuellen
+        //    Marktwert kalibriert (ratio 1.0, nicht der Fantasie-Startwert aus state.js) und
+        //    es entstehen tatsächlich Dauerkarteninhaber.
+        renewSeasonTickets();
+        let marktpreis = getMarketSeasonTicketPrice();
+        out.preisAufMarktKalibriert = Math.abs(game.ticketPrices.dauerkarte - marktpreis) <= 1;
+        out.dauerkartenNachSaisonwendeVorhanden = game.seasonTicketHolders > 0;
+
+        // 3. Die Zuschauerzahl selbst bleibt von Dauerkarten UNBEEINFLUSST - das war ein
+        //    Designfehler im ersten Entwurf (Dauerkarten als harter Zuschauer-Sockel), der
+        //    Fanstimmungs-Einfluss, Ligadeckel und Derby-Bonus überschrieben hat.
+        game.fans = 90;
+        game.seasonTicketHolders = Math.round((stadium.total || 16000) * 0.9);
+        let mitVielenDauerkarten = calculateMatchAttendance(1, 1);
+        game.seasonTicketHolders = 0;
+        let ohneDauerkarten = calculateMatchAttendance(1, 1);
+        out.zuschauerzahlUnbeeinflusst = mitVielenDauerkarten === ohneDauerkarten;
+
+        // 4. Aber die ECHTE Spieltags-Einnahme berücksichtigt Dauerkarten: der bereits bezahlte
+        //    Anteil wird nicht nochmal kassiert. Die Zuschauerzahl wird für den Vergleich
+        //    FEST vorgegeben (wie beim Live-Match, siehe applyMatchdayFinances in match.js),
+        //    damit die normale Zufallsstreuung der Zuschauerzahl den Vergleich nicht verzerrt.
+        // Bewusst eine KLEINE Inhaberzahl (500) statt einer großen - bei einem Fantasiewert
+        // über der festen Zuschauerzahl würde der zahlende Anteil auf 0 fallen und der
+        // Ticketverkauf-Posten (amount>0-Filter) ganz aus dem Buchungsjournal verschwinden.
+        game.money = 5000000;
+        currentMatch = { finalAttendance: 5000, finalAttendanceMatchday: game.matchday, isHome: true };
+        game.seasonTicketHolders = 500;
+        applyMatchdayFinances(true, true, false, false, 'Testgegner', '2:0');
+        let ledgerMitDauerkarte500 = game.financeLedger[game.financeLedger.length - 1].einnahmen.find(e => e.label.includes('Ticketverkauf'))?.amount || 0;
+
+        game.money = 5000000;
+        game.seasonTicketHolders = 0;
+        applyMatchdayFinances(true, true, false, false, 'Testgegner', '2:0');
+        let ledgerOhneDauerkarte = game.financeLedger[game.financeLedger.length - 1].einnahmen.find(e => e.label.includes('Ticketverkauf'))?.amount || 0;
+        out.dauerkartenSenkenSpieltagsEinnahme = ledgerMitDauerkarte500 < ledgerOhneDauerkarte;
+
+        // 5. Rasenpflege: Zustand sinkt durch Heimspiele, lässt sich gezielt wieder anheben.
+        stadium.pitchCondition = 60;
+        let condVor = stadium.pitchCondition;
+        tickPitchCondition();
+        out.rasenNutztSichAb = stadium.pitchCondition < condVor;
+        let geldVorPflege = game.money;
+        maintainPitch(100);
+        out.pflegeKostetGeldUndHilft = game.money < geldVorPflege && stadium.pitchCondition > condVor;
+        out.rasenNieUnterMinimum = stadium.pitchCondition >= 20;
+
+        // 6. Kapazitätsprojekte: Effekt, Gate-Prüfung, Sitzplatz-Anteile bleiben normiert.
+        game.money = 999999999;
+        let capVor = stadium.total;
+        buyCapacityProject('zusatztribuene');
+        let queued = game.stadiumConstructionQueue.find(p => p.params && p.params.key === 'zusatztribuene');
+        for (let i = 0; i < queued.totalDays; i++) tickStadiumConstruction();
+        out.kapazitaetsprojektWirkt = stadium.total > capVor;
+
+        let stehVor = stadium.stehShare;
+        buyCapacityProject('sitzplatzumbau');
+        let queued2 = game.stadiumConstructionQueue.find(p => p.params && p.params.key === 'sitzplatzumbau');
+        for (let i = 0; i < queued2.totalDays; i++) tickStadiumConstruction();
+        out.sitzplatzumbauVerschiebtAnteil = stadium.stehShare < stehVor;
+        out.anteileBleibenNormiert = Math.abs((stadium.stehShare + stadium.sitzShare + stadium.vipShare) - 1) < 0.001;
+
+        game.boardSat = 10;
+        let vorGrossausbau = game.stadiumConstructionQueue.length;
+        buyCapacityProject('grossausbau');
+        out.grossausbauOhneVertrauenAbgelehnt = game.stadiumConstructionQueue.length === vorGrossausbau;
+
+        // 7. Nebeneinnahmen-Übersicht: reine, korrekte Anzeige bestehender Campus-Erlöse.
+        campusBuildings.fankneipe.lvl = 2;
+        campusBuildings.parkhaus.lvl = 1;
+        let est = computeAncillaryIncomeEstimate();
+        out.nebeneinnahmenKorrekt = est.gastronomie >= 2 * 1800 && est.parken === 1500 && est.summe === est.gastronomie + est.parken + est.vipBewirtung + est.fanshop;
+
+        // 8. Speichern/Laden erhält alle neuen Felder.
+        stadium.pitchCondition = 71;
+        stadium.hybridrasen = true;
+        game.ticketPrices.dauerkarte = 111;
+        game.seasonTicketHolders = 4444;
+        saveGameToSlot(6);
+        stadium.pitchCondition = 85; stadium.hybridrasen = false;
+        game.ticketPrices.dauerkarte = 1; game.seasonTicketHolders = 0;
+        loadGameFromSlot(6, true);
+        out.speichernLadenOk = stadium.pitchCondition === 71 && stadium.hybridrasen === true && game.ticketPrices.dauerkarte === 111 && game.seasonTicketHolders === 4444;
+
+        return out;
+    });
+
+    // 9. Ein neuer, per Startdialog konfigurierter Verein bekommt exakt das gewählte
+    //    Startkapital - kein unerwarteter Dauerkarten-Bonus (Regressionsschutz für den
+    //    zunächst gefundenen Bug).
+    await page.evaluate(() => closeTutorial());
+    await page.evaluate(() => showScreen('screen-dashboard'));
+    await page.click('#btn-new-game');
+    await page.waitForTimeout(150);
+    await page.evaluate(() => { selectedNewGameLevel = 3; selectedNewGameMoney = 300000; renderNewGameSetupOptions(); });
+    await page.click('#btn-confirm-new-game');
+    await page.waitForTimeout(100);
+    await page.click('#btn-confirm-new-game');
+    await page.waitForTimeout(600);
+    const neustart = await page.evaluate(() => ({
+        money: game.money,
+        erwartet: getNewGameStartMoney(3, 300000),
+        seasonTicketHolders: game.seasonTicketHolders
+    }));
+
+    assert(r.keineDauerkartenVorErsterSaisonwende, 'Vor der ersten echten Saisonwende gibt es noch keine Dauerkarten (kein Geld-Windfall beim Programmstart)');
+    assert(r.preisAufMarktKalibriert, 'Der Dauerkartenpreis wird beim ersten Verkauf exakt auf den Marktwert kalibriert');
+    assert(r.dauerkartenNachSaisonwendeVorhanden, 'Nach der ersten echten Saisonwende gibt es tatsächlich Dauerkarteninhaber');
+    assert(r.zuschauerzahlUnbeeinflusst, 'Die Zuschauerzahl selbst bleibt von Dauerkarten unbeeinflusst (kein verzerrender Sockel)');
+    assert(r.dauerkartenSenkenSpieltagsEinnahme, 'Ein bereits über die Dauerkarte bezahlter Anteil wird an dem Spieltag nicht doppelt kassiert');
+    assert(r.rasenNutztSichAb, 'Der Rasenzustand nutzt sich durch Heimspiele ab');
+    assert(r.pflegeKostetGeldUndHilft, 'Rasenpflege kostet Geld und verbessert den Zustand messbar');
+    assert(r.rasenNieUnterMinimum, 'Der Rasenzustand fällt nie unter das Minimum');
+    assert(r.kapazitaetsprojektWirkt, 'Ein namentliches Kapazitätsprojekt erhöht nach Fertigstellung die Gesamtkapazität');
+    assert(r.sitzplatzumbauVerschiebtAnteil, 'Sitzplatzumbau verschiebt den Stehplatzanteil tatsächlich zugunsten der Sitzplätze');
+    assert(r.anteileBleibenNormiert, 'Steh-, Sitz- und VIP-Anteil ergeben nach einem Umbau weiterhin exakt 100%');
+    assert(r.grossausbauOhneVertrauenAbgelehnt, 'Der Großausbau wird ohne ausreichendes Vorstandsvertrauen abgelehnt');
+    assert(r.nebeneinnahmenKorrekt, 'Die Nebeneinnahmen-Übersicht zeigt die echten, aus den Campus-Stufen berechneten Werte');
+    assert(r.speichernLadenOk, 'Rasenzustand, Hybridrasen, Dauerkartenpreis und -inhaberzahl überleben Speichern und Laden');
+    assert(neustart.money === neustart.erwartet, `Ein per Startdialog konfigurierter Verein bekommt exakt das gewählte Startkapital, kein Dauerkarten-Bonus (${neustart.money} statt ${neustart.erwartet})`);
+    assert(neustart.seasonTicketHolders === 0, 'Auch dort gibt es vor der ersten Saisonwende noch keine Dauerkarteninhaber');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Stadion-Ausbau 2.0');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -3188,6 +3328,7 @@ async function main() {
         testFinancialFairplay,
         testBonusClauses,
         testSquadPlanningTool,
+        testStadiumAusbau2,
     ];
 
     for (const suite of suites) {
