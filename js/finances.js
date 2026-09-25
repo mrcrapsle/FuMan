@@ -355,8 +355,14 @@
     }
 
     // Alt-Sofortkredit (bleibt aus Kompatibilitätsgründen bestehen: flacher Aufschlag, freie Rückzahlung)
-    function takeLoan(amt) { playSound('click'); game.money += amt; game.loanDebt += Math.round(amt * 1.12); updateUI(); renderFinancesView(); }
-    function payLoan(amt) { if (game.loanDebt <= 0 || game.money < amt) return; playSound('click'); game.money -= amt; game.loanDebt -= amt; updateUI(); renderFinancesView(); }
+    // Bugfix (Financial Fairplay): alle Kredit-/Festgeld-Buchungen bekommen jetzt einen
+    // EXPLIZITEN Buchungskontext statt sich auf den zufälligen Bildschirm-Fallback zu
+    // verlassen (siehe buchungsLabelErmitteln()) - Kreditraten und Festgeldauszahlungen
+    // laufen ueber den Spieltag-Tick (match.js) und feuern damit fast NIE, waehrend
+    // "screen-finances" aktiv ist. Vorher wurden sie dadurch faelschlich als normaler
+    // FFP-Verlust/-Gewinn gezaehlt statt als kapitalneutrale Finanzierung ausgenommen zu sein.
+    function takeLoan(amt) { playSound('click'); setzeBuchungskontext('💰 Finanzen & Kredite'); game.money += amt; loescheBuchungskontext(); game.loanDebt += Math.round(amt * 1.12); updateUI(); renderFinancesView(); }
+    function payLoan(amt) { if (game.loanDebt <= 0 || game.money < amt) return; playSound('click'); setzeBuchungskontext('💰 Finanzen & Kredite'); game.money -= amt; loescheBuchungskontext(); game.loanDebt -= amt; updateUI(); renderFinancesView(); }
 
     // Neues Kreditsystem: gestaffelte Laufzeiten mit echter Ratenzahlung statt freier Rückzahlung
     function takeLoanTier(tierKey, amount) {
@@ -369,7 +375,9 @@
         let effectiveRate = Math.max(0.02, tier.rate + (typeof getCreditRatingInterestModifier === 'function' ? getCreditRatingInterestModifier() : 0));
         let totalToRepay = Math.round(amount * (1 + effectiveRate));
         let installment = Math.ceil(totalToRepay / tier.duration);
+        setzeBuchungskontext('💰 Finanzen & Kredite');
         game.money += amount;
+        loescheBuchungskontext();
         activeLoans.push({ id: Date.now(), tierName: tier.name, principal: amount, installment, matchdaysLeft: tier.duration, totalToRepay });
         renderFinancesView(); updateUI();
         showToast(`🏦 Kredit über ${formatVal(amount)} aufgenommen (${tier.name}: ${formatVal(installment)}/Spieltag für ${tier.duration} Spieltage)`, 'success');
@@ -377,10 +385,12 @@
 
     function processLoanInstallments() {
         if (activeLoans.length === 0) return;
+        setzeBuchungskontext('💰 Finanzen & Kredite');
         activeLoans.forEach(loan => {
             game.money -= loan.installment;
             loan.matchdaysLeft--;
         });
+        loescheBuchungskontext();
         let completed = activeLoans.filter(l => l.matchdaysLeft <= 0);
         completed.forEach(l => showToast(`✅ Kredit "${l.tierName}" ist vollständig zurückgezahlt!`, 'success'));
         activeLoans = activeLoans.filter(l => l.matchdaysLeft > 0);
@@ -457,7 +467,9 @@
         if (financeCentralState.fixedDeposit) { showToast('Es läuft bereits eine Festgeldanlage!', 'error'); return; }
         if (!amount || amount <= 0 || game.money < amount) { showToast('Ungültiger Betrag oder nicht genug Geld!', 'error'); return; }
         playSound('click');
+        setzeBuchungskontext('💰 Finanzen & Kredite');
         game.money -= amount;
+        loescheBuchungskontext();
         let rate = matchdays >= 20 ? 0.12 : (matchdays >= 10 ? 0.07 : 0.03);
         financeCentralState.fixedDeposit = { principal: amount, matchdaysLeft: matchdays, totalMatchdays: matchdays, payout: Math.round(amount * (1 + rate)) };
         showToast(`🏦 Festgeldanlage über ${formatVal(amount)} für ${matchdays} Spieltage eröffnet (Auszahlung: ${formatVal(financeCentralState.fixedDeposit.payout)}).`, 'success');
@@ -469,7 +481,9 @@
         if (!fd) return;
         fd.matchdaysLeft--;
         if (fd.matchdaysLeft <= 0) {
+            setzeBuchungskontext('💰 Finanzen & Kredite');
             game.money += fd.payout;
+            loescheBuchungskontext();
             addInboxMessage('finanzen', '🏦 Festgeldanlage ausgezahlt!', `Die Festgeldanlage über ${formatVal(fd.principal)} wurde ausgezahlt: ${formatVal(fd.payout)}.`, 'screen-finances');
             financeCentralState.fixedDeposit = null;
         }
@@ -592,7 +606,9 @@
         let discountedPayoff = Math.round(remainingTotal * 0.85);
         if (game.money < discountedPayoff) { showToast(`Nicht genug Geld! Benötigt: ${formatVal(discountedPayoff)}`, 'error'); return; }
         playSound('goal');
+        setzeBuchungskontext('💰 Finanzen & Kredite');
         game.money -= discountedPayoff;
+        loescheBuchungskontext();
         activeLoans = activeLoans.filter(l => l.id !== loanId);
         showToast(`✅ Kredit "${loan.tierName}" vorzeitig getilgt für ${formatVal(discountedPayoff)} (15% Rabatt)!`, 'success');
         renderFinancesView();
@@ -746,7 +762,14 @@
         'screen-youth': '🎓 Jugendarbeit',
         'screen-training': '🏋️ Training',
         'screen-fans': '📣 Fanarbeit',
-        'screen-finances': '💰 Finanzen & Kredite',
+        // Bugfix (Financial Fairplay): bewusst NICHT identisch mit dem FFP-Ausnahme-Label
+        // "💰 Finanzen & Kredite" - dieser Fallback greift bei JEDER Buchung ohne eigenen
+        // Kontext, solange "Finanzen" der zuletzt besuchte Screen war. Wäre er textgleich mit
+        // dem Ausnahme-Label, würde ein spontanes Ereignis (z.B. eine Büro-Entscheidung), das
+        // während dieser Zeit ohne eigenen Kontext bucht, fälschlich von der FFP-Bilanz
+        // ausgenommen. Echte Kredit-/Festgeldbuchungen setzen ihren Kontext seit dem Bugfix
+        // ohnehin explizit selbst (siehe takeLoan()/processLoanInstallments()/etc.).
+        'screen-finances': '💰 Finanzmenü',
         'screen-stocks': '📈 Börse',
         'screen-industry': '🏭 Fabriken',
         'screen-holding': '🏢 Holding',
