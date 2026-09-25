@@ -49,7 +49,7 @@
             row.style.cssText = 'margin-bottom:4px; padding:6px;';
             row.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span>${p.name} (${p.contracts} J. Rest)${p.agent ? ` <span class="badge badge-trait" title="${p.agent.name}">🕴️ Berater</span>` : ''}</span>
+                    <span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 28) : ''}${p.name} (${p.contracts} J. Rest)${p.agent ? ` <span class="badge badge-trait" title="${p.agent.name}">🕴️ Berater</span>` : ''}</span>
                     <button onclick="extendContract('${p.id}')" class="btn-secondary" style="width:auto;">+1 J. [${formatVal(feeDisplay)}]</button>
                 </div>
                 ${isNegotiating ? `<div class="box" style="font-size:9px; margin-top:4px; border-left-color:var(--danger);">💬 ${p.name} verlangt mehr! <button onclick="rejectContractCounter()" class="btn-secondary" style="width:auto; font-size:8px; margin-left:4px;">Ablehnen</button></div>` : ''}

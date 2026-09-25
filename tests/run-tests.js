@@ -3271,6 +3271,125 @@ async function testStadiumAusbau2(browser) {
     await page.close();
 }
 
+async function testPlayerAvatars(browser) {
+    console.log('\n[40] Spielerporträts: prozedural generierte Avatare für jeden Spieler');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        let out = {};
+        closeTutorial();
+
+        // 1. Jeder Spieler bekommt ein echtes, nicht-leeres SVG-Porträt.
+        let svg = getPlayerAvatarSVG(squad[0], 56);
+        out.erzeugtEchtesSvg = svg.includes('<svg') && svg.length > 200;
+
+        // 2. Dasselbe Porträt ist für denselben Spieler bei wiederholtem Aufruf IDENTISCH
+        //    (deterministisch aus der Spieler-ID) - sonst würde sich das Gesicht eines
+        //    Spielers bei jedem Rendern zufällig ändern.
+        let svgNochmal = getPlayerAvatarSVG(squad[0], 56);
+        out.deterministischGleich = svg === svgNochmal;
+
+        // 3. Zwei verschiedene Spieler bekommen (mit extrem hoher Wahrscheinlichkeit)
+        //    unterschiedliche Porträts - keine Einheits-Grafik für den ganzen Kader.
+        let unterschiedlich = new Set(squad.slice(0, 10).map(p => getPlayerAvatarSVG(p, 56))).size;
+        out.kaderIstVisuellUnterschiedlich = unterschiedlich >= 8;
+
+        // 4. Der Mundausdruck reagiert LIVE auf die aktuelle Moral (nicht Teil der
+        //    geseedeten, stabilen Identität) - derselbe Spieler sieht bei guter und
+        //    schlechter Stimmung sichtbar anders aus.
+        let p = squad[0];
+        p.morale = 90;
+        let froehlich = getPlayerAvatarSVG(p, 56);
+        p.morale = 15;
+        let traurig = getPlayerAvatarSVG(p, 56);
+        out.mundAendertSichMitMoral = froehlich !== traurig;
+
+        // 5. Eine kleine Narbe erscheint nur bei häufig verletzten Spielern - ein echtes
+        //    Spieldatum fließt sichtbar ins Porträt ein, nicht nur reiner Zufall.
+        let robust = { ...squad[1], id: 'test-robust-spieler', timesInjured: 0 };
+        let verletzungsanfaellig = { ...squad[1], id: 'test-narbe-spieler', timesInjured: 5 };
+        // Mehrere ID-Varianten testen, da die Narbe selbst bei hoher timesInjured-Zahl nur
+        // mit ~65% Wahrscheinlichkeit erscheint (seededRand-Anteil) - bei robust (0) ist sie
+        // dagegen IMMER ausgeschlossen, das lässt sich eindeutig prüfen.
+        out.keineNarbeBeiRobustemSpieler = !getPlayerAvatarSVG(robust, 56).includes('#b3564a');
+
+        // 6. Das Porträt hängt AUSSCHLIESSLICH von echten, stabilen Merkmalen ab (Alter,
+        //    Charakter, Verletzungshistorie) plus der ID - zwei Spieler mit komplett
+        //    identischen Attributen aber unterschiedlicher ID sehen trotzdem unterschiedlich
+        //    aus (die ID allein reicht für Varianz).
+        let klon1 = { ...squad[2], id: 'klon-eins' };
+        let klon2 = { ...squad[2], id: 'klon-zwei' };
+        out.idAlleinReichtFuerVarianz = getPlayerAvatarSVG(klon1, 56) !== getPlayerAvatarSVG(klon2, 56);
+
+        // 7. Der Positions-Hintergrund ist an die echte Position gekoppelt.
+        let tw = { ...squad[2], id: 'test-tw', pos: 'TW' };
+        let st = { ...squad[2], id: 'test-tw', pos: 'ST' };
+        out.hintergrundfarbeFolgtPosition = getPlayerAvatarSVG(tw, 56) !== getPlayerAvatarSVG(st, 56);
+
+        // 8. renderPlayerAvatarTag() liefert einen fertigen, rund zugeschnittenen Chip für
+        //    Listenzeilen (Kader, Transfermarkt, Jugend, etc.).
+        let tag = renderPlayerAvatarTag(squad[0], 32);
+        out.tagHatRundenRahmen = tag.includes('border-radius:50%') && tag.includes('<svg');
+
+        return out;
+    });
+
+    // 9. Das Porträt taucht tatsächlich an den wichtigsten Einbindungsstellen im echten
+    //    Markup auf - nicht nur als isoliert aufrufbare Funktion.
+    const stellen = await page.evaluate(() => {
+        let out = {};
+        game.money = 5000000;
+
+        showScreen('screen-squad');
+        out.kaderliste = (document.getElementById('bench-list')?.innerHTML || '').includes('player-avatar');
+
+        openPlayerDetail(squad[0].id, 'squad');
+        out.detailPopup = (document.getElementById('pd-avatar')?.innerHTML || '').includes('<svg');
+        closePlayerDetail();
+
+        showScreen('screen-transfer'); setTransferTab('market');
+        out.transfermarkt = (document.getElementById('market-list')?.innerHTML || '').includes('player-avatar');
+        setTransferTab('free');
+        out.vereinslose = (document.getElementById('free-agents-list')?.innerHTML || '').includes('player-avatar');
+        setTransferTab('sell');
+        out.kaderVerkaufen = (document.getElementById('sell-list')?.innerHTML || '').includes('player-avatar');
+
+        showScreen('screen-contracts');
+        out.vertraege = (document.getElementById('contracts-list')?.innerHTML || '').includes('player-avatar');
+
+        showScreen('screen-training');
+        out.training = (document.getElementById('individual-training-list')?.innerHTML || '').includes('player-avatar');
+
+        managerRPG.level = 10;
+        foundSecondTeam();
+        showScreen('screen-second-team');
+        out.zweiteMannschaft = (document.getElementById('st-squad-list')?.innerHTML || '').includes('player-avatar');
+
+        return out;
+    });
+
+    assert(r.erzeugtEchtesSvg, 'Jeder Spieler bekommt ein echtes, nicht-leeres SVG-Porträt');
+    assert(r.deterministischGleich, 'Das Porträt eines Spielers bleibt bei wiederholtem Aufruf identisch (deterministisch aus der ID)');
+    assert(r.kaderIstVisuellUnterschiedlich, `Verschiedene Spieler bekommen verschiedene Porträts (${JSON.stringify(r.kaderIstVisuellUnterschiedlich)})`);
+    assert(r.mundAendertSichMitMoral, 'Der Mundausdruck ändert sich live mit der aktuellen Moral des Spielers');
+    assert(r.keineNarbeBeiRobustemSpieler, 'Ein nie verletzter Spieler bekommt nie die Verletzungs-Narbe');
+    assert(r.idAlleinReichtFuerVarianz, 'Zwei sonst identische Spieler mit unterschiedlicher ID sehen trotzdem unterschiedlich aus');
+    assert(r.hintergrundfarbeFolgtPosition, 'Die Hintergrundfarbe des Porträts folgt der echten Spielerposition');
+    assert(r.tagHatRundenRahmen, 'renderPlayerAvatarTag() liefert einen fertigen, rund zugeschnittenen Listenzeilen-Chip');
+
+    assert(stellen.kaderliste, 'Das Porträt erscheint in der Kaderliste');
+    assert(stellen.detailPopup, 'Das Porträt erscheint im Spieler-Detail-Popup');
+    assert(stellen.transfermarkt, 'Das Porträt erscheint im Transfermarkt (Kaufliste)');
+    assert(stellen.vereinslose, 'Das Porträt erscheint bei den Vereinslosen');
+    assert(stellen.kaderVerkaufen, 'Das Porträt erscheint bei "Kader verkaufen"');
+    assert(stellen.vertraege, 'Das Porträt erscheint in der Vertragsverwaltung');
+    assert(stellen.training, 'Das Porträt erscheint beim individuellen Training');
+    assert(stellen.zweiteMannschaft, 'Das Porträt erscheint in der Kaderliste der zweiten Mannschaft');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei den Spielerporträts');
+    await page.close();
+}
+
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
@@ -3329,6 +3448,7 @@ async function main() {
         testBonusClauses,
         testSquadPlanningTool,
         testStadiumAusbau2,
+        testPlayerAvatars,
     ];
 
     for (const suite of suites) {

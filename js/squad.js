@@ -553,8 +553,8 @@
         box.style.display = 'block';
         let remaining = Math.max(0, game.ultimatumDeadlineMatchday - game.matchday);
         box.innerHTML = `
-            <div class="box" style="border-left-color:var(--danger); background:rgba(255,77,109,0.08); display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size:10px;"><strong style="color:var(--danger);">⚠️ Ultimatum von ${p.name}</strong><br>Noch ${remaining} Spieltag(e) bis zur Frist.</span>
+            <div class="box" style="border-left-color:var(--danger); background:rgba(255,77,109,0.08); display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                <span style="display:flex; align-items:center; gap:8px; font-size:10px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 32) : ''}<span><strong style="color:var(--danger);">⚠️ Ultimatum von ${p.name}</strong><br>Noch ${remaining} Spieltag(e) bis zur Frist.</span></span>
                 <button onclick="openUltimatumModal()" class="btn-secondary" style="width:auto; font-size:9px;">Jetzt entscheiden</button>
             </div>`;
     }
@@ -745,6 +745,7 @@
             row.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
                     <div style="display:flex; align-items:center; gap:6px;">
+                        ${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 32) : ''}
                         <span class="badge ${badgeClass}">${p.pos}</span>
                         <strong style="font-size:12px;">${p.name}${roleBadge}</strong>
                         ${traitBadge}

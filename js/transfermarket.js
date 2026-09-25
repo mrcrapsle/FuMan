@@ -467,7 +467,11 @@
         document.getElementById('nego-resell-value').innerText = negoResellPct + '%';
         let histList = document.getElementById('nego-history-list');
         histList.innerHTML = (o.history || []).slice().reverse().map(h => `<div style="font-size:10px; color:#94a3b8;">Runde ${h.round}: ${formatVal(h.demanded)} gefordert</div>`).join('') || '<div style="font-size:10px; color:#64748b;">Noch keine Nachverhandlung.</div>';
-        document.getElementById('player-detail-link-nego').onclick = () => { closeNegotiationStepper(); if (p) openPlayerDetail(p.id, 'squad'); };
+        let negoAvatarBox = document.getElementById('player-detail-link-nego');
+        if (negoAvatarBox) {
+            negoAvatarBox.innerHTML = (p && typeof getPlayerAvatarSVG === 'function') ? getPlayerAvatarSVG(p, 76) : '👤';
+            negoAvatarBox.onclick = () => { closeNegotiationStepper(); if (p) openPlayerDetail(p.id, 'squad'); };
+        }
     }
 
     function renderTransferView() {
@@ -493,11 +497,14 @@
                         <span style="font-size:9px; color:#aaa;">Gültig: ${o.expiresIn} SpT</span>
                     </div>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                        <div>
-                            <span class="badge ${badgeClass}">${o.playerPos}</span>
-                            <button onclick="openPlayerDetail('${o.playerId}','squad')" class="btn-secondary" style="width:auto; padding:2px 6px; font-size:9px;" title="Details">ℹ️</button>
-                            <strong>${o.playerName}</strong> (Stärke: ${o.playerStr})
-                            <div style="font-size:9px; color:#aaa;">Marktwert: ${formatVal(o.marketValue)}</div>
+                        <div style="display:flex; align-items:center; gap:6px;">
+                            ${p && typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 32) : ''}
+                            <span>
+                                <span class="badge ${badgeClass}">${o.playerPos}</span>
+                                <button onclick="openPlayerDetail('${o.playerId}','squad')" class="btn-secondary" style="width:auto; padding:2px 6px; font-size:9px;" title="Details">ℹ️</button>
+                                <strong>${o.playerName}</strong> (Stärke: ${o.playerStr})
+                                <div style="font-size:9px; color:#aaa;">Marktwert: ${formatVal(o.marketValue)}</div>
+                            </span>
                         </div>
                         <div style="text-align:right;">
                             <div style="font-size:13px; font-weight:900; color:var(--accent);">${formatVal(o.currentBid)}</div>
@@ -528,6 +535,7 @@
             row.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                     <div style="display:flex; align-items:center; gap:6px;">
+                        ${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 32) : ''}
                         <span class="badge ${badgeClass}">${p.pos}</span>
                         <strong style="font-size:12px;">${p.name}</strong>
                         ${traitBadge}
@@ -556,7 +564,10 @@
             let feeDisplay = isNegotiating ? pendingFreeAgentNegotiation.counterFee : p.signOnFee;
             row.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span><strong class="badge badge-${(p.pos||'mit').toLowerCase()}">${p.pos}</strong> ${p.name} (Str: ${p.strength}) <span style="font-size:8px; color:var(--text-muted);">${p.character || ''}</span></span>
+                    <span style="display:flex; align-items:center; gap:6px;">
+                        ${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 28) : ''}
+                        <span><strong class="badge badge-${(p.pos||'mit').toLowerCase()}">${p.pos}</strong> ${p.name} (Str: ${p.strength}) <span style="font-size:8px; color:var(--text-muted);">${p.character || ''}</span></span>
+                    </span>
                     <button onclick="signFreeAgent(${idx})" class="btn-blue" style="width:auto;">Verpflichten [Handgeld: ${formatVal(feeDisplay)}]</button>
                 </div>
                 ${isNegotiating ? `<div class="box" style="font-size:9px; margin-top:4px; border-left-color:var(--danger);">💬 Gegenangebot: ${p.name} verlangt ${formatVal(pendingFreeAgentNegotiation.counterFee)} statt ursprünglich ${formatVal(p.signOnFee)}. <button onclick="rejectFreeAgentCounter()" class="btn-secondary" style="width:auto; font-size:8px; margin-left:4px;">Ablehnen</button></div>` : ''}
@@ -569,7 +580,7 @@
         squad.forEach((p) => {
             let row = document.createElement('div');
             row.className = 'player-row';
-            row.innerHTML = `<span>${p.name} (${p.pos}|Str:${p.strength})</span><button onclick="sellPlayer('${p.id}', this)" class="btn-danger" style="width:auto;">Blitzverkauf [${formatVal(Math.round(p.marketValue*0.80))}]</button>`;
+            row.innerHTML = `<span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 26) : ''}${p.name} (${p.pos}|Str:${p.strength})</span><button onclick="sellPlayer('${p.id}', this)" class="btn-danger" style="width:auto;">Blitzverkauf [${formatVal(Math.round(p.marketValue*0.80))}]</button>`;
             sList.appendChild(row);
         });
 

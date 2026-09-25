@@ -271,9 +271,9 @@
             let row = document.createElement('div');
             row.className = 'player-row';
             row.innerHTML = `
-                <span><strong class="badge badge-${(p.pos||'mit').toLowerCase()}">${p.pos}</strong> ${p.name} (Str: ${p.strength})</span>
+                <span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 26) : ''}<strong class="badge badge-${(p.pos||'mit').toLowerCase()}">${p.pos}</strong> ${p.name} (Str: ${p.strength})</span>
                 <div>
-                    Fokus: 
+                    Fokus:
                     <select class="input-inline" style="width:100px;" onchange="setIndividualFocus('${p.id}', this.value)">
                         <option value="allgemein" ${p.individualFocus==='allgemein'?'selected':''}>Allgemein</option>
                         <option value="torschuss" ${p.individualFocus==='torschuss'?'selected':''}>Torschuss</option>

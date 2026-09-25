@@ -525,6 +525,7 @@
                 row.className = 'player-row';
                 let badgeClass = 'badge-' + (p.pos || 'mit').toLowerCase();
                 row.innerHTML = `
+                    ${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 30) : ''}
                     <span class="badge ${badgeClass}">${p.pos}</span>
                     <button onclick="openPlayerDetail('${p.id}','secondTeam')" class="btn-secondary" style="width:auto; padding:2px 6px; font-size:9px;" title="Details">ℹ️</button>
                     <span style="flex:1; text-align:left; padding-left:6px;">
@@ -561,7 +562,7 @@
                 ? '<div class="box" style="font-size:10px; color:#64748b;">Kein Markt verfügbar - erst nächste Saison aktualisiert sich das Angebot.</div>'
                 : secondTeamMarketPlayers.map((p, idx) => `
                     <div class="market-row">
-                        <span><span class="badge badge-${(p.pos||'mit').toLowerCase()}">${p.pos}</span> ${p.name} (Str: ${p.strength})</span>
+                        <span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 26) : ''}<span class="badge badge-${(p.pos||'mit').toLowerCase()}">${p.pos}</span> ${p.name} (Str: ${p.strength})</span>
                         <span>${formatVal(p.marketValue)}</span>
                         <button onclick="buySecondTeamMarketPlayer(${idx})" class="btn-action" style="width:auto; font-size:9px;">Kaufen</button>
                     </div>`).join('');
@@ -571,6 +572,7 @@
         if (firstTeamList) {
             firstTeamList.innerHTML = squad.map(p => `
                 <div class="player-row">
+                    ${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 26) : ''}
                     <span class="badge badge-${(p.pos||'mit').toLowerCase()}">${p.pos}</span>
                     <span style="flex:1; text-align:left; padding-left:6px;"><strong>${p.name}</strong> <span style="font-size:9px; color:#aaa;">(Str: ${p.strength})</span></span>
                     <button onclick="demoteToSecondTeam('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:9px; color:var(--teal);" title="In die 2. Mannschaft verschieben">⬇️</button>

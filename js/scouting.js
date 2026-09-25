@@ -259,7 +259,7 @@
                     let row = document.createElement('div');
                     row.className = 'panel';
                     row.innerHTML = `
-                        <div class="panel-header"><span>⭐ ${p.name} (${p.pos})</span><strong style="color:var(--accent);">Stärke: ~${p.strength}</strong></div>
+                        <div class="panel-header"><span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 28) : ''}⭐ ${p.name} (${p.pos})</span><strong style="color:var(--accent);">Stärke: ~${p.strength}</strong></div>
                         <div style="font-size:9px; margin-bottom:4px;">
                             <span style="color:${confColor};">🔎 Vertrauens-Level: ${confidence}%${confidence < 95 ? ' (Werte unscharf)' : ' (bestätigt)'}</span>
                         </div>

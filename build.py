@@ -16,6 +16,7 @@ JS_ORDER = [
     "js/state.js",
     "js/inbox.js",
     "js/entities.js",
+    "js/avatars.js",
     "js/playerdetail.js",
     "js/squad.js",
     "js/squadplanning.js",
