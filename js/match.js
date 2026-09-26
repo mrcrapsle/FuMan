@@ -465,6 +465,32 @@
         });
     }
 
+    // Taktik-Automatik (NEU, Einstellung in der Taktiktafel siehe js/squad.js): reagiert
+    // automatisch auf den Spielstand, ohne dass das Live-Panel oben manuell bedient werden
+    // muss. Feuert je Regel höchstens EINMAL pro Spiel (currentMatch.tacticAutomationFired),
+    // damit nicht bei jedem weiteren Schritt derselbe Stil erneut gesetzt und der Ticker
+    // zugespammt wird. Nutzt bewusst liveSetTacticStyle() statt die Umstellung zu duplizieren.
+    function applyTacticAutomation() {
+        if (!currentMatch || !game.tacticAutomation) return;
+        if (!currentMatch.tacticAutomationFired) currentMatch.tacticAutomationFired = {};
+        let ourGoals = currentMatch.isHome ? currentMatch.homeGoals : currentMatch.awayGoals;
+        let oppGoals = currentMatch.isHome ? currentMatch.awayGoals : currentMatch.homeGoals;
+        let log = document.getElementById('ticker-log');
+
+        if (game.tacticAutomation.offensivBeiRueckstand && currentMatch.minute >= 46 && ourGoals < oppGoals
+            && game.tacticStyle !== 'offensiv' && !currentMatch.tacticAutomationFired.offensiv) {
+            currentMatch.tacticAutomationFired.offensiv = true;
+            if (log) log.innerHTML += `<div style="color:var(--gold); font-size:10px;">🤖 Taktik-Automatik: Rückstand erkannt.</div>`;
+            liveSetTacticStyle('offensiv');
+        }
+        if (game.tacticAutomation.defensivBeiFuehrung && currentMatch.minute >= 75 && ourGoals > oppGoals
+            && game.tacticStyle !== 'defensiv' && !currentMatch.tacticAutomationFired.defensiv) {
+            currentMatch.tacticAutomationFired.defensiv = true;
+            if (log) log.innerHTML += `<div style="color:var(--gold); font-size:10px;">🤖 Taktik-Automatik: Führung kurz vor Schluss wird verteidigt.</div>`;
+            liveSetTacticStyle('defensiv');
+        }
+    }
+
     // Ticker-Text-Pools für ein lebendigeres Spielerlebnis
     const NEUTRAL_FLAVOR_EVENTS = [
         "Beide Mannschaften tasten sich ab.",
@@ -707,6 +733,7 @@
 
         document.getElementById('ticker-log').scrollTop = document.getElementById('ticker-log').scrollHeight;
         document.getElementById('live-score').innerText = currentMatch.homeGoals + " : " + currentMatch.awayGoals;
+        applyTacticAutomation();
 
         // Co-Kommentator: unabhängig vom Spielgeschehen, ca. jeder 5. Spielzug
         if (Math.random() < 0.2) {

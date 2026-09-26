@@ -370,6 +370,35 @@
             </div>`).join('');
     }
 
+    // Taktik-Automatik (NEU): reagiert im laufenden Spiel automatisch auf den Spielstand, ohne
+    // dass das Live-Taktikpanel manuell bedient werden muss - eine STANDING-Einstellung in der
+    // Taktiktafel (bleibt über Spiele hinweg aktiv), kein einmaliger Vorschlag wie der
+    // Co-Trainer (siehe getCoTrainerTacticalSuggestion() oben). Die eigentliche Auswertung
+    // läuft in applyTacticAutomation() in match.js und wirkt nur in Schritt-für-Schritt
+    // simulierten Spielen (live oder "schnell durchspielen"), nicht beim automatischen
+    // Durchsimulieren mehrerer Spieltage ohne echten Spielverlauf.
+    function toggleTacticAutomation(key) {
+        playSound('click');
+        game.tacticAutomation[key] = !game.tacticAutomation[key];
+        renderTacticAutomationBox();
+    }
+    function renderTacticAutomationBox() {
+        let box = document.getElementById('tactic-automation-box');
+        if (!box) return;
+        let items = [
+            { key: 'offensivBeiRueckstand', label: 'Bei Rückstand automatisch offensiver spielen', desc: 'Stellt ab der 46. Minute einmalig auf den Spielstil "Offensiv" um, sobald das eigene Team zurückliegt.' },
+            { key: 'defensivBeiFuehrung', label: 'Bei Führung kurz vor Schluss automatisch defensiver spielen', desc: 'Stellt ab der 75. Minute einmalig auf den Spielstil "Defensiv" um, solange das eigene Team in Führung liegt.' }
+        ];
+        box.innerHTML = items.map(it => `
+            <div class="box" style="cursor:pointer;" onclick="toggleTacticAutomation('${it.key}')">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <div style="width:18px; height:18px; border:2px solid ${game.tacticAutomation[it.key] ? 'var(--primary)' : '#666'}; border-radius:3px; background:${game.tacticAutomation[it.key] ? 'var(--primary)' : 'transparent'}; display:flex; align-items:center; justify-content:center; font-size:11px; color:#000; flex-shrink:0;">${game.tacticAutomation[it.key] ? '✓' : ''}</div>
+                    <strong style="font-size:11px;">${it.label}</strong>
+                </div>
+                <div style="font-size:9px; color:#aaa; margin-top:3px; margin-left:26px;">${it.desc}</div>
+            </div>`).join('');
+    }
+
     function setFormation(form) {
         playSound('click');
         game.formation = form;
@@ -703,6 +732,7 @@
         renderTacticStyleCards();
         renderTacticsBoardStatBar();
         renderTeamInstructions();
+        renderTacticAutomationBox();
         populateRoleSelects();
         renderCoTrainerAdvice();
         renderInjuryCrisisWarning();

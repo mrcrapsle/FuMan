@@ -3502,6 +3502,108 @@ async function testTrainingCalendar(browser) {
 }
 
 // ---------------------------------------------------------------------------
+// [42] TAKTIKTAFEL: TAKTIK-AUTOMATIK
+// ---------------------------------------------------------------------------
+// Neue STANDING-Einstellung in der Taktiktafel: reagiert im laufenden Spiel automatisch auf
+// den Spielstand (offensiver bei Rückstand, defensiver bei knapper Führung kurz vor Schluss),
+// ohne dass das Live-Taktikpanel manuell bedient werden muss. Feuert je Regel nur einmal pro
+// Spiel und nur ab der jeweils passenden Spielminute.
+async function testTacticAutomation(browser) {
+    console.log('\n[42] Taktiktafel: Taktik-Automatik reagiert auf den Spielstand');
+    const { page, consoleErrors } = await freshPage(browser);
+
+    const r = await page.evaluate(() => {
+        let out = {};
+        closeTutorial();
+
+        // 1. Die Automatik ist standardmäßig deaktiviert und lässt sich umschalten.
+        out.standardmaessigDeaktiviert = game.tacticAutomation.offensivBeiRueckstand === false
+            && game.tacticAutomation.defensivBeiFuehrung === false;
+        toggleTacticAutomation('offensivBeiRueckstand');
+        out.umschaltenFunktioniert = game.tacticAutomation.offensivBeiRueckstand === true;
+        toggleTacticAutomation('offensivBeiRueckstand');
+        out.zurueckschaltenFunktioniert = game.tacticAutomation.offensivBeiRueckstand === false;
+
+        // 2. Deaktivierte Automatik greift trotz Rückstand nicht ein.
+        game.tacticStyle = 'ausgeglichen';
+        currentMatch = { isHome: true, homeGoals: 0, awayGoals: 1, minute: 60 };
+        applyTacticAutomation();
+        out.deaktiviertGreiftNicht = game.tacticStyle === 'ausgeglichen';
+
+        // 3. Aktivierte Regel greift bei Rückstand ab der 46. Minute.
+        game.tacticAutomation.offensivBeiRueckstand = true;
+        game.tacticStyle = 'ausgeglichen';
+        currentMatch = { isHome: true, homeGoals: 0, awayGoals: 1, minute: 60 };
+        applyTacticAutomation();
+        out.offensivBeiRueckstandGreift = game.tacticStyle === 'offensiv' && currentMatch.tacticAutomationFired.offensiv === true;
+
+        // 4. Vor der 46. Minute greift dieselbe Regel noch nicht.
+        game.tacticStyle = 'ausgeglichen';
+        currentMatch = { isHome: true, homeGoals: 0, awayGoals: 1, minute: 30 };
+        applyTacticAutomation();
+        out.nichtVorHalbzeit = game.tacticStyle === 'ausgeglichen';
+
+        // 5. Einmaligkeit: nach dem Auslösen wird eine manuelle Rückstellung nicht sofort
+        //    wieder überschrieben, solange derselbe Rückstand anhält.
+        game.tacticStyle = 'ausgeglichen';
+        currentMatch = { isHome: true, homeGoals: 0, awayGoals: 1, minute: 60 };
+        applyTacticAutomation(); // feuert einmal
+        game.tacticStyle = 'ausgeglichen'; // manuell zurückgestellt
+        applyTacticAutomation(); // sollte NICHT erneut feuern
+        out.feuertNurEinmalProSpiel = game.tacticStyle === 'ausgeglichen';
+        game.tacticAutomation.offensivBeiRueckstand = false;
+
+        // 6. Auswärtsperspektive: "unser" Team ist bei isHome=false das Auswärtsteam.
+        game.tacticAutomation.offensivBeiRueckstand = true;
+        game.tacticStyle = 'ausgeglichen';
+        currentMatch = { isHome: false, homeGoals: 2, awayGoals: 0, minute: 60 };
+        applyTacticAutomation();
+        out.auswaertsperspektiveKorrekt = game.tacticStyle === 'offensiv';
+        game.tacticAutomation.offensivBeiRueckstand = false;
+
+        // 7. Führung kurz vor Schluss: greift erst ab der 75. Minute, nicht früher.
+        game.tacticAutomation.defensivBeiFuehrung = true;
+        game.tacticStyle = 'ausgeglichen';
+        currentMatch = { isHome: true, homeGoals: 2, awayGoals: 0, minute: 65 };
+        applyTacticAutomation();
+        out.defensivNichtZuFrueh = game.tacticStyle === 'ausgeglichen';
+        currentMatch = { isHome: true, homeGoals: 2, awayGoals: 0, minute: 80 };
+        applyTacticAutomation();
+        out.defensivBeiFuehrungGreift = game.tacticStyle === 'defensiv' && currentMatch.tacticAutomationFired.defensiv === true;
+        game.tacticAutomation.defensivBeiFuehrung = false;
+
+        // 8. Ohne laufendes Spiel (currentMatch = null) darf die Funktion nicht abstürzen.
+        currentMatch = null;
+        let crashed = false;
+        try { applyTacticAutomation(); } catch (e) { crashed = true; }
+        out.keinAbsturzOhneMatch = !crashed;
+
+        // 9. Rendering: die Taktiktafel zeigt beide Regeln als echte Markup-Zeilen.
+        renderTacticAutomationBox();
+        let box = document.getElementById('tactic-automation-box').innerHTML;
+        out.zeigtBeideRegeln = box.includes('Bei Rückstand automatisch offensiver spielen')
+            && box.includes('Bei Führung kurz vor Schluss automatisch defensiver spielen');
+
+        return out;
+    });
+
+    assert(r.standardmaessigDeaktiviert, 'Die Taktik-Automatik ist standardmäßig deaktiviert');
+    assert(r.umschaltenFunktioniert, 'Eine Automatik-Regel lässt sich aktivieren');
+    assert(r.zurueckschaltenFunktioniert, 'Eine Automatik-Regel lässt sich wieder deaktivieren');
+    assert(r.deaktiviertGreiftNicht, 'Eine deaktivierte Regel greift trotz passendem Spielstand nicht ein');
+    assert(r.offensivBeiRueckstandGreift, 'Bei aktivierter Regel wird bei Rückstand ab der 46. Minute auf Offensiv umgestellt');
+    assert(r.nichtVorHalbzeit, 'Vor der 46. Minute greift die Rückstands-Regel noch nicht');
+    assert(r.feuertNurEinmalProSpiel, 'Die Regel feuert nur einmal pro Spiel und überschreibt keine manuelle Rückstellung erneut');
+    assert(r.auswaertsperspektiveKorrekt, 'Bei einem Auswärtsspiel wird der eigene Rückstand korrekt aus der Auswärtsperspektive erkannt');
+    assert(r.defensivNichtZuFrueh, 'Die Führungs-Regel greift vor der 75. Minute noch nicht');
+    assert(r.defensivBeiFuehrungGreift, 'Bei aktivierter Regel wird bei Führung ab der 75. Minute auf Defensiv umgestellt');
+    assert(r.keinAbsturzOhneMatch, 'Die Taktik-Automatik stürzt ohne laufendes Spiel nicht ab');
+    assert(r.zeigtBeideRegeln, 'Die Taktiktafel zeigt beide Automatik-Regeln als echte Markup-Zeilen');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler in der Taktik-Automatik');
+    await page.close();
+}
+
+// ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
 async function main() {
@@ -3561,6 +3663,7 @@ async function main() {
         testStadiumAusbau2,
         testPlayerAvatars,
         testTrainingCalendar,
+        testTacticAutomation,
     ];
 
     for (const suite of suites) {

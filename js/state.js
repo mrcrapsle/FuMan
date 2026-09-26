@@ -108,6 +108,7 @@
         agentRelationships: {},
         pendingSponsorActivation: null,
         teamInstructions: { gegenpressing: false, tiefStehen: false, hoheAV: false },
+        tacticAutomation: { offensivBeiRueckstand: false, defensivBeiFuehrung: false },
         pendingNamingCeremony: null,
         stadiumConstructionQueue: [],
         sponsorEarningsHistory: {},
