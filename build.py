@@ -28,6 +28,7 @@ JS_ORDER = [
     "js/transfermarket.js",
     "js/manager-rpg.js",
     "js/scouting.js",
+    "js/scouting-enhanced.js",
     "js/commodities.js",
     "js/merchandise.js",
     "js/office.js",

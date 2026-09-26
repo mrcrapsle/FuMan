@@ -182,7 +182,12 @@
         penaltyTakerId: null,
         freeKickTakerId: null,
         cornerTakerId: null,
-        trophies: []
+        trophies: [],
+        scoutingDatabase: {
+            discoveredPlayers: [],
+            lastAnalysisMatchday: 0,
+            talentWatchlist: []
+        }
     };
 
     let managerRPG = {
