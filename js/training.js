@@ -517,16 +517,72 @@
         updateUI();
     }
 
-    // 11. Belastungssteuerung nach Spielrhythmus: erkennt Englische Wochen (Pokal + Liga eng
-    // getaktet) und schlägt automatisch einen schonenderen Wochenplan vor.
-    function checkFixtureCongestionWarning() {
-        let cupRoundIdx = cupTournament.matchdays ? cupTournament.matchdays.indexOf(game.matchday + 1) : -1;
-        let isCongested = cupRoundIdx !== -1 || (europeTournament.matchdays || []).includes(game.matchday + 1);
-        return isCongested;
+    // 11. Trainingskalender: Mehrspieltage-Vorschau statt nur den nächsten Spieltag zu prüfen.
+    // Zeigt Liga/DFB-Pokal/Landespokal/Europapokal für die kommenden Spieltage an, damit sich
+    // der Wochenplan VOR einer Häufung wichtiger Spiele anpassen lässt statt erst danach.
+    const TRAINING_CALENDAR_LOOKAHEAD = 6;
+    const FIXTURE_TYPE_LABELS = {
+        liga: { label: 'Liga', icon: '🏟️' },
+        dfbpokal: { label: 'DFB-Pokal', icon: '🏆' },
+        landespokal: { label: 'Landespokal', icon: '🥈' },
+        europapokal: { label: 'Europapokal', icon: '🌍' }
+    };
+    function getUpcomingFixtureCalendar(lookahead = TRAINING_CALENDAR_LOOKAHEAD) {
+        let entries = [];
+        for (let i = 1; i <= lookahead; i++) {
+            let md = game.matchday + i;
+            if (md > 34) break;
+            let type = 'liga';
+            if ((cupTournament.matchdays || []).includes(md) && !cupTournament.eliminated && (typeof isQualifiedForDfbPokal !== 'function' || isQualifiedForDfbPokal())) {
+                type = 'dfbpokal';
+            } else if ((landesPokal.matchdays || []).includes(md) && landesPokal.active) {
+                type = 'landespokal';
+            } else if ((europeTournament.matchdays || []).includes(md) && europeTournament.active) {
+                type = 'europapokal';
+            }
+            entries.push({ matchday: md, type });
+        }
+        return entries;
+    }
+    // Eine Belastungsphase liegt vor, wenn zwei besondere Spieltage (alles außer Liga) höchstens
+    // zwei Spieltage voneinander entfernt liegen - dann lohnt sich der Schonplan schon VOR dem
+    // ersten der beiden, nicht erst danach.
+    function findCongestedStretch(entries) {
+        let special = entries.filter(e => e.type !== 'liga');
+        for (let i = 0; i < special.length - 1; i++) {
+            if (special[i + 1].matchday - special[i].matchday <= 2) {
+                return { from: special[i].matchday, to: special[i + 1].matchday };
+            }
+        }
+        return null;
+    }
+    function renderTrainingCalendarPreview() {
+        let box = document.getElementById('training-calendar-box');
+        if (!box) return;
+        let entries = getUpcomingFixtureCalendar();
+        if (entries.length === 0) {
+            box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Saisonende erreicht - keine weiteren Spieltage.</div>';
+            return;
+        }
+        let stretch = findCongestedStretch(entries);
+        box.innerHTML = `
+            <div style="display:flex; gap:4px; overflow-x:auto; padding-bottom:4px;">
+                ${entries.map(e => {
+                    let info = FIXTURE_TYPE_LABELS[e.type];
+                    let isHot = !!stretch && e.matchday >= stretch.from && e.matchday <= stretch.to;
+                    return `<div style="flex:0 0 auto; text-align:center; padding:4px 6px; border-radius:6px; background:${isHot ? 'rgba(239,68,68,0.15)' : 'var(--bg-card)'}; border:1px solid ${isHot ? 'var(--danger)' : 'var(--border)'};">
+                        <div style="font-size:8px; color:var(--text-muted);">SpT ${e.matchday}</div>
+                        <div style="font-size:14px;">${info.icon}</div>
+                        <div style="font-size:8px;">${info.label}</div>
+                    </div>`;
+                }).join('')}
+            </div>
+            ${stretch ? `<div class="box" style="border-left-color:var(--danger); font-size:10px; margin-top:6px;">⚠️ Belastungsphase Spieltag ${stretch.from}-${stretch.to} (mehrere wichtige Spiele dicht hintereinander)! <button onclick="applyCongestionRecommendation()" class="btn-secondary" style="width:auto; font-size:9px;">Schonplan übernehmen</button></div>` : ''}
+        `;
     }
     function applyCongestionRecommendation() {
         applyWeeklyTrainingPreset('regeneration');
-        showToast('📅 Schonender Wochenplan wegen englischer Woche übernommen!', 'success');
+        showToast('📅 Schonender Wochenplan für die anstehende Belastungsphase übernommen!', 'success');
     }
 
     // 12. Jugendspieler-Hospitanz im Profitraining: temporär im Profikader mittrainieren,
@@ -625,12 +681,7 @@
         if (doubleBtn) doubleBtn.innerText = game.lastDoubleTrainingMatchday === game.matchday ? '💪 Doppeltraining bereits heute durchgeführt ✓' : '💪 Doppeltraining-Tag durchführen';
         let equipBtn = document.getElementById('btn-buy-equipment');
         if (equipBtn) equipBtn.innerText = game.equipmentLevel >= 3 ? '🎒 Trainingsausrüstung: Maximalstufe' : `🎒 Trainingsausrüstung ausbauen (Stufe ${game.equipmentLevel}/3) [${formatVal(8000 * (game.equipmentLevel + 1))}]`;
-        let congestionBox = document.getElementById('congestion-warning-box');
-        if (congestionBox) {
-            let congested = checkFixtureCongestionWarning();
-            congestionBox.style.display = congested ? 'block' : 'none';
-            if (congested) congestionBox.innerHTML = `<div class="box" style="border-left-color:var(--danger); font-size:10px;">⚠️ Englische Woche voraus! <button onclick="applyCongestionRecommendation()" class="btn-secondary" style="width:auto; font-size:9px;">Schonplan übernehmen</button></div>`;
-        }
+        renderTrainingCalendarPreview();
         let hospitantBox = document.getElementById('youth-hospitant-list');
         if (hospitantBox) {
             let available = youthTalents.filter(p => !game.youthHospitants.includes(p.id));

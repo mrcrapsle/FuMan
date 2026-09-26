@@ -3394,6 +3394,114 @@ async function testPlayerAvatars(browser) {
 }
 
 // ---------------------------------------------------------------------------
+// [41] TRAININGSKALENDER: MEHRSPIELTAGE-VORSCHAU
+// ---------------------------------------------------------------------------
+// Die bisherige Belastungswarnung sah nur den unmittelbar nächsten Spieltag. Der neue
+// Trainingskalender zeigt Liga/DFB-Pokal/Landespokal/Europapokal für die kommenden
+// Spieltage und erkennt Belastungsphasen (mehrere wichtige Spiele dicht hintereinander)
+// über den gesamten Vorschau-Zeitraum, nicht nur einen Spieltag im Voraus.
+async function testTrainingCalendar(browser) {
+    console.log('\n[41] Trainingskalender: Mehrspieltage-Vorschau auf Liga/Pokal/Europapokal');
+    const { page, consoleErrors } = await freshPage(browser);
+
+    const r = await page.evaluate(() => {
+        let out = {};
+        closeTutorial();
+        showScreen('screen-training');
+
+        // 1. Ohne besondere Wettbewerbsbeteiligung sind alle Vorschau-Spieltage einfache
+        //    Ligaspieltage, direkt auf den aktuellen Spieltag folgend.
+        game.matchday = 1;
+        cupTournament.eliminated = true;
+        landesPokal.active = false;
+        europeTournament.active = false;
+        let nurLiga = getUpcomingFixtureCalendar();
+        out.standardLaengeStimmt = nurLiga.length === 6;
+        out.ohneWettbewerbeNurLiga = nurLiga.every(e => e.type === 'liga');
+        out.spieltagsnummernKorrekt = nurLiga.map(e => e.matchday).join(',') === '2,3,4,5,6,7';
+
+        // 2. DFB-Pokal wird nur erkannt, wenn der Verein tatsächlich teilnahmeberechtigt ist
+        //    (ab 3. Liga automatisch, sonst nur über den Landespokal-Aufstieg) und noch nicht
+        //    ausgeschieden ist.
+        game.matchday = 3; // naechster Spieltag = 4 = cupTournament.matchdays[0]
+        cupTournament.eliminated = false;
+        game.leagueLevel = 5; game.dfbPokalViaLandespokal = false;
+        out.dfbPokalOhneBerechtigungNichtErkannt = getUpcomingFixtureCalendar()[0].type === 'liga';
+        game.dfbPokalViaLandespokal = true;
+        out.dfbPokalMitBerechtigungErkannt = getUpcomingFixtureCalendar()[0].type === 'dfbpokal';
+        cupTournament.eliminated = true;
+        out.ausgeschiedenNichtMehrErkannt = getUpcomingFixtureCalendar()[0].type === 'liga';
+        cupTournament.eliminated = false;
+
+        // 3. Landespokal und Europapokal jeweils nur bei aktiver Teilnahme.
+        game.matchday = 5; // naechster Spieltag = 6 = landesPokal.matchdays[0]
+        landesPokal.active = false;
+        out.landespokalInaktivNichtErkannt = getUpcomingFixtureCalendar()[0].type === 'liga';
+        landesPokal.active = true;
+        out.landespokalAktivErkannt = getUpcomingFixtureCalendar()[0].type === 'landespokal';
+        landesPokal.active = false;
+
+        game.matchday = 2; // naechster Spieltag = 3 = europeTournament.matchdays[0]
+        europeTournament.active = true;
+        out.europapokalErkannt = getUpcomingFixtureCalendar()[0].type === 'europapokal';
+        europeTournament.active = false;
+
+        // 4. Die Vorschau bricht am Saisonende (Spieltag 34) ab statt darüber hinauszulaufen.
+        game.matchday = 32;
+        let saisonende = getUpcomingFixtureCalendar();
+        out.stoppTAmSaisonende = saisonende.length === 2 && saisonende.every(e => e.matchday <= 34);
+
+        // 5. Belastungsphase: zwei wichtige Spieltage im Abstand von höchstens zwei
+        //    Spieltagen werden erkannt, weiter auseinanderliegende dagegen nicht.
+        let eng = [{ matchday: 10, type: 'liga' }, { matchday: 11, type: 'dfbpokal' }, { matchday: 13, type: 'europapokal' }];
+        out.belastungsphaseErkannt = JSON.stringify(findCongestedStretch(eng)) === JSON.stringify({ from: 11, to: 13 });
+        let entspannt = [{ matchday: 10, type: 'liga' }, { matchday: 12, type: 'dfbpokal' }, { matchday: 20, type: 'europapokal' }];
+        out.keineBelastungsphaseOhneHaeufung = findCongestedStretch(entspannt) === null;
+
+        return out;
+    });
+
+    // 6. Integrationstest: die Vorschau erscheint im echten Trainingskalender-Panel, eine
+    //    erkannte Belastungsphase zeigt die Warnung samt Schonplan-Knopf, und der Knopf
+    //    übernimmt tatsächlich den bestehenden Regenerations-Wochenplan.
+    const dom = await page.evaluate(() => {
+        let out = {};
+        game.matchday = 9; // naechste Spieltage 10-15: Europapokal (11) und DFB-Pokal (12) eng beieinander
+        cupTournament.eliminated = false;
+        game.leagueLevel = 5; game.dfbPokalViaLandespokal = true;
+        europeTournament.active = true;
+        landesPokal.active = false;
+        renderTrainingCalendarPreview();
+        let box = document.getElementById('training-calendar-box').innerHTML;
+        out.zeigtSechsSpieltage = (box.match(/SpT \d+/g) || []).length === 6;
+        out.zeigtBelastungswarnung = box.includes('Belastungsphase') && box.includes('Schonplan übernehmen');
+
+        game.weeklyTrainingPlan = { mo: 'kondition', di: 'kondition', mi: 'kondition', do: 'kondition', fr: 'kondition', sa: 'kondition', so: 'kondition' };
+        applyCongestionRecommendation();
+        out.schonplanUebernommen = game.weeklyTrainingPlan.mo === 'erholung';
+        return out;
+    });
+
+    assert(r.standardLaengeStimmt, 'Der Trainingskalender zeigt genau 6 kommende Spieltage');
+    assert(r.ohneWettbewerbeNurLiga, 'Ohne Pokal-/Europapokalbeteiligung sind alle Vorschau-Spieltage Liga');
+    assert(r.spieltagsnummernKorrekt, 'Die Spieltagsnummern in der Vorschau folgen direkt auf den aktuellen Spieltag');
+    assert(r.dfbPokalOhneBerechtigungNichtErkannt, 'DFB-Pokal wird ohne Teilnahmeberechtigung nicht als Wettbewerb erkannt');
+    assert(r.dfbPokalMitBerechtigungErkannt, 'DFB-Pokal wird mit Teilnahmeberechtigung korrekt erkannt');
+    assert(r.ausgeschiedenNichtMehrErkannt, 'Nach dem Ausscheiden aus dem DFB-Pokal zeigt die Vorschau wieder Liga');
+    assert(r.landespokalInaktivNichtErkannt, 'Landespokal wird nur erkannt, wenn der Verein noch im Wettbewerb ist');
+    assert(r.landespokalAktivErkannt, 'Landespokal wird bei aktiver Teilnahme korrekt erkannt');
+    assert(r.europapokalErkannt, 'Europapokal wird bei aktiver Teilnahme korrekt erkannt');
+    assert(r.stoppTAmSaisonende, 'Die Vorschau läuft nicht über Spieltag 34 hinaus');
+    assert(r.belastungsphaseErkannt, 'Zwei wichtige Spieltage im Abstand von höchstens zwei Spieltagen gelten als Belastungsphase');
+    assert(r.keineBelastungsphaseOhneHaeufung, 'Weiter auseinanderliegende wichtige Spieltage lösen keine Belastungsphase aus');
+    assert(dom.zeigtSechsSpieltage, 'Der Trainingskalender rendert alle sechs Vorschau-Spieltage im echten Markup');
+    assert(dom.zeigtBelastungswarnung, 'Eine erkannte Belastungsphase zeigt die Warnung samt Schonplan-Knopf');
+    assert(dom.schonplanUebernommen, 'Der Schonplan-Knopf übernimmt den bestehenden Regenerations-Wochenplan');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler im Trainingskalender');
+    await page.close();
+}
+
+// ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
 async function main() {
@@ -3452,6 +3560,7 @@ async function main() {
         testSquadPlanningTool,
         testStadiumAusbau2,
         testPlayerAvatars,
+        testTrainingCalendar,
     ];
 
     for (const suite of suites) {
