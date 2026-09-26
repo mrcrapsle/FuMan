@@ -2684,7 +2684,7 @@ async function main() {
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
     console.log('='.repeat(60));
 
-    const browser = await chromium.launch();
+    const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
 
     const suites = [
         testStructuralSelfTest,

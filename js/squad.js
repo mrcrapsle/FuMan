@@ -704,6 +704,7 @@
         renderTacticsBoardStatBar();
         renderTeamInstructions();
         populateRoleSelects();
+        renderTransferMarketBox();
         renderCoTrainerAdvice();
         renderInjuryCrisisWarning();
         renderUltimatumBanner();
@@ -879,5 +880,59 @@
         if (pen) game.penaltyTakerId = pen.value;
         if (fk) game.freeKickTakerId = fk.value;
         if (ck) game.cornerTakerId = ck.value;
+    }
+
+    function renderTransferMarketBox() {
+        let box = document.getElementById('transfer-market-box');
+        if (!box) return;
+
+        refreshTransferPoolIfNeeded();
+        let budget = getTransferBudgetInfo();
+
+        box.innerHTML = '<div class="panel-header" style="color:var(--gold);">💰 TRANSFERMARKT</div>';
+        box.innerHTML += `
+            <div style="margin-bottom:12px;">
+                <div style="display:flex; justify-content:space-between; font-size:9px; margin-bottom:4px;">
+                    <span>Budget: ${formatVal(budget.available)}/${formatVal(budget.total)}</span>
+                    <span>${budget.usedPercent}% genutzt</span>
+                </div>
+                <div style="width:100%; height:8px; background:var(--border); border-radius:2px; overflow:hidden;">
+                    <div style="height:100%; width:${budget.usedPercent}%; background:var(--accent); transition:width 0.3s;"></div>
+                </div>
+            </div>
+        `;
+
+        box.innerHTML += '<div style="font-size:10px; font-weight:bold; color:var(--text-muted); margin-bottom:6px;">Spieler im Angebot:</div>';
+        if (game.transferMarketPlayers && game.transferMarketPlayers.length > 0) {
+            game.transferMarketPlayers.slice(0, 8).forEach(mp => {
+                let val = calcSquadPlayerValue(mp);
+                box.innerHTML += `
+                    <div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:4px; font-size:9px;">
+                        <div><strong>${mp.name}</strong> (${mp.position}, ${mp.age}J)</div>
+                        <div style="color:var(--text-muted);">Rating: ${mp.rating} · ${mp.region}</div>
+                        <div style="color:var(--accent); margin-top:3px;">${formatVal(val)}</div>
+                        <button onclick="(function() { let r = buyFromTransferMarket('${mp.id}'); if(r.success) alert('${mp.name} gekauft!'); renderSquadView(); })()" class="btn-primary" style="width:100%; padding:4px; margin-top:4px; font-size:8px;">Kaufen</button>
+                    </div>
+                `;
+            });
+        } else {
+            box.innerHTML += '<div style="color:var(--text-muted); font-size:9px;">Keine Spieler verfügbar</div>';
+        }
+
+        box.innerHTML += '<div style="font-size:10px; font-weight:bold; color:var(--text-muted); margin-top:12px; margin-bottom:6px;">Verkaufbar:</div>';
+        let sellablePlayers = squad.filter(p => !p.isAcademy && !p.isLoanedIn).slice(0, 5);
+        if (sellablePlayers.length > 0) {
+            sellablePlayers.forEach(p => {
+                let sellVal = Math.round(calcSquadPlayerValue(p) * 0.55);
+                box.innerHTML += `
+                    <div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:4px; font-size:9px;">
+                        <div><strong>${p.name}</strong> (${p.pos}, ${p.age}J)</div>
+                        <div style="color:var(--text-muted);">Stärke: ${p.strength}</div>
+                        <div style="color:var(--danger); margin-top:3px;">Rückkauföption: ${formatVal(sellVal)}</div>
+                        <button onclick="(function() { let r = sellToTransferMarket('${p.id}'); if(r.success) alert('${p.name} verkauft!'); renderSquadView(); })()" class="btn-secondary" style="width:100%; padding:4px; margin-top:4px; font-size:8px;">Verkaufen</button>
+                    </div>
+                `;
+            });
+        }
     }
 
