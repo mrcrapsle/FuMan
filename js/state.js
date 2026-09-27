@@ -187,7 +187,9 @@
             discoveredPlayers: [],
             lastAnalysisMatchday: 0,
             talentWatchlist: []
-        }
+        },
+        negotiationHistory: [],
+        agentRelationships: {}
     };
 
     let managerRPG = {
