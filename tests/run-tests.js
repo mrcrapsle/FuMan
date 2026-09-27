@@ -2717,15 +2717,21 @@ async function testLandesPokal(browser) {
         // geht es nur um genau diesen Mechanismus, nicht um die Spielsimulation selbst -
         // deshalb wird das Tor-Ergebnis fuer die Dauer des Tests deterministisch anhand der
         // Staerke entschieden (die staerkere Seite gewinnt klar, kein Unentschieden/Elfmeter).
+        const originalSimulateGoals = simulateGoals;
         simulateGoals = function(a, b) { return a >= b ? { myGoals: 5, oppGoals: 0 } : { myGoals: 0, oppGoals: 5 }; };
         squad.forEach(p => { p.strength = 99; p.fitness = 100; p.morale = 100; });
-        for (let i = 0; i < 7; i++) simulateMatchdays(5);
+        let spieltage = 0;
+        while (!landesPokal.won && spieltage < 40) {
+            simulateMatchdays(1);
+            spieltage++;
+        }
         let nachSaison = {
             gewonnen: landesPokal.won,
             startplatz: game.dfbPokalViaLandespokal,
             trophaee: (game.trophies || []).some(t => t.includes('pokalsieger'))
         };
         concludeSeasonAndAdvance();
+        simulateGoals = originalSimulateGoals;
         return {
             ...nachSaison,
             imDfbPokal: game.inCup,
