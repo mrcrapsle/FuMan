@@ -3621,7 +3621,15 @@ async function main() {
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
     console.log('='.repeat(60));
 
-    const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
+    // Versuche zuerst 1243, dann 1194 (für verschiedene Umgebungen)
+    let executablePath;
+    const { existsSync } = require('fs');
+    if (existsSync('/opt/pw-browsers/chromium-1243/chrome-linux/chrome')) {
+        executablePath = '/opt/pw-browsers/chromium-1243/chrome-linux/chrome';
+    } else if (existsSync('/opt/pw-browsers/chromium-1194/chrome-linux/chrome')) {
+        executablePath = '/opt/pw-browsers/chromium-1194/chrome-linux/chrome';
+    }
+    const browser = await chromium.launch(executablePath ? { executablePath } : {});
 
     const suites = [
         testStructuralSelfTest,

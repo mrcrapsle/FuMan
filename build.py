@@ -111,10 +111,10 @@ def build_lint_bundle():
 def build():
     html = read(HTML_FILE)
 
-    # 1. CSS einbetten
+    # 1. CSS einbetten (mit optionalem Cache-Busting-Parameter wie ?v=2.1)
     css_content = read(CSS_FILE)
     html = re.sub(
-        r'<link rel="stylesheet" href="css/styles\.css">',
+        r'<link rel="stylesheet" href="css/styles\.css(\?[^"]*)?">',
         f"<style>\n{css_content}\n</style>",
         html,
     )
