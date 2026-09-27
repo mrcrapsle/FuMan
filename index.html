@@ -89,6 +89,9 @@
     </div>
 </div>
 <div class="app-notice-overlay" id="app-notice" style="display:none;"></div>
+<div id="version-info" style="position:fixed; bottom:8px; right:8px; background:rgba(0,0,0,0.7); color:#FFC107; padding:6px 12px; border-radius:4px; font-size:10px; font-weight:bold; z-index:100; border:1px solid #FFC107; cursor:help;" title="Anstoss FM13 - Spielversion">
+    <span id="version-display"></span>
+</div>
 <div id="app-toast" class="app-toast"></div>
 <div id="tutorial-overlay" class="tutorial-overlay">
     <div class="tutorial-box">
@@ -2363,6 +2366,15 @@
             safeLocalRemove('anstoss_fm13_storage_test');
         }
     }
+
+    // Spielversion anzeigen
+    document.addEventListener('DOMContentLoaded', function() {
+        const versionDisplay = document.getElementById('version-display');
+        if (versionDisplay && typeof GAME_VERSION !== 'undefined') {
+            versionDisplay.textContent = `v${GAME_VERSION.number} (${GAME_VERSION.date})`;
+            versionDisplay.title = `Anstoss FM13 - Version ${GAME_VERSION.number}\n${GAME_VERSION.features}`;
+        }
+    });
 
     window.onload = function() {
         try {
