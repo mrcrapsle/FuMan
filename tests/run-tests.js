@@ -968,6 +968,7 @@ async function testManagerOffice(browser) {
     console.log('\n[15] Managerbüro (Point-and-Click-Startbildschirm)');
     const { page, consoleErrors } = await freshPage(browser);
     await page.evaluate(() => closeTutorial());
+    await page.waitForTimeout(200);
 
     const isStartScreen = await page.evaluate(() => document.getElementById('screen-office').style.display === 'block');
     const hotspotIds = await page.evaluate(() => OFFICE_HOTSPOTS.map(h => h.id));
