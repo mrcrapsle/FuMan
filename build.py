@@ -120,12 +120,15 @@ def build():
     )
 
     # 2. Jedes <script src="js/XYZ.js"></script> durch den echten Inhalt ersetzen
+    # (unterstützt auch Cache-Busting wie ?v=2.1)
     for js_path in JS_ORDER:
         js_content = read(js_path)
-        tag = f'<script src="{js_path}"></script>'
-        if tag not in html:
+        # Versuche mit Cache-Busting-Parametern (z.B. ?v=2.1)
+        match = re.search(rf'<script src="{re.escape(js_path)}(\?[^"]*)?"></script>', html)
+        if not match:
             print(f"WARNUNG: Tag für {js_path} nicht gefunden, wird übersprungen.")
             continue
+        tag = match.group(0)
         html = html.replace(tag, f"<script>\n{js_content}\n</script>")
 
     import os
