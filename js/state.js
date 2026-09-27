@@ -202,7 +202,8 @@
             talentWatchlist: []
         },
         negotiationHistory: [],
-        clubSwitchHistory: []
+        clubSwitchHistory: [],
+        agentPool: []
     };
 
     let managerRPG = {

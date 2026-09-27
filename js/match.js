@@ -1180,6 +1180,7 @@
         setzeBuchungskontext('🏦 Automatische Rücklage');
         if (typeof tickAutoReserve === 'function') tickAutoReserve(game.money - moneyAtStart);
         loescheBuchungskontext();
+        if (typeof checkAgentNegotiations === 'function') checkAgentNegotiations();
     }
 
     // Bestimmte runde Zuschauerzahlen sind erzählerisch bedeutsam genug für eine einmalige

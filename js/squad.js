@@ -712,6 +712,7 @@
         renderTeamChemistryPanel();
         if (typeof renderCliqueBox === 'function') renderCliqueBox();
         if (typeof renderLeadershipCouncilBox === 'function') renderLeadershipCouncilBox();
+        if (typeof renderAgentsPanel === 'function') renderAgentsPanel();
         let container = document.getElementById('bench-list');
         if (!container) return;
         container.innerHTML = '';
