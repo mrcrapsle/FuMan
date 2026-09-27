@@ -1224,6 +1224,19 @@
         setzeBuchungskontext('🏦 Automatische Rücklage');
         if (typeof tickAutoReserve === 'function') tickAutoReserve(game.money - moneyAtStart);
         loescheBuchungskontext();
+        if (typeof checkAgentNegotiations === 'function') checkAgentNegotiations();
+        // Derby-Verarbeitung: wenn es ein Spiel gegen einen Rivalen war
+        if (typeof currentMatch !== 'undefined' && currentMatch && typeof processDerbyMatch === 'function') {
+            processDerbyMatch(currentMatch.opponent, won, currentMatch.score, currentMatch.conceded);
+        }
+        if (typeof checkInjuries === 'function') checkInjuries();
+        if (typeof checkForScandale === 'function') checkForScandale();
+        if (typeof checkFanProtest === 'function') checkFanProtest();
+        if (typeof checkUltraConflict === 'function') checkUltraConflict();
+        if (typeof analyzeMatchTactics === 'function') {
+            analyzeMatchTactics({ won: won, draw: matchday.result === 'draw', score: currentScore, conceded: concededGoals });
+        }
+        if (typeof checkBoardConflict === 'function') checkBoardConflict();
     }
 
     // Bestimmte runde Zuschauerzahlen sind erzählerisch bedeutsam genug für eine einmalige

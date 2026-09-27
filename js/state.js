@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '1.9', date: '14.09.2026' };
+    const GAME_VERSION = { number: '2.0', date: '27.09.2026', features: '10 neue Features' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -13,6 +13,10 @@
         season: 1,
         money: 150000,
         transferBudget: 100000,
+        transferBudgetUsed: 0,
+        transferMarketPlayers: [],
+        transferHistory: [],
+        transferLastRefreshMatchday: 0,
         wageBudget: 15000,
         fans: 75,
         matchday: 1,
@@ -41,6 +45,19 @@
         youthCapacityBonus: 0,
         youthNationalCallups: 0,
         pendingYouthPoach: null,
+        youthCoachId: null,
+        youthCoachHistory: [],
+        youthTournaments: [],
+        youthTourneyWins: 0,
+        mediaReputation: 50,
+        mediaConferences: [],
+        mediaConferenceHistory: [],
+        playerInterviews: [],
+        mediaRelationships: {},
+        journalistInteractions: [],
+        stadiumOptimizationHistory: [],
+        namingRightsHistory: [],
+        recentResults: [],
         mentalTrainingLevel: 0,
         videoAnalysisBoostActive: false,
         doubleTrainingBoostActive: false,
@@ -194,7 +211,33 @@
         penaltyTakerId: null,
         freeKickTakerId: null,
         cornerTakerId: null,
-        trophies: []
+        trophies: [],
+        scoutingDatabase: {
+            discoveredPlayers: [],
+            lastAnalysisMatchday: 0,
+            talentWatchlist: []
+        },
+        negotiationHistory: [],
+        clubSwitchHistory: [],
+        agentPool: [],
+        localRivals: [],
+        academyLeague: null,
+        scandals: [],
+        fanclubs: [],
+        fanSatisfaction: 50,
+        ultraGroups: [],
+        tacticsHistory: [],
+        playerRoles: {},
+        formationHistory: [],
+        tacticAnalysis: { matchesAnalyzed: 0, effectiveness: 0.5 },
+        internationalTournaments: [],
+        playerInternationalCaps: {},
+        internationalTournamentHistory: [],
+        nextWorldCup: 2026,
+        boardMembers: [],
+        boardDecisions: [],
+        boardMemberSatisfaction: {},
+        boardConflicts: []
     };
 
     let managerRPG = {
@@ -365,6 +408,8 @@
             presse: { name: "Presse-Tribüne", cap: 200, foodLvl: 0, merchLvl: 0, toiletLvl: 0, addSeats: 100, cost: 3000000, expansions: 0 }
         },
         flutlicht: false, rasenheizung: false, videowalls: false, dach: false,
+        namingRights: null,
+        events: [],
         // Sitzplatz-Zusammensetzung (NEU, siehe js/stadium.js): war bisher an mehreren Stellen
         // fest auf 50%/45%/5% verdrahtet - jetzt ein echter, über Bauprojekte (Sitzplatzumbau/
         // Stehplatzrückbau) veränderbarer Anteil. Die Standardwerte entsprechen exakt den
@@ -538,6 +583,7 @@
     let loanablePlayers = [];
     let incomingLoans = []; // { playerId, parentClub, matchdaysLeft, buyOptionFee }
     let youthTalents = [];
+    let youthDevelopmentHistory = {};
 
     let cupTournament = {
         currentRound: 0,

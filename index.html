@@ -89,6 +89,9 @@
     </div>
 </div>
 <div class="app-notice-overlay" id="app-notice" style="display:none;"></div>
+<div id="version-info" style="position:fixed; bottom:8px; right:8px; background:rgba(0,0,0,0.7); color:#FFC107; padding:6px 12px; border-radius:4px; font-size:10px; font-weight:bold; z-index:100; border:1px solid #FFC107; cursor:help;" title="Anstoss FM13 - Spielversion">
+    <span id="version-display"></span>
+</div>
 <div id="app-toast" class="app-toast"></div>
 <div id="tutorial-overlay" class="tutorial-overlay">
     <div class="tutorial-box">
@@ -1050,6 +1053,16 @@
                 </div>
 
                 <div class="panel">
+                    <div class="panel-header" style="color:var(--accent);">📰 MEDIENBEZIEHUNGEN</div>
+                    <div id="media-relations-panel"></div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--blue);">👥 JOURNALIST-NETZWERK</div>
+                    <div id="media-journalists-panel"></div>
+                </div>
+
+                <div class="panel">
                     <div class="panel-header">🏦 KREDITE</div>
                     <div id="active-loans-list" style="margin-bottom:6px;"></div>
                     <input type="number" id="loan-amount-input" placeholder="Kreditsumme in €" class="input-inline" style="width:100%; margin-bottom:6px;">
@@ -1243,6 +1256,7 @@
                     </div>
                     <div style="margin-top:6px; font-size:9px; color:#aaa;" id="tackle-hardness-desc">Ausgewogenes Einsteigen ohne besondere Vor-/Nachteile.</div>
                 </div>
+                <div class="panel" id="transfer-market-box" style="display:none;"></div>
                 <div class="panel">
                     <div class="panel-header">🤖 TAKTIK-AUTOMATIK</div>
                     <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Reagiert im laufenden Spiel automatisch auf den Spielstand, ohne dass du das Live-Taktikpanel selbst bedienen musst.</div>
@@ -1259,6 +1273,42 @@
                 <div class="panel">
                     <div class="panel-header" style="color:var(--gold);">🗣️ FÜHRUNGSSPIELER-RAT</div>
                     <div id="leadership-council-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--blue);">👔 SPIELER-AGENTEN</div>
+                    <div id="agents-panel"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--danger);">🔥 RIVALITÄTEN</div>
+                    <div id="rivalries-panel"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--purple);">🎭 SPIELER-ARCHETYPEN</div>
+                    <div id="archetypes-panel"></div>
+                </div>
+                <div class="panel" style="display:none;">
+                    <div class="panel-header">📈 KARRIERE-VERGLEICH</div>
+                    <div id="archetype-comparison-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--danger);">⚠️ SPIELER-SKANDALE</div>
+                    <div id="scandals-panel"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--accent);">👥 FANCLUB-MANAGEMENT</div>
+                    <div id="fanclub-management-panel"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--purple);">⚙️ TAKTIK-SYSTEM</div>
+                    <div id="tactic-system-panel"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--blue);">🌍 INTERNATIONALE TURNIERE</div>
+                    <div id="international-tournaments-panel"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--gold);">👔 VORSTANDSMITGLIEDER</div>
+                    <div id="board-members-panel"></div>
                 </div>
                 <div id="injury-crisis-warning" style="display:none;"></div>
                 <div class="panel">
@@ -1332,6 +1382,11 @@
                     </div>
                     <div style="font-size:9px; color:var(--text-muted); margin-top:4px;">Hart: mehr Trainingserfolg, mehr Fitnessverlust. Locker: umgekehrt.</div>
                 </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--danger);">⚠️ VERLETZUNGSRISIKO-KONTROLLE</div>
+                    <div id="injury-risk-panel"></div>
+                </div>
+                <div id="congestion-warning-box" style="display:none;"></div>
                 <div class="panel">
                     <div class="panel-header">📅 TRAININGSKALENDER</div>
                     <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Liga, DFB-Pokal, Landespokal und Europapokal für die nächsten Spieltage im Überblick.</div>
@@ -1522,6 +1577,14 @@
                 <div class="panel">
                     <div class="panel-header">🖼️ VEREINSMUSEUM: WAPPEN-HISTORIE</div>
                     <div id="crest-museum-gallery"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--blue);">🔧 STADION-MANAGEMENT</div>
+                    <div id="stadium-management-panel"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--accent);">📅 STADION-EVENTS</div>
+                    <div id="stadium-events-panel"></div>
                 </div>
             </div>
             <div id="screen-staff" style="display:none;">
@@ -1718,6 +1781,10 @@
                     <div class="panel-header" style="color:var(--gold);">📚 TALENT-DATENBANK (Top 15 aller Zeiten)</div>
                     <div id="talent-database-box"></div>
                 </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--primary);">🔍 ERWEITERTE TALENTERKENNUNG</div>
+                    <div id="talent-detection-box"></div>
+                </div>
             </div>
             <div id="screen-youth" style="display:none;">
                 <div class="panel">
@@ -1741,6 +1808,18 @@
                     <div class="panel-header">📊 JUGEND-BESTENLISTE</div>
                     <div id="youth-leaderboard-box"></div>
                 </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--blue);">🌟 AKADEMIE ERWEITERT</div>
+                    <div id="youth-academy-extended-panel"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--primary);">📈 ENTWICKLUNGSFORTSCHRITT</div>
+                    <div id="youth-development-chart-panel"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--gold);">🎓 AKADEMIE-RANGLISTE</div>
+                    <div id="academy-ranking-panel"></div>
+                </div>
             </div>
             <div id="screen-contracts" style="display:none;">
                 <div class="panel">
@@ -1750,6 +1829,10 @@
                 <div class="panel">
                     <div class="panel-header">📝 VERTRAGSVERWALTUNG</div>
                     <div id="contracts-list"></div>
+                </div>
+                <div class="panel" id="negotiations-panel">
+                    <div class="panel-header" style="color:var(--primary);">🤝 VERHANDLUNGEN</div>
+                    <div id="negotiations-content"></div>
                 </div>
             </div>
             <div id="screen-squad-planning" style="display:none;">
@@ -2146,6 +2229,13 @@
                         <textarea readonly style="width:100%; height:80px; background:#07090e; color:var(--primary); font-family:monospace; font-size:9px; border:1px solid #334155; border-radius:4px; padding:4px;" onclick="this.select()"></textarea>
                     </div>
                 </div>
+
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--accent);">🔄 VEREINSWECHSEL & KARRIERE-PROGRESSION</div>
+                    <div id="club-switch-panel" style="margin-bottom:12px;"></div>
+                    <div style="font-size:10px; font-weight:bold; margin-bottom:8px; color:var(--text-muted);">🏆 Karriere-Stationen:</div>
+                    <div id="club-progression-panel"></div>
+                </div>
             </div>
 
             <!-- 28. PRE-MATCH & LIVESPIEL -->
@@ -2244,6 +2334,11 @@
 <script src="js/avatars.js"></script>
 <script src="js/playerdetail.js"></script>
 <script src="js/squad.js"></script>
+<script src="js/agents-management.js"></script>
+<script src="js/club-rivalries.js"></script>
+<script src="js/injury-risk-management.js"></script>
+<script src="js/player-archetypes.js"></script>
+<script src="js/transfers.js"></script>
 <script src="js/squadplanning.js"></script>
 <script src="js/secondteam.js"></script>
 <script src="js/career.js"></script>
@@ -2255,6 +2350,7 @@
 <script src="js/transfermarket.js"></script>
 <script src="js/manager-rpg.js"></script>
 <script src="js/scouting.js"></script>
+<script src="js/scouting-enhanced.js"></script>
 <script src="js/commodities.js"></script>
 <script src="js/merchandise.js"></script>
 <script src="js/office.js"></script>
@@ -2271,14 +2367,19 @@
 <script src="js/stocks.js"></script>
 <script src="js/sponsors.js"></script>
 <script src="js/media-rights.js"></script>
+<script src="js/media-relations-extended.js"></script>
 <script src="js/betting.js"></script>
 <script src="js/stadium.js"></script>
+<script src="js/stadium-management.js"></script>
 <script src="js/real-estate.js"></script>
 <script src="js/campus-staff.js"></script>
 <script src="js/fans.js"></script>
 <script src="js/youth.js"></script>
+<script src="js/youth-academy-extended.js"></script>
+<script src="js/academy-ranking.js"></script>
 <script src="js/bonusclauses.js"></script>
 <script src="js/contracts.js"></script>
+<script src="js/negotiations.js"></script>
 <script src="js/private-life.js"></script>
 <script src="js/underworld.js"></script>
 <script src="js/history.js"></script>
@@ -2290,6 +2391,7 @@
 <script src="js/admin.js"></script>
 <script src="js/premium.js"></script>
 <script src="js/save.js"></script>
+<script src="js/club-switch.js"></script>
 <script>
     // Sichere Storage-Zugriffe: manche Android-Dateimanager öffnen HTML-Dateien in stark
     // eingeschränkten WebViews, die den Zugriff auf sessionStorage/localStorage bei
@@ -2329,6 +2431,15 @@
             safeLocalRemove('anstoss_fm13_storage_test');
         }
     }
+
+    // Spielversion anzeigen
+    document.addEventListener('DOMContentLoaded', function() {
+        const versionDisplay = document.getElementById('version-display');
+        if (versionDisplay && typeof GAME_VERSION !== 'undefined') {
+            versionDisplay.textContent = `v${GAME_VERSION.number} (${GAME_VERSION.date})`;
+            versionDisplay.title = `Anstoss FM13 - Version ${GAME_VERSION.number}\n${GAME_VERSION.features}`;
+        }
+    });
 
     window.onload = function() {
         try {

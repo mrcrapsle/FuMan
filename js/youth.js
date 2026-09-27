@@ -77,6 +77,11 @@
             }
         }
         renderYouthLeaderboard();
+
+        if (typeof renderYouthAcademyPanel === 'function') renderYouthAcademyPanel();
+        if (typeof renderYouthDevelopmentChart === 'function') renderYouthDevelopmentChart();
+        if (typeof simulateYouthDevelopment === 'function') simulateYouthDevelopment();
+        if (typeof renderAcademyRankingPanel === 'function') renderAcademyRankingPanel();
     }
 
     // ==========================================
