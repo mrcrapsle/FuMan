@@ -717,6 +717,7 @@
         if (typeof renderArchetypesPanel === 'function') renderArchetypesPanel();
         if (typeof renderArchetypeComparisonChart === 'function') renderArchetypeComparisonChart();
         if (typeof renderScandalsPanel === 'function') renderScandalsPanel();
+        if (typeof renderFanclubManagementPanel === 'function') renderFanclubManagementPanel();
         let container = document.getElementById('bench-list');
         if (!container) return;
         container.innerHTML = '';

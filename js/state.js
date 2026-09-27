@@ -206,7 +206,10 @@
         agentPool: [],
         localRivals: [],
         academyLeague: null,
-        scandals: []
+        scandals: [],
+        fanclubs: [],
+        fanSatisfaction: 50,
+        ultraGroups: []
     };
 
     let managerRPG = {

@@ -1187,6 +1187,8 @@
         }
         if (typeof checkInjuries === 'function') checkInjuries();
         if (typeof checkForScandale === 'function') checkForScandale();
+        if (typeof checkFanProtest === 'function') checkFanProtest();
+        if (typeof checkUltraConflict === 'function') checkUltraConflict();
     }
 
     // Bestimmte runde Zuschauerzahlen sind erzählerisch bedeutsam genug für eine einmalige
