@@ -189,7 +189,7 @@
             talentWatchlist: []
         },
         negotiationHistory: [],
-        agentRelationships: {}
+        clubSwitchHistory: []
     };
 
     let managerRPG = {

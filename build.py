@@ -63,6 +63,7 @@ JS_ORDER = [
     "js/admin.js",
     "js/premium.js",
     "js/save.js",
+    "js/club-switch.js",
 ]
 
 

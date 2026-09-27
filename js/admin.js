@@ -82,6 +82,12 @@
 
         let rawEl = document.getElementById('adm-ins-raw');
         if (rawEl) rawEl.innerText = (rawMaterials.totalStock || 0).toLocaleString() + " kg";
+
+        if (typeof renderClubSwitchPanel === 'function') renderClubSwitchPanel();
+        let clubProgEl = document.getElementById('club-progression-panel');
+        if (clubProgEl && typeof renderClubProgression === 'function') {
+            clubProgEl.innerHTML = renderClubProgression();
+        }
     }
 
     function adminAddClubMoney(amt) { playSound('goal'); game.money += amt; updateUI(); renderAdminView(); showToast(`💵 +${formatVal(amt)} Vereinskonto gutgeschrieben!`, 'success', 4000); }
