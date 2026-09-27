@@ -204,7 +204,8 @@
         negotiationHistory: [],
         clubSwitchHistory: [],
         agentPool: [],
-        localRivals: []
+        localRivals: [],
+        academyLeague: null
     };
 
     let managerRPG = {
