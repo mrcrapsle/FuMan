@@ -716,6 +716,7 @@
         if (typeof renderRivalriesPanel === 'function') renderRivalriesPanel();
         if (typeof renderArchetypesPanel === 'function') renderArchetypesPanel();
         if (typeof renderArchetypeComparisonChart === 'function') renderArchetypeComparisonChart();
+        if (typeof renderScandalsPanel === 'function') renderScandalsPanel();
         let container = document.getElementById('bench-list');
         if (!container) return;
         container.innerHTML = '';

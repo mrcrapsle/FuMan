@@ -205,7 +205,8 @@
         clubSwitchHistory: [],
         agentPool: [],
         localRivals: [],
-        academyLeague: null
+        academyLeague: null,
+        scandals: []
     };
 
     let managerRPG = {
