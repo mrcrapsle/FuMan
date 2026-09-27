@@ -799,6 +799,7 @@
     }
 
     function renderStadiumView() {
+        updateInteractiveStadiumVisualization();
         applyStadiumVisualTierClass('.stadium-bowl');
         renderStadiumConstructionBox();
         renderStadiumKeyFigures();
@@ -1193,5 +1194,39 @@
         let rawFactor = Math.max(0.3, Math.min(1.2, (game.fans / 100) * avgComfortBonus * getTicketPriceElasticityFactor()));
         let ceiling = LEAGUE_ATTENDANCE_CEILING[game.leagueLevel] ?? LEAGUE_ATTENDANCE_CEILING[LEAGUE_ATTENDANCE_CEILING.length - 1];
         return ceiling * (rawFactor / 0.75);
+    }
+
+    // ==========================================
+    // INTERACTIVE STADION-VISUALISIERUNG (NEU)
+    // ==========================================
+    // Aktualisiert die interaktive Stadion-Visualisierung basierend auf der aktuellen Kapazität.
+    // Die Visualisierung zeigt 5 Level: Level 1 (klein), Level 2-5 (immer größer werdend).
+    function updateInteractiveStadiumVisualization() {
+        const container = document.getElementById('stadium-container');
+        const levelDisplay = document.getElementById('stadium-level-display');
+        if (!container || !levelDisplay) return;
+
+        let cap = stadium.total || 16000;
+        let level = 1;
+
+        // Bestimme das Stadium-Level basierend auf Kapazität
+        if (cap >= 50000) level = 5;
+        else if (cap >= 35000) level = 4;
+        else if (cap >= 25000) level = 3;
+        else if (cap >= 18000) level = 2;
+
+        // Entferne alte Klassen und füge neue hinzu
+        container.className = '';
+        container.classList.add(`stadium-level-${level}`);
+        levelDisplay.textContent = level;
+    }
+
+    // Upgrade-Funktion für das Stadion (wird beim Kauf von Projekten aufgerufen)
+    function upgradeStadium(level) {
+        const container = document.getElementById('stadium-container');
+        if (!container) return;
+        container.className = '';
+        container.classList.add(`stadium-level-${Math.max(1, Math.min(5, level))}`);
+        updateInteractiveStadiumVisualization();
     }
 
