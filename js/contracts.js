@@ -62,6 +62,8 @@
             `;
             list.appendChild(row);
         });
+
+        if (typeof renderNegotiationPanel === 'function') renderNegotiationPanel();
     }
 
     // Verhandlungs-Zähigkeit auch bei bestehenden Verträgen (NEU): analog zur Logik bei
