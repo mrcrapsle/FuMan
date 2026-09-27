@@ -49,6 +49,15 @@
         youthCoachHistory: [],
         youthTournaments: [],
         youthTourneyWins: 0,
+        mediaReputation: 50,
+        mediaConferences: [],
+        mediaConferenceHistory: [],
+        playerInterviews: [],
+        mediaRelationships: {},
+        journalistInteractions: [],
+        stadiumOptimizationHistory: [],
+        namingRightsHistory: [],
+        recentResults: [],
         mentalTrainingLevel: 0,
         videoAnalysisBoostActive: false,
         doubleTrainingBoostActive: false,
@@ -364,6 +373,8 @@
             presse: { name: "Presse-Tribüne", cap: 200, foodLvl: 0, merchLvl: 0, toiletLvl: 0, addSeats: 100, cost: 3000000, expansions: 0 }
         },
         flutlicht: false, rasenheizung: false, videowalls: false, dach: false,
+        namingRights: null,
+        events: [],
         get total() { return Object.values(this.blocks || {}).reduce((s, b) => s + (b.cap || 0), 0); },
         get vipTotal() { return this.blocks?.vipLogen?.cap || 50; }
     };
