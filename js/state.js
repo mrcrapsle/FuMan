@@ -213,7 +213,11 @@
         tacticsHistory: [],
         playerRoles: {},
         formationHistory: [],
-        tacticAnalysis: { matchesAnalyzed: 0, effectiveness: 0.5 }
+        tacticAnalysis: { matchesAnalyzed: 0, effectiveness: 0.5 },
+        internationalTournaments: [],
+        playerInternationalCaps: {},
+        internationalTournamentHistory: [],
+        nextWorldCup: 2026
     };
 
     let managerRPG = {

@@ -719,6 +719,7 @@
         if (typeof renderScandalsPanel === 'function') renderScandalsPanel();
         if (typeof renderFanclubManagementPanel === 'function') renderFanclubManagementPanel();
         if (typeof renderTacticSystemPanel === 'function') renderTacticSystemPanel();
+        if (typeof renderInternationalTournamentsPanel === 'function') renderInternationalTournamentsPanel();
         let container = document.getElementById('bench-list');
         if (!container) return;
         container.innerHTML = '';
