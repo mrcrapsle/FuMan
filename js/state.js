@@ -45,6 +45,10 @@
         youthCapacityBonus: 0,
         youthNationalCallups: 0,
         pendingYouthPoach: null,
+        youthCoachId: null,
+        youthCoachHistory: [],
+        youthTournaments: [],
+        youthTourneyWins: 0,
         mentalTrainingLevel: 0,
         videoAnalysisBoostActive: false,
         doubleTrainingBoostActive: false,
@@ -519,6 +523,7 @@
     let loanablePlayers = [];
     let incomingLoans = []; // { playerId, parentClub, matchdaysLeft, buyOptionFee }
     let youthTalents = [];
+    let youthDevelopmentHistory = {};
 
     let cupTournament = {
         currentRound: 0,
