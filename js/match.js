@@ -1185,6 +1185,7 @@
         if (typeof currentMatch !== 'undefined' && currentMatch && typeof processDerbyMatch === 'function') {
             processDerbyMatch(currentMatch.opponent, won, currentMatch.score, currentMatch.conceded);
         }
+        if (typeof checkInjuries === 'function') checkInjuries();
     }
 
     // Bestimmte runde Zuschauerzahlen sind erzählerisch bedeutsam genug für eine einmalige

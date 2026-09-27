@@ -287,6 +287,7 @@
             `;
             list.appendChild(row);
         });
+        if (typeof renderInjuryRiskPanel === 'function') renderInjuryRiskPanel();
     }
 
     function setTeamTraining(focus) {
