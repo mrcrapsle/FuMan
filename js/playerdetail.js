@@ -25,10 +25,11 @@
 
         let stats = getDisplayStats(p);
         let statOrder = ['OFF', 'ABS', 'DEF', 'INT', 'PRE', 'TEM', 'PAS', 'ZKH', 'ZKE', 'FLA', 'KOP', 'SPR', 'DRI', 'WEI', 'ELF', 'FRS', 'FIT', 'GRU'];
-        let posEmoji = { TW: '🧤', ABW: '🛡️', MIT: '⚙️', ST: '⚽' }[p.pos] || '👤';
-
         document.getElementById('pd-name').innerText = p.name;
-        document.getElementById('pd-avatar').innerText = posEmoji;
+        // Spielerporträt (NEU, siehe js/avatars.js): ersetzt das bisherige reine Positions-
+        // Emoji durch ein pro Spieler eindeutiges, deterministisch generiertes Porträt.
+        let avatarBox = document.getElementById('pd-avatar');
+        if (avatarBox) avatarBox.innerHTML = (typeof getPlayerAvatarSVG === 'function') ? getPlayerAvatarSVG(p, 76) : (({ TW: '🧤', ABW: '🛡️', MIT: '⚙️', ST: '⚽' }[p.pos] || '👤'));
         document.getElementById('pd-fields').innerHTML = `
             <span class="label">Position:</span><span class="val">${p.pos}${p.secondaryPositions && p.secondaryPositions.length ? ' (' + p.secondaryPositions.join(', ') + ')' : ''}</span>
             <span class="label">Nation:</span><span class="val">${p.nation || 'Deutschland'}</span>

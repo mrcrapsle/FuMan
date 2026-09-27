@@ -78,7 +78,11 @@
         negativeStreak: 0,
         transferEmbargo: false,
         lastInsolvencyPenaltyAt: 0,
-        ticketPrices: { steh: 12, sitz: 24, vip: 80 },
+        ticketPrices: { steh: 12, sitz: 24, vip: 80, dauerkarte: 90 },
+        // Dauerkarten (NEU, siehe js/stadium.js): Zahl der Inhaber wird einmal pro Saison bei
+        // renewSeasonTickets() neu ermittelt, nicht bei jeder Preisänderung.
+        seasonTicketHolders: 0,
+        seasonTicketPriceInitialized: false,
         stewards: 100,
         youthAcademyLvl: 1,
         sponsor: { name: 'Stadtwerke & Regionalbank', base: 3000, winBonus: 1500, duration: 34, tier: 'standard', cupBonus: 2000, promotionBonus: 20000, themedBonusType: null, themedBonusAmount: 0, category: 'Finanzen' },
@@ -121,6 +125,7 @@
         agentRelationships: {},
         pendingSponsorActivation: null,
         teamInstructions: { gegenpressing: false, tiefStehen: false, hoheAV: false },
+        tacticAutomation: { offensivBeiRueckstand: false, defensivBeiFuehrung: false },
         pendingNamingCeremony: null,
         stadiumConstructionQueue: [],
         sponsorEarningsHistory: {},
@@ -144,6 +149,15 @@
         // Entlassung ausgesprochen, Bestaetigung steht noch aus - solange ruht das Spiel.
         sackPending: false,
         officeEvent: null,
+        // Financial Fairplay: laufender Saison-Akkumulator, Historie der letzten Saisons,
+        // Verstoss-Zaehler, eigene (von der Insolvenz-Sperre getrennte) Transfersperre und
+        // ein vorgemerkter Punktabzug fuer die naechste Saison (siehe js/ffp.js).
+        ffpSeasonNet: 0,
+        ffpHistory: [],
+        ffpStrikes: 0,
+        ffpTransferEmbargo: false,
+        ffpLastResult: null,
+        pendingFfpPointDeduction: 0,
         officeEventHistory: [],
         pitchDamaged: false,
         lastMatchdayTax: 0,
@@ -190,6 +204,8 @@
         trainingCampBuff: { active: false, matchesLeft: 0, injuryReduction: 0, strengthBonus: 0, campName: '' },
         boardTargets: { minPlace: 6, cupTarget: "2. Runde", minCash: 30000 },
         inCup: true,
+        // Startplatz im DFB-Pokal, erspielt ueber den Landespokal der Vorsaison.
+        dfbPokalViaLandespokal: false,
         inEurope: false,
         captainId: null,
         penaltyTakerId: null,
@@ -394,7 +410,21 @@
         flutlicht: false, rasenheizung: false, videowalls: false, dach: false,
         namingRights: null,
         events: [],
-        get total() { return Object.values(this.blocks || {}).reduce((s, b) => s + (b.cap || 0), 0); },
+        // Sitzplatz-Zusammensetzung (NEU, siehe js/stadium.js): war bisher an mehreren Stellen
+        // fest auf 50%/45%/5% verdrahtet - jetzt ein echter, über Bauprojekte (Sitzplatzumbau/
+        // Stehplatzrückbau) veränderbarer Anteil. Die Standardwerte entsprechen exakt den
+        // alten festen Zahlen, damit sich am Verhalten nichts ändert, bevor ein Projekt
+        // tatsächlich gebaut wurde.
+        stehShare: 0.5, sitzShare: 0.45, vipShare: 0.05,
+        // Zusätzliche Kapazität aus den neuen, namentlichen Ausbauprojekten (Zusatztribüne,
+        // Ränge erweitern, Großausbau, Zweiter Rang, Sitzplatzumbau/-rückbau) - kommt zur
+        // Summe der Block-Kapazitäten hinzu, ohne das bestehende Block-Modell umzubauen.
+        bonusCapacity: 0,
+        // Rasenzustand (NEU): 0-99, nutzt sich durch Heimspiele leicht ab, wird über
+        // maintainPitch() gepflegt. Die Obergrenze steigt mit Rasenheizung/Hybridrasen.
+        pitchCondition: 85,
+        hybridrasen: false,
+        get total() { return Object.values(this.blocks || {}).reduce((s, b) => s + (b.cap || 0), 0) + (this.bonusCapacity || 0); },
         get vipTotal() { return this.blocks?.vipLogen?.cap || 50; }
     };
 
@@ -561,6 +591,20 @@
         matchdays: [4, 12, 20, 28, 34],
         prizes: [215000, 430000, 860000, 1720000, 4300000],
         roundsHistory: []
+    };
+
+    // Landespokal des eigenen Verbands - der einzige Weg in den DFB-Pokal fuer Vereine
+    // unterhalb der 3. Liga (siehe js/landescup.js). Bewusst auf eigene Spieltage gelegt,
+    // die sich nicht mit dem DFB-Pokal (4, 12, 20, 28, 34) ueberschneiden.
+    let landesPokal = {
+        region: 'Sachsen',
+        active: false,
+        won: false,
+        currentRound: 0,
+        roundNames: ['Achtelfinale', 'Viertelfinale', 'Halbfinale', 'Landespokal-Finale'],
+        matchdays: [6, 14, 22, 30],
+        roundsHistory: [],
+        drawCeremonyShown: false
     };
 
     let europeTournament = { startFeePaid: false,

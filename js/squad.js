@@ -370,6 +370,35 @@
             </div>`).join('');
     }
 
+    // Taktik-Automatik (NEU): reagiert im laufenden Spiel automatisch auf den Spielstand, ohne
+    // dass das Live-Taktikpanel manuell bedient werden muss - eine STANDING-Einstellung in der
+    // Taktiktafel (bleibt über Spiele hinweg aktiv), kein einmaliger Vorschlag wie der
+    // Co-Trainer (siehe getCoTrainerTacticalSuggestion() oben). Die eigentliche Auswertung
+    // läuft in applyTacticAutomation() in match.js und wirkt nur in Schritt-für-Schritt
+    // simulierten Spielen (live oder "schnell durchspielen"), nicht beim automatischen
+    // Durchsimulieren mehrerer Spieltage ohne echten Spielverlauf.
+    function toggleTacticAutomation(key) {
+        playSound('click');
+        game.tacticAutomation[key] = !game.tacticAutomation[key];
+        renderTacticAutomationBox();
+    }
+    function renderTacticAutomationBox() {
+        let box = document.getElementById('tactic-automation-box');
+        if (!box) return;
+        let items = [
+            { key: 'offensivBeiRueckstand', label: 'Bei Rückstand automatisch offensiver spielen', desc: 'Stellt ab der 46. Minute einmalig auf den Spielstil "Offensiv" um, sobald das eigene Team zurückliegt.' },
+            { key: 'defensivBeiFuehrung', label: 'Bei Führung kurz vor Schluss automatisch defensiver spielen', desc: 'Stellt ab der 75. Minute einmalig auf den Spielstil "Defensiv" um, solange das eigene Team in Führung liegt.' }
+        ];
+        box.innerHTML = items.map(it => `
+            <div class="box" style="cursor:pointer;" onclick="toggleTacticAutomation('${it.key}')">
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <div style="width:18px; height:18px; border:2px solid ${game.tacticAutomation[it.key] ? 'var(--primary)' : '#666'}; border-radius:3px; background:${game.tacticAutomation[it.key] ? 'var(--primary)' : 'transparent'}; display:flex; align-items:center; justify-content:center; font-size:11px; color:#000; flex-shrink:0;">${game.tacticAutomation[it.key] ? '✓' : ''}</div>
+                    <strong style="font-size:11px;">${it.label}</strong>
+                </div>
+                <div style="font-size:9px; color:#aaa; margin-top:3px; margin-left:26px;">${it.desc}</div>
+            </div>`).join('');
+    }
+
     function setFormation(form) {
         playSound('click');
         game.formation = form;
@@ -553,8 +582,8 @@
         box.style.display = 'block';
         let remaining = Math.max(0, game.ultimatumDeadlineMatchday - game.matchday);
         box.innerHTML = `
-            <div class="box" style="border-left-color:var(--danger); background:rgba(255,77,109,0.08); display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size:10px;"><strong style="color:var(--danger);">⚠️ Ultimatum von ${p.name}</strong><br>Noch ${remaining} Spieltag(e) bis zur Frist.</span>
+            <div class="box" style="border-left-color:var(--danger); background:rgba(255,77,109,0.08); display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                <span style="display:flex; align-items:center; gap:8px; font-size:10px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 32) : ''}<span><strong style="color:var(--danger);">⚠️ Ultimatum von ${p.name}</strong><br>Noch ${remaining} Spieltag(e) bis zur Frist.</span></span>
                 <button onclick="openUltimatumModal()" class="btn-secondary" style="width:auto; font-size:9px;">Jetzt entscheiden</button>
             </div>`;
     }
@@ -703,6 +732,7 @@
         renderTacticStyleCards();
         renderTacticsBoardStatBar();
         renderTeamInstructions();
+        renderTacticAutomationBox();
         populateRoleSelects();
         renderTransferMarketBox();
         renderCoTrainerAdvice();
@@ -755,6 +785,7 @@
             row.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
                     <div style="display:flex; align-items:center; gap:6px;">
+                        ${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 32) : ''}
                         <span class="badge ${badgeClass}">${p.pos}</span>
                         <strong style="font-size:12px;">${p.name}${roleBadge}</strong>
                         ${traitBadge}

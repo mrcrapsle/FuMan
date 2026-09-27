@@ -139,7 +139,7 @@
     ];
     const lastNames = [
         "Neuher", "Mullert", "Kroosz", "Kimmig", "Sanee", "Gnabri", "Haferts", "Wernar",
-        "Sulle", "Rudinger", "Gundogun", "ter Stegner", "Musialla", "Wirts", "Schlotterberg", "Kehrerr",
+        "Sulle", "Rudinger", "Gundogun", "Terstegenn", "Musialla", "Wirts", "Schlotterberg", "Kehrerr",
         "Klosterman", "Hummell", "Boatenk", "Howedess", "Klosen", "Podolsky", "Schweinsberger", "Lahmann",
         "Mertesacker", "Ozell", "Kedira", "Schurrler", "Kramerr", "Ballak", "Effenbergh", "Mattheus",
         "Vollers", "Beckenbaur", "Seelers", "Netzers", "Rummenick", "Breitnerr", "Vogtz", "Overath",
@@ -233,6 +233,11 @@
             nationalDuty: 0,
             timesInjured: 0,
             appearances: 0,
+            appearancesSeason: 0,
+            // Erfolgsbasierte Vertragsboni (siehe js/bonusclauses.js): Torbonus, Einsatzbonus,
+            // Aufstiegsbonus - jeweils null, solange keine Klausel vereinbart wurde.
+            bonusClauses: { goals: null, appearances: null, promotion: null },
+            bonusPaidThisSeason: { goals: false, appearances: false, promotion: false },
             friendPlayerId: null,
             squadTenureMatchdays: 0,
             ultimatumCount: 0,

@@ -465,6 +465,32 @@
         });
     }
 
+    // Taktik-Automatik (NEU, Einstellung in der Taktiktafel siehe js/squad.js): reagiert
+    // automatisch auf den Spielstand, ohne dass das Live-Panel oben manuell bedient werden
+    // muss. Feuert je Regel höchstens EINMAL pro Spiel (currentMatch.tacticAutomationFired),
+    // damit nicht bei jedem weiteren Schritt derselbe Stil erneut gesetzt und der Ticker
+    // zugespammt wird. Nutzt bewusst liveSetTacticStyle() statt die Umstellung zu duplizieren.
+    function applyTacticAutomation() {
+        if (!currentMatch || !game.tacticAutomation) return;
+        if (!currentMatch.tacticAutomationFired) currentMatch.tacticAutomationFired = {};
+        let ourGoals = currentMatch.isHome ? currentMatch.homeGoals : currentMatch.awayGoals;
+        let oppGoals = currentMatch.isHome ? currentMatch.awayGoals : currentMatch.homeGoals;
+        let log = document.getElementById('ticker-log');
+
+        if (game.tacticAutomation.offensivBeiRueckstand && currentMatch.minute >= 46 && ourGoals < oppGoals
+            && game.tacticStyle !== 'offensiv' && !currentMatch.tacticAutomationFired.offensiv) {
+            currentMatch.tacticAutomationFired.offensiv = true;
+            if (log) log.innerHTML += `<div style="color:var(--gold); font-size:10px;">🤖 Taktik-Automatik: Rückstand erkannt.</div>`;
+            liveSetTacticStyle('offensiv');
+        }
+        if (game.tacticAutomation.defensivBeiFuehrung && currentMatch.minute >= 75 && ourGoals > oppGoals
+            && game.tacticStyle !== 'defensiv' && !currentMatch.tacticAutomationFired.defensiv) {
+            currentMatch.tacticAutomationFired.defensiv = true;
+            if (log) log.innerHTML += `<div style="color:var(--gold); font-size:10px;">🤖 Taktik-Automatik: Führung kurz vor Schluss wird verteidigt.</div>`;
+            liveSetTacticStyle('defensiv');
+        }
+    }
+
     // Ticker-Text-Pools für ein lebendigeres Spielerlebnis
     const NEUTRAL_FLAVOR_EVENTS = [
         "Beide Mannschaften tasten sich ab.",
@@ -707,6 +733,7 @@
 
         document.getElementById('ticker-log').scrollTop = document.getElementById('ticker-log').scrollHeight;
         document.getElementById('live-score').innerText = currentMatch.homeGoals + " : " + currentMatch.awayGoals;
+        applyTacticAutomation();
 
         // Co-Kommentator: unabhängig vom Spielgeschehen, ca. jeder 5. Spielzug
         if (Math.random() < 0.2) {
@@ -902,6 +929,9 @@
         // im Kontoauszug geführt - sie stehen vollständig aufgeschlüsselt im
         // Buchungsjournal (siehe game.financeLedger weiter unten).
         setzeBuchungskontext(SPIELTAG_KONTEXT);
+        // Rasenpflege (NEU): das Geläuf nutzt sich durch jedes Heimspiel leicht ab, siehe
+        // tickPitchCondition()/maintainPitch() in stadium.js.
+        if (isHomeMatch && typeof tickPitchCondition === 'function') tickPitchCondition();
         let ghostGameActive = isHomeMatch && game.forcedGhostGame;
         // Lokalderby-Atmosphäre: bei Heimspielen gegen den permanenten Rivalen ist das
         // Stadion deutlich stärker ausgelastet als sonst (gedeckelt bei "ausverkauft").
@@ -989,8 +1019,15 @@
         // 600 Zuschauer im Stadion waren - ein Kreisklassenspiel verdiente so ein Viertel
         // seiner Ticketeinnahmen mit 50 verkauften Logenplaetzen. Jetzt sind sie wie in der
         // GuV-Prognose (finances.js) an die tatsaechliche Zuschauerzahl gekoppelt.
-        let vipSold = Math.min(stadium.vipTotal || 50, Math.round(att * 0.05));
-        let ticketIncome = (isHomeMatch && !ghostGameActive) ? Math.round(att * 0.5 * game.ticketPrices.steh + att * 0.45 * game.ticketPrices.sitz + vipSold * game.ticketPrices.vip) : 0;
+        // Dauerkarten (NEU): der Anteil der Zuschauer, der bereits über die Dauerkarte bezahlt
+        // hat (siehe renewSeasonTickets() in stadium.js), wird bei der SPIELTAGS-Einnahme
+        // ausgeklammert - sonst würde er doppelt kassiert. Er zählt aber weiterhin voll zur
+        // Zuschauerzahl (Fanartikel, Rekorde, Auslastung), da diese Fans wirklich im Stadion
+        // stehen/sitzen.
+        let dauerkartenAnwesend = (typeof getSeasonTicketAttendanceFloor === 'function') ? Math.min(att, getSeasonTicketAttendanceFloor()) : 0;
+        let zahlendeAtt = Math.max(0, att - dauerkartenAnwesend);
+        let vipSold = Math.min(stadium.vipTotal || 50, Math.round(zahlendeAtt * (stadium.vipShare ?? 0.05)));
+        let ticketIncome = (isHomeMatch && !ghostGameActive) ? Math.round(zahlendeAtt * (stadium.stehShare ?? 0.5) * game.ticketPrices.steh + zahlendeAtt * (stadium.sitzShare ?? 0.45) * game.ticketPrices.sitz + vipSold * game.ticketPrices.vip) : 0;
         // Doppelte Ticketeinnahmen (Premium-Booster, NEU).
         if (isHomeMatch && game.ticketIncomeBoostNextMatch) { ticketIncome *= 2; game.ticketIncomeBoostNextMatch = false; }
         // Medienrechte (NEU): eigener Medienpartner zahlt bei jedem Heimspiel, mit Bonus bei
@@ -1141,14 +1178,21 @@
         ].filter(e => e.amount > 0);
 
         if (!game.financeLedger) game.financeLedger = [];
+        let ledgerSummeEin = einnahmen.reduce((s, e) => s + e.amount, 0);
+        let ledgerSummeAus = ausgaben.reduce((s, e) => s + e.amount, 0);
         game.financeLedger.push({
             season: game.season, matchday: game.matchday,
             heimspiel: !!isHomeMatch, zuschauer: att,
             einnahmen, ausgaben,
-            summeEin: einnahmen.reduce((s, e) => s + e.amount, 0),
-            summeAus: ausgaben.reduce((s, e) => s + e.amount, 0)
+            summeEin: ledgerSummeEin,
+            summeAus: ledgerSummeAus
         });
         if (game.financeLedger.length > 80) game.financeLedger.shift();
+        // Financial Fairplay (js/ffp.js): die komplette Spieltagsabrechnung zaehlt zum
+        // laufenden Saison-Ergebnis - anders als der Kontoauszug (siehe protokolliereBuchung
+        // in finances.js) gibt es hier keine Ausnahmen, das Spieltagsgeschaeft ist immer
+        // regulaeres Kerngeschaeft.
+        if (typeof addToFfpSeasonNet === 'function') addToFfpSeasonNet(ledgerSummeEin - ledgerSummeAus);
         if (ghostGameActive) game.forcedGhostGame = false; // Geisterspiel-Auflage ist damit erfüllt
         if (derbyBoostActive) {
             if (genuinelySoldOut) {
@@ -1357,6 +1401,12 @@
         // Stadion-Erweiterungen (NEU): Medizinzentrum/Rasenpflege senken das Trainings-
         // Verletzungsrisiko - wirkt am heimischen Gelände, unabhängig vom letzten Spielort.
         if (typeof getStadiumInjuryReduction === 'function') injuryChance *= (1 - getStadiumInjuryReduction());
+        // Rasenzustand (NEU): unabhängig von den festen Stadion-Erweiterungen oben - ein
+        // gepflegtes Geläuf senkt das Risiko zusätzlich leicht, ein vernachlässigtes erhöht es.
+        // Bei stadium.pitchCondition === 85 (Ausgangswert) ist der Faktor exakt neutral (1.0).
+        if (typeof stadium !== 'undefined' && stadium.pitchCondition !== undefined) {
+            injuryChance *= Math.max(0.9, Math.min(1.2, 1 + (85 - stadium.pitchCondition) / 85 * 0.25));
+        }
         injuryChance *= currentWeather.injuryMult;
         if (game.tackleHardness === 'hart') injuryChance *= 1.3;
         if (game.tackleHardness === 'vorsichtig') injuryChance *= 0.75;
@@ -1491,6 +1541,7 @@
                 // Mängel rechtzeitig behoben: nachträglicher Aufstieg mitten in der laufenden Saison!
                 game.leagueLevel = game.dfbGracePeriod.targetLevel;
                 game.dfbGracePeriod = null;
+                if (typeof triggerPromotionBonusClauses === 'function') triggerPromotionBonusClauses();
                 addInboxMessage('vertrag', '🎉 Nachträglicher Aufstieg!', `Die DFB-Auflagen wurden rechtzeitig innerhalb der Nachfrist erfüllt - der Aufstieg in die ${leagueNames[game.leagueLevel]} wird nachträglich vollzogen!`, 'screen-stadium');
                 showToast(`🎉 Nachträglicher Aufstieg in die ${leagueNames[game.leagueLevel]}!`, 'success');
             } else {
@@ -1581,6 +1632,10 @@
         // individuelles Risiko - ein sich selbst verstärkender Teufelskreis wie im echten Fußball.
         playedThisMatch.forEach(p => {
             p.appearances = (p.appearances || 0) + 1;
+            p.appearancesSeason = (p.appearancesSeason || 0) + 1;
+            // Erfolgsbasierte Vertragsboni (js/bonusclauses.js): Tor- und Einsatzbonus prüfen -
+            // goalsSeason ist zu diesem Zeitpunkt bereits für dieses Spiel aktualisiert.
+            if (typeof checkMatchdayBonusClauses === 'function') checkMatchdayBonusClauses(p);
             // Bus statt Flugzeug ist unbequemer - kleiner Moraldämpfer bei Auswärtsfahrten
             // (gesponserter Bus mit besserer Ausstattung mildert das etwas ab).
             if (!isHomeMatchParam && game.travelMode === 'bus') p.morale = Math.max(10, p.morale - (game.busSponsorActive ? (game.busSponsorViaBanden ? 1.5 : 1) : 2));
@@ -1617,6 +1672,12 @@
 
         let cupRoundIdx = cupTournament.matchdays.indexOf(game.matchday);
         if (cupRoundIdx !== -1) simulateCupRound(cupRoundIdx, isLiveContext);
+
+        // Landespokal: eigene Spieltage, damit er sich nicht mit dem DFB-Pokal beisst.
+        if (typeof simulateLandesPokalRound === 'function') {
+            let landesIdx = landesPokal.matchdays.indexOf(game.matchday);
+            if (landesIdx !== -1) simulateLandesPokalRound(landesIdx, isLiveContext);
+        }
 
         if (europeTournament.matchdays.includes(game.matchday)) {
             simulateEuropeMatchday(game.matchday, isLiveContext);

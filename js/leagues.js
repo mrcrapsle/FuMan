@@ -70,6 +70,7 @@
         insertPermanentRivalIntoLeagues();
         generateFixtures();
         initDynamicCup();
+        if (typeof initLandesPokal === 'function') initLandesPokal();
         initEuropeCup();
     }
 
@@ -169,6 +170,7 @@
         insertPermanentRivalIntoLeagues();
         generateFixtures();
         initDynamicCup();
+        if (typeof initLandesPokal === 'function') initLandesPokal();
         initEuropeCup();
 
         if (arrivingInOurLevel.length > 0) {

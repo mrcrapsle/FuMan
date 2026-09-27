@@ -269,6 +269,32 @@ Abrechnung, eine Buchung von dort landete weder im Journal noch im Auszug.
 `getDeployedStewards()`); auswärts stellt der Gastgeber das Personal. Vorher
 wurde an jedem Spieltag die volle vorgehaltene Zahl abgerechnet.
 
+## Pokalsystem: Landespokal als Weg in den DFB-Pokal
+
+Im echten deutschen Fußball qualifiziert man sich aus den unteren Ligen **nicht**
+direkt für den DFB-Pokal. Ab der 3. Liga ist man automatisch dabei; darunter
+führt der Weg ausschließlich über den Landespokal des eigenen Verbands. Genau
+dieser Schritt fehlte - ein Sechstligist startete einfach im DFB-Pokal gegen
+Bundesligisten.
+
+`js/landescup.js` bildet das ab:
+
+* `isQualifiedForDfbPokal()` - ab `DFB_POKAL_DIREKT_AB_LIGA` (Ligastufe 2,
+  also der 3. Liga) automatisch, darunter nur mit `game.dfbPokalViaLandespokal`
+  aus der Vorsaison. `initDynamicCup()` löst den Startplatz dabei ein: Er gilt
+  für genau eine Saison.
+* Der Landespokal läuft über vier Runden an den Spieltagen **6, 14, 22, 30** -
+  bewusst versetzt zum DFB-Pokal (4, 12, 20, 28, 34), damit sich nichts beißt.
+* Gegner kommen aus der eigenen und den benachbarten Spielklassen **derselben
+  Region** (`buildLandesPokalTeams()`), passend zur regionalen Gliederung der
+  Vereinsnamen ab der 4. Liga.
+* Die Prämien liegen weit unter denen des DFB-Pokals und skalieren mit der
+  Ligastufe. Ein Verbandspokal finanziert keine Saison - er öffnet eine Tür.
+
+Der Wettbewerb heißt nach `landesPokal.region` (Standard: Sachsen, passend zum
+Startverein in Leipzig); `LANDESVERBAENDE` listet die übrigen Verbände für eine
+spätere Regionswahl.
+
 ## Vereins- und Spielernamen
 
 Alle Namen sind **minimal verfremdet** - ein geänderter Buchstabe, ein entfernter

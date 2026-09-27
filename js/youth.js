@@ -35,7 +35,7 @@
                 : `<button onclick="revealYouthPotential('${p.id}')" class="btn-secondary" style="width:auto; font-size:8px;">🔍 Potenzial prüfen [3.000 €]</button>`;
             row.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span>${p.name} (${p.pos}|Str: ${p.strength}) ${p.trait && p.trait!=='Kein'?`<span class="badge badge-trait">${p.trait}</span>`:''}</span>
+                    <span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 28) : ''}${p.name} (${p.pos}|Str: ${p.strength}) ${p.trait && p.trait!=='Kein'?`<span class="badge badge-trait">${p.trait}</span>`:''}</span>
                     <span style="display:flex; gap:4px;">
                         <button onclick="promoteYouth(${idx}, this)" class="btn-action" style="width:auto; font-size:9px;">In Profikader</button>
                         ${game.secondTeam.isActive ? `<button onclick="promoteYouthToSecondTeam(${idx}, this)" class="btn-secondary" style="width:auto; font-size:9px; color:var(--teal);" title="Behutsamer Weg: erst Spielpraxis in der Reserve sammeln">In die Reserve</button>` : ''}

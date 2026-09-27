@@ -259,7 +259,7 @@
                     let row = document.createElement('div');
                     row.className = 'panel';
                     row.innerHTML = `
-                        <div class="panel-header"><span>⭐ ${p.name} (${p.pos})</span><strong style="color:var(--accent);">Stärke: ~${p.strength}</strong></div>
+                        <div class="panel-header"><span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 28) : ''}⭐ ${p.name} (${p.pos})</span><strong style="color:var(--accent);">Stärke: ~${p.strength}</strong></div>
                         <div style="font-size:9px; margin-bottom:4px;">
                             <span style="color:${confColor};">🔎 Vertrauens-Level: ${confidence}%${confidence < 95 ? ' (Werte unscharf)' : ' (bestätigt)'}</span>
                         </div>
@@ -297,7 +297,7 @@
 
     function signGlobalScoutPlayer(idx) {
         let p = globalScoutResults[idx];
-        if (game.transferEmbargo) { showToast('🚫 Transfersperre aktiv - erst die Zahlungsfähigkeit wiederherstellen (siehe Finanzen).', 'error', 5000); return; }
+        if (isTransferEmbargoActive()) { showToast(`🚫 Transfersperre aktiv${game.ffpTransferEmbargo ? ' (Financial Fairplay)' : ' - erst die Zahlungsfähigkeit wiederherstellen (siehe Finanzen)'}.`, 'error', 5000); return; }
         let discount = 1.0 - (staffMembers.scout.hired ? 0.15 : 0);
         if (typeof getActiveStaffSynergies === 'function' && getActiveStaffSynergies().some(s => s.bonusKey === 'transferDiscount')) discount -= 0.05;
         let price = Math.round(p.marketValue * discount);

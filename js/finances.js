@@ -55,13 +55,15 @@
     }
 
     function renderFinancesView() {
-        renderTicketPriceSliders();
+        // Ticketpreise (inkl. Dauerkarte) sind jetzt im Stadion-Screen zu finden, dort direkt
+        // neben Kapazität, Rasenpflege und Nebeneinnahmen - siehe renderStadiumView().
         if (typeof renderMediaRightsView === 'function') renderMediaRightsView();
         renderStockTicker();
         renderSponsorLeaderboard();
         renderFinanceForecast();
         renderMoneyHistoryChart();
         renderFinanceLedger();
+        if (typeof renderFfpStatusBox === 'function') renderFfpStatusBox();
         let totalWages = (squad.reduce((s, p) => s + p.wage, 0) + (game.secondTeam.isActive ? secondTeamSquad.reduce((s, p) => s + p.wage, 0) : 0)) * 4;
         let totalStaffWages = Object.values(staffMembers).filter(s => s.hired).reduce((s, st) => s + st.wage, 0) * 4;
         // Dieselbe Rechnung wie in applyMatchdayFinances(), inkl. stillgelegter Ränge.
@@ -233,7 +235,9 @@
     let ticketPricePreview = null; // null = noch keine Änderung, zeigt aktuelle Werte
 
     function getTicketSliderRange(category) {
-        let market = getMarketTicketPrice(category);
+        let market = (category === 'dauerkarte' && typeof getMarketSeasonTicketPrice === 'function')
+            ? getMarketSeasonTicketPrice()
+            : getMarketTicketPrice(category);
         return { min: Math.max(1, Math.round(market * 0.35)), max: Math.round(market * 4) };
     }
 
@@ -252,7 +256,8 @@
         ticketPricePreview = {
             steh: getMarketTicketPrice('steh'),
             sitz: getMarketTicketPrice('sitz'),
-            vip: getMarketTicketPrice('vip')
+            vip: getMarketTicketPrice('vip'),
+            dauerkarte: typeof getMarketSeasonTicketPrice === 'function' ? getMarketSeasonTicketPrice() : game.ticketPrices.dauerkarte
         };
         renderTicketPriceSliders();
     }
@@ -262,6 +267,10 @@
         game.ticketPrices.steh = preview.steh;
         game.ticketPrices.sitz = preview.sitz;
         game.ticketPrices.vip = preview.vip;
+        // Dauerkarte (NEU): der Preis wird sofort übernommen, wirkt sich aber - wie im echten
+        // Fußballgeschäft - erst beim nächsten Saisonverkauf (renewSeasonTickets()) auf die
+        // tatsächliche Zahl der Inhaber aus.
+        if (preview.dauerkarte !== undefined) game.ticketPrices.dauerkarte = preview.dauerkarte;
         ticketPricePreview = null;
         showToast('🎟️ Neue Ticketpreise übernommen!', 'success');
         renderTicketPriceSliders();
@@ -277,13 +286,18 @@
         game.ticketPrices = realPrices; // sofort zurücksetzen
         let capacity = stadium.total || 16000;
         let totalAtt = Math.round(capacity * attFactor);
-        let stehAtt = Math.round(totalAtt * 0.5);
-        let sitzAtt = Math.round(totalAtt * 0.45);
-        let vipAtt = Math.min(stadium.vipTotal || 50, Math.round(totalAtt * 0.05));
+        // Dauerkarten (NEU): der bereits im Voraus bezahlte Anteil zählt zur Zuschauerzahl,
+        // aber nicht zur SPIELTAGS-Einnahme - sonst würde er in dieser Vorschau doppelt
+        // kassiert, obwohl er real nur einmal (beim Saisonverkauf) bezahlt wurde.
+        let dauerkartenAnwesend = (typeof getSeasonTicketAttendanceFloor === 'function') ? Math.min(totalAtt, getSeasonTicketAttendanceFloor()) : 0;
+        let zahlendeAtt = Math.max(0, totalAtt - dauerkartenAnwesend);
+        let stehAtt = Math.round(zahlendeAtt * (stadium.stehShare ?? 0.5));
+        let sitzAtt = Math.round(zahlendeAtt * (stadium.sitzShare ?? 0.45));
+        let vipAtt = Math.min(stadium.vipTotal || 50, Math.round(zahlendeAtt * (stadium.vipShare ?? 0.05)));
         let matchRevenue = Math.round(stehAtt * prices.steh + sitzAtt * prices.sitz + vipAtt * prices.vip);
         let homeMatchesPerSeason = 17;
         return {
-            totalAtt, stehAtt, sitzAtt, vipAtt,
+            totalAtt, stehAtt, sitzAtt, vipAtt, dauerkartenAnwesend,
             utilization: capacity > 0 ? (totalAtt / capacity * 100) : 0,
             matchRevenue,
             seasonProjection: matchRevenue * homeMatchesPerSeason
@@ -318,16 +332,21 @@
                 </div>`;
         };
 
+        let kapazitaet = stadium.total || 16000;
+        let dauerkartenPct = kapazitaet > 0 ? Math.round(((game.seasonTicketHolders || 0) / kapazitaet) * 100) : 0;
+        let marktpreisDauerkarte = typeof getMarketSeasonTicketPrice === 'function' ? getMarketSeasonTicketPrice() : prices.dauerkarte;
         box.innerHTML = `
-            <div style="font-size:9px; color:var(--text-muted); margin-bottom:10px;">Marktüblich: Steh ${getMarketTicketPrice('steh')}€ · Sitz ${getMarketTicketPrice('sitz')}€ · VIP ${getMarketTicketPrice('vip')}€</div>
+            <div style="font-size:9px; color:var(--text-muted); margin-bottom:10px;">Marktüblich: Steh ${getMarketTicketPrice('steh')}€ · Sitz ${getMarketTicketPrice('sitz')}€ · VIP ${getMarketTicketPrice('vip')}€ · Dauerkarte ${marktpreisDauerkarte}€</div>
             ${sliderRow('Stehplatz', 'steh')}
             ${sliderRow('Sitzplatz', 'sitz')}
             ${sliderRow('VIP-Loge', 'vip')}
+            ${sliderRow('Dauerkarte', 'dauerkarte')}
+            <div class="box" style="font-size:9px; margin-bottom:10px;">🎟️ Aktuell <strong>${(game.seasonTicketHolders || 0).toLocaleString('de-DE')}</strong> Dauerkarten (${dauerkartenPct}% der Plätze). Ein neuer Preis wirkt erst beim nächsten Saisonverkauf - die Vorschau rechts zeigt nur das Tagesgeschäft.</div>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin:12px 0;">
-                <div class="box"><div style="font-size:8px; color:var(--text-muted);">ERWARTETE ZUSCHAUER</div><div style="font-size:16px; font-weight:900;">${stats.totalAtt.toLocaleString('de-DE')}</div><div style="font-size:8px; color:var(--text-muted);">Steh ${stats.stehAtt.toLocaleString('de-DE')} · Sitz ${stats.sitzAtt.toLocaleString('de-DE')} · VIP ${stats.vipAtt}</div></div>
+                <div class="box"><div style="font-size:8px; color:var(--text-muted);">ERWARTETE ZUSCHAUER</div><div style="font-size:16px; font-weight:900;">${stats.totalAtt.toLocaleString('de-DE')}</div><div style="font-size:8px; color:var(--text-muted);">Steh ${stats.stehAtt.toLocaleString('de-DE')} · Sitz ${stats.sitzAtt.toLocaleString('de-DE')} · VIP ${stats.vipAtt} · Dauerkarte ${stats.dauerkartenAnwesend.toLocaleString('de-DE')}</div></div>
                 <div class="box"><div style="font-size:8px; color:var(--text-muted);">AUSLASTUNG</div><div style="font-size:16px; font-weight:900; color:${stats.utilization>=70?'var(--primary)':'var(--accent)'};">${stats.utilization.toFixed(1)}%</div></div>
                 <div class="box"><div style="font-size:8px; color:var(--text-muted);">TAGESKASSE JE HEIMSPIEL</div><div style="font-size:16px; font-weight:900; color:var(--gold);">${formatVal(stats.matchRevenue)}</div><div style="font-size:8px; color:${changePercent>=0?'var(--primary)':'var(--danger)'};">${changePercent>=0?'+':''}${changePercent.toFixed(1)}% ggü. jetzt</div></div>
-                <div class="box"><div style="font-size:8px; color:var(--text-muted);">HOCHRECHNUNG SAISON</div><div style="font-size:16px; font-weight:900; color:var(--gold);">${formatVal(stats.seasonProjection)}</div><div style="font-size:8px; color:var(--text-muted);">17 Heimspiele, geschätzt</div></div>
+                <div class="box"><div style="font-size:8px; color:var(--text-muted);">HOCHRECHNUNG SAISON</div><div style="font-size:16px; font-weight:900; color:var(--gold);">${formatVal(stats.seasonProjection)}</div><div style="font-size:8px; color:var(--text-muted);">17 Heimspiele, geschätzt (ohne Dauerkarten-Erlös)</div></div>
             </div>
             <div style="font-size:10px; margin-bottom:10px;">${feedbackText}</div>
             <button onclick="commitTicketPrices()" class="btn-action" style="margin-bottom:6px;">✅ Preise übernehmen</button>
@@ -339,8 +358,14 @@
     }
 
     // Alt-Sofortkredit (bleibt aus Kompatibilitätsgründen bestehen: flacher Aufschlag, freie Rückzahlung)
-    function takeLoan(amt) { playSound('click'); game.money += amt; game.loanDebt += Math.round(amt * 1.12); updateUI(); renderFinancesView(); }
-    function payLoan(amt) { if (game.loanDebt <= 0 || game.money < amt) return; playSound('click'); game.money -= amt; game.loanDebt -= amt; updateUI(); renderFinancesView(); }
+    // Bugfix (Financial Fairplay): alle Kredit-/Festgeld-Buchungen bekommen jetzt einen
+    // EXPLIZITEN Buchungskontext statt sich auf den zufälligen Bildschirm-Fallback zu
+    // verlassen (siehe buchungsLabelErmitteln()) - Kreditraten und Festgeldauszahlungen
+    // laufen ueber den Spieltag-Tick (match.js) und feuern damit fast NIE, waehrend
+    // "screen-finances" aktiv ist. Vorher wurden sie dadurch faelschlich als normaler
+    // FFP-Verlust/-Gewinn gezaehlt statt als kapitalneutrale Finanzierung ausgenommen zu sein.
+    function takeLoan(amt) { playSound('click'); setzeBuchungskontext('💰 Finanzen & Kredite'); game.money += amt; loescheBuchungskontext(); game.loanDebt += Math.round(amt * 1.12); updateUI(); renderFinancesView(); }
+    function payLoan(amt) { if (game.loanDebt <= 0 || game.money < amt) return; playSound('click'); setzeBuchungskontext('💰 Finanzen & Kredite'); game.money -= amt; loescheBuchungskontext(); game.loanDebt -= amt; updateUI(); renderFinancesView(); }
 
     // Neues Kreditsystem: gestaffelte Laufzeiten mit echter Ratenzahlung statt freier Rückzahlung
     function takeLoanTier(tierKey, amount) {
@@ -353,7 +378,9 @@
         let effectiveRate = Math.max(0.02, tier.rate + (typeof getCreditRatingInterestModifier === 'function' ? getCreditRatingInterestModifier() : 0));
         let totalToRepay = Math.round(amount * (1 + effectiveRate));
         let installment = Math.ceil(totalToRepay / tier.duration);
+        setzeBuchungskontext('💰 Finanzen & Kredite');
         game.money += amount;
+        loescheBuchungskontext();
         activeLoans.push({ id: Date.now(), tierName: tier.name, principal: amount, installment, matchdaysLeft: tier.duration, totalToRepay });
         renderFinancesView(); updateUI();
         showToast(`🏦 Kredit über ${formatVal(amount)} aufgenommen (${tier.name}: ${formatVal(installment)}/Spieltag für ${tier.duration} Spieltage)`, 'success');
@@ -361,10 +388,12 @@
 
     function processLoanInstallments() {
         if (activeLoans.length === 0) return;
+        setzeBuchungskontext('💰 Finanzen & Kredite');
         activeLoans.forEach(loan => {
             game.money -= loan.installment;
             loan.matchdaysLeft--;
         });
+        loescheBuchungskontext();
         let completed = activeLoans.filter(l => l.matchdaysLeft <= 0);
         completed.forEach(l => showToast(`✅ Kredit "${l.tierName}" ist vollständig zurückgezahlt!`, 'success'));
         activeLoans = activeLoans.filter(l => l.matchdaysLeft > 0);
@@ -441,7 +470,9 @@
         if (financeCentralState.fixedDeposit) { showToast('Es läuft bereits eine Festgeldanlage!', 'error'); return; }
         if (!amount || amount <= 0 || game.money < amount) { showToast('Ungültiger Betrag oder nicht genug Geld!', 'error'); return; }
         playSound('click');
+        setzeBuchungskontext('💰 Finanzen & Kredite');
         game.money -= amount;
+        loescheBuchungskontext();
         let rate = matchdays >= 20 ? 0.12 : (matchdays >= 10 ? 0.07 : 0.03);
         financeCentralState.fixedDeposit = { principal: amount, matchdaysLeft: matchdays, totalMatchdays: matchdays, payout: Math.round(amount * (1 + rate)) };
         showToast(`🏦 Festgeldanlage über ${formatVal(amount)} für ${matchdays} Spieltage eröffnet (Auszahlung: ${formatVal(financeCentralState.fixedDeposit.payout)}).`, 'success');
@@ -453,7 +484,9 @@
         if (!fd) return;
         fd.matchdaysLeft--;
         if (fd.matchdaysLeft <= 0) {
+            setzeBuchungskontext('💰 Finanzen & Kredite');
             game.money += fd.payout;
+            loescheBuchungskontext();
             addInboxMessage('finanzen', '🏦 Festgeldanlage ausgezahlt!', `Die Festgeldanlage über ${formatVal(fd.principal)} wurde ausgezahlt: ${formatVal(fd.payout)}.`, 'screen-finances');
             financeCentralState.fixedDeposit = null;
         }
@@ -576,7 +609,9 @@
         let discountedPayoff = Math.round(remainingTotal * 0.85);
         if (game.money < discountedPayoff) { showToast(`Nicht genug Geld! Benötigt: ${formatVal(discountedPayoff)}`, 'error'); return; }
         playSound('goal');
+        setzeBuchungskontext('💰 Finanzen & Kredite');
         game.money -= discountedPayoff;
+        loescheBuchungskontext();
         activeLoans = activeLoans.filter(l => l.id !== loanId);
         showToast(`✅ Kredit "${loan.tierName}" vorzeitig getilgt für ${formatVal(discountedPayoff)} (15% Rabatt)!`, 'success');
         renderFinancesView();
@@ -730,7 +765,14 @@
         'screen-youth': '🎓 Jugendarbeit',
         'screen-training': '🏋️ Training',
         'screen-fans': '📣 Fanarbeit',
-        'screen-finances': '💰 Finanzen & Kredite',
+        // Bugfix (Financial Fairplay): bewusst NICHT identisch mit dem FFP-Ausnahme-Label
+        // "💰 Finanzen & Kredite" - dieser Fallback greift bei JEDER Buchung ohne eigenen
+        // Kontext, solange "Finanzen" der zuletzt besuchte Screen war. Wäre er textgleich mit
+        // dem Ausnahme-Label, würde ein spontanes Ereignis (z.B. eine Büro-Entscheidung), das
+        // während dieser Zeit ohne eigenen Kontext bucht, fälschlich von der FFP-Bilanz
+        // ausgenommen. Echte Kredit-/Festgeldbuchungen setzen ihren Kontext seit dem Bugfix
+        // ohnehin explizit selbst (siehe takeLoan()/processLoanInstallments()/etc.).
+        'screen-finances': '💰 Finanzmenü',
         'screen-stocks': '📈 Börse',
         'screen-industry': '🏭 Fabriken',
         'screen-holding': '🏢 Holding',
@@ -768,6 +810,12 @@
         if (buchungsKontext === SPIELTAG_KONTEXT) return; // steht bereits im Buchungsjournal
         if (!game.kontoauszug) game.kontoauszug = [];
         let label = buchungsLabelErmitteln();
+        // Financial Fairplay (js/ffp.js): jede Kontoauszug-Buchung zaehlt zum laufenden
+        // Saison-Ergebnis, AUSSER Infrastruktur-Investitionen und reine Finanzierungsvorgaenge
+        // (Kredite/Festgeld) - siehe FFP_EXEMPTE_LABELS dort.
+        if (typeof addToFfpSeasonNet === 'function' && typeof isFfpExemptLabel === 'function' && !isFfpExemptLabel(label)) {
+            addToFfpSeasonNet(delta);
+        }
         let letzte = game.kontoauszug[game.kontoauszug.length - 1];
         // Aufeinanderfolgende Buchungen derselben Aktion (z.B. Ablöse + Handgeld) werden zu
         // einer Zeile zusammengefasst, damit der Auszug lesbar bleibt.
@@ -822,6 +870,12 @@
         let posten = liste.find(p => p.label === label);
         if (posten) posten.amount += amount; else liste.push({ label, amount });
         eintrag[typ === 'einnahmen' ? 'summeEin' : 'summeAus'] = liste.reduce((s, p) => s + p.amount, 0);
+        // Financial Fairplay (js/ffp.js): applyMatchdayFinances() hat sein Saison-Ergebnis
+        // bereits VOR diesem Nachtrag an addToFfpSeasonNet() gemeldet (z.B. der Ordnerdienst
+        // fällt erst in processPostMatchRoutine() an, NACH dem financeLedger.push()) - ohne
+        // diesen Ausgleich hier würde jeder Nachtrag spurlos aus der FFP-Bilanz verschwinden,
+        // obwohl er im sichtbaren Buchungsjournal und im echten Kontostand auftaucht.
+        if (typeof addToFfpSeasonNet === 'function') addToFfpSeasonNet(typ === 'einnahmen' ? amount : -amount);
     }
     function loescheBuchungskontext() { buchungsKontext = null; }
 

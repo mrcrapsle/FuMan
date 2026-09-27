@@ -48,7 +48,7 @@
     }
 
     function buildSaveState() {
-        return { game, managerRPG, incomingOffers, holdingCompany, rawMaterials, factories, merchandise, merchExtras, productionQueue, globalScoutResults, scoutingNetwork, securityWorkforce, mediaRights, realEstatePortfolio, stockMarket, financeCentralState, underworld, stadium, campusBuildings, staffMembers, staffMeta, staffCentralState, secondTeamStaff, fanGroups, fanCentralState, privateLife, bandenSponsors, activeBet, betHistory, squad, lineup, secondTeamSquad, secondTeamLineup, youthTalents, activeLoans, loanClubRelationships, loanClubLastInteractionSeason, leaguesData, fixturesData, cupTournament, europeTournament, inboxMessages, inboxArchive, rivalryRecord, crestHistory, loanedPlayers, loanablePlayers, incomingLoans, youthLeagueTable, youthLeagueMatchday };
+        return { game, managerRPG, incomingOffers, holdingCompany, rawMaterials, factories, merchandise, merchExtras, productionQueue, globalScoutResults, scoutingNetwork, securityWorkforce, mediaRights, realEstatePortfolio, stockMarket, financeCentralState, underworld, stadium, campusBuildings, staffMembers, staffMeta, staffCentralState, secondTeamStaff, fanGroups, fanCentralState, privateLife, bandenSponsors, activeBet, betHistory, squad, lineup, secondTeamSquad, secondTeamLineup, youthTalents, activeLoans, loanClubRelationships, loanClubLastInteractionSeason, leaguesData, fixturesData, cupTournament, landesPokal, europeTournament, inboxMessages, inboxArchive, rivalryRecord, crestHistory, loanedPlayers, loanablePlayers, incomingLoans, youthLeagueTable, youthLeagueMatchday };
     }
 
     // Kontoauszug pausieren: das Object.assign im Rumpf setzt game.money auf den
@@ -73,6 +73,7 @@
         if (game.secondTeam && game.secondTeam.name && game.secondTeam.name.includes('Lok Leipzig')) {
             game.secondTeam.name = game.secondTeam.name.replace('Lok Leipzig', '1.FC Moritz Leipzig');
         }
+        if (p.landesPokal) Object.assign(landesPokal, p.landesPokal);
         if (p.secondTeamStaff) Object.assign(secondTeamStaff, p.secondTeamStaff);
         if (p.managerRPG) Object.assign(managerRPG, p.managerRPG);
         if (p.incomingOffers) incomingOffers = p.incomingOffers;

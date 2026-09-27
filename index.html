@@ -435,7 +435,8 @@
 <div id="ultimatum-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
         <div style="font-size:15px; font-weight:900; color:var(--danger); margin-bottom:8px;">⚠️ Vertrags-Ultimatum!</div>
-        <div style="font-size:13px; font-weight:900; color:#fff;" id="ultimatum-player-name">Spielername</div>
+        <div id="ultimatum-player-avatar" style="display:flex; justify-content:center; margin-bottom:6px;"></div>
+        <div style="font-size:13px; font-weight:900; color:#fff; text-align:center;" id="ultimatum-player-name">Spielername</div>
         <div style="font-size:11px; color:#94a3b8; margin-bottom:14px;" id="ultimatum-player-info">Details</div>
         <div style="font-size:11px; color:#cbd5e1; margin-bottom:14px;">„Entweder ich bekomme einen neuen Vertrag, oder ich will verkauft werden!“</div>
         <button onclick="resolveUltimatumRenew()" class="btn-primary" style="margin-bottom:8px;">✅ Neuen Vertrag anbieten</button>
@@ -1027,6 +1028,11 @@
                 </div>
 
                 <div class="panel">
+                    <div class="panel-header">⚖️ FINANCIAL FAIRPLAY</div>
+                    <div id="ffp-status-box"></div>
+                </div>
+
+                <div class="panel">
                     <div class="panel-header">💼 BUDGETS & VORSTANDS-VERHANDLUNGEN</div>
                     <div id="insolvency-status-box" class="box" style="display:none; border-color:var(--danger); color:var(--danger); font-size:11px; margin-bottom:6px;"></div>
                     <div style="font-size:11px; margin-bottom:2px;" id="budget-transfer-bar-label">Transferbudget: 0 €</div>
@@ -1038,11 +1044,6 @@
                         <button onclick="negotiateBoardBudget('transfer', 500000)" class="btn-secondary">+500.000 € Transferbudget fordern</button>
                         <button onclick="negotiateBoardBudget('wage', 10000)" class="btn-secondary">+10.000 €/SpT Gehaltsbudget fordern</button>
                     </div>
-                </div>
-
-                <div class="panel">
-                    <div class="panel-header">🎟️ TICKETPREISE</div>
-                    <div id="ticket-price-sliders-box"></div>
                 </div>
 
                 <div class="panel">
@@ -1256,6 +1257,11 @@
                     <div style="margin-top:6px; font-size:9px; color:#aaa;" id="tackle-hardness-desc">Ausgewogenes Einsteigen ohne besondere Vor-/Nachteile.</div>
                 </div>
                 <div class="panel" id="transfer-market-box" style="display:none;"></div>
+                <div class="panel">
+                    <div class="panel-header">🤖 TAKTIK-AUTOMATIK</div>
+                    <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Reagiert im laufenden Spiel automatisch auf den Spielstand, ohne dass du das Live-Taktikpanel selbst bedienen musst.</div>
+                    <div id="tactic-automation-box"></div>
+                </div>
                 <div class="panel" id="co-trainer-advice-box" style="display:none;"></div>
                 <div id="ultimatum-banner-box" style="display:none;"></div>
                 <div id="crowd-favorite-preview-box" style="display:none;"></div>
@@ -1381,6 +1387,11 @@
                     <div id="injury-risk-panel"></div>
                 </div>
                 <div id="congestion-warning-box" style="display:none;"></div>
+                <div class="panel">
+                    <div class="panel-header">📅 TRAININGSKALENDER</div>
+                    <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Liga, DFB-Pokal, Landespokal und Europapokal für die nächsten Spieltage im Überblick.</div>
+                    <div id="training-calendar-box"></div>
+                </div>
                 </div>
 
                 <div id="training-tab-minigames" style="display:none;">
@@ -1483,8 +1494,25 @@
                     <div id="stadium-key-figures-box"></div>
                 </div>
                 <div class="panel">
+                    <div class="panel-header">🎟️ TICKETPREISE</div>
+                    <div id="ticket-price-sliders-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">🌱 RASENPFLEGE</div>
+                    <div id="pitch-maintenance-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--gold);">💰 NEBENEINNAHMEN</div>
+                    <div id="stadium-ancillary-income-box"></div>
+                </div>
+                <div class="panel">
                     <div class="panel-header">📈 ZUSCHAUERENTWICKLUNG</div>
                     <div id="stadium-attendance-chart-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--gold);">🏗️ NAMENTLICHE AUSBAUPROJEKTE</div>
+                    <div class="box" style="font-size:9px; margin-bottom:6px;">Zusätzlich zum block-für-block-Ausbau unten: konkrete Großprojekte mit eigenem Effekt auf Kapazität und Sitzplatz-Zusammensetzung.</div>
+                    <div id="capacity-projects-grid"></div>
                 </div>
                 <div class="panel">
                     <div class="panel-header" style="color:var(--gold);">🏗️ LAUFENDE BAUPROJEKTE</div>
@@ -1695,6 +1723,7 @@
                 <button onclick="showScreen('screen-scouting-global')" id="hubtab-btn-screen-scouting-global" class="btn-secondary" style="font-size:10px; padding:6px 4px;">Scouting</button>
                 <button onclick="showScreen('screen-youth')" id="hubtab-btn-screen-youth" class="btn-secondary" style="font-size:10px; padding:6px 4px;">Jugend</button>
                 <button onclick="showScreen('screen-contracts')" id="hubtab-btn-screen-contracts" class="btn-secondary" style="font-size:10px; padding:6px 4px;">Verträge</button>
+                <button onclick="showScreen('screen-squad-planning')" id="hubtab-btn-screen-squad-planning" class="btn-secondary" style="font-size:10px; padding:6px 4px;">📊 Planungstool</button>
             </div>
             <div id="screen-transfer" style="display:none;">
                 <div id="winter-window-banner" style="display:none; background:linear-gradient(135deg, rgba(63,182,255,0.25), rgba(23,201,184,0.15)); border:1px solid var(--blue); border-radius:10px; padding:8px 12px; margin-bottom:8px; font-size:11px; color:#fff;"></div>
@@ -1804,6 +1833,27 @@
                 <div class="panel" id="negotiations-panel">
                     <div class="panel-header" style="color:var(--primary);">🤝 VERHANDLUNGEN</div>
                     <div id="negotiations-content"></div>
+                </div>
+            </div>
+            <div id="screen-squad-planning" style="display:none;">
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--danger);">🚨 KRITISCHE SCHWACHSTELLEN FÜR KOMMENDE SAISONS</div>
+                    <div class="box" style="font-size:9px; margin-bottom:6px;">
+                        Führt Positionstiefe, Altersstruktur und auslaufende Verträge zusammen - eine Position kann bei jedem Wert für sich unauffällig wirken und trotzdem in Kombination zum Problem werden.
+                    </div>
+                    <div id="squad-planning-warnings-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">🧩 POSITIONSTIEFE, ALTER & VERTRÄGE</div>
+                    <div id="squad-planning-position-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">📊 ALTERSPYRAMIDE DES GESAMTKADERS</div>
+                    <div id="squad-planning-age-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">📅 AUSLAUFENDE VERTRÄGE NACH POSITION</div>
+                    <div id="squad-planning-contract-box"></div>
                 </div>
             </div>
             </div>
@@ -1931,9 +1981,14 @@
                     </div>
                     <div class="box" style="margin-bottom:8px;">
                         Der Pokal wird an den Spieltagen <strong>4, 12, 20, 28 und 34</strong> ausgetragen. Ein Weiterkommen garantiert massive Prämien!
+                        <div id="cup-qualification-note" style="font-size:10px; color:var(--text-muted); margin-top:4px;"></div>
                     </div>
                     <button onclick="showCupDrawCeremony()" class="btn-primary" style="margin-bottom:8px;">🎟️ Auslosung ansehen</button>
                     <div id="cup-tree-container"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header"><span id="landescup-header">🏅 LANDESPOKAL</span></div>
+                    <div id="landescup-container"></div>
                 </div>
                 <div class="panel">
                     <div class="panel-header" style="color:var(--gold);">📊 EIGENE POKAL-STATISTIK</div>
@@ -2276,14 +2331,21 @@
 <script src="js/state.js"></script>
 <script src="js/inbox.js"></script>
 <script src="js/entities.js"></script>
+<script src="js/avatars.js"></script>
 <script src="js/playerdetail.js"></script>
 <script src="js/squad.js"></script>
+<script src="js/agents-management.js"></script>
+<script src="js/club-rivalries.js"></script>
+<script src="js/injury-risk-management.js"></script>
+<script src="js/player-archetypes.js"></script>
 <script src="js/transfers.js"></script>
+<script src="js/squadplanning.js"></script>
 <script src="js/secondteam.js"></script>
 <script src="js/career.js"></script>
 <script src="js/crest.js"></script>
 <script src="js/leagues.js"></script>
 <script src="js/cup.js"></script>
+    <script src="js/landescup.js"></script>
 <script src="js/europe.js"></script>
 <script src="js/transfermarket.js"></script>
 <script src="js/manager-rpg.js"></script>
@@ -2301,6 +2363,7 @@
 <script src="js/training.js"></script>
 <script src="js/training-games.js"></script>
 <script src="js/finances.js"></script>
+<script src="js/ffp.js"></script>
 <script src="js/stocks.js"></script>
 <script src="js/sponsors.js"></script>
 <script src="js/media-rights.js"></script>
@@ -2313,6 +2376,8 @@
 <script src="js/fans.js"></script>
 <script src="js/youth.js"></script>
 <script src="js/youth-academy-extended.js"></script>
+<script src="js/academy-ranking.js"></script>
+<script src="js/bonusclauses.js"></script>
 <script src="js/contracts.js"></script>
 <script src="js/negotiations.js"></script>
 <script src="js/private-life.js"></script>

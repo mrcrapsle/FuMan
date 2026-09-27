@@ -3,11 +3,16 @@
 // DFB-POKAL SYSTEM
 // ==========================================
     function initDynamicCup() {
-        game.inCup = true;
+        // Teilnahme wie im echten Fussball: ab der 3. Liga automatisch, darunter nur als
+        // Sieger des Landespokals der Vorsaison (siehe js/landescup.js). Vorher startete
+        // selbst ein Sechstligist direkt gegen Bundesligisten.
+        game.inCup = (typeof isQualifiedForDfbPokal === 'function') ? isQualifiedForDfbPokal() : true;
+        // Der erspielte Startplatz ist mit dieser Auslosung eingeloest.
+        game.dfbPokalViaLandespokal = false;
         cupTournament.currentRound = 0;
         cupTournament.roundsHistory = [];
 
-        let cupTeams = [game.clubName];
+        let cupTeams = game.inCup ? [game.clubName] : [];
         while (cupTeams.length < 32) {
             let t = generateTeamName();
             if (!cupTeams.includes(t)) cupTeams.push(t);
@@ -216,6 +221,19 @@
 
     function renderCupView() {
         renderCupOwnStats();
+        if (typeof renderLandesPokalView === 'function') renderLandesPokalView();
+        // Erklaert, WARUM man dabei ist oder nicht - sonst waere ein leerer Turnierbaum in
+        // den unteren Ligen kommentarlos.
+        let qualNote = document.getElementById('cup-qualification-note');
+        if (qualNote) {
+            if (game.leagueLevel <= DFB_POKAL_DIREKT_AB_LIGA) {
+                qualNote.innerText = `Ab der ${leagueNames[DFB_POKAL_DIREKT_AB_LIGA]} ist der Verein automatisch für den DFB-Pokal gesetzt.`;
+            } else if (game.inCup) {
+                qualNote.innerText = `Qualifiziert über den Sieg im ${landesPokal.region}pokal der Vorsaison.`;
+            } else {
+                qualNote.innerText = `Unterhalb der ${leagueNames[DFB_POKAL_DIREKT_AB_LIGA]} führt der Weg in den DFB-Pokal nur über den ${landesPokal.region}pokal - siehe unten.`;
+            }
+        }
         let badge = document.getElementById('cup-status-badge');
         if (badge) {
             badge.innerText = game.inCup ? "Im Wettbewerb ✓" : "Ausgeschieden ❌";

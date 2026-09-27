@@ -187,6 +187,8 @@
         let p = squad.find(x => x.id === game.activeUltimatumPlayerId);
         if (!p) return;
         document.getElementById('ultimatum-player-name').innerText = p.name;
+        let ultAvatarBox = document.getElementById('ultimatum-player-avatar');
+        if (ultAvatarBox) ultAvatarBox.innerHTML = (typeof getPlayerAvatarSVG === 'function') ? getPlayerAvatarSVG(p, 64) : '';
         document.getElementById('ultimatum-player-info').innerText = `Stärke ${p.strength} · Moral ${p.morale}% · Restvertrag: ${p.contracts} Jahr(e) · Frist: Spieltag ${game.ultimatumDeadlineMatchday}${(p.ultimatumCount || 0) > 0 ? ` · ⚠️ ${p.ultimatumCount}. Ultimatum` : ''}`;
         let agentBtn = document.getElementById('btn-ultimatum-agent');
         if (agentBtn) {
