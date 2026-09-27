@@ -63,6 +63,7 @@ JS_ORDER = [
     "js/private-life.js",
     "js/player-scandals.js",
     "js/fanclub-management.js",
+    "js/tactic-system.js",
     "js/underworld.js",
     "js/history.js",
     "js/achievements.js",

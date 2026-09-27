@@ -1189,6 +1189,9 @@
         if (typeof checkForScandale === 'function') checkForScandale();
         if (typeof checkFanProtest === 'function') checkFanProtest();
         if (typeof checkUltraConflict === 'function') checkUltraConflict();
+        if (typeof analyzeMatchTactics === 'function') {
+            analyzeMatchTactics({ won: won, draw: matchday.result === 'draw', score: currentScore, conceded: concededGoals });
+        }
     }
 
     // Bestimmte runde Zuschauerzahlen sind erzählerisch bedeutsam genug für eine einmalige

@@ -209,7 +209,11 @@
         scandals: [],
         fanclubs: [],
         fanSatisfaction: 50,
-        ultraGroups: []
+        ultraGroups: [],
+        tacticsHistory: [],
+        playerRoles: {},
+        formationHistory: [],
+        tacticAnalysis: { matchesAnalyzed: 0, effectiveness: 0.5 }
     };
 
     let managerRPG = {
