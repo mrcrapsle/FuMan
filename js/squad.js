@@ -714,6 +714,8 @@
         if (typeof renderLeadershipCouncilBox === 'function') renderLeadershipCouncilBox();
         if (typeof renderAgentsPanel === 'function') renderAgentsPanel();
         if (typeof renderRivalriesPanel === 'function') renderRivalriesPanel();
+        if (typeof renderArchetypesPanel === 'function') renderArchetypesPanel();
+        if (typeof renderArchetypeComparisonChart === 'function') renderArchetypeComparisonChart();
         let container = document.getElementById('bench-list');
         if (!container) return;
         container.innerHTML = '';
