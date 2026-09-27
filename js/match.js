@@ -1181,6 +1181,10 @@
         if (typeof tickAutoReserve === 'function') tickAutoReserve(game.money - moneyAtStart);
         loescheBuchungskontext();
         if (typeof checkAgentNegotiations === 'function') checkAgentNegotiations();
+        // Derby-Verarbeitung: wenn es ein Spiel gegen einen Rivalen war
+        if (typeof currentMatch !== 'undefined' && currentMatch && typeof processDerbyMatch === 'function') {
+            processDerbyMatch(currentMatch.opponent, won, currentMatch.score, currentMatch.conceded);
+        }
     }
 
     // Bestimmte runde Zuschauerzahlen sind erzählerisch bedeutsam genug für eine einmalige

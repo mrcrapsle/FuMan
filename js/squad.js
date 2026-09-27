@@ -713,6 +713,7 @@
         if (typeof renderCliqueBox === 'function') renderCliqueBox();
         if (typeof renderLeadershipCouncilBox === 'function') renderLeadershipCouncilBox();
         if (typeof renderAgentsPanel === 'function') renderAgentsPanel();
+        if (typeof renderRivalriesPanel === 'function') renderRivalriesPanel();
         let container = document.getElementById('bench-list');
         if (!container) return;
         container.innerHTML = '';

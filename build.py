@@ -19,6 +19,7 @@ JS_ORDER = [
     "js/playerdetail.js",
     "js/squad.js",
     "js/agents-management.js",
+    "js/club-rivalries.js",
     "js/transfers.js",
     "js/secondteam.js",
     "js/career.js",
