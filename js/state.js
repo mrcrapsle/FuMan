@@ -429,17 +429,17 @@
     };
 
     let campusBuildings = {
-        fankneipe: { name: "Fan-Kneipe 'Zur Nachspielzeit'", lvl: 0, max: 5, baseCost: 600000, desc: "+1.800 € Umsatz pro Heimspiel & steigert Ultra-Zufriedenheit" },
-        megastore: { name: "Fanshop Megastore", lvl: 0, max: 5, baseCost: 2800000, desc: "+35 Basis-Kunden pro Woche für alle Fanartikel pro Stufe" },
-        parkhaus: { name: "Parkhaus & Shuttle-Bahnhof", lvl: 0, max: 5, baseCost: 2500000, desc: "+1.500 € Parkgebühren & verbessert Stadionauslastung" },
-        reha: { name: "Reha-Klinik & Physio-Zentrum", lvl: 0, max: 5, baseCost: 4500000, desc: "Verringert Verletzungszeiten und beschleunigt Regeneration" },
-        internat: { name: "Jugendinternat & Schule", lvl: 0, max: 5, baseCost: 5500000, desc: "Erhöht Stärke und Potenzial neuer Nachwuchsspieler" },
-        museum: { name: "Vereinsmuseum & Traditions-Pavillon", lvl: 0, max: 5, baseCost: 1800000, desc: "+2% Vorstands- und Fanvertrauen dauerhaft pro Stufe" },
-        trainingground: { name: "Trainingsgelände mit Flutlicht", lvl: 0, max: 5, baseCost: 3200000, desc: "+1 permanenter Stärkebonus für die gesamte Mannschaft" },
-        hotel: { name: "VIP-Tagungshotel", lvl: 0, max: 5, baseCost: 9000000, desc: "+5.000 € feste Einnahmen pro Heimspiel" },
-        foodtrucks: { name: "Catering-Meile & Foodtruck-Garten", lvl: 0, max: 5, baseCost: 550000, desc: "+2.400 € Catering-Erlöse pro Heimspiel" },
-        turnstiles: { name: "Modernes Einlass-System", lvl: 0, max: 5, baseCost: 900000, desc: "Senkt Betriebskosten & verhindert Schwarzmarkt-Verluste" },
-        securityAcademy: { name: "Sicherheitsakademie", lvl: 0, max: 5, baseCost: 850000, desc: "Bildet eigene Ordner & Sicherheitskräfte aus - schaltet höhere Schulungsstufen und mehr Festanstellungs-Plätze frei" }
+        fankneipe: { name: "Fan-Kneipe 'Zur Nachspielzeit'", lvl: 0, max: 5, baseCost: 1500000, desc: "+1.800 € Umsatz pro Heimspiel & steigert Ultra-Zufriedenheit" },
+        megastore: { name: "Fanshop Megastore", lvl: 0, max: 5, baseCost: 7200000, desc: "+35 Basis-Kunden pro Woche für alle Fanartikel pro Stufe" },
+        parkhaus: { name: "Parkhaus & Shuttle-Bahnhof", lvl: 0, max: 5, baseCost: 6500000, desc: "+1.500 € Parkgebühren & verbessert Stadionauslastung" },
+        reha: { name: "Reha-Klinik & Physio-Zentrum", lvl: 0, max: 5, baseCost: 12000000, desc: "Verringert Verletzungszeiten und beschleunigt Regeneration" },
+        internat: { name: "Jugendinternat & Schule", lvl: 0, max: 5, baseCost: 14500000, desc: "Erhöht Stärke und Potenzial neuer Nachwuchsspieler" },
+        museum: { name: "Vereinsmuseum & Traditions-Pavillon", lvl: 0, max: 5, baseCost: 4500000, desc: "+2% Vorstands- und Fanvertrauen dauerhaft pro Stufe" },
+        trainingground: { name: "Trainingsgelände mit Flutlicht", lvl: 0, max: 5, baseCost: 8500000, desc: "+1 permanenter Stärkebonus für die gesamte Mannschaft" },
+        hotel: { name: "VIP-Tagungshotel", lvl: 0, max: 5, baseCost: 22500000, desc: "+5.000 € feste Einnahmen pro Heimspiel" },
+        foodtrucks: { name: "Catering-Meile & Foodtruck-Garten", lvl: 0, max: 5, baseCost: 1400000, desc: "+2.400 € Catering-Erlöse pro Heimspiel" },
+        turnstiles: { name: "Modernes Einlass-System", lvl: 0, max: 5, baseCost: 2400000, desc: "Senkt Betriebskosten & verhindert Schwarzmarkt-Verluste" },
+        securityAcademy: { name: "Sicherheitsakademie", lvl: 0, max: 5, baseCost: 2200000, desc: "Bildet eigene Ordner & Sicherheitskräfte aus - schaltet höhere Schulungsstufen und mehr Festanstellungs-Plätze frei" }
     };
     let securityWorkforce = {
         permanentStewards: 0,
@@ -448,32 +448,32 @@
     };
 
     let staffMembers = {
-        coTrainer: { name: "Co-Trainer", hired: false, wage: 800, cost: 6000, desc: "+2 Team-Stärke im Spiel & kann individuelles Spielertraining automatisch verteilen", task: "aus" },
-        twTrainer: { name: "Torwarttrainer", hired: false, wage: 550, cost: 4500, desc: "+10% bessere Torwart-Paraden" },
-        fitCoach: { name: "Athletik- & Konditionstrainer", hired: false, wage: 600, cost: 5000, desc: "-30% Fitnessverlust nach Spielen & kann Team-Trainingsschwerpunkt automatisch wählen", task: "aus" },
-        physio: { name: "Chef-Physiotherapeut", hired: false, wage: 700, cost: 5500, desc: "Halbiert die Ausfallzeit von Verletzten" },
-        scout: { name: "Chef-Scout", hired: false, wage: 750, cost: 6500, desc: "15% Rabatt auf alle Transfers" },
-        sportDir: { name: "Sportdirektor", hired: false, wage: 1100, cost: 9000, desc: "-20% Handgeld bei Vertragsverlängerungen" },
-        fanLiaison: { name: "Fanbeauftragter", hired: false, wage: 450, cost: 3500, desc: "+Fan-Zufriedenheit, weniger Ausschreitungsrisiko & kann Ticketpreise automatisch verwalten", task: "aus" },
-        marketingDir: { name: "Marketing-Direktor", hired: false, wage: 900, cost: 7500, desc: "+60% Online-Merch-Absatz & +20% Sponsoring" },
-        greenkeeper: { name: "Head-Greenkeeper", hired: false, wage: 400, cost: 3000, desc: "Perfekter Rasen (+2 Heimstärke)" },
-        secChief: { name: "Sicherheitschef", hired: false, wage: 500, cost: 4000, desc: "Verhindert teure DFB-Verbandsstrafen" },
-        fanshopManager: { name: "Fanshop-Manager", hired: false, wage: 650, cost: 5000, desc: "Übernimmt automatisch eine wählbare Aufgabe im Fanshop", task: "restock" },
-        analyst: { name: "Chef-Analyst", hired: false, wage: 700, cost: 6000, desc: "Enthüllt vor jedem Spiel die gegnerische Spielweise, Form & den gefährlichsten Gegenspieler" },
-        nutritionist: { name: "Ernährungsberater", hired: false, wage: 550, cost: 4500, desc: "Zusätzlicher Fitness-Erholungsbonus nach Spielen (stapelt mit Konditionstrainer)" },
-        pressOfficer: { name: "Pressesprecher", hired: false, wage: 600, cost: 5000, desc: "Dämpft negative Medienwirkung bei schlechten Ergebnissen & Skandalen" },
-        setPieceCoach: { name: "Standards-Spezialist", hired: false, wage: 650, cost: 5500, desc: "Verbessert Elfmeter-, Freistoß- und Eckballqualität der Mannschaft" }
+        coTrainer: { name: "Co-Trainer", hired: false, wage: 8000, cost: 60000, desc: "+2 Team-Stärke im Spiel & kann individuelles Spielertraining automatisch verteilen", task: "aus" },
+        twTrainer: { name: "Torwarttrainer", hired: false, wage: 5500, cost: 45000, desc: "+10% bessere Torwart-Paraden" },
+        fitCoach: { name: "Athletik- & Konditionstrainer", hired: false, wage: 6000, cost: 50000, desc: "-30% Fitnessverlust nach Spielen & kann Team-Trainingsschwerpunkt automatisch wählen", task: "aus" },
+        physio: { name: "Chef-Physiotherapeut", hired: false, wage: 7000, cost: 55000, desc: "Halbiert die Ausfallzeit von Verletzten" },
+        scout: { name: "Chef-Scout", hired: false, wage: 7500, cost: 65000, desc: "15% Rabatt auf alle Transfers" },
+        sportDir: { name: "Sportdirektor", hired: false, wage: 11000, cost: 90000, desc: "-20% Handgeld bei Vertragsverlängerungen" },
+        fanLiaison: { name: "Fanbeauftragter", hired: false, wage: 4500, cost: 35000, desc: "+Fan-Zufriedenheit, weniger Ausschreitungsrisiko & kann Ticketpreise automatisch verwalten", task: "aus" },
+        marketingDir: { name: "Marketing-Direktor", hired: false, wage: 9000, cost: 75000, desc: "+60% Online-Merch-Absatz & +20% Sponsoring" },
+        greenkeeper: { name: "Head-Greenkeeper", hired: false, wage: 4000, cost: 30000, desc: "Perfekter Rasen (+2 Heimstärke)" },
+        secChief: { name: "Sicherheitschef", hired: false, wage: 5000, cost: 40000, desc: "Verhindert teure DFB-Verbandsstrafen" },
+        fanshopManager: { name: "Fanshop-Manager", hired: false, wage: 6500, cost: 50000, desc: "Übernimmt automatisch eine wählbare Aufgabe im Fanshop", task: "restock" },
+        analyst: { name: "Chef-Analyst", hired: false, wage: 7000, cost: 60000, desc: "Enthüllt vor jedem Spiel die gegnerische Spielweise, Form & den gefährlichsten Gegenspieler" },
+        nutritionist: { name: "Ernährungsberater", hired: false, wage: 5500, cost: 45000, desc: "Zusätzlicher Fitness-Erholungsbonus nach Spielen (stapelt mit Konditionstrainer)" },
+        pressOfficer: { name: "Pressesprecher", hired: false, wage: 6000, cost: 50000, desc: "Dämpft negative Medienwirkung bei schlechten Ergebnissen & Skandalen" },
+        setPieceCoach: { name: "Standards-Spezialist", hired: false, wage: 6500, cost: 55000, desc: "Verbessert Elfmeter-, Freistoß- und Eckballqualität der Mannschaft" }
     };
     // Eigener, deutlich kleinerer Trainerstab NUR für die zweite Mannschaft. Bisher lief die
     // Reserve komplett ohne Betreuung: kein Trainer, keine Physio, keine Nachwuchsarbeit -
     // der Kader veränderte sich zwischen zwei Saisons überhaupt nicht. Gehälter und
     // Ablösen liegen bewusst weit unter denen des Profistabs (Amateurbereich).
     let secondTeamStaff = {
-        chefTrainer: { name: 'Reserve-Cheftrainer', hired: false, wage: 320, cost: 2800, icon: '🎯', desc: '+2 Teamstärke der zweiten Mannschaft in der Liga-Simulation.' },
-        coTrainer: { name: 'Reserve-Co-Trainer', hired: false, wage: 220, cost: 2000, icon: '📋', desc: 'Stellt die Reserve vor jedem Spieltag automatisch bestmöglich auf.' },
-        physio: { name: 'Reserve-Physiotherapeut', hired: false, wage: 240, cost: 2200, icon: '🩹', desc: 'Die Reserve erholt sich nach jedem Spieltag deutlich besser (Fitness).' },
-        talentScout: { name: 'Amateur-Talentspäher', hired: false, wage: 280, cost: 2500, icon: '🔍', desc: 'Deutlich stärkeres Angebot auf dem Amateur-Transfermarkt.' },
-        nachwuchsKoordinator: { name: 'Nachwuchs-Koordinator', hired: false, wage: 300, cost: 2600, icon: '🌱', desc: 'Reserve-Spieler bis 23 Jahre entwickeln sich im Saisonverlauf weiter.' }
+        chefTrainer: { name: 'Reserve-Cheftrainer', hired: false, wage: 3200, cost: 28000, icon: '🎯', desc: '+2 Teamstärke der zweiten Mannschaft in der Liga-Simulation.' },
+        coTrainer: { name: 'Reserve-Co-Trainer', hired: false, wage: 2200, cost: 20000, icon: '📋', desc: 'Stellt die Reserve vor jedem Spieltag automatisch bestmöglich auf.' },
+        physio: { name: 'Reserve-Physiotherapeut', hired: false, wage: 2400, cost: 22000, icon: '🩹', desc: 'Die Reserve erholt sich nach jedem Spieltag deutlich besser (Fitness).' },
+        talentScout: { name: 'Amateur-Talentspäher', hired: false, wage: 2800, cost: 25000, icon: '🔍', desc: 'Deutlich stärkeres Angebot auf dem Amateur-Transfermarkt.' },
+        nachwuchsKoordinator: { name: 'Nachwuchs-Koordinator', hired: false, wage: 3000, cost: 26000, icon: '🌱', desc: 'Reserve-Spieler bis 23 Jahre entwickeln sich im Saisonverlauf weiter.' }
     };
 
     // Für die neuen Personal-Funktionen: Ausbaustufen, Verträge, Zufriedenheit je Mitarbeiter.

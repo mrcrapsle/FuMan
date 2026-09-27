@@ -407,26 +407,26 @@
     // dadurch hat jede einzelne, frei kaufbare Anlage eine echte, spürbare Auswirkung statt
     // nur eine Zahl im Stadionwert zu sein.
     const STADIUM_UPGRADES = {
-        sicherheitstechnik: { name: '📹 Kameras & Zutrittskontrolle', cost: 1800000, category: 'security', desc: 'Senkt das Ausschreitungsrisiko dauerhaft um 15%.' },
-        evakuierung: { name: '🚨 Notfall-Evakuierungssystem', cost: 2200000, category: 'security', desc: 'Senkt das Ausschreitungsrisiko dauerhaft um 15% und verbessert die Sicherheitsbilanz.' },
-        medizinzentrum: { name: '🏥 Medizinisches Behandlungszentrum', cost: 3200000, category: 'injury', desc: 'Senkt das Verletzungsrisiko bei Heimspielen um 12%.' },
-        rasenpflege_hightech: { name: '🌱 High-Tech-Rasenpflegesystem', cost: 2600000, category: 'injury', desc: 'Senkt das Verletzungsrisiko bei Heimspielen um 12%.' },
-        klimaanlage: { name: '❄️ Klimaanlage & Belüftung', cost: 3800000, category: 'weather', desc: 'Neutralisiert die negativen Effekte von Hitze-Wetter komplett.' },
-        vip_lounges: { name: '🥂 VIP-Business-Lounges', cost: 4500000, category: 'income', incomeBase: 8000, desc: 'Feste Zusatzeinnahmen pro Heimspiel.' },
-        public_viewing: { name: '📽️ Public-Viewing-Zone', cost: 1500000, category: 'income', incomeBase: 3500, desc: 'Feste Zusatzeinnahmen pro Heimspiel.' },
-        ladestationen: { name: '🔌 E-Auto-Ladestationen', cost: 900000, category: 'income', incomeBase: 1800, desc: 'Feste Zusatzeinnahmen pro Heimspiel.' },
-        flagship_store: { name: '🛍️ Merchandising-Flagship-Store', cost: 3600000, category: 'merch', desc: 'Erhöht den Fanartikel-Absatz im Stadion dauerhaft um 15%.' },
-        stadion_app: { name: '📱 Digitale Stadion-App', cost: 1600000, category: 'merch', desc: 'Erhöht den Fanartikel-Absatz im Stadion dauerhaft um 10%.' },
-        wlan: { name: '📶 Öffentliches WLAN', cost: 1100000, category: 'comfort', desc: 'Erhöht den Zuschauerkomfort dauerhaft.' },
-        komfort_wc: { name: '🚿 Modernisierte Sanitäranlagen', cost: 1400000, category: 'comfort', desc: 'Erhöht den Zuschauerkomfort dauerhaft.' },
-        bahnanbindung: { name: '🚉 Verbesserte ÖPNV-Anbindung', cost: 5200000, category: 'comfort', desc: 'Erhöht den Zuschauerkomfort spürbar dauerhaft.' },
-        familienbereich: { name: '🎠 Familien-Erlebnisbereich', cost: 1900000, category: 'fans', desc: 'Erhöht die Fan-Zufriedenheit dauerhaft.' },
-        stadion_museum: { name: '🏛️ Stadion-internes Museum', cost: 2100000, category: 'fans', desc: 'Erhöht die Fan-Zufriedenheit dauerhaft.' },
-        lichtshow: { name: '✨ Lichtshow-System', cost: 2400000, category: 'media', desc: 'Erhöht dein Manager-Medienimage bei jedem Heimspiel leicht.' },
-        pressezentrum: { name: '🎙️ Modernes Pressezentrum', cost: 2000000, category: 'media', desc: 'Erhöht dein Manager-Medienimage bei jedem Heimspiel leicht.' },
-        beschallung: { name: '🔊 Profi-Beschallungsanlage', cost: 1700000, category: 'homeadvantage', desc: 'Verstärkt den Heimvorteil (Teamstärke bei Heimspielen).' },
-        solaranlage: { name: '☀️ Solaranlage aufs Dach', cost: 3300000, category: 'sponsor', desc: 'Erhöht die laufenden Sponsoreneinnahmen dauerhaft um 8% UND senkt die Stromkosten-Komponente der Betriebskosten um 20%.' },
-        business_center: { name: '🏢 Business-Center für Firmenkunden', cost: 4800000, category: 'sponsor', desc: 'Erhöht die laufenden Sponsoreneinnahmen dauerhaft um 8%.' }
+        sicherheitstechnik: { name: '📹 Kameras & Zutrittskontrolle', cost: 5400000, category: 'security', desc: 'Senkt das Ausschreitungsrisiko dauerhaft um 15%.' },
+        evakuierung: { name: '🚨 Notfall-Evakuierungssystem', cost: 6600000, category: 'security', desc: 'Senkt das Ausschreitungsrisiko dauerhaft um 15% und verbessert die Sicherheitsbilanz.' },
+        medizinzentrum: { name: '🏥 Medizinisches Behandlungszentrum', cost: 9600000, category: 'injury', desc: 'Senkt das Verletzungsrisiko bei Heimspielen um 12%.' },
+        rasenpflege_hightech: { name: '🌱 High-Tech-Rasenpflegesystem', cost: 7800000, category: 'injury', desc: 'Senkt das Verletzungsrisiko bei Heimspielen um 12%.' },
+        klimaanlage: { name: '❄️ Klimaanlage & Belüftung', cost: 11400000, category: 'weather', desc: 'Neutralisiert die negativen Effekte von Hitze-Wetter komplett.' },
+        vip_lounges: { name: '🥂 VIP-Business-Lounges', cost: 13500000, category: 'income', incomeBase: 8000, desc: 'Feste Zusatzeinnahmen pro Heimspiel.' },
+        public_viewing: { name: '📽️ Public-Viewing-Zone', cost: 4500000, category: 'income', incomeBase: 3500, desc: 'Feste Zusatzeinnahmen pro Heimspiel.' },
+        ladestationen: { name: '🔌 E-Auto-Ladestationen', cost: 2700000, category: 'income', incomeBase: 1800, desc: 'Feste Zusatzeinnahmen pro Heimspiel.' },
+        flagship_store: { name: '🛍️ Merchandising-Flagship-Store', cost: 10800000, category: 'merch', desc: 'Erhöht den Fanartikel-Absatz im Stadion dauerhaft um 15%.' },
+        stadion_app: { name: '📱 Digitale Stadion-App', cost: 4800000, category: 'merch', desc: 'Erhöht den Fanartikel-Absatz im Stadion dauerhaft um 10%.' },
+        wlan: { name: '📶 Öffentliches WLAN', cost: 3300000, category: 'comfort', desc: 'Erhöht den Zuschauerkomfort dauerhaft.' },
+        komfort_wc: { name: '🚿 Modernisierte Sanitäranlagen', cost: 4200000, category: 'comfort', desc: 'Erhöht den Zuschauerkomfort dauerhaft.' },
+        bahnanbindung: { name: '🚉 Verbesserte ÖPNV-Anbindung', cost: 15600000, category: 'comfort', desc: 'Erhöht den Zuschauerkomfort spürbar dauerhaft.' },
+        familienbereich: { name: '🎠 Familien-Erlebnisbereich', cost: 5700000, category: 'fans', desc: 'Erhöht die Fan-Zufriedenheit dauerhaft.' },
+        stadion_museum: { name: '🏛️ Stadion-internes Museum', cost: 6300000, category: 'fans', desc: 'Erhöht die Fan-Zufriedenheit dauerhaft.' },
+        lichtshow: { name: '✨ Lichtshow-System', cost: 7200000, category: 'media', desc: 'Erhöht dein Manager-Medienimage bei jedem Heimspiel leicht.' },
+        pressezentrum: { name: '🎙️ Modernes Pressezentrum', cost: 6000000, category: 'media', desc: 'Erhöht dein Manager-Medienimage bei jedem Heimspiel leicht.' },
+        beschallung: { name: '🔊 Profi-Beschallungsanlage', cost: 5100000, category: 'homeadvantage', desc: 'Verstärkt den Heimvorteil (Teamstärke bei Heimspielen).' },
+        solaranlage: { name: '☀️ Solaranlage aufs Dach', cost: 9900000, category: 'sponsor', desc: 'Erhöht die laufenden Sponsoreneinnahmen dauerhaft um 8% UND senkt die Stromkosten-Komponente der Betriebskosten um 20%.' },
+        business_center: { name: '🏢 Business-Center für Firmenkunden', cost: 14400000, category: 'sponsor', desc: 'Erhöht die laufenden Sponsoreneinnahmen dauerhaft um 8%.' }
     };
 
     function getStadiumUpgradeCost(key) {
@@ -690,37 +690,37 @@
     const STADIUM_CAPACITY_PROJECTS = {
         zusatztribuene: {
             name: '🏗️ Zusatztribüne', desc: 'Eine schlichte Stahlrohrtribüne hinter dem Tor. Nicht schön, aber zahlende Plätze mehr.',
-            baseCost: 5500000, seats: 2200, stehDelta: 0.02, sitzDelta: -0.02, fanDelta: 0,
+            baseCost: 13000000, seats: 2200, stehDelta: 0.02, sitzDelta: -0.02, fanDelta: 0,
             gate: () => true, gateText: ''
         },
         raenge_erweitern: {
             name: '🏗️ Ränge erweitern', desc: 'Beide Hintertortribünen aufstocken. Deutlich mehr Plätze - und eine lange Bauzeit.',
-            baseCost: 15000000, seats: 5500, stehDelta: 0, sitzDelta: 0, fanDelta: 0,
+            baseCost: 35000000, seats: 5500, stehDelta: 0, sitzDelta: 0, fanDelta: 0,
             gate: () => true, gateText: ''
         },
         grossausbau: {
             name: '🏗️ Großausbau', desc: 'Der ganz große Wurf: massiv mehr Plätze rundum. Der Vorstand muss dahinterstehen.',
-            baseCost: 28000000, seats: 9500, stehDelta: 0, sitzDelta: 0, fanDelta: 0,
+            baseCost: 65000000, seats: 9500, stehDelta: 0, sitzDelta: 0, fanDelta: 0,
             gate: () => (game.boardSat || 0) >= 70, gateText: 'Setzt ein Vorstandsvertrauen von mindestens 70% voraus.'
         },
         zweiter_rang: {
             name: '🏗️ Zweiter Rang', desc: 'Ein kompletter Oberrang auf die Haupttribüne. Steil, hoch, laut.',
-            baseCost: 19500000, seats: 6200, stehDelta: 0, sitzDelta: 0, fanDelta: 0,
+            baseCost: 48000000, seats: 6200, stehDelta: 0, sitzDelta: 0, fanDelta: 0,
             gate: () => !(STADIUM_TIER_CONFIG[getStadiumVisualTier()] || {}).secondTier, gateText: 'Nur möglich, solange das Stadion noch keinen zweiten Rang hat.'
         },
         sitzplatzumbau: {
             name: '🔧 Sitzplatzumbau', desc: 'Stehplätze werden bestuhlt. Bringt Geld pro Kopf - und garantiert Ärger mit der Kurve.',
-            baseCost: 3600000, seats: -800, stehDelta: -0.08, sitzDelta: 0.08, fanDelta: -4,
+            baseCost: 8500000, seats: -800, stehDelta: -0.08, sitzDelta: 0.08, fanDelta: -4,
             gate: () => (stadium.stehShare ?? 0.5) > 0.15, gateText: 'Der Stehplatzanteil ist bereits zu gering für einen weiteren Umbau.'
         },
         stehplatzrueckbau: {
             name: '🔧 Stehplatzrückbau', desc: 'Sitze raus, Wellenbrecher rein. Die Kurve jubelt, der Erlös pro Kopf sinkt leicht.',
-            baseCost: 2100000, seats: 900, stehDelta: 0.08, sitzDelta: -0.08, fanDelta: 3,
+            baseCost: 5500000, seats: 900, stehDelta: 0.08, sitzDelta: -0.08, fanDelta: 3,
             gate: () => (stadium.sitzShare ?? 0.45) > 0.15, gateText: 'Der Sitzplatzanteil ist bereits zu gering für einen weiteren Umbau.'
         },
         hybridrasen: {
             name: '🌱 Hybridrasen', desc: 'Kunstfaser im Naturrasen. Hebt die maximal erreichbare Rasenqualität dauerhaft an.',
-            baseCost: 2600000, seats: 0, stehDelta: 0, sitzDelta: 0, fanDelta: 0,
+            baseCost: 6500000, seats: 0, stehDelta: 0, sitzDelta: 0, fanDelta: 0,
             gate: () => !stadium.hybridrasen, gateText: 'Bereits vorhanden.'
         }
     };
