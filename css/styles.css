@@ -1101,3 +1101,118 @@
         .office-event-card button { width: 100%; }
 
         .off-lamp-foot { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: 76px; height: 12px; border-radius: 999px; background: linear-gradient(180deg, #6b7683, #333a44); }
+
+        /* ============================================================
+           INTERACTIVE STADION-VISUALISIERUNG - Neue Komponente
+           ============================================================ */
+        #stadium-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            height: 220px;
+            background: #111;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.5);
+            margin: 0 auto;
+            border: 2px solid var(--border-highlight);
+        }
+
+        /* Spielfeld */
+        .pitch {
+            position: absolute;
+            top: 25%;
+            left: 15%;
+            width: 70%;
+            height: 50%;
+            background: linear-gradient(135deg, #2e7d32 0%, #1b5e20 100%);
+            border: 2px solid #fff;
+            border-radius: 4px;
+            box-shadow: inset 0 2px 4px rgba(255,255,255,0.1);
+        }
+
+        .center-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            border: 2px solid rgba(255,255,255,0.6);
+            border-radius: 50%;
+        }
+
+        /* Tribünen (Basisstufe) */
+        .stand {
+            position: absolute;
+            background: linear-gradient(180deg, #37474f 0%, #263238 100%);
+            border: 1px solid #546e7a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: rgba(255,255,255,0.7);
+            font-weight: 600;
+        }
+
+        .north-stand { top: 5%; left: 15%; width: 70%; height: 20%; border-radius: 4px 4px 0 0; }
+        .south-stand { bottom: 5%; left: 15%; width: 70%; height: 20%; border-radius: 0 0 4px 4px; }
+        .west-stand { top: 25%; left: 2%; width: 13%; height: 50%; border-radius: 4px 0 0 4px; }
+        .east-stand { top: 25%; right: 2%; width: 13%; height: 50%; border-radius: 0 4px 4px 0; }
+
+        /* Flutlichter */
+        .floodlight {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: #ffeb3b;
+            border-radius: 50%;
+            box-shadow: 0 0 12px rgba(255, 235, 59, 0.6), 0 0 24px rgba(255, 235, 59, 0.3);
+        }
+
+        .top-left { top: 2%; left: 8%; }
+        .top-right { top: 2%; right: 8%; }
+
+        /* Dynamische Veränderung bei Vergrößerung (Level 2+) */
+        #stadium-container.stadium-level-2 .stand {
+            background: linear-gradient(180deg, #455a64 0%, #37474f 100%);
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+            border-color: var(--accent);
+        }
+
+        #stadium-container.stadium-level-2 .north-stand,
+        #stadium-container.stadium-level-2 .south-stand {
+            height: 28%;
+        }
+
+        #stadium-container.stadium-level-3 .stand {
+            background: linear-gradient(180deg, #546e7a 0%, #455a64 100%);
+            box-shadow: inset 0 0 15px rgba(255,235,59,0.1);
+        }
+
+        #stadium-container.stadium-level-3 .north-stand,
+        #stadium-container.stadium-level-3 .south-stand {
+            height: 32%;
+        }
+
+        #stadium-container.stadium-level-4 .stand {
+            background: linear-gradient(180deg, #607d8b 0%, #546e7a 100%);
+            box-shadow: 0 0 20px rgba(62, 224, 138, 0.2), inset 0 0 20px rgba(255,235,59,0.1);
+            border-color: var(--primary);
+        }
+
+        #stadium-container.stadium-level-4 .north-stand,
+        #stadium-container.stadium-level-4 .south-stand {
+            height: 35%;
+        }
+
+        #stadium-container.stadium-level-5 .stand {
+            background: linear-gradient(180deg, #78909c 0%, #607d8b 100%);
+            box-shadow: 0 0 30px rgba(62, 224, 138, 0.3), inset 0 0 25px rgba(255,235,59,0.15);
+            border-color: var(--gold);
+        }
+
+        #stadium-container.stadium-level-5 .north-stand,
+        #stadium-container.stadium-level-5 .south-stand {
+            height: 38%;
+        }
