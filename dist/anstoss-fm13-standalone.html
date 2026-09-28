@@ -3246,6 +3246,18 @@
                         <div id="top-scorers-box"></div>
                     </div>
                     <div class="panel" style="margin-bottom:8px;">
+                        <div class="panel-header">📊 LIGAPLATZIERUNG</div>
+                        <div id="league-position-chart"></div>
+                    </div>
+                    <div class="panel" style="margin-bottom:8px;">
+                        <div class="panel-header">💎 PUNKTE-ENTWICKLUNG</div>
+                        <div id="league-points-chart"></div>
+                    </div>
+                    <div class="panel" style="margin-bottom:8px;">
+                        <div class="panel-header">🏆 AKTUELLE LIGAPOSITION</div>
+                        <div id="league-standings-box"></div>
+                    </div>
+                    <div class="panel" style="margin-bottom:8px;">
                         <div class="panel-header" style="color:var(--primary);">📈 SAISONVERLAUF (PUNKTE)</div>
                         <div id="season-points-chart-box"></div>
                     </div>
@@ -9424,8 +9436,10 @@ function getTransferBudgetInfo() {
     }
 
     function renderLeagueView() {
+        recordLeagueProgress();
         renderTopScorersBox();
         renderSeasonPointsChart();
+        if (typeof renderLeagueProgressCharts === 'function') renderLeagueProgressCharts();
 
         // WICHTIG: Zwei getrennte Referenzen! fixturesData verweist per Index auf die
         // ORIGINAL-Reihenfolge in leaguesData[level] - die darf nie sortiert werden,
