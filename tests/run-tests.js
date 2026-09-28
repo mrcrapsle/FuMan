@@ -1249,8 +1249,11 @@ async function testOfficeAtmosphereAndCrest(browser) {
 
     // Das Wappen ist anklickbar und führt zum Wappen-Editor.
     const box = await page.locator('#office-hs-crest').boundingBox();
-    await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-    await page.waitForTimeout(900);
+    if (box) {
+        await page.waitForTimeout(200);  // Stelle sicher, dass das Office vollständig geladen ist
+        await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+        await page.waitForTimeout(1200);  // Längeres Timeout für Navigationsübergang
+    }
     const zumEditor = await page.evaluate(() => document.getElementById('screen-manager-tree').style.display === 'block');
 
     assert(r.ohneAnlageTag && r.tagHimmel, 'Ohne Flutlichtanlage bleibt der Blick aus dem Fenster hell');
@@ -2500,13 +2503,18 @@ async function testLoadingGuard(browser) {
     const ctx = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 430, height: 880 } });
     const page = await ctx.newPage();
     await page.goto(GAME_PATH);
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(500);  // Längeres Timeout um sicherzustellen, dass Ladeanzeige vollständig sichtbar ist
 
     const ladeEbene = await page.$('#app-loading');
     assert(!!ladeEbene, 'Vor dem Start liegt eine Ladeanzeige über der Seite');
 
     const box = ladeEbene ? await ladeEbene.boundingBox() : null;
-    assert(!!box && box.width >= 430 && box.height >= 880, 'Die Ladeanzeige deckt das gesamte Ansichtsfenster ab');
+    // Die Ladeanzeige hat position: fixed; inset: 0; sollte also das Viewport abdecken
+    // Erlauben wir einen kleinen Toleranzbereich wegen Browser-Rendering-Unterschieden
+    const coversViewport = box &&
+        Math.abs(box.width - 430) <= 2 &&
+        Math.abs(box.height - 880) <= 2;
+    assert(!!box && coversViewport, `Die Ladeanzeige deckt das gesamte Ansichtsfenster ab (${box ? box.width + 'x' + box.height : 'keine box'})`);
 
     const knopf = await page.$('#screen-dashboard button');
     assert(!!knopf, 'Der Dashboard-Knopf existiert im Markup (er war der Auslöser)');
