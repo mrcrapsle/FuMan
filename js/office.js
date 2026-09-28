@@ -439,23 +439,36 @@
         // dürfen nicht zusätzlich als Klick in den Raum gewertet werden.
         const isOverlayTarget = (e) => !!(e.target.closest && e.target.closest('.office-hud, .office-quicknav'));
 
-        viewport.addEventListener('click', e => {
+        // Event Listener speichern um Memory Leaks zu verhindern
+        const officeClickHandler = (e) => {
             if (isOverlayTarget(e)) return;
             let id = officeHotspotAtPoint(e.clientX, e.clientY);
             if (id) officeEnterHotspot(id);
-        });
-
-        viewport.addEventListener('mousemove', e => {
+        };
+        const officeMoveHandler = (e) => {
             apply(e.clientX, e.clientY);
             setOfficeHover(isOverlayTarget(e) ? null : officeHotspotAtPoint(e.clientX, e.clientY));
-        });
-        viewport.addEventListener('touchmove', e => {
+        };
+        const officeTouchHandler = (e) => {
             if (e.touches && e.touches[0]) apply(e.touches[0].clientX, e.touches[0].clientY);
-        }, { passive: true });
-        viewport.addEventListener('mouseleave', () => {
+        };
+        const officeLeaveHandler = () => {
             room.style.setProperty('--office-ry', '0deg');
             room.style.setProperty('--office-rx', '0deg');
             setOfficeHover(null);
-        });
+        };
+
+        // Alte Listener entfernen falls vorhanden
+        viewport.removeEventListener('click', officeClickHandler);
+        viewport.removeEventListener('mousemove', officeMoveHandler);
+        viewport.removeEventListener('touchmove', officeTouchHandler);
+        viewport.removeEventListener('mouseleave', officeLeaveHandler);
+        window.removeEventListener('resize', fitOfficeScale);
+
+        // Neue Listener hinzufügen
+        viewport.addEventListener('click', officeClickHandler);
+        viewport.addEventListener('mousemove', officeMoveHandler);
+        viewport.addEventListener('touchmove', officeTouchHandler, { passive: true });
+        viewport.addEventListener('mouseleave', officeLeaveHandler);
         window.addEventListener('resize', fitOfficeScale);
     }

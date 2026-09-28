@@ -1224,6 +1224,235 @@
             height: 38%;
         }
 
+        /* ========== UMFASSENDE MOBILE RESPONSIVITÄT ========== */
+
+        /* TABLET: 650px - 1000px */
+        @media (max-width: 1000px) {
+            .panel { margin-bottom: 12px; }
+            .btn-action, .btn-secondary { font-size: 11px; padding: 8px 10px; }
+            .panel-header { font-size: 12px; padding: 8px; }
+            .box { font-size: 10px; padding: 6px; }
+            .stadium-bowl-wrapper { max-height: 280px; }
+            #stadium-container { width: 100%; height: 200px; }
+        }
+
+        /* MOBILE LANDSCAPE: 768px - 1000px */
+        @media (max-width: 768px) {
+            body { font-size: 12px; }
+            .panel { margin: 0 0 10px 0; }
+            .panel-header { padding: 6px; font-size: 11px; }
+            .box { padding: 5px; font-size: 9px; }
+
+            /* Grid optimieren */
+            .player-card { font-size: 9px; padding: 8px; }
+            .stat-row { grid-template-columns: 1fr 1fr; }
+
+            /* Buttons kompakter */
+            .btn-action, .btn-secondary {
+                font-size: 10px;
+                padding: 6px 8px;
+                min-width: auto;
+            }
+
+            /* Transfer/Kader Listen */
+            .player-list-item {
+                display: grid;
+                grid-template-columns: auto 1fr auto;
+                gap: 4px;
+                font-size: 9px;
+                padding: 6px;
+            }
+
+            /* Stadium visuell kompakter */
+            .stand { font-size: 8px; }
+            .stadium-bowl-wrapper { max-height: 200px; }
+        }
+
+        /* MOBILE PORTRAIT: <= 650px (bestehende Media Query, erweitert) */
+        @media (max-width: 650px) {
+            html { font-size: 13px; }
+            body { margin: 0; padding: 0; }
+
+            /* Layout */
+            .main-wrapper { flex-direction: column; }
+            .app-sidebar {
+                position: fixed; top: 0; left: 0; bottom: 0; width: 78%; max-width: 300px;
+                z-index: 900; flex-direction: column; flex-wrap: nowrap;
+                transform: translateX(-105%); transition: transform 0.28s ease;
+                box-shadow: 8px 0 30px rgba(0,0,0,0.6); overflow-y: auto; max-height: 100vh;
+                padding-top: 16px;
+            }
+            .app-sidebar.menu-open { transform: translateX(0); }
+            .nav-category { display: block; }
+            .nav-btn { flex: none; font-size: 11px; padding: 9px 10px; }
+            .menu-backdrop {
+                display: none; position: fixed; inset: 0; z-index: 899;
+                background: rgba(0,0,0,0.55); backdrop-filter: blur(2px);
+            }
+            .menu-backdrop.menu-open { display: block; }
+            .hamburger-btn {
+                display: flex; align-items: center; justify-content: center;
+                width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border);
+                background: rgba(255,255,255,0.05); color: var(--text-main); font-size: 16px;
+                cursor: pointer; flex-shrink: 0;
+            }
+            .app-content { max-height: none; overflow-y: visible; padding: 8px; }
+
+            /* Panels compact */
+            .panel { margin: 0 0 8px 0; padding: 6px; }
+            .panel-header { font-size: 11px; padding: 6px; }
+            .box { font-size: 9px; padding: 4px; margin: 4px 0; }
+
+            /* Buttons */
+            .btn-action, .btn-secondary, .btn-success, .btn-warning, .btn-danger {
+                font-size: 10px;
+                padding: 6px 8px;
+                margin: 2px 0;
+                width: 100%;
+                border-radius: 4px;
+            }
+
+            /* Grid-Layouts anpassen */
+            .player-card {
+                padding: 6px;
+                font-size: 9px;
+                grid-template-columns: auto 1fr;
+            }
+            .stat-row {
+                grid-template-columns: 1fr;
+                gap: 2px;
+            }
+
+            /* Transfer-Liste single column */
+            .player-list-item {
+                display: block;
+                font-size: 9px;
+                padding: 6px;
+                margin: 4px 0;
+            }
+
+            /* Stadium Visualisierung */
+            .stadium-bowl-wrapper {
+                max-height: 150px;
+                margin: 4px 0;
+            }
+            .stadium-bowl {
+                width: 100%;
+                height: 150px;
+            }
+            .stand {
+                font-size: 7px;
+                padding: 3px;
+            }
+
+            /* Hub-Tabs stacked */
+            .hub-tab-bar {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 2px;
+                margin-bottom: 6px;
+            }
+            .hubtab-btn {
+                font-size: 9px;
+                padding: 6px 4px;
+            }
+
+            /* Header kompakt */
+            .app-header {
+                padding: 8px;
+                gap: 4px;
+            }
+
+            /* Accordion compact */
+            .accordion-header {
+                font-size: 11px;
+                padding: 6px;
+            }
+            .accordion-toggle {
+                font-size: 12px;
+            }
+
+            /* Modals responsive */
+            .generic-modal-overlay { padding: 8px; }
+            .generic-modal {
+                max-width: 95vw;
+                max-height: 85vh;
+                font-size: 10px;
+            }
+
+            /* Toast messages */
+            .app-toast {
+                font-size: 11px;
+                padding: 10px 16px;
+                max-width: 90vw;
+                bottom: 12px;
+            }
+
+            /* Input fields */
+            input, select, textarea {
+                font-size: 12px;
+                padding: 6px;
+            }
+
+            /* Scrollbar dünner */
+            ::-webkit-scrollbar { width: 6px; height: 6px; }
+            ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+            ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+        }
+
+        /* SMALL MOBILE: <= 480px (iPhone SE, etc.) */
+        @media (max-width: 480px) {
+            html { font-size: 12px; }
+            .app-sidebar { width: 85%; max-width: 280px; }
+            .app-content { padding: 6px; }
+
+            .panel { margin: 0 0 6px 0; padding: 4px; }
+            .panel-header { font-size: 10px; padding: 4px; }
+            .box { font-size: 8px; padding: 3px; }
+
+            .btn-action, .btn-secondary {
+                font-size: 9px;
+                padding: 5px 6px;
+            }
+
+            .hub-tab-bar {
+                grid-template-columns: 1fr;
+                gap: 1px;
+            }
+
+            .stadium-bowl { height: 120px; }
+            .stand { font-size: 6px; }
+
+            .accordion-header {
+                font-size: 10px;
+                padding: 4px;
+            }
+
+            /* Tabelle/Listen single column */
+            .stat-row { grid-template-columns: 1fr; }
+            table { font-size: 8px; }
+            tr { padding: 2px; }
+            td { padding: 2px 4px; }
+        }
+
+        /* VERY SMALL: <= 360px (Galaxy S, etc.) */
+        @media (max-width: 360px) {
+            html { font-size: 11px; }
+
+            .panel { padding: 3px; margin: 0 0 4px 0; }
+            .panel-header { font-size: 9px; padding: 3px; }
+            .box { font-size: 8px; padding: 2px; }
+
+            .btn-action, .btn-secondary {
+                font-size: 8px;
+                padding: 4px;
+            }
+
+            .hub-tab-bar { grid-template-columns: 1fr; }
+            .accordion-header { font-size: 9px; padding: 3px; }
+
+            .stadium-bowl { height: 100px; }
+        }
+
         /* Accordion Styles */
         .accordion-section {
             margin-bottom: 8px;
@@ -13030,24 +13259,37 @@ function renderTalentDetectionPanel() {
         // dürfen nicht zusätzlich als Klick in den Raum gewertet werden.
         const isOverlayTarget = (e) => !!(e.target.closest && e.target.closest('.office-hud, .office-quicknav'));
 
-        viewport.addEventListener('click', e => {
+        // Event Listener speichern um Memory Leaks zu verhindern
+        const officeClickHandler = (e) => {
             if (isOverlayTarget(e)) return;
             let id = officeHotspotAtPoint(e.clientX, e.clientY);
             if (id) officeEnterHotspot(id);
-        });
-
-        viewport.addEventListener('mousemove', e => {
+        };
+        const officeMoveHandler = (e) => {
             apply(e.clientX, e.clientY);
             setOfficeHover(isOverlayTarget(e) ? null : officeHotspotAtPoint(e.clientX, e.clientY));
-        });
-        viewport.addEventListener('touchmove', e => {
+        };
+        const officeTouchHandler = (e) => {
             if (e.touches && e.touches[0]) apply(e.touches[0].clientX, e.touches[0].clientY);
-        }, { passive: true });
-        viewport.addEventListener('mouseleave', () => {
+        };
+        const officeLeaveHandler = () => {
             room.style.setProperty('--office-ry', '0deg');
             room.style.setProperty('--office-rx', '0deg');
             setOfficeHover(null);
-        });
+        };
+
+        // Alte Listener entfernen falls vorhanden
+        viewport.removeEventListener('click', officeClickHandler);
+        viewport.removeEventListener('mousemove', officeMoveHandler);
+        viewport.removeEventListener('touchmove', officeTouchHandler);
+        viewport.removeEventListener('mouseleave', officeLeaveHandler);
+        window.removeEventListener('resize', fitOfficeScale);
+
+        // Neue Listener hinzufügen
+        viewport.addEventListener('click', officeClickHandler);
+        viewport.addEventListener('mousemove', officeMoveHandler);
+        viewport.addEventListener('touchmove', officeTouchHandler, { passive: true });
+        viewport.addEventListener('mouseleave', officeLeaveHandler);
         window.addEventListener('resize', fitOfficeScale);
     }
 
