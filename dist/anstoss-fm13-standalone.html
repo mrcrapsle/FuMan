@@ -2508,6 +2508,18 @@
                     <div id="squad-leaderboard-box"></div>
                 </div>
                 <div class="panel">
+                    <div class="panel-header">📡 KADER-RADAR (ATTRIBUTE)</div>
+                    <div id="squad-radar-container" style="margin-bottom:12px;"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">📊 KADER-METRIKEN</div>
+                    <div id="squad-strength-metrics"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">⚖️ LIGA-VERGLEICH</div>
+                    <div id="squad-comparison-box"></div>
+                </div>
+                <div class="panel">
                     <div class="panel-header">⚽ KADER & AUFSTELLUNG</div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px; margin-bottom:6px;">
                         <div>Kapitän: <select id="sel-captain" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
@@ -6292,6 +6304,9 @@
         renderSquadOverviewBox();
         renderSquadDepthChart();
         renderSquadLeaderboardBox();
+        if (typeof renderSquadRadar === 'function') renderSquadRadar();
+        if (typeof renderSquadStrengthMetrics === 'function') renderSquadStrengthMetrics();
+        if (typeof renderSquadComparison === 'function') renderSquadComparison();
         renderFormationCards();
         renderTacticStyleCards();
         renderTacticsBoardStatBar();

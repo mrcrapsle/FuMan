@@ -728,6 +728,9 @@
         renderSquadOverviewBox();
         renderSquadDepthChart();
         renderSquadLeaderboardBox();
+        if (typeof renderSquadRadar === 'function') renderSquadRadar();
+        if (typeof renderSquadStrengthMetrics === 'function') renderSquadStrengthMetrics();
+        if (typeof renderSquadComparison === 'function') renderSquadComparison();
         renderFormationCards();
         renderTacticStyleCards();
         renderTacticsBoardStatBar();
