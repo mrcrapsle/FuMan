@@ -9,12 +9,12 @@
     // wieder zu verkaufen (zu einem Abschlag, wie im echten Immobilienmarkt üblich).
 
     let realEstatePortfolio = {
-        parkplatz: { name: "Parkplatz-Gelände", owned: false, lvl: 0, max: 3, baseCost: 700000, baseIncome: 3200, desc: "Vermietete Parkflächen rund ums Stadion - Einnahmen aus Parkgebühren an Spiel- und Nicht-Spieltagen." },
-        buerokomplex: { name: "Bürokomplex 'Vereins-Tower'", owned: false, lvl: 0, max: 3, baseCost: 2200000, baseIncome: 9500, desc: "Vermietete Büroflächen an lokale Unternehmen - stabile, planbare Mieteinnahmen." },
-        wohnanlage: { name: "Wohnanlage am Stadion", owned: false, lvl: 0, max: 3, baseCost: 3500000, baseIncome: 13000, desc: "Mietwohnungen in Stadionnähe - beliebt bei Fans, die nah am Verein wohnen wollen." },
-        einkaufszentrum: { name: "Einkaufszentrum 'Fan-Meile'", owned: false, lvl: 0, max: 3, baseCost: 5000000, baseIncome: 21000, desc: "Ladenflächen für Einzelhandel und Gastronomie - höhere Miete, aber auch höheres Risiko bei schlechter Konjunktur." },
-        hotelbeteiligung: { name: "Hotel-Beteiligung", owned: false, lvl: 0, max: 3, baseCost: 6500000, baseIncome: 26000, desc: "Anteile an einem Hotel für Gästefans und Geschäftsreisende - Einnahmen steigen zusätzlich mit der Attraktivität des Vereins." },
-        gewerbepark: { name: "Gewerbepark", owned: false, lvl: 0, max: 3, baseCost: 4200000, baseIncome: 17500, desc: "Gemischt genutzter Gewerbepark mit mehreren kleinen Mietern - breit gestreutes, robustes Einkommen." }
+        parkplatz: { name: "Parkplatz-Gelände", owned: false, lvl: 0, max: 3, baseCost: 3200000, baseIncome: 2800, desc: "Vermietete Parkflächen rund ums Stadion - Einnahmen aus Parkgebühren an Spiel- und Nicht-Spieltagen." },
+        buerokomplex: { name: "Bürokomplex 'Vereins-Tower'", owned: false, lvl: 0, max: 3, baseCost: 8500000, baseIncome: 6200, desc: "Vermietete Büroflächen an lokale Unternehmen - stabile, planbare Mieteinnahmen." },
+        wohnanlage: { name: "Wohnanlage am Stadion", owned: false, lvl: 0, max: 3, baseCost: 12000000, baseIncome: 7500, desc: "Mietwohnungen in Stadionnähe - beliebt bei Fans, die nah am Verein wohnen wollen." },
+        einkaufszentrum: { name: "Einkaufszentrum 'Fan-Meile'", owned: false, lvl: 0, max: 3, baseCost: 18000000, baseIncome: 9800, desc: "Ladenflächen für Einzelhandel und Gastronomie - höhere Miete, aber auch höheres Risiko bei schlechter Konjunktur." },
+        hotelbeteiligung: { name: "Hotel-Beteiligung", owned: false, lvl: 0, max: 3, baseCost: 22000000, baseIncome: 11500, desc: "Anteile an einem Hotel für Gästefans und Geschäftsreisende - Einnahmen steigen zusätzlich mit der Attraktivität des Vereins." },
+        gewerbepark: { name: "Gewerbepark", owned: false, lvl: 0, max: 3, baseCost: 15000000, baseIncome: 8200, desc: "Gemischt genutzter Gewerbepark mit mehreren kleinen Mietern - breit gestreutes, robustes Einkommen." }
     };
 
     function getRealEstateCost(key) {
