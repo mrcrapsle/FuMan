@@ -1216,3 +1216,65 @@
         #stadium-container.stadium-level-5 .south-stand {
             height: 38%;
         }
+
+        /* Accordion Styles */
+        .accordion-section {
+            margin-bottom: 8px;
+        }
+
+        .accordion-header {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 600;
+            font-size: 12px;
+            color: var(--accent);
+            border-radius: 4px;
+            user-select: none;
+            transition: all 0.2s ease;
+        }
+
+        .accordion-header:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--primary);
+        }
+
+        .accordion-header.active {
+            color: var(--gold);
+            border-color: var(--gold);
+        }
+
+        .accordion-toggle {
+            display: inline-block;
+            transition: transform 0.2s ease;
+            font-size: 14px;
+        }
+
+        .accordion-header.active .accordion-toggle {
+            transform: rotate(180deg);
+        }
+
+        .accordion-content {
+            display: none;
+            overflow: hidden;
+            animation: slideDown 0.2s ease;
+        }
+
+        .accordion-content.active {
+            display: block;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-5px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }

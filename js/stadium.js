@@ -1229,3 +1229,16 @@
         updateInteractiveStadiumVisualization();
     }
 
+    // Accordion Toggle Funktion für Menü-Organisation
+    function toggleAccordion(headerElement) {
+        const section = headerElement.closest('.accordion-section');
+        if (!section) return;
+
+        const content = section.querySelector('.accordion-content');
+        const isActive = content.classList.contains('active');
+
+        // Toggle active state
+        headerElement.classList.toggle('active');
+        content.classList.toggle('active');
+    }
+

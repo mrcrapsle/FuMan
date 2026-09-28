@@ -1488,101 +1488,150 @@
                         <div class="dashboard-hero-bowl-wrapper" id="stadium-hero-bowl-wrapper"></div>
                     </div>
                 </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">📊 KENNZAHLEN</div>
-                    <div id="stadium-name-header" style="text-align:center; font-size:14px; font-weight:900; color:var(--accent); margin-bottom:8px;">Vereinsstadion</div>
-                    <div id="stadium-key-figures-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">🎟️ TICKETPREISE</div>
-                    <div id="ticket-price-sliders-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">🌱 RASENPFLEGE</div>
-                    <div id="pitch-maintenance-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">💰 NEBENEINNAHMEN</div>
-                    <div id="stadium-ancillary-income-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">📈 ZUSCHAUERENTWICKLUNG</div>
-                    <div id="stadium-attendance-chart-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">🏗️ NAMENTLICHE AUSBAUPROJEKTE</div>
-                    <div class="box" style="font-size:9px; margin-bottom:6px;">Zusätzlich zum block-für-block-Ausbau unten: konkrete Großprojekte mit eigenem Effekt auf Kapazität und Sitzplatz-Zusammensetzung.</div>
-                    <div id="capacity-projects-grid"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">🏗️ LAUFENDE BAUPROJEKTE</div>
-                    <div id="stadium-construction-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">🏟️ NAMENSRECHTE</div>
-                    <div id="stadium-naming-box"></div>
-                    <div id="attendance-milestone-countdown" style="margin-top:6px;"></div>
-                </div>
-                <div id="dfb-licensing-status-box" style="display:none;"></div>
-                <div class="panel" id="naming-ceremony-box" style="display:none;"></div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">🎭 BLOCK-SPEZIFISCHE FAN-KULTUR</div>
-                    <div id="block-culture-box"></div>
-                </div>
-                <div id="crowd-favorite-monument-box" style="display:none;"></div>
-                <div class="panel">
-                    <div class="panel-header">🏟️ STADION-AUSBAU (8 BLÖCKE)</div>
-                    <div class="stadium-bowl-wrapper">
-                        <div class="stadium-bowl" id="stadium-bowl-container" style="position:relative;">
-                            <div class="stand stand-vip" onclick="selectStadiumBlock('vipLogen')">VIP-Logen<br><span id="cap-vipLogen">50</span><div class="stand-infra-row" id="infra-vipLogen"></div></div>
-                            <div class="stand stand-north-outer" onclick="selectStadiumBlock('hauptNord')">Nord-Oberrang<br><span id="cap-hauptNord">1.500</span><div class="stand-infra-row" id="infra-hauptNord"></div></div>
-                            <div class="stand stand-family" onclick="selectStadiumBlock('familie')">Familien-<br>block<br><span id="cap-familie">800</span><div class="stand-infra-row" id="infra-familie"></div></div>
-                            <div class="stand stand-north-inner" onclick="selectStadiumBlock('haupt')">Nord-Unterrang<br><span id="cap-haupt">2.000</span><div class="stand-infra-row" id="infra-haupt"></div></div>
-                            <div class="stand stand-west" onclick="selectStadiumBlock('west')">West-<br>Tribüne<br><span id="cap-west">2.000</span><div class="stand-infra-row" id="infra-west"></div></div>
-                            <div class="stadium-pitch-mini"></div>
-                            <div class="stand stand-east" onclick="selectStadiumBlock('gegen')">Ost-<br>Gegen-<br>gerade<br><span id="cap-gegen">3.000</span><div class="stand-infra-row" id="infra-gegen"></div></div>
-                            <div class="stand stand-south-inner" onclick="selectStadiumBlock('kurve')">Südtribüne (Ultras)<br><span id="cap-kurve">3.000</span><div class="stand-infra-row" id="infra-kurve"></div></div>
-                            <div class="stand stand-press" onclick="selectStadiumBlock('presse')">Presse-<br>Tribüne<br><span id="cap-presse">200</span><div class="stand-infra-row" id="infra-presse"></div></div>
-                            <div class="stand stand-south-outer" onclick="selectStadiumBlock('suedOber')">Süd-Oberrang<br><span id="cap-suedOber">1.500</span><div class="stand-infra-row" id="infra-suedOber"></div></div>
-                            <div class="stand stand-away" onclick="selectStadiumBlock('gaeste')">Gäste-Block<br><span id="cap-gaeste">1.500</span><div class="stand-infra-row" id="infra-gaeste"></div></div>
-                            <div id="stadium-roof-overlay-el"></div>
-                            <div id="stadium-floodlights-container"></div>
+
+                <!-- Accordion Section: Übersicht -->
+                <div class="accordion-section">
+                    <div class="accordion-header active" onclick="toggleAccordion(this)">
+                        📊 Übersicht <span class="accordion-toggle">▼</span>
+                    </div>
+                    <div class="accordion-content active">
+                        <div class="panel">
+                            <div class="panel-header" style="color:var(--gold);">📊 KENNZAHLEN</div>
+                            <div id="stadium-name-header" style="text-align:center; font-size:14px; font-weight:900; color:var(--accent); margin-bottom:8px;">Vereinsstadion</div>
+                            <div id="stadium-key-figures-box"></div>
+                        </div>
+                        <div class="panel">
+                            <div class="panel-header">📈 ZUSCHAUERENTWICKLUNG</div>
+                            <div id="stadium-attendance-chart-box"></div>
                         </div>
                     </div>
-                    <div id="stadium-action-box" class="box" style="margin-top:6px;">Tippe oben auf einen Block für Erweiterungen & Infrastruktur.</div>
                 </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--accent);">🏟️ INTERACTIVE STADION-VISUALISIERUNG</div>
-                    <!-- Stadion-Container für die neue interaktive Visualisierung -->
-                    <div id="stadium-container" class="stadium-level-1">
-                        <div class="floodlight top-left"></div>
-                        <div class="floodlight top-right"></div>
 
-                        <!-- Tribünen -->
-                        <div class="stand north-stand"></div>
-                        <div class="stand south-stand"></div>
-                        <div class="stand east-stand"></div>
-                        <div class="stand west-stand"></div>
-
-                        <!-- Spielfeld -->
-                        <div class="pitch">
-                            <div class="center-circle"></div>
+                <!-- Accordion Section: Finanzen -->
+                <div class="accordion-section">
+                    <div class="accordion-header active" onclick="toggleAccordion(this)">
+                        💰 Finanzen <span class="accordion-toggle">▼</span>
+                    </div>
+                    <div class="accordion-content active">
+                        <div class="panel">
+                            <div class="panel-header">🎟️ TICKETPREISE</div>
+                            <div id="ticket-price-sliders-box"></div>
+                        </div>
+                        <div class="panel">
+                            <div class="panel-header" style="color:var(--gold);">💰 NEBENEINNAHMEN</div>
+                            <div id="stadium-ancillary-income-box"></div>
                         </div>
                     </div>
-                    <div style="margin-top:8px; font-size:9px; color:var(--text-muted); text-align:center;">Stadion-Ausbaustufe: <strong id="stadium-level-display">1</strong></div>
                 </div>
-                <div class="panel">
-                    <div class="panel-header">SPEZIAL-INSTALLATIONEN</div>
-                    <div id="special-installs-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;"></div>
+
+                <!-- Accordion Section: Instandhaltung -->
+                <div class="accordion-section">
+                    <div class="accordion-header active" onclick="toggleAccordion(this)">
+                        🌱 Instandhaltung <span class="accordion-toggle">▼</span>
+                    </div>
+                    <div class="accordion-content active">
+                        <div class="panel">
+                            <div class="panel-header">🌱 RASENPFLEGE</div>
+                            <div id="pitch-maintenance-box"></div>
+                        </div>
+                    </div>
                 </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">📊 GESAMTÜBERSICHT DER STADION-BONI</div>
-                    <div id="stadium-upgrades-summary"></div>
+
+                <!-- Accordion Section: Stadion-Ausbau -->
+                <div class="accordion-section">
+                    <div class="accordion-header active" onclick="toggleAccordion(this)">
+                        🏟️ Stadion-Ausbau <span class="accordion-toggle">▼</span>
+                    </div>
+                    <div class="accordion-content active">
+                        <div class="panel">
+                            <div class="panel-header">🏟️ STADION-AUSBAU (8 BLÖCKE)</div>
+                            <div class="stadium-bowl-wrapper">
+                                <div class="stadium-bowl" id="stadium-bowl-container" style="position:relative;">
+                                    <div class="stand stand-vip" onclick="selectStadiumBlock('vipLogen')">VIP-Logen<br><span id="cap-vipLogen">50</span><div class="stand-infra-row" id="infra-vipLogen"></div></div>
+                                    <div class="stand stand-north-outer" onclick="selectStadiumBlock('hauptNord')">Nord-Oberrang<br><span id="cap-hauptNord">1.500</span><div class="stand-infra-row" id="infra-hauptNord"></div></div>
+                                    <div class="stand stand-family" onclick="selectStadiumBlock('familie')">Familien-<br>block<br><span id="cap-familie">800</span><div class="stand-infra-row" id="infra-familie"></div></div>
+                                    <div class="stand stand-north-inner" onclick="selectStadiumBlock('haupt')">Nord-Unterrang<br><span id="cap-haupt">2.000</span><div class="stand-infra-row" id="infra-haupt"></div></div>
+                                    <div class="stand stand-west" onclick="selectStadiumBlock('west')">West-<br>Tribüne<br><span id="cap-west">2.000</span><div class="stand-infra-row" id="infra-west"></div></div>
+                                    <div class="stadium-pitch-mini"></div>
+                                    <div class="stand stand-east" onclick="selectStadiumBlock('gegen')">Ost-<br>Gegen-<br>gerade<br><span id="cap-gegen">3.000</span><div class="stand-infra-row" id="infra-gegen"></div></div>
+                                    <div class="stand stand-south-inner" onclick="selectStadiumBlock('kurve')">Südtribüne (Ultras)<br><span id="cap-kurve">3.000</span><div class="stand-infra-row" id="infra-kurve"></div></div>
+                                    <div class="stand stand-press" onclick="selectStadiumBlock('presse')">Presse-<br>Tribüne<br><span id="cap-presse">200</span><div class="stand-infra-row" id="infra-presse"></div></div>
+                                    <div class="stand stand-south-outer" onclick="selectStadiumBlock('suedOber')">Süd-Oberrang<br><span id="cap-suedOber">1.500</span><div class="stand-infra-row" id="infra-suedOber"></div></div>
+                                    <div class="stand stand-away" onclick="selectStadiumBlock('gaeste')">Gäste-Block<br><span id="cap-gaeste">1.500</span><div class="stand-infra-row" id="infra-gaeste"></div></div>
+                                    <div id="stadium-roof-overlay-el"></div>
+                                    <div id="stadium-floodlights-container"></div>
+                                </div>
+                            </div>
+                            <div id="stadium-action-box" class="box" style="margin-top:6px;">Tippe oben auf einen Block für Erweiterungen & Infrastruktur.</div>
+                        </div>
+                        <div class="panel">
+                            <div class="panel-header" style="color:var(--accent);">🏟️ INTERACTIVE STADION-VISUALISIERUNG</div>
+                            <div id="stadium-container" class="stadium-level-1">
+                                <div class="floodlight top-left"></div>
+                                <div class="floodlight top-right"></div>
+                                <div class="stand north-stand"></div>
+                                <div class="stand south-stand"></div>
+                                <div class="stand east-stand"></div>
+                                <div class="stand west-stand"></div>
+                                <div class="pitch">
+                                    <div class="center-circle"></div>
+                                </div>
+                            </div>
+                            <div style="margin-top:8px; font-size:9px; color:var(--text-muted); text-align:center;">Stadion-Ausbaustufe: <strong id="stadium-level-display">1</strong></div>
+                        </div>
+                        <div class="panel">
+                            <div class="panel-header">SPEZIAL-INSTALLATIONEN</div>
+                            <div id="special-installs-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;"></div>
+                        </div>
+                    </div>
                 </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">🏗️ STADION-ERWEITERUNGEN (20 NEU)</div>
-                    <div class="box" style="font-size:9px; margin-bottom:6px;">Zusätzliche Anlagen für Sicherheit, Komfort, Einnahmen und mehr - jede mit einer echten, spürbaren Wirkung.</div>
-                    <div id="stadium-upgrades-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;"></div>
+
+                <!-- Accordion Section: Bauprojekte -->
+                <div class="accordion-section">
+                    <div class="accordion-header" onclick="toggleAccordion(this)">
+                        🏗️ Bauprojekte <span class="accordion-toggle">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <div class="panel">
+                            <div class="panel-header" style="color:var(--gold);">🏗️ NAMENTLICHE AUSBAUPROJEKTE</div>
+                            <div class="box" style="font-size:9px; margin-bottom:6px;">Zusätzlich zum block-für-block-Ausbau unten: konkrete Großprojekte mit eigenem Effekt auf Kapazität und Sitzplatz-Zusammensetzung.</div>
+                            <div id="capacity-projects-grid"></div>
+                        </div>
+                        <div class="panel">
+                            <div class="panel-header" style="color:var(--gold);">🏗️ LAUFENDE BAUPROJEKTE</div>
+                            <div id="stadium-construction-box"></div>
+                        </div>
+                        <div class="panel">
+                            <div class="panel-header" style="color:var(--gold);">🏗️ STADION-ERWEITERUNGEN (20 NEU)</div>
+                            <div class="box" style="font-size:9px; margin-bottom:6px;">Zusätzliche Anlagen für Sicherheit, Komfort, Einnahmen und mehr - jede mit einer echten, spürbaren Wirkung.</div>
+                            <div id="stadium-upgrades-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Accordion Section: Zusätzliche Features -->
+                <div class="accordion-section">
+                    <div class="accordion-header" onclick="toggleAccordion(this)">
+                        ⭐ Zusätzliche Features <span class="accordion-toggle">▼</span>
+                    </div>
+                    <div class="accordion-content">
+                        <div class="panel">
+                            <div class="panel-header">🏟️ NAMENSRECHTE</div>
+                            <div id="stadium-naming-box"></div>
+                            <div id="attendance-milestone-countdown" style="margin-top:6px;"></div>
+                        </div>
+                        <div id="dfb-licensing-status-box" style="display:none;"></div>
+                        <div class="panel" id="naming-ceremony-box" style="display:none;"></div>
+                        <div class="panel">
+                            <div class="panel-header" style="color:var(--gold);">🎭 BLOCK-SPEZIFISCHE FAN-KULTUR</div>
+                            <div id="block-culture-box"></div>
+                        </div>
+                        <div id="crowd-favorite-monument-box" style="display:none;"></div>
+                        <div class="panel">
+                            <div class="panel-header" style="color:var(--gold);">📊 GESAMTÜBERSICHT DER STADION-BONI</div>
+                            <div id="stadium-upgrades-summary"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div id="screen-campus" style="display:none;">
