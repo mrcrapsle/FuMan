@@ -395,7 +395,7 @@
     // Spezial-Installationen: deutlich realistischere Basiskosten (NEU), skaliert mit der
     // Liga-Stärke - eine Komplett-Überdachung kostet im Spitzenfußball echte zweistellige
     // Millionenbeträge, nicht ein paar hunderttausend Euro.
-    const SPECIAL_INSTALL_BASE_COSTS = { flutlicht: 122500, rasenheizung: 77000, videowalls: 140000, dach: 980000 };
+    const SPECIAL_INSTALL_BASE_COSTS = { flutlicht: 3500000, rasenheizung: 2200000, videowalls: 4000000, dach: 28000000 };
     const SPECIAL_INSTALL_LABELS = { flutlicht: '💡 Flutlicht-Masten', rasenheizung: '🔥 Rasenheizung', videowalls: '📺 Digitale Anzeigen / HD-Videowalls', dach: '🏗️ Komplett-Überdachung' };
 
     // ==========================================
