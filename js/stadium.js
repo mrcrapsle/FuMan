@@ -395,7 +395,7 @@
     // Spezial-Installationen: deutlich realistischere Basiskosten (NEU), skaliert mit der
     // Liga-Stärke - eine Komplett-Überdachung kostet im Spitzenfußball echte zweistellige
     // Millionenbeträge, nicht ein paar hunderttausend Euro.
-    const SPECIAL_INSTALL_BASE_COSTS = { flutlicht: 3500000, rasenheizung: 2200000, videowalls: 4000000, dach: 28000000 };
+    const SPECIAL_INSTALL_BASE_COSTS = { flutlicht: 122500, rasenheizung: 77000, videowalls: 140000, dach: 980000 };
     const SPECIAL_INSTALL_LABELS = { flutlicht: '💡 Flutlicht-Masten', rasenheizung: '🔥 Rasenheizung', videowalls: '📺 Digitale Anzeigen / HD-Videowalls', dach: '🏗️ Komplett-Überdachung' };
 
     // ==========================================
@@ -533,9 +533,8 @@
     function renderSpecialInstallsGrid() {
         let grid = document.getElementById('special-installs-grid');
         if (!grid) return;
-        let scale = getStadiumCostScale();
         grid.innerHTML = Object.keys(SPECIAL_INSTALL_BASE_COSTS).map(key => {
-            let cost = Math.round(SPECIAL_INSTALL_BASE_COSTS[key] * scale);
+            let cost = SPECIAL_INSTALL_BASE_COSTS[key];
             let owned = stadium[key];
             let queued = (game.stadiumConstructionQueue || []).some(p => p.type === 'specialInstall' && p.params.key === key);
             let label = owned ? `${SPECIAL_INSTALL_LABELS[key]} ✓ vorhanden` : (queued ? `${SPECIAL_INSTALL_LABELS[key]} (im Bau...)` : `${SPECIAL_INSTALL_LABELS[key]} [${formatVal(cost)}]`);
