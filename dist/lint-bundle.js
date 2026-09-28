@@ -15002,7 +15002,7 @@ function renderMediaJournalistPanel() {
     // Spezial-Installationen: deutlich realistischere Basiskosten (NEU), skaliert mit der
     // Liga-Stärke - eine Komplett-Überdachung kostet im Spitzenfußball echte zweistellige
     // Millionenbeträge, nicht ein paar hunderttausend Euro.
-    const SPECIAL_INSTALL_BASE_COSTS = { flutlicht: 3500000, rasenheizung: 2200000, videowalls: 4000000, dach: 28000000 };
+    const SPECIAL_INSTALL_BASE_COSTS = { flutlicht: 122500, rasenheizung: 77000, videowalls: 140000, dach: 980000 };
     const SPECIAL_INSTALL_LABELS = { flutlicht: '💡 Flutlicht-Masten', rasenheizung: '🔥 Rasenheizung', videowalls: '📺 Digitale Anzeigen / HD-Videowalls', dach: '🏗️ Komplett-Überdachung' };
 
     // ==========================================
@@ -24949,23 +24949,23 @@ function renderBoardMembersPanel() {
 /* eslint-disable no-undef */
 
 function getAvailableClubbsForSwitch() {
-    if (!leagues || !leagues.pyramide) return [];
+    if (!leaguesData || leaguesData.length === 0) return [];
 
     const available = [];
     const currentClubId = getOurLeagueTeam()?.id;
 
-    for (let level = 0; level < leagues.pyramide.length; level++) {
-        const league = leagues.pyramide[level];
-        if (!league || !league.teams) continue;
+    for (let level = 0; level < leaguesData.length; level++) {
+        const league = leaguesData[level];
+        if (!league || !Array.isArray(league)) continue;
 
-        league.teams.forEach(team => {
-            if (team.id !== currentClubId && team.isAI) {
+        league.forEach(team => {
+            if (team.name !== game.clubName && team.isAI) {
                 available.push({
                     id: team.id,
                     name: team.name,
                     league: level,
                     leagueName: ['1. Liga', '2. Liga', '3. Liga', '4. Liga', '5. Liga', '6. Liga'][level] || `Liga ${level + 1}`,
-                    position: league.teams.indexOf(team) + 1,
+                    position: league.indexOf(team) + 1,
                     strength: team.strength || 50,
                     wealth: team.wealth || 100000,
                     fans: team.fans || 50
@@ -25024,13 +25024,13 @@ function switchToNewClub(clubId) {
     lineup = squad.slice(0, 11).map(p => p.id);
 
     // Update Liga-Tabelle
-    const newLeague = leagues.pyramide[targetClub.league];
+    const newLeague = leaguesData[targetClub.league];
     if (newLeague) {
-        const oldPosition = newLeague.teams.indexOf(targetClub);
+        const oldPosition = newLeague.indexOf(targetClub);
         if (oldPosition >= 0) {
-            newLeague.teams.splice(oldPosition, 1);
+            newLeague.splice(oldPosition, 1);
         }
-        newLeague.teams.push({
+        newLeague.push({
             id: generateUniqueTeamId(),
             name: game.clubName,
             strength: calcTeamStrength(),
@@ -25038,9 +25038,9 @@ function switchToNewClub(clubId) {
             fans: game.fans,
             isAI: false,
             points: 0,
-            wins: 0,
-            draws: 0,
-            losses: 0,
+            won: 0,
+            drawn: 0,
+            lost: 0,
             goalsFor: 0,
             goalsAgainst: 0
         });
