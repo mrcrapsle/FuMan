@@ -2260,6 +2260,16 @@
             <div id="screen-finances" style="display:none;">
                 <div class="stock-ticker-bar" id="fin-stock-ticker"></div>
                 <div class="panel">
+                    <div class="panel-header" style="color:var(--accent);">🤝 SPONSORING-VERTRÄGE</div>
+                    <div id="sponsoring-list"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">📊 FINANZ-CHARTS</div>
+                    <div id="fin-trend-chart" style="margin-bottom:12px;"></div>
+                    <div id="fin-revenue-breakdown" style="margin-bottom:12px;"></div>
+                    <div id="fin-cashflow-bar"></div>
+                </div>
+                <div class="panel">
                     <div class="panel-header" style="color:var(--accent);">🏆 SPONSOREN-RANKING (KARRIERE)</div>
                     <div id="sponsor-leaderboard-toggle" style="display:flex; gap:6px; margin-bottom:8px;"></div>
                     <div id="sponsor-leaderboard-box"></div>
@@ -15619,10 +15629,12 @@ function finishGoalkeeperGame() {
         // Ticketpreise (inkl. Dauerkarte) sind jetzt im Stadion-Screen zu finden, dort direkt
         // neben Kapazität, Rasenpflege und Nebeneinnahmen - siehe renderStadiumView().
         if (typeof renderMediaRightsView === 'function') renderMediaRightsView();
+        if (typeof renderSponsoringPanel === 'function') renderSponsoringPanel();
         renderStockTicker();
         renderSponsorLeaderboard();
         renderFinanceForecast();
         renderMoneyHistoryChart();
+        if (typeof renderFinancialCharts === 'function') renderFinancialCharts();
         renderFinanceLedger();
         if (typeof renderFfpStatusBox === 'function') renderFfpStatusBox();
         let totalWages = (squad.reduce((s, p) => s + p.wage, 0) + (game.secondTeam.isActive ? secondTeamSquad.reduce((s, p) => s + p.wage, 0) : 0)) * 4;
@@ -25015,6 +25027,10 @@ function closeNegotiationModal() {
         if (typeof runSecChiefAutomation === 'function') runSecChiefAutomation();
         // Immobilien-Portfolio (NEU): laufende Mieteinnahmen unabhängig von Heim-/Auswärtsspiel.
         if (typeof tickRealEstateIncome === 'function') tickRealEstateIncome();
+        // Sponsoring-Verträge: monatliche Einnahmen
+        if (typeof tickSponsoringIncome === 'function') tickSponsoringIncome();
+        // Financial tracking for dashboard charts
+        if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();
         if (typeof checkReleaseClauseTriggers === 'function') checkReleaseClauseTriggers();
         if (typeof tickIncomingLoans === 'function') tickIncomingLoans();

@@ -63,6 +63,7 @@
         renderSponsorLeaderboard();
         renderFinanceForecast();
         renderMoneyHistoryChart();
+        if (typeof renderFinancialCharts === 'function') renderFinancialCharts();
         renderFinanceLedger();
         if (typeof renderFfpStatusBox === 'function') renderFfpStatusBox();
         let totalWages = (squad.reduce((s, p) => s + p.wage, 0) + (game.secondTeam.isActive ? secondTeamSquad.reduce((s, p) => s + p.wage, 0) : 0)) * 4;
