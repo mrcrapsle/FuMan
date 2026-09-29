@@ -2339,6 +2339,16 @@
                 </div>
 
                 <div class="panel">
+                    <div class="panel-header">👥 FAN-ENGAGEMENT & ZUFRIEDENHEIT</div>
+                    <div id="fan-engagement-box"></div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">💰 FAN-IMPACT AUF FINANZIERUNG</div>
+                    <div id="fin-fan-impact-box"></div>
+                </div>
+
+                <div class="panel">
                     <div class="panel-header" style="color:var(--gold);">📺 MEDIENRECHTE & TV-VERTRAG</div>
                     <div id="media-rights-box"></div>
                     <div id="tv-income-history-box" style="margin-top:6px;"></div>
@@ -15659,6 +15669,8 @@ function finishGoalkeeperGame() {
         // neben Kapazität, Rasenpflege und Nebeneinnahmen - siehe renderStadiumView().
         if (typeof renderMediaRightsView === 'function') renderMediaRightsView();
         if (typeof renderSponsoringPanel === 'function') renderSponsoringPanel();
+        if (typeof renderFanEngagementPanel === 'function') renderFanEngagementPanel();
+        if (typeof renderFanEngagementStats === 'function') renderFanEngagementStats();
         renderStockTicker();
         renderSponsorLeaderboard();
         renderFinanceForecast();
@@ -25058,6 +25070,8 @@ function closeNegotiationModal() {
         if (typeof tickRealEstateIncome === 'function') tickRealEstateIncome();
         // Sponsoring-Verträge: monatliche Einnahmen
         if (typeof tickSponsoringIncome === 'function') tickSponsoringIncome();
+        // Fan-Engagement: monatliche Zufriedenheits-Updates
+        if (typeof tickFanEngagement === 'function') tickFanEngagement();
         // Financial tracking for dashboard charts
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();

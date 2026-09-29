@@ -59,6 +59,8 @@
         // neben Kapazität, Rasenpflege und Nebeneinnahmen - siehe renderStadiumView().
         if (typeof renderMediaRightsView === 'function') renderMediaRightsView();
         if (typeof renderSponsoringPanel === 'function') renderSponsoringPanel();
+        if (typeof renderFanEngagementPanel === 'function') renderFanEngagementPanel();
+        if (typeof renderFanEngagementStats === 'function') renderFanEngagementStats();
         renderStockTicker();
         renderSponsorLeaderboard();
         renderFinanceForecast();

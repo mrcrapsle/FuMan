@@ -1720,6 +1720,8 @@
         if (typeof tickRealEstateIncome === 'function') tickRealEstateIncome();
         // Sponsoring-Verträge: monatliche Einnahmen
         if (typeof tickSponsoringIncome === 'function') tickSponsoringIncome();
+        // Fan-Engagement: monatliche Zufriedenheits-Updates
+        if (typeof tickFanEngagement === 'function') tickFanEngagement();
         // Financial tracking for dashboard charts
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();
