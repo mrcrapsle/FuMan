@@ -94,6 +94,7 @@
         let teams = [...leaguesData[game.leagueLevel]].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
         let myRank = teams.findIndex(t => t.name === game.clubName) + 1;
         let myTeamRecord = leaguesData[game.leagueLevel].find(t => t.name === game.clubName);
+        if (typeof evaluateSeasonEndObjectives === 'function') evaluateSeasonEndObjectives(myRank);
 
         // Medienrechte (NEU): Liga-Kollektiv-TV-Ausschüttung zum Saisonende, gestaffelt nach
         // Ligastärke UND Tabellenplatz.
@@ -259,6 +260,7 @@
         // Manager Analytics: record seasonal manager statistics
         if (typeof recordSeasonalManagerStats === 'function') recordSeasonalManagerStats();
         game.season++;
+        if (typeof startNewSeasonObjectives === 'function') startNewSeasonObjectives();
         checkJubileeCrestUnlock();
         // Leihverein-Beziehungen schwächen sich ab, wenn 2+ Saisons kein neues Geschäft mit
         // demselben Klub stattfand - Kontakte pflegen sich nicht von selbst.

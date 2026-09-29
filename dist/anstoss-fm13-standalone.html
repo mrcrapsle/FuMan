@@ -6111,10 +6111,16 @@ function initializePostMatchAnalysis() {
 function analyzeLastMatch() {
     initializePostMatchAnalysis();
 
-    if (!game.matchResults || game.matchResults.length === 0) return null;
-
-    let lastMatch = game.matchResults[game.matchResults.length - 1];
-    if (!lastMatch) return null;
+    const played = typeof getOwnSeasonMatches === 'function' ? getOwnSeasonMatches() : [];
+    if (played.length === 0) return null;
+    const m = played[played.length - 1];
+    let lastMatch = {
+        matchday: m.matchday,
+        opponent: m.opponent,
+        result: m.own > m.opp ? 'WIN' : (m.own === m.opp ? 'DRAW' : 'LOSS'),
+        ownGoals: m.own,
+        oppGoals: m.opp
+    };
 
     // Spieler-Bewertungen basierend auf Match-Ergebnis
     let playerRatings = squad.map(player => {
@@ -6153,7 +6159,7 @@ function analyzeLastMatch() {
     let tacticalInsights = [];
 
     if (lastMatch.result === 'LOSS') {
-        if (lastMatch.homeScore < lastMatch.awayScore - 1) {
+        if (lastMatch.ownGoals < lastMatch.oppGoals - 1) {
             tacticalInsights.push({
                 type: 'DEFENSIVE',
                 title: '🛡️ Abwehr zu offen',
@@ -6179,16 +6185,18 @@ function analyzeLastMatch() {
         matchday: lastMatch.matchday,
         opponent: lastMatch.opponent,
         result: lastMatch.result,
-        score: `${lastMatch.homeScore}:${lastMatch.awayScore}`,
+        score: `${lastMatch.ownGoals}:${lastMatch.oppGoals}`,
         playerRatings: playerRatings,
         tacticalInsights: tacticalInsights,
         timestamp: new Date().getTime()
     };
 
-    game.postMatchAnalysis.analyses.push(analysis);
-    if (game.postMatchAnalysis.analyses.length > 15) {
-        game.postMatchAnalysis.analyses.shift();
-    }
+    // Pro Spiel nur ein Verlaufseintrag, auch wenn das Panel mehrfach gerendert wird.
+    const history = game.postMatchAnalysis.analyses;
+    const prev = history[history.length - 1];
+    if (prev && prev.matchday === analysis.matchday) history[history.length - 1] = analysis;
+    else history.push(analysis);
+    if (history.length > 15) history.shift();
 
     postMatchAnalysisState.lastMatchAnalysis = analysis;
     return analysis;
@@ -6218,13 +6226,7 @@ function tickPostMatchAnalysis() {
     initializePostMatchAnalysis();
 
     // Nach jedem Match: Analyse durchführen (einmal pro Match-Tag)
-    if (game.matchResults && game.matchResults.length > 0) {
-        let lastAnalysis = game.postMatchAnalysis.analyses[game.postMatchAnalysis.analyses.length - 1];
-
-        if (!lastAnalysis || lastAnalysis.matchday !== game.matchday) {
-            analyzeLastMatch();
-        }
-    }
+    analyzeLastMatch();
 }
 
 function renderPostMatchAnalysisPanel() {
@@ -6244,7 +6246,7 @@ function renderPostMatchAnalysisPanel() {
     html += '<h3>📊 POST-MATCH-ANALYSE</h3>';
 
     html += `<div style="background:#1a1a1a; padding:8px; border-radius:4px; margin-bottom:10px;">`;
-    html += `<p style="font-size:9px; margin:0;"><strong>ST${analysis.matchday}:</strong> ${analysis.result} vs ${analysis.opponent} (${analysis.score})</p>`;
+    html += `<p style="font-size:9px; margin:0;"><strong>ST${analysis.matchday}:</strong> ${({ WIN: 'Sieg', DRAW: 'Remis', LOSS: 'Niederlage' })[analysis.result]} gegen ${analysis.opponent} (${analysis.score})</p>`;
     html += `</div>`;
 
     // Beste Spieler
@@ -31186,7 +31188,7 @@ const OBJECTIVE_TYPES = {
         category: 'Entwicklung',
         difficulty: 'MEDIUM',
         baseReward: 350000,
-        description: 'Spieler unter 21 Jahren spielen 100+ Minuten'
+        description: 'Spieler unter 21 Jahren kommen auf 5+ Ligaeinsätze'
     },
     TICKET_REVENUE: {
         name: 'Zuschauer-Erlebnis',
@@ -31207,7 +31209,7 @@ const OBJECTIVE_TYPES = {
         category: 'Leistung',
         difficulty: 'MEDIUM',
         baseReward: 200000,
-        description: 'Erreiche 10+ Zu-Null-Siege in der Saison'
+        description: 'Erreiche 10+ Zu-Null-Siege in der Liga'
     }
 };
 
@@ -31232,7 +31234,10 @@ function generateSeasonObjectives() {
     // Keine Ziele anbieten, die schon beim Anlegen erfüllt oder unerreichbar sind.
     const availableTypes = Object.keys(OBJECTIVE_TYPES).filter(type =>
         !(type === 'PROMOTION' && game.leagueLevel === 0) &&
-        !(type === 'FINANCIAL_TARGET' && game.money >= 1000000));
+        !(type === 'FINANCIAL_TARGET' && game.money >= 1000000) &&
+        !(type === 'EUROPEAN_QUALIFICATION' && game.leagueLevel !== 0 && !game.inCup) &&
+        // Zuschauer sind je Liga gedeckelt (LEAGUE_ATTENDANCE_CEILING) - 80% erst ab 2. Liga möglich.
+        !(type === 'TICKET_REVENUE' && (LEAGUE_ATTENDANCE_CEILING[game.leagueLevel] ?? 0) < 0.6));
 
     // Generate 3-5 random objectives per season based on league
     const objectiveCount = 3 + Math.floor(Math.random() * 2);
@@ -31269,93 +31274,145 @@ function generateSeasonObjectives() {
     game.seasonObjectives.activeObjectives = objectives;
 }
 
-function updateObjectiveProgress(allowCompletion = true) {
+// Gleiche Sortierung wie Tabellenanzeige und Saisonabschluss (Punkte, dann Tordifferenz).
+function getOwnLeagueRank() {
+    const teams = [...(leaguesData[game.leagueLevel] || [])]
+        .sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+    const rank = teams.findIndex(t => t.name === game.clubName) + 1;
+    return rank > 0 ? rank : null;
+}
+
+// Gespielte Ligaspiele des eigenen Vereins in dieser Saison, chronologisch.
+function getOwnSeasonMatches() {
+    const teams = leaguesData[game.leagueLevel] || [];
+    const me = teams.findIndex(t => t.name === game.clubName);
+    const rounds = (typeof fixturesData !== 'undefined' && fixturesData[game.leagueLevel]) || [];
+    if (me < 0) return [];
+    const result = [];
+    rounds.forEach((round, idx) => (round || []).forEach(f => {
+        if (!f.played || (f.home !== me && f.away !== me)) return;
+        const isHome = f.home === me;
+        result.push({
+            matchday: idx + 1,
+            opponent: (teams[isHome ? f.away : f.home] || {}).name || '?',
+            own: isHome ? f.homeGoals : f.awayGoals,
+            opp: isHome ? f.awayGoals : f.homeGoals
+        });
+    }));
+    return result;
+}
+
+function wonTrophyThisSeason(fragment) {
+    return (game.trophies || []).some(t => t.includes(fragment) && t.includes(`(Saison ${game.season})`));
+}
+
+function updateObjectiveProgress(allowCompletion = true, finalRank = null) {
     if (!game.seasonObjectives.activeObjectives) return;
+    const matches = getOwnSeasonMatches();
+    const rank = finalRank || getOwnLeagueRank();
 
     game.seasonObjectives.activeObjectives.forEach(obj => {
         if (obj.completed) return;
 
+        let done = false;
         let progress = 0;
-        let target = 100;
 
         switch (obj.type) {
             case 'PROMOTION':
-                target = 1; // Check if promoted
-                progress = (game.leagueLevel < (obj.startLeagueLevel ?? game.leagueLevel)) ? 100 : 0;
-                obj.progress_label = progress === 100 ? 'Aufgestiegen ✓' : `Liga ${game.leagueLevel}`;
+                // Der Ligawechsel passiert erst im Saisonabschluss - dort wird erneut geprüft.
+                done = game.leagueLevel < (obj.startLeagueLevel ?? game.leagueLevel);
+                obj.progress_label = done ? 'Aufgestiegen ✓' : `Platz ${rank || '?'} (Aufstieg: Platz 1-2)`;
                 break;
 
             case 'CHAMPIONSHIP':
-                // Check if won league this season
-                target = 1;
-                progress = (game.leaguePosition === 1 && game.season > obj.startSeason) ? 100 : 0;
-                obj.progress_label = progress === 100 ? 'Meister ✓' : `Position: ${game.leaguePosition || '?'}`;
+                // Erst mit dem Endstand entschieden, nicht schon als Tabellenführer im Herbst.
+                done = finalRank === 1;
+                obj.progress_label = done ? 'Meister ✓' : `Platz ${rank || '?'}`;
                 break;
 
             case 'CUP_WIN':
-                target = 1;
-                progress = (game.cupWinThisSeason) ? 100 : 0;
-                obj.progress_label = progress === 100 ? 'Pokalsieg ✓' : 'In den Wettbewerben';
+                done = wonTrophyThisSeason('pokalsieger');
+                obj.progress_label = done ? 'Pokalsieg ✓' : 'Im Wettbewerb';
                 break;
 
             case 'EUROPEAN_QUALIFICATION':
-                target = 1;
-                progress = (game.leaguePosition <= 3 || game.europeanQualified) ? 100 : 0;
-                obj.progress_label = progress === 100 ? 'Qualifiziert ✓' : `Position: ${game.leaguePosition || '?'}`;
+                // Wie im Saisonabschluss: Platz 1-4 der 1. Liga oder DFB-Pokalsieg.
+                done = (finalRank !== null && (obj.startLeagueLevel ?? game.leagueLevel) === 0 && finalRank <= 4)
+                    || wonTrophyThisSeason('DFB-Pokalsieger');
+                obj.progress_label = done ? 'Qualifiziert ✓' : `Platz ${rank || '?'} (nötig: 1-4)`;
                 break;
 
             case 'FINANCIAL_TARGET':
-                target = 1000000;
-                progress = Math.min(100, Math.floor((game.money / target) * 100));
+                progress = Math.min(100, Math.floor((game.money / 1000000) * 100));
+                done = progress >= 100;
                 obj.progress_label = `€${(game.money / 1000000).toFixed(2)}M / €1M`;
                 break;
 
-            case 'UNDEFEATED_RUN':
-                target = 5;
-                const recentResults = (game.recentResults || []).slice(-5);
-                progress = Math.floor((recentResults.filter(r => r.result !== 'L').length / 5) * 100);
-                obj.progress_label = `${recentResults.filter(r => r.result !== 'L').length} / 5 ungeschlagen`;
+            case 'UNDEFEATED_RUN': {
+                const last5 = matches.slice(-5);
+                const unbeaten = last5.filter(m => m.own >= m.opp).length;
+                done = last5.length === 5 && unbeaten === 5;
+                progress = unbeaten * 20;
+                obj.progress_label = `${unbeaten} / 5 ungeschlagen`;
                 break;
+            }
 
-            case 'YOUTH_PROMOTION':
-                target = 100;
-                const youthMinutes = squad.filter(p => (p.age || 25) < 21)
-                    .reduce((sum, p) => sum + (p.minutesPlayed || 0), 0);
-                progress = Math.min(100, Math.floor((youthMinutes / 100) * 100));
-                obj.progress_label = `${youthMinutes} Minuten / 100 min`;
+            case 'YOUTH_PROMOTION': {
+                const youthApps = squad.filter(p => (p.age || 25) < 21)
+                    .reduce((sum, p) => sum + (p.appearancesSeason || 0), 0);
+                progress = Math.min(100, youthApps * 20);
+                done = youthApps >= 5;
+                obj.progress_label = `${youthApps} / 5 U21-Einsätze`;
                 break;
+            }
 
-            case 'TICKET_REVENUE':
-                target = 100;
-                const avgAttendance = (game.matchAttendances || []).reduce((a, b) => a + b, 0) /
-                                     Math.max(1, game.matchAttendances?.length || 1);
-                const capacity = game.stadium?.capacity || 10000;
-                progress = Math.min(100, Math.floor(((avgAttendance / capacity) * 100) / 80 * 100));
-                obj.progress_label = `${Math.floor((avgAttendance / capacity) * 100)}% / 80%`;
+            case 'TICKET_REVENUE': {
+                const home = (game.attendanceHistory || []).filter(a => a.season === game.season && a.capacity > 0);
+                const avg = home.length ? home.reduce((s, a) => s + a.attendance / a.capacity, 0) / home.length : 0;
+                progress = Math.min(100, Math.floor(avg / 0.8 * 100));
+                done = home.length >= 3 && avg >= 0.8;
+                obj.progress_label = `${Math.round(avg * 100)}% / 80% Auslastung`;
                 break;
+            }
 
-            case 'TOP_SCORER':
-                target = 10;
-                const topScorerGoals = Math.max(...squad.map(p => p.goals || 0));
-                progress = Math.min(100, Math.floor((topScorerGoals / 10) * 100));
-                obj.progress_label = `${topScorerGoals} Tore / 10 Tore`;
+            case 'TOP_SCORER': {
+                const best = Math.max(0, ...squad.map(p => p.goalsSeason || 0));
+                progress = Math.min(100, best * 10);
+                done = best >= 10;
+                obj.progress_label = `${best} / 10 Tore`;
                 break;
+            }
 
-            case 'CLEAN_SHEETS':
-                target = 10;
-                const cleanSheets = (game.matchResults || []).filter(m => m.goalsAgainst === 0).length;
-                progress = Math.min(100, Math.floor((cleanSheets / 10) * 100));
-                obj.progress_label = `${cleanSheets} Zu-Null / 10 Siege`;
+            case 'CLEAN_SHEETS': {
+                const zuNullSiege = matches.filter(m => m.opp === 0 && m.own > 0).length;
+                progress = Math.min(100, zuNullSiege * 10);
+                done = zuNullSiege >= 10;
+                obj.progress_label = `${zuNullSiege} / 10 Zu-Null-Siege`;
                 break;
+            }
         }
 
-        obj.progress = progress;
-        obj.target = target;
+        obj.progress = done ? 100 : progress;
+        obj.target = 100;
 
-        if (allowCompletion && progress >= 100 && !obj.completed) {
+        if (allowCompletion && done) {
             completeObjective(obj.id);
         }
     });
+}
+
+// Saisonabschluss, VOR dem Zurücksetzen der Saisonstatistiken: alles mit Endstand werten.
+function evaluateSeasonEndObjectives(finalRank) {
+    initializeSeasonObjectives();
+    updateObjectiveProgress(true, finalRank);
+}
+
+// Nach dem Ligawechsel und game.season++: Aufstieg werten, dann neue Saisonziele vergeben.
+function startNewSeasonObjectives() {
+    initializeSeasonObjectives();
+    updateObjectiveProgress(true);
+    game.seasonObjectives.activeObjectives = [];
+    generateSeasonObjectives();
 }
 
 function completeObjective(objectiveId) {
@@ -31433,7 +31490,7 @@ function renderSeasonObjectivesPanel() {
             html += `<div style="width:100%; height:8px; background:#333; border-radius:2px; overflow:hidden; margin-bottom:4px;">`;
             html += `<div style="width:${obj.progress}%; height:100%; background:${diffColor};"></div>`;
             html += `</div>`;
-            html += `<p style="font-size:8px; color:var(--text-muted); margin:0;">${obj.progress_label || obj.progress}%</p>`;
+            html += `<p style="font-size:8px; color:var(--text-muted); margin:0;">${obj.progress_label || obj.progress + '%'}</p>`;
             html += `<p style="font-size:9px; margin:4px 0 0 0; color:var(--primary);">💰 €${(obj.reward / 1000).toFixed(0)}k</p>`;
             html += `</div>`;
         });
@@ -37321,6 +37378,7 @@ function tickMatchInjuries() {
         let teams = [...leaguesData[game.leagueLevel]].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
         let myRank = teams.findIndex(t => t.name === game.clubName) + 1;
         let myTeamRecord = leaguesData[game.leagueLevel].find(t => t.name === game.clubName);
+        if (typeof evaluateSeasonEndObjectives === 'function') evaluateSeasonEndObjectives(myRank);
 
         // Medienrechte (NEU): Liga-Kollektiv-TV-Ausschüttung zum Saisonende, gestaffelt nach
         // Ligastärke UND Tabellenplatz.
@@ -37486,6 +37544,7 @@ function tickMatchInjuries() {
         // Manager Analytics: record seasonal manager statistics
         if (typeof recordSeasonalManagerStats === 'function') recordSeasonalManagerStats();
         game.season++;
+        if (typeof startNewSeasonObjectives === 'function') startNewSeasonObjectives();
         checkJubileeCrestUnlock();
         // Leihverein-Beziehungen schwächen sich ab, wenn 2+ Saisons kein neues Geschäft mit
         // demselben Klub stattfand - Kontakte pflegen sich nicht von selbst.

@@ -17,10 +17,16 @@ function initializePostMatchAnalysis() {
 function analyzeLastMatch() {
     initializePostMatchAnalysis();
 
-    if (!game.matchResults || game.matchResults.length === 0) return null;
-
-    let lastMatch = game.matchResults[game.matchResults.length - 1];
-    if (!lastMatch) return null;
+    const played = typeof getOwnSeasonMatches === 'function' ? getOwnSeasonMatches() : [];
+    if (played.length === 0) return null;
+    const m = played[played.length - 1];
+    let lastMatch = {
+        matchday: m.matchday,
+        opponent: m.opponent,
+        result: m.own > m.opp ? 'WIN' : (m.own === m.opp ? 'DRAW' : 'LOSS'),
+        ownGoals: m.own,
+        oppGoals: m.opp
+    };
 
     // Spieler-Bewertungen basierend auf Match-Ergebnis
     let playerRatings = squad.map(player => {
@@ -59,7 +65,7 @@ function analyzeLastMatch() {
     let tacticalInsights = [];
 
     if (lastMatch.result === 'LOSS') {
-        if (lastMatch.homeScore < lastMatch.awayScore - 1) {
+        if (lastMatch.ownGoals < lastMatch.oppGoals - 1) {
             tacticalInsights.push({
                 type: 'DEFENSIVE',
                 title: '🛡️ Abwehr zu offen',
@@ -85,16 +91,18 @@ function analyzeLastMatch() {
         matchday: lastMatch.matchday,
         opponent: lastMatch.opponent,
         result: lastMatch.result,
-        score: `${lastMatch.homeScore}:${lastMatch.awayScore}`,
+        score: `${lastMatch.ownGoals}:${lastMatch.oppGoals}`,
         playerRatings: playerRatings,
         tacticalInsights: tacticalInsights,
         timestamp: new Date().getTime()
     };
 
-    game.postMatchAnalysis.analyses.push(analysis);
-    if (game.postMatchAnalysis.analyses.length > 15) {
-        game.postMatchAnalysis.analyses.shift();
-    }
+    // Pro Spiel nur ein Verlaufseintrag, auch wenn das Panel mehrfach gerendert wird.
+    const history = game.postMatchAnalysis.analyses;
+    const prev = history[history.length - 1];
+    if (prev && prev.matchday === analysis.matchday) history[history.length - 1] = analysis;
+    else history.push(analysis);
+    if (history.length > 15) history.shift();
 
     postMatchAnalysisState.lastMatchAnalysis = analysis;
     return analysis;
@@ -124,13 +132,7 @@ function tickPostMatchAnalysis() {
     initializePostMatchAnalysis();
 
     // Nach jedem Match: Analyse durchführen (einmal pro Match-Tag)
-    if (game.matchResults && game.matchResults.length > 0) {
-        let lastAnalysis = game.postMatchAnalysis.analyses[game.postMatchAnalysis.analyses.length - 1];
-
-        if (!lastAnalysis || lastAnalysis.matchday !== game.matchday) {
-            analyzeLastMatch();
-        }
-    }
+    analyzeLastMatch();
 }
 
 function renderPostMatchAnalysisPanel() {
@@ -150,7 +152,7 @@ function renderPostMatchAnalysisPanel() {
     html += '<h3>📊 POST-MATCH-ANALYSE</h3>';
 
     html += `<div style="background:#1a1a1a; padding:8px; border-radius:4px; margin-bottom:10px;">`;
-    html += `<p style="font-size:9px; margin:0;"><strong>ST${analysis.matchday}:</strong> ${analysis.result} vs ${analysis.opponent} (${analysis.score})</p>`;
+    html += `<p style="font-size:9px; margin:0;"><strong>ST${analysis.matchday}:</strong> ${({ WIN: 'Sieg', DRAW: 'Remis', LOSS: 'Niederlage' })[analysis.result]} gegen ${analysis.opponent} (${analysis.score})</p>`;
     html += `</div>`;
 
     // Beste Spieler
