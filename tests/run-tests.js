@@ -3627,6 +3627,68 @@ async function testTacticAutomation(browser) {
 // ---------------------------------------------------------------------------
 // HAUPTPROGRAMM
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// LAUFZEIT-RUNDLAUF: jede Spielfunktion wird so umhüllt, dass ein Fehler notiert und
+// die Simulation fortgesetzt wird - ein Lauf zeigt dadurch ALLE Absturzstellen (mit
+// Funktionsnamen) statt nur der ersten. Deckt vor allem Feature-Module ab, deren Ticks
+// sonst erst nach Wochen im echten Spiel auffallen.
+// ---------------------------------------------------------------------------
+async function testRuntimeRoundTrip(browser) {
+    console.log('\n[R] Laufzeit-Rundlauf: 2 Saisons + alle Screens');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        const fehler = {};
+        const isNative = f => Function.prototype.toString.call(f).includes('[native code]');
+        let umhuellt = 0;
+        for (const name of Object.getOwnPropertyNames(window)) {
+            const desc = Object.getOwnPropertyDescriptor(window, name);
+            const orig = desc && desc.value;
+            if (typeof orig !== 'function' || !desc.writable || isNative(orig) || /^[A-Z]/.test(name)) continue;
+            window[name] = function (...args) {
+                try { return orig.apply(this, args); } catch (e) {
+                    const key = `${name}(): ${e.message}`;
+                    if (!(key in fehler)) fehler[key] = 0;
+                    fehler[key]++;
+                    return undefined;
+                }
+            };
+            umhuellt++;
+        }
+
+        const haenger = [];
+        for (let saison = 0; saison < 2; saison++) {
+            for (let i = 0; i < 40 && game.matchday <= 34; i++) {
+                game.sackPending = false; // Entlassungen sind hier kein Fehler, nur Stopp
+                const md = game.matchday;
+                simulateMatchdays(1);
+                if (game.matchday === md) { haenger.push(`Saison ${game.season}, Spieltag ${md}`); break; }
+            }
+            concludeSeasonAndAdvance();
+        }
+
+        // Reines Anzeigen eines Screens darf weder Geld bewegen noch buchen.
+        const geldDurchAnzeige = [];
+        for (const sc of [...document.querySelectorAll('[id^="screen-"]')].map(e => e.id)) {
+            const geld = game.money, buchungen = (game.kontoauszug || []).length;
+            showScreen(sc);
+            if (game.money !== geld || (game.kontoauszug || []).length !== buchungen) {
+                geldDurchAnzeige.push(`${sc}: ${Math.round(game.money - geld)} €`);
+            }
+        }
+        return { fehler, haenger, geldDurchAnzeige, umhuellt };
+    });
+
+    const fehlerListe = Object.entries(r.fehler).map(([k, n]) => `${k} (${n}x)`);
+    assert(r.umhuellt > 500, `Spielfunktionen für den Rundlauf erfasst (${r.umhuellt})`);
+    assert(fehlerListe.length === 0, `Keine Laufzeitfehler in 2 Saisons + allen Screens${fehlerListe.length ? ':\n      ' + fehlerListe.join('\n      ') : ''}`);
+    assert(r.haenger.length === 0, `Die Simulation bleibt an keinem Spieltag hängen (${r.haenger.join(', ')})`);
+    assert(r.geldDurchAnzeige.length === 0, `Screens anzeigen bewegt kein Geld (${r.geldDurchAnzeige.join(', ')})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler im Rundlauf (${[...new Set(consoleErrors)].slice(0, 5).join(' | ')})`);
+    await page.close();
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -3693,9 +3755,12 @@ async function main() {
         testPlayerAvatars,
         testTrainingCalendar,
         testTacticAutomation,
+        testRuntimeRoundTrip,
     ];
 
-    for (const suite of suites) {
+    // TEST_ONLY=Landes npm test -> nur Suiten, deren Name den Text enthält
+    const only = process.env.TEST_ONLY;
+    for (const suite of only ? suites.filter(s => s.name.includes(only)) : suites) {
         try {
             await suite(browser);
         } catch (e) {

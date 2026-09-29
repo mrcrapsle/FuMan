@@ -9,6 +9,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Common Commands
 
 ```bash
+# PFLICHT vor jedem Merge/Push auf main: Build, Lint, Tests (normal + minifiziert)
+npm run check          # "npm run check -- fast" lässt die minifizierte Variante weg
+# Logs bei Fehlern: dist/check-logs/
+
 # Build standalone HTML (required before deploying)
 python3 build.py
 # Output: dist/anstoss-fm13-standalone.html
@@ -160,11 +164,15 @@ This ensures users can see exactly where money comes from/goes. Add new income o
 ### Building & Bundling
 
 `build.py` does:
-1. Reads `index.html` for `<script src="js/*.js">` tags
-2. Concatenates all referenced .js files
-3. Embeds inline CSS from `css/styles.css`
+1. Reads `index.html` for `<script src="js/*.js">` tags - the ONLY list of modules (no second list in build.py)
+2. Aborts on duplicate script tags, missing files, or `js/*.js` files without a script tag
+3. Embeds every referenced .js file and the CSS from `css/styles.css`
 4. Writes single `dist/anstoss-fm13-standalone.html`
-5. Lints the combined bundle (all files treated as one global scope)
+5. `npm run lint` lints the combined bundle (all files treated as one global scope)
+
+**Lint rules that matter:** a file-level `/* eslint-disable no-undef */` only applies to that file (the lint bundle re-enables rules between files). `no-redeclare` catches two modules defining the same global name - a later `function x()` would otherwise silently replace an existing one. Rename the new one instead.
+
+**Monthly ticks:** feature ticks belong inside the `if (game.matchday % 4 === 0)` block in `processPostMatchRoutine()` (js/match.js), not next to it - otherwise they run every matchday. Render functions must never change `game.money` (checked by the runtime round-trip test).
 
 **Why one big file:** Game must run offline as a single draggable-and-droppable file on Android/mobile (Chrome, Firefox, etc.). No server, no network, no external dependencies.
 
@@ -221,6 +229,8 @@ This ensures users can see exactly where money comes from/goes. Add new income o
 ```bash
 # Full test suite (Playwright, runs against built standalone HTML)
 cd tests && npm install && npm test
+# Single suite by function name
+cd tests && TEST_ONLY=LandesPokal node run-tests.js
 
 # The test file (tests/run-tests.js) includes:
 # - testManagerOffice: 3D hotspot hit-detection for all office objects
@@ -230,7 +240,7 @@ cd tests && npm install && npm test
 # - Save/load: verifies game state persists and loads correctly
 ```
 
-Each test is named (`test('...', async () => {...})`). To run a single test, grep for its name in the output and adjust the skip/only in run-tests.js.
+`testRuntimeRoundTrip` wraps every game function, plays two seasons and opens every screen; it lists ALL runtime errors with the function name at once, plus screens that move money. When it fails, fix each listed function.
 
 ## Deployment
 
@@ -239,7 +249,7 @@ Commits to `main` branch trigger an automated build-and-deploy via GitHub Action
 2. If tests pass, deploy dist/anstoss-fm13-standalone.html to GitHub Pages
 3. Live at https://mrcrapsle.github.io/FuMan/
 
-Only push to `main` when the game is tested and ready for players. Use feature branches (e.g., `claude/feature-name`) for development and testing.
+CI runs on every branch; only `main` deploys. Only push to `main` after `npm run check` is green. Use feature branches (e.g., `claude/feature-name`) for development and testing.
 
 ## Repository Structure
 

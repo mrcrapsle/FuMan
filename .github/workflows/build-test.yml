@@ -4,8 +4,10 @@
 name: Build & Test
 
 on:
+  # Auch Feature-Branches testen, damit Fehler VOR dem Merge auffallen; veröffentlicht
+  # wird weiterhin nur von main (siehe deploy-Job).
   push:
-    branches: ["main"]
+    branches: ["**"]
   pull_request:
     branches: ["main"]
 

@@ -18,13 +18,16 @@ def js_order():
     """Reihenfolge und Umfang der Module kommen ausschließlich aus den <script src>-Tags
     in index.html - eine zweite, handgepflegte Liste lief früher unbemerkt auseinander,
     sodass neue Module im Standalone-Build fehlten."""
-    order = []
-    for path, _ in SCRIPT_TAG_RE.findall(read(HTML_FILE)):
-        if path not in order:
-            order.append(path)
+    order = [path for path, _ in SCRIPT_TAG_RE.findall(read(HTML_FILE))]
+    doppelt = sorted({p for p in order if order.count(p) > 1})
+    if doppelt:
+        sys.exit(f"FEHLER: doppelte <script>-Tags in index.html (Modul liefe zweimal): {doppelt}")
     missing = [p for p in order if not os.path.isfile(p)]
     if missing:
         sys.exit(f"FEHLER: in index.html referenziert, aber nicht vorhanden: {missing}")
+    verwaist = sorted(f"js/{f}" for f in os.listdir("js") if f.endswith(".js") and f"js/{f}" not in order)
+    if verwaist:
+        sys.exit(f"FEHLER: Dateien in js/ ohne <script>-Tag in index.html (würden nie geladen): {verwaist}")
     return order
 
 

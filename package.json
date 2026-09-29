@@ -4,6 +4,8 @@
   "private": true,
   "description": "Lint-Tooling fuer Anstoss Mobile Pro - FM13 (Spiel selbst: python3 build.py)",
   "scripts": {
+    "check": "bash scripts/check.sh",
+    "test": "cd tests && node run-tests.js",
     "lint": "python3 build.py --lint-bundle && eslint dist/lint-bundle.js",
     "minify": "node minify.js",
     "serve": "python3 server.py"
