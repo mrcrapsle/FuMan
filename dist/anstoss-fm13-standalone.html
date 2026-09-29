@@ -2021,6 +2021,7 @@
             <div class="nav-category" data-i18n="nav_category_team">Team & Kader</div>
             <button class="nav-btn" onclick="showScreen('screen-squad')" data-i18n="nav_squad">⚽ Kader & 3D Taktik</button>
             <button class="nav-btn" onclick="showScreen('screen-second-team')" data-i18n="nav_second_team">🥈 Zweite Mannschaft</button>
+            <button class="nav-btn" onclick="showScreen('screen-women')" data-i18n="nav_women">👩 Frauenmannschaft</button>
             <button class="nav-btn" onclick="showScreen('screen-training')" data-i18n="nav_training">🏋️ Training & Förderung</button>
             <button class="nav-btn" onclick="showScreen('screen-transfer')" id="nav-btn-transfer"><span data-i18n="nav_transfer">🤝 Kaderplanung & Transfers</span> <span id="sidebar-offers-badge" class="badge-count" style="display:none; margin-left:auto;">0</span></button>
 
@@ -2090,6 +2091,10 @@
             </div>
 
             <!-- ZWEITE MANNSCHAFT -->
+            <div id="screen-women" style="display:none;">
+                <div id="women-team-box"></div>
+            </div>
+
             <div id="screen-second-team" style="display:none;">
                 <div id="st-not-founded-box" class="panel">
                     <div class="panel-header">🥈 ZWEITE MANNSCHAFT GRÜNDEN</div>
@@ -2199,6 +2204,7 @@
                     </div>
                     <div class="dashboard-hero-bowl-wrapper"></div>
                 </div>
+                <div id="member-assembly-box" class="panel" style="display:none; border-color:var(--gold); margin-bottom:10px;"></div>
                 <div id="dash-offers-alert" class="panel box-offer" style="display:none; border-color:var(--blue); margin-bottom:10px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <span>📩 <strong>Transfer-Zentrale:</strong> Du hast <strong id="dash-offers-alert-count" style="color:var(--accent);">0</strong> offene Transferangebote für deine Spieler!</span>
@@ -2222,6 +2228,7 @@
                             <div style="font-size:9px; color:var(--text-muted);">Gastteam (Str: <span id="dash-opp-str">58</span>)</div>
                         </div>
                     </div>
+                    <div id="dash-referee-box"></div>
                     <div id="dash-match-actions" style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
                         <button onclick="startMatchdayFlow()" class="btn-action" style="font-size:12px;">▶ Spieltag starten (Livespiel)</button>
                         <button onclick="simulateMatchdays(5)" class="btn-secondary">⏩ 5 Spieltage simulieren</button>
@@ -2937,6 +2944,10 @@
                 <div class="panel">
                     <div class="panel-header">❤️ MANNSCHAFTS-HARMONIE</div>
                     <div id="squad-harmony-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">🤝 MANNSCHAFTSRAT</div>
+                    <div id="team-council-box"></div>
                 </div>
             </div>
 
@@ -4349,6 +4360,7 @@
             nav_category_team: 'Team & Kader',
             nav_squad: '⚽ Kader & 3D Taktik',
             nav_second_team: '🥈 Zweite Mannschaft',
+            nav_women: '👩 Frauenmannschaft',
             nav_training: '🏋️ Training & Förderung',
             nav_transfer: '🤝 Kaderplanung & Transfers',
             nav_category_infra: 'Ausbau & Infrastruktur',
@@ -4445,6 +4457,7 @@
             nav_category_team: 'Team & Squad',
             nav_squad: '⚽ Squad & 3D Tactics',
             nav_second_team: '🥈 Reserve Team',
+            nav_women: '👩 Women\'s Team',
             nav_training: '🏋️ Training & Development',
             nav_transfer: '🤝 Squad Planning & Transfers',
             nav_category_infra: 'Facilities & Infrastructure',
@@ -4572,7 +4585,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '2.3', date: '30.09.2026', features: 'Code-Integritätsprüfung, 3D-Stadion-Fix, Diagramme in versteckten Screens' };
+    const GAME_VERSION = { number: '2.4', date: '30.09.2026', features: 'Phase 11: Schiedsrichter, Mannschaftsrat, Mitgliederversammlung, Frauenmannschaft' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -7423,6 +7436,7 @@ function renderFanEventsPanel() {
         if (typeof renderMediaManagementPanel === 'function') renderMediaManagementPanel();
         if (typeof renderTransferMarketAnalysisPanel === 'function') renderTransferMarketAnalysisPanel();
         if (typeof renderSquadHarmonyPanel === 'function') renderSquadHarmonyPanel();
+        if (typeof renderTeamCouncilPanel === 'function') renderTeamCouncilPanel();
         let container = document.getElementById('bench-list');
         if (!container) return;
         container.innerHTML = '';
@@ -15093,7 +15107,7 @@ function renderTalentDetectionPanel() {
     // sah das Spiel dadurch komplett funktionslos aus, obwohl der komplette JS-Code fehlerfrei
     // lief. Dieser Test hätte das beim nächsten Bauen sofort sichtbar gemacht.
     function runStructuralSelfTest(silent = true) {
-        let topScreens = ['screen-office', 'screen-dashboard', 'screen-calendar', 'screen-inbox', 'screen-squad', 'screen-second-team', 'screen-training', 'screen-manager-tree', 'screen-admin', 'screen-prematch-press', 'screen-matchday'];
+        let topScreens = ['screen-office', 'screen-dashboard', 'screen-calendar', 'screen-inbox', 'screen-squad', 'screen-second-team', 'screen-women', 'screen-training', 'screen-manager-tree', 'screen-admin', 'screen-prematch-press', 'screen-matchday'];
         let allTestIds = [...topScreens, ...Object.keys(HUB_MEMBERS), ...Object.values(HUB_MEMBERS).flat()];
         let problems = [];
         let originalTopScreen = topScreens.find(s => document.getElementById(s)?.style.display === 'block') || 'screen-dashboard';
@@ -15207,7 +15221,7 @@ function renderTalentDetectionPanel() {
         if (typeof loescheBuchungskontext === 'function') loescheBuchungskontext();
         const screens = [
             'screen-office',
-            'screen-dashboard', 'screen-calendar', 'screen-inbox', 'screen-squad', 'screen-second-team', 'screen-training',
+            'screen-dashboard', 'screen-calendar', 'screen-inbox', 'screen-squad', 'screen-second-team', 'screen-women', 'screen-training',
             'screen-manager-tree', 'screen-admin', 'screen-cup',
             'screen-hub-wirtschaft', 'screen-hub-finanzen', 'screen-hub-ausbau',
             'screen-hub-kaderplanung', 'screen-hub-wettbewerbe', 'screen-hub-spezial',
@@ -15242,6 +15256,7 @@ function renderTalentDetectionPanel() {
         if (screenId === 'screen-inbox') renderInboxView();
         if (screenId === 'screen-squad') { renderSquadView(); render3DPitch(); }
         if (screenId === 'screen-second-team') renderSecondTeamView();
+        if (screenId === 'screen-women' && typeof renderWomenTeamView === 'function') renderWomenTeamView();
         if (screenId === 'screen-manager-tree') { renderCareerSummary(); renderCrestEditor(); applyClubCrest(); }
         if (screenId === 'screen-campus') renderCrestMuseumGallery();
         if (screenId === 'screen-training') renderTrainingView();
@@ -15352,6 +15367,8 @@ function renderTalentDetectionPanel() {
         document.getElementById('dash-opp-name').innerText = oppName;
         document.getElementById('dash-opp-str').innerText = oppStr;
         document.getElementById('dash-our-str').innerText = calcTeamStrength(true);
+        if (typeof renderRefereePreview === 'function') renderRefereePreview();
+        if (typeof renderMemberAssemblyPanel === 'function') renderMemberAssemblyPanel();
 
         document.getElementById('dash-europe-status').innerText = game.inEurope ? "🏆 Champions Cup Gruppenphase" : "Nicht qualifiziert";
         let activePerks = Object.values(managerRPG.perks).filter(Boolean).length;
@@ -17936,6 +17953,7 @@ function finishGoalkeeperGame() {
         'screen-calendar': '📅 Terminplanung',
         'screen-squad': '👥 Kader',
         'screen-second-team': '🅱️ Zweite Mannschaft',
+        'screen-women': '👩 Frauenmannschaft',
         'screen-private': '🏠 Privatleben',
         'screen-underworld': '🌃 Zwielichtige Geschäfte',
         'screen-real-estate': '🏢 Immobilien',
@@ -31958,6 +31976,590 @@ function renderSquadHarmonyPanel() {
 
 </script>
 <script>
+// Mannschaftsrat: Kapitän + zwei Führungsspieler. Einmal im Monat bringt der Rat höchstens
+// ein Anliegen ein, das aus dem echten Kaderzustand entsteht (Moral, Einsatzzeiten,
+// Trainingshärte, Siegesserie). Deine Entscheidung wirkt auf Moral und Kasse.
+
+const COUNCIL_CONCERN_TIMEOUT = 4; // Spieltage, bis ein unbeantwortetes Anliegen verfällt
+const COUNCIL_LEAGUE_COST_FACTOR = [1.0, 0.7, 0.45, 0.3, 0.2, 0.12];
+
+function initTeamCouncil() {
+    if (!game.teamCouncil) game.teamCouncil = { memberIds: [], concern: null, history: [] };
+    const tc = game.teamCouncil;
+    tc.memberIds = tc.memberIds.filter(id => squad.some(p => p.id === id));
+    if (tc.memberIds.length < 3) electTeamCouncil(true);
+    return tc;
+}
+
+// Kapitän plus die beiden erfahrensten Spieler (Einsätze, dann Alter).
+function electTeamCouncil(silent) {
+    const tc = game.teamCouncil || (game.teamCouncil = { memberIds: [], concern: null, history: [] });
+    const captain = squad.find(p => p.id === game.captainId);
+    const rest = squad.filter(p => !captain || p.id !== captain.id)
+        .sort((a, b) => (b.appearances || 0) - (a.appearances || 0) || (b.age || 0) - (a.age || 0))
+        .slice(0, captain ? 2 : 3);
+    tc.memberIds = [...(captain ? [captain.id] : []), ...rest.map(p => p.id)];
+    if (!silent) { showToast('🤝 Der Mannschaftsrat wurde neu gewählt.', 'success'); renderTeamCouncilPanel(); }
+}
+
+function getCouncilMembers() {
+    return initTeamCouncil().memberIds.map(id => squad.find(p => p.id === id)).filter(Boolean);
+}
+
+function councilCost(base) {
+    const f = COUNCIL_LEAGUE_COST_FACTOR[game.leagueLevel] ?? COUNCIL_LEAGUE_COST_FACTOR[COUNCIL_LEAGUE_COST_FACTOR.length - 1];
+    return Math.round(base * f / 500) * 500;
+}
+
+function adjustMorale(players, delta) {
+    players.forEach(p => { p.morale = Math.max(10, Math.min(100, (p.morale || 50) + delta)); });
+}
+
+// Findet das dringendste Anliegen aus dem aktuellen Zustand - oder keines.
+function findCouncilConcern() {
+    if (squad.length === 0) return null;
+    const avgMorale = squad.reduce((s, p) => s + (p.morale || 50), 0) / squad.length;
+    if (avgMorale < 45) {
+        return { type: 'stimmung', title: 'Die Stimmung in der Kabine ist im Keller',
+            text: `Die durchschnittliche Moral liegt bei ${Math.round(avgMorale)}. Der Rat schlägt einen gemeinsamen Mannschaftsabend vor.`,
+            cost: councilCost(40000) };
+    }
+
+    const medianStrength = [...squad].map(p => p.strength).sort((a, b) => a - b)[Math.floor(squad.length / 2)];
+    const vergessen = game.matchday >= 8 && squad
+        .filter(p => (p.appearancesSeason || 0) === 0 && p.strength >= medianStrength && !(p.injured > 0))
+        .sort((a, b) => b.strength - a.strength)[0];
+    if (vergessen) {
+        return { type: 'einsatzzeit', playerId: vergessen.id, title: `${vergessen.name} fühlt sich übergangen`,
+            text: `${vergessen.name} (Stärke ${vergessen.strength}) hat diese Saison noch kein Spiel gemacht. Der Rat bittet um ein klärendes Gespräch.` };
+    }
+
+    if (game.trainingIntensity === 'hart' || game.trainingIntensity === 'intensiv') {
+        return { type: 'training', title: 'Die Trainingsbelastung ist zu hoch',
+            text: 'Die Führungsspieler melden müde Beine und wachsenden Unmut über das harte Training.' };
+    }
+
+    const letzte = (typeof getOwnSeasonMatches === 'function' ? getOwnSeasonMatches() : []).slice(-3);
+    if (letzte.length === 3 && letzte.every(m => m.own > m.opp)) {
+        return { type: 'praemie', title: 'Die Mannschaft möchte eine Prämie für die Siegesserie',
+            text: 'Drei Siege in Folge - der Rat bittet um eine Sonderprämie für die Mannschaft.',
+            cost: councilCost(60000) };
+    }
+    return null;
+}
+
+const COUNCIL_OPTIONS = {
+    stimmung: [
+        { label: c => `Mannschaftsabend (${formatVal(c.cost)})`, cost: c => c.cost, apply: () => adjustMorale(squad, 6), result: 'Mannschaftsabend organisiert, Moral +6' },
+        { label: () => 'Ablehnen', apply: () => adjustMorale(getCouncilMembers(), -5), result: 'Abgelehnt, der Rat ist verstimmt' }
+    ],
+    einsatzzeit: [
+        { label: () => 'Gespräch führen', apply: c => { const p = squad.find(x => x.id === c.playerId); if (p) adjustMorale([p], 10); }, result: 'Gespräch geführt, Spieler beruhigt' },
+        { label: () => 'Kein Kommentar', apply: c => { const p = squad.find(x => x.id === c.playerId); if (p) adjustMorale([p], -10); adjustMorale(getCouncilMembers(), -2); }, result: 'Abgewiesen, der Spieler ist enttäuscht' }
+    ],
+    training: [
+        { label: () => 'Training auf normal senken', apply: () => { if (typeof setTrainingIntensity === 'function') setTrainingIntensity('normal'); else game.trainingIntensity = 'normal'; adjustMorale(squad, 4); }, result: 'Training entschärft, Moral +4' },
+        { label: () => 'Härte beibehalten', apply: () => adjustMorale(squad, -4), result: 'Härte beibehalten, Moral -4' }
+    ],
+    praemie: [
+        { label: c => `Prämie zahlen (${formatVal(c.cost)})`, cost: c => c.cost, apply: () => adjustMorale(squad, 5), result: 'Prämie gezahlt, Moral +5' },
+        { label: () => 'Ablehnen', apply: () => adjustMorale(squad, -3), result: 'Prämie abgelehnt, Moral -3' }
+    ]
+};
+
+function answerCouncilConcern(optionIndex) {
+    const tc = initTeamCouncil();
+    const c = tc.concern;
+    if (!c) return;
+    const option = (COUNCIL_OPTIONS[c.type] || [])[optionIndex];
+    if (!option) return;
+    const cost = option.cost ? option.cost(c) : 0;
+    if (cost > game.money) { showToast(`Nicht genug Geld (${formatVal(cost)}).`, 'error'); return; }
+    if (cost > 0) {
+        setzeBuchungskontext('🤝 Mannschaftsrat');
+        game.money -= cost;
+        loescheBuchungskontext();
+    }
+    option.apply(c);
+    tc.history.unshift({ season: game.season, matchday: game.matchday, title: c.title, result: option.result });
+    tc.history = tc.history.slice(0, 6);
+    tc.concern = null;
+    showToast(`🤝 ${option.result}`, 'success');
+    updateUI();
+    renderTeamCouncilPanel();
+}
+
+// Monatlich: Anliegen verfallen lassen oder neues einbringen; der Rat prägt die Kabine.
+function tickTeamCouncil() {
+    const tc = initTeamCouncil();
+    if (tc.concern) {
+        const alter = (game.matchday - tc.concern.matchday) + (game.season > tc.concern.season ? 34 : 0);
+        if (alter < COUNCIL_CONCERN_TIMEOUT) return;
+        adjustMorale(getCouncilMembers(), -3);
+        tc.history.unshift({ season: game.season, matchday: game.matchday, title: tc.concern.title, result: 'Unbeantwortet verfallen, der Rat ist verstimmt' });
+        tc.history = tc.history.slice(0, 6);
+        tc.concern = null;
+    }
+    const members = getCouncilMembers();
+    const ratMoral = members.reduce((s, p) => s + (p.morale || 50), 0) / Math.max(1, members.length);
+    if (ratMoral >= 70) adjustMorale(squad.filter(p => !members.includes(p)), 1);
+    else if (ratMoral < 35) adjustMorale(squad.filter(p => !members.includes(p)), -1);
+
+    const concern = findCouncilConcern();
+    if (concern) {
+        tc.concern = { ...concern, season: game.season, matchday: game.matchday };
+        addInboxMessage('vertrag', `🤝 Mannschaftsrat: ${concern.title}`, `${concern.text} Antworte im Kader-Bereich beim Mannschaftsrat.`, 'screen-squad');
+    }
+}
+
+function renderTeamCouncilPanel() {
+    const box = document.getElementById('team-council-box');
+    if (!box) return;
+    const tc = initTeamCouncil();
+    const members = getCouncilMembers();
+    let html = '<div style="font-size:9px;">';
+    html += members.map(p => `<div style="display:flex; justify-content:space-between; padding:2px 0;">
+        <span>${p.id === game.captainId ? 'Ⓒ ' : ''}${p.name} (${p.age || '?'})</span>
+        <span style="color:${(p.morale || 50) >= 60 ? 'var(--primary)' : (p.morale || 50) < 40 ? 'var(--danger)' : 'var(--accent)'};">Moral ${Math.round(p.morale || 50)}</span></div>`).join('');
+    html += '<button onclick="electTeamCouncil()" class="btn-secondary" style="width:100%; font-size:8px; padding:3px; margin:4px 0;">Rat neu wählen</button>';
+
+    if (tc.concern) {
+        const opts = COUNCIL_OPTIONS[tc.concern.type] || [];
+        html += `<div style="background:rgba(212,169,74,0.12); border-left:3px solid var(--gold); padding:6px; border-radius:4px; margin-top:4px;">
+            <div style="font-weight:bold;">${tc.concern.title}</div>
+            <div style="color:var(--text-muted); margin:3px 0;">${tc.concern.text}</div>
+            ${opts.map((o, i) => `<button onclick="answerCouncilConcern(${i})" class="${i === 0 ? 'btn-action' : 'btn-secondary'}" style="font-size:8px; padding:3px 6px; margin:2px 4px 0 0;">${o.label(tc.concern)}</button>`).join('')}
+        </div>`;
+    } else {
+        html += '<div style="color:var(--text-muted); margin-top:4px;">Keine offenen Anliegen. Der Rat meldet sich einmal im Monat.</div>';
+    }
+    if (tc.history.length) {
+        html += '<div style="margin-top:6px; font-weight:bold;">Letzte Entscheidungen</div>';
+        html += tc.history.slice(0, 3).map(h => `<div style="color:var(--text-muted); font-size:8px;">S${h.season}/ST${h.matchday}: ${h.title} - ${h.result}</div>`).join('');
+    }
+    box.innerHTML = html + '</div>';
+}
+
+</script>
+<script>
+// Mitgliederversammlung: nach jedem Saisonabschluss legt der Verein vor seinen Mitgliedern
+// Rechenschaft ab. Grundlage sind echte Zahlen (Endplatz gegen die Erwartung zu Saisonbeginn,
+// Auf-/Abstieg, Finanzergebnis, Fanstimmung). Du wählst Rede und Beitragsantrag, dann wird
+// über die Entlastung abgestimmt - mit Folgen für Vorstand, Fans und Kasse.
+
+const ASSEMBLY_AUTO_AFTER = 6;   // Spieltage, bis die Versammlung ohne dich stattfindet
+const ASSEMBLY_SHOW_RESULT_FOR = 4;  // Spieltage, die das Ergebnis im Dashboard stehen bleibt
+const ASSEMBLY_LEAGUE_FACTOR = [1.0, 0.7, 0.45, 0.3, 0.2, 0.12];
+
+const ASSEMBLY_SPEECHES = {
+    selbstkritisch: { label: 'Selbstkritisch', desc: 'Fehler eingestehen, Besserung versprechen' },
+    visionaer: { label: 'Visionär', desc: 'Große Ziele für die Zukunft ausrufen' },
+    zahlen: { label: 'Zahlen sprechen lassen', desc: 'Nüchtern mit Tabelle und Bilanz argumentieren' }
+};
+const ASSEMBLY_FEES = {
+    senken: { label: 'Beitrag senken', fans: 3, approval: 4, money: -60000 },
+    halten: { label: 'Beitrag halten', fans: 0, approval: 0, money: 0 },
+    erhoehen: { label: 'Beitrag erhöhen', fans: -4, approval: -6, money: 120000 }
+};
+
+function assemblyLeagueFactor(level) {
+    return ASSEMBLY_LEAGUE_FACTOR[level] ?? ASSEMBLY_LEAGUE_FACTOR[ASSEMBLY_LEAGUE_FACTOR.length - 1];
+}
+
+// Erwarteter Platz = Rang der eigenen Kaderstärke in der (neuen) Liga zu Saisonbeginn.
+function recordSeasonExpectationRank() {
+    const teams = leaguesData[game.leagueLevel] || [];
+    // Schnitt der besten Elf: gleiche Skala wie die Gegnerstärken, ohne Taktik-/Heimboni.
+    const top11 = squad.map(p => p.strength).sort((x, y) => y - x).slice(0, 11);
+    const own = top11.length ? top11.reduce((x, y) => x + y, 0) / top11.length : 0;
+    const exp = game.seasonExpectation && game.seasonExpectation.season === game.season
+        ? game.seasonExpectation : (game.seasonExpectation = { season: game.season, startMoney: Math.round(game.money) });
+    exp.leagueLevel = game.leagueLevel;
+    exp.teams = teams.length;
+    exp.expectedRank = 1 + teams.filter(t => t.name !== game.clubName && t.strength > own).length;
+}
+
+function recordSeasonExpectation() {
+    game.seasonExpectation = { season: game.season, startMoney: Math.round(game.money) };
+    recordSeasonExpectationRank();
+}
+
+function getSeasonExpectation() {
+    if (!game.seasonExpectation || game.seasonExpectation.season !== game.season) recordSeasonExpectation();
+    return game.seasonExpectation;
+}
+
+// Im Saisonabschluss, VOR dem Ligawechsel: Bilanz der abgelaufenen Saison festhalten.
+function prepareMemberAssembly(finalRank) {
+    const exp = getSeasonExpectation();
+    game.pendingAssemblyReport = {
+        season: game.season,
+        finalRank,
+        expectedRank: exp.expectedRank,
+        teams: exp.teams,
+        leagueLevel: game.leagueLevel,
+        startMoney: exp.startMoney,
+        fans: Math.round(game.fans)
+    };
+}
+
+// Nach game.season++ (inkl. Saisonend-Prämien, vor den Dauerkarten der neuen Saison):
+// Finanzergebnis abschließen, Versammlung einberufen. Die Platzerwartung der neuen Saison
+// folgt nach advanceLeaguesToNewSeason() über recordSeasonExpectationRank().
+function openMemberAssembly() {
+    const r = game.pendingAssemblyReport;
+    game.pendingAssemblyReport = null;
+    game.seasonExpectation = { season: game.season, startMoney: Math.round(game.money) };
+    if (!r) return;
+    r.financeResult = Math.round(game.money - r.startMoney);
+    r.promoted = game.leagueLevel < r.leagueLevel;
+    r.relegated = game.leagueLevel > r.leagueLevel;
+    game.memberAssembly = { report: r, status: 'offen', openedMatchday: game.matchday, season: game.season, speech: 'zahlen', fee: 'halten' };
+    addInboxMessage('vertrag', '🗳️ Mitgliederversammlung einberufen',
+        `Die Mitglieder erwarten deinen Bericht zur Saison ${r.season} (Platz ${r.finalRank}, erwartet Platz ${r.expectedRank}). Bereite im Dashboard Rede und Beitragsantrag vor.`, 'screen-dashboard');
+}
+
+// Stimmung der Mitglieder vor der Rede, aus der tatsächlichen Saison.
+function assemblyBaseApproval(r) {
+    let a = 55;
+    a += Math.max(-25, Math.min(25, (r.expectedRank - r.finalRank) * 4));
+    if (r.promoted) a += 15;
+    if (r.relegated) a -= 20;
+    a += r.financeResult >= 0 ? 5 : -8;
+    a += (r.fans - 60) / 4;
+    return a;
+}
+
+function speechEffect(speech, r) {
+    const gut = r.finalRank <= r.expectedRank || r.promoted;
+    if (speech === 'selbstkritisch') return gut ? -3 : 6;
+    if (speech === 'visionaer') return gut ? 7 : -6;
+    return r.financeResult >= 0 ? 3 : -2; // zahlen
+}
+
+function setAssemblyChoice(field, value) {
+    const a = game.memberAssembly;
+    if (!a || a.status !== 'offen') return;
+    if (field === 'speech' && ASSEMBLY_SPEECHES[value]) a.speech = value;
+    if (field === 'fee' && ASSEMBLY_FEES[value]) a.fee = value;
+    renderMemberAssemblyPanel();
+}
+
+function holdMemberAssembly(automatisch) {
+    const a = game.memberAssembly;
+    if (!a || a.status !== 'offen') return;
+    const r = a.report;
+    const fee = ASSEMBLY_FEES[a.fee];
+    const money = Math.round(fee.money * assemblyLeagueFactor(game.leagueLevel) / 1000) * 1000;
+    if (money < 0 && game.money < -money) { showToast(`Nicht genug Geld für die Beitragssenkung (${formatVal(-money)}).`, 'error'); return; }
+
+    const zustimmung = Math.round(Math.max(5, Math.min(95, assemblyBaseApproval(r) + speechEffect(a.speech, r) + fee.approval
+        + (automatisch ? -5 : 0))));
+    const entlastet = zustimmung >= 50;
+    const boardDelta = zustimmung >= 70 ? 10 : entlastet ? 5 : zustimmung >= 30 ? -10 : -20;
+
+    game.boardSat = Math.max(1, Math.min(100, game.boardSat + boardDelta));
+    game.fans = Math.max(game.fanBaseFloor || 0, Math.min(100, game.fans + fee.fans));
+    if (money !== 0) {
+        setzeBuchungskontext('🗳️ Mitgliedsbeiträge');
+        game.money += money;
+        loescheBuchungskontext();
+    }
+    Object.assign(a, { status: 'abgehalten', heldMatchday: game.matchday, zustimmung, entlastet, boardDelta, money, automatisch: !!automatisch });
+    const titel = entlastet ? `✅ Entlastet mit ${zustimmung}% Zustimmung` : `❌ Nicht entlastet (${zustimmung}% Zustimmung)`;
+    addInboxMessage('vertrag', `🗳️ Mitgliederversammlung: ${titel}`,
+        `${automatisch ? 'Die Versammlung fand ohne deine Vorbereitung statt. ' : ''}Vorstandszufriedenheit ${boardDelta > 0 ? '+' : ''}${boardDelta}. ${fee.label}${money ? ` (${money > 0 ? '+' : ''}${formatVal(money)})` : ''}.`, 'screen-dashboard');
+    if (!automatisch) showToast(`🗳️ ${titel}`, entlastet ? 'success' : 'error');
+    updateUI();
+}
+
+// Monatlich: nicht vorbereitete Versammlung findet irgendwann ohne dich statt.
+function tickMemberAssembly() {
+    if (!game.seasonExpectation || game.seasonExpectation.season !== game.season) recordSeasonExpectation();
+    const a = game.memberAssembly;
+    if (a && a.status === 'offen' && game.matchday - a.openedMatchday >= ASSEMBLY_AUTO_AFTER) holdMemberAssembly(true);
+}
+
+function renderMemberAssemblyPanel() {
+    const box = document.getElementById('member-assembly-box');
+    if (!box) return;
+    const a = game.memberAssembly;
+    const sichtbar = a && a.season === game.season && (a.status === 'offen' || game.matchday <= (a.heldMatchday || 0) + ASSEMBLY_SHOW_RESULT_FOR);
+    if (!sichtbar) { box.style.display = 'none'; box.innerHTML = ''; return; }
+    box.style.display = 'block';
+    const r = a.report;
+    const verlauf = r.promoted ? '⬆️ Aufstieg' : r.relegated ? '⬇️ Abstieg' : 'Klassenerhalt';
+    let html = `<div class="panel-header" style="color:var(--gold);">🗳️ MITGLIEDERVERSAMMLUNG (SAISON ${r.season})</div>
+        <div style="font-size:9px; display:grid; grid-template-columns:1fr 1fr; gap:3px; margin-bottom:6px;">
+            <div>Endplatz: <strong>${r.finalRank}.</strong> (erwartet: ${r.expectedRank}.)</div>
+            <div>${verlauf}</div>
+            <div>Finanzergebnis: <strong style="color:${r.financeResult >= 0 ? 'var(--primary)' : 'var(--danger)'};">${r.financeResult >= 0 ? '+' : ''}${formatVal(r.financeResult)}</strong></div>
+            <div>Fan-Stimmung: ${r.fans}%</div>
+        </div>`;
+    if (a.status === 'offen') {
+        const rest = ASSEMBLY_AUTO_AFTER - (game.matchday - a.openedMatchday);
+        html += '<div style="font-size:9px; font-weight:bold;">Deine Rede</div>';
+        html += Object.entries(ASSEMBLY_SPEECHES).map(([k, s]) => `<button onclick="setAssemblyChoice('speech','${k}')" class="${a.speech === k ? 'btn-action' : 'btn-secondary'}" style="font-size:8px; padding:3px 6px; margin:2px 3px 2px 0;" title="${s.desc}">${s.label}</button>`).join('');
+        html += '<div style="font-size:9px; font-weight:bold; margin-top:4px;">Antrag zum Mitgliedsbeitrag</div>';
+        html += Object.entries(ASSEMBLY_FEES).map(([k, f]) => {
+            const m = Math.round(f.money * assemblyLeagueFactor(game.leagueLevel) / 1000) * 1000;
+            return `<button onclick="setAssemblyChoice('fee','${k}')" class="${a.fee === k ? 'btn-action' : 'btn-secondary'}" style="font-size:8px; padding:3px 6px; margin:2px 3px 2px 0;">${f.label}${m ? ` (${m > 0 ? '+' : ''}${formatVal(m)})` : ''}</button>`;
+        }).join('');
+        html += `<button onclick="holdMemberAssembly()" class="btn-gold" style="width:100%; font-size:10px; padding:6px; margin-top:6px;">🗳️ Versammlung durchführen</button>
+            <div style="font-size:8px; color:var(--text-muted); margin-top:3px;">Ohne dich findet sie in ${Math.max(0, rest)} Spieltag(en) statt - unvorbereitet kostet das Zustimmung.</div>`;
+    } else {
+        html += `<div style="font-size:10px; font-weight:bold; color:${a.entlastet ? 'var(--primary)' : 'var(--danger)'};">${a.entlastet ? '✅ Entlastet' : '❌ Nicht entlastet'} - ${a.zustimmung}% Zustimmung</div>
+            <div style="font-size:9px; color:var(--text-muted);">Vorstandszufriedenheit ${a.boardDelta > 0 ? '+' : ''}${a.boardDelta}${a.money ? ` · Beiträge ${a.money > 0 ? '+' : ''}${formatVal(a.money)}` : ''}${a.automatisch ? ' · ohne Vorbereitung abgehalten' : ''}</div>`;
+    }
+    box.innerHTML = html;
+}
+
+</script>
+<script>
+// Frauenmannschaft: eigenes Team mit Kader, eigener Liga (12 Teams, 22 Spieltage parallel zu
+// den Herren-Spieltagen), Auf-/Abstieg zwischen drei Ligen und Kosten/Einnahmen als
+// Spieltagsposten im Buchungsjournal.
+
+const WOMEN_LEAGUES = [
+    { name: 'Frauen-Bundesliga', minStr: 58, maxStr: 76, wage: 1800, income: 9000 },
+    { name: '2. Frauen-Bundesliga', minStr: 44, maxStr: 58, wage: 700, income: 3200 },
+    { name: 'Frauen-Regionalliga', minStr: 30, maxStr: 44, wage: 220, income: 900 }
+];
+const WOMEN_TEAMS_PER_LEAGUE = 12;
+const WOMEN_MATCHDAYS = (WOMEN_TEAMS_PER_LEAGUE - 1) * 2;
+const WOMEN_FOUNDING_COST = 60000;
+const WOMEN_FOERDERUNG = [
+    { name: 'Grundbetrieb', cost: 0, growth: 0, wageMult: 1.0 },
+    { name: 'Leistungszentrum', cost: 40000, growth: 1, wageMult: 1.2 },
+    { name: 'Profi-Strukturen', cost: 150000, growth: 2, wageMult: 1.5 },
+    { name: 'Spitzenförderung', cost: 400000, growth: 3, wageMult: 1.9 }
+];
+const WOMEN_FIRST_NAMES = ['Lena', 'Anna', 'Marie', 'Sophie', 'Laura', 'Julia', 'Lea', 'Hannah', 'Mia', 'Emma', 'Sarah', 'Nina',
+    'Lisa', 'Jana', 'Carla', 'Paula', 'Merle', 'Klara', 'Ida', 'Frieda', 'Selin', 'Aylin', 'Svenja', 'Tabea', 'Greta', 'Noemi'];
+const WOMEN_LAST_NAMES = ['Brandt', 'Keller', 'Vogel', 'Jansen', 'Kraus', 'Lehmann', 'Arnold', 'Busch', 'Ziegler', 'Winkler',
+    'Seidel', 'Kaya', 'Roth', 'Franke', 'Pohl', 'Engel', 'Horn', 'Sauer', 'Graf', 'Kuhn', 'Marx', 'Böhm', 'Stein', 'Yilmaz'];
+const WOMEN_CLUB_TOWNS = ['Grünwald', 'Birkenfeld', 'Seestadt', 'Lindenau', 'Talheim', 'Rotenburgh', 'Hohenwart', 'Mühlbach',
+    'Kirchhain', 'Neuried', 'Sonnfeld', 'Waldeck', 'Eichstätt-Nord', 'Burgdorfh', 'Altmark', 'Wiesental', 'Sandhofen',
+    'Rheinau', 'Bergheide', 'Ostfeld', 'Weißenbach', 'Hafenstadt', 'Ulmenhof', 'Steinach', 'Brückenau', 'Moorfeld', 'Tannheim',
+    'Feldkirchen-Süd', 'Auenwald', 'Lerchenberg', 'Kronach-Ost', 'Silberau', 'Heidesee'];
+const WOMEN_CLUB_PREFIX = ['SV', 'FC', 'TSV', 'SC', 'VfL', '1. FFC', 'SG', 'FFC'];
+
+function womenRand(min, max) { return min + Math.floor(Math.random() * (max - min + 1)); }
+
+function womenOwnStrength() {
+    const w = game.womenTeam;
+    const top = w.squad.map(p => p.strength).sort((a, b) => b - a).slice(0, 11);
+    return top.reduce((s, x) => s + x, 0) / Math.max(1, top.length);
+}
+
+function createWomenPlayer(level, pos) {
+    const lg = WOMEN_LEAGUES[level];
+    return {
+        id: 'w' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+        name: `${WOMEN_FIRST_NAMES[womenRand(0, WOMEN_FIRST_NAMES.length - 1)]} ${WOMEN_LAST_NAMES[womenRand(0, WOMEN_LAST_NAMES.length - 1)]}`,
+        pos,
+        age: womenRand(17, 32),
+        strength: womenRand(lg.minStr - 2, Math.round((lg.minStr + lg.maxStr) / 2)),
+        goals: 0
+    };
+}
+
+function buildWomenLeague(level, keepNames) {
+    const w = game.womenTeam;
+    const lg = WOMEN_LEAGUES[level];
+    const used = new Set(keepNames || []);
+    const teams = [{ name: w.name, own: true }];
+    while (teams.length < WOMEN_TEAMS_PER_LEAGUE) {
+        const name = `${WOMEN_CLUB_PREFIX[womenRand(0, WOMEN_CLUB_PREFIX.length - 1)]} ${WOMEN_CLUB_TOWNS[womenRand(0, WOMEN_CLUB_TOWNS.length - 1)]}`;
+        if (used.has(name) || teams.some(t => t.name === name)) continue;
+        teams.push({ name, strength: womenRand(lg.minStr, lg.maxStr) });
+    }
+    w.table = teams.map(t => ({ ...t, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, points: 0 }));
+    // Doppelrunde nach dem Kreisverfahren
+    const idx = teams.map((_, i) => i);
+    const rounds = [];
+    for (let r = 0; r < WOMEN_TEAMS_PER_LEAGUE - 1; r++) {
+        const pairs = [];
+        for (let i = 0; i < WOMEN_TEAMS_PER_LEAGUE / 2; i++) {
+            let h = idx[i], a = idx[WOMEN_TEAMS_PER_LEAGUE - 1 - i];
+            if (r % 2 === 1) [h, a] = [a, h];
+            pairs.push([h, a]);
+        }
+        rounds.push(pairs);
+        idx.splice(1, 0, idx.pop());
+    }
+    w.fixtures = [...rounds, ...rounds.map(r => r.map(([h, a]) => [a, h]))];
+    w.round = 0;
+    w.lastResults = [];
+}
+
+function foundWomenTeam() {
+    if (game.womenTeam && game.womenTeam.founded) return;
+    if (game.money < WOMEN_FOUNDING_COST) { showToast(`Für die Gründung fehlen ${formatVal(WOMEN_FOUNDING_COST - game.money)}.`, 'error'); return; }
+    setzeBuchungskontext('👩 Frauenmannschaft');
+    game.money -= WOMEN_FOUNDING_COST;
+    loescheBuchungskontext();
+    const level = WOMEN_LEAGUES.length - 1;
+    game.womenTeam = { founded: true, name: `${game.clubName} Frauen`, leagueLevel: level, foerderung: 0, squad: [], history: [] };
+    const positions = ['TW', 'TW', 'ABW', 'ABW', 'ABW', 'ABW', 'ABW', 'ABW', 'MF', 'MF', 'MF', 'MF', 'MF', 'MF', 'ST', 'ST', 'ST', 'ST'];
+    game.womenTeam.squad = positions.map(pos => createWomenPlayer(level, pos));
+    buildWomenLeague(level);
+    addInboxMessage('vertrag', '👩 Frauenmannschaft gegründet!', `${game.womenTeam.name} startet in der ${WOMEN_LEAGUES[level].name}. Die Spiele laufen parallel zu den Herren-Spieltagen.`, 'screen-women');
+    showToast('👩 Frauenmannschaft gegründet!', 'success');
+    renderWomenTeamView();
+}
+
+function upgradeWomenFoerderung() {
+    const w = game.womenTeam;
+    if (!w || !w.founded) return;
+    const next = WOMEN_FOERDERUNG[w.foerderung + 1];
+    if (!next) return;
+    if (game.money < next.cost) { showToast(`Nicht genug Geld (${formatVal(next.cost)}).`, 'error'); return; }
+    setzeBuchungskontext('👩 Frauenmannschaft');
+    game.money -= next.cost;
+    loescheBuchungskontext();
+    w.foerderung++;
+    showToast(`👩 Förderung ausgebaut: ${next.name}`, 'success');
+    renderWomenTeamView();
+}
+
+function womenGoals(att, def) {
+    // Poisson-ähnlich: Erwartungswert aus der Stärkedifferenz
+    const lambda = Math.max(0.2, 1.35 + (att - def) * 0.06);
+    let goals = 0, p = Math.exp(-lambda), s = p, u = Math.random();
+    while (u > s && goals < 9) { goals++; p *= lambda / goals; s += p; }
+    return goals;
+}
+
+function playWomenRound() {
+    const w = game.womenTeam;
+    const round = w.fixtures[w.round];
+    if (!round) return;
+    const own = womenOwnStrength();
+    w.lastResults = [];
+    round.forEach(([h, a]) => {
+        const th = w.table[h], ta = w.table[a];
+        const sh = (th.own ? own : th.strength) + 2; // Heimvorteil
+        const sa = ta.own ? own : ta.strength;
+        const gh = womenGoals(sh, sa), ga = womenGoals(sa, sh);
+        [[th, gh, ga], [ta, ga, gh]].forEach(([t, f, g]) => {
+            t.played++; t.gf += f; t.ga += g;
+            if (f > g) { t.won++; t.points += 3; } else if (f === g) { t.drawn++; t.points++; } else t.lost++;
+        });
+        if (th.own || ta.own) {
+            const eigene = th.own ? gh : ga;
+            const torschuetzinnen = w.squad.filter(p => p.pos !== 'TW');
+            for (let i = 0; i < eigene; i++) torschuetzinnen[womenRand(0, torschuetzinnen.length - 1)].goals++;
+            w.lastResults.push(`${th.name} ${gh}:${ga} ${ta.name}`);
+        }
+    });
+    w.round++;
+}
+
+function getWomenTableSorted() {
+    return [...game.womenTeam.table].sort((a, b) => b.points - a.points || (b.gf - b.ga) - (a.gf - a.ga) || b.gf - a.gf);
+}
+
+// Jeder Herren-Spieltag: eine Frauen-Runde (solange die Saison läuft) plus Kosten/Einnahmen.
+function tickWomenTeam() {
+    const w = game.womenTeam;
+    if (!w || !w.founded) return;
+    if (w.round < WOMEN_MATCHDAYS) playWomenRound();
+
+    const lg = WOMEN_LEAGUES[w.leagueLevel];
+    const wages = Math.round(lg.wage * w.squad.length * WOMEN_FOERDERUNG[w.foerderung].wageMult / 4); // pro Spieltag
+    const rank = getWomenTableSorted().findIndex(t => t.own) + 1;
+    const income = Math.round(lg.income * (1.3 - rank / WOMEN_TEAMS_PER_LEAGUE * 0.6) * (0.6 + (game.fans || 50) / 125));
+    const imJournal = typeof hatSpieltagsabrechnung === 'function' && hatSpieltagsabrechnung();
+    setzeBuchungskontext(imJournal ? SPIELTAG_KONTEXT : '👩 Frauenmannschaft');
+    game.money += income - wages;
+    loescheBuchungskontext();
+    if (imJournal) {
+        bucheInSpieltagsjournal('👩 Frauenmannschaft: Gehälter', wages, 'ausgaben');
+        bucheInSpieltagsjournal('👩 Frauenmannschaft: Einnahmen', income, 'einnahmen');
+    }
+}
+
+// Saisonabschluss: Auf-/Abstieg, Entwicklung der Spielerinnen, neue Liga.
+function concludeWomenSeason() {
+    const w = game.womenTeam;
+    if (!w || !w.founded) return;
+    while (w.round < WOMEN_MATCHDAYS) playWomenRound();
+    const rank = getWomenTableSorted().findIndex(t => t.own) + 1;
+    const alteLiga = w.leagueLevel;
+    if (rank === 1 && w.leagueLevel > 0) w.leagueLevel--;
+    else if (rank >= WOMEN_TEAMS_PER_LEAGUE - 1 && w.leagueLevel < WOMEN_LEAGUES.length - 1) w.leagueLevel++;
+    const titel = rank === 1 && alteLiga === 0;
+    w.history.unshift({ season: game.season, liga: WOMEN_LEAGUES[alteLiga].name, rank });
+    w.history = w.history.slice(0, 10);
+    if (titel) {
+        game.trophies.push(`Deutsche Meisterin Frauen (Saison ${game.season})`);
+        game.fans = Math.min(100, game.fans + 3);
+    }
+    const growth = WOMEN_FOERDERUNG[w.foerderung].growth;
+    w.squad.forEach(p => {
+        p.age++;
+        const alterseffekt = p.age <= 23 ? 2 : p.age >= 31 ? -2 : 0;
+        p.strength = Math.max(20, Math.min(90, p.strength + womenRand(-1, 2) + growth + alterseffekt));
+        p.goals = 0;
+    });
+    // Karriereende mit 34, Nachrückerinnen auf dem Niveau der (neuen) Liga
+    w.squad = w.squad.map(p => p.age >= 34 ? createWomenPlayer(w.leagueLevel, p.pos) : p);
+    const verlauf = w.leagueLevel < alteLiga ? `⬆️ Aufstieg in die ${WOMEN_LEAGUES[w.leagueLevel].name}!`
+        : w.leagueLevel > alteLiga ? `⬇️ Abstieg in die ${WOMEN_LEAGUES[w.leagueLevel].name}.` : `Klassenerhalt in der ${WOMEN_LEAGUES[w.leagueLevel].name}.`;
+    addInboxMessage('vertrag', `👩 Frauenmannschaft: Platz ${rank}`, `${titel ? '🏆 Deutsche Meisterschaft! ' : ''}${verlauf}`, 'screen-women');
+    buildWomenLeague(w.leagueLevel);
+}
+
+function renderWomenTeamView() {
+    const box = document.getElementById('women-team-box');
+    if (!box) return;
+    const w = game.womenTeam;
+    if (!w || !w.founded) {
+        box.innerHTML = `<div class="panel"><div class="panel-header">👩 FRAUENMANNSCHAFT GRÜNDEN</div><div class="box" style="font-size:10px;">
+            Gründe eine eigene Frauenmannschaft. Sie startet in der ${WOMEN_LEAGUES[WOMEN_LEAGUES.length - 1].name} und kann bis in die
+            ${WOMEN_LEAGUES[0].name} aufsteigen. Ihre Spiele laufen parallel zu den Herren-Spieltagen, Gehälter und Einnahmen
+            erscheinen im Buchungsjournal.</div>
+            <button onclick="foundWomenTeam()" class="btn-gold" style="width:100%; padding:8px;">👩 Frauenmannschaft gründen (${formatVal(WOMEN_FOUNDING_COST)})</button></div>`;
+        return;
+    }
+    const tabelle = getWomenTableSorted();
+    const rank = tabelle.findIndex(t => t.own) + 1;
+    const fd = WOMEN_FOERDERUNG[w.foerderung], next = WOMEN_FOERDERUNG[w.foerderung + 1];
+    let html = `<div class="panel"><div class="panel-header">👩 ${w.name.toUpperCase()}</div>
+        <div style="font-size:10px; display:grid; grid-template-columns:1fr 1fr; gap:4px;">
+            <div>Liga: <strong>${WOMEN_LEAGUES[w.leagueLevel].name}</strong></div>
+            <div>Platz: <strong>${rank}.</strong> · Spieltag ${Math.min(w.round, WOMEN_MATCHDAYS)}/${WOMEN_MATCHDAYS}</div>
+            <div>Teamstärke: <strong>${Math.round(womenOwnStrength())}</strong></div>
+            <div>Förderung: <strong>${fd.name}</strong></div>
+        </div>
+        ${w.lastResults.length ? `<div style="font-size:9px; color:var(--text-muted); margin-top:4px;">Letztes Spiel: ${w.lastResults.join(' · ')}</div>` : ''}
+        ${w.round >= WOMEN_MATCHDAYS ? '<div style="font-size:9px; color:var(--accent); margin-top:4px;">Saison beendet - Auf-/Abstieg zum Saisonwechsel.</div>' : ''}
+        ${next ? `<button onclick="upgradeWomenFoerderung()" class="btn-secondary" style="width:100%; font-size:9px; padding:5px; margin-top:6px;">⬆️ ${next.name} (${formatVal(next.cost)}, Entwicklung +${next.growth}/Saison, Gehälter ×${next.wageMult})</button>` : ''}
+        </div>`;
+
+    html += `<div class="panel"><div class="panel-header">📊 TABELLE</div><table style="width:100%; font-size:9px; border-collapse:collapse;">
+        <tr style="color:var(--text-muted);"><td>#</td><td>Verein</td><td>Sp</td><td>Tore</td><td style="text-align:right;">Pkt</td></tr>`;
+    tabelle.forEach((t, i) => {
+        const zone = i === 0 && w.leagueLevel > 0 ? 'var(--primary)' : i >= WOMEN_TEAMS_PER_LEAGUE - 2 && w.leagueLevel < WOMEN_LEAGUES.length - 1 ? 'var(--danger)' : 'inherit';
+        html += `<tr style="${t.own ? 'font-weight:bold; color:var(--accent);' : ''}"><td style="color:${zone};">${i + 1}</td><td>${t.name}</td><td>${t.played}</td><td>${t.gf}:${t.ga}</td><td style="text-align:right;">${t.points}</td></tr>`;
+    });
+    html += '</table></div>';
+
+    const kader = [...w.squad].sort((a, b) => b.strength - a.strength);
+    html += `<div class="panel"><div class="panel-header">👟 KADER (${kader.length})</div><div style="font-size:9px; display:grid; grid-template-columns:1fr 1fr; gap:2px 8px;">`;
+    html += kader.map(p => `<div>${p.pos} ${p.name} (${p.age}) · <strong>${p.strength}</strong>${p.goals ? ` · ⚽${p.goals}` : ''}</div>`).join('');
+    html += '</div></div>';
+
+    if (w.history.length) {
+        html += '<div class="panel"><div class="panel-header">📜 SAISONHISTORIE</div><div style="font-size:9px;">'
+            + w.history.map(h => `<div>Saison ${h.season}: Platz ${h.rank} in der ${h.liga}</div>`).join('') + '</div></div>';
+    }
+    box.innerHTML = html;
+}
+
+</script>
+<script>
 // Spieler-Vertragsverlängerungs-System
 // Automatische Kündigungen, Verhandlungen, Loyalität und Vertragsboni
 
@@ -34743,6 +35345,74 @@ function tickMatchInjuries() {
 
 </script>
 <script>
+// Schiedsrichter: jedes Ligaspiel hat einen namentlichen Unparteiischen. Seine Strenge
+// (cardMult) wirkt auf die Kartenschwellen im Liveticker und auf die Sperren nach dem Spiel.
+// Die Ansetzung ist pro Saison/Spieltag/Liga fest, damit sie vorab im Dashboard steht.
+
+const REFEREES = [
+    // minLeague/maxLeague: leagueLevel-Bereich (0 = 1. Liga), in dem er pfeift
+    { id: 'hartung', name: 'Tobias Hartung', style: 'Kleinlich', cardMult: 1.4, minLeague: 0, maxLeague: 2 },
+    { id: 'brenner', name: 'Felix Brenner', style: 'Souverän', cardMult: 0.9, minLeague: 0, maxLeague: 1 },
+    { id: 'aydin', name: 'Deniz Aydın', style: 'Großzügig', cardMult: 0.7, minLeague: 0, maxLeague: 2 },
+    { id: 'wendt', name: 'Marco Wendt', style: 'Konsequent', cardMult: 1.2, minLeague: 0, maxLeague: 3 },
+    { id: 'lorenz', name: 'Sabine Lorenz', style: 'Souverän', cardMult: 1.0, minLeague: 0, maxLeague: 3 },
+    { id: 'petrovic', name: 'Luka Petrović', style: 'Lässt laufen', cardMult: 0.75, minLeague: 1, maxLeague: 4 },
+    { id: 'krause', name: 'Jens Krause', style: 'Kleinlich', cardMult: 1.35, minLeague: 2, maxLeague: 5 },
+    { id: 'haas', name: 'Nina Haas', style: 'Konsequent', cardMult: 1.15, minLeague: 2, maxLeague: 5 },
+    { id: 'schubert', name: 'Uwe Schubert', style: 'Großzügig', cardMult: 0.8, minLeague: 3, maxLeague: 5 },
+    { id: 'demir', name: 'Kerem Demir', style: 'Souverän', cardMult: 1.0, minLeague: 3, maxLeague: 5 },
+    { id: 'vogt', name: 'Heiko Vogt', style: 'Hektisch', cardMult: 1.3, minLeague: 4, maxLeague: 5 },
+    { id: 'ernst', name: 'Paula Ernst', style: 'Lässt laufen', cardMult: 0.85, minLeague: 4, maxLeague: 5 }
+];
+
+function getRefereeFor(season, matchday, leagueLevel) {
+    const pool = REFEREES.filter(r => leagueLevel >= r.minLeague && leagueLevel <= r.maxLeague);
+    // Deterministische Streuung statt Math.random(): gleiche Ansetzung bei jedem Aufruf.
+    const seed = (season * 131 + matchday * 17 + leagueLevel * 7 + (game.clubName || '').length) >>> 0;
+    return pool[seed % pool.length];
+}
+
+function getCurrentReferee() {
+    return getRefereeFor(game.season, game.matchday, game.leagueLevel);
+}
+
+function getRefereeCardMult() {
+    return getCurrentReferee().cardMult;
+}
+
+function getRefereeRecord(refId) {
+    if (!game.refereeHistory) game.refereeHistory = {};
+    if (!game.refereeHistory[refId]) game.refereeHistory[refId] = { spiele: 0, siege: 0, remis: 0, niederlagen: 0, platzverweise: 0 };
+    return game.refereeHistory[refId];
+}
+
+// Nach jedem eigenen Ligaspiel (Live und Schnellsimulation).
+function recordRefereeMatch(matchResult, platzverweise) {
+    if (!matchResult) return;
+    const rec = getRefereeRecord(getCurrentReferee().id);
+    rec.spiele++;
+    if (matchResult === 'win') rec.siege++;
+    else if (matchResult === 'draw') rec.remis++;
+    else rec.niederlagen++;
+    rec.platzverweise += platzverweise || 0;
+}
+
+function renderRefereePreview() {
+    const box = document.getElementById('dash-referee-box');
+    if (!box) return;
+    if (game.matchday > 34) { box.innerHTML = ''; return; }
+    const ref = getCurrentReferee();
+    const rec = (game.refereeHistory || {})[ref.id] || { spiele: 0 };
+    const strenge = ref.cardMult >= 1.25 ? '🟥 zückt schnell Karten' : ref.cardMult <= 0.8 ? '🟩 lässt viel laufen' : '🟨 durchschnittlich streng';
+    const bilanz = rec.spiele ? `Bisherige Bilanz: ${rec.siege}S ${rec.remis}U ${rec.niederlagen}N` : 'Noch kein gemeinsames Spiel';
+    box.innerHTML = `<div style="font-size:9px; color:var(--text-muted); margin:6px 0; padding:6px; background:rgba(255,255,255,0.03); border-radius:4px;">
+        🧑‍⚖️ Schiedsrichter: <strong style="color:var(--text);">${ref.name}</strong> (${ref.style}) · ${strenge}<br>${bilanz}
+        ${game.tackleHardness === 'hart' && ref.cardMult >= 1.2 ? '<br><span style="color:var(--accent);">⚠️ Harte Zweikampfführung gegen diesen Schiedsrichter ist riskant.</span>' : ''}
+    </div>`;
+}
+
+</script>
+<script>
 
     // currentMatch/substitutionsLeft: waren bisher nirgends deklariert (nur per Zuweisung
     // ohne let/var/const entstandene implizite globale Variablen) - ESLint (siehe
@@ -35136,7 +35806,8 @@ function tickMatchInjuries() {
             }
         }
         
-        let introNotes = "Anpfiff der Partie!";
+        currentMatch.referee = (typeof getCurrentReferee === 'function') ? getCurrentReferee() : null;
+        let introNotes = currentMatch.referee ? `Anpfiff durch ${currentMatch.referee.name} (${currentMatch.referee.style})!` : "Anpfiff der Partie!";
         if (underworld.activeSabotages.pyroHotel) introNotes += " [🧨 Gegner wirkt müde]";
         if (underworld.activeSabotages.refBribe) introNotes += " [⌚ Schiedsrichter pfeift wohlwollend]";
         document.getElementById('ticker-log').innerHTML = `<div>${introNotes}</div>`;
@@ -35428,6 +36099,8 @@ function tickMatchInjuries() {
             ourCardThreshold *= currentWeather.cardMult;
             if (game.tackleHardness === 'hart') ourCardThreshold *= 1.5;
             if (game.tackleHardness === 'vorsichtig') ourCardThreshold *= 0.6;
+            let refCardMult = currentMatch.referee ? currentMatch.referee.cardMult : 1;
+            ourCardThreshold *= refCardMult;
             // Nervenkrieg-Effekt: bei einer bereits etablierten Elfmeterschießen-Rivalität
             // (siehe checkShootoutRivalryIntensity() in europe.js/cup.js) steht das ganze
             // Spiel unter besonderer psychischer Anspannung - hitzköpfige Spieler geraten
@@ -35455,7 +36128,7 @@ function tickMatchInjuries() {
                     currentMatch.yellowCards[culprit.id] = (currentMatch.yellowCards[culprit.id] || 0) + 1;
                     document.getElementById('ticker-log').innerHTML += `<div style="color:var(--accent);">🟨 ${currentMatch.minute}. Min: Gelbe Karte für ${culprit.name}.</div>`;
                 }
-            } else if (ourCardRoll < 0.11) {
+            } else if (ourCardRoll < 0.11 * refCardMult) {
                 // Gegnerische Karte - kein individueller Spieler, aber wirkt sich leicht auf Spielverlauf aus
                 eventHandled = true;
                 let isRed = Math.random() < 0.1;
@@ -36380,6 +37053,8 @@ function tickMatchInjuries() {
         // Neue Verletzungen/Sperren nur unter Spielern, die diesen Spieltag tatsächlich aufgelaufen sind.
         // Wer schon oft verletzt war, gilt als "verletzungsanfällig" und hat ein höheres
         // individuelles Risiko - ein sich selbst verstärkender Teufelskreis wie im echten Fußball.
+        let refereeCardMultThisMatch = (matchResult && typeof getRefereeCardMult === 'function') ? getRefereeCardMult() : 1;
+        let sperrenDurchSchiri = 0;
         playedThisMatch.forEach(p => {
             p.appearances = (p.appearances || 0) + 1;
             p.appearancesSeason = (p.appearancesSeason || 0) + 1;
@@ -36414,11 +37089,17 @@ function tickMatchInjuries() {
                 p.timesInjured = (p.timesInjured || 0) + 1;
                 let fragileTag = p.timesInjured >= 3 ? ' ⚠️ Wird zunehmend verletzungsanfällig!' : '';
                 addInboxMessage('verletzung', `${p.name} verletzt`, `Fällt für ${p.injured} Spiel(e) aus. (${p.timesInjured}. Verletzung in dieser Karriere)${fragileTag}`, 'screen-squad');
-            } else if (Math.random() < 0.015) {
+            } else if (Math.random() < 0.015 * refereeCardMultThisMatch) {
                 p.suspended = 1; // Platzverweis/Gelb-Sperre: 1 Spiel Sperre
+                sperrenDurchSchiri++;
                 addInboxMessage('verletzung', `${p.name} gesperrt`, `Fällt für das nächste Spiel gesperrt aus.`, 'screen-squad');
             }
         });
+
+        if (typeof recordRefereeMatch === 'function') {
+            let liveRot = (isLiveContext && typeof currentMatch !== 'undefined' && currentMatch) ? currentMatch.sentOff.length : 0;
+            recordRefereeMatch(matchResult, liveRot + sperrenDurchSchiri);
+        }
 
         let cupRoundIdx = cupTournament.matchdays.indexOf(game.matchday);
         if (cupRoundIdx !== -1) simulateCupRound(cupRoundIdx, isLiveContext);
@@ -36478,6 +37159,7 @@ function tickMatchInjuries() {
                 bucheInSpieltagsjournal('📣 Fanclub-Einnahmen', fanRevenue, 'einnahmen');
             }
         }
+        if (typeof tickWomenTeam === 'function') tickWomenTeam();
         // Stadium Management: Projektfortschritt und Wartung
         if (typeof tickStadiumProjects === 'function') tickStadiumProjects();
         let stadiumMaintenance = (typeof tickStadiumMaintenance === 'function') ? tickStadiumMaintenance() : 0;
@@ -36529,6 +37211,8 @@ function tickMatchInjuries() {
             // Season Objectives & Squad Harmony: Ziele und Mannschaftsharmonie
             if (typeof tickSeasonObjectives === 'function') tickSeasonObjectives();
             if (typeof tickSquadHarmony === 'function') tickSquadHarmony();
+            if (typeof tickTeamCouncil === 'function') tickTeamCouncil();
+            if (typeof tickMemberAssembly === 'function') tickMemberAssembly();
             // Contract Renewal & Media Relations: Verträge und Medienbeziehungen
             if (typeof tickContractRenewal === 'function') tickContractRenewal();
             if (typeof tickMediaRelations === 'function') tickMediaRelations();
@@ -37497,6 +38181,8 @@ function tickMatchInjuries() {
         let myRank = teams.findIndex(t => t.name === game.clubName) + 1;
         let myTeamRecord = leaguesData[game.leagueLevel].find(t => t.name === game.clubName);
         if (typeof evaluateSeasonEndObjectives === 'function') evaluateSeasonEndObjectives(myRank);
+        if (typeof prepareMemberAssembly === 'function') prepareMemberAssembly(myRank);
+        if (typeof concludeWomenSeason === 'function') concludeWomenSeason();
 
         // Medienrechte (NEU): Liga-Kollektiv-TV-Ausschüttung zum Saisonende, gestaffelt nach
         // Ligastärke UND Tabellenplatz.
@@ -37663,6 +38349,7 @@ function tickMatchInjuries() {
         if (typeof recordSeasonalManagerStats === 'function') recordSeasonalManagerStats();
         game.season++;
         if (typeof startNewSeasonObjectives === 'function') startNewSeasonObjectives();
+        if (typeof openMemberAssembly === 'function') openMemberAssembly();
         checkJubileeCrestUnlock();
         // Leihverein-Beziehungen schwächen sich ab, wenn 2+ Saisons kein neues Geschäft mit
         // demselben Klub stattfand - Kontakte pflegen sich nicht von selbst.
@@ -37696,6 +38383,7 @@ function tickMatchInjuries() {
         if (typeof renewSeasonTickets === 'function') renewSeasonTickets();
         if (typeof checkSeasonMoodTargetResult === 'function') checkSeasonMoodTargetResult();
         advanceLeaguesToNewSeason();
+        if (typeof recordSeasonExpectationRank === 'function') recordSeasonExpectationRank();
         if (typeof applyPendingFfpPointDeduction === 'function') applyPendingFfpPointDeduction();
         refreshTransferMarket();
         autoLineup();

@@ -3864,6 +3864,98 @@ async function testCodeIntegrity(browser) {
     await page.close();
 }
 
+// ---------------------------------------------------------------------------
+// PHASE 11: Schiedsrichter, Mannschaftsrat, Mitgliederversammlung, Frauenmannschaft
+// ---------------------------------------------------------------------------
+async function testPhase11(browser) {
+    console.log('\n[P11] Schiedsrichter, Mannschaftsrat, Mitgliederversammlung, Frauenmannschaft');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        const out = {};
+        game.money = 5000000;
+
+        // Schiedsrichter: feste Ansetzung, Pools je Liga, Vorschau, Bilanz nach dem Spiel
+        out.refFest = getCurrentReferee().id === getCurrentReferee().id;
+        out.refJedeLiga = [0, 1, 2, 3, 4, 5].every(l => REFEREES.some(ref => l >= ref.minLeague && l <= ref.maxLeague));
+        showScreen('screen-dashboard'); updateUI();
+        out.refVorschau = document.getElementById('dash-referee-box').innerText.includes(getCurrentReferee().name);
+        const ref = getCurrentReferee();
+        simulateMatchdays(1);
+        out.refBilanz = (game.refereeHistory[ref.id] || {}).spiele === 1
+            && Object.values(game.refereeHistory).every(h => h.spiele > 0);
+
+        // Mannschaftsrat: drei Mitglieder inkl. Kapitän, Anliegen aus echtem Zustand, Wirkung
+        const rat = getCouncilMembers();
+        out.ratBesetzt = rat.length === 3 && (!game.captainId || rat.some(p => p.id === game.captainId));
+        squad.forEach(p => p.morale = 30);
+        tickTeamCouncil();
+        out.ratAnliegen = game.teamCouncil.concern && game.teamCouncil.concern.type === 'stimmung';
+        const moralVorher = squad.reduce((s, p) => s + p.morale, 0);
+        answerCouncilConcern(0);
+        out.ratWirkung = squad.reduce((s, p) => s + p.morale, 0) > moralVorher && !game.teamCouncil.concern;
+        squad.forEach(p => p.morale = 70);
+        game.trainingIntensity = 'hart';
+        tickTeamCouncil();
+        game.matchday += COUNCIL_CONCERN_TIMEOUT;
+        tickTeamCouncil();
+        out.ratVerfall = game.teamCouncil.history[0].result.includes('verfallen');
+        game.trainingIntensity = 'normal';
+
+        // Frauenmannschaft gründen (spielt die Saison parallel mit)
+        foundWomenTeam();
+        game.womenTeam.squad.forEach(p => p.strength = 60);
+
+        // Saison zu Ende spielen
+        while (game.matchday <= 34) { game.sackPending = false; simulateMatchdays(1); }
+        const tab = getWomenTableSorted();
+        out.frauenSaison = game.womenTeam.round === WOMEN_MATCHDAYS && tab.every(t => t.played === WOMEN_MATCHDAYS)
+            && tab.reduce((s, t) => s + t.gf, 0) === tab.reduce((s, t) => s + t.ga, 0);
+        out.frauenJournal = game.financeLedger.some(e => (e.ausgaben || []).some(x => x.label.includes('Frauenmannschaft')));
+        const frauenLiga = game.womenTeam.leagueLevel;
+
+        // Saisonwechsel: Versammlung einberufen, Frauen-Aufstieg
+        concludeSeasonAndAdvance();
+        out.frauenAufstieg = game.womenTeam.leagueLevel === frauenLiga - 1 && game.womenTeam.round === 0;
+        const a = game.memberAssembly;
+        out.versammlungOffen = !!a && a.status === 'offen' && a.report.season === game.season - 1
+            && typeof a.report.financeResult === 'number' && a.report.expectedRank >= 1;
+        showScreen('screen-dashboard'); updateUI();
+        out.versammlungSichtbar = document.getElementById('member-assembly-box').style.display === 'block';
+        const satVorher = game.boardSat;
+        setAssemblyChoice('fee', 'erhoehen');
+        const geldVorher = game.money;
+        holdMemberAssembly();
+        out.versammlungWirkung = a.status === 'abgehalten' && game.money > geldVorher
+            && game.boardSat === Math.max(1, Math.min(100, satVorher + a.boardDelta));
+
+        showScreen('screen-women');
+        out.frauenScreen = document.getElementById('women-team-box').innerText.includes('TABELLE');
+        out.selbsttest = runStructuralSelfTest(true);
+        return out;
+    });
+
+    assert(r.refFest, 'Schiedsrichter-Ansetzung ist pro Spieltag fest');
+    assert(r.refJedeLiga, 'Für jede Liga gibt es Schiedsrichter');
+    assert(r.refVorschau, 'Das Dashboard nennt den Schiedsrichter des nächsten Spiels');
+    assert(r.refBilanz, 'Nach dem Spiel steht es in der Schiedsrichter-Bilanz (keine leeren Einträge)');
+    assert(r.ratBesetzt, 'Der Mannschaftsrat hat drei Mitglieder inklusive Kapitän');
+    assert(r.ratAnliegen, 'Bei schlechter Stimmung bringt der Rat genau dieses Anliegen ein');
+    assert(r.ratWirkung, 'Die Antwort auf das Anliegen hebt die Moral und schließt es');
+    assert(r.ratVerfall, 'Unbeantwortete Anliegen verfallen');
+    assert(r.frauenSaison, 'Frauen-Saison: alle Teams 22 Spiele, Tore ausgeglichen');
+    assert(r.frauenJournal, 'Gehälter der Frauenmannschaft stehen im Buchungsjournal');
+    assert(r.frauenAufstieg, 'Die überlegene Frauenmannschaft steigt auf, neue Saison beginnt');
+    assert(r.versammlungOffen, 'Nach dem Saisonwechsel ist die Mitgliederversammlung mit Saisonbericht offen');
+    assert(r.versammlungSichtbar, 'Die offene Versammlung erscheint im Dashboard');
+    assert(r.versammlungWirkung, 'Die Abstimmung wirkt auf Vorstand und Kasse');
+    assert(r.frauenScreen, 'Der Frauenmannschafts-Screen zeigt die Tabelle');
+    assert(Array.isArray(r.selbsttest) && r.selbsttest.length === 0, `Struktur-Selbsttest mit neuem Screen ohne Probleme (${JSON.stringify(r.selbsttest)})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler in Phase 11 (${consoleErrors.slice(0, 3).join(' | ')})`);
+    await page.close();
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -3932,6 +4024,7 @@ async function main() {
         testTacticAutomation,
         testObjectivesEventsSeasonTickets,
         testCodeIntegrity,
+        testPhase11,
         testRuntimeRoundTrip,
     ];
 
