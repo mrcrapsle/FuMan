@@ -3301,6 +3301,10 @@
                 <div class="panel" id="player-development-box">
                     <div class="panel-header">📈 SPIELER-ENTWICKLUNG & KARRIERE</div>
                 </div>
+                <div class="panel">
+                    <div class="panel-header">💼 VERTRAGSVERLÄNGERUNGEN</div>
+                    <div id="contract-renewal-box"></div>
+                </div>
             </div>
             </div>
 
@@ -3707,6 +3711,10 @@
                 </div>
                 <div class="panel" id="disciplinary-sanctions-box">
                     <div class="panel-header">📋 DISZIPLINAR & STRAFEN</div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">📺 MEDIENBEZIEHUNGEN</div>
+                    <div id="media-relations-box"></div>
                 </div>
             </div>
 
@@ -7587,6 +7595,7 @@ function getTransferBudgetInfo() {
         renderSquadPlanningWarningsBox();
         if (typeof renderReservesLoanPanel === 'function') renderReservesLoanPanel();
         if (typeof renderPlayerDevelopmentPanel === 'function') renderPlayerDevelopmentPanel();
+        if (typeof renderContractRenewalPanel === 'function') renderContractRenewalPanel();
     }
 
 </script>
@@ -24737,6 +24746,8 @@ function renderStadiumManagementPanel() {
 <script src="js/disciplinary-sanctions.js?v=2.1"></script>
 <script src="js/season-objectives.js?v=2.1"></script>
 <script src="js/squad-harmony.js?v=2.1"></script>
+<script src="js/contract-renewal.js?v=2.1"></script>
+<script src="js/media-relations.js?v=2.1"></script>
 <script>
 
     // Wandelt einen rohen Trophäen-Eintrag in Icon + Kategorie um, für eine chronologische
@@ -26782,6 +26793,9 @@ function renderStadiumManagementPanel() {
         // Season Objectives & Squad Harmony: Ziele und Mannschaftsharmonie
         if (typeof tickSeasonObjectives === 'function') tickSeasonObjectives();
         if (typeof tickSquadHarmony === 'function') tickSquadHarmony();
+        // Contract Renewal & Media Relations: Verträge und Medienbeziehungen
+        if (typeof tickContractRenewal === 'function') tickContractRenewal();
+        if (typeof tickMediaRelations === 'function') tickMediaRelations();
         // Financial tracking for dashboard charts
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();
@@ -28097,6 +28111,7 @@ function renderStadiumManagementPanel() {
         }
         if (typeof renderCrisisManagementPanel === 'function') renderCrisisManagementPanel();
         if (typeof renderDisciplinarySanctionsPanel === 'function') renderDisciplinarySanctionsPanel();
+        if (typeof renderMediaRelationsPanel === 'function') renderMediaRelationsPanel();
     }
 
     function adminAddClubMoney(amt) { playSound('goal'); game.money += amt; updateUI(); renderAdminView(); showToast(`💵 +${formatVal(amt)} Vereinskonto gutgeschrieben!`, 'success', 4000); }
