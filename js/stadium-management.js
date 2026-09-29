@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 
-const STADIUM_UPGRADES = {
+const STADIUM_PROJECTS = {
   seatingExpansion: {
     name: 'Tribünenausbau',
     cost: 500000,
@@ -79,7 +79,7 @@ function getStadiumCondition() {
 function startStadiumUpgrade(upgradeType) {
   if (!game.stadium) initializeStadium();
   
-  const config = STADIUM_UPGRADES[upgradeType];
+  const config = STADIUM_PROJECTS[upgradeType];
   if (!config) return false;
   
   if (game.money < config.cost) {
@@ -129,7 +129,7 @@ function tickStadiumProjects() {
 }
 
 function completeStadiumUpgrade(project) {
-  const config = STADIUM_UPGRADES[project.type];
+  const config = STADIUM_PROJECTS[project.type];
   if (!config) return;
   
   if (config.capacityIncrease > 0) {
@@ -182,20 +182,20 @@ function repairStadium(percentage) {
   return true;
 }
 
-function getAttendanceFactor() {
+function getManagementAttendanceFactor() {
   if (!game.stadium) return 1.0;
-  
+
   let factor = 1.0;
   const capacity = getStadiumCapacity();
   const condition = getStadiumCondition();
-  
+
   factor *= (0.5 + (condition / 100) * 0.5);
-  
+
   if (game.stadium.upgrades && game.stadium.upgrades.length > 0) {
     const attendanceUpgrades = game.stadium.upgrades.filter(u => u.benefits.attendanceBonus);
     factor *= (1 + attendanceUpgrades.length * 0.05);
   }
-  
+
   return factor;
 }
 
@@ -234,7 +234,7 @@ function renderStadiumManagementPanel() {
   html += '</div>';
   
   html += '<h4>Verfügbare Upgrades:</h4>';
-  Object.entries(STADIUM_UPGRADES).forEach(([key, config]) => {
+  Object.entries(STADIUM_PROJECTS).forEach(([key, config]) => {
     const isUpgraded = game.stadium.upgrades && game.stadium.upgrades.some(u => u.type === key);
     const hasProject = game.stadium.projectsUnderway && game.stadium.projectsUnderway.some(p => p.type === key && p.status === 'active');
     
