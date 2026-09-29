@@ -755,6 +755,10 @@
         if (typeof renderInternationalTournamentsPanel === 'function') renderInternationalTournamentsPanel();
         if (typeof renderBoardMembersPanel === 'function') renderBoardMembersPanel();
         if (typeof renderSponsorManagementPanel === 'function') renderSponsorManagementPanel();
+        if (typeof renderSetPieceTrainingPanel === 'function') renderSetPieceTrainingPanel();
+        if (typeof renderPostMatchAnalysisPanel === 'function') renderPostMatchAnalysisPanel();
+        if (typeof renderTrainingSpecializationPanel === 'function') renderTrainingSpecializationPanel();
+        if (typeof renderFanEventsPanel === 'function') renderFanEventsPanel();
         if (typeof renderMedicalManagementPanel === 'function') renderMedicalManagementPanel();
         if (typeof renderStadiumManagementPanel === 'function') renderStadiumManagementPanel();
         if (typeof renderYouthAcademyPanel === 'function') renderYouthAcademyPanel();

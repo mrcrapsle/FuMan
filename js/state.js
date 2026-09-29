@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '2.0', date: '27.09.2026', features: '10 neue Features' };
+    const GAME_VERSION = { number: '2.1', date: '29.09.2026', features: 'Phase 10: Set-Piece-Training, Post-Match-Analyse, Trainings-Spezialisierung, Sponsor-Management, Fan-Events' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

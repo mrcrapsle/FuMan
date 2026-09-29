@@ -2873,6 +2873,22 @@
                     <div id="sponsor-management-panel"></div>
                 </div>
                 <div class="panel">
+                    <div class="panel-header" style="color:#9C27B0;">⚽ SET-PIECE-TRAINING</div>
+                    <div id="set-piece-training-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:#00BCD4;">📊 POST-MATCH-ANALYSE</div>
+                    <div id="post-match-analysis-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:#FFC107;">📚 TRAININGS-SPEZIALISIERUNG</div>
+                    <div id="training-specialization-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:#FF5722;">🎉 FAN-EVENTS</div>
+                    <div id="fan-events-box"></div>
+                </div>
+                <div class="panel">
                     <div class="panel-header" style="color:#E91E63;">🏥 MEDIZINISCHE ABTEILUNG</div>
                     <div id="medical-management-panel"></div>
                 </div>
@@ -4550,7 +4566,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '2.0', date: '27.09.2026', features: '10 neue Features' };
+    const GAME_VERSION = { number: '2.1', date: '29.09.2026', features: 'Phase 10: Set-Piece-Training, Post-Match-Analyse, Trainings-Spezialisierung, Sponsor-Management, Fan-Events' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -6692,6 +6708,10 @@
         if (typeof renderInternationalTournamentsPanel === 'function') renderInternationalTournamentsPanel();
         if (typeof renderBoardMembersPanel === 'function') renderBoardMembersPanel();
         if (typeof renderSponsorManagementPanel === 'function') renderSponsorManagementPanel();
+        if (typeof renderSetPieceTrainingPanel === 'function') renderSetPieceTrainingPanel();
+        if (typeof renderPostMatchAnalysisPanel === 'function') renderPostMatchAnalysisPanel();
+        if (typeof renderTrainingSpecializationPanel === 'function') renderTrainingSpecializationPanel();
+        if (typeof renderFanEventsPanel === 'function') renderFanEventsPanel();
         if (typeof renderMedicalManagementPanel === 'function') renderMedicalManagementPanel();
         if (typeof renderStadiumManagementPanel === 'function') renderStadiumManagementPanel();
         if (typeof renderYouthAcademyPanel === 'function') renderYouthAcademyPanel();
@@ -24724,6 +24744,10 @@ function renderBoardMembersPanel() {
 
 </script>
 <script src="js/sponsor-management.js?v=2.1"></script>
+<script src="js/set-piece-training.js?v=2.1"></script>
+<script src="js/post-match-analysis.js?v=2.1"></script>
+<script src="js/training-specialization.js?v=2.1"></script>
+<script src="js/fan-events.js?v=2.1"></script>
 <script src="js/medical-management.js?v=2.1"></script>
 <script>
 /* eslint-disable no-undef */
@@ -27077,6 +27101,11 @@ function renderStadiumManagementPanel() {
         // Injury Management: Verletzungs-Management und Genesung
         if (typeof tickInjuryManagement === 'function') tickInjuryManagement();
         if (typeof tickMatchInjuries === 'function') tickMatchInjuries();
+        // Phase 10: Set-Piece Training, Post-Match Analysis, Training Specialization, Fan Events
+        if (typeof tickSetPieceTraining === 'function') tickSetPieceTraining();
+        if (typeof tickPostMatchAnalysis === 'function') tickPostMatchAnalysis();
+        if (typeof tickTrainingSpecialization === 'function') tickTrainingSpecialization();
+        if (typeof tickFanEvents === 'function') tickFanEvents();
         // Financial tracking for dashboard charts
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();

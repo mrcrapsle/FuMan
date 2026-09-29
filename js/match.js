@@ -1786,6 +1786,11 @@
         // Injury Management: Verletzungs-Management und Genesung
         if (typeof tickInjuryManagement === 'function') tickInjuryManagement();
         if (typeof tickMatchInjuries === 'function') tickMatchInjuries();
+        // Phase 10: Set-Piece Training, Post-Match Analysis, Training Specialization, Fan Events
+        if (typeof tickSetPieceTraining === 'function') tickSetPieceTraining();
+        if (typeof tickPostMatchAnalysis === 'function') tickPostMatchAnalysis();
+        if (typeof tickTrainingSpecialization === 'function') tickTrainingSpecialization();
+        if (typeof tickFanEvents === 'function') tickFanEvents();
         // Financial tracking for dashboard charts
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();
