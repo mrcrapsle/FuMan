@@ -1795,6 +1795,7 @@
             // Season Objectives & Squad Harmony: Ziele und Mannschaftsharmonie
             if (typeof tickSeasonObjectives === 'function') tickSeasonObjectives();
             if (typeof tickSquadHarmony === 'function') tickSquadHarmony();
+            if (typeof tickTeamCouncil === 'function') tickTeamCouncil();
             // Contract Renewal & Media Relations: Verträge und Medienbeziehungen
             if (typeof tickContractRenewal === 'function') tickContractRenewal();
             if (typeof tickMediaRelations === 'function') tickMediaRelations();
