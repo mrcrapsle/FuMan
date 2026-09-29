@@ -1771,6 +1771,9 @@
         if (typeof tickPlayerAging === 'function') tickPlayerAging();
         // Scouting Intelligence: Überwachungsupdates
         if (typeof tickScoutingUpdates === 'function') tickScoutingUpdates();
+        // Season Objectives & Squad Harmony: Ziele und Mannschaftsharmonie
+        if (typeof tickSeasonObjectives === 'function') tickSeasonObjectives();
+        if (typeof tickSquadHarmony === 'function') tickSquadHarmony();
         // Financial tracking for dashboard charts
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();

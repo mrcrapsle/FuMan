@@ -760,6 +760,7 @@
         if (typeof renderYouthAcademyPanel === 'function') renderYouthAcademyPanel();
         if (typeof renderMediaManagementPanel === 'function') renderMediaManagementPanel();
         if (typeof renderTransferMarketAnalysisPanel === 'function') renderTransferMarketAnalysisPanel();
+        if (typeof renderSquadHarmonyPanel === 'function') renderSquadHarmonyPanel();
         let container = document.getElementById('bench-list');
         if (!container) return;
         container.innerHTML = '';

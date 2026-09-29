@@ -2023,6 +2023,10 @@
                         <div>Champions Cup: <strong id="dash-europe-status" style="color:#82b1ff;">Nicht qualifiziert</strong></div>
                         <div>Trainer-Perks: <strong id="dash-perks-count" style="color:var(--gold);">0 / 5 Aktiv</strong></div>
                     </div>
+                    <div class="panel">
+                        <div class="panel-header">🎯 SAISON-ZIELE</div>
+                        <div id="season-objectives-box"></div>
+                    </div>
                 </div>
 
                 <div class="panel">
@@ -2678,6 +2682,10 @@
                         <button onclick="setSquadFilter('ST')" id="sf-ST" class="btn-secondary" style="font-size:9px; padding:5px 2px;">ST</button>
                     </div>
                     <div id="bench-list" style="max-height:260px; overflow-y:auto;"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">❤️ MANNSCHAFTS-HARMONIE</div>
+                    <div id="squad-harmony-box"></div>
                 </div>
             </div>
 
@@ -6432,6 +6440,7 @@
         if (typeof renderYouthAcademyPanel === 'function') renderYouthAcademyPanel();
         if (typeof renderMediaManagementPanel === 'function') renderMediaManagementPanel();
         if (typeof renderTransferMarketAnalysisPanel === 'function') renderTransferMarketAnalysisPanel();
+        if (typeof renderSquadHarmonyPanel === 'function') renderSquadHarmonyPanel();
         let container = document.getElementById('bench-list');
         if (!container) return;
         container.innerHTML = '';
@@ -13946,6 +13955,7 @@ function renderTalentDetectionPanel() {
         renderSaveSlotsUI();
         renderNextGoalsList();
         renderWeeklyRecap();
+        if (typeof renderSeasonObjectivesPanel === 'function') renderSeasonObjectivesPanel();
     }
 
     // ==========================================
@@ -24725,6 +24735,8 @@ function renderStadiumManagementPanel() {
 <script src="js/player-development-tracking.js?v=2.1"></script>
 <script src="js/scouting-intelligence.js?v=2.1"></script>
 <script src="js/disciplinary-sanctions.js?v=2.1"></script>
+<script src="js/season-objectives.js?v=2.1"></script>
+<script src="js/squad-harmony.js?v=2.1"></script>
 <script>
 
     // Wandelt einen rohen Trophäen-Eintrag in Icon + Kategorie um, für eine chronologische
@@ -26767,6 +26779,9 @@ function renderStadiumManagementPanel() {
         if (typeof tickPlayerAging === 'function') tickPlayerAging();
         // Scouting Intelligence: Überwachungsupdates
         if (typeof tickScoutingUpdates === 'function') tickScoutingUpdates();
+        // Season Objectives & Squad Harmony: Ziele und Mannschaftsharmonie
+        if (typeof tickSeasonObjectives === 'function') tickSeasonObjectives();
+        if (typeof tickSquadHarmony === 'function') tickSquadHarmony();
         // Financial tracking for dashboard charts
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();
