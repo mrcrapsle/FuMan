@@ -139,7 +139,7 @@ function generateSeasonObjectives() {
     game.seasonObjectives.activeObjectives = objectives;
 }
 
-function updateObjectiveProgress() {
+function updateObjectiveProgress(allowCompletion = true) {
     if (!game.seasonObjectives.activeObjectives) return;
 
     game.seasonObjectives.activeObjectives.forEach(obj => {
@@ -222,7 +222,7 @@ function updateObjectiveProgress() {
         obj.progress = progress;
         obj.target = target;
 
-        if (progress >= 100 && !obj.completed) {
+        if (allowCompletion && progress >= 100 && !obj.completed) {
             completeObjective(obj.id);
         }
     });
@@ -268,7 +268,8 @@ function renderSeasonObjectivesPanel() {
     if (!container) return;
 
     initializeSeasonObjectives();
-    updateObjectiveProgress();
+    // Nur Anzeige: Prämien zahlt ausschließlich der monatliche Tick aus.
+    updateObjectiveProgress(false);
 
     let html = '<div class="panel-content">';
     html += '<h3>🎯 Saison-Ziele</h3>';
