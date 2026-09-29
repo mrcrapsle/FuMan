@@ -1796,6 +1796,7 @@
             if (typeof tickSeasonObjectives === 'function') tickSeasonObjectives();
             if (typeof tickSquadHarmony === 'function') tickSquadHarmony();
             if (typeof tickTeamCouncil === 'function') tickTeamCouncil();
+            if (typeof tickMemberAssembly === 'function') tickMemberAssembly();
             // Contract Renewal & Media Relations: Verträge und Medienbeziehungen
             if (typeof tickContractRenewal === 'function') tickContractRenewal();
             if (typeof tickMediaRelations === 'function') tickMediaRelations();

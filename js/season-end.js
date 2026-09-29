@@ -95,6 +95,7 @@
         let myRank = teams.findIndex(t => t.name === game.clubName) + 1;
         let myTeamRecord = leaguesData[game.leagueLevel].find(t => t.name === game.clubName);
         if (typeof evaluateSeasonEndObjectives === 'function') evaluateSeasonEndObjectives(myRank);
+        if (typeof prepareMemberAssembly === 'function') prepareMemberAssembly(myRank);
 
         // Medienrechte (NEU): Liga-Kollektiv-TV-Ausschüttung zum Saisonende, gestaffelt nach
         // Ligastärke UND Tabellenplatz.
@@ -261,6 +262,7 @@
         if (typeof recordSeasonalManagerStats === 'function') recordSeasonalManagerStats();
         game.season++;
         if (typeof startNewSeasonObjectives === 'function') startNewSeasonObjectives();
+        if (typeof openMemberAssembly === 'function') openMemberAssembly();
         checkJubileeCrestUnlock();
         // Leihverein-Beziehungen schwächen sich ab, wenn 2+ Saisons kein neues Geschäft mit
         // demselben Klub stattfand - Kontakte pflegen sich nicht von selbst.
@@ -294,6 +296,7 @@
         if (typeof renewSeasonTickets === 'function') renewSeasonTickets();
         if (typeof checkSeasonMoodTargetResult === 'function') checkSeasonMoodTargetResult();
         advanceLeaguesToNewSeason();
+        if (typeof recordSeasonExpectationRank === 'function') recordSeasonExpectationRank();
         if (typeof applyPendingFfpPointDeduction === 'function') applyPendingFfpPointDeduction();
         refreshTransferMarket();
         autoLineup();
