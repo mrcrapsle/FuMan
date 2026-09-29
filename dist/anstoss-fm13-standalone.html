@@ -4566,7 +4566,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '2.1', date: '29.09.2026', features: 'Phase 10: Set-Piece-Training, Post-Match-Analyse, Trainings-Spezialisierung, Sponsor-Management, Fan-Events' };
+    const GAME_VERSION = { number: '2.2', date: '30.09.2026', features: 'Saisonziele mit echten Daten, Stadion-Events, realistische Dauerkarten' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -21548,7 +21548,11 @@ function renderMediaRelationsBoxPanel() {
         // Zielanteil bei exaktem Marktpreis: 25-55% der Plätze, abhängig von der
         // Fan-Zufriedenheit - ein beliebter Verein bindet mehr Dauerkarteninhaber.
         let zielanteilBeiMarktpreis = 0.25 + (Math.max(0, Math.min(100, game.fans)) / 100) * 0.30;
-        let neueDauerkarten = Math.max(0, Math.min(kapazitaet, Math.round(kapazitaet * zielanteilBeiMarktpreis * el.factor)));
+        // Basis ist das realistische Zuschauerpotenzial der Liga (wie bei den Spieltagszuschauern),
+        // nicht die Kapazität - sonst verkaufte ein Sechstligist >5.000 Dauerkarten (>1 Mio. €),
+        // während zu den Spielen nur einige hundert Menschen kamen.
+        let potenzial = Math.min(kapazitaet, getLeagueAttendanceCap());
+        let neueDauerkarten = Math.max(0, Math.min(potenzial, Math.round(potenzial * zielanteilBeiMarktpreis * el.factor)));
         let erloes = neueDauerkarten * (game.ticketPrices.dauerkarte || 0);
         game.seasonTicketHolders = neueDauerkarten;
         if (erloes > 0) {
@@ -31341,6 +31345,8 @@ const OBJECTIVE_TYPES = {
     }
 };
 
+const OBJECTIVE_LEAGUE_FACTOR = [1.0, 0.7, 0.45, 0.3, 0.2, 0.12];
+
 const DIFFICULTY_MULTIPLIERS = {
     EASY: 1.0,
     MEDIUM: 1.5,
@@ -31376,10 +31382,10 @@ function generateSeasonObjectives() {
         if (!selected.includes(type)) {
             selected.push(type);
             const config = OBJECTIVE_TYPES[type];
-            const reward = Math.floor(
-                config.baseReward * DIFFICULTY_MULTIPLIERS[config.difficulty] *
-                (1 + (game.leagueLevel * 0.2)) // Higher leagues have higher rewards
-            );
+            // leagueLevel 0 = 1. Liga: höhere Ligen zahlen mehr (bisher war es umgekehrt, die
+            // 6. Liga bekam das Doppelte - bei 150.000 € Startkapital ein Vielfaches davon).
+            const leagueFactor = OBJECTIVE_LEAGUE_FACTOR[game.leagueLevel] ?? OBJECTIVE_LEAGUE_FACTOR[OBJECTIVE_LEAGUE_FACTOR.length - 1];
+            const reward = Math.floor(config.baseReward * DIFFICULTY_MULTIPLIERS[config.difficulty] * leagueFactor);
 
             objectives.push({
                 id: `obj_${type}_${game.season}`,
@@ -31551,11 +31557,13 @@ function completeObjective(objectiveId) {
     game.seasonObjectives.activeObjectives = game.seasonObjectives.activeObjectives.filter(o => o.id !== objectiveId);
     game.seasonObjectives.completedObjectives.push(obj);
 
+    const aeussererKontext = buchungsKontext; // läuft ggf. im Monatsblock mit eigenem Label
+    setzeBuchungskontext('🎯 Saisonziel-Prämie');
     game.money += obj.reward;
+    setzeBuchungskontext(aeussererKontext);
     game.seasonObjectives.objectiveRewards += obj.reward;
 
     showToast(`🎯 Ziel erreicht: ${obj.name}! +€${(obj.reward / 1000).toFixed(0)}k`, 'success', 6000);
-    recordFinancialEvent('Zielbonus', obj.reward, 'Season Objective');
 }
 
 function getSeasonObjectivesSummary() {

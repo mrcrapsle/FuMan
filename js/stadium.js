@@ -580,7 +580,11 @@
         // Zielanteil bei exaktem Marktpreis: 25-55% der Plätze, abhängig von der
         // Fan-Zufriedenheit - ein beliebter Verein bindet mehr Dauerkarteninhaber.
         let zielanteilBeiMarktpreis = 0.25 + (Math.max(0, Math.min(100, game.fans)) / 100) * 0.30;
-        let neueDauerkarten = Math.max(0, Math.min(kapazitaet, Math.round(kapazitaet * zielanteilBeiMarktpreis * el.factor)));
+        // Basis ist das realistische Zuschauerpotenzial der Liga (wie bei den Spieltagszuschauern),
+        // nicht die Kapazität - sonst verkaufte ein Sechstligist >5.000 Dauerkarten (>1 Mio. €),
+        // während zu den Spielen nur einige hundert Menschen kamen.
+        let potenzial = Math.min(kapazitaet, getLeagueAttendanceCap());
+        let neueDauerkarten = Math.max(0, Math.min(potenzial, Math.round(potenzial * zielanteilBeiMarktpreis * el.factor)));
         let erloes = neueDauerkarten * (game.ticketPrices.dauerkarte || 0);
         game.seasonTicketHolders = neueDauerkarten;
         if (erloes > 0) {

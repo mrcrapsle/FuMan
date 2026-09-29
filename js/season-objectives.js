@@ -81,6 +81,8 @@ const OBJECTIVE_TYPES = {
     }
 };
 
+const OBJECTIVE_LEAGUE_FACTOR = [1.0, 0.7, 0.45, 0.3, 0.2, 0.12];
+
 const DIFFICULTY_MULTIPLIERS = {
     EASY: 1.0,
     MEDIUM: 1.5,
@@ -116,10 +118,10 @@ function generateSeasonObjectives() {
         if (!selected.includes(type)) {
             selected.push(type);
             const config = OBJECTIVE_TYPES[type];
-            const reward = Math.floor(
-                config.baseReward * DIFFICULTY_MULTIPLIERS[config.difficulty] *
-                (1 + (game.leagueLevel * 0.2)) // Higher leagues have higher rewards
-            );
+            // leagueLevel 0 = 1. Liga: höhere Ligen zahlen mehr (bisher war es umgekehrt, die
+            // 6. Liga bekam das Doppelte - bei 150.000 € Startkapital ein Vielfaches davon).
+            const leagueFactor = OBJECTIVE_LEAGUE_FACTOR[game.leagueLevel] ?? OBJECTIVE_LEAGUE_FACTOR[OBJECTIVE_LEAGUE_FACTOR.length - 1];
+            const reward = Math.floor(config.baseReward * DIFFICULTY_MULTIPLIERS[config.difficulty] * leagueFactor);
 
             objectives.push({
                 id: `obj_${type}_${game.season}`,
@@ -291,11 +293,13 @@ function completeObjective(objectiveId) {
     game.seasonObjectives.activeObjectives = game.seasonObjectives.activeObjectives.filter(o => o.id !== objectiveId);
     game.seasonObjectives.completedObjectives.push(obj);
 
+    const aeussererKontext = buchungsKontext; // läuft ggf. im Monatsblock mit eigenem Label
+    setzeBuchungskontext('🎯 Saisonziel-Prämie');
     game.money += obj.reward;
+    setzeBuchungskontext(aeussererKontext);
     game.seasonObjectives.objectiveRewards += obj.reward;
 
     showToast(`🎯 Ziel erreicht: ${obj.name}! +€${(obj.reward / 1000).toFixed(0)}k`, 'success', 6000);
-    recordFinancialEvent('Zielbonus', obj.reward, 'Season Objective');
 }
 
 function getSeasonObjectivesSummary() {

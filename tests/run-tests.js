@@ -3689,6 +3689,88 @@ async function testRuntimeRoundTrip(browser) {
     await page.close();
 }
 
+async function testObjectivesEventsSeasonTickets(browser) {
+    console.log('\n[S] Saisonziele, Stadion-Events, Dauerkarten');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        const out = {};
+        // 1. Saisonziele werten echte Daten; Meisterschaft/Aufstieg erst am Saisonende.
+        initializeSeasonObjectives();
+        const typen = ['CHAMPIONSHIP', 'PROMOTION', 'TOP_SCORER', 'CLEAN_SHEETS'];
+        game.seasonObjectives.activeObjectives = typen.map(t => ({ id: `obj_${t}_${game.season}`, type: t, name: t, reward: 1000,
+            startSeason: game.season, startLeagueLevel: game.leagueLevel, completed: false }));
+        const origGoals = simulateGoals;
+        simulateGoals = (a, b) => a >= b ? { myGoals: 3, oppGoals: 0 } : { myGoals: 0, oppGoals: 3 };
+        try {
+            while (game.matchday <= 34) {
+                game.sackPending = false;
+                squad.forEach(p => { p.strength = 99; p.injured = 0; p.suspended = 0; p.nationalDuty = 0; });
+                simulateMatchdays(1);
+                if (game.matchday === 20) {
+                    out.meisterNichtVorzeitig = !game.seasonObjectives.completedObjectives.some(o => o.type === 'CHAMPIONSHIP');
+                }
+            }
+            const startLiga = game.leagueLevel;
+            concludeSeasonAndAdvance();
+            const erreicht = game.seasonObjectives.completedObjectives.map(o => o.type);
+            out.alleErreicht = typen.every(t => erreicht.includes(t));
+            out.aufgestiegen = game.leagueLevel < startLiga;
+            out.neueSaisonNeueZiele = game.seasonObjectives.activeObjectives.length > 0
+                && game.seasonObjectives.activeObjectives.every(o => o.startSeason === game.season);
+        } finally {
+            simulateGoals = origGoals;
+        }
+
+        // 2. Prämien steigen mit der Liga (1. Liga > 6. Liga).
+        const lvl = game.leagueLevel;
+        game.leagueLevel = 5; game.money = 0; generateSeasonObjectives();
+        const unten = Math.max(...game.seasonObjectives.activeObjectives.map(o => o.reward / DIFFICULTY_MULTIPLIERS[OBJECTIVE_TYPES[o.type].difficulty] / OBJECTIVE_TYPES[o.type].baseReward));
+        game.leagueLevel = 0; generateSeasonObjectives();
+        const oben = Math.max(...game.seasonObjectives.activeObjectives.map(o => o.reward / DIFFICULTY_MULTIPLIERS[OBJECTIVE_TYPES[o.type].difficulty] / OBJECTIVE_TYPES[o.type].baseReward));
+        out.praemienSteigenMitLiga = oben > unten;
+        game.leagueLevel = lvl;
+
+        // 3. Stadion-Events: kostet sofort, nicht vorzeitig durchführbar, nur eines zur Zeit.
+        game.money = 1000000;
+        stadium.events = [];
+        const m0 = game.money;
+        scheduleStadiumEvent('fanfest');
+        out.eventKostet = game.money < m0;
+        scheduleStadiumEvent('stadiontag');
+        out.nurEinEvent = stadium.events.length === 1;
+        const ev = stadium.events[0];
+        runStadiumEvent(ev.id);
+        out.nichtVorzeitig = !ev.completed;
+        game.matchday = ev.scheduledMatchday;
+        const m1 = game.money;
+        runStadiumEvent(ev.id);
+        out.eventDurchgefuehrt = ev.completed && game.money > m1 && ev.visitors <= (stadium.total || 16000);
+        out.sperrfrist = !!getStadiumEventBlockReason();
+
+        // 4. Dauerkarten richten sich nach dem Zuschauerpotenzial der Liga, nicht der Kapazität.
+        game.leagueLevel = 5;
+        renewSeasonTickets();
+        out.dauerkartenGedeckelt = game.seasonTicketHolders <= getLeagueAttendanceCap();
+        return out;
+    });
+
+    assert(r.meisterNichtVorzeitig, 'Meisterschaftsziel wird nicht schon als Tabellenführer im Saisonverlauf ausgezahlt');
+    assert(r.alleErreicht, 'Meisterschaft, Aufstieg, Torschütze und Zu-Null-Siege werden aus echten Spieldaten gewertet');
+    assert(r.aufgestiegen, 'Der Meister steigt auf (Voraussetzung für das Aufstiegsziel)');
+    assert(r.neueSaisonNeueZiele, 'Die neue Saison bekommt neue Saisonziele');
+    assert(r.praemienSteigenMitLiga, 'Saisonziel-Prämien sind in höheren Ligen größer');
+    assert(r.eventKostet, 'Ein Stadion-Event kostet beim Planen Organisationskosten');
+    assert(r.nurEinEvent, 'Es kann nur ein Stadion-Event zur Zeit geplant sein');
+    assert(r.nichtVorzeitig, 'Ein Stadion-Event lässt sich nicht vor seinem Termin durchführen');
+    assert(r.eventDurchgefuehrt, 'Am Termin bringt das Event Einnahmen, Besucher gedeckelt durch die Kapazität');
+    assert(r.sperrfrist, 'Nach einem Event gilt eine Sperrfrist');
+    assert(r.dauerkartenGedeckelt, 'Dauerkarten übersteigen nicht das Zuschauerpotenzial der Liga');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei Saisonzielen/Events/Dauerkarten');
+    await page.close();
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -3755,6 +3837,7 @@ async function main() {
         testPlayerAvatars,
         testTrainingCalendar,
         testTacticAutomation,
+        testObjectivesEventsSeasonTickets,
         testRuntimeRoundTrip,
     ];
 
