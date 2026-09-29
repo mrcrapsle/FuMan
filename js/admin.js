@@ -89,6 +89,7 @@
             clubProgEl.innerHTML = renderClubProgression();
         }
         if (typeof renderCrisisManagementPanel === 'function') renderCrisisManagementPanel();
+        if (typeof renderDisciplinarySanctionsPanel === 'function') renderDisciplinarySanctionsPanel();
     }
 
     function adminAddClubMoney(amt) { playSound('goal'); game.money += amt; updateUI(); renderAdminView(); showToast(`💵 +${formatVal(amt)} Vereinskonto gutgeschrieben!`, 'success', 4000); }

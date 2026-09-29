@@ -3206,6 +3206,10 @@
                     <div class="panel-header" style="color:var(--primary);">🔍 ERWEITERTE TALENTERKENNUNG</div>
                     <div id="talent-detection-box"></div>
                 </div>
+                <div class="panel">
+                    <div class="panel-header">🔬 SCOUTING-INTELLIGENZ</div>
+                    <div id="scouting-intelligence-box"></div>
+                </div>
             </div>
             <div id="screen-youth" style="display:none;">
                 <div class="panel">
@@ -3692,6 +3696,9 @@
                 </div>
                 <div class="panel" id="crisis-management-box">
                     <div class="panel-header">⚠️ KRISEN-MANAGEMENT</div>
+                </div>
+                <div class="panel" id="disciplinary-sanctions-box">
+                    <div class="panel-header">📋 DISZIPLINAR & STRAFEN</div>
                 </div>
             </div>
 
@@ -11917,6 +11924,7 @@ function getTransferBudgetInfo() {
         }
         renderTalentDatabase();
         if (typeof renderTalentDetectionPanel === 'function') renderTalentDetectionPanel();
+        if (typeof renderScoutingIntelligencePanel === 'function') renderScoutingIntelligencePanel();
     }
 
     // 4. Talent-Datenbank: dauerhaftes Archiv aller je entdeckten Spieler.
@@ -24715,6 +24723,8 @@ function renderStadiumManagementPanel() {
 <script src="js/reserves-loan-management.js?v=2.1"></script>
 <script src="js/crisis-management.js?v=2.1"></script>
 <script src="js/player-development-tracking.js?v=2.1"></script>
+<script src="js/scouting-intelligence.js?v=2.1"></script>
+<script src="js/disciplinary-sanctions.js?v=2.1"></script>
 <script>
 
     // Wandelt einen rohen Trophäen-Eintrag in Icon + Kategorie um, für eine chronologische
@@ -26750,6 +26760,13 @@ function renderStadiumManagementPanel() {
         // Reserves & Loan: Leihspieler-Management und Rückgabe
         if (typeof tickLoanedPlayerDevelopment === 'function') tickLoanedPlayerDevelopment();
         if (typeof tickIncomingLoanManagement === 'function') tickIncomingLoanManagement();
+        // Crisis Management: monatliche Krisen-Events
+        if (typeof tickCrisisEvents === 'function') tickCrisisEvents();
+        if (typeof tickDisciplinaryBans === 'function') tickDisciplinaryBans();
+        // Player Development: Alterung und Entwicklung
+        if (typeof tickPlayerAging === 'function') tickPlayerAging();
+        // Scouting Intelligence: Überwachungsupdates
+        if (typeof tickScoutingUpdates === 'function') tickScoutingUpdates();
         // Financial tracking for dashboard charts
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();
@@ -28064,6 +28081,7 @@ function renderStadiumManagementPanel() {
             clubProgEl.innerHTML = renderClubProgression();
         }
         if (typeof renderCrisisManagementPanel === 'function') renderCrisisManagementPanel();
+        if (typeof renderDisciplinarySanctionsPanel === 'function') renderDisciplinarySanctionsPanel();
     }
 
     function adminAddClubMoney(amt) { playSound('goal'); game.money += amt; updateUI(); renderAdminView(); showToast(`💵 +${formatVal(amt)} Vereinskonto gutgeschrieben!`, 'success', 4000); }

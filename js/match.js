@@ -1764,6 +1764,13 @@
         // Reserves & Loan: Leihspieler-Management und Rückgabe
         if (typeof tickLoanedPlayerDevelopment === 'function') tickLoanedPlayerDevelopment();
         if (typeof tickIncomingLoanManagement === 'function') tickIncomingLoanManagement();
+        // Crisis Management: monatliche Krisen-Events
+        if (typeof tickCrisisEvents === 'function') tickCrisisEvents();
+        if (typeof tickDisciplinaryBans === 'function') tickDisciplinaryBans();
+        // Player Development: Alterung und Entwicklung
+        if (typeof tickPlayerAging === 'function') tickPlayerAging();
+        // Scouting Intelligence: Überwachungsupdates
+        if (typeof tickScoutingUpdates === 'function') tickScoutingUpdates();
         // Financial tracking for dashboard charts
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();

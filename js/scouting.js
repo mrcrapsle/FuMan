@@ -279,6 +279,7 @@
         }
         renderTalentDatabase();
         if (typeof renderTalentDetectionPanel === 'function') renderTalentDetectionPanel();
+        if (typeof renderScoutingIntelligencePanel === 'function') renderScoutingIntelligencePanel();
     }
 
     // 4. Talent-Datenbank: dauerhaftes Archiv aller je entdeckten Spieler.
