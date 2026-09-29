@@ -2732,6 +2732,9 @@ async function testLandesPokal(browser) {
             squad.forEach(p => { p.strength = 99; p.fitness = 100; p.morale = 100; });
             let spieltage = 0;
             while (!landesPokal.won && spieltage < 50) {
+                // Auch Verletzungen/Sperren sind Zufall: bis zu 14 Ausfälle gleichzeitig
+                // drückten die Aufstellung unter die Gegnerstärke. Kader daher fit halten.
+                squad.forEach(p => { p.injured = 0; p.suspended = 0; p.nationalDuty = 0; p.fitness = 100; });
                 simulateMatchdays(1);
                 spieltage++;
             }
