@@ -251,6 +251,7 @@
 
         incomingOffers = [];
         if (typeof evaluateFinancialFairplay === 'function') evaluateFinancialFairplay();
+        if (typeof recordSeasonStats === 'function') recordSeasonStats();
         game.season++;
         checkJubileeCrestUnlock();
         // Leihverein-Beziehungen schwächen sich ab, wenn 2+ Saisons kein neues Geschäft mit
