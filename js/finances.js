@@ -62,6 +62,7 @@
         if (typeof renderFanEngagementPanel === 'function') renderFanEngagementPanel();
         if (typeof renderFanEngagementStats === 'function') renderFanEngagementStats();
         if (typeof renderMediaRelationsPanel === 'function') renderMediaRelationsPanel();
+        if (typeof renderMediaRelationsBoxPanel === 'function') renderMediaRelationsBoxPanel();
         if (typeof renderBoardManagementPanel === 'function') renderBoardManagementPanel();
         renderStockTicker();
         renderSponsorLeaderboard();
@@ -213,6 +214,7 @@
         }
 
         if (typeof renderMediaRelationsPanel === 'function') renderMediaRelationsPanel();
+        if (typeof renderMediaRelationsBoxPanel === 'function') renderMediaRelationsBoxPanel();
         if (typeof renderMediaJournalistPanel === 'function') renderMediaJournalistPanel();
     }
 
@@ -884,6 +886,17 @@
         if (typeof addToFfpSeasonNet === 'function') addToFfpSeasonNet(typ === 'einnahmen' ? amount : -amount);
     }
     function loescheBuchungskontext() { buchungsKontext = null; }
+
+    // Aufrufer haben game.money bereits geändert; hier bekommt die dabei entstandene
+    // Kontoauszug-Zeile nur ein sprechendes Label statt des Screen-Namens.
+    function recordFinancialEvent(label, amount) {
+        let auszug = game.kontoauszug || [];
+        let letzte = auszug[auszug.length - 1];
+        if (letzte && letzte.season === game.season && letzte.matchday === game.matchday
+            && Math.round(letzte.amount) === Math.round(amount)) {
+            letzte.label = label;
+        }
+    }
 
 
     // Kontoauszug-Ansicht: chronologische Liste aller Kontobewegungen ausserhalb der

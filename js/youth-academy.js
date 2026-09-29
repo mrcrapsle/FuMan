@@ -148,7 +148,7 @@ function completeYouthProgram(enrollment) {
   }
 }
 
-function promoteYouthPlayer(playerId) {
+function academyPromoteYouthPlayer(playerId) {
   if (!game.youthAcademy) return false;
   
   const youthPlayer = game.youthAcademy.youngPlayers.find(p => p.id === playerId);
@@ -215,7 +215,7 @@ function tickYouthRecruitment() {
   }
 }
 
-function renderYouthAcademyPanel() {
+function renderYouthAcademyManagementPanel() {
   const panel = document.getElementById('youth-academy-panel');
   if (!panel) return;
   
@@ -243,7 +243,7 @@ function renderYouthAcademyPanel() {
       html += `<div class="player-info">Stärke: ${player.strength.toFixed(0)}/Potenzial: ${player.potential.toFixed(0)}</div>`;
       html += `<div class="player-info">Moral: ${player.morale.toFixed(0)}%</div>`;
       if (player.readyForPromotion) {
-        html += `<button onclick="promoteYouthPlayer('${player.id}')" style="background:#4CAF50; color:white; border:none; padding:4px 8px; margin-right:4px; border-radius:3px; font-size:10px;">Befördern</button>`;
+        html += `<button onclick="academyPromoteYouthPlayer('${player.id}')" style="background:#4CAF50; color:white; border:none; padding:4px 8px; margin-right:4px; border-radius:3px; font-size:10px;">Befördern</button>`;
       } else {
         html += `<select onchange="enrollPlayerInProgram('${player.id}', this.value)" style="font-size:10px; padding:2px;">`;
         html += `<option value="">-- Programm wählen --</option>`;

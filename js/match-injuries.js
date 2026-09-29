@@ -31,7 +31,7 @@ function checkMatchInjuries(playersInMatch) {
 
         // Kleine Chance für Verletzung (5-20% basierend auf Risiko)
         if (Math.random() < injuryRisk * 0.5) { // 50% der Risiko-Wahrscheinlichkeit tritt während Match auf
-            let injured = injurePlayer(playerId);
+            let injured = injureSquadPlayer(playerId);
             if (injured) {
                 game.matchInjuries.matchInjuryEvents.push({
                     playerId: playerId,

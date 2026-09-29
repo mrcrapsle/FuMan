@@ -92,7 +92,7 @@
         return Math.min(100, Math.round((baseRating + performanceBonus) * 100));
     }
 
-    function recordPlayerMilestone(playerId, milestone, value) {
+    function recordCareerProgressionMilestone(playerId, milestone, value) {
         if (!playerCareerProgressionState.careerMilestones[playerId]) {
             playerCareerProgressionState.careerMilestones[playerId] = [];
         }
@@ -122,21 +122,21 @@
         // 100 Spiele
         if ((player.appearances || 0) === 100 && !profile.achievements.includes('100Matches')) {
             profile.achievements.push('100Matches');
-            recordPlayerMilestone(player.id, '🏆 100 Ligaspiele', player.appearances);
+            recordCareerProgressionMilestone(player.id, '🏆 100 Ligaspiele', player.appearances);
             showToast(`⭐ ${player.name} erreicht 100 Ligaspiele!`, 'success', 5000);
         }
 
         // 50 Tore
         if ((player.goalsSeason || 0) >= 50 && !profile.achievements.includes('50Goals')) {
             profile.achievements.push('50Goals');
-            recordPlayerMilestone(player.id, '⚽ 50 Tore in einer Saison', player.goalsSeason);
+            recordCareerProgressionMilestone(player.id, '⚽ 50 Tore in einer Saison', player.goalsSeason);
             showToast(`⭐ ${player.name} schoss 50 Tore in dieser Saison!`, 'success', 5000);
         }
 
         // 100 Tore Karriere
         if ((profile.totalGoals || 0) >= 100 && !profile.achievements.includes('100GoalsCareer')) {
             profile.achievements.push('100GoalsCareer');
-            recordPlayerMilestone(player.id, '⚽ 100 Karriere-Tore', profile.totalGoals);
+            recordCareerProgressionMilestone(player.id, '⚽ 100 Karriere-Tore', profile.totalGoals);
             showToast(`⭐ ${player.name} erreicht 100 Karriere-Tore!`, 'success', 5000);
         }
 
@@ -145,7 +145,7 @@
             let potmCount = game.potmHistory.filter(id => id === player.id).length;
             if (potmCount === 1 && !profile.achievements.includes('PlayerOfMonth1')) {
                 profile.achievements.push('PlayerOfMonth1');
-                recordPlayerMilestone(player.id, '🌟 Spieler des Monats', 1);
+                recordCareerProgressionMilestone(player.id, '🌟 Spieler des Monats', 1);
             }
         }
     }

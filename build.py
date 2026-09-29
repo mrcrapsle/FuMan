@@ -3,86 +3,29 @@
 Baut aus der modularen Struktur (index.html + css/styles.css + js/*.js) eine einzelne
 standalone HTML-Datei, die überall (auch als lokale Datei auf Android) läuft.
 """
+import os
 import re
+import sys
 
 HTML_FILE = "index.html"
 CSS_FILE = "css/styles.css"
 OUTPUT_FILE = "dist/anstoss-fm13-standalone.html"
 
-JS_ORDER = [
-    "js/audio.js",
-    "js/utils.js",
-    "js/i18n.js",
-    "js/state.js",
-    "js/inbox.js",
-    "js/entities.js",
-    "js/avatars.js",
-    "js/playerdetail.js",
-    "js/squad.js",
-    "js/agents-management.js",
-    "js/club-rivalries.js",
-    "js/injury-risk-management.js",
-    "js/player-archetypes.js",
-    "js/transfers.js",
-    "js/squadplanning.js",
-    "js/secondteam.js",
-    "js/career.js",
-    "js/crest.js",
-    "js/leagues.js",
-    "js/cup.js",
-    "js/landescup.js",
-    "js/europe.js",
-    "js/transfermarket.js",
-    "js/manager-rpg.js",
-    "js/scouting.js",
-    "js/scouting-enhanced.js",
-    "js/commodities.js",
-    "js/merchandise.js",
-    "js/office.js",
-    "js/office-events.js",
-    "js/ui-core.js",
-    "js/render-dashboard.js",
-    "js/industry.js",
-    "js/holding.js",
-    "js/calendar.js",
-    "js/training.js",
-    "js/training-games.js",
-    "js/finances.js",
-    "js/ffp.js",
-    "js/stocks.js",
-    "js/sponsors.js",
-    "js/media-rights.js",
-    "js/media-relations-extended.js",
-    "js/betting.js",
-    "js/stadium.js",
-    "js/stadium-management.js",
-    "js/real-estate.js",
-    "js/campus-staff.js",
-    "js/fans.js",
-    "js/youth.js",
-    "js/youth-academy-extended.js",
-    "js/academy-ranking.js",
-    "js/bonusclauses.js",
-    "js/contracts.js",
-    "js/negotiations.js",
-    "js/private-life.js",
-    "js/player-scandals.js",
-    "js/fanclub-management.js",
-    "js/tactic-system.js",
-    "js/international-tournaments.js",
-    "js/board-members.js",
-    "js/underworld.js",
-    "js/history.js",
-    "js/achievements.js",
-    "js/weather.js",
-    "js/match.js",
-    "js/contract-ultimatum.js",
-    "js/season-end.js",
-    "js/admin.js",
-    "js/premium.js",
-    "js/save.js",
-    "js/club-switch.js",
-]
+SCRIPT_TAG_RE = re.compile(r'<script src="(js/[^"?]+\.js)(\?[^"]*)?"></script>')
+
+
+def js_order():
+    """Reihenfolge und Umfang der Module kommen ausschließlich aus den <script src>-Tags
+    in index.html - eine zweite, handgepflegte Liste lief früher unbemerkt auseinander,
+    sodass neue Module im Standalone-Build fehlten."""
+    order = []
+    for path, _ in SCRIPT_TAG_RE.findall(read(HTML_FILE)):
+        if path not in order:
+            order.append(path)
+    missing = [p for p in order if not os.path.isfile(p)]
+    if missing:
+        sys.exit(f"FEHLER: in index.html referenziert, aber nicht vorhanden: {missing}")
+    return order
 
 
 def read(path):
@@ -100,8 +43,7 @@ def build_lint_bundle():
     undefinierte Referenzen."""
     html = read(HTML_FILE)
     inline_scripts = re.findall(r'<script>(.*?)</script>', html, re.DOTALL)
-    content = "\n".join(read(p) for p in JS_ORDER) + "\n" + "\n".join(inline_scripts)
-    import os
+    content = "\n/* eslint-enable */\n".join(read(p) for p in js_order()) + "\n/* eslint-enable */" + "\n" + "\n".join(inline_scripts)
     os.makedirs("dist", exist_ok=True)
     with open("dist/lint-bundle.js", "w", encoding="utf-8") as f:
         f.write(content)
@@ -121,17 +63,14 @@ def build():
 
     # 2. Jedes <script src="js/XYZ.js"></script> durch den echten Inhalt ersetzen
     # (unterstützt auch Cache-Busting wie ?v=2.1)
-    for js_path in JS_ORDER:
+    for js_path in js_order():
         js_content = read(js_path)
-        # Versuche mit Cache-Busting-Parametern (z.B. ?v=2.1)
         match = re.search(rf'<script src="{re.escape(js_path)}(\?[^"]*)?"></script>', html)
-        if not match:
-            print(f"WARNUNG: Tag für {js_path} nicht gefunden, wird übersprungen.")
-            continue
-        tag = match.group(0)
-        html = html.replace(tag, f"<script>\n{js_content}\n</script>")
+        html = html.replace(match.group(0), f"<script>\n{js_content}\n</script>", 1)
+    leftover = SCRIPT_TAG_RE.findall(html)
+    if leftover:
+        sys.exit(f"FEHLER: nicht eingebettete Script-Tags im Build: {leftover}")
 
-    import os
     os.makedirs("dist", exist_ok=True)
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         f.write(html)
@@ -139,7 +78,6 @@ def build():
 
 
 if __name__ == "__main__":
-    import sys
     if "--lint-bundle" in sys.argv:
         build_lint_bundle()
     else:

@@ -239,7 +239,7 @@ function getMediaRelationsSummary() {
     };
 }
 
-function renderMediaRelationsPanel() {
+function renderMediaRelationsBoxPanel() {
     const container = document.getElementById('media-relations-box');
     if (!container) return;
 

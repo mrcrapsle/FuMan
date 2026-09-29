@@ -121,7 +121,7 @@ function scoutPlayer(playerName, estimatedValue) {
   return report;
 }
 
-function addToWatchlist(playerId, playerName, currentValue) {
+function marketAnalysisAddToWatchlist(playerId, playerName, currentValue) {
   if (!game.transferMarket) initializeTransferMarket();
   
   const watchEntry = {
@@ -179,7 +179,7 @@ function getMarketInsight() {
   return game.transferMarket.marketAnalysis;
 }
 
-function removeFromWatchlist(entryId) {
+function marketAnalysisRemoveFromWatchlist(entryId) {
   if (!game.transferMarket || !game.transferMarket.watchlist) return;
   game.transferMarket.watchlist = game.transferMarket.watchlist.filter(e => e.id !== entryId);
 }
@@ -247,7 +247,7 @@ function renderTransferMarketAnalysisPanel() {
       html += `<div class="watchlist-item">`;
       html += `<strong>${entry.playerName}</strong> ${valueTrend}`;
       html += `<div class="watchlist-info">Aktuell: €${entry.currentValue.toLocaleString()} | High: €${entry.highestValue.toLocaleString()} | Low: €${entry.lowestValue.toLocaleString()}</div>`;
-      html += `<button onclick="removeFromWatchlist(${entry.id})" style="background:#FF5252; color:white; border:none; padding:3px 6px; border-radius:2px; font-size:9px;">✕</button>`;
+      html += `<button onclick="marketAnalysisRemoveFromWatchlist(${entry.id})" style="background:#FF5252; color:white; border:none; padding:3px 6px; border-radius:2px; font-size:9px;">✕</button>`;
       html += '</div>';
     });
   }

@@ -1,4 +1,3 @@
-/* eslint-disable no-undef */
 
     // ==========================================
     // SPIELER-DETAIL-POPUP: wiederverwendbares Modal für Kader, Transfermarkt, Scouting &

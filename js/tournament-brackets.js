@@ -98,7 +98,7 @@ function generateBracketMatches(tournamentId) {
     return matches;
 }
 
-function getNextOpponent(tournamentId) {
+function getNextTournamentOpponent(tournamentId) {
     if (tournamentId === 'dfb_pokal') {
         const cupTournament = window.cupTournament || {};
         const nextMatches = (cupTournament.matches || []).filter(m => !m.played);
@@ -118,7 +118,7 @@ function getNextOpponent(tournamentId) {
 function generateBracketVisualization(tournamentId) {
     const progress = getBracketProgress(tournamentId);
     const matches = generateBracketMatches(tournamentId);
-    const nextOpp = getNextOpponent(tournamentId);
+    const nextOpp = getNextTournamentOpponent(tournamentId);
     const config = Object.values(BRACKET_CONFIG).find(b => b.id === tournamentId);
 
     if (!config) return '';

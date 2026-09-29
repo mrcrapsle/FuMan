@@ -93,7 +93,7 @@ function startNegotiation(playerId) {
     return true;
 }
 
-function acceptOffer(playerId) {
+function acceptRenewalOffer(playerId) {
     const negotiation = game.contractRenewal.activeNegotiations[playerId];
     if (!negotiation) return false;
 
@@ -174,7 +174,7 @@ function tickContractRenewal() {
         if (daysInNegotiation >= 4) {
             const random = Math.random();
             if (random < negotiation.playerAcceptanceProbability) {
-                acceptOffer(playerId);
+                acceptRenewalOffer(playerId);
             } else {
                 rejectOffer(playerId);
             }
@@ -227,7 +227,7 @@ function renderContractRenewalPanel() {
             html += `<p style="font-size:9px; color:var(--text-muted); margin:0 0 4px 0;">Angebot: €${negotiation.offeredWage.toLocaleString()}/SpT (${negotiation.offerDuration}J)</p>`;
             html += `<p style="font-size:9px; margin:0 0 4px 0;">Bonus: <span style="color:var(--danger);">€${(negotiation.bonusOnAgreement / 1000).toFixed(0)}k</span></p>`;
             html += `<div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">`;
-            html += `<button onclick="acceptOffer('${playerId}')" class="btn-primary" style="font-size:8px; padding:4px;">✅ Annehmen</button>`;
+            html += `<button onclick="acceptRenewalOffer('${playerId}')" class="btn-primary" style="font-size:8px; padding:4px;">✅ Annehmen</button>`;
             html += `<button onclick="rejectOffer('${playerId}')" class="btn-secondary" style="font-size:8px; padding:4px;">❌ Ablehnen</button>`;
             html += `</div>`;
             html += `</div>`;

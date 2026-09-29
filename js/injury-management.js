@@ -8,7 +8,7 @@ let injuryManagementState = {
     injuryRecords: {} // { playerId: { totalInjuries, severeDays, comebackRisks } }
 };
 
-const INJURY_TYPES = {
+const INJURY_MANAGEMENT_TYPES = {
     MUSCLE_STRAIN: { label: 'Muskelfaserriss', minDays: 7, maxDays: 14, severity: 'LIGHT' },
     SPRAIN: { label: 'Verstauchung', minDays: 10, maxDays: 21, severity: 'MEDIUM' },
     FRACTURE: { label: 'Fraktur', minDays: 21, maxDays: 42, severity: 'HEAVY' },
@@ -54,11 +54,11 @@ function getInjuryRisk(player) {
 }
 
 function getRandomInjury() {
-    let types = Object.keys(INJURY_TYPES);
+    let types = Object.keys(INJURY_MANAGEMENT_TYPES);
     return types[Math.floor(Math.random() * types.length)];
 }
 
-function injurePlayer(playerId, injuryType = null) {
+function injureSquadPlayer(playerId, injuryType = null) {
     let player = squad.find(p => p.id === playerId);
     if (!player) return false;
 
@@ -66,7 +66,7 @@ function injurePlayer(playerId, injuryType = null) {
     if (game.injuryManagement.injuredPlayers.find(inj => inj.playerId === playerId)) return false;
 
     let type = injuryType || getRandomInjury();
-    let injuryDef = INJURY_TYPES[type];
+    let injuryDef = INJURY_MANAGEMENT_TYPES[type];
     if (!injuryDef) return false;
 
     let recoveryDays = Math.round(
@@ -191,7 +191,7 @@ function getRecoveringPlayers() {
     return game.injuryManagement.injuredPlayers.filter(inj => inj.status === 'RECOVERING');
 }
 
-function upgradeMedicalStaff(type) {
+function upgradeInjuryMedicalStaff(type) {
     let cost = 50000; // € pro Level-Up
     if (game.money < cost) {
         showToast('💰 Nicht genug Geld für Medical-Upgrade!', 'error', 3000);
@@ -230,12 +230,12 @@ function renderInjuryManagementPanel() {
     html += '<h4>🏥 MEDIZINISCHES PERSONAL</h4>';
     html += '<div style="background:#1a2a1a; padding:6px; border-radius:3px; margin-bottom:4px;">';
     html += `<p style="font-size:9px; margin:0;"><strong>Physiotherapeut:</strong> Stufe ${game.injuryManagement.medicalStaff.physiotherapist || 2}/5</p>`;
-    html += `<button onclick="upgradeMedicalStaff('physiotherapist')" class="btn-secondary" style="width:auto; font-size:8px; padding:2px 6px; margin-top:3px;">+50.000€ Upgrade</button>`;
+    html += `<button onclick="upgradeInjuryMedicalStaff('physiotherapist')" class="btn-secondary" style="width:auto; font-size:8px; padding:2px 6px; margin-top:3px;">+50.000€ Upgrade</button>`;
     html += '</div>';
 
     html += '<div style="background:#1a1a2a; padding:6px; border-radius:3px;">';
     html += `<p style="font-size:9px; margin:0;"><strong>Arzt-Qualität:</strong> Stufe ${game.injuryManagement.medicalStaff.doctorLevel || 2}/5</p>`;
-    html += `<button onclick="upgradeMedicalStaff('doctor')" class="btn-secondary" style="width:auto; font-size:8px; padding:2px 6px; margin-top:3px;">+50.000€ Upgrade</button>`;
+    html += `<button onclick="upgradeInjuryMedicalStaff('doctor')" class="btn-secondary" style="width:auto; font-size:8px; padding:2px 6px; margin-top:3px;">+50.000€ Upgrade</button>`;
     html += '</div>';
     html += '</div>';
 

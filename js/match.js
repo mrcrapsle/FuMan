@@ -1237,7 +1237,9 @@
         if (typeof checkFanProtest === 'function') checkFanProtest();
         if (typeof checkUltraConflict === 'function') checkUltraConflict();
         if (typeof analyzeMatchTactics === 'function') {
-            analyzeMatchTactics({ won: won, draw: matchday.result === 'draw', score: currentScore, conceded: concededGoals });
+            let [ownGoals, oppGoals] = String(scoreTextForRecord || '').split(':').map(n => parseInt(n, 10));
+            let hasScore = Number.isFinite(ownGoals) && Number.isFinite(oppGoals);
+            analyzeMatchTactics({ won: won, draw: hasScore && ownGoals === oppGoals, score: hasScore ? ownGoals : 0, conceded: hasScore ? oppGoals : 0 });
         }
         if (typeof checkBoardConflict === 'function') checkBoardConflict();
     }

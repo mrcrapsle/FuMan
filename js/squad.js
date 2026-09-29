@@ -1,4 +1,3 @@
-/* eslint-disable no-undef */
 
 // ==========================================
 // KADER-INITIALISIERUNG
@@ -762,7 +761,7 @@
         if (typeof renderFanEventsPanel === 'function') renderFanEventsPanel();
         if (typeof renderMedicalManagementPanel === 'function') renderMedicalManagementPanel();
         if (typeof renderStadiumManagementPanel === 'function') renderStadiumManagementPanel();
-        if (typeof renderYouthAcademyPanel === 'function') renderYouthAcademyPanel();
+        if (typeof renderYouthAcademyManagementPanel === 'function') renderYouthAcademyManagementPanel();
         if (typeof renderMediaManagementPanel === 'function') renderMediaManagementPanel();
         if (typeof renderTransferMarketAnalysisPanel === 'function') renderTransferMarketAnalysisPanel();
         if (typeof renderSquadHarmonyPanel === 'function') renderSquadHarmonyPanel();

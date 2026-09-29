@@ -60,7 +60,7 @@ function demoteToReserveSquad(playerId) {
     return promoteToReserveSquad(playerId);
 }
 
-function loanOutPlayer(playerId, loanDuration, salarySharePercentage) {
+function reservesLoanOutPlayer(playerId, loanDuration, salarySharePercentage) {
     const player = squad.find(p => p.id === playerId);
     if (!player) return null;
 
@@ -119,7 +119,7 @@ function generateLoanPlayerName() {
            lastNames[Math.floor(Math.random() * lastNames.length)];
 }
 
-function recallLoanedPlayer(loanId) {
+function reservesRecallLoanedPlayer(loanId) {
     const loan = game.reserves.loanedOut.find(l => l.id === loanId);
     if (!loan) return false;
 
