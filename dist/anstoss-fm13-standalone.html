@@ -3191,6 +3191,14 @@
                     </div>
                     <div id="transfer-tab-sell" style="display:none;"><div id="sell-list"></div></div>
                 </div>
+                <div class="panel">
+                    <div class="panel-header">📊 GEGNER-ANALYSE</div>
+                    <div id="opponent-analysis-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">🎲 WETTQUOTEN & PROGNOSE</div>
+                    <div id="match-prediction-box"></div>
+                </div>
             </div>
             <div id="screen-scouting-global" style="display:none;">
                 <div class="panel">
@@ -11281,6 +11289,9 @@ function getTransferBudgetInfo() {
             row.innerHTML = `<span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 26) : ''}${p.name} (${p.pos}|Str:${p.strength})</span><button onclick="sellPlayer('${p.id}', this)" class="btn-danger" style="width:auto;">Blitzverkauf [${formatVal(Math.round(p.marketValue*0.80))}]</button>`;
             sList.appendChild(row);
         });
+
+        if (typeof renderOpponentAnalysisPanel === 'function') renderOpponentAnalysisPanel();
+        if (typeof renderMatchPredictionPanel === 'function') renderMatchPredictionPanel();
 
         updateUI();
     }
@@ -24759,6 +24770,8 @@ function renderStadiumManagementPanel() {
 <script src="js/media-relations.js?v=2.1"></script>
 <script src="js/player-retirement.js?v=2.1"></script>
 <script src="js/tournament-brackets.js?v=2.1"></script>
+<script src="js/opponent-analysis.js?v=2.1"></script>
+<script src="js/match-prediction.js?v=2.1"></script>
 <script>
 
     // Wandelt einen rohen Trophäen-Eintrag in Icon + Kategorie um, für eine chronologische
@@ -26810,6 +26823,9 @@ function renderStadiumManagementPanel() {
         // Player Retirement & Tournament Brackets: Spieler-Pensionierung und Turnier-Klammern
         if (typeof tickPlayerRetirement === 'function') tickPlayerRetirement();
         if (typeof tickTournamentBrackets === 'function') tickTournamentBrackets();
+        // Opponent Analysis & Match Prediction: Gegner-Analyse und Match-Prognosen
+        if (typeof tickOpponentAnalysis === 'function') tickOpponentAnalysis();
+        if (typeof tickMatchPrediction === 'function') tickMatchPrediction();
         // Financial tracking for dashboard charts
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();

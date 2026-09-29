@@ -584,6 +584,9 @@
             sList.appendChild(row);
         });
 
+        if (typeof renderOpponentAnalysisPanel === 'function') renderOpponentAnalysisPanel();
+        if (typeof renderMatchPredictionPanel === 'function') renderMatchPredictionPanel();
+
         updateUI();
     }
 

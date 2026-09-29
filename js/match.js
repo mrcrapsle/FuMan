@@ -1780,6 +1780,9 @@
         // Player Retirement & Tournament Brackets: Spieler-Pensionierung und Turnier-Klammern
         if (typeof tickPlayerRetirement === 'function') tickPlayerRetirement();
         if (typeof tickTournamentBrackets === 'function') tickTournamentBrackets();
+        // Opponent Analysis & Match Prediction: Gegner-Analyse und Match-Prognosen
+        if (typeof tickOpponentAnalysis === 'function') tickOpponentAnalysis();
+        if (typeof tickMatchPrediction === 'function') tickMatchPrediction();
         // Financial tracking for dashboard charts
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();
