@@ -3677,7 +3677,11 @@ async function testRuntimeRoundTrip(browser) {
                 geldDurchAnzeige.push(`${sc}: ${Math.round(game.money - geld)} €`);
             }
         }
-        return { fehler, haenger, geldDurchAnzeige, umhuellt };
+        // Wachstum: nichts darf mit der Karrieredauer unbegrenzt anwachsen.
+        const verwaisteAngebote = ((game.contractRenewal || {}).pendingRenewals || [])
+            .filter(o => !squad.some(p => p.id === o.playerId)).length;
+        const saveKB = Math.round(JSON.stringify(buildSaveState()).length / 1024);
+        return { fehler, haenger, geldDurchAnzeige, umhuellt, verwaisteAngebote, saveKB };
     });
 
     const fehlerListe = Object.entries(r.fehler).map(([k, n]) => `${k} (${n}x)`);
@@ -3685,6 +3689,9 @@ async function testRuntimeRoundTrip(browser) {
     assert(fehlerListe.length === 0, `Keine Laufzeitfehler in 2 Saisons + allen Screens${fehlerListe.length ? ':\n      ' + fehlerListe.join('\n      ') : ''}`);
     assert(r.haenger.length === 0, `Die Simulation bleibt an keinem Spieltag hängen (${r.haenger.join(', ')})`);
     assert(r.geldDurchAnzeige.length === 0, `Screens anzeigen bewegt kein Geld (${r.geldDurchAnzeige.join(', ')})`);
+    assert(r.verwaisteAngebote === 0, `Keine Vertragsangebote für Spieler, die den Verein verlassen haben (${r.verwaisteAngebote})`);
+    // 3 Slots + Autosave müssen in ~5 MB localStorage passen; 10 Saisons ergaben ~510 KB.
+    assert(r.saveKB < 900, `Spielstand bleibt kompakt (${r.saveKB} KB nach 2 Saisons, Grenze 900 KB)`);
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler im Rundlauf (${[...new Set(consoleErrors)].slice(0, 5).join(' | ')})`);
     await page.close();
 }
@@ -3771,6 +3778,92 @@ async function testObjectivesEventsSeasonTickets(browser) {
     await page.close();
 }
 
+// ---------------------------------------------------------------------------
+// CODE-INTEGRITÄT: Handler, Element-IDs, Diagramme in versteckten Screens, 3D-Szenen
+// ---------------------------------------------------------------------------
+async function testCodeIntegrity(browser) {
+    console.log('\n[I] Code-Integrität: Handler, IDs, versteckte Diagramme, 3D-Szenen');
+    const fs = require('fs');
+    const root = path.resolve(__dirname, '..');
+    const quellen = ['index.html', ...fs.readdirSync(path.join(root, 'js')).filter(f => f.endsWith('.js')).map(f => 'js/' + f)]
+        .map(f => [f, fs.readFileSync(path.join(root, f), 'utf8')]);
+
+    // 1. Jede Funktion, die ein on*-Attribut aufruft (index.html und erzeugtes HTML in js/),
+    //    muss global existieren - sonst passiert beim Klick einfach nichts.
+    const KEIN_AUFRUF = new Set(['if', 'return', 'typeof', 'function', 'new', 'this', 'event', 'else', 'for', 'while', 'switch',
+        'var', 'let', 'const', 'document', 'window', 'console', 'Math', 'JSON', 'parseInt', 'parseFloat', 'String', 'Number',
+        'Boolean', 'Array', 'Object', 'Date', 'setTimeout', 'clearTimeout', 'encodeURIComponent', 'alert', 'confirm']);
+    const handler = {};
+    for (const [f, src] of quellen) {
+        for (const m of src.matchAll(/\bon(?:click|change|input|submit|keyup|keydown|touchstart|touchend|pointerdown|pointerup|blur|focus)\s*=\s*(["'`])([\s\S]*?)\1/g)) {
+            for (const c of m[2].matchAll(/(?:^|[^.\w$])([A-Za-z_$][\w$]*)\s*\(/g)) {
+                if (!KEIN_AUFRUF.has(c[1])) (handler[c[1]] = handler[c[1]] || new Set()).add(f);
+            }
+        }
+    }
+
+    // 2. Jede per getElementById('…') gelesene ID muss irgendwo entstehen (HTML oder Template).
+    const alles = quellen.map(([, s]) => s).join('\n');
+    const definiert = new Set([...alles.matchAll(/\bid\s*=\s*["']([\w-]+)["']/g), ...alles.matchAll(/\.id\s*=\s*["']([\w-]+)["']/g)].map(m => m[1]));
+    const praefixe = [...alles.matchAll(/\bid\s*=\s*["']([\w-]+?)\$\{/g)].map(m => m[1]);
+    const unbekannteIds = new Set();
+    for (const [f, src] of quellen) {
+        for (const m of src.matchAll(/getElementById\(\s*["']([\w-]+)["']\s*\)/g)) {
+            if (!definiert.has(m[1]) && !praefixe.some(p => m[1].startsWith(p))) unbekannteIds.add(`${m[1]} (${f})`);
+        }
+    }
+
+    const { page, consoleErrors } = await freshPage(browser);
+    const fehlendeHandler = await page.evaluate(ns => ns.filter(n => typeof window[n] !== 'function'), Object.keys(handler));
+
+    const r = await page.evaluate(async () => {
+        const warte = ms => new Promise(res => setTimeout(res, ms));
+        // 3. Rendern, während Screens versteckt sind (offsetWidth 0), darf keine kaputten SVGs erzeugen.
+        showScreen('screen-dashboard');
+        simulateMatchdays(2);
+        const kaputteSvgs = [...document.querySelectorAll('svg')]
+            .filter(s => ['width', 'height'].some(a => s.hasAttribute(a) && parseFloat(s.getAttribute(a)) < 0))
+            .map(s => (s.closest('[id]') || {}).id);
+
+        // 4. 3D-Szenen: kein filter/opacity auf preserve-3d-Elementen oder deren Eltern
+        //    (macht die Szene flach und bricht die Klick-Erkennung in Android-WebViews).
+        const pruefe3d = () => [...document.querySelectorAll('*')]
+            .filter(el => el.offsetParent !== null && getComputedStyle(el).transformStyle === 'preserve-3d')
+            .flatMap(el => {
+                const fund = [];
+                for (let a = el; a && a !== document.documentElement; a = a.parentElement) {
+                    const cs = getComputedStyle(a);
+                    if (cs.filter !== 'none' || parseFloat(cs.opacity) < 1) fund.push(`${el.id || el.className} <- ${a.id || a.className || a.tagName}`);
+                }
+                return fund;
+            });
+        const verstoesse3d = [];
+        let szenen3d = 0;
+        const zustaende = [['screen-stadium', null], ['screen-office', null], ['screen-office', 'dunkel'],
+            ...OFFICE_EVENTS.map(ev => ['screen-office', ev])];
+        for (const [sc, zustand] of zustaende) {
+            if (zustand === 'dunkel') toggleOfficeLamp();
+            if (zustand && zustand.id) game.officeEvent = { id: zustand.id, seit: game.matchday, season: game.season, titel: zustand.titel(), text: zustand.text() };
+            showScreen('screen-dashboard'); showScreen(sc);
+            await warte(120);
+            szenen3d += [...document.querySelectorAll('*')].filter(el => el.offsetParent !== null && getComputedStyle(el).transformStyle === 'preserve-3d').length;
+            verstoesse3d.push(...pruefe3d().map(v => `${sc}${zustand ? '/' + (zustand.id || zustand) : ''}: ${v}`));
+            if (zustand === 'dunkel') toggleOfficeLamp();
+        }
+        game.officeEvent = null;
+        return { kaputteSvgs, verstoesse3d: [...new Set(verstoesse3d)], szenen3d };
+    });
+
+    assert(Object.keys(handler).length > 300, `Handler-Funktionen aus on*-Attributen erfasst (${Object.keys(handler).length})`);
+    assert(fehlendeHandler.length === 0, `Jede in onclick & Co. aufgerufene Funktion existiert (${fehlendeHandler.map(n => `${n} <- ${[...handler[n]].join('/')}`).join(', ')})`);
+    assert(unbekannteIds.size === 0, `Jede per getElementById gelesene ID existiert im HTML oder in einer Vorlage (${[...unbekannteIds].join(', ')})`);
+    assert(r.kaputteSvgs.length === 0, `Diagramme in versteckten Screens haben keine negativen Maße (${r.kaputteSvgs.join(', ')})`);
+    assert(r.szenen3d > 20, `3D-Szenen im Büro/Stadion geprüft (${r.szenen3d} Elemente in allen Zuständen)`);
+    assert(r.verstoesse3d.length === 0, `Kein filter/opacity auf 3D-Elementen oder deren Eltern (${r.verstoesse3d.slice(0, 5).join(' | ')})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler bei der Integritätsprüfung (${consoleErrors.slice(0, 3).join(' | ')})`);
+    await page.close();
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -3838,6 +3931,7 @@ async function main() {
         testTrainingCalendar,
         testTacticAutomation,
         testObjectivesEventsSeasonTickets,
+        testCodeIntegrity,
         testRuntimeRoundTrip,
     ];
 

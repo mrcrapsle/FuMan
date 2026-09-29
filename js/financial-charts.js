@@ -75,7 +75,8 @@
         let data = financialHistory.monthlyData.slice(-12); // Last 12 months
         let maxVal = Math.max(...data.map(d => d.income), ...data.map(d => d.expenses)) || 100000;
         let chartHeight = 120;
-        let barWidth = Math.max(20, Math.floor((container.offsetWidth - 40) / data.length));
+        let breite = container.offsetWidth || 320; // 0, solange der Screen versteckt ist
+        let barWidth = Math.max(20, Math.floor((breite - 40) / data.length));
         let padding = 8;
 
         let html = `

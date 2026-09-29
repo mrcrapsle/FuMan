@@ -172,7 +172,7 @@ This ensures users can see exactly where money comes from/goes. Add new income o
 
 **Lint rules that matter:** a file-level `/* eslint-disable no-undef */` only applies to that file (the lint bundle re-enables rules between files). `no-redeclare` catches two modules defining the same global name - a later `function x()` would otherwise silently replace an existing one. Rename the new one instead.
 
-**Monthly ticks:** feature ticks belong inside the `if (game.matchday % 4 === 0)` block in `processPostMatchRoutine()` (js/match.js), not next to it - otherwise they run every matchday. Render functions must never change `game.money` (checked by the runtime round-trip test).
+**Monthly ticks:** feature ticks belong inside the `if (game.matchday % 4 === 0)` block in `processPostMatchRoutine()` (js/match.js), not next to it - otherwise they run every matchday. Render functions must never change `game.money` (checked by the runtime round-trip test). Measure sizes with a fallback (`el.offsetWidth || 320`): screens are `display:none` while not shown.
 
 **Why one big file:** Game must run offline as a single draggable-and-droppable file on Android/mobile (Chrome, Firefox, etc.). No server, no network, no external dependencies.
 
@@ -239,6 +239,8 @@ cd tests && TEST_ONLY=LandesPokal node run-tests.js
 # - Screen rendering: loads key screens and checks for errors
 # - Save/load: verifies game state persists and loads correctly
 ```
+
+`testCodeIntegrity` checks statically and in the browser: every function called from an `on*` attribute (index.html and generated HTML) exists, every `getElementById('…')` id exists somewhere, charts rendered while their screen is hidden (`offsetWidth` 0) have no negative sizes, and no `filter`/`opacity` sits on a `preserve-3d` element or its ancestors (office light/dark, every office event, stadium).
 
 `testRuntimeRoundTrip` wraps every game function, plays two seasons and opens every screen; it lists ALL runtime errors with the function name at once, plus screens that move money. When it fails, fix each listed function.
 

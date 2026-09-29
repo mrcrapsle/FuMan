@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '2.2', date: '30.09.2026', features: 'Saisonziele mit echten Daten, Stadion-Events, realistische Dauerkarten' };
+    const GAME_VERSION = { number: '2.3', date: '30.09.2026', features: 'Code-Integritätsprüfung, 3D-Stadion-Fix, Diagramme in versteckten Screens' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

@@ -487,7 +487,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '2.2', date: '30.09.2026', features: 'Saisonziele mit echten Daten, Stadion-Events, realistische Dauerkarten' };
+    const GAME_VERSION = { number: '2.3', date: '30.09.2026', features: 'Code-Integritätsprüfung, 3D-Stadion-Fix, Diagramme in versteckten Screens' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -3608,7 +3608,8 @@ function renderFanEventsPanel() {
         if (!stats) return;
 
         // SVG Radar Chart mit 6 Attributen
-        let size = Math.min(container.offsetWidth - 20, 200);
+        // offsetWidth ist 0, solange der Screen versteckt ist -> sonst entstünde ein -20x-20-SVG.
+        let size = container.offsetWidth > 40 ? Math.min(container.offsetWidth - 20, 200) : 200;
         let center = size / 2;
         let maxValue = 100;
         let levels = 5;
@@ -6296,7 +6297,8 @@ function getTransferBudgetInfo() {
         let data = leagueProgressHistory.matchdayData.slice(-12);
         let maxPos = Math.max(...data.map(d => d.position)) + 1;
         let chartHeight = 120;
-        let barWidth = Math.max(20, Math.floor((container.offsetWidth - 40) / data.length));
+        let breite = container.offsetWidth || 320; // 0, solange der Screen versteckt ist
+        let barWidth = Math.max(20, Math.floor((breite - 40) / data.length));
 
         let html = `
             <div style="font-size:9px; color:#94a3b8; margin-bottom:4px;">Ligaplatzierung (letzte 12 Monate)</div>
@@ -6339,7 +6341,8 @@ function getTransferBudgetInfo() {
         let data = leagueProgressHistory.matchdayData.slice(-12);
         let maxPoints = Math.max(...data.map(d => d.points)) || 90;
         let chartHeight = 80;
-        let barWidth = Math.max(20, Math.floor((container.offsetWidth - 40) / data.length));
+        let breite = container.offsetWidth || 320; // 0, solange der Screen versteckt ist
+        let barWidth = Math.max(20, Math.floor((breite - 40) / data.length));
 
         let html = `
             <div style="font-size:9px; color:#94a3b8; margin-bottom:4px;">Punkte-Trend (letzte 12 Monate)</div>
@@ -14036,7 +14039,8 @@ function finishGoalkeeperGame() {
         let data = financialHistory.monthlyData.slice(-12); // Last 12 months
         let maxVal = Math.max(...data.map(d => d.income), ...data.map(d => d.expenses)) || 100000;
         let chartHeight = 120;
-        let barWidth = Math.max(20, Math.floor((container.offsetWidth - 40) / data.length));
+        let breite = container.offsetWidth || 320; // 0, solange der Screen versteckt ist
+        let barWidth = Math.max(20, Math.floor((breite - 40) / data.length));
         let padding = 8;
 
         let html = `
@@ -27812,6 +27816,12 @@ function initializeContractRenewal() {
     if (!game.contractRenewal.activeNegotiations) game.contractRenewal.activeNegotiations = {};
     if (!game.contractRenewal.renewalHistory) game.contractRenewal.renewalHistory = [];
     if (!game.contractRenewal.bonusesAwarded) game.contractRenewal.bonusesAwarded = 0;
+    // Angebote/Verhandlungen für Spieler, die den Verein verlassen haben, verwaisten sonst für immer.
+    const imKader = id => squad.some(p => p.id === id);
+    game.contractRenewal.pendingRenewals = game.contractRenewal.pendingRenewals.filter(r => imKader(r.playerId));
+    Object.keys(game.contractRenewal.activeNegotiations).forEach(id => {
+        if (!squad.some(p => String(p.id) === id)) delete game.contractRenewal.activeNegotiations[id];
+    });
 }
 
 function getPlayerLoyaltyYears(playerId) {
@@ -30259,40 +30269,6 @@ function tickMatchInjuries() {
         return html;
     }
 
-    function renderPlayerProgressionOverview() {
-        let container = document.getElementById('player-progression-overview-box');
-        if (!container) return;
-
-        // Finde die Top 5 Spieler nach Gesamtleistung
-        let topPlayers = Object.entries(playerCareerProgressionState.playerProfiles)
-            .sort((a, b) => (b[1].totalGoals || 0) - (a[1].totalGoals || 0))
-            .slice(0, 5);
-
-        let html = `
-            <div style="display:grid; gap:4px; font-size:9px;">
-                <div style="font-weight:700; color:var(--accent); margin-bottom:4px;">🏆 TOP 5 KARRIERE-TORSCHÜTZEN</div>
-        `;
-
-        if (topPlayers.length === 0) {
-            html += '<div style="color:#aaa;">Keine Spieler-Profile vorhanden</div>';
-        } else {
-            topPlayers.forEach(([playerId, profile], idx) => {
-                let medalEmoji = idx === 0 ? '🥇' : (idx === 1 ? '🥈' : '🥉');
-                html += `
-                    <div style="display:flex; justify-content:space-between; padding:4px; background:rgba(255,255,255,0.02); border-radius:3px;">
-                        <span>${medalEmoji} ${profile.name}</span>
-                        <span style="color:var(--gold); font-weight:700;">${profile.totalGoals || 0} Tore</span>
-                    </div>
-                `;
-            });
-        }
-
-        html += `
-            </div>
-        `;
-
-        container.innerHTML = html;
-    }
 
 /* eslint-enable */
 

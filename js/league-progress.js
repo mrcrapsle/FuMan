@@ -57,7 +57,8 @@
         let data = leagueProgressHistory.matchdayData.slice(-12);
         let maxPos = Math.max(...data.map(d => d.position)) + 1;
         let chartHeight = 120;
-        let barWidth = Math.max(20, Math.floor((container.offsetWidth - 40) / data.length));
+        let breite = container.offsetWidth || 320; // 0, solange der Screen versteckt ist
+        let barWidth = Math.max(20, Math.floor((breite - 40) / data.length));
 
         let html = `
             <div style="font-size:9px; color:#94a3b8; margin-bottom:4px;">Ligaplatzierung (letzte 12 Monate)</div>
@@ -100,7 +101,8 @@
         let data = leagueProgressHistory.matchdayData.slice(-12);
         let maxPoints = Math.max(...data.map(d => d.points)) || 90;
         let chartHeight = 80;
-        let barWidth = Math.max(20, Math.floor((container.offsetWidth - 40) / data.length));
+        let breite = container.offsetWidth || 320; // 0, solange der Screen versteckt ist
+        let barWidth = Math.max(20, Math.floor((breite - 40) / data.length));
 
         let html = `
             <div style="font-size:9px; color:#94a3b8; margin-bottom:4px;">Punkte-Trend (letzte 12 Monate)</div>

@@ -28,6 +28,12 @@ function initializeContractRenewal() {
     if (!game.contractRenewal.activeNegotiations) game.contractRenewal.activeNegotiations = {};
     if (!game.contractRenewal.renewalHistory) game.contractRenewal.renewalHistory = [];
     if (!game.contractRenewal.bonusesAwarded) game.contractRenewal.bonusesAwarded = 0;
+    // Angebote/Verhandlungen für Spieler, die den Verein verlassen haben, verwaisten sonst für immer.
+    const imKader = id => squad.some(p => p.id === id);
+    game.contractRenewal.pendingRenewals = game.contractRenewal.pendingRenewals.filter(r => imKader(r.playerId));
+    Object.keys(game.contractRenewal.activeNegotiations).forEach(id => {
+        if (!squad.some(p => String(p.id) === id)) delete game.contractRenewal.activeNegotiations[id];
+    });
 }
 
 function getPlayerLoyaltyYears(playerId) {

@@ -1497,6 +1497,12 @@
             display: block;
         }
 
+        /* Enthält eine 3D-Szene (Stadionschüssel): opacity/transform auf einem Eltern-Element
+           machen sie in Android-WebViews flach und brechen die Klick-Erkennung. */
+        .accordion-content.accordion-3d {
+            animation: none;
+        }
+
         @keyframes slideDown {
             from {
                 opacity: 0;

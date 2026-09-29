@@ -50,7 +50,8 @@
         if (!stats) return;
 
         // SVG Radar Chart mit 6 Attributen
-        let size = Math.min(container.offsetWidth - 20, 200);
+        // offsetWidth ist 0, solange der Screen versteckt ist -> sonst entstünde ein -20x-20-SVG.
+        let size = container.offsetWidth > 40 ? Math.min(container.offsetWidth - 20, 200) : 200;
         let center = size / 2;
         let maxValue = 100;
         let levels = 5;

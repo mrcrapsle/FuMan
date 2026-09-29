@@ -248,37 +248,3 @@
         return html;
     }
 
-    function renderPlayerProgressionOverview() {
-        let container = document.getElementById('player-progression-overview-box');
-        if (!container) return;
-
-        // Finde die Top 5 Spieler nach Gesamtleistung
-        let topPlayers = Object.entries(playerCareerProgressionState.playerProfiles)
-            .sort((a, b) => (b[1].totalGoals || 0) - (a[1].totalGoals || 0))
-            .slice(0, 5);
-
-        let html = `
-            <div style="display:grid; gap:4px; font-size:9px;">
-                <div style="font-weight:700; color:var(--accent); margin-bottom:4px;">🏆 TOP 5 KARRIERE-TORSCHÜTZEN</div>
-        `;
-
-        if (topPlayers.length === 0) {
-            html += '<div style="color:#aaa;">Keine Spieler-Profile vorhanden</div>';
-        } else {
-            topPlayers.forEach(([playerId, profile], idx) => {
-                let medalEmoji = idx === 0 ? '🥇' : (idx === 1 ? '🥈' : '🥉');
-                html += `
-                    <div style="display:flex; justify-content:space-between; padding:4px; background:rgba(255,255,255,0.02); border-radius:3px;">
-                        <span>${medalEmoji} ${profile.name}</span>
-                        <span style="color:var(--gold); font-weight:700;">${profile.totalGoals || 0} Tore</span>
-                    </div>
-                `;
-            });
-        }
-
-        html += `
-            </div>
-        `;
-
-        container.innerHTML = html;
-    }
