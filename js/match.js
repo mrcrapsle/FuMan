@@ -1758,6 +1758,12 @@
         if (typeof tickContractExpirations === 'function') tickContractExpirations();
         // Opposition Analysis: Gegner-Analyse-Updates
         if (typeof tickOppositionAnalysisUpdate === 'function') tickOppositionAnalysisUpdate();
+        // Training Schedule: Trainingseffekte und Müdigkeitsabbau
+        if (typeof applyTrainingEffects === 'function') applyTrainingEffects(game.matchday);
+        if (typeof tickTrainingFatigue === 'function') tickTrainingFatigue();
+        // Reserves & Loan: Leihspieler-Management und Rückgabe
+        if (typeof tickLoanedPlayerDevelopment === 'function') tickLoanedPlayerDevelopment();
+        if (typeof tickIncomingLoanManagement === 'function') tickIncomingLoanManagement();
         // Financial tracking for dashboard charts
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();

@@ -2741,6 +2741,9 @@
                     <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Liga, DFB-Pokal, Landespokal und Europapokal für die nächsten Spieltage im Überblick.</div>
                     <div id="training-calendar-box"></div>
                 </div>
+                <div class="panel" id="training-schedule-box">
+                    <div class="panel-header">⚙️ MODERNE TRAININGSPLANUNG</div>
+                </div>
                 </div>
 
                 <div id="training-tab-minigames" style="display:none;">
@@ -3279,6 +3282,9 @@
                 <div class="panel">
                     <div class="panel-header">📅 AUSLAUFENDE VERTRÄGE NACH POSITION</div>
                     <div id="squad-planning-contract-box"></div>
+                </div>
+                <div class="panel" id="reserves-loan-box">
+                    <div class="panel-header">🔄 RESERVEMANNSCHAFT & LEIHSPIELER</div>
                 </div>
             </div>
             </div>
@@ -7557,6 +7563,7 @@ function getTransferBudgetInfo() {
         renderSquadPlanningAgeBox();
         renderSquadPlanningContractBox();
         renderSquadPlanningWarningsBox();
+        if (typeof renderReservesLoanPanel === 'function') renderReservesLoanPanel();
     }
 
 </script>
@@ -14814,6 +14821,7 @@ function renderTalentDetectionPanel() {
             list.appendChild(row);
         });
         if (typeof renderInjuryRiskPanel === 'function') renderInjuryRiskPanel();
+        if (typeof renderTrainingSchedulePanel === 'function') renderTrainingSchedulePanel();
     }
 
     function setTeamTraining(focus) {
@@ -24696,6 +24704,8 @@ function renderStadiumManagementPanel() {
 <script src="js/transfer-market-analysis.js?v=2.1"></script>
 <script src="js/contract-management.js?v=2.1"></script>
 <script src="js/opposition-analysis.js?v=2.1"></script>
+<script src="js/training-schedule.js?v=2.1"></script>
+<script src="js/reserves-loan-management.js?v=2.1"></script>
 <script>
 
     // Wandelt einen rohen Trophäen-Eintrag in Icon + Kategorie um, für eine chronologische
@@ -26725,6 +26735,12 @@ function renderStadiumManagementPanel() {
         if (typeof tickContractExpirations === 'function') tickContractExpirations();
         // Opposition Analysis: Gegner-Analyse-Updates
         if (typeof tickOppositionAnalysisUpdate === 'function') tickOppositionAnalysisUpdate();
+        // Training Schedule: Trainingseffekte und Müdigkeitsabbau
+        if (typeof applyTrainingEffects === 'function') applyTrainingEffects(game.matchday);
+        if (typeof tickTrainingFatigue === 'function') tickTrainingFatigue();
+        // Reserves & Loan: Leihspieler-Management und Rückgabe
+        if (typeof tickLoanedPlayerDevelopment === 'function') tickLoanedPlayerDevelopment();
+        if (typeof tickIncomingLoanManagement === 'function') tickIncomingLoanManagement();
         // Financial tracking for dashboard charts
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();

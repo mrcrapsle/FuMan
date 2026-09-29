@@ -143,4 +143,5 @@
         renderSquadPlanningAgeBox();
         renderSquadPlanningContractBox();
         renderSquadPlanningWarningsBox();
+        if (typeof renderReservesLoanPanel === 'function') renderReservesLoanPanel();
     }
