@@ -1722,6 +1722,8 @@
         if (typeof tickSponsoringIncome === 'function') tickSponsoringIncome();
         // Fan-Engagement: monatliche Zufriedenheits-Updates
         if (typeof tickFanEngagement === 'function') tickFanEngagement();
+        // Board Relations: monatliche Zufriedenheits- und Job-Sicherheits-Updates
+        if (typeof tickBoardRelations === 'function') tickBoardRelations();
         // Financial tracking for dashboard charts
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();

@@ -2354,6 +2354,11 @@
                 </div>
 
                 <div class="panel">
+                    <div class="panel-header">👑 VORSTANDSVERHÄLTNISSE & JOB-SICHERHEIT</div>
+                    <div id="board-management-box"></div>
+                </div>
+
+                <div class="panel">
                     <div class="panel-header" style="color:var(--gold);">📺 MEDIENRECHTE & TV-VERTRAG</div>
                     <div id="media-rights-box"></div>
                     <div id="tv-income-history-box" style="margin-top:6px;"></div>
@@ -6572,6 +6577,7 @@
 
 
 </script>
+<script src="js/squad-radar.js?v=2.1"></script>
 <script>
 
     // ==========================================
@@ -9558,6 +9564,7 @@ function getTransferBudgetInfo() {
 
 
 </script>
+<script src="js/league-progress.js?v=2.1"></script>
 <script>
 
 // ==========================================
@@ -15677,6 +15684,7 @@ function finishGoalkeeperGame() {
         if (typeof renderFanEngagementPanel === 'function') renderFanEngagementPanel();
         if (typeof renderFanEngagementStats === 'function') renderFanEngagementStats();
         if (typeof renderMediaRelationsPanel === 'function') renderMediaRelationsPanel();
+        if (typeof renderBoardManagementPanel === 'function') renderBoardManagementPanel();
         renderStockTicker();
         renderSponsorLeaderboard();
         renderFinanceForecast();
@@ -16544,6 +16552,8 @@ function finishGoalkeeperGame() {
     installKontoauszug();
 
 </script>
+<script src="js/financial-charts.js?v=2.1"></script>
+<script src="js/board-management.js?v=2.1"></script>
 <script>
     // ==========================================
     // FINANCIAL FAIRPLAY
@@ -18215,6 +18225,7 @@ function renderMediaJournalistPanel() {
 }
 
 </script>
+<script src="js/media-relations.js?v=2.1"></script>
 <script>
 
     // ==========================================
@@ -21233,6 +21244,7 @@ function renderStadiumEventsPanel() {
 
 
 </script>
+<script src="js/fan-engagement.js?v=2.1"></script>
 <script>
 
     function renderYouthView() {
@@ -25078,6 +25090,8 @@ function closeNegotiationModal() {
         if (typeof tickSponsoringIncome === 'function') tickSponsoringIncome();
         // Fan-Engagement: monatliche Zufriedenheits-Updates
         if (typeof tickFanEngagement === 'function') tickFanEngagement();
+        // Board Relations: monatliche Zufriedenheits- und Job-Sicherheits-Updates
+        if (typeof tickBoardRelations === 'function') tickBoardRelations();
         // Financial tracking for dashboard charts
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();

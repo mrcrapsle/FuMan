@@ -62,6 +62,7 @@
         if (typeof renderFanEngagementPanel === 'function') renderFanEngagementPanel();
         if (typeof renderFanEngagementStats === 'function') renderFanEngagementStats();
         if (typeof renderMediaRelationsPanel === 'function') renderMediaRelationsPanel();
+        if (typeof renderBoardManagementPanel === 'function') renderBoardManagementPanel();
         renderStockTicker();
         renderSponsorLeaderboard();
         renderFinanceForecast();
