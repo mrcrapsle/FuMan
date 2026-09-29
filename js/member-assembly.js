@@ -25,7 +25,9 @@ function assemblyLeagueFactor(level) {
 // Erwarteter Platz = Rang der eigenen Kaderstärke in der (neuen) Liga zu Saisonbeginn.
 function recordSeasonExpectationRank() {
     const teams = leaguesData[game.leagueLevel] || [];
-    const own = calcTeamStrength(false); // ohne Heimvorteil, sonst zu optimistisch
+    // Schnitt der besten Elf: gleiche Skala wie die Gegnerstärken, ohne Taktik-/Heimboni.
+    const top11 = squad.map(p => p.strength).sort((x, y) => y - x).slice(0, 11);
+    const own = top11.length ? top11.reduce((x, y) => x + y, 0) / top11.length : 0;
     const exp = game.seasonExpectation && game.seasonExpectation.season === game.season
         ? game.seasonExpectation : (game.seasonExpectation = { season: game.season, startMoney: Math.round(game.money) });
     exp.leagueLevel = game.leagueLevel;
