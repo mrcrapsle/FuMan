@@ -1720,6 +1720,11 @@
         if (typeof tickRealEstateIncome === 'function') tickRealEstateIncome();
         // Sponsoring-Verträge: monatliche Einnahmen
         if (typeof tickSponsoringIncome === 'function') tickSponsoringIncome();
+        // Fanclub Revenue: monatliche Einnahmen aus Fanclubs
+        if (typeof processFanRevenue === 'function') {
+            let fanRevenue = processFanRevenue();
+            game.money += fanRevenue;
+        }
         // Fan-Engagement: monatliche Zufriedenheits-Updates
         if (typeof tickFanEngagement === 'function') tickFanEngagement();
         // Board Relations: monatliche Zufriedenheits- und Job-Sicherheits-Updates
