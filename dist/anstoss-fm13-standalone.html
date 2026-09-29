@@ -1445,6 +1445,7 @@
         <div style="font-size:11px; font-weight:800; color:var(--accent); margin-top:6px;">Fähigkeiten</div>
         <div class="modal-stat-grid" id="pd-stats"></div>
         <div id="pd-strength-history" style="margin-top:8px; text-align:center;"></div>
+        <div id="pd-career-progression" style="display:none; margin-top:6px;"></div>
         <div id="pd-scouting-report" style="display:none; margin-top:6px;"></div>
         <button onclick="closePlayerDetail()" class="btn-primary" style="margin-top:10px;">Schließen</button>
         <button onclick="talkToPlayerFromDetail()" id="pd-talk-btn" class="btn-primary" style="margin-top:6px;">💬 Mit Spieler sprechen</button>
@@ -5545,6 +5546,20 @@
                         }).join('')}
                     </svg>
                 `;
+            }
+        }
+
+        // Career Progression Panel (NEU): Karriere-Statistik und Meilensteine
+        let careerBox = document.getElementById('pd-career-progression');
+        if (careerBox) {
+            if (typeof renderPlayerCareerPanel === 'function') {
+                let careerHtml = renderPlayerCareerPanel(p.id);
+                if (careerHtml) {
+                    careerBox.style.display = 'block';
+                    careerBox.innerHTML = careerHtml;
+                } else {
+                    careerBox.style.display = 'none';
+                }
             }
         }
 
@@ -23311,6 +23326,7 @@ function closeNegotiationModal() {
 
 </script>
 <script src="js/hall-of-fame.js?v=2.1"></script>
+<script src="js/player-career-progression.js?v=2.1"></script>
 <script>
 
     // ---------- WETTER ---------- (aus match.js ausgelagert - reine Datei-Organisation,
@@ -26212,6 +26228,10 @@ function closeNegotiationModal() {
         incomingOffers = [];
         if (typeof evaluateFinancialFairplay === 'function') evaluateFinancialFairplay();
         if (typeof recordSeasonStats === 'function') recordSeasonStats();
+        // Player Career Progression: record seasonal performance for all squad members
+        if (typeof recordSeasonalPerformance === 'function') {
+            squad.forEach(p => recordSeasonalPerformance(p));
+        }
         game.season++;
         checkJubileeCrestUnlock();
         // Leihverein-Beziehungen schwächen sich ab, wenn 2+ Saisons kein neues Geschäft mit
