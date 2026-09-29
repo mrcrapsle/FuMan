@@ -1724,6 +1724,8 @@
         if (typeof tickFanEngagement === 'function') tickFanEngagement();
         // Board Relations: monatliche Zufriedenheits- und Job-Sicherheits-Updates
         if (typeof tickBoardRelations === 'function') tickBoardRelations();
+        // Youth Academy: monatliche Trainings-Programm-Updates
+        if (typeof tickYouthAcademyPrograms === 'function') tickYouthAcademyPrograms();
         // Financial tracking for dashboard charts
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();

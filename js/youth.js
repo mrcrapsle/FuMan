@@ -82,6 +82,7 @@
         if (typeof renderYouthDevelopmentChart === 'function') renderYouthDevelopmentChart();
         if (typeof simulateYouthDevelopment === 'function') simulateYouthDevelopment();
         if (typeof renderAcademyRankingPanel === 'function') renderAcademyRankingPanel();
+        if (typeof renderYouthAcademyAdvanced === 'function') renderYouthAcademyAdvanced();
     }
 
     // ==========================================

@@ -3213,6 +3213,10 @@
                     <div class="panel-header" style="color:var(--gold);">🎓 AKADEMIE-RANGLISTE</div>
                     <div id="academy-ranking-panel"></div>
                 </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--primary);">📚 ADVANCED YOUTH ACADEMY</div>
+                    <div id="youth-academy-advanced-box"></div>
+                </div>
             </div>
             <div id="screen-contracts" style="display:none;">
                 <div class="panel">
@@ -21334,6 +21338,7 @@ function renderStadiumEventsPanel() {
         if (typeof renderYouthDevelopmentChart === 'function') renderYouthDevelopmentChart();
         if (typeof simulateYouthDevelopment === 'function') simulateYouthDevelopment();
         if (typeof renderAcademyRankingPanel === 'function') renderAcademyRankingPanel();
+        if (typeof renderYouthAcademyAdvanced === 'function') renderYouthAcademyAdvanced();
     }
 
     // ==========================================
@@ -21932,6 +21937,7 @@ function renderYouthDevelopmentChart() {
 }
 
 </script>
+<script src="js/youth-academy-advanced.js?v=2.1"></script>
 <script>
 
     // ==========================================
@@ -25098,6 +25104,8 @@ function closeNegotiationModal() {
         if (typeof tickFanEngagement === 'function') tickFanEngagement();
         // Board Relations: monatliche Zufriedenheits- und Job-Sicherheits-Updates
         if (typeof tickBoardRelations === 'function') tickBoardRelations();
+        // Youth Academy: monatliche Trainings-Programm-Updates
+        if (typeof tickYouthAcademyPrograms === 'function') tickYouthAcademyPrograms();
         // Financial tracking for dashboard charts
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();
