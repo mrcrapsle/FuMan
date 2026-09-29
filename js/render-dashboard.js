@@ -41,6 +41,7 @@
         document.getElementById('dash-opp-name').innerText = oppName;
         document.getElementById('dash-opp-str').innerText = oppStr;
         document.getElementById('dash-our-str').innerText = calcTeamStrength(true);
+        if (typeof renderRefereePreview === 'function') renderRefereePreview();
 
         document.getElementById('dash-europe-status').innerText = game.inEurope ? "🏆 Champions Cup Gruppenphase" : "Nicht qualifiziert";
         let activePerks = Object.values(managerRPG.perks).filter(Boolean).length;

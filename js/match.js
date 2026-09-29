@@ -391,7 +391,8 @@
             }
         }
         
-        let introNotes = "Anpfiff der Partie!";
+        currentMatch.referee = (typeof getCurrentReferee === 'function') ? getCurrentReferee() : null;
+        let introNotes = currentMatch.referee ? `Anpfiff durch ${currentMatch.referee.name} (${currentMatch.referee.style})!` : "Anpfiff der Partie!";
         if (underworld.activeSabotages.pyroHotel) introNotes += " [🧨 Gegner wirkt müde]";
         if (underworld.activeSabotages.refBribe) introNotes += " [⌚ Schiedsrichter pfeift wohlwollend]";
         document.getElementById('ticker-log').innerHTML = `<div>${introNotes}</div>`;
@@ -683,6 +684,8 @@
             ourCardThreshold *= currentWeather.cardMult;
             if (game.tackleHardness === 'hart') ourCardThreshold *= 1.5;
             if (game.tackleHardness === 'vorsichtig') ourCardThreshold *= 0.6;
+            let refCardMult = currentMatch.referee ? currentMatch.referee.cardMult : 1;
+            ourCardThreshold *= refCardMult;
             // Nervenkrieg-Effekt: bei einer bereits etablierten Elfmeterschießen-Rivalität
             // (siehe checkShootoutRivalryIntensity() in europe.js/cup.js) steht das ganze
             // Spiel unter besonderer psychischer Anspannung - hitzköpfige Spieler geraten
@@ -710,7 +713,7 @@
                     currentMatch.yellowCards[culprit.id] = (currentMatch.yellowCards[culprit.id] || 0) + 1;
                     document.getElementById('ticker-log').innerHTML += `<div style="color:var(--accent);">🟨 ${currentMatch.minute}. Min: Gelbe Karte für ${culprit.name}.</div>`;
                 }
-            } else if (ourCardRoll < 0.11) {
+            } else if (ourCardRoll < 0.11 * refCardMult) {
                 // Gegnerische Karte - kein individueller Spieler, aber wirkt sich leicht auf Spielverlauf aus
                 eventHandled = true;
                 let isRed = Math.random() < 0.1;
@@ -1635,6 +1638,8 @@
         // Neue Verletzungen/Sperren nur unter Spielern, die diesen Spieltag tatsächlich aufgelaufen sind.
         // Wer schon oft verletzt war, gilt als "verletzungsanfällig" und hat ein höheres
         // individuelles Risiko - ein sich selbst verstärkender Teufelskreis wie im echten Fußball.
+        let refereeCardMultThisMatch = (matchResult && typeof getRefereeCardMult === 'function') ? getRefereeCardMult() : 1;
+        let sperrenDurchSchiri = 0;
         playedThisMatch.forEach(p => {
             p.appearances = (p.appearances || 0) + 1;
             p.appearancesSeason = (p.appearancesSeason || 0) + 1;
@@ -1669,11 +1674,17 @@
                 p.timesInjured = (p.timesInjured || 0) + 1;
                 let fragileTag = p.timesInjured >= 3 ? ' ⚠️ Wird zunehmend verletzungsanfällig!' : '';
                 addInboxMessage('verletzung', `${p.name} verletzt`, `Fällt für ${p.injured} Spiel(e) aus. (${p.timesInjured}. Verletzung in dieser Karriere)${fragileTag}`, 'screen-squad');
-            } else if (Math.random() < 0.015) {
+            } else if (Math.random() < 0.015 * refereeCardMultThisMatch) {
                 p.suspended = 1; // Platzverweis/Gelb-Sperre: 1 Spiel Sperre
+                sperrenDurchSchiri++;
                 addInboxMessage('verletzung', `${p.name} gesperrt`, `Fällt für das nächste Spiel gesperrt aus.`, 'screen-squad');
             }
         });
+
+        if (typeof recordRefereeMatch === 'function') {
+            let liveRot = (isLiveContext && typeof currentMatch !== 'undefined' && currentMatch) ? currentMatch.sentOff.length : 0;
+            recordRefereeMatch(matchResult, liveRot + sperrenDurchSchiri);
+        }
 
         let cupRoundIdx = cupTournament.matchdays.indexOf(game.matchday);
         if (cupRoundIdx !== -1) simulateCupRound(cupRoundIdx, isLiveContext);
