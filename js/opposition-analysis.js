@@ -203,6 +203,7 @@ function getRecommendedTactics(opponentAnalysis) {
 function tickOppositionAnalysisUpdate() {
     // Update analysis if not done this month
     const currentMatchday = game.matchday || 1;
+    if (!game.upcomingOpponents) initializeOppositionAnalysis();
 
     game.upcomingOpponents.forEach(opponent => {
         // Analyze if match is within next 6 matchdays

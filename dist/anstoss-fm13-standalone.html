@@ -1420,7 +1420,7 @@
             }
 
             .stadium-bowl { height: 120px; }
-            .stand { font-size: 6px; }
+            .stand { font-size: 7px; }
 
             .accordion-header {
                 font-size: 10px;
@@ -29196,6 +29196,7 @@ function getRecommendedTactics(opponentAnalysis) {
 function tickOppositionAnalysisUpdate() {
     // Update analysis if not done this month
     const currentMatchday = game.matchday || 1;
+    if (!game.upcomingOpponents) initializeOppositionAnalysis();
 
     game.upcomingOpponents.forEach(opponent => {
         // Analyze if match is within next 6 matchdays
