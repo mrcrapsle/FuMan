@@ -792,6 +792,7 @@
         'screen-calendar': '📅 Terminplanung',
         'screen-squad': '👥 Kader',
         'screen-second-team': '🅱️ Zweite Mannschaft',
+        'screen-women': '👩 Frauenmannschaft',
         'screen-private': '🏠 Privatleben',
         'screen-underworld': '🌃 Zwielichtige Geschäfte',
         'screen-real-estate': '🏢 Immobilien',

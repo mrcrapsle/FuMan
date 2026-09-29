@@ -1744,6 +1744,7 @@
                 bucheInSpieltagsjournal('📣 Fanclub-Einnahmen', fanRevenue, 'einnahmen');
             }
         }
+        if (typeof tickWomenTeam === 'function') tickWomenTeam();
         // Stadium Management: Projektfortschritt und Wartung
         if (typeof tickStadiumProjects === 'function') tickStadiumProjects();
         let stadiumMaintenance = (typeof tickStadiumMaintenance === 'function') ? tickStadiumMaintenance() : 0;

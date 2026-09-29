@@ -90,7 +90,7 @@
     // sah das Spiel dadurch komplett funktionslos aus, obwohl der komplette JS-Code fehlerfrei
     // lief. Dieser Test hätte das beim nächsten Bauen sofort sichtbar gemacht.
     function runStructuralSelfTest(silent = true) {
-        let topScreens = ['screen-office', 'screen-dashboard', 'screen-calendar', 'screen-inbox', 'screen-squad', 'screen-second-team', 'screen-training', 'screen-manager-tree', 'screen-admin', 'screen-prematch-press', 'screen-matchday'];
+        let topScreens = ['screen-office', 'screen-dashboard', 'screen-calendar', 'screen-inbox', 'screen-squad', 'screen-second-team', 'screen-women', 'screen-training', 'screen-manager-tree', 'screen-admin', 'screen-prematch-press', 'screen-matchday'];
         let allTestIds = [...topScreens, ...Object.keys(HUB_MEMBERS), ...Object.values(HUB_MEMBERS).flat()];
         let problems = [];
         let originalTopScreen = topScreens.find(s => document.getElementById(s)?.style.display === 'block') || 'screen-dashboard';
@@ -204,7 +204,7 @@
         if (typeof loescheBuchungskontext === 'function') loescheBuchungskontext();
         const screens = [
             'screen-office',
-            'screen-dashboard', 'screen-calendar', 'screen-inbox', 'screen-squad', 'screen-second-team', 'screen-training',
+            'screen-dashboard', 'screen-calendar', 'screen-inbox', 'screen-squad', 'screen-second-team', 'screen-women', 'screen-training',
             'screen-manager-tree', 'screen-admin', 'screen-cup',
             'screen-hub-wirtschaft', 'screen-hub-finanzen', 'screen-hub-ausbau',
             'screen-hub-kaderplanung', 'screen-hub-wettbewerbe', 'screen-hub-spezial',
@@ -239,6 +239,7 @@
         if (screenId === 'screen-inbox') renderInboxView();
         if (screenId === 'screen-squad') { renderSquadView(); render3DPitch(); }
         if (screenId === 'screen-second-team') renderSecondTeamView();
+        if (screenId === 'screen-women' && typeof renderWomenTeamView === 'function') renderWomenTeamView();
         if (screenId === 'screen-manager-tree') { renderCareerSummary(); renderCrestEditor(); applyClubCrest(); }
         if (screenId === 'screen-campus') renderCrestMuseumGallery();
         if (screenId === 'screen-training') renderTrainingView();

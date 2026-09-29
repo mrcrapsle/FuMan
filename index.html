@@ -504,6 +504,7 @@
             <div class="nav-category" data-i18n="nav_category_team">Team & Kader</div>
             <button class="nav-btn" onclick="showScreen('screen-squad')" data-i18n="nav_squad">⚽ Kader & 3D Taktik</button>
             <button class="nav-btn" onclick="showScreen('screen-second-team')" data-i18n="nav_second_team">🥈 Zweite Mannschaft</button>
+            <button class="nav-btn" onclick="showScreen('screen-women')" data-i18n="nav_women">👩 Frauenmannschaft</button>
             <button class="nav-btn" onclick="showScreen('screen-training')" data-i18n="nav_training">🏋️ Training & Förderung</button>
             <button class="nav-btn" onclick="showScreen('screen-transfer')" id="nav-btn-transfer"><span data-i18n="nav_transfer">🤝 Kaderplanung & Transfers</span> <span id="sidebar-offers-badge" class="badge-count" style="display:none; margin-left:auto;">0</span></button>
 
@@ -573,6 +574,10 @@
             </div>
 
             <!-- ZWEITE MANNSCHAFT -->
+            <div id="screen-women" style="display:none;">
+                <div id="women-team-box"></div>
+            </div>
+
             <div id="screen-second-team" style="display:none;">
                 <div id="st-not-founded-box" class="panel">
                     <div class="panel-header">🥈 ZWEITE MANNSCHAFT GRÜNDEN</div>
@@ -2660,6 +2665,7 @@
 <script src="js/squad-harmony.js?v=2.1"></script>
 <script src="js/team-council.js?v=2.1"></script>
 <script src="js/member-assembly.js?v=2.1"></script>
+<script src="js/women-team.js?v=2.1"></script>
 <script src="js/contract-renewal.js?v=2.1"></script>
 <script src="js/player-retirement.js?v=2.1"></script>
 <script src="js/tournament-brackets.js?v=2.1"></script>

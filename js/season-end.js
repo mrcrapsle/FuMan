@@ -96,6 +96,7 @@
         let myTeamRecord = leaguesData[game.leagueLevel].find(t => t.name === game.clubName);
         if (typeof evaluateSeasonEndObjectives === 'function') evaluateSeasonEndObjectives(myRank);
         if (typeof prepareMemberAssembly === 'function') prepareMemberAssembly(myRank);
+        if (typeof concludeWomenSeason === 'function') concludeWomenSeason();
 
         // Medienrechte (NEU): Liga-Kollektiv-TV-Ausschüttung zum Saisonende, gestaffelt nach
         // Ligastärke UND Tabellenplatz.
