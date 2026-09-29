@@ -2349,6 +2349,11 @@
                 </div>
 
                 <div class="panel">
+                    <div class="panel-header">📻 MEDIENBEZIEHUNGEN & PRESSEKONFERENZEN</div>
+                    <div id="media-relations-box"></div>
+                </div>
+
+                <div class="panel">
                     <div class="panel-header" style="color:var(--gold);">📺 MEDIENRECHTE & TV-VERTRAG</div>
                     <div id="media-rights-box"></div>
                     <div id="tv-income-history-box" style="margin-top:6px;"></div>
@@ -15671,6 +15676,7 @@ function finishGoalkeeperGame() {
         if (typeof renderSponsoringPanel === 'function') renderSponsoringPanel();
         if (typeof renderFanEngagementPanel === 'function') renderFanEngagementPanel();
         if (typeof renderFanEngagementStats === 'function') renderFanEngagementStats();
+        if (typeof renderMediaRelationsPanel === 'function') renderMediaRelationsPanel();
         renderStockTicker();
         renderSponsorLeaderboard();
         renderFinanceForecast();
