@@ -1777,6 +1777,9 @@
         // Contract Renewal & Media Relations: Verträge und Medienbeziehungen
         if (typeof tickContractRenewal === 'function') tickContractRenewal();
         if (typeof tickMediaRelations === 'function') tickMediaRelations();
+        // Player Retirement & Tournament Brackets: Spieler-Pensionierung und Turnier-Klammern
+        if (typeof tickPlayerRetirement === 'function') tickPlayerRetirement();
+        if (typeof tickTournamentBrackets === 'function') tickTournamentBrackets();
         // Financial tracking for dashboard charts
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();

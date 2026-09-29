@@ -3361,6 +3361,10 @@
                         </div>
                         <div id="matchday-fixtures-list"></div>
                     </div>
+                    <div class="panel">
+                        <div class="panel-header">🏆 TURNIER-KLAMMERN</div>
+                        <div id="tournament-brackets-box"></div>
+                    </div>
                 </div>
             </div>
             <div id="screen-europe" style="display:none;">
@@ -3715,6 +3719,10 @@
                 <div class="panel">
                     <div class="panel-header">📺 MEDIENBEZIEHUNGEN</div>
                     <div id="media-relations-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">👋 SPIELER-PENSIONIERUNG & LEGENDEN</div>
+                    <div id="player-retirement-box"></div>
                 </div>
             </div>
 
@@ -9135,6 +9143,7 @@ function getTransferBudgetInfo() {
 
 
 </script>
+<script src="js/league-progress.js?v=2.1"></script>
 <script>
 
 // ==========================================
@@ -9578,6 +9587,7 @@ function getTransferBudgetInfo() {
         renderTopScorersBox();
         renderSeasonPointsChart();
         if (typeof renderLeagueProgressCharts === 'function') renderLeagueProgressCharts();
+        if (typeof renderTournamentBracketsPanel === 'function') renderTournamentBracketsPanel();
 
         // WICHTIG: Zwei getrennte Referenzen! fixturesData verweist per Index auf die
         // ORIGINAL-Reihenfolge in leaguesData[level] - die darf nie sortiert werden,
@@ -9666,7 +9676,6 @@ function getTransferBudgetInfo() {
 
 
 </script>
-<script src="js/league-progress.js?v=2.1"></script>
 <script>
 
 // ==========================================
@@ -24748,6 +24757,8 @@ function renderStadiumManagementPanel() {
 <script src="js/squad-harmony.js?v=2.1"></script>
 <script src="js/contract-renewal.js?v=2.1"></script>
 <script src="js/media-relations.js?v=2.1"></script>
+<script src="js/player-retirement.js?v=2.1"></script>
+<script src="js/tournament-brackets.js?v=2.1"></script>
 <script>
 
     // Wandelt einen rohen Trophäen-Eintrag in Icon + Kategorie um, für eine chronologische
@@ -26796,6 +26807,9 @@ function renderStadiumManagementPanel() {
         // Contract Renewal & Media Relations: Verträge und Medienbeziehungen
         if (typeof tickContractRenewal === 'function') tickContractRenewal();
         if (typeof tickMediaRelations === 'function') tickMediaRelations();
+        // Player Retirement & Tournament Brackets: Spieler-Pensionierung und Turnier-Klammern
+        if (typeof tickPlayerRetirement === 'function') tickPlayerRetirement();
+        if (typeof tickTournamentBrackets === 'function') tickTournamentBrackets();
         // Financial tracking for dashboard charts
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();
@@ -28112,6 +28126,7 @@ function renderStadiumManagementPanel() {
         if (typeof renderCrisisManagementPanel === 'function') renderCrisisManagementPanel();
         if (typeof renderDisciplinarySanctionsPanel === 'function') renderDisciplinarySanctionsPanel();
         if (typeof renderMediaRelationsPanel === 'function') renderMediaRelationsPanel();
+        if (typeof renderPlayerRetirementPanel === 'function') renderPlayerRetirementPanel();
     }
 
     function adminAddClubMoney(amt) { playSound('goal'); game.money += amt; updateUI(); renderAdminView(); showToast(`💵 +${formatVal(amt)} Vereinskonto gutgeschrieben!`, 'success', 4000); }
