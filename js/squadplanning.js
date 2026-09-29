@@ -144,4 +144,5 @@
         renderSquadPlanningContractBox();
         renderSquadPlanningWarningsBox();
         if (typeof renderReservesLoanPanel === 'function') renderReservesLoanPanel();
+        if (typeof renderPlayerDevelopmentPanel === 'function') renderPlayerDevelopmentPanel();
     }
