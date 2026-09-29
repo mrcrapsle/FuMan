@@ -86,6 +86,20 @@
             }
         }
 
+        // Career Progression Panel (NEU): Karriere-Statistik und Meilensteine
+        let careerBox = document.getElementById('pd-career-progression');
+        if (careerBox) {
+            if (typeof renderPlayerCareerPanel === 'function') {
+                let careerHtml = renderPlayerCareerPanel(p.id);
+                if (careerHtml) {
+                    careerBox.style.display = 'block';
+                    careerBox.innerHTML = careerHtml;
+                } else {
+                    careerBox.style.display = 'none';
+                }
+            }
+        }
+
         // Tiefere Scouting-Berichte (NEU): Text-Dossier statt nur Zahlen, nur bei Spielern
         // aus dem Scouting-Pool relevant.
         let reportBox = document.getElementById('pd-scouting-report');

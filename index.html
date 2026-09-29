@@ -163,6 +163,7 @@
         <div style="font-size:11px; font-weight:800; color:var(--accent); margin-top:6px;">Fähigkeiten</div>
         <div class="modal-stat-grid" id="pd-stats"></div>
         <div id="pd-strength-history" style="margin-top:8px; text-align:center;"></div>
+        <div id="pd-career-progression" style="display:none; margin-top:6px;"></div>
         <div id="pd-scouting-report" style="display:none; margin-top:6px;"></div>
         <button onclick="closePlayerDetail()" class="btn-primary" style="margin-top:10px;">Schließen</button>
         <button onclick="talkToPlayerFromDetail()" id="pd-talk-btn" class="btn-primary" style="margin-top:6px;">💬 Mit Spieler sprechen</button>
@@ -740,6 +741,10 @@
                         <div>Champions Cup: <strong id="dash-europe-status" style="color:#82b1ff;">Nicht qualifiziert</strong></div>
                         <div>Trainer-Perks: <strong id="dash-perks-count" style="color:var(--gold);">0 / 5 Aktiv</strong></div>
                     </div>
+                    <div class="panel">
+                        <div class="panel-header">🎯 SAISON-ZIELE</div>
+                        <div id="season-objectives-box"></div>
+                    </div>
                 </div>
 
                 <div class="panel">
@@ -978,6 +983,16 @@
             <div id="screen-finances" style="display:none;">
                 <div class="stock-ticker-bar" id="fin-stock-ticker"></div>
                 <div class="panel">
+                    <div class="panel-header" style="color:var(--accent);">🤝 SPONSORING-VERTRÄGE</div>
+                    <div id="sponsoring-list"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">📊 FINANZ-CHARTS</div>
+                    <div id="fin-trend-chart" style="margin-bottom:12px;"></div>
+                    <div id="fin-revenue-breakdown" style="margin-bottom:12px;"></div>
+                    <div id="fin-cashflow-bar"></div>
+                </div>
+                <div class="panel">
                     <div class="panel-header" style="color:var(--accent);">🏆 SPONSOREN-RANKING (KARRIERE)</div>
                     <div id="sponsor-leaderboard-toggle" style="display:flex; gap:6px; margin-bottom:8px;"></div>
                     <div id="sponsor-leaderboard-box"></div>
@@ -1044,6 +1059,26 @@
                         <button onclick="negotiateBoardBudget('transfer', 500000)" class="btn-secondary">+500.000 € Transferbudget fordern</button>
                         <button onclick="negotiateBoardBudget('wage', 10000)" class="btn-secondary">+10.000 €/SpT Gehaltsbudget fordern</button>
                     </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">👥 FAN-ENGAGEMENT & ZUFRIEDENHEIT</div>
+                    <div id="fan-engagement-box"></div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">💰 FAN-IMPACT AUF FINANZIERUNG</div>
+                    <div id="fin-fan-impact-box"></div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">📻 MEDIENBEZIEHUNGEN & PRESSEKONFERENZEN</div>
+                    <div id="media-relations-box"></div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">👑 VORSTANDSVERHÄLTNISSE & JOB-SICHERHEIT</div>
+                    <div id="board-management-box"></div>
                 </div>
 
                 <div class="panel">
@@ -1216,6 +1251,18 @@
                     <div id="squad-leaderboard-box"></div>
                 </div>
                 <div class="panel">
+                    <div class="panel-header">📡 KADER-RADAR (ATTRIBUTE)</div>
+                    <div id="squad-radar-container" style="margin-bottom:12px;"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">📊 KADER-METRIKEN</div>
+                    <div id="squad-strength-metrics"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">⚖️ LIGA-VERGLEICH</div>
+                    <div id="squad-comparison-box"></div>
+                </div>
+                <div class="panel">
                     <div class="panel-header">⚽ KADER & AUFSTELLUNG</div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px; margin-bottom:6px;">
                         <div>Kapitän: <select id="sel-captain" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
@@ -1310,6 +1357,30 @@
                     <div class="panel-header" style="color:var(--gold);">👔 VORSTANDSMITGLIEDER</div>
                     <div id="board-members-panel"></div>
                 </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:#FF9800;">💼 SPONSORING & PARTNERSCHAFTEN</div>
+                    <div id="sponsor-management-panel"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:#E91E63;">🏥 MEDIZINISCHE ABTEILUNG</div>
+                    <div id="medical-management-panel"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:#2196F3;">🏟️ STADION-MANAGEMENT</div>
+                    <div id="stadium-management-panel"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:#4CAF50;">🌟 NACHWUCHS-AKADEMIE</div>
+                    <div id="youth-academy-panel"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:#9C27B0;">📱 MEDIEN & PR</div>
+                    <div id="media-management-panel"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:#FF5722;">📊 TRANSFER-MARKT-ANALYSE</div>
+                    <div id="transfer-market-panel"></div>
+                </div>
                 <div id="injury-crisis-warning" style="display:none;"></div>
                 <div class="panel">
                     <div class="panel-header">KADERLISTE & ATTRIBUTE</div>
@@ -1329,6 +1400,10 @@
                         <button onclick="setSquadFilter('ST')" id="sf-ST" class="btn-secondary" style="font-size:9px; padding:5px 2px;">ST</button>
                     </div>
                     <div id="bench-list" style="max-height:260px; overflow-y:auto;"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">❤️ MANNSCHAFTS-HARMONIE</div>
+                    <div id="squad-harmony-box"></div>
                 </div>
             </div>
 
@@ -1391,6 +1466,9 @@
                     <div class="panel-header">📅 TRAININGSKALENDER</div>
                     <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Liga, DFB-Pokal, Landespokal und Europapokal für die nächsten Spieltage im Überblick.</div>
                     <div id="training-calendar-box"></div>
+                </div>
+                <div class="panel" id="training-schedule-box">
+                    <div class="panel-header">⚙️ MODERNE TRAININGSPLANUNG</div>
                 </div>
                 </div>
 
@@ -1831,6 +1909,14 @@
                     </div>
                     <div id="transfer-tab-sell" style="display:none;"><div id="sell-list"></div></div>
                 </div>
+                <div class="panel">
+                    <div class="panel-header">📊 GEGNER-ANALYSE</div>
+                    <div id="opponent-analysis-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">🎲 WETTQUOTEN & PROGNOSE</div>
+                    <div id="match-prediction-box"></div>
+                </div>
             </div>
             <div id="screen-scouting-global" style="display:none;">
                 <div class="panel">
@@ -1853,6 +1939,10 @@
                 <div class="panel">
                     <div class="panel-header" style="color:var(--primary);">🔍 ERWEITERTE TALENTERKENNUNG</div>
                     <div id="talent-detection-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">🔬 SCOUTING-INTELLIGENZ</div>
+                    <div id="scouting-intelligence-box"></div>
                 </div>
             </div>
             <div id="screen-youth" style="display:none;">
@@ -1889,6 +1979,10 @@
                     <div class="panel-header" style="color:var(--gold);">🎓 AKADEMIE-RANGLISTE</div>
                     <div id="academy-ranking-panel"></div>
                 </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--primary);">📚 ADVANCED YOUTH ACADEMY</div>
+                    <div id="youth-academy-advanced-box"></div>
+                </div>
             </div>
             <div id="screen-contracts" style="display:none;">
                 <div class="panel">
@@ -1902,6 +1996,9 @@
                 <div class="panel" id="negotiations-panel">
                     <div class="panel-header" style="color:var(--primary);">🤝 VERHANDLUNGEN</div>
                     <div id="negotiations-content"></div>
+                </div>
+                <div class="panel" id="contract-management-box">
+                    <div class="panel-header">📋 MODERNE VERTRAGSMANAGEMENT</div>
                 </div>
             </div>
             <div id="screen-squad-planning" style="display:none;">
@@ -1923,6 +2020,16 @@
                 <div class="panel">
                     <div class="panel-header">📅 AUSLAUFENDE VERTRÄGE NACH POSITION</div>
                     <div id="squad-planning-contract-box"></div>
+                </div>
+                <div class="panel" id="reserves-loan-box">
+                    <div class="panel-header">🔄 RESERVEMANNSCHAFT & LEIHSPIELER</div>
+                </div>
+                <div class="panel" id="player-development-box">
+                    <div class="panel-header">📈 SPIELER-ENTWICKLUNG & KARRIERE</div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">💼 VERTRAGSVERLÄNGERUNGEN</div>
+                    <div id="contract-renewal-box"></div>
                 </div>
             </div>
             </div>
@@ -1954,6 +2061,18 @@
                         <div id="top-scorers-box"></div>
                     </div>
                     <div class="panel" style="margin-bottom:8px;">
+                        <div class="panel-header">📊 LIGAPLATZIERUNG</div>
+                        <div id="league-position-chart"></div>
+                    </div>
+                    <div class="panel" style="margin-bottom:8px;">
+                        <div class="panel-header">💎 PUNKTE-ENTWICKLUNG</div>
+                        <div id="league-points-chart"></div>
+                    </div>
+                    <div class="panel" style="margin-bottom:8px;">
+                        <div class="panel-header">🏆 AKTUELLE LIGAPOSITION</div>
+                        <div id="league-standings-box"></div>
+                    </div>
+                    <div class="panel" style="margin-bottom:8px;">
                         <div class="panel-header" style="color:var(--primary);">📈 SAISONVERLAUF (PUNKTE)</div>
                         <div id="season-points-chart-box"></div>
                     </div>
@@ -1967,6 +2086,10 @@
                             <button onclick="changeLeagueMatchday(1)" class="btn-secondary" style="width:auto; padding:4px 10px;">Nächster ▶</button>
                         </div>
                         <div id="matchday-fixtures-list"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header">🏆 TURNIER-KLAMMERN</div>
+                        <div id="tournament-brackets-box"></div>
                     </div>
                 </div>
             </div>
@@ -2020,6 +2143,14 @@
                 <div class="panel">
                     <div class="panel-header">🌟 TROPHÄENRAUM</div>
                     <div id="trophies-list"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--gold);">⭐ HALL OF FAME</div>
+                    <div id="hall-of-fame-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--purple);">👔 MANAGER-STATISTIK</div>
+                    <div id="manager-analytics-box"></div>
                 </div>
                 <div class="panel">
                     <div class="panel-header" style="color:var(--teal);">📖 RIVALEN-GESCHICHTSBUCH</div>
@@ -2305,11 +2436,28 @@
                     <div style="font-size:10px; font-weight:bold; margin-bottom:8px; color:var(--text-muted);">🏆 Karriere-Stationen:</div>
                     <div id="club-progression-panel"></div>
                 </div>
+                <div class="panel" id="crisis-management-box">
+                    <div class="panel-header">⚠️ KRISEN-MANAGEMENT</div>
+                </div>
+                <div class="panel" id="disciplinary-sanctions-box">
+                    <div class="panel-header">📋 DISZIPLINAR & STRAFEN</div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">📺 MEDIENBEZIEHUNGEN</div>
+                    <div id="media-relations-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">👋 SPIELER-PENSIONIERUNG & LEGENDEN</div>
+                    <div id="player-retirement-box"></div>
+                </div>
             </div>
 
             <!-- 28. PRE-MATCH & LIVESPIEL -->
             <div id="screen-prematch-press" style="display:none;">
                 <div id="prematch-analysis-box" style="margin-bottom:10px;"></div>
+                <div class="panel" id="opposition-analysis-box">
+                    <div class="panel-header">🎯 GEGNERANALYSE</div>
+                </div>
                 <div class="panel">
                     <div class="panel-header">🎙️ PRE-MATCH PRESSEKONFERENZ</div>
                     <div id="press-question-container" class="box"></div>
@@ -2403,6 +2551,7 @@
 <script src="js/avatars.js?v=2.1"></script>
 <script src="js/playerdetail.js?v=2.1"></script>
 <script src="js/squad.js?v=2.1"></script>
+<script src="js/squad-radar.js?v=2.1"></script>
 <script src="js/agents-management.js?v=2.1"></script>
 <script src="js/club-rivalries.js?v=2.1"></script>
 <script src="js/injury-risk-management.js?v=2.1"></script>
@@ -2412,6 +2561,7 @@
 <script src="js/secondteam.js?v=2.1"></script>
 <script src="js/career.js?v=2.1"></script>
 <script src="js/crest.js?v=2.1"></script>
+<script src="js/league-progress.js?v=2.1"></script>
 <script src="js/leagues.js?v=2.1"></script>
 <script src="js/cup.js?v=2.1"></script>
     <script src="js/landescup.js?v=2.1"></script>
@@ -2432,27 +2582,62 @@
 <script src="js/training.js?v=2.1"></script>
 <script src="js/training-games.js?v=2.1"></script>
 <script src="js/finances.js?v=2.1"></script>
+<script src="js/financial-charts.js?v=2.1"></script>
+<script src="js/board-management.js?v=2.1"></script>
 <script src="js/ffp.js?v=2.1"></script>
 <script src="js/stocks.js?v=2.1"></script>
 <script src="js/sponsors.js?v=2.1"></script>
 <script src="js/media-rights.js?v=2.1"></script>
 <script src="js/media-relations-extended.js?v=2.1"></script>
+<script src="js/media-relations.js?v=2.1"></script>
 <script src="js/betting.js?v=2.1"></script>
 <script src="js/stadium.js?v=2.1"></script>
 <script src="js/stadium-management.js?v=2.1"></script>
 <script src="js/real-estate.js?v=2.1"></script>
 <script src="js/campus-staff.js?v=2.1"></script>
 <script src="js/fans.js?v=2.1"></script>
+<script src="js/fan-engagement.js?v=2.1"></script>
 <script src="js/youth.js?v=2.1"></script>
 <script src="js/youth-academy-extended.js?v=2.1"></script>
+<script src="js/youth-academy-advanced.js?v=2.1"></script>
 <script src="js/academy-ranking.js?v=2.1"></script>
 <script src="js/bonusclauses.js?v=2.1"></script>
 <script src="js/contracts.js?v=2.1"></script>
 <script src="js/negotiations.js?v=2.1"></script>
 <script src="js/private-life.js?v=2.1"></script>
+<script src="js/player-scandals.js?v=2.1"></script>
 <script src="js/underworld.js?v=2.1"></script>
+<script src="js/tactic-system.js?v=2.1"></script>
+<script src="js/fanclub-management.js?v=2.1"></script>
+<script src="js/international-tournaments.js?v=2.1"></script>
+<script src="js/board-members.js?v=2.1"></script>
+<script src="js/sponsor-management.js?v=2.1"></script>
+<script src="js/medical-management.js?v=2.1"></script>
+<script src="js/stadium-management.js?v=2.1"></script>
+<script src="js/youth-academy.js?v=2.1"></script>
+<script src="js/media-management.js?v=2.1"></script>
+<script src="js/transfer-market-analysis.js?v=2.1"></script>
+<script src="js/contract-management.js?v=2.1"></script>
+<script src="js/opposition-analysis.js?v=2.1"></script>
+<script src="js/training-schedule.js?v=2.1"></script>
+<script src="js/reserves-loan-management.js?v=2.1"></script>
+<script src="js/crisis-management.js?v=2.1"></script>
+<script src="js/player-development-tracking.js?v=2.1"></script>
+<script src="js/scouting-intelligence.js?v=2.1"></script>
+<script src="js/disciplinary-sanctions.js?v=2.1"></script>
+<script src="js/season-objectives.js?v=2.1"></script>
+<script src="js/squad-harmony.js?v=2.1"></script>
+<script src="js/contract-renewal.js?v=2.1"></script>
+<script src="js/media-relations.js?v=2.1"></script>
+<script src="js/player-retirement.js?v=2.1"></script>
+<script src="js/tournament-brackets.js?v=2.1"></script>
+<script src="js/opponent-analysis.js?v=2.1"></script>
+<script src="js/match-prediction.js?v=2.1"></script>
 <script src="js/history.js?v=2.1"></script>
 <script src="js/achievements.js?v=2.1"></script>
+<script src="js/hall-of-fame.js?v=2.1"></script>
+<script src="js/player-career-progression.js?v=2.1"></script>
+<script src="js/manager-analytics.js?v=2.1"></script>
 <script src="js/weather.js?v=2.1"></script>
 <script src="js/match.js?v=2.1"></script>
 <script src="js/contract-ultimatum.js?v=2.1"></script>

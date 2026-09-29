@@ -70,6 +70,7 @@
         renderSaveSlotsUI();
         renderNextGoalsList();
         renderWeeklyRecap();
+        if (typeof renderSeasonObjectivesPanel === 'function') renderSeasonObjectivesPanel();
     }
 
     // ==========================================

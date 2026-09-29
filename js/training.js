@@ -288,6 +288,7 @@
             list.appendChild(row);
         });
         if (typeof renderInjuryRiskPanel === 'function') renderInjuryRiskPanel();
+        if (typeof renderTrainingSchedulePanel === 'function') renderTrainingSchedulePanel();
     }
 
     function setTeamTraining(focus) {

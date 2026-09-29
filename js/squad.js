@@ -728,6 +728,9 @@
         renderSquadOverviewBox();
         renderSquadDepthChart();
         renderSquadLeaderboardBox();
+        if (typeof renderSquadRadar === 'function') renderSquadRadar();
+        if (typeof renderSquadStrengthMetrics === 'function') renderSquadStrengthMetrics();
+        if (typeof renderSquadComparison === 'function') renderSquadComparison();
         renderFormationCards();
         renderTacticStyleCards();
         renderTacticsBoardStatBar();
@@ -751,6 +754,13 @@
         if (typeof renderTacticSystemPanel === 'function') renderTacticSystemPanel();
         if (typeof renderInternationalTournamentsPanel === 'function') renderInternationalTournamentsPanel();
         if (typeof renderBoardMembersPanel === 'function') renderBoardMembersPanel();
+        if (typeof renderSponsorManagementPanel === 'function') renderSponsorManagementPanel();
+        if (typeof renderMedicalManagementPanel === 'function') renderMedicalManagementPanel();
+        if (typeof renderStadiumManagementPanel === 'function') renderStadiumManagementPanel();
+        if (typeof renderYouthAcademyPanel === 'function') renderYouthAcademyPanel();
+        if (typeof renderMediaManagementPanel === 'function') renderMediaManagementPanel();
+        if (typeof renderTransferMarketAnalysisPanel === 'function') renderTransferMarketAnalysisPanel();
+        if (typeof renderSquadHarmonyPanel === 'function') renderSquadHarmonyPanel();
         let container = document.getElementById('bench-list');
         if (!container) return;
         container.innerHTML = '';

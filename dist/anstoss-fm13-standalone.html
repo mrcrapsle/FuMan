@@ -1674,6 +1674,7 @@
         <div style="font-size:11px; font-weight:800; color:var(--accent); margin-top:6px;">Fähigkeiten</div>
         <div class="modal-stat-grid" id="pd-stats"></div>
         <div id="pd-strength-history" style="margin-top:8px; text-align:center;"></div>
+        <div id="pd-career-progression" style="display:none; margin-top:6px;"></div>
         <div id="pd-scouting-report" style="display:none; margin-top:6px;"></div>
         <button onclick="closePlayerDetail()" class="btn-primary" style="margin-top:10px;">Schließen</button>
         <button onclick="talkToPlayerFromDetail()" id="pd-talk-btn" class="btn-primary" style="margin-top:6px;">💬 Mit Spieler sprechen</button>
@@ -2251,6 +2252,10 @@
                         <div>Champions Cup: <strong id="dash-europe-status" style="color:#82b1ff;">Nicht qualifiziert</strong></div>
                         <div>Trainer-Perks: <strong id="dash-perks-count" style="color:var(--gold);">0 / 5 Aktiv</strong></div>
                     </div>
+                    <div class="panel">
+                        <div class="panel-header">🎯 SAISON-ZIELE</div>
+                        <div id="season-objectives-box"></div>
+                    </div>
                 </div>
 
                 <div class="panel">
@@ -2489,6 +2494,16 @@
             <div id="screen-finances" style="display:none;">
                 <div class="stock-ticker-bar" id="fin-stock-ticker"></div>
                 <div class="panel">
+                    <div class="panel-header" style="color:var(--accent);">🤝 SPONSORING-VERTRÄGE</div>
+                    <div id="sponsoring-list"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">📊 FINANZ-CHARTS</div>
+                    <div id="fin-trend-chart" style="margin-bottom:12px;"></div>
+                    <div id="fin-revenue-breakdown" style="margin-bottom:12px;"></div>
+                    <div id="fin-cashflow-bar"></div>
+                </div>
+                <div class="panel">
                     <div class="panel-header" style="color:var(--accent);">🏆 SPONSOREN-RANKING (KARRIERE)</div>
                     <div id="sponsor-leaderboard-toggle" style="display:flex; gap:6px; margin-bottom:8px;"></div>
                     <div id="sponsor-leaderboard-box"></div>
@@ -2555,6 +2570,26 @@
                         <button onclick="negotiateBoardBudget('transfer', 500000)" class="btn-secondary">+500.000 € Transferbudget fordern</button>
                         <button onclick="negotiateBoardBudget('wage', 10000)" class="btn-secondary">+10.000 €/SpT Gehaltsbudget fordern</button>
                     </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">👥 FAN-ENGAGEMENT & ZUFRIEDENHEIT</div>
+                    <div id="fan-engagement-box"></div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">💰 FAN-IMPACT AUF FINANZIERUNG</div>
+                    <div id="fin-fan-impact-box"></div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">📻 MEDIENBEZIEHUNGEN & PRESSEKONFERENZEN</div>
+                    <div id="media-relations-box"></div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-header">👑 VORSTANDSVERHÄLTNISSE & JOB-SICHERHEIT</div>
+                    <div id="board-management-box"></div>
                 </div>
 
                 <div class="panel">
@@ -2727,6 +2762,18 @@
                     <div id="squad-leaderboard-box"></div>
                 </div>
                 <div class="panel">
+                    <div class="panel-header">📡 KADER-RADAR (ATTRIBUTE)</div>
+                    <div id="squad-radar-container" style="margin-bottom:12px;"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">📊 KADER-METRIKEN</div>
+                    <div id="squad-strength-metrics"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">⚖️ LIGA-VERGLEICH</div>
+                    <div id="squad-comparison-box"></div>
+                </div>
+                <div class="panel">
                     <div class="panel-header">⚽ KADER & AUFSTELLUNG</div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px; margin-bottom:6px;">
                         <div>Kapitän: <select id="sel-captain" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
@@ -2821,6 +2868,30 @@
                     <div class="panel-header" style="color:var(--gold);">👔 VORSTANDSMITGLIEDER</div>
                     <div id="board-members-panel"></div>
                 </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:#FF9800;">💼 SPONSORING & PARTNERSCHAFTEN</div>
+                    <div id="sponsor-management-panel"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:#E91E63;">🏥 MEDIZINISCHE ABTEILUNG</div>
+                    <div id="medical-management-panel"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:#2196F3;">🏟️ STADION-MANAGEMENT</div>
+                    <div id="stadium-management-panel"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:#4CAF50;">🌟 NACHWUCHS-AKADEMIE</div>
+                    <div id="youth-academy-panel"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:#9C27B0;">📱 MEDIEN & PR</div>
+                    <div id="media-management-panel"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:#FF5722;">📊 TRANSFER-MARKT-ANALYSE</div>
+                    <div id="transfer-market-panel"></div>
+                </div>
                 <div id="injury-crisis-warning" style="display:none;"></div>
                 <div class="panel">
                     <div class="panel-header">KADERLISTE & ATTRIBUTE</div>
@@ -2840,6 +2911,10 @@
                         <button onclick="setSquadFilter('ST')" id="sf-ST" class="btn-secondary" style="font-size:9px; padding:5px 2px;">ST</button>
                     </div>
                     <div id="bench-list" style="max-height:260px; overflow-y:auto;"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">❤️ MANNSCHAFTS-HARMONIE</div>
+                    <div id="squad-harmony-box"></div>
                 </div>
             </div>
 
@@ -2902,6 +2977,9 @@
                     <div class="panel-header">📅 TRAININGSKALENDER</div>
                     <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Liga, DFB-Pokal, Landespokal und Europapokal für die nächsten Spieltage im Überblick.</div>
                     <div id="training-calendar-box"></div>
+                </div>
+                <div class="panel" id="training-schedule-box">
+                    <div class="panel-header">⚙️ MODERNE TRAININGSPLANUNG</div>
                 </div>
                 </div>
 
@@ -3342,6 +3420,14 @@
                     </div>
                     <div id="transfer-tab-sell" style="display:none;"><div id="sell-list"></div></div>
                 </div>
+                <div class="panel">
+                    <div class="panel-header">📊 GEGNER-ANALYSE</div>
+                    <div id="opponent-analysis-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">🎲 WETTQUOTEN & PROGNOSE</div>
+                    <div id="match-prediction-box"></div>
+                </div>
             </div>
             <div id="screen-scouting-global" style="display:none;">
                 <div class="panel">
@@ -3364,6 +3450,10 @@
                 <div class="panel">
                     <div class="panel-header" style="color:var(--primary);">🔍 ERWEITERTE TALENTERKENNUNG</div>
                     <div id="talent-detection-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">🔬 SCOUTING-INTELLIGENZ</div>
+                    <div id="scouting-intelligence-box"></div>
                 </div>
             </div>
             <div id="screen-youth" style="display:none;">
@@ -3400,6 +3490,10 @@
                     <div class="panel-header" style="color:var(--gold);">🎓 AKADEMIE-RANGLISTE</div>
                     <div id="academy-ranking-panel"></div>
                 </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--primary);">📚 ADVANCED YOUTH ACADEMY</div>
+                    <div id="youth-academy-advanced-box"></div>
+                </div>
             </div>
             <div id="screen-contracts" style="display:none;">
                 <div class="panel">
@@ -3413,6 +3507,9 @@
                 <div class="panel" id="negotiations-panel">
                     <div class="panel-header" style="color:var(--primary);">🤝 VERHANDLUNGEN</div>
                     <div id="negotiations-content"></div>
+                </div>
+                <div class="panel" id="contract-management-box">
+                    <div class="panel-header">📋 MODERNE VERTRAGSMANAGEMENT</div>
                 </div>
             </div>
             <div id="screen-squad-planning" style="display:none;">
@@ -3434,6 +3531,16 @@
                 <div class="panel">
                     <div class="panel-header">📅 AUSLAUFENDE VERTRÄGE NACH POSITION</div>
                     <div id="squad-planning-contract-box"></div>
+                </div>
+                <div class="panel" id="reserves-loan-box">
+                    <div class="panel-header">🔄 RESERVEMANNSCHAFT & LEIHSPIELER</div>
+                </div>
+                <div class="panel" id="player-development-box">
+                    <div class="panel-header">📈 SPIELER-ENTWICKLUNG & KARRIERE</div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">💼 VERTRAGSVERLÄNGERUNGEN</div>
+                    <div id="contract-renewal-box"></div>
                 </div>
             </div>
             </div>
@@ -3465,6 +3572,18 @@
                         <div id="top-scorers-box"></div>
                     </div>
                     <div class="panel" style="margin-bottom:8px;">
+                        <div class="panel-header">📊 LIGAPLATZIERUNG</div>
+                        <div id="league-position-chart"></div>
+                    </div>
+                    <div class="panel" style="margin-bottom:8px;">
+                        <div class="panel-header">💎 PUNKTE-ENTWICKLUNG</div>
+                        <div id="league-points-chart"></div>
+                    </div>
+                    <div class="panel" style="margin-bottom:8px;">
+                        <div class="panel-header">🏆 AKTUELLE LIGAPOSITION</div>
+                        <div id="league-standings-box"></div>
+                    </div>
+                    <div class="panel" style="margin-bottom:8px;">
                         <div class="panel-header" style="color:var(--primary);">📈 SAISONVERLAUF (PUNKTE)</div>
                         <div id="season-points-chart-box"></div>
                     </div>
@@ -3478,6 +3597,10 @@
                             <button onclick="changeLeagueMatchday(1)" class="btn-secondary" style="width:auto; padding:4px 10px;">Nächster ▶</button>
                         </div>
                         <div id="matchday-fixtures-list"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header">🏆 TURNIER-KLAMMERN</div>
+                        <div id="tournament-brackets-box"></div>
                     </div>
                 </div>
             </div>
@@ -3531,6 +3654,14 @@
                 <div class="panel">
                     <div class="panel-header">🌟 TROPHÄENRAUM</div>
                     <div id="trophies-list"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--gold);">⭐ HALL OF FAME</div>
+                    <div id="hall-of-fame-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--purple);">👔 MANAGER-STATISTIK</div>
+                    <div id="manager-analytics-box"></div>
                 </div>
                 <div class="panel">
                     <div class="panel-header" style="color:var(--teal);">📖 RIVALEN-GESCHICHTSBUCH</div>
@@ -3816,11 +3947,28 @@
                     <div style="font-size:10px; font-weight:bold; margin-bottom:8px; color:var(--text-muted);">🏆 Karriere-Stationen:</div>
                     <div id="club-progression-panel"></div>
                 </div>
+                <div class="panel" id="crisis-management-box">
+                    <div class="panel-header">⚠️ KRISEN-MANAGEMENT</div>
+                </div>
+                <div class="panel" id="disciplinary-sanctions-box">
+                    <div class="panel-header">📋 DISZIPLINAR & STRAFEN</div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">📺 MEDIENBEZIEHUNGEN</div>
+                    <div id="media-relations-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">👋 SPIELER-PENSIONIERUNG & LEGENDEN</div>
+                    <div id="player-retirement-box"></div>
+                </div>
             </div>
 
             <!-- 28. PRE-MATCH & LIVESPIEL -->
             <div id="screen-prematch-press" style="display:none;">
                 <div id="prematch-analysis-box" style="margin-bottom:10px;"></div>
+                <div class="panel" id="opposition-analysis-box">
+                    <div class="panel-header">🎯 GEGNERANALYSE</div>
+                </div>
                 <div class="panel">
                     <div class="panel-header">🎙️ PRE-MATCH PRESSEKONFERENZ</div>
                     <div id="press-question-container" class="box"></div>
@@ -5715,6 +5863,20 @@
             }
         }
 
+        // Career Progression Panel (NEU): Karriere-Statistik und Meilensteine
+        let careerBox = document.getElementById('pd-career-progression');
+        if (careerBox) {
+            if (typeof renderPlayerCareerPanel === 'function') {
+                let careerHtml = renderPlayerCareerPanel(p.id);
+                if (careerHtml) {
+                    careerBox.style.display = 'block';
+                    careerBox.innerHTML = careerHtml;
+                } else {
+                    careerBox.style.display = 'none';
+                }
+            }
+        }
+
         // Tiefere Scouting-Berichte (NEU): Text-Dossier statt nur Zahlen, nur bei Spielern
         // aus dem Scouting-Pool relevant.
         let reportBox = document.getElementById('pd-scouting-report');
@@ -6499,6 +6661,9 @@
         renderSquadOverviewBox();
         renderSquadDepthChart();
         renderSquadLeaderboardBox();
+        if (typeof renderSquadRadar === 'function') renderSquadRadar();
+        if (typeof renderSquadStrengthMetrics === 'function') renderSquadStrengthMetrics();
+        if (typeof renderSquadComparison === 'function') renderSquadComparison();
         renderFormationCards();
         renderTacticStyleCards();
         renderTacticsBoardStatBar();
@@ -6522,6 +6687,13 @@
         if (typeof renderTacticSystemPanel === 'function') renderTacticSystemPanel();
         if (typeof renderInternationalTournamentsPanel === 'function') renderInternationalTournamentsPanel();
         if (typeof renderBoardMembersPanel === 'function') renderBoardMembersPanel();
+        if (typeof renderSponsorManagementPanel === 'function') renderSponsorManagementPanel();
+        if (typeof renderMedicalManagementPanel === 'function') renderMedicalManagementPanel();
+        if (typeof renderStadiumManagementPanel === 'function') renderStadiumManagementPanel();
+        if (typeof renderYouthAcademyPanel === 'function') renderYouthAcademyPanel();
+        if (typeof renderMediaManagementPanel === 'function') renderMediaManagementPanel();
+        if (typeof renderTransferMarketAnalysisPanel === 'function') renderTransferMarketAnalysisPanel();
+        if (typeof renderSquadHarmonyPanel === 'function') renderSquadHarmonyPanel();
         let container = document.getElementById('bench-list');
         if (!container) return;
         container.innerHTML = '';
@@ -6749,6 +6921,7 @@
 
 
 </script>
+<script src="js/squad-radar.js?v=2.1"></script>
 <script>
 
     // ==========================================
@@ -7665,6 +7838,9 @@ function getTransferBudgetInfo() {
         renderSquadPlanningAgeBox();
         renderSquadPlanningContractBox();
         renderSquadPlanningWarningsBox();
+        if (typeof renderReservesLoanPanel === 'function') renderReservesLoanPanel();
+        if (typeof renderPlayerDevelopmentPanel === 'function') renderPlayerDevelopmentPanel();
+        if (typeof renderContractRenewalPanel === 'function') renderContractRenewalPanel();
     }
 
 </script>
@@ -9204,6 +9380,7 @@ function getTransferBudgetInfo() {
 
 
 </script>
+<script src="js/league-progress.js?v=2.1"></script>
 <script>
 
 // ==========================================
@@ -9643,8 +9820,11 @@ function getTransferBudgetInfo() {
     }
 
     function renderLeagueView() {
+        recordLeagueProgress();
         renderTopScorersBox();
         renderSeasonPointsChart();
+        if (typeof renderLeagueProgressCharts === 'function') renderLeagueProgressCharts();
+        if (typeof renderTournamentBracketsPanel === 'function') renderTournamentBracketsPanel();
 
         // WICHTIG: Zwei getrennte Referenzen! fixturesData verweist per Index auf die
         // ORIGINAL-Reihenfolge in leaguesData[level] - die darf nie sortiert werden,
@@ -11339,6 +11519,9 @@ function getTransferBudgetInfo() {
             sList.appendChild(row);
         });
 
+        if (typeof renderOpponentAnalysisPanel === 'function') renderOpponentAnalysisPanel();
+        if (typeof renderMatchPredictionPanel === 'function') renderMatchPredictionPanel();
+
         updateUI();
     }
 
@@ -12008,6 +12191,7 @@ function getTransferBudgetInfo() {
         }
         renderTalentDatabase();
         if (typeof renderTalentDetectionPanel === 'function') renderTalentDetectionPanel();
+        if (typeof renderScoutingIntelligencePanel === 'function') renderScoutingIntelligencePanel();
     }
 
     // 4. Talent-Datenbank: dauerhaftes Archiv aller je entdeckten Spieler.
@@ -14042,6 +14226,7 @@ function renderTalentDetectionPanel() {
         renderSaveSlotsUI();
         renderNextGoalsList();
         renderWeeklyRecap();
+        if (typeof renderSeasonObjectivesPanel === 'function') renderSeasonObjectivesPanel();
     }
 
     // ==========================================
@@ -14932,6 +15117,7 @@ function renderTalentDetectionPanel() {
             list.appendChild(row);
         });
         if (typeof renderInjuryRiskPanel === 'function') renderInjuryRiskPanel();
+        if (typeof renderTrainingSchedulePanel === 'function') renderTrainingSchedulePanel();
     }
 
     function setTeamTraining(focus) {
@@ -15861,10 +16047,16 @@ function finishGoalkeeperGame() {
         // Ticketpreise (inkl. Dauerkarte) sind jetzt im Stadion-Screen zu finden, dort direkt
         // neben Kapazität, Rasenpflege und Nebeneinnahmen - siehe renderStadiumView().
         if (typeof renderMediaRightsView === 'function') renderMediaRightsView();
+        if (typeof renderSponsoringPanel === 'function') renderSponsoringPanel();
+        if (typeof renderFanEngagementPanel === 'function') renderFanEngagementPanel();
+        if (typeof renderFanEngagementStats === 'function') renderFanEngagementStats();
+        if (typeof renderMediaRelationsPanel === 'function') renderMediaRelationsPanel();
+        if (typeof renderBoardManagementPanel === 'function') renderBoardManagementPanel();
         renderStockTicker();
         renderSponsorLeaderboard();
         renderFinanceForecast();
         renderMoneyHistoryChart();
+        if (typeof renderFinancialCharts === 'function') renderFinancialCharts();
         renderFinanceLedger();
         if (typeof renderFfpStatusBox === 'function') renderFfpStatusBox();
         let totalWages = (squad.reduce((s, p) => s + p.wage, 0) + (game.secondTeam.isActive ? secondTeamSquad.reduce((s, p) => s + p.wage, 0) : 0)) * 4;
@@ -16727,6 +16919,8 @@ function finishGoalkeeperGame() {
     installKontoauszug();
 
 </script>
+<script src="js/financial-charts.js?v=2.1"></script>
+<script src="js/board-management.js?v=2.1"></script>
 <script>
     // ==========================================
     // FINANCIAL FAIRPLAY
@@ -18398,6 +18592,7 @@ function renderMediaJournalistPanel() {
 }
 
 </script>
+<script src="js/media-relations.js?v=2.1"></script>
 <script>
 
     // ==========================================
@@ -19861,271 +20056,276 @@ function renderMediaJournalistPanel() {
 
 </script>
 <script>
-// ==========================================
-// STADION-MANAGEMENT ERWEITERTE FUNKTIONEN
-// ==========================================
 /* eslint-disable no-undef */
 
-function getStadiumRevenuePotential() {
-    const baseCapacity = Object.values(stadium.blocks || {})
-        .reduce((sum, b) => sum + (b.cap || 0), 0);
+const STADIUM_UPGRADES = {
+  seatingExpansion: {
+    name: 'Tribünenausbau',
+    cost: 500000,
+    capacityIncrease: 5000,
+    timeToComplete: 12,
+    attendanceBonus: 0.1
+  },
+  medicalFacilities: {
+    name: 'Medizinische Infrastruktur',
+    cost: 300000,
+    capacityIncrease: 0,
+    timeToComplete: 8,
+    recoveryBonus: 0.15
+  },
+  trainingFacilities: {
+    name: 'Trainingsanlage',
+    cost: 400000,
+    capacityIncrease: 0,
+    timeToComplete: 10,
+    trainingBonus: 0.12
+  },
+  cateringServices: {
+    name: 'Catering & Gastronomie',
+    cost: 200000,
+    capacityIncrease: 0,
+    timeToComplete: 6,
+    fanSatisfaction: 0.1
+  },
+  vipLounge: {
+    name: 'VIP-Loge',
+    cost: 250000,
+    capacityIncrease: 500,
+    timeToComplete: 8,
+    revenueMultiplier: 1.2
+  },
+  lightingSystem: {
+    name: 'Beleuchtungssystem',
+    cost: 150000,
+    capacityIncrease: 0,
+    timeToComplete: 4,
+    qualityBonus: 0.08
+  }
+};
 
-    const ticketRevenue = baseCapacity * 30;
-    const foodRevenue = Math.round(baseCapacity * 0.4 * 15);
-    const merchRevenue = Math.round(baseCapacity * 0.25 * 20);
-    const vipRevenue = Math.round((stadium.blocks?.vipLogen?.cap || 0) * 100);
-    const namingRights = stadium.namingRights ? 50000 : 0;
+const stadiumState = {
+  capacity: 25000,
+  condition: 100,
+  upgrades: [],
+  projectsUnderway: [],
+  maintenanceCost: 5000
+};
 
-    const total = ticketRevenue + foodRevenue + merchRevenue + vipRevenue + namingRights;
-
-    return {
-        baseCapacity,
-        ticketRevenue,
-        foodRevenue,
-        merchRevenue,
-        vipRevenue,
-        namingRights,
-        total
+function initializeStadium() {
+  if (!game.stadium) {
+    game.stadium = {
+      capacity: 25000,
+      condition: 100,
+      upgrades: [],
+      projectsUnderway: [],
+      totalInvestment: 0,
+      lastExpanded: 0
     };
+  }
 }
 
-function optimizeStadiumBlock(blockName, strategy) {
-    const block = stadium.blocks?.[blockName];
-    if (!block) return { success: false, message: 'Block nicht gefunden' };
+function getStadiumCapacity() {
+  if (!game.stadium) return 25000;
+  return game.stadium.capacity;
+}
 
-    const strategyCosts = {
-        'revenue': { investment: 150000, foodBonus: 2, merchBonus: 2 },
-        'comfort': { investment: 100000, toiletBonus: 1, foodBonus: 1 },
-        'vip': { investment: 200000, vipBonus: 1, merchBonus: 1 },
-        'capacity': { investment: 250000, capIncrease: 1500 }
-    };
+function getStadiumCondition() {
+  if (!game.stadium) return 100;
+  return Math.max(0, Math.min(100, game.stadium.condition));
+}
 
-    const strat = strategyCosts[strategy];
-    if (!strat) return { success: false, message: 'Strategie unbekannt' };
-
-    if (game.money < strat.investment) {
-        return { success: false, message: 'Nicht genug Geld' };
+function startStadiumUpgrade(upgradeType) {
+  if (!game.stadium) initializeStadium();
+  
+  const config = STADIUM_UPGRADES[upgradeType];
+  if (!config) return false;
+  
+  if (game.money < config.cost) {
+    if (game.inbox) {
+      addInboxMessage('❌ Nicht genügend Mittel', `Upgrade kostet €${config.cost.toLocaleString()}`);
     }
-
-    game.money -= strat.investment;
-
-    if (strat.foodBonus) block.foodLvl = Math.min(5, (block.foodLvl || 0) + strat.foodBonus);
-    if (strat.merchBonus) block.merchLvl = Math.min(5, (block.merchLvl || 0) + strat.merchBonus);
-    if (strat.toiletBonus) block.toiletLvl = Math.min(5, (block.toiletLvl || 0) + strat.toiletBonus);
-    if (strat.capIncrease) block.cap = (block.cap || 10000) + strat.capIncrease;
-
-    if (!game.stadiumOptimizationHistory) game.stadiumOptimizationHistory = [];
-    game.stadiumOptimizationHistory.push({
-        blockName: blockName,
-        strategy: strategy,
-        matchday: game.matchday,
-        investment: strat.investment
-    });
-
-    updateUI();
-    return {
-        success: true,
-        message: `✓ Block "${blockName}" optimiert (${strategy})`
-    };
+    return false;
+  }
+  
+  game.money -= config.cost;
+  
+  const project = {
+    id: (game.stadium.projectsUnderway || []).length,
+    type: upgradeType,
+    name: config.name,
+    startMatchday: game.matchday,
+    completionMatchday: game.matchday + config.timeToComplete,
+    cost: config.cost,
+    progress: 0,
+    status: 'active'
+  };
+  
+  if (!game.stadium.projectsUnderway) game.stadium.projectsUnderway = [];
+  game.stadium.projectsUnderway.push(project);
+  
+  if (game.inbox) {
+    addInboxMessage(`🏗️ Baubeginn: ${config.name}`, `Fertigstellung in ${config.timeToComplete} Spieltagen`);
+  }
+  
+  return true;
 }
 
-function sellNamingRightsToCompany(companyName) {
-    if (stadium.namingRights) {
-        return { success: false, message: 'Stadion hat bereits Namensrechte' };
+function tickStadiumProjects() {
+  if (!game.stadium || !game.stadium.projectsUnderway) return;
+  
+  game.stadium.projectsUnderway = game.stadium.projectsUnderway.filter((project) => {
+    const progress = ((game.matchday - project.startMatchday) / (project.completionMatchday - project.startMatchday)) * 100;
+    project.progress = Math.min(100, progress);
+    
+    if (game.matchday >= project.completionMatchday) {
+      completeStadiumUpgrade(project);
+      return false;
     }
-
-    const revenue = 500000;
-    game.money += revenue;
-    stadium.namingRights = {
-        company: companyName,
-        revenue: revenue,
-        startedMatchday: game.matchday,
-        durationMatchdays: 100
-    };
-
-    if (!game.namingRightsHistory) game.namingRightsHistory = [];
-    game.namingRightsHistory.push({
-        company: companyName,
-        revenue: revenue,
-        matchday: game.matchday
-    });
-
-    updateUI();
-    return {
-        success: true,
-        message: `✓ Namensrechte an ${companyName} verkauft! +${formatVal(revenue)}`
-    };
+    
+    return true;
+  });
 }
 
-function calculateAttendanceChance(expectedAttendance, matchImportance) {
-    const baseAttendance = Math.round(expectedAttendance || 5000);
-    const stadiumFactor = getStadiumRevenuePotential().baseCapacity / 50000;
-    const boardSat = (game.boardSat || 70) / 100;
-    const fanBase = (game.fans || 50) / 100;
-    const importanceFactor = matchImportance || 1.0;
-
-    const adjusted = Math.round(baseAttendance * stadiumFactor * boardSat * fanBase * importanceFactor);
-    const realistic = Math.min(getStadiumRevenuePotential().baseCapacity, Math.max(1000, adjusted));
-
-    return {
-        base: baseAttendance,
-        adjusted: realistic,
-        factors: {
-            stadium: stadiumFactor,
-            boardSatisfaction: boardSat,
-            fanBase: fanBase,
-            importance: importanceFactor
-        }
-    };
+function completeStadiumUpgrade(project) {
+  const config = STADIUM_UPGRADES[project.type];
+  if (!config) return;
+  
+  if (config.capacityIncrease > 0) {
+    game.stadium.capacity += config.capacityIncrease;
+    game.stadium.lastExpanded = game.matchday;
+  }
+  
+  if (!game.stadium.upgrades) game.stadium.upgrades = [];
+  game.stadium.upgrades.push({
+    type: project.type,
+    name: config.name,
+    completedMatchday: game.matchday,
+    season: game.season,
+    benefits: config
+  });
+  
+  if (game.inbox) {
+    addInboxMessage(`✅ Ausbau abgeschlossen`, config.name);
+  }
 }
 
-function getStadiumComfortRating() {
-    const blocks = stadium.blocks || {};
-    const blockArray = Object.values(blocks);
-
-    if (blockArray.length === 0) return 50;
-
-    const avgToilets = blockArray.reduce((sum, b) => sum + (b.toiletLvl || 0), 0) / blockArray.length;
-    const avgFood = blockArray.reduce((sum, b) => sum + (b.foodLvl || 0), 0) / blockArray.length;
-    const avgMerch = blockArray.reduce((sum, b) => sum + (b.merchLvl || 0), 0) / blockArray.length;
-
-    const lighting = stadium.flutlicht ? 10 : 0;
-    const heating = stadium.rasenheizung ? 5 : 0;
-    const roof = stadium.dach ? 10 : 0;
-    const videoWalls = stadium.videowalls ? 8 : 0;
-
-    const infrastructure = Math.round((avgToilets + avgFood + avgMerch) * 10);
-    const amenities = lighting + heating + roof + videoWalls;
-
-    return Math.min(100, infrastructure + amenities);
+function tickStadiumMaintenance() {
+  if (!game.stadium) return 0;
+  
+  const maintenanceCost = Math.round(5000 * (1 - getStadiumCondition() / 100));
+  
+  if (game.money >= maintenanceCost) {
+    game.money -= maintenanceCost;
+    game.stadium.condition = Math.min(100, game.stadium.condition + 2);
+  } else {
+    game.stadium.condition = Math.max(0, game.stadium.condition - 1);
+  }
+  
+  return maintenanceCost;
 }
 
-function getFanComfortEffect() {
-    const rating = getStadiumComfortRating();
-    if (rating >= 80) return 1.15;
-    if (rating >= 60) return 1.08;
-    if (rating >= 40) return 1.0;
-    if (rating >= 20) return 0.95;
-    return 0.85;
+function repairStadium(percentage) {
+  if (!game.stadium) return false;
+  
+  const repairCost = Math.round(200000 * (percentage / 100));
+  if (game.money < repairCost) return false;
+  
+  game.money -= repairCost;
+  game.stadium.condition = Math.min(100, game.stadium.condition + percentage);
+  
+  if (game.inbox) {
+    addInboxMessage(`🔧 Reparatur`, `Stadionzustand: ${Math.round(game.stadium.condition)}%`);
+  }
+  
+  return true;
 }
 
-function scheduleStadiumEvent() {
-    if (!stadium.events) stadium.events = [];
-
-    const eventTypes = [
-        { name: 'Stadiontag', attendance: 5000, revenue: 75000 },
-        { name: 'Fanfest', attendance: 8000, revenue: 120000 },
-        { name: 'Sponsoring-Event', attendance: 2000, revenue: 80000 },
-        { name: 'Nachwuchs-Festival', attendance: 6000, revenue: 45000 }
-    ];
-
-    const event = eventTypes[Math.floor(Math.random() * eventTypes.length)];
-    event.scheduledMatchday = game.matchday + 2;
-    event.id = 'se_' + Math.random().toString(36).substr(2, 9);
-
-    stadium.events.push(event);
-    return { success: true, message: `✓ ${event.name} angesetzt!` };
+function getAttendanceFactor() {
+  if (!game.stadium) return 1.0;
+  
+  let factor = 1.0;
+  const capacity = getStadiumCapacity();
+  const condition = getStadiumCondition();
+  
+  factor *= (0.5 + (condition / 100) * 0.5);
+  
+  if (game.stadium.upgrades && game.stadium.upgrades.length > 0) {
+    const attendanceUpgrades = game.stadium.upgrades.filter(u => u.benefits.attendanceBonus);
+    factor *= (1 + attendanceUpgrades.length * 0.05);
+  }
+  
+  return factor;
 }
 
-function runStadiumEvent(eventId) {
-    const event = (stadium.events || []).find(e => e.id === eventId);
-    if (!event) return { success: false, message: 'Event nicht gefunden' };
-
-    const attendance = Math.round(event.attendance * (0.7 + Math.random() * 0.6));
-    const actualRevenue = Math.round(event.revenue * (attendance / event.attendance));
-
-    game.money += actualRevenue;
-    event.completed = true;
-    event.actualAttendance = attendance;
-    event.actualRevenue = actualRevenue;
-
-    updateUI();
-    return {
-        success: true,
-        message: `✓ ${event.name}: ${attendance} Besucher, +${formatVal(actualRevenue)}`
-    };
+function getStadiumRevenueBenefit() {
+  if (!game.stadium || !game.stadium.upgrades) return 1.0;
+  
+  let multiplier = 1.0;
+  game.stadium.upgrades.forEach((upgrade) => {
+    if (upgrade.benefits.revenueMultiplier) {
+      multiplier *= upgrade.benefits.revenueMultiplier;
+    }
+  });
+  
+  return multiplier;
 }
 
 function renderStadiumManagementPanel() {
-    const box = document.getElementById('stadium-management-panel');
-    if (!box) return;
-
-    const revenue = getStadiumRevenuePotential();
-    const comfort = getStadiumComfortRating();
-    const comfortEffect = getFanComfortEffect();
-
-    let html = '<div style="margin-bottom:12px;">';
-
-    html += `<div style="background:rgba(76,175,80,0.1); padding:6px; border-radius:4px; margin-bottom:8px; border-left:3px solid var(--primary);">
-        <div style="font-size:9px; font-weight:bold; margin-bottom:4px;">🏆 STADION-POTENZIAL</div>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px; font-size:8px;">
-            <div>📊 Kapazität: <strong>${revenue.baseCapacity.toLocaleString()}</strong></div>
-            <div>💰 Ticketrevenue: <strong>${formatVal(revenue.ticketRevenue)}</strong></div>
-            <div>🍔 Food/Drinks: <strong>${formatVal(revenue.foodRevenue)}</strong></div>
-            <div>🎁 Merchandise: <strong>${formatVal(revenue.merchRevenue)}</strong></div>
-            <div>💎 VIP-Zones: <strong>${formatVal(revenue.vipRevenue)}</strong></div>
-            <div>📍 Namensrechte: <strong>${revenue.namingRights > 0 ? formatVal(revenue.namingRights) : 'Keine'}</strong></div>
-        </div>
-        <div style="font-size:9px; font-weight:bold; margin-top:4px; color:var(--accent);">💵 Gesamtrevenue/Spiel: ${formatVal(revenue.total)}</div>
-    </div>`;
-
-    html += `<div style="background:rgba(100,150,255,0.1); padding:6px; border-radius:4px; margin-bottom:8px;">
-        <div style="font-size:9px; font-weight:bold; margin-bottom:4px;">⭐ KOMFORT-RATING: ${comfort}/100</div>
-        <div style="font-size:8px; color:var(--text-muted); margin-bottom:4px;">Fan-Zufriedenheitsmultiplikator: ×${comfortEffect.toFixed(2)}</div>
-        <div style="width:100%; background:rgba(0,0,0,0.3); height:6px; border-radius:3px; overflow:hidden;">
-            <div style="width:${comfort}%; height:100%; background:var(--primary); transition:width 0.3s;"></div>
-        </div>
-    </div>`;
-
-    if (stadium.namingRights) {
-        html += `<div style="background:rgba(212,169,74,0.1); padding:6px; border-radius:4px; margin-bottom:8px; border-left:3px solid var(--gold);">
-            <div style="font-size:9px; font-weight:bold;">📍 ${stadium.namingRights.company}-Stadion</div>
-            <div style="font-size:8px; color:var(--text-muted);">Laufzeit: ${stadium.namingRights.durationMatchdays - (game.matchday - stadium.namingRights.startedMatchday)} SpT</div>
-        </div>`;
-    } else {
-        html += '<button onclick="sellNamingRightsToCompany(\'Premium-Bank\')" class="btn-gold" style="width:100%; font-size:9px; padding:6px; margin-bottom:8px;">📍 Namensrechte verkaufen (+500.000 €)</button>';
+  const panel = document.getElementById('stadium-management-panel');
+  if (!panel) return;
+  
+  initializeStadium();
+  
+  const capacity = getStadiumCapacity();
+  const condition = getStadiumCondition();
+  const conditionColor = condition > 70 ? '#4CAF50' : condition > 40 ? '#FFC107' : '#FF5252';
+  const ongoingProjects = (game.stadium.projectsUnderway || []).filter(p => p.status === 'active').length;
+  
+  let html = '<div class="panel-content">';
+  html += `<h3>Stadion-Management</h3>`;
+  
+  html += '<div class="stadium-stats">';
+  html += `<div class="stat-box">Kapazität: ${capacity.toLocaleString()} Plätze</div>`;
+  html += `<div class="stat-box" style="border-left:4px solid ${conditionColor}">Zustand: ${Math.round(condition)}%</div>`;
+  html += `<div class="stat-box">Laufende Projekte: ${ongoingProjects}</div>`;
+  html += `<div class="stat-box">Einnahmen-Multiplikator: ${getStadiumRevenueBenefit().toFixed(2)}x</div>`;
+  html += '</div>';
+  
+  html += '<h4>Verfügbare Upgrades:</h4>';
+  Object.entries(STADIUM_UPGRADES).forEach(([key, config]) => {
+    const isUpgraded = game.stadium.upgrades && game.stadium.upgrades.some(u => u.type === key);
+    const hasProject = game.stadium.projectsUnderway && game.stadium.projectsUnderway.some(p => p.type === key && p.status === 'active');
+    
+    html += `<div class="upgrade-item" style="opacity:${isUpgraded ? 0.6 : 1}">`;
+    html += `<strong>${config.name}</strong>`;
+    html += `<div class="upgrade-info">Kosten: €${config.cost.toLocaleString()} | Dauer: ${config.timeToComplete} Spieltage</div>`;
+    if (config.capacityIncrease > 0) {
+      html += `<div class="upgrade-info">Kapazität: +${config.capacityIncrease} Plätze</div>`;
     }
-
-    html += '<div style="font-size:10px; font-weight:bold; margin-bottom:6px;">🔧 Block-Optimierung:</div>';
-    const strategies = ['revenue', 'comfort', 'vip', 'capacity'];
-    strategies.forEach(strat => {
-        const costs = { revenue: 150000, comfort: 100000, vip: 200000, capacity: 250000 };
-        html += `<button onclick="optimizeStadiumBlock('haupttribune', '${strat}')" class="btn-secondary" style="width:100%; font-size:8px; padding:4px; margin-bottom:2px;">
-            ${strat === 'revenue' ? '💰' : strat === 'comfort' ? '⭐' : strat === 'vip' ? '💎' : '📈'} ${strat} [${formatVal(costs[strat])}]
-        </button>`;
-    });
-
+    if (isUpgraded) {
+      html += `<div style="color:#4CAF50; font-size:10px;">✅ Installiert</div>`;
+    } else if (hasProject) {
+      html += `<div style="color:#FFC107; font-size:10px;">🔨 In Arbeit</div>`;
+    } else {
+      html += `<button onclick="startStadiumUpgrade('${key}')" style="background:#2196F3; color:white; border:none; padding:4px 8px; border-radius:3px; font-size:10px;">Starten</button>`;
+    }
     html += '</div>';
-    box.innerHTML = html;
-}
-
-function renderStadiumEventsPanel() {
-    const box = document.getElementById('stadium-events-panel');
-    if (!box) return;
-
-    const events = stadium.events || [];
-    const pendingEvents = events.filter(e => !e.completed);
-
-    let html = '<div style="font-size:10px; font-weight:bold; margin-bottom:6px;">📅 STADIUM-EVENTS</div>';
-
-    if (pendingEvents.length === 0) {
-        html += '<div style="font-size:9px; color:var(--text-muted); margin-bottom:8px;">Keine anstehenden Events</div>';
-        html += '<button onclick="scheduleStadiumEvent()" class="btn-action" style="width:100%; font-size:9px; padding:6px;">+ Neues Event ansetzen</button>';
-    } else {
-        html += `<div style="font-size:9px; color:var(--accent); margin-bottom:6px;">${pendingEvents.length} Events ausstehend</div>`;
-        pendingEvents.slice(0, 3).forEach(e => {
-            html += `<div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:4px; font-size:9px;">
-                <div><strong>${e.name}</strong></div>
-                <div style="color:var(--text-muted); font-size:8px;">MD ${e.scheduledMatchday} · ${e.attendance} Besucher · ${formatVal(e.revenue)}</div>
-                <button onclick="runStadiumEvent('${e.id}')" class="btn-primary" style="font-size:8px; padding:2px 4px; margin-top:2px;">Durchführen</button>
-            </div>`;
-        });
-        if (pendingEvents.length > 3) {
-            html += `<div style="font-size:8px; color:var(--text-muted);">+${pendingEvents.length - 3} weitere Events</div>`;
-        }
-    }
-
-    box.innerHTML = html;
+  });
+  
+  if (game.stadium.projectsUnderway && game.stadium.projectsUnderway.length > 0) {
+    html += '<h4>Laufende Arbeiten:</h4>';
+    game.stadium.projectsUnderway.forEach((project) => {
+      html += `<div class="project-item">`;
+      html += `<strong>${project.name}</strong>`;
+      html += `<div style="background:#f0f0f0; height:8px; border-radius:4px; margin:4px 0; overflow:hidden;">`;
+      html += `<div style="background:#2196F3; height:100%; width:${project.progress}%"></div>`;
+      html += `</div>`;
+      html += '</div>';
+    });
+  }
+  
+  html += '</div>';
+  panel.innerHTML = html;
 }
 
 </script>
@@ -21416,6 +21616,7 @@ function renderStadiumEventsPanel() {
 
 
 </script>
+<script src="js/fan-engagement.js?v=2.1"></script>
 <script>
 
     function renderYouthView() {
@@ -21501,6 +21702,7 @@ function renderStadiumEventsPanel() {
         if (typeof renderYouthDevelopmentChart === 'function') renderYouthDevelopmentChart();
         if (typeof simulateYouthDevelopment === 'function') simulateYouthDevelopment();
         if (typeof renderAcademyRankingPanel === 'function') renderAcademyRankingPanel();
+        if (typeof renderYouthAcademyAdvanced === 'function') renderYouthAcademyAdvanced();
     }
 
     // ==========================================
@@ -22099,6 +22301,7 @@ function renderYouthDevelopmentChart() {
 }
 
 </script>
+<script src="js/youth-academy-advanced.js?v=2.1"></script>
 <script>
 
     // ==========================================
@@ -22451,6 +22654,7 @@ function renderYouthDevelopmentChart() {
         });
 
         if (typeof renderNegotiationPanel === 'function') renderNegotiationPanel();
+        if (typeof renderContractManagementPanel === 'function') renderContractManagementPanel();
     }
 
     // Verhandlungs-Zähigkeit auch bei bestehenden Verträgen (NEU): analog zur Logik bei
@@ -23135,6 +23339,185 @@ function closeNegotiationModal() {
 </script>
 <script>
 
+    // ==========================================
+    // SPIELER-SKANDALE
+    // ==========================================
+    // Spieler können in negative Schlagzeilen geraten: Verletzungs-Vortäuschung,
+    // schlechte Disziplin, Doping-Vorwürfe - mit echten Konsequenzen für die Karriere.
+    /* eslint-disable no-undef */
+
+    const SCANDAL_TYPES = {
+        'indiscipline': {
+            name: 'Disziplinlosigkeit',
+            icon: '😤',
+            impact: 'morale',
+            affectedTeam: true,
+            duration: 4,
+            consequences: { moraleMinus: 15, mediaReputation: -20 }
+        },
+        'overparty': {
+            name: 'Zu wilde Nachtleben',
+            icon: '🍺',
+            impact: 'fitness',
+            affectedTeam: false,
+            duration: 3,
+            consequences: { fitnessLoss: 20, moraleMinus: 10 }
+        },
+        'doping': {
+            name: 'Doping-Verdacht',
+            icon: '⚖️',
+            impact: 'reputation',
+            affectedTeam: true,
+            duration: 8,
+            consequences: { mediaReputation: -50, suspension: 3 }
+        },
+        'faking-injury': {
+            name: 'Verletzungs-Vortäuschung',
+            icon: '🤥',
+            impact: 'morale',
+            affectedTeam: true,
+            duration: 5,
+            consequences: { moraleMinus: 20, mediaReputation: -30 }
+        },
+        'violence': {
+            name: 'Gewalt außerhalb des Platzes',
+            icon: '⚔️',
+            impact: 'reputation',
+            affectedTeam: true,
+            duration: 6,
+            consequences: { mediaReputation: -40, suspension: 2 }
+        }
+    };
+
+    function generatePlayerScandale() {
+        if (!squad || squad.length === 0) return null;
+
+        // Nur Spieler mit niedriger Moral oder schlechter Disziplin sind anfällig
+        let candidates = squad.filter(p => p.morale < 40 || (p.discipline || 50) < 40);
+        if (candidates.length === 0) return null;
+
+        let player = candidates[Math.floor(Math.random() * candidates.length)];
+        let scandalType = Object.keys(SCANDAL_TYPES)[Math.floor(Math.random() * Object.keys(SCANDAL_TYPES).length)];
+        let scandal = SCANDAL_TYPES[scandalType];
+
+        return {
+            playerId: player.id,
+            playerName: player.name,
+            type: scandalType,
+            icon: scandal.icon,
+            name: scandal.name,
+            matchday: game.matchday,
+            duration: scandal.duration,
+            daysLeft: scandal.duration,
+            affectedTeam: scandal.affectedTeam,
+            consequences: scandal.consequences,
+            resolved: false
+        };
+    }
+
+    function checkForScandale() {
+        if (!game.scandals) game.scandals = [];
+
+        // Alle 30 Spieltage ca. 30% Chance für einen Skandal
+        if (game.matchday % 30 === 0 && Math.random() < 0.3) {
+            let scandal = generatePlayerScandale();
+            if (scandal) {
+                game.scandals.push(scandal);
+                let player = squad.find(p => p.id === scandal.playerId);
+
+                // Morale-Hit für ganzes Team bei negativen Skandalen
+                if (scandal.affectedTeam) {
+                    squad.forEach(p => {
+                        p.morale -= 5;
+                        p.morale = Math.max(0, p.morale);
+                    });
+                }
+
+                // Medien-Reputation sinkt
+                if (typeof updateMediaReputation === 'function') {
+                    updateMediaReputation(-scandal.consequences.mediaReputation);
+                }
+
+                addInboxMessage('scandal', `${scandal.icon} Skandal: ${player?.name}`,
+                    `${player?.name} ist in einen Skandal verstrickt: "${scandal.name}". Dauer: ca. ${scandal.duration} Spieltage.`, 'screen-squad');
+                showToast(`⚠️ ${scandal.icon} SKANDAL: ${scandal.name}!`, 'error');
+            }
+        }
+
+        // Abgelaufene Skandale aufräumen
+        game.scandals = game.scandals.map(s => {
+            s.daysLeft--;
+            return s;
+        }).filter(s => s.daysLeft > 0);
+    }
+
+    function resolveScandale(scandalIndex, accept = false) {
+        if (!game.scandals || !game.scandals[scandalIndex]) return;
+
+        let scandal = game.scandals[scandalIndex];
+        let player = squad.find(p => p.id === scandal.playerId);
+
+        if (accept) {
+            // Spieler muss Konsequenzen tragen
+            if (scandal.consequences.moraleMinus) {
+                player.morale -= scandal.consequences.moraleMinus;
+                player.morale = Math.max(0, player.morale);
+            }
+            if (scandal.consequences.suspension) {
+                player.suspended = (player.suspended || 0) + scandal.consequences.suspension;
+            }
+            if (scandal.consequences.fitnessLoss) {
+                player.fitness -= scandal.consequences.fitnessLoss;
+                player.fitness = Math.max(10, player.fitness);
+            }
+            showToast(`✅ ${scandal.icon} Skandal gelöst - ${player.name} trägt Konsequenzen`, 'info');
+        } else {
+            // Spieler verleugnet alles - Skandal wird schlimmer, aber Spieler bleibt leistungsfähig
+            if (typeof updateMediaReputation === 'function') {
+                updateMediaReputation(-30);
+            }
+            showToast(`💢 ${scandal.icon} ${player.name} leugnet alles - noch schlechtere Publicity!`, 'error');
+        }
+
+        scandal.resolved = true;
+    }
+
+    function renderScandalsPanel() {
+        const box = document.getElementById('scandals-panel');
+        if (!box) return;
+
+        const scandals = (game.scandals || []).filter(s => !s.resolved);
+
+        let html = `<div style="font-size:10px; font-weight:bold; margin-bottom:6px;">⚠️ SPIELER-SKANDALE</div>`;
+
+        if (scandals.length === 0) {
+            html += '<div style="font-size:9px; color:var(--text-muted); margin-bottom:8px;">Keine aktuellen Skandale</div>';
+        } else {
+            scandals.forEach((scandal, idx) => {
+                let player = squad.find(p => p.id === scandal.playerId);
+                html += `<div style="background:rgba(255,84,104,0.15); padding:6px; border-radius:4px; margin-bottom:6px; border-left:3px solid var(--danger);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
+                        <strong>${scandal.icon} ${scandal.name}</strong>
+                        <span style="font-size:8px; color:var(--text-muted);">${scandal.daysLeft} SpT</span>
+                    </div>
+                    <div style="font-size:8px; color:var(--text-muted); margin-bottom:4px;">
+                        Spieler: <strong>${player?.name || 'Unbekannt'}</strong>
+                    </div>
+                    <div style="display:flex; gap:3px;">
+                        <button onclick="resolveScandale(${idx}, true)" class="btn-secondary" style="font-size:8px; padding:3px 6px; flex:1;">Konsequenzen</button>
+                        <button onclick="resolveScandale(${idx}, false)" class="btn-secondary" style="font-size:8px; padding:3px 6px; flex:1;">Dementieren</button>
+                    </div>
+                </div>`;
+            });
+        }
+
+        box.innerHTML = html;
+    }
+
+
+</script>
+<script>
+
     function renderUnderworldView() {
         document.getElementById('uw-pressure').innerText = underworld.pressure + '%';
         let acts = [];
@@ -23274,6 +23657,1364 @@ function closeNegotiationModal() {
 
 </script>
 <script>
+/* eslint-disable no-undef */
+
+const TACTICS_CONFIG = {
+  formations: {
+    '3-5-2': {
+      name: '3-5-2: Defensiv stabil',
+      defense: 0.9,
+      midfield: 1.0,
+      offense: 0.8,
+      width: 0.9,
+      distribution: 'kurz',
+      pressing: 'normal',
+      positionMap: { def: 3, mid: 5, att: 2 },
+      counterChance: 0.15,
+      creativeBonus: -0.1,
+      defensiveStyle: 'compact',
+      offensiveStyle: 'controlled'
+    },
+    '3-4-3': {
+      name: '3-4-3: Ausgewogen',
+      defense: 0.85,
+      midfield: 1.05,
+      offense: 0.95,
+      width: 1.0,
+      distribution: 'kurz',
+      pressing: 'normal',
+      positionMap: { def: 3, mid: 4, att: 3 },
+      counterChance: 0.20,
+      creativeBonus: 0.05,
+      defensiveStyle: 'balanced',
+      offensiveStyle: 'dynamic'
+    },
+    '4-2-4': {
+      name: '4-2-4: Offensiv',
+      defense: 0.75,
+      midfield: 0.9,
+      offense: 1.2,
+      width: 1.1,
+      distribution: 'lang',
+      pressing: 'aggressiv',
+      positionMap: { def: 4, mid: 2, att: 4 },
+      counterChance: 0.25,
+      creativeBonus: 0.2,
+      defensiveStyle: 'pressing',
+      offensiveStyle: 'aggressive'
+    },
+    '4-3-3': {
+      name: '4-3-3: Klassisch',
+      defense: 0.95,
+      midfield: 1.0,
+      offense: 1.0,
+      width: 1.0,
+      distribution: 'kurz',
+      pressing: 'normal',
+      positionMap: { def: 4, mid: 3, att: 3 },
+      counterChance: 0.18,
+      creativeBonus: 0.08,
+      defensiveStyle: 'compact',
+      offensiveStyle: 'dynamic'
+    },
+    '4-4-2': {
+      name: '4-4-2: Tradition',
+      defense: 1.0,
+      midfield: 0.95,
+      offense: 0.95,
+      width: 0.85,
+      distribution: 'lang',
+      pressing: 'normal',
+      positionMap: { def: 4, mid: 4, att: 2 },
+      counterChance: 0.22,
+      creativeBonus: -0.05,
+      defensiveStyle: 'solid',
+      offensiveStyle: 'direct'
+    },
+    '5-3-2': {
+      name: '5-3-2: Ultra-Defensiv',
+      defense: 1.15,
+      midfield: 0.8,
+      offense: 0.7,
+      width: 0.7,
+      distribution: 'lang',
+      pressing: 'vorsichtig',
+      positionMap: { def: 5, mid: 3, att: 2 },
+      counterChance: 0.30,
+      creativeBonus: -0.25,
+      defensiveStyle: 'deep',
+      offensiveStyle: 'counter'
+    }
+  },
+  pressing: {
+    vorsichtig: { name: 'Vorsichtig', ballLoss: 0.05, pressing: 0.3, energy: 0.7 },
+    normal: { name: 'Normal', ballLoss: 0.12, pressing: 0.6, energy: 1.0 },
+    aggressiv: { name: 'Aggressiv', ballLoss: 0.22, pressing: 1.0, energy: 1.3 }
+  },
+  possession: {
+    ballHoldingShort: { name: 'Kurze Pässe', accuracy: 1.1, pace: 0.8, riskFactor: 0.2 },
+    ballHoldingMid: { name: 'Gemischtes Spiel', accuracy: 1.0, pace: 1.0, riskFactor: 0.4 },
+    ballHoldingLong: { name: 'Lange Bälle', accuracy: 0.85, pace: 1.3, riskFactor: 0.7 }
+  },
+  roles: {
+    CB: { name: 'Innenverteidiger', attrs: ['defense', 'strength', 'heading'] },
+    FB: { name: 'Außenverteidiger', attrs: ['defense', 'pace', 'stamina'] },
+    LB: { name: 'Linkes Außenverteidiger', attrs: ['defense', 'pace', 'crossing'] },
+    RB: { name: 'Rechtes Außenverteidiger', attrs: ['defense', 'pace', 'crossing'] },
+    CM: { name: 'Zentrales Mittelfeld', attrs: ['passing', 'defense', 'stamina'] },
+    CAM: { name: 'Offensives Mittelfeld', attrs: ['passing', 'creativity', 'shooting'] },
+    CDM: { name: 'Defensives Mittelfeld', attrs: ['defense', 'passing', 'stamina'] },
+    LM: { name: 'Linkes Mittelfeld', attrs: ['pace', 'dribbling', 'passing'] },
+    RM: { name: 'Rechtes Mittelfeld', attrs: ['pace', 'dribbling', 'passing'] },
+    ST: { name: 'Stürmer', attrs: ['shooting', 'pace', 'strength'] },
+    CF: { name: 'Mittelstürmer', attrs: ['shooting', 'strength', 'heading'] },
+    LW: { name: 'Linker Flügel', attrs: ['pace', 'dribbling', 'shooting'] },
+    RW: { name: 'Rechter Flügel', attrs: ['pace', 'dribbling', 'shooting'] }
+  }
+};
+
+function initializeTacticsSystem() {
+  if (!game.tacticsHistory) {
+    game.tacticsHistory = [];
+  }
+  if (!game.playerRoles) {
+    game.playerRoles = {};
+  }
+  if (!game.formationHistory) {
+    game.formationHistory = [];
+  }
+  if (!game.tacticAnalysis) {
+    game.tacticAnalysis = { matchesAnalyzed: 0, effectiveness: 0.5 };
+  }
+}
+
+function assignPlayerTacticRole(playerId, formation, roleInFormation) {
+  if (!game.playerRoles) game.playerRoles = {};
+  if (!game.playerRoles[formation]) {
+    game.playerRoles[formation] = {};
+  }
+  game.playerRoles[formation][playerId] = roleInFormation;
+}
+
+function getPlayerTacticRoleInFormation(playerId, formation) {
+  if (!game.playerRoles || !game.playerRoles[formation]) return null;
+  return game.playerRoles[formation][playerId] || null;
+}
+
+function getFitnessPenaltyForRole(player, role) {
+  const fitness = player.fitness || 100;
+  if (fitness > 90) return 0;
+  if (fitness > 75) return -0.05;
+  if (fitness > 60) return -0.15;
+  return -0.3;
+}
+
+function getPlayerFormationFit(player, formation, roleInFormation) {
+  const config = TACTICS_CONFIG.formations[formation];
+  if (!config) return 0.5;
+
+  let fit = 0.5;
+  const playerPos = player.pos;
+
+  if (roleInFormation === 'CB' && ['AB'].includes(playerPos)) fit += 0.3;
+  else if (roleInFormation === 'FB' && ['AB', 'AH'].includes(playerPos)) fit += 0.25;
+  else if (roleInFormation === 'LB' && playerPos === 'AH') fit += 0.3;
+  else if (roleInFormation === 'RB' && playerPos === 'AH') fit += 0.3;
+  else if (roleInFormation === 'CDM' && ['MF', 'DM'].includes(playerPos)) fit += 0.3;
+  else if (roleInFormation === 'CM' && ['MF', 'ZM'].includes(playerPos)) fit += 0.25;
+  else if (roleInFormation === 'CAM' && ['MF', 'OM'].includes(playerPos)) fit += 0.3;
+  else if (roleInFormation === 'LM' && playerPos === 'MF') fit += 0.25;
+  else if (roleInFormation === 'RM' && playerPos === 'MF') fit += 0.25;
+  else if (roleInFormation === 'ST' && ['ST', 'MS'].includes(playerPos)) fit += 0.35;
+  else if (roleInFormation === 'CF' && ['ST', 'MS'].includes(playerPos)) fit += 0.3;
+  else if (roleInFormation === 'LW' && playerPos === 'ST') fit += 0.2;
+  else if (roleInFormation === 'RW' && playerPos === 'ST') fit += 0.2;
+
+  fit = Math.min(1.0, Math.max(0.3, fit));
+  fit += getFitnessPenaltyForRole(player, roleInFormation);
+  return fit;
+}
+
+function getFormationBonus(formation, tacticStyle) {
+  const config = TACTICS_CONFIG.formations[formation];
+  if (!config) return { attack: 0, defense: 0, creativity: 0 };
+
+  let bonuses = {
+    attack: (config.offense - 1.0) * 0.5,
+    defense: (config.defense - 1.0) * 0.5,
+    creativity: config.creativeBonus * 0.4
+  };
+
+  if (tacticStyle === 'aggressive' && config.offensiveStyle === 'aggressive') {
+    bonuses.attack += 0.1;
+  } else if (tacticStyle === 'defensive' && config.defensiveStyle === 'deep') {
+    bonuses.defense += 0.1;
+  }
+
+  return bonuses;
+}
+
+function analyzeMatchTactics(match) {
+  if (!match || !game.tacticAnalysis) return;
+
+  game.tacticAnalysis.matchesAnalyzed++;
+  let effectiveness = 0.5;
+
+  if (match.won) effectiveness = 0.75;
+  else if (match.draw) effectiveness = 0.55;
+  else effectiveness = 0.35;
+
+  const prevEffectiveness = game.tacticAnalysis.effectiveness || 0.5;
+  game.tacticAnalysis.effectiveness = prevEffectiveness * 0.7 + effectiveness * 0.3;
+}
+
+function getTacticSuggestion() {
+  if (!game.tacticAnalysis || game.tacticAnalysis.matchesAnalyzed < 3) {
+    return 'Zu wenig Daten für Taktik-Analyse (min. 3 Spiele)';
+  }
+
+  const effectiveness = game.tacticAnalysis.effectiveness || 0.5;
+
+  if (effectiveness > 0.65) {
+    return 'Aktuelle Taktik funktioniert gut - beibehalten';
+  } else if (effectiveness < 0.45) {
+    return 'Taktik nicht effektiv - Wechsel erwägen';
+  } else {
+    return 'Taktik funktioniert mittelmäßig - kleine Anpassungen möglich';
+  }
+}
+
+function getFormationCompletenessFit(formation) {
+  if (!squad || squad.length === 0) return 0;
+  if (!game.playerRoles || !game.playerRoles[formation]) return 0.4;
+
+  const roles = game.playerRoles[formation];
+  const config = TACTICS_CONFIG.formations[formation];
+  if (!config) return 0.4;
+
+  let totalFit = 0;
+  let count = 0;
+
+  squad.forEach((player) => {
+    if (!player.active) return;
+    const role = roles[player.id];
+    if (role) {
+      const fit = getPlayerFormationFit(player, formation, role);
+      totalFit += fit;
+      count++;
+    }
+  });
+
+  if (count === 0) return 0.4;
+  return Math.min(1.0, Math.max(0.3, totalFit / count));
+}
+
+function getTacticStyleInfluence() {
+  if (!game.tacticAnalysis) return 1.0;
+  const effectiveness = game.tacticAnalysis.effectiveness || 0.5;
+  return 0.85 + (effectiveness - 0.5) * 0.3;
+}
+
+function renderTacticSystemPanel() {
+  const panel = document.getElementById('tactic-system-panel');
+  if (!panel) return;
+
+  if (!game.tacticAnalysis) {
+    initializeTacticsSystem();
+  }
+
+  let html = '<div class="panel-content">';
+  html += `<h3>Taktik-System</h3>`;
+
+  html += '<div class="tactic-stats">';
+  html += `<div class="stat-box">Taktik-Effektivität: ${(game.tacticAnalysis.effectiveness * 100).toFixed(0)}%</div>`;
+  html += `<div class="stat-box">Spiele analysiert: ${game.tacticAnalysis.matchesAnalyzed}</div>`;
+  html += `<div class="stat-box">Taktik-Einfluss: ${(getTacticStyleInfluence() * 100).toFixed(0)}%</div>`;
+  html += '</div>';
+
+  html += `<div style="font-size:11px; color:#FFC107; margin:6px 0; padding:6px; background:rgba(255,193,7,0.1); border-radius:4px;">💡 ${getTacticSuggestion()}</div>`;
+
+  html += '<h4>Formation Übersicht:</h4>';
+  Object.entries(TACTICS_CONFIG.formations).forEach(([key, config]) => {
+    const completeness = getFormationCompletenessFit(key);
+    const completenessColor = completeness > 0.7 ? '#4CAF50' : completeness > 0.5 ? '#FFC107' : '#FF5252';
+    html += `<div class="tactic-formation-item" style="border-left: 4px solid ${completenessColor}">`;
+    html += `<strong>${config.name}</strong>`;
+    html += `<div class="formation-info">Bestückung: ${(completeness * 100).toFixed(0)}% | Counter: ${(config.counterChance * 100).toFixed(0)}%</div>`;
+    html += `<div class="formation-info">Def: ${config.defense.toFixed(2)} | Mid: ${config.midfield.toFixed(2)} | Off: ${config.offense.toFixed(2)}</div>`;
+    html += '</div>';
+  });
+
+  html += '<h4>Spielstil-Auswirkungen:</h4>';
+  ['aggressive', 'balanced', 'defensive', 'possession'].forEach((style) => {
+    const bonus = getFormationBonus(game.formation || '4-4-2', style);
+    html += `<div class="tactic-style-item">`;
+    html += `<strong>${style}</strong>: Angriff ${(bonus.attack > 0 ? '+' : '')}${(bonus.attack * 100).toFixed(0)}% | Abwehr ${(bonus.defense > 0 ? '+' : '')}${(bonus.defense * 100).toFixed(0)}%`;
+    html += `</div>`;
+  });
+
+  html += '</div>';
+  panel.innerHTML = html;
+}
+
+</script>
+<script>
+/* eslint-disable no-undef */
+
+function initializeFanclubs() {
+  if (!game.fanclubs) {
+    game.fanclubs = [];
+  }
+  if (!game.fanSatisfaction) {
+    game.fanSatisfaction = 50;
+  }
+  if (!game.ultraGroups) {
+    game.ultraGroups = [];
+  }
+}
+
+function createFanclub(name, ultraGroupName, ultras, type) {
+  const fanclub = {
+    id: game.fanclubs.length,
+    name: name,
+    ultraGroupName: ultraGroupName,
+    ultras: ultras,
+    type: type,
+    satisfaction: 50,
+    funding: 0,
+    influence: 0.5,
+    createdSeason: game.season,
+    matchAttendance: [],
+    revenueFans: 0,
+  };
+  game.fanclubs.push(fanclub);
+  return fanclub;
+}
+
+function addUltraGroup(name, intensity) {
+  const ultraGroup = {
+    id: game.ultraGroups.length,
+    name: name,
+    intensity: Math.min(100, Math.max(0, intensity)),
+    loyalty: 60,
+    violence: 0,
+    bannerCount: 1,
+    createdSeason: game.season,
+  };
+  game.ultraGroups.push(ultraGroup);
+  return ultraGroup;
+}
+
+function updateFanSatisfaction(delta) {
+  game.fanSatisfaction = Math.min(100, Math.max(0, game.fanSatisfaction + delta));
+}
+
+function getFanSatisfactionBonus() {
+  if (game.fanSatisfaction < 30) {
+    return -0.15;
+  } else if (game.fanSatisfaction < 50) {
+    return -0.05;
+  } else if (game.fanSatisfaction < 70) {
+    return 0.05;
+  } else {
+    return 0.15;
+  }
+}
+
+function getUltraInfluence() {
+  let totalInfluence = 0;
+  if (game.ultraGroups) {
+    game.ultraGroups.forEach((group) => {
+      totalInfluence += (group.intensity / 100) * group.loyalty / 100;
+    });
+  }
+  return Math.min(1.5, totalInfluence * 0.5);
+}
+
+function processFanRevenue() {
+  let revenue = 0;
+  if (game.fanclubs) {
+    game.fanclubs.forEach((club) => {
+      const satisfactionBonus = 1 + (club.satisfaction - 50) / 100 * 0.2;
+      const clubRevenue = Math.floor((club.ultras * 2 + club.funding * 0.1) * satisfactionBonus);
+      revenue += clubRevenue;
+      club.revenueFans += clubRevenue;
+    });
+  }
+  return revenue;
+}
+
+function checkFanProtest() {
+  if (game.fanSatisfaction < 25 && Math.random() < 0.2) {
+    const protest = {
+      type: 'protest',
+      message: 'Protestaktion: Fans demonstrieren gegen Spielweise!',
+      impact: 'Negative Medienberichterstattung',
+    };
+    if (game.inbox) {
+      addInboxMessage('⚠️ ' + protest.message, protest.impact);
+    }
+    return true;
+  }
+  return false;
+}
+
+function checkUltraConflict() {
+  if (game.ultraGroups && game.ultraGroups.length > 1) {
+    const group1 = game.ultraGroups[Math.floor(Math.random() * game.ultraGroups.length)];
+    const group2 = game.ultraGroups[Math.floor(Math.random() * game.ultraGroups.length)];
+    if (group1.id !== group2.id && Math.random() < 0.15) {
+      const conflict = group1.violence + group2.violence > 100;
+      if (conflict && Math.random() < 0.3) {
+        if (game.inbox) {
+          addInboxMessage('⚠️ Ultra-Konflikt', 'Gewalt zwischen Ultra-Gruppen! Stadionverbot für beide Gruppen.');
+        }
+        group1.violence = Math.min(100, group1.violence + 10);
+        group2.violence = Math.min(100, group2.violence + 10);
+        group1.loyalty = Math.max(0, group1.loyalty - 5);
+        group2.loyalty = Math.max(0, group2.loyalty - 5);
+      }
+    }
+  }
+}
+
+function upgradeFanclubFunding(fanclubId, amount) {
+  if (game.fanclubs && game.fanclubs[fanclubId]) {
+    const fanclub = game.fanclubs[fanclubId];
+    fanclub.funding = Math.min(1000, fanclub.funding + amount);
+    fanclub.satisfaction = Math.min(100, fanclub.satisfaction + 3);
+  }
+}
+
+function renderFanclubManagementPanel() {
+  const panel = document.getElementById('fanclub-management-panel');
+  if (!panel) return;
+
+  if (!game.fanclubs || game.fanclubs.length === 0) {
+    createFanclub('Ultras München', 'Red Army', 500, 'ultras');
+    createFanclub('Fanclub Süd', 'Core Fans', 300, 'traditional');
+  }
+
+  if (!game.ultraGroups || game.ultraGroups.length === 0) {
+    addUltraGroup('Red Army', 75);
+    addUltraGroup('South Side', 65);
+  }
+
+  let html = '<div class="panel-content">';
+  html += `<h3>Fanclub Management - Fangesamtzufriedenheit: ${Math.round(game.fanSatisfaction)}%</h3>`;
+
+  html += '<div class="fanclub-stats">';
+  html += `<div class="stat-box">Satisfaction Bonus: ${(getFanSatisfactionBonus() * 100).toFixed(0)}%</div>`;
+  html += `<div class="stat-box">Ultra Einfluss: ${(getUltraInfluence() * 100).toFixed(0)}%</div>`;
+  html += '</div>';
+
+  html += '<h4>Fanclubs:</h4>';
+  if (game.fanclubs) {
+    game.fanclubs.forEach((club) => {
+      const satisfactionColor = club.satisfaction > 60 ? '#4CAF50' : club.satisfaction > 40 ? '#FFC107' : '#FF5252';
+      html += `<div class="fanclub-item" style="border-left: 4px solid ${satisfactionColor}">`;
+      html += `<strong>${club.name}</strong> (${club.type})`;
+      html += `<div class="club-info">Ultras: ${club.ultras} | Satisfaction: ${Math.round(club.satisfaction)}%</div>`;
+      html += `<div class="club-info">Funding: €${club.funding} | Revenue: €${club.revenueFans}</div>`;
+      html += `<button onclick="upgradeFanclubFunding(${club.id}, 50)">Invest €50</button>`;
+      html += '</div>';
+    });
+  }
+
+  html += '<h4>Ultra-Gruppen:</h4>';
+  if (game.ultraGroups) {
+    game.ultraGroups.forEach((group) => {
+      const loyaltyColor = group.loyalty > 70 ? '#4CAF50' : group.loyalty > 50 ? '#FFC107' : '#FF5252';
+      html += `<div class="ultra-group-item" style="border-left: 4px solid ${loyaltyColor}">`;
+      html += `<strong>${group.name}</strong>`;
+      html += `<div class="group-info">Intensity: ${Math.round(group.intensity)}% | Loyalty: ${Math.round(group.loyalty)}% | Violence: ${Math.round(group.violence)}%</div>`;
+      html += `<div class="group-info">Banner: ${group.bannerCount} | Gegründet: Saison ${group.createdSeason}</div>`;
+      html += '</div>';
+    });
+  }
+
+  html += '</div>';
+  panel.innerHTML = html;
+}
+
+</script>
+<script>
+/* eslint-disable no-undef */
+
+const INTERNATIONAL_TOURNAMENTS = {
+  worldCup: {
+    id: 'wc',
+    name: 'Weltmeisterschaft',
+    frequency: 48,
+    prestige: 100,
+    prizePool: 5000000,
+    playersPerNation: 23,
+    groupStageTeams: 32,
+    rounds: ['groups', 'roundOf16', 'quarterfinals', 'semifinals', 'final']
+  },
+  euro: {
+    id: 'euro',
+    name: 'Europameisterschaft',
+    frequency: 24,
+    prestige: 80,
+    prizePool: 2500000,
+    playersPerNation: 23,
+    groupStageTeams: 24,
+    rounds: ['groups', 'roundOf16', 'quarterfinals', 'semifinals', 'final']
+  },
+  copaAmerica: {
+    id: 'ca',
+    name: 'Copa America',
+    frequency: 24,
+    prestige: 70,
+    prizePool: 1500000,
+    playersPerNation: 23,
+    groupStageTeams: 12,
+    rounds: ['groups', 'semifinals', 'final']
+  },
+  africanCup: {
+    id: 'ac',
+    name: 'Afrikanischer Pokal der Nationen',
+    frequency: 24,
+    prestige: 60,
+    prizePool: 1000000,
+    playersPerNation: 23,
+    groupStageTeams: 16,
+    rounds: ['groups', 'quarterfinals', 'semifinals', 'final']
+  },
+  asianCup: {
+    id: 'ac',
+    name: 'AFC Asienmeisterschaft',
+    frequency: 24,
+    prestige: 55,
+    prizePool: 800000,
+    playersPerNation: 23,
+    groupStageTeams: 16,
+    rounds: ['groups', 'quarterfinals', 'semifinals', 'final']
+  }
+};
+
+function initializeInternationalTournaments() {
+  if (!game.internationalTournaments) {
+    game.internationalTournaments = [];
+  }
+  if (!game.playerInternationalCaps) {
+    game.playerInternationalCaps = {};
+  }
+  if (!game.internationalTournamentHistory) {
+    game.internationalTournamentHistory = [];
+  }
+  if (!game.nextWorldCup) {
+    game.nextWorldCup = 2026;
+  }
+}
+
+function getPlayerNationality(player) {
+  return player.nationality || 'Deutschland';
+}
+
+function isPlayerEligibleForTournament(player, tournamentType) {
+  if (!player.active) return false;
+  if (player.age > 35) return false;
+  if (!player.strength || player.strength < 40) return false;
+
+  if (tournamentType === 'wc') {
+    return player.strength >= 50;
+  } else if (tournamentType === 'euro') {
+    return player.strength >= 45;
+  } else {
+    return player.strength >= 40;
+  }
+}
+
+function selectTournamentSquad(tournamentType) {
+  const tournament = Object.values(INTERNATIONAL_TOURNAMENTS).find(t => t.id === tournamentType);
+  if (!tournament || !squad) return [];
+
+  const eligible = squad.filter(p => isPlayerEligibleForTournament(p, tournamentType));
+  const sorted = eligible.sort((a, b) => b.strength - a.strength);
+  return sorted.slice(0, tournament.playersPerNation);
+}
+
+function getTournamentImpactOnPlayer(player, tournamentPerformance) {
+  let strengthBonus = 0;
+  let moraleBonus = 0;
+  let marketValueMultiplier = 1.0;
+
+  if (tournamentPerformance === 'winner') {
+    strengthBonus = 3;
+    moraleBonus = 20;
+    marketValueMultiplier = 1.3;
+  } else if (tournamentPerformance === 'finalist') {
+    strengthBonus = 2;
+    moraleBonus = 15;
+    marketValueMultiplier = 1.2;
+  } else if (tournamentPerformance === 'semifinalist') {
+    strengthBonus = 1;
+    moraleBonus = 10;
+    marketValueMultiplier = 1.1;
+  } else if (tournamentPerformance === 'quarterfinalist') {
+    strengthBonus = 0;
+    moraleBonus = 5;
+    marketValueMultiplier = 1.05;
+  } else if (tournamentPerformance === 'groupExit') {
+    strengthBonus = -1;
+    moraleBonus = -8;
+    marketValueMultiplier = 0.95;
+  }
+
+  return {
+    strengthBonus: strengthBonus,
+    moraleBonus: moraleBonus,
+    marketValueMultiplier: marketValueMultiplier
+  };
+}
+
+function processTournamentSquadReturn(squadList, tournamentType, performanceLevel) {
+  if (!squadList || squadList.length === 0) return;
+
+  squadList.forEach((playerId) => {
+    const player = squad.find(p => p.id === playerId);
+    if (!player) return;
+
+    const impact = getTournamentImpactOnPlayer(player, performanceLevel);
+    player.strength = Math.min(100, Math.max(0, player.strength + impact.strengthBonus));
+    player.morale = Math.min(100, Math.max(0, player.morale + impact.moraleBonus));
+
+    if (player.marketValue) {
+      player.marketValue = Math.round(player.marketValue * impact.marketValueMultiplier);
+    }
+
+    if (!game.playerInternationalCaps) {
+      game.playerInternationalCaps = {};
+    }
+    if (!game.playerInternationalCaps[playerId]) {
+      game.playerInternationalCaps[playerId] = 0;
+    }
+    game.playerInternationalCaps[playerId]++;
+
+    if (game.inbox) {
+      addInboxMessage(`⭐ ${player.name} kehrt von Turnier zurück`,
+        `Stärke ${impact.strengthBonus > 0 ? '+' : ''}${impact.strengthBonus}, Moral ${impact.moraleBonus > 0 ? '+' : ''}${impact.moraleBonus}`);
+    }
+  });
+}
+
+function getTournamentParticipation() {
+  if (!squad) return { total: 0, champions: 0, participation: 0 };
+
+  let total = 0;
+  let champions = 0;
+  let participation = 0;
+
+  squad.forEach((player) => {
+    const caps = (game.playerInternationalCaps && game.playerInternationalCaps[player.id]) || 0;
+    if (caps > 0) {
+      participation++;
+      total += caps;
+      if (caps > 5) champions++;
+    }
+  });
+
+  return { total: total, champions: champions, participation: participation };
+}
+
+function getTournamentLeagueBonus() {
+  const participation = getTournamentParticipation();
+  if (participation.participation === 0) return 0;
+  return Math.min(0.25, participation.participation * 0.03);
+}
+
+function generateTournamentEvent(tournamentName, isKnockout) {
+  const outcomes = isKnockout ?
+    ['Bittere Niederlage in Verlängerung', 'Dramatischer Elfmeterschießen-Sieg', 'Klarer Sieg verdienter Gegner', 'Dominante Leistung'] :
+    ['Unglückliche Niederlage', 'Langweiliges Remis', 'Verdiente Niederlage', 'Überraschender Sieg'];
+
+  return outcomes[Math.floor(Math.random() * outcomes.length)];
+}
+
+function recordTournamentMatch(tournamentName, opponent, result, squadPlayers) {
+  if (!game.internationalTournamentHistory) {
+    game.internationalTournamentHistory = [];
+  }
+
+  game.internationalTournamentHistory.push({
+    tournament: tournamentName,
+    opponent: opponent,
+    result: result,
+    season: game.season,
+    matchday: game.matchday,
+    squadSize: squadPlayers ? squadPlayers.length : 0
+  });
+}
+
+function renderInternationalTournamentsPanel() {
+  const panel = document.getElementById('international-tournaments-panel');
+  if (!panel) return;
+
+  if (!game.internationalTournaments) {
+    initializeInternationalTournaments();
+  }
+
+  const participation = getTournamentParticipation();
+  const leagueBonus = getTournamentLeagueBonus();
+
+  let html = '<div class="panel-content">';
+  html += `<h3>Internationale Turniere</h3>`;
+
+  html += '<div class="tournament-stats">';
+  html += `<div class="stat-box">Spieler im Einsatz: ${participation.participation}/${squad ? squad.length : 0}</div>`;
+  html += `<div class="stat-box">Internationale Einsätze: ${participation.total}</div>`;
+  html += `<div class="stat-box">Erfahrene Spieler: ${participation.champions}</div>`;
+  html += `<div class="stat-box">Ligabonus: ${(leagueBonus * 100).toFixed(1)}%</div>`;
+  html += '</div>';
+
+  html += '<h4>Verfügbare Turniere:</h4>';
+  Object.values(INTERNATIONAL_TOURNAMENTS).forEach((tournament) => {
+    const squad_eligible = selectTournamentSquad(tournament.id);
+    html += `<div class="tournament-item">`;
+    html += `<strong>${tournament.name}</strong>`;
+    html += `<div class="tournament-info">Prestige: ${tournament.prestige} | Preisgeld: €${tournament.prizePool.toLocaleString()}</div>`;
+    html += `<div class="tournament-info">Teilnehmende Spieler: ${squad_eligible.length}/${tournament.playersPerNation} | Häufigkeit: alle ${tournament.frequency} Spieltage</div>`;
+    html += `<div class="tournament-info">Gruppen: ${tournament.groupStageTeams} Teams | Runden: ${tournament.rounds.join(' → ')}</div>`;
+    html += '</div>';
+  });
+
+  html += '<h4>Turnier-Historie:</h4>';
+  if (game.internationalTournamentHistory && game.internationalTournamentHistory.length > 0) {
+    game.internationalTournamentHistory.slice(-5).reverse().forEach((match) => {
+      html += `<div class="tournament-history-item">`;
+      html += `<strong>${match.tournament}</strong> vs ${match.opponent}`;
+      html += `<div class="history-info">${match.result} | Saison ${match.season}</div>`;
+      html += `</div>`;
+    });
+  } else {
+    html += '<div style="font-size:11px; color:#999;">Noch keine Turnier-Einsätze</div>';
+  }
+
+  html += '</div>';
+  panel.innerHTML = html;
+}
+
+</script>
+<script>
+/* eslint-disable no-undef */
+
+const BOARD_MEMBER_TYPES = {
+  president: {
+    name: 'Präsident',
+    influence: 1.0,
+    priorities: ['finances', 'reputation', 'success'],
+    salary: 50000,
+    votingPower: 2
+  },
+  vicePresident: {
+    name: 'Vizepräsident',
+    influence: 0.8,
+    priorities: ['success', 'development', 'finances'],
+    salary: 30000,
+    votingPower: 1.5
+  },
+  financeDirector: {
+    name: 'Finanzvorstand',
+    influence: 0.7,
+    priorities: ['finances', 'stability', 'reputation'],
+    salary: 40000,
+    votingPower: 1.5
+  },
+  sportDirector: {
+    name: 'Sportvorstand',
+    influence: 0.85,
+    priorities: ['success', 'development', 'reputation'],
+    salary: 35000,
+    votingPower: 1.5
+  },
+  academyDirector: {
+    name: 'Akademieleiter',
+    influence: 0.5,
+    priorities: ['development', 'reputation', 'finances'],
+    salary: 25000,
+    votingPower: 0.75
+  },
+  fanRepresentative: {
+    name: 'Fanvertreter',
+    influence: 0.6,
+    priorities: ['success', 'reputation', 'development'],
+    salary: 10000,
+    votingPower: 0.75
+  },
+  member: {
+    name: 'Mitglied',
+    influence: 0.4,
+    priorities: ['finances', 'reputation', 'success'],
+    salary: 0,
+    votingPower: 0.5
+  }
+};
+
+function initializeBoardMembers() {
+  if (!game.boardMembers) {
+    game.boardMembers = [];
+    createDefaultBoard();
+  }
+  if (!game.boardDecisions) {
+    game.boardDecisions = [];
+  }
+  if (!game.boardMemberSatisfaction) {
+    game.boardMemberSatisfaction = {};
+  }
+  if (!game.boardConflicts) {
+    game.boardConflicts = [];
+  }
+}
+
+function createDefaultBoard() {
+  const firstNames = ['Klaus', 'Bernd', 'Helmut', 'Petra', 'Michael', 'Stefan', 'Wolfgang', 'Anke'];
+  const lastNames = ['Schmidt', 'Meyer', 'Müller', 'Wagner', 'Schneider', 'Fischer', 'Weber', 'Hoffmann'];
+
+  const positions = ['president', 'sportDirector', 'financeDirector', 'member', 'member'];
+
+  positions.forEach((type, index) => {
+    const firstName = firstNames[index % firstNames.length];
+    const lastName = lastNames[(index + 2) % lastNames.length];
+    createBoardMember(
+      `${firstName} ${lastName}`,
+      type,
+      50
+    );
+  });
+}
+
+function createBoardMember(name, type, satisfaction) {
+  const config = BOARD_MEMBER_TYPES[type];
+  if (!config) return null;
+
+  const member = {
+    id: game.boardMembers.length,
+    name: name,
+    type: type,
+    satisfaction: Math.min(100, Math.max(0, satisfaction)),
+    influence: config.influence,
+    yearsOnBoard: 0,
+    votingPower: config.votingPower,
+    salary: config.salary,
+    relationshipWithManager: 50,
+    priorities: [...config.priorities]
+  };
+
+  game.boardMembers.push(member);
+  game.boardMemberSatisfaction[member.id] = satisfaction;
+  return member;
+}
+
+function updateBoardMemberSatisfaction(memberId, delta) {
+  if (!game.boardMembers || !game.boardMembers[memberId]) return;
+
+  const member = game.boardMembers[memberId];
+  member.satisfaction = Math.min(100, Math.max(0, member.satisfaction + delta));
+  game.boardMemberSatisfaction[memberId] = member.satisfaction;
+}
+
+function getAverageBoardSatisfaction() {
+  if (!game.boardMembers || game.boardMembers.length === 0) return 50;
+
+  let total = 0;
+  game.boardMembers.forEach((member) => {
+    total += member.satisfaction;
+  });
+
+  return total / game.boardMembers.length;
+}
+
+function getBoardInfluenceOnDecision() {
+  const avgSatisfaction = getAverageBoardSatisfaction();
+  let influence = 1.0;
+
+  if (avgSatisfaction > 75) {
+    influence = 1.15;
+  } else if (avgSatisfaction > 60) {
+    influence = 1.05;
+  } else if (avgSatisfaction < 40) {
+    influence = 0.9;
+  } else if (avgSatisfaction < 25) {
+    influence = 0.75;
+  }
+
+  return influence;
+}
+
+function checkBoardConflict() {
+  if (!game.boardMembers || game.boardMembers.length < 2) return false;
+
+  let conflictChance = 0;
+  let conflictMembers = [];
+
+  game.boardMembers.forEach((member) => {
+    if (member.satisfaction < 35) {
+      conflictChance += 0.1;
+      conflictMembers.push(member);
+    }
+  });
+
+  if (Math.random() < conflictChance && conflictMembers.length > 0) {
+    const member = conflictMembers[Math.floor(Math.random() * conflictMembers.length)];
+    const conflictTypes = [
+      'Einspruch gegen aktuelle Taktik',
+      'Forderung nach mehr Investitionen',
+      'Kritik an Trainerkompetenz',
+      'Konflikt über Spielerverkauf'
+    ];
+
+    const conflict = {
+      type: conflictTypes[Math.floor(Math.random() * conflictTypes.length)],
+      member: member.name,
+      memberId: member.id,
+      season: game.season,
+      resolved: false
+    };
+
+    if (!game.boardConflicts) game.boardConflicts = [];
+    game.boardConflicts.push(conflict);
+
+    if (game.inbox) {
+      addInboxMessage(`⚠️ Vorstandskonflikt: ${member.name}`, conflict.type);
+    }
+
+    updateBoardMemberSatisfaction(member.id, -15);
+    return true;
+  }
+
+  return false;
+}
+
+function processBoardDecision(decisionType, outcome) {
+  if (!game.boardMembers) return 1.0;
+
+  let supportScore = 0;
+  let totalInfluence = 0;
+
+  game.boardMembers.forEach((member) => {
+    const typeConfig = BOARD_MEMBER_TYPES[member.type];
+    const matchesPreference = typeConfig.priorities.includes(decisionType);
+    const supportMultiplier = matchesPreference ? 1.2 : 0.8;
+
+    const memberSupport = (member.satisfaction / 100) * supportMultiplier;
+    supportScore += memberSupport * member.votingPower;
+    totalInfluence += member.votingPower;
+  });
+
+  const finalSupport = totalInfluence > 0 ? supportScore / totalInfluence : 0.5;
+
+  if (outcome === 'success') {
+    game.boardMembers.forEach((member) => {
+      updateBoardMemberSatisfaction(member.id, 3);
+    });
+  } else if (outcome === 'failure') {
+    game.boardMembers.forEach((member) => {
+      const typeConfig = BOARD_MEMBER_TYPES[member.type];
+      const penalty = typeConfig.priorities.includes(decisionType) ? 8 : 3;
+      updateBoardMemberSatisfaction(member.id, -penalty);
+    });
+  }
+
+  return finalSupport;
+}
+
+function getBoardVotingResult(proposalType) {
+  if (!game.boardMembers || game.boardMembers.length === 0) return true;
+
+  let yesVotes = 0;
+  let totalVotes = 0;
+
+  game.boardMembers.forEach((member) => {
+    const typeConfig = BOARD_MEMBER_TYPES[member.type];
+    const supportProbability = member.satisfaction / 100 + (typeConfig.priorities.includes(proposalType) ? 0.2 : 0);
+
+    if (Math.random() < Math.min(1.0, supportProbability)) {
+      yesVotes += member.votingPower;
+    }
+
+    totalVotes += member.votingPower;
+  });
+
+  return yesVotes / totalVotes > 0.5;
+}
+
+function getBoardExpenses() {
+  if (!game.boardMembers) return 0;
+
+  let totalExpenses = 0;
+  game.boardMembers.forEach((member) => {
+    const typeConfig = BOARD_MEMBER_TYPES[member.type];
+    totalExpenses += typeConfig.salary;
+  });
+
+  return totalExpenses;
+}
+
+function recordBoardDecision(type, description, outcome) {
+  if (!game.boardDecisions) game.boardDecisions = [];
+
+  game.boardDecisions.push({
+    type: type,
+    description: description,
+    outcome: outcome,
+    season: game.season,
+    matchday: game.matchday,
+    timestamp: new Date().toISOString()
+  });
+}
+
+function renderBoardMembersPanel() {
+  const panel = document.getElementById('board-members-panel');
+  if (!panel) return;
+
+  if (!game.boardMembers) {
+    initializeBoardMembers();
+  }
+
+  const avgSatisfaction = getAverageBoardSatisfaction();
+  const boardInfluence = getBoardInfluenceOnDecision();
+  const boardExpenses = getBoardExpenses();
+
+  let html = '<div class="panel-content">';
+  html += `<h3>Vorstandsmitglieder</h3>`;
+
+  html += '<div class="board-stats">';
+  html += `<div class="stat-box">Durchschn. Zufriedenheit: ${Math.round(avgSatisfaction)}%</div>`;
+  html += `<div class="stat-box">Vorstandseinfluss: ${(boardInfluence * 100).toFixed(0)}%</div>`;
+  html += `<div class="stat-box">Gehälter pro Spieltag: €${Math.round(boardExpenses / 34)}</div>`;
+  html += `<div class="stat-box">Mitglieder: ${game.boardMembers.length}</div>`;
+  html += '</div>';
+
+  if (avgSatisfaction < 40) {
+    html += `<div style="font-size:11px; color:#FF5252; margin:6px 0; padding:6px; background:rgba(255,82,82,0.1); border-radius:4px;">⚠️ Vorstand ist unzufrieden! Entscheidungen könnten blockiert werden!</div>`;
+  }
+
+  html += '<h4>Vorstandsmitglieder:</h4>';
+  game.boardMembers.forEach((member) => {
+    const typeConfig = BOARD_MEMBER_TYPES[member.type];
+    const satisfactionColor = member.satisfaction > 60 ? '#4CAF50' : member.satisfaction > 40 ? '#FFC107' : '#FF5252';
+
+    html += `<div class="board-member-item" style="border-left: 4px solid ${satisfactionColor}">`;
+    html += `<strong>${member.name}</strong> (${typeConfig.name})`;
+    html += `<div class="member-info">Zufriedenheit: ${Math.round(member.satisfaction)}% | Einfluss: ${(member.influence * 100).toFixed(0)}%</div>`;
+    html += `<div class="member-info">Stimmrecht: ${member.votingPower} | Prioritäten: ${member.priorities.join(', ')}</div>`;
+    html += '</div>';
+  });
+
+  html += '<h4>Konflikte:</h4>';
+  if (game.boardConflicts && game.boardConflicts.length > 0) {
+    game.boardConflicts.filter(c => !c.resolved).slice(-3).forEach((conflict) => {
+      html += `<div class="conflict-item">`;
+      html += `<strong>${conflict.member}</strong>: ${conflict.type}`;
+      html += `</div>`;
+    });
+  } else {
+    html += '<div style="font-size:11px; color:#999;">Keine aktuellen Konflikte</div>';
+  }
+
+  html += '</div>';
+  panel.innerHTML = html;
+}
+
+</script>
+<script src="js/sponsor-management.js?v=2.1"></script>
+<script src="js/medical-management.js?v=2.1"></script>
+<script>
+/* eslint-disable no-undef */
+
+const STADIUM_UPGRADES = {
+  seatingExpansion: {
+    name: 'Tribünenausbau',
+    cost: 500000,
+    capacityIncrease: 5000,
+    timeToComplete: 12,
+    attendanceBonus: 0.1
+  },
+  medicalFacilities: {
+    name: 'Medizinische Infrastruktur',
+    cost: 300000,
+    capacityIncrease: 0,
+    timeToComplete: 8,
+    recoveryBonus: 0.15
+  },
+  trainingFacilities: {
+    name: 'Trainingsanlage',
+    cost: 400000,
+    capacityIncrease: 0,
+    timeToComplete: 10,
+    trainingBonus: 0.12
+  },
+  cateringServices: {
+    name: 'Catering & Gastronomie',
+    cost: 200000,
+    capacityIncrease: 0,
+    timeToComplete: 6,
+    fanSatisfaction: 0.1
+  },
+  vipLounge: {
+    name: 'VIP-Loge',
+    cost: 250000,
+    capacityIncrease: 500,
+    timeToComplete: 8,
+    revenueMultiplier: 1.2
+  },
+  lightingSystem: {
+    name: 'Beleuchtungssystem',
+    cost: 150000,
+    capacityIncrease: 0,
+    timeToComplete: 4,
+    qualityBonus: 0.08
+  }
+};
+
+const stadiumState = {
+  capacity: 25000,
+  condition: 100,
+  upgrades: [],
+  projectsUnderway: [],
+  maintenanceCost: 5000
+};
+
+function initializeStadium() {
+  if (!game.stadium) {
+    game.stadium = {
+      capacity: 25000,
+      condition: 100,
+      upgrades: [],
+      projectsUnderway: [],
+      totalInvestment: 0,
+      lastExpanded: 0
+    };
+  }
+}
+
+function getStadiumCapacity() {
+  if (!game.stadium) return 25000;
+  return game.stadium.capacity;
+}
+
+function getStadiumCondition() {
+  if (!game.stadium) return 100;
+  return Math.max(0, Math.min(100, game.stadium.condition));
+}
+
+function startStadiumUpgrade(upgradeType) {
+  if (!game.stadium) initializeStadium();
+  
+  const config = STADIUM_UPGRADES[upgradeType];
+  if (!config) return false;
+  
+  if (game.money < config.cost) {
+    if (game.inbox) {
+      addInboxMessage('❌ Nicht genügend Mittel', `Upgrade kostet €${config.cost.toLocaleString()}`);
+    }
+    return false;
+  }
+  
+  game.money -= config.cost;
+  
+  const project = {
+    id: (game.stadium.projectsUnderway || []).length,
+    type: upgradeType,
+    name: config.name,
+    startMatchday: game.matchday,
+    completionMatchday: game.matchday + config.timeToComplete,
+    cost: config.cost,
+    progress: 0,
+    status: 'active'
+  };
+  
+  if (!game.stadium.projectsUnderway) game.stadium.projectsUnderway = [];
+  game.stadium.projectsUnderway.push(project);
+  
+  if (game.inbox) {
+    addInboxMessage(`🏗️ Baubeginn: ${config.name}`, `Fertigstellung in ${config.timeToComplete} Spieltagen`);
+  }
+  
+  return true;
+}
+
+function tickStadiumProjects() {
+  if (!game.stadium || !game.stadium.projectsUnderway) return;
+  
+  game.stadium.projectsUnderway = game.stadium.projectsUnderway.filter((project) => {
+    const progress = ((game.matchday - project.startMatchday) / (project.completionMatchday - project.startMatchday)) * 100;
+    project.progress = Math.min(100, progress);
+    
+    if (game.matchday >= project.completionMatchday) {
+      completeStadiumUpgrade(project);
+      return false;
+    }
+    
+    return true;
+  });
+}
+
+function completeStadiumUpgrade(project) {
+  const config = STADIUM_UPGRADES[project.type];
+  if (!config) return;
+  
+  if (config.capacityIncrease > 0) {
+    game.stadium.capacity += config.capacityIncrease;
+    game.stadium.lastExpanded = game.matchday;
+  }
+  
+  if (!game.stadium.upgrades) game.stadium.upgrades = [];
+  game.stadium.upgrades.push({
+    type: project.type,
+    name: config.name,
+    completedMatchday: game.matchday,
+    season: game.season,
+    benefits: config
+  });
+  
+  if (game.inbox) {
+    addInboxMessage(`✅ Ausbau abgeschlossen`, config.name);
+  }
+}
+
+function tickStadiumMaintenance() {
+  if (!game.stadium) return 0;
+  
+  const maintenanceCost = Math.round(5000 * (1 - getStadiumCondition() / 100));
+  
+  if (game.money >= maintenanceCost) {
+    game.money -= maintenanceCost;
+    game.stadium.condition = Math.min(100, game.stadium.condition + 2);
+  } else {
+    game.stadium.condition = Math.max(0, game.stadium.condition - 1);
+  }
+  
+  return maintenanceCost;
+}
+
+function repairStadium(percentage) {
+  if (!game.stadium) return false;
+  
+  const repairCost = Math.round(200000 * (percentage / 100));
+  if (game.money < repairCost) return false;
+  
+  game.money -= repairCost;
+  game.stadium.condition = Math.min(100, game.stadium.condition + percentage);
+  
+  if (game.inbox) {
+    addInboxMessage(`🔧 Reparatur`, `Stadionzustand: ${Math.round(game.stadium.condition)}%`);
+  }
+  
+  return true;
+}
+
+function getAttendanceFactor() {
+  if (!game.stadium) return 1.0;
+  
+  let factor = 1.0;
+  const capacity = getStadiumCapacity();
+  const condition = getStadiumCondition();
+  
+  factor *= (0.5 + (condition / 100) * 0.5);
+  
+  if (game.stadium.upgrades && game.stadium.upgrades.length > 0) {
+    const attendanceUpgrades = game.stadium.upgrades.filter(u => u.benefits.attendanceBonus);
+    factor *= (1 + attendanceUpgrades.length * 0.05);
+  }
+  
+  return factor;
+}
+
+function getStadiumRevenueBenefit() {
+  if (!game.stadium || !game.stadium.upgrades) return 1.0;
+  
+  let multiplier = 1.0;
+  game.stadium.upgrades.forEach((upgrade) => {
+    if (upgrade.benefits.revenueMultiplier) {
+      multiplier *= upgrade.benefits.revenueMultiplier;
+    }
+  });
+  
+  return multiplier;
+}
+
+function renderStadiumManagementPanel() {
+  const panel = document.getElementById('stadium-management-panel');
+  if (!panel) return;
+  
+  initializeStadium();
+  
+  const capacity = getStadiumCapacity();
+  const condition = getStadiumCondition();
+  const conditionColor = condition > 70 ? '#4CAF50' : condition > 40 ? '#FFC107' : '#FF5252';
+  const ongoingProjects = (game.stadium.projectsUnderway || []).filter(p => p.status === 'active').length;
+  
+  let html = '<div class="panel-content">';
+  html += `<h3>Stadion-Management</h3>`;
+  
+  html += '<div class="stadium-stats">';
+  html += `<div class="stat-box">Kapazität: ${capacity.toLocaleString()} Plätze</div>`;
+  html += `<div class="stat-box" style="border-left:4px solid ${conditionColor}">Zustand: ${Math.round(condition)}%</div>`;
+  html += `<div class="stat-box">Laufende Projekte: ${ongoingProjects}</div>`;
+  html += `<div class="stat-box">Einnahmen-Multiplikator: ${getStadiumRevenueBenefit().toFixed(2)}x</div>`;
+  html += '</div>';
+  
+  html += '<h4>Verfügbare Upgrades:</h4>';
+  Object.entries(STADIUM_UPGRADES).forEach(([key, config]) => {
+    const isUpgraded = game.stadium.upgrades && game.stadium.upgrades.some(u => u.type === key);
+    const hasProject = game.stadium.projectsUnderway && game.stadium.projectsUnderway.some(p => p.type === key && p.status === 'active');
+    
+    html += `<div class="upgrade-item" style="opacity:${isUpgraded ? 0.6 : 1}">`;
+    html += `<strong>${config.name}</strong>`;
+    html += `<div class="upgrade-info">Kosten: €${config.cost.toLocaleString()} | Dauer: ${config.timeToComplete} Spieltage</div>`;
+    if (config.capacityIncrease > 0) {
+      html += `<div class="upgrade-info">Kapazität: +${config.capacityIncrease} Plätze</div>`;
+    }
+    if (isUpgraded) {
+      html += `<div style="color:#4CAF50; font-size:10px;">✅ Installiert</div>`;
+    } else if (hasProject) {
+      html += `<div style="color:#FFC107; font-size:10px;">🔨 In Arbeit</div>`;
+    } else {
+      html += `<button onclick="startStadiumUpgrade('${key}')" style="background:#2196F3; color:white; border:none; padding:4px 8px; border-radius:3px; font-size:10px;">Starten</button>`;
+    }
+    html += '</div>';
+  });
+  
+  if (game.stadium.projectsUnderway && game.stadium.projectsUnderway.length > 0) {
+    html += '<h4>Laufende Arbeiten:</h4>';
+    game.stadium.projectsUnderway.forEach((project) => {
+      html += `<div class="project-item">`;
+      html += `<strong>${project.name}</strong>`;
+      html += `<div style="background:#f0f0f0; height:8px; border-radius:4px; margin:4px 0; overflow:hidden;">`;
+      html += `<div style="background:#2196F3; height:100%; width:${project.progress}%"></div>`;
+      html += `</div>`;
+      html += '</div>';
+    });
+  }
+  
+  html += '</div>';
+  panel.innerHTML = html;
+}
+
+</script>
+<script src="js/youth-academy.js?v=2.1"></script>
+<script src="js/media-management.js?v=2.1"></script>
+<script src="js/transfer-market-analysis.js?v=2.1"></script>
+<script src="js/contract-management.js?v=2.1"></script>
+<script src="js/opposition-analysis.js?v=2.1"></script>
+<script src="js/training-schedule.js?v=2.1"></script>
+<script src="js/reserves-loan-management.js?v=2.1"></script>
+<script src="js/crisis-management.js?v=2.1"></script>
+<script src="js/player-development-tracking.js?v=2.1"></script>
+<script src="js/scouting-intelligence.js?v=2.1"></script>
+<script src="js/disciplinary-sanctions.js?v=2.1"></script>
+<script src="js/season-objectives.js?v=2.1"></script>
+<script src="js/squad-harmony.js?v=2.1"></script>
+<script src="js/contract-renewal.js?v=2.1"></script>
+<script src="js/media-relations.js?v=2.1"></script>
+<script src="js/player-retirement.js?v=2.1"></script>
+<script src="js/tournament-brackets.js?v=2.1"></script>
+<script src="js/opponent-analysis.js?v=2.1"></script>
+<script src="js/match-prediction.js?v=2.1"></script>
+<script>
 
     // Wandelt einen rohen Trophäen-Eintrag in Icon + Kategorie um, für eine chronologische
     // "Ehrengalerie" statt einer schlichten Liste (bringt auch den Legenden-Status sichtbar
@@ -23385,6 +25126,8 @@ function closeNegotiationModal() {
         renderLeagueChronikBox();
         if (typeof renderPlayerOfMonthBox === 'function') renderPlayerOfMonthBox();
         if (typeof renderPlayerOfSeasonBox === 'function') renderPlayerOfSeasonBox();
+        if (typeof renderHallOfFamePanel === 'function') renderHallOfFamePanel();
+        if (typeof renderManagerAnalyticsPanel === 'function') renderManagerAnalyticsPanel();
         let list = document.getElementById('trophies-list');
         list.innerHTML = '';
         renderRivalryHistoryBook();
@@ -23470,6 +25213,9 @@ function closeNegotiationModal() {
     }
 
 </script>
+<script src="js/hall-of-fame.js?v=2.1"></script>
+<script src="js/player-career-progression.js?v=2.1"></script>
+<script src="js/manager-analytics.js?v=2.1"></script>
 <script>
 
     // ---------- WETTER ---------- (aus match.js ausgelagert - reine Datei-Organisation,
@@ -23843,6 +25589,7 @@ function closeNegotiationModal() {
             btn.onclick = () => { skipPressAndPlay(); };
             aBox.appendChild(btn);
         });
+        if (typeof renderOppositionAnalysisPanel === 'function') renderOppositionAnalysisPanel();
         showScreen('screen-prematch-press');
     }
 
@@ -24687,8 +26434,9 @@ function closeNegotiationModal() {
         // nicht mit dem Kontostand in Einklang bringen.
         let staffWages = (typeof getTotalStaffWages === 'function') ? getTotalStaffWages() : 0;
         let secondTeamStaffWages = (typeof getSecondTeamStaffWages === 'function') ? getSecondTeamStaffWages() : 0;
+        let boardExpenses = (typeof getBoardExpenses === 'function') ? getBoardExpenses() : 0;
 
-        let net = grossIncome - taxAmount - advisorFee - wages - staffWages - secondTeamStaffWages - travelCost;
+        let net = grossIncome - taxAmount - advisorFee - wages - staffWages - secondTeamStaffWages - boardExpenses - travelCost;
         game.money += net;
 
         // Buchungsjournal: hält für JEDEN Spieltag fest, woraus sich Einnahmen und Ausgaben
@@ -24710,6 +26458,7 @@ function closeNegotiationModal() {
             { label: '⚽ Spielergehälter', amount: wages },
             { label: '💼 Personalgehälter', amount: staffWages },
             { label: '🅱️ Reserve-Trainerstab', amount: secondTeamStaffWages },
+            { label: '👔 Vorstandsgehälter', amount: boardExpenses },
             { label: '🔧 Stadion- & Campus-Unterhalt', amount: maintenanceCost },
             { label: '🚌 Auswärtsfahrt', amount: travelCost },
             { label: '🧾 Steuern & Abgaben', amount: taxAmount },
@@ -25257,6 +27006,70 @@ function closeNegotiationModal() {
         if (typeof runSecChiefAutomation === 'function') runSecChiefAutomation();
         // Immobilien-Portfolio (NEU): laufende Mieteinnahmen unabhängig von Heim-/Auswärtsspiel.
         if (typeof tickRealEstateIncome === 'function') tickRealEstateIncome();
+        // Sponsoring-Verträge: monatliche Einnahmen
+        if (typeof tickSponsoringIncome === 'function') tickSponsoringIncome();
+        // Fanclub Revenue: monatliche Einnahmen aus Fanclubs
+        if (typeof processFanRevenue === 'function') {
+            let fanRevenue = processFanRevenue();
+            game.money += fanRevenue;
+        }
+        // Fan-Engagement: monatliche Zufriedenheits-Updates
+        if (typeof tickFanEngagement === 'function') tickFanEngagement();
+        // Board Relations: monatliche Zufriedenheits- und Job-Sicherheits-Updates
+        if (typeof tickBoardRelations === 'function') tickBoardRelations();
+        // Youth Academy: monatliche Trainings-Programm-Updates
+        if (typeof tickYouthAcademyPrograms === 'function') tickYouthAcademyPrograms();
+        // Sponsor Management: Zahlungen und Vertragsabläufe
+        if (typeof tickSponsorNegotiations === 'function') tickSponsorNegotiations();
+        let sponsorPayments = (typeof processSponsorPayments === 'function') ? processSponsorPayments() : 0;
+        if (sponsorPayments > 0) game.money += sponsorPayments;
+        if (typeof applySponsorBenefits === 'function') applySponsorBenefits();
+        // Medical Management: Genesung und Spielerverletzungen
+        if (typeof tickMedicalRecovery === 'function') tickMedicalRecovery();
+        if (typeof randomizeMatchInjuries === 'function') randomizeMatchInjuries();
+        // Stadium Management: Projektfortschritt und Wartung
+        if (typeof tickStadiumProjects === 'function') tickStadiumProjects();
+        let stadiumMaintenance = (typeof tickStadiumMaintenance === 'function') ? tickStadiumMaintenance() : 0;
+        if (stadiumMaintenance > 0) game.money -= stadiumMaintenance;
+        // Youth Academy (New Systems): Nachwuchsrekrutierung und Programm-Ticks
+        if (typeof tickYouthRecruitment === 'function') tickYouthRecruitment();
+        if (typeof tickYouthPrograms === 'function') tickYouthPrograms();
+        // Media Management: Kampagnen und zufällige Medienereignisse
+        if (typeof tickMediaCampaigns === 'function') tickMediaCampaigns();
+        if (typeof tickRandomMediaEvent === 'function') tickRandomMediaEvent();
+        // Transfer Market Analysis: Markttrends und Watchlist-Updates
+        if (typeof tickTransferMarketAnalysis === 'function') tickTransferMarketAnalysis();
+        // Contract Management: Vertragsverlängerungen und -ablauf
+        if (typeof tickContractExpirations === 'function') tickContractExpirations();
+        // Opposition Analysis: Gegner-Analyse-Updates
+        if (typeof tickOppositionAnalysisUpdate === 'function') tickOppositionAnalysisUpdate();
+        // Training Schedule: Trainingseffekte und Müdigkeitsabbau
+        if (typeof applyTrainingEffects === 'function') applyTrainingEffects(game.matchday);
+        if (typeof tickTrainingFatigue === 'function') tickTrainingFatigue();
+        // Reserves & Loan: Leihspieler-Management und Rückgabe
+        if (typeof tickLoanedPlayerDevelopment === 'function') tickLoanedPlayerDevelopment();
+        if (typeof tickIncomingLoanManagement === 'function') tickIncomingLoanManagement();
+        // Crisis Management: monatliche Krisen-Events
+        if (typeof tickCrisisEvents === 'function') tickCrisisEvents();
+        if (typeof tickDisciplinaryBans === 'function') tickDisciplinaryBans();
+        // Player Development: Alterung und Entwicklung
+        if (typeof tickPlayerAging === 'function') tickPlayerAging();
+        // Scouting Intelligence: Überwachungsupdates
+        if (typeof tickScoutingUpdates === 'function') tickScoutingUpdates();
+        // Season Objectives & Squad Harmony: Ziele und Mannschaftsharmonie
+        if (typeof tickSeasonObjectives === 'function') tickSeasonObjectives();
+        if (typeof tickSquadHarmony === 'function') tickSquadHarmony();
+        // Contract Renewal & Media Relations: Verträge und Medienbeziehungen
+        if (typeof tickContractRenewal === 'function') tickContractRenewal();
+        if (typeof tickMediaRelations === 'function') tickMediaRelations();
+        // Player Retirement & Tournament Brackets: Spieler-Pensionierung und Turnier-Klammern
+        if (typeof tickPlayerRetirement === 'function') tickPlayerRetirement();
+        if (typeof tickTournamentBrackets === 'function') tickTournamentBrackets();
+        // Opponent Analysis & Match Prediction: Gegner-Analyse und Match-Prognosen
+        if (typeof tickOpponentAnalysis === 'function') tickOpponentAnalysis();
+        if (typeof tickMatchPrediction === 'function') tickMatchPrediction();
+        // Financial tracking for dashboard charts
+        if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();
         if (typeof checkReleaseClauseTriggers === 'function') checkReleaseClauseTriggers();
         if (typeof tickIncomingLoans === 'function') tickIncomingLoans();
@@ -26360,6 +28173,13 @@ function closeNegotiationModal() {
 
         incomingOffers = [];
         if (typeof evaluateFinancialFairplay === 'function') evaluateFinancialFairplay();
+        if (typeof recordSeasonStats === 'function') recordSeasonStats();
+        // Player Career Progression: record seasonal performance for all squad members
+        if (typeof recordSeasonalPerformance === 'function') {
+            squad.forEach(p => recordSeasonalPerformance(p));
+        }
+        // Manager Analytics: record seasonal manager statistics
+        if (typeof recordSeasonalManagerStats === 'function') recordSeasonalManagerStats();
         game.season++;
         checkJubileeCrestUnlock();
         // Leihverein-Beziehungen schwächen sich ab, wenn 2+ Saisons kein neues Geschäft mit
@@ -26561,6 +28381,10 @@ function closeNegotiationModal() {
         if (clubProgEl && typeof renderClubProgression === 'function') {
             clubProgEl.innerHTML = renderClubProgression();
         }
+        if (typeof renderCrisisManagementPanel === 'function') renderCrisisManagementPanel();
+        if (typeof renderDisciplinarySanctionsPanel === 'function') renderDisciplinarySanctionsPanel();
+        if (typeof renderMediaRelationsPanel === 'function') renderMediaRelationsPanel();
+        if (typeof renderPlayerRetirementPanel === 'function') renderPlayerRetirementPanel();
     }
 
     function adminAddClubMoney(amt) { playSound('goal'); game.money += amt; updateUI(); renderAdminView(); showToast(`💵 +${formatVal(amt)} Vereinskonto gutgeschrieben!`, 'success', 4000); }

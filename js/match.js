@@ -304,6 +304,7 @@
             btn.onclick = () => { skipPressAndPlay(); };
             aBox.appendChild(btn);
         });
+        if (typeof renderOppositionAnalysisPanel === 'function') renderOppositionAnalysisPanel();
         showScreen('screen-prematch-press');
     }
 
@@ -1148,8 +1149,9 @@
         // nicht mit dem Kontostand in Einklang bringen.
         let staffWages = (typeof getTotalStaffWages === 'function') ? getTotalStaffWages() : 0;
         let secondTeamStaffWages = (typeof getSecondTeamStaffWages === 'function') ? getSecondTeamStaffWages() : 0;
+        let boardExpenses = (typeof getBoardExpenses === 'function') ? getBoardExpenses() : 0;
 
-        let net = grossIncome - taxAmount - advisorFee - wages - staffWages - secondTeamStaffWages - travelCost;
+        let net = grossIncome - taxAmount - advisorFee - wages - staffWages - secondTeamStaffWages - boardExpenses - travelCost;
         game.money += net;
 
         // Buchungsjournal: hält für JEDEN Spieltag fest, woraus sich Einnahmen und Ausgaben
@@ -1171,6 +1173,7 @@
             { label: '⚽ Spielergehälter', amount: wages },
             { label: '💼 Personalgehälter', amount: staffWages },
             { label: '🅱️ Reserve-Trainerstab', amount: secondTeamStaffWages },
+            { label: '👔 Vorstandsgehälter', amount: boardExpenses },
             { label: '🔧 Stadion- & Campus-Unterhalt', amount: maintenanceCost },
             { label: '🚌 Auswärtsfahrt', amount: travelCost },
             { label: '🧾 Steuern & Abgaben', amount: taxAmount },
@@ -1718,6 +1721,70 @@
         if (typeof runSecChiefAutomation === 'function') runSecChiefAutomation();
         // Immobilien-Portfolio (NEU): laufende Mieteinnahmen unabhängig von Heim-/Auswärtsspiel.
         if (typeof tickRealEstateIncome === 'function') tickRealEstateIncome();
+        // Sponsoring-Verträge: monatliche Einnahmen
+        if (typeof tickSponsoringIncome === 'function') tickSponsoringIncome();
+        // Fanclub Revenue: monatliche Einnahmen aus Fanclubs
+        if (typeof processFanRevenue === 'function') {
+            let fanRevenue = processFanRevenue();
+            game.money += fanRevenue;
+        }
+        // Fan-Engagement: monatliche Zufriedenheits-Updates
+        if (typeof tickFanEngagement === 'function') tickFanEngagement();
+        // Board Relations: monatliche Zufriedenheits- und Job-Sicherheits-Updates
+        if (typeof tickBoardRelations === 'function') tickBoardRelations();
+        // Youth Academy: monatliche Trainings-Programm-Updates
+        if (typeof tickYouthAcademyPrograms === 'function') tickYouthAcademyPrograms();
+        // Sponsor Management: Zahlungen und Vertragsabläufe
+        if (typeof tickSponsorNegotiations === 'function') tickSponsorNegotiations();
+        let sponsorPayments = (typeof processSponsorPayments === 'function') ? processSponsorPayments() : 0;
+        if (sponsorPayments > 0) game.money += sponsorPayments;
+        if (typeof applySponsorBenefits === 'function') applySponsorBenefits();
+        // Medical Management: Genesung und Spielerverletzungen
+        if (typeof tickMedicalRecovery === 'function') tickMedicalRecovery();
+        if (typeof randomizeMatchInjuries === 'function') randomizeMatchInjuries();
+        // Stadium Management: Projektfortschritt und Wartung
+        if (typeof tickStadiumProjects === 'function') tickStadiumProjects();
+        let stadiumMaintenance = (typeof tickStadiumMaintenance === 'function') ? tickStadiumMaintenance() : 0;
+        if (stadiumMaintenance > 0) game.money -= stadiumMaintenance;
+        // Youth Academy (New Systems): Nachwuchsrekrutierung und Programm-Ticks
+        if (typeof tickYouthRecruitment === 'function') tickYouthRecruitment();
+        if (typeof tickYouthPrograms === 'function') tickYouthPrograms();
+        // Media Management: Kampagnen und zufällige Medienereignisse
+        if (typeof tickMediaCampaigns === 'function') tickMediaCampaigns();
+        if (typeof tickRandomMediaEvent === 'function') tickRandomMediaEvent();
+        // Transfer Market Analysis: Markttrends und Watchlist-Updates
+        if (typeof tickTransferMarketAnalysis === 'function') tickTransferMarketAnalysis();
+        // Contract Management: Vertragsverlängerungen und -ablauf
+        if (typeof tickContractExpirations === 'function') tickContractExpirations();
+        // Opposition Analysis: Gegner-Analyse-Updates
+        if (typeof tickOppositionAnalysisUpdate === 'function') tickOppositionAnalysisUpdate();
+        // Training Schedule: Trainingseffekte und Müdigkeitsabbau
+        if (typeof applyTrainingEffects === 'function') applyTrainingEffects(game.matchday);
+        if (typeof tickTrainingFatigue === 'function') tickTrainingFatigue();
+        // Reserves & Loan: Leihspieler-Management und Rückgabe
+        if (typeof tickLoanedPlayerDevelopment === 'function') tickLoanedPlayerDevelopment();
+        if (typeof tickIncomingLoanManagement === 'function') tickIncomingLoanManagement();
+        // Crisis Management: monatliche Krisen-Events
+        if (typeof tickCrisisEvents === 'function') tickCrisisEvents();
+        if (typeof tickDisciplinaryBans === 'function') tickDisciplinaryBans();
+        // Player Development: Alterung und Entwicklung
+        if (typeof tickPlayerAging === 'function') tickPlayerAging();
+        // Scouting Intelligence: Überwachungsupdates
+        if (typeof tickScoutingUpdates === 'function') tickScoutingUpdates();
+        // Season Objectives & Squad Harmony: Ziele und Mannschaftsharmonie
+        if (typeof tickSeasonObjectives === 'function') tickSeasonObjectives();
+        if (typeof tickSquadHarmony === 'function') tickSquadHarmony();
+        // Contract Renewal & Media Relations: Verträge und Medienbeziehungen
+        if (typeof tickContractRenewal === 'function') tickContractRenewal();
+        if (typeof tickMediaRelations === 'function') tickMediaRelations();
+        // Player Retirement & Tournament Brackets: Spieler-Pensionierung und Turnier-Klammern
+        if (typeof tickPlayerRetirement === 'function') tickPlayerRetirement();
+        if (typeof tickTournamentBrackets === 'function') tickTournamentBrackets();
+        // Opponent Analysis & Match Prediction: Gegner-Analyse und Match-Prognosen
+        if (typeof tickOpponentAnalysis === 'function') tickOpponentAnalysis();
+        if (typeof tickMatchPrediction === 'function') tickMatchPrediction();
+        // Financial tracking for dashboard charts
+        if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();
         if (typeof checkReleaseClauseTriggers === 'function') checkReleaseClauseTriggers();
         if (typeof tickIncomingLoans === 'function') tickIncomingLoans();

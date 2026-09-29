@@ -436,8 +436,11 @@
     }
 
     function renderLeagueView() {
+        recordLeagueProgress();
         renderTopScorersBox();
         renderSeasonPointsChart();
+        if (typeof renderLeagueProgressCharts === 'function') renderLeagueProgressCharts();
+        if (typeof renderTournamentBracketsPanel === 'function') renderTournamentBracketsPanel();
 
         // WICHTIG: Zwei getrennte Referenzen! fixturesData verweist per Index auf die
         // ORIGINAL-Reihenfolge in leaguesData[level] - die darf nie sortiert werden,

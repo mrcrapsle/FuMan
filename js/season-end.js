@@ -251,6 +251,13 @@
 
         incomingOffers = [];
         if (typeof evaluateFinancialFairplay === 'function') evaluateFinancialFairplay();
+        if (typeof recordSeasonStats === 'function') recordSeasonStats();
+        // Player Career Progression: record seasonal performance for all squad members
+        if (typeof recordSeasonalPerformance === 'function') {
+            squad.forEach(p => recordSeasonalPerformance(p));
+        }
+        // Manager Analytics: record seasonal manager statistics
+        if (typeof recordSeasonalManagerStats === 'function') recordSeasonalManagerStats();
         game.season++;
         checkJubileeCrestUnlock();
         // Leihverein-Beziehungen schwächen sich ab, wenn 2+ Saisons kein neues Geschäft mit
