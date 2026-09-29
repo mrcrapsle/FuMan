@@ -99,7 +99,10 @@ function initializeSeasonObjectives() {
 
 function generateSeasonObjectives() {
     const objectives = [];
-    const availableTypes = Object.keys(OBJECTIVE_TYPES);
+    // Keine Ziele anbieten, die schon beim Anlegen erfüllt oder unerreichbar sind.
+    const availableTypes = Object.keys(OBJECTIVE_TYPES).filter(type =>
+        !(type === 'PROMOTION' && game.leagueLevel === 0) &&
+        !(type === 'FINANCIAL_TARGET' && game.money >= 1000000));
 
     // Generate 3-5 random objectives per season based on league
     const objectiveCount = 3 + Math.floor(Math.random() * 2);
@@ -126,6 +129,7 @@ function generateSeasonObjectives() {
                 target: 100,
                 reward: reward,
                 startSeason: game.season,
+                startLeagueLevel: game.leagueLevel,
                 completed: false,
                 progress_label: ''
             });
@@ -147,8 +151,8 @@ function updateObjectiveProgress() {
         switch (obj.type) {
             case 'PROMOTION':
                 target = 1; // Check if promoted
-                progress = (game.leagueLevel < 4) ? 100 : 0;
-                obj.progress_label = progress === 100 ? 'Aufgestiegen ✓' : `Liga ${game.leagueLevel} / 3+`;
+                progress = (game.leagueLevel < (obj.startLeagueLevel ?? game.leagueLevel)) ? 100 : 0;
+                obj.progress_label = progress === 100 ? 'Aufgestiegen ✓' : `Liga ${game.leagueLevel}`;
                 break;
 
             case 'CHAMPIONSHIP':

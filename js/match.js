@@ -1724,9 +1724,14 @@
         // Immobilien-Portfolio (NEU): laufende Mieteinnahmen unabhängig von Heim-/Auswärtsspiel.
         if (typeof tickRealEstateIncome === 'function') tickRealEstateIncome();
         // Fanclub Revenue: monatliche Einnahmen aus Fanclubs
-        if (typeof processFanRevenue === 'function') {
+        if (typeof processFanRevenue === 'function' && hatSpieltagsabrechnung()) {
             let fanRevenue = processFanRevenue();
-            game.money += fanRevenue;
+            if (fanRevenue > 0) {
+                setzeBuchungskontext(SPIELTAG_KONTEXT);
+                game.money += fanRevenue;
+                loescheBuchungskontext();
+                bucheInSpieltagsjournal('📣 Fanclub-Einnahmen', fanRevenue, 'einnahmen');
+            }
         }
         // Stadium Management: Projektfortschritt und Wartung
         if (typeof tickStadiumProjects === 'function') tickStadiumProjects();
@@ -1734,6 +1739,7 @@
         if (stadiumMaintenance > 0) game.money -= stadiumMaintenance;
         // Monatliche Ticks (alle 4 Spieltage ≈ 1 Monat) der Feature-Systeme.
         if (game.matchday % 4 === 0) {
+            setzeBuchungskontext('📅 Monatliche Vereinsposten');
             // Sponsoring-Verträge: monatliche Einnahmen
             if (typeof tickSponsoringIncome === 'function') tickSponsoringIncome();
             // Fan-Engagement: monatliche Zufriedenheits-Updates
@@ -1797,6 +1803,7 @@
             if (typeof tickFanEvents === 'function') tickFanEvents();
             // Financial tracking for dashboard charts
             if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
+            loescheBuchungskontext();
         }
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();
         if (typeof checkReleaseClauseTriggers === 'function') checkReleaseClauseTriggers();
