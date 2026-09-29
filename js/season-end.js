@@ -256,6 +256,8 @@
         if (typeof recordSeasonalPerformance === 'function') {
             squad.forEach(p => recordSeasonalPerformance(p));
         }
+        // Manager Analytics: record seasonal manager statistics
+        if (typeof recordSeasonalManagerStats === 'function') recordSeasonalManagerStats();
         game.season++;
         checkJubileeCrestUnlock();
         // Leihverein-Beziehungen schwächen sich ab, wenn 2+ Saisons kein neues Geschäft mit

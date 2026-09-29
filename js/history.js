@@ -110,6 +110,7 @@
         if (typeof renderPlayerOfMonthBox === 'function') renderPlayerOfMonthBox();
         if (typeof renderPlayerOfSeasonBox === 'function') renderPlayerOfSeasonBox();
         if (typeof renderHallOfFamePanel === 'function') renderHallOfFamePanel();
+        if (typeof renderManagerAnalyticsPanel === 'function') renderManagerAnalyticsPanel();
         let list = document.getElementById('trophies-list');
         list.innerHTML = '';
         renderRivalryHistoryBook();

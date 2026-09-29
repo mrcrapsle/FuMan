@@ -3367,6 +3367,10 @@
                     <div id="hall-of-fame-box"></div>
                 </div>
                 <div class="panel">
+                    <div class="panel-header" style="color:var(--purple);">👔 MANAGER-STATISTIK</div>
+                    <div id="manager-analytics-box"></div>
+                </div>
+                <div class="panel">
                     <div class="panel-header" style="color:var(--teal);">📖 RIVALEN-GESCHICHTSBUCH</div>
                     <div id="rivalry-history-book"></div>
                 </div>
@@ -23240,6 +23244,7 @@ function closeNegotiationModal() {
         if (typeof renderPlayerOfMonthBox === 'function') renderPlayerOfMonthBox();
         if (typeof renderPlayerOfSeasonBox === 'function') renderPlayerOfSeasonBox();
         if (typeof renderHallOfFamePanel === 'function') renderHallOfFamePanel();
+        if (typeof renderManagerAnalyticsPanel === 'function') renderManagerAnalyticsPanel();
         let list = document.getElementById('trophies-list');
         list.innerHTML = '';
         renderRivalryHistoryBook();
@@ -23327,6 +23332,7 @@ function closeNegotiationModal() {
 </script>
 <script src="js/hall-of-fame.js?v=2.1"></script>
 <script src="js/player-career-progression.js?v=2.1"></script>
+<script src="js/manager-analytics.js?v=2.1"></script>
 <script>
 
     // ---------- WETTER ---------- (aus match.js ausgelagert - reine Datei-Organisation,
@@ -26232,6 +26238,8 @@ function closeNegotiationModal() {
         if (typeof recordSeasonalPerformance === 'function') {
             squad.forEach(p => recordSeasonalPerformance(p));
         }
+        // Manager Analytics: record seasonal manager statistics
+        if (typeof recordSeasonalManagerStats === 'function') recordSeasonalManagerStats();
         game.season++;
         checkJubileeCrestUnlock();
         // Leihverein-Beziehungen schwächen sich ab, wenn 2+ Saisons kein neues Geschäft mit
