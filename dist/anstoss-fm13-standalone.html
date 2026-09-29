@@ -3256,6 +3256,9 @@
                     <div class="panel-header" style="color:var(--primary);">🤝 VERHANDLUNGEN</div>
                     <div id="negotiations-content"></div>
                 </div>
+                <div class="panel" id="contract-management-box">
+                    <div class="panel-header">📋 MODERNE VERTRAGSMANAGEMENT</div>
+                </div>
             </div>
             <div id="screen-squad-planning" style="display:none;">
                 <div class="panel">
@@ -3683,6 +3686,9 @@
             <!-- 28. PRE-MATCH & LIVESPIEL -->
             <div id="screen-prematch-press" style="display:none;">
                 <div id="prematch-analysis-box" style="margin-bottom:10px;"></div>
+                <div class="panel" id="opposition-analysis-box">
+                    <div class="panel-header">🎯 GEGNERANALYSE</div>
+                </div>
                 <div class="panel">
                     <div class="panel-header">🎙️ PRE-MATCH PRESSEKONFERENZ</div>
                     <div id="press-question-container" class="box"></div>
@@ -22344,6 +22350,7 @@ function renderYouthDevelopmentChart() {
         });
 
         if (typeof renderNegotiationPanel === 'function') renderNegotiationPanel();
+        if (typeof renderContractManagementPanel === 'function') renderContractManagementPanel();
     }
 
     // Verhandlungs-Zähigkeit auch bei bestehenden Verträgen (NEU): analog zur Logik bei
@@ -24687,6 +24694,8 @@ function renderStadiumManagementPanel() {
 <script src="js/youth-academy.js?v=2.1"></script>
 <script src="js/media-management.js?v=2.1"></script>
 <script src="js/transfer-market-analysis.js?v=2.1"></script>
+<script src="js/contract-management.js?v=2.1"></script>
+<script src="js/opposition-analysis.js?v=2.1"></script>
 <script>
 
     // Wandelt einen rohen Trophäen-Eintrag in Icon + Kategorie um, für eine chronologische
@@ -25262,6 +25271,7 @@ function renderStadiumManagementPanel() {
             btn.onclick = () => { skipPressAndPlay(); };
             aBox.appendChild(btn);
         });
+        if (typeof renderOppositionAnalysisPanel === 'function') renderOppositionAnalysisPanel();
         showScreen('screen-prematch-press');
     }
 
@@ -26711,6 +26721,10 @@ function renderStadiumManagementPanel() {
         if (typeof tickRandomMediaEvent === 'function') tickRandomMediaEvent();
         // Transfer Market Analysis: Markttrends und Watchlist-Updates
         if (typeof tickTransferMarketAnalysis === 'function') tickTransferMarketAnalysis();
+        // Contract Management: Vertragsverlängerungen und -ablauf
+        if (typeof tickContractExpirations === 'function') tickContractExpirations();
+        // Opposition Analysis: Gegner-Analyse-Updates
+        if (typeof tickOppositionAnalysisUpdate === 'function') tickOppositionAnalysisUpdate();
         // Financial tracking for dashboard charts
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();

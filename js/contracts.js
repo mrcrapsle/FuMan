@@ -67,6 +67,7 @@
         });
 
         if (typeof renderNegotiationPanel === 'function') renderNegotiationPanel();
+        if (typeof renderContractManagementPanel === 'function') renderContractManagementPanel();
     }
 
     // Verhandlungs-Zähigkeit auch bei bestehenden Verträgen (NEU): analog zur Logik bei

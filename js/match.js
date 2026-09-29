@@ -304,6 +304,7 @@
             btn.onclick = () => { skipPressAndPlay(); };
             aBox.appendChild(btn);
         });
+        if (typeof renderOppositionAnalysisPanel === 'function') renderOppositionAnalysisPanel();
         showScreen('screen-prematch-press');
     }
 
@@ -1753,6 +1754,10 @@
         if (typeof tickRandomMediaEvent === 'function') tickRandomMediaEvent();
         // Transfer Market Analysis: Markttrends und Watchlist-Updates
         if (typeof tickTransferMarketAnalysis === 'function') tickTransferMarketAnalysis();
+        // Contract Management: Vertragsverlängerungen und -ablauf
+        if (typeof tickContractExpirations === 'function') tickContractExpirations();
+        // Opposition Analysis: Gegner-Analyse-Updates
+        if (typeof tickOppositionAnalysisUpdate === 'function') tickOppositionAnalysisUpdate();
         // Financial tracking for dashboard charts
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();
