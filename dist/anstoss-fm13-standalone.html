@@ -3961,6 +3961,10 @@
                     <div class="panel-header">👋 SPIELER-PENSIONIERUNG & LEGENDEN</div>
                     <div id="player-retirement-box"></div>
                 </div>
+                <div class="panel">
+                    <div class="panel-header">🏥 VERLETZUNGS-MANAGEMENT</div>
+                    <div id="injury-management-box"></div>
+                </div>
             </div>
 
             <!-- 28. PRE-MATCH & LIVESPIEL -->
@@ -25014,6 +25018,8 @@ function renderStadiumManagementPanel() {
 <script src="js/tournament-brackets.js?v=2.1"></script>
 <script src="js/opponent-analysis.js?v=2.1"></script>
 <script src="js/match-prediction.js?v=2.1"></script>
+<script src="js/injury-management.js?v=2.1"></script>
+<script src="js/match-injuries.js?v=2.1"></script>
 <script>
 
     // Wandelt einen rohen Trophäen-Eintrag in Icon + Kategorie um, für eine chronologische
@@ -27068,6 +27074,9 @@ function renderStadiumManagementPanel() {
         // Opponent Analysis & Match Prediction: Gegner-Analyse und Match-Prognosen
         if (typeof tickOpponentAnalysis === 'function') tickOpponentAnalysis();
         if (typeof tickMatchPrediction === 'function') tickMatchPrediction();
+        // Injury Management: Verletzungs-Management und Genesung
+        if (typeof tickInjuryManagement === 'function') tickInjuryManagement();
+        if (typeof tickMatchInjuries === 'function') tickMatchInjuries();
         // Financial tracking for dashboard charts
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();
@@ -28385,6 +28394,7 @@ function renderStadiumManagementPanel() {
         if (typeof renderDisciplinarySanctionsPanel === 'function') renderDisciplinarySanctionsPanel();
         if (typeof renderMediaRelationsPanel === 'function') renderMediaRelationsPanel();
         if (typeof renderPlayerRetirementPanel === 'function') renderPlayerRetirementPanel();
+        if (typeof renderInjuryManagementPanel === 'function') renderInjuryManagementPanel();
     }
 
     function adminAddClubMoney(amt) { playSound('goal'); game.money += amt; updateUI(); renderAdminView(); showToast(`💵 +${formatVal(amt)} Vereinskonto gutgeschrieben!`, 'success', 4000); }

@@ -1783,6 +1783,9 @@
         // Opponent Analysis & Match Prediction: Gegner-Analyse und Match-Prognosen
         if (typeof tickOpponentAnalysis === 'function') tickOpponentAnalysis();
         if (typeof tickMatchPrediction === 'function') tickMatchPrediction();
+        // Injury Management: Verletzungs-Management und Genesung
+        if (typeof tickInjuryManagement === 'function') tickInjuryManagement();
+        if (typeof tickMatchInjuries === 'function') tickMatchInjuries();
         // Financial tracking for dashboard charts
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();

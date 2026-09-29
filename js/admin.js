@@ -92,6 +92,7 @@
         if (typeof renderDisciplinarySanctionsPanel === 'function') renderDisciplinarySanctionsPanel();
         if (typeof renderMediaRelationsPanel === 'function') renderMediaRelationsPanel();
         if (typeof renderPlayerRetirementPanel === 'function') renderPlayerRetirementPanel();
+        if (typeof renderInjuryManagementPanel === 'function') renderInjuryManagementPanel();
     }
 
     function adminAddClubMoney(amt) { playSound('goal'); game.money += amt; updateUI(); renderAdminView(); showToast(`💵 +${formatVal(amt)} Vereinskonto gutgeschrieben!`, 'success', 4000); }
