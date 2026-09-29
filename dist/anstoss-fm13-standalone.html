@@ -2635,6 +2635,30 @@
                     <div class="panel-header" style="color:var(--gold);">👔 VORSTANDSMITGLIEDER</div>
                     <div id="board-members-panel"></div>
                 </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:#FF9800;">💼 SPONSORING & PARTNERSCHAFTEN</div>
+                    <div id="sponsor-management-panel"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:#E91E63;">🏥 MEDIZINISCHE ABTEILUNG</div>
+                    <div id="medical-management-panel"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:#2196F3;">🏟️ STADION-MANAGEMENT</div>
+                    <div id="stadium-management-panel"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:#4CAF50;">🌟 NACHWUCHS-AKADEMIE</div>
+                    <div id="youth-academy-panel"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:#9C27B0;">📱 MEDIEN & PR</div>
+                    <div id="media-management-panel"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:#FF5722;">📊 TRANSFER-MARKT-ANALYSE</div>
+                    <div id="transfer-market-panel"></div>
+                </div>
                 <div id="injury-crisis-warning" style="display:none;"></div>
                 <div class="panel">
                     <div class="panel-header">KADERLISTE & ATTRIBUTE</div>
@@ -6377,6 +6401,12 @@
         if (typeof renderTacticSystemPanel === 'function') renderTacticSystemPanel();
         if (typeof renderInternationalTournamentsPanel === 'function') renderInternationalTournamentsPanel();
         if (typeof renderBoardMembersPanel === 'function') renderBoardMembersPanel();
+        if (typeof renderSponsorManagementPanel === 'function') renderSponsorManagementPanel();
+        if (typeof renderMedicalManagementPanel === 'function') renderMedicalManagementPanel();
+        if (typeof renderStadiumManagementPanel === 'function') renderStadiumManagementPanel();
+        if (typeof renderYouthAcademyPanel === 'function') renderYouthAcademyPanel();
+        if (typeof renderMediaManagementPanel === 'function') renderMediaManagementPanel();
+        if (typeof renderTransferMarketAnalysisPanel === 'function') renderTransferMarketAnalysisPanel();
         let container = document.getElementById('bench-list');
         if (!container) return;
         container.innerHTML = '';
@@ -19716,271 +19746,276 @@ function renderMediaJournalistPanel() {
 
 </script>
 <script>
-// ==========================================
-// STADION-MANAGEMENT ERWEITERTE FUNKTIONEN
-// ==========================================
 /* eslint-disable no-undef */
 
-function getStadiumRevenuePotential() {
-    const baseCapacity = Object.values(stadium.blocks || {})
-        .reduce((sum, b) => sum + (b.cap || 0), 0);
+const STADIUM_UPGRADES = {
+  seatingExpansion: {
+    name: 'Tribünenausbau',
+    cost: 500000,
+    capacityIncrease: 5000,
+    timeToComplete: 12,
+    attendanceBonus: 0.1
+  },
+  medicalFacilities: {
+    name: 'Medizinische Infrastruktur',
+    cost: 300000,
+    capacityIncrease: 0,
+    timeToComplete: 8,
+    recoveryBonus: 0.15
+  },
+  trainingFacilities: {
+    name: 'Trainingsanlage',
+    cost: 400000,
+    capacityIncrease: 0,
+    timeToComplete: 10,
+    trainingBonus: 0.12
+  },
+  cateringServices: {
+    name: 'Catering & Gastronomie',
+    cost: 200000,
+    capacityIncrease: 0,
+    timeToComplete: 6,
+    fanSatisfaction: 0.1
+  },
+  vipLounge: {
+    name: 'VIP-Loge',
+    cost: 250000,
+    capacityIncrease: 500,
+    timeToComplete: 8,
+    revenueMultiplier: 1.2
+  },
+  lightingSystem: {
+    name: 'Beleuchtungssystem',
+    cost: 150000,
+    capacityIncrease: 0,
+    timeToComplete: 4,
+    qualityBonus: 0.08
+  }
+};
 
-    const ticketRevenue = baseCapacity * 30;
-    const foodRevenue = Math.round(baseCapacity * 0.4 * 15);
-    const merchRevenue = Math.round(baseCapacity * 0.25 * 20);
-    const vipRevenue = Math.round((stadium.blocks?.vipLogen?.cap || 0) * 100);
-    const namingRights = stadium.namingRights ? 50000 : 0;
+const stadiumState = {
+  capacity: 25000,
+  condition: 100,
+  upgrades: [],
+  projectsUnderway: [],
+  maintenanceCost: 5000
+};
 
-    const total = ticketRevenue + foodRevenue + merchRevenue + vipRevenue + namingRights;
-
-    return {
-        baseCapacity,
-        ticketRevenue,
-        foodRevenue,
-        merchRevenue,
-        vipRevenue,
-        namingRights,
-        total
+function initializeStadium() {
+  if (!game.stadium) {
+    game.stadium = {
+      capacity: 25000,
+      condition: 100,
+      upgrades: [],
+      projectsUnderway: [],
+      totalInvestment: 0,
+      lastExpanded: 0
     };
+  }
 }
 
-function optimizeStadiumBlock(blockName, strategy) {
-    const block = stadium.blocks?.[blockName];
-    if (!block) return { success: false, message: 'Block nicht gefunden' };
+function getStadiumCapacity() {
+  if (!game.stadium) return 25000;
+  return game.stadium.capacity;
+}
 
-    const strategyCosts = {
-        'revenue': { investment: 150000, foodBonus: 2, merchBonus: 2 },
-        'comfort': { investment: 100000, toiletBonus: 1, foodBonus: 1 },
-        'vip': { investment: 200000, vipBonus: 1, merchBonus: 1 },
-        'capacity': { investment: 250000, capIncrease: 1500 }
-    };
+function getStadiumCondition() {
+  if (!game.stadium) return 100;
+  return Math.max(0, Math.min(100, game.stadium.condition));
+}
 
-    const strat = strategyCosts[strategy];
-    if (!strat) return { success: false, message: 'Strategie unbekannt' };
-
-    if (game.money < strat.investment) {
-        return { success: false, message: 'Nicht genug Geld' };
+function startStadiumUpgrade(upgradeType) {
+  if (!game.stadium) initializeStadium();
+  
+  const config = STADIUM_UPGRADES[upgradeType];
+  if (!config) return false;
+  
+  if (game.money < config.cost) {
+    if (game.inbox) {
+      addInboxMessage('❌ Nicht genügend Mittel', `Upgrade kostet €${config.cost.toLocaleString()}`);
     }
-
-    game.money -= strat.investment;
-
-    if (strat.foodBonus) block.foodLvl = Math.min(5, (block.foodLvl || 0) + strat.foodBonus);
-    if (strat.merchBonus) block.merchLvl = Math.min(5, (block.merchLvl || 0) + strat.merchBonus);
-    if (strat.toiletBonus) block.toiletLvl = Math.min(5, (block.toiletLvl || 0) + strat.toiletBonus);
-    if (strat.capIncrease) block.cap = (block.cap || 10000) + strat.capIncrease;
-
-    if (!game.stadiumOptimizationHistory) game.stadiumOptimizationHistory = [];
-    game.stadiumOptimizationHistory.push({
-        blockName: blockName,
-        strategy: strategy,
-        matchday: game.matchday,
-        investment: strat.investment
-    });
-
-    updateUI();
-    return {
-        success: true,
-        message: `✓ Block "${blockName}" optimiert (${strategy})`
-    };
+    return false;
+  }
+  
+  game.money -= config.cost;
+  
+  const project = {
+    id: (game.stadium.projectsUnderway || []).length,
+    type: upgradeType,
+    name: config.name,
+    startMatchday: game.matchday,
+    completionMatchday: game.matchday + config.timeToComplete,
+    cost: config.cost,
+    progress: 0,
+    status: 'active'
+  };
+  
+  if (!game.stadium.projectsUnderway) game.stadium.projectsUnderway = [];
+  game.stadium.projectsUnderway.push(project);
+  
+  if (game.inbox) {
+    addInboxMessage(`🏗️ Baubeginn: ${config.name}`, `Fertigstellung in ${config.timeToComplete} Spieltagen`);
+  }
+  
+  return true;
 }
 
-function sellNamingRightsToCompany(companyName) {
-    if (stadium.namingRights) {
-        return { success: false, message: 'Stadion hat bereits Namensrechte' };
+function tickStadiumProjects() {
+  if (!game.stadium || !game.stadium.projectsUnderway) return;
+  
+  game.stadium.projectsUnderway = game.stadium.projectsUnderway.filter((project) => {
+    const progress = ((game.matchday - project.startMatchday) / (project.completionMatchday - project.startMatchday)) * 100;
+    project.progress = Math.min(100, progress);
+    
+    if (game.matchday >= project.completionMatchday) {
+      completeStadiumUpgrade(project);
+      return false;
     }
-
-    const revenue = 500000;
-    game.money += revenue;
-    stadium.namingRights = {
-        company: companyName,
-        revenue: revenue,
-        startedMatchday: game.matchday,
-        durationMatchdays: 100
-    };
-
-    if (!game.namingRightsHistory) game.namingRightsHistory = [];
-    game.namingRightsHistory.push({
-        company: companyName,
-        revenue: revenue,
-        matchday: game.matchday
-    });
-
-    updateUI();
-    return {
-        success: true,
-        message: `✓ Namensrechte an ${companyName} verkauft! +${formatVal(revenue)}`
-    };
+    
+    return true;
+  });
 }
 
-function calculateAttendanceChance(expectedAttendance, matchImportance) {
-    const baseAttendance = Math.round(expectedAttendance || 5000);
-    const stadiumFactor = getStadiumRevenuePotential().baseCapacity / 50000;
-    const boardSat = (game.boardSat || 70) / 100;
-    const fanBase = (game.fans || 50) / 100;
-    const importanceFactor = matchImportance || 1.0;
-
-    const adjusted = Math.round(baseAttendance * stadiumFactor * boardSat * fanBase * importanceFactor);
-    const realistic = Math.min(getStadiumRevenuePotential().baseCapacity, Math.max(1000, adjusted));
-
-    return {
-        base: baseAttendance,
-        adjusted: realistic,
-        factors: {
-            stadium: stadiumFactor,
-            boardSatisfaction: boardSat,
-            fanBase: fanBase,
-            importance: importanceFactor
-        }
-    };
+function completeStadiumUpgrade(project) {
+  const config = STADIUM_UPGRADES[project.type];
+  if (!config) return;
+  
+  if (config.capacityIncrease > 0) {
+    game.stadium.capacity += config.capacityIncrease;
+    game.stadium.lastExpanded = game.matchday;
+  }
+  
+  if (!game.stadium.upgrades) game.stadium.upgrades = [];
+  game.stadium.upgrades.push({
+    type: project.type,
+    name: config.name,
+    completedMatchday: game.matchday,
+    season: game.season,
+    benefits: config
+  });
+  
+  if (game.inbox) {
+    addInboxMessage(`✅ Ausbau abgeschlossen`, config.name);
+  }
 }
 
-function getStadiumComfortRating() {
-    const blocks = stadium.blocks || {};
-    const blockArray = Object.values(blocks);
-
-    if (blockArray.length === 0) return 50;
-
-    const avgToilets = blockArray.reduce((sum, b) => sum + (b.toiletLvl || 0), 0) / blockArray.length;
-    const avgFood = blockArray.reduce((sum, b) => sum + (b.foodLvl || 0), 0) / blockArray.length;
-    const avgMerch = blockArray.reduce((sum, b) => sum + (b.merchLvl || 0), 0) / blockArray.length;
-
-    const lighting = stadium.flutlicht ? 10 : 0;
-    const heating = stadium.rasenheizung ? 5 : 0;
-    const roof = stadium.dach ? 10 : 0;
-    const videoWalls = stadium.videowalls ? 8 : 0;
-
-    const infrastructure = Math.round((avgToilets + avgFood + avgMerch) * 10);
-    const amenities = lighting + heating + roof + videoWalls;
-
-    return Math.min(100, infrastructure + amenities);
+function tickStadiumMaintenance() {
+  if (!game.stadium) return 0;
+  
+  const maintenanceCost = Math.round(5000 * (1 - getStadiumCondition() / 100));
+  
+  if (game.money >= maintenanceCost) {
+    game.money -= maintenanceCost;
+    game.stadium.condition = Math.min(100, game.stadium.condition + 2);
+  } else {
+    game.stadium.condition = Math.max(0, game.stadium.condition - 1);
+  }
+  
+  return maintenanceCost;
 }
 
-function getFanComfortEffect() {
-    const rating = getStadiumComfortRating();
-    if (rating >= 80) return 1.15;
-    if (rating >= 60) return 1.08;
-    if (rating >= 40) return 1.0;
-    if (rating >= 20) return 0.95;
-    return 0.85;
+function repairStadium(percentage) {
+  if (!game.stadium) return false;
+  
+  const repairCost = Math.round(200000 * (percentage / 100));
+  if (game.money < repairCost) return false;
+  
+  game.money -= repairCost;
+  game.stadium.condition = Math.min(100, game.stadium.condition + percentage);
+  
+  if (game.inbox) {
+    addInboxMessage(`🔧 Reparatur`, `Stadionzustand: ${Math.round(game.stadium.condition)}%`);
+  }
+  
+  return true;
 }
 
-function scheduleStadiumEvent() {
-    if (!stadium.events) stadium.events = [];
-
-    const eventTypes = [
-        { name: 'Stadiontag', attendance: 5000, revenue: 75000 },
-        { name: 'Fanfest', attendance: 8000, revenue: 120000 },
-        { name: 'Sponsoring-Event', attendance: 2000, revenue: 80000 },
-        { name: 'Nachwuchs-Festival', attendance: 6000, revenue: 45000 }
-    ];
-
-    const event = eventTypes[Math.floor(Math.random() * eventTypes.length)];
-    event.scheduledMatchday = game.matchday + 2;
-    event.id = 'se_' + Math.random().toString(36).substr(2, 9);
-
-    stadium.events.push(event);
-    return { success: true, message: `✓ ${event.name} angesetzt!` };
+function getAttendanceFactor() {
+  if (!game.stadium) return 1.0;
+  
+  let factor = 1.0;
+  const capacity = getStadiumCapacity();
+  const condition = getStadiumCondition();
+  
+  factor *= (0.5 + (condition / 100) * 0.5);
+  
+  if (game.stadium.upgrades && game.stadium.upgrades.length > 0) {
+    const attendanceUpgrades = game.stadium.upgrades.filter(u => u.benefits.attendanceBonus);
+    factor *= (1 + attendanceUpgrades.length * 0.05);
+  }
+  
+  return factor;
 }
 
-function runStadiumEvent(eventId) {
-    const event = (stadium.events || []).find(e => e.id === eventId);
-    if (!event) return { success: false, message: 'Event nicht gefunden' };
-
-    const attendance = Math.round(event.attendance * (0.7 + Math.random() * 0.6));
-    const actualRevenue = Math.round(event.revenue * (attendance / event.attendance));
-
-    game.money += actualRevenue;
-    event.completed = true;
-    event.actualAttendance = attendance;
-    event.actualRevenue = actualRevenue;
-
-    updateUI();
-    return {
-        success: true,
-        message: `✓ ${event.name}: ${attendance} Besucher, +${formatVal(actualRevenue)}`
-    };
+function getStadiumRevenueBenefit() {
+  if (!game.stadium || !game.stadium.upgrades) return 1.0;
+  
+  let multiplier = 1.0;
+  game.stadium.upgrades.forEach((upgrade) => {
+    if (upgrade.benefits.revenueMultiplier) {
+      multiplier *= upgrade.benefits.revenueMultiplier;
+    }
+  });
+  
+  return multiplier;
 }
 
 function renderStadiumManagementPanel() {
-    const box = document.getElementById('stadium-management-panel');
-    if (!box) return;
-
-    const revenue = getStadiumRevenuePotential();
-    const comfort = getStadiumComfortRating();
-    const comfortEffect = getFanComfortEffect();
-
-    let html = '<div style="margin-bottom:12px;">';
-
-    html += `<div style="background:rgba(76,175,80,0.1); padding:6px; border-radius:4px; margin-bottom:8px; border-left:3px solid var(--primary);">
-        <div style="font-size:9px; font-weight:bold; margin-bottom:4px;">🏆 STADION-POTENZIAL</div>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px; font-size:8px;">
-            <div>📊 Kapazität: <strong>${revenue.baseCapacity.toLocaleString()}</strong></div>
-            <div>💰 Ticketrevenue: <strong>${formatVal(revenue.ticketRevenue)}</strong></div>
-            <div>🍔 Food/Drinks: <strong>${formatVal(revenue.foodRevenue)}</strong></div>
-            <div>🎁 Merchandise: <strong>${formatVal(revenue.merchRevenue)}</strong></div>
-            <div>💎 VIP-Zones: <strong>${formatVal(revenue.vipRevenue)}</strong></div>
-            <div>📍 Namensrechte: <strong>${revenue.namingRights > 0 ? formatVal(revenue.namingRights) : 'Keine'}</strong></div>
-        </div>
-        <div style="font-size:9px; font-weight:bold; margin-top:4px; color:var(--accent);">💵 Gesamtrevenue/Spiel: ${formatVal(revenue.total)}</div>
-    </div>`;
-
-    html += `<div style="background:rgba(100,150,255,0.1); padding:6px; border-radius:4px; margin-bottom:8px;">
-        <div style="font-size:9px; font-weight:bold; margin-bottom:4px;">⭐ KOMFORT-RATING: ${comfort}/100</div>
-        <div style="font-size:8px; color:var(--text-muted); margin-bottom:4px;">Fan-Zufriedenheitsmultiplikator: ×${comfortEffect.toFixed(2)}</div>
-        <div style="width:100%; background:rgba(0,0,0,0.3); height:6px; border-radius:3px; overflow:hidden;">
-            <div style="width:${comfort}%; height:100%; background:var(--primary); transition:width 0.3s;"></div>
-        </div>
-    </div>`;
-
-    if (stadium.namingRights) {
-        html += `<div style="background:rgba(212,169,74,0.1); padding:6px; border-radius:4px; margin-bottom:8px; border-left:3px solid var(--gold);">
-            <div style="font-size:9px; font-weight:bold;">📍 ${stadium.namingRights.company}-Stadion</div>
-            <div style="font-size:8px; color:var(--text-muted);">Laufzeit: ${stadium.namingRights.durationMatchdays - (game.matchday - stadium.namingRights.startedMatchday)} SpT</div>
-        </div>`;
-    } else {
-        html += '<button onclick="sellNamingRightsToCompany(\'Premium-Bank\')" class="btn-gold" style="width:100%; font-size:9px; padding:6px; margin-bottom:8px;">📍 Namensrechte verkaufen (+500.000 €)</button>';
+  const panel = document.getElementById('stadium-management-panel');
+  if (!panel) return;
+  
+  initializeStadium();
+  
+  const capacity = getStadiumCapacity();
+  const condition = getStadiumCondition();
+  const conditionColor = condition > 70 ? '#4CAF50' : condition > 40 ? '#FFC107' : '#FF5252';
+  const ongoingProjects = (game.stadium.projectsUnderway || []).filter(p => p.status === 'active').length;
+  
+  let html = '<div class="panel-content">';
+  html += `<h3>Stadion-Management</h3>`;
+  
+  html += '<div class="stadium-stats">';
+  html += `<div class="stat-box">Kapazität: ${capacity.toLocaleString()} Plätze</div>`;
+  html += `<div class="stat-box" style="border-left:4px solid ${conditionColor}">Zustand: ${Math.round(condition)}%</div>`;
+  html += `<div class="stat-box">Laufende Projekte: ${ongoingProjects}</div>`;
+  html += `<div class="stat-box">Einnahmen-Multiplikator: ${getStadiumRevenueBenefit().toFixed(2)}x</div>`;
+  html += '</div>';
+  
+  html += '<h4>Verfügbare Upgrades:</h4>';
+  Object.entries(STADIUM_UPGRADES).forEach(([key, config]) => {
+    const isUpgraded = game.stadium.upgrades && game.stadium.upgrades.some(u => u.type === key);
+    const hasProject = game.stadium.projectsUnderway && game.stadium.projectsUnderway.some(p => p.type === key && p.status === 'active');
+    
+    html += `<div class="upgrade-item" style="opacity:${isUpgraded ? 0.6 : 1}">`;
+    html += `<strong>${config.name}</strong>`;
+    html += `<div class="upgrade-info">Kosten: €${config.cost.toLocaleString()} | Dauer: ${config.timeToComplete} Spieltage</div>`;
+    if (config.capacityIncrease > 0) {
+      html += `<div class="upgrade-info">Kapazität: +${config.capacityIncrease} Plätze</div>`;
     }
-
-    html += '<div style="font-size:10px; font-weight:bold; margin-bottom:6px;">🔧 Block-Optimierung:</div>';
-    const strategies = ['revenue', 'comfort', 'vip', 'capacity'];
-    strategies.forEach(strat => {
-        const costs = { revenue: 150000, comfort: 100000, vip: 200000, capacity: 250000 };
-        html += `<button onclick="optimizeStadiumBlock('haupttribune', '${strat}')" class="btn-secondary" style="width:100%; font-size:8px; padding:4px; margin-bottom:2px;">
-            ${strat === 'revenue' ? '💰' : strat === 'comfort' ? '⭐' : strat === 'vip' ? '💎' : '📈'} ${strat} [${formatVal(costs[strat])}]
-        </button>`;
-    });
-
+    if (isUpgraded) {
+      html += `<div style="color:#4CAF50; font-size:10px;">✅ Installiert</div>`;
+    } else if (hasProject) {
+      html += `<div style="color:#FFC107; font-size:10px;">🔨 In Arbeit</div>`;
+    } else {
+      html += `<button onclick="startStadiumUpgrade('${key}')" style="background:#2196F3; color:white; border:none; padding:4px 8px; border-radius:3px; font-size:10px;">Starten</button>`;
+    }
     html += '</div>';
-    box.innerHTML = html;
-}
-
-function renderStadiumEventsPanel() {
-    const box = document.getElementById('stadium-events-panel');
-    if (!box) return;
-
-    const events = stadium.events || [];
-    const pendingEvents = events.filter(e => !e.completed);
-
-    let html = '<div style="font-size:10px; font-weight:bold; margin-bottom:6px;">📅 STADIUM-EVENTS</div>';
-
-    if (pendingEvents.length === 0) {
-        html += '<div style="font-size:9px; color:var(--text-muted); margin-bottom:8px;">Keine anstehenden Events</div>';
-        html += '<button onclick="scheduleStadiumEvent()" class="btn-action" style="width:100%; font-size:9px; padding:6px;">+ Neues Event ansetzen</button>';
-    } else {
-        html += `<div style="font-size:9px; color:var(--accent); margin-bottom:6px;">${pendingEvents.length} Events ausstehend</div>`;
-        pendingEvents.slice(0, 3).forEach(e => {
-            html += `<div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:4px; font-size:9px;">
-                <div><strong>${e.name}</strong></div>
-                <div style="color:var(--text-muted); font-size:8px;">MD ${e.scheduledMatchday} · ${e.attendance} Besucher · ${formatVal(e.revenue)}</div>
-                <button onclick="runStadiumEvent('${e.id}')" class="btn-primary" style="font-size:8px; padding:2px 4px; margin-top:2px;">Durchführen</button>
-            </div>`;
-        });
-        if (pendingEvents.length > 3) {
-            html += `<div style="font-size:8px; color:var(--text-muted);">+${pendingEvents.length - 3} weitere Events</div>`;
-        }
-    }
-
-    box.innerHTML = html;
+  });
+  
+  if (game.stadium.projectsUnderway && game.stadium.projectsUnderway.length > 0) {
+    html += '<h4>Laufende Arbeiten:</h4>';
+    game.stadium.projectsUnderway.forEach((project) => {
+      html += `<div class="project-item">`;
+      html += `<strong>${project.name}</strong>`;
+      html += `<div style="background:#f0f0f0; height:8px; border-radius:4px; margin:4px 0; overflow:hidden;">`;
+      html += `<div style="background:#2196F3; height:100%; width:${project.progress}%"></div>`;
+      html += `</div>`;
+      html += '</div>';
+    });
+  }
+  
+  html += '</div>';
+  panel.innerHTML = html;
 }
 
 </script>
@@ -24373,6 +24408,285 @@ function renderBoardMembersPanel() {
 }
 
 </script>
+<script src="js/sponsor-management.js?v=2.1"></script>
+<script src="js/medical-management.js?v=2.1"></script>
+<script>
+/* eslint-disable no-undef */
+
+const STADIUM_UPGRADES = {
+  seatingExpansion: {
+    name: 'Tribünenausbau',
+    cost: 500000,
+    capacityIncrease: 5000,
+    timeToComplete: 12,
+    attendanceBonus: 0.1
+  },
+  medicalFacilities: {
+    name: 'Medizinische Infrastruktur',
+    cost: 300000,
+    capacityIncrease: 0,
+    timeToComplete: 8,
+    recoveryBonus: 0.15
+  },
+  trainingFacilities: {
+    name: 'Trainingsanlage',
+    cost: 400000,
+    capacityIncrease: 0,
+    timeToComplete: 10,
+    trainingBonus: 0.12
+  },
+  cateringServices: {
+    name: 'Catering & Gastronomie',
+    cost: 200000,
+    capacityIncrease: 0,
+    timeToComplete: 6,
+    fanSatisfaction: 0.1
+  },
+  vipLounge: {
+    name: 'VIP-Loge',
+    cost: 250000,
+    capacityIncrease: 500,
+    timeToComplete: 8,
+    revenueMultiplier: 1.2
+  },
+  lightingSystem: {
+    name: 'Beleuchtungssystem',
+    cost: 150000,
+    capacityIncrease: 0,
+    timeToComplete: 4,
+    qualityBonus: 0.08
+  }
+};
+
+const stadiumState = {
+  capacity: 25000,
+  condition: 100,
+  upgrades: [],
+  projectsUnderway: [],
+  maintenanceCost: 5000
+};
+
+function initializeStadium() {
+  if (!game.stadium) {
+    game.stadium = {
+      capacity: 25000,
+      condition: 100,
+      upgrades: [],
+      projectsUnderway: [],
+      totalInvestment: 0,
+      lastExpanded: 0
+    };
+  }
+}
+
+function getStadiumCapacity() {
+  if (!game.stadium) return 25000;
+  return game.stadium.capacity;
+}
+
+function getStadiumCondition() {
+  if (!game.stadium) return 100;
+  return Math.max(0, Math.min(100, game.stadium.condition));
+}
+
+function startStadiumUpgrade(upgradeType) {
+  if (!game.stadium) initializeStadium();
+  
+  const config = STADIUM_UPGRADES[upgradeType];
+  if (!config) return false;
+  
+  if (game.money < config.cost) {
+    if (game.inbox) {
+      addInboxMessage('❌ Nicht genügend Mittel', `Upgrade kostet €${config.cost.toLocaleString()}`);
+    }
+    return false;
+  }
+  
+  game.money -= config.cost;
+  
+  const project = {
+    id: (game.stadium.projectsUnderway || []).length,
+    type: upgradeType,
+    name: config.name,
+    startMatchday: game.matchday,
+    completionMatchday: game.matchday + config.timeToComplete,
+    cost: config.cost,
+    progress: 0,
+    status: 'active'
+  };
+  
+  if (!game.stadium.projectsUnderway) game.stadium.projectsUnderway = [];
+  game.stadium.projectsUnderway.push(project);
+  
+  if (game.inbox) {
+    addInboxMessage(`🏗️ Baubeginn: ${config.name}`, `Fertigstellung in ${config.timeToComplete} Spieltagen`);
+  }
+  
+  return true;
+}
+
+function tickStadiumProjects() {
+  if (!game.stadium || !game.stadium.projectsUnderway) return;
+  
+  game.stadium.projectsUnderway = game.stadium.projectsUnderway.filter((project) => {
+    const progress = ((game.matchday - project.startMatchday) / (project.completionMatchday - project.startMatchday)) * 100;
+    project.progress = Math.min(100, progress);
+    
+    if (game.matchday >= project.completionMatchday) {
+      completeStadiumUpgrade(project);
+      return false;
+    }
+    
+    return true;
+  });
+}
+
+function completeStadiumUpgrade(project) {
+  const config = STADIUM_UPGRADES[project.type];
+  if (!config) return;
+  
+  if (config.capacityIncrease > 0) {
+    game.stadium.capacity += config.capacityIncrease;
+    game.stadium.lastExpanded = game.matchday;
+  }
+  
+  if (!game.stadium.upgrades) game.stadium.upgrades = [];
+  game.stadium.upgrades.push({
+    type: project.type,
+    name: config.name,
+    completedMatchday: game.matchday,
+    season: game.season,
+    benefits: config
+  });
+  
+  if (game.inbox) {
+    addInboxMessage(`✅ Ausbau abgeschlossen`, config.name);
+  }
+}
+
+function tickStadiumMaintenance() {
+  if (!game.stadium) return 0;
+  
+  const maintenanceCost = Math.round(5000 * (1 - getStadiumCondition() / 100));
+  
+  if (game.money >= maintenanceCost) {
+    game.money -= maintenanceCost;
+    game.stadium.condition = Math.min(100, game.stadium.condition + 2);
+  } else {
+    game.stadium.condition = Math.max(0, game.stadium.condition - 1);
+  }
+  
+  return maintenanceCost;
+}
+
+function repairStadium(percentage) {
+  if (!game.stadium) return false;
+  
+  const repairCost = Math.round(200000 * (percentage / 100));
+  if (game.money < repairCost) return false;
+  
+  game.money -= repairCost;
+  game.stadium.condition = Math.min(100, game.stadium.condition + percentage);
+  
+  if (game.inbox) {
+    addInboxMessage(`🔧 Reparatur`, `Stadionzustand: ${Math.round(game.stadium.condition)}%`);
+  }
+  
+  return true;
+}
+
+function getAttendanceFactor() {
+  if (!game.stadium) return 1.0;
+  
+  let factor = 1.0;
+  const capacity = getStadiumCapacity();
+  const condition = getStadiumCondition();
+  
+  factor *= (0.5 + (condition / 100) * 0.5);
+  
+  if (game.stadium.upgrades && game.stadium.upgrades.length > 0) {
+    const attendanceUpgrades = game.stadium.upgrades.filter(u => u.benefits.attendanceBonus);
+    factor *= (1 + attendanceUpgrades.length * 0.05);
+  }
+  
+  return factor;
+}
+
+function getStadiumRevenueBenefit() {
+  if (!game.stadium || !game.stadium.upgrades) return 1.0;
+  
+  let multiplier = 1.0;
+  game.stadium.upgrades.forEach((upgrade) => {
+    if (upgrade.benefits.revenueMultiplier) {
+      multiplier *= upgrade.benefits.revenueMultiplier;
+    }
+  });
+  
+  return multiplier;
+}
+
+function renderStadiumManagementPanel() {
+  const panel = document.getElementById('stadium-management-panel');
+  if (!panel) return;
+  
+  initializeStadium();
+  
+  const capacity = getStadiumCapacity();
+  const condition = getStadiumCondition();
+  const conditionColor = condition > 70 ? '#4CAF50' : condition > 40 ? '#FFC107' : '#FF5252';
+  const ongoingProjects = (game.stadium.projectsUnderway || []).filter(p => p.status === 'active').length;
+  
+  let html = '<div class="panel-content">';
+  html += `<h3>Stadion-Management</h3>`;
+  
+  html += '<div class="stadium-stats">';
+  html += `<div class="stat-box">Kapazität: ${capacity.toLocaleString()} Plätze</div>`;
+  html += `<div class="stat-box" style="border-left:4px solid ${conditionColor}">Zustand: ${Math.round(condition)}%</div>`;
+  html += `<div class="stat-box">Laufende Projekte: ${ongoingProjects}</div>`;
+  html += `<div class="stat-box">Einnahmen-Multiplikator: ${getStadiumRevenueBenefit().toFixed(2)}x</div>`;
+  html += '</div>';
+  
+  html += '<h4>Verfügbare Upgrades:</h4>';
+  Object.entries(STADIUM_UPGRADES).forEach(([key, config]) => {
+    const isUpgraded = game.stadium.upgrades && game.stadium.upgrades.some(u => u.type === key);
+    const hasProject = game.stadium.projectsUnderway && game.stadium.projectsUnderway.some(p => p.type === key && p.status === 'active');
+    
+    html += `<div class="upgrade-item" style="opacity:${isUpgraded ? 0.6 : 1}">`;
+    html += `<strong>${config.name}</strong>`;
+    html += `<div class="upgrade-info">Kosten: €${config.cost.toLocaleString()} | Dauer: ${config.timeToComplete} Spieltage</div>`;
+    if (config.capacityIncrease > 0) {
+      html += `<div class="upgrade-info">Kapazität: +${config.capacityIncrease} Plätze</div>`;
+    }
+    if (isUpgraded) {
+      html += `<div style="color:#4CAF50; font-size:10px;">✅ Installiert</div>`;
+    } else if (hasProject) {
+      html += `<div style="color:#FFC107; font-size:10px;">🔨 In Arbeit</div>`;
+    } else {
+      html += `<button onclick="startStadiumUpgrade('${key}')" style="background:#2196F3; color:white; border:none; padding:4px 8px; border-radius:3px; font-size:10px;">Starten</button>`;
+    }
+    html += '</div>';
+  });
+  
+  if (game.stadium.projectsUnderway && game.stadium.projectsUnderway.length > 0) {
+    html += '<h4>Laufende Arbeiten:</h4>';
+    game.stadium.projectsUnderway.forEach((project) => {
+      html += `<div class="project-item">`;
+      html += `<strong>${project.name}</strong>`;
+      html += `<div style="background:#f0f0f0; height:8px; border-radius:4px; margin:4px 0; overflow:hidden;">`;
+      html += `<div style="background:#2196F3; height:100%; width:${project.progress}%"></div>`;
+      html += `</div>`;
+      html += '</div>';
+    });
+  }
+  
+  html += '</div>';
+  panel.innerHTML = html;
+}
+
+</script>
+<script src="js/youth-academy.js?v=2.1"></script>
+<script src="js/media-management.js?v=2.1"></script>
+<script src="js/transfer-market-analysis.js?v=2.1"></script>
 <script>
 
     // Wandelt einen rohen Trophäen-Eintrag in Icon + Kategorie um, für eine chronologische
@@ -26377,6 +26691,26 @@ function renderBoardMembersPanel() {
         if (typeof tickBoardRelations === 'function') tickBoardRelations();
         // Youth Academy: monatliche Trainings-Programm-Updates
         if (typeof tickYouthAcademyPrograms === 'function') tickYouthAcademyPrograms();
+        // Sponsor Management: Zahlungen und Vertragsabläufe
+        if (typeof tickSponsorNegotiations === 'function') tickSponsorNegotiations();
+        let sponsorPayments = (typeof processSponsorPayments === 'function') ? processSponsorPayments() : 0;
+        if (sponsorPayments > 0) game.money += sponsorPayments;
+        if (typeof applySponsorBenefits === 'function') applySponsorBenefits();
+        // Medical Management: Genesung und Spielerverletzungen
+        if (typeof tickMedicalRecovery === 'function') tickMedicalRecovery();
+        if (typeof randomizeMatchInjuries === 'function') randomizeMatchInjuries();
+        // Stadium Management: Projektfortschritt und Wartung
+        if (typeof tickStadiumProjects === 'function') tickStadiumProjects();
+        let stadiumMaintenance = (typeof tickStadiumMaintenance === 'function') ? tickStadiumMaintenance() : 0;
+        if (stadiumMaintenance > 0) game.money -= stadiumMaintenance;
+        // Youth Academy (New Systems): Nachwuchsrekrutierung und Programm-Ticks
+        if (typeof tickYouthRecruitment === 'function') tickYouthRecruitment();
+        if (typeof tickYouthPrograms === 'function') tickYouthPrograms();
+        // Media Management: Kampagnen und zufällige Medienereignisse
+        if (typeof tickMediaCampaigns === 'function') tickMediaCampaigns();
+        if (typeof tickRandomMediaEvent === 'function') tickRandomMediaEvent();
+        // Transfer Market Analysis: Markttrends und Watchlist-Updates
+        if (typeof tickTransferMarketAnalysis === 'function') tickTransferMarketAnalysis();
         // Financial tracking for dashboard charts
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();

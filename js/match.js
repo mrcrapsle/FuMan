@@ -1733,6 +1733,26 @@
         if (typeof tickBoardRelations === 'function') tickBoardRelations();
         // Youth Academy: monatliche Trainings-Programm-Updates
         if (typeof tickYouthAcademyPrograms === 'function') tickYouthAcademyPrograms();
+        // Sponsor Management: Zahlungen und Vertragsabläufe
+        if (typeof tickSponsorNegotiations === 'function') tickSponsorNegotiations();
+        let sponsorPayments = (typeof processSponsorPayments === 'function') ? processSponsorPayments() : 0;
+        if (sponsorPayments > 0) game.money += sponsorPayments;
+        if (typeof applySponsorBenefits === 'function') applySponsorBenefits();
+        // Medical Management: Genesung und Spielerverletzungen
+        if (typeof tickMedicalRecovery === 'function') tickMedicalRecovery();
+        if (typeof randomizeMatchInjuries === 'function') randomizeMatchInjuries();
+        // Stadium Management: Projektfortschritt und Wartung
+        if (typeof tickStadiumProjects === 'function') tickStadiumProjects();
+        let stadiumMaintenance = (typeof tickStadiumMaintenance === 'function') ? tickStadiumMaintenance() : 0;
+        if (stadiumMaintenance > 0) game.money -= stadiumMaintenance;
+        // Youth Academy (New Systems): Nachwuchsrekrutierung und Programm-Ticks
+        if (typeof tickYouthRecruitment === 'function') tickYouthRecruitment();
+        if (typeof tickYouthPrograms === 'function') tickYouthPrograms();
+        // Media Management: Kampagnen und zufällige Medienereignisse
+        if (typeof tickMediaCampaigns === 'function') tickMediaCampaigns();
+        if (typeof tickRandomMediaEvent === 'function') tickRandomMediaEvent();
+        // Transfer Market Analysis: Markttrends und Watchlist-Updates
+        if (typeof tickTransferMarketAnalysis === 'function') tickTransferMarketAnalysis();
         // Financial tracking for dashboard charts
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();

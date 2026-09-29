@@ -754,6 +754,12 @@
         if (typeof renderTacticSystemPanel === 'function') renderTacticSystemPanel();
         if (typeof renderInternationalTournamentsPanel === 'function') renderInternationalTournamentsPanel();
         if (typeof renderBoardMembersPanel === 'function') renderBoardMembersPanel();
+        if (typeof renderSponsorManagementPanel === 'function') renderSponsorManagementPanel();
+        if (typeof renderMedicalManagementPanel === 'function') renderMedicalManagementPanel();
+        if (typeof renderStadiumManagementPanel === 'function') renderStadiumManagementPanel();
+        if (typeof renderYouthAcademyPanel === 'function') renderYouthAcademyPanel();
+        if (typeof renderMediaManagementPanel === 'function') renderMediaManagementPanel();
+        if (typeof renderTransferMarketAnalysisPanel === 'function') renderTransferMarketAnalysisPanel();
         let container = document.getElementById('bench-list');
         if (!container) return;
         container.innerHTML = '';
