@@ -489,7 +489,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.2', date: '30.09.2026', features: 'Phase 16: Karriere-Balancing - Fitness der Startelf, größerer Transfermarkt, bezahlbare Lizenzauflagen' };
+    const GAME_VERSION = { number: '3.3', date: '30.09.2026', features: 'Phase 16: Livespiel - Statistik, echte Auswechslungen, Torschützen auswärts korrigiert, mehr Kommentare' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -20681,10 +20681,11 @@ function cleanupLegacyScoutState() {
         document.getElementById('subs-left-count').innerText = substitutionsLeft;
         container.innerHTML = '';
         let bench = squad.filter(p => !lineup.includes(p.id) && (p.injured || 0) === 0 && (p.suspended || 0) === 0 && (p.nationalDuty || 0) === 0);
-        // Wer geht raus? Vorauswahl: der Spieler mit der geringsten effektiven Stärke (müde/schwach).
+        // Wer geht raus? Vorauswahl: der müdeste Feldspieler, bei gleicher Fitness der schwächste;
+        // der Torwart steht am Ende der Liste.
         let sentOff = (currentMatch && currentMatch.sentOff) || [];
         let onPitch = squad.filter(p => lineup.includes(p.id) && !sentOff.includes(p.id))
-            .sort((a, b) => liveEffectiveStrength(a) - liveEffectiveStrength(b));
+            .sort((a, b) => ((a.pos === 'TW') - (b.pos === 'TW')) || (a.fitness - b.fitness) || (liveEffectiveStrength(a) - liveEffectiveStrength(b)));
         let sel = document.createElement('select');
         sel.id = 'live-sub-out';
         sel.className = 'input-inline';
@@ -20869,7 +20870,7 @@ function cleanupLegacyScoutState() {
         let oppStr = Math.round(currentMatch.isHome ? currentMatch.awayStr : currentMatch.homeStr);
         let zeile = (label, h, a) => `<div style="display:grid; grid-template-columns: 1fr auto 1fr; gap:6px; align-items:center;"><span style="text-align:right; font-weight:800;">${h}</span><span style="color:var(--text-muted); font-size:9px;">${label}</span><span style="font-weight:800;">${a}</span></div>`;
         box.innerHTML = `<div class="box" style="font-size:10px; margin:4px 0;">
-            <div style="display:flex; height:8px; border-radius:4px; overflow:hidden; margin-bottom:4px;"><div style="flex:${bh}; background:var(--primary);"></div><div style="flex:${ba}; background:var(--danger);"></div></div>
+            <div style="display:flex; height:8px; border-radius:4px; overflow:hidden; margin-bottom:4px;"><div style="flex:${bh}; background:${currentMatch.isHome ? 'var(--primary)' : 'var(--danger)'};"></div><div style="flex:${ba}; background:${currentMatch.isHome ? 'var(--danger)' : 'var(--primary)'};"></div></div>
             ${zeile('Ballbesitz', bh + '%', ba + '%')}
             ${zeile('Schüsse (aufs Tor)', `${st.shots[0]} (${st.onTarget[0]})`, `${st.shots[1]} (${st.onTarget[1]})`)}
             ${zeile('Karten', `🟨${st.yellow[0]} 🟥${st.red[0]}`, `🟨${st.yellow[1]} 🟥${st.red[1]}`)}
@@ -20933,6 +20934,7 @@ function cleanupLegacyScoutState() {
     }
 
     function simulateMatchStep() {
+        if (!currentMatch || currentMatch.minute >= 90) return; // nach dem Abpfiff keine Szenen mehr
         if (currentMatch.awaitingHalftimeTalk) return; // wartet auf die Halbzeit-Ansprache-Auswahl
         let prevMinute = currentMatch.minute;
         currentMatch.minute += Math.floor(Math.random() * 14) + 8;
