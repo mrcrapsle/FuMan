@@ -92,25 +92,19 @@
             tutorial_start: "Los geht's! ⚽",
             tutorial_replay: '❓ Kurzanleitung erneut anzeigen',
             tutorial_1_title: '⚽ Willkommen beim {CLUB}!',
-            tutorial_1_body: `Du übernimmst als Manager einen Klub in der <strong>6. Liga (Kreisklasse)</strong>. Dein Ziel: aufsteigen, den Verein ausbauen und irgendwann den Champions Cup holen.<br><br>
-                <strong style="color:var(--primary);">Die Bereiche im Menü:</strong><br>
-                ⚽ Kader &amp; Taktik · 🏟️ Ausbau &amp; Infrastruktur · 🏦 Finanzen &amp; Kapitalmarkt · 🏆 Wettbewerbe · 🎩 Spezial<br><br>
-                <strong style="color:var(--accent);">Tipp:</strong> "▶ Spieltag starten" für Live-Erlebnis, "⚡ Saison durchsimulieren" für den schnellen Überblick.`,
-            tutorial_2_title: '🌍 Scouting-Netzwerk 2.0',
-            tutorial_2_body: `Statt eines einzelnen Chef-Scouts baust du ein <strong>Netzwerk aus Regional-Scouts</strong> auf (Südamerika, Afrika, Westeuropa, Osteuropa).<br><br>
-                Jede Mission dauert echte <strong>Spieltage</strong> (kein Sofort-Ergebnis mehr) - und frisch gefundene Talente zeigen ihre Werte zunächst nur als <strong>ungefähre Spanne</strong>. Beobachte sie weiter oder zahle für eine genauere Auswertung, um Klarheit zu bekommen.<br><br>
-                Alle je entdeckten Spieler landen dauerhaft in der <strong>Talent-Datenbank</strong> zum Nachschlagen.`,
-            tutorial_3_title: '🏗️ Stadion-Baustellen',
-            tutorial_3_body: `Stadion-Ausbauten sind keine Sofortkäufe mehr: Du zahlst eine <strong>Anzahlung von 30%</strong>, der Rest wird erst bei Fertigstellung fällig.<br><br>
-                Jedes Projekt hat eine echte <strong>Bauzeit</strong> (mehrere Spieltage) - im Stadion-Screen siehst du unter "Laufende Bauprojekte" den Fortschritt.<br><br>
-                Die Preise skalieren mit deiner Liga: In der Bundesliga kosten große Ausbauten realistische zweistellige Millionenbeträge, in unteren Ligen bleibt es erschwinglich.`,
-            tutorial_4_title: '🤖 Personal-Automatisierung',
-            tutorial_4_body: `Mehrere Personal-Rollen können jetzt <strong>eigenständig Aufgaben übernehmen</strong>, wenn du sie im Personal-Screen auf "Automatik" statt "Manuell" stellst:<br><br>
-                🔭 Chef-Scout: entsendet freie Scouts automatisch<br>
-                📋 Sportdirektor: verlängert auslaufende Verträge<br>
-                📈 Marketing-Direktor: nimmt gute Sponsoren-Angebote an<br>
-                🎯 Standards-Spezialist: wählt die besten Elfmeter-/Freistoß-/Eckenschützen<br><br>
-                So bleibt der Verein auch am Laufen, wenn du dich lieber auf Taktik und Transfers konzentrierst.`
+            tutorial_1_body: `Du übernimmst den Verein in der <strong>{LIGA}</strong>. Dein Ziel: aufsteigen, den Verein ausbauen und irgendwann den Champions Cup holen.<br><br>
+                <strong style="color:var(--primary);">Bedienung:</strong> Die Leiste unten führt zu Start, Kader, Transfer, Finanzen, Postfach und Speichern. Alles andere (Stadion, Jugend, Scouting, Personal ...) findest du im Menü <strong>☰</strong> oben links.<br><br>
+                Auf dem Start-Bildschirm hakt eine Liste <strong>„Erste Schritte“</strong> die wichtigsten Stationen ab.`,
+            tutorial_2_title: '🏟️ Der Spieltag',
+            tutorial_2_body: `<strong>▶ Spieltag starten</strong> spielt live: Taktik ändern, auswechseln, Halbzeitansprache halten und die Statistik verfolgen. Pokalspiele kommen dabei vor dem Ligaspiel dran.<br><br>
+                <strong>⏩ 5 Spieltage</strong> oder <strong>⚡ Saison durchsimulieren</strong> gehen schnell - die Elf stellt dann der Trainer auf.<br><br>
+                <strong style="color:var(--accent);">Wichtig:</strong> Stammspieler ermüden. Vor dem Anpfiff warnt dich das Spiel und stellt auf Wunsch eine ausgeruhte Elf auf.`,
+            tutorial_3_title: '💶 Geld & Vorstand',
+            tutorial_3_body: `Einnahmen kommen aus Tickets, Sponsoren, Fanartikeln und TV-Geld, die größte Ausgabe sind die Gehälter (Gehaltsbudget beachten). Jede Buchung steht im Finanz-Journal.<br><br>
+                Im Minus gilt eine Transfersperre. Der <strong>Vorstand</strong> bewertet Ergebnisse und Finanzen - bleibt seine Zufriedenheit zu lange im Keller, wirst du entlassen.`,
+            tutorial_4_title: '📈 Der Weg nach oben',
+            tutorial_4_body: `Platz 1 und 2 steigen direkt auf, Platz 3 spielt Relegation. Für jede höhere Liga verlangt der Verband <strong>Lizenzauflagen</strong>: Stadiongröße, Finanzreserve, ab der 3. Liga Flutlicht, ab der 2. Liga ein Jugendinternat. Die Übersicht steht im Stadion-Bildschirm - rechtzeitig erfüllen!<br><br>
+                Verstärke den Kader über den Transfermarkt (neue Spieler zu jedem Wechselfenster) und die eigene Jugend.`
         },
         en: {
             nav_category_main: 'Main HQ',
@@ -189,25 +183,19 @@
             tutorial_start: "Let's go! ⚽",
             tutorial_replay: '❓ Show tutorial again',
             tutorial_1_title: '⚽ Welcome to {CLUB}!',
-            tutorial_1_body: `You take over as manager of a club in the <strong>bottom division</strong>. Your goal: get promoted, build up the club, and eventually win the Champions Cup.<br><br>
-                <strong style="color:var(--primary);">The areas in the menu:</strong><br>
-                ⚽ Squad &amp; Tactics · 🏟️ Facilities &amp; Infrastructure · 🏦 Finance &amp; Capital Markets · 🏆 Competitions · 🎩 Special<br><br>
-                <strong style="color:var(--accent);">Tip:</strong> "▶ Start matchday" for the live experience, "⚡ Simulate season" for a quick overview.`,
-            tutorial_2_title: '🌍 Scouting Network 2.0',
-            tutorial_2_body: `Instead of a single chief scout, you build a <strong>network of regional scouts</strong> (South America, Africa, Western Europe, Eastern Europe).<br><br>
-                Every mission takes real <strong>matchdays</strong> (no more instant results) - and freshly found talents only show their stats as an <strong>approximate range</strong> at first. Keep observing them or pay for a more precise assessment to get clarity.<br><br>
-                Every player ever discovered stays permanently in the <strong>talent database</strong> for later lookup.`,
-            tutorial_3_title: '🏗️ Stadium Construction',
-            tutorial_3_body: `Stadium upgrades are no longer instant purchases: you pay a <strong>30% deposit</strong>, the rest is only due on completion.<br><br>
-                Every project has a real <strong>build time</strong> (several matchdays) - the stadium screen shows the progress under "Ongoing construction projects".<br><br>
-                Prices scale with your league: in the top division, big upgrades cost realistic double-digit millions, while lower leagues stay affordable.`,
-            tutorial_4_title: '🤖 Staff Automation',
-            tutorial_4_body: `Several staff roles can now <strong>take over tasks on their own</strong> if you set them to "Automatic" instead of "Manual" on the staff screen:<br><br>
-                🔭 Chief scout: dispatches free scouts automatically<br>
-                📋 Sporting director: renews expiring contracts<br>
-                📈 Marketing director: accepts good sponsor offers<br>
-                🎯 Set-piece specialist: picks the best penalty/free-kick/corner takers<br><br>
-                That way the club keeps running even if you'd rather focus on tactics and transfers.`
+            tutorial_1_body: `You take over the club in the <strong>{LIGA}</strong>. Your goal: get promoted, build up the club and eventually win the Champions Cup.<br><br>
+                <strong style="color:var(--primary);">Controls:</strong> The bar at the bottom leads to Start, Squad, Transfer, Finance, Inbox and Save. Everything else (stadium, youth, scouting, staff ...) is in the <strong>☰</strong> menu at the top left.<br><br>
+                On the start screen a <strong>"First steps"</strong> list ticks off the most important stations.`,
+            tutorial_2_title: '🏟️ Matchday',
+            tutorial_2_body: `<strong>▶ Start matchday</strong> plays live: change tactics, make substitutions, give a half-time talk and follow the stats. Cup matches come before the league match.<br><br>
+                <strong>⏩ 5 matchdays</strong> or <strong>⚡ Simulate season</strong> are quick - the coach picks the line-up.<br><br>
+                <strong style="color:var(--accent);">Important:</strong> regulars get tired. Before kick-off the game warns you and can field a rested XI.`,
+            tutorial_3_title: '💶 Money & Board',
+            tutorial_3_body: `Income comes from tickets, sponsors, merchandise and TV money; the biggest cost is wages (mind the wage budget). Every booking is listed in the finance journal.<br><br>
+                A negative balance means a transfer ban. The <strong>board</strong> judges results and finances - if its satisfaction stays too low for too long, you get sacked.`,
+            tutorial_4_title: '📈 The way up',
+            tutorial_4_body: `Places 1 and 2 are promoted directly, place 3 plays a relegation play-off. Every higher league requires <strong>licence conditions</strong>: stadium size, financial reserve, floodlights from the 3rd league, a youth boarding school from the 2nd league. The overview is on the stadium screen - meet them in time!<br><br>
+                Strengthen the squad via the transfer market (new players every window) and your own youth.`
         }
     };
 

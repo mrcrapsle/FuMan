@@ -201,6 +201,7 @@
     }
 
     function saveGameToSlot(slotNum) {
+        if (typeof markOnboardingStep === 'function') markOnboardingStep('speichern');
         try {
             let state = buildSaveState();
             state.meta = {

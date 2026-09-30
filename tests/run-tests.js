@@ -4967,6 +4967,53 @@ async function testPlayerStats(browser) {
     await page.close();
 }
 
+async function testOnboarding(browser) {
+    console.log('\n[P17c] Einstieg: Erste Schritte, Bildschirm-Tipps, Kurzanleitung');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        const out = {};
+        // Der Struktur-Selbsttest beim Start öffnet alle Bildschirme - das darf nichts abhaken
+        out.startLeer = Object.keys(ensureOnboarding().done).length === 0 && !document.querySelector('.screen-hint');
+        // Kurzanleitung nennt die echte Startliga
+        tutorialPage = 0; renderTutorialPage();
+        const body = document.getElementById('tutorial-body').innerHTML;
+        out.anleitungLiga = body.includes(leagueNames[game.leagueLevel]) && !body.includes('{LIGA}');
+        closeTutorial();
+        showScreen('screen-dashboard');
+        const box = () => document.getElementById('dash-onboarding-box').innerHTML;
+        out.listeSichtbar = box().includes('Erste Schritte') && box().includes('⬜');
+        // Tipp auf dem Kader-Bildschirm, ausblendbar
+        showScreen('screen-squad');
+        out.tippDa = !!document.querySelector('#screen-squad > .screen-hint');
+        hideScreenHint('screen-squad');
+        showScreen('screen-squad');
+        out.tippWeg = !document.querySelector('#screen-squad > .screen-hint');
+        // Schritte haken sich selbst ab
+        const xp0 = managerRPG.xp + managerRPG.level * 100000;
+        ['screen-training', 'screen-finances', 'screen-transfer'].forEach(sc => showScreen(sc));
+        game.sackPending = false; simulateMatchdays(1);
+        quickSave();
+        out.fertig = game.onboarding.finished === true && Object.keys(game.onboarding.done).length === 6;
+        out.xp = managerRPG.xp + managerRPG.level * 100000 > xp0;
+        showScreen('screen-dashboard');
+        out.listeWeg = box() === '';
+        // Alle Tipps aus
+        hideScreenHint('alle');
+        showScreen('screen-transfer');
+        out.alleAus = !document.querySelector('.screen-hint');
+        return out;
+    });
+    assert(r.startLeer, 'Beim Spielstart ist noch kein Schritt abgehakt und kein Tipp offen');
+    assert(r.anleitungLiga, 'Kurzanleitung nennt die tatsächliche Startliga');
+    assert(r.listeSichtbar, 'Neues Spiel zeigt die Erste-Schritte-Liste');
+    assert(r.tippDa && r.tippWeg, 'Bildschirm-Tipp erscheint und bleibt nach „Verstanden“ weg');
+    assert(r.fertig && r.xp && r.listeWeg, 'Schritte haken sich beim Spielen ab, Abschluss gibt XP');
+    assert(r.alleAus, '„Alle Tipps aus“ blendet alle Tipps aus');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 3).join(' | ')})`);
+    await page.close();
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -5055,6 +5102,7 @@ async function main() {
         testNoWriteOnlyGameFields,
         testAiClubs,
         testPlayerStats,
+        testOnboarding,
         testRuntimeRoundTrip,
     ];
 

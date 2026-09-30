@@ -38,7 +38,7 @@
         let nextBtn = document.getElementById('tutorial-next-btn');
         let prevBtn = document.getElementById('tutorial-prev-btn');
         if (titleEl) titleEl.innerHTML = t(page.titleKey).replace('{CLUB}', game.clubName);
-        if (bodyEl) bodyEl.innerHTML = t(page.bodyKey);
+        if (bodyEl) bodyEl.innerHTML = t(page.bodyKey).replace('{LIGA}', leagueNames[game.leagueLevel] || '');
         if (dotsEl) dotsEl.innerHTML = TUTORIAL_PAGES.map((_, i) => `<span style="display:inline-block; width:6px; height:6px; border-radius:50%; margin:0 2px; background:${i === tutorialPage ? 'var(--accent)' : 'rgba(255,255,255,0.25)'};"></span>`).join('');
         if (prevBtn) {
             prevBtn.style.visibility = tutorialPage === 0 ? 'hidden' : 'visible';
@@ -89,12 +89,14 @@
     // waren, aber wegen der falschen Elternstruktur keine sichtbare Höhe hatten - von außen
     // sah das Spiel dadurch komplett funktionslos aus, obwohl der komplette JS-Code fehlerfrei
     // lief. Dieser Test hätte das beim nächsten Bauen sofort sichtbar gemacht.
+    let selbsttestLaeuft = false;
     function runStructuralSelfTest(silent = true) {
         let topScreens = ['screen-office', 'screen-dashboard', 'screen-calendar', 'screen-inbox', 'screen-squad', 'screen-second-team', 'screen-women', 'screen-training', 'screen-manager-tree', 'screen-admin', 'screen-prematch-press', 'screen-matchday'];
         let allTestIds = [...topScreens, ...Object.keys(HUB_MEMBERS), ...Object.values(HUB_MEMBERS).flat()];
         let problems = [];
         let originalTopScreen = topScreens.find(s => document.getElementById(s)?.style.display === 'block') || 'screen-dashboard';
 
+        selbsttestLaeuft = true; // Bildschirm-Besuche des Selbsttests zählen nicht als Nutzer-Besuche
         allTestIds.forEach(id => {
             let el = document.getElementById(id);
             if (!el) { problems.push(`${id}: Element existiert nicht im DOM!`); return; }
@@ -110,6 +112,7 @@
             }
         });
 
+        selbsttestLaeuft = false;
         showScreen(originalTopScreen); // Ursprünglichen Zustand wiederherstellen
 
         // Zusätzlicher Pre-Release-Check: prüft, ob jedes onclick-Attribut im gesamten
@@ -212,6 +215,7 @@
     function showScreen(screenId) {
         playSound('click');
         aktiverScreen = screenId;
+        if (typeof onScreenShown === 'function') onScreenShown(screenId);
         if (typeof loescheBuchungskontext === 'function') loescheBuchungskontext();
         const screens = [
             'screen-office',
