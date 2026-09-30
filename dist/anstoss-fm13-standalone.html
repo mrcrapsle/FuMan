@@ -2835,20 +2835,8 @@
                     <div id="leadership-council-box"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header" style="color:var(--blue);">👔 SPIELER-AGENTEN</div>
-                    <div id="agents-panel"></div>
-                </div>
-                <div class="panel">
                     <div class="panel-header" style="color:var(--danger);">🔥 RIVALITÄTEN</div>
                     <div id="rivalries-panel"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--purple);">🎭 SPIELER-ARCHETYPEN</div>
-                    <div id="archetypes-panel"></div>
-                </div>
-                <div class="panel" style="display:none;">
-                    <div class="panel-header">📈 KARRIERE-VERGLEICH</div>
-                    <div id="archetype-comparison-box"></div>
                 </div>
                 <div class="panel">
                     <div class="panel-header" style="color:var(--danger);">⚠️ SPIELER-SKANDALE</div>
@@ -3441,14 +3429,6 @@
                     <div class="panel-header" style="color:var(--gold);">📚 TALENT-DATENBANK (Top 15 aller Zeiten)</div>
                     <div id="talent-database-box"></div>
                 </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--primary);">🔍 ERWEITERTE TALENTERKENNUNG</div>
-                    <div id="talent-detection-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">🔬 SCOUTING-INTELLIGENZ</div>
-                    <div id="scouting-intelligence-box"></div>
-                </div>
             </div>
             <div id="screen-youth" style="display:none;">
                 <div class="panel">
@@ -3494,13 +3474,6 @@
                     <div class="panel-header">📝 VERTRAGSVERWALTUNG</div>
                     <div id="contracts-list"></div>
                 </div>
-                <div class="panel" id="negotiations-panel">
-                    <div class="panel-header" style="color:var(--primary);">🤝 VERHANDLUNGEN</div>
-                    <div id="negotiations-content"></div>
-                </div>
-                <div class="panel" id="contract-management-box">
-                    <div class="panel-header">📋 MODERNE VERTRAGSMANAGEMENT</div>
-                </div>
             </div>
             <div id="screen-squad-planning" style="display:none;">
                 <div class="panel">
@@ -3525,12 +3498,9 @@
                 <div class="panel" id="reserves-loan-box">
                     <div class="panel-header">🔄 RESERVEMANNSCHAFT & LEIHSPIELER</div>
                 </div>
-                <div class="panel" id="player-development-box">
-                    <div class="panel-header">📈 SPIELER-ENTWICKLUNG & KARRIERE</div>
-                </div>
                 <div class="panel">
-                    <div class="panel-header">💼 VERTRAGSVERLÄNGERUNGEN</div>
-                    <div id="contract-renewal-box"></div>
+                    <div class="panel-header">📈 SPIELERENTWICKLUNG &amp; ALTERUNG</div>
+                    <div id="player-development-box"></div>
                 </div>
             </div>
             </div>
@@ -4531,7 +4501,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '2.5', date: '30.09.2026', features: 'Phase 12: Medizin, Medien, Jugend, Sponsoring zusammengelegt' };
+    const GAME_VERSION = { number: '2.6', date: '30.09.2026', features: 'Phase 13: Gegner, Vorstand, Verträge, Scouting zusammengelegt, Spieler altern' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -4739,14 +4709,7 @@
         freeKickTakerId: null,
         cornerTakerId: null,
         trophies: [],
-        scoutingDatabase: {
-            discoveredPlayers: [],
-            lastAnalysisMatchday: 0,
-            talentWatchlist: []
-        },
-        negotiationHistory: [],
         clubSwitchHistory: [],
-        agentPool: [],
         localRivals: [],
         academyLeague: null,
         scandals: [],
@@ -7357,10 +7320,7 @@ function renderFanEventsPanel() {
         renderTeamChemistryPanel();
         if (typeof renderCliqueBox === 'function') renderCliqueBox();
         if (typeof renderLeadershipCouncilBox === 'function') renderLeadershipCouncilBox();
-        if (typeof renderAgentsPanel === 'function') renderAgentsPanel();
         if (typeof renderRivalriesPanel === 'function') renderRivalriesPanel();
-        if (typeof renderArchetypesPanel === 'function') renderArchetypesPanel();
-        if (typeof renderArchetypeComparisonChart === 'function') renderArchetypeComparisonChart();
         if (typeof renderScandalsPanel === 'function') renderScandalsPanel();
         if (typeof renderFanclubManagementPanel === 'function') renderFanclubManagementPanel();
         if (typeof renderTacticSystemPanel === 'function') renderTacticSystemPanel();
@@ -7837,180 +7797,6 @@ function renderFanEventsPanel() {
 <script>
 
     // ==========================================
-    // SPIELER-VERMITTLER / AGENTEN-MANAGEMENT
-    // ==========================================
-    // Agenten vertreten Spieler und verhandeln automatisch über Verträge,
-    // Transfers und Lohnerhöhungen. Sie haben eigene Gewinnspannen und
-    // können bei kritischen Spielern unbequeme Forderungen stellen.
-    /* eslint-disable no-undef */
-
-    const AGENT_TYPES = {
-        'powerbroker': { commission: 0.15, negotiationToughness: 1.3, influence: 'high' },
-        'traditional': { commission: 0.10, negotiationToughness: 1.0, influence: 'medium' },
-        'boutique': { commission: 0.08, negotiationToughness: 0.8, influence: 'low' }
-    };
-
-    function createAgent(name, type = 'traditional') {
-        return {
-            id: 'agent_' + Math.random().toString(36).substr(2, 9),
-            name: name,
-            type: type,
-            commission: AGENT_TYPES[type].commission,
-            negotiationToughness: AGENT_TYPES[type].negotiationToughness,
-            influence: AGENT_TYPES[type].influence,
-            clientsCount: 0,
-            yearsActive: Math.floor(Math.random() * 15) + 1,
-            reputation: 50 + Math.random() * 50,
-            totalCommissionEarned: 0,
-            negotiationSuccessRate: 0.6 + Math.random() * 0.25
-        };
-    }
-
-    function initializeAgentPool() {
-        if (!game.agentPool) {
-            game.agentPool = [];
-            // Erzeuge ein Netzwerk von Standard-Agenten
-            const agentNames = [
-                'Klaas Weibull', 'Bruno Sperisen', 'Bernd Schuster',
-                'Rolf Müller', 'Jorge Mendes', 'Jonathan Barnett',
-                'Mino Raiola', 'Federico Pastorello', 'Giuliano Bertolucci'
-            ];
-            agentNames.forEach((name, i) => {
-                let type = i % 3 === 0 ? 'powerbroker' : i % 3 === 1 ? 'traditional' : 'boutique';
-                game.agentPool.push(createAgent(name, type));
-            });
-        }
-    }
-
-    function assignAgentToPlayer(playerId, agentId) {
-        let p = squad.find(x => x.id === playerId);
-        if (!p) return { success: false, message: 'Spieler nicht gefunden' };
-        let agent = game.agentPool.find(x => x.id === agentId);
-        if (!agent) return { success: false, message: 'Agent nicht gefunden' };
-        if (p.agent) {
-            return { success: false, message: `${p.name} hat bereits einen Agent: ${p.agent.name}` };
-        }
-        p.agent = { id: agent.id, name: agent.name, commission: agent.commission };
-        agent.clientsCount++;
-        showToast(`✅ ${p.name} signiert mit Agent ${agent.name}`, 'success');
-        return { success: true, message: `Agent zugewiesen` };
-    }
-
-    function fireAgent(playerId) {
-        let p = squad.find(x => x.id === playerId);
-        if (!p || !p.agent) return { success: false, message: 'Spieler/Agent nicht gefunden' };
-        let agentName = p.agent.name;
-        let agent = game.agentPool.find(x => x.id === p.agent.id);
-        if (agent) agent.clientsCount--;
-        p.agent = null;
-        showToast(`📋 ${p.name} hat sich von Agent ${agentName} getrennt`, 'success');
-        return { success: true };
-    }
-
-    // Agenten verhandeln proaktiv für ihre Top-Klienten - vor allem bei
-    // etablierten, ehrgeizigen Spielern, die mehr Wertschätzung fordern.
-    function checkAgentNegotiations() {
-        squad.filter(p => p.agent && p.strength >= 60).forEach(p => {
-            let agent = game.agentPool.find(x => x.id === p.agent.id);
-            if (!agent || Math.random() > 0.05) return; // 5% Chance pro Matchday
-
-            let baseBonus = Math.round(p.salary * 0.15);
-            let agentDemand = Math.round(baseBonus * agent.negotiationToughness);
-            let successChance = agent.negotiationSuccessRate * (p.morale / 100);
-
-            if (Math.random() < successChance && game.money >= agentDemand) {
-                game.money -= agentDemand;
-                p.salary += baseBonus;
-                let commissionPaid = Math.round(agentDemand * p.agent.commission);
-                agent.totalCommissionEarned += commissionPaid;
-                showToast(
-                    `💬 Agent ${agent.name} verhandelte Lohnerhöhung für ${p.name}: +${formatVal(baseBonus)} (Agent verdient ${formatVal(commissionPaid)})`,
-                    'info'
-                );
-                addInboxMessage('agent', `Lohnverhandlung erfolgreich`,
-                    `Agent ${agent.name} hat für ${p.name} eine Lohnerhöhung um ${formatVal(baseBonus)} durchgesetzt.`, 'screen-squad');
-            } else if (game.money < agentDemand) {
-                addInboxMessage('agent', `⚠️ Agent fordert Lohnerhöhung`,
-                    `Agent ${agent.name} möchte für ${p.name} ${formatVal(agentDemand)} mehr Gehalt, aber das Geld reicht nicht.`, 'screen-squad');
-            }
-        });
-    }
-
-    // Agenten können auch bei wichtigen Spielerverpflichtungen Druck machen,
-    // besonders wenn deren Klient der beste Spieler im neuen Club sein soll.
-    function getAgentInfluenceOnTransfer(playerId, agentId) {
-        let p = squad.find(x => x.id === playerId);
-        let agent = game.agentPool.find(x => x.id === agentId);
-        if (!p || !agent) return 0;
-
-        let influence = 0;
-        if (agent.influence === 'high') influence += 0.25;
-        else if (agent.influence === 'medium') influence += 0.10;
-        else influence += 0.03;
-
-        // Mächtige Agenten können noch mehr Druck ausüben, wenn ihr Klient ein Star ist
-        if (p.strength >= 70 && agent.type === 'powerbroker') influence += 0.15;
-        return influence;
-    }
-
-    function renderAgentsPanel() {
-        const box = document.getElementById('agents-panel');
-        if (!box) return;
-
-        initializeAgentPool();
-        const agentsWithClients = game.agentPool.filter(a => a.clientsCount > 0);
-
-        let html = `<div style="font-size:10px; font-weight:bold; margin-bottom:6px;">👔 AGENTEN-NETZWERK</div>`;
-
-        if (agentsWithClients.length === 0) {
-            html += '<div style="font-size:9px; color:var(--text-muted); margin-bottom:8px;">Keine Agenten beschäftigt</div>';
-        } else {
-            agentsWithClients.forEach(agent => {
-                let clients = squad.filter(p => p.agent && p.agent.id === agent.id);
-                html += `<div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:6px; font-size:9px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
-                        <strong>${agent.name}</strong>
-                        <span style="color:var(--accent);">${agent.type}</span>
-                    </div>
-                    <div style="font-size:8px; color:var(--text-muted); margin-bottom:3px;">
-                        📊 Klienten: ${agent.clientsCount} · Provision: ${(agent.commission * 100).toFixed(0)}% · Erfolgsquote: ${(agent.negotiationSuccessRate * 100).toFixed(0)}%
-                    </div>
-                    <div style="font-size:8px; color:var(--gold);">💰 Verdient: ${formatVal(agent.totalCommissionEarned)}</div>
-                    <div style="margin-top:3px;">
-                        ${clients.map(c => `<div style="font-size:8px; color:var(--blue);">• ${c.name} (${c.pos})</div>`).join('')}
-                    </div>
-                </div>`;
-            });
-        }
-
-        html += '<div style="font-size:10px; font-weight:bold; margin-top:8px; margin-bottom:4px;">🔍 Verfügbare Agenten</div>';
-        const availableAgents = game.agentPool.filter(a => a.clientsCount === 0).slice(0, 5);
-        availableAgents.forEach(agent => {
-            html += `<div style="background:rgba(62,224,138,0.1); padding:4px; border-radius:3px; margin-bottom:3px; font-size:8px; display:flex; justify-content:space-between; align-items:center;">
-                <span>${agent.name} (${agent.type})</span>
-                <button onclick="assignAgentToRandomPlayer('${agent.id}')" class="btn-secondary" style="font-size:7px; padding:2px 4px;">Hinzufügen</button>
-            </div>`;
-        });
-
-        box.innerHTML = html;
-    }
-
-    function assignAgentToRandomPlayer(agentId) {
-        let agentlessPlayers = squad.filter(p => !p.agent && p.strength >= 40);
-        if (agentlessPlayers.length === 0) {
-            showToast('Keine verfügbaren Spieler ohne Agent!', 'error');
-            return;
-        }
-        let p = agentlessPlayers[Math.floor(Math.random() * agentlessPlayers.length)];
-        assignAgentToPlayer(p.id, agentId);
-        renderAgentsPanel();
-    }
-
-
-</script>
-<script>
-
-    // ==========================================
     // RIVALITÄTEN ZWISCHEN CLUBS
     // ==========================================
     // Lokale und nationale Rivalitäten sorgen für emotionale Derbys mit
@@ -8222,198 +8008,114 @@ function renderMedicalDepartmentPanel() {
 
 </script>
 <script>
+// Spielerentwicklung: Jeder Spieler hat einen Entwicklungstyp mit eigenem Leistungshöhepunkt.
+// Am Saisonende wird der Kader ein Jahr älter - vor dem Höhepunkt legen Spieler zu, danach
+// bauen sie ab. Bisher alterte im Spiel niemand: das einzige Alterungsmodul setzte das Alter
+// jeden Monat auf das Beitrittsalter zurück. Löst drei Module ab (Archetypen, die nie
+// zugewiesen wurden, eine kaputte Alterung und eine Karrierestatistik, die nicht gespeichert wurde).
 
-    // ==========================================
-    // SPIELER-ARCHETYPEN
-    // ==========================================
-    // Verschiedene Spielertypen haben unterschiedliche Entwicklungsmuster:
-    // - Frühe Blüte (jung stark, dann Abstieg)
-    // - Spätzünder (anfangs schwach, später stark)
-    // - Konstante Karriere (stabil)
-    // - Überflieger (schnelle Entwicklung)
-    // - Fallfiguren (erfahren aber schneller Abstieg)
-    /* eslint-disable no-undef */
+const ARCHETYPES = {
+    'steady-eddy': { name: 'Konstanter Profi', icon: '⚖️', peakAge: 29, developmentRate: 1.0, declineRate: 1.0, weight: 40 },
+    'late-bloomer': { name: 'Spätzünder', icon: '📈', peakAge: 31, developmentRate: 0.8, declineRate: 0.8, weight: 20 },
+    'early-bloomer': { name: 'Frühe Blüte', icon: '⭐', peakAge: 25, developmentRate: 1.4, declineRate: 1.4, weight: 20 },
+    'wonderkid': { name: 'Wunderkind', icon: '🌟', peakAge: 27, developmentRate: 1.8, declineRate: 1.6, weight: 8 },
+    'fallen-star': { name: 'Früh verglüht', icon: '💔', peakAge: 24, developmentRate: 0.6, declineRate: 2.0, weight: 12 }
+};
 
-    const ARCHETYPES = {
-        'early-bloomer': {
-            name: 'Frühe Blüte',
-            description: 'Jung extrem talentiert, stellt sich schnell durch',
-            peakAge: 25,
-            declineRate: 1.5,
-            developmentRate: 1.4,
-            icon: '⭐',
-            traits: ['Ambitioniert', 'Durchsetzungsstark']
-        },
-        'late-bloomer': {
-            name: 'Spätzünder',
-            description: 'Wird erst mit Erfahrung richtig gut',
-            peakAge: 32,
-            declineRate: 0.8,
-            developmentRate: 0.8,
-            icon: '📈',
-            traits: ['Geduldig', 'Professionell']
-        },
-        'steady-eddy': {
-            name: 'Konstanter Profi',
-            description: 'Stabile Karriere ohne große Sprünge',
-            peakAge: 29,
-            declineRate: 1.0,
-            developmentRate: 1.0,
-            icon: '⚖️',
-            traits: ['Zuverlässig', 'Beständig']
-        },
-        'wonderkid': {
-            name: 'Wunderkind',
-            description: 'Expotenzielle Entwicklung in den besten Jahren',
-            peakAge: 27,
-            declineRate: 2.0,
-            developmentRate: 1.8,
-            icon: '🌟',
-            traits: ['Ehrgeiziger', 'Talentiert']
-        },
-        'fallen-star': {
-            name: 'Gefallener Star',
-            description: 'War einmal großartig, fällt schnell ab',
-            peakAge: 24,
-            declineRate: 2.5,
-            developmentRate: 0.6,
-            icon: '💔',
-            traits: ['Erfahrener', 'Unreif']
-        }
-    };
-
-    function assignArchetype(playerId, archetyype) {
-        let p = squad.find(x => x.id === playerId);
-        if (!p) return { success: false, message: 'Spieler nicht gefunden' };
-        if (!ARCHETYPES[archetyype]) return { success: false, message: 'Archetyp unbekannt' };
-
-        p.archetype = archetyype;
-        showToast(`✅ ${p.name} ist jetzt ein(e) ${ARCHETYPES[archetyype].name}`, 'success');
-        return { success: true };
+// Fester Typ je Spieler (aus der ID abgeleitet, damit er nicht vom Zufall beim Laden abhängt).
+function getPlayerArchetype(p) {
+    if (!ARCHETYPES[p.archetype]) {
+        const hash = String(p.id).split('').reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 1000, 7) % 100;
+        let sum = 0;
+        p.archetype = Object.keys(ARCHETYPES).find(k => (sum += ARCHETYPES[k].weight) > hash) || 'steady-eddy';
     }
+    return ARCHETYPES[p.archetype];
+}
 
-    function getArchetypeBonus(player, stat) {
-        if (!player || !player.archetype) return 1.0;
-        let arch = ARCHETYPES[player.archetype];
-        if (!arch) return 1.0;
+// Erwartete Stärkeänderung für das kommende Lebensjahr: [min, max].
+function getDevelopmentRange(p) {
+    const arch = getPlayerArchetype(p);
+    const vomHoehepunkt = (p.age || 25) - arch.peakAge;
+    if (vomHoehepunkt < -1) return [Math.round(arch.developmentRate * 0.5), Math.round(arch.developmentRate * 2)];
+    if (vomHoehepunkt <= 1) return [0, 0];
+    const abbau = arch.declineRate * 0.4 * vomHoehepunkt;
+    return [-Math.round(abbau + 1), -Math.max(0, Math.round(abbau))];
+}
 
-        let ageFromPeak = player.age - arch.peakAge;
-        let bonus = 1.0;
+function agePlayer(p) {
+    const [min, max] = getDevelopmentRange(p);
+    const delta = min + Math.floor(Math.random() * (max - min + 1));
+    p.age = (p.age || 25) + 1;
+    const alt = p.strength;
+    p.strength = Math.max(20, Math.min(99, p.strength + delta));
+    if (p.strength !== alt && typeof calculatePlayerMarketValue === 'function') p.marketValue = calculatePlayerMarketValue(p.strength);
+    return p.strength - alt;
+}
 
-        // Im Peak-Alter optimal
-        if (Math.abs(ageFromPeak) <= 1) bonus = 1.0 + 0.15;
-        // Vor dem Peak: development rate
-        else if (ageFromPeak < 0) {
-            bonus = 1.0 + (0.08 * arch.developmentRate);
-        }
-        // Nach dem Peak: decline rate
-        else {
-            bonus = 1.0 - (ageFromPeak * 0.02 * arch.declineRate);
-            bonus = Math.max(0.6, bonus);
-        }
+// Saisonende: ganzer Kader (und zweite Mannschaft) wird ein Jahr älter.
+function agePlayersAtSeasonEnd() {
+    const changes = squad.map(p => ({ p, delta: agePlayer(p) }));
+    if (typeof secondTeamSquad !== 'undefined') secondTeamSquad.forEach(agePlayer);
+    // Wer jetzt das Rentenalter erreicht, beendet seine Laufbahn zum Saisonwechsel.
+    if (typeof tickPlayerRetirement === 'function') tickPlayerRetirement();
+    const auf = changes.filter(c => c.delta > 0).sort((a, b) => b.delta - a.delta);
+    const ab = changes.filter(c => c.delta < 0).sort((a, b) => a.delta - b.delta);
+    const liste = arr => arr.slice(0, 3).map(c => `${c.p.name} (${c.p.age}, ${c.delta > 0 ? '+' : ''}${c.delta})`).join(', ');
+    addInboxMessage('vertrag', '📈 Spielerentwicklung über den Sommer',
+        `Der Kader ist ein Jahr älter. ${auf.length} Spieler haben sich verbessert${auf.length ? `, am stärksten ${liste(auf)}` : ''}. ` +
+        `${ab.length} haben abgebaut${ab.length ? `, am deutlichsten ${liste(ab)}` : ''}.`, 'screen-squad-planning');
+}
 
-        return bonus;
-    }
+function formatDevelopmentRange(p) {
+    const [min, max] = getDevelopmentRange(p);
+    if (max === 0 && min === 0) return '<span style="color:var(--text-muted);">→ Höhepunkt</span>';
+    if (min >= 0) return `<span style="color:var(--primary);">↑ +${min === max ? max : `${min}-${max}`}</span>`;
+    return `<span style="color:var(--danger);">↓ ${max === min ? min : `${max} bis ${min}`}</span>`;
+}
 
-    function simulateArchetypeCareer(archetype, startAge = 20, endAge = 36) {
-        let arch = ARCHETYPES[archetype];
-        if (!arch) return [];
+function renderPlayerDevelopmentPanel() {
+    const box = document.getElementById('player-development-box');
+    if (!box) return;
+    const rows = [...squad].sort((a, b) => (a.age || 0) - (b.age || 0)).map(p => {
+        const arch = getPlayerArchetype(p);
+        const hist = p.strengthHistory || [];
+        const letzte = hist.length ? p.strength - hist[hist.length - 1].strength : 0;
+        return `<div style="display:grid; grid-template-columns: 1fr auto auto auto; gap:6px; padding:2px 0; border-top:1px solid rgba(255,255,255,0.06); align-items:center;">
+            <span>${p.name} <span style="color:var(--text-muted);">${p.pos}, ${p.age} J.</span></span>
+            <span title="${arch.name}, Höhepunkt mit ${arch.peakAge}">${arch.icon}</span>
+            <span>${p.strength}${letzte ? ` <span style="color:${letzte > 0 ? 'var(--primary)' : 'var(--danger)'};">(${letzte > 0 ? '+' : ''}${letzte})</span>` : ''}</span>
+            <span style="white-space:nowrap;">${formatDevelopmentRange(p)}</span>
+        </div>`;
+    }).join('');
+    box.innerHTML = `<div style="font-size:9px;">
+        <div style="color:var(--text-muted); margin-bottom:4px;">Am Saisonende altern alle Spieler um ein Jahr. Rechts: erwartete Stärkeänderung im Sommer (Klammer: seit Saisonbeginn).</div>
+        <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:4px;">${Object.values(ARCHETYPES).map(a => `<span>${a.icon} ${a.name} (${a.peakAge})</span>`).join('')}</div>
+        ${rows}
+    </div>`;
+}
 
-        let career = [];
-        for (let age = startAge; age <= endAge; age++) {
-            let ageFromPeak = age - arch.peakAge;
-            let strength = 60; // Base strength
+// Karriere-Block im Spielerdetail - aus gespeicherten Spielerdaten.
+function renderPlayerCareerPanel(playerId) {
+    const p = squad.find(x => x.id === playerId);
+    if (!p) return '';
+    const arch = getPlayerArchetype(p);
+    const hist = p.strengthHistory || [];
+    const peak = hist.reduce((best, h) => (h.strength > best.strength ? h : best), { strength: p.strength, season: game.season });
+    const saisons = hist.filter(h => h.apps !== undefined).slice(-5).reverse();
+    return `<div class="box" style="font-size:9px;">
+        <div style="font-weight:700; color:var(--accent); margin-bottom:4px;">📊 KARRIERE</div>
+        ${arch.icon} ${arch.name} - Höhepunkt mit etwa ${arch.peakAge} Jahren · nächster Sommer: ${formatDevelopmentRange(p)}<br>
+        ${p.appearances || 0} Pflichtspiele · ${p.goalsCareer || 0} Tore · Bestwert Stärke ${peak.strength} (Saison ${peak.season})
+        ${saisons.length ? `<div style="margin-top:4px;">${saisons.map(h => `Saison ${h.season}: ${h.apps} Spiele, ${h.goals} Tore, Stärke ${h.strength}`).join('<br>')}</div>` : ''}
+    </div>`;
+}
 
-            // Entwicklung zum Peak
-            if (ageFromPeak < 0) {
-                let yearsToPeak = -ageFromPeak;
-                strength += yearsToPeak * 2 * arch.developmentRate;
-            }
-            // Nach dem Peak
-            else {
-                strength -= ageFromPeak * 1.5 * arch.declineRate;
-            }
-
-            strength = Math.max(40, Math.min(strength, 95));
-            career.push({ age, strength: Math.round(strength) });
-        }
-        return career;
-    }
-
-    function renderArchetypesPanel() {
-        const box = document.getElementById('archetypes-panel');
-        if (!box) return;
-
-        let html = `<div style="font-size:10px; font-weight:bold; margin-bottom:6px;">🎭 SPIELER-ARCHETYPEN</div>`;
-
-        // Kurzbeschreibungen aller Archetypen
-        Object.entries(ARCHETYPES).forEach(([key, arch]) => {
-            html += `<div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:6px; font-size:9px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
-                    <strong>${arch.icon} ${arch.name}</strong>
-                    <span style="color:var(--text-muted); font-size:8px;">Peak: ${arch.peakAge}J.</span>
-                </div>
-                <div style="font-size:8px; color:var(--text-muted); margin-bottom:3px;">${arch.description}</div>
-                <div style="font-size:8px; color:var(--accent);">
-                    Entwicklung: ${(arch.developmentRate * 100).toFixed(0)}% · Verfall: ${(arch.declineRate * 100).toFixed(0)}%
-                </div>
-            </div>`;
-        });
-
-        // Spieler nach Archetypen gruppiert
-        let playersByArchetype = {};
-        squad.forEach(p => {
-            let arch = p.archetype || 'unassigned';
-            if (!playersByArchetype[arch]) playersByArchetype[arch] = [];
-            playersByArchetype[arch].push(p);
-        });
-
-        if (Object.keys(playersByArchetype).length > 1 || playersByArchetype['unassigned']?.length < squad.length) {
-            html += `<div style="font-size:9px; font-weight:bold; margin-top:8px; margin-bottom:4px;">📊 SPIELER NACH TYP</div>`;
-            Object.entries(playersByArchetype).forEach(([arch, players]) => {
-                if (players.length === 0) return;
-                let archObj = ARCHETYPES[arch];
-                let label = archObj ? archObj.name : 'Nicht zugewiesen';
-                html += `<div style="font-size:8px; color:var(--accent); margin-bottom:2px;">${label}: ${players.length} Spieler</div>`;
-                players.slice(0, 3).forEach(p => {
-                    html += `<div style="font-size:7px; color:var(--text-muted); margin-left:8px;">• ${p.name} (${p.age}J.)</div>`;
-                });
-                if (players.length > 3) html += `<div style="font-size:7px; color:var(--text-muted); margin-left:8px;">+ ${players.length - 3} weitere</div>`;
-            });
-        }
-
-        box.innerHTML = html;
-    }
-
-    function renderArchetypeComparisonChart() {
-        const box = document.getElementById('archetype-comparison-box');
-        if (!box) return;
-
-        let html = `<div style="font-size:10px; font-weight:bold; margin-bottom:6px;">📈 KARRIERE-VERLAUF NACH ARCHETYP</div>`;
-
-        Object.entries(ARCHETYPES).forEach(([key, arch]) => {
-            let career = simulateArchetypeCareer(key);
-            let minStrength = Math.min(...career.map(c => c.strength));
-            let maxStrength = Math.max(...career.map(c => c.strength));
-            let range = maxStrength - minStrength || 1;
-
-            html += `<div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:6px;">
-                <div style="font-weight:bold; font-size:9px; margin-bottom:4px;">${arch.icon} ${arch.name}</div>
-                <div style="display:flex; gap:1px; height:20px; align-items:flex-end;">
-                    ${career.map(c => {
-                        let height = ((c.strength - minStrength) / range) * 20;
-                        return `<div style="flex:1; height:${Math.max(1, height)}px; background:var(--accent); border-radius:1px;" title="${c.age}J: ${c.strength}"></div>`;
-                    }).join('')}
-                </div>
-                <div style="font-size:7px; color:var(--text-muted); margin-top:2px;">
-                    20J → 36J: ${career[0].strength} → ${career[career.length - 1].strength}
-                </div>
-            </div>`;
-        });
-
-        box.innerHTML = html;
-    }
-
+// Alte Spielstände: Daten der abgelösten Module.
+function cleanupLegacyDevelopmentState() {
+    delete game.playerDevelopment;
+    // Die alte Alterung hinterließ Kommazahlen bei Alter und Stärke.
+    squad.forEach(p => { p.age = Math.round(p.age || 25); p.strength = Math.round(p.strength); });
+}
 
 </script>
 <script>
@@ -8699,7 +8401,6 @@ function getTransferBudgetInfo() {
         renderSquadPlanningWarningsBox();
         if (typeof renderReservesLoanPanel === 'function') renderReservesLoanPanel();
         if (typeof renderPlayerDevelopmentPanel === 'function') renderPlayerDevelopmentPanel();
-        if (typeof renderContractRenewalPanel === 'function') renderContractRenewalPanel();
     }
 
 </script>
@@ -13494,8 +13195,6 @@ function renderBoardRoomPanel() {
             }
         }
         renderTalentDatabase();
-        if (typeof renderTalentDetectionPanel === 'function') renderTalentDetectionPanel();
-        if (typeof renderScoutingIntelligencePanel === 'function') renderScoutingIntelligencePanel();
     }
 
     // 4. Talent-Datenbank: dauerhaftes Archiv aller je entdeckten Spieler.
@@ -13530,318 +13229,12 @@ function renderBoardRoomPanel() {
         updateUI();
     }
 
-
-</script>
-<script>
-// ==========================================
-// ERWEITERTE SCOUTING-ANALYSE & TALENTERKENNUNG
-// ==========================================
-
-function calcPlayerPotential(player) {
-    if (!player) return 0;
-    const currentRating = player.rating || player.strength || 50;
-    const age = player.age || 25;
-    const potential = player.potential || currentRating;
-
-    // Potenzialberechnung basierend auf Alter und Trainingsfokus
-    const ageBonus = age < 20 ? (20 - age) * 1.5 : (age > 28 ? Math.max(0, (28 - age) * 0.8) : 0);
-    const trainingBoost = (game.trainingIntensity === 'intensiv' ? 3 : game.trainingIntensity === 'normal' ? 1.5 : 0.5);
-
-    return Math.min(99, Math.round(potential + ageBonus * trainingBoost * 0.1));
-}
-
-function calcTalentScore(player) {
-    if (!player) return 0;
-    const rating = player.rating || player.strength || 50;
-    const potential = calcPlayerPotential(player);
-    const age = player.age || 25;
-
-    // Talent-Score: wie viel Entwicklungspotenzial hat der Spieler?
-    const developmentPotential = potential - rating;
-    const ageOptimum = age >= 18 && age <= 26 ? 100 : (age < 18 ? 70 : 50);
-    const talentScore = (developmentPotential * 0.6) + (rating * 0.3) + (ageOptimum * 0.1);
-
-    return Math.round(Math.max(0, Math.min(100, talentScore)));
-}
-
-function generateScoutReport(player) {
-    if (!player) return null;
-
-    const rating = player.rating || player.strength || 50;
-    const potential = calcPlayerPotential(player);
-    const talentScore = calcTalentScore(player);
-    const age = player.age || 25;
-    const position = player.pos || player.position || 'MIT';
-
-    // Stärken analysieren
-    let strengths = [];
-    if (player.strength >= 75) strengths.push('Hervorragende physische Grundlagen');
-    if (player.pace >= 75) strengths.push('Hohe Geschwindigkeit');
-    if (player.shooting >= 75) strengths.push('Trefferquote');
-    if (player.passing >= 75) strengths.push('Passspiel');
-    if (player.defense >= 75) strengths.push('Defensive Sicherheit');
-    if (strengths.length === 0) strengths = ['Solide Grundkompetenz'];
-
-    // Schwächen analysieren
-    let weaknesses = [];
-    if (player.strength < 45) weaknesses.push('Physisch noch zu schwach');
-    if (player.pace < 45) weaknesses.push('Geschwindigkeit entwicklungsbedürftig');
-    if (player.shooting < 45) weaknesses.push('Torchancenauswertung verbesserungsfähig');
-    if (player.passing < 45) weaknesses.push('Passspiel noch ungenau');
-    if (player.defense < 45) weaknesses.push('Defensive Grundlagen fehlen');
-    if (weaknesses.length === 0) weaknesses = ['Gut ausgewogen'];
-
-    // Empfehlungen
-    let recommendation = 'NEUTRAL';
-    if (talentScore >= 75) recommendation = 'MUST-BUY';
-    else if (talentScore >= 60) recommendation = 'SEHR EMPFOHLEN';
-    else if (talentScore >= 45) recommendation = 'EMPFOHLEN';
-    else if (talentScore >= 30) recommendation = 'OPTIONAL';
-    else recommendation = 'NICHT EMPFOHLEN';
-
-    return {
-        playerName: player.name,
-        position: position,
-        age: age,
-        currentRating: rating,
-        potential: potential,
-        developmentPotential: potential - rating,
-        talentScore: talentScore,
-        strengths: strengths,
-        weaknesses: weaknesses,
-        recommendation: recommendation,
-        estimatedValue: Math.round(calcSquadPlayerValue(player) * (1 + (talentScore / 100) * 0.3)),
-        generatedAt: game.matchday
-    };
-}
-
-function detectTalents(minTalentScore = 60) {
-    if (!squad) return [];
-
-    return squad
-        .filter(p => p && !p.isAcademy)
-        .map(p => ({
-            player: p,
-            talentScore: calcTalentScore(p),
-            potential: calcPlayerPotential(p)
-        }))
-        .filter(t => t.talentScore >= minTalentScore)
-        .sort((a, b) => b.talentScore - a.talentScore);
-}
-
-function comparePlayerAttributes(playerId1, playerId2) {
-    const player1 = squad.find(p => p.id === playerId1);
-    const player2 = squad.find(p => p.id === playerId2);
-
-    if (!player1 || !player2) return null;
-
-    const attrs = ['strength', 'pace', 'shooting', 'passing', 'defense', 'fitness'];
-    const comparison = {
-        player1: { name: player1.name, id: playerId1, attributes: {} },
-        player2: { name: player2.name, id: playerId2, attributes: {} },
-        winner: {}
-    };
-
-    attrs.forEach(attr => {
-        const val1 = player1[attr] || 0;
-        const val2 = player2[attr] || 0;
-        comparison.player1.attributes[attr] = val1;
-        comparison.player2.attributes[attr] = val2;
-
-        if (val1 > val2) comparison.winner[attr] = playerId1;
-        else if (val2 > val1) comparison.winner[attr] = playerId2;
-        else comparison.winner[attr] = 'draw';
-    });
-
-    return comparison;
-}
-
-function getPlayerDevelopmentTrend(playerId, matchdaysBack = 5) {
-    const player = squad.find(p => p.id === playerId);
-    if (!player) return null;
-
-    // Vereinfachte Implementierung - in echtem System würde man historische Daten tracken
-    const trend = {
-        playerName: player.name,
-        currentStrength: player.strength,
-        trend: 'stable',
-        trajectory: 'normal'
-    };
-
-    // Basis-Logik für Trend
-    if (player.mood >= 70) trend.trend = 'improving';
-    else if (player.mood < 40) trend.trend = 'declining';
-
-    if (player.age < 22 && player.potential > player.strength) trend.trajectory = 'rising';
-    else if (player.age > 30) trend.trajectory = 'declining';
-
-    return trend;
-}
-
-function generateScoutingDatabase() {
-    if (!game.scoutingDatabase) {
-        game.scoutingDatabase = {
-            discoveredPlayers: [],
-            lastAnalysisMatchday: 0,
-            talentWatchlist: []
-        };
+    // Alte Spielstände: Daten zweier abgelöster Module, die nur den eigenen Kader "scouteten"
+    // (erfundene Potenziale, nie befüllte Berichte).
+    function cleanupLegacyScoutingState() {
+        delete game.scoutingDatabase;
+        delete game.scoutingIntelligence;
     }
-    return game.scoutingDatabase;
-}
-
-function addToTalentWatchlist(playerId) {
-    const db = generateScoutingDatabase();
-    if (!db.talentWatchlist.includes(playerId)) {
-        db.talentWatchlist.push(playerId);
-    }
-}
-
-function removeFromTalentWatchlist(playerId) {
-    const db = generateScoutingDatabase();
-    db.talentWatchlist = db.talentWatchlist.filter(id => id !== playerId);
-}
-
-function renderPlayerProfile(playerId) {
-    const player = squad.find(p => p.id === playerId);
-    if (!player) return '';
-
-    const potential = calcPlayerPotential(player);
-    const talentScore = calcTalentScore(player);
-    const report = generateScoutReport(player);
-    const trend = getPlayerDevelopmentTrend(playerId);
-
-    let html = `
-        <div class="panel" style="margin-bottom:12px;">
-            <div class="panel-header">📊 SPIELER-PROFIL: ${player.name}</div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
-                <div>
-                    <div style="font-size:10px; color:var(--text-muted);">Alter / Position</div>
-                    <div style="font-size:12px; font-weight:bold;">${player.age} Jahre · ${player.pos || 'MIT'}</div>
-                </div>
-                <div>
-                    <div style="font-size:10px; color:var(--text-muted);">Talent-Score</div>
-                    <div style="font-size:12px; font-weight:bold; color:${talentScore >= 75 ? 'var(--primary)' : 'var(--accent)'};">${talentScore}/100</div>
-                </div>
-            </div>
-
-            <div style="margin-bottom:12px;">
-                <div style="font-size:10px; color:var(--text-muted); margin-bottom:4px;">Potenzial-Entwicklung</div>
-                <div style="display:flex; gap:8px; align-items:center;">
-                    <div style="flex:1;">
-                        <div style="background:var(--border); height:8px; border-radius:2px; overflow:hidden;">
-                            <div style="height:100%; width:${(player.strength / 99) * 100}%; background:var(--accent);"></div>
-                        </div>
-                        <div style="font-size:8px; color:var(--text-muted); margin-top:2px;">Aktuell: ${player.strength}</div>
-                    </div>
-                    <div style="font-size:12px; color:var(--primary);">→</div>
-                    <div style="flex:1;">
-                        <div style="background:var(--border); height:8px; border-radius:2px; overflow:hidden;">
-                            <div style="height:100%; width:${(potential / 99) * 100}%; background:var(--primary);"></div>
-                        </div>
-                        <div style="font-size:8px; color:var(--text-muted); margin-top:2px;">Potenzial: ${potential}</div>
-                    </div>
-                </div>
-            </div>
-
-            <div style="background:rgba(100,100,100,0.1); padding:8px; border-radius:4px; margin-bottom:12px;">
-                <div style="font-size:10px; font-weight:bold; margin-bottom:4px; color:var(--text-muted);">Stärken:</div>
-                <div style="font-size:9px; color:var(--primary);">${report.strengths.join(' · ')}</div>
-                <div style="font-size:10px; font-weight:bold; margin-top:8px; margin-bottom:4px; color:var(--text-muted);">Schwächen:</div>
-                <div style="font-size:9px; color:var(--danger);">${report.weaknesses.join(' · ')}</div>
-            </div>
-
-            <div style="display:flex; gap:4px; padding:8px; background:${
-                report.recommendation === 'MUST-BUY' ? 'rgba(76,175,80,0.1)' :
-                report.recommendation === 'SEHR EMPFOHLEN' ? 'rgba(33,150,243,0.1)' :
-                report.recommendation === 'EMPFOHLEN' ? 'rgba(255,193,7,0.1)' :
-                report.recommendation === 'OPTIONAL' ? 'rgba(156,39,176,0.1)' :
-                'rgba(244,67,54,0.1)'
-            }; border-radius:4px;">
-                <div style="font-size:10px; font-weight:bold; color:${
-                    report.recommendation === 'MUST-BUY' ? 'var(--primary)' :
-                    report.recommendation === 'NICHT EMPFOHLEN' ? 'var(--danger)' :
-                    'var(--accent)'
-                };">${report.recommendation}</div>
-                <div style="font-size:9px; color:var(--text-muted); flex:1;">Geschätzter Wert: ${formatVal(report.estimatedValue)}</div>
-            </div>
-        </div>
-    `;
-
-    return html;
-}
-
-function renderTalentWatchlist() {
-    const db = generateScoutingDatabase();
-    const watchedPlayers = squad.filter(p => db.talentWatchlist.includes(p.id));
-
-    if (watchedPlayers.length === 0) {
-        return '<div style="color:var(--text-muted); font-size:9px;">Keine Spieler auf der Beobachtungsliste</div>';
-    }
-
-    let html = '<div style="font-size:10px; font-weight:bold; margin-bottom:8px;">📋 Talent-Beobachtungsliste:</div>';
-    watchedPlayers.forEach(p => {
-        const talent = calcTalentScore(p);
-        const trend = getPlayerDevelopmentTrend(p.id);
-        html += `
-            <div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
-                <div>
-                    <div style="font-size:9px; font-weight:bold;">${p.name} (${p.pos}, ${p.age}J)</div>
-                    <div style="font-size:8px; color:var(--text-muted);">Talent: ${talent}/100 · Trend: ${trend.trend}</div>
-                </div>
-                <button onclick="removeFromTalentWatchlist('${p.id}'); updateUI();" class="btn-secondary" style="padding:3px 7px; font-size:8px;">✕ Entfernen</button>
-            </div>
-        `;
-    });
-
-    return html;
-}
-
-function renderTalentDetectionPanel() {
-    const box = document.getElementById('talent-detection-box');
-    if (!box) return;
-
-    const talents = detectTalents(50);
-    const topTalents = talents.slice(0, 10);
-
-    let html = `
-        <div style="margin-bottom:12px;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                <div style="font-size:10px; font-weight:bold; color:var(--text-muted);">Talente gefunden: ${talents.length}</div>
-                <button onclick="(function() { let t = detectTalents(60); alert('Top-Talente: ' + t.length + ' Spieler mit Talent-Score ≥60'); })()" class="btn-primary" style="padding:3px 7px; font-size:8px;">🎯 Top-Talente</button>
-            </div>
-        </div>
-    `;
-
-    if (topTalents.length === 0) {
-        html += '<div style="color:var(--text-muted); font-size:9px;">Keine Talente im Kader erkannt</div>';
-    } else {
-        html += '<div style="font-size:10px; font-weight:bold; margin-bottom:8px;">🌟 Top 10 Talente im Kader:</div>';
-        topTalents.forEach((t, idx) => {
-            const p = t.player;
-            const potential = t.potential;
-            const devPot = potential - p.strength;
-            html += `
-                <div style="background:rgba(76,175,80,0.1); padding:8px; border-radius:4px; margin-bottom:6px; border-left:3px solid var(--primary);">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                        <div>
-                            <div style="font-size:9px; font-weight:bold;">${idx + 1}. ${p.name} (${p.pos}, ${p.age}J)</div>
-                            <div style="font-size:8px; color:var(--text-muted);">Talent-Score: ${t.talentScore}/100 · Entwicklungspotenzial: +${devPot}</div>
-                        </div>
-                        <button onclick="addToTalentWatchlist('${p.id}'); updateUI();" class="btn-secondary" style="padding:3px 7px; font-size:8px;">👁️ Beobachten</button>
-                    </div>
-                    <div style="display:flex; gap:8px; font-size:8px;">
-                        <div>Aktuell: ${p.strength}</div>
-                        <div style="color:var(--primary);">→ Potenzial: ${potential}</div>
-                    </div>
-                </div>
-            `;
-        });
-    }
-
-    html += renderTalentWatchlist();
-
-    box.innerHTML = html;
-}
 
 </script>
 <script>
@@ -24251,8 +23644,14 @@ function renderYouthDevelopmentChart() {
             list.appendChild(row);
         });
 
-        if (typeof renderNegotiationPanel === 'function') renderNegotiationPanel();
-        if (typeof renderContractManagementPanel === 'function') renderContractManagementPanel();
+    }
+
+    // Alte Spielstände: Daten von drei abgelösten Vertragsmodulen, die eigene Scheinverträge
+    // (Laufzeit in Spieltagen, erfundene Gehälter) neben p.contracts führten, und vom nie
+    // befüllten zweiten Berater-Pool (Berater sind p.agent, siehe getAgentFee).
+    function cleanupLegacyContractState() {
+        ['contracts', 'contractNegotiations', 'contractRenewal', 'negotiationHistory', 'agentPool'].forEach(k => { delete game[k]; });
+        squad.forEach(p => { delete p.contractEnd; delete p.loyaltyYears; });
     }
 
     // Verhandlungs-Zähigkeit auch bei bestehenden Verträgen (NEU): analog zur Logik bei
@@ -24352,357 +23751,6 @@ function renderYouthDevelopmentChart() {
         });
     }
 
-
-</script>
-<script>
-// ==========================================
-// VERHANDLUNGS-SYSTEM FÜR SPIELERVERTRÄGE
-// ==========================================
-
-function calcNegotiationSuccess(player, offerType = 'renewal') {
-    if (!player || !game) return 0;
-
-    const negotiatorPerk = managerRPG && managerRPG.perks && managerRPG.perks.negotiator ? 20 : 0;
-    const playerMood = player.morale || 50;
-    const marketValue = player.marketValue || 50000;
-    const currentWage = player.wage || 5000;
-    const wageRatio = currentWage / (marketValue / 1000);
-
-    // Basis: Spielermoral + Verhandler-Bonus
-    let successChance = 50 + negotiatorPerk + (playerMood - 50) * 0.5;
-
-    // Angebots-Typ modifier
-    if (offerType === 'renewal') {
-        successChance += wageRatio < 1.5 ? 10 : -5;
-    } else if (offerType === 'salary_increase') {
-        successChance -= 15; // Schwieriger
-    } else if (offerType === 'contract_extension') {
-        successChance += 5;
-    }
-
-    return Math.max(5, Math.min(95, successChance));
-}
-
-function generateNegotiationOffer(playerId, offerType = 'renewal') {
-    const player = squad.find(p => p.id === playerId);
-    if (!player) return null;
-
-    const currentWage = player.wage || 5000;
-    const marketValue = player.marketValue || 50000;
-    const age = player.age || 25;
-    const strength = player.strength || 50;
-    const successChance = calcNegotiationSuccess(player, offerType);
-
-    let offer = {
-        playerId: playerId,
-        playerName: player.name,
-        offerType: offerType,
-        currentWage: currentWage,
-        marketValue: marketValue,
-        proposedWage: currentWage,
-        proposedDuration: player.contracts || 3,
-        successChance: successChance,
-        bonusGoals: [],
-        alternatives: []
-    };
-
-    // Angebots-Optionen basierend auf Typ
-    if (offerType === 'renewal') {
-        offer.proposedDuration = Math.min(5, (player.contracts || 3) + 1);
-        offer.proposedWage = Math.round(currentWage * 1.05);
-        offer.alternatives = [
-            { type: 'higher_wage', wage: Math.round(currentWage * 1.15), duration: player.contracts, desc: '+15% Gehalt, gleiche Laufzeit' },
-            { type: 'extended_contract', wage: currentWage, duration: 5, desc: 'Gleiches Gehalt, 5 Jahre' },
-            { type: 'premium_offer', wage: Math.round(currentWage * 1.25), duration: 5, desc: '+25% Gehalt, 5 Jahre (Premium)' }
-        ];
-    } else if (offerType === 'salary_increase') {
-        offer.proposedWage = Math.round(currentWage * 1.08);
-        offer.alternatives = [
-            { type: 'bonus_goals', wage: currentWage, duration: player.contracts, desc: 'Bonusziele statt Gehaltserhöhung', bonus: 'Tor-Bonuse' },
-            { type: 'modest_increase', wage: Math.round(currentWage * 1.05), duration: player.contracts, desc: 'Bescheidene +5% Erhöhung' }
-        ];
-    } else if (offerType === 'contract_extension') {
-        offer.proposedDuration = Math.min(6, (player.contracts || 3) + 2);
-        offer.proposedWage = Math.round(currentWage * 1.02);
-        offer.alternatives = [
-            { type: 'early_extension', wage: currentWage, duration: 3, desc: 'Verlängerung um 3 Jahre (früh)' },
-            { type: 'long_extension', wage: Math.round(currentWage * 1.03), duration: 5, desc: 'Verlängerung um 5 Jahre (mit kleinem Bonus)' }
-        ];
-    }
-
-    // Bonusziele
-    if (strength >= 75) {
-        offer.bonusGoals = [
-            { type: 'goals', target: 10, bonus: 5000, desc: '10+ Tore = 5.000€' },
-            { type: 'assists', target: 8, bonus: 3000, desc: '8+ Assists = 3.000€' }
-        ];
-    }
-
-    return offer;
-}
-
-function acceptNegotiationOffer(playerId, offerType = 'renewal', alternativeIndex = -1) {
-    const player = squad.find(p => p.id === playerId);
-    if (!player) return { success: false, message: 'Spieler nicht gefunden' };
-
-    const offer = generateNegotiationOffer(playerId, offerType);
-    if (!offer) return { success: false, message: 'Angebot konnte nicht generiert werden' };
-
-    const successChance = offer.successChance;
-    const random = Math.random() * 100;
-    const negotiationSucceeded = random < successChance;
-
-    if (!negotiationSucceeded) {
-        return {
-            success: false,
-            message: `${player.name} hat das Angebot abgelehnt! (${successChance.toFixed(0)}% Erfolgschance)`,
-            playerName: player.name
-        };
-    }
-
-    // Bestimme tatsächliches Angebot
-    let finalWage = offer.proposedWage;
-    let finalDuration = offer.proposedDuration;
-    let bonusGoals = offer.bonusGoals;
-
-    if (alternativeIndex >= 0 && alternativeIndex < offer.alternatives.length) {
-        const alt = offer.alternatives[alternativeIndex];
-        finalWage = alt.wage;
-        finalDuration = alt.duration;
-        if (alt.bonus) {
-            bonusGoals = [{ type: 'special', desc: alt.bonus, bonus: 0 }];
-        }
-    }
-
-    // Wende das Angebot an
-    const wageDifference = finalWage - player.wage;
-    player.wage = finalWage;
-    player.contracts = finalDuration;
-    player.morale = Math.min(100, (player.morale || 50) + 10);
-
-    // Speichere Verhandlungshistorie
-    if (!game.negotiationHistory) game.negotiationHistory = [];
-    game.negotiationHistory.push({
-        playerId: playerId,
-        playerName: player.name,
-        offerType: offerType,
-        wage: finalWage,
-        duration: finalDuration,
-        wageDifference: wageDifference,
-        bonusGoals: bonusGoals,
-        matchday: game.matchday,
-        success: true
-    });
-
-    // Finanz-Auswirkung tracken
-    game.money -= (wageDifference * finalDuration * 10); // Vereinfachte Kostenberechnung
-
-    return {
-        success: true,
-        message: `✓ ${player.name} hat dem Vertrag zugestimmt!`,
-        playerName: player.name,
-        newWage: finalWage,
-        newDuration: finalDuration,
-        costImpact: wageDifference * finalDuration * 10
-    };
-}
-
-function rejectNegotiationOffer(playerId) {
-    const player = squad.find(p => p.id === playerId);
-    if (!player) return { success: false };
-
-    // Spieler wird verärgert
-    player.morale = Math.max(0, (player.morale || 50) - 15);
-
-    if (!game.negotiationHistory) game.negotiationHistory = [];
-    game.negotiationHistory.push({
-        playerId: playerId,
-        playerName: player.name,
-        matchday: game.matchday,
-        success: false,
-        reason: 'Manager hat Verhandlung abgebrochen'
-    });
-
-    return {
-        success: true,
-        message: `${player.name} ist verärgert! (-15 Moral)`,
-        playerName: player.name
-    };
-}
-
-function getPlayerContractStatus(playerId) {
-    const player = squad.find(p => p.id === playerId);
-    if (!player) return null;
-
-    const contractsLeft = player.contracts || 3;
-    const wage = player.wage || 5000;
-    const marketValue = player.marketValue || 50000;
-    const age = player.age || 25;
-
-    let status = 'normal';
-    let urgency = 'green';
-
-    if (contractsLeft <= 0) {
-        status = 'expired';
-        urgency = 'red';
-    } else if (contractsLeft <= 1) {
-        status = 'expiring_soon';
-        urgency = 'orange';
-    } else if (contractsLeft <= 2) {
-        status = 'medium_term';
-        urgency = 'yellow';
-    }
-
-    // Prüfe ob Spieler unterbewertet ist
-    const wageAdequacy = (wage * 1000) / marketValue; // Sollte ca. 0.1-0.2 sein
-    let recommendation = 'normal';
-    if (wageAdequacy < 0.05) {
-        recommendation = 'underpaid'; // Spieler könnte gehen
-    } else if (wageAdequacy > 0.3) {
-        recommendation = 'overpaid'; // Zu teuer
-    }
-
-    return {
-        playerName: player.name,
-        contractsLeft: contractsLeft,
-        currentWage: wage,
-        marketValue: marketValue,
-        status: status,
-        urgency: urgency,
-        recommendation: recommendation,
-        suggestedAction: contractsLeft <= 1 ? 'Sofortige Verhandlung empfohlen' : 'Regelmäßig überwachen'
-    };
-}
-
-function renderNegotiationPanel() {
-    const box = document.getElementById('negotiations-panel');
-    if (!box) return;
-
-    if (!squad || squad.length === 0) {
-        box.innerHTML = '<div style="color:var(--text-muted); font-size:9px;">Kein Kader verfügbar</div>';
-        return;
-    }
-
-    // Finde Spieler mit auslaufenden Verträgen oder Verhandlungsbedarf
-    const expiring = squad.filter(p => (p.contracts || 3) <= 2).sort((a, b) => (a.contracts || 3) - (b.contracts || 3));
-    const underpaid = squad.filter(p => {
-        const mv = p.marketValue || 50000;
-        const w = p.wage || 5000;
-        return (w * 1000) / mv < 0.05;
-    });
-
-    let html = '<div style="margin-bottom:12px;">';
-    html += '<div style="font-size:10px; font-weight:bold; margin-bottom:8px; color:var(--text-muted);">📋 Verhandlungs-Überblick</div>';
-
-    if (expiring.length > 0) {
-        html += '<div style="background:rgba(255,193,7,0.1); padding:8px; border-radius:4px; margin-bottom:8px; border-left:3px solid var(--accent);">';
-        html += `<div style="font-size:9px; font-weight:bold; color:var(--accent);">⚠️ ${expiring.length} Verträge laufen aus:</div>`;
-        expiring.slice(0, 3).forEach(p => {
-            html += `<div style="font-size:8px; margin-top:4px;">• ${p.name}: ${p.contracts || 3} Jahre (${p.wage || 5000}€/SpT)</div>`;
-        });
-        html += '</div>';
-    }
-
-    if (underpaid.length > 0) {
-        html += '<div style="background:rgba(76,175,80,0.1); padding:8px; border-radius:4px; margin-bottom:8px; border-left:3px solid var(--primary);">';
-        html += `<div style="font-size:9px; font-weight:bold; color:var(--primary);">💰 ${underpaid.length} unterbezahlte Spieler:</div>`;
-        underpaid.slice(0, 3).forEach(p => {
-            html += `<div style="font-size:8px; margin-top:4px;">• ${p.name}: Marktwert ${formatVal(p.marketValue || 50000)}</div>`;
-        });
-        html += '</div>';
-    }
-
-    html += '</div>';
-
-    html += '<div style="font-size:10px; font-weight:bold; margin-bottom:8px; color:var(--text-muted);">🤝 Schnelle Verhandlung:</div>';
-
-    const playersNeedingNegotiation = squad.filter(p => (p.contracts || 3) <= 2).slice(0, 5);
-    if (playersNeedingNegotiation.length === 0) {
-        html += '<div style="color:var(--text-muted); font-size:9px;">Keine dringenden Verhandlungen erforderlich</div>';
-    } else {
-        playersNeedingNegotiation.forEach(p => {
-            const status = getPlayerContractStatus(p.id);
-            html += `
-                <div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <div style="font-size:9px; font-weight:bold;">${p.name}</div>
-                        <div style="font-size:8px; color:var(--text-muted);">Vertrag: ${status.contractsLeft}J · Gehalt: ${formatVal(status.currentWage)}/SpT</div>
-                    </div>
-                    <div style="display:flex; gap:4px;">
-                        <button onclick="showNegotiationModal('${p.id}', 'renewal')" class="btn-primary" style="padding:3px 7px; font-size:8px;">Erneuern</button>
-                        <button onclick="showNegotiationModal('${p.id}', 'salary_increase')" class="btn-secondary" style="padding:3px 7px; font-size:8px;">Erhöhung</button>
-                    </div>
-                </div>
-            `;
-        });
-    }
-
-    box.innerHTML = html;
-}
-
-function showNegotiationModal(playerId, offerType) {
-    const player = squad.find(p => p.id === playerId);
-    if (!player) return;
-
-    const offer = generateNegotiationOffer(playerId, offerType);
-    if (!offer) {
-        alert('Angebot konnte nicht generiert werden');
-        return;
-    }
-
-    let modal = `
-        <div style="position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--bg-panel); border:2px solid var(--primary); border-radius:8px; padding:16px; max-width:500px; z-index:10000; box-shadow:0 0 20px rgba(0,0,0,0.5);">
-            <div style="font-size:12px; font-weight:bold; margin-bottom:12px; color:var(--primary);">🤝 Verhandlung mit ${player.name}</div>
-            <div style="font-size:9px; color:var(--text-muted); margin-bottom:12px;">
-                <div>Aktuelles Gehalt: ${formatVal(offer.currentWage)}/SpT</div>
-                <div>Marktwert: ${formatVal(offer.marketValue)}</div>
-                <div>Vertrag: ${offer.proposedDuration} Jahre</div>
-                <div style="margin-top:8px; color:var(--accent);">Erfolgschance: ${Math.round(offer.successChance)}%</div>
-            </div>
-
-            <div style="background:rgba(100,100,100,0.1); padding:8px; border-radius:4px; margin-bottom:12px;">
-                <div style="font-size:9px; font-weight:bold; margin-bottom:6px;">Standard-Angebot:</div>
-                <div style="font-size:9px;">Gehalt: ${formatVal(offer.proposedWage)}/SpT (+${Math.round(((offer.proposedWage / offer.currentWage - 1) * 100))}%)</div>
-                <button onclick="acceptOffer('${playerId}', '${offerType}', -1)" class="btn-primary" style="width:100%; margin-top:8px; padding:6px; font-size:9px;">✓ Angebot machen</button>
-            </div>
-
-            ${offer.alternatives.length > 0 ? `
-                <div style="background:rgba(76,175,80,0.1); padding:8px; border-radius:4px; margin-bottom:12px;">
-                    <div style="font-size:9px; font-weight:bold; margin-bottom:6px;">Alternativen:</div>
-                    ${offer.alternatives.map((alt, idx) => `
-                        <div style="margin-bottom:6px;">
-                            <div style="font-size:8px; color:var(--text-muted);">${alt.desc}</div>
-                            <button onclick="acceptOffer('${playerId}', '${offerType}', ${idx})" class="btn-secondary" style="width:100%; padding:4px; font-size:8px; margin-top:2px;">Angebot ${idx + 1}</button>
-                        </div>
-                    `).join('')}
-                </div>
-            ` : ''}
-
-            <button onclick="closeNegotiationModal()" class="btn-secondary" style="width:100%; padding:6px; font-size:9px;">Abbrechen</button>
-        </div>
-        <div style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999;" onclick="closeNegotiationModal()"></div>
-    `;
-
-    document.body.insertAdjacentHTML('beforeend', modal);
-}
-
-function acceptOffer(playerId, offerType, alternativeIndex) {
-    const result = acceptNegotiationOffer(playerId, offerType, alternativeIndex);
-    closeNegotiationModal();
-    alert(result.message);
-    if (result.success) {
-        renderSquadView();
-        renderNegotiationPanel();
-        updateUI();
-    }
-}
-
-function closeNegotiationModal() {
-    const modal = document.querySelector('[style*="position:fixed"][style*="z-index:10000"]');
-    if (modal) modal.remove();
-    const overlay = document.querySelector('[style*="position:fixed"][style*="z-index:9999"]');
-    if (overlay) overlay.remove();
-}
 
 </script>
 <script>
@@ -26256,311 +25304,6 @@ function renderTransferMarketAnalysisPanel() {
 
 </script>
 <script>
-// Contract Management System
-// Handles player contracts, negotiations, renewals, and agent demands
-
-let contractManagementState = {
-    contracts: [],
-    negotiations: [],
-    contractHistory: []
-};
-
-const CONTRACT_STAGES = {
-    NEGOTIATING: 'negotiating',
-    ACTIVE: 'active',
-    EXPIRING: 'expiring',
-    EXPIRED: 'expired'
-};
-
-const NEGOTIATION_OUTCOMES = {
-    ACCEPTED: 'accepted',
-    REJECTED: 'rejected',
-    PENDING: 'pending'
-};
-
-function initializeContractManagement() {
-    if (!game.contracts) game.contracts = [];
-    if (!game.contractNegotiations) game.contractNegotiations = [];
-
-    // Initialize contracts for all squad members
-    squad.forEach(player => {
-        if (!game.contracts.find(c => c.playerId === player.id)) {
-            createPlayerContract(player);
-        }
-    });
-}
-
-function createPlayerContract(player) {
-    const contractLength = Math.floor(Math.random() * 3) + 2; // 2-4 years
-    const startMatchday = game.matchday || 1;
-    const matchdaysPerSeason = 34;
-    const endMatchday = startMatchday + (contractLength * matchdaysPerSeason);
-
-    const baseSalary = calculateBaseSalary(player);
-
-    const contract = {
-        id: `contract_${player.id}_${Date.now()}`,
-        playerId: player.id,
-        playerName: player.name,
-        playerPosition: player.position,
-        playerStrength: player.strength,
-        startMatchday: startMatchday,
-        endMatchday: endMatchday,
-        baseSalary: baseSalary,
-        bonusPerGoal: Math.floor(baseSalary * 0.01),
-        bonusPerCleanSheet: Math.floor(baseSalary * 0.005),
-        agentFeePercentage: 5 + Math.random() * 5, // 5-10%
-        status: CONTRACT_STAGES.ACTIVE,
-        renewalOffered: false,
-        negotiationStarted: false
-    };
-
-    game.contracts.push(contract);
-    return contract;
-}
-
-function calculateBaseSalary(player) {
-    const strengthFactor = player.strength / 100;
-    const baseSalaryPerStrength = 500; // €500 per strength point
-    let salary = player.strength * baseSalaryPerStrength;
-
-    // Position modifier
-    const positionModifier = {
-        'ST': 1.2,
-        'CM': 1.0,
-        'LB': 0.9,
-        'RB': 0.9,
-        'CB': 0.95,
-        'GK': 0.85
-    };
-
-    salary *= (positionModifier[player.position] || 1.0);
-
-    return Math.floor(salary);
-}
-
-function tickContractExpirations() {
-    const currentMatchday = game.matchday || 1;
-    const matchdaysPerSeason = 34;
-
-    game.contracts.forEach(contract => {
-        const matchdaysRemaining = contract.endMatchday - currentMatchday;
-
-        if (matchdaysRemaining <= 0) {
-            contract.status = CONTRACT_STAGES.EXPIRED;
-            // Player contract expired - remove from squad after season end
-        } else if (matchdaysRemaining <= matchdaysPerSeason) {
-            contract.status = CONTRACT_STAGES.EXPIRING;
-
-            // Auto-offer renewal if not already offered
-            if (!contract.renewalOffered) {
-                offerContractRenewal(contract);
-            }
-        } else {
-            contract.status = CONTRACT_STAGES.ACTIVE;
-        }
-    });
-}
-
-function offerContractRenewal(contract) {
-    contract.renewalOffered = true;
-
-    const renewalOffer = {
-        id: `renewal_${contract.playerId}_${Date.now()}`,
-        contractId: contract.id,
-        playerId: contract.playerId,
-        playerName: contract.playerName,
-        originalSalary: contract.baseSalary,
-        proposedSalary: Math.floor(contract.baseSalary * (1 + Math.random() * 0.15)), // +0-15%
-        proposedDuration: 2 + Math.floor(Math.random() * 2), // 2-3 years
-        agentDemand: Math.floor(contract.baseSalary * (0.1 + Math.random() * 0.2)), // 10-30% raise demand
-        status: NEGOTIATION_OUTCOMES.PENDING,
-        createdMatchday: game.matchday || 1
-    };
-
-    game.contractNegotiations.push(renewalOffer);
-    return renewalOffer;
-}
-
-function negotiateContractRenewal(negotiationId, strategy) {
-    const negotiation = game.contractNegotiations.find(n => n.id === negotiationId);
-    if (!negotiation) return null;
-
-    let successChance = 0.5;
-    let finalSalary = negotiation.proposedSalary;
-
-    if (strategy === 'generous') {
-        // High success, but expensive
-        successChance = 0.85;
-        finalSalary = negotiation.originalSalary + negotiation.agentDemand;
-    } else if (strategy === 'balanced') {
-        // Medium success
-        successChance = 0.60;
-        finalSalary = negotiation.proposedSalary;
-    } else if (strategy === 'firm') {
-        // Lower success, cheaper
-        successChance = 0.35;
-        finalSalary = negotiation.originalSalary;
-    }
-
-    const negotiationSuccess = Math.random() < successChance;
-
-    if (negotiationSuccess) {
-        // Create new contract
-        const contract = game.contracts.find(c => c.id === negotiation.contractId);
-        if (contract) {
-            const renewalLength = negotiation.proposedDuration;
-            const currentMatchday = game.matchday || 1;
-            const matchdaysPerSeason = 34;
-
-            contract.endMatchday = currentMatchday + (renewalLength * matchdaysPerSeason);
-            contract.baseSalary = finalSalary;
-            contract.renewalOffered = false;
-            contract.status = CONTRACT_STAGES.ACTIVE;
-        }
-
-        negotiation.status = NEGOTIATION_OUTCOMES.ACCEPTED;
-        return { success: true, salary: finalSalary };
-    } else {
-        negotiation.status = NEGOTIATION_OUTCOMES.REJECTED;
-        return { success: false };
-    }
-}
-
-function terminateContract(playerId, buyoutPercentage = 50) {
-    const contract = game.contracts.find(c => c.playerId === playerId);
-    if (!contract) return null;
-
-    const currentMatchday = game.matchday || 1;
-    const matchdaysRemaining = Math.max(0, contract.endMatchday - currentMatchday);
-    const remainingValue = contract.baseSalary * matchdaysRemaining;
-    const buyoutCost = Math.floor(remainingValue * (buyoutPercentage / 100));
-
-    if (game.money >= buyoutCost) {
-        game.money -= buyoutCost;
-        contract.status = CONTRACT_STAGES.EXPIRED;
-
-        // Remove player from squad
-        const playerIndex = squad.findIndex(p => p.id === playerId);
-        if (playerIndex > -1) {
-            const removed = squad[playerIndex];
-            squad.splice(playerIndex, 1);
-            recordFinancialEvent(`Vertrag beendet: ${removed.name}`, -buyoutCost, 'Contract Termination');
-        }
-
-        return { success: true, cost: buyoutCost };
-    }
-
-    return { success: false, cost: buyoutCost, reason: 'insufficient_funds' };
-}
-
-function tickContractWages() {
-    let totalWages = 0;
-
-    game.contracts.forEach(contract => {
-        if (contract.status === CONTRACT_STAGES.ACTIVE) {
-            totalWages += contract.baseSalary;
-        }
-    });
-
-    return totalWages;
-}
-
-function getContractSummary(playerId) {
-    const contract = game.contracts.find(c => c.playerId === playerId);
-    if (!contract) return null;
-
-    const currentMatchday = game.matchday || 1;
-    const matchdaysRemaining = Math.max(0, contract.endMatchday - currentMatchday);
-    const seasonsRemaining = (matchdaysRemaining / 34).toFixed(1);
-
-    return {
-        playerName: contract.playerName,
-        salary: contract.baseSalary,
-        endMatchday: contract.endMatchday,
-        seasonsRemaining: seasonsRemaining,
-        status: contract.status,
-        agentFee: Math.floor(contract.baseSalary * (contract.agentFeePercentage / 100))
-    };
-}
-
-function renderContractManagementPanel() {
-    const container = document.getElementById('contract-management-box');
-    if (!container) return;
-
-    initializeContractManagement();
-
-    const currentMatchday = game.matchday || 1;
-    const matchdaysPerSeason = 34;
-
-    let html = '<div class="panel-content">';
-    html += '<h3>Vertragsmanagement</h3>';
-
-    // Active Contracts Section
-    html += '<div class="contract-section">';
-    html += '<h4>Aktive Verträge (' + game.contracts.filter(c => c.status === CONTRACT_STAGES.ACTIVE).length + ')</h4>';
-    html += '<table class="contracts-table">';
-    html += '<tr><th>Spieler</th><th>Pos.</th><th>Gehalt</th><th>Läuft bis</th><th>Status</th></tr>';
-
-    game.contracts.filter(c => c.status === CONTRACT_STAGES.ACTIVE).forEach(contract => {
-        const seasonsRemaining = ((contract.endMatchday - currentMatchday) / matchdaysPerSeason).toFixed(1);
-        html += `<tr>
-                    <td>${contract.playerName}</td>
-                    <td>${contract.playerPosition}</td>
-                    <td>€${contract.baseSalary.toLocaleString()}</td>
-                    <td>${seasonsRemaining}S</td>
-                    <td><span class="status-active">Aktiv</span></td>
-                </tr>`;
-    });
-
-    html += '</table>';
-    html += '</div>';
-
-    // Expiring Contracts Section
-    if (game.contracts.filter(c => c.status === CONTRACT_STAGES.EXPIRING).length > 0) {
-        html += '<div class="contract-section expiring">';
-        html += '<h4>Auslaufende Verträge</h4>';
-        html += '<table class="contracts-table">';
-        html += '<tr><th>Spieler</th><th>Gehalt</th><th>Läuft aus</th><th>Action</th></tr>';
-
-        game.contracts.filter(c => c.status === CONTRACT_STAGES.EXPIRING).forEach(contract => {
-            const negotiation = game.contractNegotiations.find(n => n.contractId === contract.id);
-            html += `<tr>
-                        <td>${contract.playerName}</td>
-                        <td>€${contract.baseSalary.toLocaleString()}</td>
-                        <td>MD ${contract.endMatchday}</td>
-                        <td>`;
-
-            if (negotiation && negotiation.status === NEGOTIATION_OUTCOMES.PENDING) {
-                html += `<button onclick="negotiateContractRenewal('${negotiation.id}', 'generous')">⬆️ Großzügig</button>
-                        <button onclick="negotiateContractRenewal('${negotiation.id}', 'balanced')">→ Ausgewogen</button>
-                        <button onclick="negotiateContractRenewal('${negotiation.id}', 'firm')">⬇️ Hart</button>`;
-            } else {
-                html += '<span>Verhandelt</span>';
-            }
-
-            html += `</td></tr>`;
-        });
-
-        html += '</table>';
-        html += '</div>';
-    }
-
-    // Contract Stats
-    const activeContracts = game.contracts.filter(c => c.status === CONTRACT_STAGES.ACTIVE);
-    const totalMonthlyWages = activeContracts.reduce((sum, c) => sum + c.baseSalary, 0);
-
-    html += '<div class="contract-stats">';
-    html += `<p><strong>Gesamtgehalt pro Monat:</strong> €${totalMonthlyWages.toLocaleString()}</p>`;
-    html += `<p><strong>Spieler unter Vertrag:</strong> ${activeContracts.length}</p>`;
-    html += '</div>';
-
-    html += '</div>';
-    container.innerHTML = html;
-}
-
-</script>
-<script>
 // Training Schedule System
 // Allows manager to customize weekly training plan with focus areas and recovery days
 
@@ -27477,591 +26220,6 @@ function renderCrisisManagementPanel() {
         html += '</ul>';
         html += '</div>';
     }
-
-    html += '</div>';
-    container.innerHTML = html;
-}
-
-</script>
-<script>
-// Player Development Tracking System
-// Tracks career progression, potential decay, and specialization
-
-let playerDevelopmentState = {
-    playerDevelopment: {},
-    developmentHistory: [],
-    careerMilestones: []
-};
-
-const SPECIALIZATIONS = [
-    { name: 'Torschuss', attribute: 'shooting', maxBonus: 15 },
-    { name: 'Passspiel', attribute: 'passing', maxBonus: 15 },
-    { name: 'Dribbeln', attribute: 'dribbling', maxBonus: 15 },
-    { name: 'Verteidigung', attribute: 'defense', maxBonus: 15 },
-    { name: 'Kopfballspiel', attribute: 'heading', maxBonus: 15 },
-    { name: 'Athletik', attribute: 'athleticism', maxBonus: 10 }
-];
-
-const CAREER_STAGES = {
-    PROSPECT: { name: 'Hoffnung', ageRange: [16, 20], potentialGrowth: 0.3 },
-    YOUNGSTER: { name: 'Aufstrebender', ageRange: [21, 25], potentialGrowth: 0.15 },
-    PRIME: { name: 'Spieler im besten Alter', ageRange: [26, 32], potentialGrowth: 0 },
-    VETERAN: { name: 'Veteran', ageRange: [33, 38], potentialGrowth: -0.1 },
-    DECLINING: { name: 'Auslaufend', ageRange: [39, 50], potentialGrowth: -0.3 }
-};
-
-function initializePlayerDevelopment() {
-    if (!game.playerDevelopment) game.playerDevelopment = {};
-
-    squad.forEach(player => {
-        if (!game.playerDevelopment[player.id]) {
-            game.playerDevelopment[player.id] = {
-                playerId: player.id,
-                playerName: player.name,
-                position: player.position,
-                joinedMatchday: player.joinedMatchday || 1,
-                joinedAge: player.age || 25,
-                startingStrength: player.strength,
-                currentStrength: player.strength,
-                potential: calculateInitialPotential(player),
-                careerStage: getCareerStage(player.age || 25),
-                specialization: null,
-                matchesPlayed: 0,
-                goals: 0,
-                appearances: 0,
-                minutesPlayed: 0,
-                development: [],
-                milestones: []
-            };
-        }
-    });
-}
-
-function calculateInitialPotential(player) {
-    const baseAge = 25;
-    const ageOffset = (player.age || 25) - baseAge;
-    const agePotential = Math.max(50, 100 - Math.abs(ageOffset) * 3);
-
-    // Potential starts at player's current strength + room to grow
-    return player.strength + (agePotential / 10);
-}
-
-function getCareerStage(age) {
-    for (const [key, stage] of Object.entries(CAREER_STAGES)) {
-        if (age >= stage.ageRange[0] && age <= stage.ageRange[1]) {
-            return key;
-        }
-    }
-    return 'PROSPECT';
-}
-
-function setPlayerSpecialization(playerId, specializationName) {
-    const dev = game.playerDevelopment[playerId];
-    if (!dev) return false;
-
-    const spec = SPECIALIZATIONS.find(s => s.name === specializationName);
-    if (!spec) return false;
-
-    dev.specialization = spec.name;
-
-    // Add specialization bonus to current strength
-    const player = squad.find(p => p.id === playerId);
-    if (player) {
-        player[spec.attribute] = Math.min(100, (player[spec.attribute] || 60) + 5);
-    }
-
-    return true;
-}
-
-function trackPlayerPerformance(playerId, goals, minutes) {
-    const dev = game.playerDevelopment[playerId];
-    if (!dev) return;
-
-    const player = squad.find(p => p.id === playerId);
-    if (!player) return;
-
-    dev.matchesPlayed++;
-    dev.goals += goals;
-    dev.minutesPlayed += minutes;
-    dev.appearances++;
-
-    // Development bonus based on playing time
-    let developmentGain = 0;
-    if (minutes >= 45) {
-        developmentGain = 0.5; // Full match
-    } else if (minutes >= 15) {
-        developmentGain = 0.2; // Decent time
-    } else if (minutes > 0) {
-        developmentGain = 0.05; // Brief appearance
-    }
-
-    // Young players develop faster
-    const careerStage = CAREER_STAGES[dev.careerStage];
-    if (careerStage) {
-        developmentGain *= (1 + careerStage.potentialGrowth);
-    }
-
-    // Specialization bonus
-    if (dev.specialization) {
-        developmentGain *= 1.15;
-    }
-
-    dev.development.push({
-        matchday: game.matchday || 1,
-        goals: goals,
-        minutes: minutes,
-        developmentGain: developmentGain
-    });
-}
-
-function tickPlayerAging() {
-    const currentMatchday = game.matchday || 1;
-    const matchdaysPerSeason = 34;
-
-    squad.forEach(player => {
-        const dev = game.playerDevelopment[player.id];
-        if (!dev) return;
-
-        const seasonsPassed = (currentMatchday - dev.joinedMatchday) / matchdaysPerSeason;
-        const agingFactor = 0.5; // 0.5 years per season
-
-        // Age player gradually
-        player.age = dev.joinedAge + (seasonsPassed * agingFactor);
-
-        // Update career stage
-        dev.careerStage = getCareerStage(player.age);
-
-        // Apply potential decay for older players
-        if (player.age > 27) {
-            const decayRate = 0.02 * (player.age - 27);
-            player.strength = Math.max(30, player.strength - decayRate);
-        }
-
-        // Young players without playing time lose potential
-        if (player.age < 23 && dev.matchesPlayed < 5) {
-            const inactivityPenalty = 0.1;
-            dev.potential = Math.max(50, dev.potential - inactivityPenalty);
-        }
-
-        dev.currentStrength = player.strength;
-    });
-}
-
-function calculateCareerValue(playerId) {
-    const dev = game.playerDevelopment[playerId];
-    if (!dev) return 0;
-
-    const player = squad.find(p => p.id === playerId);
-    if (!player) return 0;
-
-    let value = player.strength * 50000; // Base value
-
-    // Experience bonus
-    value += dev.matchesPlayed * 500;
-    value += dev.goals * 1000;
-
-    // Youth potential bonus
-    if (player.age < 25) {
-        const potentialMultiplier = 1 + ((dev.potential - player.strength) / 50) * 0.5;
-        value *= potentialMultiplier;
-    }
-
-    // Specialization bonus
-    if (dev.specialization) {
-        value *= 1.2;
-    }
-
-    // Aging penalty
-    if (player.age > 30) {
-        const agePenalty = 1 - ((player.age - 30) * 0.05);
-        value *= Math.max(0.1, agePenalty);
-    }
-
-    return Math.floor(value);
-}
-
-function getPlayerDevelopmentSummary(playerId) {
-    const dev = game.playerDevelopment[playerId];
-    if (!dev) return null;
-
-    const player = squad.find(p => p.id === playerId);
-    if (!player) return null;
-
-    const careerStage = CAREER_STAGES[dev.careerStage];
-    const strengthGain = dev.currentStrength - dev.startingStrength;
-    const averagePerformance = dev.goals / Math.max(1, dev.matchesPlayed);
-
-    return {
-        playerName: dev.playerName,
-        position: dev.position,
-        age: Math.floor(player.age),
-        careerStage: careerStage.name,
-        currentStrength: dev.currentStrength,
-        potentialStrength: dev.potential,
-        strengthGain: strengthGain,
-        specialization: dev.specialization || 'Keine',
-        matchesPlayed: dev.matchesPlayed,
-        goals: dev.goals,
-        averageGoalsPerMatch: averagePerformance.toFixed(2),
-        marketValue: calculateCareerValue(playerId)
-    };
-}
-
-function recordCareerMilestone(playerId, milestone) {
-    const dev = game.playerDevelopment[playerId];
-    if (!dev) return;
-
-    dev.milestones.push({
-        matchday: game.matchday || 1,
-        milestone: milestone,
-        value: null
-    });
-}
-
-function renderPlayerDevelopmentPanel() {
-    const container = document.getElementById('player-development-box');
-    if (!container) return;
-
-    initializePlayerDevelopment();
-
-    let html = '<div class="panel-content">';
-    html += '<h3>Spieler-Entwicklung & Karriere</h3>';
-
-    // Development Comparison
-    html += '<div class="development-overview">';
-    html += '<h4>📊 Entwicklungs-Übersicht</h4>';
-    html += '<table class="development-table" style="width:100%; font-size:9px;">';
-    html += '<tr><th>Spieler</th><th>Alter</th><th>Stadium</th><th>Stärke</th><th>Entwicklung</th><th>Spiele</th><th>Marktwert</th></tr>';
-
-    squad.slice(0, 11).forEach(player => {
-        const dev = game.playerDevelopment[player.id];
-        if (!dev) return;
-
-        const summary = getPlayerDevelopmentSummary(player.id);
-        const strengthChangeColor = summary.strengthGain > 0 ? 'green' : summary.strengthGain < 0 ? 'red' : 'white';
-        const developmentBar = (summary.currentStrength / summary.potentialStrength * 100).toFixed(0);
-
-        html += `<tr>
-                    <td>${summary.playerName}</td>
-                    <td>${summary.age}</td>
-                    <td>${summary.careerStage}</td>
-                    <td>${summary.currentStrength}/${summary.potentialStrength}</td>
-                    <td><div style="width:60px; height:8px; background:#333; border-radius:2px; overflow:hidden;">
-                        <div style="width:${developmentBar}%; height:100%; background:${strengthChangeColor};"></div>
-                    </div></td>
-                    <td>${summary.matchesPlayed}</td>
-                    <td>€${(summary.marketValue / 1000).toFixed(0)}k</td>
-                </tr>`;
-    });
-
-    html += '</table>';
-    html += '</div>';
-
-    // Specializations
-    html += '<div class="specializations" style="margin-top:10px;">';
-    html += '<h4>🎯 Spezialisierungen</h4>';
-    html += '<div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:6px;">';
-
-    SPECIALIZATIONS.forEach(spec => {
-        const players = squad.filter(p => {
-            const dev = game.playerDevelopment[p.id];
-            return dev && dev.specialization === spec.name;
-        });
-
-        html += `<div style="background:#222; padding:6px; border-radius:4px; border-left:3px solid var(--accent);">`;
-        html += `<p style="margin:0; font-weight:bold; font-size:10px;">${spec.name}</p>`;
-        html += `<p style="margin:2px 0; font-size:9px; color:#aaa;">${players.length} Spieler</p>`;
-        html += `</div>`;
-    });
-
-    html += '</div>';
-    html += '</div>';
-
-    // Career Stages Distribution
-    html += '<div class="career-stages" style="margin-top:10px;">';
-    html += '<h4>📈 Alter-Verteilung</h4>';
-
-    const stages = {};
-    squad.forEach(player => {
-        const dev = game.playerDevelopment[player.id];
-        if (!dev) return;
-
-        const stage = dev.careerStage;
-        stages[stage] = (stages[stage] || 0) + 1;
-    });
-
-    Object.entries(stages).forEach(([stage, count]) => {
-        const stageInfo = CAREER_STAGES[stage];
-        html += `<p style="font-size:9px;"><strong>${stageInfo.name}:</strong> ${count} Spieler</p>`;
-    });
-
-    html += '</div>';
-
-    html += '</div>';
-    container.innerHTML = html;
-}
-
-</script>
-<script>
-// Advanced Scouting Intelligence System
-// Detailed player analysis, injury history, market trends, and comparative scouting
-
-let scoutingIntelligenceState = {
-    scoutedPlayers: {},
-    scoutingReports: [],
-    marketTrends: {},
-    injuryDatabase: []
-};
-
-const SCOUTING_ATTRIBUTES = [
-    { key: 'shooting', label: 'Torschuss' },
-    { key: 'passing', label: 'Passspiel' },
-    { key: 'dribbling', label: 'Dribbeln' },
-    { key: 'defense', label: 'Verteidigung' },
-    { key: 'heading', label: 'Kopfballspiel' },
-    { key: 'athleticism', label: 'Athletik' }
-];
-
-const INJURY_RISK_FACTORS = {
-    HIGH: { label: 'Sehr hoch', color: 'var(--danger)', probability: 0.15 },
-    MEDIUM: { label: 'Mittel', color: 'var(--accent)', probability: 0.08 },
-    LOW: { label: 'Niedrig', color: 'var(--primary)', probability: 0.03 }
-};
-
-function initializeScoutingIntelligence() {
-    if (!game.scoutingIntelligence) game.scoutingIntelligence = {};
-    if (!game.scoutingIntelligence.scoutedPlayers) game.scoutingIntelligence.scoutedPlayers = {};
-    if (!game.scoutingIntelligence.reports) game.scoutingIntelligence.reports = [];
-}
-
-function getScoutingReport(playerId) {
-    const player = squad.find(p => p.id === playerId);
-    if (!player) return null;
-
-    if (!game.scoutingIntelligence.scoutedPlayers[playerId]) {
-        game.scoutingIntelligence.scoutedPlayers[playerId] = {
-            playerId: playerId,
-            playerName: player.name,
-            position: player.position,
-            firstScouted: game.matchday || 1,
-            lastUpdated: game.matchday || 1,
-            attributeScores: {},
-            injuryHistory: [],
-            marketValue: 50000,
-            potentialRating: player.strength + 10,
-            ageAssessment: assessPlayerAge(player),
-            riskLevel: assessInjuryRisk(player),
-            overallRating: 0
-        };
-
-        SCOUTING_ATTRIBUTES.forEach(attr => {
-            game.scoutingIntelligence.scoutedPlayers[playerId].attributeScores[attr.key] =
-                player[attr.key] || 60;
-        });
-    }
-
-    const report = game.scoutingIntelligence.scoutedPlayers[playerId];
-    report.lastUpdated = game.matchday || 1;
-
-    // Update market value
-    report.marketValue = calculateScoutedPlayerValue(player, report);
-
-    // Calculate overall rating
-    const avgAttributes = Object.values(report.attributeScores).reduce((a, b) => a + b, 0) /
-                         SCOUTING_ATTRIBUTES.length;
-    report.overallRating = Math.round((avgAttributes + report.potentialRating) / 2);
-
-    return report;
-}
-
-function assessPlayerAge(player) {
-    const age = player.age || 25;
-    if (age < 20) return { label: 'Sehr jung - Hohes Entwicklungspotenzial', value: -10, color: 'green' };
-    if (age < 25) return { label: 'Jung - Gutes Entwicklungspotenzial', value: 0, color: 'var(--primary)' };
-    if (age <= 30) return { label: 'Prime Years - Stabilität', value: 5, color: 'var(--primary)' };
-    if (age < 34) return { label: 'Erfahren - Beginn Abbauprozess', value: -5, color: 'var(--accent)' };
-    return { label: 'Veteran - Schneller Wertverfall', value: -15, color: 'var(--danger)' };
-}
-
-function assessInjuryRisk(player) {
-    const missedMatches = (player.injuryDays || 0) / 7;
-
-    if (missedMatches > 20) return INJURY_RISK_FACTORS.HIGH;
-    if (missedMatches > 10) return INJURY_RISK_FACTORS.MEDIUM;
-    return INJURY_RISK_FACTORS.LOW;
-}
-
-function calculateScoutedPlayerValue(player, report) {
-    let value = player.strength * 50000;
-
-    // Experience bonus
-    const matches = player.appearances || 0;
-    value += matches * 300;
-
-    // Age adjustment
-    const age = player.age || 25;
-    if (age < 23) value *= 1.3;
-    else if (age > 32) value *= 0.6;
-
-    // Injury penalty
-    if (report.riskLevel === INJURY_RISK_FACTORS.HIGH) value *= 0.7;
-
-    // Position multiplier
-    const posMultipliers = { TW: 0.8, ABW: 1.0, MIT: 1.1, ST: 1.2 };
-    value *= posMultipliers[player.position] || 1.0;
-
-    return Math.floor(value);
-}
-
-function recordInjury(playerId, injurySeverity) {
-    const report = getScoutingReport(playerId);
-    if (!report) return;
-
-    report.injuryHistory.push({
-        matchday: game.matchday || 1,
-        severity: injurySeverity,
-        recoveryDays: injurySeverity === 'SEVERE' ? 21 : injurySeverity === 'MODERATE' ? 14 : 7
-    });
-
-    // Update risk level
-    const recentInjuries = report.injuryHistory.filter(i =>
-        (game.matchday || 1) - i.matchday < 34
-    ).length;
-
-    if (recentInjuries >= 3) report.riskLevel = INJURY_RISK_FACTORS.HIGH;
-    else if (recentInjuries >= 1) report.riskLevel = INJURY_RISK_FACTORS.MEDIUM;
-}
-
-function compareScoutedPlayers(playerId1, playerId2) {
-    const report1 = getScoutingReport(playerId1);
-    const report2 = getScoutingReport(playerId2);
-
-    if (!report1 || !report2) return null;
-
-    const comparison = {
-        player1: report1.playerName,
-        player2: report2.playerName,
-        attributes: {},
-        overallAdvantage: report1.overallRating - report2.overallRating,
-        valueComparison: report1.marketValue - report2.marketValue,
-        riskComparison: {
-            player1: report1.riskLevel.label,
-            player2: report2.riskLevel.label
-        }
-    };
-
-    SCOUTING_ATTRIBUTES.forEach(attr => {
-        comparison.attributes[attr.label] = {
-            player1: report1.attributeScores[attr.key],
-            player2: report2.attributeScores[attr.key],
-            difference: report1.attributeScores[attr.key] - report2.attributeScores[attr.key]
-        };
-    });
-
-    return comparison;
-}
-
-function tickScoutingUpdates() {
-    // Update scouting on visited players periodically
-    Object.keys(game.scoutingIntelligence.scoutedPlayers || {}).forEach(playerId => {
-        const report = game.scoutingIntelligence.scoutedPlayers[playerId];
-        const player = squad.find(p => p.id === playerId);
-
-        if (!player) return;
-
-        // Attributes improve based on play time
-        if (player.appearances > (report.lastAppearances || 0)) {
-            SCOUTING_ATTRIBUTES.forEach(attr => {
-                if (report.attributeScores[attr.key] < player[attr.key]) {
-                    report.attributeScores[attr.key] = Math.min(
-                        player[attr.key],
-                        report.attributeScores[attr.key] + 0.5
-                    );
-                }
-            });
-        }
-
-        report.lastAppearances = player.appearances;
-    });
-}
-
-function renderScoutingIntelligencePanel() {
-    const container = document.getElementById('scouting-intelligence-box');
-    if (!container) return;
-
-    initializeScoutingIntelligence();
-
-    let html = '<div class="panel-content">';
-    html += '<h3>Scouting-Intelligenz</h3>';
-
-    // Scouted Players Overview
-    html += '<div class="scouted-players-overview" style="margin-bottom:10px;">';
-    html += '<h4>📊 Analysierte Spieler</h4>';
-    html += '<table class="scouting-table" style="width:100%; font-size:9px;">';
-    html += '<tr><th>Spieler</th><th>Position</th><th>Rating</th><th>Marktwert</th><th>Verletzungsrisiko</th><th>Alter-Bewertung</th></tr>';
-
-    const scoutedCount = Object.keys(game.scoutingIntelligence.scoutedPlayers || {}).length;
-    Object.values(game.scoutingIntelligence.scoutedPlayers || {}).slice(0, 11).forEach(report => {
-        const player = squad.find(p => p.id === report.playerId);
-        if (!player) return;
-
-        const ageAssess = assessPlayerAge(player);
-        html += `<tr>
-                    <td>${report.playerName}</td>
-                    <td>${report.position}</td>
-                    <td><strong>${report.overallRating}</strong>/100</td>
-                    <td>€${(report.marketValue / 1000).toFixed(0)}k</td>
-                    <td><span style="color:${report.riskLevel.color};">${report.riskLevel.label}</span></td>
-                    <td style="color:${ageAssess.color};">${ageAssess.label}</td>
-                </tr>`;
-    });
-
-    html += '</table>';
-    html += `<p style="font-size:8px; color:var(--text-muted); margin-top:5px;">Total: ${scoutedCount} Spieler analysiert</p>`;
-    html += '</div>';
-
-    // Injury Risk Assessment
-    html += '<div class="injury-assessment" style="margin-top:10px;">';
-    html += '<h4>⚕️ Verletzungsrisiko-Bewertung</h4>';
-
-    const highRiskPlayers = Object.values(game.scoutingIntelligence.scoutedPlayers || {})
-        .filter(r => r.riskLevel === INJURY_RISK_FACTORS.HIGH);
-
-    if (highRiskPlayers.length > 0) {
-        html += '<div style="background:#1a1a1a; padding:6px; border-radius:4px; border-left:3px solid var(--danger);">';
-        html += `<p style="font-size:9px; color:var(--danger); margin:0;"><strong>⚠️ ${highRiskPlayers.length} Spieler mit hohem Risiko:</strong></p>`;
-        html += '<ul style="font-size:8px; margin:4px 0; color:var(--text-muted);">';
-        highRiskPlayers.slice(0, 5).forEach(r => {
-            const history = r.injuryHistory.length;
-            html += `<li>${r.playerName} (${history} Verletzungen in Datenbank)</li>`;
-        });
-        html += '</ul></div>';
-    } else {
-        html += '<p style="font-size:9px; color:var(--primary);">✓ Kein kritisches Verletzungsrisiko erkannt</p>';
-    }
-    html += '</div>';
-
-    // Market Trends
-    html += '<div class="market-trends" style="margin-top:10px;">';
-    html += '<h4>💰 Marktwert-Trends</h4>';
-
-    const topValuePlayers = Object.values(game.scoutingIntelligence.scoutedPlayers || {})
-        .sort((a, b) => b.marketValue - a.marketValue)
-        .slice(0, 5);
-
-    if (topValuePlayers.length > 0) {
-        html += '<div style="display:grid; grid-template-columns: repeat(1, 1fr); gap:4px;">';
-        topValuePlayers.forEach(r => {
-            const player = squad.find(p => p.id === r.playerId);
-            if (!player) return;
-            html += `<div style="background:#222; padding:4px; border-radius:3px; font-size:8px;">
-                        <strong>${r.playerName}</strong> (${player.age || 25}J.)
-                        <span style="float:right; color:var(--accent);">€${(r.marketValue / 1000).toFixed(0)}k</span>
-                    </div>`;
-        });
-        html += '</div>';
-    }
-    html += '</div>';
 
     html += '</div>';
     container.innerHTML = html;
@@ -29619,295 +27777,6 @@ function renderWomenTeamView() {
 
 </script>
 <script>
-// Spieler-Vertragsverlängerungs-System
-// Automatische Kündigungen, Verhandlungen, Loyalität und Vertragsboni
-
-let contractRenewalState = {
-    pendingRenewals: [],
-    activeNegotiations: {},
-    renewalHistory: [],
-    bonusesAwarded: 0
-};
-
-const RENEWAL_STAGES = {
-    PENDING: 'pending',
-    NEGOTIATING: 'negotiating',
-    AGREED: 'agreed',
-    REJECTED: 'rejected'
-};
-
-const NEGOTIATION_FACTORS = {
-    PLAYER_AGE: { young: 1.3, prime: 1.0, veteran: 0.7 },
-    CLUB_PERFORMANCE: { excellent: 1.2, good: 1.0, poor: 0.8 },
-    PLAYER_PERFORMANCE: { outstanding: 1.25, good: 1.0, poor: 0.75 },
-    LOYALTY_YEARS: { base: 1.0, perYear: 0.05 }
-};
-
-function initializeContractRenewal() {
-    if (!game.contractRenewal) game.contractRenewal = {};
-    if (!game.contractRenewal.pendingRenewals) game.contractRenewal.pendingRenewals = [];
-    if (!game.contractRenewal.activeNegotiations) game.contractRenewal.activeNegotiations = {};
-    if (!game.contractRenewal.renewalHistory) game.contractRenewal.renewalHistory = [];
-    if (!game.contractRenewal.bonusesAwarded) game.contractRenewal.bonusesAwarded = 0;
-    // Angebote/Verhandlungen für Spieler, die den Verein verlassen haben, verwaisten sonst für immer.
-    const imKader = id => squad.some(p => p.id === id);
-    game.contractRenewal.pendingRenewals = game.contractRenewal.pendingRenewals.filter(r => imKader(r.playerId));
-    Object.keys(game.contractRenewal.activeNegotiations).forEach(id => {
-        if (!squad.some(p => String(p.id) === id)) delete game.contractRenewal.activeNegotiations[id];
-    });
-}
-
-function getPlayerLoyaltyYears(playerId) {
-    const player = squad.find(p => p.id === playerId);
-    if (!player) return 0;
-    return player.loyaltyYears || 0;
-}
-
-function calculateRenewalOffer(playerId) {
-    const player = squad.find(p => p.id === playerId);
-    if (!player) return null;
-
-    const age = player.age || 25;
-    const ageCategory = age < 23 ? 'young' : age <= 30 ? 'prime' : 'veteran';
-    const teamPerf = game.leaguePosition <= 3 ? 'excellent' : game.leaguePosition <= 6 ? 'good' : 'poor';
-    const playerPerf = player.strength >= 85 ? 'outstanding' : player.strength >= 70 ? 'good' : 'poor';
-    const loyaltyYears = getPlayerLoyaltyYears(playerId);
-
-    let ageFactor = NEGOTIATION_FACTORS.PLAYER_AGE[ageCategory];
-    let perfFactor = NEGOTIATION_FACTORS.CLUB_PERFORMANCE[teamPerf];
-    let playerPerfFactor = NEGOTIATION_FACTORS.PLAYER_PERFORMANCE[playerPerf];
-    let loyaltyFactor = NEGOTIATION_FACTORS.LOYALTY_YEARS.base + (loyaltyYears * NEGOTIATION_FACTORS.LOYALTY_YEARS.perYear);
-
-    let multiplier = ageFactor * perfFactor * playerPerfFactor * loyaltyFactor;
-
-    let baseSalary = player.wage || 5000;
-    let offeredWage = Math.round(baseSalary * multiplier);
-    let offerDuration = age < 23 ? 5 : age <= 30 ? 4 : 2;
-    let bonusOnAgreement = Math.round(offeredWage * offerDuration * 0.5);
-
-    let successChance = Math.min(95, Math.max(20, 50 + (multiplier - 1) * 30 + loyaltyYears * 5));
-
-    return {
-        playerId: playerId,
-        playerName: player.name,
-        currentWage: baseSalary,
-        offeredWage: offeredWage,
-        wageDifference: offeredWage - baseSalary,
-        offerDuration: offerDuration,
-        bonusOnAgreement: bonusOnAgreement,
-        successChance: successChance,
-        loyaltyYears: loyaltyYears,
-        stage: RENEWAL_STAGES.PENDING,
-        createdMatchday: game.matchday
-    };
-}
-
-function startNegotiation(playerId) {
-    const player = squad.find(p => p.id === playerId);
-    if (!player) return false;
-
-    const offer = calculateRenewalOffer(playerId);
-    if (!offer) return false;
-
-    game.contractRenewal.activeNegotiations[playerId] = {
-        ...offer,
-        stage: RENEWAL_STAGES.NEGOTIATING,
-        negotiationMatchday: game.matchday,
-        playerAcceptanceProbability: offer.successChance / 100
-    };
-
-    showToast(`💼 Verhandlungen mit ${player.name} gestartet (${Math.round(offer.successChance)}% Erfolgswahrscheinlichkeit)`, 'info', 5000);
-    return true;
-}
-
-function acceptRenewalOffer(playerId) {
-    const negotiation = game.contractRenewal.activeNegotiations[playerId];
-    if (!negotiation) return false;
-
-    const player = squad.find(p => p.id === playerId);
-    if (!player) return false;
-
-    const oldWage = player.wage;
-    player.wage = negotiation.offeredWage;
-    player.contractEnd = game.matchday + (negotiation.offerDuration * 8);
-    player.loyaltyYears = (player.loyaltyYears || 0) + 1;
-
-    const wageDifference = negotiation.offeredWage - oldWage;
-    game.money -= negotiation.bonusOnAgreement;
-    game.contractRenewal.bonusesAwarded += negotiation.bonusOnAgreement;
-
-    recordFinancialEvent('Vertragsverlängerungsbonus', -negotiation.bonusOnAgreement, 'Contract Renewal');
-
-    game.contractRenewal.renewalHistory.push({
-        season: game.season,
-        matchday: game.matchday,
-        playerName: player.name,
-        newWage: negotiation.offeredWage,
-        duration: negotiation.offerDuration,
-        bonus: negotiation.bonusOnAgreement,
-        status: 'accepted'
-    });
-
-    delete game.contractRenewal.activeNegotiations[playerId];
-    game.contractRenewal.pendingRenewals = game.contractRenewal.pendingRenewals.filter(r => r.playerId !== playerId);
-
-    showToast(`✅ ${player.name} hat neuen Vertrag akzeptiert! (€${negotiation.offeredWage.toLocaleString()}/SpT)`, 'success', 6000);
-    return true;
-}
-
-function rejectOffer(playerId) {
-    const negotiation = game.contractRenewal.activeNegotiations[playerId];
-    if (!negotiation) return false;
-
-    const player = squad.find(p => p.id === playerId);
-    if (!player) return false;
-
-    game.contractRenewal.renewalHistory.push({
-        season: game.season,
-        matchday: game.matchday,
-        playerName: player.name,
-        status: 'rejected'
-    });
-
-    delete game.contractRenewal.activeNegotiations[playerId];
-    game.contractRenewal.pendingRenewals = game.contractRenewal.pendingRenewals.filter(r => r.playerId !== playerId);
-
-    showToast(`❌ ${player.name} hat Vertragsangebot abgelehnt. Transfer wahrscheinlich.`, 'warning', 6000);
-    return true;
-}
-
-function tickContractRenewal() {
-    initializeContractRenewal();
-
-    const expiringContracts = squad.filter(p => {
-        const contractEnd = p.contractEnd || 30;
-        const matchdaysLeft = contractEnd - (game.matchday || 1);
-        return matchdaysLeft > 0 && matchdaysLeft <= 8 && !game.contractRenewal.activeNegotiations[p.id];
-    });
-
-    expiringContracts.forEach(player => {
-        const pendingAlready = game.contractRenewal.pendingRenewals.find(r => r.playerId === player.id);
-        if (!pendingAlready) {
-            const offer = calculateRenewalOffer(player.id);
-            if (offer) {
-                game.contractRenewal.pendingRenewals.push(offer);
-            }
-        }
-    });
-
-    Object.entries(game.contractRenewal.activeNegotiations).forEach(([playerId, negotiation]) => {
-        const daysInNegotiation = (game.matchday || 1) - negotiation.negotiationMatchday;
-
-        if (daysInNegotiation >= 4) {
-            const random = Math.random();
-            if (random < negotiation.playerAcceptanceProbability) {
-                acceptRenewalOffer(playerId);
-            } else {
-                rejectOffer(playerId);
-            }
-        }
-    });
-}
-
-function getContractRenewalSummary() {
-    if (!game.contractRenewal) return { pending: 0, negotiating: 0, bonusesAwarded: 0 };
-
-    return {
-        pending: game.contractRenewal.pendingRenewals.length,
-        negotiating: Object.keys(game.contractRenewal.activeNegotiations).length,
-        bonusesAwarded: game.contractRenewal.bonusesAwarded,
-        renewalsThisSeason: game.contractRenewal.renewalHistory.filter(r => r.season === game.season).length
-    };
-}
-
-function renderContractRenewalPanel() {
-    const container = document.getElementById('contract-renewal-box');
-    if (!container) return;
-
-    initializeContractRenewal();
-
-    let html = '<div class="panel-content">';
-    html += '<h3>💼 VERTRAGSVERLÄNGERUNGEN</h3>';
-
-    const summary = getContractRenewalSummary();
-    html += '<div style="background:#1a1a1a; padding:8px; border-radius:4px; margin-bottom:10px;">';
-    html += `<p style="font-size:9px; margin:0;"><strong>Status:</strong> `;
-    html += `Ausstehend: <span style="color:var(--accent);">${summary.pending}</span> | `;
-    html += `In Verhandlung: <span style="color:var(--primary);">${summary.negotiating}</span></p>`;
-    html += `<p style="font-size:9px; margin:4px 0 0 0;">Bonusausgaben diese Saison: <span style="color:var(--danger);">€${(summary.bonusesAwarded / 1000).toFixed(0)}k</span></p>`;
-    html += '</div>';
-
-    if (game.contractRenewal.activeNegotiations && Object.keys(game.contractRenewal.activeNegotiations).length > 0) {
-        html += '<div style="margin-bottom:10px;">';
-        html += '<h4>⚖️ Laufende Verhandlungen</h4>';
-
-        Object.entries(game.contractRenewal.activeNegotiations).forEach(([playerId, negotiation]) => {
-            const daysLeft = 4 - ((game.matchday || 1) - negotiation.negotiationMatchday);
-            const successColor = negotiation.successChance >= 75 ? 'var(--primary)' :
-                               negotiation.successChance >= 50 ? 'var(--accent)' : 'var(--danger)';
-
-            html += `<div style="background:#222; padding:8px; margin-bottom:6px; border-radius:4px;">`;
-            html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">`;
-            html += `<strong style="font-size:10px;">${negotiation.playerName}</strong>`;
-            html += `<span style="font-size:8px; color:${successColor};">${negotiation.successChance}% Erfolg</span>`;
-            html += `</div>`;
-            html += `<p style="font-size:9px; color:var(--text-muted); margin:0 0 4px 0;">Angebot: €${negotiation.offeredWage.toLocaleString()}/SpT (${negotiation.offerDuration}J)</p>`;
-            html += `<p style="font-size:9px; margin:0 0 4px 0;">Bonus: <span style="color:var(--danger);">€${(negotiation.bonusOnAgreement / 1000).toFixed(0)}k</span></p>`;
-            html += `<div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">`;
-            html += `<button onclick="acceptRenewalOffer('${playerId}')" class="btn-primary" style="font-size:8px; padding:4px;">✅ Annehmen</button>`;
-            html += `<button onclick="rejectOffer('${playerId}')" class="btn-secondary" style="font-size:8px; padding:4px;">❌ Ablehnen</button>`;
-            html += `</div>`;
-            html += `</div>`;
-        });
-
-        html += '</div>';
-    }
-
-    if (game.contractRenewal.pendingRenewals && game.contractRenewal.pendingRenewals.length > 0) {
-        html += '<div style="margin-bottom:10px;">';
-        html += '<h4>📋 Ausstehende Verlängerungen</h4>';
-
-        game.contractRenewal.pendingRenewals.slice(0, 5).forEach(renewal => {
-            const wageChange = renewal.offeredWage - renewal.currentWage;
-            const wageChangeColor = wageChange >= 0 ? 'var(--accent)' : 'var(--primary)';
-
-            html += `<div style="background:#1a2a1a; padding:6px; margin-bottom:4px; border-radius:3px; border-left:3px solid var(--primary);">`;
-            html += `<p style="font-size:9px; margin:0 0 2px 0;"><strong>${renewal.playerName}</strong></p>`;
-            html += `<p style="font-size:8px; color:var(--text-muted); margin:0;">Aktuell: €${renewal.currentWage.toLocaleString()} → Angebot: €${renewal.offeredWage.toLocaleString()}</p>`;
-            html += `<p style="font-size:8px; color:var(--text-muted); margin:0;">Loyalität: ${renewal.loyaltyYears}J | Erfolgsquote: ${Math.round(renewal.successChance)}%</p>`;
-            html += `<button onclick="startNegotiation('${renewal.playerId}')" class="btn-secondary" style="font-size:8px; padding:3px 6px; margin-top:3px; width:100%;">Verhandlungen starten</button>`;
-            html += `</div>`;
-        });
-
-        if (game.contractRenewal.pendingRenewals.length > 5) {
-            html += `<p style="font-size:8px; color:var(--text-muted); margin:0;">... und ${game.contractRenewal.pendingRenewals.length - 5} weitere</p>`;
-        }
-
-        html += '</div>';
-    }
-
-    if (game.contractRenewal.renewalHistory && game.contractRenewal.renewalHistory.filter(r => r.season === game.season).length > 0) {
-        html += '<div style="margin-top:10px;">';
-        html += '<h4>✅ Diese Saison verlängert</h4>';
-
-        const thisSeason = game.contractRenewal.renewalHistory.filter(r => r.season === game.season);
-        thisSeason.slice(0, 4).forEach(renewal => {
-            if (renewal.status === 'accepted') {
-                html += `<div style="font-size:8px; color:var(--primary); margin-bottom:2px;">`;
-                html += `• ${renewal.playerName} (€${renewal.newWage.toLocaleString()}, ${renewal.duration}J)`;
-                html += `</div>`;
-            }
-        });
-
-        html += '</div>';
-    }
-
-    html += '</div>';
-    container.innerHTML = html;
-}
-
-</script>
-<script>
 // Spieler-Pensionierung & Legenden-System
 // Automatische Pensionierungen, Hall of Fame, Abschiedsspiele
 
@@ -29945,7 +27814,7 @@ function checkForLegendStatus(player) {
 
     const strength = player.strength || 0;
     const games = player.appearances || 0;
-    const goals = player.goals || 0;
+    const goals = player.goalsCareer || 0;
     const assists = player.assists || 0;
 
     let tier = null;
@@ -29975,7 +27844,7 @@ function schedulePlayerRetirement(playerId) {
         strength: player.strength || 0,
         position: player.pos,
         appearances: player.appearances || 0,
-        goals: player.goals || 0,
+        goals: player.goalsCareer || 0,
         assists: player.assists || 0,
         legendTier: legendTier,
         retirementMatchday: game.matchday,
@@ -29999,8 +27868,10 @@ function schedulePlayerRetirement(playerId) {
     } else {
         showToast(`👋 ${player.name} tritt aus dem Profifußball zurück.`, 'info', 5000);
     }
+    addInboxMessage('vertrag', `👋 Karriereende: ${player.name}`, `${player.name} beendet mit ${player.age} Jahren seine Laufbahn (${retirementRecord.appearances} Pflichtspiele, ${retirementRecord.goals} Tore für den Verein)${legendTier ? ` - als ${LEGEND_TIERS[legendTier].label}` : ''}.`, 'screen-squad');
 
     squad = squad.filter(p => p.id !== playerId);
+    if (typeof lineup !== 'undefined') lineup = lineup.filter(id => id !== playerId);
     return true;
 }
 
@@ -30859,259 +28730,6 @@ function renderTournamentBracketsPanel() {
 
         container.innerHTML = html;
     }
-
-</script>
-<script>
-
-    // ==========================================
-    // PLAYER CAREER PROGRESSION - SPIELER-KARRIERE-VERFOLGUNG
-    // ==========================================
-    // Detaillierte Verfolgung von Karriere-Meilensteinen, Leistungsspitzen
-    // und Entwicklungstrends einzelner Spieler.
-
-    let playerCareerProgressionState = {
-        playerProfiles: {}, // { playerId: { name, position, careerStart, careerPeak, achievements: [] } }
-        performanceArchive: {}, // { playerId: [ { season, matches, goals, assists, rating } ] }
-        careerMilestones: {}, // { playerId: [ { milestone, season, matchday, value } ] }
-        transferHistory: {}, // { playerId: [ { season, fromClub, toClub, fee } ] }
-        injuryRecords: {} // { playerId: [ { season, injury, daysOut, comeback } ] }
-    };
-
-    const MILESTONE_THRESHOLDS = {
-        firstMatch: 1,
-        centuryMatches: 100,
-        fiftyGoals: 50,
-        hundredGoals: 100,
-        manOfTheMatch: 5,
-        captaincy: null,
-        playerOfMonth: 1,
-        playerOfSeason: 1,
-        internationals: 10
-    };
-
-    function initializePlayerProfile(player) {
-        if (!playerCareerProgressionState.playerProfiles[player.id]) {
-            playerCareerProgressionState.playerProfiles[player.id] = {
-                name: player.name,
-                position: player.position,
-                careerStart: game.season,
-                careerPeak: null,
-                peakStrength: player.strength || 0,
-                achievements: [],
-                totalMatches: 0,
-                totalGoals: 0,
-                totalAssists: 0
-            };
-        }
-
-        if (!playerCareerProgressionState.performanceArchive[player.id]) {
-            playerCareerProgressionState.performanceArchive[player.id] = [];
-        }
-
-        if (!playerCareerProgressionState.careerMilestones[player.id]) {
-            playerCareerProgressionState.careerMilestones[player.id] = [];
-        }
-    }
-
-    function recordSeasonalPerformance(player) {
-        if (!player) return;
-
-        initializePlayerProfile(player);
-
-        let seasonPerformance = {
-            season: game.season,
-            matches: player.appearances || 0,
-            goals: player.goalsSeason || 0,
-            assists: player.assistsSeason || 0,
-            strength: player.strength || 0,
-            rating: calculatePlayerRating(player)
-        };
-
-        playerCareerProgressionState.performanceArchive[player.id].push(seasonPerformance);
-
-        // Update career totals
-        let profile = playerCareerProgressionState.playerProfiles[player.id];
-        profile.totalMatches = (profile.totalMatches || 0) + (player.appearances || 0);
-        profile.totalGoals = (profile.totalGoals || 0) + (player.goalsSeason || 0);
-        profile.totalAssists = (profile.totalAssists || 0) + (player.assistsSeason || 0);
-
-        // Karrierehöhepunkt
-        if ((player.strength || 0) > (profile.peakStrength || 0)) {
-            profile.peakStrength = player.strength;
-            profile.careerPeak = game.season;
-        }
-    }
-
-    function calculatePlayerRating(player) {
-        // Einfache Bewertung basierend auf Fähigkeiten und Leistung
-        if (!player) return 0;
-
-        let baseRating = (player.strength || 50) / 100;
-        let performanceBonus = 0;
-
-        if (player.goalsSeason) performanceBonus += Math.min(0.2, (player.goalsSeason / 30) * 0.2);
-        if (player.assistsSeason) performanceBonus += Math.min(0.1, (player.assistsSeason / 15) * 0.1);
-        if (player.dailyForm) performanceBonus += ((player.dailyForm - 50) / 100) * 0.1;
-
-        return Math.min(100, Math.round((baseRating + performanceBonus) * 100));
-    }
-
-    function recordCareerProgressionMilestone(playerId, milestone, value) {
-        if (!playerCareerProgressionState.careerMilestones[playerId]) {
-            playerCareerProgressionState.careerMilestones[playerId] = [];
-        }
-
-        let entry = {
-            milestone: milestone,
-            season: game.season,
-            matchday: game.matchday,
-            value: value,
-            timestamp: new Date().toLocaleDateString('de-DE')
-        };
-
-        playerCareerProgressionState.careerMilestones[playerId].push(entry);
-
-        // Limit to 50 recent milestones
-        if (playerCareerProgressionState.careerMilestones[playerId].length > 50) {
-            playerCareerProgressionState.careerMilestones[playerId].shift();
-        }
-    }
-
-    function checkPlayerMilestones(player) {
-        if (!player) return;
-
-        initializePlayerProfile(player);
-        let profile = playerCareerProgressionState.playerProfiles[player.id];
-
-        // 100 Spiele
-        if ((player.appearances || 0) === 100 && !profile.achievements.includes('100Matches')) {
-            profile.achievements.push('100Matches');
-            recordCareerProgressionMilestone(player.id, '🏆 100 Ligaspiele', player.appearances);
-            showToast(`⭐ ${player.name} erreicht 100 Ligaspiele!`, 'success', 5000);
-        }
-
-        // 50 Tore
-        if ((player.goalsSeason || 0) >= 50 && !profile.achievements.includes('50Goals')) {
-            profile.achievements.push('50Goals');
-            recordCareerProgressionMilestone(player.id, '⚽ 50 Tore in einer Saison', player.goalsSeason);
-            showToast(`⭐ ${player.name} schoss 50 Tore in dieser Saison!`, 'success', 5000);
-        }
-
-        // 100 Tore Karriere
-        if ((profile.totalGoals || 0) >= 100 && !profile.achievements.includes('100GoalsCareer')) {
-            profile.achievements.push('100GoalsCareer');
-            recordCareerProgressionMilestone(player.id, '⚽ 100 Karriere-Tore', profile.totalGoals);
-            showToast(`⭐ ${player.name} erreicht 100 Karriere-Tore!`, 'success', 5000);
-        }
-
-        // Spieler des Monats
-        if (game.potmHistory && game.potmHistory.includes(player.id)) {
-            let potmCount = game.potmHistory.filter(id => id === player.id).length;
-            if (potmCount === 1 && !profile.achievements.includes('PlayerOfMonth1')) {
-                profile.achievements.push('PlayerOfMonth1');
-                recordCareerProgressionMilestone(player.id, '🌟 Spieler des Monats', 1);
-            }
-        }
-    }
-
-    function renderPlayerCareerPanel(playerId) {
-        if (!playerId) return '';
-
-        let player = squad.find(p => p.id === playerId);
-        if (!player) return '';
-
-        initializePlayerProfile(player);
-        checkPlayerMilestones(player);
-
-        let profile = playerCareerProgressionState.playerProfiles[playerId];
-        let performance = playerCareerProgressionState.performanceArchive[playerId] || [];
-        let milestones = playerCareerProgressionState.careerMilestones[playerId] || [];
-
-        let html = `
-            <div style="background:rgba(255,255,255,0.03); border-radius:6px; padding:8px; margin-bottom:12px; border:1px solid rgba(255,255,255,0.1);">
-                <div style="font-weight:700; color:var(--accent); margin-bottom:6px;">📊 KARRIERE-STATISTIK</div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px; font-size:9px;">
-                    <div style="background:rgba(255,255,255,0.05); padding:6px; border-radius:3px;">
-                        <div style="color:#aaa; margin-bottom:2px;">Karriere-Start</div>
-                        <div style="font-weight:700; color:var(--primary);">Saison ${profile.careerStart}</div>
-                    </div>
-                    <div style="background:rgba(255,255,255,0.05); padding:6px; border-radius:3px;">
-                        <div style="color:#aaa; margin-bottom:2px;">Karrierehöhepunkt</div>
-                        <div style="font-weight:700; color:var(--gold);">${profile.careerPeak ? `Saison ${profile.careerPeak} (Str ${profile.peakStrength})` : 'Noch nicht erreicht'}</div>
-                    </div>
-                    <div style="background:rgba(255,255,255,0.05); padding:6px; border-radius:3px;">
-                        <div style="color:#aaa; margin-bottom:2px;">Alter</div>
-                        <div style="font-weight:700; color:var(--primary);">${player.age || '-'} Jahre</div>
-                    </div>
-                </div>
-            </div>
-
-            <div style="background:rgba(255,255,255,0.03); border-radius:6px; padding:8px; margin-bottom:12px; border:1px solid rgba(255,255,255,0.1);">
-                <div style="font-weight:700; color:var(--accent); margin-bottom:6px;">📈 KARRIERE-GESAMTWERTE</div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px; font-size:9px;">
-                    <div style="background:rgba(255,255,255,0.05); padding:6px; border-radius:3px;">
-                        <div style="color:#aaa; margin-bottom:2px;">Ligaspiele</div>
-                        <div style="font-weight:700; color:var(--primary); font-size:14px;">${profile.totalMatches || 0}</div>
-                    </div>
-                    <div style="background:rgba(255,255,255,0.05); padding:6px; border-radius:3px;">
-                        <div style="color:#aaa; margin-bottom:2px;">Tore</div>
-                        <div style="font-weight:700; color:var(--gold); font-size:14px;">${profile.totalGoals || 0}</div>
-                    </div>
-                    <div style="background:rgba(255,255,255,0.05); padding:6px; border-radius:3px;">
-                        <div style="color:#aaa; margin-bottom:2px;">Assists</div>
-                        <div style="font-weight:700; color:var(--primary); font-size:14px;">${profile.totalAssists || 0}</div>
-                    </div>
-                </div>
-            </div>
-
-            <div style="background:rgba(255,255,255,0.03); border-radius:6px; padding:8px; margin-bottom:12px; border:1px solid rgba(255,255,255,0.1);">
-                <div style="font-weight:700; color:var(--accent); margin-bottom:6px;">⭐ LEISTUNGS-MEILENSTEINE</div>
-                <div style="display:grid; gap:4px; font-size:9px;">
-        `;
-
-        if (milestones.length === 0) {
-            html += '<div style="color:#aaa;">Noch keine Meilensteine erreicht</div>';
-        } else {
-            milestones.slice(-5).reverse().forEach(m => {
-                html += `
-                    <div style="padding:4px; background:rgba(255,255,255,0.02); border-radius:3px; border-left:2px solid var(--gold);">
-                        <div style="font-weight:700; color:var(--gold);">${m.milestone}</div>
-                        <div style="font-size:8px; color:#aaa;">Saison ${m.season}, Spieltag ${m.matchday}</div>
-                    </div>
-                `;
-            });
-        }
-
-        html += `
-                </div>
-            </div>
-
-            <div style="background:rgba(255,255,255,0.03); border-radius:6px; padding:8px; border:1px solid rgba(255,255,255,0.1);">
-                <div style="font-weight:700; color:var(--accent); margin-bottom:6px;">📋 SAISONALE LEISTUNG</div>
-                <div style="display:grid; gap:3px; font-size:8px;">
-        `;
-
-        if (performance.length === 0) {
-            html += '<div style="color:#aaa;">Noch keine Saisonalwerte aufgezeichnet</div>';
-        } else {
-            performance.slice(-5).reverse().forEach(perf => {
-                html += `
-                    <div style="display:flex; justify-content:space-between; padding:2px; background:rgba(255,255,255,0.02); border-radius:2px;">
-                        <span style="font-weight:700;">Saison ${perf.season}:</span>
-                        <span style="color:var(--accent);">${perf.matches} Spiele · ⚽ ${perf.goals} · 🎯 ${perf.assists}</span>
-                    </div>
-                `;
-            });
-        }
-
-        html += `
-                </div>
-            </div>
-        `;
-
-        return html;
-    }
-
 
 </script>
 <script>
@@ -32779,7 +30397,6 @@ function cleanupLegacyScoutState() {
         setzeBuchungskontext('🏦 Automatische Rücklage');
         if (typeof tickAutoReserve === 'function') tickAutoReserve(game.money - moneyAtStart);
         loescheBuchungskontext();
-        if (typeof checkAgentNegotiations === 'function') checkAgentNegotiations();
         // Derby-Verarbeitung: wenn es ein Spiel gegen einen Rivalen war
         if (typeof currentMatch !== 'undefined' && currentMatch && typeof processDerbyMatch === 'function') {
             processDerbyMatch(currentMatch.opponent, won, currentMatch.score, currentMatch.conceded);
@@ -33312,8 +30929,7 @@ function cleanupLegacyScoutState() {
             if (typeof tickMediaDepartment === 'function') tickMediaDepartment();
             // Transfer Market Analysis: Markttrends und Watchlist-Updates
             if (typeof tickTransferMarketAnalysis === 'function') tickTransferMarketAnalysis();
-            // Contract Management: Vertragsverlängerungen und -ablauf
-            if (typeof tickContractExpirations === 'function') tickContractExpirations();
+            if (typeof cleanupLegacyContractState === 'function') cleanupLegacyContractState();
             // Opposition Analysis: Gegner-Analyse-Updates
             if (typeof cleanupLegacyScoutState === 'function') cleanupLegacyScoutState();
             // Training Schedule: Trainingseffekte und Müdigkeitsabbau
@@ -33325,19 +30941,14 @@ function cleanupLegacyScoutState() {
             // Crisis Management: monatliche Krisen-Events
             if (typeof tickCrisisEvents === 'function') tickCrisisEvents();
             if (typeof tickDisciplinaryBans === 'function') tickDisciplinaryBans();
-            // Player Development: Alterung und Entwicklung
-            if (typeof tickPlayerAging === 'function') tickPlayerAging();
-            // Scouting Intelligence: Überwachungsupdates
-            if (typeof tickScoutingUpdates === 'function') tickScoutingUpdates();
+            if (typeof cleanupLegacyDevelopmentState === 'function') cleanupLegacyDevelopmentState();
+            if (typeof cleanupLegacyScoutingState === 'function') cleanupLegacyScoutingState();
             // Season Objectives & Squad Harmony: Ziele und Mannschaftsharmonie
             if (typeof tickSeasonObjectives === 'function') tickSeasonObjectives();
             if (typeof tickSquadHarmony === 'function') tickSquadHarmony();
             if (typeof tickTeamCouncil === 'function') tickTeamCouncil();
             if (typeof tickMemberAssembly === 'function') tickMemberAssembly();
-            // Contract Renewal & Media Relations: Verträge und Medienbeziehungen
-            if (typeof tickContractRenewal === 'function') tickContractRenewal();
-            // Player Retirement & Tournament Brackets: Spieler-Pensionierung und Turnier-Klammern
-            if (typeof tickPlayerRetirement === 'function') tickPlayerRetirement();
+            // Karriereenden: am Saisonende in agePlayersAtSeasonEnd() (js/player-development.js)
             if (typeof tickTournamentBrackets === 'function') tickTournamentBrackets();
             // Opponent Analysis & Match Prediction: Gegner-Analyse und Match-Prognosen
             // Phase 10: Set-Piece Training, Post-Match Analysis, Training Specialization, Fan Events
@@ -34409,7 +32020,7 @@ function cleanupLegacyScoutState() {
             // Spieler-Detail eine echte Entwicklungskurve statt nur des aktuellen Werts
             // angezeigt werden kann.
             if (!p.strengthHistory) p.strengthHistory = [];
-            p.strengthHistory.push({ season: game.season, strength: p.strength });
+            p.strengthHistory.push({ season: game.season, strength: p.strength, apps: p.appearancesSeason || 0, goals: p.goalsSeason || 0 });
             if (p.strengthHistory.length > 15) p.strengthHistory.shift();
             p.goalsSeason = 0;
             p.appearancesSeason = 0;
@@ -34436,6 +32047,7 @@ function cleanupLegacyScoutState() {
             addInboxMessage('vertrag', `⏳ Vertrag läuft aus: ${p.name}`, `${p.name} hat nur noch 1 Jahr Vertrag - jetzt verlängern, sonst verlässt er den Verein am Saisonende ablösefrei!`, 'screen-contracts');
         });
         squad = squad.filter(p => p.contracts > 0);
+        if (typeof agePlayersAtSeasonEnd === 'function') agePlayersAtSeasonEnd();
         if (squad.length < 11) {
             // Notbesetzung: Positionsverteilung wie im Standardkader (2 TW/6 ABW/6 MIT/4 ST),
             // damit garantiert ein spielbares Team entsteht (nicht rein zufällige Positionen).
@@ -34456,10 +32068,6 @@ function cleanupLegacyScoutState() {
         incomingOffers = [];
         if (typeof evaluateFinancialFairplay === 'function') evaluateFinancialFairplay();
         if (typeof recordSeasonStats === 'function') recordSeasonStats();
-        // Player Career Progression: record seasonal performance for all squad members
-        if (typeof recordSeasonalPerformance === 'function') {
-            squad.forEach(p => recordSeasonalPerformance(p));
-        }
         // Manager Analytics: record seasonal manager statistics
         if (typeof recordSeasonalManagerStats === 'function') recordSeasonalManagerStats();
         game.season++;
