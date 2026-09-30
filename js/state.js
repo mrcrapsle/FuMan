@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '2.6', date: '30.09.2026', features: 'Phase 13: Gegner, Vorstand, Verträge, Scouting zusammengelegt, Spieler altern' };
+    const GAME_VERSION = { number: '2.6.1', date: '30.09.2026', features: 'Phase 13: Gegner, Vorstand, Verträge, Scouting, Fans, Training, Stadion aufgeräumt, Spieler altern' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
