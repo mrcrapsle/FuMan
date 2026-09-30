@@ -351,8 +351,7 @@
         .bottom-nav-bar {
             position: fixed; bottom: 0; left: 0; right: 0; z-index: 500;
             display: grid; grid-template-columns: repeat(6, 1fr);
-            background: linear-gradient(180deg, rgba(20,14,8,0.85), rgba(10,7,4,0.98));
-            backdrop-filter: blur(10px); border-top: 1px solid rgba(228,197,140,0.25);
+            background: linear-gradient(180deg, rgb(24,17,10), rgb(10,7,4)); /* undurchsichtig: kein Text scheint durch */ border-top: 1px solid rgba(228,197,140,0.25);
             box-shadow: 0 -6px 20px rgba(0,0,0,0.5);
             padding-bottom: env(safe-area-inset-bottom, 0px);
         }
@@ -367,7 +366,8 @@
         .bottom-nav-bar .bottom-nav-item { padding: 8px 2px 6px; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .bottom-nav-item.active { color: var(--accent); transform: translateY(-2px); }
         .bottom-nav-item.active .bn-icon { filter: drop-shadow(0 0 6px rgba(212,169,74,0.6)); }
-        body { padding-bottom: 58px; }
+        /* Platz für die fixe untere Leiste (inkl. Android-Gestenleiste), sonst verschwindet das Seitenende dahinter */
+        body { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
         /* DASHBOARD-STADION-HERO (NEU): kompakte 3D-Stadionansicht ganz oben auf dem
            Dashboard, mit Himmel-Gradient und Flutlicht-Glanz für einen modernen,
            einladenden ersten Eindruck beim App-Start. */
@@ -1280,7 +1280,12 @@
         /* MOBILE PORTRAIT: <= 650px (bestehende Media Query, erweitert) */
         @media (max-width: 650px) {
             html { font-size: 13px; }
-            body { margin: 0; padding: 0; }
+            body { margin: 0; padding: 0 0 calc(72px + env(safe-area-inset-bottom, 0px)); }
+            /* Listen mit eigenem Scrollbereich auf dem Handy voll ausklappen: Scrollen in der
+               Seite plus in der Box war fummelig, und die Box endete hinter der unteren Leiste. */
+            #cal-schedule-list, #bench-list, #individual-training-list, #campus-buildings-list, #staff-list-container {
+                max-height: none !important; overflow-y: visible !important;
+            }
 
             /* Layout */
             .main-wrapper { flex-direction: column; }

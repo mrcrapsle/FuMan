@@ -4719,11 +4719,18 @@ async function testMobileLayout(browser) {
         ['bank', 'budget', 'journal', 'uebersicht'].forEach(t => views.push([`fin/${t}`, () => { showScreen('screen-finances'); setSubTab('fin', t); }]));
         ['chronik', 'legenden', 'rivalen', 'titel'].forEach(t => views.push([`hist/${t}`, () => { showScreen('screen-history'); setSubTab('hist', t); }]));
         const W = document.documentElement.clientWidth;
-        const ueberlauf = [], knoepfe = [], schrift = [];
+        const ueberlauf = [], knoepfe = [], schrift = [], verdeckt = [];
         for (const [name, open] of views) {
             open();
             await new Promise(res => setTimeout(res, 20));
             if (document.documentElement.scrollWidth > W + 2) ueberlauf.push(name);
+            // Seitenende muss nach dem Herunterscrollen über der unteren Leiste stehen
+            window.scrollTo(0, document.documentElement.scrollHeight);
+            const navTop = document.querySelector('.bottom-nav-bar').getBoundingClientRect().top;
+            const sichtbar = [...document.querySelectorAll('.app-content button, .app-content .box')].filter(e => e.getBoundingClientRect().height > 0 && !e.closest('[style*="overflow-y"]'));
+            const unterste = Math.max(0, ...sichtbar.map(e => e.getBoundingClientRect().bottom));
+            if (unterste > navTop + 1) verdeckt.push(`${name} (${Math.round(unterste - navTop)} px)`);
+            window.scrollTo(0, 0);
             document.querySelectorAll('.app-content button, .bottom-nav-bar button').forEach(b => {
                 const rect = b.getBoundingClientRect();
                 if (rect.height > 0 && rect.height < 32) knoepfe.push(`${name}: "${b.innerText.trim().slice(0, 20)}" ${Math.round(rect.height)}px`);
@@ -4735,12 +4742,13 @@ async function testMobileLayout(browser) {
             });
         }
         const navZeilen = new Set([...document.querySelectorAll('.bottom-nav-bar button')].map(b => Math.round(b.getBoundingClientRect().top))).size;
-        return { anzahl: views.length, ueberlauf, knoepfe: [...new Set(knoepfe)], schrift: [...new Set(schrift)], navZeilen };
+        return { anzahl: views.length, ueberlauf, knoepfe: [...new Set(knoepfe)], schrift: [...new Set(schrift)], navZeilen, verdeckt };
     });
     assert(r.ueberlauf.length === 0, `Kein horizontaler Überlauf auf ${r.anzahl} Bildschirmen/Reitern (${r.ueberlauf.join(', ')})`);
     assert(r.knoepfe.length === 0, `Alle Knöpfe mindestens 32 px hoch (${r.knoepfe.slice(0, 4).join(' | ')})`);
     assert(r.schrift.length === 0, `Keine Schrift unter 8 px (${r.schrift.slice(0, 4).join(' | ')})`);
     assert(r.navZeilen === 1, `Untere Leiste in einer Zeile (${r.navZeilen})`);
+    assert(r.verdeckt.length === 0, `Seitenende nirgends von der unteren Leiste verdeckt (${r.verdeckt.slice(0, 5).join(', ')})`);
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 3).join(' | ')})`);
     await page.close();
 }
