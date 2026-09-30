@@ -109,6 +109,7 @@
         renderLeagueChronikBox();
         if (typeof renderPlayerOfMonthBox === 'function') renderPlayerOfMonthBox();
         if (typeof renderPlayerOfSeasonBox === 'function') renderPlayerOfSeasonBox();
+        if (typeof renderLeagueAwardsBox === 'function') renderLeagueAwardsBox();
         if (typeof renderHallOfFamePanel === 'function') renderHallOfFamePanel();
         if (typeof renderManagerAnalyticsPanel === 'function') renderManagerAnalyticsPanel();
         let list = document.getElementById('trophies-list');

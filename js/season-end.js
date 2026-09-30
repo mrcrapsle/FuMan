@@ -127,6 +127,7 @@
         }
 
         holdSeasonEndGala();
+        if (typeof awardLeagueHonours === 'function') awardLeagueHonours(myRank);
         checkRivalChangeEvent();
         if (typeof tickMediaImageSeasonHistory === 'function') tickMediaImageSeasonHistory();
 
@@ -135,7 +136,10 @@
             showNotice('🌟 Champions-Cup-Qualifikation!', `Platz ${myRank} erreicht - nächste Saison spielt der Verein in der europäischen Königsklasse.`);
         }
 
-        if (myRank <= 2 && game.leagueLevel > 0) {
+        // Relegation (Platz 3 und 16): noch nicht gespielte Partien werden jetzt simuliert.
+        let relegation = typeof resolveRelegationForSeasonEnd === 'function' ? resolveRelegationForSeasonEnd() : null;
+
+        if ((myRank <= 2 || relegation === 'promoted') && game.leagueLevel > 0) {
             // ---------- DFB-LIZENZIERUNG ----------
             // Bisher war Aufstieg rein eine Frage des Tabellenplatzes - real verlangt der DFB
             // vor dem Aufstieg aber eine Lizenzierung (Stadionstandard, Flutlicht, finanzielle
@@ -167,7 +171,7 @@
                 if (typeof triggerPromotionBonusClauses === 'function') triggerPromotionBonusClauses();
                 showNotice('🎉 Aufstieg geschafft!', `Glückwunsch zur Beförderung in die ${leagueNames[game.leagueLevel]}.\n\nAufstiegsprämie 1.500.000 €${sponsorPromoBonus > 0 ? ` plus ${formatVal(sponsorPromoBonus)} Sponsoren-Aufstiegsbonus` : ''}.`);
             }
-        } else if (myRank >= 16 && game.leagueLevel < NUM_LEAGUES - 1) {
+        } else if ((myRank >= 17 || (myRank === 16 && relegation !== 'stayed')) && game.leagueLevel < NUM_LEAGUES - 1) {
             game.leagueLevel++;
             showNotice('❌ Abstieg', 'Die Klasse konnte nicht gehalten werden. Nächste Saison geht es eine Liga tiefer weiter.', { typ: 'warn' });
         }
@@ -293,6 +297,7 @@
         forceSponsorRenewalAtSeasonStart();
         if (typeof renewSeasonTickets === 'function') renewSeasonTickets();
         if (typeof checkSeasonMoodTargetResult === 'function') checkSeasonMoodTargetResult();
+        if (typeof tickCoachBounce === 'function') tickCoachBounce(true);
         advanceLeaguesToNewSeason();
         if (typeof recordSeasonExpectationRank === 'function') recordSeasonExpectationRank();
         if (typeof applyPendingFfpPointDeduction === 'function') applyPendingFfpPointDeduction();

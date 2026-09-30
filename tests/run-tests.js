@@ -4196,6 +4196,98 @@ async function testPhase13Teil3(browser) {
     await page.close();
 }
 
+async function testPhase13Teil4(browser) {
+    console.log('\n[P13d] Relegation, Deadline-Day, Liga-Auszeichnungen, Trainerkarussell');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        const out = {};
+        closeTutorial();
+        const setRank = (rank) => {
+            const t = leaguesData[game.leagueLevel];
+            const us = t.find(x => x.name === game.clubName);
+            t.filter(x => x !== us).forEach((x, i) => { x.points = 100 - (i < rank - 1 ? i : i + 1) * 3; x.goalsFor = 50; x.goalsAgainst = 40; });
+            us.points = 100 - (rank - 1) * 3; us.goalsFor = 50; us.goalsAgainst = 40;
+        };
+
+        // Deadline-Day: Sommerfenster bis Spieltag 3, danach Last-Minute-Ticker
+        showScreen('screen-transfer');
+        out.sommerBanner = document.getElementById('winter-window-banner').innerText.includes('Sommer');
+        simulateMatchdays(3);
+        out.sommerDeadline = game.lastDeadlineDay === `${game.season}-sommer` && inboxMessages.some(m => /DEADLINE-DAY \(Sommer\)/.test(m.title));
+        const ddAngebote = incomingOffers.filter(o => /Deadline-Day/.test(o.statusText));
+        out.angeboteKurzfristig = ddAngebote.every(o => o.expiresIn <= 1);
+        out.schnaeppchen = marketPlayers.filter(p => p.deadlineBargain).length;
+        game.matchday = 17; tickTransferWindows();
+        out.winterOffen = game.winterWindowActive && game.winterWindowCloseMatchday === 20;
+        game.matchday = 20; tickTransferWindows();
+        out.winterZu = !game.winterWindowActive && game.lastDeadlineDay === `${game.season}-winter`;
+
+        // Trainerkarussell: Tabellenletzter mit Niederlagenserie verliert seinen Trainer
+        game.matchday = 12;
+        const opfer = leaguesData[game.leagueLevel].find(t => t.name !== game.clubName && t.name !== game.permanentRivalName);
+        leaguesData[game.leagueLevel].forEach(t => { t.points = 30; t.recentForm = ['W', 'W', 'D', 'W', 'W']; });
+        opfer.points = 0; opfer.recentForm = ['L', 'L', 'L', 'L', 'L'];
+        const alterTrainer = getTeamCoach(opfer).name, alterStil = opfer.playstyle, basis = opfer.baseStrength;
+        const zufall = Math.random; Math.random = () => 0.01;
+        try { tickCoachCarousel(); } finally { Math.random = zufall; }
+        out.trainerGewechselt = opfer.coach.name !== alterTrainer && opfer.playstyle !== alterStil && opfer.baseStrength === basis + 3;
+        out.nurEinWechselProSaison = (() => { const n = opfer.coach.name; Math.random = () => 0.01; try { tickCoachCarousel(); } finally { Math.random = zufall; } return opfer.coach.name === n; })();
+        game.matchday = 16; tickCoachBounce();
+        out.trainereffektEndet = opfer.baseStrength === basis && !opfer.coachBounce;
+        out.trainerInAnalyse = getCoachInfoHtml(opfer).includes(opfer.coach.name);
+
+        // Liga-Auszeichnungen: eigener Torjäger schlägt die Konkurrenz
+        const star = squad.find(p => p.pos === 'ST');
+        star.goalsSeason = 60; star.appearancesSeason = 34;
+        const mw = star.marketValue;
+        const aw = awardLeagueHonours(1);
+        out.torjaeger = aw.awards.some(a => a.own && /Torjäger/.test(a.award) && a.winner === star.name) && star.marketValue > mw;
+        out.elfKomplett = aw.elf.length === 11;
+        out.trainerDesJahres = aw.awards.some(a => /Trainer des Jahres/.test(a.award));
+        showScreen('screen-history');
+        out.awardsBox = document.getElementById('league-awards-box').innerText.includes(star.name);
+
+        // Relegation: Platz 16 spielt gegen den Dritten der Liga darunter
+        game.leagueLevel = 3; initLeagues(); game.matchday = 35; setRank(16);
+        const sit = getRelegationSituation();
+        out.relegationGegner = !!sit && sit.type === 'abstieg' && sit.oppLevel === 4;
+        showScreen('screen-dashboard');
+        out.abschlussVersteckt = document.getElementById('dash-season-end-actions').style.display === 'none';
+        playRelegationLeg(); playRelegationLeg();
+        const rel = getRelegationState();
+        out.zweiSpiele = rel.legs.length === 2 && ['stayed', 'relegated'].includes(rel.result) && rel.legs.some(l => l.isHome && l.income > 0);
+        out.abschlussSichtbar = document.getElementById('dash-season-end-actions').style.display === 'block';
+        const lv = game.leagueLevel;
+        concludeSeasonAndAdvance();
+        out.ligaPasst = game.leagueLevel === (rel.result === 'relegated' ? lv + 1 : lv);
+        // Platz 3: Saisonabschluss spielt die Aufstiegs-Relegation automatisch
+        game.matchday = 35; setRank(3);
+        concludeSeasonAndAdvance();
+        out.autoRelegation = game.relegation.type === 'aufstieg' && game.relegation.legs.length === 2 && !!game.relegation.result;
+        return out;
+    });
+
+    assert(r.sommerBanner, 'Sommer-Transferfenster wird zu Saisonbeginn angezeigt');
+    assert(r.sommerDeadline, 'Nach Spieltag 3 ist Deadline-Day mit Ticker im Postfach');
+    assert(r.angeboteKurzfristig && r.schnaeppchen > 0, `Deadline-Day: Last-Minute-Angebote gelten nur kurz, Schnäppchen auf dem Markt (${r.schnaeppchen})`);
+    assert(r.winterOffen && r.winterZu, 'Winterfenster läuft Spieltag 18-20 und endet mit Deadline-Day');
+    assert(r.trainerGewechselt, 'Trainerkarussell: Krisenklub entlässt Trainer, neuer Stil und Trainereffekt');
+    assert(r.nurEinWechselProSaison, 'Ein Verein wechselt höchstens einmal pro Saison den Trainer');
+    assert(r.trainereffektEndet, 'Trainereffekt endet nach 4 Spieltagen ohne bleibende Verzerrung');
+    assert(r.trainerInAnalyse, 'Gegnerischer Trainer steht in der Spielanalyse');
+    assert(r.torjaeger, 'Eigener Torjäger gewinnt die Torjägerkanone und gewinnt an Marktwert');
+    assert(r.elfKomplett && r.trainerDesJahres, 'Elf der Saison hat 11 Spieler, Trainer des Jahres wird gekürt');
+    assert(r.awardsBox, 'Auszeichnungen erscheinen im Trophäen-Bildschirm');
+    assert(r.relegationGegner && r.abschlussVersteckt, 'Platz 16: Relegation gegen den Dritten der Liga darunter, Saisonabschluss erst danach');
+    assert(r.zweiSpiele && r.abschlussSichtbar, 'Relegation: Hin- und Rückspiel mit Heimspieleinnahmen, danach Saisonabschluss möglich');
+    assert(r.ligaPasst, 'Ergebnis der Relegation entscheidet über den Abstieg');
+    assert(r.autoRelegation, 'Saisonabschluss spielt offene Relegationsspiele automatisch');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler in Phase 13 Teil 4 (${consoleErrors.slice(0, 3).join(' | ')})`);
+    await page.close();
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -4269,6 +4361,7 @@ async function main() {
         testPhase13,
         testPhase13Teil2,
         testPhase13Teil3,
+        testPhase13Teil4,
         testRuntimeRoundTrip,
     ];
 

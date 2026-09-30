@@ -271,6 +271,7 @@
                     Spielweise: <strong>${getOpponentPlaystyle(oppName)}</strong><br>
                     Team-Stärke: <strong>${baseStr}</strong> · Form (letzte 5): ${formStr}<br>
                     Gefährlichster Spieler: <strong>${dangerName}</strong> (${dangerPos}, Stärke ${dangerRating})
+                    ${typeof getCoachInfoHtml === 'function' && oppObj ? '<br>' + getCoachInfoHtml(oppObj) : ''}
                 </span>
                 ${videoAnalysisHtml}
                 ${typeof getPredictionHtml === 'function' ? getPredictionHtml(oppName) : ''}
@@ -1756,6 +1757,7 @@
             if (typeof tickSeasonObjectives === 'function') tickSeasonObjectives();
             if (typeof tickSquadHarmony === 'function') tickSquadHarmony();
             if (typeof tickTeamCouncil === 'function') tickTeamCouncil();
+            if (typeof tickCoachCarousel === 'function') tickCoachCarousel();
             if (typeof tickMemberAssembly === 'function') tickMemberAssembly();
             // Karriereenden: am Saisonende in agePlayersAtSeasonEnd() (js/player-development.js)
             if (typeof tickTournamentBrackets === 'function') tickTournamentBrackets();
@@ -1844,9 +1846,8 @@
             game.money += dividends;
         }
 
-        if (game.matchday === 17 && !game.winterWindowUsedThisSeason) {
-            openWinterWindow();
-        }
+        if (typeof tickTransferWindows === 'function') tickTransferWindows();
+        if (typeof tickCoachBounce === 'function') tickCoachBounce();
 
         // Trainingslager-Bonus zählt jeden verarbeiteten Spieltag herunter (gilt in allen
         // drei Spieltag-Pfaden, da processPostMatchRoutine() von allen dreien aufgerufen wird).

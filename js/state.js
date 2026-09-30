@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '2.6.2', date: '30.09.2026', features: 'Phase 13: aufgeräumt, Spieler altern, Kader-Bildschirm in Reitern' };
+    const GAME_VERSION = { number: '2.7', date: '30.09.2026', features: 'Phase 13: Relegation, Deadline-Day, Liga-Auszeichnungen, Trainerkarussell' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -95,7 +95,7 @@
         permanentRivalName: null,
         rivalHistoryArchive: [],
         winterWindowActive: false,
-        winterWindowDeadline: 0,
+        winterWindowCloseMatchday: 0,
         winterWindowUsedThisSeason: false,
         travelMode: 'flugzeug', // 'flugzeug' (schnell, teurer, weniger Ermüdung) | 'bus' (günstig, mehr Ermüdung)
         busSponsorActive: false,

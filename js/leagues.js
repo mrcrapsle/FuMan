@@ -436,6 +436,7 @@
     }
 
     function renderLeagueView() {
+        if (typeof renderCoachCarouselBox === 'function') renderCoachCarouselBox();
         recordLeagueProgress();
         renderTopScorersBox();
         renderSeasonPointsChart();

@@ -104,6 +104,8 @@ This pattern ensures:
 - Scouting: the regional network in `js/scouting.js`. Opponent prediction: `js/match-scout.js` (uses `simulateGoals` on real fixtures).
 - Board: `game.boardSat`, explained per member in `js/board-room.js`.
 - Fans: `js/fans.js` (`game.fans`, fan actions/groups). Training: `js/training.js` + minigames in `js/training-games.js`. Stadium: `js/stadium.js` (blocks/capacity) + `js/stadium-events.js`.
+- Transfer windows: matchday-based (summer 1-3, winter 18-20) with `runDeadlineDay()` in `js/transfermarket.js`, driven by `tickTransferWindows()` after every matchday.
+- Season end extras: `js/relegation.js` (own club on rank 3/16, legs on the dashboard, auto-resolved in `concludeSeasonAndAdvance()`), `js/league-awards.js` (`game.leagueAwards`), `js/coach-carousel.js` (AI `team.coach`, temporary `team.coachBounce` - removed via `tickCoachBounce(true)` before leagues advance).
 - Player aging/development: only `agePlayersAtSeasonEnd()` in `js/player-development.js` (age +1, strength by archetype).
 
 ### Game Loop & Monthly Ticks

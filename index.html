@@ -718,6 +718,7 @@
                         <button onclick="simulateMatchdays(5)" class="btn-secondary">⏩ 5 Spieltage simulieren</button>
                         <button onclick="simulateFullSeason()" class="btn-primary" style="background:#f59e0b; color:#000;">⚡ Saison durchsimulieren</button>
                     </div>
+                    <div id="dash-relegation-box"></div>
                     <div id="dash-season-end-actions" style="display:none;">
                         <button onclick="concludeSeasonAndAdvance()" class="btn-danger" style="font-size:13px; padding:10px;">🏆 Saison abschließen & Neue Saison starten</button>
                     </div>
@@ -2009,6 +2010,10 @@
                         <div id="matchday-fixtures-list"></div>
                     </div>
                     <div class="panel">
+                        <div class="panel-header" style="color:var(--accent);">🎠 TRAINERKARUSSELL</div>
+                        <div id="coach-carousel-box"></div>
+                    </div>
+                    <div class="panel">
                         <div class="panel-header">🏆 TURNIER-KLAMMERN</div>
                         <div id="tournament-brackets-box"></div>
                     </div>
@@ -2060,6 +2065,10 @@
                 <div class="panel">
                     <div class="panel-header" style="color:var(--gold);">🏆 SPIELER DER SAISON</div>
                     <div id="player-of-season-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--gold);">🏅 LIGA-AUSZEICHNUNGEN</div>
+                    <div id="league-awards-box"></div>
                 </div>
                 <div class="panel">
                     <div class="panel-header">🌟 TROPHÄENRAUM</div>
@@ -2536,6 +2545,9 @@
 <script src="js/match.js?v=2.1"></script>
 <script src="js/contract-ultimatum.js?v=2.1"></script>
 <script src="js/season-end.js?v=2.1"></script>
+<script src="js/relegation.js?v=2.7"></script>
+<script src="js/league-awards.js?v=2.7"></script>
+<script src="js/coach-carousel.js?v=2.7"></script>
 <script src="js/admin.js?v=2.1"></script>
 <script src="js/premium.js?v=2.1"></script>
 <script src="js/save.js?v=2.1"></script>

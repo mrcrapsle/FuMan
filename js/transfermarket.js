@@ -118,62 +118,105 @@
         if (squad.length <= 12 || incomingOffers.length >= 3) return;
 
         // Während des Winterpause-Sondertransferfensters treffen deutlich mehr Angebote ein.
-        let chance = game.winterWindowActive ? 0.65 : 0.35;
+        let chance = isTransferWindowOpen() ? 0.65 : 0.35;
         if (Math.random() < chance) {
             triggerNewAITransferOffer();
         }
     }
 
-    // ---------- WINTERPAUSE-SONDERTRANSFERFENSTER ----------
-    // Öffnet sich automatisch zum Saisonhalbzeit-Spieltag (17) und läuft 3 ECHTE Tage lang
-    // (Realzeit, nicht Spieltage) - während dieser Zeit ist die Chance auf neue Angebote
-    // spürbar erhöht (siehe checkIncomingTransferOffers() oben). Läuft die Zeit ab, schließt
-    // sich das Fenster automatisch wieder (siehe checkWinterWindowExpiry(), die bei jedem
-    // Rendern des Transfermarkt-Screens sowie per Intervall geprüft wird).
-    const WINTER_WINDOW_DURATION_MS = 3 * 24 * 60 * 60 * 1000;
+    // ---------- WECHSELPERIODEN & DEADLINE-DAY ----------
+    // Sommerfenster: Spieltag 1-3, Winterfenster: ab Spieltag 17 für 3 Spieltage. Bisher lief
+    // das Winterfenster 3 ECHTE Tage (Uhrzeit) - wer eine Saison in einer Sitzung spielte,
+    // hatte es viele Spieltage lang offen und erlebte den Deadline-Day nie. Außerhalb der
+    // Fenster bleiben Transfers möglich, nur mit weniger Angeboten.
+    const SUMMER_WINDOW_LAST_MATCHDAY = 3;
+    const WINTER_WINDOW_MATCHDAYS = 3;
+
+    function isSummerWindowOpen() { return game.matchday <= SUMMER_WINDOW_LAST_MATCHDAY; }
+    function isTransferWindowOpen() { return isSummerWindowOpen() || !!game.winterWindowActive; }
 
     function openWinterWindow() {
         game.winterWindowActive = true;
         game.winterWindowUsedThisSeason = true;
-        game.winterWindowDeadline = Date.now() + WINTER_WINDOW_DURATION_MS;
-        addInboxMessage('transfer', '❄️ Winterpause-Sondertransferfenster geöffnet!', 'Für die nächsten 3 Tage (Echtzeit) treffen deutlich mehr Transferangebote ein - nutze die Chance!', 'screen-transfer');
-        showToast('❄️ Winterpause-Transferfenster geöffnet! 3 Tage lang erhöhte Transferaktivität.', 'success');
+        game.winterWindowCloseMatchday = game.matchday + WINTER_WINDOW_MATCHDAYS;
+        addInboxMessage('transfer', '❄️ Winter-Transferfenster geöffnet!', `Bis einschließlich Spieltag ${game.winterWindowCloseMatchday} treffen deutlich mehr Transferangebote ein - danach ist Deadline-Day.`, 'screen-transfer');
+        showToast('❄️ Winter-Transferfenster geöffnet - 3 Spieltage erhöhte Transferaktivität.', 'success');
     }
 
     function checkWinterWindowExpiry() {
-        if (game.winterWindowActive && Date.now() > game.winterWindowDeadline) {
+        if (!game.winterWindowActive) return;
+        // Alte Spielstände hatten eine Uhrzeit-Frist statt eines Spieltags.
+        if (!game.winterWindowCloseMatchday) game.winterWindowCloseMatchday = game.matchday + 1;
+        delete game.winterWindowDeadline;
+        if (game.matchday >= game.winterWindowCloseMatchday) {
             game.winterWindowActive = false;
-            triggerDeadlineDayRush();
-            addInboxMessage('transfer', '❄️ Winterpause-Transferfenster geschlossen', 'Die verstärkte Transferaktivität ist wieder auf Normalniveau zurückgegangen.', 'screen-transfer');
+            runDeadlineDay('winter');
         }
     }
 
-    // ---------- DEADLINE DAY ----------
-    // Kurz vor Schließung des Fensters trudelt noch einmal eine Welle an Last-Minute-
-    // Angeboten ein - klassischer "Deadline Day"-Wahnsinn, bevor wieder Ruhe einkehrt.
-    function triggerDeadlineDayRush() {
-        let before = incomingOffers.length;
-        for (let i = 0; i < 4; i++) triggerNewAITransferOffer();
-        let added = incomingOffers.length - before;
-        if (added > 0) {
-            addInboxMessage('transfer', '🚨 DEADLINE DAY! Letzte Angebote treffen ein!', `In letzter Minute sind noch ${added} neue Transferanfrage(n) für deine Spieler eingegangen - jetzt schnell entscheiden, bevor das Fenster endgültig schließt!`, 'screen-transfer');
-            showToast(`🚨 Deadline Day! ${added} Last-Minute-Angebot(e) eingetroffen!`, 'success');
-        }
+    // Wird nach jedem Spieltag aufgerufen (processPostMatchRoutine), game.matchday ist dabei
+    // noch der gerade gespielte Spieltag.
+    function tickTransferWindows() {
+        if (game.matchday === 17 && !game.winterWindowUsedThisSeason) openWinterWindow();
+        else checkWinterWindowExpiry();
+        if (game.matchday === SUMMER_WINDOW_LAST_MATCHDAY) runDeadlineDay('sommer');
+    }
+
+    // ---------- DEADLINE-DAY ----------
+    // Letzter Tag einer Wechselperiode: Last-Minute-Angebote für eigene Spieler (nur bis zum
+    // nächsten Spieltag gültig), Panikkäufe der Ligakonkurrenz (echte Stärkegewinne) und
+    // Schnäppchen auf dem Markt, weil Vereine noch schnell Gehälter loswerden wollen.
+    function runDeadlineDay(fenster) {
+        const key = `${game.season}-${fenster}`;
+        if (game.lastDeadlineDay === key) return;
+        game.lastDeadlineDay = key;
+        const ticker = [];
+
+        const vorher = incomingOffers.length;
+        const anzahl = 3 + Math.floor(Math.random() * 3);
+        for (let i = 0; i < anzahl; i++) triggerNewAITransferOffer();
+        incomingOffers.slice(0, incomingOffers.length - vorher).forEach(o => {
+            o.expiresIn = 1;
+            o.statusText = '⏰ Deadline-Day: Das Angebot gilt nur noch bis zum nächsten Spieltag!';
+            ticker.push(`💼 ${o.clubName} bietet in letzter Minute ${formatVal(o.currentBid)} für ${o.playerName}`);
+        });
+
+        const reserve = game.secondTeam && game.secondTeam.name;
+        const kaeufer = (leaguesData[game.leagueLevel] || []).filter(t => t.name !== game.clubName && t.name !== reserve)
+            .sort(() => Math.random() - 0.5).slice(0, 3);
+        kaeufer.forEach(t => {
+            const plus = 1 + Math.floor(Math.random() * 3);
+            t.strength = Math.min(96, t.strength + plus);
+            t.baseStrength = Math.min(96, (t.baseStrength || t.strength) + plus);
+            ticker.push(`🛒 ${t.name} holt kurz vor Schluss einen Neuzugang (Stärke +${plus})`);
+        });
+
+        marketPlayers.filter(p => !p.deadlineBargain).sort(() => Math.random() - 0.5).slice(0, 2).forEach(p => {
+            p.marketValue = Math.max(5000, Math.round(p.marketValue * 0.7 / 5000) * 5000);
+            p.deadlineBargain = true;
+            ticker.push(`🏷️ Schnäppchen: ${p.name} (${p.pos}, Stärke ${p.strength}) für nur ${formatVal(p.marketValue)} zu haben`);
+        });
+
+        addInboxMessage('transfer', `🚨 DEADLINE-DAY (${fenster === 'winter' ? 'Winter' : 'Sommer'})`, `Die Wechselperiode schließt - der Ticker vom letzten Tag:\n\n${ticker.map(t => '• ' + t).join('\n')}`, 'screen-transfer');
+        showToast(`🚨 Deadline-Day! ${ticker.length} Meldungen im Postfach.`, 'success');
     }
 
     function renderWinterWindowBanner() {
         let el = document.getElementById('winter-window-banner');
         if (!el) return;
         checkWinterWindowExpiry();
-        if (!game.winterWindowActive) { el.style.display = 'none'; return; }
-        el.style.display = 'block';
-        let remainingMs = Math.max(0, game.winterWindowDeadline - Date.now());
-        let h = Math.floor(remainingMs / 3600000);
-        let m = Math.floor((remainingMs % 3600000) / 60000);
-        let s = Math.floor((remainingMs % 60000) / 1000);
-        el.innerHTML = `❄️ <strong>Winterpause-Sondertransferfenster aktiv!</strong> Noch ${h}h ${m}m ${s}s - erhöhte Transferaktivität.`;
+        if (game.winterWindowActive) {
+            const rest = game.winterWindowCloseMatchday - game.matchday + 1;
+            el.style.display = 'block';
+            el.innerHTML = `❄️ <strong>Winter-Transferfenster offen!</strong> Noch ${rest} Spieltag(e) bis zum Deadline-Day - erhöhte Transferaktivität.`;
+        } else if (isSummerWindowOpen()) {
+            const rest = SUMMER_WINDOW_LAST_MATCHDAY + 1 - game.matchday;
+            el.style.display = 'block';
+            el.innerHTML = `☀️ <strong>Sommer-Transferfenster offen!</strong> Noch ${rest} Spieltag(e) bis zum Deadline-Day - erhöhte Transferaktivität.`;
+        } else {
+            el.style.display = 'none';
+        }
     }
-    setInterval(() => { if (typeof game !== 'undefined' && game.winterWindowActive) renderWinterWindowBanner(); }, 1000);
 
     // Welche Spieler sind fuer andere Vereine ueberhaupt interessant? Bisher galt eine
     // feste Untergrenze von Staerke 48. Ein Sechstliga-Kader liegt mit 26-44 KOMPLETT
@@ -532,6 +575,7 @@
             row.style.cssText = 'margin-bottom:6px; padding:8px;';
             let badgeClass = 'badge-' + (p.pos || 'mit').toLowerCase();
             let traitBadge = (p.trait && p.trait !== 'Kein') ? `<span class="badge badge-trait">${p.trait}</span>` : '';
+            if (p.deadlineBargain) traitBadge += '<span class="badge badge-trait" style="background:var(--danger);">⏰ Schnäppchen -30 %</span>';
             row.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                     <div style="display:flex; align-items:center; gap:6px;">

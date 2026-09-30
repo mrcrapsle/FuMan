@@ -69,6 +69,7 @@
         let isSeasonOver = game.matchday > 34;
         document.getElementById('dash-match-actions').style.display = isSeasonOver ? 'none' : 'grid';
         document.getElementById('dash-season-end-actions').style.display = isSeasonOver ? 'block' : 'none';
+        if (typeof renderRelegationBox === 'function') renderRelegationBox();
 
         renderSaveSlotsUI();
         renderNextGoalsList();
