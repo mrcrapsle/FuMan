@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Anstoß Mobile Pro - FM13** is a fully-featured browser-based football manager simulation game. The codebase is modular (index.html + css/styles.css + 80 js/*.js files) that bundles into a single 1.8 MB standalone HTML file. The game runs entirely in the browser with local storage for save games, works offline, and supports mobile devices.
+**Anstoß Mobile Pro - FM13** is a fully-featured browser-based football manager simulation game. The codebase is modular (index.html + css/styles.css + 81 js/*.js files) that bundles into a single 1.8 MB standalone HTML file. The game runs entirely in the browser with local storage for save games, works offline, and supports mobile devices.
 
 ## Working With the User
 
@@ -114,6 +114,7 @@ This pattern ensures:
 - Fans: `js/fans.js` (`game.fans`, fan actions/groups). Training: `js/training.js` + minigames in `js/training-games.js`. Stadium: `js/stadium.js` (blocks/capacity) + `js/stadium-events.js`.
 - Cup matches live: `js/cup-live.js` - on a cup matchday `startMatchdayFlow()` first plays the own DFB-Pokal/Landespokal/Champions-Cup tie in the live engine (relegation legs via `startRelegationLive()`); the result goes to `game.liveCupResult` and the competitions take it via `takeLiveCupResult(comp, home, away)` instead of `simulateGoals`.
 - Season events: `js/season-events.js` (season opening at matchday 1, Hallenturnier invite after md 15 / played after md 17 via `tickSeasonEvents()`, farewell matches from `registerFarewellMatch()`, Supercup prepared in `prepareSupercup()` before leagues advance and resolved in `resolveSupercup()`); all shown in `#dash-season-events-box`.
+- AI clubs: `js/ai-clubs.js` - every AI team has `team.star`; `tickAiTransfers()` (matchdays 2 and 19, via `tickTransferWindows()`) moves stars to top clubs with strength moving along (zero-sum), news in `game.aiTransferNews`; `ageAiStars()` at season end.
 - Transfer windows: matchday-based (summer 1-3, winter 18-20) with `runDeadlineDay()` in `js/transfermarket.js`, driven by `tickTransferWindows()` after every matchday.
 - Season end extras: `js/relegation.js` (own club on rank 3/16, legs on the dashboard, auto-resolved in `concludeSeasonAndAdvance()`), `js/league-awards.js` (`game.leagueAwards`), `js/coach-carousel.js` (AI `team.coach`, temporary `team.coachBounce` - removed via `tickCoachBounce(true)` before leagues advance).
 - Statistics: manager career in `game.managerCareer` (js/manager-analytics.js), Hall of Fame computed from squad + `game.playerRetirement` + `game.managerCareer` (js/hall-of-fame.js). Loans: `js/secondteam.js` / transfermarket loans only.
@@ -285,7 +286,7 @@ CI runs on every branch; only `main` deploys. Only push to `main` after `npm run
 
 - **index.html** – Main page; embeds CSS, loads all js/ modules, defines screen containers
 - **css/styles.css** – All styles; organized by section (DASHBOARD, SQUAD, MANAGER'S OFFICE, etc.)
-- **js/*.js** – Game logic modules (80 files); loaded in order of dependencies
+- **js/*.js** – Game logic modules (81 files); loaded in order of dependencies
 - **tests/run-tests.js** – Playwright test suite
 - **build.py** – Bundler script; concatenates and lints
 - **server.py** / `npm run serve` – Local dev server

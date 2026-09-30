@@ -160,6 +160,7 @@
         if (game.matchday === 17 && !game.winterWindowUsedThisSeason) openWinterWindow();
         else checkWinterWindowExpiry();
         if (game.matchday === SUMMER_WINDOW_LAST_MATCHDAY) runDeadlineDay('sommer');
+        if (typeof tickAiTransfers === 'function') tickAiTransfers();
     }
 
     // ---------- DEADLINE-DAY ----------
@@ -511,6 +512,7 @@
     }
 
     function renderTransferView() {
+        if (typeof renderAiTransferNews === 'function') renderAiTransferNews();
         renderLoanMarketView();
         renderWinterWindowBanner();
         let offList = document.getElementById('incoming-offers-list');

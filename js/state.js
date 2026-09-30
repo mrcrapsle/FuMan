@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.4.1', date: '30.09.2026', features: 'Fix: untere Leiste verdeckte das Seitenende auf dem Handy' };
+    const GAME_VERSION = { number: '3.5', date: '30.09.2026', features: 'Phase 17: KI-Vereine mit Stars und Transfers untereinander' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

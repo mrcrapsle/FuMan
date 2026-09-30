@@ -300,6 +300,7 @@
         if (typeof tickCoachBounce === 'function') tickCoachBounce(true);
         // Supercup der neuen Saison: braucht noch die alte Tabelle und den alten Pokal.
         if (typeof prepareSupercup === 'function') prepareSupercup();
+        if (typeof ageAiStars === 'function') ageAiStars();
         advanceLeaguesToNewSeason();
         if (typeof recordSeasonExpectationRank === 'function') recordSeasonExpectationRank();
         if (typeof applyPendingFfpPointDeduction === 'function') applyPendingFfpPointDeduction();

@@ -4865,6 +4865,62 @@ async function testNoWriteOnlyGameFields() {
     assert(nurGeschrieben.length === 0, `Jedes geschriebene game-Feld wird irgendwo gelesen (${nurGeschrieben.join(', ')})`);
 }
 
+async function testAiClubs(browser) {
+    console.log('\n[P17a] KI-Vereine: Stars, Transfers untereinander, Ticker');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        const out = {};
+        ensureAiStars();
+        const ki = leaguesData.flat().filter(isAiClub);
+        out.alleStars = ki.every(t => t.star && t.star.name && t.star.strength > 0);
+        out.eigenerOhne = !leaguesData.flat().find(t => t.name === game.clubName).star;
+        const summe = () => leaguesData.flat().reduce((a, t) => a + t.strength, 0);
+        const vorher = summe();
+        const inboxVorher = inboxMessages.length;
+        game.matchday = 2;
+        for (let i = 0; i < 3; i++) tickAiTransfers();
+        out.news = (game.aiTransferNews || []).filter(n => !n.retired).length;
+        out.summeGleich = Math.abs(summe() - vorher) <= 2 * out.news; // nur Kappungen an den Rändern
+        const n = game.aiTransferNews[0];
+        const kaeufer = leaguesData.flat().find(t => t.name === n.to);
+        const verkaeufer = leaguesData.flat().find(t => t.name === n.from);
+        out.starGewechselt = !!kaeufer && !!verkaeufer && verkaeufer.star.name !== n.player && n.fee > 0;
+        out.postfach = inboxMessages.length > inboxVorher && inboxMessages.some(m => (m.title || m.subject || '').includes('Transfer-Ticker'));
+        // Kein Wechsel außerhalb der Fenster
+        game.matchday = 7;
+        const anzahl = game.aiTransferNews.length;
+        tickAiTransfers();
+        out.nurImFenster = game.aiTransferNews.length === anzahl;
+        // Stars altern, mit 34 Karriereende
+        ki[0].star.age = 33;
+        const alterName = ki[0].star.name;
+        ageAiStars();
+        out.karriereende = ki[0].star.name !== alterName && game.aiTransferNews[0].retired === true;
+        // Sichtbar: Transfer-Ticker und Vereinsakte
+        renderAiTransferNews();
+        out.ticker = document.getElementById('ai-transfer-news-box').innerHTML.includes('→');
+        showHeadToHeadStats(kaeufer.name);
+        out.akte = document.getElementById('head-to-head-box').innerHTML.includes('Star:');
+        // Speichern/Laden behält die Stars
+        const save = JSON.parse(JSON.stringify(buildSaveState()));
+        applyLoadedState(save);
+        out.gespeichert = leaguesData.flat().filter(isAiClub).every(t => t.star);
+        return out;
+    });
+    assert(r.alleStars && r.eigenerOhne, 'Jeder KI-Verein hat einen Star, der eigene Verein nicht');
+    assert(r.news > 0 && r.starGewechselt, `KI-Vereine kaufen Stars mit Ablöse (${r.news} Wechsel)`);
+    assert(r.summeGleich, 'Stärke wandert mit dem Spieler - in der Summe bleibt sie gleich');
+    assert(r.postfach, 'Transfer-Ticker kommt ins Postfach');
+    assert(r.nurImFenster, 'Wechsel nur in den Transferfenstern');
+    assert(r.karriereende, 'Stars altern und beenden mit 34 ihre Karriere');
+    assert(r.ticker && r.akte, 'Ticker auf dem Transfer-Bildschirm, Star in der Vereinsakte');
+    assert(r.gespeichert, 'Stars überstehen Speichern und Laden');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 3).join(' | ')})`);
+    await page.close();
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -4951,6 +5007,7 @@ async function main() {
         testCareerBalancing,
         testLiveMatchEngine,
         testNoWriteOnlyGameFields,
+        testAiClubs,
         testRuntimeRoundTrip,
     ];
 
