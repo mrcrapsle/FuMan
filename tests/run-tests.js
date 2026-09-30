@@ -5110,6 +5110,61 @@ async function testPressConference(browser) {
     await page.close();
 }
 
+async function testContractTalks(browser) {
+    console.log('\n[P18b] Vertragsgespräche: Gehaltsforderung, Laufzeit, Gegenangebot, Einsatzgarantie');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        const out = {};
+        game.money = 5000000; game.wageBudget = 10000000;
+        squad.forEach(p => { p.morale = 60; });
+        const elf = pickBestLineupIds();
+        const star = [...squad].sort((a, b) => b.strength - a.strength)[0];
+        const bank = squad.filter(p => !elf.includes(p.id)).sort((a, b) => a.strength - b.strength)[0];
+        const dStar = getContractDemand(star), dBank = getContractDemand(bank);
+        out.starMehr = dStar.star && dStar.gehalt / calculatePlayerWage(star.marketValue, star.strength) > dBank.gehalt / calculatePlayerWage(bank.marketValue, bank.strength);
+        // Star: 2 Jahre unterschreiben
+        const vertrag0 = star.contracts, geld0 = game.money;
+        showScreen('screen-contracts');
+        extendContract(star.id);
+        out.gespraechSichtbar = document.getElementById('contracts-list').innerHTML.includes('Vertragsgespräch');
+        setContractTalkYears(2);
+        acceptContractTalk();
+        out.unterschrieben = star.contracts === vertrag0 + 2 && star.wage === dStar.gehalt && game.money <= geld0 - dStar.handgeldProJahr * 2;
+        // Bankspieler mit Einsatzgarantie: günstiger, Bruch kostet Moral
+        extendContract(bank.id);
+        toggleContractTalkGuarantee();
+        acceptContractTalk();
+        out.garantieGuenstiger = bank.wage < dBank.gehalt && !!bank.playtimePromise;
+        game.season = bank.playtimePromise.season; bank.appearancesSeason = 2; bank.morale = 60;
+        checkPlaytimePromises();
+        out.garantieGebrochen = bank.morale === 40 && !bank.playtimePromise;
+        // Zwei abgelehnte Gegenangebote beenden die Gespräche für die Saison
+        const dritter = squad.find(p => p.id !== star.id && p.id !== bank.id);
+        const rnd = Math.random; Math.random = () => 0.99;
+        extendContract(dritter.id); counterContractTalk(); counterContractTalk();
+        Math.random = rnd;
+        out.gesperrt = dritter.talksBlockedSeason === game.season && contractTalk === null;
+        extendContract(dritter.id);
+        out.bleibtGesperrt = contractTalk === null;
+        // Gehaltsbudget wird geprüft
+        const vierter = squad.find(p => ![star.id, bank.id, dritter.id].includes(p.id));
+        const lohn0 = vierter.wage;
+        game.wageBudget = 1;
+        extendContract(vierter.id); acceptContractTalk();
+        out.budgetGeprueft = vierter.wage === lohn0;
+        return out;
+    });
+    assert(r.starMehr, 'Leistungsträger fordern relativ mehr Gehalt als Ersatzspieler');
+    assert(r.gespraechSichtbar && r.unterschrieben, 'Vertragsgespräch: Laufzeit wählbar, neues Gehalt und Handgeld je Jahr');
+    assert(r.garantieGuenstiger && r.garantieGebrochen, 'Einsatzgarantie macht günstiger, Bruch kostet Moral');
+    assert(r.gesperrt && r.bleibtGesperrt, 'Zwei abgelehnte Gegenangebote beenden die Gespräche für die Saison');
+    assert(r.budgetGeprueft, 'Gehaltsbudget wird bei der Unterschrift geprüft');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 3).join(' | ')})`);
+    await page.close();
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -5201,6 +5256,7 @@ async function main() {
         testOnboarding,
         testCompactSave,
         testPressConference,
+        testContractTalks,
         testRuntimeRoundTrip,
     ];
 

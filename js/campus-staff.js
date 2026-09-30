@@ -107,14 +107,15 @@
         if (!staffMembers.sportDir.hired || staffMembers.sportDir.task !== 'auto_renew') return;
         squad.forEach(p => {
             if (p.contracts > 1 || p.strength < 60) return;
-            let totalWages = squad.reduce((s, pl) => s + pl.wage, 0);
-            if (totalWages > game.wageBudget * 0.95) return; // Budget-Sicherheitspuffer
-            let baseFee = Math.max(1500, Math.round(p.marketValue * 0.05) * 0.8); // Sportdirektor-Rabatt wie bei manueller Verlängerung
-            let agentFee = getAgentFee(p, baseFee);
-            if (game.money < baseFee + agentFee) return;
-            game.money -= (baseFee + agentFee);
+            // Gleiche Gehaltsforderung wie im manuellen Gespräch (js/contracts.js)
+            let d = getContractDemand(p);
+            if (contractWageTotalWith(p, d.gehalt) > game.wageBudget * 0.95) return; // Budget-Sicherheitspuffer
+            let agentFee = getAgentFee(p, d.handgeldProJahr);
+            if (game.money < d.handgeldProJahr + agentFee) return;
+            game.money -= (d.handgeldProJahr + agentFee);
+            p.wage = d.gehalt;
             p.contracts++;
-            addInboxMessage('vertrag', `📋 Automatische Vertragsverlängerung: ${p.name}`, `Der Sportdirektor hat den auslaufenden Vertrag von ${p.name} eigenständig um ein weiteres Jahr verlängert.`, 'screen-squad');
+            addInboxMessage('vertrag', `📋 Automatische Vertragsverlängerung: ${p.name}`, `Der Sportdirektor hat den auslaufenden Vertrag von ${p.name} um ein Jahr verlängert - neues Gehalt ${formatVal(d.gehalt)} pro Spieltag.`, 'screen-squad');
         });
     }
 

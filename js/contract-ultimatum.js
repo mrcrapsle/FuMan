@@ -126,6 +126,7 @@
         if (game.money < fee) { showToast(`Nicht genug Geld! Benötigt: ${formatVal(fee)}`, 'error'); return; }
         game.money -= fee;
         p.contracts += 2;
+        if (typeof getContractDemand === 'function') p.wage = Math.max(p.wage, getContractDemand(p).gehalt);
         p.morale = Math.min(100, p.morale + 30);
         p.ultimatumCount = (p.ultimatumCount || 0) + 1;
         game.ultimatumHistory.renewed = (game.ultimatumHistory.renewed || 0) + 1;

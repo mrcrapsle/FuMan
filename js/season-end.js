@@ -96,6 +96,7 @@
         let myTeamRecord = leaguesData[game.leagueLevel].find(t => t.name === game.clubName);
         // Manager-Statistik: Bilanz der gerade beendeten Saison, bevor Auf-/Abstieg die Liga ändert.
         if (typeof recordSeasonalManagerStats === 'function') recordSeasonalManagerStats(myRank, myTeamRecord, game.leagueLevel);
+        if (typeof checkPlaytimePromises === 'function') checkPlaytimePromises();
         if (typeof evaluateSeasonEndObjectives === 'function') evaluateSeasonEndObjectives(myRank);
         if (typeof prepareMemberAssembly === 'function') prepareMemberAssembly(myRank);
         if (typeof concludeWomenSeason === 'function') concludeWomenSeason();

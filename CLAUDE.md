@@ -105,10 +105,10 @@ This pattern ensures:
 
 **One system per area** (Phases 12/13 merged duplicates - don't add parallel ones again):
 - Injuries: only the post-match roll in `processPostMatchRoutine()`; extra factors and the panel live in `js/medical-department.js`. Events injure via `injurePlayerByEvent()` (never reduce strength).
-- Media: `game.managerMediaImage` is the single image; actions/events in `js/media-department.js`.
+- Media: `game.managerMediaImage` is the single image; actions/events and the pre-match press conference (`renderPressConference()`, situation-based answers with real effects, promises settled in `resolvePressPromise()`) in `js/media-department.js`.
 - Youth: `youthTalents` (js/youth.js) plus coach/ranking/monthly development in `js/youth-academy-extended.js` / `js/academy-ranking.js`.
 - Sponsoring: `js/sponsors.js` (main, kit, sleeve, boards, bus).
-- Contracts: `p.contracts` = remaining years (counted down in season-end.js); extensions/release clauses in `js/contracts.js`, ultimatums in `js/contract-ultimatum.js`. Wages are `p.wage` per matchday (there is no `p.salary`). Agents are `p.agent` (fee via `getAgentFee()`).
+- Contracts: `p.contracts` = remaining years (counted down in season-end.js); extensions are salary talks via `getContractDemand(p)` (manual talk, sport director and ultimatum all use it; playtime promises checked in `checkPlaytimePromises()`), release clauses in `js/contracts.js`, ultimatums in `js/contract-ultimatum.js`. Wages are `p.wage` per matchday (there is no `p.salary`). Agents are `p.agent` (fee via `getAgentFee()`).
 - Scouting: the regional network in `js/scouting.js`. Opponent prediction: `js/match-scout.js` (uses `simulateGoals` on real fixtures).
 - Board: `game.boardSat`, explained per member in `js/board-room.js`.
 - Fans: `js/fans.js` (`game.fans`, fan actions/groups). Training: `js/training.js` + minigames in `js/training-games.js`. Stadium: `js/stadium.js` (blocks/capacity) + `js/stadium-events.js`.

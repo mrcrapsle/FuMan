@@ -16264,14 +16264,15 @@ function renderStadiumEventsPanel() {
         if (!staffMembers.sportDir.hired || staffMembers.sportDir.task !== 'auto_renew') return;
         squad.forEach(p => {
             if (p.contracts > 1 || p.strength < 60) return;
-            let totalWages = squad.reduce((s, pl) => s + pl.wage, 0);
-            if (totalWages > game.wageBudget * 0.95) return; // Budget-Sicherheitspuffer
-            let baseFee = Math.max(1500, Math.round(p.marketValue * 0.05) * 0.8); // Sportdirektor-Rabatt wie bei manueller Verlängerung
-            let agentFee = getAgentFee(p, baseFee);
-            if (game.money < baseFee + agentFee) return;
-            game.money -= (baseFee + agentFee);
+            // Gleiche Gehaltsforderung wie im manuellen Gespräch (js/contracts.js)
+            let d = getContractDemand(p);
+            if (contractWageTotalWith(p, d.gehalt) > game.wageBudget * 0.95) return; // Budget-Sicherheitspuffer
+            let agentFee = getAgentFee(p, d.handgeldProJahr);
+            if (game.money < d.handgeldProJahr + agentFee) return;
+            game.money -= (d.handgeldProJahr + agentFee);
+            p.wage = d.gehalt;
             p.contracts++;
-            addInboxMessage('vertrag', `📋 Automatische Vertragsverlängerung: ${p.name}`, `Der Sportdirektor hat den auslaufenden Vertrag von ${p.name} eigenständig um ein weiteres Jahr verlängert.`, 'screen-squad');
+            addInboxMessage('vertrag', `📋 Automatische Vertragsverlängerung: ${p.name}`, `Der Sportdirektor hat den auslaufenden Vertrag von ${p.name} um ein Jahr verlängert - neues Gehalt ${formatVal(d.gehalt)} pro Spieltag.`, 'screen-squad');
         });
     }
 
@@ -18289,20 +18290,17 @@ function renderYouthDevelopmentChart() {
         let list = document.getElementById('contracts-list');
         list.innerHTML = '';
         squad.forEach(p => {
-            let baseFee = Math.max(1500, Math.round(p.marketValue * 0.05));
-            if (staffMembers.sportDir.hired) baseFee = Math.round(baseFee * 0.8);
-            let agentFee = getAgentFee(p, baseFee);
-            let isNegotiating = pendingContractNegotiation && pendingContractNegotiation.playerId === p.id;
-            let feeDisplay = isNegotiating ? pendingContractNegotiation.counterFee : (baseFee + agentFee);
+            let imGespraech = contractTalk && contractTalk.playerId === p.id;
+            let gesperrt = p.talksBlockedSeason === game.season;
             let row = document.createElement('div');
             row.className = 'panel';
             row.style.cssText = 'margin-bottom:4px; padding:6px;';
             row.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 28) : ''}${p.name} (${p.contracts} J. Rest)${p.agent ? ` <span class="badge badge-trait" title="${p.agent.name}">🕴️ Berater</span>` : ''}</span>
-                    <button onclick="extendContract('${p.id}')" class="btn-secondary" style="width:auto;">+1 J. [${formatVal(feeDisplay)}]</button>
+                    <span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 28) : ''}${p.name} (${p.contracts} J. Rest · ${formatVal(p.wage)}/SpT)${p.agent ? ` <span class="badge badge-trait" title="${p.agent.name}">🕴️ Berater</span>` : ''}${p.playtimePromise ? ' <span class="badge">🤝 Einsatzgarantie</span>' : ''}</span>
+                    ${imGespraech ? '' : `<button onclick="extendContract('${p.id}')" class="btn-secondary" style="width:auto;" ${gesperrt ? 'disabled' : ''}>${gesperrt ? 'Gespräche ruhen' : '📝 Verhandeln'}</button>`}
                 </div>
-                ${isNegotiating ? `<div class="box" style="font-size:9px; margin-top:4px; border-left-color:var(--danger);">💬 ${p.name} verlangt mehr! <button onclick="rejectContractCounter()" class="btn-secondary" style="width:auto; font-size:8px; margin-left:4px;">Ablehnen</button></div>` : ''}
+                ${imGespraech ? renderContractTalkBox(p) : ''}
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; font-size:9px; flex-wrap:wrap; gap:3px;">
                     ${p.releaseClause
                         ? `<span>📜 Ausstiegsklausel: <strong style="color:var(--accent);">${formatVal(p.releaseClause)}</strong></span><button onclick="removeReleaseClause('${p.id}')" class="btn-secondary" style="width:auto; font-size:8px;">Entfernen</button>`
@@ -18326,46 +18324,129 @@ function renderYouthDevelopmentChart() {
         squad.forEach(p => { delete p.contractEnd; delete p.loyaltyYears; });
     }
 
-    // Verhandlungs-Zähigkeit auch bei bestehenden Verträgen (NEU): analog zur Logik bei
-    // Neuverpflichtungen (siehe CHARACTER_TOUGHNESS in transfermarket.js) - ein etablierter,
-    // ehrgeiziger Stammspieler lässt sich bei einer Vertragsverlängerung nicht einfach mit
-    // dem ersten Angebot abspeisen, sondern fordert manchmal gezielt nach.
-    let pendingContractNegotiation = null;
+    // ==========================================
+    // VERTRAGSGESPRÄCHE MIT GEHALT
+    // ==========================================
+    // Jeder Spieler fordert bei der Verlängerung ein Gehalt nach Marktwert und Rolle:
+    // Stammspieler und Stars mehr, Bankspieler und Ältere weniger, unzufriedene einen
+    // Aufschlag. Laufzeit 1-3 Jahre (Handgeld je Jahr), Gegenangebot -10 % mit einer vom
+    // Charakter abhängigen Annahmechance, nach zwei Absagen ruhen die Gespräche bis zur
+    // nächsten Saison. Bankspieler unterschreiben gegen eine Einsatzgarantie günstiger.
+    let contractTalk = null; // { playerId, years, offerFactor, garantie, rounds }
+
+    function getContractDemand(p) {
+        let marktGehalt = calculatePlayerWage(p.marketValue, p.strength);
+        let elf = pickBestLineupIds();
+        let stammspieler = elf.includes(p.id);
+        let top3 = [...squad].sort((a, b) => b.strength - a.strength).slice(0, 3).some(x => x.id === p.id);
+        let faktor = top3 ? 1.25 : (stammspieler ? 1.1 : 0.95);
+        if (p.age >= 31) faktor -= 0.1;
+        if ((p.morale || 50) < 40) faktor += 0.1;
+        else if ((p.morale || 50) >= 80) faktor -= 0.05;
+        // Wer spielt, nimmt keine Kürzung hin; Ersatzspieler und Ältere schon.
+        let untergrenze = (stammspieler && p.age < 31) ? p.wage : p.wage * 0.85;
+        let gehalt = Math.round(Math.max(untergrenze, marktGehalt * faktor) / 10) * 10;
+        let handgeldProJahr = Math.max(1500, Math.round(p.marketValue * 0.05));
+        if (staffMembers.sportDir.hired) handgeldProJahr = Math.round(handgeldProJahr * 0.8);
+        return { gehalt, handgeldProJahr, stammspieler, star: top3 };
+    }
+
+    function contractWageTotalWith(p, neuesGehalt) {
+        return squad.reduce((s, pl) => s + (pl.id === p.id ? neuesGehalt : pl.wage), 0)
+            + (game.secondTeam && game.secondTeam.isActive ? secondTeamSquad.reduce((s, pl) => s + pl.wage, 0) : 0);
+    }
+
+    // Knopf "Verhandeln": öffnet das Gespräch mit diesem Spieler.
     function extendContract(id) {
         let p = squad.find(x => x.id === id);
         if (!p) return;
-        let baseFee = Math.max(1500, Math.round(p.marketValue * 0.05));
-        if (staffMembers.sportDir.hired) baseFee = Math.round(baseFee * 0.8);
-        let toughness = (typeof CHARACTER_TOUGHNESS !== 'undefined' && CHARACTER_TOUGHNESS[p.character]) || 1.0;
-        if (!pendingContractNegotiation || pendingContractNegotiation.playerId !== id) {
-            // Nur etablierte Spieler (Stärke 55+) sind selbstbewusst genug, um nachzuverhandeln -
-            // ein junger Ergänzungsspieler ist froh über jedes Angebot.
-            let counterChance = p.strength >= 55 ? Math.min(0.6, 0.2 * toughness) : 0;
-            if (Math.random() < counterChance) {
-                let counterFee = Math.round(baseFee * (1.2 + (toughness - 1) * 0.3));
-                pendingContractNegotiation = { playerId: id, counterFee };
-                showToast(`💬 ${p.name} verlangt für die Verlängerung ${formatVal(counterFee)} statt ${formatVal(baseFee)}! Nochmal klicken zum Akzeptieren.`, 'error');
-                renderContractsView();
-                return;
+        if (p.talksBlockedSeason === game.season) { showToast(`${p.name} will diese Saison nicht mehr verhandeln.`, 'error'); return; }
+        contractTalk = { playerId: id, years: p.age >= 30 ? 1 : 2, offerFactor: 1, garantie: false, rounds: 0 };
+        renderContractsView();
+    }
+    function setContractTalkYears(y) { if (contractTalk) { contractTalk.years = y; renderContractsView(); } }
+    function toggleContractTalkGuarantee() { if (contractTalk) { contractTalk.garantie = !contractTalk.garantie; renderContractsView(); } }
+    function cancelContractTalk() { contractTalk = null; renderContractsView(); }
+
+    function getContractTalkOffer(p) {
+        let d = getContractDemand(p);
+        let gehalt = Math.round(d.gehalt * contractTalk.offerFactor * (contractTalk.garantie && !d.stammspieler ? 0.85 : 1) / 10) * 10;
+        let handgeld = d.handgeldProJahr * contractTalk.years;
+        let berater = getAgentFee(p, handgeld);
+        return { ...d, angebot: gehalt, handgeld, berater };
+    }
+
+    // Gegenangebot: 10 % unter der aktuellen Forderung. Zähe Charaktere lehnen öfter ab.
+    function counterContractTalk() {
+        let p = contractTalk && squad.find(x => x.id === contractTalk.playerId);
+        if (!p) return;
+        let zaehigkeit = (typeof CHARACTER_TOUGHNESS !== 'undefined' && CHARACTER_TOUGHNESS[p.character]) || 1.0;
+        let chance = Math.max(0.1, 0.7 - (zaehigkeit - 1) * 1.2 - (1 - contractTalk.offerFactor) * 2);
+        if (Math.random() < chance) {
+            contractTalk.offerFactor = Math.round((contractTalk.offerFactor - 0.1) * 100) / 100;
+            showToast(`🤝 ${p.name} geht auf dein Gegenangebot ein.`, 'success');
+        } else {
+            contractTalk.rounds++;
+            p.morale = Math.max(10, (p.morale || 50) - 4);
+            if (contractTalk.rounds >= 2) {
+                p.talksBlockedSeason = game.season;
+                contractTalk = null;
+                showToast(`😤 ${p.name} bricht die Gespräche ab - erst nächste Saison wieder.`, 'error', 4500);
+                addInboxMessage('vertrag', `😤 Vertragsgespräche geplatzt: ${p.name}`, `${p.name} fühlt sich unterbewertet und will diese Saison nicht mehr über einen neuen Vertrag reden.`, 'screen-contracts');
+            } else {
+                showToast(`💬 ${p.name} lehnt ab und besteht auf seiner Forderung.`, 'error');
             }
         }
-        let finalBaseFee = (pendingContractNegotiation && pendingContractNegotiation.playerId === id) ? pendingContractNegotiation.counterFee : baseFee;
-        let agentFee = getAgentFee(p, finalBaseFee);
-        let totalFee = finalBaseFee + agentFee;
-        if (game.money < totalFee) return;
+        renderContractsView();
+    }
+
+    function acceptContractTalk() {
+        let p = contractTalk && squad.find(x => x.id === contractTalk.playerId);
+        if (!p) return;
+        let o = getContractTalkOffer(p);
+        let kosten = o.handgeld + o.berater;
+        if (game.money < kosten) { showToast(`Handgeld nicht gedeckt: ${formatVal(kosten)} nötig.`, 'error'); return; }
+        if (contractWageTotalWith(p, o.angebot) > game.wageBudget) { showToast(`Gehaltsbudget reicht nicht (${formatVal(game.wageBudget)} pro Spieltag).`, 'error', 4500); return; }
         playSound('click');
-        game.money -= totalFee;
-        p.contracts++;
-        pendingContractNegotiation = null;
-        if (agentFee > 0) showToast(`✅ Vertrag verlängert (inkl. ${formatVal(agentFee)} Beraterprovision an ${p.agent.name}).`, 'success');
-        else showToast(`✅ Vertrag mit ${p.name} verlängert!`, 'success');
+        game.money -= kosten;
+        p.wage = o.angebot;
+        p.contracts += contractTalk.years;
+        if (contractTalk.garantie && !o.stammspieler) p.playtimePromise = { season: game.season + 1, minApps: 15 };
+        p.morale = Math.min(100, (p.morale || 50) + 5);
+        showToast(`✅ ${p.name} verlängert um ${contractTalk.years} J. - ${formatVal(o.angebot)} pro Spieltag`, 'success');
+        contractTalk = null;
         renderContractsView();
         updateUI();
     }
-    function rejectContractCounter() {
-        pendingContractNegotiation = null;
-        showToast('Verhandlung abgebrochen.', 'success');
-        renderContractsView();
+
+    // Saisonende: gebrochene Einsatzgarantien kosten Moral.
+    function checkPlaytimePromises() {
+        squad.forEach(p => {
+            let pr = p.playtimePromise;
+            if (!pr || pr.season !== game.season) return;
+            if ((p.appearancesSeason || 0) < pr.minApps) {
+                p.morale = Math.max(10, (p.morale || 50) - 20);
+                addInboxMessage('vertrag', `😠 Einsatzgarantie gebrochen: ${p.name}`, `${p.name} kam nur auf ${p.appearancesSeason || 0} statt der zugesagten ${pr.minApps} Einsätze und ist schwer enttäuscht.`, 'screen-squad');
+            }
+            delete p.playtimePromise;
+        });
+    }
+
+    function renderContractTalkBox(p) {
+        let o = getContractTalkOffer(p);
+        let jahr = y => `<button onclick="setContractTalkYears(${y})" class="${contractTalk.years === y ? 'btn-action' : 'btn-secondary'}" style="width:auto; padding:4px 10px;">${y} J.</button>`;
+        return `<div class="box" style="font-size:10px; margin-top:6px; border-left-color:var(--gold);">
+            <strong>📝 Vertragsgespräch</strong>${o.star ? ' · ⭐ Leistungsträger' : (o.stammspieler ? ' · Stammspieler' : ' · Ergänzungsspieler')}<br>
+            Gehalt: ${formatVal(p.wage)} → <strong>${formatVal(o.angebot)}</strong> pro Spieltag${contractTalk.offerFactor < 1 ? ` (Gegenangebot ${Math.round((1 - contractTalk.offerFactor) * 100)} % unter Forderung)` : ''}<br>
+            Handgeld: ${formatVal(o.handgeld)}${o.berater > 0 ? ` + ${formatVal(o.berater)} Berater` : ''}
+            <div style="display:flex; gap:4px; margin:6px 0; align-items:center;">Laufzeit: ${jahr(1)}${jahr(2)}${jahr(3)}</div>
+            ${o.stammspieler ? '' : `<label style="display:block; margin-bottom:6px;"><input type="checkbox" ${contractTalk.garantie ? 'checked' : ''} onchange="toggleContractTalkGuarantee()"> Einsatzgarantie (15 Spiele nächste Saison, Gehalt -15 %)</label>`}
+            <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                <button onclick="acceptContractTalk()" class="btn-action" style="width:auto;">✔ Unterschreiben</button>
+                <button onclick="counterContractTalk()" class="btn-secondary" style="width:auto;">↘ Gegenangebot -10 %</button>
+                <button onclick="cancelContractTalk()" class="btn-secondary" style="width:auto;">Abbrechen</button>
+            </div>
+        </div>`;
     }
 
     // ==========================================
@@ -23324,6 +23405,7 @@ function cleanupLegacyScoutState() {
         if (game.money < fee) { showToast(`Nicht genug Geld! Benötigt: ${formatVal(fee)}`, 'error'); return; }
         game.money -= fee;
         p.contracts += 2;
+        if (typeof getContractDemand === 'function') p.wage = Math.max(p.wage, getContractDemand(p).gehalt);
         p.morale = Math.min(100, p.morale + 30);
         p.ultimatumCount = (p.ultimatumCount || 0) + 1;
         game.ultimatumHistory.renewed = (game.ultimatumHistory.renewed || 0) + 1;
@@ -23517,6 +23599,7 @@ function cleanupLegacyScoutState() {
         let myTeamRecord = leaguesData[game.leagueLevel].find(t => t.name === game.clubName);
         // Manager-Statistik: Bilanz der gerade beendeten Saison, bevor Auf-/Abstieg die Liga ändert.
         if (typeof recordSeasonalManagerStats === 'function') recordSeasonalManagerStats(myRank, myTeamRecord, game.leagueLevel);
+        if (typeof checkPlaytimePromises === 'function') checkPlaytimePromises();
         if (typeof evaluateSeasonEndObjectives === 'function') evaluateSeasonEndObjectives(myRank);
         if (typeof prepareMemberAssembly === 'function') prepareMemberAssembly(myRank);
         if (typeof concludeWomenSeason === 'function') concludeWomenSeason();
