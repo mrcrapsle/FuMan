@@ -3318,7 +3318,6 @@ function renderFanEventsPanel() {
         if (typeof renderTacticSystemPanel === 'function') renderTacticSystemPanel();
         if (typeof renderInternationalTournamentsPanel === 'function') renderInternationalTournamentsPanel();
         if (typeof renderBoardMembersPanel === 'function') renderBoardMembersPanel();
-        if (typeof renderSponsorManagementPanel === 'function') renderSponsorManagementPanel();
         if (typeof renderSetPieceTrainingPanel === 'function') renderSetPieceTrainingPanel();
         if (typeof renderPostMatchAnalysisPanel === 'function') renderPostMatchAnalysisPanel();
         if (typeof renderTrainingSpecializationPanel === 'function') renderTrainingSpecializationPanel();
@@ -13179,7 +13178,6 @@ function finishGoalkeeperGame() {
         // Ticketpreise (inkl. Dauerkarte) sind jetzt im Stadion-Screen zu finden, dort direkt
         // neben Kapazität, Rasenpflege und Nebeneinnahmen - siehe renderStadiumView().
         if (typeof renderMediaRightsView === 'function') renderMediaRightsView();
-        if (typeof renderSponsoringPanel === 'function') renderSponsoringPanel();
         if (typeof renderFanEngagementPanel === 'function') renderFanEngagementPanel();
         if (typeof renderFanEngagementStats === 'function') renderFanEngagementStats();
         if (typeof renderBoardManagementPanel === 'function') renderBoardManagementPanel();
@@ -15608,7 +15606,28 @@ function finishGoalkeeperGame() {
             </div>`;
     }
 
+    // Alte Spielstände: frühere Co-Sponsoren-Verträge (sponsor-management.js) zahlten nur ein
+    // Viertel ihres Werts aus und liefen über Saisonwechsel weiter. Sponsoring läuft jetzt
+    // allein über Haupt-, Ausrüster-, Ärmel-, Banden- und Bus-Sponsor; offene Restwerte
+    // werden einmalig ausgezahlt.
+    function migrateLegacyCoSponsors() {
+        if (!game.sponsors && !game.sponsorNegotiations) return;
+        let rest = (game.sponsors || []).filter(s => s.active)
+            .reduce((sum, s) => sum + Math.max(0, Math.round((s.value || 0) - (s.totalPaid || 0))), 0);
+        delete game.sponsors;
+        delete game.sponsorNegotiations;
+        delete game.totalSponsorRevenue;
+        if (rest > 0) {
+            const aeussererKontext = buchungsKontext; // läuft ggf. im Monatsblock mit eigenem Label
+            setzeBuchungskontext('🤝 Sponsoring: Vertragsauflösung');
+            game.money += rest;
+            setzeBuchungskontext(aeussererKontext);
+            addInboxMessage('vertrag', '🤝 Co-Sponsoren-Verträge abgelöst', `Die laufenden Co-Sponsoren-Verträge wurden aufgelöst, der offene Restwert von ${formatVal(rest)} wurde ausgezahlt. Sponsoring läuft ab sofort über Haupt-, Ausrüster-, Ärmel-, Banden- und Bus-Sponsor.`, 'screen-sponsors');
+        }
+    }
+
     function renderSponsorsView() {
+        migrateLegacyCoSponsors();
         document.getElementById('spons-curr-name').innerText = game.sponsor.name;
         document.getElementById('spons-curr-base').innerText = formatVal(game.sponsor.base);
         document.getElementById('spons-curr-win').innerText = formatVal(game.sponsor.winBonus);
@@ -15722,233 +15741,6 @@ function finishGoalkeeperGame() {
                 ? '<div class="box" style="font-size:10px; color:#94a3b8;">Noch keine aktiven Bandensponsoren.</div>'
                 : `<div class="box" style="font-size:10px;"><strong style="color:var(--teal);">📢 ${activeCount} aktive Banden in ${areasUsed} Stadionbereichen</strong> · Gesamt: ${formatVal(totalIncomePerHome)}/Heimspiel</div>`;
         }
-    }
-
-
-/* eslint-enable */
-
-    // ==========================================
-    // SPONSORING-SYSTEM
-    // ==========================================
-    // Manager können Sponsorings abschließen für wiederkehrende
-    // monatliche Einnahmen. Unterschiedliche Sponsoren mit verschiedenen
-    // Bedingungen, Laufzeiten und Bonuseffekten (Spielermarktbonus, etc.)
-
-    let sponsoringDeals = {
-        adidas: {
-            name: "Adidas",
-            logo: "👟",
-            active: false,
-            monthlyIncome: 0,
-            endsInMonth: 0,
-            bonus: { type: 'playerMarketDiscount', value: 5 } // 5% Rabatt auf Spielerkäufe
-        },
-        volkswagen: {
-            name: "Volkswagen",
-            logo: "🚗",
-            active: false,
-            monthlyIncome: 0,
-            endsInMonth: 0,
-            bonus: { type: 'travelCostReduction', value: 15 } // 15% Rabatt auf Auswärtsfahrten
-        },
-        lufthansa: {
-            name: "Lufthansa",
-            logo: "✈️",
-            active: false,
-            monthlyIncome: 0,
-            endsInMonth: 0,
-            bonus: { type: 'flightDiscount', value: 25 } // 25% Rabatt auf Flüge
-        },
-        sparkasse: {
-            name: "Sparkasse",
-            logo: "🏦",
-            active: false,
-            monthlyIncome: 0,
-            endsInMonth: 0,
-            bonus: { type: 'interestReduction', value: 2 } // 2% weniger Kreditzinsen
-        },
-        telekom: {
-            name: "Telekom",
-            logo: "📱",
-            active: false,
-            monthlyIncome: 0,
-            endsInMonth: 0,
-            bonus: { type: 'none', value: 0 }
-        },
-        hauptbrauerei: {
-            name: "Brauerei (Heimat)",
-            logo: "🍺",
-            active: false,
-            monthlyIncome: 0,
-            endsInMonth: 0,
-            bonus: { type: 'none', value: 0 }
-        }
-    };
-
-    const SPONSORING_OFFERS = {
-        adidas: {
-            minStarRating: 2.0,
-            baseIncome: 35000,
-            contract: { minMonths: 12, maxMonths: 60 },
-            description: "Globaler Sportartikelhersteller. Einnahmen steigen mit deiner Kaderstärke."
-        },
-        volkswagen: {
-            minStarRating: 1.5,
-            baseIncome: 40000,
-            contract: { minMonths: 24, maxMonths: 60 },
-            description: "Automobilhersteller. Subventioniert deine Auswärtsfahrten."
-        },
-        lufthansa: {
-            minStarRating: 2.5,
-            baseIncome: 45000,
-            contract: { minMonths: 12, maxMonths: 48 },
-            description: "Fluggesellschaft. Reduziert deine Flugkosten deutlich."
-        },
-        sparkasse: {
-            minStarRating: 1.0,
-            baseIncome: 25000,
-            contract: { minMonths: 12, maxMonths: 60 },
-            description: "Finanzinstitut. Reduziert deine Kreditzinsen."
-        },
-        telekom: {
-            minStarRating: 1.5,
-            baseIncome: 30000,
-            contract: { minMonths: 24, maxMonths: 60 },
-            description: "Telekommunikation. Stabile Einnahmen, geringe Anforderungen."
-        },
-        hauptbrauerei: {
-            minStarRating: 1.0,
-            baseIncome: 20000,
-            contract: { minMonths: 12, maxMonths: 36 },
-            description: "Lokale Brauerei. Kleines, aber stabiles Einkommen."
-        }
-    };
-
-    function getSponsoringIncome(dealKey) {
-        let deal = sponsoringDeals[dealKey];
-        if (!deal || !deal.active) return 0;
-
-        let income = deal.monthlyIncome;
-        // Adidas: +2% pro Punkt Kaderstärke über Basis
-        if (dealKey === 'adidas') {
-            let avgSquadStr = (squad || []).reduce((s, p) => s + (p.str || 50), 0) / Math.max(squad.length, 1);
-            income = Math.round(income * (1 + (avgSquadStr - 50) * 0.01));
-        }
-        return income;
-    }
-
-    function tickSponsoringIncome() {
-        let total = 0;
-        Object.keys(sponsoringDeals).forEach(key => {
-            let deal = sponsoringDeals[key];
-            if (!deal.active) return;
-            deal.endsInMonth--;
-            if (deal.endsInMonth <= 0) {
-                deal.active = false;
-                deal.monthlyIncome = 0;
-                showToast(`📋 Sponsoring-Vertrag mit ${deal.name} endet!`, 'info');
-            }
-            total += getSponsoringIncome(key);
-        });
-        if (total > 0) game.money += total;
-        return total;
-    }
-
-    function openSponsoringNegotiation(dealKey) {
-        let offer = SPONSORING_OFFERS[dealKey];
-        let deal = sponsoringDeals[dealKey];
-
-        if (!offer) return;
-        if (deal.active) {
-            showToast(`${deal.name}-Vertrag läuft bereits!`, 'error');
-            return;
-        }
-
-        // Check Voraussetzung
-        let starRating = game.managerMediaImage ? game.managerMediaImage / 100 : 0.5;
-        if (starRating < offer.minStarRating) {
-            showToast(`Dein Ruf ist zu niedrig! Benötigt: ${offer.minStarRating.toFixed(1)} Sterne, hast: ${starRating.toFixed(1)}`, 'error');
-            return;
-        }
-
-        let modal = document.createElement('div');
-        modal.className = 'generic-modal-overlay show';
-        modal.innerHTML = `
-            <div class="generic-modal" style="max-width: 420px;">
-                <div style="font-size: 14px; margin-bottom: 12px;">
-                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                        <span style="font-size: 28px;">${deal.logo}</span>
-                        <strong>${offer.description}</strong>
-                    </div>
-                </div>
-                <div class="box" style="margin-bottom: 8px;">
-                    <strong>Vertragsoptionen:</strong>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 6px;">
-                        ${[12, 24, 36, 48, 60].filter(m => m >= offer.contract.minMonths && m <= offer.contract.maxMonths).map(months => {
-                            let monthlyIncome = Math.round(offer.baseIncome * (1 + (months - 12) * 0.02)); // Längere Verträge = 2% pro Monat mehr
-                            let totalIncome = monthlyIncome * months;
-                            return `<button class="btn-action" onclick="concludeSponsoringDeal('${dealKey}', ${months}, ${monthlyIncome})" style="font-size: 10px; padding: 8px;">
-                                ${months}M: ${formatVal(monthlyIncome)}/Mo<br><small>= ${formatVal(totalIncome)}</small>
-                            </button>`;
-                        }).join('')}
-                    </div>
-                </div>
-                <button onclick="this.closest('.generic-modal-overlay').remove()" class="btn-secondary" style="width: 100%;">Abbrechen</button>
-            </div>
-        `;
-        document.body.appendChild(modal);
-        modal.addEventListener('click', e => {
-            if (e.target === modal) modal.remove();
-        });
-    }
-
-    function concludeSponsoringDeal(dealKey, months, monthlyIncome) {
-        let deal = sponsoringDeals[dealKey];
-        deal.active = true;
-        deal.monthlyIncome = monthlyIncome;
-        deal.endsInMonth = months;
-
-        showToast(`✅ ${months} Monate mit ${deal.name} vereinbart! +${formatVal(monthlyIncome)}/Monat`, 'success');
-        document.querySelectorAll('.generic-modal-overlay').forEach(m => m.remove());
-        renderSponsoringPanel();
-    }
-
-    function renderSponsoringPanel() {
-        let box = document.getElementById('sponsoring-list');
-        if (!box) return;
-
-        let totalActive = Object.values(sponsoringDeals).filter(d => d.active).length;
-        let totalIncome = Object.keys(sponsoringDeals).reduce((sum, key) => sum + getSponsoringIncome(key), 0);
-
-        box.innerHTML = `
-            <div class="box" style="margin-bottom: 6px; font-size: 10px;">
-                <strong>${totalActive}</strong> aktive Verträge ·
-                <strong style="color: var(--gold);">+${formatVal(totalIncome)}</strong>/Monat
-            </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px;">
-                ${Object.entries(sponsoringDeals).map(([key, deal]) => {
-                    let offer = SPONSORING_OFFERS[key];
-                    let income = getSponsoringIncome(key);
-                    return `
-                        <div class="box" style="padding: 6px; font-size: 9px; ${deal.active ? 'border: 1px solid var(--primary);' : ''}">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <strong>${deal.logo} ${deal.name}</strong>
-                                ${deal.active ? `<small style="color: var(--primary);">${deal.endsInMonth}M</small>` : ''}
-                            </div>
-                            <div style="color: #94a3b8; font-size: 8px; margin: 2px 0;">
-                                ${offer.description.substring(0, 35)}...
-                            </div>
-                            ${deal.active
-                                ? `<div style="color: var(--gold); margin-top: 4px;">+${formatVal(income)}/Monat</div>`
-                                : `<button onclick="openSponsoringNegotiation('${key}')" class="btn-action" style="width: 100%; margin-top: 4px; font-size: 8px; padding: 4px;">
-                                    Verhandeln
-                                </button>`
-                            }
-                        </div>
-                    `;
-                }).join('')}
-            </div>
-        `;
     }
 
 
@@ -22545,275 +22337,6 @@ function renderBoardMembersPanel() {
     });
   } else {
     html += '<div style="font-size:11px; color:#999;">Keine aktuellen Konflikte</div>';
-  }
-
-  html += '</div>';
-  panel.innerHTML = html;
-}
-
-/* eslint-enable */
-/* eslint-disable no-undef */
-
-const SPONSOR_TYPES = {
-  equipment: {
-    name: 'Ausrüstung',
-    baseValue: 100000,
-    duration: 24,
-    benefits: { training: 0.05, morale: 0.03 }
-  },
-  beverageBrand: {
-    name: 'Getränkemarke',
-    baseValue: 150000,
-    duration: 24,
-    benefits: { revenue: 50000, fanEngagement: 0.05 }
-  },
-  automotive: {
-    name: 'Automobilhersteller',
-    baseValue: 250000,
-    duration: 36,
-    benefits: { revenue: 80000, reputation: 0.05 }
-  },
-  technology: {
-    name: 'Technologieunternehmen',
-    baseValue: 200000,
-    duration: 24,
-    benefits: { training: 0.08, infrastructure: 0.05 }
-  },
-  financial: {
-    name: 'Finanzdienstleistung',
-    baseValue: 300000,
-    duration: 48,
-    benefits: { revenue: 100000, stability: 0.05 }
-  },
-  retail: {
-    name: 'Einzelhandelskette',
-    baseValue: 120000,
-    duration: 24,
-    benefits: { fanEngagement: 0.08, revenue: 30000 }
-  }
-};
-
-const sponsorState = {
-  sponsors: [],
-  negotiations: [],
-  totalSponsorRevenue: 0,
-  sponsorshipHistory: []
-};
-
-function initializeSponsors() {
-  if (!game.sponsors) {
-    game.sponsors = [];
-  }
-  if (!game.sponsorNegotiations) {
-    game.sponsorNegotiations = [];
-  }
-  if (!game.totalSponsorRevenue) {
-    game.totalSponsorRevenue = 0;
-  }
-}
-
-function createSponsorOffer() {
-  if (!game.sponsors) game.sponsors = [];
-
-  const types = Object.keys(SPONSOR_TYPES);
-  const randomType = types[Math.floor(Math.random() * types.length)];
-  const typeConfig = SPONSOR_TYPES[randomType];
-
-  const offer = {
-    id: game.sponsors.length + game.sponsorNegotiations.length,
-    name: typeConfig.name,
-    type: randomType,
-    value: Math.round(typeConfig.baseValue * (0.8 + Math.random() * 0.4)),
-    duration: typeConfig.duration,
-    benefits: { ...typeConfig.benefits },
-    status: 'pending',
-    negotiations: 0,
-    createdMatchday: game.matchday,
-    expiresMatchday: game.matchday + 8
-  };
-
-  if (!game.sponsorNegotiations) game.sponsorNegotiations = [];
-  game.sponsorNegotiations.push(offer);
-
-  if (game.inbox) {
-    addInboxMessage(`💼 Sponsorangebot: ${offer.name}`, `€${offer.value.toLocaleString()} für ${offer.duration} Spieltage`);
-  }
-
-  return offer;
-}
-
-function negotiateSponsorship(offerId, strategy) {
-  if (!game.sponsorNegotiations) return false;
-
-  const offer = game.sponsorNegotiations.find(o => o.id === offerId);
-  if (!offer || offer.status !== 'pending') return false;
-
-  offer.negotiations++;
-
-  let successChance = 0.6;
-  if (strategy === 'aggressive') {
-    successChance = 0.4;
-    offer.value = Math.round(offer.value * 1.15);
-  } else if (strategy === 'friendly') {
-    successChance = 0.8;
-    offer.value = Math.round(offer.value * 0.9);
-  }
-
-  if (Math.random() < successChance || offer.negotiations > 2) {
-    signSponsorshipDeal(offer);
-    game.sponsorNegotiations = game.sponsorNegotiations.filter(o => o.id !== offerId);
-    return true;
-  }
-
-  return false;
-}
-
-function signSponsorshipDeal(offer) {
-  const sponsorship = {
-    id: (game.sponsors || []).length,
-    name: offer.name,
-    type: offer.type,
-    value: offer.value,
-    startMatchday: game.matchday,
-    endMatchday: game.matchday + offer.duration,
-    active: true,
-    benefits: offer.benefits,
-    signedSeason: game.season
-  };
-
-  if (!game.sponsors) game.sponsors = [];
-  game.sponsors.push(sponsorship);
-
-  if (game.inbox) {
-    addInboxMessage(`✅ Sponsoring abgeschlossen`, `${sponsorship.name}: €${sponsorship.value.toLocaleString()}`);
-  }
-
-  return sponsorship;
-}
-
-function rejectSponsorshipOffer(offerId) {
-  if (!game.sponsorNegotiations) return;
-  game.sponsorNegotiations = game.sponsorNegotiations.filter(o => o.id !== offerId);
-}
-
-function processSponsorPayments() {
-  if (!game.sponsors) return 0;
-
-  let totalIncome = 0;
-  game.sponsors.forEach((sponsor) => {
-    if (sponsor.active && game.matchday <= sponsor.endMatchday) {
-      const monthlyPayment = Math.round(sponsor.value / (sponsor.endMatchday - sponsor.startMatchday + 1));
-      totalIncome += monthlyPayment;
-      sponsor.totalPaid = (sponsor.totalPaid || 0) + monthlyPayment;
-    } else if (game.matchday > sponsor.endMatchday) {
-      sponsor.active = false;
-    }
-  });
-
-  return totalIncome;
-}
-
-function applySponsorBenefits() {
-  if (!game.sponsors) return;
-
-  let trainingBonus = 0;
-  let moraleBonus = 0;
-  let infrastructureBonus = 0;
-
-  game.sponsors.forEach((sponsor) => {
-    if (sponsor.active && game.matchday <= sponsor.endMatchday) {
-      if (sponsor.benefits.training) trainingBonus += sponsor.benefits.training;
-      if (sponsor.benefits.morale) moraleBonus += sponsor.benefits.morale;
-      if (sponsor.benefits.infrastructure) infrastructureBonus += sponsor.benefits.infrastructure;
-    }
-  });
-
-  if (squad && trainingBonus > 0) {
-    squad.forEach(player => {
-      if (player.strength < 100) {
-        player.strength = Math.min(100, player.strength + (trainingBonus * 100 * 0.01));
-      }
-    });
-  }
-
-  if (squad && moraleBonus > 0) {
-    squad.forEach(player => {
-      if (player.morale < 100) {
-        player.morale = Math.min(100, player.morale + (moraleBonus * 100 * 0.01));
-      }
-    });
-  }
-
-  return { trainingBonus, moraleBonus, infrastructureBonus };
-}
-
-function tickSponsorNegotiations() {
-  if (!game.sponsorNegotiations) return;
-
-  game.sponsorNegotiations = game.sponsorNegotiations.filter((offer) => {
-    if (game.matchday > offer.expiresMatchday) {
-      if (game.inbox) {
-        addInboxMessage(`❌ Sponsorangebot abgelaufen`, offer.name);
-      }
-      return false;
-    }
-    return true;
-  });
-
-  if (Math.random() < 0.15 && (!game.sponsorNegotiations || game.sponsorNegotiations.length < 3)) {
-    createSponsorOffer();
-  }
-}
-
-function renderSponsorManagementPanel() {
-  const panel = document.getElementById('sponsor-management-panel');
-  if (!panel) return;
-
-  initializeSponsors();
-
-  const activeSponsors = (game.sponsors || []).filter(s => s.active && game.matchday <= s.endMatchday);
-  const totalMonthlyIncome = activeSponsors.reduce((sum, s) => {
-    const payment = Math.round(s.value / (s.endMatchday - s.startMatchday + 1));
-    return sum + payment;
-  }, 0);
-
-  let html = '<div class="panel-content">';
-  html += `<h3>Sponsoring & Partnerschaften</h3>`;
-
-  html += '<div class="sponsor-stats">';
-  html += `<div class="stat-box">Aktive Sponsoren: ${activeSponsors.length}</div>`;
-  html += `<div class="stat-box">Monatliche Einnahmen: €${totalMonthlyIncome.toLocaleString()}</div>`;
-  html += `<div class="stat-box">Ausstehende Angebote: ${(game.sponsorNegotiations || []).length}</div>`;
-  html += '</div>';
-
-  html += '<h4>Aktive Sponsoren:</h4>';
-  if (activeSponsors.length > 0) {
-    activeSponsors.forEach((sponsor) => {
-      const monthlyPayment = Math.round(sponsor.value / (sponsor.endMatchday - sponsor.startMatchday + 1));
-      const remaining = sponsor.endMatchday - game.matchday;
-      html += `<div class="sponsor-item">`;
-      html += `<strong>${sponsor.name}</strong>`;
-      html += `<div class="sponsor-info">€${monthlyPayment.toLocaleString()}/Monat | Verbleibend: ${remaining} Spieltage</div>`;
-      html += `<div class="sponsor-info">Vorteile: Training +${(sponsor.benefits.training * 100).toFixed(1)}% | Moral +${(sponsor.benefits.morale * 100).toFixed(1)}%</div>`;
-      html += '</div>';
-    });
-  } else {
-    html += '<div style="font-size:11px; color:#999;">Keine aktiven Sponsoren</div>';
-  }
-
-  html += '<h4>Sponsorangebote:</h4>';
-  if (game.sponsorNegotiations && game.sponsorNegotiations.length > 0) {
-    game.sponsorNegotiations.forEach((offer) => {
-      html += `<div class="offer-item">`;
-      html += `<strong>${offer.name}</strong>`;
-      html += `<div class="offer-info">€${offer.value.toLocaleString()} | ${offer.duration} Spieltage</div>`;
-      html += `<button onclick="negotiateSponsorship(${offer.id}, 'friendly')" style="background:#4CAF50; color:white; border:none; padding:4px 8px; margin-right:4px; border-radius:3px; font-size:10px;">Freundlich</button>`;
-      html += `<button onclick="negotiateSponsorship(${offer.id}, 'aggressive')" style="background:#FFC107; color:#000; border:none; padding:4px 8px; margin-right:4px; border-radius:3px; font-size:10px;">Aggressiv</button>`;
-      html += `<button onclick="rejectSponsorshipOffer(${offer.id})" style="background:#FF5252; color:white; border:none; padding:4px 8px; border-radius:3px; font-size:10px;">Ablehnen</button>`;
-      html += '</div>';
-    });
-  } else {
-    html += '<div style="font-size:11px; color:#999;">Keine aktuellen Angebote</div>';
   }
 
   html += '</div>';
@@ -30961,19 +30484,13 @@ function renderRefereePreview() {
         // Monatliche Ticks (alle 4 Spieltage ≈ 1 Monat) der Feature-Systeme.
         if (game.matchday % 4 === 0) {
             setzeBuchungskontext('📅 Monatliche Vereinsposten');
-            // Sponsoring-Verträge: monatliche Einnahmen
-            if (typeof tickSponsoringIncome === 'function') tickSponsoringIncome();
+            if (typeof migrateLegacyCoSponsors === 'function') migrateLegacyCoSponsors();
             // Fan-Engagement: monatliche Zufriedenheits-Updates
             if (typeof tickFanEngagement === 'function') tickFanEngagement();
             // Board Relations: monatliche Zufriedenheits- und Job-Sicherheits-Updates
             if (typeof tickBoardRelations === 'function') tickBoardRelations();
-            // Youth Academy: monatliche Trainings-Programm-Updates
+            // Jugend: monatliche Talententwicklung (Trainer-/Fokus-/Mentor-Bonus)
             if (typeof tickYouthDevelopment === 'function') tickYouthDevelopment();
-            // Sponsor Management: Zahlungen und Vertragsabläufe
-            if (typeof tickSponsorNegotiations === 'function') tickSponsorNegotiations();
-            let sponsorPayments = (typeof processSponsorPayments === 'function') ? processSponsorPayments() : 0;
-            if (sponsorPayments > 0) game.money += sponsorPayments;
-            if (typeof applySponsorBenefits === 'function') applySponsorBenefits();
             // Medienabteilung: Medienereignisse aus dem Saisonverlauf
             if (typeof tickMediaDepartment === 'function') tickMediaDepartment();
             // Transfer Market Analysis: Markttrends und Watchlist-Updates

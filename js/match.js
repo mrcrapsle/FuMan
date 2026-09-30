@@ -1753,19 +1753,13 @@
         // Monatliche Ticks (alle 4 Spieltage ≈ 1 Monat) der Feature-Systeme.
         if (game.matchday % 4 === 0) {
             setzeBuchungskontext('📅 Monatliche Vereinsposten');
-            // Sponsoring-Verträge: monatliche Einnahmen
-            if (typeof tickSponsoringIncome === 'function') tickSponsoringIncome();
+            if (typeof migrateLegacyCoSponsors === 'function') migrateLegacyCoSponsors();
             // Fan-Engagement: monatliche Zufriedenheits-Updates
             if (typeof tickFanEngagement === 'function') tickFanEngagement();
             // Board Relations: monatliche Zufriedenheits- und Job-Sicherheits-Updates
             if (typeof tickBoardRelations === 'function') tickBoardRelations();
-            // Youth Academy: monatliche Trainings-Programm-Updates
+            // Jugend: monatliche Talententwicklung (Trainer-/Fokus-/Mentor-Bonus)
             if (typeof tickYouthDevelopment === 'function') tickYouthDevelopment();
-            // Sponsor Management: Zahlungen und Vertragsabläufe
-            if (typeof tickSponsorNegotiations === 'function') tickSponsorNegotiations();
-            let sponsorPayments = (typeof processSponsorPayments === 'function') ? processSponsorPayments() : 0;
-            if (sponsorPayments > 0) game.money += sponsorPayments;
-            if (typeof applySponsorBenefits === 'function') applySponsorBenefits();
             // Medienabteilung: Medienereignisse aus dem Saisonverlauf
             if (typeof tickMediaDepartment === 'function') tickMediaDepartment();
             // Transfer Market Analysis: Markttrends und Watchlist-Updates

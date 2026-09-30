@@ -670,7 +670,28 @@
             </div>`;
     }
 
+    // Alte Spielstände: frühere Co-Sponsoren-Verträge (sponsor-management.js) zahlten nur ein
+    // Viertel ihres Werts aus und liefen über Saisonwechsel weiter. Sponsoring läuft jetzt
+    // allein über Haupt-, Ausrüster-, Ärmel-, Banden- und Bus-Sponsor; offene Restwerte
+    // werden einmalig ausgezahlt.
+    function migrateLegacyCoSponsors() {
+        if (!game.sponsors && !game.sponsorNegotiations) return;
+        let rest = (game.sponsors || []).filter(s => s.active)
+            .reduce((sum, s) => sum + Math.max(0, Math.round((s.value || 0) - (s.totalPaid || 0))), 0);
+        delete game.sponsors;
+        delete game.sponsorNegotiations;
+        delete game.totalSponsorRevenue;
+        if (rest > 0) {
+            const aeussererKontext = buchungsKontext; // läuft ggf. im Monatsblock mit eigenem Label
+            setzeBuchungskontext('🤝 Sponsoring: Vertragsauflösung');
+            game.money += rest;
+            setzeBuchungskontext(aeussererKontext);
+            addInboxMessage('vertrag', '🤝 Co-Sponsoren-Verträge abgelöst', `Die laufenden Co-Sponsoren-Verträge wurden aufgelöst, der offene Restwert von ${formatVal(rest)} wurde ausgezahlt. Sponsoring läuft ab sofort über Haupt-, Ausrüster-, Ärmel-, Banden- und Bus-Sponsor.`, 'screen-sponsors');
+        }
+    }
+
     function renderSponsorsView() {
+        migrateLegacyCoSponsors();
         document.getElementById('spons-curr-name').innerText = game.sponsor.name;
         document.getElementById('spons-curr-base').innerText = formatVal(game.sponsor.base);
         document.getElementById('spons-curr-win').innerText = formatVal(game.sponsor.winBonus);
