@@ -234,10 +234,7 @@
         playerInternationalCaps: {},
         internationalTournamentHistory: [],
         nextWorldCup: 2026,
-        boardMembers: [],
-        boardDecisions: [],
-        boardMemberSatisfaction: {},
-        boardConflicts: []
+        boardRoom: null
     };
 
     let managerRPG = {

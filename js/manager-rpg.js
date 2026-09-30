@@ -43,6 +43,7 @@
         `;
         renderMediaImageTrendChart();
         if (typeof renderMediaDepartmentPanel === 'function') renderMediaDepartmentPanel();
+        if (typeof renderBoardRoomPanel === 'function') renderBoardRoomPanel();
     }
     function renderMediaImageTrendChart() {
         let box = document.getElementById('media-image-trend-chart');

@@ -719,10 +719,7 @@
         playerInternationalCaps: {},
         internationalTournamentHistory: [],
         nextWorldCup: 2026,
-        boardMembers: [],
-        boardDecisions: [],
-        boardMemberSatisfaction: {},
-        boardConflicts: []
+        boardRoom: null
     };
 
     let managerRPG = {
@@ -3317,7 +3314,6 @@ function renderFanEventsPanel() {
         if (typeof renderFanclubManagementPanel === 'function') renderFanclubManagementPanel();
         if (typeof renderTacticSystemPanel === 'function') renderTacticSystemPanel();
         if (typeof renderInternationalTournamentsPanel === 'function') renderInternationalTournamentsPanel();
-        if (typeof renderBoardMembersPanel === 'function') renderBoardMembersPanel();
         if (typeof renderSetPieceTrainingPanel === 'function') renderSetPieceTrainingPanel();
         if (typeof renderPostMatchAnalysisPanel === 'function') renderPostMatchAnalysisPanel();
         if (typeof renderTrainingSpecializationPanel === 'function') renderTrainingSpecializationPanel();
@@ -8715,6 +8711,7 @@ function getTransferBudgetInfo() {
         `;
         renderMediaImageTrendChart();
         if (typeof renderMediaDepartmentPanel === 'function') renderMediaDepartmentPanel();
+        if (typeof renderBoardRoomPanel === 'function') renderBoardRoomPanel();
     }
     function renderMediaImageTrendChart() {
         let box = document.getElementById('media-image-trend-chart');
@@ -9046,6 +9043,103 @@ function renderMediaDepartmentPanel() {
     html += '<div style="font-size:8px; color:var(--text-muted); margin-top:4px;">Schlechte Laune im Interview schadet. Wohlwollen der Presse mildert die nächste Kritikwelle.</div>';
     if (md.log.length) html += '<div style="margin-top:6px; font-weight:bold;">Zuletzt</div>' + md.log.slice(0, 3).map(l => `<div style="color:var(--text-muted); font-size:8px;">S${l.season}/ST${l.matchday}: ${l.text}</div>`).join('');
     box.innerHTML = html + '</div>';
+}
+
+/* eslint-enable */
+// Vorstand: vier Mitglieder, die je einen echten Bereich beurteilen und damit erklären, woher
+// die Vorstandszufriedenheit (game.boardSat, an ihr hängt die Entlassung) kommt. Ihre Stimmung
+// wird aus dem aktuellen Spielstand berechnet, nicht gespeichert. Löst zwei Module ab, deren
+// Vorstand nie angelegt wurde bzw. einen eigenen, wirkungslosen Zähler führte.
+
+const BOARD_ROLES = [
+    { key: 'praesident', title: 'Präsident', icon: '🎩' },
+    { key: 'finanzen', title: 'Finanzvorstand', icon: '💶' },
+    { key: 'sport', title: 'Sportvorstand', icon: '⚽' },
+    { key: 'nachwuchs', title: 'Nachwuchsleiter', icon: '🎓' }
+];
+const BOARD_FIRST = ['Klaus', 'Petra', 'Bernd', 'Anke', 'Helmut', 'Sabine', 'Wolfgang', 'Ute', 'Dieter', 'Monika'];
+const BOARD_LAST = ['Brenner', 'Hofmann', 'Kessler', 'Lang', 'Seifert', 'Albrecht', 'Vogt', 'Krämer', 'Busch', 'Wendel'];
+
+function getBoardRoom() {
+    if (!game.boardRoom) {
+        const seed = (game.clubName || '').length;
+        game.boardRoom = { names: BOARD_ROLES.map((_, i) => `${BOARD_FIRST[(seed + i * 3) % BOARD_FIRST.length]} ${BOARD_LAST[(seed * 2 + i * 5) % BOARD_LAST.length]}`), warned: {} };
+    }
+    // Alte Spielstände: Felder der abgelösten Vorstandsmodule
+    ['boardMembers', 'boardDecisions', 'boardMemberSatisfaction', 'boardConflicts'].forEach(k => { delete game[k]; });
+    return game.boardRoom;
+}
+
+function clampMood(x) { return Math.max(0, Math.min(100, Math.round(x))); }
+
+// Stimmung + Begründung je Mitglied aus echten Daten.
+function getBoardMemberViews() {
+    const exp = game.seasonExpectation || {};
+    const rank = typeof getOwnLeagueRank === 'function' ? getOwnLeagueRank() : null;
+    const views = {};
+    views.praesident = { mood: game.boardSat, reason: game.boardSat >= 60 ? 'Zufrieden mit der Gesamtentwicklung.' : game.boardSat >= 35 ? 'Erwartet eine Steigerung.' : 'Stellt deine Arbeit offen infrage.' };
+
+    const delta = exp.startMoney !== undefined ? game.money - exp.startMoney : 0;
+    const schulden = game.loanDebt || 0;
+    views.finanzen = {
+        mood: clampMood(55 + Math.max(-30, Math.min(30, delta / Math.max(20000, Math.abs(exp.startMoney || 100000)) * 60)) - Math.min(25, schulden / 20000)),
+        reason: `${delta >= 0 ? 'Plus' : 'Minus'} von ${formatVal(Math.abs(Math.round(delta)))} seit Saisonbeginn${schulden > 0 ? `, Kredite ${formatVal(schulden)}` : ''}.`
+    };
+
+    if (rank && exp.expectedRank && game.matchday > 3) {
+        const diff = exp.expectedRank - rank;
+        views.sport = { mood: clampMood(55 + diff * 6), reason: `Platz ${rank}, erwartet war Platz ${exp.expectedRank}.` };
+    } else {
+        views.sport = { mood: 55, reason: 'Wartet die ersten Spieltage ab.' };
+    }
+
+    const talente = (typeof youthTalents !== 'undefined' ? youthTalents : []).length;
+    const akademieRang = game.academyLeague ? game.academyLeague.myRank : null;
+    views.nachwuchs = {
+        mood: clampMood(35 + talente * 5 + (akademieRang ? (6 - akademieRang) * 5 : 0)),
+        reason: `${talente} Talent(e) in der Jugend${akademieRang ? `, Akademie-Rang ${akademieRang}` : ''}.`
+    };
+    return views;
+}
+
+const BOARD_ADVICE = {
+    finanzen: 'fordert einen Sparkurs - Gehälter und laufende Kosten prüfen.',
+    sport: 'verlangt bessere Ergebnisse - Aufstellung und Training überdenken.',
+    nachwuchs: 'wünscht mehr Talente in der Jugendabteilung.',
+    praesident: 'erwägt Konsequenzen, wenn sich nichts ändert.'
+};
+
+// Monatlich: ein Mitglied, das stark unzufrieden ist, meldet sich (einmal pro Saison und Rolle).
+function tickBoardRoom() {
+    const room = getBoardRoom();
+    const views = getBoardMemberViews();
+    BOARD_ROLES.forEach((role, i) => {
+        const key = `${game.season}-${role.key}`;
+        if (views[role.key].mood < 30 && !room.warned[key]) {
+            room.warned[key] = true;
+            addInboxMessage('vertrag', `${role.icon} ${role.title} ${room.names[i]} ist unzufrieden`,
+                `${views[role.key].reason} ${room.names[i]} ${BOARD_ADVICE[role.key]}`, 'screen-manager-tree');
+        }
+    });
+    Object.keys(room.warned).forEach(k => { if (!k.startsWith(game.season + '-')) delete room.warned[k]; });
+}
+
+function renderBoardRoomPanel() {
+    const box = document.getElementById('board-room-box');
+    if (!box) return;
+    const room = getBoardRoom();
+    const views = getBoardMemberViews();
+    const farbe = m => m >= 60 ? 'var(--primary)' : m >= 35 ? 'var(--accent)' : 'var(--danger)';
+    box.innerHTML = `<div style="font-size:9px;">
+        <div style="margin-bottom:6px;">Vorstandszufriedenheit: <strong style="color:${farbe(game.boardSat)};">${Math.round(game.boardSat)}%</strong>
+            <span style="color:var(--text-muted);">- bleibt sie lange unter 25%, droht ab der 2. Saison die Entlassung.</span></div>
+        ${BOARD_ROLES.map((role, i) => {
+            const v = views[role.key];
+            return `<div style="display:flex; justify-content:space-between; gap:6px; padding:3px 0; border-top:1px solid rgba(255,255,255,0.06);">
+                <span>${role.icon} <strong>${role.title}</strong> ${room.names[i]}<br><span style="color:var(--text-muted);">${v.reason}</span></span>
+                <strong style="color:${farbe(v.mood)}; white-space:nowrap;">${v.mood}%</strong></div>`;
+        }).join('')}
+    </div>`;
 }
 
 /* eslint-enable */
@@ -13179,7 +13273,6 @@ function finishGoalkeeperGame() {
         if (typeof renderMediaRightsView === 'function') renderMediaRightsView();
         if (typeof renderFanEngagementPanel === 'function') renderFanEngagementPanel();
         if (typeof renderFanEngagementStats === 'function') renderFanEngagementStats();
-        if (typeof renderBoardManagementPanel === 'function') renderBoardManagementPanel();
         renderStockTicker();
         renderSponsorLeaderboard();
         renderFinanceForecast();
@@ -14287,235 +14380,6 @@ function finishGoalkeeperGame() {
                 <div style="font-size:14px; font-weight:700;">${isProfit ? '+' : '-'}${formatVal(Math.abs(balance))}</div>
             </div>
         `;
-    }
-
-/* eslint-enable */
-
-    // ==========================================
-    // BOARD-MANAGEMENT & VORSTANDSPOLITIK
-    // ==========================================
-    // Der Vorstand entscheidet über Budget, Langzeitpläne und deine Zukunft.
-    // Strategische Beziehungen zu Vorstandsmitgliedern sind Gold wert.
-
-    let boardState = {
-        satisfaction: 60, // 0-100: Wie zufrieden ist der Vorstand?
-        investmentLust: 50, // 0-100: Wollen sie investieren?
-        jobSecurity: 75, // 0-100: Wie sicher ist dein Job?
-        members: {
-            president: { name: 'Präsident', relation: 60, influence: 40 },
-            vicePresident: { name: 'Vizepräsident', relation: 55, influence: 30 },
-            financialBoss: { name: 'Finanzvorstand', relation: 50, influence: 35 },
-            sportsDirector: { name: 'Sportdirektor', relation: 65, influence: 25 }
-        },
-        meetingScheduled: false,
-        lastMeetingMatchday: -99
-    };
-
-    const BOARD_ACTIONS = {
-        negotiatePresidents: {
-            name: '🤝 Mit Präsident verhandeln',
-            cost: 0,
-            difficulty: 'hoch',
-            successRate: 0.6,
-            effects: {
-                satisfaction: 12,
-                investmentLust: 15,
-                relationChange: 20
-            },
-            outcomes: {
-                success: '✓ Präsident ist beeindruckt - erhöht Vertrauen in deine Strategie!',
-                failure: '✗ Präsident sieht dich als eigennützig an - Vertrauen sinkt.'
-            }
-        },
-        investorPitch: {
-            name: '💼 Investor-Präsentation',
-            cost: 0,
-            difficulty: 'mittel',
-            successRate: 0.75,
-            effects: {
-                satisfaction: 8,
-                investmentLust: 20,
-                relationChange: 10
-            },
-            outcomes: {
-                success: '✓ Board sieht Potenzial - Budget kann erhöht werden!',
-                failure: '✗ Zu ambitiös? Board ist skeptisch.'
-            }
-        },
-        performanceReport: {
-            name: '📊 Leistungsbericht',
-            cost: 0,
-            difficulty: 'niedrig',
-            successRate: 0.85,
-            effects: {
-                satisfaction: 5,
-                investmentLust: 3,
-                relationChange: 5
-            },
-            outcomes: {
-                success: '✓ Transparenz wird geschätzt - kleinerer Vertrauensbonus!',
-                failure: '✗ Bericht wirkt schlecht - Vorstand ist enttäuscht.'
-            }
-        }
-    };
-
-    function getJobSecurityModifier() {
-        let leagueTable = leaguesData[game.leagueLevel];
-        let our = leagueTable.find(t => t.id === game.clubId);
-        let position = leagueTable.indexOf(our) + 1;
-        let positionModifier = (leagueTable.length - position) / leagueTable.length * 40; // 0-40 basierend auf Position
-
-        let winRate = game.matchesPlayed > 0 ? (game.wins / game.matchesPlayed * 100) : 50;
-        let performanceModifier = Math.max(-20, Math.min(20, (winRate - 45) * 0.6));
-
-        return boardState.satisfaction * 0.5 + positionModifier + performanceModifier;
-    }
-
-    function tickBoardRelations() {
-        if (game.matchday % 4 !== 0) return; // Monatlich
-
-        let securityModifier = getJobSecurityModifier();
-        boardState.jobSecurity = Math.max(10, Math.min(100, boardState.jobSecurity + (securityModifier - 50) * 0.1));
-
-        // Natürlicher Decay der Zufriedenheit
-        boardState.satisfaction = Math.max(20, boardState.satisfaction - 2);
-        boardState.investmentLust = Math.max(15, boardState.investmentLust - 1);
-
-        // Gelüftungen durch gute Ergebnisse
-        if (game.wins > 0) {
-            boardState.satisfaction += 3;
-            boardState.jobSecurity += 2;
-        }
-
-        // Finanzielle Gesundheit beeinflußt Investmentlust
-        let cashFlow = (game.money / 1000000) * 10; // Vereinfacht
-        boardState.investmentLust = Math.min(100, boardState.investmentLust + Math.max(-5, Math.min(5, cashFlow)));
-    }
-
-    function executeBoardAction(actionKey) {
-        let action = BOARD_ACTIONS[actionKey];
-        if (!action) return;
-
-        let success = Math.random() < action.successRate;
-        let message = success ? action.outcomes.success : action.outcomes.failure;
-
-        if (success) {
-            boardState.satisfaction = Math.min(100, boardState.satisfaction + action.effects.satisfaction);
-            boardState.investmentLust = Math.min(100, boardState.investmentLust + action.effects.investmentLust);
-
-            // Beziehungen zu Mitgliedern verbessern
-            Object.keys(boardState.members).forEach(key => {
-                boardState.members[key].relation = Math.min(100, boardState.members[key].relation + action.effects.relationChange);
-            });
-        } else {
-            boardState.satisfaction = Math.max(0, boardState.satisfaction - 5);
-            Object.keys(boardState.members).forEach(key => {
-                boardState.members[key].relation = Math.max(0, boardState.members[key].relation - 5);
-            });
-        }
-
-        showToast(`${actionKey === 'performanceReport' ? '📊' : '💼'} ${action.name}\n\n${message}`,
-                 success ? 'success' : 'warning', 5000);
-        renderBoardManagementPanel();
-    }
-
-    function renderBoardManagementPanel() {
-        let container = document.getElementById('board-management-box');
-        if (!container) return;
-
-        let satisfactionColor = boardState.satisfaction >= 70 ? 'var(--primary)' :
-                                (boardState.satisfaction >= 50 ? 'var(--accent)' : 'var(--danger)');
-        let investColor = boardState.investmentLust >= 70 ? 'var(--primary)' :
-                          (boardState.investmentLust >= 50 ? 'var(--accent)' : 'var(--danger)');
-        let jobSecureColor = boardState.jobSecurity >= 70 ? 'var(--primary)' :
-                             (boardState.jobSecurity >= 50 ? 'var(--accent)' : 'var(--danger)');
-
-        let leagueTable = leaguesData[game.leagueLevel];
-        let our = leagueTable.find(t => t.id === game.clubId);
-        let position = leagueTable.indexOf(our) + 1;
-
-        let html = `
-            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; margin-bottom:12px;">
-                <div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:8px; text-align:center; border:1px solid rgba(255,255,255,0.1);">
-                    <div style="font-size:9px; color:#aaa; margin-bottom:4px;">😊 Zufriedenheit</div>
-                    <div style="font-size:16px; font-weight:700; color:${satisfactionColor};">${boardState.satisfaction}</div>
-                    <div style="height:4px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden; margin-top:4px;">
-                        <div style="height:100%; width:${boardState.satisfaction}%; background:${satisfactionColor}; border-radius:2px;"></div>
-                    </div>
-                </div>
-                <div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:8px; text-align:center; border:1px solid rgba(255,255,255,0.1);">
-                    <div style="font-size:9px; color:#aaa; margin-bottom:4px;">💰 Investlust</div>
-                    <div style="font-size:16px; font-weight:700; color:${investColor};">${boardState.investmentLust}</div>
-                    <div style="height:4px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden; margin-top:4px;">
-                        <div style="height:100%; width:${boardState.investmentLust}%; background:${investColor}; border-radius:2px;"></div>
-                    </div>
-                </div>
-                <div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:8px; text-align:center; border:1px solid rgba(255,255,255,0.1);">
-                    <div style="font-size:9px; color:#aaa; margin-bottom:4px;">🔒 Job-Sicherheit</div>
-                    <div style="font-size:16px; font-weight:700; color:${jobSecureColor};">${Math.round(boardState.jobSecurity)}</div>
-                    <div style="height:4px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden; margin-top:4px;">
-                        <div style="height:100%; width:${boardState.jobSecurity}%; background:${jobSecureColor}; border-radius:2px;"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div style="background:rgba(255,255,255,0.03); border-radius:6px; padding:8px; margin-bottom:12px; border:1px solid rgba(255,255,255,0.1); font-size:9px;">
-                <div style="font-weight:700; color:var(--accent); margin-bottom:6px;">👥 VORSTANDSMITGLIEDER</div>
-                <div style="display:grid; gap:4px;">
-        `;
-
-        Object.entries(boardState.members).forEach(([key, member]) => {
-            let relationColor = member.relation >= 70 ? 'var(--primary)' :
-                               (member.relation >= 50 ? 'var(--accent)' : 'var(--danger)');
-            html += `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:4px; background:rgba(255,255,255,0.02); border-radius:3px;">
-                    <span><strong>${member.name}</strong></span>
-                    <div style="display:flex; align-items:center; gap:4px;">
-                        <div style="font-size:8px;">Rel: <strong style="color:${relationColor};">${member.relation}</strong></div>
-                        <div style="width:30px; height:4px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden;">
-                            <div style="height:100%; width:${member.relation}%; background:${relationColor}; border-radius:2px;"></div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        });
-
-        html += `
-                </div>
-            </div>
-
-            <div style="margin-bottom:12px;">
-                <div style="font-size:9px; color:var(--accent); font-weight:700; margin-bottom:6px;">🎯 VORSTANDSVERHANDLUNGEN</div>
-                <div style="display:grid; gap:4px;">
-        `;
-
-        Object.entries(BOARD_ACTIONS).forEach(([key, action]) => {
-            let difficulty = action.difficulty === 'niedrig' ? '🟢' :
-                           (action.difficulty === 'mittel' ? '🟡' : '🔴');
-            html += `
-                <button onclick="executeBoardAction('${key}')" class="btn-action" style="font-size:8px; padding:6px; text-align:left;">
-                    <div style="font-weight:700;">${action.name} ${difficulty}</div>
-                    <div style="font-size:7px; color:#aaa;">Erfolgsrate: ${(action.successRate * 100).toFixed(0)}%</div>
-                </button>
-            `;
-        });
-
-        html += `
-                </div>
-            </div>
-
-            <div style="background:rgba(255,255,255,0.03); border-radius:6px; padding:8px; border:1px solid rgba(255,255,255,0.1); font-size:9px;">
-                <strong style="display:block; color:var(--accent); margin-bottom:6px;">💡 Board-Management Tipps:</strong>
-                <div style="color:#aaa; line-height:1.5;">
-                    • <strong>Gute Ergebnisse:</strong> Best way to keep board happy (+3 Zufriedenheit/Monat)<br>
-                    • <strong>Job-Sicherheit:</strong> Abhängig von Liga-Position und Leistung<br>
-                    • <strong>Investitionen:</strong> Hohe Investlust + gute Relation = mehr Budget<br>
-                    • <strong>Vorsicht:</strong> Zu viele gescheiterte Verhandlungen = schlechtere Chancen
-                </div>
-            </div>
-        `;
-
-        container.innerHTML = html;
     }
 
 /* eslint-enable */
@@ -22024,327 +21888,6 @@ function renderInternationalTournamentsPanel() {
 /* eslint-enable */
 /* eslint-disable no-undef */
 
-const BOARD_MEMBER_TYPES = {
-  president: {
-    name: 'Präsident',
-    influence: 1.0,
-    priorities: ['finances', 'reputation', 'success'],
-    salary: 50000,
-    votingPower: 2
-  },
-  vicePresident: {
-    name: 'Vizepräsident',
-    influence: 0.8,
-    priorities: ['success', 'development', 'finances'],
-    salary: 30000,
-    votingPower: 1.5
-  },
-  financeDirector: {
-    name: 'Finanzvorstand',
-    influence: 0.7,
-    priorities: ['finances', 'stability', 'reputation'],
-    salary: 40000,
-    votingPower: 1.5
-  },
-  sportDirector: {
-    name: 'Sportvorstand',
-    influence: 0.85,
-    priorities: ['success', 'development', 'reputation'],
-    salary: 35000,
-    votingPower: 1.5
-  },
-  academyDirector: {
-    name: 'Akademieleiter',
-    influence: 0.5,
-    priorities: ['development', 'reputation', 'finances'],
-    salary: 25000,
-    votingPower: 0.75
-  },
-  fanRepresentative: {
-    name: 'Fanvertreter',
-    influence: 0.6,
-    priorities: ['success', 'reputation', 'development'],
-    salary: 10000,
-    votingPower: 0.75
-  },
-  member: {
-    name: 'Mitglied',
-    influence: 0.4,
-    priorities: ['finances', 'reputation', 'success'],
-    salary: 0,
-    votingPower: 0.5
-  }
-};
-
-function initializeBoardMembers() {
-  if (!game.boardMembers) {
-    game.boardMembers = [];
-    createDefaultBoard();
-  }
-  if (!game.boardDecisions) {
-    game.boardDecisions = [];
-  }
-  if (!game.boardMemberSatisfaction) {
-    game.boardMemberSatisfaction = {};
-  }
-  if (!game.boardConflicts) {
-    game.boardConflicts = [];
-  }
-}
-
-function createDefaultBoard() {
-  const firstNames = ['Klaus', 'Bernd', 'Helmut', 'Petra', 'Michael', 'Stefan', 'Wolfgang', 'Anke'];
-  const lastNames = ['Schmidt', 'Meyer', 'Müller', 'Wagner', 'Schneider', 'Fischer', 'Weber', 'Hoffmann'];
-
-  const positions = ['president', 'sportDirector', 'financeDirector', 'member', 'member'];
-
-  positions.forEach((type, index) => {
-    const firstName = firstNames[index % firstNames.length];
-    const lastName = lastNames[(index + 2) % lastNames.length];
-    createBoardMember(
-      `${firstName} ${lastName}`,
-      type,
-      50
-    );
-  });
-}
-
-function createBoardMember(name, type, satisfaction) {
-  const config = BOARD_MEMBER_TYPES[type];
-  if (!config) return null;
-
-  const member = {
-    id: game.boardMembers.length,
-    name: name,
-    type: type,
-    satisfaction: Math.min(100, Math.max(0, satisfaction)),
-    influence: config.influence,
-    yearsOnBoard: 0,
-    votingPower: config.votingPower,
-    salary: config.salary,
-    relationshipWithManager: 50,
-    priorities: [...config.priorities]
-  };
-
-  game.boardMembers.push(member);
-  game.boardMemberSatisfaction[member.id] = satisfaction;
-  return member;
-}
-
-function updateBoardMemberSatisfaction(memberId, delta) {
-  if (!game.boardMembers || !game.boardMembers[memberId]) return;
-
-  const member = game.boardMembers[memberId];
-  member.satisfaction = Math.min(100, Math.max(0, member.satisfaction + delta));
-  game.boardMemberSatisfaction[memberId] = member.satisfaction;
-}
-
-function getAverageBoardSatisfaction() {
-  if (!game.boardMembers || game.boardMembers.length === 0) return 50;
-
-  let total = 0;
-  game.boardMembers.forEach((member) => {
-    total += member.satisfaction;
-  });
-
-  return total / game.boardMembers.length;
-}
-
-function getBoardInfluenceOnDecision() {
-  const avgSatisfaction = getAverageBoardSatisfaction();
-  let influence = 1.0;
-
-  if (avgSatisfaction > 75) {
-    influence = 1.15;
-  } else if (avgSatisfaction > 60) {
-    influence = 1.05;
-  } else if (avgSatisfaction < 40) {
-    influence = 0.9;
-  } else if (avgSatisfaction < 25) {
-    influence = 0.75;
-  }
-
-  return influence;
-}
-
-function checkBoardConflict() {
-  if (!game.boardMembers || game.boardMembers.length < 2) return false;
-
-  let conflictChance = 0;
-  let conflictMembers = [];
-
-  game.boardMembers.forEach((member) => {
-    if (member.satisfaction < 35) {
-      conflictChance += 0.1;
-      conflictMembers.push(member);
-    }
-  });
-
-  if (Math.random() < conflictChance && conflictMembers.length > 0) {
-    const member = conflictMembers[Math.floor(Math.random() * conflictMembers.length)];
-    const conflictTypes = [
-      'Einspruch gegen aktuelle Taktik',
-      'Forderung nach mehr Investitionen',
-      'Kritik an Trainerkompetenz',
-      'Konflikt über Spielerverkauf'
-    ];
-
-    const conflict = {
-      type: conflictTypes[Math.floor(Math.random() * conflictTypes.length)],
-      member: member.name,
-      memberId: member.id,
-      season: game.season,
-      resolved: false
-    };
-
-    if (!game.boardConflicts) game.boardConflicts = [];
-    game.boardConflicts.push(conflict);
-
-    if (game.inbox) {
-      addInboxMessage(`⚠️ Vorstandskonflikt: ${member.name}`, conflict.type);
-    }
-
-    updateBoardMemberSatisfaction(member.id, -15);
-    return true;
-  }
-
-  return false;
-}
-
-function processBoardDecision(decisionType, outcome) {
-  if (!game.boardMembers) return 1.0;
-
-  let supportScore = 0;
-  let totalInfluence = 0;
-
-  game.boardMembers.forEach((member) => {
-    const typeConfig = BOARD_MEMBER_TYPES[member.type];
-    const matchesPreference = typeConfig.priorities.includes(decisionType);
-    const supportMultiplier = matchesPreference ? 1.2 : 0.8;
-
-    const memberSupport = (member.satisfaction / 100) * supportMultiplier;
-    supportScore += memberSupport * member.votingPower;
-    totalInfluence += member.votingPower;
-  });
-
-  const finalSupport = totalInfluence > 0 ? supportScore / totalInfluence : 0.5;
-
-  if (outcome === 'success') {
-    game.boardMembers.forEach((member) => {
-      updateBoardMemberSatisfaction(member.id, 3);
-    });
-  } else if (outcome === 'failure') {
-    game.boardMembers.forEach((member) => {
-      const typeConfig = BOARD_MEMBER_TYPES[member.type];
-      const penalty = typeConfig.priorities.includes(decisionType) ? 8 : 3;
-      updateBoardMemberSatisfaction(member.id, -penalty);
-    });
-  }
-
-  return finalSupport;
-}
-
-function getBoardVotingResult(proposalType) {
-  if (!game.boardMembers || game.boardMembers.length === 0) return true;
-
-  let yesVotes = 0;
-  let totalVotes = 0;
-
-  game.boardMembers.forEach((member) => {
-    const typeConfig = BOARD_MEMBER_TYPES[member.type];
-    const supportProbability = member.satisfaction / 100 + (typeConfig.priorities.includes(proposalType) ? 0.2 : 0);
-
-    if (Math.random() < Math.min(1.0, supportProbability)) {
-      yesVotes += member.votingPower;
-    }
-
-    totalVotes += member.votingPower;
-  });
-
-  return yesVotes / totalVotes > 0.5;
-}
-
-function getBoardExpenses() {
-  if (!game.boardMembers) return 0;
-
-  let totalExpenses = 0;
-  game.boardMembers.forEach((member) => {
-    const typeConfig = BOARD_MEMBER_TYPES[member.type];
-    totalExpenses += typeConfig.salary;
-  });
-
-  return totalExpenses;
-}
-
-function recordBoardDecision(type, description, outcome) {
-  if (!game.boardDecisions) game.boardDecisions = [];
-
-  game.boardDecisions.push({
-    type: type,
-    description: description,
-    outcome: outcome,
-    season: game.season,
-    matchday: game.matchday,
-    timestamp: new Date().toISOString()
-  });
-}
-
-function renderBoardMembersPanel() {
-  const panel = document.getElementById('board-members-panel');
-  if (!panel) return;
-
-  if (!game.boardMembers) {
-    initializeBoardMembers();
-  }
-
-  const avgSatisfaction = getAverageBoardSatisfaction();
-  const boardInfluence = getBoardInfluenceOnDecision();
-  const boardExpenses = getBoardExpenses();
-
-  let html = '<div class="panel-content">';
-  html += `<h3>Vorstandsmitglieder</h3>`;
-
-  html += '<div class="board-stats">';
-  html += `<div class="stat-box">Durchschn. Zufriedenheit: ${Math.round(avgSatisfaction)}%</div>`;
-  html += `<div class="stat-box">Vorstandseinfluss: ${(boardInfluence * 100).toFixed(0)}%</div>`;
-  html += `<div class="stat-box">Gehälter pro Spieltag: €${Math.round(boardExpenses / 34)}</div>`;
-  html += `<div class="stat-box">Mitglieder: ${game.boardMembers.length}</div>`;
-  html += '</div>';
-
-  if (avgSatisfaction < 40) {
-    html += `<div style="font-size:11px; color:#FF5252; margin:6px 0; padding:6px; background:rgba(255,82,82,0.1); border-radius:4px;">⚠️ Vorstand ist unzufrieden! Entscheidungen könnten blockiert werden!</div>`;
-  }
-
-  html += '<h4>Vorstandsmitglieder:</h4>';
-  game.boardMembers.forEach((member) => {
-    const typeConfig = BOARD_MEMBER_TYPES[member.type];
-    const satisfactionColor = member.satisfaction > 60 ? '#4CAF50' : member.satisfaction > 40 ? '#FFC107' : '#FF5252';
-
-    html += `<div class="board-member-item" style="border-left: 4px solid ${satisfactionColor}">`;
-    html += `<strong>${member.name}</strong> (${typeConfig.name})`;
-    html += `<div class="member-info">Zufriedenheit: ${Math.round(member.satisfaction)}% | Einfluss: ${(member.influence * 100).toFixed(0)}%</div>`;
-    html += `<div class="member-info">Stimmrecht: ${member.votingPower} | Prioritäten: ${member.priorities.join(', ')}</div>`;
-    html += '</div>';
-  });
-
-  html += '<h4>Konflikte:</h4>';
-  if (game.boardConflicts && game.boardConflicts.length > 0) {
-    game.boardConflicts.filter(c => !c.resolved).slice(-3).forEach((conflict) => {
-      html += `<div class="conflict-item">`;
-      html += `<strong>${conflict.member}</strong>: ${conflict.type}`;
-      html += `</div>`;
-    });
-  } else {
-    html += '<div style="font-size:11px; color:#999;">Keine aktuellen Konflikte</div>';
-  }
-
-  html += '</div>';
-  panel.innerHTML = html;
-}
-
-/* eslint-enable */
-/* eslint-disable no-undef */
-
 const MARKET_TRENDS = {
   striker: {
     name: 'Stürmer',
@@ -29026,9 +28569,8 @@ function cleanupLegacyScoutState() {
         // nicht mit dem Kontostand in Einklang bringen.
         let staffWages = (typeof getTotalStaffWages === 'function') ? getTotalStaffWages() : 0;
         let secondTeamStaffWages = (typeof getSecondTeamStaffWages === 'function') ? getSecondTeamStaffWages() : 0;
-        let boardExpenses = (typeof getBoardExpenses === 'function') ? getBoardExpenses() : 0;
 
-        let net = grossIncome - taxAmount - advisorFee - wages - staffWages - secondTeamStaffWages - boardExpenses - travelCost;
+        let net = grossIncome - taxAmount - advisorFee - wages - staffWages - secondTeamStaffWages - travelCost;
         game.money += net;
 
         // Buchungsjournal: hält für JEDEN Spieltag fest, woraus sich Einnahmen und Ausgaben
@@ -29050,7 +28592,6 @@ function cleanupLegacyScoutState() {
             { label: '⚽ Spielergehälter', amount: wages },
             { label: '💼 Personalgehälter', amount: staffWages },
             { label: '🅱️ Reserve-Trainerstab', amount: secondTeamStaffWages },
-            { label: '👔 Vorstandsgehälter', amount: boardExpenses },
             { label: '🔧 Stadion- & Campus-Unterhalt', amount: maintenanceCost },
             { label: '🚌 Auswärtsfahrt', amount: travelCost },
             { label: '🧾 Steuern & Abgaben', amount: taxAmount },
@@ -29117,7 +28658,6 @@ function cleanupLegacyScoutState() {
             let hasScore = Number.isFinite(ownGoals) && Number.isFinite(oppGoals);
             analyzeMatchTactics({ won: won, draw: hasScore && ownGoals === oppGoals, score: hasScore ? ownGoals : 0, conceded: hasScore ? oppGoals : 0 });
         }
-        if (typeof checkBoardConflict === 'function') checkBoardConflict();
     }
 
     // Bestimmte runde Zuschauerzahlen sind erzählerisch bedeutsam genug für eine einmalige
@@ -29631,7 +29171,7 @@ function cleanupLegacyScoutState() {
             // Fan-Engagement: monatliche Zufriedenheits-Updates
             if (typeof tickFanEngagement === 'function') tickFanEngagement();
             // Board Relations: monatliche Zufriedenheits- und Job-Sicherheits-Updates
-            if (typeof tickBoardRelations === 'function') tickBoardRelations();
+            if (typeof tickBoardRoom === 'function') tickBoardRoom();
             // Jugend: monatliche Talententwicklung (Trainer-/Fokus-/Mentor-Bonus)
             if (typeof tickYouthDevelopment === 'function') tickYouthDevelopment();
             // Medienabteilung: Medienereignisse aus dem Saisonverlauf

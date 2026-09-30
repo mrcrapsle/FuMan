@@ -1152,9 +1152,8 @@
         // nicht mit dem Kontostand in Einklang bringen.
         let staffWages = (typeof getTotalStaffWages === 'function') ? getTotalStaffWages() : 0;
         let secondTeamStaffWages = (typeof getSecondTeamStaffWages === 'function') ? getSecondTeamStaffWages() : 0;
-        let boardExpenses = (typeof getBoardExpenses === 'function') ? getBoardExpenses() : 0;
 
-        let net = grossIncome - taxAmount - advisorFee - wages - staffWages - secondTeamStaffWages - boardExpenses - travelCost;
+        let net = grossIncome - taxAmount - advisorFee - wages - staffWages - secondTeamStaffWages - travelCost;
         game.money += net;
 
         // Buchungsjournal: hält für JEDEN Spieltag fest, woraus sich Einnahmen und Ausgaben
@@ -1176,7 +1175,6 @@
             { label: '⚽ Spielergehälter', amount: wages },
             { label: '💼 Personalgehälter', amount: staffWages },
             { label: '🅱️ Reserve-Trainerstab', amount: secondTeamStaffWages },
-            { label: '👔 Vorstandsgehälter', amount: boardExpenses },
             { label: '🔧 Stadion- & Campus-Unterhalt', amount: maintenanceCost },
             { label: '🚌 Auswärtsfahrt', amount: travelCost },
             { label: '🧾 Steuern & Abgaben', amount: taxAmount },
@@ -1243,7 +1241,6 @@
             let hasScore = Number.isFinite(ownGoals) && Number.isFinite(oppGoals);
             analyzeMatchTactics({ won: won, draw: hasScore && ownGoals === oppGoals, score: hasScore ? ownGoals : 0, conceded: hasScore ? oppGoals : 0 });
         }
-        if (typeof checkBoardConflict === 'function') checkBoardConflict();
     }
 
     // Bestimmte runde Zuschauerzahlen sind erzählerisch bedeutsam genug für eine einmalige
@@ -1757,7 +1754,7 @@
             // Fan-Engagement: monatliche Zufriedenheits-Updates
             if (typeof tickFanEngagement === 'function') tickFanEngagement();
             // Board Relations: monatliche Zufriedenheits- und Job-Sicherheits-Updates
-            if (typeof tickBoardRelations === 'function') tickBoardRelations();
+            if (typeof tickBoardRoom === 'function') tickBoardRoom();
             // Jugend: monatliche Talententwicklung (Trainer-/Fokus-/Mentor-Bonus)
             if (typeof tickYouthDevelopment === 'function') tickYouthDevelopment();
             // Medienabteilung: Medienereignisse aus dem Saisonverlauf

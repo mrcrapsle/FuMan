@@ -60,7 +60,6 @@
         if (typeof renderMediaRightsView === 'function') renderMediaRightsView();
         if (typeof renderFanEngagementPanel === 'function') renderFanEngagementPanel();
         if (typeof renderFanEngagementStats === 'function') renderFanEngagementStats();
-        if (typeof renderBoardManagementPanel === 'function') renderBoardManagementPanel();
         renderStockTicker();
         renderSponsorLeaderboard();
         renderFinanceForecast();
