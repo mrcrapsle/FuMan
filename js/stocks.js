@@ -19,8 +19,13 @@
         STOCK_KEYS.forEach(key => {
             let s = stockMarket[key];
             if (!s) return;
-            let randomWalk = 1 + (Math.random() * 2 - 1) * s.volatility;
-            let newPrice = s.price * randomWalk * (marketEvent ? marketEvent.mult : 1);
+            // Gleichverteilte Schwankung um 1 lässt Kurse im Mittel fallen (Volatilitätsverlust,
+            // Biotech -68 % in einer Saison). Der kleine Aufschlag v²/6 gleicht das aus.
+            let randomWalk = 1 + (Math.random() * 2 - 1) * s.volatility + s.volatility * s.volatility / 6;
+            // Börsenereignisse treffen schwankungsarme Titel schwächer: die "sichere Staatsanleihe"
+            // brach bisher wie eine Tech-Aktie um 12 % ein.
+            let eventMult = marketEvent ? 1 + (marketEvent.mult - 1) * Math.min(1.5, s.volatility / 0.06) : 1;
+            let newPrice = s.price * randomWalk * eventMult;
             s.price = Math.max(2, +newPrice.toFixed(2));
             if (!Array.isArray(s.history)) s.history = [s.price];
             s.history.push(s.price);

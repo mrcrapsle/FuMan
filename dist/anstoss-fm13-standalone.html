@@ -4721,9 +4721,9 @@
         money: 50000,
         valuation: 125000,
         b2bContracts: [
-            { id: 'b2b1', club: "Real Madrid", item: "Trikots", amount: 1000, reqMat: 'cotton', reqQty: 1000, payout: 65000, done: false },
-            { id: 'b2b2', club: "FC Bayern", item: "Fan-Schals", amount: 2000, reqMat: 'wool', reqQty: 1200, payout: 38000, done: false },
-            { id: 'b2b3', club: "FC Liverpool", item: "Spielbälle", amount: 800, reqMat: 'leather', reqQty: 960, payout: 48000, done: false }
+            { id: 'b2b1', club: "Real Madrit", item: "Trikots", amount: 1000, reqMat: 'cotton', reqQty: 1000, payout: 65000, done: false },
+            { id: 'b2b2', club: "Bayern Munchen", item: "Fan-Schals", amount: 2000, reqMat: 'wool', reqQty: 1200, payout: 38000, done: false },
+            { id: 'b2b3', club: "Liverpol FC", item: "Spielbälle", amount: 800, reqMat: 'leather', reqQty: 960, payout: 48000, done: false }
         ]
     };
 
@@ -5065,6 +5065,9 @@
             'internationalTournaments', 'playerInternationalCaps', 'internationalTournamentHistory', 'nextWorldCup', 'transferMarket', 'postMatchAnalysis',
             'transferBudgetUsed', 'transferMarketPlayers', 'transferLastRefreshMatchday', 'reserves', 'tournamentBrackets',
             'squadHarmony', 'disciplinarySystem', 'crises', 'localRivals'].forEach(k => { delete game[k]; });
+        // Holding-Aufträge alter Spielstände trugen echte Vereinsnamen.
+        const echteNamen = { 'Real Madrid': 'Real Madrit', 'FC Bayern': 'Bayern Munchen', 'FC Liverpool': 'Liverpol FC' };
+        if (typeof holdingCompany !== 'undefined') (holdingCompany.b2bContracts || []).forEach(c => { if (echteNamen[c.club]) c.club = echteNamen[c.club]; });
         squad.forEach(p => { delete p.currentFitnessBoost; });
     }
 
@@ -6331,9 +6334,8 @@
     }
 
     let autoLineupInProgress = false;
-    function autoLineup() {
-        if (autoLineupInProgress) return; // Rückfall-Schutz gegen Rekursion (siehe calcTeamStrength -> autoLineup -> renderSquadView -> ... Zyklus)
-        autoLineupInProgress = true;
+    // Beste Elf für die aktuelle Formation, ohne etwas zu verändern (auch fürs Wettbüro).
+    function pickBestLineupIds() {
         let available = squad.filter(p => (p.suspended || 0) === 0 && (p.injured || 0) === 0 && (p.nationalDuty || 0) === 0);
         let effStr = p => p.strength * (p.fitness / 100);
         let tws = available.filter(p => p.pos === 'TW').sort((a, b) => effStr(b) - effStr(a));
@@ -6353,7 +6355,13 @@
 
         let remaining = available.filter(p => !chosen.includes(p.id)).sort((a, b) => effStr(b) - effStr(a));
         while (chosen.length < 11 && remaining.length > 0) chosen.push(remaining.shift().id);
-        lineup = chosen;
+        return chosen;
+    }
+
+    function autoLineup() {
+        if (autoLineupInProgress) return; // Rückfall-Schutz gegen Rekursion (siehe calcTeamStrength -> autoLineup -> renderSquadView -> ... Zyklus)
+        autoLineupInProgress = true;
+        lineup = pickBestLineupIds();
         renderSquadView();
         render3DPitch();
         autoLineupInProgress = false;
@@ -16836,8 +16844,13 @@ function finishGoalkeeperGame() {
         STOCK_KEYS.forEach(key => {
             let s = stockMarket[key];
             if (!s) return;
-            let randomWalk = 1 + (Math.random() * 2 - 1) * s.volatility;
-            let newPrice = s.price * randomWalk * (marketEvent ? marketEvent.mult : 1);
+            // Gleichverteilte Schwankung um 1 lässt Kurse im Mittel fallen (Volatilitätsverlust,
+            // Biotech -68 % in einer Saison). Der kleine Aufschlag v²/6 gleicht das aus.
+            let randomWalk = 1 + (Math.random() * 2 - 1) * s.volatility + s.volatility * s.volatility / 6;
+            // Börsenereignisse treffen schwankungsarme Titel schwächer: die "sichere Staatsanleihe"
+            // brach bisher wie eine Tech-Aktie um 12 % ein.
+            let eventMult = marketEvent ? 1 + (marketEvent.mult - 1) * Math.min(1.5, s.volatility / 0.06) : 1;
+            let newPrice = s.price * randomWalk * eventMult;
             s.price = Math.max(2, +newPrice.toFixed(2));
             if (!Array.isArray(s.history)) s.history = [s.price];
             s.history.push(s.price);
@@ -18093,19 +18106,36 @@ function finishGoalkeeperGame() {
     const MAX_BET_STAKE_FRACTION = 0.15; // max. 15% des aktuellen Kontostands
     const MIN_BET_STAKE = 10;
 
-    // Reine, testbare Quotenberechnung aus Stärkedifferenz + Heimvorteil.
-    function calcOddsFromStrength(ourStr, oppStr, isHome) {
-        let diff = (ourStr - oppStr) + (isHome ? 5 : -5);
-        let pWin = 1 / (1 + Math.exp(-diff / 12));
-        let pDraw = Math.max(0.14, Math.min(0.30, 0.24 - Math.abs(diff) * 0.003));
-        let pLoss = Math.max(0.03, 1 - pWin - pDraw);
-        let total = pWin + pDraw + pLoss;
-        pWin /= total; pDraw /= total; pLoss /= total;
-        return {
-            oddsWin: +(1 / pWin / BET_MARGIN).toFixed(2),
-            oddsDraw: +(1 / pDraw / BET_MARGIN).toFixed(2),
-            oddsLoss: +(1 / pLoss / BET_MARGIN).toFixed(2)
-        };
+    const BET_SIMULATIONS = 400;
+    const quote = pr => +(1 / Math.max(0.02, pr) / BET_MARGIN).toFixed(2);
+
+    // Wahrscheinlichkeiten aus derselben Tor-Formel wie die Spieltagssimulation (simulateGoals).
+    // Früher kamen sie aus einer eigenen Logistik-Formel, die die eigene Mannschaft deutlich
+    // überschätzte - eine Wette auf die eigene Niederlage brachte im Schnitt +58 %.
+    function simulateBetProbabilities(ownStr, oppStr, isHome, ownTeam, oppTeam) {
+        let sieg = 0, remis = 0, ueber = 0, beide = 0, siegUndUeber = 0;
+        for (let i = 0; i < BET_SIMULATIONS; i++) {
+            const g = isHome ? simulateGoals(ownStr, oppStr, ownTeam, oppTeam) : simulateGoals(oppStr, ownStr, oppTeam, ownTeam);
+            const own = isHome ? g.myGoals : g.oppGoals, opp = isHome ? g.oppGoals : g.myGoals;
+            if (own > opp) sieg++; else if (own === opp) remis++;
+            if (own + opp > 2) ueber++;
+            if (own > 0 && opp > 0) beide++;
+            if (own > opp && own + opp > 2) siegUndUeber++;
+        }
+        const n = BET_SIMULATIONS;
+        return { win: sieg / n, draw: remis / n, loss: 1 - (sieg + remis) / n, over: ueber / n, btts: beide / n, winOver: siegUndUeber / n };
+    }
+
+    // Die eigene Stärke zählt mit der besten verfügbaren Elf - sonst ließe sich mit einer
+    // schwachen Aufstellung eine hohe Siegquote holen und danach die Top-Elf aufstellen.
+    function bettingOwnStrength(isHome) {
+        const aktuell = calcTeamStrength(isHome);
+        if (typeof pickBestLineupIds !== 'function') return aktuell;
+        const gespeichert = lineup;
+        lineup = pickBestLineupIds();
+        const beste = calcTeamStrength(isHome);
+        lineup = gespeichert;
+        return Math.max(aktuell, beste);
     }
 
     function calcNextMatchOdds() {
@@ -18119,28 +18149,24 @@ function finishGoalkeeperGame() {
         if (!ourFixture || ourFixture.played) return null;
 
         let isHome = leaguesData[game.leagueLevel][ourFixture.home].name === game.clubName;
-        let ourStr = calcTeamStrength(isHome);
+        let ownTeam = leaguesData[game.leagueLevel].find(t => t.name === game.clubName) || null;
         let oppName = isHome ? leaguesData[game.leagueLevel][ourFixture.away].name : leaguesData[game.leagueLevel][ourFixture.home].name;
         let oppObj = leaguesData[game.leagueLevel].find(t => t.name === oppName);
         let oppStr = applySabotageToOpponentStrength(oppObj ? oppObj.strength : 60);
-
-        let odds = calcOddsFromStrength(ourStr, oppStr, isHome);
-        odds.oppName = oppName;
-        odds.isHome = isHome;
-        // Sonderwetten-Quoten: Über/Unter 2.5 Tore & Beide Teams treffen - grob aus der
-        // Gesamt-Offensivstärke beider Teams hergeleitet (rein heuristisch, aber reagiert
-        // sinnvoll auf starke Angriffsteams vs. große Stärkeunterschiede).
-        let combinedStrength = (ourStr + oppStr) / 2;
-        let pOver = Math.max(0.25, Math.min(0.75, 0.5 + (combinedStrength - 60) * 0.004));
-        odds.oddsOver = +(1 / pOver / BET_MARGIN).toFixed(2);
-        odds.oddsUnder = +(1 / (1 - pOver) / BET_MARGIN).toFixed(2);
-        let pBtts = Math.max(0.25, Math.min(0.7, 0.48 - Math.abs(ourStr - oppStr) * 0.004));
-        odds.oddsBttsYes = +(1 / pBtts / BET_MARGIN).toFixed(2);
-        odds.oddsBttsNo = +(1 / (1 - pBtts) / BET_MARGIN).toFixed(2);
-        return odds;
+        let pr = simulateBetProbabilities(bettingOwnStrength(isHome), oppStr, isHome, ownTeam, oppObj || null);
+        return {
+            oppName, isHome, probabilities: pr,
+            oddsWin: quote(pr.win), oddsDraw: quote(pr.draw),
+            oddsOver: quote(pr.over), oddsUnder: quote(1 - pr.over),
+            oddsBttsYes: quote(pr.btts), oddsBttsNo: quote(1 - pr.btts),
+            // Sieg und viele Tore hängen zusammen - die Kombi-Quote kommt deshalb aus der
+            // gemeinsamen Wahrscheinlichkeit statt aus dem Produkt der Einzelquoten.
+            oddsWinOver: quote(pr.winOver)
+        };
     }
 
     function placeBet(outcome, stake) {
+        if (outcome !== 'win' && outcome !== 'draw') { showToast('🚫 Wettverbot: Auf eine Niederlage der eigenen Mannschaft darf ein Verein nicht wetten.', 'error', 5000); return; }
         if (activeBet) { showToast('Es läuft bereits eine Wette für den nächsten Spieltag!', 'error'); return; }
         let odds = calcNextMatchOdds();
         if (!odds) { showToast('Kein anstehendes Ligaspiel zum Wetten gefunden!', 'error'); return; }
@@ -18149,7 +18175,7 @@ function finishGoalkeeperGame() {
         if (!stake || stake < MIN_BET_STAKE) { showToast(`Mindesteinsatz ${MIN_BET_STAKE} €, Höchsteinsatz ${formatVal(maxStake)} (15% des Kontostands)!`, 'error'); return; }
         playSound('click');
         game.money -= stake;
-        let oddsForOutcome = outcome === 'win' ? odds.oddsWin : (outcome === 'draw' ? odds.oddsDraw : odds.oddsLoss);
+        let oddsForOutcome = outcome === 'win' ? odds.oddsWin : odds.oddsDraw;
         activeBet = { type: 'outcome', outcome, stake, odds: oddsForOutcome, matchday: game.matchday };
         renderBettingView(); updateUI();
         let outcomeLabel = outcome === 'win' ? 'Sieg' : (outcome === 'draw' ? 'Unentschieden' : 'Niederlage');
@@ -18177,15 +18203,14 @@ function finishGoalkeeperGame() {
     // Gesamtquote ist das Produkt beider Einzelquoten (klassisches Kombiwetten-Prinzip),
     // mit einem kleinen Kombi-Aufschlag der Marge als zusätzliches Buchmacher-Risiko.
     function placeComboBet(outcome, specialType, stake) {
+        if (outcome !== 'win' || specialType !== 'over') { showToast('Kombiwette nur als Sieg + Über 2.5 möglich.', 'error'); return; }
         if (activeBet) { showToast('Es läuft bereits eine Wette für den nächsten Spieltag!', 'error'); return; }
         let odds = calcNextMatchOdds();
         if (!odds) { showToast('Kein anstehendes Ligaspiel zum Wetten gefunden!', 'error'); return; }
         let maxStake = Math.max(MIN_BET_STAKE, Math.round(game.money * MAX_BET_STAKE_FRACTION));
         stake = Math.min(stake, maxStake, game.money);
         if (!stake || stake < MIN_BET_STAKE) { showToast(`Mindesteinsatz ${MIN_BET_STAKE} €, Höchsteinsatz ${formatVal(maxStake)}!`, 'error'); return; }
-        let oddsForOutcome = outcome === 'win' ? odds.oddsWin : (outcome === 'draw' ? odds.oddsDraw : odds.oddsLoss);
-        let oddsMap = { over: odds.oddsOver, under: odds.oddsUnder, bttsYes: odds.oddsBttsYes, bttsNo: odds.oddsBttsNo };
-        let comboOdds = +(oddsForOutcome * oddsMap[specialType] * 0.95).toFixed(2); // kleiner Kombi-Abschlag
+        let comboOdds = odds.oddsWinOver;
         playSound('click');
         game.money -= stake;
         activeBet = { type: 'combo', outcome, specialType, stake, odds: comboOdds, matchday: game.matchday };
@@ -18269,11 +18294,11 @@ function finishGoalkeeperGame() {
             </div>
             <input type="number" id="bet-stake-input" placeholder="Einsatz in €" class="input-inline" style="width:100%; margin-bottom:6px;">
             <div style="font-size:9px; font-weight:800; color:var(--text-muted); margin-bottom:3px;">SPIELAUSGANG</div>
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin-bottom:8px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-bottom:4px;">
                 <button onclick="placeBet('win', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-action" style="font-size:10px;">Sieg @ ${odds.oddsWin}</button>
                 <button onclick="placeBet('draw', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-secondary" style="font-size:10px;">Remis @ ${odds.oddsDraw}</button>
-                <button onclick="placeBet('loss', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-secondary" style="font-size:10px;">Niederlage @ ${odds.oddsLoss}</button>
             </div>
+            <div style="font-size:8px; color:var(--text-muted); margin-bottom:8px;">🚫 Auf eine Niederlage der eigenen Mannschaft zu wetten ist verboten. Quoten gelten für deine beste verfügbare Elf.</div>
             <div style="font-size:9px; font-weight:800; color:var(--text-muted); margin-bottom:3px;">SONDERWETTEN</div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-bottom:4px;">
                 <button onclick="placeSpecialBet('over', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-secondary" style="font-size:10px;">Über 2.5 @ ${odds.oddsOver}</button>
@@ -18282,7 +18307,7 @@ function finishGoalkeeperGame() {
                 <button onclick="placeSpecialBet('bttsNo', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-secondary" style="font-size:10px;">Nicht beide @ ${odds.oddsBttsNo}</button>
             </div>
             <div style="font-size:9px; font-weight:800; color:var(--text-muted); margin-bottom:3px;">KOMBIWETTE (Sieg + Über 2.5)</div>
-            <button onclick="placeComboBet('win', 'over', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-gold">Kombi Sieg + Über 2.5 @ ${+(odds.oddsWin * odds.oddsOver * 0.95).toFixed(2)}</button>
+            <button onclick="placeComboBet('win', 'over', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-gold">Kombi Sieg + Über 2.5 @ ${odds.oddsWinOver}</button>
         `;
         renderBetHistory();
     }
@@ -19687,12 +19712,12 @@ function renderStadiumEventsPanel() {
     // wieder zu verkaufen (zu einem Abschlag, wie im echten Immobilienmarkt üblich).
 
     let realEstatePortfolio = {
-        parkplatz: { name: "Parkplatz-Gelände", owned: false, lvl: 0, max: 3, baseCost: 3200000, baseIncome: 2800, desc: "Vermietete Parkflächen rund ums Stadion - Einnahmen aus Parkgebühren an Spiel- und Nicht-Spieltagen." },
-        buerokomplex: { name: "Bürokomplex 'Vereins-Tower'", owned: false, lvl: 0, max: 3, baseCost: 8500000, baseIncome: 6200, desc: "Vermietete Büroflächen an lokale Unternehmen - stabile, planbare Mieteinnahmen." },
-        wohnanlage: { name: "Wohnanlage am Stadion", owned: false, lvl: 0, max: 3, baseCost: 12000000, baseIncome: 7500, desc: "Mietwohnungen in Stadionnähe - beliebt bei Fans, die nah am Verein wohnen wollen." },
-        einkaufszentrum: { name: "Einkaufszentrum 'Fan-Meile'", owned: false, lvl: 0, max: 3, baseCost: 18000000, baseIncome: 9800, desc: "Ladenflächen für Einzelhandel und Gastronomie - höhere Miete, aber auch höheres Risiko bei schlechter Konjunktur." },
-        hotelbeteiligung: { name: "Hotel-Beteiligung", owned: false, lvl: 0, max: 3, baseCost: 22000000, baseIncome: 11500, desc: "Anteile an einem Hotel für Gästefans und Geschäftsreisende - Einnahmen steigen zusätzlich mit der Attraktivität des Vereins." },
-        gewerbepark: { name: "Gewerbepark", owned: false, lvl: 0, max: 3, baseCost: 15000000, baseIncome: 8200, desc: "Gemischt genutzter Gewerbepark mit mehreren kleinen Mietern - breit gestreutes, robustes Einkommen." }
+        parkplatz: { name: "Parkplatz-Gelände", owned: false, lvl: 0, max: 3, baseCost: 3200000, baseIncome: 12600, desc: "Vermietete Parkflächen rund ums Stadion - Einnahmen aus Parkgebühren an Spiel- und Nicht-Spieltagen." },
+        buerokomplex: { name: "Bürokomplex 'Vereins-Tower'", owned: false, lvl: 0, max: 3, baseCost: 8500000, baseIncome: 27900, desc: "Vermietete Büroflächen an lokale Unternehmen - stabile, planbare Mieteinnahmen." },
+        wohnanlage: { name: "Wohnanlage am Stadion", owned: false, lvl: 0, max: 3, baseCost: 12000000, baseIncome: 33800, desc: "Mietwohnungen in Stadionnähe - beliebt bei Fans, die nah am Verein wohnen wollen." },
+        einkaufszentrum: { name: "Einkaufszentrum 'Fan-Meile'", owned: false, lvl: 0, max: 3, baseCost: 18000000, baseIncome: 44100, desc: "Ladenflächen für Einzelhandel und Gastronomie - höhere Miete, aber auch höheres Risiko bei schlechter Konjunktur." },
+        hotelbeteiligung: { name: "Hotel-Beteiligung", owned: false, lvl: 0, max: 3, baseCost: 22000000, baseIncome: 51800, desc: "Anteile an einem Hotel für Gästefans und Geschäftsreisende - Einnahmen steigen zusätzlich mit der Attraktivität des Vereins." },
+        gewerbepark: { name: "Gewerbepark", owned: false, lvl: 0, max: 3, baseCost: 15000000, baseIncome: 36900, desc: "Gemischt genutzter Gewerbepark mit mehreren kleinen Mietern - breit gestreutes, robustes Einkommen." }
     };
 
     function getRealEstateCost(key) {
@@ -19704,7 +19729,10 @@ function renderStadiumEventsPanel() {
         let p = realEstatePortfolio[key];
         if (!p.owned) return 0;
         let scale = typeof getStadiumCostScale === 'function' ? getStadiumCostScale() : 1;
-        let income = Math.round(p.baseIncome * p.lvl * scale);
+        // Stufe n kostet n-mal den Grundpreis - die Miete wächst deshalb im selben Verhältnis
+        // (1, 3, 6), damit sich jede Ausbaustufe gleich gut rechnet (rund 10 Saisons Amortisation;
+        // vorher 40-60 Saisons, und jede weitere Stufe lohnte sich noch weniger).
+        let income = Math.round(p.baseIncome * p.lvl * (p.lvl + 1) / 2 * scale);
         // Hotel-Beteiligung profitiert zusätzlich von der Attraktivität des Vereins
         // (Manager-Medienimage und Fan-Zufriedenheit ziehen mehr Gästefans/Besucher an).
         if (key === 'hotelbeteiligung') income = Math.round(income * (1 + ((game.managerMediaImage ?? 50) / 200)));
@@ -19735,7 +19763,8 @@ function renderStadiumEventsPanel() {
         if (!p.owned) return;
         // Verkauf zu 55% des ursprünglichen Investitionswerts (Marktabschlag), wie bei
         // echten Immobilienverkäufen unter Zeitdruck üblich.
-        let refund = Math.round(getRealEstateCost(key) === 0 ? 0 : (p.baseCost * p.lvl * getStadiumCostScale() * 0.55));
+        // 55 % der insgesamt gezahlten Kaufsummen (Stufe 1 + 2 + ... = Grundpreis * n(n+1)/2).
+        let refund = Math.round(p.baseCost * p.lvl * (p.lvl + 1) / 2 * getStadiumCostScale() * 0.55);
         // Das letzte verbliebene window.confirm() im Spiel - in manchen Android-WebViews
         // unterdrueckt, der Verkauf waere dort entweder ungefragt durchgelaufen oder gar
         // nicht. Jetzt dieselbe Zwei-Klick-Bestaetigung wie bei allen anderen folgenreichen
@@ -22599,10 +22628,14 @@ function renderYouthDevelopmentChart() {
         playSound('click');
         game.money -= stake;
         underworld.insiderBetActive = true;
+        // Auszahlung nach der echten Siegchance (Wettbüro-Simulation) plus 10 % Insider-Vorteil,
+        // höchstens das Dreifache. Bisher immer das Dreifache - bei 70 % Siegchance +110 % je Spiel.
+        const quoten = typeof calcNextMatchOdds === 'function' ? calcNextMatchOdds() : null;
+        underworld.insiderBetMultiplier = quoten ? Math.min(3, +(quoten.oddsWin * BET_MARGIN * 1.1).toFixed(2)) : 1.5;
         underworld.insiderBetStake = stake;
         renderUnderworldView();
         updateUI();
-        showNotice('💰 Insider-Wette platziert', `${formatVal(stake)} sind heimlich auf den eigenen Sieg im nächsten Spiel gesetzt.\n\nBei einem Sieg kommt die dreifache Summe zurück - ohne zusätzliches Entdeckungsrisiko.`, { typ: 'warn' });
+        showNotice('💰 Insider-Wette platziert', `${formatVal(stake)} sind heimlich auf den eigenen Sieg im nächsten Spiel gesetzt.\n\nBei einem Sieg kommt das ${underworld.insiderBetMultiplier}-fache zurück (je nach Siegchance) - ohne zusätzliches Entdeckungsrisiko.`, { typ: 'warn' });
     }
 
     // Löst die Insider-Wette nach dem Spiel auf - wird aus applyMatchdayFinances() (match.js)
@@ -22614,7 +22647,7 @@ function renderYouthDevelopmentChart() {
             // Bugfix: Auszahlung war bisher unabhängig vom tatsächlichen (jetzt liga-
             // skalierten) Einsatz fix bei 30.000 € - jetzt konsistent das Dreifache des
             // tatsächlich eingesetzten Betrags.
-            let payout = (underworld.insiderBetStake || 10000) * 3;
+            let payout = Math.round((underworld.insiderBetStake || 10000) * (underworld.insiderBetMultiplier || 3));
             game.money += payout;
             addInboxMessage('vertrag', '💰 Insider-Wett-Coup ausgezahlt!', `Der heimliche Sieg-Tipp ging auf - ${formatVal(payout)} sind soeben über obskure Kanäle auf dem Vereinskonto eingegangen.`, 'screen-underworld');
         } else {
@@ -26479,7 +26512,10 @@ function cleanupLegacyScoutState() {
             let diversificationBonus = typeof getDiversificationBonus === 'function' ? getDiversificationBonus() : 0;
             let dividends = Math.round(STOCK_KEYS.reduce((sum, key) => {
                 let s = stockMarket[key];
-                return s ? sum + (s.owned * s.price * (s.dividendRate + diversificationBonus)) : sum;
+                // dividendRate ist ein Jahressatz (so wird er auch angezeigt) - ausgezahlt wird
+                // monatlich, also 1/8,5 davon. Bisher gab es den vollen Satz jeden Monat: 17-51 %
+                // Rendite pro Saison fast ohne Kursrisiko.
+                return s ? sum + (s.owned * s.price * (s.dividendRate + diversificationBonus) / 8.5) : sum;
             }, 0));
             game.money += dividends;
         }

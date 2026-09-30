@@ -4413,6 +4413,68 @@ async function testPhase14Teil3(browser) {
     await page.close();
 }
 
+async function testPhase14Teil4(browser) {
+    console.log('\n[P14d] Wirtschaft: Wetten, Aktien, Immobilien, Insider-Wette');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        const out = {};
+        // Wetten: Quoten aus der Simulation mit Marge, kein Wetten auf die eigene Niederlage
+        const o = calcNextMatchOdds();
+        out.keineNiederlageQuote = o.oddsLoss === undefined;
+        out.margeSieg = o.probabilities.win * o.oddsWin < 1 && o.probabilities.draw * o.oddsDraw < 1 && o.probabilities.winOver * o.oddsWinOver < 1.02;
+        const geld = game.money;
+        placeBet('loss', 1000);
+        out.niederlageVerboten = game.money === geld && !activeBet;
+        // Schwache Aufstellung darf die Siegquote nicht hochtreiben
+        const gespeichert = lineup.slice();
+        lineup = [...squad].sort((a, b) => a.strength - b.strength).slice(0, 11).map(p => p.id);
+        const schwach = calcNextMatchOdds();
+        lineup = gespeichert;
+        out.aufstellungEgal = Math.abs(schwach.oddsWin - o.oddsWin) / o.oddsWin < 0.25;
+
+        // Aktien: im Mittel kein Kursverfall, Anleihe ohne Einbrüche wie eine Tech-Aktie
+        const kurs = key => {
+            const s = stockMarket[key], start = s.price, werte = [];
+            for (let run = 0; run < 150; run++) { s.price = start; for (let t = 0; t < 34; t++) updateStockMarket(); werte.push(s.price / start); }
+            s.price = start; werte.sort((a, b) => a - b);
+            return { mittel: werte.reduce((a, b) => a + b, 0) / werte.length, schlecht: werte[15] };
+        };
+        const anleihe = kurs('staatsanleihe'), biotech = kurs('biotech');
+        out.aktien = anleihe.mittel > 0.93 && anleihe.mittel < 1.07 && anleihe.schlecht > 0.85 && biotech.mittel > 0.8;
+
+        // Immobilien: rund 10 Saisons Amortisation, jede Stufe lohnt sich gleich
+        const pp = realEstatePortfolio.parkplatz;
+        pp.owned = true; pp.lvl = 1;
+        const k1 = getRealEstateCost('parkplatz') / 2, e1 = getRealEstateIncome('parkplatz');
+        const k2 = getRealEstateCost('parkplatz'); pp.lvl = 2; const e2 = getRealEstateIncome('parkplatz');
+        pp.owned = false; pp.lvl = 0;
+        const amort1 = k1 / (e1 * 34), amort2 = k2 / ((e2 - e1) * 34);
+        out.immobilien = amort1 > 6 && amort1 < 16 && Math.abs(amort1 - amort2) < 0.5;
+
+        // Insider-Wette: Auszahlung nach Siegchance, höchstens das Dreifache
+        game.money = 10000000;
+        placeUnderworldInsiderBet();
+        out.insider = underworld.insiderBetMultiplier > 1 && underworld.insiderBetMultiplier <= 3;
+
+        // Keine echten Vereinsnamen in Holding-Aufträgen (auch nicht in alten Spielständen)
+        holdingCompany.b2bContracts.push({ id: 'alt', club: 'Real Madrid', item: 'x', amount: 1, reqMat: 'cotton', reqQty: 1, payout: 1, done: false });
+        cleanupRemovedModuleState();
+        out.namen = !holdingCompany.b2bContracts.some(c => /Real Madrid|FC Bayern|FC Liverpool/.test(c.club));
+        return out;
+    });
+    assert(r.keineNiederlageQuote && r.niederlageVerboten, 'Keine Wette auf die eigene Niederlage (Spielmanipulation)');
+    assert(r.margeSieg, 'Wettquoten aus der Spielsimulation mit Buchmacher-Marge (auch Kombi)');
+    assert(r.aufstellungEgal, 'Schwache Aufstellung treibt die Siegquote nicht hoch');
+    assert(r.aktien, 'Aktienkurse ohne systematischen Verfall, Staatsanleihe bleibt sicher');
+    assert(r.immobilien, 'Immobilien amortisieren sich in rund 10 Saisons, jede Stufe gleich gut');
+    assert(r.insider, 'Insider-Wette zahlt nach Siegchance, höchstens das Dreifache');
+    assert(r.namen, 'Holding-Aufträge ohne echte Vereinsnamen');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler in Phase 14 Teil 4 (${consoleErrors.slice(0, 3).join(' | ')})`);
+    await page.close();
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -4490,6 +4552,7 @@ async function main() {
         testPhase14Teil1,
         testPhase14Teil2,
         testPhase14Teil3,
+        testPhase14Teil4,
         testRuntimeRoundTrip,
     ];
 

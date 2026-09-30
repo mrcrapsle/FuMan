@@ -112,10 +112,14 @@
         playSound('click');
         game.money -= stake;
         underworld.insiderBetActive = true;
+        // Auszahlung nach der echten Siegchance (Wettbüro-Simulation) plus 10 % Insider-Vorteil,
+        // höchstens das Dreifache. Bisher immer das Dreifache - bei 70 % Siegchance +110 % je Spiel.
+        const quoten = typeof calcNextMatchOdds === 'function' ? calcNextMatchOdds() : null;
+        underworld.insiderBetMultiplier = quoten ? Math.min(3, +(quoten.oddsWin * BET_MARGIN * 1.1).toFixed(2)) : 1.5;
         underworld.insiderBetStake = stake;
         renderUnderworldView();
         updateUI();
-        showNotice('💰 Insider-Wette platziert', `${formatVal(stake)} sind heimlich auf den eigenen Sieg im nächsten Spiel gesetzt.\n\nBei einem Sieg kommt die dreifache Summe zurück - ohne zusätzliches Entdeckungsrisiko.`, { typ: 'warn' });
+        showNotice('💰 Insider-Wette platziert', `${formatVal(stake)} sind heimlich auf den eigenen Sieg im nächsten Spiel gesetzt.\n\nBei einem Sieg kommt das ${underworld.insiderBetMultiplier}-fache zurück (je nach Siegchance) - ohne zusätzliches Entdeckungsrisiko.`, { typ: 'warn' });
     }
 
     // Löst die Insider-Wette nach dem Spiel auf - wird aus applyMatchdayFinances() (match.js)
@@ -127,7 +131,7 @@
             // Bugfix: Auszahlung war bisher unabhängig vom tatsächlichen (jetzt liga-
             // skalierten) Einsatz fix bei 30.000 € - jetzt konsistent das Dreifache des
             // tatsächlich eingesetzten Betrags.
-            let payout = (underworld.insiderBetStake || 10000) * 3;
+            let payout = Math.round((underworld.insiderBetStake || 10000) * (underworld.insiderBetMultiplier || 3));
             game.money += payout;
             addInboxMessage('vertrag', '💰 Insider-Wett-Coup ausgezahlt!', `Der heimliche Sieg-Tipp ging auf - ${formatVal(payout)} sind soeben über obskure Kanäle auf dem Vereinskonto eingegangen.`, 'screen-underworld');
         } else {

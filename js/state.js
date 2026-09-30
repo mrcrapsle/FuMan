@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '2.7.1', date: '30.09.2026', features: 'Phase 14: Statistik, Kabine und Bildschirme aufgeräumt' };
+    const GAME_VERSION = { number: '2.8', date: '30.09.2026', features: 'Phase 14: Statistik, Kabine, Reiter, Wirtschaft (Wetten, Aktien, Immobilien) korrigiert' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -265,9 +265,9 @@
         money: 50000,
         valuation: 125000,
         b2bContracts: [
-            { id: 'b2b1', club: "Real Madrid", item: "Trikots", amount: 1000, reqMat: 'cotton', reqQty: 1000, payout: 65000, done: false },
-            { id: 'b2b2', club: "FC Bayern", item: "Fan-Schals", amount: 2000, reqMat: 'wool', reqQty: 1200, payout: 38000, done: false },
-            { id: 'b2b3', club: "FC Liverpool", item: "Spielbälle", amount: 800, reqMat: 'leather', reqQty: 960, payout: 48000, done: false }
+            { id: 'b2b1', club: "Real Madrit", item: "Trikots", amount: 1000, reqMat: 'cotton', reqQty: 1000, payout: 65000, done: false },
+            { id: 'b2b2', club: "Bayern Munchen", item: "Fan-Schals", amount: 2000, reqMat: 'wool', reqQty: 1200, payout: 38000, done: false },
+            { id: 'b2b3', club: "Liverpol FC", item: "Spielbälle", amount: 800, reqMat: 'leather', reqQty: 960, payout: 48000, done: false }
         ]
     };
 
@@ -609,5 +609,8 @@
             'internationalTournaments', 'playerInternationalCaps', 'internationalTournamentHistory', 'nextWorldCup', 'transferMarket', 'postMatchAnalysis',
             'transferBudgetUsed', 'transferMarketPlayers', 'transferLastRefreshMatchday', 'reserves', 'tournamentBrackets',
             'squadHarmony', 'disciplinarySystem', 'crises', 'localRivals'].forEach(k => { delete game[k]; });
+        // Holding-Aufträge alter Spielstände trugen echte Vereinsnamen.
+        const echteNamen = { 'Real Madrid': 'Real Madrit', 'FC Bayern': 'Bayern Munchen', 'FC Liverpool': 'Liverpol FC' };
+        if (typeof holdingCompany !== 'undefined') (holdingCompany.b2bContracts || []).forEach(c => { if (echteNamen[c.club]) c.club = echteNamen[c.club]; });
         squad.forEach(p => { delete p.currentFitnessBoost; });
     }

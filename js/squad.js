@@ -491,9 +491,8 @@
     }
 
     let autoLineupInProgress = false;
-    function autoLineup() {
-        if (autoLineupInProgress) return; // Rückfall-Schutz gegen Rekursion (siehe calcTeamStrength -> autoLineup -> renderSquadView -> ... Zyklus)
-        autoLineupInProgress = true;
+    // Beste Elf für die aktuelle Formation, ohne etwas zu verändern (auch fürs Wettbüro).
+    function pickBestLineupIds() {
         let available = squad.filter(p => (p.suspended || 0) === 0 && (p.injured || 0) === 0 && (p.nationalDuty || 0) === 0);
         let effStr = p => p.strength * (p.fitness / 100);
         let tws = available.filter(p => p.pos === 'TW').sort((a, b) => effStr(b) - effStr(a));
@@ -513,7 +512,13 @@
 
         let remaining = available.filter(p => !chosen.includes(p.id)).sort((a, b) => effStr(b) - effStr(a));
         while (chosen.length < 11 && remaining.length > 0) chosen.push(remaining.shift().id);
-        lineup = chosen;
+        return chosen;
+    }
+
+    function autoLineup() {
+        if (autoLineupInProgress) return; // Rückfall-Schutz gegen Rekursion (siehe calcTeamStrength -> autoLineup -> renderSquadView -> ... Zyklus)
+        autoLineupInProgress = true;
+        lineup = pickBestLineupIds();
         renderSquadView();
         render3DPitch();
         autoLineupInProgress = false;

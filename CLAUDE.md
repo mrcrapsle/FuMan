@@ -107,6 +107,7 @@ This pattern ensures:
 - Transfer windows: matchday-based (summer 1-3, winter 18-20) with `runDeadlineDay()` in `js/transfermarket.js`, driven by `tickTransferWindows()` after every matchday.
 - Season end extras: `js/relegation.js` (own club on rank 3/16, legs on the dashboard, auto-resolved in `concludeSeasonAndAdvance()`), `js/league-awards.js` (`game.leagueAwards`), `js/coach-carousel.js` (AI `team.coach`, temporary `team.coachBounce` - removed via `tickCoachBounce(true)` before leagues advance).
 - Statistics: manager career in `game.managerCareer` (js/manager-analytics.js), Hall of Fame computed from squad + `game.playerRetirement` + `game.managerCareer` (js/hall-of-fame.js). Loans: `js/secondteam.js` / transfermarket loans only.
+- Side income: stock `dividendRate` is an annual rate (paid monthly as rate/8.5); betting odds come from `simulateBetProbabilities()` (same `simulateGoals` as matches) using the best available XI (`pickBestLineupIds()`), no bets on own defeat; real estate income grows with cumulative cost (~10 seasons payback). Measure new income sources before adding them - several were money machines.
 - Removed modules leave save-game fields behind: add them to `cleanupRemovedModuleState()` in js/state.js.
 - Player aging/development: only `agePlayersAtSeasonEnd()` in `js/player-development.js` (age +1, strength by archetype).
 

@@ -9,12 +9,12 @@
     // wieder zu verkaufen (zu einem Abschlag, wie im echten Immobilienmarkt üblich).
 
     let realEstatePortfolio = {
-        parkplatz: { name: "Parkplatz-Gelände", owned: false, lvl: 0, max: 3, baseCost: 3200000, baseIncome: 2800, desc: "Vermietete Parkflächen rund ums Stadion - Einnahmen aus Parkgebühren an Spiel- und Nicht-Spieltagen." },
-        buerokomplex: { name: "Bürokomplex 'Vereins-Tower'", owned: false, lvl: 0, max: 3, baseCost: 8500000, baseIncome: 6200, desc: "Vermietete Büroflächen an lokale Unternehmen - stabile, planbare Mieteinnahmen." },
-        wohnanlage: { name: "Wohnanlage am Stadion", owned: false, lvl: 0, max: 3, baseCost: 12000000, baseIncome: 7500, desc: "Mietwohnungen in Stadionnähe - beliebt bei Fans, die nah am Verein wohnen wollen." },
-        einkaufszentrum: { name: "Einkaufszentrum 'Fan-Meile'", owned: false, lvl: 0, max: 3, baseCost: 18000000, baseIncome: 9800, desc: "Ladenflächen für Einzelhandel und Gastronomie - höhere Miete, aber auch höheres Risiko bei schlechter Konjunktur." },
-        hotelbeteiligung: { name: "Hotel-Beteiligung", owned: false, lvl: 0, max: 3, baseCost: 22000000, baseIncome: 11500, desc: "Anteile an einem Hotel für Gästefans und Geschäftsreisende - Einnahmen steigen zusätzlich mit der Attraktivität des Vereins." },
-        gewerbepark: { name: "Gewerbepark", owned: false, lvl: 0, max: 3, baseCost: 15000000, baseIncome: 8200, desc: "Gemischt genutzter Gewerbepark mit mehreren kleinen Mietern - breit gestreutes, robustes Einkommen." }
+        parkplatz: { name: "Parkplatz-Gelände", owned: false, lvl: 0, max: 3, baseCost: 3200000, baseIncome: 12600, desc: "Vermietete Parkflächen rund ums Stadion - Einnahmen aus Parkgebühren an Spiel- und Nicht-Spieltagen." },
+        buerokomplex: { name: "Bürokomplex 'Vereins-Tower'", owned: false, lvl: 0, max: 3, baseCost: 8500000, baseIncome: 27900, desc: "Vermietete Büroflächen an lokale Unternehmen - stabile, planbare Mieteinnahmen." },
+        wohnanlage: { name: "Wohnanlage am Stadion", owned: false, lvl: 0, max: 3, baseCost: 12000000, baseIncome: 33800, desc: "Mietwohnungen in Stadionnähe - beliebt bei Fans, die nah am Verein wohnen wollen." },
+        einkaufszentrum: { name: "Einkaufszentrum 'Fan-Meile'", owned: false, lvl: 0, max: 3, baseCost: 18000000, baseIncome: 44100, desc: "Ladenflächen für Einzelhandel und Gastronomie - höhere Miete, aber auch höheres Risiko bei schlechter Konjunktur." },
+        hotelbeteiligung: { name: "Hotel-Beteiligung", owned: false, lvl: 0, max: 3, baseCost: 22000000, baseIncome: 51800, desc: "Anteile an einem Hotel für Gästefans und Geschäftsreisende - Einnahmen steigen zusätzlich mit der Attraktivität des Vereins." },
+        gewerbepark: { name: "Gewerbepark", owned: false, lvl: 0, max: 3, baseCost: 15000000, baseIncome: 36900, desc: "Gemischt genutzter Gewerbepark mit mehreren kleinen Mietern - breit gestreutes, robustes Einkommen." }
     };
 
     function getRealEstateCost(key) {
@@ -26,7 +26,10 @@
         let p = realEstatePortfolio[key];
         if (!p.owned) return 0;
         let scale = typeof getStadiumCostScale === 'function' ? getStadiumCostScale() : 1;
-        let income = Math.round(p.baseIncome * p.lvl * scale);
+        // Stufe n kostet n-mal den Grundpreis - die Miete wächst deshalb im selben Verhältnis
+        // (1, 3, 6), damit sich jede Ausbaustufe gleich gut rechnet (rund 10 Saisons Amortisation;
+        // vorher 40-60 Saisons, und jede weitere Stufe lohnte sich noch weniger).
+        let income = Math.round(p.baseIncome * p.lvl * (p.lvl + 1) / 2 * scale);
         // Hotel-Beteiligung profitiert zusätzlich von der Attraktivität des Vereins
         // (Manager-Medienimage und Fan-Zufriedenheit ziehen mehr Gästefans/Besucher an).
         if (key === 'hotelbeteiligung') income = Math.round(income * (1 + ((game.managerMediaImage ?? 50) / 200)));
@@ -57,7 +60,8 @@
         if (!p.owned) return;
         // Verkauf zu 55% des ursprünglichen Investitionswerts (Marktabschlag), wie bei
         // echten Immobilienverkäufen unter Zeitdruck üblich.
-        let refund = Math.round(getRealEstateCost(key) === 0 ? 0 : (p.baseCost * p.lvl * getStadiumCostScale() * 0.55));
+        // 55 % der insgesamt gezahlten Kaufsummen (Stufe 1 + 2 + ... = Grundpreis * n(n+1)/2).
+        let refund = Math.round(p.baseCost * p.lvl * (p.lvl + 1) / 2 * getStadiumCostScale() * 0.55);
         // Das letzte verbliebene window.confirm() im Spiel - in manchen Android-WebViews
         // unterdrueckt, der Verkauf waere dort entweder ungefragt durchgelaufen oder gar
         // nicht. Jetzt dieselbe Zwei-Klick-Bestaetigung wie bei allen anderen folgenreichen

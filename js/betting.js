@@ -7,19 +7,36 @@
     const MAX_BET_STAKE_FRACTION = 0.15; // max. 15% des aktuellen Kontostands
     const MIN_BET_STAKE = 10;
 
-    // Reine, testbare Quotenberechnung aus Stärkedifferenz + Heimvorteil.
-    function calcOddsFromStrength(ourStr, oppStr, isHome) {
-        let diff = (ourStr - oppStr) + (isHome ? 5 : -5);
-        let pWin = 1 / (1 + Math.exp(-diff / 12));
-        let pDraw = Math.max(0.14, Math.min(0.30, 0.24 - Math.abs(diff) * 0.003));
-        let pLoss = Math.max(0.03, 1 - pWin - pDraw);
-        let total = pWin + pDraw + pLoss;
-        pWin /= total; pDraw /= total; pLoss /= total;
-        return {
-            oddsWin: +(1 / pWin / BET_MARGIN).toFixed(2),
-            oddsDraw: +(1 / pDraw / BET_MARGIN).toFixed(2),
-            oddsLoss: +(1 / pLoss / BET_MARGIN).toFixed(2)
-        };
+    const BET_SIMULATIONS = 400;
+    const quote = pr => +(1 / Math.max(0.02, pr) / BET_MARGIN).toFixed(2);
+
+    // Wahrscheinlichkeiten aus derselben Tor-Formel wie die Spieltagssimulation (simulateGoals).
+    // Früher kamen sie aus einer eigenen Logistik-Formel, die die eigene Mannschaft deutlich
+    // überschätzte - eine Wette auf die eigene Niederlage brachte im Schnitt +58 %.
+    function simulateBetProbabilities(ownStr, oppStr, isHome, ownTeam, oppTeam) {
+        let sieg = 0, remis = 0, ueber = 0, beide = 0, siegUndUeber = 0;
+        for (let i = 0; i < BET_SIMULATIONS; i++) {
+            const g = isHome ? simulateGoals(ownStr, oppStr, ownTeam, oppTeam) : simulateGoals(oppStr, ownStr, oppTeam, ownTeam);
+            const own = isHome ? g.myGoals : g.oppGoals, opp = isHome ? g.oppGoals : g.myGoals;
+            if (own > opp) sieg++; else if (own === opp) remis++;
+            if (own + opp > 2) ueber++;
+            if (own > 0 && opp > 0) beide++;
+            if (own > opp && own + opp > 2) siegUndUeber++;
+        }
+        const n = BET_SIMULATIONS;
+        return { win: sieg / n, draw: remis / n, loss: 1 - (sieg + remis) / n, over: ueber / n, btts: beide / n, winOver: siegUndUeber / n };
+    }
+
+    // Die eigene Stärke zählt mit der besten verfügbaren Elf - sonst ließe sich mit einer
+    // schwachen Aufstellung eine hohe Siegquote holen und danach die Top-Elf aufstellen.
+    function bettingOwnStrength(isHome) {
+        const aktuell = calcTeamStrength(isHome);
+        if (typeof pickBestLineupIds !== 'function') return aktuell;
+        const gespeichert = lineup;
+        lineup = pickBestLineupIds();
+        const beste = calcTeamStrength(isHome);
+        lineup = gespeichert;
+        return Math.max(aktuell, beste);
     }
 
     function calcNextMatchOdds() {
@@ -33,28 +50,24 @@
         if (!ourFixture || ourFixture.played) return null;
 
         let isHome = leaguesData[game.leagueLevel][ourFixture.home].name === game.clubName;
-        let ourStr = calcTeamStrength(isHome);
+        let ownTeam = leaguesData[game.leagueLevel].find(t => t.name === game.clubName) || null;
         let oppName = isHome ? leaguesData[game.leagueLevel][ourFixture.away].name : leaguesData[game.leagueLevel][ourFixture.home].name;
         let oppObj = leaguesData[game.leagueLevel].find(t => t.name === oppName);
         let oppStr = applySabotageToOpponentStrength(oppObj ? oppObj.strength : 60);
-
-        let odds = calcOddsFromStrength(ourStr, oppStr, isHome);
-        odds.oppName = oppName;
-        odds.isHome = isHome;
-        // Sonderwetten-Quoten: Über/Unter 2.5 Tore & Beide Teams treffen - grob aus der
-        // Gesamt-Offensivstärke beider Teams hergeleitet (rein heuristisch, aber reagiert
-        // sinnvoll auf starke Angriffsteams vs. große Stärkeunterschiede).
-        let combinedStrength = (ourStr + oppStr) / 2;
-        let pOver = Math.max(0.25, Math.min(0.75, 0.5 + (combinedStrength - 60) * 0.004));
-        odds.oddsOver = +(1 / pOver / BET_MARGIN).toFixed(2);
-        odds.oddsUnder = +(1 / (1 - pOver) / BET_MARGIN).toFixed(2);
-        let pBtts = Math.max(0.25, Math.min(0.7, 0.48 - Math.abs(ourStr - oppStr) * 0.004));
-        odds.oddsBttsYes = +(1 / pBtts / BET_MARGIN).toFixed(2);
-        odds.oddsBttsNo = +(1 / (1 - pBtts) / BET_MARGIN).toFixed(2);
-        return odds;
+        let pr = simulateBetProbabilities(bettingOwnStrength(isHome), oppStr, isHome, ownTeam, oppObj || null);
+        return {
+            oppName, isHome, probabilities: pr,
+            oddsWin: quote(pr.win), oddsDraw: quote(pr.draw),
+            oddsOver: quote(pr.over), oddsUnder: quote(1 - pr.over),
+            oddsBttsYes: quote(pr.btts), oddsBttsNo: quote(1 - pr.btts),
+            // Sieg und viele Tore hängen zusammen - die Kombi-Quote kommt deshalb aus der
+            // gemeinsamen Wahrscheinlichkeit statt aus dem Produkt der Einzelquoten.
+            oddsWinOver: quote(pr.winOver)
+        };
     }
 
     function placeBet(outcome, stake) {
+        if (outcome !== 'win' && outcome !== 'draw') { showToast('🚫 Wettverbot: Auf eine Niederlage der eigenen Mannschaft darf ein Verein nicht wetten.', 'error', 5000); return; }
         if (activeBet) { showToast('Es läuft bereits eine Wette für den nächsten Spieltag!', 'error'); return; }
         let odds = calcNextMatchOdds();
         if (!odds) { showToast('Kein anstehendes Ligaspiel zum Wetten gefunden!', 'error'); return; }
@@ -63,7 +76,7 @@
         if (!stake || stake < MIN_BET_STAKE) { showToast(`Mindesteinsatz ${MIN_BET_STAKE} €, Höchsteinsatz ${formatVal(maxStake)} (15% des Kontostands)!`, 'error'); return; }
         playSound('click');
         game.money -= stake;
-        let oddsForOutcome = outcome === 'win' ? odds.oddsWin : (outcome === 'draw' ? odds.oddsDraw : odds.oddsLoss);
+        let oddsForOutcome = outcome === 'win' ? odds.oddsWin : odds.oddsDraw;
         activeBet = { type: 'outcome', outcome, stake, odds: oddsForOutcome, matchday: game.matchday };
         renderBettingView(); updateUI();
         let outcomeLabel = outcome === 'win' ? 'Sieg' : (outcome === 'draw' ? 'Unentschieden' : 'Niederlage');
@@ -91,15 +104,14 @@
     // Gesamtquote ist das Produkt beider Einzelquoten (klassisches Kombiwetten-Prinzip),
     // mit einem kleinen Kombi-Aufschlag der Marge als zusätzliches Buchmacher-Risiko.
     function placeComboBet(outcome, specialType, stake) {
+        if (outcome !== 'win' || specialType !== 'over') { showToast('Kombiwette nur als Sieg + Über 2.5 möglich.', 'error'); return; }
         if (activeBet) { showToast('Es läuft bereits eine Wette für den nächsten Spieltag!', 'error'); return; }
         let odds = calcNextMatchOdds();
         if (!odds) { showToast('Kein anstehendes Ligaspiel zum Wetten gefunden!', 'error'); return; }
         let maxStake = Math.max(MIN_BET_STAKE, Math.round(game.money * MAX_BET_STAKE_FRACTION));
         stake = Math.min(stake, maxStake, game.money);
         if (!stake || stake < MIN_BET_STAKE) { showToast(`Mindesteinsatz ${MIN_BET_STAKE} €, Höchsteinsatz ${formatVal(maxStake)}!`, 'error'); return; }
-        let oddsForOutcome = outcome === 'win' ? odds.oddsWin : (outcome === 'draw' ? odds.oddsDraw : odds.oddsLoss);
-        let oddsMap = { over: odds.oddsOver, under: odds.oddsUnder, bttsYes: odds.oddsBttsYes, bttsNo: odds.oddsBttsNo };
-        let comboOdds = +(oddsForOutcome * oddsMap[specialType] * 0.95).toFixed(2); // kleiner Kombi-Abschlag
+        let comboOdds = odds.oddsWinOver;
         playSound('click');
         game.money -= stake;
         activeBet = { type: 'combo', outcome, specialType, stake, odds: comboOdds, matchday: game.matchday };
@@ -183,11 +195,11 @@
             </div>
             <input type="number" id="bet-stake-input" placeholder="Einsatz in €" class="input-inline" style="width:100%; margin-bottom:6px;">
             <div style="font-size:9px; font-weight:800; color:var(--text-muted); margin-bottom:3px;">SPIELAUSGANG</div>
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin-bottom:8px;">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-bottom:4px;">
                 <button onclick="placeBet('win', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-action" style="font-size:10px;">Sieg @ ${odds.oddsWin}</button>
                 <button onclick="placeBet('draw', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-secondary" style="font-size:10px;">Remis @ ${odds.oddsDraw}</button>
-                <button onclick="placeBet('loss', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-secondary" style="font-size:10px;">Niederlage @ ${odds.oddsLoss}</button>
             </div>
+            <div style="font-size:8px; color:var(--text-muted); margin-bottom:8px;">🚫 Auf eine Niederlage der eigenen Mannschaft zu wetten ist verboten. Quoten gelten für deine beste verfügbare Elf.</div>
             <div style="font-size:9px; font-weight:800; color:var(--text-muted); margin-bottom:3px;">SONDERWETTEN</div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-bottom:4px;">
                 <button onclick="placeSpecialBet('over', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-secondary" style="font-size:10px;">Über 2.5 @ ${odds.oddsOver}</button>
@@ -196,7 +208,7 @@
                 <button onclick="placeSpecialBet('bttsNo', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-secondary" style="font-size:10px;">Nicht beide @ ${odds.oddsBttsNo}</button>
             </div>
             <div style="font-size:9px; font-weight:800; color:var(--text-muted); margin-bottom:3px;">KOMBIWETTE (Sieg + Über 2.5)</div>
-            <button onclick="placeComboBet('win', 'over', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-gold">Kombi Sieg + Über 2.5 @ ${+(odds.oddsWin * odds.oddsOver * 0.95).toFixed(2)}</button>
+            <button onclick="placeComboBet('win', 'over', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-gold">Kombi Sieg + Über 2.5 @ ${odds.oddsWinOver}</button>
         `;
         renderBetHistory();
     }

@@ -1828,7 +1828,10 @@
             let diversificationBonus = typeof getDiversificationBonus === 'function' ? getDiversificationBonus() : 0;
             let dividends = Math.round(STOCK_KEYS.reduce((sum, key) => {
                 let s = stockMarket[key];
-                return s ? sum + (s.owned * s.price * (s.dividendRate + diversificationBonus)) : sum;
+                // dividendRate ist ein Jahressatz (so wird er auch angezeigt) - ausgezahlt wird
+                // monatlich, also 1/8,5 davon. Bisher gab es den vollen Satz jeden Monat: 17-51 %
+                // Rendite pro Saison fast ohne Kursrisiko.
+                return s ? sum + (s.owned * s.price * (s.dividendRate + diversificationBonus) / 8.5) : sum;
             }, 0));
             game.money += dividends;
         }
