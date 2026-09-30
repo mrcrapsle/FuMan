@@ -208,7 +208,7 @@
             // Spieler-Detail eine echte Entwicklungskurve statt nur des aktuellen Werts
             // angezeigt werden kann.
             if (!p.strengthHistory) p.strengthHistory = [];
-            p.strengthHistory.push({ season: game.season, strength: p.strength });
+            p.strengthHistory.push({ season: game.season, strength: p.strength, apps: p.appearancesSeason || 0, goals: p.goalsSeason || 0 });
             if (p.strengthHistory.length > 15) p.strengthHistory.shift();
             p.goalsSeason = 0;
             p.appearancesSeason = 0;
@@ -235,6 +235,7 @@
             addInboxMessage('vertrag', `⏳ Vertrag läuft aus: ${p.name}`, `${p.name} hat nur noch 1 Jahr Vertrag - jetzt verlängern, sonst verlässt er den Verein am Saisonende ablösefrei!`, 'screen-contracts');
         });
         squad = squad.filter(p => p.contracts > 0);
+        if (typeof agePlayersAtSeasonEnd === 'function') agePlayersAtSeasonEnd();
         if (squad.length < 11) {
             // Notbesetzung: Positionsverteilung wie im Standardkader (2 TW/6 ABW/6 MIT/4 ST),
             // damit garantiert ein spielbares Team entsteht (nicht rein zufällige Positionen).
@@ -255,10 +256,6 @@
         incomingOffers = [];
         if (typeof evaluateFinancialFairplay === 'function') evaluateFinancialFairplay();
         if (typeof recordSeasonStats === 'function') recordSeasonStats();
-        // Player Career Progression: record seasonal performance for all squad members
-        if (typeof recordSeasonalPerformance === 'function') {
-            squad.forEach(p => recordSeasonalPerformance(p));
-        }
         // Manager Analytics: record seasonal manager statistics
         if (typeof recordSeasonalManagerStats === 'function') recordSeasonalManagerStats();
         game.season++;

@@ -35,7 +35,7 @@ function checkForLegendStatus(player) {
 
     const strength = player.strength || 0;
     const games = player.appearances || 0;
-    const goals = player.goals || 0;
+    const goals = player.goalsCareer || 0;
     const assists = player.assists || 0;
 
     let tier = null;
@@ -65,7 +65,7 @@ function schedulePlayerRetirement(playerId) {
         strength: player.strength || 0,
         position: player.pos,
         appearances: player.appearances || 0,
-        goals: player.goals || 0,
+        goals: player.goalsCareer || 0,
         assists: player.assists || 0,
         legendTier: legendTier,
         retirementMatchday: game.matchday,
@@ -89,8 +89,10 @@ function schedulePlayerRetirement(playerId) {
     } else {
         showToast(`👋 ${player.name} tritt aus dem Profifußball zurück.`, 'info', 5000);
     }
+    addInboxMessage('vertrag', `👋 Karriereende: ${player.name}`, `${player.name} beendet mit ${player.age} Jahren seine Laufbahn (${retirementRecord.appearances} Pflichtspiele, ${retirementRecord.goals} Tore für den Verein)${legendTier ? ` - als ${LEGEND_TIERS[legendTier].label}` : ''}.`, 'screen-squad');
 
     squad = squad.filter(p => p.id !== playerId);
+    if (typeof lineup !== 'undefined') lineup = lineup.filter(id => id !== playerId);
     return true;
 }
 

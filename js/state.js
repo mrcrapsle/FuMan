@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '2.5', date: '30.09.2026', features: 'Phase 12: Medizin, Medien, Jugend, Sponsoring zusammengelegt' };
+    const GAME_VERSION = { number: '2.6', date: '30.09.2026', features: 'Phase 13: Gegner, Vorstand, Verträge, Scouting zusammengelegt, Spieler altern' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -213,7 +213,6 @@
         cornerTakerId: null,
         trophies: [],
         clubSwitchHistory: [],
-        agentPool: [],
         localRivals: [],
         academyLeague: null,
         scandals: [],

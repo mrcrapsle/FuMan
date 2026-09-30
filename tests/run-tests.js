@@ -4047,6 +4047,80 @@ async function testPhase12(browser) {
     await page.close();
 }
 
+async function testPhase13(browser) {
+    console.log('\n[P13] Aufgeräumt: Gegner, Vorstand, Verträge, Scouting, Spielerentwicklung');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        const out = {};
+        out.alteModuleWeg = ['tickContractExpirations', 'tickContractRenewal', 'renderNegotiationPanel', 'renderContractManagementPanel',
+            'tickScoutingUpdates', 'renderTalentDetectionPanel', 'renderScoutingIntelligencePanel', 'tickPlayerAging',
+            'recordSeasonalPerformance', 'renderArchetypesPanel', 'checkAgentNegotiations', 'renderAgentsPanel',
+            'tickBoardRelations', 'checkBoardConflict', 'renderOppositionAnalysisPanel']
+            .filter(n => typeof window[n] === 'function');
+
+        // Alter Spielstand mit Daten der abgelösten Module
+        game.contracts = [{ playerId: 1 }]; game.contractRenewal = {}; game.negotiationHistory = []; game.agentPool = [];
+        game.scoutingDatabase = {}; game.scoutingIntelligence = {}; game.playerDevelopment = {};
+        game.boardMembers = []; game.boardConflicts = [];
+        squad[0].contractEnd = 30; squad[1].age = 24.5; squad[1].strength = 51.3;
+
+        // Spielprognose: echte Paarung, Wahrscheinlichkeiten ergeben 100%
+        staffMembers.analyst.hired = true;
+        const prog = predictNextMatch();
+        out.prognose = !!prog && Math.abs(prog.sieg + prog.remis + prog.niederlage - 1) < 1e-9 && !!prog.opp.name;
+
+        simulateMatchdays(4);
+        out.altWeg = ['contracts', 'contractRenewal', 'negotiationHistory', 'agentPool', 'scoutingDatabase', 'scoutingIntelligence',
+            'playerDevelopment', 'boardMembers', 'boardConflicts'].filter(k => game[k] !== undefined);
+        out.ganzzahlig = Number.isInteger(squad[1].age) && Number.isInteger(squad[1].strength) && squad[0].contractEnd === undefined;
+
+        // Vorstand: vier Mitglieder mit Begründung
+        showScreen('screen-manager-tree');
+        out.vorstand = (document.getElementById('board-room-box') || {}).innerText || '';
+
+        // Alterung am Saisonende: jeder genau ein Jahr älter, Typ fest, Rentner verlassen Kader und Aufstellung
+        const vorher = squad.map(p => ({ id: p.id, age: p.age }));
+        const typ = getPlayerArchetype(squad[2]).name;
+        const rentner = squad[3];
+        rentner.age = 35;
+        if (!lineup.includes(rentner.id)) lineup[0] = rentner.id;
+        agePlayersAtSeasonEnd();
+        out.alterung = vorher.filter(v => v.id !== rentner.id).every(v => { const p = squad.find(x => x.id === v.id); return p && p.age === v.age + 1; });
+        out.typFest = getPlayerArchetype(squad[2]).name === typ;
+        out.rentnerWeg = !squad.some(p => p.id === rentner.id) && !lineup.includes(rentner.id);
+        const jung = squad.find(p => p.id !== rentner.id);
+        jung.age = 19; jung.archetype = 'wonderkid';
+        const alt = squad.find(p => p !== jung);
+        alt.age = 33; alt.archetype = 'steady-eddy';
+        out.richtung = getDevelopmentRange(jung)[0] > 0 && getDevelopmentRange(alt)[1] < 0;
+
+        showScreen('screen-squad-planning');
+        out.entwicklungPanel = (document.getElementById('player-development-box') || {}).innerText || '';
+        openPlayerDetail(squad[0].id);
+        out.karriere = (document.getElementById('pd-career-progression') || {}).innerText || '';
+        showScreen('screen-contracts');
+        out.vertragsZeilen = document.querySelectorAll('#contracts-list .panel').length === squad.length;
+        return out;
+    });
+
+    assert(r.alteModuleWeg.length === 0, `Abgelöste Parallel-Systeme sind entfernt (${r.alteModuleWeg.join(', ')})`);
+    assert(r.altWeg.length === 0, `Daten abgelöster Module werden aus Spielständen entfernt (${r.altWeg.join(', ')})`);
+    assert(r.ganzzahlig, 'Kommazahlen der alten Alterung werden bereinigt');
+    assert(r.prognose, 'Spielprognose nutzt die echte nächste Paarung, Wahrscheinlichkeiten ergeben 100%');
+    assert(['Präsident', 'Finanzvorstand', 'Sportvorstand', 'Nachwuchsleiter'].every(t => r.vorstand.includes(t)), 'Vorstands-Panel zeigt vier Mitglieder');
+    assert(r.alterung, 'Am Saisonende altert jeder Spieler um genau ein Jahr');
+    assert(r.typFest, 'Entwicklungstyp eines Spielers bleibt fest');
+    assert(r.rentnerWeg, 'Spieler mit 36 beenden die Karriere und verlassen auch die Aufstellung');
+    assert(r.richtung, 'Junge Spieler legen zu, Spieler nach dem Höhepunkt bauen ab');
+    assert(r.entwicklungPanel.includes('Saisonende'), 'Entwicklungs-Panel in der Kaderplanung');
+    assert(r.karriere.includes('Pflichtspiele'), 'Karriere-Block im Spielerdetail aus gespeicherten Daten');
+    assert(r.vertragsZeilen, 'Vertragsübersicht zeigt jeden Kaderspieler');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler in Phase 13 (${consoleErrors.slice(0, 3).join(' | ')})`);
+    await page.close();
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -4117,6 +4191,7 @@ async function main() {
         testCodeIntegrity,
         testPhase11,
         testPhase12,
+        testPhase13,
         testRuntimeRoundTrip,
     ];
 

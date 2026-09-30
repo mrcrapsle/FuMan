@@ -745,10 +745,7 @@
         renderTeamChemistryPanel();
         if (typeof renderCliqueBox === 'function') renderCliqueBox();
         if (typeof renderLeadershipCouncilBox === 'function') renderLeadershipCouncilBox();
-        if (typeof renderAgentsPanel === 'function') renderAgentsPanel();
         if (typeof renderRivalriesPanel === 'function') renderRivalriesPanel();
-        if (typeof renderArchetypesPanel === 'function') renderArchetypesPanel();
-        if (typeof renderArchetypeComparisonChart === 'function') renderArchetypeComparisonChart();
         if (typeof renderScandalsPanel === 'function') renderScandalsPanel();
         if (typeof renderFanclubManagementPanel === 'function') renderFanclubManagementPanel();
         if (typeof renderTacticSystemPanel === 'function') renderTacticSystemPanel();

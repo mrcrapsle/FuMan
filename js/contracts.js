@@ -69,9 +69,10 @@
     }
 
     // Alte Spielstände: Daten von drei abgelösten Vertragsmodulen, die eigene Scheinverträge
-    // (Laufzeit in Spieltagen, erfundene Gehälter) neben p.contracts führten.
+    // (Laufzeit in Spieltagen, erfundene Gehälter) neben p.contracts führten, und vom nie
+    // befüllten zweiten Berater-Pool (Berater sind p.agent, siehe getAgentFee).
     function cleanupLegacyContractState() {
-        ['contracts', 'contractNegotiations', 'contractRenewal', 'negotiationHistory'].forEach(k => { delete game[k]; });
+        ['contracts', 'contractNegotiations', 'contractRenewal', 'negotiationHistory', 'agentPool'].forEach(k => { delete game[k]; });
         squad.forEach(p => { delete p.contractEnd; delete p.loyaltyYears; });
     }
 

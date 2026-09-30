@@ -1228,7 +1228,6 @@
         setzeBuchungskontext('🏦 Automatische Rücklage');
         if (typeof tickAutoReserve === 'function') tickAutoReserve(game.money - moneyAtStart);
         loescheBuchungskontext();
-        if (typeof checkAgentNegotiations === 'function') checkAgentNegotiations();
         // Derby-Verarbeitung: wenn es ein Spiel gegen einen Rivalen war
         if (typeof currentMatch !== 'undefined' && currentMatch && typeof processDerbyMatch === 'function') {
             processDerbyMatch(currentMatch.opponent, won, currentMatch.score, currentMatch.conceded);
@@ -1773,16 +1772,14 @@
             // Crisis Management: monatliche Krisen-Events
             if (typeof tickCrisisEvents === 'function') tickCrisisEvents();
             if (typeof tickDisciplinaryBans === 'function') tickDisciplinaryBans();
-            // Player Development: Alterung und Entwicklung
-            if (typeof tickPlayerAging === 'function') tickPlayerAging();
+            if (typeof cleanupLegacyDevelopmentState === 'function') cleanupLegacyDevelopmentState();
             if (typeof cleanupLegacyScoutingState === 'function') cleanupLegacyScoutingState();
             // Season Objectives & Squad Harmony: Ziele und Mannschaftsharmonie
             if (typeof tickSeasonObjectives === 'function') tickSeasonObjectives();
             if (typeof tickSquadHarmony === 'function') tickSquadHarmony();
             if (typeof tickTeamCouncil === 'function') tickTeamCouncil();
             if (typeof tickMemberAssembly === 'function') tickMemberAssembly();
-            // Player Retirement & Tournament Brackets: Spieler-Pensionierung und Turnier-Klammern
-            if (typeof tickPlayerRetirement === 'function') tickPlayerRetirement();
+            // Karriereenden: am Saisonende in agePlayersAtSeasonEnd() (js/player-development.js)
             if (typeof tickTournamentBrackets === 'function') tickTournamentBrackets();
             // Opponent Analysis & Match Prediction: Gegner-Analyse und Match-Prognosen
             // Phase 10: Set-Piece Training, Post-Match Analysis, Training Specialization, Fan Events
