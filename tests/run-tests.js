@@ -5180,11 +5180,14 @@ async function testJobOffers(browser) {
         out.mittelfeldKeins = pendingJobApproach === null;
         checkJobOfferApproach({ saisonende: true, rank: 1 });
         Math.random = rnd;
-        out.angebot = !!pendingJobApproach && document.getElementById('joboffer-overlay').classList.contains('show');
+        // Beim Simulieren kein Fenster, sondern Karte auf dem Dashboard
+        showScreen('screen-dashboard');
+        out.angebot = !!pendingJobApproach && !document.getElementById('joboffer-overlay').classList.contains('show')
+            && document.getElementById('dash-joboffer-box').innerHTML.includes(pendingJobApproach.clubName);
         const eigene = leaguesData[game.leagueLevel].find(t => t.name === game.clubName);
         out.passenderVerein = pendingJobApproach && (pendingJobApproach.level < game.leagueLevel || pendingJobApproach.strength > eigene.strength)
             && pendingJobApproach.level >= game.leagueLevel - 1 && pendingJobApproach.clubName !== game.clubName;
-        out.dreiOptionen = document.getElementById('joboffer-overlay').innerHTML.includes('acceptJobOfferMove');
+        out.dreiOptionen = document.getElementById('dash-joboffer-box').innerHTML.includes('acceptJobOfferMove') && document.getElementById('joboffer-overlay').innerHTML.includes('acceptJobOfferMove');
         // Wechsel: Karriere bleibt, neuer Verein, Station wird festgehalten
         const ziel = pendingJobApproach.clubName, lvl = managerRPG.level, trophaeen = game.trophies.length;
         acceptJobOfferMove(null);

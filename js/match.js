@@ -1601,7 +1601,7 @@
             recordHomeAwayResult(isHomeMatchParam, matchResult);
             checkBettingScandalSuspicion(matchResult, matchMargin);
             if (isLiveContext) checkPostMatchInterview(matchResult);
-            checkJobOfferApproach();
+            checkJobOfferApproach({ live: isLiveContext });
             checkContractUltimatum();
         }
         checkFanRadioFeedback();
@@ -2216,6 +2216,8 @@
     // Interesse anderer Vereine hängt am Erfolg: Tabellenplatz, Medienimage, Manager-Level.
     // Nach einer Saison unter den ersten drei kommt sehr wahrscheinlich ein Angebot.
     function checkJobOfferApproach(opts = {}) {
+        // Offene Angebote verfallen nach 6 Spieltagen
+        if (pendingJobApproach && (game.season > pendingJobApproach.season || game.matchday - pendingJobApproach.matchday >= 6)) pendingJobApproach = null;
         if (pendingJobApproach || game.sackPending) return;
         let chance;
         if (opts.saisonende) chance = opts.rank <= 3 ? 0.6 : 0.05;
@@ -2227,9 +2229,26 @@
         if (Math.random() > chance) return;
         let club = pickJobOfferClub();
         if (!club) return;
-        pendingJobApproach = { clubName: club.name, level: club.level, strength: club.strength };
-        document.getElementById('joboffer-club-name').innerText = `${club.name} (${leagueNames[club.level]}, Stärke ${club.strength})`;
-        document.getElementById('joboffer-overlay').classList.add('show');
+        pendingJobApproach = { clubName: club.name, level: club.level, strength: club.strength, season: game.season, matchday: game.matchday };
+        let text = `${club.name} (${leagueNames[club.level]}, Stärke ${club.strength})`;
+        document.getElementById('joboffer-club-name').innerText = text;
+        // Nach einem Livespiel als Fenster; beim Simulieren nicht mittendrin aufpoppen,
+        // sondern als Postfach-Nachricht und Karte auf dem Dashboard.
+        if (opts.live) document.getElementById('joboffer-overlay').classList.add('show');
+        else addInboxMessage('vertrag', `💼 Jobangebot: ${club.name}`, `${text} will dich als Trainer. Entscheide auf dem Dashboard - das Angebot gilt 6 Spieltage.`, 'screen-dashboard');
+    }
+    function renderJobOfferCard() {
+        let box = document.getElementById('dash-joboffer-box');
+        if (!box) return;
+        let o = pendingJobApproach;
+        if (!o || game.season > o.season || game.matchday - o.matchday >= 6) { box.innerHTML = ''; return; }
+        box.innerHTML = `<div class="box" style="font-size:11px; border-left-color:var(--gold); margin-bottom:6px;">
+            💼 <strong>Jobangebot:</strong> ${o.clubName} (${leagueNames[o.level]}, Stärke ${o.strength}) will dich als Trainer.
+            <div style="display:flex; flex-direction:column; gap:4px; margin-top:6px;">
+                <button onclick="acceptJobOfferMove(this)" class="btn-action">🔄 Wechseln (Karriere bleibt, Kader neu)</button>
+                <button onclick="acceptJobOfferLeverage()" class="btn-secondary">💰 Als Druckmittel für mehr Budget</button>
+                <button onclick="declineJobOfferLoyalty()" class="btn-secondary">❤️ Vereinstreue zeigen</button>
+            </div></div>`;
     }
     // Echter Wechsel: Karriere (Level, Trophäen, Konto) bleibt, Kader wird neu (switchToClub).
     function acceptJobOfferMove(btn) {
