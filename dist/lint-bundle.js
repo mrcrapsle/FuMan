@@ -489,7 +489,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.1', date: '30.09.2026', features: 'Phase 16: Handy-Check - größere Knöpfe und Schriften, Leiste einzeilig, Stadionplan repariert' };
+    const GAME_VERSION = { number: '3.2', date: '30.09.2026', features: 'Phase 16: Karriere-Balancing - Fitness der Startelf, größerer Transfermarkt, bezahlbare Lizenzauflagen' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -893,7 +893,9 @@
         megastore: { name: "Fanshop Megastore", lvl: 0, max: 5, baseCost: 7200000, desc: "+35 Basis-Kunden pro Woche für alle Fanartikel pro Stufe" },
         parkhaus: { name: "Parkhaus & Shuttle-Bahnhof", lvl: 0, max: 5, baseCost: 6500000, desc: "+1.500 € Parkgebühren & verbessert Stadionauslastung" },
         reha: { name: "Reha-Klinik & Physio-Zentrum", lvl: 0, max: 5, baseCost: 12000000, desc: "Verringert Verletzungszeiten und beschleunigt Regeneration" },
-        internat: { name: "Jugendinternat & Schule", lvl: 0, max: 5, baseCost: 14500000, desc: "Erhöht Stärke und Potenzial neuer Nachwuchsspieler" },
+        // 9 statt 14,5 Mio.: Stufe 1 ist Lizenzauflage für die 2. Liga und kostete in der 3. Liga
+        // rund 4 Mio. - mehr als zwei Saisons Gehälter; Meister blieben deshalb jahrelang unten.
+        internat: { name: "Jugendinternat & Schule", lvl: 0, max: 5, baseCost: 9000000, desc: "Erhöht Stärke und Potenzial neuer Nachwuchsspieler" },
         museum: { name: "Vereinsmuseum & Traditions-Pavillon", lvl: 0, max: 5, baseCost: 4500000, desc: "+2% Vorstands- und Fanvertrauen dauerhaft pro Stufe" },
         trainingground: { name: "Trainingsgelände mit Flutlicht", lvl: 0, max: 5, baseCost: 8500000, desc: "+1 permanenter Stärkebonus für die gesamte Mannschaft" },
         hotel: { name: "VIP-Tagungshotel", lvl: 0, max: 5, baseCost: 22500000, desc: "+5.000 € feste Einnahmen pro Heimspiel" },
@@ -14656,6 +14658,12 @@ function finishGoalkeeperGame() {
     // Liga-Stärke - eine Komplett-Überdachung kostet im Spitzenfußball echte zweistellige
     // Millionenbeträge, nicht ein paar hunderttausend Euro.
     const SPECIAL_INSTALL_BASE_COSTS = { flutlicht: 3500000, rasenheizung: 2200000, videowalls: 4000000, dach: 28000000 };
+    // Wie alle Stadionausbauten nach Liga skaliert (Untergrenze 0,2): pauschal 3,5 Mio. für
+    // das Flutlicht - Pflicht für die 3. Liga - konnte ein Regionalligist über Jahre nicht
+    // ansparen und blieb als Meister trotzdem unten.
+    function getSpecialInstallCost(key) {
+        return Math.round(SPECIAL_INSTALL_BASE_COSTS[key] * Math.max(0.2, getStadiumCostScale()) / 10000) * 10000;
+    }
     const SPECIAL_INSTALL_LABELS = { flutlicht: '💡 Flutlicht-Masten', rasenheizung: '🔥 Rasenheizung', videowalls: '📺 Digitale Anzeigen / HD-Videowalls', dach: '🏗️ Komplett-Überdachung' };
 
     // ==========================================
@@ -14794,11 +14802,11 @@ function finishGoalkeeperGame() {
         let grid = document.getElementById('special-installs-grid');
         if (!grid) return;
         grid.innerHTML = Object.keys(SPECIAL_INSTALL_BASE_COSTS).map(key => {
-            let cost = SPECIAL_INSTALL_BASE_COSTS[key];
+            let cost = getSpecialInstallCost(key);
             let owned = stadium[key];
             let queued = (game.stadiumConstructionQueue || []).some(p => p.type === 'specialInstall' && p.params.key === key);
             let label = owned ? `${SPECIAL_INSTALL_LABELS[key]} ✓ vorhanden` : (queued ? `${SPECIAL_INSTALL_LABELS[key]} (im Bau...)` : `${SPECIAL_INSTALL_LABELS[key]} [${formatVal(cost)}]`);
-            return `<button onclick="upgradeSpecialInstall('${key}', ${cost})" class="btn-secondary" ${owned || queued ? 'disabled' : ''}>${label}</button>`;
+            return `<button onclick="upgradeSpecialInstall('${key}')" class="btn-secondary" ${owned || queued ? 'disabled' : ''}>${label}</button>`;
         }).join('');
     }
 
@@ -15178,8 +15186,9 @@ function finishGoalkeeperGame() {
         queueStadiumConstruction('blockExpand', { blockKey, seats }, cost, getConstructionDays(cost), `Rangerweiterung ${blockKey} (+${seats} Plätze)`);
     }
 
-    function upgradeSpecialInstall(key, cost) {
-        if (stadium[key]) return;
+    function upgradeSpecialInstall(key) {
+        if (stadium[key] || !SPECIAL_INSTALL_BASE_COSTS[key]) return;
+        let cost = getSpecialInstallCost(key);
         let labels = { flutlicht: 'Flutlichtanlage', rasenheizung: 'Rasenheizung', videowalls: 'Digitale Anzeigen', dach: 'Stadiondach' };
         queueStadiumConstruction('specialInstall', { key }, cost, getConstructionDays(cost), labels[key] || key);
     }
