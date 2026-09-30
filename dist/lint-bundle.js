@@ -489,7 +489,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.0.1', date: '30.09.2026', features: 'Spielversion oben im Kopfbereich' };
+    const GAME_VERSION = { number: '3.1', date: '30.09.2026', features: 'Phase 16: Handy-Check - größere Knöpfe und Schriften, Leiste einzeilig, Stadionplan repariert' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -12617,10 +12617,10 @@ function finishGoalkeeperGame() {
             <div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:8px; margin-bottom:4px;">
                 <div style="display:flex; height:20px; border-radius:4px; overflow:hidden; gap:1px;">
                     <div style="flex:${income}; background:var(--primary); position:relative;">
-                        <span style="position:absolute; left:50%; transform:translateX(-50%); top:50%; transform:translate(-50%, -50%); font-size:7px; color:#000; white-space:nowrap; font-weight:700;">${total > 0 ? (income/total*100).toFixed(0) : '0'}%</span>
+                        <span style="position:absolute; left:50%; transform:translateX(-50%); top:50%; transform:translate(-50%, -50%); font-size:10px; color:#000; white-space:nowrap; font-weight:700;">${total > 0 ? (income/total*100).toFixed(0) : '0'}%</span>
                     </div>
                     <div style="flex:${expenses}; background:var(--danger); position:relative;">
-                        <span style="position:absolute; left:50%; transform:translateX(-50%); top:50%; transform:translate(-50%, -50%); font-size:7px; color:#fff; white-space:nowrap; font-weight:700;">${total > 0 ? (expenses/total*100).toFixed(0) : '0'}%</span>
+                        <span style="position:absolute; left:50%; transform:translateX(-50%); top:50%; transform:translate(-50%, -50%); font-size:10px; color:#fff; white-space:nowrap; font-weight:700;">${total > 0 ? (expenses/total*100).toFixed(0) : '0'}%</span>
                     </div>
                 </div>
             </div>
