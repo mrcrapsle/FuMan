@@ -489,7 +489,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.0', date: '30.09.2026', features: 'Phase 15: Pokal-Livespiele, Supercup, Hallenturnier, Saisoneröffnung, Abschiedsspiele, Taktik-Bilanz' };
+    const GAME_VERSION = { number: '3.0.1', date: '30.09.2026', features: 'Spielversion oben im Kopfbereich' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -9617,6 +9617,8 @@ function renderBoardRoomPanel() {
         document.getElementById('top-board').innerText = game.boardSat + '%';
         document.getElementById('top-matchday').innerText = Math.min(34, game.matchday) + ' / 34';
         document.getElementById('head-league-name').innerText = leagueNames[game.leagueLevel];
+        let versionTag = document.getElementById('header-version-tag');
+        if (versionTag) versionTag.innerText = `v${GAME_VERSION.number}`;
         document.getElementById('head-season').innerText = "Saison " + game.season;
         document.getElementById('top-mgr-lvl').innerText = `Lvl ${managerRPG.level} (${managerRPG.xp} XP)`;
 
