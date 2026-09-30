@@ -4921,6 +4921,52 @@ async function testAiClubs(browser) {
     await page.close();
 }
 
+async function testPlayerStats(browser) {
+    console.log('\n[P17b] Spielerstatistik: Tore, Vorlagen, Noten, Elf des Spieltags');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        const out = {};
+        for (let i = 0; i < 10; i++) { game.sackPending = false; simulateMatchdays(1); }
+        const mitStats = squad.filter(p => p.statsSeason);
+        const tore = squad.reduce((a, p) => a + (p.statsSeason ? p.statsSeason.tore : 0), 0);
+        const eigene = leaguesData[game.leagueLevel].find(t => t.name === game.clubName);
+        out.toreStimmen = tore === eigene.goalsFor;
+        out.vorlagen = squad.reduce((a, p) => a + (p.statsSeason ? p.statsSeason.vorlagen : 0), 0);
+        out.vorlagenPlausibel = out.vorlagen <= tore && out.vorlagen >= Math.floor(tore * 0.4);
+        out.spiele = Math.max(...mitStats.map(p => p.statsSeason.spiele));
+        out.notenGueltig = mitStats.every(p => p.lastGrade >= 1 && p.lastGrade <= 6 && (p.lastGrade * 2) % 1 === 0);
+        out.bester = !!game.lastMatchBestPlayer;
+        // Anzeige im Analyse-Reiter
+        showScreen('screen-squad'); setSquadTab('analyse');
+        const html = document.getElementById('player-season-stats-box').innerHTML;
+        out.tabelle = html.includes('Ø-Note') && html.includes('Vorl.');
+        // Sieg mit vielen Toren -> bessere Noten als bei einer Klatsche
+        lineup = pickBestLineupIds();
+        squad.forEach(p => { p.dailyForm = 50; });
+        const schnitt = (u, g) => { let s = 0; for (let i = 0; i < 40; i++) s += lineup.reduce((a, id) => a + computePlayerGrade(squad.find(p => p.id === id), u, g), 0) / lineup.length; return s / 40; };
+        out.notenSinnvoll = schnitt(4, 0) < schnitt(0, 4) - 1;
+        // Saisonwechsel: Werte wandern in die Historie
+        const p0 = mitStats[0];
+        const spieleVorher = p0.statsSeason.spiele;
+        while (game.matchday <= 34) { game.sackPending = false; simulateMatchdays(10); }
+        concludeSeasonAndAdvance();
+        const p1 = squad.find(p => p.id === p0.id);
+        out.saisonReset = !p1 || (!p1.statsSeason && p1.strengthHistory[p1.strengthHistory.length - 1].grade > 0);
+        out.spieleVorher = spieleVorher;
+        return out;
+    });
+    assert(r.toreStimmen, 'Tore der Spieler ergeben die Tore des Vereins in der Tabelle');
+    assert(r.vorlagenPlausibel, `Vorlagen werden vergeben (${r.vorlagen})`);
+    assert(r.spiele >= 8 && r.notenGueltig && r.bester, `Noten 1,0-6,0 in halben Schritten, Spieler des Spiels (${r.spiele} Spiele)`);
+    assert(r.tabelle, 'Saisonstatistik im Analyse-Reiter');
+    assert(r.notenSinnvoll, 'Hohe Siege geben bessere Noten als hohe Niederlagen');
+    assert(r.saisonReset, 'Saisonwerte gehen beim Saisonwechsel in die Spieler-Historie');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 3).join(' | ')})`);
+    await page.close();
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -5008,6 +5054,7 @@ async function main() {
         testLiveMatchEngine,
         testNoWriteOnlyGameFields,
         testAiClubs,
+        testPlayerStats,
         testRuntimeRoundTrip,
     ];
 

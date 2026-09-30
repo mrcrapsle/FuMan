@@ -489,7 +489,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.4.1', date: '30.09.2026', features: 'Fix: untere Leiste verdeckte das Seitenende auf dem Handy' };
+    const GAME_VERSION = { number: '3.5', date: '30.09.2026', features: 'Phase 17: KI-Vereine mit Stars und Transfers untereinander' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -2646,6 +2646,7 @@
         if (typeof renderLeadershipCouncilBox === 'function') renderLeadershipCouncilBox();
         if (typeof renderScandalsPanel === 'function') renderScandalsPanel();
         if (typeof renderTacticSystemPanel === 'function') renderTacticSystemPanel();
+        if (typeof renderPlayerSeasonStats === 'function') renderPlayerSeasonStats();
         if (typeof renderTeamCouncilPanel === 'function') renderTeamCouncilPanel();
         let container = document.getElementById('bench-list');
         if (!container) return;
@@ -7270,7 +7271,8 @@ function executeAiStarTransfer(kaeufer, verkaeufer, kaeuferLiga, verkaeuferLiga)
     verkaeufer.strength = Math.max(20, verkaeufer.strength - delta);
     verkaeufer.baseStrength = Math.max(20, (verkaeufer.baseStrength || verkaeufer.strength) - delta);
     const abloese = Math.round(calculatePlayerMarketValue(star.strength) * (1.1 + Math.random() * 0.4) / 10000) * 10000;
-    kaeufer.star = { ...star };
+    // Star des Käufers wird er nur, wenn er besser ist als der bisherige Leistungsträger
+    if (!kaeufer.star || star.strength > kaeufer.star.strength) kaeufer.star = { ...star };
     verkaeufer.star = makeAiStar(verkaeufer, true);
     addAiTransferNews({ player: star.name, pos: star.pos, strength: star.strength, from: verkaeufer.name, to: kaeufer.name,
         fee: abloese, fromLeague: verkaeuferLiga, toLeague: kaeuferLiga });
@@ -7298,8 +7300,8 @@ function tickAiTransfers() {
                 verkaeufer = kandidaten[Math.floor(Math.random() * kandidaten.length)];
             }
             if (!kaeufer || !verkaeufer || kaeufer === verkaeufer || !verkaeufer.star) continue;
-            // Nur echte Verstärkungen: der Star muss besser sein als der eigene
-            if (kaeufer.star && kaeufer.star.strength >= verkaeufer.star.strength) continue;
+            // Nur echte Verstärkungen: mindestens so gut wie die Mannschaft des Käufers
+            if (verkaeufer.star.strength < kaeufer.strength) continue;
             meldungen.push({ l, text: executeAiStarTransfer(kaeufer, verkaeufer, l, verkaeuferLiga) });
         }
     });
@@ -7341,6 +7343,116 @@ function renderAiTransferNews() {
             : `🔁 <strong>${n.player}</strong> (${n.pos}, ${n.strength}): ${n.from} → <strong>${n.to}</strong> · ${formatVal(n.fee)}`;
         return `<div class="box" style="font-size:10px; ${eigeneLiga ? 'border-left-color:var(--accent);' : ''}">S${n.season}/SpT ${n.matchday}: ${text}</div>`;
     }).join('');
+}
+
+/* eslint-enable */
+/* eslint-disable no-undef */
+// Spielerstatistik & Noten: Tore UND Vorlagen in Live- und simulierten Spielen, eine
+// Kicker-Note (1,0 bis 6,0) für jeden eingesetzten Spieler nach jedem eigenen Ligaspiel,
+// "Spieler des Spiels" und Nominierungen für die Elf des Spieltags (Note 1,5 oder besser).
+// Saisonwerte stehen in p.statsSeason, Karriere-Vorlagen in p.assists (zählt auch für den
+// Legenden-Status, siehe checkForLegendStatus()).
+
+let matchEvents = { tore: {}, vorlagen: {} };
+
+function resetMatchEvents() { matchEvents = { tore: {}, vorlagen: {} }; }
+
+function pickAssistant(players) {
+    const gewichte = { MIT: 4, ST: 2, ABW: 1.5, TW: 0.1 };
+    const summe = players.reduce((a, p) => a + (gewichte[p.pos] || 1), 0);
+    let wurf = Math.random() * summe;
+    for (const p of players) { wurf -= gewichte[p.pos] || 1; if (wurf <= 0) return p; }
+    return players[players.length - 1] || null;
+}
+
+// Eigenes Tor: Torschütze nach Position gewichtet, in drei von vier Fällen mit Vorlage.
+function creditOwnGoal(players) {
+    const scorer = pickWeightedScorer(players);
+    if (!scorer) return { scorer: null, assist: null };
+    scorer.goalsSeason = (scorer.goalsSeason || 0) + 1;
+    scorer.goalsCareer = (scorer.goalsCareer || 0) + 1;
+    matchEvents.tore[scorer.id] = (matchEvents.tore[scorer.id] || 0) + 1;
+    let assist = null;
+    const mitspieler = players.filter(p => p.id !== scorer.id);
+    if (mitspieler.length && Math.random() < 0.75) {
+        assist = pickAssistant(mitspieler);
+        if (assist) {
+            assist.assists = (assist.assists || 0) + 1;
+            matchEvents.vorlagen[assist.id] = (matchEvents.vorlagen[assist.id] || 0) + 1;
+        }
+    }
+    return { scorer, assist };
+}
+
+function formatGrade(n) { return n.toFixed(1).replace('.', ','); }
+
+// Note für einen Spieler: Ergebnis, Tagesform, eigene Tore/Vorlagen, Zu-Null für die
+// Defensive, etwas Zufall. Auf halbe Noten gerundet wie im Kicker.
+function computePlayerGrade(p, ourGoals, oppGoals) {
+    let note = 3.5 - Math.max(-0.75, Math.min(0.75, (ourGoals - oppGoals) * 0.3));
+    note -= ((p.dailyForm ?? 50) - 50) / 100;
+    note -= (matchEvents.tore[p.id] || 0) * 0.75;
+    note -= (matchEvents.vorlagen[p.id] || 0) * 0.4;
+    if (p.pos === 'TW' || p.pos === 'ABW') {
+        if (oppGoals === 0) note -= 0.5;
+        else if (oppGoals >= 3) note += 0.4;
+    }
+    note += Math.random() - 0.5;
+    return Math.max(1, Math.min(6, Math.round(note * 2) / 2));
+}
+
+// Aus processPostMatchRoutine() nach jedem eigenen Ligaspiel (live und simuliert).
+function gradeOwnMatch(ourGoals, oppGoals) {
+    const starter = squad.filter(p => lineup.includes(p.id));
+    if (!starter.length) { resetMatchEvents(); return null; }
+    let bester = null;
+    starter.forEach(p => {
+        const note = computePlayerGrade(p, ourGoals, oppGoals);
+        const st = p.statsSeason || (p.statsSeason = { spiele: 0, tore: 0, vorlagen: 0, notenSumme: 0, elf: 0 });
+        st.spiele++;
+        st.tore += matchEvents.tore[p.id] || 0;
+        st.vorlagen += matchEvents.vorlagen[p.id] || 0;
+        st.notenSumme += note;
+        if (note <= 1.5) st.elf++;
+        p.lastGrade = note;
+        if (!bester || note < bester.note) bester = { p, note };
+    });
+    const elf = starter.filter(p => p.lastGrade <= 1.5);
+    if (elf.length) {
+        elf.forEach(p => { p.morale = Math.min(100, (p.morale || 50) + 3); });
+        addInboxMessage('vertrag', `⭐ Elf des Spieltags: ${elf.map(p => p.name).join(', ')}`,
+            `Die Fachpresse nominiert ${elf.map(p => `${p.name} (Note ${formatGrade(p.lastGrade)})`).join(', ')} für die Elf des ${game.matchday}. Spieltags - Moralschub!`, 'screen-squad');
+    }
+    game.lastMatchBestPlayer = bester ? { name: bester.p.name, note: bester.note, matchday: game.matchday, season: game.season } : null;
+    resetMatchEvents();
+    return bester;
+}
+
+// Saisonende: Saisonwerte in die Spieler-Historie, dann zurücksetzen.
+function resetPlayerSeasonStats(p) {
+    if (p.statsSeason && p.strengthHistory && p.strengthHistory.length) {
+        const letzter = p.strengthHistory[p.strengthHistory.length - 1];
+        letzter.assists = p.statsSeason.vorlagen;
+        letzter.grade = p.statsSeason.spiele ? +(p.statsSeason.notenSumme / p.statsSeason.spiele).toFixed(2) : null;
+    }
+    p.statsSeason = null;
+}
+
+function renderPlayerSeasonStats() {
+    const box = document.getElementById('player-season-stats-box');
+    if (!box) return;
+    const rows = squad.filter(p => p.statsSeason && p.statsSeason.spiele > 0)
+        .map(p => ({ p, st: p.statsSeason, schnitt: p.statsSeason.notenSumme / p.statsSeason.spiele }))
+        .sort((a, b) => a.schnitt - b.schnitt);
+    const best = game.lastMatchBestPlayer && game.lastMatchBestPlayer.season === game.season
+        ? `<div style="font-size:10px; margin-bottom:6px;">🏅 Spieler des letzten Spiels: <strong>${game.lastMatchBestPlayer.name}</strong> (Note ${formatGrade(game.lastMatchBestPlayer.note)}, ${game.lastMatchBestPlayer.matchday}. Spieltag)</div>` : '';
+    if (!rows.length) { box.innerHTML = best + '<div style="font-size:10px; color:var(--text-muted);">Noch keine Ligaspiele in dieser Saison.</div>'; return; }
+    const farbe = n => n <= 2.5 ? 'var(--primary)' : (n <= 3.5 ? 'var(--gold, #FFC107)' : 'var(--danger)');
+    box.innerHTML = best + `<table style="width:100%; font-size:10px; border-collapse:collapse;">
+        <tr style="color:var(--text-muted); text-align:left;"><th>Spieler</th><th>Sp.</th><th>Tore</th><th>Vorl.</th><th>Ø-Note</th><th>Elf</th></tr>
+        ${rows.map(({ p, st, schnitt }) => `<tr><td>${p.name} <span style="color:var(--text-muted);">${p.pos}</span></td><td>${st.spiele}</td><td>${st.tore}</td><td>${st.vorlagen}</td>
+            <td style="color:${farbe(schnitt)}; font-weight:800;">${formatGrade(Math.round(schnitt * 100) / 100)}</td><td>${st.elf ? '⭐' + st.elf : ''}</td></tr>`).join('')}
+    </table>`;
 }
 
 /* eslint-enable */
@@ -20711,6 +20823,7 @@ function cleanupLegacyScoutState() {
     function setupMatch(homeName, awayName, oppStrength, isHome, isCup, refObj) {
         playSound('whistle');
         substitutionsLeft = 5;
+        if (typeof resetMatchEvents === 'function') resetMatchEvents();
         rollWeather();
         let ourStrength = calcTeamStrength(isHome);
         // Taktik-/Härte-Bonus aus der "eingefrorenen" Basisstärke herauslösen, damit spätere
@@ -21142,10 +21255,9 @@ function cleanupLegacyScoutState() {
                 if (currentMatch.isHome) currentMatch.homeGoals++; else currentMatch.awayGoals++;
                 recordLiveShot(currentMatch.isHome, true);
                 playSound('goal');
-                let scorer = pickWeightedScorer(onPitch);
-                if (scorer) { scorer.goalsSeason = (scorer.goalsSeason || 0) + 1; scorer.goalsCareer = (scorer.goalsCareer || 0) + 1; }
+                let { scorer, assist } = creditOwnGoal(onPitch);
                 if (hasFkGod && Math.random() < 0.3) art = 'mit einem traumhaften direkten Freistoß';
-                let scorerText = scorer ? `${scorer.name} trifft ${art}` : `Tor ${art}`;
+                let scorerText = scorer ? `${scorer.name} trifft ${art}${assist ? ` (Vorlage: ${assist.name})` : ''}` : `Tor ${art}`;
                 document.getElementById('ticker-log').innerHTML += `<div style="color:var(--primary); font-weight:bold;">⚽ ${currentMatch.minute}. Min: TOR! ${scorerText} für ${ourName}!</div>`;
             } else if (hasPkKiller && Math.random() < 0.12) {
                 recordLiveShot(!currentMatch.isHome, true);
@@ -21436,6 +21548,12 @@ function cleanupLegacyScoutState() {
 
         applyMatchdayFinances(currentMatch.isHome, won, oppGoalsThisMatch === 0, isHomeDerby, opponentName, `${ourGoalsThisMatch}:${oppGoalsThisMatch}`);
         processPostMatchRoutine(won ? 'win' : (drawn ? 'draw' : 'loss'), isHomeDerby, true, ourGoalsThisMatch - oppGoalsThisMatch, currentMatch.isHome, { total: currentMatch.homeGoals + currentMatch.awayGoals, bothScored: currentMatch.homeGoals > 0 && currentMatch.awayGoals > 0 });
+        let bester = game.lastMatchBestPlayer;
+        let log = document.getElementById('ticker-log');
+        if (log && bester && bester.matchday === game.matchday - 1) {
+            log.innerHTML += `<div style="color:var(--gold); font-weight:bold;">🏅 Spieler des Spiels: ${bester.name} (Note ${formatGrade(bester.note)})</div>`;
+            log.scrollTop = log.scrollHeight;
+        }
     }
 
     function applyMatchdayFinances(isHomeMatch = true, won = false, cleanSheet = false, isDerbyMatch = false, opponentNameForRecord = null, scoreTextForRecord = null) {
@@ -21806,6 +21924,11 @@ function cleanupLegacyScoutState() {
         // unabhängig davon ob live gespielt oder automatisch simuliert wurde - beide sind
         // ans jeweils NÄCHSTE (jetzt vergangene) Spiel gebunden, nicht an den Live-Kontext.
         if (matchResult !== null) resolveUnderworldInsiderBet(matchResult === 'win');
+        // Noten für alle eingesetzten Spieler (js/player-stats.js) - live wie simuliert.
+        if (matchResult !== null && totalGoalsForBets && typeof gradeOwnMatch === 'function') {
+            let unsere = (totalGoalsForBets.total + matchMargin) / 2;
+            gradeOwnMatch(unsere, totalGoalsForBets.total - unsere);
+        }
         underworld.spyIntelActive = false;
         // Zuschauerzahl-Konsistenz-Fix (NEU): finalAttendance nach dem Spiel zurücksetzen,
         // damit sie nicht versehentlich ins nächste Spiel durchsickert.
@@ -22812,10 +22935,7 @@ function cleanupLegacyScoutState() {
         if (goalCount <= 0) return;
         let starting = squad.filter(p => lineup.includes(p.id));
         if (starting.length === 0) return;
-        for (let i = 0; i < goalCount; i++) {
-            let scorer = pickWeightedScorer(starting);
-            if (scorer) { scorer.goalsSeason = (scorer.goalsSeason || 0) + 1; scorer.goalsCareer = (scorer.goalsCareer || 0) + 1; }
-        }
+        for (let i = 0; i < goalCount; i++) creditOwnGoal(starting);
     }
 
     function simulateFullSeason() { simulateMatchdays(35); }
@@ -23343,6 +23463,7 @@ function cleanupLegacyScoutState() {
             if (!p.strengthHistory) p.strengthHistory = [];
             p.strengthHistory.push({ season: game.season, strength: p.strength, apps: p.appearancesSeason || 0, goals: p.goalsSeason || 0 });
             if (p.strengthHistory.length > 15) p.strengthHistory.shift();
+            if (typeof resetPlayerSeasonStats === 'function') resetPlayerSeasonStats(p);
             p.goalsSeason = 0;
             p.appearancesSeason = 0;
             // Erfolgsbasierte Vertragsboni (js/bonusclauses.js): eine bereits eingelöste
@@ -23778,6 +23899,7 @@ function markCupLiveMatch(tie) {
 function finishCupLiveMatch() {
     const m = currentMatch, tie = m.cupTie;
     lineup = m.cupLineup.filter(id => squad.some(p => p.id === id));
+    if (typeof resetMatchEvents === 'function') resetMatchEvents(); // Pokaltore fließen nicht in die Liganoten
     squad.forEach(p => { if (p.id in m.cupGoalsSeason) p.goalsSeason = m.cupGoalsSeason[p.id]; });
     const ergebnis = { comp: tie.comp, season: game.season, matchday: game.matchday, home: tie.home, away: tie.away, homeGoals: m.homeGoals, awayGoals: m.awayGoals };
     game.liveCupResult = ergebnis;

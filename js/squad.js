@@ -781,6 +781,7 @@
         if (typeof renderLeadershipCouncilBox === 'function') renderLeadershipCouncilBox();
         if (typeof renderScandalsPanel === 'function') renderScandalsPanel();
         if (typeof renderTacticSystemPanel === 'function') renderTacticSystemPanel();
+        if (typeof renderPlayerSeasonStats === 'function') renderPlayerSeasonStats();
         if (typeof renderTeamCouncilPanel === 'function') renderTeamCouncilPanel();
         let container = document.getElementById('bench-list');
         if (!container) return;

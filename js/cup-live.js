@@ -124,6 +124,7 @@ function markCupLiveMatch(tie) {
 function finishCupLiveMatch() {
     const m = currentMatch, tie = m.cupTie;
     lineup = m.cupLineup.filter(id => squad.some(p => p.id === id));
+    if (typeof resetMatchEvents === 'function') resetMatchEvents(); // Pokaltore fließen nicht in die Liganoten
     squad.forEach(p => { if (p.id in m.cupGoalsSeason) p.goalsSeason = m.cupGoalsSeason[p.id]; });
     const ergebnis = { comp: tie.comp, season: game.season, matchday: game.matchday, home: tie.home, away: tie.away, homeGoals: m.homeGoals, awayGoals: m.awayGoals };
     game.liveCupResult = ergebnis;

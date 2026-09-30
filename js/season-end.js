@@ -215,6 +215,7 @@
             if (!p.strengthHistory) p.strengthHistory = [];
             p.strengthHistory.push({ season: game.season, strength: p.strength, apps: p.appearancesSeason || 0, goals: p.goalsSeason || 0 });
             if (p.strengthHistory.length > 15) p.strengthHistory.shift();
+            if (typeof resetPlayerSeasonStats === 'function') resetPlayerSeasonStats(p);
             p.goalsSeason = 0;
             p.appearancesSeason = 0;
             // Erfolgsbasierte Vertragsboni (js/bonusclauses.js): eine bereits eingelöste

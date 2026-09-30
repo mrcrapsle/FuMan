@@ -351,6 +351,7 @@
     function setupMatch(homeName, awayName, oppStrength, isHome, isCup, refObj) {
         playSound('whistle');
         substitutionsLeft = 5;
+        if (typeof resetMatchEvents === 'function') resetMatchEvents();
         rollWeather();
         let ourStrength = calcTeamStrength(isHome);
         // Taktik-/Härte-Bonus aus der "eingefrorenen" Basisstärke herauslösen, damit spätere
@@ -782,10 +783,9 @@
                 if (currentMatch.isHome) currentMatch.homeGoals++; else currentMatch.awayGoals++;
                 recordLiveShot(currentMatch.isHome, true);
                 playSound('goal');
-                let scorer = pickWeightedScorer(onPitch);
-                if (scorer) { scorer.goalsSeason = (scorer.goalsSeason || 0) + 1; scorer.goalsCareer = (scorer.goalsCareer || 0) + 1; }
+                let { scorer, assist } = creditOwnGoal(onPitch);
                 if (hasFkGod && Math.random() < 0.3) art = 'mit einem traumhaften direkten Freistoß';
-                let scorerText = scorer ? `${scorer.name} trifft ${art}` : `Tor ${art}`;
+                let scorerText = scorer ? `${scorer.name} trifft ${art}${assist ? ` (Vorlage: ${assist.name})` : ''}` : `Tor ${art}`;
                 document.getElementById('ticker-log').innerHTML += `<div style="color:var(--primary); font-weight:bold;">⚽ ${currentMatch.minute}. Min: TOR! ${scorerText} für ${ourName}!</div>`;
             } else if (hasPkKiller && Math.random() < 0.12) {
                 recordLiveShot(!currentMatch.isHome, true);
@@ -1076,6 +1076,12 @@
 
         applyMatchdayFinances(currentMatch.isHome, won, oppGoalsThisMatch === 0, isHomeDerby, opponentName, `${ourGoalsThisMatch}:${oppGoalsThisMatch}`);
         processPostMatchRoutine(won ? 'win' : (drawn ? 'draw' : 'loss'), isHomeDerby, true, ourGoalsThisMatch - oppGoalsThisMatch, currentMatch.isHome, { total: currentMatch.homeGoals + currentMatch.awayGoals, bothScored: currentMatch.homeGoals > 0 && currentMatch.awayGoals > 0 });
+        let bester = game.lastMatchBestPlayer;
+        let log = document.getElementById('ticker-log');
+        if (log && bester && bester.matchday === game.matchday - 1) {
+            log.innerHTML += `<div style="color:var(--gold); font-weight:bold;">🏅 Spieler des Spiels: ${bester.name} (Note ${formatGrade(bester.note)})</div>`;
+            log.scrollTop = log.scrollHeight;
+        }
     }
 
     function applyMatchdayFinances(isHomeMatch = true, won = false, cleanSheet = false, isDerbyMatch = false, opponentNameForRecord = null, scoreTextForRecord = null) {
@@ -1446,6 +1452,11 @@
         // unabhängig davon ob live gespielt oder automatisch simuliert wurde - beide sind
         // ans jeweils NÄCHSTE (jetzt vergangene) Spiel gebunden, nicht an den Live-Kontext.
         if (matchResult !== null) resolveUnderworldInsiderBet(matchResult === 'win');
+        // Noten für alle eingesetzten Spieler (js/player-stats.js) - live wie simuliert.
+        if (matchResult !== null && totalGoalsForBets && typeof gradeOwnMatch === 'function') {
+            let unsere = (totalGoalsForBets.total + matchMargin) / 2;
+            gradeOwnMatch(unsere, totalGoalsForBets.total - unsere);
+        }
         underworld.spyIntelActive = false;
         // Zuschauerzahl-Konsistenz-Fix (NEU): finalAttendance nach dem Spiel zurücksetzen,
         // damit sie nicht versehentlich ins nächste Spiel durchsickert.
@@ -2452,10 +2463,7 @@
         if (goalCount <= 0) return;
         let starting = squad.filter(p => lineup.includes(p.id));
         if (starting.length === 0) return;
-        for (let i = 0; i < goalCount; i++) {
-            let scorer = pickWeightedScorer(starting);
-            if (scorer) { scorer.goalsSeason = (scorer.goalsSeason || 0) + 1; scorer.goalsCareer = (scorer.goalsCareer || 0) + 1; }
-        }
+        for (let i = 0; i < goalCount; i++) creditOwnGoal(starting);
     }
 
     function simulateFullSeason() { simulateMatchdays(35); }
