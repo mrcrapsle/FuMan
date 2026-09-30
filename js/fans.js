@@ -559,14 +559,3 @@
             ? '<div class="box" style="font-size:10px; color:var(--text-muted);">Noch keine Fan-Ereignisse.</div>'
             : feed.slice(0, 10).map(e => `<div class="box" style="font-size:10px;"><span style="color:var(--text-muted);">S${e.season}/${e.matchday}:</span> ${e.text}</div>`).join('');
     }
-
-    // Alte Spielstände: Daten von sieben abgelösten Modulen (Fan-Engagement, Fanclubs, Fan-Events,
-    // Trainingswochenplan, Trainings-Spezialisierung, Standard-Training, Stadion-Management), die
-    // eigene Werte ohne Wirkung aufs Spiel führten.
-    function cleanupLegacyFanTrainingStadiumState() {
-        ['fanclubs', 'fanSatisfaction', 'ultraGroups', 'fanEvents', 'fanEngagement', 'ticketSalesMultiplier', 'sponsorAttractiveness',
-            'trainingSchedule', 'trainingSpecialization', 'setPieceTraining', 'stadium',
-            // Kader-Bildschirm: Turniere ohne Austragung, Zufalls-Marktanalyse, Pauschal-Spielerbewertung
-            'internationalTournaments', 'playerInternationalCaps', 'internationalTournamentHistory', 'nextWorldCup', 'transferMarket', 'postMatchAnalysis'].forEach(k => { delete game[k]; });
-        squad.forEach(p => { delete p.currentFitnessBoost; });
-    }

@@ -13,10 +13,7 @@
         season: 1,
         money: 150000,
         transferBudget: 100000,
-        transferBudgetUsed: 0,
-        transferMarketPlayers: [],
         transferHistory: [],
-        transferLastRefreshMatchday: 0,
         wageBudget: 15000,
         fans: 75,
         matchday: 1,
@@ -601,3 +598,15 @@
         finalMatch: null
     };
 
+    // Alte Spielstände: Daten abgelöster Module entfernen (monatlich aufgerufen). Phase 13:
+    // Fan-Engagement, Fanclubs, Fan-Events, Trainingswochenplan, Trainings-Spezialisierung,
+    // Standard-Training, Stadion-Management, Turniere ohne Austragung, Zufalls-Marktanalyse,
+    // Pauschal-Spielerbewertung. Phase 14: zweiter Transfermarkt, zweites Leihsystem,
+    // Turnier-Klammern.
+    function cleanupRemovedModuleState() {
+        ['fanclubs', 'fanSatisfaction', 'ultraGroups', 'fanEvents', 'fanEngagement', 'ticketSalesMultiplier', 'sponsorAttractiveness',
+            'trainingSchedule', 'trainingSpecialization', 'setPieceTraining', 'stadium',
+            'internationalTournaments', 'playerInternationalCaps', 'internationalTournamentHistory', 'nextWorldCup', 'transferMarket', 'postMatchAnalysis',
+            'transferBudgetUsed', 'transferMarketPlayers', 'transferLastRefreshMatchday', 'reserves', 'tournamentBrackets'].forEach(k => { delete game[k]; });
+        squad.forEach(p => { delete p.currentFitnessBoost; });
+    }

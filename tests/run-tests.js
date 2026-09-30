@@ -4288,6 +4288,54 @@ async function testPhase13Teil4(browser) {
     await page.close();
 }
 
+async function testPhase14Teil1(browser) {
+    console.log('\n[P14a] Statistik aus echten Daten, Schein-Module entfernt');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        const out = {};
+        closeTutorial();
+        out.alteModuleWeg = ['recordLeagueProgress', 'renderLeagueProgressCharts', 'renderTournamentBracketsPanel', 'tickTournamentBrackets',
+            'buyFromTransferMarket', 'calcSquadPlayerValue', 'renderTransferMarketBox', 'tickLoanedPlayerDevelopment', 'renderReservesLoanPanel', 'recordSeasonStats']
+            .filter(n => typeof window[n] === 'function');
+        game.transferMarketPlayers = [{ id: 'x' }]; game.reserves = {}; game.tournamentBrackets = {}; game.transferBudgetUsed = 5;
+        simulateMatchdays(4);
+        out.altWeg = ['transferMarketPlayers', 'reserves', 'tournamentBrackets', 'transferBudgetUsed'].filter(k => game[k] !== undefined);
+
+        // Eine Saison: Manager-Bilanz entspricht der echten Tabellenzeile
+        for (let i = 0; i < 6; i++) { game.sackPending = false; simulateMatchdays(5); }
+        const rank = getOwnLeagueRank();
+        const zeile = leaguesData[game.leagueLevel].find(t => t.name === game.clubName);
+        const erwartet = { won: zeile.won, drawn: zeile.drawn, lost: zeile.lost, points: zeile.points, league: leagueNames[game.leagueLevel] };
+        const star = squad[0];
+        star.goalsCareer = 999;
+        game.playerRetirement = { retiredPlayers: [], legendPlayers: [], fareewellGamesScheduled: [],
+            retirementHistory: [{ playerName: 'Test Legende', goals: 120, appearances: 400, legendTier: 'ICON', retirementSeason: 1 }] };
+        concludeSeasonAndAdvance();
+        const e = (game.managerCareer || [])[0];
+        out.karriere = !!e && e.rank === rank && e.won === erwartet.won && e.drawn === erwartet.drawn && e.lost === erwartet.lost && e.points === erwartet.points && e.league === erwartet.league;
+        showScreen('screen-history');
+        const ms = document.getElementById('manager-analytics-box').innerText;
+        out.managerPanel = ms.includes(`${erwartet.won}-${erwartet.drawn}-${erwartet.lost}`) && ms.includes(`Platz ${rank}`);
+        const hof = document.getElementById('hall-of-fame-box').innerText;
+        out.hallOfFame = hof.includes(star.name) && hof.includes('999 Tore') && hof.includes('Test Legende') && hof.includes('Vereins-Ikone') && hof.includes(`Platz ${rank}`);
+        const toasts = document.querySelectorAll('.app-toast').length;
+        for (let i = 0; i < 3; i++) { showScreen('screen-dashboard'); showScreen('screen-history'); }
+        out.keineToastsBeimOeffnen = document.querySelectorAll('.app-toast').length <= toasts;
+        return out;
+    });
+
+    assert(r.alteModuleWeg.length === 0, `Schein-Module entfernt (${r.alteModuleWeg.join(', ')})`);
+    assert(r.altWeg.length === 0, `Ihre Spielstanddaten werden entfernt (${r.altWeg.join(', ')})`);
+    assert(r.karriere, 'Manager-Statistik speichert Platz und Bilanz der echten Tabellenzeile');
+    assert(r.managerPanel, 'Manager-Statistik zeigt die Bilanz an');
+    assert(r.hallOfFame, 'Hall of Fame zeigt ewige Torjäger, Legenden und beste Saisons aus echten Daten');
+    assert(r.keineToastsBeimOeffnen, 'Öffnen des Trophäen-Bildschirms löst keine Meldungen aus');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler in Phase 14 Teil 1 (${consoleErrors.slice(0, 3).join(' | ')})`);
+    await page.close();
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -4362,6 +4410,7 @@ async function main() {
         testPhase13Teil2,
         testPhase13Teil3,
         testPhase13Teil4,
+        testPhase14Teil1,
         testRuntimeRoundTrip,
     ];
 

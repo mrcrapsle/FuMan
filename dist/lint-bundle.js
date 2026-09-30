@@ -498,10 +498,7 @@
         season: 1,
         money: 150000,
         transferBudget: 100000,
-        transferBudgetUsed: 0,
-        transferMarketPlayers: [],
         transferHistory: [],
-        transferLastRefreshMatchday: 0,
         wageBudget: 15000,
         fans: 75,
         matchday: 1,
@@ -1086,6 +1083,18 @@
         finalMatch: null
     };
 
+    // Alte Spielstände: Daten abgelöster Module entfernen (monatlich aufgerufen). Phase 13:
+    // Fan-Engagement, Fanclubs, Fan-Events, Trainingswochenplan, Trainings-Spezialisierung,
+    // Standard-Training, Stadion-Management, Turniere ohne Austragung, Zufalls-Marktanalyse,
+    // Pauschal-Spielerbewertung. Phase 14: zweiter Transfermarkt, zweites Leihsystem,
+    // Turnier-Klammern.
+    function cleanupRemovedModuleState() {
+        ['fanclubs', 'fanSatisfaction', 'ultraGroups', 'fanEvents', 'fanEngagement', 'ticketSalesMultiplier', 'sponsorAttractiveness',
+            'trainingSchedule', 'trainingSpecialization', 'setPieceTraining', 'stadium',
+            'internationalTournaments', 'playerInternationalCaps', 'internationalTournamentHistory', 'nextWorldCup', 'transferMarket', 'postMatchAnalysis',
+            'transferBudgetUsed', 'transferMarketPlayers', 'transferLastRefreshMatchday', 'reserves', 'tournamentBrackets'].forEach(k => { delete game[k]; });
+        squad.forEach(p => { delete p.currentFitnessBoost; });
+    }
 
 /* eslint-enable */
 
@@ -2621,7 +2630,6 @@
         renderTeamInstructions();
         renderTacticAutomationBox();
         populateRoleSelects();
-        renderTransferMarketBox();
         renderCoTrainerAdvice();
         renderInjuryCrisisWarning();
         renderUltimatumBanner();
@@ -2805,59 +2813,6 @@
         if (ck) game.cornerTakerId = ck.value;
     }
 
-    function renderTransferMarketBox() {
-        let box = document.getElementById('transfer-market-box');
-        if (!box) return;
-
-        refreshTransferPoolIfNeeded();
-        let budget = getTransferBudgetInfo();
-
-        box.innerHTML = '<div class="panel-header" style="color:var(--gold);">💰 TRANSFERMARKT</div>';
-        box.innerHTML += `
-            <div style="margin-bottom:12px;">
-                <div style="display:flex; justify-content:space-between; font-size:9px; margin-bottom:4px;">
-                    <span>Budget: ${formatVal(budget.available)}/${formatVal(budget.total)}</span>
-                    <span>${budget.usedPercent}% genutzt</span>
-                </div>
-                <div style="width:100%; height:8px; background:var(--border); border-radius:2px; overflow:hidden;">
-                    <div style="height:100%; width:${budget.usedPercent}%; background:var(--accent); transition:width 0.3s;"></div>
-                </div>
-            </div>
-        `;
-
-        box.innerHTML += '<div style="font-size:10px; font-weight:bold; color:var(--text-muted); margin-bottom:6px;">Spieler im Angebot:</div>';
-        if (game.transferMarketPlayers && game.transferMarketPlayers.length > 0) {
-            game.transferMarketPlayers.slice(0, 8).forEach(mp => {
-                let val = calcSquadPlayerValue(mp);
-                box.innerHTML += `
-                    <div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:4px; font-size:9px;">
-                        <div><strong>${mp.name}</strong> (${mp.position}, ${mp.age}J)</div>
-                        <div style="color:var(--text-muted);">Rating: ${mp.rating} · ${mp.region}</div>
-                        <div style="color:var(--accent); margin-top:3px;">${formatVal(val)}</div>
-                        <button onclick="(function() { let r = buyFromTransferMarket('${mp.id}'); if(r.success) alert('${mp.name} gekauft!'); renderSquadView(); })()" class="btn-primary" style="width:100%; padding:4px; margin-top:4px; font-size:8px;">Kaufen</button>
-                    </div>
-                `;
-            });
-        } else {
-            box.innerHTML += '<div style="color:var(--text-muted); font-size:9px;">Keine Spieler verfügbar</div>';
-        }
-
-        box.innerHTML += '<div style="font-size:10px; font-weight:bold; color:var(--text-muted); margin-top:12px; margin-bottom:6px;">Verkaufbar:</div>';
-        let sellablePlayers = squad.filter(p => !p.isAcademy && !p.isLoanedIn).slice(0, 5);
-        if (sellablePlayers.length > 0) {
-            sellablePlayers.forEach(p => {
-                let sellVal = Math.round(calcSquadPlayerValue(p) * 0.55);
-                box.innerHTML += `
-                    <div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:4px; font-size:9px;">
-                        <div><strong>${p.name}</strong> (${p.pos}, ${p.age}J)</div>
-                        <div style="color:var(--text-muted);">Stärke: ${p.strength}</div>
-                        <div style="color:var(--danger); margin-top:3px;">Rückkauföption: ${formatVal(sellVal)}</div>
-                        <button onclick="(function() { let r = sellToTransferMarket('${p.id}'); if(r.success) alert('${p.name} verkauft!'); renderSquadView(); })()" class="btn-secondary" style="width:100%; padding:4px; margin-top:4px; font-size:8px;">Verkaufen</button>
-                    </div>
-                `;
-            });
-        }
-    }
 
 
 /* eslint-enable */
@@ -3415,140 +3370,6 @@ function cleanupLegacyDevelopmentState() {
 }
 
 /* eslint-enable */
-// ==========================================
-// SPIELERKAUF & VERKAUF - TRANSFERBUDGET
-// ==========================================
-
-function calcSquadPlayerValue(player) {
-    if (!player) return 0;
-    const rating = player.rating || 50;
-    const age = player.age || 25;
-    const ageAdj = 1.0 - ((age - 24) * 0.03);
-    const baseVal = Math.pow(rating, 2.5) * 100;
-    return Math.max(1000, Math.round(baseVal * ageAdj));
-}
-
-function generateTransferMarketPool() {
-    if (!game) return;
-    if (!game.transferMarketPlayers) game.transferMarketPlayers = [];
-    game.transferMarketPlayers = [];
-    const regions = ['Deutschland', 'Westeuropa', 'Südeuropa', 'Osteuropa', 'Südamerika', 'Afrika'];
-    const positions = ['TW', 'AB', 'AB', 'MF', 'MF', 'ST'];
-    const count = 15 + Math.floor(Math.random() * 10);
-
-    for (let i = 0; i < count; i++) {
-        const baseRating = game.leagueLevel <= 2 ? 70 + Math.random() * 20 : 50 + Math.random() * 25;
-        const player = {
-            id: 'tmkt_' + Math.random().toString(36).substr(2, 9),
-            name: getRandomName ? getRandomName() : 'Spieler ' + Math.floor(Math.random() * 10000),
-            position: positions[Math.floor(Math.random() * positions.length)],
-            rating: Math.round(baseRating),
-            age: 18 + Math.floor(Math.random() * 15),
-            region: regions[Math.floor(Math.random() * regions.length)],
-            marketValue: 0
-        };
-        player.marketValue = calcSquadPlayerValue(player);
-        game.transferMarketPlayers.push(player);
-    }
-}
-
-function refreshTransferPoolIfNeeded() {
-    if (game.matchday - game.transferLastRefreshMatchday >= 5 || game.transferMarketPlayers.length === 0) {
-        generateTransferMarketPool();
-        game.transferLastRefreshMatchday = game.matchday;
-    }
-}
-
-function buyFromTransferMarket(marketPlayerId) {
-    if (!game || !game.transferMarketPlayers) return { success: false, error: 'Markt nicht verfügbar.' };
-    if (!marketPlayerId) return { success: false, error: 'Kein Spieler ausgewählt.' };
-
-    const marketPlayer = game.transferMarketPlayers.find(p => p && p.id === marketPlayerId);
-    if (!marketPlayer) return { success: false, error: 'Spieler nicht verfügbar.' };
-
-    if (game.transferBudget - game.transferBudgetUsed < marketPlayer.marketValue) {
-        return { success: false, error: 'Budget unzureichend.' };
-    }
-
-    const newPlayer = {
-        id: 'p_' + Math.random().toString(36).substr(2, 9),
-        name: marketPlayer.name,
-        position: marketPlayer.position,
-        rating: marketPlayer.rating,
-        age: marketPlayer.age,
-        potential: marketPlayer.rating + Math.floor(Math.random() * 8),
-        mood: 70 + Math.floor(Math.random() * 20),
-        fitness: 100,
-        form: 0.8 + Math.random() * 0.4,
-        injury: null,
-        contract: 34,
-        value: marketPlayer.marketValue,
-        wage: Math.round(marketPlayer.marketValue / 2000),
-        boughtForValue: marketPlayer.marketValue,
-        boughtAtMatchday: game.matchday,
-        transferHistory: [{
-            type: 'bought',
-            from: marketPlayer.region,
-            fee: marketPlayer.marketValue,
-            matchday: game.matchday
-        }]
-    };
-
-    if (typeof squad !== 'undefined' && Array.isArray(squad)) {
-        squad.push(newPlayer);
-    }
-    game.transferBudgetUsed += marketPlayer.marketValue;
-
-    if (!Array.isArray(game.transferHistory)) game.transferHistory = [];
-    game.transferHistory.push({
-        type: 'buy',
-        playerName: newPlayer.name,
-        fee: marketPlayer.marketValue,
-        matchday: game.matchday,
-        fromRegion: marketPlayer.region
-    });
-
-    game.transferMarketPlayers = game.transferMarketPlayers.filter(p => p.id !== marketPlayerId);
-
-    return { success: true, playerName: newPlayer.name, fee: marketPlayer.marketValue };
-}
-
-function sellToTransferMarket(playerId) {
-    if (!playerId) return { success: false, error: 'Spieler nicht ausgewählt.' };
-
-    const playerIdx = squad.findIndex(p => p.id === playerId);
-    if (playerIdx === -1) return { success: false, error: 'Im Kader nicht gefunden.' };
-
-    const player = squad[playerIdx];
-    const sellVal = Math.round(calcSquadPlayerValue(player) * 0.55);
-
-    game.transferBudgetUsed = Math.max(0, game.transferBudgetUsed - (player.boughtForValue || 0));
-
-    game.transferHistory.push({
-        type: 'sell',
-        playerName: player.name,
-        fee: sellVal,
-        matchday: game.matchday
-    });
-
-    squad.splice(playerIdx, 1);
-    lineup = lineup.filter(p => p.id !== playerId);
-
-    return { success: true, playerName: player.name, fee: sellVal };
-}
-
-function getTransferBudgetInfo() {
-    const available = game.transferBudget - game.transferBudgetUsed;
-    const usedPc = game.transferBudgetUsed / game.transferBudget * 100;
-    return {
-        total: game.transferBudget,
-        used: game.transferBudgetUsed,
-        available: available,
-        usedPercent: Math.round(usedPc)
-    };
-}
-
-/* eslint-enable */
 
     // ==========================================
     // KADERPLANUNGSTOOL (NEU)
@@ -3694,7 +3515,6 @@ function getTransferBudgetInfo() {
         renderSquadPlanningAgeBox();
         renderSquadPlanningContractBox();
         renderSquadPlanningWarningsBox();
-        if (typeof renderReservesLoanPanel === 'function') renderReservesLoanPanel();
         if (typeof renderPlayerDevelopmentPanel === 'function') renderPlayerDevelopmentPanel();
     }
 
@@ -5233,199 +5053,6 @@ function getTransferBudgetInfo() {
 
 /* eslint-enable */
 
-    // ==========================================
-    // LIGA-PROGRESS-SYSTEM
-    // ==========================================
-    // Visuelle Darstellung des Ligaverlaufs:
-    // Ligatabelle, Punkte-Trend, Platzierungshistorie
-
-    let leagueProgressHistory = {
-        matchdayData: [], // Array von { matchday, position, points, goalDiff, gf, ga }
-        seasonData: [] // Array von Saisons mit finalen Platzierungen
-    };
-
-    function recordLeagueProgress() {
-        if (game.matchday % 4 !== 0) return; // Nur monatlich
-
-        // Find current position and stats from live table
-        let currentLeague = leaguesData[game.leagueLevel];
-        if (!currentLeague || !currentLeague.table) return;
-
-        let ourId = game.clubId;
-        let our = currentLeague.table.find(t => t.id === ourId);
-        if (!our) return;
-
-        leagueProgressHistory.matchdayData.push({
-            matchday: game.matchday,
-            season: game.season,
-            position: currentLeague.table.indexOf(our) + 1,
-            points: our.points || 0,
-            goalDiff: (our.gf || 0) - (our.ga || 0),
-            gf: our.gf || 0,
-            ga: our.ga || 0,
-            played: our.played || 0,
-            wins: our.wins || 0,
-            draws: our.draws || 0,
-            losses: our.losses || 0
-        });
-
-        // Keep only last season + current season data
-        if (leagueProgressHistory.matchdayData.length > 40) {
-            leagueProgressHistory.matchdayData.shift();
-        }
-    }
-
-    function renderLeagueProgressCharts() {
-        renderLeaguePositionTrend();
-        renderLeaguePointsTrend();
-        renderCurrentStandings();
-    }
-
-    function renderLeaguePositionTrend() {
-        let container = document.getElementById('league-position-chart');
-        if (!container || leagueProgressHistory.matchdayData.length < 2) {
-            if (container) container.innerHTML = '<div style="font-size:9px; color:#94a3b8;">Noch nicht genug Daten verfügbar</div>';
-            return;
-        }
-
-        let data = leagueProgressHistory.matchdayData.slice(-12);
-        let maxPos = Math.max(...data.map(d => d.position)) + 1;
-        let chartHeight = 120;
-        let breite = container.offsetWidth || 320; // 0, solange der Screen versteckt ist
-        let barWidth = Math.max(20, Math.floor((breite - 40) / data.length));
-
-        let html = `
-            <div style="font-size:9px; color:#94a3b8; margin-bottom:4px;">Ligaplatzierung (letzte 12 Monate)</div>
-            <div style="display:flex; align-items:flex-end; justify-content:space-around; height:${chartHeight}px; background:rgba(255,255,255,0.03); border-radius:6px; padding:8px; gap:3px; border:1px solid rgba(255,255,255,0.1);">
-        `;
-
-        data.forEach((d, i) => {
-            // Position: 1 at top, more at bottom
-            let posHeight = (1 - (d.position / maxPos)) * (chartHeight - 16);
-            let color = d.position <= 3 ? 'var(--primary)' : (d.position <= 6 ? 'var(--accent)' : (d.position <= leaguesData[game.leagueLevel].table.length - 4 ? '#aaa' : 'var(--danger)'));
-
-            html += `
-                <div style="display:flex; flex-direction:column; align-items:center; gap:2px; flex:1; min-width:${barWidth}px;">
-                    <div style="display:flex; align-items:flex-end; height:${chartHeight - 16}px; width:100%; justify-content:center;">
-                        <div style="width:${Math.max(2, barWidth/2)}px; height:${posHeight}px; background:${color}; border-radius:2px 2px 0 0; opacity:0.8;" title="Platz ${d.position}"></div>
-                    </div>
-                    <span style="font-size:8px; color:#666; white-space:nowrap;">M${d.matchday}</span>
-                </div>
-            `;
-        });
-
-        html += `
-            </div>
-            <div style="display:flex; justify-content:space-between; font-size:8px; color:#94a3b8; margin-top:4px;">
-                <span>Aufstiegszone</span>
-                <span>Abstiegszone</span>
-            </div>
-        `;
-
-        container.innerHTML = html;
-    }
-
-    function renderLeaguePointsTrend() {
-        let container = document.getElementById('league-points-chart');
-        if (!container || leagueProgressHistory.matchdayData.length < 2) {
-            if (container) container.innerHTML = '';
-            return;
-        }
-
-        let data = leagueProgressHistory.matchdayData.slice(-12);
-        let maxPoints = Math.max(...data.map(d => d.points)) || 90;
-        let chartHeight = 80;
-        let breite = container.offsetWidth || 320; // 0, solange der Screen versteckt ist
-        let barWidth = Math.max(20, Math.floor((breite - 40) / data.length));
-
-        let html = `
-            <div style="font-size:9px; color:#94a3b8; margin-bottom:4px;">Punkte-Trend (letzte 12 Monate)</div>
-            <div style="display:flex; align-items:flex-end; justify-content:space-around; height:${chartHeight}px; background:rgba(255,255,255,0.03); border-radius:6px; padding:8px; gap:2px; border:1px solid rgba(255,255,255,0.1);">
-        `;
-
-        data.forEach((d, i) => {
-            let pointsHeight = (d.points / maxPoints) * (chartHeight - 16);
-            let trend = i > 0 && data[i-1] ? (d.points - data[i-1].points) : 0;
-            let trendColor = trend > 0 ? 'var(--primary)' : (trend < 0 ? 'var(--danger)' : '#aaa');
-
-            html += `
-                <div style="display:flex; flex-direction:column; align-items:center; gap:2px; flex:1; min-width:${barWidth}px;">
-                    <div style="display:flex; align-items:flex-end; height:${chartHeight - 16}px; width:100%; justify-content:center;">
-                        <div style="width:${Math.max(2, barWidth/2)}px; height:${pointsHeight}px; background:var(--gold); border-radius:2px 2px 0 0; opacity:0.8;" title="${d.points} Punkte"></div>
-                    </div>
-                    <span style="font-size:7px; color:${trendColor}; font-weight:700;">${trend > 0 ? '+' : ''}${trend}</span>
-                </div>
-            `;
-        });
-
-        html += `</div>`;
-        container.innerHTML = html;
-    }
-
-    function renderCurrentStandings() {
-        let container = document.getElementById('league-standings-box');
-        if (!container) return;
-
-        let currentLeague = leaguesData[game.leagueLevel];
-        if (!currentLeague || !currentLeague.table) {
-            container.innerHTML = '<div style="font-size:9px; color:#94a3b8;">Ligadaten nicht verfügbar</div>';
-            return;
-        }
-
-        let ourId = game.clubId;
-        let our = currentLeague.table.find(t => t.id === ourId);
-        let ourPos = currentLeague.table.indexOf(our) + 1;
-
-        // Show +/- 2 positions around us
-        let startPos = Math.max(0, ourPos - 3);
-        let endPos = Math.min(currentLeague.table.length, ourPos + 3);
-        let relevantTeams = currentLeague.table.slice(startPos, endPos);
-
-        let html = `
-            <div style="font-size:9px; color:#94a3b8; margin-bottom:6px;">
-                Du: <strong style="color:var(--primary);">${ourPos}. Platz</strong> ·
-                ${our.points} Punkte · ${our.wins}S ${our.draws}U ${our.losses}N
-            </div>
-            <div style="background:rgba(255,255,255,0.05); border-radius:6px; overflow:hidden;">
-        `;
-
-        relevantTeams.forEach((t, i) => {
-            let pos = startPos + i + 1;
-            let isOur = t.id === ourId;
-            let posColor = pos <= 3 ? 'var(--primary)' : (pos > currentLeague.table.length - 4 ? 'var(--danger)' : '#aaa');
-            let bgColor = isOur ? 'rgba(139,92,246,0.2)' : 'transparent';
-            let formIndicators = '';
-
-            if (t.recent) {
-                formIndicators = t.recent.split('').slice(-5).map(r =>
-                    `<span style="display:inline-block; width:6px; height:6px; border-radius:2px; background:${r === 'W' ? 'var(--primary)' : (r === 'D' ? '#aaa' : 'var(--danger)')}; margin:0 1px;"></span>`
-                ).join('');
-            }
-
-            html += `
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 8px; border-bottom:1px solid rgba(255,255,255,0.05); background:${bgColor}; ${isOur ? 'border-left:3px solid var(--primary);' : ''}">
-                    <div style="display:flex; align-items:center; gap:6px; flex:1;">
-                        <strong style="color:${posColor}; width:20px; text-align:right;">${pos}.</strong>
-                        <span style="font-size:9px; flex:1;">${t.name}</span>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:6px;">
-                        <div style="text-align:center; font-size:8px;">
-                            <div style="color:var(--gold); font-weight:700;">${t.points}</div>
-                            <div style="color:#666; font-size:7px;">${t.played}Sp</div>
-                        </div>
-                        <div style="font-size:8px; color:#aaa;">${t.wins}-${t.draws}-${t.losses}</div>
-                        <div style="display:flex; gap:1px;">${formIndicators}</div>
-                    </div>
-                </div>
-            `;
-        });
-
-        html += `</div>`;
-        container.innerHTML = html;
-    }
-
-/* eslint-enable */
-
 // ==========================================
 // LIGA-SYSTEM: INITIALISIERUNG & SPIELPLAN
 // ==========================================
@@ -5864,11 +5491,8 @@ function getTransferBudgetInfo() {
 
     function renderLeagueView() {
         if (typeof renderCoachCarouselBox === 'function') renderCoachCarouselBox();
-        recordLeagueProgress();
         renderTopScorersBox();
         renderSeasonPointsChart();
-        if (typeof renderLeagueProgressCharts === 'function') renderLeagueProgressCharts();
-        if (typeof renderTournamentBracketsPanel === 'function') renderTournamentBracketsPanel();
 
         // WICHTIG: Zwei getrennte Referenzen! fixturesData verweist per Index auf die
         // ORIGINAL-Reihenfolge in leaguesData[level] - die darf nie sortiert werden,
@@ -17444,17 +17068,6 @@ function renderStadiumEventsPanel() {
             : feed.slice(0, 10).map(e => `<div class="box" style="font-size:10px;"><span style="color:var(--text-muted);">S${e.season}/${e.matchday}:</span> ${e.text}</div>`).join('');
     }
 
-    // Alte Spielstände: Daten von sieben abgelösten Modulen (Fan-Engagement, Fanclubs, Fan-Events,
-    // Trainingswochenplan, Trainings-Spezialisierung, Standard-Training, Stadion-Management), die
-    // eigene Werte ohne Wirkung aufs Spiel führten.
-    function cleanupLegacyFanTrainingStadiumState() {
-        ['fanclubs', 'fanSatisfaction', 'ultraGroups', 'fanEvents', 'fanEngagement', 'ticketSalesMultiplier', 'sponsorAttractiveness',
-            'trainingSchedule', 'trainingSpecialization', 'setPieceTraining', 'stadium',
-            // Kader-Bildschirm: Turniere ohne Austragung, Zufalls-Marktanalyse, Pauschal-Spielerbewertung
-            'internationalTournaments', 'playerInternationalCaps', 'internationalTournamentHistory', 'nextWorldCup', 'transferMarket', 'postMatchAnalysis'].forEach(k => { delete game[k]; });
-        squad.forEach(p => { delete p.currentFitnessBoost; });
-    }
-
 /* eslint-enable */
 
     function renderYouthView() {
@@ -19405,331 +19018,6 @@ function renderTacticSystemPanel() {
 
   html += '</div>';
   panel.innerHTML = html;
-}
-
-/* eslint-enable */
-// Reserves & Loan Management System
-// Manages reserve squad, player loans, and development of young players
-
-let reservesLoanState = {
-    reserveSquad: [],
-    loanedOutPlayers: [],
-    incomingLoans: [],
-    loanOffers: []
-};
-
-const LOAN_DURATIONS = [
-    { months: 6, minSalaryShare: 20, maxSalaryShare: 40 },
-    { months: 12, minSalaryShare: 30, maxSalaryShare: 60 },
-    { months: 18, minSalaryShare: 40, maxSalaryShare: 70 }
-];
-
-const INCOMING_LOAN_CLUBS = [
-    { name: 'Bayern München', division: 1, maxAge: 30 },
-    { name: 'BVB Dortmund', division: 1, maxAge: 28 },
-    { name: 'RB Leipzig', division: 1, maxAge: 29 },
-    { name: 'Bayer Leverkusen', division: 1, maxAge: 27 },
-    { name: '1. FC Köln', division: 1, maxAge: 25 },
-    { name: 'Eintracht Frankfurt', division: 1, maxAge: 26 },
-    { name: 'Union Berlin', division: 1, maxAge: 24 }
-];
-
-function initializeReservesLoan() {
-    if (!game.reserves) game.reserves = {};
-    if (!game.reserves.reserveSquad) game.reserves.reserveSquad = [];
-    if (!game.reserves.loanedOut) game.reserves.loanedOut = [];
-    if (!game.reserves.incomingLoans) game.reserves.incomingLoans = [];
-    if (!game.reserves.friendlyMatches) game.reserves.friendlyMatches = [];
-}
-
-function promoteToReserveSquad(playerId) {
-    const player = squad.find(p => p.id === playerId);
-    if (!player || !game.reserves) return false;
-
-    const reserve = {
-        id: player.id,
-        name: player.name,
-        position: player.position,
-        strength: player.strength,
-        age: player.age,
-        morale: player.morale,
-        promotedMatchday: game.matchday || 1,
-        developmentFocus: null,
-        matchesPlayed: 0,
-        goals: 0
-    };
-
-    game.reserves.reserveSquad.push(reserve);
-    return true;
-}
-
-function demoteToReserveSquad(playerId) {
-    const player = squad.find(p => p.id === playerId);
-    if (!player) return false;
-
-    return promoteToReserveSquad(playerId);
-}
-
-function reservesLoanOutPlayer(playerId, loanDuration, salarySharePercentage) {
-    const player = squad.find(p => p.id === playerId);
-    if (!player) return null;
-
-    const loan = {
-        id: `loan_${playerId}_${Date.now()}`,
-        playerId: playerId,
-        playerName: player.name,
-        playerPosition: player.position,
-        loanedClub: INCOMING_LOAN_CLUBS[Math.floor(Math.random() * INCOMING_LOAN_CLUBS.length)].name,
-        startMatchday: game.matchday || 1,
-        endMatchday: (game.matchday || 1) + (loanDuration * 8.5), // Approximate matchdays per half-season
-        monthlySalaryCost: Math.floor(player.wage * (salarySharePercentage / 100)),
-        developmentBonus: Math.random() * 0.3, // 0-30% potential increase
-        buyoutClause: null,
-        status: 'active'
-    };
-
-    if (!game.reserves.loanedOut) game.reserves.loanedOut = [];
-    game.reserves.loanedOut.push(loan);
-
-    // Remove from main squad
-    const index = squad.findIndex(p => p.id === playerId);
-    if (index > -1) {
-        squad.splice(index, 1);
-    }
-
-    return loan;
-}
-
-function acceptIncomingLoan(club, position, strength) {
-    const loanPlayer = {
-        id: `incoming_loan_${Date.now()}`,
-        name: generateLoanPlayerName(),
-        club: club,
-        position: position,
-        strength: strength,
-        age: 20 + Math.floor(Math.random() * 8),
-        startMatchday: game.matchday || 1,
-        endMatchday: (game.matchday || 1) + (12 * 8.5), // 12-month loan
-        status: 'active',
-        matchesPlayed: 0,
-        goals: 0
-    };
-
-    if (!game.reserves.incomingLoans) game.reserves.incomingLoans = [];
-    game.reserves.incomingLoans.push(loanPlayer);
-
-    return loanPlayer;
-}
-
-function generateLoanPlayerName() {
-    const firstNames = ['Stefan', 'Daniel', 'Michael', 'Andreas', 'Klaus', 'Frank', 'Peter'];
-    const lastNames = ['Mueller', 'Schmidt', 'Wagner', 'Bauer', 'Fischer', 'Weber', 'Meyer'];
-
-    return firstNames[Math.floor(Math.random() * firstNames.length)] + ' ' +
-           lastNames[Math.floor(Math.random() * lastNames.length)];
-}
-
-function reservesRecallLoanedPlayer(loanId) {
-    const loan = game.reserves.loanedOut.find(l => l.id === loanId);
-    if (!loan) return false;
-
-    const player = squad.find(p => p.id === loan.playerId);
-    if (!player) {
-        // Recreate player if not in squad
-        squad.push({
-            id: loan.playerId,
-            name: loan.playerName,
-            pos: loan.playerPosition,
-            strength: Math.min(100, loan.developmentBonus * 20 + 60),
-            age: 25,
-            morale: 70,
-            wage: Math.floor(50000 + Math.random() * 50000)
-        });
-    }
-
-    loan.status = 'recalled';
-    return true;
-}
-
-function tickLoanedPlayerDevelopment() {
-    if (!game.reserves.loanedOut) return;
-
-    const currentMatchday = game.matchday || 1;
-
-    game.reserves.loanedOut.forEach(loan => {
-        if (loan.status === 'active' && currentMatchday >= loan.endMatchday) {
-            // Loan ended
-            loan.status = 'ended';
-
-            // Player returns stronger due to development bonus
-            const player = squad.find(p => p.id === loan.playerId);
-            if (player && loan.developmentBonus > 0) {
-                player.strength = Math.min(100, player.strength + loan.developmentBonus * 5);
-            }
-        }
-
-        // Deduct salary costs during loan
-        if (loan.status === 'active') {
-            game.money -= loan.monthlySalaryCost;
-        }
-    });
-}
-
-function tickIncomingLoanManagement() {
-    if (!game.reserves.incomingLoans) return;
-
-    const currentMatchday = game.matchday || 1;
-
-    game.reserves.incomingLoans.forEach(loan => {
-        if (loan.status === 'active' && currentMatchday >= loan.endMatchday) {
-            loan.status = 'ended';
-        }
-    });
-
-    // Potential loan offers (5% chance per month)
-    if (Math.random() < 0.05 && game.reserves.reserveSquad && game.reserves.reserveSquad.length > 0) {
-        const candidate = game.reserves.reserveSquad[Math.floor(Math.random() * game.reserves.reserveSquad.length)];
-        const loanOffer = {
-            id: `offer_${candidate.id}_${Date.now()}`,
-            playerId: candidate.id,
-            playerName: candidate.name,
-            club: INCOMING_LOAN_CLUBS[Math.floor(Math.random() * INCOMING_LOAN_CLUBS.length)].name,
-            duration: LOAN_DURATIONS[Math.floor(Math.random() * LOAN_DURATIONS.length)],
-            createdMatchday: game.matchday || 1
-        };
-
-        if (!game.reserves.loanOffers) game.reserves.loanOffers = [];
-        game.reserves.loanOffers.push(loanOffer);
-    }
-}
-
-function playReserveFriendly(opponent) {
-    const reserveStrength = game.reserves.reserveSquad && game.reserves.reserveSquad.length > 0
-        ? game.reserves.reserveSquad.reduce((sum, p) => sum + p.strength, 0) / game.reserves.reserveSquad.length
-        : 40;
-
-    const opponentStrength = 50 + Math.random() * 20;
-
-    const ourGoals = Math.floor(reserveStrength / 20 + Math.random() * 2);
-    const theirGoals = Math.floor(opponentStrength / 20 + Math.random() * 2);
-
-    const result = ourGoals > theirGoals ? 'win' : ourGoals === theirGoals ? 'draw' : 'loss';
-
-    const match = {
-        opponent: opponent,
-        matchday: game.matchday || 1,
-        result: result,
-        ourGoals: ourGoals,
-        theirGoals: theirGoals,
-        attendance: 2000 + Math.random() * 3000
-    };
-
-    if (!game.reserves.friendlyMatches) game.reserves.friendlyMatches = [];
-    game.reserves.friendlyMatches.push(match);
-
-    // Update reserve player stats
-    if (game.reserves.reserveSquad) {
-        game.reserves.reserveSquad.forEach(p => {
-            p.matchesPlayed++;
-            if (Math.random() < (p.strength / 100)) {
-                p.goals += Math.floor(Math.random() * 2);
-            }
-        });
-    }
-
-    return match;
-}
-
-function renderReservesLoanPanel() {
-    const container = document.getElementById('reserves-loan-box');
-    if (!container) return;
-
-    initializeReservesLoan();
-
-    let html = '<div class="panel-content">';
-    html += '<h3>Reservemannschaft & Leihspieler</h3>';
-
-    // Reserve Squad Section
-    if (game.reserves.reserveSquad && game.reserves.reserveSquad.length > 0) {
-        html += '<div class="reserves-section">';
-        html += '<h4>Reservemannschaft (' + game.reserves.reserveSquad.length + ')</h4>';
-        html += '<table class="reserves-table" style="width:100%; font-size:9px;">';
-        html += '<tr><th>Spieler</th><th>Pos.</th><th>Stärke</th><th>Spiele</th><th>Tore</th></tr>';
-
-        game.reserves.reserveSquad.slice(0, 8).forEach(player => {
-            html += `<tr>
-                        <td>${player.name}</td>
-                        <td>${player.position}</td>
-                        <td>${Math.floor(player.strength)}</td>
-                        <td>${player.matchesPlayed}</td>
-                        <td>${player.goals}</td>
-                    </tr>`;
-        });
-
-        html += '</table>';
-        html += '</div>';
-    }
-
-    // Loaned Out Players Section
-    if (game.reserves.loanedOut && game.reserves.loanedOut.length > 0) {
-        html += '<div class="loaned-section" style="margin-top:10px;">';
-        html += '<h4>Verliehene Spieler (' + game.reserves.loanedOut.filter(l => l.status === 'active').length + ')</h4>';
-        html += '<table class="loaned-table" style="width:100%; font-size:9px;">';
-        html += '<tr><th>Spieler</th><th>Verein</th><th>Rückgabe</th><th>Kosten</th><th>Status</th></tr>';
-
-        game.reserves.loanedOut.filter(l => l.status === 'active').forEach(loan => {
-            const matchdaysRemaining = Math.max(0, loan.endMatchday - (game.matchday || 1));
-            const seasonsRemaining = (matchdaysRemaining / 34).toFixed(1);
-            html += `<tr>
-                        <td>${loan.playerName}</td>
-                        <td>${loan.loanedClub}</td>
-                        <td>${seasonsRemaining}S</td>
-                        <td>€${loan.monthlySalaryCost.toLocaleString()}/M</td>
-                        <td>Aktiv</td>
-                    </tr>`;
-        });
-
-        html += '</table>';
-        html += '</div>';
-    }
-
-    // Incoming Loans Section
-    if (game.reserves.incomingLoans && game.reserves.incomingLoans.length > 0) {
-        html += '<div class="incoming-section" style="margin-top:10px;">';
-        html += '<h4>Leihspieler (' + game.reserves.incomingLoans.filter(l => l.status === 'active').length + ')</h4>';
-        html += '<table class="incoming-table" style="width:100%; font-size:9px;">';
-        html += '<tr><th>Spieler</th><th>Verein</th><th>Pos.</th><th>Stärke</th><th>Spiele</th></tr>';
-
-        game.reserves.incomingLoans.filter(l => l.status === 'active').forEach(loan => {
-            html += `<tr>
-                        <td>${loan.name}</td>
-                        <td>${loan.club}</td>
-                        <td>${loan.position}</td>
-                        <td>${Math.floor(loan.strength)}</td>
-                        <td>${loan.matchesPlayed}</td>
-                    </tr>`;
-        });
-
-        html += '</table>';
-        html += '</div>';
-    }
-
-    // Loan Offers Section
-    if (game.reserves.loanOffers && game.reserves.loanOffers.length > 0) {
-        html += '<div class="offers-section" style="margin-top:10px;">';
-        html += '<h4>Leih-Anfragen (' + game.reserves.loanOffers.length + ')</h4>';
-        html += '<ul style="font-size:9px;">';
-
-        game.reserves.loanOffers.slice(0, 5).forEach(offer => {
-            html += `<li>${offer.playerName} → ${offer.club} (${offer.duration.months} Monate)</li>`;
-        });
-
-        html += '</ul>';
-        html += '</div>';
-    }
-
-    html += '</div>';
-    container.innerHTML = html;
 }
 
 /* eslint-enable */
@@ -21830,220 +21118,6 @@ function renderPlayerRetirementPanel() {
 }
 
 /* eslint-enable */
-// Turnier-Klammer-System
-// DFB-Pokal, Landespokal und Champions Cup Visualization
-
-let tournamentBracketsState = {
-    activeBrackets: {},
-    bracketHistory: [],
-    matchupPreviews: {}
-};
-
-const BRACKET_CONFIG = {
-    DFB_POKAL: {
-        id: 'dfb_pokal',
-        name: 'DFB-Pokal',
-        rounds: ['1. Runde', '2. Runde', 'Achtelfinale', 'Viertelfinale', 'Halbfinale', 'Finale'],
-        color: 'var(--primary)'
-    },
-    LANDES_POKAL: {
-        id: 'landes_pokal',
-        name: 'Landespokal',
-        rounds: ['1. Runde', 'Achtelfinale', 'Viertelfinale', 'Halbfinale', 'Finale'],
-        color: 'var(--accent)'
-    },
-    CHAMPIONS_CUP: {
-        id: 'champions_cup',
-        name: 'Champions Cup',
-        rounds: ['Gruppenphase', 'Achtelfinale', 'Viertelfinale', 'Halbfinale', 'Finale'],
-        color: 'var(--gold)'
-    }
-};
-
-function initializeTournamentBrackets() {
-    if (!game.tournamentBrackets) game.tournamentBrackets = {};
-    if (!game.tournamentBrackets.activeBrackets) game.tournamentBrackets.activeBrackets = {};
-    if (!game.tournamentBrackets.bracketHistory) game.tournamentBrackets.bracketHistory = [];
-    if (!game.tournamentBrackets.matchupPreviews) game.tournamentBrackets.matchupPreviews = {};
-}
-
-function getBracketProgress(tournamentId) {
-    if (tournamentId === 'dfb_pokal') {
-        const cupTournament = window.cupTournament || { currentRound: 0, eliminated: false };
-        return {
-            name: 'DFB-Pokal',
-            currentRound: cupTournament.currentRound,
-            eliminated: cupTournament.eliminated,
-            roundName: cupTournament.roundNames ? cupTournament.roundNames[cupTournament.currentRound] : 'N/A',
-            progress: ((cupTournament.currentRound || 0) / 5) * 100
-        };
-    } else if (tournamentId === 'champions_cup') {
-        return {
-            name: 'Champions Cup',
-            currentRound: game.inEurope ? 1 : 0,
-            eliminated: !game.inEurope,
-            roundName: game.inEurope ? 'Gruppenphase' : 'Nicht qualifiziert',
-            progress: game.inEurope ? 20 : 0
-        };
-    }
-
-    return {
-        name: 'Unbekannter Turnier',
-        currentRound: 0,
-        eliminated: true,
-        roundName: 'N/A',
-        progress: 0
-    };
-}
-
-function generateBracketMatches(tournamentId) {
-    const matches = [];
-
-    if (tournamentId === 'dfb_pokal') {
-        const cupTournament = window.cupTournament || { matches: [] };
-        const recentMatches = (cupTournament.matches || []).slice(-4);
-
-        recentMatches.forEach(match => {
-            matches.push({
-                home: match.home || 'Team A',
-                away: match.away || 'Team B',
-                homeGoals: match.homeGoals !== undefined ? match.homeGoals : '?',
-                awayGoals: match.awayGoals !== undefined ? match.awayGoals : '?',
-                status: match.played ? 'completed' : 'pending',
-                isOurMatch: (match.home === game.clubName || match.away === game.clubName)
-            });
-        });
-    } else if (tournamentId === 'champions_cup') {
-        const groupMatches = (game.europeGroupMatches || []).slice(-4);
-        groupMatches.forEach(match => {
-            matches.push({
-                home: match.homeTeam || 'Team A',
-                away: match.awayTeam || 'Team B',
-                homeGoals: match.homeGoals !== undefined ? match.homeGoals : '?',
-                awayGoals: match.awayGoals !== undefined ? match.awayGoals : '?',
-                status: match.played ? 'completed' : 'pending',
-                isOurMatch: (match.homeTeam === game.clubName || match.awayTeam === game.clubName)
-            });
-        });
-    }
-
-    return matches;
-}
-
-function getNextTournamentOpponent(tournamentId) {
-    if (tournamentId === 'dfb_pokal') {
-        const cupTournament = window.cupTournament || {};
-        const nextMatches = (cupTournament.matches || []).filter(m => !m.played);
-        if (nextMatches.length > 0) {
-            const nextMatch = nextMatches[0];
-            if (nextMatch.home === game.clubName) {
-                return { opponent: nextMatch.away, isHome: true };
-            } else if (nextMatch.away === game.clubName) {
-                return { opponent: nextMatch.home, isHome: false };
-            }
-        }
-    }
-
-    return { opponent: 'TBD', isHome: null };
-}
-
-function generateBracketVisualization(tournamentId) {
-    const progress = getBracketProgress(tournamentId);
-    const matches = generateBracketMatches(tournamentId);
-    const nextOpp = getNextTournamentOpponent(tournamentId);
-    const config = Object.values(BRACKET_CONFIG).find(b => b.id === tournamentId);
-
-    if (!config) return '';
-
-    let html = '<div style="background:#1a1a1a; padding:8px; border-radius:4px; margin-bottom:8px;">';
-    html += `<p style="font-size:10px; margin:0 0 4px 0; color:${config.color};"><strong>${config.name}</strong></p>`;
-
-    html += '<div style="width:100%; height:10px; background:#333; border-radius:3px; overflow:hidden; margin-bottom:4px;">';
-    html += `<div style="width:${progress.progress}%; height:100%; background:${config.color};"></div>`;
-    html += '</div>';
-
-    html += `<p style="font-size:8px; color:var(--text-muted); margin:0 0 4px 0;">`;
-    if (progress.eliminated) {
-        html += `<span style="color:var(--danger);">❌ Ausgeschieden</span>`;
-    } else {
-        html += `<span style="color:${config.color};">${progress.roundName}</span>`;
-    }
-    html += `</p>`;
-
-    if (!progress.eliminated && nextOpp.opponent !== 'TBD') {
-        const homeIcon = nextOpp.isHome ? '🏠' : '✈️';
-        html += `<p style="font-size:9px; margin:0 0 4px 0;"><strong>Nächster Gegner:</strong> ${homeIcon} ${nextOpp.opponent}</p>`;
-    }
-
-    if (matches.length > 0) {
-        html += '<div style="font-size:8px; margin-top:4px;">';
-        matches.slice(0, 3).forEach(match => {
-            const statusIcon = match.status === 'completed' ? '✓' : '○';
-            const statusColor = match.status === 'completed' ? 'var(--primary)' : 'var(--text-muted)';
-            const highlight = match.isOurMatch ? 'background:#2a3a2a; ' : '';
-            html += `<div style="${highlight}font-size:8px; padding:3px; margin-bottom:2px;">`;
-            html += `<span style="color:${statusColor};">${statusIcon}</span> ${match.home} ${match.homeGoals}:${match.awayGoals} ${match.away}`;
-            html += `</div>`;
-        });
-        html += '</div>';
-    }
-
-    html += '</div>';
-    return html;
-}
-
-function tickTournamentBrackets() {
-    initializeTournamentBrackets();
-
-    const activeTournaments = ['dfb_pokal', 'champions_cup'];
-
-    activeTournaments.forEach(tournamentId => {
-        const progress = getBracketProgress(tournamentId);
-        game.tournamentBrackets.activeBrackets[tournamentId] = progress;
-    });
-}
-
-function getTournamentBracketsSummary() {
-    if (!game.tournamentBrackets) return { tournaments: 0, active: 0, eliminated: 0 };
-
-    const dfbPokal = getBracketProgress('dfb_pokal');
-    const championsCup = getBracketProgress('champions_cup');
-
-    return {
-        tournaments: 2,
-        active: (dfbPokal.eliminated ? 0 : 1) + (championsCup.eliminated ? 0 : 1),
-        eliminated: (dfbPokal.eliminated ? 1 : 0) + (championsCup.eliminated ? 1 : 0)
-    };
-}
-
-function renderTournamentBracketsPanel() {
-    const container = document.getElementById('tournament-brackets-box');
-    if (!container) return;
-
-    initializeTournamentBrackets();
-
-    let html = '<div class="panel-content">';
-    html += '<h3>🏆 TURNIER-KLAMMERN</h3>';
-
-    const summary = getTournamentBracketsSummary();
-    html += '<div style="background:#1a1a1a; padding:8px; border-radius:4px; margin-bottom:10px;">';
-    html += `<p style="font-size:9px; margin:0;"><strong>Aktive Turniere:</strong> `;
-    html += `Gesamt: <span style="color:var(--text-muted);">${summary.tournaments}</span> | `;
-    html += `Aktiv: <span style="color:var(--primary);">${summary.active}</span> | `;
-    html += `Ausgeschieden: <span style="color:var(--danger);">${summary.eliminated}</span></p>`;
-    html += '</div>';
-
-    const dfbViz = generateBracketVisualization('dfb_pokal');
-    if (dfbViz) html += dfbViz;
-
-    const champViz = generateBracketVisualization('champions_cup');
-    if (champViz) html += champViz;
-
-    html += '</div>';
-    container.innerHTML = html;
-}
-
-/* eslint-enable */
 
     // Wandelt einen rohen Trophäen-Eintrag in Icon + Kategorie um, für eine chronologische
     // "Ehrengalerie" statt einer schlichten Liste (bringt auch den Legenden-Status sichtbar
@@ -22244,539 +21318,102 @@ function renderTournamentBracketsPanel() {
 /* eslint-enable */
 
     // ==========================================
-    // HALL OF FAME - KARRIEREHÖHEPUNKTE & LEGENDÄRE SPIELER
+    // HALL OF FAME
     // ==========================================
-    // Verfolgt die Leistungen des Vereins, rekordhalter, beste Spieler und denkwürdige Momente.
+    // Ewige Bestenlisten des Vereins aus gespeicherten Daten: aktueller Kader (goalsCareer,
+    // appearances), Spieler, die ihre Karriere beendet haben (game.playerRetirement), und die
+    // Saisonbilanzen (game.managerCareer). Die alte Version hielt alles nur im Arbeitsspeicher,
+    // fand den eigenen Verein nie und meldete beim bloßen Öffnen "legendäre" Spieler.
 
-    let hallOfFameState = {
-        topScorers: [], // [ { playerName, goals, season, timestamp } ]
-        topAssists: [], // [ { playerName, assists, season, timestamp } ]
-        bestSeasons: [], // [ { season, points, wins, goals, trophies, timestamp } ]
-        legendaryPlayers: [], // [ { playerName, appearances, goals, assists, awards, timestamp } ]
-        trophyHistory: [], // [ { trophy, season, timestamp } ]
-        recordMatches: [], // [ { description, score, opponent, timestamp } ]
-        careerMilestones: [] // [ { milestone, value, timestamp, matchday } ]
-    };
-
-    const HALL_OF_FAME_CONFIG = {
-        topScorersLimit: 10,
-        topAssistsLimit: 10,
-        bestSeasonsLimit: 5,
-        legendaryPlayersLimit: 5,
-        trophyHistoryLimit: 20,
-        recordMatchesLimit: 10,
-        milestonesLimit: 50
-    };
-
-    function recordPlayerMilestone(playerName, goalsThisSeason, appearsThisSeason) {
-        if (!hallOfFameState.careerMilestones) hallOfFameState.careerMilestones = [];
-
-        // 50 Tore in einer Saison
-        if (goalsThisSeason === 50) {
-            hallOfFameState.careerMilestones.push({
-                milestone: `🎯 50-Tore-Meilenstein`,
-                value: `${playerName} schoss 50 Tore in dieser Saison!`,
-                timestamp: new Date().toLocaleDateString('de-DE'),
-                matchday: game.matchday
-            });
-            showToast(`🌟 Hall of Fame: ${playerName} erreicht 50-Tore-Meilenstein!`, 'success', 5000);
-        }
-
-        // 100 Ligaspiele
-        if (appearsThisSeason === 100) {
-            hallOfFameState.careerMilestones.push({
-                milestone: `🏆 100-Spiele-Jubiläum`,
-                value: `${playerName} spielte 100 Ligaspiele für den Verein!`,
-                timestamp: new Date().toLocaleDateString('de-DE'),
-                matchday: game.matchday
-            });
-        }
-
-        if (hallOfFameState.careerMilestones.length > HALL_OF_FAME_CONFIG.milestonesLimit) {
-            hallOfFameState.careerMilestones.shift();
-        }
-    }
-
-    function recordTopScorer() {
-        if (!squad || squad.length === 0) return;
-
-        let topScorer = squad.reduce((best, p) => {
-            let pGoals = p.goalsSeason || 0;
-            let bestGoals = best.goalsSeason || 0;
-            return pGoals > bestGoals ? p : best;
-        }, squad[0]);
-
-        if ((topScorer.goalsSeason || 0) > 0) {
-            let entry = {
-                playerName: topScorer.name,
-                goals: topScorer.goalsSeason || 0,
-                season: game.season,
-                timestamp: new Date().toLocaleDateString('de-DE')
-            };
-
-            hallOfFameState.topScorers.push(entry);
-            hallOfFameState.topScorers.sort((a, b) => b.goals - a.goals);
-
-            if (hallOfFameState.topScorers.length > HALL_OF_FAME_CONFIG.topScorersLimit) {
-                hallOfFameState.topScorers.pop();
-            }
-
-            recordPlayerMilestone(topScorer.name, topScorer.goalsSeason || 0, topScorer.appearances || 0);
-        }
-    }
-
-    function recordTopAssists() {
-        if (!squad || squad.length === 0) return;
-
-        let topAssister = squad.reduce((best, p) => {
-            let pAssists = p.assistsSeason || 0;
-            let bestAssists = best.assistsSeason || 0;
-            return pAssists > bestAssists ? p : best;
-        }, squad[0]);
-
-        if ((topAssister.assistsSeason || 0) > 0) {
-            let entry = {
-                playerName: topAssister.name,
-                assists: topAssister.assistsSeason || 0,
-                season: game.season,
-                timestamp: new Date().toLocaleDateString('de-DE')
-            };
-
-            hallOfFameState.topAssists.push(entry);
-            hallOfFameState.topAssists.sort((a, b) => b.assists - a.assists);
-
-            if (hallOfFameState.topAssists.length > HALL_OF_FAME_CONFIG.topAssistsLimit) {
-                hallOfFameState.topAssists.pop();
-            }
-        }
-    }
-
-    function recordSeasonStats() {
-        if (!hallOfFameState.bestSeasons) hallOfFameState.bestSeasons = [];
-
-        let leagueTable = leaguesData[game.leagueLevel];
-        let ourTeam = leagueTable.find(t => t.id === game.clubId);
-        let position = leagueTable.indexOf(ourTeam) + 1;
-        let isChampion = position === 1;
-
-        let entry = {
-            season: game.season,
-            points: ourTeam.points || 0,
-            wins: game.wins || 0,
-            goals: (squad || []).reduce((sum, p) => sum + (p.goalsSeason || 0), 0),
-            trophies: (game.trophiesWon || []).length,
-            position: position,
-            timestamp: new Date().toLocaleDateString('de-DE')
+    function getHallOfFameEntries() {
+        const aktiv = squad.map(p => ({ name: p.name, goals: p.goalsCareer || 0, apps: p.appearances || 0, aktiv: true }));
+        const ehemalig = ((game.playerRetirement && game.playerRetirement.retirementHistory) || [])
+            .map(r => ({ name: r.playerName, goals: r.goals || 0, apps: r.appearances || 0, aktiv: false, tier: r.legendTier, season: r.retirementSeason }));
+        const alle = [...aktiv, ...ehemalig.filter(r => !aktiv.some(a => a.name === r.name))];
+        return {
+            torjaeger: alle.filter(e => e.goals > 0).sort((a, b) => b.goals - a.goals).slice(0, 5),
+            rekordspieler: alle.filter(e => e.apps > 0).sort((a, b) => b.apps - a.apps).slice(0, 5),
+            legenden: ehemalig.filter(e => e.tier).slice(-5).reverse(),
+            saisons: (game.managerCareer || []).filter(e => e.club === game.clubName)
+                .sort((a, b) => a.level - b.level || a.rank - b.rank || b.points - a.points).slice(0, 5)
         };
-
-        hallOfFameState.bestSeasons.push(entry);
-        hallOfFameState.bestSeasons.sort((a, b) => b.points - a.points);
-
-        if (hallOfFameState.bestSeasons.length > HALL_OF_FAME_CONFIG.bestSeasonsLimit) {
-            hallOfFameState.bestSeasons.pop();
-        }
-
-        if (isChampion) {
-            showToast(`🏆 Hall of Fame: Meisterschaft gewonnen!`, 'success', 5000);
-        }
-    }
-
-    function recordTrophy(trophyName) {
-        if (!hallOfFameState.trophyHistory) hallOfFameState.trophyHistory = [];
-
-        let entry = {
-            trophy: trophyName,
-            season: game.season,
-            timestamp: new Date().toLocaleDateString('de-DE'),
-            matchday: game.matchday
-        };
-
-        hallOfFameState.trophyHistory.push(entry);
-
-        if (hallOfFameState.trophyHistory.length > HALL_OF_FAME_CONFIG.trophyHistoryLimit) {
-            hallOfFameState.trophyHistory.shift();
-        }
-
-        showToast(`🏆 Trophäe in Hall of Fame aufgenommen: ${trophyName}`, 'success', 5000);
-    }
-
-    function recordRecordMatch(score, opponent, description) {
-        if (!hallOfFameState.recordMatches) hallOfFameState.recordMatches = [];
-
-        let entry = {
-            description: description,
-            score: score,
-            opponent: opponent,
-            season: game.season,
-            timestamp: new Date().toLocaleDateString('de-DE'),
-            matchday: game.matchday
-        };
-
-        hallOfFameState.recordMatches.push(entry);
-        hallOfFameState.recordMatches.sort((a, b) => b.matchday - a.matchday);
-
-        if (hallOfFameState.recordMatches.length > HALL_OF_FAME_CONFIG.recordMatchesLimit) {
-            hallOfFameState.recordMatches.pop();
-        }
-    }
-
-    function updateLegendaryPlayers() {
-        if (!hallOfFameState.legendaryPlayers) hallOfFameState.legendaryPlayers = [];
-
-        // Spieler mit >100 Spielen und >30 Toren werden legendär
-        let candidates = (squad || []).filter(p => {
-            let apps = p.appearances || 0;
-            let goals = p.goalsSeason || 0;
-            return apps >= 100 && goals >= 30;
-        });
-
-        candidates.forEach(player => {
-            let existing = hallOfFameState.legendaryPlayers.find(l => l.playerName === player.name);
-            if (!existing) {
-                hallOfFameState.legendaryPlayers.push({
-                    playerName: player.name,
-                    position: player.position,
-                    appearances: player.appearances || 0,
-                    goals: player.goalsSeason || 0,
-                    assists: player.assistsSeason || 0,
-                    awards: 0,
-                    timestamp: new Date().toLocaleDateString('de-DE')
-                });
-
-                if (hallOfFameState.legendaryPlayers.length > HALL_OF_FAME_CONFIG.legendaryPlayersLimit) {
-                    hallOfFameState.legendaryPlayers = hallOfFameState.legendaryPlayers
-                        .sort((a, b) => b.appearances - a.appearances)
-                        .slice(0, HALL_OF_FAME_CONFIG.legendaryPlayersLimit);
-                }
-
-                showToast(`⭐ Hall of Fame: ${player.name} wird legendär!`, 'success', 5000);
-            }
-        });
     }
 
     function renderHallOfFamePanel() {
-        let container = document.getElementById('hall-of-fame-box');
-        if (!container) return;
-
-        updateLegendaryPlayers();
-        recordTopScorer();
-        recordTopAssists();
-
-        let html = `
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:12px;">
-                <div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:8px; border:1px solid rgba(255,255,255,0.1);">
-                    <div style="font-size:9px; color:#aaa; margin-bottom:4px;">⚽ Top-Torschützen</div>
-                    <div style="font-size:10px;">
-        `;
-
-        if ((hallOfFameState.topScorers || []).length === 0) {
-            html += '<div style="color:#aaa;">Noch keine Einträge</div>';
-        } else {
-            (hallOfFameState.topScorers || []).slice(0, 3).forEach((entry, idx) => {
-                html += `<div style="padding:2px 0; color:var(--accent);">🥇 ${entry.playerName}: <strong>${entry.goals}</strong> Tore (S${entry.season})</div>`;
-            });
-        }
-
-        html += `
-                    </div>
-                </div>
-                <div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:8px; border:1px solid rgba(255,255,255,0.1);">
-                    <div style="font-size:9px; color:#aaa; margin-bottom:4px;">🎯 Top-Vorlagengeber</div>
-                    <div style="font-size:10px;">
-        `;
-
-        if ((hallOfFameState.topAssists || []).length === 0) {
-            html += '<div style="color:#aaa;">Noch keine Einträge</div>';
-        } else {
-            (hallOfFameState.topAssists || []).slice(0, 3).forEach((entry, idx) => {
-                html += `<div style="padding:2px 0; color:var(--accent);">🎯 ${entry.playerName}: <strong>${entry.assists}</strong> Assists (S${entry.season})</div>`;
-            });
-        }
-
-        html += `
-                    </div>
-                </div>
-            </div>
-
-            <div style="background:rgba(255,255,255,0.03); border-radius:6px; padding:8px; margin-bottom:12px; border:1px solid rgba(255,255,255,0.1);">
-                <div style="font-weight:700; color:var(--accent); margin-bottom:6px;">⭐ LEGENDÄRE SPIELER (100+ Spiele, 30+ Tore)</div>
-                <div style="display:grid; gap:4px; font-size:9px;">
-        `;
-
-        if ((hallOfFameState.legendaryPlayers || []).length === 0) {
-            html += '<div style="color:#aaa;">Noch keine legendären Spieler</div>';
-        } else {
-            (hallOfFameState.legendaryPlayers || []).forEach(player => {
-                html += `
-                    <div style="background:rgba(255,215,0,0.1); padding:4px; border-radius:3px; border-left:2px solid var(--gold);">
-                        <div style="font-weight:700; color:#FFD700;">${player.playerName}</div>
-                        <div style="color:#aaa; font-size:8px;">⚽ ${player.appearances} Spiele · ⚽ ${player.goals} Tore · 🎯 ${player.assists} Assists</div>
-                    </div>
-                `;
-            });
-        }
-
-        html += `
-                </div>
-            </div>
-
-            <div style="background:rgba(255,255,255,0.03); border-radius:6px; padding:8px; border:1px solid rgba(255,255,255,0.1);">
-                <div style="font-weight:700; color:var(--accent); margin-bottom:6px;">🏆 BESTE SAISONEN</div>
-                <div style="display:grid; gap:4px; font-size:9px;">
-        `;
-
-        if ((hallOfFameState.bestSeasons || []).length === 0) {
-            html += '<div style="color:#aaa;">Noch keine Einträge</div>';
-        } else {
-            (hallOfFameState.bestSeasons || []).forEach(season => {
-                let medailleEmoji = season.position === 1 ? '🥇' : (season.position === 2 ? '🥈' : '🥉');
-                html += `
-                    <div style="display:flex; justify-content:space-between; padding:4px; background:rgba(255,255,255,0.02); border-radius:3px;">
-                        <span>${medailleEmoji} Saison ${season.season}</span>
-                        <span style="color:var(--accent);"><strong>${season.points}</strong> Punkte · Platz ${season.position}</span>
-                    </div>
-                `;
-            });
-        }
-
-        html += `
-                </div>
-            </div>
-
-            <div style="background:rgba(255,255,255,0.03); border-radius:6px; padding:8px; border:1px solid rgba(255,255,255,0.1); font-size:9px;">
-                <div style="color:#aaa; line-height:1.5;">
-                    <strong style="display:block; color:var(--accent); margin-bottom:6px;">💡 Hall of Fame:</strong>
-                    • <strong>Legendäre Spieler:</strong> 100+ Spiele + 30+ Tore = unsterblich<br>
-                    • <strong>Record-Matches:</strong> Besondere Siege und Meilensteine<br>
-                    • <strong>Beste Saisonen:</strong> Deine erfolgreichsten Spielzeiten<br>
-                    • <strong>Trophäen:</strong> Alle gewonnenen Titel im Überblick
-                </div>
-            </div>
-        `;
-
-        container.innerHTML = html;
+        const box = document.getElementById('hall-of-fame-box');
+        if (!box) return;
+        const h = getHallOfFameEntries();
+        const zeile = (links, rechts, gold) => `<div style="display:flex; justify-content:space-between; gap:6px; padding:2px 0; border-top:1px solid rgba(255,255,255,0.06);${gold ? ' color:var(--gold);' : ''}"><span>${links}</span><strong style="white-space:nowrap;">${rechts}</strong></div>`;
+        const block = (titel, inhalt, leer) => `<div style="margin-bottom:8px;"><div style="font-weight:700; color:var(--accent); margin-bottom:2px;">${titel}</div>${inhalt || `<div style="color:var(--text-muted);">${leer}</div>`}</div>`;
+        const tier = { ICON: 'Vereins-Ikone', LEGEND: 'Legende', CLUB_HERO: 'Vereinsheld' };
+        box.innerHTML = `<div style="font-size:9px;">
+            ${block('⚽ Ewige Torjäger', h.torjaeger.map(e => zeile(`${e.name}${e.aktiv ? '' : ' (ehemalig)'}`, `${e.goals} Tore`)).join(''), 'Noch keine Tore.')}
+            ${block('🏟️ Rekordspieler', h.rekordspieler.map(e => zeile(`${e.name}${e.aktiv ? '' : ' (ehemalig)'}`, `${e.apps} Spiele`)).join(''), 'Noch keine Einsätze.')}
+            ${block('⭐ Vereinslegenden', h.legenden.map(e => zeile(`${e.name} (Karriereende Saison ${e.season})`, tier[e.tier] || e.tier, true)).join(''), 'Legende wird, wer mit Stärke 85+ und 100+ Spielen seine Karriere beendet.')}
+            ${block('🏆 Beste Saisons', h.saisons.map(e => zeile(`Saison ${e.season} · ${e.league}`, `Platz ${e.rank} · ${e.points} P.`)).join(''), 'Wird nach der ersten Saison gefüllt.')}
+        </div>`;
     }
 
 /* eslint-enable */
 
     // ==========================================
-    // MANAGER ANALYTICS - MANAGERLEISTUNGS-ANALYSE
+    // MANAGER-STATISTIK
     // ==========================================
-    // Umfassende Verfolgung von Managerleistung, Erfolgsquoten,
-    // Taktischen Entscheidungen und langfristigen Karriere-Trends.
+    // Karrierebilanz des Managers über alle Saisons und Vereine, gespeichert in
+    // game.managerCareer. Die alte Version hielt ihre Daten nur im Arbeitsspeicher, zählte Siege
+    // aus einem nie gesetzten Feld und fand über game.clubId (gibt es nicht) immer den ersten
+    // Verein der Tabelle statt den eigenen.
 
-    let managerAnalyticsState = {
-        seasonRecords: [], // [ { season, wins, draws, losses, goals, conceded, points, position, trophies } ]
-        managerRatings: [], // [ { season, avgRating, wins, losses, tactical, financial, youth, relations } ]
-        decisionLog: [], // [ { type, decision, result, season, matchday } ]
-        marketingImpact: [], // [ { season, sponsorValue, ticketRevenue, fanBase } ]
-        tacticalAnalysis: {}, // { tactic: { winRate, avgGoals, avgConceded } }
-        managerStats: {
-            totalMatches: 0,
-            totalWins: 0,
-            totalDraws: 0,
-            totalLosses: 0,
-            totalGoals: 0,
-            totalConceded: 0,
-            trophiesWon: 0,
-            bestPlacement: 999,
-            promotions: 0,
-            relegations: 0,
-            budgetManaged: 0
-        }
-    };
-
-    function recordManagerDecision(decisionType, decision, result) {
-        if (!managerAnalyticsState.decisionLog) managerAnalyticsState.decisionLog = [];
-
-        let entry = {
-            type: decisionType, // 'formation', 'transfer', 'tactic', 'signing', 'selling', 'youth'
-            decision: decision,
-            result: result, // 'success', 'neutral', 'failure'
-            season: game.season,
-            matchday: game.matchday,
-            timestamp: new Date().toLocaleDateString('de-DE')
-        };
-
-        managerAnalyticsState.decisionLog.push(entry);
-
-        // Keep last 100 decisions
-        if (managerAnalyticsState.decisionLog.length > 100) {
-            managerAnalyticsState.decisionLog.shift();
-        }
+    // Saisonende, vor Auf-/Abstieg (siehe concludeSeasonAndAdvance).
+    function recordSeasonalManagerStats(rank, record, level) {
+        if (!record) return;
+        if (!game.managerCareer) game.managerCareer = [];
+        if (game.managerCareer.some(e => e.season === game.season && e.club === game.clubName)) return;
+        game.managerCareer.push({
+            season: game.season, club: game.clubName, level, league: leagueNames[level], rank,
+            won: record.won || 0, drawn: record.drawn || 0, lost: record.lost || 0,
+            goalsFor: record.goalsFor || 0, goalsAgainst: record.goalsAgainst || 0, points: record.points || 0
+        });
+        if (game.managerCareer.length > 40) game.managerCareer.shift();
     }
 
-    function recordSeasonalManagerStats() {
-        if (!managerAnalyticsState.seasonRecords) managerAnalyticsState.seasonRecords = [];
-
-        let leagueTable = leaguesData[game.leagueLevel];
-        let ourTeam = leagueTable.find(t => t.id === game.clubId);
-        let position = leagueTable.indexOf(ourTeam) + 1;
-
-        let seasonRecord = {
-            season: game.season,
-            wins: game.wins || 0,
-            draws: game.draws || 0,
-            losses: game.losses || 0,
-            goals: (squad || []).reduce((sum, p) => sum + (p.goalsSeason || 0), 0),
-            conceded: game.goalsAgainst || 0,
-            points: ourTeam.points || 0,
-            position: position,
-            trophies: (game.trophies || []).filter(t => t.includes(`Saison ${game.season}`)).length,
-            budget: game.money || 0,
-            avgAttendance: Math.round((game.attendance || 0) / Math.max(1, game.matchesPlayed || 1))
-        };
-
-        managerAnalyticsState.seasonRecords.push(seasonRecord);
-
-        // Update overall stats
-        let stats = managerAnalyticsState.managerStats;
-        stats.totalMatches += (seasonRecord.wins + seasonRecord.draws + seasonRecord.losses);
-        stats.totalWins += seasonRecord.wins;
-        stats.totalDraws += seasonRecord.draws;
-        stats.totalLosses += seasonRecord.losses;
-        stats.totalGoals += seasonRecord.goals;
-        stats.totalConceded += seasonRecord.conceded;
-        stats.trophiesWon += seasonRecord.trophies;
-        stats.bestPlacement = Math.min(stats.bestPlacement, position);
-
-        // Keep last 20 seasons
-        if (managerAnalyticsState.seasonRecords.length > 20) {
-            managerAnalyticsState.seasonRecords.shift();
-        }
-    }
-
-    function calculateManagerRating(season) {
-        let record = managerAnalyticsState.seasonRecords.find(r => r.season === season);
-        if (!record) return 0;
-
-        let totalMatches = record.wins + record.draws + record.losses;
-        let winRate = totalMatches > 0 ? (record.wins / totalMatches) : 0;
-        let pointsPerGame = totalMatches > 0 ? (record.points / totalMatches) : 0;
-        let goalDiff = record.goals - record.conceded;
-
-        let tactical = Math.min(100, Math.round((winRate * 100) * 0.6));
-        let defensive = Math.min(100, Math.round((1 - (record.conceded / Math.max(1, record.goals))) * 80));
-        let financial = Math.min(100, 60); // Placeholder
-        let relations = Math.min(100, 60 + record.trophies * 10); // Trophy boost
-
-        let avgRating = Math.round((tactical + defensive + financial + relations) / 4);
-
-        return {
-            season: season,
-            avgRating: avgRating,
-            wins: record.wins,
-            losses: record.losses,
-            tactical: tactical,
-            defensive: defensive,
-            financial: financial,
-            relations: relations,
-            position: record.position,
-            trophies: record.trophies
-        };
+    function getManagerCareerTotals() {
+        const liste = game.managerCareer || [];
+        const t = { seasons: liste.length, won: 0, drawn: 0, lost: 0, goalsFor: 0, goalsAgainst: 0, promotions: 0, relegations: 0, titles: 0, best: null };
+        liste.forEach((e, i) => {
+            t.won += e.won; t.drawn += e.drawn; t.lost += e.lost; t.goalsFor += e.goalsFor; t.goalsAgainst += e.goalsAgainst;
+            if (e.rank === 1) t.titles++;
+            const next = liste[i + 1];
+            if (next && next.club === e.club) {
+                if (next.level < e.level) t.promotions++;
+                else if (next.level > e.level) t.relegations++;
+            }
+            if (!t.best || e.level < t.best.level || (e.level === t.best.level && e.rank < t.best.rank)) t.best = e;
+        });
+        t.matches = t.won + t.drawn + t.lost;
+        return t;
     }
 
     function renderManagerAnalyticsPanel() {
-        let container = document.getElementById('manager-analytics-box');
-        if (!container) return;
-
-        let stats = managerAnalyticsState.managerStats;
-        let latestSeason = managerAnalyticsState.seasonRecords.length > 0
-            ? managerAnalyticsState.seasonRecords[managerAnalyticsState.seasonRecords.length - 1]
-            : null;
-        let rating = latestSeason ? calculateManagerRating(latestSeason.season) : null;
-
-        let html = `
-            <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:6px; margin-bottom:12px;">
-                <div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:6px; text-align:center; border:1px solid rgba(255,255,255,0.1);">
-                    <div style="font-size:9px; color:#aaa; margin-bottom:2px;">⚽ Gesamt-Siege</div>
-                    <div style="font-size:16px; font-weight:700; color:var(--primary);">${stats.totalWins}</div>
-                    <div style="font-size:8px; color:#aaa;">von ${stats.totalMatches} Spielen</div>
-                </div>
-                <div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:6px; text-align:center; border:1px solid rgba(255,255,255,0.1);">
-                    <div style="font-size:9px; color:#aaa; margin-bottom:2px;">🏆 Trophäen</div>
-                    <div style="font-size:16px; font-weight:700; color:var(--gold);">${stats.trophiesWon}</div>
-                    <div style="font-size:8px; color:#aaa;">Karriere insgesamt</div>
-                </div>
-                <div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:6px; text-align:center; border:1px solid rgba(255,255,255,0.1);">
-                    <div style="font-size:9px; color:#aaa; margin-bottom:2px;">📊 Quote</div>
-                    <div style="font-size:16px; font-weight:700; color:var(--primary);">${stats.totalMatches > 0 ? Math.round((stats.totalWins / stats.totalMatches) * 100) : 0}%</div>
-                    <div style="font-size:8px; color:#aaa;">Siegesquote</div>
-                </div>
-                <div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:6px; text-align:center; border:1px solid rgba(255,255,255,0.1);">
-                    <div style="font-size:9px; color:#aaa; margin-bottom:2px;">🥇 Beste Platzierung</div>
-                    <div style="font-size:16px; font-weight:700; color:var(--gold);">Platz ${stats.bestPlacement}</div>
-                    <div style="font-size:8px; color:#aaa;">in der Liga</div>
-                </div>
-            </div>
-
-            <div style="background:rgba(255,255,255,0.03); border-radius:6px; padding:8px; margin-bottom:12px; border:1px solid rgba(255,255,255,0.1);">
-                <div style="font-weight:700; color:var(--accent); margin-bottom:6px;">🎯 AKTUELLE SAISON-BEWERTUNG</div>
-                <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:6px; font-size:9px;">
-        `;
-
-        if (rating) {
-            let ratingColor = rating.avgRating >= 70 ? 'var(--primary)' : (rating.avgRating >= 50 ? 'var(--accent)' : 'var(--danger)');
-            html += `
-                <div style="background:rgba(255,255,255,0.05); padding:4px; border-radius:3px; text-align:center;">
-                    <div style="color:#aaa; font-size:8px;">Gesamt</div>
-                    <div style="font-weight:700; color:${ratingColor}; font-size:14px;">${rating.avgRating}</div>
-                </div>
-                <div style="background:rgba(255,255,255,0.05); padding:4px; border-radius:3px; text-align:center;">
-                    <div style="color:#aaa; font-size:8px;">Taktik</div>
-                    <div style="font-weight:700; color:var(--primary); font-size:14px;">${rating.tactical}</div>
-                </div>
-                <div style="background:rgba(255,255,255,0.05); padding:4px; border-radius:3px; text-align:center;">
-                    <div style="color:#aaa; font-size:8px;">Abwehr</div>
-                    <div style="font-weight:700; color:var(--primary); font-size:14px;">${rating.defensive}</div>
-                </div>
-                <div style="background:rgba(255,255,255,0.05); padding:4px; border-radius:3px; text-align:center;">
-                    <div style="color:#aaa; font-size:8px;">Beziehungen</div>
-                    <div style="font-weight:700; color:var(--primary); font-size:14px;">${rating.relations}</div>
-                </div>
-            `;
+        const box = document.getElementById('manager-analytics-box');
+        if (!box) return;
+        const liste = game.managerCareer || [];
+        if (!liste.length) {
+            box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Die Bilanz wird nach der ersten abgeschlossenen Saison geführt.</div>';
+            return;
         }
-
-        html += `
-                </div>
+        const t = getManagerCareerTotals();
+        const quote = t.matches ? Math.round(t.won / t.matches * 100) : 0;
+        const kachel = (label, wert, sub) => `<div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:6px; text-align:center;">
+            <div style="font-size:8px; color:var(--text-muted);">${label}</div><div style="font-size:15px; font-weight:800;">${wert}</div><div style="font-size:8px; color:var(--text-muted);">${sub}</div></div>`;
+        box.innerHTML = `<div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:6px; margin-bottom:8px;">
+                ${kachel('Bilanz', `${t.won}-${t.drawn}-${t.lost}`, `${t.matches} Ligaspiele · ${quote}% Siege`)}
+                ${kachel('Tore', `${t.goalsFor}:${t.goalsAgainst}`, `${t.seasons} Saison(s)`)}
+                ${kachel('Meisterschaften', t.titles, `${t.promotions} Aufstieg(e) · ${t.relegations} Abstieg(e)`)}
+                ${kachel('Bestes Ergebnis', `Platz ${t.best.rank}`, t.best.league)}
             </div>
-
-            <div style="background:rgba(255,255,255,0.03); border-radius:6px; padding:8px; margin-bottom:12px; border:1px solid rgba(255,255,255,0.1);">
-                <div style="font-weight:700; color:var(--accent); margin-bottom:6px;">📈 SAISONVERLAUF (letzte 5)</div>
-                <div style="display:grid; gap:3px; font-size:9px;">
-        `;
-
-        let recentSeasons = managerAnalyticsState.seasonRecords.slice(-5).reverse();
-        if (recentSeasons.length === 0) {
-            html += '<div style="color:#aaa;">Noch keine Saison abgeschlossen</div>';
-        } else {
-            recentSeasons.forEach(season => {
-                let positionEmoji = season.position === 1 ? '🥇' : (season.position <= 3 ? '🥈' : '📊');
-                html += `
-                    <div style="display:flex; justify-content:space-between; padding:3px; background:rgba(255,255,255,0.02); border-radius:2px;">
-                        <span>${positionEmoji} Saison ${season.season}</span>
-                        <span style="color:var(--accent);"><strong>${season.wins}W-${season.draws}D-${season.losses}L</strong> · Platz ${season.position} · 🏆 ${season.trophies}</span>
-                    </div>
-                `;
-            });
-        }
-
-        html += `
-                </div>
-            </div>
-
-            <div style="background:rgba(255,255,255,0.03); border-radius:6px; padding:8px; border:1px solid rgba(255,255,255,0.1); font-size:9px;">
-                <strong style="display:block; color:var(--accent); margin-bottom:6px;">💡 Manager Analytics:</strong>
-                <div style="color:#aaa; line-height:1.5;">
-                    • <strong>Gesamt-Statistik:</strong> Alle Spiele, Siege und Trophäen tracken<br>
-                    • <strong>Bewertung:</strong> Taktik, Abwehr, Finanzen und Beziehungen<br>
-                    • <strong>Saisonverlauf:</strong> Die letzten 20 Saisons in Übersicht<br>
-                    • <strong>Entscheidungslog:</strong> Alle wichtigen Managemententscheidungen
-                </div>
-            </div>
-        `;
-
-        container.innerHTML = html;
+            <div style="font-size:9px;">${liste.slice(-6).reverse().map(e => `<div style="display:flex; justify-content:space-between; gap:6px; padding:2px 0; border-top:1px solid rgba(255,255,255,0.06);">
+                <span>Saison ${e.season} · ${e.club}</span><span style="white-space:nowrap;">${e.league.replace(/ \(.*\)/, '')} · Platz <strong>${e.rank}</strong> · ${e.won}-${e.drawn}-${e.lost} · ${e.points} P.</span></div>`).join('')}</div>`;
     }
 
 /* eslint-enable */
@@ -24734,10 +23371,7 @@ function cleanupLegacyScoutState() {
             if (typeof cleanupLegacyContractState === 'function') cleanupLegacyContractState();
             // Opposition Analysis: Gegner-Analyse-Updates
             if (typeof cleanupLegacyScoutState === 'function') cleanupLegacyScoutState();
-            if (typeof cleanupLegacyFanTrainingStadiumState === 'function') cleanupLegacyFanTrainingStadiumState();
-            // Reserves & Loan: Leihspieler-Management und Rückgabe
-            if (typeof tickLoanedPlayerDevelopment === 'function') tickLoanedPlayerDevelopment();
-            if (typeof tickIncomingLoanManagement === 'function') tickIncomingLoanManagement();
+            if (typeof cleanupRemovedModuleState === 'function') cleanupRemovedModuleState();
             // Crisis Management: monatliche Krisen-Events
             if (typeof tickCrisisEvents === 'function') tickCrisisEvents();
             if (typeof tickDisciplinaryBans === 'function') tickDisciplinaryBans();
@@ -24750,7 +23384,6 @@ function cleanupLegacyScoutState() {
             if (typeof tickCoachCarousel === 'function') tickCoachCarousel();
             if (typeof tickMemberAssembly === 'function') tickMemberAssembly();
             // Karriereenden: am Saisonende in agePlayersAtSeasonEnd() (js/player-development.js)
-            if (typeof tickTournamentBrackets === 'function') tickTournamentBrackets();
             // Financial tracking for dashboard charts
             if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
             loescheBuchungskontext();
@@ -25698,6 +24331,8 @@ function cleanupLegacyScoutState() {
         let teams = [...leaguesData[game.leagueLevel]].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
         let myRank = teams.findIndex(t => t.name === game.clubName) + 1;
         let myTeamRecord = leaguesData[game.leagueLevel].find(t => t.name === game.clubName);
+        // Manager-Statistik: Bilanz der gerade beendeten Saison, bevor Auf-/Abstieg die Liga ändert.
+        if (typeof recordSeasonalManagerStats === 'function') recordSeasonalManagerStats(myRank, myTeamRecord, game.leagueLevel);
         if (typeof evaluateSeasonEndObjectives === 'function') evaluateSeasonEndObjectives(myRank);
         if (typeof prepareMemberAssembly === 'function') prepareMemberAssembly(myRank);
         if (typeof concludeWomenSeason === 'function') concludeWomenSeason();
@@ -25863,9 +24498,6 @@ function cleanupLegacyScoutState() {
 
         incomingOffers = [];
         if (typeof evaluateFinancialFairplay === 'function') evaluateFinancialFairplay();
-        if (typeof recordSeasonStats === 'function') recordSeasonStats();
-        // Manager Analytics: record seasonal manager statistics
-        if (typeof recordSeasonalManagerStats === 'function') recordSeasonalManagerStats();
         game.season++;
         if (typeof startNewSeasonObjectives === 'function') startNewSeasonObjectives();
         if (typeof openMemberAssembly === 'function') openMemberAssembly();

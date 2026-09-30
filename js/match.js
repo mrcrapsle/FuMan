@@ -1744,10 +1744,7 @@
             if (typeof cleanupLegacyContractState === 'function') cleanupLegacyContractState();
             // Opposition Analysis: Gegner-Analyse-Updates
             if (typeof cleanupLegacyScoutState === 'function') cleanupLegacyScoutState();
-            if (typeof cleanupLegacyFanTrainingStadiumState === 'function') cleanupLegacyFanTrainingStadiumState();
-            // Reserves & Loan: Leihspieler-Management und Rückgabe
-            if (typeof tickLoanedPlayerDevelopment === 'function') tickLoanedPlayerDevelopment();
-            if (typeof tickIncomingLoanManagement === 'function') tickIncomingLoanManagement();
+            if (typeof cleanupRemovedModuleState === 'function') cleanupRemovedModuleState();
             // Crisis Management: monatliche Krisen-Events
             if (typeof tickCrisisEvents === 'function') tickCrisisEvents();
             if (typeof tickDisciplinaryBans === 'function') tickDisciplinaryBans();
@@ -1760,7 +1757,6 @@
             if (typeof tickCoachCarousel === 'function') tickCoachCarousel();
             if (typeof tickMemberAssembly === 'function') tickMemberAssembly();
             // Karriereenden: am Saisonende in agePlayersAtSeasonEnd() (js/player-development.js)
-            if (typeof tickTournamentBrackets === 'function') tickTournamentBrackets();
             // Financial tracking for dashboard charts
             if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
             loescheBuchungskontext();

@@ -106,6 +106,8 @@ This pattern ensures:
 - Fans: `js/fans.js` (`game.fans`, fan actions/groups). Training: `js/training.js` + minigames in `js/training-games.js`. Stadium: `js/stadium.js` (blocks/capacity) + `js/stadium-events.js`.
 - Transfer windows: matchday-based (summer 1-3, winter 18-20) with `runDeadlineDay()` in `js/transfermarket.js`, driven by `tickTransferWindows()` after every matchday.
 - Season end extras: `js/relegation.js` (own club on rank 3/16, legs on the dashboard, auto-resolved in `concludeSeasonAndAdvance()`), `js/league-awards.js` (`game.leagueAwards`), `js/coach-carousel.js` (AI `team.coach`, temporary `team.coachBounce` - removed via `tickCoachBounce(true)` before leagues advance).
+- Statistics: manager career in `game.managerCareer` (js/manager-analytics.js), Hall of Fame computed from squad + `game.playerRetirement` + `game.managerCareer` (js/hall-of-fame.js). Loans: `js/secondteam.js` / transfermarket loans only.
+- Removed modules leave save-game fields behind: add them to `cleanupRemovedModuleState()` in js/state.js.
 - Player aging/development: only `agePlayersAtSeasonEnd()` in `js/player-development.js` (age +1, strength by archetype).
 
 ### Game Loop & Monthly Ticks
@@ -134,10 +136,10 @@ if (game.matchday % 4 === 0) {
 
 **Season End** (called in `js/season-end.js` → `concludeSeasonAndAdvance()`):
 ```javascript
-if (typeof recordSeasonStats === 'function') recordSeasonStats();
+// before promotion/relegation changes game.leagueLevel:
+if (typeof recordSeasonalManagerStats === 'function') recordSeasonalManagerStats(myRank, myTeamRecord, game.leagueLevel);
+if (typeof awardLeagueHonours === 'function') awardLeagueHonours(myRank);
 if (typeof agePlayersAtSeasonEnd === 'function') agePlayersAtSeasonEnd();
-if (typeof recordSeasonalManagerStats === 'function') 
-    recordSeasonalManagerStats();
 ```
 
 Always use `typeof ... === 'function'` checks before calling feature functions—this allows features to be optional.

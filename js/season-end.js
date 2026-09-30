@@ -94,6 +94,8 @@
         let teams = [...leaguesData[game.leagueLevel]].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
         let myRank = teams.findIndex(t => t.name === game.clubName) + 1;
         let myTeamRecord = leaguesData[game.leagueLevel].find(t => t.name === game.clubName);
+        // Manager-Statistik: Bilanz der gerade beendeten Saison, bevor Auf-/Abstieg die Liga ändert.
+        if (typeof recordSeasonalManagerStats === 'function') recordSeasonalManagerStats(myRank, myTeamRecord, game.leagueLevel);
         if (typeof evaluateSeasonEndObjectives === 'function') evaluateSeasonEndObjectives(myRank);
         if (typeof prepareMemberAssembly === 'function') prepareMemberAssembly(myRank);
         if (typeof concludeWomenSeason === 'function') concludeWomenSeason();
@@ -259,9 +261,6 @@
 
         incomingOffers = [];
         if (typeof evaluateFinancialFairplay === 'function') evaluateFinancialFairplay();
-        if (typeof recordSeasonStats === 'function') recordSeasonStats();
-        // Manager Analytics: record seasonal manager statistics
-        if (typeof recordSeasonalManagerStats === 'function') recordSeasonalManagerStats();
         game.season++;
         if (typeof startNewSeasonObjectives === 'function') startNewSeasonObjectives();
         if (typeof openMemberAssembly === 'function') openMemberAssembly();
