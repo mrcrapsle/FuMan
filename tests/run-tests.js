@@ -4824,18 +4824,29 @@ async function testLiveMatchEngine(browser) {
         const st = currentMatch.stats;
         const unsere = currentMatch.awayGoals, gegner = currentMatch.homeGoals;
         const toreNachher = squad.reduce((a, p) => a + (p.goalsSeason || 0), 0);
-        out.tore = `${gegner}:${unsere}`;
+        out.einzel = `${gegner}:${unsere}`;
         out.torschuetzenRichtig = toreNachher - toreVorher === unsere;
-        out.dominant = unsere > gegner;
         out.statistik = st.shots[1] >= unsere && st.onTarget[1] >= unsere && st.shots[0] >= gegner && getLivePossession()[1] > 55;
         out.statistikSichtbar = document.getElementById('live-match-stats').innerHTML.includes('Ballbesitz');
         out.abpfiffZeile = document.getElementById('ticker-log').innerHTML.includes('📊 Statistik');
         const stand = `${currentMatch.homeGoals}:${currentMatch.awayGoals}`;
         for (let i = 0; i < 5; i++) simulateMatchStep();
         out.nachAbpfiffRuhe = `${currentMatch.homeGoals}:${currentMatch.awayGoals}` === stand;
+        // Überlegenheit über fünf weitere Auswärtsspiele (ein Einzelspiel kann 1:1 enden)
+        let wir = unsere, sie = gegner;
+        for (let n = 0; n < 5; n++) {
+            lineup = pickBestLineupIds();
+            setupMatch('Kreisklasse FC', game.clubName, 5, false, false, null);
+            stopLiveTickerAutoplay();
+            currentMatch.halftimeShown = true;
+            while (currentMatch.minute < 90) simulateMatchStep();
+            wir += currentMatch.awayGoals; sie += currentMatch.homeGoals;
+        }
+        out.tore = `${sie}:${wir} in 6 Spielen`;
+        out.dominant = wir >= 3 * Math.max(1, sie);
         return out;
     });
-    assert(r.torschuetzenRichtig, `Auswärtstore werden unseren Spielern gutgeschrieben, Heimtore nicht (${r.tore})`);
+    assert(r.torschuetzenRichtig, `Auswärtstore werden unseren Spielern gutgeschrieben, Heimtore nicht (${r.einzel})`);
     assert(r.dominant, `Klar überlegene Mannschaft gewinnt auswärts (${r.tore})`);
     assert(r.statistik && r.statistikSichtbar && r.abpfiffZeile, 'Statistik (Ballbesitz, Schüsse) passt zum Spiel und wird angezeigt');
     assert(r.vorauswahlFeldspieler, 'Auswechslung: Vorauswahl ist ein Feldspieler, nicht der Torwart');

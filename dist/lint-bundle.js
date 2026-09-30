@@ -477,7 +477,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.6', date: '30.09.2026', features: 'Phase 17: KI-Vereine mit Stars und Transfers, Spielerstatistik mit Noten und Vorlagen' };
+    const GAME_VERSION = { number: '3.7', date: '30.09.2026', features: 'Phase 17: Einstieg - Erste Schritte, Bildschirm-Tipps, neue Kurzanleitung' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
