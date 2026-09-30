@@ -9552,6 +9552,17 @@ function renderBoardRoomPanel() {
         document.getElementById('menu-backdrop').classList.remove('menu-open');
     }
 
+    // Reiter innerhalb eines Bildschirms (Historie, Finanzen): Container "subtab-<prefix>-<name>",
+    // Knöpfe "btn-subtab-<prefix>-<name>". Danach wird der Bildschirm neu gezeichnet, weil
+    // Diagramme ihre Breite erst messen können, wenn der Reiter sichtbar ist.
+    const SUBTAB_RENDER = { hist: () => renderHistoryView(), fin: () => renderFinancesView() };
+    function setSubTab(prefix, tab) {
+        playSound('click');
+        document.querySelectorAll(`.subtab-${prefix}`).forEach(el => { el.style.display = el.id === `subtab-${prefix}-${tab}` ? 'block' : 'none'; });
+        document.querySelectorAll(`[id^="btn-subtab-${prefix}-"]`).forEach(btn => { btn.className = btn.id === `btn-subtab-${prefix}-${tab}` ? 'btn-action' : 'btn-secondary'; });
+        if (SUBTAB_RENDER[prefix]) SUBTAB_RENDER[prefix]();
+    }
+
     // Merkt sich den zuletzt geoeffneten Screen. Der Kontoauszug (finances.js) leitet
     // daraus ab, welchem Bereich eine Kontobewegung zuzuordnen ist.
     let aktiverScreen = 'screen-dashboard';

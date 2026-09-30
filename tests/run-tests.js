@@ -4382,6 +4382,37 @@ async function testPhase14Teil2(browser) {
     await page.close();
 }
 
+async function testPhase14Teil3(browser) {
+    console.log('\n[P14c] Historie und Finanzen in Reitern');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        simulateMatchdays(4);
+        const out = {};
+        for (const [scr, prefix, tabs] of [['screen-history', 'hist', ['titel', 'legenden', 'chronik', 'rivalen']], ['screen-finances', 'fin', ['uebersicht', 'journal', 'budget', 'bank']]]) {
+            showScreen(scr);
+            out[prefix] = tabs.map(t => {
+                setSubTab(prefix, t);
+                const sichtbar = tabs.filter(x => document.getElementById(`subtab-${prefix}-${x}`).style.display !== 'none');
+                const el = document.getElementById(`subtab-${prefix}-${t}`);
+                return { t, ok: sichtbar.length === 1 && sichtbar[0] === t && el.querySelectorAll(':scope > .panel').length >= 2
+                    && document.getElementById(`btn-subtab-${prefix}-${t}`).className === 'btn-action' };
+            });
+            const direkt = [...document.getElementById(scr).children].filter(c => c.classList.contains('panel'));
+            out[prefix + 'Direkt'] = direkt.length;
+        }
+        showScreen('screen-finances'); setSubTab('fin', 'journal');
+        out.journalDa = !!document.querySelector('#subtab-fin-journal #ledger-tab-letzter');
+        return out;
+    });
+    [...r.hist, ...r.fin].forEach(x => assert(x.ok, `Reiter „${x.t}“ zeigt nur seine Panels und ist markiert`));
+    assert(r.histDirekt === 0 && r.finDirekt === 0, `Keine Panels mehr außerhalb der Reiter (Historie ${r.histDirekt}, Finanzen ${r.finDirekt})`);
+    assert(r.journalDa, 'Buchungsjournal liegt im Journal-Reiter');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler in Phase 14 Teil 3 (${consoleErrors.slice(0, 3).join(' | ')})`);
+    await page.close();
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -4458,6 +4489,7 @@ async function main() {
         testPhase13Teil4,
         testPhase14Teil1,
         testPhase14Teil2,
+        testPhase14Teil3,
         testRuntimeRoundTrip,
     ];
 

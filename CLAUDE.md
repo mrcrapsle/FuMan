@@ -152,7 +152,7 @@ Most game screens follow this pattern:
 3. Each sub-render builds HTML and updates a specific container
 4. Container exists in index.html with a fixed `id` (e.g., `<div id="squad-box"></div>`)
 
-Long screens use sub-tabs instead of stacking panels (`setTrainingTab()`, `setSquadTab()` with `squad-tab-*` containers): put a new squad panel into the matching tab, not directly into `screen-squad`.
+Long screens use sub-tabs instead of stacking panels (`setTrainingTab()`, `setSquadTab()` with `squad-tab-*` containers, and the generic `setSubTab(prefix, tab)` in js/ui-core.js with `subtab-<prefix>-<tab>` containers for history `hist` and finances `fin`): put a new panel into the matching tab, not directly into the screen.
 
 Screen render functions are typically called:
 - On screen switch: `showScreen('screen-squad')` calls `renderSquadView()`

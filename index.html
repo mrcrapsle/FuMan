@@ -998,137 +998,140 @@
                 <button onclick="showScreen('screen-betting')" id="hubtab-btn-screen-betting" class="btn-secondary" style="font-size:10px; padding:6px 4px;">Wetten</button>
             </div>
             <div id="screen-finances" style="display:none;">
+                <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:4px; margin-bottom:8px;">
+                    <button onclick="setSubTab('fin', 'uebersicht')" id="btn-subtab-fin-uebersicht" class="btn-action" style="font-size:10px; padding:6px 2px;">📊 Übersicht</button>
+                    <button onclick="setSubTab('fin', 'journal')" id="btn-subtab-fin-journal" class="btn-secondary" style="font-size:10px; padding:6px 2px;">📒 Journal</button>
+                    <button onclick="setSubTab('fin', 'budget')" id="btn-subtab-fin-budget" class="btn-secondary" style="font-size:10px; padding:6px 2px;">💼 Budget</button>
+                    <button onclick="setSubTab('fin', 'bank')" id="btn-subtab-fin-bank" class="btn-secondary" style="font-size:10px; padding:6px 2px;">🏦 Bank</button>
+                </div>
                 <div class="stock-ticker-bar" id="fin-stock-ticker"></div>
-                <div class="panel">
-                    <div class="panel-header">📊 FINANZ-CHARTS</div>
-                    <div id="fin-trend-chart" style="margin-bottom:12px;"></div>
-                    <div id="fin-revenue-breakdown" style="margin-bottom:12px;"></div>
-                    <div id="fin-cashflow-bar"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--accent);">🏆 SPONSOREN-RANKING (KARRIERE)</div>
-                    <div id="sponsor-leaderboard-toggle" style="display:flex; gap:6px; margin-bottom:8px;"></div>
-                    <div id="sponsor-leaderboard-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">
-                        <span>🏦 MONATLICHE GEWINN- & VERLUSTRECHNUNG (GuV)</span>
-                        <span id="fin-month-title" style="color:#fff;">Monat 1</span>
+                <div id="subtab-fin-uebersicht" class="subtab-fin">
+                    <div class="panel">
+                        <div class="panel-header">📊 FINANZ-CHARTS</div>
+                        <div id="fin-trend-chart" style="margin-bottom:12px;"></div>
+                        <div id="fin-revenue-breakdown" style="margin-bottom:12px;"></div>
+                        <div id="fin-cashflow-bar"></div>
                     </div>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-                        <div class="box">
-                            <strong style="color:var(--primary);">EINNAHMEN</strong>
-                            <div style="display:flex; justify-content:space-between;"><span>Ticketverkäufe:</span><span id="fin-in-tickets">0 €</span></div>
-                            <div style="display:flex; justify-content:space-between; font-size:9px; color:#94a3b8; margin-bottom:4px;"><span>↳ Zuschauer beim letzten Heimspiel:</span><span id="fin-last-attendance">-</span></div>
-                            <div style="display:flex; justify-content:space-between;"><span>Merchandising (Shop):</span><span id="fin-in-merch">0 €</span></div>
-                            <div style="display:flex; justify-content:space-between;"><span>Sponsoren, TV & Banden:</span><span id="fin-in-sponsors">0 €</span></div>
-                            <div style="display:flex; justify-content:space-between;"><span>Börsendividenden:</span><span id="fin-in-dividends">0 €</span></div>
+                    <div class="panel">
+                        <div class="panel-header">
+                            <span>🏦 MONATLICHE GEWINN- & VERLUSTRECHNUNG (GuV)</span>
+                            <span id="fin-month-title" style="color:#fff;">Monat 1</span>
                         </div>
-                        <div class="box">
-                            <strong style="color:var(--danger);">AUSGABEN</strong>
-                            <div style="display:flex; justify-content:space-between;"><span>Spieler- & Staffgehälter:</span><span id="fin-out-wages">0 €</span></div>
-                            <div style="display:flex; justify-content:space-between;"><span>Stadion & Campus-Unterhalt:</span><span id="fin-out-maintenance">0 €</span></div>
-                            <div style="display:flex; justify-content:space-between;"><span>Ordnerdienst:</span><span id="fin-out-stewards">0 €</span></div>
-                            <div style="display:flex; justify-content:space-between;"><span>Auswärtsfahrten (Ø/Monat):</span><span id="fin-out-travel">0 €</span></div>
-                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px; margin:4px 0 6px 0;">
-                                <button onclick="setTravelMode('flugzeug')" id="travel-mode-flugzeug" class="btn-action" style="font-size:9px;">✈️ Flugzeug</button>
-                                <button onclick="setTravelMode('bus')" id="travel-mode-bus" class="btn-secondary" style="font-size:9px;">🚌 Bus (günstiger)</button>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                            <div class="box">
+                                <strong style="color:var(--primary);">EINNAHMEN</strong>
+                                <div style="display:flex; justify-content:space-between;"><span>Ticketverkäufe:</span><span id="fin-in-tickets">0 €</span></div>
+                                <div style="display:flex; justify-content:space-between; font-size:9px; color:#94a3b8; margin-bottom:4px;"><span>↳ Zuschauer beim letzten Heimspiel:</span><span id="fin-last-attendance">-</span></div>
+                                <div style="display:flex; justify-content:space-between;"><span>Merchandising (Shop):</span><span id="fin-in-merch">0 €</span></div>
+                                <div style="display:flex; justify-content:space-between;"><span>Sponsoren, TV & Banden:</span><span id="fin-in-sponsors">0 €</span></div>
+                                <div style="display:flex; justify-content:space-between;"><span>Börsendividenden:</span><span id="fin-in-dividends">0 €</span></div>
                             </div>
-                            <button onclick="openBusSponsoringNegotiation()" id="btn-bus-sponsoring" class="btn-secondary" style="font-size:9px; margin-bottom:6px;">🚌 Bus-Sponsoring verhandeln</button>
-                            <div style="display:flex; justify-content:space-between;"><span>Kreditzinsen:</span><span id="fin-out-interest">0 €</span></div>
-                            <div style="display:flex; justify-content:space-between;"><span id="fin-out-tax-label">Steuern & Abgaben:</span><span id="fin-out-tax">0 €</span></div>
+                            <div class="box">
+                                <strong style="color:var(--danger);">AUSGABEN</strong>
+                                <div style="display:flex; justify-content:space-between;"><span>Spieler- & Staffgehälter:</span><span id="fin-out-wages">0 €</span></div>
+                                <div style="display:flex; justify-content:space-between;"><span>Stadion & Campus-Unterhalt:</span><span id="fin-out-maintenance">0 €</span></div>
+                                <div style="display:flex; justify-content:space-between;"><span>Ordnerdienst:</span><span id="fin-out-stewards">0 €</span></div>
+                                <div style="display:flex; justify-content:space-between;"><span>Auswärtsfahrten (Ø/Monat):</span><span id="fin-out-travel">0 €</span></div>
+                                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px; margin:4px 0 6px 0;">
+                                    <button onclick="setTravelMode('flugzeug')" id="travel-mode-flugzeug" class="btn-action" style="font-size:9px;">✈️ Flugzeug</button>
+                                    <button onclick="setTravelMode('bus')" id="travel-mode-bus" class="btn-secondary" style="font-size:9px;">🚌 Bus (günstiger)</button>
+                                </div>
+                                <button onclick="openBusSponsoringNegotiation()" id="btn-bus-sponsoring" class="btn-secondary" style="font-size:9px; margin-bottom:6px;">🚌 Bus-Sponsoring verhandeln</button>
+                                <div style="display:flex; justify-content:space-between;"><span>Kreditzinsen:</span><span id="fin-out-interest">0 €</span></div>
+                                <div style="display:flex; justify-content:space-between;"><span id="fin-out-tax-label">Steuern & Abgaben:</span><span id="fin-out-tax">0 €</span></div>
+                            </div>
+                        </div>
+                        <div style="text-align:right; font-size:12px; margin-top:4px;">
+                            Erwarteter Monatsüberschuss: <strong id="fin-net-total" style="color:var(--primary);">+0 €</strong>
                         </div>
                     </div>
-                    <div style="text-align:right; font-size:12px; margin-top:4px;">
-                        Erwarteter Monatsüberschuss: <strong id="fin-net-total" style="color:var(--primary);">+0 €</strong>
+                    <div class="panel">
+                        <div class="panel-header">📈 FINANZPROGNOSE & VERLAUF</div>
+                        <div id="finance-forecast-box" style="margin-bottom:8px;"></div>
+                        <div id="money-history-chart-box"></div>
                     </div>
                 </div>
-
-                <div class="panel">
-                    <div class="panel-header">📒 BUCHUNGSJOURNAL – WOHER KOMMT DAS GELD?</div>
-                    <div style="font-size:10px; color:#94a3b8; margin-bottom:6px;">Jede Spieltagsabrechnung einzeln aufgeschlüsselt. So sehen Sie genau, welcher Posten wie viel gebracht oder gekostet hat.</div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin-bottom:8px;">
-                        <button onclick="setLedgerView('letzter')" id="ledger-tab-letzter" class="btn-action" style="font-size:9px; padding:5px 2px;">📄 Letzter Spieltag</button>
-                        <button onclick="setLedgerView('saison')" id="ledger-tab-saison" class="btn-secondary" style="font-size:9px; padding:5px 2px;">📊 Saison gesamt</button>
-                        <button onclick="setLedgerView('konto')" id="ledger-tab-konto" class="btn-secondary" style="font-size:9px; padding:5px 2px;">💳 Kontoauszug</button>
+                <div id="subtab-fin-journal" class="subtab-fin" style="display:none;">
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--accent);">🏆 SPONSOREN-RANKING (KARRIERE)</div>
+                        <div id="sponsor-leaderboard-toggle" style="display:flex; gap:6px; margin-bottom:8px;"></div>
+                        <div id="sponsor-leaderboard-box"></div>
                     </div>
-                    <div id="finance-ledger-box"></div>
-                </div>
-
-                <div class="panel">
-                    <div class="panel-header">⚖️ FINANCIAL FAIRPLAY</div>
-                    <div id="ffp-status-box"></div>
-                </div>
-
-                <div class="panel">
-                    <div class="panel-header">💼 BUDGETS & VORSTANDS-VERHANDLUNGEN</div>
-                    <div id="insolvency-status-box" class="box" style="display:none; border-color:var(--danger); color:var(--danger); font-size:11px; margin-bottom:6px;"></div>
-                    <div style="font-size:11px; margin-bottom:2px;" id="budget-transfer-bar-label">Transferbudget: 0 €</div>
-                    <div style="font-size:11px; margin-bottom:2px;" id="budget-wage-bar-label">Gehaltsbudget: 0 / 0</div>
-                    <div style="background:#1e293b; border-radius:6px; height:10px; overflow:hidden; margin-bottom:8px;">
-                        <div id="budget-wage-bar-fill" style="height:100%; width:0%; background:var(--primary); transition:width 0.3s;"></div>
-                    </div>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
-                        <button onclick="negotiateBoardBudget('transfer', 500000)" class="btn-secondary">+500.000 € Transferbudget fordern</button>
-                        <button onclick="negotiateBoardBudget('wage', 10000)" class="btn-secondary">+10.000 €/SpT Gehaltsbudget fordern</button>
+                    <div class="panel">
+                        <div class="panel-header">📒 BUCHUNGSJOURNAL – WOHER KOMMT DAS GELD?</div>
+                        <div style="font-size:10px; color:#94a3b8; margin-bottom:6px;">Jede Spieltagsabrechnung einzeln aufgeschlüsselt. So sehen Sie genau, welcher Posten wie viel gebracht oder gekostet hat.</div>
+                        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin-bottom:8px;">
+                            <button onclick="setLedgerView('letzter')" id="ledger-tab-letzter" class="btn-action" style="font-size:9px; padding:5px 2px;">📄 Letzter Spieltag</button>
+                            <button onclick="setLedgerView('saison')" id="ledger-tab-saison" class="btn-secondary" style="font-size:9px; padding:5px 2px;">📊 Saison gesamt</button>
+                            <button onclick="setLedgerView('konto')" id="ledger-tab-konto" class="btn-secondary" style="font-size:9px; padding:5px 2px;">💳 Kontoauszug</button>
+                        </div>
+                        <div id="finance-ledger-box"></div>
                     </div>
                 </div>
-
-
-
-
-
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">📺 MEDIENRECHTE & TV-VERTRAG</div>
-                    <div id="media-rights-box"></div>
-                    <div id="tv-income-history-box" style="margin-top:6px;"></div>
-                </div>
-
-
-
-                <div class="panel">
-                    <div class="panel-header">🏦 KREDITE</div>
-                    <div id="active-loans-list" style="margin-bottom:6px;"></div>
-                    <input type="number" id="loan-amount-input" placeholder="Kreditsumme in €" class="input-inline" style="width:100%; margin-bottom:6px;">
-                    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px;">
-                        <button onclick="takeLoanTier('kurz', parseInt(document.getElementById('loan-amount-input').value)||0)" class="btn-secondary" style="font-size:9px;">Kurzfristig<br>10 SpT · 15%</button>
-                        <button onclick="takeLoanTier('mittel', parseInt(document.getElementById('loan-amount-input').value)||0)" class="btn-secondary" style="font-size:9px;">Mittelfristig<br>20 SpT · 10%</button>
-                        <button onclick="takeLoanTier('lang', parseInt(document.getElementById('loan-amount-input').value)||0)" class="btn-secondary" style="font-size:9px;">Langfristig<br>34 SpT · 6%</button>
+                <div id="subtab-fin-budget" class="subtab-fin" style="display:none;">
+                    <div class="panel">
+                        <div class="panel-header">⚖️ FINANCIAL FAIRPLAY</div>
+                        <div id="ffp-status-box"></div>
                     </div>
-                    <div style="font-size:9px; color:#64748b; margin-top:8px;">Alt-Sofortkredit (freie Tilgung): <strong id="legacy-loan-debt" style="color:var(--danger);">0 €</strong></div>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px; margin-top:4px;">
-                        <button onclick="takeLoan(100000)" class="btn-secondary">+ 100.000 € Soforthilfe</button>
-                        <button onclick="payLoan(50000)" class="btn-secondary">- 50.000 € Tilgen</button>
+                    <div class="panel">
+                        <div class="panel-header">💼 BUDGETS & VORSTANDS-VERHANDLUNGEN</div>
+                        <div id="insolvency-status-box" class="box" style="display:none; border-color:var(--danger); color:var(--danger); font-size:11px; margin-bottom:6px;"></div>
+                        <div style="font-size:11px; margin-bottom:2px;" id="budget-transfer-bar-label">Transferbudget: 0 €</div>
+                        <div style="font-size:11px; margin-bottom:2px;" id="budget-wage-bar-label">Gehaltsbudget: 0 / 0</div>
+                        <div style="background:#1e293b; border-radius:6px; height:10px; overflow:hidden; margin-bottom:8px;">
+                            <div id="budget-wage-bar-fill" style="height:100%; width:0%; background:var(--primary); transition:width 0.3s;"></div>
+                        </div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+                            <button onclick="negotiateBoardBudget('transfer', 500000)" class="btn-secondary">+500.000 € Transferbudget fordern</button>
+                            <button onclick="negotiateBoardBudget('wage', 10000)" class="btn-secondary">+10.000 €/SpT Gehaltsbudget fordern</button>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--gold);">📺 MEDIENRECHTE & TV-VERTRAG</div>
+                        <div id="media-rights-box"></div>
+                        <div id="tv-income-history-box" style="margin-top:6px;"></div>
                     </div>
                 </div>
-                <div class="panel">
-                    <div class="panel-header">📈 FINANZPROGNOSE & VERLAUF</div>
-                    <div id="finance-forecast-box" style="margin-bottom:8px;"></div>
-                    <div id="money-history-chart-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">🏦 FESTGELDANLAGE</div>
-                    <div id="fixed-deposit-box" style="margin-bottom:6px;"></div>
-                    <input type="number" id="fixed-deposit-amount" placeholder="Betrag in €" class="input-inline" style="width:100%; margin-bottom:6px;">
-                    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px;">
-                        <button onclick="openFixedDeposit(parseInt(document.getElementById('fixed-deposit-amount').value)||0, 10)" class="btn-secondary" style="font-size:9px;">10 SpT · 3%</button>
-                        <button onclick="openFixedDeposit(parseInt(document.getElementById('fixed-deposit-amount').value)||0, 20)" class="btn-secondary" style="font-size:9px;">20 SpT · 7%</button>
-                        <button onclick="openFixedDeposit(parseInt(document.getElementById('fixed-deposit-amount').value)||0, 34)" class="btn-secondary" style="font-size:9px;">34 SpT · 12%</button>
+                <div id="subtab-fin-bank" class="subtab-fin" style="display:none;">
+                    <div class="panel">
+                        <div class="panel-header">🏦 KREDITE</div>
+                        <div id="active-loans-list" style="margin-bottom:6px;"></div>
+                        <input type="number" id="loan-amount-input" placeholder="Kreditsumme in €" class="input-inline" style="width:100%; margin-bottom:6px;">
+                        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px;">
+                            <button onclick="takeLoanTier('kurz', parseInt(document.getElementById('loan-amount-input').value)||0)" class="btn-secondary" style="font-size:9px;">Kurzfristig<br>10 SpT · 15%</button>
+                            <button onclick="takeLoanTier('mittel', parseInt(document.getElementById('loan-amount-input').value)||0)" class="btn-secondary" style="font-size:9px;">Mittelfristig<br>20 SpT · 10%</button>
+                            <button onclick="takeLoanTier('lang', parseInt(document.getElementById('loan-amount-input').value)||0)" class="btn-secondary" style="font-size:9px;">Langfristig<br>34 SpT · 6%</button>
+                        </div>
+                        <div style="font-size:9px; color:#64748b; margin-top:8px;">Alt-Sofortkredit (freie Tilgung): <strong id="legacy-loan-debt" style="color:var(--danger);">0 €</strong></div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px; margin-top:4px;">
+                            <button onclick="takeLoan(100000)" class="btn-secondary">+ 100.000 € Soforthilfe</button>
+                            <button onclick="payLoan(50000)" class="btn-secondary">- 50.000 € Tilgen</button>
+                        </div>
                     </div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">🐷 RÜCKLAGEN & BONITÄT</div>
-                    <div id="reserve-fund-box" class="box" style="margin-bottom:4px;"></div>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px; margin-bottom:6px;">
-                        <button onclick="toggleAutoReserve(10)" class="btn-secondary" style="font-size:9px;">🐷 Auto-Rücklage 10%</button>
-                        <button onclick="withdrawReserveFund()" class="btn-secondary" style="font-size:9px;">💰 Rücklage entnehmen</button>
+                    <div class="panel">
+                        <div class="panel-header">🏦 FESTGELDANLAGE</div>
+                        <div id="fixed-deposit-box" style="margin-bottom:6px;"></div>
+                        <input type="number" id="fixed-deposit-amount" placeholder="Betrag in €" class="input-inline" style="width:100%; margin-bottom:6px;">
+                        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px;">
+                            <button onclick="openFixedDeposit(parseInt(document.getElementById('fixed-deposit-amount').value)||0, 10)" class="btn-secondary" style="font-size:9px;">10 SpT · 3%</button>
+                            <button onclick="openFixedDeposit(parseInt(document.getElementById('fixed-deposit-amount').value)||0, 20)" class="btn-secondary" style="font-size:9px;">20 SpT · 7%</button>
+                            <button onclick="openFixedDeposit(parseInt(document.getElementById('fixed-deposit-amount').value)||0, 34)" class="btn-secondary" style="font-size:9px;">34 SpT · 12%</button>
+                        </div>
                     </div>
-                    <div id="credit-rating-box" class="box" style="margin-bottom:6px;"></div>
-                    <input type="number" id="expense-limit-input" placeholder="Ausgaben-Warnlimit/SpT" class="input-inline" style="width:100%; margin-bottom:6px;">
-                    <button onclick="setExpenseWarningLimit(parseInt(document.getElementById('expense-limit-input').value)||0)" class="btn-secondary" style="margin-bottom:6px;">⚠️ Warnlimit setzen</button>
-                    <button onclick="toggleTaxAdvisor()" id="btn-tax-advisor" class="btn-secondary" style="margin-bottom:4px;">📊 Steuerberater engagieren [15.000 €]</button>
-                    <div id="tax-advisor-note" class="box" style="font-size:9px; line-height:1.5; margin-bottom:6px;"></div>
-                    <button onclick="acceptStrategicInvestor()" id="btn-strategic-investor" class="btn-secondary">💼 Strategischen Investor aufnehmen [+400.000 €]</button>
+                    <div class="panel">
+                        <div class="panel-header">🐷 RÜCKLAGEN & BONITÄT</div>
+                        <div id="reserve-fund-box" class="box" style="margin-bottom:4px;"></div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px; margin-bottom:6px;">
+                            <button onclick="toggleAutoReserve(10)" class="btn-secondary" style="font-size:9px;">🐷 Auto-Rücklage 10%</button>
+                            <button onclick="withdrawReserveFund()" class="btn-secondary" style="font-size:9px;">💰 Rücklage entnehmen</button>
+                        </div>
+                        <div id="credit-rating-box" class="box" style="margin-bottom:6px;"></div>
+                        <input type="number" id="expense-limit-input" placeholder="Ausgaben-Warnlimit/SpT" class="input-inline" style="width:100%; margin-bottom:6px;">
+                        <button onclick="setExpenseWarningLimit(parseInt(document.getElementById('expense-limit-input').value)||0)" class="btn-secondary" style="margin-bottom:6px;">⚠️ Warnlimit setzen</button>
+                        <button onclick="toggleTaxAdvisor()" id="btn-tax-advisor" class="btn-secondary" style="margin-bottom:4px;">📊 Steuerberater engagieren [15.000 €]</button>
+                        <div id="tax-advisor-note" class="box" style="font-size:9px; line-height:1.5; margin-bottom:6px;"></div>
+                        <button onclick="acceptStrategicInvestor()" id="btn-strategic-investor" class="btn-secondary">💼 Strategischen Investor aufnehmen [+400.000 €]</button>
+                    </div>
                 </div>
             </div>
             <div id="screen-betting" style="display:none;">
@@ -2022,54 +2025,68 @@
                 </div>
             </div>
             <div id="screen-history" style="display:none;">
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">📖 VEREINSREKORDE</div>
-                    <div id="club-records-box"></div>
+                <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:4px; margin-bottom:8px;">
+                    <button onclick="setSubTab('hist', 'titel')" id="btn-subtab-hist-titel" class="btn-action" style="font-size:10px; padding:6px 2px;">🏆 Titel</button>
+                    <button onclick="setSubTab('hist', 'legenden')" id="btn-subtab-hist-legenden" class="btn-secondary" style="font-size:10px; padding:6px 2px;">⭐ Legenden</button>
+                    <button onclick="setSubTab('hist', 'chronik')" id="btn-subtab-hist-chronik" class="btn-secondary" style="font-size:10px; padding:6px 2px;">📊 Chronik</button>
+                    <button onclick="setSubTab('hist', 'rivalen')" id="btn-subtab-hist-rivalen" class="btn-secondary" style="font-size:10px; padding:6px 2px;">⚔️ Rivalen</button>
                 </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--teal);">🎖️ ACHIEVEMENTS</div>
-                    <div id="achievements-box"></div>
+                <div id="subtab-hist-titel" class="subtab-hist">
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--gold);">📖 VEREINSREKORDE</div>
+                        <div id="club-records-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--teal);">🎖️ ACHIEVEMENTS</div>
+                        <div id="achievements-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--gold);">🏅 LIGA-AUSZEICHNUNGEN</div>
+                        <div id="league-awards-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header">🌟 TROPHÄENRAUM</div>
+                        <div id="trophies-list"></div>
+                    </div>
                 </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">🌟 SPIELER DES MONATS</div>
-                    <div id="player-of-month-box"></div>
+                <div id="subtab-hist-legenden" class="subtab-hist" style="display:none;">
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--gold);">🌟 SPIELER DES MONATS</div>
+                        <div id="player-of-month-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--gold);">🏆 SPIELER DER SAISON</div>
+                        <div id="player-of-season-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--gold);">⭐ HALL OF FAME</div>
+                        <div id="hall-of-fame-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--gold);">👑 GENERATIONEN-VERGLEICH</div>
+                        <div id="legend-generations-box"></div>
+                    </div>
                 </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">🏆 SPIELER DER SAISON</div>
-                    <div id="player-of-season-box"></div>
+                <div id="subtab-hist-chronik" class="subtab-hist" style="display:none;">
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--purple);">👔 MANAGER-STATISTIK</div>
+                        <div id="manager-analytics-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--blue);">📊 LIGA-CHRONIK</div>
+                        <div style="font-size:9px; color:var(--text-muted); margin-bottom:4px;">Die größten Stärke-Veränderungen der letzten Saison über alle 108 Vereine der Liga-Pyramide hinweg.</div>
+                        <div id="league-chronik-box"></div>
+                    </div>
                 </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">🏅 LIGA-AUSZEICHNUNGEN</div>
-                    <div id="league-awards-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">🌟 TROPHÄENRAUM</div>
-                    <div id="trophies-list"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">⭐ HALL OF FAME</div>
-                    <div id="hall-of-fame-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--purple);">👔 MANAGER-STATISTIK</div>
-                    <div id="manager-analytics-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--teal);">📖 RIVALEN-GESCHICHTSBUCH</div>
-                    <div id="rivalry-history-book"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--purple);">⚔️ RIVALEN-ARCHIV (ABGELÖSTE ERZFEINDE)</div>
-                    <div id="rival-history-archive-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">👑 GENERATIONEN-VERGLEICH</div>
-                    <div id="legend-generations-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--blue);">📊 LIGA-CHRONIK</div>
-                    <div style="font-size:9px; color:var(--text-muted); margin-bottom:4px;">Die größten Stärke-Veränderungen der letzten Saison über alle 108 Vereine der Liga-Pyramide hinweg.</div>
-                    <div id="league-chronik-box"></div>
+                <div id="subtab-hist-rivalen" class="subtab-hist" style="display:none;">
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--teal);">📖 RIVALEN-GESCHICHTSBUCH</div>
+                        <div id="rivalry-history-book"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--purple);">⚔️ RIVALEN-ARCHIV (ABGELÖSTE ERZFEINDE)</div>
+                        <div id="rival-history-archive-box"></div>
+                    </div>
                 </div>
             </div>
             </div>
