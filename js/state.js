@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.1', date: '30.09.2026', features: 'Phase 16: Handy-Check - größere Knöpfe und Schriften, Leiste einzeilig, Stadionplan repariert' };
+    const GAME_VERSION = { number: '3.2', date: '30.09.2026', features: 'Phase 16: Karriere-Balancing - Fitness der Startelf, größerer Transfermarkt, bezahlbare Lizenzauflagen' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -408,7 +408,9 @@
         megastore: { name: "Fanshop Megastore", lvl: 0, max: 5, baseCost: 7200000, desc: "+35 Basis-Kunden pro Woche für alle Fanartikel pro Stufe" },
         parkhaus: { name: "Parkhaus & Shuttle-Bahnhof", lvl: 0, max: 5, baseCost: 6500000, desc: "+1.500 € Parkgebühren & verbessert Stadionauslastung" },
         reha: { name: "Reha-Klinik & Physio-Zentrum", lvl: 0, max: 5, baseCost: 12000000, desc: "Verringert Verletzungszeiten und beschleunigt Regeneration" },
-        internat: { name: "Jugendinternat & Schule", lvl: 0, max: 5, baseCost: 14500000, desc: "Erhöht Stärke und Potenzial neuer Nachwuchsspieler" },
+        // 9 statt 14,5 Mio.: Stufe 1 ist Lizenzauflage für die 2. Liga und kostete in der 3. Liga
+        // rund 4 Mio. - mehr als zwei Saisons Gehälter; Meister blieben deshalb jahrelang unten.
+        internat: { name: "Jugendinternat & Schule", lvl: 0, max: 5, baseCost: 9000000, desc: "Erhöht Stärke und Potenzial neuer Nachwuchsspieler" },
         museum: { name: "Vereinsmuseum & Traditions-Pavillon", lvl: 0, max: 5, baseCost: 4500000, desc: "+2% Vorstands- und Fanvertrauen dauerhaft pro Stufe" },
         trainingground: { name: "Trainingsgelände mit Flutlicht", lvl: 0, max: 5, baseCost: 8500000, desc: "+1 permanenter Stärkebonus für die gesamte Mannschaft" },
         hotel: { name: "VIP-Tagungshotel", lvl: 0, max: 5, baseCost: 22500000, desc: "+5.000 € feste Einnahmen pro Heimspiel" },

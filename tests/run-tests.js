@@ -4745,6 +4745,49 @@ async function testMobileLayout(browser) {
     await page.close();
 }
 
+async function testCareerBalancing(browser) {
+    console.log('\n[P16b] Karriere-Balancing: Fitness, Transfermarkt, Lizenzkosten');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        const out = {};
+        // Unveränderte Startelf über 6 Spieltage (Livespiel-Nutzer ohne Rotation)
+        const elf = pickBestLineupIds();
+        squad.forEach(p => { p.fitness = 100; });
+        for (let i = 0; i < 6; i++) { lineup = [...elf]; processPostMatchRoutine('draw', false, false, 0, true, { total: 2, bothScored: true }); }
+        const starter = squad.filter(p => elf.includes(p.id) && !(p.injured > 0));
+        out.fitnessMin = Math.min(...starter.map(p => p.fitness));
+        // Vorbericht warnt vor müden Stammspielern, Knopf stellt ausgeruhte Elf auf
+        squad.filter(p => lineup.includes(p.id)).slice(0, 3).forEach(p => { p.fitness = 50; });
+        renderFatigueWarning();
+        out.warnung = document.getElementById('prematch-fatigue-box').innerHTML.includes('rotateTiredPlayers');
+        rotateTiredPlayers();
+        out.rotiert = squad.filter(p => lineup.includes(p.id) && p.fitness < 70).length < 3;
+        // Transfermarkt: 10 Angebote, frisch zum Winterfenster
+        refreshTransferMarket();
+        out.markt = marketPlayers.length;
+        const alt = marketPlayers.map(p => p.id).join();
+        openWinterWindow();
+        out.winterNeu = marketPlayers.map(p => p.id).join() !== alt;
+        // Lizenzkosten skalieren mit der Liga
+        game.leagueLevel = 3;
+        out.flutlichtLiga4 = getSpecialInstallCost('flutlicht');
+        game.leagueLevel = 0;
+        out.flutlichtLiga1 = getSpecialInstallCost('flutlicht');
+        game.leagueLevel = 2;
+        out.internatLiga3 = getCampusUpgradeCost('internat');
+        return out;
+    });
+    assert(r.fitnessMin >= 60, `Unveränderte Startelf nach 6 Spielen noch fit genug (min. ${r.fitnessMin} %)`);
+    assert(r.warnung && r.rotiert, 'Vorbericht warnt vor müden Stammspielern, ein Klick rotiert');
+    assert(r.markt === 10 && r.winterNeu, `Transfermarkt mit 10 Spielern, neu zum Winterfenster (${r.markt})`);
+    assert(r.flutlichtLiga4 <= 1000000 && r.flutlichtLiga1 === 3500000, `Flutlicht skaliert mit der Liga (Liga 4: ${r.flutlichtLiga4}, Liga 1: ${r.flutlichtLiga1})`);
+    assert(r.internatLiga3 <= 3000000, `Jugendinternat (Lizenz 2. Liga) in der 3. Liga bezahlbar (${r.internatLiga3})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 3).join(' | ')})`);
+    await page.close();
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -4828,6 +4871,7 @@ async function main() {
         testCupLive,
         testSeasonEvents,
         testMobileLayout,
+        testCareerBalancing,
         testRuntimeRoundTrip,
     ];
 

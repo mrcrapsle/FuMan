@@ -3883,6 +3883,7 @@
 
             <!-- 28. PRE-MATCH & LIVESPIEL -->
             <div id="screen-prematch-press" style="display:none;">
+                <div id="prematch-fatigue-box"></div>
                 <div id="prematch-analysis-box" style="margin-bottom:10px;"></div>
                 <div class="panel">
                     <div class="panel-header">🎙️ PRE-MATCH PRESSEKONFERENZ</div>
@@ -4867,7 +4868,9 @@
         megastore: { name: "Fanshop Megastore", lvl: 0, max: 5, baseCost: 7200000, desc: "+35 Basis-Kunden pro Woche für alle Fanartikel pro Stufe" },
         parkhaus: { name: "Parkhaus & Shuttle-Bahnhof", lvl: 0, max: 5, baseCost: 6500000, desc: "+1.500 € Parkgebühren & verbessert Stadionauslastung" },
         reha: { name: "Reha-Klinik & Physio-Zentrum", lvl: 0, max: 5, baseCost: 12000000, desc: "Verringert Verletzungszeiten und beschleunigt Regeneration" },
-        internat: { name: "Jugendinternat & Schule", lvl: 0, max: 5, baseCost: 14500000, desc: "Erhöht Stärke und Potenzial neuer Nachwuchsspieler" },
+        // 9 statt 14,5 Mio.: Stufe 1 ist Lizenzauflage für die 2. Liga und kostete in der 3. Liga
+        // rund 4 Mio. - mehr als zwei Saisons Gehälter; Meister blieben deshalb jahrelang unten.
+        internat: { name: "Jugendinternat & Schule", lvl: 0, max: 5, baseCost: 9000000, desc: "Erhöht Stärke und Potenzial neuer Nachwuchsspieler" },
         museum: { name: "Vereinsmuseum & Traditions-Pavillon", lvl: 0, max: 5, baseCost: 4500000, desc: "+2% Vorstands- und Fanvertrauen dauerhaft pro Stufe" },
         trainingground: { name: "Trainingsgelände mit Flutlicht", lvl: 0, max: 5, baseCost: 8500000, desc: "+1 permanenter Stärkebonus für die gesamte Mannschaft" },
         hotel: { name: "VIP-Tagungshotel", lvl: 0, max: 5, baseCost: 22500000, desc: "+5.000 € feste Einnahmen pro Heimspiel" },
@@ -10443,7 +10446,7 @@ function cleanupLegacyDevelopmentState() {
         let minStr = 50 + (3 - game.leagueLevel) * 9;
         let maxStr = minStr + 9;
 
-        for (let i = 0; i < 6; i++) {
+        for (let i = 0; i < 10; i++) {
             let p = createPlayer(["TW", "ABW", "MIT", "ST"][Math.floor(Math.random() * 4)], minStr, maxStr);
             p.marketValue = Math.round(p.marketValue * discount);
             marketPlayers.push(p);
@@ -10566,6 +10569,8 @@ function cleanupLegacyDevelopmentState() {
     function isTransferWindowOpen() { return isSummerWindowOpen() || !!game.winterWindowActive; }
 
     function openWinterWindow() {
+        // Neue Spieler zum Winterfenster - vorher gab es nur einmal pro Saison 6 Angebote.
+        refreshTransferMarket();
         game.winterWindowActive = true;
         game.winterWindowUsedThisSeason = true;
         game.winterWindowCloseMatchday = game.matchday + WINTER_WINDOW_MATCHDAYS;
@@ -18668,6 +18673,12 @@ function finishGoalkeeperGame() {
     // Liga-Stärke - eine Komplett-Überdachung kostet im Spitzenfußball echte zweistellige
     // Millionenbeträge, nicht ein paar hunderttausend Euro.
     const SPECIAL_INSTALL_BASE_COSTS = { flutlicht: 3500000, rasenheizung: 2200000, videowalls: 4000000, dach: 28000000 };
+    // Wie alle Stadionausbauten nach Liga skaliert (Untergrenze 0,2): pauschal 3,5 Mio. für
+    // das Flutlicht - Pflicht für die 3. Liga - konnte ein Regionalligist über Jahre nicht
+    // ansparen und blieb als Meister trotzdem unten.
+    function getSpecialInstallCost(key) {
+        return Math.round(SPECIAL_INSTALL_BASE_COSTS[key] * Math.max(0.2, getStadiumCostScale()) / 10000) * 10000;
+    }
     const SPECIAL_INSTALL_LABELS = { flutlicht: '💡 Flutlicht-Masten', rasenheizung: '🔥 Rasenheizung', videowalls: '📺 Digitale Anzeigen / HD-Videowalls', dach: '🏗️ Komplett-Überdachung' };
 
     // ==========================================
@@ -18806,11 +18817,11 @@ function finishGoalkeeperGame() {
         let grid = document.getElementById('special-installs-grid');
         if (!grid) return;
         grid.innerHTML = Object.keys(SPECIAL_INSTALL_BASE_COSTS).map(key => {
-            let cost = SPECIAL_INSTALL_BASE_COSTS[key];
+            let cost = getSpecialInstallCost(key);
             let owned = stadium[key];
             let queued = (game.stadiumConstructionQueue || []).some(p => p.type === 'specialInstall' && p.params.key === key);
             let label = owned ? `${SPECIAL_INSTALL_LABELS[key]} ✓ vorhanden` : (queued ? `${SPECIAL_INSTALL_LABELS[key]} (im Bau...)` : `${SPECIAL_INSTALL_LABELS[key]} [${formatVal(cost)}]`);
-            return `<button onclick="upgradeSpecialInstall('${key}', ${cost})" class="btn-secondary" ${owned || queued ? 'disabled' : ''}>${label}</button>`;
+            return `<button onclick="upgradeSpecialInstall('${key}')" class="btn-secondary" ${owned || queued ? 'disabled' : ''}>${label}</button>`;
         }).join('');
     }
 
@@ -19190,8 +19201,9 @@ function finishGoalkeeperGame() {
         queueStadiumConstruction('blockExpand', { blockKey, seats }, cost, getConstructionDays(cost), `Rangerweiterung ${blockKey} (+${seats} Plätze)`);
     }
 
-    function upgradeSpecialInstall(key, cost) {
-        if (stadium[key]) return;
+    function upgradeSpecialInstall(key) {
+        if (stadium[key] || !SPECIAL_INSTALL_BASE_COSTS[key]) return;
+        let cost = getSpecialInstallCost(key);
         let labels = { flutlicht: 'Flutlichtanlage', rasenheizung: 'Rasenheizung', videowalls: 'Digitale Anzeigen', dach: 'Stadiondach' };
         queueStadiumConstruction('specialInstall', { key }, cost, getConstructionDays(cost), labels[key] || key);
     }
@@ -24550,6 +24562,25 @@ function cleanupLegacyScoutState() {
             </div>`;
     }
 
+    // Vorbericht: müde Stammspieler (Fitness unter 70 %) kosten spürbar Stärke - Hinweis
+    // mit einem Knopf, der die beste ausgeruhte Elf aufstellt.
+    function renderFatigueWarning() {
+        let box = document.getElementById('prematch-fatigue-box');
+        if (!box) return;
+        let muede = squad.filter(p => lineup.includes(p.id) && p.fitness < 70);
+        if (!muede.length) { box.innerHTML = ''; return; }
+        box.innerHTML = `<div class="box" style="font-size:11px; border-left-color:var(--danger); margin-bottom:8px;">
+            😮‍💨 <strong>${muede.length} Stammspieler erschöpft:</strong> ${muede.map(p => `${p.name} (${p.fitness}%)`).join(', ')}.
+            Fitness zählt voll in die Teamstärke.
+            <button onclick="rotateTiredPlayers()" class="btn-action" style="margin-top:6px;">🔄 Ausgeruhte Elf aufstellen</button></div>`;
+    }
+    function rotateTiredPlayers() {
+        let vorher = calcTeamStrength(false);
+        lineup = pickBestLineupIds();
+        renderFatigueWarning();
+        showToast(`🔄 Ausgeruhte Elf aufgestellt (Stärke ${Math.round(vorher)} → ${Math.round(calcTeamStrength(false))}).`, 'success');
+    }
+
     function startMatchdayFlow() {
         if (game.matchday > 34) return;
         if (game.sackPending) { showToast('Du bist entlassen - bestätige die Meldung, um bei einem neuen Klub anzufangen.', 'error', 5000); return; }
@@ -24567,6 +24598,7 @@ function cleanupLegacyScoutState() {
         pendingMatchInfo = { ourFixture, isHome, oppName, oppStr };
 
         renderPreMatchAnalysis(oppObj, oppName);
+        renderFatigueWarning();
 
         let q = { q: "Wie lautet die Marschroute für das Spiel?", a: ["Volle Offensive auf Sieg!", "Kompakt stehen und kontern.", "Kräfte schonen & rotieren."] };
         document.getElementById('press-question-container').innerHTML = `<strong>Journalist fragt:</strong> "${q.q}"`;
@@ -25847,7 +25879,10 @@ function cleanupLegacyScoutState() {
         }
 
         squad.forEach(p => {
-            if (lineup.includes(p.id)) p.fitness = Math.max(10, p.fitness - fitLoss);
+            // Stammspieler erholen sich unter der Woche teilweise (ein Viertel der Bank-Erholung):
+            // Ermüdung baut sich über mehrere Spiele auf und Rotation bleibt wichtig, aber eine
+            // unveränderte Startelf bricht nicht mehr nach vier Spielen auf zwei Drittel ein.
+            if (lineup.includes(p.id)) p.fitness = Math.max(10, Math.min(100, p.fitness - fitLoss + Math.round(benchRecovery / 4)));
             else p.fitness = Math.min(100, p.fitness + benchRecovery);
 
             if (moraleShift !== 0) p.morale = Math.max(10, Math.min(100, (p.morale || 80) + moraleShift));
@@ -27512,6 +27547,7 @@ function startCupLiveFlow(tie) {
     pendingMatchInfo = { ourFixture: null, isHome, oppName, oppStr: tie.oppStr, cupTie: tie };
     const oppObj = leaguesData.flat().find(t => t.name === oppName) || null;
     renderPreMatchAnalysis(oppObj, oppName);
+    if (typeof renderFatigueWarning === 'function') renderFatigueWarning();
     const box = document.getElementById('prematch-analysis-box');
     const danach = tie.comp === 'relegation' ? '' : '<br><span style="color:var(--text-muted);">Das Ligaspiel folgt direkt im Anschluss.</span>';
     if (box) box.innerHTML = `<div class="box" style="font-size:11px; border-left-color:var(--gold);"><strong>${tie.titel}</strong><br>${tie.home} - ${tie.away} (Gegner-Stärke ${Math.round(tie.oppStr)})${danach}</div>` + box.innerHTML;

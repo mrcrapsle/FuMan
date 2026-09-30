@@ -13,7 +13,7 @@
         let minStr = 50 + (3 - game.leagueLevel) * 9;
         let maxStr = minStr + 9;
 
-        for (let i = 0; i < 6; i++) {
+        for (let i = 0; i < 10; i++) {
             let p = createPlayer(["TW", "ABW", "MIT", "ST"][Math.floor(Math.random() * 4)], minStr, maxStr);
             p.marketValue = Math.round(p.marketValue * discount);
             marketPlayers.push(p);
@@ -136,6 +136,8 @@
     function isTransferWindowOpen() { return isSummerWindowOpen() || !!game.winterWindowActive; }
 
     function openWinterWindow() {
+        // Neue Spieler zum Winterfenster - vorher gab es nur einmal pro Saison 6 Angebote.
+        refreshTransferMarket();
         game.winterWindowActive = true;
         game.winterWindowUsedThisSeason = true;
         game.winterWindowCloseMatchday = game.matchday + WINTER_WINDOW_MATCHDAYS;

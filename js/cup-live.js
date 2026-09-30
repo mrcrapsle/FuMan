@@ -89,6 +89,7 @@ function startCupLiveFlow(tie) {
     pendingMatchInfo = { ourFixture: null, isHome, oppName, oppStr: tie.oppStr, cupTie: tie };
     const oppObj = leaguesData.flat().find(t => t.name === oppName) || null;
     renderPreMatchAnalysis(oppObj, oppName);
+    if (typeof renderFatigueWarning === 'function') renderFatigueWarning();
     const box = document.getElementById('prematch-analysis-box');
     const danach = tie.comp === 'relegation' ? '' : '<br><span style="color:var(--text-muted);">Das Ligaspiel folgt direkt im Anschluss.</span>';
     if (box) box.innerHTML = `<div class="box" style="font-size:11px; border-left-color:var(--gold);"><strong>${tie.titel}</strong><br>${tie.home} - ${tie.away} (Gegner-Stärke ${Math.round(tie.oppStr)})${danach}</div>` + box.innerHTML;

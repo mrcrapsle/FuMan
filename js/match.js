@@ -271,6 +271,25 @@
             </div>`;
     }
 
+    // Vorbericht: müde Stammspieler (Fitness unter 70 %) kosten spürbar Stärke - Hinweis
+    // mit einem Knopf, der die beste ausgeruhte Elf aufstellt.
+    function renderFatigueWarning() {
+        let box = document.getElementById('prematch-fatigue-box');
+        if (!box) return;
+        let muede = squad.filter(p => lineup.includes(p.id) && p.fitness < 70);
+        if (!muede.length) { box.innerHTML = ''; return; }
+        box.innerHTML = `<div class="box" style="font-size:11px; border-left-color:var(--danger); margin-bottom:8px;">
+            😮‍💨 <strong>${muede.length} Stammspieler erschöpft:</strong> ${muede.map(p => `${p.name} (${p.fitness}%)`).join(', ')}.
+            Fitness zählt voll in die Teamstärke.
+            <button onclick="rotateTiredPlayers()" class="btn-action" style="margin-top:6px;">🔄 Ausgeruhte Elf aufstellen</button></div>`;
+    }
+    function rotateTiredPlayers() {
+        let vorher = calcTeamStrength(false);
+        lineup = pickBestLineupIds();
+        renderFatigueWarning();
+        showToast(`🔄 Ausgeruhte Elf aufgestellt (Stärke ${Math.round(vorher)} → ${Math.round(calcTeamStrength(false))}).`, 'success');
+    }
+
     function startMatchdayFlow() {
         if (game.matchday > 34) return;
         if (game.sackPending) { showToast('Du bist entlassen - bestätige die Meldung, um bei einem neuen Klub anzufangen.', 'error', 5000); return; }
@@ -288,6 +307,7 @@
         pendingMatchInfo = { ourFixture, isHome, oppName, oppStr };
 
         renderPreMatchAnalysis(oppObj, oppName);
+        renderFatigueWarning();
 
         let q = { q: "Wie lautet die Marschroute für das Spiel?", a: ["Volle Offensive auf Sieg!", "Kompakt stehen und kontern.", "Kräfte schonen & rotieren."] };
         document.getElementById('press-question-container').innerHTML = `<strong>Journalist fragt:</strong> "${q.q}"`;
@@ -1568,7 +1588,10 @@
         }
 
         squad.forEach(p => {
-            if (lineup.includes(p.id)) p.fitness = Math.max(10, p.fitness - fitLoss);
+            // Stammspieler erholen sich unter der Woche teilweise (ein Viertel der Bank-Erholung):
+            // Ermüdung baut sich über mehrere Spiele auf und Rotation bleibt wichtig, aber eine
+            // unveränderte Startelf bricht nicht mehr nach vier Spielen auf zwei Drittel ein.
+            if (lineup.includes(p.id)) p.fitness = Math.max(10, Math.min(100, p.fitness - fitLoss + Math.round(benchRecovery / 4)));
             else p.fitness = Math.min(100, p.fitness + benchRecovery);
 
             if (moraleShift !== 0) p.morale = Math.max(10, Math.min(100, (p.morale || 80) + moraleShift));
