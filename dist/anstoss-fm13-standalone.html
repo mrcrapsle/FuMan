@@ -2235,6 +2235,7 @@
                         <button onclick="simulateMatchdays(5)" class="btn-secondary">⏩ 5 Spieltage simulieren</button>
                         <button onclick="simulateFullSeason()" class="btn-primary" style="background:#f59e0b; color:#000;">⚡ Saison durchsimulieren</button>
                     </div>
+                    <div id="dash-relegation-box"></div>
                     <div id="dash-season-end-actions" style="display:none;">
                         <button onclick="concludeSeasonAndAdvance()" class="btn-danger" style="font-size:13px; padding:10px;">🏆 Saison abschließen & Neue Saison starten</button>
                     </div>
@@ -3526,6 +3527,10 @@
                         <div id="matchday-fixtures-list"></div>
                     </div>
                     <div class="panel">
+                        <div class="panel-header" style="color:var(--accent);">🎠 TRAINERKARUSSELL</div>
+                        <div id="coach-carousel-box"></div>
+                    </div>
+                    <div class="panel">
                         <div class="panel-header">🏆 TURNIER-KLAMMERN</div>
                         <div id="tournament-brackets-box"></div>
                     </div>
@@ -3577,6 +3582,10 @@
                 <div class="panel">
                     <div class="panel-header" style="color:var(--gold);">🏆 SPIELER DER SAISON</div>
                     <div id="player-of-season-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--gold);">🏅 LIGA-AUSZEICHNUNGEN</div>
+                    <div id="league-awards-box"></div>
                 </div>
                 <div class="panel">
                     <div class="panel-header">🌟 TROPHÄENRAUM</div>
@@ -4468,7 +4477,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '2.6.2', date: '30.09.2026', features: 'Phase 13: aufgeräumt, Spieler altern, Kader-Bildschirm in Reitern' };
+    const GAME_VERSION = { number: '2.7', date: '30.09.2026', features: 'Phase 13: Relegation, Deadline-Day, Liga-Auszeichnungen, Trainerkarussell' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -4559,7 +4568,7 @@
         permanentRivalName: null,
         rivalHistoryArchive: [],
         winterWindowActive: false,
-        winterWindowDeadline: 0,
+        winterWindowCloseMatchday: 0,
         winterWindowUsedThisSeason: false,
         travelMode: 'flugzeug', // 'flugzeug' (schnell, teurer, weniger Ermüdung) | 'bus' (günstig, mehr Ermüdung)
         busSponsorActive: false,
@@ -9858,6 +9867,7 @@ function getTransferBudgetInfo() {
     }
 
     function renderLeagueView() {
+        if (typeof renderCoachCarouselBox === 'function') renderCoachCarouselBox();
         recordLeagueProgress();
         renderTopScorersBox();
         renderSeasonPointsChart();
@@ -11091,62 +11101,105 @@ function getTransferBudgetInfo() {
         if (squad.length <= 12 || incomingOffers.length >= 3) return;
 
         // Während des Winterpause-Sondertransferfensters treffen deutlich mehr Angebote ein.
-        let chance = game.winterWindowActive ? 0.65 : 0.35;
+        let chance = isTransferWindowOpen() ? 0.65 : 0.35;
         if (Math.random() < chance) {
             triggerNewAITransferOffer();
         }
     }
 
-    // ---------- WINTERPAUSE-SONDERTRANSFERFENSTER ----------
-    // Öffnet sich automatisch zum Saisonhalbzeit-Spieltag (17) und läuft 3 ECHTE Tage lang
-    // (Realzeit, nicht Spieltage) - während dieser Zeit ist die Chance auf neue Angebote
-    // spürbar erhöht (siehe checkIncomingTransferOffers() oben). Läuft die Zeit ab, schließt
-    // sich das Fenster automatisch wieder (siehe checkWinterWindowExpiry(), die bei jedem
-    // Rendern des Transfermarkt-Screens sowie per Intervall geprüft wird).
-    const WINTER_WINDOW_DURATION_MS = 3 * 24 * 60 * 60 * 1000;
+    // ---------- WECHSELPERIODEN & DEADLINE-DAY ----------
+    // Sommerfenster: Spieltag 1-3, Winterfenster: ab Spieltag 17 für 3 Spieltage. Bisher lief
+    // das Winterfenster 3 ECHTE Tage (Uhrzeit) - wer eine Saison in einer Sitzung spielte,
+    // hatte es viele Spieltage lang offen und erlebte den Deadline-Day nie. Außerhalb der
+    // Fenster bleiben Transfers möglich, nur mit weniger Angeboten.
+    const SUMMER_WINDOW_LAST_MATCHDAY = 3;
+    const WINTER_WINDOW_MATCHDAYS = 3;
+
+    function isSummerWindowOpen() { return game.matchday <= SUMMER_WINDOW_LAST_MATCHDAY; }
+    function isTransferWindowOpen() { return isSummerWindowOpen() || !!game.winterWindowActive; }
 
     function openWinterWindow() {
         game.winterWindowActive = true;
         game.winterWindowUsedThisSeason = true;
-        game.winterWindowDeadline = Date.now() + WINTER_WINDOW_DURATION_MS;
-        addInboxMessage('transfer', '❄️ Winterpause-Sondertransferfenster geöffnet!', 'Für die nächsten 3 Tage (Echtzeit) treffen deutlich mehr Transferangebote ein - nutze die Chance!', 'screen-transfer');
-        showToast('❄️ Winterpause-Transferfenster geöffnet! 3 Tage lang erhöhte Transferaktivität.', 'success');
+        game.winterWindowCloseMatchday = game.matchday + WINTER_WINDOW_MATCHDAYS;
+        addInboxMessage('transfer', '❄️ Winter-Transferfenster geöffnet!', `Bis einschließlich Spieltag ${game.winterWindowCloseMatchday} treffen deutlich mehr Transferangebote ein - danach ist Deadline-Day.`, 'screen-transfer');
+        showToast('❄️ Winter-Transferfenster geöffnet - 3 Spieltage erhöhte Transferaktivität.', 'success');
     }
 
     function checkWinterWindowExpiry() {
-        if (game.winterWindowActive && Date.now() > game.winterWindowDeadline) {
+        if (!game.winterWindowActive) return;
+        // Alte Spielstände hatten eine Uhrzeit-Frist statt eines Spieltags.
+        if (!game.winterWindowCloseMatchday) game.winterWindowCloseMatchday = game.matchday + 1;
+        delete game.winterWindowDeadline;
+        if (game.matchday >= game.winterWindowCloseMatchday) {
             game.winterWindowActive = false;
-            triggerDeadlineDayRush();
-            addInboxMessage('transfer', '❄️ Winterpause-Transferfenster geschlossen', 'Die verstärkte Transferaktivität ist wieder auf Normalniveau zurückgegangen.', 'screen-transfer');
+            runDeadlineDay('winter');
         }
     }
 
-    // ---------- DEADLINE DAY ----------
-    // Kurz vor Schließung des Fensters trudelt noch einmal eine Welle an Last-Minute-
-    // Angeboten ein - klassischer "Deadline Day"-Wahnsinn, bevor wieder Ruhe einkehrt.
-    function triggerDeadlineDayRush() {
-        let before = incomingOffers.length;
-        for (let i = 0; i < 4; i++) triggerNewAITransferOffer();
-        let added = incomingOffers.length - before;
-        if (added > 0) {
-            addInboxMessage('transfer', '🚨 DEADLINE DAY! Letzte Angebote treffen ein!', `In letzter Minute sind noch ${added} neue Transferanfrage(n) für deine Spieler eingegangen - jetzt schnell entscheiden, bevor das Fenster endgültig schließt!`, 'screen-transfer');
-            showToast(`🚨 Deadline Day! ${added} Last-Minute-Angebot(e) eingetroffen!`, 'success');
-        }
+    // Wird nach jedem Spieltag aufgerufen (processPostMatchRoutine), game.matchday ist dabei
+    // noch der gerade gespielte Spieltag.
+    function tickTransferWindows() {
+        if (game.matchday === 17 && !game.winterWindowUsedThisSeason) openWinterWindow();
+        else checkWinterWindowExpiry();
+        if (game.matchday === SUMMER_WINDOW_LAST_MATCHDAY) runDeadlineDay('sommer');
+    }
+
+    // ---------- DEADLINE-DAY ----------
+    // Letzter Tag einer Wechselperiode: Last-Minute-Angebote für eigene Spieler (nur bis zum
+    // nächsten Spieltag gültig), Panikkäufe der Ligakonkurrenz (echte Stärkegewinne) und
+    // Schnäppchen auf dem Markt, weil Vereine noch schnell Gehälter loswerden wollen.
+    function runDeadlineDay(fenster) {
+        const key = `${game.season}-${fenster}`;
+        if (game.lastDeadlineDay === key) return;
+        game.lastDeadlineDay = key;
+        const ticker = [];
+
+        const vorher = incomingOffers.length;
+        const anzahl = 3 + Math.floor(Math.random() * 3);
+        for (let i = 0; i < anzahl; i++) triggerNewAITransferOffer();
+        incomingOffers.slice(0, incomingOffers.length - vorher).forEach(o => {
+            o.expiresIn = 1;
+            o.statusText = '⏰ Deadline-Day: Das Angebot gilt nur noch bis zum nächsten Spieltag!';
+            ticker.push(`💼 ${o.clubName} bietet in letzter Minute ${formatVal(o.currentBid)} für ${o.playerName}`);
+        });
+
+        const reserve = game.secondTeam && game.secondTeam.name;
+        const kaeufer = (leaguesData[game.leagueLevel] || []).filter(t => t.name !== game.clubName && t.name !== reserve)
+            .sort(() => Math.random() - 0.5).slice(0, 3);
+        kaeufer.forEach(t => {
+            const plus = 1 + Math.floor(Math.random() * 3);
+            t.strength = Math.min(96, t.strength + plus);
+            t.baseStrength = Math.min(96, (t.baseStrength || t.strength) + plus);
+            ticker.push(`🛒 ${t.name} holt kurz vor Schluss einen Neuzugang (Stärke +${plus})`);
+        });
+
+        marketPlayers.filter(p => !p.deadlineBargain).sort(() => Math.random() - 0.5).slice(0, 2).forEach(p => {
+            p.marketValue = Math.max(5000, Math.round(p.marketValue * 0.7 / 5000) * 5000);
+            p.deadlineBargain = true;
+            ticker.push(`🏷️ Schnäppchen: ${p.name} (${p.pos}, Stärke ${p.strength}) für nur ${formatVal(p.marketValue)} zu haben`);
+        });
+
+        addInboxMessage('transfer', `🚨 DEADLINE-DAY (${fenster === 'winter' ? 'Winter' : 'Sommer'})`, `Die Wechselperiode schließt - der Ticker vom letzten Tag:\n\n${ticker.map(t => '• ' + t).join('\n')}`, 'screen-transfer');
+        showToast(`🚨 Deadline-Day! ${ticker.length} Meldungen im Postfach.`, 'success');
     }
 
     function renderWinterWindowBanner() {
         let el = document.getElementById('winter-window-banner');
         if (!el) return;
         checkWinterWindowExpiry();
-        if (!game.winterWindowActive) { el.style.display = 'none'; return; }
-        el.style.display = 'block';
-        let remainingMs = Math.max(0, game.winterWindowDeadline - Date.now());
-        let h = Math.floor(remainingMs / 3600000);
-        let m = Math.floor((remainingMs % 3600000) / 60000);
-        let s = Math.floor((remainingMs % 60000) / 1000);
-        el.innerHTML = `❄️ <strong>Winterpause-Sondertransferfenster aktiv!</strong> Noch ${h}h ${m}m ${s}s - erhöhte Transferaktivität.`;
+        if (game.winterWindowActive) {
+            const rest = game.winterWindowCloseMatchday - game.matchday + 1;
+            el.style.display = 'block';
+            el.innerHTML = `❄️ <strong>Winter-Transferfenster offen!</strong> Noch ${rest} Spieltag(e) bis zum Deadline-Day - erhöhte Transferaktivität.`;
+        } else if (isSummerWindowOpen()) {
+            const rest = SUMMER_WINDOW_LAST_MATCHDAY + 1 - game.matchday;
+            el.style.display = 'block';
+            el.innerHTML = `☀️ <strong>Sommer-Transferfenster offen!</strong> Noch ${rest} Spieltag(e) bis zum Deadline-Day - erhöhte Transferaktivität.`;
+        } else {
+            el.style.display = 'none';
+        }
     }
-    setInterval(() => { if (typeof game !== 'undefined' && game.winterWindowActive) renderWinterWindowBanner(); }, 1000);
 
     // Welche Spieler sind fuer andere Vereine ueberhaupt interessant? Bisher galt eine
     // feste Untergrenze von Staerke 48. Ein Sechstliga-Kader liegt mit 26-44 KOMPLETT
@@ -11505,6 +11558,7 @@ function getTransferBudgetInfo() {
             row.style.cssText = 'margin-bottom:6px; padding:8px;';
             let badgeClass = 'badge-' + (p.pos || 'mit').toLowerCase();
             let traitBadge = (p.trait && p.trait !== 'Kein') ? `<span class="badge badge-trait">${p.trait}</span>` : '';
+            if (p.deadlineBargain) traitBadge += '<span class="badge badge-trait" style="background:var(--danger);">⏰ Schnäppchen -30 %</span>';
             row.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                     <div style="display:flex; align-items:center; gap:6px;">
@@ -14208,6 +14262,7 @@ function renderBoardRoomPanel() {
         let isSeasonOver = game.matchday > 34;
         document.getElementById('dash-match-actions').style.display = isSeasonOver ? 'none' : 'grid';
         document.getElementById('dash-season-end-actions').style.display = isSeasonOver ? 'block' : 'none';
+        if (typeof renderRelegationBox === 'function') renderRelegationBox();
 
         renderSaveSlotsUI();
         renderNextGoalsList();
@@ -26155,6 +26210,7 @@ function renderTournamentBracketsPanel() {
         renderLeagueChronikBox();
         if (typeof renderPlayerOfMonthBox === 'function') renderPlayerOfMonthBox();
         if (typeof renderPlayerOfSeasonBox === 'function') renderPlayerOfSeasonBox();
+        if (typeof renderLeagueAwardsBox === 'function') renderLeagueAwardsBox();
         if (typeof renderHallOfFamePanel === 'function') renderHallOfFamePanel();
         if (typeof renderManagerAnalyticsPanel === 'function') renderManagerAnalyticsPanel();
         let list = document.getElementById('trophies-list');
@@ -27267,6 +27323,7 @@ function cleanupLegacyScoutState() {
                     Spielweise: <strong>${getOpponentPlaystyle(oppName)}</strong><br>
                     Team-Stärke: <strong>${baseStr}</strong> · Form (letzte 5): ${formStr}<br>
                     Gefährlichster Spieler: <strong>${dangerName}</strong> (${dangerPos}, Stärke ${dangerRating})
+                    ${typeof getCoachInfoHtml === 'function' && oppObj ? '<br>' + getCoachInfoHtml(oppObj) : ''}
                 </span>
                 ${videoAnalysisHtml}
                 ${typeof getPredictionHtml === 'function' ? getPredictionHtml(oppName) : ''}
@@ -28752,6 +28809,7 @@ function cleanupLegacyScoutState() {
             if (typeof tickSeasonObjectives === 'function') tickSeasonObjectives();
             if (typeof tickSquadHarmony === 'function') tickSquadHarmony();
             if (typeof tickTeamCouncil === 'function') tickTeamCouncil();
+            if (typeof tickCoachCarousel === 'function') tickCoachCarousel();
             if (typeof tickMemberAssembly === 'function') tickMemberAssembly();
             // Karriereenden: am Saisonende in agePlayersAtSeasonEnd() (js/player-development.js)
             if (typeof tickTournamentBrackets === 'function') tickTournamentBrackets();
@@ -28840,9 +28898,8 @@ function cleanupLegacyScoutState() {
             game.money += dividends;
         }
 
-        if (game.matchday === 17 && !game.winterWindowUsedThisSeason) {
-            openWinterWindow();
-        }
+        if (typeof tickTransferWindows === 'function') tickTransferWindows();
+        if (typeof tickCoachBounce === 'function') tickCoachBounce();
 
         // Trainingslager-Bonus zählt jeden verarbeiteten Spieltag herunter (gilt in allen
         // drei Spieltag-Pfaden, da processPostMatchRoutine() von allen dreien aufgerufen wird).
@@ -29738,6 +29795,7 @@ function cleanupLegacyScoutState() {
         }
 
         holdSeasonEndGala();
+        if (typeof awardLeagueHonours === 'function') awardLeagueHonours(myRank);
         checkRivalChangeEvent();
         if (typeof tickMediaImageSeasonHistory === 'function') tickMediaImageSeasonHistory();
 
@@ -29746,7 +29804,10 @@ function cleanupLegacyScoutState() {
             showNotice('🌟 Champions-Cup-Qualifikation!', `Platz ${myRank} erreicht - nächste Saison spielt der Verein in der europäischen Königsklasse.`);
         }
 
-        if (myRank <= 2 && game.leagueLevel > 0) {
+        // Relegation (Platz 3 und 16): noch nicht gespielte Partien werden jetzt simuliert.
+        let relegation = typeof resolveRelegationForSeasonEnd === 'function' ? resolveRelegationForSeasonEnd() : null;
+
+        if ((myRank <= 2 || relegation === 'promoted') && game.leagueLevel > 0) {
             // ---------- DFB-LIZENZIERUNG ----------
             // Bisher war Aufstieg rein eine Frage des Tabellenplatzes - real verlangt der DFB
             // vor dem Aufstieg aber eine Lizenzierung (Stadionstandard, Flutlicht, finanzielle
@@ -29778,7 +29839,7 @@ function cleanupLegacyScoutState() {
                 if (typeof triggerPromotionBonusClauses === 'function') triggerPromotionBonusClauses();
                 showNotice('🎉 Aufstieg geschafft!', `Glückwunsch zur Beförderung in die ${leagueNames[game.leagueLevel]}.\n\nAufstiegsprämie 1.500.000 €${sponsorPromoBonus > 0 ? ` plus ${formatVal(sponsorPromoBonus)} Sponsoren-Aufstiegsbonus` : ''}.`);
             }
-        } else if (myRank >= 16 && game.leagueLevel < NUM_LEAGUES - 1) {
+        } else if ((myRank >= 17 || (myRank === 16 && relegation !== 'stayed')) && game.leagueLevel < NUM_LEAGUES - 1) {
             game.leagueLevel++;
             showNotice('❌ Abstieg', 'Die Klasse konnte nicht gehalten werden. Nächste Saison geht es eine Liga tiefer weiter.', { typ: 'warn' });
         }
@@ -29904,6 +29965,7 @@ function cleanupLegacyScoutState() {
         forceSponsorRenewalAtSeasonStart();
         if (typeof renewSeasonTickets === 'function') renewSeasonTickets();
         if (typeof checkSeasonMoodTargetResult === 'function') checkSeasonMoodTargetResult();
+        if (typeof tickCoachBounce === 'function') tickCoachBounce(true);
         advanceLeaguesToNewSeason();
         if (typeof recordSeasonExpectationRank === 'function') recordSeasonExpectationRank();
         if (typeof applyPendingFfpPointDeduction === 'function') applyPendingFfpPointDeduction();
@@ -29980,6 +30042,340 @@ function cleanupLegacyScoutState() {
             }).join('')}
         </div>`;
     }
+
+</script>
+<script>
+// Relegation: Der Drittletzte (Platz 16) spielt nach dem 34. Spieltag in Hin- und Rückspiel
+// gegen den Dritten der Liga darunter, der eigene Dritte entsprechend gegen den 16. der
+// Liga darüber. Betrifft nur den eigenen Verein - die KI-Vereine steigen weiter symmetrisch
+// 2 rauf/2 runter (siehe advanceLeaguesToNewSeason). Gespielt wird mit einem Kurz-Ticker auf
+// dem Dashboard; wer direkt "Saison abschließen" wählt, bekommt die Spiele automatisch
+// simuliert (resolveRelegationForSeasonEnd).
+
+function sortedTable(level) {
+    return [...(leaguesData[level] || [])].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+}
+
+// Reine Abfrage (ohne Zustand zu ändern): steht der Verein nach Saisonende auf einem Relegationsplatz?
+function getRelegationSituation() {
+    if (game.matchday <= 34) return null;
+    const table = sortedTable(game.leagueLevel);
+    const rank = table.findIndex(t => t.name === game.clubName) + 1;
+    const reserve = game.secondTeam && game.secondTeam.name;
+    let type = null, oppLevel = null, oppRank = null;
+    if (rank === 16 && game.leagueLevel < NUM_LEAGUES - 1) { type = 'abstieg'; oppLevel = game.leagueLevel + 1; oppRank = 3; }
+    else if (rank === 3 && game.leagueLevel > 0) { type = 'aufstieg'; oppLevel = game.leagueLevel - 1; oppRank = 16; }
+    if (!type) return null;
+    // Eine zweite Mannschaft darf nicht in die Liga des eigenen Profiteams - dann rückt der Nächste nach.
+    const kandidaten = sortedTable(oppLevel).filter(t => t.name !== game.clubName && t.name !== reserve);
+    const opp = type === 'abstieg' ? kandidaten[oppRank - 1] : kandidaten[kandidaten.length - 3];
+    if (!opp) return null;
+    return { type, rank, oppName: opp.name, oppStrength: opp.strength, oppLevel, oppTeam: opp };
+}
+
+function getRelegationState() {
+    const r = game.relegation;
+    return r && r.season === game.season ? r : null;
+}
+
+// Minuten und Torschützen für den Kurz-Ticker.
+function buildRelegationTicker(ourGoals, oppGoals, oppName) {
+    const schuetzen = squad.filter(p => lineup.includes(p.id) && !(p.injured > 0));
+    const gewichtet = schuetzen.flatMap(p => p.pos === 'ST' ? [p, p, p] : p.pos === 'MIT' ? [p, p] : p.pos === 'ABW' ? [p] : []);
+    const events = [];
+    for (let i = 0; i < ourGoals; i++) {
+        const p = gewichtet[Math.floor(Math.random() * gewichtet.length)] || squad[0];
+        if (p) p.goalsCareer = (p.goalsCareer || 0) + 1;
+        events.push({ min: 1 + Math.floor(Math.random() * 90), own: true, name: p ? p.name : game.clubName });
+    }
+    for (let i = 0; i < oppGoals; i++) events.push({ min: 1 + Math.floor(Math.random() * 90), own: false, name: getRandomName() + ` (${oppName})` });
+    return events.sort((a, b) => a.min - b.min);
+}
+
+function playRelegationLeg(silent = false) {
+    const sit = getRelegationSituation();
+    if (!sit) return null;
+    let r = getRelegationState();
+    if (!r) {
+        r = game.relegation = { season: game.season, type: sit.type, oppName: sit.oppName, oppLevel: sit.oppLevel, legs: [], result: null };
+    }
+    if (r.result) return r;
+    // Der Verein aus der unteren Liga hat im Hinspiel Heimrecht.
+    const legIdx = r.legs.length;
+    const isHome = (r.type === 'aufstieg') === (legIdx === 0);
+    const ownStr = calcTeamStrength(isHome);
+    const oppStr = typeof applySabotageToOpponentStrength === 'function' ? applySabotageToOpponentStrength(sit.oppStrength) : sit.oppStrength;
+    const ownTeam = (leaguesData[game.leagueLevel] || []).find(t => t.name === game.clubName) || null;
+    const g = isHome ? simulateGoals(ownStr, oppStr, ownTeam, sit.oppTeam) : simulateGoals(oppStr, ownStr, sit.oppTeam, ownTeam);
+    const ourGoals = isHome ? g.myGoals : g.oppGoals, oppGoals = isHome ? g.oppGoals : g.myGoals;
+    const leg = { isHome, ourGoals, oppGoals, ticker: buildRelegationTicker(ourGoals, oppGoals, sit.oppName), income: 0 };
+
+    if (isHome) {
+        // Ausverkauftes Endspiel-Gefühl: wie ein Pokalspiel (1,4-fache Nachfrage).
+        const att = typeof calculateMatchAttendance === 'function' ? calculateMatchAttendance(1.4, 1) : 0;
+        const preis = (stadium.stehShare ?? 0.5) * game.ticketPrices.steh + (stadium.sitzShare ?? 0.45) * game.ticketPrices.sitz;
+        leg.attendance = att;
+        leg.income = Math.round(att * preis);
+        if (leg.income > 0) {
+            const aeussererKontext = buchungsKontext;
+            setzeBuchungskontext('⚔️ Relegation: Heimspiel');
+            game.money += leg.income;
+            setzeBuchungskontext(aeussererKontext);
+        }
+    }
+    r.legs.push(leg);
+
+    if (r.legs.length === 2) {
+        const own = r.legs[0].ourGoals + r.legs[1].ourGoals, opp = r.legs[0].oppGoals + r.legs[1].oppGoals;
+        let gewonnen = own > opp;
+        if (own === opp) {
+            // Elfmeterschießen: leichter Vorteil für die stärkere Mannschaft.
+            r.penalties = true;
+            gewonnen = Math.random() < 0.5 + Math.max(-0.15, Math.min(0.15, (ownStr - oppStr) / 100));
+        }
+        r.aggregate = `${own}:${opp}`;
+        r.result = gewonnen ? (r.type === 'aufstieg' ? 'promoted' : 'stayed') : (r.type === 'aufstieg' ? 'stayed' : 'relegated');
+        squad.forEach(p => { p.morale = Math.max(5, Math.min(100, (p.morale || 50) + (gewonnen ? 10 : -10))); });
+        game.fans = Math.max(0, Math.min(100, game.fans + (gewonnen ? 4 : -4)));
+        const titel = r.type === 'aufstieg'
+            ? (gewonnen ? '🎉 Aufstieg über die Relegation!' : '😞 Relegation verloren - kein Aufstieg')
+            : (gewonnen ? '💪 Klassenerhalt in der Relegation!' : '💔 Abstieg nach Relegation');
+        addInboxMessage('vertrag', titel, `Relegation gegen ${r.oppName}: ${r.legs.map((l, i) => `${i === 0 ? 'Hinspiel' : 'Rückspiel'} ${l.ourGoals}:${l.oppGoals} (${l.isHome ? 'H' : 'A'})`).join(', ')} - Gesamt ${r.aggregate}${r.penalties ? ', Entscheidung im Elfmeterschießen' : ''}.`, 'screen-dashboard');
+    }
+    if (!silent) {
+        const kopf = `${r.legs.length === 1 ? 'Hinspiel' : 'Rückspiel'}: ${leg.isHome ? game.clubName : r.oppName} - ${leg.isHome ? r.oppName : game.clubName}`;
+        const stand = leg.isHome ? `${leg.ourGoals}:${leg.oppGoals}` : `${leg.oppGoals}:${leg.ourGoals}`;
+        const ticker = leg.ticker.length ? leg.ticker.map(e => `${e.min}' ⚽ ${e.name}`).join('\n') : 'Keine Tore.';
+        const ende = r.result ? `\n\nGesamt ${r.aggregate}${r.penalties ? ' - Elfmeterschießen!' : ''}\n${({ promoted: '🎉 AUFSTIEG!', stayed: r.type === 'abstieg' ? '💪 Klasse gehalten!' : 'Kein Aufstieg.', relegated: '💔 Abstieg.' })[r.result]}` : '';
+        showNotice(`⚔️ Relegation - ${kopf}`, `Endstand ${stand}${leg.attendance ? ` · ${leg.attendance.toLocaleString('de-DE')} Zuschauer · ${formatVal(leg.income)} Ticketeinnahmen` : ''}\n\n${ticker}${ende}`, { typ: r.result === 'relegated' || (r.result === 'stayed' && r.type === 'aufstieg') ? 'warn' : undefined });
+        updateUI();
+        renderRelegationBox();
+    }
+    return r;
+}
+
+// Saisonabschluss: noch offene Relegationsspiele werden simuliert. Ergebnis: 'promoted' |
+// 'stayed' | 'relegated' oder null, wenn der Verein keinen Relegationsplatz hat.
+function resolveRelegationForSeasonEnd() {
+    if (!getRelegationSituation()) return null;
+    let r = getRelegationState();
+    while (!r || !r.result) {
+        r = playRelegationLeg(true);
+        if (!r) return null;
+    }
+    return r.result;
+}
+
+function renderRelegationBox() {
+    const box = document.getElementById('dash-relegation-box');
+    if (!box) return;
+    const sit = getRelegationSituation();
+    const r = getRelegationState();
+    const endBtn = document.getElementById('dash-season-end-actions');
+    if (!sit) { box.innerHTML = ''; return; }
+    const offen = !r || !r.result;
+    if (endBtn && game.matchday > 34) endBtn.style.display = offen ? 'none' : 'block';
+    const ziel = sit.type === 'aufstieg' ? `Aufstieg in die ${leagueNames[sit.oppLevel]}` : `Klassenerhalt gegen den Dritten der ${leagueNames[sit.oppLevel]}`;
+    const gespielt = (r ? r.legs : []).map((l, i) => `<div>${i === 0 ? 'Hinspiel' : 'Rückspiel'} (${l.isHome ? 'Heim' : 'Auswärts'}): <strong>${l.ourGoals}:${l.oppGoals}</strong></div>`).join('');
+    box.innerHTML = `<div class="box" style="font-size:10px; border-left-color:var(--accent); margin-bottom:6px;">
+        ⚔️ <strong>RELEGATION</strong> - Platz ${sit.rank}: ${ziel}<br>Gegner: <strong>${sit.oppName}</strong> (Stärke ${sit.oppStrength})
+        ${gespielt}
+        ${r && r.result ? `<div style="margin-top:4px; font-weight:800;">Gesamt ${r.aggregate}${r.penalties ? ' n.E.' : ''}: ${({ promoted: '🎉 Aufstieg geschafft!', stayed: sit.type === 'abstieg' ? '💪 Klasse gehalten!' : 'Kein Aufstieg.', relegated: '💔 Abstieg.' })[r.result]}</div>`
+            : `<button onclick="playRelegationLeg()" class="btn-action" style="margin-top:6px;">▶ ${r && r.legs.length === 1 ? 'Rückspiel' : 'Hinspiel'} spielen</button>`}
+    </div>`;
+}
+
+</script>
+<script>
+// Liga-Auszeichnungen am Saisonende: Torjägerkanone, Elf der Saison, Trainer des Jahres und
+// Talent des Jahres. Eigene Spieler treten mit ihren echten Saisonwerten an. KI-Vereine haben
+// keine einzelnen Spieler - ihre Kandidaten werden aus echten Ligadaten abgeleitet (erzielte
+// Tore, Tabellenplatz, Vereinsstärke), nur die Namen sind generiert.
+
+const ELF_DER_SAISON = { TW: 1, ABW: 4, MIT: 4, ST: 2 };
+
+function awardLeagueHonours(myRank) {
+    const level = game.leagueLevel;
+    const table = [...(leaguesData[level] || [])].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+    const reserve = game.secondTeam && game.secondTeam.name;
+    const ki = table.filter(t => t.name !== game.clubName && t.name !== reserve);
+    if (!table.length || !squad.length) return null;
+    const ergebnis = { season: game.season, league: leagueNames[level], awards: [] };
+    const eigeneGewinne = [];
+    const ehre = (p, moral, wert) => {
+        p.morale = Math.min(100, (p.morale || 50) + moral);
+        p.marketValue = Math.round(p.marketValue * wert / 1000) * 1000;
+    };
+
+    // Torjägerkanone: bester Stürmer jedes KI-Vereins trifft 18-32 % der Vereinstore.
+    const kiTorjaeger = ki.map(t => ({ name: getRandomName(), club: t.name, goals: Math.round(t.goalsFor * (0.18 + Math.random() * 0.14)) }))
+        .sort((a, b) => b.goals - a.goals)[0];
+    const eigenerTorjaeger = [...squad].sort((a, b) => (b.goalsSeason || 0) - (a.goalsSeason || 0))[0];
+    if (eigenerTorjaeger && (eigenerTorjaeger.goalsSeason || 0) > 0 && (!kiTorjaeger || eigenerTorjaeger.goalsSeason >= kiTorjaeger.goals)) {
+        ergebnis.awards.push({ award: '👟 Torjägerkanone', winner: eigenerTorjaeger.name, club: game.clubName, value: `${eigenerTorjaeger.goalsSeason} Tore`, own: true });
+        ehre(eigenerTorjaeger, 15, 1.15);
+        eigeneGewinne.push(`👟 Torjägerkanone: ${eigenerTorjaeger.name} (${eigenerTorjaeger.goalsSeason} Tore)`);
+    } else if (kiTorjaeger) {
+        ergebnis.awards.push({ award: '👟 Torjägerkanone', winner: kiTorjaeger.name, club: kiTorjaeger.club, value: `${kiTorjaeger.goals} Tore` });
+    }
+
+    // Elf der Saison: eigene Stammspieler, die das Niveau der Spitzenteams erreichen.
+    const spitze = ki.slice(0, 4);
+    const niveau = spitze.length ? spitze.reduce((s, t) => s + (t.baseStrength || t.strength), 0) / spitze.length : 60;
+    const elf = [];
+    Object.entries(ELF_DER_SAISON).forEach(([pos, plaetze]) => {
+        const eigene = squad.filter(p => p.pos === pos && (p.appearancesSeason || 0) >= 15)
+            .map(p => ({ p, wert: p.strength + (p.goalsSeason || 0) * 0.3 + (myRank <= 3 ? 2 : 0) }))
+            .filter(x => x.wert >= niveau + 2)
+            .sort((a, b) => b.wert - a.wert).slice(0, plaetze);
+        eigene.forEach(x => { elf.push({ pos, name: x.p.name, club: game.clubName, own: true }); ehre(x.p, 8, 1.08); });
+        for (let i = eigene.length; i < plaetze; i++) {
+            const club = spitze.length ? spitze[Math.floor(Math.random() * spitze.length)].name : '-';
+            elf.push({ pos, name: getRandomName(), club });
+        }
+    });
+    const eigeneInElf = elf.filter(e => e.own);
+    ergebnis.elf = elf;
+    if (eigeneInElf.length) eigeneGewinne.push(`⭐ Elf der Saison: ${eigeneInElf.map(e => e.name).join(', ')}`);
+
+    // Trainer des Jahres: Meister oder deutlich über den Erwartungen.
+    const erwartet = game.seasonExpectation && game.seasonExpectation.expectedRank;
+    const leistung = (myRank === 1 ? 6 : 0) + (erwartet ? (erwartet - myRank) : 0);
+    if (leistung >= 6) {
+        ergebnis.awards.push({ award: '🎩 Trainer des Jahres', winner: 'Du', club: game.clubName, value: `Platz ${myRank}${erwartet ? ` (erwartet: ${erwartet})` : ''}`, own: true });
+        if (typeof addManagerXP === 'function') addManagerXP(500);
+        game.managerMediaImage = Math.min(100, (game.managerMediaImage || 50) + 5);
+        game.boardSat = Math.min(100, game.boardSat + 5);
+        eigeneGewinne.push('🎩 Du bist Trainer des Jahres!');
+    } else {
+        const meister = ki[0];
+        const coach = meister ? (typeof getTeamCoach === 'function' ? getTeamCoach(meister).name : getRandomName()) : '-';
+        ergebnis.awards.push({ award: '🎩 Trainer des Jahres', winner: coach, club: meister ? meister.name : '-', value: meister ? `Platz ${table.indexOf(meister) + 1}` : '' });
+    }
+
+    // Talent des Jahres: bester U21-Spieler mit Einsatzzeit.
+    const ligaBasis = 82 - level * 10;
+    const talent = squad.filter(p => (p.age || 30) <= 21 && (p.appearancesSeason || 0) >= 10).sort((a, b) => b.strength - a.strength)[0];
+    const kiTalentStaerke = ligaBasis - 6 + Math.floor(Math.random() * 6);
+    if (talent && talent.strength >= kiTalentStaerke) {
+        ergebnis.awards.push({ award: '🌱 Talent des Jahres', winner: talent.name, club: game.clubName, value: `${talent.age} Jahre, Stärke ${talent.strength}`, own: true });
+        ehre(talent, 10, 1.1);
+        eigeneGewinne.push(`🌱 Talent des Jahres: ${talent.name}`);
+    } else {
+        const club = ki.length ? ki[Math.floor(Math.random() * Math.min(8, ki.length))].name : '-';
+        ergebnis.awards.push({ award: '🌱 Talent des Jahres', winner: getRandomName(), club, value: `${19 + Math.floor(Math.random() * 3)} Jahre` });
+    }
+
+    if (!game.leagueAwards) game.leagueAwards = [];
+    game.leagueAwards.push(ergebnis);
+    if (game.leagueAwards.length > 20) game.leagueAwards.shift();
+
+    const liste = ergebnis.awards.map(a => `${a.award}: ${a.winner} (${a.club}) - ${a.value}`).join('\n');
+    addInboxMessage('vertrag', `🏅 Liga-Auszeichnungen ${ergebnis.league}, Saison ${game.season}`,
+        `${liste}\n\n⭐ Elf der Saison: ${elf.map(e => `${e.name} (${e.club === game.clubName ? 'dein Verein' : e.club})`).join(', ')}`, 'screen-history');
+    if (eigeneGewinne.length) showNotice('🏅 Liga-Auszeichnungen', `Dein Verein räumt ab:\n\n${eigeneGewinne.join('\n')}`);
+    return ergebnis;
+}
+
+function renderLeagueAwardsBox() {
+    const box = document.getElementById('league-awards-box');
+    if (!box) return;
+    const liste = (game.leagueAwards || []).slice().reverse();
+    if (!liste.length) { box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Die ersten Auszeichnungen werden am Saisonende vergeben.</div>'; return; }
+    box.innerHTML = liste.slice(0, 5).map(e => `<div class="box" style="font-size:9px; margin-bottom:4px;">
+        <strong>Saison ${e.season} · ${e.league}</strong>
+        ${e.awards.map(a => `<div style="${a.own ? 'color:var(--gold); font-weight:700;' : ''}">${a.award}: ${a.winner} (${a.club}) - ${a.value}</div>`).join('')}
+        <div style="color:var(--text-muted);">⭐ Elf: ${e.elf.filter(x => x.own).length} eigene Spieler${e.elf.some(x => x.own) ? ` (${e.elf.filter(x => x.own).map(x => x.name).join(', ')})` : ''}</div>
+    </div>`).join('');
+}
+
+</script>
+<script>
+// Trainerkarussell: Jeder KI-Verein hat einen Trainer. Bei anhaltendem Misserfolg (hinten in
+// der Tabelle, schwache Form) wird er entlassen - der Nachfolger bringt einen anderen
+// Spielstil und kurzfristig Schwung (+3 Stärke für 4 Spieltage, "Trainereffekt"). Der
+// Trainer des permanenten Rivalen ist game.rivalManagerName und wird mitgeführt.
+
+const COACH_BOUNCE = 3;
+const COACH_BOUNCE_MATCHDAYS = 4;
+
+function getTeamCoach(team) {
+    if (!team.coach) team.coach = { name: team.name === game.permanentRivalName && game.rivalManagerName ? game.rivalManagerName : getRandomName(), since: game.season, sackedThisSeason: false };
+    return team.coach;
+}
+
+function coachCarouselTeams() {
+    const reserve = game.secondTeam && game.secondTeam.name;
+    return (leaguesData[game.leagueLevel] || []).filter(t => t.name !== game.clubName && t.name !== reserve);
+}
+
+// Monatlich: Entlassungen in der eigenen Liga.
+function tickCoachCarousel() {
+    if (game.matchday < 8 || game.matchday > 30) return;
+    const table = [...(leaguesData[game.leagueLevel] || [])].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+    const meldungen = [];
+    coachCarouselTeams().forEach(t => {
+        const coach = getTeamCoach(t);
+        if (coach.sackedThisSeason === game.season) return;
+        const rank = table.indexOf(t) + 1;
+        const niederlagen = (t.recentForm || []).filter(r => r === 'L').length;
+        let chance = 0;
+        if (rank >= 15 && niederlagen >= 3) chance = 0.35;
+        else if (rank >= 16) chance = 0.15;
+        else if (niederlagen >= 4) chance = 0.12;
+        if (Math.random() >= chance) return;
+
+        const alt = coach.name;
+        const altStil = getTeamPlaystyle(t);
+        const neueStile = AI_PLAYSTYLES.filter(s => s.id !== t.playstyle);
+        t.playstyle = neueStile[Math.floor(Math.random() * neueStile.length)].id;
+        let neu = getRandomName();
+        if (t.name === game.permanentRivalName && typeof assignRivalManagerPersonality === 'function') {
+            assignRivalManagerPersonality();
+            neu = game.rivalManagerName;
+        }
+        t.coach = { name: neu, since: game.season, sackedThisSeason: game.season };
+        t.coachBounce = { amount: COACH_BOUNCE, until: game.matchday + COACH_BOUNCE_MATCHDAYS };
+        t.baseStrength = (t.baseStrength || t.strength) + COACH_BOUNCE;
+        t.strength += COACH_BOUNCE;
+        meldungen.push({ t, alt, neu, rank, altStil: altStil.label, neuStil: getTeamPlaystyle(t).label });
+    });
+    meldungen.forEach(m => {
+        addInboxMessage('vertrag', `🎠 Trainerwechsel bei ${m.t.name}`,
+            `${m.t.name} (Platz ${m.rank}) trennt sich von Trainer ${m.alt}. Nachfolger ${m.neu} stellt von „${m.altStil}“ auf „${m.neuStil}“ um - in den nächsten ${COACH_BOUNCE_MATCHDAYS} Spieltagen ist mit einem Trainereffekt zu rechnen.`, 'screen-league');
+    });
+    if (!game.coachChanges) game.coachChanges = [];
+    meldungen.forEach(m => game.coachChanges.push({ season: game.season, matchday: game.matchday, club: m.t.name, alt: m.alt, neu: m.neu }));
+    if (game.coachChanges.length > 30) game.coachChanges.splice(0, game.coachChanges.length - 30);
+}
+
+// Jeden Spieltag: abgelaufenen Trainereffekt wieder herausnehmen.
+function tickCoachBounce(force = false) {
+    (leaguesData || []).forEach(table => table.forEach(t => {
+        if (t.coachBounce && (force || game.matchday >= t.coachBounce.until)) {
+            t.baseStrength -= t.coachBounce.amount;
+            t.strength -= t.coachBounce.amount;
+            delete t.coachBounce;
+        }
+    }));
+}
+
+// Kurzinfo für Spielanalyse und Prognose.
+function getCoachInfoHtml(team) {
+    if (!team || team.name === game.clubName) return '';
+    const coach = getTeamCoach(team);
+    const neu = team.coachBounce ? ' <span style="color:var(--accent);">(neuer Trainer - Trainereffekt!)</span>' : '';
+    return `🎩 Trainer: <strong>${coach.name}</strong>${neu}`;
+}
+
+function renderCoachCarouselBox() {
+    const box = document.getElementById('coach-carousel-box');
+    if (!box) return;
+    const wechsel = (game.coachChanges || []).filter(c => c.season === game.season).slice().reverse();
+    box.innerHTML = `<div style="font-size:9px;">${wechsel.length
+        ? wechsel.map(c => `<div style="padding:2px 0; border-top:1px solid rgba(255,255,255,0.06);">Spt ${c.matchday}: <strong>${c.club}</strong> - ${c.alt} ➜ ${c.neu}</div>`).join('')
+        : '<span style="color:var(--text-muted);">Diese Saison noch keine Trainerwechsel in deiner Liga.</span>'}</div>`;
+}
 
 </script>
 <script>
