@@ -1229,10 +1229,6 @@
         setzeBuchungskontext('🏦 Automatische Rücklage');
         if (typeof tickAutoReserve === 'function') tickAutoReserve(game.money - moneyAtStart);
         loescheBuchungskontext();
-        // Derby-Verarbeitung: wenn es ein Spiel gegen einen Rivalen war
-        if (typeof currentMatch !== 'undefined' && currentMatch && typeof processDerbyMatch === 'function') {
-            processDerbyMatch(currentMatch.opponent, won, currentMatch.score, currentMatch.conceded);
-        }
         if (typeof checkForScandale === 'function') checkForScandale();
         if (typeof analyzeMatchTactics === 'function') {
             let [ownGoals, oppGoals] = String(scoreTextForRecord || '').split(':').map(n => parseInt(n, 10));
@@ -1745,14 +1741,9 @@
             // Opposition Analysis: Gegner-Analyse-Updates
             if (typeof cleanupLegacyScoutState === 'function') cleanupLegacyScoutState();
             if (typeof cleanupRemovedModuleState === 'function') cleanupRemovedModuleState();
-            // Crisis Management: monatliche Krisen-Events
-            if (typeof tickCrisisEvents === 'function') tickCrisisEvents();
-            if (typeof tickDisciplinaryBans === 'function') tickDisciplinaryBans();
             if (typeof cleanupLegacyDevelopmentState === 'function') cleanupLegacyDevelopmentState();
             if (typeof cleanupLegacyScoutingState === 'function') cleanupLegacyScoutingState();
-            // Season Objectives & Squad Harmony: Ziele und Mannschaftsharmonie
             if (typeof tickSeasonObjectives === 'function') tickSeasonObjectives();
-            if (typeof tickSquadHarmony === 'function') tickSquadHarmony();
             if (typeof tickTeamCouncil === 'function') tickTeamCouncil();
             if (typeof tickCoachCarousel === 'function') tickCoachCarousel();
             if (typeof tickMemberAssembly === 'function') tickMemberAssembly();

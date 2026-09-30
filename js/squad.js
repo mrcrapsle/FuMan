@@ -624,7 +624,7 @@
             ? `<span style="color:var(--primary);">▲ ${stats.percent - leagueAvgChemistry} über Liga-Ø</span>`
             : `<span style="color:var(--danger);">▼ ${leagueAvgChemistry - stats.percent} unter Liga-Ø</span>`;
         box.innerHTML = `
-            <div class="panel-header">🤝 TEAM-CHEMIE</div>
+            <div style="font-size:9px; font-weight:800; margin-bottom:3px;">⚽ Eingespieltheit</div>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                 <span style="font-size:10px;">Eingespieltheit der Startelf</span>
                 <strong style="color:${color};">${stats.percent}% ${stats.bonus > 0 ? `(+${stats.bonus} Stärke)` : ''}</strong>
@@ -774,10 +774,8 @@
         renderTeamChemistryPanel();
         if (typeof renderCliqueBox === 'function') renderCliqueBox();
         if (typeof renderLeadershipCouncilBox === 'function') renderLeadershipCouncilBox();
-        if (typeof renderRivalriesPanel === 'function') renderRivalriesPanel();
         if (typeof renderScandalsPanel === 'function') renderScandalsPanel();
         if (typeof renderTacticSystemPanel === 'function') renderTacticSystemPanel();
-        if (typeof renderSquadHarmonyPanel === 'function') renderSquadHarmonyPanel();
         if (typeof renderTeamCouncilPanel === 'function') renderTeamCouncilPanel();
         let container = document.getElementById('bench-list');
         if (!container) return;

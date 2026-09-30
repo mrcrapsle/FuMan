@@ -4336,6 +4336,52 @@ async function testPhase14Teil1(browser) {
     await page.close();
 }
 
+async function testPhase14Teil2(browser) {
+    console.log('\n[P14b] Kabine: ein Panel, Schein-Systeme entfernt, Skandale korrigiert');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        const out = {};
+        closeTutorial();
+        out.alteModuleWeg = ['tickSquadHarmony', 'organizeMoraleEvent', 'tickCrisisEvents', 'resolveCrisis', 'recordCard', 'tickDisciplinaryBans',
+            'processDerbyMatch', 'renderRivalriesPanel', 'renderSquadHarmonyPanel'].filter(n => typeof window[n] === 'function');
+        game.squadHarmony = {}; game.crises = {}; game.disciplinarySystem = {}; game.localRivals = [];
+        simulateMatchdays(4);
+        out.altWeg = ['squadHarmony', 'crises', 'disciplinarySystem', 'localRivals'].filter(k => game[k] !== undefined);
+
+        showScreen('screen-squad'); setSquadTab('team');
+        const tab = document.getElementById('squad-tab-team');
+        const kabine = [...tab.querySelectorAll(':scope > .panel')].find(p => p.innerText.includes('KABINE'));
+        out.kabine = !!kabine && !!kabine.querySelector('#squad-cliques-box') && !!kabine.querySelector('#leadership-council-box') && !!kabine.querySelector('#team-chemistry-box');
+        out.kabineInhalt = kabine ? kabine.innerText.includes('Führungsspieler') : false;
+        out.teamPanels = tab.querySelectorAll(':scope > .panel').length;
+
+        // Skandal: schadet dem Medienimage (vorher Vorzeichenfehler) und ist nicht mehr an Spieltag 30 gebunden
+        game.scandals = [];
+        squad.forEach(p => { p.morale = 20; });
+        game.matchday = 11;
+        game.managerMediaImage = 60;
+        const zufall = Math.random; Math.random = () => 0.01;
+        try { checkForScandale(); } finally { Math.random = zufall; }
+        out.skandal = game.scandals.length === 1;
+        out.imageSinkt = game.managerMediaImage < 60;
+        Math.random = () => 0.01;
+        try { checkForScandale(); } finally { Math.random = zufall; }
+        out.nurEiner = game.scandals.length === 1;
+        return out;
+    });
+
+    assert(r.alteModuleWeg.length === 0, `Schein-Systeme der Kabine entfernt (${r.alteModuleWeg.join(', ')})`);
+    assert(r.altWeg.length === 0, `Ihre Spielstanddaten werden entfernt (${r.altWeg.join(', ')})`);
+    assert(r.kabine && r.kabineInhalt, 'Team-Chemie, Grüppchen und Führungsspieler-Rat in einem Kabinen-Panel');
+    assert(r.teamPanels === 3, `Mannschaft-Reiter hat 3 statt 7 Panels (${r.teamPanels})`);
+    assert(r.skandal && r.imageSinkt, 'Skandal an einem normalen Spieltag möglich und schadet dem Medienimage');
+    assert(r.nurEiner, 'Höchstens ein Skandal gleichzeitig');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler in Phase 14 Teil 2 (${consoleErrors.slice(0, 3).join(' | ')})`);
+    await page.close();
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -4411,6 +4457,7 @@ async function main() {
         testPhase13Teil3,
         testPhase13Teil4,
         testPhase14Teil1,
+        testPhase14Teil2,
         testRuntimeRoundTrip,
     ];
 

@@ -88,8 +88,6 @@
         if (clubProgEl && typeof renderClubProgression === 'function') {
             clubProgEl.innerHTML = renderClubProgression();
         }
-        if (typeof renderCrisisManagementPanel === 'function') renderCrisisManagementPanel();
-        if (typeof renderDisciplinarySanctionsPanel === 'function') renderDisciplinarySanctionsPanel();
         if (typeof renderPlayerRetirementPanel === 'function') renderPlayerRetirementPanel();
     }
 

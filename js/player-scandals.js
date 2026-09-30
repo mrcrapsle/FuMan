@@ -78,8 +78,10 @@
     function checkForScandale() {
         if (!game.scandals) game.scandals = [];
 
-        // Alle 30 Spieltage ca. 30% Chance für einen Skandal
-        if (game.matchday % 30 === 0 && Math.random() < 0.3) {
+        // Bisher nur an Spieltag 30 möglich (game.matchday % 30). Jetzt jeder Spieltag mit kleiner
+        // Chance - im Schnitt etwa ein Skandal pro Saison, höchstens einer gleichzeitig, und nur
+        // wenn es anfällige Spieler (niedrige Moral) gibt.
+        if (game.matchday <= 34 && game.scandals.length === 0 && Math.random() < 0.03) {
             let scandal = generatePlayerScandale();
             if (scandal) {
                 game.scandals.push(scandal);
@@ -95,7 +97,8 @@
 
                 // Medien-Reputation sinkt
                 if (typeof changeMediaImage === 'function') {
-                    changeMediaImage(-Math.round(scandal.consequences.mediaReputation / 2));
+                    // mediaReputation ist negativ - das alte "-Math.round(...)" machte daraus ein Plus.
+                    changeMediaImage(Math.round((scandal.consequences.mediaReputation || 0) / 2));
                 }
 
                 addInboxMessage('scandal', `${scandal.icon} Skandal: ${player?.name}`,
@@ -116,6 +119,7 @@
 
         let scandal = game.scandals[scandalIndex];
         let player = squad.find(p => p.id === scandal.playerId);
+        if (!player) return; // inzwischen verkauft - der Skandal läuft einfach aus
 
         if (accept) {
             // Spieler muss Konsequenzen tragen

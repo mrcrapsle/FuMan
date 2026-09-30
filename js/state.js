@@ -210,7 +210,6 @@
         cornerTakerId: null,
         trophies: [],
         clubSwitchHistory: [],
-        localRivals: [],
         academyLeague: null,
         scandals: [],
         tacticsHistory: [],
@@ -602,11 +601,13 @@
     // Fan-Engagement, Fanclubs, Fan-Events, Trainingswochenplan, Trainings-Spezialisierung,
     // Standard-Training, Stadion-Management, Turniere ohne Austragung, Zufalls-Marktanalyse,
     // Pauschal-Spielerbewertung. Phase 14: zweiter Transfermarkt, zweites Leihsystem,
-    // Turnier-Klammern.
+    // Turnier-Klammern, Schein-Harmonie, Disziplinarsystem ohne Sperren, Krisen, leere
+    // lokale Rivalitäten.
     function cleanupRemovedModuleState() {
         ['fanclubs', 'fanSatisfaction', 'ultraGroups', 'fanEvents', 'fanEngagement', 'ticketSalesMultiplier', 'sponsorAttractiveness',
             'trainingSchedule', 'trainingSpecialization', 'setPieceTraining', 'stadium',
             'internationalTournaments', 'playerInternationalCaps', 'internationalTournamentHistory', 'nextWorldCup', 'transferMarket', 'postMatchAnalysis',
-            'transferBudgetUsed', 'transferMarketPlayers', 'transferLastRefreshMatchday', 'reserves', 'tournamentBrackets'].forEach(k => { delete game[k]; });
+            'transferBudgetUsed', 'transferMarketPlayers', 'transferLastRefreshMatchday', 'reserves', 'tournamentBrackets',
+            'squadHarmony', 'disciplinarySystem', 'crises', 'localRivals'].forEach(k => { delete game[k]; });
         squad.forEach(p => { delete p.currentFitnessBoost; });
     }
