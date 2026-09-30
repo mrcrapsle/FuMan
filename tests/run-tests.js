@@ -5141,7 +5141,8 @@ async function testContractTalks(browser) {
         checkPlaytimePromises();
         out.garantieGebrochen = bank.morale === 40 && !bank.playtimePromise;
         // Zwei abgelehnte Gegenangebote beenden die Gespräche für die Saison
-        const dritter = squad.find(p => p.id !== star.id && p.id !== bank.id);
+        // Verhandlungsstarker Charakter: nimmt Gegenangebote bei hohem Zufallswert nicht an
+        const dritter = squad.find(p => p.id !== star.id && p.id !== bank.id && !['Bescheiden', 'Ruhig'].includes(p.character)) || squad.find(p => p.id !== star.id && p.id !== bank.id);
         const rnd = Math.random; Math.random = () => 0.99;
         extendContract(dritter.id); counterContractTalk(); counterContractTalk();
         Math.random = rnd;
@@ -5161,6 +5162,45 @@ async function testContractTalks(browser) {
     assert(r.garantieGuenstiger && r.garantieGebrochen, 'Einsatzgarantie macht günstiger, Bruch kostet Moral');
     assert(r.gesperrt && r.bleibtGesperrt, 'Zwei abgelehnte Gegenangebote beenden die Gespräche für die Saison');
     assert(r.budgetGeprueft, 'Gehaltsbudget wird bei der Unterschrift geprüft');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 3).join(' | ')})`);
+    await page.close();
+}
+
+async function testJobOffers(browser) {
+    console.log('\n[P18c] Jobangebote: erfolgsabhängig, passende Vereine, echter Wechsel');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        const out = {};
+        const rnd = Math.random;
+        // Saisonende auf Platz 1: Angebot sehr wahrscheinlich; auf Platz 12 kaum
+        Math.random = () => 0.5;
+        checkJobOfferApproach({ saisonende: true, rank: 12 });
+        out.mittelfeldKeins = pendingJobApproach === null;
+        checkJobOfferApproach({ saisonende: true, rank: 1 });
+        Math.random = rnd;
+        out.angebot = !!pendingJobApproach && document.getElementById('joboffer-overlay').classList.contains('show');
+        const eigene = leaguesData[game.leagueLevel].find(t => t.name === game.clubName);
+        out.passenderVerein = pendingJobApproach && (pendingJobApproach.level < game.leagueLevel || pendingJobApproach.strength > eigene.strength)
+            && pendingJobApproach.level >= game.leagueLevel - 1 && pendingJobApproach.clubName !== game.clubName;
+        out.dreiOptionen = document.getElementById('joboffer-overlay').innerHTML.includes('acceptJobOfferMove');
+        // Wechsel: Karriere bleibt, neuer Verein, Station wird festgehalten
+        const ziel = pendingJobApproach.clubName, lvl = managerRPG.level, trophaeen = game.trophies.length;
+        acceptJobOfferMove(null);
+        out.gewechselt = game.clubName === ziel && managerRPG.level === lvl && game.trophies.length === trophaeen
+            && game.careerStations.length === 1 && !document.getElementById('joboffer-overlay').classList.contains('show');
+        renderCareerSummary();
+        out.stationSichtbar = document.getElementById('career-summary-box').innerHTML.includes(ziel);
+        // Weiterspielen beim neuen Verein funktioniert
+        game.sackPending = false; simulateMatchdays(2);
+        out.weiter = game.matchday === 3;
+        return out;
+    });
+    assert(r.mittelfeldKeins && r.angebot, 'Angebote hängen am Erfolg (Platz 1 ja, Mittelfeld kaum)');
+    assert(r.passenderVerein, 'Angebot kommt von einem stärkeren Verein der eigenen oder nächsthöheren Liga');
+    assert(r.dreiOptionen && r.gewechselt && r.stationSichtbar, 'Echter Wechsel mit Karriere-Mitnahme, Station im Karriere-Rückblick');
+    assert(r.weiter, 'Beim neuen Verein geht die Saison normal weiter');
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 3).join(' | ')})`);
     await page.close();
 }
@@ -5257,6 +5297,7 @@ async function main() {
         testCompactSave,
         testPressConference,
         testContractTalks,
+        testJobOffers,
         testRuntimeRoundTrip,
     ];
 

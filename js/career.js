@@ -140,6 +140,7 @@
                 <span class="label">Saison:</span><span class="val">${game.season}</span>
                 <span class="label">Aktuelle Liga:</span><span class="val">${leagueNames[game.leagueLevel]}</span>
                 <span class="label">Trophäen gesamt:</span><span class="val">${(game.trophies || []).length}</span>
+                <span class="label">Karriere-Stationen:</span><span class="val">${(game.careerStations || []).length ? game.careerStations.map(st => `${st.from} → ${st.to} (S${st.season})`).join(', ') : 'nur dieser Verein'}</span>
                 <span class="label">Schon entlassen:</span><span class="val">${game.timesSacked || 0}×</span>
                 <span class="label">Rivalen-Bilanz:</span><span class="val">${rivalryRecord.wins}S ${rivalryRecord.draws}U ${rivalryRecord.losses}N</span>
                 <span class="label">Höchster Derbysieg:</span><span class="val">${bestWin ? `${bestWin.ourGoals}:${bestWin.oppGoals} (Saison ${bestWin.season})` : '-'}</span>

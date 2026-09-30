@@ -1601,7 +1601,7 @@
             recordHomeAwayResult(isHomeMatchParam, matchResult);
             checkBettingScandalSuspicion(matchResult, matchMargin);
             if (isLiveContext) checkPostMatchInterview(matchResult);
-            if (isLiveContext) checkJobOfferApproach();
+            checkJobOfferApproach();
             checkContractUltimatum();
         }
         checkFanRadioFeedback();
@@ -2202,12 +2202,48 @@
     // oder Vereinstreue-Bonus (ablehnen) - beides sind echte, unterschiedliche Belohnungen
     // für eine sportlich erfolgreiche Zwischenbilanz.
     let pendingJobApproach = null;
-    function checkJobOfferApproach() {
-        if (game.matchday % 6 !== 0) return;
-        if (Math.random() > (0.05 + managerRPG.level * 0.01)) return;
-        pendingJobApproach = { clubName: pickRandomOpposingClubName(true) };
-        document.getElementById('joboffer-club-name').innerText = pendingJobApproach.clubName;
+    // Wer wirbt? Ein stärkerer Verein aus der eigenen oder der nächsthöheren Liga.
+    function pickJobOfferClub() {
+        let excluded = [game.clubName, game.secondTeam && game.secondTeam.name, game.permanentRivalName];
+        let eigene = (leaguesData[game.leagueLevel] || []).find(t => t.name === game.clubName);
+        let ourStr = eigene ? eigene.strength : 50;
+        let pool = [game.leagueLevel - 1, game.leagueLevel].filter(l => l >= 0)
+            .flatMap(l => (leaguesData[l] || []).filter(t => !excluded.includes(t.name) && (l < game.leagueLevel || t.strength > ourStr + 2)).map(t => ({ name: t.name, level: l, strength: t.strength })));
+        if (!pool.length) return null;
+        pool.sort((a, b) => b.strength - a.strength);
+        return pool[Math.floor(Math.random() * Math.min(6, pool.length))];
+    }
+    // Interesse anderer Vereine hängt am Erfolg: Tabellenplatz, Medienimage, Manager-Level.
+    // Nach einer Saison unter den ersten drei kommt sehr wahrscheinlich ein Angebot.
+    function checkJobOfferApproach(opts = {}) {
+        if (pendingJobApproach || game.sackPending) return;
+        let chance;
+        if (opts.saisonende) chance = opts.rank <= 3 ? 0.6 : 0.05;
+        else {
+            if (game.matchday % 6 !== 0) return;
+            let rank = typeof getOwnLeagueRank === 'function' ? getOwnLeagueRank() : 9;
+            chance = 0.02 + Math.max(0, 4 - rank) * 0.03 + Math.max(0, (game.managerMediaImage ?? 50) - 50) / 1000 + managerRPG.level * 0.005;
+        }
+        if (Math.random() > chance) return;
+        let club = pickJobOfferClub();
+        if (!club) return;
+        pendingJobApproach = { clubName: club.name, level: club.level, strength: club.strength };
+        document.getElementById('joboffer-club-name').innerText = `${club.name} (${leagueNames[club.level]}, Stärke ${club.strength})`;
         document.getElementById('joboffer-overlay').classList.add('show');
+    }
+    // Echter Wechsel: Karriere (Level, Trophäen, Konto) bleibt, Kader wird neu (switchToClub).
+    function acceptJobOfferMove(btn) {
+        if (!pendingJobApproach) return;
+        if (!requireConfirm(btn, 'Wirklich wechseln? Neuer Kader!')) return;
+        let von = game.clubName, ziel = pendingJobApproach.clubName, liga = pendingJobApproach.level;
+        document.getElementById('joboffer-overlay').classList.remove('show');
+        pendingJobApproach = null;
+        if (!switchToClub(ziel)) { showToast('Der Wechsel ist geplatzt.', 'error'); return; }
+        if (!game.careerStations) game.careerStations = [];
+        game.careerStations.push({ season: game.season, matchday: game.matchday, from: von, to: ziel, level: liga });
+        addInboxMessage('vertrag', `🔄 Neuer Verein: ${ziel}`, `Du wechselst von ${von} zu ${ziel} (${leagueNames[liga]}). Karriere-Level, Trophäen und Vereinskonto nimmst du mit, der Kader ist neu.`, 'screen-dashboard');
+        showToast(`🔄 Willkommen bei ${ziel}!`, 'success', 4500);
+        showScreen('screen-dashboard');
     }
     function acceptJobOfferLeverage() {
         if (!pendingJobApproach) return;

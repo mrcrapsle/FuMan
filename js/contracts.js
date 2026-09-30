@@ -130,7 +130,7 @@
         let p = contractTalk && squad.find(x => x.id === contractTalk.playerId);
         if (!p) return;
         let zaehigkeit = (typeof CHARACTER_TOUGHNESS !== 'undefined' && CHARACTER_TOUGHNESS[p.character]) || 1.0;
-        let chance = Math.max(0.1, 0.7 - (zaehigkeit - 1) * 1.2 - (1 - contractTalk.offerFactor) * 2);
+        let chance = Math.min(0.9, Math.max(0.1, 0.7 - (zaehigkeit - 1) * 1.2 - (1 - contractTalk.offerFactor) * 2));
         if (Math.random() < chance) {
             contractTalk.offerFactor = Math.round((contractTalk.offerFactor - 0.1) * 100) / 100;
             showToast(`🤝 ${p.name} geht auf dein Gegenangebot ein.`, 'success');

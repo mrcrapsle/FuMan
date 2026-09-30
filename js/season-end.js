@@ -311,6 +311,7 @@
         updateUI();
         showScreen('screen-dashboard');
         showSeasonReviewSummary(myRank, myTeamRecord);
+        if (typeof checkJobOfferApproach === 'function') checkJobOfferApproach({ saisonende: true, rank: myRank });
     }
 
     // ---------- SAISON-RÜCKBLICK-ZUSAMMENFASSUNG ----------

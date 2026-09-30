@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.9', date: '30.09.2026', features: 'Phase 18: Pressekonferenzen mit Wirkung, Vertragsgespräche mit Gehalt' };
+    const GAME_VERSION = { number: '3.9', date: '30.09.2026', features: 'Phase 18: Pressekonferenzen, Vertragsgespräche mit Gehalt, Jobangebote mit echtem Wechsel' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

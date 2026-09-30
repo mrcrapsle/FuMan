@@ -124,7 +124,7 @@ This pattern ensures:
 - Career balance (Phase 16, measured with an active-manager bot over 10-14 seasons: Liga 6 -> 2. Liga in 6-9 seasons, passive clubs sink): starters recover a quarter of the bench recovery between matchdays; the market has 10 players and refreshes at the winter window; licence items scale with the league (`getSpecialInstallCost()`, campus via `getStadiumCostScale()`). Promotion walls must stay affordable for a club of that league.
 - Save format: `buildSaveState()` packs `fixturesData` as `[home, away, hg, ag]` arrays (`packFixtures()`/`unpackFixtures()` in js/save.js, old object saves still load). The boot structural self-test runs once per `GAME_VERSION` (localStorage `anstoss_fm13_selftest_version`) - it cost ~1 s per start on phones.
 - Removed modules leave save-game fields behind: add them to `cleanupRemovedModuleState()` in js/state.js (runs on load and monthly).
-- Club change: only `showClubSwitchOptions()` in js/career.js. Player retirements: `tickPlayerRetirement()` (js/player-retirement.js), shown in the Hall of Fame.
+- Club change: `switchToClub()` in js/career.js - used by `showClubSwitchOptions()` and by job offers (`checkJobOfferApproach()` in js/match.js: chance from rank/media/level every 6 matchdays and at season end, offering clubs from own or next-higher league, move recorded in `game.careerStations`). Player retirements: `tickPlayerRetirement()` (js/player-retirement.js), shown in the Hall of Fame.
 - Player aging/development: only `agePlayersAtSeasonEnd()` in `js/player-development.js` (age +1, strength by archetype).
 
 ### Game Loop & Monthly Ticks
