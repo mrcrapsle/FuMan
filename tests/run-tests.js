@@ -743,32 +743,61 @@ async function testSaveExportImportAndErrorLog(browser) {
     await page.close();
 }
 
-async function testSeasonPointsChart(browser) {
-    console.log('\n[12] Saisonverlauf-Graph');
+async function testLeagueStats(browser) {
+    console.log('\n[12] Liga-Statistiken: Torjägerliste, Form-, Heim-/Auswärtstabelle, Tabellenverlauf');
     const { page, consoleErrors } = await freshPage(browser);
     page.on('dialog', d => d.accept());
 
     const r = await page.evaluate(() => {
         try {
+            const eigeneLiga = game.leagueLevel;
+            showScreen('screen-league');
+            setLeagueLevel(eigeneLiga === 0 ? 1 : 0);
+            const ligaUnveraendert = game.leagueLevel === eigeneLiga;
             simulateFullSeason();
             showScreen('screen-league');
-            let html = document.getElementById('season-points-chart-box').innerHTML;
-            let historyLen = (game.seasonPointsHistory || []).length;
+            const zurueckAufEigene = getLeagueViewLevel() === eigeneLiga;
+            setLeagueTab('stats');
+            const teams = leaguesData[eigeneLiga];
+            const scorers = getLeagueScorers(eigeneLiga);
+            const kiTore = teams.filter(isAiClub).reduce((s, t) => s + t.goalsFor, 0);
+            const kiBenannt = scorers.filter(x => !x.own).reduce((s, x) => s + x.goals, 0);
+            const heimAus = teams.every(t => t.homeRec[0] + t.homeRec[1] + t.homeRec[2] + t.awayRec[0] + t.awayRec[1] + t.awayRec[2] === t.played
+                && t.homeRec[3] + t.awayRec[3] === t.goalsFor);
+            const verlauf = teams.every(t => t.rankHist.length === 34 && t.rankHist.every(x => x >= 1 && x <= teams.length));
+            const tabelle = sortedTable(eigeneLiga);
+            const letzterPlatzStimmt = tabelle.every((t, i) => t.rankHist[33] === i + 1);
+            const html = ['top-scorers-box', 'league-form-table-box', 'league-homeaway-box', 'league-rank-chart-box'].map(id => document.getElementById(id).innerHTML);
+            setLeagueStatsSplit('auswaerts');
+            const auswaertsAktiv = document.getElementById('league-homeaway-box').innerHTML.includes("setLeagueStatsSplit('auswaerts')\" class=\"btn-action");
+            const kiKanone = scorers.find(x => !x.own);
+            const awards = awardLeagueHonours(5);
+            const kanone = awards.awards.find(a => a.award.includes('Torjäger'));
+            const kanoneEcht = kanone.club === game.clubName || (kiKanone && kanone.winner === kiKanone.name && kanone.value === kiKanone.goals + ' Tore');
             concludeSeasonAndAdvance();
-            let historyLenAfterReset = (game.seasonPointsHistory || []).length;
-            return { crash: false, hasChart: html.includes('<polyline'), historyLen, historyLenAfterReset };
+            const zurueckgesetzt = leaguesData.every(l => l.every(t => (t.rankHist || []).length === 0 && (!t.star || !t.star.goals) && (!t.homeRec || t.homeRec[0] === 0)));
+            return { crash: false, ligaUnveraendert, zurueckAufEigene, anteil: kiBenannt / Math.max(1, kiTore), heimAus, verlauf, letzterPlatzStimmt,
+                hatScorer: html[0].includes('<table'), hatForm: html[1].includes('●'), hatHeim: html[2].includes('Heim'), hatChart: html[3].includes('<polyline'),
+                auswaertsAktiv, kanoneEcht, zurueckgesetzt, altFeld: 'seasonPointsHistory' in game };
         } catch (e) {
-            return { crash: true, error: e.message };
+            return { crash: true, error: e.message + ' ' + e.stack };
         }
     });
 
-    assert(r.crash === false, `Saisonverlauf-Graph-Test ohne Absturz (${r.crash ? r.error : 'ok'})`);
+    assert(r.crash === false, `Liga-Statistik-Test ohne Absturz (${r.crash ? r.error : 'ok'})`);
     if (!r.crash) {
-        assert(r.historyLen === 34, `Ein Datenpunkt pro Spieltag über die volle Saison gesammelt (${r.historyLen} statt 34)`);
-        assert(r.hasChart, 'Saisonverlauf-Graph rendert eine SVG-Linie');
-        assert(r.historyLenAfterReset === 0, 'Saisonverlauf-Historie wird beim Saisonwechsel zurückgesetzt');
+        assert(r.ligaUnveraendert, 'Liga-Umschalter zeigt nur eine andere Liga an und ändert die eigene Liga nicht');
+        assert(r.zurueckAufEigene, 'Liga-Bildschirm öffnet wieder mit der eigenen Liga');
+        assert(r.anteil > 0.3 && r.anteil < 0.75, `Benannte KI-Torschützen erzielen einen plausiblen Anteil der Vereinstore (${(r.anteil * 100).toFixed(0)} %)`);
+        assert(r.heimAus, 'Heim- und Auswärtsbilanz ergeben zusammen genau die Tabellenwerte');
+        assert(r.verlauf && r.letzterPlatzStimmt, 'Tabellenverlauf hat 34 Plätze je Verein und endet mit dem echten Tabellenplatz');
+        assert(r.hatScorer && r.hatForm && r.hatHeim && r.hatChart, 'Statistik-Reiter zeigt Torjägerliste, Formtabelle, Heim/Auswärts und Verlaufsgrafik');
+        assert(r.auswaertsAktiv, 'Umschalter Heim/Auswärts wirkt');
+        assert(r.kanoneEcht, 'Torjägerkanone geht an den echten Führenden der Torjägerliste');
+        assert(r.zurueckgesetzt, 'Saisonwechsel setzt Verlauf, Heim/Auswärts und KI-Tore zurück');
+        assert(!r.altFeld, 'Altes Feld seasonPointsHistory ist entfernt');
     }
-    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Saisonverlauf-Graph-Test');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Liga-Statistik-Test');
     await page.close();
 }
 
@@ -4712,7 +4741,7 @@ async function testMobileLayout(browser) {
         game.sackPending = false; simulateMatchdays(5);
         const views = [...document.querySelectorAll('[id^="screen-"]')].map(e => e.id)
             .filter(id => !id.includes('prematch') && id !== 'screen-matchday').map(id => [id, () => showScreen(id)]);
-        const tabs = { 'screen-fans': ['setFansTab', ['gruppen', 'programme', 'sicherheit']], 'screen-league': ['setLeagueTab', ['fixtures', 'table']],
+        const tabs = { 'screen-fans': ['setFansTab', ['gruppen', 'programme', 'sicherheit']], 'screen-league': ['setLeagueTab', ['fixtures', 'stats', 'table']],
             'screen-squad': ['setSquadTab', ['analyse', 'aufstellung', 'taktik', 'team']], 'screen-training': ['setTrainingTab', ['individual', 'minigames', 'plan', 'special']],
             'screen-transfer': ['setTransferTab', ['free', 'loan', 'market', 'offers', 'sell']] };
         Object.entries(tabs).forEach(([sc, [fn, ts]]) => ts.forEach(t => views.push([`${sc}/${t}`, () => { showScreen(sc); window[fn](t); }])));
@@ -5240,7 +5269,7 @@ async function main() {
         testTransferMarketAndClubDossier,
         testFreeTextInputSanitization,
         testSaveExportImportAndErrorLog,
-        testSeasonPointsChart,
+        testLeagueStats,
         testRivalManagerPersonality,
         testAchievementsSystem,
         testConfigurableNewGameStart,

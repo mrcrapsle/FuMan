@@ -3510,14 +3510,7 @@
                     <div style="display:flex; gap:4px; margin-bottom:6px;">
                         <button onclick="setLeagueTab('table')" id="btn-tab-table" class="btn-action">Tabelle</button>
                         <button onclick="setLeagueTab('fixtures')" id="btn-tab-fixtures" class="btn-secondary">Paarungen</button>
-                    </div>
-                    <div class="panel" style="margin-bottom:8px;">
-                        <div class="panel-header" style="color:var(--gold);">👑 TOP-TORSCHÜTZEN (Saison)</div>
-                        <div id="top-scorers-box"></div>
-                    </div>
-                    <div class="panel" style="margin-bottom:8px;">
-                        <div class="panel-header" style="color:var(--primary);">📈 SAISONVERLAUF (PUNKTE)</div>
-                        <div id="season-points-chart-box"></div>
+                        <button onclick="setLeagueTab('stats')" id="btn-tab-stats" class="btn-secondary">Statistik</button>
                     </div>
                     <div id="league-tab-table"><table><thead><tr><th>Pl</th><th>Team</th><th>Sp</th><th>Tore</th><th>Diff</th><th>Pkt</th><th>Form</th></tr></thead><tbody id="league-table-body"></tbody></table>
                         <div id="head-to-head-box" style="margin-top:8px;"></div>
@@ -3529,6 +3522,24 @@
                             <button onclick="changeLeagueMatchday(1)" class="btn-secondary" style="width:auto; padding:4px 10px;">Nächster ▶</button>
                         </div>
                         <div id="matchday-fixtures-list"></div>
+                    </div>
+                    <div id="league-tab-stats" style="display:none;">
+                        <div class="panel" style="margin-bottom:8px;">
+                            <div class="panel-header" style="color:var(--gold);">👑 TORJÄGERLISTE</div>
+                            <div id="top-scorers-box"></div>
+                        </div>
+                        <div class="panel" style="margin-bottom:8px;">
+                            <div class="panel-header" style="color:var(--primary);">📈 TABELLENVERLAUF</div>
+                            <div id="league-rank-chart-box"></div>
+                        </div>
+                        <div class="panel" style="margin-bottom:8px;">
+                            <div class="panel-header" style="color:var(--accent);">🔥 FORMTABELLE (LETZTE 5 SPIELE)</div>
+                            <div id="league-form-table-box"></div>
+                        </div>
+                        <div class="panel" style="margin-bottom:8px;">
+                            <div class="panel-header" style="color:var(--teal);">🏠 HEIM- & AUSWÄRTSTABELLE</div>
+                            <div id="league-homeaway-box"></div>
+                        </div>
                     </div>
                     <div class="panel">
                         <div class="panel-header" style="color:var(--accent);">🎠 TRAINERKARUSSELL</div>
@@ -4578,7 +4589,6 @@
         playerOfMonthHistory: [],
         potmGoalSnapshot: {},
         headToHeadRecords: {},
-        seasonPointsHistory: [],
         achievements: [],
         agentRelationships: {},
         pendingSponsorActivation: null,
@@ -5067,7 +5077,7 @@
             'trainingSchedule', 'trainingSpecialization', 'setPieceTraining', 'stadium',
             'internationalTournaments', 'playerInternationalCaps', 'internationalTournamentHistory', 'nextWorldCup', 'transferMarket', 'postMatchAnalysis',
             'transferBudgetUsed', 'transferMarketPlayers', 'transferLastRefreshMatchday', 'reserves', 'tournamentBrackets',
-            'squadHarmony', 'disciplinarySystem', 'crises', 'localRivals', 'tacticsHistory', 'playerRoles', 'formationHistory', 'tacticAnalysis', 'clubSwitchHistory', 'youthNationalCallups', 'licenseRejectionCount'].forEach(k => { delete game[k]; });
+            'squadHarmony', 'disciplinarySystem', 'crises', 'localRivals', 'tacticsHistory', 'playerRoles', 'formationHistory', 'tacticAnalysis', 'clubSwitchHistory', 'youthNationalCallups', 'licenseRejectionCount', 'seasonPointsHistory'].forEach(k => { delete game[k]; });
         // Holding-Aufträge alter Spielstände trugen echte Vereinsnamen.
         const echteNamen = { 'Real Madrid': 'Real Madrit', 'FC Bayern': 'Bayern Munchen', 'FC Liverpool': 'Liverpol FC' };
         if (typeof holdingCompany !== 'undefined') (holdingCompany.b2bContracts || []).forEach(c => { if (echteNamen[c.club]) c.club = echteNamen[c.club]; });
@@ -9035,6 +9045,7 @@ function cleanupLegacyDevelopmentState() {
                 if (info) evolveAiTeamStrength(t, info);
                 t.played = 0; t.won = 0; t.drawn = 0; t.lost = 0;
                 t.goalsFor = 0; t.goalsAgainst = 0; t.points = 0; t.recentForm = [];
+                if (typeof resetLeagueTeamStats === 'function') resetLeagueTeamStats(t);
                 t.rivalName = null; t.friendName = null;
             });
             assignRivalriesAndFriendships(table);
@@ -9246,21 +9257,26 @@ function cleanupLegacyDevelopmentState() {
         return pool[Math.floor(Math.random() * pool.length)].team.name;
     }
 
+    // Angesehene Liga auf dem Liga-Bildschirm (null = eigene). Ändert nie game.leagueLevel -
+    // früher setzte der Liga-Umschalter die eigene Liga um.
+    let leagueViewLevel = null;
+
+    function getLeagueViewLevel() {
+        return (leagueViewLevel !== null && leaguesData[leagueViewLevel]) ? leagueViewLevel : game.leagueLevel;
+    }
+
     function setLeagueLevel(lvl) {
-        game.leagueLevel = lvl;
-        for (let i = 0; i < NUM_LEAGUES; i++) {
-            let btn = document.getElementById('btn-lvl-' + i);
-            if (btn) btn.className = (i === lvl) ? 'btn-action' : 'btn-secondary';
-        }
+        leagueViewLevel = lvl;
         renderLeagueView();
     }
 
     function setLeagueTab(tab) {
-        ['table', 'fixtures'].forEach(t => {
+        ['table', 'fixtures', 'stats'].forEach(t => {
             document.getElementById('league-tab-' + t).style.display = (t === tab) ? 'block' : 'none';
             let btn = document.getElementById('btn-tab-' + t);
             if (btn) btn.className = (t === tab) ? 'btn-action' : 'btn-secondary';
         });
+        if (tab === 'stats' && typeof renderLeagueStats === 'function') renderLeagueStats();
     }
 
     function changeLeagueMatchday(dir) {
@@ -9268,58 +9284,20 @@ function cleanupLegacyDevelopmentState() {
         renderLeagueView();
     }
 
-    // Torschützenliste (NEU): erste echte individuelle Torstatistik im Spiel - zeigt die
-    // eigenen Top-Torschützen der laufenden Saison.
-    function renderTopScorersBox() {
-        let box = document.getElementById('top-scorers-box');
-        if (!box) return;
-        let scorers = [...squad].filter(p => (p.goalsSeason || 0) > 0).sort((a, b) => b.goalsSeason - a.goalsSeason).slice(0, 8);
-        if (scorers.length === 0) { box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Noch keine Tore in dieser Saison.</div>'; return; }
-        box.innerHTML = scorers.map((p, idx) => `
-            <div class="box" style="display:flex; justify-content:space-between; align-items:center; font-size:10px;">
-                <span>${idx === 0 ? '👑 ' : ''}<strong class="badge badge-${(p.pos||'mit').toLowerCase()}">${p.pos}</strong> ${p.name}</span>
-                <strong style="color:var(--accent); font-size:13px;">${p.goalsSeason} ⚽</strong>
-            </div>`).join('');
-    }
-
-    // Saisonverlauf-Graph (NEU): visualisiert game.seasonPointsHistory (siehe
-    // updateLeagueTable() in match.js) als einfache SVG-Linie - macht den kompletten
-    // Saisonverlauf auf einen Blick sichtbar statt nur die aktuelle Tabellensituation.
-    function renderSeasonPointsChart() {
-        let box = document.getElementById('season-points-chart-box');
-        if (!box) return;
-        let history = game.seasonPointsHistory || [];
-        if (history.length < 2) {
-            box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Der Saisonverlauf-Graph füllt sich mit jedem gespielten Spieltag.</div>';
-            return;
-        }
-        let maxPoints = Math.max(...history.map(h => h.points), 3);
-        let w = 300, h = 70, pad = 4;
-        let stepX = (w - pad * 2) / (history.length - 1);
-        let points = history.map((entry, i) => {
-            let x = pad + i * stepX;
-            let y = h - pad - (entry.points / maxPoints) * (h - pad * 2);
-            return `${x.toFixed(1)},${y.toFixed(1)}`;
-        }).join(' ');
-        let last = history[history.length - 1];
-        box.innerHTML = `
-            <svg viewBox="0 0 ${w} ${h}" style="width:100%; height:70px; display:block;" preserveAspectRatio="none">
-                <polyline points="${points}" fill="none" stroke="var(--primary)" stroke-width="2" />
-            </svg>
-            <div style="font-size:9px; color:var(--text-muted); text-align:center;">Spieltag ${last.matchday} · ${last.points} Punkte · Platz ${last.rank}</div>
-        `;
-    }
-
     function renderLeagueView() {
         if (typeof renderCoachCarouselBox === 'function') renderCoachCarouselBox();
-        renderTopScorersBox();
-        renderSeasonPointsChart();
+        if (typeof renderLeagueStats === 'function') renderLeagueStats();
+        let viewLevel = getLeagueViewLevel();
+        for (let i = 0; i < NUM_LEAGUES; i++) {
+            let btn = document.getElementById('btn-lvl-' + i);
+            if (btn) btn.className = (i === viewLevel) ? 'btn-action' : 'btn-secondary';
+        }
 
         // WICHTIG: Zwei getrennte Referenzen! fixturesData verweist per Index auf die
         // ORIGINAL-Reihenfolge in leaguesData[level] - die darf nie sortiert werden,
         // sonst würden Teams plötzlich falsch gegeneinander antreten (Spielplan-Korruption).
         // Für die Tabellenansicht wird stattdessen eine sortierte KOPIE erzeugt.
-        let rawTeams = leaguesData[game.leagueLevel] || [];
+        let rawTeams = leaguesData[viewLevel] || [];
         let sortedTeams = [...rawTeams].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
         let tbody = document.getElementById('league-table-body');
         tbody.innerHTML = '';
@@ -9343,7 +9321,7 @@ function cleanupLegacyDevelopmentState() {
 
         let list = document.getElementById('matchday-fixtures-list');
         list.innerHTML = '';
-        let fixs = fixturesData[game.leagueLevel] ? fixturesData[game.leagueLevel][md - 1] : [];
+        let fixs = fixturesData[viewLevel] ? fixturesData[viewLevel][md - 1] : [];
         if (fixs) {
             fixs.forEach(f => {
                 let h = rawTeams[f.home]?.name || "Team A", a = rawTeams[f.away]?.name || "Team B";
@@ -11321,9 +11299,27 @@ function ageAiStars() {
     }));
 }
 
+// Ligatore der KI-Vereine: jedes Tor geht an den Star (Anteil nach Position), an die
+// Sturmspitze (team.striker) oder an einen ungenannten Mitspieler. Beide zählen ihre
+// Saisontore in .goals - daraus entsteht die Torjägerliste der Liga (league-stats.js). Der
+// Star nimmt seine Tore bei einem Wechsel mit.
+const AI_STAR_GOAL_SHARE = { ST: 0.3, MIT: 0.18, ABW: 0.07, TW: 0 };
+
+function creditAiLeagueGoals(t, goals) {
+    if (!isAiClub(t) || !(goals > 0)) return;
+    if (!t.star) t.star = makeAiStar(t);
+    if (!t.striker) t.striker = { name: getRandomName(), pos: 'ST', goals: 0 };
+    const anteil = AI_STAR_GOAL_SHARE[t.star.pos] ?? 0.15;
+    for (let i = 0; i < goals; i++) {
+        const wurf = Math.random();
+        if (wurf < anteil) t.star.goals = (t.star.goals || 0) + 1;
+        else if (wurf < anteil + 0.26) t.striker.goals = (t.striker.goals || 0) + 1;
+    }
+}
+
 function getAiStarLine(team) {
     if (!team || !team.star) return '';
-    return `<br>⭐ Star: <strong>${team.star.name}</strong> (${team.star.pos}, Stärke ${team.star.strength}, ${team.star.age} J.)`;
+    return `<br>⭐ Star: <strong>${team.star.name}</strong> (${team.star.pos}, Stärke ${team.star.strength}, ${team.star.age} J.${team.star.goals ? `, ${team.star.goals} Saisontore` : ''})`;
 }
 
 function renderAiTransferNews() {
@@ -14028,7 +14024,7 @@ function renderBoardRoomPanel() {
         if (screenId === 'screen-fans') renderFansView();
         if (screenId === 'screen-real-estate' && typeof renderRealEstateView === 'function') renderRealEstateView();
         if (screenId === 'screen-transfer') renderTransferView();
-        if (screenId === 'screen-league') renderLeagueView();
+        if (screenId === 'screen-league') { if (typeof leagueViewLevel !== 'undefined') leagueViewLevel = null; renderLeagueView(); }
         if (screenId === 'screen-cup') renderCupView();
         if (screenId === 'screen-youth') renderYouthView();
         if (screenId === 'screen-contracts') renderContractsView();
@@ -26807,6 +26803,7 @@ function cleanupLegacyScoutState() {
             }
         }
 
+        if (typeof recordLeagueRankHistory === 'function') recordLeagueRankHistory();
         game.matchday++;
         game.viewingMatchday = Math.min(34, game.matchday);
         if (typeof maybeAutoSave === 'function') maybeAutoSave();
@@ -26838,6 +26835,8 @@ function cleanupLegacyScoutState() {
         if (f.homeGoals > f.awayGoals) { h.won++; h.points += 3; a.lost++; pushRecentForm(h, 'W'); pushRecentForm(a, 'L'); }
         else if (f.homeGoals < f.awayGoals) { a.won++; a.points += 3; h.lost++; pushRecentForm(h, 'L'); pushRecentForm(a, 'W'); }
         else { h.drawn++; h.points += 1; a.drawn++; a.points += 1; pushRecentForm(h, 'D'); pushRecentForm(a, 'D'); }
+        if (typeof recordLeagueHomeAway === 'function') recordLeagueHomeAway(h, a, f);
+        if (typeof creditAiLeagueGoals === 'function') { creditAiLeagueGoals(h, f.homeGoals); creditAiLeagueGoals(a, f.awayGoals); }
 
         // Kopf-an-Kopf-Statistik (NEU): historische Bilanz gegen JEDEN Ligagegner, nicht nur
         // den einen festen Erzfeind - nur relevant, wenn 1.FC Moritz Leipzig an dem Spiel beteiligt war.
@@ -26851,15 +26850,6 @@ function cleanupLegacyScoutState() {
             if (ourGoals > oppGoals) rec.wins++; else if (ourGoals < oppGoals) rec.losses++; else rec.draws++;
             rec.lastResults.unshift(`${ourGoals}:${oppGoals}`);
             if (rec.lastResults.length > 5) rec.lastResults.pop();
-
-            // Saisonverlauf-Graph (NEU): ein Datenpunkt pro eigenem Spieltag, damit sich
-            // die komplette Saison als Punkte-/Rang-Verlauf visualisieren lässt (siehe
-            // renderSeasonPointsChart() in leagues.js), statt nur die aktuelle
-            // Tabellensituation zu zeigen.
-            let ourRow = h.name === game.clubName ? h : a;
-            let rank = [...teams].sort((x, y) => y.points - x.points || (y.goalsFor - y.goalsAgainst) - (x.goalsFor - x.goalsAgainst)).indexOf(ourRow) + 1;
-            if (!game.seasonPointsHistory) game.seasonPointsHistory = [];
-            game.seasonPointsHistory.push({ matchday: game.matchday, points: ourRow.points, rank });
         }
 
         // Formkurve: Teamstärke schwankt leicht (begrenzt) um ihren Basiswert -
@@ -27911,7 +27901,6 @@ function cleanupLegacyScoutState() {
         game.matchday = 1;
         game.seasonTaxPaid = 0;
         game.viewingMatchday = 1;
-        game.seasonPointsHistory = []; // Saisonverlauf-Graph (NEU, siehe updateLeagueTable()/leagues.js)
         game.winterWindowUsedThisSeason = false;
         game.winterWindowActive = false;
         processSecondTeamSeasonEnd();
@@ -28557,10 +28546,153 @@ function renderSeasonEventsBox() {
 
 </script>
 <script>
+/* eslint-disable no-undef */
+// Liga-Statistiken (Reiter "Statistik" auf dem Liga-Bildschirm): Torjägerliste der ganzen
+// Liga (eigene Spieler mit ihren Ligatoren, KI-Vereine mit Star und Sturmspitze - siehe
+// creditAiLeagueGoals() in ai-clubs.js), Formtabelle der letzten fünf Spiele, Heim- und
+// Auswärtstabelle sowie der Tabellenverlauf aller Vereine. Daten je Verein: t.homeRec /
+// t.awayRec ([S, U, N, Tore, Gegentore]) und t.rankHist (Platz je Spieltag), zurückgesetzt
+// in advanceLeaguesToNewSeason().
+
+let leagueStatsSplit = 'heim';
+
+// Aus updateLeagueTable(): Heim-/Auswärtsbilanz beider Vereine.
+function recordLeagueHomeAway(h, a, f) {
+    const add = (rec, tore, gegen) => { rec[tore > gegen ? 0 : (tore === gegen ? 1 : 2)]++; rec[3] += tore; rec[4] += gegen; };
+    if (!Array.isArray(h.homeRec)) h.homeRec = [0, 0, 0, 0, 0];
+    if (!Array.isArray(a.awayRec)) a.awayRec = [0, 0, 0, 0, 0];
+    add(h.homeRec, f.homeGoals, f.awayGoals);
+    add(a.awayRec, f.awayGoals, f.homeGoals);
+}
+
+// Aus processPostMatchRoutine(), wenn alle Spiele des Spieltags gespielt sind.
+function recordLeagueRankHistory() {
+    const idx = game.matchday - 1;
+    if (idx < 0 || idx >= 34) return;
+    (leaguesData || []).forEach((liga, l) => sortedTable(l).forEach((t, i) => {
+        if (!Array.isArray(t.rankHist)) t.rankHist = [];
+        t.rankHist[idx] = i + 1;
+    }));
+}
+
+function resetLeagueTeamStats(t) {
+    t.homeRec = [0, 0, 0, 0, 0];
+    t.awayRec = [0, 0, 0, 0, 0];
+    t.rankHist = [];
+    if (t.star) t.star.goals = 0;
+    if (t.striker) t.striker.goals = 0;
+}
+
+// Torjägerliste einer Liga: eigene Spieler (p.goalsSeason zählt nur Ligatore, Pokaltore
+// werden in cup-live.js herausgerechnet) und die benannten Torschützen der KI-Vereine.
+function getLeagueScorers(level) {
+    const liste = [];
+    (leaguesData[level] || []).forEach(t => {
+        if (t.name === game.clubName) {
+            squad.forEach(p => { if ((p.goalsSeason || 0) > 0) liste.push({ name: p.name, pos: p.pos, club: t.name, goals: p.goalsSeason, own: true }); });
+        } else if (isAiClub(t)) {
+            [t.star, t.striker].forEach(s => { if (s && (s.goals || 0) > 0) liste.push({ name: s.name, pos: s.pos, club: t.name, goals: s.goals }); });
+        }
+    });
+    return liste.sort((a, b) => b.goals - a.goals || (b.own ? 1 : 0) - (a.own ? 1 : 0));
+}
+
+function setLeagueStatsSplit(art) {
+    leagueStatsSplit = art;
+    renderLeagueStats();
+}
+
+function leagueTeamCell(t) {
+    const eigen = t.name === game.clubName;
+    const rivale = t.name === game.permanentRivalName;
+    return `<td style="text-align:left; ${eigen ? 'color:var(--primary); font-weight:bold;' : ''}">${t.name}${rivale ? ' ⚔️' : ''}</td>`;
+}
+
+function renderLeagueScorersBox(level) {
+    const box = document.getElementById('top-scorers-box');
+    if (!box) return;
+    const liste = getLeagueScorers(level).slice(0, 10);
+    if (!liste.length) { box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Noch keine Tore in dieser Saison.</div>'; return; }
+    box.innerHTML = `<table style="width:100%; font-size:10px;"><tr style="color:var(--text-muted);"><th>#</th><th style="text-align:left;">Spieler</th><th style="text-align:left;">Verein</th><th>Tore</th></tr>
+        ${liste.map((s, i) => `<tr style="${s.own ? 'color:var(--primary); font-weight:700;' : ''}"><td>${i === 0 ? '👑' : i + 1}</td>
+            <td style="text-align:left;">${s.name} <span style="color:var(--text-muted);">${s.pos}</span></td><td style="text-align:left;">${s.club}</td>
+            <td><strong style="color:var(--accent);">${s.goals}</strong></td></tr>`).join('')}</table>`;
+}
+
+function renderLeagueFormTable(level) {
+    const box = document.getElementById('league-form-table-box');
+    if (!box) return;
+    const punkte = t => (t.recentForm || []).reduce((s, r) => s + (r === 'W' ? 3 : (r === 'D' ? 1 : 0)), 0);
+    const teams = sortedTable(level);
+    if (!teams.some(t => (t.recentForm || []).length)) { box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Die Formtabelle füllt sich ab dem ersten Spieltag.</div>'; return; }
+    const farbe = { W: 'var(--primary)', D: 'var(--accent)', L: 'var(--danger)' };
+    const zeilen = teams.map((t, i) => ({ t, platz: i + 1, pkt: punkte(t) })).sort((a, b) => b.pkt - a.pkt || a.platz - b.platz);
+    box.innerHTML = `<table style="width:100%; font-size:10px;"><tr style="color:var(--text-muted);"><th>#</th><th style="text-align:left;">Team</th><th>Letzte 5</th><th>Pkt</th><th>Tab.</th></tr>
+        ${zeilen.map((z, i) => `<tr><td>${i + 1}</td>${leagueTeamCell(z.t)}
+            <td style="white-space:nowrap;">${(z.t.recentForm || []).map(r => `<span style="color:${farbe[r]};">●</span>`).join(' ')}</td>
+            <td><strong>${z.pkt}</strong></td><td style="color:var(--text-muted);">${z.platz}.</td></tr>`).join('')}</table>`;
+}
+
+function renderLeagueHomeAwayTable(level) {
+    const box = document.getElementById('league-homeaway-box');
+    if (!box) return;
+    const feld = leagueStatsSplit === 'heim' ? 'homeRec' : 'awayRec';
+    const rec = t => Array.isArray(t[feld]) ? t[feld] : [0, 0, 0, 0, 0];
+    const zeilen = (leaguesData[level] || []).map(t => ({ t, r: rec(t), pkt: rec(t)[0] * 3 + rec(t)[1] }))
+        .sort((a, b) => b.pkt - a.pkt || (b.r[3] - b.r[4]) - (a.r[3] - a.r[4]) || b.r[3] - a.r[3]);
+    const knopf = (art, text) => `<button onclick="setLeagueStatsSplit('${art}')" class="${leagueStatsSplit === art ? 'btn-action' : 'btn-secondary'}" style="width:auto; padding:4px 12px;">${text}</button>`;
+    box.innerHTML = `<div style="display:flex; gap:4px; margin-bottom:6px;">${knopf('heim', '🏠 Heim')}${knopf('auswaerts', '🚌 Auswärts')}</div>
+        <table style="width:100%; font-size:10px;"><tr style="color:var(--text-muted);"><th>#</th><th style="text-align:left;">Team</th><th>Sp</th><th>S-U-N</th><th>Tore</th><th>Pkt</th></tr>
+        ${zeilen.map((z, i) => `<tr><td>${i + 1}</td>${leagueTeamCell(z.t)}<td>${z.r[0] + z.r[1] + z.r[2]}</td><td>${z.r[0]}-${z.r[1]}-${z.r[2]}</td>
+            <td>${z.r[3]}:${z.r[4]}</td><td><strong>${z.pkt}</strong></td></tr>`).join('')}</table>`;
+}
+
+// Tabellenverlauf: Platz je Spieltag für alle Vereine; hervorgehoben sind der eigene Verein
+// (bzw. der Tabellenführer in fremden Ligen) und der Erzrivale.
+function renderLeagueRankChart(level) {
+    const box = document.getElementById('league-rank-chart-box');
+    if (!box) return;
+    const teams = sortedTable(level);
+    const n = teams.length;
+    const spieltage = Math.max(0, ...teams.map(t => (t.rankHist || []).length));
+    if (spieltage < 2 || n < 2) { box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Der Tabellenverlauf füllt sich mit jedem gespielten Spieltag.</div>'; return; }
+    const w = 300, h = 130, pad = 6;
+    const x = i => pad + i * (w - pad * 2) / (spieltage - 1);
+    const y = platz => pad + (platz - 1) * (h - pad * 2) / (n - 1);
+    const linie = t => (t.rankHist || []).map((p, i) => p ? `${x(i).toFixed(1)},${y(p).toFixed(1)}` : null).filter(Boolean).join(' ');
+    const eigen = teams.find(t => t.name === game.clubName);
+    const fokus = eigen || teams[0];
+    const rivale = teams.find(t => t.name === game.permanentRivalName && t !== fokus);
+    const hinten = teams.filter(t => t !== fokus && t !== rivale).map(t => `<polyline points="${linie(t)}" fill="none" stroke="rgba(150,150,150,0.35)" stroke-width="1" />`).join('');
+    const vorn = (rivale ? `<polyline points="${linie(rivale)}" fill="none" stroke="var(--danger)" stroke-width="1.5" />` : '')
+        + `<polyline points="${linie(fokus)}" fill="none" stroke="var(--primary)" stroke-width="2.5" />`;
+    const hist = (fokus.rankHist || []).filter(Boolean);
+    const bester = hist.length ? Math.min(...hist) : '-', schlechtester = hist.length ? Math.max(...hist) : '-';
+    box.innerHTML = `<svg viewBox="0 0 ${w} ${h}" style="width:100%; height:130px; display:block;" preserveAspectRatio="none">
+            <line x1="0" x2="${w}" y1="${((y(2) + y(3)) / 2).toFixed(1)}" y2="${((y(2) + y(3)) / 2).toFixed(1)}" stroke="var(--primary)" stroke-dasharray="3 3" stroke-width="0.6" />
+            <line x1="0" x2="${w}" y1="${((y(n - 2) + y(n - 1)) / 2).toFixed(1)}" y2="${((y(n - 2) + y(n - 1)) / 2).toFixed(1)}" stroke="var(--danger)" stroke-dasharray="3 3" stroke-width="0.6" />
+            ${hinten}${vorn}
+        </svg>
+        <div style="font-size:9px; color:var(--text-muted); text-align:center;">
+            <span style="color:var(--primary);">━</span> ${fokus.name}: aktuell Platz ${teams.indexOf(fokus) + 1}, ${fokus.points} Punkte (bester ${bester}., schlechtester ${schlechtester}.)
+            ${rivale ? `· <span style="color:var(--danger);">━</span> ${rivale.name}` : ''} · gestrichelt: Aufstiegs- und Abstiegsplätze
+        </div>`;
+}
+
+function renderLeagueStats() {
+    const level = typeof getLeagueViewLevel === 'function' ? getLeagueViewLevel() : game.leagueLevel;
+    renderLeagueScorersBox(level);
+    renderLeagueFormTable(level);
+    renderLeagueHomeAwayTable(level);
+    renderLeagueRankChart(level);
+}
+
+</script>
+<script>
 // Liga-Auszeichnungen am Saisonende: Torjägerkanone, Elf der Saison, Trainer des Jahres und
-// Talent des Jahres. Eigene Spieler treten mit ihren echten Saisonwerten an. KI-Vereine haben
-// keine einzelnen Spieler - ihre Kandidaten werden aus echten Ligadaten abgeleitet (erzielte
-// Tore, Tabellenplatz, Vereinsstärke), nur die Namen sind generiert.
+// Talent des Jahres. Eigene Spieler treten mit ihren echten Saisonwerten an. Die Torjägerkanone
+// kommt aus der Torjägerliste der Liga (getLeagueScorers()); die übrigen KI-Kandidaten werden
+// aus echten Ligadaten abgeleitet (Tabellenplatz, Vereinsstärke), nur die Namen sind generiert.
 
 const ELF_DER_SAISON = { TW: 1, ABW: 4, MIT: 4, ST: 2 };
 
@@ -28577,9 +28709,8 @@ function awardLeagueHonours(myRank) {
         p.marketValue = Math.round(p.marketValue * wert / 1000) * 1000;
     };
 
-    // Torjägerkanone: bester Stürmer jedes KI-Vereins trifft 18-32 % der Vereinstore.
-    const kiTorjaeger = ki.map(t => ({ name: getRandomName(), club: t.name, goals: Math.round(t.goalsFor * (0.18 + Math.random() * 0.14)) }))
-        .sort((a, b) => b.goals - a.goals)[0];
+    // Torjägerkanone: bester KI-Torschütze aus der echten Torjägerliste (league-stats.js).
+    const kiTorjaeger = typeof getLeagueScorers === 'function' ? getLeagueScorers(level).find(s => !s.own) : null;
     const eigenerTorjaeger = [...squad].sort((a, b) => (b.goalsSeason || 0) - (a.goalsSeason || 0))[0];
     if (eigenerTorjaeger && (eigenerTorjaeger.goalsSeason || 0) > 0 && (!kiTorjaeger || eigenerTorjaeger.goalsSeason >= kiTorjaeger.goals)) {
         ergebnis.awards.push({ award: '👟 Torjägerkanone', winner: eigenerTorjaeger.name, club: game.clubName, value: `${eigenerTorjaeger.goalsSeason} Tore`, own: true });

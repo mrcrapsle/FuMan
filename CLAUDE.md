@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Working With the User
 
 - Always reply in German.
-- After every merge to `main`, send the minified build as a ZIP (`anstoss-fm13-vX.zip` containing `anstoss-fm13.html`) and always include both links:
+- After every merge to `main`, send a ZIP `anstoss-fm13-vX.zip` containing the minified build as `anstoss-fm13.html` PLUS the source code in a folder `anstoss-fm13/` (`git archive origin/main` without `dist/`: css, js, tests, build.py, index.html, README.md, ...), and always include both links:
   - Spielen: https://mrcrapsle.github.io/FuMan/
   - Download: https://github.com/mrcrapsle/FuMan/raw/main/dist/anstoss-fm13-standalone.min.html
 - The game version is shown in the header (`#header-version-tag`, from `GAME_VERSION`); bump it on every merge.
@@ -119,6 +119,7 @@ This pattern ensures:
 - Onboarding: `js/onboarding.js` - "Erste Schritte" checklist (`game.onboarding`, `#dash-onboarding-box`, first season only) ticks off via `onScreenShown()` in `showScreen()` (ignored while `runStructuralSelfTest()` visits every screen at boot) and `markOnboardingStep('speichern')` in `saveGameToSlot()`; per-screen tips in `SCREEN_HINTS`. Tutorial texts in js/i18n.js use `{CLUB}`/`{LIGA}`.
 - Transfer windows: matchday-based (summer 1-3, winter 18-20) with `runDeadlineDay()` in `js/transfermarket.js`, driven by `tickTransferWindows()` after every matchday.
 - Season end extras: `js/relegation.js` (own club on rank 3/16, legs on the dashboard, auto-resolved in `concludeSeasonAndAdvance()`), `js/league-awards.js` (`game.leagueAwards`), `js/coach-carousel.js` (AI `team.coach`, temporary `team.coachBounce` - removed via `tickCoachBounce(true)` before leagues advance).
+- League statistics: `js/league-stats.js` (tab "Statistik" on the league screen: league-wide scorer list from `getLeagueScorers()` - own `p.goalsSeason` plus AI `team.star`/`team.striker` goals credited by `creditAiLeagueGoals()` in js/ai-clubs.js -, form table, home/away table `t.homeRec`/`t.awayRec`, rank history `t.rankHist`). The league screen views `getLeagueViewLevel()`; never change `game.leagueLevel` from UI buttons. The Torjägerkanone (league-awards.js) uses the same scorer list.
 - Statistics: manager career in `game.managerCareer` (js/manager-analytics.js), Hall of Fame computed from squad + `game.playerRetirement` + `game.managerCareer` (js/hall-of-fame.js). Loans: `js/secondteam.js` / transfermarket loans only.
 - Side income: stock `dividendRate` is an annual rate (paid monthly as rate/8.5); betting odds come from `simulateBetProbabilities()` (same `simulateGoals` as matches) using the best available XI (`pickBestLineupIds()`), no bets on own defeat; real estate income grows with cumulative cost (~10 seasons payback). Measure new income sources before adding them - several were money machines.
 - Career balance (Phase 16, measured with an active-manager bot over 10-14 seasons: Liga 6 -> 2. Liga in 6-9 seasons, passive clubs sink): starters recover a quarter of the bench recovery between matchdays; the market has 10 players and refreshes at the winter window; licence items scale with the league (`getSpecialInstallCost()`, campus via `getStadiumCostScale()`). Promotion walls must stay affordable for a club of that league.

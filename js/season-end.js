@@ -292,7 +292,6 @@
         game.matchday = 1;
         game.seasonTaxPaid = 0;
         game.viewingMatchday = 1;
-        game.seasonPointsHistory = []; // Saisonverlauf-Graph (NEU, siehe updateLeagueTable()/leagues.js)
         game.winterWindowUsedThisSeason = false;
         game.winterWindowActive = false;
         processSecondTeamSeasonEnd();

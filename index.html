@@ -1977,14 +1977,7 @@
                     <div style="display:flex; gap:4px; margin-bottom:6px;">
                         <button onclick="setLeagueTab('table')" id="btn-tab-table" class="btn-action">Tabelle</button>
                         <button onclick="setLeagueTab('fixtures')" id="btn-tab-fixtures" class="btn-secondary">Paarungen</button>
-                    </div>
-                    <div class="panel" style="margin-bottom:8px;">
-                        <div class="panel-header" style="color:var(--gold);">👑 TOP-TORSCHÜTZEN (Saison)</div>
-                        <div id="top-scorers-box"></div>
-                    </div>
-                    <div class="panel" style="margin-bottom:8px;">
-                        <div class="panel-header" style="color:var(--primary);">📈 SAISONVERLAUF (PUNKTE)</div>
-                        <div id="season-points-chart-box"></div>
+                        <button onclick="setLeagueTab('stats')" id="btn-tab-stats" class="btn-secondary">Statistik</button>
                     </div>
                     <div id="league-tab-table"><table><thead><tr><th>Pl</th><th>Team</th><th>Sp</th><th>Tore</th><th>Diff</th><th>Pkt</th><th>Form</th></tr></thead><tbody id="league-table-body"></tbody></table>
                         <div id="head-to-head-box" style="margin-top:8px;"></div>
@@ -1996,6 +1989,24 @@
                             <button onclick="changeLeagueMatchday(1)" class="btn-secondary" style="width:auto; padding:4px 10px;">Nächster ▶</button>
                         </div>
                         <div id="matchday-fixtures-list"></div>
+                    </div>
+                    <div id="league-tab-stats" style="display:none;">
+                        <div class="panel" style="margin-bottom:8px;">
+                            <div class="panel-header" style="color:var(--gold);">👑 TORJÄGERLISTE</div>
+                            <div id="top-scorers-box"></div>
+                        </div>
+                        <div class="panel" style="margin-bottom:8px;">
+                            <div class="panel-header" style="color:var(--primary);">📈 TABELLENVERLAUF</div>
+                            <div id="league-rank-chart-box"></div>
+                        </div>
+                        <div class="panel" style="margin-bottom:8px;">
+                            <div class="panel-header" style="color:var(--accent);">🔥 FORMTABELLE (LETZTE 5 SPIELE)</div>
+                            <div id="league-form-table-box"></div>
+                        </div>
+                        <div class="panel" style="margin-bottom:8px;">
+                            <div class="panel-header" style="color:var(--teal);">🏠 HEIM- & AUSWÄRTSTABELLE</div>
+                            <div id="league-homeaway-box"></div>
+                        </div>
                     </div>
                     <div class="panel">
                         <div class="panel-header" style="color:var(--accent);">🎠 TRAINERKARUSSELL</div>
@@ -2527,6 +2538,7 @@
 <script src="js/relegation.js?v=2.7"></script>
 <script src="js/cup-live.js?v=2.9"></script>
 <script src="js/season-events.js?v=2.9"></script>
+<script src="js/league-stats.js?v=3.9"></script>
 <script src="js/league-awards.js?v=2.7"></script>
 <script src="js/coach-carousel.js?v=2.7"></script>
 <script src="js/admin.js?v=2.1"></script>

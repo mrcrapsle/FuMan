@@ -156,6 +156,7 @@
                 if (info) evolveAiTeamStrength(t, info);
                 t.played = 0; t.won = 0; t.drawn = 0; t.lost = 0;
                 t.goalsFor = 0; t.goalsAgainst = 0; t.points = 0; t.recentForm = [];
+                if (typeof resetLeagueTeamStats === 'function') resetLeagueTeamStats(t);
                 t.rivalName = null; t.friendName = null;
             });
             assignRivalriesAndFriendships(table);
@@ -367,21 +368,26 @@
         return pool[Math.floor(Math.random() * pool.length)].team.name;
     }
 
+    // Angesehene Liga auf dem Liga-Bildschirm (null = eigene). Ändert nie game.leagueLevel -
+    // früher setzte der Liga-Umschalter die eigene Liga um.
+    let leagueViewLevel = null;
+
+    function getLeagueViewLevel() {
+        return (leagueViewLevel !== null && leaguesData[leagueViewLevel]) ? leagueViewLevel : game.leagueLevel;
+    }
+
     function setLeagueLevel(lvl) {
-        game.leagueLevel = lvl;
-        for (let i = 0; i < NUM_LEAGUES; i++) {
-            let btn = document.getElementById('btn-lvl-' + i);
-            if (btn) btn.className = (i === lvl) ? 'btn-action' : 'btn-secondary';
-        }
+        leagueViewLevel = lvl;
         renderLeagueView();
     }
 
     function setLeagueTab(tab) {
-        ['table', 'fixtures'].forEach(t => {
+        ['table', 'fixtures', 'stats'].forEach(t => {
             document.getElementById('league-tab-' + t).style.display = (t === tab) ? 'block' : 'none';
             let btn = document.getElementById('btn-tab-' + t);
             if (btn) btn.className = (t === tab) ? 'btn-action' : 'btn-secondary';
         });
+        if (tab === 'stats' && typeof renderLeagueStats === 'function') renderLeagueStats();
     }
 
     function changeLeagueMatchday(dir) {
@@ -389,58 +395,20 @@
         renderLeagueView();
     }
 
-    // Torschützenliste (NEU): erste echte individuelle Torstatistik im Spiel - zeigt die
-    // eigenen Top-Torschützen der laufenden Saison.
-    function renderTopScorersBox() {
-        let box = document.getElementById('top-scorers-box');
-        if (!box) return;
-        let scorers = [...squad].filter(p => (p.goalsSeason || 0) > 0).sort((a, b) => b.goalsSeason - a.goalsSeason).slice(0, 8);
-        if (scorers.length === 0) { box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Noch keine Tore in dieser Saison.</div>'; return; }
-        box.innerHTML = scorers.map((p, idx) => `
-            <div class="box" style="display:flex; justify-content:space-between; align-items:center; font-size:10px;">
-                <span>${idx === 0 ? '👑 ' : ''}<strong class="badge badge-${(p.pos||'mit').toLowerCase()}">${p.pos}</strong> ${p.name}</span>
-                <strong style="color:var(--accent); font-size:13px;">${p.goalsSeason} ⚽</strong>
-            </div>`).join('');
-    }
-
-    // Saisonverlauf-Graph (NEU): visualisiert game.seasonPointsHistory (siehe
-    // updateLeagueTable() in match.js) als einfache SVG-Linie - macht den kompletten
-    // Saisonverlauf auf einen Blick sichtbar statt nur die aktuelle Tabellensituation.
-    function renderSeasonPointsChart() {
-        let box = document.getElementById('season-points-chart-box');
-        if (!box) return;
-        let history = game.seasonPointsHistory || [];
-        if (history.length < 2) {
-            box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Der Saisonverlauf-Graph füllt sich mit jedem gespielten Spieltag.</div>';
-            return;
-        }
-        let maxPoints = Math.max(...history.map(h => h.points), 3);
-        let w = 300, h = 70, pad = 4;
-        let stepX = (w - pad * 2) / (history.length - 1);
-        let points = history.map((entry, i) => {
-            let x = pad + i * stepX;
-            let y = h - pad - (entry.points / maxPoints) * (h - pad * 2);
-            return `${x.toFixed(1)},${y.toFixed(1)}`;
-        }).join(' ');
-        let last = history[history.length - 1];
-        box.innerHTML = `
-            <svg viewBox="0 0 ${w} ${h}" style="width:100%; height:70px; display:block;" preserveAspectRatio="none">
-                <polyline points="${points}" fill="none" stroke="var(--primary)" stroke-width="2" />
-            </svg>
-            <div style="font-size:9px; color:var(--text-muted); text-align:center;">Spieltag ${last.matchday} · ${last.points} Punkte · Platz ${last.rank}</div>
-        `;
-    }
-
     function renderLeagueView() {
         if (typeof renderCoachCarouselBox === 'function') renderCoachCarouselBox();
-        renderTopScorersBox();
-        renderSeasonPointsChart();
+        if (typeof renderLeagueStats === 'function') renderLeagueStats();
+        let viewLevel = getLeagueViewLevel();
+        for (let i = 0; i < NUM_LEAGUES; i++) {
+            let btn = document.getElementById('btn-lvl-' + i);
+            if (btn) btn.className = (i === viewLevel) ? 'btn-action' : 'btn-secondary';
+        }
 
         // WICHTIG: Zwei getrennte Referenzen! fixturesData verweist per Index auf die
         // ORIGINAL-Reihenfolge in leaguesData[level] - die darf nie sortiert werden,
         // sonst würden Teams plötzlich falsch gegeneinander antreten (Spielplan-Korruption).
         // Für die Tabellenansicht wird stattdessen eine sortierte KOPIE erzeugt.
-        let rawTeams = leaguesData[game.leagueLevel] || [];
+        let rawTeams = leaguesData[viewLevel] || [];
         let sortedTeams = [...rawTeams].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
         let tbody = document.getElementById('league-table-body');
         tbody.innerHTML = '';
@@ -464,7 +432,7 @@
 
         let list = document.getElementById('matchday-fixtures-list');
         list.innerHTML = '';
-        let fixs = fixturesData[game.leagueLevel] ? fixturesData[game.leagueLevel][md - 1] : [];
+        let fixs = fixturesData[viewLevel] ? fixturesData[viewLevel][md - 1] : [];
         if (fixs) {
             fixs.forEach(f => {
                 let h = rawTeams[f.home]?.name || "Team A", a = rawTeams[f.away]?.name || "Team B";

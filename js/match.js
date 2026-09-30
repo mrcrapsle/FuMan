@@ -2013,6 +2013,7 @@
             }
         }
 
+        if (typeof recordLeagueRankHistory === 'function') recordLeagueRankHistory();
         game.matchday++;
         game.viewingMatchday = Math.min(34, game.matchday);
         if (typeof maybeAutoSave === 'function') maybeAutoSave();
@@ -2044,6 +2045,8 @@
         if (f.homeGoals > f.awayGoals) { h.won++; h.points += 3; a.lost++; pushRecentForm(h, 'W'); pushRecentForm(a, 'L'); }
         else if (f.homeGoals < f.awayGoals) { a.won++; a.points += 3; h.lost++; pushRecentForm(h, 'L'); pushRecentForm(a, 'W'); }
         else { h.drawn++; h.points += 1; a.drawn++; a.points += 1; pushRecentForm(h, 'D'); pushRecentForm(a, 'D'); }
+        if (typeof recordLeagueHomeAway === 'function') recordLeagueHomeAway(h, a, f);
+        if (typeof creditAiLeagueGoals === 'function') { creditAiLeagueGoals(h, f.homeGoals); creditAiLeagueGoals(a, f.awayGoals); }
 
         // Kopf-an-Kopf-Statistik (NEU): historische Bilanz gegen JEDEN Ligagegner, nicht nur
         // den einen festen Erzfeind - nur relevant, wenn 1.FC Moritz Leipzig an dem Spiel beteiligt war.
@@ -2057,15 +2060,6 @@
             if (ourGoals > oppGoals) rec.wins++; else if (ourGoals < oppGoals) rec.losses++; else rec.draws++;
             rec.lastResults.unshift(`${ourGoals}:${oppGoals}`);
             if (rec.lastResults.length > 5) rec.lastResults.pop();
-
-            // Saisonverlauf-Graph (NEU): ein Datenpunkt pro eigenem Spieltag, damit sich
-            // die komplette Saison als Punkte-/Rang-Verlauf visualisieren lässt (siehe
-            // renderSeasonPointsChart() in leagues.js), statt nur die aktuelle
-            // Tabellensituation zu zeigen.
-            let ourRow = h.name === game.clubName ? h : a;
-            let rank = [...teams].sort((x, y) => y.points - x.points || (y.goalsFor - y.goalsAgainst) - (x.goalsFor - x.goalsAgainst)).indexOf(ourRow) + 1;
-            if (!game.seasonPointsHistory) game.seasonPointsHistory = [];
-            game.seasonPointsHistory.push({ matchday: game.matchday, points: ourRow.points, rank });
         }
 
         // Formkurve: Teamstärke schwankt leicht (begrenzt) um ihren Basiswert -

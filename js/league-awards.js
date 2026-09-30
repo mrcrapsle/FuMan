@@ -1,7 +1,7 @@
 // Liga-Auszeichnungen am Saisonende: Torjägerkanone, Elf der Saison, Trainer des Jahres und
-// Talent des Jahres. Eigene Spieler treten mit ihren echten Saisonwerten an. KI-Vereine haben
-// keine einzelnen Spieler - ihre Kandidaten werden aus echten Ligadaten abgeleitet (erzielte
-// Tore, Tabellenplatz, Vereinsstärke), nur die Namen sind generiert.
+// Talent des Jahres. Eigene Spieler treten mit ihren echten Saisonwerten an. Die Torjägerkanone
+// kommt aus der Torjägerliste der Liga (getLeagueScorers()); die übrigen KI-Kandidaten werden
+// aus echten Ligadaten abgeleitet (Tabellenplatz, Vereinsstärke), nur die Namen sind generiert.
 
 const ELF_DER_SAISON = { TW: 1, ABW: 4, MIT: 4, ST: 2 };
 
@@ -18,9 +18,8 @@ function awardLeagueHonours(myRank) {
         p.marketValue = Math.round(p.marketValue * wert / 1000) * 1000;
     };
 
-    // Torjägerkanone: bester Stürmer jedes KI-Vereins trifft 18-32 % der Vereinstore.
-    const kiTorjaeger = ki.map(t => ({ name: getRandomName(), club: t.name, goals: Math.round(t.goalsFor * (0.18 + Math.random() * 0.14)) }))
-        .sort((a, b) => b.goals - a.goals)[0];
+    // Torjägerkanone: bester KI-Torschütze aus der echten Torjägerliste (league-stats.js).
+    const kiTorjaeger = typeof getLeagueScorers === 'function' ? getLeagueScorers(level).find(s => !s.own) : null;
     const eigenerTorjaeger = [...squad].sort((a, b) => (b.goalsSeason || 0) - (a.goalsSeason || 0))[0];
     if (eigenerTorjaeger && (eigenerTorjaeger.goalsSeason || 0) > 0 && (!kiTorjaeger || eigenerTorjaeger.goalsSeason >= kiTorjaeger.goals)) {
         ergebnis.awards.push({ award: '👟 Torjägerkanone', winner: eigenerTorjaeger.name, club: game.clubName, value: `${eigenerTorjaeger.goalsSeason} Tore`, own: true });

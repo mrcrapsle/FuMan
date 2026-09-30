@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.9', date: '30.09.2026', features: 'Phase 18: Pressekonferenzen, Vertragsgespräche mit Gehalt, Jobangebote mit echtem Wechsel' };
+    const GAME_VERSION = { number: '3.10', date: '30.09.2026', features: 'Phase 18: Liga-Statistiken (Torjägerliste der ganzen Liga, Formtabelle, Heim/Auswärts, Tabellenverlauf)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -117,7 +117,6 @@
         playerOfMonthHistory: [],
         potmGoalSnapshot: {},
         headToHeadRecords: {},
-        seasonPointsHistory: [],
         achievements: [],
         agentRelationships: {},
         pendingSponsorActivation: null,
@@ -606,7 +605,7 @@
             'trainingSchedule', 'trainingSpecialization', 'setPieceTraining', 'stadium',
             'internationalTournaments', 'playerInternationalCaps', 'internationalTournamentHistory', 'nextWorldCup', 'transferMarket', 'postMatchAnalysis',
             'transferBudgetUsed', 'transferMarketPlayers', 'transferLastRefreshMatchday', 'reserves', 'tournamentBrackets',
-            'squadHarmony', 'disciplinarySystem', 'crises', 'localRivals', 'tacticsHistory', 'playerRoles', 'formationHistory', 'tacticAnalysis', 'clubSwitchHistory', 'youthNationalCallups', 'licenseRejectionCount'].forEach(k => { delete game[k]; });
+            'squadHarmony', 'disciplinarySystem', 'crises', 'localRivals', 'tacticsHistory', 'playerRoles', 'formationHistory', 'tacticAnalysis', 'clubSwitchHistory', 'youthNationalCallups', 'licenseRejectionCount', 'seasonPointsHistory'].forEach(k => { delete game[k]; });
         // Holding-Aufträge alter Spielstände trugen echte Vereinsnamen.
         const echteNamen = { 'Real Madrid': 'Real Madrit', 'FC Bayern': 'Bayern Munchen', 'FC Liverpool': 'Liverpol FC' };
         if (typeof holdingCompany !== 'undefined') (holdingCompany.b2bContracts || []).forEach(c => { if (echteNamen[c.club]) c.club = echteNamen[c.club]; });

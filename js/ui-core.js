@@ -276,7 +276,7 @@
         if (screenId === 'screen-fans') renderFansView();
         if (screenId === 'screen-real-estate' && typeof renderRealEstateView === 'function') renderRealEstateView();
         if (screenId === 'screen-transfer') renderTransferView();
-        if (screenId === 'screen-league') renderLeagueView();
+        if (screenId === 'screen-league') { if (typeof leagueViewLevel !== 'undefined') leagueViewLevel = null; renderLeagueView(); }
         if (screenId === 'screen-cup') renderCupView();
         if (screenId === 'screen-youth') renderYouthView();
         if (screenId === 'screen-contracts') renderContractsView();

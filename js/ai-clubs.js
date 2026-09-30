@@ -98,9 +98,27 @@ function ageAiStars() {
     }));
 }
 
+// Ligatore der KI-Vereine: jedes Tor geht an den Star (Anteil nach Position), an die
+// Sturmspitze (team.striker) oder an einen ungenannten Mitspieler. Beide zählen ihre
+// Saisontore in .goals - daraus entsteht die Torjägerliste der Liga (league-stats.js). Der
+// Star nimmt seine Tore bei einem Wechsel mit.
+const AI_STAR_GOAL_SHARE = { ST: 0.3, MIT: 0.18, ABW: 0.07, TW: 0 };
+
+function creditAiLeagueGoals(t, goals) {
+    if (!isAiClub(t) || !(goals > 0)) return;
+    if (!t.star) t.star = makeAiStar(t);
+    if (!t.striker) t.striker = { name: getRandomName(), pos: 'ST', goals: 0 };
+    const anteil = AI_STAR_GOAL_SHARE[t.star.pos] ?? 0.15;
+    for (let i = 0; i < goals; i++) {
+        const wurf = Math.random();
+        if (wurf < anteil) t.star.goals = (t.star.goals || 0) + 1;
+        else if (wurf < anteil + 0.26) t.striker.goals = (t.striker.goals || 0) + 1;
+    }
+}
+
 function getAiStarLine(team) {
     if (!team || !team.star) return '';
-    return `<br>⭐ Star: <strong>${team.star.name}</strong> (${team.star.pos}, Stärke ${team.star.strength}, ${team.star.age} J.)`;
+    return `<br>⭐ Star: <strong>${team.star.name}</strong> (${team.star.pos}, Stärke ${team.star.strength}, ${team.star.age} J.${team.star.goals ? `, ${team.star.goals} Saisontore` : ''})`;
 }
 
 function renderAiTransferNews() {
