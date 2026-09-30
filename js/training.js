@@ -288,7 +288,6 @@
             list.appendChild(row);
         });
         if (typeof renderMedicalDepartmentPanel === 'function') renderMedicalDepartmentPanel();
-        if (typeof renderTrainingSchedulePanel === 'function') renderTrainingSchedulePanel();
     }
 
     function setTeamTraining(focus) {

@@ -747,14 +747,9 @@
         if (typeof renderLeadershipCouncilBox === 'function') renderLeadershipCouncilBox();
         if (typeof renderRivalriesPanel === 'function') renderRivalriesPanel();
         if (typeof renderScandalsPanel === 'function') renderScandalsPanel();
-        if (typeof renderFanclubManagementPanel === 'function') renderFanclubManagementPanel();
         if (typeof renderTacticSystemPanel === 'function') renderTacticSystemPanel();
         if (typeof renderInternationalTournamentsPanel === 'function') renderInternationalTournamentsPanel();
-        if (typeof renderSetPieceTrainingPanel === 'function') renderSetPieceTrainingPanel();
         if (typeof renderPostMatchAnalysisPanel === 'function') renderPostMatchAnalysisPanel();
-        if (typeof renderTrainingSpecializationPanel === 'function') renderTrainingSpecializationPanel();
-        if (typeof renderFanEventsPanel === 'function') renderFanEventsPanel();
-        if (typeof renderStadiumManagementPanel === 'function') renderStadiumManagementPanel();
         if (typeof renderTransferMarketAnalysisPanel === 'function') renderTransferMarketAnalysisPanel();
         if (typeof renderSquadHarmonyPanel === 'function') renderSquadHarmonyPanel();
         if (typeof renderTeamCouncilPanel === 'function') renderTeamCouncilPanel();

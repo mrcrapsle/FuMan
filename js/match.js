@@ -1233,8 +1233,6 @@
             processDerbyMatch(currentMatch.opponent, won, currentMatch.score, currentMatch.conceded);
         }
         if (typeof checkForScandale === 'function') checkForScandale();
-        if (typeof checkFanProtest === 'function') checkFanProtest();
-        if (typeof checkUltraConflict === 'function') checkUltraConflict();
         if (typeof analyzeMatchTactics === 'function') {
             let [ownGoals, oppGoals] = String(scoreTextForRecord || '').split(':').map(n => parseInt(n, 10));
             let hasScore = Number.isFinite(ownGoals) && Number.isFinite(oppGoals);
@@ -1731,27 +1729,11 @@
         if (typeof runSecChiefAutomation === 'function') runSecChiefAutomation();
         // Immobilien-Portfolio (NEU): laufende Mieteinnahmen unabhängig von Heim-/Auswärtsspiel.
         if (typeof tickRealEstateIncome === 'function') tickRealEstateIncome();
-        // Fanclub Revenue: monatliche Einnahmen aus Fanclubs
-        if (typeof processFanRevenue === 'function' && hatSpieltagsabrechnung()) {
-            let fanRevenue = processFanRevenue();
-            if (fanRevenue > 0) {
-                setzeBuchungskontext(SPIELTAG_KONTEXT);
-                game.money += fanRevenue;
-                loescheBuchungskontext();
-                bucheInSpieltagsjournal('📣 Fanclub-Einnahmen', fanRevenue, 'einnahmen');
-            }
-        }
         if (typeof tickWomenTeam === 'function') tickWomenTeam();
-        // Stadium Management: Projektfortschritt und Wartung
-        if (typeof tickStadiumProjects === 'function') tickStadiumProjects();
-        let stadiumMaintenance = (typeof tickStadiumMaintenance === 'function') ? tickStadiumMaintenance() : 0;
-        if (stadiumMaintenance > 0) game.money -= stadiumMaintenance;
         // Monatliche Ticks (alle 4 Spieltage ≈ 1 Monat) der Feature-Systeme.
         if (game.matchday % 4 === 0) {
             setzeBuchungskontext('📅 Monatliche Vereinsposten');
             if (typeof migrateLegacyCoSponsors === 'function') migrateLegacyCoSponsors();
-            // Fan-Engagement: monatliche Zufriedenheits-Updates
-            if (typeof tickFanEngagement === 'function') tickFanEngagement();
             // Board Relations: monatliche Zufriedenheits- und Job-Sicherheits-Updates
             if (typeof tickBoardRoom === 'function') tickBoardRoom();
             // Jugend: monatliche Talententwicklung (Trainer-/Fokus-/Mentor-Bonus)
@@ -1763,9 +1745,7 @@
             if (typeof cleanupLegacyContractState === 'function') cleanupLegacyContractState();
             // Opposition Analysis: Gegner-Analyse-Updates
             if (typeof cleanupLegacyScoutState === 'function') cleanupLegacyScoutState();
-            // Training Schedule: Trainingseffekte und Müdigkeitsabbau
-            if (typeof applyTrainingEffects === 'function') applyTrainingEffects(game.matchday);
-            if (typeof tickTrainingFatigue === 'function') tickTrainingFatigue();
+            if (typeof cleanupLegacyFanTrainingStadiumState === 'function') cleanupLegacyFanTrainingStadiumState();
             // Reserves & Loan: Leihspieler-Management und Rückgabe
             if (typeof tickLoanedPlayerDevelopment === 'function') tickLoanedPlayerDevelopment();
             if (typeof tickIncomingLoanManagement === 'function') tickIncomingLoanManagement();
@@ -1782,11 +1762,7 @@
             // Karriereenden: am Saisonende in agePlayersAtSeasonEnd() (js/player-development.js)
             if (typeof tickTournamentBrackets === 'function') tickTournamentBrackets();
             // Opponent Analysis & Match Prediction: Gegner-Analyse und Match-Prognosen
-            // Phase 10: Set-Piece Training, Post-Match Analysis, Training Specialization, Fan Events
-            if (typeof tickSetPieceTraining === 'function') tickSetPieceTraining();
             if (typeof tickPostMatchAnalysis === 'function') tickPostMatchAnalysis();
-            if (typeof tickTrainingSpecialization === 'function') tickTrainingSpecialization();
-            if (typeof tickFanEvents === 'function') tickFanEvents();
             // Financial tracking for dashboard charts
             if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
             loescheBuchungskontext();

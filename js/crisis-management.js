@@ -27,7 +27,6 @@ const CRISIS_TYPES = {
     STADIUM_DAMAGE: {
         name: 'Stadionbeschädigung',
         probability: 0.03,
-        capacityLoss: { min: 2000, max: 5000 },
         reputationDamage: -8,
         resolution: ['Reparatur', 'Umzug', 'Versicherung'],
         cost: { min: 30000, max: 80000 }
@@ -185,17 +184,9 @@ function applyCrisisEffects(crisis) {
 
     // Financial damage
     if (config.moneyDamage) {
-        const damage = config.moneyDamage.min + Math.random() * (config.moneyDamage.max - config.moneyDamage.min);
+        const damage = Math.round(config.moneyDamage.min + Math.random() * (config.moneyDamage.max - config.moneyDamage.min));
         game.money -= damage;
         recordFinancialEvent('Krise-Kosten', -damage, 'Crisis');
-    }
-
-    // Stadium capacity damage
-    if (config.capacityLoss) {
-        if (game.stadium) {
-            const loss = config.capacityLoss.min + Math.random() * (config.capacityLoss.max - config.capacityLoss.min);
-            game.stadium.capacity = Math.max(5000, game.stadium.capacity - loss);
-        }
     }
 
     // Player injuries (for injury crisis)

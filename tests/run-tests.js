@@ -4121,6 +4121,38 @@ async function testPhase13(browser) {
     await page.close();
 }
 
+async function testPhase13Teil2(browser) {
+    console.log('\n[P13b] Aufgeräumt: Fans, Training, Stadion');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        const out = {};
+        out.alteModuleWeg = ['tickFanEngagement', 'processFanRevenue', 'renderFanclubManagementPanel', 'tickFanEvents',
+            'applyTrainingEffects', 'tickTrainingSpecialization', 'tickSetPieceTraining', 'startStadiumUpgrade', 'tickStadiumMaintenance']
+            .filter(n => typeof window[n] === 'function');
+        game.fanclubs = [{ ultras: 500 }]; game.fanSatisfaction = 50; game.ultraGroups = []; game.fanEvents = {};
+        game.trainingSchedule = {}; game.trainingSpecialization = {}; game.setPieceTraining = {}; game.stadium = { capacity: 25000 };
+        const kontoVorher = (game.kontoauszug || []).length;
+        simulateMatchdays(4);
+        out.altWeg = ['fanclubs', 'fanSatisfaction', 'ultraGroups', 'fanEvents', 'trainingSchedule', 'trainingSpecialization', 'setPieceTraining', 'stadium']
+            .filter(k => game[k] !== undefined);
+        out.keineFanclubEinnahmen = !(game.kontoauszug || []).slice(kontoVorher).some(k => /Fanclub-Einnahmen/.test(k.label || ''))
+            && !(game.financeLedger || []).some(e => JSON.stringify(e).includes('Fanclub-Einnahmen'));
+        ['screen-squad', 'screen-training', 'screen-stadium', 'screen-fans', 'screen-finances'].forEach(s => { try { showScreen(s); } catch (e) { out.fehler = s + ': ' + e.message; } });
+        out.geldGanzzahlig = Number.isInteger(game.money);
+        return out;
+    });
+
+    assert(r.alteModuleWeg.length === 0, `Abgelöste Fan-/Trainings-/Stadionmodule sind entfernt (${r.alteModuleWeg.join(', ')})`);
+    assert(r.altWeg.length === 0, `Ihre Daten werden aus Spielständen entfernt (${r.altWeg.join(', ')})`);
+    assert(r.keineFanclubEinnahmen, 'Keine Fanclub-Einnahmen aus dem Nichts mehr');
+    assert(!r.fehler, `Betroffene Bildschirme öffnen ohne Fehler (${r.fehler || ''})`);
+    assert(r.geldGanzzahlig, 'Kontostand bleibt ganzzahlig');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler in Phase 13 Teil 2 (${consoleErrors.slice(0, 3).join(' | ')})`);
+    await page.close();
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -4192,6 +4224,7 @@ async function main() {
         testPhase11,
         testPhase12,
         testPhase13,
+        testPhase13Teil2,
         testRuntimeRoundTrip,
     ];
 

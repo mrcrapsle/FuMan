@@ -873,7 +873,6 @@
             }
         });
 
-        if (typeof renderStadiumManagementPanel === 'function') renderStadiumManagementPanel();
         if (typeof renderStadiumEventsPanel === 'function') renderStadiumEventsPanel();
     }
 
