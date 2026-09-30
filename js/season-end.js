@@ -299,6 +299,8 @@
         if (typeof renewSeasonTickets === 'function') renewSeasonTickets();
         if (typeof checkSeasonMoodTargetResult === 'function') checkSeasonMoodTargetResult();
         if (typeof tickCoachBounce === 'function') tickCoachBounce(true);
+        // Supercup der neuen Saison: braucht noch die alte Tabelle und den alten Pokal.
+        if (typeof prepareSupercup === 'function') prepareSupercup();
         advanceLeaguesToNewSeason();
         if (typeof recordSeasonExpectationRank === 'function') recordSeasonExpectationRank();
         if (typeof applyPendingFfpPointDeduction === 'function') applyPendingFfpPointDeduction();

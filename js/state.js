@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '2.9', date: '30.09.2026', features: 'Phase 15: Pokal, Champions Cup und Relegation als Livespiel, Taktik-Bilanz, Langzeittest, Aufräumen Teil 4' };
+    const GAME_VERSION = { number: '3.0', date: '30.09.2026', features: 'Phase 15: Pokal-Livespiele, Supercup, Hallenturnier, Saisoneröffnung, Abschiedsspiele, Taktik-Bilanz' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

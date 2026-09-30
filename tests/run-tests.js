@@ -4632,6 +4632,76 @@ async function testCupLive(browser) {
     await page.close();
 }
 
+async function testSeasonEvents(browser) {
+    console.log('\n[P15d] Saisoneröffnung, Hallenturnier, Abschiedsspiel, Supercup');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        const out = {};
+        const box = () => document.getElementById('dash-season-events-box').innerHTML;
+        // Saisoneröffnung: einmal pro Saison vor dem 1. Spieltag
+        renderSeasonEventsBox();
+        out.eroeffnungAngeboten = box().includes('chooseSeasonOpening');
+        const geld0 = game.money;
+        chooseSeasonOpening('sponsorentag');
+        out.eroeffnungWirkt = game.money > geld0 && game.seasonOpening.season === game.season;
+        const geld1 = game.money;
+        chooseSeasonOpening('fanfest');
+        renderSeasonEventsBox();
+        out.eroeffnungEinmal = game.money === geld1 && !box().includes('chooseSeasonOpening');
+        // Hallenturnier: Einladung, Zusage, Turnier in der Winterpause
+        while (game.matchday <= HALLENTURNIER_EINLADUNG) { game.sackPending = false; simulateMatchdays(1); }
+        out.einladung = !!game.hallenturnier && game.hallenturnier.status === 'eingeladen';
+        renderSeasonEventsBox();
+        out.einladungSichtbar = box().includes('respondHallenturnier');
+        respondHallenturnier(true);
+        while (game.matchday <= HALLENTURNIER_SPIELTAG) { game.sackPending = false; simulateMatchdays(1); }
+        const h = game.hallenturnier;
+        out.hallenturnier = h.status === 'gespielt' && h.spiele.length === 3 && h.praemie > 0 && [h.spiele[2].heim, h.spiele[2].gast].includes(h.sieger);
+        out.hallenTitel = (h.sieger === game.clubName) === game.trophies.some(t => t.includes('Hallenmasters'));
+        // Abschiedsspiel für einen verdienten Spieler
+        const alt = squad[0];
+        alt.age = 36; alt.appearances = 200;
+        schedulePlayerRetirement(alt.id);
+        out.abschiedOffen = getOpenFarewellMatches().length === 1 && getOpenFarewellMatches()[0].name === alt.name;
+        const geld3 = game.money, fans3 = game.fans;
+        holdFarewellMatch(alt.name);
+        out.abschiedWirkt = game.money !== geld3 && game.fans >= Math.min(100, fans3 + 3) && getOpenFarewellMatches().length === 0;
+        // Supercup: eigener Verein gewinnt das DFB-Pokalfinale, spielt am 1. Spieltag gegen den Meister
+        while (game.matchday <= 34) { game.sackPending = false; simulateMatchdays(5); }
+        const finale = cupTournament.roundsHistory.find(x => x.roundIndex === 4);
+        if (finale) { const p = finale.pairings[0]; p.home = game.clubName; p.homeGoals = 3; p.awayGoals = 0; p.played = true; finale.completed = true; }
+        concludeSeasonAndAdvance();
+        const sc = findOwnCupTieToday();
+        out.supercupAngesetzt = !!game.supercup && !!sc && sc.comp === 'supercup' && game.matchday === 1;
+        if (out.supercupAngesetzt) {
+            startMatchdayFlow();
+            resolveMatchInstantly();
+            const live = { ...game.liveCupResult };
+            if (live.homeGoals === live.awayGoals && pendingShootoutContext) pendingShootoutContext.onConfirm(autoSelectShooters());
+            const pw = game.liveCupResult && game.liveCupResult.penaltyWinner;
+            finishMatch();
+            resolveMatchInstantly();
+            const s = game.supercup;
+            const erwarteterSieger = live.homeGoals > live.awayGoals ? s.home : (live.awayGoals > live.homeGoals ? s.away : pw);
+            out.supercupUebernommen = s.played && s.score === `${live.homeGoals}:${live.awayGoals}` && s.winner === erwarteterSieger;
+            out.supercupTitel = (s.winner === game.clubName) === game.trophies.some(t => t.includes('Supercup-Sieger'));
+            finishMatch();
+        }
+        return out;
+    });
+    assert(r.eroeffnungAngeboten && r.eroeffnungWirkt && r.eroeffnungEinmal, 'Saisoneröffnung vor dem 1. Spieltag, genau einmal pro Saison, mit echter Wirkung');
+    assert(r.einladung && r.einladungSichtbar, 'Einladung zum Hallenturnier nach dem 15. Spieltag mit Zu-/Absage auf dem Dashboard');
+    assert(r.hallenturnier, 'Hallenturnier wird in der Winterpause ausgespielt (Halbfinals, Finale, Prämie)');
+    assert(r.hallenTitel, 'Hallenmasters-Titel nur bei eigenem Turniersieg');
+    assert(r.abschiedOffen && r.abschiedWirkt, 'Abschiedsspiel für verdiente Spieler bringt Zuschauer und Fans, nur einmal');
+    assert(r.supercupAngesetzt, 'Pokalsieger spielt am 1. Spieltag den Supercup');
+    assert(r.supercupUebernommen && r.supercupTitel, 'Supercup übernimmt das live gespielte Ergebnis und vergibt den Titel');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 3).join(' | ')})`);
+    await page.close();
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -4713,6 +4783,7 @@ async function main() {
         testLongRun,
         testTacticRecords,
         testCupLive,
+        testSeasonEvents,
         testRuntimeRoundTrip,
     ];
 

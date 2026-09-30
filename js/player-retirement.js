@@ -47,6 +47,7 @@ function checkForLegendStatus(player) {
 }
 
 function schedulePlayerRetirement(playerId) {
+    initializePlayerRetirement();
     const player = squad.find(p => p.id === playerId);
     if (!player) return false;
 
@@ -68,6 +69,7 @@ function schedulePlayerRetirement(playerId) {
 
     game.playerRetirement.retiredPlayers.push(retirementRecord);
     game.playerRetirement.retirementHistory.push(retirementRecord);
+    if (typeof registerFarewellMatch === 'function') registerFarewellMatch(retirementRecord);
 
     if (legendTier) {
         game.playerRetirement.legendPlayers.push({

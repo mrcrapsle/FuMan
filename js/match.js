@@ -1689,6 +1689,7 @@
         if (europeTournament.matchdays.includes(game.matchday)) {
             simulateEuropeMatchday(game.matchday, isLiveContext);
         }
+        if (typeof resolveSupercup === 'function') resolveSupercup();
         // Ein live gespieltes Pokalergebnis gilt nur für diesen Spieltag.
         game.liveCupResult = null;
 
@@ -1838,6 +1839,7 @@
         }
 
         if (typeof tickTransferWindows === 'function') tickTransferWindows();
+        if (typeof tickSeasonEvents === 'function') tickSeasonEvents();
         if (typeof tickCoachBounce === 'function') tickCoachBounce();
 
         // Trainingslager-Bonus zählt jeden verarbeiteten Spieltag herunter (gilt in allen

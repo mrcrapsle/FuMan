@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 // Pokal als Livespiel: An Pokal-Spieltagen spielt der Nutzer die eigene Partie im DFB-Pokal,
-// Landespokal oder Champions Cup vor dem Ligaspiel in der Live-Engine (setupMatch), die
+// Landespokal, Champions Cup oder Supercup (js/season-events.js) vor dem Ligaspiel in der Live-Engine (setupMatch), die
 // Relegation auf Wunsch ebenso. Das Endergebnis landet in game.liveCupResult und wird von
 // simulateCupRound(), simulateLandesPokalRound(), simulateEuropeMatchday() bzw.
 // playRelegationLeg() statt eines gewürfelten Ergebnisses übernommen - Prämien, nächste
@@ -48,6 +48,8 @@ function findOwnCupTieToday() {
     const md = game.matchday, us = game.clubName;
     const r0 = game.liveCupResult;
     if (r0 && r0.season === game.season && r0.matchday === md) return null; // heute schon live gespielt
+    const supercup = typeof getOwnSupercupTie === 'function' ? getOwnSupercupTie() : null;
+    if (supercup) return supercup;
     const offen = r => (r && !r.completed) ? r.pairings.find(p => !p.played && (p.home === us || p.away === us)) : null;
     const gegner = p => p.home === us ? p.away : p.home;
 
