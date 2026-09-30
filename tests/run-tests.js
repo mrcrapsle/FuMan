@@ -1738,8 +1738,9 @@ async function testEconomyBalance(browser) {
     // Bewusst keine Pruefung auf "Ende < Start": ueber 35 Spieltage kann eine gluecklich
     // gelaufene Pokalrunde auch eine voellig passiv gespielte Saison ins Plus drehen - das
     // ist legitimes Spielverhalten und hat die Pruefung vereinzelt kippen lassen. Gemessen
-    // ueber je fuenf Laeufe endet die Saison bei rund 35.000 bis 76.000 EUR von 150.000 EUR
-    // Startkapital. Geprueft wird deshalb, was verlaesslich gilt: Nichtstun macht nicht reich.
+    // ueber je fuenf Laeufe (v2.5, inkl. Saisonziel-Praemien) endet die Saison bei rund
+    // 140.000 bis 160.000 EUR von 150.000 EUR Startkapital. Geprueft wird deshalb, was
+    // verlaesslich gilt: Nichtstun macht nicht reich.
     assert(passiv.ende < passiv.start * 1.5,
         `Nichtstun macht den Verein nicht reich (${Math.round(passiv.ende)} € von ${Math.round(passiv.start)} €)`);
 
@@ -3956,6 +3957,96 @@ async function testPhase11(browser) {
     await page.close();
 }
 
+// ---------------------------------------------------------------------------
+// PHASE 12: zusammengelegte Systeme (Medizin, Medien, Jugend, Sponsoring)
+// ---------------------------------------------------------------------------
+async function testPhase12(browser) {
+    console.log('\n[P12] Zusammengelegte Systeme: Medizin, Medien, Jugend, Sponsoring');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        const out = {};
+        // Alte Parallel-Systeme sind weg
+        out.alteModuleWeg = ['checkInjuries', 'randomizeMatchInjuries', 'tickInjuryManagement', 'tickMatchInjuries',
+            'tickMediaRelations', 'tickRandomMediaEvent', 'tickYouthRecruitment', 'tickYouthAcademyPrograms',
+            'processSponsorPayments', 'applySponsorBenefits', 'tickSponsoringIncome', 'simulateYouthDevelopment']
+            .filter(n => typeof window[n] === 'function');
+
+        // Alter Spielstand mit Daten der abgelösten Systeme
+        game.youthAcademy = { youngPlayers: [{ id: 'youth_0', name: 'Test Talent', position: 'CM', age: 17, strength: 41 }] };
+        game.mediaRelations = { mediaImage: 80 };
+        game.playerInjuries = [{ playerId: 1 }];
+        squad[0].pos = 'GK';
+
+        // Medizin: eine Saison ohne Verletzungsflut
+        let maxVerletzt = 0;
+        const vorher = squad.reduce((s, p) => s + (p.timesInjured || 0), 0);
+        while (game.matchday <= 34) {
+            game.sackPending = false;
+            simulateMatchdays(1);
+            maxVerletzt = Math.max(maxVerletzt, squad.filter(p => p.injured > 0).length);
+        }
+        out.verletzungenSaison = squad.reduce((s, p) => s + (p.timesInjured || 0), 0) - vorher;
+        out.maxVerletzt = maxVerletzt;
+        const opfer = squad.find(p => !(p.injured > 0));
+        const staerke = opfer.strength;
+        injurePlayerByEvent(opfer, 'Test');
+        out.ereignisOhneStaerkeverlust = opfer.injured > 0 && opfer.strength === staerke;
+        showScreen('screen-training');
+        out.medizinPanel = (document.getElementById('medical-department-box') || {}).innerText || '';
+        out.altInjuryWeg = game.playerInjuries === undefined;
+
+        // Medien: Aktion wirkt auf das echte Image, Sperrfrist, alte Felder weg
+        game.money = 5000000;
+        game.managerMediaImage = 50;
+        showScreen('screen-manager-tree');
+        out.altMedienWeg = game.mediaRelations === undefined;
+        const kandidat = interviewCandidates()[0];
+        kandidat.morale = 80;
+        runMediaAction('interview', String(kandidat.id));
+        out.interviewWirkt = game.managerMediaImage === 52;
+        const img = game.managerMediaImage;
+        runMediaAction('kampagne');
+        out.medienSperre = game.managerMediaImage === img;
+
+        // Jugend: Migration, Anzeigen entwickelt nicht
+        showScreen('screen-youth');
+        out.jugendMigriert = youthTalents.some(t => t.name === 'Test Talent' && t.pos === 'MIT') && game.youthAcademy === undefined;
+        out.gkKorrigiert = squad[0].pos === 'TW';
+        const st = youthTalents.map(t => t.strength).join(',');
+        for (let i = 0; i < 5; i++) { showScreen('screen-dashboard'); showScreen('screen-youth'); }
+        out.anzeigenOhneWachstum = youthTalents.map(t => t.strength).join(',') === st;
+        out.akademieOhneRealnamen = !game.academyLeague.academies.some(a => /Bayern München|Dortmund|Köln|Hamburger SV|Stuttgart/.test(a.name));
+
+        // Sponsoring: Restwert einmalig
+        game.sponsors = [{ name: 'Alt', value: 100000, totalPaid: 40000, active: true }];
+        game.sponsorNegotiations = [];
+        const geld = game.money;
+        showScreen('screen-sponsors');
+        const nachErstem = game.money;
+        showScreen('screen-dashboard'); showScreen('screen-sponsors');
+        out.sponsorRestwert = nachErstem - geld === 60000 && game.money === nachErstem && game.sponsors === undefined;
+        return out;
+    });
+
+    assert(r.alteModuleWeg.length === 0, `Abgelöste Parallel-Systeme sind entfernt (${r.alteModuleWeg.join(', ')})`);
+    assert(r.verletzungenSaison < 30 && r.maxVerletzt <= 6, `Keine Verletzungsflut (${r.verletzungenSaison} Verletzungen, max. ${r.maxVerletzt} gleichzeitig)`);
+    assert(r.ereignisOhneStaerkeverlust, 'Verletzung durch Ereignisse kostet keine Spielerstärke');
+    assert(r.medizinPanel.includes('Verletzt') && r.medizinPanel.includes('Risiko'), 'Medizin-Panel zeigt Verletzte und Risiko');
+    assert(r.altInjuryWeg, 'Alte Verletzungs-Buchführung wird aus Spielständen entfernt');
+    assert(r.altMedienWeg, 'Alte Medien-Felder werden aus Spielständen entfernt');
+    assert(r.interviewWirkt, 'Spieler-Interview wirkt auf das echte Medienimage');
+    assert(r.medienSperre, 'Medienaktionen haben eine Sperrfrist');
+    assert(r.jugendMigriert, 'Talente der alten Zusatz-Akademie wandern in die Jugendabteilung (mit gültiger Position)');
+    assert(r.gkKorrigiert, 'Profis mit alter englischer Position werden korrigiert');
+    assert(r.anzeigenOhneWachstum, 'Öffnen des Jugend-Screens lässt Talente nicht wachsen');
+    assert(r.akademieOhneRealnamen, 'Akademie-Rangliste nutzt Vereine aus dem Spiel');
+    assert(r.sponsorRestwert, 'Alte Co-Sponsoren-Verträge werden einmalig mit dem Restwert ausgezahlt');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler in Phase 12 (${consoleErrors.slice(0, 3).join(' | ')})`);
+    await page.close();
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -4025,6 +4116,7 @@ async function main() {
         testObjectivesEventsSeasonTickets,
         testCodeIntegrity,
         testPhase11,
+        testPhase12,
         testRuntimeRoundTrip,
     ];
 

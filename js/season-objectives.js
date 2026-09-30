@@ -81,7 +81,8 @@ const OBJECTIVE_TYPES = {
     }
 };
 
-const OBJECTIVE_LEAGUE_FACTOR = [1.0, 0.7, 0.45, 0.3, 0.2, 0.12];
+// Ein Ziel soll etwa 5-15% eines Saisonbudgets der Liga wert sein (6. Liga: ~12-20k bei 150k Startkapital).
+const OBJECTIVE_LEAGUE_FACTOR = [1.0, 0.55, 0.3, 0.15, 0.08, 0.04];
 
 const DIFFICULTY_MULTIPLIERS = {
     EASY: 1.0,

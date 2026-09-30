@@ -4545,7 +4545,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '2.4', date: '30.09.2026', features: 'Phase 11: Schiedsrichter, Mannschaftsrat, Mitgliederversammlung, Frauenmannschaft' };
+    const GAME_VERSION = { number: '2.5', date: '30.09.2026', features: 'Phase 12: Medizin, Medien, Jugend, Sponsoring zusammengelegt' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -29252,7 +29252,8 @@ const OBJECTIVE_TYPES = {
     }
 };
 
-const OBJECTIVE_LEAGUE_FACTOR = [1.0, 0.7, 0.45, 0.3, 0.2, 0.12];
+// Ein Ziel soll etwa 5-15% eines Saisonbudgets der Liga wert sein (6. Liga: ~12-20k bei 150k Startkapital).
+const OBJECTIVE_LEAGUE_FACTOR = [1.0, 0.55, 0.3, 0.15, 0.08, 0.04];
 
 const DIFFICULTY_MULTIPLIERS = {
     EASY: 1.0,
