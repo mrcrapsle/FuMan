@@ -477,7 +477,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.7', date: '30.09.2026', features: 'Phase 17: Einstieg - Erste Schritte, Bildschirm-Tipps, neue Kurzanleitung' };
+    const GAME_VERSION = { number: '3.8', date: '30.09.2026', features: 'Phase 17: Tempo features: 'Phase 17: Einstieg - Erste Schritte, Bildschirm-Tipps, neue Kurzanleitung' Speicher - schnellerer Start, kleinerer Spielstand' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
