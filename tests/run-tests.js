@@ -4788,6 +4788,55 @@ async function testCareerBalancing(browser) {
     await page.close();
 }
 
+async function testLiveMatchEngine(browser) {
+    console.log('\n[P16c] Livespiel: Torschützen, Statistik, Auswechslungen');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        const out = {};
+        // Auswärtsspiel gegen einen sehr schwachen Gegner: unsere Tore sind Gasttore
+        lineup = pickBestLineupIds();
+        const toreVorher = squad.reduce((a, p) => a + (p.goalsSeason || 0), 0);
+        setupMatch('Kreisklasse FC', game.clubName, 5, false, false, null);
+        stopLiveTickerAutoplay();
+        // Auswechslung vor dem Durchlauf: stärkster Bankspieler für den schwächsten Feldspieler
+        const bank = squad.filter(p => !lineup.includes(p.id) && p.pos !== 'TW' && !(p.injured > 0)).sort((a, b) => b.strength - a.strength)[0];
+        const stBefore = currentMatch.ourBaseStr;
+        renderLiveSubs();
+        const sel = document.getElementById('live-sub-out');
+        const raus = squad.find(p => String(p.id) === sel.value);
+        out.vorauswahlFeldspieler = raus && raus.pos !== 'TW';
+        makeLiveSubstitution(bank.id);
+        const erwartet = (liveEffectiveStrength(bank) - liveEffectiveStrength(raus)) / 11;
+        out.wechselWirkt = Math.abs((currentMatch.ourBaseStr - stBefore) - erwartet) < 0.01 && lineup.includes(bank.id) && !lineup.includes(raus.id) && substitutionsLeft === 4;
+        out.wechselTicker = document.getElementById('ticker-log').innerHTML.includes(`${bank.name} kommt für ${raus.name}`);
+        currentMatch.halftimeShown = true; // Halbzeit-Ansprache überspringen
+        while (currentMatch.minute < 90) simulateMatchStep();
+        const st = currentMatch.stats;
+        const unsere = currentMatch.awayGoals, gegner = currentMatch.homeGoals;
+        const toreNachher = squad.reduce((a, p) => a + (p.goalsSeason || 0), 0);
+        out.tore = `${gegner}:${unsere}`;
+        out.torschuetzenRichtig = toreNachher - toreVorher === unsere;
+        out.dominant = unsere > gegner;
+        out.statistik = st.shots[1] >= unsere && st.onTarget[1] >= unsere && st.shots[0] >= gegner && getLivePossession()[1] > 55;
+        out.statistikSichtbar = document.getElementById('live-match-stats').innerHTML.includes('Ballbesitz');
+        out.abpfiffZeile = document.getElementById('ticker-log').innerHTML.includes('📊 Statistik');
+        const stand = `${currentMatch.homeGoals}:${currentMatch.awayGoals}`;
+        for (let i = 0; i < 5; i++) simulateMatchStep();
+        out.nachAbpfiffRuhe = `${currentMatch.homeGoals}:${currentMatch.awayGoals}` === stand;
+        return out;
+    });
+    assert(r.torschuetzenRichtig, `Auswärtstore werden unseren Spielern gutgeschrieben, Heimtore nicht (${r.tore})`);
+    assert(r.dominant, `Klar überlegene Mannschaft gewinnt auswärts (${r.tore})`);
+    assert(r.statistik && r.statistikSichtbar && r.abpfiffZeile, 'Statistik (Ballbesitz, Schüsse) passt zum Spiel und wird angezeigt');
+    assert(r.vorauswahlFeldspieler, 'Auswechslung: Vorauswahl ist ein Feldspieler, nicht der Torwart');
+    assert(r.wechselWirkt && r.wechselTicker, 'Auswechslung ersetzt den gewählten Spieler und ändert die Teamstärke');
+    assert(r.nachAbpfiffRuhe, 'Nach dem Abpfiff fallen keine Tore mehr');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 3).join(' | ')})`);
+    await page.close();
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -4872,6 +4921,7 @@ async function main() {
         testSeasonEvents,
         testMobileLayout,
         testCareerBalancing,
+        testLiveMatchEngine,
         testRuntimeRoundTrip,
     ];
 

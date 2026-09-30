@@ -370,7 +370,8 @@
             homeGoals: 0, awayGoals: 0, minute: 0,
             isCup, ref: refObj,
             homeStrPenalty: 0, awayStrPenalty: 0,
-            yellowCards: {}, sentOff: [], halftimeShown: false
+            yellowCards: {}, sentOff: [], halftimeShown: false,
+            stats: newLiveMatchStats()
         };
         showScreen('screen-matchday');
         document.getElementById('match-title').innerText = homeName + " vs " + awayName;
@@ -420,6 +421,7 @@
         document.getElementById('btn-finish-match').innerText = '✔ Spielbericht schließen';
         renderLiveSubs();
         renderLiveTacticsPanel();
+        renderLiveMatchStats();
         render3DPitch('live-pitch');
         startLiveTickerAutoplay();
     }
@@ -429,21 +431,55 @@
         document.getElementById('subs-left-count').innerText = substitutionsLeft;
         container.innerHTML = '';
         let bench = squad.filter(p => !lineup.includes(p.id) && (p.injured || 0) === 0 && (p.suspended || 0) === 0 && (p.nationalDuty || 0) === 0);
+        // Wer geht raus? Vorauswahl: der müdeste Feldspieler, bei gleicher Fitness der schwächste;
+        // der Torwart steht am Ende der Liste.
+        let sentOff = (currentMatch && currentMatch.sentOff) || [];
+        let onPitch = squad.filter(p => lineup.includes(p.id) && !sentOff.includes(p.id))
+            .sort((a, b) => ((a.pos === 'TW') - (b.pos === 'TW')) || (a.fitness - b.fitness) || (liveEffectiveStrength(a) - liveEffectiveStrength(b)));
+        let sel = document.createElement('select');
+        sel.id = 'live-sub-out';
+        sel.className = 'input-inline';
+        sel.style.width = '100%';
+        onPitch.forEach(p => {
+            let opt = document.createElement('option');
+            opt.value = String(p.id);
+            opt.textContent = `Raus: ${p.name} (${p.pos}, Stärke ${p.strength}, ${p.fitness}% fit)`;
+            sel.appendChild(opt);
+        });
+        container.appendChild(sel);
         bench.forEach(p => {
             let btn = document.createElement('button');
             btn.className = 'btn-secondary';
-            btn.style.fontSize = '8px'; btn.style.padding = '2px 4px';
-            btn.innerText = `+ ${p.name} (${p.pos})`;
-            btn.onclick = () => {
-                if (substitutionsLeft <= 0) return;
-                let out = lineup[lineup.length - 1];
-                lineup = lineup.map(id => id === out ? p.id : id);
-                substitutionsLeft--;
-                renderLiveSubs();
-                render3DPitch('live-pitch');
-            };
+            btn.style.fontSize = '10px'; btn.style.padding = '4px 6px'; btn.style.width = 'auto';
+            btn.innerText = `+ ${p.name} (${p.pos}, ${p.strength})`;
+            btn.onclick = () => makeLiveSubstitution(p.id);
             container.appendChild(btn);
         });
+    }
+    function liveEffectiveStrength(p) {
+        return p.strength * (p.fitness / 100) * (0.9 + (p.dailyForm ?? 50) / 500);
+    }
+    // Einwechslung: der gewählte Spieler geht, die Teamstärke ändert sich um die Differenz
+    // (wie in calcTeamStrength() durch 11 geteilt); ab der 55. Minute bringen frische Beine
+    // einen kleinen Zusatzschub.
+    function makeLiveSubstitution(inId) {
+        if (!currentMatch || substitutionsLeft <= 0 || currentMatch.minute >= 90) return;
+        let sel = document.getElementById('live-sub-out');
+        let outId = lineup.find(id => String(id) === (sel ? sel.value : ''));
+        let aus = squad.find(p => p.id === outId), rein = squad.find(p => p.id === inId);
+        if (!aus || !rein || lineup.includes(inId) || currentMatch.sentOff.includes(outId)) return;
+        lineup = lineup.map(id => id === outId ? inId : id);
+        substitutionsLeft--;
+        let delta = (liveEffectiveStrength(rein) - liveEffectiveStrength(aus)) / 11 + (currentMatch.minute >= 55 ? 0.4 : 0);
+        currentMatch.ourBaseStr += delta;
+        let log = document.getElementById('ticker-log');
+        if (log) {
+            log.innerHTML += `<div style="color:var(--teal); font-size:10px;">🔄 ${currentMatch.minute}. Min: ${rein.name} kommt für ${aus.name} (Stärke ${delta >= 0 ? '+' : ''}${delta.toFixed(1)}).</div>`;
+            log.scrollTop = log.scrollHeight;
+        }
+        renderLiveSubs();
+        renderLiveMatchStats();
+        render3DPitch('live-pitch');
     }
 
     // Live-Taktikpanel: erlaubt Formation, Spielstil & Zweikampfhärte auch WÄHREND des
@@ -519,21 +555,83 @@
         "Zweikampf im Mittelfeld, Ball geht ins Toraus.",
         "Der Schiedsrichter lässt eine Rudelbildung schlichten.",
         "Kurze Trinkpause bei drückender Hitze.",
-        "Der Trainer gestikuliert wild an der Seitenlinie."
+        "Der Trainer gestikuliert wild an der Seitenlinie.",
+        "Viel Ballbesitz im Mittelfeld, aber keine zwingende Aktion.",
+        "Ein Freistoß aus dem Halbfeld segelt ins Toraus.",
+        "Die Fans peitschen ihre Mannschaft nach vorne.",
+        "Abseits! Der Linienrichter hebt die Fahne.",
+        "Ein Spieler bleibt kurz liegen, geht dann aber weiter.",
+        "Hektische Szene an der Mittellinie, der Schiedsrichter beruhigt."
     ];
     const OUR_CHANCE_EVENTS = [
         "Gute Kombination, aber der letzte Pass sitzt nicht.",
         "Distanzschuss geht knapp über die Latte!",
         "Der gegnerische Torwart klärt in höchster Not zur Ecke.",
         "Kopfball nach Ecke – knapp vorbei!",
-        "Der Pfosten rettet für den Gegner!"
+        "Der Pfosten rettet für den Gegner!",
+        "Flanke von rechts, der Kopfball streicht knapp am Tor vorbei.",
+        "Schneller Konter - im letzten Moment noch abgelaufen.",
+        "Freistoß aus 18 Metern, der Torwart lenkt ihn über die Latte!",
+        "Doppelpass im Strafraum, aber der Abschluss ist zu harmlos.",
+        "Ein Schuss wird im letzten Moment noch geblockt."
     ];
     const OPP_CHANCE_EVENTS = [
         "Gefährlicher Konter, aber unsere Abwehr klärt in letzter Sekunde.",
         "Fernschuss des Gegners geht knapp drüber.",
         "Unser Torwart pariert stark!",
-        "Der Gegner vergibt eine Großchance freistehend!"
+        "Der Gegner vergibt eine Großchance freistehend!",
+        "Gefährliche Flanke in unseren Strafraum - geklärt!",
+        "Der Gegner trifft nur das Außennetz.",
+        "Unsere Abwehr steht nach einem Ballverlust weit offen - Glück gehabt!",
+        "Ein Kopfball des Gegners landet auf der Latte!"
     ];
+    // Wie fällt ein Tor? Etwas Abwechslung statt immer nur "trifft".
+    const GOAL_STYLES = [
+        'per Kopfball nach einer Ecke', 'mit einem Flachschuss ins lange Eck', 'nach einem blitzschnellen Konter',
+        'mit einem Distanzschuss aus 20 Metern', 'als Abstauber nach einer Torwartparade', 'nach einem feinen Doppelpass',
+        'mit einem sehenswerten Volley', 'per Elfmeter', 'mit einem direkten Freistoß', 'nach einer Flanke von außen'
+    ];
+
+    // ---------- LIVE-STATISTIK ----------
+    // Ballbesitz, Schüsse, Schüsse aufs Tor und Karten je Team - Index 0 = Heim, 1 = Gast.
+    function newLiveMatchStats() {
+        return { possSum: 0, possSteps: 0, shots: [0, 0], onTarget: [0, 0], yellow: [0, 0], red: [0, 0] };
+    }
+    function liveStatsSide(isHomeSide) { return isHomeSide ? 0 : 1; }
+    function recordLiveShot(isHomeSide, onTarget) {
+        let st = currentMatch && currentMatch.stats;
+        if (!st) return;
+        let i = liveStatsSide(isHomeSide);
+        st.shots[i]++;
+        if (onTarget) st.onTarget[i]++;
+    }
+    function getLivePossession() {
+        let st = currentMatch && currentMatch.stats;
+        if (!st || !st.possSteps) return [50, 50];
+        let heim = Math.round(st.possSum / st.possSteps);
+        return [heim, 100 - heim];
+    }
+    function renderLiveMatchStats() {
+        let box = document.getElementById('live-match-stats');
+        if (!box || !currentMatch || !currentMatch.stats) return;
+        let st = currentMatch.stats;
+        let [bh, ba] = getLivePossession();
+        let ourStr = Math.round(currentMatch.ourBaseStr + getTacticStyleBonus(game.tacticStyle) + getTackleHardnessBonus(game.tackleHardness) + (currentMatch.halftimeTalkBonus || 0));
+        let oppStr = Math.round(currentMatch.isHome ? currentMatch.awayStr : currentMatch.homeStr);
+        let zeile = (label, h, a) => `<div style="display:grid; grid-template-columns: 1fr auto 1fr; gap:6px; align-items:center;"><span style="text-align:right; font-weight:800;">${h}</span><span style="color:var(--text-muted); font-size:9px;">${label}</span><span style="font-weight:800;">${a}</span></div>`;
+        box.innerHTML = `<div class="box" style="font-size:10px; margin:4px 0;">
+            <div style="display:flex; height:8px; border-radius:4px; overflow:hidden; margin-bottom:4px;"><div style="flex:${bh}; background:${currentMatch.isHome ? 'var(--primary)' : 'var(--danger)'};"></div><div style="flex:${ba}; background:${currentMatch.isHome ? 'var(--danger)' : 'var(--primary)'};"></div></div>
+            ${zeile('Ballbesitz', bh + '%', ba + '%')}
+            ${zeile('Schüsse (aufs Tor)', `${st.shots[0]} (${st.onTarget[0]})`, `${st.shots[1]} (${st.onTarget[1]})`)}
+            ${zeile('Karten', `🟨${st.yellow[0]} 🟥${st.red[0]}`, `🟨${st.yellow[1]} 🟥${st.red[1]}`)}
+            <div style="text-align:center; color:var(--text-muted); font-size:9px; margin-top:2px;">Aktuelle Stärke: wir ${ourStr} · Gegner ${oppStr}</div>
+        </div>`;
+    }
+    function liveStatsSummaryLine() {
+        let st = currentMatch.stats;
+        let [bh, ba] = getLivePossession();
+        return `📊 Statistik: Ballbesitz ${bh}:${ba} % · Schüsse ${st.shots[0]}:${st.shots[1]} (aufs Tor ${st.onTarget[0]}:${st.onTarget[1]}) · Gelb ${st.yellow[0]}:${st.yellow[1]} · Rot ${st.red[0]}:${st.red[1]}`;
+    }
 
     // Zweite Stimme im Ticker: gelegentliche taktische Einordnung unabhängig vom eigentlichen
     // Spielgeschehen, für mehr Atmosphäre im Live-Modus (klassisches "Co-Kommentator"-Element).
@@ -586,6 +684,7 @@
     }
 
     function simulateMatchStep() {
+        if (!currentMatch || currentMatch.minute >= 90) return; // nach dem Abpfiff keine Szenen mehr
         if (currentMatch.awaitingHalftimeTalk) return; // wartet auf die Halbzeit-Ansprache-Auswahl
         let prevMinute = currentMatch.minute;
         currentMatch.minute += Math.floor(Math.random() * 14) + 8;
@@ -671,22 +770,31 @@
 
         if (Math.random() < goalChance) {
             eventHandled = true;
-            if (Math.random() < userFavoredProb) {
-                currentMatch.homeGoals++;
+            // userFavoredProb ist die Chance des HEIMteams (diff = Heim - Gast). Früher bekam bei
+            // Auswärtsspielen unser Spieler das Heimtor gutgeschrieben und unsere Tore liefen
+            // namenlos als "Tor für <Gast>".
+            let heimTrifft = Math.random() < userFavoredProb;
+            let wirTreffen = heimTrifft === currentMatch.isHome;
+            let ourName = currentMatch.isHome ? currentMatch.homeName : currentMatch.awayName;
+            let oppName = currentMatch.isHome ? currentMatch.awayName : currentMatch.homeName;
+            let art = GOAL_STYLES[Math.floor(Math.random() * GOAL_STYLES.length)];
+            if (wirTreffen) {
+                if (currentMatch.isHome) currentMatch.homeGoals++; else currentMatch.awayGoals++;
+                recordLiveShot(currentMatch.isHome, true);
                 playSound('goal');
                 let scorer = pickWeightedScorer(onPitch);
                 if (scorer) { scorer.goalsSeason = (scorer.goalsSeason || 0) + 1; scorer.goalsCareer = (scorer.goalsCareer || 0) + 1; }
-                let extra = (hasFkGod && Math.random() < 0.3) ? " (Traumhafter direkter Freistoß!)" : "";
-                let scorerText = scorer ? `${scorer.name} trifft` : "Tor";
-                document.getElementById('ticker-log').innerHTML += `<div style="color:var(--primary);">⚽ ${currentMatch.minute}. Min: ${scorerText} für ${currentMatch.homeName}!${extra}</div>`;
+                if (hasFkGod && Math.random() < 0.3) art = 'mit einem traumhaften direkten Freistoß';
+                let scorerText = scorer ? `${scorer.name} trifft ${art}` : `Tor ${art}`;
+                document.getElementById('ticker-log').innerHTML += `<div style="color:var(--primary); font-weight:bold;">⚽ ${currentMatch.minute}. Min: TOR! ${scorerText} für ${ourName}!</div>`;
+            } else if (hasPkKiller && Math.random() < 0.12) {
+                recordLiveShot(!currentMatch.isHome, true);
+                document.getElementById('ticker-log').innerHTML += `<div style="color:var(--blue);">🧤 ${currentMatch.minute}. Min: GLANZPARADE! Unser Elfmeter-Killer hält überragend!</div>`;
             } else {
-                if (hasPkKiller && Math.random() < 0.35 && !currentMatch.isHome) {
-                    document.getElementById('ticker-log').innerHTML += `<div style="color:var(--blue);">🧤 ${currentMatch.minute}. Min: GLANZPARADE! Unser Elfmeter-Killer hält überragend!</div>`;
-                } else {
-                    currentMatch.awayGoals++;
-                    playSound('goal');
-                    document.getElementById('ticker-log').innerHTML += `<div style="color:var(--danger);">⚽ ${currentMatch.minute}. Min: Tor für ${currentMatch.awayName}!</div>`;
-                }
+                if (currentMatch.isHome) currentMatch.awayGoals++; else currentMatch.homeGoals++;
+                recordLiveShot(!currentMatch.isHome, true);
+                playSound('goal');
+                document.getElementById('ticker-log').innerHTML += `<div style="color:var(--danger);">⚽ ${currentMatch.minute}. Min: Gegentor - ${oppName} trifft ${art}.</div>`;
             }
         }
 
@@ -724,18 +832,21 @@
                 let isStraightRed = Math.random() < 0.08;
                 if (isSecondYellow || isStraightRed) {
                     currentMatch.sentOff.push(culprit.id);
+                    currentMatch.stats.red[liveStatsSide(currentMatch.isHome)]++;
                     culprit.suspended = 2; // wird nach Spielende einmal herunter gezählt -> 1 Spiel Sperre
                     if (currentMatch.isHome) currentMatch.homeStrPenalty += 6; else currentMatch.awayStrPenalty += 6;
                     let label = isSecondYellow ? "🟨🟥 Gelb-Rote Karte" : "🟥 Platzverweis";
                     document.getElementById('ticker-log').innerHTML += `<div style="color:var(--danger); font-weight:bold;">${label} für ${culprit.name}! Wir spielen in Unterzahl weiter.</div>`;
                 } else {
                     currentMatch.yellowCards[culprit.id] = (currentMatch.yellowCards[culprit.id] || 0) + 1;
+                    currentMatch.stats.yellow[liveStatsSide(currentMatch.isHome)]++;
                     document.getElementById('ticker-log').innerHTML += `<div style="color:var(--accent);">🟨 ${currentMatch.minute}. Min: Gelbe Karte für ${culprit.name}.</div>`;
                 }
             } else if (ourCardRoll < 0.11 * refCardMult) {
                 // Gegnerische Karte - kein individueller Spieler, aber wirkt sich leicht auf Spielverlauf aus
                 eventHandled = true;
                 let isRed = Math.random() < 0.1;
+                currentMatch.stats[isRed ? 'red' : 'yellow'][liveStatsSide(!currentMatch.isHome)]++;
                 if (isRed) {
                     if (currentMatch.isHome) currentMatch.awayStrPenalty += 6; else currentMatch.homeStrPenalty += 6;
                     let oppName = currentMatch.isHome ? currentMatch.awayName : currentMatch.homeName;
@@ -749,13 +860,27 @@
 
         // Wenn weder Tor noch Karte: neutrale/chancenreiche Ticker-Zeile für Atmosphäre
         if (!eventHandled) {
-            let pool = diff > 8 ? OUR_CHANCE_EVENTS : (diff < -8 ? OPP_CHANCE_EVENTS : NEUTRAL_FLAVOR_EVENTS);
+            // diff ist aus Heimsicht - für "unsere"/"gegnerische" Chancen in unsere Sicht drehen.
+            let ourDiff = currentMatch.isHome ? diff : -diff;
+            let pool = ourDiff > 8 ? OUR_CHANCE_EVENTS : (ourDiff < -8 ? OPP_CHANCE_EVENTS : NEUTRAL_FLAVOR_EVENTS);
             let line = pool[Math.floor(Math.random() * pool.length)];
+            if (pool === OUR_CHANCE_EVENTS) recordLiveShot(currentMatch.isHome, Math.random() < 0.45);
+            if (pool === OPP_CHANCE_EVENTS) recordLiveShot(!currentMatch.isHome, Math.random() < 0.45);
             document.getElementById('ticker-log').innerHTML += `<div style="color:#64748b; font-size:10px;">${currentMatch.minute}. Min: ${line}</div>`;
         }
 
         document.getElementById('ticker-log').scrollTop = document.getElementById('ticker-log').scrollHeight;
         document.getElementById('live-score').innerText = currentMatch.homeGoals + " : " + currentMatch.awayGoals;
+        // Ballbesitz folgt dem Kräfteverhältnis (Heimsicht), Bus parken gibt ihn bewusst ab.
+        let heimBesitz = 50 + diff * 1.1 + (Math.random() * 10 - 5);
+        if (activeLiveShout === 'bus') heimBesitz += currentMatch.isHome ? -8 : 8;
+        if (activeLiveShout === 'pressing') heimBesitz += currentMatch.isHome ? 4 : -4;
+        currentMatch.stats.possSum += Math.max(25, Math.min(75, heimBesitz));
+        currentMatch.stats.possSteps++;
+        // Abschlüsse, die nicht im Ticker landen (geblockt, drüber, vorbei)
+        if (Math.random() < 0.3 + Math.max(0, diff) * 0.01) recordLiveShot(true, Math.random() < 0.3);
+        if (Math.random() < 0.3 + Math.max(0, -diff) * 0.01) recordLiveShot(false, Math.random() < 0.3);
+        renderLiveMatchStats();
         applyTacticAutomation();
 
         // Co-Kommentator: unabhängig vom Spielgeschehen, ca. jeder 5. Spielzug
@@ -865,6 +990,7 @@
         if (!sugg || substitutionsLeft <= 0) return;
         lineup = lineup.map(id => id === sugg.out.id ? sugg.in.id : id);
         substitutionsLeft--;
+        currentMatch.ourBaseStr += (liveEffectiveStrength(sugg.in) - liveEffectiveStrength(sugg.out)) / 11;
         document.getElementById('ticker-log').innerHTML += `<div style="color:var(--teal); font-size:10px;">🔄 Halbzeit-Wechsel: ${sugg.in.name} für ${sugg.out.name} (Co-Trainer-Empfehlung).</div>`;
         document.getElementById('ticker-log').scrollTop = document.getElementById('ticker-log').scrollHeight;
         renderLiveSubs();
@@ -905,6 +1031,11 @@
     function endMatchSimulation() {
         playSound('whistle');
         stopLiveTickerAutoplay();
+        if (currentMatch.stats) {
+            let log = document.getElementById('ticker-log');
+            if (log) log.innerHTML += `<div style="color:var(--accent); font-weight:bold;">🏁 Abpfiff! ${currentMatch.homeName} ${currentMatch.homeGoals}:${currentMatch.awayGoals} ${currentMatch.awayName}</div><div style="font-size:10px; color:#94a3b8;">${liveStatsSummaryLine()}</div>`;
+            renderLiveMatchStats();
+        }
         document.getElementById('btn-next-step').style.display = 'none';
         document.getElementById('btn-finish-match').style.display = 'inline-block';
         if (currentMatch.cupTie) { finishCupLiveMatch(); return; }
