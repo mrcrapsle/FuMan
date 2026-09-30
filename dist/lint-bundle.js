@@ -489,7 +489,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '2.7.1', date: '30.09.2026', features: 'Phase 14: Statistik, Kabine und Bildschirme aufgeräumt' };
+    const GAME_VERSION = { number: '2.8', date: '30.09.2026', features: 'Phase 14: Statistik, Kabine, Reiter, Wirtschaft (Wetten, Aktien, Immobilien) korrigiert' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
