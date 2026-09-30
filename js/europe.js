@@ -354,7 +354,8 @@
                 pairings.forEach(([h, a]) => {
                     let hStr = h.name === game.clubName ? calcTeamStrength(true) : h.str;
                     let aStr = a.name === game.clubName ? calcTeamStrength(false) : a.str;
-                    let goals = simulateGoals(hStr, aStr);
+                    let live = typeof takeLiveCupResult === 'function' ? takeLiveCupResult('europe', h.name, a.name) : null;
+                    let goals = live ? { myGoals: live.homeGoals, oppGoals: live.awayGoals } : simulateGoals(hStr, aStr);
                     let hg = goals.myGoals;
                     let ag = goals.oppGoals;
 
@@ -392,7 +393,8 @@
             function simulateLeg(home, away) {
                 let hStr = home.name === game.clubName ? calcTeamStrength(true) : home.str;
                 let aStr = away.name === game.clubName ? calcTeamStrength(false) : away.str;
-                let goals = simulateGoals(hStr, aStr);
+                let live = typeof takeLiveCupResult === 'function' ? takeLiveCupResult('europe', home.name, away.name) : null;
+                let goals = live ? { myGoals: live.homeGoals, oppGoals: live.awayGoals } : simulateGoals(hStr, aStr);
                 return { homeGoals: goals.myGoals, awayGoals: goals.oppGoals };
             }
 
@@ -434,7 +436,8 @@
                     addInboxMessage('vertrag', '🎟️ Zuschauerrekord im Halbfinal-Rückspiel!', `Das Stadion ist beim wichtigsten Spiel der Saison restlos ausverkauft (${soldOutAttendance.toLocaleString('de-DE')} Zuschauer) - ${formatVal(soldOutIncome)} Ticketeinnahmen!`, 'screen-finances');
                 }
                 // Rückspiel: teamB ist jetzt Heimteam
-                let goals = simulateGoals(strB, strA);
+                let live = typeof takeLiveCupResult === 'function' ? takeLiveCupResult('europe', tie.teamB, tie.teamA) : null;
+                let goals = live ? { myGoals: live.homeGoals, oppGoals: live.awayGoals } : simulateGoals(strB, strA);
                 tie.leg2Home = goals.myGoals; // Tore von teamB (jetzt Heim)
                 tie.leg2Away = goals.oppGoals; // Tore von teamA (jetzt Auswärts)
 
@@ -476,7 +479,8 @@
             let getFinalistStrength = name => name === game.clubName ? calcTeamStrength(true) : (allTeams.find(t => t.name === name)?.str || 84);
             let str1 = getFinalistStrength(final1);
             let str2 = getFinalistStrength(final2);
-            let goals = simulateGoals(str1, str2);
+            let live = typeof takeLiveCupResult === 'function' ? takeLiveCupResult('europe', final1, final2) : null;
+            let goals = live ? { myGoals: live.homeGoals, oppGoals: live.awayGoals } : simulateGoals(str1, str2);
             let hg = goals.myGoals, ag = goals.oppGoals;
             let winner = hg === ag ? (Math.random() < (0.5 + (str1 - str2) * 0.02) ? final1 : final2) : (hg > ag ? final1 : final2);
             let weWin = winner === game.clubName;

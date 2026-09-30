@@ -91,11 +91,15 @@
             let isHome = p.home === game.clubName;
             let homeStr = isOurMatch ? (isHome ? calcTeamStrength(true) : getOpponentStrength(p.home)) : getOpponentStrength(p.home);
             let awayStr = isOurMatch ? (!isHome ? calcTeamStrength(false) : getOpponentStrength(p.away)) : getOpponentStrength(p.away);
-            let goals = simulateGoals(homeStr, awayStr);
+            let live = isOurMatch && typeof takeLiveCupResult === 'function' ? takeLiveCupResult('landes', p.home, p.away) : null;
+            let goals = live ? { myGoals: live.homeGoals, oppGoals: live.awayGoals } : simulateGoals(homeStr, awayStr);
             p.homeGoals = goals.myGoals;
             p.awayGoals = goals.oppGoals;
             p.played = true;
-            if (p.homeGoals === p.awayGoals) {
+            if (p.homeGoals === p.awayGoals && live && live.penaltyWinner) {
+                p.penaltyWinner = live.penaltyWinner;
+                winners[idx] = live.penaltyWinner;
+            } else if (p.homeGoals === p.awayGoals) {
                 // Im Verbandspokal wird ohne Schützen-Auswahl entschieden - der grosse
                 // Elfmeter-Krimi bleibt dem DFB-Pokal und dem Europapokal vorbehalten.
                 let shootout = simulatePenaltyShootout(p.home, p.away, homeStr, awayStr,

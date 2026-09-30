@@ -4549,6 +4549,89 @@ async function testTacticRecords(browser) {
     await page.close();
 }
 
+async function testCupLive(browser) {
+    console.log('\n[P15c] Pokal, Champions Cup und Relegation als Livespiel');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        const out = {};
+        // Pokalpartie (DFB- oder Landespokal) suchen: bis zum ersten eigenen Pokal-Spieltag vorspulen
+        let tie = null;
+        while (game.matchday <= 30 && !(tie = findOwnCupTieToday())) { game.sackPending = false; simulateMatchdays(1); }
+        out.pokalGefunden = !!tie;
+        if (tie) {
+            const md = game.matchday, startelf = lineup.join(','), tore = squad.map(p => p.goalsSeason || 0).join(',');
+            startMatchdayFlow();
+            out.vorberichtPokal = !!(pendingMatchInfo && pendingMatchInfo.cupTie) && document.getElementById('prematch-analysis-box').innerHTML.includes(tie.titel);
+            resolveMatchInstantly();
+            const live = game.liveCupResult;
+            if (live && live.homeGoals === live.awayGoals && pendingShootoutContext) pendingShootoutContext.onConfirm(autoSelectShooters());
+            out.ergebnisAbgelegt = !!live && live.homeGoals === currentMatch.homeGoals && live.awayGoals === currentMatch.awayGoals && game.matchday === md;
+            out.ligaUnberuehrt = lineup.join(',') === startelf && squad.map(p => p.goalsSeason || 0).join(',') === tore;
+            out.weiterKnopf = document.getElementById('btn-finish-match').innerText.includes('Ligaspiel');
+            const erwartet = live ? { h: live.homeGoals, a: live.awayGoals, pw: live.penaltyWinner } : null;
+            finishMatch();
+            out.dannLiga = !!pendingMatchInfo && !pendingMatchInfo.cupTie && !!pendingMatchInfo.ourFixture;
+            resolveMatchInstantly();
+            const runden = tie.comp === 'dfb' ? cupTournament.roundsHistory : landesPokal.roundsHistory;
+            const paar = runden.flatMap(x => x.pairings).find(x => x.home === tie.home && x.away === tie.away);
+            out.pokalUebernommen = !!paar && !!erwartet && paar.played && paar.homeGoals === erwartet.h && paar.awayGoals === erwartet.a
+                && (erwartet.h !== erwartet.a || paar.penaltyWinner === erwartet.pw || !erwartet.pw);
+            out.weiterGespielt = game.matchday === md + 1 && game.liveCupResult === null;
+            finishMatch();
+        }
+        // Champions Cup: Gruppenspiel an Spieltag 3 einer neuen Saison
+        game.inEurope = true; initEuropeCup();
+        game.matchday = 3;
+        const eu = findOwnCupTieToday();
+        out.europaGefunden = !!eu && eu.comp === 'europe';
+        if (out.europaGefunden) {
+            startMatchdayFlow(); resolveMatchInstantly();
+            const live = { ...game.liveCupResult };
+            finishMatch(); resolveMatchInstantly();
+            const wir = [...europeTournament.groupA, ...europeTournament.groupB].find(t => t.name === game.clubName);
+            const heim = eu.home === game.clubName;
+            out.europaUebernommen = wir.played === 1 && wir.gf === (heim ? live.homeGoals : live.awayGoals) && wir.ga === (heim ? live.awayGoals : live.homeGoals);
+            finishMatch();
+        }
+        // Relegation nach dem 34. Spieltag
+        while (game.matchday <= 34) { game.sackPending = false; simulateMatchdays(5); }
+        // Relegationsplatz: 16. (Abstieg) oder in der untersten Liga 3. (Aufstieg)
+        const tabelle = [...leaguesData[game.leagueLevel]].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+        const wir = tabelle.find(t => t.name === game.clubName), ziel = tabelle[game.leagueLevel === NUM_LEAGUES - 1 ? 2 : 15];
+        if (wir && ziel && wir !== ziel) ['points', 'goalsFor', 'goalsAgainst'].forEach(k => { const x = wir[k]; wir[k] = ziel[k]; ziel[k] = x; });
+        game.relegation = null;
+        const sit = getRelegationSituation();
+        out.relegationDa = !!sit;
+        if (sit) {
+            renderRelegationBox();
+            out.relegationKnopf = document.getElementById('dash-relegation-box').innerHTML.includes('startRelegationLive');
+            startRelegationLive(); resolveMatchInstantly();
+            const leg = game.relegation && game.relegation.legs[0];
+            const heim = leg && leg.isHome;
+            out.relegationLive = !!leg && leg.live === true && leg.ourGoals === (heim ? currentMatch.homeGoals : currentMatch.awayGoals);
+            finishMatch();
+            out.relegationZurueck = document.getElementById('screen-dashboard').style.display !== 'none';
+        }
+        return out;
+    });
+    assert(r.pokalGefunden, 'Eigene Pokalpartie wird am Pokal-Spieltag erkannt');
+    assert(r.vorberichtPokal, 'Pokal-Spieltag beginnt mit dem Vorbericht zum Pokalspiel');
+    assert(r.ergebnisAbgelegt, 'Live-Ergebnis des Pokalspiels wird abgelegt, der Spieltag läuft noch nicht weiter');
+    assert(r.ligaUnberuehrt, 'Einwechslungen und Pokaltore verändern Startelf und Liga-Torjägerliste nicht');
+    assert(r.weiterKnopf, 'Nach dem Pokalspiel führt der Knopf zum Ligaspiel');
+    assert(r.dannLiga, 'Danach folgt das Ligaspiel desselben Spieltags');
+    assert(r.pokalUebernommen, 'Pokalrunde übernimmt genau das live gespielte Ergebnis');
+    assert(r.weiterGespielt, 'Spieltag wird nach dem Ligaspiel abgeschlossen, Live-Ergebnis verbraucht');
+    assert(r.europaGefunden && r.europaUebernommen, 'Champions-Cup-Gruppenspiel live gespielt und in die Gruppentabelle übernommen');
+    assert(r.relegationDa && r.relegationKnopf, 'Relegations-Box bietet das Livespiel an');
+    assert(r.relegationLive, 'Relegations-Hinspiel übernimmt das Live-Ergebnis');
+    assert(r.relegationZurueck, 'Nach dem Relegationsspiel geht es zurück zum Dashboard');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 3).join(' | ')})`);
+    await page.close();
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -4629,6 +4712,7 @@ async function main() {
         testPhase14Teil4,
         testLongRun,
         testTacticRecords,
+        testCupLive,
         testRuntimeRoundTrip,
     ];
 

@@ -117,8 +117,8 @@
             let homeStr = isOurMatch ? (isHome ? calcTeamStrength(true) : getOpponentStrength(p.home)) : (60 + Math.floor(Math.random() * 24));
             let awayStr = isOurMatch ? (!isHome ? calcTeamStrength(false) : getOpponentStrength(p.away)) : (60 + Math.floor(Math.random() * 24));
 
-            let diff = homeStr - awayStr;
-            let goals = simulateGoals(homeStr, awayStr);
+            let live = isOurMatch && typeof takeLiveCupResult === 'function' ? takeLiveCupResult('dfb', p.home, p.away) : null;
+            let goals = live ? { myGoals: live.homeGoals, oppGoals: live.awayGoals } : simulateGoals(homeStr, awayStr);
             let hg = goals.myGoals;
             let ag = goals.oppGoals;
 
@@ -135,7 +135,11 @@
                 // Schützen-Reihenfolge selbst (gleiches System wie im Europapokal-Halbfinale,
                 // siehe openShooterOrderSelection() in europe.js) - Massensimulation wählt
                 // automatisch die 5 schusstärksten Spieler, damit nichts blockiert.
-                if (isOurMatch && isLiveContext) {
+                if (live && live.penaltyWinner) {
+                    // Elfmeterschießen wurde direkt nach dem Livespiel ausgetragen.
+                    p.penaltyWinner = live.penaltyWinner;
+                    winners[idx] = live.penaltyWinner;
+                } else if (isOurMatch && isLiveContext) {
                     awaitingShooters = true;
                     openShooterOrderSelection(null, (names) => {
                         let namesHome = isHome ? names : null;

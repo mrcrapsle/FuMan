@@ -9503,8 +9503,8 @@ function cleanupLegacyDevelopmentState() {
             let homeStr = isOurMatch ? (isHome ? calcTeamStrength(true) : getOpponentStrength(p.home)) : (60 + Math.floor(Math.random() * 24));
             let awayStr = isOurMatch ? (!isHome ? calcTeamStrength(false) : getOpponentStrength(p.away)) : (60 + Math.floor(Math.random() * 24));
 
-            let diff = homeStr - awayStr;
-            let goals = simulateGoals(homeStr, awayStr);
+            let live = isOurMatch && typeof takeLiveCupResult === 'function' ? takeLiveCupResult('dfb', p.home, p.away) : null;
+            let goals = live ? { myGoals: live.homeGoals, oppGoals: live.awayGoals } : simulateGoals(homeStr, awayStr);
             let hg = goals.myGoals;
             let ag = goals.oppGoals;
 
@@ -9521,7 +9521,11 @@ function cleanupLegacyDevelopmentState() {
                 // Schützen-Reihenfolge selbst (gleiches System wie im Europapokal-Halbfinale,
                 // siehe openShooterOrderSelection() in europe.js) - Massensimulation wählt
                 // automatisch die 5 schusstärksten Spieler, damit nichts blockiert.
-                if (isOurMatch && isLiveContext) {
+                if (live && live.penaltyWinner) {
+                    // Elfmeterschießen wurde direkt nach dem Livespiel ausgetragen.
+                    p.penaltyWinner = live.penaltyWinner;
+                    winners[idx] = live.penaltyWinner;
+                } else if (isOurMatch && isLiveContext) {
                     awaitingShooters = true;
                     openShooterOrderSelection(null, (names) => {
                         let namesHome = isHome ? names : null;
@@ -9751,11 +9755,15 @@ function cleanupLegacyDevelopmentState() {
             let isHome = p.home === game.clubName;
             let homeStr = isOurMatch ? (isHome ? calcTeamStrength(true) : getOpponentStrength(p.home)) : getOpponentStrength(p.home);
             let awayStr = isOurMatch ? (!isHome ? calcTeamStrength(false) : getOpponentStrength(p.away)) : getOpponentStrength(p.away);
-            let goals = simulateGoals(homeStr, awayStr);
+            let live = isOurMatch && typeof takeLiveCupResult === 'function' ? takeLiveCupResult('landes', p.home, p.away) : null;
+            let goals = live ? { myGoals: live.homeGoals, oppGoals: live.awayGoals } : simulateGoals(homeStr, awayStr);
             p.homeGoals = goals.myGoals;
             p.awayGoals = goals.oppGoals;
             p.played = true;
-            if (p.homeGoals === p.awayGoals) {
+            if (p.homeGoals === p.awayGoals && live && live.penaltyWinner) {
+                p.penaltyWinner = live.penaltyWinner;
+                winners[idx] = live.penaltyWinner;
+            } else if (p.homeGoals === p.awayGoals) {
                 // Im Verbandspokal wird ohne Schützen-Auswahl entschieden - der grosse
                 // Elfmeter-Krimi bleibt dem DFB-Pokal und dem Europapokal vorbehalten.
                 let shootout = simulatePenaltyShootout(p.home, p.away, homeStr, awayStr,
@@ -10212,7 +10220,8 @@ function cleanupLegacyDevelopmentState() {
                 pairings.forEach(([h, a]) => {
                     let hStr = h.name === game.clubName ? calcTeamStrength(true) : h.str;
                     let aStr = a.name === game.clubName ? calcTeamStrength(false) : a.str;
-                    let goals = simulateGoals(hStr, aStr);
+                    let live = typeof takeLiveCupResult === 'function' ? takeLiveCupResult('europe', h.name, a.name) : null;
+                    let goals = live ? { myGoals: live.homeGoals, oppGoals: live.awayGoals } : simulateGoals(hStr, aStr);
                     let hg = goals.myGoals;
                     let ag = goals.oppGoals;
 
@@ -10250,7 +10259,8 @@ function cleanupLegacyDevelopmentState() {
             function simulateLeg(home, away) {
                 let hStr = home.name === game.clubName ? calcTeamStrength(true) : home.str;
                 let aStr = away.name === game.clubName ? calcTeamStrength(false) : away.str;
-                let goals = simulateGoals(hStr, aStr);
+                let live = typeof takeLiveCupResult === 'function' ? takeLiveCupResult('europe', home.name, away.name) : null;
+                let goals = live ? { myGoals: live.homeGoals, oppGoals: live.awayGoals } : simulateGoals(hStr, aStr);
                 return { homeGoals: goals.myGoals, awayGoals: goals.oppGoals };
             }
 
@@ -10292,7 +10302,8 @@ function cleanupLegacyDevelopmentState() {
                     addInboxMessage('vertrag', '🎟️ Zuschauerrekord im Halbfinal-Rückspiel!', `Das Stadion ist beim wichtigsten Spiel der Saison restlos ausverkauft (${soldOutAttendance.toLocaleString('de-DE')} Zuschauer) - ${formatVal(soldOutIncome)} Ticketeinnahmen!`, 'screen-finances');
                 }
                 // Rückspiel: teamB ist jetzt Heimteam
-                let goals = simulateGoals(strB, strA);
+                let live = typeof takeLiveCupResult === 'function' ? takeLiveCupResult('europe', tie.teamB, tie.teamA) : null;
+                let goals = live ? { myGoals: live.homeGoals, oppGoals: live.awayGoals } : simulateGoals(strB, strA);
                 tie.leg2Home = goals.myGoals; // Tore von teamB (jetzt Heim)
                 tie.leg2Away = goals.oppGoals; // Tore von teamA (jetzt Auswärts)
 
@@ -10334,7 +10345,8 @@ function cleanupLegacyDevelopmentState() {
             let getFinalistStrength = name => name === game.clubName ? calcTeamStrength(true) : (allTeams.find(t => t.name === name)?.str || 84);
             let str1 = getFinalistStrength(final1);
             let str2 = getFinalistStrength(final2);
-            let goals = simulateGoals(str1, str2);
+            let live = typeof takeLiveCupResult === 'function' ? takeLiveCupResult('europe', final1, final2) : null;
+            let goals = live ? { myGoals: live.homeGoals, oppGoals: live.awayGoals } : simulateGoals(str1, str2);
             let hg = goals.myGoals, ag = goals.oppGoals;
             let winner = hg === ag ? (Math.random() < (0.5 + (str1 - str2) * 0.02) ? final1 : final2) : (hg > ag ? final1 : final2);
             let weWin = winner === game.clubName;
@@ -24521,6 +24533,9 @@ function cleanupLegacyScoutState() {
     function startMatchdayFlow() {
         if (game.matchday > 34) return;
         if (game.sackPending) { showToast('Du bist entlassen - bestätige die Meldung, um bei einem neuen Klub anzufangen.', 'error', 5000); return; }
+        // Pokal-Spieltag: die eigene Pokalpartie wird vor dem Ligaspiel live gespielt (js/cup-live.js).
+        let cupTie = typeof findOwnCupTieToday === 'function' ? findOwnCupTieToday() : null;
+        if (cupTie) { startCupLiveFlow(cupTie); return; }
         let fixtures = fixturesData[game.leagueLevel] ? fixturesData[game.leagueLevel][game.matchday - 1] : null;
         let ourFixture = fixtures ? fixtures.find(f => leaguesData[game.leagueLevel][f.home]?.name === game.clubName || leaguesData[game.leagueLevel][f.away]?.name === game.clubName) : null;
         if (!ourFixture) { processPostMatchRoutine(); return; }
@@ -24551,9 +24566,10 @@ function cleanupLegacyScoutState() {
     function skipPressAndPlay() {
         playSound('click');
         if (!pendingMatchInfo) { processPostMatchRoutine(); return; }
-        let { isHome, oppName, oppStr, ourFixture } = pendingMatchInfo;
+        let { isHome, oppName, oppStr, ourFixture, cupTie } = pendingMatchInfo;
         activeLiveShout = 'standard';
-        setupMatch(isHome ? game.clubName : oppName, isHome ? oppName : game.clubName, oppStr, isHome, false, ourFixture);
+        setupMatch(isHome ? game.clubName : oppName, isHome ? oppName : game.clubName, oppStr, isHome, !!cupTie, ourFixture);
+        if (cupTie) markCupLiveMatch(cupTie);
     }
 
     // "Nur Ergebnisse": schneller als manuelles "Nächste Szene"-Klicken, aber ausführlicher
@@ -24563,9 +24579,10 @@ function cleanupLegacyScoutState() {
     function resolveMatchInstantly() {
         playSound('click');
         if (!pendingMatchInfo) { processPostMatchRoutine(); return; }
-        let { isHome, oppName, oppStr, ourFixture } = pendingMatchInfo;
+        let { isHome, oppName, oppStr, ourFixture, cupTie } = pendingMatchInfo;
         activeLiveShout = 'standard';
-        setupMatch(isHome ? game.clubName : oppName, isHome ? oppName : game.clubName, oppStr, isHome, false, ourFixture);
+        setupMatch(isHome ? game.clubName : oppName, isHome ? oppName : game.clubName, oppStr, isHome, !!cupTie, ourFixture);
+        if (cupTie) markCupLiveMatch(cupTie);
         stopLiveTickerAutoplay(); // Schnellsimulation läuft synchron - kein paralleler Auto-Timer nötig
         simulateRestOfMatch();
     }
@@ -24583,7 +24600,7 @@ function cleanupLegacyScoutState() {
         // Gegner-Identität (NEU): Spielstil des Live-Gegners nachschlagen, damit er sich auch
         // im direkten Duell gegen uns bemerkbar macht (siehe simulateMatchStep()).
         let oppName = isHome ? awayName : homeName;
-        let oppTeamObj = (leaguesData[game.leagueLevel] || []).find(t => t.name === oppName) || null;
+        let oppTeamObj = leaguesData.flat().find(t => t && t.name === oppName) || null;
         currentMatch = {
             homeName, awayName,
             homeStr: isHome ? ourStrength : oppStrength,
@@ -24639,6 +24656,7 @@ function cleanupLegacyScoutState() {
 
         document.getElementById('btn-next-step').style.display = 'inline-block';
         document.getElementById('btn-finish-match').style.display = 'none';
+        document.getElementById('btn-finish-match').innerText = '✔ Spielbericht schließen';
         renderLiveSubs();
         renderLiveTacticsPanel();
         render3DPitch('live-pitch');
@@ -25128,6 +25146,7 @@ function cleanupLegacyScoutState() {
         stopLiveTickerAutoplay();
         document.getElementById('btn-next-step').style.display = 'none';
         document.getElementById('btn-finish-match').style.display = 'inline-block';
+        if (currentMatch.cupTie) { finishCupLiveMatch(); return; }
         if (currentMatch.ref) {
             currentMatch.ref.homeGoals = currentMatch.homeGoals;
             currentMatch.ref.awayGoals = currentMatch.awayGoals;
@@ -25929,6 +25948,8 @@ function cleanupLegacyScoutState() {
         if (europeTournament.matchdays.includes(game.matchday)) {
             simulateEuropeMatchday(game.matchday, isLiveContext);
         }
+        // Ein live gespieltes Pokalergebnis gilt nur für diesen Spieltag.
+        game.liveCupResult = null;
 
         checkNationalTeamCallups(isLiveContext);
 
@@ -26478,7 +26499,15 @@ function cleanupLegacyScoutState() {
         showToast(mode === 'bus' ? '🚌 Reisemodus: Bus (günstiger, mehr Ermüdung)' : '✈️ Reisemodus: Flugzeug (teurer, weniger Ermüdung)', 'success');
     }
 
-    function finishMatch() { showScreen('screen-dashboard'); }
+    function finishMatch() {
+        // Nach dem live gespielten Pokalspiel geht es direkt zum Ligaspiel desselben Spieltags.
+        if (typeof currentMatch !== 'undefined' && currentMatch && currentMatch.cupTie && !currentMatch.cupWeiter) {
+            currentMatch.cupWeiter = true;
+            startMatchdayFlow();
+            return;
+        }
+        showScreen('screen-dashboard');
+    }
 
     // Torschützen-Zuordnung für automatisch simulierte eigene Spiele (NEU): bisher wurden
     // beim "Saison durchsimulieren"/Admin-Vorspulen nur nackte Tordifferenzen berechnet,
@@ -27283,9 +27312,13 @@ function playRelegationLeg(silent = false) {
     const ownStr = calcTeamStrength(isHome);
     const oppStr = typeof applySabotageToOpponentStrength === 'function' ? applySabotageToOpponentStrength(sit.oppStrength) : sit.oppStrength;
     const ownTeam = (leaguesData[game.leagueLevel] || []).find(t => t.name === game.clubName) || null;
-    const g = isHome ? simulateGoals(ownStr, oppStr, ownTeam, sit.oppTeam) : simulateGoals(oppStr, ownStr, sit.oppTeam, ownTeam);
+    // Live gespielt (js/cup-live.js)? Dann zählt das Ergebnis aus der Live-Engine.
+    const live = typeof takeLiveCupResult === 'function'
+        ? takeLiveCupResult('relegation', isHome ? game.clubName : sit.oppName, isHome ? sit.oppName : game.clubName) : null;
+    const g = live ? { myGoals: live.homeGoals, oppGoals: live.awayGoals }
+        : (isHome ? simulateGoals(ownStr, oppStr, ownTeam, sit.oppTeam) : simulateGoals(oppStr, ownStr, sit.oppTeam, ownTeam));
     const ourGoals = isHome ? g.myGoals : g.oppGoals, oppGoals = isHome ? g.oppGoals : g.myGoals;
-    const leg = { isHome, ourGoals, oppGoals, ticker: buildRelegationTicker(ourGoals, oppGoals, sit.oppName), income: 0 };
+    const leg = { isHome, ourGoals, oppGoals, live: !!live, ticker: live ? [] : buildRelegationTicker(ourGoals, oppGoals, sit.oppName), income: 0 };
 
     if (isHome) {
         // Ausverkauftes Endspiel-Gefühl: wie ein Pokalspiel (1,4-fache Nachfrage).
@@ -27358,8 +27391,181 @@ function renderRelegationBox() {
         ⚔️ <strong>RELEGATION</strong> - Platz ${sit.rank}: ${ziel}<br>Gegner: <strong>${sit.oppName}</strong> (Stärke ${sit.oppStrength})
         ${gespielt}
         ${r && r.result ? `<div style="margin-top:4px; font-weight:800;">Gesamt ${r.aggregate}${r.penalties ? ' n.E.' : ''}: ${({ promoted: '🎉 Aufstieg geschafft!', stayed: sit.type === 'abstieg' ? '💪 Klasse gehalten!' : 'Kein Aufstieg.', relegated: '💔 Abstieg.' })[r.result]}</div>`
-            : `<button onclick="playRelegationLeg()" class="btn-action" style="margin-top:6px;">▶ ${r && r.legs.length === 1 ? 'Rückspiel' : 'Hinspiel'} spielen</button>`}
+            : `<div style="display:flex; gap:6px; margin-top:6px;"><button onclick="startRelegationLive()" class="btn-action">🎮 ${r && r.legs.length === 1 ? 'Rückspiel' : 'Hinspiel'} live</button><button onclick="playRelegationLeg()" class="btn-secondary">⚡ Nur Ergebnis</button></div>`}
     </div>`;
+}
+
+</script>
+<script>
+/* eslint-disable no-undef */
+// Pokal als Livespiel: An Pokal-Spieltagen spielt der Nutzer die eigene Partie im DFB-Pokal,
+// Landespokal oder Champions Cup vor dem Ligaspiel in der Live-Engine (setupMatch), die
+// Relegation auf Wunsch ebenso. Das Endergebnis landet in game.liveCupResult und wird von
+// simulateCupRound(), simulateLandesPokalRound(), simulateEuropeMatchday() bzw.
+// playRelegationLeg() statt eines gewürfelten Ergebnisses übernommen - Prämien, nächste
+// Runde und Auslosung laufen unverändert dort.
+
+// Eigene Champions-Cup-Partie an diesem Spieltag, mit derselben Paarungslogik wie
+// simulateEuropeMatchday() (Gruppen, Halbfinale Hin-/Rückspiel, Finale).
+function getOwnEuropeFixture(md) {
+    if (!game.inEurope) return null;
+    const et = europeTournament, us = game.clubName;
+    const gruppen = [et.groupA, et.groupB].filter(g => Array.isArray(g) && g.length >= 4);
+    const alle = gruppen.flat();
+    const staerke = name => (alle.find(t => t.name === name) || {}).str || 84;
+    const gi = [3, 7, 11, 15, 19, 23].indexOf(md);
+    if (gi !== -1) {
+        for (const [t1, t2, t3, t4] of gruppen) {
+            const paare = gi % 3 === 0 ? [[t1, t2], [t3, t4]] : (gi % 3 === 1 ? [[t1, t3], [t2, t4]] : [[t1, t4], [t2, t3]]);
+            const eigen = paare.find(([h, a]) => h.name === us || a.name === us);
+            if (eigen) return { home: eigen[0].name, away: eigen[1].name, runde: 'Gruppenphase', oppStr: staerke(eigen[0].name === us ? eigen[1].name : eigen[0].name) };
+        }
+        return null;
+    }
+    if (md === 27 && gruppen.length === 2) {
+        const sortiert = g => [...g].sort((a, b) => b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga));
+        const [a, b] = gruppen.map(sortiert);
+        const eigen = [[a[0], b[1]], [b[0], a[1]]].find(([h, x]) => h.name === us || x.name === us);
+        if (eigen) return { home: eigen[0].name, away: eigen[1].name, runde: 'Halbfinale, Hinspiel', oppStr: staerke(eigen[0].name === us ? eigen[1].name : eigen[0].name) };
+        return null;
+    }
+    const semis = et.semiFinals || [];
+    if (md === 29) {
+        const tie = semis.find(t => !t.winner && (t.teamA === us || t.teamB === us));
+        if (tie) return { home: tie.teamB, away: tie.teamA, runde: `Halbfinale, Rückspiel (Hinspiel ${tie.leg1Home}:${tie.leg1Away})`, oppStr: staerke(tie.teamA === us ? tie.teamB : tie.teamA) };
+        return null;
+    }
+    if (md === 31 && semis.length === 2 && semis[0].winner && semis[1].winner && !et.finalMatch) {
+        const [f1, f2] = [semis[0].winner, semis[1].winner];
+        if (f1 === us || f2 === us) return { home: f1, away: f2, runde: 'Finale', oppStr: staerke(f1 === us ? f2 : f1) };
+    }
+    return null;
+}
+
+// Eigene, noch nicht gespielte Pokalpartie an diesem Spieltag (oder null).
+function findOwnCupTieToday() {
+    const md = game.matchday, us = game.clubName;
+    const r0 = game.liveCupResult;
+    if (r0 && r0.season === game.season && r0.matchday === md) return null; // heute schon live gespielt
+    const offen = r => (r && !r.completed) ? r.pairings.find(p => !p.played && (p.home === us || p.away === us)) : null;
+    const gegner = p => p.home === us ? p.away : p.home;
+
+    const ci = cupTournament.matchdays.indexOf(md);
+    const cupRunde = ci !== -1 ? cupTournament.roundsHistory[ci] : null;
+    const cupPaar = offen(cupRunde);
+    if (cupPaar) return { comp: 'dfb', titel: `🏆 DFB-Pokal · ${cupRunde.name}`, home: cupPaar.home, away: cupPaar.away, oppStr: getOpponentStrength(gegner(cupPaar)), elfmeter: true };
+
+    if (typeof landesPokal !== 'undefined' && landesPokal.active) {
+        const li = landesPokal.matchdays.indexOf(md);
+        const lpRunde = li !== -1 ? landesPokal.roundsHistory[li] : null;
+        const lpPaar = offen(lpRunde);
+        if (lpPaar) return { comp: 'landes', titel: `🏅 Landespokal · ${lpRunde.name}`, home: lpPaar.home, away: lpPaar.away, oppStr: getOpponentStrength(gegner(lpPaar)), elfmeter: true };
+    }
+
+    if (europeTournament.matchdays.includes(md)) {
+        const e = getOwnEuropeFixture(md);
+        if (e) return { comp: 'europe', titel: `🌍 Champions Cup · ${e.runde}`, home: e.home, away: e.away, oppStr: e.oppStr, elfmeter: false };
+    }
+    return null;
+}
+
+// Wird von den Wettbewerben aufgerufen: liefert das live gespielte Ergebnis genau dieser
+// Partie (und verbraucht es) oder null - dann wird wie bisher simuliert.
+function takeLiveCupResult(comp, home, away) {
+    const r = game.liveCupResult;
+    if (!r || r.comp !== comp || r.season !== game.season || r.matchday !== game.matchday || r.home !== home || r.away !== away) return null;
+    game.liveCupResult = null;
+    return r;
+}
+
+// Vorbericht für die Pokalpartie: gleicher Bildschirm wie vor dem Ligaspiel.
+function startCupLiveFlow(tie) {
+    const us = game.clubName;
+    const isHome = tie.home === us;
+    const oppName = isHome ? tie.away : tie.home;
+    pendingMatchInfo = { ourFixture: null, isHome, oppName, oppStr: tie.oppStr, cupTie: tie };
+    const oppObj = leaguesData.flat().find(t => t.name === oppName) || null;
+    renderPreMatchAnalysis(oppObj, oppName);
+    const box = document.getElementById('prematch-analysis-box');
+    const danach = tie.comp === 'relegation' ? '' : '<br><span style="color:var(--text-muted);">Das Ligaspiel folgt direkt im Anschluss.</span>';
+    if (box) box.innerHTML = `<div class="box" style="font-size:11px; border-left-color:var(--gold);"><strong>${tie.titel}</strong><br>${tie.home} - ${tie.away} (Gegner-Stärke ${Math.round(tie.oppStr)})${danach}</div>` + box.innerHTML;
+    document.getElementById('press-question-container').innerHTML = `<strong>Journalist fragt:</strong> "Welchen Stellenwert hat dieses Spiel für Sie?"`;
+    const aBox = document.getElementById('press-answers-container');
+    aBox.innerHTML = '';
+    ['Wir wollen unbedingt weiterkommen!', 'Jedes Spiel ist gleich wichtig.', 'Wir schauen von Runde zu Runde.'].forEach(ans => {
+        const btn = document.createElement('button');
+        btn.className = 'btn-action';
+        btn.style.margin = '3px 0';
+        btn.innerText = ans;
+        btn.onclick = () => { skipPressAndPlay(); };
+        aBox.appendChild(btn);
+    });
+    showScreen('screen-prematch-press');
+}
+
+// Direkt nach setupMatch(): Pokalspiel markieren und Aufstellung/Saisontore sichern.
+// Einwechslungen und Pokaltore gelten nur für dieses Spiel (die Ligatorjägerliste und die
+// Startelf fürs anschließende Ligaspiel bleiben unberührt; Karrieretore zählen).
+function markCupLiveMatch(tie) {
+    currentMatch.cupTie = tie;
+    currentMatch.isEurope = tie.comp === 'europe';
+    currentMatch.cupLineup = [...lineup];
+    currentMatch.cupGoalsSeason = Object.fromEntries(squad.map(p => [p.id, p.goalsSeason || 0]));
+    const titel = document.getElementById('match-title');
+    if (titel) titel.innerText = `${tie.titel}: ${tie.home} vs ${tie.away}`;
+}
+
+// Abpfiff eines Pokalspiels (aus endMatchSimulation()): Ergebnis ablegen, bei Remis im
+// K.-o.-Spiel sofort Elfmeterschießen mit eigener Schützenwahl.
+function finishCupLiveMatch() {
+    const m = currentMatch, tie = m.cupTie;
+    lineup = m.cupLineup.filter(id => squad.some(p => p.id === id));
+    squad.forEach(p => { if (p.id in m.cupGoalsSeason) p.goalsSeason = m.cupGoalsSeason[p.id]; });
+    const ergebnis = { comp: tie.comp, season: game.season, matchday: game.matchday, home: tie.home, away: tie.away, homeGoals: m.homeGoals, awayGoals: m.awayGoals };
+    game.liveCupResult = ergebnis;
+    const isHome = tie.home === game.clubName;
+    const unsere = isHome ? m.homeGoals : m.awayGoals, deren = isHome ? m.awayGoals : m.homeGoals;
+    if (unsere > deren && typeof addManagerXP === 'function') addManagerXP(100);
+    const btn = document.getElementById('btn-finish-match');
+    const log = document.getElementById('ticker-log');
+
+    if (tie.comp === 'relegation') {
+        // Relegation: das Spiel wird sofort als Hin-/Rückspiel verbucht.
+        m.cupWeiter = true;
+        const r = playRelegationLeg(true);
+        if (r && r.result) {
+            const text = ({ promoted: '🎉 AUFSTIEG!', stayed: r.type === 'abstieg' ? '💪 Klasse gehalten!' : 'Kein Aufstieg.', relegated: '💔 Abstieg.' })[r.result];
+            if (log) log.innerHTML += `<div style="font-weight:bold; color:var(--gold);">Gesamt ${r.aggregate}${r.penalties ? ' nach Elfmeterschießen' : ''}: ${text}</div>`;
+        }
+        if (typeof renderRelegationBox === 'function') renderRelegationBox();
+        updateUI();
+        return;
+    }
+
+    if (btn) btn.innerText = '▶ Weiter zum Ligaspiel';
+    if (m.homeGoals === m.awayGoals && tie.elfmeter) {
+        if (log) log.innerHTML += '<div style="font-weight:bold; color:var(--gold);">Unentschieden nach 90 Minuten - Elfmeterschießen! Wähle deine Schützen.</div>';
+        openShooterOrderSelection(null, names => {
+            const shootout = simulatePenaltyShootout(tie.home, tie.away, m.homeStr, m.awayStr, isHome ? names : null, isHome ? null : names);
+            ergebnis.penaltyWinner = shootout.winner;
+            showPenaltyShootoutTicker(shootout, tie.home, tie.away);
+        });
+    }
+}
+
+// Relegation live: Knopf in der Relegations-Box auf dem Dashboard.
+function startRelegationLive() {
+    const sit = typeof getRelegationSituation === 'function' ? getRelegationSituation() : null;
+    if (!sit) return;
+    const r = getRelegationState();
+    if (r && r.result) return;
+    const legIdx = r ? r.legs.length : 0;
+    const isHome = (sit.type === 'aufstieg') === (legIdx === 0);
+    const oppStr = typeof applySabotageToOpponentStrength === 'function' ? applySabotageToOpponentStrength(sit.oppStrength) : sit.oppStrength;
+    startCupLiveFlow({
+        comp: 'relegation', titel: `⚔️ Relegation · ${legIdx === 0 ? 'Hinspiel' : 'Rückspiel'}`,
+        home: isHome ? game.clubName : sit.oppName, away: isHome ? sit.oppName : game.clubName, oppStr, elfmeter: false
+    });
 }
 
 </script>

@@ -274,6 +274,9 @@
     function startMatchdayFlow() {
         if (game.matchday > 34) return;
         if (game.sackPending) { showToast('Du bist entlassen - bestätige die Meldung, um bei einem neuen Klub anzufangen.', 'error', 5000); return; }
+        // Pokal-Spieltag: die eigene Pokalpartie wird vor dem Ligaspiel live gespielt (js/cup-live.js).
+        let cupTie = typeof findOwnCupTieToday === 'function' ? findOwnCupTieToday() : null;
+        if (cupTie) { startCupLiveFlow(cupTie); return; }
         let fixtures = fixturesData[game.leagueLevel] ? fixturesData[game.leagueLevel][game.matchday - 1] : null;
         let ourFixture = fixtures ? fixtures.find(f => leaguesData[game.leagueLevel][f.home]?.name === game.clubName || leaguesData[game.leagueLevel][f.away]?.name === game.clubName) : null;
         if (!ourFixture) { processPostMatchRoutine(); return; }
@@ -304,9 +307,10 @@
     function skipPressAndPlay() {
         playSound('click');
         if (!pendingMatchInfo) { processPostMatchRoutine(); return; }
-        let { isHome, oppName, oppStr, ourFixture } = pendingMatchInfo;
+        let { isHome, oppName, oppStr, ourFixture, cupTie } = pendingMatchInfo;
         activeLiveShout = 'standard';
-        setupMatch(isHome ? game.clubName : oppName, isHome ? oppName : game.clubName, oppStr, isHome, false, ourFixture);
+        setupMatch(isHome ? game.clubName : oppName, isHome ? oppName : game.clubName, oppStr, isHome, !!cupTie, ourFixture);
+        if (cupTie) markCupLiveMatch(cupTie);
     }
 
     // "Nur Ergebnisse": schneller als manuelles "Nächste Szene"-Klicken, aber ausführlicher
@@ -316,9 +320,10 @@
     function resolveMatchInstantly() {
         playSound('click');
         if (!pendingMatchInfo) { processPostMatchRoutine(); return; }
-        let { isHome, oppName, oppStr, ourFixture } = pendingMatchInfo;
+        let { isHome, oppName, oppStr, ourFixture, cupTie } = pendingMatchInfo;
         activeLiveShout = 'standard';
-        setupMatch(isHome ? game.clubName : oppName, isHome ? oppName : game.clubName, oppStr, isHome, false, ourFixture);
+        setupMatch(isHome ? game.clubName : oppName, isHome ? oppName : game.clubName, oppStr, isHome, !!cupTie, ourFixture);
+        if (cupTie) markCupLiveMatch(cupTie);
         stopLiveTickerAutoplay(); // Schnellsimulation läuft synchron - kein paralleler Auto-Timer nötig
         simulateRestOfMatch();
     }
@@ -336,7 +341,7 @@
         // Gegner-Identität (NEU): Spielstil des Live-Gegners nachschlagen, damit er sich auch
         // im direkten Duell gegen uns bemerkbar macht (siehe simulateMatchStep()).
         let oppName = isHome ? awayName : homeName;
-        let oppTeamObj = (leaguesData[game.leagueLevel] || []).find(t => t.name === oppName) || null;
+        let oppTeamObj = leaguesData.flat().find(t => t && t.name === oppName) || null;
         currentMatch = {
             homeName, awayName,
             homeStr: isHome ? ourStrength : oppStrength,
@@ -392,6 +397,7 @@
 
         document.getElementById('btn-next-step').style.display = 'inline-block';
         document.getElementById('btn-finish-match').style.display = 'none';
+        document.getElementById('btn-finish-match').innerText = '✔ Spielbericht schließen';
         renderLiveSubs();
         renderLiveTacticsPanel();
         render3DPitch('live-pitch');
@@ -881,6 +887,7 @@
         stopLiveTickerAutoplay();
         document.getElementById('btn-next-step').style.display = 'none';
         document.getElementById('btn-finish-match').style.display = 'inline-block';
+        if (currentMatch.cupTie) { finishCupLiveMatch(); return; }
         if (currentMatch.ref) {
             currentMatch.ref.homeGoals = currentMatch.homeGoals;
             currentMatch.ref.awayGoals = currentMatch.awayGoals;
@@ -1682,6 +1689,8 @@
         if (europeTournament.matchdays.includes(game.matchday)) {
             simulateEuropeMatchday(game.matchday, isLiveContext);
         }
+        // Ein live gespieltes Pokalergebnis gilt nur für diesen Spieltag.
+        game.liveCupResult = null;
 
         checkNationalTeamCallups(isLiveContext);
 
@@ -2231,7 +2240,15 @@
         showToast(mode === 'bus' ? '🚌 Reisemodus: Bus (günstiger, mehr Ermüdung)' : '✈️ Reisemodus: Flugzeug (teurer, weniger Ermüdung)', 'success');
     }
 
-    function finishMatch() { showScreen('screen-dashboard'); }
+    function finishMatch() {
+        // Nach dem live gespielten Pokalspiel geht es direkt zum Ligaspiel desselben Spieltags.
+        if (typeof currentMatch !== 'undefined' && currentMatch && currentMatch.cupTie && !currentMatch.cupWeiter) {
+            currentMatch.cupWeiter = true;
+            startMatchdayFlow();
+            return;
+        }
+        showScreen('screen-dashboard');
+    }
 
     // Torschützen-Zuordnung für automatisch simulierte eigene Spiele (NEU): bisher wurden
     // beim "Saison durchsimulieren"/Admin-Vorspulen nur nackte Tordifferenzen berechnet,

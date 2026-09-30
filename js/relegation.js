@@ -59,9 +59,13 @@ function playRelegationLeg(silent = false) {
     const ownStr = calcTeamStrength(isHome);
     const oppStr = typeof applySabotageToOpponentStrength === 'function' ? applySabotageToOpponentStrength(sit.oppStrength) : sit.oppStrength;
     const ownTeam = (leaguesData[game.leagueLevel] || []).find(t => t.name === game.clubName) || null;
-    const g = isHome ? simulateGoals(ownStr, oppStr, ownTeam, sit.oppTeam) : simulateGoals(oppStr, ownStr, sit.oppTeam, ownTeam);
+    // Live gespielt (js/cup-live.js)? Dann zählt das Ergebnis aus der Live-Engine.
+    const live = typeof takeLiveCupResult === 'function'
+        ? takeLiveCupResult('relegation', isHome ? game.clubName : sit.oppName, isHome ? sit.oppName : game.clubName) : null;
+    const g = live ? { myGoals: live.homeGoals, oppGoals: live.awayGoals }
+        : (isHome ? simulateGoals(ownStr, oppStr, ownTeam, sit.oppTeam) : simulateGoals(oppStr, ownStr, sit.oppTeam, ownTeam));
     const ourGoals = isHome ? g.myGoals : g.oppGoals, oppGoals = isHome ? g.oppGoals : g.myGoals;
-    const leg = { isHome, ourGoals, oppGoals, ticker: buildRelegationTicker(ourGoals, oppGoals, sit.oppName), income: 0 };
+    const leg = { isHome, ourGoals, oppGoals, live: !!live, ticker: live ? [] : buildRelegationTicker(ourGoals, oppGoals, sit.oppName), income: 0 };
 
     if (isHome) {
         // Ausverkauftes Endspiel-Gefühl: wie ein Pokalspiel (1,4-fache Nachfrage).
@@ -134,6 +138,6 @@ function renderRelegationBox() {
         ⚔️ <strong>RELEGATION</strong> - Platz ${sit.rank}: ${ziel}<br>Gegner: <strong>${sit.oppName}</strong> (Stärke ${sit.oppStrength})
         ${gespielt}
         ${r && r.result ? `<div style="margin-top:4px; font-weight:800;">Gesamt ${r.aggregate}${r.penalties ? ' n.E.' : ''}: ${({ promoted: '🎉 Aufstieg geschafft!', stayed: sit.type === 'abstieg' ? '💪 Klasse gehalten!' : 'Kein Aufstieg.', relegated: '💔 Abstieg.' })[r.result]}</div>`
-            : `<button onclick="playRelegationLeg()" class="btn-action" style="margin-top:6px;">▶ ${r && r.legs.length === 1 ? 'Rückspiel' : 'Hinspiel'} spielen</button>`}
+            : `<div style="display:flex; gap:6px; margin-top:6px;"><button onclick="startRelegationLive()" class="btn-action">🎮 ${r && r.legs.length === 1 ? 'Rückspiel' : 'Hinspiel'} live</button><button onclick="playRelegationLeg()" class="btn-secondary">⚡ Nur Ergebnis</button></div>`}
     </div>`;
 }
