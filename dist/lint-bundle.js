@@ -489,7 +489,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '2.9', date: '30.09.2026', features: 'Phase 15: Pokal, Champions Cup und Relegation als Livespiel, Taktik-Bilanz, Langzeittest, Aufräumen Teil 4' };
+    const GAME_VERSION = { number: '3.0', date: '30.09.2026', features: 'Phase 15: Pokal-Livespiele, Supercup, Hallenturnier, Saisoneröffnung, Abschiedsspiele, Taktik-Bilanz' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -19662,6 +19662,7 @@ function checkForLegendStatus(player) {
 }
 
 function schedulePlayerRetirement(playerId) {
+    initializePlayerRetirement();
     const player = squad.find(p => p.id === playerId);
     if (!player) return false;
 
@@ -23681,8 +23682,9 @@ function holdFarewellMatch(name) {
     const boost = f.tier === 'ICON' ? 2.2 : (f.tier ? 1.8 : 1.4);
     const zuschauer = typeof calculateMatchAttendance === 'function' ? calculateMatchAttendance(boost, 1) : 0;
     const preis = (stadium.stehShare ?? 0.5) * game.ticketPrices.steh + (stadium.sitzShare ?? 0.45) * game.ticketPrices.sitz;
-    const kosten = Math.round(10000 * seasonEventScale() / 500) * 500;
     const einnahmen = Math.round(zuschauer * preis);
+    // Organisation: höchstens 30 % der Einnahmen, damit es sich auch im kleinen Stadion lohnt.
+    const kosten = Math.round(Math.min(10000 * seasonEventScale(), einnahmen * 0.3) / 500) * 500;
     bucheSaisonereignis('👋 Abschiedsspiel', einnahmen - kosten);
     game.fans = Math.min(100, game.fans + (f.tier === 'ICON' ? 5 : 3));
     squad.forEach(p => { p.morale = Math.min(100, (p.morale || 50) + 3); });
