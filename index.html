@@ -712,6 +712,7 @@
                         </div>
                     </div>
                     <div id="dash-referee-box"></div>
+                    <div id="dash-prediction-box"></div>
                     <div id="dash-match-actions" style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
                         <button onclick="startMatchdayFlow()" class="btn-action" style="font-size:12px;">▶ Spieltag starten (Livespiel)</button>
                         <button onclick="simulateMatchdays(5)" class="btn-secondary">⏩ 5 Spieltage simulieren</button>
@@ -1908,14 +1909,6 @@
                     </div>
                     <div id="transfer-tab-sell" style="display:none;"><div id="sell-list"></div></div>
                 </div>
-                <div class="panel">
-                    <div class="panel-header">📊 GEGNER-ANALYSE</div>
-                    <div id="opponent-analysis-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">🎲 WETTQUOTEN & PROGNOSE</div>
-                    <div id="match-prediction-box"></div>
-                </div>
             </div>
             <div id="screen-scouting-global" style="display:none;">
                 <div class="panel">
@@ -2446,9 +2439,6 @@
             <!-- 28. PRE-MATCH & LIVESPIEL -->
             <div id="screen-prematch-press" style="display:none;">
                 <div id="prematch-analysis-box" style="margin-bottom:10px;"></div>
-                <div class="panel" id="opposition-analysis-box">
-                    <div class="panel-header">🎯 GEGNERANALYSE</div>
-                </div>
                 <div class="panel">
                     <div class="panel-header">🎙️ PRE-MATCH PRESSEKONFERENZ</div>
                     <div id="press-question-container" class="box"></div>
@@ -2607,7 +2597,6 @@
 <script src="js/board-members.js?v=2.1"></script>
 <script src="js/transfer-market-analysis.js?v=2.1"></script>
 <script src="js/contract-management.js?v=2.1"></script>
-<script src="js/opposition-analysis.js?v=2.1"></script>
 <script src="js/training-schedule.js?v=2.1"></script>
 <script src="js/reserves-loan-management.js?v=2.1"></script>
 <script src="js/crisis-management.js?v=2.1"></script>
@@ -2622,8 +2611,6 @@
 <script src="js/contract-renewal.js?v=2.1"></script>
 <script src="js/player-retirement.js?v=2.1"></script>
 <script src="js/tournament-brackets.js?v=2.1"></script>
-<script src="js/opponent-analysis.js?v=2.1"></script>
-<script src="js/match-prediction.js?v=2.1"></script>
 <script src="js/history.js?v=2.1"></script>
 <script src="js/achievements.js?v=2.1"></script>
 <script src="js/hall-of-fame.js?v=2.1"></script>
@@ -2631,6 +2618,7 @@
 <script src="js/manager-analytics.js?v=2.1"></script>
 <script src="js/weather.js?v=2.1"></script>
 <script src="js/referees.js?v=2.1"></script>
+<script src="js/match-scout.js?v=2.1"></script>
 <script src="js/match.js?v=2.1"></script>
 <script src="js/contract-ultimatum.js?v=2.1"></script>
 <script src="js/season-end.js?v=2.1"></script>

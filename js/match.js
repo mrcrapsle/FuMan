@@ -234,7 +234,7 @@
             return;
         }
         let form = (oppObj && oppObj.recentForm) ? oppObj.recentForm.slice(-5) : [];
-        let formStr = form.length > 0 ? form.map(r => r === 'S' ? '🟢' : (r === 'U' ? '🟡' : '🔴')).join(' ') : 'Keine Daten';
+        let formStr = form.length > 0 ? form.map(r => r === 'W' ? '🟢' : (r === 'D' ? '🟡' : '🔴')).join(' ') : 'Keine Daten';
         let dangerPos = ['ST', 'MIT', 'ABW'][Math.floor(Math.random() * 3)];
         let dangerName = getRandomName();
         let baseStr = oppObj ? oppObj.strength : 60;
@@ -273,6 +273,7 @@
                     Gefährlichster Spieler: <strong>${dangerName}</strong> (${dangerPos}, Stärke ${dangerRating})
                 </span>
                 ${videoAnalysisHtml}
+                ${typeof getPredictionHtml === 'function' ? getPredictionHtml(oppName) : ''}
                 ${spyNote}
             </div>`;
     }
@@ -304,7 +305,6 @@
             btn.onclick = () => { skipPressAndPlay(); };
             aBox.appendChild(btn);
         });
-        if (typeof renderOppositionAnalysisPanel === 'function') renderOppositionAnalysisPanel();
         showScreen('screen-prematch-press');
     }
 
@@ -1767,7 +1767,7 @@
             // Contract Management: Vertragsverlängerungen und -ablauf
             if (typeof tickContractExpirations === 'function') tickContractExpirations();
             // Opposition Analysis: Gegner-Analyse-Updates
-            if (typeof tickOppositionAnalysisUpdate === 'function') tickOppositionAnalysisUpdate();
+            if (typeof cleanupLegacyScoutState === 'function') cleanupLegacyScoutState();
             // Training Schedule: Trainingseffekte und Müdigkeitsabbau
             if (typeof applyTrainingEffects === 'function') applyTrainingEffects(game.matchday);
             if (typeof tickTrainingFatigue === 'function') tickTrainingFatigue();
@@ -1792,8 +1792,6 @@
             if (typeof tickPlayerRetirement === 'function') tickPlayerRetirement();
             if (typeof tickTournamentBrackets === 'function') tickTournamentBrackets();
             // Opponent Analysis & Match Prediction: Gegner-Analyse und Match-Prognosen
-            if (typeof tickOpponentAnalysis === 'function') tickOpponentAnalysis();
-            if (typeof tickMatchPrediction === 'function') tickMatchPrediction();
             // Phase 10: Set-Piece Training, Post-Match Analysis, Training Specialization, Fan Events
             if (typeof tickSetPieceTraining === 'function') tickSetPieceTraining();
             if (typeof tickPostMatchAnalysis === 'function') tickPostMatchAnalysis();

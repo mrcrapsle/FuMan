@@ -8508,8 +8508,6 @@ function getTransferBudgetInfo() {
             sList.appendChild(row);
         });
 
-        if (typeof renderOpponentAnalysisPanel === 'function') renderOpponentAnalysisPanel();
-        if (typeof renderMatchPredictionPanel === 'function') renderMatchPredictionPanel();
 
         updateUI();
     }
@@ -11333,6 +11331,7 @@ function renderTalentDetectionPanel() {
         document.getElementById('dash-opp-str').innerText = oppStr;
         document.getElementById('dash-our-str').innerText = calcTeamStrength(true);
         if (typeof renderRefereePreview === 'function') renderRefereePreview();
+        if (typeof renderMatchScoutLine === 'function') renderMatchScoutLine();
         if (typeof renderMemberAssemblyPanel === 'function') renderMemberAssemblyPanel();
 
         document.getElementById('dash-europe-status').innerText = game.inEurope ? "🏆 Champions Cup Gruppenphase" : "Nicht qualifiziert";
@@ -22907,353 +22906,6 @@ function renderContractManagementPanel() {
 }
 
 /* eslint-enable */
-// Opposition Analysis System
-// Analyzes upcoming opponents, identifies weaknesses, and provides tactical recommendations
-
-let oppositionAnalysisState = {
-    analyzedOpponents: [],
-    upcomingMatches: [],
-    matchHistory: []
-};
-
-const OPPONENT_FORMATIONS = [
-    { name: '4-4-2', defense: 85, midfield: 80, attack: 75 },
-    { name: '4-3-3', defense: 80, midfield: 85, attack: 80 },
-    { name: '3-5-2', defense: 70, midfield: 90, attack: 85 },
-    { name: '5-3-2', defense: 95, midfield: 75, attack: 70 },
-    { name: '4-2-3-1', defense: 88, midfield: 82, attack: 78 },
-    { name: '2-3-5', defense: 60, midfield: 85, attack: 95 }
-];
-
-const WEAKNESSES = [
-    'Schwache Defensive',
-    'Langsame Außenbahn',
-    'Fehlerhafte Luftspiele',
-    'Schwaches Pressing',
-    'Instabile Torwartleistung',
-    'Fehlende Spielkontrolle',
-    'Hohe Verletzungsrate'
-];
-
-function initializeOppositionAnalysis() {
-    if (!game.oppositionAnalysis) game.oppositionAnalysis = [];
-    if (!game.upcomingOpponents) game.upcomingOpponents = [];
-
-    // Initialize with random opponents for schedule
-    generateOpponentSchedule();
-}
-
-function generateOpponentSchedule() {
-    const opponents = [
-        { name: 'FC Dortmund', strength: 82 },
-        { name: 'Bayern München', strength: 95 },
-        { name: 'RB Leipzig', strength: 88 },
-        { name: 'Bayer Leverkusen', strength: 85 },
-        { name: 'Schalke 04', strength: 72 },
-        { name: 'Borussia Mönchengladbach', strength: 80 },
-        { name: 'VfL Wolfsburg', strength: 78 },
-        { name: 'TSG Hoffenheim', strength: 75 },
-        { name: 'FC Köln', strength: 68 },
-        { name: 'Union Berlin', strength: 71 },
-        { name: 'SC Freiburg', strength: 73 },
-        { name: 'Eintracht Frankfurt', strength: 79 },
-        { name: 'VfB Stuttgart', strength: 77 },
-        { name: 'Hamburger SV', strength: 70 },
-        { name: 'Werder Bremen', strength: 74 },
-        { name: 'Mainz 05', strength: 69 }
-    ];
-
-    game.upcomingOpponents = [];
-    for (let i = 0; i < 10; i++) {
-        const opponent = opponents[Math.floor(Math.random() * opponents.length)];
-        game.upcomingOpponents.push({
-            name: opponent.name,
-            matchday: (game.matchday || 1) + (i * 3) + 1,
-            strength: opponent.strength,
-            analyzed: false
-        });
-    }
-}
-
-function analyzeOpponent(opponentName) {
-    let analysis = game.oppositionAnalysis.find(o => o.name === opponentName);
-
-    if (!analysis) {
-        analysis = createOpponentAnalysis(opponentName);
-        game.oppositionAnalysis.push(analysis);
-    }
-
-    return analysis;
-}
-
-function createOpponentAnalysis(opponentName) {
-    const strength = 50 + Math.random() * 50; // 50-100
-    const formation = OPPONENT_FORMATIONS[Math.floor(Math.random() * OPPONENT_FORMATIONS.length)];
-
-    // Generate key players
-    const keyPlayers = [];
-    for (let i = 0; i < 3; i++) {
-        keyPlayers.push({
-            name: generatePlayerName(),
-            position: ['ST', 'CM', 'LB', 'CB', 'GK'][Math.floor(Math.random() * 5)],
-            strength: 70 + Math.random() * 30,
-            gamesInSeason: 15 + Math.floor(Math.random() * 15),
-            goalsInSeason: Math.floor(Math.random() * 20)
-        });
-    }
-
-    // Select weaknesses
-    const selectedWeaknesses = [];
-    for (let i = 0; i < 2 + Math.floor(Math.random() * 2); i++) {
-        const weakness = WEAKNESSES[Math.floor(Math.random() * WEAKNESSES.length)];
-        if (!selectedWeaknesses.includes(weakness)) {
-            selectedWeaknesses.push(weakness);
-        }
-    }
-
-    // Generate recommended formations
-    const recommendedFormations = [];
-    if (selectedWeaknesses.includes('Schwache Defensive')) {
-        recommendedFormations.push('3-5-2');
-    }
-    if (selectedWeaknesses.includes('Langsame Außenbahn')) {
-        recommendedFormations.push('4-3-3');
-    }
-    if (selectedWeaknesses.includes('Fehlerhafte Luftspiele')) {
-        recommendedFormations.push('4-4-2');
-    }
-    if (recommendedFormations.length === 0) {
-        recommendedFormations.push('4-3-3');
-    }
-
-    const analysis = {
-        id: `opponent_${opponentName}_${Date.now()}`,
-        name: opponentName,
-        overallStrength: Math.floor(strength),
-        lastAnalyzedMatchday: game.matchday || 1,
-        formation: formation,
-        keyPlayers: keyPlayers,
-        weaknesses: selectedWeaknesses,
-        strengths: [
-            'Hohe Ballbesitzquote',
-            'Schnelle Umschaltspiele',
-            'Erfahrene Spieler'
-        ],
-        recommendedFormations: recommendedFormations,
-        recentForm: generateRecentForm(),
-        headToHeadRecord: {
-            wins: Math.floor(Math.random() * 5),
-            draws: Math.floor(Math.random() * 3),
-            losses: Math.floor(Math.random() * 5)
-        }
-    };
-
-    return analysis;
-}
-
-function generateRecentForm() {
-    const results = ['W', 'D', 'L'];
-    const form = [];
-    for (let i = 0; i < 5; i++) {
-        form.push(results[Math.floor(Math.random() * results.length)]);
-    }
-    return form;
-}
-
-function generatePlayerName() {
-    const firstNames = ['Max', 'Thomas', 'Jürgen', 'Julian', 'Robert', 'Marco', 'Christian'];
-    const lastNames = ['Mueller', 'Schmidt', 'Wagner', 'Becker', 'Hoffmann', 'Keller', 'Richter'];
-
-    return firstNames[Math.floor(Math.random() * firstNames.length)] + ' ' +
-           lastNames[Math.floor(Math.random() * lastNames.length)];
-}
-
-function getRecommendedTactics(opponentAnalysis) {
-    const tactics = [];
-
-    if (opponentAnalysis.overallStrength > 85) {
-        tactics.push({
-            recommendation: 'Defensives Pressing',
-            reason: 'Gegner ist stark - Ballverluste erzwingen'
-        });
-    }
-
-    if (opponentAnalysis.weaknesses.includes('Schwache Defensive')) {
-        tactics.push({
-            recommendation: 'Offensive Formation',
-            reason: 'Defensive Schwächen ausnutzen'
-        });
-    }
-
-    if (opponentAnalysis.weaknesses.includes('Langsame Außenbahn')) {
-        tactics.push({
-            recommendation: 'Flügelspiel',
-            reason: 'Außenbahn ist verwundbar'
-        });
-    }
-
-    if (opponentAnalysis.weaknesses.includes('Schwaches Pressing')) {
-        tactics.push({
-            recommendation: 'Possession-Spiel',
-            reason: 'Ballkontrolle dominieren'
-        });
-    }
-
-    if (tactics.length === 0) {
-        tactics.push({
-            recommendation: 'Ausgewogene Taktik',
-            reason: 'Keine offensichtlichen Schwächen'
-        });
-    }
-
-    return tactics;
-}
-
-function tickOppositionAnalysisUpdate() {
-    // Update analysis if not done this month
-    const currentMatchday = game.matchday || 1;
-    if (!game.upcomingOpponents) initializeOppositionAnalysis();
-
-    game.upcomingOpponents.forEach(opponent => {
-        // Analyze if match is within next 6 matchdays
-        if (!opponent.analyzed && opponent.matchday > currentMatchday && opponent.matchday <= currentMatchday + 6) {
-            analyzeOpponent(opponent.name);
-            opponent.analyzed = true;
-        }
-
-        // Reset analysis for future matches
-        if (opponent.matchday <= currentMatchday) {
-            opponent.analyzed = false;
-        }
-    });
-}
-
-function getNextOpponentAnalysis() {
-    const currentMatchday = game.matchday || 1;
-    const nextMatch = game.upcomingOpponents.find(o => o.matchday > currentMatchday);
-
-    if (!nextMatch) return null;
-
-    return analyzeOpponent(nextMatch.name);
-}
-
-function recordMatchOutcome(opponentName, result, goalsFor, goalsAgainst) {
-    const record = {
-        opponent: opponentName,
-        matchday: game.matchday || 1,
-        result: result, // 'win', 'draw', 'loss'
-        goalsFor: goalsFor,
-        goalsAgainst: goalsAgainst
-    };
-
-    game.oppositionAnalysis.forEach(opp => {
-        if (opp.name === opponentName) {
-            opp.lastAnalyzedMatchday = game.matchday || 1;
-            if (result === 'win') {
-                opp.headToHeadRecord.wins++;
-            } else if (result === 'draw') {
-                opp.headToHeadRecord.draws++;
-            } else {
-                opp.headToHeadRecord.losses++;
-            }
-        }
-    });
-}
-
-function renderOppositionAnalysisPanel() {
-    const container = document.getElementById('opposition-analysis-box');
-    if (!container) return;
-
-    initializeOppositionAnalysis();
-    tickOppositionAnalysisUpdate();
-
-    let html = '<div class="panel-content">';
-    html += '<h3>Gegneranalyse</h3>';
-
-    const nextAnalysis = getNextOpponentAnalysis();
-
-    if (nextAnalysis) {
-        html += '<div class="opponent-card">';
-        html += `<h4>${nextAnalysis.name}</h4>`;
-
-        // Overall Strength
-        html += '<div class="analysis-row">';
-        html += `<span><strong>Gesamtstärke:</strong> ${nextAnalysis.overallStrength}/100</span>`;
-        const strengthBar = Math.floor(nextAnalysis.overallStrength / 10);
-        html += `<div class="strength-bar" style="width: ${strengthBar * 10}%"></div>`;
-        html += '</div>';
-
-        // Formation
-        html += `<p><strong>Formation:</strong> ${nextAnalysis.formation.name}</p>`;
-
-        // Recent Form
-        html += '<p><strong>Aktuelle Form:</strong> ';
-        nextAnalysis.recentForm.forEach(result => {
-            const color = result === 'W' ? 'green' : result === 'D' ? 'yellow' : 'red';
-            html += `<span class="form-${color}">${result}</span>`;
-        });
-        html += '</p>';
-
-        // Key Players
-        html += '<p><strong>Schlüsselspieler:</strong></p>';
-        html += '<ul>';
-        nextAnalysis.keyPlayers.forEach(player => {
-            html += `<li>${player.name} (${player.position}) - Str: ${Math.floor(player.strength)} (${player.goalsInSeason} Tore)</li>`;
-        });
-        html += '</ul>';
-
-        // Weaknesses
-        html += '<p><strong>Schwächen:</strong></p>';
-        html += '<ul>';
-        nextAnalysis.weaknesses.forEach(weakness => {
-            html += `<li>🎯 ${weakness}</li>`;
-        });
-        html += '</ul>';
-
-        // Tactical Recommendations
-        const tactics = getRecommendedTactics(nextAnalysis);
-        html += '<p><strong>Empfohlene Taktiken:</strong></p>';
-        html += '<ul>';
-        tactics.forEach(tactic => {
-            html += `<li><strong>${tactic.recommendation}:</strong> ${tactic.reason}</li>`;
-        });
-        html += '</ul>';
-
-        // Head to Head
-        const h2h = nextAnalysis.headToHeadRecord;
-        const h2hTotal = h2h.wins + h2h.draws + h2h.losses;
-        html += `<p><strong>Kopf-an-Kopf:</strong> ${h2h.wins}S, ${h2h.draws}U, ${h2h.losses}N (${h2hTotal} Spiele)</p>`;
-
-        html += '</div>';
-    } else {
-        html += '<p>Keine kommenden Gegner analysiert.</p>';
-    }
-
-    // Upcoming Matches
-    html += '<div class="upcoming-matches">';
-    html += '<h4>Kommende Gegner</h4>';
-    html += '<table class="matches-table">';
-    html += '<tr><th>Matchday</th><th>Gegner</th><th>Stärke</th><th>Status</th></tr>';
-
-    game.upcomingOpponents.slice(0, 5).forEach(opponent => {
-        const analyzed = game.oppositionAnalysis.find(o => o.name === opponent.name);
-        const status = analyzed ? '✓ Analysiert' : '○ Nicht analysiert';
-        html += `<tr>
-                    <td>MD ${opponent.matchday}</td>
-                    <td>${opponent.name}</td>
-                    <td>${opponent.strength}/100</td>
-                    <td>${status}</td>
-                </tr>`;
-    });
-
-    html += '</table>';
-    html += '</div>';
-
-    html += '</div>';
-    container.innerHTML = html;
-}
-
-/* eslint-enable */
 // Training Schedule System
 // Allows manager to customize weekly training plan with focus areas and recovery days
 
@@ -27025,592 +26677,6 @@ function renderTournamentBracketsPanel() {
 }
 
 /* eslint-enable */
-// Gegner-Analyse & Match-Vorbereitung
-// Scout-Berichte, Gegner-Statistiken, Formkurven, Wettquoten
-
-let opponentAnalysisState = {
-    lastOpponentData: null,
-    scoutReports: [], // Array von { opponent, matchday, formation, avgStrength, recentResults, topScorers }
-    formHistories: {}, // { clubName: [{ matchday, result, opponent, gf, ga }] }
-    oddsHistory: [] // Array von { matchday, opponent, ourWinOdds, drawOdds, lossOdds, prediction }
-};
-
-function initializeOpponentAnalysis() {
-    if (!game.opponentAnalysis) game.opponentAnalysis = {};
-    if (!game.opponentAnalysis.scoutReports) game.opponentAnalysis.scoutReports = [];
-    if (!game.opponentAnalysis.formHistories) game.opponentAnalysis.formHistories = {};
-    if (!game.opponentAnalysis.oddsHistory) game.opponentAnalysis.oddsHistory = [];
-}
-
-function getNextOpponent() {
-    if (!leaguesData || !leaguesData[game.leagueLevel]) return null;
-
-    let currentLeague = leaguesData[game.leagueLevel];
-    let fixtures = currentLeague.fixtures || [];
-
-    let nextMatch = fixtures.find(f =>
-        (f.homeTeam === game.clubId || f.awayTeam === game.clubId) &&
-        f.matchday >= game.matchday
-    );
-
-    if (!nextMatch) return null;
-
-    let isHome = nextMatch.homeTeam === game.clubId;
-    let opponentId = isHome ? nextMatch.awayTeam : nextMatch.homeTeam;
-    let opponent = currentLeague.find(t => t.id === opponentId);
-
-    return {
-        id: opponentId,
-        name: opponent ? opponent.name : 'Unbekannt',
-        isHome: isHome,
-        matchday: nextMatch.matchday,
-        opponent: opponent
-    };
-}
-
-function calculateOpponentFormation(opponentTeam) {
-    if (!opponentTeam) return null;
-
-    let formation = '4-3-3'; // Standard
-    let avgStrength = opponentTeam.avgStrength || 70;
-
-    // Formation basierend auf Liga-Level und Stärke
-    if (avgStrength > 85) {
-        formation = '4-2-3-1'; // Defensiv für starke Teams
-    } else if (avgStrength < 60) {
-        formation = '3-5-2'; // Offensiv für schwache Teams
-    }
-
-    return {
-        formation: formation,
-        avgStrength: avgStrength,
-        wins: opponentTeam.wins || 0,
-        draws: opponentTeam.draws || 0,
-        losses: opponentTeam.losses || 0,
-        goalsFor: opponentTeam.gf || 0,
-        goalsAgainst: opponentTeam.ga || 0
-    };
-}
-
-function getOpponentRecentResults(opponentName, limit = 5) {
-    let results = [];
-
-    if (game.matchResults && Array.isArray(game.matchResults)) {
-        let opponentMatches = game.matchResults.filter(m =>
-            (m.opponent === opponentName || m.homeTeam === opponentName || m.awayTeam === opponentName) &&
-            m.matchday <= game.matchday
-        ).slice(-limit);
-
-        results = opponentMatches.map(m => ({
-            matchday: m.matchday,
-            season: m.season,
-            result: m.result || (m.homeScore > m.awayScore ? 'W' : m.homeScore < m.awayScore ? 'L' : 'D'),
-            score: `${m.homeScore || 0}-${m.awayScore || 0}`,
-            opponent: m.opponent || 'Unbekannt'
-        }));
-    }
-
-    return results.length > 0 ? results : null;
-}
-
-function getOpponentTopScorers(opponent, limit = 3) {
-    if (!opponent || !opponent.players) return [];
-
-    let scorers = opponent.players
-        .filter(p => p.goals > 0)
-        .sort((a, b) => b.goals - a.goals)
-        .slice(0, limit)
-        .map(p => ({
-            name: p.name,
-            goals: p.goals,
-            assists: p.assists || 0,
-            strength: p.strength || 70
-        }));
-
-    return scorers;
-}
-
-function recordScoutReport(opponentTeam) {
-    initializeOpponentAnalysis();
-
-    let nextMatch = getNextOpponent();
-    if (!nextMatch) return;
-
-    let formation = calculateOpponentFormation(opponentTeam);
-    let recentResults = getOpponentRecentResults(nextMatch.name);
-    let topScorers = getOpponentTopScorers(opponentTeam);
-
-    let report = {
-        opponent: nextMatch.name,
-        opponentId: nextMatch.id,
-        matchday: game.matchday,
-        season: game.season,
-        isHome: nextMatch.isHome,
-        formation: formation,
-        recentResults: recentResults,
-        topScorers: topScorers,
-        timestamp: new Date().getTime()
-    };
-
-    game.opponentAnalysis.scoutReports.push(report);
-    if (game.opponentAnalysis.scoutReports.length > 20) {
-        game.opponentAnalysis.scoutReports.shift();
-    }
-
-    opponentAnalysisState.lastOpponentData = report;
-    return report;
-}
-
-function calculateMatchOdds(ourTeam, opponentTeam) {
-    if (!ourTeam || !opponentTeam) {
-        return { winOdds: 1.8, drawOdds: 3.5, lossOdds: 4.2 };
-    }
-
-    let ourStrength = ourTeam.avgStrength || 70;
-    let oppStrength = opponentTeam.avgStrength || 70;
-    let strengthDiff = ourStrength - oppStrength;
-
-    // Basis-Wahrscheinlichkeit basierend auf Stärke-Differenz
-    let winChance = 50 + (strengthDiff * 0.8); // -80 bis +80
-    let lossChance = 50 - (strengthDiff * 0.8);
-    let drawChance = 25;
-
-    // Home-Vorteil anwenden (+5%)
-    let nextMatch = getNextOpponent();
-    if (nextMatch && nextMatch.isHome) {
-        winChance += 5;
-        lossChance -= 5;
-    }
-
-    // Normalisieren (summe = 100)
-    let total = winChance + drawChance + lossChance;
-    winChance = Math.max(5, Math.min(75, (winChance / total) * 100));
-    lossChance = Math.max(5, Math.min(75, (lossChance / total) * 100));
-    drawChance = 100 - winChance - lossChance;
-
-    // Wettquoten berechnen (inverse Wahrscheinlichkeit)
-    let winOdds = Math.round((100 / Math.max(5, winChance)) * 100) / 100;
-    let drawOdds = Math.round((100 / Math.max(5, drawChance)) * 100) / 100;
-    let lossOdds = Math.round((100 / Math.max(5, lossChance)) * 100) / 100;
-
-    return {
-        winChance: Math.round(winChance),
-        drawChance: Math.round(drawChance),
-        lossChance: Math.round(lossChance),
-        winOdds: Math.max(1.01, winOdds),
-        drawOdds: Math.max(1.01, drawOdds),
-        lossOdds: Math.max(1.01, lossOdds)
-    };
-}
-
-function predictMatchOutcome(odds) {
-    let rand = Math.random() * 100;
-    if (rand < odds.winChance) return 'WIN';
-    if (rand < odds.winChance + odds.drawChance) return 'DRAW';
-    return 'LOSS';
-}
-
-function recordMatchPrediction(opponentTeam) {
-    initializeOpponentAnalysis();
-
-    let nextMatch = getNextOpponent();
-    if (!nextMatch) return;
-
-    let odds = calculateMatchOdds(squad, opponentTeam);
-    let prediction = predictMatchOutcome(odds);
-
-    let entry = {
-        matchday: game.matchday,
-        opponent: nextMatch.name,
-        opponentId: nextMatch.id,
-        odds: odds,
-        prediction: prediction,
-        timestamp: new Date().getTime()
-    };
-
-    game.opponentAnalysis.oddsHistory.push(entry);
-    if (game.opponentAnalysis.oddsHistory.length > 50) {
-        game.opponentAnalysis.oddsHistory.shift();
-    }
-}
-
-function getTacticalRecommendations(opponentFormation) {
-    if (!opponentFormation) return [];
-
-    let recommendations = [];
-    let oppFormation = opponentFormation.formation || '4-3-3';
-
-    // Formation-basierte Empfehlungen
-    if (oppFormation === '4-3-3') {
-        recommendations.push({
-            title: '5-3-2 Counter',
-            benefit: '+8% Gewinnchance',
-            explanation: 'Blockiert die Flügel, Extra-Abwehrspieler gegen breite Spielweise'
-        });
-    } else if (oppFormation === '4-2-3-1') {
-        recommendations.push({
-            title: '3-5-2 Überfall',
-            benefit: '+6% Gewinnchance',
-            explanation: 'Überzahl im Mittelfeld, Druck auf Gegenspieler'
-        });
-    } else if (oppFormation === '3-5-2') {
-        recommendations.push({
-            title: '4-3-3 Klassiker',
-            benefit: '+7% Gewinnchance',
-            explanation: 'Stabile Vier, Seitenspieler überlasten die Flügel'
-        });
-    }
-
-    // Stärke-basierte Empfehlungen
-    if (opponentFormation.avgStrength > 85) {
-        recommendations.push({
-            title: '🛡️ Defensiv spielen',
-            benefit: '+4% Unentschieden',
-            explanation: 'Kompaktes Mittelfeld, schnelle Konter'
-        });
-    } else if (opponentFormation.avgStrength < 65) {
-        recommendations.push({
-            title: '⚽ Offensiv drücken',
-            benefit: '+5% Gewinnchance',
-            explanation: 'Hohes Pressing, frühe Ballgewinne'
-        });
-    }
-
-    return recommendations;
-}
-
-function renderOpponentAnalysisPanel() {
-    const container = document.getElementById('opponent-analysis-box');
-    if (!container) return;
-
-    initializeOpponentAnalysis();
-
-    let nextMatch = getNextOpponent();
-    if (!nextMatch) {
-        container.innerHTML = '<div class="panel-content"><p style="color:var(--text-muted); font-size:9px;">Keine anstehenden Spiele.</p></div>';
-        return;
-    }
-
-    let html = '<div class="panel-content">';
-    html += '<h3>📊 GEGNER-ANALYSE</h3>';
-
-    // Gegner-Übersicht
-    html += '<div style="background:#1a1a1a; padding:8px; border-radius:4px; margin-bottom:10px;">';
-    html += `<p style="font-size:10px; margin:0;"><strong>${nextMatch.name}</strong> (Spieltag ${nextMatch.matchday})</p>`;
-    html += `<p style="font-size:9px; margin:4px 0 0 0; color:var(--text-muted);">${nextMatch.isHome ? '🏠 Heimspiel' : '✈️ Auswärtsspiel'}</p>`;
-    html += '</div>';
-
-    // Letzte Scout-Report anzeigen
-    let report = opponentAnalysisState.lastOpponentData;
-    if (report) {
-        html += '<div style="margin-bottom:10px;">';
-        html += '<h4>📋 FORMATION & STÄRKE</h4>';
-        html += `<div style="background:#1a2a1a; padding:6px; border-radius:3px; margin-bottom:4px;">`;
-        html += `<p style="font-size:9px; margin:0;"><strong>${report.formation.formation}</strong> | Ø Stärke: ${report.formation.avgStrength}</p>`;
-        html += `<p style="font-size:8px; color:var(--text-muted); margin:2px 0 0 0;">S/U/N: ${report.formation.wins}/${report.formation.draws}/${report.formation.losses} | Tore: ${report.formation.goalsFor}:${report.formation.goalsAgainst}</p>`;
-        html += `</div>`;
-        html += '</div>';
-
-        // Top-Torschützen
-        if (report.topScorers && report.topScorers.length > 0) {
-            html += '<div style="margin-bottom:10px;">';
-            html += '<h4>⚽ TOP-TORSCHÜTZEN</h4>';
-            report.topScorers.forEach(scorer => {
-                html += `<div style="font-size:8px; padding:3px; background:#2a1a1a; border-radius:2px; margin-bottom:2px;">`;
-                html += `${scorer.name}: <strong style="color:var(--primary);">${scorer.goals} Tore</strong> (ST ${scorer.strength})`;
-                html += `</div>`;
-            });
-            html += '</div>';
-        }
-
-        // Letzte Ergebnisse
-        if (report.recentResults && report.recentResults.length > 0) {
-            html += '<div style="margin-bottom:10px;">';
-            html += '<h4>📈 LETZTE 5 SPIELE</h4>';
-            report.recentResults.forEach(result => {
-                let resultColor = result.result === 'W' ? 'var(--success)' : result.result === 'L' ? 'var(--danger)' : 'var(--text-muted)';
-                html += `<div style="font-size:8px; padding:2px; margin-bottom:1px;">`;
-                html += `<span style="color:${resultColor}; font-weight:bold;">${result.result}</span> ${result.score} vs ${result.opponent} (ST ${result.matchday})`;
-                html += `</div>`;
-            });
-            html += '</div>';
-        }
-    }
-
-    // Wett-Quoten anzeigen (von match-prediction.js)
-    if (typeof renderMatchPredictionPanel === 'function') {
-        // Die Prognose wird separat in einem eigenen Panel angezeigt
-    }
-
-    html += '</div>';
-    container.innerHTML = html;
-}
-
-function tickOpponentAnalysis() {
-    initializeOpponentAnalysis();
-
-    let nextMatch = getNextOpponent();
-    if (!nextMatch || !nextMatch.opponent) return;
-
-    // Scout-Report aktualisieren (nur einmal pro anstehenden Match)
-    let existingReport = game.opponentAnalysis.scoutReports.find(r =>
-        r.opponent === nextMatch.name && r.matchday === nextMatch.matchday
-    );
-
-    if (!existingReport) {
-        recordScoutReport(nextMatch.opponent);
-        recordMatchPrediction(nextMatch.opponent);
-    }
-}
-
-/* eslint-enable */
-// Match-Prognose & Wettquoten
-// Quoten, Gewinn-Wahrscheinlichkeiten, AI-Vorhersagen
-
-let matchPredictionState = {
-    currentMatchOdds: null,
-    previousPredictions: [], // Historische Vorhersagen vs. Ergebnisse
-    predictionAccuracy: 0, // Prozentuale Trefferquote
-    seasonPredictions: [] // Array von { matchday, prediction, actualResult, correct }
-};
-
-function initializeMatchPrediction() {
-    if (!game.matchPrediction) game.matchPrediction = {};
-    if (!game.matchPrediction.predictions) game.matchPrediction.predictions = [];
-    if (!game.matchPrediction.accuracy) game.matchPrediction.accuracy = 0;
-}
-
-function generateCurrentMatchOdds() {
-    let nextMatch = getNextOpponent();
-    if (!nextMatch || !nextMatch.opponent) return null;
-
-    let odds = calculateMatchOdds(squad, nextMatch.opponent);
-    let prediction = predictMatchOutcome(odds);
-
-    return {
-        opponent: nextMatch.name,
-        matchday: nextMatch.matchday,
-        isHome: nextMatch.isHome,
-        odds: odds,
-        prediction: prediction,
-        timestamp: new Date().getTime()
-    };
-}
-
-function evaluatePastPredictions() {
-    initializeMatchPrediction();
-
-    if (!game.matchResults || game.matchResults.length === 0) return;
-
-    let predictions = game.matchPrediction.predictions || [];
-    let correct = 0;
-    let total = 0;
-
-    predictions.forEach(pred => {
-        let actualMatch = game.matchResults.find(m => m.matchday === pred.matchday);
-        if (actualMatch) {
-            total++;
-            let actualResult = actualMatch.result || (actualMatch.homeScore > actualMatch.awayScore ? 'WIN' :
-                              actualMatch.homeScore < actualMatch.awayScore ? 'LOSS' : 'DRAW');
-
-            if (pred.prediction === actualResult) {
-                correct++;
-                pred.correct = true;
-            } else {
-                pred.correct = false;
-            }
-        }
-    });
-
-    game.matchPrediction.accuracy = total > 0 ? Math.round((correct / total) * 100) : 0;
-}
-
-function recordCurrentPrediction() {
-    initializeMatchPrediction();
-
-    let odds = generateCurrentMatchOdds();
-    if (!odds) return;
-
-    game.matchPrediction.predictions.push({
-        matchday: odds.matchday,
-        opponent: odds.opponent,
-        prediction: odds.prediction,
-        odds: odds.odds,
-        recorded: new Date().getTime()
-    });
-
-    if (game.matchPrediction.predictions.length > 100) {
-        game.matchPrediction.predictions.shift();
-    }
-}
-
-function getPredictionStatistics() {
-    initializeMatchPrediction();
-
-    evaluatePastPredictions();
-
-    let predictions = game.matchPrediction.predictions || [];
-    let winPredictions = predictions.filter(p => p.prediction === 'WIN').length;
-    let drawPredictions = predictions.filter(p => p.prediction === 'DRAW').length;
-    let lossPredictions = predictions.filter(p => p.prediction === 'LOSS').length;
-
-    return {
-        totalPredictions: predictions.length,
-        accuracy: game.matchPrediction.accuracy || 0,
-        winPredictions: winPredictions,
-        drawPredictions: drawPredictions,
-        lossPredictions: lossPredictions,
-        recentPredictions: predictions.slice(-10)
-    };
-}
-
-function getOddsComparison(currentOdds) {
-    if (!currentOdds) return null;
-
-    // Vergleich mit durchschnittlichen Quoten der letzten 5 Spiele
-    let recentOdds = game.opponentAnalysis.oddsHistory.slice(-5) || [];
-
-    if (recentOdds.length === 0) {
-        return {
-            avgWinOdds: currentOdds.odds.winOdds,
-            avgDrawOdds: currentOdds.odds.drawOdds,
-            avgLossOdds: currentOdds.odds.lossOdds,
-            trend: 'NEUTRAL'
-        };
-    }
-
-    let avgWinOdds = recentOdds.reduce((sum, o) => sum + (o.odds.winOdds || 0), 0) / recentOdds.length;
-    let avgDrawOdds = recentOdds.reduce((sum, o) => sum + (o.odds.drawOdds || 0), 0) / recentOdds.length;
-    let avgLossOdds = recentOdds.reduce((sum, o) => sum + (o.odds.lossOdds || 0), 0) / recentOdds.length;
-
-    let trend = 'NEUTRAL';
-    if (currentOdds.odds.winOdds < avgWinOdds) {
-        trend = 'IMPROVING'; // Bessere Gewinnchancen als sonst
-    } else if (currentOdds.odds.winOdds > avgWinOdds) {
-        trend = 'DECLINING'; // Schlechtere Gewinnchancen
-    }
-
-    return {
-        avgWinOdds: Math.round(avgWinOdds * 100) / 100,
-        avgDrawOdds: Math.round(avgDrawOdds * 100) / 100,
-        avgLossOdds: Math.round(avgLossOdds * 100) / 100,
-        trend: trend
-    };
-}
-
-function renderMatchPredictionPanel() {
-    const container = document.getElementById('match-prediction-box');
-    if (!container) return;
-
-    initializeMatchPrediction();
-
-    let currentOdds = generateCurrentMatchOdds();
-    if (!currentOdds) {
-        container.innerHTML = '<div class="panel-content"><p style="color:var(--text-muted); font-size:9px;">Keine anstehenden Spiele.</p></div>';
-        return;
-    }
-
-    let comparison = getOddsComparison(currentOdds);
-    let stats = getPredictionStatistics();
-
-    let html = '<div class="panel-content">';
-    html += '<h3>🎲 WETTQUOTEN & PROGNOSE</h3>';
-
-    // Wett-Quoten Display
-    html += '<div style="background:#1a1a1a; padding:8px; border-radius:4px; margin-bottom:10px;">';
-    html += `<p style="font-size:10px; margin:0 0 6px 0;"><strong>Spieltag ${currentOdds.matchday}</strong></p>`;
-
-    // Wahrscheinlichkeiten
-    html += '<div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px; margin-bottom:6px;">';
-    html += `<div style="background:#1a2a1a; padding:4px; border-radius:2px; text-align:center;">`;
-    html += `<p style="font-size:8px; margin:0; color:var(--success);">SIEG</p>`;
-    html += `<p style="font-size:11px; margin:2px 0 0 0; font-weight:bold; color:var(--primary);">${currentOdds.odds.winChance}%</p>`;
-    html += `<p style="font-size:8px; margin:2px 0 0 0; color:var(--text-muted);">Quote: ${currentOdds.odds.winOdds.toFixed(2)}</p>`;
-    html += `</div>`;
-
-    html += `<div style="background:#1a1a2a; padding:4px; border-radius:2px; text-align:center;">`;
-    html += `<p style="font-size:8px; margin:0; color:var(--accent);">UNENTSCH.</p>`;
-    html += `<p style="font-size:11px; margin:2px 0 0 0; font-weight:bold; color:var(--primary);">${currentOdds.odds.drawChance}%</p>`;
-    html += `<p style="font-size:8px; margin:2px 0 0 0; color:var(--text-muted);">Quote: ${currentOdds.odds.drawOdds.toFixed(2)}</p>`;
-    html += `</div>`;
-
-    html += `<div style="background:#2a1a1a; padding:4px; border-radius:2px; text-align:center;">`;
-    html += `<p style="font-size:8px; margin:0; color:var(--danger);">NIEDERLAGE</p>`;
-    html += `<p style="font-size:11px; margin:2px 0 0 0; font-weight:bold; color:var(--primary);">${currentOdds.odds.lossChance}%</p>`;
-    html += `<p style="font-size:8px; margin:2px 0 0 0; color:var(--text-muted);">Quote: ${currentOdds.odds.lossOdds.toFixed(2)}</p>`;
-    html += `</div>`;
-    html += '</div>';
-
-    // Prognose
-    let predictionIcon = currentOdds.prediction === 'WIN' ? '🟢' : currentOdds.prediction === 'DRAW' ? '🟡' : '🔴';
-    let predictionText = currentOdds.prediction === 'WIN' ? 'SIEG' : currentOdds.prediction === 'DRAW' ? 'UNENTSCHIEDEN' : 'NIEDERLAGE';
-    html += `<p style="font-size:9px; margin:0; text-align:center;"><strong>${predictionIcon} KI-VORHERSAGE: ${predictionText}</strong></p>`;
-
-    html += '</div>';
-
-    // Trend vs. Durchschnitt
-    if (comparison) {
-        html += '<div style="margin-bottom:10px;">';
-        html += '<h4>📊 TREND (vs. letzte 5 Spiele)</h4>';
-
-        let trendColor = comparison.trend === 'IMPROVING' ? 'var(--success)' :
-                        comparison.trend === 'DECLINING' ? 'var(--danger)' : 'var(--text-muted)';
-        let trendText = comparison.trend === 'IMPROVING' ? '📈 Bessere Chancen als üblich' :
-                       comparison.trend === 'DECLINING' ? '📉 Schlechtere Chancen als üblich' : '➡️ Durchschnittlich';
-
-        html += `<p style="font-size:9px; margin:0; color:${trendColor};"><strong>${trendText}</strong></p>`;
-        html += `<p style="font-size:8px; margin:4px 0 0 0; color:var(--text-muted);">`;
-        html += `Ø Quote Sieg: ${comparison.avgWinOdds.toFixed(2)} | Unent.: ${comparison.avgDrawOdds.toFixed(2)} | Nieder.: ${comparison.avgLossOdds.toFixed(2)}`;
-        html += `</p>`;
-        html += '</div>';
-    }
-
-    // Genauigkeitsstatistiken
-    html += '<div style="margin-bottom:10px;">';
-    html += '<h4>🎯 VORHERSAGE-GENAUIGKEIT</h4>';
-    html += `<div style="background:#1a2a1a; padding:6px; border-radius:3px; margin-bottom:4px;">`;
-    html += `<p style="font-size:9px; margin:0;"><strong>Trefferquote: ${stats.accuracy}%</strong></p>`;
-    html += `<p style="font-size:8px; margin:2px 0 0 0; color:var(--text-muted);">Insgesamt ${stats.totalPredictions} Prognosen</p>`;
-    html += `</div>`;
-
-    if (stats.recentPredictions.length > 0) {
-        html += '<div style="font-size:8px;">';
-        html += '<strong>Letzte Prognosen:</strong><br>';
-        stats.recentPredictions.slice(-3).reverse().forEach(pred => {
-            let predIcon = pred.prediction === 'WIN' ? '🟢' : pred.prediction === 'DRAW' ? '🟡' : '🔴';
-            let correctIcon = pred.correct ? '✅' : pred.correct === false ? '❌' : '⏳';
-            html += `${correctIcon} ST${pred.matchday}: ${predIcon} ${pred.prediction} vs ${pred.opponent}<br>`;
-        });
-        html += '</div>';
-    }
-
-    html += '</div>';
-
-    html += '</div>';
-    container.innerHTML = html;
-}
-
-function tickMatchPrediction() {
-    initializeMatchPrediction();
-
-    // Nur wenn Match ansteht
-    let nextMatch = getNextOpponent();
-    if (!nextMatch) return;
-
-    // Prognose aufzeichnen (einmal pro Matchday)
-    let existingPrediction = game.matchPrediction.predictions.find(p =>
-        p.matchday === nextMatch.matchday
-    );
-
-    if (!existingPrediction) {
-        recordCurrentPrediction();
-    }
-
-    // Vergangene Vorhersagen vs. tatsächliche Ergebnisse vergleichen
-    evaluatePastPredictions();
-}
-
-/* eslint-enable */
 
     // Wandelt einen rohen Trophäen-Eintrag in Icon + Kategorie um, für eine chronologische
     // "Ehrengalerie" statt einer schlichten Liste (bringt auch den Legenden-Status sichtbar
@@ -28730,6 +27796,82 @@ function renderRefereePreview() {
 }
 
 /* eslint-enable */
+// Spielprognose des Chef-Analysten für das nächste Ligaspiel: simuliert die Partie mehrfach
+// mit derselben Tor-Formel wie die Spieltagssimulation (simulateGoals) - aus den echten
+// Paarungen (fixturesData), Stärken und Spielstilen. Erscheint in der Spielanalyse vor dem
+// Anpfiff (renderPreMatchAnalysis) und als Zeile im Dashboard. Löst drei Module ab, die
+// einen erfundenen Spielplan nutzten bzw. nie einen Gegner fanden.
+
+const SCOUT_SIMULATIONS = 400;
+
+function getNextLeagueMatch() {
+    if (game.matchday > 34) return null;
+    const teams = leaguesData[game.leagueLevel] || [];
+    const round = (fixturesData[game.leagueLevel] || [])[game.matchday - 1] || [];
+    const f = round.find(x => teams[x.home]?.name === game.clubName || teams[x.away]?.name === game.clubName);
+    if (!f) return null;
+    const isHome = teams[f.home].name === game.clubName;
+    return { isHome, opp: teams[isHome ? f.away : f.home], ownTeam: teams[isHome ? f.home : f.away] };
+}
+
+// Wahrscheinlichkeiten aus wiederholter Simulation mit der Spieltags-Formel.
+function predictNextMatch() {
+    const m = getNextLeagueMatch();
+    if (!m) return null;
+    const ownStr = calcTeamStrength(m.isHome);
+    const oppStr = typeof applySabotageToOpponentStrength === 'function' ? applySabotageToOpponentStrength(m.opp.strength) : m.opp.strength;
+    const hStr = m.isHome ? ownStr : oppStr, aStr = m.isHome ? oppStr : ownStr;
+    const hTeam = m.isHome ? m.ownTeam : m.opp, aTeam = m.isHome ? m.opp : m.ownTeam;
+    let sieg = 0, remis = 0, tore = 0, gegentore = 0;
+    for (let i = 0; i < SCOUT_SIMULATIONS; i++) {
+        const g = simulateGoals(hStr, aStr, hTeam, aTeam);
+        const own = m.isHome ? g.myGoals : g.oppGoals, opp = m.isHome ? g.oppGoals : g.myGoals;
+        if (own > opp) sieg++; else if (own === opp) remis++;
+        tore += own; gegentore += opp;
+    }
+    return {
+        ...m, ownStr, oppStr,
+        sieg: sieg / SCOUT_SIMULATIONS, remis: remis / SCOUT_SIMULATIONS, niederlage: 1 - (sieg + remis) / SCOUT_SIMULATIONS,
+        xTore: tore / SCOUT_SIMULATIONS, xGegentore: gegentore / SCOUT_SIMULATIONS
+    };
+}
+
+function hasMatchAnalyst() {
+    return !!(staffMembers.analyst && staffMembers.analyst.hired) || !!(underworld && underworld.spyIntelActive);
+}
+
+// oppName: Gegner der angezeigten Spielanalyse - bei Pokalspielen passt die Liga-Prognose nicht.
+function getPredictionHtml(oppName) {
+    const p = predictNextMatch();
+    if (!p || (oppName && p.opp.name !== oppName)) return '';
+    const pct = x => Math.round(x * 100) + '%';
+    return `<div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.15); font-size:10px;">
+        🔮 <strong style="color:var(--teal);">Prognose des Analysten</strong> (${SCOUT_SIMULATIONS} simulierte Spiele)
+        <div style="display:flex; height:14px; border-radius:3px; overflow:hidden; font-size:8px; font-weight:bold; color:#fff; text-align:center; line-height:14px; margin:4px 0;">
+            <div style="width:${pct(p.sieg)}; background:var(--primary);">${p.sieg >= 0.12 ? pct(p.sieg) : ''}</div>
+            <div style="width:${pct(p.remis)}; background:#8a8f98;">${p.remis >= 0.12 ? pct(p.remis) : ''}</div>
+            <div style="width:${pct(p.niederlage)}; background:var(--danger);">${p.niederlage >= 0.12 ? pct(p.niederlage) : ''}</div>
+        </div>
+        Sieg ${pct(p.sieg)} · Remis ${pct(p.remis)} · Niederlage ${pct(p.niederlage)} · erwartet ${p.xTore.toFixed(1)}:${p.xGegentore.toFixed(1)}
+        ${p.opp && game.headToHeadRecords && game.headToHeadRecords[p.opp.name] ? `<br>Bisherige Bilanz: ${game.headToHeadRecords[p.opp.name].wins}S ${game.headToHeadRecords[p.opp.name].draws}U ${game.headToHeadRecords[p.opp.name].losses}N` : ''}
+    </div>`;
+}
+
+// Kompakte Zeile fürs Dashboard (unter "Nächste Begegnung").
+function renderMatchScoutLine() {
+    const box = document.getElementById('dash-prediction-box');
+    if (!box) return;
+    const p = hasMatchAnalyst() ? predictNextMatch() : null;
+    if (!p) { box.innerHTML = hasMatchAnalyst() ? '' : '<div style="font-size:9px; color:var(--text-muted); margin-bottom:4px;">🔮 Spielprognosen liefert ein Chef-Analyst (Personal).</div>'; return; }
+    box.innerHTML = `<div style="font-size:9px; color:var(--text-muted); margin-bottom:4px;">🔮 Prognose: <span style="color:var(--primary);">Sieg ${Math.round(p.sieg * 100)}%</span> · Remis ${Math.round(p.remis * 100)}% · <span style="color:var(--danger);">Niederlage ${Math.round(p.niederlage * 100)}%</span></div>`;
+}
+
+// Alte Spielstände: Daten der abgelösten Analyse-Module entfernen.
+function cleanupLegacyScoutState() {
+    ['upcomingOpponents', 'oppositionAnalysis', 'opponentAnalysis', 'matchPredictions', 'matchPrediction'].forEach(k => { delete game[k]; });
+}
+
+/* eslint-enable */
 
     // currentMatch/substitutionsLeft: waren bisher nirgends deklariert (nur per Zuweisung
     // ohne let/var/const entstandene implizite globale Variablen) - ESLint (siehe
@@ -28966,7 +28108,7 @@ function renderRefereePreview() {
             return;
         }
         let form = (oppObj && oppObj.recentForm) ? oppObj.recentForm.slice(-5) : [];
-        let formStr = form.length > 0 ? form.map(r => r === 'S' ? '🟢' : (r === 'U' ? '🟡' : '🔴')).join(' ') : 'Keine Daten';
+        let formStr = form.length > 0 ? form.map(r => r === 'W' ? '🟢' : (r === 'D' ? '🟡' : '🔴')).join(' ') : 'Keine Daten';
         let dangerPos = ['ST', 'MIT', 'ABW'][Math.floor(Math.random() * 3)];
         let dangerName = getRandomName();
         let baseStr = oppObj ? oppObj.strength : 60;
@@ -29005,6 +28147,7 @@ function renderRefereePreview() {
                     Gefährlichster Spieler: <strong>${dangerName}</strong> (${dangerPos}, Stärke ${dangerRating})
                 </span>
                 ${videoAnalysisHtml}
+                ${typeof getPredictionHtml === 'function' ? getPredictionHtml(oppName) : ''}
                 ${spyNote}
             </div>`;
     }
@@ -29036,7 +28179,6 @@ function renderRefereePreview() {
             btn.onclick = () => { skipPressAndPlay(); };
             aBox.appendChild(btn);
         });
-        if (typeof renderOppositionAnalysisPanel === 'function') renderOppositionAnalysisPanel();
         showScreen('screen-prematch-press');
     }
 
@@ -30499,7 +29641,7 @@ function renderRefereePreview() {
             // Contract Management: Vertragsverlängerungen und -ablauf
             if (typeof tickContractExpirations === 'function') tickContractExpirations();
             // Opposition Analysis: Gegner-Analyse-Updates
-            if (typeof tickOppositionAnalysisUpdate === 'function') tickOppositionAnalysisUpdate();
+            if (typeof cleanupLegacyScoutState === 'function') cleanupLegacyScoutState();
             // Training Schedule: Trainingseffekte und Müdigkeitsabbau
             if (typeof applyTrainingEffects === 'function') applyTrainingEffects(game.matchday);
             if (typeof tickTrainingFatigue === 'function') tickTrainingFatigue();
@@ -30524,8 +29666,6 @@ function renderRefereePreview() {
             if (typeof tickPlayerRetirement === 'function') tickPlayerRetirement();
             if (typeof tickTournamentBrackets === 'function') tickTournamentBrackets();
             // Opponent Analysis & Match Prediction: Gegner-Analyse und Match-Prognosen
-            if (typeof tickOpponentAnalysis === 'function') tickOpponentAnalysis();
-            if (typeof tickMatchPrediction === 'function') tickMatchPrediction();
             // Phase 10: Set-Piece Training, Post-Match Analysis, Training Specialization, Fan Events
             if (typeof tickSetPieceTraining === 'function') tickSetPieceTraining();
             if (typeof tickPostMatchAnalysis === 'function') tickPostMatchAnalysis();
