@@ -1761,8 +1761,7 @@
             if (typeof tickMediaDepartment === 'function') tickMediaDepartment();
             // Transfer Market Analysis: Markttrends und Watchlist-Updates
             if (typeof tickTransferMarketAnalysis === 'function') tickTransferMarketAnalysis();
-            // Contract Management: Vertragsverlängerungen und -ablauf
-            if (typeof tickContractExpirations === 'function') tickContractExpirations();
+            if (typeof cleanupLegacyContractState === 'function') cleanupLegacyContractState();
             // Opposition Analysis: Gegner-Analyse-Updates
             if (typeof cleanupLegacyScoutState === 'function') cleanupLegacyScoutState();
             // Training Schedule: Trainingseffekte und Müdigkeitsabbau
@@ -1783,8 +1782,6 @@
             if (typeof tickSquadHarmony === 'function') tickSquadHarmony();
             if (typeof tickTeamCouncil === 'function') tickTeamCouncil();
             if (typeof tickMemberAssembly === 'function') tickMemberAssembly();
-            // Contract Renewal & Media Relations: Verträge und Medienbeziehungen
-            if (typeof tickContractRenewal === 'function') tickContractRenewal();
             // Player Retirement & Tournament Brackets: Spieler-Pensionierung und Turnier-Klammern
             if (typeof tickPlayerRetirement === 'function') tickPlayerRetirement();
             if (typeof tickTournamentBrackets === 'function') tickTournamentBrackets();

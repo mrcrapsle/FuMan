@@ -217,7 +217,6 @@
             lastAnalysisMatchday: 0,
             talentWatchlist: []
         },
-        negotiationHistory: [],
         clubSwitchHistory: [],
         agentPool: [],
         localRivals: [],

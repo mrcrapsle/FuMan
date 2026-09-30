@@ -75,15 +75,19 @@
     function checkAgentNegotiations() {
         squad.filter(p => p.agent && p.strength >= 60).forEach(p => {
             let agent = game.agentPool.find(x => x.id === p.agent.id);
-            if (!agent || Math.random() > 0.05) return; // 5% Chance pro Matchday
+            // Las bisher das nie gesetzte p.salary (NaN) und blieb damit wirkungslos.
+            if (!agent || Math.random() > 0.015) return; // 1,5% pro Spieltag - ca. einmal alle zwei Saisons
 
-            let baseBonus = Math.round(p.salary * 0.15);
-            let agentDemand = Math.round(baseBonus * agent.negotiationToughness);
+            let baseBonus = Math.max(100, Math.round((p.wage || 0) * 0.1));
+            let agentDemand = Math.round(baseBonus * 4 * agent.negotiationToughness);
             let successChance = agent.negotiationSuccessRate * (p.morale / 100);
 
             if (Math.random() < successChance && game.money >= agentDemand) {
+                const aeussererKontext = buchungsKontext;
+                setzeBuchungskontext('🕴️ Beraterforderung');
                 game.money -= agentDemand;
-                p.salary += baseBonus;
+                setzeBuchungskontext(aeussererKontext);
+                p.wage += baseBonus;
                 let commissionPaid = Math.round(agentDemand * p.agent.commission);
                 agent.totalCommissionEarned += commissionPaid;
                 showToast(
@@ -94,7 +98,7 @@
                     `Agent ${agent.name} hat für ${p.name} eine Lohnerhöhung um ${formatVal(baseBonus)} durchgesetzt.`, 'screen-squad');
             } else if (game.money < agentDemand) {
                 addInboxMessage('agent', `⚠️ Agent fordert Lohnerhöhung`,
-                    `Agent ${agent.name} möchte für ${p.name} ${formatVal(agentDemand)} mehr Gehalt, aber das Geld reicht nicht.`, 'screen-squad');
+                    `Agent ${agent.name} fordert für ${p.name} ${formatVal(agentDemand)} Handgeld und eine Gehaltserhöhung, aber das Geld reicht nicht.`, 'screen-squad');
             }
         });
     }

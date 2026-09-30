@@ -66,8 +66,13 @@
             list.appendChild(row);
         });
 
-        if (typeof renderNegotiationPanel === 'function') renderNegotiationPanel();
-        if (typeof renderContractManagementPanel === 'function') renderContractManagementPanel();
+    }
+
+    // Alte Spielstände: Daten von drei abgelösten Vertragsmodulen, die eigene Scheinverträge
+    // (Laufzeit in Spieltagen, erfundene Gehälter) neben p.contracts führten.
+    function cleanupLegacyContractState() {
+        ['contracts', 'contractNegotiations', 'contractRenewal', 'negotiationHistory'].forEach(k => { delete game[k]; });
+        squad.forEach(p => { delete p.contractEnd; delete p.loyaltyYears; });
     }
 
     // Verhandlungs-Zähigkeit auch bei bestehenden Verträgen (NEU): analog zur Logik bei

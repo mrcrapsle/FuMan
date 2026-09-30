@@ -145,5 +145,4 @@
         renderSquadPlanningWarningsBox();
         if (typeof renderReservesLoanPanel === 'function') renderReservesLoanPanel();
         if (typeof renderPlayerDevelopmentPanel === 'function') renderPlayerDevelopmentPanel();
-        if (typeof renderContractRenewalPanel === 'function') renderContractRenewalPanel();
     }
