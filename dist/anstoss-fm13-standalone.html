@@ -2590,15 +2590,7 @@
                     </div>
                 </div>
 
-                <div class="panel">
-                    <div class="panel-header">👥 FAN-ENGAGEMENT & ZUFRIEDENHEIT</div>
-                    <div id="fan-engagement-box"></div>
-                </div>
 
-                <div class="panel">
-                    <div class="panel-header">💰 FAN-IMPACT AUF FINANZIERUNG</div>
-                    <div id="fin-fan-impact-box"></div>
-                </div>
 
 
 
@@ -2843,10 +2835,6 @@
                     <div id="scandals-panel"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header" style="color:var(--accent);">👥 FANCLUB-MANAGEMENT</div>
-                    <div id="fanclub-management-panel"></div>
-                </div>
-                <div class="panel">
                     <div class="panel-header" style="color:var(--purple);">⚙️ TAKTIK-SYSTEM</div>
                     <div id="tactic-system-panel"></div>
                 </div>
@@ -2855,24 +2843,8 @@
                     <div id="international-tournaments-panel"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header" style="color:#9C27B0;">⚽ SET-PIECE-TRAINING</div>
-                    <div id="set-piece-training-box"></div>
-                </div>
-                <div class="panel">
                     <div class="panel-header" style="color:#00BCD4;">📊 POST-MATCH-ANALYSE</div>
                     <div id="post-match-analysis-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:#FFC107;">📚 TRAININGS-SPEZIALISIERUNG</div>
-                    <div id="training-specialization-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:#FF5722;">🎉 FAN-EVENTS</div>
-                    <div id="fan-events-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:#2196F3;">🏟️ STADION-MANAGEMENT</div>
-                    <div id="stadium-management-panel"></div>
                 </div>
                 <div class="panel">
                     <div class="panel-header" style="color:#FF5722;">📊 TRANSFER-MARKT-ANALYSE</div>
@@ -2967,9 +2939,6 @@
                     <div class="panel-header">📅 TRAININGSKALENDER</div>
                     <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Liga, DFB-Pokal, Landespokal und Europapokal für die nächsten Spieltage im Überblick.</div>
                     <div id="training-calendar-box"></div>
-                </div>
-                <div class="panel" id="training-schedule-box">
-                    <div class="panel-header">⚙️ MODERNE TRAININGSPLANUNG</div>
                 </div>
                 </div>
 
@@ -3225,10 +3194,6 @@
                 <div class="panel">
                     <div class="panel-header">🖼️ VEREINSMUSEUM: WAPPEN-HISTORIE</div>
                     <div id="crest-museum-gallery"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--blue);">🔧 STADION-MANAGEMENT</div>
-                    <div id="stadium-management-panel"></div>
                 </div>
                 <div class="panel">
                     <div class="panel-header" style="color:var(--accent);">📅 STADION-EVENTS</div>
@@ -4713,9 +4678,6 @@
         localRivals: [],
         academyLeague: null,
         scandals: [],
-        fanclubs: [],
-        fanSatisfaction: 50,
-        ultraGroups: [],
         tacticsHistory: [],
         playerRoles: {},
         formationHistory: [],
@@ -5876,147 +5838,6 @@
 
 </script>
 <script>
-// Set-Piece-Training
-// Eck-Training, Elfmeter, Freistoß, Einwürfe
-
-let setPieceTrainingState = {
-    trainingPrograms: {
-        corners: { level: 1, successRate: 0.45, trainingDays: 0, cost: 5000 },
-        penalties: { level: 1, successRate: 0.65, trainingDays: 0, cost: 5000 },
-        freeKicks: { level: 1, successRate: 0.35, trainingDays: 0, cost: 5000 },
-        throwIns: { level: 1, successRate: 0.50, trainingDays: 0, cost: 5000 }
-    },
-    trainingHistory: [],
-    matchBonus: { corners: 0, penalties: 0, freeKicks: 0, throwIns: 0 }
-};
-
-function initializeSetPieceTraining() {
-    if (!game.setPieceTraining) game.setPieceTraining = {};
-    if (!game.setPieceTraining.programs) game.setPieceTraining.programs = {
-        corners: { level: 1, successRate: 0.45 },
-        penalties: { level: 1, successRate: 0.65 },
-        freeKicks: { level: 1, successRate: 0.35 },
-        throwIns: { level: 1, successRate: 0.50 }
-    };
-    if (!game.setPieceTraining.history) game.setPieceTraining.history = [];
-}
-
-function startSetPieceTraining(type) {
-    if (game.money < 5000) {
-        showToast('💰 Nicht genug Geld für Set-Piece-Training!', 'error', 3000);
-        return false;
-    }
-
-    game.money -= 5000;
-
-    if (!game.setPieceTraining.programs[type]) return false;
-
-    let program = game.setPieceTraining.programs[type];
-    program.trainingDays = program.trainingDays || 0;
-    program.trainingDays += 5; // 5 Tage Training
-
-    showToast(`⚽ ${type.toUpperCase()}-Training gestartet! (+5 Tage)`, 'success', 3000);
-    return true;
-}
-
-function completeSetPieceTraining(type) {
-    initializeSetPieceTraining();
-
-    let program = game.setPieceTraining.programs[type];
-    if (!program || program.trainingDays <= 0) return false;
-
-    program.level = Math.min(5, program.level + 1);
-
-    // Success Rate basierend auf Level
-    let baseRates = {
-        corners: 0.35,
-        penalties: 0.60,
-        freeKicks: 0.25,
-        throwIns: 0.45
-    };
-
-    program.successRate = Math.min(0.95, baseRates[type] + (program.level * 0.10));
-    program.trainingDays = 0;
-
-    game.setPieceTraining.history.push({
-        type: type,
-        newLevel: program.level,
-        matchday: game.matchday,
-        timestamp: new Date().getTime()
-    });
-
-    showToast(`⭐ ${type}: Level ${program.level}! Erfolgsrate: ${Math.round(program.successRate * 100)}%`, 'success', 4000);
-    return true;
-}
-
-function getSetPieceBonus(type) {
-    initializeSetPieceTraining();
-    let program = game.setPieceTraining.programs[type];
-    if (!program) return 0;
-
-    // Bonus basierend auf Level: +5% pro Level
-    return program.level * 0.05;
-}
-
-function tickSetPieceTraining() {
-    initializeSetPieceTraining();
-
-    // Jeden Trainingstag reduzieren
-    Object.keys(game.setPieceTraining.programs).forEach(type => {
-        let program = game.setPieceTraining.programs[type];
-        if (program.trainingDays && program.trainingDays > 0) {
-            program.trainingDays--;
-
-            // Training abgeschlossen
-            if (program.trainingDays === 0) {
-                completeSetPieceTraining(type);
-            }
-        }
-    });
-}
-
-function renderSetPieceTrainingPanel() {
-    const container = document.getElementById('set-piece-training-box');
-    if (!container) return;
-
-    initializeSetPieceTraining();
-
-    let html = '<div class="panel-content">';
-    html += '<h3>⚽ SET-PIECE-TRAINING</h3>';
-
-    let types = ['corners', 'penalties', 'freeKicks', 'throwIns'];
-    let labels = ['Ecken', 'Elfmeter', 'Freistöße', 'Einwürfe'];
-
-    types.forEach((type, idx) => {
-        let program = game.setPieceTraining.programs[type];
-        let label = labels[idx];
-        let progress = Math.round((program.trainingDays / 5) * 100);
-
-        html += `<div style="background:#1a1a1a; padding:6px; border-radius:3px; margin-bottom:6px;">`;
-        html += `<div style="display:flex; justify-content:space-between; align-items:center;">`;
-        html += `<span style="font-size:9px;"><strong>${label}</strong> | Level ${program.level}/5</span>`;
-        html += `<span style="font-size:8px; color:var(--text-muted);">${Math.round(program.successRate * 100)}%</span>`;
-        html += `</div>`;
-
-        html += '<div style="background:#000; border-radius:2px; height:6px; margin:3px 0;">';
-        html += `<div style="background:var(--primary); height:100%; width:${progress}%;"></div>`;
-        html += '</div>';
-
-        if (program.trainingDays === 0) {
-            html += `<button onclick="startSetPieceTraining('${type}')" class="btn-secondary" style="width:auto; font-size:7px; padding:2px 6px;">Training starten (+5000€)</button>`;
-        } else {
-            html += `<p style="font-size:8px; margin:2px 0 0 0; color:var(--text-muted);">Tag ${5 - program.trainingDays}/5</p>`;
-        }
-
-        html += `</div>`;
-    });
-
-    html += '</div>';
-    container.innerHTML = html;
-}
-
-</script>
-<script>
 // Post-Match-Analyse
 // Spieler-Bewertungen, taktische Fehler, Verbesserungsvorschläge
 
@@ -6210,362 +6031,6 @@ function renderPostMatchAnalysisPanel() {
         });
         html += '</div>';
     }
-
-    html += '</div>';
-    container.innerHTML = html;
-}
-
-</script>
-<script>
-// Trainings-Spezialisierung
-// Position-spezifische Trainings, Skill-Entwicklung
-
-let trainingSpecializationState = {
-    trainingPlans: {},
-    skillDevelopment: [],
-    specialistBonus: {}
-};
-
-const POSITION_SKILLS = {
-    TOR: ['Reflexe', 'Flugparade', 'Herrschbereich'],
-    AB: ['Kopfballspiel', 'Stellungsspiel', 'Zweikampf'],
-    MF: ['Übersicht', 'Ballsicherung', 'Ausdauer'],
-    ST: ['Torinstinkt', 'Ballkontrolle', 'Bewegungsläufe']
-};
-
-function initializeTrainingSpecialization() {
-    if (!game.trainingSpecialization) game.trainingSpecialization = {};
-    if (!game.trainingSpecialization.plans) game.trainingSpecialization.plans = {};
-    if (!game.trainingSpecialization.skills) game.trainingSpecialization.skills = [];
-}
-
-function getPositionShorthand(pos) {
-    if (!pos) return 'MF';
-    if (pos === 'Torwart') return 'TOR';
-    if (pos.startsWith('AB') || pos.startsWith('AB')) return 'AB';
-    if (pos.startsWith('ST')) return 'ST';
-    return 'MF';
-}
-
-function startPositionTraining(playerId, positionType) {
-    let player = squad.find(p => p.id === playerId);
-    if (!player || game.money < 3000) {
-        showToast('💰 Nicht genug Geld!', 'error', 2000);
-        return false;
-    }
-
-    game.money -= 3000;
-
-    let posShort = getPositionShorthand(player.pos);
-    let skills = POSITION_SKILLS[posShort] || ['Allgemein'];
-    let randomSkill = skills[Math.floor(Math.random() * skills.length)];
-
-    if (!game.trainingSpecialization.plans[playerId]) {
-        game.trainingSpecialization.plans[playerId] = [];
-    }
-
-    game.trainingSpecialization.plans[playerId].push({
-        skill: randomSkill,
-        progress: 0,
-        daysRemaining: 7,
-        startMatchday: game.matchday
-    });
-
-    showToast(`📚 ${player.name} trainiert: ${randomSkill} (+7 Tage)`, 'success', 3000);
-    return true;
-}
-
-function completeSkillTraining(playerId, skillIndex) {
-    initializeTrainingSpecialization();
-
-    let plans = game.trainingSpecialization.plans[playerId];
-    if (!plans || !plans[skillIndex]) return false;
-
-    let skill = plans[skillIndex];
-    let player = squad.find(p => p.id === playerId);
-    if (!player) return false;
-
-    // Attribut erhöhen basierend auf Skill
-    if (skill.skill === 'Reflexe' || skill.skill === 'Flugparade') {
-        player.defense = Math.min(99, (player.defense || 60) + 3);
-    } else if (skill.skill === 'Kopfballspiel' || skill.skill === 'Stellungsspiel') {
-        player.defense = Math.min(99, (player.defense || 60) + 2);
-    } else if (skill.skill === 'Torinstinkt') {
-        player.shooting = Math.min(99, (player.shooting || 60) + 3);
-    } else if (skill.skill === 'Übersicht' || skill.skill === 'Ballsicherung') {
-        player.passing = Math.min(99, (player.passing || 60) + 3);
-    }
-
-    game.trainingSpecialization.skills.push({
-        playerId: playerId,
-        playerName: player.name,
-        skill: skill.skill,
-        completedMatchday: game.matchday,
-        timestamp: new Date().getTime()
-    });
-
-    plans.splice(skillIndex, 1);
-
-    showToast(`⭐ ${player.name} hat ${skill.skill} gelernt!`, 'success', 4000);
-    return true;
-}
-
-function tickTrainingSpecialization() {
-    initializeTrainingSpecialization();
-
-    // Skill-Training Fortschritt
-    Object.keys(game.trainingSpecialization.plans).forEach(playerId => {
-        let plans = game.trainingSpecialization.plans[playerId];
-        plans.forEach((plan, idx) => {
-            plan.daysRemaining--;
-            if (plan.daysRemaining <= 0) {
-                completeSkillTraining(playerId, idx);
-            }
-        });
-    });
-}
-
-function renderTrainingSpecializationPanel() {
-    const container = document.getElementById('training-specialization-box');
-    if (!container) return;
-
-    initializeTrainingSpecialization();
-
-    let html = '<div class="panel-content">';
-    html += '<h3>📚 TRAININGS-SPEZIALISIERUNG</h3>';
-
-    let activeTrainings = 0;
-    squad.slice(0, 5).forEach(player => {
-        let plans = game.trainingSpecialization.plans[player.id];
-        if (plans && plans.length > 0) {
-            activeTrainings += plans.length;
-            plans.forEach(plan => {
-                html += `<div style="background:#1a1a1a; padding:6px; border-radius:3px; margin-bottom:4px;">`;
-                html += `<p style="font-size:9px; margin:0;"><strong>${player.name}:</strong> ${plan.skill}</p>`;
-                html += `<p style="font-size:8px; margin:2px 0 0 0; color:var(--text-muted);">Tag ${7 - plan.daysRemaining}/7</p>`;
-                html += `</div>`;
-            });
-        }
-    });
-
-    if (activeTrainings === 0) {
-        html += '<p style="font-size:9px; color:var(--text-muted); margin:0;">Keine aktiven Trainings.</p>';
-        html += '<button onclick="startPositionTraining(squad[0].id, \'auto\')" class="btn-secondary" style="width:auto; font-size:8px; padding:3px 8px; margin-top:6px;">Training starten (+3000€)</button>';
-    }
-
-    html += '</div>';
-    container.innerHTML = html;
-}
-
-</script>
-<script>
-/* eslint-disable no-undef */
-
-// Fan-Events & Fanclubs
-// Fanveranstaltungen, Stimmung, Engagement-Events
-
-let fanEventsState = {
-    upcomingEvents: [],
-    eventHistory: [],
-    fanEngagement: 0,
-    fanMorale: 100,
-    eventCosts: 0
-};
-
-const FAN_EVENTS = {
-    openTraining: {
-        name: 'Offenes Training',
-        engagementBoost: 0.15,
-        moraleCost: 500,
-        cost: 2000,
-        icon: '🏋️'
-    },
-    fanSigningEvent: {
-        name: 'Autogrammstunde',
-        engagementBoost: 0.20,
-        moraleCost: 1000,
-        cost: 3000,
-        icon: '✍️'
-    },
-    communityEvent: {
-        name: 'Fanclub-Treffen',
-        engagementBoost: 0.25,
-        moraleCost: 1500,
-        cost: 4000,
-        icon: '👥'
-    },
-    stadiumTour: {
-        name: 'Stadion-Tour',
-        engagementBoost: 0.18,
-        moraleCost: 800,
-        cost: 2500,
-        icon: '🏟️'
-    },
-    charityMatch: {
-        name: 'Wohltätigkeitsspiel',
-        engagementBoost: 0.30,
-        moraleCost: 2000,
-        cost: 5000,
-        icon: '❤️'
-    }
-};
-
-function initializeFanEvents() {
-    if (!game.fanEvents) {
-        game.fanEvents = {
-            upcomingEvents: [],
-            eventHistory: [],
-            fanEngagement: 0,
-            fanMorale: 100
-        };
-    }
-}
-
-function createFanEvent(eventType) {
-    initializeFanEvents();
-
-    if (game.money < 2000) {
-        showToast('💰 Nicht genug Geld für Fan-Events!', 'error', 2000);
-        return false;
-    }
-
-    const eventConfig = FAN_EVENTS[eventType];
-    if (!eventConfig) return false;
-
-    if (game.money < eventConfig.cost) {
-        showToast('💰 Unzureichende Mittel!', 'error', 2000);
-        return false;
-    }
-
-    game.money -= eventConfig.cost;
-
-    const event = {
-        id: game.fanEvents.eventHistory.length,
-        type: eventType,
-        name: eventConfig.name,
-        icon: eventConfig.icon,
-        engagementBoost: eventConfig.engagementBoost,
-        startMatchday: game.matchday,
-        daysRemaining: 3,
-        status: 'active',
-        cost: eventConfig.cost
-    };
-
-    game.fanEvents.upcomingEvents.push(event);
-    showToast(`${eventConfig.icon} ${eventConfig.name} geplant! (+3 Tage)`, 'success', 3000);
-    return true;
-}
-
-function completeFanEvent(eventId) {
-    initializeFanEvents();
-
-    const eventIndex = game.fanEvents.upcomingEvents.findIndex(e => e.id === eventId);
-    if (eventIndex === -1) return false;
-
-    const event = game.fanEvents.upcomingEvents[eventIndex];
-    const eventConfig = FAN_EVENTS[event.type];
-
-    // Engagement erhöhen
-    game.fanEngagement = (game.fanEngagement || 0) + eventConfig.engagementBoost;
-    game.fanEngagement = Math.min(1.0, game.fanEngagement);
-
-    // Fan Morale erhöhen
-    if (squad && squad.length > 0) {
-        squad.forEach(player => {
-            if (player.morale) {
-                player.morale = Math.min(100, player.morale + 5);
-            }
-        });
-    }
-
-    // Event abgeschlossen
-    event.status = 'completed';
-    event.completedMatchday = game.matchday;
-
-    game.fanEvents.eventHistory.push({
-        ...event,
-        completedMatchday: game.matchday,
-        timestamp: new Date().getTime()
-    });
-
-    game.fanEvents.upcomingEvents.splice(eventIndex, 1);
-
-    showToast(`✅ ${event.name} erfolgreich durchgeführt!`, 'success', 4000);
-    return true;
-}
-
-function tickFanEvents() {
-    initializeFanEvents();
-
-    // Events countdown
-    game.fanEvents.upcomingEvents.forEach((event, idx) => {
-        event.daysRemaining--;
-        if (event.daysRemaining <= 0) {
-            completeFanEvent(event.id);
-        }
-    });
-
-    // Zufällige Fan-Events während der Saison
-    if (Math.random() < 0.05 && game.fanEvents.upcomingEvents.length < 2) {
-        const eventTypes = Object.keys(FAN_EVENTS);
-        const randomType = eventTypes[Math.floor(Math.random() * eventTypes.length)];
-
-        if (game.money >= FAN_EVENTS[randomType].cost) {
-            // Gelegentlich automatisch ein Event erstellen
-            // (optional - nur wenn Geld vorhanden)
-        }
-    }
-
-    // Engagement natürlich minimal sinken lassen (außer bei Erfolgen)
-    if (game.fanEngagement > 0) {
-        game.fanEngagement = Math.max(0, game.fanEngagement - 0.02);
-    }
-}
-
-function getFanEventBonus() {
-    initializeFanEvents();
-    return game.fanEngagement || 0;
-}
-
-function renderFanEventsPanel() {
-    const container = document.getElementById('fan-events-box');
-    if (!container) return;
-
-    initializeFanEvents();
-
-    let html = '<div class="panel-content">';
-    html += '<h3>🎉 FAN-EVENTS & ENGAGEMENT</h3>';
-
-    // Engagement anzeigen
-    const engagement = game.fanEngagement || 0;
-    const engagementPercent = Math.round(engagement * 100);
-    html += `<div style="background:#1a1a1a; padding:6px; border-radius:3px; margin-bottom:10px;">`;
-    html += `<p style="font-size:9px; margin:0;"><strong>Fan-Engagement:</strong> ${engagementPercent}%</p>`;
-    html += '<div style="background:#000; border-radius:2px; height:6px; margin:3px 0;">';
-    html += `<div style="background:var(--primary); height:100%; width:${engagementPercent}%;"></div>`;
-    html += '</div>';
-    html += `</div>`;
-
-    // Aktive Events
-    if (game.fanEvents.upcomingEvents.length > 0) {
-        html += '<h4>⏳ Laufende Events</h4>';
-        game.fanEvents.upcomingEvents.slice(0, 3).forEach(event => {
-            html += `<div style="background:#1a1a1a; padding:6px; border-radius:3px; margin-bottom:4px;">`;
-            html += `<p style="font-size:9px; margin:0;"><strong>${event.icon} ${event.name}</strong></p>`;
-            html += `<p style="font-size:8px; margin:2px 0 0 0; color:var(--text-muted);">Tag ${3 - event.daysRemaining}/3</p>`;
-            html += `</div>`;
-        });
-    }
-
-    // Event-Optionen
-    html += '<h4>+ Neue Events</h4>';
-    const eventTypes = Object.keys(FAN_EVENTS);
-    eventTypes.slice(0, 3).forEach(type => {
-        const config = FAN_EVENTS[type];
-        html += `<button onclick="createFanEvent('${type}')" class="btn-secondary" style="width:auto; font-size:7px; padding:2px 6px; margin:2px; display:inline-block;">`;
-        html += `${config.icon} ${config.name} (€${config.cost.toLocaleString()})`;
-        html += `</button>`;
-    });
 
     html += '</div>';
     container.innerHTML = html;
@@ -7322,14 +6787,9 @@ function renderFanEventsPanel() {
         if (typeof renderLeadershipCouncilBox === 'function') renderLeadershipCouncilBox();
         if (typeof renderRivalriesPanel === 'function') renderRivalriesPanel();
         if (typeof renderScandalsPanel === 'function') renderScandalsPanel();
-        if (typeof renderFanclubManagementPanel === 'function') renderFanclubManagementPanel();
         if (typeof renderTacticSystemPanel === 'function') renderTacticSystemPanel();
         if (typeof renderInternationalTournamentsPanel === 'function') renderInternationalTournamentsPanel();
-        if (typeof renderSetPieceTrainingPanel === 'function') renderSetPieceTrainingPanel();
         if (typeof renderPostMatchAnalysisPanel === 'function') renderPostMatchAnalysisPanel();
-        if (typeof renderTrainingSpecializationPanel === 'function') renderTrainingSpecializationPanel();
-        if (typeof renderFanEventsPanel === 'function') renderFanEventsPanel();
-        if (typeof renderStadiumManagementPanel === 'function') renderStadiumManagementPanel();
         if (typeof renderTransferMarketAnalysisPanel === 'function') renderTransferMarketAnalysisPanel();
         if (typeof renderSquadHarmonyPanel === 'function') renderSquadHarmonyPanel();
         if (typeof renderTeamCouncilPanel === 'function') renderTeamCouncilPanel();
@@ -15818,7 +15278,6 @@ function renderBoardRoomPanel() {
             list.appendChild(row);
         });
         if (typeof renderMedicalDepartmentPanel === 'function') renderMedicalDepartmentPanel();
-        if (typeof renderTrainingSchedulePanel === 'function') renderTrainingSchedulePanel();
     }
 
     function setTeamTraining(focus) {
@@ -16748,8 +16207,6 @@ function finishGoalkeeperGame() {
         // Ticketpreise (inkl. Dauerkarte) sind jetzt im Stadion-Screen zu finden, dort direkt
         // neben Kapazität, Rasenpflege und Nebeneinnahmen - siehe renderStadiumView().
         if (typeof renderMediaRightsView === 'function') renderMediaRightsView();
-        if (typeof renderFanEngagementPanel === 'function') renderFanEngagementPanel();
-        if (typeof renderFanEngagementStats === 'function') renderFanEngagementStats();
         renderStockTicker();
         renderSponsorLeaderboard();
         renderFinanceForecast();
@@ -20356,7 +19813,6 @@ function finishGoalkeeperGame() {
             }
         });
 
-        if (typeof renderStadiumManagementPanel === 'function') renderStadiumManagementPanel();
         if (typeof renderStadiumEventsPanel === 'function') renderStadiumEventsPanel();
     }
 
@@ -20855,280 +20311,6 @@ function renderStadiumEventsPanel() {
         });
     }
     box.innerHTML = html;
-}
-
-</script>
-<script>
-/* eslint-disable no-undef */
-
-const STADIUM_PROJECTS = {
-  seatingExpansion: {
-    name: 'Tribünenausbau',
-    cost: 500000,
-    capacityIncrease: 5000,
-    timeToComplete: 12,
-    attendanceBonus: 0.1
-  },
-  medicalFacilities: {
-    name: 'Medizinische Infrastruktur',
-    cost: 300000,
-    capacityIncrease: 0,
-    timeToComplete: 8,
-    recoveryBonus: 0.15
-  },
-  trainingFacilities: {
-    name: 'Trainingsanlage',
-    cost: 400000,
-    capacityIncrease: 0,
-    timeToComplete: 10,
-    trainingBonus: 0.12
-  },
-  cateringServices: {
-    name: 'Catering & Gastronomie',
-    cost: 200000,
-    capacityIncrease: 0,
-    timeToComplete: 6,
-    fanSatisfaction: 0.1
-  },
-  vipLounge: {
-    name: 'VIP-Loge',
-    cost: 250000,
-    capacityIncrease: 500,
-    timeToComplete: 8,
-    revenueMultiplier: 1.2
-  },
-  lightingSystem: {
-    name: 'Beleuchtungssystem',
-    cost: 150000,
-    capacityIncrease: 0,
-    timeToComplete: 4,
-    qualityBonus: 0.08
-  }
-};
-
-const stadiumState = {
-  capacity: 25000,
-  condition: 100,
-  upgrades: [],
-  projectsUnderway: [],
-  maintenanceCost: 5000
-};
-
-function initializeStadium() {
-  if (!game.stadium) {
-    game.stadium = {
-      capacity: 25000,
-      condition: 100,
-      upgrades: [],
-      projectsUnderway: [],
-      totalInvestment: 0,
-      lastExpanded: 0
-    };
-  }
-}
-
-function getStadiumCapacity() {
-  if (!game.stadium) return 25000;
-  return game.stadium.capacity;
-}
-
-function getStadiumCondition() {
-  if (!game.stadium) return 100;
-  return Math.max(0, Math.min(100, game.stadium.condition));
-}
-
-function startStadiumUpgrade(upgradeType) {
-  if (!game.stadium) initializeStadium();
-  
-  const config = STADIUM_PROJECTS[upgradeType];
-  if (!config) return false;
-  
-  if (game.money < config.cost) {
-    if (game.inbox) {
-      addInboxMessage('❌ Nicht genügend Mittel', `Upgrade kostet €${config.cost.toLocaleString()}`);
-    }
-    return false;
-  }
-  
-  game.money -= config.cost;
-  
-  const project = {
-    id: (game.stadium.projectsUnderway || []).length,
-    type: upgradeType,
-    name: config.name,
-    startMatchday: game.matchday,
-    completionMatchday: game.matchday + config.timeToComplete,
-    cost: config.cost,
-    progress: 0,
-    status: 'active'
-  };
-  
-  if (!game.stadium.projectsUnderway) game.stadium.projectsUnderway = [];
-  game.stadium.projectsUnderway.push(project);
-  
-  if (game.inbox) {
-    addInboxMessage(`🏗️ Baubeginn: ${config.name}`, `Fertigstellung in ${config.timeToComplete} Spieltagen`);
-  }
-  
-  return true;
-}
-
-function tickStadiumProjects() {
-  if (!game.stadium || !game.stadium.projectsUnderway) return;
-  
-  game.stadium.projectsUnderway = game.stadium.projectsUnderway.filter((project) => {
-    const progress = ((game.matchday - project.startMatchday) / (project.completionMatchday - project.startMatchday)) * 100;
-    project.progress = Math.min(100, progress);
-    
-    if (game.matchday >= project.completionMatchday) {
-      completeStadiumUpgrade(project);
-      return false;
-    }
-    
-    return true;
-  });
-}
-
-function completeStadiumUpgrade(project) {
-  const config = STADIUM_PROJECTS[project.type];
-  if (!config) return;
-  
-  if (config.capacityIncrease > 0) {
-    game.stadium.capacity += config.capacityIncrease;
-    game.stadium.lastExpanded = game.matchday;
-  }
-  
-  if (!game.stadium.upgrades) game.stadium.upgrades = [];
-  game.stadium.upgrades.push({
-    type: project.type,
-    name: config.name,
-    completedMatchday: game.matchday,
-    season: game.season,
-    benefits: config
-  });
-  
-  if (game.inbox) {
-    addInboxMessage(`✅ Ausbau abgeschlossen`, config.name);
-  }
-}
-
-function tickStadiumMaintenance() {
-  if (!game.stadium) return 0;
-  
-  const maintenanceCost = Math.round(5000 * (1 - getStadiumCondition() / 100));
-  
-  if (game.money >= maintenanceCost) {
-    game.money -= maintenanceCost;
-    game.stadium.condition = Math.min(100, game.stadium.condition + 2);
-  } else {
-    game.stadium.condition = Math.max(0, game.stadium.condition - 1);
-  }
-  
-  return maintenanceCost;
-}
-
-function repairStadium(percentage) {
-  if (!game.stadium) return false;
-  
-  const repairCost = Math.round(200000 * (percentage / 100));
-  if (game.money < repairCost) return false;
-  
-  game.money -= repairCost;
-  game.stadium.condition = Math.min(100, game.stadium.condition + percentage);
-  
-  if (game.inbox) {
-    addInboxMessage(`🔧 Reparatur`, `Stadionzustand: ${Math.round(game.stadium.condition)}%`);
-  }
-  
-  return true;
-}
-
-function getManagementAttendanceFactor() {
-  if (!game.stadium) return 1.0;
-
-  let factor = 1.0;
-  const capacity = getStadiumCapacity();
-  const condition = getStadiumCondition();
-
-  factor *= (0.5 + (condition / 100) * 0.5);
-
-  if (game.stadium.upgrades && game.stadium.upgrades.length > 0) {
-    const attendanceUpgrades = game.stadium.upgrades.filter(u => u.benefits.attendanceBonus);
-    factor *= (1 + attendanceUpgrades.length * 0.05);
-  }
-
-  return factor;
-}
-
-function getStadiumRevenueBenefit() {
-  if (!game.stadium || !game.stadium.upgrades) return 1.0;
-  
-  let multiplier = 1.0;
-  game.stadium.upgrades.forEach((upgrade) => {
-    if (upgrade.benefits.revenueMultiplier) {
-      multiplier *= upgrade.benefits.revenueMultiplier;
-    }
-  });
-  
-  return multiplier;
-}
-
-function renderStadiumManagementPanel() {
-  const panel = document.getElementById('stadium-management-panel');
-  if (!panel) return;
-  
-  initializeStadium();
-  
-  const capacity = getStadiumCapacity();
-  const condition = getStadiumCondition();
-  const conditionColor = condition > 70 ? '#4CAF50' : condition > 40 ? '#FFC107' : '#FF5252';
-  const ongoingProjects = (game.stadium.projectsUnderway || []).filter(p => p.status === 'active').length;
-  
-  let html = '<div class="panel-content">';
-  html += `<h3>Stadion-Management</h3>`;
-  
-  html += '<div class="stadium-stats">';
-  html += `<div class="stat-box">Kapazität: ${capacity.toLocaleString()} Plätze</div>`;
-  html += `<div class="stat-box" style="border-left:4px solid ${conditionColor}">Zustand: ${Math.round(condition)}%</div>`;
-  html += `<div class="stat-box">Laufende Projekte: ${ongoingProjects}</div>`;
-  html += `<div class="stat-box">Einnahmen-Multiplikator: ${getStadiumRevenueBenefit().toFixed(2)}x</div>`;
-  html += '</div>';
-  
-  html += '<h4>Verfügbare Upgrades:</h4>';
-  Object.entries(STADIUM_PROJECTS).forEach(([key, config]) => {
-    const isUpgraded = game.stadium.upgrades && game.stadium.upgrades.some(u => u.type === key);
-    const hasProject = game.stadium.projectsUnderway && game.stadium.projectsUnderway.some(p => p.type === key && p.status === 'active');
-    
-    html += `<div class="upgrade-item" style="opacity:${isUpgraded ? 0.6 : 1}">`;
-    html += `<strong>${config.name}</strong>`;
-    html += `<div class="upgrade-info">Kosten: €${config.cost.toLocaleString()} | Dauer: ${config.timeToComplete} Spieltage</div>`;
-    if (config.capacityIncrease > 0) {
-      html += `<div class="upgrade-info">Kapazität: +${config.capacityIncrease} Plätze</div>`;
-    }
-    if (isUpgraded) {
-      html += `<div style="color:#4CAF50; font-size:10px;">✅ Installiert</div>`;
-    } else if (hasProject) {
-      html += `<div style="color:#FFC107; font-size:10px;">🔨 In Arbeit</div>`;
-    } else {
-      html += `<button onclick="startStadiumUpgrade('${key}')" style="background:#2196F3; color:white; border:none; padding:4px 8px; border-radius:3px; font-size:10px;">Starten</button>`;
-    }
-    html += '</div>';
-  });
-  
-  if (game.stadium.projectsUnderway && game.stadium.projectsUnderway.length > 0) {
-    html += '<h4>Laufende Arbeiten:</h4>';
-    game.stadium.projectsUnderway.forEach((project) => {
-      html += `<div class="project-item">`;
-      html += `<strong>${project.name}</strong>`;
-      html += `<div style="background:#f0f0f0; height:8px; border-radius:4px; margin:4px 0; overflow:hidden;">`;
-      html += `<div style="background:#2196F3; height:100%; width:${project.progress}%"></div>`;
-      html += `</div>`;
-      html += '</div>';
-    });
-  }
-  
-  html += '</div>';
-  panel.innerHTML = html;
 }
 
 </script>
@@ -22417,229 +21599,13 @@ function renderStadiumManagementPanel() {
             : feed.slice(0, 10).map(e => `<div class="box" style="font-size:10px;"><span style="color:var(--text-muted);">S${e.season}/${e.matchday}:</span> ${e.text}</div>`).join('');
     }
 
-
-</script>
-<script>
-
-    // ==========================================
-    // FAN-ENGAGEMENT-SYSTEM
-    // ==========================================
-    // Fans sind das Herzstück: Ticketverkäufe, Merchandise, Atmosphäre,
-    // Sponsoring-Attraktivität. Ihr Management entscheidet über den Erfolg.
-
-    let fanEngagementState = {
-        satisfaction: 75, // 0-100: Wie zufrieden sind die Fans?
-        engagement: 60, // 0-100: Wie engagiert sind sie?
-        loyalty: 70, // 0-100: Wie loyal sind sie?
-        events: [], // Veranstaltungen diesen Monat
-        lastEventTick: 0 // Letzter Tick, an dem Events verarbeitet wurden
-    };
-
-    const FAN_ACTIVITIES = {
-        matchdayActivation: {
-            name: '🎉 Spieltag-Aktivierungen',
-            cost: 5000,
-            satisfaction: 8,
-            engagement: 12,
-            loyalty: 3,
-            description: 'Choreographien, Pyrotechnik, Live-Events im Stadion'
-        },
-        socialMedia: {
-            name: '📱 Social-Media-Kampagne',
-            cost: 3000,
-            satisfaction: 5,
-            engagement: 15,
-            loyalty: 2,
-            description: 'Regelmäßige Posts, Fan-Interaktion, Behind-the-Scenes'
-        },
-        communityEvent: {
-            name: '👥 Gemeinschafts-Event',
-            cost: 8000,
-            satisfaction: 15,
-            engagement: 10,
-            loyalty: 12,
-            description: 'Fanfest, Unterschriften-Sessions, Meet & Greet'
-        },
-        merchandisePromotion: {
-            name: '🎁 Merchandise-Aktion',
-            cost: 4000,
-            satisfaction: 6,
-            engagement: 8,
-            loyalty: 6,
-            description: 'Limited Editions, Rabatte, exklusive Items'
-        },
-        youthProgram: {
-            name: '⚽ Jugend-Akademie-Show',
-            cost: 2500,
-            satisfaction: 10,
-            engagement: 6,
-            loyalty: 8,
-            description: 'Nachwuchstalente präsentieren, Familientag'
-        }
-    };
-
-    function tickFanEngagement() {
-        if (game.matchday % 4 !== 0) return; // Monatlich
-
-        // Basisfaktoren beeinflussen Zufriedenheit
-        let seasonProgress = game.matchday / 34;
-        let leagueTable = leaguesData[game.leagueLevel];
-        let ourTeam = leagueTable.find(t => t.id === game.clubId);
-        let position = leagueTable.indexOf(ourTeam) + 1;
-        let positionBonus = (leagueTable.length - position) / leagueTable.length * 30; // 0-30 je nach Position
-
-        // Spielergebnisse beeinflussen Fans stark
-        let recentWins = Math.min(5, Math.floor((game.wins || 0) / 3));
-        let resultBonus = recentWins * 5;
-
-        // Stadion-Atmosphäre
-        let atmosphereBonus = game.fans * 0.3; // 0-30 je nach Fans
-
-        // Decay über Zeit
-        fanEngagementState.satisfaction = Math.max(20, Math.min(100,
-            fanEngagementState.satisfaction + positionBonus - 5 + resultBonus + (Math.random() - 0.5) * 10
-        ));
-
-        fanEngagementState.engagement = Math.max(10, Math.min(100,
-            fanEngagementState.engagement + atmosphereBonus - 3 + (Math.random() - 0.5) * 8
-        ));
-
-        fanEngagementState.loyalty = Math.max(15, Math.min(100,
-            fanEngagementState.loyalty - 2 + (recentWins * 3) + (Math.random() - 0.5) * 5
-        ));
-
-        // Auswirkungen auf Ticketverkäufe
-        let satisfactionMultiplier = 1 + (fanEngagementState.satisfaction - 50) * 0.01; // ±50% bei Extremen
-        game.ticketSalesMultiplier = satisfactionMultiplier;
-
-        // Auswirkungen auf Sponsoring-Attraktivität
-        let sponsorAttractiveness = (fanEngagementState.engagement + fanEngagementState.loyalty) / 200 * 50; // +25% Bonus möglich
-        game.sponsorAttractiveness = sponsorAttractiveness;
-    }
-
-    function executeFanActivity(activityKey) {
-        let activity = FAN_ACTIVITIES[activityKey];
-        if (!activity) return;
-
-        if (game.money < activity.cost) {
-            showToast(`💰 Nicht genug Geld! Benötigt: ${formatVal(activity.cost)}`, 'error');
-            return;
-        }
-
-        game.money -= activity.cost;
-        fanEngagementState.satisfaction = Math.min(100, fanEngagementState.satisfaction + activity.satisfaction);
-        fanEngagementState.engagement = Math.min(100, fanEngagementState.engagement + activity.engagement);
-        fanEngagementState.loyalty = Math.min(100, fanEngagementState.loyalty + activity.loyalty);
-
-        let effects = [];
-        if (activity.satisfaction > 0) effects.push(`Zufriedenheit +${activity.satisfaction}`);
-        if (activity.engagement > 0) effects.push(`Engagement +${activity.engagement}`);
-        if (activity.loyalty > 0) effects.push(`Loyalität +${activity.loyalty}`);
-
-        showToast(`✅ ${activity.name} durchgeführt!\n${effects.join(' · ')}`, 'success');
-        renderFanEngagementPanel();
-        updateUI();
-    }
-
-    function renderFanEngagementPanel() {
-        let container = document.getElementById('fan-engagement-box');
-        if (!container) return;
-
-        let leagueTable = leaguesData[game.leagueLevel];
-        let ourTeam = leagueTable.find(t => t.id === game.clubId);
-        let position = leagueTable.indexOf(ourTeam) + 1;
-
-        // Farb-Bewertung für jeden Wert
-        let getSatColor = (val) => val >= 70 ? 'var(--primary)' : (val >= 50 ? 'var(--accent)' : 'var(--danger)');
-        let getSatLabel = (val) => val >= 70 ? '😊 Zufrieden' : (val >= 50 ? '😐 Neutral' : '😠 Unzufrieden');
-
-        let html = `
-            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; margin-bottom:12px;">
-                <div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:8px; text-align:center; border:1px solid rgba(255,255,255,0.1);">
-                    <div style="font-size:9px; color:#aaa; margin-bottom:4px;">😊 Zufriedenheit</div>
-                    <div style="font-size:16px; font-weight:700; color:${getSatColor(fanEngagementState.satisfaction)};">${fanEngagementState.satisfaction}%</div>
-                    <div style="font-size:8px; color:#666; margin-top:2px;">${getSatLabel(fanEngagementState.satisfaction)}</div>
-                </div>
-                <div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:8px; text-align:center; border:1px solid rgba(255,255,255,0.1);">
-                    <div style="font-size:9px; color:#aaa; margin-bottom:4px;">🔥 Engagement</div>
-                    <div style="font-size:16px; font-weight:700; color:${getSatColor(fanEngagementState.engagement)};">${fanEngagementState.engagement}%</div>
-                    <div style="font-size:8px; color:#666; margin-top:2px;">Aktivität & Beteiligung</div>
-                </div>
-                <div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:8px; text-align:center; border:1px solid rgba(255,255,255,0.1);">
-                    <div style="font-size:9px; color:#aaa; margin-bottom:4px;">💚 Loyalität</div>
-                    <div style="font-size:16px; font-weight:700; color:${getSatColor(fanEngagementState.loyalty)};">${fanEngagementState.loyalty}%</div>
-                    <div style="font-size:8px; color:#666; margin-top:2px;">Langzeit-Bindung</div>
-                </div>
-            </div>
-
-            <div style="background:rgba(255,255,255,0.03); border-radius:6px; padding:8px; margin-bottom:12px; border:1px solid rgba(255,255,255,0.1); font-size:9px;">
-                <div style="color:var(--accent); font-weight:700; margin-bottom:4px;">📊 Auswirkungen</div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:3px;">
-                    <span>Ticketverkauf-Multiplikator:</span>
-                    <strong style="color:var(--gold);">×${(game.ticketSalesMultiplier || 1).toFixed(2)}</strong>
-                </div>
-                <div style="display:flex; justify-content:space-between;">
-                    <span>Sponsor-Attraktivität:</span>
-                    <strong style="color:var(--primary);">+${(game.sponsorAttractiveness || 0).toFixed(0)}%</strong>
-                </div>
-            </div>
-
-            <div style="margin-bottom:12px;">
-                <div style="font-size:9px; color:var(--accent); font-weight:700; margin-bottom:6px;">🎯 FAN-AKTIVIERUNGEN</div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
-        `;
-
-        Object.entries(FAN_ACTIVITIES).forEach(([key, activity]) => {
-            let canAfford = game.money >= activity.cost;
-            let btnColor = canAfford ? 'btn-action' : 'btn-secondary';
-            let opacityStyle = canAfford ? '' : 'opacity:0.5;';
-
-            html += `
-                <button onclick="executeFanActivity('${key}')" class="${btnColor}" style="font-size:8px; padding:6px; text-align:left; ${opacityStyle} ${!canAfford ? 'cursor:not-allowed;' : ''}">
-                    <div style="font-weight:700; margin-bottom:2px;">${activity.name}</div>
-                    <div style="font-size:7px; color:#aaa; margin-bottom:2px;">💰 ${formatVal(activity.cost)}</div>
-                    <div style="font-size:7px;">+${activity.satisfaction}Zu +${activity.engagement}En +${activity.loyalty}Lo</div>
-                </button>
-            `;
-        });
-
-        html += `
-                </div>
-            </div>
-
-            <div style="background:rgba(255,255,255,0.03); border-radius:6px; padding:8px; border:1px solid rgba(255,255,255,0.1); font-size:9px;">
-                <div style="color:#aaa; line-height:1.4;">
-                    <strong style="display:block; margin-bottom:4px;">💡 Tipps für höhere Fan-Zufriedenheit:</strong>
-                    • Spielergebnisse: Siege sind das beste Fan-Mittel (${position <= 3 ? '✓ Ihr Team läuft gut!' : '⚠ Bessere Ergebnisse nötig'})<br>
-                    • Regelmäßige Aktivierungen: Konstante Engagement-Events halten Fans aktiv<br>
-                    • Merchandise: Hochwertige Fanartikel stärken Loyalität<br>
-                    • Community: Face-to-Face Events sind am wirksamsten
-                </div>
-            </div>
-        `;
-
-        container.innerHTML = html;
-    }
-
-    function renderFanEngagementStats() {
-        let container = document.getElementById('fin-fan-impact-box');
-        if (!container) return;
-
-        let ticketBonus = ((game.ticketSalesMultiplier || 1) - 1) * 100;
-        let sponsorBonus = (game.sponsorAttractiveness || 0);
-
-        container.innerHTML = `
-            <div style="font-size:9px;">
-                <div style="display:flex; justify-content:space-between; margin-bottom:6px; padding:6px; background:rgba(255,255,255,0.05); border-radius:4px;">
-                    <span>Fan-Zufriedenheits-Effekt auf Ticketverkäufe:</span>
-                    <strong style="color:${ticketBonus > 0 ? 'var(--primary)' : 'var(--danger)'};">${ticketBonus > 0 ? '+' : ''}${ticketBonus.toFixed(0)}%</strong>
-                </div>
-                <div style="display:flex; justify-content:space-between; padding:6px; background:rgba(255,255,255,0.05); border-radius:4px;">
-                    <span>Sponsor-Attraktivität durch Engagement:</span>
-                    <strong style="color:var(--accent);">+${sponsorBonus.toFixed(0)}%</strong>
-                </div>
-            </div>
-        `;
+    // Alte Spielstände: Daten von sieben abgelösten Modulen (Fan-Engagement, Fanclubs, Fan-Events,
+    // Trainingswochenplan, Trainings-Spezialisierung, Standard-Training, Stadion-Management), die
+    // eigene Werte ohne Wirkung aufs Spiel führten.
+    function cleanupLegacyFanTrainingStadiumState() {
+        ['fanclubs', 'fanSatisfaction', 'ultraGroups', 'fanEvents', 'fanEngagement', 'ticketSalesMultiplier', 'sponsorAttractiveness',
+            'trainingSchedule', 'trainingSpecialization', 'setPieceTraining', 'stadium'].forEach(k => { delete game[k]; });
+        squad.forEach(p => { delete p.currentFitnessBoost; });
     }
 
 </script>
@@ -24607,186 +23573,6 @@ function renderTacticSystemPanel() {
 <script>
 /* eslint-disable no-undef */
 
-function initializeFanclubs() {
-  if (!game.fanclubs) {
-    game.fanclubs = [];
-  }
-  if (!game.fanSatisfaction) {
-    game.fanSatisfaction = 50;
-  }
-  if (!game.ultraGroups) {
-    game.ultraGroups = [];
-  }
-}
-
-function createFanclub(name, ultraGroupName, ultras, type) {
-  const fanclub = {
-    id: game.fanclubs.length,
-    name: name,
-    ultraGroupName: ultraGroupName,
-    ultras: ultras,
-    type: type,
-    satisfaction: 50,
-    funding: 0,
-    influence: 0.5,
-    createdSeason: game.season,
-    matchAttendance: [],
-    revenueFans: 0,
-  };
-  game.fanclubs.push(fanclub);
-  return fanclub;
-}
-
-function addUltraGroup(name, intensity) {
-  const ultraGroup = {
-    id: game.ultraGroups.length,
-    name: name,
-    intensity: Math.min(100, Math.max(0, intensity)),
-    loyalty: 60,
-    violence: 0,
-    bannerCount: 1,
-    createdSeason: game.season,
-  };
-  game.ultraGroups.push(ultraGroup);
-  return ultraGroup;
-}
-
-function updateFanSatisfaction(delta) {
-  game.fanSatisfaction = Math.min(100, Math.max(0, game.fanSatisfaction + delta));
-}
-
-function getFanSatisfactionBonus() {
-  if (game.fanSatisfaction < 30) {
-    return -0.15;
-  } else if (game.fanSatisfaction < 50) {
-    return -0.05;
-  } else if (game.fanSatisfaction < 70) {
-    return 0.05;
-  } else {
-    return 0.15;
-  }
-}
-
-function getUltraInfluence() {
-  let totalInfluence = 0;
-  if (game.ultraGroups) {
-    game.ultraGroups.forEach((group) => {
-      totalInfluence += (group.intensity / 100) * group.loyalty / 100;
-    });
-  }
-  return Math.min(1.5, totalInfluence * 0.5);
-}
-
-function processFanRevenue() {
-  let revenue = 0;
-  if (game.fanclubs) {
-    game.fanclubs.forEach((club) => {
-      const satisfactionBonus = 1 + (club.satisfaction - 50) / 100 * 0.2;
-      const clubRevenue = Math.floor((club.ultras * 2 + club.funding * 0.1) * satisfactionBonus);
-      revenue += clubRevenue;
-      club.revenueFans += clubRevenue;
-    });
-  }
-  return revenue;
-}
-
-function checkFanProtest() {
-  if (game.fanSatisfaction < 25 && Math.random() < 0.2) {
-    const protest = {
-      type: 'protest',
-      message: 'Protestaktion: Fans demonstrieren gegen Spielweise!',
-      impact: 'Negative Medienberichterstattung',
-    };
-    if (game.inbox) {
-      addInboxMessage('⚠️ ' + protest.message, protest.impact);
-    }
-    return true;
-  }
-  return false;
-}
-
-function checkUltraConflict() {
-  if (game.ultraGroups && game.ultraGroups.length > 1) {
-    const group1 = game.ultraGroups[Math.floor(Math.random() * game.ultraGroups.length)];
-    const group2 = game.ultraGroups[Math.floor(Math.random() * game.ultraGroups.length)];
-    if (group1.id !== group2.id && Math.random() < 0.15) {
-      const conflict = group1.violence + group2.violence > 100;
-      if (conflict && Math.random() < 0.3) {
-        if (game.inbox) {
-          addInboxMessage('⚠️ Ultra-Konflikt', 'Gewalt zwischen Ultra-Gruppen! Stadionverbot für beide Gruppen.');
-        }
-        group1.violence = Math.min(100, group1.violence + 10);
-        group2.violence = Math.min(100, group2.violence + 10);
-        group1.loyalty = Math.max(0, group1.loyalty - 5);
-        group2.loyalty = Math.max(0, group2.loyalty - 5);
-      }
-    }
-  }
-}
-
-function upgradeFanclubFunding(fanclubId, amount) {
-  if (game.fanclubs && game.fanclubs[fanclubId]) {
-    const fanclub = game.fanclubs[fanclubId];
-    fanclub.funding = Math.min(1000, fanclub.funding + amount);
-    fanclub.satisfaction = Math.min(100, fanclub.satisfaction + 3);
-  }
-}
-
-function renderFanclubManagementPanel() {
-  const panel = document.getElementById('fanclub-management-panel');
-  if (!panel) return;
-
-  if (!game.fanclubs || game.fanclubs.length === 0) {
-    createFanclub('Ultras München', 'Red Army', 500, 'ultras');
-    createFanclub('Fanclub Süd', 'Core Fans', 300, 'traditional');
-  }
-
-  if (!game.ultraGroups || game.ultraGroups.length === 0) {
-    addUltraGroup('Red Army', 75);
-    addUltraGroup('South Side', 65);
-  }
-
-  let html = '<div class="panel-content">';
-  html += `<h3>Fanclub Management - Fangesamtzufriedenheit: ${Math.round(game.fanSatisfaction)}%</h3>`;
-
-  html += '<div class="fanclub-stats">';
-  html += `<div class="stat-box">Satisfaction Bonus: ${(getFanSatisfactionBonus() * 100).toFixed(0)}%</div>`;
-  html += `<div class="stat-box">Ultra Einfluss: ${(getUltraInfluence() * 100).toFixed(0)}%</div>`;
-  html += '</div>';
-
-  html += '<h4>Fanclubs:</h4>';
-  if (game.fanclubs) {
-    game.fanclubs.forEach((club) => {
-      const satisfactionColor = club.satisfaction > 60 ? '#4CAF50' : club.satisfaction > 40 ? '#FFC107' : '#FF5252';
-      html += `<div class="fanclub-item" style="border-left: 4px solid ${satisfactionColor}">`;
-      html += `<strong>${club.name}</strong> (${club.type})`;
-      html += `<div class="club-info">Ultras: ${club.ultras} | Satisfaction: ${Math.round(club.satisfaction)}%</div>`;
-      html += `<div class="club-info">Funding: €${club.funding} | Revenue: €${club.revenueFans}</div>`;
-      html += `<button onclick="upgradeFanclubFunding(${club.id}, 50)">Invest €50</button>`;
-      html += '</div>';
-    });
-  }
-
-  html += '<h4>Ultra-Gruppen:</h4>';
-  if (game.ultraGroups) {
-    game.ultraGroups.forEach((group) => {
-      const loyaltyColor = group.loyalty > 70 ? '#4CAF50' : group.loyalty > 50 ? '#FFC107' : '#FF5252';
-      html += `<div class="ultra-group-item" style="border-left: 4px solid ${loyaltyColor}">`;
-      html += `<strong>${group.name}</strong>`;
-      html += `<div class="group-info">Intensity: ${Math.round(group.intensity)}% | Loyalty: ${Math.round(group.loyalty)}% | Violence: ${Math.round(group.violence)}%</div>`;
-      html += `<div class="group-info">Banner: ${group.bannerCount} | Gegründet: Saison ${group.createdSeason}</div>`;
-      html += '</div>';
-    });
-  }
-
-  html += '</div>';
-  panel.innerHTML = html;
-}
-
-</script>
-<script>
-/* eslint-disable no-undef */
-
 const INTERNATIONAL_TOURNAMENTS = {
   worldCup: {
     id: 'wc',
@@ -25304,264 +24090,6 @@ function renderTransferMarketAnalysisPanel() {
 
 </script>
 <script>
-// Training Schedule System
-// Allows manager to customize weekly training plan with focus areas and recovery days
-
-let trainingScheduleState = {
-    weeklyPlan: [],
-    trainingHistory: [],
-    playerFitness: {}
-};
-
-const TRAINING_TYPES = {
-    RECOVERY: { name: 'Erholungstag', fitnessModifier: 0.1, injuryReduction: 0.15, cost: 5000 },
-    STANDARD: { name: 'Standardtraining', fitnessModifier: 0.3, injuryReduction: 0.05, cost: 8000 },
-    INTENSIVE: { name: 'Intensives Training', fitnessModifier: 0.5, injuryReduction: -0.1, cost: 12000 },
-    TACTICAL: { name: 'Taktisches Training', fitnessModifier: 0.25, injuryReduction: 0.08, cost: 10000 },
-    SET_PIECES: { name: 'Standardsituationen', fitnessModifier: 0.2, injuryReduction: 0.05, cost: 9000 },
-    RECOVERY_FOCUS: { name: 'Regenerationsfokus', fitnessModifier: 0.05, injuryReduction: 0.25, cost: 7000 }
-};
-
-const FOCUS_AREAS = [
-    'Ballkontrolle',
-    'Defensive',
-    'Set-Pieces',
-    'Pressing',
-    'Transition',
-    'Flankenspiel'
-];
-
-function initializeTrainingSchedule() {
-    if (!game.trainingSchedule) game.trainingSchedule = {};
-    if (!game.trainingSchedule.weeklyPlans) game.trainingSchedule.weeklyPlans = [];
-    if (!game.trainingSchedule.currentWeek) game.trainingSchedule.currentWeek = 1;
-    if (!game.trainingSchedule.playerFitness) game.trainingSchedule.playerFitness = {};
-
-    // Initialize player fitness levels
-    squad.forEach(player => {
-        if (!game.trainingSchedule.playerFitness[player.id]) {
-            game.trainingSchedule.playerFitness[player.id] = {
-                playerId: player.id,
-                playerName: player.name,
-                fitnessLevel: 80 + Math.random() * 20, // 80-100
-                fatigueLevel: 20 + Math.random() * 10, // 20-30
-                recoveryDaysNeeded: 0
-            };
-        }
-    });
-}
-
-function createWeeklyTrainingPlan(matchday) {
-    const plan = {
-        id: `plan_${matchday}_${Date.now()}`,
-        startMatchday: matchday,
-        days: []
-    };
-
-    // Default: 6-day training week with 1 recovery day
-    for (let i = 0; i < 6; i++) {
-        plan.days.push({
-            dayNumber: i + 1,
-            trainingType: i === 5 ? 'RECOVERY' : 'STANDARD',
-            focusArea: FOCUS_AREAS[Math.floor(Math.random() * FOCUS_AREAS.length)],
-            playerGrouping: 'full', // full, starters, reserves, injured
-            cost: TRAINING_TYPES.STANDARD.cost
-        });
-    }
-
-    return plan;
-}
-
-function customizeTrainingDay(matchday, dayNumber, trainingType, focusArea) {
-    let plan = game.trainingSchedule.weeklyPlans.find(p => p.startMatchday === matchday);
-
-    if (!plan) {
-        plan = createWeeklyTrainingPlan(matchday);
-        game.trainingSchedule.weeklyPlans.push(plan);
-    }
-
-    if (dayNumber >= 1 && dayNumber <= 6) {
-        plan.days[dayNumber - 1].trainingType = trainingType;
-        plan.days[dayNumber - 1].focusArea = focusArea;
-        plan.days[dayNumber - 1].cost = TRAINING_TYPES[trainingType].cost;
-    }
-
-    return plan;
-}
-
-function applyTrainingEffects(matchday) {
-    const plan = game.trainingSchedule.weeklyPlans.find(p => p.startMatchday === matchday);
-    if (!plan) return;
-
-    let totalTrainingCost = 0;
-
-    squad.forEach(player => {
-        const fitness = game.trainingSchedule.playerFitness[player.id];
-        if (!fitness) return;
-
-        let fitnessGain = 0;
-        let injuryRiskReduction = 0;
-
-        // Apply training effects from all 6 training days
-        plan.days.forEach(day => {
-            const trainingConfig = TRAINING_TYPES[day.trainingType];
-            if (trainingConfig) {
-                fitnessGain += trainingConfig.fitnessModifier;
-                injuryRiskReduction += trainingConfig.injuryReduction;
-            }
-        });
-
-        // Apply focused training benefit
-        if (fitness.specialFocus) {
-            fitnessGain *= 1.1; // 10% bonus if training matches player's specialization
-        }
-
-        // Update player fitness
-        fitness.fitnessLevel = Math.min(100, fitness.fitnessLevel + fitnessGain);
-        fitness.fatigueLevel = Math.max(0, fitness.fatigueLevel - (fitnessGain * 0.5));
-
-        // Injury risk reduction
-        if (Math.random() < injuryRiskReduction) {
-            // Training helps prevent injury
-            fitness.recoveryDaysNeeded = Math.max(0, fitness.recoveryDaysNeeded - 1);
-        }
-
-        // Apply fitness to player strength (temporary boost)
-        const fitnessBoost = (fitness.fitnessLevel - 80) * 0.02; // Up to +0.4 strength at 100% fitness
-        player.currentFitnessBoost = fitnessBoost;
-    });
-
-    // Deduct training costs
-    plan.days.forEach(day => {
-        totalTrainingCost += day.cost;
-    });
-
-    if (game.money >= totalTrainingCost) {
-        game.money -= totalTrainingCost;
-        recordFinancialEvent('Trainingskosten', -totalTrainingCost, 'Training');
-    }
-}
-
-function tickTrainingFatigue() {
-    // Every matchday, increase fatigue if not recovering
-    squad.forEach(player => {
-        const fitness = game.trainingSchedule.playerFitness[player.id];
-        if (!fitness) return;
-
-        // Match play increases fatigue
-        fitness.fatigueLevel = Math.min(100, fitness.fatigueLevel + 15);
-
-        // High fatigue reduces fitness
-        if (fitness.fatigueLevel > 80) {
-            fitness.fitnessLevel = Math.max(40, fitness.fitnessLevel - 2);
-        }
-    });
-}
-
-function getPlayerFitnessStatus(playerId) {
-    const fitness = game.trainingSchedule.playerFitness[playerId];
-    if (!fitness) return null;
-
-    let status = 'Topform';
-    if (fitness.fitnessLevel < 60) status = 'Schwach';
-    else if (fitness.fitnessLevel < 75) status = 'Beeinträchtigt';
-    else if (fitness.fitnessLevel < 90) status = 'Normal';
-    else if (fitness.fatigueLevel > 70) status = 'Ermüdet';
-
-    return {
-        ...fitness,
-        status: status,
-        fitnessPercentage: Math.floor(fitness.fitnessLevel),
-        fatiguePercentage: Math.floor(fitness.fatigueLevel)
-    };
-}
-
-function rotateSquad(matchday) {
-    // Intelligente Rotation: Spieler mit hoher Fatigue bekommen Ruhe
-    const fatigued = squad.filter(p => {
-        const fitness = game.trainingSchedule.playerFitness[p.id];
-        return fitness && fitness.fatigueLevel > 75;
-    });
-
-    return fatigued.map(p => ({
-        playerId: p.id,
-        playerName: p.name,
-        reason: 'Hohe Fatigue',
-        recommendedRestDays: Math.ceil(fatigued.find(f => f.id === p.id).fatigueLevel / 25)
-    }));
-}
-
-function renderTrainingSchedulePanel() {
-    const container = document.getElementById('training-schedule-box');
-    if (!container) return;
-
-    initializeTrainingSchedule();
-
-    const currentMatchday = game.matchday || 1;
-    const plan = game.trainingSchedule.weeklyPlans.find(p => p.startMatchday === currentMatchday) ||
-                 createWeeklyTrainingPlan(currentMatchday);
-
-    let html = '<div class="panel-content">';
-    html += '<h3>Trainingsplanung</h3>';
-
-    // Weekly Plan
-    html += '<div class="training-week">';
-    html += '<h4>Trainingsplan (Woche MD ' + currentMatchday + ')</h4>';
-    html += '<table class="training-table" style="width:100%; font-size:9px;">';
-    html += '<tr><th>Tag</th><th>Trainingsart</th><th>Fokus</th><th>Kosten</th></tr>';
-
-    plan.days.forEach((day, idx) => {
-        const config = TRAINING_TYPES[day.trainingType];
-        html += `<tr>
-                    <td>Tag ${day.dayNumber}</td>
-                    <td>${config.name}</td>
-                    <td>${day.focusArea}</td>
-                    <td>€${day.cost.toLocaleString()}</td>
-                </tr>`;
-    });
-    html += '</table>';
-
-    const totalCost = plan.days.reduce((sum, d) => sum + d.cost, 0);
-    html += `<p style="font-size:9px; margin-top:6px;"><strong>Wochenkosten:</strong> €${totalCost.toLocaleString()}</p>`;
-    html += '</div>';
-
-    // Fitness Status
-    html += '<div class="fitness-status" style="margin-top:10px;">';
-    html += '<h4>Spieler-Fitnessstatus</h4>';
-    html += '<div style="max-height:200px; overflow-y:auto;">';
-
-    squad.slice(0, 11).forEach(player => {
-        const status = getPlayerFitnessStatus(player.id);
-        if (status) {
-            const fitnessColor = status.fitnessLevel > 90 ? 'green' :
-                                status.fitnessLevel > 75 ? 'yellow' : 'red';
-            html += `<div style="display:flex; justify-content:space-between; align-items:center; padding:4px; border-bottom:1px solid var(--border);">
-                        <span>${player.name}</span>
-                        <span style="display:flex; gap:8px; font-size:8px;">
-                            <span style="color:${fitnessColor};">Fitness: ${status.fitnessPercentage}%</span>
-                            <span style="color:orange;">Fatigue: ${status.fatiguePercentage}%</span>
-                        </span>
-                    </div>`;
-        }
-    });
-
-    html += '</div>';
-    html += '</div>';
-
-    // Training Type Legend
-    html += '<div class="training-legend" style="margin-top:10px; font-size:8px;">';
-    html += '<h4>Trainingsarten</h4>';
-    Object.entries(TRAINING_TYPES).forEach(([key, config]) => {
-        html += `<p><strong>${config.name}:</strong> Fitness +${Math.floor(config.fitnessModifier * 100)}%, Verletzungsschutz ${Math.floor(config.injuryReduction * 100)}%</p>`;
-    });
-    html += '</div>';
-
-    html += '</div>';
-    container.innerHTML = html;
-}
-
-</script>
-<script>
 // Reserves & Loan Management System
 // Manages reserve squad, player loans, and development of young players
 
@@ -25917,7 +24445,6 @@ const CRISIS_TYPES = {
     STADIUM_DAMAGE: {
         name: 'Stadionbeschädigung',
         probability: 0.03,
-        capacityLoss: { min: 2000, max: 5000 },
         reputationDamage: -8,
         resolution: ['Reparatur', 'Umzug', 'Versicherung'],
         cost: { min: 30000, max: 80000 }
@@ -26075,17 +24602,9 @@ function applyCrisisEffects(crisis) {
 
     // Financial damage
     if (config.moneyDamage) {
-        const damage = config.moneyDamage.min + Math.random() * (config.moneyDamage.max - config.moneyDamage.min);
+        const damage = Math.round(config.moneyDamage.min + Math.random() * (config.moneyDamage.max - config.moneyDamage.min));
         game.money -= damage;
         recordFinancialEvent('Krise-Kosten', -damage, 'Crisis');
-    }
-
-    // Stadium capacity damage
-    if (config.capacityLoss) {
-        if (game.stadium) {
-            const loss = config.capacityLoss.min + Math.random() * (config.capacityLoss.max - config.capacityLoss.min);
-            game.stadium.capacity = Math.max(5000, game.stadium.capacity - loss);
-        }
     }
 
     // Player injuries (for injury crisis)
@@ -30402,8 +28921,6 @@ function cleanupLegacyScoutState() {
             processDerbyMatch(currentMatch.opponent, won, currentMatch.score, currentMatch.conceded);
         }
         if (typeof checkForScandale === 'function') checkForScandale();
-        if (typeof checkFanProtest === 'function') checkFanProtest();
-        if (typeof checkUltraConflict === 'function') checkUltraConflict();
         if (typeof analyzeMatchTactics === 'function') {
             let [ownGoals, oppGoals] = String(scoreTextForRecord || '').split(':').map(n => parseInt(n, 10));
             let hasScore = Number.isFinite(ownGoals) && Number.isFinite(oppGoals);
@@ -30900,27 +29417,11 @@ function cleanupLegacyScoutState() {
         if (typeof runSecChiefAutomation === 'function') runSecChiefAutomation();
         // Immobilien-Portfolio (NEU): laufende Mieteinnahmen unabhängig von Heim-/Auswärtsspiel.
         if (typeof tickRealEstateIncome === 'function') tickRealEstateIncome();
-        // Fanclub Revenue: monatliche Einnahmen aus Fanclubs
-        if (typeof processFanRevenue === 'function' && hatSpieltagsabrechnung()) {
-            let fanRevenue = processFanRevenue();
-            if (fanRevenue > 0) {
-                setzeBuchungskontext(SPIELTAG_KONTEXT);
-                game.money += fanRevenue;
-                loescheBuchungskontext();
-                bucheInSpieltagsjournal('📣 Fanclub-Einnahmen', fanRevenue, 'einnahmen');
-            }
-        }
         if (typeof tickWomenTeam === 'function') tickWomenTeam();
-        // Stadium Management: Projektfortschritt und Wartung
-        if (typeof tickStadiumProjects === 'function') tickStadiumProjects();
-        let stadiumMaintenance = (typeof tickStadiumMaintenance === 'function') ? tickStadiumMaintenance() : 0;
-        if (stadiumMaintenance > 0) game.money -= stadiumMaintenance;
         // Monatliche Ticks (alle 4 Spieltage ≈ 1 Monat) der Feature-Systeme.
         if (game.matchday % 4 === 0) {
             setzeBuchungskontext('📅 Monatliche Vereinsposten');
             if (typeof migrateLegacyCoSponsors === 'function') migrateLegacyCoSponsors();
-            // Fan-Engagement: monatliche Zufriedenheits-Updates
-            if (typeof tickFanEngagement === 'function') tickFanEngagement();
             // Board Relations: monatliche Zufriedenheits- und Job-Sicherheits-Updates
             if (typeof tickBoardRoom === 'function') tickBoardRoom();
             // Jugend: monatliche Talententwicklung (Trainer-/Fokus-/Mentor-Bonus)
@@ -30932,9 +29433,7 @@ function cleanupLegacyScoutState() {
             if (typeof cleanupLegacyContractState === 'function') cleanupLegacyContractState();
             // Opposition Analysis: Gegner-Analyse-Updates
             if (typeof cleanupLegacyScoutState === 'function') cleanupLegacyScoutState();
-            // Training Schedule: Trainingseffekte und Müdigkeitsabbau
-            if (typeof applyTrainingEffects === 'function') applyTrainingEffects(game.matchday);
-            if (typeof tickTrainingFatigue === 'function') tickTrainingFatigue();
+            if (typeof cleanupLegacyFanTrainingStadiumState === 'function') cleanupLegacyFanTrainingStadiumState();
             // Reserves & Loan: Leihspieler-Management und Rückgabe
             if (typeof tickLoanedPlayerDevelopment === 'function') tickLoanedPlayerDevelopment();
             if (typeof tickIncomingLoanManagement === 'function') tickIncomingLoanManagement();
@@ -30951,11 +29450,7 @@ function cleanupLegacyScoutState() {
             // Karriereenden: am Saisonende in agePlayersAtSeasonEnd() (js/player-development.js)
             if (typeof tickTournamentBrackets === 'function') tickTournamentBrackets();
             // Opponent Analysis & Match Prediction: Gegner-Analyse und Match-Prognosen
-            // Phase 10: Set-Piece Training, Post-Match Analysis, Training Specialization, Fan Events
-            if (typeof tickSetPieceTraining === 'function') tickSetPieceTraining();
             if (typeof tickPostMatchAnalysis === 'function') tickPostMatchAnalysis();
-            if (typeof tickTrainingSpecialization === 'function') tickTrainingSpecialization();
-            if (typeof tickFanEvents === 'function') tickFanEvents();
             // Financial tracking for dashboard charts
             if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
             loescheBuchungskontext();
