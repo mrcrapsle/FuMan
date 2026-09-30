@@ -186,6 +186,8 @@
             if (p.cupTournament) cupTournament = renameOldClubName(cupTournament);
             if (p.europeTournament) europeTournament = renameOldClubName(europeTournament);
         }
+        // Felder entfernter Module sofort loswerden, nicht erst beim nächsten Monatswechsel.
+        if (typeof cleanupRemovedModuleState === 'function') cleanupRemovedModuleState();
         restoreGetters();
     }
 

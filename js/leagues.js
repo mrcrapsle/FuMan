@@ -24,10 +24,6 @@
         return getOurLeagueTeam()?.rivalName || null;
     }
 
-    function getOurFriendName() {
-        return getOurLeagueTeam()?.friendName || null;
-    }
-
     // Gegner-Identität (NEU): jedes Team bekommt einen eigenen Spielstil, der sein
     // Torverhalten (sowohl in Spielen gegen uns als auch in reinen KI-vs-KI-Spielen)
     // tatsächlich beeinflusst - Offensiv-Teams schießen mehr Tore, kassieren aber auch mehr;

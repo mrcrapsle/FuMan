@@ -4510,6 +4510,45 @@ async function testLongRun(browser) {
     await page.close();
 }
 
+async function testTacticRecords(browser) {
+    console.log('\n[P15b] Taktik-Bilanz und Aufräumen Teil 4');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        game.formation = '4-3-3'; game.tacticStyle = 'pressing';
+        game.sackPending = false; simulateMatchdays(5);
+        game.formation = '5-3-2'; game.tacticStyle = 'defensiv';
+        game.sackPending = false; simulateMatchdays(5);
+        const rows = getTacticRecordRows();
+        const spiele = rows.reduce((a, x) => a + x.spiele, 0);
+        const druck = rows.find(x => x.formation === '4-3-3' && x.stil === 'pressing');
+        renderTacticSystemPanel();
+        const html = document.getElementById('tactic-system-panel').innerHTML;
+        // Alte Spielstände: Felder der entfernten Module verschwinden beim Laden
+        const save = buildSaveState();
+        save.game = Object.assign({}, save.game, { tacticAnalysis: { effectiveness: 0.5 }, playerRoles: {}, clubSwitchHistory: [] });
+        applyLoadedState(JSON.parse(JSON.stringify(save)));
+        return {
+            spiele, druckSpiele: druck ? druck.spiele : 0, html,
+            toreStimmen: rows.every(x => x.tore >= 0 && x.gegentore >= 0 && x.s + x.u + x.n === x.spiele),
+            altWeg: !('tacticAnalysis' in game) && !('playerRoles' in game) && !('clubSwitchHistory' in game),
+            behalten: game.tacticRecords && Object.keys(game.tacticRecords).length === rows.length,
+            modulWeg: typeof switchToNewClub === 'undefined' && typeof renderPlayerRetirementPanel === 'undefined'
+                && typeof getFormationCompletenessFit === 'undefined' && typeof tickPlayerRetirement === 'function'
+        };
+    });
+    assert(r.spiele === 10, `Taktik-Bilanz zählt jedes Ligaspiel genau einmal (${r.spiele}/10)`);
+    assert(r.druckSpiele === 5, `Bilanz je Formation und Stil getrennt (4-3-3 Pressing: ${r.druckSpiele}/5)`);
+    assert(r.toreStimmen, 'Siege, Remis und Niederlagen ergeben die Spielzahl');
+    assert(r.html.includes('Pkt/Sp.') && r.html.includes('Pressing') && r.html.includes('Teamstärke-Effekt'), 'Panel zeigt Bilanz-Tabelle und echte Stärke-Effekte');
+    assert(r.altWeg, 'Alte Taktik-/Vereinswechsel-Felder werden beim Laden entfernt');
+    assert(r.behalten, 'Taktik-Bilanz übersteht Speichern und Laden');
+    assert(r.modulWeg, 'Admin-Vereinswechsel, Pensionierungs-Panel und Schein-Taktikwerte sind entfernt');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 3).join(' | ')})`);
+    await page.close();
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -4589,6 +4628,7 @@ async function main() {
         testPhase14Teil3,
         testPhase14Teil4,
         testLongRun,
+        testTacticRecords,
         testRuntimeRoundTrip,
     ];
 

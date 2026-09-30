@@ -210,14 +210,6 @@
 
     let pendingMatchInfo = null;
 
-    // Deterministischer "Fingerabdruck" pro Gegnername, damit derselbe Verein in der
-    // Analyse immer denselben taktischen Grundcharakter zeigt (statt bei jedem Aufruf
-    // zufällig zu wechseln).
-    function hashTeamName(name) {
-        let h = 0;
-        for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-        return h;
-    }
     function getOpponentPlaystyle(name) {
         // Bugfix: zeigte bisher nur einen aus dem Vereinsnamen gehashten Zufallstext ohne
         // jeden Bezug zum tatsächlichen Spielverhalten - jetzt der echte, simulationswirksame
@@ -2375,5 +2367,4 @@
         showScreen('screen-dashboard');
         showToast(`⚡ ${simuliert} Spieltag${simuliert === 1 ? '' : 'e'} simuliert - jetzt Spieltag ${Math.min(34, game.matchday)}/34.`, 'success', 3500);
     }
-
 

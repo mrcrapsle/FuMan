@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Anstoß Mobile Pro - FM13** is a fully-featured browser-based football manager simulation game. The codebase is modular (index.html + css/styles.css + 83 js/*.js files) that bundles into a single 1.8 MB standalone HTML file. The game runs entirely in the browser with local storage for save games, works offline, and supports mobile devices.
+**Anstoß Mobile Pro - FM13** is a fully-featured browser-based football manager simulation game. The codebase is modular (index.html + css/styles.css + 78 js/*.js files) that bundles into a single 1.8 MB standalone HTML file. The game runs entirely in the browser with local storage for save games, works offline, and supports mobile devices.
 
 ## Common Commands
 
@@ -89,7 +89,7 @@ This pattern ensures:
 **Current Integrated Systems:**
 - Manager Analytics (career stats, rating breakdown)
 - Player Scandals (controversies, suspensions, team morale)
-- Tactic System (6 formations, effectiveness analysis)
+- Tactic record (`game.tacticRecords`: real results per formation + style, js/tactic-system.js; formation/style effects live in `FORMATION_RATINGS` / `TACTIC_STYLE_CONFIG`)
 - Fans (fan groups, actions, club network) in `js/fans.js`
 - Board Room (four members explaining `game.boardSat`)
 - Hall of Fame, Youth Academy, Player Development
@@ -108,7 +108,8 @@ This pattern ensures:
 - Season end extras: `js/relegation.js` (own club on rank 3/16, legs on the dashboard, auto-resolved in `concludeSeasonAndAdvance()`), `js/league-awards.js` (`game.leagueAwards`), `js/coach-carousel.js` (AI `team.coach`, temporary `team.coachBounce` - removed via `tickCoachBounce(true)` before leagues advance).
 - Statistics: manager career in `game.managerCareer` (js/manager-analytics.js), Hall of Fame computed from squad + `game.playerRetirement` + `game.managerCareer` (js/hall-of-fame.js). Loans: `js/secondteam.js` / transfermarket loans only.
 - Side income: stock `dividendRate` is an annual rate (paid monthly as rate/8.5); betting odds come from `simulateBetProbabilities()` (same `simulateGoals` as matches) using the best available XI (`pickBestLineupIds()`), no bets on own defeat; real estate income grows with cumulative cost (~10 seasons payback). Measure new income sources before adding them - several were money machines.
-- Removed modules leave save-game fields behind: add them to `cleanupRemovedModuleState()` in js/state.js.
+- Removed modules leave save-game fields behind: add them to `cleanupRemovedModuleState()` in js/state.js (runs on load and monthly).
+- Club change: only `showClubSwitchOptions()` in js/career.js. Player retirements: `tickPlayerRetirement()` (js/player-retirement.js), shown in the Hall of Fame.
 - Player aging/development: only `agePlayersAtSeasonEnd()` in `js/player-development.js` (age +1, strength by archetype).
 
 ### Game Loop & Monthly Ticks
@@ -271,7 +272,7 @@ CI runs on every branch; only `main` deploys. Only push to `main` after `npm run
 
 - **index.html** – Main page; embeds CSS, loads all js/ modules, defines screen containers
 - **css/styles.css** – All styles; organized by section (DASHBOARD, SQUAD, MANAGER'S OFFICE, etc.)
-- **js/*.js** – Game logic modules (83 files); loaded in order of dependencies
+- **js/*.js** – Game logic modules (78 files); loaded in order of dependencies
 - **tests/run-tests.js** – Playwright test suite
 - **build.py** – Bundler script; concatenates and lints
 - **server.py** / `npm run serve` – Local dev server

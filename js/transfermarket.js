@@ -413,13 +413,6 @@
         updateUI();
     }
 
-    function counterTransferOffer(offerId, multiplier, demandLabel) {
-        let o = incomingOffers.find(x => x.id === offerId);
-        if (!o) return;
-        let demandedSum = Math.round((o.currentBid * multiplier) / 5000) * 5000;
-        applyTransferCounterDemand(offerId, demandedSum);
-    }
-
     // Kernlogik der Nachverhandlung - nimmt jetzt einen FREI GEWÄHLTEN Betrag entgegen
     // (aus dem Schrittweite-Stepper-Modal) statt nur fester Prozent-Buttons.
     function applyTransferCounterDemand(offerId, demandedSum) {
@@ -627,7 +620,6 @@
             row.innerHTML = `<span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 26) : ''}${p.name} (${p.pos}|Str:${p.strength})</span><button onclick="sellPlayer('${p.id}', this)" class="btn-danger" style="width:auto;">Blitzverkauf [${formatVal(Math.round(p.marketValue*0.80))}]</button>`;
             sList.appendChild(row);
         });
-
 
         updateUI();
     }

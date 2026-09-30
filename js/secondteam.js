@@ -176,26 +176,6 @@
         renderSecondTeamView();
     }
 
-    // Bewusst schlanker als der volle Transfermarkt der ersten Mannschaft: die zweite
-    // Mannschaft dient als eigenständiges "zweites Spielstandbein", kein komplett
-    // dupliziertes Transfersystem. Ein einfacher, bezahlbarer Amateur-Neuzugang reicht,
-    // um den Kader über die Zeit auszubauen.
-    function signSecondTeamTalent() {
-        if (secondTeamSquad.length >= 22) { showToast('Kader bereits voll (22 Spieler)!', 'error'); return; }
-        let pos = ['TW', 'ABW', 'MIT', 'ST'][Math.floor(Math.random() * 4)];
-        let baseStr = Math.max(25, calcSecondTeamStrength() - 4);
-        let candidate = createPlayer(pos, baseStr, baseStr + 10);
-        let cost = Math.round(candidate.marketValue * 0.7 / 500) * 500;
-        if (game.money < cost) { showToast(`Nicht genug Geld! Benötigt: ${formatVal(cost)}`, 'error'); return; }
-        game.money -= cost;
-        secondTeamSquad.push(candidate);
-        autoLineupSecondTeam();
-        syncSecondTeamIntoLeagueTable();
-        renderSecondTeamView();
-        updateUI();
-        showToast(`✅ ${candidate.name} (${candidate.pos}, Stärke ${candidate.strength}) für ${formatVal(cost)} verpflichtet!`, 'success');
-    }
-
     function releaseSecondTeamPlayer(id, btn) {
         if (!requireConfirm(btn, 'Wirklich entlassen?')) return;
         if (secondTeamSquad.length <= 11) { showToast('Mindestens 11 Spieler benötigt!', 'error'); return; }
@@ -295,23 +275,6 @@
         } else {
             showToast(`📉 ${loan.loanClub} lehnt dieses Angebot ab - versuch es mit einem höheren Betrag.`, 'error');
         }
-    }
-
-    function recallLoanedPlayer(index) {
-        let loan = loanedPlayers[index];
-        if (!loan) return;
-        let fee = Math.max(1500, Math.round(loan.player.marketValue * 0.1 * (loan.duration / 15)));
-        if (game.money < fee) { showToast(`Nicht genug Geld! Rückruf-Ablöse: ${formatVal(fee)}`, 'error'); return; }
-        game.money -= fee;
-        let p = loan.player;
-        secondTeamSquad.push(p);
-        loanedPlayers.splice(index, 1);
-        autoLineupSecondTeam();
-        syncSecondTeamIntoLeagueTable();
-        addInboxMessage('vertrag', `📥 ${p.name} vorzeitig zurückgerufen!`, `Für ${formatVal(fee)} Ablöse hat ${loan.loanClub} der vorzeitigen Rückholung von ${p.name} zugestimmt - sofort wieder einsatzbereit für die zweite Mannschaft.`, 'screen-second-team');
-        showToast(`📥 ${p.name} für ${formatVal(fee)} vorzeitig zurückgerufen!`, 'success');
-        renderSecondTeamView();
-        updateUI();
     }
 
     // Zählt die Leihdauer jeden Spieltag herunter (wird von processPostMatchRoutine() aus
@@ -614,7 +577,6 @@
         refreshSecondTeamMarket();
         takeSecondTeamStrengthSnapshot();
     }
-
 
     // ==========================================
     // EIGENER TRAINERSTAB DER ZWEITEN MANNSCHAFT

@@ -44,16 +44,9 @@
     // Ligen sind sie aber die mit Abstand groesste Einnahmequelle - ein Erstligist stand
     // dadurch eine ganze Saison lang zweistellig im Minus und wurde erst am letzten
     // Spieltag schlagartig wieder solvent. Echte Vereine bekommen ihr TV-Geld in Raten,
-    // und genau so laeuft es jetzt: jeden Spieltag ein Vierunddreissigstel, berechnet nach
-    // dem AKTUELLEN Tabellenplatz. Zum Saisonende folgt nur noch die Differenz zum
-    // Endstand (Restausschuettung), der Tabellenplatz bleibt also voll relevant.
-    function getCurrentLeagueRank() {
-        let table = leaguesData[game.leagueLevel] || [];
-        let sorted = [...table].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
-        let rank = sorted.findIndex(t => t.name === game.clubName) + 1;
-        return rank > 0 ? rank : Math.max(1, Math.round(sorted.length / 2));
-    }
-
+    // und genau so laeuft es jetzt: jeden Spieltag ein Vierunddreissigstel. Zum Saisonende
+    // folgt nur noch die Differenz zum Endstand (Restausschuettung), der Tabellenplatz
+    // bleibt also voll relevant.
     // Die Rate ist bewusst platzierungsNEUTRAL (Grundbetrag der Liga geteilt durch die
     // Spieltage). Zu Saisonbeginn steht die Tabelle noch auf null, ein zufaelliger erster
     // Platz wuerde sonst die ganze Saison ueber 50 % mehr Geld bringen. Der Tabellenplatz

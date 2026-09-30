@@ -694,13 +694,9 @@
         freeKickTakerId: null,
         cornerTakerId: null,
         trophies: [],
-        clubSwitchHistory: [],
         academyLeague: null,
         scandals: [],
-        tacticsHistory: [],
-        playerRoles: {},
-        formationHistory: [],
-        tacticAnalysis: { matchesAnalyzed: 0, effectiveness: 0.5 },
+        tacticRecords: {},
         boardRoom: null
     };
 
@@ -1093,7 +1089,7 @@
             'trainingSchedule', 'trainingSpecialization', 'setPieceTraining', 'stadium',
             'internationalTournaments', 'playerInternationalCaps', 'internationalTournamentHistory', 'nextWorldCup', 'transferMarket', 'postMatchAnalysis',
             'transferBudgetUsed', 'transferMarketPlayers', 'transferLastRefreshMatchday', 'reserves', 'tournamentBrackets',
-            'squadHarmony', 'disciplinarySystem', 'crises', 'localRivals'].forEach(k => { delete game[k]; });
+            'squadHarmony', 'disciplinarySystem', 'crises', 'localRivals', 'tacticsHistory', 'playerRoles', 'formationHistory', 'tacticAnalysis', 'clubSwitchHistory'].forEach(k => { delete game[k]; });
         // Holding-Aufträge alter Spielstände trugen echte Vereinsnamen.
         const echteNamen = { 'Real Madrid': 'Real Madrit', 'FC Bayern': 'Bayern Munchen', 'FC Liverpool': 'Liverpol FC' };
         if (typeof holdingCompany !== 'undefined') (holdingCompany.b2bContracts || []).forEach(c => { if (echteNamen[c.club]) c.club = echteNamen[c.club]; });
@@ -3571,26 +3567,6 @@ function cleanupLegacyDevelopmentState() {
         renderSecondTeamView();
     }
 
-    // Bewusst schlanker als der volle Transfermarkt der ersten Mannschaft: die zweite
-    // Mannschaft dient als eigenständiges "zweites Spielstandbein", kein komplett
-    // dupliziertes Transfersystem. Ein einfacher, bezahlbarer Amateur-Neuzugang reicht,
-    // um den Kader über die Zeit auszubauen.
-    function signSecondTeamTalent() {
-        if (secondTeamSquad.length >= 22) { showToast('Kader bereits voll (22 Spieler)!', 'error'); return; }
-        let pos = ['TW', 'ABW', 'MIT', 'ST'][Math.floor(Math.random() * 4)];
-        let baseStr = Math.max(25, calcSecondTeamStrength() - 4);
-        let candidate = createPlayer(pos, baseStr, baseStr + 10);
-        let cost = Math.round(candidate.marketValue * 0.7 / 500) * 500;
-        if (game.money < cost) { showToast(`Nicht genug Geld! Benötigt: ${formatVal(cost)}`, 'error'); return; }
-        game.money -= cost;
-        secondTeamSquad.push(candidate);
-        autoLineupSecondTeam();
-        syncSecondTeamIntoLeagueTable();
-        renderSecondTeamView();
-        updateUI();
-        showToast(`✅ ${candidate.name} (${candidate.pos}, Stärke ${candidate.strength}) für ${formatVal(cost)} verpflichtet!`, 'success');
-    }
-
     function releaseSecondTeamPlayer(id, btn) {
         if (!requireConfirm(btn, 'Wirklich entlassen?')) return;
         if (secondTeamSquad.length <= 11) { showToast('Mindestens 11 Spieler benötigt!', 'error'); return; }
@@ -3690,23 +3666,6 @@ function cleanupLegacyDevelopmentState() {
         } else {
             showToast(`📉 ${loan.loanClub} lehnt dieses Angebot ab - versuch es mit einem höheren Betrag.`, 'error');
         }
-    }
-
-    function recallLoanedPlayer(index) {
-        let loan = loanedPlayers[index];
-        if (!loan) return;
-        let fee = Math.max(1500, Math.round(loan.player.marketValue * 0.1 * (loan.duration / 15)));
-        if (game.money < fee) { showToast(`Nicht genug Geld! Rückruf-Ablöse: ${formatVal(fee)}`, 'error'); return; }
-        game.money -= fee;
-        let p = loan.player;
-        secondTeamSquad.push(p);
-        loanedPlayers.splice(index, 1);
-        autoLineupSecondTeam();
-        syncSecondTeamIntoLeagueTable();
-        addInboxMessage('vertrag', `📥 ${p.name} vorzeitig zurückgerufen!`, `Für ${formatVal(fee)} Ablöse hat ${loan.loanClub} der vorzeitigen Rückholung von ${p.name} zugestimmt - sofort wieder einsatzbereit für die zweite Mannschaft.`, 'screen-second-team');
-        showToast(`📥 ${p.name} für ${formatVal(fee)} vorzeitig zurückgerufen!`, 'success');
-        renderSecondTeamView();
-        updateUI();
     }
 
     // Zählt die Leihdauer jeden Spieltag herunter (wird von processPostMatchRoutine() aus
@@ -4009,7 +3968,6 @@ function cleanupLegacyDevelopmentState() {
         refreshSecondTeamMarket();
         takeSecondTeamStrengthSnapshot();
     }
-
 
     // ==========================================
     // EIGENER TRAINERSTAB DER ZWEITEN MANNSCHAFT
@@ -4950,10 +4908,6 @@ function cleanupLegacyDevelopmentState() {
 
     function getOurRivalName() {
         return getOurLeagueTeam()?.rivalName || null;
-    }
-
-    function getOurFriendName() {
-        return getOurLeagueTeam()?.friendName || null;
     }
 
     // Gegner-Identität (NEU): jedes Team bekommt einen eigenen Spielstil, der sein
@@ -6886,13 +6840,6 @@ function cleanupLegacyDevelopmentState() {
         updateUI();
     }
 
-    function counterTransferOffer(offerId, multiplier, demandLabel) {
-        let o = incomingOffers.find(x => x.id === offerId);
-        if (!o) return;
-        let demandedSum = Math.round((o.currentBid * multiplier) / 5000) * 5000;
-        applyTransferCounterDemand(offerId, demandedSum);
-    }
-
     // Kernlogik der Nachverhandlung - nimmt jetzt einen FREI GEWÄHLTEN Betrag entgegen
     // (aus dem Schrittweite-Stepper-Modal) statt nur fester Prozent-Buttons.
     function applyTransferCounterDemand(offerId, demandedSum) {
@@ -7100,7 +7047,6 @@ function cleanupLegacyDevelopmentState() {
             row.innerHTML = `<span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 26) : ''}${p.name} (${p.pos}|Str:${p.strength})</span><button onclick="sellPlayer('${p.id}', this)" class="btn-danger" style="width:auto;">Blitzverkauf [${formatVal(Math.round(p.marketValue*0.80))}]</button>`;
             sList.appendChild(row);
         });
-
 
         updateUI();
     }
@@ -12148,7 +12094,6 @@ function finishGoalkeeperGame() {
         updateUI();
     }
 
-
     // ==========================================
     // BUCHUNGSJOURNAL: aufgeschlüsselte Ein- und Ausgaben je Spieltag
     // ==========================================
@@ -12394,18 +12339,6 @@ function finishGoalkeeperGame() {
         if (typeof addToFfpSeasonNet === 'function') addToFfpSeasonNet(typ === 'einnahmen' ? amount : -amount);
     }
     function loescheBuchungskontext() { buchungsKontext = null; }
-
-    // Aufrufer haben game.money bereits geändert; hier bekommt die dabei entstandene
-    // Kontoauszug-Zeile nur ein sprechendes Label statt des Screen-Namens.
-    function recordFinancialEvent(label, amount) {
-        let auszug = game.kontoauszug || [];
-        let letzte = auszug[auszug.length - 1];
-        if (letzte && letzte.season === game.season && letzte.matchday === game.matchday
-            && Math.round(letzte.amount) === Math.round(amount)) {
-            letzte.label = label;
-        }
-    }
-
 
     // Kontoauszug-Ansicht: chronologische Liste aller Kontobewegungen ausserhalb der
     // Spieltagsabrechnung, plus eine Zusammenfassung je Bereich.
@@ -13960,16 +13893,9 @@ function finishGoalkeeperGame() {
     // Ligen sind sie aber die mit Abstand groesste Einnahmequelle - ein Erstligist stand
     // dadurch eine ganze Saison lang zweistellig im Minus und wurde erst am letzten
     // Spieltag schlagartig wieder solvent. Echte Vereine bekommen ihr TV-Geld in Raten,
-    // und genau so laeuft es jetzt: jeden Spieltag ein Vierunddreissigstel, berechnet nach
-    // dem AKTUELLEN Tabellenplatz. Zum Saisonende folgt nur noch die Differenz zum
-    // Endstand (Restausschuettung), der Tabellenplatz bleibt also voll relevant.
-    function getCurrentLeagueRank() {
-        let table = leaguesData[game.leagueLevel] || [];
-        let sorted = [...table].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
-        let rank = sorted.findIndex(t => t.name === game.clubName) + 1;
-        return rank > 0 ? rank : Math.max(1, Math.round(sorted.length / 2));
-    }
-
+    // und genau so laeuft es jetzt: jeden Spieltag ein Vierunddreissigstel. Zum Saisonende
+    // folgt nur noch die Differenz zum Endstand (Restausschuettung), der Tabellenplatz
+    // bleibt also voll relevant.
     // Die Rate ist bewusst platzierungsNEUTRAL (Grundbetrag der Liga geteilt durch die
     // Spieltage). Zu Saisonbeginn steht die Tabelle noch auf null, ein zufaelliger erster
     // Platz wuerde sonst die ganze Saison ueber 50 % mehr Geld bringen. Der Tabellenplatz
@@ -15401,7 +15327,6 @@ function finishGoalkeeperGame() {
         }).join('');
     }
 
-
     // Liga-abhängige Zuschauer-OBERGRENZE (Anteil der Stadionkapazität, der bei
     // durchschnittlicher Fan-Stimmung realistisch ausgelastet wird): Ein Landesliga-Klub
     // füllt sein Stadion nicht annähernd wie ein Bundesligist, selbst bei guter Stimmung.
@@ -15538,15 +15463,6 @@ function finishGoalkeeperGame() {
         container.className = '';
         container.classList.add(`stadium-level-${level}`);
         levelDisplay.textContent = level;
-    }
-
-    // Upgrade-Funktion für das Stadion (wird beim Kauf von Projekten aufgerufen)
-    function upgradeStadium(level) {
-        const container = document.getElementById('stadium-container');
-        if (!container) return;
-        container.className = '';
-        container.classList.add(`stadium-level-${Math.max(1, Math.min(5, level))}`);
-        updateInteractiveStadiumVisualization();
     }
 
     // Accordion Toggle Funktion für Menü-Organisation
@@ -18637,302 +18553,70 @@ function renderYouthDevelopmentChart() {
 
 /* eslint-enable */
 /* eslint-disable no-undef */
+// Taktik-Bilanz: echte Ergebnisse je Kombination aus Formation und Spielstil sowie die
+// tatsächlichen Auswirkungen der aktuellen Wahl auf die Teamstärke (FORMATION_RATINGS in
+// squad.js, getTacticStyleBonus()/getFormationDefBonus() in match.js). Früher stand hier ein
+// losgelöstes "Taktik-System" mit eigenen Formationen, deren Werte nirgends wirkten.
 
-const TACTICS_CONFIG = {
-  formations: {
-    '3-5-2': {
-      name: '3-5-2: Defensiv stabil',
-      defense: 0.9,
-      midfield: 1.0,
-      offense: 0.8,
-      width: 0.9,
-      distribution: 'kurz',
-      pressing: 'normal',
-      positionMap: { def: 3, mid: 5, att: 2 },
-      counterChance: 0.15,
-      creativeBonus: -0.1,
-      defensiveStyle: 'compact',
-      offensiveStyle: 'controlled'
-    },
-    '3-4-3': {
-      name: '3-4-3: Ausgewogen',
-      defense: 0.85,
-      midfield: 1.05,
-      offense: 0.95,
-      width: 1.0,
-      distribution: 'kurz',
-      pressing: 'normal',
-      positionMap: { def: 3, mid: 4, att: 3 },
-      counterChance: 0.20,
-      creativeBonus: 0.05,
-      defensiveStyle: 'balanced',
-      offensiveStyle: 'dynamic'
-    },
-    '4-2-4': {
-      name: '4-2-4: Offensiv',
-      defense: 0.75,
-      midfield: 0.9,
-      offense: 1.2,
-      width: 1.1,
-      distribution: 'lang',
-      pressing: 'aggressiv',
-      positionMap: { def: 4, mid: 2, att: 4 },
-      counterChance: 0.25,
-      creativeBonus: 0.2,
-      defensiveStyle: 'pressing',
-      offensiveStyle: 'aggressive'
-    },
-    '4-3-3': {
-      name: '4-3-3: Klassisch',
-      defense: 0.95,
-      midfield: 1.0,
-      offense: 1.0,
-      width: 1.0,
-      distribution: 'kurz',
-      pressing: 'normal',
-      positionMap: { def: 4, mid: 3, att: 3 },
-      counterChance: 0.18,
-      creativeBonus: 0.08,
-      defensiveStyle: 'compact',
-      offensiveStyle: 'dynamic'
-    },
-    '4-4-2': {
-      name: '4-4-2: Tradition',
-      defense: 1.0,
-      midfield: 0.95,
-      offense: 0.95,
-      width: 0.85,
-      distribution: 'lang',
-      pressing: 'normal',
-      positionMap: { def: 4, mid: 4, att: 2 },
-      counterChance: 0.22,
-      creativeBonus: -0.05,
-      defensiveStyle: 'solid',
-      offensiveStyle: 'direct'
-    },
-    '5-3-2': {
-      name: '5-3-2: Ultra-Defensiv',
-      defense: 1.15,
-      midfield: 0.8,
-      offense: 0.7,
-      width: 0.7,
-      distribution: 'lang',
-      pressing: 'vorsichtig',
-      positionMap: { def: 5, mid: 3, att: 2 },
-      counterChance: 0.30,
-      creativeBonus: -0.25,
-      defensiveStyle: 'deep',
-      offensiveStyle: 'counter'
-    }
-  },
-  pressing: {
-    vorsichtig: { name: 'Vorsichtig', ballLoss: 0.05, pressing: 0.3, energy: 0.7 },
-    normal: { name: 'Normal', ballLoss: 0.12, pressing: 0.6, energy: 1.0 },
-    aggressiv: { name: 'Aggressiv', ballLoss: 0.22, pressing: 1.0, energy: 1.3 }
-  },
-  possession: {
-    ballHoldingShort: { name: 'Kurze Pässe', accuracy: 1.1, pace: 0.8, riskFactor: 0.2 },
-    ballHoldingMid: { name: 'Gemischtes Spiel', accuracy: 1.0, pace: 1.0, riskFactor: 0.4 },
-    ballHoldingLong: { name: 'Lange Bälle', accuracy: 0.85, pace: 1.3, riskFactor: 0.7 }
-  },
-  roles: {
-    CB: { name: 'Innenverteidiger', attrs: ['defense', 'strength', 'heading'] },
-    FB: { name: 'Außenverteidiger', attrs: ['defense', 'pace', 'stamina'] },
-    LB: { name: 'Linkes Außenverteidiger', attrs: ['defense', 'pace', 'crossing'] },
-    RB: { name: 'Rechtes Außenverteidiger', attrs: ['defense', 'pace', 'crossing'] },
-    CM: { name: 'Zentrales Mittelfeld', attrs: ['passing', 'defense', 'stamina'] },
-    CAM: { name: 'Offensives Mittelfeld', attrs: ['passing', 'creativity', 'shooting'] },
-    CDM: { name: 'Defensives Mittelfeld', attrs: ['defense', 'passing', 'stamina'] },
-    LM: { name: 'Linkes Mittelfeld', attrs: ['pace', 'dribbling', 'passing'] },
-    RM: { name: 'Rechtes Mittelfeld', attrs: ['pace', 'dribbling', 'passing'] },
-    ST: { name: 'Stürmer', attrs: ['shooting', 'pace', 'strength'] },
-    CF: { name: 'Mittelstürmer', attrs: ['shooting', 'strength', 'heading'] },
-    LW: { name: 'Linker Flügel', attrs: ['pace', 'dribbling', 'shooting'] },
-    RW: { name: 'Rechter Flügel', attrs: ['pace', 'dribbling', 'shooting'] }
-  }
-};
-
-function initializeTacticsSystem() {
-  if (!game.tacticsHistory) {
-    game.tacticsHistory = [];
-  }
-  if (!game.playerRoles) {
-    game.playerRoles = {};
-  }
-  if (!game.formationHistory) {
-    game.formationHistory = [];
-  }
-  if (!game.tacticAnalysis) {
-    game.tacticAnalysis = { matchesAnalyzed: 0, effectiveness: 0.5 };
-  }
-}
-
-function assignPlayerTacticRole(playerId, formation, roleInFormation) {
-  if (!game.playerRoles) game.playerRoles = {};
-  if (!game.playerRoles[formation]) {
-    game.playerRoles[formation] = {};
-  }
-  game.playerRoles[formation][playerId] = roleInFormation;
-}
-
-function getPlayerTacticRoleInFormation(playerId, formation) {
-  if (!game.playerRoles || !game.playerRoles[formation]) return null;
-  return game.playerRoles[formation][playerId] || null;
-}
-
-function getFitnessPenaltyForRole(player, role) {
-  const fitness = player.fitness || 100;
-  if (fitness > 90) return 0;
-  if (fitness > 75) return -0.05;
-  if (fitness > 60) return -0.15;
-  return -0.3;
-}
-
-function getPlayerFormationFit(player, formation, roleInFormation) {
-  const config = TACTICS_CONFIG.formations[formation];
-  if (!config) return 0.5;
-
-  let fit = 0.5;
-  const playerPos = player.pos;
-
-  if (roleInFormation === 'CB' && ['AB'].includes(playerPos)) fit += 0.3;
-  else if (roleInFormation === 'FB' && ['AB', 'AH'].includes(playerPos)) fit += 0.25;
-  else if (roleInFormation === 'LB' && playerPos === 'AH') fit += 0.3;
-  else if (roleInFormation === 'RB' && playerPos === 'AH') fit += 0.3;
-  else if (roleInFormation === 'CDM' && ['MF', 'DM'].includes(playerPos)) fit += 0.3;
-  else if (roleInFormation === 'CM' && ['MF', 'ZM'].includes(playerPos)) fit += 0.25;
-  else if (roleInFormation === 'CAM' && ['MF', 'OM'].includes(playerPos)) fit += 0.3;
-  else if (roleInFormation === 'LM' && playerPos === 'MF') fit += 0.25;
-  else if (roleInFormation === 'RM' && playerPos === 'MF') fit += 0.25;
-  else if (roleInFormation === 'ST' && ['ST', 'MS'].includes(playerPos)) fit += 0.35;
-  else if (roleInFormation === 'CF' && ['ST', 'MS'].includes(playerPos)) fit += 0.3;
-  else if (roleInFormation === 'LW' && playerPos === 'ST') fit += 0.2;
-  else if (roleInFormation === 'RW' && playerPos === 'ST') fit += 0.2;
-
-  fit = Math.min(1.0, Math.max(0.3, fit));
-  fit += getFitnessPenaltyForRole(player, roleInFormation);
-  return fit;
-}
-
-function getFormationBonus(formation, tacticStyle) {
-  const config = TACTICS_CONFIG.formations[formation];
-  if (!config) return { attack: 0, defense: 0, creativity: 0 };
-
-  let bonuses = {
-    attack: (config.offense - 1.0) * 0.5,
-    defense: (config.defense - 1.0) * 0.5,
-    creativity: config.creativeBonus * 0.4
-  };
-
-  if (tacticStyle === 'aggressive' && config.offensiveStyle === 'aggressive') {
-    bonuses.attack += 0.1;
-  } else if (tacticStyle === 'defensive' && config.defensiveStyle === 'deep') {
-    bonuses.defense += 0.1;
-  }
-
-  return bonuses;
-}
-
+// Nach jedem eigenen Ligaspiel aus processPostMatchRoutine() aufgerufen.
 function analyzeMatchTactics(match) {
-  if (!match || !game.tacticAnalysis) return;
-
-  game.tacticAnalysis.matchesAnalyzed++;
-  let effectiveness = 0.5;
-
-  if (match.won) effectiveness = 0.75;
-  else if (match.draw) effectiveness = 0.55;
-  else effectiveness = 0.35;
-
-  const prevEffectiveness = game.tacticAnalysis.effectiveness || 0.5;
-  game.tacticAnalysis.effectiveness = prevEffectiveness * 0.7 + effectiveness * 0.3;
+  if (!match) return;
+  if (!game.tacticRecords) game.tacticRecords = {};
+  const key = `${game.formation || '4-4-2'}|${game.tacticStyle || 'ausgeglichen'}`;
+  const r = game.tacticRecords[key] || (game.tacticRecords[key] = { s: 0, u: 0, n: 0, tore: 0, gegentore: 0 });
+  if (match.won) r.s++;
+  else if (match.draw) r.u++;
+  else r.n++;
+  r.tore += match.score || 0;
+  r.gegentore += match.conceded || 0;
 }
 
-function getTacticSuggestion() {
-  if (!game.tacticAnalysis || game.tacticAnalysis.matchesAnalyzed < 3) {
-    return 'Zu wenig Daten für Taktik-Analyse (min. 3 Spiele)';
-  }
-
-  const effectiveness = game.tacticAnalysis.effectiveness || 0.5;
-
-  if (effectiveness > 0.65) {
-    return 'Aktuelle Taktik funktioniert gut - beibehalten';
-  } else if (effectiveness < 0.45) {
-    return 'Taktik nicht effektiv - Wechsel erwägen';
-  } else {
-    return 'Taktik funktioniert mittelmäßig - kleine Anpassungen möglich';
-  }
-}
-
-function getFormationCompletenessFit(formation) {
-  if (!squad || squad.length === 0) return 0;
-  if (!game.playerRoles || !game.playerRoles[formation]) return 0.4;
-
-  const roles = game.playerRoles[formation];
-  const config = TACTICS_CONFIG.formations[formation];
-  if (!config) return 0.4;
-
-  let totalFit = 0;
-  let count = 0;
-
-  squad.forEach((player) => {
-    if (!player.active) return;
-    const role = roles[player.id];
-    if (role) {
-      const fit = getPlayerFormationFit(player, formation, role);
-      totalFit += fit;
-      count++;
-    }
-  });
-
-  if (count === 0) return 0.4;
-  return Math.min(1.0, Math.max(0.3, totalFit / count));
-}
-
-function getTacticStyleInfluence() {
-  if (!game.tacticAnalysis) return 1.0;
-  const effectiveness = game.tacticAnalysis.effectiveness || 0.5;
-  return 0.85 + (effectiveness - 0.5) * 0.3;
+function getTacticRecordRows() {
+  return Object.entries(game.tacticRecords || {}).map(([key, r]) => {
+    const [formation, stil] = key.split('|');
+    const spiele = r.s + r.u + r.n;
+    return { formation, stil, spiele, ...r, schnitt: spiele ? (r.s * 3 + r.u) / spiele : 0 };
+  }).filter(r => r.spiele > 0);
 }
 
 function renderTacticSystemPanel() {
   const panel = document.getElementById('tactic-system-panel');
   if (!panel) return;
+  const stilLabel = s => (typeof TACTIC_STYLE_CONFIG !== 'undefined' && TACTIC_STYLE_CONFIG[s]) ? TACTIC_STYLE_CONFIG[s].label : s;
+  const vz = n => (n > 0 ? '+' : '') + n.toFixed(1);
+  let html = '';
 
-  if (!game.tacticAnalysis) {
-    initializeTacticsSystem();
+  // Aktuelle Wahl: genau die Werte, die in calcTeamStrength() und die Live-Simulation eingehen.
+  if (typeof FORMATION_RATINGS !== 'undefined' && typeof getTacticStyleBonus === 'function') {
+    const rating = FORMATION_RATINGS[game.formation] || { def: 60, off: 60 };
+    const angriff = getFormationOffBonus() + getTacticStyleBonus(game.tacticStyle);
+    const abwehr = getFormationDefBonus() * 0.6;
+    const kraft = Math.round((getTacticStyleFitnessMultiplier(game.tacticStyle) - 1) * 100);
+    html += `<div style="font-size:10px; line-height:1.6;">Aktuell: <b>${game.formation}</b> · <b>${stilLabel(game.tacticStyle)}</b><br>`
+      + `Formation: Abwehr ${rating.def} / Angriff ${rating.off}<br>`
+      + `Teamstärke-Effekt: Angriff <b>${vz(angriff)}</b> · Abwehr <b>${vz(abwehr)}</b> · Kraftverbrauch <b>${kraft > 0 ? '+' : ''}${kraft}%</b></div>`;
   }
 
-  let html = '<div class="panel-content">';
-  html += `<h3>Taktik-System</h3>`;
-
-  html += '<div class="tactic-stats">';
-  html += `<div class="stat-box">Taktik-Effektivität: ${(game.tacticAnalysis.effectiveness * 100).toFixed(0)}%</div>`;
-  html += `<div class="stat-box">Spiele analysiert: ${game.tacticAnalysis.matchesAnalyzed}</div>`;
-  html += `<div class="stat-box">Taktik-Einfluss: ${(getTacticStyleInfluence() * 100).toFixed(0)}%</div>`;
-  html += '</div>';
-
-  html += `<div style="font-size:11px; color:#FFC107; margin:6px 0; padding:6px; background:rgba(255,193,7,0.1); border-radius:4px;">💡 ${getTacticSuggestion()}</div>`;
-
-  html += '<h4>Formation Übersicht:</h4>';
-  Object.entries(TACTICS_CONFIG.formations).forEach(([key, config]) => {
-    const completeness = getFormationCompletenessFit(key);
-    const completenessColor = completeness > 0.7 ? '#4CAF50' : completeness > 0.5 ? '#FFC107' : '#FF5252';
-    html += `<div class="tactic-formation-item" style="border-left: 4px solid ${completenessColor}">`;
-    html += `<strong>${config.name}</strong>`;
-    html += `<div class="formation-info">Bestückung: ${(completeness * 100).toFixed(0)}% | Counter: ${(config.counterChance * 100).toFixed(0)}%</div>`;
-    html += `<div class="formation-info">Def: ${config.defense.toFixed(2)} | Mid: ${config.midfield.toFixed(2)} | Off: ${config.offense.toFixed(2)}</div>`;
-    html += '</div>';
+  const rows = getTacticRecordRows().sort((a, b) => b.spiele - a.spiele);
+  if (!rows.length) {
+    html += '<div style="font-size:10px; color:var(--text-muted); margin-top:6px;">Noch keine Ligaspiele mit Taktik-Bilanz.</div>';
+    panel.innerHTML = html;
+    return;
+  }
+  html += '<table style="width:100%; font-size:10px; margin-top:6px; border-collapse:collapse;">'
+    + '<tr style="color:var(--text-muted); text-align:left;"><th>Formation</th><th>Stil</th><th>Sp.</th><th>S-U-N</th><th>Tore</th><th>Pkt/Sp.</th></tr>';
+  rows.slice(0, 8).forEach(r => {
+    const aktiv = r.formation === game.formation && r.stil === game.tacticStyle;
+    const farbe = r.schnitt >= 1.8 ? 'var(--green, #4CAF50)' : r.schnitt >= 1.1 ? 'var(--gold, #FFC107)' : 'var(--red, #FF5252)';
+    html += `<tr style="${aktiv ? 'font-weight:bold;' : ''}"><td>${r.formation}</td><td>${stilLabel(r.stil)}</td><td>${r.spiele}</td>`
+      + `<td>${r.s}-${r.u}-${r.n}</td><td>${r.tore}:${r.gegentore}</td><td style="color:${farbe};">${r.schnitt.toFixed(2)}</td></tr>`;
   });
-
-  html += '<h4>Spielstil-Auswirkungen:</h4>';
-  ['aggressive', 'balanced', 'defensive', 'possession'].forEach((style) => {
-    const bonus = getFormationBonus(game.formation || '4-4-2', style);
-    html += `<div class="tactic-style-item">`;
-    html += `<strong>${style}</strong>: Angriff ${(bonus.attack > 0 ? '+' : '')}${(bonus.attack * 100).toFixed(0)}% | Abwehr ${(bonus.defense > 0 ? '+' : '')}${(bonus.defense * 100).toFixed(0)}%`;
-    html += `</div>`;
-  });
-
-  html += '</div>';
+  html += '</table>';
+  const erprobt = rows.filter(r => r.spiele >= 5).sort((a, b) => b.schnitt - a.schnitt);
+  if (erprobt.length >= 2) {
+    const best = erprobt[0];
+    html += `<div style="font-size:10px; color:var(--gold, #FFC107); margin-top:6px;">💡 Beste erprobte Kombination: ${best.formation} · ${stilLabel(best.stil)} (${best.schnitt.toFixed(2)} Punkte pro Spiel)</div>`;
+  }
   panel.innerHTML = html;
 }
 
@@ -19917,14 +19601,7 @@ function renderWomenTeamView() {
 
 /* eslint-enable */
 // Spieler-Pensionierung & Legenden-System
-// Automatische Pensionierungen, Hall of Fame, Abschiedsspiele
-
-let playerRetirementState = {
-    retiredPlayers: [],
-    legendPlayers: [],
-    retirementHistory: [],
-    fareewellGamesScheduled: []
-};
+// Automatische Karriereenden ab 36 am Saisonende; die Legenden zeigt die Hall of Fame (js/hall-of-fame.js).
 
 const RETIREMENT_CRITERIA = {
     AUTOMATIC_AGE: 36,
@@ -19945,7 +19622,7 @@ function initializePlayerRetirement() {
     if (!game.playerRetirement.retiredPlayers) game.playerRetirement.retiredPlayers = [];
     if (!game.playerRetirement.legendPlayers) game.playerRetirement.legendPlayers = [];
     if (!game.playerRetirement.retirementHistory) game.playerRetirement.retirementHistory = [];
-    if (!game.playerRetirement.fareewellGamesScheduled) game.playerRetirement.fareewellGamesScheduled = [];
+    delete game.playerRetirement.fareewellGamesScheduled; // Abschiedsspiele wurden nie ausgetragen
 }
 
 function checkForLegendStatus(player) {
@@ -20020,23 +19697,6 @@ function isPlayerEligibleForRetirement(player) {
     return age >= RETIREMENT_CRITERIA.AUTOMATIC_AGE;
 }
 
-function scheduleRetirementCeremonial(playerId) {
-    const player = squad.find(p => p.id === playerId);
-    if (!player) return false;
-
-    const ceremonyMatchday = (game.matchday || 1) + 2;
-
-    game.playerRetirement.fareewellGamesScheduled.push({
-        playerId: playerId,
-        playerName: player.name,
-        scheduledMatchday: ceremonyMatchday,
-        season: game.season
-    });
-
-    showToast(`🎉 Abschiedsspiel für ${player.name} in 2 Spieltagen geplant!`, 'info', 5000);
-    return true;
-}
-
 function tickPlayerRetirement() {
     initializePlayerRetirement();
 
@@ -20048,95 +19708,6 @@ function tickPlayerRetirement() {
             schedulePlayerRetirement(player.id);
         }
     });
-
-    const completedCeremonies = game.playerRetirement.fareewellGamesScheduled.filter(c =>
-        c.scheduledMatchday <= (game.matchday || 1)
-    );
-
-    game.playerRetirement.fareewellGamesScheduled = game.playerRetirement.fareewellGamesScheduled.filter(c =>
-        c.scheduledMatchday > (game.matchday || 1)
-    );
-}
-
-function getRetirementSummary() {
-    if (!game.playerRetirement) return { retired: 0, legends: 0, ceremonies: 0 };
-
-    return {
-        retired: game.playerRetirement.retiredPlayers.length,
-        legends: game.playerRetirement.legendPlayers.length,
-        ceremonies: game.playerRetirement.fareewellGamesScheduled.length,
-        retiredThisSeason: game.playerRetirement.retirementHistory.filter(r => r.retirementSeason === game.season).length
-    };
-}
-
-function renderPlayerRetirementPanel() {
-    const container = document.getElementById('player-retirement-box');
-    if (!container) return;
-
-    initializePlayerRetirement();
-
-    let html = '<div class="panel-content">';
-    html += '<h3>👋 SPIELER-PENSIONIERUNG & LEGENDEN</h3>';
-
-    const summary = getRetirementSummary();
-    html += '<div style="background:#1a1a1a; padding:8px; border-radius:4px; margin-bottom:10px;">';
-    html += `<p style="font-size:9px; margin:0;"><strong>Karriere-Status:</strong> `;
-    html += `Pensioniert: <span style="color:var(--text-muted);">${summary.retired}</span> | `;
-    html += `Legenden: <span style="color:var(--gold);">${summary.legends}</span></p>`;
-    html += `<p style="font-size:9px; margin:4px 0 0 0;">Diese Saison: ${summary.retiredThisSeason} Pensionierungen</p>`;
-    html += '</div>';
-
-    if (game.playerRetirement.legendPlayers && game.playerRetirement.legendPlayers.length > 0) {
-        html += '<div style="margin-bottom:10px;">';
-        html += '<h4>⭐ LEGENDEN DES VEREINS</h4>';
-
-        game.playerRetirement.legendPlayers.slice(0, 8).forEach(legend => {
-            html += `<div style="background:#1a2a1a; padding:6px; margin-bottom:4px; border-radius:3px; border-left:3px solid ${legend.tierColor};">`;
-            html += `<p style="font-size:9px; margin:0 0 2px 0;"><strong>${legend.playerName}</strong> <span style="color:${legend.tierColor}; font-size:8px;">${legend.tierLabel}</span></p>`;
-            html += `<p style="font-size:8px; color:var(--text-muted); margin:0;">ST ${legend.age} | ${legend.goals} Tore | ${legend.appearances} Spiele</p>`;
-            html += `</div>`;
-        });
-
-        if (game.playerRetirement.legendPlayers.length > 8) {
-            html += `<p style="font-size:8px; color:var(--text-muted); margin:0;">... und ${game.playerRetirement.legendPlayers.length - 8} weitere Legenden</p>`;
-        }
-
-        html += '</div>';
-    }
-
-    if (game.playerRetirement.fareewellGamesScheduled && game.playerRetirement.fareewellGamesScheduled.length > 0) {
-        html += '<div style="margin-bottom:10px;">';
-        html += '<h4>🎉 ABSCHIEDSSPIELE GEPLANT</h4>';
-
-        game.playerRetirement.fareewellGamesScheduled.forEach(ceremony => {
-            const daysLeft = ceremony.scheduledMatchday - (game.matchday || 1);
-            html += `<div style="background:#2a1a1a; padding:6px; margin-bottom:4px; border-radius:3px; border-left:3px solid var(--accent);">`;
-            html += `<p style="font-size:9px; margin:0;"><strong>${ceremony.playerName}</strong></p>`;
-            html += `<p style="font-size:8px; color:var(--accent); margin:0;">in ${daysLeft} Spieltagen (ST ${ceremony.scheduledMatchday})</p>`;
-            html += `</div>`;
-        });
-
-        html += '</div>';
-    }
-
-    const eligibleForRetirement = squad.filter(p => isPlayerEligibleForRetirement(p));
-    if (eligibleForRetirement.length > 0) {
-        html += '<div style="margin-top:10px;">';
-        html += '<h4>⚠️ NÄCHSTE PENSIONIERUNGEN</h4>';
-
-        eligibleForRetirement.slice(0, 4).forEach(player => {
-            const legendTier = checkForLegendStatus(player);
-            const tierText = legendTier ? ` (${LEGEND_TIERS[legendTier].label})` : '';
-            html += `<div style="font-size:8px; padding:4px; background:#2a2a2a; border-radius:2px; margin-bottom:2px;">`;
-            html += `${player.name}, ${player.age} Jahre${tierText}`;
-            html += `</div>`;
-        });
-
-        html += '</div>';
-    }
-
-    html += '</div>';
-    container.innerHTML = html;
 }
 
 /* eslint-enable */
@@ -20859,14 +20430,6 @@ function cleanupLegacyScoutState() {
 
     let pendingMatchInfo = null;
 
-    // Deterministischer "Fingerabdruck" pro Gegnername, damit derselbe Verein in der
-    // Analyse immer denselben taktischen Grundcharakter zeigt (statt bei jedem Aufruf
-    // zufällig zu wechseln).
-    function hashTeamName(name) {
-        let h = 0;
-        for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
-        return h;
-    }
     function getOpponentPlaystyle(name) {
         // Bugfix: zeigte bisher nur einen aus dem Vereinsnamen gehashten Zufallstext ohne
         // jeden Bezug zum tatsächlichen Spielverhalten - jetzt der echte, simulationswirksame
@@ -23026,7 +22589,6 @@ function cleanupLegacyScoutState() {
     }
 
 
-
 /* eslint-enable */
 
     // (aus match.js ausgelagert - reine Datei-Organisation, keine Verhaltensänderung)
@@ -24046,12 +23608,6 @@ function renderCoachCarouselBox() {
         let rawEl = document.getElementById('adm-ins-raw');
         if (rawEl) rawEl.innerText = (rawMaterials.totalStock || 0).toLocaleString() + " kg";
 
-        if (typeof renderClubSwitchPanel === 'function') renderClubSwitchPanel();
-        let clubProgEl = document.getElementById('club-progression-panel');
-        if (clubProgEl && typeof renderClubProgression === 'function') {
-            clubProgEl.innerHTML = renderClubProgression();
-        }
-        if (typeof renderPlayerRetirementPanel === 'function') renderPlayerRetirementPanel();
     }
 
     function adminAddClubMoney(amt) { playSound('goal'); game.money += amt; updateUI(); renderAdminView(); showToast(`💵 +${formatVal(amt)} Vereinskonto gutgeschrieben!`, 'success', 4000); }
@@ -24068,8 +23624,6 @@ function renderCoachCarouselBox() {
     }
 
     function adminSetTransferBudget(amt) { playSound('goal'); game.transferBudget = amt; updateUI(); renderAdminView(); showToast(`💼 Transferbudget auf ${formatVal(amt)} gesetzt!`, 'success', 4000); }
-
-    function adminTriggerTransferOffer() { triggerNewAITransferOffer(); updateUI(); renderTransferView(); showToast("📩 KI-Transferangebot erfolgreich erzwungen!", 'success', 4000); }
 
     function adminMaxOutAllBuildings() {
         playSound('goal');
@@ -25262,274 +24816,6 @@ function renderCoachCarouselBox() {
         location.reload();
     }
 
-
-/* eslint-enable */
-// ==========================================
-// VEREINSWECHSEL & KLUB-MANAGEMENT
-// ==========================================
-/* eslint-disable no-undef */
-
-function getAvailableClubbsForSwitch() {
-    if (!leaguesData || leaguesData.length === 0) return [];
-
-    const available = [];
-    const currentClubId = getOurLeagueTeam()?.id;
-
-    for (let level = 0; level < leaguesData.length; level++) {
-        const league = leaguesData[level];
-        if (!league || !Array.isArray(league)) continue;
-
-        league.forEach(team => {
-            if (team.name !== game.clubName && team.isAI) {
-                available.push({
-                    id: team.id,
-                    name: team.name,
-                    league: level,
-                    leagueName: ['1. Liga', '2. Liga', '3. Liga', '4. Liga', '5. Liga', '6. Liga'][level] || `Liga ${level + 1}`,
-                    position: league.indexOf(team) + 1,
-                    strength: team.strength || 50,
-                    wealth: team.wealth || 100000,
-                    fans: team.fans || 50
-                });
-            }
-        });
-    }
-
-    return available.sort((a, b) => a.league - b.league);
-}
-
-function calcSwitchCapital(targetLeague) {
-    const baseCapital = 150000;
-    const leagueMultipliers = [2.5, 2.0, 1.5, 1.2, 1.0, 0.8];
-    const multiplier = leagueMultipliers[targetLeague] || 1.0;
-
-    return Math.round(baseCapital * multiplier);
-}
-
-function switchToNewClub(clubId) {
-    if (!clubId) return { success: false, message: 'Verein nicht gefunden' };
-
-    const availableClubs = getAvailableClubbsForSwitch();
-    const targetClub = availableClubs.find(c => c.id === clubId);
-
-    if (!targetClub) {
-        return { success: false, message: 'Dieser Verein ist nicht verfügbar' };
-    }
-
-    // Speichere alten Verein als KI-Verein
-    const oldLeague = game.leagueLevel;
-    const oldClubName = game.clubName;
-
-    // Finde den alten Verein in der Liga und markiere ihn als KI
-    const ourOldTeam = getOurLeagueTeam();
-    if (ourOldTeam) {
-        ourOldTeam.isAI = true;
-        ourOldTeam.isFormerPlayerClub = true;
-        ourOldTeam.strength = calcTeamStrength();
-        ourOldTeam.wealth = game.money;
-    }
-
-    // Wechsle zu neuem Verein
-    game.clubName = targetClub.name;
-    game.leagueLevel = targetClub.league;
-    game.season = 1;
-    game.matchday = 1;
-    game.money = calcSwitchCapital(targetClub.league);
-    game.wageBudget = Math.round(game.money * 0.15);
-    game.transferBudget = Math.round(game.money * 0.2);
-    game.fans = Math.max(50, targetClub.fans || 50);
-    game.boardSat = 80;
-
-    // Generiere neuen Kader für die neue Liga
-    squad = generateSquadForLeague(targetClub.league);
-    lineup = squad.slice(0, 11).map(p => p.id);
-
-    // Update Liga-Tabelle
-    const newLeague = leaguesData[targetClub.league];
-    if (newLeague) {
-        const oldPosition = newLeague.indexOf(targetClub);
-        if (oldPosition >= 0) {
-            newLeague.splice(oldPosition, 1);
-        }
-        newLeague.push({
-            id: generateUniqueTeamId(),
-            name: game.clubName,
-            strength: calcTeamStrength(),
-            wealth: game.money,
-            fans: game.fans,
-            isAI: false,
-            points: 0,
-            won: 0,
-            drawn: 0,
-            lost: 0,
-            goalsFor: 0,
-            goalsAgainst: 0
-        });
-    }
-
-    // Speichere in Progression-History
-    if (!game.clubSwitchHistory) game.clubSwitchHistory = [];
-    game.clubSwitchHistory.push({
-        fromClub: oldClubName,
-        fromLeague: oldLeague,
-        toClub: targetClub.name,
-        toLeague: targetClub.league,
-        matchday: game.matchday,
-        season: game.season,
-        finalLeague: oldLeague
-    });
-
-    // Reset spezifische Systeme für neuen Verein
-    game.seasonPointsHistory = [];
-    game.trophies = [];
-    game.permanentRivalName = null;
-    game.recordAttendance = 0;
-    game.secondTeam.isActive = false;
-
-    return {
-        success: true,
-        message: `✓ Zu ${targetClub.name} (${targetClub.leagueName}) gewechselt!`,
-        newCapital: game.money,
-        newLeague: targetClub.leagueName,
-        newSquadSize: squad.length
-    };
-}
-
-function generateSquadForLeague(leagueLevel) {
-    const strength = [85, 75, 65, 55, 45, 35][leagueLevel] || 50;
-    const squadSize = 18;
-    const positions = ['TW', 'AB', 'AB', 'MF', 'MF', 'ST'];
-
-    const newSquad = [];
-    for (let i = 0; i < squadSize; i++) {
-        const position = positions[i % positions.length];
-        const variance = Math.random() * 10 - 5;
-
-        newSquad.push({
-            id: 'p_' + Math.random().toString(36).substr(2, 9),
-            name: getRandomName ? getRandomName() : 'Spieler ' + (i + 1),
-            position: position,
-            pos: position,
-            age: 20 + Math.floor(Math.random() * 15),
-            strength: Math.max(30, Math.min(99, Math.round(strength + variance))),
-            rating: Math.max(30, Math.min(99, Math.round(strength + variance))),
-            pace: Math.max(30, Math.min(99, Math.round(50 + Math.random() * 30))),
-            shooting: Math.max(30, Math.min(99, Math.round(50 + Math.random() * 30))),
-            passing: Math.max(30, Math.min(99, Math.round(50 + Math.random() * 30))),
-            defense: Math.max(30, Math.min(99, Math.round(50 + Math.random() * 30))),
-            KOP: Math.max(30, Math.min(99, Math.round(50 + Math.random() * 30))),
-            fitness: 100,
-            morale: 70 + Math.floor(Math.random() * 20),
-            mood: 70 + Math.floor(Math.random() * 20),
-            contracts: 3,
-            wage: Math.round(3000 + Math.random() * 4000),
-            value: Math.round(30000 + Math.random() * 150000),
-            marketValue: Math.round(30000 + Math.random() * 150000),
-            potential: Math.max(30, Math.min(99, Math.round(strength + variance + (25 - Math.random() * 10)))),
-            injured: 0,
-            suspended: 0,
-            injury: null,
-            isAcademy: false,
-            isLoanedIn: false
-        });
-    }
-
-    return newSquad;
-}
-
-function generateUniqueTeamId() {
-    return 'team_' + Math.random().toString(36).substr(2, 9);
-}
-
-function renderClubSwitchPanel() {
-    const box = document.getElementById('club-switch-panel');
-    if (!box) return;
-
-    const available = getAvailableClubbsForSwitch();
-
-    let html = '<div style="margin-bottom:12px;">';
-    html += '<div style="font-size:10px; font-weight:bold; margin-bottom:8px; color:var(--text-muted);">📋 Vereinswechsel verfügbar</div>';
-
-    if (available.length === 0) {
-        html += '<div style="color:var(--text-muted); font-size:9px;">Keine Vereine verfügbar</div>';
-    } else {
-        html += `<div style="font-size:9px; margin-bottom:12px; color:var(--accent);">Insgesamt ${available.length} Vereine verfügbar</div>`;
-
-        // Gruppiere nach Liga
-        const byLeague = {};
-        available.forEach(club => {
-            if (!byLeague[club.league]) byLeague[club.league] = [];
-            byLeague[club.league].push(club);
-        });
-
-        Object.keys(byLeague).sort().forEach(league => {
-            const leagueName = ['1. Liga', '2. Liga', '3. Liga', '4. Liga', '5. Liga', '6. Liga'][league] || `Liga ${parseInt(league) + 1}`;
-            html += `<div style="margin-bottom:12px;">
-                <div style="font-size:9px; font-weight:bold; color:var(--primary); margin-bottom:6px;">${leagueName} (${byLeague[league].length} Teams)</div>`;
-
-            byLeague[league].slice(0, 5).forEach(club => {
-                const capital = calcSwitchCapital(club.league);
-                html += `
-                    <div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:4px; display:flex; justify-content:space-between; align-items:center;">
-                        <div>
-                            <div style="font-size:9px; font-weight:bold;">${club.name}</div>
-                            <div style="font-size:8px; color:var(--text-muted);">Position: ${club.position}. · Stärke: ${club.strength} · Fans: ${club.fans}</div>
-                            <div style="font-size:8px; color:var(--accent); margin-top:2px;">Startkapital: ${formatVal(capital)}</div>
-                        </div>
-                        <button onclick="showClubSwitchConfirm('${club.id}', '${club.name}')" class="btn-primary" style="padding:4px 8px; font-size:8px;">Wechseln</button>
-                    </div>
-                `;
-            });
-
-            html += '</div>';
-        });
-    }
-
-    html += '</div>';
-    box.innerHTML = html;
-}
-
-function showClubSwitchConfirm(clubId, clubName) {
-    const confirmed = confirm(`Möchtest du wirklich zu ${clubName} wechseln? Dein aktueller Verein wird zur KI und der Kader wird neu generiert.`);
-    if (!confirmed) return;
-
-    const result = switchToNewClub(clubId);
-    alert(result.message);
-
-    if (result.success) {
-        game.viewingMatchday = game.matchday;
-        renderSquadView();
-        renderDashboard();
-        updateUI();
-    }
-}
-
-function renderClubProgression() {
-    if (!game.clubSwitchHistory || game.clubSwitchHistory.length === 0) {
-        return '<div style="color:var(--text-muted); font-size:9px;">Noch kein Vereinswechsel durchgeführt</div>';
-    }
-
-    let html = '<div style="font-size:10px; font-weight:bold; margin-bottom:8px;">🏆 Karriere-Stationen:</div>';
-    game.clubSwitchHistory.forEach((entry, idx) => {
-        html += `
-            <div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:4px; font-size:9px;">
-                <div><strong>${idx + 1}. ${entry.fromClub}</strong></div>
-                <div style="color:var(--text-muted); font-size:8px;">Liga: ${['1. Liga', '2. Liga', '3. Liga', '4. Liga', '5. Liga', '6. Liga'][entry.fromLeague] || `Liga ${entry.fromLeague + 1}`}</div>
-                <div style="color:var(--accent); font-size:8px; margin-top:2px;">→ Wechsel zu ${entry.toClub}</div>
-            </div>
-        `;
-    });
-
-    // Aktueller Verein
-    html += `
-        <div style="background:rgba(76,175,80,0.1); padding:6px; border-radius:4px; margin-top:8px; border-left:3px solid var(--primary);">
-            <div style="font-size:9px;"><strong>✓ Aktuell: ${game.clubName}</strong></div>
-            <div style="color:var(--text-muted); font-size:8px;">Saison ${game.season}</div>
-        </div>
-    `;
-
-    return html;
-}
 
 /* eslint-enable */
 

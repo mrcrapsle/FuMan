@@ -1084,7 +1084,6 @@
         }).join('');
     }
 
-
     // Liga-abhängige Zuschauer-OBERGRENZE (Anteil der Stadionkapazität, der bei
     // durchschnittlicher Fan-Stimmung realistisch ausgelastet wird): Ein Landesliga-Klub
     // füllt sein Stadion nicht annähernd wie ein Bundesligist, selbst bei guter Stimmung.
@@ -1221,15 +1220,6 @@
         container.className = '';
         container.classList.add(`stadium-level-${level}`);
         levelDisplay.textContent = level;
-    }
-
-    // Upgrade-Funktion für das Stadion (wird beim Kauf von Projekten aufgerufen)
-    function upgradeStadium(level) {
-        const container = document.getElementById('stadium-container');
-        if (!container) return;
-        container.className = '';
-        container.classList.add(`stadium-level-${Math.max(1, Math.min(5, level))}`);
-        updateInteractiveStadiumVisualization();
     }
 
     // Accordion Toggle Funktion für Menü-Organisation
