@@ -90,8 +90,7 @@ This pattern ensures:
 - Manager Analytics (career stats, rating breakdown)
 - Player Scandals (controversies, suspensions, team morale)
 - Tactic System (6 formations, effectiveness analysis)
-- Fanclub Management (fan groups, satisfaction, revenue)
-- International Tournaments (World Cup, Euros, player development)
+- Fans (fan groups, actions, club network) in `js/fans.js`
 - Board Room (four members explaining `game.boardSat`)
 - Hall of Fame, Youth Academy, Player Development
 - Plus 60+ other game systems

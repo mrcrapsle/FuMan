@@ -2743,140 +2743,142 @@
 
             <!-- 13. KADER & TAKTIK -->
             <div id="screen-squad" style="display:none;">
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">📊 KADER-ÜBERBLICK</div>
-                    <div id="squad-overview-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">📐 KADERTIEFE NACH POSITION</div>
-                    <div id="squad-depth-chart-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">🏅 KADER-BESTENLISTE</div>
-                    <div id="squad-leaderboard-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">📡 KADER-RADAR (ATTRIBUTE)</div>
-                    <div id="squad-radar-container" style="margin-bottom:12px;"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">📊 KADER-METRIKEN</div>
-                    <div id="squad-strength-metrics"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">⚖️ LIGA-VERGLEICH</div>
-                    <div id="squad-comparison-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">⚽ KADER & AUFSTELLUNG</div>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px; margin-bottom:6px;">
-                        <div>Kapitän: <select id="sel-captain" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
-                        <div>Elfmeter: <select id="sel-penalty" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
-                        <div>Freistöße: <select id="sel-freekick" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
-                        <div>Ecken: <select id="sel-corner" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
-                    </div>
-                    <div id="formation-cards-grid" style="display:grid; grid-template-columns: repeat(2, 1fr); gap:4px;"></div>
-                    <button onclick="openFormationModal()" class="btn-primary" style="margin-top:6px;">🎛️ Formation im Detail wählen (Grid + Vorschau)</button>
-                    <button onclick="autoLineup()" class="btn-action" style="margin-top:6px;">🤖 Trainer stellt Top-Elf auf</button>
-                </div>
-                <div class="panel" style="text-align:center;">
-                    <div class="panel-header"><span>🏟️ 3D TAKTIKTAFEL (<span id="squad-form-name">4-4-2</span>)</span></div>
-                    <div id="tactics-board-stat-bar" style="margin-bottom:8px;"></div>
-                    <div style="font-size:9px; color:#94a3b8; margin-bottom:4px;">🔁 Tippe zwei Spieler nacheinander an (Feld oder Liste), um sie exakt zu tauschen.</div>
-                    <div class="pitch-3d-wrapper">
-                        <div class="soccer-pitch" id="soccer-pitch">
-                            <div class="pitch-center-line"></div>
-                            <div class="pitch-center-circle"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">🧠 SPIELSTIL</div>
-                    <div id="tactic-style-cards-grid" style="display:grid; grid-template-columns: repeat(2, 1fr); gap:4px;"></div>
-                    <div style="margin-top:6px; font-size:9px; color:#aaa;" id="tactic-style-desc">Ausgewogener Ansatz ohne besondere Vor-/Nachteile.</div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">📐 TEAM-ANWEISUNGEN</div>
-                    <div id="team-instructions-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">🥊 ZWEIKAMPFHÄRTE</div>
-                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:3px;">
-                        <button onclick="setTackleHardness('vorsichtig')" id="th-vorsichtig" class="btn-secondary">🕊️ Vorsichtig</button>
-                        <button onclick="setTackleHardness('normal')" id="th-normal" class="btn-action">⚖️ Normal</button>
-                        <button onclick="setTackleHardness('hart')" id="th-hart" class="btn-secondary">🥊 Hart</button>
-                    </div>
-                    <div style="margin-top:6px; font-size:9px; color:#aaa;" id="tackle-hardness-desc">Ausgewogenes Einsteigen ohne besondere Vor-/Nachteile.</div>
+                <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:4px; margin-bottom:8px;">
+                    <button onclick="setSquadTab('aufstellung')" id="btn-tab-squad-aufstellung" class="btn-action" style="font-size:10px; padding:6px 2px;">⚽ Aufstellung</button>
+                    <button onclick="setSquadTab('taktik')" id="btn-tab-squad-taktik" class="btn-secondary" style="font-size:10px; padding:6px 2px;">🧠 Taktik</button>
+                    <button onclick="setSquadTab('analyse')" id="btn-tab-squad-analyse" class="btn-secondary" style="font-size:10px; padding:6px 2px;">📊 Analyse</button>
+                    <button onclick="setSquadTab('team')" id="btn-tab-squad-team" class="btn-secondary" style="font-size:10px; padding:6px 2px;">🤝 Mannschaft</button>
                 </div>
                 <div class="panel" id="transfer-market-box" style="display:none;"></div>
-                <div class="panel">
-                    <div class="panel-header">🤖 TAKTIK-AUTOMATIK</div>
-                    <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Reagiert im laufenden Spiel automatisch auf den Spielstand, ohne dass du das Live-Taktikpanel selbst bedienen musst.</div>
-                    <div id="tactic-automation-box"></div>
-                </div>
                 <div class="panel" id="co-trainer-advice-box" style="display:none;"></div>
                 <div id="ultimatum-banner-box" style="display:none;"></div>
                 <div id="crowd-favorite-preview-box" style="display:none;"></div>
-                <div class="panel" id="team-chemistry-box" style="display:none;"></div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--purple);">👥 KABINEN-CLIQUEN</div>
-                    <div id="squad-cliques-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">🗣️ FÜHRUNGSSPIELER-RAT</div>
-                    <div id="leadership-council-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--danger);">🔥 RIVALITÄTEN</div>
-                    <div id="rivalries-panel"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--danger);">⚠️ SPIELER-SKANDALE</div>
-                    <div id="scandals-panel"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--purple);">⚙️ TAKTIK-SYSTEM</div>
-                    <div id="tactic-system-panel"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--blue);">🌍 INTERNATIONALE TURNIERE</div>
-                    <div id="international-tournaments-panel"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:#00BCD4;">📊 POST-MATCH-ANALYSE</div>
-                    <div id="post-match-analysis-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:#FF5722;">📊 TRANSFER-MARKT-ANALYSE</div>
-                    <div id="transfer-market-panel"></div>
-                </div>
                 <div id="injury-crisis-warning" style="display:none;"></div>
-                <div class="panel">
-                    <div class="panel-header">KADERLISTE & ATTRIBUTE</div>
-                    <div id="role-fit-summary" style="font-size:9px; color:var(--accent); margin-bottom:6px;"></div>
-                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:4px;">
-                        <button onclick="setSquadSort('staerke')" id="ss-staerke" class="btn-action" style="font-size:8px; padding:5px 2px;">Stärke</button>
-                        <button onclick="setSquadSort('alter')" id="ss-alter" class="btn-secondary" style="font-size:8px; padding:5px 2px;">Alter</button>
-                        <button onclick="setSquadSort('marktwert')" id="ss-marktwert" class="btn-secondary" style="font-size:8px; padding:5px 2px;">Marktwert</button>
-                        <button onclick="setSquadSort('moral')" id="ss-moral" class="btn-secondary" style="font-size:8px; padding:5px 2px;">Moral</button>
-                        <button onclick="setSquadSort('name')" id="ss-name" class="btn-secondary" style="font-size:8px; padding:5px 2px;">A-Z</button>
+                <div id="squad-tab-aufstellung">
+                    <div class="panel">
+                        <div class="panel-header">⚽ KADER & AUFSTELLUNG</div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px; margin-bottom:6px;">
+                            <div>Kapitän: <select id="sel-captain" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
+                            <div>Elfmeter: <select id="sel-penalty" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
+                            <div>Freistöße: <select id="sel-freekick" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
+                            <div>Ecken: <select id="sel-corner" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
+                        </div>
+                        <div id="formation-cards-grid" style="display:grid; grid-template-columns: repeat(2, 1fr); gap:4px;"></div>
+                        <button onclick="openFormationModal()" class="btn-primary" style="margin-top:6px;">🎛️ Formation im Detail wählen (Grid + Vorschau)</button>
+                        <button onclick="autoLineup()" class="btn-action" style="margin-top:6px;">🤖 Trainer stellt Top-Elf auf</button>
                     </div>
-                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:6px;">
-                        <button onclick="setSquadFilter('alle')" id="sf-alle" class="btn-action" style="font-size:9px; padding:5px 2px;">Alle</button>
-                        <button onclick="setSquadFilter('TW')" id="sf-TW" class="btn-secondary" style="font-size:9px; padding:5px 2px;">TW</button>
-                        <button onclick="setSquadFilter('ABW')" id="sf-ABW" class="btn-secondary" style="font-size:9px; padding:5px 2px;">ABW</button>
-                        <button onclick="setSquadFilter('MIT')" id="sf-MIT" class="btn-secondary" style="font-size:9px; padding:5px 2px;">MIT</button>
-                        <button onclick="setSquadFilter('ST')" id="sf-ST" class="btn-secondary" style="font-size:9px; padding:5px 2px;">ST</button>
+                    <div class="panel" style="text-align:center;">
+                        <div class="panel-header"><span>🏟️ 3D TAKTIKTAFEL (<span id="squad-form-name">4-4-2</span>)</span></div>
+                        <div id="tactics-board-stat-bar" style="margin-bottom:8px;"></div>
+                        <div style="font-size:9px; color:#94a3b8; margin-bottom:4px;">🔁 Tippe zwei Spieler nacheinander an (Feld oder Liste), um sie exakt zu tauschen.</div>
+                        <div class="pitch-3d-wrapper">
+                            <div class="soccer-pitch" id="soccer-pitch">
+                                <div class="pitch-center-line"></div>
+                                <div class="pitch-center-circle"></div>
+                            </div>
+                        </div>
                     </div>
-                    <div id="bench-list" style="max-height:260px; overflow-y:auto;"></div>
+                    <div class="panel">
+                        <div class="panel-header">KADERLISTE & ATTRIBUTE</div>
+                        <div id="role-fit-summary" style="font-size:9px; color:var(--accent); margin-bottom:6px;"></div>
+                        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:4px;">
+                            <button onclick="setSquadSort('staerke')" id="ss-staerke" class="btn-action" style="font-size:8px; padding:5px 2px;">Stärke</button>
+                            <button onclick="setSquadSort('alter')" id="ss-alter" class="btn-secondary" style="font-size:8px; padding:5px 2px;">Alter</button>
+                            <button onclick="setSquadSort('marktwert')" id="ss-marktwert" class="btn-secondary" style="font-size:8px; padding:5px 2px;">Marktwert</button>
+                            <button onclick="setSquadSort('moral')" id="ss-moral" class="btn-secondary" style="font-size:8px; padding:5px 2px;">Moral</button>
+                            <button onclick="setSquadSort('name')" id="ss-name" class="btn-secondary" style="font-size:8px; padding:5px 2px;">A-Z</button>
+                        </div>
+                        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:6px;">
+                            <button onclick="setSquadFilter('alle')" id="sf-alle" class="btn-action" style="font-size:9px; padding:5px 2px;">Alle</button>
+                            <button onclick="setSquadFilter('TW')" id="sf-TW" class="btn-secondary" style="font-size:9px; padding:5px 2px;">TW</button>
+                            <button onclick="setSquadFilter('ABW')" id="sf-ABW" class="btn-secondary" style="font-size:9px; padding:5px 2px;">ABW</button>
+                            <button onclick="setSquadFilter('MIT')" id="sf-MIT" class="btn-secondary" style="font-size:9px; padding:5px 2px;">MIT</button>
+                            <button onclick="setSquadFilter('ST')" id="sf-ST" class="btn-secondary" style="font-size:9px; padding:5px 2px;">ST</button>
+                        </div>
+                        <div id="bench-list" style="max-height:260px; overflow-y:auto;"></div>
+                    </div>
                 </div>
-                <div class="panel">
-                    <div class="panel-header">❤️ MANNSCHAFTS-HARMONIE</div>
-                    <div id="squad-harmony-box"></div>
+                <div id="squad-tab-taktik" style="display:none;">
+                    <div class="panel">
+                        <div class="panel-header">🧠 SPIELSTIL</div>
+                        <div id="tactic-style-cards-grid" style="display:grid; grid-template-columns: repeat(2, 1fr); gap:4px;"></div>
+                        <div style="margin-top:6px; font-size:9px; color:#aaa;" id="tactic-style-desc">Ausgewogener Ansatz ohne besondere Vor-/Nachteile.</div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header">📐 TEAM-ANWEISUNGEN</div>
+                        <div id="team-instructions-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header">🥊 ZWEIKAMPFHÄRTE</div>
+                        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:3px;">
+                            <button onclick="setTackleHardness('vorsichtig')" id="th-vorsichtig" class="btn-secondary">🕊️ Vorsichtig</button>
+                            <button onclick="setTackleHardness('normal')" id="th-normal" class="btn-action">⚖️ Normal</button>
+                            <button onclick="setTackleHardness('hart')" id="th-hart" class="btn-secondary">🥊 Hart</button>
+                        </div>
+                        <div style="margin-top:6px; font-size:9px; color:#aaa;" id="tackle-hardness-desc">Ausgewogenes Einsteigen ohne besondere Vor-/Nachteile.</div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header">🤖 TAKTIK-AUTOMATIK</div>
+                        <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Reagiert im laufenden Spiel automatisch auf den Spielstand, ohne dass du das Live-Taktikpanel selbst bedienen musst.</div>
+                        <div id="tactic-automation-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--purple);">⚙️ TAKTIK-SYSTEM</div>
+                        <div id="tactic-system-panel"></div>
+                    </div>
                 </div>
-                <div class="panel">
-                    <div class="panel-header">🤝 MANNSCHAFTSRAT</div>
-                    <div id="team-council-box"></div>
+                <div id="squad-tab-analyse" style="display:none;">
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--gold);">📊 KADER-ÜBERBLICK</div>
+                        <div id="squad-overview-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--gold);">📐 KADERTIEFE NACH POSITION</div>
+                        <div id="squad-depth-chart-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--gold);">🏅 KADER-BESTENLISTE</div>
+                        <div id="squad-leaderboard-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header">📡 KADER-RADAR (ATTRIBUTE)</div>
+                        <div id="squad-radar-container" style="margin-bottom:12px;"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header">📊 KADER-METRIKEN</div>
+                        <div id="squad-strength-metrics"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header">⚖️ LIGA-VERGLEICH</div>
+                        <div id="squad-comparison-box"></div>
+                    </div>
+                </div>
+                <div id="squad-tab-team" style="display:none;">
+                    <div class="panel" id="team-chemistry-box" style="display:none;"></div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--purple);">👥 KABINEN-CLIQUEN</div>
+                        <div id="squad-cliques-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--gold);">🗣️ FÜHRUNGSSPIELER-RAT</div>
+                        <div id="leadership-council-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--danger);">🔥 RIVALITÄTEN</div>
+                        <div id="rivalries-panel"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--danger);">⚠️ SPIELER-SKANDALE</div>
+                        <div id="scandals-panel"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header">❤️ MANNSCHAFTS-HARMONIE</div>
+                        <div id="squad-harmony-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header">🤝 MANNSCHAFTSRAT</div>
+                        <div id="team-council-box"></div>
+                    </div>
                 </div>
             </div>
 
@@ -4466,7 +4468,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '2.6.1', date: '30.09.2026', features: 'Phase 13: Gegner, Vorstand, Verträge, Scouting, Fans, Training, Stadion aufgeräumt, Spieler altern' };
+    const GAME_VERSION = { number: '2.6.2', date: '30.09.2026', features: 'Phase 13: aufgeräumt, Spieler altern, Kader-Bildschirm in Reitern' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -4682,10 +4684,6 @@
         playerRoles: {},
         formationHistory: [],
         tacticAnalysis: { matchesAnalyzed: 0, effectiveness: 0.5 },
-        internationalTournaments: [],
-        playerInternationalCaps: {},
-        internationalTournamentHistory: [],
-        nextWorldCup: 2026,
         boardRoom: null
     };
 
@@ -5838,206 +5836,6 @@
 
 </script>
 <script>
-// Post-Match-Analyse
-// Spieler-Bewertungen, taktische Fehler, Verbesserungsvorschläge
-
-let postMatchAnalysisState = {
-    lastMatchAnalysis: null,
-    playerRatings: [],
-    tacticalInsights: [],
-    analysisHistory: []
-};
-
-function initializePostMatchAnalysis() {
-    if (!game.postMatchAnalysis) game.postMatchAnalysis = {};
-    if (!game.postMatchAnalysis.analyses) game.postMatchAnalysis.analyses = [];
-    if (!game.postMatchAnalysis.playerRatings) game.postMatchAnalysis.playerRatings = [];
-}
-
-function analyzeLastMatch() {
-    initializePostMatchAnalysis();
-
-    const played = typeof getOwnSeasonMatches === 'function' ? getOwnSeasonMatches() : [];
-    if (played.length === 0) return null;
-    const m = played[played.length - 1];
-    let lastMatch = {
-        matchday: m.matchday,
-        opponent: m.opponent,
-        result: m.own > m.opp ? 'WIN' : (m.own === m.opp ? 'DRAW' : 'LOSS'),
-        ownGoals: m.own,
-        oppGoals: m.opp
-    };
-
-    // Spieler-Bewertungen basierend auf Match-Ergebnis
-    let playerRatings = squad.map(player => {
-        let rating = 70; // Basis-Rating
-
-        // Team-Ergebnis beeinflussen
-        if (lastMatch.result === 'WIN') {
-            rating += 15;
-        } else if (lastMatch.result === 'DRAW') {
-            rating += 5;
-        } else {
-            rating -= 10;
-        }
-
-        // Spieler-Stärke beeinflussen
-        rating += (player.strength - 70) * 0.1;
-
-        // Form-Faktor
-        rating += ((player.form || 1.0) - 1.0) * 20;
-
-        // Nach dem Spiel verletzt ausgefallen: Leistung litt darunter
-        if ((player.injured || 0) > 0) rating *= 0.85;
-
-        return {
-            playerId: player.id,
-            playerName: player.name,
-            position: player.pos,
-            rating: Math.round(Math.max(30, Math.min(95, rating))),
-            performance: rating > 75 ? 'AUSGEZEICHNET' : rating > 60 ? 'GUT' : rating > 50 ? 'OK' : 'SCHWACH'
-        };
-    });
-
-    // Taktische Analyse
-    let tacticalInsights = [];
-
-    if (lastMatch.result === 'LOSS') {
-        if (lastMatch.ownGoals < lastMatch.oppGoals - 1) {
-            tacticalInsights.push({
-                type: 'DEFENSIVE',
-                title: '🛡️ Abwehr zu offen',
-                suggestion: 'Versuch 5-3-2 oder erhöhe Tackle-Intensität'
-            });
-        }
-        tacticalInsights.push({
-            type: 'ATTACKING',
-            title: '⚽ Zu wenig Tore',
-            suggestion: 'Erhöhe Offensiv-Druck oder wechsle Formation zu 4-2-3-1'
-        });
-    }
-
-    if (lastMatch.result === 'WIN') {
-        tacticalInsights.push({
-            type: 'STRATEGY_SUCCESS',
-            title: '✅ Taktik funktioniert',
-            suggestion: 'Behalte aktuelle Formation und Spielweise'
-        });
-    }
-
-    let analysis = {
-        matchday: lastMatch.matchday,
-        opponent: lastMatch.opponent,
-        result: lastMatch.result,
-        score: `${lastMatch.ownGoals}:${lastMatch.oppGoals}`,
-        playerRatings: playerRatings,
-        tacticalInsights: tacticalInsights,
-        timestamp: new Date().getTime()
-    };
-
-    // Pro Spiel nur ein Verlaufseintrag, auch wenn das Panel mehrfach gerendert wird.
-    const history = game.postMatchAnalysis.analyses;
-    const prev = history[history.length - 1];
-    if (prev && prev.matchday === analysis.matchday) history[history.length - 1] = analysis;
-    else history.push(analysis);
-    if (history.length > 15) history.shift();
-
-    postMatchAnalysisState.lastMatchAnalysis = analysis;
-    return analysis;
-}
-
-function getBestPerformers() {
-    initializePostMatchAnalysis();
-
-    if (!postMatchAnalysisState.lastMatchAnalysis) return [];
-
-    return postMatchAnalysisState.lastMatchAnalysis.playerRatings
-        .sort((a, b) => b.rating - a.rating)
-        .slice(0, 3);
-}
-
-function getWorstPerformers() {
-    initializePostMatchAnalysis();
-
-    if (!postMatchAnalysisState.lastMatchAnalysis) return [];
-
-    return postMatchAnalysisState.lastMatchAnalysis.playerRatings
-        .sort((a, b) => a.rating - b.rating)
-        .slice(0, 3);
-}
-
-function tickPostMatchAnalysis() {
-    initializePostMatchAnalysis();
-
-    // Nach jedem Match: Analyse durchführen (einmal pro Match-Tag)
-    analyzeLastMatch();
-}
-
-function renderPostMatchAnalysisPanel() {
-    const container = document.getElementById('post-match-analysis-box');
-    if (!container) return;
-
-    initializePostMatchAnalysis();
-    analyzeLastMatch();
-
-    let analysis = postMatchAnalysisState.lastMatchAnalysis;
-    if (!analysis) {
-        container.innerHTML = '<div class="panel-content"><p style="color:var(--text-muted); font-size:9px;">Noch kein Match gespielt.</p></div>';
-        return;
-    }
-
-    let html = '<div class="panel-content">';
-    html += '<h3>📊 POST-MATCH-ANALYSE</h3>';
-
-    html += `<div style="background:#1a1a1a; padding:8px; border-radius:4px; margin-bottom:10px;">`;
-    html += `<p style="font-size:9px; margin:0;"><strong>ST${analysis.matchday}:</strong> ${({ WIN: 'Sieg', DRAW: 'Remis', LOSS: 'Niederlage' })[analysis.result]} gegen ${analysis.opponent} (${analysis.score})</p>`;
-    html += `</div>`;
-
-    // Beste Spieler
-    let best = getBestPerformers();
-    if (best.length > 0) {
-        html += '<div style="margin-bottom:10px;">';
-        html += '<h4>⭐ BESTE SPIELER</h4>';
-        best.forEach(p => {
-            html += `<div style="font-size:8px; padding:3px; background:#1a2a1a; border-radius:2px; margin-bottom:2px;">`;
-            html += `${p.playerName} (${p.position}): <strong style="color:var(--success);">${p.rating}</strong>/100`;
-            html += `</div>`;
-        });
-        html += '</div>';
-    }
-
-    // Schwächste Spieler
-    let worst = getWorstPerformers();
-    if (worst.length > 0) {
-        html += '<div style="margin-bottom:10px;">';
-        html += '<h4>⚠️ VERBESSERUNGSBEDARF</h4>';
-        worst.forEach(p => {
-            html += `<div style="font-size:8px; padding:3px; background:#2a1a1a; border-radius:2px; margin-bottom:2px;">`;
-            html += `${p.playerName} (${p.position}): <strong style="color:var(--danger);">${p.rating}</strong>/100`;
-            html += `</div>`;
-        });
-        html += '</div>';
-    }
-
-    // Taktische Hinweise
-    if (analysis.tacticalInsights.length > 0) {
-        html += '<div>';
-        html += '<h4>💡 TAKTISCHE HINWEISE</h4>';
-        analysis.tacticalInsights.forEach(insight => {
-            html += `<div style="background:#1a1a2a; padding:6px; border-radius:3px; margin-bottom:4px;">`;
-            html += `<p style="font-size:9px; margin:0;"><strong>${insight.title}</strong></p>`;
-            html += `<p style="font-size:8px; margin:2px 0 0 0; color:var(--text-muted);">${insight.suggestion}</p>`;
-            html += `</div>`;
-        });
-        html += '</div>';
-    }
-
-    html += '</div>';
-    container.innerHTML = html;
-}
-
-</script>
-<script>
 
 // ==========================================
 // KADER-INITIALISIERUNG
@@ -6071,12 +5869,25 @@ function renderPostMatchAnalysisPanel() {
         // Liga-Durchschnittsteam und kein Titelfavorit mit Superstars. Der Kader liegt
         // jetzt um das Ligamittel herum (die KI-Vereine der Liga haben ebenfalls base).
         let mk = (pos, delta, trait) => createPlayer(pos, Math.max(20, base - 6 + delta), Math.min(99, base + 3 + delta), trait || null);
-        return [
+        let kader = [
             mk("TW", 6, "Elfmeter-Killer"), mk("TW", 0),
             mk("ABW", 6, "Eisenfuß"), mk("ABW", 5), mk("ABW", 3), mk("ABW", 1), mk("ABW", -1), mk("ABW", -2),
             mk("MIT", 7, "Leader"), mk("MIT", 5, "Freistoß-Gott"), mk("MIT", 3), mk("MIT", 1), mk("MIT", -1), mk("MIT", -2),
             mk("ST", 8, "Tor-Instinkt"), mk("ST", 5), mk("ST", 1), mk("ST", -1)
         ];
+        // Der Marktwert steigt in den oberen Stärkebereichen steil, deshalb überzog ein
+        // Erstliga-Startkader je nach Los bis zu 30 % das Gehaltsbudget derselben Liga
+        // (1,7-2,1 statt 1,575 Mio. € pro Spieltag) und wirtschaftete ins Minus. Die Gehälter
+        // eines übernommenen Kaders werden deshalb auf 95 % des Ligabudgets gedeckelt.
+        let limit = Math.round(getLeagueWageBudget(level) * 0.95);
+        let summe = kader.reduce((s, p) => s + p.wage, 0);
+        if (summe > limit) kader.forEach(p => { p.wage = Math.max(150, Math.round(p.wage * limit / summe / 50) * 50); });
+        return kader;
+    }
+
+    // Gehaltsbudget pro Spieltag für eine Liga ohne Platzierungsfaktor (wie beim Vereinswechsel).
+    function getLeagueWageBudget(level) {
+        return Math.round(450000 * (1 + (NUM_LEAGUES - level) / NUM_LEAGUES * 2.5));
     }
 
     const PLAYER_ROLES = {
@@ -6764,6 +6575,23 @@ function renderPostMatchAnalysisPanel() {
         `;
     }
 
+    // Kader-Bildschirm in vier Reitern statt 26 Panels untereinander (Muster wie setTrainingTab).
+    const SQUAD_TABS = ['aufstellung', 'taktik', 'analyse', 'team'];
+    let squadTab = 'aufstellung';
+    function setSquadTab(tab) {
+        if (!SQUAD_TABS.includes(tab)) return;
+        playSound('click');
+        squadTab = tab;
+        SQUAD_TABS.forEach(t => {
+            let el = document.getElementById('squad-tab-' + t);
+            if (el) el.style.display = (t === tab) ? 'block' : 'none';
+            let btn = document.getElementById('btn-tab-squad-' + t);
+            if (btn) btn.className = (t === tab) ? 'btn-action' : 'btn-secondary';
+        });
+        // Diagramme messen ihre Breite erst, wenn der Reiter sichtbar ist.
+        renderSquadView();
+    }
+
     function renderSquadView() {
         renderSquadOverviewBox();
         renderSquadDepthChart();
@@ -6788,9 +6616,6 @@ function renderPostMatchAnalysisPanel() {
         if (typeof renderRivalriesPanel === 'function') renderRivalriesPanel();
         if (typeof renderScandalsPanel === 'function') renderScandalsPanel();
         if (typeof renderTacticSystemPanel === 'function') renderTacticSystemPanel();
-        if (typeof renderInternationalTournamentsPanel === 'function') renderInternationalTournamentsPanel();
-        if (typeof renderPostMatchAnalysisPanel === 'function') renderPostMatchAnalysisPanel();
-        if (typeof renderTransferMarketAnalysisPanel === 'function') renderTransferMarketAnalysisPanel();
         if (typeof renderSquadHarmonyPanel === 'function') renderSquadHarmonyPanel();
         if (typeof renderTeamCouncilPanel === 'function') renderTeamCouncilPanel();
         let container = document.getElementById('bench-list');
@@ -8870,7 +8695,7 @@ function getTransferBudgetInfo() {
         // ohne Platzierungsbonus/-malus, da noch keine Saison beim neuen Verein gespielt wurde.
         let leagueFactor = (NUM_LEAGUES - targetLevel) / NUM_LEAGUES;
         game.transferBudget = Math.round(2500000 * (1 + leagueFactor * 2.5));
-        game.wageBudget = Math.round(450000 * (1 + leagueFactor * 2.5));
+        game.wageBudget = getLeagueWageBudget(targetLevel);
 
         refreshTransferMarket();
         applyClubCrest();
@@ -21604,7 +21429,9 @@ function renderStadiumEventsPanel() {
     // eigene Werte ohne Wirkung aufs Spiel führten.
     function cleanupLegacyFanTrainingStadiumState() {
         ['fanclubs', 'fanSatisfaction', 'ultraGroups', 'fanEvents', 'fanEngagement', 'ticketSalesMultiplier', 'sponsorAttractiveness',
-            'trainingSchedule', 'trainingSpecialization', 'setPieceTraining', 'stadium'].forEach(k => { delete game[k]; });
+            'trainingSchedule', 'trainingSpecialization', 'setPieceTraining', 'stadium',
+            // Kader-Bildschirm: Turniere ohne Austragung, Zufalls-Marktanalyse, Pauschal-Spielerbewertung
+            'internationalTournaments', 'playerInternationalCaps', 'internationalTournamentHistory', 'nextWorldCup', 'transferMarket', 'postMatchAnalysis'].forEach(k => { delete game[k]; });
         squad.forEach(p => { delete p.currentFitnessBoost; });
     }
 
@@ -23565,525 +23392,6 @@ function renderTacticSystemPanel() {
     html += `</div>`;
   });
 
-  html += '</div>';
-  panel.innerHTML = html;
-}
-
-</script>
-<script>
-/* eslint-disable no-undef */
-
-const INTERNATIONAL_TOURNAMENTS = {
-  worldCup: {
-    id: 'wc',
-    name: 'Weltmeisterschaft',
-    frequency: 48,
-    prestige: 100,
-    prizePool: 5000000,
-    playersPerNation: 23,
-    groupStageTeams: 32,
-    rounds: ['groups', 'roundOf16', 'quarterfinals', 'semifinals', 'final']
-  },
-  euro: {
-    id: 'euro',
-    name: 'Europameisterschaft',
-    frequency: 24,
-    prestige: 80,
-    prizePool: 2500000,
-    playersPerNation: 23,
-    groupStageTeams: 24,
-    rounds: ['groups', 'roundOf16', 'quarterfinals', 'semifinals', 'final']
-  },
-  copaAmerica: {
-    id: 'ca',
-    name: 'Copa America',
-    frequency: 24,
-    prestige: 70,
-    prizePool: 1500000,
-    playersPerNation: 23,
-    groupStageTeams: 12,
-    rounds: ['groups', 'semifinals', 'final']
-  },
-  africanCup: {
-    id: 'ac',
-    name: 'Afrikanischer Pokal der Nationen',
-    frequency: 24,
-    prestige: 60,
-    prizePool: 1000000,
-    playersPerNation: 23,
-    groupStageTeams: 16,
-    rounds: ['groups', 'quarterfinals', 'semifinals', 'final']
-  },
-  asianCup: {
-    id: 'ac',
-    name: 'AFC Asienmeisterschaft',
-    frequency: 24,
-    prestige: 55,
-    prizePool: 800000,
-    playersPerNation: 23,
-    groupStageTeams: 16,
-    rounds: ['groups', 'quarterfinals', 'semifinals', 'final']
-  }
-};
-
-function initializeInternationalTournaments() {
-  if (!game.internationalTournaments) {
-    game.internationalTournaments = [];
-  }
-  if (!game.playerInternationalCaps) {
-    game.playerInternationalCaps = {};
-  }
-  if (!game.internationalTournamentHistory) {
-    game.internationalTournamentHistory = [];
-  }
-  if (!game.nextWorldCup) {
-    game.nextWorldCup = 2026;
-  }
-}
-
-function getPlayerNationality(player) {
-  return player.nationality || 'Deutschland';
-}
-
-function isPlayerEligibleForTournament(player, tournamentType) {
-  if (!player.active) return false;
-  if (player.age > 35) return false;
-  if (!player.strength || player.strength < 40) return false;
-
-  if (tournamentType === 'wc') {
-    return player.strength >= 50;
-  } else if (tournamentType === 'euro') {
-    return player.strength >= 45;
-  } else {
-    return player.strength >= 40;
-  }
-}
-
-function selectTournamentSquad(tournamentType) {
-  const tournament = Object.values(INTERNATIONAL_TOURNAMENTS).find(t => t.id === tournamentType);
-  if (!tournament || !squad) return [];
-
-  const eligible = squad.filter(p => isPlayerEligibleForTournament(p, tournamentType));
-  const sorted = eligible.sort((a, b) => b.strength - a.strength);
-  return sorted.slice(0, tournament.playersPerNation);
-}
-
-function getTournamentImpactOnPlayer(player, tournamentPerformance) {
-  let strengthBonus = 0;
-  let moraleBonus = 0;
-  let marketValueMultiplier = 1.0;
-
-  if (tournamentPerformance === 'winner') {
-    strengthBonus = 3;
-    moraleBonus = 20;
-    marketValueMultiplier = 1.3;
-  } else if (tournamentPerformance === 'finalist') {
-    strengthBonus = 2;
-    moraleBonus = 15;
-    marketValueMultiplier = 1.2;
-  } else if (tournamentPerformance === 'semifinalist') {
-    strengthBonus = 1;
-    moraleBonus = 10;
-    marketValueMultiplier = 1.1;
-  } else if (tournamentPerformance === 'quarterfinalist') {
-    strengthBonus = 0;
-    moraleBonus = 5;
-    marketValueMultiplier = 1.05;
-  } else if (tournamentPerformance === 'groupExit') {
-    strengthBonus = -1;
-    moraleBonus = -8;
-    marketValueMultiplier = 0.95;
-  }
-
-  return {
-    strengthBonus: strengthBonus,
-    moraleBonus: moraleBonus,
-    marketValueMultiplier: marketValueMultiplier
-  };
-}
-
-function processTournamentSquadReturn(squadList, tournamentType, performanceLevel) {
-  if (!squadList || squadList.length === 0) return;
-
-  squadList.forEach((playerId) => {
-    const player = squad.find(p => p.id === playerId);
-    if (!player) return;
-
-    const impact = getTournamentImpactOnPlayer(player, performanceLevel);
-    player.strength = Math.min(100, Math.max(0, player.strength + impact.strengthBonus));
-    player.morale = Math.min(100, Math.max(0, player.morale + impact.moraleBonus));
-
-    if (player.marketValue) {
-      player.marketValue = Math.round(player.marketValue * impact.marketValueMultiplier);
-    }
-
-    if (!game.playerInternationalCaps) {
-      game.playerInternationalCaps = {};
-    }
-    if (!game.playerInternationalCaps[playerId]) {
-      game.playerInternationalCaps[playerId] = 0;
-    }
-    game.playerInternationalCaps[playerId]++;
-
-    if (game.inbox) {
-      addInboxMessage(`⭐ ${player.name} kehrt von Turnier zurück`,
-        `Stärke ${impact.strengthBonus > 0 ? '+' : ''}${impact.strengthBonus}, Moral ${impact.moraleBonus > 0 ? '+' : ''}${impact.moraleBonus}`);
-    }
-  });
-}
-
-function getTournamentParticipation() {
-  if (!squad) return { total: 0, champions: 0, participation: 0 };
-
-  let total = 0;
-  let champions = 0;
-  let participation = 0;
-
-  squad.forEach((player) => {
-    const caps = (game.playerInternationalCaps && game.playerInternationalCaps[player.id]) || 0;
-    if (caps > 0) {
-      participation++;
-      total += caps;
-      if (caps > 5) champions++;
-    }
-  });
-
-  return { total: total, champions: champions, participation: participation };
-}
-
-function getTournamentLeagueBonus() {
-  const participation = getTournamentParticipation();
-  if (participation.participation === 0) return 0;
-  return Math.min(0.25, participation.participation * 0.03);
-}
-
-function generateTournamentEvent(tournamentName, isKnockout) {
-  const outcomes = isKnockout ?
-    ['Bittere Niederlage in Verlängerung', 'Dramatischer Elfmeterschießen-Sieg', 'Klarer Sieg verdienter Gegner', 'Dominante Leistung'] :
-    ['Unglückliche Niederlage', 'Langweiliges Remis', 'Verdiente Niederlage', 'Überraschender Sieg'];
-
-  return outcomes[Math.floor(Math.random() * outcomes.length)];
-}
-
-function recordTournamentMatch(tournamentName, opponent, result, squadPlayers) {
-  if (!game.internationalTournamentHistory) {
-    game.internationalTournamentHistory = [];
-  }
-
-  game.internationalTournamentHistory.push({
-    tournament: tournamentName,
-    opponent: opponent,
-    result: result,
-    season: game.season,
-    matchday: game.matchday,
-    squadSize: squadPlayers ? squadPlayers.length : 0
-  });
-}
-
-function renderInternationalTournamentsPanel() {
-  const panel = document.getElementById('international-tournaments-panel');
-  if (!panel) return;
-
-  if (!game.internationalTournaments) {
-    initializeInternationalTournaments();
-  }
-
-  const participation = getTournamentParticipation();
-  const leagueBonus = getTournamentLeagueBonus();
-
-  let html = '<div class="panel-content">';
-  html += `<h3>Internationale Turniere</h3>`;
-
-  html += '<div class="tournament-stats">';
-  html += `<div class="stat-box">Spieler im Einsatz: ${participation.participation}/${squad ? squad.length : 0}</div>`;
-  html += `<div class="stat-box">Internationale Einsätze: ${participation.total}</div>`;
-  html += `<div class="stat-box">Erfahrene Spieler: ${participation.champions}</div>`;
-  html += `<div class="stat-box">Ligabonus: ${(leagueBonus * 100).toFixed(1)}%</div>`;
-  html += '</div>';
-
-  html += '<h4>Verfügbare Turniere:</h4>';
-  Object.values(INTERNATIONAL_TOURNAMENTS).forEach((tournament) => {
-    const squad_eligible = selectTournamentSquad(tournament.id);
-    html += `<div class="tournament-item">`;
-    html += `<strong>${tournament.name}</strong>`;
-    html += `<div class="tournament-info">Prestige: ${tournament.prestige} | Preisgeld: €${tournament.prizePool.toLocaleString()}</div>`;
-    html += `<div class="tournament-info">Teilnehmende Spieler: ${squad_eligible.length}/${tournament.playersPerNation} | Häufigkeit: alle ${tournament.frequency} Spieltage</div>`;
-    html += `<div class="tournament-info">Gruppen: ${tournament.groupStageTeams} Teams | Runden: ${tournament.rounds.join(' → ')}</div>`;
-    html += '</div>';
-  });
-
-  html += '<h4>Turnier-Historie:</h4>';
-  if (game.internationalTournamentHistory && game.internationalTournamentHistory.length > 0) {
-    game.internationalTournamentHistory.slice(-5).reverse().forEach((match) => {
-      html += `<div class="tournament-history-item">`;
-      html += `<strong>${match.tournament}</strong> vs ${match.opponent}`;
-      html += `<div class="history-info">${match.result} | Saison ${match.season}</div>`;
-      html += `</div>`;
-    });
-  } else {
-    html += '<div style="font-size:11px; color:#999;">Noch keine Turnier-Einsätze</div>';
-  }
-
-  html += '</div>';
-  panel.innerHTML = html;
-}
-
-</script>
-<script>
-/* eslint-disable no-undef */
-
-const MARKET_TRENDS = {
-  striker: {
-    name: 'Stürmer',
-    priceMultiplier: 1.0,
-    demandLevel: 'high',
-    volatility: 0.15
-  },
-  midfielder: {
-    name: 'Mittelfeld',
-    priceMultiplier: 0.85,
-    demandLevel: 'very high',
-    volatility: 0.12
-  },
-  defender: {
-    name: 'Abwehr',
-    priceMultiplier: 0.75,
-    demandLevel: 'medium',
-    volatility: 0.10
-  },
-  goalkeeper: {
-    name: 'Torwart',
-    priceMultiplier: 0.65,
-    demandLevel: 'low',
-    volatility: 0.08
-  }
-};
-
-const transferMarketState = {
-  marketAnalysis: null,
-  watchlist: [],
-  scoutReports: [],
-  marketTrends: []
-};
-
-function initializeTransferMarket() {
-  if (!game.transferMarket) {
-    game.transferMarket = {
-      watchlist: [],
-      scoutReports: [],
-      marketAnalysis: null,
-      discoveredBargains: 0
-    };
-  }
-}
-
-function analyzeMarketTrends() {
-  const analysis = {
-    timestamp: game.matchday,
-    season: game.season,
-    trends: {},
-    opportunities: []
-  };
-  
-  Object.entries(MARKET_TRENDS).forEach(([positionKey, positionData]) => {
-    const volatility = positionData.volatility;
-    const baseMultiplier = positionData.priceMultiplier;
-    const currentMultiplier = baseMultiplier * (0.9 + Math.random() * 0.2);
-    
-    analysis.trends[positionKey] = {
-      position: positionData.name,
-      demandLevel: positionData.demandLevel,
-      priceIndex: Math.round(currentMultiplier * 100),
-      trend: currentMultiplier > baseMultiplier ? 'rising' : 'falling',
-      volatility: Math.round(volatility * 100)
-    };
-    
-    if (currentMultiplier < baseMultiplier * 0.92) {
-      analysis.opportunities.push({
-        position: positionKey,
-        description: `${positionData.name} unterbewertet`,
-        discount: Math.round((1 - currentMultiplier / baseMultiplier) * 100)
-      });
-    }
-  });
-  
-  if (!game.transferMarket) initializeTransferMarket();
-  game.transferMarket.marketAnalysis = analysis;
-  
-  if (analysis.opportunities.length > 0 && game.inbox) {
-    addInboxMessage(`📊 Marktanalyse`, `${analysis.opportunities.length} Gelegenheit(en) gefunden`);
-  }
-  
-  return analysis;
-}
-
-function scoutPlayer(playerName, estimatedValue) {
-  if (!game.transferMarket) initializeTransferMarket();
-  
-  const report = {
-    id: (game.transferMarket.scoutReports || []).length,
-    playerName: playerName,
-    estimatedValue: estimatedValue,
-    marketValue: Math.round(estimatedValue * (0.8 + Math.random() * 0.4)),
-    scoutedMatchday: game.matchday,
-    season: game.season,
-    recommendation: '',
-    status: 'active'
-  };
-  
-  const marketValue = report.marketValue;
-  const estimatedRatio = marketValue / estimatedValue;
-  
-  if (estimatedRatio < 0.9) {
-    report.recommendation = 'Bargain - potentially undervalued';
-    game.transferMarket.discoveredBargains = (game.transferMarket.discoveredBargains || 0) + 1;
-  } else if (estimatedRatio > 1.1) {
-    report.recommendation = 'Overpriced - avoid';
-  } else {
-    report.recommendation = 'Fair market price';
-  }
-  
-  if (!game.transferMarket.scoutReports) game.transferMarket.scoutReports = [];
-  game.transferMarket.scoutReports.push(report);
-  
-  if (game.inbox) {
-    addInboxMessage(`🔍 Scout-Bericht`, `${playerName}: €${marketValue.toLocaleString()}`);
-  }
-  
-  return report;
-}
-
-function marketAnalysisAddToWatchlist(playerId, playerName, currentValue) {
-  if (!game.transferMarket) initializeTransferMarket();
-  
-  const watchEntry = {
-    id: (game.transferMarket.watchlist || []).length,
-    playerId: playerId,
-    playerName: playerName,
-    currentValue: currentValue,
-    highestValue: currentValue,
-    lowestValue: currentValue,
-    addedMatchday: game.matchday,
-    priceHistory: [{ matchday: game.matchday, value: currentValue }]
-  };
-  
-  if (!game.transferMarket.watchlist) game.transferMarket.watchlist = [];
-  game.transferMarket.watchlist.push(watchEntry);
-  
-  if (game.inbox) {
-    addInboxMessage(`⭐ Merkliste`, `${playerName} hinzugefügt`);
-  }
-  
-  return watchEntry;
-}
-
-function updateWatchlistPrices() {
-  if (!game.transferMarket || !game.transferMarket.watchlist) return;
-  
-  game.transferMarket.watchlist.forEach((entry) => {
-    const priceChange = entry.currentValue * (0.95 + Math.random() * 0.1);
-    entry.currentValue = Math.round(priceChange);
-    entry.highestValue = Math.max(entry.highestValue, entry.currentValue);
-    entry.lowestValue = Math.min(entry.lowestValue, entry.currentValue);
-    
-    entry.priceHistory.push({
-      matchday: game.matchday,
-      value: entry.currentValue
-    });
-    
-    if (entry.priceHistory.length > 20) {
-      entry.priceHistory.shift();
-    }
-  });
-}
-
-function tickTransferMarketAnalysis() {
-  if (game.matchday % 4 === 0) {
-    analyzeMarketTrends();
-    updateWatchlistPrices();
-  }
-}
-
-function getMarketInsight() {
-  if (!game.transferMarket || !game.transferMarket.marketAnalysis) {
-    return analyzeMarketTrends();
-  }
-  return game.transferMarket.marketAnalysis;
-}
-
-function marketAnalysisRemoveFromWatchlist(entryId) {
-  if (!game.transferMarket || !game.transferMarket.watchlist) return;
-  game.transferMarket.watchlist = game.transferMarket.watchlist.filter(e => e.id !== entryId);
-}
-
-function renderTransferMarketAnalysisPanel() {
-  const panel = document.getElementById('transfer-market-panel');
-  if (!panel) return;
-  
-  initializeTransferMarket();
-  
-  const analysis = getMarketInsight();
-  const watchlist = (game.transferMarket.watchlist || []).sort((a, b) => b.currentValue - a.currentValue);
-  const scoutReports = (game.transferMarket.scoutReports || []).slice(-5);
-  
-  let html = '<div class="panel-content">';
-  html += `<h3>Transfer-Markt-Analyse</h3>`;
-  
-  html += '<div class="market-stats">';
-  html += `<div class="stat-box">Beobachtete Spieler: ${watchlist.length}</div>`;
-  html += `<div class="stat-box">Scout-Berichte: ${(game.transferMarket.scoutReports || []).length}</div>`;
-  html += `<div class="stat-box">Gefundene Schnäppchen: ${game.transferMarket.discoveredBargains || 0}</div>`;
-  html += '</div>';
-  
-  if (analysis && analysis.trends) {
-    html += '<h4>Markt-Trends:</h4>';
-    html += '<div class="market-trends">';
-    Object.entries(analysis.trends).forEach(([key, trend]) => {
-      const trendIcon = trend.trend === 'rising' ? '📈' : '📉';
-      html += `<div class="trend-item">`;
-      html += `<strong>${trend.position}</strong> ${trendIcon}`;
-      html += `<div class="trend-info">Index: ${trend.priceIndex} | Nachfrage: ${trend.demandLevel}</div>`;
-      html += '</div>';
-    });
-    html += '</div>';
-    
-    if (analysis.opportunities && analysis.opportunities.length > 0) {
-      html += '<h4>Markt-Chancen:</h4>';
-      analysis.opportunities.forEach((opp) => {
-        html += `<div class="opportunity-item" style="background:#E8F5E9; padding:6px; border-left:3px solid #4CAF50; margin-bottom:4px;">`;
-        html += `<strong style="color:#2E7D32;">${opp.description}</strong>`;
-        html += `<div style="font-size:10px; color:#558B2F;">Rabatt: -${opp.discount}%</div>`;
-        html += '</div>';
-      });
-    }
-  }
-  
-  if (scoutReports.length > 0) {
-    html += '<h4>Letzte Scout-Berichte:</h4>';
-    scoutReports.forEach((report) => {
-      const recommendColor = report.recommendation.includes('Bargain') ? '#4CAF50' : 
-                            report.recommendation.includes('Overpriced') ? '#FF5252' : '#FFC107';
-      html += `<div class="scout-report-item">`;
-      html += `<strong>${report.playerName}</strong>`;
-      html += `<div class="report-info">Marktwert: €${report.marketValue.toLocaleString()}</div>`;
-      html += `<div class="report-info" style="color:${recommendColor}; font-size:10px; font-weight:bold;">${report.recommendation}</div>`;
-      html += '</div>';
-    });
-  }
-  
-  if (watchlist.length > 0) {
-    html += '<h4>Merkliste (Top 5):</h4>';
-    watchlist.slice(0, 5).forEach((entry) => {
-      const valueTrend = entry.priceHistory.length > 1 ? 
-        (entry.priceHistory[entry.priceHistory.length - 1].value >= entry.priceHistory[entry.priceHistory.length - 2].value ? '📈' : '📉') : '';
-      html += `<div class="watchlist-item">`;
-      html += `<strong>${entry.playerName}</strong> ${valueTrend}`;
-      html += `<div class="watchlist-info">Aktuell: €${entry.currentValue.toLocaleString()} | High: €${entry.highestValue.toLocaleString()} | Low: €${entry.lowestValue.toLocaleString()}</div>`;
-      html += `<button onclick="marketAnalysisRemoveFromWatchlist(${entry.id})" style="background:#FF5252; color:white; border:none; padding:3px 6px; border-radius:2px; font-size:9px;">✕</button>`;
-      html += '</div>';
-    });
-  }
-  
   html += '</div>';
   panel.innerHTML = html;
 }
@@ -29428,8 +28736,6 @@ function cleanupLegacyScoutState() {
             if (typeof tickYouthDevelopment === 'function') tickYouthDevelopment();
             // Medienabteilung: Medienereignisse aus dem Saisonverlauf
             if (typeof tickMediaDepartment === 'function') tickMediaDepartment();
-            // Transfer Market Analysis: Markttrends und Watchlist-Updates
-            if (typeof tickTransferMarketAnalysis === 'function') tickTransferMarketAnalysis();
             if (typeof cleanupLegacyContractState === 'function') cleanupLegacyContractState();
             // Opposition Analysis: Gegner-Analyse-Updates
             if (typeof cleanupLegacyScoutState === 'function') cleanupLegacyScoutState();
@@ -29449,8 +28755,6 @@ function cleanupLegacyScoutState() {
             if (typeof tickMemberAssembly === 'function') tickMemberAssembly();
             // Karriereenden: am Saisonende in agePlayersAtSeasonEnd() (js/player-development.js)
             if (typeof tickTournamentBrackets === 'function') tickTournamentBrackets();
-            // Opponent Analysis & Match Prediction: Gegner-Analyse und Match-Prognosen
-            if (typeof tickPostMatchAnalysis === 'function') tickPostMatchAnalysis();
             // Financial tracking for dashboard charts
             if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
             loescheBuchungskontext();
@@ -32339,7 +31643,7 @@ function renderClubProgression() {
                     autoLineup();
                     let leagueFactor = (NUM_LEAGUES - game.leagueLevel) / NUM_LEAGUES;
                     game.transferBudget = Math.round(2500000 * (1 + leagueFactor * 2.5));
-                    game.wageBudget = Math.round(450000 * (1 + leagueFactor * 2.5));
+                    game.wageBudget = getLeagueWageBudget(game.leagueLevel);
                 } else {
                     initDefaultSquad();
                 }
