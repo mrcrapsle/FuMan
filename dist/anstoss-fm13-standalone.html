@@ -2347,6 +2347,10 @@
                     <div id="manager-media-image-box"></div>
                 </div>
                 <div class="panel">
+                    <div class="panel-header" style="color:var(--gold);">🗞️ MEDIENABTEILUNG</div>
+                    <div id="media-department-box"></div>
+                </div>
+                <div class="panel">
                     <div class="panel-header" style="color:var(--gold);">
                         <span>🌳 MANAGER-TALENTBAUM & SKILL-PUNKTE</span>
                         <span>Verfügbare Skill-Punkte: <strong id="rpg-available-points" style="color:var(--gold); font-size:14px;">0</strong></span>
@@ -2595,10 +2599,6 @@
                     <div id="fin-fan-impact-box"></div>
                 </div>
 
-                <div class="panel">
-                    <div class="panel-header">📻 MEDIENBEZIEHUNGEN & PRESSEKONFERENZEN</div>
-                    <div id="media-relations-box"></div>
-                </div>
 
                 <div class="panel">
                     <div class="panel-header">👑 VORSTANDSVERHÄLTNISSE & JOB-SICHERHEIT</div>
@@ -2611,15 +2611,7 @@
                     <div id="tv-income-history-box" style="margin-top:6px;"></div>
                 </div>
 
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--accent);">📰 MEDIENBEZIEHUNGEN</div>
-                    <div id="media-relations-panel"></div>
-                </div>
 
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--blue);">👥 JOURNALIST-NETZWERK</div>
-                    <div id="media-journalists-panel"></div>
-                </div>
 
                 <div class="panel">
                     <div class="panel-header">🏦 KREDITE</div>
@@ -2908,10 +2900,6 @@
                 <div class="panel">
                     <div class="panel-header" style="color:#4CAF50;">🌟 NACHWUCHS-AKADEMIE</div>
                     <div id="youth-academy-panel"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:#9C27B0;">📱 MEDIEN & PR</div>
-                    <div id="media-management-panel"></div>
                 </div>
                 <div class="panel">
                     <div class="panel-header" style="color:#FF5722;">📊 TRANSFER-MARKT-ANALYSE</div>
@@ -3981,10 +3969,6 @@
                 </div>
                 <div class="panel" id="disciplinary-sanctions-box">
                     <div class="panel-header">📋 DISZIPLINAR & STRAFEN</div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">📺 MEDIENBEZIEHUNGEN</div>
-                    <div id="media-relations-box"></div>
                 </div>
                 <div class="panel">
                     <div class="panel-header">👋 SPIELER-PENSIONIERUNG & LEGENDEN</div>
@@ -7422,7 +7406,6 @@ function renderFanEventsPanel() {
         if (typeof renderFanEventsPanel === 'function') renderFanEventsPanel();
         if (typeof renderStadiumManagementPanel === 'function') renderStadiumManagementPanel();
         if (typeof renderYouthAcademyManagementPanel === 'function') renderYouthAcademyManagementPanel();
-        if (typeof renderMediaManagementPanel === 'function') renderMediaManagementPanel();
         if (typeof renderTransferMarketAnalysisPanel === 'function') renderTransferMarketAnalysisPanel();
         if (typeof renderSquadHarmonyPanel === 'function') renderSquadHarmonyPanel();
         if (typeof renderTeamCouncilPanel === 'function') renderTeamCouncilPanel();
@@ -12833,6 +12816,7 @@ function getTransferBudgetInfo() {
             <div id="media-image-trend-chart" style="margin-top:6px;"></div>
         `;
         renderMediaImageTrendChart();
+        if (typeof renderMediaDepartmentPanel === 'function') renderMediaDepartmentPanel();
     }
     function renderMediaImageTrendChart() {
         let box = document.getElementById('media-image-trend-chart');
@@ -13012,6 +12996,160 @@ function getTransferBudgetInfo() {
     }
 
 
+
+</script>
+<script>
+// Medienabteilung: aktive Pressearbeit auf dem einen echten Medienimage
+// (game.managerMediaImage), das auch Pressekonferenzen, Sponsoren-Erstangebote, TV-Partner
+// und Büro-Ereignisse nutzen. Löst drei Module ab, die je ein eigenes, wirkungsloses Image
+// führten. Eine Aktion pro Monat; Medienereignisse entstehen aus dem echten Saisonverlauf.
+
+const MEDIA_ACTION_COOLDOWN = 4; // Spieltage
+const MEDIA_EVENT_TIMEOUT = 4;
+const MEDIA_LEAGUE_COST_FACTOR = [1.0, 0.7, 0.45, 0.3, 0.2, 0.12];
+
+function initMediaDepartment() {
+    if (!game.mediaDept) game.mediaDept = { lastActionMatchday: null, lastActionSeason: null, goodwill: 0, event: null, log: [] };
+    // Alte Parallel-Systeme (eigene Images ohne Wirkung) aus Spielständen entfernen
+    ['mediaManagement', 'mediaRelations', 'mediaReputation', 'mediaRelationships', 'mediaConferences', 'mediaConferenceHistory',
+        'playerInterviews', 'journalistInteractions'].forEach(k => { delete game[k]; });
+    return game.mediaDept;
+}
+
+function changeMediaImage(delta) {
+    game.managerMediaImage = Math.max(0, Math.min(100, (game.managerMediaImage ?? 50) + delta));
+}
+
+function mediaCost(base) {
+    const f = MEDIA_LEAGUE_COST_FACTOR[game.leagueLevel] ?? MEDIA_LEAGUE_COST_FACTOR[MEDIA_LEAGUE_COST_FACTOR.length - 1];
+    return Math.round(base * f / 500) * 500;
+}
+
+function mediaLog(text) {
+    const md = initMediaDepartment();
+    md.log.unshift({ season: game.season, matchday: game.matchday, text });
+    md.log = md.log.slice(0, 5);
+}
+
+function getMediaActionBlockReason() {
+    const md = initMediaDepartment();
+    if (md.lastActionSeason === game.season && md.lastActionMatchday !== null && game.matchday - md.lastActionMatchday < MEDIA_ACTION_COOLDOWN) {
+        return `Nächste Medienaktion ab Spieltag ${md.lastActionMatchday + MEDIA_ACTION_COOLDOWN}.`;
+    }
+    return null;
+}
+
+function interviewCandidates() {
+    return [...squad].sort((a, b) => (b.appearances || 0) - (a.appearances || 0)).slice(0, 5);
+}
+
+const MEDIA_ACTIONS = {
+    kampagne: {
+        label: '📱 Social-Media-Kampagne', cost: () => mediaCost(20000),
+        run: () => {
+            const erfolg = Math.random() < 0.55 + (game.managerMediaImage ?? 50) / 500;
+            if (erfolg) { changeMediaImage(4); game.fans = Math.min(100, game.fans + 2); return 'Kampagne ging viral: Image +4, Fans +2'; }
+            changeMediaImage(-2); return 'Kampagne verpuffte, Spott im Netz: Image -2';
+        }
+    },
+    interview: {
+        label: '🎤 Spieler-Interview', cost: () => 0,
+        run: playerId => {
+            const p = squad.find(x => String(x.id) === String(playerId)) || interviewCandidates()[0];
+            if (!p) return 'Kein Spieler verfügbar';
+            if ((p.morale || 50) < 40) { changeMediaImage(-3); p.morale = Math.max(10, p.morale - 3); return `${p.name} kritisiert im Interview den Verein: Image -3`; }
+            changeMediaImage(2); p.morale = Math.min(100, (p.morale || 50) + 6); return `${p.name} glänzt im Interview: Image +2, seine Moral +6`;
+        }
+    },
+    hintergrund: {
+        label: '☕ Hintergrundgespräch', cost: () => mediaCost(5000),
+        run: () => { const md = initMediaDepartment(); md.goodwill = Math.min(3, md.goodwill + 1); changeMediaImage(1); return `Gute Kontakte zur Presse: Image +1, Wohlwollen ${md.goodwill}/3 (mildert Kritik)`; }
+    }
+};
+
+function runMediaAction(key, playerId) {
+    const action = MEDIA_ACTIONS[key];
+    if (!action) return;
+    const blocked = getMediaActionBlockReason();
+    if (blocked) { showToast(blocked, 'error'); return; }
+    const cost = action.cost();
+    if (cost > game.money) { showToast(`Nicht genug Geld (${formatVal(cost)}).`, 'error'); return; }
+    if (cost > 0) { setzeBuchungskontext('📰 Medienabteilung'); game.money -= cost; loescheBuchungskontext(); }
+    const md = initMediaDepartment();
+    md.lastActionMatchday = game.matchday;
+    md.lastActionSeason = game.season;
+    const text = action.run(playerId);
+    mediaLog(text);
+    showToast(`📰 ${text}`, 'success');
+    renderMediaDepartmentPanel();
+}
+
+const MEDIA_EVENT_OPTIONS = {
+    kritik: [
+        { label: 'Fehler eingestehen', run: () => { changeMediaImage(2); return 'Offener Umgang mit der Krise: Image +2'; } },
+        { label: 'Mannschaft in Schutz nehmen', run: () => { changeMediaImage(-2); squad.forEach(p => { p.morale = Math.min(100, (p.morale || 50) + 3); }); return 'Rückendeckung für die Spieler: Image -2, Moral +3'; } },
+        { label: 'Schweigen', run: () => { changeMediaImage(-4); return 'Schweigen wird als Schwäche gedeutet: Image -4'; } }
+    ]
+};
+
+// Monatlich: Ereignis aus dem Saisonverlauf, offene Kritik verfällt.
+function tickMediaDepartment() {
+    const md = initMediaDepartment();
+    if (md.event) {
+        const alter = (game.matchday - md.event.matchday) + (game.season > md.event.season ? 34 : 0);
+        if (alter < MEDIA_EVENT_TIMEOUT) return;
+        const text = MEDIA_EVENT_OPTIONS.kritik[2].run();
+        mediaLog(`Unbeantwortet: ${text}`);
+        md.event = null;
+    }
+    const letzte = (typeof getOwnSeasonMatches === 'function' ? getOwnSeasonMatches() : []).slice(-3);
+    if (letzte.length < 3) return;
+    if (letzte.every(m => m.own < m.opp)) {
+        if (md.goodwill > 0) { md.goodwill--; mediaLog('Drei Niederlagen - dank guter Kontakte fällt die Kritik mild aus.'); return; }
+        md.event = { type: 'kritik', title: 'Die Presse fordert Konsequenzen', text: 'Nach drei Niederlagen in Folge erwarten die Medien eine Stellungnahme.', season: game.season, matchday: game.matchday };
+        addInboxMessage('vertrag', '📰 Medien: Die Presse fordert Konsequenzen', 'Nach drei Niederlagen in Folge erwarten die Medien eine Stellungnahme. Antworte in der Managerkarriere bei der Medienabteilung.', 'screen-manager-tree');
+    } else if (letzte.every(m => m.own > m.opp)) {
+        changeMediaImage(2);
+        mediaLog('Drei Siege in Folge: Lobeshymnen in der Presse, Image +2');
+    }
+}
+
+function answerMediaEvent(index) {
+    const md = initMediaDepartment();
+    if (!md.event) return;
+    const option = (MEDIA_EVENT_OPTIONS[md.event.type] || [])[index];
+    if (!option) return;
+    const text = option.run();
+    mediaLog(text);
+    md.event = null;
+    showToast(`📰 ${text}`, 'success');
+    renderMediaDepartmentPanel();
+}
+
+function renderMediaDepartmentPanel() {
+    const box = document.getElementById('media-department-box');
+    if (!box) return;
+    const md = initMediaDepartment();
+    const blocked = getMediaActionBlockReason();
+    let html = '<div style="font-size:9px;">';
+    if (md.event) {
+        html += `<div style="background:rgba(255,84,104,0.1); border-left:3px solid var(--danger); padding:6px; border-radius:4px; margin-bottom:6px;">
+            <div style="font-weight:bold;">${md.event.title}</div><div style="color:var(--text-muted); margin:3px 0;">${md.event.text}</div>
+            ${MEDIA_EVENT_OPTIONS[md.event.type].map((o, i) => `<button onclick="answerMediaEvent(${i})" class="${i === 0 ? 'btn-action' : 'btn-secondary'}" style="font-size:8px; padding:3px 6px; margin:2px 4px 0 0;">${o.label}</button>`).join('')}
+        </div>`;
+    }
+    if (blocked) html += `<div style="color:var(--text-muted); margin-bottom:4px;">${blocked}</div>`;
+    const dis = blocked ? 'disabled' : '';
+    const kosten = key => { const c = MEDIA_ACTIONS[key].cost(); return c ? ` (${formatVal(c)})` : ''; };
+    html += `<button onclick="runMediaAction('kampagne')" class="btn-secondary" ${dis} style="width:100%; font-size:9px; padding:4px; margin-bottom:3px;">${MEDIA_ACTIONS.kampagne.label}${kosten('kampagne')}</button>`;
+    html += `<div style="display:flex; gap:4px; margin-bottom:3px;"><select id="media-interview-player" class="input-inline" style="flex:1; font-size:9px;">
+        ${interviewCandidates().map(p => `<option value="${p.id}">${p.name} (Moral ${Math.round(p.morale || 50)})</option>`).join('')}</select>
+        <button onclick="runMediaAction('interview', document.getElementById('media-interview-player').value)" class="btn-secondary" ${dis} style="font-size:9px; padding:4px;">${MEDIA_ACTIONS.interview.label}</button></div>`;
+    html += `<button onclick="runMediaAction('hintergrund')" class="btn-secondary" ${dis} style="width:100%; font-size:9px; padding:4px;">${MEDIA_ACTIONS.hintergrund.label}${kosten('hintergrund')}</button>`;
+    html += '<div style="font-size:8px; color:var(--text-muted); margin-top:4px;">Schlechte Laune im Interview schadet. Wohlwollen der Presse mildert die nächste Kritikwelle.</div>';
+    if (md.log.length) html += '<div style="margin-top:6px; font-weight:bold;">Zuletzt</div>' + md.log.slice(0, 3).map(l => `<div style="color:var(--text-muted); font-size:8px;">S${l.season}/ST${l.matchday}: ${l.text}</div>`).join('');
+    box.innerHTML = html + '</div>';
+}
 
 </script>
 <script>
@@ -17158,8 +17296,6 @@ function finishGoalkeeperGame() {
         if (typeof renderSponsoringPanel === 'function') renderSponsoringPanel();
         if (typeof renderFanEngagementPanel === 'function') renderFanEngagementPanel();
         if (typeof renderFanEngagementStats === 'function') renderFanEngagementStats();
-        if (typeof renderMediaRelationsPanel === 'function') renderMediaRelationsPanel();
-        if (typeof renderMediaRelationsBoxPanel === 'function') renderMediaRelationsBoxPanel();
         if (typeof renderBoardManagementPanel === 'function') renderBoardManagementPanel();
         renderStockTicker();
         renderSponsorLeaderboard();
@@ -17310,9 +17446,6 @@ function finishGoalkeeperGame() {
             loansListExt.innerHTML = activeLoans.map(l => `<div class="player-row"><span>${l.tierName}: noch ${formatVal(l.installment)}/SpT für ${l.matchdaysLeft} Spieltage</span><button onclick="specialRepayLoan(${l.id})" class="btn-secondary" style="width:auto; font-size:8px;">Sondertilgung</button></div>`).join('');
         }
 
-        if (typeof renderMediaRelationsPanel === 'function') renderMediaRelationsPanel();
-        if (typeof renderMediaRelationsBoxPanel === 'function') renderMediaRelationsBoxPanel();
-        if (typeof renderMediaJournalistPanel === 'function') renderMediaJournalistPanel();
     }
 
     function negotiateBoardBudget(type, amount) {
@@ -20114,604 +20247,6 @@ function finishGoalkeeperGame() {
         }
     }
 
-
-</script>
-<script>
-// ==========================================
-// MEDIENBEZIEHUNGEN ERWEITERTE FUNKTIONEN
-// ==========================================
-/* eslint-disable no-undef */
-
-function getMediaReputation() {
-    if (!game.mediaReputation) game.mediaReputation = 50;
-    return Math.max(0, Math.min(100, game.mediaReputation));
-}
-
-function updateMediaReputation(delta) {
-    if (!game.mediaReputation) game.mediaReputation = 50;
-    game.mediaReputation = Math.max(0, Math.min(100, game.mediaReputation + delta));
-}
-
-function generateMediaHeadline() {
-    const reputationLevel = getMediaReputation();
-    const recentResults = game.recentResults || [];
-    const wins = recentResults.filter(r => r === 'W').length;
-    const losses = recentResults.filter(r => r === 'L').length;
-    const draws = recentResults.filter(r => r === 'D').length;
-
-    const headlines = {
-        positive: [
-            `${game.clubName} erobert Tabellenspitze!`,
-            `Trainer ${game.managerName}: "Wir sind bereit für Großes!"`,
-            `${game.clubName} begeistert Fans mit spektakulärem Sieg`,
-            `Wunderkind-Entdeckung: Neuer Superstar bei ${game.clubName}?`,
-            `${game.clubName}: Von der Krise zur Meisterschaft`
-        ],
-        neutral: [
-            `${game.clubName} hält Kurs`,
-            `Solider Sieg für ${game.clubName}`,
-            `${game.clubName}-Trainer analysiert Saisonverlauf`,
-            `Trainerwechsel bei ${game.clubName} geplant?`,
-            `Stabiler Auftritt von ${game.clubName}`
-        ],
-        negative: [
-            `Krise bei ${game.clubName} - Trainer unter Druck`,
-            `${game.clubName} verliert wichtiges Derby-Spiel`,
-            `Spieleraufstand bei ${game.clubName}?`,
-            `${game.clubName} rutscht in Abstiegszone`,
-            `Kritik wächst: ${game.clubName} enttäuscht`
-        ]
-    };
-
-    let category = 'neutral';
-    if (reputationLevel >= 75 || wins >= 3) category = 'positive';
-    if (reputationLevel <= 25 || losses >= 3) category = 'negative';
-
-    const categoryHeadlines = headlines[category];
-    return categoryHeadlines[Math.floor(Math.random() * categoryHeadlines.length)];
-}
-
-function scheduleMediaConference() {
-    if (!game.mediaConferences) game.mediaConferences = [];
-
-    const cost = 5000;
-    if (game.money < cost) {
-        return { success: false, message: 'Nicht genug Geld' };
-    }
-
-    game.money -= cost;
-
-    const conference = {
-        id: 'mc_' + Math.random().toString(36).substr(2, 9),
-        scheduledMatchday: game.matchday + 1,
-        topic: ['Saisonzielestragie', 'Spielentwicklung', 'Vereinspläne'][Math.floor(Math.random() * 3)],
-        completed: false,
-        reputationDelta: 0
-    };
-
-    game.mediaConferences.push(conference);
-    return { success: true, message: `✓ Pressekonferenz geplant! (${formatVal(cost)})` };
-}
-
-function conductMediaConference(conferenceId, approach) {
-    const conf = (game.mediaConferences || []).find(c => c.id === conferenceId);
-    if (!conf) return { success: false, message: 'Konferenz nicht gefunden' };
-
-    const approaches = {
-        aggressive: { reputation: 20, risk: 30, bonus: 0 },
-        professional: { reputation: 10, risk: 5, bonus: 5 },
-        reserved: { reputation: 5, risk: 0, bonus: -10 }
-    };
-
-    const app = approaches[approach] || approaches.professional;
-    const actual = Math.round(app.reputation + (Math.random() * app.risk - app.risk / 2));
-
-    updateMediaReputation(actual);
-    conf.completed = true;
-    conf.approach = approach;
-    conf.reputationDelta = actual;
-
-    if (!game.mediaConferenceHistory) game.mediaConferenceHistory = [];
-    game.mediaConferenceHistory.push({
-        matchday: game.matchday,
-        approach: approach,
-        delta: actual
-    });
-
-    updateUI();
-    return {
-        success: true,
-        message: actual > 0
-            ? `✓ Erfolgreiche Pressekonferenz! +${actual} Reputation`
-            : `⚠️ Pressekonferenz durchgeführt (${actual} Reputation)`
-    };
-}
-
-function generateMediaInterview() {
-    const squad = window.squad || [];
-    if (squad.length === 0) return null;
-
-    const player = squad[Math.floor(Math.random() * squad.length)];
-
-    return {
-        playerId: player.id,
-        playerName: player.name,
-        topics: [
-            `"${player.name} über seine Entwicklung: 'Ich möchte ein Vorbild für andere sein'"`,
-            `Exklusiv: ${player.name} spricht über seinen Traum von der Nationalelf`,
-            `${player.name} über die Rivalen: "Wir haben Angst vor niemandem"`,
-            `Interview: ${player.name} verrät Geheimnis seines Erfolgs`
-        ][Math.floor(Math.random() * 4)]
-    };
-}
-
-function publishPlayerInterview(playerId) {
-    const player = squad?.find(p => p.id === playerId);
-    if (!player) return { success: false, message: 'Spieler nicht gefunden' };
-
-    const cost = 8000;
-    if (game.money < cost) {
-        return { success: false, message: 'Nicht genug Geld' };
-    }
-
-    game.money -= cost;
-
-    const moraleDelta = Math.random() * 20 + 5;
-    player.morale = Math.min(100, player.morale + moraleDelta);
-
-    updateMediaReputation(8);
-
-    if (!game.playerInterviews) game.playerInterviews = [];
-    game.playerInterviews.push({
-        playerId: playerId,
-        playerName: player.name,
-        matchday: game.matchday,
-        moraleBump: moraleDelta
-    });
-
-    updateUI();
-    return {
-        success: true,
-        message: `✓ Interview mit ${player.name} veröffentlicht! +${moraleDelta.toFixed(0)} Moral`
-    };
-}
-
-function getMediaCoverageBonus() {
-    const reputation = getMediaReputation();
-    if (reputation >= 80) return 1.15;
-    if (reputation >= 60) return 1.08;
-    if (reputation >= 40) return 1.0;
-    if (reputation >= 20) return 0.95;
-    return 0.85;
-}
-
-function manageMediaRelationship(journalistName, action) {
-    if (!game.mediaRelationships) game.mediaRelationships = {};
-
-    const rel = game.mediaRelationships[journalistName] || { favor: 50, lastAction: 0 };
-
-    const actions = {
-        'provide_exclusive': { favor: 15, reputation: 10, cost: 0 },
-        'invite_vip': { favor: 20, reputation: 5, cost: 12000 },
-        'ignore': { favor: -10, reputation: 0, cost: 0 },
-        'criticize': { favor: -25, reputation: -15, cost: 0 }
-    };
-
-    const act = actions[action];
-    if (!act) return { success: false, message: 'Aktion unbekannt' };
-
-    if (game.money < act.cost) {
-        return { success: false, message: 'Nicht genug Geld' };
-    }
-
-    game.money -= act.cost;
-    rel.favor = Math.max(0, Math.min(100, rel.favor + act.favor));
-    rel.lastAction = game.matchday;
-    updateMediaReputation(act.reputation);
-
-    game.mediaRelationships[journalistName] = rel;
-
-    if (!game.journalistInteractions) game.journalistInteractions = [];
-    game.journalistInteractions.push({
-        journalist: journalistName,
-        action: action,
-        favor: rel.favor,
-        matchday: game.matchday
-    });
-
-    updateUI();
-    return {
-        success: true,
-        message: `✓ Beziehung zu ${journalistName}: ${rel.favor}/100`
-    };
-}
-
-function renderMediaRelationsPanel() {
-    const box = document.getElementById('media-relations-panel');
-    if (!box) return;
-
-    const reputation = getMediaReputation();
-    const coverage = getMediaCoverageBonus();
-    const headline = generateMediaHeadline();
-
-    let html = '<div style="margin-bottom:12px;">';
-
-    html += `<div style="background:rgba(255,194,60,0.1); padding:6px; border-radius:4px; margin-bottom:8px; border-left:3px solid var(--accent);">
-        <div style="font-size:9px; font-weight:bold; margin-bottom:4px; color:var(--accent);">📰 MEDIENREPUTATION: ${reputation}/100</div>
-        <div style="width:100%; background:rgba(0,0,0,0.3); height:6px; border-radius:3px; overflow:hidden; margin-bottom:4px;">
-            <div style="width:${reputation}%; height:100%; background:var(--accent); transition:width 0.3s;"></div>
-        </div>
-        <div style="font-size:8px; color:var(--text-muted);">Coverage-Multiplikator: ×${coverage.toFixed(2)}</div>
-    </div>`;
-
-    html += `<div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:8px; font-size:9px;">
-        <div style="font-weight:bold; margin-bottom:4px;">📰 ${headline}</div>
-    </div>`;
-
-    html += '<button onclick="scheduleMediaConference()" class="btn-primary" style="width:100%; font-size:9px; padding:6px; margin-bottom:8px;">🎤 Pressekonferenz ansetzen (5.000 €)</button>';
-
-    const interviews = (game.mediaConferences || []).filter(c => !c.completed && c.scheduledMatchday === game.matchday);
-    if (interviews.length > 0) {
-        html += '<div style="margin-bottom:8px; font-size:9px; font-weight:bold;">📋 Heute durchführen:</div>';
-        interviews.forEach(conf => {
-            html += `<div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:2px; margin-bottom:2px;">
-                <button onclick="conductMediaConference('${conf.id}', 'aggressive')" class="btn-danger" style="font-size:8px; padding:3px;">Aggressiv</button>
-                <button onclick="conductMediaConference('${conf.id}', 'professional')" class="btn-primary" style="font-size:8px; padding:3px;">Professional</button>
-                <button onclick="conductMediaConference('${conf.id}', 'reserved')" class="btn-secondary" style="font-size:8px; padding:3px;">Vorsichtig</button>
-            </div>`;
-        });
-    }
-
-    html += '<div style="margin-top:8px; font-size:9px; font-weight:bold;">🎬 Spieler-Interviews:</div>';
-    const interview = generateMediaInterview();
-    if (interview) {
-        html += `<div style="background:rgba(100,100,100,0.1); padding:4px; border-radius:4px; margin-bottom:4px; font-size:8px;">
-            <div style="margin-bottom:2px;">${interview.topics}</div>
-            <button onclick="publishPlayerInterview('${interview.playerId}')" class="btn-action" style="width:100%; font-size:8px; padding:2px;">Veröffentlichen (8.000 €)</button>
-        </div>`;
-    }
-
-    html += '</div>';
-    box.innerHTML = html;
-}
-
-function renderMediaJournalistPanel() {
-    const box = document.getElementById('media-journalists-panel');
-    if (!box) return;
-
-    const journalists = ['Sky Sports', 'Kickest', 'Sport1', 'Eurosport'];
-    const relationships = game.mediaRelationships || {};
-
-    let html = '<div style="font-size:10px; font-weight:bold; margin-bottom:6px;">👥 JOURNALIST-NETZWERK</div>';
-
-    journalists.forEach(jname => {
-        const rel = relationships[jname] || { favor: 50 };
-        const relColor = rel.favor >= 75 ? 'var(--primary)' : rel.favor >= 50 ? 'var(--accent)' : 'var(--danger)';
-
-        html += `<div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:6px;">
-            <div style="font-size:9px; font-weight:bold; margin-bottom:4px;">${jname}</div>
-            <div style="width:100%; background:rgba(0,0,0,0.3); height:4px; border-radius:2px; overflow:hidden; margin-bottom:4px;">
-                <div style="width:${rel.favor}%; height:100%; background:${relColor}; transition:width 0.3s;"></div>
-            </div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:2px; font-size:8px;">
-                <button onclick="manageMediaRelationship('${jname}', 'provide_exclusive')" class="btn-secondary" style="padding:2px;">Exclusive</button>
-                <button onclick="manageMediaRelationship('${jname}', 'invite_vip')" class="btn-primary" style="padding:2px;">VIP laden</button>
-            </div>
-        </div>`;
-    });
-
-    box.innerHTML = html;
-}
-
-</script>
-<script>
-// Medienbeziehungen & Pressekonferenz-System
-// Manager-Medienimage, Statements, öffentliche Meinung
-
-let mediaRelationsState = {
-    mediaImage: 50,
-    pressStatements: [],
-    publicOpinion: 50,
-    conferenceHistory: [],
-    imageModifiers: []
-};
-
-const STATEMENT_TYPES = {
-    CONFIDENT: {
-        label: 'Selbstbewusst',
-        imageImpact: 8,
-        moralImpact: 5,
-        fanImpact: 4,
-        risk: 'Übermut bei Niederlage'
-    },
-    HUMBLE: {
-        label: 'Bescheiden',
-        imageImpact: 4,
-        moralImpact: 2,
-        fanImpact: 2,
-        risk: 'Wirkt schwach'
-    },
-    MOTIVATED: {
-        label: 'Motivierend',
-        imageImpact: 6,
-        moralImpact: 8,
-        fanImpact: 6,
-        risk: 'Kann über-promisieren'
-    },
-    DEFENSIVE: {
-        label: 'Defensiv',
-        imageImpact: -3,
-        moralImpact: -2,
-        fanImpact: -4,
-        risk: 'Wirkt ängstlich'
-    },
-    EMOTIONAL: {
-        label: 'Emotional',
-        imageImpact: 5,
-        moralImpact: 6,
-        fanImpact: 5,
-        risk: 'Kann missverstanden werden'
-    }
-};
-
-const IMAGE_IMPACTS = {
-    VICTORY: 3,
-    DRAW: 1,
-    DEFEAT: -4,
-    UNDEFEATED_RUN: 5,
-    PROMOTION: 8,
-    DEMOTION: -8,
-    TROPHY_WIN: 10,
-    SCANDAL: -6
-};
-
-function initializeMediaRelations() {
-    if (!game.mediaRelations) game.mediaRelations = {};
-    if (typeof game.mediaRelations.mediaImage !== 'number') {
-        game.mediaRelations.mediaImage = 50;
-    }
-    if (!game.mediaRelations.pressStatements) game.mediaRelations.pressStatements = [];
-    if (typeof game.mediaRelations.publicOpinion !== 'number') {
-        game.mediaRelations.publicOpinion = 50;
-    }
-    if (!game.mediaRelations.conferenceHistory) game.mediaRelations.conferenceHistory = [];
-    if (!game.mediaRelations.imageModifiers) game.mediaRelations.imageModifiers = [];
-}
-
-function getMediaImageLevel() {
-    const image = game.mediaRelations.mediaImage || 50;
-    if (image >= 80) return { label: 'Legendär', color: 'var(--primary)', modifier: 1.2 };
-    if (image >= 65) return { label: 'Sehr gut', color: 'var(--primary)', modifier: 1.1 };
-    if (image >= 50) return { label: 'Neutral', color: 'var(--text-muted)', modifier: 1.0 };
-    if (image >= 35) return { label: 'Kritisch', color: 'var(--accent)', modifier: 0.95 };
-    return { label: 'Verhasst', color: 'var(--danger)', modifier: 0.85 };
-}
-
-function giveStatement(statementType) {
-    if (!STATEMENT_TYPES[statementType]) return false;
-
-    const statement = STATEMENT_TYPES[statementType];
-    const today = game.matchday || 1;
-
-    game.mediaRelations.mediaImage = Math.max(0, Math.min(100, 
-        game.mediaRelations.mediaImage + statement.imageImpact
-    ));
-
-    game.mediaRelations.publicOpinion = Math.max(0, Math.min(100,
-        game.mediaRelations.publicOpinion + statement.fanImpact
-    ));
-
-    if (statement.moralImpact !== 0) {
-        Object.values(game.squadHarmony?.playerMorale || {}).forEach(player => {
-            player.morale = Math.max(0, Math.min(100, 
-                player.morale + statement.moralImpact
-            ));
-        });
-    }
-
-    game.mediaRelations.pressStatements.push({
-        type: statementType,
-        label: statement.label,
-        matchday: today,
-        season: game.season,
-        imageChange: statement.imageImpact,
-        timestamp: new Date().getTime()
-    });
-
-    if (game.mediaRelations.pressStatements.length > 10) {
-        game.mediaRelations.pressStatements.shift();
-    }
-
-    const riskOccurs = Math.random() < 0.15;
-    let message = `📰 Pressestatement gegeben: "${statement.label}"`;
-    if (riskOccurs) {
-        message += ` (Risiko: ${statement.risk})`;
-    }
-
-    showToast(message, 'info', 5000);
-    return true;
-}
-
-function holdPressConference() {
-    const matchday = game.matchday || 1;
-    const image = game.mediaRelations.mediaImage || 50;
-
-    let topics = [];
-    if (game.leaguePosition && game.leaguePosition <= 3) {
-        topics.push('🏆 Titelaussichten');
-    }
-    if (game.leaguePosition && game.leaguePosition >= Object.keys(leaguesData[game.leagueLevel] || {}).length - 2) {
-        topics.push('⚠️ Abstiegskampf');
-    }
-    if (Object.values(game.squadHarmony?.playerMorale || {}).some(p => p.morale < 30)) {
-        topics.push('💔 Spieler-Konflikte');
-    }
-    if (game.money < 50000) {
-        topics.push('💰 Finanzielle Probleme');
-    }
-
-    const conference = {
-        matchday: matchday,
-        season: game.season,
-        topics: topics.length > 0 ? topics : ['⚽ Allgemeine Einschätzung'],
-        mediaImageBefore: image,
-        timestamp: new Date().getTime()
-    };
-
-    game.mediaRelations.conferenceHistory.push(conference);
-
-    let publicReaction = (Math.random() - 0.5) * 20;
-    game.mediaRelations.publicOpinion = Math.max(0, Math.min(100,
-        game.mediaRelations.publicOpinion + publicReaction
-    ));
-
-    showToast(`📺 Pressekonferenz abgehalten! Öffentliche Meinung: ${Math.round(publicReaction) > 0 ? '+' : ''}${Math.round(publicReaction)}`, 'info', 5000);
-    return true;
-}
-
-function recordMatchdayMediaEvent(result) {
-    if (!game.mediaRelations) return;
-
-    let impact = 0;
-    if (result === 'W') {
-        impact = IMAGE_IMPACTS.VICTORY;
-    } else if (result === 'D') {
-        impact = IMAGE_IMPACTS.DRAW;
-    } else if (result === 'L') {
-        impact = IMAGE_IMPACTS.DEFEAT;
-    }
-
-    if (impact !== 0) {
-        game.mediaRelations.mediaImage = Math.max(0, Math.min(100,
-            game.mediaRelations.mediaImage + impact
-        ));
-        
-        game.mediaRelations.publicOpinion = Math.max(0, Math.min(100,
-            game.mediaRelations.publicOpinion + (impact * 0.7)
-        ));
-    }
-}
-
-function tickMediaRelations() {
-    initializeMediaRelations();
-
-    const recentResults = (game.recentResults || []).slice(-5);
-    const undefeated = recentResults.length > 0 && recentResults.every(r => r.result !== 'L');
-
-    if (undefeated && recentResults.length >= 5) {
-        game.mediaRelations.mediaImage = Math.min(100,
-            game.mediaRelations.mediaImage + IMAGE_IMPACTS.UNDEFEATED_RUN
-        );
-    }
-
-    const imageLevel = getMediaImageLevel();
-    if (game.mediaRelations.publicOpinion > 70) {
-        game.mediaRelations.mediaImage = Math.min(100,
-            game.mediaRelations.mediaImage + 1
-        );
-    } else if (game.mediaRelations.publicOpinion < 30) {
-        game.mediaRelations.mediaImage = Math.max(0,
-            game.mediaRelations.mediaImage - 1
-        );
-    }
-
-    if (game.boardSat && game.boardSat > 80) {
-        game.mediaRelations.mediaImage = Math.min(100,
-            game.mediaRelations.mediaImage + 0.5
-        );
-    }
-
-    const oldStatements = game.mediaRelations.pressStatements.filter(s => {
-        const age = (game.matchday || 1) - s.matchday;
-        return age > 8;
-    });
-    if (oldStatements.length > 0) {
-        game.mediaRelations.pressStatements = game.mediaRelations.pressStatements.filter(s => {
-            const age = (game.matchday || 1) - s.matchday;
-            return age <= 8;
-        });
-    }
-}
-
-function getMediaRelationsSummary() {
-    if (!game.mediaRelations) return { image: 50, publicOpinion: 50, statements: 0 };
-
-    const imageLevel = getMediaImageLevel();
-    return {
-        image: Math.round(game.mediaRelations.mediaImage || 50),
-        publicOpinion: Math.round(game.mediaRelations.publicOpinion || 50),
-        imageLevel: imageLevel,
-        statements: game.mediaRelations.pressStatements?.length || 0,
-        conferences: game.mediaRelations.conferenceHistory?.filter(c => c.season === game.season)?.length || 0
-    };
-}
-
-function renderMediaRelationsBoxPanel() {
-    const container = document.getElementById('media-relations-box');
-    if (!container) return;
-
-    initializeMediaRelations();
-
-    let html = '<div class="panel-content">';
-    html += '<h3>📺 MEDIENBEZIEHUNGEN</h3>';
-
-    const summary = getMediaRelationsSummary();
-
-    html += '<div style="margin-bottom:10px;">';
-    html += '<p style="font-size:10px; margin:0 0 4px 0;"><strong>Trainer-Image:</strong> <span style="color:' + summary.imageLevel.color + ';">' + summary.imageLevel.label + '</span></p>';
-    html += '<div style="width:100%; height:12px; background:#333; border-radius:4px; overflow:hidden; margin-bottom:4px;">';
-    html += '<div style="width:' + summary.image + '%; height:100%; background:' + summary.imageLevel.color + '; transition:width 0.3s;"></div>';
-    html += '</div>';
-    html += '<p style="font-size:8px; color:var(--text-muted); margin:0;">Score: ' + summary.image + '/100</p>';
-    html += '</div>';
-
-    html += '<div style="margin-bottom:10px;">';
-    html += '<p style="font-size:10px; margin:0 0 4px 0;"><strong>Öffentliche Meinung:</strong></p>';
-    const opinionColor = summary.publicOpinion >= 60 ? 'var(--primary)' : summary.publicOpinion >= 40 ? 'var(--text-muted)' : 'var(--danger)';
-    html += '<div style="width:100%; height:12px; background:#333; border-radius:4px; overflow:hidden;">';
-    html += '<div style="width:' + summary.publicOpinion + '%; height:100%; background:' + opinionColor + '; transition:width 0.3s;"></div>';
-    html += '</div>';
-    html += '</div>';
-
-    html += '<div style="margin-bottom:10px;">';
-    html += '<h4>🎤 Pressestatements</h4>';
-    html += '<div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">';
-
-    Object.entries(STATEMENT_TYPES).forEach(([key, statement]) => {
-        const bgColor = statement.imageImpact > 5 ? '#1a3a1a' : statement.imageImpact > 0 ? '#1a2a3a' : '#3a1a1a';
-        const icon = statement.imageImpact > 5 ? '✅' : statement.imageImpact > 0 ? '➡️' : '❌';
-        html += '<button onclick="giveStatement(\'' + key + '\')" class="btn-secondary" style="font-size:9px; padding:6px; background:' + bgColor + ';">' + icon + ' ' + statement.label + '</button>';
-    });
-
-    html += '</div>';
-    html += '</div>';
-
-    html += '<div style="margin-bottom:10px;">';
-    html += '<h4>📺 Pressekonferenz</h4>';
-    html += '<button onclick="holdPressConference()" class="btn-action" style="width:100%; font-size:10px;">🎙️ Pressekonferenz halten</button>';
-    html += '<p style="font-size:8px; color:var(--text-muted); margin:4px 0 0 0;">Diese Saison: ' + summary.conferences + ' Konferenzen</p>';
-    html += '</div>';
-
-    if (game.mediaRelations.pressStatements && game.mediaRelations.pressStatements.length > 0) {
-        html += '<div style="margin-top:10px;">';
-        html += '<h4>📰 Letzte Statements</h4>';
-
-        game.mediaRelations.pressStatements.slice(-3).forEach(stmt => {
-            const imgSign = stmt.imageChange > 0 ? '+' : '';
-            const imgColor = stmt.imageChange > 0 ? 'var(--primary)' : 'var(--danger)';
-            html += '<div style="font-size:8px; margin-bottom:3px; padding:4px; background:#222; border-radius:3px;">';
-            html += '<span style="color:var(--text-muted);">ST ' + stmt.matchday + ':</span> ';
-            html += '<strong>' + stmt.label + '</strong> ';
-            html += '<span style="color:' + imgColor + ';">(' + imgSign + stmt.imageChange + ')</span>';
-            html += '</div>';
-        });
-
-        html += '</div>';
-    }
-
-    html += '</div>';
-    container.innerHTML = html;
-}
 
 </script>
 <script>
@@ -26203,8 +25738,8 @@ function closeNegotiationModal() {
                 }
 
                 // Medien-Reputation sinkt
-                if (typeof updateMediaReputation === 'function') {
-                    updateMediaReputation(-scandal.consequences.mediaReputation);
+                if (typeof changeMediaImage === 'function') {
+                    changeMediaImage(-Math.round(scandal.consequences.mediaReputation / 2));
                 }
 
                 addInboxMessage('scandal', `${scandal.icon} Skandal: ${player?.name}`,
@@ -26242,8 +25777,8 @@ function closeNegotiationModal() {
             showToast(`✅ ${scandal.icon} Skandal gelöst - ${player.name} trägt Konsequenzen`, 'info');
         } else {
             // Spieler verleugnet alles - Skandal wird schlimmer, aber Spieler bleibt leistungsfähig
-            if (typeof updateMediaReputation === 'function') {
-                updateMediaReputation(-30);
+            if (typeof changeMediaImage === 'function') {
+                changeMediaImage(-15);
             }
             showToast(`💢 ${scandal.icon} ${player.name} leugnet alles - noch schlechtere Publicity!`, 'error');
         }
@@ -28030,274 +27565,6 @@ function renderYouthAcademyManagementPanel() {
       html += `</div>`;
       html += '</div>';
     });
-  }
-  
-  html += '</div>';
-  panel.innerHTML = html;
-}
-
-</script>
-<script>
-/* eslint-disable no-undef */
-
-const MEDIA_EVENTS = {
-  pressConference: {
-    name: 'Pressekonferenz',
-    topics: ['Taktik', 'Spielerverletzungen', 'Transfermarkt'],
-    positiveOutcome: 0.6,
-    reputationImpact: 0.05,
-    fanEngagementImpact: 0.08
-  },
-  interview: {
-    name: 'Spielerinterview',
-    topics: ['Karriere', 'Mannschaftsgeist', 'Ambitionen'],
-    positiveOutcome: 0.7,
-    reputationImpact: 0.03,
-    fanEngagementImpact: 0.06
-  },
-  socialMedia: {
-    name: 'Social Media Kampagne',
-    topics: ['Erfolgsgeschichten', 'Behind-the-Scenes', 'Fankultur'],
-    positiveOutcome: 0.8,
-    reputationImpact: 0.02,
-    fanEngagementImpact: 0.12
-  }
-};
-
-const mediaState = {
-  reputationScore: 50,
-  mediaRelations: 50,
-  lastCampaigns: [],
-  mediaHistory: [],
-  publicImage: 'neutral'
-};
-
-function initializeMediaManagement() {
-  if (!game.mediaManagement) {
-    game.mediaManagement = {
-      reputationScore: 50,
-      mediaRelations: 50,
-      campaigns: [],
-      publicImage: 'neutral'
-    };
-  }
-}
-
-function updateReputation(delta) {
-  if (!game.mediaManagement) initializeMediaManagement();
-  game.mediaManagement.reputationScore = Math.min(100, Math.max(0, game.mediaManagement.reputationScore + delta));
-}
-
-function updateMediaRelations(delta) {
-  if (!game.mediaManagement) initializeMediaManagement();
-  game.mediaManagement.mediaRelations = Math.min(100, Math.max(0, game.mediaManagement.mediaRelations + delta));
-}
-
-function getPublicImage() {
-  if (!game.mediaManagement) return 'neutral';
-  
-  const reputation = game.mediaManagement.reputationScore || 50;
-  if (reputation > 75) return 'excellent';
-  if (reputation > 60) return 'positive';
-  if (reputation > 40) return 'neutral';
-  if (reputation > 25) return 'negative';
-  return 'crisis';
-}
-
-function conductPressConference(topic) {
-  if (!game.mediaManagement) initializeMediaManagement();
-  
-  const eventConfig = MEDIA_EVENTS.pressConference;
-  const success = Math.random() < eventConfig.positiveOutcome;
-  
-  const result = {
-    type: 'pressConference',
-    topic: topic,
-    success: success,
-    date: game.matchday,
-    season: game.season
-  };
-  
-  if (success) {
-    updateReputation(5);
-    updateMediaRelations(3);
-    if (game.inbox) {
-      addInboxMessage(`📰 Pressekonferenz erfolgreich`, `Thema: ${topic}`);
-    }
-  } else {
-    updateReputation(-3);
-    updateMediaRelations(-2);
-    if (game.inbox) {
-      addInboxMessage(`⚠️ Pressekonferenz kritisch`, `Negative Reaktionen auf Aussagen`);
-    }
-  }
-  
-  if (!game.mediaManagement.campaigns) game.mediaManagement.campaigns = [];
-  game.mediaManagement.campaigns.push(result);
-  
-  return result;
-}
-
-function launchSocialMediaCampaign(focusTopic) {
-  if (!game.mediaManagement) initializeMediaManagement();
-  
-  const eventConfig = MEDIA_EVENTS.socialMedia;
-  const success = Math.random() < eventConfig.positiveOutcome;
-  
-  const campaign = {
-    type: 'socialMedia',
-    topic: focusTopic,
-    success: success,
-    engagement: Math.floor(success ? 5000 + Math.random() * 10000 : 1000 + Math.random() * 3000),
-    startMatchday: game.matchday,
-    duration: 4,
-    status: 'active'
-  };
-  
-  if (success) {
-    updateReputation(4);
-    updateMediaRelations(2);
-    if (game.fanSatisfaction) {
-      game.fanSatisfaction = Math.min(100, game.fanSatisfaction + 3);
-    }
-  } else {
-    updateReputation(-2);
-    if (game.fanSatisfaction) {
-      game.fanSatisfaction = Math.max(0, game.fanSatisfaction - 2);
-    }
-  }
-  
-  if (!game.mediaManagement.campaigns) game.mediaManagement.campaigns = [];
-  game.mediaManagement.campaigns.push(campaign);
-  
-  if (game.inbox) {
-    addInboxMessage(`📱 Social Media Kampagne`, `${focusTopic}: ${campaign.engagement} Engagement`);
-  }
-  
-  return campaign;
-}
-
-function tickMediaCampaigns() {
-  if (!game.mediaManagement || !game.mediaManagement.campaigns) return;
-  
-  game.mediaManagement.campaigns = game.mediaManagement.campaigns.filter((campaign) => {
-    if (campaign.type === 'socialMedia' && campaign.status === 'active') {
-      if (game.matchday >= campaign.startMatchday + campaign.duration) {
-        campaign.status = 'completed';
-        if (campaign.success) {
-          updateReputation(2);
-        }
-        return false;
-      }
-    }
-    return true;
-  });
-}
-
-function respondToMediaCrisis(responseType) {
-  if (!game.mediaManagement) initializeMediaManagement();
-  
-  let reputationChange = 0;
-  let relationshipChange = 0;
-  
-  if (responseType === 'apologize') {
-    reputationChange = 8;
-    relationshipChange = 5;
-  } else if (responseType === 'defend') {
-    reputationChange = -2;
-    relationshipChange = -3;
-  } else if (responseType === 'ignore') {
-    reputationChange = -5;
-    relationshipChange = -2;
-  }
-  
-  updateReputation(reputationChange);
-  updateMediaRelations(relationshipChange);
-  
-  if (game.inbox) {
-    addInboxMessage(`🎙️ Medienkrise ${responseType}`, `Reputation ${reputationChange > 0 ? '+' : ''}${reputationChange}`);
-  }
-  
-  return { reputationChange, relationshipChange };
-}
-
-function tickRandomMediaEvent() {
-  if (!game.mediaManagement) initializeMediaManagement();
-  
-  if (Math.random() > 0.05) return;
-  
-  const currentImage = getPublicImage();
-  let eventChance = 0.1;
-  
-  if (currentImage === 'crisis') eventChance = 0.5;
-  else if (currentImage === 'negative') eventChance = 0.3;
-  else if (currentImage === 'excellent') eventChance = 0.05;
-  
-  if (Math.random() < eventChance) {
-    updateReputation(-8);
-    if (game.inbox) {
-      const issues = ['Spieler meldet sich krank', 'Negative Berichterstattung', 'Fanproteste im Stadion'];
-      addInboxMessage(`⚠️ Medienkrise`, issues[Math.floor(Math.random() * issues.length)]);
-    }
-  }
-}
-
-function renderMediaManagementPanel() {
-  const panel = document.getElementById('media-management-panel');
-  if (!panel) return;
-  
-  initializeMediaManagement();
-  
-  const reputation = game.mediaManagement.reputationScore || 50;
-  const mediaRelations = game.mediaManagement.mediaRelations || 50;
-  const publicImage = getPublicImage();
-  const imageColors = {
-    'excellent': '#4CAF50',
-    'positive': '#8BC34A',
-    'neutral': '#FFC107',
-    'negative': '#FF9800',
-    'crisis': '#FF5252'
-  };
-  const imageLabels = {
-    'excellent': '⭐⭐⭐',
-    'positive': '⭐⭐',
-    'neutral': '⭐',
-    'negative': '⚠️',
-    'crisis': '🆘'
-  };
-  
-  let html = '<div class="panel-content">';
-  html += `<h3>Medien & PR-Management</h3>`;
-  
-  html += '<div class="media-stats">';
-  html += `<div class="stat-box">Ruf: ${Math.round(reputation)}% | <span style="color:${imageColors[publicImage]}; font-weight:bold;">${imageLabels[publicImage]} ${publicImage}</span></div>`;
-  html += `<div class="stat-box">Medienbeziehungen: ${Math.round(mediaRelations)}%</div>`;
-  html += `<div class="stat-box">Kampagnen: ${(game.mediaManagement.campaigns || []).length}</div>`;
-  html += '</div>';
-  
-  html += '<h4>PR-Maßnahmen:</h4>';
-  html += '<div class="media-actions">';
-  html += `<button onclick="conductPressConference('Taktik')" style="background:#2196F3; color:white; border:none; padding:6px 12px; margin-right:4px; margin-bottom:4px; border-radius:3px; font-size:10px;">📰 Pressekonferenz</button>`;
-  html += `<button onclick="launchSocialMediaCampaign('Spielergeschichte')" style="background:#4CAF50; color:white; border:none; padding:6px 12px; margin-right:4px; margin-bottom:4px; border-radius:3px; font-size:10px;">📱 Social Media</button>`;
-  if (publicImage === 'crisis' || publicImage === 'negative') {
-    html += `<button onclick="respondToMediaCrisis('apologize')" style="background:#FF9800; color:white; border:none; padding:6px 12px; margin-right:4px; margin-bottom:4px; border-radius:3px; font-size:10px;">🎙️ Entschuldigung</button>`;
-  }
-  html += '</div>';
-  
-  html += '<h4>Aktuelle Kampagnen:</h4>';
-  const activeCampaigns = (game.mediaManagement.campaigns || []).filter(c => c.status === 'active' || (c.type !== 'socialMedia'));
-  if (activeCampaigns.length > 0) {
-    activeCampaigns.slice(-5).forEach((campaign) => {
-      const statusIcon = campaign.success ? '✅' : '❌';
-      html += `<div class="campaign-item">`;
-      html += `<strong>${statusIcon} ${campaign.type === 'pressConference' ? '📰' : '📱'} ${campaign.topic}</strong>`;
-      if (campaign.engagement) {
-        html += `<div class="campaign-info">Engagement: ${campaign.engagement.toLocaleString()}</div>`;
-      }
-      html += '</div>';
-    });
-  } else {
-    html += '<div style="font-size:11px; color:#999;">Keine aktuellen Kampagnen</div>';
   }
   
   html += '</div>';
@@ -36488,9 +35755,8 @@ function renderRefereePreview() {
             // Youth Academy (New Systems): Nachwuchsrekrutierung und Programm-Ticks
             if (typeof tickYouthRecruitment === 'function') tickYouthRecruitment();
             if (typeof tickYouthPrograms === 'function') tickYouthPrograms();
-            // Media Management: Kampagnen und zufällige Medienereignisse
-            if (typeof tickMediaCampaigns === 'function') tickMediaCampaigns();
-            if (typeof tickRandomMediaEvent === 'function') tickRandomMediaEvent();
+            // Medienabteilung: Medienereignisse aus dem Saisonverlauf
+            if (typeof tickMediaDepartment === 'function') tickMediaDepartment();
             // Transfer Market Analysis: Markttrends und Watchlist-Updates
             if (typeof tickTransferMarketAnalysis === 'function') tickTransferMarketAnalysis();
             // Contract Management: Vertragsverlängerungen und -ablauf
@@ -36517,7 +35783,6 @@ function renderRefereePreview() {
             if (typeof tickMemberAssembly === 'function') tickMemberAssembly();
             // Contract Renewal & Media Relations: Verträge und Medienbeziehungen
             if (typeof tickContractRenewal === 'function') tickContractRenewal();
-            if (typeof tickMediaRelations === 'function') tickMediaRelations();
             // Player Retirement & Tournament Brackets: Spieler-Pensionierung und Turnier-Klammern
             if (typeof tickPlayerRetirement === 'function') tickPlayerRetirement();
             if (typeof tickTournamentBrackets === 'function') tickTournamentBrackets();
@@ -37852,8 +37117,6 @@ function renderRefereePreview() {
         }
         if (typeof renderCrisisManagementPanel === 'function') renderCrisisManagementPanel();
         if (typeof renderDisciplinarySanctionsPanel === 'function') renderDisciplinarySanctionsPanel();
-        if (typeof renderMediaRelationsPanel === 'function') renderMediaRelationsPanel();
-        if (typeof renderMediaRelationsBoxPanel === 'function') renderMediaRelationsBoxPanel();
         if (typeof renderPlayerRetirementPanel === 'function') renderPlayerRetirementPanel();
     }
 

@@ -90,8 +90,6 @@
         }
         if (typeof renderCrisisManagementPanel === 'function') renderCrisisManagementPanel();
         if (typeof renderDisciplinarySanctionsPanel === 'function') renderDisciplinarySanctionsPanel();
-        if (typeof renderMediaRelationsPanel === 'function') renderMediaRelationsPanel();
-        if (typeof renderMediaRelationsBoxPanel === 'function') renderMediaRelationsBoxPanel();
         if (typeof renderPlayerRetirementPanel === 'function') renderPlayerRetirementPanel();
     }
 

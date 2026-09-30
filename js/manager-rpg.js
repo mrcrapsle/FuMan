@@ -42,6 +42,7 @@
             <div id="media-image-trend-chart" style="margin-top:6px;"></div>
         `;
         renderMediaImageTrendChart();
+        if (typeof renderMediaDepartmentPanel === 'function') renderMediaDepartmentPanel();
     }
     function renderMediaImageTrendChart() {
         let box = document.getElementById('media-image-trend-chart');

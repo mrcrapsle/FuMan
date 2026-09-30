@@ -1769,9 +1769,8 @@
             // Youth Academy (New Systems): Nachwuchsrekrutierung und Programm-Ticks
             if (typeof tickYouthRecruitment === 'function') tickYouthRecruitment();
             if (typeof tickYouthPrograms === 'function') tickYouthPrograms();
-            // Media Management: Kampagnen und zufällige Medienereignisse
-            if (typeof tickMediaCampaigns === 'function') tickMediaCampaigns();
-            if (typeof tickRandomMediaEvent === 'function') tickRandomMediaEvent();
+            // Medienabteilung: Medienereignisse aus dem Saisonverlauf
+            if (typeof tickMediaDepartment === 'function') tickMediaDepartment();
             // Transfer Market Analysis: Markttrends und Watchlist-Updates
             if (typeof tickTransferMarketAnalysis === 'function') tickTransferMarketAnalysis();
             // Contract Management: Vertragsverlängerungen und -ablauf
@@ -1798,7 +1797,6 @@
             if (typeof tickMemberAssembly === 'function') tickMemberAssembly();
             // Contract Renewal & Media Relations: Verträge und Medienbeziehungen
             if (typeof tickContractRenewal === 'function') tickContractRenewal();
-            if (typeof tickMediaRelations === 'function') tickMediaRelations();
             // Player Retirement & Tournament Brackets: Spieler-Pensionierung und Turnier-Klammern
             if (typeof tickPlayerRetirement === 'function') tickPlayerRetirement();
             if (typeof tickTournamentBrackets === 'function') tickTournamentBrackets();

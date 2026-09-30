@@ -94,8 +94,8 @@
                 }
 
                 // Medien-Reputation sinkt
-                if (typeof updateMediaReputation === 'function') {
-                    updateMediaReputation(-scandal.consequences.mediaReputation);
+                if (typeof changeMediaImage === 'function') {
+                    changeMediaImage(-Math.round(scandal.consequences.mediaReputation / 2));
                 }
 
                 addInboxMessage('scandal', `${scandal.icon} Skandal: ${player?.name}`,
@@ -133,8 +133,8 @@
             showToast(`✅ ${scandal.icon} Skandal gelöst - ${player.name} trägt Konsequenzen`, 'info');
         } else {
             // Spieler verleugnet alles - Skandal wird schlimmer, aber Spieler bleibt leistungsfähig
-            if (typeof updateMediaReputation === 'function') {
-                updateMediaReputation(-30);
+            if (typeof changeMediaImage === 'function') {
+                changeMediaImage(-15);
             }
             showToast(`💢 ${scandal.icon} ${player.name} leugnet alles - noch schlechtere Publicity!`, 'error');
         }

@@ -61,8 +61,6 @@
         if (typeof renderSponsoringPanel === 'function') renderSponsoringPanel();
         if (typeof renderFanEngagementPanel === 'function') renderFanEngagementPanel();
         if (typeof renderFanEngagementStats === 'function') renderFanEngagementStats();
-        if (typeof renderMediaRelationsPanel === 'function') renderMediaRelationsPanel();
-        if (typeof renderMediaRelationsBoxPanel === 'function') renderMediaRelationsBoxPanel();
         if (typeof renderBoardManagementPanel === 'function') renderBoardManagementPanel();
         renderStockTicker();
         renderSponsorLeaderboard();
@@ -213,9 +211,6 @@
             loansListExt.innerHTML = activeLoans.map(l => `<div class="player-row"><span>${l.tierName}: noch ${formatVal(l.installment)}/SpT für ${l.matchdaysLeft} Spieltage</span><button onclick="specialRepayLoan(${l.id})" class="btn-secondary" style="width:auto; font-size:8px;">Sondertilgung</button></div>`).join('');
         }
 
-        if (typeof renderMediaRelationsPanel === 'function') renderMediaRelationsPanel();
-        if (typeof renderMediaRelationsBoxPanel === 'function') renderMediaRelationsBoxPanel();
-        if (typeof renderMediaJournalistPanel === 'function') renderMediaJournalistPanel();
     }
 
     function negotiateBoardBudget(type, amount) {

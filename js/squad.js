@@ -761,7 +761,6 @@
         if (typeof renderFanEventsPanel === 'function') renderFanEventsPanel();
         if (typeof renderStadiumManagementPanel === 'function') renderStadiumManagementPanel();
         if (typeof renderYouthAcademyManagementPanel === 'function') renderYouthAcademyManagementPanel();
-        if (typeof renderMediaManagementPanel === 'function') renderMediaManagementPanel();
         if (typeof renderTransferMarketAnalysisPanel === 'function') renderTransferMarketAnalysisPanel();
         if (typeof renderSquadHarmonyPanel === 'function') renderSquadHarmonyPanel();
         if (typeof renderTeamCouncilPanel === 'function') renderTeamCouncilPanel();
