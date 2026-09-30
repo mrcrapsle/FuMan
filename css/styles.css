@@ -80,6 +80,12 @@
             position: relative; z-index: 5;
         }
         .club-brand { display: flex; align-items: center; gap: 10px; }
+        /* Spielversion oben links neben dem Menüknopf (auf dem Handy die freie Fläche) */
+        .header-version {
+            font-size: 11px; font-weight: 800; color: var(--text-muted); letter-spacing: 0.5px;
+            padding: 3px 8px; border: 1px solid var(--border); border-radius: 10px;
+            background: rgba(255,255,255,0.04); white-space: nowrap; margin-right: auto;
+        }
         .club-logo {
             width: 36px; height: 36px; border-radius: 50%;
             background: radial-gradient(circle at 35% 30%, #f0d98a 0%, #d4a94a 55%, #96701f 100%);

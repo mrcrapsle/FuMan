@@ -6,6 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Anstoß Mobile Pro - FM13** is a fully-featured browser-based football manager simulation game. The codebase is modular (index.html + css/styles.css + 80 js/*.js files) that bundles into a single 1.8 MB standalone HTML file. The game runs entirely in the browser with local storage for save games, works offline, and supports mobile devices.
 
+## Working With the User
+
+- Always reply in German.
+- After every merge to `main`, send the minified build as a ZIP (`anstoss-fm13-vX.zip` containing `anstoss-fm13.html`) and always include both links:
+  - Spielen: https://mrcrapsle.github.io/FuMan/
+  - Download: https://github.com/mrcrapsle/FuMan/raw/main/dist/anstoss-fm13-standalone.min.html
+- The game version is shown in the header (`#header-version-tag`, from `GAME_VERSION`); bump it on every merge.
+
 ## Common Commands
 
 ```bash

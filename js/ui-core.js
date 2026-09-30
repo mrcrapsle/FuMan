@@ -292,6 +292,8 @@
         document.getElementById('top-board').innerText = game.boardSat + '%';
         document.getElementById('top-matchday').innerText = Math.min(34, game.matchday) + ' / 34';
         document.getElementById('head-league-name').innerText = leagueNames[game.leagueLevel];
+        let versionTag = document.getElementById('header-version-tag');
+        if (versionTag) versionTag.innerText = `v${GAME_VERSION.number}`;
         document.getElementById('head-season').innerText = "Saison " + game.season;
         document.getElementById('top-mgr-lvl').innerText = `Lvl ${managerRPG.level} (${managerRPG.xp} XP)`;
 

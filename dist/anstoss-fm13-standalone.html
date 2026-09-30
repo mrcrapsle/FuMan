@@ -87,6 +87,12 @@
             position: relative; z-index: 5;
         }
         .club-brand { display: flex; align-items: center; gap: 10px; }
+        /* Spielversion oben links neben dem Menüknopf (auf dem Handy die freie Fläche) */
+        .header-version {
+            font-size: 11px; font-weight: 800; color: var(--text-muted); letter-spacing: 0.5px;
+            padding: 3px 8px; border: 1px solid var(--border); border-radius: 10px;
+            background: rgba(255,255,255,0.04); white-space: nowrap; margin-right: auto;
+        }
         .club-logo {
             width: 36px; height: 36px; border-radius: 50%;
             background: radial-gradient(circle at 35% 30%, #f0d98a 0%, #d4a94a 55%, #96701f 100%);
@@ -1970,6 +1976,7 @@
     <!-- HEADER -->
     <header class="app-header">
         <button class="hamburger-btn" onclick="toggleMenuDrawer()" id="hamburger-menu-btn">☰</button>
+        <div class="header-version" id="header-version-tag"></div>
         <div class="club-brand">
             <div class="club-logo" id="club-logo-display" style="position:relative;">
                 <span id="club-logo-symbol-text">FCM</span>
@@ -13605,6 +13612,8 @@ function renderBoardRoomPanel() {
         document.getElementById('top-board').innerText = game.boardSat + '%';
         document.getElementById('top-matchday').innerText = Math.min(34, game.matchday) + ' / 34';
         document.getElementById('head-league-name').innerText = leagueNames[game.leagueLevel];
+        let versionTag = document.getElementById('header-version-tag');
+        if (versionTag) versionTag.innerText = `v${GAME_VERSION.number}`;
         document.getElementById('head-season').innerText = "Saison " + game.season;
         document.getElementById('top-mgr-lvl').innerText = `Lvl ${managerRPG.level} (${managerRPG.xp} XP)`;
 
