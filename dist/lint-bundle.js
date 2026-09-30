@@ -477,7 +477,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.9', date: '30.09.2026', features: 'Phase 18: Pressekonferenzen, Vertragsgespräche mit Gehalt, Jobangebote mit echtem Wechsel' };
+    const GAME_VERSION = { number: '3.10', date: '30.09.2026', features: 'Phase 18: Liga-Statistiken (Torjägerliste der ganzen Liga, Formtabelle, Heim/Auswärts, Tabellenverlauf)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

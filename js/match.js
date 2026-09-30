@@ -754,7 +754,10 @@
         let hasPkKiller = onPitch.some(p => p.trait === 'Elfmeter-Killer' && p.pos === 'TW');
         let hasWingSpeedster = onPitch.some(p => p.trait === 'Flügelflitzer');
         let hasTackleMonster = onPitch.some(p => p.trait === 'Zweikampfmonster');
-        if (hasGoalInstinct) userFavoredProb += 0.06;
+        // userFavoredProb ist die Chance des HEIMteams: der Tor-Instinkt hilft uns also nur
+        // mit Vorzeichen - früher bekam bei Auswärtsspielen der Gegner den Bonus.
+        if (hasGoalInstinct) userFavoredProb += currentMatch.isHome ? 0.06 : -0.06;
+        userFavoredProb = Math.max(0.02, Math.min(0.98, userFavoredProb));
         if (hasWingSpeedster) goalChance += 0.05;
 
         let eventHandled = false;

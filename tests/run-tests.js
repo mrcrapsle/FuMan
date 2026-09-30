@@ -4873,10 +4873,23 @@ async function testLiveMatchEngine(browser) {
         }
         out.tore = `${sie}:${wir} in 6 Spielen`;
         out.dominant = wir >= 3 * Math.max(1, sie);
+        // Tor-Instinkt hilft uns auch auswärts (früher bekam dort der Gegner den Bonus)
+        let gegenMitInstinkt = 0;
+        for (let n = 0; n < 20; n++) {
+            lineup = pickBestLineupIds();
+            squad.find(p => p.id === lineup[lineup.length - 1]).trait = 'Tor-Instinkt';
+            setupMatch('Kreisklasse FC', game.clubName, 5, false, false, null);
+            stopLiveTickerAutoplay();
+            currentMatch.halftimeShown = true;
+            while (currentMatch.minute < 90) simulateMatchStep();
+            gegenMitInstinkt += currentMatch.homeGoals;
+        }
+        out.instinktGegentore = gegenMitInstinkt;
         return out;
     });
     assert(r.torschuetzenRichtig, `Auswärtstore werden unseren Spielern gutgeschrieben, Heimtore nicht (${r.einzel})`);
     assert(r.dominant, `Klar überlegene Mannschaft gewinnt auswärts (${r.tore})`);
+    assert(r.instinktGegentore <= 5, `Tor-Instinkt stärkt auswärts uns, nicht den Gegner (${r.instinktGegentore} Gegentore in 20 Spielen gegen Stärke 5)`);
     assert(r.statistik && r.statistikSichtbar && r.abpfiffZeile, 'Statistik (Ballbesitz, Schüsse) passt zum Spiel und wird angezeigt');
     assert(r.vorauswahlFeldspieler, 'Auswechslung: Vorauswahl ist ein Feldspieler, nicht der Torwart');
     assert(r.wechselWirkt && r.wechselTicker, 'Auswechslung ersetzt den gewählten Spieler und ändert die Teamstärke');
