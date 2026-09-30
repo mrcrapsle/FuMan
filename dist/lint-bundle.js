@@ -489,7 +489,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.3', date: '30.09.2026', features: 'Phase 16: Livespiel - Statistik, echte Auswechslungen, Torschützen auswärts korrigiert, mehr Kommentare' };
+    const GAME_VERSION = { number: '3.4', date: '30.09.2026', features: 'Phase 16: Aufräumen Teil 5 - Felder und Container ohne Wirkung entfernt' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
