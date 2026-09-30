@@ -3324,7 +3324,6 @@ function renderFanEventsPanel() {
         if (typeof renderTrainingSpecializationPanel === 'function') renderTrainingSpecializationPanel();
         if (typeof renderFanEventsPanel === 'function') renderFanEventsPanel();
         if (typeof renderStadiumManagementPanel === 'function') renderStadiumManagementPanel();
-        if (typeof renderYouthAcademyManagementPanel === 'function') renderYouthAcademyManagementPanel();
         if (typeof renderTransferMarketAnalysisPanel === 'function') renderTransferMarketAnalysisPanel();
         if (typeof renderSquadHarmonyPanel === 'function') renderSquadHarmonyPanel();
         if (typeof renderTeamCouncilPanel === 'function') renderTeamCouncilPanel();
@@ -19581,9 +19580,8 @@ function renderStadiumManagementPanel() {
 
         if (typeof renderYouthAcademyPanel === 'function') renderYouthAcademyPanel();
         if (typeof renderYouthDevelopmentChart === 'function') renderYouthDevelopmentChart();
-        if (typeof simulateYouthDevelopment === 'function') simulateYouthDevelopment();
+        if (typeof migrateLegacyYouthAcademy === 'function') migrateLegacyYouthAcademy();
         if (typeof renderAcademyRankingPanel === 'function') renderAcademyRankingPanel();
-        if (typeof renderYouthAcademyAdvanced === 'function') renderYouthAcademyAdvanced();
     }
 
     // ==========================================
@@ -19803,6 +19801,7 @@ function renderStadiumManagementPanel() {
         youthTalents.forEach(p => {
             if (Math.random() < 0.2 * getYouthPotentialMultiplier(p)) { p.strength = Math.min(99, p.strength + 1); improved.push(p.name); }
         });
+        if (improved.length >= 2 && typeof updateAcademyPoints === 'function') updateAcademyPoints('youth-tournament-win');
         showToast(improved.length > 0 ? `🏆 Jugendturnier: ${improved.join(', ')} zeigten starke Leistungen!` : '🏆 Jugendturnier durchgeführt - keine besonderen Ausreißer.', 'success');
         renderYouthView();
         updateUI();
@@ -19891,6 +19890,7 @@ function renderStadiumManagementPanel() {
         let p = youthTalents[idx];
         squad.push(p);
         youthTalents.splice(idx, 1);
+        if (typeof updateAcademyPoints === 'function') updateAcademyPoints('youth-graduation');
         // Jugendakademie-Abschlussfeier: statt nur einer trockenen Nachricht ein kleines
         // Zeremoniell mit Moralschub fürs ganze Team - ein Aufstieg aus der eigenen Jugend
         // ist immer ein Grund zum Feiern für die Kabine.
@@ -20006,7 +20006,10 @@ function getYouthCoachBonus() {
     return Math.min(1.5, baseBonus + experienceBonus + coachingBonus);
 }
 
-function simulateYouthDevelopment() {
+// Monatlich (nicht beim Öffnen des Screens - sonst wuchsen Talente mit jedem Aufruf):
+// Entwicklung der Jugend mit Jugendtrainer-, Fokus- und Mentor-Bonus.
+function tickYouthDevelopment() {
+    migrateLegacyYouthAcademy();
     trackYouthDevelopment();
 
     const coachBonus = getYouthCoachBonus();
@@ -20017,74 +20020,36 @@ function simulateYouthDevelopment() {
         const mentorBonus = p.mentorId && squad.some(s => s.id === p.mentorId) ? 1.35 : 1.0;
         const potentialGap = Math.max(0, (p.potential || 75) - p.strength);
 
-        let strengthIncrease = Math.random() * 3 * coachBonus * focusBonus * mentorBonus * ageDecay;
+        let strengthIncrease = Math.random() * 1.5 * coachBonus * focusBonus * mentorBonus * ageDecay;
         if (potentialGap < 5) strengthIncrease *= 0.3;
         if (potentialGap < 2) strengthIncrease *= 0.1;
 
         p.strength = Math.min(p.potential || 99, Math.round(p.strength + strengthIncrease));
-
         p.morale = Math.max(30, Math.min(100, p.morale + (Math.random() * 10 - 5)));
     });
+    if (youthTalents.length && typeof updateAcademyPoints === 'function') updateAcademyPoints('talent-development');
 }
 
-function scheduleYouthTournament() {
-    if (!game.youthTournaments) game.youthTournaments = [];
-
-    const tournament = {
-        id: 'yt_' + Math.random().toString(36).substr(2, 9),
-        name: `Jugend-Turnier MD${game.matchday}`,
-        startMatchday: game.matchday + 2,
-        status: 'scheduled',
-        results: [],
-        prize: {
-            money: 25000,
-            reputation: 5
-        }
-    };
-
-    game.youthTournaments.push(tournament);
-    return { success: true, message: `✓ Turnier ${tournament.name} angesetzt!` };
-}
-
-function runYouthTournament(tournamentId) {
-    const tournament = (game.youthTournaments || []).find(t => t.id === tournamentId);
-    if (!tournament) return { success: false, message: 'Turnier nicht gefunden' };
-
-    const avgYouthStrength = youthTalents.length > 0
-        ? Math.round(youthTalents.reduce((sum, p) => sum + p.strength, 0) / youthTalents.length)
-        : 50;
-
-    const opponentStrength = 45 + Math.floor(Math.random() * 20);
-    const successChance = Math.min(95, Math.max(5, 50 + (avgYouthStrength - opponentStrength)));
-    const won = Math.random() * 100 < successChance;
-
-    tournament.status = 'completed';
-    tournament.results.push({
-        matchday: game.matchday,
-        won: won,
-        opponentStrength: opponentStrength,
-        ourStrength: avgYouthStrength
+// Alte Spielstände: die frühere Zweit-Akademie (game.youthAcademy) führte einen eigenen
+// Spielerpool mit englischen Positionen und doppelten IDs. Talente wandern in die echte
+// Jugendabteilung, bereits beförderte Profis bekommen gültige Positionen.
+const LEGACY_POS = { GK: 'TW', CB: 'ABW', LB: 'ABW', RB: 'ABW', CM: 'MIT', CDM: 'MIT', CAM: 'MIT' };
+function migrateLegacyYouthAcademy() {
+    squad.forEach(p => { if (LEGACY_POS[p.pos]) p.pos = LEGACY_POS[p.pos]; });
+    const alt = game.youthAcademy;
+    if (!alt) return;
+    const pool = [...(alt.youngPlayers || []), ...(alt.players || [])];
+    pool.forEach(yp => {
+        const pos = LEGACY_POS[yp.position] || (['TW', 'ABW', 'MIT', 'ST'].includes(yp.position) ? yp.position : 'MIT');
+        const staerke = Math.round(yp.strength || 40);
+        const neu = createPlayer(pos, staerke, staerke, null, [yp.age || 17, yp.age || 17]);
+        if (yp.name) neu.name = yp.name;
+        if (typeof assignYouthPotentialTier === 'function') assignYouthPotentialTier(neu);
+        neu.youthFocus = 'allgemein';
+        youthTalents.push(neu);
     });
-
-    if (won) {
-        game.money += tournament.prize.money;
-        if (!game.youthTourneyWins) game.youthTourneyWins = 0;
-        game.youthTourneyWins++;
-
-        youthTalents.forEach(p => {
-            p.morale = Math.min(100, p.morale + 10);
-            p.strength = Math.min(p.potential || 99, p.strength + 1);
-        });
-    }
-
-    updateUI();
-    return {
-        success: true,
-        won: won,
-        message: won
-            ? `🏆 Jugend-Team gewonnen! +${tournament.prize.money} € Prämie`
-            : `😞 Jugend-Team verloren. Weiter gehts!`
-    };
+    delete game.youthAcademy;
+    if (pool.length) addInboxMessage('vertrag', '🎓 Nachwuchs zusammengeführt', `${pool.length} Talente aus der früheren Zusatz-Akademie gehören jetzt zur Jugendabteilung.`, 'screen-youth');
 }
 
 function renderYouthAcademyPanel() {
@@ -20134,9 +20099,7 @@ function renderYouthAcademyPanel() {
         </div>`;
     });
 
-    html += '<div style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(100,100,100,0.2);">';
-    html += '<button onclick="scheduleYouthTournament()" class="btn-primary" style="width:100%; font-size:9px; padding:6px;">🏆 Jugend-Turnier ansetzen</button>';
-    html += '</div></div>';
+    html += '</div>';
 
     box.innerHTML = html;
 }
@@ -20183,323 +20146,31 @@ function renderYouthDevelopmentChart() {
 /* eslint-enable */
 
     // ==========================================
-    // ADVANCED YOUTH ACADEMY - TALENTFÖRDERUNG & ENTWICKLUNGSPROGRAMME
-    // ==========================================
-    // Spezialisierte Trainings-Programme für verschiedene Positionen, Scouting-Missionen
-    // und systematische Talentförderung zur Integration in die erste Mannschaft.
-
-    let advancedYouthAcademyState = {
-        trainingPrograms: {}, // { programId: { name, position, level, trainingFocus, successRate, cost } }
-        activePrograms: [], // [ { playerName, programId, progress, startedMatchday } ]
-        talentReports: [], // [ { playerName, potential, scout, timestamp, rating } ]
-        academyRanking: [], // [ { season, rank, tournamentWins, playersPromoted } ]
-        partnerClubs: [], // [ { clubName, relation, exchanges, lastInteraction } ]
-        youthTournaments: [] // [ { name, season, winners, participants, timestamp } ]
-    };
-
-    const TRAINING_PROGRAMS = {
-        strikerMastery: {
-            id: 'strikerMastery',
-            name: '⚽ Stürmer-Spezialisierung',
-            position: 'ST',
-            level: 'advanced',
-            focus: 'Torschuss, Positionsspiel, Kopfballspiel',
-            cost: 5000,
-            duration: 12,
-            successRate: 0.70,
-            skillBonus: { strength: 2, shooting: 4, dribbling: 1 }
-        },
-        midfielderControl: {
-            id: 'midfielderControl',
-            name: '🎯 Mittelfeld-Kontrolle',
-            position: 'MIT',
-            level: 'advanced',
-            focus: 'Passspiel, Spielübersicht, Ballkontrolle',
-            cost: 4500,
-            duration: 12,
-            successRate: 0.72,
-            skillBonus: { strength: 1, passing: 4, pace: 1 }
-        },
-        defenderAcademics: {
-            id: 'defenderAcademics',
-            name: '🛡️ Abwehr-Akademie',
-            position: 'ABW',
-            level: 'advanced',
-            focus: 'Zweikampf, Positionierung, Luftspiel',
-            cost: 4000,
-            duration: 12,
-            successRate: 0.68,
-            skillBonus: { strength: 3, defense: 4, pace: 1 }
-        },
-        goalkeeperMastery: {
-            id: 'goalkeeperMastery',
-            name: '🥅 Torwart-Elite',
-            position: 'TW',
-            level: 'advanced',
-            focus: 'Reflex-Training, Flugausbildung, Befehlsgewalt',
-            cost: 3500,
-            duration: 12,
-            successRate: 0.75,
-            skillBonus: { strength: 2, defense: 3, pace: 1 }
-        },
-        physicalDevelopment: {
-            id: 'physicalDevelopment',
-            name: '💪 Athletik-Ausbildung',
-            position: 'any',
-            level: 'intermediate',
-            focus: 'Kraft, Ausdauer, Schnelligkeit',
-            cost: 3000,
-            duration: 10,
-            successRate: 0.80,
-            skillBonus: { strength: 3, pace: 2, physique: 2 }
-        }
-    };
-
-    function startTrainingProgram(playerName, programId) {
-        if (!playerName || !programId) return false;
-
-        let program = TRAINING_PROGRAMS[programId];
-        if (!program) return false;
-
-        // Kosten überprüfen
-        if (game.money < program.cost) {
-            showToast(`💰 Nicht genug Budget für ${program.name} (benötigt ${formatVal(program.cost)})`, 'warning');
-            return false;
-        }
-
-        // Spieler überprüfen
-        let player = squad.find(p => p.name === playerName);
-        if (!player) return false;
-
-        // Bereits aktives Programm?
-        let existingProgram = advancedYouthAcademyState.activePrograms.find(ap => ap.playerName === playerName);
-        if (existingProgram) {
-            showToast(`📚 ${playerName} absolviert bereits ein Trainings-Programm`, 'info');
-            return false;
-        }
-
-        // Programm starten
-        game.money -= program.cost;
-        advancedYouthAcademyState.activePrograms.push({
-            playerName: playerName,
-            programId: programId,
-            progress: 0,
-            startedMatchday: game.matchday,
-            duration: program.duration
-        });
-
-        showToast(`📚 ${playerName} startet ${program.name}!`, 'success', 4000);
-        return true;
-    }
-
-    function tickYouthAcademyPrograms() {
-        if (game.matchday % 4 !== 0) return; // Monatlich
-
-        let toRemove = [];
-
-        advancedYouthAcademyState.activePrograms.forEach((activeProgram, idx) => {
-            let program = TRAINING_PROGRAMS[activeProgram.programId];
-            if (!program) return;
-
-            activeProgram.progress += 1;
-            let player = squad.find(p => p.name === activeProgram.playerName);
-            if (!player) return;
-
-            // Programm abgeschlossen?
-            if (activeProgram.progress >= program.duration) {
-                let success = Math.random() < program.successRate;
-
-                if (success) {
-                    // Fähigkeiten erhöhen
-                    Object.entries(program.skillBonus).forEach(([skill, bonus]) => {
-                        if (skill === 'strength' && player.strength) player.strength = Math.min(100, player.strength + bonus);
-                        if (skill === 'shooting' && player.shooting) player.shooting = Math.min(100, player.shooting + bonus);
-                        if (skill === 'passing' && player.passing) player.passing = Math.min(100, player.passing + bonus);
-                        if (skill === 'defense' && player.defense) player.defense = Math.min(100, player.defense + bonus);
-                        if (skill === 'pace' && player.pace) player.pace = Math.min(100, player.pace + bonus);
-                        if (skill === 'dribbling' && player.dribbling) player.dribbling = Math.min(100, player.dribbling + bonus);
-                        if (skill === 'physique' && player.physique) player.physique = Math.min(100, player.physique + bonus);
-                    });
-
-                    showToast(`✅ ${player.name} beendet ${program.name} erfolgreich! Fähigkeiten gesteigert!`, 'success', 5000);
-                } else {
-                    showToast(`⚠️ ${player.name} konnte ${program.name} nicht erfolgreich abschließen.`, 'warning', 5000);
-                }
-
-                toRemove.push(idx);
-            }
-        });
-
-        // Abgeschlossene Programme entfernen
-        toRemove.reverse().forEach(idx => advancedYouthAcademyState.activePrograms.splice(idx, 1));
-    }
-
-    function addScoutingReport(playerName, potential, scoutName, rating) {
-        if (!advancedYouthAcademyState.talentReports) advancedYouthAcademyState.talentReports = [];
-
-        let report = {
-            playerName: playerName,
-            potential: potential,
-            scout: scoutName,
-            timestamp: new Date().toLocaleDateString('de-DE'),
-            rating: rating, // 'Supertalent', 'Großes Potential', 'Solider Spieler'
-            season: game.season
-        };
-
-        advancedYouthAcademyState.talentReports.push(report);
-
-        if (advancedYouthAcademyState.talentReports.length > 20) {
-            advancedYouthAcademyState.talentReports.shift();
-        }
-    }
-
-    function recordYouthAcademySuccess(seasonData) {
-        if (!advancedYouthAcademyState.academyRanking) advancedYouthAcademyState.academyRanking = [];
-
-        let entry = {
-            season: game.season,
-            rank: seasonData.rank || '-',
-            tournamentWins: seasonData.tournamentWins || 0,
-            playersPromoted: seasonData.playersPromoted || 0,
-            timestamp: new Date().toLocaleDateString('de-DE')
-        };
-
-        advancedYouthAcademyState.academyRanking.push(entry);
-
-        if (advancedYouthAcademyState.academyRanking.length > 10) {
-            advancedYouthAcademyState.academyRanking.shift();
-        }
-    }
-
-    function promoteYouthPlayer(playerName) {
-        let player = squad.find(p => p.name === playerName && (p.age || 16) <= 22);
-        if (!player) return false;
-
-        // Spieler in erste Mannschaft fördern
-        player.promoted = true;
-        player.promotedSeason = game.season;
-
-        showToast(`⭐ ${playerName} wird in die erste Mannschaft befördert!`, 'success', 5000);
-
-        return true;
-    }
-
-    function renderYouthAcademyAdvanced() {
-        let container = document.getElementById('youth-academy-advanced-box');
-        if (!container) return;
-
-        let html = `
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:12px;">
-                <div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:8px; border:1px solid rgba(255,255,255,0.1);">
-                    <div style="font-size:9px; color:#aaa; margin-bottom:4px;">📚 AKTIVE PROGRAMME</div>
-                    <div style="font-size:10px;">
-        `;
-
-        if ((advancedYouthAcademyState.activePrograms || []).length === 0) {
-            html += '<div style="color:#aaa;">Keine aktiven Programme</div>';
-        } else {
-            (advancedYouthAcademyState.activePrograms || []).forEach(ap => {
-                let program = TRAINING_PROGRAMS[ap.programId];
-                let progress = Math.round((ap.progress / ap.duration) * 100);
-                html += `
-                    <div style="padding:4px 0; margin-bottom:4px;">
-                        <div style="font-weight:700; color:var(--accent);">${ap.playerName}</div>
-                        <div style="font-size:9px; color:#aaa;">${program.name}</div>
-                        <div style="height:4px; background:rgba(255,255,255,0.1); border-radius:2px; margin-top:2px; overflow:hidden;">
-                            <div style="height:100%; width:${progress}%; background:var(--primary);"></div>
-                        </div>
-                        <div style="font-size:8px; color:#aaa; margin-top:2px;">${progress}%</div>
-                    </div>
-                `;
-            });
-        }
-
-        html += `
-                    </div>
-                </div>
-                <div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:8px; border:1px solid rgba(255,255,255,0.1);">
-                    <div style="font-size:9px; color:#aaa; margin-bottom:4px;">⭐ TALENT-BERICHTE</div>
-                    <div style="font-size:10px;">
-        `;
-
-        if ((advancedYouthAcademyState.talentReports || []).length === 0) {
-            html += '<div style="color:#aaa;">Noch keine Berichte</div>';
-        } else {
-            (advancedYouthAcademyState.talentReports || []).slice(0, 3).forEach(report => {
-                let ratingColor = report.rating === 'Supertalent' ? 'var(--gold)' : (report.rating === 'Großes Potential' ? 'var(--primary)' : 'var(--accent)');
-                html += `
-                    <div style="padding:4px 0; margin-bottom:4px;">
-                        <div style="font-weight:700; color:${ratingColor};">${report.playerName}</div>
-                        <div style="font-size:8px; color:#aaa;">${report.rating}</div>
-                    </div>
-                `;
-            });
-        }
-
-        html += `
-                    </div>
-                </div>
-            </div>
-
-            <div style="background:rgba(255,255,255,0.03); border-radius:6px; padding:8px; margin-bottom:12px; border:1px solid rgba(255,255,255,0.1);">
-                <div style="font-weight:700; color:var(--accent); margin-bottom:6px;">📚 VERFÜGBARE TRAININGS-PROGRAMME</div>
-                <div style="display:grid; gap:4px; font-size:9px;">
-        `;
-
-        Object.entries(TRAINING_PROGRAMS).forEach(([key, program]) => {
-            html += `
-                <button onclick="startTrainingProgram(prompt('Spieler-Name:'), '${key}')" class="btn-action" style="text-align:left; font-size:8px; padding:6px;">
-                    <div style="font-weight:700;">${program.name}</div>
-                    <div style="font-size:7px; color:#aaa;">Position: ${program.position} · Kosten: ${formatVal(program.cost)}</div>
-                </button>
-            `;
-        });
-
-        html += `
-                </div>
-            </div>
-
-            <div style="background:rgba(255,255,255,0.03); border-radius:6px; padding:8px; border:1px solid rgba(255,255,255,0.1); font-size:9px;">
-                <strong style="display:block; color:var(--accent); margin-bottom:6px;">💡 Youth Academy:</strong>
-                <div style="color:#aaa; line-height:1.5;">
-                    • <strong>Trainings-Programme:</strong> Spezialisierte Ausbildung für verschiedene Positionen<br>
-                    • <strong>Dauer:</strong> 10-12 Monate (1-1,2 Saisons)<br>
-                    • <strong>Erfolgsrate:</strong> 68-80% je nach Programm<br>
-                    • <strong>Talentförderung:</strong> Junge Spieler systematisch entwickeln<br>
-                    • <strong>Beförderung:</strong> Die besten Talente in die erste Mannschaft
-                </div>
-            </div>
-        `;
-
-        container.innerHTML = html;
-    }
-
-/* eslint-enable */
-
-    // ==========================================
     // AKADEMIE-RANGLISTE
     // ==========================================
     // Wettbewerb mit anderen Academies in der Liga - wer entwickelt
     // die besten Spieler? Rankings, Boni für Platzierungen.
     /* eslint-disable no-undef */
 
+    // Konkurrenz-Akademien sind die Erstligisten aus dem Spiel selbst (keine realen Vereine).
+    function academyRivalNames() {
+        return (leaguesData[0] || []).filter(t => t.name !== game.clubName)
+            .sort((x, y) => y.strength - x.strength).slice(0, 5).map(t => t.name + ' U23');
+    }
     function initializeAcademyLeague() {
+        const namen = academyRivalNames();
         if (!game.academyLeague) {
             game.academyLeague = {
-                myRank: Math.floor(Math.random() * 10) + 1,
+                myRank: 6,
                 myPoints: 0,
                 season: game.season,
-                academies: [
-                    { name: 'FC Bayern München U23', points: 850, graduates: 12, avgStrength: 72 },
-                    { name: 'Borussia Dortmund U23', points: 820, graduates: 11, avgStrength: 71 },
-                    { name: '1.FC Köln U23', points: 750, graduates: 9, avgStrength: 68 },
-                    { name: 'Hamburger SV U23', points: 700, graduates: 8, avgStrength: 66 },
-                    { name: 'VfB Stuttgart U23', points: 680, graduates: 7, avgStrength: 65 },
-                ]
+                academies: [850, 820, 750, 700, 680].map((points, i) => ({ name: namen[i] || `Akademie ${i + 1}`, points, graduates: 12 - i, avgStrength: 72 - i }))
             };
         }
+        // Ältere Spielstände enthielten reale Vereinsnamen - durch Spielvereine ersetzen.
+        const bekannt = new Set((leaguesData || []).flat().map(t => t.name + ' U23'));
+        game.academyLeague.academies.forEach((a, i) => { if (!bekannt.has(a.name) && namen[i]) a.name = namen[i]; });
     }
-
     function updateAcademyPoints(reason = 'match', pointsGained = 0) {
         initializeAcademyLeague();
 
@@ -23145,284 +22816,6 @@ function renderSponsorManagementPanel() {
     html += '<div style="font-size:11px; color:#999;">Keine aktuellen Angebote</div>';
   }
 
-  html += '</div>';
-  panel.innerHTML = html;
-}
-
-/* eslint-enable */
-/* eslint-disable no-undef */
-
-const YOUTH_PROGRAMS = {
-  development: {
-    name: 'Talententwicklung',
-    cost: 50000,
-    duration: 12,
-    strengthGain: 5,
-    moralGain: 8
-  },
-  specialization: {
-    name: 'Spezialisierung',
-    cost: 75000,
-    duration: 16,
-    strengthGain: 8,
-    moralGain: 5
-  },
-  conditioning: {
-    name: 'Athletiktraining',
-    cost: 40000,
-    duration: 10,
-    strengthGain: 6,
-    moralGain: 3
-  },
-  tacticalEducation: {
-    name: 'Taktische Schulung',
-    cost: 60000,
-    duration: 14,
-    strengthGain: 4,
-    moralGain: 10
-  }
-};
-
-const youthAcademyState = {
-  youngPlayers: [],
-  programs: [],
-  totalPromotion: 0,
-  totalSales: 0
-};
-
-function initializeYouthAcademy() {
-  if (!game.youthAcademy) {
-    game.youthAcademy = {
-      youngPlayers: [],
-      programs: [],
-      totalPromotion: 0,
-      totalSales: 0,
-      academyLevel: 1
-    };
-  }
-}
-
-function createYoungPlayer() {
-  const firstNames = ['Lucas', 'Felix', 'Noah', 'Liam', 'Emma', 'Sophie', 'Anna', 'Nina'];
-  const lastNames = ['Müller', 'Schmidt', 'Weber', 'Meyer', 'Wagner', 'Hoffmann', 'Koch', 'Becker'];
-  
-  const name = `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
-  const position = ['ST', 'CM', 'LB', 'CB', 'GK'][Math.floor(Math.random() * 5)];
-  const age = 16 + Math.floor(Math.random() * 4);
-  
-  const youngPlayer = {
-    id: `youth_${(game.youthAcademy && game.youthAcademy.youngPlayers.length) || 0}`,
-    name: name,
-    position: position,
-    age: age,
-    strength: 30 + Math.random() * 20,
-    potential: 70 + Math.random() * 25,
-    morale: 60 + Math.random() * 30,
-    joinedSeason: game.season,
-    programsCompleted: [],
-    readyForPromotion: false
-  };
-  
-  if (!game.youthAcademy.youngPlayers) game.youthAcademy.youngPlayers = [];
-  game.youthAcademy.youngPlayers.push(youngPlayer);
-  
-  if (game.inbox) {
-    addInboxMessage(`🌟 Neuer Nachwuchsspieler`, `${youngPlayer.name} (${youngPlayer.age} Jahre)`);
-  }
-  
-  return youngPlayer;
-}
-
-function enrollPlayerInProgram(playerId, programType) {
-  if (!game.youthAcademy) return false;
-  
-  const player = game.youthAcademy.youngPlayers.find(p => p.id === playerId);
-  const program = YOUTH_PROGRAMS[programType];
-  
-  if (!player || !program) return false;
-  if (game.money < program.cost) return false;
-  
-  game.money -= program.cost;
-  
-  const enrollment = {
-    playerId: playerId,
-    playerName: player.name,
-    programType: programType,
-    programName: program.name,
-    startMatchday: game.matchday,
-    completionMatchday: game.matchday + program.duration,
-    strengthGain: program.strengthGain,
-    moralGain: program.moralGain,
-    progress: 0,
-    status: 'active'
-  };
-  
-  if (!game.youthAcademy.programs) game.youthAcademy.programs = [];
-  game.youthAcademy.programs.push(enrollment);
-  
-  if (game.inbox) {
-    addInboxMessage(`📚 Training begonnen`, `${player.name}: ${program.name}`);
-  }
-  
-  return true;
-}
-
-function tickYouthPrograms() {
-  if (!game.youthAcademy || !game.youthAcademy.programs) return;
-  
-  game.youthAcademy.programs = game.youthAcademy.programs.filter((enrollment) => {
-    if (game.matchday >= enrollment.completionMatchday) {
-      completeYouthProgram(enrollment);
-      return false;
-    }
-    
-    const progress = ((game.matchday - enrollment.startMatchday) / (enrollment.completionMatchday - enrollment.startMatchday)) * 100;
-    enrollment.progress = Math.min(100, progress);
-    
-    return true;
-  });
-}
-
-function completeYouthProgram(enrollment) {
-  const player = game.youthAcademy.youngPlayers.find(p => p.id === enrollment.playerId);
-  if (!player) return;
-  
-  player.strength = Math.min(player.potential, player.strength + enrollment.strengthGain);
-  player.morale = Math.min(100, player.morale + enrollment.moralGain);
-  player.programsCompleted.push(enrollment.programType);
-  
-  if (player.strength >= player.potential - 5) {
-    player.readyForPromotion = true;
-  }
-  
-  if (game.inbox) {
-    addInboxMessage(`✅ Training abgeschlossen`, `${player.name}: Stärke ${player.strength.toFixed(0)}`);
-  }
-}
-
-function academyPromoteYouthPlayer(playerId) {
-  if (!game.youthAcademy) return false;
-  
-  const youthPlayer = game.youthAcademy.youngPlayers.find(p => p.id === playerId);
-  if (!youthPlayer || !squad) return false;
-  
-  const newPlayer = {
-    id: squad.length,
-    name: youthPlayer.name,
-    position: youthPlayer.position,
-    age: youthPlayer.age,
-    strength: Math.max(30, youthPlayer.strength),
-    morale: youthPlayer.morale,
-    speed: 60 + Math.random() * 20,
-    stamina: 60 + Math.random() * 20,
-    technique: 50 + Math.random() * 30,
-    tactical: 40 + Math.random() * 30,
-    physical: 55 + Math.random() * 25,
-    marketValue: Math.round((youthPlayer.strength / 100) * 500000),
-    salary: 5000,
-    contract: 48,
-    active: true,
-    yearsOnTeam: 0,
-    youthPromotion: true,
-    nationality: 'Deutschland',
-    gamesPlayed: 0
-  };
-  
-  squad.push(newPlayer);
-  game.youthAcademy.youngPlayers = game.youthAcademy.youngPlayers.filter(p => p.id !== playerId);
-  game.youthAcademy.totalPromotion++;
-  
-  if (game.inbox) {
-    addInboxMessage(`🎉 Beförderung in erste Mannschaft`, newPlayer.name);
-  }
-  
-  return true;
-}
-
-function sellYouthPlayer(playerId, fee) {
-  if (!game.youthAcademy) return false;
-  
-  const player = game.youthAcademy.youngPlayers.find(p => p.id === playerId);
-  if (!player) return false;
-  
-  game.money += fee;
-  game.youthAcademy.youngPlayers = game.youthAcademy.youngPlayers.filter(p => p.id !== playerId);
-  game.youthAcademy.totalSales++;
-  
-  if (game.inbox) {
-    addInboxMessage(`💰 Spieler verkauft`, `${player.name}: €${fee.toLocaleString()}`);
-  }
-  
-  return true;
-}
-
-function tickYouthRecruitment() {
-  if (!game.youthAcademy) return;
-  
-  const academyLevel = game.youthAcademy.academyLevel || 1;
-  const recruitmentChance = 0.15 * academyLevel;
-  
-  if (Math.random() < recruitmentChance) {
-    createYoungPlayer();
-  }
-}
-
-function renderYouthAcademyManagementPanel() {
-  const panel = document.getElementById('youth-academy-panel');
-  if (!panel) return;
-  
-  initializeYouthAcademy();
-  
-  const youngPlayers = game.youthAcademy.youngPlayers || [];
-  const programs = (game.youthAcademy.programs || []).filter(p => p.status === 'active');
-  
-  let html = '<div class="panel-content">';
-  html += `<h3>Nachwuchs-Akademie (Level ${game.youthAcademy.academyLevel})</h3>`;
-  
-  html += '<div class="academy-stats">';
-  html += `<div class="stat-box">Nachwuchsspieler: ${youngPlayers.length}</div>`;
-  html += `<div class="stat-box">Aktive Programme: ${programs.length}</div>`;
-  html += `<div class="stat-box">Beförderungen: ${game.youthAcademy.totalPromotion}</div>`;
-  html += `<div class="stat-box">Verkaufte Spieler: ${game.youthAcademy.totalSales}</div>`;
-  html += '</div>';
-  
-  html += '<h4>Nachwuchsspieler:</h4>';
-  if (youngPlayers.length > 0) {
-    youngPlayers.forEach((player) => {
-      const readyIcon = player.readyForPromotion ? '🌟' : '';
-      html += `<div class="youth-player-item">`;
-      html += `<strong>${player.name}</strong> ${readyIcon} (${player.age} Jahre, ${player.position})`;
-      html += `<div class="player-info">Stärke: ${player.strength.toFixed(0)}/Potenzial: ${player.potential.toFixed(0)}</div>`;
-      html += `<div class="player-info">Moral: ${player.morale.toFixed(0)}%</div>`;
-      if (player.readyForPromotion) {
-        html += `<button onclick="academyPromoteYouthPlayer('${player.id}')" style="background:#4CAF50; color:white; border:none; padding:4px 8px; margin-right:4px; border-radius:3px; font-size:10px;">Befördern</button>`;
-      } else {
-        html += `<select onchange="enrollPlayerInProgram('${player.id}', this.value)" style="font-size:10px; padding:2px;">`;
-        html += `<option value="">-- Programm wählen --</option>`;
-        Object.entries(YOUTH_PROGRAMS).forEach(([key, prog]) => {
-          html += `<option value="${key}">${prog.name} (€${prog.cost.toLocaleString()})</option>`;
-        });
-        html += `</select>`;
-      }
-      html += `<button onclick="sellYouthPlayer('${player.id}', 100000)" style="background:#FF9800; color:white; border:none; padding:4px 8px; margin-left:4px; border-radius:3px; font-size:10px;">Verkaufen (€100k)</button>`;
-      html += '</div>';
-    });
-  } else {
-    html += '<div style="font-size:11px; color:#999;">Keine Nachwuchsspieler</div>';
-  }
-  
-  if (programs.length > 0) {
-    html += '<h4>Aktive Programme:</h4>';
-    programs.forEach((prog) => {
-      html += `<div class="program-item">`;
-      html += `<strong>${prog.playerName}</strong> - ${prog.programName}`;
-      html += `<div style="background:#f0f0f0; height:8px; border-radius:4px; margin:4px 0; overflow:hidden;">`;
-      html += `<div style="background:#FFC107; height:100%; width:${prog.progress}%"></div>`;
-      html += `</div>`;
-      html += '</div>';
-    });
-  }
-  
   html += '</div>';
   panel.innerHTML = html;
 }
@@ -31575,15 +30968,12 @@ function renderRefereePreview() {
             // Board Relations: monatliche Zufriedenheits- und Job-Sicherheits-Updates
             if (typeof tickBoardRelations === 'function') tickBoardRelations();
             // Youth Academy: monatliche Trainings-Programm-Updates
-            if (typeof tickYouthAcademyPrograms === 'function') tickYouthAcademyPrograms();
+            if (typeof tickYouthDevelopment === 'function') tickYouthDevelopment();
             // Sponsor Management: Zahlungen und Vertragsabläufe
             if (typeof tickSponsorNegotiations === 'function') tickSponsorNegotiations();
             let sponsorPayments = (typeof processSponsorPayments === 'function') ? processSponsorPayments() : 0;
             if (sponsorPayments > 0) game.money += sponsorPayments;
             if (typeof applySponsorBenefits === 'function') applySponsorBenefits();
-            // Youth Academy (New Systems): Nachwuchsrekrutierung und Programm-Ticks
-            if (typeof tickYouthRecruitment === 'function') tickYouthRecruitment();
-            if (typeof tickYouthPrograms === 'function') tickYouthPrograms();
             // Medienabteilung: Medienereignisse aus dem Saisonverlauf
             if (typeof tickMediaDepartment === 'function') tickMediaDepartment();
             // Transfer Market Analysis: Markttrends und Watchlist-Updates

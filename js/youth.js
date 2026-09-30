@@ -80,9 +80,8 @@
 
         if (typeof renderYouthAcademyPanel === 'function') renderYouthAcademyPanel();
         if (typeof renderYouthDevelopmentChart === 'function') renderYouthDevelopmentChart();
-        if (typeof simulateYouthDevelopment === 'function') simulateYouthDevelopment();
+        if (typeof migrateLegacyYouthAcademy === 'function') migrateLegacyYouthAcademy();
         if (typeof renderAcademyRankingPanel === 'function') renderAcademyRankingPanel();
-        if (typeof renderYouthAcademyAdvanced === 'function') renderYouthAcademyAdvanced();
     }
 
     // ==========================================
@@ -302,6 +301,7 @@
         youthTalents.forEach(p => {
             if (Math.random() < 0.2 * getYouthPotentialMultiplier(p)) { p.strength = Math.min(99, p.strength + 1); improved.push(p.name); }
         });
+        if (improved.length >= 2 && typeof updateAcademyPoints === 'function') updateAcademyPoints('youth-tournament-win');
         showToast(improved.length > 0 ? `🏆 Jugendturnier: ${improved.join(', ')} zeigten starke Leistungen!` : '🏆 Jugendturnier durchgeführt - keine besonderen Ausreißer.', 'success');
         renderYouthView();
         updateUI();
@@ -390,6 +390,7 @@
         let p = youthTalents[idx];
         squad.push(p);
         youthTalents.splice(idx, 1);
+        if (typeof updateAcademyPoints === 'function') updateAcademyPoints('youth-graduation');
         // Jugendakademie-Abschlussfeier: statt nur einer trockenen Nachricht ein kleines
         // Zeremoniell mit Moralschub fürs ganze Team - ein Aufstieg aus der eigenen Jugend
         // ist immer ein Grund zum Feiern für die Kabine.

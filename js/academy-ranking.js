@@ -6,23 +6,25 @@
     // die besten Spieler? Rankings, Boni für Platzierungen.
     /* eslint-disable no-undef */
 
+    // Konkurrenz-Akademien sind die Erstligisten aus dem Spiel selbst (keine realen Vereine).
+    function academyRivalNames() {
+        return (leaguesData[0] || []).filter(t => t.name !== game.clubName)
+            .sort((x, y) => y.strength - x.strength).slice(0, 5).map(t => t.name + ' U23');
+    }
     function initializeAcademyLeague() {
+        const namen = academyRivalNames();
         if (!game.academyLeague) {
             game.academyLeague = {
-                myRank: Math.floor(Math.random() * 10) + 1,
+                myRank: 6,
                 myPoints: 0,
                 season: game.season,
-                academies: [
-                    { name: 'FC Bayern München U23', points: 850, graduates: 12, avgStrength: 72 },
-                    { name: 'Borussia Dortmund U23', points: 820, graduates: 11, avgStrength: 71 },
-                    { name: '1.FC Köln U23', points: 750, graduates: 9, avgStrength: 68 },
-                    { name: 'Hamburger SV U23', points: 700, graduates: 8, avgStrength: 66 },
-                    { name: 'VfB Stuttgart U23', points: 680, graduates: 7, avgStrength: 65 },
-                ]
+                academies: [850, 820, 750, 700, 680].map((points, i) => ({ name: namen[i] || `Akademie ${i + 1}`, points, graduates: 12 - i, avgStrength: 72 - i }))
             };
         }
+        // Ältere Spielstände enthielten reale Vereinsnamen - durch Spielvereine ersetzen.
+        const bekannt = new Set((leaguesData || []).flat().map(t => t.name + ' U23'));
+        game.academyLeague.academies.forEach((a, i) => { if (!bekannt.has(a.name) && namen[i]) a.name = namen[i]; });
     }
-
     function updateAcademyPoints(reason = 'match', pointsGained = 0) {
         initializeAcademyLeague();
 

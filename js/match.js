@@ -1760,15 +1760,12 @@
             // Board Relations: monatliche Zufriedenheits- und Job-Sicherheits-Updates
             if (typeof tickBoardRelations === 'function') tickBoardRelations();
             // Youth Academy: monatliche Trainings-Programm-Updates
-            if (typeof tickYouthAcademyPrograms === 'function') tickYouthAcademyPrograms();
+            if (typeof tickYouthDevelopment === 'function') tickYouthDevelopment();
             // Sponsor Management: Zahlungen und Vertragsabläufe
             if (typeof tickSponsorNegotiations === 'function') tickSponsorNegotiations();
             let sponsorPayments = (typeof processSponsorPayments === 'function') ? processSponsorPayments() : 0;
             if (sponsorPayments > 0) game.money += sponsorPayments;
             if (typeof applySponsorBenefits === 'function') applySponsorBenefits();
-            // Youth Academy (New Systems): Nachwuchsrekrutierung und Programm-Ticks
-            if (typeof tickYouthRecruitment === 'function') tickYouthRecruitment();
-            if (typeof tickYouthPrograms === 'function') tickYouthPrograms();
             // Medienabteilung: Medienereignisse aus dem Saisonverlauf
             if (typeof tickMediaDepartment === 'function') tickMediaDepartment();
             // Transfer Market Analysis: Markttrends und Watchlist-Updates

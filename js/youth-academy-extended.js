@@ -100,7 +100,10 @@ function getYouthCoachBonus() {
     return Math.min(1.5, baseBonus + experienceBonus + coachingBonus);
 }
 
-function simulateYouthDevelopment() {
+// Monatlich (nicht beim Öffnen des Screens - sonst wuchsen Talente mit jedem Aufruf):
+// Entwicklung der Jugend mit Jugendtrainer-, Fokus- und Mentor-Bonus.
+function tickYouthDevelopment() {
+    migrateLegacyYouthAcademy();
     trackYouthDevelopment();
 
     const coachBonus = getYouthCoachBonus();
@@ -111,74 +114,36 @@ function simulateYouthDevelopment() {
         const mentorBonus = p.mentorId && squad.some(s => s.id === p.mentorId) ? 1.35 : 1.0;
         const potentialGap = Math.max(0, (p.potential || 75) - p.strength);
 
-        let strengthIncrease = Math.random() * 3 * coachBonus * focusBonus * mentorBonus * ageDecay;
+        let strengthIncrease = Math.random() * 1.5 * coachBonus * focusBonus * mentorBonus * ageDecay;
         if (potentialGap < 5) strengthIncrease *= 0.3;
         if (potentialGap < 2) strengthIncrease *= 0.1;
 
         p.strength = Math.min(p.potential || 99, Math.round(p.strength + strengthIncrease));
-
         p.morale = Math.max(30, Math.min(100, p.morale + (Math.random() * 10 - 5)));
     });
+    if (youthTalents.length && typeof updateAcademyPoints === 'function') updateAcademyPoints('talent-development');
 }
 
-function scheduleYouthTournament() {
-    if (!game.youthTournaments) game.youthTournaments = [];
-
-    const tournament = {
-        id: 'yt_' + Math.random().toString(36).substr(2, 9),
-        name: `Jugend-Turnier MD${game.matchday}`,
-        startMatchday: game.matchday + 2,
-        status: 'scheduled',
-        results: [],
-        prize: {
-            money: 25000,
-            reputation: 5
-        }
-    };
-
-    game.youthTournaments.push(tournament);
-    return { success: true, message: `✓ Turnier ${tournament.name} angesetzt!` };
-}
-
-function runYouthTournament(tournamentId) {
-    const tournament = (game.youthTournaments || []).find(t => t.id === tournamentId);
-    if (!tournament) return { success: false, message: 'Turnier nicht gefunden' };
-
-    const avgYouthStrength = youthTalents.length > 0
-        ? Math.round(youthTalents.reduce((sum, p) => sum + p.strength, 0) / youthTalents.length)
-        : 50;
-
-    const opponentStrength = 45 + Math.floor(Math.random() * 20);
-    const successChance = Math.min(95, Math.max(5, 50 + (avgYouthStrength - opponentStrength)));
-    const won = Math.random() * 100 < successChance;
-
-    tournament.status = 'completed';
-    tournament.results.push({
-        matchday: game.matchday,
-        won: won,
-        opponentStrength: opponentStrength,
-        ourStrength: avgYouthStrength
+// Alte Spielstände: die frühere Zweit-Akademie (game.youthAcademy) führte einen eigenen
+// Spielerpool mit englischen Positionen und doppelten IDs. Talente wandern in die echte
+// Jugendabteilung, bereits beförderte Profis bekommen gültige Positionen.
+const LEGACY_POS = { GK: 'TW', CB: 'ABW', LB: 'ABW', RB: 'ABW', CM: 'MIT', CDM: 'MIT', CAM: 'MIT' };
+function migrateLegacyYouthAcademy() {
+    squad.forEach(p => { if (LEGACY_POS[p.pos]) p.pos = LEGACY_POS[p.pos]; });
+    const alt = game.youthAcademy;
+    if (!alt) return;
+    const pool = [...(alt.youngPlayers || []), ...(alt.players || [])];
+    pool.forEach(yp => {
+        const pos = LEGACY_POS[yp.position] || (['TW', 'ABW', 'MIT', 'ST'].includes(yp.position) ? yp.position : 'MIT');
+        const staerke = Math.round(yp.strength || 40);
+        const neu = createPlayer(pos, staerke, staerke, null, [yp.age || 17, yp.age || 17]);
+        if (yp.name) neu.name = yp.name;
+        if (typeof assignYouthPotentialTier === 'function') assignYouthPotentialTier(neu);
+        neu.youthFocus = 'allgemein';
+        youthTalents.push(neu);
     });
-
-    if (won) {
-        game.money += tournament.prize.money;
-        if (!game.youthTourneyWins) game.youthTourneyWins = 0;
-        game.youthTourneyWins++;
-
-        youthTalents.forEach(p => {
-            p.morale = Math.min(100, p.morale + 10);
-            p.strength = Math.min(p.potential || 99, p.strength + 1);
-        });
-    }
-
-    updateUI();
-    return {
-        success: true,
-        won: won,
-        message: won
-            ? `🏆 Jugend-Team gewonnen! +${tournament.prize.money} € Prämie`
-            : `😞 Jugend-Team verloren. Weiter gehts!`
-    };
+    delete game.youthAcademy;
+    if (pool.length) addInboxMessage('vertrag', '🎓 Nachwuchs zusammengeführt', `${pool.length} Talente aus der früheren Zusatz-Akademie gehören jetzt zur Jugendabteilung.`, 'screen-youth');
 }
 
 function renderYouthAcademyPanel() {
@@ -228,9 +193,7 @@ function renderYouthAcademyPanel() {
         </div>`;
     });
 
-    html += '<div style="margin-top:8px; padding-top:8px; border-top:1px solid rgba(100,100,100,0.2);">';
-    html += '<button onclick="scheduleYouthTournament()" class="btn-primary" style="width:100%; font-size:9px; padding:6px;">🏆 Jugend-Turnier ansetzen</button>';
-    html += '</div></div>';
+    html += '</div>';
 
     box.innerHTML = html;
 }
