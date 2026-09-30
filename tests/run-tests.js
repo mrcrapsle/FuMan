@@ -4475,6 +4475,41 @@ async function testPhase14Teil4(browser) {
     await page.close();
 }
 
+async function testLongRun(browser) {
+    console.log('\n[P15a] Langzeittest: 6 Saisons am Stück');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        const out = { kaderMin: 99, saveMax: 0 };
+        for (let s = 0; s < 6; s++) {
+            for (let i = 0; i < 7; i++) { game.sackPending = false; simulateMatchdays(5); }
+            concludeSeasonAndAdvance();
+            out.kaderMin = Math.min(out.kaderMin, squad.length);
+            out.saveMax = Math.max(out.saveMax, JSON.stringify(buildSaveState()).length);
+        }
+        // KI-Ligen driften nicht weg vom Niveau ihrer Stufe
+        out.drift = leaguesData.map((t, l) => Math.round(t.reduce((a, x) => a + (x.baseStrength || x.strength), 0) / t.length) - (82 - l * 10));
+        out.alterOk = squad.every(p => Number.isInteger(p.age) && p.age >= 15 && p.age <= 40);
+        // Spielstand übersteht Speichern und Laden
+        const vorher = { season: game.season, money: game.money, kader: squad.map(p => p.id).join(','), karriere: (game.managerCareer || []).length };
+        const json = JSON.stringify(buildSaveState());
+        game.money = 1; game.season = 99; squad = [];
+        applyLoadedState(JSON.parse(json));
+        out.roundtrip = game.season === vorher.season && game.money === vorher.money && squad.map(p => p.id).join(',') === vorher.kader && (game.managerCareer || []).length === vorher.karriere;
+        out.karriereSaisons = vorher.karriere;
+        return out;
+    });
+    assert(r.kaderMin >= 14, `Kader fällt nach dem Saisonwechsel nie unter 14 Spieler (min. ${r.kaderMin})`);
+    assert(r.saveMax < 1024 * 1024, `Spielstand bleibt unter 1 MB (max. ${Math.round(r.saveMax / 1024)} KB)`);
+    assert(r.drift.every(d => Math.abs(d) <= 8), `KI-Ligen bleiben auf ihrem Niveau (Abweichung ${r.drift.join('/')})`);
+    assert(r.alterOk, 'Alle Spieler haben ein plausibles, ganzzahliges Alter');
+    assert(r.roundtrip, 'Spielstand nach 6 Saisons übersteht Speichern und Laden');
+    assert(r.karriereSaisons === 6, `Manager-Statistik hat 6 Saisons (${r.karriereSaisons})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler im Langzeittest (${consoleErrors.slice(0, 3).join(' | ')})`);
+    await page.close();
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -4553,6 +4588,7 @@ async function main() {
         testPhase14Teil2,
         testPhase14Teil3,
         testPhase14Teil4,
+        testLongRun,
         testRuntimeRoundTrip,
     ];
 

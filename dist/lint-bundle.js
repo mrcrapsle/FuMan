@@ -8264,7 +8264,9 @@ function renderBoardRoomPanel() {
         // ---- 4. Verlauf mitschreiben, damit nachvollziehbar bleibt, was sich verkauft hat ----
         if (!merchExtras.salesHistory) merchExtras.salesHistory = [];
         merchExtras.salesHistory.push(matchdayLog);
-        if (merchExtras.salesHistory.length > 80) merchExtras.salesHistory.shift();
+        // Eine Saison reicht (angezeigt werden die letzten 10 Spieltage) - 80 Einträge waren ein
+        // Viertel des gesamten Spielstands.
+        while (merchExtras.salesHistory.length > 34) merchExtras.salesHistory.shift();
 
         game.merchDoubleNextMatch = false;
         return totalSalesRevenue;
@@ -23493,7 +23495,9 @@ function cleanupLegacyScoutState() {
         });
         squad = squad.filter(p => p.contracts > 0);
         if (typeof agePlayersAtSeasonEnd === 'function') agePlayersAtSeasonEnd();
-        if (squad.length < 11) {
+        // Ab 14 Spielern (Startelf + 3 Wechsel) statt erst unter 11: auslaufende Verträge ließen
+        // den Kader im Langzeittest regelmäßig auf 12 schrumpfen.
+        if (squad.length < 14) {
             // Notbesetzung: Positionsverteilung wie im Standardkader (2 TW/6 ABW/6 MIT/4 ST),
             // damit garantiert ein spielbares Team entsteht (nicht rein zufällige Positionen).
             let emergencyPlan = [];

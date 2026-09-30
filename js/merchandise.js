@@ -157,7 +157,9 @@
         // ---- 4. Verlauf mitschreiben, damit nachvollziehbar bleibt, was sich verkauft hat ----
         if (!merchExtras.salesHistory) merchExtras.salesHistory = [];
         merchExtras.salesHistory.push(matchdayLog);
-        if (merchExtras.salesHistory.length > 80) merchExtras.salesHistory.shift();
+        // Eine Saison reicht (angezeigt werden die letzten 10 Spieltage) - 80 Einträge waren ein
+        // Viertel des gesamten Spielstands.
+        while (merchExtras.salesHistory.length > 34) merchExtras.salesHistory.shift();
 
         game.merchDoubleNextMatch = false;
         return totalSalesRevenue;
