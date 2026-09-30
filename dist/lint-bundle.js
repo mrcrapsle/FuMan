@@ -19278,6 +19278,9 @@ function getSeasonObjectivesSummary() {
 }
 
 function tickSeasonObjectives() {
+    // Nicht darauf verlassen, dass das Panel schon einmal gezeichnet wurde - früher legte
+    // erst der Struktur-Selbsttest beim Start (alle Bildschirme) die Ziele an.
+    initializeSeasonObjectives();
     updateObjectiveProgress();
 }
 
