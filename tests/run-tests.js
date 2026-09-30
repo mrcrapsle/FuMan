@@ -5059,6 +5059,57 @@ async function testCompactSave(browser) {
     await page.close();
 }
 
+async function testPressConference(browser) {
+    console.log('\n[P18a] Pressekonferenz: Fragen nach Lage, Antworten mit Wirkung');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        const out = {};
+        const frage = () => document.getElementById('press-question-container').innerText;
+        // Favorit: Pflichtsieg ankündigen, dann verlieren -> Image und Vorstand sinken
+        renderPressConference({ oppName: 'Schwach FC', oppStr: 5, isHome: true, cup: false });
+        out.favorit = frage().includes('Favorit');
+        const img0 = game.managerMediaImage ?? 50, board0 = game.boardSat;
+        pressSituation.antworten[0].run();
+        resolvePressPromise('loss');
+        out.versprechenGebrochen = (game.managerMediaImage < img0) && game.boardSat < board0 && !game.pressPromise;
+        // Außenseiter: Konter-Antwort stellt den Spielstil um
+        game.tacticStyle = 'ausgeglichen';
+        renderPressConference({ oppName: 'Riese FC', oppStr: 99, isHome: false, cup: false });
+        out.underdog = frage().includes('Favorit') && frage().includes('Riese FC');
+        pressSituation.antworten[1].run();
+        out.konter = game.tacticStyle === 'konter';
+        // Krise nach zwei Niederlagen
+        const orig = window.getOwnSeasonMatches;
+        window.getOwnSeasonMatches = () => [{ own: 0, opp: 2 }, { own: 1, opp: 3 }];
+        renderPressConference({ oppName: 'Mittel FC', oppStr: 45, isHome: true, cup: false });
+        out.krise = frage().includes('Job');
+        window.getOwnSeasonMatches = orig;
+        // Pokal
+        renderPressConference({ oppName: 'Pokal FC', oppStr: 45, isHome: true, cup: true });
+        out.pokal = frage().includes('Pokal');
+        out.hinweise = document.getElementById('press-answers-container').innerHTML.includes('Stärke +1');
+        // Stärkebonus wirkt im Livespiel genau um den angekündigten Wert
+        startMatchdayFlow();
+        skipPressAndPlay(); stopLiveTickerAutoplay();
+        const ohne = currentMatch.ourBaseStr;
+        currentMatch = null;
+        startMatchdayFlow();
+        game.pressMatchBonus = { season: game.season, matchday: game.matchday, bonus: 2 };
+        skipPressAndPlay(); stopLiveTickerAutoplay();
+        out.bonus = Math.round((currentMatch.ourBaseStr - ohne) * 10) / 10;
+        return out;
+    });
+    assert(r.favorit && r.underdog && r.krise && r.pokal, 'Frage passt zur Lage (Favorit, Außenseiter, Krise, Pokal)');
+    assert(r.hinweise, 'Antworten zeigen ihre Wirkung an');
+    assert(r.versprechenGebrochen, 'Angekündigter Sieg ohne Sieg kostet Image und Vorstand');
+    assert(r.konter, 'Konter-Antwort stellt den Spielstil um');
+    assert(r.bonus === 2, `Stärkebonus aus der Pressekonferenz wirkt im Spiel (${r.bonus})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 3).join(' | ')})`);
+    await page.close();
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -5149,6 +5200,7 @@ async function main() {
         testPlayerStats,
         testOnboarding,
         testCompactSave,
+        testPressConference,
         testRuntimeRoundTrip,
     ];
 

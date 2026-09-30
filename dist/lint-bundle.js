@@ -7917,6 +7917,98 @@ function renderMediaDepartmentPanel() {
     box.innerHTML = html + '</div>';
 }
 
+// ---------- PRESSEKONFERENZ VOR DEM SPIEL ----------
+// Die Frage richtet sich nach der Lage (Derby, Krise, Favorit, Außenseiter, Pokal, sonst
+// Marschroute); jede Antwort wirkt: Moral, Stärke in genau diesem Spiel, Taktik, Medien-
+// image oder Vorstand. Große Worte werden nach dem Spiel abgerechnet (game.pressPromise).
+function pressMoral(delta) { squad.forEach(p => { p.morale = Math.max(10, Math.min(100, (p.morale || 50) + delta)); }); }
+function pressBoard(delta) { game.boardSat = Math.max(0, Math.min(100, game.boardSat + delta)); }
+function pressMatchBonus(delta) { game.pressMatchBonus = { season: game.season, matchday: game.matchday, bonus: delta }; }
+function pressPromise(typ) { game.pressPromise = { season: game.season, matchday: game.matchday, typ }; }
+
+function getOwnRecentLosses() {
+    const letzte = (typeof getOwnSeasonMatches === 'function' ? getOwnSeasonMatches() : []).slice(-2);
+    return letzte.length === 2 && letzte.every(m => m.own < m.opp);
+}
+
+const PRESS_SITUATIONS = [
+    { key: 'pokal', when: c => c.cup, frage: c => `Pokalspiel gegen ${c.oppName} - welchen Stellenwert hat der Wettbewerb?`, antworten: [
+        { text: 'Wir wollen unbedingt weiterkommen!', hint: 'Stärke +1, Moral +2', run: () => { pressMatchBonus(1); pressMoral(2); return 'Kampfansage im Pokal'; } },
+        { text: 'Die Liga hat Vorrang.', hint: 'Elf wird geschont (ausgeruhte Spieler), Vorstand +1', run: () => { if (typeof rotateTiredPlayers === 'function') lineup = pickBestLineupIds(); pressBoard(1); return 'Pokal mit Blick auf die Liga'; } },
+        { text: 'Wir schauen von Runde zu Runde.', hint: 'Medienimage +1', run: () => { changeMediaImage(1); return 'Diplomatische Antwort'; } }
+    ] },
+    { key: 'derby', when: c => c.oppName === game.permanentRivalName || (typeof getOurRivalName === 'function' && c.oppName === getOurRivalName()),
+      frage: c => `Derby gegen ${c.oppName}! Was erwarten Sie?`, antworten: [
+        { text: 'Wir fegen sie vom Platz!', hint: 'Moral +3, Stärke +1 - riskant: bei Niederlage Image, Fans und Vorstand runter', run: () => { pressMoral(3); pressMatchBonus(1); pressPromise('sieg'); return 'Kampfansage vor dem Derby'; } },
+        { text: 'Ein Spiel wie jedes andere.', hint: 'Vorstand +1', run: () => { pressBoard(1); return 'Gelassenheit vor dem Derby'; } },
+        { text: 'Großer Respekt vor dem Gegner.', hint: 'Medienimage +2', run: () => { changeMediaImage(2); return 'Respekt vor dem Rivalen'; } }
+    ] },
+    { key: 'krise', when: () => getOwnRecentLosses(), frage: () => 'Zwei Niederlagen in Folge - steht Ihr Job zur Debatte?', antworten: [
+        { text: 'Ich habe volles Vertrauen in die Mannschaft.', hint: 'Moral +4, bei weiterer Niederlage Vorstand -3', run: () => { pressMoral(4); pressPromise('vertrauen'); return 'Rückendeckung für das Team'; } },
+        { text: 'Die Spieler müssen mehr liefern.', hint: 'Stärke +1,5 in diesem Spiel, Moral -4', run: () => { pressMatchBonus(1.5); pressMoral(-4); return 'Öffentliche Kritik an den Spielern'; } },
+        { text: 'Wir analysieren das in Ruhe.', hint: 'Medienimage +1, Vorstand +1', run: () => { changeMediaImage(1); pressBoard(1); return 'Sachliche Analyse'; } }
+    ] },
+    { key: 'favorit', when: c => c.ourStr >= c.oppStr + 6, frage: c => `Sie sind klarer Favorit gegen ${c.oppName}. Ein Pflichtsieg?`, antworten: [
+        { text: 'Alles andere als drei Punkte wäre eine Enttäuschung.', hint: 'Moral +2 - bei Punktverlust Image und Vorstand runter', run: () => { pressMoral(2); pressPromise('sieg'); return 'Pflichtsieg angekündigt'; } },
+        { text: 'Es gibt keine leichten Gegner.', hint: 'Stärke +0,5 (keine Überheblichkeit)', run: () => { pressMatchBonus(0.5); return 'Warnung vor Überheblichkeit'; } },
+        { text: 'Ich rotiere, um Kräfte zu sparen.', hint: 'Ausgeruhte Elf wird aufgestellt', run: () => { lineup = pickBestLineupIds(); return 'Rotation angekündigt'; } }
+    ] },
+    { key: 'underdog', when: c => c.oppStr >= c.ourStr + 6, frage: c => `${c.oppName} ist klarer Favorit. Rechnen Sie sich etwas aus?`, antworten: [
+        { text: 'Wir haben nichts zu verlieren!', hint: 'Stärke +1, Moral +2', run: () => { pressMatchBonus(1); pressMoral(2); return 'Mutige Außenseiter-Rolle'; } },
+        { text: 'Wir stehen tief und lauern auf Konter.', hint: 'Spielstil wird auf Konterfußball gestellt', run: () => { game.tacticStyle = 'konter'; return 'Konter-Taktik angekündigt'; } },
+        { text: 'Ein Punkt wäre ein Erfolg.', hint: 'Medienimage +1, Vorstand +1', run: () => { changeMediaImage(1); pressBoard(1); return 'Bescheidene Ziele'; } }
+    ] },
+    { key: 'standard', when: () => true, frage: () => 'Wie lautet die Marschroute für das Spiel?', antworten: [
+        { text: 'Volle Offensive auf Sieg!', hint: 'Spielstil Offensiv, Moral +1', run: () => { game.tacticStyle = 'offensiv'; pressMoral(1); return 'Offensive angekündigt'; } },
+        { text: 'Kompakt stehen und kontern.', hint: 'Spielstil Konterfußball', run: () => { game.tacticStyle = 'konter'; return 'Konterfußball angekündigt'; } },
+        { text: 'Kräfte schonen & rotieren.', hint: 'Ausgeruhte Elf wird aufgestellt', run: () => { lineup = pickBestLineupIds(); return 'Rotation angekündigt'; } }
+    ] }
+];
+
+let pressSituation = null;
+
+function renderPressConference(ctx) {
+    const c = { ...ctx, ourStr: typeof calcTeamStrength === 'function' ? calcTeamStrength(ctx.isHome) : 50 };
+    pressSituation = PRESS_SITUATIONS.find(s => s.when(c));
+    game.pressMatchBonus = null;
+    const q = document.getElementById('press-question-container');
+    if (q) q.innerHTML = `<strong>Journalist fragt:</strong> "${pressSituation.frage(c)}"`;
+    const box = document.getElementById('press-answers-container');
+    if (!box) return;
+    box.innerHTML = pressSituation.antworten.map((a, i) => `<button onclick="answerPressConference(${i})" class="btn-action" style="margin:3px 0; text-align:left;">${a.text}<br><span style="font-size:9px; font-weight:600; opacity:0.8;">${a.hint}</span></button>`).join('');
+}
+
+function answerPressConference(index) {
+    const a = pressSituation && pressSituation.antworten[index];
+    if (!a) { skipPressAndPlay(); return; }
+    const text = a.run();
+    mediaLog(`Pressekonferenz: ${text}`);
+    showToast(`🎙️ ${text}`, 'success');
+    skipPressAndPlay();
+}
+
+// Direkt nach setupMatch(): Stärkebonus aus der Pressekonferenz für genau dieses Spiel.
+function applyPressConferenceToMatch() {
+    const b = game.pressMatchBonus;
+    if (!b || b.season !== game.season || b.matchday !== game.matchday || !currentMatch) return;
+    currentMatch.ourBaseStr += b.bonus;
+    game.pressMatchBonus = null;
+}
+
+// Aus processPostMatchRoutine(): große Worte werden abgerechnet.
+function resolvePressPromise(matchResult) {
+    const pp = game.pressPromise;
+    if (!pp || pp.season !== game.season || pp.matchday !== game.matchday || matchResult === null) return;
+    game.pressPromise = null;
+    if (pp.typ === 'sieg') {
+        if (matchResult === 'win') { changeMediaImage(2); game.fans = Math.min(100, game.fans + 1); mediaLog('Versprochen und gehalten - die Presse feiert dich.'); }
+        else { changeMediaImage(-3); game.fans = Math.max(game.fanBaseFloor || 0, game.fans - 2); pressBoard(-2); mediaLog('Große Worte, kein Sieg - die Presse zerreißt dich.'); addInboxMessage('vertrag', '📰 Große Worte, kein Sieg', 'Du hattest vor dem Spiel einen Sieg angekündigt. Medien, Fans und Vorstand nehmen dir das übel.', 'screen-dashboard'); }
+    } else if (pp.typ === 'vertrauen' && matchResult === 'loss') {
+        pressBoard(-3);
+        mediaLog('Wieder verloren trotz Rückendeckung - der Vorstand wird unruhig.');
+    }
+}
+
 /* eslint-enable */
 // Vorstand: vier Mitglieder, die je einen echten Bereich beurteilen und damit erklären, woher
 // die Vorstandszufriedenheit (game.boardSat, an ihr hängt die Entlassung) kommt. Ihre Stimmung
@@ -20871,18 +20963,7 @@ function cleanupLegacyScoutState() {
         renderPreMatchAnalysis(oppObj, oppName);
         renderFatigueWarning();
 
-        let q = { q: "Wie lautet die Marschroute für das Spiel?", a: ["Volle Offensive auf Sieg!", "Kompakt stehen und kontern.", "Kräfte schonen & rotieren."] };
-        document.getElementById('press-question-container').innerHTML = `<strong>Journalist fragt:</strong> "${q.q}"`;
-        let aBox = document.getElementById('press-answers-container');
-        aBox.innerHTML = '';
-        q.a.forEach(ans => {
-            let btn = document.createElement('button');
-            btn.className = 'btn-action';
-            btn.style.margin = '3px 0';
-            btn.innerText = ans;
-            btn.onclick = () => { skipPressAndPlay(); };
-            aBox.appendChild(btn);
-        });
+        renderPressConference({ oppName, oppStr, isHome, cup: false });
         showScreen('screen-prematch-press');
     }
 
@@ -20893,6 +20974,7 @@ function cleanupLegacyScoutState() {
         activeLiveShout = 'standard';
         setupMatch(isHome ? game.clubName : oppName, isHome ? oppName : game.clubName, oppStr, isHome, !!cupTie, ourFixture);
         if (cupTie) markCupLiveMatch(cupTie);
+        if (typeof applyPressConferenceToMatch === 'function') applyPressConferenceToMatch();
     }
 
     // "Nur Ergebnisse": schneller als manuelles "Nächste Szene"-Klicken, aber ausführlicher
@@ -22014,6 +22096,7 @@ function cleanupLegacyScoutState() {
         // unabhängig davon ob live gespielt oder automatisch simuliert wurde - beide sind
         // ans jeweils NÄCHSTE (jetzt vergangene) Spiel gebunden, nicht an den Live-Kontext.
         if (matchResult !== null) resolveUnderworldInsiderBet(matchResult === 'win');
+        if (typeof resolvePressPromise === 'function') resolvePressPromise(matchResult);
         // Noten für alle eingesetzten Spieler (js/player-stats.js) - live wie simuliert.
         if (matchResult !== null && totalGoalsForBets && typeof gradeOwnMatch === 'function') {
             let unsere = (totalGoalsForBets.total + matchMargin) / 2;
@@ -23958,17 +24041,7 @@ function startCupLiveFlow(tie) {
     const box = document.getElementById('prematch-analysis-box');
     const danach = tie.comp === 'relegation' ? '' : '<br><span style="color:var(--text-muted);">Das Ligaspiel folgt direkt im Anschluss.</span>';
     if (box) box.innerHTML = `<div class="box" style="font-size:11px; border-left-color:var(--gold);"><strong>${tie.titel}</strong><br>${tie.home} - ${tie.away} (Gegner-Stärke ${Math.round(tie.oppStr)})${danach}</div>` + box.innerHTML;
-    document.getElementById('press-question-container').innerHTML = `<strong>Journalist fragt:</strong> "Welchen Stellenwert hat dieses Spiel für Sie?"`;
-    const aBox = document.getElementById('press-answers-container');
-    aBox.innerHTML = '';
-    ['Wir wollen unbedingt weiterkommen!', 'Jedes Spiel ist gleich wichtig.', 'Wir schauen von Runde zu Runde.'].forEach(ans => {
-        const btn = document.createElement('button');
-        btn.className = 'btn-action';
-        btn.style.margin = '3px 0';
-        btn.innerText = ans;
-        btn.onclick = () => { skipPressAndPlay(); };
-        aBox.appendChild(btn);
-    });
+    renderPressConference({ oppName, oppStr: tie.oppStr, isHome, cup: true });
     showScreen('screen-prematch-press');
 }
 

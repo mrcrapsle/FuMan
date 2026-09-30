@@ -93,17 +93,7 @@ function startCupLiveFlow(tie) {
     const box = document.getElementById('prematch-analysis-box');
     const danach = tie.comp === 'relegation' ? '' : '<br><span style="color:var(--text-muted);">Das Ligaspiel folgt direkt im Anschluss.</span>';
     if (box) box.innerHTML = `<div class="box" style="font-size:11px; border-left-color:var(--gold);"><strong>${tie.titel}</strong><br>${tie.home} - ${tie.away} (Gegner-Stärke ${Math.round(tie.oppStr)})${danach}</div>` + box.innerHTML;
-    document.getElementById('press-question-container').innerHTML = `<strong>Journalist fragt:</strong> "Welchen Stellenwert hat dieses Spiel für Sie?"`;
-    const aBox = document.getElementById('press-answers-container');
-    aBox.innerHTML = '';
-    ['Wir wollen unbedingt weiterkommen!', 'Jedes Spiel ist gleich wichtig.', 'Wir schauen von Runde zu Runde.'].forEach(ans => {
-        const btn = document.createElement('button');
-        btn.className = 'btn-action';
-        btn.style.margin = '3px 0';
-        btn.innerText = ans;
-        btn.onclick = () => { skipPressAndPlay(); };
-        aBox.appendChild(btn);
-    });
+    renderPressConference({ oppName, oppStr: tie.oppStr, isHome, cup: true });
     showScreen('screen-prematch-press');
 }
 

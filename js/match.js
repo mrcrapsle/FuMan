@@ -309,18 +309,7 @@
         renderPreMatchAnalysis(oppObj, oppName);
         renderFatigueWarning();
 
-        let q = { q: "Wie lautet die Marschroute für das Spiel?", a: ["Volle Offensive auf Sieg!", "Kompakt stehen und kontern.", "Kräfte schonen & rotieren."] };
-        document.getElementById('press-question-container').innerHTML = `<strong>Journalist fragt:</strong> "${q.q}"`;
-        let aBox = document.getElementById('press-answers-container');
-        aBox.innerHTML = '';
-        q.a.forEach(ans => {
-            let btn = document.createElement('button');
-            btn.className = 'btn-action';
-            btn.style.margin = '3px 0';
-            btn.innerText = ans;
-            btn.onclick = () => { skipPressAndPlay(); };
-            aBox.appendChild(btn);
-        });
+        renderPressConference({ oppName, oppStr, isHome, cup: false });
         showScreen('screen-prematch-press');
     }
 
@@ -331,6 +320,7 @@
         activeLiveShout = 'standard';
         setupMatch(isHome ? game.clubName : oppName, isHome ? oppName : game.clubName, oppStr, isHome, !!cupTie, ourFixture);
         if (cupTie) markCupLiveMatch(cupTie);
+        if (typeof applyPressConferenceToMatch === 'function') applyPressConferenceToMatch();
     }
 
     // "Nur Ergebnisse": schneller als manuelles "Nächste Szene"-Klicken, aber ausführlicher
@@ -1452,6 +1442,7 @@
         // unabhängig davon ob live gespielt oder automatisch simuliert wurde - beide sind
         // ans jeweils NÄCHSTE (jetzt vergangene) Spiel gebunden, nicht an den Live-Kontext.
         if (matchResult !== null) resolveUnderworldInsiderBet(matchResult === 'win');
+        if (typeof resolvePressPromise === 'function') resolvePressPromise(matchResult);
         // Noten für alle eingesetzten Spieler (js/player-stats.js) - live wie simuliert.
         if (matchResult !== null && totalGoalsForBets && typeof gradeOwnMatch === 'function') {
             let unsere = (totalGoalsForBets.total + matchMargin) / 2;
