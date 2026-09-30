@@ -1740,8 +1740,6 @@
             if (typeof tickYouthDevelopment === 'function') tickYouthDevelopment();
             // Medienabteilung: Medienereignisse aus dem Saisonverlauf
             if (typeof tickMediaDepartment === 'function') tickMediaDepartment();
-            // Transfer Market Analysis: Markttrends und Watchlist-Updates
-            if (typeof tickTransferMarketAnalysis === 'function') tickTransferMarketAnalysis();
             if (typeof cleanupLegacyContractState === 'function') cleanupLegacyContractState();
             // Opposition Analysis: Gegner-Analyse-Updates
             if (typeof cleanupLegacyScoutState === 'function') cleanupLegacyScoutState();
@@ -1761,8 +1759,6 @@
             if (typeof tickMemberAssembly === 'function') tickMemberAssembly();
             // Karriereenden: am Saisonende in agePlayersAtSeasonEnd() (js/player-development.js)
             if (typeof tickTournamentBrackets === 'function') tickTournamentBrackets();
-            // Opponent Analysis & Match Prediction: Gegner-Analyse und Match-Prognosen
-            if (typeof tickPostMatchAnalysis === 'function') tickPostMatchAnalysis();
             // Financial tracking for dashboard charts
             if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
             loescheBuchungskontext();

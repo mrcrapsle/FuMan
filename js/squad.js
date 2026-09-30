@@ -31,12 +31,25 @@
         // Liga-Durchschnittsteam und kein Titelfavorit mit Superstars. Der Kader liegt
         // jetzt um das Ligamittel herum (die KI-Vereine der Liga haben ebenfalls base).
         let mk = (pos, delta, trait) => createPlayer(pos, Math.max(20, base - 6 + delta), Math.min(99, base + 3 + delta), trait || null);
-        return [
+        let kader = [
             mk("TW", 6, "Elfmeter-Killer"), mk("TW", 0),
             mk("ABW", 6, "Eisenfuß"), mk("ABW", 5), mk("ABW", 3), mk("ABW", 1), mk("ABW", -1), mk("ABW", -2),
             mk("MIT", 7, "Leader"), mk("MIT", 5, "Freistoß-Gott"), mk("MIT", 3), mk("MIT", 1), mk("MIT", -1), mk("MIT", -2),
             mk("ST", 8, "Tor-Instinkt"), mk("ST", 5), mk("ST", 1), mk("ST", -1)
         ];
+        // Der Marktwert steigt in den oberen Stärkebereichen steil, deshalb überzog ein
+        // Erstliga-Startkader je nach Los bis zu 30 % das Gehaltsbudget derselben Liga
+        // (1,7-2,1 statt 1,575 Mio. € pro Spieltag) und wirtschaftete ins Minus. Die Gehälter
+        // eines übernommenen Kaders werden deshalb auf 95 % des Ligabudgets gedeckelt.
+        let limit = Math.round(getLeagueWageBudget(level) * 0.95);
+        let summe = kader.reduce((s, p) => s + p.wage, 0);
+        if (summe > limit) kader.forEach(p => { p.wage = Math.max(150, Math.round(p.wage * limit / summe / 50) * 50); });
+        return kader;
+    }
+
+    // Gehaltsbudget pro Spieltag für eine Liga ohne Platzierungsfaktor (wie beim Vereinswechsel).
+    function getLeagueWageBudget(level) {
+        return Math.round(450000 * (1 + (NUM_LEAGUES - level) / NUM_LEAGUES * 2.5));
     }
 
     const PLAYER_ROLES = {
@@ -724,6 +737,23 @@
         `;
     }
 
+    // Kader-Bildschirm in vier Reitern statt 26 Panels untereinander (Muster wie setTrainingTab).
+    const SQUAD_TABS = ['aufstellung', 'taktik', 'analyse', 'team'];
+    let squadTab = 'aufstellung';
+    function setSquadTab(tab) {
+        if (!SQUAD_TABS.includes(tab)) return;
+        playSound('click');
+        squadTab = tab;
+        SQUAD_TABS.forEach(t => {
+            let el = document.getElementById('squad-tab-' + t);
+            if (el) el.style.display = (t === tab) ? 'block' : 'none';
+            let btn = document.getElementById('btn-tab-squad-' + t);
+            if (btn) btn.className = (t === tab) ? 'btn-action' : 'btn-secondary';
+        });
+        // Diagramme messen ihre Breite erst, wenn der Reiter sichtbar ist.
+        renderSquadView();
+    }
+
     function renderSquadView() {
         renderSquadOverviewBox();
         renderSquadDepthChart();
@@ -748,9 +778,6 @@
         if (typeof renderRivalriesPanel === 'function') renderRivalriesPanel();
         if (typeof renderScandalsPanel === 'function') renderScandalsPanel();
         if (typeof renderTacticSystemPanel === 'function') renderTacticSystemPanel();
-        if (typeof renderInternationalTournamentsPanel === 'function') renderInternationalTournamentsPanel();
-        if (typeof renderPostMatchAnalysisPanel === 'function') renderPostMatchAnalysisPanel();
-        if (typeof renderTransferMarketAnalysisPanel === 'function') renderTransferMarketAnalysisPanel();
         if (typeof renderSquadHarmonyPanel === 'function') renderSquadHarmonyPanel();
         if (typeof renderTeamCouncilPanel === 'function') renderTeamCouncilPanel();
         let container = document.getElementById('bench-list');

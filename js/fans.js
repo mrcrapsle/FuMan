@@ -565,6 +565,8 @@
     // eigene Werte ohne Wirkung aufs Spiel führten.
     function cleanupLegacyFanTrainingStadiumState() {
         ['fanclubs', 'fanSatisfaction', 'ultraGroups', 'fanEvents', 'fanEngagement', 'ticketSalesMultiplier', 'sponsorAttractiveness',
-            'trainingSchedule', 'trainingSpecialization', 'setPieceTraining', 'stadium'].forEach(k => { delete game[k]; });
+            'trainingSchedule', 'trainingSpecialization', 'setPieceTraining', 'stadium',
+            // Kader-Bildschirm: Turniere ohne Austragung, Zufalls-Marktanalyse, Pauschal-Spielerbewertung
+            'internationalTournaments', 'playerInternationalCaps', 'internationalTournamentHistory', 'nextWorldCup', 'transferMarket', 'postMatchAnalysis'].forEach(k => { delete game[k]; });
         squad.forEach(p => { delete p.currentFitnessBoost; });
     }

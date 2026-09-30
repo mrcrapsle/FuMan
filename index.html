@@ -1226,140 +1226,142 @@
 
             <!-- 13. KADER & TAKTIK -->
             <div id="screen-squad" style="display:none;">
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">📊 KADER-ÜBERBLICK</div>
-                    <div id="squad-overview-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">📐 KADERTIEFE NACH POSITION</div>
-                    <div id="squad-depth-chart-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">🏅 KADER-BESTENLISTE</div>
-                    <div id="squad-leaderboard-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">📡 KADER-RADAR (ATTRIBUTE)</div>
-                    <div id="squad-radar-container" style="margin-bottom:12px;"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">📊 KADER-METRIKEN</div>
-                    <div id="squad-strength-metrics"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">⚖️ LIGA-VERGLEICH</div>
-                    <div id="squad-comparison-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">⚽ KADER & AUFSTELLUNG</div>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px; margin-bottom:6px;">
-                        <div>Kapitän: <select id="sel-captain" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
-                        <div>Elfmeter: <select id="sel-penalty" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
-                        <div>Freistöße: <select id="sel-freekick" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
-                        <div>Ecken: <select id="sel-corner" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
-                    </div>
-                    <div id="formation-cards-grid" style="display:grid; grid-template-columns: repeat(2, 1fr); gap:4px;"></div>
-                    <button onclick="openFormationModal()" class="btn-primary" style="margin-top:6px;">🎛️ Formation im Detail wählen (Grid + Vorschau)</button>
-                    <button onclick="autoLineup()" class="btn-action" style="margin-top:6px;">🤖 Trainer stellt Top-Elf auf</button>
-                </div>
-                <div class="panel" style="text-align:center;">
-                    <div class="panel-header"><span>🏟️ 3D TAKTIKTAFEL (<span id="squad-form-name">4-4-2</span>)</span></div>
-                    <div id="tactics-board-stat-bar" style="margin-bottom:8px;"></div>
-                    <div style="font-size:9px; color:#94a3b8; margin-bottom:4px;">🔁 Tippe zwei Spieler nacheinander an (Feld oder Liste), um sie exakt zu tauschen.</div>
-                    <div class="pitch-3d-wrapper">
-                        <div class="soccer-pitch" id="soccer-pitch">
-                            <div class="pitch-center-line"></div>
-                            <div class="pitch-center-circle"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">🧠 SPIELSTIL</div>
-                    <div id="tactic-style-cards-grid" style="display:grid; grid-template-columns: repeat(2, 1fr); gap:4px;"></div>
-                    <div style="margin-top:6px; font-size:9px; color:#aaa;" id="tactic-style-desc">Ausgewogener Ansatz ohne besondere Vor-/Nachteile.</div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">📐 TEAM-ANWEISUNGEN</div>
-                    <div id="team-instructions-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">🥊 ZWEIKAMPFHÄRTE</div>
-                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:3px;">
-                        <button onclick="setTackleHardness('vorsichtig')" id="th-vorsichtig" class="btn-secondary">🕊️ Vorsichtig</button>
-                        <button onclick="setTackleHardness('normal')" id="th-normal" class="btn-action">⚖️ Normal</button>
-                        <button onclick="setTackleHardness('hart')" id="th-hart" class="btn-secondary">🥊 Hart</button>
-                    </div>
-                    <div style="margin-top:6px; font-size:9px; color:#aaa;" id="tackle-hardness-desc">Ausgewogenes Einsteigen ohne besondere Vor-/Nachteile.</div>
+                <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:4px; margin-bottom:8px;">
+                    <button onclick="setSquadTab('aufstellung')" id="btn-tab-squad-aufstellung" class="btn-action" style="font-size:10px; padding:6px 2px;">⚽ Aufstellung</button>
+                    <button onclick="setSquadTab('taktik')" id="btn-tab-squad-taktik" class="btn-secondary" style="font-size:10px; padding:6px 2px;">🧠 Taktik</button>
+                    <button onclick="setSquadTab('analyse')" id="btn-tab-squad-analyse" class="btn-secondary" style="font-size:10px; padding:6px 2px;">📊 Analyse</button>
+                    <button onclick="setSquadTab('team')" id="btn-tab-squad-team" class="btn-secondary" style="font-size:10px; padding:6px 2px;">🤝 Mannschaft</button>
                 </div>
                 <div class="panel" id="transfer-market-box" style="display:none;"></div>
-                <div class="panel">
-                    <div class="panel-header">🤖 TAKTIK-AUTOMATIK</div>
-                    <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Reagiert im laufenden Spiel automatisch auf den Spielstand, ohne dass du das Live-Taktikpanel selbst bedienen musst.</div>
-                    <div id="tactic-automation-box"></div>
-                </div>
                 <div class="panel" id="co-trainer-advice-box" style="display:none;"></div>
                 <div id="ultimatum-banner-box" style="display:none;"></div>
                 <div id="crowd-favorite-preview-box" style="display:none;"></div>
-                <div class="panel" id="team-chemistry-box" style="display:none;"></div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--purple);">👥 KABINEN-CLIQUEN</div>
-                    <div id="squad-cliques-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">🗣️ FÜHRUNGSSPIELER-RAT</div>
-                    <div id="leadership-council-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--danger);">🔥 RIVALITÄTEN</div>
-                    <div id="rivalries-panel"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--danger);">⚠️ SPIELER-SKANDALE</div>
-                    <div id="scandals-panel"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--purple);">⚙️ TAKTIK-SYSTEM</div>
-                    <div id="tactic-system-panel"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--blue);">🌍 INTERNATIONALE TURNIERE</div>
-                    <div id="international-tournaments-panel"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:#00BCD4;">📊 POST-MATCH-ANALYSE</div>
-                    <div id="post-match-analysis-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:#FF5722;">📊 TRANSFER-MARKT-ANALYSE</div>
-                    <div id="transfer-market-panel"></div>
-                </div>
                 <div id="injury-crisis-warning" style="display:none;"></div>
-                <div class="panel">
-                    <div class="panel-header">KADERLISTE & ATTRIBUTE</div>
-                    <div id="role-fit-summary" style="font-size:9px; color:var(--accent); margin-bottom:6px;"></div>
-                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:4px;">
-                        <button onclick="setSquadSort('staerke')" id="ss-staerke" class="btn-action" style="font-size:8px; padding:5px 2px;">Stärke</button>
-                        <button onclick="setSquadSort('alter')" id="ss-alter" class="btn-secondary" style="font-size:8px; padding:5px 2px;">Alter</button>
-                        <button onclick="setSquadSort('marktwert')" id="ss-marktwert" class="btn-secondary" style="font-size:8px; padding:5px 2px;">Marktwert</button>
-                        <button onclick="setSquadSort('moral')" id="ss-moral" class="btn-secondary" style="font-size:8px; padding:5px 2px;">Moral</button>
-                        <button onclick="setSquadSort('name')" id="ss-name" class="btn-secondary" style="font-size:8px; padding:5px 2px;">A-Z</button>
+                <div id="squad-tab-aufstellung">
+                    <div class="panel">
+                        <div class="panel-header">⚽ KADER & AUFSTELLUNG</div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px; margin-bottom:6px;">
+                            <div>Kapitän: <select id="sel-captain" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
+                            <div>Elfmeter: <select id="sel-penalty" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
+                            <div>Freistöße: <select id="sel-freekick" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
+                            <div>Ecken: <select id="sel-corner" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
+                        </div>
+                        <div id="formation-cards-grid" style="display:grid; grid-template-columns: repeat(2, 1fr); gap:4px;"></div>
+                        <button onclick="openFormationModal()" class="btn-primary" style="margin-top:6px;">🎛️ Formation im Detail wählen (Grid + Vorschau)</button>
+                        <button onclick="autoLineup()" class="btn-action" style="margin-top:6px;">🤖 Trainer stellt Top-Elf auf</button>
                     </div>
-                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:6px;">
-                        <button onclick="setSquadFilter('alle')" id="sf-alle" class="btn-action" style="font-size:9px; padding:5px 2px;">Alle</button>
-                        <button onclick="setSquadFilter('TW')" id="sf-TW" class="btn-secondary" style="font-size:9px; padding:5px 2px;">TW</button>
-                        <button onclick="setSquadFilter('ABW')" id="sf-ABW" class="btn-secondary" style="font-size:9px; padding:5px 2px;">ABW</button>
-                        <button onclick="setSquadFilter('MIT')" id="sf-MIT" class="btn-secondary" style="font-size:9px; padding:5px 2px;">MIT</button>
-                        <button onclick="setSquadFilter('ST')" id="sf-ST" class="btn-secondary" style="font-size:9px; padding:5px 2px;">ST</button>
+                    <div class="panel" style="text-align:center;">
+                        <div class="panel-header"><span>🏟️ 3D TAKTIKTAFEL (<span id="squad-form-name">4-4-2</span>)</span></div>
+                        <div id="tactics-board-stat-bar" style="margin-bottom:8px;"></div>
+                        <div style="font-size:9px; color:#94a3b8; margin-bottom:4px;">🔁 Tippe zwei Spieler nacheinander an (Feld oder Liste), um sie exakt zu tauschen.</div>
+                        <div class="pitch-3d-wrapper">
+                            <div class="soccer-pitch" id="soccer-pitch">
+                                <div class="pitch-center-line"></div>
+                                <div class="pitch-center-circle"></div>
+                            </div>
+                        </div>
                     </div>
-                    <div id="bench-list" style="max-height:260px; overflow-y:auto;"></div>
+                    <div class="panel">
+                        <div class="panel-header">KADERLISTE & ATTRIBUTE</div>
+                        <div id="role-fit-summary" style="font-size:9px; color:var(--accent); margin-bottom:6px;"></div>
+                        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:4px;">
+                            <button onclick="setSquadSort('staerke')" id="ss-staerke" class="btn-action" style="font-size:8px; padding:5px 2px;">Stärke</button>
+                            <button onclick="setSquadSort('alter')" id="ss-alter" class="btn-secondary" style="font-size:8px; padding:5px 2px;">Alter</button>
+                            <button onclick="setSquadSort('marktwert')" id="ss-marktwert" class="btn-secondary" style="font-size:8px; padding:5px 2px;">Marktwert</button>
+                            <button onclick="setSquadSort('moral')" id="ss-moral" class="btn-secondary" style="font-size:8px; padding:5px 2px;">Moral</button>
+                            <button onclick="setSquadSort('name')" id="ss-name" class="btn-secondary" style="font-size:8px; padding:5px 2px;">A-Z</button>
+                        </div>
+                        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:6px;">
+                            <button onclick="setSquadFilter('alle')" id="sf-alle" class="btn-action" style="font-size:9px; padding:5px 2px;">Alle</button>
+                            <button onclick="setSquadFilter('TW')" id="sf-TW" class="btn-secondary" style="font-size:9px; padding:5px 2px;">TW</button>
+                            <button onclick="setSquadFilter('ABW')" id="sf-ABW" class="btn-secondary" style="font-size:9px; padding:5px 2px;">ABW</button>
+                            <button onclick="setSquadFilter('MIT')" id="sf-MIT" class="btn-secondary" style="font-size:9px; padding:5px 2px;">MIT</button>
+                            <button onclick="setSquadFilter('ST')" id="sf-ST" class="btn-secondary" style="font-size:9px; padding:5px 2px;">ST</button>
+                        </div>
+                        <div id="bench-list" style="max-height:260px; overflow-y:auto;"></div>
+                    </div>
                 </div>
-                <div class="panel">
-                    <div class="panel-header">❤️ MANNSCHAFTS-HARMONIE</div>
-                    <div id="squad-harmony-box"></div>
+                <div id="squad-tab-taktik" style="display:none;">
+                    <div class="panel">
+                        <div class="panel-header">🧠 SPIELSTIL</div>
+                        <div id="tactic-style-cards-grid" style="display:grid; grid-template-columns: repeat(2, 1fr); gap:4px;"></div>
+                        <div style="margin-top:6px; font-size:9px; color:#aaa;" id="tactic-style-desc">Ausgewogener Ansatz ohne besondere Vor-/Nachteile.</div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header">📐 TEAM-ANWEISUNGEN</div>
+                        <div id="team-instructions-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header">🥊 ZWEIKAMPFHÄRTE</div>
+                        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:3px;">
+                            <button onclick="setTackleHardness('vorsichtig')" id="th-vorsichtig" class="btn-secondary">🕊️ Vorsichtig</button>
+                            <button onclick="setTackleHardness('normal')" id="th-normal" class="btn-action">⚖️ Normal</button>
+                            <button onclick="setTackleHardness('hart')" id="th-hart" class="btn-secondary">🥊 Hart</button>
+                        </div>
+                        <div style="margin-top:6px; font-size:9px; color:#aaa;" id="tackle-hardness-desc">Ausgewogenes Einsteigen ohne besondere Vor-/Nachteile.</div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header">🤖 TAKTIK-AUTOMATIK</div>
+                        <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Reagiert im laufenden Spiel automatisch auf den Spielstand, ohne dass du das Live-Taktikpanel selbst bedienen musst.</div>
+                        <div id="tactic-automation-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--purple);">⚙️ TAKTIK-SYSTEM</div>
+                        <div id="tactic-system-panel"></div>
+                    </div>
                 </div>
-                <div class="panel">
-                    <div class="panel-header">🤝 MANNSCHAFTSRAT</div>
-                    <div id="team-council-box"></div>
+                <div id="squad-tab-analyse" style="display:none;">
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--gold);">📊 KADER-ÜBERBLICK</div>
+                        <div id="squad-overview-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--gold);">📐 KADERTIEFE NACH POSITION</div>
+                        <div id="squad-depth-chart-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--gold);">🏅 KADER-BESTENLISTE</div>
+                        <div id="squad-leaderboard-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header">📡 KADER-RADAR (ATTRIBUTE)</div>
+                        <div id="squad-radar-container" style="margin-bottom:12px;"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header">📊 KADER-METRIKEN</div>
+                        <div id="squad-strength-metrics"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header">⚖️ LIGA-VERGLEICH</div>
+                        <div id="squad-comparison-box"></div>
+                    </div>
+                </div>
+                <div id="squad-tab-team" style="display:none;">
+                    <div class="panel" id="team-chemistry-box" style="display:none;"></div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--purple);">👥 KABINEN-CLIQUEN</div>
+                        <div id="squad-cliques-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--gold);">🗣️ FÜHRUNGSSPIELER-RAT</div>
+                        <div id="leadership-council-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--danger);">🔥 RIVALITÄTEN</div>
+                        <div id="rivalries-panel"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--danger);">⚠️ SPIELER-SKANDALE</div>
+                        <div id="scandals-panel"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header">❤️ MANNSCHAFTS-HARMONIE</div>
+                        <div id="squad-harmony-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header">🤝 MANNSCHAFTSRAT</div>
+                        <div id="team-council-box"></div>
+                    </div>
                 </div>
             </div>
 
@@ -2462,7 +2464,6 @@
 <script src="js/entities.js?v=2.1"></script>
 <script src="js/avatars.js?v=2.1"></script>
 <script src="js/playerdetail.js?v=2.1"></script>
-<script src="js/post-match-analysis.js?v=2.1"></script>
 <script src="js/squad.js?v=2.1"></script>
 <script src="js/squad-radar.js?v=2.1"></script>
 <script src="js/club-rivalries.js?v=2.1"></script>
@@ -2515,8 +2516,6 @@
 <script src="js/player-scandals.js?v=2.1"></script>
 <script src="js/underworld.js?v=2.1"></script>
 <script src="js/tactic-system.js?v=2.1"></script>
-<script src="js/international-tournaments.js?v=2.1"></script>
-<script src="js/transfer-market-analysis.js?v=2.1"></script>
 <script src="js/reserves-loan-management.js?v=2.1"></script>
 <script src="js/crisis-management.js?v=2.1"></script>
 <script src="js/disciplinary-sanctions.js?v=2.1"></script>
@@ -2625,7 +2624,7 @@
                     autoLineup();
                     let leagueFactor = (NUM_LEAGUES - game.leagueLevel) / NUM_LEAGUES;
                     game.transferBudget = Math.round(2500000 * (1 + leagueFactor * 2.5));
-                    game.wageBudget = Math.round(450000 * (1 + leagueFactor * 2.5));
+                    game.wageBudget = getLeagueWageBudget(game.leagueLevel);
                 } else {
                     initDefaultSquad();
                 }

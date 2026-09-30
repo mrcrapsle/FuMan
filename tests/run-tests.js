@@ -4153,6 +4153,49 @@ async function testPhase13Teil2(browser) {
     await page.close();
 }
 
+async function testPhase13Teil3(browser) {
+    console.log('\n[P13c] Kader-Bildschirm in Reitern, Startkader im Gehaltsbudget');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+
+    const r = await page.evaluate(() => {
+        const out = {};
+        out.alteModuleWeg = ['renderInternationalTournamentsPanel', 'renderTransferMarketAnalysisPanel', 'renderPostMatchAnalysisPanel', 'tickTransferMarketAnalysis']
+            .filter(n => typeof window[n] === 'function');
+        showScreen('screen-squad');
+        const tabs = ['aufstellung', 'taktik', 'analyse', 'team'];
+        out.reiter = tabs.map(t => {
+            setSquadTab(t);
+            const sichtbar = tabs.filter(x => document.getElementById('squad-tab-' + x).style.display !== 'none');
+            const el = document.getElementById('squad-tab-' + t);
+            return { t, nurEiner: sichtbar.length === 1 && sichtbar[0] === t, panels: el.querySelectorAll(':scope > .panel').length, aktiv: document.getElementById('btn-tab-squad-' + t).className === 'btn-action' };
+        });
+        setSquadTab('analyse');
+        const radar = document.querySelector('#squad-radar-container svg');
+        out.radarSichtbar = !!radar && radar.getBoundingClientRect().width > 0;
+        // Kaderliste und Taktiktafel liegen im Start-Reiter
+        setSquadTab('aufstellung');
+        out.aufstellungKomplett = !!document.querySelector('#squad-tab-aufstellung #bench-list') && !!document.querySelector('#squad-tab-aufstellung #soccer-pitch');
+        // Startkader einer höheren Liga passt ins Gehaltsbudget der Liga
+        out.gehaelterImBudget = [0, 1, 2].every(lvl => {
+            for (let i = 0; i < 8; i++) {
+                const summe = generateSquadForLevel(lvl).reduce((s, p) => s + p.wage, 0);
+                if (summe > getLeagueWageBudget(lvl)) return false;
+            }
+            return true;
+        });
+        return out;
+    });
+
+    assert(r.alteModuleWeg.length === 0, `Scheinmodule vom Kader-Bildschirm entfernt (${r.alteModuleWeg.join(', ')})`);
+    r.reiter.forEach(x => assert(x.nurEiner && x.aktiv && x.panels >= 3, `Kader-Reiter „${x.t}“ zeigt nur seine Panels (${x.panels}) und ist markiert`));
+    assert(r.radarSichtbar, 'Kader-Radar wird im Analyse-Reiter mit echter Breite gezeichnet');
+    assert(r.aufstellungKomplett, 'Kaderliste und Taktiktafel liegen im Start-Reiter');
+    assert(r.gehaelterImBudget, 'Startkader höherer Ligen überziehen das Gehaltsbudget ihrer Liga nicht');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler in Phase 13 Teil 3 (${consoleErrors.slice(0, 3).join(' | ')})`);
+    await page.close();
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -4225,6 +4268,7 @@ async function main() {
         testPhase12,
         testPhase13,
         testPhase13Teil2,
+        testPhase13Teil3,
         testRuntimeRoundTrip,
     ];
 

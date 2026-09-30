@@ -78,7 +78,7 @@
         // ohne Platzierungsbonus/-malus, da noch keine Saison beim neuen Verein gespielt wurde.
         let leagueFactor = (NUM_LEAGUES - targetLevel) / NUM_LEAGUES;
         game.transferBudget = Math.round(2500000 * (1 + leagueFactor * 2.5));
-        game.wageBudget = Math.round(450000 * (1 + leagueFactor * 2.5));
+        game.wageBudget = getLeagueWageBudget(targetLevel);
 
         refreshTransferMarket();
         applyClubCrest();

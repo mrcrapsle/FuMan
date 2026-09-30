@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '2.6.1', date: '30.09.2026', features: 'Phase 13: Gegner, Vorstand, Verträge, Scouting, Fans, Training, Stadion aufgeräumt, Spieler altern' };
+    const GAME_VERSION = { number: '2.6.2', date: '30.09.2026', features: 'Phase 13: aufgeräumt, Spieler altern, Kader-Bildschirm in Reitern' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -220,10 +220,6 @@
         playerRoles: {},
         formationHistory: [],
         tacticAnalysis: { matchesAnalyzed: 0, effectiveness: 0.5 },
-        internationalTournaments: [],
-        playerInternationalCaps: {},
-        internationalTournamentHistory: [],
-        nextWorldCup: 2026,
         boardRoom: null
     };
 
