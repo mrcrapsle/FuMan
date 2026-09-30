@@ -278,8 +278,6 @@
             }
         }
         renderTalentDatabase();
-        if (typeof renderTalentDetectionPanel === 'function') renderTalentDetectionPanel();
-        if (typeof renderScoutingIntelligencePanel === 'function') renderScoutingIntelligencePanel();
     }
 
     // 4. Talent-Datenbank: dauerhaftes Archiv aller je entdeckten Spieler.
@@ -314,3 +312,9 @@
         updateUI();
     }
 
+    // Alte Spielstände: Daten zweier abgelöster Module, die nur den eigenen Kader "scouteten"
+    // (erfundene Potenziale, nie befüllte Berichte).
+    function cleanupLegacyScoutingState() {
+        delete game.scoutingDatabase;
+        delete game.scoutingIntelligence;
+    }

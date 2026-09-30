@@ -1775,8 +1775,7 @@
             if (typeof tickDisciplinaryBans === 'function') tickDisciplinaryBans();
             // Player Development: Alterung und Entwicklung
             if (typeof tickPlayerAging === 'function') tickPlayerAging();
-            // Scouting Intelligence: Überwachungsupdates
-            if (typeof tickScoutingUpdates === 'function') tickScoutingUpdates();
+            if (typeof cleanupLegacyScoutingState === 'function') cleanupLegacyScoutingState();
             // Season Objectives & Squad Harmony: Ziele und Mannschaftsharmonie
             if (typeof tickSeasonObjectives === 'function') tickSeasonObjectives();
             if (typeof tickSquadHarmony === 'function') tickSquadHarmony();

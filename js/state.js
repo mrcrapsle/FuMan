@@ -212,11 +212,6 @@
         freeKickTakerId: null,
         cornerTakerId: null,
         trophies: [],
-        scoutingDatabase: {
-            discoveredPlayers: [],
-            lastAnalysisMatchday: 0,
-            talentWatchlist: []
-        },
         clubSwitchHistory: [],
         agentPool: [],
         localRivals: [],
