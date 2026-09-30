@@ -110,7 +110,7 @@
             padding: 5px 10px; border-radius: 6px; text-align: center;
             backdrop-filter: blur(6px);
         }
-        .kpi-chip span { font-size: 8px; color: var(--text-muted); display: block; letter-spacing: 0.4px; }
+        .kpi-chip span { font-size: 9px; color: var(--text-muted); display: block; letter-spacing: 0.4px; }
         .kpi-chip strong { font-size: 11px; color: var(--text-main); }
         .sound-btn {
             background: rgba(90, 108, 255, 0.15); border: 1px solid rgba(90, 108, 255, 0.5); color: #dce8ff;
@@ -346,11 +346,11 @@
             box-shadow: 0 0 12px 3px rgba(255,244,200,0.55);
         }
         /* BOTTOM-NAVIGATION (NEU): fixe Schnellzugriffsleiste am unteren Bildschirmrand für
-           die 5 meistgenutzten Bereiche - ergänzt das bestehende volle Menü oben, statt es zu
+           die 5 meistgenutzten Bereiche plus Speichern (6 Spalten) - ergänzt das bestehende volle Menü oben, statt es zu
            ersetzen, für bequeme Einhand-Bedienung auf dem Handy. */
         .bottom-nav-bar {
             position: fixed; bottom: 0; left: 0; right: 0; z-index: 500;
-            display: grid; grid-template-columns: repeat(5, 1fr);
+            display: grid; grid-template-columns: repeat(6, 1fr);
             background: linear-gradient(180deg, rgba(20,14,8,0.85), rgba(10,7,4,0.98));
             backdrop-filter: blur(10px); border-top: 1px solid rgba(228,197,140,0.25);
             box-shadow: 0 -6px 20px rgba(0,0,0,0.5);
@@ -359,10 +359,12 @@
         .bottom-nav-item {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             gap: 2px; padding: 8px 2px 6px; background: none; border: none; cursor: pointer;
-            color: var(--text-muted); font-size: 8px; font-weight: 700; font-family: inherit;
+            color: var(--text-muted); font-size: 10px; font-weight: 700; font-family: inherit; min-width: 0;
             transition: color 0.15s, transform 0.15s;
         }
         .bottom-nav-item .bn-icon { font-size: 18px; line-height: 1; }
+        /* gewinnt gegen die Handy-Regel für .nav-btn (sonst zu breit für 6 Spalten) */
+        .bottom-nav-bar .bottom-nav-item { padding: 8px 2px 6px; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .bottom-nav-item.active { color: var(--accent); transform: translateY(-2px); }
         .bottom-nav-item.active .bn-icon { filter: drop-shadow(0 0 6px rgba(212,169,74,0.6)); }
         body { padding-bottom: 58px; }
@@ -598,7 +600,7 @@
 
         /* TOAST-BENACHRICHTIGUNGEN */
         .app-toast {
-            position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%) translateY(20px);
+            position: fixed; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%) translateY(20px); /* über der unteren Leiste */
             background: linear-gradient(135deg, #3a2a1a, #221810); color: var(--text-main); padding: 12px 22px;
             border-radius: 6px; font-size: 12px; font-weight: 700;
             box-shadow: 0 8px 26px rgba(0,0,0,0.6), inset 0 1px 0 rgba(228, 197, 140, 0.06);
@@ -1155,8 +1157,9 @@
             border-radius: 50%;
         }
 
-        /* Tribünen (Basisstufe) */
-        .stand {
+        /* Tribünen (Basisstufe) - nur in der Visualisierung; ohne den Container-Präfix
+           rutschten auch die Blöcke im Ausbauplan (.stadium-bowl) aus ihrem Raster. */
+        #stadium-container .stand {
             position: absolute;
             background: linear-gradient(180deg, #37474f 0%, #263238 100%);
             border: 1px solid #546e7a;
@@ -1311,12 +1314,14 @@
 
             /* Buttons */
             .btn-action, .btn-secondary, .btn-success, .btn-warning, .btn-danger {
-                font-size: 10px;
-                padding: 6px 8px;
-                margin: 2px 0;
+                font-size: 11px;
+                padding: 8px 10px;
+                margin: 3px 0;
                 width: 100%;
-                border-radius: 4px;
+                border-radius: 6px;
             }
+            /* Handy: jeder Knopf mindestens fingergroß (vorher oft nur 20 px hoch) */
+            button { min-height: 36px; }
 
             /* Grid-Layouts anpassen */
             .player-card {
@@ -1339,15 +1344,15 @@
 
             /* Stadium Visualisierung */
             .stadium-bowl-wrapper {
-                max-height: 150px;
+                max-height: none;
                 margin: 4px 0;
             }
             .stadium-bowl {
                 width: 100%;
-                height: 150px;
+                height: 260px; /* vorher 150 px: die Blöcke wurden unlesbar gestaucht */
             }
             .stand {
-                font-size: 7px;
+                font-size: 9px;
                 padding: 3px;
             }
 
@@ -1390,7 +1395,7 @@
                 font-size: 11px;
                 padding: 10px 16px;
                 max-width: 90vw;
-                bottom: 12px;
+                bottom: calc(66px + env(safe-area-inset-bottom, 0px)); /* über der unteren Leiste */
             }
 
             /* Input fields */
@@ -1412,12 +1417,12 @@
             .app-content { padding: 6px; }
 
             .panel { margin: 0 0 6px 0; padding: 4px; }
-            .panel-header { font-size: 10px; padding: 4px; }
-            .box { font-size: 8px; padding: 3px; }
+            .panel-header { font-size: 11px; padding: 5px; }
+            .box { font-size: 10px; padding: 4px; }
 
             .btn-action, .btn-secondary {
-                font-size: 9px;
-                padding: 5px 6px;
+                font-size: 11px;
+                padding: 8px 8px;
             }
 
             .hub-tab-bar {
@@ -1425,8 +1430,8 @@
                 gap: 1px;
             }
 
-            .stadium-bowl { height: 120px; }
-            .stand { font-size: 7px; }
+            .stadium-bowl { height: 250px; }
+            .stand { font-size: 9px; }
 
             .accordion-header {
                 font-size: 10px;
@@ -1435,9 +1440,9 @@
 
             /* Tabelle/Listen single column */
             .stat-row { grid-template-columns: 1fr; }
-            table { font-size: 8px; }
+            table { font-size: 10px; }
             tr { padding: 2px; }
-            td { padding: 2px 4px; }
+            td { padding: 3px 4px; }
         }
 
         /* VERY SMALL: <= 360px (Galaxy S, etc.) */
@@ -1445,18 +1450,18 @@
             html { font-size: 11px; }
 
             .panel { padding: 3px; margin: 0 0 4px 0; }
-            .panel-header { font-size: 9px; padding: 3px; }
-            .box { font-size: 8px; padding: 2px; }
+            .panel-header { font-size: 10px; padding: 4px; }
+            .box { font-size: 9px; padding: 3px; }
 
             .btn-action, .btn-secondary {
-                font-size: 8px;
-                padding: 4px;
+                font-size: 10px;
+                padding: 7px 6px;
             }
 
             .hub-tab-bar { grid-template-columns: 1fr; }
             .accordion-header { font-size: 9px; padding: 3px; }
 
-            .stadium-bowl { height: 100px; }
+            .stadium-bowl { height: 230px; }
         }
 
         /* Accordion Styles */
@@ -16620,10 +16625,10 @@ function finishGoalkeeperGame() {
             <div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:8px; margin-bottom:4px;">
                 <div style="display:flex; height:20px; border-radius:4px; overflow:hidden; gap:1px;">
                     <div style="flex:${income}; background:var(--primary); position:relative;">
-                        <span style="position:absolute; left:50%; transform:translateX(-50%); top:50%; transform:translate(-50%, -50%); font-size:7px; color:#000; white-space:nowrap; font-weight:700;">${total > 0 ? (income/total*100).toFixed(0) : '0'}%</span>
+                        <span style="position:absolute; left:50%; transform:translateX(-50%); top:50%; transform:translate(-50%, -50%); font-size:10px; color:#000; white-space:nowrap; font-weight:700;">${total > 0 ? (income/total*100).toFixed(0) : '0'}%</span>
                     </div>
                     <div style="flex:${expenses}; background:var(--danger); position:relative;">
-                        <span style="position:absolute; left:50%; transform:translateX(-50%); top:50%; transform:translate(-50%, -50%); font-size:7px; color:#fff; white-space:nowrap; font-weight:700;">${total > 0 ? (expenses/total*100).toFixed(0) : '0'}%</span>
+                        <span style="position:absolute; left:50%; transform:translateX(-50%); top:50%; transform:translate(-50%, -50%); font-size:10px; color:#fff; white-space:nowrap; font-weight:700;">${total > 0 ? (expenses/total*100).toFixed(0) : '0'}%</span>
                     </div>
                 </div>
             </div>

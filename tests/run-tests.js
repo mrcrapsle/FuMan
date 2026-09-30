@@ -4702,6 +4702,49 @@ async function testSeasonEvents(browser) {
     await page.close();
 }
 
+async function testMobileLayout(browser) {
+    console.log('\n[P16a] Handy-Layout (412 px): Überläufe, Knopfgröße, Schriftgröße');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    await page.setViewportSize({ width: 412, height: 900 });
+    const r = await page.evaluate(async () => {
+        closeTutorial();
+        game.sackPending = false; simulateMatchdays(5);
+        const views = [...document.querySelectorAll('[id^="screen-"]')].map(e => e.id)
+            .filter(id => !id.includes('prematch') && id !== 'screen-matchday').map(id => [id, () => showScreen(id)]);
+        const tabs = { 'screen-fans': ['setFansTab', ['gruppen', 'programme', 'sicherheit']], 'screen-league': ['setLeagueTab', ['fixtures', 'table']],
+            'screen-squad': ['setSquadTab', ['analyse', 'aufstellung', 'taktik', 'team']], 'screen-training': ['setTrainingTab', ['individual', 'minigames', 'plan', 'special']],
+            'screen-transfer': ['setTransferTab', ['free', 'loan', 'market', 'offers', 'sell']] };
+        Object.entries(tabs).forEach(([sc, [fn, ts]]) => ts.forEach(t => views.push([`${sc}/${t}`, () => { showScreen(sc); window[fn](t); }])));
+        ['bank', 'budget', 'journal', 'uebersicht'].forEach(t => views.push([`fin/${t}`, () => { showScreen('screen-finances'); setSubTab('fin', t); }]));
+        ['chronik', 'legenden', 'rivalen', 'titel'].forEach(t => views.push([`hist/${t}`, () => { showScreen('screen-history'); setSubTab('hist', t); }]));
+        const W = document.documentElement.clientWidth;
+        const ueberlauf = [], knoepfe = [], schrift = [];
+        for (const [name, open] of views) {
+            open();
+            await new Promise(res => setTimeout(res, 20));
+            if (document.documentElement.scrollWidth > W + 2) ueberlauf.push(name);
+            document.querySelectorAll('.app-content button, .bottom-nav-bar button').forEach(b => {
+                const rect = b.getBoundingClientRect();
+                if (rect.height > 0 && rect.height < 32) knoepfe.push(`${name}: "${b.innerText.trim().slice(0, 20)}" ${Math.round(rect.height)}px`);
+            });
+            document.querySelectorAll('.app-content *').forEach(el => {
+                if (el.getBoundingClientRect().height === 0) return;
+                if (![...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return;
+                if (parseFloat(getComputedStyle(el).fontSize) < 8) schrift.push(`${name}: "${el.textContent.trim().slice(0, 20)}"`);
+            });
+        }
+        const navZeilen = new Set([...document.querySelectorAll('.bottom-nav-bar button')].map(b => Math.round(b.getBoundingClientRect().top))).size;
+        return { anzahl: views.length, ueberlauf, knoepfe: [...new Set(knoepfe)], schrift: [...new Set(schrift)], navZeilen };
+    });
+    assert(r.ueberlauf.length === 0, `Kein horizontaler Überlauf auf ${r.anzahl} Bildschirmen/Reitern (${r.ueberlauf.join(', ')})`);
+    assert(r.knoepfe.length === 0, `Alle Knöpfe mindestens 32 px hoch (${r.knoepfe.slice(0, 4).join(' | ')})`);
+    assert(r.schrift.length === 0, `Keine Schrift unter 8 px (${r.schrift.slice(0, 4).join(' | ')})`);
+    assert(r.navZeilen === 1, `Untere Leiste in einer Zeile (${r.navZeilen})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 3).join(' | ')})`);
+    await page.close();
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -4784,6 +4827,7 @@ async function main() {
         testTacticRecords,
         testCupLive,
         testSeasonEvents,
+        testMobileLayout,
         testRuntimeRoundTrip,
     ];
 
