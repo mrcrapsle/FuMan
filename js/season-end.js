@@ -155,7 +155,6 @@
             if (req.minYouthLvl > 0 && (campusBuildings.internat?.lvl || 0) < req.minYouthLvl) failedReasons.push(`Jugendinternat zu niedrig ausgebaut (Stufe ${campusBuildings.internat?.lvl || 0} von benötigter Stufe ${req.minYouthLvl})`);
 
             if (failedReasons.length > 0) {
-                game.licenseRejectionCount = (game.licenseRejectionCount || 0) + 1;
                 // Nachfrist statt sofortiger endgültiger Verweigerung: bei knapp verfehlten
                 // Auflagen bekommt man 3 Spieltage der neuen Saison Zeit, die Mängel noch zu
                 // beheben - erst wenn auch die Nachfrist verstreicht, verfällt der Aufstieg

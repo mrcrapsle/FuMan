@@ -268,6 +268,8 @@ cd tests && TEST_ONLY=LandesPokal node run-tests.js
 
 `testCodeIntegrity` checks statically and in the browser: every function called from an `on*` attribute (index.html and generated HTML) exists, every `getElementById('…')` id exists somewhere, charts rendered while their screen is hidden (`offsetWidth` 0) have no negative sizes, and no `filter`/`opacity` sits on a `preserve-3d` element or its ancestors (office light/dark, every office event, stadium).
 
+`testNoWriteOnlyGameFields` fails when a `game.x` field is only ever written (or only counts itself up) - either use it or remove it (plus `cleanupRemovedModuleState()`). `testMobileLayout` checks every screen/tab at 412 px (no overflow, buttons >= 32 px, no font < 8 px).
+
 `testRuntimeRoundTrip` wraps every game function, plays two seasons and opens every screen; it lists ALL runtime errors with the function name at once, plus screens that move money. When it fails, fix each listed function.
 
 ## Deployment

@@ -871,14 +871,6 @@
                 infraEl.innerHTML = icons ? `<span>${icons}</span>` : '';
             }
         }
-        ['flutlicht', 'rasenheizung', 'videowalls', 'dach'].forEach(k => {
-            let btn = document.getElementById('btn-spec-' + k);
-            if (btn && stadium[k]) {
-                btn.innerText = btn.innerText.split('[')[0] + " [Installiert ✓]";
-                btn.disabled = true;
-            }
-        });
-
         if (typeof renderStadiumEventsPanel === 'function') renderStadiumEventsPanel();
     }
 

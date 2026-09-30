@@ -46,7 +46,6 @@
         if (squad.length >= 22) { showToast('Kader bereits voll (22 Spieler)!', 'error'); return; }
         playSound('whistle');
         game.money -= p.loanFee;
-        p.isLoanedIn = true;
         p.contracts = 1;
         squad.push(p);
         incomingLoans.push({ playerId: p.id, parentClub: p.loanParentClub, matchdaysLeft: p.loanDurationMatchdays, buyOptionFee: p.loanBuyOptionFee });
@@ -65,7 +64,6 @@
         playSound('goal');
         game.money -= loan.buyOptionFee;
         game.transferBudget -= loan.buyOptionFee;
-        p.isLoanedIn = false;
         p.contracts = 3;
         incomingLoans = incomingLoans.filter(l => l.playerId !== playerId);
         addInboxMessage('vertrag', `✅ Kaufoption gezogen: ${p.name}!`, `${p.name} wechselt dauerhaft von ${loan.parentClub} zum Verein!`, 'screen-squad');

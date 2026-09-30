@@ -284,7 +284,6 @@
         let eligible = youthTalents.filter(p => p.strength >= 62);
         if (eligible.length === 0 || Math.random() > 0.01) return;
         let p = eligible[Math.floor(Math.random() * eligible.length)];
-        game.youthNationalCallups = (game.youthNationalCallups || 0) + 1;
         p.strength = Math.min(99, p.strength + 1);
         game.fans = Math.min(100, game.fans + 2);
         addInboxMessage('vertrag', `🌍 U-Nationalmannschaft: ${p.name} berufen!`, `${p.name} wird erstmals in eine deutsche Jugend-Nationalmannschaft berufen - eine große Ehre für die Akademie und einen echten Entwicklungsschub!`, 'screen-youth');

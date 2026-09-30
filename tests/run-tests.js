@@ -377,7 +377,7 @@ async function testTransferMarket(browser) {
         let loan = incomingLoans.find(l => l.playerId === loanPlayer.id);
         exerciseLoanBuyOption(loanPlayer.id);
         let playerAfter = squad.find(p => p.id === loanPlayer.id);
-        results.buyOptionMakesPermanent = playerAfter.isLoanedIn === false;
+        results.buyOptionMakesPermanent = !!loan && !!playerAfter && !incomingLoans.some(l => l.playerId === loanPlayer.id);
 
         // Ausstiegsklausel
         let minClause = Math.round(squad[0].marketValue * 1.1);
@@ -4837,6 +4837,26 @@ async function testLiveMatchEngine(browser) {
     await page.close();
 }
 
+async function testNoWriteOnlyGameFields() {
+    console.log('\n[P16d] Aufräumen: keine game-Felder, die nur geschrieben und nie gelesen werden');
+    const fs = require('fs');
+    const root = path.resolve(__dirname, '..');
+    const quellen = ['index.html', ...fs.readdirSync(path.join(root, 'js')).filter(f => f.endsWith('.js')).map(f => 'js/' + f)]
+        .map(f => fs.readFileSync(path.join(root, f), 'utf8'));
+    const gelesen = new Set(), geschrieben = new Set();
+    quellen.forEach(src => src.split('\n').forEach(zeile => {
+        const zugewiesen = new Set([...zeile.matchAll(/\bgame\.(\w+)\s*(?:=(?!=)|\+=|-=|\+\+|--)/g)].map(m => m[1]));
+        for (const m of zeile.matchAll(/\bgame\.(\w+)/g)) {
+            const rest = zeile.slice(m.index + m[0].length, m.index + m[0].length + 4);
+            if (/^\s*(=(?!=)|\+=|-=|\*=|\+\+|--)/.test(rest)) geschrieben.add(m[1]);
+            // Lesen nur, um sich selbst hochzuzählen, zählt nicht - außer als Bedingung (if/?:)
+            else if (!zugewiesen.has(m[1]) || /\bif\s*\(|\?/.test(zeile)) gelesen.add(m[1]);
+        }
+    }));
+    const nurGeschrieben = [...geschrieben].filter(n => !gelesen.has(n));
+    assert(nurGeschrieben.length === 0, `Jedes geschriebene game-Feld wird irgendwo gelesen (${nurGeschrieben.join(', ')})`);
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -4922,6 +4942,7 @@ async function main() {
         testMobileLayout,
         testCareerBalancing,
         testLiveMatchEngine,
+        testNoWriteOnlyGameFields,
         testRuntimeRoundTrip,
     ];
 

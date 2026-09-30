@@ -1091,7 +1091,7 @@
             'trainingSchedule', 'trainingSpecialization', 'setPieceTraining', 'stadium',
             'internationalTournaments', 'playerInternationalCaps', 'internationalTournamentHistory', 'nextWorldCup', 'transferMarket', 'postMatchAnalysis',
             'transferBudgetUsed', 'transferMarketPlayers', 'transferLastRefreshMatchday', 'reserves', 'tournamentBrackets',
-            'squadHarmony', 'disciplinarySystem', 'crises', 'localRivals', 'tacticsHistory', 'playerRoles', 'formationHistory', 'tacticAnalysis', 'clubSwitchHistory'].forEach(k => { delete game[k]; });
+            'squadHarmony', 'disciplinarySystem', 'crises', 'localRivals', 'tacticsHistory', 'playerRoles', 'formationHistory', 'tacticAnalysis', 'clubSwitchHistory', 'youthNationalCallups', 'licenseRejectionCount'].forEach(k => { delete game[k]; });
         // Holding-Aufträge alter Spielstände trugen echte Vereinsnamen.
         const echteNamen = { 'Real Madrid': 'Real Madrit', 'FC Bayern': 'Bayern Munchen', 'FC Liverpool': 'Liverpol FC' };
         if (typeof holdingCompany !== 'undefined') (holdingCompany.b2bContracts || []).forEach(c => { if (echteNamen[c.club]) c.club = echteNamen[c.club]; });
@@ -6487,7 +6487,6 @@ function cleanupLegacyDevelopmentState() {
         if (squad.length >= 22) { showToast('Kader bereits voll (22 Spieler)!', 'error'); return; }
         playSound('whistle');
         game.money -= p.loanFee;
-        p.isLoanedIn = true;
         p.contracts = 1;
         squad.push(p);
         incomingLoans.push({ playerId: p.id, parentClub: p.loanParentClub, matchdaysLeft: p.loanDurationMatchdays, buyOptionFee: p.loanBuyOptionFee });
@@ -6506,7 +6505,6 @@ function cleanupLegacyDevelopmentState() {
         playSound('goal');
         game.money -= loan.buyOptionFee;
         game.transferBudget -= loan.buyOptionFee;
-        p.isLoanedIn = false;
         p.contracts = 3;
         incomingLoans = incomingLoans.filter(l => l.playerId !== playerId);
         addInboxMessage('vertrag', `✅ Kaufoption gezogen: ${p.name}!`, `${p.name} wechselt dauerhaft von ${loan.parentClub} zum Verein!`, 'screen-squad');
@@ -15133,14 +15131,6 @@ function finishGoalkeeperGame() {
                 infraEl.innerHTML = icons ? `<span>${icons}</span>` : '';
             }
         }
-        ['flutlicht', 'rasenheizung', 'videowalls', 'dach'].forEach(k => {
-            let btn = document.getElementById('btn-spec-' + k);
-            if (btn && stadium[k]) {
-                btn.innerText = btn.innerText.split('[')[0] + " [Installiert ✓]";
-                btn.disabled = true;
-            }
-        });
-
         if (typeof renderStadiumEventsPanel === 'function') renderStadiumEventsPanel();
     }
 
@@ -17205,7 +17195,6 @@ function renderStadiumEventsPanel() {
         let eligible = youthTalents.filter(p => p.strength >= 62);
         if (eligible.length === 0 || Math.random() > 0.01) return;
         let p = eligible[Math.floor(Math.random() * eligible.length)];
-        game.youthNationalCallups = (game.youthNationalCallups || 0) + 1;
         p.strength = Math.min(99, p.strength + 1);
         game.fans = Math.min(100, game.fans + 2);
         addInboxMessage('vertrag', `🌍 U-Nationalmannschaft: ${p.name} berufen!`, `${p.name} wird erstmals in eine deutsche Jugend-Nationalmannschaft berufen - eine große Ehre für die Akademie und einen echten Entwicklungsschub!`, 'screen-youth');
@@ -23173,7 +23162,6 @@ function cleanupLegacyScoutState() {
             if (req.minYouthLvl > 0 && (campusBuildings.internat?.lvl || 0) < req.minYouthLvl) failedReasons.push(`Jugendinternat zu niedrig ausgebaut (Stufe ${campusBuildings.internat?.lvl || 0} von benötigter Stufe ${req.minYouthLvl})`);
 
             if (failedReasons.length > 0) {
-                game.licenseRejectionCount = (game.licenseRejectionCount || 0) + 1;
                 // Nachfrist statt sofortiger endgültiger Verweigerung: bei knapp verfehlten
                 // Auflagen bekommt man 3 Spieltage der neuen Saison Zeit, die Mängel noch zu
                 // beheben - erst wenn auch die Nachfrist verstreicht, verfällt der Aufstieg
