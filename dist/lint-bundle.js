@@ -25258,8 +25258,20 @@ function renderCoachCarouselBox() {
         try { sessionStorage.setItem(key, value); return true; } catch (e) { console.error('Session-Storage nicht verfügbar:', e); return false; }
     }
 
+    // Spielpläne kompakt speichern: [heim, gast, heimtore, gasttore] statt Objekten mit
+    // langen Feldnamen (-1 = noch nicht gespielt) - macht rund die Hälfte des Spielstands aus.
+    function packFixtures(fx) {
+        return { packed: 1, ligen: (fx || []).map(liga => (liga || []).map(tag => (tag || []).map(f =>
+            [f.home, f.away, f.played ? f.homeGoals : -1, f.played ? f.awayGoals : -1]))) };
+    }
+    function unpackFixtures(fx) {
+        if (!fx || !fx.packed) return fx; // alter Spielstand: bereits Objekte
+        return fx.ligen.map(liga => liga.map(tag => tag.map(([home, away, hg, ag]) =>
+            ({ home, away, homeGoals: hg >= 0 ? hg : null, awayGoals: ag >= 0 ? ag : null, played: hg >= 0 }))));
+    }
+
     function buildSaveState() {
-        return { game, managerRPG, incomingOffers, holdingCompany, rawMaterials, factories, merchandise, merchExtras, productionQueue, globalScoutResults, scoutingNetwork, securityWorkforce, mediaRights, realEstatePortfolio, stockMarket, financeCentralState, underworld, stadium, campusBuildings, staffMembers, staffMeta, staffCentralState, secondTeamStaff, fanGroups, fanCentralState, privateLife, bandenSponsors, activeBet, betHistory, squad, lineup, secondTeamSquad, secondTeamLineup, youthTalents, activeLoans, loanClubRelationships, loanClubLastInteractionSeason, leaguesData, fixturesData, cupTournament, landesPokal, europeTournament, inboxMessages, inboxArchive, rivalryRecord, crestHistory, loanedPlayers, loanablePlayers, incomingLoans, youthLeagueTable, youthLeagueMatchday };
+        return { game, managerRPG, incomingOffers, holdingCompany, rawMaterials, factories, merchandise, merchExtras, productionQueue, globalScoutResults, scoutingNetwork, securityWorkforce, mediaRights, realEstatePortfolio, stockMarket, financeCentralState, underworld, stadium, campusBuildings, staffMembers, staffMeta, staffCentralState, secondTeamStaff, fanGroups, fanCentralState, privateLife, bandenSponsors, activeBet, betHistory, squad, lineup, secondTeamSquad, secondTeamLineup, youthTalents, activeLoans, loanClubRelationships, loanClubLastInteractionSeason, leaguesData, fixturesData: packFixtures(fixturesData), cupTournament, landesPokal, europeTournament, inboxMessages, inboxArchive, rivalryRecord, crestHistory, loanedPlayers, loanablePlayers, incomingLoans, youthLeagueTable, youthLeagueMatchday };
     }
 
     // Kontoauszug pausieren: das Object.assign im Rumpf setzt game.money auf den
@@ -25381,7 +25393,7 @@ function renderCoachCarouselBox() {
         if (typeof p.youthLeagueMatchday === 'number') youthLeagueMatchday = p.youthLeagueMatchday;
         if (p.incomingLoans) incomingLoans = p.incomingLoans;
         if (p.leaguesData) leaguesData = p.leaguesData;
-        if (p.fixturesData) fixturesData = p.fixturesData;
+        if (p.fixturesData) fixturesData = unpackFixtures(p.fixturesData);
         if (p.cupTournament) cupTournament = p.cupTournament;
         if (p.europeTournament) europeTournament = p.europeTournament;
         // Migrations-Fix (NEU): Speicherstände von vor der Vereinsumbenennung hatten den
@@ -25943,7 +25955,11 @@ function renderCoachCarouselBox() {
             // Leiser Struktur-Selbsttest im Hintergrund - macht Verschachtelungsfehler wie
             // die kürzlich gefundene fehlende </div> sofort sichtbar (roter Banner), statt
             // dass sie erst durch Nutzerberichte auffallen.
-            try { runStructuralSelfTest(true); } catch (e) { console.error('Struktur-Selbsttest konnte nicht laufen:', e); }
+            // Nur einmal pro Spielversion: der Test öffnet alle 44 Bildschirme und kostete auf
+            // dem Handy rund eine Sekunde bei jedem Start (Admin-Knopf startet ihn jederzeit).
+            if (safeLocalGet('anstoss_fm13_selftest_version') !== GAME_VERSION.number) {
+                try { runStructuralSelfTest(true); safeLocalSet('anstoss_fm13_selftest_version', GAME_VERSION.number); } catch (e) { console.error('Struktur-Selbsttest konnte nicht laufen:', e); }
+            }
         } catch (bootError) {
             // Letztes Sicherheitsnetz: falls beim Start trotzdem etwas vollkommen
             // Unerwartetes passiert (z.B. wegen eines extrem eingeschränkten WebViews),

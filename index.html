@@ -2655,7 +2655,11 @@
             // Leiser Struktur-Selbsttest im Hintergrund - macht Verschachtelungsfehler wie
             // die kürzlich gefundene fehlende </div> sofort sichtbar (roter Banner), statt
             // dass sie erst durch Nutzerberichte auffallen.
-            try { runStructuralSelfTest(true); } catch (e) { console.error('Struktur-Selbsttest konnte nicht laufen:', e); }
+            // Nur einmal pro Spielversion: der Test öffnet alle 44 Bildschirme und kostete auf
+            // dem Handy rund eine Sekunde bei jedem Start (Admin-Knopf startet ihn jederzeit).
+            if (safeLocalGet('anstoss_fm13_selftest_version') !== GAME_VERSION.number) {
+                try { runStructuralSelfTest(true); safeLocalSet('anstoss_fm13_selftest_version', GAME_VERSION.number); } catch (e) { console.error('Struktur-Selbsttest konnte nicht laufen:', e); }
+            }
         } catch (bootError) {
             // Letztes Sicherheitsnetz: falls beim Start trotzdem etwas vollkommen
             // Unerwartetes passiert (z.B. wegen eines extrem eingeschränkten WebViews),

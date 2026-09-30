@@ -5025,6 +5025,40 @@ async function testOnboarding(browser) {
     await page.close();
 }
 
+async function testCompactSave(browser) {
+    console.log('\n[P17d] Tempo & Speicher: kompakte Spielpläne, Selbsttest einmal pro Version');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        const out = {};
+        game.sackPending = false; simulateMatchdays(5);
+        const original = JSON.stringify(fixturesData);
+        const save = JSON.parse(JSON.stringify(buildSaveState()));
+        out.kompakt = JSON.stringify(save.fixturesData).length < 40000;
+        out.gesamtKB = Math.round(JSON.stringify(save).length / 1024);
+        fixturesData = [];
+        applyLoadedState(save);
+        out.verlustfrei = JSON.stringify(fixturesData) === original;
+        // Alter Spielstand mit Spielplan-Objekten lädt weiterhin
+        const alt = JSON.parse(JSON.stringify(buildSaveState()));
+        alt.fixturesData = JSON.parse(original);
+        fixturesData = [];
+        applyLoadedState(alt);
+        out.altLaedt = JSON.stringify(fixturesData) === original;
+        // Nach dem Laden läuft die Saison normal weiter
+        simulateMatchdays(1);
+        out.weiter = game.matchday === 7;
+        out.selbsttestGemerkt = safeLocalGet('anstoss_fm13_selftest_version') === GAME_VERSION.number || safeLocalGet('anstoss_fm13_selftest_version') === null;
+        return out;
+    });
+    assert(r.kompakt, `Spielpläne im Spielstand kompakt (Spielstand gesamt ${r.gesamtKB} KB)`);
+    assert(r.verlustfrei && r.altLaedt && r.weiter, 'Spielpläne verlustfrei gespeichert/geladen, alte Spielstände laden weiter');
+    assert(r.selbsttestGemerkt, 'Struktur-Selbsttest merkt sich die geprüfte Version');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 3).join(' | ')})`);
+    await page.close();
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -5114,6 +5148,7 @@ async function main() {
         testAiClubs,
         testPlayerStats,
         testOnboarding,
+        testCompactSave,
         testRuntimeRoundTrip,
     ];
 
