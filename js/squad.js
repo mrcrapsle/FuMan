@@ -759,7 +759,6 @@
         if (typeof renderPostMatchAnalysisPanel === 'function') renderPostMatchAnalysisPanel();
         if (typeof renderTrainingSpecializationPanel === 'function') renderTrainingSpecializationPanel();
         if (typeof renderFanEventsPanel === 'function') renderFanEventsPanel();
-        if (typeof renderMedicalManagementPanel === 'function') renderMedicalManagementPanel();
         if (typeof renderStadiumManagementPanel === 'function') renderStadiumManagementPanel();
         if (typeof renderYouthAcademyManagementPanel === 'function') renderYouthAcademyManagementPanel();
         if (typeof renderMediaManagementPanel === 'function') renderMediaManagementPanel();

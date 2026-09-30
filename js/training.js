@@ -287,7 +287,7 @@
             `;
             list.appendChild(row);
         });
-        if (typeof renderInjuryRiskPanel === 'function') renderInjuryRiskPanel();
+        if (typeof renderMedicalDepartmentPanel === 'function') renderMedicalDepartmentPanel();
         if (typeof renderTrainingSchedulePanel === 'function') renderTrainingSchedulePanel();
     }
 

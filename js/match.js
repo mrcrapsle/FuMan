@@ -1235,7 +1235,6 @@
         if (typeof currentMatch !== 'undefined' && currentMatch && typeof processDerbyMatch === 'function') {
             processDerbyMatch(currentMatch.opponent, won, currentMatch.score, currentMatch.conceded);
         }
-        if (typeof checkInjuries === 'function') checkInjuries();
         if (typeof checkForScandale === 'function') checkForScandale();
         if (typeof checkFanProtest === 'function') checkFanProtest();
         if (typeof checkUltraConflict === 'function') checkUltraConflict();
@@ -1425,6 +1424,7 @@
             let weeklyStats = computeWeeklyTrainingStats();
             injuryChance *= (1 + (weeklyStats.risk - 10) * 0.012);
         }
+        if (typeof getTrainingIntensityInjuryFactor === 'function') injuryChance *= getTrainingIntensityInjuryFactor();
 
         let playedThisMatch = squad.filter(p => lineup.includes(p.id));
 
@@ -1666,6 +1666,7 @@
             // Wochenplans gezielt für SIE persönlich ab, statt sie wie alle anderen voll
             // mitzubelasten.
             if ((p.timesInjured || 0) >= 2) individualInjuryChance *= 0.72;
+            if (typeof getAgeInjuryFactor === 'function') individualInjuryChance *= getAgeInjuryFactor(p);
             if (Math.random() < individualInjuryChance) {
                 let baseDuration = Math.floor(Math.random() * 4) + 1; // 1-4 Spiele Ausfallzeit
                 let reduction = 1 - (campusBuildings.reha.lvl * 0.08) - (staffMembers.physio.hired ? 0.5 : 0);
@@ -1765,9 +1766,6 @@
             let sponsorPayments = (typeof processSponsorPayments === 'function') ? processSponsorPayments() : 0;
             if (sponsorPayments > 0) game.money += sponsorPayments;
             if (typeof applySponsorBenefits === 'function') applySponsorBenefits();
-            // Medical Management: Genesung und Spielerverletzungen
-            if (typeof tickMedicalRecovery === 'function') tickMedicalRecovery();
-            if (typeof randomizeMatchInjuries === 'function') randomizeMatchInjuries();
             // Youth Academy (New Systems): Nachwuchsrekrutierung und Programm-Ticks
             if (typeof tickYouthRecruitment === 'function') tickYouthRecruitment();
             if (typeof tickYouthPrograms === 'function') tickYouthPrograms();
@@ -1807,9 +1805,6 @@
             // Opponent Analysis & Match Prediction: Gegner-Analyse und Match-Prognosen
             if (typeof tickOpponentAnalysis === 'function') tickOpponentAnalysis();
             if (typeof tickMatchPrediction === 'function') tickMatchPrediction();
-            // Injury Management: Verletzungs-Management und Genesung
-            if (typeof tickInjuryManagement === 'function') tickInjuryManagement();
-            if (typeof tickMatchInjuries === 'function') tickMatchInjuries();
             // Phase 10: Set-Piece Training, Post-Match Analysis, Training Specialization, Fan Events
             if (typeof tickSetPieceTraining === 'function') tickSetPieceTraining();
             if (typeof tickPostMatchAnalysis === 'function') tickPostMatchAnalysis();

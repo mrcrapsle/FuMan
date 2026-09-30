@@ -203,9 +203,7 @@ function applyCrisisEffects(crisis) {
         const numInuries = config.injuredPlayers.min + Math.floor(Math.random() * (config.injuredPlayers.max - config.injuredPlayers.min + 1));
         for (let i = 0; i < numInuries && i < squad.length; i++) {
             const player = squad[Math.floor(Math.random() * squad.length)];
-            if (typeof injurePlayer === 'function') {
-                injurePlayer(player, 'RANDOM');
-            }
+            if (typeof injurePlayerByEvent === 'function') injurePlayerByEvent(player, 'Verletzungskrise');
         }
     }
 

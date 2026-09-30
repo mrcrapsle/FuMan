@@ -47,10 +47,8 @@ function analyzeLastMatch() {
         // Form-Faktor
         rating += ((player.form || 1.0) - 1.0) * 20;
 
-        // Verletzungszustand
-        if (typeof getPlayerFormAfterInjury === 'function') {
-            rating *= getPlayerFormAfterInjury(player);
-        }
+        // Nach dem Spiel verletzt ausgefallen: Leistung litt darunter
+        if ((player.injured || 0) > 0) rating *= 0.85;
 
         return {
             playerId: player.id,
