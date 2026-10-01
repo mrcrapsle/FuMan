@@ -201,7 +201,7 @@
     // Reiter innerhalb eines Bildschirms (Historie, Finanzen): Container "subtab-<prefix>-<name>",
     // Knöpfe "btn-subtab-<prefix>-<name>". Danach wird der Bildschirm neu gezeichnet, weil
     // Diagramme ihre Breite erst messen können, wenn der Reiter sichtbar ist.
-    const SUBTAB_RENDER = { hist: () => renderHistoryView(), fin: () => renderFinancesView() };
+    const SUBTAB_RENDER = { hist: () => renderHistoryView(), fin: () => renderFinancesView(), jug: () => renderYouthView() };
     function setSubTab(prefix, tab) {
         playSound('click');
         document.querySelectorAll(`.subtab-${prefix}`).forEach(el => { el.style.display = el.id === `subtab-${prefix}-${tab}` ? 'block' : 'none'; });

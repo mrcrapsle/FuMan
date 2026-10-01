@@ -277,6 +277,112 @@ async function testSquadAndTactics(browser) {
 // ---------------------------------------------------------------------------
 // [6] JUGENDAKADEMIE
 // ---------------------------------------------------------------------------
+async function testYouthPathway(browser) {
+    console.log('\n[18.5] Jugend-Laufbahn: Potenzial, Profivertrag mit 19, Leihe, Durchbruch-Momente');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            game.money = 5000000;
+            youthTalents = [];
+            for (let i = 0; i < 6; i++) scoutYouthTalent();
+            out.potenzialEcht = youthTalents.every(p => typeof p.potential === 'number' && p.potential >= p.strength + 4
+                && p.potential >= YOUTH_POTENTIAL_RANGE[p.potentialTier][0] - 0 || p.potential === p.strength + 4);
+            const t0 = youthTalents[0];
+            out.unbekannt = getYouthPotentialText(t0).includes('unbekannt');
+            revealYouthPotential(t0.id);
+            out.spanne = /\d+-\d+/.test(getYouthPotentialText(t0));
+            for (let i = 0; i < 40; i++) tickYouthDevelopment();
+            out.grenze = youthTalents.every(p => p.strength <= p.potential);
+
+            // Alterung und Entscheidung mit 19
+            youthTalents.forEach(p => { p.age = 17; p.proDecisionLeft = null; });
+            const a = youthTalents[1], b = youthTalents[2];
+            a.age = 18; b.age = 18;
+            const inboxVor = inboxMessages.length;
+            ageYouthAtSeasonEnd();
+            out.altern = youthTalents[3].age === 18 && a.age === 19 && a.proDecisionLeft === YOUTH_DECISION_MATCHDAYS && b.proDecisionLeft === YOUTH_DECISION_MATCHDAYS;
+            out.meldung = inboxMessages.length > inboxVor;
+            showScreen('screen-youth');
+            out.karte = document.getElementById('youth-decision-box').innerHTML.includes('PROFIVERTRAG-ENTSCHEIDUNG');
+            // a bekommt den Profivertrag, b wartet ab und geht
+            const lohn = getYouthProWage(a);
+            promoteYouth(youthTalents.indexOf(a), null);
+            out.profi = squad.includes(a) && a.contracts === 3 && a.wage === lohn && a.academyGraduate === true && !a.proDecisionLeft;
+            const geld = game.money;
+            for (let i = 0; i < YOUTH_DECISION_MATCHDAYS; i++) tickYouthProDecisions();
+            out.abschied = !youthTalents.includes(b) && game.money > geld;
+
+            // Leihe zur Entwicklung
+            const c = youthTalents[0];
+            c.age = 17; c.strength = 55; c.potential = 80;
+            const clubs = getYouthLoanClubs(c);
+            out.echteVereine = clubs.length >= 2 && clubs.every(k => leaguesData[k.level].some(t => t.name === k.name));
+            openYouthLoanChoice(c.id);
+            out.auswahl = document.getElementById('youth-loan-choice-box').innerHTML.includes(clubs[0].name);
+            loanYouthForDevelopment(c.id, clubs[0].name);
+            const leihe = loanedPlayers.find(l => l.player === c);
+            out.verliehen = !!leihe && leihe.youthLoan && !youthTalents.includes(c);
+            out.leihBox = document.getElementById('youth-loans-box').innerHTML.includes(c.name);
+            const dauer = leihe.duration;
+            for (let i = 0; i < dauer; i++) tickLoanedPlayers();
+            out.zurueck = youthTalents.includes(c) && !loanedPlayers.includes(leihe) && leihe.apps > 0 && c.strength > 55;
+            out.leihBilanz = `${leihe.apps} Einsätze, ${leihe.goals} Tore, ${55} → ${c.strength} in ${dauer} SpT`;
+
+            // Durchbruch-Moment (Zufall erzwungen)
+            const d = youthTalents.find(p => p !== c) || c;
+            d.strength = 55; d.potential = 80;
+            const zufall = Math.random;
+            Math.random = () => 0.01;
+            try { tickYouthBreakthroughs(); } finally { Math.random = zufall; }
+            out.durchbruch = d.strength >= 58 && game.youthMoments.some(m => m.icon === '💥' && m.text.includes(d.name));
+
+            // Profidebüt und erstes Tor des Absolventen
+            lineup = pickBestLineupIds();
+            if (!lineup.includes(a.id)) lineup[lineup.length - 1] = a.id;
+            resetMatchEvents();
+            matchEvents.tore[a.id] = 1;
+            gradeOwnMatch(2, 0);
+            out.meilensteine = !!(a.milestones.debut && a.milestones.tor) && game.youthMoments.some(m => m.icon === '🎉') && game.youthMoments.some(m => m.icon === '⚽');
+
+            setSubTab('jug', 'entwicklung');
+            out.momente = document.getElementById('youth-moments-box').innerHTML.includes('Durchbruch');
+            const ext = document.getElementById('youth-academy-extended-panel').innerHTML;
+            out.deutsch = !/improving|excellent|stable|declining/.test(ext) && !ext.includes('Potenzial: 75');
+            setSubTab('jug', 'talente');
+
+            // Saisonwechsel lässt die Akademie altern
+            const e = youthTalents[0];
+            const alt = e.age;
+            simulateFullSeason();
+            concludeSeasonAndAdvance();
+            out.saisonAlter = !youthTalents.includes(e) || e.age === alt + 1 || squad.includes(e);
+            return out;
+        } catch (err) { return { crash: err.message + ' ' + err.stack }; }
+    });
+    assert(!r.crash, `Jugend-Laufbahn-Test ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.potenzialEcht, 'Jedes gesichtete Talent hat ein echtes Potenzial über seiner Stärke');
+        assert(r.unbekannt && r.spanne, 'Potenzial ist ungeprüft unbekannt und nach der Prüfung als Spanne sichtbar');
+        assert(r.grenze, 'Monatliche Entwicklung bleibt unter dem Potenzial');
+        assert(r.altern && r.meldung, 'Talente altern am Saisonende; mit 19 wird eine Profivertrag-Entscheidung fällig (mit Meldung)');
+        assert(r.karte, 'Jugendakademie zeigt die offene Entscheidung als Karte');
+        assert(r.profi, 'Profivertrag: Talent im Kader mit 3 Jahren Vertrag und Profigehalt');
+        assert(r.abschied, 'Ohne Entscheidung geht das Talent nach 8 Spieltagen gegen Ausbildungsentschädigung');
+        assert(r.echteVereine && r.auswahl, 'Leihe bietet echte KI-Vereine zur Auswahl an');
+        assert(r.verliehen && r.leihBox, 'Verliehenes Talent steht in der Leihliste der Akademie');
+        assert(r.zurueck, `Leihe bringt Einsätze und Entwicklung, danach zurück in die Akademie (${r.leihBilanz})`);
+        assert(r.durchbruch, 'Durchbruch: Leistungssprung mit Eintrag in den Akademie-Momenten');
+        assert(r.meilensteine, 'Profidebüt und erstes Profitor eines Absolventen werden festgehalten');
+        assert(r.momente && r.deutsch, 'Reiter Entwicklung zeigt die Momente, Trends auf Deutsch, kein Schein-Potenzial 75');
+        assert(r.saisonAlter, 'Saisonwechsel lässt die Akademie altern');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testYouthAcademy(browser) {
     console.log('\n[6] Jugendakademie');
     const { page } = await freshPage(browser);
@@ -4747,6 +4853,7 @@ async function testMobileLayout(browser) {
         Object.entries(tabs).forEach(([sc, [fn, ts]]) => ts.forEach(t => views.push([`${sc}/${t}`, () => { showScreen(sc); window[fn](t); }])));
         ['bank', 'budget', 'journal', 'uebersicht'].forEach(t => views.push([`fin/${t}`, () => { showScreen('screen-finances'); setSubTab('fin', t); }]));
         ['chronik', 'legenden', 'rivalen', 'titel'].forEach(t => views.push([`hist/${t}`, () => { showScreen('screen-history'); setSubTab('hist', t); }]));
+        ['entwicklung', 'liga', 'talente'].forEach(t => views.push([`jug/${t}`, () => { showScreen('screen-youth'); setSubTab('jug', t); }]));
         const W = document.documentElement.clientWidth;
         const ueberlauf = [], knoepfe = [], schrift = [], verdeckt = [];
         for (const [name, open] of views) {
@@ -5272,6 +5379,7 @@ async function main() {
         testEconomy,
         testSquadAndTactics,
         testYouthAcademy,
+        testYouthPathway,
         testTransferMarket,
         testStadiumSystems,
         testAllScreensRender,

@@ -260,8 +260,9 @@
         if (Math.random() < successChance) {
             game.money -= loanRecallNegoAmount;
             let p = loan.player;
-            secondTeamSquad.push(p);
             loanedPlayers.splice(loanRecallNegoIndex, 1);
+            if (loan.youthLoan) returnYouthFromLoan(loan);
+            else secondTeamSquad.push(p);
             loanClubRelationships[loan.loanClub] = (loanClubRelationships[loan.loanClub] || 0) + 1;
             loanClubLastInteractionSeason[loan.loanClub] = game.season;
             autoLineupSecondTeam();
@@ -296,6 +297,13 @@
         for (let i = loanedPlayers.length - 1; i >= 0; i--) {
             let loan = loanedPlayers[i];
             loan.duration--;
+            if (loan.youthLoan) {
+                // Leihe zur Entwicklung (youth-pathway.js): Einsätze und Fortschritt je Spieltag,
+                // am Ende zurück in die Akademie.
+                if (typeof tickYouthLoanMatchday === 'function') tickYouthLoanMatchday(loan);
+                if (loan.duration <= 0) { loanedPlayers.splice(i, 1); returnYouthFromLoan(loan); }
+                continue;
+            }
             if (loan.duration <= 0) {
                 let p = loan.player;
                 let devBonus = 1 + Math.floor(Math.random() * 3); // +1 bis +3 durch die Leihe
@@ -512,7 +520,7 @@
                 : loanedPlayers.map((l, idx) => {
                     let fee = Math.max(1500, Math.round(l.player.marketValue * 0.1 * (l.duration / 15)));
                     return `<div class="box" style="font-size:10px; display:flex; justify-content:space-between; align-items:center;">
-                        <span>📤 ${l.player.name} bei ${l.loanClub} - noch ${l.duration} Spieltage</span>
+                        <span>📤 ${l.player.name}${l.youthLoan ? ' 🌱' : ''} bei ${l.loanClub} - noch ${l.duration} Spieltage</span>
                         <button onclick="openLoanRecallNegotiation(${idx})" class="btn-secondary" style="width:auto; font-size:9px;" title="Rückholung verhandeln">🔙 Verhandeln</button>
                     </div>`;
                 }).join('');

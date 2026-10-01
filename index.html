@@ -1885,38 +1885,59 @@
                 </div>
             </div>
             <div id="screen-youth" style="display:none;">
-                <div class="panel">
-                    <div class="panel-header">🌱 JUGENDAKADEMIE</div>
-                    <div class="box">Akademie-Stufe: <strong id="youth-lvl-disp">1</strong></div>
-                    <div class="box" id="youth-capacity-box">Kapazität: 0 / 5</div>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
-                        <button onclick="upgradeYouthAcademy()" id="btn-upgrade-youth-academy" class="btn-secondary">Akademie ausbauen [35.000 €]</button>
-                        <button onclick="scoutYouthTalent()" class="btn-action">🌟 Nachwuchs sichten [8.000 €]</button>
-                        <button onclick="expandYouthCapacity()" id="btn-expand-youth-capacity" class="btn-secondary">🏠 Kapazität erweitern</button>
-                        <button onclick="holdYouthTournament()" class="btn-secondary">🏆 Jugendturnier [4.000 €]</button>
+                <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:8px;">
+                    <button onclick="setSubTab('jug', 'talente')" id="btn-subtab-jug-talente" class="btn-action" style="font-size:10px; padding:6px 2px;">🌱 Talente</button>
+                    <button onclick="setSubTab('jug', 'entwicklung')" id="btn-subtab-jug-entwicklung" class="btn-secondary" style="font-size:10px; padding:6px 2px;">📈 Entwicklung</button>
+                    <button onclick="setSubTab('jug', 'liga')" id="btn-subtab-jug-liga" class="btn-secondary" style="font-size:10px; padding:6px 2px;">🏆 Jugendliga</button>
+                </div>
+                <div id="subtab-jug-talente" class="subtab-jug">
+                    <div id="youth-decision-box"></div>
+                    <div id="youth-loan-choice-box"></div>
+                    <div class="panel">
+                        <div class="panel-header">🌱 JUGENDAKADEMIE</div>
+                        <div class="box">Akademie-Stufe: <strong id="youth-lvl-disp">1</strong></div>
+                        <div class="box" id="youth-capacity-box">Kapazität: 0 / 5</div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
+                            <button onclick="upgradeYouthAcademy()" id="btn-upgrade-youth-academy" class="btn-secondary">Akademie ausbauen [35.000 €]</button>
+                            <button onclick="scoutYouthTalent()" class="btn-action">🌟 Nachwuchs sichten [8.000 €]</button>
+                            <button onclick="expandYouthCapacity()" id="btn-expand-youth-capacity" class="btn-secondary">🏠 Kapazität erweitern</button>
+                            <button onclick="holdYouthTournament()" class="btn-secondary">🏆 Jugendturnier [4.000 €]</button>
+                        </div>
+                        <div id="youth-talents-list" style="margin-top:8px;"></div>
                     </div>
-                    <div id="youth-talents-list" style="margin-top:8px;"></div>
+                    <div class="panel" id="youth-poach-box" style="display:none; border: 1px solid var(--danger);"></div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--teal);">📤 VERLIEHENE TALENTE</div>
+                        <div id="youth-loans-box"></div>
+                    </div>
                 </div>
-                <div class="panel" id="youth-poach-box" style="display:none; border: 1px solid var(--danger);"></div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">🏆 JUGENDLIGA</div>
-                    <div id="youth-league-table-box"></div>
+                <div id="subtab-jug-entwicklung" class="subtab-jug" style="display:none;">
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--accent);">💥 MOMENTE DER AKADEMIE</div>
+                        <div id="youth-moments-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header">📊 POTENZIAL & ENTWICKLUNG</div>
+                        <div id="youth-leaderboard-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--blue);">🌟 JUGENDTRAINER & TOP-TALENTE</div>
+                        <div id="youth-academy-extended-panel"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--primary);">📈 ENTWICKLUNGSFORTSCHRITT</div>
+                        <div id="youth-development-chart-panel"></div>
+                    </div>
                 </div>
-                <div class="panel">
-                    <div class="panel-header">📊 JUGEND-BESTENLISTE</div>
-                    <div id="youth-leaderboard-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--blue);">🌟 AKADEMIE ERWEITERT</div>
-                    <div id="youth-academy-extended-panel"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--primary);">📈 ENTWICKLUNGSFORTSCHRITT</div>
-                    <div id="youth-development-chart-panel"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">🎓 AKADEMIE-RANGLISTE</div>
-                    <div id="academy-ranking-panel"></div>
+                <div id="subtab-jug-liga" class="subtab-jug" style="display:none;">
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--gold);">🏆 JUGENDLIGA</div>
+                        <div id="youth-league-table-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--gold);">🎓 AKADEMIE-RANGLISTE</div>
+                        <div id="academy-ranking-panel"></div>
+                    </div>
                 </div>
             </div>
             <div id="screen-contracts" style="display:none;">
@@ -2513,6 +2534,7 @@
 <script src="js/fans.js?v=2.1"></script>
 <script src="js/youth.js?v=2.1"></script>
 <script src="js/youth-academy-extended.js?v=2.1"></script>
+<script src="js/youth-pathway.js?v=3.11"></script>
 <script src="js/academy-ranking.js?v=2.1"></script>
 <script src="js/bonusclauses.js?v=2.1"></script>
 <script src="js/contracts.js?v=2.1"></script>

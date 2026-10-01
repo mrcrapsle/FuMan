@@ -109,6 +109,7 @@ function tickYouthDevelopment() {
     const coachBonus = getYouthCoachBonus();
 
     youthTalents.forEach(p => {
+        if (typeof ensureYouthPotential === 'function') ensureYouthPotential(p);
         const ageDecay = Math.max(0.5, 1.0 - Math.max(0, p.age - 20) * 0.05);
         const focusBonus = p.youthFocus && p.youthFocus !== 'allgemein' ? 1.2 : 1.0;
         const mentorBonus = p.mentorId && squad.some(s => s.id === p.mentorId) ? 1.35 : 1.0;
@@ -139,6 +140,7 @@ function migrateLegacyYouthAcademy() {
         const neu = createPlayer(pos, staerke, staerke, null, [yp.age || 17, yp.age || 17]);
         if (yp.name) neu.name = yp.name;
         if (typeof assignYouthPotentialTier === 'function') assignYouthPotentialTier(neu);
+        if (typeof ensureYouthPotential === 'function') ensureYouthPotential(neu);
         neu.youthFocus = 'allgemein';
         youthTalents.push(neu);
     });
@@ -177,19 +179,19 @@ function renderYouthAcademyPanel() {
 
     html += '<div style="font-size:10px; font-weight:bold; margin-bottom:6px; color:var(--accent);">🌟 Top-Talente:</div>';
     ranking.slice(0, 5).forEach((p, idx) => {
-        const trendIcon = {
-            'excellent': '📈',
-            'good': '↗️',
-            'improving': '🔼',
-            'stable': '➡️',
-            'declining': '↘️',
-            'new': '✨'
+        const trend = {
+            'excellent': '📈 stark verbessert',
+            'good': '↗️ gute Entwicklung',
+            'improving': '🔼 verbessert sich',
+            'stable': '➡️ stagniert',
+            'declining': '↘️ baut ab',
+            'new': '✨ neu in der Akademie'
         }[p.developmentTrend];
 
         html += `<div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:4px; font-size:9px;">
             <div><strong>${idx + 1}. ${p.name}</strong> (${p.pos} | Str: ${p.strength})</div>
-            <div style="color:var(--text-muted); font-size:8px;">Potenzial: ${p.potential || 75} | Score: ${p.talentScore}</div>
-            <div style="color:var(--accent); font-size:8px;">${trendIcon} ${p.developmentTrend}</div>
+            <div style="color:var(--text-muted); font-size:8px;">Potenzial: ${typeof getYouthPotentialText === 'function' ? getYouthPotentialText(p) : '?'} | Talentwert: ${p.talentScore}</div>
+            <div style="color:var(--accent); font-size:8px;">${trend}</div>
         </div>`;
     });
 

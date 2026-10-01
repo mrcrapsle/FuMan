@@ -46,6 +46,7 @@ function agePlayer(p) {
 function agePlayersAtSeasonEnd() {
     const changes = squad.map(p => ({ p, delta: agePlayer(p) }));
     if (typeof secondTeamSquad !== 'undefined') secondTeamSquad.forEach(agePlayer);
+    if (typeof ageYouthAtSeasonEnd === 'function') ageYouthAtSeasonEnd();
     // Wer jetzt das Rentenalter erreicht, beendet seine Laufbahn zum Saisonwechsel.
     if (typeof tickPlayerRetirement === 'function') tickPlayerRetirement();
     const auf = changes.filter(c => c.delta > 0).sort((a, b) => b.delta - a.delta);

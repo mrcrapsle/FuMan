@@ -1628,6 +1628,7 @@
             checkYouthPoachingAttempt();
             checkYouthNationalCallup();
         }
+        if (typeof tickYouthProDecisions === 'function') tickYouthProDecisions();
         // Holding & Industrie: echte Marktpreis-Schwankungen und Konkurrenzfirmen-Aktivität
         // jeden verarbeiteten Spieltag.
         if (typeof tickRawMaterialPrices === 'function') {
@@ -1896,6 +1897,7 @@
             if (typeof tickBoardRoom === 'function') tickBoardRoom();
             // Jugend: monatliche Talententwicklung (Trainer-/Fokus-/Mentor-Bonus)
             if (typeof tickYouthDevelopment === 'function') tickYouthDevelopment();
+            if (typeof tickYouthBreakthroughs === 'function') tickYouthBreakthroughs();
             // Medienabteilung: Medienereignisse aus dem Saisonverlauf
             if (typeof tickMediaDepartment === 'function') tickMediaDepartment();
             if (typeof cleanupLegacyContractState === 'function') cleanupLegacyContractState();

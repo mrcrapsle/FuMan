@@ -26,6 +26,7 @@
         }
 
         youthTalents.forEach((p, idx) => {
+            if (typeof ensureYouthPotential === 'function') ensureYouthPotential(p);
             let row = document.createElement('div');
             row.className = 'player-row';
             row.style.flexDirection = 'column';
@@ -35,9 +36,10 @@
                 : `<button onclick="revealYouthPotential('${p.id}')" class="btn-secondary" style="width:auto; font-size:8px;">🔍 Potenzial prüfen [3.000 €]</button>`;
             row.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 28) : ''}${p.name} (${p.pos}|Str: ${p.strength}) ${p.trait && p.trait!=='Kein'?`<span class="badge badge-trait">${p.trait}</span>`:''}</span>
+                    <span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 28) : ''}${p.name} (${p.pos}, ${p.age} J., Str ${p.strength})${p.proDecisionLeft ? ' <span class="badge" style="background:rgba(255,193,7,0.3);">✍️ Entscheidung</span>' : ''} ${p.trait && p.trait!=='Kein'?`<span class="badge badge-trait">${p.trait}</span>`:''}</span>
                     <span style="display:flex; gap:4px;">
                         <button onclick="promoteYouth(${idx}, this)" class="btn-action" style="width:auto; font-size:9px;">In Profikader</button>
+                        ${(p.age || 0) >= 17 ? `<button onclick="openYouthLoanChoice('${p.id}')" class="btn-secondary" style="width:auto; font-size:9px;" title="Leihe zur Entwicklung">📤 Leihe</button>` : ''}
                         ${game.secondTeam.isActive ? `<button onclick="promoteYouthToSecondTeam(${idx}, this)" class="btn-secondary" style="width:auto; font-size:9px; color:var(--teal);" title="Behutsamer Weg: erst Spielpraxis in der Reserve sammeln">In die Reserve</button>` : ''}
                     </span>
                 </div>
@@ -76,7 +78,7 @@
                     </div>`;
             }
         }
-        renderYouthLeaderboard();
+        if (typeof renderYouthPathwayBoxes === 'function') renderYouthPathwayBoxes();
 
         if (typeof renderYouthAcademyPanel === 'function') renderYouthAcademyPanel();
         if (typeof renderYouthDevelopmentChart === 'function') renderYouthDevelopmentChart();
@@ -306,16 +308,6 @@
         updateUI();
     }
 
-    // 7. Jugend-Bestenliste: sortiert nach Stärke, zeigt Potenzial wo bekannt.
-    function renderYouthLeaderboard() {
-        let box = document.getElementById('youth-leaderboard-box');
-        if (!box) return;
-        let sorted = [...youthTalents].sort((a, b) => b.strength - a.strength);
-        box.innerHTML = sorted.length === 0
-            ? '<div style="font-size:9px; color:var(--text-muted);">Keine Talente in der Akademie.</div>'
-            : sorted.map((p, i) => `<div class="box" style="display:flex; justify-content:space-between; font-size:9px;"><span>#${i+1} ${p.name} (${p.pos})</span><span>Str: ${p.strength} ${p.potentialRevealed ? POTENTIAL_TIER_LABELS[p.potentialTier] : ''}</span></div>`).join('');
-    }
-
     // 8. Jugendtalent freilassen: bisher gab es nur "Befördern", kein Ausmustern.
     function releaseYouthTalent(playerId, btn) {
         if (!requireConfirm(btn, 'Wirklich freilassen?')) return;
@@ -359,6 +351,7 @@
         let internatLvl = campusBuildings.internat?.lvl || 0;
         let p = createPlayer(["TW", "ABW", "MIT", "ST"][Math.floor(Math.random()*4)], 46 + game.youthAcademyLvl * 3 + internatLvl * 2, 58 + game.youthAcademyLvl * 3 + internatLvl * 2, null, [15, 18]);
         assignYouthPotentialTier(p);
+        if (typeof ensureYouthPotential === 'function') ensureYouthPotential(p);
         p.youthFocus = 'allgemein';
         youthTalents.push(p);
         renderYouthView();
@@ -373,6 +366,8 @@
         if (!requireConfirm(btn, 'Wirklich in die Reserve?')) return;
         playSound('click');
         let p = youthTalents[idx];
+        p.academyGraduate = true;
+        p.proDecisionLeft = null;
         secondTeamSquad.push(p);
         youthTalents.splice(idx, 1);
         if (typeof autoLineupSecondTeam === 'function') autoLineupSecondTeam();
@@ -387,6 +382,7 @@
         if (!requireConfirm(btn, 'Wirklich hochziehen?')) return;
         playSound('click');
         let p = youthTalents[idx];
+        if (typeof signYouthProContract === 'function') signYouthProContract(p);
         squad.push(p);
         youthTalents.splice(idx, 1);
         if (typeof updateAcademyPoints === 'function') updateAcademyPoints('youth-graduation');
@@ -395,7 +391,7 @@
         // ist immer ein Grund zum Feiern für die Kabine.
         squad.forEach(pl => { pl.morale = Math.min(100, pl.morale + 2); });
         game.fans = Math.min(100, game.fans + 2);
-        addInboxMessage('vertrag', `🎓 Jugendakademie-Abschlussfeier: ${p.name}!`, `${p.name} (${p.pos}, Stärke ${p.strength}) wird feierlich in den Profikader aufgenommen - die ganze Mannschaft feiert mit und ist spürbar motiviert!`, 'screen-squad');
+        addInboxMessage('vertrag', `🎓 Jugendakademie-Abschlussfeier: ${p.name}!`, `${p.name} (${p.pos}, Stärke ${p.strength}) unterschreibt einen Profivertrag über ${p.contracts} Jahre (${formatVal(p.wage)} pro Spieltag) und wird feierlich in den Profikader aufgenommen - die ganze Mannschaft feiert mit!`, 'screen-squad');
         showToast(`🎓 ${p.name} feierlich in den Profikader befördert!`, 'success');
         renderYouthView();
         updateUI();

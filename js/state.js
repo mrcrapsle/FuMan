@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.10', date: '30.09.2026', features: 'Phase 18: Liga-Statistiken (Torjägerliste der ganzen Liga, Formtabelle, Heim/Auswärts, Tabellenverlauf)' };
+    const GAME_VERSION = { number: '3.11', date: '01.10.2026', features: 'Phase 18: Jugend sichtbarer (echtes Potenzial, Profivertrag mit 19, Leihe zur Entwicklung, Durchbruch-Momente)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

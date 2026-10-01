@@ -75,6 +75,7 @@ function gradeOwnMatch(ourGoals, oppGoals) {
         addInboxMessage('vertrag', `⭐ Elf des Spieltags: ${elf.map(p => p.name).join(', ')}`,
             `Die Fachpresse nominiert ${elf.map(p => `${p.name} (Note ${formatGrade(p.lastGrade)})`).join(', ')} für die Elf des ${game.matchday}. Spieltags - Moralschub!`, 'screen-squad');
     }
+    if (typeof checkYouthMilestones === 'function') checkYouthMilestones(starter, matchEvents.tore);
     game.lastMatchBestPlayer = bester ? { name: bester.p.name, note: bester.note, matchday: game.matchday, season: game.season } : null;
     resetMatchEvents();
     return bester;

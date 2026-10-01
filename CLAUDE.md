@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Anstoß Mobile Pro - FM13** is a fully-featured browser-based football manager simulation game. The codebase is modular (index.html + css/styles.css + 83 js/*.js files) that bundles into a single 1.8 MB standalone HTML file. The game runs entirely in the browser with local storage for save games, works offline, and supports mobile devices.
+**Anstoß Mobile Pro - FM13** is a fully-featured browser-based football manager simulation game. The codebase is modular (index.html + css/styles.css + 84 js/*.js files) that bundles into a single 1.8 MB standalone HTML file. The game runs entirely in the browser with local storage for save games, works offline, and supports mobile devices.
 
 ## Working With the User
 
@@ -106,7 +106,7 @@ This pattern ensures:
 **One system per area** (Phases 12/13 merged duplicates - don't add parallel ones again):
 - Injuries: only the post-match roll in `processPostMatchRoutine()`; extra factors and the panel live in `js/medical-department.js`. Events injure via `injurePlayerByEvent()` (never reduce strength).
 - Media: `game.managerMediaImage` is the single image; actions/events and the pre-match press conference (`renderPressConference()`, situation-based answers with real effects, promises settled in `resolvePressPromise()`) in `js/media-department.js`.
-- Youth: `youthTalents` (js/youth.js) plus coach/ranking/monthly development in `js/youth-academy-extended.js` / `js/academy-ranking.js`.
+- Youth: `youthTalents` (js/youth.js) plus coach/ranking/monthly development in `js/youth-academy-extended.js` / `js/academy-ranking.js`. The pathway lives in `js/youth-pathway.js`: real ceiling `p.potential` (`ensureYouthPotential()`, shown only after the paid check), aging via `ageYouthAtSeasonEnd()` (from `agePlayersAtSeasonEnd()`), pro-contract decision at 19 (`p.proDecisionLeft`, `promoteYouth()` signs via `signYouthProContract()`), development loans through `loanedPlayers` with `youthLoan: true` (ticked in `tickLoanedPlayers()`), moments in `game.youthMoments` (breakthroughs, debut/first goal via `checkYouthMilestones()` in `gradeOwnMatch()`). Youth screen uses sub-tabs `setSubTab('jug', …)`.
 - Sponsoring: `js/sponsors.js` (main, kit, sleeve, boards, bus).
 - Contracts: `p.contracts` = remaining years (counted down in season-end.js); extensions are salary talks via `getContractDemand(p)` (manual talk, sport director and ultimatum all use it; playtime promises checked in `checkPlaytimePromises()`), release clauses in `js/contracts.js`, ultimatums in `js/contract-ultimatum.js`. Wages are `p.wage` per matchday (there is no `p.salary`). Agents are `p.agent` (fee via `getAgentFee()`).
 - Scouting: the regional network in `js/scouting.js`. Opponent prediction: `js/match-scout.js` (uses `simulateGoals` on real fixtures).
@@ -290,7 +290,7 @@ CI runs on every branch; only `main` deploys. Only push to `main` after `npm run
 
 - **index.html** – Main page; embeds CSS, loads all js/ modules, defines screen containers
 - **css/styles.css** – All styles; organized by section (DASHBOARD, SQUAD, MANAGER'S OFFICE, etc.)
-- **js/*.js** – Game logic modules (83 files); loaded in order of dependencies
+- **js/*.js** – Game logic modules (84 files); loaded in order of dependencies
 - **tests/run-tests.js** – Playwright test suite
 - **build.py** – Bundler script; concatenates and lints
 - **server.py** / `npm run serve` – Local dev server
