@@ -160,6 +160,8 @@
         if (isHomeMatch && typeof getBlockCultureHomeBonus === 'function') bonus += getBlockCultureHomeBonus();
         // Stadion-Erweiterungen (NEU): Beschallungsanlage verstärkt den Heimvorteil.
         if (isHomeMatch && typeof getStadiumHomeAdvantageBonus === 'function') bonus += getStadiumHomeAdvantageBonus();
+        // Fan-Aktionen (Choreo heim, Sonderzug auswärts), siehe runFanAction() in fans.js.
+        if (typeof getFanSupportBonus === 'function') bonus += getFanSupportBonus(isHomeMatch);
         // Kapitän (NEU): war bisher rein kosmetisch (nur ein Ⓒ-Icon) - steht der ernannte
         // Kapitän tatsächlich auf dem Feld, gibt seine Führungsqualität einen kleinen, aber
         // echten Team-Stärke-Bonus. Ein erfahrener Kapitän (30+) wirkt sich stärker aus.
@@ -1342,6 +1344,13 @@
             summeAus: ledgerSummeAus
         });
         if (game.financeLedger.length > 80) game.financeLedger.shift();
+        // Ausgaben-Warnlimit (Finanzen): meldet sich beim Überschreiten, nicht jeden Spieltag neu.
+        let warnLimit = financeCentralState.expenseWarningLimit || 0;
+        let vorher = game.financeLedger[game.financeLedger.length - 2];
+        if (warnLimit > 0 && ledgerSummeAus > warnLimit && !(vorher && vorher.summeAus > warnLimit)) {
+            let groesste = [...ausgaben].sort((a, b) => b.amount - a.amount).slice(0, 3).map(e => `${e.label}: ${formatVal(e.amount)}`).join(', ');
+            addInboxMessage('finanzen', '⚠️ Ausgaben über dem Warnlimit', `Die Ausgaben dieses Spieltags (${formatVal(ledgerSummeAus)}) liegen über deinem Warnlimit von ${formatVal(warnLimit)}. Größte Posten: ${groesste}.`, 'screen-finances');
+        }
         // Financial Fairplay (js/ffp.js): die komplette Spieltagsabrechnung zaehlt zum
         // laufenden Saison-Ergebnis - anders als der Kontoauszug (siehe protokolliereBuchung
         // in finances.js) gibt es hier keine Ausnahmen, das Spieltagsgeschaeft ist immer
@@ -1602,6 +1611,7 @@
             checkJobSecurity();
             generatePressHeadline(matchResult, isHomeDerby);
             recordHomeAwayResult(isHomeMatchParam, matchResult);
+            if (typeof consumeFanSupport === 'function') consumeFanSupport(isHomeMatchParam);
             checkBettingScandalSuspicion(matchResult, matchMargin);
             if (isLiveContext) checkPostMatchInterview(matchResult);
             checkJobOfferApproach({ live: isLiveContext });

@@ -801,6 +801,7 @@
                             <button onclick="showClubSwitchOptions()" class="btn-secondary" style="width:auto; padding:5px 10px; font-size:10px;">🔄 Verein wechseln</button>
                         </div>
                     </div>
+                    <div id="club-rename-box"></div>
                     <div id="club-switch-box"></div>
                 </div>
                 <div class="panel">
@@ -1742,8 +1743,8 @@
                 <div class="panel">
                     <div id="fan-groups-list"></div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px; margin-top:6px;">
-                        <button onclick="runFanAction('choreo', 8000)" class="btn-secondary">🎨 Mega-Choreo [8.000 €]</button>
-                        <button onclick="runFanAction('express', 5000)" class="btn-secondary">🚆 Sonderzug [5.000 €]</button>
+                        <button onclick="runFanAction('choreo')" id="btn-fan-action-choreo" class="btn-secondary">🎨 Mega-Choreo [8.000 €]</button>
+                        <button onclick="runFanAction('express')" id="btn-fan-action-express" class="btn-secondary">🚆 Sonderzug [5.000 €]</button>
                     </div>
                 </div>
                 <div class="panel">
@@ -1782,6 +1783,7 @@
                         <button onclick="setSeasonMoodTarget(75)" class="btn-secondary" style="font-size:9px;">🎯 Ziel: 75%</button>
                         <button onclick="setSeasonMoodTarget(90)" class="btn-secondary" style="font-size:9px;">🎯 Ziel: 90%</button>
                     </div>
+                    <div id="fan-mood-target-box" style="font-size:9px; color:var(--text-muted); margin-top:4px;"></div>
                 </div>
                 <div class="panel">
                     <div class="panel-header">🌟 JUGEND-PATENSCHAFTEN DER FANS</div>

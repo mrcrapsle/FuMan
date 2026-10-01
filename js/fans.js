@@ -60,6 +60,14 @@
     }
 
     function renderFansView() {
+        renderFanActionButtons();
+        let zielBox = document.getElementById('fan-mood-target-box');
+        if (zielBox) {
+            let t = fanCentralState.seasonMoodTarget;
+            zielBox.innerHTML = t && t.season === game.season
+                ? `🎯 Saisonziel: ${t.value}% Fan-Zufriedenheit (aktuell ${Math.round(game.fans)}%). Erreicht: ${formatVal(25000)} Prämie, verfehlt: Stimmung -3.`
+                : (game.matchday <= 6 ? 'Saisonziel bis zum 6. Spieltag wählbar - Prämie bei Erfolg, Stimmungsverlust bei Misserfolg.' : 'Saisonziel nur bis zum 6. Spieltag wählbar.');
+        }
         renderSecurityWorkforceBox();
         renderAttendanceChart();
         renderAttendanceRanking();
@@ -256,13 +264,41 @@
         `;
     }
 
-    function runFanAction(act, cost) {
-        if (game.money < cost) return;
+    // Fan-Aktionen: Choreo wirkt im nächsten Heimspiel, der Sonderzug im nächsten Auswärtsspiel
+    // (calcTeamStrength). Je eine Buchung bis zum Spiel - früher brachten beide dasselbe +5
+    // Stimmung, beliebig oft, und die teurere Choreo war schlicht die schlechtere Wahl.
+    const FAN_ACTIONS = {
+        choreo: { label: '🎨 Mega-Choreo', cost: 8000, bonus: 2, wann: 'im nächsten Heimspiel' },
+        express: { label: '🚆 Sonderzug', cost: 5000, bonus: 1.5, wann: 'im nächsten Auswärtsspiel' }
+    };
+    function runFanAction(act) {
+        let a = FAN_ACTIONS[act];
+        if (!a) return;
+        if (!game.fanSupport) game.fanSupport = {};
+        if (game.fanSupport[act]) { showToast(`${a.label} ist schon für das nächste Spiel gebucht.`, 'error'); return; }
+        if (game.money < a.cost) { showToast(`Nicht genug Geld! Benötigt: ${formatVal(a.cost)}`, 'error'); return; }
         playSound('click');
-        game.money -= cost;
-        game.fans = Math.min(100, game.fans + 5);
+        game.money -= a.cost;
+        game.fanSupport[act] = true;
+        game.fans = Math.min(100, game.fans + 2);
+        showToast(`${a.label} gebucht: +${String(a.bonus).replace('.', ',')} Stärke ${a.wann}, Fans +2.`, 'success');
         renderFansView();
         updateUI();
+    }
+    function getFanSupportBonus(isHomeMatch) {
+        let fs = game.fanSupport || {};
+        return isHomeMatch ? (fs.choreo ? FAN_ACTIONS.choreo.bonus : 0) : (fs.express ? FAN_ACTIONS.express.bonus : 0);
+    }
+    // Nach jedem eigenen Ligaspiel: die passende Aktion ist verbraucht.
+    function consumeFanSupport(isHomeMatch) {
+        if (!game.fanSupport) return;
+        if (isHomeMatch) game.fanSupport.choreo = false; else game.fanSupport.express = false;
+    }
+    function renderFanActionButtons() {
+        Object.entries(FAN_ACTIONS).forEach(([key, a]) => {
+            let btn = document.getElementById('btn-fan-action-' + key);
+            if (btn) btn.innerText = (game.fanSupport || {})[key] ? `${a.label}: gebucht ✓` : `${a.label} [${formatVal(a.cost)}] +${String(a.bonus).replace('.', ',')} ${a.wann.replace('im nächsten ', '')}`;
+        });
     }
 
     // ==========================================
@@ -503,7 +539,10 @@
     }
 
     // 12. Fan-Zufriedenheits-Saisonziel: freiwillige Selbstverpflichtung mit Bonus bei Erfolg.
+    // Nur bis zum 6. Spieltag und mit Risiko: verfehlt kostet Fanstimmung (früher war das Ziel
+    // ein Gratis-Los - kurz vor Saisonende gesetzt, wenn die Stimmung ohnehin passte).
     function setSeasonMoodTarget(target) {
+        if (game.matchday > 6) { showToast('Saisonziele lassen sich nur bis zum 6. Spieltag festlegen.', 'error'); return; }
         fanCentralState.seasonMoodTarget = { value: target, season: game.season };
         pushFanFeedEntry(`🎯 Saisonziel gesetzt: mindestens ${target}% Fan-Zufriedenheit bis Saisonende.`);
         renderFansView();
@@ -517,6 +556,9 @@
             game.money += bonus;
             boostFanBaseFloor(2, 'Das erreichte Fan-Zufriedenheits-Saisonziel');
             addInboxMessage('vertrag', '🎯 Saisonziel erreicht!', `Das selbst gesteckte Fan-Zufriedenheits-Ziel von ${t.value}% wurde erreicht - ${formatVal(bonus)} Belohnung!`, 'screen-fans');
+        } else {
+            game.fans = Math.max(0, game.fans - 3);
+            addInboxMessage('vertrag', '🎯 Saisonziel verfehlt', `Das öffentlich ausgegebene Ziel von ${t.value}% Fan-Zufriedenheit wurde verfehlt (${Math.round(game.fans + 3)}%). Die Fans nehmen es übel: Stimmung -3.`, 'screen-fans');
         }
         fanCentralState.seasonMoodTarget = null;
     }

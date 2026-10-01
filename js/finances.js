@@ -58,6 +58,9 @@
         // Ticketpreise (inkl. Dauerkarte) sind jetzt im Stadion-Screen zu finden, dort direkt
         // neben Kapazität, Rasenpflege und Nebeneinnahmen - siehe renderStadiumView().
         if (typeof renderMediaRightsView === 'function') renderMediaRightsView();
+        let limitInput = document.getElementById('expense-limit-input');
+        if (limitInput) limitInput.placeholder = financeCentralState.expenseWarningLimit > 0
+            ? `Warnlimit aktiv: ${formatVal(financeCentralState.expenseWarningLimit)}/SpT (0 = aus)` : 'Ausgaben-Warnlimit/SpT (aus)';
         renderStockTicker();
         renderSponsorLeaderboard();
         renderFinanceForecast();
@@ -494,8 +497,8 @@
     // 3. Ausgaben-Warnlimit: warnt aktiv, wenn die Gesamtausgaben pro Spieltag eine
     // selbst gesetzte Grenze überschreiten.
     function setExpenseWarningLimit(limit) {
-        financeCentralState.expenseWarningLimit = limit;
-        showToast(`⚠️ Ausgaben-Warnlimit auf ${formatVal(limit)}/SpT gesetzt.`, 'success');
+        financeCentralState.expenseWarningLimit = Math.max(0, limit);
+        showToast(limit > 0 ? `⚠️ Ausgaben-Warnlimit auf ${formatVal(limit)}/SpT gesetzt - beim Überschreiten kommt eine Meldung ins Postfach.` : 'Ausgaben-Warnlimit ausgeschaltet.', 'success');
         renderFinancesView();
     }
 

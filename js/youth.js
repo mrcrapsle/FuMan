@@ -342,7 +342,7 @@
 
     function scoutYouthTalent() {
         if (youthTalents.length >= getYouthAcademyCapacity()) { showToast('Jugendkader-Kapazität erreicht! Erst ausbauen oder Plätze freimachen.', 'error'); return; }
-        if (game.money < 8000) return;
+        if (game.money < 8000) { showToast(`Nicht genug Geld! Benötigt: ${formatVal(8000)}`, 'error'); return; }
         playSound('click');
         game.money -= 8000;
         // Bugfix: das Jugendinternat bewarb "erhöht Stärke und Potenzial neuer

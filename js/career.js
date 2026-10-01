@@ -40,9 +40,24 @@
         updateUI();
         showToast(`✅ Verein umbenannt: ${newName}`, 'success');
     }
+    // Eingabefeld im Spiel statt prompt(): native Dialoge unterdrücken viele Android-WebViews
+    // stillschweigend - der Knopf tat dort gar nichts.
     function promptRenameClub() {
-        let newName = prompt('Neuer Vereinsname:', game.clubName);
-        if (newName !== null) renameClub(newName);
+        let box = document.getElementById('club-rename-box');
+        if (!box) return;
+        if (box.innerHTML) { box.innerHTML = ''; return; }
+        box.innerHTML = `<div class="box" style="display:flex; gap:6px; align-items:center;">
+            <input type="text" id="club-rename-input" class="input-inline" maxlength="40" style="flex:1;" value="${game.clubName}">
+            <button onclick="confirmRenameClub()" class="btn-action" style="width:auto; font-size:10px;">Übernehmen</button>
+        </div>`;
+    }
+    function confirmRenameClub() {
+        let input = document.getElementById('club-rename-input');
+        let alt = game.clubName;
+        renameClub(input ? input.value : '');
+        if (game.clubName === alt) { showToast('Bitte einen neuen, gültigen Namen eingeben.', 'error'); return; }
+        document.getElementById('club-rename-box').innerHTML = '';
+        showToast(`✏️ Der Verein heißt jetzt ${game.clubName}.`, 'success');
     }
 
     // ==========================================

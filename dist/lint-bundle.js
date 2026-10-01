@@ -595,6 +595,7 @@
         pendingSponsorActivation: null,
         teamInstructions: { gegenpressing: false, tiefStehen: false, hoheAV: false },
         tacticAutomation: { offensivBeiRueckstand: false, defensivBeiFuehrung: false },
+        fanSupport: {},
         pendingNamingCeremony: null,
         stadiumConstructionQueue: [],
         sponsorEarningsHistory: {},
@@ -2200,30 +2201,42 @@
     // Team-Anweisungen (NEU): unabhängig voneinander an-/abschaltbare Zusatzbefehle, jeweils
     // mit einem echten Vor- und Nachteil - anders als die Spielstil-Karten (die sich
     // gegenseitig ausschließen) lassen sich diese frei miteinander kombinieren.
+    // Tief stehen schließt Gegenpressing und hohe Außenverteidiger aus - wer hinten drin
+    // steht, läuft nicht vorne an.
     function toggleTeamInstruction(key) {
         playSound('click');
-        game.teamInstructions[key] = !game.teamInstructions[key];
+        let t = game.teamInstructions;
+        t[key] = !t[key];
+        if (t[key] && key === 'tiefStehen' && (t.gegenpressing || t.hoheAV)) {
+            t.gegenpressing = false; t.hoheAV = false;
+            showToast('Tief stehen: Gegenpressing und hohe Außenverteidiger sind damit aus.', 'success');
+        } else if (t[key] && key !== 'tiefStehen' && t.tiefStehen) {
+            t.tiefStehen = false;
+            showToast('Tief stehen ist damit aus.', 'success');
+        }
         renderTeamInstructions();
     }
     function getTeamInstructionBonus() {
         let t = game.teamInstructions;
         let bonus = 0;
-        if (t.gegenpressing) bonus += 1.5; // erobert den Ball höher zurück, kostet aber Kraft (siehe Fitness-Hook)
-        if (t.tiefStehen) bonus += 1; // kompakter, weniger anfällig
-        if (t.hoheAV) bonus += 1; // mehr Breite im Angriff, aber konteranfällig (siehe Def-Malus)
-        if (t.hoheAV) bonus -= 0.5; // Kontergefahr durch weit aufgerückte Außenverteidiger
+        // Jede Anweisung kostet etwas: mehr Stärke nur gegen mehr Kraftverbrauch (früher gab
+        // es für alle drei nur Pluspunkte - man schaltete einfach alles ein).
+        if (t.gegenpressing) bonus += 1.5;
+        if (t.hoheAV) bonus += 1;
+        if (t.tiefStehen) bonus -= 0.5;
         return bonus;
     }
     function getTeamInstructionFitnessMultiplier() {
-        return game.teamInstructions.gegenpressing ? 1.15 : 1;
+        let t = game.teamInstructions;
+        return (t.gegenpressing ? 1.15 : 1) * (t.hoheAV ? 1.08 : 1) * (t.tiefStehen ? 0.85 : 1);
     }
     function renderTeamInstructions() {
         let box = document.getElementById('team-instructions-box');
         if (!box) return;
         let items = [
-            { key: 'gegenpressing', label: 'Gegenpressing', desc: 'Nach Ballverlust sofort wieder drauf. Erobert den Ball in gefährlicher Zone zurück - kostet aber richtig Körner.' },
-            { key: 'tiefStehen', label: 'Tief stehen', desc: 'Die Kette bleibt am eigenen Sechzehner. Hinter der Abwehr gibt es keinen Raum mehr - vor ihr dafür jede Menge.' },
-            { key: 'hoheAV', label: 'Hohe Außenverteidiger', desc: 'Die Außenverteidiger schieben auf Höhe des Mittelfelds. Mehr Breite im Angriff, weite Wege zurück.' }
+            { key: 'gegenpressing', label: 'Gegenpressing', desc: 'Nach Ballverlust sofort wieder drauf. Erobert den Ball in gefährlicher Zone zurück. +1,5 Stärke, 15 % mehr Kraftverbrauch.' },
+            { key: 'tiefStehen', label: 'Tief stehen', desc: 'Die Kette bleibt am eigenen Sechzehner. Hinter der Abwehr gibt es keinen Raum mehr - vor ihr dafür jede Menge. −0,5 Stärke, 15 % weniger Kraftverbrauch; schließt Gegenpressing und hohe AV aus.' },
+            { key: 'hoheAV', label: 'Hohe Außenverteidiger', desc: 'Die Außenverteidiger schieben auf Höhe des Mittelfelds. Mehr Breite im Angriff, weite Wege zurück. +1 Stärke, 8 % mehr Kraftverbrauch.' }
         ];
         box.innerHTML = items.map(it => `
             <div class="box" style="cursor:pointer;" onclick="toggleTeamInstruction('${it.key}')">
@@ -11946,6 +11959,9 @@ function finishGoalkeeperGame() {
         // Ticketpreise (inkl. Dauerkarte) sind jetzt im Stadion-Screen zu finden, dort direkt
         // neben Kapazität, Rasenpflege und Nebeneinnahmen - siehe renderStadiumView().
         if (typeof renderMediaRightsView === 'function') renderMediaRightsView();
+        let limitInput = document.getElementById('expense-limit-input');
+        if (limitInput) limitInput.placeholder = financeCentralState.expenseWarningLimit > 0
+            ? `Warnlimit aktiv: ${formatVal(financeCentralState.expenseWarningLimit)}/SpT (0 = aus)` : 'Ausgaben-Warnlimit/SpT (aus)';
         renderStockTicker();
         renderSponsorLeaderboard();
         renderFinanceForecast();
@@ -12382,8 +12398,8 @@ function finishGoalkeeperGame() {
     // 3. Ausgaben-Warnlimit: warnt aktiv, wenn die Gesamtausgaben pro Spieltag eine
     // selbst gesetzte Grenze überschreiten.
     function setExpenseWarningLimit(limit) {
-        financeCentralState.expenseWarningLimit = limit;
-        showToast(`⚠️ Ausgaben-Warnlimit auf ${formatVal(limit)}/SpT gesetzt.`, 'success');
+        financeCentralState.expenseWarningLimit = Math.max(0, limit);
+        showToast(limit > 0 ? `⚠️ Ausgaben-Warnlimit auf ${formatVal(limit)}/SpT gesetzt - beim Überschreiten kommt eine Meldung ins Postfach.` : 'Ausgaben-Warnlimit ausgeschaltet.', 'success');
         renderFinancesView();
     }
 
@@ -16502,6 +16518,8 @@ function renderStadiumEventsPanel() {
             }
             s.hired = false;
             staffMeta[key] = { level: 1, contractMatchdays: 34, morale: 80, hiredSeason: null, contributionScore: 0 };
+        } else if (staffHireBreaksCap(s)) {
+            showToast(`💼 ${s.name} würde die Personalbudget-Obergrenze von ${formatVal(staffCentralState.wageBudgetCap)}/SpT sprengen. Obergrenze anheben oder aufheben.`, 'error', 4500);
         } else if (game.money >= s.cost) {
             game.money -= s.cost;
             s.hired = true;
@@ -16510,6 +16528,8 @@ function renderStadiumEventsPanel() {
             meta.morale = 80;
             meta.hiredSeason = game.season;
             meta.level = 1;
+        } else {
+            showToast(`Nicht genug Geld! Benötigt: ${formatVal(s.cost)}`, 'error');
         }
         renderStaffView();
         updateUI();
@@ -16677,6 +16697,7 @@ function renderStadiumEventsPanel() {
         let s = staffMembers[key];
         let cost = Math.round(s.cost * cand.costMult);
         if (game.money < cost) { showToast(`Nicht genug Geld! Benötigt: ${formatVal(cost)}`, 'error'); return; }
+        if (staffHireBreaksCap(s)) { showToast(`💼 ${s.name} würde die Personalbudget-Obergrenze von ${formatVal(staffCentralState.wageBudgetCap)}/SpT sprengen.`, 'error', 4500); return; }
         playSound('goal');
         game.money -= cost;
         s.hired = true;
@@ -16703,11 +16724,16 @@ function renderStadiumEventsPanel() {
         updateUI();
     }
 
-    // 13. Personalbudget-Obergrenze: warnt, wenn die Summe aller Gehälter das Limit überschreitet.
+    // 13. Personalbudget-Obergrenze: Neueinstellungen über dem Limit werden abgelehnt
+    // (früher nur eine rote Anzeige ohne jede Wirkung).
+    function staffHireBreaksCap(s) {
+        let cap = staffCentralState.wageBudgetCap || 0;
+        return cap > 0 && !s.hired && getTotalStaffWages() + s.wage > cap;
+    }
     function setStaffWageBudgetCap(cap) {
         staffCentralState.wageBudgetCap = cap;
         renderStaffView();
-        showToast(`💼 Personalbudget-Obergrenze auf ${formatVal(cap)}/SpT gesetzt.`, 'success');
+        showToast(cap > 0 ? `💼 Personalbudget-Obergrenze: ${formatVal(cap)}/SpT - Einstellungen darüber werden abgelehnt.` : '💼 Keine Personalbudget-Obergrenze mehr.', 'success');
     }
     function getTotalStaffWages() {
         return Object.values(staffMembers).filter(s => s.hired).reduce((sum, s) => sum + s.wage, 0);
@@ -16818,6 +16844,14 @@ function renderStadiumEventsPanel() {
     }
 
     function renderFansView() {
+        renderFanActionButtons();
+        let zielBox = document.getElementById('fan-mood-target-box');
+        if (zielBox) {
+            let t = fanCentralState.seasonMoodTarget;
+            zielBox.innerHTML = t && t.season === game.season
+                ? `🎯 Saisonziel: ${t.value}% Fan-Zufriedenheit (aktuell ${Math.round(game.fans)}%). Erreicht: ${formatVal(25000)} Prämie, verfehlt: Stimmung -3.`
+                : (game.matchday <= 6 ? 'Saisonziel bis zum 6. Spieltag wählbar - Prämie bei Erfolg, Stimmungsverlust bei Misserfolg.' : 'Saisonziel nur bis zum 6. Spieltag wählbar.');
+        }
         renderSecurityWorkforceBox();
         renderAttendanceChart();
         renderAttendanceRanking();
@@ -17014,13 +17048,41 @@ function renderStadiumEventsPanel() {
         `;
     }
 
-    function runFanAction(act, cost) {
-        if (game.money < cost) return;
+    // Fan-Aktionen: Choreo wirkt im nächsten Heimspiel, der Sonderzug im nächsten Auswärtsspiel
+    // (calcTeamStrength). Je eine Buchung bis zum Spiel - früher brachten beide dasselbe +5
+    // Stimmung, beliebig oft, und die teurere Choreo war schlicht die schlechtere Wahl.
+    const FAN_ACTIONS = {
+        choreo: { label: '🎨 Mega-Choreo', cost: 8000, bonus: 2, wann: 'im nächsten Heimspiel' },
+        express: { label: '🚆 Sonderzug', cost: 5000, bonus: 1.5, wann: 'im nächsten Auswärtsspiel' }
+    };
+    function runFanAction(act) {
+        let a = FAN_ACTIONS[act];
+        if (!a) return;
+        if (!game.fanSupport) game.fanSupport = {};
+        if (game.fanSupport[act]) { showToast(`${a.label} ist schon für das nächste Spiel gebucht.`, 'error'); return; }
+        if (game.money < a.cost) { showToast(`Nicht genug Geld! Benötigt: ${formatVal(a.cost)}`, 'error'); return; }
         playSound('click');
-        game.money -= cost;
-        game.fans = Math.min(100, game.fans + 5);
+        game.money -= a.cost;
+        game.fanSupport[act] = true;
+        game.fans = Math.min(100, game.fans + 2);
+        showToast(`${a.label} gebucht: +${String(a.bonus).replace('.', ',')} Stärke ${a.wann}, Fans +2.`, 'success');
         renderFansView();
         updateUI();
+    }
+    function getFanSupportBonus(isHomeMatch) {
+        let fs = game.fanSupport || {};
+        return isHomeMatch ? (fs.choreo ? FAN_ACTIONS.choreo.bonus : 0) : (fs.express ? FAN_ACTIONS.express.bonus : 0);
+    }
+    // Nach jedem eigenen Ligaspiel: die passende Aktion ist verbraucht.
+    function consumeFanSupport(isHomeMatch) {
+        if (!game.fanSupport) return;
+        if (isHomeMatch) game.fanSupport.choreo = false; else game.fanSupport.express = false;
+    }
+    function renderFanActionButtons() {
+        Object.entries(FAN_ACTIONS).forEach(([key, a]) => {
+            let btn = document.getElementById('btn-fan-action-' + key);
+            if (btn) btn.innerText = (game.fanSupport || {})[key] ? `${a.label}: gebucht ✓` : `${a.label} [${formatVal(a.cost)}] +${String(a.bonus).replace('.', ',')} ${a.wann.replace('im nächsten ', '')}`;
+        });
     }
 
     // ==========================================
@@ -17261,7 +17323,10 @@ function renderStadiumEventsPanel() {
     }
 
     // 12. Fan-Zufriedenheits-Saisonziel: freiwillige Selbstverpflichtung mit Bonus bei Erfolg.
+    // Nur bis zum 6. Spieltag und mit Risiko: verfehlt kostet Fanstimmung (früher war das Ziel
+    // ein Gratis-Los - kurz vor Saisonende gesetzt, wenn die Stimmung ohnehin passte).
     function setSeasonMoodTarget(target) {
+        if (game.matchday > 6) { showToast('Saisonziele lassen sich nur bis zum 6. Spieltag festlegen.', 'error'); return; }
         fanCentralState.seasonMoodTarget = { value: target, season: game.season };
         pushFanFeedEntry(`🎯 Saisonziel gesetzt: mindestens ${target}% Fan-Zufriedenheit bis Saisonende.`);
         renderFansView();
@@ -17275,6 +17340,9 @@ function renderStadiumEventsPanel() {
             game.money += bonus;
             boostFanBaseFloor(2, 'Das erreichte Fan-Zufriedenheits-Saisonziel');
             addInboxMessage('vertrag', '🎯 Saisonziel erreicht!', `Das selbst gesteckte Fan-Zufriedenheits-Ziel von ${t.value}% wurde erreicht - ${formatVal(bonus)} Belohnung!`, 'screen-fans');
+        } else {
+            game.fans = Math.max(0, game.fans - 3);
+            addInboxMessage('vertrag', '🎯 Saisonziel verfehlt', `Das öffentlich ausgegebene Ziel von ${t.value}% Fan-Zufriedenheit wurde verfehlt (${Math.round(game.fans + 3)}%). Die Fans nehmen es übel: Stimmung -3.`, 'screen-fans');
         }
         fanCentralState.seasonMoodTarget = null;
     }
@@ -17663,7 +17731,7 @@ function renderStadiumEventsPanel() {
 
     function scoutYouthTalent() {
         if (youthTalents.length >= getYouthAcademyCapacity()) { showToast('Jugendkader-Kapazität erreicht! Erst ausbauen oder Plätze freimachen.', 'error'); return; }
-        if (game.money < 8000) return;
+        if (game.money < 8000) { showToast(`Nicht genug Geld! Benötigt: ${formatVal(8000)}`, 'error'); return; }
         playSound('click');
         game.money -= 8000;
         // Bugfix: das Jugendinternat bewarb "erhöht Stärke und Potenzial neuer
@@ -17806,8 +17874,17 @@ function assignYouthCoach(playerId) {
     return { success: true, message: `✓ ${player.name} zum Jugendtrainer ernannt!` };
 }
 
+// Auswahl im Jugend-Bildschirm: Ergebnis anzeigen (früher wurde es verworfen - ohne Geld
+// passierte schlicht nichts, und auch ein Erfolg blieb unsichtbar).
+function chooseYouthCoach(playerId) {
+    const r = assignYouthCoach(playerId);
+    showToast(r.success ? `${r.message} (Kosten: ${formatVal(15000)})` : `${r.message} - benötigt: ${formatVal(15000)}`, r.success ? 'success' : 'error');
+    if (typeof renderYouthView === 'function') renderYouthView();
+}
+
 function removeYouthCoach() {
     game.youthCoachId = null;
+    if (typeof renderYouthView === 'function') renderYouthView();
     updateUI();
 }
 
@@ -17817,9 +17894,7 @@ function getYouthCoachBonus() {
 
     const baseBonus = 1.15;
     const experienceBonus = (game.youthCoachHistory?.length || 0) * 0.02;
-    const coachingBonus = Math.min(0.25, coach.coaching || 0) / 100;
-
-    return Math.min(1.5, baseBonus + experienceBonus + coachingBonus);
+    return Math.min(1.5, baseBonus + experienceBonus);
 }
 
 // Monatlich (nicht beim Öffnen des Screens - sonst wuchsen Talente mit jedem Aufruf):
@@ -17887,10 +17962,10 @@ function renderYouthAcademyPanel() {
             <button onclick="removeYouthCoach()" class="btn-secondary" style="font-size:8px; padding:2px 4px; margin-top:4px;">Entfernen</button>
         </div>`;
     } else {
-        const coachCandidates = squad.filter(s => s.age >= 28 && s.strength >= 60 && !s.isInjured);
+        const coachCandidates = squad.filter(s => s.age >= 28 && s.strength >= 60 && !(s.injured > 0));
         if (coachCandidates.length > 0) {
             html += '<div style="margin-bottom:8px;"><div style="font-size:9px; font-weight:bold; margin-bottom:4px;">👨‍🏫 Jugendtrainer auswählen:</div>';
-            html += '<select class="input-inline" style="font-size:8px; width:100%; padding:4px; margin-bottom:4px;" onchange="this.value && assignYouthCoach(this.value)">';
+            html += '<select class="input-inline" style="font-size:8px; width:100%; padding:4px; margin-bottom:4px;" onchange="this.value && chooseYouthCoach(this.value)">';
             html += '<option value="">-- Kein Trainer --</option>';
             coachCandidates.forEach(p => {
                 html += `<option value="${p.id}">${p.name} (${p.age}J., Str${p.strength})</option>`;
@@ -21173,6 +21248,8 @@ function cleanupLegacyScoutState() {
         if (isHomeMatch && typeof getBlockCultureHomeBonus === 'function') bonus += getBlockCultureHomeBonus();
         // Stadion-Erweiterungen (NEU): Beschallungsanlage verstärkt den Heimvorteil.
         if (isHomeMatch && typeof getStadiumHomeAdvantageBonus === 'function') bonus += getStadiumHomeAdvantageBonus();
+        // Fan-Aktionen (Choreo heim, Sonderzug auswärts), siehe runFanAction() in fans.js.
+        if (typeof getFanSupportBonus === 'function') bonus += getFanSupportBonus(isHomeMatch);
         // Kapitän (NEU): war bisher rein kosmetisch (nur ein Ⓒ-Icon) - steht der ernannte
         // Kapitän tatsächlich auf dem Feld, gibt seine Führungsqualität einen kleinen, aber
         // echten Team-Stärke-Bonus. Ein erfahrener Kapitän (30+) wirkt sich stärker aus.
@@ -22355,6 +22432,13 @@ function cleanupLegacyScoutState() {
             summeAus: ledgerSummeAus
         });
         if (game.financeLedger.length > 80) game.financeLedger.shift();
+        // Ausgaben-Warnlimit (Finanzen): meldet sich beim Überschreiten, nicht jeden Spieltag neu.
+        let warnLimit = financeCentralState.expenseWarningLimit || 0;
+        let vorher = game.financeLedger[game.financeLedger.length - 2];
+        if (warnLimit > 0 && ledgerSummeAus > warnLimit && !(vorher && vorher.summeAus > warnLimit)) {
+            let groesste = [...ausgaben].sort((a, b) => b.amount - a.amount).slice(0, 3).map(e => `${e.label}: ${formatVal(e.amount)}`).join(', ');
+            addInboxMessage('finanzen', '⚠️ Ausgaben über dem Warnlimit', `Die Ausgaben dieses Spieltags (${formatVal(ledgerSummeAus)}) liegen über deinem Warnlimit von ${formatVal(warnLimit)}. Größte Posten: ${groesste}.`, 'screen-finances');
+        }
         // Financial Fairplay (js/ffp.js): die komplette Spieltagsabrechnung zaehlt zum
         // laufenden Saison-Ergebnis - anders als der Kontoauszug (siehe protokolliereBuchung
         // in finances.js) gibt es hier keine Ausnahmen, das Spieltagsgeschaeft ist immer
@@ -22615,6 +22699,7 @@ function cleanupLegacyScoutState() {
             checkJobSecurity();
             generatePressHeadline(matchResult, isHomeDerby);
             recordHomeAwayResult(isHomeMatchParam, matchResult);
+            if (typeof consumeFanSupport === 'function') consumeFanSupport(isHomeMatchParam);
             checkBettingScandalSuspicion(matchResult, matchMargin);
             if (isLiveContext) checkPostMatchInterview(matchResult);
             checkJobOfferApproach({ live: isLiveContext });

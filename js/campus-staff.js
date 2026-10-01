@@ -348,6 +348,8 @@
             }
             s.hired = false;
             staffMeta[key] = { level: 1, contractMatchdays: 34, morale: 80, hiredSeason: null, contributionScore: 0 };
+        } else if (staffHireBreaksCap(s)) {
+            showToast(`💼 ${s.name} würde die Personalbudget-Obergrenze von ${formatVal(staffCentralState.wageBudgetCap)}/SpT sprengen. Obergrenze anheben oder aufheben.`, 'error', 4500);
         } else if (game.money >= s.cost) {
             game.money -= s.cost;
             s.hired = true;
@@ -356,6 +358,8 @@
             meta.morale = 80;
             meta.hiredSeason = game.season;
             meta.level = 1;
+        } else {
+            showToast(`Nicht genug Geld! Benötigt: ${formatVal(s.cost)}`, 'error');
         }
         renderStaffView();
         updateUI();
@@ -523,6 +527,7 @@
         let s = staffMembers[key];
         let cost = Math.round(s.cost * cand.costMult);
         if (game.money < cost) { showToast(`Nicht genug Geld! Benötigt: ${formatVal(cost)}`, 'error'); return; }
+        if (staffHireBreaksCap(s)) { showToast(`💼 ${s.name} würde die Personalbudget-Obergrenze von ${formatVal(staffCentralState.wageBudgetCap)}/SpT sprengen.`, 'error', 4500); return; }
         playSound('goal');
         game.money -= cost;
         s.hired = true;
@@ -549,11 +554,16 @@
         updateUI();
     }
 
-    // 13. Personalbudget-Obergrenze: warnt, wenn die Summe aller Gehälter das Limit überschreitet.
+    // 13. Personalbudget-Obergrenze: Neueinstellungen über dem Limit werden abgelehnt
+    // (früher nur eine rote Anzeige ohne jede Wirkung).
+    function staffHireBreaksCap(s) {
+        let cap = staffCentralState.wageBudgetCap || 0;
+        return cap > 0 && !s.hired && getTotalStaffWages() + s.wage > cap;
+    }
     function setStaffWageBudgetCap(cap) {
         staffCentralState.wageBudgetCap = cap;
         renderStaffView();
-        showToast(`💼 Personalbudget-Obergrenze auf ${formatVal(cap)}/SpT gesetzt.`, 'success');
+        showToast(cap > 0 ? `💼 Personalbudget-Obergrenze: ${formatVal(cap)}/SpT - Einstellungen darüber werden abgelehnt.` : '💼 Keine Personalbudget-Obergrenze mehr.', 'success');
     }
     function getTotalStaffWages() {
         return Object.values(staffMembers).filter(s => s.hired).reduce((sum, s) => sum + s.wage, 0);

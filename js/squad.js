@@ -348,30 +348,42 @@
     // Team-Anweisungen (NEU): unabhängig voneinander an-/abschaltbare Zusatzbefehle, jeweils
     // mit einem echten Vor- und Nachteil - anders als die Spielstil-Karten (die sich
     // gegenseitig ausschließen) lassen sich diese frei miteinander kombinieren.
+    // Tief stehen schließt Gegenpressing und hohe Außenverteidiger aus - wer hinten drin
+    // steht, läuft nicht vorne an.
     function toggleTeamInstruction(key) {
         playSound('click');
-        game.teamInstructions[key] = !game.teamInstructions[key];
+        let t = game.teamInstructions;
+        t[key] = !t[key];
+        if (t[key] && key === 'tiefStehen' && (t.gegenpressing || t.hoheAV)) {
+            t.gegenpressing = false; t.hoheAV = false;
+            showToast('Tief stehen: Gegenpressing und hohe Außenverteidiger sind damit aus.', 'success');
+        } else if (t[key] && key !== 'tiefStehen' && t.tiefStehen) {
+            t.tiefStehen = false;
+            showToast('Tief stehen ist damit aus.', 'success');
+        }
         renderTeamInstructions();
     }
     function getTeamInstructionBonus() {
         let t = game.teamInstructions;
         let bonus = 0;
-        if (t.gegenpressing) bonus += 1.5; // erobert den Ball höher zurück, kostet aber Kraft (siehe Fitness-Hook)
-        if (t.tiefStehen) bonus += 1; // kompakter, weniger anfällig
-        if (t.hoheAV) bonus += 1; // mehr Breite im Angriff, aber konteranfällig (siehe Def-Malus)
-        if (t.hoheAV) bonus -= 0.5; // Kontergefahr durch weit aufgerückte Außenverteidiger
+        // Jede Anweisung kostet etwas: mehr Stärke nur gegen mehr Kraftverbrauch (früher gab
+        // es für alle drei nur Pluspunkte - man schaltete einfach alles ein).
+        if (t.gegenpressing) bonus += 1.5;
+        if (t.hoheAV) bonus += 1;
+        if (t.tiefStehen) bonus -= 0.5;
         return bonus;
     }
     function getTeamInstructionFitnessMultiplier() {
-        return game.teamInstructions.gegenpressing ? 1.15 : 1;
+        let t = game.teamInstructions;
+        return (t.gegenpressing ? 1.15 : 1) * (t.hoheAV ? 1.08 : 1) * (t.tiefStehen ? 0.85 : 1);
     }
     function renderTeamInstructions() {
         let box = document.getElementById('team-instructions-box');
         if (!box) return;
         let items = [
-            { key: 'gegenpressing', label: 'Gegenpressing', desc: 'Nach Ballverlust sofort wieder drauf. Erobert den Ball in gefährlicher Zone zurück - kostet aber richtig Körner.' },
-            { key: 'tiefStehen', label: 'Tief stehen', desc: 'Die Kette bleibt am eigenen Sechzehner. Hinter der Abwehr gibt es keinen Raum mehr - vor ihr dafür jede Menge.' },
-            { key: 'hoheAV', label: 'Hohe Außenverteidiger', desc: 'Die Außenverteidiger schieben auf Höhe des Mittelfelds. Mehr Breite im Angriff, weite Wege zurück.' }
+            { key: 'gegenpressing', label: 'Gegenpressing', desc: 'Nach Ballverlust sofort wieder drauf. Erobert den Ball in gefährlicher Zone zurück. +1,5 Stärke, 15 % mehr Kraftverbrauch.' },
+            { key: 'tiefStehen', label: 'Tief stehen', desc: 'Die Kette bleibt am eigenen Sechzehner. Hinter der Abwehr gibt es keinen Raum mehr - vor ihr dafür jede Menge. −0,5 Stärke, 15 % weniger Kraftverbrauch; schließt Gegenpressing und hohe AV aus.' },
+            { key: 'hoheAV', label: 'Hohe Außenverteidiger', desc: 'Die Außenverteidiger schieben auf Höhe des Mittelfelds. Mehr Breite im Angriff, weite Wege zurück. +1 Stärke, 8 % mehr Kraftverbrauch.' }
         ];
         box.innerHTML = items.map(it => `
             <div class="box" style="cursor:pointer;" onclick="toggleTeamInstruction('${it.key}')">

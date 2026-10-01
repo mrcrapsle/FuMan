@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.11', date: '01.10.2026', features: 'Phase 18: Jugend sichtbarer (echtes Potenzial, Profivertrag mit 19, Leihe zur Entwicklung, Durchbruch-Momente)' };
+    const GAME_VERSION = { number: '3.12', date: '01.10.2026', features: 'Phase 18: Aufräumen Teil 6 (Schein-Entscheidungen mit echter Wirkung, keine stillen Knöpfe mehr)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -122,6 +122,7 @@
         pendingSponsorActivation: null,
         teamInstructions: { gegenpressing: false, tiefStehen: false, hoheAV: false },
         tacticAutomation: { offensivBeiRueckstand: false, defensivBeiFuehrung: false },
+        fanSupport: {},
         pendingNamingCeremony: null,
         stadiumConstructionQueue: [],
         sponsorEarningsHistory: {},

@@ -209,7 +209,9 @@ This ensures users can see exactly where money comes from/goes. Add new income o
 
 ### Important Architectural Decisions & Gotchas
 
-1. **No `alert()` or `confirm()`** – Many Android WebViews suppress native dialogs silently. Use `showToast()` for notifications or `addInboxMessage()` for confirmations instead. This is enforced by linting and tests.
+1. **No `alert()`, `confirm()` or `prompt()`** – Many Android WebViews suppress native dialogs silently. Use `showToast()` for notifications, `requireConfirm()` for confirmations and an inline input for text. `testNoNativeDialogs` scans all js/*.js.
+
+   **No silent buttons or fake choices** – a button that cannot act (no money, wrong state) must say why via `showToast()`; every option needs a real effect and a trade-off (Phase 18.6: team instructions cost fitness, fan actions are per-match boosts, caps/limits really block/warn).
 
 2. **Manager's Office: Custom Hit Detection** – The office 3D scene (`js/office.js`) uses custom `getBoundingClientRect()` hit testing, not native browser hit detection. Native hit testing is unreliable on 3D-transformed elements across browser versions. See `officeHotspotAtPoint()`.
 

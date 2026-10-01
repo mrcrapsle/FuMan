@@ -38,9 +38,9 @@
     let cupDrawRevealTimer = null;
     function showCupDrawCeremony() {
         let r = cupTournament.roundsHistory[cupTournament.currentRound];
-        if (!r) return;
+        if (!r) { showToast('Für die nächste Pokalrunde gibt es noch keine Auslosung.', 'error'); return; }
         let ourPairing = r.pairings.find(p => p.home === game.clubName || p.away === game.clubName);
-        if (!ourPairing) return;
+        if (!ourPairing) { showToast(`${game.clubName} ist in dieser Pokalrunde nicht mehr dabei.`, 'error'); return; }
         let opponent = ourPairing.home === game.clubName ? ourPairing.away : ourPairing.home;
         let isHome = ourPairing.home === game.clubName;
 

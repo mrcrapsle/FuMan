@@ -2411,6 +2411,99 @@ async function testOfficeEvents(browser) {
     await page.close();
 }
 
+async function testFakeDecisions(browser) {
+    console.log('\n[18.6] Aufräumen Teil 6: Schein-Entscheidungen mit echter Wirkung');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            const toast = () => document.getElementById('app-toast').innerText;
+            // Mannschaftsanweisungen: Stärke nur gegen Kraft, Tief stehen schließt aus
+            game.teamInstructions = { gegenpressing: false, tiefStehen: false, hoheAV: false };
+            const basis = getTeamInstructionBonus(), basisFit = getTeamInstructionFitnessMultiplier();
+            toggleTeamInstruction('gegenpressing'); toggleTeamInstruction('hoheAV');
+            out.offensivKostet = getTeamInstructionBonus() > basis && getTeamInstructionFitnessMultiplier() > basisFit;
+            toggleTeamInstruction('tiefStehen');
+            const t = game.teamInstructions;
+            out.tiefExklusiv = t.tiefStehen && !t.gegenpressing && !t.hoheAV && getTeamInstructionBonus() < 0 && getTeamInstructionFitnessMultiplier() < 1;
+            toggleTeamInstruction('gegenpressing');
+            out.tiefWiederAus = !t.tiefStehen && t.gegenpressing;
+            // Fan-Aktionen: getrennte Wirkung, je einmal bis zum Spiel
+            game.money = 1000000; game.fanSupport = {};
+            const heim0 = calcTeamStrength(true), aus0 = calcTeamStrength(false);
+            runFanAction('choreo');
+            const geld1 = game.money;
+            runFanAction('choreo');
+            out.choreoEinmal = game.money === geld1 && toast().includes('schon');
+            out.choreoHeim = calcTeamStrength(true) > heim0 && calcTeamStrength(false) === aus0;
+            runFanAction('express');
+            out.zugAuswaerts = calcTeamStrength(false) > aus0;
+            consumeFanSupport(true);
+            out.verbraucht = !game.fanSupport.choreo && game.fanSupport.express;
+            game.money = 100; game.fanSupport = {};
+            runFanAction('choreo');
+            out.fanGeldMeldung = toast().includes('Nicht genug Geld') && !game.fanSupport.choreo;
+            // Ausgaben-Warnlimit erzeugt eine Meldung beim Überschreiten
+            game.money = 5000000;
+            setExpenseWarningLimit(1);
+            const inbox0 = inboxMessages.length;
+            simulateMatchdays(2);
+            out.warnlimit = inboxMessages.slice(0, inboxMessages.length - inbox0 + 5).filter(m => (m.title || m.subject || '').includes('Warnlimit')).length === 1
+                || inboxMessages.filter(m => JSON.stringify(m).includes('über dem Warnlimit')).length === 1;
+            setExpenseWarningLimit(0);
+            // Personal-Obergrenze blockiert Einstellungen
+            const key = Object.keys(staffMembers).find(k => !staffMembers[k].hired && staffMembers[k].wage > 0);
+            game.money = 5000000;
+            setStaffWageBudgetCap(1);
+            toggleStaffMember(key, null);
+            out.capBlockiert = !staffMembers[key].hired && toast().includes('Obergrenze');
+            setStaffWageBudgetCap(0);
+            toggleStaffMember(key, null);
+            out.ohneCapEingestellt = staffMembers[key].hired;
+            // Fan-Saisonziel: nur bis Spieltag 6, Verfehlen kostet
+            game.matchday = 10;
+            setSeasonMoodTarget(90);
+            out.zielFrist = !(fanCentralState.seasonMoodTarget && fanCentralState.seasonMoodTarget.season === game.season);
+            fanCentralState.seasonMoodTarget = { value: 99, season: game.season - 1 };
+            game.fans = 50;
+            checkSeasonMoodTargetResult();
+            out.zielRisiko = game.fans === 47;
+            // Stille Abbrüche melden sich jetzt
+            game.money = 100;
+            scoutYouthTalent();
+            out.sichtenMeldung = toast().includes('Nicht genug Geld');
+            showScreen('screen-youth'); setSubTab('jug', 'entwicklung');
+            const kandidat = squad.find(s => s.age >= 28 && s.strength >= 60);
+            if (kandidat) { chooseYouthCoach(kandidat.id); out.trainerMeldung = toast().includes('Nicht genug Geld'); } else out.trainerMeldung = true;
+            // Umbenennen ohne prompt()
+            showScreen('screen-manager-tree');
+            promptRenameClub();
+            const feld = document.getElementById('club-rename-input');
+            feld.value = 'SV Testheim 09';
+            confirmRenameClub();
+            out.umbenannt = game.clubName === 'SV Testheim 09' && leaguesData[game.leagueLevel].some(t2 => t2.name === 'SV Testheim 09');
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Schein-Entscheidungen-Test ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.offensivKostet, 'Gegenpressing/hohe AV: mehr Stärke, aber mehr Kraftverbrauch');
+        assert(r.tiefExklusiv && r.tiefWiederAus, 'Tief stehen: weniger Stärke, weniger Kraftverbrauch, schließt die anderen Anweisungen aus');
+        assert(r.choreoEinmal && r.choreoHeim, 'Choreo wirkt nur im Heimspiel und ist nur einmal buchbar');
+        assert(r.zugAuswaerts && r.verbraucht, 'Sonderzug wirkt auswärts; nach dem Heimspiel ist die Choreo verbraucht');
+        assert(r.fanGeldMeldung, 'Fan-Aktion ohne Geld meldet sich statt still nichts zu tun');
+        assert(r.warnlimit, 'Ausgaben-Warnlimit erzeugt beim Überschreiten genau eine Meldung');
+        assert(r.capBlockiert && r.ohneCapEingestellt, 'Personalbudget-Obergrenze blockiert Einstellungen wirklich');
+        assert(r.zielFrist && r.zielRisiko, 'Fan-Saisonziel nur bis Spieltag 6 und mit Stimmungsverlust bei Misserfolg');
+        assert(r.sichtenMeldung && r.trainerMeldung, 'Nachwuchs sichten und Jugendtrainer melden fehlendes Geld');
+        assert(r.umbenannt, 'Verein umbenennen funktioniert über ein Eingabefeld (ohne natives prompt)');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testNoNativeDialogs(browser) {
     console.log('\n[30] Keine nativen Dialoge mehr im ganzen Spiel');
     const { page, consoleErrors } = await freshPage(browser);
@@ -2513,6 +2606,17 @@ async function testNoNativeDialogs(browser) {
     assert(entlassung.meldungGanzVorn, 'Die Entlassungsmeldung steht vor allen anderen Meldungen');
     assert(entlassung.nurEinmal, 'Die Entlassung wird nur ein einziges Mal ausgesprochen');
     assert(r.keineDialogeImCode, 'Die geprüften Spielfunktionen nutzen keine nativen Dialoge');
+    // 7. Statisch über den gesamten Spielcode: kein alert()/confirm()/prompt() in ausführbaren
+    //    Zeilen (prompt() blockierte z. B. das Umbenennen des Vereins auf Android).
+    const dialogTreffer = [];
+    const fs = require('fs');
+    fs.readdirSync(path.join(__dirname, '..', 'js')).filter(f => f.endsWith('.js')).forEach(f => {
+        fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf-8').split('\n').forEach((zeile, i) => {
+            const code = zeile.replace(/\/\/.*$/, '');
+            if (/(^|[^.\w'"`])(alert|confirm|prompt)\s*\(/.test(code)) dialogTreffer.push(`${f}:${i + 1}`);
+        });
+    });
+    assert(dialogTreffer.length === 0, `Kein alert/confirm/prompt im gesamten Spielcode (${dialogTreffer.join(', ') || 'keiner'})`);
     assert(nativeDialoge.length === 0,
         `Eine komplette Saison samt Saisonabschluss löst keinen nativen Dialog aus (${nativeDialoge.join(' | ') || 'keiner'})`);
     assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Dialog-Test');
@@ -5412,6 +5516,7 @@ async function main() {
         testSecondTeamFriendlies,
         testOfficeEvents,
         testNoNativeDialogs,
+        testFakeDecisions,
         testEuropeanCup,
         testLoadingGuard,
         testAttendanceRealism,

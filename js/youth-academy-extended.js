@@ -84,8 +84,17 @@ function assignYouthCoach(playerId) {
     return { success: true, message: `✓ ${player.name} zum Jugendtrainer ernannt!` };
 }
 
+// Auswahl im Jugend-Bildschirm: Ergebnis anzeigen (früher wurde es verworfen - ohne Geld
+// passierte schlicht nichts, und auch ein Erfolg blieb unsichtbar).
+function chooseYouthCoach(playerId) {
+    const r = assignYouthCoach(playerId);
+    showToast(r.success ? `${r.message} (Kosten: ${formatVal(15000)})` : `${r.message} - benötigt: ${formatVal(15000)}`, r.success ? 'success' : 'error');
+    if (typeof renderYouthView === 'function') renderYouthView();
+}
+
 function removeYouthCoach() {
     game.youthCoachId = null;
+    if (typeof renderYouthView === 'function') renderYouthView();
     updateUI();
 }
 
@@ -95,9 +104,7 @@ function getYouthCoachBonus() {
 
     const baseBonus = 1.15;
     const experienceBonus = (game.youthCoachHistory?.length || 0) * 0.02;
-    const coachingBonus = Math.min(0.25, coach.coaching || 0) / 100;
-
-    return Math.min(1.5, baseBonus + experienceBonus + coachingBonus);
+    return Math.min(1.5, baseBonus + experienceBonus);
 }
 
 // Monatlich (nicht beim Öffnen des Screens - sonst wuchsen Talente mit jedem Aufruf):
@@ -165,10 +172,10 @@ function renderYouthAcademyPanel() {
             <button onclick="removeYouthCoach()" class="btn-secondary" style="font-size:8px; padding:2px 4px; margin-top:4px;">Entfernen</button>
         </div>`;
     } else {
-        const coachCandidates = squad.filter(s => s.age >= 28 && s.strength >= 60 && !s.isInjured);
+        const coachCandidates = squad.filter(s => s.age >= 28 && s.strength >= 60 && !(s.injured > 0));
         if (coachCandidates.length > 0) {
             html += '<div style="margin-bottom:8px;"><div style="font-size:9px; font-weight:bold; margin-bottom:4px;">👨‍🏫 Jugendtrainer auswählen:</div>';
-            html += '<select class="input-inline" style="font-size:8px; width:100%; padding:4px; margin-bottom:4px;" onchange="this.value && assignYouthCoach(this.value)">';
+            html += '<select class="input-inline" style="font-size:8px; width:100%; padding:4px; margin-bottom:4px;" onchange="this.value && chooseYouthCoach(this.value)">';
             html += '<option value="">-- Kein Trainer --</option>';
             coachCandidates.forEach(p => {
                 html += `<option value="${p.id}">${p.name} (${p.age}J., Str${p.strength})</option>`;
