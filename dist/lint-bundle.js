@@ -477,7 +477,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.10', date: '30.09.2026', features: 'Phase 18: Liga-Statistiken (Torjägerliste der ganzen Liga, Formtabelle, Heim/Auswärts, Tabellenverlauf)' };
+    const GAME_VERSION = { number: '3.11', date: '01.10.2026', features: 'Phase 18: Jugend sichtbarer (echtes Potenzial, Profivertrag mit 19, Leihe zur Entwicklung, Durchbruch-Momente)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -18004,10 +18004,15 @@ function addYouthMoment(icon, text) {
 }
 
 // ---------- Profivertrag ----------
+// Der Marktwert streut zufällig - das Angebot wird je Stärke festgehalten, damit die Karte
+// genau das Gehalt zeigt, das unterschrieben wird.
 function getYouthProWage(p) {
+    if (p.proWageQuote && p.proWageQuote.strength === p.strength) return p.proWageQuote.wage;
     const basis = calculatePlayerWage(calculatePlayerMarketValue(p.strength), p.strength);
     // Ausnahmetalente wissen um ihren Wert, Mittelmaß nimmt, was es bekommt.
-    return Math.round(basis * ({ 1: 0.8, 2: 1, 3: 1.3 }[p.potentialTier] || 1) / 10) * 10;
+    const wage = Math.round(basis * ({ 1: 0.8, 2: 1, 3: 1.3 }[p.potentialTier] || 1) / 10) * 10;
+    p.proWageQuote = { strength: p.strength, wage };
+    return wage;
 }
 
 // Aus promoteYouth(): echter Profivertrag statt Jugendkonditionen.
@@ -18016,6 +18021,7 @@ function signYouthProContract(p) {
     p.wage = getYouthProWage(p);
     p.academyGraduate = true;
     p.proDecisionLeft = null;
+    delete p.proWageQuote;
     p.milestones = p.milestones || {};
 }
 
@@ -18057,15 +18063,17 @@ function tickYouthProDecisions() {
 }
 
 // ---------- Leihe zur Entwicklung ----------
-// Zwei bis drei echte KI-Vereine: eine Liga tiefer (Stammplatz) und aus der eigenen Liga
-// (höheres Niveau, weniger Spielzeit).
+// Drei echte KI-Vereine: zwei eine Liga tiefer (Stammplatz) und einer eine Liga höher als die
+// Stammplatz-Liga (höheres Niveau, weniger Spielzeit). In der untersten Liga kommen die
+// Stammplatz-Vereine aus der eigenen Liga und die Herausforderung aus der Liga darüber.
 function getYouthLoanClubs(p) {
-    const tiefer = Math.min(leaguesData.length - 1, game.leagueLevel + 1);
-    const pick = (level, n) => [...(leaguesData[level] || [])].filter(t => typeof isAiClub === 'function' ? isAiClub(t) : t.name !== game.clubName)
-        .sort((a, b) => Math.abs(a.strength - p.strength - (level === tiefer ? 0 : 6)) - Math.abs(b.strength - p.strength - (level === tiefer ? 0 : 6)))
+    const stamm = Math.min(leaguesData.length - 1, game.leagueLevel + 1);
+    const hoch = Math.max(0, stamm - 1);
+    const pick = (level, n, aufschlag) => [...(leaguesData[level] || [])].filter(t => typeof isAiClub === 'function' ? isAiClub(t) : t.name !== game.clubName)
+        .sort((a, b) => Math.abs(a.strength - p.strength - aufschlag) - Math.abs(b.strength - p.strength - aufschlag))
         .slice(0, n).map(t => ({ name: t.name, level, strength: t.strength }));
-    const liste = tiefer !== game.leagueLevel ? [...pick(tiefer, 2), ...pick(game.leagueLevel, 1)] : pick(tiefer, 3);
-    return liste;
+    const stammVereine = pick(stamm, 2, 0);
+    return [...stammVereine, ...pick(hoch, 3, 6).filter(c => !stammVereine.some(v => v.name === c.name)).slice(0, 1)];
 }
 
 function getYouthLoanPlayChance(p, clubStrength) {
@@ -18073,7 +18081,7 @@ function getYouthLoanPlayChance(p, clubStrength) {
 }
 
 function getYouthLoanDevPerApp(p, clubStrength) {
-    return 0.18 + Math.max(0, clubStrength - p.strength) * 0.015;
+    return 0.25 + Math.max(0, clubStrength - p.strength) * 0.015;
 }
 
 function openYouthLoanChoice(id) {
@@ -18107,7 +18115,7 @@ function tickYouthLoanMatchday(loan) {
     if (Math.random() < getYouthLoanPlayChance(p, loan.clubStrength)) {
         loan.apps++;
         if (Math.random() < ({ ST: 0.3, MIT: 0.12, ABW: 0.04, TW: 0 }[p.pos] || 0.1)) loan.goals++;
-        loan.devProgress += getYouthLoanDevPerApp(p, loan.clubStrength) * ({ 1: 0.7, 2: 1, 3: 1.4 }[p.potentialTier] || 1);
+        loan.devProgress += getYouthLoanDevPerApp(p, loan.clubStrength) * ({ 1: 0.8, 2: 1, 3: 1.3 }[p.potentialTier] || 1);
     } else {
         loan.devProgress += 0.03;
     }
@@ -18185,7 +18193,7 @@ function renderYouthLoanChoiceBox() {
             const spielzeit = Math.round(getYouthLoanPlayChance(p, c.strength) * 100);
             const proSpiel = getYouthLoanDevPerApp(p, c.strength);
             return `<div class="box" style="display:flex; justify-content:space-between; align-items:center; gap:6px; font-size:9px;">
-                <span><strong>${c.name}</strong> · ${leagueNames[c.level]} · Stärke ${c.strength}<br>Spielzeit ca. ${spielzeit} % · Entwicklung je Einsatz ${proSpiel >= 0.25 ? 'hoch' : 'normal'}</span>
+                <span><strong>${c.name}</strong> · ${leagueNames[c.level]} · Stärke ${c.strength}<br>Spielzeit ca. ${spielzeit} % · Entwicklung je Einsatz ${proSpiel >= 0.3 ? 'hoch' : 'normal'}</span>
                 <button onclick="loanYouthForDevelopment('${p.id}', '${c.name.replace(/'/g, "\\'")}')" class="btn-action" style="width:auto; font-size:9px;">Verleihen</button>
             </div>`;
         }).join('')}
