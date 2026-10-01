@@ -5344,14 +5344,16 @@ async function testPressConference(browser) {
         out.pokal = frage().includes('Pokal');
         out.hinweise = document.getElementById('press-answers-container').innerHTML.includes('Stärke +1');
         // Stärkebonus wirkt im Livespiel genau um den angekündigten Wert
-        startMatchdayFlow();
-        skipPressAndPlay(); stopLiveTickerAutoplay();
-        const ohne = currentMatch.ourBaseStr;
-        currentMatch = null;
+        // (Gemessen im selben Spiel: zwei Spielvorbereitungen nacheinander weichen durch
+        // Zufallsereignisse vor dem Anpfiff gelegentlich um ±2 voneinander ab.)
+        const original = window.applyPressConferenceToMatch;
+        let ohne = null;
+        window.applyPressConferenceToMatch = function () { ohne = currentMatch.ourBaseStr; return original(); };
         startMatchdayFlow();
         game.pressMatchBonus = { season: game.season, matchday: game.matchday, bonus: 2 };
-        skipPressAndPlay(); stopLiveTickerAutoplay();
-        out.bonus = Math.round((currentMatch.ourBaseStr - ohne) * 10) / 10;
+        try { skipPressAndPlay(); } finally { window.applyPressConferenceToMatch = original; }
+        stopLiveTickerAutoplay();
+        out.bonus = ohne === null ? 'nicht aufgerufen' : Math.round((currentMatch.ourBaseStr - ohne) * 10) / 10;
         return out;
     });
     assert(r.favorit && r.underdog && r.krise && r.pokal, 'Frage passt zur Lage (Favorit, Außenseiter, Krise, Pokal)');

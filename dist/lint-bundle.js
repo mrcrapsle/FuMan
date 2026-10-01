@@ -477,7 +477,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.11', date: '01.10.2026', features: 'Phase 18: Jugend sichtbarer (echtes Potenzial, Profivertrag mit 19, Leihe zur Entwicklung, Durchbruch-Momente)' };
+    const GAME_VERSION = { number: '3.12', date: '01.10.2026', features: 'Phase 18: Aufräumen Teil 6 (Schein-Entscheidungen mit echter Wirkung, keine stillen Knöpfe mehr)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -4329,9 +4329,24 @@ function cleanupLegacyDevelopmentState() {
         updateUI();
         showToast(`✅ Verein umbenannt: ${newName}`, 'success');
     }
+    // Eingabefeld im Spiel statt prompt(): native Dialoge unterdrücken viele Android-WebViews
+    // stillschweigend - der Knopf tat dort gar nichts.
     function promptRenameClub() {
-        let newName = prompt('Neuer Vereinsname:', game.clubName);
-        if (newName !== null) renameClub(newName);
+        let box = document.getElementById('club-rename-box');
+        if (!box) return;
+        if (box.innerHTML) { box.innerHTML = ''; return; }
+        box.innerHTML = `<div class="box" style="display:flex; gap:6px; align-items:center;">
+            <input type="text" id="club-rename-input" class="input-inline" maxlength="40" style="flex:1;" value="${game.clubName}">
+            <button onclick="confirmRenameClub()" class="btn-action" style="width:auto; font-size:10px;">Übernehmen</button>
+        </div>`;
+    }
+    function confirmRenameClub() {
+        let input = document.getElementById('club-rename-input');
+        let alt = game.clubName;
+        renameClub(input ? input.value : '');
+        if (game.clubName === alt) { showToast('Bitte einen neuen, gültigen Namen eingeben.', 'error'); return; }
+        document.getElementById('club-rename-box').innerHTML = '';
+        showToast(`✏️ Der Verein heißt jetzt ${game.clubName}.`, 'success');
     }
 
     // ==========================================
@@ -5430,9 +5445,9 @@ function cleanupLegacyDevelopmentState() {
     let cupDrawRevealTimer = null;
     function showCupDrawCeremony() {
         let r = cupTournament.roundsHistory[cupTournament.currentRound];
-        if (!r) return;
+        if (!r) { showToast('Für die nächste Pokalrunde gibt es noch keine Auslosung.', 'error'); return; }
         let ourPairing = r.pairings.find(p => p.home === game.clubName || p.away === game.clubName);
-        if (!ourPairing) return;
+        if (!ourPairing) { showToast(`${game.clubName} ist in dieser Pokalrunde nicht mehr dabei.`, 'error'); return; }
         let opponent = ourPairing.home === game.clubName ? ourPairing.away : ourPairing.home;
         let isHome = ourPairing.home === game.clubName;
 
