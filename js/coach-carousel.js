@@ -19,7 +19,7 @@ function coachCarouselTeams() {
 // Monatlich: Entlassungen in der eigenen Liga.
 function tickCoachCarousel() {
     if (game.matchday < 8 || game.matchday > 30) return;
-    const table = [...(leaguesData[game.leagueLevel] || [])].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+    const table = [...(leaguesData[game.leagueLevel] || [])].sort(compareTableRows);
     const meldungen = [];
     coachCarouselTeams().forEach(t => {
         const coach = getTeamCoach(t);

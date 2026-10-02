@@ -206,7 +206,7 @@ This ensures users can see exactly where money comes from/goes. Add new income o
 4. Writes single `dist/anstoss-fm13-standalone.html`
 5. `npm run lint` lints the combined bundle (all files treated as one global scope)
 
-**Lint rules that matter:** a file-level `/* eslint-disable no-undef */` only applies to that file (the lint bundle re-enables rules between files). `no-redeclare` catches two modules defining the same global name - a later `function x()` would otherwise silently replace an existing one. Rename the new one instead.
+**Lint rules that matter:** a file-level `/* eslint-disable no-undef */` only applies to that file (the lint bundle re-enables rules between files). `no-redeclare` catches two modules defining the same global name - a later `function x()` would otherwise silently replace an existing one. Rename the new one instead. `no-unused-vars` (local variables) is an error since Phase 19.5 - delete leftovers instead of keeping them.
 
 **Monthly ticks:** feature ticks belong inside the `if (game.matchday % 4 === 0)` block in `processPostMatchRoutine()` (js/match.js), not next to it - otherwise they run every matchday. Render functions must never change `game.money` (checked by the runtime round-trip test). Measure sizes with a fallback (`el.offsetWidth || 320`): screens are `display:none` while not shown.
 

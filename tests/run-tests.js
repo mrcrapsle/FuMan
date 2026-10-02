@@ -5309,7 +5309,7 @@ async function testMobileLayout(browser) {
         ['chronik', 'legenden', 'rivalen', 'titel'].forEach(t => views.push([`hist/${t}`, () => { showScreen('screen-history'); setSubTab('hist', t); }]));
         ['entwicklung', 'liga', 'talente'].forEach(t => views.push([`jug/${t}`, () => { showScreen('screen-youth'); setSubTab('jug', t); }]));
         const W = document.documentElement.clientWidth;
-        const ueberlauf = [], knoepfe = [], schrift = [], verdeckt = [];
+        const ueberlauf = [], knoepfe = [], schrift = [], verdeckt = [], streifen = [];
         for (const [name, open] of views) {
             open();
             await new Promise(res => setTimeout(res, 20));
@@ -5330,14 +5330,23 @@ async function testMobileLayout(browser) {
                 if (![...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return;
                 if (parseFloat(getComputedStyle(el).fontSize) < 8) schrift.push(`${name}: "${el.textContent.trim().slice(0, 20)}"`);
             });
+            // Akzentstreifen (.box::before, bis 9 px vom Rand) darf nicht auf dem Text liegen
+            document.querySelectorAll('.app-content .box').forEach(el => {
+                if (el.getBoundingClientRect().height === 0) return;
+                const vor = getComputedStyle(el, '::before');
+                if (vor.content === 'none' || vor.display === 'none') return;
+                const streifenEnde = parseFloat(vor.left) + parseFloat(vor.width);
+                if (parseFloat(getComputedStyle(el).paddingLeft) < streifenEnde + 3) streifen.push(`${name}: "${el.textContent.trim().slice(0, 20)}"`);
+            });
         }
         const navZeilen = new Set([...document.querySelectorAll('.bottom-nav-bar button')].map(b => Math.round(b.getBoundingClientRect().top))).size;
-        return { anzahl: views.length, ueberlauf, knoepfe: [...new Set(knoepfe)], schrift: [...new Set(schrift)], navZeilen, verdeckt };
+        return { anzahl: views.length, ueberlauf, knoepfe: [...new Set(knoepfe)], schrift: [...new Set(schrift)], navZeilen, verdeckt, streifen: [...new Set(streifen)] };
     });
     assert(r.ueberlauf.length === 0, `Kein horizontaler Überlauf auf ${r.anzahl} Bildschirmen/Reitern (${r.ueberlauf.join(', ')})`);
     assert(r.knoepfe.length === 0, `Alle Knöpfe mindestens 32 px hoch (${r.knoepfe.slice(0, 4).join(' | ')})`);
     assert(r.schrift.length === 0, `Keine Schrift unter 8 px (${r.schrift.slice(0, 4).join(' | ')})`);
     assert(r.navZeilen === 1, `Untere Leiste in einer Zeile (${r.navZeilen})`);
+    assert(r.streifen.length === 0, `Akzentstreifen der Kästen liegt nirgends auf dem Text (${r.streifen.length}: ${r.streifen.slice(0, 4).join(' | ')})`);
     assert(r.verdeckt.length === 0, `Seitenende nirgends von der unteren Leiste verdeckt (${r.verdeckt.slice(0, 5).join(', ')})`);
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 3).join(' | ')})`);
     await page.close();

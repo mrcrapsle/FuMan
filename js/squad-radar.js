@@ -55,7 +55,6 @@
         let center = size / 2;
         let maxValue = 100;
         let levels = 5;
-        let levelHeight = (size / 2) / levels;
         let attributes = [
             { label: 'Stärke', value: stats.strength },
             { label: 'Tempo', value: stats.pace },
@@ -208,7 +207,6 @@
         comparisons.forEach(c => {
             let diff = c.our - c.league;
             let diffColor = diff > 0 ? 'var(--primary)' : (diff < 0 ? 'var(--danger)' : '#aaa');
-            let barWidth = 100;
             let ourWidth = (c.our / Math.max(c.league, c.our) * 100);
             let leagueWidth = (c.league / Math.max(c.league, c.our) * 100);
 

@@ -151,7 +151,7 @@ function holdFarewellMatch(name) {
 // das Double, spielt der Vizemeister. Nur wenn der eigene Verein beteiligt ist.
 function prepareSupercup() {
     game.supercup = null;
-    const tabelle = [...(leaguesData[0] || [])].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+    const tabelle = [...(leaguesData[0] || [])].sort(compareTableRows);
     const finale = (cupTournament.roundsHistory || []).find(r => r.roundIndex === 4 && r.completed);
     const p = finale && finale.pairings[0];
     if (!tabelle.length || !p) return;

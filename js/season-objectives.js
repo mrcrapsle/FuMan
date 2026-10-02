@@ -148,7 +148,7 @@ function generateSeasonObjectives() {
 // Gleiche Sortierung wie Tabellenanzeige und Saisonabschluss (Punkte, dann Tordifferenz).
 function getOwnLeagueRank() {
     const teams = [...(leaguesData[game.leagueLevel] || [])]
-        .sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+        .sort(compareTableRows);
     const rank = teams.findIndex(t => t.name === game.clubName) + 1;
     return rank > 0 ? rank : null;
 }

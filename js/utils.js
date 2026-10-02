@@ -1,3 +1,8 @@
+// Tabellenreihenfolge überall gleich: Punkte, Tordifferenz, erzielte Tore.
+function compareTableRows(a, b) {
+    return b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst) || b.goalsFor - a.goalsFor;
+}
+
 
     // Zwei-Klick-Bestätigung für folgenreiche, nicht umkehrbare Aktionen (Verkaufen,
     // Entlassen, Jugendspieler hochziehen). Bewusst KEIN window.confirm(): native Dialoge

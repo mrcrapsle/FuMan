@@ -77,7 +77,6 @@
         let chartHeight = 120;
         let breite = container.offsetWidth || 320; // 0, solange der Screen versteckt ist
         let barWidth = Math.max(20, Math.floor((breite - 40) / data.length));
-        let padding = 8;
 
         let html = `
             <div style="font-size:9px; color:#94a3b8; margin-bottom:4px;">Gewinn- & Verlusttrend (letzte 12 Monate)</div>
@@ -87,8 +86,6 @@
         data.forEach((d, i) => {
             let incomeHeight = (d.income / maxVal) * (chartHeight - 16);
             let expenseHeight = (d.expenses / maxVal) * (chartHeight - 16);
-            let isProfit = d.balance >= 0;
-            let balanceColor = isProfit ? 'var(--primary)' : 'var(--danger)';
 
             html += `
                 <div style="display:flex; flex-direction:column; align-items:center; gap:2px; flex:1; min-width:${barWidth}px;">
@@ -189,10 +186,7 @@
         let expenses = totalWages + totalStaffWages + maintenance + loanInterest + loanInstallments + estTravelCost + estTax + estAdvisorFee;
 
         let balance = income - expenses;
-        let maxVal = Math.max(income, expenses) * 1.1 || 100000;
 
-        let incomeWidth = (income / maxVal) * 100;
-        let expenseWidth = (expenses / maxVal) * 100;
         let isProfit = balance >= 0;
         let statusColor = isProfit ? 'var(--primary)' : 'var(--danger)';
         let total = income + expenses;

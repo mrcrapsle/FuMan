@@ -83,6 +83,11 @@
 
 
 /* eslint-enable */
+// Tabellenreihenfolge überall gleich: Punkte, Tordifferenz, erzielte Tore.
+function compareTableRows(a, b) {
+    return b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst) || b.goalsFor - a.goalsFor;
+}
+
 
     // Zwei-Klick-Bestätigung für folgenreiche, nicht umkehrbare Aktionen (Verkaufen,
     // Entlassen, Jugendspieler hochziehen). Bewusst KEIN window.confirm(): native Dialoge
@@ -1185,7 +1190,6 @@
     function renderInboxView() {
         let list = document.getElementById('inbox-messages-list');
         if (!list) return;
-        let source = inboxFilter === 'archiv' ? inboxArchive : inboxMessages;
         let filtered = inboxFilter === 'alle' ? inboxMessages
             : inboxFilter === 'wichtig' ? inboxMessages.filter(m => m.important)
             : inboxFilter === 'archiv' ? inboxArchive
@@ -2044,7 +2048,6 @@
         // Gegner-Bezug: kennt der Co-Trainer (via Chef-Analyst) die Stärke des nächsten
         // Gegners, fließt das mit ein - gegen einen deutlich stärkeren Gegner rät er zu einer
         // vorsichtigeren, kompakteren Ausrichtung statt der reinen Kaderanalyse zu folgen.
-        let opponentNote = null;
         if (staffMembers.analyst.hired && typeof pendingMatchInfo !== 'undefined' && pendingMatchInfo && pendingMatchInfo.oppStr) {
             let ownAvgStrength = squad.length > 0 ? squad.reduce((s, p) => s + p.strength, 0) / squad.length : 55;
             let strDiff = pendingMatchInfo.oppStr - ownAvgStrength;
@@ -2881,7 +2884,6 @@
         let center = size / 2;
         let maxValue = 100;
         let levels = 5;
-        let levelHeight = (size / 2) / levels;
         let attributes = [
             { label: 'Stärke', value: stats.strength },
             { label: 'Tempo', value: stats.pace },
@@ -3034,7 +3036,6 @@
         comparisons.forEach(c => {
             let diff = c.our - c.league;
             let diffColor = diff > 0 ? 'var(--primary)' : (diff < 0 ? 'var(--danger)' : '#aaa');
-            let barWidth = 100;
             let ourWidth = (c.our / Math.max(c.league, c.our) * 100);
             let leagueWidth = (c.league / Math.max(c.league, c.our) * 100);
 
@@ -3859,7 +3860,7 @@ function cleanupLegacyDevelopmentState() {
         document.getElementById('st-strength').innerText = calcSecondTeamStrength();
 
         let table = leaguesData[game.secondTeam.leagueLevel] || [];
-        let sorted = [...table].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+        let sorted = [...table].sort(compareTableRows);
         let rank = sorted.findIndex(t => t.name === game.secondTeam.name) + 1;
         let ourEntry = sorted.find(t => t.name === game.secondTeam.name);
         document.getElementById('st-rank').innerText = ourEntry ? `Platz ${rank} von ${sorted.length} · ${ourEntry.points} Punkte (${ourEntry.played} Spiele)` : '-';
@@ -3915,7 +3916,6 @@ function cleanupLegacyDevelopmentState() {
             loanedBox.innerHTML = loanedPlayers.length === 0
                 ? '<div class="box" style="font-size:10px; color:#94a3b8;">Aktuell keine Spieler verliehen.</div>'
                 : loanedPlayers.map((l, idx) => {
-                    let fee = Math.max(1500, Math.round(l.player.marketValue * 0.1 * (l.duration / 15)));
                     return `<div class="box" style="font-size:10px; display:flex; justify-content:space-between; align-items:center;">
                         <span>📤 ${l.player.name}${l.youthLoan ? ' 🌱' : ''} bei ${l.loanClub} - noch ${l.duration} Spieltage</span>
                         <button onclick="openLoanRecallNegotiation(${idx})" class="btn-secondary" style="width:auto; font-size:9px;" title="Rückholung verhandeln">🔙 Verhandeln</button>
@@ -3955,7 +3955,7 @@ function cleanupLegacyDevelopmentState() {
         if (!game.secondTeam.isActive) return;
         let table = leaguesData[game.secondTeam.leagueLevel];
         if (!table) return;
-        let sorted = [...table].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+        let sorted = [...table].sort(compareTableRows);
         let rank = sorted.findIndex(t => t.name === game.secondTeam.name) + 1;
 
         if (rank <= 2 && game.secondTeam.leagueLevel > 0) {
@@ -4641,7 +4641,6 @@ function selectNewGameScenario(id) {
             : '<div style="font-size:10px; color:#94a3b8;">Keine Trophäen errungen.</div>';
 
         let crestThumbs = crestHistory.slice(-8).map(c => {
-            let patternMeta = CREST_PATTERN_PRESETS.find(p => p.key === c.pattern);
             return `<div style="width:32px; height:32px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:13px; font-weight:900; color:#1a1200; border:1px solid rgba(255,255,255,0.5); margin:2px; background:radial-gradient(circle at 35% 30%, ${hexToRgba(c.color, 0.65)} 0%, ${c.color} 55%, ${hexToRgba(c.color, 0.75)} 100%);">${c.symbol}</div>`;
         }).join('');
 
@@ -5174,7 +5173,7 @@ function selectNewGameScenario(id) {
         // Rang & Auf-/Abstiegs-Ausgang JEDES Vereins anhand der GERADE beendeten Saison
         // festhalten, bevor irgendetwas verschoben oder zurückgesetzt wird.
         let standingsPerLevel = leaguesData.map(table =>
-            [...table].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst))
+            [...table].sort(compareTableRows)
         );
         // Unser eigener Auf-/Abstieg wird woanders eigenständig entschieden (inkl. DFB-
         // Lizenzprüfung - kann vom reinen Tabellenplatz abweichen!) und weiter unten per
@@ -5470,7 +5469,7 @@ function selectNewGameScenario(id) {
         // sonst würden Teams plötzlich falsch gegeneinander antreten (Spielplan-Korruption).
         // Für die Tabellenansicht wird stattdessen eine sortierte KOPIE erzeugt.
         let rawTeams = leaguesData[viewLevel] || [];
-        let sortedTeams = [...rawTeams].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+        let sortedTeams = [...rawTeams].sort(compareTableRows);
         let tbody = document.getElementById('league-table-body');
         tbody.innerHTML = '';
         sortedTeams.forEach((t, idx) => {
@@ -9179,7 +9178,7 @@ function renderBoardRoomPanel() {
                 </div>
                 <div style="font-size:10px; margin-bottom:6px;">Marktlage: <strong id="merch-elasticity-label-${key}" style="color:${elast.color};">${elast.label}</strong></div>
                 
-                <div class="box" style="font-size:10px; background:rgba(0,0,0,0.4); padding:6px;">
+                <div class="box" style="font-size:10px; background:rgba(0,0,0,0.4); padding:6px 6px 6px 13px;">
                     <strong style="color:var(--accent);">Absatz letzter Spieltag: ${s.total} Stk. (+${formatVal(s.revenue)})</strong><br>
                     🏟️ Stadion: <strong>${s.stadium}</strong> | 🏬 City: <strong>${s.city}</strong> | 🌐 Online: <strong>${s.online}</strong>
                     ${s.missed > 0 ? `<div style="color:var(--danger); font-weight:bold; margin-top:2px;">⚠️ ${s.missed} Kunden gingen wegen Lagermangel leer aus!</div>` : ''}
@@ -10533,7 +10532,7 @@ function renderBoardRoomPanel() {
         let teams = leaguesData[game.leagueLevel];
         let us = teams ? teams.find(t => t.name === game.clubName) : null;
         if (us && teams) {
-            let sorted = [...teams].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+            let sorted = [...teams].sort(compareTableRows);
             let ourRank = sorted.findIndex(t => t.name === game.clubName) + 1;
             if (ourRank > 1) {
                 let above = sorted[ourRank - 2];
@@ -10698,7 +10697,7 @@ function renderBoardRoomPanel() {
         box.innerHTML = productionQueue.map(order => {
             let m = merchandise[order.merchKey];
             let segments = Array.from({ length: order.totalMatchdays }, (_, i) => i < (order.totalMatchdays - order.matchdaysLeft));
-            return `<div class="box" style="display:flex; align-items:center; gap:10px; padding:8px;">
+            return `<div class="box" style="display:flex; align-items:center; gap:10px; padding:8px 8px 8px 13px;">
                 <div style="min-width:44px; text-align:center;">
                     <div style="font-size:22px; font-weight:900; color:var(--industry); line-height:1;">${order.matchdaysLeft}</div>
                     <div style="font-size:8px; color:var(--text-muted); text-transform:uppercase;">SpT übrig</div>
@@ -12410,7 +12409,6 @@ function finishGoalkeeperGame() {
 
         // Budget-Balken
         let currentWages = squad.reduce((s, p) => s + p.wage, 0) + (game.secondTeam.isActive ? secondTeamSquad.reduce((s, p) => s + p.wage, 0) : 0);
-        let transferPct = Math.min(100, Math.round((game.transferBudget / Math.max(1, game.transferBudget)) * 100));
         document.getElementById('budget-transfer-bar-label').innerText = `Transferbudget: ${formatVal(game.transferBudget)}`;
         document.getElementById('budget-wage-bar-label').innerText = `Gehaltsbudget: ${formatVal(currentWages)} / ${formatVal(game.wageBudget)} pro Spieltag`;
         let wagePct = Math.min(100, Math.round((currentWages / Math.max(1, game.wageBudget)) * 100));
@@ -13277,7 +13275,6 @@ function finishGoalkeeperGame() {
         let chartHeight = 120;
         let breite = container.offsetWidth || 320; // 0, solange der Screen versteckt ist
         let barWidth = Math.max(20, Math.floor((breite - 40) / data.length));
-        let padding = 8;
 
         let html = `
             <div style="font-size:9px; color:#94a3b8; margin-bottom:4px;">Gewinn- & Verlusttrend (letzte 12 Monate)</div>
@@ -13287,8 +13284,6 @@ function finishGoalkeeperGame() {
         data.forEach((d, i) => {
             let incomeHeight = (d.income / maxVal) * (chartHeight - 16);
             let expenseHeight = (d.expenses / maxVal) * (chartHeight - 16);
-            let isProfit = d.balance >= 0;
-            let balanceColor = isProfit ? 'var(--primary)' : 'var(--danger)';
 
             html += `
                 <div style="display:flex; flex-direction:column; align-items:center; gap:2px; flex:1; min-width:${barWidth}px;">
@@ -13389,10 +13384,7 @@ function finishGoalkeeperGame() {
         let expenses = totalWages + totalStaffWages + maintenance + loanInterest + loanInstallments + estTravelCost + estTax + estAdvisorFee;
 
         let balance = income - expenses;
-        let maxVal = Math.max(income, expenses) * 1.1 || 100000;
 
-        let incomeWidth = (income / maxVal) * 100;
-        let expenseWidth = (expenses / maxVal) * 100;
         let isProfit = balance >= 0;
         let statusColor = isProfit ? 'var(--primary)' : 'var(--danger)';
         let total = income + expenses;
@@ -14627,7 +14619,7 @@ function finishGoalkeeperGame() {
                     + `<button onclick="toggleBande(${b.id})" class="btn-secondary" style="width:auto; font-size:8px;">${b.active ? 'Aktiv ✓' : 'Inaktiv'}</button></div>`).join('');
                 let freeCount = slots - occupants.length;
                 let freeNote = freeCount > 0
-                    ? `<div style="font-size:9px; color:var(--text-muted); padding:2px 0;">${freeCount} freie${freeCount === 1 ? 'r' : ''} Bandenplatz${freeCount === 1 ? '' : 'e'}</div>`
+                    ? `<div style="font-size:9px; color:var(--text-muted); padding:2px 0;">${freeCount} ${freeCount === 1 ? 'freier Bandenplatz' : 'freie Bandenplätze'}</div>`
                     : '';
                 return `<div class="box" style="margin-bottom:5px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; font-weight:800;">
@@ -14655,7 +14647,7 @@ function finishGoalkeeperGame() {
             let areasUsed = new Set(bandenSponsors.filter(b => b.active).map(b => b.area)).size;
             portfolioBox.innerHTML = activeCount === 0
                 ? '<div class="box" style="font-size:10px; color:#94a3b8;">Noch keine aktiven Bandensponsoren.</div>'
-                : `<div class="box" style="font-size:10px;"><strong style="color:var(--teal);">📢 ${activeCount} aktive Banden in ${areasUsed} Stadionbereichen</strong> · Gesamt: ${formatVal(totalIncomePerHome)}/Heimspiel</div>`;
+                : `<div class="box" style="font-size:10px;"><strong style="color:var(--teal);">📢 ${activeCount} aktive ${activeCount === 1 ? 'Bande' : 'Banden'} in ${areasUsed} ${areasUsed === 1 ? 'Stadionbereich' : 'Stadionbereichen'}</strong> · Gesamt: ${formatVal(totalIncomePerHome)}/Heimspiel</div>`;
         }
     }
 
@@ -15318,7 +15310,7 @@ function finishGoalkeeperGame() {
             let teams = leaguesData[game.leagueLevel];
             let inPromotionZone = false;
             if (teams) {
-                let sorted = [...teams].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+                let sorted = [...teams].sort(compareTableRows);
                 let myRank = sorted.findIndex(t => t.name === game.clubName) + 1;
                 inPromotionZone = myRank > 0 && myRank <= 2;
             }
@@ -16126,7 +16118,7 @@ function finishGoalkeeperGame() {
         if (queue.length === 0) { box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Keine laufenden Bauprojekte.</div>'; return; }
         box.innerHTML = queue.map(proj => {
             let segments = Array.from({ length: proj.totalDays }, (_, i) => i < (proj.totalDays - proj.daysLeft));
-            return `<div class="box" style="display:flex; align-items:center; gap:10px; padding:8px;">
+            return `<div class="box" style="display:flex; align-items:center; gap:10px; padding:8px 8px 8px 13px;">
                 <div style="min-width:40px; text-align:center;">
                     <div style="font-size:20px; font-weight:900; color:var(--accent); line-height:1;">${proj.daysLeft}</div>
                     <div style="font-size:8px; color:var(--text-muted); text-transform:uppercase;">SpT übrig</div>
@@ -16284,7 +16276,6 @@ function finishGoalkeeperGame() {
         if (!section) return;
 
         const content = section.querySelector('.accordion-content');
-        const isActive = content.classList.contains('active');
 
         // Toggle active state
         headerElement.classList.toggle('active');
@@ -17963,7 +17954,7 @@ function renderStadiumEventsPanel() {
         else { teamA.drawn++; teamB.drawn++; teamA.points++; teamB.points++; }
     }
     function concludeYouthLeagueSeason() {
-        let sorted = [...youthLeagueTable].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+        let sorted = [...youthLeagueTable].sort(compareTableRows);
         let ourRank = sorted.findIndex(t => t.isOwn) + 1;
         let scale = typeof leagueScaleFactor === 'function' ? leagueScaleFactor() : 1;
         if (ourRank === 1) {
@@ -17984,7 +17975,7 @@ function renderStadiumEventsPanel() {
         let box = document.getElementById('youth-league-table-box');
         if (!box) return;
         if (!youthLeagueTable || youthLeagueTable.length === 0) initYouthLeagueTable();
-        let sorted = [...youthLeagueTable].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+        let sorted = [...youthLeagueTable].sort(compareTableRows);
         box.innerHTML = `
             <table><thead><tr><th>Pl</th><th>Team</th><th>Sp</th><th>Tore</th><th>Pkt</th></tr></thead><tbody>
             ${sorted.map((t, i) => `<tr style="${t.isOwn ? 'font-weight:900; color:var(--accent);' : ''}"><td>${i+1}</td><td style="text-align:left;">${t.name}</td><td>${t.played}</td><td>${t.goalsFor}:${t.goalsAgainst}</td><td>${t.points}</td></tr>`).join('')}
@@ -20004,7 +19995,7 @@ function generateSeasonObjectives() {
 // Gleiche Sortierung wie Tabellenanzeige und Saisonabschluss (Punkte, dann Tordifferenz).
 function getOwnLeagueRank() {
     const teams = [...(leaguesData[game.leagueLevel] || [])]
-        .sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+        .sort(compareTableRows);
     const rank = teams.findIndex(t => t.name === game.clubName) + 1;
     return rank > 0 ? rank : null;
 }
@@ -23250,7 +23241,7 @@ function cleanupLegacyScoutState() {
             let status = checkDfbLicensingStatus();
             if (status.targetLevel !== null && status.missing.length > 0) {
                 let teams = leaguesData[game.leagueLevel];
-                let sorted = teams ? [...teams].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst)) : [];
+                let sorted = teams ? [...teams].sort(compareTableRows) : [];
                 let myRank = sorted.findIndex(t => t.name === game.clubName) + 1;
                 if (myRank > 0 && myRank <= 2) {
                     addInboxMessage('vertrag', '🚨 DFB-Lizenz-Frühwarnung!', `Du liegst aktuell in Aufstiegsposition, aber die Lizenz für die ${leagueNames[status.targetLevel]} fehlt noch:\n\n${status.missing.map(m => '• ' + m).join('\n')}\n\nNur noch wenige Spieltage bis Saisonende - jetzt nachbessern!`, 'screen-stadium');
@@ -24453,7 +24444,7 @@ function cleanupLegacyScoutState() {
         // tatsächlich berechnete Rang dadurch von dem in der Tabelle angezeigten Rang
         // abweichen (Einfüge-Reihenfolge statt Tordifferenz entschied). Jetzt identische
         // Sortierlogik wie in der Tabellenanzeige.
-        let teams = [...leaguesData[game.leagueLevel]].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+        let teams = [...leaguesData[game.leagueLevel]].sort(compareTableRows);
         let myRank = teams.findIndex(t => t.name === game.clubName) + 1;
         let myTeamRecord = leaguesData[game.leagueLevel].find(t => t.name === game.clubName);
         // Manager-Statistik: Bilanz der gerade beendeten Saison, bevor Auf-/Abstieg die Liga ändert.
@@ -24755,7 +24746,7 @@ function cleanupLegacyScoutState() {
 // simuliert (resolveRelegationForSeasonEnd).
 
 function sortedTable(level) {
-    return [...(leaguesData[level] || [])].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+    return [...(leaguesData[level] || [])].sort(compareTableRows);
 }
 
 // Reine Abfrage (ohne Zustand zu ändern): steht der Verein nach Saisonende auf einem Relegationsplatz?
@@ -25212,7 +25203,7 @@ function holdFarewellMatch(name) {
 // das Double, spielt der Vizemeister. Nur wenn der eigene Verein beteiligt ist.
 function prepareSupercup() {
     game.supercup = null;
-    const tabelle = [...(leaguesData[0] || [])].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+    const tabelle = [...(leaguesData[0] || [])].sort(compareTableRows);
     const finale = (cupTournament.roundsHistory || []).find(r => r.roundIndex === 4 && r.completed);
     const p = finale && finale.pairings[0];
     if (!tabelle.length || !p) return;
@@ -25622,7 +25613,7 @@ const ELF_DER_SAISON = { TW: 1, ABW: 4, MIT: 4, ST: 2 };
 
 function awardLeagueHonours(myRank) {
     const level = game.leagueLevel;
-    const table = [...(leaguesData[level] || [])].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+    const table = [...(leaguesData[level] || [])].sort(compareTableRows);
     const reserve = game.secondTeam && game.secondTeam.name;
     const ki = table.filter(t => t.name !== game.clubName && t.name !== reserve);
     if (!table.length || !squad.length) return null;
@@ -25736,7 +25727,7 @@ function coachCarouselTeams() {
 // Monatlich: Entlassungen in der eigenen Liga.
 function tickCoachCarousel() {
     if (game.matchday < 8 || game.matchday > 30) return;
-    const table = [...(leaguesData[game.leagueLevel] || [])].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+    const table = [...(leaguesData[game.leagueLevel] || [])].sort(compareTableRows);
     const meldungen = [];
     coachCarouselTeams().forEach(t => {
         const coach = getTeamCoach(t);
@@ -26121,7 +26112,7 @@ function renderCoachCarouselBox() {
             remaining -= step;
             let teams = leaguesData[game.leagueLevel];
             let myTeam = teams ? teams.find(t => t.name === game.clubName) : null;
-            let rank = teams && myTeam ? [...teams].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst)).findIndex(t => t.name === game.clubName) + 1 : '-';
+            let rank = teams && myTeam ? [...teams].sort(compareTableRows).findIndex(t => t.name === game.clubName) + 1 : '-';
             checkpoints.push({ matchday: game.matchday, rank, points: myTeam ? myTeam.points : 0, money: game.money });
             if (game.matchday > 34) break;
         }
@@ -26153,7 +26144,7 @@ function renderCoachCarouselBox() {
             if (teams) {
                 let myTeam = teams.find(t => t.name === game.clubName);
                 if (myTeam) myTeam.points = 62;
-                let sorted = [...teams].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+                let sorted = [...teams].sort(compareTableRows);
                 if (sorted[0] && sorted[0].name !== game.clubName) sorted[0].points = 63;
             }
             showToast('🧪 Szenario "Meisterschafts-Endspurt" aktiviert: Spieltag 30, knapper Rückstand auf Platz 1.', 'success', 4000);
@@ -27025,7 +27016,6 @@ function renderCoachCarouselBox() {
 
     // Alte Funktionsnamen bleiben als Kompatibilitäts-Wrapper erhalten (u.a. für den
     // window.onload-Bootstrap, der weiterhin loadGame(true) aufruft)
-    function saveGame() { saveGameToSlot(1); }
     function loadGame(silent = false) { migrateLegacySave(); return loadGameFromSlot(1, silent); }
 
     // "Neues Spiel starten": lässt bestehende Speicherstände in den Slots unangetastet

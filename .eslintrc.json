@@ -8,6 +8,6 @@
         "no-dupe-args": "error",
         "no-unreachable": "error",
         "no-const-assign": "error",
-        "no-unused-vars": ["warn", { "vars": "local", "args": "none" }]
+        "no-unused-vars": ["error", { "vars": "local", "args": "none" }]
     }
 }

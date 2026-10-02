@@ -462,7 +462,7 @@
         document.getElementById('st-strength').innerText = calcSecondTeamStrength();
 
         let table = leaguesData[game.secondTeam.leagueLevel] || [];
-        let sorted = [...table].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+        let sorted = [...table].sort(compareTableRows);
         let rank = sorted.findIndex(t => t.name === game.secondTeam.name) + 1;
         let ourEntry = sorted.find(t => t.name === game.secondTeam.name);
         document.getElementById('st-rank').innerText = ourEntry ? `Platz ${rank} von ${sorted.length} · ${ourEntry.points} Punkte (${ourEntry.played} Spiele)` : '-';
@@ -518,7 +518,6 @@
             loanedBox.innerHTML = loanedPlayers.length === 0
                 ? '<div class="box" style="font-size:10px; color:#94a3b8;">Aktuell keine Spieler verliehen.</div>'
                 : loanedPlayers.map((l, idx) => {
-                    let fee = Math.max(1500, Math.round(l.player.marketValue * 0.1 * (l.duration / 15)));
                     return `<div class="box" style="font-size:10px; display:flex; justify-content:space-between; align-items:center;">
                         <span>📤 ${l.player.name}${l.youthLoan ? ' 🌱' : ''} bei ${l.loanClub} - noch ${l.duration} Spieltage</span>
                         <button onclick="openLoanRecallNegotiation(${idx})" class="btn-secondary" style="width:auto; font-size:9px;" title="Rückholung verhandeln">🔙 Verhandeln</button>
@@ -558,7 +557,7 @@
         if (!game.secondTeam.isActive) return;
         let table = leaguesData[game.secondTeam.leagueLevel];
         if (!table) return;
-        let sorted = [...table].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+        let sorted = [...table].sort(compareTableRows);
         let rank = sorted.findIndex(t => t.name === game.secondTeam.name) + 1;
 
         if (rank <= 2 && game.secondTeam.leagueLevel > 0) {

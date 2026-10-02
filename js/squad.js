@@ -190,7 +190,6 @@
         // Gegner-Bezug: kennt der Co-Trainer (via Chef-Analyst) die Stärke des nächsten
         // Gegners, fließt das mit ein - gegen einen deutlich stärkeren Gegner rät er zu einer
         // vorsichtigeren, kompakteren Ausrichtung statt der reinen Kaderanalyse zu folgen.
-        let opponentNote = null;
         if (staffMembers.analyst.hired && typeof pendingMatchInfo !== 'undefined' && pendingMatchInfo && pendingMatchInfo.oppStr) {
             let ownAvgStrength = squad.length > 0 ? squad.reduce((s, p) => s + p.strength, 0) / squad.length : 55;
             let strDiff = pendingMatchInfo.oppStr - ownAvgStrength;

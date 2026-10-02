@@ -91,7 +91,7 @@
         // tatsächlich berechnete Rang dadurch von dem in der Tabelle angezeigten Rang
         // abweichen (Einfüge-Reihenfolge statt Tordifferenz entschied). Jetzt identische
         // Sortierlogik wie in der Tabellenanzeige.
-        let teams = [...leaguesData[game.leagueLevel]].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+        let teams = [...leaguesData[game.leagueLevel]].sort(compareTableRows);
         let myRank = teams.findIndex(t => t.name === game.clubName) + 1;
         let myTeamRecord = leaguesData[game.leagueLevel].find(t => t.name === game.clubName);
         // Manager-Statistik: Bilanz der gerade beendeten Saison, bevor Auf-/Abstieg die Liga ändert.

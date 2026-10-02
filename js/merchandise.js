@@ -325,7 +325,7 @@
                 </div>
                 <div style="font-size:10px; margin-bottom:6px;">Marktlage: <strong id="merch-elasticity-label-${key}" style="color:${elast.color};">${elast.label}</strong></div>
                 
-                <div class="box" style="font-size:10px; background:rgba(0,0,0,0.4); padding:6px;">
+                <div class="box" style="font-size:10px; background:rgba(0,0,0,0.4); padding:6px 6px 6px 13px;">
                     <strong style="color:var(--accent);">Absatz letzter Spieltag: ${s.total} Stk. (+${formatVal(s.revenue)})</strong><br>
                     🏟️ Stadion: <strong>${s.stadium}</strong> | 🏬 City: <strong>${s.city}</strong> | 🌐 Online: <strong>${s.online}</strong>
                     ${s.missed > 0 ? `<div style="color:var(--danger); font-weight:bold; margin-top:2px;">⚠️ ${s.missed} Kunden gingen wegen Lagermangel leer aus!</div>` : ''}

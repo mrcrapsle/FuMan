@@ -317,7 +317,7 @@
             remaining -= step;
             let teams = leaguesData[game.leagueLevel];
             let myTeam = teams ? teams.find(t => t.name === game.clubName) : null;
-            let rank = teams && myTeam ? [...teams].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst)).findIndex(t => t.name === game.clubName) + 1 : '-';
+            let rank = teams && myTeam ? [...teams].sort(compareTableRows).findIndex(t => t.name === game.clubName) + 1 : '-';
             checkpoints.push({ matchday: game.matchday, rank, points: myTeam ? myTeam.points : 0, money: game.money });
             if (game.matchday > 34) break;
         }
@@ -349,7 +349,7 @@
             if (teams) {
                 let myTeam = teams.find(t => t.name === game.clubName);
                 if (myTeam) myTeam.points = 62;
-                let sorted = [...teams].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+                let sorted = [...teams].sort(compareTableRows);
                 if (sorted[0] && sorted[0].name !== game.clubName) sorted[0].points = 63;
             }
             showToast('🧪 Szenario "Meisterschafts-Endspurt" aktiviert: Spieltag 30, knapper Rückstand auf Platz 1.', 'success', 4000);

@@ -775,7 +775,7 @@
                     + `<button onclick="toggleBande(${b.id})" class="btn-secondary" style="width:auto; font-size:8px;">${b.active ? 'Aktiv ✓' : 'Inaktiv'}</button></div>`).join('');
                 let freeCount = slots - occupants.length;
                 let freeNote = freeCount > 0
-                    ? `<div style="font-size:9px; color:var(--text-muted); padding:2px 0;">${freeCount} freie${freeCount === 1 ? 'r' : ''} Bandenplatz${freeCount === 1 ? '' : 'e'}</div>`
+                    ? `<div style="font-size:9px; color:var(--text-muted); padding:2px 0;">${freeCount} ${freeCount === 1 ? 'freier Bandenplatz' : 'freie Bandenplätze'}</div>`
                     : '';
                 return `<div class="box" style="margin-bottom:5px;">
                         <div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; font-weight:800;">
@@ -803,7 +803,7 @@
             let areasUsed = new Set(bandenSponsors.filter(b => b.active).map(b => b.area)).size;
             portfolioBox.innerHTML = activeCount === 0
                 ? '<div class="box" style="font-size:10px; color:#94a3b8;">Noch keine aktiven Bandensponsoren.</div>'
-                : `<div class="box" style="font-size:10px;"><strong style="color:var(--teal);">📢 ${activeCount} aktive Banden in ${areasUsed} Stadionbereichen</strong> · Gesamt: ${formatVal(totalIncomePerHome)}/Heimspiel</div>`;
+                : `<div class="box" style="font-size:10px;"><strong style="color:var(--teal);">📢 ${activeCount} aktive ${activeCount === 1 ? 'Bande' : 'Banden'} in ${areasUsed} ${areasUsed === 1 ? 'Stadionbereich' : 'Stadionbereichen'}</strong> · Gesamt: ${formatVal(totalIncomePerHome)}/Heimspiel</div>`;
         }
     }
 

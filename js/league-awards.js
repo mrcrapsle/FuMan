@@ -7,7 +7,7 @@ const ELF_DER_SAISON = { TW: 1, ABW: 4, MIT: 4, ST: 2 };
 
 function awardLeagueHonours(myRank) {
     const level = game.leagueLevel;
-    const table = [...(leaguesData[level] || [])].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+    const table = [...(leaguesData[level] || [])].sort(compareTableRows);
     const reserve = game.secondTeam && game.secondTeam.name;
     const ki = table.filter(t => t.name !== game.clubName && t.name !== reserve);
     if (!table.length || !squad.length) return null;

@@ -113,7 +113,7 @@
         // Rang & Auf-/Abstiegs-Ausgang JEDES Vereins anhand der GERADE beendeten Saison
         // festhalten, bevor irgendetwas verschoben oder zurückgesetzt wird.
         let standingsPerLevel = leaguesData.map(table =>
-            [...table].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst))
+            [...table].sort(compareTableRows)
         );
         // Unser eigener Auf-/Abstieg wird woanders eigenständig entschieden (inkl. DFB-
         // Lizenzprüfung - kann vom reinen Tabellenplatz abweichen!) und weiter unten per
@@ -409,7 +409,7 @@
         // sonst würden Teams plötzlich falsch gegeneinander antreten (Spielplan-Korruption).
         // Für die Tabellenansicht wird stattdessen eine sortierte KOPIE erzeugt.
         let rawTeams = leaguesData[viewLevel] || [];
-        let sortedTeams = [...rawTeams].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+        let sortedTeams = [...rawTeams].sort(compareTableRows);
         let tbody = document.getElementById('league-table-body');
         tbody.innerHTML = '';
         sortedTeams.forEach((t, idx) => {

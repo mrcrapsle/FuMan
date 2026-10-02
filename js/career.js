@@ -206,7 +206,6 @@
             : '<div style="font-size:10px; color:#94a3b8;">Keine Trophäen errungen.</div>';
 
         let crestThumbs = crestHistory.slice(-8).map(c => {
-            let patternMeta = CREST_PATTERN_PRESETS.find(p => p.key === c.pattern);
             return `<div style="width:32px; height:32px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:13px; font-weight:900; color:#1a1200; border:1px solid rgba(255,255,255,0.5); margin:2px; background:radial-gradient(circle at 35% 30%, ${hexToRgba(c.color, 0.65)} 0%, ${c.color} 55%, ${hexToRgba(c.color, 0.75)} 100%);">${c.symbol}</div>`;
         }).join('');
 

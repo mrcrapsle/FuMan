@@ -202,7 +202,7 @@
         else { teamA.drawn++; teamB.drawn++; teamA.points++; teamB.points++; }
     }
     function concludeYouthLeagueSeason() {
-        let sorted = [...youthLeagueTable].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+        let sorted = [...youthLeagueTable].sort(compareTableRows);
         let ourRank = sorted.findIndex(t => t.isOwn) + 1;
         let scale = typeof leagueScaleFactor === 'function' ? leagueScaleFactor() : 1;
         if (ourRank === 1) {
@@ -223,7 +223,7 @@
         let box = document.getElementById('youth-league-table-box');
         if (!box) return;
         if (!youthLeagueTable || youthLeagueTable.length === 0) initYouthLeagueTable();
-        let sorted = [...youthLeagueTable].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+        let sorted = [...youthLeagueTable].sort(compareTableRows);
         box.innerHTML = `
             <table><thead><tr><th>Pl</th><th>Team</th><th>Sp</th><th>Tore</th><th>Pkt</th></tr></thead><tbody>
             ${sorted.map((t, i) => `<tr style="${t.isOwn ? 'font-weight:900; color:var(--accent);' : ''}"><td>${i+1}</td><td style="text-align:left;">${t.name}</td><td>${t.played}</td><td>${t.goalsFor}:${t.goalsAgainst}</td><td>${t.points}</td></tr>`).join('')}

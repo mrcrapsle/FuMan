@@ -94,7 +94,6 @@
     function renderInboxView() {
         let list = document.getElementById('inbox-messages-list');
         if (!list) return;
-        let source = inboxFilter === 'archiv' ? inboxArchive : inboxMessages;
         let filtered = inboxFilter === 'alle' ? inboxMessages
             : inboxFilter === 'wichtig' ? inboxMessages.filter(m => m.important)
             : inboxFilter === 'archiv' ? inboxArchive

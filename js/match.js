@@ -1695,7 +1695,7 @@
             let status = checkDfbLicensingStatus();
             if (status.targetLevel !== null && status.missing.length > 0) {
                 let teams = leaguesData[game.leagueLevel];
-                let sorted = teams ? [...teams].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst)) : [];
+                let sorted = teams ? [...teams].sort(compareTableRows) : [];
                 let myRank = sorted.findIndex(t => t.name === game.clubName) + 1;
                 if (myRank > 0 && myRank <= 2) {
                     addInboxMessage('vertrag', '🚨 DFB-Lizenz-Frühwarnung!', `Du liegst aktuell in Aufstiegsposition, aber die Lizenz für die ${leagueNames[status.targetLevel]} fehlt noch:\n\n${status.missing.map(m => '• ' + m).join('\n')}\n\nNur noch wenige Spieltage bis Saisonende - jetzt nachbessern!`, 'screen-stadium');

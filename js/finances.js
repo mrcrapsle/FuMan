@@ -137,7 +137,6 @@
 
         // Budget-Balken
         let currentWages = squad.reduce((s, p) => s + p.wage, 0) + (game.secondTeam.isActive ? secondTeamSquad.reduce((s, p) => s + p.wage, 0) : 0);
-        let transferPct = Math.min(100, Math.round((game.transferBudget / Math.max(1, game.transferBudget)) * 100));
         document.getElementById('budget-transfer-bar-label').innerText = `Transferbudget: ${formatVal(game.transferBudget)}`;
         document.getElementById('budget-wage-bar-label').innerText = `Gehaltsbudget: ${formatVal(currentWages)} / ${formatVal(game.wageBudget)} pro Spieltag`;
         let wagePct = Math.min(100, Math.round((currentWages / Math.max(1, game.wageBudget)) * 100));

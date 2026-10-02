@@ -130,7 +130,7 @@
         box.innerHTML = productionQueue.map(order => {
             let m = merchandise[order.merchKey];
             let segments = Array.from({ length: order.totalMatchdays }, (_, i) => i < (order.totalMatchdays - order.matchdaysLeft));
-            return `<div class="box" style="display:flex; align-items:center; gap:10px; padding:8px;">
+            return `<div class="box" style="display:flex; align-items:center; gap:10px; padding:8px 8px 8px 13px;">
                 <div style="min-width:44px; text-align:center;">
                     <div style="font-size:22px; font-weight:900; color:var(--industry); line-height:1;">${order.matchdaysLeft}</div>
                     <div style="font-size:8px; color:var(--text-muted); text-transform:uppercase;">SpT übrig</div>

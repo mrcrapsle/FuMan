@@ -479,7 +479,6 @@
 
     // Alte Funktionsnamen bleiben als Kompatibilitäts-Wrapper erhalten (u.a. für den
     // window.onload-Bootstrap, der weiterhin loadGame(true) aufruft)
-    function saveGame() { saveGameToSlot(1); }
     function loadGame(silent = false) { migrateLegacySave(); return loadGameFromSlot(1, silent); }
 
     // "Neues Spiel starten": lässt bestehende Speicherstände in den Slots unangetastet

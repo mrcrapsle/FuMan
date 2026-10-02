@@ -261,7 +261,7 @@
             let teams = leaguesData[game.leagueLevel];
             let inPromotionZone = false;
             if (teams) {
-                let sorted = [...teams].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+                let sorted = [...teams].sort(compareTableRows);
                 let myRank = sorted.findIndex(t => t.name === game.clubName) + 1;
                 inPromotionZone = myRank > 0 && myRank <= 2;
             }
@@ -1069,7 +1069,7 @@
         if (queue.length === 0) { box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Keine laufenden Bauprojekte.</div>'; return; }
         box.innerHTML = queue.map(proj => {
             let segments = Array.from({ length: proj.totalDays }, (_, i) => i < (proj.totalDays - proj.daysLeft));
-            return `<div class="box" style="display:flex; align-items:center; gap:10px; padding:8px;">
+            return `<div class="box" style="display:flex; align-items:center; gap:10px; padding:8px 8px 8px 13px;">
                 <div style="min-width:40px; text-align:center;">
                     <div style="font-size:20px; font-weight:900; color:var(--accent); line-height:1;">${proj.daysLeft}</div>
                     <div style="font-size:8px; color:var(--text-muted); text-transform:uppercase;">SpT übrig</div>
@@ -1227,7 +1227,6 @@
         if (!section) return;
 
         const content = section.querySelector('.accordion-content');
-        const isActive = content.classList.contains('active');
 
         // Toggle active state
         headerElement.classList.toggle('active');

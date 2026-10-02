@@ -94,7 +94,7 @@
         let teams = leaguesData[game.leagueLevel];
         let us = teams ? teams.find(t => t.name === game.clubName) : null;
         if (us && teams) {
-            let sorted = [...teams].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+            let sorted = [...teams].sort(compareTableRows);
             let ourRank = sorted.findIndex(t => t.name === game.clubName) + 1;
             if (ourRank > 1) {
                 let above = sorted[ourRank - 2];

@@ -6,7 +6,7 @@
 // simuliert (resolveRelegationForSeasonEnd).
 
 function sortedTable(level) {
-    return [...(leaguesData[level] || [])].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+    return [...(leaguesData[level] || [])].sort(compareTableRows);
 }
 
 // Reine Abfrage (ohne Zustand zu ändern): steht der Verein nach Saisonende auf einem Relegationsplatz?
