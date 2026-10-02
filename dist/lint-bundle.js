@@ -477,7 +477,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.16', date: '03.10.2026', features: 'Autosave alle 5 Spieltage wird beim Start geladen; Fehler beim automatischen Speichern werden gemeldet' };
+    const GAME_VERSION = { number: '3.17', date: '03.10.2026', features: 'Phase 19: Karriere-Szenarien (Absteiger retten, Pleiteklub sanieren, Traditionsverein, Meister oder Chaos)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
