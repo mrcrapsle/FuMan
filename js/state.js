@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.18', date: '03.10.2026', features: 'Phase 19: Aufräumen Teil 7 (Akzentstreifen nicht mehr über dem Text, tote Variablen und CSS entfernt, einheitliche Tabellensortierung)' };
+    const GAME_VERSION = { number: '3.19', date: '03.10.2026', features: 'Phase 19: Langzeittest 20 Saisons (Vorstand reagiert erwartungsabhängig, 1.-Liga-Lizenz bezahlbar, Sponsoren-Konflikt mit Namen)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

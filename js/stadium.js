@@ -180,8 +180,11 @@
     // zur Anzeige im Stadion-Screen verwendet, damit man VORAB weiß, was für den nächsten
     // Aufstieg noch fehlt, statt erst nach der Meisterschaft eine böse Überraschung zu erleben.
     const DFB_LICENSING_REQUIREMENTS = [
-        { minCapacity: 20000, floodlight: true, minMoney: 500000, minYouthLvl: 2 }, // 1. Bundesliga
-        { minCapacity: 12000, floodlight: true, minMoney: 250000, minYouthLvl: 1 }, // 2. Bundesliga
+        // Kapazität wie in der DFL-Lizenzordnung (15.000 / 10.000): mit 20.000 Plätzen kostete die
+        // 1.-Liga-Lizenz einen Aufsteiger aus dem Startstadion (15.550) rund 15 Mio. € Ausbau plus
+        // Internat - mehr als eine komplette Zweitliga-Saison einbringt (~15 Mio. €, Langzeittest 19.6).
+        { minCapacity: 15000, floodlight: true, minMoney: 500000, minYouthLvl: 2 }, // 1. Bundesliga
+        { minCapacity: 10000, floodlight: true, minMoney: 250000, minYouthLvl: 1 }, // 2. Bundesliga
         { minCapacity: 6000, floodlight: true, minMoney: 100000, minYouthLvl: 0 },  // 3. Liga
         { minCapacity: 3000, floodlight: false, minMoney: 30000, minYouthLvl: 0 },  // Regionalliga
         { minCapacity: 1000, floodlight: false, minMoney: 0, minYouthLvl: 0 },      // Oberliga
