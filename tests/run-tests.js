@@ -568,6 +568,65 @@ async function testAutosaveResume(browser) {
     assert(fehler.length === 0, `Keine JS-Fehler (${fehler.slice(0, 2).join(' | ')})`);
 }
 
+async function testCareerScenarios(browser) {
+    console.log('\n[19.4] Karriere-Szenarien: Start über den Neues-Spiel-Dialog, Ziele und Sterne');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    // Start über den Dialog (mit Neuladen wie im echten Spiel)
+    await page.evaluate(() => { closeTutorial(); startNewGame(); selectNewGameScenario('absteiger'); });
+    const dialog = await page.evaluate(() => document.getElementById('new-game-scenario-btns').innerHTML);
+    await Promise.all([page.waitForNavigation(), page.evaluate(() => confirmNewGameWithSettings(null))]);
+    await page.waitForTimeout(500);
+    const r = await page.evaluate(() => {
+        try {
+            const out = {};
+            try { closeTutorial(); } catch (e) { /* egal */ }
+            out.start = game.scenario && game.scenario.id === 'absteiger' && game.leagueLevel === 2 && game.money === 120000 && game.fans === 35 && game.scenario.status === 'aktiv';
+            showScreen('screen-dashboard');
+            out.karte = document.getElementById('dash-scenario-box').innerHTML.includes('Rettet den Absteiger');
+            // Echte Saison: am Ende wird bewertet
+            game.sackPending = false;
+            simulateFullSeason();
+            concludeSeasonAndAdvance();
+            out.bewertet = game.scenario.status !== 'aktiv' && (game.scenarioResults || []).length === 1 && typeof game.scenario.lastRank === 'number';
+            out.ergebnis = game.scenario.status + ' / ' + game.scenario.result;
+            renderCareerSummary && renderCareerSummary();
+            // Bewertungslogik der übrigen Szenarien
+            const pruef = (id, setzen) => { const s = { id, startSeason: 1, startLevel: CAREER_SCENARIOS[id].level, lastRank: 5, status: 'aktiv' }; setzen(s); return CAREER_SCENARIOS[id].check(s); };
+            game.leagueLevel = 3; game.season = 2; game.money = 300000;
+            const p1 = pruef('pleite', () => {});
+            game.money = -5000;
+            const p2 = pruef('pleite', () => {});
+            game.season = 3;
+            const p3 = pruef('pleite', () => {});
+            out.pleite = p1.ok && p1.stars === 3 && !p2.done && p3.done && !p3.ok;
+            game.leagueLevel = 3; game.season = 3;
+            const t1 = pruef('tradition', () => {});
+            game.leagueLevel = 2;
+            const t2 = pruef('tradition', () => {});
+            game.leagueLevel = 4; game.season = 5;
+            const t3 = pruef('tradition', () => {});
+            out.tradition = !t1.done && t2.ok && t2.stars === 3 && t3.done && !t3.ok;
+            game.leagueLevel = 0;
+            out.titel = pruef('titel', s => { s.lastRank = 1; }).ok && !pruef('titel', s => { s.lastRank = 2; }).ok;
+            game.leagueLevel = 3;
+            out.abstieg = !pruef('absteiger', s => { s.startLevel = 2; }).ok && pruef('absteiger', s => { s.startLevel = 3; s.lastRank = 8; }).stars === 3;
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(dialog.includes('Freies Spiel') && dialog.includes('Pleiteklub') && dialog.includes('Traditionsverein') && dialog.includes('Meister'), 'Neues-Spiel-Dialog bietet freies Spiel und vier Szenarien');
+    assert(!r.crash, `Szenario-Test ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.start && r.karte, 'Szenario-Start: eigene Liga, Kasse, Fans; Ziel-Karte auf dem Dashboard');
+        assert(r.bewertet, `Am Saisonende wird bewertet und in der Karriere festgehalten (${r.ergebnis})`);
+        assert(r.pleite, 'Pleiteklub: schwarze Zahlen nach 1 Saison = 3 Sterne, Zwischenstand, Scheitern nach Fristende');
+        assert(r.tradition, 'Traditionsverein: 3. Liga nach 2 Saisons (schnellstmöglich) = 3 Sterne, Frist von 4 Saisons');
+        assert(r.titel && r.abstieg, 'Meister oder Chaos und Klassenerhalt werden richtig bewertet');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testYouthPathway(browser) {
     console.log('\n[18.5] Jugend-Laufbahn: Potenzial, Profivertrag mit 19, Leihe, Durchbruch-Momente');
     const { page, consoleErrors } = await freshPage(browser);
@@ -5777,6 +5836,7 @@ async function main() {
         testSquadAndTactics,
         testYouthAcademy,
         testYouthPathway,
+        testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,
         testTransferPoker,

@@ -98,6 +98,7 @@
         if (typeof recordSeasonalManagerStats === 'function') recordSeasonalManagerStats(myRank, myTeamRecord, game.leagueLevel);
         if (typeof checkPlaytimePromises === 'function') checkPlaytimePromises();
         if (typeof evaluateSeasonEndObjectives === 'function') evaluateSeasonEndObjectives(myRank);
+        if (typeof recordScenarioSeasonRank === 'function') recordScenarioSeasonRank(myRank);
         if (typeof prepareMemberAssembly === 'function') prepareMemberAssembly(myRank);
         if (typeof concludeWomenSeason === 'function') concludeWomenSeason();
 
@@ -298,6 +299,7 @@
         forceSponsorRenewalAtSeasonStart();
         if (typeof renewSeasonTickets === 'function') renewSeasonTickets();
         if (typeof checkSeasonMoodTargetResult === 'function') checkSeasonMoodTargetResult();
+        if (typeof evaluateScenarioAtSeasonEnd === 'function') evaluateScenarioAtSeasonEnd();
         // WM/EM im Sommer nach jeder geraden Saison (js/national-team.js), nach dem Fitness-Reset.
         if (typeof playSummerTournament === 'function') playSummerTournament();
         if (typeof tickCoachBounce === 'function') tickCoachBounce(true);

@@ -720,6 +720,7 @@
                         <button onclick="simulateMatchdays(5)" class="btn-secondary">⏩ 5 Spieltage simulieren</button>
                         <button onclick="simulateFullSeason()" class="btn-primary" style="background:#f59e0b; color:#000;">⚡ Saison durchsimulieren</button>
                     </div>
+                    <div id="dash-scenario-box"></div>
                     <div id="dash-joboffer-box"></div>
                     <div id="dash-onboarding-box"></div>
                     <div id="dash-relegation-box"></div>
@@ -765,6 +766,8 @@
                     <div class="panel-header">💾 SPEICHERSTÄNDE</div>
                     <button onclick="startNewGame()" id="btn-new-game" data-confirming="false" class="btn-danger" style="margin-bottom:10px;">🆕 Neues Spiel starten (frischer Klub)</button>
                     <div id="new-game-setup-box" class="box" style="display:none; margin-bottom:10px;">
+                        <div style="font-size:10px; font-weight:800; margin-bottom:4px;">Spielart wählen:</div>
+                        <div id="new-game-scenario-btns" style="margin-bottom:8px;"></div>
                         <div style="font-size:10px; font-weight:800; margin-bottom:4px;">Startliga wählen:</div>
                         <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin-bottom:8px;" id="new-game-level-btns"></div>
                         <div style="font-size:10px; font-weight:800; margin-bottom:4px;">Startkapital wählen:</div>
@@ -2502,6 +2505,7 @@
 <script src="js/player-development.js?v=2.6"></script>
 <script src="js/squadplanning.js?v=2.1"></script>
 <script src="js/secondteam.js?v=2.1"></script>
+<script src="js/scenarios.js?v=3.17"></script>
 <script src="js/career.js?v=2.1"></script>
 <script src="js/crest.js?v=2.1"></script>
 <script src="js/leagues.js?v=2.1"></script>
@@ -2667,6 +2671,9 @@
                 initLeagues();
                 refreshTransferMarket();
                 forceSponsorRenewalAtSeasonStart(true);
+                let chosenScenario = safeStorageGet(sessionStorage, 'anstoss_fm13_newgame_scenario');
+                safeStorageRemove(sessionStorage, 'anstoss_fm13_newgame_scenario');
+                if (chosenScenario && typeof applyScenarioStart === 'function') applyScenarioStart(chosenScenario);
 
                 // Falls dieser Neustart durch eine Entlassung ausgelöst wurde: Karriere
                 // (Level/XP/Perks) & Trophäenschrank retten, alles andere bleibt frisch.

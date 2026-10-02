@@ -544,6 +544,7 @@
         if (show) renderNewGameSetupOptions();
     }
     function renderNewGameSetupOptions() {
+        if (typeof renderNewGameScenarioOptions === 'function') renderNewGameScenarioOptions();
         let levelBox = document.getElementById('new-game-level-btns');
         if (levelBox) {
             levelBox.innerHTML = NEW_GAME_LEVEL_OPTIONS.map(o =>
@@ -568,8 +569,11 @@
         }
         clearTimeout(newGameConfirmTimer);
         safeSessionSet(FORCE_NEW_GAME_FLAG, '1');
-        safeSessionSet('anstoss_fm13_newgame_leaguelevel', String(selectedNewGameLevel));
-        safeSessionSet('anstoss_fm13_newgame_money', String(selectedNewGameMoney));
+        // Karriere-Szenario (js/scenarios.js): bestimmt die Startliga selbst.
+        let szenario = (typeof selectedNewGameScenario !== 'undefined' && selectedNewGameScenario && CAREER_SCENARIOS[selectedNewGameScenario]) ? selectedNewGameScenario : null;
+        safeSessionSet('anstoss_fm13_newgame_leaguelevel', String(szenario ? CAREER_SCENARIOS[szenario].level : selectedNewGameLevel));
+        safeSessionSet('anstoss_fm13_newgame_money', String(szenario ? 150000 : selectedNewGameMoney));
+        if (szenario) safeSessionSet('anstoss_fm13_newgame_scenario', szenario);
         location.reload();
     }
 

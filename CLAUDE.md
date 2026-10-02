@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Anstoß Mobile Pro - FM13** is a fully-featured browser-based football manager simulation game. The codebase is modular (index.html + css/styles.css + 87 js/*.js files) that bundles into a single 1.8 MB standalone HTML file. The game runs entirely in the browser with local storage for save games, works offline, and supports mobile devices.
+**Anstoß Mobile Pro - FM13** is a fully-featured browser-based football manager simulation game. The codebase is modular (index.html + css/styles.css + 88 js/*.js files) that bundles into a single 1.8 MB standalone HTML file. The game runs entirely in the browser with local storage for save games, works offline, and supports mobile devices.
 
 ## Working With the User
 
@@ -128,6 +128,7 @@ This pattern ensures:
 - Autosave every 5 matchdays (`maybeAutoSave()`, own key); every save writes `anstoss_fm13_last_save` ('auto' or 'slotN') and the boot loads exactly that one via `loadMostRecentGame()` (formerly always slot 1, so autosaves seemed lost). A failing autosave warns once per session. Tests: `freshPage()` removes that key; each `browser.newPage()` is its own storage context.
 - Save format: `buildSaveState()` packs `fixturesData` as `[home, away, hg, ag]` arrays (`packFixtures()`/`unpackFixtures()` in js/save.js, old object saves still load). The boot structural self-test runs once per `GAME_VERSION` (localStorage `anstoss_fm13_selftest_version`) - it cost ~1 s per start on phones.
 - Removed modules leave save-game fields behind: add them to `cleanupRemovedModuleState()` in js/state.js (runs on load and monthly).
+- Career scenarios: `js/scenarios.js` - `CAREER_SCENARIOS` (absteiger, pleite, tradition, titel) chosen in the new-game dialog (`selectNewGameScenario()`, sessionStorage marker read in window.onload → `applyScenarioStart()`); `recordScenarioSeasonRank(myRank)` before promotion, `evaluateScenarioAtSeasonEnd()` after season change (stars 1-3, `game.scenario`, `game.scenarioResults` shown in the career summary); card `#dash-scenario-box`.
 - Club change: `switchToClub()` in js/career.js - used by `showClubSwitchOptions()` and by job offers (`checkJobOfferApproach()` in js/match.js: chance from rank/media/level every 6 matchdays and at season end, offering clubs from own or next-higher league, move recorded in `game.careerStations`). Player retirements: `tickPlayerRetirement()` (js/player-retirement.js), shown in the Hall of Fame.
 - National teams: `js/national-team.js` - fixed international breaks after matchdays 6/13/24/30 (`tickInternationalBreak()` in `processPostMatchRoutine()`), nomination by country threshold (`getNominationThreshold()`, good grades lower it); no league match is missed, the trip costs fitness/injury risk and adds caps (`p.caps`, `p.intlGoals`), morale and market value. The club receives release fees via `payReleaseFee()` (booked as "🌍 Abstellungsprämien": 15,000 € per player and break, 10,000/12,000 € per player and tournament day for WC/EC). WC/EC after every even season via `playSummerTournament()` in `concludeSeasonAndAdvance()` (`game.intlTournaments`, `p.intlTitles`). Panel `#national-team-box` in the squad tab Analyse (the Team tab is capped at 3 panels by a test).
 - Player aging/development: only `agePlayersAtSeasonEnd()` in `js/player-development.js` (age +1, strength by archetype).
@@ -296,7 +297,7 @@ CI runs on every branch; only `main` deploys. Only push to `main` after `npm run
 
 - **index.html** – Main page; embeds CSS, loads all js/ modules, defines screen containers
 - **css/styles.css** – All styles; organized by section (DASHBOARD, SQUAD, MANAGER'S OFFICE, etc.)
-- **js/*.js** – Game logic modules (87 files); loaded in order of dependencies
+- **js/*.js** – Game logic modules (88 files); loaded in order of dependencies
 - **tests/run-tests.js** – Playwright test suite
 - **build.py** – Bundler script; concatenates and lints
 - **server.py** / `npm run serve` – Local dev server
