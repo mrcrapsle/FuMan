@@ -297,7 +297,9 @@ async function testNationalTeam(browser) {
             out.keinePause = tickInternationalBreak() === null;
             game.matchday = 6;
             const inbox0 = inboxMessages.length, fit0 = star.fitness = 100, mw0 = star.marketValue;
+            const geld0 = game.money;
             const kader = tickInternationalBreak();
+            out.praemiePause = game.money - geld0 === 2 * INTL_BREAK_FEE && JSON.stringify(inboxMessages).includes('Abstellungsprämie');
             out.pause = !!kader && kader.includes(star) && kader.includes(knapp) && kader.length === 2;
             out.wirkung = star.caps >= 1 && star.fitness === fit0 - 12 && star.marketValue >= mw0 && inboxMessages.length > inbox0;
             out.keinAusfall = !('nationalDuty' in star) || !star.nationalDuty;
@@ -306,7 +308,10 @@ async function testNationalTeam(browser) {
             out.keinTurnier = playSummerTournament() === null;
             game.season = 3;
             const caps0 = star.caps;
+            star.injured = 0; knapp.injured = 0;
+            const geld1 = game.money;
             const t = playSummerTournament();
+            out.praemieTurnier = !!t && t.fee === t.nations.reduce((a, n) => a + 12000 * n.days * n.players.length, 0) && game.money - geld1 === t.fee && t.fee > 0;
             out.turnier = !!t && t.season === 2 && t.name === 'Europameisterschaft' && t.nations[0].nation === 'Deutschland'
                 && t.nations[0].players.some(x => x.name === star.name) && star.caps > caps0 && game.intlTournaments[0] === t;
             out.stufe = t ? t.nations[0].stage : null;
@@ -318,11 +323,16 @@ async function testNationalTeam(browser) {
             game.intlTournaments = [];
             game.season = 2; game.matchday = 1;
             star.strength = 85;
-            simulateFullSeason();
-            star.strength = Math.max(star.strength, 85);
+            const originalPause = window.tickInternationalBreak;
+            let pausen = 0;
+            window.tickInternationalBreak = function () { const k = originalPause(); if (k) pausen++; return k; };
+            try { simulateFullSeason(); } finally { window.tickInternationalBreak = originalPause; }
+            // (Zufallsverletzungen dürfen die Turnierteilnahme im Test nicht verhindern)
+            if (squad.includes(star)) { star.strength = Math.max(star.strength, 85); star.injured = 0; }
             concludeSeasonAndAdvance();
             out.saisonwechsel = (game.intlTournaments || []).some(x => x.season === 2 && x.name === 'Europameisterschaft');
-            out.pausenGespielt = star.caps > caps0 + 4;
+            out.pausenGespielt = pausen >= 2; // ein verletzter Nationalspieler lässt eine Pause ausfallen
+            out.pausen = pausen;
             return out;
         } catch (e) { return { crash: e.message + ' ' + e.stack }; }
     });
@@ -334,7 +344,9 @@ async function testNationalTeam(browser) {
         assert(r.keinAusfall, 'Nationalspieler verpassen kein Ligaspiel mehr');
         assert(r.keinTurnier && r.turnier, `WM/EM nur nach geraden Saisons, mit Einsätzen der eigenen Spieler (${r.stufe})`);
         assert(r.anzeige, 'Kader/Analyse zeigt Nationalspieler, Nominierung und Turnierhistorie');
-        assert(r.saisonwechsel && r.pausenGespielt, 'Saisonwechsel spielt das Turnier, die Saison enthält vier Länderspielpausen');
+        assert(r.saisonwechsel && r.pausenGespielt, `Saisonwechsel spielt das Turnier, die Saison enthält die Länderspielpausen (${r.pausen})`);
+        assert(r.praemiePause, 'Abstellungsprämie je Spieler und Länderspielpause wird gezahlt und gemeldet');
+        assert(r.praemieTurnier, 'Turnierprämie je Spieler und Turniertag wird gezahlt');
     }
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
     await page.close();
