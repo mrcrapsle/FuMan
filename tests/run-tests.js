@@ -627,6 +627,32 @@ async function testCareerScenarios(browser) {
     await page.close();
 }
 
+async function testSponsorConflict(browser) {
+    console.log('\n[19.x] Sponsoren: Branchenkonflikt nennt den Konkurrenten und kostet 30 %');
+    const { page, consoleErrors } = await freshPage(browser);
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            bandenSponsors = [{ id: 1, name: 'RegioBank Test', type: 'LED', income: 1000, active: true, duration: 10, category: 'Finanzen', area: Object.keys(stadium.blocks)[0] }];
+            sponsorOffers = [];
+            checkIncomingSponsorOffers(true);
+            const o = sponsorOffers[0];
+            o.category = 'Finanzen';
+            showScreen('screen-sponsors');
+            renderSponsorsView();
+            const html = document.body.innerHTML;
+            const basis = o.base;
+            acceptSponsorOffer(o.id);
+            return { anzeige: html.includes('Branchenkonflikt mit RegioBank Test (Bande)') && html.includes('nur 70 %'), abschlag: game.sponsor.base === Math.round(basis * 0.7) };
+        } catch (e) { return { crash: e.message }; }
+    });
+    assert(!r.crash, `Sponsoren-Konflikt-Test ohne Absturz (${r.crash || 'ok'})`);
+    assert(r.anzeige, 'Angebot nennt den konkurrierenden Sponsor und den Abschlag');
+    assert(r.abschlag, 'Beim Annehmen zahlt der Sponsor tatsächlich nur 70 %');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testYouthPathway(browser) {
     console.log('\n[18.5] Jugend-Laufbahn: Potenzial, Profivertrag mit 19, Leihe, Durchbruch-Momente');
     const { page, consoleErrors } = await freshPage(browser);
@@ -5845,6 +5871,7 @@ async function main() {
         testSquadAndTactics,
         testYouthAcademy,
         testYouthPathway,
+        testSponsorConflict,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,

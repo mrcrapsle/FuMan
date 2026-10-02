@@ -38,13 +38,17 @@
     // am selben Trikot/Stadion. Gibt bei Konflikt die Branche zurück (kein Hard-Block, um das
     // Verhandeln nicht zu frustrierend zu machen - stattdessen Rabatt, siehe Angebots-Annahme).
     function getExclusivityConflict(category, excludeSlot = null) {
+        return getExclusivityRival(category, excludeSlot) ? category : null;
+    }
+    // Welcher aktive Sponsor belegt die Branche schon? (Für die Anzeige auf dem Angebot.)
+    function getExclusivityRival(category, excludeSlot = null) {
         if (!category) return null;
-        let activeCategories = [];
-        if (excludeSlot !== 'sponsor' && game.sponsor.base > 500) activeCategories.push(game.sponsor.category);
-        if (excludeSlot !== 'kit' && game.kitSupplier.income > 0) activeCategories.push(game.kitSupplier.category);
-        if (excludeSlot !== 'sleeve' && (game.sleeveSponsor?.income || 0) > 0) activeCategories.push(game.sleeveSponsor.category);
-        if (excludeSlot !== 'banden') bandenSponsors.forEach(b => activeCategories.push(b.category));
-        return activeCategories.includes(category) ? category : null;
+        let aktive = [];
+        if (excludeSlot !== 'sponsor' && game.sponsor.base > 500) aktive.push({ name: game.sponsor.name, slot: 'Hauptsponsor', category: game.sponsor.category });
+        if (excludeSlot !== 'kit' && game.kitSupplier.income > 0) aktive.push({ name: game.kitSupplier.name, slot: 'Ausrüster', category: game.kitSupplier.category });
+        if (excludeSlot !== 'sleeve' && (game.sleeveSponsor?.income || 0) > 0) aktive.push({ name: game.sleeveSponsor.name, slot: 'Ärmelsponsor', category: game.sleeveSponsor.category });
+        if (excludeSlot !== 'banden') bandenSponsors.forEach(b => aktive.push({ name: b.name, slot: 'Bande', category: b.category }));
+        return aktive.find(a => a.category === category) || null;
     }
 
     function generateSponsorName() {
@@ -648,9 +652,9 @@
 
     function categoryBadgeHtml(category, slot) {
         if (!category) return '';
-        let conflict = getExclusivityConflict(category, slot);
-        return conflict
-            ? ` · <span style="color:var(--danger);">🏷️ ${category} ⚠️ Konflikt!</span>`
+        let rivale = getExclusivityRival(category, slot);
+        return rivale
+            ? ` · <span style="color:var(--danger);">🏷️ ${category} ⚠️ Branchenkonflikt mit ${rivale.name} (${rivale.slot}): alle Beträge nur 70 %</span>`
             : ` · <span style="color:#94a3b8;">🏷️ ${category}</span>`;
     }
 

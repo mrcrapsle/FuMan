@@ -1607,7 +1607,16 @@
         // statt (wie vorher) komplett wirkungslos zu bleiben. Anhaltend schlechte Stimmung
         // kann zur Entlassung führen (siehe checkJobSecurity() weiter unten).
         if (matchResult) {
-            let boardShift = matchResult === 'win' ? 2 : (matchResult === 'loss' ? -3 : -1);
+            // Erwartungsabhängig (Langzeittest Phase 19.6): früher fest Sieg +2 / Remis -1 /
+            // Niederlage -3 - ein Mittelfeldteam verlor so ~20 Punkte pro Saison und landete
+            // zwangsläufig bei der Entlassung. Jetzt zählt, gegen wen: Pflichtsiege bringen wenig,
+            // Punkte gegen stärkere Gegner viel.
+            let erwartung = typeof getOwnMatchExpectation === 'function' ? getOwnMatchExpectation() : 'offen';
+            let boardShift = {
+                favorit: { win: 1, draw: -1, loss: -3 },
+                offen: { win: 2, draw: 0, loss: -2 },
+                aussenseiter: { win: 3, draw: 1, loss: -1 }
+            }[erwartung][matchResult] ?? 0;
             // Ruhiger Pol (Krisenmanager-Perk, NEU): dämpft den Vertrauensverlust beim
             // Vorstand nach Niederlagen - der Manager bleibt auch in schwierigen Phasen
             // glaubwürdig.
@@ -2326,6 +2335,20 @@
         showNotice('🚪 Entlassen!',
             'Der Vorstand hat genug gesehen und trennt sich mit sofortiger Wirkung von dir.\n\nDeine Karriere-Erfahrung und deine Trophäen nimmst du mit - bei deinem neuen Klub beginnst du aber wieder ganz von unten.',
             { typ: 'warn', sofort: true, knopf: 'Neuen Klub suchen', danach: () => location.reload() });
+    }
+
+    // Erwartung für das gerade gespielte eigene Ligaspiel: Gegnerstärke gegen den Schnitt der
+    // eigenen Startelf (±4 gilt als offenes Spiel).
+    function getOwnMatchExpectation() {
+        let fixs = fixturesData[game.leagueLevel] ? fixturesData[game.leagueLevel][game.matchday - 1] : null;
+        let teams = leaguesData[game.leagueLevel] || [];
+        let f = fixs ? fixs.find(x => teams[x.home]?.name === game.clubName || teams[x.away]?.name === game.clubName) : null;
+        if (!f) return 'offen';
+        let gegner = teams[teams[f.home].name === game.clubName ? f.away : f.home];
+        let elf = squad.filter(p => lineup.includes(p.id));
+        if (!gegner || !elf.length) return 'offen';
+        let diff = gegner.strength - elf.reduce((a, p) => a + p.strength, 0) / elf.length;
+        return diff < -4 ? 'favorit' : (diff > 4 ? 'aussenseiter' : 'offen');
     }
 
     // ---------- PRESSESTIMMEN ----------
