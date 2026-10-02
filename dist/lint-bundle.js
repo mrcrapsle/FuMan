@@ -477,7 +477,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.13', date: '02.10.2026', features: 'Phase 19: Länderspiele & Turniere (feste Länderspielpausen, Nominierungen, WM/EM)' };
+    const GAME_VERSION = { number: '3.14', date: '02.10.2026', features: 'Phase 19: Transferpoker (Forderung, Schmerzgrenze, Geduld, Rivalen, Gehaltsgespräch)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -6453,7 +6453,7 @@ function ensureTransferTerms(p) {
     const vertrag = Math.max(1, Math.min(4, p.contracts || 2));
     // Lange Verträge machen den Spieler teuer und den Verkäufer zäh.
     p.sellerMinimum = Math.round(p.marketValue * (0.82 + vertrag * 0.05) / 1000) * 1000;
-    p.askingPrice = Math.max(p.sellerMinimum + 1000, Math.round(p.marketValue * (1.05 + vertrag * 0.05 + Math.random() * 0.15) / 1000) * 1000);
+    p.askingPrice = Math.max(p.sellerMinimum + 1000, Math.round(p.marketValue * (1.0 + vertrag * 0.04 + Math.random() * 0.12) / 1000) * 1000);
     return p;
 }
 
