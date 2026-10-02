@@ -760,8 +760,6 @@
                 inset 0 90px 60px -60px rgba(120, 80, 30, 0.35),
                 inset 0 -90px 60px -60px rgba(60, 38, 14, 0.5);
         }
-        .glass-panel { background: rgba(17, 24, 39, 0.85); backdrop-filter: blur(12px); border: 1px solid rgba(55, 65, 81, 0.6); }
-
 
         /* ============================================================
            MANAGERBÜRO - POINT-AND-CLICK STARTBILDSCHIRM (reines CSS-3D)
@@ -1247,22 +1245,12 @@
 
             /* Grid optimieren */
             .player-card { font-size: 9px; padding: 8px; }
-            .stat-row { grid-template-columns: 1fr 1fr; }
 
             /* Buttons kompakter */
             .btn-action, .btn-secondary {
                 font-size: 10px;
                 padding: 6px 8px;
                 min-width: auto;
-            }
-
-            /* Transfer/Kader Listen */
-            .player-list-item {
-                display: grid;
-                grid-template-columns: auto 1fr auto;
-                gap: 4px;
-                font-size: 9px;
-                padding: 6px;
             }
 
             /* Stadium visuell kompakter */
@@ -1311,7 +1299,7 @@
             .box { font-size: 9px; padding: 4px 4px 4px 13px; margin: 4px 0; }
 
             /* Buttons */
-            .btn-action, .btn-secondary, .btn-success, .btn-warning, .btn-danger {
+            .btn-action, .btn-secondary, .btn-danger {
                 font-size: 11px;
                 padding: 8px 10px;
                 margin: 3px 0;
@@ -1326,18 +1314,6 @@
                 padding: 6px;
                 font-size: 9px;
                 grid-template-columns: auto 1fr;
-            }
-            .stat-row {
-                grid-template-columns: 1fr;
-                gap: 2px;
-            }
-
-            /* Transfer-Liste single column */
-            .player-list-item {
-                display: block;
-                font-size: 9px;
-                padding: 6px;
-                margin: 4px 0;
             }
 
             /* Stadium Visualisierung */
@@ -1437,7 +1413,7 @@
             }
 
             /* Tabelle/Listen single column */
-            .stat-row { grid-template-columns: 1fr; }
+            
             table { font-size: 10px; }
             tr { padding: 2px; }
             td { padding: 3px 4px; }

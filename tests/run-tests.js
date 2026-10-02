@@ -5944,6 +5944,9 @@ async function main() {
     if (failedTests.length > 0) {
         console.log('\nFehlgeschlagene Tests:');
         failedTests.forEach(t => console.log(`  - ${t}`));
+        // In GitHub Actions zusätzlich als Annotation: die sind über die API lesbar, auch
+        // wenn das Protokoll selbst nicht abrufbar ist.
+        if (process.env.GITHUB_ACTIONS) failedTests.forEach(t => console.log(`::error title=Test fehlgeschlagen (${process.env.GAME_FILE || 'standalone'})::${String(t).replace(/[\r\n]+/g, ' ').slice(0, 300)}`));
     }
     console.log('='.repeat(60));
     process.exit(failed > 0 ? 1 : 0);
