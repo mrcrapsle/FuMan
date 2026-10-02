@@ -477,7 +477,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.15', date: '02.10.2026', features: 'Phase 19: Gegner-Taktik reagiert (Taktik-Duell, berechenbare Trainer werden gekontert)' };
+    const GAME_VERSION = { number: '3.16', date: '03.10.2026', features: 'Autosave alle 5 Spieltage wird beim Start geladen; Fehler beim automatischen Speichern werden gemeldet' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -26820,7 +26820,7 @@ function renderCoachCarouselBox() {
             box.innerHTML = `
                 <div style="font-weight:bold; color:var(--teal);">🔄 Automatisch: ${m.clubName || '-'}</div>
                 <div style="font-size:10px; color:#94a3b8;">${m.league || '-'} · Saison ${m.season} · Spieltag ${m.matchday}/34 · ${formatVal(m.money || 0)}</div>
-                <div style="font-size:9px; color:#64748b;">Gespeichert: ${m.savedAt || '-'} · wird alle ${AUTOSAVE_INTERVAL} Spieltage erneuert</div>
+                <div style="font-size:9px; color:#64748b;">Gespeichert: ${m.savedAt || '-'} · wird alle ${AUTOSAVE_INTERVAL} Spieltage erneuert · beim Start wird automatisch der neueste Stand geladen</div>
                 <button onclick="loadAutoSave()" class="btn-secondary" style="font-size:9px; margin-top:4px;">Automatischen Stand laden</button>`;
         } catch (e) {
             box.innerHTML = '<div style="font-size:10px; color:var(--danger);">Automatischer Spielstand ist beschädigt.</div>';
