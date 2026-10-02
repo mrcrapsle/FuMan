@@ -311,7 +311,7 @@ async function testNationalTeam(browser) {
                 && t.nations[0].players.some(x => x.name === star.name) && star.caps > caps0 && game.intlTournaments[0] === t;
             out.stufe = t ? t.nations[0].stage : null;
             // Anzeige im Reiter Team
-            showScreen('screen-squad'); setSquadTab('team');
+            showScreen('screen-squad'); setSquadTab('analyse');
             const html = document.getElementById('national-team-box').innerHTML;
             out.anzeige = html.includes(star.name) && html.includes('nominiert') && html.includes('Europameisterschaft 2');
             // Integration: nach Saison 2 läuft das Turnier beim Saisonwechsel automatisch
@@ -333,7 +333,7 @@ async function testNationalTeam(browser) {
         assert(r.pause && r.wirkung, 'Länderspielpause: genau die Nominierten reisen, mit Einsätzen, Müdigkeit, Marktwert und Meldung');
         assert(r.keinAusfall, 'Nationalspieler verpassen kein Ligaspiel mehr');
         assert(r.keinTurnier && r.turnier, `WM/EM nur nach geraden Saisons, mit Einsätzen der eigenen Spieler (${r.stufe})`);
-        assert(r.anzeige, 'Kader/Team zeigt Nationalspieler, Nominierung und Turnierhistorie');
+        assert(r.anzeige, 'Kader/Analyse zeigt Nationalspieler, Nominierung und Turnierhistorie');
         assert(r.saisonwechsel && r.pausenGespielt, 'Saisonwechsel spielt das Turnier, die Saison enthält vier Länderspielpausen');
     }
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
