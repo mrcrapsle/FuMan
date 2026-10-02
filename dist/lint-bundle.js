@@ -482,7 +482,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.17', date: '03.10.2026', features: 'Phase 19: Karriere-Szenarien (Absteiger retten, Pleiteklub sanieren, Traditionsverein, Meister oder Chaos)' };
+    const GAME_VERSION = { number: '3.18', date: '03.10.2026', features: 'Phase 19: Aufräumen Teil 7 (Akzentstreifen nicht mehr über dem Text, tote Variablen und CSS entfernt, einheitliche Tabellensortierung)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -7839,7 +7839,7 @@ const ONBOARDING_STEPS = [
 
 const SCREEN_HINTS = {
     'screen-squad': 'Die Startelf zählt: Stärke × Fitness × Tagesform. „Trainer stellt Top-Elf auf“ wählt automatisch die fitteste starke Elf. Formation und Spielstil ändern Angriff, Abwehr und Kraftverbrauch.',
-    'screen-transfer': 'Angebote für deine Spieler findest du unter „Angebote“. Neue Spieler gibt es im Transfermarkt (10 pro Fenster), ablösefrei bei den Vereinslosen oder auf Leihbasis. Achte auf das Gehaltsbudget.',
+    'screen-transfer': 'Angebote für deine Spieler findest du unter „Angebote“. Neue Spieler gibt es im Transfermarkt (10 pro Fenster) - die Ablöse lässt sich mit 🃏 Verhandeln drücken, Sofortkauf zahlt die Forderung -, ablösefrei bei den Vereinslosen oder auf Leihbasis. Achte auf das Gehaltsbudget.',
     'screen-finances': 'Jede Einnahme und Ausgabe steht im Buchungsjournal. Im Minus gilt eine Transfersperre; anhaltende Verluste bestraft das Financial Fairplay bis hin zum Punktabzug. Sponsoren-Angebote kannst du nachverhandeln.',
     'screen-training': 'Der Wochenschwerpunkt wirkt nach jedem Spieltag: Kondition hilft der Fitness, Taktik und Match-Prep der Teamstärke, Erholung senkt das Verletzungsrisiko.',
     'screen-stadium': 'Stadionausbau wird voll bezahlt, wenn er beginnt, und ist nach einigen Spieltagen fertig. Für den Aufstieg brauchst du Lizenzauflagen (z. B. Flutlicht für die 3. Liga) - die Übersicht steht hier.',
