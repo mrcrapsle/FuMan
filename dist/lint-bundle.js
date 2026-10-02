@@ -26433,6 +26433,10 @@ function renderCoachCarouselBox() {
     // schreiben, überschriebe sie ungefragt den von Hand angelegten Spielstand.
     const AUTOSAVE_KEY = 'anstoss_fm13_autosave';
     const AUTOSAVE_INTERVAL = 5;
+    // Welcher Stand zuletzt geschrieben wurde ('auto' oder 'slot1'..): beim Start wird genau
+    // dieser geladen - früher immer Slot 1, wodurch der neuere Autosave verloren schien.
+    const LAST_SAVE_KEY = 'anstoss_fm13_last_save';
+    let autosaveWarnungGezeigt = false;
     const LEGACY_SAVE_KEY = 'anstoss_fm13_save_v1';
     const SAVE_SLOT_COUNT = 3;
     const FORCE_NEW_GAME_FLAG = 'anstoss_fm13_force_new_game';
@@ -26631,6 +26635,7 @@ function renderCoachCarouselBox() {
                 showToast('💾 Speichern nicht möglich: Dieser Browser/diese Ansicht blockiert lokalen Speicher für diese Datei. Öffne die Datei in einem normalen Browser (z.B. "Öffnen mit..." → Chrome), nicht in der Dateivorschau.', 'error', 8000);
                 return;
             }
+            safeLocalSet(LAST_SAVE_KEY, 'slot' + slotNum);
             playSound('whistle');
             showToast(`💾 In Slot ${slotNum} gespeichert!`, 'success');
             renderSaveSlotsUI();
@@ -26753,8 +26758,14 @@ function renderCoachCarouselBox() {
             };
             if (safeLocalSet(AUTOSAVE_KEY, JSON.stringify(state))) {
                 game.lastAutoSaveMatchday = game.matchday;
+                safeLocalSet(LAST_SAVE_KEY, 'auto');
                 showToast(`💾 Automatisch gespeichert (Spieltag ${Math.min(34, game.matchday)}).`, 'success', 2200);
                 renderSaveSlotsUI();
+            } else if (!autosaveWarnungGezeigt) {
+                // Nicht mehr stumm scheitern: einmal pro Sitzung deutlich warnen.
+                autosaveWarnungGezeigt = true;
+                game.lastAutoSaveMatchday = game.matchday;
+                showToast('⚠️ Automatisches Speichern nicht möglich: der Browser blockiert den Speicher (oder er ist voll). Exportiere deinen Spielstand als Datei (💾 Speichern → Export) oder öffne das Spiel in Chrome/Firefox statt in der Dateivorschau.', 'error', 9000);
             }
         } catch (e) { console.error('Autosave fehlgeschlagen:', e); }
     }
@@ -26771,6 +26782,26 @@ function renderCoachCarouselBox() {
             renderSaveSlotsUI();
             return true;
         } catch (e) { showToast('Automatischer Spielstand ist beschädigt: ' + e.message, 'error'); return false; }
+    }
+
+    // Spielstart: den zuletzt geschriebenen Stand laden (Autosave oder Slot), sonst Slot 1.
+    function loadMostRecentGame() {
+        let zuletzt = safeLocalGet(LAST_SAVE_KEY);
+        if (zuletzt === 'auto') {
+            try {
+                let raw = safeLocalGet(AUTOSAVE_KEY);
+                if (raw) {
+                    let p = JSON.parse(raw);
+                    applyLoadedState(p);
+                    updateUI();
+                    showToast(`📂 Automatischer Spielstand geladen (Saison ${p.meta ? p.meta.season : '?'}, Spieltag ${p.meta ? p.meta.matchday : '?'}).`, 'success', 3500);
+                    return true;
+                }
+            } catch (e) { console.error('Autosave beim Start nicht ladbar:', e); }
+        }
+        let slot = /^slot(\d)$/.exec(zuletzt || '');
+        if (slot) return loadGameFromSlot(parseInt(slot[1]), true);
+        return loadGame(true);
     }
 
     // Schnellspeichern aus der unteren Menüleiste - legt immer in Slot 1 ab.
@@ -27127,7 +27158,7 @@ function renderCoachCarouselBox() {
                 }
                 updateUI();
                 showScreen('screen-office');
-            } else if (!loadGame(true)) {
+            } else if (!(typeof loadMostRecentGame === 'function' ? loadMostRecentGame() : loadGame(true))) {
                 initDefaultSquad();
                 initLeagues();
                 refreshTransferMarket();

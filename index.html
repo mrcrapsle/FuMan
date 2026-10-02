@@ -2686,7 +2686,7 @@
                 }
                 updateUI();
                 showScreen('screen-office');
-            } else if (!loadGame(true)) {
+            } else if (!(typeof loadMostRecentGame === 'function' ? loadMostRecentGame() : loadGame(true))) {
                 initDefaultSquad();
                 initLeagues();
                 refreshTransferMarket();

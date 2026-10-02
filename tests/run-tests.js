@@ -34,6 +34,10 @@ function assert(condition, label) {
 
 async function freshPage(browser) {
     const page = await browser.newPage();
+    // Tests teilen sich den lokalen Speicher (file://): ohne diesen Schritt würde jeder neue
+    // Test den Autosave eines vorherigen Tests laden (Start lädt den zuletzt geschriebenen
+    // Stand). testAutosaveResume prüft dieses Startverhalten bewusst ohne Bereinigung.
+    await page.addInitScript(() => { try { localStorage.removeItem('anstoss_fm13_last_save'); } catch (e) { /* egal */ } });
     let consoleErrors = [];
     page.on('pageerror', e => consoleErrors.push(e.message));
     await page.goto(GAME_PATH);
@@ -515,6 +519,53 @@ async function testOpponentTactics(browser) {
     }
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
     await page.close();
+}
+
+async function testAutosaveResume(browser) {
+    console.log('\n[19.x] Autosave: Start lädt den zuletzt geschriebenen Stand, Fehler werden gemeldet');
+    // 1. Spielen bis zum Autosave (ein gemeinsamer Kontext = gemeinsamer Speicher wie im Browser)
+    const ctx = await browser.newContext();
+    const page1 = await ctx.newPage();
+    const fehler = [];
+    page1.on('pageerror', e => fehler.push(e.message));
+    page1.on('dialog', d => d.accept());
+    await page1.goto(GAME_PATH);
+    await page1.waitForTimeout(400);
+    const vorher = await page1.evaluate(() => {
+        closeTutorial();
+        game.sackPending = false;
+        game.clubName = 'Autosave Testclub';
+        game.lastAutoSaveMatchday = game.matchday;
+        simulateMatchdays(6);
+        return { matchday: game.matchday, last: localStorage.getItem('anstoss_fm13_last_save'), auto: !!localStorage.getItem('anstoss_fm13_autosave') };
+    });
+    await page1.close();
+    // 2. Neustart ohne Bereinigung: der Autosave muss geladen werden
+    const page2 = await ctx.newPage();
+    page2.on('pageerror', e => fehler.push(e.message));
+    await page2.goto(GAME_PATH);
+    await page2.waitForTimeout(600);
+    const nachher = await page2.evaluate(() => {
+        const out = { club: game.clubName, matchday: game.matchday };
+        // Danach von Hand in Slot 2 speichern: dieser Stand gilt beim nächsten Start
+        saveGameToSlot(2);
+        out.lastNachSlot = localStorage.getItem('anstoss_fm13_last_save');
+        // Scheiternder Autosave meldet sich (einmal)
+        const original = window.safeLocalSet;
+        window.safeLocalSet = () => false;
+        game.lastAutoSaveMatchday = 0; game.matchday = 30;
+        maybeAutoSave();
+        out.warnung = document.getElementById('app-toast').innerText.includes('Automatisches Speichern nicht möglich');
+        window.safeLocalSet = original;
+        return out;
+    });
+    await ctx.close();
+    assert(vorher.auto && vorher.last === 'auto', `Nach 5 Spieltagen wird automatisch gespeichert und als neuester Stand gemerkt (${vorher.last})`);
+    assert(nachher.club === 'Autosave Testclub' && nachher.matchday > 1 && nachher.matchday <= vorher.matchday,
+        `Beim Neustart wird der automatische Stand geladen (Spieltag ${nachher.matchday}, ${nachher.club})`);
+    assert(nachher.lastNachSlot === 'slot2', 'Manuelles Speichern macht den Slot zum neuesten Stand');
+    assert(nachher.warnung, 'Scheiternder Autosave wird deutlich gemeldet statt stumm zu bleiben');
+    assert(fehler.length === 0, `Keine JS-Fehler (${fehler.slice(0, 2).join(' | ')})`);
 }
 
 async function testYouthPathway(browser) {
@@ -5726,6 +5777,7 @@ async function main() {
         testSquadAndTactics,
         testYouthAcademy,
         testYouthPathway,
+        testAutosaveResume,
         testOpponentTactics,
         testTransferPoker,
         testNationalTeam,
