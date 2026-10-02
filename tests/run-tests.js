@@ -440,6 +440,83 @@ async function testTransferPoker(browser) {
     await page.close();
 }
 
+async function testOpponentTactics(browser) {
+    console.log('\n[19.3] Gegner-Taktik reagiert: Schere-Stein-Papier, berechenbare Trainer, Vorbericht');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            const zufall = Math.random;
+            game.tacticStyle = 'pressing';
+            out.matrix = getTacticMatchupBonus('B') === 2 && getTacticMatchupBonus('K') === -2 && getTacticMatchupBonus('P') === 0 && getTacticMatchupBonus('N') === 0
+                && getTacticMatchupBonus('P', 'konter') === 2 && getTacticMatchupBonus('K', 'ballbesitz') === 2 && getTacticMatchupBonus('B', 'ausgeglichen') === 0;
+            game.recentTacticStyles = ['pressing', 'offensiv', 'konter', 'umschaltspiel', 'ballbesitz'];
+            out.berechenbar = getPredictableArchetype() === 'P';
+            game.recentTacticStyles = ['pressing', 'konter', 'ballbesitz', 'ausgeglichen', 'kickrush'];
+            out.unberechenbar = getPredictableArchetype() === null;
+            // Gegner mit Ballbesitz-Grundausrichtung stellt sich auf berechenbares Pressing ein
+            const gegner = leaguesData[game.leagueLevel].find(t => t.name !== game.clubName);
+            gegner.playstyle = 'ausgeglichen';
+            game.recentTacticStyles = ['pressing', 'pressing', 'pressing', 'pressing', 'pressing'];
+            game.oppTacticPlan = null;
+            Math.random = () => 0;
+            const plan = getOppTacticPlan(gegner);
+            Math.random = () => 0.99;
+            const nochmal = getOppTacticPlan(gegner);
+            Math.random = zufall;
+            out.reagiert = plan.arch === 'K' && plan.reacted && plan.base === 'B' && nochmal === plan;
+            out.staerke = getOwnLeagueMatchStrength(true, gegner) === calcTeamStrength(true) - 2;
+            // Unberechenbar: Grundausrichtung bleibt
+            game.recentTacticStyles = ['pressing', 'konter', 'ballbesitz'];
+            game.oppTacticPlan = null;
+            Math.random = () => 0;
+            const plan2 = getOppTacticPlan(gegner);
+            Math.random = zufall;
+            out.bleibt = plan2.arch === 'B' && !plan2.reacted;
+            // Vorbericht: ohne Analyst nur Presse, mit Analyst der Plan samt Wirkung
+            staffMembers.analyst.hired = false;
+            renderOppTacticBox(gegner);
+            const ohne = document.getElementById('prematch-tactic-box').innerHTML;
+            staffMembers.analyst.hired = true;
+            renderOppTacticBox(gegner);
+            const mit = document.getElementById('prematch-tactic-box').innerHTML;
+            out.vorbericht = ohne.includes('Laut Presse') && !ohne.includes('plant') && mit.includes('plant') && mit.includes('Stärke');
+            // Livespiel: Plan wird übernommen, Pokal ohne Taktik-Duell
+            game.oppTacticPlan = null;
+            const f = fixturesData[game.leagueLevel][game.matchday - 1].find(x => leaguesData[game.leagueLevel][x.home].name === game.clubName || leaguesData[game.leagueLevel][x.away].name === game.clubName);
+            const heim = leaguesData[game.leagueLevel][f.home].name === game.clubName;
+            const opp = leaguesData[game.leagueLevel][heim ? f.away : f.home];
+            setupMatch(heim ? game.clubName : opp.name, heim ? opp.name : game.clubName, opp.strength, heim, false, f);
+            stopLiveTickerAutoplay();
+            out.live = currentMatch.oppTacticArch === getOppTacticPlan(opp).arch;
+            setupMatch(game.clubName, 'Pokal FC', 50, true, true, null);
+            stopLiveTickerAutoplay();
+            out.pokalNeutral = currentMatch.oppTacticArch === null;
+            currentMatch = null;
+            // Eigene Ligaspiele werden für die Gegner-Analyse mitgeschrieben
+            game.recentTacticStyles = [];
+            game.tacticStyle = 'konter';
+            simulateMatchdays(3);
+            out.historie = game.recentTacticStyles.length === 3 && game.recentTacticStyles.every(x => x === 'konter');
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Taktik-Duell-Test ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.matrix, 'Pressing schlägt Ballbesitz, Ballbesitz schlägt Konter, Konter schlägt Pressing (±2), neutral bleibt 0');
+        assert(r.berechenbar && r.unberechenbar, 'Berechenbar ist, wer in 3 von 5 Ligaspielen denselben Ansatz wählt');
+        assert(r.reagiert && r.staerke, 'Gegner stellt sich auf berechenbares Pressing ein; Plan bleibt fest; Stärke sinkt um 2');
+        assert(r.bleibt, 'Gegen einen unberechenbaren Trainer bleibt der Gegner bei seiner Grundausrichtung');
+        assert(r.vorbericht, 'Vorbericht: ohne Analyst nur die Presse-Einschätzung, mit Analyst der echte Plan samt Wirkung');
+        assert(r.live && r.pokalNeutral, 'Livespiel übernimmt den Plan, Pokalspiele bleiben ohne Taktik-Duell');
+        assert(r.historie, 'Eigene Ligaspiele werden für die Gegner-Analyse mitgeschrieben');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testYouthPathway(browser) {
     console.log('\n[18.5] Jugend-Laufbahn: Potenzial, Profivertrag mit 19, Leihe, Durchbruch-Momente');
     const { page, consoleErrors } = await freshPage(browser);
@@ -5649,6 +5726,7 @@ async function main() {
         testSquadAndTactics,
         testYouthAcademy,
         testYouthPathway,
+        testOpponentTactics,
         testTransferPoker,
         testNationalTeam,
         testTransferMarket,

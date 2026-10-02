@@ -20,7 +20,7 @@ function getNextLeagueMatch() {
 function predictNextMatch() {
     const m = getNextLeagueMatch();
     if (!m) return null;
-    const ownStr = calcTeamStrength(m.isHome);
+    const ownStr = typeof getOwnLeagueMatchStrength === 'function' ? getOwnLeagueMatchStrength(m.isHome, m.opp) : calcTeamStrength(m.isHome);
     const oppStr = typeof applySabotageToOpponentStrength === 'function' ? applySabotageToOpponentStrength(m.opp.strength) : m.opp.strength;
     const hStr = m.isHome ? ownStr : oppStr, aStr = m.isHome ? oppStr : ownStr;
     const hTeam = m.isHome ? m.ownTeam : m.opp, aTeam = m.isHome ? m.opp : m.ownTeam;

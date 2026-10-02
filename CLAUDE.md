@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Anstoß Mobile Pro - FM13** is a fully-featured browser-based football manager simulation game. The codebase is modular (index.html + css/styles.css + 86 js/*.js files) that bundles into a single 1.8 MB standalone HTML file. The game runs entirely in the browser with local storage for save games, works offline, and supports mobile devices.
+**Anstoß Mobile Pro - FM13** is a fully-featured browser-based football manager simulation game. The codebase is modular (index.html + css/styles.css + 87 js/*.js files) that bundles into a single 1.8 MB standalone HTML file. The game runs entirely in the browser with local storage for save games, works offline, and supports mobile devices.
 
 ## Working With the User
 
@@ -118,6 +118,7 @@ This pattern ensures:
 - Player stats: `js/player-stats.js` - every own goal goes through `creditOwnGoal()` (scorer + 75 % assist, live and simulated); `gradeOwnMatch()` in `processPostMatchRoutine()` gives Kicker grades (`p.statsSeason`, `p.lastGrade`, Elf des Spieltags <= 1.5); cup matches reset `matchEvents` so they don't count for league grades.
 - Onboarding: `js/onboarding.js` - "Erste Schritte" checklist (`game.onboarding`, `#dash-onboarding-box`, first season only) ticks off via `onScreenShown()` in `showScreen()` (ignored while `runStructuralSelfTest()` visits every screen at boot) and `markOnboardingStep('speichern')` in `saveGameToSlot()`; per-screen tips in `SCREEN_HINTS`. Tutorial texts in js/i18n.js use `{CLUB}`/`{LIGA}`.
 - Buying from the market: `js/transfer-poker.js` - every market player gets a real AI seller (`ensureTransferTerms()`: `p.sellerClub`, `p.askingPrice`, hidden `p.sellerMinimum`); the poker (`openTransferPoker()`/`submitPokerOffer()`) has limited patience, lowballs cost double, a rival can raise the floor and snatch the player, then a wage talk (`haggleWage()`). `buyPlayer()` is the instant buy at the asking price; both end in `finalizePlayerPurchase()` (all budget checks).
+- Tactic duel: `js/opponent-tactics.js` - rock-paper-scissors of archetypes (Pressing > Ballbesitz > Konter > Pressing, ±2 strength, `getTacticMatchupBonus()`), league matches only. AI coaches read `game.recentTacticStyles` (recorded after each own league match) and counter a predictable manager (3 of 5); the plan is fixed per matchday in `game.oppTacticPlan` (`getOppTacticPlan()`), used by the live engine (current style each step), the matchday simulation and match-scout via `getOwnLeagueMatchStrength()`; shown in `#prematch-tactic-box` (full plan only with the analyst).
 - Transfer windows: matchday-based (summer 1-3, winter 18-20) with `runDeadlineDay()` in `js/transfermarket.js`, driven by `tickTransferWindows()` after every matchday.
 - Season end extras: `js/relegation.js` (own club on rank 3/16, legs on the dashboard, auto-resolved in `concludeSeasonAndAdvance()`), `js/league-awards.js` (`game.leagueAwards`), `js/coach-carousel.js` (AI `team.coach`, temporary `team.coachBounce` - removed via `tickCoachBounce(true)` before leagues advance).
 - League statistics: `js/league-stats.js` (tab "Statistik" on the league screen: league-wide scorer list from `getLeagueScorers()` - own `p.goalsSeason` plus AI `team.star`/`team.striker` goals credited by `creditAiLeagueGoals()` in js/ai-clubs.js -, form table, home/away table `t.homeRec`/`t.awayRec`, rank history `t.rankHist`). The league screen views `getLeagueViewLevel()`; never change `game.leagueLevel` from UI buttons. The Torjägerkanone (league-awards.js) uses the same scorer list.
@@ -294,7 +295,7 @@ CI runs on every branch; only `main` deploys. Only push to `main` after `npm run
 
 - **index.html** – Main page; embeds CSS, loads all js/ modules, defines screen containers
 - **css/styles.css** – All styles; organized by section (DASHBOARD, SQUAD, MANAGER'S OFFICE, etc.)
-- **js/*.js** – Game logic modules (86 files); loaded in order of dependencies
+- **js/*.js** – Game logic modules (87 files); loaded in order of dependencies
 - **tests/run-tests.js** – Playwright test suite
 - **build.py** – Bundler script; concatenates and lints
 - **server.py** / `npm run serve` – Local dev server

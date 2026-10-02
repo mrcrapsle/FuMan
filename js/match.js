@@ -309,6 +309,7 @@
         pendingMatchInfo = { ourFixture, isHome, oppName, oppStr };
 
         renderPreMatchAnalysis(oppObj, oppName);
+        if (typeof renderOppTacticBox === 'function') renderOppTacticBox(oppObj);
         renderFatigueWarning();
 
         renderPressConference({ oppName, oppStr, isHome, cup: false });
@@ -360,6 +361,8 @@
             homeStr: isHome ? ourStrength : oppStrength,
             awayStr: isHome ? oppStrength : ourStrength,
             ourBaseStr, isHome, oppPlaystyle: oppTeamObj ? oppTeamObj.playstyle : null,
+            // Taktik-Duell (js/opponent-tactics.js): nur im Ligaspiel, Plan steht vor dem Anpfiff fest.
+            oppTacticArch: (!isCup && refObj && typeof getOppTacticPlan === 'function') ? (getOppTacticPlan(oppTeamObj) || {}).arch || null : null,
             homeGoals: 0, awayGoals: 0, minute: 0,
             isCup, ref: refObj,
             homeStrPenalty: 0, awayStrPenalty: 0,
@@ -698,7 +701,8 @@
         // game.tackleHardness berechnet (nicht aus dem eingefrorenen Anpfiff-Wert) - so
         // wirkt sich eine Taktikänderung während des Spiels sofort auf den Rest der Partie aus.
         let liveTacticDelta = getTacticStyleBonus(game.tacticStyle) + getTackleHardnessBonus(game.tackleHardness) + (currentMatch.halftimeTalkBonus || 0);
-        let ourLiveStr = currentMatch.ourBaseStr + liveTacticDelta;
+        let ourLiveStr = currentMatch.ourBaseStr + liveTacticDelta
+            + (typeof getTacticMatchupBonus === 'function' ? getTacticMatchupBonus(currentMatch.oppTacticArch) : 0);
         let effHomeStr = (currentMatch.isHome ? ourLiveStr : currentMatch.homeStr) - currentMatch.homeStrPenalty;
         let effAwayStr = (currentMatch.isHome ? currentMatch.awayStr : ourLiveStr) - currentMatch.awayStrPenalty;
         let diff = effHomeStr - effAwayStr;
@@ -1469,6 +1473,7 @@
         if (matchResult !== null) {
             game.luckyCharmNextMatch = false;
             game.securityCalmNextMatch = false;
+            if (typeof recordOwnTacticStyle === 'function') recordOwnTacticStyle();
         }
         game.videoAnalysisBoostActive = false; // Video-Analyse-Bonus gilt nur fürs eine Spiel
         // Finanzen & Kapitalmarkt: Festgeld, Rücklagen, Kontoverlauf und Bonität jeden
@@ -2525,8 +2530,8 @@
                     if (!f.played) {
                         let hTeam = leaguesData[l][f.home];
                         let aTeam = leaguesData[l][f.away];
-                        let hStr = (hTeam.name === game.clubName) ? calcTeamStrength(true) : (aTeam.name === game.clubName ? applySabotageToOpponentStrength(hTeam.strength) : hTeam.strength);
-                        let aStr = (aTeam.name === game.clubName) ? calcTeamStrength(false) : (hTeam.name === game.clubName ? applySabotageToOpponentStrength(aTeam.strength) : aTeam.strength);
+                        let hStr = (hTeam.name === game.clubName) ? (typeof getOwnLeagueMatchStrength === 'function' ? getOwnLeagueMatchStrength(true, aTeam) : calcTeamStrength(true)) : (aTeam.name === game.clubName ? applySabotageToOpponentStrength(hTeam.strength) : hTeam.strength);
+                        let aStr = (aTeam.name === game.clubName) ? (typeof getOwnLeagueMatchStrength === 'function' ? getOwnLeagueMatchStrength(false, hTeam) : calcTeamStrength(false)) : (hTeam.name === game.clubName ? applySabotageToOpponentStrength(aTeam.strength) : aTeam.strength);
 
                         let goals = simulateGoals(hStr, aStr, hTeam, aTeam);
                         f.homeGoals = goals.myGoals;

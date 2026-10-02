@@ -381,8 +381,8 @@
                 fixs?.forEach(f => {
                     if (!f.played) {
                         let hTeam = leaguesData[l][f.home], aTeam = leaguesData[l][f.away];
-                        let hStr = (hTeam.name === game.clubName) ? calcTeamStrength(true) : (aTeam.name === game.clubName ? applySabotageToOpponentStrength(hTeam.strength) : hTeam.strength);
-                        let aStr = (aTeam.name === game.clubName) ? calcTeamStrength(false) : (hTeam.name === game.clubName ? applySabotageToOpponentStrength(aTeam.strength) : aTeam.strength);
+                        let hStr = (hTeam.name === game.clubName) ? (typeof getOwnLeagueMatchStrength === 'function' ? getOwnLeagueMatchStrength(true, aTeam) : calcTeamStrength(true)) : (aTeam.name === game.clubName ? applySabotageToOpponentStrength(hTeam.strength) : hTeam.strength);
+                        let aStr = (aTeam.name === game.clubName) ? (typeof getOwnLeagueMatchStrength === 'function' ? getOwnLeagueMatchStrength(false, hTeam) : calcTeamStrength(false)) : (hTeam.name === game.clubName ? applySabotageToOpponentStrength(aTeam.strength) : aTeam.strength);
                         let goals = simulateGoals(hStr, aStr, hTeam, aTeam);
                         f.homeGoals = goals.myGoals;
                         f.awayGoals = goals.oppGoals;

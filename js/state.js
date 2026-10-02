@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.14', date: '02.10.2026', features: 'Phase 19: Transferpoker (Forderung, Schmerzgrenze, Geduld, Rivalen, Gehaltsgespräch)' };
+    const GAME_VERSION = { number: '3.15', date: '02.10.2026', features: 'Phase 19: Gegner-Taktik reagiert (Taktik-Duell, berechenbare Trainer werden gekontert)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -123,6 +123,8 @@
         teamInstructions: { gegenpressing: false, tiefStehen: false, hoheAV: false },
         tacticAutomation: { offensivBeiRueckstand: false, defensivBeiFuehrung: false },
         fanSupport: {},
+        recentTacticStyles: [],
+        oppTacticPlan: null,
         pendingNamingCeremony: null,
         stadiumConstructionQueue: [],
         sponsorEarningsHistory: {},
