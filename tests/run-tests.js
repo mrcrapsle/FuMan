@@ -352,6 +352,94 @@ async function testNationalTeam(browser) {
     await page.close();
 }
 
+async function testTransferPoker(browser) {
+    console.log('\n[19.2] Transferpoker: Forderung, Schmerzgrenze, Geduld, Rivale, Gehalt');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            const zufall = Math.random;
+            game.money = 1e9; game.transferBudget = 1e9; game.wageBudget = 1e9;
+            game.ffpTransferEmbargo = false; game.transferEmbargo = false;
+            showScreen('screen-transfer'); setTransferTab('market');
+            const p0 = marketPlayers[0];
+            ensureTransferTerms(p0);
+            out.konditionen = p0.askingPrice > p0.sellerMinimum && !!p0.sellerClub && leaguesData.some(l => l.some(t => t.name === p0.sellerClub));
+            out.marktzeile = document.getElementById('market-list').innerHTML.includes('Verhandeln') && document.getElementById('market-list').innerHTML.includes(p0.sellerClub);
+            // Sofortkauf zahlt die Forderung
+            const geld0 = game.money, forderung = p0.askingPrice, provision = getAgentFee(p0, forderung);
+            buyPlayer(0);
+            out.sofortkauf = squad.includes(p0) && geld0 - game.money === forderung + provision;
+            // Verhandlung: unter der Schmerzgrenze nie Zusage, Gegenangebot nie darunter
+            const p1 = marketPlayers[0];
+            openTransferPoker(0);
+            transferPoker.rivalChance = 0; transferPoker.patience = 5;
+            out.box = document.getElementById('transfer-poker-box').innerHTML.includes('TRANSFERPOKER');
+            Math.random = () => 0;
+            transferPoker.offer = p1.sellerMinimum - 1000;
+            submitPokerOffer();
+            out.keineZusageUnterGrenze = !transferPoker.agreedFee && p1.askingPrice >= p1.sellerMinimum;
+            // Frechheit kostet doppelte Geduld
+            const geduld = transferPoker.patience;
+            transferPoker.offer = Math.round(p1.sellerMinimum * 0.5);
+            submitPokerOffer();
+            out.frechheit = transferPoker.patience === geduld - 2;
+            // Angebot über Schmerzgrenze wird angenommen (Zufall günstig)
+            transferPoker.offer = p1.sellerMinimum;
+            submitPokerOffer();
+            Math.random = zufall;
+            out.zusage = transferPoker.agreedFee === p1.sellerMinimum && transferPoker.wageDemand > 0;
+            const forderungLohn = transferPoker.wageDemand;
+            Math.random = () => 0;
+            haggleWage();
+            Math.random = zufall;
+            out.gehaltGedrueckt = transferPoker.wageDemand < forderungLohn && transferPoker.wageTalked;
+            const lohn = transferPoker.wageDemand, geld1 = game.money, prov1 = getAgentFee(p1, p1.sellerMinimum);
+            signPokerDeal();
+            out.unterschrieben = squad.includes(p1) && p1.wage === lohn && geld1 - game.money === p1.sellerMinimum + prov1 && transferPoker === null;
+            // Abbruch nach erschöpfter Geduld: Preis steigt, nur noch Sofortkauf
+            const p2 = marketPlayers[0];
+            openTransferPoker(0);
+            transferPoker.rivalChance = 0; transferPoker.patience = 1;
+            const preis2 = p2.askingPrice;
+            transferPoker.offer = Math.round(p2.sellerMinimum * 0.5);
+            submitPokerOffer();
+            out.abbruch = p2.pokerBroken && p2.askingPrice > preis2 && transferPoker === null;
+            openTransferPoker(0);
+            out.gesperrt = transferPoker === null && document.getElementById('app-toast').innerText.includes('verhandelt nicht mehr');
+            // Rivale steigt ein und schnappt sich den Spieler
+            const p3 = marketPlayers[1];
+            openTransferPoker(1);
+            transferPoker.rivalChance = 1; transferPoker.patience = 9;
+            const min3 = p3.sellerMinimum;
+            Math.random = () => 0.5;
+            transferPoker.offer = Math.round(p3.sellerMinimum * 0.95);
+            submitPokerOffer(); // Runde 1: kein Rivale möglich
+            submitPokerOffer(); // Runde 2: Rivale steigt ein
+            out.rivale = !!(transferPoker && transferPoker.rival) && p3.sellerMinimum > min3;
+            Math.random = () => 0.1;
+            submitPokerOffer();
+            Math.random = zufall;
+            out.weggeschnappt = !marketPlayers.includes(p3) && transferPoker === null && JSON.stringify(inboxMessages).includes(`${p3.name} geht zu`);
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Transferpoker-Test ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.konditionen && r.marktzeile, 'Jeder Marktspieler hat einen echten Verkäuferverein, Forderung über Schmerzgrenze, Knopf Verhandeln');
+        assert(r.sofortkauf, 'Sofortkauf zahlt genau die Forderung (plus Beraterprovision)');
+        assert(r.box && r.keineZusageUnterGrenze, 'Unter der Schmerzgrenze gibt es keine Zusage, das Gegenangebot bleibt darüber');
+        assert(r.frechheit, 'Ein sehr niedriges Angebot kostet doppelt Geduld');
+        assert(r.zusage && r.gehaltGedrueckt && r.unterschrieben, 'Einigung, Gehaltsgespräch und Unterschrift mit genau vereinbarter Ablöse und Gehalt');
+        assert(r.abbruch && r.gesperrt, 'Erschöpfte Geduld: Gespräche abgebrochen, Preis steigt, nur noch Sofortkauf');
+        assert(r.rivale && r.weggeschnappt, `Rivale treibt den Preis und schnappt den Spieler bei zu langem Pokern weg (${r.rivale}/${r.weggeschnappt})`);
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testYouthPathway(browser) {
     console.log('\n[18.5] Jugend-Laufbahn: Potenzial, Profivertrag mit 19, Leihe, Durchbruch-Momente');
     const { page, consoleErrors } = await freshPage(browser);
@@ -5561,6 +5649,7 @@ async function main() {
         testSquadAndTactics,
         testYouthAcademy,
         testYouthPathway,
+        testTransferPoker,
         testNationalTeam,
         testTransferMarket,
         testStadiumSystems,

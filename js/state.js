@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.13', date: '02.10.2026', features: 'Phase 19: Länderspiele & Turniere (feste Länderspielpausen, Nominierungen, WM/EM)' };
+    const GAME_VERSION = { number: '3.14', date: '02.10.2026', features: 'Phase 19: Transferpoker (Forderung, Schmerzgrenze, Geduld, Rivalen, Gehaltsgespräch)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

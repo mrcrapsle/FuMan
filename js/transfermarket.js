@@ -195,6 +195,9 @@
         marketPlayers.filter(p => !p.deadlineBargain).sort(() => Math.random() - 0.5).slice(0, 2).forEach(p => {
             p.marketValue = Math.max(5000, Math.round(p.marketValue * 0.7 / 5000) * 5000);
             p.deadlineBargain = true;
+            // Verkäufer wollen am letzten Tag loswerden: Forderung und Schmerzgrenze neu.
+            delete p.askingPrice;
+            if (typeof ensureTransferTerms === 'function') ensureTransferTerms(p);
             ticker.push(`🏷️ Schnäppchen: ${p.name} (${p.pos}, Stärke ${p.strength}) für nur ${formatVal(p.marketValue)} zu haben`);
         });
 
@@ -562,6 +565,7 @@
             });
         }
 
+        if (typeof renderTransferPokerBox === 'function') renderTransferPokerBox();
         let mList = document.getElementById('market-list');
         mList.innerHTML = '';
         marketPlayers.forEach((p, idx) => {
@@ -588,7 +592,11 @@
                     <div>PAS<br><strong>${p.passing}</strong></div>
                     <div>DEF<br><strong>${p.defense}</strong></div>
                 </div>
-                <button onclick="buyPlayer(${idx})" class="btn-action">Kaufen [${formatVal(p.marketValue)}]</button>
+                <div style="font-size:9px; color:var(--text-muted); margin-bottom:4px;">🏟️ ${ensureTransferTerms(p).sellerClub} · Marktwert ${formatVal(p.marketValue)}${p.pokerBroken ? ' · <span style="color:var(--danger);">Gespräche abgebrochen</span>' : ''}</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
+                    <button onclick="openTransferPoker(${idx})" class="btn-action" ${p.pokerBroken ? 'disabled' : ''}>🃏 Verhandeln</button>
+                    <button onclick="buyPlayer(${idx})" class="btn-secondary">Sofortkauf [${formatVal(p.askingPrice)}]</button>
+                </div>
             `;
             mList.appendChild(row);
         });
@@ -664,35 +672,13 @@
         }
     }
 
-    // Bieterwettstreit (NEU): bei begehrten Spielern (Stärke 65+) steigt gelegentlich ein
-    // Rivale mit ins Rennen ein - der Preis steigt, ein zweiter Klick bestätigt den Aufpreis.
-    let pendingBiddingWarId = null;
+    // Sofortkauf zur aktuellen Forderung des Verkäufers; verhandeln geht über den
+    // Transferpoker (js/transfer-poker.js). Der frühere Zufalls-Bieterwettstreit ist dort
+    // als echter Rivale aufgegangen.
     function buyPlayer(idx) {
         let p = marketPlayers[idx];
-        if (isTransferEmbargoActive()) { showToast(`🚫 Transfersperre aktiv${game.ffpTransferEmbargo ? ' (Financial Fairplay)' : ' - erst die Zahlungsfähigkeit wiederherstellen (siehe Finanzen)'}.`, 'error', 5000); return; }
-        if (pendingBiddingWarId !== p.id && p.strength >= 65 && Math.random() < 0.15) {
-            pendingBiddingWarId = p.id;
-            let premium = Math.round(p.marketValue * 0.25);
-            p.marketValue += premium;
-            showToast(`⚔️ Bieterwettstreit! Ein Rivale bietet auch mit - neuer Preis: ${formatVal(p.marketValue)}. Nochmal klicken, um ihn dir zu sichern!`, 'error');
-            renderTransferView();
-            return;
-        }
-        pendingBiddingWarId = null;
-        let agentFee = getAgentFee(p, p.marketValue);
-        let totalCost = p.marketValue + agentFee;
-        if (game.money < totalCost) { showToast(`Vereinskonto reicht nicht: ${formatVal(totalCost)} nötig${agentFee > 0 ? ` (inkl. ${formatVal(agentFee)} Beraterprovision)` : ''}, ${formatVal(game.money)} vorhanden.`, 'error', 5000); return; }
-        if (game.transferBudget < p.marketValue) { showToast(`Transferbudget reicht nicht: ${formatVal(p.marketValue)} nötig, ${formatVal(game.transferBudget)} verfügbar. Verhandle mit dem Vorstand oder verkaufe erst einen Spieler.`, 'error', 5500); return; }
-        let totalWages = squad.reduce((s, pl) => s + pl.wage, 0) + (game.secondTeam.isActive ? secondTeamSquad.reduce((s, pl) => s + pl.wage, 0) : 0);
-        if (totalWages + p.wage > game.wageBudget) { showToast(`Gehaltsbudget reicht nicht: ${formatVal(totalWages + p.wage)} nach der Verpflichtung, erlaubt sind ${formatVal(game.wageBudget)}.`, 'error', 5000); return; }
-        playSound('click');
-        game.money -= totalCost;
-        game.transferBudget -= p.marketValue;
-        squad.push(p);
-        marketPlayers.splice(idx, 1);
-        if (agentFee > 0) showToast(`✅ ${p.name} verpflichtet (inkl. ${formatVal(agentFee)} Beraterprovision an ${p.agent.name}).`, 'success');
-        renderTransferView();
-        updateUI();
+        if (!p) return;
+        finalizePlayerPurchase(p, getTransferAsking(p), p.wage);
     }
 
     // Vertragsverhandlung mit Gegenangeboten (NEU): statt nur "Ja/Nein" kann der Spieler
