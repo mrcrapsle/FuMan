@@ -230,7 +230,6 @@
             contracts: 2 + Math.floor(Math.random() * 3), // 2-4 Jahre, gestreut statt synchron
             injured: 0,
             suspended: 0,
-            nationalDuty: 0,
             timesInjured: 0,
             appearances: 0,
             appearancesSeason: 0,

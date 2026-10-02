@@ -277,6 +277,69 @@ async function testSquadAndTactics(browser) {
 // ---------------------------------------------------------------------------
 // [6] JUGENDAKADEMIE
 // ---------------------------------------------------------------------------
+async function testNationalTeam(browser) {
+    console.log('\n[19.1] Länderspiele & Turniere');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            squad.forEach(p => { p.strength = Math.min(p.strength, 60); p.nation = 'Deutschland'; p.statsSeason = null; });
+            const star = squad.find(p => p.pos === 'ST');
+            star.strength = 80; star.injured = 0;
+            const knapp = squad.find(p => p.pos === 'MIT');
+            knapp.strength = 71;
+            out.schwelle = getNominationThreshold(knapp) === 73;
+            knapp.statsSeason = { spiele: 6, tore: 0, vorlagen: 0, notenSumme: 13, elf: 0 };
+            out.notenSenken = getNominationThreshold(knapp) === 71 && isNominated(knapp);
+            game.matchday = 7;
+            out.keinePause = tickInternationalBreak() === null;
+            game.matchday = 6;
+            const inbox0 = inboxMessages.length, fit0 = star.fitness = 100, mw0 = star.marketValue;
+            const kader = tickInternationalBreak();
+            out.pause = !!kader && kader.includes(star) && kader.includes(knapp) && kader.length === 2;
+            out.wirkung = star.caps >= 1 && star.fitness === fit0 - 12 && star.marketValue >= mw0 && inboxMessages.length > inbox0;
+            out.keinAusfall = !('nationalDuty' in star) || !star.nationalDuty;
+            // Turnier nur nach geraden Saisons
+            game.season = 4;
+            out.keinTurnier = playSummerTournament() === null;
+            game.season = 3;
+            const caps0 = star.caps;
+            const t = playSummerTournament();
+            out.turnier = !!t && t.season === 2 && t.name === 'Europameisterschaft' && t.nations[0].nation === 'Deutschland'
+                && t.nations[0].players.some(x => x.name === star.name) && star.caps > caps0 && game.intlTournaments[0] === t;
+            out.stufe = t ? t.nations[0].stage : null;
+            // Anzeige im Reiter Team
+            showScreen('screen-squad'); setSquadTab('team');
+            const html = document.getElementById('national-team-box').innerHTML;
+            out.anzeige = html.includes(star.name) && html.includes('nominiert') && html.includes('Europameisterschaft 2');
+            // Integration: nach Saison 2 läuft das Turnier beim Saisonwechsel automatisch
+            game.intlTournaments = [];
+            game.season = 2; game.matchday = 1;
+            star.strength = 85;
+            simulateFullSeason();
+            star.strength = Math.max(star.strength, 85);
+            concludeSeasonAndAdvance();
+            out.saisonwechsel = (game.intlTournaments || []).some(x => x.season === 2 && x.name === 'Europameisterschaft');
+            out.pausenGespielt = star.caps > caps0 + 4;
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Länderspiel-Test ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.schwelle && r.notenSenken, 'Nominierungsschwelle je Land; Notenschnitt 2,5 oder besser senkt sie um 2');
+        assert(r.keinePause, 'Außerhalb der Länderspielpausen keine Reise');
+        assert(r.pause && r.wirkung, 'Länderspielpause: genau die Nominierten reisen, mit Einsätzen, Müdigkeit, Marktwert und Meldung');
+        assert(r.keinAusfall, 'Nationalspieler verpassen kein Ligaspiel mehr');
+        assert(r.keinTurnier && r.turnier, `WM/EM nur nach geraden Saisons, mit Einsätzen der eigenen Spieler (${r.stufe})`);
+        assert(r.anzeige, 'Kader/Team zeigt Nationalspieler, Nominierung und Turnierhistorie');
+        assert(r.saisonwechsel && r.pausenGespielt, 'Saisonwechsel spielt das Turnier, die Saison enthält vier Länderspielpausen');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testYouthPathway(browser) {
     console.log('\n[18.5] Jugend-Laufbahn: Potenzial, Profivertrag mit 19, Leihe, Durchbruch-Momente');
     const { page, consoleErrors } = await freshPage(browser);
@@ -2974,7 +3037,7 @@ async function testLandesPokal(browser) {
             while (!landesPokal.won && spieltage < 50) {
                 // Auch Verletzungen/Sperren sind Zufall: bis zu 14 Ausfälle gleichzeitig
                 // drückten die Aufstellung unter die Gegnerstärke. Kader daher fit halten.
-                squad.forEach(p => { p.injured = 0; p.suspended = 0; p.nationalDuty = 0; p.fitness = 100; });
+                squad.forEach(p => { p.injured = 0; p.suspended = 0; p.fitness = 100; });
                 simulateMatchdays(1);
                 spieltage++;
             }
@@ -3953,7 +4016,7 @@ async function testObjectivesEventsSeasonTickets(browser) {
         try {
             while (game.matchday <= 34) {
                 game.sackPending = false;
-                squad.forEach(p => { p.strength = 99; p.injured = 0; p.suspended = 0; p.nationalDuty = 0; });
+                squad.forEach(p => { p.strength = 99; p.injured = 0; p.suspended = 0; });
                 simulateMatchdays(1);
                 if (game.matchday === 20) {
                     out.meisterNichtVorzeitig = !game.seasonObjectives.completedObjectives.some(o => o.type === 'CHAMPIONSHIP');
@@ -5486,6 +5549,7 @@ async function main() {
         testSquadAndTactics,
         testYouthAcademy,
         testYouthPathway,
+        testNationalTeam,
         testTransferMarket,
         testStadiumSystems,
         testAllScreensRender,

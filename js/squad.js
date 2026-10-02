@@ -112,7 +112,7 @@
             if (!starter) return;
             let betterBench = squad.filter(p =>
                 p.pos === starter.pos && !lineup.includes(p.id) && !usedBenchIds.has(p.id) &&
-                (p.injured || 0) === 0 && (p.suspended || 0) === 0 && (p.nationalDuty || 0) === 0 &&
+                (p.injured || 0) === 0 && (p.suspended || 0) === 0 &&
                 effStr(p) > effStr(starter) + 3
             );
             if (betterBench.length > 0) {
@@ -505,7 +505,7 @@
     let autoLineupInProgress = false;
     // Beste Elf für die aktuelle Formation, ohne etwas zu verändern (auch fürs Wettbüro).
     function pickBestLineupIds() {
-        let available = squad.filter(p => (p.suspended || 0) === 0 && (p.injured || 0) === 0 && (p.nationalDuty || 0) === 0);
+        let available = squad.filter(p => (p.suspended || 0) === 0 && (p.injured || 0) === 0);
         let effStr = p => p.strength * (p.fitness / 100);
         let tws = available.filter(p => p.pos === 'TW').sort((a, b) => effStr(b) - effStr(a));
         let abws = available.filter(p => p.pos === 'ABW').sort((a, b) => effStr(b) - effStr(a));
@@ -544,7 +544,7 @@
     function selectForSwap(id) {
         playSound('click');
         let player = squad.find(p => p.id === id);
-        if (!player || (player.injured || 0) > 0 || (player.suspended || 0) > 0 || (player.nationalDuty || 0) > 0) { showToast('Spieler nicht einsatzbereit!', 'error'); return; }
+        if (!player || (player.injured || 0) > 0 || (player.suspended || 0) > 0) { showToast('Spieler nicht einsatzbereit!', 'error'); return; }
 
         if (!selectedSwapId) {
             selectedSwapId = id;
@@ -585,7 +585,7 @@
     function toggleLineupPlayer(id) {
         playSound('click');
         let player = squad.find(p => p.id === id);
-        if (!player || (player.injured || 0) > 0 || (player.suspended || 0) > 0 || (player.nationalDuty || 0) > 0) { showToast('Dieser Spieler ist nicht einsatzbereit (verletzt, gesperrt oder auf Länderspielreise).', 'error', 4000); return; }
+        if (!player || (player.injured || 0) > 0 || (player.suspended || 0) > 0) { showToast('Dieser Spieler ist nicht einsatzbereit (verletzt oder gesperrt).', 'error', 4000); return; }
         if (lineup.includes(id)) {
             if (lineup.length <= 11) { showToast('Die Startelf braucht mindestens 11 Spieler.', 'error', 3500); return; }
             lineup = lineup.filter(pid => pid !== id);
@@ -658,7 +658,7 @@
     function renderInjuryCrisisWarning() {
         let box = document.getElementById('injury-crisis-warning');
         if (!box) return;
-        let unavailable = squad.filter(p => (p.injured || 0) > 0 || (p.suspended || 0) > 0 || (p.nationalDuty || 0) > 0).length;
+        let unavailable = squad.filter(p => (p.injured || 0) > 0 || (p.suspended || 0) > 0).length;
         let available = squad.length - unavailable;
         if (available >= 14 || squad.length === 0) { box.style.display = 'none'; return; }
         box.style.display = 'block';
@@ -772,6 +772,7 @@
     }
 
     function renderSquadView() {
+        if (typeof renderNationalTeamPanel === 'function') renderNationalTeamPanel();
         renderSquadOverviewBox();
         renderSquadDepthChart();
         renderSquadLeaderboardBox();
@@ -814,9 +815,9 @@
             row.className = 'panel player-card';
             row.style.cssText = `margin-bottom:6px; padding:8px; border-left: 3px solid ${isStarting ? 'var(--primary)' : 'var(--border)'};`;
             let badgeClass = 'badge-' + (p.pos || 'mit').toLowerCase();
-            let status = (p.injured || 0) > 0 ? `<span style="color:var(--danger);">Verletzt (${p.injured} Sp.)</span>` : ((p.suspended || 0) > 0 ? `<span style="color:var(--accent);">Gesperrt (${p.suspended} Sp.)</span>` : ((p.nationalDuty || 0) > 0 ? `<span style="color:var(--teal);">🌍 Nationalelf</span>` : `Fit: ${p.fitness}%`));
+            let status = (p.injured || 0) > 0 ? `<span style="color:var(--danger);">Verletzt (${p.injured} Sp.)</span>` : ((p.suspended || 0) > 0 ? `<span style="color:var(--accent);">Gesperrt (${p.suspended} Sp.)</span>` : `Fit: ${p.fitness}%`);
             let moraleColor = p.morale >= 70 ? 'var(--primary)' : (p.morale >= 40 ? 'var(--accent)' : 'var(--danger)');
-            let moraleLine = ((p.injured || 0) === 0 && (p.suspended || 0) === 0 && (p.nationalDuty || 0) === 0) ? ` · <span style="color:${moraleColor};">Moral: ${p.morale}%</span>` : '';
+            let moraleLine = ((p.injured || 0) === 0 && (p.suspended || 0) === 0) ? ` · <span style="color:${moraleColor};">Moral: ${p.morale}%</span>` : '';
             let roleBadge = p.id === game.captainId ? ' Ⓒ' : (p.id === game.penaltyTakerId ? ' ⚽' : (p.id === game.freeKickTakerId ? ' 🎯' : (p.id === game.cornerTakerId ? ' 🚩' : '')));
             if (p.individualFocus === 'elfmeter') roleBadge += ' <span title="Elfmeter-Spezialist" style="font-size:9px;">🥅</span>';
             if (p.isCrowdFavorite) roleBadge += ' <span title="Publikumsliebling der Saison" style="font-size:9px;">❤️</span>';

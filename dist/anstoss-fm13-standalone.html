@@ -2900,6 +2900,10 @@
                         <div class="panel-header">🤝 MANNSCHAFTSRAT</div>
                         <div id="team-council-box"></div>
                     </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--blue);">🌍 NATIONALSPIELER</div>
+                        <div id="national-team-box"></div>
+                    </div>
                 </div>
             </div>
 
@@ -5480,7 +5484,6 @@
             contracts: 2 + Math.floor(Math.random() * 3), // 2-4 Jahre, gestreut statt synchron
             injured: 0,
             suspended: 0,
-            nationalDuty: 0,
             timesInjured: 0,
             appearances: 0,
             appearancesSeason: 0,
@@ -5992,7 +5995,7 @@
             if (!starter) return;
             let betterBench = squad.filter(p =>
                 p.pos === starter.pos && !lineup.includes(p.id) && !usedBenchIds.has(p.id) &&
-                (p.injured || 0) === 0 && (p.suspended || 0) === 0 && (p.nationalDuty || 0) === 0 &&
+                (p.injured || 0) === 0 && (p.suspended || 0) === 0 &&
                 effStr(p) > effStr(starter) + 3
             );
             if (betterBench.length > 0) {
@@ -6385,7 +6388,7 @@
     let autoLineupInProgress = false;
     // Beste Elf für die aktuelle Formation, ohne etwas zu verändern (auch fürs Wettbüro).
     function pickBestLineupIds() {
-        let available = squad.filter(p => (p.suspended || 0) === 0 && (p.injured || 0) === 0 && (p.nationalDuty || 0) === 0);
+        let available = squad.filter(p => (p.suspended || 0) === 0 && (p.injured || 0) === 0);
         let effStr = p => p.strength * (p.fitness / 100);
         let tws = available.filter(p => p.pos === 'TW').sort((a, b) => effStr(b) - effStr(a));
         let abws = available.filter(p => p.pos === 'ABW').sort((a, b) => effStr(b) - effStr(a));
@@ -6424,7 +6427,7 @@
     function selectForSwap(id) {
         playSound('click');
         let player = squad.find(p => p.id === id);
-        if (!player || (player.injured || 0) > 0 || (player.suspended || 0) > 0 || (player.nationalDuty || 0) > 0) { showToast('Spieler nicht einsatzbereit!', 'error'); return; }
+        if (!player || (player.injured || 0) > 0 || (player.suspended || 0) > 0) { showToast('Spieler nicht einsatzbereit!', 'error'); return; }
 
         if (!selectedSwapId) {
             selectedSwapId = id;
@@ -6465,7 +6468,7 @@
     function toggleLineupPlayer(id) {
         playSound('click');
         let player = squad.find(p => p.id === id);
-        if (!player || (player.injured || 0) > 0 || (player.suspended || 0) > 0 || (player.nationalDuty || 0) > 0) { showToast('Dieser Spieler ist nicht einsatzbereit (verletzt, gesperrt oder auf Länderspielreise).', 'error', 4000); return; }
+        if (!player || (player.injured || 0) > 0 || (player.suspended || 0) > 0) { showToast('Dieser Spieler ist nicht einsatzbereit (verletzt oder gesperrt).', 'error', 4000); return; }
         if (lineup.includes(id)) {
             if (lineup.length <= 11) { showToast('Die Startelf braucht mindestens 11 Spieler.', 'error', 3500); return; }
             lineup = lineup.filter(pid => pid !== id);
@@ -6538,7 +6541,7 @@
     function renderInjuryCrisisWarning() {
         let box = document.getElementById('injury-crisis-warning');
         if (!box) return;
-        let unavailable = squad.filter(p => (p.injured || 0) > 0 || (p.suspended || 0) > 0 || (p.nationalDuty || 0) > 0).length;
+        let unavailable = squad.filter(p => (p.injured || 0) > 0 || (p.suspended || 0) > 0).length;
         let available = squad.length - unavailable;
         if (available >= 14 || squad.length === 0) { box.style.display = 'none'; return; }
         box.style.display = 'block';
@@ -6652,6 +6655,7 @@
     }
 
     function renderSquadView() {
+        if (typeof renderNationalTeamPanel === 'function') renderNationalTeamPanel();
         renderSquadOverviewBox();
         renderSquadDepthChart();
         renderSquadLeaderboardBox();
@@ -6694,9 +6698,9 @@
             row.className = 'panel player-card';
             row.style.cssText = `margin-bottom:6px; padding:8px; border-left: 3px solid ${isStarting ? 'var(--primary)' : 'var(--border)'};`;
             let badgeClass = 'badge-' + (p.pos || 'mit').toLowerCase();
-            let status = (p.injured || 0) > 0 ? `<span style="color:var(--danger);">Verletzt (${p.injured} Sp.)</span>` : ((p.suspended || 0) > 0 ? `<span style="color:var(--accent);">Gesperrt (${p.suspended} Sp.)</span>` : ((p.nationalDuty || 0) > 0 ? `<span style="color:var(--teal);">🌍 Nationalelf</span>` : `Fit: ${p.fitness}%`));
+            let status = (p.injured || 0) > 0 ? `<span style="color:var(--danger);">Verletzt (${p.injured} Sp.)</span>` : ((p.suspended || 0) > 0 ? `<span style="color:var(--accent);">Gesperrt (${p.suspended} Sp.)</span>` : `Fit: ${p.fitness}%`);
             let moraleColor = p.morale >= 70 ? 'var(--primary)' : (p.morale >= 40 ? 'var(--accent)' : 'var(--danger)');
-            let moraleLine = ((p.injured || 0) === 0 && (p.suspended || 0) === 0 && (p.nationalDuty || 0) === 0) ? ` · <span style="color:${moraleColor};">Moral: ${p.morale}%</span>` : '';
+            let moraleLine = ((p.injured || 0) === 0 && (p.suspended || 0) === 0) ? ` · <span style="color:${moraleColor};">Moral: ${p.morale}%</span>` : '';
             let roleBadge = p.id === game.captainId ? ' Ⓒ' : (p.id === game.penaltyTakerId ? ' ⚽' : (p.id === game.freeKickTakerId ? ' 🎯' : (p.id === game.cornerTakerId ? ' 🚩' : '')));
             if (p.individualFocus === 'elfmeter') roleBadge += ' <span title="Elfmeter-Spezialist" style="font-size:9px;">🥅</span>';
             if (p.isCrowdFavorite) roleBadge += ' <span title="Publikumsliebling der Saison" style="font-size:9px;">❤️</span>';
@@ -25618,7 +25622,7 @@ function cleanupLegacyScoutState() {
         let container = document.getElementById('live-subs-list');
         document.getElementById('subs-left-count').innerText = substitutionsLeft;
         container.innerHTML = '';
-        let bench = squad.filter(p => !lineup.includes(p.id) && (p.injured || 0) === 0 && (p.suspended || 0) === 0 && (p.nationalDuty || 0) === 0);
+        let bench = squad.filter(p => !lineup.includes(p.id) && (p.injured || 0) === 0 && (p.suspended || 0) === 0);
         // Wer geht raus? Vorauswahl: der müdeste Feldspieler, bei gleicher Fitness der schwächste;
         // der Torwart steht am Ende der Liste.
         let sentOff = (currentMatch && currentMatch.sentOff) || [];
@@ -26161,7 +26165,7 @@ function cleanupLegacyScoutState() {
         if (onPitch.length === 0 || substitutionsLeft <= 0) return null;
         let tiredest = [...onPitch].sort((a, b) => a.fitness - b.fitness)[0];
         if (tiredest.fitness > 75) return null; // noch kein dringender Handlungsbedarf
-        let bench = squad.filter(p => !lineup.includes(p.id) && (p.injured || 0) === 0 && (p.suspended || 0) === 0 && (p.nationalDuty || 0) === 0);
+        let bench = squad.filter(p => !lineup.includes(p.id) && (p.injured || 0) === 0 && (p.suspended || 0) === 0);
         let replacement = bench.filter(p => p.pos === tiredest.pos).sort((a, b) => b.strength - a.strength)[0] || bench.sort((a, b) => b.strength - a.strength)[0];
         if (!replacement) return null;
         return { out: tiredest, in: replacement };
@@ -26977,17 +26981,6 @@ function cleanupLegacyScoutState() {
             // Verletzungs-/Sperren-Countdown herunterzählen
             if ((p.injured || 0) > 0) p.injured--;
             if ((p.suspended || 0) > 0) p.suspended--;
-            if ((p.nationalDuty || 0) > 0) {
-                p.nationalDuty--;
-                if (p.nationalDuty === 0) {
-                    // Rückkehr von der Länderspielreise: spürbare Ermüdung, kleines Verletzungsrisiko
-                    p.fitness = Math.max(10, p.fitness - 15);
-                    if (Math.random() < 0.12) {
-                        p.injured = 1 + Math.floor(Math.random() * 2);
-                        addInboxMessage('verletzung', `${p.name} verletzt von der Nationalmannschaft zurück`, `Kommt mit einer kleinen Blessur zurück und fällt ${p.injured} Spiel(e) aus.`, 'screen-squad');
-                    }
-                }
-            }
         });
 
         // Neue Verletzungen/Sperren nur unter Spielern, die diesen Spieltag tatsächlich aufgelaufen sind.
@@ -27058,7 +27051,8 @@ function cleanupLegacyScoutState() {
         // Ein live gespieltes Pokalergebnis gilt nur für diesen Spieltag.
         game.liveCupResult = null;
 
-        checkNationalTeamCallups(isLiveContext);
+        // Länderspielpausen (js/national-team.js): feste Pausen, nachvollziehbare Nominierung.
+        if (typeof tickInternationalBreak === 'function') tickInternationalBreak();
 
         if (underworld.pressure > 25) {
             let raidRoll = Math.random();
@@ -27526,26 +27520,6 @@ function cleanupLegacyScoutState() {
         showNotice('🚪 Entlassen!',
             'Der Vorstand hat genug gesehen und trennt sich mit sofortiger Wirkung von dir.\n\nDeine Karriere-Erfahrung und deine Trophäen nimmst du mit - bei deinem neuen Klub beginnst du aber wieder ganz von unten.',
             { typ: 'warn', sofort: true, knopf: 'Neuen Klub suchen', danach: () => location.reload() });
-    }
-
-    // ---------- NATIONALMANNSCHAFTSBERUFUNGEN ----------
-    // Alle ~5 Spieltage (simuliert eine Länderspielpause) hat jeder ausreichend starke,
-    // verfügbare Spieler eine kleine Chance auf eine Berufung. Bringt Prestige (Fans/XP),
-    // kostet aber eine Ausfall-Woche plus Rückkehr-Risiko (Ermüdung/leichte Blessur, siehe
-    // Countdown weiter oben in processPostMatchRoutine).
-    function checkNationalTeamCallups(isLiveContext = false) {
-        if (game.matchday % 5 !== 0) return;
-        if (squad.some(p => (p.nationalDuty || 0) > 0)) return; // schon jemand unterwegs
-        let eligible = squad.filter(p => p.strength >= 70 && (p.injured || 0) === 0 && (p.suspended || 0) === 0);
-        eligible.forEach(p => {
-            if (Math.random() < 0.06) {
-                p.nationalDuty = 1;
-                game.fans = Math.min(100, game.fans + 3);
-                if (isLiveContext) addManagerXP(30);
-                addInboxMessage('vertrag', '🌍 Nationalmannschaft-Berufung!', `${p.name} wird für die Nationalmannschaft (${p.nation || 'Deutschland'}) nominiert - großes Prestige für den Verein! Fällt das nächste Spiel aus.`, 'screen-squad');
-                showToast(`🌍 ${p.name} wurde in die Nationalmannschaft berufen!`, 'success');
-            }
-        });
     }
 
     // ---------- PRESSESTIMMEN ----------
@@ -28327,6 +28301,8 @@ function cleanupLegacyScoutState() {
         forceSponsorRenewalAtSeasonStart();
         if (typeof renewSeasonTickets === 'function') renewSeasonTickets();
         if (typeof checkSeasonMoodTargetResult === 'function') checkSeasonMoodTargetResult();
+        // WM/EM im Sommer nach jeder geraden Saison (js/national-team.js), nach dem Fitness-Reset.
+        if (typeof playSummerTournament === 'function') playSummerTournament();
         if (typeof tickCoachBounce === 'function') tickCoachBounce(true);
         // Supercup der neuen Saison: braucht noch die alte Tabelle und den alten Pokal.
         if (typeof prepareSupercup === 'function') prepareSupercup();
@@ -29105,6 +29081,160 @@ function renderLeagueStats() {
     renderLeagueFormTable(level);
     renderLeagueHomeAwayTable(level);
     renderLeagueRankChart(level);
+}
+
+</script>
+<script>
+/* eslint-disable no-undef */
+// Länderspiele & Turniere: feste Länderspielpausen nach den Spieltagen 6, 13, 24 und 30.
+// Nominiert wird nachvollziehbar - wer die Stärke-Schwelle seines Landes erreicht (gute
+// Saisonnoten senken sie), fährt zur Nationalmannschaft. Kein Ligaspiel fällt aus, aber
+// die Reise kostet Kraft und birgt ein Verletzungsrisiko; dafür steigen Moral, Marktwert
+// und das Ansehen des Vereins. In jedem zweiten Sommer (nach geraden Saisons) folgt ein
+// Turnier - abwechselnd WM und EM - mit Ergebnissen für jede Nation mit eigenen Spielern.
+// Spielerwerte: p.caps, p.intlGoals, p.intlTitles; Turnierhistorie in game.intlTournaments.
+
+const INTL_BREAK_MATCHDAYS = [6, 13, 24, 30];
+const NATIONS = {
+    Deutschland: { threshold: 73, strength: 86, flag: '🇩🇪' },
+    Frankreich: { threshold: 75, strength: 88, flag: '🇫🇷' },
+    Niederlande: { threshold: 72, strength: 83, flag: '🇳🇱' },
+    Schweiz: { threshold: 66, strength: 77, flag: '🇨🇭' },
+    Österreich: { threshold: 65, strength: 76, flag: '🇦🇹' },
+    Polen: { threshold: 64, strength: 76, flag: '🇵🇱' }
+};
+const INTL_OPPONENTS = ['Spanien', 'Italien', 'England', 'Portugal', 'Belgien', 'Kroatien', 'Dänemark', 'Schweden', 'Tschechien', 'Ungarn', 'Schottland', 'Norwegen'];
+const TOURNAMENT_STAGES = ['Vorrunde', 'Achtelfinale', 'Viertelfinale', 'Halbfinale', 'Finale', 'Titel'];
+
+function getNation(p) {
+    return NATIONS[p.nation] ? p.nation : 'Deutschland';
+}
+
+// Schwelle für eine Nominierung: gute Saisonnoten (Ø 2,5 oder besser) senken sie um 2.
+function getNominationThreshold(p) {
+    let schwelle = NATIONS[getNation(p)].threshold;
+    const st = p.statsSeason;
+    if (st && st.spiele >= 5 && st.notenSumme / st.spiele <= 2.5) schwelle -= 2;
+    return schwelle;
+}
+
+function isNominated(p) {
+    return (p.injured || 0) === 0 && p.strength >= getNominationThreshold(p);
+}
+
+function getNextIntlBreak() {
+    return INTL_BREAK_MATCHDAYS.find(md => md >= game.matchday) || null;
+}
+
+// Aus processPostMatchRoutine() nach jedem Spieltag: an den Pausen-Spieltagen reisen die
+// Nominierten zu zwei Länderspielen.
+function tickInternationalBreak() {
+    if (!INTL_BREAK_MATCHDAYS.includes(game.matchday)) return null;
+    const kader = squad.filter(isNominated);
+    if (!kader.length) return null;
+    const zeilen = [];
+    kader.forEach(p => {
+        const gegner = INTL_OPPONENTS[Math.floor(Math.random() * INTL_OPPONENTS.length)];
+        const einsaetze = Math.random() < 0.7 ? 2 : 1;
+        let tore = 0;
+        for (let i = 0; i < einsaetze; i++) if (Math.random() < ({ ST: 0.3, MIT: 0.12, ABW: 0.04, TW: 0 }[p.pos] || 0.1)) tore++;
+        p.caps = (p.caps || 0) + einsaetze;
+        p.intlGoals = (p.intlGoals || 0) + tore;
+        p.morale = Math.min(100, (p.morale || 50) + 5);
+        p.fitness = Math.max(10, (p.fitness || 100) - 12);
+        p.marketValue = Math.round((p.marketValue || 0) * 1.02 / 1000) * 1000;
+        let verletzt = '';
+        if (Math.random() < 0.08) {
+            p.injured = 1 + Math.floor(Math.random() * 2);
+            verletzt = ` - kommt verletzt zurück (${p.injured} Sp.)`;
+        }
+        zeilen.push(`${NATIONS[getNation(p)].flag} ${p.name}: ${einsaetze} Spiel${einsaetze > 1 ? 'e' : ''} (u. a. gegen ${gegner})${tore ? `, ${tore} Tor${tore > 1 ? 'e' : ''}` : ''}${verletzt}`);
+    });
+    game.fans = Math.min(100, game.fans + Math.min(3, kader.length));
+    if (typeof addManagerXP === 'function') addManagerXP(20 * kader.length);
+    addInboxMessage('vertrag', `🌍 Länderspielpause: ${kader.length} Nationalspieler unterwegs`,
+        `${zeilen.join('\n')}\n\nAlle sind zum nächsten Spiel zurück, aber müde (Fitness -12). Moral und Marktwert steigen, die Fans sind stolz.`, 'screen-squad');
+    return kader;
+}
+
+function getTournamentName(season) {
+    return season % 4 === 0 ? 'Weltmeisterschaft' : 'Europameisterschaft';
+}
+
+// Saisonwechsel (nach dem Fitness-Reset): nach jeder geraden Saison ein Turnier für alle
+// Nationen mit nominierten eigenen Spielern.
+function playSummerTournament() {
+    const saison = game.season - 1;
+    if (saison < 1 || saison % 2 !== 0) return null;
+    const teilnehmer = squad.filter(isNominated);
+    if (!teilnehmer.length) return null;
+    const name = getTournamentName(saison);
+    const proNation = {};
+    teilnehmer.forEach(p => { (proNation[getNation(p)] = proNation[getNation(p)] || []).push(p); });
+    const ergebnis = { season: saison, name, nations: [] };
+    const meldungen = [];
+    Object.entries(proNation).forEach(([nation, spieler]) => {
+        const s = NATIONS[nation].strength;
+        let stufe = 0;
+        if (Math.random() < Math.max(0.3, Math.min(0.95, (s - 66) / 22))) {
+            stufe = 1;
+            while (stufe < 5 && Math.random() < Math.max(0.2, Math.min(0.7, 0.4 + (s - 80) * 0.03))) stufe++;
+        }
+        const spiele = 3 + Math.min(stufe, 4);
+        const runde = TOURNAMENT_STAGES[stufe];
+        const eintrag = { nation, stage: runde, players: [] };
+        spieler.forEach(p => {
+            const anteil = Math.min(1, 0.55 + (p.strength - getNominationThreshold(p)) * 0.06);
+            const einsaetze = Math.max(1, Math.round(spiele * anteil));
+            let tore = 0;
+            for (let i = 0; i < einsaetze; i++) if (Math.random() < ({ ST: 0.32, MIT: 0.13, ABW: 0.04, TW: 0 }[p.pos] || 0.1)) tore++;
+            p.caps = (p.caps || 0) + einsaetze;
+            p.intlGoals = (p.intlGoals || 0) + tore;
+            if (stufe === 5) p.intlTitles = (p.intlTitles || 0) + 1;
+            // Ein gutes Turnier treibt den Marktwert, dafür beginnt die Vorbereitung später.
+            const schub = 1 + 0.03 * stufe + 0.02 * tore;
+            p.marketValue = Math.round((p.marketValue || 0) * schub / 1000) * 1000;
+            p.morale = Math.min(100, (p.morale || 50) + (stufe === 5 ? 15 : stufe >= 3 ? 6 : 0));
+            p.fitness = Math.max(40, (p.fitness || 100) - 15);
+            if (Math.random() < 0.1) p.injured = Math.max(p.injured || 0, 1 + Math.floor(Math.random() * 3));
+            eintrag.players.push({ name: p.name, apps: einsaetze, goals: tore });
+        });
+        ergebnis.nations.push(eintrag);
+        meldungen.push(`${NATIONS[nation].flag} ${nation}: ${stufe === 5 ? '🏆 TITEL!' : (stufe === 4 ? 'Finale verloren' : (stufe === 0 ? 'Aus in der Vorrunde' : `Aus im ${runde}`))} - ${eintrag.players.map(x => `${x.name} (${x.apps} Sp.${x.goals ? `, ${x.goals} T.` : ''})`).join(', ')}`);
+    });
+    if (!game.intlTournaments) game.intlTournaments = [];
+    game.intlTournaments.unshift(ergebnis);
+    if (game.intlTournaments.length > 8) game.intlTournaments.length = 8;
+    const titel = ergebnis.nations.some(n => n.stage === 'Titel');
+    if (titel) { game.fans = Math.min(100, game.fans + 4); if (typeof addManagerXP === 'function') addManagerXP(300); }
+    addInboxMessage('vertrag', `🌍 ${name} ${saison}: ${teilnehmer.length} Spieler dabei${titel ? ' - mit Titel!' : ''}`,
+        `${meldungen.join('\n')}\n\nDie Turnierfahrer steigen später ins Training ein (Fitness -15), der Marktwert steigt mit jedem Turniererfolg.`, 'screen-squad');
+    return ergebnis;
+}
+
+function renderNationalTeamPanel() {
+    const box = document.getElementById('national-team-box');
+    if (!box) return;
+    const naechste = getNextIntlBreak();
+    const saisonGerade = game.season % 2 === 0;
+    const kandidaten = [...squad].map(p => ({ p, schwelle: getNominationThreshold(p) }))
+        .filter(x => x.p.strength >= x.schwelle - 4 || (x.p.caps || 0) > 0)
+        .sort((a, b) => (b.p.strength - b.schwelle) - (a.p.strength - a.schwelle));
+    const zeilen = kandidaten.length ? kandidaten.slice(0, 12).map(({ p, schwelle }) => {
+        const drin = isNominated(p);
+        return `<div style="display:flex; justify-content:space-between; gap:6px; padding:2px 0; border-top:1px solid rgba(255,255,255,0.06);">
+            <span>${NATIONS[getNation(p)].flag} ${p.name} <span style="color:var(--text-muted);">${p.pos}</span></span>
+            <span>${drin ? '<span style="color:var(--primary);">✅ nominiert</span>' : `<span style="color:var(--text-muted);">Stärke ${p.strength}/${schwelle}</span>`}
+            · ${p.caps || 0} Sp., ${p.intlGoals || 0} T.${p.intlTitles ? ` · 🏆${p.intlTitles}` : ''}</span>
+        </div>`;
+    }).join('') : '<div style="color:var(--text-muted);">Noch niemand in Reichweite einer Nominierung (Deutschland ab Stärke 73, kleinere Nationen ab 64).</div>';
+    const historie = (game.intlTournaments || []).slice(0, 3).map(t => `<div class="box" style="font-size:9px;"><strong>${t.name} ${t.season}</strong>: ${t.nations.map(n => `${NATIONS[n.nation] ? NATIONS[n.nation].flag : ''} ${n.nation} - ${n.stage === 'Titel' ? '🏆 Titel' : n.stage}`).join(' · ')}</div>`).join('');
+    box.innerHTML = `<div style="font-size:9px;">
+        <div style="color:var(--text-muted); margin-bottom:4px;">Länderspielpausen nach den Spieltagen ${INTL_BREAK_MATCHDAYS.join(', ')}${naechste ? ` (nächste: nach Spieltag ${naechste})` : ''}. Nominiert wird, wer die Schwelle seines Landes erreicht; ein Notenschnitt von 2,5 oder besser senkt sie um 2. Reise: Fitness -12, Verletzungsrisiko - dafür Moral, Marktwert und Fans.
+        ${saisonGerade ? `<br>🏆 Nach dieser Saison: <strong>${getTournamentName(game.season)}</strong>.` : '<br>Nach der nächsten Saison steht wieder ein Turnier an.'}</div>
+        ${zeilen}
+        ${historie ? `<div style="margin-top:6px;">${historie}</div>` : ''}
+    </div>`;
 }
 
 </script>

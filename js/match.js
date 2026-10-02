@@ -423,7 +423,7 @@
         let container = document.getElementById('live-subs-list');
         document.getElementById('subs-left-count').innerText = substitutionsLeft;
         container.innerHTML = '';
-        let bench = squad.filter(p => !lineup.includes(p.id) && (p.injured || 0) === 0 && (p.suspended || 0) === 0 && (p.nationalDuty || 0) === 0);
+        let bench = squad.filter(p => !lineup.includes(p.id) && (p.injured || 0) === 0 && (p.suspended || 0) === 0);
         // Wer geht raus? Vorauswahl: der müdeste Feldspieler, bei gleicher Fitness der schwächste;
         // der Torwart steht am Ende der Liste.
         let sentOff = (currentMatch && currentMatch.sentOff) || [];
@@ -966,7 +966,7 @@
         if (onPitch.length === 0 || substitutionsLeft <= 0) return null;
         let tiredest = [...onPitch].sort((a, b) => a.fitness - b.fitness)[0];
         if (tiredest.fitness > 75) return null; // noch kein dringender Handlungsbedarf
-        let bench = squad.filter(p => !lineup.includes(p.id) && (p.injured || 0) === 0 && (p.suspended || 0) === 0 && (p.nationalDuty || 0) === 0);
+        let bench = squad.filter(p => !lineup.includes(p.id) && (p.injured || 0) === 0 && (p.suspended || 0) === 0);
         let replacement = bench.filter(p => p.pos === tiredest.pos).sort((a, b) => b.strength - a.strength)[0] || bench.sort((a, b) => b.strength - a.strength)[0];
         if (!replacement) return null;
         return { out: tiredest, in: replacement };
@@ -1782,17 +1782,6 @@
             // Verletzungs-/Sperren-Countdown herunterzählen
             if ((p.injured || 0) > 0) p.injured--;
             if ((p.suspended || 0) > 0) p.suspended--;
-            if ((p.nationalDuty || 0) > 0) {
-                p.nationalDuty--;
-                if (p.nationalDuty === 0) {
-                    // Rückkehr von der Länderspielreise: spürbare Ermüdung, kleines Verletzungsrisiko
-                    p.fitness = Math.max(10, p.fitness - 15);
-                    if (Math.random() < 0.12) {
-                        p.injured = 1 + Math.floor(Math.random() * 2);
-                        addInboxMessage('verletzung', `${p.name} verletzt von der Nationalmannschaft zurück`, `Kommt mit einer kleinen Blessur zurück und fällt ${p.injured} Spiel(e) aus.`, 'screen-squad');
-                    }
-                }
-            }
         });
 
         // Neue Verletzungen/Sperren nur unter Spielern, die diesen Spieltag tatsächlich aufgelaufen sind.
@@ -1863,7 +1852,8 @@
         // Ein live gespieltes Pokalergebnis gilt nur für diesen Spieltag.
         game.liveCupResult = null;
 
-        checkNationalTeamCallups(isLiveContext);
+        // Länderspielpausen (js/national-team.js): feste Pausen, nachvollziehbare Nominierung.
+        if (typeof tickInternationalBreak === 'function') tickInternationalBreak();
 
         if (underworld.pressure > 25) {
             let raidRoll = Math.random();
@@ -2331,26 +2321,6 @@
         showNotice('🚪 Entlassen!',
             'Der Vorstand hat genug gesehen und trennt sich mit sofortiger Wirkung von dir.\n\nDeine Karriere-Erfahrung und deine Trophäen nimmst du mit - bei deinem neuen Klub beginnst du aber wieder ganz von unten.',
             { typ: 'warn', sofort: true, knopf: 'Neuen Klub suchen', danach: () => location.reload() });
-    }
-
-    // ---------- NATIONALMANNSCHAFTSBERUFUNGEN ----------
-    // Alle ~5 Spieltage (simuliert eine Länderspielpause) hat jeder ausreichend starke,
-    // verfügbare Spieler eine kleine Chance auf eine Berufung. Bringt Prestige (Fans/XP),
-    // kostet aber eine Ausfall-Woche plus Rückkehr-Risiko (Ermüdung/leichte Blessur, siehe
-    // Countdown weiter oben in processPostMatchRoutine).
-    function checkNationalTeamCallups(isLiveContext = false) {
-        if (game.matchday % 5 !== 0) return;
-        if (squad.some(p => (p.nationalDuty || 0) > 0)) return; // schon jemand unterwegs
-        let eligible = squad.filter(p => p.strength >= 70 && (p.injured || 0) === 0 && (p.suspended || 0) === 0);
-        eligible.forEach(p => {
-            if (Math.random() < 0.06) {
-                p.nationalDuty = 1;
-                game.fans = Math.min(100, game.fans + 3);
-                if (isLiveContext) addManagerXP(30);
-                addInboxMessage('vertrag', '🌍 Nationalmannschaft-Berufung!', `${p.name} wird für die Nationalmannschaft (${p.nation || 'Deutschland'}) nominiert - großes Prestige für den Verein! Fällt das nächste Spiel aus.`, 'screen-squad');
-                showToast(`🌍 ${p.name} wurde in die Nationalmannschaft berufen!`, 'success');
-            }
-        });
     }
 
     // ---------- PRESSESTIMMEN ----------

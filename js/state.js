@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.12', date: '01.10.2026', features: 'Phase 18: Aufräumen Teil 6 (Schein-Entscheidungen mit echter Wirkung, keine stillen Knöpfe mehr)' };
+    const GAME_VERSION = { number: '3.13', date: '02.10.2026', features: 'Phase 19: Länderspiele & Turniere (feste Länderspielpausen, Nominierungen, WM/EM)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -610,5 +610,5 @@
         // Holding-Aufträge alter Spielstände trugen echte Vereinsnamen.
         const echteNamen = { 'Real Madrid': 'Real Madrit', 'FC Bayern': 'Bayern Munchen', 'FC Liverpool': 'Liverpol FC' };
         if (typeof holdingCompany !== 'undefined') (holdingCompany.b2bContracts || []).forEach(c => { if (echteNamen[c.club]) c.club = echteNamen[c.club]; });
-        squad.forEach(p => { delete p.currentFitnessBoost; });
+        squad.forEach(p => { delete p.currentFitnessBoost; delete p.nationalDuty; });
     }

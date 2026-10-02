@@ -298,6 +298,8 @@
         forceSponsorRenewalAtSeasonStart();
         if (typeof renewSeasonTickets === 'function') renewSeasonTickets();
         if (typeof checkSeasonMoodTargetResult === 'function') checkSeasonMoodTargetResult();
+        // WM/EM im Sommer nach jeder geraden Saison (js/national-team.js), nach dem Fitness-Reset.
+        if (typeof playSummerTournament === 'function') playSummerTournament();
         if (typeof tickCoachBounce === 'function') tickCoachBounce(true);
         // Supercup der neuen Saison: braucht noch die alte Tabelle und den alten Pokal.
         if (typeof prepareSupercup === 'function') prepareSupercup();
