@@ -2884,7 +2884,9 @@ async function testFakeDecisions(browser) {
             toggleTeamInstruction('gegenpressing');
             out.tiefWiederAus = !t.tiefStehen && t.gegenpressing;
             // Fan-Aktionen: getrennte Wirkung, je einmal bis zum Spiel
-            game.money = 1000000; game.fanSupport = {};
+            // Fans auf 100: jede Aktion gibt +2 Fans, und die Fanstimmung fließt in die
+            // Auswärtsstärke ein - an einer Rundungsgrenze kippte der Vergleich sonst (CI 3.21).
+            game.money = 1000000; game.fanSupport = {}; game.fans = 100;
             const heim0 = calcTeamStrength(true), aus0 = calcTeamStrength(false);
             runFanAction('choreo');
             const geld1 = game.money;
