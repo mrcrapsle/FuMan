@@ -2880,12 +2880,12 @@
                 <div id="squad-tab-team" style="display:none;">
                     <div class="panel">
                         <div class="panel-header" style="color:var(--purple);">🤝 KABINE</div>
-                        <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Eingespieltheit, Grüppchen und Wortführer - alles fließt in die Teamstärke bzw. die Moral nach Niederlagen ein.</div>
+                        <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Eingespieltheit, Grüppchen und Rangordnung - rumorende Gruppen kosten Teamstärke und ziehen die Kabine runter. Wortführer melden sich beim Mannschaftsrat, Unzufriedene im Büro.</div>
                         <div id="team-chemistry-box" style="display:none;"></div>
                         <div style="font-size:9px; font-weight:800; margin:6px 0 3px;">👥 Grüppchen</div>
                         <div id="squad-cliques-box"></div>
-                        <div style="font-size:9px; font-weight:800; margin:6px 0 3px;">🗣️ Führungsspieler-Rat</div>
-                        <div id="leadership-council-box"></div>
+                        <div style="font-size:9px; font-weight:800; margin:6px 0 3px;">🏛️ Rangordnung</div>
+                        <div id="locker-hierarchy-box"></div>
                     </div>
                     <div class="panel">
                         <div class="panel-header" style="color:var(--danger);">⚠️ SPIELER-SKANDALE</div>
@@ -4519,7 +4519,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.22.1', date: '03.10.2026', features: 'Phase 20: Saisonvorschau & Experten-Check; Zuschauer schwanken auch an der Liga-Obergrenze (nicht mehr immer 1.000)' };
+    const GAME_VERSION = { number: '3.23', date: '03.10.2026', features: 'Phase 20: Kabine & Führungsspieler (ein Mannschaftsrat, rumorende Cliquen, Kapitänsfrage, Unzufriedene im Büro)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -6690,7 +6690,7 @@ function compareTableRows(a, b) {
         renderCrowdFavoritePreview();
         renderTeamChemistryPanel();
         if (typeof renderCliqueBox === 'function') renderCliqueBox();
-        if (typeof renderLeadershipCouncilBox === 'function') renderLeadershipCouncilBox();
+        if (typeof renderLockerHierarchyBox === 'function') renderLockerHierarchyBox();
         if (typeof renderScandalsPanel === 'function') renderScandalsPanel();
         if (typeof renderTacticSystemPanel === 'function') renderTacticSystemPanel();
         if (typeof renderPlayerSeasonStats === 'function') renderPlayerSeasonStats();
@@ -6860,7 +6860,12 @@ function compareTableRows(a, b) {
         let pen = document.getElementById('sel-penalty');
         let fk = document.getElementById('sel-freekick');
         let ck = document.getElementById('sel-corner');
-        if (cap) game.captainId = cap.value;
+        // Kapitänswechsel hat Folgen in der Kabine (js/locker-room.js).
+        if (cap && String(cap.value) !== String(game.captainId)) {
+            if (typeof handleCaptainChange === 'function') handleCaptainChange(cap.value, false); else game.captainId = cap.value;
+            if (typeof renderTeamCouncilPanel === 'function') renderTeamCouncilPanel();
+            if (typeof renderLockerHierarchyBox === 'function') renderLockerHierarchyBox();
+        }
         if (pen) game.penaltyTakerId = pen.value;
         if (fk) game.freeKickTakerId = fk.value;
         if (ck) game.cornerTakerId = ck.value;
@@ -11098,9 +11103,11 @@ function renderTransferPokerBox() {
         return Math.max(20, Math.round(schnitt));
     }
 
-    function triggerNewAITransferOffer() {
+    // gezielt: ein Spieler, für den der Verein selbst grünes Licht gibt (Bürotermin "Wechsel erlauben").
+    function triggerNewAITransferOffer(gezielt) {
         let schwelle = getTransferInterestThreshold();
-        let validTargets = squad.filter(p => p.strength >= schwelle && !incomingOffers.some(o => o.playerId === p.id));
+        let validTargets = gezielt ? [gezielt].filter(p => !incomingOffers.some(o => o.playerId === p.id))
+            : squad.filter(p => p.strength >= schwelle && !incomingOffers.some(o => o.playerId === p.id));
         if (validTargets.length === 0) return;
 
         let targetPlayer = validTargets[Math.floor(Math.random() * validTargets.length)];
@@ -14079,6 +14086,53 @@ function renderBoardRoomPanel() {
         }
     ];
 
+    // Gezielter Besuch (kein Zufallsereignis): ein unzufriedener Leistungsträger aus der Kabine
+    // (pickUnhappyVisitor in js/locker-room.js). game.officeEvent.playerId nennt den Spieler.
+    const OFFICE_VISITOR_UNHAPPY = {
+        id: 'unzufrieden',
+        person: 'Unzufriedener Spieler',
+        farbe: '#f87171',
+        gezielt: true,
+        titel: p => `${p.name} steht vor Ihrer Tür`,
+        text: p => `„Ich bin nicht hierher gekommen, um auf der Tribüne zu sitzen. ${(p.appearancesSeason || 0)} Einsätze in dieser Saison - so geht das nicht weiter."`,
+        optionen: [
+            {
+                label: 'Einsatzgarantie geben',
+                hinweis: () => 'Moral +15 · gebrochen kostet sie am Saisonende -20',
+                wirkung: () => {
+                    let p = squad.find(x => x.id === game.officeEvent.playerId);
+                    if (!p) return { ok: true, text: 'Der Spieler hat den Verein inzwischen verlassen.' };
+                    let rest = Math.max(0, 34 - game.matchday);
+                    p.playtimePromise = { season: game.season, minApps: Math.min(34, (p.appearancesSeason || 0) + Math.ceil(rest * 0.6)) };
+                    p.morale = Math.min(100, (p.morale || 50) + 15);
+                    return { ok: true, text: `${p.name} bekommt seine Einsätze zugesagt: ${p.playtimePromise.minApps} bis Saisonende. Er geht zufrieden.` };
+                }
+            },
+            {
+                label: 'Leistung einfordern',
+                hinweis: () => 'Er ist enttäuscht, der Mannschaftsrat schätzt die klare Linie',
+                wirkung: () => {
+                    let p = squad.find(x => x.id === game.officeEvent.playerId);
+                    if (!p) return { ok: true, text: 'Der Spieler hat den Verein inzwischen verlassen.' };
+                    p.morale = Math.max(10, (p.morale || 50) - 6);
+                    if (typeof getCouncilMembers === 'function' && typeof adjustMorale === 'function') adjustMorale(getCouncilMembers(), 2);
+                    return { ok: true, text: `„Zeig es im Training." ${p.name} schluckt - der Mannschaftsrat nickt anerkennend.` };
+                }
+            },
+            {
+                label: 'Wechsel erlauben',
+                hinweis: () => 'Er ist erleichtert, ein Klub bekommt grünes Licht für ein Angebot',
+                wirkung: () => {
+                    let p = squad.find(x => x.id === game.officeEvent.playerId);
+                    if (!p) return { ok: true, text: 'Der Spieler hat den Verein inzwischen verlassen.' };
+                    p.morale = Math.min(100, (p.morale || 50) + 6);
+                    if (typeof triggerNewAITransferOffer === 'function') triggerNewAITransferOffer(p);
+                    return { ok: true, text: `Sie geben ${p.name} frei. Ein Angebot liegt schon auf dem Tisch (Transfermarkt > Angebote).` };
+                }
+            }
+        ]
+    };
+
     // Alle Geldbeträge skalieren mit der Ligastufe - 8.000 € Handgeld sind in der
     // Kreisklasse ein Vermögen und in der Bundesliga Portokasse.
     function getOfficeEventScaledSum(basis) {
@@ -14088,11 +14142,20 @@ function renderBoardRoomPanel() {
 
     function getPendingOfficeEvent() {
         if (!game.officeEvent) return null;
+        if (game.officeEvent.id === OFFICE_VISITOR_UNHAPPY.id) return OFFICE_VISITOR_UNHAPPY;
         return OFFICE_EVENTS.find(e => e.id === game.officeEvent.id) || null;
     }
 
     function rollOfficeEvent() {
         if (game.officeEvent) { checkOfficeEventTimeout(); return; }
+        // Unzufriedene Leistungsträger klopfen bevorzugt an (js/locker-room.js).
+        let unzufrieden = typeof pickUnhappyVisitor === 'function' ? pickUnhappyVisitor() : null;
+        if (unzufrieden && Math.random() < 0.5) {
+            game.officeEvent = { id: OFFICE_VISITOR_UNHAPPY.id, playerId: unzufrieden.id, seit: game.matchday, season: game.season,
+                titel: OFFICE_VISITOR_UNHAPPY.titel(unzufrieden), text: OFFICE_VISITOR_UNHAPPY.text(unzufrieden) };
+            addInboxMessage('vertrag', `🚪 ${unzufrieden.name} will Sie sprechen`, `${unzufrieden.name} ist unzufrieden (Moral ${Math.round(unzufrieden.morale || 50)}) und wartet im Managerbüro auf ein Gespräch.`, 'screen-office');
+            return;
+        }
         if (Math.random() > OFFICE_EVENT_CHANCE) return;
         let ereignis = OFFICE_EVENTS[Math.floor(Math.random() * OFFICE_EVENTS.length)];
         game.officeEvent = {
@@ -20903,70 +20966,8 @@ function renderStadiumEventsPanel() {
         }
     }
 
-    // ==========================================
-    // KABINEN-DYNAMIK: CLIQUENBILDUNG & FÜHRUNGSSPIELER-RAT (NEU)
-    // ==========================================
-
-    // 1. Cliquenbildung: Spieler gruppieren sich informell nach Nation und Alter - eine
-    // geschlossene, große Clique stärkt den Zusammenhalt, viele kleine Grüppchen schwächen ihn.
-    function computeSquadCliques() {
-        let groups = {};
-        squad.forEach(p => {
-            let ageGroup = (p.age || 25) <= 23 ? 'jung' : ((p.age || 25) >= 30 ? 'erfahren' : 'mitte');
-            let key = `${p.nation || 'Deutschland'}-${ageGroup}`;
-            if (!groups[key]) groups[key] = [];
-            groups[key].push(p);
-        });
-        let cliques = Object.entries(groups).filter(([k, members]) => members.length >= 3).map(([key, members]) => ({ key, members, size: members.length }));
-        let largestClique = cliques.sort((a, b) => b.size - a.size)[0];
-        let fragmentation = cliques.length; // viele kleine Cliquen = fragmentierte Kabine
-        return { cliques, largestClique, fragmentation };
-    }
-    function getCliqueChemistryModifier() {
-        let { largestClique, fragmentation } = computeSquadCliques();
-        let bonus = 0;
-        if (largestClique && largestClique.size >= squad.length * 0.4) bonus += 1.5; // dominante, einende Clique
-        if (fragmentation >= 5) bonus -= 1; // viele kleine Grüppchen stören den Zusammenhalt
-        return bonus;
-    }
-    function renderCliqueBox() {
-        let box = document.getElementById('squad-cliques-box');
-        if (!box) return;
-        let { cliques, largestClique } = computeSquadCliques();
-        if (cliques.length === 0) { box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Noch keine erkennbaren Grüppchen im Kader.</div>'; return; }
-        box.innerHTML = cliques.sort((a, b) => b.size - a.size).slice(0, 4).map(c => {
-            let isDominant = largestClique && c.key === largestClique.key;
-            return `<div class="box" style="font-size:9px; ${isDominant ? 'border-left-color:var(--primary);' : ''}">${isDominant ? '👑 ' : ''}${c.key.replace('-', ', ')}: ${c.members.map(m => m.name.split(' ').pop()).join(', ')}</div>`;
-        }).join('') + `<div style="font-size:9px; color:var(--text-muted); margin-top:4px;">Chemie-Modifikator: ${getCliqueChemistryModifier() >= 0 ? '+' : ''}${getCliqueChemistryModifier().toFixed(1)}</div>`;
-    }
-
-    // 2. Führungsspieler-Rat: bis zu 3 Wortführer neben dem Kapitän (Leader-Trait, hohes
-    // Alter/Erfahrung, hohe Moral) - ein starker Rat stabilisiert die Moral nach Niederlagen.
-    function getLeadershipCouncil() {
-        return [...squad]
-            .filter(p => p.id !== game.captainId)
-            .map(p => ({ p, score: (p.trait === 'Leader' ? 30 : 0) + Math.max(0, (p.age || 25) - 26) * 2 + (p.morale || 50) * 0.2 }))
-            .sort((a, b) => b.score - a.score)
-            .slice(0, 3)
-            .map(x => x.p);
-    }
-    function getLeadershipCouncilMoraleStabilizer() {
-        let council = getLeadershipCouncil();
-        if (council.length === 0) return 0;
-        let avgMorale = council.reduce((s, p) => s + (p.morale || 50), 0) / council.length;
-        return avgMorale >= 70 ? 3 : (avgMorale <= 35 ? -2 : 0);
-    }
-    function renderLeadershipCouncilBox() {
-        let box = document.getElementById('leadership-council-box');
-        if (!box) return;
-        let council = getLeadershipCouncil();
-        let captain = squad.find(p => p.id === game.captainId);
-        box.innerHTML = `
-            ${captain ? `<div class="box" style="font-size:9px; border-left-color:var(--gold);">Ⓒ ${captain.name} (Kapitän)</div>` : ''}
-            ${council.map(p => `<div class="box" style="font-size:9px;">🗣️ ${p.name} (Moral: ${p.morale || 50})</div>`).join('')}
-            <div style="font-size:9px; color:var(--text-muted); margin-top:4px;">Moral-Stabilisator nach Niederlagen: ${getLeadershipCouncilMoraleStabilizer() >= 0 ? '+' : ''}${getLeadershipCouncilMoraleStabilizer()}</div>
-        `;
-    }
+    // Kabinen-Dynamik (Cliquen, Rangordnung, Kapitänsfrage) liegt seit Phase 20.2 in
+    // js/locker-room.js; den früheren zweiten "Führungsspieler-Rat" ersetzt der Mannschaftsrat.
 
     function toggleStaffMember(key, btn) {
         // Nur das Entlassen ist folgenreich - beim Einstellen wird nicht nachgefragt.
@@ -24377,12 +24378,15 @@ function initTeamCouncil() {
     return tc;
 }
 
-// Kapitän plus die beiden erfahrensten Spieler (Einsätze, dann Alter).
+// Kapitän plus die beiden Spieler mit der größten Führungsqualität (getLeadershipScore in
+// js/locker-room.js: Leader-Eigenschaft, Alter, Erfahrung, Moral). Der einzige Rat im Spiel -
+// der frühere zweite "Führungsspieler-Rat" (campus-staff.js) ist darin aufgegangen.
 function electTeamCouncil(silent) {
     const tc = game.teamCouncil || (game.teamCouncil = { memberIds: [], concern: null, history: [] });
     const captain = squad.find(p => p.id === game.captainId);
+    const score = p => typeof getLeadershipScore === 'function' ? getLeadershipScore(p) : (p.appearances || 0);
     const rest = squad.filter(p => !captain || p.id !== captain.id)
-        .sort((a, b) => (b.appearances || 0) - (a.appearances || 0) || (b.age || 0) - (a.age || 0))
+        .sort((a, b) => score(b) - score(a))
         .slice(0, captain ? 2 : 3);
     tc.memberIds = [...(captain ? [captain.id] : []), ...rest.map(p => p.id)];
     if (!silent) { showToast('🤝 Der Mannschaftsrat wurde neu gewählt.', 'success'); renderTeamCouncilPanel(); }
@@ -24390,6 +24394,15 @@ function electTeamCouncil(silent) {
 
 function getCouncilMembers() {
     return initTeamCouncil().memberIds.map(id => squad.find(p => p.id === id)).filter(Boolean);
+}
+
+// Ein gut gelaunter Rat fängt Niederlagen auf, ein frustrierter verstärkt sie (Moral nach
+// Niederlagen in processPostMatchRoutine, kleiner Anteil auch in calcTeamStrength).
+function getCouncilMoraleStabilizer() {
+    const members = getCouncilMembers();
+    if (members.length === 0) return 0;
+    const schnitt = members.reduce((s, p) => s + (p.morale || 50), 0) / members.length;
+    return schnitt >= 70 ? 3 : (schnitt <= 35 ? -2 : 0);
 }
 
 function councilCost(base) {
@@ -24410,6 +24423,9 @@ function findCouncilConcern() {
             text: `Die durchschnittliche Moral liegt bei ${Math.round(avgMorale)}. Der Rat schlägt einen gemeinsamen Mannschaftsabend vor.`,
             cost: councilCost(40000) };
     }
+    // Kabine (js/locker-room.js): rumorende Clique oder die Kapitänsfrage.
+    const kabine = typeof findLockerRoomConcern === 'function' ? findLockerRoomConcern() : null;
+    if (kabine) return kabine;
 
     const medianStrength = [...squad].map(p => p.strength).sort((a, b) => a - b)[Math.floor(squad.length / 2)];
     const vergessen = game.matchday >= 8 && squad
@@ -24446,6 +24462,14 @@ const COUNCIL_OPTIONS = {
     training: [
         { label: () => 'Training auf normal senken', apply: () => { if (typeof setTrainingIntensity === 'function') setTrainingIntensity('normal'); else game.trainingIntensity = 'normal'; adjustMorale(squad, 4); }, result: 'Training entschärft, Moral +4' },
         { label: () => 'Härte beibehalten', apply: () => adjustMorale(squad, -4), result: 'Härte beibehalten, Moral -4' }
+    ],
+    clique: [
+        { label: c => `${(squad.find(p => p.id === c.leaderId) || {}).name || 'Wortführer'} anhören`, apply: c => { const cl = getCliqueByKey(c.cliqueKey); if (cl) adjustMorale(cl.members, 8); adjustMorale(getCouncilMembers().filter(p => !cl || !cl.members.includes(p)), -2); }, result: 'Gruppe angehört: ihre Stimmung steigt (+8), der Rat sieht eine Bevorzugung (-2)' },
+        { label: () => 'Klare Ansage an die Gruppe', apply: c => { const cl = getCliqueByKey(c.cliqueKey); if (!cl) return; adjustMorale(cl.members, -3); adjustMorale(squad.filter(p => !cl.members.includes(p)), 2); const l = squad.find(p => p.id === c.leaderId); if (l) adjustMorale([l], -6); }, result: 'Klare Linie: die Gruppe murrt (-3, Wortführer -6), der Rest der Kabine zieht mit (+2)' }
+    ],
+    kapitaen: [
+        { label: () => 'Kapitän stärken', apply: c => { const k = squad.find(p => p.id === c.captainId); if (k) adjustMorale([k], 10); adjustMorale(getCouncilMembers().filter(p => p.id !== c.captainId), -2); }, result: 'Kapitän gestärkt (+10), der Rat ist skeptisch (-2)' },
+        { label: c => `Binde an ${(squad.find(p => p.id === c.successorId) || {}).name || 'den Vorschlag'}`, apply: c => { if (typeof handleCaptainChange === 'function') handleCaptainChange(c.successorId, true); }, result: 'Kapitänswechsel mit Rückendeckung des Rats' }
     ],
     praemie: [
         { label: c => `Prämie zahlen (${formatVal(c.cost)})`, cost: c => c.cost, apply: () => adjustMorale(squad, 5), result: 'Prämie gezahlt, Moral +5' },
@@ -24524,6 +24548,170 @@ function renderTeamCouncilPanel() {
         html += tc.history.slice(0, 3).map(h => `<div style="color:var(--text-muted); font-size:8px;">S${h.season}/ST${h.matchday}: ${h.title} - ${h.result}</div>`).join('');
     }
     box.innerHTML = html + '</div>';
+}
+
+</script>
+<script>
+/* eslint-disable no-undef */
+// Kabine: Rangordnung, Grüppchen (Cliquen), Unzufriedene und die Kapitänsfrage. Baut auf dem
+// einen Mannschaftsrat auf (js/team-council.js: Kapitän + zwei Führungsspieler nach
+// getLeadershipScore()). Früher gab es daneben einen zweiten "Führungsspieler-Rat" mit anderen
+// Mitgliedern (campus-staff.js) - zusammengelegt in Phase 20.2.
+//
+// Wirkung: eine Clique mit Stimmung unter 40 rumort und zieht monatlich den Rest des Kaders
+// runter (ein Kapitän mit Autorität halbiert das), unruhige Cliquen kosten Teamstärke
+// (getCliqueChemistryModifier), ihr Wortführer meldet sich über den Rat. Unzufriedene
+// Leistungsträger kommen ins Büro (pickUnhappyVisitor, js/office-events.js). Ein Kapitänswechsel
+// trifft den alten Kapitän und - ohne Rückhalt in der Kabine - den Rat.
+
+const CLIQUE_AGE_LABELS = { jung: 'Junge Wilde', mitte: 'Mittelbau', erfahren: 'Routiniers' };
+const CLIQUE_UNREST_MOOD = 40;
+
+// Führungsqualität: Leader-Eigenschaft, Alter, Erfahrung, Moral.
+function getLeadershipScore(p) {
+    return (p.trait === 'Leader' ? 30 : 0) + Math.max(0, (p.age || 25) - 26) * 2
+        + Math.min(p.appearances || 0, 150) * 0.12 + (p.morale || 50) * 0.15;
+}
+
+function getLockerRoomStatus(p) {
+    if (p.id === game.captainId) return { key: 'kapitaen', label: 'Ⓒ Kapitän' };
+    const rat = (game.teamCouncil && game.teamCouncil.memberIds) || [];
+    if (rat.includes(p.id)) return { key: 'rat', label: '🗣️ Führungsspieler' };
+    if ((p.appearances || 0) >= 30 || (p.age || 25) >= 27) return { key: 'etabliert', label: 'Etabliert' };
+    if ((p.age || 25) <= 21) return { key: 'talent', label: '🌱 Talent' };
+    return { key: 'mitlaeufer', label: 'Mitläufer' };
+}
+
+// Cliquen nach Nation und Altersgruppe (ab 3 Spielern), mit Stimmung und Wortführer.
+function computeSquadCliques() {
+    const groups = {};
+    squad.forEach(p => {
+        const ageGroup = (p.age || 25) <= 23 ? 'jung' : ((p.age || 25) >= 30 ? 'erfahren' : 'mitte');
+        const key = `${p.nation || 'Deutschland'}-${ageGroup}`;
+        (groups[key] = groups[key] || []).push(p);
+    });
+    const cliques = Object.entries(groups).filter(([, members]) => members.length >= 3).map(([key, members]) => {
+        const [nation, alter] = key.split('-');
+        const flag = typeof NATIONS !== 'undefined' && NATIONS[nation] ? NATIONS[nation].flag : '🏳️';
+        const mood = Math.round(members.reduce((s, p) => s + (p.morale || 50), 0) / members.length);
+        const leader = [...members].sort((a, b) => getLeadershipScore(b) - getLeadershipScore(a))[0];
+        return { key, name: `${flag} ${CLIQUE_AGE_LABELS[alter] || alter}`, members, size: members.length, mood, leader, unruhig: mood < CLIQUE_UNREST_MOOD };
+    });
+    const largestClique = [...cliques].sort((a, b) => b.size - a.size)[0];
+    return { cliques, largestClique, fragmentation: cliques.length };
+}
+
+function getCliqueChemistryModifier() {
+    const { cliques, largestClique, fragmentation } = computeSquadCliques();
+    let bonus = 0;
+    if (largestClique && largestClique.size >= squad.length * 0.4 && !largestClique.unruhig) bonus += 1.5; // einende Clique
+    if (fragmentation >= 5) bonus -= 1;                                                                 // viele kleine Grüppchen
+    bonus -= Math.min(1.5, cliques.filter(c => c.unruhig).length * 0.5);                               // rumorende Cliquen
+    return bonus;
+}
+
+function captainHasAuthority() {
+    const k = squad.find(p => p.id === game.captainId);
+    return !!k && (k.morale || 50) >= 60 && getLeadershipScore(k) >= 20;
+}
+
+// Monatlich nach dem Mannschaftsrat (processPostMatchRoutine).
+function tickLockerRoom() {
+    const { cliques } = computeSquadCliques();
+    const autoritaet = captainHasAuthority();
+    cliques.forEach(c => {
+        if (c.unruhig) {
+            if (!autoritaet || Math.random() < 0.5) adjustMorale(squad.filter(p => !c.members.includes(p)), -1);
+        } else if (c.mood >= 75) {
+            adjustMorale(c.members, 1);
+        }
+    });
+}
+
+// Für findCouncilConcern(): rumorende Clique oder die Kapitänsfrage.
+function findLockerRoomConcern() {
+    const unruhig = computeSquadCliques().cliques.filter(c => c.unruhig).sort((a, b) => a.mood - b.mood)[0];
+    if (unruhig && unruhig.leader) {
+        return { type: 'clique', cliqueKey: unruhig.key, leaderId: unruhig.leader.id, title: `Die Gruppe ${unruhig.name} rumort`,
+            text: `${unruhig.leader.name} spricht für ${unruhig.size} Spieler (Stimmung ${unruhig.mood}). Die schlechte Laune färbt auf die Kabine ab und kostet Teamstärke.` };
+    }
+    const kapitaen = squad.find(p => p.id === game.captainId);
+    if (kapitaen) {
+        const ohneEinsatz = game.matchday >= 10 && (kapitaen.appearancesSeason || 0) < game.matchday * 0.4;
+        if ((kapitaen.morale || 50) < 35 || ohneEinsatz) {
+            const nachfolger = getCouncilMembers().filter(p => p.id !== kapitaen.id).sort((a, b) => getLeadershipScore(b) - getLeadershipScore(a))[0];
+            if (nachfolger) {
+                return { type: 'kapitaen', captainId: kapitaen.id, successorId: nachfolger.id, title: 'Die Kapitänsfrage',
+                    text: ohneEinsatz ? `${kapitaen.name} trägt die Binde, spielt aber kaum (${kapitaen.appearancesSeason || 0} Einsätze). Der Rat schlägt ${nachfolger.name} vor.`
+                        : `${kapitaen.name} wirkt als Kapitän ausgebrannt (Moral ${Math.round(kapitaen.morale || 50)}). Der Rat schlägt ${nachfolger.name} vor.` };
+            }
+        }
+    }
+    return null;
+}
+
+function getCliqueByKey(key) {
+    return computeSquadCliques().cliques.find(c => c.key === key) || null;
+}
+
+// Einziger Weg, die Binde zu wechseln (Auswahlfeld im Kader und Kapitänsfrage des Rats).
+function handleCaptainChange(newId, viaRat) {
+    const alt = squad.find(p => p.id === game.captainId);
+    const neu = squad.find(p => String(p.id) === String(newId));
+    if (!neu || (alt && alt.id === neu.id)) return;
+    if (alt) adjustMorale([alt], -12);
+    adjustMorale([neu], 8);
+    const status = getLockerRoomStatus(neu).key;
+    game.captainId = neu.id;
+    let folge;
+    if (viaRat) {
+        adjustMorale(squad.filter(p => p !== alt && p !== neu), 2);
+        folge = 'Der Rat steht hinter der Entscheidung, die Kabine zieht mit (+2 Moral).';
+    } else if (status !== 'rat' && status !== 'etabliert') {
+        adjustMorale(getCouncilMembers().filter(p => p !== neu && p !== alt), -4);
+        folge = `${neu.name} hat in der Kabine noch wenig Standing - die Führungsspieler sind irritiert (-4 Moral).`;
+    } else {
+        folge = `${neu.name} ist in der Kabine anerkannt.`;
+    }
+    if (typeof electTeamCouncil === 'function') electTeamCouncil(true);
+    addInboxMessage('vertrag', `Ⓒ Neuer Kapitän: ${neu.name}`, `${alt ? `${alt.name} gibt die Binde ab und ist enttäuscht (-12 Moral). ` : ''}${folge}`, 'screen-squad');
+    showToast(`Ⓒ ${neu.name} ist neuer Kapitän. ${folge}`, viaRat || status === 'rat' || status === 'etabliert' ? 'success' : 'error', 5000);
+}
+
+// Ein frustrierter Leistungsträger (nicht im Rat) kommt ins Büro (js/office-events.js).
+function pickUnhappyVisitor() {
+    if (squad.length < 5) return null;
+    const median = [...squad].map(p => p.strength).sort((a, b) => a - b)[Math.floor(squad.length / 2)];
+    const rat = (game.teamCouncil && game.teamCouncil.memberIds) || [];
+    return squad.filter(p => (p.morale || 50) < 35 && p.strength >= median && !(p.injured > 0) && p.id !== game.captainId && !rat.includes(p.id))
+        .sort((a, b) => (a.morale || 50) - (b.morale || 50))[0] || null;
+}
+
+function renderCliqueBox() {
+    const box = document.getElementById('squad-cliques-box');
+    if (!box) return;
+    const { cliques, largestClique } = computeSquadCliques();
+    if (cliques.length === 0) { box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Noch keine erkennbaren Grüppchen im Kader.</div>'; return; }
+    const mod = getCliqueChemistryModifier();
+    box.innerHTML = [...cliques].sort((a, b) => b.size - a.size).slice(0, 5).map(c => {
+        const dominant = largestClique && c.key === largestClique.key;
+        const farbe = c.unruhig ? 'var(--danger)' : (c.mood >= 75 ? 'var(--primary)' : 'var(--text-muted)');
+        return `<div class="box" style="font-size:9px; ${c.unruhig ? 'border-left-color:var(--danger);' : (dominant ? 'border-left-color:var(--primary);' : '')}">
+            ${dominant ? '👑 ' : ''}<strong>${c.name}</strong> (${c.size}) · <span style="color:${farbe};">Stimmung ${c.mood}${c.unruhig ? ' - rumort!' : ''}</span><br>
+            <span style="color:var(--text-muted);">Wortführer: ${c.leader ? c.leader.name : '-'} · ${c.members.map(m => m.name.split(' ').pop()).join(', ')}</span></div>`;
+    }).join('') + `<div style="font-size:9px; color:var(--text-muted); margin-top:4px;">Wirkung auf die Teamstärke: ${mod >= 0 ? '+' : ''}${mod.toFixed(1)} · Unter Stimmung ${CLIQUE_UNREST_MOOD} rumort eine Gruppe und zieht jeden Monat den Rest der Kabine runter${captainHasAuthority() ? ' (dein Kapitän hat Autorität und dämpft das)' : ''}.</div>`;
+}
+
+function renderLockerHierarchyBox() {
+    const box = document.getElementById('locker-hierarchy-box');
+    if (!box) return;
+    const gruppen = {};
+    squad.forEach(p => { const s = getLockerRoomStatus(p); (gruppen[s.key] = gruppen[s.key] || { label: s.label, spieler: [] }).spieler.push(p); });
+    const reihenfolge = ['kapitaen', 'rat', 'etabliert', 'mitlaeufer', 'talent'];
+    const unzufrieden = squad.filter(p => (p.morale || 50) < 35);
+    box.innerHTML = reihenfolge.filter(k => gruppen[k]).map(k => `<div style="font-size:9px; padding:2px 0;"><strong>${gruppen[k].label}</strong> (${gruppen[k].spieler.length}): <span style="color:var(--text-muted);">${gruppen[k].spieler.map(p => p.name.split(' ').pop()).join(', ')}</span></div>`).join('')
+        + (unzufrieden.length ? `<div class="box" style="font-size:9px; border-left-color:var(--danger); margin-top:4px;">😠 Unzufrieden: ${unzufrieden.map(p => `${p.name} (${Math.round(p.morale || 50)})`).join(', ')} - unzufriedene Leistungsträger stehen irgendwann im Büro.</div>` : '')
+        + `<div style="font-size:9px; color:var(--text-muted); margin-top:4px;">Kapitän wechseln geht im Reiter Aufstellung - der alte Kapitän ist enttäuscht, ohne Standing des Neuen auch der Rat.</div>`;
 }
 
 </script>
@@ -25813,7 +26001,7 @@ function cleanupLegacyScoutState() {
         // Kabinen-Dynamik (NEU): Cliquenbildung und Führungsspieler-Rat wirken sich auf die
         // Team-Stärke aus.
         if (typeof getCliqueChemistryModifier === 'function') bonus += getCliqueChemistryModifier();
-        if (typeof getLeadershipCouncilMoraleStabilizer === 'function') bonus += getLeadershipCouncilMoraleStabilizer() * 0.3;
+        if (typeof getCouncilMoraleStabilizer === 'function') bonus += getCouncilMoraleStabilizer() * 0.3;
 
         if (underworld.activeSabotages.stealBanner && isHomeMatch) bonus += 3;
         if (managerRPG.perks.tactician) bonus += 3;
@@ -27267,8 +27455,8 @@ function cleanupLegacyScoutState() {
         let moraleShift = matchResult === 'win' ? 4 : (matchResult === 'loss' ? -6 : (matchResult === 'draw' ? -1 : 0));
         // Führungsspieler-Rat (Kabinen-Dynamik, NEU): ein starker Rat fängt schlechte
         // Stimmung nach Niederlagen etwas ab, ein schwacher verstärkt sie.
-        if (matchResult === 'loss' && typeof getLeadershipCouncilMoraleStabilizer === 'function') {
-            moraleShift += getLeadershipCouncilMoraleStabilizer();
+        if (matchResult === 'loss' && typeof getCouncilMoraleStabilizer === 'function') {
+            moraleShift += getCouncilMoraleStabilizer();
         }
         // Der Manager selbst steht unter Druck: Niederlagen erhöhen den Stress, Siege entspannen etwas.
         let stressShift = matchResult === 'win' ? -1 : (matchResult === 'loss' ? 3 : (matchResult === 'draw' ? 1 : 0));
@@ -27597,6 +27785,7 @@ function cleanupLegacyScoutState() {
             if (typeof cleanupLegacyScoutingState === 'function') cleanupLegacyScoutingState();
             if (typeof tickSeasonObjectives === 'function') tickSeasonObjectives();
             if (typeof tickTeamCouncil === 'function') tickTeamCouncil();
+            if (typeof tickLockerRoom === 'function') tickLockerRoom();
             if (typeof tickCoachCarousel === 'function') tickCoachCarousel();
             if (typeof tickMemberAssembly === 'function') tickMemberAssembly();
             // Karriereenden: am Saisonende in agePlayersAtSeasonEnd() (js/player-development.js)
@@ -30008,6 +30197,9 @@ const LEXICON_ENTRIES = [
     { cat: 'Verein', title: 'Vorstandszufriedenheit', screen: 'screen-dashboard',
         text: 'Wie zufrieden der Vorstand ist (0-100). Bleibt sie mehrere Spieltage unter 25, folgt erst eine Warnung, dann die Entlassung. In der ersten Saison gibt es Schonfrist.',
         tips: ['Siege und erreichte Saisonziele heben sie', 'Schulden, gebrochene Versprechen und Niederlagenserien senken sie', 'Der Vorstandsraum erklärt jedes Mitglied einzeln'] },
+    { cat: 'Verein', title: 'Kabine, Cliquen & Kapitän', screen: 'screen-squad',
+        text: 'Ein Mannschaftsrat: Kapitän plus die zwei Spieler mit der größten Führungsqualität (Leader-Eigenschaft, Alter, Erfahrung, Moral). Spieler gruppieren sich nach Nation und Alter; fällt die Stimmung einer Gruppe unter 40, rumort sie: Teamstärke sinkt, und jeden Monat färbt die Laune auf den Rest ab. Ein Kapitän mit Autorität (Moral ab 60) dämpft das.',
+        tips: ['Wortführer melden sich beim Mannschaftsrat (anhören oder klare Ansage)', 'Unzufriedene Leistungsträger kommen ins Büro: Einsatzgarantie, Leistung einfordern oder Wechsel erlauben', 'Kapitän wechseln kostet den alten Kapitän Moral - einen Neuling ohne Standing nimmt der Rat übel'] },
     { cat: 'Verein', title: 'Fanstimmung', screen: 'screen-fans',
         text: 'Wie zufrieden die Anhänger sind (0-100). Beeinflusst Zuschauer, Fanartikel und Mitgliederzahlen.',
         tips: ['Mega-Choreo: +2 Stärke im nächsten Heimspiel', 'Sonderzug: +1,5 im nächsten Auswärtsspiel', 'Saisonziel bis Spieltag 6 setzen - Prämie bei Erfolg, Stimmungsverlust bei Misserfolg'] },
