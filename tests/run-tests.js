@@ -5743,12 +5743,13 @@ async function testOnboarding(browser) {
 }
 
 async function testCompactSave(browser) {
-    console.log('\n[P17d] Tempo & Speicher: kompakte Spielpläne, Selbsttest einmal pro Version');
+    console.log('\n[P17d] Tempo & Speicher: kompakte Spielpläne, kein Selbsttest beim Start');
     const { page, consoleErrors } = await freshPage(browser);
     page.on('dialog', d => d.accept());
     const r = await page.evaluate(() => {
         closeTutorial();
         const out = {};
+        out.keinSelbsttest = (game.selfTestHistory || []).length === 0;
         game.sackPending = false; simulateMatchdays(5);
         const original = JSON.stringify(fixturesData);
         const save = JSON.parse(JSON.stringify(buildSaveState()));
@@ -5766,12 +5767,11 @@ async function testCompactSave(browser) {
         // Nach dem Laden läuft die Saison normal weiter
         simulateMatchdays(1);
         out.weiter = game.matchday === 7;
-        out.selbsttestGemerkt = safeLocalGet('anstoss_fm13_selftest_version') === GAME_VERSION.number || safeLocalGet('anstoss_fm13_selftest_version') === null;
         return out;
     });
     assert(r.kompakt, `Spielpläne im Spielstand kompakt (Spielstand gesamt ${r.gesamtKB} KB)`);
     assert(r.verlustfrei && r.altLaedt && r.weiter, 'Spielpläne verlustfrei gespeichert/geladen, alte Spielstände laden weiter');
-    assert(r.selbsttestGemerkt, 'Struktur-Selbsttest merkt sich die geprüfte Version');
+    assert(r.keinSelbsttest, 'Beim Start läuft kein Struktur-Selbsttest (kostete ~1,5 s auf dem Handy)');
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 3).join(' | ')})`);
     await page.close();
 }

@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.20', date: '03.10.2026', features: 'Phase 19: Spiel-Lexikon (durchsuchbare Hilfe zu allen wichtigen Werten und Regeln, mit Sprung zum Bildschirm)' };
+    const GAME_VERSION = { number: '3.21', date: '03.10.2026', features: 'Phase 19: Tempo auf dem Handy (flüssiges Scrollen ohne Panel-Unschärfe, kein Selbsttest beim Start, Büro im Leerlauf ohne Dauer-Animation)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

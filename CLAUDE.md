@@ -126,7 +126,7 @@ This pattern ensures:
 - Side income: stock `dividendRate` is an annual rate (paid monthly as rate/8.5); betting odds come from `simulateBetProbabilities()` (same `simulateGoals` as matches) using the best available XI (`pickBestLineupIds()`), no bets on own defeat; real estate income grows with cumulative cost (~10 seasons payback). Measure new income sources before adding them - several were money machines.
 - Career balance (Phase 16, measured with an active-manager bot over 10-14 seasons: Liga 6 -> 2. Liga in 6-9 seasons, passive clubs sink): starters recover a quarter of the bench recovery between matchdays; the market has 10 players and refreshes at the winter window; licence items scale with the league (`getSpecialInstallCost()`, campus via `getStadiumCostScale()`). Promotion walls must stay affordable for a club of that league (19.6, 20 seasons: a 2. Liga club grosses ~15 M€/season, so the 1. Liga licence needs 15,000 seats like the DFL - 20,000 cost a climber from the 15,550 start stadium ~25 M€ with the internat).
 - Autosave every 5 matchdays (`maybeAutoSave()`, own key); every save writes `anstoss_fm13_last_save` ('auto' or 'slotN') and the boot loads exactly that one via `loadMostRecentGame()` (formerly always slot 1, so autosaves seemed lost). A failing autosave warns once per session. Tests: `freshPage()` removes that key; each `browser.newPage()` is its own storage context.
-- Save format: `buildSaveState()` packs `fixturesData` as `[home, away, hg, ag]` arrays (`packFixtures()`/`unpackFixtures()` in js/save.js, old object saves still load). The boot structural self-test runs once per `GAME_VERSION` (localStorage `anstoss_fm13_selftest_version`) - it cost ~1 s per start on phones.
+- Save format: `buildSaveState()` packs `fixturesData` as `[home, away, hg, ag]` arrays (`packFixtures()`/`unpackFixtures()` in js/save.js, old object saves still load). There is no structural self-test at boot any more (it cost ~1.5 s on the first start after every update, 4x CPU throttle); `testStructuralSelfTest` covers it and the admin button still runs it.
 - Removed modules leave save-game fields behind: add them to `cleanupRemovedModuleState()` in js/state.js (runs on load and monthly).
 - Career scenarios: `js/scenarios.js` - `CAREER_SCENARIOS` (absteiger, pleite, tradition, titel) chosen in the new-game dialog (`selectNewGameScenario()`, sessionStorage marker read in window.onload → `applyScenarioStart()`); `recordScenarioSeasonRank(myRank)` before promotion, `evaluateScenarioAtSeasonEnd()` after season change (stars 1-3, `game.scenario`, `game.scenarioResults` shown in the career summary); card `#dash-scenario-box`.
 - Club change: `switchToClub()` in js/career.js - used by `showClubSwitchOptions()` and by job offers (`checkJobOfferApproach()` in js/match.js: chance from rank/media/level every 6 matchdays and at season end, offering clubs from own or next-higher league, move recorded in `game.careerStations`). Player retirements: `tickPlayerRetirement()` (js/player-retirement.js), shown in the Hall of Fame.
@@ -221,16 +221,18 @@ This ensures users can see exactly where money comes from/goes. Add new income o
 
 2. **Manager's Office: Custom Hit Detection** – The office 3D scene (`js/office.js`) uses custom `getBoundingClientRect()` hit testing, not native browser hit detection. Native hit testing is unreliable on 3D-transformed elements across browser versions. See `officeHotspotAtPoint()`.
 
-3. **CSS-3D Pitfalls:**
+3. **Mobile performance (19.8, measured at 4x CPU throttle):** no `backdrop-filter` on elements that appear many times or scroll (`.panel` had `blur(12px)`: squad scroll frames up to 42 ms instead of 17 ms) - only on short-lived overlays. No endless animations on the office start screen: the phone ring (`officePhoneRing`) runs 4 times per visit, idle CPU dropped from ~13 % to <1 %. Infinite animations go into the `prefers-reduced-motion` block at the end of css/styles.css.
+
+4. **CSS-3D Pitfalls:**
    - Never use `filter` or `opacity` on 3D-positioned elements (forces `transform-style: flat`)
    - Use `box-shadow` for shading, not `filter`
    - Don't animate `transform` properties (breaks compositing); use `box-shadow` animations instead
 
-4. **localStorage Access** – Android WebViews block localStorage on `file://` URLs completely. Always serve over `http://` for development/testing. `safeLocalSet()` wraps all storage access in try-catch for WebViews that don't support it.
+5. **localStorage Access** – Android WebViews block localStorage on `file://` URLs completely. Always serve over `http://` for development/testing. `safeLocalSet()` wraps all storage access in try-catch for WebViews that don't support it.
 
-5. **Squad Array Consistency** – The squad roster is a simple array (`let squad = [...]` in `js/state.js`). When adding players in transfers/recruitment, ensure each player has a unique `id`, else state becomes ambiguous. Use `squad.find(p => p.id === X)` for lookups, never array indices.
+6. **Squad Array Consistency** – The squad roster is a simple array (`let squad = [...]` in `js/state.js`). When adding players in transfers/recruitment, ensure each player has a unique `id`, else state becomes ambiguous. Use `squad.find(p => p.id === X)` for lookups, never array indices.
 
-6. **Game Version & Compatibility** – `GAME_VERSION` in state.js is user-facing and logged when save games load. Update it on major features; it helps debug save-state issues.
+7. **Game Version & Compatibility** – `GAME_VERSION` in state.js is user-facing and logged when save games load. Update it on major features; it helps debug save-state issues.
 
 ## Common Editing Tasks
 
