@@ -69,7 +69,7 @@ const LEXICON_ENTRIES = [
         tips: ['Branchen mischen bringt mehr Geld als zwei Partner aus derselben Branche', 'Erfolge und Medienimage locken bessere Sponsoren an'] },
     { cat: 'Finanzen', title: 'Ticketpreise & Zuschauer', screen: 'screen-finances',
         text: 'Ticketerlöse sind neben den TV-Geldern die größte Einnahme. Die Zuschauerzahl hängt von Fanstimmung, Liga, Gegner und Stadionkomfort ab; hohe Preise bringen mehr pro Kopf, aber weniger Zuschauer und schlechtere Stimmung in der Kurve.',
-        tips: ['Leere Ränge werden automatisch gesperrt und kosten weniger Unterhalt', 'Fressbuden und Toiletten erhöhen den Komfort und damit die Zuschauer'] },
+        tips: ['In unteren Ligen begrenzt das Liga-Interesse die Zuschauer (6. Liga bis etwa 1.000) - ein größeres Stadion hilft dort nicht, Wetter, Form und Preis zählen trotzdem', 'Leere Ränge werden automatisch gesperrt und kosten weniger Unterhalt', 'Fressbuden und Toiletten erhöhen den Komfort und damit die Zuschauer'] },
     { cat: 'Transfers', title: 'Transferpoker', screen: 'screen-transfer',
         text: 'Jeder Marktspieler gehört einem KI-Verein mit Forderung und verdeckter Schmerzgrenze. Unter der Grenze gibt es keine Zusage, sehr niedrige Angebote kosten doppelt Geduld. Bei begehrten Spielern kann ein Rivale mitbieten und den Spieler wegschnappen.',
         tips: ['Sofortkauf zahlt die Forderung', 'Nach der Einigung folgt das Gehaltsgespräch'] },

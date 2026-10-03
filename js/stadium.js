@@ -1131,7 +1131,14 @@
         // wirken sich statt auf die ZUSCHAUERZAHL selbst nur auf die ERLÖSVERTEILUNG aus -
         // siehe getSeasonTicketAttendanceFloor() in match.js/finances.js: der bereits bezahlte
         // Anteil wird von der reell berechneten Zuschauerzahl abgezogen, nicht draufgelegt.
-        return Math.max(0, Math.min(kapazitaet, ausKapazitaet, getLeagueAttendanceCap(boostMult)));
+        // Das Liga-Interesse ist eine Obergrenze, aber keine feste Zahl: In unteren Ligen mit
+        // großem Stadion greift sie bei jedem Heimspiel - ohne diese Schwankung stand dort jedes
+        // Mal exakt dieselbe Zahl (6. Liga: immer 1.000, vom Nutzer gemeldet). Wetter, Form,
+        // Publikumsliebling, Ticketpreis und die Tagesform des Spieltags wirken jetzt auch hier.
+        let stimmung = getMatchdayAttendanceMood();
+        let schwankung = stimmung.weather * (1 + stimmung.form + stimmung.favorite) * getTicketPriceElasticityFactor() * noise;
+        let interesse = Math.round(getLeagueAttendanceCap(boostMult) * Math.min(1.12, schwankung));
+        return Math.max(0, Math.min(kapazitaet, ausKapazitaet, interesse));
     }
 
     // Preis-Nachfrage-Zusammenhang für Tickets (NEU): bisher hatte der Ticketpreis KEINERLEI
@@ -1164,6 +1171,19 @@
         return Math.min(kapazitaet, Math.round((game.seasonTicketHolders || 0) * 0.93));
     }
 
+    // Was an DIESEM Spieltag zusätzlich lockt oder abschreckt: Wetter (Sturm hält Fans zu Hause),
+    // Formkurve (±2 % je Sieg/Niederlage der letzten fünf) und der Publikumsliebling in der Startelf.
+    function getMatchdayAttendanceMood() {
+        let weather = (typeof currentWeather !== 'undefined' && currentWeather.attendanceMult) ? currentWeather.attendanceMult : 1;
+        let form = 0;
+        let ourTeamObj = leaguesData[game.leagueLevel]?.find(t => t.name === game.clubName);
+        if (ourTeamObj && Array.isArray(ourTeamObj.recentForm) && ourTeamObj.recentForm.length > 0) {
+            form = ourTeamObj.recentForm.reduce((s, r) => s + (r === 'W' ? 1 : (r === 'L' ? -1 : 0)), 0) * 0.02;
+        }
+        let favorite = (typeof lineup !== 'undefined' && Array.isArray(lineup) && squad.some(p => p.isCrowdFavorite && lineup.includes(p.id))) ? 0.04 : 0;
+        return { weather, form, favorite };
+    }
+
     function getAttendanceFactor() {
         let totalComfort = 0;
         Object.values(stadium.blocks || {}).forEach(b => { totalComfort += (b.foodLvl + b.merchLvl + b.toiletLvl) / 9; });
@@ -1176,21 +1196,9 @@
         // Parkhaus & Shuttle-Bahnhof (Campus): erleichtert die Anreise und verbessert dadurch
         // die Stadionauslastung spürbar (war bisher nur Text ohne tatsächliche Wirkung).
         if (campusBuildings.parkhaus?.lvl > 0) avgComfortBonus += campusBuildings.parkhaus.lvl * 0.015;
-        // Wetterabhängige Zuschauerzahlen (NEU): bei schlechtem Wetter bleiben spürbar mehr
-        // Fans zu Hause - besonders bei Sturm.
-        if (typeof currentWeather !== 'undefined' && currentWeather.attendanceMult) avgComfortBonus *= currentWeather.attendanceMult;
-        // Aktuelle Form (NEU): eine laufende Siegesserie zieht spürbar mehr Zuschauer an,
-        // eine Pleitenserie schreckt Fans ab - genau wie im echten Fußball üblich.
-        let ourTeamObj = leaguesData[game.leagueLevel]?.find(t => t.name === game.clubName);
-        if (ourTeamObj && Array.isArray(ourTeamObj.recentForm) && ourTeamObj.recentForm.length > 0) {
-            let formScore = ourTeamObj.recentForm.reduce((s, r) => s + (r === 'W' ? 1 : (r === 'L' ? -1 : 0)), 0);
-            avgComfortBonus += formScore * 0.02; // bis zu ±10% bei 5/5 Siegen bzw. Niederlagen
-        }
-        // Publikumsliebling (NEU): steht der amtierende Publikumsliebling in der aktuellen
-        // Startelf, kommen zusätzliche Fans gezielt, um ihn spielen zu sehen.
-        if (typeof lineup !== 'undefined' && Array.isArray(lineup) && squad.some(p => p.isCrowdFavorite && lineup.includes(p.id))) {
-            avgComfortBonus += 0.04;
-        }
+        let stimmung = getMatchdayAttendanceMood();
+        avgComfortBonus *= stimmung.weather;
+        avgComfortBonus += stimmung.form + stimmung.favorite;
         // rawFactor bleibt die reine Fan-Stimmungs-/Komfort-Kennzahl (0.3-1.2, "1.0" = Standard
         // bei 100% Fans ohne Komfort-Bonus). Die Liga-Obergrenze skaliert diese Kennzahl dann
         // auf einen realistischen Auslastungsanteil der Stadionkapazität herunter.

@@ -767,6 +767,33 @@ async function testSeasonPreview(browser) {
     await page.close();
 }
 
+async function testAttendanceCapVaries(browser) {
+    console.log('\n[20.x] Zuschauer: Liga-Obergrenze schwankt mit Wetter, Form und Preis (nicht immer 1.000)');
+    const { page, consoleErrors } = await freshPage(browser);
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            game.leagueLevel = 5; game.fans = 100;
+            stadium.total = 55000; // riesiges Stadion: die Liga-Obergrenze greift immer
+            const deckel = getLeagueAttendanceCap(1);
+            const werte = [];
+            for (let i = 0; i < 12; i++) werte.push(calculateMatchAttendance(1, 0.92 + Math.random() * 0.16));
+            const markt = { steh: getMarketTicketPrice('steh'), sitz: getMarketTicketPrice('sitz'), vip: getMarketTicketPrice('vip') };
+            Object.assign(game.ticketPrices, markt);
+            const fair = calculateMatchAttendance(1, 1);
+            Object.assign(game.ticketPrices, { steh: markt.steh * 2, sitz: markt.sitz * 2, vip: markt.vip * 2 });
+            const teuer = calculateMatchAttendance(1, 1);
+            return { deckel, verschieden: new Set(werte).size >= 4, nieDrueber: werte.every(w => w <= Math.round(deckel * 1.12)), preisWirkt: teuer < fair };
+        } catch (e) { return { crash: e.message }; }
+    });
+    assert(!r.crash, `Zuschauer-Test ohne Absturz (${r.crash || 'ok'})`);
+    assert(r.verschieden, 'Bei greifender Liga-Obergrenze schwankt die Zuschauerzahl von Spiel zu Spiel');
+    assert(r.nieDrueber, `Die Liga-Obergrenze (${r.deckel}) wird höchstens leicht überschritten`);
+    assert(r.preisWirkt, 'Auch bei greifender Obergrenze kosten zu hohe Ticketpreise Zuschauer');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testYouthPathway(browser) {
     console.log('\n[18.5] Jugend-Laufbahn: Potenzial, Profivertrag mit 19, Leihe, Durchbruch-Momente');
     const { page, consoleErrors } = await freshPage(browser);
@@ -6011,6 +6038,7 @@ async function main() {
         testSponsorConflict,
         testLexicon,
         testSeasonPreview,
+        testAttendanceCapVaries,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,
