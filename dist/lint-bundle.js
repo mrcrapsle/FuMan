@@ -484,7 +484,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.21', date: '03.10.2026', features: 'Phase 19: Tempo auf dem Handy (flüssiges Scrollen ohne Panel-Unschärfe, kein Selbsttest beim Start, Büro im Leerlauf ohne Dauer-Animation)' };
+    const GAME_VERSION = { number: '3.21.1', date: '03.10.2026', features: 'Phase 19: Tempo auf dem Handy (flüssiges Scrollen ohne Panel-Unschärfe, kein Selbsttest beim Start, Büro im Leerlauf ohne Dauer-Animation); Testkorrektur Fan-Aktionen' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
