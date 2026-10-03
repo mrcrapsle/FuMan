@@ -790,7 +790,7 @@
         renderCrowdFavoritePreview();
         renderTeamChemistryPanel();
         if (typeof renderCliqueBox === 'function') renderCliqueBox();
-        if (typeof renderLeadershipCouncilBox === 'function') renderLeadershipCouncilBox();
+        if (typeof renderLockerHierarchyBox === 'function') renderLockerHierarchyBox();
         if (typeof renderScandalsPanel === 'function') renderScandalsPanel();
         if (typeof renderTacticSystemPanel === 'function') renderTacticSystemPanel();
         if (typeof renderPlayerSeasonStats === 'function') renderPlayerSeasonStats();
@@ -960,7 +960,12 @@
         let pen = document.getElementById('sel-penalty');
         let fk = document.getElementById('sel-freekick');
         let ck = document.getElementById('sel-corner');
-        if (cap) game.captainId = cap.value;
+        // Kapitänswechsel hat Folgen in der Kabine (js/locker-room.js).
+        if (cap && String(cap.value) !== String(game.captainId)) {
+            if (typeof handleCaptainChange === 'function') handleCaptainChange(cap.value, false); else game.captainId = cap.value;
+            if (typeof renderTeamCouncilPanel === 'function') renderTeamCouncilPanel();
+            if (typeof renderLockerHierarchyBox === 'function') renderLockerHierarchyBox();
+        }
         if (pen) game.penaltyTakerId = pen.value;
         if (fk) game.freeKickTakerId = fk.value;
         if (ck) game.cornerTakerId = ck.value;

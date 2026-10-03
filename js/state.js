@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.22.1', date: '03.10.2026', features: 'Phase 20: Saisonvorschau & Experten-Check; Zuschauer schwanken auch an der Liga-Obergrenze (nicht mehr immer 1.000)' };
+    const GAME_VERSION = { number: '3.23', date: '03.10.2026', features: 'Phase 20: Kabine & Führungsspieler (ein Mannschaftsrat, rumorende Cliquen, Kapitänsfrage, Unzufriedene im Büro)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

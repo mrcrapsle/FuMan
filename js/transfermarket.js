@@ -238,9 +238,11 @@
         return Math.max(20, Math.round(schnitt));
     }
 
-    function triggerNewAITransferOffer() {
+    // gezielt: ein Spieler, für den der Verein selbst grünes Licht gibt (Bürotermin "Wechsel erlauben").
+    function triggerNewAITransferOffer(gezielt) {
         let schwelle = getTransferInterestThreshold();
-        let validTargets = squad.filter(p => p.strength >= schwelle && !incomingOffers.some(o => o.playerId === p.id));
+        let validTargets = gezielt ? [gezielt].filter(p => !incomingOffers.some(o => o.playerId === p.id))
+            : squad.filter(p => p.strength >= schwelle && !incomingOffers.some(o => o.playerId === p.id));
         if (validTargets.length === 0) return;
 
         let targetPlayer = validTargets[Math.floor(Math.random() * validTargets.length)];

@@ -138,7 +138,7 @@
         // Kabinen-Dynamik (NEU): Cliquenbildung und Führungsspieler-Rat wirken sich auf die
         // Team-Stärke aus.
         if (typeof getCliqueChemistryModifier === 'function') bonus += getCliqueChemistryModifier();
-        if (typeof getLeadershipCouncilMoraleStabilizer === 'function') bonus += getLeadershipCouncilMoraleStabilizer() * 0.3;
+        if (typeof getCouncilMoraleStabilizer === 'function') bonus += getCouncilMoraleStabilizer() * 0.3;
 
         if (underworld.activeSabotages.stealBanner && isHomeMatch) bonus += 3;
         if (managerRPG.perks.tactician) bonus += 3;
@@ -1592,8 +1592,8 @@
         let moraleShift = matchResult === 'win' ? 4 : (matchResult === 'loss' ? -6 : (matchResult === 'draw' ? -1 : 0));
         // Führungsspieler-Rat (Kabinen-Dynamik, NEU): ein starker Rat fängt schlechte
         // Stimmung nach Niederlagen etwas ab, ein schwacher verstärkt sie.
-        if (matchResult === 'loss' && typeof getLeadershipCouncilMoraleStabilizer === 'function') {
-            moraleShift += getLeadershipCouncilMoraleStabilizer();
+        if (matchResult === 'loss' && typeof getCouncilMoraleStabilizer === 'function') {
+            moraleShift += getCouncilMoraleStabilizer();
         }
         // Der Manager selbst steht unter Druck: Niederlagen erhöhen den Stress, Siege entspannen etwas.
         let stressShift = matchResult === 'win' ? -1 : (matchResult === 'loss' ? 3 : (matchResult === 'draw' ? 1 : 0));
@@ -1922,6 +1922,7 @@
             if (typeof cleanupLegacyScoutingState === 'function') cleanupLegacyScoutingState();
             if (typeof tickSeasonObjectives === 'function') tickSeasonObjectives();
             if (typeof tickTeamCouncil === 'function') tickTeamCouncil();
+            if (typeof tickLockerRoom === 'function') tickLockerRoom();
             if (typeof tickCoachCarousel === 'function') tickCoachCarousel();
             if (typeof tickMemberAssembly === 'function') tickMemberAssembly();
             // Karriereenden: am Saisonende in agePlayersAtSeasonEnd() (js/player-development.js)

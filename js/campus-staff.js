@@ -267,70 +267,8 @@
         }
     }
 
-    // ==========================================
-    // KABINEN-DYNAMIK: CLIQUENBILDUNG & FÜHRUNGSSPIELER-RAT (NEU)
-    // ==========================================
-
-    // 1. Cliquenbildung: Spieler gruppieren sich informell nach Nation und Alter - eine
-    // geschlossene, große Clique stärkt den Zusammenhalt, viele kleine Grüppchen schwächen ihn.
-    function computeSquadCliques() {
-        let groups = {};
-        squad.forEach(p => {
-            let ageGroup = (p.age || 25) <= 23 ? 'jung' : ((p.age || 25) >= 30 ? 'erfahren' : 'mitte');
-            let key = `${p.nation || 'Deutschland'}-${ageGroup}`;
-            if (!groups[key]) groups[key] = [];
-            groups[key].push(p);
-        });
-        let cliques = Object.entries(groups).filter(([k, members]) => members.length >= 3).map(([key, members]) => ({ key, members, size: members.length }));
-        let largestClique = cliques.sort((a, b) => b.size - a.size)[0];
-        let fragmentation = cliques.length; // viele kleine Cliquen = fragmentierte Kabine
-        return { cliques, largestClique, fragmentation };
-    }
-    function getCliqueChemistryModifier() {
-        let { largestClique, fragmentation } = computeSquadCliques();
-        let bonus = 0;
-        if (largestClique && largestClique.size >= squad.length * 0.4) bonus += 1.5; // dominante, einende Clique
-        if (fragmentation >= 5) bonus -= 1; // viele kleine Grüppchen stören den Zusammenhalt
-        return bonus;
-    }
-    function renderCliqueBox() {
-        let box = document.getElementById('squad-cliques-box');
-        if (!box) return;
-        let { cliques, largestClique } = computeSquadCliques();
-        if (cliques.length === 0) { box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Noch keine erkennbaren Grüppchen im Kader.</div>'; return; }
-        box.innerHTML = cliques.sort((a, b) => b.size - a.size).slice(0, 4).map(c => {
-            let isDominant = largestClique && c.key === largestClique.key;
-            return `<div class="box" style="font-size:9px; ${isDominant ? 'border-left-color:var(--primary);' : ''}">${isDominant ? '👑 ' : ''}${c.key.replace('-', ', ')}: ${c.members.map(m => m.name.split(' ').pop()).join(', ')}</div>`;
-        }).join('') + `<div style="font-size:9px; color:var(--text-muted); margin-top:4px;">Chemie-Modifikator: ${getCliqueChemistryModifier() >= 0 ? '+' : ''}${getCliqueChemistryModifier().toFixed(1)}</div>`;
-    }
-
-    // 2. Führungsspieler-Rat: bis zu 3 Wortführer neben dem Kapitän (Leader-Trait, hohes
-    // Alter/Erfahrung, hohe Moral) - ein starker Rat stabilisiert die Moral nach Niederlagen.
-    function getLeadershipCouncil() {
-        return [...squad]
-            .filter(p => p.id !== game.captainId)
-            .map(p => ({ p, score: (p.trait === 'Leader' ? 30 : 0) + Math.max(0, (p.age || 25) - 26) * 2 + (p.morale || 50) * 0.2 }))
-            .sort((a, b) => b.score - a.score)
-            .slice(0, 3)
-            .map(x => x.p);
-    }
-    function getLeadershipCouncilMoraleStabilizer() {
-        let council = getLeadershipCouncil();
-        if (council.length === 0) return 0;
-        let avgMorale = council.reduce((s, p) => s + (p.morale || 50), 0) / council.length;
-        return avgMorale >= 70 ? 3 : (avgMorale <= 35 ? -2 : 0);
-    }
-    function renderLeadershipCouncilBox() {
-        let box = document.getElementById('leadership-council-box');
-        if (!box) return;
-        let council = getLeadershipCouncil();
-        let captain = squad.find(p => p.id === game.captainId);
-        box.innerHTML = `
-            ${captain ? `<div class="box" style="font-size:9px; border-left-color:var(--gold);">Ⓒ ${captain.name} (Kapitän)</div>` : ''}
-            ${council.map(p => `<div class="box" style="font-size:9px;">🗣️ ${p.name} (Moral: ${p.morale || 50})</div>`).join('')}
-            <div style="font-size:9px; color:var(--text-muted); margin-top:4px;">Moral-Stabilisator nach Niederlagen: ${getLeadershipCouncilMoraleStabilizer() >= 0 ? '+' : ''}${getLeadershipCouncilMoraleStabilizer()}</div>
-        `;
-    }
+    // Kabinen-Dynamik (Cliquen, Rangordnung, Kapitänsfrage) liegt seit Phase 20.2 in
+    // js/locker-room.js; den früheren zweiten "Führungsspieler-Rat" ersetzt der Mannschaftsrat.
 
     function toggleStaffMember(key, btn) {
         // Nur das Entlassen ist folgenreich - beim Einstellen wird nicht nachgefragt.

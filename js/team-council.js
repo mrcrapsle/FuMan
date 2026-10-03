@@ -13,12 +13,15 @@ function initTeamCouncil() {
     return tc;
 }
 
-// Kapitän plus die beiden erfahrensten Spieler (Einsätze, dann Alter).
+// Kapitän plus die beiden Spieler mit der größten Führungsqualität (getLeadershipScore in
+// js/locker-room.js: Leader-Eigenschaft, Alter, Erfahrung, Moral). Der einzige Rat im Spiel -
+// der frühere zweite "Führungsspieler-Rat" (campus-staff.js) ist darin aufgegangen.
 function electTeamCouncil(silent) {
     const tc = game.teamCouncil || (game.teamCouncil = { memberIds: [], concern: null, history: [] });
     const captain = squad.find(p => p.id === game.captainId);
+    const score = p => typeof getLeadershipScore === 'function' ? getLeadershipScore(p) : (p.appearances || 0);
     const rest = squad.filter(p => !captain || p.id !== captain.id)
-        .sort((a, b) => (b.appearances || 0) - (a.appearances || 0) || (b.age || 0) - (a.age || 0))
+        .sort((a, b) => score(b) - score(a))
         .slice(0, captain ? 2 : 3);
     tc.memberIds = [...(captain ? [captain.id] : []), ...rest.map(p => p.id)];
     if (!silent) { showToast('🤝 Der Mannschaftsrat wurde neu gewählt.', 'success'); renderTeamCouncilPanel(); }
@@ -26,6 +29,15 @@ function electTeamCouncil(silent) {
 
 function getCouncilMembers() {
     return initTeamCouncil().memberIds.map(id => squad.find(p => p.id === id)).filter(Boolean);
+}
+
+// Ein gut gelaunter Rat fängt Niederlagen auf, ein frustrierter verstärkt sie (Moral nach
+// Niederlagen in processPostMatchRoutine, kleiner Anteil auch in calcTeamStrength).
+function getCouncilMoraleStabilizer() {
+    const members = getCouncilMembers();
+    if (members.length === 0) return 0;
+    const schnitt = members.reduce((s, p) => s + (p.morale || 50), 0) / members.length;
+    return schnitt >= 70 ? 3 : (schnitt <= 35 ? -2 : 0);
 }
 
 function councilCost(base) {
@@ -46,6 +58,9 @@ function findCouncilConcern() {
             text: `Die durchschnittliche Moral liegt bei ${Math.round(avgMorale)}. Der Rat schlägt einen gemeinsamen Mannschaftsabend vor.`,
             cost: councilCost(40000) };
     }
+    // Kabine (js/locker-room.js): rumorende Clique oder die Kapitänsfrage.
+    const kabine = typeof findLockerRoomConcern === 'function' ? findLockerRoomConcern() : null;
+    if (kabine) return kabine;
 
     const medianStrength = [...squad].map(p => p.strength).sort((a, b) => a - b)[Math.floor(squad.length / 2)];
     const vergessen = game.matchday >= 8 && squad
@@ -82,6 +97,14 @@ const COUNCIL_OPTIONS = {
     training: [
         { label: () => 'Training auf normal senken', apply: () => { if (typeof setTrainingIntensity === 'function') setTrainingIntensity('normal'); else game.trainingIntensity = 'normal'; adjustMorale(squad, 4); }, result: 'Training entschärft, Moral +4' },
         { label: () => 'Härte beibehalten', apply: () => adjustMorale(squad, -4), result: 'Härte beibehalten, Moral -4' }
+    ],
+    clique: [
+        { label: c => `${(squad.find(p => p.id === c.leaderId) || {}).name || 'Wortführer'} anhören`, apply: c => { const cl = getCliqueByKey(c.cliqueKey); if (cl) adjustMorale(cl.members, 8); adjustMorale(getCouncilMembers().filter(p => !cl || !cl.members.includes(p)), -2); }, result: 'Gruppe angehört: ihre Stimmung steigt (+8), der Rat sieht eine Bevorzugung (-2)' },
+        { label: () => 'Klare Ansage an die Gruppe', apply: c => { const cl = getCliqueByKey(c.cliqueKey); if (!cl) return; adjustMorale(cl.members, -3); adjustMorale(squad.filter(p => !cl.members.includes(p)), 2); const l = squad.find(p => p.id === c.leaderId); if (l) adjustMorale([l], -6); }, result: 'Klare Linie: die Gruppe murrt (-3, Wortführer -6), der Rest der Kabine zieht mit (+2)' }
+    ],
+    kapitaen: [
+        { label: () => 'Kapitän stärken', apply: c => { const k = squad.find(p => p.id === c.captainId); if (k) adjustMorale([k], 10); adjustMorale(getCouncilMembers().filter(p => p.id !== c.captainId), -2); }, result: 'Kapitän gestärkt (+10), der Rat ist skeptisch (-2)' },
+        { label: c => `Binde an ${(squad.find(p => p.id === c.successorId) || {}).name || 'den Vorschlag'}`, apply: c => { if (typeof handleCaptainChange === 'function') handleCaptainChange(c.successorId, true); }, result: 'Kapitänswechsel mit Rückendeckung des Rats' }
     ],
     praemie: [
         { label: c => `Prämie zahlen (${formatVal(c.cost)})`, cost: c => c.cost, apply: () => adjustMorale(squad, 5), result: 'Prämie gezahlt, Moral +5' },

@@ -264,6 +264,53 @@
         }
     ];
 
+    // Gezielter Besuch (kein Zufallsereignis): ein unzufriedener Leistungsträger aus der Kabine
+    // (pickUnhappyVisitor in js/locker-room.js). game.officeEvent.playerId nennt den Spieler.
+    const OFFICE_VISITOR_UNHAPPY = {
+        id: 'unzufrieden',
+        person: 'Unzufriedener Spieler',
+        farbe: '#f87171',
+        gezielt: true,
+        titel: p => `${p.name} steht vor Ihrer Tür`,
+        text: p => `„Ich bin nicht hierher gekommen, um auf der Tribüne zu sitzen. ${(p.appearancesSeason || 0)} Einsätze in dieser Saison - so geht das nicht weiter."`,
+        optionen: [
+            {
+                label: 'Einsatzgarantie geben',
+                hinweis: () => 'Moral +15 · gebrochen kostet sie am Saisonende -20',
+                wirkung: () => {
+                    let p = squad.find(x => x.id === game.officeEvent.playerId);
+                    if (!p) return { ok: true, text: 'Der Spieler hat den Verein inzwischen verlassen.' };
+                    let rest = Math.max(0, 34 - game.matchday);
+                    p.playtimePromise = { season: game.season, minApps: Math.min(34, (p.appearancesSeason || 0) + Math.ceil(rest * 0.6)) };
+                    p.morale = Math.min(100, (p.morale || 50) + 15);
+                    return { ok: true, text: `${p.name} bekommt seine Einsätze zugesagt: ${p.playtimePromise.minApps} bis Saisonende. Er geht zufrieden.` };
+                }
+            },
+            {
+                label: 'Leistung einfordern',
+                hinweis: () => 'Er ist enttäuscht, der Mannschaftsrat schätzt die klare Linie',
+                wirkung: () => {
+                    let p = squad.find(x => x.id === game.officeEvent.playerId);
+                    if (!p) return { ok: true, text: 'Der Spieler hat den Verein inzwischen verlassen.' };
+                    p.morale = Math.max(10, (p.morale || 50) - 6);
+                    if (typeof getCouncilMembers === 'function' && typeof adjustMorale === 'function') adjustMorale(getCouncilMembers(), 2);
+                    return { ok: true, text: `„Zeig es im Training." ${p.name} schluckt - der Mannschaftsrat nickt anerkennend.` };
+                }
+            },
+            {
+                label: 'Wechsel erlauben',
+                hinweis: () => 'Er ist erleichtert, ein Klub bekommt grünes Licht für ein Angebot',
+                wirkung: () => {
+                    let p = squad.find(x => x.id === game.officeEvent.playerId);
+                    if (!p) return { ok: true, text: 'Der Spieler hat den Verein inzwischen verlassen.' };
+                    p.morale = Math.min(100, (p.morale || 50) + 6);
+                    if (typeof triggerNewAITransferOffer === 'function') triggerNewAITransferOffer(p);
+                    return { ok: true, text: `Sie geben ${p.name} frei. Ein Angebot liegt schon auf dem Tisch (Transfermarkt > Angebote).` };
+                }
+            }
+        ]
+    };
+
     // Alle Geldbeträge skalieren mit der Ligastufe - 8.000 € Handgeld sind in der
     // Kreisklasse ein Vermögen und in der Bundesliga Portokasse.
     function getOfficeEventScaledSum(basis) {
@@ -273,11 +320,20 @@
 
     function getPendingOfficeEvent() {
         if (!game.officeEvent) return null;
+        if (game.officeEvent.id === OFFICE_VISITOR_UNHAPPY.id) return OFFICE_VISITOR_UNHAPPY;
         return OFFICE_EVENTS.find(e => e.id === game.officeEvent.id) || null;
     }
 
     function rollOfficeEvent() {
         if (game.officeEvent) { checkOfficeEventTimeout(); return; }
+        // Unzufriedene Leistungsträger klopfen bevorzugt an (js/locker-room.js).
+        let unzufrieden = typeof pickUnhappyVisitor === 'function' ? pickUnhappyVisitor() : null;
+        if (unzufrieden && Math.random() < 0.5) {
+            game.officeEvent = { id: OFFICE_VISITOR_UNHAPPY.id, playerId: unzufrieden.id, seit: game.matchday, season: game.season,
+                titel: OFFICE_VISITOR_UNHAPPY.titel(unzufrieden), text: OFFICE_VISITOR_UNHAPPY.text(unzufrieden) };
+            addInboxMessage('vertrag', `🚪 ${unzufrieden.name} will Sie sprechen`, `${unzufrieden.name} ist unzufrieden (Moral ${Math.round(unzufrieden.morale || 50)}) und wartet im Managerbüro auf ein Gespräch.`, 'screen-office');
+            return;
+        }
         if (Math.random() > OFFICE_EVENT_CHANCE) return;
         let ereignis = OFFICE_EVENTS[Math.floor(Math.random() * OFFICE_EVENTS.length)];
         game.officeEvent = {

@@ -794,6 +794,81 @@ async function testAttendanceCapVaries(browser) {
     await page.close();
 }
 
+async function testLockerRoom(browser) {
+    console.log('\n[20.2] Kabine: ein Rat, rumorende Cliquen, Kapitänsfrage, Unzufriedene im Büro');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            squad.forEach(p => { p.morale = 80; p.nation = 'Deutschland'; p.injured = 0; });
+            electTeamCouncil(true);
+            const rat = getCouncilMembers();
+            out.einRat = rat.length === 3 && rat.some(p => p.id === game.captainId) && typeof getLeadershipCouncil === 'undefined' && !document.getElementById('leadership-council-box');
+            // Clique aus vier Franzosen im Mittelbau, schlecht gelaunt
+            const franz = squad.filter(p => !rat.includes(p)).slice(0, 4);
+            franz.forEach(p => { p.nation = 'Frankreich'; p.age = 26; p.morale = 25; });
+            const cl = computeSquadCliques().cliques.find(c => c.key === 'Frankreich-mitte');
+            out.clique = !!cl && cl.unruhig && cl.members.length === 4 && !!cl.leader;
+            const ohne = (() => { const m = franz.map(p => p.morale); franz.forEach(p => { p.morale = 80; }); const v = getCliqueChemistryModifier(); franz.forEach((p, i) => { p.morale = m[i]; }); return v; })();
+            out.kostetStaerke = getCliqueChemistryModifier() < ohne;
+            const kapitaen = squad.find(p => p.id === game.captainId); kapitaen.morale = 40; // keine Autorität
+            const andere = squad.filter(p => !franz.includes(p) && p !== kapitaen);
+            const vorher = andere.reduce((s, p) => s + p.morale, 0);
+            tickLockerRoom();
+            out.zieltRunter = andere.reduce((s, p) => s + p.morale, 0) < vorher;
+            // Der Wortführer meldet sich beim Rat
+            kapitaen.morale = 80;
+            game.teamCouncil.concern = null;
+            const anliegen = findCouncilConcern();
+            out.ratAnliegen = !!anliegen && anliegen.type === 'clique' && anliegen.leaderId === cl.leader.id;
+            game.teamCouncil.concern = { ...anliegen, season: game.season, matchday: game.matchday };
+            const cliqueVor = franz.map(p => p.morale);
+            answerCouncilConcern(0);
+            out.anhoeren = franz.every((p, i) => p.morale === Math.min(100, cliqueVor[i] + 8));
+            // Kapitänswechsel per Auswahlfeld auf einen Neuling ohne Standing
+            showScreen('screen-squad'); setSquadTab('aufstellung');
+            const neuling = squad.find(p => !getCouncilMembers().includes(p) && ['mitlaeufer', 'talent'].includes(getLockerRoomStatus(p).key) && !franz.includes(p))
+                || Object.assign(squad.find(p => !getCouncilMembers().includes(p) && !franz.includes(p)), { age: 22, appearances: 3 });
+            const alterKap = squad.find(p => p.id === game.captainId);
+            const ratOhneKap = getCouncilMembers().filter(p => p.id !== game.captainId && p !== neuling);
+            const ratMoral = ratOhneKap.map(p => p.morale), altMoral = alterKap.morale;
+            const sel = document.getElementById('sel-captain'); sel.value = neuling.id; assignRoles();
+            out.kapitaenGewechselt = String(game.captainId) === String(neuling.id) && alterKap.morale === altMoral - 12
+                && ratOhneKap.every((p, i) => p.morale === Math.max(10, ratMoral[i] - 4));
+            out.neuerRat = getCouncilMembers().some(p => p.id === neuling.id);
+            // Unzufriedener Leistungsträger im Büro
+            squad.forEach(p => { p.morale = 70; });
+            const top = [...squad].filter(p => p.id !== game.captainId && !getCouncilMembers().includes(p)).sort((a, b) => b.strength - a.strength)[0];
+            top.morale = 20;
+            out.kandidat = pickUnhappyVisitor() === top;
+            for (let i = 0; i < 60 && !(game.officeEvent && game.officeEvent.id === 'unzufrieden'); i++) { game.officeEvent = null; rollOfficeEvent(); }
+            out.imBuero = !!game.officeEvent && game.officeEvent.playerId === top.id && getPendingOfficeEvent().optionen.length === 3;
+            incomingOffers = [];
+            resolveOfficeEvent(2);
+            out.freigabe = incomingOffers.some(o => o.playerId === top.id) && !game.officeEvent;
+            top.morale = 20; game.officeEvent = { id: 'unzufrieden', playerId: top.id, seit: game.matchday, season: game.season, titel: 'x', text: 'y' };
+            resolveOfficeEvent(0);
+            out.garantie = !!top.playtimePromise && top.playtimePromise.season === game.season && top.morale === 35;
+            showScreen('screen-squad'); setSquadTab('team');
+            out.anzeige = document.getElementById('locker-hierarchy-box').innerText.includes('Kapitän') && document.getElementById('squad-cliques-box').innerText.includes('Stimmung');
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Kabinen-Test ohne Absturz (${r.crash || 'ok'})`);
+    assert(r.einRat, 'Nur noch ein Mannschaftsrat (Kapitän + 2), der alte Führungsspieler-Rat ist weg');
+    assert(r.clique && r.kostetStaerke, 'Schlecht gelaunte Clique rumort und kostet Teamstärke');
+    assert(r.zieltRunter, 'Rumorende Clique zieht monatlich den Rest der Kabine runter');
+    assert(r.ratAnliegen && r.anhoeren, 'Wortführer meldet sich beim Rat, Anhören hebt die Stimmung der Gruppe');
+    assert(r.kapitaenGewechselt && r.neuerRat, 'Kapitänswechsel: alter Kapitän -12, Rat -4 bei Neuling ohne Standing, Rat neu besetzt');
+    assert(r.kandidat && r.imBuero, 'Unzufriedener Leistungsträger wartet im Büro mit drei Optionen');
+    assert(r.freigabe && r.garantie, 'Freigabe erzeugt ein echtes Angebot, Einsatzgarantie wird hinterlegt');
+    assert(r.anzeige, 'Rangordnung und Cliquen-Stimmung werden im Reiter Mannschaft angezeigt');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testYouthPathway(browser) {
     console.log('\n[18.5] Jugend-Laufbahn: Potenzial, Profivertrag mit 19, Leihe, Durchbruch-Momente');
     const { page, consoleErrors } = await freshPage(browser);
@@ -5130,8 +5205,8 @@ async function testPhase14Teil2(browser) {
         showScreen('screen-squad'); setSquadTab('team');
         const tab = document.getElementById('squad-tab-team');
         const kabine = [...tab.querySelectorAll(':scope > .panel')].find(p => p.innerText.includes('KABINE'));
-        out.kabine = !!kabine && !!kabine.querySelector('#squad-cliques-box') && !!kabine.querySelector('#leadership-council-box') && !!kabine.querySelector('#team-chemistry-box');
-        out.kabineInhalt = kabine ? kabine.innerText.includes('Führungsspieler') : false;
+        out.kabine = !!kabine && !!kabine.querySelector('#squad-cliques-box') && !!kabine.querySelector('#locker-hierarchy-box') && !!kabine.querySelector('#team-chemistry-box');
+        out.kabineInhalt = kabine ? kabine.innerText.includes('Rangordnung') : false;
         out.teamPanels = tab.querySelectorAll(':scope > .panel').length;
 
         // Skandal: schadet dem Medienimage (vorher Vorzeichenfehler) und ist nicht mehr an Spieltag 30 gebunden
@@ -5151,7 +5226,7 @@ async function testPhase14Teil2(browser) {
 
     assert(r.alteModuleWeg.length === 0, `Schein-Systeme der Kabine entfernt (${r.alteModuleWeg.join(', ')})`);
     assert(r.altWeg.length === 0, `Ihre Spielstanddaten werden entfernt (${r.altWeg.join(', ')})`);
-    assert(r.kabine && r.kabineInhalt, 'Team-Chemie, Grüppchen und Führungsspieler-Rat in einem Kabinen-Panel');
+    assert(r.kabine && r.kabineInhalt, 'Team-Chemie, Grüppchen und Rangordnung in einem Kabinen-Panel');
     assert(r.teamPanels === 3, `Mannschaft-Reiter hat 3 statt 7 Panels (${r.teamPanels})`);
     assert(r.skandal && r.imageSinkt, 'Skandal an einem normalen Spieltag möglich und schadet dem Medienimage');
     assert(r.nurEiner, 'Höchstens ein Skandal gleichzeitig');
@@ -6039,6 +6114,7 @@ async function main() {
         testLexicon,
         testSeasonPreview,
         testAttendanceCapVaries,
+        testLockerRoom,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,
