@@ -524,6 +524,7 @@
             <div class="nav-category" data-i18n="nav_category_career">Karriere & Spezial</div>
             <button class="nav-btn special-gold" onclick="showScreen('screen-manager-tree')" data-i18n="nav_manager_tree">🌳 Manager-Talentbaum</button>
             <button class="nav-btn special-red" onclick="showScreen('screen-private')" data-i18n="nav_private">🎩 Spezial & Privatleben</button>
+            <button class="nav-btn" onclick="showScreen('screen-lexicon')" data-i18n="nav_lexicon">📖 Spiel-Lexikon</button>
             <button class="nav-btn special-gold" onclick="showScreen('screen-admin')" data-i18n="nav_admin">🛠️ Admin & Cheats PRO</button>
         </nav>
 
@@ -2285,6 +2286,18 @@
             <!-- 26. TROPHÄEN -->
             
 
+            <!-- SPIEL-LEXIKON (js/lexicon.js) -->
+            <div id="screen-lexicon" style="display:none;">
+                <div class="panel">
+                    <div class="panel-header"><span>📖 SPIEL-LEXIKON</span></div>
+                    <div style="font-size:10px; color:var(--text-muted); margin-bottom:6px;">Was bedeutet ein Wert, wie wirkt er, wie beeinflusst man ihn? Suchen oder nach Bereich filtern.</div>
+                    <input id="lexicon-search" type="search" oninput="renderLexicon()" placeholder="Suchen, z.B. Fitness, Lizenz, Sponsor ..." style="width:100%; box-sizing:border-box; padding:8px; font-size:12px; margin-bottom:6px;">
+                    <div id="lexicon-categories" style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px;"></div>
+                    <div id="lexicon-screen-filter"></div>
+                    <div id="lexicon-list"></div>
+                </div>
+            </div>
+
             <!-- 27. ADMIN & CHEATS PRO -->
             <div id="screen-admin" style="display:none;">
                 <div class="panel box-admin">
@@ -2577,6 +2590,7 @@
 <script src="js/national-team.js?v=3.13"></script>
 <script src="js/league-awards.js?v=2.7"></script>
 <script src="js/coach-carousel.js?v=2.7"></script>
+<script src="js/lexicon.js?v=3.20"></script>
 <script src="js/admin.js?v=2.1"></script>
 <script src="js/premium.js?v=2.1"></script>
 <script src="js/save.js?v=2.1"></script>

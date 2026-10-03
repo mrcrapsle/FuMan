@@ -319,7 +319,8 @@ async function testNationalTeam(browser) {
             out.turnier = !!t && t.season === 2 && t.name === 'Europameisterschaft' && t.nations[0].nation === 'Deutschland'
                 && t.nations[0].players.some(x => x.name === star.name) && star.caps > caps0 && game.intlTournaments[0] === t;
             out.stufe = t ? t.nations[0].stage : null;
-            // Anzeige im Reiter Team
+            // Anzeige im Reiter Team (Turnierverletzungen, je 10 %, würden die Nominierung aufheben)
+            star.injured = 0; knapp.injured = 0;
             showScreen('screen-squad'); setSquadTab('analyse');
             const html = document.getElementById('national-team-box').innerHTML;
             out.anzeige = html.includes(star.name) && html.includes('nominiert') && html.includes('Europameisterschaft 2');
@@ -649,6 +650,63 @@ async function testSponsorConflict(browser) {
     assert(!r.crash, `Sponsoren-Konflikt-Test ohne Absturz (${r.crash || 'ok'})`);
     assert(r.anzeige, 'Angebot nennt den konkurrierenden Sponsor und den Abschlag');
     assert(r.abschlag, 'Beim Annehmen zahlt der Sponsor tatsächlich nur 70 %');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
+async function testLexicon(browser) {
+    console.log('\n[19.7] Spiel-Lexikon: Suche, Kategorien, Sprung zum Bildschirm, Lizenzwerte aktuell');
+    const { page, consoleErrors } = await freshPage(browser);
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            const geld = game.money;
+            out.navKnopf = !!document.querySelector(`.nav-btn[onclick="showScreen('screen-lexicon')"]`);
+            showScreen('screen-lexicon');
+            const liste = () => document.querySelectorAll('#lexicon-list > .box');
+            out.alle = liste().length === LEXICON_ENTRIES.length && LEXICON_ENTRIES.length >= 25;
+            out.zieleExistieren = LEXICON_ENTRIES.filter(e => !document.getElementById(e.screen)).map(e => e.title);
+            const suche = document.getElementById('lexicon-search');
+            suche.value = 'lizenz'; renderLexicon();
+            out.sucheTrifft = liste().length >= 1 && liste().length < LEXICON_ENTRIES.length && document.getElementById('lexicon-list').innerText.includes('Lizenzauflagen');
+            suche.value = 'xyzkeintreffer'; renderLexicon();
+            out.keinTreffer = liste().length === 0 && document.getElementById('lexicon-list').innerText.includes('Kein Eintrag');
+            suche.value = ''; setLexiconCategory('Finanzen');
+            out.kategorie = liste().length === LEXICON_ENTRIES.filter(e => e.cat === 'Finanzen').length;
+            setLexiconCategory('Alle');
+            // Die Zahlen im Eintrag müssen zu den echten Auflagen passen.
+            const lizenz = LEXICON_ENTRIES.find(e => e.title === 'Lizenzauflagen').text;
+            out.lizenzAktuell = [0, 1, 2].every(i => lizenz.includes(DFB_LICENSING_REQUIREMENTS[i].minCapacity.toLocaleString('de-DE') + ' Plätze'));
+            // Sprung zum Bildschirm
+            const knopf = [...document.querySelectorAll('#lexicon-list button')].find(b => b.getAttribute('onclick').includes('screen-transfer'));
+            knopf.click();
+            out.sprung = aktiverScreen === 'screen-transfer';
+            // Aus einem Bildschirm-Tipp: nur Einträge dieses Bildschirms, Menü zeigt danach wieder alle
+            openLexiconForScreen('screen-finances');
+            out.gefiltert = liste().length === LEXICON_ENTRIES.filter(e => e.screen === 'screen-finances').length && !!document.querySelector('#lexicon-screen-filter .box');
+            showScreen('screen-lexicon');
+            out.menueAlle = liste().length === LEXICON_ENTRIES.length;
+            game.onboarding = null; ensureOnboarding();
+            showScreen('screen-squad');
+            out.tippKnopf = !!document.querySelector(`#screen-squad .screen-hint button[onclick="openLexiconForScreen('screen-squad')"]`);
+            out.geldGleich = game.money === geld;
+            return out;
+        } catch (e) { return { crash: e.message }; }
+    });
+    assert(!r.crash, `Lexikon-Test ohne Absturz (${r.crash || 'ok'})`);
+    assert(r.navKnopf, 'Menüpunkt „Spiel-Lexikon“ vorhanden');
+    assert(r.alle, 'Ohne Filter erscheinen alle Einträge (mindestens 25)');
+    assert(r.zieleExistieren && r.zieleExistieren.length === 0, `Jeder Eintrag springt zu einem existierenden Bildschirm (${(r.zieleExistieren || []).join(', ')})`);
+    assert(r.sucheTrifft, 'Suche „lizenz“ findet die Lizenzauflagen und filtert');
+    assert(r.keinTreffer, 'Suche ohne Treffer zeigt einen Hinweis');
+    assert(r.kategorie, 'Kategorie „Finanzen“ zeigt genau deren Einträge');
+    assert(r.lizenzAktuell, 'Lizenz-Eintrag nennt die aktuellen Kapazitätsauflagen');
+    assert(r.sprung, '„Zum Bildschirm“ öffnet den passenden Bildschirm');
+    assert(r.gefiltert, 'Aus einem Bildschirm-Tipp geöffnet: nur Einträge dieses Bildschirms');
+    assert(r.menueAlle, 'Über das Menü geöffnet: wieder alle Einträge');
+    assert(r.tippKnopf, 'Bildschirm-Tipp bietet „📖 Lexikon“ an');
+    assert(r.geldGleich, 'Lexikon verändert kein Geld');
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
     await page.close();
 }
@@ -1441,7 +1499,13 @@ async function testAccessibilityContrastAndFontSizes(browser) {
 
 async function testLanguageToggle(browser) {
     console.log('\n[14] Sprachumschalter (DE/EN)');
-    const { page, consoleErrors } = await freshPage(browser);
+    // Eigener Kontext, damit eine zweite Seite denselben Speicher sieht (siehe Reload unten).
+    const ctx = await browser.newContext();
+    const page = await ctx.newPage();
+    const consoleErrors = [];
+    page.on('pageerror', e => consoleErrors.push(e.message));
+    await page.goto(GAME_PATH);
+    await page.waitForTimeout(400);
     await page.evaluate(() => closeTutorial());
     // Startbildschirm ist das Managerbüro und deckt das ganze Display ab - für die
     // Kopfzeilen-/Seitenmenü-Knöpfe muss der Test es zuerst verlassen.
@@ -1455,11 +1519,24 @@ async function testLanguageToggle(browser) {
     const langStoredAfterToggle = await page.evaluate(() => safeLocalGet('anstoss_fm13_language'));
     const tutorialNextTextEn = await page.evaluate(() => { tutorialPage = 0; renderTutorialPage(); return document.getElementById('tutorial-next-btn').innerText; });
 
+    // Unter voller Testlast war der Eintrag nach einem Reload gelegentlich weg (localStorage
+    // null, alle älteren Einträge noch da, kein Spielcode löscht ihn): Chromium hatte den frischen
+    // Schreibvorgang noch nicht an den Speicher des Kontexts übergeben. Deshalb erst warten, bis
+    // eine zweite Seite desselben Kontexts (gleiche file://-Herkunft) den Wert sieht.
+    const vorReload = await page.evaluate(() => localStorage.getItem('anstoss_fm13_language'));
+    const zweite = await ctx.newPage();
+    await zweite.goto('file://' + path.resolve(__dirname, 'package.json'));
+    for (let i = 0; i < 30; i++) {
+        if (await zweite.evaluate(() => localStorage.getItem('anstoss_fm13_language')) === 'en') break;
+        await zweite.waitForTimeout(100);
+    }
+    await zweite.close();
     await page.reload();
     await page.waitForTimeout(400);
     await page.evaluate(() => { closeTutorial(); showScreen('screen-dashboard'); });
     await page.waitForTimeout(150);
     const enTextAfterReload = await page.evaluate(() => document.querySelector('[onclick*="screen-calendar"]').textContent.trim());
+    const langDiag = await page.evaluate(() => ({ lang: currentLang, gespeichert: localStorage.getItem('anstoss_fm13_language'), schluessel: Object.keys(localStorage).length }));
 
     await page.click('#btn-lang-toggle');
     await page.waitForTimeout(100);
@@ -1469,10 +1546,10 @@ async function testLanguageToggle(browser) {
     assert(enText === '📅 Calendar & Fixtures', 'Klick auf den Sprachumschalter übersetzt die Seitenleiste sofort ins Englische');
     assert(langStoredAfterToggle === 'en', 'Sprachwahl wird persistiert (localStorage)');
     assert(tutorialNextTextEn === 'Next →', 'Tutorial-Texte werden ebenfalls über die gewählte Sprache gerendert');
-    assert(enTextAfterReload === '📅 Calendar & Fixtures', 'Sprachwahl überlebt einen Reload');
+    assert(enTextAfterReload === '📅 Calendar & Fixtures', `Sprachwahl überlebt einen Reload (${enTextAfterReload} | vor dem Reload ${vorReload}, danach ${JSON.stringify(langDiag)})`);
     assert(backToDeText === '📅 Kalender & Termine', 'Zurückschalten auf Deutsch funktioniert erneut');
     assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Sprachumschalter-Test');
-    await page.close();
+    await ctx.close();
 }
 
 async function testManagerOffice(browser) {
@@ -5213,7 +5290,9 @@ async function testCupLive(browser) {
         // Relegation nach dem 34. Spieltag
         while (game.matchday <= 34) { game.sackPending = false; simulateMatchdays(5); }
         // Relegationsplatz: 16. (Abstieg) oder in der untersten Liga 3. (Aufstieg)
-        const tabelle = [...leaguesData[game.leagueLevel]].sort((a, b) => b.points - a.points || (b.goalsFor - b.goalsAgainst) - (a.goalsFor - a.goalsAgainst));
+        // Dieselbe Sortierung wie das Spiel (inkl. erzielter Tore) - mit einer eigenen ohne
+        // diesen Tiebreak landete der Verein bei Gleichstand gelegentlich neben dem Relegationsplatz.
+        const tabelle = sortedTable(game.leagueLevel);
         const wir = tabelle.find(t => t.name === game.clubName), ziel = tabelle[game.leagueLevel === NUM_LEAGUES - 1 ? 2 : 15];
         if (wir && ziel && wir !== ziel) ['points', 'goalsFor', 'goalsAgainst'].forEach(k => { const x = wir[k]; wir[k] = ziel[k]; ziel[k] = x; });
         game.relegation = null;
@@ -5872,6 +5951,7 @@ async function main() {
         testYouthAcademy,
         testYouthPathway,
         testSponsorConflict,
+        testLexicon,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,
