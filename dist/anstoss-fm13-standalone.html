@@ -2033,6 +2033,7 @@
             <div class="nav-category" data-i18n="nav_category_career">Karriere & Spezial</div>
             <button class="nav-btn special-gold" onclick="showScreen('screen-manager-tree')" data-i18n="nav_manager_tree">🌳 Manager-Talentbaum</button>
             <button class="nav-btn special-red" onclick="showScreen('screen-private')" data-i18n="nav_private">🎩 Spezial & Privatleben</button>
+            <button class="nav-btn" onclick="showScreen('screen-lexicon')" data-i18n="nav_lexicon">📖 Spiel-Lexikon</button>
             <button class="nav-btn special-gold" onclick="showScreen('screen-admin')" data-i18n="nav_admin">🛠️ Admin & Cheats PRO</button>
         </nav>
 
@@ -3794,6 +3795,18 @@
             <!-- 26. TROPHÄEN -->
             
 
+            <!-- SPIEL-LEXIKON (js/lexicon.js) -->
+            <div id="screen-lexicon" style="display:none;">
+                <div class="panel">
+                    <div class="panel-header"><span>📖 SPIEL-LEXIKON</span></div>
+                    <div style="font-size:10px; color:var(--text-muted); margin-bottom:6px;">Was bedeutet ein Wert, wie wirkt er, wie beeinflusst man ihn? Suchen oder nach Bereich filtern.</div>
+                    <input id="lexicon-search" type="search" oninput="renderLexicon()" placeholder="Suchen, z.B. Fitness, Lizenz, Sponsor ..." style="width:100%; box-sizing:border-box; padding:8px; font-size:12px; margin-bottom:6px;">
+                    <div id="lexicon-categories" style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px;"></div>
+                    <div id="lexicon-screen-filter"></div>
+                    <div id="lexicon-list"></div>
+                </div>
+            </div>
+
             <!-- 27. ADMIN & CHEATS PRO -->
             <div id="screen-admin" style="display:none;">
                 <div class="panel box-admin">
@@ -4289,6 +4302,7 @@ function compareTableRows(a, b) {
             nav_category_career: 'Karriere & Spezial',
             nav_manager_tree: '🌳 Manager-Talentbaum',
             nav_private: '🎩 Spezial & Privatleben',
+            nav_lexicon: '📖 Spiel-Lexikon',
             nav_admin: '🛠️ Admin & Cheats PRO',
             nav_office: '🏢 Managerbüro',
             office_title: 'MANAGERBÜRO',
@@ -4380,6 +4394,7 @@ function compareTableRows(a, b) {
             nav_category_career: 'Career & Special',
             nav_manager_tree: '🌳 Manager Talent Tree',
             nav_private: '🎩 Special & Private Life',
+            nav_lexicon: '📖 Game Glossary',
             nav_admin: '🛠️ Admin & Cheats PRO',
             nav_office: "🏢 Manager's Office",
             office_title: "MANAGER'S OFFICE",
@@ -4488,7 +4503,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.19', date: '03.10.2026', features: 'Phase 19: Langzeittest 20 Saisons (Vorstand reagiert erwartungsabhängig, 1.-Liga-Lizenz bezahlbar, Sponsoren-Konflikt mit Namen)' };
+    const GAME_VERSION = { number: '3.20', date: '03.10.2026', features: 'Phase 19: Spiel-Lexikon (durchsuchbare Hilfe zu allen wichtigen Werten und Regeln, mit Sprung zum Bildschirm)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -11915,6 +11930,7 @@ function onScreenShown(screenId) {
         <div style="display:flex; gap:6px; margin-top:6px;">
             <button onclick="hideScreenHint('${screenId}')" class="btn-secondary" style="width:auto;">Verstanden</button>
             <button onclick="hideScreenHint('alle')" class="btn-secondary" style="width:auto;">Alle Tipps aus</button>
+            ${typeof hasLexiconEntriesFor === 'function' && hasLexiconEntriesFor(screenId) ? `<button onclick="openLexiconForScreen('${screenId}')" class="btn-secondary" style="width:auto;">📖 Lexikon</button>` : ''}
         </div>`;
 }
 
@@ -14241,7 +14257,7 @@ function renderBoardRoomPanel() {
     // lief. Dieser Test hätte das beim nächsten Bauen sofort sichtbar gemacht.
     let selbsttestLaeuft = false;
     function runStructuralSelfTest(silent = true) {
-        let topScreens = ['screen-office', 'screen-dashboard', 'screen-calendar', 'screen-inbox', 'screen-squad', 'screen-second-team', 'screen-women', 'screen-training', 'screen-manager-tree', 'screen-admin', 'screen-prematch-press', 'screen-matchday'];
+        let topScreens = ['screen-office', 'screen-dashboard', 'screen-calendar', 'screen-inbox', 'screen-squad', 'screen-second-team', 'screen-women', 'screen-training', 'screen-manager-tree', 'screen-admin', 'screen-lexicon', 'screen-prematch-press', 'screen-matchday'];
         let allTestIds = [...topScreens, ...Object.keys(HUB_MEMBERS), ...Object.values(HUB_MEMBERS).flat()];
         let problems = [];
         let originalTopScreen = topScreens.find(s => document.getElementById(s)?.style.display === 'block') || 'screen-dashboard';
@@ -14370,7 +14386,7 @@ function renderBoardRoomPanel() {
         const screens = [
             'screen-office',
             'screen-dashboard', 'screen-calendar', 'screen-inbox', 'screen-squad', 'screen-second-team', 'screen-women', 'screen-training',
-            'screen-manager-tree', 'screen-admin', 'screen-cup',
+            'screen-manager-tree', 'screen-admin', 'screen-cup', 'screen-lexicon',
             'screen-hub-wirtschaft', 'screen-hub-finanzen', 'screen-hub-ausbau',
             'screen-hub-kaderplanung', 'screen-hub-wettbewerbe', 'screen-hub-spezial',
             'screen-prematch-press', 'screen-matchday'
@@ -14436,6 +14452,7 @@ function renderBoardRoomPanel() {
         if (screenId === 'screen-premium' && typeof renderPremiumShopView === 'function') renderPremiumShopView();
         if (screenId === 'screen-history') renderHistoryView();
         if (screenId === 'screen-admin') renderAdminView();
+        if (screenId === 'screen-lexicon' && typeof showLexiconView === 'function') showLexiconView();
         updateUI();
     }
 
@@ -29908,6 +29925,161 @@ function renderCoachCarouselBox() {
     box.innerHTML = `<div style="font-size:9px;">${wechsel.length
         ? wechsel.map(c => `<div style="padding:2px 0; border-top:1px solid rgba(255,255,255,0.06);">Spt ${c.matchday}: <strong>${c.club}</strong> - ${c.alt} ➜ ${c.neu}</div>`).join('')
         : '<span style="color:var(--text-muted);">Diese Saison noch keine Trainerwechsel in deiner Liga.</span>'}</div>`;
+}
+
+</script>
+<script>
+/* eslint-disable no-undef */
+// Spiel-Lexikon: durchsuchbare Hilfe zu allen wichtigen Werten und Regeln - was ein Wert
+// bedeutet, wie er wirkt und wie man ihn beeinflusst, jeweils mit Sprung zum passenden
+// Bildschirm. Eigener Bildschirm screen-lexicon (Menü: Karriere & Spezial).
+
+const LEXICON_ENTRIES = [
+    { cat: 'Spieler', title: 'Stärke', screen: 'screen-squad',
+        text: 'Grundwert jedes Spielers (bis 99). Die Startelf zählt: Stärke × Fitness × Tagesform, gemittelt über elf Spieler, plus Boni (Taktik, Heimvorteil, Kapitän, Traits).',
+        tips: ['Training und Spielpraxis entwickeln junge Spieler', 'Ab etwa 30 baut die Stärke im Sommer ab (Archetyp entscheidet)', 'Verbesserungen kauft man am Transfermarkt'] },
+    { cat: 'Spieler', title: 'Fitness', screen: 'screen-training',
+        text: 'Jedes Spiel kostet Kraft, Pausen bringen sie zurück. Stammspieler erholen sich zwischen den Spieltagen nur zu einem Viertel so stark wie Bankspieler - wer immer dieselbe Elf bringt, wird müde.',
+        tips: ['Rotieren (Vorbericht bietet „Ausgeruhte Elf“ an)', 'Trainingsschwerpunkt Kondition oder Erholung', 'Gegenpressing und hohe Außenverteidiger kosten zusätzlich Kraft, Tief stehen spart sie'] },
+    { cat: 'Spieler', title: 'Moral', screen: 'screen-squad',
+        text: 'Stimmung der Spieler. Der Schnitt der Startelf verschiebt die Teamstärke: über 80 % gibt es einen Bonus, darunter einen Abzug.',
+        tips: ['Siege, Einsätze, Elf des Spieltags und Länderspiele heben sie', 'Gebrochene Versprechen (Einsatzgarantie, Pressekonferenz) und Bankdrücken senken sie', 'Der Mannschaftsrat dämpft Moralstürze nach Niederlagen'] },
+    { cat: 'Spieler', title: 'Tagesform', screen: 'screen-squad',
+        text: 'Schwankt von Spiel zu Spiel um den Wert 50 und verändert die effektive Stärke leicht - gute Tage und schlechte Tage.',
+        tips: ['„Trainer stellt Top-Elf auf“ berücksichtigt Tagesform und Fitness'] },
+    { cat: 'Spieler', title: 'Potenzial (Jugend)', screen: 'screen-youth',
+        text: 'Obergrenze, bis zu der sich ein Talent entwickeln kann. Ungeprüft unbekannt; die Potenzial-Prüfung (3.000 €) zeigt eine Spanne.',
+        tips: ['Leihe zur Entwicklung bringt mit Stammplatz mehr als die Akademie allein', 'Mentor und Jugendtrainer beschleunigen die Entwicklung', 'Mit 19 ist eine Profivertrag-Entscheidung fällig'] },
+    { cat: 'Spieler', title: 'Marktwert', screen: 'screen-transfer',
+        text: 'Richtwert für Ablösen. Steigt mit der Stärke, mit Länderspielen, Turniererfolgen und Auszeichnungen.',
+        tips: ['Verkäufer verlangen meist etwas mehr als den Marktwert', 'Am Deadline-Day gibt es Schnäppchen (-30 %)'] },
+    { cat: 'Spieler', title: 'Kicker-Noten & Elf des Spieltags', screen: 'screen-squad',
+        text: 'Nach jedem Ligaspiel bekommt jeder Startspieler eine Note von 1,0 bis 6,0. Mit 1,5 oder besser gibt es die Nominierung für die Elf des Spieltags und einen Moralschub.',
+        tips: ['Ein Notenschnitt von 2,5 oder besser senkt die Schwelle für die Nationalmannschaft'] },
+    { cat: 'Spieler', title: 'Verletzungen', screen: 'screen-squad',
+        text: 'Nach jedem Spiel wird für die Eingesetzten gewürfelt. Das Risiko steigt mit harter Trainingsintensität (bis +25 %), dem Alter (ab 32 +20 %, ab 35 +40 %) und früheren Verletzungen; junge Spieler sind robuster.',
+        tips: ['Lockeres Training und Erholung senken das Risiko', 'Physiotherapeut (halbe Ausfallzeit) und Reha-Zentrum verkürzen Ausfälle', 'Länderspielreisen bringen ein zusätzliches Risiko'] },
+    { cat: 'Taktik', title: 'Taktik-Duell', screen: 'screen-squad',
+        text: 'Pressing schlägt Ballbesitz, Ballbesitz schlägt Konter, Konter schlägt Pressing - ±2 Stärke im Ligaspiel. Ausgeglichen und Kick and Rush sind neutral.',
+        tips: ['Wer in 3 von 5 Ligaspielen denselben Ansatz wählt, ist berechenbar - Gegner stellen sich darauf ein', 'Der Chef-Analyst verrät im Vorbericht den Plan des Gegners', 'Im Livespiel zählt die aktuell gewählte Taktik'] },
+    { cat: 'Taktik', title: 'Mannschaftsanweisungen', screen: 'screen-squad',
+        text: 'Gegenpressing (+1,5 Stärke, +15 % Kraftverbrauch), hohe Außenverteidiger (+1, +8 %), Tief stehen (−0,5, −15 %; schließt die anderen aus).',
+        tips: ['Bei vollem Spielplan Kraft sparen, in wichtigen Spielen draufgehen'] },
+    { cat: 'Taktik', title: 'Pressekonferenz', screen: 'screen-dashboard',
+        text: 'Vor jedem Spiel: drei Antworten mit echter Wirkung (Moral, Stärke im nächsten Spiel, Vorstand, Fans). Versprechen werden nach dem Spiel abgerechnet.',
+        tips: ['Wer einen Sieg verspricht und verliert, verliert Ansehen bei Medien, Fans und Vorstand'] },
+    { cat: 'Verein', title: 'Vorstandszufriedenheit', screen: 'screen-dashboard',
+        text: 'Wie zufrieden der Vorstand ist (0-100). Bleibt sie mehrere Spieltage unter 25, folgt erst eine Warnung, dann die Entlassung. In der ersten Saison gibt es Schonfrist.',
+        tips: ['Siege und erreichte Saisonziele heben sie', 'Schulden, gebrochene Versprechen und Niederlagenserien senken sie', 'Der Vorstandsraum erklärt jedes Mitglied einzeln'] },
+    { cat: 'Verein', title: 'Fanstimmung', screen: 'screen-fans',
+        text: 'Wie zufrieden die Anhänger sind (0-100). Beeinflusst Zuschauer, Fanartikel und Mitgliederzahlen.',
+        tips: ['Mega-Choreo: +2 Stärke im nächsten Heimspiel', 'Sonderzug: +1,5 im nächsten Auswärtsspiel', 'Saisonziel bis Spieltag 6 setzen - Prämie bei Erfolg, Stimmungsverlust bei Misserfolg'] },
+    { cat: 'Verein', title: 'Medienimage', screen: 'screen-dashboard',
+        text: 'Ein Wert für dein Bild in der Öffentlichkeit. Beeinflusst Sponsoren und Jobangebote.',
+        tips: ['Pressekonferenzen und Interviews wirken direkt darauf'] },
+    { cat: 'Verein', title: 'Lizenzauflagen', screen: 'screen-stadium',
+        text: 'Für den Aufstieg verlangt der Verband Mindeststandards: Oberliga 1.000 Plätze · Regionalliga 3.000 Plätze und 30.000 € Reserve · 3. Liga 6.000 Plätze, Flutlicht, 100.000 € · 2. Liga 10.000 Plätze, Internat Stufe 1, 250.000 € · 1. Liga 15.000 Plätze, Internat Stufe 2, 500.000 €. Fehlt etwas, gibt es 3 Spieltage Nachfrist, danach verfällt der Aufstieg.',
+        tips: ['Die Übersicht steht im Stadion-Bildschirm, an Spieltag 30 warnt das Postfach', 'Das Internat in unteren Ligen bauen - dort kostet es einen Bruchteil', 'Rechtzeitig bauen - Baustellen brauchen einige Spieltage'] },
+    { cat: 'Finanzen', title: 'Gehaltsbudget', screen: 'screen-finances',
+        text: 'Höchstsumme aller Spielergehälter pro Spieltag. Neue Verträge über dem Budget sind nicht möglich.',
+        tips: ['Verkäufe und auslaufende Verträge schaffen Luft', 'Im Gehaltsgespräch einmal nachverhandeln'] },
+    { cat: 'Finanzen', title: 'Transferbudget', screen: 'screen-finances',
+        text: 'Wie viel Ablöse der Vorstand freigibt. Unabhängig vom Kontostand: beides muss reichen.',
+        tips: ['Verkäufe erhöhen es', 'Mit dem Vorstand lässt sich nachverhandeln'] },
+    { cat: 'Finanzen', title: 'Financial Fairplay', screen: 'screen-finances',
+        text: 'Über drei Saisons darf der Verein nur begrenzt Verlust machen (je nach Liga). Investitionen in Stadion, Gelände und Jugend zählen nicht. Bei Verstoß: Verwarnung, dann Transfersperre und Punktabzug.',
+        tips: ['Das Buchungsjournal zeigt, wofür das Geld ausgegeben wird', 'Nicht verwechseln mit der Transfersperre bei negativem Kontostand'] },
+    { cat: 'Finanzen', title: 'Negativer Kontostand', screen: 'screen-finances',
+        text: 'Bleibt das Konto im Minus: nach 3 Spieltagen Warnung, nach 6 Transfersperre, alle 10 Spieltage ein Zwangsverkauf des wertvollsten Spielers.',
+        tips: ['Rücklage und Ausgaben-Warnlimit helfen, rechtzeitig gegenzusteuern'] },
+    { cat: 'Finanzen', title: 'Abstellungsprämien', screen: 'screen-squad',
+        text: 'Für Nationalspieler zahlt der Verband 15.000 € je Spieler und Länderspielpause, bei WM/EM 10.000 bzw. 12.000 € je Spieler und Turniertag.',
+        tips: ['Steht im Kontoauszug unter „Abstellungsprämien“'] },
+    { cat: 'Finanzen', title: 'Sponsoren & Branchenkonflikt', screen: 'screen-sponsors',
+        text: 'Hauptsponsor, Trikotärmel, Banden und Mannschaftsbus werden einzeln vergeben. Ist bereits ein Partner derselben Branche unter Vertrag, steht am Angebot „Branchenkonflikt mit …“: dann zahlt der neue Sponsor nur 70 % aller Beträge.',
+        tips: ['Branchen mischen bringt mehr Geld als zwei Partner aus derselben Branche', 'Erfolge und Medienimage locken bessere Sponsoren an'] },
+    { cat: 'Finanzen', title: 'Ticketpreise & Zuschauer', screen: 'screen-finances',
+        text: 'Ticketerlöse sind neben den TV-Geldern die größte Einnahme. Die Zuschauerzahl hängt von Fanstimmung, Liga, Gegner und Stadionkomfort ab; hohe Preise bringen mehr pro Kopf, aber weniger Zuschauer und schlechtere Stimmung in der Kurve.',
+        tips: ['Leere Ränge werden automatisch gesperrt und kosten weniger Unterhalt', 'Fressbuden und Toiletten erhöhen den Komfort und damit die Zuschauer'] },
+    { cat: 'Transfers', title: 'Transferpoker', screen: 'screen-transfer',
+        text: 'Jeder Marktspieler gehört einem KI-Verein mit Forderung und verdeckter Schmerzgrenze. Unter der Grenze gibt es keine Zusage, sehr niedrige Angebote kosten doppelt Geduld. Bei begehrten Spielern kann ein Rivale mitbieten und den Spieler wegschnappen.',
+        tips: ['Sofortkauf zahlt die Forderung', 'Nach der Einigung folgt das Gehaltsgespräch'] },
+    { cat: 'Transfers', title: 'Transferfenster', screen: 'screen-transfer',
+        text: 'Sommer: Spieltage 1-3, Winter: Spieltage 18-20. Am letzten Tag (Deadline-Day) gibt es Schnäppchen und hektische Wechsel.',
+        tips: ['Der Transfer-Ticker zeigt, wohin die Stars der anderen Vereine wechseln'] },
+    { cat: 'Transfers', title: 'Vertragsgespräch', screen: 'screen-contracts',
+        text: 'Verlängerungen sind Gehaltsgespräche: Stammspieler und Stars fordern mehr, ältere Spieler weniger. Zähe Charaktere lassen sich schwer drücken; nach zwei geplatzten Runden ist für die Saison Schluss.',
+        tips: ['Eine Einsatzgarantie macht Spieler billiger - aber wird geprüft'] },
+    { cat: 'Wettbewerbe', title: 'Auf- und Abstieg', screen: 'screen-league',
+        text: 'Platz 1 und 2 steigen direkt auf, Platz 3 spielt Relegation gegen den 16. der Liga darüber. Platz 16 muss in die Relegation, Platz 17 und 18 steigen ab.',
+        tips: ['Bei Gleichstand entscheiden Tordifferenz, dann erzielte Tore'] },
+    { cat: 'Wettbewerbe', title: 'Länderspielpausen & Turniere', screen: 'screen-squad',
+        text: 'Pausen nach den Spieltagen 6, 13, 24 und 30. Nominiert wird, wer die Schwelle seines Landes erreicht. Nach jeder geraden Saison WM oder EM.',
+        tips: ['Kein Ligaspiel fällt aus, aber die Reise kostet Fitness'] },
+    { cat: 'Wettbewerbe', title: 'Pokale', screen: 'screen-cup',
+        text: 'Landespokal in den unteren Ligen, DFB-Pokal ab der 3. Liga, der Champions Cup für die Spitze. Eigene Pokalspiele laufen live.',
+        tips: ['Pokaltore zählen nicht für die Ligastatistik und die Noten'] },
+    { cat: 'Karriere', title: 'Jobangebote', screen: 'screen-dashboard',
+        text: 'Erfolgreiche Manager bekommen Angebote von stärkeren Vereinen. Ein Wechsel nimmt Karriere und Trophäen mit, der Kader ist neu.',
+        tips: ['Ein Angebot gilt 6 Spieltage', 'Man kann es auch als Druckmittel für den Vorstand nutzen'] },
+    { cat: 'Karriere', title: 'Karriere-Szenarien', screen: 'screen-dashboard',
+        text: 'Beim neuen Spiel wählbar: Absteiger retten, Pleiteklub sanieren, Traditionsverein zurückführen, Meister oder Chaos - mit Ziel, Frist und 1-3 Sternen.',
+        tips: ['Danach geht die Karriere als freies Spiel weiter'] },
+    { cat: 'Bedienung', title: 'Speichern', screen: 'screen-dashboard',
+        text: 'Drei Speicher-Slots plus automatisches Speichern alle 5 Spieltage. Beim Start wird immer der zuletzt gespeicherte Stand geladen.',
+        tips: ['Wenn der Browser das Speichern blockiert, Spielstand als Datei exportieren', 'In der Dateivorschau mancher Handys geht Speichern nicht - im Browser öffnen'] }
+];
+
+let lexiconCategory = 'Alle';
+let lexiconScreenFilter = null; // aus einem Bildschirm-Tipp geöffnet: nur Einträge zu diesem Bildschirm
+
+function setLexiconCategory(cat) {
+    lexiconCategory = cat;
+    lexiconScreenFilter = null;
+    renderLexicon();
+}
+
+function hasLexiconEntriesFor(screenId) {
+    return LEXICON_ENTRIES.some(e => e.screen === screenId);
+}
+
+// Normaler Aufruf über das Menü (showScreen): immer das ganze Lexikon.
+function showLexiconView() {
+    lexiconScreenFilter = null;
+    renderLexicon();
+}
+
+// Aus den Bildschirm-Tipps (js/onboarding.js): springt ins Lexikon, gefiltert auf diesen Bildschirm.
+function openLexiconForScreen(screenId) {
+    const input = document.getElementById('lexicon-search');
+    if (input) input.value = '';
+    lexiconCategory = 'Alle';
+    showScreen('screen-lexicon');
+    lexiconScreenFilter = hasLexiconEntriesFor(screenId) ? screenId : null;
+    renderLexicon();
+}
+
+function renderLexicon() {
+    const box = document.getElementById('lexicon-list');
+    if (!box) return;
+    const input = document.getElementById('lexicon-search');
+    const suche = (input ? input.value : '').trim().toLowerCase();
+    const kategorien = ['Alle', ...new Set(LEXICON_ENTRIES.map(e => e.cat))];
+    const chips = document.getElementById('lexicon-categories');
+    if (chips) chips.innerHTML = kategorien.map(k => `<button onclick="setLexiconCategory('${k}')" class="${k === lexiconCategory ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:9px; padding:4px 8px;">${k}</button>`).join('');
+    const filterHinweis = document.getElementById('lexicon-screen-filter');
+    if (filterHinweis) filterHinweis.innerHTML = lexiconScreenFilter ? `<div class="box" style="font-size:10px; display:flex; justify-content:space-between; align-items:center; gap:6px;"><span>Nur Einträge zum Bildschirm, von dem du kommst.</span><button onclick="setLexiconCategory('Alle')" class="btn-secondary" style="width:auto; font-size:9px;">Alle zeigen</button></div>` : '';
+    const treffer = LEXICON_ENTRIES.filter(e => (lexiconCategory === 'Alle' || e.cat === lexiconCategory)
+        && (!lexiconScreenFilter || e.screen === lexiconScreenFilter)
+        && (!suche || (e.title + ' ' + e.text + ' ' + e.tips.join(' ')).toLowerCase().includes(suche)));
+    box.innerHTML = treffer.length ? treffer.map(e => `<div class="box" style="font-size:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
+            <strong style="color:var(--accent);">${e.title}</strong><span style="font-size:8px; color:var(--text-muted);">${e.cat}</span>
+        </div>
+        <div style="margin-top:3px;">${e.text}</div>
+        <ul style="margin:4px 0 0 0; padding-left:16px;">${e.tips.map(t => `<li>${t}</li>`).join('')}</ul>
+        <button onclick="showScreen('${e.screen}')" class="btn-secondary" style="width:auto; font-size:9px; margin-top:4px;">➜ Zum Bildschirm</button>
+    </div>`).join('') : '<div style="font-size:10px; color:var(--text-muted);">Kein Eintrag gefunden. Anderen Begriff versuchen oder Kategorie „Alle“ wählen.</div>';
 }
 
 </script>
