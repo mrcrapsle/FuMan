@@ -484,7 +484,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.20', date: '03.10.2026', features: 'Phase 19: Spiel-Lexikon (durchsuchbare Hilfe zu allen wichtigen Werten und Regeln, mit Sprung zum Bildschirm)' };
+    const GAME_VERSION = { number: '3.21', date: '03.10.2026', features: 'Phase 19: Tempo auf dem Handy (flüssiges Scrollen ohne Panel-Unschärfe, kein Selbsttest beim Start, Büro im Leerlauf ohne Dauer-Animation)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -27503,14 +27503,11 @@ function renderLexicon() {
             initLanguage();
             warnIfStorageBlocked();
             maybeShowTutorial();
-            // Leiser Struktur-Selbsttest im Hintergrund - macht Verschachtelungsfehler wie
-            // die kürzlich gefundene fehlende </div> sofort sichtbar (roter Banner), statt
-            // dass sie erst durch Nutzerberichte auffallen.
-            // Nur einmal pro Spielversion: der Test öffnet alle 44 Bildschirme und kostete auf
-            // dem Handy rund eine Sekunde bei jedem Start (Admin-Knopf startet ihn jederzeit).
-            if (safeLocalGet('anstoss_fm13_selftest_version') !== GAME_VERSION.number) {
-                try { runStructuralSelfTest(true); safeLocalSet('anstoss_fm13_selftest_version', GAME_VERSION.number); } catch (e) { console.error('Struktur-Selbsttest konnte nicht laufen:', e); }
-            }
+            // Kein Struktur-Selbsttest beim Start mehr: er öffnete alle Bildschirme und kostete
+            // beim ersten Start nach jedem Update rund 1,5 s auf dem Handy. Die Testsuite prüft
+            // dieselbe Struktur vor jeder Veröffentlichung (testStructuralSelfTest); im Admin-
+            // Bereich lässt er sich weiterhin von Hand starten.
+            safeLocalRemove('anstoss_fm13_selftest_version');
         } catch (bootError) {
             // Letztes Sicherheitsnetz: falls beim Start trotzdem etwas vollkommen
             // Unerwartetes passiert (z.B. wegen eines extrem eingeschränkten WebViews),

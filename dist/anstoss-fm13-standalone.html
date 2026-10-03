@@ -108,7 +108,6 @@
             background: rgba(212, 169, 74, 0.06);
             border: 1px solid rgba(212, 169, 74, 0.18);
             padding: 5px 10px; border-radius: 6px; text-align: center;
-            backdrop-filter: blur(6px);
         }
         .kpi-chip span { font-size: 9px; color: var(--text-muted); display: block; letter-spacing: 0.4px; }
         .kpi-chip strong { font-size: 11px; color: var(--text-main); }
@@ -158,9 +157,11 @@
         }
 
         /* PANELS - Holzpaneel mit Messing-Ecknieten als wiederkehrendes Signatur-Detail */
+        /* Kein backdrop-filter: jedes Panel rechnete beim Scrollen eine eigene Unschärfe -
+           auf dem Handy (CPU 4x gedrosselt) Kader-Scrollbilder bis 42 ms statt 17 ms (19.8).
+           Der Hintergrund ist fast einfarbig, die etwas dichtere Fläche sieht gleich aus. */
         .panel {
-            background: rgba(17, 24, 39, 0.85);
-            backdrop-filter: blur(12px);
+            background: rgba(17, 24, 39, 0.92);
             border: 1px solid rgba(55, 65, 81, 0.6);
             border-radius: 18px; padding: 15px; margin-bottom: 12px;
             box-shadow: 0 14px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
@@ -1067,7 +1068,10 @@
            eine laufende transform-Animation befördert das Element auf eine eigene
            Compositing-Ebene, und innerhalb eines preserve-3d-Baums fällt es damit komplett
            aus der Trefferprüfung heraus - das Telefon war dadurch nicht mehr anklickbar. */
-        .off-phone-ringing .off-phone-handset { animation: officePhoneRing 1.3s ease-in-out infinite; }
+        /* Nur vier Klingelzeichen beim Betreten des Büros (19.8): da fast immer ungelesene Post
+           wartet, lief das Leuchten sonst endlos und kostete auf dem Handy ~8 % CPU im Leerlauf.
+           Das rote Zähler-Abzeichen bleibt stehen. */
+        .off-phone-ringing .off-phone-handset { animation: officePhoneRing 1.3s ease-in-out 4; }
         @keyframes officePhoneRing {
             0%, 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,0.14); }
             50% { box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 0 15px 4px rgba(199,53,69,0.9); }
@@ -1512,6 +1516,12 @@
                 transform: translateY(0);
             }
         }
+
+/* Bewegung reduzieren (Systemeinstellung): keine Daueranimationen im Büro. */
+@media (prefers-reduced-motion: reduce) {
+    .office-mote, .off-weather-rain, .off-weather-snow, .off-weather-storm,
+    .off-phone-ringing .off-phone-handset, .office-quicknav-alert, .off-visitor-badge { animation: none !important; }
+}
 
 </style>
 </head>
@@ -4503,7 +4513,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.20', date: '03.10.2026', features: 'Phase 19: Spiel-Lexikon (durchsuchbare Hilfe zu allen wichtigen Werten und Regeln, mit Sprung zum Bildschirm)' };
+    const GAME_VERSION = { number: '3.21', date: '03.10.2026', features: 'Phase 19: Tempo auf dem Handy (flüssiges Scrollen ohne Panel-Unschärfe, kein Selbsttest beim Start, Büro im Leerlauf ohne Dauer-Animation)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -31555,14 +31565,11 @@ function renderLexicon() {
             initLanguage();
             warnIfStorageBlocked();
             maybeShowTutorial();
-            // Leiser Struktur-Selbsttest im Hintergrund - macht Verschachtelungsfehler wie
-            // die kürzlich gefundene fehlende </div> sofort sichtbar (roter Banner), statt
-            // dass sie erst durch Nutzerberichte auffallen.
-            // Nur einmal pro Spielversion: der Test öffnet alle 44 Bildschirme und kostete auf
-            // dem Handy rund eine Sekunde bei jedem Start (Admin-Knopf startet ihn jederzeit).
-            if (safeLocalGet('anstoss_fm13_selftest_version') !== GAME_VERSION.number) {
-                try { runStructuralSelfTest(true); safeLocalSet('anstoss_fm13_selftest_version', GAME_VERSION.number); } catch (e) { console.error('Struktur-Selbsttest konnte nicht laufen:', e); }
-            }
+            // Kein Struktur-Selbsttest beim Start mehr: er öffnete alle Bildschirme und kostete
+            // beim ersten Start nach jedem Update rund 1,5 s auf dem Handy. Die Testsuite prüft
+            // dieselbe Struktur vor jeder Veröffentlichung (testStructuralSelfTest); im Admin-
+            // Bereich lässt er sich weiterhin von Hand starten.
+            safeLocalRemove('anstoss_fm13_selftest_version');
         } catch (bootError) {
             // Letztes Sicherheitsnetz: falls beim Start trotzdem etwas vollkommen
             // Unerwartetes passiert (z.B. wegen eines extrem eingeschränkten WebViews),
