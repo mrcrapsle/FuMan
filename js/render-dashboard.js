@@ -70,6 +70,7 @@
         document.getElementById('dash-match-actions').style.display = isSeasonOver ? 'none' : 'grid';
         document.getElementById('dash-season-end-actions').style.display = isSeasonOver ? 'block' : 'none';
         if (typeof renderScenarioCard === 'function') renderScenarioCard();
+        if (typeof renderSeasonPreviewCard === 'function') renderSeasonPreviewCard();
         if (typeof renderJobOfferCard === 'function') renderJobOfferCard();
         if (typeof renderOnboardingBox === 'function') renderOnboardingBox();
         if (typeof renderRelegationBox === 'function') renderRelegationBox();

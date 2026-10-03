@@ -722,6 +722,7 @@
                         <button onclick="simulateFullSeason()" class="btn-primary" style="background:#f59e0b; color:#000;">⚡ Saison durchsimulieren</button>
                     </div>
                     <div id="dash-scenario-box"></div>
+                    <div id="dash-season-preview-box"></div>
                     <div id="dash-joboffer-box"></div>
                     <div id="dash-onboarding-box"></div>
                     <div id="dash-relegation-box"></div>
@@ -2124,6 +2125,11 @@
                         <div id="manager-analytics-box"></div>
                     </div>
                     <div class="panel">
+                        <div class="panel-header" style="color:var(--blue);">📰 PROGNOSE & WIRKLICHKEIT</div>
+                        <div style="font-size:9px; color:var(--text-muted); margin-bottom:4px;">Expertentipp vor der Saison gegen den tatsächlichen Abschluss.</div>
+                        <div id="season-forecast-history-box"></div>
+                    </div>
+                    <div class="panel">
                         <div class="panel-header" style="color:var(--blue);">📊 LIGA-CHRONIK</div>
                         <div style="font-size:9px; color:var(--text-muted); margin-bottom:4px;">Die größten Stärke-Veränderungen der letzten Saison über alle 108 Vereine der Liga-Pyramide hinweg.</div>
                         <div id="league-chronik-box"></div>
@@ -2591,6 +2597,7 @@
 <script src="js/league-awards.js?v=2.7"></script>
 <script src="js/coach-carousel.js?v=2.7"></script>
 <script src="js/lexicon.js?v=3.20"></script>
+<script src="js/season-preview.js?v=3.22"></script>
 <script src="js/admin.js?v=2.1"></script>
 <script src="js/premium.js?v=2.1"></script>
 <script src="js/save.js?v=2.1"></script>

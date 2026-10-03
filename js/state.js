@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.21.1', date: '03.10.2026', features: 'Phase 19: Tempo auf dem Handy (flüssiges Scrollen ohne Panel-Unschärfe, kein Selbsttest beim Start, Büro im Leerlauf ohne Dauer-Animation); Testkorrektur Fan-Aktionen' };
+    const GAME_VERSION = { number: '3.22', date: '03.10.2026', features: 'Phase 20: Saisonvorschau & Experten-Check (Tipp für jeden Verein, Bilanz am Saisonende, ein Spieler der Saison nach Noten)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

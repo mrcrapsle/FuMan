@@ -114,6 +114,7 @@
         if (typeof renderLeagueAwardsBox === 'function') renderLeagueAwardsBox();
         if (typeof renderHallOfFamePanel === 'function') renderHallOfFamePanel();
         if (typeof renderManagerAnalyticsPanel === 'function') renderManagerAnalyticsPanel();
+        if (typeof renderSeasonForecastHistory === 'function') renderSeasonForecastHistory();
         let list = document.getElementById('trophies-list');
         list.innerHTML = '';
         renderRivalryHistoryBook();

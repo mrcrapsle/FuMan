@@ -2509,7 +2509,7 @@
         if (!box) return;
         let hist = game.playerOfSeasonHistory || [];
         if (hist.length === 0) { box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Noch keine Saison abgeschlossen.</div>'; return; }
-        box.innerHTML = hist.map(h => `<div class="box" style="font-size:10px; display:flex; justify-content:space-between;"><span>🏆 ${h.playerName} (Saison ${h.season})</span><span>${h.goals} Tore</span></div>`).join('');
+        box.innerHTML = hist.map(h => `<div class="box" style="font-size:10px; display:flex; justify-content:space-between;"><span>🏆 ${h.playerName} (Saison ${h.season})</span><span>${h.grade ? `Ø ${formatGrade(h.grade)} · ` : ''}${h.goals} Tore</span></div>`).join('');
     }
 
     function attributeGoalsToScorers(goalCount) {

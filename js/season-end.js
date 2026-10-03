@@ -25,7 +25,10 @@
 
     function holdSeasonEndGala() {
         if (squad.length === 0) return;
-        let playerOfSeason = [...squad].sort((a, b) => (b.strength * (b.appearances || 1)) - (a.strength * (a.appearances || 1)))[0];
+        // Spieler der Saison nach echten Saisonnoten (pickPlayerOfSeason in js/season-preview.js) -
+        // früher Stärke × Karriere-Einsätze, also fast immer der dienstälteste Stammspieler.
+        let wahl = typeof pickPlayerOfSeason === 'function' ? pickPlayerOfSeason() : null;
+        let playerOfSeason = wahl ? wahl.p : [...squad].sort((a, b) => b.strength - a.strength)[0];
         let riser = [...squad].filter(p => (p.age || 30) <= 21).sort((a, b) => b.strength - a.strength)[0];
         const GOAL_OF_SEASON_FLAVOR = [
             'ein satter Distanzschuss aus 25 Metern ins Torwinkel',
@@ -34,7 +37,10 @@
             'ein präziser Freistoß direkt in den Winkel'
         ];
         let goalFlavor = GOAL_OF_SEASON_FLAVOR[Math.floor(Math.random() * GOAL_OF_SEASON_FLAVOR.length)];
-        let goalScorer = playerOfSeason;
+        // Tor der Saison: ein echter Torschütze dieser Saison (je mehr Tore, desto wahrscheinlicher).
+        let schuetzen = [];
+        squad.forEach(p => { for (let i = 0; i < Math.min(30, p.goalsSeason || 0); i++) schuetzen.push(p); });
+        let goalScorer = schuetzen.length ? schuetzen[Math.floor(Math.random() * schuetzen.length)] : null;
 
         // Gala-Publikumspreis: eine simulierte Fan-Abstimmung kürt einen eigenen
         // "Publikumsliebling", unabhängig vom "Spieler der Saison" - gewichtet nach Moral
@@ -63,8 +69,8 @@
         game.fans = Math.min(100, game.fans + 5);
         if (riser && riser.id !== playerOfSeason.id) riser.morale = Math.min(100, riser.morale + 10);
 
-        let body = `🏅 Spieler der Saison: <strong>${playerOfSeason.name}</strong> (Stärke ${playerOfSeason.strength})\n` +
-            `⚽ Tor der Saison: <strong>${goalScorer.name}</strong> mit ${goalFlavor}\n` +
+        let body = `🏅 Spieler der Saison: <strong>${playerOfSeason.name}</strong> (${wahl && wahl.grade ? `Ø-Note ${formatGrade(wahl.grade)}, ` : ''}${playerOfSeason.goalsSeason || 0} Tore)\n` +
+            (goalScorer ? `⚽ Tor der Saison: <strong>${goalScorer.name}</strong> mit ${goalFlavor}\n` : '') +
             `❤️ Publikumsliebling der Saison: <strong>${publikumsliebling.name}</strong> (Fan-Abstimmung)\n` +
             (riser ? `🌟 Aufsteiger des Jahres: <strong>${riser.name}</strong> (${riser.age || '-'} Jahre, Stärke ${riser.strength})` : '');
         addInboxMessage('vertrag', `🎊 Saisonabschluss-Gala ${game.season}`, body, 'screen-squad');
@@ -94,12 +100,17 @@
         let teams = [...leaguesData[game.leagueLevel]].sort(compareTableRows);
         let myRank = teams.findIndex(t => t.name === game.clubName) + 1;
         let myTeamRecord = leaguesData[game.leagueLevel].find(t => t.name === game.clubName);
+        // Schnappschuss für den Rückblick: advanceLeaguesToNewSeason() setzt das Tabellenobjekt
+        // zurück, der Rückblick zeigte deshalb immer "0 Punkte" (und das Archiv speicherte 0).
+        let myTeamSnapshot = myTeamRecord ? { ...myTeamRecord } : null;
         // Manager-Statistik: Bilanz der gerade beendeten Saison, bevor Auf-/Abstieg die Liga ändert.
         if (typeof recordSeasonalManagerStats === 'function') recordSeasonalManagerStats(myRank, myTeamRecord, game.leagueLevel);
         if (typeof checkPlaytimePromises === 'function') checkPlaytimePromises();
         if (typeof evaluateSeasonEndObjectives === 'function') evaluateSeasonEndObjectives(myRank);
         if (typeof recordScenarioSeasonRank === 'function') recordScenarioSeasonRank(myRank);
         if (typeof prepareMemberAssembly === 'function') prepareMemberAssembly(myRank);
+        // Experten-Check (js/season-preview.js): Prognose gegen Abschlusstabelle, vor dem Ligawechsel.
+        if (typeof buildSeasonExpertCheck === 'function') buildSeasonExpertCheck(myRank);
         if (typeof concludeWomenSeason === 'function') concludeWomenSeason();
 
         // Medienrechte (NEU): Liga-Kollektiv-TV-Ausschüttung zum Saisonende, gestaffelt nach
@@ -197,15 +208,12 @@
         let newManagerWage = Math.round(1200 * (1 + leagueFactor * 2.5) * placementFactor);
         if (newManagerWage > privateLife.wage) privateLife.wage = newManagerWage;
 
-        // Spieler der Saison (NEU): letzte Auswertung der Torsaison, bevor goalsSeason
-        // zurückgesetzt wird - ergänzt "Spieler des Monats" um eine Saison-Gesamtwürdigung.
-        let seasonTopScorer = [...squad].sort((a, b) => (b.goalsSeason || 0) - (a.goalsSeason || 0))[0];
-        if (seasonTopScorer && (seasonTopScorer.goalsSeason || 0) > 0) {
+        // Spieler der Saison für die Chronik: derselbe wie bei der Gala (Ehrung und Moral gab es dort).
+        let saisonSpieler = typeof pickPlayerOfSeason === 'function' ? pickPlayerOfSeason() : null;
+        if (saisonSpieler) {
             if (!game.playerOfSeasonHistory) game.playerOfSeasonHistory = [];
-            game.playerOfSeasonHistory.unshift({ season: game.season, playerId: seasonTopScorer.id, playerName: seasonTopScorer.name, goals: seasonTopScorer.goalsSeason });
+            game.playerOfSeasonHistory.unshift({ season: game.season, playerId: saisonSpieler.p.id, playerName: saisonSpieler.p.name, goals: saisonSpieler.goals, grade: saisonSpieler.grade });
             if (game.playerOfSeasonHistory.length > 15) game.playerOfSeasonHistory.pop();
-            seasonTopScorer.morale = Math.min(100, (seasonTopScorer.morale || 80) + 12);
-            addInboxMessage('vertrag', `🏆 Spieler der Saison: ${seasonTopScorer.name}!`, `Mit ${seasonTopScorer.goalsSeason} Saisontoren wird ${seasonTopScorer.name} zum Spieler der Saison gekürt - ein deutlicher Moralschub für die neue Spielzeit!`, 'screen-history');
         }
 
         squad.forEach(p => {
@@ -308,12 +316,13 @@
         if (typeof ageAiStars === 'function') ageAiStars();
         advanceLeaguesToNewSeason();
         if (typeof recordSeasonExpectationRank === 'function') recordSeasonExpectationRank();
+        if (typeof createSeasonPreview === 'function') createSeasonPreview();
         if (typeof applyPendingFfpPointDeduction === 'function') applyPendingFfpPointDeduction();
         refreshTransferMarket();
         autoLineup();
         updateUI();
         showScreen('screen-dashboard');
-        showSeasonReviewSummary(myRank, myTeamRecord);
+        showSeasonReviewSummary(myRank, myTeamSnapshot);
         if (typeof checkJobOfferApproach === 'function') checkJobOfferApproach({ saisonende: true, rank: myRank });
     }
 
@@ -330,6 +339,7 @@
 
         // Karriere-Archiv: jede Saison-Zusammenfassung wird dauerhaft gespeichert, damit man
         // frühere Saisons im direkten Vergleich nebeneinander sehen kann.
+        let expertCheck = (game.seasonReviews || []).find(r => r.season === game.season - 1 && typeof describeExpertCheck === 'function') || null;
         let entry = { season: game.season - 1, rank: myRank, points: myTeamRecord?.points || 0, avgAttendance, chemistry: chemStats.percent, trophyCount: (game.trophies || []).length };
         if (!game.seasonReviewArchive) game.seasonReviewArchive = [];
         game.seasonReviewArchive.push(entry);
@@ -357,6 +367,7 @@
                 <span class="label">DFB-Lizenzstatus:</span><span class="val">${dfbText}</span>
                 <span class="label">Trophäen gesamt:</span><span class="val">${(game.trophies || []).length}</span>
             </div>
+            ${expertCheck ? `<div style="font-size:10px; font-weight:800; color:var(--text-muted); margin:10px 0 4px 0;">🔮 Experten-Check</div><div style="font-size:10px;">${describeExpertCheck(expertCheck)}</div>` : ''}
             ${game.seasonReviewArchive.length > 1 ? `
             <div style="font-size:10px; font-weight:800; color:var(--text-muted); margin:10px 0 4px 0;">Frühere Saisons im Vergleich</div>
             <div style="max-height:100px; overflow-y:auto;">

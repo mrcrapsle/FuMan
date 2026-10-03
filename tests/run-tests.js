@@ -711,6 +711,62 @@ async function testLexicon(browser) {
     await page.close();
 }
 
+async function testSeasonPreview(browser) {
+    console.log('\n[20.1] Saisonvorschau & Experten-Check');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            showScreen('screen-dashboard');
+            const pv = getCurrentSeasonPreview();
+            const teams = leaguesData[game.leagueLevel];
+            out.karte = document.getElementById('dash-season-preview-box').innerText.includes('Saisonvorschau');
+            out.alleTeams = pv.order.length === teams.length && new Set(pv.order).size === teams.length && teams.every(t => pv.order.includes(t.name));
+            out.gleicheErwartung = pv.own === getSeasonExpectation().expectedRank && pv.order[pv.own - 1] === game.clubName;
+            toggleSeasonPreviewTable();
+            out.aufgeklappt = document.getElementById('dash-season-preview-box').innerText.includes(`${pv.own}. ${game.clubName}`);
+            // Saison spielen, eigener Spieler mit klar bester Note
+            while (game.matchday <= 34) { game.sackPending = false; simulateMatchdays(5); }
+            const star = squad[0];
+            squad.forEach(p => { if (p.statsSeason) p.statsSeason.notenSumme = p.statsSeason.spiele * 3.5; });
+            star.statsSeason = { spiele: 30, tore: 9, vorlagen: 4, notenSumme: 30 * 1.8, elf: 3 };
+            const rang = sortedTable(game.leagueLevel).findIndex(t => t.name === game.clubName) + 1;
+            game.seasonPreview.own = Math.min(teams.length, rang + 4);
+            const tipp = game.seasonPreview.own;
+            game.fans = 50;
+            const saison = game.season;
+            concludeSeasonAndAdvance();
+            const rv = game.seasonReviews[0];
+            out.bericht = rv.season === saison && rv.actualOwn === rang && rv.predOwn === tipp && rv.ownDelta === tipp - rang;
+            out.folge = tipp - rang >= 3 ? (rv.effect || '').includes('Medienimage +3') : true;
+            out.spieler = rv.player && rv.player.name === star.name && rv.player.grade === 1.8;
+            out.chronikSpieler = game.playerOfSeasonHistory[0].playerId === star.id;
+            out.gala = JSON.stringify(inboxMessages).includes(`Spieler der Saison: <strong>${star.name}`) || JSON.stringify(inboxArchive || []).includes(star.name);
+            out.rueckblick = document.getElementById('season-review-content').innerText.includes('Experten-Check');
+            out.punkte = game.seasonReviewArchive[game.seasonReviewArchive.length - 1].points > 0;
+            out.neueVorschau = game.seasonPreview.season === game.season && game.seasonPreview.level === game.leagueLevel;
+            showScreen('screen-history'); setSubTab('hist', 'chronik');
+            out.historie = document.getElementById('season-forecast-history-box').innerText.includes(`Saison ${saison}`);
+            game.matchday = 9; renderSeasonPreviewCard();
+            out.ausgeblendet = document.getElementById('dash-season-preview-box').innerHTML === '';
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Saisonvorschau-Test ohne Absturz (${r.crash || 'ok'})`);
+    assert(r.karte && r.alleTeams, 'Dashboard zeigt die Vorschau, Expertentabelle enthält jeden Verein genau einmal');
+    assert(r.gleicheErwartung, 'Eigener Tipp = Erwartung von Vorstand und Mitgliederversammlung');
+    assert(r.aufgeklappt, 'Ganze Expertentabelle lässt sich aufklappen');
+    assert(r.bericht && r.folge, 'Experten-Check am Saisonende: Tipp gegen Platz, 3+ Plätze besser bringt Medienimage');
+    assert(r.spieler && r.chronikSpieler && r.gala, 'Ein Spieler der Saison (beste Ø-Note) für Rückblick, Gala und Chronik');
+    assert(r.rueckblick && r.historie, 'Experten-Check im Saison-Rückblick und in Historie > Chronik');
+    assert(r.punkte, 'Saison-Rückblick zeigt die echten Punkte (früher nach dem Ligawechsel immer 0)');
+    assert(r.neueVorschau && r.ausgeblendet, 'Neue Vorschau zur neuen Saison, Karte nach Spieltag 8 ausgeblendet');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testYouthPathway(browser) {
     console.log('\n[18.5] Jugend-Laufbahn: Potenzial, Profivertrag mit 19, Leihe, Durchbruch-Momente');
     const { page, consoleErrors } = await freshPage(browser);
@@ -5954,6 +6010,7 @@ async function main() {
         testYouthPathway,
         testSponsorConflict,
         testLexicon,
+        testSeasonPreview,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,
