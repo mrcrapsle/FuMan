@@ -761,6 +761,7 @@
         // (js/set-pieces.js); nur Ecken laufen weiter pauschal über den Eckenschützen.
         let cornerTaker = onPitch.find(p => p.id === game.cornerTakerId);
         if (cornerTaker && cornerTaker.passing >= 75) goalChance += 0.006;
+        if (typeof getDrillMastery === 'function') goalChance += 0.008 * getDrillMastery('ecke'); // einstudierte Ecken
         let hasPkKiller = onPitch.some(p => p.trait === 'Elfmeter-Killer' && p.pos === 'TW');
         let hasWingSpeedster = onPitch.some(p => p.trait === 'Flügelflitzer');
         let hasTackleMonster = onPitch.some(p => p.trait === 'Zweikampfmonster');
@@ -1723,6 +1724,7 @@
 
         // Kabinen-Freundschaften (js/locker-room.js).
         if (typeof tickLockerFriendships === 'function') tickLockerFriendships();
+        if (typeof tickSetPieceDrills === 'function') tickSetPieceDrills();
 
         squad.forEach(p => {
             // Stammspieler erholen sich unter der Woche teilweise (ein Viertel der Bank-Erholung):

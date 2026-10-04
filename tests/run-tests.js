@@ -1336,6 +1336,68 @@ async function testMatchPrep(browser) {
     await page.close();
 }
 
+async function testSetPieceDrills(browser) {
+    console.log('\n[22.3] Standards einstudieren: Standards-Tage im Wochenplan, Beherrschung wirkt im Livespiel');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            // Vorlage "Technik" setzt einen Standards-Tag - den gibt es jetzt wirklich
+            applyWeeklyTrainingPreset('technik');
+            showScreen('screen-training');
+            const sel = [...document.querySelectorAll('#weekly-training-grid select')];
+            out.einheit = !!WEEKLY_TRAINING_UNITS.standards && countStandardsDays() === 1 && sel.some(s => s.value === 'standards');
+            // Lauter Standards-Tage: Mannschafts-Schwerpunkt bleibt "ausgeglichen"
+            ['mo', 'di', 'mi', 'do'].forEach(d => setWeeklyTrainingDay(d, 'standards'));
+            out.schwerpunkt = game.teamTraining === 'ausgeglichen' && countStandardsDays() === 4;
+            out.box = document.getElementById('setpiece-drill-box').innerHTML.includes('4 Standards-Tage');
+            // Übung: Fokus Elfmeter, 2 Tage -> +20 pro Spieltag, Rest verblasst
+            ['mo', 'di', 'mi', 'do', 'fr', 'sa', 'so'].forEach(d => { game.weeklyTrainingPlan[d] = 'ausgeglichen'; });
+            game.weeklyTrainingPlan.mo = 'standards'; game.weeklyTrainingPlan.mi = 'standards';
+            staffMembers.setPieceCoach.hired = false;
+            game.setPieceDrills = { focus: 'direkt', mastery: { direkt: 0, flanke: 10, kurz: 0, elfmeter: 0, ecke: 0 } };
+            setSetPieceDrillFocus('elfmeter');
+            tickSetPieceDrills();
+            out.uebung = game.setPieceDrills.mastery.elfmeter === 20 && game.setPieceDrills.mastery.flanke === 8;
+            staffMembers.setPieceCoach.hired = true;
+            out.coach = getDrillGainPerMatchday() === 30;
+            staffMembers.setPieceCoach.hired = false;
+            // Wirkung im Livespiel
+            currentMatch = { homeGoals: 0, awayGoals: 0, minute: 10, isHome: true, sentOff: [] };
+            const schuetze = squad.find(p => p.pos === 'ST');
+            schuetze.shooting = 60; schuetze.fitness = 100;
+            game.setPieceDrills.mastery.elfmeter = 0;
+            const ohne = getLivePenaltyChance(schuetze, false);
+            game.setPieceDrills.mastery.elfmeter = 100;
+            out.elfmeter = Math.abs(getLivePenaltyChance(schuetze, false) - ohne - 0.06) < 0.001;
+            lineup = pickBestLineupIds();
+            game.setPieceDrills.mastery.kurz = 0; game.setPieceDrills.mastery.flanke = 0;
+            const vorher = getFreeKickOptions();
+            game.setPieceDrills.mastery.kurz = 100; game.setPieceDrills.mastery.flanke = 100;
+            const nachher = getFreeKickOptions();
+            out.freistoss = Math.abs(nachher.kurz.prob - 0.10) < 0.001 && nachher.flanke.risiko === 0.02 && nachher.flanke.prob > vorher.flanke.prob && nachher.kurz.hinweis.includes('einstudiert 100 %');
+            // Ohne Standards-Tage verblasst alles
+            ['mo', 'mi'].forEach(d => { game.weeklyTrainingPlan[d] = 'ausgeglichen'; });
+            for (let i = 0; i < 10; i++) tickSetPieceDrills();
+            out.verblasst = game.setPieceDrills.mastery.kurz === 80;
+            currentMatch = null;
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Standards einstudieren ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.einheit, 'Standards ist eine echte Wochenplan-Einheit (die Vorlagen setzten sie, das Auswahlfeld kannte sie nicht)');
+        assert(r.schwerpunkt && r.box, 'Standards-Tage zählen für die Varianten, der Mannschafts-Schwerpunkt bleibt ausgeglichen');
+        assert(r.uebung && r.coach, 'Je Standards-Tag +10 pro Spieltag (Standards-Spezialist x1,5), nicht geübte Varianten verlieren 2');
+        assert(r.elfmeter && r.freistoss, 'Einstudiert wirkt im Livespiel: Elfmeter +6 %, kurz bis 10 %, Flanke mit halbem Konterrisiko');
+        assert(r.verblasst, 'Ohne Standards-Tage verblasst die Beherrschung');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testSponsorConflict(browser) {
     console.log('\n[19.x] Sponsoren: Branchenkonflikt nennt den Konkurrenten und kostet 30 %');
     const { page, consoleErrors } = await freshPage(browser);
@@ -7037,6 +7099,7 @@ async function main() {
         testCoTrainerLive,
         testPregameTalk,
         testMatchPrep,
+        testSetPieceDrills,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,

@@ -23,6 +23,7 @@ function getLivePenaltyChance(p, gefoult) {
     const knapp = Math.abs(currentMatch.homeGoals - currentMatch.awayGoals) <= 1 && currentMatch.minute >= 75;
     if (knapp && p.character !== 'Selbstbewusst') prob -= 0.04;      // Nerven in der Schlussphase
     if (gefoult) prob -= 0.03;                                        // der Gefoulte ist oft noch angeschlagen
+    if (typeof getDrillMastery === 'function') prob += 0.06 * getDrillMastery('elfmeter'); // einstudiert (set-piece-drills.js)
     return Math.max(0.45, Math.min(0.93, prob));
 }
 
@@ -32,14 +33,17 @@ function getFreeKickOptions() {
     const schuetze = onPitch.find(p => p.id === game.freeKickTakerId) || [...onPitch].sort((a, b) => (b.shooting || 0) - (a.shooting || 0))[0];
     const kopfball = [...onPitch].filter(p => p.pos === 'ABW' || p.pos === 'ST').sort((a, b) => b.strength - a.strength)[0] || schuetze;
     const flanker = onPitch.find(p => p.id === game.cornerTakerId) || schuetze;
+    // Einstudierte Varianten (js/set-piece-drills.js)
+    const geuebt = k => (typeof getDrillMastery === 'function' ? getDrillMastery(k) : 0);
+    const tag = k => (typeof drillTag === 'function' ? drillTag(k) : '');
     return {
         direkt: { label: `🎯 Direkt schießen (${schuetze ? schuetze.name : '-'})`, schuetze,
-            prob: Math.max(0.03, Math.min(0.3, 0.05 + ((schuetze ? schuetze.shooting : 50) - 60) * 0.003 + (schuetze && schuetze.trait === 'Freistoß-Gott' ? 0.15 : 0) + coach)),
-            risiko: 0, hinweis: 'Hängt ganz vom Schützen ab' },
+            prob: Math.max(0.03, Math.min(0.36, 0.05 + ((schuetze ? schuetze.shooting : 50) - 60) * 0.003 + (schuetze && schuetze.trait === 'Freistoß-Gott' ? 0.15 : 0) + coach + 0.06 * geuebt('direkt'))),
+            risiko: 0, hinweis: 'Hängt ganz vom Schützen ab' + tag('direkt') },
         flanke: { label: `🔝 Flanke auf ${kopfball ? kopfball.name : 'den Kopfballspieler'}`, schuetze: kopfball, vorlage: flanker,
-            prob: Math.max(0.05, Math.min(0.2, 0.09 + ((kopfball ? kopfball.strength : 50) - 60) * 0.002 + (flanker && flanker.passing >= 75 ? 0.02 : 0) + coach)),
-            risiko: 0.04, hinweis: 'Geklärt? Dann droht ein Konter' },
-        kurz: { label: '↪️ Kurz ausführen', schuetze: null, prob: 0.04, risiko: 0, hinweis: 'Sicher, aber selten gefährlich' }
+            prob: Math.max(0.05, Math.min(0.25, 0.09 + ((kopfball ? kopfball.strength : 50) - 60) * 0.002 + (flanker && flanker.passing >= 75 ? 0.02 : 0) + coach + 0.05 * geuebt('flanke'))),
+            risiko: Math.round(0.04 * (1 - 0.5 * geuebt('flanke')) * 1000) / 1000, hinweis: 'Geklärt? Dann droht ein Konter' + tag('flanke') },
+        kurz: { label: '↪️ Kurz ausführen', schuetze: null, prob: 0.04 + 0.06 * geuebt('kurz'), risiko: 0, hinweis: 'Sicher, aber selten gefährlich' + tag('kurz') }
     };
 }
 
@@ -175,7 +179,7 @@ function resolveSetPiece(choice, silent) {
         const o = getFreeKickOptions()[choice] || getFreeKickOptions().direkt;
         if (Math.random() < o.prob) {
             ownSetPieceGoal(o.schuetze, o.vorlage, choice === 'direkt' ? `${o.schuetze.name} zirkelt den Freistoß direkt ins Tor` : (choice === 'flanke' ? `${o.schuetze.name} köpft die Freistoßflanke ein` : 'Kurz ausgeführt, abgefälscht'));
-        } else if (o.risiko && Math.random() < 0.15) { // geklärte Flanke: Konter, ~4 % Gegentor
+        } else if (o.risiko && Math.random() < 0.15 * (o.risiko / 0.04)) { // geklärte Flanke: Konter, ~4 % Gegentor (einstudiert weniger)
             tickerLine(`<div style="color:var(--danger);">⚡ ${sp.minute}. Min: Flanke geklärt - Konter!</div>`);
             if (Math.random() < 0.27) {
                 if (currentMatch.isHome) currentMatch.awayGoals++; else currentMatch.homeGoals++;

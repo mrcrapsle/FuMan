@@ -6,6 +6,9 @@
         technik: { label: 'Technik', icon: '⚽', load: 2 },
         taktik: { label: 'Taktik', icon: '📋', load: 2 },
         matchprep: { label: 'Match-Prep', icon: '🎯', load: 2 },
+        // Standards einstudieren (js/set-piece-drills.js) - vorher schrieben die Vorlagen
+        // Technik/Taktik einen Tag "standards", den es als Einheit gar nicht gab.
+        standards: { label: 'Standards', icon: '🚩', load: 1 },
         erholung: { label: 'Erholung', icon: '🧘', load: -2 },
         frei: { label: 'Frei', icon: '🌴', load: -3 }
     };
@@ -38,7 +41,8 @@
         // Alle Kategorien außer "frei" existieren 1:1 im bisherigen System (kondition, taktik,
         // technik, matchprep, erholung, ausgeglichen) - "frei" selbst hat kein Pendant und
         // verhält sich wie "erholung" für die bestehenden Effekt-Hooks.
-        let mappedTeamTraining = dominant;
+        // Standards-Tage zählen für die Standard-Varianten, nicht als Mannschafts-Schwerpunkt.
+        let mappedTeamTraining = dominant === 'standards' ? 'ausgeglichen' : dominant;
         return { totalLoad, freeCount, sessionCount, risk, dominant, mappedTeamTraining, categoryCounts };
     }
 
@@ -235,6 +239,7 @@
         renderTrainingAutopilotBox();
         document.getElementById('cur-team-training').innerText = game.teamTraining.toUpperCase();
         if (typeof renderMatchPrepBox === 'function') renderMatchPrepBox();
+        if (typeof renderSetPieceDrillBox === 'function') renderSetPieceDrillBox();
 
         // Minispiel-Bereich: Spielerauswahl, verbleibende Einheiten, Bestleistungen
         let playerSelect = document.getElementById('minigame-player-select');
