@@ -293,7 +293,7 @@
         // gemeldet, bevor der Spieler den Kader verlässt.
         let expiredPlayers = squad.filter(p => p.contracts <= 0);
         expiredPlayers.forEach(p => {
-            addInboxMessage('vertrag', `📋 Vertrag ausgelaufen: ${p.name}`, `Der Vertrag von ${p.name} ist ausgelaufen - er verlässt den Verein ablösefrei (Bosman-Regel).`, 'screen-squad');
+            addInboxMessage('vertrag', `📋 Vertrag ausgelaufen: ${p.name}`, p.preContractSigned ? `${p.name} wechselt wie per Vorvertrag vereinbart ablösefrei zu ${p.preContractSigned}.` : `Der Vertrag von ${p.name} ist ausgelaufen - er verlässt den Verein ablösefrei (Bosman-Regel).`, 'screen-squad');
             if (typeof checkCrowdFavoriteDeparture === 'function') checkCrowdFavoriteDeparture(p);
         });
         // Vorwarnung: wer nur noch 1 Jahr Restlaufzeit hat, wird jetzt aktiv gemeldet,
@@ -303,6 +303,8 @@
         });
         squad = squad.filter(p => p.contracts > 0);
         if (typeof agePlayersAtSeasonEnd === 'function') agePlayersAtSeasonEnd();
+        // Vorverträge (js/pre-contracts.js): ablösefreie Neuzugänge kommen nach der Alterung dazu.
+        if (typeof joinPreContractPlayers === 'function') joinPreContractPlayers();
         // Ab 14 Spielern (Startelf + 3 Wechsel) statt erst unter 11: auslaufende Verträge ließen
         // den Kader im Langzeittest regelmäßig auf 12 schrumpfen.
         if (squad.length < 14) {

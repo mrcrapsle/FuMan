@@ -1731,6 +1731,7 @@
         // Kabinen-Freundschaften (js/locker-room.js).
         if (typeof tickLockerFriendships === 'function') tickLockerFriendships();
         if (typeof tickSetPieceDrills === 'function') tickSetPieceDrills();
+        if (typeof tickPreContracts === 'function') tickPreContracts();
 
         squad.forEach(p => {
             // Stammspieler erholen sich unter der Woche teilweise (ein Viertel der Bank-Erholung):

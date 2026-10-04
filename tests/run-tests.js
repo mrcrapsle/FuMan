@@ -1570,6 +1570,108 @@ async function testMedicalCheck(browser) {
     await page.close();
 }
 
+async function testPreContracts(browser) {
+    console.log('\n[22.6] Vorverträge: ablösefreie Zugänge zur neuen Saison, Angebote anderer Vereine für eigene Spieler');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            const zufall = Math.random;
+            game.money = 50000000; game.wageBudget = 50000000; game.ffpTransferEmbargo = false;
+            game.matchday = 10;
+            showScreen('screen-transfer'); setTransferTab('free');
+            const box = () => document.getElementById('precontract-box').innerHTML;
+            out.vorWinter = box().includes('Ab dem Winterfenster') && ensurePreContractPool() === null;
+            // Ab Spieltag 18: vier Kandidaten mit auslaufendem Vertrag
+            game.matchday = 18;
+            renderPreContractBox();
+            const pool = game.preContractPool;
+            out.pool = pool.season === game.season && pool.players.length === 4 && box().includes('VORVERTRÄGE') && box().includes('% Zusage');
+            out.doppeltBesser = pool.players.every(p => getPreContractChance(p, 'doppelt') > getPreContractChance(p, 'normal') || getPreContractChance(p, 'normal') === 0.95);
+            // Zusage: Handgeld sofort, 20 % mehr Gehalt, Spieler wartet auf die neue Saison
+            const a = pool.players[0];
+            const lohnAlt = a.wage;
+            const t = getPreContractTerms(a, 'normal');
+            const geld0 = game.money;
+            const kader0 = squad.length;
+            Math.random = () => 0;
+            offerPreContract(a.id, 'normal');
+            Math.random = zufall;
+            out.zusage = game.money === geld0 - t.handgeld && game.preContracts.length === 1 && a.wage === Math.round(lohnAlt * 1.2 / 10) * 10 && squad.length === kader0 && !game.preContractPool.players.includes(a);
+            // Absage: kein Geld weg, kein zweiter Versuch
+            const b = game.preContractPool.players[0];
+            const geld1 = game.money;
+            Math.random = () => 0.999;
+            offerPreContract(b.id, 'doppelt');
+            Math.random = () => 0;
+            offerPreContract(b.id, 'doppelt');
+            Math.random = zufall;
+            out.absage = b.preRefused === true && game.money === geld1 && game.preContracts.length === 1;
+            // Gehaltsbudget der neuen Saison zählt
+            const c = game.preContractPool.players[1];
+            game.wageBudget = 1;
+            offerPreContract(c.id, 'normal');
+            out.budget = game.preContracts.length === 1 && !c.preRefused;
+            game.wageBudget = 50000000;
+            // Höchstens drei offene Vorverträge
+            game.preContracts.push({ player: { name: 'X', wage: 1 }, club: game.clubName }, { player: { name: 'Y', wage: 1 }, club: game.clubName });
+            offerPreContract(c.id, 'normal');
+            out.limit = game.preContracts.length === 3 && !c.preRefused;
+            game.preContracts = game.preContracts.slice(0, 1);
+            // Andere Vereine schnappen sich wartende Kandidaten
+            game.matchday = 19;
+            squad.forEach(p => { p.contracts = 3; });
+            Math.random = () => 0;
+            tickPreContracts();
+            out.konkurrenz = game.preContractPool.players.length === 0;
+            // Abgang: eigener Spieler im letzten Vertragsjahr bekommt ein Angebot
+            const stark = [...squad].sort((x, y) => y.strength - x.strength);
+            const weg = stark[0], bleibt = stark[1];
+            weg.contracts = 1; bleibt.contracts = 1;
+            const forderungOhne = getContractDemand(weg).gehalt;
+            tickPreContracts();
+            Math.random = zufall;
+            out.angebot = !!weg.preContractOffer && weg.preContractOffer.deadline === 22 && !!bleibt.preContractOffer;
+            out.teurer = getContractDemand(weg).gehalt === Math.round(forderungOhne * 1.15 / 10) * 10;
+            // Verlängert: Angebot vom Tisch / Frist verstrichen: unterschrieben, keine Verlängerung mehr
+            bleibt.contracts = 3;
+            game.matchday = 22;
+            Math.random = () => 0.999;
+            tickPreContracts();
+            Math.random = zufall;
+            out.bleibt = !bleibt.preContractOffer && !bleibt.preContractSigned;
+            out.unterschrieben = weg.preContractSigned && !weg.preContractOffer;
+            showScreen('screen-contracts');
+            extendContract(weg.id);
+            out.gesperrt = (typeof contractTalk === 'undefined' || !contractTalk || contractTalk.playerId !== weg.id) && document.getElementById('contracts-list').innerHTML.includes('Vorvertrag bei');
+            // Saisonwechsel: Neuzugang kommt, ein Jahr älter, 3 Jahre Vertrag
+            const alter = a.age;
+            joinPreContractPlayers();
+            const neu = squad.find(p => p.id === a.id);
+            out.ankunft = !!neu && neu.contracts === 3 && neu.age === alter + 1 && game.preContracts.length === 0 && inboxMessages.some(m => m.title.includes('Neuzugang'));
+            // Nach Vereinswechsel verfällt ein Vorvertrag
+            game.preContracts = [{ player: { id: 'zz', name: 'Zed', age: 25, wage: 100 }, club: 'Anderer Verein', from: 'Irgendwo' }];
+            joinPreContractPlayers();
+            out.verfaellt = !squad.some(p => p.id === 'zz');
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Vorverträge ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.vorWinter && r.pool && r.doppeltBesser, 'Ab Spieltag 18 vier Kandidaten mit auslaufendem Vertrag, doppeltes Handgeld überzeugt eher');
+        assert(r.zusage, 'Zusage: Handgeld sofort, 20 % mehr Gehalt, der Spieler kommt erst zur neuen Saison');
+        assert(r.absage && r.budget && r.limit, 'Absage ohne Kosten und ohne zweiten Versuch; Gehaltsbudget der neuen Saison und Limit 3 greifen');
+        assert(r.konkurrenz, 'Wartende Kandidaten unterschreiben bei anderen Vereinen');
+        assert(r.angebot && r.teurer, 'Eigene Spieler im letzten Vertragsjahr bekommen Angebote (Frist 3 Spieltage) und fordern 15 % mehr');
+        assert(r.bleibt && r.unterschrieben && r.gesperrt, 'Verlängert: Angebot weg; Frist verstrichen: Vorvertrag woanders, keine Verlängerung mehr');
+        assert(r.ankunft && r.verfaellt, 'Zur neuen Saison kommt der Neuzugang - nach einem Vereinswechsel verfällt der Vorvertrag');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testSponsorConflict(browser) {
     console.log('\n[19.x] Sponsoren: Branchenkonflikt nennt den Konkurrenten und kostet 30 %');
     const { page, consoleErrors } = await freshPage(browser);
@@ -7274,6 +7376,7 @@ async function main() {
         testSetPieceDrills,
         testRefereeCritique,
         testMedicalCheck,
+        testPreContracts,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,

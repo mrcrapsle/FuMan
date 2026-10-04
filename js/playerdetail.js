@@ -12,6 +12,7 @@
         if (pool === 'secondTeam') return secondTeamSquad.find(p => p.id === id);
         if (pool === 'market') return marketPlayers.find(p => p.id === id) || freeAgentPlayers.find(p => p.id === id) || (typeof secondTeamMarketPlayers !== 'undefined' ? secondTeamMarketPlayers.find(p => p.id === id) : null);
         if (pool === 'scout') return (typeof globalScoutResults !== 'undefined' ? globalScoutResults.find(p => p.id === id) : null);
+        if (pool === 'precontract') return (game.preContractPool && game.preContractPool.players || []).find(p => p.id === id) || null;
         if (pool === 'youth') return (typeof youthTalents !== 'undefined' ? youthTalents.find(p => p.id === id) : null);
         return squad.find(p => p.id === id);
     }

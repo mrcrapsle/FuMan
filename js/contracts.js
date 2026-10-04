@@ -40,14 +40,14 @@
         list.innerHTML = '';
         squad.forEach(p => {
             let imGespraech = contractTalk && contractTalk.playerId === p.id;
-            let gesperrt = p.talksBlockedSeason === game.season;
+            let gesperrt = p.talksBlockedSeason === game.season || !!p.preContractSigned;
             let row = document.createElement('div');
             row.className = 'panel';
             row.style.cssText = 'margin-bottom:4px; padding:6px;';
             row.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 28) : ''}${p.name} (${p.contracts} J. Rest · ${formatVal(p.wage)}/SpT)${p.agent ? ` <span class="badge badge-trait" title="${p.agent.name}">🕴️ Berater</span>` : ''}${p.playtimePromise ? ' <span class="badge">🤝 Einsatzgarantie</span>' : ''}</span>
-                    ${imGespraech ? '' : `<button onclick="extendContract('${p.id}')" class="btn-secondary" style="width:auto;" ${gesperrt ? 'disabled' : ''}>${gesperrt ? 'Gespräche ruhen' : '📝 Verhandeln'}</button>`}
+                    <span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 28) : ''}${p.name} (${p.contracts} J. Rest · ${formatVal(p.wage)}/SpT)${p.agent ? ` <span class="badge badge-trait" title="${p.agent.name}">🕴️ Berater</span>` : ''}${p.playtimePromise ? ' <span class="badge">🤝 Einsatzgarantie</span>' : ''}${p.preContractOffer ? ` <span class="badge" style="background:var(--danger);">⚠️ ${p.preContractOffer.club} lockt - Frist SpT ${p.preContractOffer.deadline}</span>` : ''}${p.preContractSigned ? ` <span class="badge" style="background:var(--danger);">✍️ Vorvertrag bei ${p.preContractSigned}</span>` : ''}</span>
+                    ${imGespraech ? '' : `<button onclick="extendContract('${p.id}')" class="btn-secondary" style="width:auto;" ${gesperrt ? 'disabled' : ''}>${p.preContractSigned ? 'Geht am Saisonende' : (gesperrt ? 'Gespräche ruhen' : '📝 Verhandeln')}</button>`}
                 </div>
                 ${imGespraech ? renderContractTalkBox(p) : ''}
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; font-size:9px; flex-wrap:wrap; gap:3px;">
@@ -95,6 +95,8 @@
         // Wer spielt, nimmt keine Kürzung hin; Ersatzspieler und Ältere schon.
         let untergrenze = (stammspieler && p.age < 31) ? p.wage : p.wage * 0.85;
         let gehalt = Math.round(Math.max(untergrenze, marktGehalt * faktor) / 10) * 10;
+        // Vorvertrags-Angebot eines anderen Vereins (js/pre-contracts.js): er weiß, was er wert ist.
+        if (p.preContractOffer) gehalt = Math.round(gehalt * 1.15 / 10) * 10;
         let handgeldProJahr = Math.max(1500, Math.round(p.marketValue * 0.05));
         if (staffMembers.sportDir.hired) handgeldProJahr = Math.round(handgeldProJahr * 0.8);
         return { gehalt, handgeldProJahr, stammspieler, star: top3 };
@@ -110,6 +112,7 @@
         let p = squad.find(x => x.id === id);
         if (!p) return;
         if (p.talksBlockedSeason === game.season) { showToast(`${p.name} will diese Saison nicht mehr verhandeln.`, 'error'); return; }
+        if (p.preContractSigned) { showToast(`${p.name} hat schon einen Vorvertrag bei ${p.preContractSigned} unterschrieben - er geht am Saisonende.`, 'error', 4500); return; }
         contractTalk = { playerId: id, years: p.age >= 30 ? 1 : 2, offerFactor: 1, garantie: false, rounds: 0 };
         renderContractsView();
     }

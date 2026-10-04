@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.37', date: '04.10.2026', features: 'Phase 22: Medizincheck bei Transfers (verdeckte Befunde, Check im Transferpoker senkt die Ablöse, Sofortkauf blind)' };
+    const GAME_VERSION = { number: '3.38', date: '04.10.2026', features: 'Phase 22: Vorverträge (ablösefreie Zugänge zur neuen Saison, Angebote anderer Vereine für eigene Spieler)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
