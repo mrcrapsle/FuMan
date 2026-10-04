@@ -63,7 +63,8 @@ function getOwnLeagueMatchStrength(isHome, oppTeam) {
     // Derby-Woche (js/derby-week.js): Vorbereitung zählt nur am Derby-Spieltag.
     const derby = typeof getDerbyBonus === 'function' && oppTeam ? getDerbyBonus(oppTeam.name) : 0;
     const erzfeind = typeof getNemesisModifier === 'function' ? getNemesisModifier(oppTeam, isHome) : 0;
-    return calcTeamStrength(isHome) + getTacticMatchupBonus(plan ? plan.arch : null) + derby + erzfeind;
+    const vorbereitung = typeof getMatchPrepBonus === 'function' ? getMatchPrepBonus(oppTeam) : 0;
+    return calcTeamStrength(isHome) + getTacticMatchupBonus(plan ? plan.arch : null) + derby + erzfeind + vorbereitung;
 }
 
 // Aus processPostMatchRoutine() nach jedem eigenen Ligaspiel.

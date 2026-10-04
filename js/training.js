@@ -234,6 +234,7 @@
         renderSkillTrainingActiveList();
         renderTrainingAutopilotBox();
         document.getElementById('cur-team-training').innerText = game.teamTraining.toUpperCase();
+        if (typeof renderMatchPrepBox === 'function') renderMatchPrepBox();
 
         // Minispiel-Bereich: Spielerauswahl, verbleibende Einheiten, Bestleistungen
         let playerSelect = document.getElementById('minigame-player-select');
@@ -298,6 +299,7 @@
             if (btn) btn.className = (f === focus) ? 'btn-action' : 'btn-secondary';
         });
         document.getElementById('cur-team-training').innerText = focus.toUpperCase();
+        if (typeof renderMatchPrepBox === 'function') renderMatchPrepBox();
     }
 
     function setIndividualFocus(playerId, focus) {
@@ -383,6 +385,8 @@
                 }
             }
             game.teamTraining = upcomingIsDerby ? 'matchprep' : 'taktik';
+            // Gegnervorbereitung (js/match-prep.js): auf den öffentlichen Grundstil einstellen.
+            if (upcomingIsDerby && typeof autoSetMatchPrepTarget === 'function') autoSetMatchPrepTarget();
         }
     }
 

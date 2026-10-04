@@ -1277,6 +1277,65 @@ async function testPregameTalk(browser) {
     await page.close();
 }
 
+async function testMatchPrep(browser) {
+    console.log('\n[22.2] Gegnervorbereitung: Match-Prep tippt den Gegnerstil - richtig +2,5, daneben 0');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            game.sackPending = false;
+            const opp = getNextLeagueOpponentTeam();
+            showScreen('screen-training');
+            const box = () => document.getElementById('matchprep-target-box').innerHTML;
+            out.box = !!opp && box().includes(opp.name) && box().includes('Pressing') && box().includes('Konter');
+            // Keine Scheinwahl mehr: Taktik sicher +2, Match-Prep ohne Tipp 0
+            game.teamTraining = 'taktik'; const taktik = calcTeamStrength(true);
+            game.teamTraining = 'matchprep'; const prep = calcTeamStrength(true);
+            out.taktikSicher = Math.abs(taktik - prep - 2) < 0.01 && getMatchPrepBonus(opp) === 0;
+            const plan = getOppTacticPlan(opp);
+            const falsch = ['P', 'B', 'K'].find(a => a !== plan.arch);
+            setMatchPrepTarget(falsch);
+            out.daneben = getMatchPrepBonus(opp) === 0 && box().includes('✔');
+            setMatchPrepTarget(plan.arch);
+            out.richtig = getMatchPrepBonus(opp) === 2.5 && game.teamTraining === 'matchprep';
+            const ohne = (() => { const t = game.teamTraining; game.teamTraining = 'ausgeglichen'; const v = getOwnLeagueMatchStrength(true, opp); game.teamTraining = t; return v; })();
+            out.simulation = getOwnLeagueMatchStrength(true, opp) - ohne > 2.4;
+            // Gilt nur für den Spieltag, für den vorbereitet wurde
+            game.matchPrep.matchday = game.matchday + 1;
+            out.nurDieserSpieltag = getMatchPrepBonus(opp) === 0;
+            setMatchPrepTarget(plan.arch);
+            // Analyst zeigt den Plan
+            staffMembers.analyst.hired = true; renderMatchPrepBox();
+            out.analyst = box().includes('Chef-Analyst') && box().includes(ARCHETYPE_LABELS[plan.arch]);
+            staffMembers.analyst.hired = false;
+            // Automatik stellt sich auf den Grundstil ein
+            autoSetMatchPrepTarget();
+            out.automatik = game.matchPrep.arch === (AI_STYLE_ARCHETYPE[opp.playstyle] || 'B');
+            // Livespiel zeigt Treffer oder Fehlgriff
+            setMatchPrepTarget(plan.arch);
+            startMatchdayFlow();
+            const direkt = [...document.querySelectorAll('#screen-prematch-press button')].find(b => b.innerText.includes('Direkt zum Spiel'));
+            if (direkt) direkt.click();
+            out.live = document.getElementById('ticker-log').innerHTML.includes('Match-Prep passt');
+            simulateRestOfMatch(); finishMatch();
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Gegnervorbereitung ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.box, 'Training zeigt den nächsten Ligagegner und drei Stile zur Vorbereitung');
+        assert(r.taktikSicher, 'Taktik bringt sicher +2, Match-Prep ohne Tipp nichts (vorher pauschal +1 = Scheinwahl)');
+        assert(r.daneben && r.richtig && r.simulation, 'Richtiger Tipp +2,5 auch in der Simulation, falscher Tipp 0');
+        assert(r.nurDieserSpieltag, 'Vorbereitung gilt nur für den Spieltag, für den sie gewählt wurde');
+        assert(r.analyst && r.automatik, 'Chef-Analyst verrät den Plan, die Automatik tippt auf den Grundstil');
+        assert(r.live, 'Livespiel-Ticker meldet, ob die Vorbereitung passt');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testSponsorConflict(browser) {
     console.log('\n[19.x] Sponsoren: Branchenkonflikt nennt den Konkurrenten und kostet 30 %');
     const { page, consoleErrors } = await freshPage(browser);
@@ -6977,6 +7036,7 @@ async function main() {
         testNemesisCoach,
         testCoTrainerLive,
         testPregameTalk,
+        testMatchPrep,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,

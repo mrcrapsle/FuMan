@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.33', date: '04.10.2026', features: 'Phase 22: Kabinenansprache vor dem Anpfiff (Lage und Spielercharaktere entscheiden, Druck-Rede mit Folgen)' };
+    const GAME_VERSION = { number: '3.34', date: '04.10.2026', features: 'Phase 22: Gegnervorbereitung im Training (Match-Prep tippt den Gegnerstil: richtig +2,5, daneben 0)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

@@ -16,7 +16,7 @@ const SCREEN_HINTS = {
     'screen-squad': 'Die Startelf zählt: Stärke × Fitness × Tagesform. „Trainer stellt Top-Elf auf“ wählt automatisch die fitteste starke Elf. Formation und Spielstil ändern Angriff, Abwehr und Kraftverbrauch.',
     'screen-transfer': 'Angebote für deine Spieler findest du unter „Angebote“. Neue Spieler gibt es im Transfermarkt (10 pro Fenster) - die Ablöse lässt sich mit 🃏 Verhandeln drücken, Sofortkauf zahlt die Forderung -, ablösefrei bei den Vereinslosen oder auf Leihbasis. Achte auf das Gehaltsbudget.',
     'screen-finances': 'Jede Einnahme und Ausgabe steht im Buchungsjournal. Im Minus gilt eine Transfersperre; anhaltende Verluste bestraft das Financial Fairplay bis hin zum Punktabzug. Sponsoren-Angebote kannst du nachverhandeln.',
-    'screen-training': 'Der Wochenschwerpunkt wirkt nach jedem Spieltag: Kondition hilft der Fitness, Taktik und Match-Prep der Teamstärke, Erholung senkt das Verletzungsrisiko.',
+    'screen-training': 'Der Wochenschwerpunkt wirkt nach jedem Spieltag: Kondition hilft der Fitness, Taktik sicher der Teamstärke, Match-Prep noch mehr - wenn du den Stil des nächsten Gegners richtig tippst, Erholung senkt das Verletzungsrisiko.',
     'screen-stadium': 'Stadionausbau wird voll bezahlt, wenn er beginnt, und ist nach einigen Spieltagen fertig. Für den Aufstieg brauchst du Lizenzauflagen (z. B. Flutlicht für die 3. Liga) - die Übersicht steht hier.',
     'screen-inbox': 'Im Postfach landen alle Ereignisse. Der Link in jeder Nachricht führt direkt zum passenden Bildschirm.',
     'screen-league': 'Platz 1-2 steigt direkt auf, Platz 3 spielt Relegation. Die letzten zwei steigen ab, Platz 16 muss in die Relegation.'

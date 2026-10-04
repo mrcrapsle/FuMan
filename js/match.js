@@ -176,9 +176,9 @@
         // Ein überlasteter Manager trifft schlechtere Entscheidungen am Spieltag.
         bonus -= (privateLife.stress || 0) * 0.03;
 
-        // Team-Trainingsschwerpunkt: Taktik und Match-Prep bringen einen kleinen, begrenzten Bonus.
+        // Team-Trainingsschwerpunkt: Taktik bringt sicher +2. Match-Prep wirkt nur gegen den
+        // vorbereiteten Gegnerstil (js/match-prep.js, in getOwnLeagueMatchStrength/setupMatch).
         if (game.teamTraining === 'taktik') bonus += 2;
-        if (game.teamTraining === 'matchprep') bonus += 1;
 
         // Spielstil: Offensiv riskiert mehr für mehr Durchschlagskraft, Defensiv ist solider.
         bonus += getTacticStyleBonus(game.tacticStyle);
@@ -418,6 +418,7 @@
         if (!isCup && typeof applyDerbyPreparation === 'function') applyDerbyPreparation(oppName);
         if (!isCup && typeof applyNemesisLiveModifier === 'function') applyNemesisLiveModifier(oppTeamObj, isHome);
         if (typeof applyPregameTalk === 'function') applyPregameTalk();
+        if (!isCup && typeof applyMatchPrepLive === 'function') applyMatchPrepLive(oppTeamObj);
 
         document.getElementById('btn-next-step').style.display = 'inline-block';
         document.getElementById('btn-finish-match').style.display = 'none';
