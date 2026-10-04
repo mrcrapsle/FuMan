@@ -484,7 +484,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.26', date: '04.10.2026', features: 'Phase 20: Aufräumen Teil 8 (Nachfrist-Aufstieg wechselt wirklich die Liga, Monats-Ticks gebündelt, Altlasten beim Laden, veraltete Kommentare entfernt)' };
+    const GAME_VERSION = { number: '3.26.1', date: '04.10.2026', features: 'Phase 20: Aufräumen Teil 8 + stabiler Saisonziel-Test (Torjäger-Ziel nicht mehr zufallsabhängig)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
