@@ -210,7 +210,7 @@
             box-shadow: 0 6px 18px rgba(255, 213, 74, 0.35);
         }
         .btn-danger {
-            /* Kontrast-Check (NEU): der helle Gradient-Stop #ff8a97 gab weißem Text nur
+            /* Kontrast-Check: der helle Gradient-Stop #ff8a97 gab weißem Text nur
                2.25:1 (WCAG AA verlangt 4.5:1) - #c73545/#a82838 halten auf der gesamten
                Fläche >5:1, bei gleichem "Warnrot"-Charakter. */
             background: linear-gradient(135deg, #c73545, #a82838); color: #fff; font-weight: 800; border: none;
@@ -228,7 +228,7 @@
             box-shadow: 0 6px 18px rgba(255, 145, 66, 0.35);
         }
         .btn-europe {
-            /* Kontrast-Check (NEU): #a5b4ff vs. weißer Text war nur 1.99:1, var(--europe)
+            /* Kontrast-Check: #a5b4ff vs. weißer Text war nur 1.99:1, var(--europe)
                (#6f8dff) nur 3.03:1 (WCAG AA verlangt 4.5:1) - #3d54c9/#2c3f9e halten
                6.34:1/9.08:1, gleicher Blauton, nur dunkler. */
             background: linear-gradient(135deg, #3d54c9, #2c3f9e); color: #fff; font-weight: 900; border: none;
@@ -314,12 +314,12 @@
         /* STADION-BOWL: echte Draufsicht statt flachem Trapez - Rasen in der Mitte, Tribünen
            als Ringe drumherum, damit es tatsächlich wie ein Stadion aussieht (statt nur wie
            ein goldenes Viereck mit übereinanderliegenden Textlabeln). */
-        /* STADION-BOWL 3D (NEU): moderne Perspektive statt flacher Draufsicht - dieselbe
+        /* STADION-BOWL 3D: moderne Perspektive statt flacher Draufsicht - dieselbe
            Technik wie bei der Taktiktafel (perspective + rotateX), plus abgerundete
            Außenform, realistischerer Rasen mit Eckfahnen-Andeutung und Flutlicht-Glanz für
            einen deutlich moderneren, lebendigeren Eindruck. */
         .stadium-bowl-wrapper { width: 100%; margin: 8px 0; perspective: 1100px; }
-        /* LIVE-SPIEL-STADION-RAHMEN (NEU): umgibt das bestehende 3D-Spielfeld mit
+        /* LIVE-SPIEL-STADION-RAHMEN: umgibt das bestehende 3D-Spielfeld mit
            angedeuteten Tribünen und Flutlicht, damit sich das Live-Spiel wie in einem
            echten Stadion anfühlt statt in einer leeren Box zu schweben. */
         .live-stadium-frame {
@@ -346,7 +346,7 @@
             background: radial-gradient(ellipse, rgba(255,248,220,0.95), rgba(255,248,220,0));
             box-shadow: 0 0 12px 3px rgba(255,244,200,0.55);
         }
-        /* BOTTOM-NAVIGATION (NEU): fixe Schnellzugriffsleiste am unteren Bildschirmrand für
+        /* BOTTOM-NAVIGATION: fixe Schnellzugriffsleiste am unteren Bildschirmrand für
            die 5 meistgenutzten Bereiche plus Speichern (6 Spalten) - ergänzt das bestehende volle Menü oben, statt es zu
            ersetzen, für bequeme Einhand-Bedienung auf dem Handy. */
         .bottom-nav-bar {
@@ -369,7 +369,7 @@
         .bottom-nav-item.active .bn-icon { filter: drop-shadow(0 0 6px rgba(212,169,74,0.6)); }
         /* Platz für die fixe untere Leiste (inkl. Android-Gestenleiste), sonst verschwindet das Seitenende dahinter */
         body { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
-        /* DASHBOARD-STADION-HERO (NEU): kompakte 3D-Stadionansicht ganz oben auf dem
+        /* DASHBOARD-STADION-HERO: kompakte 3D-Stadionansicht ganz oben auf dem
            Dashboard, mit Himmel-Gradient und Flutlicht-Glanz für einen modernen,
            einladenden ersten Eindruck beim App-Start. */
         .dashboard-hero-sky {
@@ -467,7 +467,7 @@
             content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px;
             background: rgba(240,230,210,0.45);
         }
-        /* STADION-IMMERSIVE-HERO (NEU): große 3D-Ansicht mit schwebenden Kennzahlen-Karten
+        /* STADION-IMMERSIVE-HERO: große 3D-Ansicht mit schwebenden Kennzahlen-Karten
            darüber, angelehnt an moderne Management-Spiele - angepasst an das schmale
            Mobile-Format (Karten übereinander/im Scroll statt nebeneinander wie am Desktop). */
         .stadium-hero-metrics-row {
@@ -494,7 +494,7 @@
             position: absolute; top: 10px; left: 14px; z-index: 4; font-size: 13px; font-weight: 900;
             color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,0.8);
         }
-        /* STADION-GRÖSSENSTUFEN (NEU): das Design verändert sich jetzt sichtbar mit der
+        /* STADION-GRÖSSENSTUFEN: das Design verändert sich jetzt sichtbar mit der
            tatsächlichen Kapazität - von der kompakten Amateurarena bis zum Mega-Stadion mit
            zweitem Rang und Dach-Silhouette. Gilt für Stadion-Screen, Dashboard-Hero und
            Live-Spiel-Rahmen gleichermaßen (gemeinsame Tier-Klassen). */
@@ -525,7 +525,7 @@
         .stadium-floodlight-icon {
             position: absolute; font-size: 13px; filter: drop-shadow(0 0 4px rgba(255,240,180,0.6));
         }
-        /* STADION-TRIBÜNENGRÖSSE (NEU, überarbeitet): Tribünenbreite, zweiter Rang, Dach und
+        /* STADION-TRIBÜNENGRÖSSE (überarbeitet): Tribünenbreite, zweiter Rang, Dach und
            Zuschauer-Textur werden jetzt strukturell pro Stufe generiert (siehe
            generateStadiumBowlHTML in stadium.js), nicht nur per CSS-Klasse angedeutet. */
         .dashboard-hero-stand.stand-thin { opacity: 0.65; }
@@ -569,7 +569,7 @@
 
         @media (max-width: 650px) {
             .main-wrapper { flex-direction: column; }
-            /* KOMPLETT NEUE MENÜFÜHRUNG (NEU): statt eines permanenten Button-Grids, das auf
+            /* KOMPLETT NEUE MENÜFÜHRUNG: statt eines permanenten Button-Grids, das auf
                jedem Screen wertvollen Platz wegnimmt, jetzt ein modernes Slide-In-Menü -
                per Hamburger-Icon im Header ein-/ausklappbar, mit Backdrop zum Schließen per
                Antippen daneben und wiederhergestellten Kategorie-Überschriften (jetzt ist
@@ -758,7 +758,7 @@
                 radial-gradient(ellipse 8px 60px at 12% 0%, rgba(255,240,190,0.10), transparent 70%),
                 radial-gradient(ellipse 8px 60px at 88% 0%, rgba(255,240,190,0.10), transparent 70%);
         }
-        /* Bürokulisse - jetzt garantiert sichtbar (NEU, nachgebessert): eine fest positionierte
+        /* Bürokulisse - jetzt garantiert sichtbar (nachgebessert): eine fest positionierte
            Holzrahmen-Vignette an den Bildschirmrändern, die von keinem Panel verdeckt werden
            kann, unabhängig vom Scroll-Stand oder blickdichten Hero-Flächen darüber. */
         body::after {
@@ -1545,7 +1545,7 @@
 <script>
     (function() {
         var shown = 0;
-        // Persistentes Fehlerprotokoll (NEU): bisher verschwanden Laufzeitfehler beim
+        // Persistentes Fehlerprotokoll: bisher verschwanden Laufzeitfehler beim
         // Schließen des Banners oder einem Reload spurlos - nur der Struktur-Selbsttest
         // (siehe game.selfTestHistory/admin.js) hatte einen echten, exportierbaren
         // Verlauf. Läuft bewusst VOR allen js/*.js-Dateien, damit auch ganz frühe
@@ -4274,7 +4274,7 @@ function compareTableRows(a, b) {
         let diff = myStr - oppStr;
         let myXg = Math.max(0.15, Math.min(5.5, 1.35 + diff * 0.045));
         let oppXg = Math.max(0.15, Math.min(5.5, 1.35 - diff * 0.045));
-        // Gegner-Identität (NEU): Offensiv-/Defensiv-/Konter-Spielstile verschieben die
+        // Gegner-Identität: Offensiv-/Defensiv-/Konter-Spielstile verschieben die
         // erwarteten Tore beider Teams tatsächlich, statt dass jedes KI-Team bis auf seine
         // Stärke identisch spielt.
         if (myTeam) {
@@ -4533,9 +4533,9 @@ function compareTableRows(a, b) {
 // ==========================================
 // SPIELZUSTAND & DATENMODELLE
 // ==========================================
-    // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
+    // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.25', date: '04.10.2026', features: 'Phase 20: Pokalfinale als Großereignis (Finalwoche mit Tickets, Sonderzügen und Trainingslager, Titelfeier, Final-Chronik)' };
+    const GAME_VERSION = { number: '3.26', date: '04.10.2026', features: 'Phase 20: Aufräumen Teil 8 (Nachfrist-Aufstieg wechselt wirklich die Liga, Monats-Ticks gebündelt, Altlasten beim Laden, veraltete Kommentare entfernt)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -4607,7 +4607,7 @@ function compareTableRows(a, b) {
         transferEmbargo: false,
         lastInsolvencyPenaltyAt: 0,
         ticketPrices: { steh: 12, sitz: 24, vip: 80, dauerkarte: 90 },
-        // Dauerkarten (NEU, siehe js/stadium.js): Zahl der Inhaber wird einmal pro Saison bei
+        // Dauerkarten (siehe js/stadium.js): Zahl der Inhaber wird einmal pro Saison bei
         // renewSeasonTickets() neu ermittelt, nicht bei jeder Preisänderung.
         seasonTicketHolders: 0,
         seasonTicketPriceInitialized: false,
@@ -4918,7 +4918,7 @@ function compareTableRows(a, b) {
         flutlicht: false, rasenheizung: false, videowalls: false, dach: false,
         namingRights: null,
         events: [],
-        // Sitzplatz-Zusammensetzung (NEU, siehe js/stadium.js): war bisher an mehreren Stellen
+        // Sitzplatz-Zusammensetzung (siehe js/stadium.js): war bisher an mehreren Stellen
         // fest auf 50%/45%/5% verdrahtet - jetzt ein echter, über Bauprojekte (Sitzplatzumbau/
         // Stehplatzrückbau) veränderbarer Anteil. Die Standardwerte entsprechen exakt den
         // alten festen Zahlen, damit sich am Verhalten nichts ändert, bevor ein Projekt
@@ -4928,7 +4928,7 @@ function compareTableRows(a, b) {
         // Ränge erweitern, Großausbau, Zweiter Rang, Sitzplatzumbau/-rückbau) - kommt zur
         // Summe der Block-Kapazitäten hinzu, ohne das bestehende Block-Modell umzubauen.
         bonusCapacity: 0,
-        // Rasenzustand (NEU): 0-99, nutzt sich durch Heimspiele leicht ab, wird über
+        // Rasenzustand: 0-99, nutzt sich durch Heimspiele leicht ab, wird über
         // maintainPitch() gepflegt. Die Obergrenze steigt mit Rasenheizung/Hybridrasen.
         pitchCondition: 85,
         hybridrasen: false,
@@ -5144,6 +5144,11 @@ function compareTableRows(a, b) {
         const echteNamen = { 'Real Madrid': 'Real Madrit', 'FC Bayern': 'Bayern Munchen', 'FC Liverpool': 'Liverpol FC' };
         if (typeof holdingCompany !== 'undefined') (holdingCompany.b2bContracts || []).forEach(c => { if (echteNamen[c.club]) c.club = echteNamen[c.club]; });
         squad.forEach(p => { delete p.currentFitnessBoost; delete p.nationalDuty; });
+        // Ältere Aufräum-Helfer einzelner Module - laufen jetzt gesammelt auch beim Laden.
+        if (typeof cleanupLegacyContractState === 'function') cleanupLegacyContractState();
+        if (typeof cleanupLegacyScoutState === 'function') cleanupLegacyScoutState();
+        if (typeof cleanupLegacyDevelopmentState === 'function') cleanupLegacyDevelopmentState();
+        if (typeof cleanupLegacyScoutingState === 'function') cleanupLegacyScoutingState();
     }
 
 </script>
@@ -5202,14 +5207,14 @@ function compareTableRows(a, b) {
         renderInboxView();
     }
 
-    // Wichtig-Markierung (NEU): wichtige Nachrichten werden nicht automatisch gelöscht,
+    // Wichtig-Markierung: wichtige Nachrichten werden nicht automatisch gelöscht,
     // wenn das Postfach voll wird, und lassen sich per eigenem Filter isoliert ansehen.
     function toggleInboxImportant(id) {
         let m = inboxMessages.find(x => x.id === id) || inboxArchive.find(x => x.id === id);
         if (m) { m.important = !m.important; renderInboxView(); }
     }
 
-    // Nachrichten-Archiv (NEU): statt endgültig zu löschen, wandern Nachrichten ins Archiv
+    // Nachrichten-Archiv: statt endgültig zu löschen, wandern Nachrichten ins Archiv
     // und lassen sich von dort wiederherstellen oder erst dort endgültig entfernen.
     function archiveInboxMessage(id) {
         let idx = inboxMessages.findIndex(m => m.id === id);
@@ -5557,7 +5562,7 @@ function compareTableRows(a, b) {
     // damit sich die Provision nicht nur an einer einzelnen Stelle bemerkbar macht.
     function getAgentFee(p, baseAmount) {
         if (!p || !p.agent) return 0;
-        // Berater-Beziehungspflege (NEU): eine gepflegte Beziehung zum Berater senkt seine
+        // Berater-Beziehungspflege: eine gepflegte Beziehung zum Berater senkt seine
         // Provision spürbar - Berater erinnern sich, mit wem sie gut Geschäfte machen.
         let relationship = (typeof game !== 'undefined' && game.agentRelationships) ? (game.agentRelationships[p.agent.name] || 0) : 0;
         let effectiveFeePct = Math.max(0.01, p.agent.feePct - relationship * 0.001);
@@ -5605,7 +5610,7 @@ function compareTableRows(a, b) {
 <script>
 
     // ==========================================
-    // SPIELERPORTRÄTS: PROZEDURALE AVATARE (NEU)
+    // SPIELERPORTRÄTS: PROZEDURALE AVATARE
     // ==========================================
     // Echte Fotos sind hier aus zwei Gründen keine Option: es gibt in dieser Umgebung kein
     // Bildgenerierungs-Werkzeug, UND der Kader entsteht komplett prozedural (Saisonstart,
@@ -5786,7 +5791,7 @@ function compareTableRows(a, b) {
         let stats = getDisplayStats(p);
         let statOrder = ['OFF', 'ABS', 'DEF', 'INT', 'PRE', 'TEM', 'PAS', 'ZKH', 'ZKE', 'FLA', 'KOP', 'SPR', 'DRI', 'WEI', 'ELF', 'FRS', 'FIT', 'GRU'];
         document.getElementById('pd-name').innerText = p.name;
-        // Spielerporträt (NEU, siehe js/avatars.js): ersetzt das bisherige reine Positions-
+        // Spielerporträt (siehe js/avatars.js): ersetzt das bisherige reine Positions-
         // Emoji durch ein pro Spieler eindeutiges, deterministisch generiertes Porträt.
         let avatarBox = document.getElementById('pd-avatar');
         if (avatarBox) avatarBox.innerHTML = (typeof getPlayerAvatarSVG === 'function') ? getPlayerAvatarSVG(p, 76) : (({ TW: '🧤', ABW: '🛡️', MIT: '⚙️', ST: '⚽' }[p.pos] || '👤'));
@@ -5812,7 +5817,7 @@ function compareTableRows(a, b) {
         document.getElementById('pd-stats').innerHTML = statOrder.map(k => `<div class="modal-stat-chip"><span class="k">${k}</span><span class="v">${stats[k]}</span></div>`).join('');
         document.getElementById('pd-talk-btn').style.display = (pool === 'squad' || pool === 'secondTeam') ? 'block' : 'none';
 
-        // Spielerwert-Entwicklungskurve (NEU): eine kleine SVG-Sparkline zeigt, wie sich die
+        // Spielerwert-Entwicklungskurve: eine kleine SVG-Sparkline zeigt, wie sich die
         // Stärke des Spielers über die Saisons entwickelt hat - bisher gab es nur den
         // aktuellen Momentanwert ohne jede historische Einordnung.
         let historyBox = document.getElementById('pd-strength-history');
@@ -5846,7 +5851,7 @@ function compareTableRows(a, b) {
             }
         }
 
-        // Career Progression Panel (NEU): Karriere-Statistik und Meilensteine
+        // Career Progression Panel: Karriere-Statistik und Meilensteine
         let careerBox = document.getElementById('pd-career-progression');
         if (careerBox) {
             if (typeof renderPlayerCareerPanel === 'function') {
@@ -5860,7 +5865,7 @@ function compareTableRows(a, b) {
             }
         }
 
-        // Tiefere Scouting-Berichte (NEU): Text-Dossier statt nur Zahlen, nur bei Spielern
+        // Tiefere Scouting-Berichte: Text-Dossier statt nur Zahlen, nur bei Spielern
         // aus dem Scouting-Pool relevant.
         let reportBox = document.getElementById('pd-scouting-report');
         if (reportBox) {
@@ -5876,7 +5881,7 @@ function compareTableRows(a, b) {
                 reportBox.innerHTML = '';
             }
         }
-        // Berater-Beziehungspflege (NEU)
+        // Berater-Beziehungspflege
         let agentBtn = document.getElementById('pd-agent-relationship-btn');
         if (agentBtn) {
             if (p.agent) {
@@ -6181,7 +6186,7 @@ function compareTableRows(a, b) {
 
     const ALL_FORMATIONS = ['4-4-2', '4-3-3', '3-5-2', '5-3-2', '4-2-3-1', '4-1-4-1', '3-4-3', '5-4-1'];
 
-    // Formations-Bewertungen (NEU): jede Formation hat eine Verteidigungs- und eine
+    // Formations-Bewertungen: jede Formation hat eine Verteidigungs- und eine
     // Offensiv-Kennzahl, die echt in die Teamstärke einfließen (siehe getFormationBonus()
     // in match.js) - bisher hatte die Formation außer der reinen Spieler-Positionierung
     // keinerlei taktische Auswirkung.
@@ -6240,7 +6245,7 @@ function compareTableRows(a, b) {
         closeFormationModal();
     }
 
-    // Taktikbrett-Statistikleiste (NEU): Gesamtstärke, Chemie, Ø Fitness und Ø Tagesform der
+    // Taktikbrett-Statistikleiste: Gesamtstärke, Chemie, Ø Fitness und Ø Tagesform der
     // aktuellen Startelf auf einen Blick, wie im Referenz-Layout gewünscht.
     function renderTacticsBoardStatBar() {
         let box = document.getElementById('tactics-board-stat-bar');
@@ -6260,7 +6265,7 @@ function compareTableRows(a, b) {
             </div>`;
     }
 
-    // Team-Anweisungen (NEU): unabhängig voneinander an-/abschaltbare Zusatzbefehle, jeweils
+    // Team-Anweisungen: unabhängig voneinander an-/abschaltbare Zusatzbefehle, jeweils
     // mit einem echten Vor- und Nachteil - anders als die Spielstil-Karten (die sich
     // gegenseitig ausschließen) lassen sich diese frei miteinander kombinieren.
     // Tief stehen schließt Gegenpressing und hohe Außenverteidiger aus - wer hinten drin
@@ -6310,7 +6315,7 @@ function compareTableRows(a, b) {
             </div>`).join('');
     }
 
-    // Taktik-Automatik (NEU): reagiert im laufenden Spiel automatisch auf den Spielstand, ohne
+    // Taktik-Automatik: reagiert im laufenden Spiel automatisch auf den Spielstand, ohne
     // dass das Live-Taktikpanel manuell bedient werden muss - eine STANDING-Einstellung in der
     // Taktiktafel (bleibt über Spiele hinweg aktiv), kein einmaliger Vorschlag wie der
     // Co-Trainer (siehe getCoTrainerTacticalSuggestion() oben). Die eigentliche Auswertung
@@ -6349,7 +6354,7 @@ function compareTableRows(a, b) {
         render3DPitch();
     }
 
-    // Formations-Karten-Grid (NEU): zeigt Def/Off-Werte direkt auf der Karte, statt reiner
+    // Formations-Karten-Grid: zeigt Def/Off-Werte direkt auf der Karte, statt reiner
     // Formations-Bezeichnungen auf kleinen Buttons.
     function renderFormationCards() {
         let grid = document.getElementById('formation-cards-grid');
@@ -6364,7 +6369,7 @@ function compareTableRows(a, b) {
         }).join('');
     }
 
-    // Spielstil-Karten-Grid (NEU): 8 Optionen mit Tempo/Pressing-Werten statt 3 Buttons.
+    // Spielstil-Karten-Grid: 8 Optionen mit Tempo/Pressing-Werten statt 3 Buttons.
     function renderTacticStyleCards() {
         let grid = document.getElementById('tactic-style-cards-grid');
         if (!grid) return;
@@ -6598,7 +6603,7 @@ function compareTableRows(a, b) {
         renderSquadView();
     }
 
-    // KADER-ÜBERBLICK (NEU): Gesamtkennzahlen auf einen Blick - Kaderwert, Durchschnittsalter,
+    // KADER-ÜBERBLICK: Gesamtkennzahlen auf einen Blick - Kaderwert, Durchschnittsalter,
     // Durchschnittsmoral, Gehaltssumme, Größe - macht den Kader-Screen zu einem echten
     // Management-Dashboard statt einer reinen Spielerliste.
     function renderSquadOverviewBox() {
@@ -6625,7 +6630,7 @@ function compareTableRows(a, b) {
         `;
     }
 
-    // KADERTIEFE NACH POSITION (NEU): zeigt auf einen Blick, wo der Kader dünn besetzt ist -
+    // KADERTIEFE NACH POSITION: zeigt auf einen Blick, wo der Kader dünn besetzt ist -
     // pro Positionsgruppe Anzahl + durchschnittliche Stärke, farblich nach Tiefe markiert.
     function renderSquadDepthChart() {
         let box = document.getElementById('squad-depth-chart-box');
@@ -6651,7 +6656,7 @@ function compareTableRows(a, b) {
         }).join('');
     }
 
-    // KADER-BESTENLISTE (NEU): Top-Torschütze, meiste Einsätze, jüngstes/ältestes Talent,
+    // KADER-BESTENLISTE: Top-Torschütze, meiste Einsätze, jüngstes/ältestes Talent,
     // wertvollster Spieler - ein schneller Statistik-Überblick ohne extra Screen wechseln zu müssen.
     function renderSquadLeaderboardBox() {
         let box = document.getElementById('squad-leaderboard-box');
@@ -6715,7 +6720,7 @@ function compareTableRows(a, b) {
         if (!container) return;
         container.innerHTML = '';
         let filtered = squadFilterPos === 'alle' ? squad : squad.filter(p => p.pos === squadFilterPos);
-        // Sortierfunktion (NEU): nicht mehr nur nach Position filterbar, sondern auch echt sortierbar.
+        // Sortierfunktion: nicht mehr nur nach Position filterbar, sondern auch echt sortierbar.
         filtered = [...filtered].sort((a, b) => {
             if (squadSortMode === 'staerke') return b.strength - a.strength;
             if (squadSortMode === 'alter') return a.age - b.age;
@@ -6794,7 +6799,7 @@ function compareTableRows(a, b) {
     function render3DPitch(pitchElId = 'soccer-pitch') {
         let pitch = document.getElementById(pitchElId);
         if (!pitch) return;
-        // Stadion-Größenstufe (NEU): nur beim Live-Spielfeld anwenden, das vom Stadion-
+        // Stadion-Größenstufe: nur beim Live-Spielfeld anwenden, das vom Stadion-
         // Rahmen umgeben ist - die Taktiktafel hat keinen solchen Rahmen.
         if (pitchElId === 'live-pitch' && typeof applyStadiumVisualTierClass === 'function') applyStadiumVisualTierClass('.live-stadium-frame');
         pitch.querySelectorAll('.player-pin-3d').forEach(el => el.remove());
@@ -7316,7 +7321,7 @@ function cleanupLegacyDevelopmentState() {
 <script>
 
     // ==========================================
-    // KADERPLANUNGSTOOL (NEU)
+    // KADERPLANUNGSTOOL
     // ==========================================
     // Positionstiefe (siehe renderSquadDepthChart in squad.js), Altersstruktur und auslaufende
     // Verträge (siehe renderSeasonPlanningBox in contracts.js) existierten bisher als drei
@@ -7490,7 +7495,7 @@ function cleanupLegacyDevelopmentState() {
         // NEU: Eigene Trainingssteuerung für die zweite Mannschaft, unabhängig vom
         // Profikader-Training - Kondition boostet Fitness-Erhalt, Technik die reine Stärke.
         if (game.secondTeam.trainingFocus === 'technik') avg += 1;
-        // Eigener Trainerstab (NEU): ein Cheftrainer für die Reserve macht sich direkt in
+        // Eigener Trainerstab: ein Cheftrainer für die Reserve macht sich direkt in
         // der Liga-Simulation bemerkbar.
         if (typeof secondTeamStaff !== 'undefined' && secondTeamStaff.chefTrainer.hired) avg += 2;
         return Math.round(avg);
@@ -7549,7 +7554,7 @@ function cleanupLegacyDevelopmentState() {
         if (entry) entry.strength = calcSecondTeamStrength();
     }
 
-    // Torschützen-Zuordnung für die zweite Mannschaft (NEU): analog zu
+    // Torschützen-Zuordnung für die zweite Mannschaft: analog zu
     // attributeGoalsToScorers() beim ersten Team, damit auch Perspektivspieler in der
     // Reserve eine echte, sichtbare Torstatistik aufbauen (relevant für Beförderungs-
     // Entscheidungen ins erste Team).
@@ -7836,7 +7841,7 @@ function cleanupLegacyDevelopmentState() {
         secondTeamMarketPlayers = [];
         let minStr = 28 + (NUM_LEAGUES - 1 - game.secondTeam.leagueLevel) * 6;
         let maxStr = minStr + 10;
-        // Amateur-Talentspäher (NEU): sichtet gezielt und bringt spürbar bessere sowie mehr
+        // Amateur-Talentspäher: sichtet gezielt und bringt spürbar bessere sowie mehr
         // Namen auf die Liste.
         let hatSpaeher = typeof secondTeamStaff !== 'undefined' && secondTeamStaff.talentScout.hired;
         if (hatSpaeher) { minStr += 4; maxStr += 6; }
@@ -8505,7 +8510,7 @@ function selectNewGameScenario(id) {
 <script>
 
     // ==========================================
-    // VEREINSIDENTITÄT: FREIE UMBENENNUNG (NEU)
+    // VEREINSIDENTITÄT: FREIE UMBENENNUNG
     // ==========================================
     // Der Klubname war bisher an ~120 Stellen im Code hart als "1.FC Moritz Leipzig"
     // verankert - jetzt läuft jeder dieser Vergleiche über game.clubName, wodurch eine
@@ -8566,7 +8571,7 @@ function selectNewGameScenario(id) {
     }
 
     // ==========================================
-    // VEREINSWECHSEL: ZU EINEM BESTEHENDEN VEREIN DER PYRAMIDE WECHSELN (NEU)
+    // VEREINSWECHSEL: ZU EINEM BESTEHENDEN VEREIN DER PYRAMIDE WECHSELN
     // ==========================================
     // Echte Karriere-Mobilität statt nur Umbenennung: übernimmt eine bestehende KI-
     // Vereinszeile (Name + aktuelles Liganiveau + Tabellenstand) aus der jetzt persistenten
@@ -8974,7 +8979,7 @@ function selectNewGameScenario(id) {
                 badge.style.display = 'none';
             }
         }
-        // Dritte, kombinierbare Wappen-Ebene (NEU): Tier-/Maskottchen-Symbol oben links, damit
+        // Dritte, kombinierbare Wappen-Ebene: Tier-/Maskottchen-Symbol oben links, damit
         // Initialen, Muster-Badge und Tier-Symbol frei miteinander kombiniert werden können.
         let animalBadge = document.getElementById('club-logo-animal-badge');
         if (animalBadge) {
@@ -9082,7 +9087,7 @@ function selectNewGameScenario(id) {
         applyClubCrest();
         renderCrestEditor();
     }
-    // Eigene Wappen-Elemente kombinierbar (NEU): Tier-/Maskottchen-Symbol als dritte,
+    // Eigene Wappen-Elemente kombinierbar: Tier-/Maskottchen-Symbol als dritte,
     // unabhängig wählbare Ebene neben Initialen und Muster-Badge.
     const CREST_ANIMAL_OPTIONS = [null, '🦁', '🐺', '🦅', '🐴', '🐻', '🐗', '🦊', '🐂'];
     function setCrestAnimal(animal) {
@@ -9156,7 +9161,7 @@ function selectNewGameScenario(id) {
         return getOurLeagueTeam()?.rivalName || null;
     }
 
-    // Gegner-Identität (NEU): jedes Team bekommt einen eigenen Spielstil, der sein
+    // Gegner-Identität: jedes Team bekommt einen eigenen Spielstil, der sein
     // Torverhalten (sowohl in Spielen gegen uns als auch in reinen KI-vs-KI-Spielen)
     // tatsächlich beeinflusst - Offensiv-Teams schießen mehr Tore, kassieren aber auch mehr;
     // Defensiv-Teams umgekehrt. Bisher waren alle KI-Teams bis auf ihre Stärke identisch.
@@ -9203,7 +9208,7 @@ function selectNewGameScenario(id) {
     }
 
     // ==========================================
-    // LEBENDE LIGA: ECHTES AUF-/ABSTIEGSSYSTEM FÜR ALLE 108 KI-VEREINE (NEU)
+    // LEBENDE LIGA: ECHTES AUF-/ABSTIEGSSYSTEM FÜR ALLE 108 KI-VEREINE
     // ==========================================
     // Bisher warf initLeagues() JEDE Saison die komplette Liga-Pyramide weg und würfelte
     // für alle 6 Ligen x 18 Teams (außer den beiden fest "eingebauten" Sonderplätzen
@@ -9220,7 +9225,7 @@ function selectNewGameScenario(id) {
         // Unser eigenes Team wird über den Kader simuliert, nicht über dieses Feld - das
         // Feld selbst ist für uns nur ein ungenutztes Überbleibsel der Tabellenzeile.
         if (team.name === game.clubName) return;
-        // Stärke-Historie (NEU): analog zu p.strengthHistory beim eigenen Kader - macht die
+        // Stärke-Historie: analog zu p.strengthHistory beim eigenen Kader - macht die
         // Formkurve eines Vereins über mehrere Saisons hinweg sichtbar (siehe Vereinsakte in
         // showHeadToHeadStats()), statt dass nur der aktuelle Wert bekannt ist.
         if (!team.strengthHistory) team.strengthHistory = [];
@@ -9276,7 +9281,7 @@ function selectNewGameScenario(id) {
         }
         leaguesData = newLeaguesData;
 
-        // Neuer Verein-News-Ticker (NEU): welche Vereine sind neu in unserer aktuellen Liga -
+        // Neuer Verein-News-Ticker: welche Vereine sind neu in unserer aktuellen Liga -
         // sonst würde man den vollzogenen Auf-/Abstieg der Konkurrenz nie erfahren.
         let arrivingInOurLevel = [...promotedInto[game.leagueLevel], ...relegatedInto[game.leagueLevel]]
             .filter(t => t.name !== game.clubName && t.name !== game.secondTeam.name);
@@ -9373,7 +9378,7 @@ function selectNewGameScenario(id) {
     }
 
     // ==========================================
-    // TRAINERPERSÖNLICHKEIT DES PERMANENTEN RIVALEN (NEU)
+    // TRAINERPERSÖNLICHKEIT DES PERMANENTEN RIVALEN
     // ==========================================
     // Der permanente Rivale war bisher nur ein Vereinsname ohne eigenes Gesicht. Ein Name +
     // eine feste Persönlichkeit für seinen Trainer machen die Rivalität greifbarer - taucht
@@ -9396,7 +9401,7 @@ function selectNewGameScenario(id) {
     }
 
     // ==========================================
-    // RIVALITÄTEN: ERZFEIND-WECHSEL-MECHANIK (NEU)
+    // RIVALITÄTEN: ERZFEIND-WECHSEL-MECHANIK
     // ==========================================
     // Wird bei jedem Saisonabschluss geprüft: wird eine Rivalität über viele Spiele hinweg
     // extrem einseitig (fast immer Sieg oder fast immer Niederlage), verliert sie ihre
@@ -9549,7 +9554,7 @@ function selectNewGameScenario(id) {
             let isUs = (t.name === game.clubName);
             let formIcons = { W: '<span style="color:var(--primary);">●</span>', D: '<span style="color:var(--accent);">●</span>', L: '<span style="color:var(--danger);">●</span>' };
             let formHtml = (t.recentForm || []).map(r => formIcons[r] || '').join(' ');
-            // Kopf-an-Kopf-Statistik (NEU): Klick auf einen Gegnernamen zeigt die historische
+            // Kopf-an-Kopf-Statistik: Klick auf einen Gegnernamen zeigt die historische
             // Bilanz gegen genau diesen Verein.
             let nameCell = isUs ? t.name : `<span onclick="showHeadToHeadStats('${t.name.replace(/'/g, "\\'")}')" style="text-decoration:underline dotted; cursor:pointer;">${t.name}</span>`;
             tr.innerHTML = `<td>${idx+1}</td><td style="text-align:left; ${isUs?'color:var(--primary); font-weight:bold;':''}">${nameCell}</td><td>${t.played}</td><td>${t.goalsFor}:${t.goalsAgainst}</td><td>${t.goalsFor-t.goalsAgainst}</td><td><strong>${t.points}</strong></td><td style="font-size:9px; white-space:nowrap;">${formHtml}</td>`;
@@ -9588,7 +9593,7 @@ function selectNewGameScenario(id) {
         }
     }
 
-    // Kopf-an-Kopf-Statistik (NEU): zeigt die historische Bilanz gegen einen bestimmten
+    // Kopf-an-Kopf-Statistik: zeigt die historische Bilanz gegen einen bestimmten
     // Ligagegner in einer eigenen Box unterhalb der Tabelle.
     // Vereinsakte (erweitert seit der persistenten Liga-Pyramide, siehe
     // advanceLeaguesToNewSeason()): zeigt jetzt zusätzlich zur Kopf-an-Kopf-Bilanz das
@@ -9692,7 +9697,7 @@ function selectNewGameScenario(id) {
     }
 
     // ==========================================
-    // POKALSCHRECK-TRACKING & EIGENE POKAL-STATISTIK (NEU)
+    // POKALSCHRECK-TRACKING & EIGENE POKAL-STATISTIK
     // ==========================================
     function recordCupResultStats(weWon, ourStr, oppStr, oppName, roundName) {
         if (!game.cupHistory) game.cupHistory = { titlesWon: 0, schrecksErlitten: [], schrecksVerursacht: [], bestRunEver: null, matchesPlayed: 0, wins: 0 };
@@ -9752,7 +9757,7 @@ function selectNewGameScenario(id) {
             p.homeGoals = hg;
             p.awayGoals = ag;
             p.played = true;
-            // Pokalschreck-Tracking (NEU): Stärkewerte zum Zeitpunkt des Spiels sichern, um
+            // Pokalschreck-Tracking: Stärkewerte zum Zeitpunkt des Spiels sichern, um
             // in finalizeCupRound() erkennen zu können, ob es sich um eine echte Überraschung
             // handelte (deutlicher Stärkeunterschied, aber der Schwächere gewinnt).
             if (isOurMatch) { p.ourStr = isHome ? homeStr : awayStr; p.oppStr = isHome ? awayStr : homeStr; }
@@ -9800,7 +9805,7 @@ function selectNewGameScenario(id) {
                 let weWon = (winTeam === game.clubName);
                 let oppName = p.home === game.clubName ? p.away : p.home;
                 if (roundIdx === cupTournament.matchdays.length - 1 && typeof recordCupFinal === 'function') recordCupFinal('dfb', p, weWon);
-                // Pokalschreck-Tracking & eigene Pokal-Statistik (NEU)
+                // Pokalschreck-Tracking & eigene Pokal-Statistik
                 if (typeof recordCupResultStats === 'function') recordCupResultStats(weWon, p.ourStr, p.oppStr, oppName, r.name);
                 if (weWon) {
                     let sponsorCupBonus = game.sponsor.cupBonus || 0;
@@ -10923,7 +10928,7 @@ function renderTransferPokerBox() {
             p.signOnFee = Math.round(p.wage * 6);
             freeAgentPlayers.push(p);
         }
-        // Leihspieler (NEU): eingehende Leihen von anderen Vereinen - deutlich günstiger als
+        // Leihspieler: eingehende Leihen von anderen Vereinen - deutlich günstiger als
         // ein Kauf, mit optionaler Kaufoption für eine dauerhafte Verpflichtung später.
         for (let i = 0; i < 3; i++) {
             let p = createPlayer(["TW", "ABW", "MIT", "ST"][Math.floor(Math.random() * 4)], minStr - 2, maxStr + 4);
@@ -10936,7 +10941,7 @@ function renderTransferPokerBox() {
     }
 
     // ==========================================
-    // EINGEHENDE LEIHSPIELER (NEU)
+    // EINGEHENDE LEIHSPIELER
     // ==========================================
     function signLoanPlayer(idx) {
         let p = loanablePlayers[idx];
@@ -11247,7 +11252,7 @@ function renderTransferPokerBox() {
     }
 
     // ==========================================
-    // WEITERVERKAUFSBETEILIGUNG (NEU)
+    // WEITERVERKAUFSBETEILIGUNG
     // ==========================================
     // Beim Verkauf eines Spielers kann statt der vollen Sofortsumme eine
     // Weiterverkaufsbeteiligung ausgehandelt werden: der Verein zahlt etwas weniger sofort,
@@ -11582,7 +11587,7 @@ function renderTransferPokerBox() {
         finalizePlayerPurchase(p, getTransferAsking(p), p.wage);
     }
 
-    // Vertragsverhandlung mit Gegenangeboten (NEU): statt nur "Ja/Nein" kann der Spieler
+    // Vertragsverhandlung mit Gegenangeboten: statt nur "Ja/Nein" kann der Spieler
     // ein Gegenangebot stellen, das von seinem Charakter abhängt - manche Spieler sind
     // zäher in Verhandlungen als andere.
     let pendingFreeAgentNegotiation = null;
@@ -12123,7 +12128,7 @@ function renderOnboardingBox() {
                 }).join('');
             grid.appendChild(synBox);
         }
-        // Zwei Talentbaum-Zweige (NEU): "Aufbau-Spezialist" (Wirtschaft & Kader-Aufbau) und
+        // Zwei Talentbaum-Zweige: "Aufbau-Spezialist" (Wirtschaft & Kader-Aufbau) und
         // "Krisenmanager" (Stabilität & Schadensbegrenzung) - unabhängig kombinierbar, keine
         // exklusive Wahl, aber klar erkennbar als zwei unterschiedliche Spielstile.
         let aufbauHeader = document.createElement('div');
@@ -12698,7 +12703,7 @@ function renderBoardRoomPanel() {
             let pos = f ? (f.pos === 'any' ? ["TW", "ABW", "MIT", "ST"][Math.floor(Math.random() * 4)] : f.pos) : cfg.pos;
             let ageRange = f ? [f.minAge, f.maxAge] : null;
             let star = createPlayer(pos, minStr, maxStr, f ? null : cfg.trait, ageRange);
-            // Vertrauens-Level (NEU): bestimmt, wie unscharf die Werte zunächst angezeigt werden.
+            // Vertrauens-Level: bestimmt, wie unscharf die Werte zunächst angezeigt werden.
             star.scoutConfidence = Math.min(95, Math.max(15, scout.skill + Math.floor(Math.random() * 20 - 10)));
             star.scoutedByRegion = mission.region;
             star.scoutedMatchday = game.matchday;
@@ -14302,7 +14307,7 @@ function renderBoardRoomPanel() {
         safeLocalSet('anstoss_fm13_tutorial_seen', 'true');
     }
 
-    // Mehrseitiges Tutorial (NEU): erklärt jetzt auch die neueren, komplexeren Systeme
+    // Mehrseitiges Tutorial: erklärt jetzt auch die neueren, komplexeren Systeme
     // (Scouting-Netzwerk 2.0, Stadion-Baustellen, Personal-Automatisierung) statt nur die
     // Grundstruktur der Menüs - bisher blieb ein neuer Spieler bei diesen Tiefensystemen
     // komplett auf sich gestellt.
@@ -14472,7 +14477,7 @@ function renderBoardRoomPanel() {
         });
     }
 
-    // Slide-In-Menü (NEU): öffnet/schließt die Navigation als Overlay-Drawer statt eines
+    // Slide-In-Menü: öffnet/schließt die Navigation als Overlay-Drawer statt eines
     // permanenten Grids - schafft deutlich mehr Platz für den eigentlichen Bildschirminhalt.
     function toggleMenuDrawer() {
         playSound('click');
@@ -14531,7 +14536,7 @@ function renderBoardRoomPanel() {
                 btn.classList.remove('active');
             }
         });
-        // Slide-In-Menü (NEU): automatisch schließen, sobald ein Ziel ausgewählt wurde.
+        // Slide-In-Menü: automatisch schließen, sobald ein Ziel ausgewählt wurde.
         closeMenuDrawer();
 
         if (screenId === 'screen-office') { renderOfficeView(); initOfficeParallax(); }
@@ -14615,7 +14620,7 @@ function renderBoardRoomPanel() {
     function renderDashboardView() {
         document.getElementById('dash-mday').innerText = Math.min(34, game.matchday);
         document.getElementById('dash-league-name').innerText = leagueNames[game.leagueLevel];
-        // Dashboard-Hero (NEU): Liga & Spieltag auch in der neuen 3D-Stadion-Ansicht anzeigen.
+        // Dashboard-Hero: Liga & Spieltag auch in der neuen 3D-Stadion-Ansicht anzeigen.
         let heroSubline = document.getElementById('dash-hero-subline');
         if (heroSubline) heroSubline.innerText = `${leagueNames[game.leagueLevel]} · Spieltag ${Math.min(34, game.matchday)}/34`;
         let heroCrest = document.getElementById('dash-hero-crest');
@@ -14817,7 +14822,7 @@ function renderBoardRoomPanel() {
         updateUI();
     }
 
-    // Produktionsketten-Logik mit echtem Countdown (NEU): Rohstoffe werden sofort verbraucht,
+    // Produktionsketten-Logik mit echtem Countdown: Rohstoffe werden sofort verbraucht,
     // die fertige Ware erscheint aber erst nach einer Produktionsdauer, die von der
     // Fabrik-Ausbaustufe abhängt (höhere Stufe = schnellere Produktion). Bisher wurde die
     // Ware sofort und ohne jede Verzögerung "hergestellt", was den Sinn einer Fabrik
@@ -14869,7 +14874,7 @@ function renderBoardRoomPanel() {
             box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Keine laufenden Produktionsaufträge.</div>';
             return;
         }
-        // Deutlich sichtbarere grafische Countdown-Anzeige (NEU): große Tage-Zahl links,
+        // Deutlich sichtbarere grafische Countdown-Anzeige: große Tage-Zahl links,
         // einzelne Tages-Segmente statt nur ein dünner Balken - auf einen Blick erkennbar,
         // wie viele Spieltage noch verbleiben, statt nur Fließtext lesen zu müssen.
         box.innerHTML = productionQueue.map(order => {
@@ -14924,7 +14929,7 @@ function renderBoardRoomPanel() {
             grid.appendChild(card);
         }
 
-        // Konkurrenzfirmen & Übernahmeangebote (NEU)
+        // Konkurrenzfirmen & Übernahmeangebote
         let competitorBox = document.getElementById('competitor-firms-box');
         if (competitorBox) {
             competitorBox.innerHTML = rawMaterials.competitorFirms.map(f => `<div class="box" style="font-size:10px;"><strong>${f.name}</strong> · Marktmacht: ${f.strength}${f.lastAction ? ` · <span style="color:var(--text-muted);">${f.lastAction}</span>` : ''}</div>`).join('');
@@ -15203,7 +15208,7 @@ function renderBoardRoomPanel() {
         let stops = 3;
         let totalIncome = 0;
         let stopNames = [];
-        // Wirtschaftliche Konsistenz (NEU): die alten Fixbeträge (25.000-45.000 € je Station)
+        // Wirtschaftliche Konsistenz: die alten Fixbeträge (25.000-45.000 € je Station)
         // waren nach der Wirtschaftsreform (Gehaltsbudgets jetzt im Millionenbereich, siehe
         // wageBudget-Neuberechnung) zur Bedeutungslosigkeit geschrumpft - jetzt skaliert mit
         // derselben Liga-Stärke wie Sponsoren-Einnahmen.
@@ -15432,7 +15437,7 @@ function renderBoardRoomPanel() {
             </div>`).join('');
     }
 
-    // Reiter-Navigation (NEU): teilt den bisher sehr langen Trainings-Screen in 4 Reiter auf,
+    // Reiter-Navigation: teilt den bisher sehr langen Trainings-Screen in 4 Reiter auf,
     // um das ständige Scrollen zu vermeiden.
     function setTrainingTab(tab) {
         playSound('click');
@@ -15445,7 +15450,7 @@ function renderBoardRoomPanel() {
     }
 
     // ==========================================
-    // FÄHIGKEITEN GEZIELT ANTRAINIEREN (NEU)
+    // FÄHIGKEITEN GEZIELT ANTRAINIEREN
     // ==========================================
     // Ein zugewiesener Trainer (Personal) bildet einen Spieler über mehrere Spieltage gezielt
     // in einer Fähigkeit fort - kostet echtes Geld UND Zeit, garantiert dafür eine echte,
@@ -15546,7 +15551,7 @@ function renderBoardRoomPanel() {
         }
         let sessionsLeftEl = document.getElementById('training-sessions-left');
         if (sessionsLeftEl) sessionsLeftEl.innerText = trainingSessionsLeft();
-        // Minispiel-Kosten (NEU) dynamisch an den Buttons anzeigen.
+        // Minispiel-Kosten dynamisch an den Buttons anzeigen.
         let mgCost = typeof getMinigameCost === 'function' ? getMinigameCost() : 2000;
         let btnPenalty = document.getElementById('btn-minigame-penalty');
         if (btnPenalty) btnPenalty.innerText = `⚽ Elfmeterschießen [${formatVal(mgCost)}]`;
@@ -16683,7 +16688,7 @@ function finishGoalkeeperGame() {
     }
 
     // ==========================================
-    // TICKETPREISE MIT SCHIEBEREGLERN & LIVE-VORSCHAU (NEU)
+    // TICKETPREISE MIT SCHIEBEREGLERN & LIVE-VORSCHAU
     // ==========================================
     // Ersetzt die einfachen Zahlenfelder durch Schieberegler mit sofortiger Vorschau
     // (erwartete Zuschauer, Auslastung, Tageskasse, Saison-Hochrechnung) - Preise werden
@@ -16723,7 +16728,7 @@ function finishGoalkeeperGame() {
         game.ticketPrices.steh = preview.steh;
         game.ticketPrices.sitz = preview.sitz;
         game.ticketPrices.vip = preview.vip;
-        // Dauerkarte (NEU): der Preis wird sofort übernommen, wirkt sich aber - wie im echten
+        // Dauerkarte: der Preis wird sofort übernommen, wirkt sich aber - wie im echten
         // Fußballgeschäft - erst beim nächsten Saisonverkauf (renewSeasonTickets()) auf die
         // tatsächliche Zahl der Inhaber aus.
         if (preview.dauerkarte !== undefined) game.ticketPrices.dauerkarte = preview.dauerkarte;
@@ -16742,7 +16747,7 @@ function finishGoalkeeperGame() {
         game.ticketPrices = realPrices; // sofort zurücksetzen
         let capacity = stadium.total || 16000;
         let totalAtt = Math.round(capacity * attFactor);
-        // Dauerkarten (NEU): der bereits im Voraus bezahlte Anteil zählt zur Zuschauerzahl,
+        // Dauerkarten: der bereits im Voraus bezahlte Anteil zählt zur Zuschauerzahl,
         // aber nicht zur SPIELTAGS-Einnahme - sonst würde er in dieser Vorschau doppelt
         // kassiert, obwohl er real nur einmal (beim Saisonverkauf) bezahlt wurde.
         let dauerkartenAnwesend = (typeof getSeasonTicketAttendanceFloor === 'function') ? Math.min(totalAtt, getSeasonTicketAttendanceFloor()) : 0;
@@ -18155,7 +18160,7 @@ function finishGoalkeeperGame() {
         let lf = leagueScaleFactor();
         let tier = rollDurationTier();
         let base = Math.round((2000 + Math.random() * 2500) * lf * tier.payMult / 100) * 100;
-        // Manager-Medienimage (NEU): ein beliebter, medienwirksamer Manager macht den Verein
+        // Manager-Medienimage: ein beliebter, medienwirksamer Manager macht den Verein
         // für Sponsoren attraktiver - kleiner, aber echter Aufschlag auf das Grundangebot.
         let imageMult = 1 + Math.max(0, ((game.managerMediaImage || 50) - 50) / 250);
         base = Math.round(base * imageMult);
@@ -18628,7 +18633,7 @@ function finishGoalkeeperGame() {
 
     // ---------- RENDER ----------
     // ==========================================
-    // SPONSOREN: SPONSOREN-ZUFRIEDENHEIT & AKTIVIERUNGS-EVENTS (NEU)
+    // SPONSOREN: SPONSOREN-ZUFRIEDENHEIT & AKTIVIERUNGS-EVENTS
     // ==========================================
 
     // 1. Sponsoren-Zufriedenheit/Treue: sinkt bei schlechten Ergebnissen, steigt bei guten -
@@ -18730,7 +18735,7 @@ function finishGoalkeeperGame() {
         document.getElementById('spons-curr-name').innerText = game.sponsor.name;
         document.getElementById('spons-curr-base').innerText = formatVal(game.sponsor.base);
         document.getElementById('spons-curr-win').innerText = formatVal(game.sponsor.winBonus);
-        // Sponsoren-Zufriedenheit (NEU)
+        // Sponsoren-Zufriedenheit
         let loyaltyBox = document.getElementById('sponsor-loyalty-box');
         if (loyaltyBox) {
             if (game.sponsor.name === 'Kein Hauptsponsor') { loyaltyBox.innerHTML = ''; }
@@ -18847,7 +18852,7 @@ function finishGoalkeeperGame() {
 <script>
 
     // ==========================================
-    // MEDIENRECHTE & TV-VERTRAG (NEU)
+    // MEDIENRECHTE & TV-VERTRAG
     // ==========================================
     // Im echten Fußball sind TV-/Medienrechte oft die GRÖSSTE Einnahmequelle eines Vereins -
     // bisher fehlte das im Spiel komplett. Zwei Säulen:
@@ -18906,11 +18911,11 @@ function finishGoalkeeperGame() {
     // 2. Eigener Medienpartner: Angebote generieren, analog zum Sponsoren-System.
     function generateMediaRightsOffers() {
         let scale = typeof leagueScaleFactor === 'function' ? leagueScaleFactor() : 1;
-        // Verknüpfung mit dem Manager-Medienimage (NEU): ein Manager mit gutem Ruf in der
+        // Verknüpfung mit dem Manager-Medienimage: ein Manager mit gutem Ruf in der
         // Presse (z.B. durch geschickte Interview-Antworten) bekommt spürbar bessere
         // Angebote von Medienpartnern - ein niedriges Image drückt die Konditionen.
         let imageMult = 0.75 + ((game.managerMediaImage ?? 50) / 100) * 0.5; // 0.75x bis 1.25x
-        // Liga-Voraussetzung (NEU): ein Kreisligist bekommt realistischerweise kein Angebot
+        // Liga-Voraussetzung: ein Kreisligist bekommt realistischerweise kein Angebot
         // vom internationalen Pay-TV - höherwertige Medienpartner setzen eine entsprechend
         // starke Liga voraus (nutzt das zuvor ungenutzte tierKey-Konzept sinnvoll).
         let eligibleTiers = MEDIA_PARTNER_TIERS.filter(t => game.leagueLevel <= t.maxLeagueLevel);
@@ -18930,7 +18935,7 @@ function finishGoalkeeperGame() {
         mediaRights.currentDeal = { name: offer.name, tierKey: offer.tierKey, label: offer.label, base: offer.base, remainingMatchdays: offer.duration, prestige: offer.prestige };
         mediaRights.dealOffers = [];
         addInboxMessage('vertrag', `📺 Medienvertrag mit ${offer.name}!`, `Ab sofort überträgt ${offer.name} (${offer.label}) eure Heimspiele - Handgeld ${formatVal(offer.signOn)}, laufend +${formatVal(offer.base)}/Heimspiel für ${offer.duration} Spieltage.`, 'screen-finances');
-        // Prestige-Wirkung (NEU, Bugfix): ein hochkarätiger Medienpartner (Prestige 3+)
+        // Prestige-Wirkung (Bugfix): ein hochkarätiger Medienpartner (Prestige 3+)
         // sorgt einmalig für spürbar mehr überregionale Bekanntheit - dauerhaft höheres
         // Grundinteresse der Fans, statt wie zuvor ein unbenutztes Datenfeld zu sein.
         if (offer.prestige >= 3 && typeof boostFanBaseFloor === 'function') {
@@ -19144,7 +19149,7 @@ function finishGoalkeeperGame() {
     }
 
     // Wird nach jedem gespielten Spieltag aufgerufen; matchResult ist 'win'/'draw'/'loss'/null aus
-    // unserer Sicht, goalInfo (NEU) ist { total, bothScored } für Sonder-/Kombiwetten.
+    // unserer Sicht, goalInfo ist { total, bothScored } für Sonder-/Kombiwetten.
     function resolveBetIfPending(matchResult, goalInfo = null) {
         if (!activeBet || !matchResult) return;
         let won = false;
@@ -19157,7 +19162,7 @@ function finishGoalkeeperGame() {
         }
         let payout = won ? Math.round(activeBet.stake * activeBet.odds) : 0;
         if (won) game.money += payout;
-        // Wett-Historie (NEU): Ergebnis dauerhaft protokollieren.
+        // Wett-Historie: Ergebnis dauerhaft protokollieren.
         if (!betHistory) betHistory = [];
         betHistory.unshift({ season: game.season, matchday: activeBet.matchday, type: activeBet.type, stake: activeBet.stake, odds: activeBet.odds, won, payout });
         if (betHistory.length > 20) betHistory.pop();
@@ -19243,12 +19248,12 @@ function finishGoalkeeperGame() {
 <script>
 
     // ---------- STADIONNAME & NAMENSRECHTE ----------
-    // Stadion-Kostenskalierung (NEU): deutlich steiler als der generische Liga-Faktor, damit
+    // Stadion-Kostenskalierung: deutlich steiler als der generische Liga-Faktor, damit
     // ein Kreisligist sich keine Bundesliga-Arena leisten muss, ein Spitzenklub aber echte
     // zweistellige Millionenbeträge zahlt (wie in der Realität) - Index = leagueLevel
     // (0 = höchste Liga).
     const STADIUM_COST_SCALE = [1.0, 0.55, 0.28, 0.14, 0.07, 0.035];
-    // Stadion-Größenstufe (NEU): das 3D-Design verändert sich jetzt sichtbar mit der
+    // Stadion-Größenstufe: das 3D-Design verändert sich jetzt sichtbar mit der
     // tatsächlichen Kapazität, statt bei jeder Stadiongröße gleich auszusehen -
     // von der kompakten Amateurarena bis zum Mega-Stadion mit Dach-Silhouette.
     function getStadiumVisualTier() {
@@ -19258,7 +19263,7 @@ function finishGoalkeeperGame() {
         if (cap < 60000) return 'large';
         return 'mega';
     }
-    // Generiert die komplette innere Stadion-Struktur abhängig von der Größenstufe (NEU,
+    // Generiert die komplette innere Stadion-Struktur abhängig von der Größenstufe (
     // überarbeitet): nicht mehr nur ein CSS-Klassenwechsel auf starrer Struktur, sondern
     // echte strukturelle Unterschiede - Anzahl Flutlichter, Tribünenbreite, zweiter Rang,
     // Dach - damit der Ausbau auch bei mittleren Kapazitäten sichtbar etwas verändert.
@@ -19349,7 +19354,7 @@ function finishGoalkeeperGame() {
         let genutzt = getUsedStadiumCapacity();
         let kosten = genutzt * STADIUM_MAINTENANCE_PER_SEAT
             + getMothballedCapacity() * STADIUM_MAINTENANCE_PER_SEAT * MOTHBALLED_MAINTENANCE_RATE;
-        // Solaranlage (NEU): senkt die Stromkosten-Komponente der Betriebskosten spürbar,
+        // Solaranlage: senkt die Stromkosten-Komponente der Betriebskosten spürbar,
         // statt nur eine reine Sponsoren-Einnahmen-Erhöhung zu sein - echte Stromersparnis.
         if (stadium.upgrades?.solaranlage) kosten *= 0.8;
         return kosten;
@@ -19369,7 +19374,7 @@ function finishGoalkeeperGame() {
         stadium.namingRightsIncome = perMatch;
         game.money += lumpSum;
         addInboxMessage('vertrag', '🏟️ Namensrechte verkauft!', `Das Stadion heißt ab sofort "${stadium.name}". Einmalzahlung: ${formatVal(lumpSum)}, laufend +${formatVal(perMatch)}/Heimspiel.`, 'screen-stadium');
-        // Namensgebungs-Zeremonie (NEU): eigenes Ereignis mit einer echten Entscheidung, statt
+        // Namensgebungs-Zeremonie: eigenes Ereignis mit einer echten Entscheidung, statt
         // dass die Umbenennung einfach kommentarlos passiert.
         game.pendingNamingCeremony = { sponsor, stadiumName: stadium.name };
         renderStadiumView();
@@ -19451,7 +19456,7 @@ function finishGoalkeeperGame() {
     }
     // Kompakte Anzeige im Stadion-Screen, damit die Auflagen jederzeit einsehbar sind.
     // ==========================================
-    // BLOCK-SPEZIFISCHE FAN-KULTUR (NEU)
+    // BLOCK-SPEZIFISCHE FAN-KULTUR
     // ==========================================
     // Jeder Stadion-Block hat eine natürliche kulturelle Zugehörigkeit zu einer der vier
     // Fan-Gruppen. Ist diese Fan-Gruppe gut gelaunt, stärkt sich die Block-Kultur über die
@@ -19537,7 +19542,7 @@ function finishGoalkeeperGame() {
         if (roofBox) roofBox.className = stadium.dach ? 'stadium-roof-overlay' : '';
     }
 
-    // Kennzahlen-Box (NEU): Kapazität, letzte Zuschauerzahl, Auslastung, Stadionwert und
+    // Kennzahlen-Box: Kapazität, letzte Zuschauerzahl, Auslastung, Stadionwert und
     // Bauwert auf einen Blick, plus Zuschauerentwicklungs-Diagramm - wie im Referenz-Layout.
     function getStadiumMarketValue() {
         // Der "Stadionwert" ist keine reine Bausumme, sondern eine grobe Marktbewertung:
@@ -19581,7 +19586,7 @@ function finishGoalkeeperGame() {
         renderStadiumImmersiveHero();
     }
 
-    // Immersive Stadion-Hero (NEU): große 3D-Ansicht mit schwebenden Kennzahlen-Karten und
+    // Immersive Stadion-Hero: große 3D-Ansicht mit schwebenden Kennzahlen-Karten und
     // einer berechneten "Stadion-Zustand"-Einschätzung, angelehnt an moderne Management-
     // Spiele-Referenzen - nutzt echte Spieldaten statt Platzhaltertexten.
     function getStadiumConditionRating() {
@@ -19638,7 +19643,7 @@ function finishGoalkeeperGame() {
         if (typeof applyStadiumVisualTier === 'function') applyStadiumVisualTier('#stadium-hero-bowl-wrapper');
     }
 
-    // Spezial-Installationen: deutlich realistischere Basiskosten (NEU), skaliert mit der
+    // Spezial-Installationen: deutlich realistischere Basiskosten, skaliert mit der
     // Liga-Stärke - eine Komplett-Überdachung kostet im Spitzenfußball echte zweistellige
     // Millionenbeträge, nicht ein paar hunderttausend Euro.
     const SPECIAL_INSTALL_BASE_COSTS = { flutlicht: 3500000, rasenheizung: 2200000, videowalls: 4000000, dach: 28000000 };
@@ -19651,7 +19656,7 @@ function finishGoalkeeperGame() {
     const SPECIAL_INSTALL_LABELS = { flutlicht: '💡 Flutlicht-Masten', rasenheizung: '🔥 Rasenheizung', videowalls: '📺 Digitale Anzeigen / HD-Videowalls', dach: '🏗️ Komplett-Überdachung' };
 
     // ==========================================
-    // 20 NEUE STADION-ERWEITERUNGEN (NEU)
+    // 20 NEUE STADION-ERWEITERUNGEN
     // ==========================================
     // Jede Erweiterung gehört zu einer von mehreren Wirkungs-Kategorien, die direkt in
     // bestehende Formeln einfließen (Komfort/Zuschauerzahl, Sicherheit, Verletzungsrisiko,
@@ -19723,7 +19728,7 @@ function finishGoalkeeperGame() {
             .reduce((sum, k) => sum + Math.round(STADIUM_UPGRADES[k].incomeBase * scale), 0);
     }
 
-    // Zusammenfassungs-Übersicht (NEU): fasst alle Kategorie-Boni der 20 Stadion-Erweiterungen
+    // Zusammenfassungs-Übersicht: fasst alle Kategorie-Boni der 20 Stadion-Erweiterungen
     // an einer Stelle zusammen, mit Fortschrittsbalken relativ zum jeweils maximal
     // erreichbaren Wert (nicht der willkürlichen Sicherheits-Obergrenze im Code, sondern dem
     // tatsächlich mit den vorhandenen Anlagen erreichbaren Maximum) - damit auf einen Blick
@@ -19795,7 +19800,7 @@ function finishGoalkeeperGame() {
     }
 
     // ==========================================
-    // DAUERKARTEN (NEU)
+    // DAUERKARTEN
     // ==========================================
     // Eigene Ticketkategorie neben Steh/Sitz/VIP: der Preis lässt sich jederzeit über den
     // Schieberegler anpassen (siehe finances.js), wirkt sich aber - wie im echten
@@ -19851,7 +19856,7 @@ function finishGoalkeeperGame() {
     }
 
     // ==========================================
-    // RASENPFLEGE (NEU)
+    // RASENPFLEGE
     // ==========================================
     // Zustand des Geläufs auf einer 0-99-Skala, unabhängig von den festen Stadion-
     // Erweiterungen (Medizinzentrum/Rasenpflege-System, die das VERLETZUNGSRISIKO senken) -
@@ -19936,7 +19941,7 @@ function finishGoalkeeperGame() {
     }
 
     // ==========================================
-    // NAMENTLICHE KAPAZITÄTS- & UMBAUPROJEKTE (NEU)
+    // NAMENTLICHE KAPAZITÄTS- & UMBAUPROJEKTE
     // ==========================================
     // Ergänzt die bisherige, generische Block-für-Block-Erweiterung (expandBlock, siehe oben)
     // um konkrete, benannte Großprojekte mit eigenem Effekt - inklusive zwei Umbauten, die
@@ -20008,7 +20013,7 @@ function finishGoalkeeperGame() {
     }
 
     // ==========================================
-    // NEBENEINNAHMEN-ÜBERSICHT (NEU)
+    // NEBENEINNAHMEN-ÜBERSICHT
     // ==========================================
     // Rein informative Aufschlüsselung der bereits bestehenden Campus-Einnahmequellen
     // (Fan-Kneipe/Foodtrucks = Gastronomie, Parkhaus = Parkplätze, VIP-Tagungshotel =
@@ -20170,13 +20175,13 @@ function finishGoalkeeperGame() {
     }
 
     // ==========================================
-    // STADION-BAUSTELLEN-SYSTEM (NEU): Anzahlung + Restzahlung + echte Bauzeit
+    // STADION-BAUSTELLEN-SYSTEM: Anzahlung + Restzahlung + echte Bauzeit
     // ==========================================
     // Bisher wurde JEDER Stadion-Ausbau (Ränge, Infrastruktur, Flutlicht/Dach/etc.) sofort
     // und vollständig bezahlt UND sofort wirksam - realitätsfern für ein Bauprojekt dieser
     // Größenordnung. Jetzt: 30% Anzahlung sofort fällig, Rest bei Fertigstellung, echte
     // Bauzeit in Spieltagen (je teurer, desto länger), mit sichtbarem Baufortschritt.
-    // Realistische Bauzeit (NEU): reale deutsche Bauprojekte dieser Größenordnung dauern
+    // Realistische Bauzeit: reale deutsche Bauprojekte dieser Größenordnung dauern
     // Monate bis Jahre, nicht ein paar Tage. Ein kleines Vorhaben (~250.000 €, z.B. eine
     // Fan-Kneipen-Renovierung) braucht real ca. 2-3 Monate inkl. Genehmigungen, ein
     // Millionenprojekt eher 1-2 Jahre, ein zweistelliger Millionenbetrag (große Tribüne,
@@ -20232,7 +20237,7 @@ function finishGoalkeeperGame() {
                 stadium.totalInvested = (stadium.totalInvested || 0) + proj.remainingPayment;
                 stadium[proj.params.key] = true;
             } else if (proj.type === 'campusBuilding') {
-                // Campus-Gebäude (NEU): eigener Baustellen-Typ, fließt bewusst NICHT in
+                // Campus-Gebäude: eigener Baustellen-Typ, fließt bewusst NICHT in
                 // stadium.totalInvested ein (das ist eine separate Investitionsart).
                 let b = campusBuildings[proj.params.key];
                 if (b) {
@@ -20244,12 +20249,12 @@ function finishGoalkeeperGame() {
                     }
                 }
             } else if (proj.type === 'realEstate' && typeof realEstatePortfolio !== 'undefined') {
-                // Immobilien-Portfolio (NEU): eigener Baustellen-Typ, ebenfalls getrennt von
+                // Immobilien-Portfolio: eigener Baustellen-Typ, ebenfalls getrennt von
                 // stadium.totalInvested (separates Investitionsvehikel).
                 let re = realEstatePortfolio[proj.params.key];
                 if (re) { re.owned = true; re.lvl++; }
             } else if (proj.type === 'staffTraining' && typeof ensureStaffMeta === 'function') {
-                // Personal-Weiterbildung (NEU): eigener, kürzerer Baustellen-Typ für
+                // Personal-Weiterbildung: eigener, kürzerer Baustellen-Typ für
                 // Schulungen statt Bauprojekte - ebenfalls getrennt von stadium.totalInvested.
                 let meta = ensureStaffMeta(proj.params.key);
                 meta.level++;
@@ -20257,7 +20262,7 @@ function finishGoalkeeperGame() {
                     addInboxMessage('vertrag', `⭐ Weiterbildung abgeschlossen: ${staffMembers[proj.params.key].name}`, `Jetzt auf Ausbaustufe ${meta.level}.`, 'screen-staff');
                 }
             } else if (proj.type === 'stadiumUpgrade' && typeof STADIUM_UPGRADES !== 'undefined') {
-                // 20 neue Stadion-Erweiterungen (NEU): schalten sich beim Bau-Abschluss frei.
+                // 20 neue Stadion-Erweiterungen: schalten sich beim Bau-Abschluss frei.
                 if (!stadium.upgrades) stadium.upgrades = {};
                 stadium.upgrades[proj.params.key] = true;
                 let u = STADIUM_UPGRADES[proj.params.key];
@@ -20266,15 +20271,15 @@ function finishGoalkeeperGame() {
                 }
                 addInboxMessage('vertrag', `🏗️ Stadion-Erweiterung fertig: ${u.name}!`, u.desc, 'screen-stadium');
             } else if (proj.type === 'youthAcademyLvl') {
-                // Jugendakademie-Ausbau (NEU): jetzt mit echter Bauzeit statt Sofort-Ausbau.
+                // Jugendakademie-Ausbau: jetzt mit echter Bauzeit statt Sofort-Ausbau.
                 game.youthAcademyLvl++;
                 addInboxMessage('vertrag', '🎓 Jugendakademie ausgebaut!', `Die Nachwuchsakademie ist jetzt auf Stufe ${game.youthAcademyLvl} - bessere Talente und höheres Potenzial bei künftigen Sichtungen.`, 'screen-youth');
             } else if (proj.type === 'youthCapacity') {
-                // Jugendkader-Kapazität (NEU): jetzt mit echter Bauzeit statt Sofort-Ausbau.
+                // Jugendkader-Kapazität: jetzt mit echter Bauzeit statt Sofort-Ausbau.
                 game.youthCapacityBonus = (game.youthCapacityBonus || 0) + 1;
                 addInboxMessage('vertrag', '🏠 Jugendkader-Kapazität erweitert!', `Platz für jetzt ${getYouthAcademyCapacity()} Nachwuchsspieler in der Akademie.`, 'screen-youth');
             } else if (proj.type === 'capacityProject' && typeof STADIUM_CAPACITY_PROJECTS !== 'undefined') {
-                // Namentliche Kapazitäts-/Umbauprojekte (NEU): Zusatztribüne, Ränge erweitern,
+                // Namentliche Kapazitäts-/Umbauprojekte: Zusatztribüne, Ränge erweitern,
                 // Großausbau, Zweiter Rang, Sitzplatzumbau, Stehplatzrückbau, Hybridrasen.
                 stadium.totalInvested = (stadium.totalInvested || 0) + proj.remainingPayment;
                 let cp = STADIUM_CAPACITY_PROJECTS[proj.params.key];
@@ -20305,7 +20310,7 @@ function finishGoalkeeperGame() {
         });
         game.stadiumConstructionQueue = stillActive;
     }
-    // Parametrisiert (NEU): kann sowohl alle Baustellen zeigen (Stadion-Screen) als auch nur
+    // Parametrisiert: kann sowohl alle Baustellen zeigen (Stadion-Screen) als auch nur
     // eine bestimmte Projektart filtern (z.B. nur Campus-Gebäude auf dem Campus-Screen),
     // damit dort nicht irrelevante Stadion-Baustellen mit auftauchen.
     function renderStadiumConstructionBox(targetBoxId = 'stadium-construction-box', filterType = null) {
@@ -20384,7 +20389,7 @@ function finishGoalkeeperGame() {
         return Math.max(0, Math.min(kapazitaet, ausKapazitaet, interesse));
     }
 
-    // Preis-Nachfrage-Zusammenhang für Tickets (NEU): bisher hatte der Ticketpreis KEINERLEI
+    // Preis-Nachfrage-Zusammenhang für Tickets: bisher hatte der Ticketpreis KEINERLEI
     // Einfluss auf die Zuschauerzahl - nur auf den Erlös pro Ticket. Jetzt wirkt sich ein zu
     // hoher Preis auch spürbar auf die Auslastung aus, ein günstiger Preis lockt mehr Fans.
     // Nutzt dieselbe Elastizitäts-Logik wie die Fanartikel-Preise (siehe calculateElasticity()).
@@ -20434,7 +20439,7 @@ function finishGoalkeeperGame() {
         // Digitale Anzeigen (Videowalls): sorgen für Stimmung und Unterhaltung im Stadion und
         // geben einen kleinen zusätzlichen Komfort-Bonus, unabhängig von den Block-Ausbauten.
         if (stadium.videowalls) avgComfortBonus += 0.05;
-        // Stadion-Erweiterungen (NEU): WLAN/Sanitär/ÖPNV-Anbindung erhöhen den Komfort weiter.
+        // Stadion-Erweiterungen: WLAN/Sanitär/ÖPNV-Anbindung erhöhen den Komfort weiter.
         if (typeof getStadiumComfortBonus === 'function') avgComfortBonus += getStadiumComfortBonus();
         // Parkhaus & Shuttle-Bahnhof (Campus): erleichtert die Anreise und verbessert dadurch
         // die Stadionauslastung spürbar (war bisher nur Text ohne tatsächliche Wirkung).
@@ -20451,7 +20456,7 @@ function finishGoalkeeperGame() {
     }
 
     // ==========================================
-    // INTERACTIVE STADION-VISUALISIERUNG (NEU)
+    // INTERACTIVE STADION-VISUALISIERUNG
     // ==========================================
     // Aktualisiert die interaktive Stadion-Visualisierung basierend auf der aktuellen Kapazität.
     // Die Visualisierung zeigt 5 Level: Level 1 (klein), Level 2-5 (immer größer werdend).
@@ -20619,7 +20624,7 @@ function renderStadiumEventsPanel() {
 <script>
 
     // ==========================================
-    // IMMOBILIEN-PORTFOLIO (NEU)
+    // IMMOBILIEN-PORTFOLIO
     // ==========================================
     // Der Verein investiert in Immobilien rund ums Stadion, um sich eine zweite,
     // fußballunabhängige Einnahmequelle aufzubauen - je Objekt eine einmalige
@@ -20766,7 +20771,7 @@ function renderStadiumEventsPanel() {
 
     function getCampusUpgradeCost(key) {
         let b = campusBuildings[key];
-        // Liga-Skalierung (NEU): dieselbe steile Kurve wie bei Stadion-Ausbauten - realistische
+        // Liga-Skalierung: dieselbe steile Kurve wie bei Stadion-Ausbauten - realistische
         // Millionenbeträge im Spitzenfußball, erschwinglich in unteren Ligen. Trotzdem nie
         // unter 250.000 € (Mindestwert für auch nur das kleinste reale Bauprojekt in
         // Deutschland, siehe Baukosten-Recherche: selbst ein kleiner Umbau/Neubau kostet
@@ -20778,7 +20783,7 @@ function renderStadiumEventsPanel() {
         let b = campusBuildings[key];
         let cost = getCampusUpgradeCost(key);
         if (b.lvl >= b.max) { showToast('Maximalstufe bereits erreicht!', 'error'); return; }
-        // Echter Bau-Timer (NEU): Campus-Gebäude wurden bisher sofort fertig, ganz ohne
+        // Echter Bau-Timer: Campus-Gebäude wurden bisher sofort fertig, ganz ohne
         // Bauzeit - unrealistisch für ein Bauprojekt in Millionenhöhe. Jetzt läuft es über
         // dieselbe Baustellen-Logik wie die Stadion-Ausbauten (30% Anzahlung, echte Bauzeit,
         // Rest bei Fertigstellung).
@@ -20808,7 +20813,7 @@ function renderStadiumEventsPanel() {
     };
 
     // ==========================================
-    // ERWEITERTE PERSONAL-AUTOMATISIERUNG (NEU): 4 weitere Rollen mit wählbaren
+    // ERWEITERTE PERSONAL-AUTOMATISIERUNG: 4 weitere Rollen mit wählbaren
     // Automatik-Aufgaben, analog zum bestehenden Muster bei Co-Trainer/Konditionstrainer/
     // Fanbeauftragtem/Fanshop-Manager.
     // ==========================================
@@ -21342,7 +21347,7 @@ function renderStadiumEventsPanel() {
         }).join('');
     }
 
-    // Reiter-Navigation (NEU): teilt den bisher sehr langen Fans-Screen in 3 Reiter auf.
+    // Reiter-Navigation: teilt den bisher sehr langen Fans-Screen in 3 Reiter auf.
     function setFansTab(tab) {
         playSound('click');
         ['sicherheit', 'gruppen', 'programme'].forEach(t => {
@@ -21429,7 +21434,7 @@ function renderStadiumEventsPanel() {
     }
 
     // ==========================================
-    // EIGENE AUSBILDUNG VON ORDNERN & SICHERHEITSKRÄFTEN (NEU)
+    // EIGENE AUSBILDUNG VON ORDNERN & SICHERHEITSKRÄFTEN
     // ==========================================
     // Bisher gab es nur "Ordner mieten" (game.stewards, pro Spieltag neu gebucht, nie
     // wirklich abgerechnet - siehe Fix unten) ohne jede Qualitäts-Ebene. Jetzt kann der
@@ -21518,7 +21523,7 @@ function renderStadiumEventsPanel() {
         bucheInSpieltagsjournal('🦺 Ordnerdienst', kosten);
     }
 
-    // Automatisierung für den Sicherheitschef (NEU): führt Schulungen automatisch durch,
+    // Automatisierung für den Sicherheitschef: führt Schulungen automatisch durch,
     // sobald möglich - passend zum bestehenden Muster bei anderen Personal-Rollen.
     const SEC_CHIEF_TASKS = [
         { id: 'aus', name: 'Manuell', desc: 'Du entscheidest selbst über Ordner-Schulungen und Festanstellungen.' },
@@ -21908,7 +21913,7 @@ function renderStadiumEventsPanel() {
         let capBox = document.getElementById('youth-capacity-box');
         if (capBox) capBox.innerText = `Kapazität: ${youthTalents.length} / ${capacity}`;
 
-        // Baustellen-Status (NEU): zeigt "im Bau..." statt des Kauf-Buttons, solange eine
+        // Baustellen-Status: zeigt "im Bau..." statt des Kauf-Buttons, solange eine
         // Jugendakademie-/Kapazitäts-Baustelle läuft.
         let academyQueued = (game.stadiumConstructionQueue || []).find(q => q.type === 'youthAcademyLvl');
         let btnAcademy = document.getElementById('btn-upgrade-youth-academy');
@@ -22051,7 +22056,7 @@ function renderStadiumEventsPanel() {
     }
 
     // ==========================================
-    // JUGENDLIGA-TABELLE (NEU)
+    // JUGENDLIGA-TABELLE
     // ==========================================
     // Bisher gab es nur ein einmaliges "Jugendturnier"-Ereignis ohne jeden Wettbewerbs-
     // kontext. Jetzt eine echte Liga mit 7 KI-Nachwuchsakademien, gegen die automatisch
@@ -22133,7 +22138,7 @@ function renderStadiumEventsPanel() {
     }
 
     // ==========================================
-    // JUGEND-MENTOR-SYSTEM (NEU)
+    // JUGEND-MENTOR-SYSTEM
     // ==========================================
     // Ein erfahrener Profi (27+ Jahre, Stärke 55+) übernimmt die persönliche Betreuung eines
     // Jugendtalents während der Hospitanz - beschleunigt dessen Entwicklung spürbar (+35%
@@ -22977,7 +22982,7 @@ function renderYouthPathwayBoxes() {
 <script>
 
     // ==========================================
-    // ERFOLGSBASIERTE VERTRAGSBONI (NEU)
+    // ERFOLGSBASIERTE VERTRAGSBONI
     // ==========================================
     // Zusätzlich zum Grundgehalt lassen sich mit jedem Spieler individuelle Erfolgsklauseln
     // vereinbaren, die erst bei tatsächlichem Erreichen einer sportlichen Marke ausgezahlt
@@ -23120,7 +23125,7 @@ function renderYouthPathwayBoxes() {
 <script>
 
     // ==========================================
-    // SAISONPLANUNG-ÜBERSICHT (NEU)
+    // SAISONPLANUNG-ÜBERSICHT
     // ==========================================
     // Zeigt auf einen Blick, wer wirklich für die kommende Saison zur Verfügung steht: welche
     // Verträge bald auslaufen, wer zurück zum Leihverein muss, und wo eine Entscheidung ansteht.
@@ -23319,7 +23324,7 @@ function renderYouthPathwayBoxes() {
     }
 
     // ==========================================
-    // AUSSTIEGSKLAUSEL (NEU)
+    // AUSSTIEGSKLAUSEL
     // ==========================================
     // Eine feste Ablösesumme, ab der jeder interessierte Verein den Spieler sofort und ohne
     // Verhandlung abwerben kann - wie im echten Fußball üblich. Eine niedrige Klausel macht
@@ -24756,6 +24761,19 @@ function renderLockerHierarchyBox() {
         + `<div style="font-size:9px; color:var(--text-muted); margin-top:4px;">Kapitän wechseln geht im Reiter Aufstellung - der alte Kapitän ist enttäuscht, ohne Standing des Neuen auch der Rat.</div>`;
 }
 
+// Jeden Spieltag: wer lange genug gemeinsam im Kader ist, wird gelegentlich "bester Freund"
+// eines Mitspielers - verlässt einer den Verein, leidet der andere (checkFriendshipDeparture()).
+function tickLockerFriendships() {
+    squad.forEach(p => { p.squadTenureMatchdays = (p.squadTenureMatchdays || 0) + 1; });
+    const ohneFreund = squad.filter(p => !p.friendPlayerId && (p.squadTenureMatchdays || 0) >= 20);
+    if (ohneFreund.length < 2 || Math.random() >= 0.05) return;
+    const a = ohneFreund[Math.floor(Math.random() * ohneFreund.length)];
+    const andere = ohneFreund.filter(p => p.id !== a.id);
+    const b = andere[Math.floor(Math.random() * andere.length)];
+    a.friendPlayerId = b.id; b.friendPlayerId = a.id;
+    addInboxMessage('vertrag', '🤝 Kabinen-Freundschaft entstanden', `${a.name} und ${b.name} sind in der Kabine beste Freunde geworden.`, 'screen-squad');
+}
+
 </script>
 <script>
 /* eslint-disable no-undef */
@@ -25717,7 +25735,7 @@ function tickPlayerRetirement() {
     function renderRivalryHistoryBook() {
         let box = document.getElementById('rivalry-history-book');
         if (!box) return;
-        // Trainerpersönlichkeit (NEU, siehe assignRivalManagerPersonality() in leagues.js):
+        // Trainerpersönlichkeit (siehe assignRivalManagerPersonality() in leagues.js):
         // gibt dem Rivalen ein Gesicht statt nur ein Vereinsname zu sein.
         let managerQuote = (typeof getRivalManagerQuote === 'function') ? getRivalManagerQuote() : null;
         let managerLine = (game.permanentRivalName && game.rivalManagerName)
@@ -25733,7 +25751,7 @@ function tickPlayerRetirement() {
         }).join('');
     }
 
-    // Rivalen-Archiv (NEU): frühere, inzwischen abgelöste Erzfeindschaften bleiben als
+    // Rivalen-Archiv: frühere, inzwischen abgelöste Erzfeindschaften bleiben als
     // abgeschlossenes Kapitel sichtbar, statt beim Rivalenwechsel einfach zu verschwinden.
     function renderRivalHistoryArchive() {
         let box = document.getElementById('rival-history-archive-box');
@@ -25744,7 +25762,7 @@ function tickPlayerRetirement() {
             : archive.slice().reverse().map(r => `<div class="box" style="font-size:10px;"><strong>${r.name}</strong> (bis Saison ${r.endedSeason}) - Bilanz: ${r.record.wins}S ${r.record.draws}U ${r.record.losses}N${r.managerName ? `<br><span style="color:#94a3b8; font-size:9px;">🎩 Trainer: ${r.managerName} (${r.managerTrait})</span>` : ''}</div>`).join('');
     }
 
-    // Generationsübergreifende Legenden-Vergleiche (NEU): gruppiert alle ehemaligen Spieler
+    // Generationsübergreifende Legenden-Vergleiche: gruppiert alle ehemaligen Spieler
     // aus notablePastPlayers in 5-Saison-"Generationen" und zeigt die stärkste pro Ära.
     function renderLegendGenerationComparison() {
         let box = document.getElementById('legend-generations-box');
@@ -25760,7 +25778,7 @@ function tickPlayerRetirement() {
         box.innerHTML = Object.entries(generations).map(([label, p]) => `<div class="box" style="display:flex; justify-content:space-between; font-size:10px;"><span>${label}</span><strong>${p.name} (${p.strength})</strong></div>`).join('');
     }
 
-    // Vereinsrekorde (NEU): dauerhaftes Rekordarchiv für den gesamten Verein.
+    // Vereinsrekorde: dauerhaftes Rekordarchiv für den gesamten Verein.
     function renderClubRecordsBox() {
         let box = document.getElementById('club-records-box');
         if (!box) return;
@@ -25777,7 +25795,7 @@ function tickPlayerRetirement() {
         `;
     }
 
-    // Liga-Chronik (NEU): macht die seit der persistenten Liga-Pyramide (siehe
+    // Liga-Chronik: macht die seit der persistenten Liga-Pyramide (siehe
     // advanceLeaguesToNewSeason() in leagues.js) mitlaufende team.strengthHistory sichtbar -
     // zeigt die größten Stärke-Gewinner/-Verlierer der letzten Saison über alle 108 Vereine,
     // statt dass diese Entwicklung nur unsichtbar im Hintergrund abläuft.
@@ -25850,7 +25868,7 @@ function tickPlayerRetirement() {
 <script>
 
     // ==========================================
-    // ACHIEVEMENTS: VON TROPHÄEN LOSGELÖSTE MEILENSTEINE (NEU)
+    // ACHIEVEMENTS: VON TROPHÄEN LOSGELÖSTE MEILENSTEINE
     // ==========================================
     // Trophäen (game.trophies) markieren sportliche Erfolge (Meisterschaft, Pokalsieg).
     // Achievements sind bewusst BREITER angelegt - auch wirtschaftliche/strukturelle
@@ -26037,7 +26055,7 @@ function tickPlayerRetirement() {
         for (let w of WEATHER_TYPES) {
             if (roll < w.weight) {
                 currentWeather = w;
-                // Rasenheizung (NEU, Bugfix): hatte bisher außer einem kleinen Stadionwert-
+                // Rasenheizung (Bugfix): hatte bisher außer einem kleinen Stadionwert-
                 // Bonus KEINERLEI Spielwirkung - dabei ist die Neutralisierung von
                 // Schnee/Frost-Nachteilen genau ihr realer Zweck. Bei installierter
                 // Rasenheizung bleibt der Platz bei Schnee bespielbar wie bei normalem Wetter.
@@ -26045,19 +26063,19 @@ function tickPlayerRetirement() {
                     currentWeather = { ...w, fitLossMult: 1.0, injuryMult: 1.0, cardMult: 1.0, goalMult: 1.0, attendanceMult: 1.0, neutralizedBySnow: true };
                     addInboxMessage('vertrag', '❄️ Schnee, aber der Rasen bleibt bespielbar!', 'Dank der Rasenheizung sind die Auswirkungen des Schneefalls komplett neutralisiert - der Platz ist in bestem Zustand.', 'screen-calendar');
                 }
-                // Stadiondach (NEU, Bugfix): hatte bisher außer einem visuellen Overlay und
+                // Stadiondach (Bugfix): hatte bisher außer einem visuellen Overlay und
                 // etwas Stadionwert KEINERLEI Spielwirkung - ein überdachtes Stadion sollte
                 // aber logischerweise gegen Regen und Sturm unempfindlich sein.
                 if ((w.name === 'Regen' || w.isStorm) && typeof stadium !== 'undefined' && stadium.dach) {
                     currentWeather = { ...w, fitLossMult: 1.0, injuryMult: 1.0, cardMult: 1.0, goalMult: 1.0, attendanceMult: 1.0, neutralizedByRoof: true };
                     addInboxMessage('vertrag', `${w.icon} ${w.name}, aber das Dach hält dicht!`, `Dank der Komplett-Überdachung bleibt das Stadion von den Auswirkungen des ${w.name.toLowerCase()}s komplett verschont.`, 'screen-calendar');
                 }
-                // Klimaanlage (NEU, Stadion-Erweiterung): neutralisiert Hitze-Wetter komplett.
+                // Klimaanlage (Stadion-Erweiterung): neutralisiert Hitze-Wetter komplett.
                 if (w.name === 'Hitze' && typeof stadium !== 'undefined' && stadium.upgrades?.klimaanlage) {
                     currentWeather = { ...w, fitLossMult: 1.0, injuryMult: 1.0, cardMult: 1.0, goalMult: 1.0, attendanceMult: 1.0, neutralizedByAC: true };
                     addInboxMessage('vertrag', `${w.icon} Hitze, aber die Klimaanlage hält kühl!`, 'Dank der Klimaanlage sind alle negativen Auswirkungen der Hitzewelle neutralisiert.', 'screen-calendar');
                 }
-                // Sturm-Warnung (NEU): dramatische Vorwarnung statt einer echten
+                // Sturm-Warnung: dramatische Vorwarnung statt einer echten
                 // Spielverlegung (die den Spielplan strukturell gefährden würde) - viele
                 // Fans bleiben aus Sorge vor einer Absage zu Hause (siehe attendanceMult).
                 if (w.isStorm) addInboxMessage('vertrag', '🌪️ Sturmwarnung vor dem nächsten Spiel!', 'Der Deutsche Wetterdienst warnt vor Sturmböen - das Spiel findet trotzdem statt, aber viele Fans dürften der Warnung folgen und zu Hause bleiben.', 'screen-calendar');
@@ -26347,7 +26365,7 @@ function cleanupLegacyScoutState() {
     // Zentrale, einmal definierte Bonuswerte für Spielstil & Zweikampfhärte - werden sowohl
     // in calcTeamStrength() (Saison-/Vorschau-Werte) als auch LIVE während des Spiels
     // (simulateMatchStep()) verwendet, damit Taktikänderungen mitten im Match sofort wirken.
-    // Spielstile 2.0 (NEU): 8 statt 3 Optionen, jeweils mit Tempo/Pressing-Werten, aus denen
+    // Spielstile 2.0: 8 statt 3 Optionen, jeweils mit Tempo/Pressing-Werten, aus denen
     // sich Teamstärke-Bonus UND Fitnessverlust ableiten (siehe getTacticStyleBonus() und
     // getTacticStyleFitnessMultiplier() unten) - vorher nur 3 feste Sonderfälle.
     // Formations-Bewertungen (FORMATION_RATINGS) sind bereits in squad.js definiert.
@@ -26373,7 +26391,7 @@ function cleanupLegacyScoutState() {
         let cfg = TACTIC_STYLE_CONFIG[style] || TACTIC_STYLE_CONFIG.ausgeglichen;
         return 1 + ((cfg.tempo - 50) + (cfg.press - 50)) / 400; // z.B. Pressing (68/88): 1+ (18+38)/400 = 1.14
     }
-    // Formations-Bonus (NEU): Off-Wert erhöht die Angriffsdurchschlagskraft, Def-Wert
+    // Formations-Bonus: Off-Wert erhöht die Angriffsdurchschlagskraft, Def-Wert
     // stabilisiert (siehe Verwendung in match.js für den defensiven Gegenpart).
     function getFormationOffBonus() {
         let r = FORMATION_RATINGS[game.formation] || { off: 60 };
@@ -26449,7 +26467,7 @@ function cleanupLegacyScoutState() {
         // Eingespieltheit: Spielerpaare, die schon oft zusammen aufgelaufen sind, geben einen
         // kleinen, aber spürbaren Team-Stärke-Bonus (bis zu +3 bei maximaler Eingespieltheit).
         bonus += getLineupChemistryStats().bonus;
-        // Kabinen-Dynamik (NEU): Cliquenbildung und Führungsspieler-Rat wirken sich auf die
+        // Kabinen-Dynamik: Cliquenbildung und Führungsspieler-Rat wirken sich auf die
         // Team-Stärke aus.
         if (typeof getCliqueChemistryModifier === 'function') bonus += getCliqueChemistryModifier();
         if (typeof getCouncilMoraleStabilizer === 'function') bonus += getCouncilMoraleStabilizer() * 0.3;
@@ -26469,14 +26487,14 @@ function cleanupLegacyScoutState() {
         // Wetterfest: gibt bei schlechtem Wetter (Regen/Schnee/Sturm/Hitze) einen kleinen
         // Extra-Bonus, unbeeindruckt von den Bedingungen zu bleiben.
         if (currentWeather.goalMult < 1 && starting.some(p => p.trait === 'Wetterfest')) bonus += 1.5;
-        // Block-spezifische Fan-Kultur (NEU): tief verwurzelte Block-Kulturen geben bei
+        // Block-spezifische Fan-Kultur: tief verwurzelte Block-Kulturen geben bei
         // Heimspielen einen kleinen zusätzlichen Atmosphäre-Bonus.
         if (isHomeMatch && typeof getBlockCultureHomeBonus === 'function') bonus += getBlockCultureHomeBonus();
-        // Stadion-Erweiterungen (NEU): Beschallungsanlage verstärkt den Heimvorteil.
+        // Stadion-Erweiterungen: Beschallungsanlage verstärkt den Heimvorteil.
         if (isHomeMatch && typeof getStadiumHomeAdvantageBonus === 'function') bonus += getStadiumHomeAdvantageBonus();
         // Fan-Aktionen (Choreo heim, Sonderzug auswärts), siehe runFanAction() in fans.js.
         if (typeof getFanSupportBonus === 'function') bonus += getFanSupportBonus(isHomeMatch);
-        // Kapitän (NEU): war bisher rein kosmetisch (nur ein Ⓒ-Icon) - steht der ernannte
+        // Kapitän: war bisher rein kosmetisch (nur ein Ⓒ-Icon) - steht der ernannte
         // Kapitän tatsächlich auf dem Feld, gibt seine Führungsqualität einen kleinen, aber
         // echten Team-Stärke-Bonus. Ein erfahrener Kapitän (30+) wirkt sich stärker aus.
         let captainOnPitch = starting.find(p => p.id === game.captainId);
@@ -26496,10 +26514,10 @@ function cleanupLegacyScoutState() {
 
         // Spielstil: Offensiv riskiert mehr für mehr Durchschlagskraft, Defensiv ist solider.
         bonus += getTacticStyleBonus(game.tacticStyle);
-        // Formations-Bonus (NEU): Off-Wert der gewählten Formation erhöht die Angriffs-
+        // Formations-Bonus: Off-Wert der gewählten Formation erhöht die Angriffs-
         // durchschlagskraft, siehe FORMATION_RATINGS in squad.js.
         bonus += getFormationOffBonus();
-        // Team-Anweisungen (NEU): Gegenpressing/Tief stehen/Hohe Außenverteidiger wirken sich
+        // Team-Anweisungen: Gegenpressing/Tief stehen/Hohe Außenverteidiger wirken sich
         // zusätzlich zu Formation und Spielstil aus, unabhängig kombinierbar.
         if (typeof getTeamInstructionBonus === 'function') bonus += getTeamInstructionBonus();
 
@@ -26666,7 +26684,7 @@ function cleanupLegacyScoutState() {
         // der Partie tatsächlich neu bewerten können, statt nur beim Anpfiff zu zählen.
         let kickoffTacticDelta = getTacticStyleBonus(game.tacticStyle) + getTackleHardnessBonus(game.tackleHardness);
         let ourBaseStr = ourStrength - kickoffTacticDelta;
-        // Gegner-Identität (NEU): Spielstil des Live-Gegners nachschlagen, damit er sich auch
+        // Gegner-Identität: Spielstil des Live-Gegners nachschlagen, damit er sich auch
         // im direkten Duell gegen uns bemerkbar macht (siehe simulateMatchStep()).
         let oppName = isHome ? awayName : homeName;
         let oppTeamObj = leaguesData.flat().find(t => t && t.name === oppName) || null;
@@ -26832,7 +26850,7 @@ function cleanupLegacyScoutState() {
         });
     }
 
-    // Taktik-Automatik (NEU, Einstellung in der Taktiktafel siehe js/squad.js): reagiert
+    // Taktik-Automatik (Einstellung in der Taktiktafel siehe js/squad.js): reagiert
     // automatisch auf den Spielstand, ohne dass das Live-Panel oben manuell bedient werden
     // muss. Feuert je Regel höchstens EINMAL pro Spiel (currentMatch.tacticAutomationFired),
     // damit nicht bei jedem weiteren Schritt derselbe Stil erneut gesetzt und der Ticker
@@ -26953,7 +26971,7 @@ function cleanupLegacyScoutState() {
         "🎙️ Co-Kommentator: „Die Zweikampfquote ist heute bemerkenswert hoch.“",
         "🎙️ Co-Kommentator: „Beide Torhüter wirken heute sehr aufmerksam.“"
     ];
-    // Kontextabhängige Kommentar-Varianz (NEU): zusätzliche Zeilen je nach Spielstand und
+    // Kontextabhängige Kommentar-Varianz: zusätzliche Zeilen je nach Spielstand und
     // Spielminute, damit der Ticker nicht immer dieselben generischen Sätze wiederholt.
     const CO_COMMENTATOR_LINES_LEADING = [
         "🎙️ Co-Kommentator: „Die Führung gibt spürbar Sicherheit in den eigenen Reihen.“",
@@ -27022,11 +27040,11 @@ function cleanupLegacyScoutState() {
         let effHomeStr = (currentMatch.isHome ? ourLiveStr : currentMatch.homeStr) - currentMatch.homeStrPenalty;
         let effAwayStr = (currentMatch.isHome ? currentMatch.awayStr : ourLiveStr) - currentMatch.awayStrPenalty;
         let diff = effHomeStr - effAwayStr;
-        // Formations-Verteidigungswert (NEU): eine defensiv robuste Formation verschiebt die
+        // Formations-Verteidigungswert: eine defensiv robuste Formation verschiebt die
         // Wahrscheinlichkeit im Ballbesitz-Duell zu unseren Gunsten, unabhängig davon, ob wir
         // Heim- oder Auswärtsteam sind (siehe FORMATION_RATINGS in squad.js).
         let ourDefShift = getFormationDefBonus() * 0.6;
-        // Torwarttrainer (NEU): wirkte bisher nur im seltenen Elfmeterschießen, nie im
+        // Torwarttrainer: wirkte bisher nur im seltenen Elfmeterschießen, nie im
         // regulären 90-minütigen Spielverlauf - ein guter Torwart-Coach verbessert
         // Reflexe/Stellungsspiel des Keepers auch im Alltagsgeschäft.
         if (staffMembers.twTrainer.hired) ourDefShift += 0.4 * getStaffLevelMultiplier('twTrainer');
@@ -27039,7 +27057,7 @@ function cleanupLegacyScoutState() {
         // viel zu oft 0:0 endete, weil einfach zu wenige Torereignisse pro Partie ausgelöst
         // wurden - unabhängig davon, wer sie dann verwertet hätte.
         goalChance += Math.min(0.25, Math.abs(diff) * 0.003);
-        // Gegner-Identität (NEU): ein offensiv eingestellter Gegner erhöht die Chance auf ein
+        // Gegner-Identität: ein offensiv eingestellter Gegner erhöht die Chance auf ein
         // Torereignis zusätzlich, ein defensiver senkt sie.
         if (currentMatch.oppPlaystyle) {
             let style = getTeamPlaystyle({ playstyle: currentMatch.oppPlaystyle });
@@ -27058,7 +27076,7 @@ function cleanupLegacyScoutState() {
         // Standards-Spezialist: erhöht generell die Chance auf Tore aus Standardsituationen
         // (Freistöße/Ecken), unabhängig von individuellen Spieler-Eigenschaften.
         if (staffMembers.setPieceCoach.hired) goalChance += 0.015 * getStaffLevelMultiplier('setPieceCoach');
-        // Standard-Schützen (NEU): war bisher rein kosmetisch (nur ein Icon neben dem Namen) -
+        // Standard-Schützen: war bisher rein kosmetisch (nur ein Icon neben dem Namen) -
         // jetzt geben ein passsicherer Freistoß-/Eckenschütze und ein torgefährlicher
         // Elfmeterschütze im Kader einen kleinen echten Zusatzbonus, wenn sie auf dem Platz
         // stehen. Das macht die neue Standards-Spezialist-Automatisierung auch tatsächlich
@@ -27123,7 +27141,7 @@ function cleanupLegacyScoutState() {
             let ourCardRoll = Math.random();
             // Ein "Zweikampfmonster" gewinnt seine Duelle sauber und senkt so das eigene Kartenrisiko.
             let ourCardThreshold = hasTackleMonster ? 0.045 : 0.06;
-            // Kapitän auf dem Feld (NEU): beruhigt die Mannschaft und senkt das Kartenrisiko
+            // Kapitän auf dem Feld: beruhigt die Mannschaft und senkt das Kartenrisiko
             // leicht - eine der klassischsten Führungsspieler-Aufgaben im echten Fußball.
             if (onPitch.some(p => p.id === game.captainId)) ourCardThreshold *= 0.9;
             // Glücksbringer (Premium-Booster, NEU): dämpft auch das Kartenrisiko.
@@ -27284,7 +27302,7 @@ function cleanupLegacyScoutState() {
         renderHalftimeSubSuggestion();
         document.getElementById('halftime-talk-overlay').classList.add('show');
     }
-    // KI-Vorschlag für Einwechslungen zur Halbzeit (NEU): identifiziert den müdesten
+    // KI-Vorschlag für Einwechslungen zur Halbzeit: identifiziert den müdesten
     // Feldspieler auf dem Platz und den stärksten passenden Ersatz auf der Bank, statt dass
     // eine Einwechslung immer nur den zuletzt eingewechselten Spieler naiv austauscht.
     function getHalftimeSubSuggestion() {
@@ -27411,14 +27429,14 @@ function cleanupLegacyScoutState() {
         // im Kontoauszug geführt - sie stehen vollständig aufgeschlüsselt im
         // Buchungsjournal (siehe game.financeLedger weiter unten).
         setzeBuchungskontext(SPIELTAG_KONTEXT);
-        // Rasenpflege (NEU): das Geläuf nutzt sich durch jedes Heimspiel leicht ab, siehe
+        // Rasenpflege: das Geläuf nutzt sich durch jedes Heimspiel leicht ab, siehe
         // tickPitchCondition()/maintainPitch() in stadium.js.
         if (isHomeMatch && typeof tickPitchCondition === 'function') tickPitchCondition();
         let ghostGameActive = isHomeMatch && game.forcedGhostGame;
         // Lokalderby-Atmosphäre: bei Heimspielen gegen den permanenten Rivalen ist das
         // Stadion deutlich stärker ausgelastet als sonst (gedeckelt bei "ausverkauft").
         let derbyBoostActive = isHomeMatch && isDerbyMatch && !ghostGameActive;
-        // Pokal-/Europapokalspiele (NEU): ziehen erfahrungsgemäß mehr Zuschauer an als
+        // Pokal-/Europapokalspiele: ziehen erfahrungsgemäß mehr Zuschauer an als
         // gewöhnliche Ligaspiele - besondere Atmosphäre, seltenere Gelegenheit.
         let isCupOrEuropeMatch = isHomeMatch && !ghostGameActive && typeof currentMatch !== 'undefined' && currentMatch && (currentMatch.isCup || currentMatch.isEurope);
         let cupBoostActive = isCupOrEuropeMatch && !derbyBoostActive;
@@ -27469,7 +27487,7 @@ function cleanupLegacyScoutState() {
             // (Zuschauerrekord wird bereits an anderer Stelle über game.recordAttendance
             // gepflegt, siehe applyMatchdayFinances weiter unten - keine doppelte Erfassung.)
         }
-        // Vereinsrekorde (NEU): größter Sieg, höchste Niederlage, torreichstes Spiel und
+        // Vereinsrekorde: größter Sieg, höchste Niederlage, torreichstes Spiel und
         // ungeschlagen-Serie - bisher gab es außer der punktuellen Rivalen-Bilanz kein
         // dauerhaftes Rekordarchiv für den gesamten Verein.
         if (scoreTextForRecord && typeof scoreTextForRecord === 'string' && scoreTextForRecord.includes(':')) {
@@ -27501,7 +27519,7 @@ function cleanupLegacyScoutState() {
         // 600 Zuschauer im Stadion waren - ein Kreisklassenspiel verdiente so ein Viertel
         // seiner Ticketeinnahmen mit 50 verkauften Logenplaetzen. Jetzt sind sie wie in der
         // GuV-Prognose (finances.js) an die tatsaechliche Zuschauerzahl gekoppelt.
-        // Dauerkarten (NEU): der Anteil der Zuschauer, der bereits über die Dauerkarte bezahlt
+        // Dauerkarten: der Anteil der Zuschauer, der bereits über die Dauerkarte bezahlt
         // hat (siehe renewSeasonTickets() in stadium.js), wird bei der SPIELTAGS-Einnahme
         // ausgeklammert - sonst würde er doppelt kassiert. Er zählt aber weiterhin voll zur
         // Zuschauerzahl (Fanartikel, Rekorde, Auslastung), da diese Fans wirklich im Stadion
@@ -27512,9 +27530,9 @@ function cleanupLegacyScoutState() {
         let ticketIncome = (isHomeMatch && !ghostGameActive) ? Math.round(zahlendeAtt * (stadium.stehShare ?? 0.5) * game.ticketPrices.steh + zahlendeAtt * (stadium.sitzShare ?? 0.45) * game.ticketPrices.sitz + vipSold * game.ticketPrices.vip) : 0;
         // Doppelte Ticketeinnahmen (Premium-Booster, NEU).
         if (isHomeMatch && game.ticketIncomeBoostNextMatch) { ticketIncome *= 2; game.ticketIncomeBoostNextMatch = false; }
-        // Medienrechte (NEU): eigener Medienpartner zahlt bei jedem Heimspiel, mit Bonus bei
+        // Medienrechte: eigener Medienpartner zahlt bei jedem Heimspiel, mit Bonus bei
         // Derbys/Pokalspielen (attraktivere Übertragungen).
-        // Stadion-Erweiterungen (NEU): feste Zusatzeinnahmen der "income"-Kategorie
+        // Stadion-Erweiterungen: feste Zusatzeinnahmen der "income"-Kategorie
         // (VIP-Lounges, Public-Viewing, Ladestationen) sowie ein leichter Medienimage-Schub
         // durch Lichtshow/Pressezentrum bei jedem Heimspiel.
         if (isHomeMatch && typeof getStadiumMatchdayIncome === 'function') {
@@ -27524,7 +27542,7 @@ function cleanupLegacyScoutState() {
         if (isHomeMatch && typeof tickMediaRightsPayment === 'function') {
             tickMediaRightsPayment(isDerbyMatch, !!(typeof currentMatch !== 'undefined' && currentMatch && currentMatch.isCup));
         }
-        // Betriebskosten (NEU, echte Abbuchung): dieselbe Formel wurde bisher nur im
+        // Betriebskosten (echte Abbuchung): dieselbe Formel wurde bisher nur im
         // Finanz-Ausblick ANGEZEIGT, aber nie tatsächlich abgebucht - ein "Phantom-Posten".
         // Jetzt wird der Pro-Spieltag-Anteil (Monatsschätzung / 4) jeden Spieltag wirklich
         // fällig, egal ob Heim- oder Auswärtsspiel (laufende Kosten fallen immer an).
@@ -27581,13 +27599,13 @@ function cleanupLegacyScoutState() {
         let themedBonus = 0;
         if (game.sponsor.themedBonusType === 'cleanSheet' && cleanSheet) themedBonus = game.sponsor.themedBonusAmount;
         if (game.sponsor.themedBonusType === 'attendance' && isHomeMatch && !ghostGameActive) themedBonus = Math.round(att * game.sponsor.themedBonusAmount);
-        // Sponsoren-Zufriedenheit (NEU): bei niedriger Loyalität zahlt der Hauptsponsor
+        // Sponsoren-Zufriedenheit: bei niedriger Loyalität zahlt der Hauptsponsor
         // spürbar weniger (nur der Hauptsponsor-Teil, nicht Banden/Ausrüster/Namensrechte).
         let loyaltyMult = typeof getSponsorLoyaltyPaymentMultiplier === 'function' ? getSponsorLoyaltyPaymentMultiplier() : 1;
         let mainSponsorInc = Math.round((game.sponsor.base + (won ? game.sponsor.winBonus : 0) + themedBonus) * loyaltyMult);
         // Sponsoren-Boost (Premium-Booster, NEU): +50% für begrenzte Zeit.
         if (game.sponsorBoostMatchdaysLeft > 0) mainSponsorInc = Math.round(mainSponsorInc * 1.5);
-        // Stadion-Erweiterungen (NEU): Solaranlage/Business-Center erhöhen die laufenden
+        // Stadion-Erweiterungen: Solaranlage/Business-Center erhöhen die laufenden
         // Sponsoreneinnahmen dauerhaft.
         if (typeof getStadiumSponsorBonus === 'function') mainSponsorInc = Math.round(mainSponsorInc * (1 + getStadiumSponsorBonus()));
         let sponsorInc = mainSponsorInc + (isHomeMatch ? getBandenIncome() + game.kitSupplier.income + (stadium.namingRightsIncome || 0) : 0) + (game.sleeveSponsor?.income || 0);
@@ -27751,7 +27769,7 @@ function cleanupLegacyScoutState() {
 
     // Ausschreitungen bei Heim-Derbys: Risiko sinkt deutlich mit mehr Ordnerdienst-Personal.
     function checkHooliganIncident() {
-        // Eigene Sicherheitskräfte (NEU): feste Ordner zählen zur effektiven Ordnerzahl dazu,
+        // Eigene Sicherheitskräfte: feste Ordner zählen zur effektiven Ordnerzahl dazu,
         // die Ausbildungsstufe macht jeden einzelnen Ordner zusätzlich wirksamer.
         let effectiveStewards = (game.stewards || 0) + (typeof securityWorkforce !== 'undefined' ? securityWorkforce.permanentStewards : 0);
         let skillMult = typeof securityWorkforce !== 'undefined' ? (1 + (securityWorkforce.skillLevel - 1) * 0.12) : 1;
@@ -27759,7 +27777,7 @@ function cleanupLegacyScoutState() {
         if (staffMembers.fanLiaison.hired) baseChance *= 0.7; // Fanbeauftragter deeskaliert im Vorfeld
         // Sicherheitslage beruhigen (Premium-Booster, NEU): stark reduziertes Risiko.
         if (game.securityCalmNextMatch) baseChance *= 0.15;
-        // Stadion-Sicherheitstechnik (NEU): dauerhafte Risikosenkung durch gekaufte Anlagen.
+        // Stadion-Sicherheitstechnik: dauerhafte Risikosenkung durch gekaufte Anlagen.
         if (typeof getStadiumSecurityBonus === 'function') baseChance *= (1 - getStadiumSecurityBonus());
         if (Math.random() >= baseChance) return;
 
@@ -27787,10 +27805,10 @@ function cleanupLegacyScoutState() {
             gradeOwnMatch(unsere, totalGoalsForBets.total - unsere);
         }
         underworld.spyIntelActive = false;
-        // Zuschauerzahl-Konsistenz-Fix (NEU): finalAttendance nach dem Spiel zurücksetzen,
+        // Zuschauerzahl-Konsistenz-Fix: finalAttendance nach dem Spiel zurücksetzen,
         // damit sie nicht versehentlich ins nächste Spiel durchsickert.
         if (typeof currentMatch !== 'undefined' && currentMatch) currentMatch.finalAttendance = undefined;
-        // Premium-Booster-Flags (NEU): erst NACH dem kompletten Spiel zurücksetzen, da sie
+        // Premium-Booster-Flags: erst NACH dem kompletten Spiel zurücksetzen, da sie
         // während des gesamten Spielverlaufs (viele Ticks) wirken sollen, nicht nur beim ersten.
         if (matchResult !== null) {
             game.luckyCharmNextMatch = false;
@@ -27814,7 +27832,7 @@ function cleanupLegacyScoutState() {
                     // Potenzial-Multiplikator & Ausbildungsschwerpunkt (Jugendakademie): stärkere
                     // Talente und passender Fokus entwickeln sich schneller in der Hospitanz.
                     let potMult = typeof getYouthPotentialMultiplier === 'function' ? getYouthPotentialMultiplier(p) : 1;
-                    // Jugend-Mentor (NEU): ein erfahrener Profi als persönlicher Mentor
+                    // Jugend-Mentor: ein erfahrener Profi als persönlicher Mentor
                     // beschleunigt die Entwicklung während der Hospitanz zusätzlich spürbar.
                     if (p.mentorId && squad.some(s => s.id === p.mentorId)) potMult *= 1.35;
                     if (Math.random() < 0.12 * potMult) {
@@ -27881,16 +27899,16 @@ function cleanupLegacyScoutState() {
         individualBoostChance *= (1 + (game.equipmentLevel || 0) * 0.05);
         if (game.doubleTrainingBoostActive) { individualBoostChance *= 1.6; game.doubleTrainingBoostActive = false; }
         let injuryChance = game.teamTraining === 'erholung' ? 0.024 : 0.03;
-        // Premium-Booster (NEU): Verletzungsschutz setzt das Risiko komplett auf 0,
+        // Premium-Booster: Verletzungsschutz setzt das Risiko komplett auf 0,
         // Glücksbringer dämpft es stark.
         if (game.injuryShieldMatchdaysLeft > 0) injuryChance = 0;
         else if (game.luckyCharmNextMatch) injuryChance *= 0.4;
         // Verletzungspräventions-Programm (Training & Förderung): dauerhafte Grundrisiko-Senkung.
         if (game.injuryPreventionProgram) injuryChance *= 0.82;
-        // Stadion-Erweiterungen (NEU): Medizinzentrum/Rasenpflege senken das Trainings-
+        // Stadion-Erweiterungen: Medizinzentrum/Rasenpflege senken das Trainings-
         // Verletzungsrisiko - wirkt am heimischen Gelände, unabhängig vom letzten Spielort.
         if (typeof getStadiumInjuryReduction === 'function') injuryChance *= (1 - getStadiumInjuryReduction());
-        // Rasenzustand (NEU): unabhängig von den festen Stadion-Erweiterungen oben - ein
+        // Rasenzustand: unabhängig von den festen Stadion-Erweiterungen oben - ein
         // gepflegtes Geläuf senkt das Risiko zusätzlich leicht, ein vernachlässigtes erhöht es.
         // Bei stadium.pitchCondition === 85 (Ausgangswert) ist der Faktor exakt neutral (1.0).
         if (typeof stadium !== 'undefined' && stadium.pitchCondition !== undefined) {
@@ -27982,35 +28000,35 @@ function cleanupLegacyScoutState() {
             tickCompetitorFirms();
             tickAcquisitionOfferExpiry();
         }
-        // Produktionsketten-Countdown (NEU) jeden Spieltag herunterzählen.
+        // Produktionsketten-Countdown jeden Spieltag herunterzählen.
         if (typeof tickProductionQueue === 'function') tickProductionQueue();
         // Merchandising: limitierte Edition und saisonale Kollektion jeden Spieltag prüfen.
         if (typeof tickLimitedEditionSales === 'function') {
             tickLimitedEditionSales();
             tickSeasonalCollectionExpiry();
         }
-        // Scouting-Netzwerk 2.0 (NEU): Countdown-Missionen und Beobachtungsliste jeden
+        // Scouting-Netzwerk 2.0: Countdown-Missionen und Beobachtungsliste jeden
         // Spieltag weiterentwickeln.
         if (typeof tickScoutingMissions === 'function') {
             tickScoutingMissions();
             tickWatchlist();
         }
-        // Stadion-Baustellen (NEU) jeden Spieltag weiterführen.
+        // Stadion-Baustellen jeden Spieltag weiterführen.
         if (typeof tickStadiumConstruction === 'function') tickStadiumConstruction();
-        // Spieler des Monats (NEU) jeden Spieltag prüfen (wird nur alle 4 SpT tatsächlich vergeben).
+        // Spieler des Monats jeden Spieltag prüfen (wird nur alle 4 SpT tatsächlich vergeben).
         if (typeof checkPlayerOfTheMonth === 'function') checkPlayerOfTheMonth();
-        // Tagesform (NEU): schwankt jeden Spieltag neu, leicht durch Moral/Fitness beeinflusst
+        // Tagesform: schwankt jeden Spieltag neu, leicht durch Moral/Fitness beeinflusst
         // (wer in Form und ausgeruht ist, hat bessere Chancen auf einen guten Tag).
         squad.forEach(p => {
             let bias = ((p.morale || 50) - 50) * 0.15 + ((p.fitness || 100) - 80) * 0.1;
             p.dailyForm = Math.max(5, Math.min(95, Math.round(50 + bias + (Math.random() * 40 - 20))));
         });
-        // Sponsoren-Zufriedenheit und Aktivierungs-Events (NEU) jeden Spieltag.
+        // Sponsoren-Zufriedenheit und Aktivierungs-Events jeden Spieltag.
         if (typeof tickSponsorLoyalty === 'function') {
             tickSponsorLoyalty(matchResult);
             checkSponsorActivationEvent();
         }
-        // Block-spezifische Fan-Kultur (NEU) jeden Spieltag weiterentwickeln.
+        // Block-spezifische Fan-Kultur jeden Spieltag weiterentwickeln.
         if (typeof tickBlockCultures === 'function') tickBlockCultures();
         // Fan-Zentrale: Cooldown herunterzählen, Traditionsverein-Status und kritischen
         // Fan-Brief prüfen - jeden verarbeiteten Spieltag, unabhängig von Live/Batch-Kontext.
@@ -28019,56 +28037,11 @@ function cleanupLegacyScoutState() {
             if (typeof checkTraditionClubStatus === 'function') checkTraditionClubStatus();
             if (typeof checkCriticalFanLetter === 'function') checkCriticalFanLetter();
         }
-        // DFB-Nachfrist-Frühwarnung: einmalig in den letzten Spieltagen der Saison aktiv per
-        // Postfach warnen, falls man aufstiegsberechtigt wäre, aber die Lizenz noch fehlt -
-        // damit man es nicht verpasst, wenn man den Stadion-Screen nicht besucht.
-        if (game.matchday === 30 && !game.dfbGracePeriod) {
-            let status = checkDfbLicensingStatus();
-            if (status.targetLevel !== null && status.missing.length > 0) {
-                let teams = leaguesData[game.leagueLevel];
-                let sorted = teams ? [...teams].sort(compareTableRows) : [];
-                let myRank = sorted.findIndex(t => t.name === game.clubName) + 1;
-                if (myRank > 0 && myRank <= 2) {
-                    addInboxMessage('vertrag', '🚨 DFB-Lizenz-Frühwarnung!', `Du liegst aktuell in Aufstiegsposition, aber die Lizenz für die ${leagueNames[status.targetLevel]} fehlt noch:\n\n${status.missing.map(m => '• ' + m).join('\n')}\n\nNur noch wenige Spieltage bis Saisonende - jetzt nachbessern!`, 'screen-stadium');
-                    showToast('🚨 DFB-Lizenz-Frühwarnung: Auflagen für den möglichen Aufstieg noch nicht erfüllt!', 'error');
-                }
-            }
-        }
-        // DFB-Nachfrist prüfen: wird jeden Spieltag der neuen Saison ausgewertet, solange
-        // eine offene Nachfrist läuft (siehe DFB-Lizenzierung in concludeSeasonAndAdvance()).
-        if (game.dfbGracePeriod) {
-            let status = checkDfbLicensingStatus();
-            if (status.missing.length === 0) {
-                // Mängel rechtzeitig behoben: nachträglicher Aufstieg mitten in der laufenden Saison!
-                game.leagueLevel = game.dfbGracePeriod.targetLevel;
-                game.dfbGracePeriod = null;
-                if (typeof triggerPromotionBonusClauses === 'function') triggerPromotionBonusClauses();
-                addInboxMessage('vertrag', '🎉 Nachträglicher Aufstieg!', `Die DFB-Auflagen wurden rechtzeitig innerhalb der Nachfrist erfüllt - der Aufstieg in die ${leagueNames[game.leagueLevel]} wird nachträglich vollzogen!`, 'screen-stadium');
-                showToast(`🎉 Nachträglicher Aufstieg in die ${leagueNames[game.leagueLevel]}!`, 'success');
-            } else {
-                game.dfbGracePeriod.deadlineMatchday--;
-                if (game.dfbGracePeriod.deadlineMatchday <= 0) {
-                    let targetLevel = game.dfbGracePeriod.targetLevel;
-                    game.dfbGracePeriod = null;
-                    addInboxMessage('vertrag', '📋 DFB-Nachfrist verstrichen', `Die Nachfrist zur Erfüllung der DFB-Auflagen für die ${leagueNames[targetLevel]} ist ohne Erfolg verstrichen - der Aufstieg verfällt endgültig für diese Saison.`, 'screen-stadium');
-                    showToast('📋 DFB-Nachfrist verstrichen - Aufstieg endgültig verfallen.', 'error');
-                }
-            }
-        }
+        // DFB-Lizenz: Frühwarnung an Spieltag 30 und laufende Nachfrist (js/season-end.js).
+        if (typeof checkDfbLicenseDeadlines === 'function') checkDfbLicenseDeadlines();
 
-        // ---------- KABINEN-CLIQUEN ----------
-        // Spieler, die lange genug gemeinsam im Kader sind, werden gelegentlich "beste
-        // Freunde" - wird einer von beiden verkauft, leidet kurzzeitig die Moral des anderen
-        // (siehe checkFriendshipDeparture() in transfermarket.js).
-        squad.forEach(p => { p.squadTenureMatchdays = (p.squadTenureMatchdays || 0) + 1; });
-        let unpaired = squad.filter(p => !p.friendPlayerId && (p.squadTenureMatchdays || 0) >= 20);
-        if (unpaired.length >= 2 && Math.random() < 0.05) {
-            let a = unpaired[Math.floor(Math.random() * unpaired.length)];
-            let candidates = unpaired.filter(p => p.id !== a.id);
-            let b = candidates[Math.floor(Math.random() * candidates.length)];
-            a.friendPlayerId = b.id; b.friendPlayerId = a.id;
-            addInboxMessage('vertrag', '🤝 Kabinen-Freundschaft entstanden', `${a.name} und ${b.name} sind in der Kabine beste Freunde geworden.`, 'screen-squad');
-        }
+        // Kabinen-Freundschaften (js/locker-room.js).
+        if (typeof tickLockerFriendships === 'function') tickLockerFriendships();
 
         squad.forEach(p => {
             // Stammspieler erholen sich unter der Woche teilweise (ein Viertel der Bank-Erholung):
@@ -28218,44 +28191,19 @@ function cleanupLegacyScoutState() {
 
         // Ausschreitungen: nur relevant, wenn wir gerade ein Heim-Derby ausgetragen haben
         if (isHomeDerby) checkHooliganIncident();
-        // Ordner-Kosten (NEU, echte Abbuchung): bisher wurde nur im Finanz-Ausblick ein
+        // Ordner-Kosten (echte Abbuchung): bisher wurde nur im Finanz-Ausblick ein
         // Betrag angezeigt, aber nie wirklich abgebucht - ein weiterer "Phantom-Posten".
         if (typeof tickStewardCosts === 'function') tickStewardCosts(isHomeMatchParam);
         if (typeof runSecChiefAutomation === 'function') runSecChiefAutomation();
-        // Immobilien-Portfolio (NEU): laufende Mieteinnahmen unabhängig von Heim-/Auswärtsspiel.
+        // Immobilien-Portfolio: laufende Mieteinnahmen unabhängig von Heim-/Auswärtsspiel.
         if (typeof tickRealEstateIncome === 'function') tickRealEstateIncome();
         if (typeof tickWomenTeam === 'function') tickWomenTeam();
-        // Monatliche Ticks (alle 4 Spieltage ≈ 1 Monat) der Feature-Systeme.
-        if (game.matchday % 4 === 0) {
-            setzeBuchungskontext('📅 Monatliche Vereinsposten');
-            if (typeof migrateLegacyCoSponsors === 'function') migrateLegacyCoSponsors();
-            // Board Relations: monatliche Zufriedenheits- und Job-Sicherheits-Updates
-            if (typeof tickBoardRoom === 'function') tickBoardRoom();
-            // Jugend: monatliche Talententwicklung (Trainer-/Fokus-/Mentor-Bonus)
-            if (typeof tickYouthDevelopment === 'function') tickYouthDevelopment();
-            if (typeof tickYouthBreakthroughs === 'function') tickYouthBreakthroughs();
-            // Medienabteilung: Medienereignisse aus dem Saisonverlauf
-            if (typeof tickMediaDepartment === 'function') tickMediaDepartment();
-            if (typeof cleanupLegacyContractState === 'function') cleanupLegacyContractState();
-            // Opposition Analysis: Gegner-Analyse-Updates
-            if (typeof cleanupLegacyScoutState === 'function') cleanupLegacyScoutState();
-            if (typeof cleanupRemovedModuleState === 'function') cleanupRemovedModuleState();
-            if (typeof cleanupLegacyDevelopmentState === 'function') cleanupLegacyDevelopmentState();
-            if (typeof cleanupLegacyScoutingState === 'function') cleanupLegacyScoutingState();
-            if (typeof tickSeasonObjectives === 'function') tickSeasonObjectives();
-            if (typeof tickTeamCouncil === 'function') tickTeamCouncil();
-            if (typeof tickLockerRoom === 'function') tickLockerRoom();
-            if (typeof tickCoachCarousel === 'function') tickCoachCarousel();
-            if (typeof tickMemberAssembly === 'function') tickMemberAssembly();
-            // Karriereenden: am Saisonende in agePlayersAtSeasonEnd() (js/player-development.js)
-            // Financial tracking for dashboard charts
-            if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
-            loescheBuchungskontext();
-        }
+        // Monatliche Ticks (alle 4 Spieltage ≈ 1 Monat): runMonthlyClubTicks().
+        if (game.matchday % 4 === 0) runMonthlyClubTicks();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();
         if (typeof checkReleaseClauseTriggers === 'function') checkReleaseClauseTriggers();
         if (typeof tickIncomingLoans === 'function') tickIncomingLoans();
-        // Jugendliga (NEU): alle 4 Spieltage ein automatisches Jugendliga-Spiel.
+        // Jugendliga: alle 4 Spieltage ein automatisches Jugendliga-Spiel.
         if (game.matchday % 4 === 0 && typeof tickYouthLeague === 'function') tickYouthLeague();
         if (typeof checkSellOnClausePayouts === 'function') checkSellOnClausePayouts();
         if (typeof tickSkillTraining === 'function') tickSkillTraining();
@@ -28264,7 +28212,7 @@ function cleanupLegacyScoutState() {
         if (typeof runTrainingAutopilotTick === 'function') runTrainingAutopilotTick();
         if (typeof tickSecondTeamRoutine === 'function') tickSecondTeamRoutine();
         if (typeof rollOfficeEvent === 'function') rollOfficeEvent();
-        // Weitere Premium-Booster-Countdowns (NEU).
+        // Weitere Premium-Booster-Countdowns.
         if (game.injuryShieldMatchdaysLeft > 0) game.injuryShieldMatchdaysLeft--;
         if (game.sponsorBoostMatchdaysLeft > 0) game.sponsorBoostMatchdaysLeft--;
 
@@ -28309,7 +28257,7 @@ function cleanupLegacyScoutState() {
         checkIncomingBandenOffers();
         checkIncomingSleeveOffers();
         runFanshopManagerTasks();
-        // Erweiterte Personal-Automatisierung (NEU): Chef-Scout, Sportdirektor,
+        // Erweiterte Personal-Automatisierung: Chef-Scout, Sportdirektor,
         // Marketing-Direktor, Standards-Spezialist.
         if (typeof runScoutAutomation === 'function') {
             runScoutAutomation();
@@ -28321,20 +28269,6 @@ function cleanupLegacyScoutState() {
         runFitCoachAutoAssignment();
         applyFanLiaisonPassiveEffect();
         runFanLiaisonAutoPricing();
-
-        if (game.matchday % 4 === 0) {
-            // Portfolio-Diversifikationsbonus (Kapitalmarkt): wer breit gestreut investiert,
-            // bekommt einen kleinen Dividenden-Aufschlag auf ALLE gehaltenen Aktien.
-            let diversificationBonus = typeof getDiversificationBonus === 'function' ? getDiversificationBonus() : 0;
-            let dividends = Math.round(STOCK_KEYS.reduce((sum, key) => {
-                let s = stockMarket[key];
-                // dividendRate ist ein Jahressatz (so wird er auch angezeigt) - ausgezahlt wird
-                // monatlich, also 1/8,5 davon. Bisher gab es den vollen Satz jeden Monat: 17-51 %
-                // Rendite pro Saison fast ohne Kursrisiko.
-                return s ? sum + (s.owned * s.price * (s.dividendRate + diversificationBonus) / 8.5) : sum;
-            }, 0));
-            game.money += dividends;
-        }
 
         if (typeof tickTransferWindows === 'function') tickTransferWindows();
         if (typeof tickSeasonEvents === 'function') tickSeasonEvents();
@@ -28360,6 +28294,33 @@ function cleanupLegacyScoutState() {
         game.viewingMatchday = Math.min(34, game.matchday);
         if (typeof maybeAutoSave === 'function') maybeAutoSave();
         updateUI();
+    }
+
+    // Alle 4 Spieltage (≈ 1 Monat) aus processPostMatchRoutine(): monatliche Ticks der
+    // Feature-Systeme und die Aktiendividende. Neue Monats-Ticks gehören HIERHER.
+    function runMonthlyClubTicks() {
+        setzeBuchungskontext('📅 Monatliche Vereinsposten');
+        if (typeof migrateLegacyCoSponsors === 'function') migrateLegacyCoSponsors();
+        if (typeof tickBoardRoom === 'function') tickBoardRoom();
+        if (typeof tickYouthDevelopment === 'function') tickYouthDevelopment();
+        if (typeof tickYouthBreakthroughs === 'function') tickYouthBreakthroughs();
+        if (typeof tickMediaDepartment === 'function') tickMediaDepartment();
+        if (typeof cleanupRemovedModuleState === 'function') cleanupRemovedModuleState();
+        if (typeof tickSeasonObjectives === 'function') tickSeasonObjectives();
+        if (typeof tickTeamCouncil === 'function') tickTeamCouncil();
+        if (typeof tickLockerRoom === 'function') tickLockerRoom();
+        if (typeof tickCoachCarousel === 'function') tickCoachCarousel();
+        if (typeof tickMemberAssembly === 'function') tickMemberAssembly();
+        if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
+        // Aktiendividende: dividendRate ist ein Jahressatz, ausgezahlt wird monatlich 1/8,5
+        // davon; breit gestreute Portfolios bekommen einen kleinen Aufschlag.
+        setzeBuchungskontext('📈 Dividenden');
+        let diversificationBonus = typeof getDiversificationBonus === 'function' ? getDiversificationBonus() : 0;
+        game.money += Math.round(STOCK_KEYS.reduce((sum, key) => {
+            let st = stockMarket[key];
+            return st ? sum + (st.owned * st.price * (st.dividendRate + diversificationBonus) / 8.5) : sum;
+        }, 0));
+        loescheBuchungskontext();
     }
 
     function applyFormWalk(team) {
@@ -28390,7 +28351,7 @@ function cleanupLegacyScoutState() {
         if (typeof recordLeagueHomeAway === 'function') recordLeagueHomeAway(h, a, f);
         if (typeof creditAiLeagueGoals === 'function') { creditAiLeagueGoals(h, f.homeGoals); creditAiLeagueGoals(a, f.awayGoals); }
 
-        // Kopf-an-Kopf-Statistik (NEU): historische Bilanz gegen JEDEN Ligagegner, nicht nur
+        // Kopf-an-Kopf-Statistik: historische Bilanz gegen JEDEN Ligagegner, nicht nur
         // den einen festen Erzfeind - nur relevant, wenn 1.FC Moritz Leipzig an dem Spiel beteiligt war.
         if (h.name === game.clubName || a.name === game.clubName) {
             let oppName = h.name === game.clubName ? a.name : h.name;
@@ -28763,7 +28724,7 @@ function cleanupLegacyScoutState() {
         if (!game.interviewHistory) game.interviewHistory = [];
         game.interviewHistory.push({ season: game.season, matchday: game.matchday, question: pendingInterview.q, answer: a.label, fans: a.fans, board: a.board });
         if (game.interviewHistory.length > 30) game.interviewHistory.shift();
-        // Manager-Medienimage (NEU): fanfreundliche Antworten schieben das Image Richtung
+        // Manager-Medienimage: fanfreundliche Antworten schieben das Image Richtung
         // "Volksheld", vorstandstreue Antworten Richtung "Verwaltungsprofi" - unabhängig von
         // Fan-/Vorstands-Zufriedenheit selbst, ein eigener Ruf-Wert des Managers als Person.
         let imageShift = (a.fans - a.board) * 0.8;
@@ -28793,11 +28754,11 @@ function cleanupLegacyScoutState() {
         showScreen('screen-dashboard');
     }
 
-    // Torschützen-Zuordnung für automatisch simulierte eigene Spiele (NEU): bisher wurden
+    // Torschützen-Zuordnung für automatisch simulierte eigene Spiele: bisher wurden
     // beim "Saison durchsimulieren"/Admin-Vorspulen nur nackte Tordifferenzen berechnet,
     // OHNE die Tore einem Spieler zuzuordnen - individuelle Torstatistiken blieben für den
     // häufigsten Spielmodus (automatische Simulation) komplett leer.
-    // Spieler des Monats (NEU): alle 4 Spieltage (in Ermangelung eines echten Kalenders die
+    // Spieler des Monats: alle 4 Spieltage (in Ermangelung eines echten Kalenders die
     // nächstliegende Saison-Unterteilung) wird der Spieler mit der besten jüngsten Bilanz
     // ausgezeichnet - Tore in diesem Zeitraum zählen am stärksten, Form/Fitness als
     // Tiebreaker. Echte Belohnung: spürbarer Moralschub plus dauerhafter Eintrag im Archiv.
@@ -28885,7 +28846,7 @@ function cleanupLegacyScoutState() {
                         f.played = true;
                         updateLeagueTable(l, f);
 
-                        // Zweite Mannschaft (NEU): dieselbe Torschützen-Lücke wie beim
+                        // Zweite Mannschaft: dieselbe Torschützen-Lücke wie beim
                         // ersten Team behoben - bisher wurden ihre Ligaspiele nur als reine
                         // Zahlen simuliert, ohne die Tore realen Spielern im Kader
                         // zuzuordnen.
@@ -28997,7 +28958,7 @@ function cleanupLegacyScoutState() {
         if (!p) { game.activeUltimatumPlayerId = null; return; } // Spieler ist anderweitig weg (z.B. verkauft)
 
         let remaining = game.ultimatumDeadlineMatchday - game.matchday;
-        // Öffentliche Spieler-Forderung an die Presse (NEU): geht die Frist zäh voran, kann
+        // Öffentliche Spieler-Forderung an die Presse: geht die Frist zäh voran, kann
         // der Spieler von sich aus an die Presse gehen - erhöht den Druck auf den Vorstand,
         // bringt dem Spieler aber gleichzeitig Sympathie bei den eigenen Fans ein, die sein
         // offenes Wort oft nachvollziehen können.
@@ -29232,6 +29193,56 @@ function cleanupLegacyScoutState() {
         showToast(`🎊 Saisonabschluss-Gala: ${playerOfSeason.name} ist Spieler der Saison!`, 'success');
     }
 
+    // Aufstiegsprämie, Sponsoren-Bonus, XP, Fan-Fundament und Vertragsboni - für den regulären
+    // Aufstieg am Saisonende UND den nachträglichen nach erfüllter DFB-Nachfrist (der bekam
+    // bisher nichts davon). Gibt den Sponsoren-Bonus zurück (für die Meldung).
+    function applyPromotionRewards() {
+        game.money += 1500000;
+        let sponsorPromoBonus = game.sponsor.promotionBonus || 0;
+        if (sponsorPromoBonus > 0) game.money += sponsorPromoBonus;
+        addManagerXP(1000);
+        boostFanBaseFloor(6, `Der Aufstieg in die ${leagueNames[game.leagueLevel]}`);
+        if (typeof triggerPromotionBonusClauses === 'function') triggerPromotionBonusClauses();
+        return sponsorPromoBonus;
+    }
+
+    // Jeden Spieltag (processPostMatchRoutine): Lizenz-Frühwarnung an Spieltag 30 und die
+    // laufende DFB-Nachfrist nach einem vorläufig verweigerten Aufstieg.
+    function checkDfbLicenseDeadlines() {
+        if (game.matchday === 30 && !game.dfbGracePeriod) {
+            let status = checkDfbLicensingStatus();
+            if (status.targetLevel !== null && status.missing.length > 0) {
+                let sorted = leaguesData[game.leagueLevel] ? [...leaguesData[game.leagueLevel]].sort(compareTableRows) : [];
+                let myRank = sorted.findIndex(t => t.name === game.clubName) + 1;
+                if (myRank > 0 && myRank <= 2) {
+                    addInboxMessage('vertrag', '🚨 DFB-Lizenz-Frühwarnung!', `Du liegst aktuell in Aufstiegsposition, aber die Lizenz für die ${leagueNames[status.targetLevel]} fehlt noch:\n\n${status.missing.map(m => '• ' + m).join('\n')}\n\nNur noch wenige Spieltage bis Saisonende - jetzt nachbessern!`, 'screen-stadium');
+                    showToast('🚨 DFB-Lizenz-Frühwarnung: Auflagen für den möglichen Aufstieg noch nicht erfüllt!', 'error');
+                }
+            }
+        }
+        if (!game.dfbGracePeriod) return;
+        let status = checkDfbLicensingStatus();
+        if (status.missing.length === 0) {
+            // Mängel rechtzeitig behoben: nachträglicher Aufstieg. Früher wurde nur leagueLevel
+            // umgestellt - der Verein spielte weiter in der alten Liga und fehlte in der neuen
+            // Tabelle. Jetzt tauscht insertOurTeamIntoLeagues() ihn wie beim Saisonwechsel ein.
+            game.leagueLevel = game.dfbGracePeriod.targetLevel;
+            game.dfbGracePeriod = null;
+            if (typeof insertOurTeamIntoLeagues === 'function') insertOurTeamIntoLeagues();
+            let sponsorPromoBonus = applyPromotionRewards();
+            addInboxMessage('vertrag', '🎉 Nachträglicher Aufstieg!', `Die DFB-Auflagen wurden rechtzeitig innerhalb der Nachfrist erfüllt - der Aufstieg in die ${leagueNames[game.leagueLevel]} wird nachträglich vollzogen! Aufstiegsprämie 1.500.000 €${sponsorPromoBonus > 0 ? ` plus ${formatVal(sponsorPromoBonus)} Sponsoren-Bonus` : ''}.`, 'screen-stadium');
+            showToast(`🎉 Nachträglicher Aufstieg in die ${leagueNames[game.leagueLevel]}!`, 'success');
+            return;
+        }
+        game.dfbGracePeriod.deadlineMatchday--;
+        if (game.dfbGracePeriod.deadlineMatchday <= 0) {
+            let targetLevel = game.dfbGracePeriod.targetLevel;
+            game.dfbGracePeriod = null;
+            addInboxMessage('vertrag', '📋 DFB-Nachfrist verstrichen', `Die Nachfrist zur Erfüllung der DFB-Auflagen für die ${leagueNames[targetLevel]} ist ohne Erfolg verstrichen - der Aufstieg verfällt endgültig für diese Saison.`, 'screen-stadium');
+            showToast('📋 DFB-Nachfrist verstrichen - Aufstieg endgültig verfallen.', 'error');
+        }
+    }
+
     function concludeSeasonAndAdvance() {
         // Erfolgsbasierte Vertragsboni (js/bonusclauses.js): das Aufstiegsbonus-Flag wird
         // bewusst HIER, ganz am Anfang, zurückgesetzt - nicht in der allgemeinen
@@ -29268,7 +29279,7 @@ function cleanupLegacyScoutState() {
         if (typeof buildSeasonExpertCheck === 'function') buildSeasonExpertCheck(myRank);
         if (typeof concludeWomenSeason === 'function') concludeWomenSeason();
 
-        // Medienrechte (NEU): Liga-Kollektiv-TV-Ausschüttung zum Saisonende, gestaffelt nach
+        // Medienrechte: Liga-Kollektiv-TV-Ausschüttung zum Saisonende, gestaffelt nach
         // Ligastärke UND Tabellenplatz.
         if (typeof calculateCollectiveTvMoney === 'function') {
             // Der Grossteil des TV-Geldes wurde bereits in Spieltagsraten ausgezahlt (siehe
@@ -29332,12 +29343,7 @@ function cleanupLegacyScoutState() {
                 showNotice('📋 DFB-Lizenz vorläufig verweigert', `Sportlich wäre der Aufstieg in die ${leagueNames[targetLevel]} geschafft - der DFB räumt aber erst eine Nachfrist von drei Spieltagen ein, um die fehlenden Auflagen zu erfüllen:\n\n${failedReasons.map(r => '• ' + r).join('\n')}`, { typ: 'warn' });
             } else {
                 game.leagueLevel--;
-                game.money += 1500000;
-                let sponsorPromoBonus = game.sponsor.promotionBonus || 0;
-                if (sponsorPromoBonus > 0) game.money += sponsorPromoBonus;
-                addManagerXP(1000);
-                boostFanBaseFloor(6, `Der Aufstieg in die ${leagueNames[game.leagueLevel]}`);
-                if (typeof triggerPromotionBonusClauses === 'function') triggerPromotionBonusClauses();
+                let sponsorPromoBonus = applyPromotionRewards();
                 showNotice('🎉 Aufstieg geschafft!', `Glückwunsch zur Beförderung in die ${leagueNames[game.leagueLevel]}.\n\nAufstiegsprämie 1.500.000 €${sponsorPromoBonus > 0 ? ` plus ${formatVal(sponsorPromoBonus)} Sponsoren-Aufstiegsbonus` : ''}.`);
             }
         } else if ((myRank >= 17 || (myRank === 16 && relegation !== 'stayed')) && game.leagueLevel < NUM_LEAGUES - 1) {
@@ -29347,7 +29353,7 @@ function cleanupLegacyScoutState() {
 
         // Der Vorstand legt zu Saisonbeginn neue Budgets fest - abhängig von Ligastärke
         // und Abschneiden der Vorsaison, statt eines für immer fixen Startwerts.
-        // Wirtschaftliche Konsistenz (NEU): die alte Formel (Basis 60.000/10.000) ergab in
+        // Wirtschaftliche Konsistenz: die alte Formel (Basis 60.000/10.000) ergab in
         // der höchsten Liga nur ~35.000-45.000 € Gehaltsbudget PRO SPIELTAG für den GESAMTEN
         // Kader - ein einzelner Weltklassespieler kann laut calculatePlayerWage() aber bis zu
         // 900.000 €/Spieltag kosten. Nach der realistischen Stadion-Preisreform (teils 40+
@@ -29356,7 +29362,7 @@ function cleanupLegacyScoutState() {
         let placementFactor = myRank <= 4 ? 1.3 : (myRank <= 10 ? 1.0 : 0.8);
         game.transferBudget = Math.round(2500000 * (1 + leagueFactor * 2.5) * placementFactor);
         game.wageBudget = Math.round(450000 * (1 + leagueFactor * 2.5) * placementFactor);
-        // Manager-Eigengehalt (NEU): blieb bisher für immer beim Startwert (1.200 €/SpT),
+        // Manager-Eigengehalt: blieb bisher für immer beim Startwert (1.200 €/SpT),
         // selbst nach mehreren Aufstiegen in die Bundesliga mit Millionenbudgets - ein
         // erfolgreicher Bundesliga-Trainer verdient real deutlich mehr als ein Kreisliga-
         // Einsteiger. Skaliert jetzt mit derselben Liga-/Erfolgsformel wie die Vereinsbudgets.
@@ -29374,7 +29380,7 @@ function cleanupLegacyScoutState() {
         squad.forEach(p => {
             p.contracts--;
             p.fitness = 100;
-            // Spielerwert-Entwicklungs-Historie (NEU): ein Schnappschuss pro Saison, damit im
+            // Spielerwert-Entwicklungs-Historie: ein Schnappschuss pro Saison, damit im
             // Spieler-Detail eine echte Entwicklungskurve statt nur des aktuellen Werts
             // angezeigt werden kann.
             if (!p.strengthHistory) p.strengthHistory = [];
@@ -29400,7 +29406,7 @@ function cleanupLegacyScoutState() {
             addInboxMessage('vertrag', `📋 Vertrag ausgelaufen: ${p.name}`, `Der Vertrag von ${p.name} ist ausgelaufen - er verlässt den Verein ablösefrei (Bosman-Regel).`, 'screen-squad');
             if (typeof checkCrowdFavoriteDeparture === 'function') checkCrowdFavoriteDeparture(p);
         });
-        // Vorwarnung (NEU): wer nur noch 1 Jahr Restlaufzeit hat, wird jetzt aktiv gemeldet,
+        // Vorwarnung: wer nur noch 1 Jahr Restlaufzeit hat, wird jetzt aktiv gemeldet,
         // statt dass der Manager es zufällig in der Vertragsliste entdecken muss.
         squad.filter(p => p.contracts === 1 && p.strength >= 50).forEach(p => {
             addInboxMessage('vertrag', `⏳ Vertrag läuft aus: ${p.name}`, `${p.name} hat nur noch 1 Jahr Vertrag - jetzt verlängern, sonst verlässt er den Verein am Saisonende ablösefrei!`, 'screen-contracts');
@@ -31123,7 +31129,7 @@ function renderSeasonForecastHistory() {
         showToast('🌟 GESAMTES TEAM AUF MAXIMALWERT!\nAlle Spieler haben jetzt 99 in jeder Kernfähigkeit, 100% Fitness & Moral, keine Verletzungen/Sperren.', 'success', 4000);
     }
 
-    // Kaderstärke in 5er-Schritten erhöhen (NEU): sanftere Alternative zum kompletten
+    // Kaderstärke in 5er-Schritten erhöhen: sanftere Alternative zum kompletten
     // Maximieren - hebt alle Kernwerte jedes Spielers gleichmäßig um 5 Punkte an (bis zum
     // Maximum von 99), statt alles sofort auf den Höchstwert zu springen. Praktisch für
     // schrittweises Testen der Spielbalance bei unterschiedlichen Stärkeniveaus.
@@ -31491,7 +31497,7 @@ function renderSeasonForecastHistory() {
         updateUI();
     }
 
-    // Admin-Zugriff (NEU, wie gewünscht): kostenloser Premium-Punkte-Bonus ohne jede
+    // Admin-Zugriff (wie gewünscht): kostenloser Premium-Punkte-Bonus ohne jede
     // Bezahlung - passend zum bestehenden Admin/Cheats-Bereich.
     function adminGrantPremiumPoints() {
         playSound('goal');
@@ -31768,7 +31774,7 @@ function renderSeasonForecastHistory() {
 
     function applyLoadedStateInner(p) {
         if (p.game) Object.assign(game, p.game);
-        // Migrations-Fix (NEU): game.secondTeam.name wird als verschachteltes Objekt beim
+        // Migrations-Fix: game.secondTeam.name wird als verschachteltes Objekt beim
         // Object.assign oben komplett aus dem alten Spielstand übernommen - falls dort noch
         // "Lok Leipzig II" gespeichert war, hier konsistent korrigieren.
         if (game.secondTeam && game.secondTeam.name && game.secondTeam.name.includes('Lok Leipzig')) {
@@ -31874,7 +31880,7 @@ function renderSeasonForecastHistory() {
         if (p.fixturesData) fixturesData = unpackFixtures(p.fixturesData);
         if (p.cupTournament) cupTournament = p.cupTournament;
         if (p.europeTournament) europeTournament = p.europeTournament;
-        // Migrations-Fix (NEU): Speicherstände von vor der Vereinsumbenennung hatten den
+        // Migrations-Fix: Speicherstände von vor der Vereinsumbenennung hatten den
         // Namen "Lok Leipzig" noch fest in Liga-Tabellen, Spielplänen und Pokal-Paarungen
         // gespeichert - der Code sucht seitdem aber überall nach "1.FC Moritz Leipzig".
         // Dadurch fand keine der Rang-/Aufstiegs-Berechnungen das eigene Team mehr, und in
@@ -31948,7 +31954,7 @@ function renderSeasonForecastHistory() {
         return false;
     }
 
-    // ---------- SPIELSTAND ALS DATEI EXPORTIEREN/IMPORTIEREN (NEU) ----------
+    // ---------- SPIELSTAND ALS DATEI EXPORTIEREN/IMPORTIEREN ----------
     // Ergänzt die 3 lokalen Slots (localStorage) um eine echte, portable Datei - wichtig
     // seit klar ist, dass localStorage in manchen Android-Ansichten komplett blockiert
     // sein kann (siehe safeLocalSet-Absicherung oben) UND weil localStorage grundsätzlich
@@ -32183,7 +32189,7 @@ function renderSeasonForecastHistory() {
     // der Button würde dann scheinbar wirkungslos bleiben. Stattdessen ein dialogfreier
     // Zwei-Klick-Bestätigungsmechanismus direkt am Button selbst (gleiches Muster wie
     // bereits bei deleteSaveSlot() bewährt).
-    // Startbedingungen konfigurierbar (NEU): bisher fest 6. Liga/150.000 € - jetzt wählbar,
+    // Startbedingungen konfigurierbar: bisher fest 6. Liga/150.000 € - jetzt wählbar,
     // BEVOR der eigentliche Reset erfolgt. Übergibt die Wahl über sessionStorage-Marker
     // (analog zum FORCE_NEW_GAME_FLAG selbst) über den Reload hinweg, da nach dem Reload
     // ein komplett frisches game-Objekt entsteht (siehe window.onload in index.html).
@@ -32340,7 +32346,7 @@ function renderSeasonForecastHistory() {
             let forceNewGame = safeStorageGet(sessionStorage, 'anstoss_fm13_force_new_game');
             if (forceNewGame) {
                 safeStorageRemove(sessionStorage, 'anstoss_fm13_force_new_game');
-                // Startbedingungen konfigurierbar (NEU): nur gesetzt, wenn der Reset über
+                // Startbedingungen konfigurierbar: nur gesetzt, wenn der Reset über
                 // den "Neues Spiel starten"-Dialog mit Auswahl kam (siehe confirmNewGame
                 // WithSettings() in save.js) - beim Entlassungs-Reload (getSacked()) fehlen
                 // diese Marker, dann bleibt es beim alten Standardverhalten (6. Liga).
@@ -32447,7 +32453,7 @@ function renderSeasonForecastHistory() {
         }
     };
 </script>
-    <!-- BOTTOM-NAVIGATION (NEU): Schnellzugriff auf die 5 wichtigsten Bereiche -->
+    <!-- BOTTOM-NAVIGATION: Schnellzugriff auf die 5 wichtigsten Bereiche -->
     <nav class="bottom-nav-bar">
         <button class="nav-btn bottom-nav-item active" onclick="showScreen('screen-dashboard')"><span class="bn-icon">📊</span>Start</button>
         <button class="nav-btn bottom-nav-item" onclick="showScreen('screen-squad')"><span class="bn-icon">⚽</span>Kader</button>
