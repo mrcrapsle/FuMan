@@ -89,8 +89,9 @@
             }
             let isOurMatch = (p.home === game.clubName || p.away === game.clubName);
             let isHome = p.home === game.clubName;
-            let homeStr = isOurMatch ? (isHome ? calcTeamStrength(true) : getOpponentStrength(p.home)) : getOpponentStrength(p.home);
-            let awayStr = isOurMatch ? (!isHome ? calcTeamStrength(false) : getOpponentStrength(p.away)) : getOpponentStrength(p.away);
+            let finalBonus = isOurMatch && typeof getCupFinalBonus === 'function' ? getCupFinalBonus('landes') : 0; // js/cup-final.js
+            let homeStr = isOurMatch ? (isHome ? calcTeamStrength(true) + finalBonus : getOpponentStrength(p.home)) : getOpponentStrength(p.home);
+            let awayStr = isOurMatch ? (!isHome ? calcTeamStrength(false) + finalBonus : getOpponentStrength(p.away)) : getOpponentStrength(p.away);
             let live = isOurMatch && typeof takeLiveCupResult === 'function' ? takeLiveCupResult('landes', p.home, p.away) : null;
             let goals = live ? { myGoals: live.homeGoals, oppGoals: live.awayGoals } : simulateGoals(homeStr, awayStr);
             p.homeGoals = goals.myGoals;
@@ -120,6 +121,7 @@
             if (p.home !== game.clubName && p.away !== game.clubName) return;
             let weWon = winners[idx] === game.clubName;
             let oppName = p.home === game.clubName ? p.away : p.home;
+            if (letzteRunde && typeof recordCupFinal === 'function') recordCupFinal('landes', p, weWon);
             if (weWon) {
                 setzeBuchungskontext('🏆 Landespokal');
                 game.money += r.prize;

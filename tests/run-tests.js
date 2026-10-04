@@ -956,6 +956,75 @@ async function testSetPieces(browser) {
     await page.close();
 }
 
+async function testCupFinal(browser) {
+    console.log('\n[20.4] Pokalfinale: Finalwoche, Vorbereitung wirkt im Endspiel, Titelfeier, Chronik');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        const echtSim = window.simulateGoals;
+        try {
+            closeTutorial();
+            const out = {};
+            const us = game.clubName;
+            game.inCup = true; game.money = 2000000; game.fans = 60;
+            cupTournament.roundsHistory = [0, 1, 2, 3].map(i => ({ roundIndex: i, name: cupTournament.roundNames[i], matchday: cupTournament.matchdays[i], prize: cupTournament.prizes[i], pairings: [], completed: true }));
+            cupTournament.roundsHistory.push({ roundIndex: 4, name: cupTournament.roundNames[4], matchday: 34, prize: cupTournament.prizes[4], pairings: [{ home: us, away: 'FC Finalgegner', homeGoals: null, awayGoals: null, penaltyWinner: null, played: false }], completed: false });
+            cupTournament.currentRound = 4;
+            game.matchday = 30;
+            showScreen('screen-dashboard');
+            out.nochNicht = document.getElementById('dash-cup-final-box').innerHTML === '';
+            game.matchday = 32; renderCupFinalCard();
+            out.karte = document.getElementById('dash-cup-final-box').innerText.includes('Finalwoche');
+            const geld0 = game.money;
+            chooseCupFinalTickets('fans');
+            out.tickets = game.money === geld0 + 8000 * 30 && game.fans === 64;
+            out.karteAktuell = document.getElementById('dash-cup-final-box').innerText.includes('an die Fans');
+            chooseCupFinalTickets('sponsoren');
+            out.nurEinmal = game.money === geld0 + 8000 * 30;
+            bookCupFinalTrains(); bookCupFinalCamp();
+            out.kosten = game.money === geld0 + 240000 - 120000 - 150000;
+            out.bonusVorher = getCupFinalBonus('dfb') === 0; // erst am Finalspieltag
+            game.matchday = 34;
+            out.bonus = getCupFinalBonus('dfb') === 3.5;
+            // Simuliertes Finale: Stärke enthält die Vorbereitung, Sieg erzwungen
+            window.simulateGoals = () => ({ myGoals: 2, oppGoals: 0 });
+            const basis = calcTeamStrength(true);
+            simulateCupRound(4, false);
+            window.simulateGoals = echtSim;
+            const paar = cupTournament.roundsHistory[4].pairings[0];
+            out.staerke = paar.ourStr === basis + 3.5;
+            const f = (game.cupFinals || [])[0];
+            out.chronik = !!f && f.won && f.opponent === 'FC Finalgegner' && f.score === '2:0' && f.prep.length === 3;
+            out.titel = game.trophies.some(t => t.includes('DFB-Pokalsieger'));
+            renderCupFinalCard();
+            out.feierAngebot = document.getElementById('dash-cup-final-box').innerText.includes('Wie wird gefeiert');
+            const fans1 = game.fans, bild = game.managerMediaImage ?? 50;
+            chooseCupCelebration('korso');
+            out.feier = game.fans === Math.min(100, fans1 + 6) && (game.managerMediaImage ?? 50) === Math.min(100, bild + 3) && game.cupFinal.celebration === 'korso';
+            showScreen('screen-history'); setSubTab('hist', 'titel');
+            out.historie = document.getElementById('cup-finals-history-box').innerText.includes('DFB-Pokal-Finale');
+            // Live-Finale: Vorbereitung landet in der Basisstärke
+            game.cupFinal = { season: game.season, comp: 'landes', opponent: 'SV Land', matchday: 34, tickets: 'fans', zug: true, camp: false, played: false, celebration: null };
+            setupMatch(us, 'SV Land', 60, true, true, null);
+            stopLiveTickerAutoplay();
+            const vorher = currentMatch.ourBaseStr;
+            markCupLiveMatch({ comp: 'landes', titel: 'Landespokal-Finale', home: us, away: 'SV Land', oppStr: 60, elfmeter: true });
+            out.live = currentMatch.ourBaseStr === vorher + 2.5;
+            return out;
+        } catch (e) { window.simulateGoals = echtSim; return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Pokalfinale-Test ohne Absturz (${r.crash || 'ok'})`);
+    assert(r.nochNicht && r.karte, 'Finalwoche erscheint drei Spieltage vor dem Endspiel');
+    assert(r.tickets && r.nurEinmal && r.kosten, 'Ticketkontingent (einmalig), Sonderzüge und Trainingslager werden gebucht');
+    assert(r.karteAktuell, 'Die Karte zeigt eine Entscheidung sofort an (kein stummer Knopf)');
+    assert(r.bonusVorher && r.bonus && r.staerke, 'Vorbereitung wirkt genau im Finale (+3,5 Stärke)');
+    assert(r.chronik && r.titel && r.historie, 'Endspiel mit Vorbereitung in der Chronik, Titel im Trophäenschrank');
+    assert(r.feierAngebot && r.feier, 'Titelfeier: Autokorso kostet Geld, bringt Fans und Medienimage');
+    assert(r.live, 'Im Livespiel fließt die Vorbereitung in die Stärke');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testYouthPathway(browser) {
     console.log('\n[18.5] Jugend-Laufbahn: Potenzial, Profivertrag mit 19, Leihe, Durchbruch-Momente');
     const { page, consoleErrors } = await freshPage(browser);
@@ -6203,6 +6272,7 @@ async function main() {
         testAttendanceCapVaries,
         testLockerRoom,
         testSetPieces,
+        testCupFinal,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,

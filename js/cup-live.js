@@ -93,7 +93,9 @@ function startCupLiveFlow(tie) {
     if (typeof renderFatigueWarning === 'function') renderFatigueWarning();
     const box = document.getElementById('prematch-analysis-box');
     const danach = tie.comp === 'relegation' ? '' : '<br><span style="color:var(--text-muted);">Das Ligaspiel folgt direkt im Anschluss.</span>';
-    if (box) box.innerHTML = `<div class="box" style="font-size:11px; border-left-color:var(--gold);"><strong>${tie.titel}</strong><br>${tie.home} - ${tie.away} (Gegner-Stärke ${Math.round(tie.oppStr)})${danach}</div>` + box.innerHTML;
+    const finalBonus = typeof getCupFinalBonus === 'function' ? getCupFinalBonus(tie.comp) : 0;
+    const finalZeile = finalBonus > 0 ? `<br>🏟️ Finalvorbereitung: +${String(finalBonus).replace('.', ',')} Stärke` : '';
+    if (box) box.innerHTML = `<div class="box" style="font-size:11px; border-left-color:var(--gold);"><strong>${tie.titel}</strong><br>${tie.home} - ${tie.away} (Gegner-Stärke ${Math.round(tie.oppStr)})${finalZeile}${danach}</div>` + box.innerHTML;
     renderPressConference({ oppName, oppStr: tie.oppStr, isHome, cup: true });
     showScreen('screen-prematch-press');
 }
@@ -108,6 +110,8 @@ function markCupLiveMatch(tie) {
     currentMatch.cupGoalsSeason = Object.fromEntries(squad.map(p => [p.id, p.goalsSeason || 0]));
     const titel = document.getElementById('match-title');
     if (titel) titel.innerText = `${tie.titel}: ${tie.home} vs ${tie.away}`;
+    // Pokalfinale (js/cup-final.js): die Vorbereitung der Finalwoche wirkt im Endspiel.
+    if (typeof applyCupFinalPreparation === 'function') applyCupFinalPreparation(tie);
 }
 
 // Abpfiff eines Pokalspiels (aus endMatchSimulation()): Ergebnis ablegen, bei Remis im

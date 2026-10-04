@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.24', date: '04.10.2026', features: 'Phase 20: Standards & Elfmeter im Livespiel (Schützenwahl, Freistoß-Varianten, Videobeweis, Torwart im Elfmeterschießen)' };
+    const GAME_VERSION = { number: '3.25', date: '04.10.2026', features: 'Phase 20: Pokalfinale als Großereignis (Finalwoche mit Tickets, Sonderzügen und Trainingslager, Titelfeier, Final-Chronik)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

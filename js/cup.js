@@ -114,8 +114,9 @@
             }
             let isOurMatch = (p.home === game.clubName || p.away === game.clubName);
             let isHome = p.home === game.clubName;
-            let homeStr = isOurMatch ? (isHome ? calcTeamStrength(true) : getOpponentStrength(p.home)) : (60 + Math.floor(Math.random() * 24));
-            let awayStr = isOurMatch ? (!isHome ? calcTeamStrength(false) : getOpponentStrength(p.away)) : (60 + Math.floor(Math.random() * 24));
+            let finalBonus = isOurMatch && typeof getCupFinalBonus === 'function' ? getCupFinalBonus('dfb') : 0; // js/cup-final.js
+            let homeStr = isOurMatch ? (isHome ? calcTeamStrength(true) + finalBonus : getOpponentStrength(p.home)) : (60 + Math.floor(Math.random() * 24));
+            let awayStr = isOurMatch ? (!isHome ? calcTeamStrength(false) + finalBonus : getOpponentStrength(p.away)) : (60 + Math.floor(Math.random() * 24));
 
             let live = isOurMatch && typeof takeLiveCupResult === 'function' ? takeLiveCupResult('dfb', p.home, p.away) : null;
             let goals = live ? { myGoals: live.homeGoals, oppGoals: live.awayGoals } : simulateGoals(homeStr, awayStr);
@@ -172,6 +173,7 @@
             if (p.home === game.clubName || p.away === game.clubName) {
                 let weWon = (winTeam === game.clubName);
                 let oppName = p.home === game.clubName ? p.away : p.home;
+                if (roundIdx === cupTournament.matchdays.length - 1 && typeof recordCupFinal === 'function') recordCupFinal('dfb', p, weWon);
                 // Pokalschreck-Tracking & eigene Pokal-Statistik (NEU)
                 if (typeof recordCupResultStats === 'function') recordCupResultStats(weWon, p.ourStr, p.oppStr, oppName, r.name);
                 if (weWon) {
