@@ -3003,6 +3003,7 @@
                     </div>
                     <div id="weekly-training-grid" style="display:grid; grid-template-columns: repeat(7, 1fr); gap:3px;"></div>
                     <div id="weekly-training-stats" style="display:flex; justify-content:space-between; margin-top:8px; font-size:10px; flex-wrap:wrap; gap:4px;"></div>
+                    <div id="setpiece-drill-box" style="margin-top:8px;"></div>
                     <div style="margin-top:10px; padding-top:8px; border-top:1px solid var(--border);">
                         <div style="font-size:10px; font-weight:800; color:var(--text-muted); margin-bottom:4px;">Eigene Vorlagen</div>
                         <div style="display:flex; gap:4px; margin-bottom:6px;">
@@ -4607,7 +4608,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.34', date: '04.10.2026', features: 'Phase 22: Gegnervorbereitung im Training (Match-Prep tippt den Gegnerstil: richtig +2,5, daneben 0)' };
+    const GAME_VERSION = { number: '3.35', date: '04.10.2026', features: 'Phase 22: Standards einstudieren (Standards-Tage im Wochenplan, Beherrschung wirkt im Livespiel)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -15573,6 +15574,9 @@ function initOneHand() {
         technik: { label: 'Technik', icon: '⚽', load: 2 },
         taktik: { label: 'Taktik', icon: '📋', load: 2 },
         matchprep: { label: 'Match-Prep', icon: '🎯', load: 2 },
+        // Standards einstudieren (js/set-piece-drills.js) - vorher schrieben die Vorlagen
+        // Technik/Taktik einen Tag "standards", den es als Einheit gar nicht gab.
+        standards: { label: 'Standards', icon: '🚩', load: 1 },
         erholung: { label: 'Erholung', icon: '🧘', load: -2 },
         frei: { label: 'Frei', icon: '🌴', load: -3 }
     };
@@ -15605,7 +15609,8 @@ function initOneHand() {
         // Alle Kategorien außer "frei" existieren 1:1 im bisherigen System (kondition, taktik,
         // technik, matchprep, erholung, ausgeglichen) - "frei" selbst hat kein Pendant und
         // verhält sich wie "erholung" für die bestehenden Effekt-Hooks.
-        let mappedTeamTraining = dominant;
+        // Standards-Tage zählen für die Standard-Varianten, nicht als Mannschafts-Schwerpunkt.
+        let mappedTeamTraining = dominant === 'standards' ? 'ausgeglichen' : dominant;
         return { totalLoad, freeCount, sessionCount, risk, dominant, mappedTeamTraining, categoryCounts };
     }
 
@@ -15802,6 +15807,7 @@ function initOneHand() {
         renderTrainingAutopilotBox();
         document.getElementById('cur-team-training').innerText = game.teamTraining.toUpperCase();
         if (typeof renderMatchPrepBox === 'function') renderMatchPrepBox();
+        if (typeof renderSetPieceDrillBox === 'function') renderSetPieceDrillBox();
 
         // Minispiel-Bereich: Spielerauswahl, verbleibende Einheiten, Bestleistungen
         let playerSelect = document.getElementById('minigame-player-select');
@@ -25075,6 +25081,7 @@ function getLivePenaltyChance(p, gefoult) {
     const knapp = Math.abs(currentMatch.homeGoals - currentMatch.awayGoals) <= 1 && currentMatch.minute >= 75;
     if (knapp && p.character !== 'Selbstbewusst') prob -= 0.04;      // Nerven in der Schlussphase
     if (gefoult) prob -= 0.03;                                        // der Gefoulte ist oft noch angeschlagen
+    if (typeof getDrillMastery === 'function') prob += 0.06 * getDrillMastery('elfmeter'); // einstudiert (set-piece-drills.js)
     return Math.max(0.45, Math.min(0.93, prob));
 }
 
@@ -25084,14 +25091,17 @@ function getFreeKickOptions() {
     const schuetze = onPitch.find(p => p.id === game.freeKickTakerId) || [...onPitch].sort((a, b) => (b.shooting || 0) - (a.shooting || 0))[0];
     const kopfball = [...onPitch].filter(p => p.pos === 'ABW' || p.pos === 'ST').sort((a, b) => b.strength - a.strength)[0] || schuetze;
     const flanker = onPitch.find(p => p.id === game.cornerTakerId) || schuetze;
+    // Einstudierte Varianten (js/set-piece-drills.js)
+    const geuebt = k => (typeof getDrillMastery === 'function' ? getDrillMastery(k) : 0);
+    const tag = k => (typeof drillTag === 'function' ? drillTag(k) : '');
     return {
         direkt: { label: `🎯 Direkt schießen (${schuetze ? schuetze.name : '-'})`, schuetze,
-            prob: Math.max(0.03, Math.min(0.3, 0.05 + ((schuetze ? schuetze.shooting : 50) - 60) * 0.003 + (schuetze && schuetze.trait === 'Freistoß-Gott' ? 0.15 : 0) + coach)),
-            risiko: 0, hinweis: 'Hängt ganz vom Schützen ab' },
+            prob: Math.max(0.03, Math.min(0.36, 0.05 + ((schuetze ? schuetze.shooting : 50) - 60) * 0.003 + (schuetze && schuetze.trait === 'Freistoß-Gott' ? 0.15 : 0) + coach + 0.06 * geuebt('direkt'))),
+            risiko: 0, hinweis: 'Hängt ganz vom Schützen ab' + tag('direkt') },
         flanke: { label: `🔝 Flanke auf ${kopfball ? kopfball.name : 'den Kopfballspieler'}`, schuetze: kopfball, vorlage: flanker,
-            prob: Math.max(0.05, Math.min(0.2, 0.09 + ((kopfball ? kopfball.strength : 50) - 60) * 0.002 + (flanker && flanker.passing >= 75 ? 0.02 : 0) + coach)),
-            risiko: 0.04, hinweis: 'Geklärt? Dann droht ein Konter' },
-        kurz: { label: '↪️ Kurz ausführen', schuetze: null, prob: 0.04, risiko: 0, hinweis: 'Sicher, aber selten gefährlich' }
+            prob: Math.max(0.05, Math.min(0.25, 0.09 + ((kopfball ? kopfball.strength : 50) - 60) * 0.002 + (flanker && flanker.passing >= 75 ? 0.02 : 0) + coach + 0.05 * geuebt('flanke'))),
+            risiko: Math.round(0.04 * (1 - 0.5 * geuebt('flanke')) * 1000) / 1000, hinweis: 'Geklärt? Dann droht ein Konter' + tag('flanke') },
+        kurz: { label: '↪️ Kurz ausführen', schuetze: null, prob: 0.04 + 0.06 * geuebt('kurz'), risiko: 0, hinweis: 'Sicher, aber selten gefährlich' + tag('kurz') }
     };
 }
 
@@ -25227,7 +25237,7 @@ function resolveSetPiece(choice, silent) {
         const o = getFreeKickOptions()[choice] || getFreeKickOptions().direkt;
         if (Math.random() < o.prob) {
             ownSetPieceGoal(o.schuetze, o.vorlage, choice === 'direkt' ? `${o.schuetze.name} zirkelt den Freistoß direkt ins Tor` : (choice === 'flanke' ? `${o.schuetze.name} köpft die Freistoßflanke ein` : 'Kurz ausgeführt, abgefälscht'));
-        } else if (o.risiko && Math.random() < 0.15) { // geklärte Flanke: Konter, ~4 % Gegentor
+        } else if (o.risiko && Math.random() < 0.15 * (o.risiko / 0.04)) { // geklärte Flanke: Konter, ~4 % Gegentor (einstudiert weniger)
             tickerLine(`<div style="color:var(--danger);">⚡ ${sp.minute}. Min: Flanke geklärt - Konter!</div>`);
             if (Math.random() < 0.27) {
                 if (currentMatch.isHome) currentMatch.awayGoals++; else currentMatch.homeGoals++;
@@ -26282,6 +26292,96 @@ function renderMatchPrepBox() {
     box.innerHTML = `<div class="box" style="font-size:10px; border-left-color:var(--accent);">🎯 <strong>Gegnervorbereitung</strong> (Schwerpunkt Match-Prep${aktiv ? '' : ' - derzeit nicht aktiv'}): nächster Ligagegner ${opp.name}. ${info}
         <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:4px; margin-top:4px;">${knopf('P')}${knopf('B')}${knopf('K')}</div>
         <div style="color:var(--text-muted); margin-top:3px;">Richtig getippt: +2,5 Stärke · daneben oder ohne Ziel: 0 (Taktik-Schwerpunkt bringt sicher +2). Nur Ligaspiele.</div></div>`;
+}
+
+</script>
+<script>
+/* eslint-disable no-undef */
+// Standards einstudieren (Phase 22.3): "Standards" ist eine echte Einheit im Wochenplan
+// (vorher schrieben die Vorlagen Technik/Taktik einen Tag "standards", den es nicht gab).
+// Jeder Standards-Tag bringt der gewählten Variante (game.setPieceDrills.focus) pro Spieltag
+// Übung; alle anderen Varianten verblassen langsam. Die Beherrschung (0-100) wirkt im
+// Livespiel (js/set-pieces.js) und bei Ecken (simulateMatchStep):
+//   direkt   +6 Prozentpunkte Torchance beim direkten Freistoß
+//   flanke   +5 Punkte und halbes Konterrisiko
+//   kurz     +6 Punkte (aus 4 % werden bis zu 10 %)
+//   elfmeter +6 Punkte Trefferquote
+//   ecke     +0,8 Punkte Torchance je Spielzug mit Ecke
+// Preis: jeder Standards-Tag fehlt Taktik, Technik oder Kondition.
+
+const SET_PIECE_DRILLS = {
+    direkt: { label: 'Direkter Freistoß', icon: '🎯', wirkung: '+6 % Torchance' },
+    flanke: { label: 'Freistoßflanke', icon: '🔝', wirkung: '+5 % Torchance, halbes Konterrisiko' },
+    kurz: { label: 'Kurz ausgeführt', icon: '↪️', wirkung: '+6 % Torchance' },
+    elfmeter: { label: 'Elfmeter', icon: '❗', wirkung: '+6 % Trefferquote' },
+    ecke: { label: 'Ecken', icon: '🚩', wirkung: 'mehr Gefahr bei jeder Ecke' }
+};
+const DRILL_GAIN_PER_DAY = 10;
+const DRILL_DECAY = 2;
+
+function ensureSetPieceDrills() {
+    if (!game.setPieceDrills || !game.setPieceDrills.mastery) {
+        game.setPieceDrills = { focus: 'direkt', mastery: { direkt: 0, flanke: 0, kurz: 0, elfmeter: 0, ecke: 0 } };
+    }
+    return game.setPieceDrills;
+}
+
+function getDrillMastery(key) {
+    const d = ensureSetPieceDrills();
+    return Math.max(0, Math.min(100, d.mastery[key] || 0)) / 100;
+}
+
+function countStandardsDays() {
+    return Object.values(game.weeklyTrainingPlan || {}).filter(t => t === 'standards').length;
+}
+
+function getDrillGainPerMatchday() {
+    const tage = countStandardsDays();
+    if (!tage) return 0;
+    const coach = staffMembers.setPieceCoach && staffMembers.setPieceCoach.hired ? 1.5 : 1;
+    return Math.round(tage * DRILL_GAIN_PER_DAY * coach);
+}
+
+// Nach jedem Spieltag (processPostMatchRoutine).
+function tickSetPieceDrills() {
+    const d = ensureSetPieceDrills();
+    const plus = getDrillGainPerMatchday();
+    Object.keys(SET_PIECE_DRILLS).forEach(k => {
+        if (k === d.focus && plus > 0) d.mastery[k] = Math.min(100, (d.mastery[k] || 0) + plus);
+        else d.mastery[k] = Math.max(0, (d.mastery[k] || 0) - DRILL_DECAY);
+    });
+}
+
+function setSetPieceDrillFocus(key) {
+    if (!SET_PIECE_DRILLS[key]) return;
+    ensureSetPieceDrills().focus = key;
+    playSound('click');
+    if (!countStandardsDays()) showToast(`${SET_PIECE_DRILLS[key].label} ist das Ziel - aber ohne Standards-Tag im Wochenplan wird nichts geübt.`, 'error', 4500);
+    renderSetPieceDrillBox();
+}
+
+function drillTag(key) {
+    const m = Math.round(getDrillMastery(key) * 100);
+    return m >= 10 ? ` · einstudiert ${m} %` : '';
+}
+
+function renderSetPieceDrillBox() {
+    const box = document.getElementById('setpiece-drill-box');
+    if (!box) return;
+    const d = ensureSetPieceDrills();
+    const tage = countStandardsDays();
+    const plus = getDrillGainPerMatchday();
+    const zeilen = Object.entries(SET_PIECE_DRILLS).map(([k, v]) => {
+        const m = Math.round(getDrillMastery(k) * 100);
+        const aktiv = d.focus === k;
+        return `<button onclick="setSetPieceDrillFocus('${k}')" class="${aktiv ? 'btn-action' : 'btn-secondary'}" style="text-align:left; font-size:10px; margin-bottom:3px;">
+            ${aktiv ? '✔ ' : ''}${v.icon} ${v.label} · <strong>${m} %</strong> <span style="font-size:9px; opacity:0.8;">(${v.wirkung} bei 100 %)</span>
+            <div style="height:4px; background:rgba(255,255,255,0.08); border-radius:2px; margin-top:2px;"><div style="height:4px; width:${m}%; background:var(--accent); border-radius:2px;"></div></div></button>`;
+    }).join('');
+    box.innerHTML = `<div class="box" style="font-size:10px;">🚩 <strong>Standards einstudieren:</strong> ${tage
+        ? `${tage} Standards-Tag${tage > 1 ? 'e' : ''} im Wochenplan - die gewählte Variante gewinnt ${plus} Punkte pro Spieltag.`
+        : '<span style="color:var(--accent);">Kein Standards-Tag im Wochenplan - setze oben einen Tag auf „🚩 Standards“.</span>'}
+        <div style="color:var(--text-muted); margin-top:2px;">Nicht geübte Varianten verlieren ${DRILL_DECAY} Punkte pro Spieltag. Jeder Standards-Tag fehlt Taktik, Technik oder Kondition.</div></div>${zeilen}`;
 }
 
 </script>
@@ -28203,6 +28303,7 @@ function cleanupLegacyScoutState() {
         // (js/set-pieces.js); nur Ecken laufen weiter pauschal über den Eckenschützen.
         let cornerTaker = onPitch.find(p => p.id === game.cornerTakerId);
         if (cornerTaker && cornerTaker.passing >= 75) goalChance += 0.006;
+        if (typeof getDrillMastery === 'function') goalChance += 0.008 * getDrillMastery('ecke'); // einstudierte Ecken
         let hasPkKiller = onPitch.some(p => p.trait === 'Elfmeter-Killer' && p.pos === 'TW');
         let hasWingSpeedster = onPitch.some(p => p.trait === 'Flügelflitzer');
         let hasTackleMonster = onPitch.some(p => p.trait === 'Zweikampfmonster');
@@ -29165,6 +29266,7 @@ function cleanupLegacyScoutState() {
 
         // Kabinen-Freundschaften (js/locker-room.js).
         if (typeof tickLockerFriendships === 'function') tickLockerFriendships();
+        if (typeof tickSetPieceDrills === 'function') tickSetPieceDrills();
 
         squad.forEach(p => {
             // Stammspieler erholen sich unter der Woche teilweise (ein Viertel der Bank-Erholung):
@@ -31801,6 +31903,9 @@ const LEXICON_ENTRIES = [
     { cat: 'Taktik', title: 'Co-Trainer im Livespiel', screen: 'screen-squad',
         text: 'Ein eingestellter Co-Trainer meldet sich im Livespiel mit Hinweisen aus dem echten Spielstand - jeweils mit einer Aktion per Tipp. Stufe 1: müde Spieler, Rückstand oder knappe Führung in der Schlussphase. Stufe 2: zusätzlich Gelb-Rot-Gefahr und ein verlorenes Taktik-Duell (ab der 20. Minute, mit Chef-Analyst sofort). Stufe 3: erkennt auch ein gewinnbares Taktik-Duell.',
         tips: ['Jede Aktion kostet, was sie sonst auch kostet: einen Wechsel, Zweikampfstärke oder Ordnung hinten', 'Ein schlecht gelaunter Co-Trainer meldet sich seltener - Gehaltserhöhung hebt seine Laune', 'Befolgte Hinweise stärken das Vertrauen in ihn (Kader > Co-Trainer-Historie)'] },
+    { cat: 'Taktik', title: 'Standards einstudieren', screen: 'screen-training',
+        text: 'Setze im Wochenplan Tage auf „🚩 Standards“ und wähle darunter eine Variante: direkter Freistoß, Freistoßflanke, kurz ausgeführt, Elfmeter oder Ecken. Jeder Standards-Tag bringt der Variante 10 Punkte pro Spieltag (mit Standards-Spezialist 15), alle anderen verlieren 2. Bei 100 % bringt sie im Livespiel bis zu +6 % Torchance bzw. Trefferquote, die Flanke halbiert zusätzlich das Konterrisiko.',
+        tips: ['Jeder Standards-Tag fehlt Taktik, Technik oder Kondition', 'Der Livespiel-Freistoß zeigt, wie gut eine Variante einstudiert ist'] },
     { cat: 'Taktik', title: 'Mannschaftsanweisungen', screen: 'screen-squad',
         text: 'Gegenpressing (+1,5 Stärke, +15 % Kraftverbrauch), hohe Außenverteidiger (+1, +8 %), Tief stehen (−0,5, −15 %; schließt die anderen aus).',
         tips: ['Bei vollem Spielplan Kraft sparen, in wichtigen Spielen draufgehen'] },
