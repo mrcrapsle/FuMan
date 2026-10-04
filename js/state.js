@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.27', date: '04.10.2026', features: 'Phase 20: Szenarien-Langzeittest (Pleiteklub: Kredite und Zwangsverkäufe zählen, Absteiger wirklich schwach, Aufstiegsprämie nach Liga)' };
+    const GAME_VERSION = { number: '3.28', date: '04.10.2026', features: 'Phase 20: Spielstand-Sicherheit (Prüfung und Reparatur vor dem Laden, Sicherheitskopie, Ausweichen auf heilen Stand beim Start, Speicher-voll-Warnung, Export-Erinnerung)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

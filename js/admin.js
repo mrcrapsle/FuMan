@@ -458,13 +458,9 @@
         try {
             let area = document.getElementById('adm-save-json');
             if (!area || !area.value.trim()) { showToast("Bitte erst ein Savegame-JSON in das Textfeld einfügen!", 'success', 4000); return; }
-            let p = JSON.parse(area.value.trim());
-
-            // Nutzt jetzt dieselbe zentrale Lade-Funktion wie save.js, statt einer separat
-            // gepflegten Kopie - die war leider veraltet (fehlende Stadion-Top-Level-Felder
-            // wie Flutlicht/Dach/Videowalls sowie die neueren Fan-/Personal-/Finanz-States)
-            // und hätte beim manuellen JSON-Import Fortschritt stillschweigend verworfen.
-            applyLoadedState(p);
+            // Derselbe geprüfte Ladeweg wie Slots und Dateiimport (save-safety.js): kaputtes
+            // JSON lässt das laufende Spiel unangetastet, das alte Spiel wird gesichert.
+            if (!loadSaveSafely(area.value.trim(), { label: 'Admin-JSON' })) return;
             updateUI();
             renderAdminView();
             showToast("📥 Spielstand aus JSON erfolgreich importiert und angewendet!", 'success', 4000);

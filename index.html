@@ -792,6 +792,7 @@
                     <div id="save-slot-2" class="box" style="margin-bottom:6px;"></div>
                     <div id="save-slot-3" class="box"></div>
                     <div id="save-slot-auto" class="box" style="border-left:3px solid var(--teal);"></div>
+                    <div id="save-safety-box" class="box" style="margin-top:6px; border-left:3px solid var(--blue);"></div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:8px;">
                         <button onclick="exportSaveToFile()" class="btn-secondary" style="font-size:10px;">📤 Als Datei exportieren</button>
                         <button onclick="document.getElementById('save-import-file-input').click()" class="btn-secondary" style="font-size:10px;">📥 Aus Datei importieren</button>
@@ -2620,6 +2621,7 @@
 <script src="js/admin.js?v=2.1"></script>
 <script src="js/premium.js?v=2.1"></script>
 <script src="js/save.js?v=2.1"></script>
+<script src="js/save-safety.js?v=3.28"></script>
 <script>
     // Sichere Storage-Zugriffe: manche Android-Dateimanager öffnen HTML-Dateien in stark
     // eingeschränkten WebViews, die den Zugriff auf sessionStorage/localStorage bei

@@ -535,7 +535,7 @@ async function testAutosaveResume(browser) {
     const vorher = await page1.evaluate(() => {
         closeTutorial();
         game.sackPending = false;
-        game.clubName = 'Autosave Testclub';
+        renameClub('Autosave Testclub'); // benennt auch die Tabellenzeile um (sonst lehnt die Prüfung den Stand ab)
         game.lastAutoSaveMatchday = game.matchday;
         simulateMatchdays(6);
         return { matchday: game.matchday, last: localStorage.getItem('anstoss_fm13_last_save'), auto: !!localStorage.getItem('anstoss_fm13_autosave') };
@@ -552,12 +552,13 @@ async function testAutosaveResume(browser) {
         saveGameToSlot(2);
         out.lastNachSlot = localStorage.getItem('anstoss_fm13_last_save');
         // Scheiternder Autosave meldet sich (einmal)
-        const original = window.safeLocalSet;
-        window.safeLocalSet = () => false;
+        // wie ein Browser, der das Schreiben blockiert
+        const original = Storage.prototype.setItem;
+        Storage.prototype.setItem = function () { throw new DOMException('blockiert', 'SecurityError'); };
         game.lastAutoSaveMatchday = 0; game.matchday = 30;
         maybeAutoSave();
         out.warnung = document.getElementById('app-toast').innerText.includes('Automatisches Speichern nicht möglich');
-        window.safeLocalSet = original;
+        Storage.prototype.setItem = original;
         return out;
     });
     await ctx.close();
@@ -684,6 +685,115 @@ async function testScenarioBalance(browser) {
     }
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
     await page.close();
+}
+
+async function testSaveSafety(browser) {
+    console.log('\n[20.7] Spielstand-Sicherheit: Prüfen vor dem Laden, Reparatur, Sicherheitskopie, voller Speicher');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            const toasts = [];
+            const origToast = showToast;
+            showToast = (m, t, d) => { toasts.push(String(m)); return origToast(m, t, d); };
+            const letzterToast = () => toasts[toasts.length - 1] || '';
+            const zustand = aenderung => { const st = JSON.parse(JSON.stringify(buildSaveState())); st.meta = buildSaveMeta(); if (aenderung) aenderung(st); return JSON.stringify(st); };
+
+            // 1. Unlesbarer Slot: laufendes Spiel bleibt unverändert.
+            game.money = 111111; saveGameToSlot(1);
+            game.money = 222222;
+            localStorage.setItem(SAVE_SLOT_PREFIX + 2, '{"game": {kaputt');
+            out.kaputtAbgelehnt = loadGameFromSlot(2, false) === false && game.money === 222222 && letzterToast().includes('beschädigt');
+            // 2. Fehlender Kader: ebenfalls abgelehnt.
+            localStorage.setItem(SAVE_SLOT_PREFIX + 2, zustand(st => { delete st.squad; }));
+            out.ohneKaderAbgelehnt = loadGameFromSlot(2, false) === false && game.money === 222222 && letzterToast().includes('Kader fehlt');
+            // 3. Kleine Schäden werden repariert und gemeldet; vorher entsteht die Sicherheitskopie.
+            localStorage.setItem(SAVE_SLOT_PREFIX + 3, zustand(st => { st.squad[1].id = st.squad[0].id; st.game.money = null; st.squad[2].strength = null; st.lineup = [987654]; }));
+            out.repariert = loadGameFromSlot(3, false) === true && new Set(squad.map(x => x.id)).size === squad.length
+                && game.money === 0 && squad.every(x => Number.isFinite(x.strength)) && lineup.length === 11 && lineup.every(id => squad.some(x => x.id === id))
+                && toasts.some(t => t.includes('repariert') && t.includes('doppelte Spieler-IDs'));
+            const kopie = JSON.parse(localStorage.getItem(SAVE_BACKUP_KEY));
+            out.kopieVorDemLaden = kopie.meta.money === 222222 && kopie.meta.backupReason.includes('Slot 3');
+            // 4. Wiederherstellen ist umkehrbar.
+            out.wiederhergestellt = restoreSaveBackup() === true && game.money === 222222 && JSON.parse(localStorage.getItem(SAVE_BACKUP_KEY)).meta.money === 0;
+            // 5. Überschreiben eines Slots sichert den alten Inhalt.
+            saveGameToSlot(1);
+            const alt = JSON.parse(localStorage.getItem(SAVE_BACKUP_KEY));
+            out.ueberschreibenGesichert = alt.meta.money === 111111 && alt.meta.backupReason.includes('Slot 1') && getSlotMeta(1).money === 222222 && getSlotMeta(1).version === GAME_VERSION.number;
+            // 6. Neuere Version wird gemeldet.
+            localStorage.setItem(SAVE_SLOT_PREFIX + 2, zustand(st => { st.meta.version = '99.0'; }));
+            loadGameFromSlot(2, false);
+            out.neuereVersion = toasts.some(t => t.includes('neueren Version'));
+            // 7. Speicher voll: erst weicht die Sicherheitskopie, sonst klare Meldung.
+            backupCurrentGame('Test');
+            localStorage.removeItem(SAVE_SLOT_PREFIX + 2); localStorage.removeItem(SAVE_SLOT_PREFIX + 3);
+            const groesse = zustand().length + 50;
+            const fueller = 'x'.repeat(1000);
+            let n = 0;
+            try { while (n < 20000) { localStorage.setItem('fueller_' + n, fueller); n++; } } catch (e) { /* voll */ }
+            out.fuellerGeschrieben = n > 100;
+            // so viel freigeben, dass ein Stand nur nach dem Löschen der Sicherheitskopie passt
+            let frei = 0, k = n - 1;
+            while (frei < groesse * 0.6 && k >= 0) { localStorage.removeItem('fueller_' + k); frei += 1000 + ('fueller_' + k).length; k--; }
+            const erg = writeSaveVerified(SAVE_SLOT_PREFIX + 2, zustand());
+            out.kopieWeicht = erg.ok && erg.backupDropped === true && !localStorage.getItem(SAVE_BACKUP_KEY);
+            try { while (true) { localStorage.setItem('fueller_' + (++n), fueller); } } catch (e) { /* voll */ }
+            saveGameToSlot(3);
+            out.vollGemeldet = letzterToast().includes('Speicher voll') && !localStorage.getItem(SAVE_SLOT_PREFIX + 3);
+            out.warnungBeiVoll = getStorageUsage().share > 0.8;
+            for (let i = 0; i <= n; i++) localStorage.removeItem('fueller_' + i);
+            // 8. Anzeige: Füllstand, Sicherheitskopie, letzter Export.
+            backupCurrentGame('Test');
+            showScreen('screen-dashboard');
+            renderSaveSlotsUI();
+            const box = document.getElementById('save-safety-box').innerHTML;
+            out.anzeige = box.includes('Speicher belegt') && box.includes('Sicherheitskopie wiederherstellen') && box.includes('Letzter Datei-Export: noch nie');
+            // 9. Export-Erinnerung am Saisonende und Export merkt sich die Saison.
+            game.season = 5; game.lastExportSeason = 0; game.lastExportReminderSeason = 0;
+            const vorher = inboxMessages.length;
+            remindSaveExport(); remindSaveExport();
+            out.erinnerung = inboxMessages.length === vorher + 1;
+            exportSaveToFile();
+            out.exportGemerkt = game.lastExportSeason === 5;
+            showToast = origToast;
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Spielstand-Sicherheit ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.kaputtAbgelehnt && r.ohneKaderAbgelehnt, 'Unlesbarer Slot oder Stand ohne Kader wird abgelehnt, das laufende Spiel bleibt unverändert');
+        assert(r.repariert, 'Doppelte IDs, ungültige Zahlen und verwaiste Aufstellung werden beim Laden repariert und gemeldet');
+        assert(r.kopieVorDemLaden && r.wiederhergestellt, 'Vor dem Laden entsteht eine Sicherheitskopie, Wiederherstellen ist umkehrbar');
+        assert(r.ueberschreibenGesichert, 'Überschreiben eines Slots sichert den alten Inhalt; Slots merken sich die Version');
+        assert(r.neuereVersion, 'Spielstand aus einer neueren Version wird gemeldet');
+        assert(r.fuellerGeschrieben && r.kopieWeicht, 'Speicher voll: die Sicherheitskopie weicht, damit der Spielstand passt');
+        assert(r.vollGemeldet && r.warnungBeiVoll, 'Passt gar nichts mehr, meldet das Spiel "Speicher voll" statt still zu scheitern');
+        assert(r.anzeige, 'Speicherstände zeigen Füllstand, Sicherheitskopie und letzten Datei-Export');
+        assert(r.erinnerung && r.exportGemerkt, 'Export-Erinnerung einmal pro Saison, der Export merkt sich die Saison');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+
+    // Start mit beschädigtem letzten Stand: der nächstneuere heile Stand wird geladen.
+    const p2 = await browser.newPage();
+    const fehler2 = [];
+    p2.on('pageerror', e => fehler2.push(e.message));
+    await p2.goto(GAME_PATH);
+    await p2.waitForTimeout(400);
+    await p2.evaluate(() => {
+        closeTutorial();
+        game.money = 345678; saveGameToSlot(1);
+        localStorage.setItem(SAVE_SLOT_PREFIX + 2, '{"kaputt":');
+        localStorage.setItem('anstoss_fm13_last_save', 'slot2');
+    });
+    await p2.reload();
+    await p2.waitForTimeout(600);
+    const start = await p2.evaluate(() => ({ money: game.money, toast: (document.getElementById('app-toast') || {}).innerText || '' }));
+    assert(start.money === 345678, `Start: beschädigter letzter Stand (Slot 2) wird übersprungen, Slot 1 geladen (${start.money})`);
+    assert(fehler2.length === 0, `Keine JS-Fehler beim Start mit beschädigtem Stand (${fehler2.slice(0, 2).join(' | ')})`);
+    await p2.close();
 }
 
 async function testSponsorConflict(browser) {
@@ -6377,6 +6487,7 @@ async function main() {
         testCupFinal,
         testCleanupPart8,
         testScenarioBalance,
+        testSaveSafety,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,

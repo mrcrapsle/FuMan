@@ -220,21 +220,14 @@
         if (typeof markOnboardingStep === 'function') markOnboardingStep('speichern');
         try {
             let state = buildSaveState();
-            state.meta = {
-                savedAt: new Date().toLocaleString('de-DE'),
-                clubName: game.clubName,
-                league: leagueNames[game.leagueLevel],
-                season: game.season,
-                matchday: Math.min(34, game.matchday),
-                money: game.money
-            };
-            // safeLocalSet statt direktem localStorage.setItem: manche Android-WebViews
-            // (Dateivorschau statt echtem Browser) blockieren localStorage bei file://
-            // komplett und werfen schon beim Property-Zugriff ("Access is denied for
-            // this document") - das braucht eine verständliche, konkret hilfreiche
-            // Meldung statt des rohen Browser-Fehlertexts.
-            if (!safeLocalSet(SAVE_SLOT_PREFIX + slotNum, JSON.stringify(state))) {
-                showToast('💾 Speichern nicht möglich: Dieser Browser/diese Ansicht blockiert lokalen Speicher für diese Datei. Öffne die Datei in einem normalen Browser (z.B. "Öffnen mit..." → Chrome), nicht in der Dateivorschau.', 'error', 8000);
+            state.meta = buildSaveMeta();
+            // writeSaveVerified (save-safety.js) erkennt blockierten und vollen Speicher und
+            // liest den Stand zurück; der alte Slot-Inhalt wandert vorher in die Sicherheitskopie.
+            backupSlotBeforeOverwrite(SAVE_SLOT_PREFIX + slotNum, `Slot ${slotNum}`);
+            let erg = writeSaveVerified(SAVE_SLOT_PREFIX + slotNum, JSON.stringify(state));
+            if (!erg.ok) {
+                showToast(describeSaveFailure(erg), 'error', 8000);
+                renderSaveSlotsUI();
                 return;
             }
             safeLocalSet(LAST_SAVE_KEY, 'slot' + slotNum);
@@ -250,8 +243,8 @@
         try {
             let raw = safeLocalGet(SAVE_SLOT_PREFIX + slotNum);
             if (raw) {
-                let p = JSON.parse(raw);
-                applyLoadedState(p);
+                // Geprüft und mit Sicherheitskopie des laufenden Spiels (save-safety.js).
+                if (!loadSaveSafely(raw, { label: `Slot ${slotNum}`, backup: !silent, silent })) { renderSaveSlotsUI(); return false; }
                 updateUI();
                 showScreen('screen-dashboard');
                 if (!silent) { playSound('whistle'); showToast(`📂 Slot ${slotNum} geladen!`, 'success'); }
@@ -272,14 +265,7 @@
     function exportSaveToFile() {
         try {
             let state = buildSaveState();
-            state.meta = {
-                savedAt: new Date().toLocaleString('de-DE'),
-                clubName: game.clubName,
-                league: leagueNames[game.leagueLevel],
-                season: game.season,
-                matchday: Math.min(34, game.matchday),
-                money: game.money
-            };
+            state.meta = buildSaveMeta();
             let data = JSON.stringify(state);
             let blob = new Blob([data], { type: 'application/json' });
             let url = URL.createObjectURL(blob);
@@ -291,6 +277,8 @@
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
+            game.lastExportSeason = game.season;
+            renderSaveSlotsUI();
             showToast('📤 Spielstand als Datei exportiert!', 'success');
         } catch(e) {
             showToast('Export-Fehler: ' + e.message, 'error');
@@ -302,12 +290,13 @@
         let reader = new FileReader();
         reader.onload = function() {
             try {
-                let p = JSON.parse(reader.result);
-                applyLoadedState(p);
-                updateUI();
-                showScreen('screen-dashboard');
-                playSound('whistle');
-                showToast('📥 Spielstand aus Datei importiert!', 'success');
+                if (loadSaveSafely(reader.result, { label: 'Importdatei' })) {
+                    updateUI();
+                    showScreen('screen-dashboard');
+                    playSound('whistle');
+                    showToast('📥 Spielstand aus Datei importiert!', 'success');
+                    renderSaveSlotsUI();
+                }
             } catch(e) {
                 showToast('Import-Fehler: Datei ist kein gültiger Anstoß-Spielstand (' + e.message + ')', 'error');
             }
@@ -350,15 +339,9 @@
         if (game.matchday - letzter < AUTOSAVE_INTERVAL && game.matchday >= letzter) return;
         try {
             let state = buildSaveState();
-            state.meta = {
-                savedAt: new Date().toLocaleString('de-DE'),
-                clubName: game.clubName,
-                league: leagueNames[game.leagueLevel],
-                season: game.season,
-                matchday: Math.min(34, game.matchday),
-                money: game.money
-            };
-            if (safeLocalSet(AUTOSAVE_KEY, JSON.stringify(state))) {
+            state.meta = buildSaveMeta();
+            let erg = writeSaveVerified(AUTOSAVE_KEY, JSON.stringify(state));
+            if (erg.ok) {
                 game.lastAutoSaveMatchday = game.matchday;
                 safeLocalSet(LAST_SAVE_KEY, 'auto');
                 showToast(`💾 Automatisch gespeichert (Spieltag ${Math.min(34, game.matchday)}).`, 'success', 2200);
@@ -367,7 +350,7 @@
                 // Nicht mehr stumm scheitern: einmal pro Sitzung deutlich warnen.
                 autosaveWarnungGezeigt = true;
                 game.lastAutoSaveMatchday = game.matchday;
-                showToast('⚠️ Automatisches Speichern nicht möglich: der Browser blockiert den Speicher (oder er ist voll). Exportiere deinen Spielstand als Datei (💾 Speichern → Export) oder öffne das Spiel in Chrome/Firefox statt in der Dateivorschau.', 'error', 9000);
+                showToast('⚠️ Automatisches Speichern nicht möglich. ' + describeSaveFailure(erg), 'error', 9000);
             }
         } catch (e) { console.error('Autosave fehlgeschlagen:', e); }
     }
@@ -376,7 +359,7 @@
         try {
             let raw = safeLocalGet(AUTOSAVE_KEY);
             if (!raw) { showToast('Es gibt noch keinen automatischen Spielstand.', 'error'); return false; }
-            applyLoadedState(JSON.parse(raw));
+            if (!loadSaveSafely(raw, { label: 'Autosave' })) return false;
             updateUI();
             showScreen('screen-dashboard');
             playSound('whistle');
@@ -387,23 +370,13 @@
     }
 
     // Spielstart: den zuletzt geschriebenen Stand laden (Autosave oder Slot), sonst Slot 1.
+    // Ist er beschädigt, lädt loadNewestIntactSave() (save-safety.js) den nächstneueren heilen Stand.
     function loadMostRecentGame() {
         let zuletzt = safeLocalGet(LAST_SAVE_KEY);
-        if (zuletzt === 'auto') {
-            try {
-                let raw = safeLocalGet(AUTOSAVE_KEY);
-                if (raw) {
-                    let p = JSON.parse(raw);
-                    applyLoadedState(p);
-                    updateUI();
-                    showToast(`📂 Automatischer Spielstand geladen (Saison ${p.meta ? p.meta.season : '?'}, Spieltag ${p.meta ? p.meta.matchday : '?'}).`, 'success', 3500);
-                    return true;
-                }
-            } catch (e) { console.error('Autosave beim Start nicht ladbar:', e); }
-        }
-        let slot = /^slot(\d)$/.exec(zuletzt || '');
-        if (slot) return loadGameFromSlot(parseInt(slot[1]), true);
-        return loadGame(true);
+        // Ohne Merker (sehr alte Stände, Testumgebung) wie früher nur Slot 1 versuchen.
+        if (!zuletzt) return loadGame(true);
+        migrateLegacySave();
+        return loadNewestIntactSave(zuletzt);
     }
 
     // Schnellspeichern aus der unteren Menüleiste - legt immer in Slot 1 ab.
@@ -431,6 +404,7 @@
 
     function renderSaveSlotsUI() {
         renderAutoSaveBox();
+        if (typeof renderSaveSafetyBox === 'function') renderSaveSafetyBox();
         let versionTag = document.getElementById('game-version-tag');
         if (versionTag) versionTag.innerText = `Version ${GAME_VERSION.number} · Stand: ${GAME_VERSION.date}`;
         for (let i = 1; i <= SAVE_SLOT_COUNT; i++) {
@@ -441,7 +415,7 @@
                 box.innerHTML = `
                     <div style="font-weight:bold; color:var(--accent);">Slot ${i}: ${meta.clubName}</div>
                     <div style="font-size:10px; color:#94a3b8;">${meta.league} · Saison ${meta.season} · Spieltag ${meta.matchday}/34 · ${formatVal(meta.money)}</div>
-                    <div style="font-size:9px; color:#64748b;">Gespeichert: ${meta.savedAt}</div>
+                    <div style="font-size:9px; color:#64748b;">Gespeichert: ${meta.savedAt}${meta.version ? ` · Version ${meta.version}` : ''}</div>
                     <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin-top:4px;">
                         <button onclick="saveGameToSlot(${i})" class="btn-blue" style="font-size:9px;">Speichern</button>
                         <button onclick="loadGameFromSlot(${i}, false)" class="btn-secondary" style="font-size:9px;">Laden</button>
@@ -567,6 +541,8 @@
             return;
         }
         clearTimeout(newGameConfirmTimer);
+        // Das bisherige Spiel bleibt als Sicherheitskopie erhalten (save-safety.js).
+        backupCurrentGame('vor dem neuen Spiel');
         safeSessionSet(FORCE_NEW_GAME_FLAG, '1');
         // Karriere-Szenario (js/scenarios.js): bestimmt die Startliga selbst.
         let szenario = (typeof selectedNewGameScenario !== 'undefined' && selectedNewGameScenario && CAREER_SCENARIOS[selectedNewGameScenario]) ? selectedNewGameScenario : null;
@@ -594,6 +570,8 @@
         clearTimeout(hardResetConfirmTimer);
         for (let i = 1; i <= SAVE_SLOT_COUNT; i++) safeLocalRemove(SAVE_SLOT_PREFIX + i);
         safeLocalRemove(LEGACY_SAVE_KEY);
+        safeLocalRemove(AUTOSAVE_KEY);
+        safeLocalRemove(SAVE_BACKUP_KEY);
         safeSessionSet(FORCE_NEW_GAME_FLAG, '1');
         location.reload();
     }
