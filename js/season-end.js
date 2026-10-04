@@ -80,8 +80,14 @@
     // Aufstiegsprämie, Sponsoren-Bonus, XP, Fan-Fundament und Vertragsboni - für den regulären
     // Aufstieg am Saisonende UND den nachträglichen nach erfüllter DFB-Nachfrist (der bekam
     // bisher nichts davon). Gibt den Sponsoren-Bonus zurück (für die Meldung).
+    // Aufstiegsprämie nach der NEUEN Liga: pauschal 1,5 Mio. waren für einen Ober- oder
+    // Regionalligisten mehr als eine ganze Saison Umsatz (Szenario-Langzeittest 20.6:
+    // Traditionsverein von 0,4 auf 3,5 Mio. € in einer Regionalliga-Saison).
+    const PROMOTION_PRIZE_BY_LEVEL = [5000000, 2500000, 1000000, 400000, 150000, 0];
+    function getPromotionPrize(level) { return PROMOTION_PRIZE_BY_LEVEL[level] ?? 0; }
+
     function applyPromotionRewards() {
-        game.money += 1500000;
+        game.money += getPromotionPrize(game.leagueLevel);
         let sponsorPromoBonus = game.sponsor.promotionBonus || 0;
         if (sponsorPromoBonus > 0) game.money += sponsorPromoBonus;
         addManagerXP(1000);
@@ -114,7 +120,7 @@
             game.dfbGracePeriod = null;
             if (typeof insertOurTeamIntoLeagues === 'function') insertOurTeamIntoLeagues();
             let sponsorPromoBonus = applyPromotionRewards();
-            addInboxMessage('vertrag', '🎉 Nachträglicher Aufstieg!', `Die DFB-Auflagen wurden rechtzeitig innerhalb der Nachfrist erfüllt - der Aufstieg in die ${leagueNames[game.leagueLevel]} wird nachträglich vollzogen! Aufstiegsprämie 1.500.000 €${sponsorPromoBonus > 0 ? ` plus ${formatVal(sponsorPromoBonus)} Sponsoren-Bonus` : ''}.`, 'screen-stadium');
+            addInboxMessage('vertrag', '🎉 Nachträglicher Aufstieg!', `Die DFB-Auflagen wurden rechtzeitig innerhalb der Nachfrist erfüllt - der Aufstieg in die ${leagueNames[game.leagueLevel]} wird nachträglich vollzogen! Aufstiegsprämie ${formatVal(getPromotionPrize(game.leagueLevel))}${sponsorPromoBonus > 0 ? ` plus ${formatVal(sponsorPromoBonus)} Sponsoren-Bonus` : ''}.`, 'screen-stadium');
             showToast(`🎉 Nachträglicher Aufstieg in die ${leagueNames[game.leagueLevel]}!`, 'success');
             return;
         }
@@ -228,7 +234,7 @@
             } else {
                 game.leagueLevel--;
                 let sponsorPromoBonus = applyPromotionRewards();
-                showNotice('🎉 Aufstieg geschafft!', `Glückwunsch zur Beförderung in die ${leagueNames[game.leagueLevel]}.\n\nAufstiegsprämie 1.500.000 €${sponsorPromoBonus > 0 ? ` plus ${formatVal(sponsorPromoBonus)} Sponsoren-Aufstiegsbonus` : ''}.`);
+                showNotice('🎉 Aufstieg geschafft!', `Glückwunsch zur Beförderung in die ${leagueNames[game.leagueLevel]}.\n\nAufstiegsprämie ${formatVal(getPromotionPrize(game.leagueLevel))}${sponsorPromoBonus > 0 ? ` plus ${formatVal(sponsorPromoBonus)} Sponsoren-Aufstiegsbonus` : ''}.`);
             }
         } else if ((myRank >= 17 || (myRank === 16 && relegation !== 'stayed')) && game.leagueLevel < NUM_LEAGUES - 1) {
             game.leagueLevel++;

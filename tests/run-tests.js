@@ -595,6 +595,8 @@ async function testCareerScenarios(browser) {
             // Bewertungslogik der übrigen Szenarien
             const pruef = (id, setzen) => { const s = { id, startSeason: 1, startLevel: CAREER_SCENARIOS[id].level, lastRank: 5, status: 'aktiv' }; setzen(s); return CAREER_SCENARIOS[id].check(s); };
             game.leagueLevel = 3; game.season = 2; game.money = 300000;
+            // Zwangsverkäufe aus der simulierten Absteiger-Saison zählen sonst gegen den Pleiteklub.
+            game.forcedSalesCount = 0; game.loanDebt = 0; activeLoans = [];
             const p1 = pruef('pleite', () => {});
             game.money = -5000;
             const p2 = pruef('pleite', () => {});
@@ -623,6 +625,62 @@ async function testCareerScenarios(browser) {
         assert(r.pleite, 'Pleiteklub: schwarze Zahlen nach 1 Saison = 3 Sterne, Zwischenstand, Scheitern nach Fristende');
         assert(r.tradition, 'Traditionsverein: 3. Liga nach 2 Saisons (schnellstmöglich) = 3 Sterne, Frist von 4 Saisons');
         assert(r.titel && r.abstieg, 'Meister oder Chaos und Klassenerhalt werden richtig bewertet');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
+async function testScenarioBalance(browser) {
+    console.log('\n[20.6] Szenarien-Langzeittest: Kredite und Zwangsverkäufe sanieren nicht, Aufstiegsprämie nach Liga');
+    const { page, consoleErrors } = await freshPage(browser);
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            const pruef = () => CAREER_SCENARIOS.pleite.check(game.scenario);
+            game.leagueLevel = 3; game.season = 2;
+            game.scenario = { id: 'pleite', startSeason: 1, startLevel: 3, lastRank: 5, status: 'aktiv', forcedAtStart: 0 };
+            game.forcedSalesCount = 0; game.loanDebt = 0; activeLoans = [];
+            // Ein Kredit hebt das Konto ins Plus, ist aber keine Sanierung.
+            game.money = -200000;
+            takeLoanTier('lang', 400000);
+            const k = pruef();
+            out.kreditZaehltNicht = game.money > 0 && !k.ok && !k.done && getScenarioNetCash() < 0;
+            activeLoans = [];
+            // Zwangsverkauf: eigener Buchungstext und Zähler.
+            game.money = -10000; game.negativeStreak = 9;
+            const kader = squad.length;
+            checkInsolvencyRisk();
+            const zeile = (game.kontoauszug || []).slice(-1)[0];
+            out.zwangsverkauf = squad.length === kader - 1 && game.forcedSalesCount === 1 && zeile && zeile.label === '💸 Zwangsverkauf';
+            game.money = 300000;
+            const einer = pruef();
+            out.einStern = einer.ok && einer.stars === 2;
+            game.forcedSalesCount = 2;
+            const zwei = pruef();
+            out.zweiGescheitert = zwei.done && !zwei.ok;
+            game.scenario.forcedAtStart = 2;
+            out.vorherigeZaehlenNicht = pruef().stars === 3;
+            showScreen('screen-dashboard');
+            renderScenarioCard();
+            out.karte = document.getElementById('dash-scenario-box').innerHTML.includes('Zwangsverkäufe: 0 / 2');
+            // Aufstiegsprämie: Oberliga deutlich kleiner als Bundesliga, Lexikon nennt die Spanne.
+            out.praemie = getPromotionPrize(4) === 150000 && getPromotionPrize(3) < getPromotionPrize(2) && getPromotionPrize(0) === 5000000;
+            game.leagueLevel = 4; game.money = 0;
+            applyPromotionRewards();
+            out.praemieGebucht = game.money >= 150000 && game.money < 1500000;
+            out.lexikon = LEXICON_ENTRIES.some(e => e.title === 'Auf- und Abstieg' && e.text.includes('150.000 €'));
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Szenario-Balance-Test ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.kreditZaehltNicht, 'Pleiteklub: ein Kredit bringt das Konto ins Plus, zählt aber nicht als Sanierung');
+        assert(r.zwangsverkauf, 'Zwangsverkauf wird gezählt und als "💸 Zwangsverkauf" gebucht (nicht unter dem offenen Screen)');
+        assert(r.einStern && r.zweiGescheitert && r.vorherigeZaehlenNicht, 'Ein Zwangsverkauf kostet einen Stern, zwei lassen die Sanierung scheitern, frühere zählen nicht');
+        assert(r.karte, 'Szenario-Karte zeigt die Zwangsverkäufe');
+        assert(r.praemie && r.praemieGebucht, 'Aufstiegsprämie richtet sich nach der neuen Liga (Oberliga 150.000 €, Bundesliga 5 Mio. €)');
+        assert(r.lexikon, 'Lexikon nennt die Aufstiegsprämie');
     }
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
     await page.close();
@@ -1033,13 +1091,18 @@ async function testCleanupPart8(browser) {
         try {
             closeTutorial();
             const out = {};
-            const alt = game.leagueLevel, geld = game.money;
+            const alt = game.leagueLevel;
+            // Prämie seit 20.6 nach Liga (Oberliga 150.000 €) - zählen statt Kontostand vergleichen.
+            let praemien = 0;
+            const origRewards = applyPromotionRewards;
+            applyPromotionRewards = () => { praemien++; return origRewards(); };
             game.dfbGracePeriod = { targetLevel: alt - 1, deadlineMatchday: 3, originalLeagueLevel: alt };
             game.sackPending = false; simulateMatchdays(1);
+            applyPromotionRewards = origRewards;
             out.aufgestiegen = game.leagueLevel === alt - 1 && !game.dfbGracePeriod;
             out.inNeuerTabelle = leaguesData[game.leagueLevel].some(t => t.name === game.clubName) && !leaguesData[alt].some(t => t.name === game.clubName);
             out.groessen = leaguesData[alt].length === 18 && leaguesData[game.leagueLevel].length === 18;
-            out.praemie = game.money - geld > 1000000;
+            out.praemie = praemien === 1;
             game.sackPending = false; simulateMatchdays(2);
             out.spieltWeiter = leaguesData[game.leagueLevel].find(t => t.name === game.clubName).played >= 2;
             // Altlasten alter Spielstände werden schon beim Laden entfernt
@@ -6313,6 +6376,7 @@ async function main() {
         testSetPieces,
         testCupFinal,
         testCleanupPart8,
+        testScenarioBalance,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,

@@ -431,7 +431,11 @@
                 let value = Math.round(calculatePlayerMarketValue(candidate.strength) * sellFactor);
                 squad.splice(idx, 1);
                 lineup = lineup.filter(id => id !== candidate.id);
+                // Eigener Buchungstext (lief vorher unter dem gerade offenen Screen, z.B. "Vereinsbüro").
+                setzeBuchungskontext('💸 Zwangsverkauf');
                 game.money += value;
+                loescheBuchungskontext();
+                game.forcedSalesCount = (game.forcedSalesCount || 0) + 1;
                 showNotice('💸 Zwangsverkauf', `Um die Zahlungsfähigkeit zu sichern, verkauft der Vorstand notgedrungen ${candidate.name} für ${formatVal(value)} - deutlich unter Marktwert.`, { typ: 'warn' });
                 addInboxMessage('finanzen', 'Zwangsverkauf!', `Der Vorstand hat ${candidate.name} notgedrungen für ${formatVal(value)} verkauft (unter Marktwert).`, 'screen-finances');
             }

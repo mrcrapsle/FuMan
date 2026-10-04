@@ -86,7 +86,7 @@ const LEXICON_ENTRIES = [
         text: 'Verlängerungen sind Gehaltsgespräche: Stammspieler und Stars fordern mehr, ältere Spieler weniger. Zähe Charaktere lassen sich schwer drücken; nach zwei geplatzten Runden ist für die Saison Schluss.',
         tips: ['Eine Einsatzgarantie macht Spieler billiger - aber wird geprüft'] },
     { cat: 'Wettbewerbe', title: 'Auf- und Abstieg', screen: 'screen-league',
-        text: 'Platz 1 und 2 steigen direkt auf, Platz 3 spielt Relegation gegen den 16. der Liga darüber. Platz 16 muss in die Relegation, Platz 17 und 18 steigen ab.',
+        text: 'Platz 1 und 2 steigen direkt auf, Platz 3 spielt Relegation gegen den 16. der Liga darüber. Platz 16 muss in die Relegation, Platz 17 und 18 steigen ab. Die Aufstiegsprämie richtet sich nach der neuen Liga: 150.000 € (Oberliga) bis 5 Mio. € (Bundesliga).',
         tips: ['Bei Gleichstand entscheiden Tordifferenz, dann erzielte Tore'] },
     { cat: 'Wettbewerbe', title: 'Saisonvorschau & Experten-Check', screen: 'screen-dashboard',
         text: 'Vor jeder Saison tippen die Experten die ganze Tabelle; dein Platz ist dieselbe Erwartung, an der dich Vorstand und Mitgliederversammlung messen. Am Saisonende zeigt der Rückblick Tipp gegen Wirklichkeit, Überraschung, Flop und den Spieler der Saison (beste Ø-Note, mindestens 10 Ligaspiele).',
@@ -105,7 +105,7 @@ const LEXICON_ENTRIES = [
         tips: ['Ein Angebot gilt 6 Spieltage', 'Man kann es auch als Druckmittel für den Vorstand nutzen'] },
     { cat: 'Karriere', title: 'Karriere-Szenarien', screen: 'screen-dashboard',
         text: 'Beim neuen Spiel wählbar: Absteiger retten, Pleiteklub sanieren, Traditionsverein zurückführen, Meister oder Chaos - mit Ziel, Frist und 1-3 Sternen.',
-        tips: ['Danach geht die Karriere als freies Spiel weiter'] },
+        tips: ['Danach geht die Karriere als freies Spiel weiter', 'Pleiteklub: Kredite zählen als Schulden, jeder Zwangsverkauf kostet einen Stern - zwei lassen die Sanierung scheitern'] },
     { cat: 'Bedienung', title: 'Speichern', screen: 'screen-dashboard',
         text: 'Drei Speicher-Slots plus automatisches Speichern alle 5 Spieltage. Beim Start wird immer der zuletzt gespeicherte Stand geladen.',
         tips: ['Wenn der Browser das Speichern blockiert, Spielstand als Datei exportieren', 'In der Dateivorschau mancher Handys geht Speichern nicht - im Browser öffnen'] }

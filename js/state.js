@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.26.1', date: '04.10.2026', features: 'Phase 20: Aufräumen Teil 8 + stabiler Saisonziel-Test (Torjäger-Ziel nicht mehr zufallsabhängig)' };
+    const GAME_VERSION = { number: '3.27', date: '04.10.2026', features: 'Phase 20: Szenarien-Langzeittest (Pleiteklub: Kredite und Zwangsverkäufe zählen, Absteiger wirklich schwach, Aufstiegsprämie nach Liga)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

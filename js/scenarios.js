@@ -10,7 +10,7 @@ const CAREER_SCENARIOS = {
         title: '🆘 Rettet den Absteiger', level: 2, seasons: 1,
         desc: 'Ein Drittligist mit zu schwachem Kader, fast leerer Kasse und müden Fans. Ziel: Klassenerhalt in der ersten Saison (auch über die Relegation).',
         setup() {
-            squad.forEach(p => { p.strength = Math.max(30, p.strength - 5); p.marketValue = calculatePlayerMarketValue(p.strength); });
+            squad.forEach(p => { p.strength = Math.max(30, p.strength - 11); p.marketValue = calculatePlayerMarketValue(p.strength); });
             game.money = 120000; game.fans = 35; game.boardSat = 45;
         },
         check(s) {
@@ -21,7 +21,7 @@ const CAREER_SCENARIOS = {
     },
     pleite: {
         title: '💸 Pleiteklub sanieren', level: 3, seasons: 2,
-        desc: 'Ein Viertligist mit 600.000 € Schulden auf dem Konto und überhöhten Gehältern. Im Minus drohen Transfersperre und Zwangsverkäufe. Ziel: binnen zwei Saisons schwarze Zahlen, ohne abzusteigen.',
+        desc: 'Ein Viertligist mit 600.000 € Schulden auf dem Konto und überhöhten Gehältern. Im Minus drohen Transfersperre und alle 10 Spieltage ein Zwangsverkauf. Ziel: binnen zwei Saisons schwarze Zahlen (offene Kredite zählen als Schulden), ohne abzusteigen - saniert der Vorstand per Zwangsverkauf, kostet das Sterne, ab zwei Zwangsverkäufen gilt die Sanierung als gescheitert.',
         setup() {
             squad.forEach(p => { p.wage = Math.round(p.wage * 1.15 / 10) * 10; });
             game.money = -600000; game.boardSat = 50;
@@ -29,12 +29,18 @@ const CAREER_SCENARIOS = {
         check(s) {
             if (game.leagueLevel > s.startLevel) return { done: true, ok: false, text: 'Abgestiegen - die Sanierung ist gescheitert.' };
             const jahre = game.season - s.startSeason;
-            if (game.money >= 0) {
-                const sterne = jahre === 1 ? 3 : (game.money >= 250000 ? 2 : 1);
-                return { done: true, ok: true, stars: sterne, text: `Saniert nach ${jahre} Saison${jahre > 1 ? 's' : ''}: Kontostand ${formatVal(game.money)}.` };
+            // Zwangsverkäufe (checkInsolvencyRisk) sanieren den Verein ohne Zutun des Managers:
+            // im Langzeittest 20.6 war das Szenario so auch ganz ohne Eingriff nach einer Saison
+            // mit 3 Sternen geschafft (zwei Zwangsverkäufe à ~380.000 €).
+            const zwang = getScenarioForcedSales(s);
+            if (zwang >= 2) return { done: true, ok: false, text: `Der Vorstand musste ${zwang} Spieler zwangsverkaufen - saniert hat nicht der Manager.` };
+            const netto = getScenarioNetCash();
+            if (netto >= 0) {
+                const sterne = Math.max(1, (jahre === 1 ? 3 : (netto >= 250000 ? 2 : 1)) - zwang);
+                return { done: true, ok: true, stars: sterne, text: `Saniert nach ${jahre} Saison${jahre > 1 ? 's' : ''}: ${formatVal(netto)} ohne Kreditschulden${zwang ? ' (ein Zwangsverkauf kostet einen Stern)' : ''}.` };
             }
-            if (jahre >= this.seasons) return { done: true, ok: false, text: `Nach ${jahre} Saisons noch immer ${formatVal(game.money)} im Minus.` };
-            return { done: false, text: `Noch ${formatVal(-game.money)} bis zur schwarzen Null.` };
+            if (jahre >= this.seasons) return { done: true, ok: false, text: `Nach ${jahre} Saisons noch immer ${formatVal(netto)} im Minus (Kredite eingerechnet).` };
+            return { done: false, text: `Noch ${formatVal(-netto)} bis zur schwarzen Null (Kredite eingerechnet).` };
         }
     },
     tradition: {
@@ -70,12 +76,22 @@ const CAREER_SCENARIOS = {
 
 let selectedNewGameScenario = null;
 
+// Pleite-Szenario: Kontostand abzüglich offener Kredite - sonst "saniert" ein Kredit sofort.
+function getScenarioNetCash() {
+    const raten = (typeof activeLoans !== 'undefined' ? activeLoans : []).reduce((a, l) => a + l.installment * l.matchdaysLeft, 0);
+    return game.money - (game.loanDebt || 0) - raten;
+}
+
+function getScenarioForcedSales(s) {
+    return Math.max(0, (game.forcedSalesCount || 0) - ((s && s.forcedAtStart) || 0));
+}
+
 // Neues Spiel (window.onload nach dem Reload): Szenario-Start anwenden.
 function applyScenarioStart(id) {
     const sc = CAREER_SCENARIOS[id];
     if (!sc) return;
     sc.setup();
-    game.scenario = { id, startSeason: game.season, startLevel: game.leagueLevel, lastRank: null, status: 'aktiv' };
+    game.scenario = { id, startSeason: game.season, startLevel: game.leagueLevel, lastRank: null, status: 'aktiv', forcedAtStart: game.forcedSalesCount || 0 };
     addInboxMessage('vertrag', `${sc.title}: Die Mission beginnt`, `${sc.desc}\n\nFrist: ${sc.seasons} Saison${sc.seasons > 1 ? 's' : ''}. Bewertet wird jeweils am Saisonende.`, 'screen-dashboard');
 }
 
@@ -117,7 +133,8 @@ function renderScenarioCard() {
     let inhalt;
     if (s.status === 'aktiv') {
         const restSaisons = s.startSeason + sc.seasons - game.season;
-        inhalt = `<div style="color:var(--text-muted);">${sc.desc}</div><div style="margin-top:4px;">⏳ Bewertung am Ende von Saison ${game.season}${restSaisons > 0 ? ` · Frist bis Saison ${s.startSeason + sc.seasons - 1}` : ''}</div>`;
+        const zwang = s.id === 'pleite' ? `<div style="margin-top:2px;">💸 Zwangsverkäufe: ${getScenarioForcedSales(s)} / 2${game.money < 0 ? ` · ${game.negativeStreak || 0} Spieltage im Minus (alle 10 ein Zwangsverkauf)` : ''}</div>` : '';
+        inhalt = `<div style="color:var(--text-muted);">${sc.desc}</div><div style="margin-top:4px;">⏳ Bewertung am Ende von Saison ${game.season}${restSaisons > 0 ? ` · Frist bis Saison ${s.startSeason + sc.seasons - 1}` : ''}</div>${zwang}`;
     } else {
         inhalt = `<div>${s.status === 'geschafft' ? `✅ Geschafft ${'⭐'.repeat(s.stars)}${'☆'.repeat(3 - s.stars)}` : '❌ Gescheitert'} - ${s.result}</div><div style="color:var(--text-muted); margin-top:2px;">Die Karriere läuft als freies Spiel weiter.</div>`;
     }
