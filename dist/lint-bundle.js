@@ -484,7 +484,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.33', date: '04.10.2026', features: 'Phase 22: Kabinenansprache vor dem Anpfiff (Lage und Spielercharaktere entscheiden, Druck-Rede mit Folgen)' };
+    const GAME_VERSION = { number: '3.34', date: '04.10.2026', features: 'Phase 22: Gegnervorbereitung im Training (Match-Prep tippt den Gegnerstil: richtig +2,5, daneben 0)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -7906,7 +7906,7 @@ const SCREEN_HINTS = {
     'screen-squad': 'Die Startelf zählt: Stärke × Fitness × Tagesform. „Trainer stellt Top-Elf auf“ wählt automatisch die fitteste starke Elf. Formation und Spielstil ändern Angriff, Abwehr und Kraftverbrauch.',
     'screen-transfer': 'Angebote für deine Spieler findest du unter „Angebote“. Neue Spieler gibt es im Transfermarkt (10 pro Fenster) - die Ablöse lässt sich mit 🃏 Verhandeln drücken, Sofortkauf zahlt die Forderung -, ablösefrei bei den Vereinslosen oder auf Leihbasis. Achte auf das Gehaltsbudget.',
     'screen-finances': 'Jede Einnahme und Ausgabe steht im Buchungsjournal. Im Minus gilt eine Transfersperre; anhaltende Verluste bestraft das Financial Fairplay bis hin zum Punktabzug. Sponsoren-Angebote kannst du nachverhandeln.',
-    'screen-training': 'Der Wochenschwerpunkt wirkt nach jedem Spieltag: Kondition hilft der Fitness, Taktik und Match-Prep der Teamstärke, Erholung senkt das Verletzungsrisiko.',
+    'screen-training': 'Der Wochenschwerpunkt wirkt nach jedem Spieltag: Kondition hilft der Fitness, Taktik sicher der Teamstärke, Match-Prep noch mehr - wenn du den Stil des nächsten Gegners richtig tippst, Erholung senkt das Verletzungsrisiko.',
     'screen-stadium': 'Stadionausbau wird voll bezahlt, wenn er beginnt, und ist nach einigen Spieltagen fertig. Für den Aufstieg brauchst du Lizenzauflagen (z. B. Flutlicht für die 3. Liga) - die Übersicht steht hier.',
     'screen-inbox': 'Im Postfach landen alle Ereignisse. Der Link in jeder Nachricht führt direkt zum passenden Bildschirm.',
     'screen-league': 'Platz 1-2 steigt direkt auf, Platz 3 spielt Relegation. Die letzten zwei steigen ab, Platz 16 muss in die Relegation.'
@@ -11641,6 +11641,7 @@ function initOneHand() {
         renderSkillTrainingActiveList();
         renderTrainingAutopilotBox();
         document.getElementById('cur-team-training').innerText = game.teamTraining.toUpperCase();
+        if (typeof renderMatchPrepBox === 'function') renderMatchPrepBox();
 
         // Minispiel-Bereich: Spielerauswahl, verbleibende Einheiten, Bestleistungen
         let playerSelect = document.getElementById('minigame-player-select');
@@ -11705,6 +11706,7 @@ function initOneHand() {
             if (btn) btn.className = (f === focus) ? 'btn-action' : 'btn-secondary';
         });
         document.getElementById('cur-team-training').innerText = focus.toUpperCase();
+        if (typeof renderMatchPrepBox === 'function') renderMatchPrepBox();
     }
 
     function setIndividualFocus(playerId, focus) {
@@ -11790,6 +11792,8 @@ function initOneHand() {
                 }
             }
             game.teamTraining = upcomingIsDerby ? 'matchprep' : 'taktik';
+            // Gegnervorbereitung (js/match-prep.js): auf den öffentlichen Grundstil einstellen.
+            if (upcomingIsDerby && typeof autoSetMatchPrepTarget === 'function') autoSetMatchPrepTarget();
         }
     }
 
@@ -22000,6 +22004,94 @@ function renderPregameTalkBox() {
 }
 
 /* eslint-enable */
+/* eslint-disable no-undef */
+// Gegnervorbereitung (Phase 22.2): der Trainingsschwerpunkt "Match-Prep" war eine Scheinwahl
+// (pauschal +1, "Taktik" brachte +2). Jetzt bereitet sich die Mannschaft gezielt auf den
+// Spielstil des NÄCHSTEN Ligagegners vor (game.matchPrep = { arch, season, matchday }):
+//   richtig getippt (Plan des Gegners, getOppTacticPlan) -> +2,5 Stärke
+//   falsch oder nichts gewählt                            -> 0 (und die +2 von Taktik fehlen)
+// Ohne Chef-Analyst ist nur der öffentliche Grundstil bekannt - reagiert der Gegner auf dich,
+// liegt die Vorbereitung daneben. Nur Ligaspiele (der Pokal hat keinen Taktik-Plan).
+// Wirkt in getOwnLeagueMatchStrength() (Simulation, Prognose) und im Livespiel über
+// applyMatchPrepLive() in setupMatch().
+
+const MATCH_PREP_BONUS = 2.5;
+
+function getNextLeagueOpponentTeam() {
+    const liga = leaguesData[game.leagueLevel] || [];
+    const tag = (fixturesData[game.leagueLevel] || [])[game.matchday - 1] || [];
+    const f = tag.find(x => liga[x.home]?.name === game.clubName || liga[x.away]?.name === game.clubName);
+    if (!f) return null;
+    return liga[liga[f.home].name === game.clubName ? f.away : f.home] || null;
+}
+
+function getActiveMatchPrep() {
+    const m = game.matchPrep;
+    return game.teamTraining === 'matchprep' && m && m.season === game.season && m.matchday === game.matchday ? m : null;
+}
+
+function getMatchPrepBonus(oppTeam) {
+    if (game.teamTraining !== 'matchprep' || !oppTeam || typeof getOppTacticPlan !== 'function') return 0;
+    const m = getActiveMatchPrep();
+    if (!m) return 0;
+    const plan = getOppTacticPlan(oppTeam);
+    return plan && plan.arch === m.arch ? MATCH_PREP_BONUS : 0;
+}
+
+function setMatchPrepTarget(arch) {
+    if (!['P', 'B', 'K'].includes(arch)) return;
+    const opp = getNextLeagueOpponentTeam();
+    if (!opp) { showToast('Am nächsten Spieltag hast du kein Ligaspiel - Match-Prep greift nur in der Liga.', 'error'); return; }
+    game.matchPrep = { arch, season: game.season, matchday: game.matchday, opp: opp.name };
+    if (game.teamTraining !== 'matchprep') {
+        game.teamTraining = 'matchprep';
+        if (typeof setTeamTraining === 'function') setTeamTraining('matchprep');
+    }
+    showToast(`🎯 Vorbereitung auf ${ARCHETYPE_LABELS[arch]} von ${opp.name}: liegst du richtig, +2,5 Stärke.`, 'success', 3500);
+    renderMatchPrepBox();
+}
+
+// Personal-Automatik "Auf Spieltag fokussieren": stellt sich auf den öffentlichen Grundstil ein.
+function autoSetMatchPrepTarget() {
+    const opp = getNextLeagueOpponentTeam();
+    if (!opp) return;
+    const arch = AI_STYLE_ARCHETYPE[opp.playstyle] || 'B';
+    game.matchPrep = { arch, season: game.season, matchday: game.matchday, opp: opp.name };
+}
+
+// Livespiel (setupMatch, nur Liga).
+function applyMatchPrepLive(oppTeam) {
+    if (!currentMatch || currentMatch.isCup || game.teamTraining !== 'matchprep') return;
+    const m = getActiveMatchPrep();
+    const bonus = getMatchPrepBonus(oppTeam);
+    if (bonus) {
+        currentMatch.ourBaseStr += bonus;
+        if (currentMatch.isHome) currentMatch.homeStr += bonus; else currentMatch.awayStr += bonus;
+    }
+    const log = document.getElementById('ticker-log');
+    if (log) log.innerHTML += bonus
+        ? `<div style="color:var(--primary);">🎯 Match-Prep passt: der Gegner spielt wie erwartet ${ARCHETYPE_LABELS[m.arch]} (+2,5 Stärke).</div>`
+        : `<div style="color:var(--danger);">🎯 Match-Prep ${m ? 'daneben: der Gegner spielt anders als erwartet' : 'ohne Ziel: kein Gegner analysiert'} (kein Bonus).</div>`;
+}
+
+function renderMatchPrepBox() {
+    const box = document.getElementById('matchprep-target-box');
+    if (!box) return;
+    const opp = getNextLeagueOpponentTeam();
+    if (!opp) { box.innerHTML = '<div class="box" style="font-size:10px;">🎯 Match-Prep: am nächsten Spieltag kein Ligaspiel - dafür lohnt sich ein anderer Schwerpunkt.</div>'; return; }
+    const basis = AI_STYLE_ARCHETYPE[opp.playstyle] || 'B';
+    const analyst = staffMembers.analyst && staffMembers.analyst.hired;
+    const plan = analyst && typeof getOppTacticPlan === 'function' ? getOppTacticPlan(opp) : null;
+    const m = getActiveMatchPrep() || (game.matchPrep && game.matchPrep.season === game.season && game.matchPrep.matchday === game.matchday ? game.matchPrep : null);
+    const info = plan ? `Chef-Analyst: ${opp.name} plant <strong>${ARCHETYPE_LABELS[plan.arch]}</strong>.` : `Laut Presse spielt ${opp.name} meist <strong>${ARCHETYPE_LABELS[basis]}</strong> - ob der Trainer auf dich reagiert, weiß nur ein Chef-Analyst.`;
+    const knopf = arch => `<button onclick="setMatchPrepTarget('${arch}')" class="${m && m.arch === arch ? 'btn-action' : 'btn-secondary'}" style="font-size:10px;">${m && m.arch === arch ? '✔ ' : ''}${ARCHETYPE_LABELS[arch]}</button>`;
+    const aktiv = game.teamTraining === 'matchprep';
+    box.innerHTML = `<div class="box" style="font-size:10px; border-left-color:var(--accent);">🎯 <strong>Gegnervorbereitung</strong> (Schwerpunkt Match-Prep${aktiv ? '' : ' - derzeit nicht aktiv'}): nächster Ligagegner ${opp.name}. ${info}
+        <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:4px; margin-top:4px;">${knopf('P')}${knopf('B')}${knopf('K')}</div>
+        <div style="color:var(--text-muted); margin-top:3px;">Richtig getippt: +2,5 Stärke · daneben oder ohne Ziel: 0 (Taktik-Schwerpunkt bringt sicher +2). Nur Ligaspiele.</div></div>`;
+}
+
+/* eslint-enable */
 // Mitgliederversammlung: nach jedem Saisonabschluss legt der Verein vor seinen Mitgliedern
 // Rechenschaft ab. Grundlage sind echte Zahlen (Endplatz gegen die Erwartung zu Saisonbeginn,
 // Auf-/Abstieg, Finanzergebnis, Fanstimmung). Du wählst Rede und Beitragsantrag, dann wird
@@ -23031,7 +23123,8 @@ function getOwnLeagueMatchStrength(isHome, oppTeam) {
     // Derby-Woche (js/derby-week.js): Vorbereitung zählt nur am Derby-Spieltag.
     const derby = typeof getDerbyBonus === 'function' && oppTeam ? getDerbyBonus(oppTeam.name) : 0;
     const erzfeind = typeof getNemesisModifier === 'function' ? getNemesisModifier(oppTeam, isHome) : 0;
-    return calcTeamStrength(isHome) + getTacticMatchupBonus(plan ? plan.arch : null) + derby + erzfeind;
+    const vorbereitung = typeof getMatchPrepBonus === 'function' ? getMatchPrepBonus(oppTeam) : 0;
+    return calcTeamStrength(isHome) + getTacticMatchupBonus(plan ? plan.arch : null) + derby + erzfeind + vorbereitung;
 }
 
 // Aus processPostMatchRoutine() nach jedem eigenen Ligaspiel.
@@ -23320,9 +23413,9 @@ function cleanupLegacyScoutState() {
         // Ein überlasteter Manager trifft schlechtere Entscheidungen am Spieltag.
         bonus -= (privateLife.stress || 0) * 0.03;
 
-        // Team-Trainingsschwerpunkt: Taktik und Match-Prep bringen einen kleinen, begrenzten Bonus.
+        // Team-Trainingsschwerpunkt: Taktik bringt sicher +2. Match-Prep wirkt nur gegen den
+        // vorbereiteten Gegnerstil (js/match-prep.js, in getOwnLeagueMatchStrength/setupMatch).
         if (game.teamTraining === 'taktik') bonus += 2;
-        if (game.teamTraining === 'matchprep') bonus += 1;
 
         // Spielstil: Offensiv riskiert mehr für mehr Durchschlagskraft, Defensiv ist solider.
         bonus += getTacticStyleBonus(game.tacticStyle);
@@ -23562,6 +23655,7 @@ function cleanupLegacyScoutState() {
         if (!isCup && typeof applyDerbyPreparation === 'function') applyDerbyPreparation(oppName);
         if (!isCup && typeof applyNemesisLiveModifier === 'function') applyNemesisLiveModifier(oppTeamObj, isHome);
         if (typeof applyPregameTalk === 'function') applyPregameTalk();
+        if (!isCup && typeof applyMatchPrepLive === 'function') applyMatchPrepLive(oppTeamObj);
 
         document.getElementById('btn-next-step').style.display = 'inline-block';
         document.getElementById('btn-finish-match').style.display = 'none';
@@ -27480,6 +27574,9 @@ const LEXICON_ENTRIES = [
     { cat: 'Spieler', title: 'Verletzungen', screen: 'screen-squad',
         text: 'Nach jedem Spiel wird für die Eingesetzten gewürfelt. Das Risiko steigt mit harter Trainingsintensität (bis +25 %), dem Alter (ab 32 +20 %, ab 35 +40 %) und früheren Verletzungen; junge Spieler sind robuster.',
         tips: ['Lockeres Training und Erholung senken das Risiko', 'Physiotherapeut (halbe Ausfallzeit) und Reha-Zentrum verkürzen Ausfälle', 'Länderspielreisen bringen ein zusätzliches Risiko'] },
+    { cat: 'Taktik', title: 'Gegnervorbereitung (Match-Prep)', screen: 'screen-training',
+        text: 'Mit dem Trainingsschwerpunkt Match-Prep bereitest du dich auf den Spielstil des nächsten Ligagegners vor: tippst du richtig (Pressing, Ballbesitz oder Konter), gibt es +2,5 Stärke - daneben gibt es nichts. Der Schwerpunkt Taktik bringt dagegen sicher +2.',
+        tips: ['Ohne Chef-Analyst kennst du nur den Grundstil aus der Presse - ein berechenbarer Manager wird gekontert, dann liegt die Vorbereitung daneben', 'Die Vorbereitung gilt nur für den Spieltag, für den du sie gewählt hast, und nur in der Liga'] },
     { cat: 'Taktik', title: 'Taktik-Duell', screen: 'screen-squad',
         text: 'Pressing schlägt Ballbesitz, Ballbesitz schlägt Konter, Konter schlägt Pressing - ±2 Stärke im Ligaspiel. Ausgeglichen und Kick and Rush sind neutral.',
         tips: ['Wer in 3 von 5 Ligaspielen denselben Ansatz wählt, ist berechenbar - Gegner stellen sich darauf ein', 'Der Chef-Analyst verrät im Vorbericht den Plan des Gegners', 'Im Livespiel zählt die aktuell gewählte Taktik'] },
