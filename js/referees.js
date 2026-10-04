@@ -61,5 +61,6 @@ function renderRefereePreview() {
     box.innerHTML = `<div style="font-size:9px; color:var(--text-muted); margin:6px 0; padding:6px; background:rgba(255,255,255,0.03); border-radius:4px;">
         🧑‍⚖️ Schiedsrichter: <strong style="color:var(--text);">${ref.name}</strong> (${ref.style}) · ${strenge}<br>${bilanz}
         ${game.tackleHardness === 'hart' && ref.cardMult >= 1.2 ? '<br><span style="color:var(--accent);">⚠️ Harte Zweikampfführung gegen diesen Schiedsrichter ist riskant.</span>' : ''}
+        ${typeof getRefereeGrudgeNote === 'function' ? getRefereeGrudgeNote(ref.id, ref.name) : ''}
     </div>`;
 }

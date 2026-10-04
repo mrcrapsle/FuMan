@@ -1398,6 +1398,94 @@ async function testSetPieceDrills(browser) {
     await page.close();
 }
 
+async function testRefereeCritique(browser) {
+    console.log('\n[22.4] Schiedsrichter-Kritik: strittige Szenen, drei Reaktionen mit Folgen, Groll des Schiedsrichters');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            game.sackPending = false;
+            startMatchdayFlow();
+            const direkt = [...document.querySelectorAll('#screen-prematch-press button')].find(b => b.innerText.includes('Direkt zum Spiel'));
+            direkt.click();
+            const box = () => document.getElementById('ref-critique-box').innerHTML;
+            out.leerZuBeginn = box() === '' && !currentMatch.controversies;
+            // Strenger Schiedsrichter: Platzverweise landen als strittige Szene im Protokoll
+            const ref = currentMatch.referee;
+            currentMatch.referee = Object.assign({}, ref, { cardMult: 40 });
+            lineup.forEach(id => { currentMatch.yellowCards[id] = 1; }); // jede Karte ist Gelb-Rot
+            playOpponentPenalty();
+            simulateRestOfMatch();
+            const rote = (currentMatch.controversies || []).filter(c => c.type === 'rot');
+            out.rotErfasst = currentMatch.sentOff.length > 0 && rote.length === currentMatch.sentOff.length && rote.every(c => squad.some(p => p.id === c.playerId));
+            out.elfErfasst = currentMatch.controversies.some(c => c.type === 'elfmeter');
+            // Sieg: kein Angebot
+            const wir = s => { if (currentMatch.isHome) { currentMatch.homeGoals = s[0]; currentMatch.awayGoals = s[1]; } else { currentMatch.awayGoals = s[0]; currentMatch.homeGoals = s[1]; } };
+            currentMatch.critiquePending = false;
+            wir([2, 0]); offerRefereeCritique();
+            out.keinAngebotBeiSieg = box() === '' && !currentMatch.critiquePending;
+            // Niederlage: Angebot mit drei Wegen
+            wir([0, 1]); offerRefereeCritique();
+            out.angebot = currentMatch.critiquePending && box().includes('Öffentlich kritisieren') && box().includes('Schriftliche Beschwerde') && box().includes('Nichts sagen') && box().includes('Platzverweis gegen');
+            // Beschwerde mit Erfolg: Sperre weg, Gebühr gebucht
+            const gesperrt = squad.find(p => p.id === rote[0].playerId);
+            gesperrt.suspended = 1;
+            const geld0 = game.money;
+            const zufall = Math.random;
+            Math.random = () => 0.01;
+            chooseRefereeCritique('beschwerde');
+            Math.random = zufall;
+            out.beschwerde = gesperrt.suspended === 0 && game.money === geld0 - REF_COMPLAINT_FEE[game.leagueLevel] && box() === '';
+            const geld1 = game.money;
+            chooseRefereeCritique('kritik');
+            out.nurEinmal = game.money === geld1;
+            // Öffentliche Kritik: Strafe (verdoppelt sich), Fans +, Groll
+            game.refCritiques = null; game.refereeGrudges = {};
+            const fans0 = game.fans;
+            currentMatch.critiquePending = true;
+            const strafe1 = getRefCritiqueFine();
+            chooseRefereeCritique('kritik');
+            out.kritik = game.money === geld1 - strafe1 && game.fans === Math.min(100, fans0 + 3) && game.refereeGrudges[ref.id] === 2;
+            out.verdoppelt = getRefCritiqueFine() === strafe1 * 2;
+            // Schweigen: Vorstand +2
+            game.boardSat = 50;
+            currentMatch.critiquePending = true;
+            chooseRefereeCritique('schweigen');
+            out.schweigen = game.boardSat === 52 && game.refereeCritiqueLog[0].art === 'schweigen' && game.refereeCritiqueLog.length === 3;
+            finishMatch();
+            // Groll: Vorschau zeigt ihn, das nächste Spiel unter ihm wird strenger gepfiffen
+            renderRefereePreview();
+            const vorschauRef = getCurrentReferee();
+            game.refereeGrudges = { [vorschauRef.id]: 2 };
+            game.refereeCritiqueLog.unshift({ season: game.season, matchday: 1, ref: vorschauRef.name, art: 'kritik' });
+            renderRefereePreview();
+            const vorschau = document.getElementById('dash-referee-box').innerHTML;
+            out.vorschau = vorschau.includes('Noch verärgert') && vorschau.includes('öffentlich kritisiert');
+            currentMatch = { referee: vorschauRef, homeGoals: 0, awayGoals: 0, minute: 0, isHome: true, sentOff: [] };
+            applyRefereeGrudge();
+            out.groll = Math.abs(currentMatch.referee.cardMult - vorschauRef.cardMult * 1.2) < 1e-9 && game.refereeGrudges[vorschauRef.id] === 1 && getRefereeCardMult() === vorschauRef.cardMult;
+            applyRefereeGrudge();
+            out.grollEndet = !(vorschauRef.id in game.refereeGrudges);
+            currentMatch = null;
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Schiedsrichter-Kritik ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.leerZuBeginn, 'Ohne strittige Szene keine Kritik-Box');
+        assert(r.rotErfasst && r.elfErfasst, 'Platzverweise und Elfmeter gegen uns werden im Livespiel als strittige Szenen erfasst');
+        assert(r.keinAngebotBeiSieg && r.angebot, 'Nach einem Sieg kein Angebot, nach einer Niederlage drei Reaktionen');
+        assert(r.beschwerde && r.nurEinmal, 'Erfolgreiche Beschwerde hebt die Rot-Sperre auf und kostet die Gebühr - nur eine Reaktion pro Spiel');
+        assert(r.kritik && r.verdoppelt, 'Öffentliche Kritik: Strafe, Fans +3, Groll für 2 Spiele; die nächste Strafe der Saison verdoppelt sich');
+        assert(r.schweigen, 'Schweigen: Vorstand +2, alles im Protokoll');
+        assert(r.vorschau && r.groll && r.grollEndet, 'Groll steht in der Vorschau, macht den Schiedsrichter 2 Spiele strenger und endet dann');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testSponsorConflict(browser) {
     console.log('\n[19.x] Sponsoren: Branchenkonflikt nennt den Konkurrenten und kostet 30 %');
     const { page, consoleErrors } = await freshPage(browser);
@@ -7100,6 +7188,7 @@ async function main() {
         testPregameTalk,
         testMatchPrep,
         testSetPieceDrills,
+        testRefereeCritique,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,

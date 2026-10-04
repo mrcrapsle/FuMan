@@ -113,6 +113,7 @@ function playOpponentPenalty() {
     let prob = 0.76 - (keeper && keeper.trait === 'Elfmeter-Killer' ? 0.12 : 0) - (staffMembers.twTrainer && staffMembers.twTrainer.hired ? 0.04 : 0);
     const oppName = currentMatch.isHome ? currentMatch.awayName : currentMatch.homeName;
     tickerLine(`<div style="color:var(--danger);">❗ ${currentMatch.minute}. Min: Elfmeter für ${oppName}...</div>`);
+    if (typeof noteRefereeControversy === 'function') noteRefereeControversy('elfmeter');
     if (Math.random() < prob) {
         if (currentMatch.isHome) currentMatch.awayGoals++; else currentMatch.homeGoals++;
         if (typeof recordLiveShot === 'function') recordLiveShot(!currentMatch.isHome, true);

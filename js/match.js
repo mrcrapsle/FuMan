@@ -419,6 +419,8 @@
         if (!isCup && typeof applyNemesisLiveModifier === 'function') applyNemesisLiveModifier(oppTeamObj, isHome);
         if (typeof applyPregameTalk === 'function') applyPregameTalk();
         if (!isCup && typeof applyMatchPrepLive === 'function') applyMatchPrepLive(oppTeamObj);
+        if (typeof applyRefereeGrudge === 'function') applyRefereeGrudge();
+        if (typeof renderRefereeCritiqueBox === 'function') renderRefereeCritiqueBox();
 
         document.getElementById('btn-next-step').style.display = 'inline-block';
         document.getElementById('btn-finish-match').style.display = 'none';
@@ -794,6 +796,7 @@
             let annulliert = typeof varOverturnsGoal === 'function' && varOverturnsGoal(wirTreffen);
             if (annulliert) {
                 recordLiveShot(wirTreffen === currentMatch.isHome, true);
+                if (wirTreffen && typeof noteRefereeControversy === 'function') noteRefereeControversy('var');
             } else if (wirTreffen) {
                 if (currentMatch.isHome) currentMatch.homeGoals++; else currentMatch.awayGoals++;
                 recordLiveShot(currentMatch.isHome, true);
@@ -849,6 +852,7 @@
                     currentMatch.sentOff.push(culprit.id);
                     currentMatch.stats.red[liveStatsSide(currentMatch.isHome)]++;
                     culprit.suspended = 2; // wird nach Spielende einmal herunter gezählt -> 1 Spiel Sperre
+                    if (typeof noteRefereeControversy === 'function') noteRefereeControversy('rot', { playerId: culprit.id, name: culprit.name });
                     if (currentMatch.isHome) currentMatch.homeStrPenalty += 6; else currentMatch.awayStrPenalty += 6;
                     let label = isSecondYellow ? "🟨🟥 Gelb-Rote Karte" : "🟥 Platzverweis";
                     document.getElementById('ticker-log').innerHTML += `<div style="color:var(--danger); font-weight:bold;">${label} für ${culprit.name}! Wir spielen in Unterzahl weiter.</div>`;
@@ -1057,6 +1061,8 @@
         }
         document.getElementById('btn-next-step').style.display = 'none';
         document.getElementById('btn-finish-match').style.display = 'inline-block';
+        // Schiedsrichter-Kritik (js/referee-critique.js): nur nach strittigen Szenen ohne Sieg.
+        if (typeof offerRefereeCritique === 'function') offerRefereeCritique();
         if (currentMatch.cupTie) { finishCupLiveMatch(); return; }
         if (currentMatch.ref) {
             currentMatch.ref.homeGoals = currentMatch.homeGoals;
