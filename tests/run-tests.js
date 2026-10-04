@@ -4753,6 +4753,10 @@ async function testObjectivesEventsSeasonTickets(browser) {
             startSeason: game.season, startLeagueLevel: game.leagueLevel, completed: false }));
         const origGoals = simulateGoals;
         simulateGoals = (a, b) => a >= b ? { myGoals: 3, oppGoals: 0 } : { myGoals: 0, oppGoals: 3 };
+        // 102 Tore verteilt auf die ganze Elf ergaben 10-15 für den besten Schützen - knapp an
+        // der 10-Tore-Grenze (CI-Flake 3.26). Ein fester Torjäger trifft, gezählt wird weiter echt.
+        const origCredit = creditOwnGoal;
+        creditOwnGoal = (players) => origCredit(players, players.find(p => p.pos === 'ST') || players[0]);
         try {
             while (game.matchday <= 34) {
                 game.sackPending = false;
@@ -4771,6 +4775,7 @@ async function testObjectivesEventsSeasonTickets(browser) {
                 && game.seasonObjectives.activeObjectives.every(o => o.startSeason === game.season);
         } finally {
             simulateGoals = origGoals;
+            creditOwnGoal = origCredit;
         }
 
         // 2. Prämien steigen mit der Liga (1. Liga > 6. Liga).
