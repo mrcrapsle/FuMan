@@ -18,15 +18,22 @@ function pickAssistant(players) {
 }
 
 // Eigenes Tor: Torschütze nach Position gewichtet, in drei von vier Fällen mit Vorlage.
-function creditOwnGoal(players) {
-    const scorer = pickWeightedScorer(players);
+// scorer/assist optional vorgegeben (Standards in js/set-pieces.js: Elfmeterschütze, Kopfball nach Flanke).
+function creditOwnGoal(players, fixedScorer = null, fixedAssist) {
+    const scorer = fixedScorer || pickWeightedScorer(players);
     if (!scorer) return { scorer: null, assist: null };
     scorer.goalsSeason = (scorer.goalsSeason || 0) + 1;
     scorer.goalsCareer = (scorer.goalsCareer || 0) + 1;
     matchEvents.tore[scorer.id] = (matchEvents.tore[scorer.id] || 0) + 1;
     let assist = null;
     const mitspieler = players.filter(p => p.id !== scorer.id);
-    if (mitspieler.length && Math.random() < 0.75) {
+    if (fixedAssist !== undefined) {
+        assist = fixedAssist && fixedAssist.id !== scorer.id ? fixedAssist : null;
+        if (assist) {
+            assist.assists = (assist.assists || 0) + 1;
+            matchEvents.vorlagen[assist.id] = (matchEvents.vorlagen[assist.id] || 0) + 1;
+        }
+    } else if (mitspieler.length && Math.random() < 0.75) {
         assist = pickAssistant(mitspieler);
         if (assist) {
             assist.assists = (assist.assists || 0) + 1;

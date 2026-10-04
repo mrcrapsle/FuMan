@@ -869,6 +869,93 @@ async function testLockerRoom(browser) {
     await page.close();
 }
 
+async function testSetPieces(browser) {
+    console.log('\n[20.3] Livespiel: Elfmeter-Schützenwahl, Freistoß-Varianten, Videobeweis, Torwart im Elfmeterschießen');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        const echtRandom = Math.random;
+        try {
+            closeTutorial();
+            const out = {};
+            const endeEcht = window.endMatchSimulation;
+            window.endMatchSimulation = () => {};
+            setupMatch(game.clubName, 'Gegner FC', calcTeamStrength(true), true, false, null);
+            stopLiveTickerAutoplay();
+            const onPitch = squad.filter(p => lineup.includes(p.id) && p.pos !== 'TW');
+            game.penaltyTakerId = onPitch[0].id;
+            currentMatch.minute = 30;
+            // Elfmeter erzwingen
+            Math.random = () => 0;
+            const gestartet = rollLiveSetPiece(0);
+            Math.random = echtRandom;
+            out.elfmeter = gestartet && currentMatch.awaitingSetPiece && currentMatch.setPiece.type === 'elfmeter'
+                && document.getElementById('setpiece-overlay').classList.contains('show');
+            const kandidaten = getPenaltyCandidates(currentMatch.setPiece.gefoultId);
+            out.kandidaten = kandidaten.length >= 2 && kandidaten[0].p.id === game.penaltyTakerId && kandidaten.every(c => c.prob >= 0.45 && c.prob <= 0.93);
+            // Spiel ruht während der Entscheidung
+            const minute = currentMatch.minute;
+            simulateMatchStep();
+            out.ruht = currentMatch.minute === minute;
+            const schuetze = kandidaten[kandidaten.length - 1].p;
+            const tore = schuetze.goalsSeason || 0, vorher = currentMatch.homeGoals;
+            Math.random = () => 0;
+            resolveSetPiece(String(schuetze.id));
+            Math.random = echtRandom;
+            out.verwandelt = currentMatch.homeGoals === vorher + 1 && (schuetze.goalsSeason || 0) === tore + 1 && !currentMatch.awaitingSetPiece
+                && !document.getElementById('setpiece-overlay').classList.contains('show') && schuetze.penaltiesScored >= 1;
+            // Freistoß: drei Varianten, direkt durch den Freistoßschützen
+            game.freeKickTakerId = onPitch[1].id;
+            currentMatch.setPiece = { type: 'freistoss', minute: 40 }; currentMatch.awaitingSetPiece = true;
+            showSetPiecePanel();
+            out.freistossOptionen = document.querySelectorAll('#setpiece-options button').length === 3;
+            const fk = onPitch[1], fkTore = fk.goalsSeason || 0;
+            Math.random = () => 0;
+            resolveSetPiece('direkt');
+            Math.random = echtRandom;
+            out.direkt = (fk.goalsSeason || 0) === fkTore + 1;
+            const opt = getFreeKickOptions();
+            out.abwaegung = opt.flanke.risiko > 0 && opt.kurz.risiko === 0 && opt.kurz.prob < opt.flanke.prob;
+            // Schnelles Durchspielen entscheidet automatisch
+            currentMatch.minute = 50;
+            currentMatch.setPiece = { type: 'freistoss', minute: 50 }; currentMatch.awaitingSetPiece = true;
+            simulateRestOfMatch();
+            out.automatisch = currentMatch.minute >= 90 && !currentMatch.awaitingSetPiece;
+            // Videobeweis
+            Math.random = () => 0;
+            out.var = varOverturnsGoal(true) === true;
+            Math.random = echtRandom;
+            window.endMatchSimulation = endeEcht;
+            // Torwart im Elfmeterschießen: Ersatztorwart als Elfmeter-Killer kostet einen Wechsel
+            const stamm = squad.find(p => lineup.includes(p.id) && p.pos === 'TW');
+            const ersatz = squad.find(p => p.pos === 'TW' && !lineup.includes(p.id));
+            if (stamm) stamm.trait = 'Kein';
+            ersatz.trait = 'Elfmeter-Killer';
+            const modStamm = getShootoutKeeperModifier();
+            substitutionsLeft = 2;
+            let bestaetigt = null;
+            openShooterOrderSelection(null, names => { bestaetigt = names; });
+            chooseShootoutKeeper(ersatz.id);
+            out.keeperAuswahl = document.getElementById('shooter-select-keeper').innerText.includes(ersatz.name);
+            const modErsatz = getShootoutKeeperModifier();
+            selectedShooters = squad.filter(p => lineup.includes(p.id)).slice(0, 5).map(p => p.id);
+            confirmShooterOrder();
+            out.keeper = modErsatz < modStamm && substitutionsLeft === 1 && Array.isArray(bestaetigt);
+            return out;
+        } catch (e) { Math.random = echtRandom; return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Standard-Test ohne Absturz (${r.crash || 'ok'})`);
+    assert(r.elfmeter && r.kandidaten, 'Elfmeter hält das Spiel an, Schützenwahl mit festem Schützen zuerst und Trefferchance');
+    assert(r.ruht, 'Während der Entscheidung läuft das Spiel nicht weiter');
+    assert(r.verwandelt, 'Gewählter Schütze verwandelt: Tor, Torschützenliste, Elfmeterquote');
+    assert(r.freistossOptionen && r.direkt && r.abwaegung, 'Freistoß: direkt, Flanke (Konterrisiko) oder kurz (sicher)');
+    assert(r.automatisch, 'Schnelles Durchspielen entscheidet Standards automatisch');
+    assert(r.var, 'Videobeweis kann ein Tor zurücknehmen');
+    assert(r.keeperAuswahl && r.keeper, 'Elfmeterschießen: Elfmeter-Killer von der Bank senkt die Gegnerquote und kostet einen Wechsel');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testYouthPathway(browser) {
     console.log('\n[18.5] Jugend-Laufbahn: Potenzial, Profivertrag mit 19, Leihe, Durchbruch-Momente');
     const { page, consoleErrors } = await freshPage(browser);
@@ -5684,7 +5771,7 @@ async function testLiveMatchEngine(browser) {
         out.wechselWirkt = Math.abs((currentMatch.ourBaseStr - stBefore) - erwartet) < 0.01 && lineup.includes(bank.id) && !lineup.includes(raus.id) && substitutionsLeft === 4;
         out.wechselTicker = document.getElementById('ticker-log').innerHTML.includes(`${bank.name} kommt für ${raus.name}`);
         currentMatch.halftimeShown = true; // Halbzeit-Ansprache überspringen
-        while (currentMatch.minute < 90) simulateMatchStep();
+        while (currentMatch.minute < 90) { if (currentMatch.awaitingSetPiece) resolveSetPiece(null, true); simulateMatchStep(); }
         const st = currentMatch.stats;
         const unsere = currentMatch.awayGoals, gegner = currentMatch.homeGoals;
         const toreNachher = squad.reduce((a, p) => a + (p.goalsSeason || 0), 0);
@@ -5694,7 +5781,7 @@ async function testLiveMatchEngine(browser) {
         out.statistikSichtbar = document.getElementById('live-match-stats').innerHTML.includes('Ballbesitz');
         out.abpfiffZeile = document.getElementById('ticker-log').innerHTML.includes('📊 Statistik');
         const stand = `${currentMatch.homeGoals}:${currentMatch.awayGoals}`;
-        for (let i = 0; i < 5; i++) simulateMatchStep();
+        for (let i = 0; i < 5; i++) simulateMatchStep(); // nach dem Abpfiff passiert nichts mehr
         out.nachAbpfiffRuhe = `${currentMatch.homeGoals}:${currentMatch.awayGoals}` === stand;
         // Überlegenheit über fünf weitere Auswärtsspiele (ein Einzelspiel kann 1:1 enden)
         let wir = unsere, sie = gegner;
@@ -5703,7 +5790,7 @@ async function testLiveMatchEngine(browser) {
             setupMatch('Kreisklasse FC', game.clubName, 5, false, false, null);
             stopLiveTickerAutoplay();
             currentMatch.halftimeShown = true;
-            while (currentMatch.minute < 90) simulateMatchStep();
+            while (currentMatch.minute < 90) { if (currentMatch.awaitingSetPiece) resolveSetPiece(null, true); simulateMatchStep(); }
             wir += currentMatch.awayGoals; sie += currentMatch.homeGoals;
         }
         out.tore = `${sie}:${wir} in 6 Spielen`;
@@ -5716,7 +5803,7 @@ async function testLiveMatchEngine(browser) {
             setupMatch('Kreisklasse FC', game.clubName, 5, false, false, null);
             stopLiveTickerAutoplay();
             currentMatch.halftimeShown = true;
-            while (currentMatch.minute < 90) simulateMatchStep();
+            while (currentMatch.minute < 90) { if (currentMatch.awaitingSetPiece) resolveSetPiece(null, true); simulateMatchStep(); }
             gegenMitInstinkt += currentMatch.homeGoals;
         }
         out.instinktGegentore = gegenMitInstinkt;
@@ -6115,6 +6202,7 @@ async function main() {
         testSeasonPreview,
         testAttendanceCapVaries,
         testLockerRoom,
+        testSetPieces,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,

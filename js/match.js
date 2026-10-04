@@ -682,6 +682,8 @@
     function simulateMatchStep() {
         if (!currentMatch || currentMatch.minute >= 90) return; // nach dem Abpfiff keine Szenen mehr
         if (currentMatch.awaitingHalftimeTalk) return; // wartet auf die Halbzeit-Ansprache-Auswahl
+        // Wartet auf die Entscheidung beim Standard (js/set-pieces.js) - "Nächste Szene" zeigt sie erneut an.
+        if (currentMatch.awaitingSetPiece) { if (typeof showSetPiecePanel === 'function') showSetPiecePanel(); return; }
         let prevMinute = currentMatch.minute;
         currentMatch.minute += Math.floor(Math.random() * 14) + 8;
         if (currentMatch.minute >= 90) { currentMatch.minute = 90; }
@@ -747,15 +749,9 @@
         // Elfmeterschütze im Kader einen kleinen echten Zusatzbonus, wenn sie auf dem Platz
         // stehen. Das macht die neue Standards-Spezialist-Automatisierung auch tatsächlich
         // sinnvoll, statt nur die Anzeige zu ändern.
-        let fkTaker = onPitch.find(p => p.id === game.freeKickTakerId);
+        // Freistoß- und Elfmeterschütze wirken seit Phase 20.3 in echten Standardsituationen
+        // (js/set-pieces.js); nur Ecken laufen weiter pauschal über den Eckenschützen.
         let cornerTaker = onPitch.find(p => p.id === game.cornerTakerId);
-        if (fkTaker && fkTaker.passing >= 75) goalChance += 0.008;
-        // Elfmeterschütze (NEU): war bisher nur im Elfmeterschießen wirksam, nie im
-        // regulären Spielverlauf (der keine expliziten Elfmeter-Ereignisse simuliert) - ein
-        // zuverlässiger, auf dem Feld stehender Schütze erhöht die generelle Torgefahr etwas,
-        // stellvertretend für die zusätzliche Ruhe/Präzision, die er in den 16er bringt.
-        let penaltyTaker = onPitch.find(p => p.id === game.penaltyTakerId);
-        if (penaltyTaker && penaltyTaker.shooting >= 75) goalChance += 0.006;
         if (cornerTaker && cornerTaker.passing >= 75) goalChance += 0.006;
         let hasPkKiller = onPitch.some(p => p.trait === 'Elfmeter-Killer' && p.pos === 'TW');
         let hasWingSpeedster = onPitch.some(p => p.trait === 'Flügelflitzer');
@@ -768,6 +764,13 @@
 
         let eventHandled = false;
 
+        // Standards (Elfmeter, Freistoß): unterbrechen den Spielzug und warten auf die Entscheidung.
+        if (currentMatch.minute < 88 && typeof rollLiveSetPiece === 'function' && rollLiveSetPiece(currentMatch.isHome ? diff : -diff)) {
+            document.getElementById('live-score').innerText = currentMatch.homeGoals + " : " + currentMatch.awayGoals;
+            renderLiveMatchStats();
+            return;
+        }
+
         if (Math.random() < goalChance) {
             eventHandled = true;
             // userFavoredProb ist die Chance des HEIMteams (diff = Heim - Gast). Früher bekam bei
@@ -778,7 +781,11 @@
             let ourName = currentMatch.isHome ? currentMatch.homeName : currentMatch.awayName;
             let oppName = currentMatch.isHome ? currentMatch.awayName : currentMatch.homeName;
             let art = GOAL_STYLES[Math.floor(Math.random() * GOAL_STYLES.length)];
-            if (wirTreffen) {
+            // Videobeweis (js/set-pieces.js): ein Teil der Tore wird wegen Abseits zurückgenommen.
+            let annulliert = typeof varOverturnsGoal === 'function' && varOverturnsGoal(wirTreffen);
+            if (annulliert) {
+                recordLiveShot(wirTreffen === currentMatch.isHome, true);
+            } else if (wirTreffen) {
                 if (currentMatch.isHome) currentMatch.homeGoals++; else currentMatch.awayGoals++;
                 recordLiveShot(currentMatch.isHome, true);
                 playSound('goal');
@@ -924,7 +931,7 @@
         liveTickerPaused = false;
         updateLiveTickerPauseButton();
         liveTickerTimer = setInterval(() => {
-            if (!currentMatch || liveTickerPaused || currentMatch.awaitingHalftimeTalk || currentMatch.minute >= 90) return;
+            if (!currentMatch || liveTickerPaused || currentMatch.awaitingHalftimeTalk || currentMatch.awaitingSetPiece || currentMatch.minute >= 90) return;
             simulateMatchStep();
         }, 1800);
     }
@@ -945,6 +952,7 @@
             // Beim schnellen Durchspielen wird "Ruhig bleiben" automatisch (neutral) gewählt,
             // damit kein Modal den Ablauf unterbricht.
             if (currentMatch.awaitingHalftimeTalk) chooseHalftimeTalk('ruhig', true);
+            if (currentMatch.awaitingSetPiece && typeof resolveSetPiece === 'function') resolveSetPiece(null, true);
             simulateMatchStep();
             if (currentMatch.minute >= 90) break;
         }

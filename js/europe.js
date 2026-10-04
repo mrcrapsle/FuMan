@@ -115,6 +115,12 @@
             if (teamAName === game.clubName) successProbB = Math.max(0.4, successProbB - 0.07);
             else if (teamBName === game.clubName) successProbA = Math.max(0.4, successProbA - 0.07);
         }
+        // Unser Torwart im Elfmeterschießen (wählbar in der Schützenauswahl, js/set-pieces.js):
+        // ein Elfmeter-Killer oder starker Keeper senkt die Quote des Gegners.
+        let keeperMod = typeof getShootoutKeeperModifier === 'function' ? getShootoutKeeperModifier() : 0;
+        if (teamAName === game.clubName) successProbB = Math.max(0.4, successProbB + keeperMod);
+        else if (teamBName === game.clubName) successProbA = Math.max(0.4, successProbA + keeperMod);
+        if (typeof shootoutKeeperId !== 'undefined') shootoutKeeperId = null; // gilt nur für dieses Elfmeterschießen
 
         // Elfmeter-Erfolgsquote als Spielerstatistik: bei benannten, echten Spielern unserer
         // Mannschaft (nicht generische KI-Team-Platzhalter) wird jeder Schuss auf
@@ -266,6 +272,8 @@
             </div>`;
         }).join('');
         document.getElementById('shooter-select-count').innerText = `${selectedShooters.length}/5 gewählt`;
+        let keeperBox = document.getElementById('shooter-select-keeper');
+        if (keeperBox && typeof renderShootoutKeeperChoice === 'function') keeperBox.innerHTML = renderShootoutKeeperChoice();
         let confirmBtn = document.getElementById('shooter-select-confirm');
         if (confirmBtn) confirmBtn.disabled = selectedShooters.length !== 5;
 
@@ -287,6 +295,12 @@
         if (selectedShooters.length !== 5 || !pendingShootoutContext) return;
         let names = selectedShooters.map(id => squad.find(p => p.id === id).name);
         game.lastShooterOrder = [...selectedShooters];
+        // Torwartwechsel nur fürs Elfmeterschießen kostet einen Wechsel.
+        let keeper = typeof getShootoutKeeper === 'function' ? getShootoutKeeper() : null;
+        if (keeper && !lineup.includes(keeper.id) && typeof substitutionsLeft !== 'undefined') {
+            substitutionsLeft = Math.max(0, substitutionsLeft - 1);
+            showToast(`🧤 ${keeper.name} kommt nur fürs Elfmeterschießen!`, 'success');
+        }
         document.getElementById('shooter-select-overlay').classList.remove('show');
         let { onConfirm } = pendingShootoutContext;
         pendingShootoutContext = null;

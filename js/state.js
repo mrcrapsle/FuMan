@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.23', date: '03.10.2026', features: 'Phase 20: Kabine & Führungsspieler (ein Mannschaftsrat, rumorende Cliquen, Kapitänsfrage, Unzufriedene im Büro)' };
+    const GAME_VERSION = { number: '3.24', date: '04.10.2026', features: 'Phase 20: Standards & Elfmeter im Livespiel (Schützenwahl, Freistoß-Varianten, Videobeweis, Torwart im Elfmeterschießen)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

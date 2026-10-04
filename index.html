@@ -297,6 +297,15 @@
     </div>
 </div>
 
+<!-- STANDARDSITUATION IM LIVESPIEL (js/set-pieces.js) -->
+<div id="setpiece-overlay" class="generic-modal-overlay">
+    <div class="generic-modal-box">
+        <div style="font-size:15px; font-weight:900; color:#fff; margin-bottom:6px;" id="setpiece-title">Standard</div>
+        <div style="font-size:11px; color:#94a3b8; margin-bottom:10px;">Das Spiel ruht, bis du entscheidest.</div>
+        <div id="setpiece-options"></div>
+    </div>
+</div>
+
 <!-- MANAGER-INTERVIEW (POST-MATCH) -->
 <div id="interview-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
@@ -343,7 +352,9 @@
         <div style="font-size:11px; color:#94a3b8; margin-bottom:8px;">Wähle genau 5 Schützen in der gewünschten Reihenfolge (antippen zum Hinzufügen/Entfernen).</div>
         <div style="font-size:11px; color:var(--accent); font-weight:bold; margin-bottom:6px;" id="shooter-select-count">0/5 gewählt</div>
         <button onclick="useLastShooterOrder()" id="shooter-select-last-order" class="btn-secondary" style="display:none; margin-bottom:8px; font-size:10px;">🔁 Letzte Reihenfolge übernehmen</button>
-        <div id="shooter-select-list" style="max-height:280px; overflow-y:auto;"></div>
+        <div id="shooter-select-list" style="max-height:240px; overflow-y:auto;"></div>
+        <div style="font-size:11px; color:#94a3b8; margin:8px 0 4px;">Torwart im Elfmeterschießen (Ersatztorwart kostet einen Wechsel):</div>
+        <div id="shooter-select-keeper"></div>
         <button onclick="confirmShooterOrder()" id="shooter-select-confirm" class="btn-primary" style="margin-top:10px;" disabled>Elfmeterschießen starten</button>
     </div>
 </div>
@@ -2576,6 +2587,7 @@
 <script src="js/season-objectives.js?v=2.1"></script>
 <script src="js/team-council.js?v=2.1"></script>
 <script src="js/locker-room.js?v=3.23"></script>
+<script src="js/set-pieces.js?v=3.24"></script>
 <script src="js/member-assembly.js?v=2.1"></script>
 <script src="js/women-team.js?v=2.1"></script>
 <script src="js/player-retirement.js?v=2.1"></script>
