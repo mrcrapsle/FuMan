@@ -1557,6 +1557,12 @@
         padding: 6px; box-shadow: 0 -6px 18px rgba(0,0,0,0.55);
     }
 
+    /* Co-Trainer-Hinweis (js/co-trainer-live.js) steht direkt über der Livespiel-Leiste */
+    #live-cotrainer-box:not(:empty) {
+        position: sticky; bottom: calc(var(--bottom-nav-h, 58px) + 64px + env(safe-area-inset-bottom, 0px)); z-index: 40;
+    }
+    #live-cotrainer-box .box { background: rgb(16, 22, 20); }
+
     /* Kopf: Kennzahlen in EINER wischbaren Zeile (Sprache/Ton liegen im Menü) */
     .header-kpis { flex-wrap: nowrap; overflow-x: auto; width: 100%; scrollbar-width: none; }
     .header-kpis::-webkit-scrollbar { display: none; }
@@ -4095,6 +4101,7 @@
                         Auswechslungen: <span id="subs-left-count">5</span> übrig
                         <div id="live-subs-list" style="display:flex; flex-wrap:wrap; gap:3px; margin-top:2px;"></div>
                     </div>
+                    <div id="live-cotrainer-box"></div>
                     <div style="display:flex; gap:4px;" id="matchday-controls">
                         <button onclick="simulateMatchStep()" id="btn-next-step" class="btn-action">▶ Nächste Szene</button>
                         <button onclick="toggleLiveTickerAutoplay()" id="btn-toggle-autoplay" class="btn-secondary">⏸ Ticker pausieren</button>
@@ -4598,7 +4605,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.31', date: '04.10.2026', features: 'Phase 21: Erzfeind-Trainer (Person mit Bilanz, Revanche, Persönlichkeit mit Spielwirkung, Abwerben, folgt dir in deine Liga)' };
+    const GAME_VERSION = { number: '3.32', date: '04.10.2026', features: 'Phase 21: Co-Trainer im Livespiel (Hinweise aus dem echten Spielstand je Ausbaustufe, Ein-Tipp-Aktionen)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -5018,7 +5025,7 @@ function compareTableRows(a, b) {
     };
 
     let staffMembers = {
-        coTrainer: { name: "Co-Trainer", hired: false, wage: 8000, cost: 60000, desc: "+2 Team-Stärke im Spiel & kann individuelles Spielertraining automatisch verteilen", task: "aus" },
+        coTrainer: { name: "Co-Trainer", hired: false, wage: 8000, cost: 60000, desc: "+2 Team-Stärke im Spiel, Hinweise im Livespiel (je Ausbaustufe mehr) & kann individuelles Spielertraining automatisch verteilen", task: "aus" },
         twTrainer: { name: "Torwarttrainer", hired: false, wage: 5500, cost: 45000, desc: "+10% bessere Torwart-Paraden" },
         fitCoach: { name: "Athletik- & Konditionstrainer", hired: false, wage: 6000, cost: 50000, desc: "-30% Fitnessverlust nach Spielen & kann Team-Trainingsschwerpunkt automatisch wählen", task: "aus" },
         physio: { name: "Chef-Physiotherapeut", hired: false, wage: 7000, cost: 55000, desc: "Halbiert die Ausfallzeit von Verletzten" },
@@ -6130,11 +6137,11 @@ function compareTableRows(a, b) {
         let h = game.coTrainerHistory || { followedMatches: 0, followedWins: 0, ownMatches: 0, ownWins: 0 };
         let followedRate = h.followedMatches > 0 ? Math.round((h.followedWins / h.followedMatches) * 100) : null;
         let ownRate = h.ownMatches > 0 ? Math.round((h.ownWins / h.ownMatches) * 100) : null;
-        let historyHtml = (h.followedMatches > 0 || h.ownMatches > 0) ? `
+        let historyHtml = (h.followedMatches > 0 || h.ownMatches > 0 || h.liveFollowed || h.liveIgnored) ? `
             <div class="box" style="font-size:10px; margin-top:6px;">
                 <strong>📊 Co-Trainer-Historie:</strong><br>
                 Vorschlag übernommen: ${h.followedWins}/${h.followedMatches} Siege${followedRate !== null ? ` (${followedRate}%)` : ''}<br>
-                Eigene Entscheidung: ${h.ownWins}/${h.ownMatches} Siege${ownRate !== null ? ` (${ownRate}%)` : ''}
+                Eigene Entscheidung: ${h.ownWins}/${h.ownMatches} Siege${ownRate !== null ? ` (${ownRate}%)` : ''}${(h.liveFollowed || h.liveIgnored) ? `<br>Hinweise im Livespiel: ${h.liveFollowed || 0} befolgt, ${h.liveIgnored || 0} ignoriert` : ''}
             </div>` : '';
         box.innerHTML = `
             ${hasSwaps ? `<div class="panel-header">🧑‍🏫 CO-TRAINER-EMPFEHLUNG</div>
@@ -25895,6 +25902,173 @@ function renderNemesisBox() {
 
 </script>
 <script>
+/* eslint-disable no-undef */
+// Co-Trainer im Livespiel (Phase 21.3): nach jeder Szene prüft der Co-Trainer (staffMembers.
+// coTrainer) den ECHTEN Spielstand und meldet sich mit genau einem Hinweis samt Ein-Tipp-
+// Aktion in #live-cotrainer-box (jede Hinweisart höchstens einmal pro Spiel, Abstand >= 15 Min.).
+// Was er erkennt, hängt von seiner Ausbaustufe ab (getStaffLevelMultiplier):
+//   Stufe 1: müde Spieler (ab 55.), Rückstand spät (Brechstange), knappe Führung spät (Bus)
+//   Stufe 2: + Gelb-Rot-Gefahr, + Taktik-Duell verloren (ab 20. Min., mit Chef-Analyst sofort)
+//   Stufe 3: + Taktik-Duell gewinnbar (neutraler Stil, Konterstil bringt +2)
+// Seine Laune (getStaffEffectivenessMultiplier) bestimmt, wie zuverlässig er sich meldet.
+// Folgen/Ignorieren zählt in game.coTrainerHistory (liveFollowed/liveIgnored); Folgen hebt
+// das Vertrauen (game.coTrainerTrust) um 1. Jede Aktion nutzt die normalen Livespiel-Wege
+// (makeLiveSubstitution, liveSetTackleHardness, liveSetTacticStyle, setLiveShout) - also
+// mit allen echten Kosten (Wechselkontingent, Stärke, Gegentorrisiko).
+
+const COTRAINER_HINT_GAP = 15;
+const COTRAINER_STYLE_FOR_ARCH = { P: 'pressing', B: 'ballbesitz', K: 'konter' };
+let coTrainerActiveHint = null;
+
+function getCoTrainerLiveLevel() {
+    if (!staffMembers.coTrainer || !staffMembers.coTrainer.hired) return 0;
+    return Math.max(1, Math.min(3, typeof getStaffLevelMultiplier === 'function' ? getStaffLevelMultiplier('coTrainer') : 1));
+}
+
+function resetCoTrainerLive() {
+    coTrainerActiveHint = null;
+    const box = document.getElementById('live-cotrainer-box');
+    if (box) box.innerHTML = '';
+}
+
+function coTrainerScore() {
+    const unsere = currentMatch.isHome ? currentMatch.homeGoals : currentMatch.awayGoals;
+    const deren = currentMatch.isHome ? currentMatch.awayGoals : currentMatch.homeGoals;
+    return { unsere, deren };
+}
+
+function coTrainerOnPitch() {
+    return squad.filter(p => lineup.includes(p.id) && !currentMatch.sentOff.includes(p.id));
+}
+
+// Bester Bankspieler für einen Wechsel (gleiche Position bevorzugt, einsatzfähig).
+function coTrainerBestBench(aus) {
+    const bank = squad.filter(p => !lineup.includes(p.id) && (p.injured || 0) === 0 && (p.suspended || 0) === 0 && p.pos !== 'TW');
+    const gleich = bank.filter(p => p.pos === aus.pos);
+    const pool = gleich.length ? gleich : bank;
+    return pool.sort((a, b) => liveEffectiveStrength(b) - liveEffectiveStrength(a))[0] || null;
+}
+
+// Mögliche Hinweise in Prioritätsreihenfolge - nur, was der Spielstand wirklich hergibt.
+function findCoTrainerHint() {
+    const level = getCoTrainerLiveLevel();
+    if (!level || !currentMatch || currentMatch.minute >= 90) return null;
+    const used = currentMatch.coHintsUsed || [];
+    const min = currentMatch.minute;
+    const { unsere, deren } = coTrainerScore();
+    const elf = coTrainerOnPitch();
+    const frei = id => !used.includes(id);
+
+    if (level >= 2 && frei('karte') && min >= 30 && game.tackleHardness !== 'vorsichtig') {
+        const verwarnt = elf.find(p => (currentMatch.yellowCards[p.id] || 0) >= 1);
+        if (verwarnt) {
+            const ersatz = substitutionsLeft > 0 ? coTrainerBestBench(verwarnt) : null;
+            return { id: 'karte', text: `${verwarnt.name} ist verwarnt - noch ein Foul und wir sind zu zehnt. Härte runter${ersatz ? ` oder ${ersatz.name} bringen` : ''}?`,
+                actions: [{ label: '🕊️ Härte: vorsichtig', run: () => liveSetTackleHardness('vorsichtig') }]
+                    .concat(ersatz ? [{ label: `🔄 ${ersatz.name} für ${verwarnt.name}`, run: () => coTrainerSubstitute(verwarnt.id, ersatz.id) }] : []) };
+        }
+    }
+    const oppArch = currentMatch.oppTacticArch;
+    const kennt = level >= 2 && (min >= 20 || (staffMembers.analyst && staffMembers.analyst.hired));
+    if (kennt && oppArch && typeof getTacticMatchupBonus === 'function') {
+        const jetzt = getTacticMatchupBonus(oppArch);
+        const zielArch = getCounterArchetype(oppArch);
+        const stil = zielArch ? COTRAINER_STYLE_FOR_ARCH[zielArch] : null;
+        if (stil && frei('taktik') && jetzt < 0) {
+            return { id: 'taktik', text: `Der Gegner spielt ${ARCHETYPE_LABELS[oppArch]} - unser Stil läuft ins offene Messer (-2). Mit ${stil} drehen wir das (+2).`,
+                actions: [{ label: `🧠 Auf ${stil} umstellen`, run: () => liveSetTacticStyle(stil) }] };
+        }
+        if (stil && level >= 3 && frei('taktik') && jetzt === 0) {
+            return { id: 'taktik', text: `Ich habe den Gegner durchschaut: ${ARCHETYPE_LABELS[oppArch]}. Mit ${stil} wären wir einen Schritt voraus (+2).`,
+                actions: [{ label: `🧠 Auf ${stil} umstellen`, run: () => liveSetTacticStyle(stil) }] };
+        }
+    }
+    if (frei('muede') && min >= 55 && substitutionsLeft > 0) {
+        const kandidat = elf.filter(p => p.pos !== 'TW' && (p.fitness ?? 100) < 80).sort((a, b) => (a.fitness ?? 100) - (b.fitness ?? 100))[0];
+        const ersatz = kandidat ? coTrainerBestBench(kandidat) : null;
+        if (kandidat && ersatz && liveEffectiveStrength(ersatz) >= liveEffectiveStrength(kandidat) * 0.95) {
+            return { id: 'muede', text: `${kandidat.name} baut ab (${kandidat.fitness}% Fitness). ${ersatz.name} bringt frische Beine.`,
+                actions: [{ label: `🔄 ${ersatz.name} für ${kandidat.name}`, run: () => coTrainerSubstitute(kandidat.id, ersatz.id) }] };
+        }
+    }
+    if (frei('rueckstand') && min >= 70 && unsere < deren && activeLiveShout !== 'brechstange') {
+        return { id: 'rueckstand', text: `${deren - unsere === 1 ? 'Ein Tor' : 'Zwei Tore'} fehlen noch - alles nach vorn? Hinten wird es dann offen.`,
+            actions: [{ label: '💥 Brechstange', run: () => setLiveShout('brechstange') }] };
+    }
+    if (frei('fuehrung') && min >= 78 && unsere - deren === 1 && activeLiveShout !== 'bus') {
+        return { id: 'fuehrung', text: 'Nur ein Tor Vorsprung - sollen wir das jetzt über die Zeit bringen?',
+            actions: [{ label: '🛡️ Bus parken', run: () => setLiveShout('bus') }] };
+    }
+    return null;
+}
+
+// Nach jeder Szene (simulateMatchStep).
+function tickCoTrainerLive() {
+    if (!currentMatch) return;
+    if (currentMatch.minute >= 90) { resetCoTrainerLive(); coTrainerActiveHint = null; return; }
+    if (coTrainerActiveHint) return; // ein offener Hinweis wartet noch
+    if (currentMatch.lastCoHintMinute !== undefined && currentMatch.minute - currentMatch.lastCoHintMinute < COTRAINER_HINT_GAP) return;
+    const zuverlaessig = typeof getStaffEffectivenessMultiplier === 'function' ? getStaffEffectivenessMultiplier('coTrainer') : 1;
+    if (Math.random() > zuverlaessig) return;
+    const hint = findCoTrainerHint();
+    if (!hint) return;
+    currentMatch.coHintsUsed = (currentMatch.coHintsUsed || []).concat(hint.id);
+    currentMatch.lastCoHintMinute = currentMatch.minute;
+    coTrainerActiveHint = hint;
+    const log = document.getElementById('ticker-log');
+    if (log) { log.innerHTML += `<div style="color:var(--teal);">🧑‍🏫 ${currentMatch.minute}. Min, Co-Trainer: ${hint.text}</div>`; log.scrollTop = log.scrollHeight; }
+    renderCoTrainerLiveBox();
+}
+
+function renderCoTrainerLiveBox() {
+    const box = document.getElementById('live-cotrainer-box');
+    if (!box) return;
+    const h = coTrainerActiveHint;
+    if (!h) { box.innerHTML = ''; return; }
+    box.innerHTML = `<div class="box" style="font-size:10px; border-left-color:var(--teal); margin:4px 0;">🧑‍🏫 <strong>Co-Trainer:</strong> ${h.text}
+        <div style="display:flex; gap:4px; flex-wrap:wrap; margin-top:4px;">
+            ${h.actions.map((a, i) => `<button onclick="followCoTrainerHint(${i})" class="btn-action" style="width:auto; font-size:10px;">${a.label}</button>`).join('')}
+            <button onclick="ignoreCoTrainerHint()" class="btn-secondary" style="width:auto; font-size:10px;">Nein danke</button>
+        </div></div>`;
+}
+
+function coTrainerHistory() {
+    if (!game.coTrainerHistory) game.coTrainerHistory = { followedMatches: 0, followedWins: 0, ownMatches: 0, ownWins: 0 };
+    return game.coTrainerHistory;
+}
+
+function followCoTrainerHint(i) {
+    const h = coTrainerActiveHint;
+    if (!h || !currentMatch || currentMatch.minute >= 90) { showToast('Dieser Hinweis ist nicht mehr aktuell.', 'error'); coTrainerActiveHint = null; renderCoTrainerLiveBox(); return; }
+    const aktion = h.actions[i];
+    if (!aktion) return;
+    aktion.run();
+    const hist = coTrainerHistory();
+    hist.liveFollowed = (hist.liveFollowed || 0) + 1;
+    game.coTrainerTrust = Math.min(100, (game.coTrainerTrust ?? 66) + 1);
+    coTrainerActiveHint = null;
+    renderCoTrainerLiveBox();
+}
+
+function ignoreCoTrainerHint() {
+    if (!coTrainerActiveHint) return;
+    const hist = coTrainerHistory();
+    hist.liveIgnored = (hist.liveIgnored || 0) + 1;
+    coTrainerActiveHint = null;
+    renderCoTrainerLiveBox();
+}
+
+// Wechsel über den normalen Livespiel-Weg (Auswahlfeld "Raus" setzen, dann einwechseln).
+function coTrainerSubstitute(outId, inId) {
+    if (substitutionsLeft <= 0) { showToast('Kein Wechsel mehr übrig.', 'error'); return; }
+    const sel = document.getElementById('live-sub-out');
+    if (!sel) { showToast('Wechsel gerade nicht möglich.', 'error'); return; }
+    sel.value = String(outId);
+    makeLiveSubstitution(inId);
+}
+
+</script>
+<script>
 // Mitgliederversammlung: nach jedem Saisonabschluss legt der Verein vor seinen Mitgliedern
 // Rechenschaft ab. Grundlage sind echte Zahlen (Endplatz gegen die Erwartung zu Saisonbeginn,
 // Auf-/Abstieg, Finanzergebnis, Fanstimmung). Du wählst Rede und Beitragsantrag, dann wird
@@ -27463,6 +27637,7 @@ function cleanupLegacyScoutState() {
         if (underworld.activeSabotages.refBribe) introNotes += " [⌚ Schiedsrichter pfeift wohlwollend]";
         document.getElementById('ticker-log').innerHTML = `<div>${introNotes}</div>`;
         // Derby-Woche (js/derby-week.js): nach dem Ticker-Start, sonst wäre die Zeile gleich wieder weg.
+        if (typeof resetCoTrainerLive === 'function') resetCoTrainerLive();
         if (!isCup && typeof applyDerbyPreparation === 'function') applyDerbyPreparation(oppName);
         if (!isCup && typeof applyNemesisLiveModifier === 'function') applyNemesisLiveModifier(oppTeamObj, isHome);
 
@@ -27957,6 +28132,8 @@ function cleanupLegacyScoutState() {
         animateLiveBall(eventHandled ? (Math.random() < userFavoredProb ? 'home' : 'away') : (diff > 8 ? 'home' : (diff < -8 ? 'away' : 'midfield')));
 
         if (currentMatch.minute >= 90) { endMatchSimulation(); }
+        // Co-Trainer im Livespiel (js/co-trainer-live.js): Hinweis aus dem echten Spielstand.
+        if (typeof tickCoTrainerLive === 'function') tickCoTrainerLive();
     }
 
     // ---------- SPIELFELD-BALL-ANIMATION ----------
@@ -31393,6 +31570,9 @@ const LEXICON_ENTRIES = [
     { cat: 'Taktik', title: 'Standards & Elfmeter im Livespiel', screen: 'screen-squad',
         text: 'Bei einem Elfmeter oder Freistoß in Tornähe hält das Livespiel an. Elfmeter: Du wählst den Schützen - der feste Schütze hat Routine (+5 %), der Gefoulte will oft selbst, ist aber angeschlagen; in der Schlussphase eines knappen Spiels flattern die Nerven (außer bei Selbstbewussten). Freistoß: direkt (hängt am Schützen), Flanke auf den Kopfballspieler (Konterrisiko) oder kurz (sicher, selten gefährlich). Der Videobeweis nimmt manches Tor zurück.',
         tips: ['Feste Schützen stellst du in der Aufstellung ein', 'Im Elfmeterschießen kannst du einen Elfmeter-Killer von der Bank bringen - das kostet einen Wechsel', 'Beim schnellen Durchspielen entscheidet der Trainer automatisch'] },
+    { cat: 'Taktik', title: 'Co-Trainer im Livespiel', screen: 'screen-squad',
+        text: 'Ein eingestellter Co-Trainer meldet sich im Livespiel mit Hinweisen aus dem echten Spielstand - jeweils mit einer Aktion per Tipp. Stufe 1: müde Spieler, Rückstand oder knappe Führung in der Schlussphase. Stufe 2: zusätzlich Gelb-Rot-Gefahr und ein verlorenes Taktik-Duell (ab der 20. Minute, mit Chef-Analyst sofort). Stufe 3: erkennt auch ein gewinnbares Taktik-Duell.',
+        tips: ['Jede Aktion kostet, was sie sonst auch kostet: einen Wechsel, Zweikampfstärke oder Ordnung hinten', 'Ein schlecht gelaunter Co-Trainer meldet sich seltener - Gehaltserhöhung hebt seine Laune', 'Befolgte Hinweise stärken das Vertrauen in ihn (Kader > Co-Trainer-Historie)'] },
     { cat: 'Taktik', title: 'Mannschaftsanweisungen', screen: 'screen-squad',
         text: 'Gegenpressing (+1,5 Stärke, +15 % Kraftverbrauch), hohe Außenverteidiger (+1, +8 %), Tief stehen (−0,5, −15 %; schließt die anderen aus).',
         tips: ['Bei vollem Spielplan Kraft sparen, in wichtigen Spielen draufgehen'] },
