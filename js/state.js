@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.29', date: '04.10.2026', features: 'Phase 20: Bedienung mit einer Hand (Weiter-Knopf, Zurück-Taste, Menü unten, Fenster von unten, Livespiel-Leiste, Linkshänder-Option)' };
+    const GAME_VERSION = { number: '3.30', date: '04.10.2026', features: 'Phase 21: Derby-Woche (Choreo/Sonderzug, Sicherheit, Prämie, Kampfansage, Derby-Chronik; keine erzwungenen Derbys an den ersten Spieltagen mehr)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -99,9 +99,6 @@
         busSponsorPermanentlyRejected: false,
         busSponsorViaBanden: false,
         jubileePatternUnlocked: false,
-        // Die ersten 3 Spieltage einer neuen Karriere gelten testweise als Hochrisiko-
-        // Derbys (Ausschreitungsrisiko möglich), unabhängig vom tatsächlichen Gegner.
-        forceDerbyMatchdays: [1, 2, 3],
         selfTestHistory: [],
         unlockedSynergies: [],
         interviewHistory: [],
@@ -608,7 +605,7 @@
             'trainingSchedule', 'trainingSpecialization', 'setPieceTraining', 'stadium',
             'internationalTournaments', 'playerInternationalCaps', 'internationalTournamentHistory', 'nextWorldCup', 'transferMarket', 'postMatchAnalysis',
             'transferBudgetUsed', 'transferMarketPlayers', 'transferLastRefreshMatchday', 'reserves', 'tournamentBrackets',
-            'squadHarmony', 'disciplinarySystem', 'crises', 'localRivals', 'tacticsHistory', 'playerRoles', 'formationHistory', 'tacticAnalysis', 'clubSwitchHistory', 'youthNationalCallups', 'licenseRejectionCount', 'seasonPointsHistory'].forEach(k => { delete game[k]; });
+            'squadHarmony', 'disciplinarySystem', 'crises', 'localRivals', 'tacticsHistory', 'playerRoles', 'formationHistory', 'tacticAnalysis', 'clubSwitchHistory', 'youthNationalCallups', 'licenseRejectionCount', 'seasonPointsHistory', 'forceDerbyMatchdays'].forEach(k => { delete game[k]; });
         // Holding-Aufträge alter Spielstände trugen echte Vereinsnamen.
         const echteNamen = { 'Real Madrid': 'Real Madrit', 'FC Bayern': 'Bayern Munchen', 'FC Liverpool': 'Liverpol FC' };
         if (typeof holdingCompany !== 'undefined') (holdingCompany.b2bContracts || []).forEach(c => { if (echteNamen[c.club]) c.club = echteNamen[c.club]; });

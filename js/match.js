@@ -243,7 +243,7 @@
         // Videoanalyse: bei besonders wichtigen Spielen (Derby, Pokal, Europapokal) liefert
         // der Chef-Analyst einen ausführlicheren Bericht mit Formations-Tendenz und einem
         // konkreten Schwachstellen-Hinweis statt nur der Basis-Kennzahlen.
-        let isImportantMatch = oppName === game.permanentRivalName || (game.forceDerbyMatchdays || []).includes(game.matchday) || currentMatch?.isCup || game.inEurope;
+        let isImportantMatch = isDerbyOpponent(oppName) || currentMatch?.isCup || game.inEurope;
         let spyNote = underworld.spyIntelActive ? `<div style="margin-top:6px; font-size:10px; color:#f97316;">🕵️ <strong>Insider-Info aktiv:</strong> Diese Analyse stammt von einem bezahlten Informanten im gegnerischen Verein und ist garantiert zuverlässig.</div>` : '';
         let videoAnalysisHtml = '';
         if (isImportantMatch) {
@@ -381,7 +381,7 @@
         if (attEl) {
             if (isHome) {
                 let opponentNameForDerby = isHome ? awayName : homeName;
-                let isDerbyKickoff = opponentNameForDerby === game.permanentRivalName || (game.forceDerbyMatchdays || []).includes(game.matchday);
+                let isDerbyKickoff = isDerbyOpponent(opponentNameForDerby);
                 let attFactor = getAttendanceFactor();
                 if (isDerbyKickoff && !game.forcedGhostGame) attFactor = Math.min(1.0, attFactor * 2.2);
                 else if (!game.forcedGhostGame && currentMatch && (currentMatch.isCup || currentMatch.isEurope)) attFactor = Math.min(1.0, attFactor * 1.4);
@@ -411,6 +411,8 @@
         if (underworld.activeSabotages.pyroHotel) introNotes += " [🧨 Gegner wirkt müde]";
         if (underworld.activeSabotages.refBribe) introNotes += " [⌚ Schiedsrichter pfeift wohlwollend]";
         document.getElementById('ticker-log').innerHTML = `<div>${introNotes}</div>`;
+        // Derby-Woche (js/derby-week.js): nach dem Ticker-Start, sonst wäre die Zeile gleich wieder weg.
+        if (!isCup && typeof applyDerbyPreparation === 'function') applyDerbyPreparation(oppName);
 
         document.getElementById('btn-next-step').style.display = 'inline-block';
         document.getElementById('btn-finish-match').style.display = 'none';
@@ -1076,7 +1078,7 @@
         if (won) addManagerXP(150);
 
         let opponentName = currentMatch.isHome ? currentMatch.awayName : currentMatch.homeName;
-        let isHomeDerby = (currentMatch.isHome && opponentName === getOurRivalName()) || (game.forceDerbyMatchdays || []).includes(game.matchday);
+        let isHomeDerby = currentMatch.isHome && isDerbyOpponent(opponentName);
         let ourGoalsThisMatch = currentMatch.isHome ? currentMatch.homeGoals : currentMatch.awayGoals;
         let oppGoalsThisMatch = currentMatch.isHome ? currentMatch.awayGoals : currentMatch.homeGoals;
         recordRivalryResult(opponentName, ourGoalsThisMatch, oppGoalsThisMatch);
@@ -1447,6 +1449,8 @@
         if (game.securityCalmNextMatch) baseChance *= 0.15;
         // Stadion-Sicherheitstechnik: dauerhafte Risikosenkung durch gekaufte Anlagen.
         if (typeof getStadiumSecurityBonus === 'function') baseChance *= (1 - getStadiumSecurityBonus());
+        // Derby-Woche: Choreo (Pyro) erhöht, Sicherheitskonzept/Respekt senken das Risiko.
+        if (typeof getDerbyRiskFactor === 'function') baseChance *= getDerbyRiskFactor();
         if (Math.random() >= baseChance) return;
 
         game.riotCount = (game.riotCount || 0) + 1;
@@ -2545,7 +2549,6 @@
 
             if (opponentNameThisMatch) recordRivalryResult(opponentNameThisMatch, ourGoalsThisMatch, oppGoalsThisMatch);
             if (playedOurMatch) attributeGoalsToScorers(ourGoalsThisMatch);
-            if (playedOurMatch && (game.forceDerbyMatchdays || []).includes(md)) isHomeDerby = true;
             applyMatchdayFinances(isHome, won, playedOurMatch && oppGoalsThisMatch === 0, isHomeDerby, opponentNameThisMatch, opponentNameThisMatch ? `${ourGoalsThisMatch}:${oppGoalsThisMatch}` : null);
             processPostMatchRoutine(playedOurMatch ? (won ? 'win' : (drawn ? 'draw' : 'loss')) : null, isHomeDerby, false, ourGoalsThisMatch - oppGoalsThisMatch, isHome, playedOurMatch ? { total: ourGoalsThisMatch + oppGoalsThisMatch, bothScored: ourGoalsThisMatch > 0 && oppGoalsThisMatch > 0 } : null);
         }

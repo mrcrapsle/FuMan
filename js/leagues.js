@@ -317,6 +317,11 @@
             rivalryRecord.draws++;
             addInboxMessage('vertrag', `⚖️ Unentschieden im Derby gegen ${opponentName}`, `${ourGoals}:${oppGoals} - Gesamtbilanz: ${rivalryRecord.wins}S ${rivalryRecord.draws}U ${rivalryRecord.losses}N`, 'screen-history');
         }
+        // Derby-Woche (js/derby-week.js): Vorbereitung abrechnen, Folgen für Fans/Medien/Moral.
+        if (typeof resolveDerbyWeek === 'function') {
+            let folgen = resolveDerbyWeek(opponentName, ourGoals, oppGoals);
+            if (folgen.length) addInboxMessage('vertrag', '🔥 Nach dem Derby', folgen.join(' · '), 'screen-history');
+        }
     }
 
     function generateFixtures() {

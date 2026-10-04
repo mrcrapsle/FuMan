@@ -910,6 +910,96 @@ async function testOneHandControls(browser) {
     await page.close();
 }
 
+async function testDerbyWeek(browser) {
+    console.log('\n[21.1] Derby-Woche: Vorbereitung mit Kosten und Risiko, Bonus nur am Derby-Tag, Folgen und Chronik');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            out.keinTestDerby = game.forceDerbyMatchdays === undefined && !isDerbyOpponent('Irgendein Verein');
+            // Derby-Spieltag im echten Spielplan suchen (nicht vor Spieltag 3)
+            const liga = leaguesData[game.leagueLevel];
+            let derbyMd = null, heim = null, gegner = null;
+            for (let md = 3; md <= 34 && !derbyMd; md++) {
+                for (const f of fixturesData[game.leagueLevel][md - 1]) {
+                    const h = liga[f.home].name, a = liga[f.away].name;
+                    if (h === game.clubName && isDerbyOpponent(a)) { derbyMd = md; heim = true; gegner = a; }
+                    if (a === game.clubName && isDerbyOpponent(h)) { derbyMd = md; heim = false; gegner = h; }
+                }
+            }
+            out.derbyGefunden = !!derbyMd;
+            if (!derbyMd) return out;
+            out.heim = heim;
+            game.matchday = derbyMd - 2;
+            game.money = 5000000; game.sackPending = false;
+            showScreen('screen-dashboard');
+            const karte = document.getElementById('dash-derby-box').innerHTML;
+            out.karte = karte.includes('Derby-Woche') && karte.includes(gegner) && karte.includes('in 2 Spieltagen');
+            const k = getDerbyCosts();
+            let geld = game.money;
+            chooseDerbyMood();
+            out.stimmungKostet = game.money === geld - k.stimmung;
+            geld = game.money;
+            chooseDerbyMood();
+            out.nichtDoppelt = game.money === geld;
+            if (heim) { chooseDerbySecurity(); out.sicherheit = game.money === geld - k.sicherheit; } else { chooseDerbySecurity(); out.sicherheit = game.money === geld; }
+            const moral = squad[0].morale;
+            chooseDerbyPremium();
+            out.praemieMoral = squad[0].morale === Math.min(100, moral + 5) && game.derbyWeek.praemie > 0;
+            chooseDerbyPress('kampf');
+            out.karteAktualisiert = document.getElementById('dash-derby-box').innerHTML.includes('✔');
+            // Bonus nur am Derby-Spieltag
+            const oppTeam = liga.find(t => t.name === gegner);
+            out.vorherKeinBonus = getDerbyBonus(gegner) === 0;
+            game.matchday = derbyMd;
+            out.bonus = getDerbyBonus(gegner) === 2.5;
+            const plan = getOppTacticPlan(oppTeam);
+            out.simBonus = Math.abs(getOwnLeagueMatchStrength(heim, oppTeam) - calcTeamStrength(heim) - getTacticMatchupBonus(plan ? plan.arch : null) - 2.5) < 0.01;
+            out.risiko = heim ? Math.abs(getDerbyRiskFactor() - 1.3 * 0.35) < 0.001 : getDerbyRiskFactor() === 1;
+            // Livespiel: Bonus im Ticker, Abschluss über den echten Spielweg
+            startMatchdayFlow();
+            const direkt = [...document.querySelectorAll('#screen-prematch-press button')].find(b => b.innerText.includes('Direkt zum Spiel'));
+            if (direkt) direkt.click();
+            out.ticker = document.getElementById('ticker-log').innerHTML.includes('Derbystimmung');
+            simulateRestOfMatch();
+            finishMatch();
+            const h0 = (game.derbyHistory || [])[0];
+            out.chronik = !!h0 && h0.opp === gegner && h0.matchday === derbyMd && h0.prep.includes('Kampfansage') && h0.prep.includes(heim ? 'Choreo' : 'Sonderzug');
+            out.abgeschlossen = game.derbyWeek.resolved === true && getDerbyBonus(gegner) === 0;
+            // Folgen direkt: Sieg zahlt die Prämie und hebt Medien, Niederlage kostet Moral
+            const test = (tore, gegentore) => {
+                game.derbyWeek = { season: game.season, matchday: game.matchday, opp: gegner, home: true, stimmung: false, sicherheit: false, praemie: 50000, presse: 'kampf', resolved: false };
+                return resolveDerbyWeek(gegner, tore, gegentore);
+            };
+            game.money = 1000000; game.fans = 50; game.managerMediaImage = 50;
+            const sieg = test(2, 0);
+            out.siegFolgen = game.money === 950000 && game.fans === 54 && game.managerMediaImage > 50 && sieg.some(t => t.includes('Prämie'));
+            game.fans = 50; const m0 = squad[0].morale = 60; const board = game.boardSat = 60;
+            test(0, 1);
+            out.niederlageFolgen = squad[0].morale === m0 - 4 && game.fans === 45 && game.boardSat === board - 2 && game.money === 950000;
+            showScreen('screen-history'); setSubTab('hist', 'rivalen');
+            out.historie = document.getElementById('derby-history-box').innerHTML.includes(gegner);
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Derby-Woche ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.keinTestDerby, 'Kein Test-Überbleibsel mehr: die ersten Spieltage sind keine erzwungenen Derbys');
+        assert(r.derbyGefunden && r.karte, 'Derby-Woche-Karte erscheint vor dem Derby mit Gegner und Abstand');
+        assert(r.stimmungKostet && r.nichtDoppelt && r.sicherheit, `Vorbereitungen kosten Geld, einmal pro Derby, Sicherheit nur zu Hause (heim: ${r.heim})`);
+        assert(r.praemieMoral && r.karteAktualisiert, 'Prämie hebt die Moral sofort, die Karte zeichnet sich nach jeder Wahl neu');
+        assert(r.vorherKeinBonus && r.bonus && r.simBonus, 'Bonus (+2,5) gilt nur am Derby-Spieltag und auch in der Simulation');
+        assert(r.risiko, 'Choreo erhöht, Sicherheitskonzept senkt das Ausschreitungsrisiko');
+        assert(r.ticker && r.chronik && r.abgeschlossen, 'Livespiel zeigt die Derbystimmung, das Derby landet in der Chronik');
+        assert(r.siegFolgen && r.niederlageFolgen, 'Sieg zahlt die Prämie und hebt Fans/Medien, Niederlage nach Kampfansage kostet Moral, Fans und Vorstand');
+        assert(r.historie, 'Historie > Rivalen zeigt die Derby-Chronik');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testSponsorConflict(browser) {
     console.log('\n[19.x] Sponsoren: Branchenkonflikt nennt den Konkurrenten und kostet 30 %');
     const { page, consoleErrors } = await freshPage(browser);
@@ -6603,6 +6693,7 @@ async function main() {
         testScenarioBalance,
         testSaveSafety,
         testOneHandControls,
+        testDerbyWeek,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,
