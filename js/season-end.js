@@ -360,6 +360,7 @@
         if (typeof checkSeasonMoodTargetResult === 'function') checkSeasonMoodTargetResult();
         if (typeof evaluateScenarioAtSeasonEnd === 'function') evaluateScenarioAtSeasonEnd();
         if (typeof remindSaveExport === 'function') remindSaveExport();
+        if (typeof tickNemesisSeason === 'function') tickNemesisSeason();
         // WM/EM im Sommer nach jeder geraden Saison (js/national-team.js), nach dem Fitness-Reset.
         if (typeof playSummerTournament === 'function') playSummerTournament();
         if (typeof tickCoachBounce === 'function') tickCoachBounce(true);

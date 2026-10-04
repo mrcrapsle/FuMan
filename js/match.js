@@ -310,6 +310,7 @@
 
         renderPreMatchAnalysis(oppObj, oppName);
         if (typeof renderOppTacticBox === 'function') renderOppTacticBox(oppObj);
+        if (typeof renderNemesisPrematch === 'function') renderNemesisPrematch(oppObj);
         renderFatigueWarning();
 
         renderPressConference({ oppName, oppStr, isHome, cup: false });
@@ -413,6 +414,7 @@
         document.getElementById('ticker-log').innerHTML = `<div>${introNotes}</div>`;
         // Derby-Woche (js/derby-week.js): nach dem Ticker-Start, sonst wäre die Zeile gleich wieder weg.
         if (!isCup && typeof applyDerbyPreparation === 'function') applyDerbyPreparation(oppName);
+        if (!isCup && typeof applyNemesisLiveModifier === 'function') applyNemesisLiveModifier(oppTeamObj, isHome);
 
         document.getElementById('btn-next-step').style.display = 'inline-block';
         document.getElementById('btn-finish-match').style.display = 'none';
@@ -1971,6 +1973,7 @@
     // Alle 4 Spieltage (≈ 1 Monat) aus processPostMatchRoutine(): monatliche Ticks der
     // Feature-Systeme und die Aktiendividende. Neue Monats-Ticks gehören HIERHER.
     function runMonthlyClubTicks() {
+        if (typeof tickNemesisPoaching === 'function') tickNemesisPoaching();
         setzeBuchungskontext('📅 Monatliche Vereinsposten');
         if (typeof migrateLegacyCoSponsors === 'function') migrateLegacyCoSponsors();
         if (typeof tickBoardRoom === 'function') tickBoardRoom();

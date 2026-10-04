@@ -117,6 +117,7 @@
         if (typeof renderSeasonForecastHistory === 'function') renderSeasonForecastHistory();
         if (typeof renderCupFinalHistory === 'function') renderCupFinalHistory();
         if (typeof renderDerbyHistory === 'function') renderDerbyHistory();
+        if (typeof renderNemesisBox === 'function') renderNemesisBox();
         let list = document.getElementById('trophies-list');
         list.innerHTML = '';
         renderRivalryHistoryBook();

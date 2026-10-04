@@ -239,7 +239,8 @@
     }
 
     // gezielt: ein Spieler, für den der Verein selbst grünes Licht gibt (Bürotermin "Wechsel erlauben").
-    function triggerNewAITransferOffer(gezielt) {
+    // optionen (js/nemesis.js): { club, multiplier, nemesis } - gezieltes Angebot eines bestimmten Vereins.
+    function triggerNewAITransferOffer(gezielt, optionen) {
         let schwelle = getTransferInterestThreshold();
         let validTargets = gezielt ? [gezielt].filter(p => !incomingOffers.some(o => o.playerId === p.id))
             : squad.filter(p => p.strength >= schwelle && !incomingOffers.some(o => o.playerId === p.id));
@@ -250,8 +251,8 @@
         // einem frisch ausgewürfelten, nie wieder auftauchenden Fantasienamen - bevorzugt
         // Vereine auf oder über dem eigenen Liganiveau, da eher etablierte Klubs um
         // Spitzenspieler eines Amateur-/Unterligisten werben.
-        let buyerClub = pickRandomOpposingClubName(true);
-        let initialMultiplier = (managerRPG.perks.negotiator ? 1.05 : 0.85) + Math.random() * 0.35;
+        let buyerClub = (optionen && optionen.club) || pickRandomOpposingClubName(true);
+        let initialMultiplier = (optionen && optionen.multiplier) || ((managerRPG.perks.negotiator ? 1.05 : 0.85) + Math.random() * 0.35);
         let offerSum = Math.max(10000, Math.round((targetPlayer.marketValue * initialMultiplier) / 5000) * 5000);
 
         let newOffer = {
@@ -266,7 +267,8 @@
             originalBid: offerSum,
             round: 1,
             expiresIn: 3,
-            statusText: "Neues schriftliches Angebot eingegangen."
+            statusText: "Neues schriftliches Angebot eingegangen.",
+            nemesis: !!(optionen && optionen.nemesis)
         };
 
         incomingOffers.unshift(newOffer);
@@ -340,6 +342,7 @@
         squad.splice(pIdx, 1);
         lineup = lineup.filter(id => id !== offer.playerId);
         incomingOffers.splice(oIdx, 1);
+        if (offer.nemesis && typeof onNemesisOfferAccepted === 'function') onNemesisOfferAccepted(offer);
 
         addManagerXP(120);
         showToast(`🤝 Transfer perfekt: ${offer.playerName} wechselt für ${formatVal(offer.currentBid)} zu ${offer.clubName}.${agentFee > 0 ? ` Abzüglich ${formatVal(agentFee)} Beraterprovision.` : ''}`, 'success', 6000);
@@ -378,6 +381,7 @@
         squad.splice(pIdx, 1);
         lineup = lineup.filter(id => id !== offer.playerId);
         incomingOffers.splice(oIdx, 1);
+        if (offer.nemesis && typeof onNemesisOfferAccepted === 'function') onNemesisOfferAccepted(offer);
         addManagerXP(120);
         showToast(`🤝 ${offer.playerName} wechselt für ${formatVal(reducedBid)} zu ${offer.clubName} - dazu ${clausePercent}% von jedem künftigen Weiterverkauf.`, 'success', 6000);
         updateUI();
@@ -413,6 +417,7 @@
             if (p && o.currentBid > p.marketValue * 1.2) {
                 p.morale = Math.max(20, p.morale - 8);
             }
+            if (o.nemesis && typeof onNemesisOfferRejected === 'function') onNemesisOfferRejected(o);
             incomingOffers.splice(oIdx, 1);
         }
         renderTransferView();

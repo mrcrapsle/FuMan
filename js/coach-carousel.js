@@ -42,6 +42,7 @@ function tickCoachCarousel() {
             neu = game.rivalManagerName;
         }
         t.coach = { name: neu, since: game.season, sackedThisSeason: game.season };
+        if (typeof onCoachSacked === 'function') onCoachSacked(t, alt);
         t.coachBounce = { amount: COACH_BOUNCE, until: game.matchday + COACH_BOUNCE_MATCHDAYS };
         t.baseStrength = (t.baseStrength || t.strength) + COACH_BOUNCE;
         t.strength += COACH_BOUNCE;

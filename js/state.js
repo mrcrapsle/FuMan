@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.30', date: '04.10.2026', features: 'Phase 21: Derby-Woche (Choreo/Sonderzug, Sicherheit, Prämie, Kampfansage, Derby-Chronik; keine erzwungenen Derbys an den ersten Spieltagen mehr)' };
+    const GAME_VERSION = { number: '3.31', date: '04.10.2026', features: 'Phase 21: Erzfeind-Trainer (Person mit Bilanz, Revanche, Persönlichkeit mit Spielwirkung, Abwerben, folgt dir in deine Liga)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

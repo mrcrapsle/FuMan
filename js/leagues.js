@@ -302,6 +302,8 @@
     // vorspulen) aus aufgerufen werden kann, damit die Statistik unabhängig vom gewählten
     // Modus konsistent mitwächst.
     function recordRivalryResult(opponentName, ourGoals, oppGoals) {
+        // Erzfeind-Trainer (js/nemesis.js): eine Person, kann jeden Verein trainieren.
+        if (typeof recordNemesisResult === 'function') recordNemesisResult(opponentName, ourGoals, oppGoals);
         if (!game.permanentRivalName || opponentName !== game.permanentRivalName) return;
         rivalryRecord.matches.push({ season: game.season, matchday: game.matchday, ourGoals, oppGoals });        rivalryRecord.goalsFor += ourGoals;
         rivalryRecord.goalsAgainst += oppGoals;

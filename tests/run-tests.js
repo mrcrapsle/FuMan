@@ -1000,6 +1000,106 @@ async function testDerbyWeek(browser) {
     await page.close();
 }
 
+async function testNemesisCoach(browser) {
+    console.log('\n[21.2] Erzfeind-Trainer: Person mit Bilanz, Revanche, Persönlichkeit, Abwerben, Jobwechsel');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            const n = ensureNemesis();
+            const nt = findNemesisTeam();
+            out.start = !!nt && nt.team.name === game.permanentRivalName && !!n.trait && nt.level === game.leagueLevel;
+            const team = nt.team;
+            // Livespiel gegen ihn: Vorbericht, Revanche im Ticker, Bilanz über den echten Spielweg
+            const liga = leaguesData[game.leagueLevel];
+            let md = null, heim = null;
+            for (let m = 2; m <= 34 && !md; m++) for (const f of fixturesData[game.leagueLevel][m - 1]) {
+                const h = liga[f.home].name, a = liga[f.away].name;
+                if (h === game.clubName && a === team.name) { md = m; heim = true; }
+                if (a === game.clubName && h === team.name) { md = m; heim = false; }
+            }
+            game.matchday = md; game.sackPending = false;
+            n.revenge = true; n.trait = 'Provokateur';
+            startMatchdayFlow();
+            out.vorbericht = document.getElementById('prematch-nemesis-box').innerHTML.includes('Duell mit dem Erzfeind') && document.getElementById('prematch-nemesis-box').innerHTML.includes('Revanche');
+            const direkt = [...document.querySelectorAll('#screen-prematch-press button')].find(b => b.innerText.includes('Direkt zum Spiel'));
+            if (direkt) direkt.click();
+            out.ticker = document.getElementById('ticker-log').innerHTML.includes('Duell mit ' + n.name);
+            const vorher = n.meetings.length;
+            simulateRestOfMatch(); finishMatch();
+            out.bilanzEcht = n.meetings.length === vorher + 1 && n.meetings[0].club === team.name;
+            // Revanche-Mechanik direkt
+            n.record = { w: 0, d: 0, l: 0 }; n.revenge = false; n.trait = 'Provokateur';
+            const ohne = getNemesisModifier(team, heim);
+            squad.forEach(p => { p.morale = 70; });
+            recordNemesisResult(team.name, 0, 2);
+            out.provokateur = squad[0].morale === 67;
+            out.revancheOffen = n.revenge === true && Math.abs(getNemesisModifier(team, heim) - ohne - 1.5) < 0.001;
+            game.fans = 50;
+            recordNemesisResult(team.name, 3, 1);
+            out.revancheSieg = n.revenge === false && game.fans === 52 && n.record.w === 1 && n.record.l === 1;
+            // Persönlichkeiten mit echter Wirkung
+            n.trait = 'Publikumsliebling';
+            out.publikum = getNemesisModifier(team, false) === -1 && getNemesisModifier(team, true) === 0;
+            n.trait = 'Aufsteiger-Talent'; n.since = game.season - 5;
+            out.talent = getNemesisModifier(team, true) === -2;
+            n.trait = 'Alte Schule';
+            const elf = squad.find(p => lineup.includes(p.id)); elf.fitness = 90;
+            recordNemesisResult(team.name, 1, 1);
+            out.alteSchule = elf.fitness === 86;
+            n.trait = 'Taktik-Fuchs';
+            game.recentTacticStyles = ['offensiv', 'offensiv', 'offensiv', 'offensiv', 'offensiv'];
+            game.oppTacticPlan = null;
+            const lesbar = getPredictableArchetype();
+            const plan = getOppTacticPlan(team);
+            out.fuchs = !!lesbar && plan.arch === (getCounterArchetype(lesbar) || plan.base);
+            // Abwerben: unzufriedener Stammspieler, 125 % Marktwert, Ablehnen kostet Moral
+            const zielSpieler = [...squad].sort((a, b) => b.strength - a.strength)[0];
+            squad.forEach(p => { p.morale = 80; }); zielSpieler.morale = 40;
+            incomingOffers.length = 0; n.lastPoachSeason = 0; game.matchday = 10;
+            const rnd = Math.random; Math.random = () => 0;
+            tickNemesisPoaching();
+            Math.random = rnd;
+            const angebot = incomingOffers.find(o => o.nemesis);
+            out.abwerben = !!angebot && angebot.playerId === zielSpieler.id && angebot.clubName === team.name && angebot.currentBid >= zielSpieler.marketValue * 1.2;
+            tickNemesisPoaching();
+            out.einmalProSaison = incomingOffers.filter(o => o.nemesis).length === 1;
+            rejectTransferOffer(angebot.id);
+            out.ablehnenMoral = zielSpieler.morale <= 36;
+            triggerNewAITransferOffer(squad[5], { club: team.name, multiplier: 1.25, nemesis: true });
+            game.fans = 60;
+            acceptTransferOffer(incomingOffers.find(o => o.nemesis).id);
+            out.verkaufFans = game.fans === 57;
+            // Entlassen -> taucht in deiner Liga wieder auf
+            onCoachSacked(team, n.name);
+            team.coach = { name: 'Jemand Anderes', since: game.season, sackedThisSeason: game.season };
+            out.arbeitslos = !findNemesisTeam() && n.unemployedSince === game.season;
+            Math.random = () => 0;
+            tickNemesisSeason();
+            Math.random = rnd;
+            const neu = findNemesisTeam();
+            out.rueckkehr = !!neu && neu.level === game.leagueLevel && neu.team.name !== game.clubName;
+            showScreen('screen-history'); setSubTab('hist', 'rivalen');
+            out.historie = document.getElementById('nemesis-box').innerHTML.includes(n.name);
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Erzfeind-Trainer ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.start, 'Erzfeind ist zu Beginn der Trainer des Erzrivalen');
+        assert(r.vorbericht && r.ticker && r.bilanzEcht, 'Vorbericht mit Spruch und Revanche, Livespiel zeigt das Duell, Bilanz über den echten Spielweg');
+        assert(r.provokateur && r.revancheOffen && r.revancheSieg, 'Niederlage öffnet die Revanche (+1,5), der Revanche-Sieg bringt Fans; Provokateur kostet Moral');
+        assert(r.publikum && r.talent && r.alteSchule && r.fuchs, 'Persönlichkeiten wirken: Heimstärke, wachsendes Talent, harte Gangart, Taktik-Fuchs kontert immer');
+        assert(r.abwerben && r.einmalProSaison && r.ablehnenMoral && r.verkaufFans, 'Abwerben: 125 %-Angebot für Unzufriedene, einmal pro Saison, Ablehnen kostet Moral, Verkauf an ihn ärgert die Fans');
+        assert(r.arbeitslos && r.rueckkehr, 'Entlassen ist er arbeitslos - zum Saisonwechsel übernimmt er einen Verein in deiner Liga');
+        assert(r.historie, 'Historie > Rivalen zeigt den Erzfeind mit Bilanz');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testSponsorConflict(browser) {
     console.log('\n[19.x] Sponsoren: Branchenkonflikt nennt den Konkurrenten und kostet 30 %');
     const { page, consoleErrors } = await freshPage(browser);
@@ -6694,6 +6794,7 @@ async function main() {
         testSaveSafety,
         testOneHandControls,
         testDerbyWeek,
+        testNemesisCoach,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,
