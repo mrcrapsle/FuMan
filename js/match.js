@@ -1814,6 +1814,7 @@
             // mitzubelasten.
             if ((p.timesInjured || 0) >= 2) individualInjuryChance *= 0.72;
             if (typeof getAgeInjuryFactor === 'function') individualInjuryChance *= getAgeInjuryFactor(p);
+            if (typeof getChronicInjuryFactor === 'function') individualInjuryChance *= getChronicInjuryFactor(p);
             if (Math.random() < individualInjuryChance) {
                 let baseDuration = Math.floor(Math.random() * 4) + 1; // 1-4 Spiele Ausfallzeit
                 let reduction = 1 - (campusBuildings.reha.lvl * 0.08) - (staffMembers.physio.hired ? 0.5 : 0);

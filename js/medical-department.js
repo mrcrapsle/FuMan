@@ -25,6 +25,7 @@ function getPlayerInjuryRiskIndex(p) {
     r *= 1 + Math.min(2.5, (p.timesInjured || 0) * 0.18);
     if ((p.timesInjured || 0) >= 2) r *= 0.72;
     if (game.injuryPreventionProgram) r *= 0.82;
+    if (typeof getChronicInjuryFactor === 'function') r *= getChronicInjuryFactor(p);
     if (p.fitness !== undefined && p.fitness < 60) r *= 1.15;
     return r;
 }

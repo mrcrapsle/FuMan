@@ -599,7 +599,7 @@
                     <div>PAS<br><strong>${p.passing}</strong></div>
                     <div>DEF<br><strong>${p.defense}</strong></div>
                 </div>
-                <div style="font-size:9px; color:var(--text-muted); margin-bottom:4px;">🏟️ ${ensureTransferTerms(p).sellerClub} · Marktwert ${formatVal(p.marketValue)}${p.pokerBroken ? ' · <span style="color:var(--danger);">Gespräche abgebrochen</span>' : ''}</div>
+                <div style="font-size:9px; color:var(--text-muted); margin-bottom:4px;">🏟️ ${ensureTransferTerms(p).sellerClub} · Marktwert ${formatVal(p.marketValue)}${typeof getMedicalTag === 'function' ? ` · ${getMedicalTag(p)}` : ''}${p.pokerBroken ? ' · <span style="color:var(--danger);">Gespräche abgebrochen</span>' : ''}</div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
                     <button onclick="openTransferPoker(${idx})" class="btn-action" ${p.pokerBroken ? 'disabled' : ''}>🃏 Verhandeln</button>
                     <button onclick="buyPlayer(${idx})" class="btn-secondary">Sofortkauf [${formatVal(p.askingPrice)}]</button>

@@ -821,6 +821,7 @@
             if (p.individualFocus === 'elfmeter') roleBadge += ' <span title="Elfmeter-Spezialist" style="font-size:9px;">🥅</span>';
             if (p.isCrowdFavorite) roleBadge += ' <span title="Publikumsliebling der Saison" style="font-size:9px;">❤️</span>';
             if ((p.timesInjured || 0) >= 2) roleBadge += ' <span title="Wird vom Physio-Stab individuell geschont (verletzungsanfällig)" style="font-size:9px;">🛡️</span>';
+            if (p.chronicIssue) roleBadge += ' <span title="Chronische Probleme: dauerhaft x1,5 Verletzungsrisiko" style="font-size:9px;">🩹</span>';
             let traitBadge = (p.trait && p.trait !== 'Kein') ? `<span class="badge badge-trait">${p.trait}</span>` : '';
             let posRoles = getRolesForPosition(p.pos);
             let roleOptions = '<option value="">Keine Rolle</option>' + posRoles.map(r => `<option value="${r.id}" ${p.role === r.id ? 'selected' : ''}>${r.name}</option>`).join('');

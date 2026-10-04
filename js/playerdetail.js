@@ -43,7 +43,9 @@
             <span class="label">Persönlichkeit:</span><span class="val">${p.personality || '-'}</span>
             <span class="label">Charakter:</span><span class="val">${p.character || '-'}</span>
             <span class="label">Berater:</span><span class="val">${p.agent ? `🕴️ ${p.agent.name} (${Math.round(p.agent.feePct * 100)}%)` : 'Kein Berater'}</span>
-            <span class="label">Verletzungsanfälligkeit:</span><span class="val" style="color:${(p.timesInjured||0) >= 3 ? 'var(--danger)' : ((p.timesInjured||0) >= 1 ? 'var(--accent)' : 'var(--primary)')};">${(p.timesInjured||0) === 0 ? 'Robust' : `${p.timesInjured}× verletzt`}</span>
+            <span class="label">Verletzungsanfälligkeit:</span>${marketPlayers.includes(p) && typeof getMedicalTag === 'function'
+                ? `<span class="val">${p.medical && p.medical.checked ? describeMedical(p.medical) : '❓ unbekannt - Medizincheck im Transferpoker'}</span>`
+                : `<span class="val" style="color:${(p.timesInjured||0) >= 3 || p.chronicIssue ? 'var(--danger)' : ((p.timesInjured||0) >= 1 ? 'var(--accent)' : 'var(--primary)')};">${(p.timesInjured||0) === 0 ? 'Robust' : `${p.timesInjured}× verletzt`}${p.chronicIssue ? ' · 🩹 chronisch (×1,5 Risiko)' : ''}</span>`}
             <span class="label">Kabinen-Freund:</span><span class="val">${p.friendPlayerId ? (squad.find(x => x.id === p.friendPlayerId)?.name || '-') : 'Keiner'}</span>
             <span class="label">Elfmeter-Quote:</span><span class="val">${(p.penaltiesTaken || 0) > 0 ? `${p.penaltiesScored}/${p.penaltiesTaken} (${Math.round((p.penaltiesScored/p.penaltiesTaken)*100)}%)` : 'Noch keine Schüsse'}</span>
             <span class="label">Publikumsliebling:</span><span class="val">${p.isCrowdFavorite ? '❤️ Ja (aktuelle Saison)' : 'Nein'}</span>

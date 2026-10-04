@@ -45,6 +45,8 @@ function finalizePlayerPurchase(p, ablose, gehalt) {
     marketPlayers.splice(idx, 1);
     if (transferPoker && transferPoker.playerId === p.id) transferPoker = null;
     showToast(`✅ ${p.name} kommt von ${p.sellerClub || 'seinem Verein'} für ${formatVal(ablose)}${agentFee > 0 ? ` (+ ${formatVal(agentFee)} Provision an ${p.agent.name})` : ''}.`, 'success', 4500);
+    // Medizincheck (js/medical-check.js): ein verdeckter Befund wird jetzt Wirklichkeit.
+    if (typeof applyMedicalOnArrival === 'function') applyMedicalOnArrival(p);
     renderTransferView();
     updateUI();
     return true;
@@ -204,6 +206,7 @@ function renderTransferPokerBox() {
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
                 <button onclick="signPokerDeal()" class="btn-action">✍️ Unterschreiben</button>
                 <button onclick="haggleWage()" class="btn-secondary" ${t.wageTalked ? 'disabled' : ''}>💬 Gehalt drücken (-10 %)</button>
+                ${typeof getMedicalCheckFee === 'function' ? `<button onclick="runMedicalCheck()" class="btn-secondary" style="grid-column: span 2;" ${p.medical && p.medical.checked ? 'disabled' : ''}>${p.medical && p.medical.checked ? getMedicalTag(p) : `🩺 Medizincheck (${formatVal(getMedicalCheckFee(t.agreedFee))}) - ohne ihn unterschreibst du blind`}</button>` : ''}
                 <button onclick="closeTransferPoker()" class="btn-secondary" style="grid-column: span 2;">Abbrechen</button>
             </div>` : `
             <div style="display:flex; align-items:center; justify-content:space-between; gap:4px; margin-bottom:6px;">

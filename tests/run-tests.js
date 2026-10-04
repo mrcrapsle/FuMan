@@ -1486,6 +1486,90 @@ async function testRefereeCritique(browser) {
     await page.close();
 }
 
+async function testMedicalCheck(browser) {
+    console.log('\n[22.5] Medizincheck bei Transfers: verdeckter Befund, Check nach der Einigung senkt die Ablöse, Sofortkauf bleibt blind');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            game.money = 50000000; game.transferBudget = 50000000; game.wageBudget = 50000000;
+            game.ffpTransferEmbargo = false;
+            staffMembers.physio.hired = false;
+            refreshTransferMarket();
+            showScreen('screen-transfer');
+            // Befunde werden gewürfelt - jeder Marktspieler bekommt einen
+            out.profile = marketPlayers.every(p => ['ok', 'chronisch', 'verletzt'].includes(ensureMedicalProfile(p).issue) && !p.medical.checked);
+            renderTransferView();
+            out.ungeprueft = document.getElementById('market-list').innerHTML.includes('🩺 ungeprüft');
+            const kandidat = marketPlayers[0];
+            openPlayerDetail(kandidat.id, 'market');
+            out.popupUnbekannt = document.body.innerHTML.includes('unbekannt - Medizincheck');
+            if (typeof closePlayerDetail === 'function') closePlayerDetail();
+            // Chronischer Befund: Check erst nach der Einigung, dann sinkt die Ablöse um 20 %
+            kandidat.medical = { issue: 'chronisch', injuries: 4, checked: false };
+            openTransferPoker(0);
+            const geld0 = game.money;
+            runMedicalCheck();
+            out.erstNachEinigung = game.money === geld0 && !kandidat.medical.checked;
+            acceptPokerAsking();
+            const vereinbart = transferPoker.agreedFee;
+            out.knopf = document.getElementById('transfer-poker-box').innerHTML.includes('Medizincheck');
+            const gebuehr = getMedicalCheckFee(vereinbart);
+            runMedicalCheck();
+            out.check = game.money === geld0 - gebuehr && kandidat.medical.checked && transferPoker.agreedFee === Math.round(vereinbart * 0.8 / 1000) * 1000;
+            out.log = transferPoker.log.some(z => z.includes('chronische Probleme'));
+            const geld1 = game.money;
+            runMedicalCheck();
+            out.nurEinmal = game.money === geld1;
+            signPokerDeal();
+            const neu = squad.find(p => p.id === kandidat.id);
+            out.chronisch = !!neu && neu.chronicIssue === true && neu.timesInjured === 4 && neu.medical === undefined;
+            const mit = getPlayerInjuryRiskIndex(neu);
+            neu.chronicIssue = false;
+            const ohne = getPlayerInjuryRiskIndex(neu);
+            neu.chronicIssue = true;
+            out.risiko = Math.abs(mit / ohne - 1.5) < 1e-9;
+            out.badge = (showScreen('screen-squad'), document.body.innerHTML.includes('Chronische Probleme'));
+            // Sofortkauf ohne Check: der Befund kommt nach der Unterschrift ans Licht
+            showScreen('screen-transfer');
+            const blind = marketPlayers[0];
+            blind.medical = { issue: 'verletzt', weeks: 3, checked: false };
+            buyPlayer(0);
+            const blindNeu = squad.find(p => p.id === blind.id);
+            out.blind = !!blindNeu && blindNeu.injured === 3 && inboxMessages[0].title.includes('Böse Überraschung');
+            // Unauffällig: Check kostet, aber keine Preissenkung
+            const gesund = marketPlayers[0];
+            gesund.medical = { issue: 'ok', checked: false };
+            openTransferPoker(0);
+            acceptPokerAsking();
+            const fee = transferPoker.agreedFee;
+            runMedicalCheck();
+            out.gesund = transferPoker.agreedFee === fee && gesund.medical.checked && getMedicalTag(gesund).includes('unauffällig');
+            closeTransferPoker();
+            // Chef-Physio halbiert die Gebühr
+            const normal = getMedicalCheckFee(1000000);
+            staffMembers.physio.hired = true;
+            out.physio = normal === 30000 && getMedicalCheckFee(1000000) === 15000 && getMedicalCheckFee(10000) === 1500;
+            staffMembers.physio.hired = false;
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Medizincheck ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.profile && r.ungeprueft && r.popupUnbekannt, 'Jeder Marktspieler hat einen verdeckten Befund, Liste und Popup zeigen „ungeprüft/unbekannt“');
+        assert(r.erstNachEinigung && r.knopf, 'Der Check ist erst nach der Ablöse-Einigung möglich und steht dann im Transferpoker');
+        assert(r.check && r.log && r.nurEinmal, 'Check kostet 3 % der Ablöse, ein chronischer Befund senkt die Ablöse um 20 % - nur einmal');
+        assert(r.chronisch && r.risiko && r.badge, 'Chronische Probleme bleiben: Verletzungsakte, x1,5 Verletzungsrisiko, Abzeichen im Kader');
+        assert(r.blind, 'Sofortkauf ist blind: ein verletzter Spieler fällt sofort aus, die Post meldet die böse Überraschung');
+        assert(r.gesund, 'Unauffälliger Befund: keine Preissenkung');
+        assert(r.physio, 'Chef-Physio halbiert die Gebühr, mindestens 1.500 €');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testSponsorConflict(browser) {
     console.log('\n[19.x] Sponsoren: Branchenkonflikt nennt den Konkurrenten und kostet 30 %');
     const { page, consoleErrors } = await freshPage(browser);
@@ -7189,6 +7273,7 @@ async function main() {
         testMatchPrep,
         testSetPieceDrills,
         testRefereeCritique,
+        testMedicalCheck,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,
