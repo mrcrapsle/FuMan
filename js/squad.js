@@ -149,11 +149,11 @@
         let h = game.coTrainerHistory || { followedMatches: 0, followedWins: 0, ownMatches: 0, ownWins: 0 };
         let followedRate = h.followedMatches > 0 ? Math.round((h.followedWins / h.followedMatches) * 100) : null;
         let ownRate = h.ownMatches > 0 ? Math.round((h.ownWins / h.ownMatches) * 100) : null;
-        let historyHtml = (h.followedMatches > 0 || h.ownMatches > 0) ? `
+        let historyHtml = (h.followedMatches > 0 || h.ownMatches > 0 || h.liveFollowed || h.liveIgnored) ? `
             <div class="box" style="font-size:10px; margin-top:6px;">
                 <strong>📊 Co-Trainer-Historie:</strong><br>
                 Vorschlag übernommen: ${h.followedWins}/${h.followedMatches} Siege${followedRate !== null ? ` (${followedRate}%)` : ''}<br>
-                Eigene Entscheidung: ${h.ownWins}/${h.ownMatches} Siege${ownRate !== null ? ` (${ownRate}%)` : ''}
+                Eigene Entscheidung: ${h.ownWins}/${h.ownMatches} Siege${ownRate !== null ? ` (${ownRate}%)` : ''}${(h.liveFollowed || h.liveIgnored) ? `<br>Hinweise im Livespiel: ${h.liveFollowed || 0} befolgt, ${h.liveIgnored || 0} ignoriert` : ''}
             </div>` : '';
         box.innerHTML = `
             ${hasSwaps ? `<div class="panel-header">🧑‍🏫 CO-TRAINER-EMPFEHLUNG</div>

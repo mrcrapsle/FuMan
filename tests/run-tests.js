@@ -1100,6 +1100,110 @@ async function testNemesisCoach(browser) {
     await page.close();
 }
 
+async function testCoTrainerLive(browser) {
+    console.log('\n[21.3] Co-Trainer im Livespiel: echte Hinweise je Ausbaustufe, Ein-Tipp-Aktionen');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            game.sackPending = false;
+            startMatchdayFlow();
+            if (aktiverScreen !== 'screen-prematch-press') { showScreen('screen-dashboard'); }
+            const direkt = [...document.querySelectorAll('#screen-prematch-press button')].find(b => b.innerText.includes('Direkt zum Spiel'));
+            if (direkt) direkt.click();
+            out.live = !!currentMatch && aktiverScreen === 'screen-matchday';
+            const rnd = Math.random;
+            Math.random = () => 0;
+            const frisch = () => { currentMatch.coHintsUsed = []; delete currentMatch.lastCoHintMinute; resetCoTrainerLive(); };
+            const stand = (wir, die) => { if (currentMatch.isHome) { currentMatch.homeGoals = wir; currentMatch.awayGoals = die; } else { currentMatch.awayGoals = wir; currentMatch.homeGoals = die; } };
+            squad.forEach(p => { p.fitness = 100; });
+            currentMatch.yellowCards = {};
+            // Ohne Co-Trainer: kein Hinweis
+            staffMembers.coTrainer.hired = false;
+            currentMatch.minute = 72; stand(0, 1); frisch();
+            tickCoTrainerLive();
+            out.ohneKeiner = document.getElementById('live-cotrainer-box').innerHTML === '';
+            // Stufe 1: Rückstand spät -> Brechstange
+            staffMembers.coTrainer.hired = true;
+            ensureStaffMeta('coTrainer').level = 1; ensureStaffMeta('coTrainer').morale = 80;
+            activeLiveShout = 'standard';
+            const trust = game.coTrainerTrust ?? 66;
+            tickCoTrainerLive();
+            const box = document.getElementById('live-cotrainer-box').innerHTML;
+            out.rueckstand = box.includes('Brechstange') && document.getElementById('ticker-log').innerHTML.includes('Co-Trainer');
+            followCoTrainerHint(0);
+            out.befolgt = activeLiveShout === 'brechstange' && game.coTrainerTrust === Math.min(100, trust + 1) && game.coTrainerHistory.liveFollowed === 1 && document.getElementById('live-cotrainer-box').innerHTML === '';
+            // Abstand: sofort danach kein neuer Hinweis
+            currentMatch.minute = 75;
+            tickCoTrainerLive();
+            out.abstand = document.getElementById('live-cotrainer-box').innerHTML === '';
+            // Stufe 1 kennt keine Karten-Hinweise
+            const elf = squad.filter(p => lineup.includes(p.id) && p.pos !== 'TW');
+            stand(1, 1); frisch(); currentMatch.minute = 40; game.tackleHardness = 'normal';
+            currentMatch.yellowCards[elf[0].id] = 1;
+            tickCoTrainerLive();
+            out.stufe1OhneKarte = document.getElementById('live-cotrainer-box').innerHTML === '';
+            // Stufe 2: Gelb-Rot-Gefahr -> Härte runter
+            ensureStaffMeta('coTrainer').level = 2; frisch();
+            tickCoTrainerLive();
+            out.karte = document.getElementById('live-cotrainer-box').innerHTML.includes(elf[0].name);
+            followCoTrainerHint(0);
+            out.haerte = game.tackleHardness === 'vorsichtig';
+            // Stufe 2: Taktik-Duell verloren -> Konterstil
+            currentMatch.yellowCards = {}; frisch(); currentMatch.minute = 30;
+            currentMatch.oppTacticArch = 'K'; game.tacticStyle = 'pressing';
+            tickCoTrainerLive();
+            out.taktikHinweis = document.getElementById('live-cotrainer-box').innerHTML.includes('ballbesitz');
+            followCoTrainerHint(0);
+            out.taktik = game.tacticStyle === 'ballbesitz' && getTacticMatchupBonus('K') === 2;
+            // Stufe 3: neutraler Stil, Gegner durchschaut
+            ensureStaffMeta('coTrainer').level = 3; frisch(); game.tacticStyle = 'ausgeglichen';
+            tickCoTrainerLive();
+            out.stufe3 = document.getElementById('live-cotrainer-box').innerHTML.includes('durchschaut');
+            ignoreCoTrainerHint();
+            out.ignoriert = game.coTrainerHistory.liveIgnored === 1;
+            // Müder Spieler -> Wechsel über den normalen Weg
+            frisch(); currentMatch.minute = 60; currentMatch.oppTacticArch = null;
+            const muede = elf[1]; muede.fitness = 55;
+            const wechselVorher = substitutionsLeft;
+            tickCoTrainerLive();
+            out.muedeHinweis = document.getElementById('live-cotrainer-box').innerHTML.includes(muede.name);
+            followCoTrainerHint(0);
+            out.wechsel = !lineup.includes(muede.id) && substitutionsLeft === wechselVorher - 1;
+            // Schlechte Laune: meldet sich unzuverlässig
+            ensureStaffMeta('coTrainer').morale = 20; frisch(); currentMatch.minute = 79; stand(1, 0); activeLiveShout = 'standard';
+            Math.random = () => 0.9;
+            tickCoTrainerLive();
+            out.laune = document.getElementById('live-cotrainer-box').innerHTML === '';
+            Math.random = () => 0;
+            ensureStaffMeta('coTrainer').morale = 80;
+            tickCoTrainerLive();
+            out.fuehrung = document.getElementById('live-cotrainer-box').innerHTML.includes('Bus parken');
+            Math.random = rnd;
+            simulateRestOfMatch();
+            out.abpfiffLeer = document.getElementById('live-cotrainer-box').innerHTML === '';
+            finishMatch();
+            showScreen('screen-squad');
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Co-Trainer im Livespiel ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.live && r.ohneKeiner, 'Ohne Co-Trainer keine Hinweise');
+        assert(r.rueckstand && r.befolgt && r.abstand, 'Stufe 1: Rückstand spät -> Brechstange per Tipp, Vertrauen +1, danach 15 Minuten Ruhe');
+        assert(r.stufe1OhneKarte && r.karte && r.haerte, 'Gelb-Rot-Gefahr erst ab Stufe 2, Aktion stellt die Härte um');
+        assert(r.taktikHinweis && r.taktik, 'Verlorenes Taktik-Duell: Hinweis auf den Konterstil, der das Duell dreht');
+        assert(r.stufe3 && r.ignoriert, 'Stufe 3 erkennt auch ein gewinnbares Taktik-Duell; Ignorieren wird gezählt');
+        assert(r.muedeHinweis && r.wechsel, 'Müder Spieler: Wechsel über den normalen Livespiel-Weg');
+        assert(r.laune && r.fuehrung, 'Schlecht gelaunter Co-Trainer meldet sich unzuverlässiger; knappe Führung spät -> Bus parken');
+        assert(r.abpfiffLeer, 'Nach dem Abpfiff verschwindet der Hinweis');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testSponsorConflict(browser) {
     console.log('\n[19.x] Sponsoren: Branchenkonflikt nennt den Konkurrenten und kostet 30 %');
     const { page, consoleErrors } = await freshPage(browser);
@@ -1287,6 +1391,9 @@ async function testLockerRoom(browser) {
             out.kostetStaerke = getCliqueChemistryModifier() < ohne;
             const kapitaen = squad.find(p => p.id === game.captainId); kapitaen.morale = 40; // keine Autorität
             const andere = squad.filter(p => !franz.includes(p) && p !== kapitaen);
+            // Moral 70: sonst bilden die übrigen (alle "Deutschland") je nach Altersverteilung
+            // gut gelaunte Cliquen (Stimmung >= 75, +1 im Monat), die das -1 genau aufheben (CI 3.32).
+            andere.forEach(p => { p.morale = 70; });
             const vorher = andere.reduce((s, p) => s + p.morale, 0);
             tickLockerRoom();
             out.zieltRunter = andere.reduce((s, p) => s + p.morale, 0) < vorher;
@@ -6795,6 +6902,7 @@ async function main() {
         testOneHandControls,
         testDerbyWeek,
         testNemesisCoach,
+        testCoTrainerLive,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,

@@ -1550,6 +1550,12 @@
         padding: 6px; box-shadow: 0 -6px 18px rgba(0,0,0,0.55);
     }
 
+    /* Co-Trainer-Hinweis (js/co-trainer-live.js) steht direkt über der Livespiel-Leiste */
+    #live-cotrainer-box:not(:empty) {
+        position: sticky; bottom: calc(var(--bottom-nav-h, 58px) + 64px + env(safe-area-inset-bottom, 0px)); z-index: 40;
+    }
+    #live-cotrainer-box .box { background: rgb(16, 22, 20); }
+
     /* Kopf: Kennzahlen in EINER wischbaren Zeile (Sprache/Ton liegen im Menü) */
     .header-kpis { flex-wrap: nowrap; overflow-x: auto; width: 100%; scrollbar-width: none; }
     .header-kpis::-webkit-scrollbar { display: none; }

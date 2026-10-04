@@ -413,6 +413,7 @@
         if (underworld.activeSabotages.refBribe) introNotes += " [⌚ Schiedsrichter pfeift wohlwollend]";
         document.getElementById('ticker-log').innerHTML = `<div>${introNotes}</div>`;
         // Derby-Woche (js/derby-week.js): nach dem Ticker-Start, sonst wäre die Zeile gleich wieder weg.
+        if (typeof resetCoTrainerLive === 'function') resetCoTrainerLive();
         if (!isCup && typeof applyDerbyPreparation === 'function') applyDerbyPreparation(oppName);
         if (!isCup && typeof applyNemesisLiveModifier === 'function') applyNemesisLiveModifier(oppTeamObj, isHome);
 
@@ -907,6 +908,8 @@
         animateLiveBall(eventHandled ? (Math.random() < userFavoredProb ? 'home' : 'away') : (diff > 8 ? 'home' : (diff < -8 ? 'away' : 'midfield')));
 
         if (currentMatch.minute >= 90) { endMatchSimulation(); }
+        // Co-Trainer im Livespiel (js/co-trainer-live.js): Hinweis aus dem echten Spielstand.
+        if (typeof tickCoTrainerLive === 'function') tickCoTrainerLive();
     }
 
     // ---------- SPIELFELD-BALL-ANIMATION ----------

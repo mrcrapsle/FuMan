@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.31', date: '04.10.2026', features: 'Phase 21: Erzfeind-Trainer (Person mit Bilanz, Revanche, Persönlichkeit mit Spielwirkung, Abwerben, folgt dir in deine Liga)' };
+    const GAME_VERSION = { number: '3.32', date: '04.10.2026', features: 'Phase 21: Co-Trainer im Livespiel (Hinweise aus dem echten Spielstand je Ausbaustufe, Ein-Tipp-Aktionen)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -424,7 +424,7 @@
     };
 
     let staffMembers = {
-        coTrainer: { name: "Co-Trainer", hired: false, wage: 8000, cost: 60000, desc: "+2 Team-Stärke im Spiel & kann individuelles Spielertraining automatisch verteilen", task: "aus" },
+        coTrainer: { name: "Co-Trainer", hired: false, wage: 8000, cost: 60000, desc: "+2 Team-Stärke im Spiel, Hinweise im Livespiel (je Ausbaustufe mehr) & kann individuelles Spielertraining automatisch verteilen", task: "aus" },
         twTrainer: { name: "Torwarttrainer", hired: false, wage: 5500, cost: 45000, desc: "+10% bessere Torwart-Paraden" },
         fitCoach: { name: "Athletik- & Konditionstrainer", hired: false, wage: 6000, cost: 50000, desc: "-30% Fitnessverlust nach Spielen & kann Team-Trainingsschwerpunkt automatisch wählen", task: "aus" },
         physio: { name: "Chef-Physiotherapeut", hired: false, wage: 7000, cost: 55000, desc: "Halbiert die Ausfallzeit von Verletzten" },
