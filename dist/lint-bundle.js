@@ -484,7 +484,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.26.1', date: '04.10.2026', features: 'Phase 20: Aufräumen Teil 8 + stabiler Saisonziel-Test (Torjäger-Ziel nicht mehr zufallsabhängig)' };
+    const GAME_VERSION = { number: '3.27', date: '04.10.2026', features: 'Phase 20: Szenarien-Langzeittest (Pleiteklub: Kredite und Zwangsverkäufe zählen, Absteiger wirklich schwach, Aufstiegsprämie nach Liga)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -4313,7 +4313,7 @@ const CAREER_SCENARIOS = {
         title: '🆘 Rettet den Absteiger', level: 2, seasons: 1,
         desc: 'Ein Drittligist mit zu schwachem Kader, fast leerer Kasse und müden Fans. Ziel: Klassenerhalt in der ersten Saison (auch über die Relegation).',
         setup() {
-            squad.forEach(p => { p.strength = Math.max(30, p.strength - 5); p.marketValue = calculatePlayerMarketValue(p.strength); });
+            squad.forEach(p => { p.strength = Math.max(30, p.strength - 11); p.marketValue = calculatePlayerMarketValue(p.strength); });
             game.money = 120000; game.fans = 35; game.boardSat = 45;
         },
         check(s) {
@@ -4324,7 +4324,7 @@ const CAREER_SCENARIOS = {
     },
     pleite: {
         title: '💸 Pleiteklub sanieren', level: 3, seasons: 2,
-        desc: 'Ein Viertligist mit 600.000 € Schulden auf dem Konto und überhöhten Gehältern. Im Minus drohen Transfersperre und Zwangsverkäufe. Ziel: binnen zwei Saisons schwarze Zahlen, ohne abzusteigen.',
+        desc: 'Ein Viertligist mit 600.000 € Schulden auf dem Konto und überhöhten Gehältern. Im Minus drohen Transfersperre und alle 10 Spieltage ein Zwangsverkauf. Ziel: binnen zwei Saisons schwarze Zahlen (offene Kredite zählen als Schulden), ohne abzusteigen - saniert der Vorstand per Zwangsverkauf, kostet das Sterne, ab zwei Zwangsverkäufen gilt die Sanierung als gescheitert.',
         setup() {
             squad.forEach(p => { p.wage = Math.round(p.wage * 1.15 / 10) * 10; });
             game.money = -600000; game.boardSat = 50;
@@ -4332,12 +4332,18 @@ const CAREER_SCENARIOS = {
         check(s) {
             if (game.leagueLevel > s.startLevel) return { done: true, ok: false, text: 'Abgestiegen - die Sanierung ist gescheitert.' };
             const jahre = game.season - s.startSeason;
-            if (game.money >= 0) {
-                const sterne = jahre === 1 ? 3 : (game.money >= 250000 ? 2 : 1);
-                return { done: true, ok: true, stars: sterne, text: `Saniert nach ${jahre} Saison${jahre > 1 ? 's' : ''}: Kontostand ${formatVal(game.money)}.` };
+            // Zwangsverkäufe (checkInsolvencyRisk) sanieren den Verein ohne Zutun des Managers:
+            // im Langzeittest 20.6 war das Szenario so auch ganz ohne Eingriff nach einer Saison
+            // mit 3 Sternen geschafft (zwei Zwangsverkäufe à ~380.000 €).
+            const zwang = getScenarioForcedSales(s);
+            if (zwang >= 2) return { done: true, ok: false, text: `Der Vorstand musste ${zwang} Spieler zwangsverkaufen - saniert hat nicht der Manager.` };
+            const netto = getScenarioNetCash();
+            if (netto >= 0) {
+                const sterne = Math.max(1, (jahre === 1 ? 3 : (netto >= 250000 ? 2 : 1)) - zwang);
+                return { done: true, ok: true, stars: sterne, text: `Saniert nach ${jahre} Saison${jahre > 1 ? 's' : ''}: ${formatVal(netto)} ohne Kreditschulden${zwang ? ' (ein Zwangsverkauf kostet einen Stern)' : ''}.` };
             }
-            if (jahre >= this.seasons) return { done: true, ok: false, text: `Nach ${jahre} Saisons noch immer ${formatVal(game.money)} im Minus.` };
-            return { done: false, text: `Noch ${formatVal(-game.money)} bis zur schwarzen Null.` };
+            if (jahre >= this.seasons) return { done: true, ok: false, text: `Nach ${jahre} Saisons noch immer ${formatVal(netto)} im Minus (Kredite eingerechnet).` };
+            return { done: false, text: `Noch ${formatVal(-netto)} bis zur schwarzen Null (Kredite eingerechnet).` };
         }
     },
     tradition: {
@@ -4373,12 +4379,22 @@ const CAREER_SCENARIOS = {
 
 let selectedNewGameScenario = null;
 
+// Pleite-Szenario: Kontostand abzüglich offener Kredite - sonst "saniert" ein Kredit sofort.
+function getScenarioNetCash() {
+    const raten = (typeof activeLoans !== 'undefined' ? activeLoans : []).reduce((a, l) => a + l.installment * l.matchdaysLeft, 0);
+    return game.money - (game.loanDebt || 0) - raten;
+}
+
+function getScenarioForcedSales(s) {
+    return Math.max(0, (game.forcedSalesCount || 0) - ((s && s.forcedAtStart) || 0));
+}
+
 // Neues Spiel (window.onload nach dem Reload): Szenario-Start anwenden.
 function applyScenarioStart(id) {
     const sc = CAREER_SCENARIOS[id];
     if (!sc) return;
     sc.setup();
-    game.scenario = { id, startSeason: game.season, startLevel: game.leagueLevel, lastRank: null, status: 'aktiv' };
+    game.scenario = { id, startSeason: game.season, startLevel: game.leagueLevel, lastRank: null, status: 'aktiv', forcedAtStart: game.forcedSalesCount || 0 };
     addInboxMessage('vertrag', `${sc.title}: Die Mission beginnt`, `${sc.desc}\n\nFrist: ${sc.seasons} Saison${sc.seasons > 1 ? 's' : ''}. Bewertet wird jeweils am Saisonende.`, 'screen-dashboard');
 }
 
@@ -4420,7 +4436,8 @@ function renderScenarioCard() {
     let inhalt;
     if (s.status === 'aktiv') {
         const restSaisons = s.startSeason + sc.seasons - game.season;
-        inhalt = `<div style="color:var(--text-muted);">${sc.desc}</div><div style="margin-top:4px;">⏳ Bewertung am Ende von Saison ${game.season}${restSaisons > 0 ? ` · Frist bis Saison ${s.startSeason + sc.seasons - 1}` : ''}</div>`;
+        const zwang = s.id === 'pleite' ? `<div style="margin-top:2px;">💸 Zwangsverkäufe: ${getScenarioForcedSales(s)} / 2${game.money < 0 ? ` · ${game.negativeStreak || 0} Spieltage im Minus (alle 10 ein Zwangsverkauf)` : ''}</div>` : '';
+        inhalt = `<div style="color:var(--text-muted);">${sc.desc}</div><div style="margin-top:4px;">⏳ Bewertung am Ende von Saison ${game.season}${restSaisons > 0 ? ` · Frist bis Saison ${s.startSeason + sc.seasons - 1}` : ''}</div>${zwang}`;
     } else {
         inhalt = `<div>${s.status === 'geschafft' ? `✅ Geschafft ${'⭐'.repeat(s.stars)}${'☆'.repeat(3 - s.stars)}` : '❌ Gescheitert'} - ${s.result}</div><div style="color:var(--text-muted); margin-top:2px;">Die Karriere läuft als freies Spiel weiter.</div>`;
     }
@@ -12802,7 +12819,11 @@ function finishGoalkeeperGame() {
                 let value = Math.round(calculatePlayerMarketValue(candidate.strength) * sellFactor);
                 squad.splice(idx, 1);
                 lineup = lineup.filter(id => id !== candidate.id);
+                // Eigener Buchungstext (lief vorher unter dem gerade offenen Screen, z.B. "Vereinsbüro").
+                setzeBuchungskontext('💸 Zwangsverkauf');
                 game.money += value;
+                loescheBuchungskontext();
+                game.forcedSalesCount = (game.forcedSalesCount || 0) + 1;
                 showNotice('💸 Zwangsverkauf', `Um die Zahlungsfähigkeit zu sichern, verkauft der Vorstand notgedrungen ${candidate.name} für ${formatVal(value)} - deutlich unter Marktwert.`, { typ: 'warn' });
                 addInboxMessage('finanzen', 'Zwangsverkauf!', `Der Vorstand hat ${candidate.name} notgedrungen für ${formatVal(value)} verkauft (unter Marktwert).`, 'screen-finances');
             }
@@ -25067,8 +25088,14 @@ function cleanupLegacyScoutState() {
     // Aufstiegsprämie, Sponsoren-Bonus, XP, Fan-Fundament und Vertragsboni - für den regulären
     // Aufstieg am Saisonende UND den nachträglichen nach erfüllter DFB-Nachfrist (der bekam
     // bisher nichts davon). Gibt den Sponsoren-Bonus zurück (für die Meldung).
+    // Aufstiegsprämie nach der NEUEN Liga: pauschal 1,5 Mio. waren für einen Ober- oder
+    // Regionalligisten mehr als eine ganze Saison Umsatz (Szenario-Langzeittest 20.6:
+    // Traditionsverein von 0,4 auf 3,5 Mio. € in einer Regionalliga-Saison).
+    const PROMOTION_PRIZE_BY_LEVEL = [5000000, 2500000, 1000000, 400000, 150000, 0];
+    function getPromotionPrize(level) { return PROMOTION_PRIZE_BY_LEVEL[level] ?? 0; }
+
     function applyPromotionRewards() {
-        game.money += 1500000;
+        game.money += getPromotionPrize(game.leagueLevel);
         let sponsorPromoBonus = game.sponsor.promotionBonus || 0;
         if (sponsorPromoBonus > 0) game.money += sponsorPromoBonus;
         addManagerXP(1000);
@@ -25101,7 +25128,7 @@ function cleanupLegacyScoutState() {
             game.dfbGracePeriod = null;
             if (typeof insertOurTeamIntoLeagues === 'function') insertOurTeamIntoLeagues();
             let sponsorPromoBonus = applyPromotionRewards();
-            addInboxMessage('vertrag', '🎉 Nachträglicher Aufstieg!', `Die DFB-Auflagen wurden rechtzeitig innerhalb der Nachfrist erfüllt - der Aufstieg in die ${leagueNames[game.leagueLevel]} wird nachträglich vollzogen! Aufstiegsprämie 1.500.000 €${sponsorPromoBonus > 0 ? ` plus ${formatVal(sponsorPromoBonus)} Sponsoren-Bonus` : ''}.`, 'screen-stadium');
+            addInboxMessage('vertrag', '🎉 Nachträglicher Aufstieg!', `Die DFB-Auflagen wurden rechtzeitig innerhalb der Nachfrist erfüllt - der Aufstieg in die ${leagueNames[game.leagueLevel]} wird nachträglich vollzogen! Aufstiegsprämie ${formatVal(getPromotionPrize(game.leagueLevel))}${sponsorPromoBonus > 0 ? ` plus ${formatVal(sponsorPromoBonus)} Sponsoren-Bonus` : ''}.`, 'screen-stadium');
             showToast(`🎉 Nachträglicher Aufstieg in die ${leagueNames[game.leagueLevel]}!`, 'success');
             return;
         }
@@ -25215,7 +25242,7 @@ function cleanupLegacyScoutState() {
             } else {
                 game.leagueLevel--;
                 let sponsorPromoBonus = applyPromotionRewards();
-                showNotice('🎉 Aufstieg geschafft!', `Glückwunsch zur Beförderung in die ${leagueNames[game.leagueLevel]}.\n\nAufstiegsprämie 1.500.000 €${sponsorPromoBonus > 0 ? ` plus ${formatVal(sponsorPromoBonus)} Sponsoren-Aufstiegsbonus` : ''}.`);
+                showNotice('🎉 Aufstieg geschafft!', `Glückwunsch zur Beförderung in die ${leagueNames[game.leagueLevel]}.\n\nAufstiegsprämie ${formatVal(getPromotionPrize(game.leagueLevel))}${sponsorPromoBonus > 0 ? ` plus ${formatVal(sponsorPromoBonus)} Sponsoren-Aufstiegsbonus` : ''}.`);
             }
         } else if ((myRank >= 17 || (myRank === 16 && relegation !== 'stayed')) && game.leagueLevel < NUM_LEAGUES - 1) {
             game.leagueLevel++;
@@ -26575,7 +26602,7 @@ const LEXICON_ENTRIES = [
         text: 'Verlängerungen sind Gehaltsgespräche: Stammspieler und Stars fordern mehr, ältere Spieler weniger. Zähe Charaktere lassen sich schwer drücken; nach zwei geplatzten Runden ist für die Saison Schluss.',
         tips: ['Eine Einsatzgarantie macht Spieler billiger - aber wird geprüft'] },
     { cat: 'Wettbewerbe', title: 'Auf- und Abstieg', screen: 'screen-league',
-        text: 'Platz 1 und 2 steigen direkt auf, Platz 3 spielt Relegation gegen den 16. der Liga darüber. Platz 16 muss in die Relegation, Platz 17 und 18 steigen ab.',
+        text: 'Platz 1 und 2 steigen direkt auf, Platz 3 spielt Relegation gegen den 16. der Liga darüber. Platz 16 muss in die Relegation, Platz 17 und 18 steigen ab. Die Aufstiegsprämie richtet sich nach der neuen Liga: 150.000 € (Oberliga) bis 5 Mio. € (Bundesliga).',
         tips: ['Bei Gleichstand entscheiden Tordifferenz, dann erzielte Tore'] },
     { cat: 'Wettbewerbe', title: 'Saisonvorschau & Experten-Check', screen: 'screen-dashboard',
         text: 'Vor jeder Saison tippen die Experten die ganze Tabelle; dein Platz ist dieselbe Erwartung, an der dich Vorstand und Mitgliederversammlung messen. Am Saisonende zeigt der Rückblick Tipp gegen Wirklichkeit, Überraschung, Flop und den Spieler der Saison (beste Ø-Note, mindestens 10 Ligaspiele).',
@@ -26594,7 +26621,7 @@ const LEXICON_ENTRIES = [
         tips: ['Ein Angebot gilt 6 Spieltage', 'Man kann es auch als Druckmittel für den Vorstand nutzen'] },
     { cat: 'Karriere', title: 'Karriere-Szenarien', screen: 'screen-dashboard',
         text: 'Beim neuen Spiel wählbar: Absteiger retten, Pleiteklub sanieren, Traditionsverein zurückführen, Meister oder Chaos - mit Ziel, Frist und 1-3 Sternen.',
-        tips: ['Danach geht die Karriere als freies Spiel weiter'] },
+        tips: ['Danach geht die Karriere als freies Spiel weiter', 'Pleiteklub: Kredite zählen als Schulden, jeder Zwangsverkauf kostet einen Stern - zwei lassen die Sanierung scheitern'] },
     { cat: 'Bedienung', title: 'Speichern', screen: 'screen-dashboard',
         text: 'Drei Speicher-Slots plus automatisches Speichern alle 5 Spieltage. Beim Start wird immer der zuletzt gespeicherte Stand geladen.',
         tips: ['Wenn der Browser das Speichern blockiert, Spielstand als Datei exportieren', 'In der Dateivorschau mancher Handys geht Speichern nicht - im Browser öffnen'] }
