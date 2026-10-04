@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.28', date: '04.10.2026', features: 'Phase 20: Spielstand-Sicherheit (Prüfung und Reparatur vor dem Laden, Sicherheitskopie, Ausweichen auf heilen Stand beim Start, Speicher-voll-Warnung, Export-Erinnerung)' };
+    const GAME_VERSION = { number: '3.29', date: '04.10.2026', features: 'Phase 20: Bedienung mit einer Hand (Weiter-Knopf, Zurück-Taste, Menü unten, Fenster von unten, Livespiel-Leiste, Linkshänder-Option)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

@@ -214,6 +214,8 @@
     let aktiverScreen = 'screen-dashboard';
     function showScreen(screenId) {
         playSound('click');
+        // Für die Zurück-Taste (js/one-hand.js): woher kam man?
+        if (typeof recordScreenVisit === 'function') recordScreenVisit(aktiverScreen, screenId);
         aktiverScreen = screenId;
         if (typeof onScreenShown === 'function') onScreenShown(screenId);
         if (typeof loescheBuchungskontext === 'function') loescheBuchungskontext();
@@ -291,6 +293,7 @@
     }
 
     function updateUI() {
+        if (typeof updateOneHandFab === 'function') updateOneHandFab();
         document.getElementById('top-money').innerText = formatVal(game.money);
         document.getElementById('top-holding-money').innerText = formatVal(holdingCompany.money);
         document.getElementById('top-fans').innerText = game.fans + '%';

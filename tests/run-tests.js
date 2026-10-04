@@ -796,6 +796,120 @@ async function testSaveSafety(browser) {
     await p2.close();
 }
 
+async function testOneHandControls(browser) {
+    console.log('\n[20.8] Bedienung mit einer Hand: Weiter-Knopf, Zurück-Taste, Fenster unten, Livespiel-Leiste');
+    const page = await browser.newPage({ viewport: { width: 412, height: 900 } });
+    const consoleErrors = [];
+    page.on('pageerror', e => consoleErrors.push(e.message));
+    await page.addInitScript(() => { try { localStorage.removeItem('anstoss_fm13_last_save'); localStorage.removeItem('anstoss_fm13_ui_fab'); } catch (e) { /* egal */ } });
+    await page.goto(GAME_PATH);
+    await page.waitForTimeout(500);
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            const H = window.innerHeight;
+            // Kopf: Sprache/Ton im Menü, Kennzahlen in einer Zeile
+            out.togglesImMenue = !!document.querySelector('#one-hand-settings-toggles #btn-lang-toggle') && !!document.querySelector('#one-hand-settings-toggles #btn-sound-toggle');
+            out.kopfHoehe = Math.round(document.querySelector('.app-header').getBoundingClientRect().height);
+            const fans = document.getElementById('top-fans').getBoundingClientRect(), board = document.getElementById('top-board').getBoundingClientRect();
+            out.fansEineZeile = Math.abs(fans.top - board.top) < 4;
+            // Untere Leiste: Menü-Knopf öffnet das Seitenmenü
+            const menue = document.getElementById('bottom-nav-menu');
+            out.menueUnten = menue.getBoundingClientRect().bottom > H - 80;
+            menue.click();
+            out.menueOffen = document.getElementById('app-sidebar').classList.contains('menu-open');
+            closeMenuDrawer();
+            // Weiter-Knopf: sichtbar im Daumenbereich, startet den Spieltag, links/aus umschaltbar
+            showScreen('screen-squad');
+            const fab = document.getElementById('one-hand-fab');
+            const f = fab.getBoundingClientRect();
+            out.fabRechtsUnten = f.height >= 40 && f.bottom > H - 160 && f.right > 412 - 40 && fab.innerText.includes('Spieltag 1');
+            cycleOneHandFabMode();
+            out.fabLinks = fab.getBoundingClientRect().left < 40;
+            cycleOneHandFabMode();
+            out.fabAus = fab.getBoundingClientRect().height === 0;
+            cycleOneHandFabMode();
+            // Seitenende liegt auch über dem Weiter-Knopf
+            showScreen('screen-dashboard');
+            window.scrollTo(0, document.documentElement.scrollHeight);
+            const fabTop = fab.getBoundingClientRect().top;
+            const unterste = Math.max(...[...document.querySelectorAll('.app-content button, .app-content .box')].filter(e => e.getBoundingClientRect().height > 0).map(e => e.getBoundingClientRect().bottom));
+            out.endeFrei = unterste <= fabTop + 1;
+            window.scrollTo(0, 0);
+            fab.click();
+            out.fabStartet = aktiverScreen === 'screen-prematch-press' && fab.getBoundingClientRect().height === 0;
+            // Zurück-Taste im laufenden Spiel: kein Verlassen, Hinweis
+            out.zurueckImSpiel = handleOneHandBack() === true && aktiverScreen === 'screen-prematch-press';
+            // Livespiel: Steuerleiste steht über der unteren Leiste, ohne zu scrollen
+            const direkt = [...document.querySelectorAll('#screen-prematch-press button')].find(b => b.innerText.includes('Direkt zum Spiel'));
+            direkt.click();
+            window.scrollTo(0, 0);
+            const navTop = document.querySelector('.bottom-nav-bar').getBoundingClientRect().top;
+            const szene = document.getElementById('btn-next-step').getBoundingClientRect();
+            out.liveLeiste = szene.height > 0 && szene.bottom <= navTop + 1 && szene.top > H / 2;
+            simulateRestOfMatch();
+            finishMatch();
+            out.nachSpiel = `notices ${noticeQueue.length} overlay ${(findOpenOverlay() || {}).id || '-'} screen ${aktiverScreen}`;
+            // Nach dem Spiel offene Meldungen/Fenster (Interview, Spieltagsmeldungen) zuerst wegklicken -
+            // sie würde die Zurück-Taste sonst richtigerweise zuerst schließen.
+            while (noticeQueue.length) dismissNotice();
+            // Das Interview verlangt eine Antwort (kein ✕) - erste Antwort wählen.
+            for (let i = 0; i < 5 && findOpenOverlay(); i++) { const ov = findOpenOverlay(); const zu = findOverlayCloseButton(ov) || ov.querySelector('button'); if (!zu) break; zu.click(); }
+            out.nachSpiel += ` -> overlay ${(findOpenOverlay() || {}).id || '-'}`;
+            // Zurück-Taste: Bildschirme rückwärts, Fenster und Menü schließen
+            showScreen('screen-dashboard'); showScreen('screen-squad'); showScreen('screen-finances');
+            handleOneHandBack();
+            out.zurueckKader = aktiverScreen === 'screen-squad';
+            handleOneHandBack();
+            out.zurueckStart = aktiverScreen === 'screen-dashboard';
+            toggleMenuDrawer();
+            handleOneHandBack();
+            out.menueZu = !document.getElementById('app-sidebar').classList.contains('menu-open') && aktiverScreen === 'screen-dashboard';
+            openPlayerDetail(squad[0].id);
+            const ov = document.getElementById('player-detail-overlay');
+            const box = ov.querySelector('.generic-modal-box').getBoundingClientRect();
+            out.fensterUnten = ov.classList.contains('show') && box.bottom > H - 20;
+            handleOneHandBack();
+            out.fensterZu = !ov.classList.contains('show');
+            // Tipp neben das Fenster schließt es
+            openPlayerDetail(squad[0].id);
+            ov.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+            out.tippDaneben = !ov.classList.contains('show');
+            // Meldungen: ohne Folgeaktion per Zurück weg, mit Folgeaktion bleibt sie
+            showNotice('Test', 'Info');
+            handleOneHandBack();
+            out.meldungWeg = document.getElementById('app-notice').style.display === 'none';
+            let gelaufen = false;
+            showNotice('Wichtig', 'Mit Folge', { danach: () => { gelaufen = true; } });
+            handleOneHandBack();
+            out.meldungBleibt = document.getElementById('app-notice').style.display !== 'none' && !gelaufen;
+            dismissNotice();
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Einhand-Test ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.togglesImMenue && r.kopfHoehe <= 130 && r.fansEineZeile, `Kopf kompakt: Sprache/Ton im Menü, Kennzahlen in einer Zeile (${r.kopfHoehe} px)`);
+        assert(r.menueUnten && r.menueOffen, 'Menü öffnet sich aus der unteren Leiste');
+        assert(r.fabRechtsUnten && r.fabLinks && r.fabAus, 'Weiter-Knopf unten rechts, für Linkshänder links, abschaltbar');
+        assert(r.endeFrei, 'Seitenende liegt über dem Weiter-Knopf');
+        assert(r.fabStartet && r.zurueckImSpiel, 'Weiter-Knopf startet den Spieltag; Zurück verlässt das laufende Spiel nicht');
+        assert(r.liveLeiste, 'Livespiel: Szene/Pause/Abpfiff stehen ohne Scrollen über der unteren Leiste');
+        assert(r.zurueckKader && r.zurueckStart && r.menueZu, `Zurück-Taste geht Bildschirme rückwärts und schließt das Menü (${r.zurueckKader}/${r.zurueckStart}/${r.menueZu}, nach dem Spiel: ${r.nachSpiel})`);
+        assert(r.fensterUnten && r.fensterZu && r.tippDaneben, 'Fenster fahren von unten ein und schließen per Zurück oder Tipp daneben');
+        assert(r.meldungWeg && r.meldungBleibt, 'Zurück schließt Infomeldungen, Meldungen mit Folgeaktion brauchen den Knopf');
+    }
+    // Echte Zurück-Taste (Browser-History): erst das Fenster, ein Druck auf dem Startbildschirm warnt nur.
+    await page.evaluate(() => openPlayerDetail(squad[0].id));
+    await page.goBack().catch(() => null);
+    await page.waitForTimeout(300);
+    const nachBack = await page.evaluate(() => ({ zu: !document.getElementById('player-detail-overlay').classList.contains('show'), da: typeof game === 'object' }));
+    assert(nachBack.zu && nachBack.da, 'Browser-Zurück schließt das Fenster und bleibt im Spiel');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 3).join(' | ')})`);
+    await page.close();
+}
+
 async function testSponsorConflict(browser) {
     console.log('\n[19.x] Sponsoren: Branchenkonflikt nennt den Konkurrenten und kostet 30 %');
     const { page, consoleErrors } = await freshPage(browser);
@@ -6488,6 +6602,7 @@ async function main() {
         testCleanupPart8,
         testScenarioBalance,
         testSaveSafety,
+        testOneHandControls,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,

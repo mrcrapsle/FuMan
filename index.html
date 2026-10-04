@@ -537,6 +537,12 @@
             <button class="nav-btn special-red" onclick="showScreen('screen-private')" data-i18n="nav_private">🎩 Spezial & Privatleben</button>
             <button class="nav-btn" onclick="showScreen('screen-lexicon')" data-i18n="nav_lexicon">📖 Spiel-Lexikon</button>
             <button class="nav-btn special-gold" onclick="showScreen('screen-admin')" data-i18n="nav_admin">🛠️ Admin & Cheats PRO</button>
+
+            <div class="one-hand-settings">
+                <div class="nav-category">Einstellungen</div>
+                <div id="one-hand-settings-fab"></div>
+                <div id="one-hand-settings-toggles" class="one-hand-toggles"></div>
+            </div>
         </nav>
 
         <!-- MAIN WORKSPACE -->
@@ -2562,6 +2568,7 @@
 <script src="js/office.js?v=2.1"></script>
     <script src="js/office-events.js?v=2.1"></script>
 <script src="js/ui-core.js?v=2.1"></script>
+<script src="js/one-hand.js?v=3.29"></script>
 <script src="js/render-dashboard.js?v=2.1"></script>
 <script src="js/industry.js?v=2.1"></script>
 <script src="js/holding.js?v=2.1"></script>
@@ -2747,6 +2754,7 @@
             initLanguage();
             warnIfStorageBlocked();
             maybeShowTutorial();
+            if (typeof initOneHand === 'function') initOneHand();
             // Kein Struktur-Selbsttest beim Start mehr: er öffnete alle Bildschirme und kostete
             // beim ersten Start nach jedem Update rund 1,5 s auf dem Handy. Die Testsuite prüft
             // dieselbe Struktur vor jeder Veröffentlichung (testStructuralSelfTest); im Admin-
@@ -2792,6 +2800,9 @@
         <button class="nav-btn bottom-nav-item" onclick="showScreen('screen-finances')"><span class="bn-icon">🏦</span>Finanzen</button>
         <button class="nav-btn bottom-nav-item" onclick="showScreen('screen-inbox')"><span class="bn-icon">📬</span>Postfach</button>
         <button class="nav-btn bottom-nav-item" onclick="quickSave()"><span class="bn-icon">💾</span>Speichern</button>
+        <button class="nav-btn bottom-nav-item" onclick="toggleMenuDrawer()" id="bottom-nav-menu"><span class="bn-icon">☰</span>Menü</button>
     </nav>
+    <!-- Einhand-Bedienung (js/one-hand.js): nächster Spieltag aus jedem Bildschirm -->
+    <button id="one-hand-fab" class="one-hand-fab" onclick="oneHandContinue()">▶ Spieltag 1</button>
 </body>
 </html>

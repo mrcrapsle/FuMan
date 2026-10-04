@@ -104,6 +104,8 @@
         }
         .kpi-chip span { font-size: 9px; color: var(--text-muted); display: block; letter-spacing: 0.4px; }
         .kpi-chip strong { font-size: 11px; color: var(--text-main); }
+        /* Werte in <strong> (Fans | Vorstand) bleiben in einer Zeile - die Regel oben gilt nur der Beschriftung */
+        .kpi-chip strong span { display: inline; font-size: inherit; color: inherit; letter-spacing: normal; }
         .sound-btn {
             background: rgba(90, 108, 255, 0.15); border: 1px solid rgba(90, 108, 255, 0.5); color: #dce8ff;
             font-size: 10px; font-weight: 800; padding: 6px 10px; border-radius: 999px; cursor: pointer;
@@ -344,7 +346,7 @@
            ersetzen, für bequeme Einhand-Bedienung auf dem Handy. */
         .bottom-nav-bar {
             position: fixed; bottom: 0; left: 0; right: 0; z-index: 500;
-            display: grid; grid-template-columns: repeat(6, 1fr);
+            display: grid; grid-template-columns: repeat(7, 1fr);
             background: linear-gradient(180deg, rgb(24,17,10), rgb(10,7,4)); /* undurchsichtig: kein Text scheint durch */ border-top: 1px solid rgba(228,197,140,0.25);
             box-shadow: 0 -6px 20px rgba(0,0,0,0.5);
             padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -1511,6 +1513,50 @@
         }
 
 /* Bewegung reduzieren (Systemeinstellung): keine Daueranimationen im Büro. */
+
+/* EINHAND-BEDIENUNG (Phase 20.8, js/one-hand.js): auf dem Handy liegt alles Wichtige im
+   Daumenbereich - Weiter-Knopf, Fenster von unten, Livespiel-Steuerung über der Leiste. */
+.one-hand-fab { display: none; }
+/* Einstellungen im Menü nur auf dem Handy (am Desktop gibt es keinen Weiter-Knopf, Sprache/Ton stehen im Kopf) */
+.one-hand-settings { display: none; }
+@media (max-width: 650px) { .one-hand-settings { display: block; } }
+.one-hand-toggles { display: flex; gap: 6px; flex-wrap: wrap; padding: 4px 2px; }
+.one-hand-toggles:empty { display: none; }
+@media (max-width: 650px) {
+    .one-hand-fab {
+        display: flex; align-items: center; gap: 4px;
+        position: fixed; right: 12px; bottom: calc(var(--bottom-nav-h, 58px) + 10px + env(safe-area-inset-bottom, 0px));
+        z-index: 600; min-height: 46px; padding: 0 16px; border-radius: 999px;
+        border: 2px solid rgba(240, 230, 210, 0.75); cursor: pointer;
+        background: linear-gradient(135deg, #f0d98a, var(--accent)); color: #241800;
+        font-size: 13px; font-weight: 900; font-family: inherit;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.55), 0 0 14px var(--accent-glow);
+    }
+    body.fab-left .one-hand-fab { right: auto; left: 12px; }
+    .one-hand-fab.fab-hidden, body.fab-off .one-hand-fab { display: none; }
+    /* Seitenende auch über dem Weiter-Knopf (Leiste 72 px + Knopf ~60 px) */
+    body { padding-bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
+    body.fab-off { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
+
+    /* Fenster fahren von unten ein: Knöpfe im Daumenbereich, Tipp daneben schließt */
+    .generic-modal-overlay { align-items: flex-end; padding: 8px 6px 0; }
+    .generic-modal-box { border-radius: 14px 14px 0 0; max-height: 86vh; padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+    .app-notice-overlay { align-items: flex-end; padding-bottom: calc(var(--bottom-nav-h, 58px) + 12px); }
+
+    /* Livespiel: Szene/Pause/Abpfiff bleiben über der unteren Leiste stehen */
+    #matchday-controls, #btn-finish-match {
+        position: sticky; bottom: calc(var(--bottom-nav-h, 58px) + 6px + env(safe-area-inset-bottom, 0px)); z-index: 40;
+        background: rgb(16, 12, 8); border: 1px solid rgba(228,197,140,0.25); border-radius: 10px;
+        padding: 6px; box-shadow: 0 -6px 18px rgba(0,0,0,0.55);
+    }
+
+    /* Kopf: Kennzahlen in EINER wischbaren Zeile (Sprache/Ton liegen im Menü) */
+    .header-kpis { flex-wrap: nowrap; overflow-x: auto; width: 100%; scrollbar-width: none; }
+    .header-kpis::-webkit-scrollbar { display: none; }
+    .header-kpis .kpi-chip { flex: 0 0 auto; padding: 4px 8px; }
+    .header-kpis .kpi-chip strong { white-space: nowrap; }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .office-mote, .off-weather-rain, .off-weather-snow, .off-weather-storm,
     .off-phone-ringing .off-phone-handset, .office-quicknav-alert, .off-visitor-badge { animation: none !important; }
