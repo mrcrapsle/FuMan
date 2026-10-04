@@ -90,6 +90,9 @@ function startCupLiveFlow(tie) {
     const oppObj = leaguesData.flat().find(t => t.name === oppName) || null;
     renderPreMatchAnalysis(oppObj, oppName);
     if (typeof renderOppTacticBox === 'function') renderOppTacticBox(null);
+    // Erzfeind-Kasten leeren (sonst stünde dort noch das letzte Ligaspiel), Ansprache anbieten.
+    if (typeof renderNemesisPrematch === 'function') renderNemesisPrematch(null);
+    if (typeof renderPregameTalkBox === 'function') renderPregameTalkBox();
     if (typeof renderFatigueWarning === 'function') renderFatigueWarning();
     const box = document.getElementById('prematch-analysis-box');
     const danach = tie.comp === 'relegation' ? '' : '<br><span style="color:var(--text-muted);">Das Ligaspiel folgt direkt im Anschluss.</span>';

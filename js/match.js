@@ -311,6 +311,7 @@
         renderPreMatchAnalysis(oppObj, oppName);
         if (typeof renderOppTacticBox === 'function') renderOppTacticBox(oppObj);
         if (typeof renderNemesisPrematch === 'function') renderNemesisPrematch(oppObj);
+        if (typeof renderPregameTalkBox === 'function') renderPregameTalkBox();
         renderFatigueWarning();
 
         renderPressConference({ oppName, oppStr, isHome, cup: false });
@@ -416,6 +417,7 @@
         if (typeof resetCoTrainerLive === 'function') resetCoTrainerLive();
         if (!isCup && typeof applyDerbyPreparation === 'function') applyDerbyPreparation(oppName);
         if (!isCup && typeof applyNemesisLiveModifier === 'function') applyNemesisLiveModifier(oppTeamObj, isHome);
+        if (typeof applyPregameTalk === 'function') applyPregameTalk();
 
         document.getElementById('btn-next-step').style.display = 'inline-block';
         document.getElementById('btn-finish-match').style.display = 'none';
@@ -1044,6 +1046,7 @@
 
     function endMatchSimulation() {
         playSound('whistle');
+        if (typeof resolvePregameTalk === 'function') resolvePregameTalk();
         stopLiveTickerAutoplay();
         if (currentMatch.stats) {
             let log = document.getElementById('ticker-log');

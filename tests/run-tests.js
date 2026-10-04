@@ -1204,6 +1204,79 @@ async function testCoTrainerLive(browser) {
     await page.close();
 }
 
+async function testPregameTalk(browser) {
+    console.log('\n[22.1] Kabinenansprache vor dem Anpfiff: Lage und Charaktere entscheiden, Druck hat Folgen');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            game.sackPending = false;
+            startMatchdayFlow();
+            const box = () => document.getElementById('prematch-talk-box').innerHTML;
+            out.box = box().includes('KABINENANSPRACHE') && box().includes('Keine Überheblichkeit') && box().includes('nichts zu verlieren') && box().includes('zählt nur der Sieg');
+            const elf = squad.filter(p => lineup.includes(p.id));
+            const avg = elf.reduce((a, p) => a + p.strength, 0) / elf.length;
+            const merk = { ...pendingMatchInfo };
+            game.pregameTalkHistory = [];
+            elf.forEach(p => { p.character = 'Ruhig'; });
+            pendingMatchInfo.oppStr = avg - 10;
+            out.situationFav = getPregameSituation() === 'favorit';
+            const fokusFav = computePregameTalkBonus('fokus'), mutFav = computePregameTalkBonus('mut');
+            pendingMatchInfo.oppStr = avg + 10;
+            const fokusAus = computePregameTalkBonus('fokus'), mutAus = computePregameTalkBonus('mut');
+            out.lage = fokusFav > fokusAus && mutAus > mutFav && mutFav < 0;
+            elf.forEach(p => { p.character = 'Ehrgeizig'; });
+            const druckStark = computePregameTalkBonus('druck');
+            elf.forEach(p => { p.character = 'Hitzköpfig'; });
+            const druckNervoes = computePregameTalkBonus('druck');
+            out.charakter = druckStark > 2 && druckNervoes < -1;
+            game.pregameTalkHistory = ['mut', 'mut'];
+            const voll = (() => { game.pregameTalkHistory = []; return computePregameTalkBonus('mut'); })();
+            game.pregameTalkHistory = ['mut', 'mut'];
+            out.abgenutzt = isPregameTalkWornOut('mut') && Math.abs(computePregameTalkBonus('mut') - voll / 2) < 0.06 && box().length > 0;
+            renderPregameTalkBox();
+            out.abgenutztAnzeige = box().includes('kennen sie schon');
+            // Wählen, einmal pro Spiel, Wirkung im Livespiel
+            Object.assign(pendingMatchInfo, merk);
+            game.pregameTalkHistory = [];
+            elf.forEach(p => { p.character = 'Ruhig'; });
+            choosePregameTalk('fokus');
+            const t = game.pregameTalk;
+            choosePregameTalk('mut');
+            out.einmal = game.pregameTalk === t && t.type === 'fokus' && box().includes('✔');
+            const direkt = [...document.querySelectorAll('#screen-prematch-press button')].find(b => b.innerText.includes('Direkt zum Spiel'));
+            direkt.click();
+            out.ticker = document.getElementById('ticker-log').innerHTML.includes('Kabinenansprache') && t.used === true && game.pregameTalkHistory.slice(-1)[0] === 'fokus';
+            // Druck: Niederlage kostet Moral
+            currentMatch.pregameTalk = 'druck';
+            if (currentMatch.isHome) { currentMatch.homeGoals = 0; currentMatch.awayGoals = 2; } else { currentMatch.awayGoals = 0; currentMatch.homeGoals = 2; }
+            squad.forEach(p => { p.morale = 60; });
+            resolvePregameTalk();
+            out.druckFolge = squad.every(p => p.morale === 56);
+            resolvePregameTalk();
+            out.nurEinmal = squad.every(p => p.morale === 56);
+            simulateRestOfMatch(); finishMatch();
+            renderNemesisPrematch(null);
+            out.nemesisLeer = document.getElementById('prematch-nemesis-box').innerHTML === '';
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Kabinenansprache ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.box, 'Spielvorbericht bietet drei Ansprachen');
+        assert(r.situationFav && r.lage, 'Lage entscheidet: Konzentration als Favorit, Mut als Außenseiter (als Favorit kontraproduktiv)');
+        assert(r.charakter, 'Charaktere entscheiden: Druck beflügelt Ehrgeizige, lähmt Hitzköpfe');
+        assert(r.abgenutzt && r.abgenutztAnzeige, 'Dieselbe Rede dreimal hintereinander wirkt nur halb und ist markiert');
+        assert(r.einmal && r.ticker, 'Eine Ansprache pro Spiel, Wirkung steht im Livespiel-Ticker');
+        assert(r.druckFolge && r.nurEinmal, 'Druck-Rede: Niederlage kostet einmalig Moral');
+        assert(r.nemesisLeer, 'Erzfeind-Kasten wird ohne Gegner (Pokal) geleert');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testSponsorConflict(browser) {
     console.log('\n[19.x] Sponsoren: Branchenkonflikt nennt den Konkurrenten und kostet 30 %');
     const { page, consoleErrors } = await freshPage(browser);
@@ -6903,6 +6976,7 @@ async function main() {
         testDerbyWeek,
         testNemesisCoach,
         testCoTrainerLive,
+        testPregameTalk,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,

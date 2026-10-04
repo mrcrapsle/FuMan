@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.32', date: '04.10.2026', features: 'Phase 21: Co-Trainer im Livespiel (Hinweise aus dem echten Spielstand je Ausbaustufe, Ein-Tipp-Aktionen)' };
+    const GAME_VERSION = { number: '3.33', date: '04.10.2026', features: 'Phase 22: Kabinenansprache vor dem Anpfiff (Lage und Spielercharaktere entscheiden, Druck-Rede mit Folgen)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
