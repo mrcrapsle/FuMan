@@ -4609,7 +4609,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.36', date: '04.10.2026', features: 'Phase 22: Schiedsrichter-Kritik nach dem Spiel (strittige Szenen, Kritik/Beschwerde/Schweigen, Groll des Schiedsrichters)' };
+    const GAME_VERSION = { number: '3.37', date: '04.10.2026', features: 'Phase 22: Medizincheck bei Transfers (verdeckte Befunde, Check im Transferpoker senkt die Ablöse, Sofortkauf blind)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -5879,7 +5879,9 @@ function compareTableRows(a, b) {
             <span class="label">Persönlichkeit:</span><span class="val">${p.personality || '-'}</span>
             <span class="label">Charakter:</span><span class="val">${p.character || '-'}</span>
             <span class="label">Berater:</span><span class="val">${p.agent ? `🕴️ ${p.agent.name} (${Math.round(p.agent.feePct * 100)}%)` : 'Kein Berater'}</span>
-            <span class="label">Verletzungsanfälligkeit:</span><span class="val" style="color:${(p.timesInjured||0) >= 3 ? 'var(--danger)' : ((p.timesInjured||0) >= 1 ? 'var(--accent)' : 'var(--primary)')};">${(p.timesInjured||0) === 0 ? 'Robust' : `${p.timesInjured}× verletzt`}</span>
+            <span class="label">Verletzungsanfälligkeit:</span>${marketPlayers.includes(p) && typeof getMedicalTag === 'function'
+                ? `<span class="val">${p.medical && p.medical.checked ? describeMedical(p.medical) : '❓ unbekannt - Medizincheck im Transferpoker'}</span>`
+                : `<span class="val" style="color:${(p.timesInjured||0) >= 3 || p.chronicIssue ? 'var(--danger)' : ((p.timesInjured||0) >= 1 ? 'var(--accent)' : 'var(--primary)')};">${(p.timesInjured||0) === 0 ? 'Robust' : `${p.timesInjured}× verletzt`}${p.chronicIssue ? ' · 🩹 chronisch (×1,5 Risiko)' : ''}</span>`}
             <span class="label">Kabinen-Freund:</span><span class="val">${p.friendPlayerId ? (squad.find(x => x.id === p.friendPlayerId)?.name || '-') : 'Keiner'}</span>
             <span class="label">Elfmeter-Quote:</span><span class="val">${(p.penaltiesTaken || 0) > 0 ? `${p.penaltiesScored}/${p.penaltiesTaken} (${Math.round((p.penaltiesScored/p.penaltiesTaken)*100)}%)` : 'Noch keine Schüsse'}</span>
             <span class="label">Publikumsliebling:</span><span class="val">${p.isCrowdFavorite ? '❤️ Ja (aktuelle Saison)' : 'Nein'}</span>
@@ -6813,6 +6815,7 @@ function compareTableRows(a, b) {
             if (p.individualFocus === 'elfmeter') roleBadge += ' <span title="Elfmeter-Spezialist" style="font-size:9px;">🥅</span>';
             if (p.isCrowdFavorite) roleBadge += ' <span title="Publikumsliebling der Saison" style="font-size:9px;">❤️</span>';
             if ((p.timesInjured || 0) >= 2) roleBadge += ' <span title="Wird vom Physio-Stab individuell geschont (verletzungsanfällig)" style="font-size:9px;">🛡️</span>';
+            if (p.chronicIssue) roleBadge += ' <span title="Chronische Probleme: dauerhaft x1,5 Verletzungsrisiko" style="font-size:9px;">🩹</span>';
             let traitBadge = (p.trait && p.trait !== 'Kein') ? `<span class="badge badge-trait">${p.trait}</span>` : '';
             let posRoles = getRolesForPosition(p.pos);
             let roleOptions = '<option value="">Keine Rolle</option>' + posRoles.map(r => `<option value="${r.id}" ${p.role === r.id ? 'selected' : ''}>${r.name}</option>`).join('');
@@ -7226,6 +7229,7 @@ function getPlayerInjuryRiskIndex(p) {
     r *= 1 + Math.min(2.5, (p.timesInjured || 0) * 0.18);
     if ((p.timesInjured || 0) >= 2) r *= 0.72;
     if (game.injuryPreventionProgram) r *= 0.82;
+    if (typeof getChronicInjuryFactor === 'function') r *= getChronicInjuryFactor(p);
     if (p.fitness !== undefined && p.fitness < 60) r *= 1.15;
     return r;
 }
@@ -10820,6 +10824,8 @@ function finalizePlayerPurchase(p, ablose, gehalt) {
     marketPlayers.splice(idx, 1);
     if (transferPoker && transferPoker.playerId === p.id) transferPoker = null;
     showToast(`✅ ${p.name} kommt von ${p.sellerClub || 'seinem Verein'} für ${formatVal(ablose)}${agentFee > 0 ? ` (+ ${formatVal(agentFee)} Provision an ${p.agent.name})` : ''}.`, 'success', 4500);
+    // Medizincheck (js/medical-check.js): ein verdeckter Befund wird jetzt Wirklichkeit.
+    if (typeof applyMedicalOnArrival === 'function') applyMedicalOnArrival(p);
     renderTransferView();
     updateUI();
     return true;
@@ -10979,6 +10985,7 @@ function renderTransferPokerBox() {
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
                 <button onclick="signPokerDeal()" class="btn-action">✍️ Unterschreiben</button>
                 <button onclick="haggleWage()" class="btn-secondary" ${t.wageTalked ? 'disabled' : ''}>💬 Gehalt drücken (-10 %)</button>
+                ${typeof getMedicalCheckFee === 'function' ? `<button onclick="runMedicalCheck()" class="btn-secondary" style="grid-column: span 2;" ${p.medical && p.medical.checked ? 'disabled' : ''}>${p.medical && p.medical.checked ? getMedicalTag(p) : `🩺 Medizincheck (${formatVal(getMedicalCheckFee(t.agreedFee))}) - ohne ihn unterschreibst du blind`}</button>` : ''}
                 <button onclick="closeTransferPoker()" class="btn-secondary" style="grid-column: span 2;">Abbrechen</button>
             </div>` : `
             <div style="display:flex; align-items:center; justify-content:space-between; gap:4px; margin-bottom:6px;">
@@ -11598,7 +11605,7 @@ function renderTransferPokerBox() {
                     <div>PAS<br><strong>${p.passing}</strong></div>
                     <div>DEF<br><strong>${p.defense}</strong></div>
                 </div>
-                <div style="font-size:9px; color:var(--text-muted); margin-bottom:4px;">🏟️ ${ensureTransferTerms(p).sellerClub} · Marktwert ${formatVal(p.marketValue)}${p.pokerBroken ? ' · <span style="color:var(--danger);">Gespräche abgebrochen</span>' : ''}</div>
+                <div style="font-size:9px; color:var(--text-muted); margin-bottom:4px;">🏟️ ${ensureTransferTerms(p).sellerClub} · Marktwert ${formatVal(p.marketValue)}${typeof getMedicalTag === 'function' ? ` · ${getMedicalTag(p)}` : ''}${p.pokerBroken ? ' · <span style="color:var(--danger);">Gespräche abgebrochen</span>' : ''}</div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
                     <button onclick="openTransferPoker(${idx})" class="btn-action" ${p.pokerBroken ? 'disabled' : ''}>🃏 Verhandeln</button>
                     <button onclick="buyPlayer(${idx})" class="btn-secondary">Sofortkauf [${formatVal(p.askingPrice)}]</button>
@@ -26526,6 +26533,104 @@ function getRefereeGrudgeNote(refId, refName) {
 
 </script>
 <script>
+/* eslint-disable no-undef */
+// Medizincheck bei Transfers (Phase 22.5): jeder Spieler auf dem Transfermarkt hat einen
+// verdeckten Befund (p.medical, einmal je Marktspieler gewürfelt, ältere Spieler öfter):
+//   ok         unauffällig
+//   chronisch  chronische Probleme - im Kader dauerhaft x1,5 Verletzungsrisiko (p.chronicIssue)
+//              und 3-5 frühere Verletzungen in der Akte (p.timesInjured)
+//   verletzt   kommt verletzt an und fällt 2-5 Spiele aus
+// Den Check gibt es nur im Transferpoker NACH der Ablöse-Einigung (wie im echten Fußball vor
+// der Unterschrift): er kostet 3 % der Ablöse (mit Chef-Physio die Hälfte, mind. 1.500 €).
+// Findet er etwas, verhandelt der Verein die Ablöse automatisch nach (chronisch -20 %,
+// verletzt -15 %) - oder man lässt den Spieler ganz sausen. Der Sofortkauf bleibt blind: ein
+// verdeckter Befund kommt dann erst nach der Unterschrift ans Licht.
+
+const MEDICAL_CHECK_RATE = 0.03;
+const MEDICAL_CHECK_MIN = 1500;
+const MEDICAL_DISCOUNT = { chronisch: 0.8, verletzt: 0.85 };
+const CHRONIC_INJURY_FACTOR = 1.5;
+
+function ensureMedicalProfile(p) {
+    if (!p.medical) {
+        const r = Math.random();
+        const chronischQuote = 0.12 + ((p.age || 25) >= 29 ? 0.1 : 0);
+        if (r < chronischQuote) p.medical = { issue: 'chronisch', injuries: 3 + Math.floor(Math.random() * 3), checked: false };
+        else if (r < chronischQuote + 0.1) p.medical = { issue: 'verletzt', weeks: 2 + Math.floor(Math.random() * 4), checked: false };
+        else p.medical = { issue: 'ok', checked: false };
+    }
+    return p.medical;
+}
+
+function getMedicalCheckFee(ablose) {
+    const physio = staffMembers.physio && staffMembers.physio.hired ? 0.5 : 1;
+    return Math.max(MEDICAL_CHECK_MIN, Math.round(ablose * MEDICAL_CHECK_RATE * physio / 100) * 100);
+}
+
+function describeMedical(m) {
+    if (m.issue === 'chronisch') return `chronische Probleme (${m.injuries} frühere Verletzungen, dauerhaft höheres Verletzungsrisiko)`;
+    if (m.issue === 'verletzt') return `aktuell verletzt (fällt ${m.weeks} Spiele aus)`;
+    return 'unauffällig';
+}
+
+// Kurzer Befund für Marktliste und Spieler-Popup.
+function getMedicalTag(p) {
+    const m = p.medical;
+    if (!m || !m.checked) return '🩺 ungeprüft';
+    return m.issue === 'ok' ? '🩺 Befund unauffällig' : `⚠️ ${m.issue === 'chronisch' ? 'chronische Probleme' : `verletzt (${m.weeks} Sp.)`}`;
+}
+
+// Transferpoker, nach der Ablöse-Einigung.
+function runMedicalCheck() {
+    const p = typeof getPokerPlayer === 'function' ? getPokerPlayer() : null;
+    const t = transferPoker;
+    if (!p || !t || !t.agreedFee) { showToast('Der Medizincheck kommt erst, wenn die Ablöse vereinbart ist.', 'error'); return; }
+    const m = ensureMedicalProfile(p);
+    if (m.checked) { showToast(`${p.name} wurde schon untersucht: ${describeMedical(m)}.`, 'error'); return; }
+    const gebuehr = getMedicalCheckFee(t.agreedFee);
+    if (game.money < gebuehr) { showToast(`Der Medizincheck kostet ${formatVal(gebuehr)} - so viel ist nicht auf dem Konto.`, 'error'); return; }
+    setzeBuchungskontext('🩺 Medizincheck');
+    game.money -= gebuehr;
+    loescheBuchungskontext();
+    m.checked = true;
+    playSound('click');
+    if (m.issue === 'ok') {
+        t.log.push(`🩺 Medizincheck (${formatVal(gebuehr)}): ${p.name} ist kerngesund.`);
+    } else {
+        const faktor = MEDICAL_DISCOUNT[m.issue];
+        const alt = t.agreedFee;
+        t.agreedFee = Math.round(alt * faktor / 1000) * 1000;
+        p.askingPrice = Math.round(p.askingPrice * faktor / 1000) * 1000;
+        p.sellerMinimum = Math.min(p.askingPrice, Math.round(p.sellerMinimum * faktor / 1000) * 1000);
+        t.log.push(`⚠️ Medizincheck (${formatVal(gebuehr)}): ${describeMedical(m)}. ${p.sellerClub} senkt die Ablöse von ${formatVal(alt)} auf ${formatVal(t.agreedFee)} - oder du lässt es.`);
+    }
+    renderTransferPokerBox();
+    updateUI();
+}
+
+// finalizePlayerPurchase(): der Befund wird Wirklichkeit.
+function applyMedicalOnArrival(p) {
+    const m = ensureMedicalProfile(p);
+    if (m.issue === 'chronisch') {
+        p.chronicIssue = true;
+        p.timesInjured = Math.max(p.timesInjured || 0, m.injuries);
+    } else if (m.issue === 'verletzt') {
+        p.injured = Math.max(p.injured || 0, m.weeks);
+    }
+    if (m.issue !== 'ok' && !m.checked) {
+        addInboxMessage('verletzung', `🩺 Böse Überraschung: ${p.name}`, `Ohne Medizincheck verpflichtet - jetzt stellt die Vereinsärztin fest: ${describeMedical(m)}.`, 'screen-squad');
+        showToast(`🩺 Ohne Medizincheck: ${p.name} - ${describeMedical(m)}.`, 'error', 6000);
+    }
+    delete p.medical;
+}
+
+// Verletzungswurf (processPostMatchRoutine) und Risikoanzeige.
+function getChronicInjuryFactor(p) {
+    return p && p.chronicIssue ? CHRONIC_INJURY_FACTOR : 1;
+}
+
+</script>
+<script>
 // Mitgliederversammlung: nach jedem Saisonabschluss legt der Verein vor seinen Mitgliedern
 // Rechenschaft ab. Grundlage sind echte Zahlen (Endplatz gegen die Erwartung zu Saisonbeginn,
 // Auf-/Abstieg, Finanzergebnis, Fanstimmung). Du wählst Rede und Beitragsantrag, dann wird
@@ -29497,6 +29602,7 @@ function cleanupLegacyScoutState() {
             // mitzubelasten.
             if ((p.timesInjured || 0) >= 2) individualInjuryChance *= 0.72;
             if (typeof getAgeInjuryFactor === 'function') individualInjuryChance *= getAgeInjuryFactor(p);
+            if (typeof getChronicInjuryFactor === 'function') individualInjuryChance *= getChronicInjuryFactor(p);
             if (Math.random() < individualInjuryChance) {
                 let baseDuration = Math.floor(Math.random() * 4) + 1; // 1-4 Spiele Ausfallzeit
                 let reduction = 1 - (campusBuildings.reha.lvl * 0.08) - (staffMembers.physio.hired ? 0.5 : 0);
@@ -32104,6 +32210,9 @@ const LEXICON_ENTRIES = [
     { cat: 'Transfers', title: 'Transferpoker', screen: 'screen-transfer',
         text: 'Jeder Marktspieler gehört einem KI-Verein mit Forderung und verdeckter Schmerzgrenze. Unter der Grenze gibt es keine Zusage, sehr niedrige Angebote kosten doppelt Geduld. Bei begehrten Spielern kann ein Rivale mitbieten und den Spieler wegschnappen.',
         tips: ['Sofortkauf zahlt die Forderung', 'Nach der Einigung folgt das Gehaltsgespräch'] },
+    { cat: 'Transfers', title: 'Medizincheck', screen: 'screen-transfer',
+        text: 'Jeder Spieler auf dem Transfermarkt hat einen verdeckten Befund: unauffällig, chronische Probleme (im Kader dauerhaft ×1,5 Verletzungsrisiko, 3-5 Verletzungen in der Akte) oder aktuell verletzt (fällt 2-5 Spiele aus). Ältere Spieler haben öfter chronische Probleme. Im Transferpoker kannst du nach der Ablöse-Einigung einen Medizincheck machen lassen: 3 % der Ablöse (mit Chef-Physio die Hälfte, mindestens 1.500 €). Findet er etwas, senkt der Verein die Ablöse (chronisch −20 %, verletzt −15 %) - oder du brichst ab.',
+        tips: ['Der Sofortkauf ist blind - ein Befund zeigt sich erst nach der Unterschrift', 'Bei teuren und älteren Spielern lohnt sich der Check fast immer', 'Chronische Probleme erkennst du im Kader am 🩹'] },
     { cat: 'Transfers', title: 'Transferfenster', screen: 'screen-transfer',
         text: 'Sommer: Spieltage 1-3, Winter: Spieltage 18-20. Am letzten Tag (Deadline-Day) gibt es Schnäppchen und hektische Wechsel.',
         tips: ['Der Transfer-Ticker zeigt, wohin die Stars der anderen Vereine wechseln'] },
