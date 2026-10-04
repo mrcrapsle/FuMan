@@ -1,6 +1,6 @@
 
     // ==========================================
-    // SAISONPLANUNG-ÜBERSICHT (NEU)
+    // SAISONPLANUNG-ÜBERSICHT
     // ==========================================
     // Zeigt auf einen Blick, wer wirklich für die kommende Saison zur Verfügung steht: welche
     // Verträge bald auslaufen, wer zurück zum Leihverein muss, und wo eine Entscheidung ansteht.
@@ -199,7 +199,7 @@
     }
 
     // ==========================================
-    // AUSSTIEGSKLAUSEL (NEU)
+    // AUSSTIEGSKLAUSEL
     // ==========================================
     // Eine feste Ablösesumme, ab der jeder interessierte Verein den Spieler sofort und ohne
     // Verhandlung abwerben kann - wie im echten Fußball üblich. Eine niedrige Klausel macht

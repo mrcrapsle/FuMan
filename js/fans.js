@@ -48,7 +48,7 @@
         }).join('');
     }
 
-    // Reiter-Navigation (NEU): teilt den bisher sehr langen Fans-Screen in 3 Reiter auf.
+    // Reiter-Navigation: teilt den bisher sehr langen Fans-Screen in 3 Reiter auf.
     function setFansTab(tab) {
         playSound('click');
         ['sicherheit', 'gruppen', 'programme'].forEach(t => {
@@ -135,7 +135,7 @@
     }
 
     // ==========================================
-    // EIGENE AUSBILDUNG VON ORDNERN & SICHERHEITSKRÄFTEN (NEU)
+    // EIGENE AUSBILDUNG VON ORDNERN & SICHERHEITSKRÄFTEN
     // ==========================================
     // Bisher gab es nur "Ordner mieten" (game.stewards, pro Spieltag neu gebucht, nie
     // wirklich abgerechnet - siehe Fix unten) ohne jede Qualitäts-Ebene. Jetzt kann der
@@ -224,7 +224,7 @@
         bucheInSpieltagsjournal('🦺 Ordnerdienst', kosten);
     }
 
-    // Automatisierung für den Sicherheitschef (NEU): führt Schulungen automatisch durch,
+    // Automatisierung für den Sicherheitschef: führt Schulungen automatisch durch,
     // sobald möglich - passend zum bestehenden Muster bei anderen Personal-Rollen.
     const SEC_CHIEF_TASKS = [
         { id: 'aus', name: 'Manuell', desc: 'Du entscheidest selbst über Ordner-Schulungen und Festanstellungen.' },

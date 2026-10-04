@@ -67,7 +67,7 @@
         if (!p) { game.activeUltimatumPlayerId = null; return; } // Spieler ist anderweitig weg (z.B. verkauft)
 
         let remaining = game.ultimatumDeadlineMatchday - game.matchday;
-        // Öffentliche Spieler-Forderung an die Presse (NEU): geht die Frist zäh voran, kann
+        // Öffentliche Spieler-Forderung an die Presse: geht die Frist zäh voran, kann
         // der Spieler von sich aus an die Presse gehen - erhöht den Druck auf den Vorstand,
         // bringt dem Spieler aber gleichzeitig Sympathie bei den eigenen Fans ein, die sein
         // offenes Wort oft nachvollziehen können.

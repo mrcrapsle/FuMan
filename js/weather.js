@@ -30,7 +30,7 @@
         for (let w of WEATHER_TYPES) {
             if (roll < w.weight) {
                 currentWeather = w;
-                // Rasenheizung (NEU, Bugfix): hatte bisher außer einem kleinen Stadionwert-
+                // Rasenheizung (Bugfix): hatte bisher außer einem kleinen Stadionwert-
                 // Bonus KEINERLEI Spielwirkung - dabei ist die Neutralisierung von
                 // Schnee/Frost-Nachteilen genau ihr realer Zweck. Bei installierter
                 // Rasenheizung bleibt der Platz bei Schnee bespielbar wie bei normalem Wetter.
@@ -38,19 +38,19 @@
                     currentWeather = { ...w, fitLossMult: 1.0, injuryMult: 1.0, cardMult: 1.0, goalMult: 1.0, attendanceMult: 1.0, neutralizedBySnow: true };
                     addInboxMessage('vertrag', '❄️ Schnee, aber der Rasen bleibt bespielbar!', 'Dank der Rasenheizung sind die Auswirkungen des Schneefalls komplett neutralisiert - der Platz ist in bestem Zustand.', 'screen-calendar');
                 }
-                // Stadiondach (NEU, Bugfix): hatte bisher außer einem visuellen Overlay und
+                // Stadiondach (Bugfix): hatte bisher außer einem visuellen Overlay und
                 // etwas Stadionwert KEINERLEI Spielwirkung - ein überdachtes Stadion sollte
                 // aber logischerweise gegen Regen und Sturm unempfindlich sein.
                 if ((w.name === 'Regen' || w.isStorm) && typeof stadium !== 'undefined' && stadium.dach) {
                     currentWeather = { ...w, fitLossMult: 1.0, injuryMult: 1.0, cardMult: 1.0, goalMult: 1.0, attendanceMult: 1.0, neutralizedByRoof: true };
                     addInboxMessage('vertrag', `${w.icon} ${w.name}, aber das Dach hält dicht!`, `Dank der Komplett-Überdachung bleibt das Stadion von den Auswirkungen des ${w.name.toLowerCase()}s komplett verschont.`, 'screen-calendar');
                 }
-                // Klimaanlage (NEU, Stadion-Erweiterung): neutralisiert Hitze-Wetter komplett.
+                // Klimaanlage (Stadion-Erweiterung): neutralisiert Hitze-Wetter komplett.
                 if (w.name === 'Hitze' && typeof stadium !== 'undefined' && stadium.upgrades?.klimaanlage) {
                     currentWeather = { ...w, fitLossMult: 1.0, injuryMult: 1.0, cardMult: 1.0, goalMult: 1.0, attendanceMult: 1.0, neutralizedByAC: true };
                     addInboxMessage('vertrag', `${w.icon} Hitze, aber die Klimaanlage hält kühl!`, 'Dank der Klimaanlage sind alle negativen Auswirkungen der Hitzewelle neutralisiert.', 'screen-calendar');
                 }
-                // Sturm-Warnung (NEU): dramatische Vorwarnung statt einer echten
+                // Sturm-Warnung: dramatische Vorwarnung statt einer echten
                 // Spielverlegung (die den Spielplan strukturell gefährden würde) - viele
                 // Fans bleiben aus Sorge vor einer Absage zu Hause (siehe attendanceMult).
                 if (w.isStorm) addInboxMessage('vertrag', '🌪️ Sturmwarnung vor dem nächsten Spiel!', 'Der Deutsche Wetterdienst warnt vor Sturmböen - das Spiel findet trotzdem statt, aber viele Fans dürften der Warnung folgen und zu Hause bleiben.', 'screen-calendar');

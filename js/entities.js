@@ -270,7 +270,7 @@
     // damit sich die Provision nicht nur an einer einzelnen Stelle bemerkbar macht.
     function getAgentFee(p, baseAmount) {
         if (!p || !p.agent) return 0;
-        // Berater-Beziehungspflege (NEU): eine gepflegte Beziehung zum Berater senkt seine
+        // Berater-Beziehungspflege: eine gepflegte Beziehung zum Berater senkt seine
         // Provision spürbar - Berater erinnern sich, mit wem sie gut Geschäfte machen.
         let relationship = (typeof game !== 'undefined' && game.agentRelationships) ? (game.agentRelationships[p.agent.name] || 0) : 0;
         let effectiveFeePct = Math.max(0.01, p.agent.feePct - relationship * 0.001);

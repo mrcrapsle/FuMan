@@ -1,6 +1,6 @@
 
     // ==========================================
-    // ACHIEVEMENTS: VON TROPHÄEN LOSGELÖSTE MEILENSTEINE (NEU)
+    // ACHIEVEMENTS: VON TROPHÄEN LOSGELÖSTE MEILENSTEINE
     // ==========================================
     // Trophäen (game.trophies) markieren sportliche Erfolge (Meisterschaft, Pokalsieg).
     // Achievements sind bewusst BREITER angelegt - auch wirtschaftliche/strukturelle

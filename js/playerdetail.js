@@ -26,7 +26,7 @@
         let stats = getDisplayStats(p);
         let statOrder = ['OFF', 'ABS', 'DEF', 'INT', 'PRE', 'TEM', 'PAS', 'ZKH', 'ZKE', 'FLA', 'KOP', 'SPR', 'DRI', 'WEI', 'ELF', 'FRS', 'FIT', 'GRU'];
         document.getElementById('pd-name').innerText = p.name;
-        // Spielerporträt (NEU, siehe js/avatars.js): ersetzt das bisherige reine Positions-
+        // Spielerporträt (siehe js/avatars.js): ersetzt das bisherige reine Positions-
         // Emoji durch ein pro Spieler eindeutiges, deterministisch generiertes Porträt.
         let avatarBox = document.getElementById('pd-avatar');
         if (avatarBox) avatarBox.innerHTML = (typeof getPlayerAvatarSVG === 'function') ? getPlayerAvatarSVG(p, 76) : (({ TW: '🧤', ABW: '🛡️', MIT: '⚙️', ST: '⚽' }[p.pos] || '👤'));
@@ -52,7 +52,7 @@
         document.getElementById('pd-stats').innerHTML = statOrder.map(k => `<div class="modal-stat-chip"><span class="k">${k}</span><span class="v">${stats[k]}</span></div>`).join('');
         document.getElementById('pd-talk-btn').style.display = (pool === 'squad' || pool === 'secondTeam') ? 'block' : 'none';
 
-        // Spielerwert-Entwicklungskurve (NEU): eine kleine SVG-Sparkline zeigt, wie sich die
+        // Spielerwert-Entwicklungskurve: eine kleine SVG-Sparkline zeigt, wie sich die
         // Stärke des Spielers über die Saisons entwickelt hat - bisher gab es nur den
         // aktuellen Momentanwert ohne jede historische Einordnung.
         let historyBox = document.getElementById('pd-strength-history');
@@ -86,7 +86,7 @@
             }
         }
 
-        // Career Progression Panel (NEU): Karriere-Statistik und Meilensteine
+        // Career Progression Panel: Karriere-Statistik und Meilensteine
         let careerBox = document.getElementById('pd-career-progression');
         if (careerBox) {
             if (typeof renderPlayerCareerPanel === 'function') {
@@ -100,7 +100,7 @@
             }
         }
 
-        // Tiefere Scouting-Berichte (NEU): Text-Dossier statt nur Zahlen, nur bei Spielern
+        // Tiefere Scouting-Berichte: Text-Dossier statt nur Zahlen, nur bei Spielern
         // aus dem Scouting-Pool relevant.
         let reportBox = document.getElementById('pd-scouting-report');
         if (reportBox) {
@@ -116,7 +116,7 @@
                 reportBox.innerHTML = '';
             }
         }
-        // Berater-Beziehungspflege (NEU)
+        // Berater-Beziehungspflege
         let agentBtn = document.getElementById('pd-agent-relationship-btn');
         if (agentBtn) {
             if (p.agent) {

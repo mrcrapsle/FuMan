@@ -1,11 +1,11 @@
 
     // ---------- STADIONNAME & NAMENSRECHTE ----------
-    // Stadion-Kostenskalierung (NEU): deutlich steiler als der generische Liga-Faktor, damit
+    // Stadion-Kostenskalierung: deutlich steiler als der generische Liga-Faktor, damit
     // ein Kreisligist sich keine Bundesliga-Arena leisten muss, ein Spitzenklub aber echte
     // zweistellige Millionenbeträge zahlt (wie in der Realität) - Index = leagueLevel
     // (0 = höchste Liga).
     const STADIUM_COST_SCALE = [1.0, 0.55, 0.28, 0.14, 0.07, 0.035];
-    // Stadion-Größenstufe (NEU): das 3D-Design verändert sich jetzt sichtbar mit der
+    // Stadion-Größenstufe: das 3D-Design verändert sich jetzt sichtbar mit der
     // tatsächlichen Kapazität, statt bei jeder Stadiongröße gleich auszusehen -
     // von der kompakten Amateurarena bis zum Mega-Stadion mit Dach-Silhouette.
     function getStadiumVisualTier() {
@@ -15,7 +15,7 @@
         if (cap < 60000) return 'large';
         return 'mega';
     }
-    // Generiert die komplette innere Stadion-Struktur abhängig von der Größenstufe (NEU,
+    // Generiert die komplette innere Stadion-Struktur abhängig von der Größenstufe (
     // überarbeitet): nicht mehr nur ein CSS-Klassenwechsel auf starrer Struktur, sondern
     // echte strukturelle Unterschiede - Anzahl Flutlichter, Tribünenbreite, zweiter Rang,
     // Dach - damit der Ausbau auch bei mittleren Kapazitäten sichtbar etwas verändert.
@@ -106,7 +106,7 @@
         let genutzt = getUsedStadiumCapacity();
         let kosten = genutzt * STADIUM_MAINTENANCE_PER_SEAT
             + getMothballedCapacity() * STADIUM_MAINTENANCE_PER_SEAT * MOTHBALLED_MAINTENANCE_RATE;
-        // Solaranlage (NEU): senkt die Stromkosten-Komponente der Betriebskosten spürbar,
+        // Solaranlage: senkt die Stromkosten-Komponente der Betriebskosten spürbar,
         // statt nur eine reine Sponsoren-Einnahmen-Erhöhung zu sein - echte Stromersparnis.
         if (stadium.upgrades?.solaranlage) kosten *= 0.8;
         return kosten;
@@ -126,7 +126,7 @@
         stadium.namingRightsIncome = perMatch;
         game.money += lumpSum;
         addInboxMessage('vertrag', '🏟️ Namensrechte verkauft!', `Das Stadion heißt ab sofort "${stadium.name}". Einmalzahlung: ${formatVal(lumpSum)}, laufend +${formatVal(perMatch)}/Heimspiel.`, 'screen-stadium');
-        // Namensgebungs-Zeremonie (NEU): eigenes Ereignis mit einer echten Entscheidung, statt
+        // Namensgebungs-Zeremonie: eigenes Ereignis mit einer echten Entscheidung, statt
         // dass die Umbenennung einfach kommentarlos passiert.
         game.pendingNamingCeremony = { sponsor, stadiumName: stadium.name };
         renderStadiumView();
@@ -208,7 +208,7 @@
     }
     // Kompakte Anzeige im Stadion-Screen, damit die Auflagen jederzeit einsehbar sind.
     // ==========================================
-    // BLOCK-SPEZIFISCHE FAN-KULTUR (NEU)
+    // BLOCK-SPEZIFISCHE FAN-KULTUR
     // ==========================================
     // Jeder Stadion-Block hat eine natürliche kulturelle Zugehörigkeit zu einer der vier
     // Fan-Gruppen. Ist diese Fan-Gruppe gut gelaunt, stärkt sich die Block-Kultur über die
@@ -294,7 +294,7 @@
         if (roofBox) roofBox.className = stadium.dach ? 'stadium-roof-overlay' : '';
     }
 
-    // Kennzahlen-Box (NEU): Kapazität, letzte Zuschauerzahl, Auslastung, Stadionwert und
+    // Kennzahlen-Box: Kapazität, letzte Zuschauerzahl, Auslastung, Stadionwert und
     // Bauwert auf einen Blick, plus Zuschauerentwicklungs-Diagramm - wie im Referenz-Layout.
     function getStadiumMarketValue() {
         // Der "Stadionwert" ist keine reine Bausumme, sondern eine grobe Marktbewertung:
@@ -338,7 +338,7 @@
         renderStadiumImmersiveHero();
     }
 
-    // Immersive Stadion-Hero (NEU): große 3D-Ansicht mit schwebenden Kennzahlen-Karten und
+    // Immersive Stadion-Hero: große 3D-Ansicht mit schwebenden Kennzahlen-Karten und
     // einer berechneten "Stadion-Zustand"-Einschätzung, angelehnt an moderne Management-
     // Spiele-Referenzen - nutzt echte Spieldaten statt Platzhaltertexten.
     function getStadiumConditionRating() {
@@ -395,7 +395,7 @@
         if (typeof applyStadiumVisualTier === 'function') applyStadiumVisualTier('#stadium-hero-bowl-wrapper');
     }
 
-    // Spezial-Installationen: deutlich realistischere Basiskosten (NEU), skaliert mit der
+    // Spezial-Installationen: deutlich realistischere Basiskosten, skaliert mit der
     // Liga-Stärke - eine Komplett-Überdachung kostet im Spitzenfußball echte zweistellige
     // Millionenbeträge, nicht ein paar hunderttausend Euro.
     const SPECIAL_INSTALL_BASE_COSTS = { flutlicht: 3500000, rasenheizung: 2200000, videowalls: 4000000, dach: 28000000 };
@@ -408,7 +408,7 @@
     const SPECIAL_INSTALL_LABELS = { flutlicht: '💡 Flutlicht-Masten', rasenheizung: '🔥 Rasenheizung', videowalls: '📺 Digitale Anzeigen / HD-Videowalls', dach: '🏗️ Komplett-Überdachung' };
 
     // ==========================================
-    // 20 NEUE STADION-ERWEITERUNGEN (NEU)
+    // 20 NEUE STADION-ERWEITERUNGEN
     // ==========================================
     // Jede Erweiterung gehört zu einer von mehreren Wirkungs-Kategorien, die direkt in
     // bestehende Formeln einfließen (Komfort/Zuschauerzahl, Sicherheit, Verletzungsrisiko,
@@ -480,7 +480,7 @@
             .reduce((sum, k) => sum + Math.round(STADIUM_UPGRADES[k].incomeBase * scale), 0);
     }
 
-    // Zusammenfassungs-Übersicht (NEU): fasst alle Kategorie-Boni der 20 Stadion-Erweiterungen
+    // Zusammenfassungs-Übersicht: fasst alle Kategorie-Boni der 20 Stadion-Erweiterungen
     // an einer Stelle zusammen, mit Fortschrittsbalken relativ zum jeweils maximal
     // erreichbaren Wert (nicht der willkürlichen Sicherheits-Obergrenze im Code, sondern dem
     // tatsächlich mit den vorhandenen Anlagen erreichbaren Maximum) - damit auf einen Blick
@@ -552,7 +552,7 @@
     }
 
     // ==========================================
-    // DAUERKARTEN (NEU)
+    // DAUERKARTEN
     // ==========================================
     // Eigene Ticketkategorie neben Steh/Sitz/VIP: der Preis lässt sich jederzeit über den
     // Schieberegler anpassen (siehe finances.js), wirkt sich aber - wie im echten
@@ -608,7 +608,7 @@
     }
 
     // ==========================================
-    // RASENPFLEGE (NEU)
+    // RASENPFLEGE
     // ==========================================
     // Zustand des Geläufs auf einer 0-99-Skala, unabhängig von den festen Stadion-
     // Erweiterungen (Medizinzentrum/Rasenpflege-System, die das VERLETZUNGSRISIKO senken) -
@@ -693,7 +693,7 @@
     }
 
     // ==========================================
-    // NAMENTLICHE KAPAZITÄTS- & UMBAUPROJEKTE (NEU)
+    // NAMENTLICHE KAPAZITÄTS- & UMBAUPROJEKTE
     // ==========================================
     // Ergänzt die bisherige, generische Block-für-Block-Erweiterung (expandBlock, siehe oben)
     // um konkrete, benannte Großprojekte mit eigenem Effekt - inklusive zwei Umbauten, die
@@ -765,7 +765,7 @@
     }
 
     // ==========================================
-    // NEBENEINNAHMEN-ÜBERSICHT (NEU)
+    // NEBENEINNAHMEN-ÜBERSICHT
     // ==========================================
     // Rein informative Aufschlüsselung der bereits bestehenden Campus-Einnahmequellen
     // (Fan-Kneipe/Foodtrucks = Gastronomie, Parkhaus = Parkplätze, VIP-Tagungshotel =
@@ -927,13 +927,13 @@
     }
 
     // ==========================================
-    // STADION-BAUSTELLEN-SYSTEM (NEU): Anzahlung + Restzahlung + echte Bauzeit
+    // STADION-BAUSTELLEN-SYSTEM: Anzahlung + Restzahlung + echte Bauzeit
     // ==========================================
     // Bisher wurde JEDER Stadion-Ausbau (Ränge, Infrastruktur, Flutlicht/Dach/etc.) sofort
     // und vollständig bezahlt UND sofort wirksam - realitätsfern für ein Bauprojekt dieser
     // Größenordnung. Jetzt: 30% Anzahlung sofort fällig, Rest bei Fertigstellung, echte
     // Bauzeit in Spieltagen (je teurer, desto länger), mit sichtbarem Baufortschritt.
-    // Realistische Bauzeit (NEU): reale deutsche Bauprojekte dieser Größenordnung dauern
+    // Realistische Bauzeit: reale deutsche Bauprojekte dieser Größenordnung dauern
     // Monate bis Jahre, nicht ein paar Tage. Ein kleines Vorhaben (~250.000 €, z.B. eine
     // Fan-Kneipen-Renovierung) braucht real ca. 2-3 Monate inkl. Genehmigungen, ein
     // Millionenprojekt eher 1-2 Jahre, ein zweistelliger Millionenbetrag (große Tribüne,
@@ -989,7 +989,7 @@
                 stadium.totalInvested = (stadium.totalInvested || 0) + proj.remainingPayment;
                 stadium[proj.params.key] = true;
             } else if (proj.type === 'campusBuilding') {
-                // Campus-Gebäude (NEU): eigener Baustellen-Typ, fließt bewusst NICHT in
+                // Campus-Gebäude: eigener Baustellen-Typ, fließt bewusst NICHT in
                 // stadium.totalInvested ein (das ist eine separate Investitionsart).
                 let b = campusBuildings[proj.params.key];
                 if (b) {
@@ -1001,12 +1001,12 @@
                     }
                 }
             } else if (proj.type === 'realEstate' && typeof realEstatePortfolio !== 'undefined') {
-                // Immobilien-Portfolio (NEU): eigener Baustellen-Typ, ebenfalls getrennt von
+                // Immobilien-Portfolio: eigener Baustellen-Typ, ebenfalls getrennt von
                 // stadium.totalInvested (separates Investitionsvehikel).
                 let re = realEstatePortfolio[proj.params.key];
                 if (re) { re.owned = true; re.lvl++; }
             } else if (proj.type === 'staffTraining' && typeof ensureStaffMeta === 'function') {
-                // Personal-Weiterbildung (NEU): eigener, kürzerer Baustellen-Typ für
+                // Personal-Weiterbildung: eigener, kürzerer Baustellen-Typ für
                 // Schulungen statt Bauprojekte - ebenfalls getrennt von stadium.totalInvested.
                 let meta = ensureStaffMeta(proj.params.key);
                 meta.level++;
@@ -1014,7 +1014,7 @@
                     addInboxMessage('vertrag', `⭐ Weiterbildung abgeschlossen: ${staffMembers[proj.params.key].name}`, `Jetzt auf Ausbaustufe ${meta.level}.`, 'screen-staff');
                 }
             } else if (proj.type === 'stadiumUpgrade' && typeof STADIUM_UPGRADES !== 'undefined') {
-                // 20 neue Stadion-Erweiterungen (NEU): schalten sich beim Bau-Abschluss frei.
+                // 20 neue Stadion-Erweiterungen: schalten sich beim Bau-Abschluss frei.
                 if (!stadium.upgrades) stadium.upgrades = {};
                 stadium.upgrades[proj.params.key] = true;
                 let u = STADIUM_UPGRADES[proj.params.key];
@@ -1023,15 +1023,15 @@
                 }
                 addInboxMessage('vertrag', `🏗️ Stadion-Erweiterung fertig: ${u.name}!`, u.desc, 'screen-stadium');
             } else if (proj.type === 'youthAcademyLvl') {
-                // Jugendakademie-Ausbau (NEU): jetzt mit echter Bauzeit statt Sofort-Ausbau.
+                // Jugendakademie-Ausbau: jetzt mit echter Bauzeit statt Sofort-Ausbau.
                 game.youthAcademyLvl++;
                 addInboxMessage('vertrag', '🎓 Jugendakademie ausgebaut!', `Die Nachwuchsakademie ist jetzt auf Stufe ${game.youthAcademyLvl} - bessere Talente und höheres Potenzial bei künftigen Sichtungen.`, 'screen-youth');
             } else if (proj.type === 'youthCapacity') {
-                // Jugendkader-Kapazität (NEU): jetzt mit echter Bauzeit statt Sofort-Ausbau.
+                // Jugendkader-Kapazität: jetzt mit echter Bauzeit statt Sofort-Ausbau.
                 game.youthCapacityBonus = (game.youthCapacityBonus || 0) + 1;
                 addInboxMessage('vertrag', '🏠 Jugendkader-Kapazität erweitert!', `Platz für jetzt ${getYouthAcademyCapacity()} Nachwuchsspieler in der Akademie.`, 'screen-youth');
             } else if (proj.type === 'capacityProject' && typeof STADIUM_CAPACITY_PROJECTS !== 'undefined') {
-                // Namentliche Kapazitäts-/Umbauprojekte (NEU): Zusatztribüne, Ränge erweitern,
+                // Namentliche Kapazitäts-/Umbauprojekte: Zusatztribüne, Ränge erweitern,
                 // Großausbau, Zweiter Rang, Sitzplatzumbau, Stehplatzrückbau, Hybridrasen.
                 stadium.totalInvested = (stadium.totalInvested || 0) + proj.remainingPayment;
                 let cp = STADIUM_CAPACITY_PROJECTS[proj.params.key];
@@ -1062,7 +1062,7 @@
         });
         game.stadiumConstructionQueue = stillActive;
     }
-    // Parametrisiert (NEU): kann sowohl alle Baustellen zeigen (Stadion-Screen) als auch nur
+    // Parametrisiert: kann sowohl alle Baustellen zeigen (Stadion-Screen) als auch nur
     // eine bestimmte Projektart filtern (z.B. nur Campus-Gebäude auf dem Campus-Screen),
     // damit dort nicht irrelevante Stadion-Baustellen mit auftauchen.
     function renderStadiumConstructionBox(targetBoxId = 'stadium-construction-box', filterType = null) {
@@ -1141,7 +1141,7 @@
         return Math.max(0, Math.min(kapazitaet, ausKapazitaet, interesse));
     }
 
-    // Preis-Nachfrage-Zusammenhang für Tickets (NEU): bisher hatte der Ticketpreis KEINERLEI
+    // Preis-Nachfrage-Zusammenhang für Tickets: bisher hatte der Ticketpreis KEINERLEI
     // Einfluss auf die Zuschauerzahl - nur auf den Erlös pro Ticket. Jetzt wirkt sich ein zu
     // hoher Preis auch spürbar auf die Auslastung aus, ein günstiger Preis lockt mehr Fans.
     // Nutzt dieselbe Elastizitäts-Logik wie die Fanartikel-Preise (siehe calculateElasticity()).
@@ -1191,7 +1191,7 @@
         // Digitale Anzeigen (Videowalls): sorgen für Stimmung und Unterhaltung im Stadion und
         // geben einen kleinen zusätzlichen Komfort-Bonus, unabhängig von den Block-Ausbauten.
         if (stadium.videowalls) avgComfortBonus += 0.05;
-        // Stadion-Erweiterungen (NEU): WLAN/Sanitär/ÖPNV-Anbindung erhöhen den Komfort weiter.
+        // Stadion-Erweiterungen: WLAN/Sanitär/ÖPNV-Anbindung erhöhen den Komfort weiter.
         if (typeof getStadiumComfortBonus === 'function') avgComfortBonus += getStadiumComfortBonus();
         // Parkhaus & Shuttle-Bahnhof (Campus): erleichtert die Anreise und verbessert dadurch
         // die Stadionauslastung spürbar (war bisher nur Text ohne tatsächliche Wirkung).
@@ -1208,7 +1208,7 @@
     }
 
     // ==========================================
-    // INTERACTIVE STADION-VISUALISIERUNG (NEU)
+    // INTERACTIVE STADION-VISUALISIERUNG
     // ==========================================
     // Aktualisiert die interaktive Stadion-Visualisierung basierend auf der aktuellen Kapazität.
     // Die Visualisierung zeigt 5 Level: Level 1 (klein), Level 2-5 (immer größer werdend).

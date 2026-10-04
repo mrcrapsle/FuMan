@@ -1,6 +1,6 @@
 
     // ==========================================
-    // SPIELERPORTRÄTS: PROZEDURALE AVATARE (NEU)
+    // SPIELERPORTRÄTS: PROZEDURALE AVATARE
     // ==========================================
     // Echte Fotos sind hier aus zwei Gründen keine Option: es gibt in dieser Umgebung kein
     // Bildgenerierungs-Werkzeug, UND der Kader entsteht komplett prozedural (Saisonstart,

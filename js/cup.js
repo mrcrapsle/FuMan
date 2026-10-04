@@ -66,7 +66,7 @@
     }
 
     // ==========================================
-    // POKALSCHRECK-TRACKING & EIGENE POKAL-STATISTIK (NEU)
+    // POKALSCHRECK-TRACKING & EIGENE POKAL-STATISTIK
     // ==========================================
     function recordCupResultStats(weWon, ourStr, oppStr, oppName, roundName) {
         if (!game.cupHistory) game.cupHistory = { titlesWon: 0, schrecksErlitten: [], schrecksVerursacht: [], bestRunEver: null, matchesPlayed: 0, wins: 0 };
@@ -126,7 +126,7 @@
             p.homeGoals = hg;
             p.awayGoals = ag;
             p.played = true;
-            // Pokalschreck-Tracking (NEU): Stärkewerte zum Zeitpunkt des Spiels sichern, um
+            // Pokalschreck-Tracking: Stärkewerte zum Zeitpunkt des Spiels sichern, um
             // in finalizeCupRound() erkennen zu können, ob es sich um eine echte Überraschung
             // handelte (deutlicher Stärkeunterschied, aber der Schwächere gewinnt).
             if (isOurMatch) { p.ourStr = isHome ? homeStr : awayStr; p.oppStr = isHome ? awayStr : homeStr; }
@@ -174,7 +174,7 @@
                 let weWon = (winTeam === game.clubName);
                 let oppName = p.home === game.clubName ? p.away : p.home;
                 if (roundIdx === cupTournament.matchdays.length - 1 && typeof recordCupFinal === 'function') recordCupFinal('dfb', p, weWon);
-                // Pokalschreck-Tracking & eigene Pokal-Statistik (NEU)
+                // Pokalschreck-Tracking & eigene Pokal-Statistik
                 if (typeof recordCupResultStats === 'function') recordCupResultStats(weWon, p.ourStr, p.oppStr, oppName, r.name);
                 if (weWon) {
                     let sponsorCupBonus = game.sponsor.cupBonus || 0;

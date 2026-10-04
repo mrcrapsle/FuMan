@@ -143,7 +143,7 @@ This pattern ensures:
 
 The main game loop is in `js/match.js` → `playMatch()` → `processPostMatchRoutine()`.
 
-**Monthly Ticks** (called every 4 matchdays, since 34 matchdays ≈ 8.5 months):
+**Monthly Ticks** (every 4 matchdays, since 34 matchdays ≈ 8.5 months) live in `runMonthlyClubTicks()` (js/match.js), called from `processPostMatchRoutine()`; the block below shows the idea:
 ```javascript
 if (game.matchday % 4 === 0) {
     // Financial ticks: income, expenses, board salary
@@ -214,7 +214,7 @@ This ensures users can see exactly where money comes from/goes. Add new income o
 
 **Lint rules that matter:** a file-level `/* eslint-disable no-undef */` only applies to that file (the lint bundle re-enables rules between files). `no-redeclare` catches two modules defining the same global name - a later `function x()` would otherwise silently replace an existing one. Rename the new one instead. `no-unused-vars` (local variables) is an error since Phase 19.5 - delete leftovers instead of keeping them.
 
-**Monthly ticks:** feature ticks belong inside the `if (game.matchday % 4 === 0)` block in `processPostMatchRoutine()` (js/match.js), not next to it - otherwise they run every matchday. Render functions must never change `game.money` (checked by the runtime round-trip test). Measure sizes with a fallback (`el.offsetWidth || 320`): screens are `display:none` while not shown.
+**Monthly ticks:** feature ticks belong into `runMonthlyClubTicks()` (js/match.js), not into `processPostMatchRoutine()` itself - otherwise they run every matchday. Per-matchday blocks were split out of the 585-line routine in 20.5 (`checkDfbLicenseDeadlines()` in season-end.js, `tickLockerFriendships()` in locker-room.js); legacy save cleanups all run from `cleanupRemovedModuleState()` (load + monthly). Promotion rewards only via `applyPromotionRewards()` (season end and the DFB grace period, which now also moves the club via `insertOurTeamIntoLeagues()`). Render functions must never change `game.money` (checked by the runtime round-trip test). Measure sizes with a fallback (`el.offsetWidth || 320`): screens are `display:none` while not shown.
 
 **Why one big file:** Game must run offline as a single draggable-and-droppable file on Android/mobile (Chrome, Firefox, etc.). No server, no network, no external dependencies.
 

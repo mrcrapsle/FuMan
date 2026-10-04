@@ -182,7 +182,7 @@
         showToast('🌟 GESAMTES TEAM AUF MAXIMALWERT!\nAlle Spieler haben jetzt 99 in jeder Kernfähigkeit, 100% Fitness & Moral, keine Verletzungen/Sperren.', 'success', 4000);
     }
 
-    // Kaderstärke in 5er-Schritten erhöhen (NEU): sanftere Alternative zum kompletten
+    // Kaderstärke in 5er-Schritten erhöhen: sanftere Alternative zum kompletten
     // Maximieren - hebt alle Kernwerte jedes Spielers gleichmäßig um 5 Punkte an (bis zum
     // Maximum von 99), statt alles sofort auf den Höchstwert zu springen. Praktisch für
     // schrittweises Testen der Spielbalance bei unterschiedlichen Stärkeniveaus.

@@ -140,7 +140,7 @@ function compareTableRows(a, b) {
         let diff = myStr - oppStr;
         let myXg = Math.max(0.15, Math.min(5.5, 1.35 + diff * 0.045));
         let oppXg = Math.max(0.15, Math.min(5.5, 1.35 - diff * 0.045));
-        // Gegner-Identität (NEU): Offensiv-/Defensiv-/Konter-Spielstile verschieben die
+        // Gegner-Identität: Offensiv-/Defensiv-/Konter-Spielstile verschieben die
         // erwarteten Tore beider Teams tatsächlich, statt dass jedes KI-Team bis auf seine
         // Stärke identisch spielt.
         if (myTeam) {

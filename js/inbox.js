@@ -52,14 +52,14 @@
         renderInboxView();
     }
 
-    // Wichtig-Markierung (NEU): wichtige Nachrichten werden nicht automatisch gelöscht,
+    // Wichtig-Markierung: wichtige Nachrichten werden nicht automatisch gelöscht,
     // wenn das Postfach voll wird, und lassen sich per eigenem Filter isoliert ansehen.
     function toggleInboxImportant(id) {
         let m = inboxMessages.find(x => x.id === id) || inboxArchive.find(x => x.id === id);
         if (m) { m.important = !m.important; renderInboxView(); }
     }
 
-    // Nachrichten-Archiv (NEU): statt endgültig zu löschen, wandern Nachrichten ins Archiv
+    // Nachrichten-Archiv: statt endgültig zu löschen, wandern Nachrichten ins Archiv
     // und lassen sich von dort wiederherstellen oder erst dort endgültig entfernen.
     function archiveInboxMessage(id) {
         let idx = inboxMessages.findIndex(m => m.id === id);

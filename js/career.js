@@ -1,6 +1,6 @@
 
     // ==========================================
-    // VEREINSIDENTITÄT: FREIE UMBENENNUNG (NEU)
+    // VEREINSIDENTITÄT: FREIE UMBENENNUNG
     // ==========================================
     // Der Klubname war bisher an ~120 Stellen im Code hart als "1.FC Moritz Leipzig"
     // verankert - jetzt läuft jeder dieser Vergleiche über game.clubName, wodurch eine
@@ -61,7 +61,7 @@
     }
 
     // ==========================================
-    // VEREINSWECHSEL: ZU EINEM BESTEHENDEN VEREIN DER PYRAMIDE WECHSELN (NEU)
+    // VEREINSWECHSEL: ZU EINEM BESTEHENDEN VEREIN DER PYRAMIDE WECHSELN
     // ==========================================
     // Echte Karriere-Mobilität statt nur Umbenennung: übernimmt eine bestehende KI-
     // Vereinszeile (Name + aktuelles Liganiveau + Tabellenstand) aus der jetzt persistenten

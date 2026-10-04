@@ -16,7 +16,7 @@
         safeLocalSet('anstoss_fm13_tutorial_seen', 'true');
     }
 
-    // Mehrseitiges Tutorial (NEU): erklärt jetzt auch die neueren, komplexeren Systeme
+    // Mehrseitiges Tutorial: erklärt jetzt auch die neueren, komplexeren Systeme
     // (Scouting-Netzwerk 2.0, Stadion-Baustellen, Personal-Automatisierung) statt nur die
     // Grundstruktur der Menüs - bisher blieb ein neuer Spieler bei diesen Tiefensystemen
     // komplett auf sich gestellt.
@@ -186,7 +186,7 @@
         });
     }
 
-    // Slide-In-Menü (NEU): öffnet/schließt die Navigation als Overlay-Drawer statt eines
+    // Slide-In-Menü: öffnet/schließt die Navigation als Overlay-Drawer statt eines
     // permanenten Grids - schafft deutlich mehr Platz für den eigentlichen Bildschirminhalt.
     function toggleMenuDrawer() {
         playSound('click');
@@ -245,7 +245,7 @@
                 btn.classList.remove('active');
             }
         });
-        // Slide-In-Menü (NEU): automatisch schließen, sobald ein Ziel ausgewählt wurde.
+        // Slide-In-Menü: automatisch schließen, sobald ein Ziel ausgewählt wurde.
         closeMenuDrawer();
 
         if (screenId === 'screen-office') { renderOfficeView(); initOfficeParallax(); }

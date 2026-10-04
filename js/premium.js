@@ -69,7 +69,7 @@
         updateUI();
     }
 
-    // Admin-Zugriff (NEU, wie gewünscht): kostenloser Premium-Punkte-Bonus ohne jede
+    // Admin-Zugriff (wie gewünscht): kostenloser Premium-Punkte-Bonus ohne jede
     // Bezahlung - passend zum bestehenden Admin/Cheats-Bereich.
     function adminGrantPremiumPoints() {
         playSound('goal');

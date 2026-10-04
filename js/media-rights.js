@@ -1,6 +1,6 @@
 
     // ==========================================
-    // MEDIENRECHTE & TV-VERTRAG (NEU)
+    // MEDIENRECHTE & TV-VERTRAG
     // ==========================================
     // Im echten Fußball sind TV-/Medienrechte oft die GRÖSSTE Einnahmequelle eines Vereins -
     // bisher fehlte das im Spiel komplett. Zwei Säulen:
@@ -59,11 +59,11 @@
     // 2. Eigener Medienpartner: Angebote generieren, analog zum Sponsoren-System.
     function generateMediaRightsOffers() {
         let scale = typeof leagueScaleFactor === 'function' ? leagueScaleFactor() : 1;
-        // Verknüpfung mit dem Manager-Medienimage (NEU): ein Manager mit gutem Ruf in der
+        // Verknüpfung mit dem Manager-Medienimage: ein Manager mit gutem Ruf in der
         // Presse (z.B. durch geschickte Interview-Antworten) bekommt spürbar bessere
         // Angebote von Medienpartnern - ein niedriges Image drückt die Konditionen.
         let imageMult = 0.75 + ((game.managerMediaImage ?? 50) / 100) * 0.5; // 0.75x bis 1.25x
-        // Liga-Voraussetzung (NEU): ein Kreisligist bekommt realistischerweise kein Angebot
+        // Liga-Voraussetzung: ein Kreisligist bekommt realistischerweise kein Angebot
         // vom internationalen Pay-TV - höherwertige Medienpartner setzen eine entsprechend
         // starke Liga voraus (nutzt das zuvor ungenutzte tierKey-Konzept sinnvoll).
         let eligibleTiers = MEDIA_PARTNER_TIERS.filter(t => game.leagueLevel <= t.maxLeagueLevel);
@@ -83,7 +83,7 @@
         mediaRights.currentDeal = { name: offer.name, tierKey: offer.tierKey, label: offer.label, base: offer.base, remainingMatchdays: offer.duration, prestige: offer.prestige };
         mediaRights.dealOffers = [];
         addInboxMessage('vertrag', `📺 Medienvertrag mit ${offer.name}!`, `Ab sofort überträgt ${offer.name} (${offer.label}) eure Heimspiele - Handgeld ${formatVal(offer.signOn)}, laufend +${formatVal(offer.base)}/Heimspiel für ${offer.duration} Spieltage.`, 'screen-finances');
-        // Prestige-Wirkung (NEU, Bugfix): ein hochkarätiger Medienpartner (Prestige 3+)
+        // Prestige-Wirkung (Bugfix): ein hochkarätiger Medienpartner (Prestige 3+)
         // sorgt einmalig für spürbar mehr überregionale Bekanntheit - dauerhaft höheres
         // Grundinteresse der Fans, statt wie zuvor ein unbenutztes Datenfeld zu sein.
         if (offer.prestige >= 3 && typeof boostFanBaseFloor === 'function') {

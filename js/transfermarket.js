@@ -24,7 +24,7 @@
             p.signOnFee = Math.round(p.wage * 6);
             freeAgentPlayers.push(p);
         }
-        // Leihspieler (NEU): eingehende Leihen von anderen Vereinen - deutlich günstiger als
+        // Leihspieler: eingehende Leihen von anderen Vereinen - deutlich günstiger als
         // ein Kauf, mit optionaler Kaufoption für eine dauerhafte Verpflichtung später.
         for (let i = 0; i < 3; i++) {
             let p = createPlayer(["TW", "ABW", "MIT", "ST"][Math.floor(Math.random() * 4)], minStr - 2, maxStr + 4);
@@ -37,7 +37,7 @@
     }
 
     // ==========================================
-    // EINGEHENDE LEIHSPIELER (NEU)
+    // EINGEHENDE LEIHSPIELER
     // ==========================================
     function signLoanPlayer(idx) {
         let p = loanablePlayers[idx];
@@ -348,7 +348,7 @@
     }
 
     // ==========================================
-    // WEITERVERKAUFSBETEILIGUNG (NEU)
+    // WEITERVERKAUFSBETEILIGUNG
     // ==========================================
     // Beim Verkauf eines Spielers kann statt der vollen Sofortsumme eine
     // Weiterverkaufsbeteiligung ausgehandelt werden: der Verein zahlt etwas weniger sofort,
@@ -683,7 +683,7 @@
         finalizePlayerPurchase(p, getTransferAsking(p), p.wage);
     }
 
-    // Vertragsverhandlung mit Gegenangeboten (NEU): statt nur "Ja/Nein" kann der Spieler
+    // Vertragsverhandlung mit Gegenangeboten: statt nur "Ja/Nein" kann der Spieler
     // ein Gegenangebot stellen, das von seinem Charakter abhängt - manche Spieler sind
     // zäher in Verhandlungen als andere.
     let pendingFreeAgentNegotiation = null;

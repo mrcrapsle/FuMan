@@ -2,9 +2,9 @@
 // ==========================================
 // SPIELZUSTAND & DATENMODELLE
 // ==========================================
-    // Versionskennung mit Datum (NEU, auf Wunsch): wird bei jeder Code-Änderung
+    // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.25', date: '04.10.2026', features: 'Phase 20: Pokalfinale als Großereignis (Finalwoche mit Tickets, Sonderzügen und Trainingslager, Titelfeier, Final-Chronik)' };
+    const GAME_VERSION = { number: '3.26', date: '04.10.2026', features: 'Phase 20: Aufräumen Teil 8 (Nachfrist-Aufstieg wechselt wirklich die Liga, Monats-Ticks gebündelt, Altlasten beim Laden, veraltete Kommentare entfernt)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -76,7 +76,7 @@
         transferEmbargo: false,
         lastInsolvencyPenaltyAt: 0,
         ticketPrices: { steh: 12, sitz: 24, vip: 80, dauerkarte: 90 },
-        // Dauerkarten (NEU, siehe js/stadium.js): Zahl der Inhaber wird einmal pro Saison bei
+        // Dauerkarten (siehe js/stadium.js): Zahl der Inhaber wird einmal pro Saison bei
         // renewSeasonTickets() neu ermittelt, nicht bei jeder Preisänderung.
         seasonTicketHolders: 0,
         seasonTicketPriceInitialized: false,
@@ -387,7 +387,7 @@
         flutlicht: false, rasenheizung: false, videowalls: false, dach: false,
         namingRights: null,
         events: [],
-        // Sitzplatz-Zusammensetzung (NEU, siehe js/stadium.js): war bisher an mehreren Stellen
+        // Sitzplatz-Zusammensetzung (siehe js/stadium.js): war bisher an mehreren Stellen
         // fest auf 50%/45%/5% verdrahtet - jetzt ein echter, über Bauprojekte (Sitzplatzumbau/
         // Stehplatzrückbau) veränderbarer Anteil. Die Standardwerte entsprechen exakt den
         // alten festen Zahlen, damit sich am Verhalten nichts ändert, bevor ein Projekt
@@ -397,7 +397,7 @@
         // Ränge erweitern, Großausbau, Zweiter Rang, Sitzplatzumbau/-rückbau) - kommt zur
         // Summe der Block-Kapazitäten hinzu, ohne das bestehende Block-Modell umzubauen.
         bonusCapacity: 0,
-        // Rasenzustand (NEU): 0-99, nutzt sich durch Heimspiele leicht ab, wird über
+        // Rasenzustand: 0-99, nutzt sich durch Heimspiele leicht ab, wird über
         // maintainPitch() gepflegt. Die Obergrenze steigt mit Rasenheizung/Hybridrasen.
         pitchCondition: 85,
         hybridrasen: false,
@@ -613,4 +613,9 @@
         const echteNamen = { 'Real Madrid': 'Real Madrit', 'FC Bayern': 'Bayern Munchen', 'FC Liverpool': 'Liverpol FC' };
         if (typeof holdingCompany !== 'undefined') (holdingCompany.b2bContracts || []).forEach(c => { if (echteNamen[c.club]) c.club = echteNamen[c.club]; });
         squad.forEach(p => { delete p.currentFitnessBoost; delete p.nationalDuty; });
+        // Ältere Aufräum-Helfer einzelner Module - laufen jetzt gesammelt auch beim Laden.
+        if (typeof cleanupLegacyContractState === 'function') cleanupLegacyContractState();
+        if (typeof cleanupLegacyScoutState === 'function') cleanupLegacyScoutState();
+        if (typeof cleanupLegacyDevelopmentState === 'function') cleanupLegacyDevelopmentState();
+        if (typeof cleanupLegacyScoutingState === 'function') cleanupLegacyScoutingState();
     }

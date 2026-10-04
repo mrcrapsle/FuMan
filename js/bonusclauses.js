@@ -1,6 +1,6 @@
 
     // ==========================================
-    // ERFOLGSBASIERTE VERTRAGSBONI (NEU)
+    // ERFOLGSBASIERTE VERTRAGSBONI
     // ==========================================
     // Zusätzlich zum Grundgehalt lassen sich mit jedem Spieler individuelle Erfolgsklauseln
     // vereinbaren, die erst bei tatsächlichem Erreichen einer sportlichen Marke ausgezahlt

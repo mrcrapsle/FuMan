@@ -1025,6 +1025,40 @@ async function testCupFinal(browser) {
     await page.close();
 }
 
+async function testCleanupPart8(browser) {
+    console.log('\n[20.5] Aufräumen Teil 8: Nachfrist-Aufstieg wechselt wirklich die Liga, Altlasten beim Laden');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            const alt = game.leagueLevel, geld = game.money;
+            game.dfbGracePeriod = { targetLevel: alt - 1, deadlineMatchday: 3, originalLeagueLevel: alt };
+            game.sackPending = false; simulateMatchdays(1);
+            out.aufgestiegen = game.leagueLevel === alt - 1 && !game.dfbGracePeriod;
+            out.inNeuerTabelle = leaguesData[game.leagueLevel].some(t => t.name === game.clubName) && !leaguesData[alt].some(t => t.name === game.clubName);
+            out.groessen = leaguesData[alt].length === 18 && leaguesData[game.leagueLevel].length === 18;
+            out.praemie = game.money - geld > 1000000;
+            game.sackPending = false; simulateMatchdays(2);
+            out.spieltWeiter = leaguesData[game.leagueLevel].find(t => t.name === game.clubName).played >= 2;
+            // Altlasten alter Spielstände werden schon beim Laden entfernt
+            const save = JSON.parse(JSON.stringify(buildSaveState()));
+            save.game.contractNegotiations = { alt: true }; save.game.scoutingDatabase = []; save.game.playerDevelopment = {};
+            applyLoadedState(save);
+            out.altlasten = game.contractNegotiations === undefined && game.scoutingDatabase === undefined && game.playerDevelopment === undefined;
+            out.monat = typeof runMonthlyClubTicks === 'function';
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Aufräum-Test ohne Absturz (${r.crash || 'ok'})`);
+    assert(r.aufgestiegen && r.inNeuerTabelle && r.groessen, 'Nachträglicher Aufstieg: der Verein spielt wirklich in der neuen Liga (vorher nur leagueLevel umgestellt)');
+    assert(r.praemie && r.spieltWeiter, 'Nachträglicher Aufstieg bringt die Aufstiegsprämie, die Saison läuft dort weiter');
+    assert(r.altlasten && r.monat, 'Altlasten alter Spielstände werden beim Laden entfernt, Monats-Ticks gebündelt');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testYouthPathway(browser) {
     console.log('\n[18.5] Jugend-Laufbahn: Potenzial, Profivertrag mit 19, Leihe, Durchbruch-Momente');
     const { page, consoleErrors } = await freshPage(browser);
@@ -6273,6 +6307,7 @@ async function main() {
         testLockerRoom,
         testSetPieces,
         testCupFinal,
+        testCleanupPart8,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,

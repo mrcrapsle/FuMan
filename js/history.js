@@ -17,7 +17,7 @@
     function renderRivalryHistoryBook() {
         let box = document.getElementById('rivalry-history-book');
         if (!box) return;
-        // Trainerpersönlichkeit (NEU, siehe assignRivalManagerPersonality() in leagues.js):
+        // Trainerpersönlichkeit (siehe assignRivalManagerPersonality() in leagues.js):
         // gibt dem Rivalen ein Gesicht statt nur ein Vereinsname zu sein.
         let managerQuote = (typeof getRivalManagerQuote === 'function') ? getRivalManagerQuote() : null;
         let managerLine = (game.permanentRivalName && game.rivalManagerName)
@@ -33,7 +33,7 @@
         }).join('');
     }
 
-    // Rivalen-Archiv (NEU): frühere, inzwischen abgelöste Erzfeindschaften bleiben als
+    // Rivalen-Archiv: frühere, inzwischen abgelöste Erzfeindschaften bleiben als
     // abgeschlossenes Kapitel sichtbar, statt beim Rivalenwechsel einfach zu verschwinden.
     function renderRivalHistoryArchive() {
         let box = document.getElementById('rival-history-archive-box');
@@ -44,7 +44,7 @@
             : archive.slice().reverse().map(r => `<div class="box" style="font-size:10px;"><strong>${r.name}</strong> (bis Saison ${r.endedSeason}) - Bilanz: ${r.record.wins}S ${r.record.draws}U ${r.record.losses}N${r.managerName ? `<br><span style="color:#94a3b8; font-size:9px;">🎩 Trainer: ${r.managerName} (${r.managerTrait})</span>` : ''}</div>`).join('');
     }
 
-    // Generationsübergreifende Legenden-Vergleiche (NEU): gruppiert alle ehemaligen Spieler
+    // Generationsübergreifende Legenden-Vergleiche: gruppiert alle ehemaligen Spieler
     // aus notablePastPlayers in 5-Saison-"Generationen" und zeigt die stärkste pro Ära.
     function renderLegendGenerationComparison() {
         let box = document.getElementById('legend-generations-box');
@@ -60,7 +60,7 @@
         box.innerHTML = Object.entries(generations).map(([label, p]) => `<div class="box" style="display:flex; justify-content:space-between; font-size:10px;"><span>${label}</span><strong>${p.name} (${p.strength})</strong></div>`).join('');
     }
 
-    // Vereinsrekorde (NEU): dauerhaftes Rekordarchiv für den gesamten Verein.
+    // Vereinsrekorde: dauerhaftes Rekordarchiv für den gesamten Verein.
     function renderClubRecordsBox() {
         let box = document.getElementById('club-records-box');
         if (!box) return;
@@ -77,7 +77,7 @@
         `;
     }
 
-    // Liga-Chronik (NEU): macht die seit der persistenten Liga-Pyramide (siehe
+    // Liga-Chronik: macht die seit der persistenten Liga-Pyramide (siehe
     // advanceLeaguesToNewSeason() in leagues.js) mitlaufende team.strengthHistory sichtbar -
     // zeigt die größten Stärke-Gewinner/-Verlierer der letzten Saison über alle 108 Vereine,
     // statt dass diese Entwicklung nur unsichtbar im Hintergrund abläuft.

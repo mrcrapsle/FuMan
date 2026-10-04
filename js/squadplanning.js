@@ -1,6 +1,6 @@
 
     // ==========================================
-    // KADERPLANUNGSTOOL (NEU)
+    // KADERPLANUNGSTOOL
     // ==========================================
     // Positionstiefe (siehe renderSquadDepthChart in squad.js), Altersstruktur und auslaufende
     // Verträge (siehe renderSeasonPlanningBox in contracts.js) existierten bisher als drei

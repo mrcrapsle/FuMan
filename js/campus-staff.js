@@ -25,7 +25,7 @@
 
     function getCampusUpgradeCost(key) {
         let b = campusBuildings[key];
-        // Liga-Skalierung (NEU): dieselbe steile Kurve wie bei Stadion-Ausbauten - realistische
+        // Liga-Skalierung: dieselbe steile Kurve wie bei Stadion-Ausbauten - realistische
         // Millionenbeträge im Spitzenfußball, erschwinglich in unteren Ligen. Trotzdem nie
         // unter 250.000 € (Mindestwert für auch nur das kleinste reale Bauprojekt in
         // Deutschland, siehe Baukosten-Recherche: selbst ein kleiner Umbau/Neubau kostet
@@ -37,7 +37,7 @@
         let b = campusBuildings[key];
         let cost = getCampusUpgradeCost(key);
         if (b.lvl >= b.max) { showToast('Maximalstufe bereits erreicht!', 'error'); return; }
-        // Echter Bau-Timer (NEU): Campus-Gebäude wurden bisher sofort fertig, ganz ohne
+        // Echter Bau-Timer: Campus-Gebäude wurden bisher sofort fertig, ganz ohne
         // Bauzeit - unrealistisch für ein Bauprojekt in Millionenhöhe. Jetzt läuft es über
         // dieselbe Baustellen-Logik wie die Stadion-Ausbauten (30% Anzahlung, echte Bauzeit,
         // Rest bei Fertigstellung).
@@ -67,7 +67,7 @@
     };
 
     // ==========================================
-    // ERWEITERTE PERSONAL-AUTOMATISIERUNG (NEU): 4 weitere Rollen mit wählbaren
+    // ERWEITERTE PERSONAL-AUTOMATISIERUNG: 4 weitere Rollen mit wählbaren
     // Automatik-Aufgaben, analog zum bestehenden Muster bei Co-Trainer/Konditionstrainer/
     // Fanbeauftragtem/Fanshop-Manager.
     // ==========================================

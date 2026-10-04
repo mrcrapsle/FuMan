@@ -72,7 +72,7 @@
         updateUI();
     }
 
-    // Produktionsketten-Logik mit echtem Countdown (NEU): Rohstoffe werden sofort verbraucht,
+    // Produktionsketten-Logik mit echtem Countdown: Rohstoffe werden sofort verbraucht,
     // die fertige Ware erscheint aber erst nach einer Produktionsdauer, die von der
     // Fabrik-Ausbaustufe abhängt (höhere Stufe = schnellere Produktion). Bisher wurde die
     // Ware sofort und ohne jede Verzögerung "hergestellt", was den Sinn einer Fabrik
@@ -124,7 +124,7 @@
             box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Keine laufenden Produktionsaufträge.</div>';
             return;
         }
-        // Deutlich sichtbarere grafische Countdown-Anzeige (NEU): große Tage-Zahl links,
+        // Deutlich sichtbarere grafische Countdown-Anzeige: große Tage-Zahl links,
         // einzelne Tages-Segmente statt nur ein dünner Balken - auf einen Blick erkennbar,
         // wie viele Spieltage noch verbleiben, statt nur Fließtext lesen zu müssen.
         box.innerHTML = productionQueue.map(order => {
@@ -179,7 +179,7 @@
             grid.appendChild(card);
         }
 
-        // Konkurrenzfirmen & Übernahmeangebote (NEU)
+        // Konkurrenzfirmen & Übernahmeangebote
         let competitorBox = document.getElementById('competitor-firms-box');
         if (competitorBox) {
             competitorBox.innerHTML = rawMaterials.competitorFirms.map(f => `<div class="box" style="font-size:10px;"><strong>${f.name}</strong> · Marktmacht: ${f.strength}${f.lastAction ? ` · <span style="color:var(--text-muted);">${f.lastAction}</span>` : ''}</div>`).join('');

@@ -128,7 +128,7 @@
     }
 
     // Wird nach jedem gespielten Spieltag aufgerufen; matchResult ist 'win'/'draw'/'loss'/null aus
-    // unserer Sicht, goalInfo (NEU) ist { total, bothScored } für Sonder-/Kombiwetten.
+    // unserer Sicht, goalInfo ist { total, bothScored } für Sonder-/Kombiwetten.
     function resolveBetIfPending(matchResult, goalInfo = null) {
         if (!activeBet || !matchResult) return;
         let won = false;
@@ -141,7 +141,7 @@
         }
         let payout = won ? Math.round(activeBet.stake * activeBet.odds) : 0;
         if (won) game.money += payout;
-        // Wett-Historie (NEU): Ergebnis dauerhaft protokollieren.
+        // Wett-Historie: Ergebnis dauerhaft protokollieren.
         if (!betHistory) betHistory = [];
         betHistory.unshift({ season: game.season, matchday: activeBet.matchday, type: activeBet.type, stake: activeBet.stake, odds: activeBet.odds, won, payout });
         if (betHistory.length > 20) betHistory.pop();

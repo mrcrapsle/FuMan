@@ -24,7 +24,7 @@
         // NEU: Eigene Trainingssteuerung für die zweite Mannschaft, unabhängig vom
         // Profikader-Training - Kondition boostet Fitness-Erhalt, Technik die reine Stärke.
         if (game.secondTeam.trainingFocus === 'technik') avg += 1;
-        // Eigener Trainerstab (NEU): ein Cheftrainer für die Reserve macht sich direkt in
+        // Eigener Trainerstab: ein Cheftrainer für die Reserve macht sich direkt in
         // der Liga-Simulation bemerkbar.
         if (typeof secondTeamStaff !== 'undefined' && secondTeamStaff.chefTrainer.hired) avg += 2;
         return Math.round(avg);
@@ -83,7 +83,7 @@
         if (entry) entry.strength = calcSecondTeamStrength();
     }
 
-    // Torschützen-Zuordnung für die zweite Mannschaft (NEU): analog zu
+    // Torschützen-Zuordnung für die zweite Mannschaft: analog zu
     // attributeGoalsToScorers() beim ersten Team, damit auch Perspektivspieler in der
     // Reserve eine echte, sichtbare Torstatistik aufbauen (relevant für Beförderungs-
     // Entscheidungen ins erste Team).
@@ -370,7 +370,7 @@
         secondTeamMarketPlayers = [];
         let minStr = 28 + (NUM_LEAGUES - 1 - game.secondTeam.leagueLevel) * 6;
         let maxStr = minStr + 10;
-        // Amateur-Talentspäher (NEU): sichtet gezielt und bringt spürbar bessere sowie mehr
+        // Amateur-Talentspäher: sichtet gezielt und bringt spürbar bessere sowie mehr
         // Namen auf die Liste.
         let hatSpaeher = typeof secondTeamStaff !== 'undefined' && secondTeamStaff.talentScout.hired;
         if (hatSpaeher) { minStr += 4; maxStr += 6; }

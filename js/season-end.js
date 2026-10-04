@@ -77,6 +77,56 @@
         showToast(`🎊 Saisonabschluss-Gala: ${playerOfSeason.name} ist Spieler der Saison!`, 'success');
     }
 
+    // Aufstiegsprämie, Sponsoren-Bonus, XP, Fan-Fundament und Vertragsboni - für den regulären
+    // Aufstieg am Saisonende UND den nachträglichen nach erfüllter DFB-Nachfrist (der bekam
+    // bisher nichts davon). Gibt den Sponsoren-Bonus zurück (für die Meldung).
+    function applyPromotionRewards() {
+        game.money += 1500000;
+        let sponsorPromoBonus = game.sponsor.promotionBonus || 0;
+        if (sponsorPromoBonus > 0) game.money += sponsorPromoBonus;
+        addManagerXP(1000);
+        boostFanBaseFloor(6, `Der Aufstieg in die ${leagueNames[game.leagueLevel]}`);
+        if (typeof triggerPromotionBonusClauses === 'function') triggerPromotionBonusClauses();
+        return sponsorPromoBonus;
+    }
+
+    // Jeden Spieltag (processPostMatchRoutine): Lizenz-Frühwarnung an Spieltag 30 und die
+    // laufende DFB-Nachfrist nach einem vorläufig verweigerten Aufstieg.
+    function checkDfbLicenseDeadlines() {
+        if (game.matchday === 30 && !game.dfbGracePeriod) {
+            let status = checkDfbLicensingStatus();
+            if (status.targetLevel !== null && status.missing.length > 0) {
+                let sorted = leaguesData[game.leagueLevel] ? [...leaguesData[game.leagueLevel]].sort(compareTableRows) : [];
+                let myRank = sorted.findIndex(t => t.name === game.clubName) + 1;
+                if (myRank > 0 && myRank <= 2) {
+                    addInboxMessage('vertrag', '🚨 DFB-Lizenz-Frühwarnung!', `Du liegst aktuell in Aufstiegsposition, aber die Lizenz für die ${leagueNames[status.targetLevel]} fehlt noch:\n\n${status.missing.map(m => '• ' + m).join('\n')}\n\nNur noch wenige Spieltage bis Saisonende - jetzt nachbessern!`, 'screen-stadium');
+                    showToast('🚨 DFB-Lizenz-Frühwarnung: Auflagen für den möglichen Aufstieg noch nicht erfüllt!', 'error');
+                }
+            }
+        }
+        if (!game.dfbGracePeriod) return;
+        let status = checkDfbLicensingStatus();
+        if (status.missing.length === 0) {
+            // Mängel rechtzeitig behoben: nachträglicher Aufstieg. Früher wurde nur leagueLevel
+            // umgestellt - der Verein spielte weiter in der alten Liga und fehlte in der neuen
+            // Tabelle. Jetzt tauscht insertOurTeamIntoLeagues() ihn wie beim Saisonwechsel ein.
+            game.leagueLevel = game.dfbGracePeriod.targetLevel;
+            game.dfbGracePeriod = null;
+            if (typeof insertOurTeamIntoLeagues === 'function') insertOurTeamIntoLeagues();
+            let sponsorPromoBonus = applyPromotionRewards();
+            addInboxMessage('vertrag', '🎉 Nachträglicher Aufstieg!', `Die DFB-Auflagen wurden rechtzeitig innerhalb der Nachfrist erfüllt - der Aufstieg in die ${leagueNames[game.leagueLevel]} wird nachträglich vollzogen! Aufstiegsprämie 1.500.000 €${sponsorPromoBonus > 0 ? ` plus ${formatVal(sponsorPromoBonus)} Sponsoren-Bonus` : ''}.`, 'screen-stadium');
+            showToast(`🎉 Nachträglicher Aufstieg in die ${leagueNames[game.leagueLevel]}!`, 'success');
+            return;
+        }
+        game.dfbGracePeriod.deadlineMatchday--;
+        if (game.dfbGracePeriod.deadlineMatchday <= 0) {
+            let targetLevel = game.dfbGracePeriod.targetLevel;
+            game.dfbGracePeriod = null;
+            addInboxMessage('vertrag', '📋 DFB-Nachfrist verstrichen', `Die Nachfrist zur Erfüllung der DFB-Auflagen für die ${leagueNames[targetLevel]} ist ohne Erfolg verstrichen - der Aufstieg verfällt endgültig für diese Saison.`, 'screen-stadium');
+            showToast('📋 DFB-Nachfrist verstrichen - Aufstieg endgültig verfallen.', 'error');
+        }
+    }
+
     function concludeSeasonAndAdvance() {
         // Erfolgsbasierte Vertragsboni (js/bonusclauses.js): das Aufstiegsbonus-Flag wird
         // bewusst HIER, ganz am Anfang, zurückgesetzt - nicht in der allgemeinen
@@ -113,7 +163,7 @@
         if (typeof buildSeasonExpertCheck === 'function') buildSeasonExpertCheck(myRank);
         if (typeof concludeWomenSeason === 'function') concludeWomenSeason();
 
-        // Medienrechte (NEU): Liga-Kollektiv-TV-Ausschüttung zum Saisonende, gestaffelt nach
+        // Medienrechte: Liga-Kollektiv-TV-Ausschüttung zum Saisonende, gestaffelt nach
         // Ligastärke UND Tabellenplatz.
         if (typeof calculateCollectiveTvMoney === 'function') {
             // Der Grossteil des TV-Geldes wurde bereits in Spieltagsraten ausgezahlt (siehe
@@ -177,12 +227,7 @@
                 showNotice('📋 DFB-Lizenz vorläufig verweigert', `Sportlich wäre der Aufstieg in die ${leagueNames[targetLevel]} geschafft - der DFB räumt aber erst eine Nachfrist von drei Spieltagen ein, um die fehlenden Auflagen zu erfüllen:\n\n${failedReasons.map(r => '• ' + r).join('\n')}`, { typ: 'warn' });
             } else {
                 game.leagueLevel--;
-                game.money += 1500000;
-                let sponsorPromoBonus = game.sponsor.promotionBonus || 0;
-                if (sponsorPromoBonus > 0) game.money += sponsorPromoBonus;
-                addManagerXP(1000);
-                boostFanBaseFloor(6, `Der Aufstieg in die ${leagueNames[game.leagueLevel]}`);
-                if (typeof triggerPromotionBonusClauses === 'function') triggerPromotionBonusClauses();
+                let sponsorPromoBonus = applyPromotionRewards();
                 showNotice('🎉 Aufstieg geschafft!', `Glückwunsch zur Beförderung in die ${leagueNames[game.leagueLevel]}.\n\nAufstiegsprämie 1.500.000 €${sponsorPromoBonus > 0 ? ` plus ${formatVal(sponsorPromoBonus)} Sponsoren-Aufstiegsbonus` : ''}.`);
             }
         } else if ((myRank >= 17 || (myRank === 16 && relegation !== 'stayed')) && game.leagueLevel < NUM_LEAGUES - 1) {
@@ -192,7 +237,7 @@
 
         // Der Vorstand legt zu Saisonbeginn neue Budgets fest - abhängig von Ligastärke
         // und Abschneiden der Vorsaison, statt eines für immer fixen Startwerts.
-        // Wirtschaftliche Konsistenz (NEU): die alte Formel (Basis 60.000/10.000) ergab in
+        // Wirtschaftliche Konsistenz: die alte Formel (Basis 60.000/10.000) ergab in
         // der höchsten Liga nur ~35.000-45.000 € Gehaltsbudget PRO SPIELTAG für den GESAMTEN
         // Kader - ein einzelner Weltklassespieler kann laut calculatePlayerWage() aber bis zu
         // 900.000 €/Spieltag kosten. Nach der realistischen Stadion-Preisreform (teils 40+
@@ -201,7 +246,7 @@
         let placementFactor = myRank <= 4 ? 1.3 : (myRank <= 10 ? 1.0 : 0.8);
         game.transferBudget = Math.round(2500000 * (1 + leagueFactor * 2.5) * placementFactor);
         game.wageBudget = Math.round(450000 * (1 + leagueFactor * 2.5) * placementFactor);
-        // Manager-Eigengehalt (NEU): blieb bisher für immer beim Startwert (1.200 €/SpT),
+        // Manager-Eigengehalt: blieb bisher für immer beim Startwert (1.200 €/SpT),
         // selbst nach mehreren Aufstiegen in die Bundesliga mit Millionenbudgets - ein
         // erfolgreicher Bundesliga-Trainer verdient real deutlich mehr als ein Kreisliga-
         // Einsteiger. Skaliert jetzt mit derselben Liga-/Erfolgsformel wie die Vereinsbudgets.
@@ -219,7 +264,7 @@
         squad.forEach(p => {
             p.contracts--;
             p.fitness = 100;
-            // Spielerwert-Entwicklungs-Historie (NEU): ein Schnappschuss pro Saison, damit im
+            // Spielerwert-Entwicklungs-Historie: ein Schnappschuss pro Saison, damit im
             // Spieler-Detail eine echte Entwicklungskurve statt nur des aktuellen Werts
             // angezeigt werden kann.
             if (!p.strengthHistory) p.strengthHistory = [];
@@ -245,7 +290,7 @@
             addInboxMessage('vertrag', `📋 Vertrag ausgelaufen: ${p.name}`, `Der Vertrag von ${p.name} ist ausgelaufen - er verlässt den Verein ablösefrei (Bosman-Regel).`, 'screen-squad');
             if (typeof checkCrowdFavoriteDeparture === 'function') checkCrowdFavoriteDeparture(p);
         });
-        // Vorwarnung (NEU): wer nur noch 1 Jahr Restlaufzeit hat, wird jetzt aktiv gemeldet,
+        // Vorwarnung: wer nur noch 1 Jahr Restlaufzeit hat, wird jetzt aktiv gemeldet,
         // statt dass der Manager es zufällig in der Vertragsliste entdecken muss.
         squad.filter(p => p.contracts === 1 && p.strength >= 50).forEach(p => {
             addInboxMessage('vertrag', `⏳ Vertrag läuft aus: ${p.name}`, `${p.name} hat nur noch 1 Jahr Vertrag - jetzt verlängern, sonst verlässt er den Verein am Saisonende ablösefrei!`, 'screen-contracts');

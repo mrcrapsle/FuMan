@@ -2,7 +2,7 @@
     function renderDashboardView() {
         document.getElementById('dash-mday').innerText = Math.min(34, game.matchday);
         document.getElementById('dash-league-name').innerText = leagueNames[game.leagueLevel];
-        // Dashboard-Hero (NEU): Liga & Spieltag auch in der neuen 3D-Stadion-Ansicht anzeigen.
+        // Dashboard-Hero: Liga & Spieltag auch in der neuen 3D-Stadion-Ansicht anzeigen.
         let heroSubline = document.getElementById('dash-hero-subline');
         if (heroSubline) heroSubline.innerText = `${leagueNames[game.leagueLevel]} · Spieltag ${Math.min(34, game.matchday)}/34`;
         let heroCrest = document.getElementById('dash-hero-crest');

@@ -65,7 +65,7 @@
         let stops = 3;
         let totalIncome = 0;
         let stopNames = [];
-        // Wirtschaftliche Konsistenz (NEU): die alten Fixbeträge (25.000-45.000 € je Station)
+        // Wirtschaftliche Konsistenz: die alten Fixbeträge (25.000-45.000 € je Station)
         // waren nach der Wirtschaftsreform (Gehaltsbudgets jetzt im Millionenbereich, siehe
         // wageBudget-Neuberechnung) zur Bedeutungslosigkeit geschrumpft - jetzt skaliert mit
         // derselben Liga-Stärke wie Sponsoren-Einnahmen.

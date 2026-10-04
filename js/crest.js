@@ -99,7 +99,7 @@
                 badge.style.display = 'none';
             }
         }
-        // Dritte, kombinierbare Wappen-Ebene (NEU): Tier-/Maskottchen-Symbol oben links, damit
+        // Dritte, kombinierbare Wappen-Ebene: Tier-/Maskottchen-Symbol oben links, damit
         // Initialen, Muster-Badge und Tier-Symbol frei miteinander kombiniert werden können.
         let animalBadge = document.getElementById('club-logo-animal-badge');
         if (animalBadge) {
@@ -207,7 +207,7 @@
         applyClubCrest();
         renderCrestEditor();
     }
-    // Eigene Wappen-Elemente kombinierbar (NEU): Tier-/Maskottchen-Symbol als dritte,
+    // Eigene Wappen-Elemente kombinierbar: Tier-/Maskottchen-Symbol als dritte,
     // unabhängig wählbare Ebene neben Initialen und Muster-Badge.
     const CREST_ANIMAL_OPTIONS = [null, '🦁', '🐺', '🦅', '🐴', '🐻', '🐗', '🦊', '🐂'];
     function setCrestAnimal(animal) {

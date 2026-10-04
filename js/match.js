@@ -33,7 +33,7 @@
     // Zentrale, einmal definierte Bonuswerte für Spielstil & Zweikampfhärte - werden sowohl
     // in calcTeamStrength() (Saison-/Vorschau-Werte) als auch LIVE während des Spiels
     // (simulateMatchStep()) verwendet, damit Taktikänderungen mitten im Match sofort wirken.
-    // Spielstile 2.0 (NEU): 8 statt 3 Optionen, jeweils mit Tempo/Pressing-Werten, aus denen
+    // Spielstile 2.0: 8 statt 3 Optionen, jeweils mit Tempo/Pressing-Werten, aus denen
     // sich Teamstärke-Bonus UND Fitnessverlust ableiten (siehe getTacticStyleBonus() und
     // getTacticStyleFitnessMultiplier() unten) - vorher nur 3 feste Sonderfälle.
     // Formations-Bewertungen (FORMATION_RATINGS) sind bereits in squad.js definiert.
@@ -59,7 +59,7 @@
         let cfg = TACTIC_STYLE_CONFIG[style] || TACTIC_STYLE_CONFIG.ausgeglichen;
         return 1 + ((cfg.tempo - 50) + (cfg.press - 50)) / 400; // z.B. Pressing (68/88): 1+ (18+38)/400 = 1.14
     }
-    // Formations-Bonus (NEU): Off-Wert erhöht die Angriffsdurchschlagskraft, Def-Wert
+    // Formations-Bonus: Off-Wert erhöht die Angriffsdurchschlagskraft, Def-Wert
     // stabilisiert (siehe Verwendung in match.js für den defensiven Gegenpart).
     function getFormationOffBonus() {
         let r = FORMATION_RATINGS[game.formation] || { off: 60 };
@@ -135,7 +135,7 @@
         // Eingespieltheit: Spielerpaare, die schon oft zusammen aufgelaufen sind, geben einen
         // kleinen, aber spürbaren Team-Stärke-Bonus (bis zu +3 bei maximaler Eingespieltheit).
         bonus += getLineupChemistryStats().bonus;
-        // Kabinen-Dynamik (NEU): Cliquenbildung und Führungsspieler-Rat wirken sich auf die
+        // Kabinen-Dynamik: Cliquenbildung und Führungsspieler-Rat wirken sich auf die
         // Team-Stärke aus.
         if (typeof getCliqueChemistryModifier === 'function') bonus += getCliqueChemistryModifier();
         if (typeof getCouncilMoraleStabilizer === 'function') bonus += getCouncilMoraleStabilizer() * 0.3;
@@ -155,14 +155,14 @@
         // Wetterfest: gibt bei schlechtem Wetter (Regen/Schnee/Sturm/Hitze) einen kleinen
         // Extra-Bonus, unbeeindruckt von den Bedingungen zu bleiben.
         if (currentWeather.goalMult < 1 && starting.some(p => p.trait === 'Wetterfest')) bonus += 1.5;
-        // Block-spezifische Fan-Kultur (NEU): tief verwurzelte Block-Kulturen geben bei
+        // Block-spezifische Fan-Kultur: tief verwurzelte Block-Kulturen geben bei
         // Heimspielen einen kleinen zusätzlichen Atmosphäre-Bonus.
         if (isHomeMatch && typeof getBlockCultureHomeBonus === 'function') bonus += getBlockCultureHomeBonus();
-        // Stadion-Erweiterungen (NEU): Beschallungsanlage verstärkt den Heimvorteil.
+        // Stadion-Erweiterungen: Beschallungsanlage verstärkt den Heimvorteil.
         if (isHomeMatch && typeof getStadiumHomeAdvantageBonus === 'function') bonus += getStadiumHomeAdvantageBonus();
         // Fan-Aktionen (Choreo heim, Sonderzug auswärts), siehe runFanAction() in fans.js.
         if (typeof getFanSupportBonus === 'function') bonus += getFanSupportBonus(isHomeMatch);
-        // Kapitän (NEU): war bisher rein kosmetisch (nur ein Ⓒ-Icon) - steht der ernannte
+        // Kapitän: war bisher rein kosmetisch (nur ein Ⓒ-Icon) - steht der ernannte
         // Kapitän tatsächlich auf dem Feld, gibt seine Führungsqualität einen kleinen, aber
         // echten Team-Stärke-Bonus. Ein erfahrener Kapitän (30+) wirkt sich stärker aus.
         let captainOnPitch = starting.find(p => p.id === game.captainId);
@@ -182,10 +182,10 @@
 
         // Spielstil: Offensiv riskiert mehr für mehr Durchschlagskraft, Defensiv ist solider.
         bonus += getTacticStyleBonus(game.tacticStyle);
-        // Formations-Bonus (NEU): Off-Wert der gewählten Formation erhöht die Angriffs-
+        // Formations-Bonus: Off-Wert der gewählten Formation erhöht die Angriffs-
         // durchschlagskraft, siehe FORMATION_RATINGS in squad.js.
         bonus += getFormationOffBonus();
-        // Team-Anweisungen (NEU): Gegenpressing/Tief stehen/Hohe Außenverteidiger wirken sich
+        // Team-Anweisungen: Gegenpressing/Tief stehen/Hohe Außenverteidiger wirken sich
         // zusätzlich zu Formation und Spielstil aus, unabhängig kombinierbar.
         if (typeof getTeamInstructionBonus === 'function') bonus += getTeamInstructionBonus();
 
@@ -352,7 +352,7 @@
         // der Partie tatsächlich neu bewerten können, statt nur beim Anpfiff zu zählen.
         let kickoffTacticDelta = getTacticStyleBonus(game.tacticStyle) + getTackleHardnessBonus(game.tackleHardness);
         let ourBaseStr = ourStrength - kickoffTacticDelta;
-        // Gegner-Identität (NEU): Spielstil des Live-Gegners nachschlagen, damit er sich auch
+        // Gegner-Identität: Spielstil des Live-Gegners nachschlagen, damit er sich auch
         // im direkten Duell gegen uns bemerkbar macht (siehe simulateMatchStep()).
         let oppName = isHome ? awayName : homeName;
         let oppTeamObj = leaguesData.flat().find(t => t && t.name === oppName) || null;
@@ -518,7 +518,7 @@
         });
     }
 
-    // Taktik-Automatik (NEU, Einstellung in der Taktiktafel siehe js/squad.js): reagiert
+    // Taktik-Automatik (Einstellung in der Taktiktafel siehe js/squad.js): reagiert
     // automatisch auf den Spielstand, ohne dass das Live-Panel oben manuell bedient werden
     // muss. Feuert je Regel höchstens EINMAL pro Spiel (currentMatch.tacticAutomationFired),
     // damit nicht bei jedem weiteren Schritt derselbe Stil erneut gesetzt und der Ticker
@@ -639,7 +639,7 @@
         "🎙️ Co-Kommentator: „Die Zweikampfquote ist heute bemerkenswert hoch.“",
         "🎙️ Co-Kommentator: „Beide Torhüter wirken heute sehr aufmerksam.“"
     ];
-    // Kontextabhängige Kommentar-Varianz (NEU): zusätzliche Zeilen je nach Spielstand und
+    // Kontextabhängige Kommentar-Varianz: zusätzliche Zeilen je nach Spielstand und
     // Spielminute, damit der Ticker nicht immer dieselben generischen Sätze wiederholt.
     const CO_COMMENTATOR_LINES_LEADING = [
         "🎙️ Co-Kommentator: „Die Führung gibt spürbar Sicherheit in den eigenen Reihen.“",
@@ -708,11 +708,11 @@
         let effHomeStr = (currentMatch.isHome ? ourLiveStr : currentMatch.homeStr) - currentMatch.homeStrPenalty;
         let effAwayStr = (currentMatch.isHome ? currentMatch.awayStr : ourLiveStr) - currentMatch.awayStrPenalty;
         let diff = effHomeStr - effAwayStr;
-        // Formations-Verteidigungswert (NEU): eine defensiv robuste Formation verschiebt die
+        // Formations-Verteidigungswert: eine defensiv robuste Formation verschiebt die
         // Wahrscheinlichkeit im Ballbesitz-Duell zu unseren Gunsten, unabhängig davon, ob wir
         // Heim- oder Auswärtsteam sind (siehe FORMATION_RATINGS in squad.js).
         let ourDefShift = getFormationDefBonus() * 0.6;
-        // Torwarttrainer (NEU): wirkte bisher nur im seltenen Elfmeterschießen, nie im
+        // Torwarttrainer: wirkte bisher nur im seltenen Elfmeterschießen, nie im
         // regulären 90-minütigen Spielverlauf - ein guter Torwart-Coach verbessert
         // Reflexe/Stellungsspiel des Keepers auch im Alltagsgeschäft.
         if (staffMembers.twTrainer.hired) ourDefShift += 0.4 * getStaffLevelMultiplier('twTrainer');
@@ -725,7 +725,7 @@
         // viel zu oft 0:0 endete, weil einfach zu wenige Torereignisse pro Partie ausgelöst
         // wurden - unabhängig davon, wer sie dann verwertet hätte.
         goalChance += Math.min(0.25, Math.abs(diff) * 0.003);
-        // Gegner-Identität (NEU): ein offensiv eingestellter Gegner erhöht die Chance auf ein
+        // Gegner-Identität: ein offensiv eingestellter Gegner erhöht die Chance auf ein
         // Torereignis zusätzlich, ein defensiver senkt sie.
         if (currentMatch.oppPlaystyle) {
             let style = getTeamPlaystyle({ playstyle: currentMatch.oppPlaystyle });
@@ -744,7 +744,7 @@
         // Standards-Spezialist: erhöht generell die Chance auf Tore aus Standardsituationen
         // (Freistöße/Ecken), unabhängig von individuellen Spieler-Eigenschaften.
         if (staffMembers.setPieceCoach.hired) goalChance += 0.015 * getStaffLevelMultiplier('setPieceCoach');
-        // Standard-Schützen (NEU): war bisher rein kosmetisch (nur ein Icon neben dem Namen) -
+        // Standard-Schützen: war bisher rein kosmetisch (nur ein Icon neben dem Namen) -
         // jetzt geben ein passsicherer Freistoß-/Eckenschütze und ein torgefährlicher
         // Elfmeterschütze im Kader einen kleinen echten Zusatzbonus, wenn sie auf dem Platz
         // stehen. Das macht die neue Standards-Spezialist-Automatisierung auch tatsächlich
@@ -809,7 +809,7 @@
             let ourCardRoll = Math.random();
             // Ein "Zweikampfmonster" gewinnt seine Duelle sauber und senkt so das eigene Kartenrisiko.
             let ourCardThreshold = hasTackleMonster ? 0.045 : 0.06;
-            // Kapitän auf dem Feld (NEU): beruhigt die Mannschaft und senkt das Kartenrisiko
+            // Kapitän auf dem Feld: beruhigt die Mannschaft und senkt das Kartenrisiko
             // leicht - eine der klassischsten Führungsspieler-Aufgaben im echten Fußball.
             if (onPitch.some(p => p.id === game.captainId)) ourCardThreshold *= 0.9;
             // Glücksbringer (Premium-Booster, NEU): dämpft auch das Kartenrisiko.
@@ -970,7 +970,7 @@
         renderHalftimeSubSuggestion();
         document.getElementById('halftime-talk-overlay').classList.add('show');
     }
-    // KI-Vorschlag für Einwechslungen zur Halbzeit (NEU): identifiziert den müdesten
+    // KI-Vorschlag für Einwechslungen zur Halbzeit: identifiziert den müdesten
     // Feldspieler auf dem Platz und den stärksten passenden Ersatz auf der Bank, statt dass
     // eine Einwechslung immer nur den zuletzt eingewechselten Spieler naiv austauscht.
     function getHalftimeSubSuggestion() {
@@ -1097,14 +1097,14 @@
         // im Kontoauszug geführt - sie stehen vollständig aufgeschlüsselt im
         // Buchungsjournal (siehe game.financeLedger weiter unten).
         setzeBuchungskontext(SPIELTAG_KONTEXT);
-        // Rasenpflege (NEU): das Geläuf nutzt sich durch jedes Heimspiel leicht ab, siehe
+        // Rasenpflege: das Geläuf nutzt sich durch jedes Heimspiel leicht ab, siehe
         // tickPitchCondition()/maintainPitch() in stadium.js.
         if (isHomeMatch && typeof tickPitchCondition === 'function') tickPitchCondition();
         let ghostGameActive = isHomeMatch && game.forcedGhostGame;
         // Lokalderby-Atmosphäre: bei Heimspielen gegen den permanenten Rivalen ist das
         // Stadion deutlich stärker ausgelastet als sonst (gedeckelt bei "ausverkauft").
         let derbyBoostActive = isHomeMatch && isDerbyMatch && !ghostGameActive;
-        // Pokal-/Europapokalspiele (NEU): ziehen erfahrungsgemäß mehr Zuschauer an als
+        // Pokal-/Europapokalspiele: ziehen erfahrungsgemäß mehr Zuschauer an als
         // gewöhnliche Ligaspiele - besondere Atmosphäre, seltenere Gelegenheit.
         let isCupOrEuropeMatch = isHomeMatch && !ghostGameActive && typeof currentMatch !== 'undefined' && currentMatch && (currentMatch.isCup || currentMatch.isEurope);
         let cupBoostActive = isCupOrEuropeMatch && !derbyBoostActive;
@@ -1155,7 +1155,7 @@
             // (Zuschauerrekord wird bereits an anderer Stelle über game.recordAttendance
             // gepflegt, siehe applyMatchdayFinances weiter unten - keine doppelte Erfassung.)
         }
-        // Vereinsrekorde (NEU): größter Sieg, höchste Niederlage, torreichstes Spiel und
+        // Vereinsrekorde: größter Sieg, höchste Niederlage, torreichstes Spiel und
         // ungeschlagen-Serie - bisher gab es außer der punktuellen Rivalen-Bilanz kein
         // dauerhaftes Rekordarchiv für den gesamten Verein.
         if (scoreTextForRecord && typeof scoreTextForRecord === 'string' && scoreTextForRecord.includes(':')) {
@@ -1187,7 +1187,7 @@
         // 600 Zuschauer im Stadion waren - ein Kreisklassenspiel verdiente so ein Viertel
         // seiner Ticketeinnahmen mit 50 verkauften Logenplaetzen. Jetzt sind sie wie in der
         // GuV-Prognose (finances.js) an die tatsaechliche Zuschauerzahl gekoppelt.
-        // Dauerkarten (NEU): der Anteil der Zuschauer, der bereits über die Dauerkarte bezahlt
+        // Dauerkarten: der Anteil der Zuschauer, der bereits über die Dauerkarte bezahlt
         // hat (siehe renewSeasonTickets() in stadium.js), wird bei der SPIELTAGS-Einnahme
         // ausgeklammert - sonst würde er doppelt kassiert. Er zählt aber weiterhin voll zur
         // Zuschauerzahl (Fanartikel, Rekorde, Auslastung), da diese Fans wirklich im Stadion
@@ -1198,9 +1198,9 @@
         let ticketIncome = (isHomeMatch && !ghostGameActive) ? Math.round(zahlendeAtt * (stadium.stehShare ?? 0.5) * game.ticketPrices.steh + zahlendeAtt * (stadium.sitzShare ?? 0.45) * game.ticketPrices.sitz + vipSold * game.ticketPrices.vip) : 0;
         // Doppelte Ticketeinnahmen (Premium-Booster, NEU).
         if (isHomeMatch && game.ticketIncomeBoostNextMatch) { ticketIncome *= 2; game.ticketIncomeBoostNextMatch = false; }
-        // Medienrechte (NEU): eigener Medienpartner zahlt bei jedem Heimspiel, mit Bonus bei
+        // Medienrechte: eigener Medienpartner zahlt bei jedem Heimspiel, mit Bonus bei
         // Derbys/Pokalspielen (attraktivere Übertragungen).
-        // Stadion-Erweiterungen (NEU): feste Zusatzeinnahmen der "income"-Kategorie
+        // Stadion-Erweiterungen: feste Zusatzeinnahmen der "income"-Kategorie
         // (VIP-Lounges, Public-Viewing, Ladestationen) sowie ein leichter Medienimage-Schub
         // durch Lichtshow/Pressezentrum bei jedem Heimspiel.
         if (isHomeMatch && typeof getStadiumMatchdayIncome === 'function') {
@@ -1210,7 +1210,7 @@
         if (isHomeMatch && typeof tickMediaRightsPayment === 'function') {
             tickMediaRightsPayment(isDerbyMatch, !!(typeof currentMatch !== 'undefined' && currentMatch && currentMatch.isCup));
         }
-        // Betriebskosten (NEU, echte Abbuchung): dieselbe Formel wurde bisher nur im
+        // Betriebskosten (echte Abbuchung): dieselbe Formel wurde bisher nur im
         // Finanz-Ausblick ANGEZEIGT, aber nie tatsächlich abgebucht - ein "Phantom-Posten".
         // Jetzt wird der Pro-Spieltag-Anteil (Monatsschätzung / 4) jeden Spieltag wirklich
         // fällig, egal ob Heim- oder Auswärtsspiel (laufende Kosten fallen immer an).
@@ -1267,13 +1267,13 @@
         let themedBonus = 0;
         if (game.sponsor.themedBonusType === 'cleanSheet' && cleanSheet) themedBonus = game.sponsor.themedBonusAmount;
         if (game.sponsor.themedBonusType === 'attendance' && isHomeMatch && !ghostGameActive) themedBonus = Math.round(att * game.sponsor.themedBonusAmount);
-        // Sponsoren-Zufriedenheit (NEU): bei niedriger Loyalität zahlt der Hauptsponsor
+        // Sponsoren-Zufriedenheit: bei niedriger Loyalität zahlt der Hauptsponsor
         // spürbar weniger (nur der Hauptsponsor-Teil, nicht Banden/Ausrüster/Namensrechte).
         let loyaltyMult = typeof getSponsorLoyaltyPaymentMultiplier === 'function' ? getSponsorLoyaltyPaymentMultiplier() : 1;
         let mainSponsorInc = Math.round((game.sponsor.base + (won ? game.sponsor.winBonus : 0) + themedBonus) * loyaltyMult);
         // Sponsoren-Boost (Premium-Booster, NEU): +50% für begrenzte Zeit.
         if (game.sponsorBoostMatchdaysLeft > 0) mainSponsorInc = Math.round(mainSponsorInc * 1.5);
-        // Stadion-Erweiterungen (NEU): Solaranlage/Business-Center erhöhen die laufenden
+        // Stadion-Erweiterungen: Solaranlage/Business-Center erhöhen die laufenden
         // Sponsoreneinnahmen dauerhaft.
         if (typeof getStadiumSponsorBonus === 'function') mainSponsorInc = Math.round(mainSponsorInc * (1 + getStadiumSponsorBonus()));
         let sponsorInc = mainSponsorInc + (isHomeMatch ? getBandenIncome() + game.kitSupplier.income + (stadium.namingRightsIncome || 0) : 0) + (game.sleeveSponsor?.income || 0);
@@ -1437,7 +1437,7 @@
 
     // Ausschreitungen bei Heim-Derbys: Risiko sinkt deutlich mit mehr Ordnerdienst-Personal.
     function checkHooliganIncident() {
-        // Eigene Sicherheitskräfte (NEU): feste Ordner zählen zur effektiven Ordnerzahl dazu,
+        // Eigene Sicherheitskräfte: feste Ordner zählen zur effektiven Ordnerzahl dazu,
         // die Ausbildungsstufe macht jeden einzelnen Ordner zusätzlich wirksamer.
         let effectiveStewards = (game.stewards || 0) + (typeof securityWorkforce !== 'undefined' ? securityWorkforce.permanentStewards : 0);
         let skillMult = typeof securityWorkforce !== 'undefined' ? (1 + (securityWorkforce.skillLevel - 1) * 0.12) : 1;
@@ -1445,7 +1445,7 @@
         if (staffMembers.fanLiaison.hired) baseChance *= 0.7; // Fanbeauftragter deeskaliert im Vorfeld
         // Sicherheitslage beruhigen (Premium-Booster, NEU): stark reduziertes Risiko.
         if (game.securityCalmNextMatch) baseChance *= 0.15;
-        // Stadion-Sicherheitstechnik (NEU): dauerhafte Risikosenkung durch gekaufte Anlagen.
+        // Stadion-Sicherheitstechnik: dauerhafte Risikosenkung durch gekaufte Anlagen.
         if (typeof getStadiumSecurityBonus === 'function') baseChance *= (1 - getStadiumSecurityBonus());
         if (Math.random() >= baseChance) return;
 
@@ -1473,10 +1473,10 @@
             gradeOwnMatch(unsere, totalGoalsForBets.total - unsere);
         }
         underworld.spyIntelActive = false;
-        // Zuschauerzahl-Konsistenz-Fix (NEU): finalAttendance nach dem Spiel zurücksetzen,
+        // Zuschauerzahl-Konsistenz-Fix: finalAttendance nach dem Spiel zurücksetzen,
         // damit sie nicht versehentlich ins nächste Spiel durchsickert.
         if (typeof currentMatch !== 'undefined' && currentMatch) currentMatch.finalAttendance = undefined;
-        // Premium-Booster-Flags (NEU): erst NACH dem kompletten Spiel zurücksetzen, da sie
+        // Premium-Booster-Flags: erst NACH dem kompletten Spiel zurücksetzen, da sie
         // während des gesamten Spielverlaufs (viele Ticks) wirken sollen, nicht nur beim ersten.
         if (matchResult !== null) {
             game.luckyCharmNextMatch = false;
@@ -1500,7 +1500,7 @@
                     // Potenzial-Multiplikator & Ausbildungsschwerpunkt (Jugendakademie): stärkere
                     // Talente und passender Fokus entwickeln sich schneller in der Hospitanz.
                     let potMult = typeof getYouthPotentialMultiplier === 'function' ? getYouthPotentialMultiplier(p) : 1;
-                    // Jugend-Mentor (NEU): ein erfahrener Profi als persönlicher Mentor
+                    // Jugend-Mentor: ein erfahrener Profi als persönlicher Mentor
                     // beschleunigt die Entwicklung während der Hospitanz zusätzlich spürbar.
                     if (p.mentorId && squad.some(s => s.id === p.mentorId)) potMult *= 1.35;
                     if (Math.random() < 0.12 * potMult) {
@@ -1567,16 +1567,16 @@
         individualBoostChance *= (1 + (game.equipmentLevel || 0) * 0.05);
         if (game.doubleTrainingBoostActive) { individualBoostChance *= 1.6; game.doubleTrainingBoostActive = false; }
         let injuryChance = game.teamTraining === 'erholung' ? 0.024 : 0.03;
-        // Premium-Booster (NEU): Verletzungsschutz setzt das Risiko komplett auf 0,
+        // Premium-Booster: Verletzungsschutz setzt das Risiko komplett auf 0,
         // Glücksbringer dämpft es stark.
         if (game.injuryShieldMatchdaysLeft > 0) injuryChance = 0;
         else if (game.luckyCharmNextMatch) injuryChance *= 0.4;
         // Verletzungspräventions-Programm (Training & Förderung): dauerhafte Grundrisiko-Senkung.
         if (game.injuryPreventionProgram) injuryChance *= 0.82;
-        // Stadion-Erweiterungen (NEU): Medizinzentrum/Rasenpflege senken das Trainings-
+        // Stadion-Erweiterungen: Medizinzentrum/Rasenpflege senken das Trainings-
         // Verletzungsrisiko - wirkt am heimischen Gelände, unabhängig vom letzten Spielort.
         if (typeof getStadiumInjuryReduction === 'function') injuryChance *= (1 - getStadiumInjuryReduction());
-        // Rasenzustand (NEU): unabhängig von den festen Stadion-Erweiterungen oben - ein
+        // Rasenzustand: unabhängig von den festen Stadion-Erweiterungen oben - ein
         // gepflegtes Geläuf senkt das Risiko zusätzlich leicht, ein vernachlässigtes erhöht es.
         // Bei stadium.pitchCondition === 85 (Ausgangswert) ist der Faktor exakt neutral (1.0).
         if (typeof stadium !== 'undefined' && stadium.pitchCondition !== undefined) {
@@ -1668,35 +1668,35 @@
             tickCompetitorFirms();
             tickAcquisitionOfferExpiry();
         }
-        // Produktionsketten-Countdown (NEU) jeden Spieltag herunterzählen.
+        // Produktionsketten-Countdown jeden Spieltag herunterzählen.
         if (typeof tickProductionQueue === 'function') tickProductionQueue();
         // Merchandising: limitierte Edition und saisonale Kollektion jeden Spieltag prüfen.
         if (typeof tickLimitedEditionSales === 'function') {
             tickLimitedEditionSales();
             tickSeasonalCollectionExpiry();
         }
-        // Scouting-Netzwerk 2.0 (NEU): Countdown-Missionen und Beobachtungsliste jeden
+        // Scouting-Netzwerk 2.0: Countdown-Missionen und Beobachtungsliste jeden
         // Spieltag weiterentwickeln.
         if (typeof tickScoutingMissions === 'function') {
             tickScoutingMissions();
             tickWatchlist();
         }
-        // Stadion-Baustellen (NEU) jeden Spieltag weiterführen.
+        // Stadion-Baustellen jeden Spieltag weiterführen.
         if (typeof tickStadiumConstruction === 'function') tickStadiumConstruction();
-        // Spieler des Monats (NEU) jeden Spieltag prüfen (wird nur alle 4 SpT tatsächlich vergeben).
+        // Spieler des Monats jeden Spieltag prüfen (wird nur alle 4 SpT tatsächlich vergeben).
         if (typeof checkPlayerOfTheMonth === 'function') checkPlayerOfTheMonth();
-        // Tagesform (NEU): schwankt jeden Spieltag neu, leicht durch Moral/Fitness beeinflusst
+        // Tagesform: schwankt jeden Spieltag neu, leicht durch Moral/Fitness beeinflusst
         // (wer in Form und ausgeruht ist, hat bessere Chancen auf einen guten Tag).
         squad.forEach(p => {
             let bias = ((p.morale || 50) - 50) * 0.15 + ((p.fitness || 100) - 80) * 0.1;
             p.dailyForm = Math.max(5, Math.min(95, Math.round(50 + bias + (Math.random() * 40 - 20))));
         });
-        // Sponsoren-Zufriedenheit und Aktivierungs-Events (NEU) jeden Spieltag.
+        // Sponsoren-Zufriedenheit und Aktivierungs-Events jeden Spieltag.
         if (typeof tickSponsorLoyalty === 'function') {
             tickSponsorLoyalty(matchResult);
             checkSponsorActivationEvent();
         }
-        // Block-spezifische Fan-Kultur (NEU) jeden Spieltag weiterentwickeln.
+        // Block-spezifische Fan-Kultur jeden Spieltag weiterentwickeln.
         if (typeof tickBlockCultures === 'function') tickBlockCultures();
         // Fan-Zentrale: Cooldown herunterzählen, Traditionsverein-Status und kritischen
         // Fan-Brief prüfen - jeden verarbeiteten Spieltag, unabhängig von Live/Batch-Kontext.
@@ -1705,56 +1705,11 @@
             if (typeof checkTraditionClubStatus === 'function') checkTraditionClubStatus();
             if (typeof checkCriticalFanLetter === 'function') checkCriticalFanLetter();
         }
-        // DFB-Nachfrist-Frühwarnung: einmalig in den letzten Spieltagen der Saison aktiv per
-        // Postfach warnen, falls man aufstiegsberechtigt wäre, aber die Lizenz noch fehlt -
-        // damit man es nicht verpasst, wenn man den Stadion-Screen nicht besucht.
-        if (game.matchday === 30 && !game.dfbGracePeriod) {
-            let status = checkDfbLicensingStatus();
-            if (status.targetLevel !== null && status.missing.length > 0) {
-                let teams = leaguesData[game.leagueLevel];
-                let sorted = teams ? [...teams].sort(compareTableRows) : [];
-                let myRank = sorted.findIndex(t => t.name === game.clubName) + 1;
-                if (myRank > 0 && myRank <= 2) {
-                    addInboxMessage('vertrag', '🚨 DFB-Lizenz-Frühwarnung!', `Du liegst aktuell in Aufstiegsposition, aber die Lizenz für die ${leagueNames[status.targetLevel]} fehlt noch:\n\n${status.missing.map(m => '• ' + m).join('\n')}\n\nNur noch wenige Spieltage bis Saisonende - jetzt nachbessern!`, 'screen-stadium');
-                    showToast('🚨 DFB-Lizenz-Frühwarnung: Auflagen für den möglichen Aufstieg noch nicht erfüllt!', 'error');
-                }
-            }
-        }
-        // DFB-Nachfrist prüfen: wird jeden Spieltag der neuen Saison ausgewertet, solange
-        // eine offene Nachfrist läuft (siehe DFB-Lizenzierung in concludeSeasonAndAdvance()).
-        if (game.dfbGracePeriod) {
-            let status = checkDfbLicensingStatus();
-            if (status.missing.length === 0) {
-                // Mängel rechtzeitig behoben: nachträglicher Aufstieg mitten in der laufenden Saison!
-                game.leagueLevel = game.dfbGracePeriod.targetLevel;
-                game.dfbGracePeriod = null;
-                if (typeof triggerPromotionBonusClauses === 'function') triggerPromotionBonusClauses();
-                addInboxMessage('vertrag', '🎉 Nachträglicher Aufstieg!', `Die DFB-Auflagen wurden rechtzeitig innerhalb der Nachfrist erfüllt - der Aufstieg in die ${leagueNames[game.leagueLevel]} wird nachträglich vollzogen!`, 'screen-stadium');
-                showToast(`🎉 Nachträglicher Aufstieg in die ${leagueNames[game.leagueLevel]}!`, 'success');
-            } else {
-                game.dfbGracePeriod.deadlineMatchday--;
-                if (game.dfbGracePeriod.deadlineMatchday <= 0) {
-                    let targetLevel = game.dfbGracePeriod.targetLevel;
-                    game.dfbGracePeriod = null;
-                    addInboxMessage('vertrag', '📋 DFB-Nachfrist verstrichen', `Die Nachfrist zur Erfüllung der DFB-Auflagen für die ${leagueNames[targetLevel]} ist ohne Erfolg verstrichen - der Aufstieg verfällt endgültig für diese Saison.`, 'screen-stadium');
-                    showToast('📋 DFB-Nachfrist verstrichen - Aufstieg endgültig verfallen.', 'error');
-                }
-            }
-        }
+        // DFB-Lizenz: Frühwarnung an Spieltag 30 und laufende Nachfrist (js/season-end.js).
+        if (typeof checkDfbLicenseDeadlines === 'function') checkDfbLicenseDeadlines();
 
-        // ---------- KABINEN-CLIQUEN ----------
-        // Spieler, die lange genug gemeinsam im Kader sind, werden gelegentlich "beste
-        // Freunde" - wird einer von beiden verkauft, leidet kurzzeitig die Moral des anderen
-        // (siehe checkFriendshipDeparture() in transfermarket.js).
-        squad.forEach(p => { p.squadTenureMatchdays = (p.squadTenureMatchdays || 0) + 1; });
-        let unpaired = squad.filter(p => !p.friendPlayerId && (p.squadTenureMatchdays || 0) >= 20);
-        if (unpaired.length >= 2 && Math.random() < 0.05) {
-            let a = unpaired[Math.floor(Math.random() * unpaired.length)];
-            let candidates = unpaired.filter(p => p.id !== a.id);
-            let b = candidates[Math.floor(Math.random() * candidates.length)];
-            a.friendPlayerId = b.id; b.friendPlayerId = a.id;
-            addInboxMessage('vertrag', '🤝 Kabinen-Freundschaft entstanden', `${a.name} und ${b.name} sind in der Kabine beste Freunde geworden.`, 'screen-squad');
-        }
+        // Kabinen-Freundschaften (js/locker-room.js).
+        if (typeof tickLockerFriendships === 'function') tickLockerFriendships();
 
         squad.forEach(p => {
             // Stammspieler erholen sich unter der Woche teilweise (ein Viertel der Bank-Erholung):
@@ -1904,44 +1859,19 @@
 
         // Ausschreitungen: nur relevant, wenn wir gerade ein Heim-Derby ausgetragen haben
         if (isHomeDerby) checkHooliganIncident();
-        // Ordner-Kosten (NEU, echte Abbuchung): bisher wurde nur im Finanz-Ausblick ein
+        // Ordner-Kosten (echte Abbuchung): bisher wurde nur im Finanz-Ausblick ein
         // Betrag angezeigt, aber nie wirklich abgebucht - ein weiterer "Phantom-Posten".
         if (typeof tickStewardCosts === 'function') tickStewardCosts(isHomeMatchParam);
         if (typeof runSecChiefAutomation === 'function') runSecChiefAutomation();
-        // Immobilien-Portfolio (NEU): laufende Mieteinnahmen unabhängig von Heim-/Auswärtsspiel.
+        // Immobilien-Portfolio: laufende Mieteinnahmen unabhängig von Heim-/Auswärtsspiel.
         if (typeof tickRealEstateIncome === 'function') tickRealEstateIncome();
         if (typeof tickWomenTeam === 'function') tickWomenTeam();
-        // Monatliche Ticks (alle 4 Spieltage ≈ 1 Monat) der Feature-Systeme.
-        if (game.matchday % 4 === 0) {
-            setzeBuchungskontext('📅 Monatliche Vereinsposten');
-            if (typeof migrateLegacyCoSponsors === 'function') migrateLegacyCoSponsors();
-            // Board Relations: monatliche Zufriedenheits- und Job-Sicherheits-Updates
-            if (typeof tickBoardRoom === 'function') tickBoardRoom();
-            // Jugend: monatliche Talententwicklung (Trainer-/Fokus-/Mentor-Bonus)
-            if (typeof tickYouthDevelopment === 'function') tickYouthDevelopment();
-            if (typeof tickYouthBreakthroughs === 'function') tickYouthBreakthroughs();
-            // Medienabteilung: Medienereignisse aus dem Saisonverlauf
-            if (typeof tickMediaDepartment === 'function') tickMediaDepartment();
-            if (typeof cleanupLegacyContractState === 'function') cleanupLegacyContractState();
-            // Opposition Analysis: Gegner-Analyse-Updates
-            if (typeof cleanupLegacyScoutState === 'function') cleanupLegacyScoutState();
-            if (typeof cleanupRemovedModuleState === 'function') cleanupRemovedModuleState();
-            if (typeof cleanupLegacyDevelopmentState === 'function') cleanupLegacyDevelopmentState();
-            if (typeof cleanupLegacyScoutingState === 'function') cleanupLegacyScoutingState();
-            if (typeof tickSeasonObjectives === 'function') tickSeasonObjectives();
-            if (typeof tickTeamCouncil === 'function') tickTeamCouncil();
-            if (typeof tickLockerRoom === 'function') tickLockerRoom();
-            if (typeof tickCoachCarousel === 'function') tickCoachCarousel();
-            if (typeof tickMemberAssembly === 'function') tickMemberAssembly();
-            // Karriereenden: am Saisonende in agePlayersAtSeasonEnd() (js/player-development.js)
-            // Financial tracking for dashboard charts
-            if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
-            loescheBuchungskontext();
-        }
+        // Monatliche Ticks (alle 4 Spieltage ≈ 1 Monat): runMonthlyClubTicks().
+        if (game.matchday % 4 === 0) runMonthlyClubTicks();
         if (typeof tickXpDoublerDuration === 'function') tickXpDoublerDuration();
         if (typeof checkReleaseClauseTriggers === 'function') checkReleaseClauseTriggers();
         if (typeof tickIncomingLoans === 'function') tickIncomingLoans();
-        // Jugendliga (NEU): alle 4 Spieltage ein automatisches Jugendliga-Spiel.
+        // Jugendliga: alle 4 Spieltage ein automatisches Jugendliga-Spiel.
         if (game.matchday % 4 === 0 && typeof tickYouthLeague === 'function') tickYouthLeague();
         if (typeof checkSellOnClausePayouts === 'function') checkSellOnClausePayouts();
         if (typeof tickSkillTraining === 'function') tickSkillTraining();
@@ -1950,7 +1880,7 @@
         if (typeof runTrainingAutopilotTick === 'function') runTrainingAutopilotTick();
         if (typeof tickSecondTeamRoutine === 'function') tickSecondTeamRoutine();
         if (typeof rollOfficeEvent === 'function') rollOfficeEvent();
-        // Weitere Premium-Booster-Countdowns (NEU).
+        // Weitere Premium-Booster-Countdowns.
         if (game.injuryShieldMatchdaysLeft > 0) game.injuryShieldMatchdaysLeft--;
         if (game.sponsorBoostMatchdaysLeft > 0) game.sponsorBoostMatchdaysLeft--;
 
@@ -1995,7 +1925,7 @@
         checkIncomingBandenOffers();
         checkIncomingSleeveOffers();
         runFanshopManagerTasks();
-        // Erweiterte Personal-Automatisierung (NEU): Chef-Scout, Sportdirektor,
+        // Erweiterte Personal-Automatisierung: Chef-Scout, Sportdirektor,
         // Marketing-Direktor, Standards-Spezialist.
         if (typeof runScoutAutomation === 'function') {
             runScoutAutomation();
@@ -2007,20 +1937,6 @@
         runFitCoachAutoAssignment();
         applyFanLiaisonPassiveEffect();
         runFanLiaisonAutoPricing();
-
-        if (game.matchday % 4 === 0) {
-            // Portfolio-Diversifikationsbonus (Kapitalmarkt): wer breit gestreut investiert,
-            // bekommt einen kleinen Dividenden-Aufschlag auf ALLE gehaltenen Aktien.
-            let diversificationBonus = typeof getDiversificationBonus === 'function' ? getDiversificationBonus() : 0;
-            let dividends = Math.round(STOCK_KEYS.reduce((sum, key) => {
-                let s = stockMarket[key];
-                // dividendRate ist ein Jahressatz (so wird er auch angezeigt) - ausgezahlt wird
-                // monatlich, also 1/8,5 davon. Bisher gab es den vollen Satz jeden Monat: 17-51 %
-                // Rendite pro Saison fast ohne Kursrisiko.
-                return s ? sum + (s.owned * s.price * (s.dividendRate + diversificationBonus) / 8.5) : sum;
-            }, 0));
-            game.money += dividends;
-        }
 
         if (typeof tickTransferWindows === 'function') tickTransferWindows();
         if (typeof tickSeasonEvents === 'function') tickSeasonEvents();
@@ -2046,6 +1962,33 @@
         game.viewingMatchday = Math.min(34, game.matchday);
         if (typeof maybeAutoSave === 'function') maybeAutoSave();
         updateUI();
+    }
+
+    // Alle 4 Spieltage (≈ 1 Monat) aus processPostMatchRoutine(): monatliche Ticks der
+    // Feature-Systeme und die Aktiendividende. Neue Monats-Ticks gehören HIERHER.
+    function runMonthlyClubTicks() {
+        setzeBuchungskontext('📅 Monatliche Vereinsposten');
+        if (typeof migrateLegacyCoSponsors === 'function') migrateLegacyCoSponsors();
+        if (typeof tickBoardRoom === 'function') tickBoardRoom();
+        if (typeof tickYouthDevelopment === 'function') tickYouthDevelopment();
+        if (typeof tickYouthBreakthroughs === 'function') tickYouthBreakthroughs();
+        if (typeof tickMediaDepartment === 'function') tickMediaDepartment();
+        if (typeof cleanupRemovedModuleState === 'function') cleanupRemovedModuleState();
+        if (typeof tickSeasonObjectives === 'function') tickSeasonObjectives();
+        if (typeof tickTeamCouncil === 'function') tickTeamCouncil();
+        if (typeof tickLockerRoom === 'function') tickLockerRoom();
+        if (typeof tickCoachCarousel === 'function') tickCoachCarousel();
+        if (typeof tickMemberAssembly === 'function') tickMemberAssembly();
+        if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
+        // Aktiendividende: dividendRate ist ein Jahressatz, ausgezahlt wird monatlich 1/8,5
+        // davon; breit gestreute Portfolios bekommen einen kleinen Aufschlag.
+        setzeBuchungskontext('📈 Dividenden');
+        let diversificationBonus = typeof getDiversificationBonus === 'function' ? getDiversificationBonus() : 0;
+        game.money += Math.round(STOCK_KEYS.reduce((sum, key) => {
+            let st = stockMarket[key];
+            return st ? sum + (st.owned * st.price * (st.dividendRate + diversificationBonus) / 8.5) : sum;
+        }, 0));
+        loescheBuchungskontext();
     }
 
     function applyFormWalk(team) {
@@ -2076,7 +2019,7 @@
         if (typeof recordLeagueHomeAway === 'function') recordLeagueHomeAway(h, a, f);
         if (typeof creditAiLeagueGoals === 'function') { creditAiLeagueGoals(h, f.homeGoals); creditAiLeagueGoals(a, f.awayGoals); }
 
-        // Kopf-an-Kopf-Statistik (NEU): historische Bilanz gegen JEDEN Ligagegner, nicht nur
+        // Kopf-an-Kopf-Statistik: historische Bilanz gegen JEDEN Ligagegner, nicht nur
         // den einen festen Erzfeind - nur relevant, wenn 1.FC Moritz Leipzig an dem Spiel beteiligt war.
         if (h.name === game.clubName || a.name === game.clubName) {
             let oppName = h.name === game.clubName ? a.name : h.name;
@@ -2449,7 +2392,7 @@
         if (!game.interviewHistory) game.interviewHistory = [];
         game.interviewHistory.push({ season: game.season, matchday: game.matchday, question: pendingInterview.q, answer: a.label, fans: a.fans, board: a.board });
         if (game.interviewHistory.length > 30) game.interviewHistory.shift();
-        // Manager-Medienimage (NEU): fanfreundliche Antworten schieben das Image Richtung
+        // Manager-Medienimage: fanfreundliche Antworten schieben das Image Richtung
         // "Volksheld", vorstandstreue Antworten Richtung "Verwaltungsprofi" - unabhängig von
         // Fan-/Vorstands-Zufriedenheit selbst, ein eigener Ruf-Wert des Managers als Person.
         let imageShift = (a.fans - a.board) * 0.8;
@@ -2479,11 +2422,11 @@
         showScreen('screen-dashboard');
     }
 
-    // Torschützen-Zuordnung für automatisch simulierte eigene Spiele (NEU): bisher wurden
+    // Torschützen-Zuordnung für automatisch simulierte eigene Spiele: bisher wurden
     // beim "Saison durchsimulieren"/Admin-Vorspulen nur nackte Tordifferenzen berechnet,
     // OHNE die Tore einem Spieler zuzuordnen - individuelle Torstatistiken blieben für den
     // häufigsten Spielmodus (automatische Simulation) komplett leer.
-    // Spieler des Monats (NEU): alle 4 Spieltage (in Ermangelung eines echten Kalenders die
+    // Spieler des Monats: alle 4 Spieltage (in Ermangelung eines echten Kalenders die
     // nächstliegende Saison-Unterteilung) wird der Spieler mit der besten jüngsten Bilanz
     // ausgezeichnet - Tore in diesem Zeitraum zählen am stärksten, Form/Fitness als
     // Tiebreaker. Echte Belohnung: spürbarer Moralschub plus dauerhafter Eintrag im Archiv.
@@ -2571,7 +2514,7 @@
                         f.played = true;
                         updateLeagueTable(l, f);
 
-                        // Zweite Mannschaft (NEU): dieselbe Torschützen-Lücke wie beim
+                        // Zweite Mannschaft: dieselbe Torschützen-Lücke wie beim
                         // ersten Team behoben - bisher wurden ihre Ligaspiele nur als reine
                         // Zahlen simuliert, ohne die Tore realen Spielern im Kader
                         // zuzuordnen.

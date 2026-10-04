@@ -24,7 +24,7 @@
         return getOurLeagueTeam()?.rivalName || null;
     }
 
-    // Gegner-Identität (NEU): jedes Team bekommt einen eigenen Spielstil, der sein
+    // Gegner-Identität: jedes Team bekommt einen eigenen Spielstil, der sein
     // Torverhalten (sowohl in Spielen gegen uns als auch in reinen KI-vs-KI-Spielen)
     // tatsächlich beeinflusst - Offensiv-Teams schießen mehr Tore, kassieren aber auch mehr;
     // Defensiv-Teams umgekehrt. Bisher waren alle KI-Teams bis auf ihre Stärke identisch.
@@ -71,7 +71,7 @@
     }
 
     // ==========================================
-    // LEBENDE LIGA: ECHTES AUF-/ABSTIEGSSYSTEM FÜR ALLE 108 KI-VEREINE (NEU)
+    // LEBENDE LIGA: ECHTES AUF-/ABSTIEGSSYSTEM FÜR ALLE 108 KI-VEREINE
     // ==========================================
     // Bisher warf initLeagues() JEDE Saison die komplette Liga-Pyramide weg und würfelte
     // für alle 6 Ligen x 18 Teams (außer den beiden fest "eingebauten" Sonderplätzen
@@ -88,7 +88,7 @@
         // Unser eigenes Team wird über den Kader simuliert, nicht über dieses Feld - das
         // Feld selbst ist für uns nur ein ungenutztes Überbleibsel der Tabellenzeile.
         if (team.name === game.clubName) return;
-        // Stärke-Historie (NEU): analog zu p.strengthHistory beim eigenen Kader - macht die
+        // Stärke-Historie: analog zu p.strengthHistory beim eigenen Kader - macht die
         // Formkurve eines Vereins über mehrere Saisons hinweg sichtbar (siehe Vereinsakte in
         // showHeadToHeadStats()), statt dass nur der aktuelle Wert bekannt ist.
         if (!team.strengthHistory) team.strengthHistory = [];
@@ -144,7 +144,7 @@
         }
         leaguesData = newLeaguesData;
 
-        // Neuer Verein-News-Ticker (NEU): welche Vereine sind neu in unserer aktuellen Liga -
+        // Neuer Verein-News-Ticker: welche Vereine sind neu in unserer aktuellen Liga -
         // sonst würde man den vollzogenen Auf-/Abstieg der Konkurrenz nie erfahren.
         let arrivingInOurLevel = [...promotedInto[game.leagueLevel], ...relegatedInto[game.leagueLevel]]
             .filter(t => t.name !== game.clubName && t.name !== game.secondTeam.name);
@@ -241,7 +241,7 @@
     }
 
     // ==========================================
-    // TRAINERPERSÖNLICHKEIT DES PERMANENTEN RIVALEN (NEU)
+    // TRAINERPERSÖNLICHKEIT DES PERMANENTEN RIVALEN
     // ==========================================
     // Der permanente Rivale war bisher nur ein Vereinsname ohne eigenes Gesicht. Ein Name +
     // eine feste Persönlichkeit für seinen Trainer machen die Rivalität greifbarer - taucht
@@ -264,7 +264,7 @@
     }
 
     // ==========================================
-    // RIVALITÄTEN: ERZFEIND-WECHSEL-MECHANIK (NEU)
+    // RIVALITÄTEN: ERZFEIND-WECHSEL-MECHANIK
     // ==========================================
     // Wird bei jedem Saisonabschluss geprüft: wird eine Rivalität über viele Spiele hinweg
     // extrem einseitig (fast immer Sieg oder fast immer Niederlage), verliert sie ihre
@@ -417,7 +417,7 @@
             let isUs = (t.name === game.clubName);
             let formIcons = { W: '<span style="color:var(--primary);">●</span>', D: '<span style="color:var(--accent);">●</span>', L: '<span style="color:var(--danger);">●</span>' };
             let formHtml = (t.recentForm || []).map(r => formIcons[r] || '').join(' ');
-            // Kopf-an-Kopf-Statistik (NEU): Klick auf einen Gegnernamen zeigt die historische
+            // Kopf-an-Kopf-Statistik: Klick auf einen Gegnernamen zeigt die historische
             // Bilanz gegen genau diesen Verein.
             let nameCell = isUs ? t.name : `<span onclick="showHeadToHeadStats('${t.name.replace(/'/g, "\\'")}')" style="text-decoration:underline dotted; cursor:pointer;">${t.name}</span>`;
             tr.innerHTML = `<td>${idx+1}</td><td style="text-align:left; ${isUs?'color:var(--primary); font-weight:bold;':''}">${nameCell}</td><td>${t.played}</td><td>${t.goalsFor}:${t.goalsAgainst}</td><td>${t.goalsFor-t.goalsAgainst}</td><td><strong>${t.points}</strong></td><td style="font-size:9px; white-space:nowrap;">${formHtml}</td>`;
@@ -456,7 +456,7 @@
         }
     }
 
-    // Kopf-an-Kopf-Statistik (NEU): zeigt die historische Bilanz gegen einen bestimmten
+    // Kopf-an-Kopf-Statistik: zeigt die historische Bilanz gegen einen bestimmten
     // Ligagegner in einer eigenen Box unterhalb der Tabelle.
     // Vereinsakte (erweitert seit der persistenten Liga-Pyramide, siehe
     // advanceLeaguesToNewSeason()): zeigt jetzt zusätzlich zur Kopf-an-Kopf-Bilanz das

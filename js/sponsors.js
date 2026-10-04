@@ -124,7 +124,7 @@
         let lf = leagueScaleFactor();
         let tier = rollDurationTier();
         let base = Math.round((2000 + Math.random() * 2500) * lf * tier.payMult / 100) * 100;
-        // Manager-Medienimage (NEU): ein beliebter, medienwirksamer Manager macht den Verein
+        // Manager-Medienimage: ein beliebter, medienwirksamer Manager macht den Verein
         // für Sponsoren attraktiver - kleiner, aber echter Aufschlag auf das Grundangebot.
         let imageMult = 1 + Math.max(0, ((game.managerMediaImage || 50) - 50) / 250);
         base = Math.round(base * imageMult);
@@ -597,7 +597,7 @@
 
     // ---------- RENDER ----------
     // ==========================================
-    // SPONSOREN: SPONSOREN-ZUFRIEDENHEIT & AKTIVIERUNGS-EVENTS (NEU)
+    // SPONSOREN: SPONSOREN-ZUFRIEDENHEIT & AKTIVIERUNGS-EVENTS
     // ==========================================
 
     // 1. Sponsoren-Zufriedenheit/Treue: sinkt bei schlechten Ergebnissen, steigt bei guten -
@@ -699,7 +699,7 @@
         document.getElementById('spons-curr-name').innerText = game.sponsor.name;
         document.getElementById('spons-curr-base').innerText = formatVal(game.sponsor.base);
         document.getElementById('spons-curr-win').innerText = formatVal(game.sponsor.winBonus);
-        // Sponsoren-Zufriedenheit (NEU)
+        // Sponsoren-Zufriedenheit
         let loyaltyBox = document.getElementById('sponsor-loyalty-box');
         if (loyaltyBox) {
             if (game.sponsor.name === 'Kein Hauptsponsor') { loyaltyBox.innerHTML = ''; }

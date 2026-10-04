@@ -83,7 +83,7 @@
 
     function applyLoadedStateInner(p) {
         if (p.game) Object.assign(game, p.game);
-        // Migrations-Fix (NEU): game.secondTeam.name wird als verschachteltes Objekt beim
+        // Migrations-Fix: game.secondTeam.name wird als verschachteltes Objekt beim
         // Object.assign oben komplett aus dem alten Spielstand übernommen - falls dort noch
         // "Lok Leipzig II" gespeichert war, hier konsistent korrigieren.
         if (game.secondTeam && game.secondTeam.name && game.secondTeam.name.includes('Lok Leipzig')) {
@@ -189,7 +189,7 @@
         if (p.fixturesData) fixturesData = unpackFixtures(p.fixturesData);
         if (p.cupTournament) cupTournament = p.cupTournament;
         if (p.europeTournament) europeTournament = p.europeTournament;
-        // Migrations-Fix (NEU): Speicherstände von vor der Vereinsumbenennung hatten den
+        // Migrations-Fix: Speicherstände von vor der Vereinsumbenennung hatten den
         // Namen "Lok Leipzig" noch fest in Liga-Tabellen, Spielplänen und Pokal-Paarungen
         // gespeichert - der Code sucht seitdem aber überall nach "1.FC Moritz Leipzig".
         // Dadurch fand keine der Rang-/Aufstiegs-Berechnungen das eigene Team mehr, und in
@@ -263,7 +263,7 @@
         return false;
     }
 
-    // ---------- SPIELSTAND ALS DATEI EXPORTIEREN/IMPORTIEREN (NEU) ----------
+    // ---------- SPIELSTAND ALS DATEI EXPORTIEREN/IMPORTIEREN ----------
     // Ergänzt die 3 lokalen Slots (localStorage) um eine echte, portable Datei - wichtig
     // seit klar ist, dass localStorage in manchen Android-Ansichten komplett blockiert
     // sein kann (siehe safeLocalSet-Absicherung oben) UND weil localStorage grundsätzlich
@@ -498,7 +498,7 @@
     // der Button würde dann scheinbar wirkungslos bleiben. Stattdessen ein dialogfreier
     // Zwei-Klick-Bestätigungsmechanismus direkt am Button selbst (gleiches Muster wie
     // bereits bei deleteSaveSlot() bewährt).
-    // Startbedingungen konfigurierbar (NEU): bisher fest 6. Liga/150.000 € - jetzt wählbar,
+    // Startbedingungen konfigurierbar: bisher fest 6. Liga/150.000 € - jetzt wählbar,
     // BEVOR der eigentliche Reset erfolgt. Übergibt die Wahl über sessionStorage-Marker
     // (analog zum FORCE_NEW_GAME_FLAG selbst) über den Reload hinweg, da nach dem Reload
     // ein komplett frisches game-Objekt entsteht (siehe window.onload in index.html).

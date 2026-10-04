@@ -8,7 +8,7 @@
         let capBox = document.getElementById('youth-capacity-box');
         if (capBox) capBox.innerText = `Kapazität: ${youthTalents.length} / ${capacity}`;
 
-        // Baustellen-Status (NEU): zeigt "im Bau..." statt des Kauf-Buttons, solange eine
+        // Baustellen-Status: zeigt "im Bau..." statt des Kauf-Buttons, solange eine
         // Jugendakademie-/Kapazitäts-Baustelle läuft.
         let academyQueued = (game.stadiumConstructionQueue || []).find(q => q.type === 'youthAcademyLvl');
         let btnAcademy = document.getElementById('btn-upgrade-youth-academy');
@@ -151,7 +151,7 @@
     }
 
     // ==========================================
-    // JUGENDLIGA-TABELLE (NEU)
+    // JUGENDLIGA-TABELLE
     // ==========================================
     // Bisher gab es nur ein einmaliges "Jugendturnier"-Ereignis ohne jeden Wettbewerbs-
     // kontext. Jetzt eine echte Liga mit 7 KI-Nachwuchsakademien, gegen die automatisch
@@ -233,7 +233,7 @@
     }
 
     // ==========================================
-    // JUGEND-MENTOR-SYSTEM (NEU)
+    // JUGEND-MENTOR-SYSTEM
     // ==========================================
     // Ein erfahrener Profi (27+ Jahre, Stärke 55+) übernimmt die persönliche Betreuung eines
     // Jugendtalents während der Hospitanz - beschleunigt dessen Entwicklung spürbar (+35%

@@ -26,7 +26,7 @@
 <script>
     (function() {
         var shown = 0;
-        // Persistentes Fehlerprotokoll (NEU): bisher verschwanden Laufzeitfehler beim
+        // Persistentes Fehlerprotokoll: bisher verschwanden Laufzeitfehler beim
         // Schließen des Banners oder einem Reload spurlos - nur der Struktur-Selbsttest
         // (siehe game.selfTestHistory/admin.js) hatte einen echten, exportierbaren
         // Verlauf. Läuft bewusst VOR allen js/*.js-Dateien, damit auch ganz frühe
@@ -2675,7 +2675,7 @@
             let forceNewGame = safeStorageGet(sessionStorage, 'anstoss_fm13_force_new_game');
             if (forceNewGame) {
                 safeStorageRemove(sessionStorage, 'anstoss_fm13_force_new_game');
-                // Startbedingungen konfigurierbar (NEU): nur gesetzt, wenn der Reset über
+                // Startbedingungen konfigurierbar: nur gesetzt, wenn der Reset über
                 // den "Neues Spiel starten"-Dialog mit Auswahl kam (siehe confirmNewGame
                 // WithSettings() in save.js) - beim Entlassungs-Reload (getSacked()) fehlen
                 // diese Marker, dann bleibt es beim alten Standardverhalten (6. Liga).
@@ -2782,7 +2782,7 @@
         }
     };
 </script>
-    <!-- BOTTOM-NAVIGATION (NEU): Schnellzugriff auf die 5 wichtigsten Bereiche -->
+    <!-- BOTTOM-NAVIGATION: Schnellzugriff auf die 5 wichtigsten Bereiche -->
     <nav class="bottom-nav-bar">
         <button class="nav-btn bottom-nav-item active" onclick="showScreen('screen-dashboard')"><span class="bn-icon">📊</span>Start</button>
         <button class="nav-btn bottom-nav-item" onclick="showScreen('screen-squad')"><span class="bn-icon">⚽</span>Kader</button>

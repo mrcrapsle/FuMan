@@ -203,7 +203,7 @@
             box-shadow: 0 6px 18px rgba(255, 213, 74, 0.35);
         }
         .btn-danger {
-            /* Kontrast-Check (NEU): der helle Gradient-Stop #ff8a97 gab weißem Text nur
+            /* Kontrast-Check: der helle Gradient-Stop #ff8a97 gab weißem Text nur
                2.25:1 (WCAG AA verlangt 4.5:1) - #c73545/#a82838 halten auf der gesamten
                Fläche >5:1, bei gleichem "Warnrot"-Charakter. */
             background: linear-gradient(135deg, #c73545, #a82838); color: #fff; font-weight: 800; border: none;
@@ -221,7 +221,7 @@
             box-shadow: 0 6px 18px rgba(255, 145, 66, 0.35);
         }
         .btn-europe {
-            /* Kontrast-Check (NEU): #a5b4ff vs. weißer Text war nur 1.99:1, var(--europe)
+            /* Kontrast-Check: #a5b4ff vs. weißer Text war nur 1.99:1, var(--europe)
                (#6f8dff) nur 3.03:1 (WCAG AA verlangt 4.5:1) - #3d54c9/#2c3f9e halten
                6.34:1/9.08:1, gleicher Blauton, nur dunkler. */
             background: linear-gradient(135deg, #3d54c9, #2c3f9e); color: #fff; font-weight: 900; border: none;
@@ -307,12 +307,12 @@
         /* STADION-BOWL: echte Draufsicht statt flachem Trapez - Rasen in der Mitte, Tribünen
            als Ringe drumherum, damit es tatsächlich wie ein Stadion aussieht (statt nur wie
            ein goldenes Viereck mit übereinanderliegenden Textlabeln). */
-        /* STADION-BOWL 3D (NEU): moderne Perspektive statt flacher Draufsicht - dieselbe
+        /* STADION-BOWL 3D: moderne Perspektive statt flacher Draufsicht - dieselbe
            Technik wie bei der Taktiktafel (perspective + rotateX), plus abgerundete
            Außenform, realistischerer Rasen mit Eckfahnen-Andeutung und Flutlicht-Glanz für
            einen deutlich moderneren, lebendigeren Eindruck. */
         .stadium-bowl-wrapper { width: 100%; margin: 8px 0; perspective: 1100px; }
-        /* LIVE-SPIEL-STADION-RAHMEN (NEU): umgibt das bestehende 3D-Spielfeld mit
+        /* LIVE-SPIEL-STADION-RAHMEN: umgibt das bestehende 3D-Spielfeld mit
            angedeuteten Tribünen und Flutlicht, damit sich das Live-Spiel wie in einem
            echten Stadion anfühlt statt in einer leeren Box zu schweben. */
         .live-stadium-frame {
@@ -339,7 +339,7 @@
             background: radial-gradient(ellipse, rgba(255,248,220,0.95), rgba(255,248,220,0));
             box-shadow: 0 0 12px 3px rgba(255,244,200,0.55);
         }
-        /* BOTTOM-NAVIGATION (NEU): fixe Schnellzugriffsleiste am unteren Bildschirmrand für
+        /* BOTTOM-NAVIGATION: fixe Schnellzugriffsleiste am unteren Bildschirmrand für
            die 5 meistgenutzten Bereiche plus Speichern (6 Spalten) - ergänzt das bestehende volle Menü oben, statt es zu
            ersetzen, für bequeme Einhand-Bedienung auf dem Handy. */
         .bottom-nav-bar {
@@ -362,7 +362,7 @@
         .bottom-nav-item.active .bn-icon { filter: drop-shadow(0 0 6px rgba(212,169,74,0.6)); }
         /* Platz für die fixe untere Leiste (inkl. Android-Gestenleiste), sonst verschwindet das Seitenende dahinter */
         body { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
-        /* DASHBOARD-STADION-HERO (NEU): kompakte 3D-Stadionansicht ganz oben auf dem
+        /* DASHBOARD-STADION-HERO: kompakte 3D-Stadionansicht ganz oben auf dem
            Dashboard, mit Himmel-Gradient und Flutlicht-Glanz für einen modernen,
            einladenden ersten Eindruck beim App-Start. */
         .dashboard-hero-sky {
@@ -460,7 +460,7 @@
             content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px;
             background: rgba(240,230,210,0.45);
         }
-        /* STADION-IMMERSIVE-HERO (NEU): große 3D-Ansicht mit schwebenden Kennzahlen-Karten
+        /* STADION-IMMERSIVE-HERO: große 3D-Ansicht mit schwebenden Kennzahlen-Karten
            darüber, angelehnt an moderne Management-Spiele - angepasst an das schmale
            Mobile-Format (Karten übereinander/im Scroll statt nebeneinander wie am Desktop). */
         .stadium-hero-metrics-row {
@@ -487,7 +487,7 @@
             position: absolute; top: 10px; left: 14px; z-index: 4; font-size: 13px; font-weight: 900;
             color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,0.8);
         }
-        /* STADION-GRÖSSENSTUFEN (NEU): das Design verändert sich jetzt sichtbar mit der
+        /* STADION-GRÖSSENSTUFEN: das Design verändert sich jetzt sichtbar mit der
            tatsächlichen Kapazität - von der kompakten Amateurarena bis zum Mega-Stadion mit
            zweitem Rang und Dach-Silhouette. Gilt für Stadion-Screen, Dashboard-Hero und
            Live-Spiel-Rahmen gleichermaßen (gemeinsame Tier-Klassen). */
@@ -518,7 +518,7 @@
         .stadium-floodlight-icon {
             position: absolute; font-size: 13px; filter: drop-shadow(0 0 4px rgba(255,240,180,0.6));
         }
-        /* STADION-TRIBÜNENGRÖSSE (NEU, überarbeitet): Tribünenbreite, zweiter Rang, Dach und
+        /* STADION-TRIBÜNENGRÖSSE (überarbeitet): Tribünenbreite, zweiter Rang, Dach und
            Zuschauer-Textur werden jetzt strukturell pro Stufe generiert (siehe
            generateStadiumBowlHTML in stadium.js), nicht nur per CSS-Klasse angedeutet. */
         .dashboard-hero-stand.stand-thin { opacity: 0.65; }
@@ -562,7 +562,7 @@
 
         @media (max-width: 650px) {
             .main-wrapper { flex-direction: column; }
-            /* KOMPLETT NEUE MENÜFÜHRUNG (NEU): statt eines permanenten Button-Grids, das auf
+            /* KOMPLETT NEUE MENÜFÜHRUNG: statt eines permanenten Button-Grids, das auf
                jedem Screen wertvollen Platz wegnimmt, jetzt ein modernes Slide-In-Menü -
                per Hamburger-Icon im Header ein-/ausklappbar, mit Backdrop zum Schließen per
                Antippen daneben und wiederhergestellten Kategorie-Überschriften (jetzt ist
@@ -751,7 +751,7 @@
                 radial-gradient(ellipse 8px 60px at 12% 0%, rgba(255,240,190,0.10), transparent 70%),
                 radial-gradient(ellipse 8px 60px at 88% 0%, rgba(255,240,190,0.10), transparent 70%);
         }
-        /* Bürokulisse - jetzt garantiert sichtbar (NEU, nachgebessert): eine fest positionierte
+        /* Bürokulisse - jetzt garantiert sichtbar (nachgebessert): eine fest positionierte
            Holzrahmen-Vignette an den Bildschirmrändern, die von keinem Panel verdeckt werden
            kann, unabhängig vom Scroll-Stand oder blickdichten Hero-Flächen darüber. */
         body::after {

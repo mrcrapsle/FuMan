@@ -265,7 +265,7 @@
 
     const ALL_FORMATIONS = ['4-4-2', '4-3-3', '3-5-2', '5-3-2', '4-2-3-1', '4-1-4-1', '3-4-3', '5-4-1'];
 
-    // Formations-Bewertungen (NEU): jede Formation hat eine Verteidigungs- und eine
+    // Formations-Bewertungen: jede Formation hat eine Verteidigungs- und eine
     // Offensiv-Kennzahl, die echt in die Teamstärke einfließen (siehe getFormationBonus()
     // in match.js) - bisher hatte die Formation außer der reinen Spieler-Positionierung
     // keinerlei taktische Auswirkung.
@@ -324,7 +324,7 @@
         closeFormationModal();
     }
 
-    // Taktikbrett-Statistikleiste (NEU): Gesamtstärke, Chemie, Ø Fitness und Ø Tagesform der
+    // Taktikbrett-Statistikleiste: Gesamtstärke, Chemie, Ø Fitness und Ø Tagesform der
     // aktuellen Startelf auf einen Blick, wie im Referenz-Layout gewünscht.
     function renderTacticsBoardStatBar() {
         let box = document.getElementById('tactics-board-stat-bar');
@@ -344,7 +344,7 @@
             </div>`;
     }
 
-    // Team-Anweisungen (NEU): unabhängig voneinander an-/abschaltbare Zusatzbefehle, jeweils
+    // Team-Anweisungen: unabhängig voneinander an-/abschaltbare Zusatzbefehle, jeweils
     // mit einem echten Vor- und Nachteil - anders als die Spielstil-Karten (die sich
     // gegenseitig ausschließen) lassen sich diese frei miteinander kombinieren.
     // Tief stehen schließt Gegenpressing und hohe Außenverteidiger aus - wer hinten drin
@@ -394,7 +394,7 @@
             </div>`).join('');
     }
 
-    // Taktik-Automatik (NEU): reagiert im laufenden Spiel automatisch auf den Spielstand, ohne
+    // Taktik-Automatik: reagiert im laufenden Spiel automatisch auf den Spielstand, ohne
     // dass das Live-Taktikpanel manuell bedient werden muss - eine STANDING-Einstellung in der
     // Taktiktafel (bleibt über Spiele hinweg aktiv), kein einmaliger Vorschlag wie der
     // Co-Trainer (siehe getCoTrainerTacticalSuggestion() oben). Die eigentliche Auswertung
@@ -433,7 +433,7 @@
         render3DPitch();
     }
 
-    // Formations-Karten-Grid (NEU): zeigt Def/Off-Werte direkt auf der Karte, statt reiner
+    // Formations-Karten-Grid: zeigt Def/Off-Werte direkt auf der Karte, statt reiner
     // Formations-Bezeichnungen auf kleinen Buttons.
     function renderFormationCards() {
         let grid = document.getElementById('formation-cards-grid');
@@ -448,7 +448,7 @@
         }).join('');
     }
 
-    // Spielstil-Karten-Grid (NEU): 8 Optionen mit Tempo/Pressing-Werten statt 3 Buttons.
+    // Spielstil-Karten-Grid: 8 Optionen mit Tempo/Pressing-Werten statt 3 Buttons.
     function renderTacticStyleCards() {
         let grid = document.getElementById('tactic-style-cards-grid');
         if (!grid) return;
@@ -682,7 +682,7 @@
         renderSquadView();
     }
 
-    // KADER-ÜBERBLICK (NEU): Gesamtkennzahlen auf einen Blick - Kaderwert, Durchschnittsalter,
+    // KADER-ÜBERBLICK: Gesamtkennzahlen auf einen Blick - Kaderwert, Durchschnittsalter,
     // Durchschnittsmoral, Gehaltssumme, Größe - macht den Kader-Screen zu einem echten
     // Management-Dashboard statt einer reinen Spielerliste.
     function renderSquadOverviewBox() {
@@ -709,7 +709,7 @@
         `;
     }
 
-    // KADERTIEFE NACH POSITION (NEU): zeigt auf einen Blick, wo der Kader dünn besetzt ist -
+    // KADERTIEFE NACH POSITION: zeigt auf einen Blick, wo der Kader dünn besetzt ist -
     // pro Positionsgruppe Anzahl + durchschnittliche Stärke, farblich nach Tiefe markiert.
     function renderSquadDepthChart() {
         let box = document.getElementById('squad-depth-chart-box');
@@ -735,7 +735,7 @@
         }).join('');
     }
 
-    // KADER-BESTENLISTE (NEU): Top-Torschütze, meiste Einsätze, jüngstes/ältestes Talent,
+    // KADER-BESTENLISTE: Top-Torschütze, meiste Einsätze, jüngstes/ältestes Talent,
     // wertvollster Spieler - ein schneller Statistik-Überblick ohne extra Screen wechseln zu müssen.
     function renderSquadLeaderboardBox() {
         let box = document.getElementById('squad-leaderboard-box');
@@ -799,7 +799,7 @@
         if (!container) return;
         container.innerHTML = '';
         let filtered = squadFilterPos === 'alle' ? squad : squad.filter(p => p.pos === squadFilterPos);
-        // Sortierfunktion (NEU): nicht mehr nur nach Position filterbar, sondern auch echt sortierbar.
+        // Sortierfunktion: nicht mehr nur nach Position filterbar, sondern auch echt sortierbar.
         filtered = [...filtered].sort((a, b) => {
             if (squadSortMode === 'staerke') return b.strength - a.strength;
             if (squadSortMode === 'alter') return a.age - b.age;
@@ -878,7 +878,7 @@
     function render3DPitch(pitchElId = 'soccer-pitch') {
         let pitch = document.getElementById(pitchElId);
         if (!pitch) return;
-        // Stadion-Größenstufe (NEU): nur beim Live-Spielfeld anwenden, das vom Stadion-
+        // Stadion-Größenstufe: nur beim Live-Spielfeld anwenden, das vom Stadion-
         // Rahmen umgeben ist - die Taktiktafel hat keinen solchen Rahmen.
         if (pitchElId === 'live-pitch' && typeof applyStadiumVisualTierClass === 'function') applyStadiumVisualTierClass('.live-stadium-frame');
         pitch.querySelectorAll('.player-pin-3d').forEach(el => el.remove());

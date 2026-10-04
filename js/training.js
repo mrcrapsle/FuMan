@@ -136,7 +136,7 @@
             </div>`).join('');
     }
 
-    // Reiter-Navigation (NEU): teilt den bisher sehr langen Trainings-Screen in 4 Reiter auf,
+    // Reiter-Navigation: teilt den bisher sehr langen Trainings-Screen in 4 Reiter auf,
     // um das ständige Scrollen zu vermeiden.
     function setTrainingTab(tab) {
         playSound('click');
@@ -149,7 +149,7 @@
     }
 
     // ==========================================
-    // FÄHIGKEITEN GEZIELT ANTRAINIEREN (NEU)
+    // FÄHIGKEITEN GEZIELT ANTRAINIEREN
     // ==========================================
     // Ein zugewiesener Trainer (Personal) bildet einen Spieler über mehrere Spieltage gezielt
     // in einer Fähigkeit fort - kostet echtes Geld UND Zeit, garantiert dafür eine echte,
@@ -250,7 +250,7 @@
         }
         let sessionsLeftEl = document.getElementById('training-sessions-left');
         if (sessionsLeftEl) sessionsLeftEl.innerText = trainingSessionsLeft();
-        // Minispiel-Kosten (NEU) dynamisch an den Buttons anzeigen.
+        // Minispiel-Kosten dynamisch an den Buttons anzeigen.
         let mgCost = typeof getMinigameCost === 'function' ? getMinigameCost() : 2000;
         let btnPenalty = document.getElementById('btn-minigame-penalty');
         if (btnPenalty) btnPenalty.innerText = `⚽ Elfmeterschießen [${formatVal(mgCost)}]`;

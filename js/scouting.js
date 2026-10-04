@@ -98,7 +98,7 @@
             let pos = f ? (f.pos === 'any' ? ["TW", "ABW", "MIT", "ST"][Math.floor(Math.random() * 4)] : f.pos) : cfg.pos;
             let ageRange = f ? [f.minAge, f.maxAge] : null;
             let star = createPlayer(pos, minStr, maxStr, f ? null : cfg.trait, ageRange);
-            // Vertrauens-Level (NEU): bestimmt, wie unscharf die Werte zunächst angezeigt werden.
+            // Vertrauens-Level: bestimmt, wie unscharf die Werte zunächst angezeigt werden.
             star.scoutConfidence = Math.min(95, Math.max(15, scout.skill + Math.floor(Math.random() * 20 - 10)));
             star.scoutedByRegion = mission.region;
             star.scoutedMatchday = game.matchday;

@@ -95,7 +95,7 @@
                 }).join('');
             grid.appendChild(synBox);
         }
-        // Zwei Talentbaum-Zweige (NEU): "Aufbau-Spezialist" (Wirtschaft & Kader-Aufbau) und
+        // Zwei Talentbaum-Zweige: "Aufbau-Spezialist" (Wirtschaft & Kader-Aufbau) und
         // "Krisenmanager" (Stabilität & Schadensbegrenzung) - unabhängig kombinierbar, keine
         // exklusive Wahl, aber klar erkennbar als zwei unterschiedliche Spielstile.
         let aufbauHeader = document.createElement('div');

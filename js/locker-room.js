@@ -159,3 +159,16 @@ function renderLockerHierarchyBox() {
         + (unzufrieden.length ? `<div class="box" style="font-size:9px; border-left-color:var(--danger); margin-top:4px;">😠 Unzufrieden: ${unzufrieden.map(p => `${p.name} (${Math.round(p.morale || 50)})`).join(', ')} - unzufriedene Leistungsträger stehen irgendwann im Büro.</div>` : '')
         + `<div style="font-size:9px; color:var(--text-muted); margin-top:4px;">Kapitän wechseln geht im Reiter Aufstellung - der alte Kapitän ist enttäuscht, ohne Standing des Neuen auch der Rat.</div>`;
 }
+
+// Jeden Spieltag: wer lange genug gemeinsam im Kader ist, wird gelegentlich "bester Freund"
+// eines Mitspielers - verlässt einer den Verein, leidet der andere (checkFriendshipDeparture()).
+function tickLockerFriendships() {
+    squad.forEach(p => { p.squadTenureMatchdays = (p.squadTenureMatchdays || 0) + 1; });
+    const ohneFreund = squad.filter(p => !p.friendPlayerId && (p.squadTenureMatchdays || 0) >= 20);
+    if (ohneFreund.length < 2 || Math.random() >= 0.05) return;
+    const a = ohneFreund[Math.floor(Math.random() * ohneFreund.length)];
+    const andere = ohneFreund.filter(p => p.id !== a.id);
+    const b = andere[Math.floor(Math.random() * andere.length)];
+    a.friendPlayerId = b.id; b.friendPlayerId = a.id;
+    addInboxMessage('vertrag', '🤝 Kabinen-Freundschaft entstanden', `${a.name} und ${b.name} sind in der Kabine beste Freunde geworden.`, 'screen-squad');
+}

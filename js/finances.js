@@ -228,7 +228,7 @@
     }
 
     // ==========================================
-    // TICKETPREISE MIT SCHIEBEREGLERN & LIVE-VORSCHAU (NEU)
+    // TICKETPREISE MIT SCHIEBEREGLERN & LIVE-VORSCHAU
     // ==========================================
     // Ersetzt die einfachen Zahlenfelder durch Schieberegler mit sofortiger Vorschau
     // (erwartete Zuschauer, Auslastung, Tageskasse, Saison-Hochrechnung) - Preise werden
@@ -268,7 +268,7 @@
         game.ticketPrices.steh = preview.steh;
         game.ticketPrices.sitz = preview.sitz;
         game.ticketPrices.vip = preview.vip;
-        // Dauerkarte (NEU): der Preis wird sofort übernommen, wirkt sich aber - wie im echten
+        // Dauerkarte: der Preis wird sofort übernommen, wirkt sich aber - wie im echten
         // Fußballgeschäft - erst beim nächsten Saisonverkauf (renewSeasonTickets()) auf die
         // tatsächliche Zahl der Inhaber aus.
         if (preview.dauerkarte !== undefined) game.ticketPrices.dauerkarte = preview.dauerkarte;
@@ -287,7 +287,7 @@
         game.ticketPrices = realPrices; // sofort zurücksetzen
         let capacity = stadium.total || 16000;
         let totalAtt = Math.round(capacity * attFactor);
-        // Dauerkarten (NEU): der bereits im Voraus bezahlte Anteil zählt zur Zuschauerzahl,
+        // Dauerkarten: der bereits im Voraus bezahlte Anteil zählt zur Zuschauerzahl,
         // aber nicht zur SPIELTAGS-Einnahme - sonst würde er in dieser Vorschau doppelt
         // kassiert, obwohl er real nur einmal (beim Saisonverkauf) bezahlt wurde.
         let dauerkartenAnwesend = (typeof getSeasonTicketAttendanceFloor === 'function') ? Math.min(totalAtt, getSeasonTicketAttendanceFloor()) : 0;
