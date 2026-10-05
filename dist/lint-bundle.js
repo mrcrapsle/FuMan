@@ -484,7 +484,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.46', date: '05.10.2026', features: 'Aufräumen Teil 9: echte Spielanalyse, Holding-Wert und neue Lohnfertigungs-Aufträge, Europa-Status' };
+    const GAME_VERSION = { number: '3.47', date: '05.10.2026', features: 'Phase 21.6: Langzeittest Bundesliga mit Bilanz-Fixes, TV-Raten-Deckelung, DFB-Pokal mit echten Clubs' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -30933,8 +30933,19 @@ function renderSaveSafetyBox() {
     });
 
     window.onload = function() {
+        // Performance-Profiling für Phase 21.7
+        const perfMarks = {};
+        function mark(label) {
+            perfMarks[label] = performance.now();
+            if (window.__DEBUG_STARTUP) console.log(`[PERF] ${label}: ${(performance.now()).toFixed(0)}ms`);
+        }
+        function delta(from, to) {
+            return ((perfMarks[to] - perfMarks[from]).toFixed(2));
+        }
+        mark('window.onload-start');
         try {
             restoreGetters();
+            mark('restoreGetters');
             let forceNewGame = safeStorageGet(sessionStorage, 'anstoss_fm13_force_new_game');
             if (forceNewGame) {
                 safeStorageRemove(sessionStorage, 'anstoss_fm13_force_new_game');
@@ -31055,9 +31066,18 @@ function renderSaveSafetyBox() {
                 }
             }
         } finally {
+            mark('boot-complete');
             // Die Ladeebene verschwindet auf JEDEM Weg - bliebe sie liegen, waere das Spiel
             // darunter zwar geladen, aber nicht bedienbar.
             let ladeEbene = document.getElementById('app-loading');
             if (ladeEbene && ladeEbene.parentNode) ladeEbene.parentNode.removeChild(ladeEbene);
+
+            // Profiling-Zusammenfassung
+            if (window.__DEBUG_STARTUP && typeof perfMarks === 'object') {
+                console.log('%c=== STARTUP PROFILING ===', 'color:blue; font-weight:bold');
+                console.log(`restoreGetters: ${delta('window.onload-start', 'restoreGetters')}ms`);
+                console.log(`Total boot: ${delta('window.onload-start', 'boot-complete')}ms`);
+                window.__STARTUP_TIMES = perfMarks;
+            }
         }
     };
