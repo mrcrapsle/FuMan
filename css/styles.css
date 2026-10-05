@@ -10,15 +10,14 @@
                Redesign app-weit, ohne ein einziges JS-File anfassen zu müssen.
                ============================================================ */
 
-            /* Basis / Flächen - tiefes Mitternachtsblau statt warmes Nussbaum-Dunkel */
+            
             --bg-body: #070b14;
             --bg-sidebar: #0b111f;
             --bg-header: #101a2e;
             --bg-card: rgba(24, 38, 63, 0.55);
             --bg-card-hover: rgba(32, 50, 82, 0.68);
 
-            /* Statusfarben (Geld, Erfolg, Warnung...) - Bedeutung bleibt wie zuvor,
-               Tonwerte auf leuchtendes Flutlicht-Grün/Gold/Neon umgestimmt */
+            
             --primary: #3ee08a;
             --primary-glow: rgba(62, 224, 138, 0.32);
             --accent: #ffc23c;
@@ -34,11 +33,7 @@
             --border: rgba(79, 195, 255, 0.14);
             --border-highlight: rgba(62, 224, 138, 0.4);
 
-            /* Primäre CTA-Akzente: elektrisches Indigo statt Leder-Braun, sattes
-               Cyan-Petrol statt Waldgrün - passend zur Flutlicht-Nacht-Materialität.
-               --violet leicht aufgehellt (Kontrast-Check, NEU): #5a6cff lag als
-               Textfarbe auf --bg-header nur bei 4.15:1 (WCAG AA verlangt 4.5:1 für
-               normalen Text) - #7d8aff schafft auf allen 3 Hintergründen >5.7:1. */
+            
             --violet: #7d8aff;
             --violet-dark: #3a44b0;
             --violet-glow: rgba(90, 108, 255, 0.4);
@@ -71,7 +66,7 @@
             box-shadow: 0 25px 70px rgba(0,0,0,0.85), inset 0 1px 0 rgba(228, 197, 140, 0.05);
         }
 
-        /* HEADER - Messing-Namensschild-Optik statt kühler Navy-Leiste */
+        
         .app-header {
             background: linear-gradient(135deg, rgba(44, 32, 20, 0.97), rgba(9, 14, 26, 0.97));
             border-bottom: 1px solid var(--border);
@@ -80,7 +75,7 @@
             position: relative; z-index: 5;
         }
         .club-brand { display: flex; align-items: center; gap: 10px; }
-        /* Spielversion oben links neben dem Menüknopf (auf dem Handy die freie Fläche) */
+        
         .header-version {
             font-size: 11px; font-weight: 800; color: var(--text-muted); letter-spacing: 0.5px;
             padding: 3px 8px; border: 1px solid var(--border); border-radius: 10px;
@@ -104,7 +99,7 @@
         }
         .kpi-chip span { font-size: 9px; color: var(--text-muted); display: block; letter-spacing: 0.4px; }
         .kpi-chip strong { font-size: 11px; color: var(--text-main); }
-        /* Werte in <strong> (Fans | Vorstand) bleiben in einer Zeile - die Regel oben gilt nur der Beschriftung */
+        
         .kpi-chip strong span { display: inline; font-size: inherit; color: inherit; letter-spacing: normal; }
         .sound-btn {
             background: rgba(90, 108, 255, 0.15); border: 1px solid rgba(90, 108, 255, 0.5); color: #dce8ff;
@@ -112,11 +107,11 @@
         }
         .sound-btn.active { color: #0a1f0f; background: var(--primary); border-color: var(--primary); box-shadow: 0 0 10px var(--primary-glow); }
 
-        /* BODY LAYOUT */
+        
         .main-wrapper { display: flex; flex: 1; min-height: 580px; }
         .hamburger-btn { display: none; }
 
-        /* SIDEBAR - dunkles Nussbaumholz statt Navy */
+        
         .app-sidebar {
             width: 225px; background: linear-gradient(180deg, rgba(29,21,13,0.94), rgba(19,13,8,0.97));
             border-right: 1px solid var(--border); padding: 12px 8px; display: flex; flex-direction: column; gap: 4px;
@@ -143,7 +138,7 @@
         .nav-btn.special-europe { color: #9fb0e0; }
         .nav-btn.special-europe.active { background: linear-gradient(90deg, rgba(119, 136, 196, 0.3), rgba(119, 136, 196, 0.08)); border-color: var(--europe); }
 
-        /* CONTENT WORKSPACE */
+        
         .app-content {
             flex: 1; padding: 14px; overflow-y: auto; max-height: calc(100vh - 70px);
             background:
@@ -151,10 +146,8 @@
                 #070b14;
         }
 
-        /* PANELS - Holzpaneel mit Messing-Ecknieten als wiederkehrendes Signatur-Detail */
-        /* Kein backdrop-filter: jedes Panel rechnete beim Scrollen eine eigene Unschärfe -
-           auf dem Handy (CPU 4x gedrosselt) Kader-Scrollbilder bis 42 ms statt 17 ms (19.8).
-           Der Hintergrund ist fast einfarbig, die etwas dichtere Fläche sieht gleich aus. */
+        
+        
         .panel {
             background: rgba(17, 24, 39, 0.92);
             border: 1px solid rgba(55, 65, 81, 0.6);
@@ -180,7 +173,7 @@
         }
         .panel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px; margin: 6px 0; }
 
-        /* BUTTONS - moderne Pill-Form statt schlichter abgerundeter Rechtecke */
+        
         button { font-family: inherit; touch-action: manipulation; }
         .btn-primary {
             background: linear-gradient(135deg, var(--violet), var(--violet-dark)); color: var(--text-main); font-weight: 800;
@@ -205,9 +198,7 @@
             box-shadow: 0 6px 18px rgba(255, 213, 74, 0.35);
         }
         .btn-danger {
-            /* Kontrast-Check: der helle Gradient-Stop #ff8a97 gab weißem Text nur
-               2.25:1 (WCAG AA verlangt 4.5:1) - #c73545/#a82838 halten auf der gesamten
-               Fläche >5:1, bei gleichem "Warnrot"-Charakter. */
+            
             background: linear-gradient(135deg, #c73545, #a82838); color: #fff; font-weight: 800; border: none;
             padding: 8px 12px; border-radius: 999px; cursor: pointer; width: 100%; margin: 4px 0;
             box-shadow: 0 6px 18px rgba(255, 84, 104, 0.35);
@@ -223,15 +214,13 @@
             box-shadow: 0 6px 18px rgba(255, 145, 66, 0.35);
         }
         .btn-europe {
-            /* Kontrast-Check: #a5b4ff vs. weißer Text war nur 1.99:1, var(--europe)
-               (#6f8dff) nur 3.03:1 (WCAG AA verlangt 4.5:1) - #3d54c9/#2c3f9e halten
-               6.34:1/9.08:1, gleicher Blauton, nur dunkler. */
+            
             background: linear-gradient(135deg, #3d54c9, #2c3f9e); color: #fff; font-weight: 900; border: none;
             padding: 10px 14px; border-radius: 999px; cursor: pointer; width: 100%; margin: 4px 0;
             box-shadow: 0 6px 18px rgba(111, 141, 255, 0.35);
         }
 
-        /* TABLES & ROWS */
+        
         table { width: 100%; border-collapse: collapse; font-size: 11px; }
         th, td { border: 1px solid var(--border); padding: 6px 6px; text-align: center; }
         th { background: rgba(90, 108, 255, 0.14); color: var(--accent); font-weight: 800; }
@@ -278,7 +267,7 @@
             border: 1px solid var(--border); font-size: 11px; border-radius: 12px; margin-bottom: 6px;
         }
 
-        /* 3D PITCH */
+        
         .pitch-3d-wrapper { perspective: 900px; width: 100%; height: 215px; margin: 8px 0; display: flex; justify-content: center; align-items: center; }
         .soccer-pitch {
             width: 96%; height: 200px;
@@ -298,25 +287,17 @@
             font-size: 8px; font-weight: 800; text-align: center; cursor: pointer; white-space: nowrap;
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
-        /* Live-Ball-Indikator: bewegt sich per CSS-Transition sichtbar über das Spielfeld,
-           damit jeder Spielzug auch optisch als Live-Geschehen wahrnehmbar ist. */
+        
         #live-ball-indicator {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) translateZ(30px);
             font-size: 15px; z-index: 8; transition: top 0.7s ease-in-out, left 0.7s ease-in-out;
             filter: drop-shadow(0 2px 3px rgba(0,0,0,0.7));
         }
 
-        /* STADION-BOWL: echte Draufsicht statt flachem Trapez - Rasen in der Mitte, Tribünen
-           als Ringe drumherum, damit es tatsächlich wie ein Stadion aussieht (statt nur wie
-           ein goldenes Viereck mit übereinanderliegenden Textlabeln). */
-        /* STADION-BOWL 3D: moderne Perspektive statt flacher Draufsicht - dieselbe
-           Technik wie bei der Taktiktafel (perspective + rotateX), plus abgerundete
-           Außenform, realistischerer Rasen mit Eckfahnen-Andeutung und Flutlicht-Glanz für
-           einen deutlich moderneren, lebendigeren Eindruck. */
+        
+        
         .stadium-bowl-wrapper { width: 100%; margin: 8px 0; perspective: 1100px; }
-        /* LIVE-SPIEL-STADION-RAHMEN: umgibt das bestehende 3D-Spielfeld mit
-           angedeuteten Tribünen und Flutlicht, damit sich das Live-Spiel wie in einem
-           echten Stadion anfühlt statt in einer leeren Box zu schweben. */
+        
         .live-stadium-frame {
             position: relative; border-radius: 14px; overflow: hidden; padding: 14px 4px 4px;
             background: linear-gradient(180deg, #0d1830 0%, #142645 55%, #1c3560 100%);
@@ -341,13 +322,11 @@
             background: radial-gradient(ellipse, rgba(255,248,220,0.95), rgba(255,248,220,0));
             box-shadow: 0 0 12px 3px rgba(255,244,200,0.55);
         }
-        /* BOTTOM-NAVIGATION: fixe Schnellzugriffsleiste am unteren Bildschirmrand für
-           die 5 meistgenutzten Bereiche plus Speichern (6 Spalten) - ergänzt das bestehende volle Menü oben, statt es zu
-           ersetzen, für bequeme Einhand-Bedienung auf dem Handy. */
+        
         .bottom-nav-bar {
             position: fixed; bottom: 0; left: 0; right: 0; z-index: 500;
             display: grid; grid-template-columns: repeat(7, 1fr);
-            background: linear-gradient(180deg, rgb(24,17,10), rgb(10,7,4)); /* undurchsichtig: kein Text scheint durch */ border-top: 1px solid rgba(228,197,140,0.25);
+            background: linear-gradient(180deg, rgb(24,17,10), rgb(10,7,4));  border-top: 1px solid rgba(228,197,140,0.25);
             box-shadow: 0 -6px 20px rgba(0,0,0,0.5);
             padding-bottom: env(safe-area-inset-bottom, 0px);
         }
@@ -358,15 +337,13 @@
             transition: color 0.15s, transform 0.15s;
         }
         .bottom-nav-item .bn-icon { font-size: 18px; line-height: 1; }
-        /* gewinnt gegen die Handy-Regel für .nav-btn (sonst zu breit für 6 Spalten) */
+        
         .bottom-nav-bar .bottom-nav-item { padding: 8px 2px 6px; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .bottom-nav-item.active { color: var(--accent); transform: translateY(-2px); }
         .bottom-nav-item.active .bn-icon { filter: drop-shadow(0 0 6px rgba(212,169,74,0.6)); }
-        /* Platz für die fixe untere Leiste (inkl. Android-Gestenleiste), sonst verschwindet das Seitenende dahinter */
+        
         body { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
-        /* DASHBOARD-STADION-HERO: kompakte 3D-Stadionansicht ganz oben auf dem
-           Dashboard, mit Himmel-Gradient und Flutlicht-Glanz für einen modernen,
-           einladenden ersten Eindruck beim App-Start. */
+        
         .dashboard-hero-sky {
             position: relative; width: 100%; border-radius: 16px; overflow: hidden;
             margin-bottom: 10px; padding: 14px 12px 10px;
@@ -462,9 +439,7 @@
             content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px;
             background: rgba(240,230,210,0.45);
         }
-        /* STADION-IMMERSIVE-HERO: große 3D-Ansicht mit schwebenden Kennzahlen-Karten
-           darüber, angelehnt an moderne Management-Spiele - angepasst an das schmale
-           Mobile-Format (Karten übereinander/im Scroll statt nebeneinander wie am Desktop). */
+        
         .stadium-hero-metrics-row {
             display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px;
         }
@@ -489,10 +464,7 @@
             position: absolute; top: 10px; left: 14px; z-index: 4; font-size: 13px; font-weight: 900;
             color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,0.8);
         }
-        /* STADION-GRÖSSENSTUFEN: das Design verändert sich jetzt sichtbar mit der
-           tatsächlichen Kapazität - von der kompakten Amateurarena bis zum Mega-Stadion mit
-           zweitem Rang und Dach-Silhouette. Gilt für Stadion-Screen, Dashboard-Hero und
-           Live-Spiel-Rahmen gleichermaßen (gemeinsame Tier-Klassen). */
+        
         .stadium-bowl.tier-small, .dashboard-hero-bowl.tier-small, .live-stadium-frame.tier-small {
             box-shadow: 0 14px 26px rgba(0,0,0,0.5), inset 0 0 20px rgba(0,0,0,0.4);
             filter: saturate(0.85);
@@ -520,9 +492,7 @@
         .stadium-floodlight-icon {
             position: absolute; font-size: 13px; filter: drop-shadow(0 0 4px rgba(255,240,180,0.6));
         }
-        /* STADION-TRIBÜNENGRÖSSE (überarbeitet): Tribünenbreite, zweiter Rang, Dach und
-           Zuschauer-Textur werden jetzt strukturell pro Stufe generiert (siehe
-           generateStadiumBowlHTML in stadium.js), nicht nur per CSS-Klasse angedeutet. */
+        
         .dashboard-hero-stand.stand-thin { opacity: 0.65; }
         .dashboard-hero-stand.stand-wide { filter: brightness(1.08); }
         .stand-second-tier-band {
@@ -551,9 +521,7 @@
             position: absolute; inset: 0; border-radius: 10px; pointer-events: none;
             box-shadow: inset 0 0 0 3px rgba(228,197,140,0.35);
         }
-        /* Infrastruktur direkt in der Stadiongrafik: kleine Icon-Reihe pro Tribüne, die
-           Fressbuden/Merch-Stände/Toiletten anzeigt (Anzahl = Ausbaustufe 0-3) statt das nur
-           im Text-Popup nach dem Antippen zu verstecken. */
+        
         .stand-infra-row { display: flex; gap: 1px; justify-content: center; margin-top: 1px; font-size: 8px; line-height: 1; opacity: 0.95; }
         .stand-infra-row span { filter: grayscale(0.15); }
 
@@ -564,12 +532,7 @@
 
         @media (max-width: 650px) {
             .main-wrapper { flex-direction: column; }
-            /* KOMPLETT NEUE MENÜFÜHRUNG: statt eines permanenten Button-Grids, das auf
-               jedem Screen wertvollen Platz wegnimmt, jetzt ein modernes Slide-In-Menü -
-               per Hamburger-Icon im Header ein-/ausklappbar, mit Backdrop zum Schließen per
-               Antippen daneben und wiederhergestellten Kategorie-Überschriften (jetzt ist
-               genug vertikaler Platz dafür vorhanden, da es kein Inline-Grid mehr ist).
-            */
+            
             .app-sidebar {
                 position: fixed; top: 0; left: 0; bottom: 0; width: 78%; max-width: 300px;
                 z-index: 900; flex-direction: column; flex-wrap: nowrap;
@@ -594,9 +557,9 @@
             .app-content { max-height: none; overflow-y: visible; }
         }
 
-        /* TOAST-BENACHRICHTIGUNGEN */
+        
         .app-toast {
-            position: fixed; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%) translateY(20px); /* über der unteren Leiste */
+            position: fixed; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%) translateY(20px); 
             background: linear-gradient(135deg, #3a2a1a, #221810); color: var(--text-main); padding: 12px 22px;
             border-radius: 6px; font-size: 12px; font-weight: 700;
             box-shadow: 0 8px 26px rgba(0,0,0,0.6), inset 0 1px 0 rgba(228, 197, 140, 0.06);
@@ -606,17 +569,17 @@
         .app-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
         .app-toast.toast-error { border-left-color: var(--danger); }
 
-        /* Thematische Akzentfarben für Hub-Tab-Buttons */
+        
         .hubtab-btn.tab-industry { color: var(--industry); }
         .hubtab-btn.tab-industry.btn-action { background: linear-gradient(135deg, rgba(255,138,92,0.9), rgba(255,138,92,0.55)); color: #2c0f00; }
         .hubtab-btn.tab-europe { color: #9db4ff; }
-        .hubtab-btn.tab-europe.btn-action { background: linear-gradient(135deg, #3d54c9, #2c3f9e); color: #fff; } /* Kontrast-Check, siehe .btn-europe */
+        .hubtab-btn.tab-europe.btn-action { background: linear-gradient(135deg, #3d54c9, #2c3f9e); color: #fff; } 
         .hubtab-btn.tab-gold { color: var(--accent); }
         .hubtab-btn.tab-gold.btn-action { background: linear-gradient(135deg, #ffe27a, var(--accent)); color: #241800; }
         .hubtab-btn.tab-red { color: var(--danger); }
-        .hubtab-btn.tab-red.btn-action { background: linear-gradient(135deg, #c73545, #a82838); color: #fff; } /* Kontrast-Check, siehe .btn-danger */
+        .hubtab-btn.tab-red.btn-action { background: linear-gradient(135deg, #c73545, #a82838); color: #fff; } 
 
-        /* ONBOARDING-OVERLAY */
+        
         .tutorial-overlay {
             position: fixed; inset: 0; background: rgba(8, 5, 3, 0.82); backdrop-filter: blur(3px);
             display: none; align-items: center; justify-content: center; z-index: 10000; padding: 16px;
@@ -629,7 +592,7 @@
             box-shadow: 0 20px 50px rgba(0,0,0,0.7), 0 0 30px rgba(212, 169, 74, 0.12);
         }
 
-        /* TRAINING-MINISPIELE */
+        
         .goal-grid {
             display:grid; grid-template-columns: repeat(3, 1fr); gap:7px;
             background: linear-gradient(160deg, #1a3a2a, #0a1f15); border:2px solid rgba(240,230,210,0.5);
@@ -646,7 +609,7 @@
         .crossing-zone-schlecht-r { left:74%; width:26%; background:rgba(217,89,79,0.25); }
         #crossing-marker { position:absolute; top:-4px; width:4px; height:46px; background:var(--text-main); left:0%; box-shadow:0 0 6px rgba(240,230,210,0.8); }
 
-        /* AKTIENMARKT: 3D-KURSCHART */
+        
         .stock-chart-3d-wrapper { perspective: 400px; width: 100%; height: 46px; margin: 4px 0; }
         .stock-chart-3d {
             display: flex; align-items: flex-end; gap: 2px; width: 100%; height: 100%;
@@ -655,8 +618,7 @@
         }
         .stock-bar-3d { flex: 1; min-width: 3px; background: linear-gradient(to top, var(--teal), #7ecfa8); border-radius: 2px 2px 0 0; transition: height 0.3s ease; }
 
-        /* GENERISCHES MODAL-SYSTEM: Spieler-Detail, Formations-Auswahl, Verhandlungs-Stepper,
-           Scouting-Fokus - alle im selben warmen Manager-Büro-Stil (Holzkarte, Messing-Rand). */
+        
         .generic-modal-overlay {
             position: fixed; inset: 0; background: rgba(8, 5, 3, 0.78); backdrop-filter: blur(3px);
             display: none; align-items: center; justify-content: center; z-index: 9500; padding: 14px;
@@ -691,7 +653,7 @@
         .modal-stat-chip .k { color: var(--text-muted); display: block; }
         .modal-stat-chip .v { color: var(--primary); font-weight: 800; font-size: 11px; }
 
-        /* Stepper (+/-) für Verhandlungen, Scouting-Filter etc. */
+        
         .stepper-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 0; font-size: 11px; }
         .stepper-controls { display: flex; align-items: center; gap: 8px; }
         .stepper-btn {
@@ -700,7 +662,7 @@
         }
         .stepper-value { min-width: 90px; text-align: center; font-weight: 800; color: var(--accent); font-size: 13px; }
 
-        /* Formations-Grid-Modal */
+        
         .formation-grid-list { display: flex; flex-direction: column; gap: 4px; max-height: 320px; overflow-y: auto; }
         .formation-grid-item {
             display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px;
@@ -718,7 +680,7 @@
             background: var(--violet); border: 1px solid var(--text-main); transform: translate(-50%, -50%);
         }
 
-        /* Börsen-Ticker (Finanzen-Screen, rein dekorativ) */
+        
         .stock-ticker-bar {
             display: flex; gap: 16px; overflow-x: auto; background: rgba(0,0,0,0.3);
             border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; margin-bottom: 10px;
@@ -727,11 +689,8 @@
         .stock-ticker-bar .tick-up { color: var(--primary); }
         .stock-ticker-bar .tick-down { color: var(--danger); }
 
-        /* NEU (auf Wunsch eingebaut): Büro-Hintergrund mit dunklem Verlauf-Overlay für ein
-           optionales Bild, plus ein wiederverwendbarer Frosted-Glass-Panel-Stil. */
-        /* Reine CSS-Bürokulisse (kein externes Bild - bleibt eine einzige, offline-fähige
-           Datei): dunkler Holzschreibtisch unten, ein "Fenster" mit Flutlicht-Schimmer oben,
-           angedeutete Bücherregal-Streifen an den Seiten. */
+        
+        
         .office-bg {
             background:
                 linear-gradient(rgba(8, 13, 21, 0.82), rgba(8, 13, 21, 0.93)),
@@ -753,9 +712,7 @@
                 radial-gradient(ellipse 8px 60px at 12% 0%, rgba(255,240,190,0.10), transparent 70%),
                 radial-gradient(ellipse 8px 60px at 88% 0%, rgba(255,240,190,0.10), transparent 70%);
         }
-        /* Bürokulisse - jetzt garantiert sichtbar (nachgebessert): eine fest positionierte
-           Holzrahmen-Vignette an den Bildschirmrändern, die von keinem Panel verdeckt werden
-           kann, unabhängig vom Scroll-Stand oder blickdichten Hero-Flächen darüber. */
+        
         body::after {
             content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 999;
             box-shadow:
@@ -770,18 +727,14 @@
            Kein Three.js/WebGL: das Spiel bleibt eine einzige offline-fähige HTML-Datei
            (siehe js/office.js). Der Raum ist eine echte 3D-Box aus fünf Ebenen, die
            Kamera sitzt in der Mitte und dreht sich leicht mit der Maus/dem Finger. */
-        /* Das Büro ist der Startbildschirm und nimmt bewusst das GANZE Display ein (statt in
-           einem Panel zwischen Kopfzeile und Seitenmenü zu stecken) - es ersetzt in diesem
-           Moment die komplette Bedienoberfläche, ausgewählt wird direkt an den Objekten.
-           z-index liegt über Bottom-Nav (500) und Seitenmenü (900), aber unter Toast (9999)
-           und Tutorial (10000), damit Hinweise weiterhin darüber erscheinen. */
+        
         #screen-office { position: fixed; inset: 0; z-index: 940; background: #04070d; }
         .office-viewport { position: absolute; inset: 0; overflow: hidden; background: #04070d; }
-        /* Feste Logikgroesse der Szene; #office-scaler wird per JS auf die echte Breite skaliert. */
+        
         #office-scaler { position: absolute; left: 50%; top: 50%; width: 900px; height: 560px; margin: -280px 0 0 -450px; transform-origin: 50% 50%; }
         #office-persp { position: absolute; inset: 0; perspective: 640px; perspective-origin: 50% 48%; }
 
-        /* Bedienleiste über der Kulisse: Vereinsname + Ausstieg in die normale Oberfläche. */
+        
         .office-hud {
             position: absolute; top: 0; left: 0; right: 0; z-index: 30; display: flex; gap: 10px;
             align-items: center; justify-content: space-between; padding: 10px 14px;
@@ -806,10 +759,7 @@
             transition: transform 0.2s ease-out;
         }
         .office-face { position: absolute; left: 50%; top: 50%; transform-style: preserve-3d; }
-        /* Abdunkeln IMMER über eine zusätzliche Hintergrundschicht (--wall-shade), nie über
-           filter/opacity: das sind "grouping properties", die eine 3D-positionierte Ebene
-           flach in die Elternebene klappen - dann stimmt zwar noch das Bild, aber die
-           Trefferfläche wandert weg und sämtliche Klicks auf dieser Wand gehen ins Leere. */
+        
         .office-face-back, .office-face-left, .office-face-right {
             background:
                 var(--wall-shade, linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0))),
@@ -863,14 +813,10 @@
             75% { opacity: 0.28; }
         }
 
-        /* Hotspots: alles Anklickbare bekommt beim Überfahren einen warmen Schimmer
-           und blendet seinen Namen ein - wie die Objektnamen in alten Adventures. */
+        
         .office-hotspot { position: absolute; cursor: pointer; transition: box-shadow 0.18s; }
         .office-hotspot-free { left: 50%; top: 50%; transform-style: preserve-3d; }
-        /* Hervorhebung bewusst per box-shadow statt per filter/brightness: filter und opacity
-           sind "grouping properties" und klappen eine 3D-positionierte Ebene flach in die
-           Elternebene - Bild und Trefferfläche laufen dann auseinander und Klicks landen im
-           Hintergrund. box-shadow lässt die 3D-Position unangetastet. */
+        
         .office-hotspot-hover { box-shadow: 0 0 0 2px rgba(255,213,74,0.9), 0 0 24px 7px rgba(255,213,74,0.4); border-radius: 4px; }
         .office-hotspot-tag {
             position: absolute; left: 50%; bottom: -22px; transform: translateX(-50%);
@@ -880,17 +826,14 @@
         }
         .office-hotspot-hover .office-hotspot-tag { opacity: 1; }
 
-        /* Licht aus (Schreibtischlampe): der ganze Raum fällt in kühles Nachtblau - ebenfalls
-           bewusst über Hintergrundschichten statt über filter (siehe Hinweis oben). */
+        
         .office-dark .office-face-back { --wall-shade: linear-gradient(rgba(5,11,26,0.62), rgba(5,11,26,0.62)); }
         .office-dark .office-face-left, .office-dark .office-face-right { --wall-shade: linear-gradient(rgba(5,11,26,0.72), rgba(5,11,26,0.72)); }
         .office-dark .office-face-floor { --wall-shade: linear-gradient(rgba(5,11,26,0.68), rgba(5,11,26,0.68)); }
         .office-dark .office-lightpool { background: none; }
         .office-dark .office-desk { background: linear-gradient(180deg, #3a2a19 0%, #2b1e12 12%, #221708 100%); }
         .office-dark .office-nameplate { background: linear-gradient(180deg, #8d7b4e, #6b5320); }
-        /* Möbel mitdunkeln - als überlagerte Schicht (pointer-events:none), damit die
-           Trefferflächen unberührt bleiben. Fenster und Monitor bleiben bewusst hell:
-           beide sind bei ausgeschaltetem Licht die einzigen Lichtquellen im Raum. */
+        
         .office-dark .office-hotspot:not(#office-hs-window):not(#office-hs-monitor)::after {
             content: ''; position: absolute; inset: 0; pointer-events: none;
             background: rgba(5, 11, 26, 0.58);
@@ -913,7 +856,7 @@
         }
         .office-quicknav-btn:hover { border-color: var(--accent); color: var(--accent); }
 
-        /* Die "Satzzeile" unten - das Markenzeichen der SCUMM-Adventures. */
+        
         .office-sentence {
             position: absolute; left: 0; right: 0; bottom: 0; z-index: 30; padding: 12px 14px 16px;
             text-align: center; font-size: 12px; font-weight: 700; color: var(--text-muted);
@@ -925,8 +868,7 @@
 
         /* --- Fenster mit Blick aufs Vereinsgelände --- */
         .off-window-sky { position: absolute; inset: 0; overflow: hidden; border-radius: 3px; }
-        /* Abend-/Flutlichtstimmung vs. Tagesansicht - welche gilt, entscheidet der
-           Spielzustand (siehe getOfficeOutlook() in js/office.js). */
+        
         .off-sky-night { background: linear-gradient(180deg, #08112a 0%, #112047 52%, #1c2f59 100%); }
         .off-sky-day { background: linear-gradient(180deg, #5b9fd6 0%, #8fc4e8 55%, #c3ddee 100%); }
         .off-moon { position: absolute; right: 44px; top: 24px; width: 32px; height: 32px; border-radius: 50%; background: radial-gradient(circle at 34% 34%, #fff9e4, #e6d9ab); box-shadow: 0 0 28px rgba(255,246,212,0.6); }
@@ -937,12 +879,11 @@
         .off-stadium-bowl { position: absolute; left: 9%; right: 9%; bottom: 0; height: 74px; border-radius: 50% 50% 6px 6px / 64% 64% 6px 6px; background: linear-gradient(180deg, #27456f, #101d33); border-top: 2px solid rgba(150,205,255,0.4); }
         .off-sky-day .off-stadium-bowl { background: linear-gradient(180deg, #4a6d94, #24364f); border-top-color: rgba(255,255,255,0.5); }
         .off-pylon { position: absolute; bottom: 54px; width: 7px; height: 92px; background: linear-gradient(180deg, #41608f, #182741); }
-        /* Mast ohne Betrieb: mattes Metall statt strahlender Leuchte. */
+        
         .off-pylon-head { position: absolute; top: -13px; left: -13px; width: 33px; height: 17px; border-radius: 3px; background: linear-gradient(180deg, #9aa8bd, #626f83); }
         .off-pylon-on .off-pylon-head { background: linear-gradient(180deg, #fff7d4, #ccd9ee); box-shadow: 0 0 32px rgba(255,249,216,0.9); }
 
-        /* Wetter im Fenster (aus js/weather.js). Bewusst ohne transform-Animationen, siehe
-           Hinweis oben zum Managerbüro - animiert wird ausschließlich background-position. */
+        
         .off-weather { position: absolute; inset: 0; pointer-events: none; }
         .off-weather-rain {
             background: repeating-linear-gradient(105deg, rgba(190,225,255,0.55) 0px, rgba(190,225,255,0.55) 1px, transparent 1px, transparent 9px);
@@ -1059,13 +1000,8 @@
         .off-phone-base { position: absolute; left: 0; right: 0; bottom: 0; height: 46px; border-radius: 7px; background: linear-gradient(180deg, #2b3242, #151a24); box-shadow: 0 10px 20px rgba(0,0,0,0.55); }
         .off-phone-handset { position: absolute; left: 6px; right: 6px; top: 6px; height: 34px; border-radius: 16px; background: linear-gradient(180deg, #39414f, #1b212c); box-shadow: inset 0 1px 0 rgba(255,255,255,0.14); }
         .off-phone-badge { position: absolute; right: -8px; top: -10px; min-width: 20px; height: 20px; line-height: 20px; text-align: center; border-radius: 999px; font-size: 10px; font-weight: 900; color: #fff; background: linear-gradient(135deg, #c73545, #a82838); box-shadow: 0 0 12px rgba(199,53,69,0.8); }
-        /* "Es klingelt" bewusst als pulsierendes Leuchten statt als transform-Animation:
-           eine laufende transform-Animation befördert das Element auf eine eigene
-           Compositing-Ebene, und innerhalb eines preserve-3d-Baums fällt es damit komplett
-           aus der Trefferprüfung heraus - das Telefon war dadurch nicht mehr anklickbar. */
-        /* Nur vier Klingelzeichen beim Betreten des Büros (19.8): da fast immer ungelesene Post
-           wartet, lief das Leuchten sonst endlos und kostete auf dem Handy ~8 % CPU im Leerlauf.
-           Das rote Zähler-Abzeichen bleibt stehen. */
+        
+        
         .off-phone-ringing .off-phone-handset { animation: officePhoneRing 1.3s ease-in-out 4; }
         @keyframes officePhoneRing {
             0%, 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,0.14); }
@@ -1077,7 +1013,7 @@
         .off-lamp-shade { position: absolute; left: 50%; top: 0; transform: translateX(-50%); width: 92px; height: 46px; border-radius: 46px 46px 8px 8px; background: linear-gradient(180deg, #d9a23c, #8a5f18); box-shadow: 0 14px 34px rgba(255,198,112,0.45); }
         .office-dark .off-lamp-shade { background: linear-gradient(180deg, #55606f, #2d3440); box-shadow: none; }
         .off-lamp-arm { position: absolute; left: 50%; top: 42px; width: 7px; height: 78px; margin-left: -3.5px; background: linear-gradient(180deg, #7b858f, #3e454f); }
-        /* Besucherstuhl vor dem Schreibtisch - leer, solange niemand wartet. */
+        
         .office-quicknav-alert { border-color: var(--danger) !important; color: var(--danger) !important; font-weight: 900; animation: officeVisitorPulse 1.8s ease-in-out infinite; }
         .off-visitor-chair { position: absolute; inset: 0; }
         .off-chair-back { position: absolute; left: 50%; top: 28px; transform: translateX(-50%); width: 62px; height: 64px; border-radius: 10px 10px 4px 4px; background: linear-gradient(180deg, #4a5462, #333b46); box-shadow: inset 0 2px 0 rgba(255,255,255,0.08); }
@@ -1090,8 +1026,8 @@
         .off-visitor-badge { position: absolute; right: 4px; top: 0; width: 22px; height: 22px; border-radius: 50%; background: var(--danger); color: #fff; font-size: 13px; font-weight: 900; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 3px rgba(0,0,0,0.35); animation: officeVisitorPulse 1.6s ease-in-out infinite; }
         @keyframes officeVisitorPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18); } }
 
-        /* Ereignis-Karte: liegt ueber der Kulisse, damit man das Buero nicht verlaesst. */
-        /* Ladeanzeige bis window.onload fertig ist - siehe Kommentar in index.html. */
+        
+        
         .app-loading { position: fixed; inset: 0; z-index: 99999; display: flex; align-items: center; justify-content: center; background: #070d18; }
         .app-loading-inner { text-align: center; padding: 20px; }
         .app-loading-ball { font-size: 44px; animation: appLoadingSpin 1.4s linear infinite; }
@@ -1099,7 +1035,7 @@
         .app-loading-title { font-size: 16px; font-weight: 900; color: #f8fafc; margin-top: 10px; }
         .app-loading-sub { font-size: 11px; color: #94a3b8; margin-top: 4px; }
 
-        /* Meldungsfenster als Ersatz fuer alert() - siehe showNotice() in js/utils.js. */
+        
         .app-notice-overlay { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgba(3, 7, 15, 0.8); }
         .app-notice-card { width: 100%; max-width: 360px; max-height: 84vh; overflow-y: auto; background: var(--bg-panel, #111a2b); border: 2px solid var(--primary); border-radius: 14px; padding: 16px; box-shadow: 0 22px 60px rgba(0,0,0,0.6); text-align: center; }
         .app-notice-card.app-notice-warn { border-color: var(--danger); }
@@ -1130,7 +1066,7 @@
             border: 2px solid var(--border-highlight);
         }
 
-        /* Spielfeld */
+        
         .pitch {
             position: absolute;
             top: 25%;
@@ -1154,8 +1090,7 @@
             border-radius: 50%;
         }
 
-        /* Tribünen (Basisstufe) - nur in der Visualisierung; ohne den Container-Präfix
-           rutschten auch die Blöcke im Ausbauplan (.stadium-bowl) aus ihrem Raster. */
+        
         #stadium-container .stand {
             position: absolute;
             background: linear-gradient(180deg, #37474f 0%, #263238 100%);
@@ -1173,7 +1108,7 @@
         .west-stand { top: 25%; left: 2%; width: 13%; height: 50%; border-radius: 4px 0 0 4px; }
         .east-stand { top: 25%; right: 2%; width: 13%; height: 50%; border-radius: 0 4px 4px 0; }
 
-        /* Flutlichter */
+        
         .floodlight {
             position: absolute;
             width: 8px;
@@ -1186,7 +1121,7 @@
         .top-left { top: 2%; left: 8%; }
         .top-right { top: 2%; right: 8%; }
 
-        /* Dynamische Veränderung bei Vergrößerung (Level 2+) */
+        
         #stadium-container.stadium-level-2 .stand {
             background: linear-gradient(180deg, #455a64 0%, #37474f 100%);
             box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
@@ -1232,7 +1167,7 @@
 
         /* ========== UMFASSENDE MOBILE RESPONSIVITÄT ========== */
 
-        /* TABLET: 650px - 1000px */
+        
         @media (max-width: 1000px) {
             .panel { margin-bottom: 12px; }
             .btn-action, .btn-secondary { font-size: 11px; padding: 8px 10px; }
@@ -1242,39 +1177,38 @@
             #stadium-container { width: 100%; height: 200px; }
         }
 
-        /* MOBILE LANDSCAPE: 768px - 1000px */
+        
         @media (max-width: 768px) {
             body { font-size: 12px; }
             .panel { margin: 0 0 10px 0; }
             .panel-header { padding: 6px; font-size: 11px; }
             .box { padding: 5px 5px 5px 13px; font-size: 9px; }
 
-            /* Grid optimieren */
+            
             .player-card { font-size: 9px; padding: 8px; }
 
-            /* Buttons kompakter */
+            
             .btn-action, .btn-secondary {
                 font-size: 10px;
                 padding: 6px 8px;
                 min-width: auto;
             }
 
-            /* Stadium visuell kompakter */
+            
             .stand { font-size: 8px; }
             .stadium-bowl-wrapper { max-height: 200px; }
         }
 
-        /* MOBILE PORTRAIT: <= 650px (bestehende Media Query, erweitert) */
+        
         @media (max-width: 650px) {
             html { font-size: 13px; }
             body { margin: 0; padding: 0 0 calc(72px + env(safe-area-inset-bottom, 0px)); }
-            /* Listen mit eigenem Scrollbereich auf dem Handy voll ausklappen: Scrollen in der
-               Seite plus in der Box war fummelig, und die Box endete hinter der unteren Leiste. */
+            
             #cal-schedule-list, #bench-list, #individual-training-list, #campus-buildings-list, #staff-list-container {
                 max-height: none !important; overflow-y: visible !important;
             }
 
-            /* Layout */
+            
             .main-wrapper { flex-direction: column; }
             .app-sidebar {
                 position: fixed; top: 0; left: 0; bottom: 0; width: 78%; max-width: 300px;
@@ -1299,12 +1233,12 @@
             }
             .app-content { max-height: none; overflow-y: visible; padding: 8px; }
 
-            /* Panels compact */
+            
             .panel { margin: 0 0 8px 0; padding: 6px; }
             .panel-header { font-size: 11px; padding: 6px; }
             .box { font-size: 9px; padding: 4px 4px 4px 13px; margin: 4px 0; }
 
-            /* Buttons */
+            
             .btn-action, .btn-secondary, .btn-danger {
                 font-size: 11px;
                 padding: 8px 10px;
@@ -1312,31 +1246,31 @@
                 width: 100%;
                 border-radius: 6px;
             }
-            /* Handy: jeder Knopf mindestens fingergroß (vorher oft nur 20 px hoch) */
+            
             button { min-height: 36px; }
 
-            /* Grid-Layouts anpassen */
+            
             .player-card {
                 padding: 6px;
                 font-size: 9px;
                 grid-template-columns: auto 1fr;
             }
 
-            /* Stadium Visualisierung */
+            
             .stadium-bowl-wrapper {
                 max-height: none;
                 margin: 4px 0;
             }
             .stadium-bowl {
                 width: 100%;
-                height: 260px; /* vorher 150 px: die Blöcke wurden unlesbar gestaucht */
+                height: 260px; 
             }
             .stand {
                 font-size: 9px;
                 padding: 3px;
             }
 
-            /* Hub-Tabs stacked */
+            
             .hub-tab-bar {
                 grid-template-columns: repeat(2, 1fr);
                 gap: 2px;
@@ -1347,13 +1281,13 @@
                 padding: 6px 4px;
             }
 
-            /* Header kompakt */
+            
             .app-header {
                 padding: 8px;
                 gap: 4px;
             }
 
-            /* Accordion compact */
+            
             .accordion-header {
                 font-size: 11px;
                 padding: 6px;
@@ -1362,30 +1296,30 @@
                 font-size: 12px;
             }
 
-            /* Modals responsive */
+            
             .generic-modal-overlay { padding: 8px; }
 
-            /* Toast messages */
+            
             .app-toast {
                 font-size: 11px;
                 padding: 10px 16px;
                 max-width: 90vw;
-                bottom: calc(66px + env(safe-area-inset-bottom, 0px)); /* über der unteren Leiste */
+                bottom: calc(66px + env(safe-area-inset-bottom, 0px)); 
             }
 
-            /* Input fields */
+            
             input, select, textarea {
                 font-size: 12px;
                 padding: 6px;
             }
 
-            /* Scrollbar dünner */
+            
             ::-webkit-scrollbar { width: 6px; height: 6px; }
             ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
             ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
         }
 
-        /* SMALL MOBILE: <= 480px (iPhone SE, etc.) */
+        
         @media (max-width: 480px) {
             html { font-size: 12px; }
             .app-sidebar { width: 85%; max-width: 280px; }
@@ -1413,14 +1347,14 @@
                 padding: 4px;
             }
 
-            /* Tabelle/Listen single column */
+            
             
             table { font-size: 10px; }
             tr { padding: 2px; }
             td { padding: 3px 4px; }
         }
 
-        /* VERY SMALL: <= 360px (Galaxy S, etc.) */
+        
         @media (max-width: 360px) {
             html { font-size: 11px; }
 
@@ -1439,7 +1373,7 @@
             .stadium-bowl { height: 230px; }
         }
 
-        /* Accordion Styles */
+        
         .accordion-section {
             margin-bottom: 8px;
         }
@@ -1490,8 +1424,7 @@
             display: block;
         }
 
-        /* Enthält eine 3D-Szene (Stadionschüssel): opacity/transform auf einem Eltern-Element
-           machen sie in Android-WebViews flach und brechen die Klick-Erkennung. */
+        
         .accordion-content.accordion-3d {
             animation: none;
         }
@@ -1507,12 +1440,8 @@
             }
         }
 
-/* Bewegung reduzieren (Systemeinstellung): keine Daueranimationen im Büro. */
-
-/* EINHAND-BEDIENUNG (Phase 20.8, js/one-hand.js): auf dem Handy liegt alles Wichtige im
-   Daumenbereich - Weiter-Knopf, Fenster von unten, Livespiel-Steuerung über der Leiste. */
 .one-hand-fab { display: none; }
-/* Einstellungen im Menü nur auf dem Handy (am Desktop gibt es keinen Weiter-Knopf, Sprache/Ton stehen im Kopf) */
+
 .one-hand-settings { display: none; }
 @media (max-width: 650px) { .one-hand-settings { display: block; } }
 .one-hand-toggles { display: flex; gap: 6px; flex-wrap: wrap; padding: 4px 2px; }
@@ -1529,29 +1458,29 @@
     }
     body.fab-left .one-hand-fab { right: auto; left: 12px; }
     .one-hand-fab.fab-hidden, body.fab-off .one-hand-fab { display: none; }
-    /* Seitenende auch über dem Weiter-Knopf (Leiste 72 px + Knopf ~60 px) */
+    
     body { padding-bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
     body.fab-off { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
 
-    /* Fenster fahren von unten ein: Knöpfe im Daumenbereich, Tipp daneben schließt */
+    
     .generic-modal-overlay { align-items: flex-end; padding: 8px 6px 0; }
     .generic-modal-box { border-radius: 14px 14px 0 0; max-height: 86vh; padding-bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
     .app-notice-overlay { align-items: flex-end; padding-bottom: calc(var(--bottom-nav-h, 58px) + 12px); }
 
-    /* Livespiel: Szene/Pause/Abpfiff bleiben über der unteren Leiste stehen */
+    
     #matchday-controls, #btn-finish-match {
         position: sticky; bottom: calc(var(--bottom-nav-h, 58px) + 6px + env(safe-area-inset-bottom, 0px)); z-index: 40;
         background: rgb(16, 12, 8); border: 1px solid rgba(228,197,140,0.25); border-radius: 10px;
         padding: 6px; box-shadow: 0 -6px 18px rgba(0,0,0,0.55);
     }
 
-    /* Co-Trainer-Hinweis (js/co-trainer-live.js) steht direkt über der Livespiel-Leiste */
+    
     #live-cotrainer-box:not(:empty) {
         position: sticky; bottom: calc(var(--bottom-nav-h, 58px) + 64px + env(safe-area-inset-bottom, 0px)); z-index: 40;
     }
     #live-cotrainer-box .box { background: rgb(16, 22, 20); }
 
-    /* Kopf: Kennzahlen in EINER wischbaren Zeile (Sprache/Ton liegen im Menü) */
+    
     .header-kpis { flex-wrap: nowrap; overflow-x: auto; width: 100%; scrollbar-width: none; }
     .header-kpis::-webkit-scrollbar { display: none; }
     .header-kpis .kpi-chip { flex: 0 0 auto; padding: 4px 8px; }
