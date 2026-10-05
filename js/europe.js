@@ -4,14 +4,14 @@
 // ==========================================
     // Lostöpfe (Phase 21.4): jede Saison ein neues Feld statt immer derselben sieben Klubs.
     // Topf 1 die europäische Elite, Topf 4 die Außenseiter. Die Stärke richtet sich nach dem
-    // Topf (gleiche Staffelung wie früher die feste Reihenfolge) und am eigenen Niveau.
+    // Topf und dem Niveau der Bundesliga-Spitze (Topf 1 darüber, Topf 4 deutlich darunter).
     const EUROPE_POTS = [
         ["Real Madriz", "FC Barcalona", "Manchester Cyty", "Liverpol FC", "Paris St. Germaine", "Inter Milano", "Arsenall London"],
         ["Atlético Madriz", "Juwentus Turin", "AC Millan", "Chelsea FC London", "Manchester Unitad", "SSC Neapell", "Benfika Lissabon", "FC Porto Portugal"],
         ["Ajax Amsterdaam", "PSV Eindhofen", "Sporting Lissabonn", "Tottenham Hotspurr", "AS Romm", "Olympique Marseile", "Galatasaray Istanbull", "Club Bruggge", "Feyenoordt Rotterdam"],
         ["Celtic Glasgoww", "RB Salzborg", "Schachtar Donezkk", "Roter Stern Belgratt", "Young Boys Bernn", "FC Baselll", "Fenerbahce Istanbull", "Olympique Lyonn", "AS Monakko", "FC Sevillia", "Lazio Romm"]
     ];
-    const EUROPE_POT_STRENGTH = [[9, 6], [4, 2], [0, -2], [-4, -6]];
+    const EUROPE_POT_STRENGTH = [[4, 2], [0, -2], [-4, -6], [-8, -10]];
     // Punkte je erreichter Runde für den Europa-Koeffizienten (letzte 5 Saisons).
     const EUROPE_STAGE_POINTS = { gruppe: 1, halbfinale: 3, finale: 4, sieger: 6 };
 
@@ -35,12 +35,16 @@
         const eigenerTopf = game.inEurope ? getEuropePot() : -1;
         const deutscherTopf = deutscher ? (eigenerTopf === 1 ? 2 : 1) : -1;
 
-        // Staerke des Teilnehmerfelds: am reinen Kaderschnitt ausgerichtet (nicht an
-        // calcTeamStrength(), das zum Saisonstart mit frischem Kader ~97 meldet und ab
-        // Spieltag 20 nur noch ~74 - daher der Abschlag von 6). Ohne diese Kopplung war das
-        // Feld 12-17 Punkte stärker und der Titel nie erreichbar (20 Saisons gemessen).
-        let kaderSchnitt = squad.length ? squad.reduce((sum, p) => sum + p.strength, 0) / squad.length : 70;
-        let feldMitte = Math.max(45, Math.min(84, Math.round(kaderSchnitt) - 6));
+        // Stärke des Teilnehmerfelds (21.6): gemessen an der Bundesliga-Spitze - dem Schnitt
+        // der vier stärksten anderen Bundesligisten (team.strength, dieselbe Skala wie
+        // calcTeamStrength() im Ligaspiel). Vorher hing das Feld am eigenen Kaderschnitt - 6;
+        // die eigene Spielstärke liegt aber im Schnitt 6-8 Punkte ÜBER dem Kaderschnitt, und
+        // Topf 1 (84-86) war schwächer als der Bundesliga-Dritte (87-92). Im Langzeittest
+        // gewann so ein passiver Verein den Titel zweimal in Folge.
+        let bundesligaSpitze = deutsche.slice(0, 4).map(t => t.strength);
+        let feldMitte = bundesligaSpitze.length
+            ? Math.round(bundesligaSpitze.reduce((a, b) => a + b, 0) / bundesligaSpitze.length)
+            : 85;
         const team = (name, str) => ({ name, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, pts: 0, str: Math.max(45, Math.min(95, Math.round(str))) });
 
         // Je Topf zwei Plätze: einer für Gruppe A, einer für Gruppe B.

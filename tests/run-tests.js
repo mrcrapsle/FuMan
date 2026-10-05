@@ -2154,6 +2154,48 @@ async function testCleanupNine(browser) {
     await page.close();
 }
 
+async function testBundesligaLongRun(browser) {
+    console.log('\n[21.6] Langzeittest Bundesliga: Rücklagen-Budgets, Stars am Markt, saubere Buchungen');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            // Rücklagen: nur was über einer halben Saison Gehaltsbudget liegt, wird freigegeben
+            game.wageBudget = 1000000;
+            game.money = 10000000;
+            const knapp = getCashSurplusBudgetShare();
+            game.money = 37000000;
+            const reich = getCashSurplusBudgetShare();
+            out.ruecklagen = knapp.transfer === 0 && knapp.wage === 0 && reich.transfer === 8000000 && reich.wage === Math.round(2000000 / 34 / 1000) * 1000;
+            const tb = game.transferBudget, wb = game.wageBudget;
+            applyCashSurplusBudgets();
+            out.freigabe = game.transferBudget === tb + reich.transfer && game.wageBudget === wb + reich.wage
+                && inboxMessages.some(m => m.title.includes('Rücklagen'));
+            // Markt: in der Bundesliga drei internationale Stars über dem Liganiveau, unten nicht
+            game.leagueLevel = 0; refreshTransferMarket();
+            out.sterne = marketPlayers.filter(p => p.strength >= 87).length >= 3;
+            game.leagueLevel = 5; refreshTransferMarket();
+            out.untenNormal = marketPlayers.every(p => p.strength < 87);
+            // Buchungen: Prämien mit eigener Bezeichnung, Startkapital zählt nicht fürs FFP
+            game.kontoauszug = [];
+            bucheMitLabel('🏆 DFB-Pokal-Prämie', 215000);
+            out.praemie = game.kontoauszug.some(k => k.label === '🏆 DFB-Pokal-Prämie' && k.amount === 215000);
+            out.startkapital = isFfpExemptLabel('🏁 Startkapital');
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Langzeittest Bundesliga ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.ruecklagen && r.freigabe, 'Der Vorstand gibt Rücklagen über der Reserve als Transfer- und Gehaltsbudget frei');
+        assert(r.sterne && r.untenNormal, 'Bundesliga-Markt mit drei internationalen Stars, untere Ligen unverändert');
+        assert(r.praemie && r.startkapital, 'Pokalprämien mit eigener Buchung, Startkapital zählt nicht fürs FFP');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testSponsorConflict(browser) {
     console.log('\n[19.x] Sponsoren: Branchenkonflikt nennt den Konkurrenten und kostet 30 %');
     const { page, consoleErrors } = await freshPage(browser);
@@ -4949,9 +4991,14 @@ async function testEuropeanCup(browser) {
         //    frischen Kader mit rund 97 bewertet, waehrend derselbe Kader ab Spieltag 20
         //    nur noch etwa 74 erreicht - das Feld war am nie wieder erreichten Bestwert
         //    ausgerichtet.
+        // 21.6: Bezug ist die Bundesliga-Spitze (Schnitt der vier stärksten anderen
+        // Bundesligisten) - am eigenen Kaderschnitt war Europas Elite schwächer als der
+        // Bundesliga-Dritte und ein passiver Verein gewann den Titel zweimal in Folge.
         let kaderSchnitt = squad.reduce((sum, p) => sum + p.strength, 0) / squad.length;
+        let spitze = leaguesData[0].filter(t => t.name !== game.clubName).map(t => t.strength).sort((a, b) => b - a).slice(0, 4);
+        let ref = spitze.reduce((a, b) => a + b, 0) / spitze.length;
         let gegner = feld.filter(t => t.name !== game.clubName).map(t => t.str);
-        out.feldAmKader = gegner.every(v => Math.abs(v - kaderSchnitt) <= 20);
+        out.feldAmKader = gegner.every(v => Math.abs(v - ref) <= 12) && Math.max(...gegner) >= ref;
         // Mindestens ein Gegner liegt unter unserem Kaderschnitt - sonst ist nichts zu holen.
         out.schlagbareGegner = gegner.some(v => v < kaderSchnitt);
         // Und mindestens einer darueber, sonst ist es keine Koenigsklasse.
@@ -5013,7 +5060,7 @@ async function testEuropeanCup(browser) {
 
     assert(r.achtTeilnehmer && r.wirDabei, 'Der Champions Cup hat acht Teilnehmer, der eigene Verein ist dabei');
     assert(r.feldGestaffelt, 'Das Teilnehmerfeld ist gestaffelt statt durchgehend gleich stark');
-    assert(r.feldAmKader, 'Das Feld richtet sich nach dem eigenen Kaderniveau');
+    assert(r.feldAmKader, 'Das Feld richtet sich nach der Bundesliga-Spitze, Topf 1 liegt darüber');
     assert(r.schlagbareGegner, 'Mindestens ein Gruppengegner ist schlagbar');
     assert(r.echteFavoriten, 'Es gibt trotzdem echte Favoriten im Feld');
     assert(r.formEgal, 'Die Tagesform zum Auslosungszeitpunkt verzerrt das Feld nicht mehr');
@@ -7838,6 +7885,7 @@ async function main() {
         testLocalDerbies,
         testEuropeDraw,
         testCleanupNine,
+        testBundesligaLongRun,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,
