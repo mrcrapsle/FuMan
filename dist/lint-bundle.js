@@ -484,7 +484,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.41', date: '05.10.2026', features: 'Phase 22: Wintergespräch mit dem Vorstand (Zwischenbilanz, Ziel hoch/runter, Winterbudget, Kurs)' };
+    const GAME_VERSION = { number: '3.42', date: '05.10.2026', features: 'Phase 22: Spieler-Karriereprofil (Herkunft, Saisontabelle, Titel, Vereinslegenden)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -1799,8 +1799,8 @@ function compareTableRows(a, b) {
         // Career Progression Panel: Karriere-Statistik und Meilensteine
         let careerBox = document.getElementById('pd-career-progression');
         if (careerBox) {
-            if (typeof renderPlayerCareerPanel === 'function') {
-                let careerHtml = renderPlayerCareerPanel(p.id);
+            if (typeof renderPlayerProfile === 'function') {
+                let careerHtml = renderPlayerProfile(p);
                 if (careerHtml) {
                     careerBox.style.display = 'block';
                     careerBox.innerHTML = careerHtml;
@@ -3237,22 +3237,6 @@ function renderPlayerDevelopmentPanel() {
     </div>`;
 }
 
-// Karriere-Block im Spielerdetail - aus gespeicherten Spielerdaten.
-function renderPlayerCareerPanel(playerId) {
-    const p = squad.find(x => x.id === playerId);
-    if (!p) return '';
-    const arch = getPlayerArchetype(p);
-    const hist = p.strengthHistory || [];
-    const peak = hist.reduce((best, h) => (h.strength > best.strength ? h : best), { strength: p.strength, season: game.season });
-    const saisons = hist.filter(h => h.apps !== undefined).slice(-5).reverse();
-    return `<div class="box" style="font-size:9px;">
-        <div style="font-weight:700; color:var(--accent); margin-bottom:4px;">📊 KARRIERE</div>
-        ${arch.icon} ${arch.name} - Höhepunkt mit etwa ${arch.peakAge} Jahren · nächster Sommer: ${formatDevelopmentRange(p)}<br>
-        ${p.appearances || 0} Pflichtspiele · ${p.goalsCareer || 0} Tore · Bestwert Stärke ${peak.strength} (Saison ${peak.season})
-        ${saisons.length ? `<div style="margin-top:4px;">${saisons.map(h => `Saison ${h.season}: ${h.apps} Spiele, ${h.goals} Tore, Stärke ${h.strength}`).join('<br>')}</div>` : ''}
-    </div>`;
-}
-
 // Alte Spielstände: Daten der abgelösten Module.
 function cleanupLegacyDevelopmentState() {
     delete game.playerDevelopment;
@@ -3741,6 +3725,7 @@ function cleanupLegacyDevelopmentState() {
         let p = secondTeamSquad[idx];
         secondTeamSquad.splice(idx, 1);
         secondTeamLineup = secondTeamLineup.filter(pid => pid !== id);
+        if (typeof stampPlayerJoin === 'function') stampPlayerJoin(p, 'reserve');
         squad.push(p);
         autoLineupSecondTeam();
         syncSecondTeamIntoLeagueTable();
@@ -6678,6 +6663,7 @@ function finalizePlayerPurchase(p, ablose, gehalt) {
     game.money -= gesamt;
     game.transferBudget -= ablose;
     p.wage = gehalt;
+    if (typeof stampPlayerJoin === 'function') stampPlayerJoin(p, 'kauf', p.sellerClub, ablose);
     squad.push(p);
     marketPlayers.splice(idx, 1);
     if (transferPoker && transferPoker.playerId === p.id) transferPoker = null;
@@ -6928,6 +6914,7 @@ function renderTransferPokerBox() {
         game.money -= loan.buyOptionFee;
         game.transferBudget -= loan.buyOptionFee;
         p.contracts = 3;
+        if (typeof stampPlayerJoin === 'function') stampPlayerJoin(p, 'leihe', loan.parentClub, loan.buyOptionFee);
         incomingLoans = incomingLoans.filter(l => l.playerId !== playerId);
         addInboxMessage('vertrag', `✅ Kaufoption gezogen: ${p.name}!`, `${p.name} wechselt dauerhaft von ${loan.parentClub} zum Verein!`, 'screen-squad');
         showToast(`✅ ${p.name} dauerhaft verpflichtet!`, 'success');
@@ -7165,6 +7152,8 @@ function renderTransferPokerBox() {
     // bei den Fans besonders schlecht an - deutlich stärkerer Fan-Rückgang als bei einem
     // gewöhnlichen Transfer, als spürbare Konsequenz statt eines rein kosmetischen Titels.
     function checkCrowdFavoriteDeparture(departingPlayer) {
+        // Vereinslegende (js/player-profile.js): jeder Abgang läuft hier durch.
+        if (typeof checkLegendDeparture === 'function') checkLegendDeparture(departingPlayer);
         if (!departingPlayer || !departingPlayer.isCrowdFavorite) return;
         game.fans = Math.max(game.fanBaseFloor || 10, game.fans - 15);
         game.boardSat = Math.max(1, game.boardSat - 5);
@@ -7565,6 +7554,7 @@ function renderTransferPokerBox() {
         if (totalWages + p.wage > game.wageBudget) { showToast(`Gehaltsbudget reicht nicht: ${formatVal(totalWages + p.wage)} nach der Verpflichtung, erlaubt sind ${formatVal(game.wageBudget)}.`, 'error', 5000); return; }
         playSound('click');
         game.money -= finalFee;
+        if (typeof stampPlayerJoin === 'function') stampPlayerJoin(p, 'ablösefrei');
         squad.push(p);
         freeAgentPlayers.splice(idx, 1);
         pendingFreeAgentNegotiation = null;
@@ -7861,6 +7851,7 @@ function resetPlayerSeasonStats(p) {
         const letzter = p.strengthHistory[p.strengthHistory.length - 1];
         letzter.assists = p.statsSeason.vorlagen;
         letzter.grade = p.statsSeason.spiele ? +(p.statsSeason.notenSumme / p.statsSeason.spiele).toFixed(2) : null;
+        letzter.elf = p.statsSeason.elf || 0;
     }
     p.statsSeason = null;
 }
@@ -18712,6 +18703,7 @@ function signYouthProContract(p) {
     p.contracts = 3;
     p.wage = getYouthProWage(p);
     p.academyGraduate = true;
+    if (typeof stampPlayerJoin === 'function') stampPlayerJoin(p, 'jugend');
     p.proDecisionLeft = null;
     delete p.proWageQuote;
     p.milestones = p.milestones || {};
@@ -21214,6 +21206,7 @@ function recordCupFinal(comp, pairing, weWon) {
     };
     if (!game.cupFinals) game.cupFinals = [];
     game.cupFinals.unshift(eintrag);
+    if (weWon && typeof addSquadHonour === 'function') addSquadHonour(`🏆 ${eintrag.name}-Sieger`);
     if (game.cupFinals.length > 20) game.cupFinals.length = 20;
     if (cf) {
         cf.played = true;
@@ -22571,6 +22564,7 @@ function joinPreContractPlayers() {
         p.contracts = 3;
         p.fitness = 100;
         delete p.sellerClub; delete p.preRefused;
+        if (typeof stampPlayerJoin === 'function') stampPlayerJoin(p, 'vorvertrag', v.from);
         if (squad.some(x => x.id === p.id)) p.id = Math.random().toString(36).substr(2, 9);
         squad.push(p);
         addInboxMessage('transfer', `👋 Neuzugang: ${p.name}`, `${p.name} (${p.pos}, Stärke ${p.strength}) kommt wie per Vorvertrag vereinbart ablösefrei von ${v.from}.`, 'screen-squad');
@@ -22687,6 +22681,7 @@ function exerciseBuyback(playerId) {
     p.injured = 0;
     p.suspended = 0;
     if (squad.some(x => x.id === p.id)) p.id = Math.random().toString(36).substr(2, 9);
+    if (typeof stampPlayerJoin === 'function') stampPlayerJoin(p, 'rückkauf', o.club, o.price, true);
     squad.push(p);
     game.buybackOptions = game.buybackOptions.filter(x => x !== o);
     game.fans = Math.min(100, game.fans + 2);
@@ -22995,6 +22990,109 @@ function renderWinterTalkCard() {
             <button onclick="chooseWinterTalk('budget')" class="btn-secondary" style="font-size:10px;">💶 Winterbudget ${formatVal(betrag)} beantragen (${chance} %, sonst -3)</button>
             <button onclick="chooseWinterTalk('kurs')" class="btn-secondary" style="font-size:10px;">🤝 Kurs bestätigen: Vorstand +2</button>
         </div></div>`;
+}
+
+/* eslint-enable */
+/* eslint-disable no-undef */
+// Spieler-Karriereprofil (Phase 22.10): im Spieler-Popup statt der kurzen Karrierezeile ein
+// echtes Profil - wie und woher er kam (p.joined: Saison, Weg, abgebender Verein, Ablöse),
+// Saison für Saison Spiele/Tore/Vorlagen/Note/Elf des Spieltags (p.strengthHistory plus die
+// laufende Saison aus p.statsSeason), Länderspiele und Titel (p.honours: Meister, Aufstieg,
+// Pokalsieg, Spieler des Monats/der Saison).
+// Vereinslegende (isClubLegend: ab 150 Pflichtspielen oder 6 Saisons im Verein): geht er -
+// Verkauf oder Vertragsende -, sind die Fans getroffen (-8, Vorstand -2).
+
+const LEGEND_APPS = 150;
+const LEGEND_SEASONS = 6;
+const JOIN_LABELS = {
+    kauf: 'gekauft', ablösefrei: 'ablösefrei als Vereinsloser', vorvertrag: 'per Vorvertrag (ablösefrei)',
+    rückkauf: 'zurückgekauft', jugend: 'aus der eigenen Jugend', leihe: 'nach Leihe fest verpflichtet', reserve: 'aus der Zweiten Mannschaft'
+};
+
+// Zugang festhalten (Kauf, Vereinslose, Vorvertrag, Rückkauf, Jugend, Leihe, Reserve).
+function stampPlayerJoin(p, via, from, fee, neu) {
+    if (!p || (p.joined && !neu)) return;
+    p.joined = { season: game.season, via, from: from || null, fee: fee || 0 };
+}
+
+function addPlayerHonour(p, text) {
+    if (!p) return;
+    if (!p.honours) p.honours = [];
+    p.honours.push({ season: game.season, text });
+    if (p.honours.length > 20) p.honours.shift();
+}
+
+function addSquadHonour(text) {
+    squad.forEach(p => addPlayerHonour(p, text));
+}
+
+function getSeasonsAtClub(p) {
+    if (p.joined && p.joined.season) return Math.max(0, game.season - p.joined.season);
+    return (p.strengthHistory || []).length;
+}
+
+function isClubLegend(p) {
+    return !!p && ((p.appearances || 0) >= LEGEND_APPS || getSeasonsAtClub(p) >= LEGEND_SEASONS);
+}
+
+// Aus checkCrowdFavoriteDeparture() - jeder Abgang (Verkauf, Vertragsende) läuft dort durch.
+function checkLegendDeparture(p) {
+    if (!isClubLegend(p)) return;
+    game.fans = Math.max(game.fanBaseFloor || 10, game.fans - 8);
+    game.boardSat = Math.max(1, game.boardSat - 2);
+    addInboxMessage('vertrag', `🏛️ Eine Vereinslegende geht: ${p.name}`, `${p.appearances || 0} Pflichtspiele, ${getSeasonsAtClub(p)} Saisons - die Fans verabschieden ${p.name} mit Wehmut (Fans -8, Vorstand -2).`, 'screen-squad');
+}
+
+// Saisonende (vor dem Ligawechsel): Meistertitel und Spieler der Saison.
+function recordSeasonHonours(myRank) {
+    const liga = typeof leagueNames !== 'undefined' ? leagueNames[game.leagueLevel] : 'Liga';
+    if (myRank === 1) addSquadHonour(`🏆 Meister ${liga}`);
+    const pos = typeof pickPlayerOfSeason === 'function' ? pickPlayerOfSeason() : null;
+    if (pos && pos.p) addPlayerHonour(pos.p, '⭐ Spieler der Saison');
+}
+
+function describeJoin(p) {
+    const j = p.joined;
+    if (!j) return p.academyGraduate ? 'aus der eigenen Jugend' : 'seit dem Start deiner Karriere im Verein';
+    const woher = j.from ? ` von ${j.from}` : '';
+    const ablose = j.via === 'kauf' || j.via === 'rückkauf' || j.via === 'leihe' ? ` für ${formatVal(j.fee || 0)}` : '';
+    return `seit Saison ${j.season} · ${JOIN_LABELS[j.via] || j.via}${woher}${ablose}`;
+}
+
+function getProfileSeasons(p) {
+    const zeilen = (p.strengthHistory || []).filter(h => h.apps !== undefined).map(h => ({
+        season: h.season, apps: h.apps, goals: h.goals, assists: h.assists ?? null, grade: h.grade ?? null, elf: h.elf ?? null, strength: h.strength
+    }));
+    const st = p.statsSeason;
+    zeilen.push({ season: game.season, apps: p.appearancesSeason || 0, goals: p.goalsSeason || 0, assists: st ? st.vorlagen : 0,
+        grade: st && st.spiele ? +(st.notenSumme / st.spiele).toFixed(2) : null, elf: st ? st.elf : 0, strength: p.strength, laufend: true });
+    return zeilen;
+}
+
+function renderPlayerProfile(p) {
+    if (!p || !squad.includes(p)) return '';
+    const arch = typeof getPlayerArchetype === 'function' ? getPlayerArchetype(p) : null;
+    const saisons = getProfileSeasons(p);
+    const vorlagen = saisons.reduce((s, z) => s + (z.assists || 0), 0);
+    const elf = saisons.reduce((s, z) => s + (z.elf || 0), 0);
+    const noten = saisons.filter(z => z.grade);
+    const besteNote = noten.length ? Math.min(...noten.map(z => z.grade)) : null;
+    const legende = isClubLegend(p);
+    const fmt = n => n === null || n === undefined ? '-' : String(n).replace('.', ',');
+    const tabelle = saisons.slice(-6).reverse().map(z => `<tr${z.laufend ? ' style="color:var(--accent);"' : ''}><td>${z.season}${z.laufend ? '*' : ''}</td><td>${z.apps}</td><td>${z.goals}</td><td>${fmt(z.assists)}</td><td>${z.grade ? fmt(z.grade.toFixed(2)) : '-'}</td><td>${fmt(z.elf)}</td><td>${z.strength}</td></tr>`).join('');
+    const titel = (p.honours || []).slice().reverse();
+    const intl = (p.caps || 0) > 0 ? `🌍 ${p.caps} Länderspiele, ${p.intlGoals || 0} Tore${(p.intlTitles || []).length ? ` · ${p.intlTitles.length} Turniertitel` : ''}<br>` : '';
+    return `<div class="box" style="font-size:9px; text-align:left;">
+        <div style="font-weight:700; color:var(--accent); margin-bottom:4px;">📊 KARRIEREPROFIL${legende ? ' · <span style="color:var(--gold);">🏛️ VEREINSLEGENDE</span>' : ''}</div>
+        🏟️ Im Verein ${describeJoin(p)}${legende ? '' : ` · Legende ab ${LEGEND_APPS} Pflichtspielen oder ${LEGEND_SEASONS} Saisons`}<br>
+        ${arch ? `${arch.icon} ${arch.name} - Höhepunkt mit etwa ${arch.peakAge} Jahren${typeof formatDevelopmentRange === 'function' ? ` · nächster Sommer: ${formatDevelopmentRange(p)}` : ''}<br>` : ''}
+        ⚽ ${p.appearances || 0} Pflichtspiele · ${p.goalsCareer || 0} Tore · ${vorlagen} Vorlagen · ${elf}× Elf des Spieltags${besteNote ? ` · beste Saisonnote ${fmt(besteNote.toFixed(2))}` : ''}<br>
+        ${intl}
+        <table style="width:100%; font-size:9px; margin-top:4px; border-collapse:collapse; text-align:center;">
+            <tr style="color:var(--text-muted);"><th>Saison</th><th>Sp</th><th>T</th><th>V</th><th>Note</th><th>Elf</th><th>Stärke</th></tr>${tabelle}
+        </table>
+        ${titel.length ? `<div style="margin-top:4px;">${titel.map(h => `${h.text} (Saison ${h.season})`).join(' · ')}</div>` : '<div style="margin-top:4px; color:var(--text-muted);">Noch keine Titel und Auszeichnungen.</div>'}
+    </div>`;
 }
 
 /* eslint-enable */
@@ -26616,6 +26714,7 @@ function cleanupLegacyScoutState() {
         if (!winner || winner.goalsInPeriod <= 0) return;
         winner.p.morale = Math.min(100, (winner.p.morale || 80) + 8);
         game.playerOfMonthHistory.unshift({ season: game.season, matchday: game.matchday, playerId: winner.p.id, playerName: winner.p.name, goals: winner.goalsInPeriod });
+        if (typeof addPlayerHonour === 'function') addPlayerHonour(winner.p, '📅 Spieler des Monats');
         if (game.playerOfMonthHistory.length > 30) game.playerOfMonthHistory.pop();
         addInboxMessage('vertrag', `🌟 Spieler des Monats: ${winner.p.name}!`, `${winner.p.name} wird für die starke Leistung der letzten Spieltage (${winner.goalsInPeriod} Tore) zum Spieler des Monats gekürt - spürbarer Moralschub!`, 'screen-squad');
         showToast(`🌟 ${winner.p.name} ist Spieler des Monats!`, 'success');
@@ -27044,6 +27143,7 @@ function cleanupLegacyScoutState() {
         if (sponsorPromoBonus > 0) game.money += sponsorPromoBonus;
         addManagerXP(1000);
         boostFanBaseFloor(6, `Der Aufstieg in die ${leagueNames[game.leagueLevel]}`);
+        if (typeof addSquadHonour === 'function') addSquadHonour(`⬆️ Aufstieg in die ${leagueNames[game.leagueLevel]}`);
         if (typeof triggerPromotionBonusClauses === 'function') triggerPromotionBonusClauses();
         return sponsorPromoBonus;
     }
@@ -27117,6 +27217,7 @@ function cleanupLegacyScoutState() {
         if (typeof evaluateSeasonEndObjectives === 'function') evaluateSeasonEndObjectives(myRank);
         if (typeof recordScenarioSeasonRank === 'function') recordScenarioSeasonRank(myRank);
         if (typeof resolveWinterTalk === 'function') resolveWinterTalk(myRank);
+        if (typeof recordSeasonHonours === 'function') recordSeasonHonours(myRank);
         if (typeof prepareMemberAssembly === 'function') prepareMemberAssembly(myRank);
         // Experten-Check (js/season-preview.js): Prognose gegen Abschlusstabelle, vor dem Ligawechsel.
         if (typeof buildSeasonExpertCheck === 'function') buildSeasonExpertCheck(myRank);
@@ -28531,6 +28632,9 @@ const LEXICON_ENTRIES = [
     { cat: 'Verein', title: 'Wintergespräch mit dem Vorstand', screen: 'screen-dashboard',
         text: 'In der Winterpause (Spieltag 18-20) zieht der Vorstand Zwischenbilanz: Tabellenplatz gegen die Erwartung und Kassenentwicklung. Du wählst einen Weg: Ziel hoch (2 Plätze, Vorstand +5 und sofort Winterbudget - am Saisonende erreicht +5, verfehlt -10), Ziel runter (2 Plätze, Vorstand -4, die Saison und die Mitgliederversammlung messen am leichteren Ziel), Winterbudget beantragen (Chance aus Zwischenbilanz und Vorstandslaune, Absage -3) oder Kurs bestätigen (+2). Wer bis Spieltag 20 nicht kommt, verpasst das Gespräch (-2).',
         tips: ['Läuft es besser als erwartet, ist das Budget leichter zu bekommen', 'Ein höheres Ziel lohnt nur, wenn du es wirklich erreichen kannst'] },
+    { cat: 'Verein', title: 'Karriereprofil & Vereinslegenden', screen: 'screen-squad',
+        text: 'Das Spieler-Popup zeigt ein Karriereprofil: seit wann und wie der Spieler im Verein ist (Kauf mit Ablöse, ablösefrei, Vorvertrag, Rückkauf, Jugend, Leihe, Reserve), Saison für Saison Spiele, Tore, Vorlagen, Notenschnitt und Elf des Spieltags, Länderspiele sowie Titel und Auszeichnungen (Meister, Aufstieg, Pokalsieg, Spieler des Monats/der Saison). Ab 150 Pflichtspielen oder 6 Saisons im Verein ist er Vereinslegende: geht er - Verkauf oder Vertragsende -, sinken Fans (-8) und Vorstand (-2).',
+        tips: ['Vor dem Verkauf eines langjährigen Stammspielers ins Profil schauen', 'Eine Legende mit auslaufendem Vertrag lieber rechtzeitig verlängern'] },
     { cat: 'Verein', title: 'Kabine, Cliquen & Kapitän', screen: 'screen-squad',
         text: 'Ein Mannschaftsrat: Kapitän plus die zwei Spieler mit der größten Führungsqualität (Leader-Eigenschaft, Alter, Erfahrung, Moral). Spieler gruppieren sich nach Nation und Alter; fällt die Stimmung einer Gruppe unter 40, rumort sie: Teamstärke sinkt, und jeden Monat färbt die Laune auf den Rest ab. Ein Kapitän mit Autorität (Moral ab 60) dämpft das.',
         tips: ['Wortführer melden sich beim Mannschaftsrat (anhören oder klare Ansage)', 'Unzufriedene Leistungsträger kommen ins Büro: Einsatzgarantie, Leistung einfordern oder Wechsel erlauben', 'Kapitän wechseln kostet den alten Kapitän Moral - einen Neuling ohne Standing nimmt der Rat übel'] },
