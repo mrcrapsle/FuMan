@@ -484,7 +484,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.42', date: '05.10.2026', features: 'Phase 22: Spieler-Karriereprofil (Herkunft, Saisontabelle, Titel, Vereinslegenden)' };
+    const GAME_VERSION = { number: '3.42.1', date: '05.10.2026', features: 'Testkorrektur: Erzfeind-Test ohne Trainerkarussell beim Sprung zum Duell (CI wackelte)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
