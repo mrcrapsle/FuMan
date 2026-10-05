@@ -484,7 +484,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.45', date: '05.10.2026', features: 'Phase 21.4: Champions Cup mit Lostöpfen, Europa-Koeffizient und Qualifikation jede Saison neu' };
+    const GAME_VERSION = { number: '3.46', date: '05.10.2026', features: 'Aufräumen Teil 9: echte Spielanalyse, Holding-Wert und neue Lohnfertigungs-Aufträge, Europa-Status' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -736,7 +736,6 @@ function compareTableRows(a, b) {
 
     let holdingCompany = {
         money: 50000,
-        valuation: 125000,
         b2bContracts: [
             { id: 'b2b1', club: "Real Madrit", item: "Trikots", amount: 1000, reqMat: 'cotton', reqQty: 1000, payout: 65000, done: false },
             { id: 'b2b2', club: "Bayern Munchen", item: "Fan-Schals", amount: 2000, reqMat: 'wool', reqQty: 1200, payout: 38000, done: false },
@@ -1088,6 +1087,8 @@ function compareTableRows(a, b) {
         // Holding-Aufträge alter Spielstände trugen echte Vereinsnamen.
         const echteNamen = { 'Real Madrid': 'Real Madrit', 'FC Bayern': 'Bayern Munchen', 'FC Liverpool': 'Liverpol FC' };
         if (typeof holdingCompany !== 'undefined') (holdingCompany.b2bContracts || []).forEach(c => { if (echteNamen[c.club]) c.club = echteNamen[c.club]; });
+        // Phase 21.5: fester Holding-Wert ersetzt durch getHoldingValuation().
+        if (typeof holdingCompany !== 'undefined') delete holdingCompany.valuation;
         squad.forEach(p => { delete p.currentFitnessBoost; delete p.nationalDuty; });
         // Phase 24.2: ausgewürfelte Rivalen-Paare der Ligatabellen (Derbys jetzt nach Ort).
         if (typeof leaguesData !== 'undefined') leaguesData.forEach(t => (t || []).forEach(x => { delete x.rivalName; }));
@@ -6487,6 +6488,24 @@ function selectNewGameScenario(id) {
         if (game.europeHistory.length > 20) game.europeHistory.length = 20;
     }
 
+    // Dashboard-Zeile: wo steht der Verein gerade? (vorher stand dort die ganze Saison
+    // "Gruppenphase", auch nach dem Aus oder im Finale)
+    function getEuropeStatusLabel() {
+        if (!game.inEurope) return 'Nicht qualifiziert';
+        const us = game.clubName, et = europeTournament;
+        if (et.finalMatch) {
+            if (et.finalMatch.home === us || et.finalMatch.away === us) return et.finalMatch.winner ? (et.finalMatch.winner === us ? '👑 Champions-Cup-Sieger' : '🥈 Im Finale unterlegen') : '🏆 Champions Cup: Finale';
+            return (et.semiFinals || []).some(t => t.teamA === us || t.teamB === us) ? 'Im Halbfinale ausgeschieden' : 'In der Gruppenphase ausgeschieden';
+        }
+        if ((et.semiFinals || []).length) {
+            const hf = et.semiFinals.find(t => t.teamA === us || t.teamB === us);
+            return hf ? (hf.winner && hf.winner !== us ? 'Im Halbfinale ausgeschieden' : '🏆 Champions Cup: Halbfinale') : 'In der Gruppenphase ausgeschieden';
+        }
+        const grp = (et.groupA || []).some(t => t.name === us) ? et.groupA : (et.groupB || []);
+        const platz = [...grp].sort((a, b) => b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga)).findIndex(t => t.name === us) + 1;
+        return platz ? `🏆 Champions Cup Gruppenphase · Platz ${platz}` : '🏆 Champions Cup Gruppenphase';
+    }
+
     // Qualifikation gilt immer nur für die nächste Saison: Platz 1-4 der Bundesliga oder der
     // DFB-Pokalsieg dieser Saison. Vorher blieb man nach EINER Qualifikation für immer dabei -
     // auch nach dem Abstieg in die 6. Liga.
@@ -11157,7 +11176,7 @@ function initOneHand() {
         if (typeof renderMatchScoutLine === 'function') renderMatchScoutLine();
         if (typeof renderMemberAssemblyPanel === 'function') renderMemberAssemblyPanel();
 
-        document.getElementById('dash-europe-status').innerText = game.inEurope ? "🏆 Champions Cup Gruppenphase" : "Nicht qualifiziert";
+        document.getElementById('dash-europe-status').innerText = typeof getEuropeStatusLabel === 'function' ? getEuropeStatusLabel() : (game.inEurope ? "🏆 Champions Cup" : "Nicht qualifiziert");
         let activePerks = Object.values(managerRPG.perks).filter(Boolean).length;
         let totalPerksCount = Object.keys(managerRPG.perks).length;
         document.getElementById('dash-perks-count').innerText = `${activePerks} / ${totalPerksCount} Aktiv`;
@@ -11435,7 +11454,7 @@ function initOneHand() {
             acqBox.style.display = offer ? 'block' : 'none';
             if (offer) {
                 acqBox.innerHTML = `<div class="panel-header" style="color:var(--accent);">💼 ÜBERNAHMEANGEBOT</div>
-                    <div class="box" style="font-size:10px;">${offer.firm} bietet <strong>${formatVal(offer.offer)}</strong> für die komplette Holding (noch ${offer.expiresMatchday - game.matchday} Spieltage gültig).</div>
+                    <div class="box" style="font-size:10px;">${offer.firm} bietet <strong>${formatVal(offer.offer)}</strong> für die komplette Holding (noch ${offer.expiresMatchday - game.matchday} Spieltage gültig). Betriebswert der Fabriken: ${formatVal(getHoldingValuation())} - beim Verkauf gehen alle Fabriken weg, Holding-Konto und Lager bleiben.</div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
                         <button onclick="resolveAcquisitionOffer(true)" class="btn-action">✅ Annehmen</button>
                         <button onclick="resolveAcquisitionOffer(false)" class="btn-secondary">❌ Ablehnen</button>
@@ -11515,8 +11534,10 @@ function initOneHand() {
             }
         });
         let dominant = rawMaterials.competitorFirms.find(f => f.strength >= 85);
-        if (dominant && rawMaterials.acquisitionOffers.length === 0 && Math.random() < 0.05) {
-            let offer = Math.round(holdingCompany.valuation * (1.1 + Math.random() * 0.3));
+        // Nur wer Fabriken besitzt, hat etwas zu verkaufen (vorher gab es auch ohne Fabrik ~150.000 € geschenkt).
+        let hatFabrik = Object.values(factories).some(f => f.owned);
+        if (dominant && hatFabrik && rawMaterials.acquisitionOffers.length === 0 && Math.random() < 0.05) {
+            let offer = Math.round(getHoldingValuation() * (1.1 + Math.random() * 0.3));
             rawMaterials.acquisitionOffers.push({ firm: dominant.name, offer, expiresMatchday: game.matchday + 5 });
             addInboxMessage('finanzen', `💼 Übernahmeangebot von ${dominant.name}!`, `${dominant.name} bietet ${formatVal(offer)} für deine komplette Holding-Gesellschaft. Angebot gültig für 5 Spieltage (Industrie-Screen).`, 'screen-industry');
         }
@@ -11527,7 +11548,6 @@ function initOneHand() {
         if (accept) {
             game.money += offer.offer;
             for (let k in factories) { factories[k].owned = false; factories[k].lvl = 1; }
-            holdingCompany.valuation = 50000;
             addInboxMessage('finanzen', '💼 Holding verkauft!', `Die Holding-Gesellschaft wurde für ${formatVal(offer.offer)} an ${offer.firm} verkauft. Ein neuer Anfang in der Industrie ist jederzeit möglich.`, 'screen-industry');
             showToast(`💼 Holding für ${formatVal(offer.offer)} verkauft!`, 'success');
         } else {
@@ -11556,7 +11576,6 @@ function initOneHand() {
         playSound('goal');
         holdingCompany.money -= cost;
         f.lvl = Math.min(f.max, f.lvl + 1);
-        holdingCompany.valuation += Math.round(cost * 0.6);
         rawMaterials.competitorFirms = rawMaterials.competitorFirms.filter(c => c !== weakFirm);
         addInboxMessage('finanzen', `🤝 Fusion mit ${weakFirm.name}!`, `Die ${f.name} übernimmt ${weakFirm.name} - direkt eine Ausbaustufe gewonnen und der Holding-Wert steigt.`, 'screen-industry');
         showToast(`🤝 Fusion mit ${weakFirm.name} abgeschlossen!`, 'success');
@@ -11567,7 +11586,17 @@ function initOneHand() {
 
 /* eslint-enable */
 
+    // Betriebswert der Holding: Grundwert plus 80 % der in Fabriken gesteckten Summe (Kauf
+    // cost, Ausbau auf Stufe k je cost*k). Vorher ein fester Wert von 125.000 €, den kein
+    // Fabrikkauf änderte - Übernahmeangebote lagen weit unter der Investition.
+    function getHoldingValuation() {
+        const investiert = Object.values(factories).filter(f => f.owned).reduce((s, f) => s + f.cost * (f.lvl * (f.lvl + 1) / 2), 0);
+        return Math.round(50000 + investiert * 0.8);
+    }
+
     function renderHoldingView() {
+        let wertEl = document.getElementById('holding-enterprise-val');
+        if (wertEl) wertEl.innerText = formatVal(getHoldingValuation());
         document.getElementById('holding-balance-val').innerText = formatVal(holdingCompany.money);
         let bList = document.getElementById('b2b-contracts-list');
         bList.innerHTML = '';
@@ -11583,6 +11612,9 @@ function initOneHand() {
             `;
             bList.appendChild(row);
         });
+        if (!holdingCompany.b2bContracts.some(c => !c.done)) {
+            bList.insertAdjacentHTML('beforeend', `<div class="box" style="font-size:10px; color:var(--text-muted);">Keine offenen Aufträge. Neue kommen zum Saisonstart - je eigener Fabrik einer für ihr Produkt (Honorar etwa dreifache Materialkosten).</div>`);
+        }
     }
 
     function transferHoldingToClub(amount) {
@@ -11610,6 +11642,25 @@ function initOneHand() {
         holdingCompany.money += amount;
         renderHoldingView();
         updateUI();
+    }
+
+    // Neue Lohnfertigungs-Aufträge zum Saisonstart (Phase 21.5): vorher gab es nur die drei
+    // Startaufträge für die ganze Karriere. Jetzt je eigener Fabrik ein Auftrag für ihr
+    // Produkt; Honorar = dreifache Materialkosten, je Ausbaustufe +10 %.
+    const B2B_FACTORY_MATERIAL = { textile: 'cotton', knitting: 'wool', leatherShop: 'leather', plastics: 'plastic' };
+    function refreshB2BContracts() {
+        holdingCompany.b2bContracts = (holdingCompany.b2bContracts || []).filter(c => !c.done);
+        Object.keys(factories).forEach(k => {
+            const f = factories[k], matKey = B2B_FACTORY_MATERIAL[k], mat = rawMaterials[matKey];
+            if (!f.owned || !mat || holdingCompany.b2bContracts.some(c => c.factory === k)) return;
+            const qty = 400 + f.lvl * 200;
+            holdingCompany.b2bContracts.push({
+                id: 'b2b' + Math.random().toString(36).substr(2, 7), factory: k,
+                club: INTERNATIONAL_CLUB_NAMES[Math.floor(Math.random() * INTERNATIONAL_CLUB_NAMES.length)],
+                item: f.product, amount: qty * 2, reqMat: matKey, reqQty: qty,
+                payout: Math.round(qty * mat.basePrice * 3 * (1 + 0.1 * f.lvl) / 1000) * 1000, done: false
+            });
+        });
     }
 
     function completeB2BContract(contractId) {
@@ -13002,9 +13053,11 @@ function finishGoalkeeperGame() {
         let dax = 16000 + Math.round((stockMarket.techCorp?.price || 100) * 8.4);
         let dollar = (1.02 + ((stockMarket.techCorp?.price || 100) % 30) / 100).toFixed(2);
         let gold = 420 + Math.round((stockMarket.greenEnergy?.price || 45) * 0.7);
-        let daxUp = Math.random() > 0.5;
-        let dollarUp = Math.random() > 0.5;
-        let goldUp = Math.random() > 0.5;
+        // Pfeile folgen der letzten echten Kursbewegung (vorher bei jedem Öffnen ausgewürfelt).
+        let steigt = s => { let h = (s && s.history) || []; return h.length < 2 || h[h.length - 1] >= h[h.length - 2]; };
+        let daxUp = steigt(stockMarket.techCorp);
+        let dollarUp = !steigt(stockMarket.realEstate);
+        let goldUp = steigt(stockMarket.greenEnergy);
         el.innerHTML = `
             <span>📈 DAX <span class="${daxUp ? 'tick-up' : 'tick-down'}">${dax} ${daxUp ? '▲' : '▼'}</span></span>
             <span>💵 DOLLAR <span class="${dollarUp ? 'tick-up' : 'tick-down'}">${dollar} ${dollarUp ? '▲' : '▼'}</span></span>
@@ -13055,6 +13108,8 @@ function finishGoalkeeperGame() {
         let totalOut = totalWages + totalStaffWages + maintenance + loanInterest + loanInstallments + estTax + estAdvisorFee;
         let net = totalIn - totalOut;
 
+        let monatEl = document.getElementById('fin-month-title');
+        if (monatEl) monatEl.innerText = `Prognose Monat ${Math.min(9, Math.floor(game.matchday / 4) + 1)} (4 Spieltage)`;
         document.getElementById('fin-in-tickets').innerText = formatVal(estTickets);
         let lastAttEl = document.getElementById('fin-last-attendance');
         if (lastAttEl) lastAttEl.innerText = game.lastHomeAttendance > 0 ? `${game.lastHomeAttendance.toLocaleString('de-DE')} (Kapazität: ${(stadium.total || 16000).toLocaleString('de-DE')})` : 'Noch kein Heimspiel gespielt';
@@ -20495,13 +20550,6 @@ function renderTacticSystemPanel() {
 // Season Goals & Objectives System
 // Dynamic season-specific objectives with rewards and progress tracking
 
-let seasonObjectivesState = {
-    activeObjectives: [],
-    completedObjectives: [],
-    objectiveRewards: 0,
-    seasonProgress: {}
-};
-
 const OBJECTIVE_TYPES = {
     PROMOTION: {
         name: 'Aufstieg',
@@ -24627,32 +24675,31 @@ function cleanupLegacyScoutState() {
         }
         let form = (oppObj && oppObj.recentForm) ? oppObj.recentForm.slice(-5) : [];
         let formStr = form.length > 0 ? form.map(r => r === 'W' ? '🟢' : (r === 'D' ? '🟡' : '🔴')).join(' ') : 'Keine Daten';
-        let dangerPos = ['ST', 'MIT', 'ABW'][Math.floor(Math.random() * 3)];
-        let dangerName = getRandomName();
         let baseStr = oppObj ? oppObj.strength : 60;
-        // Bugfix: "garantiert zuverlässige" Spionage-Infos änderten bisher nichts an der
-        // eigentlichen Berechnung - der Zufalls-Schwankungsbereich blieb identisch, obwohl
-        // der Text explizit Präzision versprach. Jetzt fällt die Zufallsstreuung bei aktiver
-        // Spionage komplett weg, der Wert ist dann wirklich exakt statt nur behauptet exakt.
-        let dangerRating = underworld.spyIntelActive
-            ? Math.max(35, Math.min(99, Math.round(baseStr + 5)))
-            : Math.max(35, Math.min(99, Math.round(baseStr + (Math.random() * 12 - 2))));
+        // Gefährlichster Spieler = der echte Star des Gegners (team.star, js/ai-clubs.js) bzw.
+        // seine Sturmspitze - vorher bei jedem Öffnen ein neu ausgewürfelter Name samt Position.
+        // Der Analyst schätzt die Stärke auf 5 Punkte genau, der Spion kennt sie exakt.
+        let star = oppObj && (oppObj.star || oppObj.striker);
+        let dangerLine = 'Gefährlichster Spieler: <strong>unbekannt</strong>';
+        if (star) {
+            let staerke = star.strength || Math.min(99, baseStr + 3);
+            let wert = underworld.spyIntelActive ? `Stärke ${staerke}` : `Stärke ca. ${Math.round(staerke / 5) * 5}`;
+            dangerLine = `Gefährlichster Spieler: <strong>${star.name}</strong> (${star.pos || 'ST'}, ${wert}${star.goals ? `, ${star.goals} Saisontore` : ''})`;
+        }
 
-        // Videoanalyse: bei besonders wichtigen Spielen (Derby, Pokal, Europapokal) liefert
-        // der Chef-Analyst einen ausführlicheren Bericht mit Formations-Tendenz und einem
-        // konkreten Schwachstellen-Hinweis statt nur der Basis-Kennzahlen.
-        let isImportantMatch = isDerbyOpponent(oppName) || currentMatch?.isCup || game.inEurope;
+        // Videoanalyse bei Derby und Pokal: Grundausrichtung des Gegners und der Stil, der sie
+        // im Taktik-Duell schlägt (js/opponent-tactics.js) - vorher zwei Zufallssätze ohne
+        // Bezug zum Spiel, und mit Europapokal-Teilnahme galt jedes Ligaspiel als Topspiel.
+        let isImportantMatch = isDerbyOpponent(oppName) || !!(pendingMatchInfo && pendingMatchInfo.cupTie);
         let spyNote = underworld.spyIntelActive ? `<div style="margin-top:6px; font-size:10px; color:#f97316;">🕵️ <strong>Insider-Info aktiv:</strong> Diese Analyse stammt von einem bezahlten Informanten im gegnerischen Verein und ist garantiert zuverlässig.</div>` : '';
         let videoAnalysisHtml = '';
-        if (isImportantMatch) {
-            const FORMATION_TENDENCIES = ['4-4-2 mit hohem Pressing', '4-3-3 mit breitem Flügelspiel', '3-5-2 mit kompakter Abwehrkette', '4-2-3-1 mit schnellen Kontern'];
-            const WEAKNESSES = ['anfällig bei hohen Bällen in den Strafraum', 'schwach in Umschaltmomenten nach Ballverlust', 'verwundbar bei schnellen Außenverteidiger-Vorstößen', 'nervös bei frühem Gegentor'];
-            let tendency = FORMATION_TENDENCIES[Math.floor(Math.random() * FORMATION_TENDENCIES.length)];
-            let weakness = WEAKNESSES[Math.floor(Math.random() * WEAKNESSES.length)];
+        if (isImportantMatch && oppObj && typeof AI_STYLE_ARCHETYPE !== 'undefined') {
+            let basis = AI_STYLE_ARCHETYPE[getTeamPlaystyle(oppObj).id] || 'N';
+            let konter = getCounterArchetype(basis);
             videoAnalysisHtml = `<div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.15); font-size:10px;">
                 🎥 <strong style="color:var(--teal);">Videoanalyse (Topspiel-Sonderbericht):</strong><br>
-                Formations-Tendenz: <strong>${tendency}</strong><br>
-                Schwachstelle: <strong>${weakness}</strong>
+                Grundausrichtung: <strong>${ARCHETYPE_LABELS[basis]}</strong><br>
+                Schwachstelle: <strong>${konter ? `verwundbar gegen ${ARCHETYPE_LABELS[konter]}` : 'kein klares Muster - schwer auszurechnen'}</strong>
             </div>`;
         }
 
@@ -24662,7 +24709,7 @@ function cleanupLegacyScoutState() {
                 <span style="font-size:10px;">
                     Spielweise: <strong>${getOpponentPlaystyle(oppName)}</strong><br>
                     Team-Stärke: <strong>${baseStr}</strong> · Form (letzte 5): ${formStr}<br>
-                    Gefährlichster Spieler: <strong>${dangerName}</strong> (${dangerPos}, Stärke ${dangerRating})
+                    ${dangerLine}
                     ${typeof getCoachInfoHtml === 'function' && oppObj ? '<br>' + getCoachInfoHtml(oppObj) : ''}
                 </span>
                 ${videoAnalysisHtml}
@@ -27537,6 +27584,7 @@ function cleanupLegacyScoutState() {
         if (typeof evaluateFinancialFairplay === 'function') evaluateFinancialFairplay();
         game.season++;
         if (typeof startNewSeasonObjectives === 'function') startNewSeasonObjectives();
+        if (typeof refreshB2BContracts === 'function') refreshB2BContracts();
         if (typeof openMemberAssembly === 'function') openMemberAssembly();
         checkJubileeCrestUnlock();
         // Leihverein-Beziehungen schwächen sich ab, wenn 2+ Saisons kein neues Geschäft mit
@@ -28795,6 +28843,9 @@ const LEXICON_ENTRIES = [
     { cat: 'Verein', title: 'Lizenzauflagen', screen: 'screen-stadium',
         text: 'Für den Aufstieg verlangt der Verband Mindeststandards: Oberliga 1.000 Plätze · Regionalliga 3.000 Plätze und 30.000 € Reserve · 3. Liga 6.000 Plätze, Flutlicht, 100.000 € · 2. Liga 10.000 Plätze, Internat Stufe 1, 250.000 € · 1. Liga 15.000 Plätze, Internat Stufe 2, 500.000 €. Fehlt etwas, gibt es 3 Spieltage Nachfrist, danach verfällt der Aufstieg.',
         tips: ['Die Übersicht steht im Stadion-Bildschirm, an Spieltag 30 warnt das Postfach', 'Das Internat in unteren Ligen bauen - dort kostet es einen Bruchteil', 'Rechtzeitig bauen - Baustellen brauchen einige Spieltage'] },
+    { cat: 'Finanzen', title: 'Holding & Fabriken', screen: 'screen-holding',
+        text: 'Die Merchandising-Holding hat ein eigenes Konto (Überweisungen vom und zum Verein). Fabriken werden vom Holding-Konto gekauft und produzieren Fanartikel aus Rohstoffen. Zum Saisonstart kommt je eigener Fabrik ein Lohnfertigungs-Auftrag für ihr Produkt (Honorar etwa dreifache Materialkosten, je Ausbaustufe mehr).',
+        tips: ['Der Unternehmenswert = 50.000 € plus 80 % der in Fabriken investierten Summe', 'Übernahmeangebote kommen nur, wenn du Fabriken besitzt - beim Verkauf sind alle Fabriken weg, Konto und Lager bleiben'] },
     { cat: 'Finanzen', title: 'Gehaltsbudget', screen: 'screen-finances',
         text: 'Höchstsumme aller Spielergehälter pro Spieltag. Neue Verträge über dem Budget sind nicht möglich.',
         tips: ['Verkäufe und auslaufende Verträge schaffen Luft', 'Im Gehaltsgespräch einmal nachverhandeln'] },
