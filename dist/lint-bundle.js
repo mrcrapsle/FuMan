@@ -484,7 +484,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.38', date: '04.10.2026', features: 'Phase 22: Vorverträge (ablösefreie Zugänge zur neuen Saison, Angebote anderer Vereine für eigene Spieler)' };
+    const GAME_VERSION = { number: '3.39', date: '05.10.2026', features: 'Phase 22: Rückkaufoption beim Verkauf (10 % weniger sofort, Rückkauf im Fenster, Entwicklung beim Käufer)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -7172,43 +7172,43 @@ function renderTransferPokerBox() {
         showToast(`💔 Fans sind empört über den Verkauf von ${departingPlayer.name}!`, 'error');
     }
 
-    function acceptTransferOffer(offerId) {
+    // Gemeinsamer Abschluss für alle Arten, ein Angebot anzunehmen (sofort, mit
+    // Weiterverkaufsbeteiligung, mit Rückkaufoption in js/buyback.js): prüft den Kader,
+    // bucht den Erlös (betrag = Summe vor Verhandlungsfuchs-Perk und Beraterprovision) und
+    // erledigt alle Abgangs-Folgen. Gibt { player, erloes, agentFee } zurück oder null.
+    function completeOfferSale(offerId, betrag) {
         let oIdx = incomingOffers.findIndex(o => o.id === offerId);
-        if (oIdx === -1) return;
+        if (oIdx === -1) return null;
         let offer = incomingOffers[oIdx];
-
-        if (squad.length <= 11) {
-            showToast('Transfer unzulässig: Der Kader muss mindestens 11 Spieler umfassen.', 'error', 4500);
-            return;
-        }
-
+        if (squad.length <= 11) { showToast('Transfer unzulässig: Der Kader muss mindestens 11 Spieler umfassen.', 'error', 4500); return null; }
         let pIdx = squad.findIndex(p => p.id === offer.playerId);
-        if (pIdx === -1) {
-            showToast('Dieser Spieler ist nicht mehr im Kader.', 'error', 4000);
-            incomingOffers.splice(oIdx, 1);
-            renderTransferView();
-            return;
-        }
-        if (!checkHighChemistryBeforeSale(squad[pIdx])) return;
-
+        if (pIdx === -1) { showToast('Dieser Spieler ist nicht mehr im Kader.', 'error', 4000); incomingOffers.splice(oIdx, 1); renderTransferView(); return null; }
+        if (!checkHighChemistryBeforeSale(squad[pIdx])) return null;
         playSound('goal');
         // Verhandlungsfuchs-Perk: +15% Erlöse bei Verkäufen gilt auch für angenommene
         // Transferangebote, nicht nur den direkten Sofortverkauf.
-        if (managerRPG.perks.negotiator) offer.currentBid = Math.round(offer.currentBid * 1.15);
-        let agentFee = getAgentFee(squad[pIdx], offer.currentBid);
-        game.money += offer.currentBid - agentFee;
-        game.transferBudget += Math.round(offer.currentBid * 0.85);
-
-        checkFriendshipDeparture(squad[pIdx]);
-        recordNotablePastPlayer(squad[pIdx]);
-        checkCrowdFavoriteDeparture(squad[pIdx]);
+        let erloes = managerRPG.perks.negotiator ? Math.round(betrag * 1.15) : betrag;
+        let player = squad[pIdx];
+        let agentFee = getAgentFee(player, erloes);
+        game.money += erloes - agentFee;
+        game.transferBudget += Math.round(erloes * 0.85);
+        checkFriendshipDeparture(player);
+        recordNotablePastPlayer(player);
+        checkCrowdFavoriteDeparture(player);
         squad.splice(pIdx, 1);
         lineup = lineup.filter(id => id !== offer.playerId);
         incomingOffers.splice(oIdx, 1);
         if (offer.nemesis && typeof onNemesisOfferAccepted === 'function') onNemesisOfferAccepted(offer);
-
         addManagerXP(120);
-        showToast(`🤝 Transfer perfekt: ${offer.playerName} wechselt für ${formatVal(offer.currentBid)} zu ${offer.clubName}.${agentFee > 0 ? ` Abzüglich ${formatVal(agentFee)} Beraterprovision.` : ''}`, 'success', 6000);
+        return { player, offer, erloes, agentFee };
+    }
+
+    function acceptTransferOffer(offerId) {
+        let offer = incomingOffers.find(o => o.id === offerId);
+        if (!offer) return;
+        let v = completeOfferSale(offerId, offer.currentBid);
+        if (!v) return;
+        showToast(`🤝 Transfer perfekt: ${offer.playerName} wechselt für ${formatVal(v.erloes)} zu ${offer.clubName}.${v.agentFee > 0 ? ` Abzüglich ${formatVal(v.agentFee)} Beraterprovision.` : ''}`, 'success', 6000);
         updateUI();
         renderTransferView();
     }
@@ -7221,32 +7221,15 @@ function renderTransferPokerBox() {
     // dafür bekommst du einen Anteil, falls der kaufende Verein den Spieler später mit
     // Gewinn weiterverkauft - eine reale, bekannte Fußball-Transfermechanik.
     function acceptTransferOfferWithClause(offerId) {
-        let oIdx = incomingOffers.findIndex(o => o.id === offerId);
-        if (oIdx === -1) return;
-        let offer = incomingOffers[oIdx];
-        if (squad.length <= 11) { showToast('Transfer unzulässig: Der Kader muss mindestens 11 Spieler umfassen.', 'error', 4500); return; }
-        let pIdx = squad.findIndex(p => p.id === offer.playerId);
-        if (pIdx === -1) { showToast('Dieser Spieler ist nicht mehr im Kader.', 'error', 4000); incomingOffers.splice(oIdx, 1); renderTransferView(); return; }
-        if (!checkHighChemistryBeforeSale(squad[pIdx])) return;
-        playSound('goal');
+        let offer = incomingOffers.find(o => o.id === offerId);
+        if (!offer) return;
         let clausePercent = 15;
         // Der kaufende Verein zahlt für die Weiterverkaufsbeteiligung 6% weniger sofort.
-        let reducedBid = Math.round(offer.currentBid * 0.94);
-        if (managerRPG.perks.negotiator) reducedBid = Math.round(reducedBid * 1.15);
-        let agentFee = getAgentFee(squad[pIdx], reducedBid);
-        game.money += reducedBid - agentFee;
-        game.transferBudget += Math.round(reducedBid * 0.85);
+        let v = completeOfferSale(offerId, Math.round(offer.currentBid * 0.94));
+        if (!v) return;
         if (!Array.isArray(game.sellOnClauses)) game.sellOnClauses = [];
-        game.sellOnClauses.push({ playerName: squad[pIdx].name, buyingClub: offer.clubName, percent: clausePercent, originalSaleValue: reducedBid });
-        checkFriendshipDeparture(squad[pIdx]);
-        recordNotablePastPlayer(squad[pIdx]);
-        checkCrowdFavoriteDeparture(squad[pIdx]);
-        squad.splice(pIdx, 1);
-        lineup = lineup.filter(id => id !== offer.playerId);
-        incomingOffers.splice(oIdx, 1);
-        if (offer.nemesis && typeof onNemesisOfferAccepted === 'function') onNemesisOfferAccepted(offer);
-        addManagerXP(120);
-        showToast(`🤝 ${offer.playerName} wechselt für ${formatVal(reducedBid)} zu ${offer.clubName} - dazu ${clausePercent}% von jedem künftigen Weiterverkauf.`, 'success', 6000);
+        game.sellOnClauses.push({ playerName: v.player.name, buyingClub: offer.clubName, percent: clausePercent, originalSaleValue: v.erloes });
+        showToast(`🤝 ${offer.playerName} wechselt für ${formatVal(v.erloes)} zu ${offer.clubName} - dazu ${clausePercent}% von jedem künftigen Weiterverkauf.`, 'success', 6000);
         updateUI();
         renderTransferView();
     }
@@ -7429,6 +7412,7 @@ function renderTransferPokerBox() {
                         <button onclick="rejectTransferOffer('${o.id}')" class="btn-danger" style="font-size:10px;">✖ Ablehnen</button>
                     </div>
                     <button onclick="acceptTransferOfferWithClause('${o.id}')" class="btn-gold" style="font-size:9px; margin-bottom:4px;">📜 Mit 15% Weiterverkaufsbeteiligung (${formatVal(Math.round(o.currentBid*0.94))} sofort)</button>
+                    ${typeof getBuybackTerms === 'function' && p && getBuybackTerms(p, o) ? `<button onclick="acceptTransferOfferWithBuyback('${o.id}')" class="btn-gold" style="font-size:9px; margin-bottom:4px;">↩️ Mit Rückkaufoption (${formatVal(getBuybackTerms(p, o).sofort)} sofort, zurück für ${formatVal(getBuybackTerms(p, o).preis)})</button>` : ''}
                     <button onclick="openNegotiationStepper('${o.id}')" class="btn-secondary" style="font-size:10px; margin-top:4px;">🔧 Nachverhandeln (Schrittweite-Angebot)</button>
                 `;
                 offList.appendChild(card);
@@ -7437,6 +7421,7 @@ function renderTransferPokerBox() {
 
         if (typeof renderTransferPokerBox === 'function') renderTransferPokerBox();
         if (typeof renderPreContractBox === 'function') renderPreContractBox();
+        if (typeof renderBuybackBox === 'function') renderBuybackBox();
         let mList = document.getElementById('market-list');
         mList.innerHTML = '';
         marketPlayers.forEach((p, idx) => {
@@ -22619,6 +22604,114 @@ function renderPreContractBox() {
 }
 
 /* eslint-enable */
+/* eslint-disable no-undef */
+// Rückkaufoption beim Verkauf (Phase 22.7): ein Angebot für einen Spieler bis 25 Jahre kann
+// mit Rückkaufoption angenommen werden. Der Käufer zahlt dafür 10 % weniger sofort; im
+// Gegenzug darf der Verein den Spieler bis zum Ende der übernächsten Saison zu einem festen
+// Preis (140 % des Angebots) zurückholen - nur in einem Transferfenster.
+// Der Spieler entwickelt sich beim neuen Verein weiter (tickBuybackOptions() zum
+// Saisonwechsel: junge Spieler legen zu, ab 27 baut er ab). Lohnt sich also bei Talenten, die
+// man gerade nicht braucht oder nicht bezahlen kann - ein Fehlgriff kostet die 10 %.
+// Offene Optionen: game.buybackOptions [{ player, club, price, untilSeason, saleStrength, season }].
+
+const BUYBACK_MAX_AGE = 25;
+const BUYBACK_DISCOUNT = 0.9;
+const BUYBACK_PRICE_FACTOR = 1.4;
+const BUYBACK_SEASONS = 2;
+
+// Konditionen für ein Angebot (null: für diesen Spieler keine Rückkaufoption).
+function getBuybackTerms(p, offer) {
+    if (!p || !offer || (p.age || 30) > BUYBACK_MAX_AGE) return null;
+    return {
+        sofort: Math.round(offer.currentBid * BUYBACK_DISCOUNT),
+        preis: Math.round(offer.currentBid * BUYBACK_PRICE_FACTOR / 1000) * 1000
+    };
+}
+
+function acceptTransferOfferWithBuyback(offerId) {
+    const offer = incomingOffers.find(o => o.id === offerId);
+    const p = offer && squad.find(x => x.id === offer.playerId);
+    const t = getBuybackTerms(p, offer);
+    if (!t) { showToast('Eine Rückkaufoption gibt es nur für Spieler bis 25 Jahre.', 'error'); return; }
+    const v = completeOfferSale(offerId, t.sofort);
+    if (!v) return;
+    if (!game.buybackOptions) game.buybackOptions = [];
+    game.buybackOptions.push({ player: v.player, club: offer.clubName, price: t.preis, untilSeason: game.season + BUYBACK_SEASONS, saleStrength: v.player.strength, season: game.season });
+    showToast(`↩️ ${v.player.name} wechselt für ${formatVal(v.erloes)} zu ${offer.clubName} - Rückkauf bis Saison ${game.season + BUYBACK_SEASONS} für ${formatVal(t.preis)} möglich.`, 'success', 6000);
+    updateUI();
+    renderTransferView();
+}
+
+// Saisonwechsel (concludeSeasonAndAdvance): Entwicklung beim neuen Verein, abgelaufene Optionen.
+function tickBuybackOptions() {
+    if (!game.buybackOptions || !game.buybackOptions.length) return;
+    game.buybackOptions = game.buybackOptions.filter(o => {
+        const p = o.player;
+        // Läuft VOR game.season++: am Ende der Saison untilSeason verfällt die Option.
+        if (game.season >= o.untilSeason) {
+            addInboxMessage('transfer', `↩️ Rückkaufoption verfallen: ${p.name}`, `Die Option, ${p.name} von ${o.club} zurückzuholen, ist abgelaufen.`, 'screen-transfer');
+            return false;
+        }
+        p.age = (p.age || 22) + 1;
+        const r = Math.random();
+        const delta = p.age <= 21 ? 2 + Math.floor(r * 5) : p.age <= 24 ? 1 + Math.floor(r * 4) : p.age <= 26 ? Math.floor(r * 3) - 1 : -1 - Math.floor(r * 3);
+        p.strength = Math.max(20, Math.min(99, p.strength + delta));
+        p.marketValue = calculatePlayerMarketValue(p.strength);
+        addInboxMessage('transfer', `↩️ ${p.name} bei ${o.club}`, `${p.name} (${p.age} J.) steht jetzt bei Stärke ${p.strength} (beim Verkauf ${o.saleStrength}). Rückkauf für ${formatVal(o.price)} bis Saison ${o.untilSeason} - nur im Transferfenster.`, 'screen-transfer');
+        return true;
+    });
+}
+
+function exerciseBuyback(playerId) {
+    const o = (game.buybackOptions || []).find(x => x.player.id === playerId);
+    if (!o) { showToast('Diese Rückkaufoption gibt es nicht mehr.', 'error'); return; }
+    if (typeof isTransferWindowOpen === 'function' && !isTransferWindowOpen()) { showToast('Zurückholen geht nur im Transferfenster (Spieltag 1-3 oder Winterfenster).', 'error', 4500); return; }
+    if (typeof isTransferEmbargoActive === 'function' && isTransferEmbargoActive()) { showToast('🚫 Transfersperre aktiv.', 'error'); return; }
+    if (game.money < o.price) { showToast(`Vereinskonto reicht nicht: ${formatVal(o.price)} nötig.`, 'error'); return; }
+    if (game.transferBudget < o.price) { showToast(`Transferbudget reicht nicht: ${formatVal(o.price)} nötig, ${formatVal(game.transferBudget)} verfügbar.`, 'error', 4500); return; }
+    const p = o.player;
+    const gehalt = Math.max(p.wage || 0, calculatePlayerWage(p.marketValue, p.strength));
+    const lohnsumme = squad.reduce((s, x) => s + x.wage, 0);
+    if (lohnsumme + gehalt > game.wageBudget) { showToast(`Gehaltsbudget reicht nicht: ${formatVal(lohnsumme + gehalt)} nach der Rückkehr, erlaubt ${formatVal(game.wageBudget)}.`, 'error', 5000); return; }
+    playSound('goal');
+    setzeBuchungskontext('↩️ Rückkauf');
+    game.money -= o.price;
+    loescheBuchungskontext();
+    game.transferBudget -= o.price;
+    p.wage = gehalt;
+    p.contracts = 3;
+    p.fitness = 100;
+    p.morale = 80;
+    p.injured = 0;
+    p.suspended = 0;
+    if (squad.some(x => x.id === p.id)) p.id = Math.random().toString(36).substr(2, 9);
+    squad.push(p);
+    game.buybackOptions = game.buybackOptions.filter(x => x !== o);
+    game.fans = Math.min(100, game.fans + 2);
+    showToast(`↩️ ${p.name} kehrt für ${formatVal(o.price)} von ${o.club} zurück (Stärke ${p.strength}, Fans +2).`, 'success', 5000);
+    renderBuybackBox();
+    updateUI();
+}
+
+function renderBuybackBox() {
+    const box = document.getElementById('buyback-box');
+    if (!box) return;
+    const liste = game.buybackOptions || [];
+    if (!liste.length) { box.innerHTML = ''; return; }
+    const fenster = typeof isTransferWindowOpen === 'function' ? isTransferWindowOpen() : true;
+    box.innerHTML = `<div class="panel"><div class="panel-header">↩️ RÜCKKAUFOPTIONEN</div>
+        ${fenster ? '' : '<div class="box" style="font-size:9px;">Zurückholen geht nur im Transferfenster (Spieltag 1-3 oder Winterfenster).</div>'}
+        ${liste.map(o => {
+            const diff = o.player.strength - o.saleStrength;
+            return `<div class="box" style="font-size:10px;">
+                <div><strong>${o.player.name}</strong> (${o.player.pos}, ${o.player.age} J.) bei ${o.club} · Stärke <strong>${o.player.strength}</strong> <span style="color:${diff > 0 ? 'var(--primary)' : diff < 0 ? 'var(--danger)' : 'var(--text-muted)'};">(${diff >= 0 ? '+' : ''}${diff} seit dem Verkauf)</span></div>
+                <div style="color:var(--text-muted);">Marktwert ${formatVal(o.player.marketValue)} · Option bis Saison ${o.untilSeason}</div>
+                <button onclick="exerciseBuyback('${o.player.id}')" class="${fenster ? 'btn-action' : 'btn-secondary'}" style="font-size:10px; margin-top:4px;">↩️ Zurückholen für ${formatVal(o.price)}</button>
+            </div>`;
+        }).join('')}</div>`;
+}
+
+/* eslint-enable */
 // Mitgliederversammlung: nach jedem Saisonabschluss legt der Verein vor seinen Mitgliedern
 // Rechenschaft ab. Grundlage sind echte Zahlen (Endplatz gegen die Erwartung zu Saisonbeginn,
 // Auf-/Abstieg, Finanzergebnis, Fanstimmung). Du wählst Rede und Beitragsantrag, dann wird
@@ -26875,6 +26968,7 @@ function cleanupLegacyScoutState() {
         if (typeof agePlayersAtSeasonEnd === 'function') agePlayersAtSeasonEnd();
         // Vorverträge (js/pre-contracts.js): ablösefreie Neuzugänge kommen nach der Alterung dazu.
         if (typeof joinPreContractPlayers === 'function') joinPreContractPlayers();
+        if (typeof tickBuybackOptions === 'function') tickBuybackOptions();
         // Ab 14 Spielern (Startelf + 3 Wechsel) statt erst unter 11: auslaufende Verträge ließen
         // den Kader im Langzeittest regelmäßig auf 12 schrumpfen.
         if (squad.length < 14) {
@@ -28186,6 +28280,9 @@ const LEXICON_ENTRIES = [
     { cat: 'Transfers', title: 'Vorverträge', screen: 'screen-transfer',
         text: 'Ab dem Winterfenster (Spieltag 18) stehen unter „Vereinslose“ vier Spieler, deren Vertrag zum Saisonende ausläuft. Ein Vorvertrag kostet keine Ablöse, aber Handgeld sofort (12 oder 24 Spieltagsgehälter), 20 % mehr Gehalt und der Spieler kommt erst zur neuen Saison. Er kann ablehnen - ein Versuch je Spieler, doppeltes Handgeld überzeugt eher. Wartende Kandidaten schnappen sich andere Vereine. Umgekehrt locken andere Vereine deine Spieler im letzten Vertragsjahr: verlängerst du nicht innerhalb von 3 Spieltagen (er fordert dann 15 % mehr), unterschreibt er woanders und geht am Saisonende ablösefrei.',
         tips: ['Wichtige Verträge früh verlängern - dann gibt es gar kein Angebot', 'Hat ein Spieler woanders unterschrieben, bringt nur ein Verkauf im Winter noch Geld', 'Höchstens 3 offene Vorverträge, das Gehaltsbudget der neuen Saison muss reichen'] },
+    { cat: 'Transfers', title: 'Rückkaufoption', screen: 'screen-transfer',
+        text: 'Ein Angebot für einen Spieler bis 25 Jahre kannst du mit Rückkaufoption annehmen: der Käufer zahlt 10 % weniger sofort, dafür darfst du den Spieler bis zum Ende der übernächsten Saison für 140 % des Angebots zurückholen - nur im Transferfenster. Beim neuen Verein entwickelt er sich weiter: junge Spieler legen zu, ab 25 stagniert er eher. Offene Optionen stehen im Reiter „Kader verkaufen“.',
+        tips: ['Ideal für Talente, die gerade keinen Platz haben oder zu teuer werden', 'Zum Saisonwechsel meldet die Post, wie stark er geworden ist'] },
     { cat: 'Transfers', title: 'Transferfenster', screen: 'screen-transfer',
         text: 'Sommer: Spieltage 1-3, Winter: Spieltage 18-20. Am letzten Tag (Deadline-Day) gibt es Schnäppchen und hektische Wechsel.',
         tips: ['Der Transfer-Ticker zeigt, wohin die Stars der anderen Vereine wechseln'] },
