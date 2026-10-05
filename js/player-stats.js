@@ -94,6 +94,7 @@ function resetPlayerSeasonStats(p) {
         const letzter = p.strengthHistory[p.strengthHistory.length - 1];
         letzter.assists = p.statsSeason.vorlagen;
         letzter.grade = p.statsSeason.spiele ? +(p.statsSeason.notenSumme / p.statsSeason.spiele).toFixed(2) : null;
+        letzter.elf = p.statsSeason.elf || 0;
     }
     p.statsSeason = null;
 }

@@ -92,8 +92,8 @@
         // Career Progression Panel: Karriere-Statistik und Meilensteine
         let careerBox = document.getElementById('pd-career-progression');
         if (careerBox) {
-            if (typeof renderPlayerCareerPanel === 'function') {
-                let careerHtml = renderPlayerCareerPanel(p.id);
+            if (typeof renderPlayerProfile === 'function') {
+                let careerHtml = renderPlayerProfile(p);
                 if (careerHtml) {
                     careerBox.style.display = 'block';
                     careerBox.innerHTML = careerHtml;

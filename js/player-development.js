@@ -85,22 +85,6 @@ function renderPlayerDevelopmentPanel() {
     </div>`;
 }
 
-// Karriere-Block im Spielerdetail - aus gespeicherten Spielerdaten.
-function renderPlayerCareerPanel(playerId) {
-    const p = squad.find(x => x.id === playerId);
-    if (!p) return '';
-    const arch = getPlayerArchetype(p);
-    const hist = p.strengthHistory || [];
-    const peak = hist.reduce((best, h) => (h.strength > best.strength ? h : best), { strength: p.strength, season: game.season });
-    const saisons = hist.filter(h => h.apps !== undefined).slice(-5).reverse();
-    return `<div class="box" style="font-size:9px;">
-        <div style="font-weight:700; color:var(--accent); margin-bottom:4px;">📊 KARRIERE</div>
-        ${arch.icon} ${arch.name} - Höhepunkt mit etwa ${arch.peakAge} Jahren · nächster Sommer: ${formatDevelopmentRange(p)}<br>
-        ${p.appearances || 0} Pflichtspiele · ${p.goalsCareer || 0} Tore · Bestwert Stärke ${peak.strength} (Saison ${peak.season})
-        ${saisons.length ? `<div style="margin-top:4px;">${saisons.map(h => `Saison ${h.season}: ${h.apps} Spiele, ${h.goals} Tore, Stärke ${h.strength}`).join('<br>')}</div>` : ''}
-    </div>`;
-}
-
 // Alte Spielstände: Daten der abgelösten Module.
 function cleanupLegacyDevelopmentState() {
     delete game.playerDevelopment;

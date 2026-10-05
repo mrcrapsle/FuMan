@@ -117,6 +117,7 @@ function recordCupFinal(comp, pairing, weWon) {
     };
     if (!game.cupFinals) game.cupFinals = [];
     game.cupFinals.unshift(eintrag);
+    if (weWon && typeof addSquadHonour === 'function') addSquadHonour(`🏆 ${eintrag.name}-Sieger`);
     if (game.cupFinals.length > 20) game.cupFinals.length = 20;
     if (cf) {
         cf.played = true;

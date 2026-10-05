@@ -56,6 +56,7 @@ function signYouthProContract(p) {
     p.contracts = 3;
     p.wage = getYouthProWage(p);
     p.academyGraduate = true;
+    if (typeof stampPlayerJoin === 'function') stampPlayerJoin(p, 'jugend');
     p.proDecisionLeft = null;
     delete p.proWageQuote;
     p.milestones = p.milestones || {};

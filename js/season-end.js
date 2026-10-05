@@ -92,6 +92,7 @@
         if (sponsorPromoBonus > 0) game.money += sponsorPromoBonus;
         addManagerXP(1000);
         boostFanBaseFloor(6, `Der Aufstieg in die ${leagueNames[game.leagueLevel]}`);
+        if (typeof addSquadHonour === 'function') addSquadHonour(`⬆️ Aufstieg in die ${leagueNames[game.leagueLevel]}`);
         if (typeof triggerPromotionBonusClauses === 'function') triggerPromotionBonusClauses();
         return sponsorPromoBonus;
     }
@@ -165,6 +166,7 @@
         if (typeof evaluateSeasonEndObjectives === 'function') evaluateSeasonEndObjectives(myRank);
         if (typeof recordScenarioSeasonRank === 'function') recordScenarioSeasonRank(myRank);
         if (typeof resolveWinterTalk === 'function') resolveWinterTalk(myRank);
+        if (typeof recordSeasonHonours === 'function') recordSeasonHonours(myRank);
         if (typeof prepareMemberAssembly === 'function') prepareMemberAssembly(myRank);
         // Experten-Check (js/season-preview.js): Prognose gegen Abschlusstabelle, vor dem Ligawechsel.
         if (typeof buildSeasonExpertCheck === 'function') buildSeasonExpertCheck(myRank);

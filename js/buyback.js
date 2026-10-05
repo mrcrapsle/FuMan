@@ -79,6 +79,7 @@ function exerciseBuyback(playerId) {
     p.injured = 0;
     p.suspended = 0;
     if (squad.some(x => x.id === p.id)) p.id = Math.random().toString(36).substr(2, 9);
+    if (typeof stampPlayerJoin === 'function') stampPlayerJoin(p, 'rückkauf', o.club, o.price, true);
     squad.push(p);
     game.buybackOptions = game.buybackOptions.filter(x => x !== o);
     game.fans = Math.min(100, game.fans + 2);

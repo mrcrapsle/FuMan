@@ -1921,6 +1921,74 @@ async function testWinterTalk(browser) {
     await page.close();
 }
 
+async function testPlayerProfile(browser) {
+    console.log('\n[22.10] Spieler-Karriereprofil: Herkunft, Saisontabelle, Titel, Vereinslegende mit Folgen beim Abschied');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            game.money = 50000000; game.transferBudget = 50000000; game.wageBudget = 50000000; game.ffpTransferEmbargo = false;
+            // Zugang per Kauf wird festgehalten
+            refreshTransferMarket();
+            const kauf = marketPlayers[0];
+            kauf.medical = { issue: 'ok', checked: true };
+            const ablose = getTransferAsking(kauf);
+            buyPlayer(0);
+            out.kauf = !!kauf.joined && kauf.joined.via === 'kauf' && kauf.joined.from === kauf.sellerClub && kauf.joined.fee === ablose && kauf.joined.season === game.season;
+            // Saisontabelle: abgeschlossene Saison aus der Historie, laufende aus statsSeason
+            const p = [...squad].sort((a, b) => b.strength - a.strength)[0];
+            p.strengthHistory = [{ season: game.season - 1, strength: 60, apps: 30, goals: 9, assists: 4, grade: 2.8, elf: 3 }];
+            p.statsSeason = { spiele: 2, notenSumme: 5, vorlagen: 1, elf: 1 };
+            p.appearancesSeason = 2; p.goalsSeason = 1; p.appearances = 32; p.goalsCareer = 10;
+            addPlayerHonour(p, '📅 Spieler des Monats');
+            openPlayerDetail(p.id, 'squad');
+            const html = document.getElementById('pd-career-progression').innerHTML;
+            out.profil = html.includes('KARRIEREPROFIL') && html.includes('<td>9</td>') && html.includes('2,80') && html.includes('2,50') && html.includes('5 Vorlagen') && html.includes('4× Elf des Spieltags') && html.includes('Spieler des Monats');
+            closePlayerDetail();
+            // Saisonhistorie speichert jetzt auch die Elf des Spieltags
+            p.strengthHistory.push({ season: game.season, strength: p.strength, apps: 2, goals: 1 });
+            resetPlayerSeasonStats(p);
+            out.elfGespeichert = p.strengthHistory[1].elf === 1 && p.strengthHistory[1].assists === 1;
+            // Titel: Meister für alle, Spieler der Saison einzeln, Pokalsieg
+            squad.forEach(x => { x.honours = []; });
+            recordSeasonHonours(1);
+            out.meister = squad.every(x => x.honours.some(h => h.text.startsWith('🏆 Meister')));
+            recordCupFinal('landes', { home: game.clubName, away: 'Gegner', homeGoals: 2, awayGoals: 0 }, true);
+            out.pokal = squad.every(x => x.honours.some(h => h.text.includes('-Sieger')));
+            // Vereinslegende: ab 150 Pflichtspielen; der Abschied trifft die Fans
+            const legende = [...squad].sort((a, b) => a.strength - b.strength)[0];
+            legende.appearances = 149; legende.isCrowdFavorite = false; legende.friendPlayerId = null; legende.agent = null;
+            out.nochKeine = !isClubLegend(legende);
+            legende.appearances = 150;
+            out.legende = isClubLegend(legende);
+            game.fans = 60; game.boardSat = 50;
+            incomingOffers = [];
+            triggerNewAITransferOffer(legende);
+            acceptTransferOffer(incomingOffers[0].id);
+            out.abschied = !squad.includes(legende) && game.fans === 52 && game.boardSat === 48 && inboxMessages.some(m => m.title.includes('Vereinslegende'));
+            // Ohne Legendenstatus kein Fan-Malus
+            const normal = [...squad].sort((a, b) => a.strength - b.strength)[0];
+            normal.appearances = 3; normal.strengthHistory = []; normal.joined = null; normal.isCrowdFavorite = false; normal.friendPlayerId = null;
+            game.fans = 60;
+            triggerNewAITransferOffer(normal);
+            acceptTransferOffer(incomingOffers.find(o => o.playerId === normal.id).id);
+            out.normal = game.fans === 60;
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Karriereprofil ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.kauf, 'Zugang wird festgehalten: Saison, Weg, abgebender Verein, Ablöse');
+        assert(r.profil && r.elfGespeichert, 'Profil zeigt Saisontabelle (Spiele, Tore, Vorlagen, Note, Elf des Spieltags) und Auszeichnungen');
+        assert(r.meister && r.pokal, 'Meistertitel und Pokalsieg landen bei allen Spielern im Profil');
+        assert(r.nochKeine && r.legende && r.abschied && r.normal, 'Vereinslegende ab 150 Pflichtspielen - ihr Abschied kostet Fans 8 und Vorstand 2');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testSponsorConflict(browser) {
     console.log('\n[19.x] Sponsoren: Branchenkonflikt nennt den Konkurrenten und kostet 30 %');
     const { page, consoleErrors } = await freshPage(browser);
@@ -7629,6 +7697,7 @@ async function main() {
         testBuyback,
         testRumors,
         testWinterTalk,
+        testPlayerProfile,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,

@@ -41,6 +41,7 @@ function finalizePlayerPurchase(p, ablose, gehalt) {
     game.money -= gesamt;
     game.transferBudget -= ablose;
     p.wage = gehalt;
+    if (typeof stampPlayerJoin === 'function') stampPlayerJoin(p, 'kauf', p.sellerClub, ablose);
     squad.push(p);
     marketPlayers.splice(idx, 1);
     if (transferPoker && transferPoker.playerId === p.id) transferPoker = null;

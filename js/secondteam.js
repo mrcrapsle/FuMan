@@ -329,6 +329,7 @@
         let p = secondTeamSquad[idx];
         secondTeamSquad.splice(idx, 1);
         secondTeamLineup = secondTeamLineup.filter(pid => pid !== id);
+        if (typeof stampPlayerJoin === 'function') stampPlayerJoin(p, 'reserve');
         squad.push(p);
         autoLineupSecondTeam();
         syncSecondTeamIntoLeagueTable();

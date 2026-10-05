@@ -65,6 +65,7 @@
         game.money -= loan.buyOptionFee;
         game.transferBudget -= loan.buyOptionFee;
         p.contracts = 3;
+        if (typeof stampPlayerJoin === 'function') stampPlayerJoin(p, 'leihe', loan.parentClub, loan.buyOptionFee);
         incomingLoans = incomingLoans.filter(l => l.playerId !== playerId);
         addInboxMessage('vertrag', `✅ Kaufoption gezogen: ${p.name}!`, `${p.name} wechselt dauerhaft von ${loan.parentClub} zum Verein!`, 'screen-squad');
         showToast(`✅ ${p.name} dauerhaft verpflichtet!`, 'success');
@@ -302,6 +303,8 @@
     // bei den Fans besonders schlecht an - deutlich stärkerer Fan-Rückgang als bei einem
     // gewöhnlichen Transfer, als spürbare Konsequenz statt eines rein kosmetischen Titels.
     function checkCrowdFavoriteDeparture(departingPlayer) {
+        // Vereinslegende (js/player-profile.js): jeder Abgang läuft hier durch.
+        if (typeof checkLegendDeparture === 'function') checkLegendDeparture(departingPlayer);
         if (!departingPlayer || !departingPlayer.isCrowdFavorite) return;
         game.fans = Math.max(game.fanBaseFloor || 10, game.fans - 15);
         game.boardSat = Math.max(1, game.boardSat - 5);
@@ -702,6 +705,7 @@
         if (totalWages + p.wage > game.wageBudget) { showToast(`Gehaltsbudget reicht nicht: ${formatVal(totalWages + p.wage)} nach der Verpflichtung, erlaubt sind ${formatVal(game.wageBudget)}.`, 'error', 5000); return; }
         playSound('click');
         game.money -= finalFee;
+        if (typeof stampPlayerJoin === 'function') stampPlayerJoin(p, 'ablösefrei');
         squad.push(p);
         freeAgentPlayers.splice(idx, 1);
         pendingFreeAgentNegotiation = null;

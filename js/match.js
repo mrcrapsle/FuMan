@@ -2472,6 +2472,7 @@
         if (!winner || winner.goalsInPeriod <= 0) return;
         winner.p.morale = Math.min(100, (winner.p.morale || 80) + 8);
         game.playerOfMonthHistory.unshift({ season: game.season, matchday: game.matchday, playerId: winner.p.id, playerName: winner.p.name, goals: winner.goalsInPeriod });
+        if (typeof addPlayerHonour === 'function') addPlayerHonour(winner.p, '📅 Spieler des Monats');
         if (game.playerOfMonthHistory.length > 30) game.playerOfMonthHistory.pop();
         addInboxMessage('vertrag', `🌟 Spieler des Monats: ${winner.p.name}!`, `${winner.p.name} wird für die starke Leistung der letzten Spieltage (${winner.goalsInPeriod} Tore) zum Spieler des Monats gekürt - spürbarer Moralschub!`, 'screen-squad');
         showToast(`🌟 ${winner.p.name} ist Spieler des Monats!`, 'success');

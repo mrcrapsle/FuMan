@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.41', date: '05.10.2026', features: 'Phase 22: Wintergespräch mit dem Vorstand (Zwischenbilanz, Ziel hoch/runter, Winterbudget, Kurs)' };
+    const GAME_VERSION = { number: '3.42', date: '05.10.2026', features: 'Phase 22: Spieler-Karriereprofil (Herkunft, Saisontabelle, Titel, Vereinslegenden)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

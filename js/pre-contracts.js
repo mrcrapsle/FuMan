@@ -145,6 +145,7 @@ function joinPreContractPlayers() {
         p.contracts = 3;
         p.fitness = 100;
         delete p.sellerClub; delete p.preRefused;
+        if (typeof stampPlayerJoin === 'function') stampPlayerJoin(p, 'vorvertrag', v.from);
         if (squad.some(x => x.id === p.id)) p.id = Math.random().toString(36).substr(2, 9);
         squad.push(p);
         addInboxMessage('transfer', `👋 Neuzugang: ${p.name}`, `${p.name} (${p.pos}, Stärke ${p.strength}) kommt wie per Vorvertrag vereinbart ablösefrei von ${v.from}.`, 'screen-squad');
