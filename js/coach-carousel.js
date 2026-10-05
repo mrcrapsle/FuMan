@@ -1,13 +1,12 @@
 // Trainerkarussell: Jeder KI-Verein hat einen Trainer. Bei anhaltendem Misserfolg (hinten in
 // der Tabelle, schwache Form) wird er entlassen - der Nachfolger bringt einen anderen
-// Spielstil und kurzfristig Schwung (+3 Stärke für 4 Spieltage, "Trainereffekt"). Der
-// Trainer des permanenten Rivalen ist game.rivalManagerName und wird mitgeführt.
+// Spielstil und kurzfristig Schwung (+3 Stärke für 4 Spieltage, "Trainereffekt").
 
 const COACH_BOUNCE = 3;
 const COACH_BOUNCE_MATCHDAYS = 4;
 
 function getTeamCoach(team) {
-    if (!team.coach) team.coach = { name: team.name === game.permanentRivalName && game.rivalManagerName ? game.rivalManagerName : getRandomName(), since: game.season, sackedThisSeason: false };
+    if (!team.coach) team.coach = { name: getRandomName(), since: game.season, sackedThisSeason: false };
     return team.coach;
 }
 
@@ -37,12 +36,7 @@ function tickCoachCarousel() {
         const neueStile = AI_PLAYSTYLES.filter(s => s.id !== t.playstyle);
         t.playstyle = neueStile[Math.floor(Math.random() * neueStile.length)].id;
         let neu = getRandomName();
-        if (t.name === game.permanentRivalName && typeof assignRivalManagerPersonality === 'function') {
-            assignRivalManagerPersonality();
-            neu = game.rivalManagerName;
-        }
         t.coach = { name: neu, since: game.season, sackedThisSeason: game.season };
-        if (typeof onCoachSacked === 'function') onCoachSacked(t, alt);
         t.coachBounce = { amount: COACH_BOUNCE, until: game.matchday + COACH_BOUNCE_MATCHDAYS };
         t.baseStrength = (t.baseStrength || t.strength) + COACH_BOUNCE;
         t.strength += COACH_BOUNCE;

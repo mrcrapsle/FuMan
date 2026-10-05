@@ -317,16 +317,15 @@
     }
 
     // ---------- "NERVENKRIEG"-ERKENNUNG ----------
-    // Trifft man im K.o.-Elfmeterschießen wiederholt auf den eigenen permanenten Rivalen,
-    // ist das erzählerisch bemerkenswert genug für eine eigene Notiz in der Rivalen-Bilanz.
+    // Trifft man im K.o.-Elfmeterschießen wiederholt auf Derbygegner, ist das erzählerisch
+    // bemerkenswert genug für eine eigene Notiz in der Derby-Bilanz.
     function checkShootoutRivalryIntensity(teamA, teamB) {
-        if (!game.permanentRivalName) return;
         let opponent = teamA === game.clubName ? teamB : (teamB === game.clubName ? teamA : null);
-        if (opponent !== game.permanentRivalName) return;
+        if (!opponent || !isDerbyOpponent(opponent)) return;
         rivalryRecord.shootoutsVsRival = (rivalryRecord.shootoutsVsRival || 0) + 1;
         game.seasonsSinceLastRivalShootout = 0;
         if (rivalryRecord.shootoutsVsRival >= 2) {
-            addInboxMessage('vertrag', '😰 Nervenkrieg mit dem Rivalen!', `Bereits das ${rivalryRecord.shootoutsVsRival}. Elfmeterschießen gegen ${game.permanentRivalName} - diese Rivalität kennt keine ruhigen Nerven!`, 'screen-history');
+            addInboxMessage('vertrag', '😰 Nervenkrieg im Derby!', `Bereits das ${rivalryRecord.shootoutsVsRival}. Elfmeterschießen in einem Derby, diesmal gegen ${opponent} - keine ruhigen Nerven mehr!`, 'screen-history');
         }
     }
 

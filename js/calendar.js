@@ -85,15 +85,14 @@
         showNotice('✈️ Vorsaison-Tour abgeschlossen', `${stops} Stationen bereist.\n\nGesamteinnahmen ${formatVal(totalIncome)}. Mannschaftsmoral und Fan-Vorfreude sind spürbar gestiegen.`);
     }
 
-    // 2. Revanche-Freundschaftsspiel gegen den aktuellen Erzfeind: eigene, emotional
-    // aufgeladene Variante des Testspiels mit Auswirkung auf die Rivalitäts-Bilanz.
-    function scheduleRivalRevengeFriendly() {
-        if (!game.permanentRivalName) { showToast('Aktuell kein Erzfeind bekannt!', 'error'); return; }
+    // 2. Testspiel gegen den Stadtrivalen (nächster Derbygegner aus js/club-geo.js) - emotional
+    // aufgeladener als ein normales Testspiel: Sieg hebt Fans und Moral, Niederlage kostet Fans.
+    function scheduleDerbyFriendly() {
+        const rivale = typeof getOwnDerbyRivals === 'function' ? getOwnDerbyRivals()[0] : null;
+        if (!rivale) { showToast('In deiner Stadt gibt es keinen anderen Verein - kein Derby-Testspiel möglich.', 'error'); return; }
         playSound('whistle');
         let ourStr = calcTeamStrength(true);
-        let rivalTeam = leaguesData[game.leagueLevel]?.find(t => t.name === game.permanentRivalName);
-        let rivalStr = rivalTeam ? rivalTeam.strength : 60;
-        let won = Math.random() < (0.5 + (ourStr - rivalStr) * 0.01);
+        let won = Math.random() < (0.5 + (ourStr - rivale.strength) * 0.01);
         let scale = typeof leagueScaleFactor === 'function' ? leagueScaleFactor() : 1;
         let income = Math.round((20000 + Math.floor(Math.random() * 15000)) * scale * 8);
         game.money += income;
@@ -101,12 +100,12 @@
         if (won) {
             game.fans = Math.min(100, game.fans + 6);
             squad.forEach(p => { p.morale = Math.min(100, p.morale + 5); });
-            addInboxMessage('vertrag', `🔥 Revanche geglückt gegen ${game.permanentRivalName}!`, `Im Vorbereitungs-Duell gegen den Erzfeind ${game.permanentRivalName} setzt sich ${game.clubName} durch - ein psychologisch wichtiges Zeichen vor dem Saisonstart!`, 'screen-calendar');
-            showNotice('🔥 Revanche geglückt!', `Sieg im Testspiel gegen Erzfeind ${game.permanentRivalName}.\n\nEinnahmen ${formatVal(income)}, dazu ein spürbarer Moralschub vor dem Saisonstart.`);
+            addInboxMessage('vertrag', `🔥 Derby-Testspiel gewonnen gegen ${rivale.name}!`, `${rivale.label}: ${game.clubName} setzt sich im Vorbereitungs-Duell durch - ein Zeichen vor dem Saisonstart!`, 'screen-calendar');
+            showNotice('🔥 Derby-Testspiel gewonnen!', `Sieg gegen ${rivale.name}.\n\nEinnahmen ${formatVal(income)}, dazu ein spürbarer Moralschub vor dem Saisonstart.`);
         } else {
             game.fans = Math.max(1, game.fans - 2);
-            addInboxMessage('vertrag', `😤 Niederlage gegen ${game.permanentRivalName}`, `Das Vorbereitungs-Duell gegen den Erzfeind ${game.permanentRivalName} geht verloren - Ansporn für die kommende Saison.`, 'screen-calendar');
-            showNotice('😤 Niederlage gegen den Erzfeind', `Das Testspiel gegen ${game.permanentRivalName} ging verloren.\n\nImmerhin ${formatVal(income)} Einnahmen - und Ansporn für die neue Saison.`, { typ: 'warn' });
+            addInboxMessage('vertrag', `😤 Derby-Testspiel verloren gegen ${rivale.name}`, `${rivale.label}: das Vorbereitungs-Duell geht verloren - Ansporn für die kommende Saison.`, 'screen-calendar');
+            showNotice('😤 Derby-Testspiel verloren', `Das Testspiel gegen ${rivale.name} ging verloren.\n\nImmerhin ${formatVal(income)} Einnahmen - und Ansporn für die neue Saison.`, { typ: 'warn' });
         }
         updateUI();
     }

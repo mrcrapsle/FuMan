@@ -47,9 +47,7 @@ function getOppTacticPlan(oppTeam) {
         // Gute Teams (obere Tabellenhälfte) haben die besseren Analysten.
         const tabelle = typeof sortedTable === 'function' ? sortedTable(game.leagueLevel) : [];
         const platz = tabelle.indexOf(oppTeam);
-        // Erzfeind mit "Taktik-Fuchs" (js/nemesis.js) liest dich immer.
-        const chance = typeof nemesisAlwaysCounters === 'function' && nemesisAlwaysCounters(oppTeam) ? 1
-            : 0.35 + (platz >= 0 && platz < tabelle.length / 2 ? 0.25 : 0);
+        const chance = 0.35 + (platz >= 0 && platz < tabelle.length / 2 ? 0.25 : 0);
         const konter = getCounterArchetype(lesbar);
         if (konter && konter !== basis && Math.random() < chance) { arch = konter; reacted = true; }
     }
@@ -62,9 +60,8 @@ function getOwnLeagueMatchStrength(isHome, oppTeam) {
     const plan = getOppTacticPlan(oppTeam);
     // Derby-Woche (js/derby-week.js): Vorbereitung zählt nur am Derby-Spieltag.
     const derby = typeof getDerbyBonus === 'function' && oppTeam ? getDerbyBonus(oppTeam.name) : 0;
-    const erzfeind = typeof getNemesisModifier === 'function' ? getNemesisModifier(oppTeam, isHome) : 0;
     const vorbereitung = typeof getMatchPrepBonus === 'function' ? getMatchPrepBonus(oppTeam) : 0;
-    return calcTeamStrength(isHome) + getTacticMatchupBonus(plan ? plan.arch : null) + derby + erzfeind + vorbereitung;
+    return calcTeamStrength(isHome) + getTacticMatchupBonus(plan ? plan.arch : null) + derby + vorbereitung;
 }
 
 // Aus processPostMatchRoutine() nach jedem eigenen Ligaspiel.

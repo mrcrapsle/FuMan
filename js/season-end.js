@@ -202,7 +202,6 @@
 
         holdSeasonEndGala();
         if (typeof awardLeagueHonours === 'function') awardLeagueHonours(myRank);
-        checkRivalChangeEvent();
         if (typeof tickMediaImageSeasonHistory === 'function') tickMediaImageSeasonHistory();
 
         if (game.leagueLevel === 0 && myRank <= 4) {
@@ -343,7 +342,7 @@
                 loanClubLastInteractionSeason[club] = game.season - 1; // verhindert sofortigen erneuten Abbau nächste Saison
             }
         }
-        // Nervenkrieg-Abkühlung: ohne ein weiteres Elfmeterschießen gegen den Rivalen legt
+        // Nervenkrieg-Abkühlung: ohne ein weiteres Elfmeterschießen gegen einen Derbygegner legt
         // sich die Anspannung über die Zeit langsam wieder, statt für immer maximal zu bleiben.
         if ((rivalryRecord.shootoutsVsRival || 0) > 0) {
             game.seasonsSinceLastRivalShootout = (game.seasonsSinceLastRivalShootout || 0) + 1;
@@ -351,7 +350,7 @@
                 rivalryRecord.shootoutsVsRival = Math.max(0, rivalryRecord.shootoutsVsRival - 1);
                 game.seasonsSinceLastRivalShootout = 0;
                 if (rivalryRecord.shootoutsVsRival < 2) {
-                    addInboxMessage('vertrag', '😌 Nervenkrieg klingt ab', `Ohne ein weiteres Elfmeterschießen gegen ${game.permanentRivalName || 'den Rivalen'} lässt die besondere Anspannung bei diesem Duell langsam nach.`, 'screen-history');
+                    addInboxMessage('vertrag', '😌 Nervenkrieg klingt ab', 'Ohne ein weiteres Elfmeterschießen in einem Derby lässt die besondere Anspannung langsam nach.', 'screen-history');
                 }
             }
         }
@@ -366,7 +365,6 @@
         if (typeof checkSeasonMoodTargetResult === 'function') checkSeasonMoodTargetResult();
         if (typeof evaluateScenarioAtSeasonEnd === 'function') evaluateScenarioAtSeasonEnd();
         if (typeof remindSaveExport === 'function') remindSaveExport();
-        if (typeof tickNemesisSeason === 'function') tickNemesisSeason();
         // WM/EM im Sommer nach jeder geraden Saison (js/national-team.js), nach dem Fitness-Reset.
         if (typeof playSummerTournament === 'function') playSummerTournament();
         if (typeof tickCoachBounce === 'function') tickCoachBounce(true);

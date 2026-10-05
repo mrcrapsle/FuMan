@@ -240,7 +240,7 @@
     }
 
     // gezielt: ein Spieler, für den der Verein selbst grünes Licht gibt (Bürotermin "Wechsel erlauben").
-    // optionen (js/nemesis.js): { club, multiplier, nemesis } - gezieltes Angebot eines bestimmten Vereins.
+    // optionen: { club, multiplier } - gezieltes Angebot eines bestimmten Vereins (Gerüchteküche).
     function triggerNewAITransferOffer(gezielt, optionen) {
         let schwelle = getTransferInterestThreshold();
         let validTargets = gezielt ? [gezielt].filter(p => !incomingOffers.some(o => o.playerId === p.id))
@@ -268,8 +268,7 @@
             originalBid: offerSum,
             round: 1,
             expiresIn: 3,
-            statusText: "Neues schriftliches Angebot eingegangen.",
-            nemesis: !!(optionen && optionen.nemesis)
+            statusText: "Neues schriftliches Angebot eingegangen."
         };
 
         incomingOffers.unshift(newOffer);
@@ -338,7 +337,6 @@
         squad.splice(pIdx, 1);
         lineup = lineup.filter(id => id !== offer.playerId);
         incomingOffers.splice(oIdx, 1);
-        if (offer.nemesis && typeof onNemesisOfferAccepted === 'function') onNemesisOfferAccepted(offer);
         addManagerXP(120);
         return { player, offer, erloes, agentFee };
     }
@@ -403,7 +401,6 @@
             if (p && o.currentBid > p.marketValue * 1.2) {
                 p.morale = Math.max(20, p.morale - 8);
             }
-            if (o.nemesis && typeof onNemesisOfferRejected === 'function') onNemesisOfferRejected(o);
             incomingOffers.splice(oIdx, 1);
         }
         renderTransferView();

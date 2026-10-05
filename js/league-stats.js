@@ -56,7 +56,7 @@ function setLeagueStatsSplit(art) {
 
 function leagueTeamCell(t) {
     const eigen = t.name === game.clubName;
-    const rivale = t.name === game.permanentRivalName;
+    const rivale = !eigen && isDerbyOpponent(t.name);
     return `<td style="text-align:left; ${eigen ? 'color:var(--primary); font-weight:bold;' : ''}">${t.name}${rivale ? ' ⚔️' : ''}</td>`;
 }
 
@@ -100,7 +100,7 @@ function renderLeagueHomeAwayTable(level) {
 }
 
 // Tabellenverlauf: Platz je Spieltag für alle Vereine; hervorgehoben sind der eigene Verein
-// (bzw. der Tabellenführer in fremden Ligen) und der Erzrivale.
+// (bzw. der Tabellenführer in fremden Ligen) und ein Derbygegner.
 function renderLeagueRankChart(level) {
     const box = document.getElementById('league-rank-chart-box');
     if (!box) return;
@@ -114,7 +114,7 @@ function renderLeagueRankChart(level) {
     const linie = t => (t.rankHist || []).map((p, i) => p ? `${x(i).toFixed(1)},${y(p).toFixed(1)}` : null).filter(Boolean).join(' ');
     const eigen = teams.find(t => t.name === game.clubName);
     const fokus = eigen || teams[0];
-    const rivale = teams.find(t => t.name === game.permanentRivalName && t !== fokus);
+    const rivale = teams.find(t => t !== fokus && isDerbyOpponent(t.name));
     const hinten = teams.filter(t => t !== fokus && t !== rivale).map(t => `<polyline points="${linie(t)}" fill="none" stroke="rgba(150,150,150,0.35)" stroke-width="1" />`).join('');
     const vorn = (rivale ? `<polyline points="${linie(rivale)}" fill="none" stroke="var(--danger)" stroke-width="1.5" />` : '')
         + `<polyline points="${linie(fokus)}" fill="none" stroke="var(--primary)" stroke-width="2.5" />`;

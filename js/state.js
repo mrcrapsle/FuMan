@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.43', date: '05.10.2026', features: 'Phase 24: Echte Orte für alle Vereine, Ligen 4-6 und Landespokal nach Heimatstadt' };
+    const GAME_VERSION = { number: '3.44', date: '05.10.2026', features: 'Phase 24: Derbys nach Ort und Traditionsduellen - Dauerrivale und Erzfeind entfernt' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -89,8 +89,6 @@
         // in der niedrigsten Liga startet (siehe secondteam.js). isActive statt "active",
         // um Namenskollisionen mit anderen Modulen zu vermeiden.
         secondTeam: { isActive: false, name: '1.FC Moritz Leipzig II', leagueLevel: 5, formation: '4-4-2', tacticStyle: 'ausgeglichen', trainingFocus: 'ausgeglichen' },
-        permanentRivalName: null,
-        rivalHistoryArchive: [],
         winterWindowActive: false,
         winterWindowCloseMatchday: 0,
         winterWindowUsedThisSeason: false,
@@ -605,11 +603,14 @@
             'trainingSchedule', 'trainingSpecialization', 'setPieceTraining', 'stadium',
             'internationalTournaments', 'playerInternationalCaps', 'internationalTournamentHistory', 'nextWorldCup', 'transferMarket', 'postMatchAnalysis',
             'transferBudgetUsed', 'transferMarketPlayers', 'transferLastRefreshMatchday', 'reserves', 'tournamentBrackets',
-            'squadHarmony', 'disciplinarySystem', 'crises', 'localRivals', 'tacticsHistory', 'playerRoles', 'formationHistory', 'tacticAnalysis', 'clubSwitchHistory', 'youthNationalCallups', 'licenseRejectionCount', 'seasonPointsHistory', 'forceDerbyMatchdays'].forEach(k => { delete game[k]; });
+            'squadHarmony', 'disciplinarySystem', 'crises', 'localRivals', 'tacticsHistory', 'playerRoles', 'formationHistory', 'tacticAnalysis', 'clubSwitchHistory', 'youthNationalCallups', 'licenseRejectionCount', 'seasonPointsHistory', 'forceDerbyMatchdays',
+            'permanentRivalName', 'rivalManagerName', 'rivalManagerTrait', 'rivalHistoryArchive', 'nemesis'].forEach(k => { delete game[k]; });
         // Holding-Aufträge alter Spielstände trugen echte Vereinsnamen.
         const echteNamen = { 'Real Madrid': 'Real Madrit', 'FC Bayern': 'Bayern Munchen', 'FC Liverpool': 'Liverpol FC' };
         if (typeof holdingCompany !== 'undefined') (holdingCompany.b2bContracts || []).forEach(c => { if (echteNamen[c.club]) c.club = echteNamen[c.club]; });
         squad.forEach(p => { delete p.currentFitnessBoost; delete p.nationalDuty; });
+        // Phase 24.2: ausgewürfelte Rivalen-Paare der Ligatabellen (Derbys jetzt nach Ort).
+        if (typeof leaguesData !== 'undefined') leaguesData.forEach(t => (t || []).forEach(x => { delete x.rivalName; }));
         // Ältere Aufräum-Helfer einzelner Module - laufen jetzt gesammelt auch beim Laden.
         if (typeof cleanupLegacyContractState === 'function') cleanupLegacyContractState();
         if (typeof cleanupLegacyScoutState === 'function') cleanupLegacyScoutState();

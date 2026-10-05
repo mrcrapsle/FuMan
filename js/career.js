@@ -31,7 +31,6 @@
             }
         }
         leaguesData.forEach(table => table.forEach(t => {
-            if (t.rivalName === oldName) t.rivalName = newName;
             if (t.friendName === oldName) t.friendName = newName;
         }));
 
@@ -103,7 +102,7 @@
 
     let clubSwitchCandidates = null;
     function showClubSwitchOptions() {
-        let excluded = [game.clubName, game.secondTeam.name, game.permanentRivalName];
+        let excluded = [game.clubName, game.secondTeam.name];
         let pool = leaguesData.flatMap((table, l) => table.filter(t => !excluded.includes(t.name)).map(t => ({ team: t, level: l })));
         // Bevorzugt Vereine nahe am aktuellen Liganiveau (±1) - ein Sprung von der
         // Kreisklasse direkt in die Bundesliga wäre keine plausible Option.
@@ -158,7 +157,7 @@
                 <span class="label">Karriere-Stationen:</span><span class="val">${(game.careerStations || []).length ? game.careerStations.map(st => `${st.from} → ${st.to} (S${st.season})`).join(', ') : 'nur dieser Verein'}</span>
                 <span class="label">Szenarien:</span><span class="val">${(game.scenarioResults || []).length ? game.scenarioResults.map(r => `${r.title} ${r.ok ? '⭐'.repeat(r.stars) : '❌'} (S${r.season})`).join(', ') : 'keine'}</span>
                 <span class="label">Schon entlassen:</span><span class="val">${game.timesSacked || 0}×</span>
-                <span class="label">Rivalen-Bilanz:</span><span class="val">${rivalryRecord.wins}S ${rivalryRecord.draws}U ${rivalryRecord.losses}N</span>
+                <span class="label">Derby-Bilanz:</span><span class="val">${rivalryRecord.wins}S ${rivalryRecord.draws}U ${rivalryRecord.losses}N</span>
                 <span class="label">Höchster Derbysieg:</span><span class="val">${bestWin ? `${bestWin.ourGoals}:${bestWin.oppGoals} (Saison ${bestWin.season})` : '-'}</span>
                 <span class="label">Zweite Mannschaft:</span><span class="val">${game.secondTeam.isActive ? 'Aktiv' : 'Nicht gegründet'}</span>
                 <span class="label">Heimbilanz:</span><span class="val">${game.homeRecord.wins}S ${game.homeRecord.draws}U ${game.homeRecord.losses}N</span>
@@ -218,7 +217,7 @@
                 <span class="label">Höchstes Manager-Level:</span><span class="val">${managerRPG.level} (${managerRPG.xp} XP)</span>
                 <span class="label">Höchste erreichte Liga:</span><span class="val">${leagueNames[game.leagueLevel]}</span>
                 <span class="label">Trophäen gesamt:</span><span class="val">${(game.trophies || []).length}</span>
-                <span class="label">Rivalen-Bilanz:</span><span class="val">${rivalryRecord.wins}S ${rivalryRecord.draws}U ${rivalryRecord.losses}N</span>
+                <span class="label">Derby-Bilanz:</span><span class="val">${rivalryRecord.wins}S ${rivalryRecord.draws}U ${rivalryRecord.losses}N</span>
                 <span class="label">Schon entlassen:</span><span class="val">${game.timesSacked || 0}×</span>
                 <span class="label">Legenden-Status:</span><span class="val">${game.legendStatus ? '👑 Ja' : 'Nein'}</span>
                 <span class="label">Zuschauerrekord:</span><span class="val">${game.recordAttendance > 0 ? `${game.recordAttendance.toLocaleString('de-DE')} (Saison ${game.recordAttendanceSeason})` : '-'}</span>
@@ -277,7 +276,7 @@
         line('Höchstes Manager-Level:', `${managerRPG.level} (${managerRPG.xp} XP)`, '#22e0a8');
         line('Höchste erreichte Liga:', leagueNames[game.leagueLevel], '#22e0a8');
         line('Trophäen gesamt:', String((game.trophies || []).length), '#22e0a8');
-        line('Rivalen-Bilanz:', `${rivalryRecord.wins}S ${rivalryRecord.draws}U ${rivalryRecord.losses}N`, '#22e0a8');
+        line('Derby-Bilanz:', `${rivalryRecord.wins}S ${rivalryRecord.draws}U ${rivalryRecord.losses}N`, '#22e0a8');
         line('Zuschauerrekord:', game.recordAttendance > 0 ? game.recordAttendance.toLocaleString('de-DE') : '-', '#3fb6ff');
         line('Legenden-Status:', game.legendStatus ? '👑 Ja' : 'Nein', '#f5b942');
         line('Ultimaten (V/Vk/I):', `${game.ultimatumHistory?.renewed || 0} / ${game.ultimatumHistory?.sold || 0} / ${game.ultimatumHistory?.ignored || 0}`, '#ff8a5c');

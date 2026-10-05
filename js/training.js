@@ -375,7 +375,7 @@
         } else if (task === 'auto-matchprep') {
             let ourTeam = getOurLeagueTeam ? getOurLeagueTeam() : null;
             let upcomingIsDerby = false;
-            if (ourTeam && ourTeam.rivalName) {
+            if (ourTeam) {
                 let md = game.matchday;
                 let fixs = fixturesData[game.leagueLevel] ? fixturesData[game.leagueLevel][md - 1] : null;
                 if (fixs) {
@@ -385,7 +385,7 @@
                     });
                     if (ourFixture) {
                         let h = leaguesData[game.leagueLevel][ourFixture.home].name, a = leaguesData[game.leagueLevel][ourFixture.away].name;
-                        upcomingIsDerby = (h === ourTeam.rivalName || a === ourTeam.rivalName);
+                        upcomingIsDerby = isDerbyOpponent(h === game.clubName ? a : h);
                     }
                 }
             }

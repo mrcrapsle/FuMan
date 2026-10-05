@@ -282,13 +282,25 @@ function buildTownClubs(key, seed) {
 
 // Stadt je Vereinsname (einmal aufgebaut).
 let clubCityIndex = null;
+// Stadtteil-Vereine aus Großstädten (Spandau, Altona ...): Ort für Derbys ist der Stadtteil.
+let clubLocalityIndex = {};
 function buildClubCityIndex() {
     clubCityIndex = Object.assign({}, TOP_CLUB_CITIES);
+    clubLocalityIndex = {};
     const add = e => { const [n, c] = e.split('|'); if (c && !clubCityIndex[n]) clubCityIndex[n] = c; };
     Object.values(REGIONALLIGA_CLUBS).forEach(l => l.forEach(add));
     Object.values(OBERLIGEN).forEach(o => o.clubs.forEach(add));
     Object.values(LIGA6).forEach(o => (o.clubs || []).forEach(add));
-    Object.keys(REGION_TOWNS).forEach(k => [0, 1, 2, 3, 4].forEach(s => buildTownClubs(k, s).forEach(add)));
+    Object.keys(REGION_TOWNS).forEach(k => {
+        const stadtteile = {};
+        REGION_TOWNS[k].forEach(t => { const { ort, stadt } = townCityOf(t); if (ort !== stadt) stadtteile[stadt + '|' + ort] = ort; });
+        [0, 1, 2, 3, 4].forEach(sd => buildTownClubs(k, sd).forEach(e => {
+            add(e);
+            const [n, c] = e.split('|');
+            const ort = Object.keys(stadtteile).map(x => x.split('|')).find(([st, o]) => st === c && n.endsWith(' ' + o));
+            if (ort) clubLocalityIndex[n] = ort[1];
+        }));
+    });
     return clubCityIndex;
 }
 
@@ -302,8 +314,9 @@ function getHomeInfo() {
 // Stadt eines Vereins (null, wenn unbekannt). Eigener Verein und Zweite Mannschaft: Heimatstadt.
 function getClubCity(name) {
     if (!name) return null;
-    if (name === game.clubName || (game.secondTeam && name === game.secondTeam.name)) return getHomeCity();
     const idx = clubCityIndex || buildClubCityIndex();
+    // Eigener Verein: nach einem Vereinswechsel zu einem echten Klub dessen Stadt, sonst die Heimat.
+    if (name === game.clubName || (game.secondTeam && name === game.secondTeam.name)) return idx[game.clubName] || getHomeCity();
     if (idx[name]) return idx[name];
     // Unbekannter Name (alter Spielstand, umbenannt): Ort am Namensende erkennen.
     const orte = Object.keys(HOME_CITIES).concat(...Object.values(REGION_TOWNS).map(l => l.map(t => townCityOf(t).ort)));
@@ -356,4 +369,78 @@ function ensureHomeCity() {
 
 function getHomeCityOptions() {
     return Object.keys(HOME_CITIES).map(c => ({ city: c, state: HOME_CITIES[c].state, region: HOME_REGIONS[HOME_CITIES[c].region].label }));
+}
+
+// ==========================================
+// DERBYS (Phase 24.2): nach Ort statt ausgewürfelter Paare
+// ==========================================
+// Derby = gleicher Ort (bei Stadtteil-Vereinen der Stadtteil) oder ein echtes Traditionsduell.
+// In Großstädten wären sonst ganze Ligen Derbys (Oberliga Hamburg, Berlin) - deshalb zählen
+// pro Verein nur die DERBY_LOCAL_CAP stärksten Vereine desselben Orts in seiner Liga.
+const DERBY_LOCAL_CAP = 3;
+const TRADITION_DERBIES = [
+    ['Schalke 05', 'Borussia Dortmunt', 'Revierderby'], ['VfL Bochumm', 'Schalke 05', 'Revierderby'], ['VfL Bochumm', 'Borussia Dortmunt', 'Revierderby'],
+    ['Rot-Weiss Essn', 'Schalke 05', 'Revierderby'], ['Rot-Weiss Essn', 'Rot-Weiss Oberhausn', 'Revierderby'], ['MSV Duisborg', 'Rot-Weiss Essn', 'Revierderby'],
+    ['Hamburger SP', 'Werder Breman', 'Nordderby'], ['Hamburger SP', 'Hannover 97', 'Nordderby'], ['Werder Breman', 'Hannover 97', 'Nordderby'],
+    ['1. FC Koln', 'Borussia Monchengladbach', 'Rheinderby'], ['1. FC Koln', 'Fortuna Dusseldorf', 'Rheinderby'], ['Borussia Monchengladbach', 'Fortuna Dusseldorf', 'Rheinderby'],
+    ['1. FC Koln', 'Bayer Leverkussen', 'Rheinderby'], ['Alemannia Aachn', '1. FC Koln', 'Rheinlandderby'],
+    ['1. FC Nurnberg', 'Greuther Furth', 'Frankenderby'], ['Wurzburger Kickerss', '1. FC Schweinfort 05', 'Unterfrankenderby'],
+    ['Karlsruher SK', 'VfB Stuttgardt', 'Baden-Württemberg-Derby'], ['Karlsruher SK', 'SV Waldhof Manheim', 'Badisches Derby'],
+    ['Karlsruher SK', '1. FC Kaiserslauten', 'Südwestderby'], ['1. FC Saarbrukken', '1. FC Kaiserslauten', 'Südwestderby'], ['FC 08 Homborg', '1. FC Saarbrukken', 'Saarderby'],
+    ['Eintracht Frankfurth', 'Kickers Offenbachh', 'Mainderby'], ['Eintracht Frankfurth', 'SV Darmstadt 99', 'Hessenderby'], ['Eintracht Frankfurth', 'Mainz 06', 'Rhein-Main-Derby'],
+    ['Eintracht Braunschweigh', 'Hannover 97', 'Niedersachsenderby'], ['Eintracht Braunschweigh', 'VfL Wolfburg', 'Niedersachsenderby'],
+    ['VfL Osnabruk', 'SC Preussen Munsterr', 'Westfalenderby'], ['Arminia Bilefeld', 'SC Padernborn', 'OWL-Derby'], ['Arminia Bilefeld', 'SC Preussen Munsterr', 'Westfalenderby'],
+    ['Holstein Kiehl', 'VfB Lubek', 'Schleswig-Holstein-Derby'], ['Hansa Rostok', 'FC St. Paulli', 'Nordderby'],
+    ['Dynamo Dressden', 'Lokomotiv Leipzich', 'Sachsenderby'], ['Dynamo Dressden', 'BSG Chemie Leipzich', 'Sachsenderby'], ['Dynamo Dressden', 'Chemnitzer FCC', 'Sachsenderby'],
+    ['Dynamo Dressden', 'RB Leibzig', 'Sachsenderby'], ['Erzgebirge Aua', 'FSV Zwikau', 'Westsachsenderby'], ['Erzgebirge Aua', 'Chemnitzer FCC', 'Sachsenderby'],
+    ['1. FC Magdeborg', 'Hallescher FK 96', 'Sachsen-Anhalt-Derby'], ['Carl Zeiss Jenna', 'FC Rot-Weiss Erfurtt', 'Thüringenderby'],
+    ['FC Energie Cotbus', 'Dynamo Dressden', 'Ostderby'], ['Hansa Rostok', 'Dynamo Dressden', 'Ostderby'], ['1. FC Magdeborg', 'Dynamo Dressden', 'Ostderby'],
+    ['Bayern Munchen', 'FC Augsburgh', 'Bayernderby'], ['1. FC Nurnberg', 'Bayern Munchen', 'Bayernderby'], ['SSV Jahn Regensborg', 'FC Ingolstat 04', 'Donauderby']
+];
+
+function getClubLocality(name) {
+    if (!name) return null;
+    if (!clubCityIndex) buildClubCityIndex();
+    return clubLocalityIndex[name] || getClubCity(name);
+}
+
+function getTraditionDerby(a, b) {
+    const t = TRADITION_DERBIES.find(([x, y]) => (x === a && y === b) || (x === b && y === a));
+    return t ? t[2] : null;
+}
+
+// Die DERBY_LOCAL_CAP stärksten Vereine desselben Orts in der Liga (ohne den Verein selbst).
+function getLocalDerbyCircle(name, teams) {
+    const ort = getClubLocality(name);
+    return teams.filter(t => t.name !== name && getClubLocality(t.name) === ort)
+        .sort((x, y) => (y.strength || 0) - (x.strength || 0) || x.name.localeCompare(y.name))
+        .slice(0, DERBY_LOCAL_CAP).map(t => t.name);
+}
+
+// DIE Derby-Prüfung für zwei Vereine (eigene und KI-Spiele, Liga und Pokal).
+function isDerbyMatch(a, b) {
+    if (!a || !b || a === b) return false;
+    if (getTraditionDerby(a, b)) return true;
+    const ort = getClubLocality(a);
+    if (!ort || ort !== getClubLocality(b)) return false;
+    const teams = (typeof leaguesData !== 'undefined' ? leaguesData : []).find(t => t.some(x => x.name === a) && t.some(x => x.name === b));
+    if (!teams) return true; // Pokal o. Ä.: gleicher Ort reicht
+    return getLocalDerbyCircle(a, teams).includes(b) || getLocalDerbyCircle(b, teams).includes(a);
+}
+
+function getDerbyLabel(a, b) {
+    return getTraditionDerby(a, b) || `Derby in ${getClubLocality(a) || getClubCity(a) || 'der Stadt'}`;
+}
+
+// Alle Derbygegner des eigenen Vereins über alle Ligen (gleicher Ort oder Traditionsduell),
+// die nächstgelegene Spielklasse zuerst - für Testspiel und Historie.
+function getOwnDerbyRivals() {
+    const ort = getClubLocality(game.clubName);
+    const out = [];
+    (typeof leaguesData !== 'undefined' ? leaguesData : []).forEach((teams, level) => teams.forEach(t => {
+        if (t.name === game.clubName || (game.secondTeam && t.name === game.secondTeam.name)) return;
+        const tradition = getTraditionDerby(game.clubName, t.name);
+        if (tradition || (ort && getClubLocality(t.name) === ort)) out.push({ name: t.name, level, strength: t.strength, label: getDerbyLabel(game.clubName, t.name) });
+    }));
+    return out.sort((a, b) => Math.abs(a.level - game.leagueLevel) - Math.abs(b.level - game.leagueLevel) || b.strength - a.strength);
 }

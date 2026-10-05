@@ -170,7 +170,7 @@ const PRESS_SITUATIONS = [
         { text: 'Die Liga hat Vorrang.', hint: 'Elf wird geschont (ausgeruhte Spieler), Vorstand +1', run: () => { if (typeof rotateTiredPlayers === 'function') lineup = pickBestLineupIds(); pressBoard(1); return 'Pokal mit Blick auf die Liga'; } },
         { text: 'Wir schauen von Runde zu Runde.', hint: 'Medienimage +1', run: () => { changeMediaImage(1); return 'Diplomatische Antwort'; } }
     ] },
-    { key: 'derby', when: c => c.oppName === game.permanentRivalName || (typeof getOurRivalName === 'function' && c.oppName === getOurRivalName()),
+    { key: 'derby', when: c => isDerbyOpponent(c.oppName),
       frage: c => `Derby gegen ${c.oppName}! Was erwarten Sie?`, antworten: [
         { text: 'Wir fegen sie vom Platz!', hint: 'Moral +3, Stärke +1 - riskant: bei Niederlage Image, Fans und Vorstand runter', run: () => { pressMoral(3); pressMatchBonus(1); pressPromise('sieg'); return 'Kampfansage vor dem Derby'; } },
         { text: 'Ein Spiel wie jedes andere.', hint: 'Vorstand +1', run: () => { pressBoard(1); return 'Gelassenheit vor dem Derby'; } },

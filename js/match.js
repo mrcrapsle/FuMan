@@ -310,7 +310,6 @@
 
         renderPreMatchAnalysis(oppObj, oppName);
         if (typeof renderOppTacticBox === 'function') renderOppTacticBox(oppObj);
-        if (typeof renderNemesisPrematch === 'function') renderNemesisPrematch(oppObj);
         if (typeof renderPregameTalkBox === 'function') renderPregameTalkBox();
         renderFatigueWarning();
 
@@ -416,7 +415,6 @@
         // Derby-Woche (js/derby-week.js): nach dem Ticker-Start, sonst wäre die Zeile gleich wieder weg.
         if (typeof resetCoTrainerLive === 'function') resetCoTrainerLive();
         if (!isCup && typeof applyDerbyPreparation === 'function') applyDerbyPreparation(oppName);
-        if (!isCup && typeof applyNemesisLiveModifier === 'function') applyNemesisLiveModifier(oppTeamObj, isHome);
         if (typeof applyPregameTalk === 'function') applyPregameTalk();
         if (!isCup && typeof applyMatchPrepLive === 'function') applyMatchPrepLive(oppTeamObj);
         if (typeof applyRefereeGrudge === 'function') applyRefereeGrudge();
@@ -835,7 +833,7 @@
             // (siehe checkShootoutRivalryIntensity() in europe.js/cup.js) steht das ganze
             // Spiel unter besonderer psychischer Anspannung - hitzköpfige Spieler geraten
             // dabei eher in Zweikämpfe außer Kontrolle, ruhige Charaktere bleiben unberührt.
-            let isNervenkriegMatch = (currentMatch.homeName === game.permanentRivalName || currentMatch.awayName === game.permanentRivalName) && (rivalryRecord.shootoutsVsRival || 0) >= 2;
+            let isNervenkriegMatch = isDerbyOpponent(currentMatch.isHome ? currentMatch.awayName : currentMatch.homeName) && (rivalryRecord.shootoutsVsRival || 0) >= 2;
             if (ourCardRoll < ourCardThreshold && onPitch.length > 0) {
                 eventHandled = true;
                 let culprit;
@@ -1389,9 +1387,9 @@
         if (ghostGameActive) game.forcedGhostGame = false; // Geisterspiel-Auflage ist damit erfüllt
         if (derbyBoostActive) {
             if (genuinelySoldOut) {
-                addInboxMessage('vertrag', '🔥 Ausverkauftes Lokalderby!', `Das Stadion war beim Derby gegen ${game.permanentRivalName} bis auf den letzten Platz gefüllt (${att.toLocaleString('de-DE')} Zuschauer) - ${formatVal(ticketIncome)} Ticketeinnahmen!`, 'screen-finances');
+                addInboxMessage('vertrag', '🔥 Ausverkauftes Lokalderby!', `Das Stadion war beim Derby gegen ${opponentNameForRecord || 'den Derbygegner'} bis auf den letzten Platz gefüllt (${att.toLocaleString('de-DE')} Zuschauer) - ${formatVal(ticketIncome)} Ticketeinnahmen!`, 'screen-finances');
             } else {
-                addInboxMessage('vertrag', '🔥 Rekordkulisse beim Lokalderby!', `Das Derby gegen ${game.permanentRivalName} lockte deutlich mehr Zuschauer als sonst an (${att.toLocaleString('de-DE')} Zuschauer) - ${formatVal(ticketIncome)} Ticketeinnahmen! Bei wachsender Fan-Zufriedenheit wird das Stadion künftig noch voller.`, 'screen-finances');
+                addInboxMessage('vertrag', '🔥 Rekordkulisse beim Lokalderby!', `Das Derby gegen ${opponentNameForRecord || 'den Derbygegner'} lockte deutlich mehr Zuschauer als sonst an (${att.toLocaleString('de-DE')} Zuschauer) - ${formatVal(ticketIncome)} Ticketeinnahmen! Bei wachsender Fan-Zufriedenheit wird das Stadion künftig noch voller.`, 'screen-finances');
             }
         } else if (cupBoostActive) {
             addInboxMessage('vertrag', '🏆 Besondere Pokal-Atmosphäre!', `Das Pokal-/Europapokalspiel lockte mehr Zuschauer als ein gewöhnliches Ligaspiel an (${att.toLocaleString('de-DE')} Zuschauer) - ${formatVal(ticketIncome)} Ticketeinnahmen!`, 'screen-finances');
@@ -1993,7 +1991,6 @@
     // Alle 4 Spieltage (≈ 1 Monat) aus processPostMatchRoutine(): monatliche Ticks der
     // Feature-Systeme und die Aktiendividende. Neue Monats-Ticks gehören HIERHER.
     function runMonthlyClubTicks() {
-        if (typeof tickNemesisPoaching === 'function') tickNemesisPoaching();
         setzeBuchungskontext('📅 Monatliche Vereinsposten');
         if (typeof migrateLegacyCoSponsors === 'function') migrateLegacyCoSponsors();
         if (typeof tickBoardRoom === 'function') tickBoardRoom();
@@ -2046,8 +2043,8 @@
         if (typeof recordLeagueHomeAway === 'function') recordLeagueHomeAway(h, a, f);
         if (typeof creditAiLeagueGoals === 'function') { creditAiLeagueGoals(h, f.homeGoals); creditAiLeagueGoals(a, f.awayGoals); }
 
-        // Kopf-an-Kopf-Statistik: historische Bilanz gegen JEDEN Ligagegner, nicht nur
-        // den einen festen Erzfeind - nur relevant, wenn 1.FC Moritz Leipzig an dem Spiel beteiligt war.
+        // Kopf-an-Kopf-Statistik: historische Bilanz gegen JEDEN Ligagegner - nur relevant,
+        // wenn der eigene Verein an dem Spiel beteiligt war.
         if (h.name === game.clubName || a.name === game.clubName) {
             let oppName = h.name === game.clubName ? a.name : h.name;
             let ourGoals = h.name === game.clubName ? f.homeGoals : f.awayGoals;
@@ -2196,7 +2193,7 @@
     let pendingJobApproach = null;
     // Wer wirbt? Ein stärkerer Verein aus der eigenen oder der nächsthöheren Liga.
     function pickJobOfferClub() {
-        let excluded = [game.clubName, game.secondTeam && game.secondTeam.name, game.permanentRivalName];
+        let excluded = [game.clubName, game.secondTeam && game.secondTeam.name];
         let eigene = (leaguesData[game.leagueLevel] || []).find(t => t.name === game.clubName);
         let ourStr = eigene ? eigene.strength : 50;
         let pool = [game.leagueLevel - 1, game.leagueLevel].filter(l => l >= 0)
@@ -2334,13 +2331,13 @@
     // Kurze Schlagzeile nach jedem Spiel, abhängig vom Ergebnis (inkl. Derby-Sonderfall) -
     // läuft in ALLEN drei Spieltag-Pfaden mit, da sie an processPostMatchRoutine() hängt.
     const PRESS_HEADLINES = {
-        win: ["„Big point!“ - {opp} chancenlos gegen unsere Mannschaft.", "Souveräner Auftritt: Die Presse lobt die taktische Disziplin.", "„Genau so weitermachen!“, jubelt die Lokalpresse."],
+        win: ["„Big point!“ - der Gegner war chancenlos gegen unsere Mannschaft.", "Souveräner Auftritt: Die Presse lobt die taktische Disziplin.", "„Genau so weitermachen!“, jubelt die Lokalpresse."],
         draw: ["Remis mit Licht und Schatten - die Presse ist gespalten.", "„Ein Punkt geht in Ordnung“, kommentiert die Fachpresse zurückhaltend.", "Ausgeglichene Partie, ausgeglichenes Presseecho."],
-        loss: ["Kritische Stimmen werden lauter nach der Niederlage.", "„Da geht mehr“ - die Presse fordert Antworten vom Trainerteam.", "Enttäuschung überwiegt in den Schlagzeilen nach dem Spiel gegen {opp}."]
+        loss: ["Kritische Stimmen werden lauter nach der Niederlage.", "„Da geht mehr“ - die Presse fordert Antworten vom Trainerteam.", "Enttäuschung überwiegt in den Schlagzeilen nach dem Spiel."]
     };
     function generatePressHeadline(matchResult, isHomeDerby) {
         let pool = PRESS_HEADLINES[matchResult] || PRESS_HEADLINES.draw;
-        let text = pool[Math.floor(Math.random() * pool.length)].replace('{opp}', game.permanentRivalName || 'dem Gegner');
+        let text = pool[Math.floor(Math.random() * pool.length)];
         if (isHomeDerby) text = (matchResult === 'win' ? '🔥 DERBYSIEG! ' : (matchResult === 'loss' ? '😔 Derby-Pleite! ' : '⚖️ Derby-Remis! ')) + text;
         addInboxMessage('vertrag', '📰 Pressestimme', text, 'screen-dashboard');
     }
@@ -2556,7 +2553,7 @@
                             playedOurMatch = true;
                             won = f.homeGoals > f.awayGoals;
                             drawn = f.homeGoals === f.awayGoals;
-                            isHomeDerby = aTeam.name === hTeam.rivalName;
+                            isHomeDerby = isDerbyOpponent(aTeam.name);
                             opponentNameThisMatch = aTeam.name;
                             ourGoalsThisMatch = f.homeGoals; oppGoalsThisMatch = f.awayGoals;
                         } else if (aTeam.name === game.clubName) {

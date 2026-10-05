@@ -1,5 +1,5 @@
 /* eslint-disable no-undef */
-// Derby-Woche (Phase 21.1): ab 3 Spieltagen vor dem Ligaspiel gegen den Erzrivalen
+// Derby-Woche (Phase 21.1): ab 3 Spieltagen vor einem Derby (seit 24.2 nach Ort, isDerbyOpponent)
 // erscheint die Karte #dash-derby-box. Vorbereitungen (je einmal pro Derby, game.derbyWeek):
 // - Stimmung: Heim-Choreo bzw. Sonderzug auswärts - +1,5 Stärke, die Choreo erhöht aber
 //   das Ausschreitungsrisiko (Pyro), der Sonderzug bindet die Fans (+2 nach dem Spiel).
@@ -23,9 +23,10 @@ const DERBY_COSTS = [
     { stimmung: 3000, sicherheit: 2500 }
 ];
 
+// Seit Phase 24.2 nach Ort und echten Traditionsduellen (isDerbyMatch in js/club-geo.js).
 function isDerbyOpponent(name) {
     if (!name) return false;
-    return name === game.permanentRivalName || name === (typeof getOurRivalName === 'function' ? getOurRivalName() : null);
+    return typeof isDerbyMatch === 'function' && isDerbyMatch(game.clubName, name);
 }
 
 function getDerbyCosts() { return DERBY_COSTS[game.leagueLevel] || DERBY_COSTS[DERBY_COSTS.length - 1]; }
@@ -192,12 +193,15 @@ function renderDerbyWeekCard() {
     if (!d) { box.innerHTML = ''; return; }
     const w = getDerbyWeekState();
     const k = getDerbyCosts();
-    const bilanz = typeof rivalryRecord !== 'undefined' ? `${rivalryRecord.wins}S ${rivalryRecord.draws}U ${rivalryRecord.losses}N` : '-';
+    // Bilanz gegen genau diesen Derbygegner (aus der Derby-Chronik).
+    const duelle = (game.derbyHistory || []).filter(h => h.opp === d.opp);
+    const bilanz = duelle.length ? `${duelle.filter(h => h.result === 'S').length}S ${duelle.filter(h => h.result === 'U').length}U ${duelle.filter(h => h.result === 'N').length}N` : 'erstes Derby';
+    const art = typeof getDerbyLabel === 'function' ? getDerbyLabel(game.clubName, d.opp) : 'Derby';
     const wann = d.inDays === 0 ? 'heute' : `in ${d.inDays} Spieltag${d.inDays > 1 ? 'en' : ''}`;
     const knopf = (fn, text, fertig) => `<button onclick="${fn}" class="${fertig ? 'btn-action' : 'btn-secondary'}" style="font-size:9px; padding:5px 3px;">${fertig ? '✔ ' : ''}${text}</button>`;
     const stimmungText = d.home ? `🔥 Choreo (${formatVal(k.stimmung)})` : `🚂 Sonderzug (${formatVal(k.stimmung)})`;
     const praemie = w.praemie ? `💰 Prämie ${formatVal(w.praemie)}` : `💰 Siegprämie (~${formatVal(getDerbyPremiumAmount())})`;
-    box.innerHTML = `<div class="box" style="font-size:10px; border-left-color:var(--danger);">🔥 <strong>Derby-Woche:</strong> ${wann} ${d.home ? 'zu Hause' : 'auswärts'} gegen <strong>${d.opp}</strong> · Bilanz ${bilanz}
+    box.innerHTML = `<div class="box" style="font-size:10px; border-left-color:var(--danger);">🔥 <strong>Derby-Woche (${art}):</strong> ${wann} ${d.home ? 'zu Hause' : 'auswärts'} gegen <strong>${d.opp}</strong> · Bilanz ${bilanz}
         <div style="color:var(--text-muted); margin-top:2px;">Ein Derby zählt für die Fans doppelt (Sieg +2, Niederlage -2). Die Vorbereitung wirkt nur am Derby-Spieltag.</div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:4px;">
             ${knopf('chooseDerbyMood()', stimmungText, w.stimmung)}

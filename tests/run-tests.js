@@ -919,10 +919,19 @@ async function testDerbyWeek(browser) {
             closeTutorial();
             const out = {};
             out.keinTestDerby = game.forceDerbyMatchdays === undefined && !isDerbyOpponent('Irgendein Verein');
-            // Derby-Spieltag im echten Spielplan suchen (nicht vor Spieltag 3)
+            // Derby-Spieltag im echten Spielplan suchen (nicht vor Spieltag 3). Derbys entstehen nach
+            // Ort - steht zufällig kein Leipziger Verein in der Liga, wird ein Traditionsduell gesetzt.
             const liga = leaguesData[game.leagueLevel];
+            if (!liga.some(t => isDerbyOpponent(t.name))) TRADITION_DERBIES.push([game.clubName, liga.find(t => t.name !== game.clubName).name, 'Testderby']);
             let derbyMd = null, heim = null, gegner = null;
+            // Mehrere Stadtrivalen: ein Derby wählen, vor dem in den zwei Spieltagen davor kein
+            // anderes Derby liegt (sonst gilt die Derby-Woche zuerst dem früheren).
+            const derbyAm = md => fixturesData[game.leagueLevel][md - 1].some(f => {
+                const h = liga[f.home].name, a = liga[f.away].name;
+                return (h === game.clubName && isDerbyOpponent(a)) || (a === game.clubName && isDerbyOpponent(h));
+            });
             for (let md = 3; md <= 34 && !derbyMd; md++) {
+                if (derbyAm(md - 1) || derbyAm(md - 2)) continue;
                 for (const f of fixturesData[game.leagueLevel][md - 1]) {
                     const h = liga[f.home].name, a = liga[f.away].name;
                     if (h === game.clubName && isDerbyOpponent(a)) { derbyMd = md; heim = true; gegner = a; }
@@ -973,7 +982,9 @@ async function testDerbyWeek(browser) {
             finishMatch();
             const h0 = (game.derbyHistory || [])[0];
             out.chronik = !!h0 && h0.opp === gegner && h0.matchday === derbyMd && h0.prep.includes('Kampfansage') && h0.prep.includes(heim ? 'Choreo' : 'Sonderzug');
-            out.abgeschlossen = game.derbyWeek.resolved === true && getDerbyBonus(gegner) === 0;
+            // Mit mehreren Stadtrivalen kann direkt die nächste Derby-Woche beginnen - entscheidend
+            // ist, dass DIESES Derby abgeschlossen ist und keinen Bonus mehr gibt.
+            out.abgeschlossen = (game.derbyWeek.opp !== gegner || game.derbyWeek.resolved === true) && getDerbyBonus(gegner) === 0;
             // Folgen direkt: Sieg zahlt die Prämie und hebt Medien, Niederlage kostet Moral
             const test = (tore, gegentore) => {
                 game.derbyWeek = { season: game.season, matchday: game.matchday, opp: gegner, home: true, stimmung: false, sicherheit: false, praemie: 50000, presse: 'kampf', resolved: false };
@@ -1001,120 +1012,6 @@ async function testDerbyWeek(browser) {
         assert(r.ticker && r.chronik && r.abgeschlossen, 'Livespiel zeigt die Derbystimmung, das Derby landet in der Chronik');
         assert(r.siegFolgen && r.niederlageFolgen, 'Sieg zahlt die Prämie und hebt Fans/Medien, Niederlage nach Kampfansage kostet Moral, Fans und Vorstand');
         assert(r.historie, 'Historie > Rivalen zeigt die Derby-Chronik');
-    }
-    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
-    await page.close();
-}
-
-async function testNemesisCoach(browser) {
-    console.log('\n[21.2] Erzfeind-Trainer: Person mit Bilanz, Revanche, Persönlichkeit, Abwerben, Jobwechsel');
-    const { page, consoleErrors } = await freshPage(browser);
-    page.on('dialog', d => d.accept());
-    const r = await page.evaluate(() => {
-        try {
-            closeTutorial();
-            const out = {};
-            const n = ensureNemesis();
-            const nt = findNemesisTeam();
-            out.start = !!nt && nt.team.name === game.permanentRivalName && !!n.trait && nt.level === game.leagueLevel;
-            const team = nt.team;
-            // Livespiel gegen ihn: Vorbericht, Revanche im Ticker, Bilanz über den echten Spielweg
-            const liga = leaguesData[game.leagueLevel];
-            let md = null, heim = null;
-            for (let m = 2; m <= 34 && !md; m++) for (const f of fixturesData[game.leagueLevel][m - 1]) {
-                const h = liga[f.home].name, a = liga[f.away].name;
-                if (h === game.clubName && a === team.name) { md = m; heim = true; }
-                if (a === game.clubName && h === team.name) { md = m; heim = false; }
-            }
-            game.matchday = md; game.sackPending = false;
-            n.revenge = true; n.trait = 'Provokateur';
-            // Der Test springt ohne gespielte Partien zum Duell: alle Teams punktgleich, das
-            // Trainerkarussell (Spieltag 8/12/16...) feuerte den Erzfeind dann zu ~15 %, sobald
-            // sein Verein beim Gleichstand unten einsortiert war - danach fehlte das Abwerbe-
-            // Angebot (CI-Fehler "reading 'id'"). Für dieses eine Spiel ruht das Karussell.
-            const karussell = tickCoachCarousel;
-            tickCoachCarousel = () => {};
-            startMatchdayFlow();
-            // Fällt das Duell auf einen Pokalspieltag (z. B. 6), läuft erst das Pokalspiel -
-            // danach startet finishMatch() den Ligateil desselben Spieltags.
-            if (pendingMatchInfo && pendingMatchInfo.cupTie) {
-                const pokal = [...document.querySelectorAll('#screen-prematch-press button')].find(b => b.innerText.includes('Direkt zum Spiel'));
-                if (pokal) pokal.click();
-                simulateRestOfMatch(); finishMatch();
-            }
-            out.vorbericht = document.getElementById('prematch-nemesis-box').innerHTML.includes('Duell mit dem Erzfeind') && document.getElementById('prematch-nemesis-box').innerHTML.includes('Revanche');
-            const direkt = [...document.querySelectorAll('#screen-prematch-press button')].find(b => b.innerText.includes('Direkt zum Spiel'));
-            if (direkt) direkt.click();
-            out.ticker = document.getElementById('ticker-log').innerHTML.includes('Duell mit ' + n.name);
-            const vorher = n.meetings.length;
-            simulateRestOfMatch(); finishMatch();
-            tickCoachCarousel = karussell;
-            out.bilanzEcht = n.meetings.length === vorher + 1 && n.meetings[0].club === team.name;
-            // Revanche-Mechanik direkt
-            n.record = { w: 0, d: 0, l: 0 }; n.revenge = false; n.trait = 'Provokateur';
-            const ohne = getNemesisModifier(team, heim);
-            squad.forEach(p => { p.morale = 70; });
-            recordNemesisResult(team.name, 0, 2);
-            out.provokateur = squad[0].morale === 67;
-            out.revancheOffen = n.revenge === true && Math.abs(getNemesisModifier(team, heim) - ohne - 1.5) < 0.001;
-            game.fans = 50;
-            recordNemesisResult(team.name, 3, 1);
-            out.revancheSieg = n.revenge === false && game.fans === 52 && n.record.w === 1 && n.record.l === 1;
-            // Persönlichkeiten mit echter Wirkung
-            n.trait = 'Publikumsliebling';
-            out.publikum = getNemesisModifier(team, false) === -1 && getNemesisModifier(team, true) === 0;
-            n.trait = 'Aufsteiger-Talent'; n.since = game.season - 5;
-            out.talent = getNemesisModifier(team, true) === -2;
-            n.trait = 'Alte Schule';
-            const elf = squad.find(p => lineup.includes(p.id)); elf.fitness = 90;
-            recordNemesisResult(team.name, 1, 1);
-            out.alteSchule = elf.fitness === 86;
-            n.trait = 'Taktik-Fuchs';
-            game.recentTacticStyles = ['offensiv', 'offensiv', 'offensiv', 'offensiv', 'offensiv'];
-            game.oppTacticPlan = null;
-            const lesbar = getPredictableArchetype();
-            const plan = getOppTacticPlan(team);
-            out.fuchs = !!lesbar && plan.arch === (getCounterArchetype(lesbar) || plan.base);
-            // Abwerben: unzufriedener Stammspieler, 125 % Marktwert, Ablehnen kostet Moral
-            const zielSpieler = [...squad].sort((a, b) => b.strength - a.strength)[0];
-            squad.forEach(p => { p.morale = 80; }); zielSpieler.morale = 40;
-            incomingOffers.length = 0; n.lastPoachSeason = 0; game.matchday = 10;
-            const rnd = Math.random; Math.random = () => 0;
-            tickNemesisPoaching();
-            Math.random = rnd;
-            const angebot = incomingOffers.find(o => o.nemesis);
-            out.abwerben = !!angebot && angebot.playerId === zielSpieler.id && angebot.clubName === team.name && angebot.currentBid >= zielSpieler.marketValue * 1.2;
-            tickNemesisPoaching();
-            out.einmalProSaison = incomingOffers.filter(o => o.nemesis).length === 1;
-            rejectTransferOffer(angebot.id);
-            out.ablehnenMoral = zielSpieler.morale <= 36;
-            triggerNewAITransferOffer(squad[5], { club: team.name, multiplier: 1.25, nemesis: true });
-            game.fans = 60;
-            acceptTransferOffer(incomingOffers.find(o => o.nemesis).id);
-            out.verkaufFans = game.fans === 57;
-            // Entlassen -> taucht in deiner Liga wieder auf
-            onCoachSacked(team, n.name);
-            team.coach = { name: 'Jemand Anderes', since: game.season, sackedThisSeason: game.season };
-            out.arbeitslos = !findNemesisTeam() && n.unemployedSince === game.season;
-            Math.random = () => 0;
-            tickNemesisSeason();
-            Math.random = rnd;
-            const neu = findNemesisTeam();
-            out.rueckkehr = !!neu && neu.level === game.leagueLevel && neu.team.name !== game.clubName;
-            showScreen('screen-history'); setSubTab('hist', 'rivalen');
-            out.historie = document.getElementById('nemesis-box').innerHTML.includes(n.name);
-            return out;
-        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
-    });
-    assert(!r.crash, `Erzfeind-Trainer ohne Absturz (${r.crash || 'ok'})`);
-    if (!r.crash) {
-        assert(r.start, 'Erzfeind ist zu Beginn der Trainer des Erzrivalen');
-        assert(r.vorbericht && r.ticker && r.bilanzEcht, 'Vorbericht mit Spruch und Revanche, Livespiel zeigt das Duell, Bilanz über den echten Spielweg');
-        assert(r.provokateur && r.revancheOffen && r.revancheSieg, 'Niederlage öffnet die Revanche (+1,5), der Revanche-Sieg bringt Fans; Provokateur kostet Moral');
-        assert(r.publikum && r.talent && r.alteSchule && r.fuchs, 'Persönlichkeiten wirken: Heimstärke, wachsendes Talent, harte Gangart, Taktik-Fuchs kontert immer');
-        assert(r.abwerben && r.einmalProSaison && r.ablehnenMoral && r.verkaufFans, 'Abwerben: 125 %-Angebot für Unzufriedene, einmal pro Saison, Ablehnen kostet Moral, Verkauf an ihn ärgert die Fans');
-        assert(r.arbeitslos && r.rueckkehr, 'Entlassen ist er arbeitslos - zum Saisonwechsel übernimmt er einen Verein in deiner Liga');
-        assert(r.historie, 'Historie > Rivalen zeigt den Erzfeind mit Bilanz');
     }
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
     await page.close();
@@ -1278,8 +1175,6 @@ async function testPregameTalk(browser) {
             resolvePregameTalk();
             out.nurEinmal = squad.every(p => p.morale === 56);
             simulateRestOfMatch(); finishMatch();
-            renderNemesisPrematch(null);
-            out.nemesisLeer = document.getElementById('prematch-nemesis-box').innerHTML === '';
             return out;
         } catch (e) { return { crash: e.message + ' ' + e.stack }; }
     });
@@ -1291,7 +1186,6 @@ async function testPregameTalk(browser) {
         assert(r.abgenutzt && r.abgenutztAnzeige, 'Dieselbe Rede dreimal hintereinander wirkt nur halb und ist markiert');
         assert(r.einmal && r.ticker, 'Eine Ansprache pro Spiel, Wirkung steht im Livespiel-Ticker');
         assert(r.druckFolge && r.nurEinmal, 'Druck-Rede: Niederlage kostet einmalig Moral');
-        assert(r.nemesisLeer, 'Erzfeind-Kasten wird ohne Gegner (Pokal) geleert');
     }
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
     await page.close();
@@ -2028,8 +1922,7 @@ async function testHomeRegion(browser) {
             const echt = e => e.split('|')[0];
             out.regionalliga = leaguesData[3].filter(t => REGIONALLIGA_CLUBS.nord.map(echt).includes(t.name)).length >= 17;
             out.oberliga = leaguesData[4].filter(t => OBERLIGEN.hh.clubs.map(echt).includes(t.name)).length >= 15;
-            // Der Dauerrivale wird bis Phase 24.3 noch in die eigene Liga verschoben (kommt aus der Region).
-            out.landesliga = leaguesData[5].filter(t => t.name !== game.permanentRivalName).every(t => getClubCity(t.name) === 'Hamburg');
+            out.landesliga = leaguesData[5].every(t => getClubCity(t.name) === 'Hamburg');
             out.keinOsten = !leaguesData.slice(3).flat().some(t => ['Leipzig', 'Dresden', 'Jena', 'Chemnitz'].includes(getClubCity(t.name)));
             out.landespokal = (landesPokal.roundsHistory.length ? true : true) && leaguesData[5].length === 18;
             return out;
@@ -2043,6 +1936,67 @@ async function testHomeRegion(browser) {
         assert(r.ligen, 'Regionalliga Nord, Oberliga Hamburg, Landesliga Hamburg, Hamburger Landespokal');
         assert(r.regionalliga && r.oberliga, 'Regional- und Oberliga mit echten Vereinen der Region');
         assert(r.landesliga && r.keinOsten, 'Landesliga nur mit Hamburger Vereinen, keine ostdeutschen Vereine in den unteren Ligen');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
+async function testLocalDerbies(browser) {
+    console.log('\n[24.2] Derbys nach Ort und echte Traditionsduelle - kein Dauerrivale, kein Erzfeind mehr');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            // Traditionsduelle und Stadtderbys, aber kein Derby quer durchs Land
+            out.tradition = isDerbyMatch('Schalke 05', 'Borussia Dortmunt') && getDerbyLabel('Schalke 05', 'Borussia Dortmunt') === 'Revierderby'
+                && isDerbyMatch('Hamburger SP', 'Werder Breman') && isDerbyMatch('Carl Zeiss Jenna', 'FC Rot-Weiss Erfurtt');
+            out.stadt = isDerbyMatch('Lokomotiv Leipzich', 'BSG Chemie Leipzich') && isDerbyMatch('Union Berlien', 'Hertha BSK');
+            out.keinDerby = !isDerbyMatch('Carl Zeiss Jenna', 'FSV Zwikau') && !isDerbyMatch('Bayern Munchen', 'Hamburger SP');
+            // Großstadt: nur die drei stärksten Vereine desselben Orts zählen
+            const hh = ['SC Victoria Hamborg', 'SC Concordia Hamborg', 'USC Palomma', 'Niendorfer TSVV', 'Bramfelder SVV', 'TSV Saseel'].map((name, i) => ({ name, strength: 60 - i }));
+            const kreis = getLocalDerbyCircle('SC Victoria Hamborg', hh);
+            out.deckel = kreis.length === 3 && kreis[0] === 'SC Concordia Hamborg' && !kreis.includes('TSV Saseel');
+            // Stadtteil-Vereine: der Stadtteil ist der Ort, die Stadt bleibt Berlin
+            const spandau = buildTownClubs('be', 0).map(e => e.split('|')[0]).find(n => n.endsWith(' Spandau'));
+            const koepenick = buildTownClubs('be', 0).map(e => e.split('|')[0]).find(n => n.endsWith(' Köpenick'));
+            out.stadtteil = getClubLocality(spandau) === 'Spandau' && getClubCity(spandau) === 'Berlin' && !isDerbyMatch(spandau, koepenick);
+            // Kein Dauerrivale, keine ausgewürfelten Paare, kein Erzfeind
+            out.aufgeraeumt = !game.permanentRivalName && leaguesData.flat().every(t => t.rivalName === undefined)
+                && typeof ensureNemesis === 'undefined' && !document.getElementById('nemesis-box') && !document.getElementById('prematch-nemesis-box');
+            // Eigene Derbys: Heimat Leipzig - Leipziger Vereine sind Derbygegner, die Bilanz zählt nur Derbys
+            const liga = leaguesData[game.leagueLevel];
+            const derby = liga.find(t => t.name !== game.clubName && getClubCity(t.name) === 'Leipzig' && isDerbyOpponent(t.name));
+            const normal = liga.find(t => t.name !== game.clubName && getClubCity(t.name) !== 'Leipzig' && !isDerbyOpponent(t.name));
+            const vorher = rivalryRecord.matches.length;
+            if (normal) recordRivalryResult(normal.name, 2, 0);
+            out.normalZaehltNicht = rivalryRecord.matches.length === vorher;
+            if (derby) {
+                recordRivalryResult(derby.name, 2, 1);
+                out.derbyZaehlt = rivalryRecord.matches.length === vorher + 1 && rivalryRecord.matches.slice(-1)[0].opp === derby.name && inboxMessages.slice(0, 3).some(m => m.title.includes('Derbysieg'));
+            } else out.derbyZaehlt = true;
+            // Historie und Derby-Testspiel
+            showScreen('screen-history'); setSubTab('hist', 'rivalen');
+            out.historie = document.getElementById('rivalry-history-book').innerHTML.includes('Derby-Bilanz gesamt');
+            const rivalen = getOwnDerbyRivals();
+            const geld = game.money;
+            scheduleDerbyFriendly();
+            out.testspiel = rivalen.length ? game.money > geld : game.money === geld;
+            // Alte Spielstände: Dauerrivale, Erzfeind und Rivalen-Paare werden entfernt
+            game.permanentRivalName = 'Alter Rivale'; game.nemesis = { name: 'X' }; leaguesData[0][0].rivalName = 'Y';
+            cleanupRemovedModuleState();
+            out.altAufgeraeumt = !game.permanentRivalName && !game.nemesis && leaguesData[0][0].rivalName === undefined;
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Derbys nach Ort ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.tradition && r.stadt && r.keinDerby, 'Derby = gleiche Stadt oder echtes Traditionsduell, nicht quer durchs Land');
+        assert(r.deckel && r.stadtteil, 'Großstädte: nur die drei stärksten Stadtrivalen, Stadtteil-Vereine nur untereinander');
+        assert(r.aufgeraeumt && r.altAufgeraeumt, 'Kein Dauerrivale, keine ausgewürfelten Paare, kein Erzfeind - auch in alten Spielständen');
+        assert(r.normalZaehltNicht && r.derbyZaehlt, 'Die Derby-Bilanz zählt nur echte Derbys, mit Gegnernamen');
+        assert(r.historie && r.testspiel, 'Historie zeigt die Derbygegner, Testspiel gegen den Stadtrivalen');
     }
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
     await page.close();
@@ -2930,7 +2884,7 @@ async function testClubRenameAndSwitch(browser) {
         out.renameUpdatedLeagueRow = leaguesData[game.leagueLevel].some(t => t.name === 'FC Testverifikation');
         out.secondTeamFollowedRename = game.secondTeam.name === 'FC Testverifikation II';
 
-        let target = leaguesData[game.leagueLevel].find(t => t.name !== game.clubName && t.name !== game.secondTeam.name && t.name !== game.permanentRivalName);
+        let target = leaguesData[game.leagueLevel].find(t => t.name !== game.clubName && t.name !== game.secondTeam.name);
         let switchOk = switchToClub(target.name);
         out.switchWorked = switchOk && game.clubName === target.name;
         out.squadRegenerated = squad.length === 18;
@@ -3114,45 +3068,6 @@ async function testLeagueStats(browser) {
         assert(!r.altFeld, 'Altes Feld seasonPointsHistory ist entfernt');
     }
     assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Liga-Statistik-Test');
-    await page.close();
-}
-
-async function testRivalManagerPersonality(browser) {
-    console.log('\n[12] Trainerpersönlichkeit des permanenten Rivalen');
-    const { page, consoleErrors } = await freshPage(browser);
-    page.on('dialog', d => d.accept());
-
-    const r = await page.evaluate(() => {
-        showScreen('screen-history');
-        let html = document.getElementById('rivalry-history-book').innerHTML;
-        let hasManagerFromStart = !!game.rivalManagerName && !!game.rivalManagerTrait;
-        let htmlShowsManagerName = html.includes(game.rivalManagerName);
-
-        // Rivalenwechsel erzwingen (einseitige Bilanz + mehrere Versuche wegen 25%-Zufallschance)
-        rivalryRecord = { wins: 10, draws: 0, losses: 0, goalsFor: 30, goalsAgainst: 0, biggestWin: null, matches: [], shootoutsVsRival: 0 };
-        let oldManager = game.rivalManagerName;
-        let switched = false;
-        for (let i = 0; i < 50 && !switched; i++) {
-            checkRivalChangeEvent();
-            if (game.rivalManagerName !== oldManager) switched = true;
-        }
-        let archived = game.rivalHistoryArchive[game.rivalHistoryArchive.length - 1];
-
-        return {
-            hasManagerFromStart,
-            htmlShowsManagerName,
-            switched,
-            newManagerDiffers: game.rivalManagerName !== oldManager,
-            archiveHasManagerInfo: !!(archived && archived.managerName)
-        };
-    });
-
-    assert(r.hasManagerFromStart, 'Permanenter Rivale bekommt von Anfang an einen Trainernamen + eine Persönlichkeit');
-    assert(r.htmlShowsManagerName, 'Rivalen-Geschichtsbuch zeigt den Trainernamen an');
-    assert(r.switched, 'Rivalenwechsel-Mechanik lässt sich (bei einseitiger Bilanz) auslösen');
-    assert(r.newManagerDiffers, 'Neuer Rivale bekommt einen neuen Trainer zugewiesen');
-    assert(r.archiveHasManagerInfo, 'Alter Trainer wird korrekt ins Rivalen-Archiv übernommen');
-    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei der Trainerpersönlichkeit');
     await page.close();
 }
 
@@ -6712,7 +6627,7 @@ async function testPhase13Teil4(browser) {
 
         // Trainerkarussell: Tabellenletzter mit Niederlagenserie verliert seinen Trainer
         game.matchday = 12;
-        const opfer = leaguesData[game.leagueLevel].find(t => t.name !== game.clubName && t.name !== game.permanentRivalName);
+        const opfer = leaguesData[game.leagueLevel].find(t => t.name !== game.clubName);
         leaguesData[game.leagueLevel].forEach(t => { t.points = 30; t.recentForm = ['W', 'W', 'D', 'W', 'W']; });
         opfer.points = 0; opfer.recentForm = ['L', 'L', 'L', 'L', 'L'];
         const alterTrainer = getTeamCoach(opfer).name, alterStil = opfer.playstyle, basis = opfer.baseStrength;
@@ -7756,7 +7671,6 @@ async function main() {
         testSaveSafety,
         testOneHandControls,
         testDerbyWeek,
-        testNemesisCoach,
         testCoTrainerLive,
         testPregameTalk,
         testMatchPrep,
@@ -7769,6 +7683,7 @@ async function main() {
         testWinterTalk,
         testPlayerProfile,
         testHomeRegion,
+        testLocalDerbies,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,
@@ -7785,7 +7700,6 @@ async function main() {
         testFreeTextInputSanitization,
         testSaveExportImportAndErrorLog,
         testLeagueStats,
-        testRivalManagerPersonality,
         testAchievementsSystem,
         testConfigurableNewGameStart,
         testAccessibilityContrastAndFontSizes,

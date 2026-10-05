@@ -2,13 +2,10 @@
 // ==========================================
 // LIGA-SYSTEM: INITIALISIERUNG & SPIELPLAN
 // ==========================================
+    // Derbys ergeben sich seit Phase 24.2 aus dem Ort (isDerbyMatch() in js/club-geo.js) -
+    // die früher ausgewürfelten Rivalen-Paare machten gefühlt jeden zum Rivalen. Hier entstehen
+    // nur noch die Fanfreundschaften (9 Paare je Liga).
     function assignRivalriesAndFriendships(teams) {
-        // 18 Teams -> 9 Rivalen-Paare (Index 0-1, 2-3, ...) und 9 Freundschafts-Paare,
-        // versetzt gebildet (Index 1-2, 3-4, ...), damit sich beide nie überschneiden.
-        for (let i = 0; i < teams.length - 1; i += 2) {
-            teams[i].rivalName = teams[i + 1].name;
-            teams[i + 1].rivalName = teams[i].name;
-        }
         for (let i = 1; i < teams.length; i += 2) {
             let j = (i + 1) % teams.length;
             teams[i].friendName = teams[j].name;
@@ -18,10 +15,6 @@
 
     function getOurLeagueTeam() {
         return leaguesData[game.leagueLevel]?.find(t => t.name === game.clubName);
-    }
-
-    function getOurRivalName() {
-        return getOurLeagueTeam()?.rivalName || null;
     }
 
     // Gegner-Identität: jedes Team bekommt einen eigenen Spielstil, der sein
@@ -50,20 +43,14 @@
                     name: name, played: 0, won: 0, drawn: 0, lost: 0,
                     goalsFor: 0, goalsAgainst: 0, points: 0,
                     strength: baseStr, baseStrength: baseStr, recentForm: [],
-                    rivalName: null, friendName: null,
+                    friendName: null,
                     playstyle: AI_PLAYSTYLES[Math.floor(Math.random() * AI_PLAYSTYLES.length)].id
                 });
             }
             assignRivalriesAndFriendships(teams);
             leaguesData.push(teams);
         }
-        // Permanenter Rivale: wird EINMALIG beim ersten Aufruf festgelegt und bleibt über alle
-        // Saisons hinweg derselbe Verein (anders als die zufällig neu gewürfelten normalen
-        // Rivalen-Paare oben) - dafür wird er jede Saison explizit in unsere aktuelle Liga
-        // "gezwungen", damit die Rivalitäts-Bilanz (siehe rivalryRecord) überhaupt wachsen kann.
-        if (!game.permanentRivalName) { game.permanentRivalName = generateTeamName(); assignRivalManagerPersonality(); }
         insertSecondTeamIntoLeagues();
-        insertPermanentRivalIntoLeagues();
         generateFixtures();
         initDynamicCup();
         if (typeof initLandesPokal === 'function') initLandesPokal();
@@ -148,7 +135,6 @@
         // sonst würde man den vollzogenen Auf-/Abstieg der Konkurrenz nie erfahren.
         let arrivingInOurLevel = [...promotedInto[game.leagueLevel], ...relegatedInto[game.leagueLevel]]
             .filter(t => t.name !== game.clubName && t.name !== game.secondTeam.name);
-        let rivalOutcome = game.permanentRivalName ? [...outcomeOf.entries()].find(([t]) => t.name === game.permanentRivalName) : null;
 
         leaguesData.forEach((table, l) => {
             table.forEach(t => {
@@ -157,14 +143,13 @@
                 t.played = 0; t.won = 0; t.drawn = 0; t.lost = 0;
                 t.goalsFor = 0; t.goalsAgainst = 0; t.points = 0; t.recentForm = [];
                 if (typeof resetLeagueTeamStats === 'function') resetLeagueTeamStats(t);
-                t.rivalName = null; t.friendName = null;
+                t.friendName = null;
             });
             assignRivalriesAndFriendships(table);
         });
 
         insertOurTeamIntoLeagues();
         insertSecondTeamIntoLeagues();
-        insertPermanentRivalIntoLeagues();
         generateFixtures();
         initDynamicCup();
         if (typeof initLandesPokal === 'function') initLandesPokal();
@@ -173,11 +158,6 @@
         if (arrivingInOurLevel.length > 0) {
             let names = arrivingInOurLevel.map(t => t.name).join(', ');
             addInboxMessage('vertrag', `📰 Neue Gesichter in der ${leagueNames[game.leagueLevel]}`, `Diese Saison neu in deiner Liga: ${names}.`, 'screen-league');
-        }
-        if (rivalOutcome) {
-            let [, info] = rivalOutcome;
-            if (info.outcome === 'promoted') addInboxMessage('vertrag', `⚔️ ${game.permanentRivalName} steigt auf!`, `Dein Rivale ${game.permanentRivalName} wurde befördert und bekommt dadurch spürbar mehr Substanz.`, 'screen-league');
-            else if (info.outcome === 'relegated') addInboxMessage('vertrag', `⚔️ ${game.permanentRivalName} steigt ab!`, `Dein Rivale ${game.permanentRivalName} ist abgestiegen und dürfte dadurch vorerst schwächer werden.`, 'screen-league');
         }
     }
 
@@ -223,7 +203,7 @@
         }
         if (oldLevel === -1 || oldLevel === game.leagueLevel) return;
         let targetTable = leaguesData[game.leagueLevel];
-        let candidates = targetTable.filter(t => t.name !== game.secondTeam.name && t.name !== game.permanentRivalName);
+        let candidates = targetTable.filter(t => t.name !== game.secondTeam.name);
         if (candidates.length === 0) return;
         let weakest = candidates.reduce((min, t) => t.strength < min.strength ? t : min, candidates[0]);
         let targetIdx = targetTable.indexOf(weakest);
@@ -232,92 +212,27 @@
         targetTable.splice(targetIdx, 1, ourTeam);
     }
 
-    function insertPermanentRivalIntoLeagues() {
-        if (!game.permanentRivalName) return;
-        let slot = relocateNamedTeamToLevel(game.permanentRivalName, game.leagueLevel, [game.clubName, game.secondTeam.name]);
-        if (!slot) return;
-        let ourTeam = leaguesData[game.leagueLevel].find(t => t.name === game.clubName);
-        if (ourTeam) { ourTeam.rivalName = game.permanentRivalName; slot.rivalName = game.clubName; }
-    }
-
-    // ==========================================
-    // TRAINERPERSÖNLICHKEIT DES PERMANENTEN RIVALEN
-    // ==========================================
-    // Der permanente Rivale war bisher nur ein Vereinsname ohne eigenes Gesicht. Ein Name +
-    // eine feste Persönlichkeit für seinen Trainer machen die Rivalität greifbarer - taucht
-    // im Rivalen-Geschichtsbuch und (beim Rivalenwechsel) im Rivalen-Archiv auf.
-    const RIVAL_MANAGER_PERSONALITIES = [
-        { trait: 'Provokateur', quote: n => `${n} kennt vor dem Anpfiff nur eine Taktik: verbal provozieren.` },
-        { trait: 'Taktik-Fuchs', quote: n => `${n} gilt als taktischer Fuchs - jedes Duell gegen ihn ist ein Schachspiel.` },
-        { trait: 'Eiskalter Analytiker', quote: n => `${n} bleibt auch bei Rückständen eiskalt und analysiert lieber, als zu emotionalisieren.` },
-        { trait: 'Publikumsliebling', quote: n => `${n} ist bei den eigenen Fans hoch angesehen - ein echtes Idol auf der Trainerbank.` },
-        { trait: 'Alte Schule', quote: n => `${n} setzt auf Kampf und Leidenschaft statt auf moderne Spielsysteme.` },
-        { trait: 'Aufsteiger-Talent', quote: n => `${n} gilt als kommendes großes Trainertalent der Liga.` }
-    ];
-    function assignRivalManagerPersonality() {
-        game.rivalManagerName = getRandomName();
-        game.rivalManagerTrait = RIVAL_MANAGER_PERSONALITIES[Math.floor(Math.random() * RIVAL_MANAGER_PERSONALITIES.length)].trait;
-    }
-    function getRivalManagerQuote() {
-        let p = RIVAL_MANAGER_PERSONALITIES.find(x => x.trait === game.rivalManagerTrait);
-        return (p && game.rivalManagerName) ? p.quote(game.rivalManagerName) : null;
-    }
-
-    // ==========================================
-    // RIVALITÄTEN: ERZFEIND-WECHSEL-MECHANIK
-    // ==========================================
-    // Wird bei jedem Saisonabschluss geprüft: wird eine Rivalität über viele Spiele hinweg
-    // extrem einseitig (fast immer Sieg oder fast immer Niederlage), verliert sie ihre
-    // emotionale Spannung - ein neuer Erzfeind tritt auf den Plan, die alte Rivalität
-    // wandert als abgeschlossenes Kapitel ins Rivalen-Archiv statt einfach zu verschwinden.
-    function checkRivalChangeEvent() {
-        let totalMatches = rivalryRecord.wins + rivalryRecord.draws + rivalryRecord.losses;
-        if (totalMatches < 8) return; // zu früh für eine fundierte Einschätzung
-        let winRate = rivalryRecord.wins / totalMatches;
-        let lossRate = rivalryRecord.losses / totalMatches;
-        if (winRate < 0.78 && lossRate < 0.78) return; // Rivalität ist noch ausgeglichen genug
-        if (Math.random() > 0.25) return; // nicht sofort bei jeder Gelegenheit, sondern schleichend
-
-        let oldRivalName = game.permanentRivalName;
-        game.rivalHistoryArchive.push({
-            name: oldRivalName, endedSeason: game.season,
-            record: { ...rivalryRecord },
-            managerName: game.rivalManagerName, managerTrait: game.rivalManagerTrait
-        });
-        if (game.rivalHistoryArchive.length > 10) game.rivalHistoryArchive.shift();
-
-        let newRivalName = generateTeamName();
-        game.permanentRivalName = newRivalName;
-        assignRivalManagerPersonality();
-        rivalryRecord = { wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0, biggestWin: null, matches: [], shootoutsVsRival: 0 };
-        insertPermanentRivalIntoLeagues();
-
-        let reason = winRate >= 0.78 ? `du hast ${oldRivalName} zu deutlich dominiert` : `${oldRivalName} hat dich zu deutlich dominiert`;
-        addInboxMessage('vertrag', `⚔️ Neuer Erzfeind: ${newRivalName}!`, `Die Rivalität mit ${oldRivalName} hat ihre Spannung verloren (${reason}) - ${newRivalName} übernimmt die Rolle als neuer Angstgegner. Die alte Rivalität bleibt für immer im Rivalen-Archiv erhalten.`, 'screen-history');
-        showToast(`⚔️ Neuer Erzfeind: ${newRivalName}!`, 'success');
-    }
-
-    // Zentrale, einmalige Stelle für die Rivalitäts-Bilanz - bewusst so gebaut, dass sie von
-    // ALLEN DREI Spieltag-Verarbeitungswegen (Live-Spiel, Saison durchsimulieren, Admin
-    // vorspulen) aus aufgerufen werden kann, damit die Statistik unabhängig vom gewählten
-    // Modus konsistent mitwächst.
+    // Derby-Bilanz (Phase 24.2): ALLE Derbys (gleicher Ort oder Traditionsduell, siehe
+    // isDerbyMatch() in js/club-geo.js) zählen in rivalryRecord - aufgerufen von allen drei
+    // Spieltag-Wegen (Live-Spiel, Saison durchsimulieren, Admin vorspulen).
     function recordRivalryResult(opponentName, ourGoals, oppGoals) {
-        // Erzfeind-Trainer (js/nemesis.js): eine Person, kann jeden Verein trainieren.
-        if (typeof recordNemesisResult === 'function') recordNemesisResult(opponentName, ourGoals, oppGoals);
-        if (!game.permanentRivalName || opponentName !== game.permanentRivalName) return;
-        rivalryRecord.matches.push({ season: game.season, matchday: game.matchday, ourGoals, oppGoals });        rivalryRecord.goalsFor += ourGoals;
+        if (!isDerbyOpponent(opponentName)) return;
+        rivalryRecord.matches.push({ season: game.season, matchday: game.matchday, opp: opponentName, ourGoals, oppGoals });
+        if (rivalryRecord.matches.length > 60) rivalryRecord.matches.shift();
+        rivalryRecord.goalsFor += ourGoals;
         rivalryRecord.goalsAgainst += oppGoals;
         let margin = ourGoals - oppGoals;
+        let art = typeof getDerbyLabel === 'function' ? getDerbyLabel(game.clubName, opponentName) : 'Derby';
         if (margin > 0) {
             rivalryRecord.wins++;
-            if (!rivalryRecord.biggestWin || margin > rivalryRecord.biggestWin.margin) rivalryRecord.biggestWin = { margin, ourGoals, oppGoals, season: game.season };
-            addInboxMessage('vertrag', `🔥 Derbysieg gegen ${opponentName}!`, `${ourGoals}:${oppGoals} - Gesamtbilanz: ${rivalryRecord.wins}S ${rivalryRecord.draws}U ${rivalryRecord.losses}N`, 'screen-history');
+            if (!rivalryRecord.biggestWin || margin > rivalryRecord.biggestWin.margin) rivalryRecord.biggestWin = { margin, ourGoals, oppGoals, season: game.season, opp: opponentName };
+            addInboxMessage('vertrag', `🔥 Derbysieg gegen ${opponentName}!`, `${art}: ${ourGoals}:${oppGoals} - Derby-Bilanz: ${rivalryRecord.wins}S ${rivalryRecord.draws}U ${rivalryRecord.losses}N`, 'screen-history');
         } else if (margin < 0) {
             rivalryRecord.losses++;
-            addInboxMessage('vertrag', `😔 Derby gegen ${opponentName} verloren`, `${ourGoals}:${oppGoals} - Gesamtbilanz: ${rivalryRecord.wins}S ${rivalryRecord.draws}U ${rivalryRecord.losses}N`, 'screen-history');
+            addInboxMessage('vertrag', `😔 Derby gegen ${opponentName} verloren`, `${art}: ${ourGoals}:${oppGoals} - Derby-Bilanz: ${rivalryRecord.wins}S ${rivalryRecord.draws}U ${rivalryRecord.losses}N`, 'screen-history');
         } else {
             rivalryRecord.draws++;
-            addInboxMessage('vertrag', `⚖️ Unentschieden im Derby gegen ${opponentName}`, `${ourGoals}:${oppGoals} - Gesamtbilanz: ${rivalryRecord.wins}S ${rivalryRecord.draws}U ${rivalryRecord.losses}N`, 'screen-history');
+            addInboxMessage('vertrag', `⚖️ Unentschieden im Derby gegen ${opponentName}`, `${art}: ${ourGoals}:${oppGoals} - Derby-Bilanz: ${rivalryRecord.wins}S ${rivalryRecord.draws}U ${rivalryRecord.losses}N`, 'screen-history');
         }
         // Derby-Woche (js/derby-week.js): Vorbereitung abrechnen, Folgen für Fans/Medien/Moral.
         if (typeof resolveDerbyWeek === 'function') {
@@ -365,7 +280,7 @@
     // kennt, auch dort als handelnde Akteure auf, statt dass jedes Mal ein neuer, nie wieder
     // auftauchender Fantasiename erscheint.
     function pickRandomOpposingClubName(preferHigherOrEqualLevel = false) {
-        let excluded = [game.clubName, game.secondTeam.name, game.permanentRivalName];
+        let excluded = [game.clubName, game.secondTeam.name];
         let pool = leaguesData.flatMap((table, l) => table.filter(t => !excluded.includes(t.name)).map(t => ({ team: t, level: l })));
         if (pool.length === 0) return generateTeamName();
         if (preferHigherOrEqualLevel) {
@@ -444,7 +359,7 @@
             fixs.forEach(f => {
                 let h = rawTeams[f.home]?.name || "Team A", a = rawTeams[f.away]?.name || "Team B";
                 let hTeamObj = rawTeams[f.home], aTeamObj = rawTeams[f.away];
-                let isDerby = hTeamObj && aTeamObj && (hTeamObj.rivalName === a || aTeamObj.rivalName === h);
+                let isDerby = hTeamObj && aTeamObj && typeof isDerbyMatch === 'function' && isDerbyMatch(h, a);
                 let isFriendly = hTeamObj && aTeamObj && (hTeamObj.friendName === a || aTeamObj.friendName === h);
                 let tag = isDerby ? ' <span style="color:var(--danger); font-weight:900;">🔥 DERBY</span>' : (isFriendly ? ' <span style="color:var(--blue);">🤝</span>' : '');
                 // Zuschauerzahl bei bereits gespielten eigenen Heimspielen anzeigen - aus der

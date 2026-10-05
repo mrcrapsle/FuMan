@@ -395,7 +395,7 @@
                         if (hTeam.name === game.clubName) {
                             isHome = true; playedOurMatch = true;
                             won = f.homeGoals > f.awayGoals; drawn = f.homeGoals === f.awayGoals;
-                            isHomeDerby = aTeam.name === hTeam.rivalName;
+                            isHomeDerby = isDerbyOpponent(aTeam.name);
                             opponentNameThisMatch = aTeam.name; ourGoalsThisMatch = f.homeGoals; oppGoalsThisMatch = f.awayGoals;
                         } else if (aTeam.name === game.clubName) {
                             isHome = false; playedOurMatch = true;

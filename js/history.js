@@ -12,36 +12,21 @@
         return { icon: '🏅', color: '#cbd5e1', category: 'Erfolg' };
     }
 
-    // Rivalen-Geschichtsbuch: chronologische Liste aller bisherigen Pflichtspiel-Duelle
-    // gegen den permanenten Rivalen, statt nur der aggregierten Bilanz.
+    // Derbygegner (Phase 24.2): wer aus derselben Stadt oder per Traditionsduell ein Derby ist,
+    // dazu die Bilanz gegen jeden einzelnen (rivalryRecord.matches, alle Derbys).
     function renderRivalryHistoryBook() {
         let box = document.getElementById('rivalry-history-book');
         if (!box) return;
-        // Trainerpersönlichkeit (siehe assignRivalManagerPersonality() in leagues.js):
-        // gibt dem Rivalen ein Gesicht statt nur ein Vereinsname zu sein.
-        let managerQuote = (typeof getRivalManagerQuote === 'function') ? getRivalManagerQuote() : null;
-        let managerLine = (game.permanentRivalName && game.rivalManagerName)
-            ? `<div class="box" style="font-size:10px; border-left-color:var(--purple); margin-bottom:6px;">🎩 Trainer von ${game.permanentRivalName}: <strong>${game.rivalManagerName}</strong> <span style="color:var(--purple);">(${game.rivalManagerTrait})</span>${managerQuote ? `<br><em style="color:#94a3b8;">"${managerQuote}"</em>` : ''}</div>`
-            : '';
-        if (!game.permanentRivalName || rivalryRecord.matches.length === 0) {
-            box.innerHTML = managerLine + '<div class="box" style="font-size:10px; color:#94a3b8;">Noch keine Duelle gegen den permanenten Rivalen ausgetragen.</div>';
-            return;
-        }
-        box.innerHTML = managerLine + rivalryRecord.matches.slice().reverse().map(m => {
-            let outcome = m.ourGoals > m.oppGoals ? { icon: '🟢', label: 'Sieg' } : (m.ourGoals < m.oppGoals ? { icon: '🔴', label: 'Niederlage' } : { icon: '🟡', label: 'Remis' });
-            return `<div class="box" style="display:flex; justify-content:space-between; font-size:10px;"><span>${outcome.icon} Saison ${m.season}, Spieltag ${m.matchday}</span><strong>${m.ourGoals}:${m.oppGoals} (${outcome.label})</strong></div>`;
-        }).join('');
-    }
-
-    // Rivalen-Archiv: frühere, inzwischen abgelöste Erzfeindschaften bleiben als
-    // abgeschlossenes Kapitel sichtbar, statt beim Rivalenwechsel einfach zu verschwinden.
-    function renderRivalHistoryArchive() {
-        let box = document.getElementById('rival-history-archive-box');
-        if (!box) return;
-        let archive = game.rivalHistoryArchive || [];
-        box.innerHTML = archive.length === 0
-            ? '<div style="font-size:9px; color:var(--text-muted);">Noch keine abgelöste Rivalität.</div>'
-            : archive.slice().reverse().map(r => `<div class="box" style="font-size:10px;"><strong>${r.name}</strong> (bis Saison ${r.endedSeason}) - Bilanz: ${r.record.wins}S ${r.record.draws}U ${r.record.losses}N${r.managerName ? `<br><span style="color:#94a3b8; font-size:9px;">🎩 Trainer: ${r.managerName} (${r.managerTrait})</span>` : ''}</div>`).join('');
+        let gegner = typeof getOwnDerbyRivals === 'function' ? getOwnDerbyRivals() : [];
+        let spiele = rivalryRecord.matches || [];
+        let bilanz = name => {
+            let m = spiele.filter(x => x.opp === name);
+            return m.length ? `${m.filter(x => x.ourGoals > x.oppGoals).length}S ${m.filter(x => x.ourGoals === x.oppGoals).length}U ${m.filter(x => x.ourGoals < x.oppGoals).length}N` : 'noch kein Derby';
+        };
+        let kopf = `<div class="box" style="font-size:10px;">🏙️ Heimat: <strong>${typeof getClubCity === 'function' ? getClubCity(game.clubName) : '-'}</strong> · Derby-Bilanz gesamt: ${rivalryRecord.wins}S ${rivalryRecord.draws}U ${rivalryRecord.losses}N</div>`;
+        box.innerHTML = kopf + (gegner.length
+            ? gegner.slice(0, 12).map(g => `<div class="box" style="display:flex; justify-content:space-between; gap:6px; font-size:10px;"><span>${g.name} <span style="color:var(--text-muted);">(${g.label}, ${leagueNames[g.level]})</span></span><strong>${bilanz(g.name)}</strong></div>`).join('')
+            : '<div class="box" style="font-size:10px; color:#94a3b8;">Kein anderer Verein aus deiner Stadt und kein Traditionsrivale in der Pyramide.</div>');
     }
 
     // Generationsübergreifende Legenden-Vergleiche: gruppiert alle ehemaligen Spieler
@@ -117,11 +102,9 @@
         if (typeof renderSeasonForecastHistory === 'function') renderSeasonForecastHistory();
         if (typeof renderCupFinalHistory === 'function') renderCupFinalHistory();
         if (typeof renderDerbyHistory === 'function') renderDerbyHistory();
-        if (typeof renderNemesisBox === 'function') renderNemesisBox();
         let list = document.getElementById('trophies-list');
         list.innerHTML = '';
         renderRivalryHistoryBook();
-        renderRivalHistoryArchive();
         renderLegendGenerationComparison();
         if (game.trophies.length === 0) { list.innerHTML = '<div class="box">Noch keine Pokale im Trophäenschrank.</div>'; }
         else {

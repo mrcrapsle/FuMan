@@ -172,7 +172,7 @@
         }
 
         if (lvl >= 3) {
-            html += `<div class="box" style="margin-top:10px; font-size:10px;"><strong style="color:var(--teal);">🆚 Rivalen-Vitrine:</strong> ${game.permanentRivalName || '-'} · Bilanz: ${rivalryRecord.wins}S ${rivalryRecord.draws}U ${rivalryRecord.losses}N${(rivalryRecord.shootoutsVsRival || 0) >= 2 ? ` · 😰 ${rivalryRecord.shootoutsVsRival}× Nervenkrieg im Elfmeterschießen` : ''}</div>`;
+            html += `<div class="box" style="margin-top:10px; font-size:10px;"><strong style="color:var(--teal);">🆚 Derby-Vitrine:</strong> Bilanz aller Derbys: ${rivalryRecord.wins}S ${rivalryRecord.draws}U ${rivalryRecord.losses}N${(rivalryRecord.shootoutsVsRival || 0) >= 2 ? ` · 😰 ${rivalryRecord.shootoutsVsRival}× Elfmeterschießen im Derby` : ''}</div>`;
         }
         if (lvl >= 5) {
             html += `<div class="box" style="margin-top:6px; font-size:10px;"><strong style="color:var(--gold);">🏅 Karriere-Vitrine:</strong> Level ${managerRPG.level} · ${(game.trophies || []).length} Trophäen · ${game.timesSacked || 0}× entlassen${game.legendStatus ? ' · 👑 Vereinslegende' : ''}</div>`;
