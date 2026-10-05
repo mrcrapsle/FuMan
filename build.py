@@ -11,6 +11,9 @@ HTML_FILE = "index.html"
 CSS_FILE = "css/styles.css"
 OUTPUT_FILE = "dist/anstoss-fm13-standalone.html"
 
+# Module, die per Lazy Loading bei Bedarf geladen werden (kein Eintrag in index.html nötig)
+LAZY_LOADED_MODULES = set()
+
 SCRIPT_TAG_RE = re.compile(r'<script src="(js/[^"?]+\.js)(\?[^"]*)?"></script>')
 
 
@@ -25,7 +28,7 @@ def js_order():
     missing = [p for p in order if not os.path.isfile(p)]
     if missing:
         sys.exit(f"FEHLER: in index.html referenziert, aber nicht vorhanden: {missing}")
-    verwaist = sorted(f"js/{f}" for f in os.listdir("js") if f.endswith(".js") and f"js/{f}" not in order)
+    verwaist = sorted(f"js/{f}" for f in os.listdir("js") if f.endswith(".js") and f"js/{f}" not in order and f"js/{f}" not in LAZY_LOADED_MODULES)
     if verwaist:
         sys.exit(f"FEHLER: Dateien in js/ ohne <script>-Tag in index.html (würden nie geladen): {verwaist}")
     return order

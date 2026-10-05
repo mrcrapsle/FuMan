@@ -287,7 +287,7 @@
         if (screenId === 'screen-underworld') renderUnderworldView();
         if (screenId === 'screen-premium' && typeof renderPremiumShopView === 'function') renderPremiumShopView();
         if (screenId === 'screen-history') renderHistoryView();
-        if (screenId === 'screen-admin') renderAdminView();
+        if (screenId === 'screen-admin' && typeof renderAdminView === 'function') renderAdminView();
         if (screenId === 'screen-lexicon' && typeof showLexiconView === 'function') showLexiconView();
         updateUI();
     }
