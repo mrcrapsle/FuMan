@@ -1732,6 +1732,7 @@
         if (typeof tickLockerFriendships === 'function') tickLockerFriendships();
         if (typeof tickSetPieceDrills === 'function') tickSetPieceDrills();
         if (typeof tickPreContracts === 'function') tickPreContracts();
+        if (typeof tickRumors === 'function') tickRumors();
 
         squad.forEach(p => {
             // Stammspieler erholen sich unter der Woche teilweise (ein Viertel der Bank-Erholung):

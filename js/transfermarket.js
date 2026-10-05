@@ -559,6 +559,7 @@
         if (typeof renderTransferPokerBox === 'function') renderTransferPokerBox();
         if (typeof renderPreContractBox === 'function') renderPreContractBox();
         if (typeof renderBuybackBox === 'function') renderBuybackBox();
+        if (typeof renderRumorBox === 'function') renderRumorBox();
         let mList = document.getElementById('market-list');
         mList.innerHTML = '';
         marketPlayers.forEach((p, idx) => {

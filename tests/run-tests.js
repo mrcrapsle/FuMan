@@ -1023,6 +1023,13 @@ async function testNemesisCoach(browser) {
             game.matchday = md; game.sackPending = false;
             n.revenge = true; n.trait = 'Provokateur';
             startMatchdayFlow();
+            // Fällt das Duell auf einen Pokalspieltag (z. B. 6), läuft erst das Pokalspiel -
+            // danach startet finishMatch() den Ligateil desselben Spieltags.
+            if (pendingMatchInfo && pendingMatchInfo.cupTie) {
+                const pokal = [...document.querySelectorAll('#screen-prematch-press button')].find(b => b.innerText.includes('Direkt zum Spiel'));
+                if (pokal) pokal.click();
+                simulateRestOfMatch(); finishMatch();
+            }
             out.vorbericht = document.getElementById('prematch-nemesis-box').innerHTML.includes('Duell mit dem Erzfeind') && document.getElementById('prematch-nemesis-box').innerHTML.includes('Revanche');
             const direkt = [...document.querySelectorAll('#screen-prematch-press button')].find(b => b.innerText.includes('Direkt zum Spiel'));
             if (direkt) direkt.click();
@@ -1744,6 +1751,90 @@ async function testBuyback(browser) {
         assert(r.entwicklung, 'Der Spieler entwickelt sich beim Käufer weiter');
         assert(r.fenster && r.zurueck, 'Zurückholen nur im Transferfenster, dann mit 3 Jahren Vertrag');
         assert(r.verfall, 'Die Option verfällt am Ende der letzten Saison');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
+async function testRumors(browser) {
+    console.log('\n[22.8] Gerüchteküche: Quellen mit echter Trefferquote, wahre Gerüchte werden Angebote, Reaktionen mit Folgen');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            const zufall = Math.random;
+            managerRPG.perks.negotiator = false;
+            incomingOffers = []; game.rumors = []; game.rumorStats = {};
+            game.matchday = 5;
+            const star = [...squad].sort((a, b) => b.strength - a.strength)[0];
+            star.character = 'Ruhig'; star.morale = 50;
+            // Neues Gerücht: Boulevard, wahr, Abwerbung
+            Math.random = () => 0;
+            tickRumors();
+            Math.random = zufall;
+            const g = game.rumors[0];
+            out.neu = !!g && g.type === 'abwerbung' && g.source === 'boulevard' && g.truth === true && g.resolveAt === 6 && inboxMessages[0].title.includes('Gerücht');
+            // Dementieren: wertgeschätzt, Verein zieht zurück
+            const p1 = squad.find(p => p.id === g.playerId);
+            p1.character = 'Ruhig'; p1.morale = 50;
+            Math.random = () => 0;
+            reactToRumor(g.id, 'dementieren');
+            Math.random = zufall;
+            reactToRumor(g.id, 'anheizen');
+            out.dementi = p1.morale === 53 && g.reaction === 'dementieren' && g.backedOff === true;
+            game.matchday = 6;
+            Math.random = () => 0.99;
+            tickRumors();
+            Math.random = zufall;
+            out.zurueck = g.outcome === 'zurueckgezogen' && incomingOffers.length === 0;
+            // Anheizen bei wahrem Gerücht: Angebot 15 % höher, Spieler fühlt sich weggeschoben
+            star.morale = 50;
+            game.rumors.unshift({ id: 'r2', type: 'abwerbung', source: 'fach', truth: true, club: 'Testclub', playerId: star.id, playerName: star.name, resolveAt: 7, season: game.season, reaction: null, outcome: null });
+            reactToRumor('r2', 'anheizen');
+            game.matchday = 7;
+            Math.random = () => 0.5;
+            tickRumors();
+            Math.random = zufall;
+            const angebot = incomingOffers.find(o => o.playerId === star.id);
+            const mult = (0.85 + 0.5 * 0.35) * 1.15;
+            out.anheizen = star.morale === 47 && !!angebot && angebot.clubName === 'Testclub' && angebot.currentBid === Math.max(10000, Math.round(star.marketValue * mult / 5000) * 5000);
+            // Ente beim Anheizen kostet Ruf
+            const zweiter = [...squad].sort((a, b) => b.strength - a.strength)[1];
+            const ruf = game.managerMediaImage;
+            game.rumors.unshift({ id: 'r3', type: 'abwerbung', source: 'boulevard', truth: false, club: 'Ente FC', playerId: zweiter.id, playerName: zweiter.name, resolveAt: 8, season: game.season, reaction: null, outcome: null });
+            reactToRumor('r3', 'anheizen');
+            game.matchday = 8;
+            Math.random = () => 0.99;
+            tickRumors();
+            Math.random = zufall;
+            out.ente = game.rumors.find(x => x.id === 'r3').outcome === 'ente' && game.managerMediaImage === Math.max(0, ruf - 2) && !incomingOffers.some(o => o.clubName === 'Ente FC');
+            // Marktgerücht: wahr -> Spieler verschwindet vom Markt
+            refreshTransferMarket();
+            const mp = marketPlayers[0];
+            game.rumors.unshift({ id: 'r4', type: 'markt', source: 'blog', truth: true, club: 'Kaufclub', playerId: mp.id, playerName: mp.name, resolveAt: 9, season: game.season, reaction: null, outcome: null });
+            game.matchday = 9;
+            Math.random = () => 0.99;
+            tickRumors();
+            Math.random = zufall;
+            out.markt = !marketPlayers.includes(mp) && game.rumors.find(x => x.id === 'r4').outcome === 'wahr';
+            // Trefferquote je Quelle
+            out.stats = game.rumorStats.boulevard.hit === 1 && game.rumorStats.boulevard.miss === 1 && game.rumorStats.fach.hit === 1;
+            showScreen('screen-transfer'); setTransferTab('offers'); renderTransferView();
+            const html = document.getElementById('rumor-box').innerHTML;
+            out.box = html.includes('GERÜCHTEKÜCHE') && html.includes('lag 1 von 2 Mal richtig') && html.includes('Ente');
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Gerüchteküche ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.neu, 'Nach dem Spieltag entsteht ein Gerücht mit Quelle, verdeckter Wahrheit und Postnachricht');
+        assert(r.dementi && r.zurueck, 'Dementieren: Moral +3 für Ruhige, der Verein zieht zurück - nur eine Reaktion pro Gerücht');
+        assert(r.anheizen, 'Anheizen: das echte Angebot fällt 15 % höher aus, der Spieler verliert Moral');
+        assert(r.ente, 'Ente nach dem Anheizen: kein Angebot, Medienimage -2');
+        assert(r.markt, 'Wahres Marktgerücht: der Spieler ist vom Transfermarkt verschwunden');
+        assert(r.stats && r.box, 'Trefferquote je Quelle wird gezählt und angezeigt');
     }
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
     await page.close();
@@ -7455,6 +7546,7 @@ async function main() {
         testMedicalCheck,
         testPreContracts,
         testBuyback,
+        testRumors,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,

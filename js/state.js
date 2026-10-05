@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.39', date: '05.10.2026', features: 'Phase 22: Rückkaufoption beim Verkauf (10 % weniger sofort, Rückkauf im Fenster, Entwicklung beim Käufer)' };
+    const GAME_VERSION = { number: '3.40', date: '05.10.2026', features: 'Phase 22: Gerüchteküche (Quellen mit Trefferquote, wahre Gerüchte werden Angebote, Dementieren/Anheizen)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
