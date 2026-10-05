@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.46', date: '05.10.2026', features: 'Aufräumen Teil 9: echte Spielanalyse, Holding-Wert und neue Lohnfertigungs-Aufträge, Europa-Status' };
+    const GAME_VERSION = { number: '3.47', date: '05.10.2026', features: 'Phase 21.6: Langzeittest Bundesliga mit Bilanz-Fixes, TV-Raten-Deckelung, DFB-Pokal mit echten Clubs' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
