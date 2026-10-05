@@ -1840,6 +1840,87 @@ async function testRumors(browser) {
     await page.close();
 }
 
+async function testWinterTalk(browser) {
+    console.log('\n[22.9] Wintergespräch mit dem Vorstand: Zwischenbilanz, vier Wege mit Folgen bis zum Saisonende');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            const zufall = Math.random;
+            const exp = getSeasonExpectation();
+            const card = () => document.getElementById('dash-winter-talk-box').innerHTML;
+            game.matchday = 10;
+            showScreen('screen-dashboard'); renderWinterTalkCard();
+            chooseWinterTalk('kurs');
+            out.zuFrueh = card() === '' && !getWinterTalk();
+            game.matchday = 18;
+            renderWinterTalkCard();
+            out.karte = card().includes('WINTERPAUSE') && card().includes('Zwischenbilanz');
+            const betrag = getWinterBudgetAmount();
+            // Ziel hoch: +5, Budget sofort; gehalten +5 / gebrochen -10
+            exp.expectedRank = 8; game.boardSat = 50; game.transferBudget = 1000000;
+            chooseWinterTalk('hoch');
+            out.hoch = getWinterTalk().goal === 6 && exp.expectedRank === 6 && game.boardSat === 55 && game.transferBudget === 1000000 + betrag;
+            chooseWinterTalk('kurs');
+            out.einmal = getWinterTalk().choice === 'hoch' && game.boardSat === 55;
+            resolveWinterTalk(5);
+            out.gehalten = game.boardSat === 60 && getWinterTalk().result === 'erreicht';
+            getWinterTalk().result = null;
+            game.boardSat = 50;
+            resolveWinterTalk(9);
+            out.gebrochen = game.boardSat === 40 && getWinterTalk().result === 'verfehlt';
+            // Ziel runter: -4, die Saison wird am leichteren Ziel gemessen (auch die Versammlung)
+            game.winterTalk = null; exp.expectedRank = 8; game.boardSat = 50;
+            chooseWinterTalk('runter');
+            prepareMemberAssembly(9);
+            out.runter = game.boardSat === 46 && exp.expectedRank === 10 && game.pendingAssemblyReport.expectedRank === 10;
+            game.pendingAssemblyReport = null;
+            // Budget: Chance hängt an der Zwischenbilanz; Zusage bringt Geld, Absage -3
+            exp.expectedRank = 1;
+            const schlecht = getWinterBudgetChance();
+            exp.expectedRank = 18;
+            out.chance = getWinterBudgetChance() > schlecht;
+            game.winterTalk = null; game.transferBudget = 1000000;
+            Math.random = () => 0;
+            chooseWinterTalk('budget');
+            Math.random = zufall;
+            out.budgetJa = game.transferBudget === 1000000 + betrag && getWinterTalk().budget === betrag;
+            game.winterTalk = null; game.boardSat = 50;
+            Math.random = () => 0.999;
+            chooseWinterTalk('budget');
+            Math.random = zufall;
+            out.budgetNein = game.boardSat === 47 && getWinterTalk().budget === 0;
+            // Kurs bestätigen
+            game.winterTalk = null; game.boardSat = 50;
+            chooseWinterTalk('kurs');
+            out.kurs = game.boardSat === 52;
+            renderWinterTalkCard();
+            out.ergebnisKarte = card().includes('Kurs bestätigt');
+            // Verpasst: nach Spieltag 20 ohne Gespräch -2, nur einmal
+            game.winterTalk = null; game.boardSat = 50; game.matchday = 21;
+            tickWinterTalk(); tickWinterTalk();
+            out.verpasst = game.boardSat === 48 && getWinterTalk().choice === 'verpasst';
+            renderWinterTalkCard();
+            out.verpasstLeer = card() === '';
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Wintergespräch ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.zuFrueh && r.karte, 'Die Karte erscheint erst in der Winterpause (Spieltag 18-20)');
+        assert(r.hoch && r.einmal, 'Ziel hoch: Vorstand +5, Winterbudget sofort - nur ein Weg pro Saison');
+        assert(r.gehalten && r.gebrochen, 'Am Saisonende: gehaltenes Versprechen +5, gebrochenes -10');
+        assert(r.runter, 'Ziel runter: Vorstand -4, Versammlung misst am niedrigeren Ziel');
+        assert(r.chance && r.budgetJa && r.budgetNein, 'Winterbudget: Chance aus der Zwischenbilanz, Zusage bringt Geld, Absage kostet 3');
+        assert(r.kurs && r.ergebnisKarte, 'Kurs bestätigen: Vorstand +2, die Karte zeigt das Ergebnis');
+        assert(r.verpasst && r.verpasstLeer, 'Verpasst: nach Spieltag 20 einmalig Vorstand -2');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testSponsorConflict(browser) {
     console.log('\n[19.x] Sponsoren: Branchenkonflikt nennt den Konkurrenten und kostet 30 %');
     const { page, consoleErrors } = await freshPage(browser);
@@ -7547,6 +7628,7 @@ async function main() {
         testPreContracts,
         testBuyback,
         testRumors,
+        testWinterTalk,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,

@@ -1984,6 +1984,8 @@
         if (typeof recordLeagueRankHistory === 'function') recordLeagueRankHistory();
         game.matchday++;
         game.viewingMatchday = Math.min(34, game.matchday);
+        // Wintergespräch (js/winter-talk.js): nach Spieltag 20 ohne Gespräch -> verpasst.
+        if (typeof tickWinterTalk === 'function') tickWinterTalk();
         if (typeof maybeAutoSave === 'function') maybeAutoSave();
         updateUI();
     }

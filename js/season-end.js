@@ -164,6 +164,7 @@
         if (typeof checkPlaytimePromises === 'function') checkPlaytimePromises();
         if (typeof evaluateSeasonEndObjectives === 'function') evaluateSeasonEndObjectives(myRank);
         if (typeof recordScenarioSeasonRank === 'function') recordScenarioSeasonRank(myRank);
+        if (typeof resolveWinterTalk === 'function') resolveWinterTalk(myRank);
         if (typeof prepareMemberAssembly === 'function') prepareMemberAssembly(myRank);
         // Experten-Check (js/season-preview.js): Prognose gegen Abschlusstabelle, vor dem Ligawechsel.
         if (typeof buildSeasonExpertCheck === 'function') buildSeasonExpertCheck(myRank);

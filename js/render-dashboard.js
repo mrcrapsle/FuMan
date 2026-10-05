@@ -73,6 +73,7 @@
         if (typeof renderSeasonPreviewCard === 'function') renderSeasonPreviewCard();
         if (typeof renderCupFinalCard === 'function') renderCupFinalCard();
         if (typeof renderDerbyWeekCard === 'function') renderDerbyWeekCard();
+        if (typeof renderWinterTalkCard === 'function') renderWinterTalkCard();
         if (typeof renderJobOfferCard === 'function') renderJobOfferCard();
         if (typeof renderOnboardingBox === 'function') renderOnboardingBox();
         if (typeof renderRelegationBox === 'function') renderRelegationBox();
