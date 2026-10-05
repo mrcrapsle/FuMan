@@ -8951,7 +8951,10 @@ function getScenarioForcedSales(s) {
 function applyScenarioStart(id) {
     const sc = CAREER_SCENARIOS[id];
     if (!sc) return;
+    // Startkasse des Szenarios: zählt nicht als Einnahme/Ausgabe (FFP, Kontoauszug-Bereich).
+    if (typeof setzeBuchungskontext === 'function') setzeBuchungskontext('🏁 Startkapital');
     sc.setup();
+    if (typeof loescheBuchungskontext === 'function') loescheBuchungskontext();
     game.scenario = { id, startSeason: game.season, startLevel: game.leagueLevel, lastRank: null, status: 'aktiv', forcedAtStart: game.forcedSalesCount || 0 };
     addInboxMessage('vertrag', `${sc.title}: Die Mission beginnt`, `${sc.desc}\n\nFrist: ${sc.seasons} Saison${sc.seasons > 1 ? 's' : ''}. Bewertet wird jeweils am Saisonende.`, 'screen-dashboard');
 }
@@ -10067,6 +10070,32 @@ function selectNewGameScenario(id) {
 // ==========================================
 // DFB-POKAL SYSTEM
 // ==========================================
+    // Teilnehmerfeld aus echten Vereinen der Pyramide (21.6): 18 aus der Bundesliga, 8 aus
+    // der 2. Liga, 4 aus der 3. Liga, 2 aus der Regionalliga - der eigene Verein belegt einen
+    // Platz seiner Liga. Vorher waren es 31 erfundene Vereine, die in keiner Liga spielten
+    // und pauschal Stärke 75 hatten: ein Bundesligist (~88) gewann den Pokal so fast
+    // automatisch (Langzeittest: ein passiver Verein auf Platz 10-12 dreimal in Folge).
+    const DFB_POKAL_QUOTEN = [18, 8, 4, 2];
+    function buildDfbPokalTeams(mitUns) {
+        let teams = mitUns ? [game.clubName] : [];
+        let zweite = game.secondTeam && game.secondTeam.name;
+        DFB_POKAL_QUOTEN.forEach((quote, l) => {
+            let pool = (leaguesData[l] || []).map(t => t.name).filter(n => n !== game.clubName && n !== zweite);
+            pool.sort(() => Math.random() - 0.5);
+            let frei = quote - (mitUns && game.leagueLevel === l ? 1 : 0);
+            pool.slice(0, Math.max(0, frei)).forEach(n => { if (teams.length < 32) teams.push(n); });
+        });
+        // Notfalls (sehr kleine Pyramide) mit Vereinen der nächsten Ligen auffüllen.
+        for (let l = 0; l < NUM_LEAGUES && teams.length < 32; l++) {
+            (leaguesData[l] || []).forEach(t => { if (teams.length < 32 && !teams.includes(t.name) && t.name !== zweite && t.name !== game.clubName) teams.push(t.name); });
+        }
+        while (teams.length < 32) {
+            let t = generateTeamName();
+            if (!teams.includes(t)) teams.push(t);
+        }
+        return teams.slice(0, 32);
+    }
+
     function initDynamicCup() {
         // Teilnahme wie im echten Fussball: ab der 3. Liga automatisch, darunter nur als
         // Sieger des Landespokals der Vorsaison (siehe js/landescup.js). Vorher startete
@@ -10077,11 +10106,7 @@ function selectNewGameScenario(id) {
         cupTournament.currentRound = 0;
         cupTournament.roundsHistory = [];
 
-        let cupTeams = game.inCup ? [game.clubName] : [];
-        while (cupTeams.length < 32) {
-            let t = generateTeamName();
-            if (!cupTeams.includes(t)) cupTeams.push(t);
-        }
+        let cupTeams = buildDfbPokalTeams(game.inCup);
 
         cupTeams.sort(() => Math.random() - 0.5);
         let pairings = [];
@@ -10180,8 +10205,8 @@ function selectNewGameScenario(id) {
             let isOurMatch = (p.home === game.clubName || p.away === game.clubName);
             let isHome = p.home === game.clubName;
             let finalBonus = isOurMatch && typeof getCupFinalBonus === 'function' ? getCupFinalBonus('dfb') : 0; // js/cup-final.js
-            let homeStr = isOurMatch ? (isHome ? calcTeamStrength(true) + finalBonus : getOpponentStrength(p.home)) : (60 + Math.floor(Math.random() * 24));
-            let awayStr = isOurMatch ? (!isHome ? calcTeamStrength(false) + finalBonus : getOpponentStrength(p.away)) : (60 + Math.floor(Math.random() * 24));
+            let homeStr = isOurMatch && isHome ? calcTeamStrength(true) + finalBonus : getOpponentStrength(p.home);
+            let awayStr = isOurMatch && !isHome ? calcTeamStrength(false) + finalBonus : getOpponentStrength(p.away);
 
             let live = isOurMatch && typeof takeLiveCupResult === 'function' ? takeLiveCupResult('dfb', p.home, p.away) : null;
             let goals = live ? { myGoals: live.homeGoals, oppGoals: live.awayGoals } : simulateGoals(homeStr, awayStr);
@@ -10243,7 +10268,7 @@ function selectNewGameScenario(id) {
                 if (typeof recordCupResultStats === 'function') recordCupResultStats(weWon, p.ourStr, p.oppStr, oppName, r.name);
                 if (weWon) {
                     let sponsorCupBonus = game.sponsor.cupBonus || 0;
-                    game.money += r.prize + sponsorCupBonus;
+                    bucheMitLabel('🏆 DFB-Pokal-Prämie', r.prize + sponsorCupBonus);
                     // Manager-XP für Erfolge gibt's ab jetzt nur beim tatsächlichen Live-
                     // Spielen des Spieltags, nicht bei reiner Simulation - wer den Spieltag
                     // durchklickt statt zu spielen, verzichtet auf den Fortschritt im
@@ -10553,14 +10578,14 @@ function selectNewGameScenario(id) {
 // ==========================================
     // Lostöpfe (Phase 21.4): jede Saison ein neues Feld statt immer derselben sieben Klubs.
     // Topf 1 die europäische Elite, Topf 4 die Außenseiter. Die Stärke richtet sich nach dem
-    // Topf (gleiche Staffelung wie früher die feste Reihenfolge) und am eigenen Niveau.
+    // Topf und dem Niveau der Bundesliga-Spitze (Topf 1 darüber, Topf 4 deutlich darunter).
     const EUROPE_POTS = [
         ["Real Madriz", "FC Barcalona", "Manchester Cyty", "Liverpol FC", "Paris St. Germaine", "Inter Milano", "Arsenall London"],
         ["Atlético Madriz", "Juwentus Turin", "AC Millan", "Chelsea FC London", "Manchester Unitad", "SSC Neapell", "Benfika Lissabon", "FC Porto Portugal"],
         ["Ajax Amsterdaam", "PSV Eindhofen", "Sporting Lissabonn", "Tottenham Hotspurr", "AS Romm", "Olympique Marseile", "Galatasaray Istanbull", "Club Bruggge", "Feyenoordt Rotterdam"],
         ["Celtic Glasgoww", "RB Salzborg", "Schachtar Donezkk", "Roter Stern Belgratt", "Young Boys Bernn", "FC Baselll", "Fenerbahce Istanbull", "Olympique Lyonn", "AS Monakko", "FC Sevillia", "Lazio Romm"]
     ];
-    const EUROPE_POT_STRENGTH = [[9, 6], [4, 2], [0, -2], [-4, -6]];
+    const EUROPE_POT_STRENGTH = [[4, 2], [0, -2], [-4, -6], [-8, -10]];
     // Punkte je erreichter Runde für den Europa-Koeffizienten (letzte 5 Saisons).
     const EUROPE_STAGE_POINTS = { gruppe: 1, halbfinale: 3, finale: 4, sieger: 6 };
 
@@ -10584,12 +10609,16 @@ function selectNewGameScenario(id) {
         const eigenerTopf = game.inEurope ? getEuropePot() : -1;
         const deutscherTopf = deutscher ? (eigenerTopf === 1 ? 2 : 1) : -1;
 
-        // Staerke des Teilnehmerfelds: am reinen Kaderschnitt ausgerichtet (nicht an
-        // calcTeamStrength(), das zum Saisonstart mit frischem Kader ~97 meldet und ab
-        // Spieltag 20 nur noch ~74 - daher der Abschlag von 6). Ohne diese Kopplung war das
-        // Feld 12-17 Punkte stärker und der Titel nie erreichbar (20 Saisons gemessen).
-        let kaderSchnitt = squad.length ? squad.reduce((sum, p) => sum + p.strength, 0) / squad.length : 70;
-        let feldMitte = Math.max(45, Math.min(84, Math.round(kaderSchnitt) - 6));
+        // Stärke des Teilnehmerfelds (21.6): gemessen an der Bundesliga-Spitze - dem Schnitt
+        // der vier stärksten anderen Bundesligisten (team.strength, dieselbe Skala wie
+        // calcTeamStrength() im Ligaspiel). Vorher hing das Feld am eigenen Kaderschnitt - 6;
+        // die eigene Spielstärke liegt aber im Schnitt 6-8 Punkte ÜBER dem Kaderschnitt, und
+        // Topf 1 (84-86) war schwächer als der Bundesliga-Dritte (87-92). Im Langzeittest
+        // gewann so ein passiver Verein den Titel zweimal in Folge.
+        let bundesligaSpitze = deutsche.slice(0, 4).map(t => t.strength);
+        let feldMitte = bundesligaSpitze.length
+            ? Math.round(bundesligaSpitze.reduce((a, b) => a + b, 0) / bundesligaSpitze.length)
+            : 85;
         const team = (name, str) => ({ name, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, pts: 0, str: Math.max(45, Math.min(95, Math.round(str))) });
 
         // Je Topf zwei Plätze: einer für Gruppe A, einer für Gruppe B.
@@ -10993,7 +11022,7 @@ function selectNewGameScenario(id) {
                     if (h.name === game.clubName || a.name === game.clubName) {
                         let weWon = (h.name === game.clubName && hg > ag) || (a.name === game.clubName && ag > hg);
                         if (weWon) {
-                            game.money += 1500000;
+                            bucheMitLabel('🌍 Europapokal', 1500000);
                             if (isLiveContext) addManagerXP(300);
                             showNotice('🌟 Sieg im Champions Cup', `${h.name} ${hg}:${ag} ${a.name}.\n\n1.500.000 € UEFA-Prämie kassiert.`);
                         }
@@ -11031,7 +11060,7 @@ function selectNewGameScenario(id) {
 
             let userInSemis = [a1.name, a2.name, b1.name, b2.name].includes(game.clubName);
             if (userInSemis) {
-                game.money += 8000000;
+                bucheMitLabel('🌍 Europapokal', 8000000);
                 if (isLiveContext) addManagerXP(1000);
                 addInboxMessage('vertrag', '🌟 Champions Cup Halbfinal-Hinspiel!', `Das Hinspiel ist gespielt - das Rückspiel entscheidet in ${europeTournament.matchdays[7] - mday} Spieltagen über den Finaleinzug. +8.000.000 € UEFA-Erfolgsprämie für den Halbfinaleinzug bereits erhalten!`, 'screen-europe');
                 showNotice('🌟 Halbfinale erreicht!', 'Das Hinspiel ist absolviert, das Rückspiel entscheidet.\n\n8.000.000 € UEFA-Erfolgsprämie erhalten.');
@@ -11055,7 +11084,7 @@ function selectNewGameScenario(id) {
                     // der Lokalderby-Regel, aber als einmaliger Bonus statt Faktor).
                     let soldOutAttendance = stadium.total || 16000;
                     let soldOutIncome = Math.round(soldOutAttendance * 0.5 * game.ticketPrices.steh + soldOutAttendance * 0.45 * game.ticketPrices.sitz + (stadium.vipTotal || 50) * game.ticketPrices.vip);
-                    game.money += soldOutIncome;
+                    bucheMitLabel('🌍 Europapokal', soldOutIncome);
                     addInboxMessage('vertrag', '🎟️ Zuschauerrekord im Halbfinal-Rückspiel!', `Das Stadion ist beim wichtigsten Spiel der Saison restlos ausverkauft (${soldOutAttendance.toLocaleString('de-DE')} Zuschauer) - ${formatVal(soldOutIncome)} Ticketeinnahmen!`, 'screen-finances');
                 }
                 // Rückspiel: teamB ist jetzt Heimteam
@@ -11111,7 +11140,7 @@ function selectNewGameScenario(id) {
             europeTournament.finalMatch = { home: final1, away: final2, score: `${hg} : ${ag}`, winner };
 
             if (weWin) {
-                game.money += 25000000;
+                bucheMitLabel('🌍 Europapokal', 25000000);
                 game.trophies.push(`Champions Cup Sieger (Saison ${game.season})`);
                 boostFanBaseFloor(15, 'Der Champions Cup Sieg');
                 if (isLiveContext) addManagerXP(3000);
@@ -11424,7 +11453,10 @@ function renderTransferPokerBox() {
         let maxStr = minStr + 9;
 
         for (let i = 0; i < 10; i++) {
-            let p = createPlayer(["TW", "ABW", "MIT", "ST"][Math.floor(Math.random() * 4)], minStr, maxStr);
+            // Bundesliga (21.6): drei internationale Stars über dem Liganiveau - vorher endete
+            // der Markt bei 86, ein Kader mit 83 ließ sich trotz voller Kasse kaum verstärken.
+            let stern = game.leagueLevel === 0 && i >= 7;
+            let p = createPlayer(["TW", "ABW", "MIT", "ST"][Math.floor(Math.random() * 4)], stern ? 87 : minStr, stern ? 93 : maxStr);
             p.marketValue = Math.round(p.marketValue * discount);
             marketPlayers.push(p);
         }
@@ -18057,6 +18089,16 @@ function finishGoalkeeperGame() {
     }
     function loescheBuchungskontext() { buchungsKontext = null; }
 
+    // Einzelne Buchung mit eigener Bezeichnung, ohne einen äußeren Kontext zu verlieren
+    // (z.B. Pokalprämien mitten in der Spieltagssimulation - ohne Label landeten sie als
+    // "Vereinsbüro" im Kontoauszug).
+    function bucheMitLabel(label, betrag) {
+        const aeusserer = buchungsKontext;
+        setzeBuchungskontext(label);
+        game.money += betrag;
+        buchungsKontext = aeusserer;
+    }
+
     // Kontoauszug-Ansicht: chronologische Liste aller Kontobewegungen ausserhalb der
     // Spieltagsabrechnung, plus eine Zusammenfassung je Bereich.
     function renderKontoauszug(box) {
@@ -18346,7 +18388,7 @@ function finishGoalkeeperGame() {
     // kein echter Gewinn/Verlust) von der Berechnung AUSGENOMMEN. Die Regel soll Vereine
     // nicht davon abhalten, in ihre Zukunft zu investieren, sondern nur laufendes
     // Überleben auf Pump verhindern.
-    const FFP_EXEMPTE_LABELS = ['🏟️ Stadionausbau', '🏘️ Vereinsgelände', '🎓 Jugendarbeit', '💰 Finanzen & Kredite'];
+    const FFP_EXEMPTE_LABELS = ['🏟️ Stadionausbau', '🏘️ Vereinsgelände', '🎓 Jugendarbeit', '💰 Finanzen & Kredite', '🏁 Startkapital'];
     const FFP_MONITORING_SEASONS = 3;
 
     function isFfpExemptLabel(label) {
@@ -19620,9 +19662,20 @@ function finishGoalkeeperGame() {
     // Spieltage). Zu Saisonbeginn steht die Tabelle noch auf null, ein zufaelliger erster
     // Platz wuerde sonst die ganze Saison ueber 50 % mehr Geld bringen. Der Tabellenplatz
     // entscheidet stattdessen vollstaendig ueber die Restausschuettung am Saisonende.
+    // Langzeittest Bundesliga (21.6): ab Spieltag 6 richtet sich die Rate nach dem aktuellen
+    // Tabellenplatz (nach unten). Die neutrale Rate entsprach etwa Platz 10 - wer am Ende darunter stand,
+    // bekam bis zu 28 Mio. € zu viel (Platz 18: Anspruch 36 statt gezahlter 64 Mio.), und
+    // die Restausschüttung forderte nie etwas zurück. Die ersten Spieltage bleiben neutral.
+    const TV_RATE_RANK_FROM_MATCHDAY = 6;
     function getTvMoneyInstallment() {
         let base = LEAGUE_BASE_TV_MONEY[game.leagueLevel] ?? 100000;
-        return Math.round(base / MATCHDAYS_PER_SEASON);
+        let rank = game.matchday >= TV_RATE_RANK_FROM_MATCHDAY && typeof getOwnLeagueRank === 'function' ? getOwnLeagueRank() : null;
+        // Gedeckelt auf die neutrale Rate: schwache Plätze bekommen weniger, das Plus guter
+        // Plätze kommt erst mit der Restausschüttung (früheres Geld im Saisonverlauf hätte
+        // z.B. den passiven Pleiteklub-Szenario-Bot in 6 von 10 Läufen gerettet statt 1).
+        let neutral = Math.round(base / MATCHDAYS_PER_SEASON);
+        if (rank) return Math.min(neutral, Math.round(calculateCollectiveTvMoney(game.leagueLevel, rank) / MATCHDAYS_PER_SEASON));
+        return neutral;
     }
 
     // 2. Eigener Medienpartner: Angebote generieren, analog zum Sponsoren-System.
@@ -31550,9 +31603,9 @@ function cleanupLegacyScoutState() {
     function getPromotionPrize(level) { return PROMOTION_PRIZE_BY_LEVEL[level] ?? 0; }
 
     function applyPromotionRewards() {
-        game.money += getPromotionPrize(game.leagueLevel);
+        bucheMitLabel('🎉 Aufstiegsprämie', getPromotionPrize(game.leagueLevel));
         let sponsorPromoBonus = game.sponsor.promotionBonus || 0;
-        if (sponsorPromoBonus > 0) game.money += sponsorPromoBonus;
+        if (sponsorPromoBonus > 0) bucheMitLabel('🤝 Sponsor-Aufstiegsbonus', sponsorPromoBonus);
         addManagerXP(1000);
         boostFanBaseFloor(6, `Der Aufstieg in die ${leagueNames[game.leagueLevel]}`);
         if (typeof addSquadHonour === 'function') addSquadHonour(`⬆️ Aufstieg in die ${leagueNames[game.leagueLevel]}`);
@@ -31597,7 +31650,30 @@ function cleanupLegacyScoutState() {
         }
     }
 
-    function concludeSeasonAndAdvance() {
+    // Langzeittest Bundesliga (21.6): die Budgets hingen nur an Liga und Platz, nie an der
+// Kasse. Ein Bundesligist häufte so über 200 Mio. € an, bekam aber ~9 Mio. Transferbudget
+// und ein Gehaltsbudget UNTER seiner Lohnsumme - kein Neuzugang möglich, das Geld lag tot.
+// Jetzt gibt der Vorstand Rücklagen über einer Reserve (eine halbe Saison Gehaltsbudget)
+// teilweise frei: 40 % fürs Transferbudget, 10 % (auf 34 Spieltage) fürs Gehaltsbudget.
+// In den unteren Ligen liegt die Reserve weit über der Kasse - dort ändert sich nichts.
+function getCashSurplusBudgetShare() {
+    const reserve = game.wageBudget * 34 * 0.5;
+    const ueberschuss = Math.max(0, game.money - reserve);
+    return {
+        transfer: Math.round(ueberschuss * 0.4 / 50000) * 50000,
+        wage: Math.round(ueberschuss * 0.1 / 34 / 1000) * 1000
+    };
+}
+
+function applyCashSurplusBudgets() {
+    const anteil = getCashSurplusBudgetShare();
+    if (!anteil.transfer && !anteil.wage) return;
+    game.transferBudget += anteil.transfer;
+    game.wageBudget += anteil.wage;
+    addInboxMessage('finanzen', '🏦 Vorstand gibt Rücklagen frei', `Aus den Rücklagen über der Reserve stehen zusätzlich ${formatVal(anteil.transfer)} Transferbudget und ${formatVal(anteil.wage)} Gehaltsbudget pro Spieltag bereit.`, 'screen-finances');
+}
+
+function concludeSeasonAndAdvance() {
         // Erfolgsbasierte Vertragsboni (js/bonusclauses.js): das Aufstiegsbonus-Flag wird
         // bewusst HIER, ganz am Anfang, zurückgesetzt - nicht in der allgemeinen
         // Saisonstatistik-Reset-Schleife weiter unten. Der Aufstieg dieser (gerade endenden)
@@ -31644,19 +31720,21 @@ function cleanupLegacyScoutState() {
             // bekommt nachgezahlt, wer abgerutscht ist, entsprechend weniger.
             let tvAnspruch = calculateCollectiveTvMoney(game.leagueLevel, myRank);
             let bereitsGezahlt = game.tvMoneyPaidThisSeason || 0;
-            let restausschuettung = Math.max(0, tvAnspruch - bereitsGezahlt);
-            game.money += restausschuettung;
+            // Positiv: Nachzahlung; negativ: Rückforderung zu viel gezahlter Raten (die Raten
+            // folgen dem laufenden Tabellenplatz, die Differenz bleibt klein).
+            let restausschuettung = tvAnspruch - bereitsGezahlt;
+            if (restausschuettung !== 0) bucheMitLabel(restausschuettung > 0 ? '📺 TV-Restausschüttung' : '📺 TV-Rückforderung', restausschuettung);
             game.lastLeagueTvPayout = tvAnspruch;
             game.tvMoneyPaidThisSeason = 0;
             addInboxMessage('vertrag', `📺 Liga-TV-Abrechnung: ${formatVal(tvAnspruch)} für Platz ${myRank}`,
-                `Der Verein hat für Platz ${myRank} Anspruch auf ${formatVal(tvAnspruch)} aus dem kollektiven TV-Vertrag. Davon wurden ${formatVal(bereitsGezahlt)} bereits in Spieltagsraten ausgezahlt - die Restausschüttung beträgt ${formatVal(restausschuettung)}.`, 'screen-finances');
+                `Der Verein hat für Platz ${myRank} Anspruch auf ${formatVal(tvAnspruch)} aus dem kollektiven TV-Vertrag. Davon wurden ${formatVal(bereitsGezahlt)} bereits in Spieltagsraten ausgezahlt - ${restausschuettung >= 0 ? `die Restausschüttung beträgt ${formatVal(restausschuettung)}` : `zu viel gezahlte Raten von ${formatVal(-restausschuettung)} werden zurückgefordert`}.`, 'screen-finances');
             mediaRights.seasonTvIncomeTotal = 0;
         }
 
         // Perfekte Saison: keine einzige Ligaspiel-Niederlage über die komplette Spielzeit.
         if (myTeamRecord && myTeamRecord.played >= 30 && myTeamRecord.lost === 0) {
             let bonus = 500000;
-            game.money += bonus;
+            bucheMitLabel('🌟 Prämie ungeschlagene Saison', bonus);
             game.trophies.push(`Ungeschlagene Saison (Saison ${game.season})`);
             boostFanBaseFloor(12, 'Die historische ungeschlagene Saison');
             addManagerXP(600);
@@ -31719,6 +31797,7 @@ function cleanupLegacyScoutState() {
         let placementFactor = myRank <= 4 ? 1.3 : (myRank <= 10 ? 1.0 : 0.8);
         game.transferBudget = Math.round(2500000 * (1 + leagueFactor * 2.5) * placementFactor);
         game.wageBudget = Math.round(450000 * (1 + leagueFactor * 2.5) * placementFactor);
+        if (typeof applyCashSurplusBudgets === 'function') applyCashSurplusBudgets();
         // Manager-Eigengehalt: blieb bisher für immer beim Startwert (1.200 €/SpT),
         // selbst nach mehreren Aufstiegen in die Bundesliga mit Millionenbudgets - ein
         // erfolgreicher Bundesliga-Trainer verdient real deutlich mehr als ein Kreisliga-
@@ -33071,7 +33150,7 @@ const LEXICON_ENTRIES = [
         tips: ['Verkäufe und auslaufende Verträge schaffen Luft', 'Im Gehaltsgespräch einmal nachverhandeln'] },
     { cat: 'Finanzen', title: 'Transferbudget', screen: 'screen-finances',
         text: 'Wie viel Ablöse der Vorstand freigibt. Unabhängig vom Kontostand: beides muss reichen.',
-        tips: ['Verkäufe erhöhen es', 'Mit dem Vorstand lässt sich nachverhandeln'] },
+        tips: ['Verkäufe erhöhen es', 'Mit dem Vorstand lässt sich nachverhandeln', 'Zum Saisonstart gibt der Vorstand 40 % der Rücklagen über einer Reserve (halbe Saison Gehaltsbudget) zusätzlich frei, 10 % davon gehen ins Gehaltsbudget'] },
     { cat: 'Finanzen', title: 'Financial Fairplay', screen: 'screen-finances',
         text: 'Über drei Saisons darf der Verein nur begrenzt Verlust machen (je nach Liga). Investitionen in Stadion, Gelände und Jugend zählen nicht. Bei Verstoß: Verwarnung, dann Transfersperre und Punktabzug.',
         tips: ['Das Buchungsjournal zeigt, wofür das Geld ausgegeben wird', 'Nicht verwechseln mit der Transfersperre bei negativem Kontostand'] },
@@ -33124,10 +33203,10 @@ const LEXICON_ENTRIES = [
         text: 'Steht dein Verein im Finale des DFB- oder Landespokals, beginnt drei Spieltage vorher die Finalwoche: Ticketkontingent an die Fans (weniger Geld, Fans +4, +1 Stärke) oder an Sponsoren (mehr Geld, Fans -2), Fan-Sonderzüge (+1,5 Stärke) und ein Kurztrainingslager (+1 Stärke). Nach einem Sieg wählst du die Titelfeier: Autokorso (kostet, Fans +6, Medienimage +3) oder Kabinenfeier (Moral +8).',
         tips: ['Die Vorbereitung wirkt nur im Endspiel, live wie simuliert', 'Alle Endspiele stehen in Historie > Titel'] },
     { cat: 'Wettbewerbe', title: 'Pokale', screen: 'screen-cup',
-        text: 'Landespokal in den unteren Ligen, DFB-Pokal ab der 3. Liga, der Champions Cup für die Spitze. Eigene Pokalspiele laufen live.',
+        text: 'Landespokal in den unteren Ligen, DFB-Pokal ab der 3. Liga, der Champions Cup für die Spitze. Eigene Pokalspiele laufen live. Im DFB-Pokal spielen 32 echte Vereine: 18 aus der Bundesliga, 8 aus der 2. Liga, 4 aus der 3. Liga und 2 aus der Regionalliga.',
         tips: ['Pokaltore zählen nicht für die Ligastatistik und die Noten'] },
     { cat: 'Wettbewerbe', title: 'Champions Cup', screen: 'screen-europe',
-        text: 'Qualifiziert sind Platz 1-4 der Bundesliga und der DFB-Pokalsieger - immer nur für die nächste Saison, wer absteigt oder abrutscht, ist wieder raus. Acht Klubs in zwei Gruppen: je Gruppe einer aus jedem der vier Lostöpfe, dazu ein zweiter Bundesligist in der anderen Gruppe. Die Gruppenersten und -zweiten spielen Halbfinale und Finale.',
+        text: 'Qualifiziert sind Platz 1-4 der Bundesliga und der DFB-Pokalsieger - immer nur für die nächste Saison, wer absteigt oder abrutscht, ist wieder raus. Acht Klubs in zwei Gruppen: je Gruppe einer aus jedem der vier Lostöpfe, dazu ein zweiter Bundesligist in der anderen Gruppe. Europas Elite (Topf 1) ist stärker als die Bundesliga-Spitze, Topf 4 deutlich schwächer. Die Gruppenersten und -zweiten spielen Halbfinale und Finale.',
         tips: ['Europa-Koeffizient der letzten 5 Saisons: Gruppenphase 1, Halbfinale 3, Finale 4, Titel 6 Punkte - ab 2 Punkten Topf 3, ab 6 Topf 2, ab 12 Topf 1 (leichtere Gruppengegner)', 'Prämien: Startprämie, 1,5 Mio. € je Sieg in der Gruppenphase, 8 Mio. € für den Halbfinaleinzug, 25 Mio. € für den Titel'] },
     { cat: 'Wettbewerbe', title: 'Derbys', screen: 'screen-history',
         text: 'Ein Derby ist ein Spiel gegen einen Verein aus deiner Stadt oder ein echtes Traditionsduell (Revierderby, Nordderby, Rheinderby, Frankenderby, Sachsenderby ...). In Großstädten zählen nur die drei stärksten Stadtrivalen deiner Liga, Vereine aus Stadtteilen nur untereinander. Derbys bringen mehr Zuschauer, die Derby-Woche und eine eigene Derby-Bilanz (Historie > Rivalen). Einen festen Dauerrivalen oder Erzfeind-Trainer gibt es nicht mehr.',
@@ -35053,10 +35132,14 @@ function renderSaveSafetyBox() {
                 if (chosenLevel !== null) game.leagueLevel = parseInt(chosenLevel);
                 // Startkapital und Stadiongroesse skalieren mit der gewaehlten Startliga
                 // (siehe getNewGameStartMoney()/scaleStadiumForLeague() in save.js).
+                // Eigene Buchungsbezeichnung: sonst stand das Startkapital als "Vereinsbüro"-
+                // Einnahme im Kontoauszug und zählte für das Financial Fairplay der 1. Saison.
                 if (chosenMoney !== null) {
+                    setzeBuchungskontext('🏁 Startkapital');
                     game.money = (chosenLevel !== null && typeof getNewGameStartMoney === 'function')
                         ? getNewGameStartMoney(parseInt(chosenLevel), parseInt(chosenMoney))
                         : parseInt(chosenMoney);
+                    loescheBuchungskontext();
                 }
                 if (chosenLevel !== null && typeof scaleStadiumForLeague === 'function') scaleStadiumForLeague(parseInt(chosenLevel));
                 if (chosenLevel !== null && parseInt(chosenLevel) !== 5 && typeof generateSquadForLevel === 'function') {
