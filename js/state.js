@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.49', date: '05.10.2026', features: 'Phase 21.7b: match.js aufteilen (Live/Post Funktionen)' };
+    const GAME_VERSION = { number: '3.50', date: '05.10.2026', features: 'Phase 21.7: Finale Optimierung (CSS + match.js Split)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
