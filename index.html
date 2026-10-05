@@ -790,6 +790,8 @@
                     <div id="new-game-setup-box" class="box" style="display:none; margin-bottom:10px;">
                         <div style="font-size:10px; font-weight:800; margin-bottom:4px;">Spielart wählen:</div>
                         <div id="new-game-scenario-btns" style="margin-bottom:8px;"></div>
+                        <div style="font-size:10px; font-weight:800; margin-bottom:4px;">Heimatstadt (bestimmt Regionalliga, Oberliga und Landespokal):</div>
+                        <div id="new-game-city-box" style="margin-bottom:8px;"></div>
                         <div style="font-size:10px; font-weight:800; margin-bottom:4px;">Startliga wählen:</div>
                         <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin-bottom:8px;" id="new-game-level-btns"></div>
                         <div style="font-size:10px; font-weight:800; margin-bottom:4px;">Startkapital wählen:</div>
@@ -2556,6 +2558,7 @@
 <script src="js/state.js?v=2.1"></script>
 <script src="js/inbox.js?v=2.1"></script>
 <script src="js/entities.js?v=2.1"></script>
+<script src="js/club-geo.js?v=3.43"></script>
 <script src="js/avatars.js?v=2.1"></script>
 <script src="js/playerdetail.js?v=2.1"></script>
 <script src="js/squad.js?v=2.1"></script>
@@ -2718,6 +2721,17 @@
                 // den "Neues Spiel starten"-Dialog mit Auswahl kam (siehe confirmNewGame
                 // WithSettings() in save.js) - beim Entlassungs-Reload (getSacked()) fehlen
                 // diese Marker, dann bleibt es beim alten Standardverhalten (6. Liga).
+                // Heimatstadt (js/club-geo.js) VOR initLeagues(): sie bestimmt die Ligen 4-6.
+                let chosenCity = safeStorageGet(sessionStorage, 'anstoss_fm13_newgame_city');
+                safeStorageRemove(sessionStorage, 'anstoss_fm13_newgame_city');
+                if (chosenCity && typeof HOME_CITIES !== 'undefined' && HOME_CITIES[chosenCity]) {
+                    game.homeCity = chosenCity;
+                    if (game.clubName === '1.FC Moritz Leipzig') {
+                        game.clubName = `1.FC Moritz ${chosenCity}`;
+                        game.secondTeam.name = `${game.clubName} II`;
+                    }
+                }
+                if (typeof ensureHomeCity === 'function') { ensureHomeCity(); applyHomeRegion(); }
                 let chosenLevel = safeStorageGet(sessionStorage, 'anstoss_fm13_newgame_leaguelevel');
                 let chosenMoney = safeStorageGet(sessionStorage, 'anstoss_fm13_newgame_money');
                 safeStorageRemove(sessionStorage, 'anstoss_fm13_newgame_leaguelevel');
@@ -2773,6 +2787,7 @@
                 updateUI();
                 showScreen('screen-office');
             } else if (!(typeof loadMostRecentGame === 'function' ? loadMostRecentGame() : loadGame(true))) {
+                if (typeof ensureHomeCity === 'function') { ensureHomeCity(); applyHomeRegion(); }
                 initDefaultSquad();
                 initLeagues();
                 refreshTransferMarket();

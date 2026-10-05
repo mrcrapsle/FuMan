@@ -49,12 +49,11 @@
     // Neu ist die Zuordnung nach Spielklasse. Vorher wurden alle bekannten Namen quer über
     // alle sechs Ligen verteilt, sodass Bayern in der Kreisklasse auftauchen konnte.
     //
-    // Wichtig ab der 4. Liga: Der deutsche Fußball ist dort REGIONAL geteilt. Der Verein des
-    // Spielers sitzt in Leipzig, deshalb bilden die unteren drei Ligen den Nordost-Strang ab
-    // (Regionalliga Nordost, NOFV-Oberliga Süd, Landesliga Sachsen). Das hat zwei Effekte,
-    // die auch im echten Fußball zusammenhängen: kurze Auswärtsfahrten und echte Derbys
-    // gegen Nachbarvereine.
-    const LEAGUE_CLUB_NAMES = [
+    // Ab der 4. Liga ist der deutsche Fußball REGIONAL geteilt: Regionalliga, Oberliga und
+    // 6. Liga kommen aus der Heimatregion des eigenen Vereins (js/club-geo.js, game.homeCity) -
+    // kurze Auswärtsfahrten und echte Derbys gegen Nachbarvereine. Hier stehen nur die
+    // bundesweiten Ligen 1-3.
+    const TOP_LEAGUE_CLUB_NAMES = [
         // 1. Liga - Bundesliga
         ["Bayern Munchen", "Borussia Dortmunt", "RB Leibzig", "Bayer Leverkussen",
          "Eintracht Frankfurth", "VfB Stuttgardt", "TSG Hoffennheim", "SC Freyburg",
@@ -66,61 +65,51 @@
          "SC Padernborn", "FC St. Paulli", "Holstein Kiehl", "1. FC Nurnberg",
          "Karlsruher SK", "Hannover 97", "SV Elversbergh", "Greuther Furth",
          "1. FC Kaiserslauten", "Eintracht Braunschweigh", "Hansa Rostok", "VfL Osnabruk",
-         "SV Wehen Wiesbadn", "SpVgg Furth-Nord"],
+         "SV Wehen Wiesbadn", "SSV Ulm 1847"],
         // 3. Liga - bundesweit
         ["Dynamo Dressden", "TSV 1861 Munchen", "MSV Duisborg", "FC Ingolstat 04",
          "1. FC Saarbrukken", "SSV Jahn Regensborg", "SpVgg Unterhachingen", "SC Verll",
          "SV Sandhausn", "SV Waldhof Manheim", "Rot-Weiss Essn", "Arminia Bilefeld",
          "Viktoria Kolln", "SC Preussen Munsterr", "VfB Lubek", "Alemannia Aachn",
-         "Stuttgarter Kikkers", "TSV Havelsee"],
-        // 4. Liga - Regionalliga Nordost
-        ["1. FC Magdeborg", "Erzgebirge Aua", "Lokomotiv Leipzich", "Carl Zeiss Jenna",
-         "BFC Dynamoo", "BSG Chemie Leipzich", "FSV Zwikau", "FC Energie Cotbus",
-         "Hallescher FK 96", "Chemnitzer FCC", "ZFC Meussen", "Viktoria Berlien",
-         "VSG Altglienike", "SV Babelsbergh 03", "Greifswalder FCC", "FSV Luckenwaldde",
-         "SV Bischofswerdda", "FC Eilenborg"],
-        // 5. Liga - NOFV-Oberliga Süd
-        ["VfB Auerbah", "SV Schott Jenna", "FC Grimma 1919", "SV Merseburgh 99",
-         "VfB Krieschoww", "Ludwigsfelder FCC", "FSV Budissa Bautzn", "SV Blau-Weiss Zorbigg",
-         "1. FC Lok Stendall", "SG Union Sandersdorff", "VfL Halle 96", "FC Anker Wismarr",
-         "FC Optik Rathenoww", "Tennis Borussia Berlien", "SV Lichtenbergh 47", "FSV Barlebn",
-         "SC Freitall", "SV Blau-Weiss Bad Frankenhausn"],
-        // 6. Liga - Landesliga Sachsen
-        ["SV Blau-Weiss Leipzich", "TSV Grosspostwitzz", "FC Empor Weimarr", "SV Motor Altenborg",
-         "SG Traktor Reichenbah", "FSV Wacker Nordhausn", "SV Einheit Wernigerodde", "SC Concordia Riesaa",
-         "FC Rot-Weiss Mittweidda", "SV Fortuna Trebbinn", "TSV Bernsdorff", "SG Dynamo Hoyerswerdda",
-         "FC Stahl Brandenborg", "SV Motor Zschopauu", "SG Chemie Bohlenn", "FC Grun-Weiss Piesteritzz",
-         "SV Blau-Gelb Grunaa", "TSV Oberwiesenthall"]
+         "Stuttgarter Kikkers", "TSV Havelsee"]
     ];
 
-    // Flache Liste über alle Ligen - gebraucht, wenn der Pool der passenden Liga erschöpft ist
-    // (etwa weil ein Verein per Auf- oder Abstieg längst woanders steht).
-    const ALL_CLUB_NAMES = LEAGUE_CLUB_NAMES.reduce((alle, liga) => alle.concat(liga), []);
+    // Pool einer Spielklasse: Liga 1-3 bundesweit, darunter regional nach Heimatstadt.
+    function getLeagueClubPool(level) {
+        if (level === null || level === undefined) return [];
+        if (level <= 2) return TOP_LEAGUE_CLUB_NAMES[level] || [];
+        return typeof getRegionalClubPool === 'function' ? getRegionalClubPool(level) : [];
+    }
 
     // leagueLevel ist optional: Wird es übergeben, kommt der Name bevorzugt aus dem Pool genau
     // dieser Spielklasse. Ohne Angabe (Pokalgegner, Leihverein, permanenter Rivale) wird aus
     // allen Ligen gezogen, weil solche Vereine ligaübergreifend auftreten.
     function generateTeamName(leagueLevel = null) {
-        let pools = [];
-        if (leagueLevel !== null && LEAGUE_CLUB_NAMES[leagueLevel]) pools.push(LEAGUE_CLUB_NAMES[leagueLevel]);
-        pools.push(ALL_CLUB_NAMES);
-        for (let pool of pools) {
-            let candidates = pool.filter(n => !usedClubNames.has(n) && n !== game.clubName);
-            if (candidates.length > 0) {
-                let name = candidates[Math.floor(Math.random() * candidates.length)];
-                usedClubNames.add(name);
-                return name;
-            }
+        const frei = n => !usedClubNames.has(n) && n !== game.clubName;
+        const nimm = liste => {
+            const kandidaten = liste.filter(frei);
+            if (!kandidaten.length) return null;
+            const name = kandidaten[Math.floor(Math.random() * kandidaten.length)];
+            usedClubNames.add(name);
+            return name;
+        };
+        if (leagueLevel !== null) {
+            const pool = getLeagueClubPool(leagueLevel);
+            // Regionale Ligen: erst die echten Vereine, dann Vereine aus echten Orten.
+            const echt = leagueLevel >= 3 && typeof getRegionalRealCount === 'function' ? getRegionalRealCount(leagueLevel) : pool.length;
+            const name = nimm(pool.slice(0, echt)) || nimm(pool.slice(echt));
+            if (name) return name;
         }
-        // Erst wenn alle echten Namen vergeben sind, wird generisch weitergebaut.
+        // Ohne Liga (Landespokal-Auffüller, Leihverein): echte Vereine der Heimatregion, dann
+        // bundesweite, dann Vereine aus Orten der Region.
+        const regional = [3, 4, 5].map(l => ({ pool: getLeagueClubPool(l), echt: typeof getRegionalRealCount === 'function' ? getRegionalRealCount(l) : 0 }));
+        const name = nimm(regional.flatMap(r => r.pool.slice(0, r.echt))) || nimm(TOP_LEAGUE_CLUB_NAMES.flat()) || nimm(regional.flatMap(r => r.pool.slice(r.echt)));
+        if (name) return name;
         for (let i = 0; i < 150; i++) {
             let pref = prefixPool[Math.floor(Math.random() * prefixPool.length)];
             let city = cityPool[Math.floor(Math.random() * cityPool.length)];
-            let name = `${pref} ${city}`;
-            if (!usedClubNames.has(name) && name !== game.clubName) {
-                usedClubNames.add(name);
-                return name;
-            }
+            let n = `${pref} ${city}`;
+            if (frei(n)) { usedClubNames.add(n); return n; }
         }
         return `FC Sportfreunde ${Math.floor(Math.random() * 900 + 100)}`;
     }

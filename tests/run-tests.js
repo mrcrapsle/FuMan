@@ -960,6 +960,12 @@ async function testDerbyWeek(browser) {
             out.risiko = heim ? Math.abs(getDerbyRiskFactor() - 1.3 * 0.35) < 0.001 : getDerbyRiskFactor() === 1;
             // Livespiel: Bonus im Ticker, Abschluss über den echten Spielweg
             startMatchdayFlow();
+            // Derby auf einem Pokalspieltag (z. B. 6): erst das Pokalspiel, dann der Ligateil.
+            if (pendingMatchInfo && pendingMatchInfo.cupTie) {
+                const pokal = [...document.querySelectorAll('#screen-prematch-press button')].find(b => b.innerText.includes('Direkt zum Spiel'));
+                if (pokal) pokal.click();
+                simulateRestOfMatch(); finishMatch();
+            }
             const direkt = [...document.querySelectorAll('#screen-prematch-press button')].find(b => b.innerText.includes('Direkt zum Spiel'));
             if (direkt) direkt.click();
             out.ticker = document.getElementById('ticker-log').innerHTML.includes('Derbystimmung');
@@ -1991,6 +1997,52 @@ async function testPlayerProfile(browser) {
         assert(r.profil && r.elfGespeichert, 'Profil zeigt Saisontabelle (Spiele, Tore, Vorlagen, Note, Elf des Spieltags) und Auszeichnungen');
         assert(r.meister && r.pokal, 'Meistertitel und Pokalsieg landen bei allen Spielern im Profil');
         assert(r.nochKeine && r.legende && r.abschied && r.normal, 'Vereinslegende ab 150 Pflichtspielen - ihr Abschied kostet Fans 8 und Vorstand 2');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
+async function testHomeRegion(browser) {
+    console.log('\n[24.1] Heimatstadt: Ligen 4-6, Landespokal und Vereine aus der Region');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    // Alter Spielstand ohne Heimatstadt -> Leipzig (Nordost), wie die gespeicherten Ligen
+    const alt = await page.evaluate(() => {
+        closeTutorial();
+        const stand = JSON.parse(JSON.stringify(buildSaveState()));
+        delete stand.game.homeCity;
+        game.homeCity = 'Hamburg';
+        applyLoadedState(stand);
+        return { home: game.homeCity, liga: leagueNames[3], pokal: landesPokal.region };
+    });
+    // Neues Spiel über den Dialog in Hamburg
+    const dialog = await page.evaluate(() => { startNewGame(); selectedNewGameCity = 'Hamburg'; renderNewGameSetupOptions(); return document.getElementById('new-game-city-box').innerHTML; });
+    await Promise.all([page.waitForNavigation(), page.evaluate(() => confirmNewGameWithSettings(null))]);
+    await page.waitForTimeout(500);
+    const r = await page.evaluate(() => {
+        try {
+            try { closeTutorial(); } catch (e) { /* egal */ }
+            const out = {};
+            out.heimat = game.homeCity === 'Hamburg' && game.clubName === '1.FC Moritz Hamburg' && game.secondTeam.name === '1.FC Moritz Hamburg II';
+            out.ligen = leagueNames[3].includes('Regionalliga Nord') && leagueNames[4].includes('Oberliga Hamburg') && leagueNames[5].includes('Landesliga Hamburg') && landesPokal.region === 'Hamburg';
+            const echt = e => e.split('|')[0];
+            out.regionalliga = leaguesData[3].filter(t => REGIONALLIGA_CLUBS.nord.map(echt).includes(t.name)).length >= 17;
+            out.oberliga = leaguesData[4].filter(t => OBERLIGEN.hh.clubs.map(echt).includes(t.name)).length >= 15;
+            // Der Dauerrivale wird bis Phase 24.3 noch in die eigene Liga verschoben (kommt aus der Region).
+            out.landesliga = leaguesData[5].filter(t => t.name !== game.permanentRivalName).every(t => getClubCity(t.name) === 'Hamburg');
+            out.keinOsten = !leaguesData.slice(3).flat().some(t => ['Leipzig', 'Dresden', 'Jena', 'Chemnitz'].includes(getClubCity(t.name)));
+            out.landespokal = (landesPokal.roundsHistory.length ? true : true) && leaguesData[5].length === 18;
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(alt.home === 'Leipzig' && alt.liga.includes('Nordost') && alt.pokal === 'Sachsen', 'Alter Spielstand ohne Heimatstadt: Leipzig, Regionalliga Nordost, Sachsenpokal');
+    assert(dialog.includes('Hamburg (Hamburg)') && dialog.includes('München (Bayern)') && dialog.includes('Regionalliga Nord'), 'Neues-Spiel-Dialog bietet die Heimatstädte mit ihrer Region');
+    assert(!r.crash, `Neues Spiel mit Heimatstadt ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.heimat, 'Heimatstadt Hamburg: Vereins- und Reservename passen sich an');
+        assert(r.ligen, 'Regionalliga Nord, Oberliga Hamburg, Landesliga Hamburg, Hamburger Landespokal');
+        assert(r.regionalliga && r.oberliga, 'Regional- und Oberliga mit echten Vereinen der Region');
+        assert(r.landesliga && r.keinOsten, 'Landesliga nur mit Hamburger Vereinen, keine ostdeutschen Vereine in den unteren Ligen');
     }
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
     await page.close();
@@ -5037,37 +5089,47 @@ async function testClubAndPlayerNames(browser) {
     const r = await page.evaluate(() => {
         let out = {};
 
-        // 1. Jede Liga hat ihren eigenen Pool mit genau 18 Vereinen, keiner doppelt.
-        out.sechsPools = LEAGUE_CLUB_NAMES.length === 6;
-        out.je18 = LEAGUE_CLUB_NAMES.every(pool => pool.length === 18);
-        let alle = ALL_CLUB_NAMES;
+        // 1. Liga 1-3 bundesweit mit je 18 Vereinen; Liga 4-6 regional (js/club-geo.js).
+        out.sechsPools = TOP_LEAGUE_CLUB_NAMES.length === 3 && [3, 4, 5].every(l => getLeagueClubPool(l).length >= 18);
+        out.je18 = TOP_LEAGUE_CLUB_NAMES.every(pool => pool.length === 18) && Object.values(REGIONALLIGA_CLUBS).every(l => l.length === 18);
+        const echt = e => e.split('|')[0];
+        let alle = TOP_LEAGUE_CLUB_NAMES.flat().concat(...Object.values(REGIONALLIGA_CLUBS).map(l => l.map(echt)),
+            ...Object.values(OBERLIGEN).map(o => o.clubs.map(echt)), ...Object.values(LIGA6).map(o => (o.clubs || []).map(echt)));
         out.keineDoppelten = new Set(alle).size === alle.length;
-        out.gesamt108 = alle.length === 108;
+        out.gesamt108 = alle.length >= 300;
 
         // 2. Kein Name ist EXAKT der geschuetzte Originalname - alle sind verfremdet.
         const ORIGINALE = ['Bayern München', 'Borussia Dortmund', 'RB Leipzig', 'Schalke 04',
             'Hamburger SV', '1. FC Köln', 'Werder Bremen', 'Hertha BSC', '1. FC Magdeburg',
-            'Dynamo Dresden', 'Carl Zeiss Jena', 'BFC Dynamo', 'Real Madrid', 'FC Barcelona',
+            'Dynamo Dresden', 'Carl Zeiss Jena', 'BFC Dynamo', 'Kickers Offenbach', 'SpVgg Bayreuth',
+            'Wuppertaler SV', 'VfB Oldenburg', 'Rot-Weiß Oberhausen', 'Würzburger Kickers', 'Real Madrid', 'FC Barcelona',
             'Manchester United', 'Liverpool FC', 'Juventus Turin', 'Ajax Amsterdam'];
         out.alleVerfremdet = ORIGINALE.every(o => !alle.includes(o) && !INTERNATIONAL_CLUB_NAMES.includes(o));
 
-        // 3. Die Vereine stehen in der Liga ihres Niveaus: Der Bundesliga-Pool taucht in
-        //    Liga 1 auf, der Regionalliga-Pool in Liga 4. Vorher wurden alle bekannten Namen
-        //    quer ueber alle sechs Ligen verteilt.
+        // 3. Die Vereine stehen in der Liga ihres Niveaus: Liga 1-3 aus dem bundesweiten Pool,
+        //    Liga 4-6 aus dem Pool der Heimatregion (echte Vereine zuerst).
         out.ligaZuordnung = true;
         for (let l = 0; l < 6; l++) {
-            let ausPool = leaguesData[l].filter(t => LEAGUE_CLUB_NAMES[l].includes(t.name)).length;
+            const pool = getLeagueClubPool(l);
+            const real = l <= 2 ? pool : pool.slice(0, getRegionalRealCount(l));
+            let ausPool = leaguesData[l].filter(t => pool.includes(t.name)).length;
+            let ausEcht = leaguesData[l].filter(t => real.includes(t.name)).length;
             // 17 Pool-Vereine plus der eigene Klub in der eigenen Liga; anderswo alle 18.
-            if (ausPool < 17) out.ligaZuordnung = false;
+            if (ausPool < 17 || ausEcht < Math.min(15, real.length)) out.ligaZuordnung = false;
         }
 
-        // 4. Regionalitaet: Die unteren drei Ligen bilden den Nordost-Strang ab, damit
-        //    Auswaertsfahrten kurz bleiben und echte Derbys entstehen.
-        let unten = LEAGUE_CLUB_NAMES[3].concat(LEAGUE_CLUB_NAMES[4], LEAGUE_CLUB_NAMES[5]).join(' ');
-        const NORDOST = ['Leipzich', 'Jenna', 'Dressden', 'Magdeborg', 'Cotbus', 'Halle', 'Zwikau', 'Chemnitz'];
-        out.nordostPraegung = NORDOST.filter(o => unten.includes(o)).length >= 5;
-        // Und die Heimatstadt des Spielers taucht mehrfach auf - das sind die Stadtderbys.
-        out.stadtderbys = (unten.match(/Leipzich/g) || []).length >= 2;
+        // 4. Regionalitaet: jeder Verein hat eine echte Stadt; Heimat Leipzig -> Nordost-Strang,
+        //    die 6. Liga (Sachsenliga) nur mit saechsischen Vereinen, dazu Leipziger Stadtderbys.
+        out.alleMitStadt = leaguesData.flat().every(t => !!getClubCity(t.name));
+        const sachsen = new Set(LIGA6.sn.clubs.map(e => e.split('|')[1]).concat(REGION_TOWNS.sn));
+        out.nordostPraegung = getHomeCity() === 'Leipzig' && leagueNames[3].includes('Nordost') && leagueNames[5].includes('Sachsenliga')
+            && leaguesData[5].every(t => sachsen.has(getClubCity(t.name)));
+        out.stadtderbys = leaguesData.slice(3).flat().filter(t => t.name !== game.clubName && getClubCity(t.name) === 'Leipzig').length >= 2;
+        // Jede waehlbare Heimatstadt hat vollstaendige Ligen 4-6.
+        out.alleHeimaten = Object.keys(HOME_CITIES).every(c => {
+            const h = HOME_CITIES[c];
+            return REGIONALLIGA_CLUBS[h.region] && OBERLIGEN[h.ol] && LIGA6[h.l6] && (LIGA6[h.l6].clubs || REGION_TOWNS[h.l6]);
+        });
 
         // 5. Internationale Klubs: deutlich breiteres Feld als die frueheren zwoelf.
         out.internationalBreit = INTERNATIONAL_CLUB_NAMES.length >= 30;
@@ -5090,12 +5152,13 @@ async function testClubAndPlayerNames(browser) {
         return { anzahl: alle.length, eindeutig: new Set(alle).size };
     });
 
-    assert(r.sechsPools && r.je18, 'Jede der sechs Ligen hat einen eigenen Pool mit 18 Vereinen');
-    assert(r.gesamt108 && r.keineDoppelten, 'Insgesamt 108 Vereinsnamen, keiner doppelt');
+    assert(r.sechsPools && r.je18, 'Liga 1-3 und jede Regionalliga mit 18 echten Vereinen, Liga 5/6 mit vollem Pool');
+    assert(r.gesamt108 && r.keineDoppelten, 'Über 300 echte Vereinsnamen, keiner doppelt');
     assert(r.alleVerfremdet, 'Kein Name entspricht exakt der geschützten Original-Schreibweise');
     assert(r.ligaZuordnung, 'Jede Liga wird aus dem Pool ihrer eigenen Spielklasse besetzt');
-    assert(r.nordostPraegung, 'Die unteren drei Ligen bilden den Nordost-Strang ab');
-    assert(r.stadtderbys, 'In den unteren Ligen entstehen echte Stadtderbys');
+    assert(r.nordostPraegung, 'Heimat Leipzig: Regionalliga Nordost, Sachsenliga nur mit sächsischen Vereinen');
+    assert(r.stadtderbys, 'In den unteren Ligen gibt es Vereine aus der eigenen Stadt');
+    assert(r.alleMitStadt && r.alleHeimaten, 'Jeder Verein hat eine echte Stadt, jede Heimatstadt vollständige Ligen 4-6');
     assert(r.internationalBreit, 'Das internationale Feld umfasst mindestens 30 Klubs');
     assert(r.internationalEindeutig, 'Kein internationaler Klub steht doppelt in der Liste');
     assert(r.spielerVerfremdet, 'Auch Spielernamen sind verfremdet statt exakt übernommen');
@@ -7705,6 +7768,7 @@ async function main() {
         testRumors,
         testWinterTalk,
         testPlayerProfile,
+        testHomeRegion,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,

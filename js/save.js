@@ -204,6 +204,11 @@
         }
         // Felder entfernter Module sofort loswerden, nicht erst beim nächsten Monatswechsel.
         if (typeof cleanupRemovedModuleState === 'function') cleanupRemovedModuleState();
+        // Heimatstadt (js/club-geo.js): alte Spielstände bekommen sie, Ligennamen/Landespokal passend.
+        // Object.assign löscht nichts: ein alter Stand ohne homeCity darf die Heimat des
+        // zuvor laufenden Spiels nicht erben.
+        if (p.game && !p.game.homeCity) delete game.homeCity;
+        if (typeof ensureHomeCity === 'function') { ensureHomeCity(); applyHomeRegion(); }
         restoreGetters();
     }
 
@@ -507,6 +512,7 @@
         });
     }
     let selectedNewGameLevel = 5;
+    let selectedNewGameCity = 'Leipzig';
     let selectedNewGameMoney = 150000;
     let newGameConfirmTimer = null;
     function startNewGame() {
@@ -518,6 +524,13 @@
     }
     function renderNewGameSetupOptions() {
         if (typeof renderNewGameScenarioOptions === 'function') renderNewGameScenarioOptions();
+        let cityBox = document.getElementById('new-game-city-box');
+        if (cityBox && typeof getHomeCityOptions === 'function') {
+            let info = HOME_CITIES[selectedNewGameCity];
+            cityBox.innerHTML = `<select id="new-game-city" onchange="selectedNewGameCity=this.value; renderNewGameSetupOptions();" class="input-inline" style="width:100%; font-size:11px; padding:6px;">
+                ${getHomeCityOptions().map(o => `<option value="${o.city}" ${o.city === selectedNewGameCity ? 'selected' : ''}>${o.city} (${o.state})</option>`).join('')}
+            </select><div style="font-size:9px; color:var(--text-muted); margin-top:3px;">Region ${HOME_REGIONS[info.region].label}: ${HOME_REGIONS[info.region].regionalliga} · ${OBERLIGEN[info.ol].name} · ${LIGA6[info.l6].name} · ${info.verband}pokal</div>`;
+        }
         let levelBox = document.getElementById('new-game-level-btns');
         if (levelBox) {
             levelBox.innerHTML = NEW_GAME_LEVEL_OPTIONS.map(o =>
@@ -549,6 +562,7 @@
         safeSessionSet('anstoss_fm13_newgame_leaguelevel', String(szenario ? CAREER_SCENARIOS[szenario].level : selectedNewGameLevel));
         safeSessionSet('anstoss_fm13_newgame_money', String(szenario ? 150000 : selectedNewGameMoney));
         if (szenario) safeSessionSet('anstoss_fm13_newgame_scenario', szenario);
+        safeSessionSet('anstoss_fm13_newgame_city', selectedNewGameCity);
         location.reload();
     }
 

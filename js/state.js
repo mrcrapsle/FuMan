@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.42.1', date: '05.10.2026', features: 'Testkorrektur: Erzfeind-Test ohne Trainerkarussell beim Sprung zum Duell (CI wackelte)' };
+    const GAME_VERSION = { number: '3.43', date: '05.10.2026', features: 'Phase 24: Echte Orte für alle Vereine, Ligen 4-6 und Landespokal nach Heimatstadt' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
