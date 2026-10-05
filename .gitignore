@@ -1,3 +1,4 @@
 node_modules/
 __pycache__/
 dist/check-logs/
+anstoss-fm13-v*.zip
