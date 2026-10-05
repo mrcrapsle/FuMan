@@ -25094,6 +25094,9 @@ function cleanupLegacyScoutState() {
         'mit einem sehenswerten Volley', 'per Elfmeter', 'mit einem direkten Freistoß', 'nach einer Flanke von außen'
     ];
 
+
+/* eslint-enable */
+/* eslint-disable no-undef */
     // ---------- LIVE-STATISTIK ----------
     // Ballbesitz, Schüsse, Schüsse aufs Tor und Karten je Team - Index 0 = Heim, 1 = Gast.
     function newLiveMatchStats() {
@@ -26561,6 +26564,10 @@ function cleanupLegacyScoutState() {
         applyFormWalk(a);
     }
 
+    // ---------- JOB-SICHERHEIT ----------
+
+/* eslint-enable */
+/* eslint-disable no-undef */
     // ---------- JOB-SICHERHEIT ----------
     // Anhaltend schlechte Vorstands-Stimmung führt jetzt zu echten Konsequenzen: erst eine
     // Warnung, dann im Extremfall die Entlassung. Der Manager behält dabei seine Karriere
