@@ -1022,6 +1022,12 @@ async function testNemesisCoach(browser) {
             }
             game.matchday = md; game.sackPending = false;
             n.revenge = true; n.trait = 'Provokateur';
+            // Der Test springt ohne gespielte Partien zum Duell: alle Teams punktgleich, das
+            // Trainerkarussell (Spieltag 8/12/16...) feuerte den Erzfeind dann zu ~15 %, sobald
+            // sein Verein beim Gleichstand unten einsortiert war - danach fehlte das Abwerbe-
+            // Angebot (CI-Fehler "reading 'id'"). Für dieses eine Spiel ruht das Karussell.
+            const karussell = tickCoachCarousel;
+            tickCoachCarousel = () => {};
             startMatchdayFlow();
             // Fällt das Duell auf einen Pokalspieltag (z. B. 6), läuft erst das Pokalspiel -
             // danach startet finishMatch() den Ligateil desselben Spieltags.
@@ -1036,6 +1042,7 @@ async function testNemesisCoach(browser) {
             out.ticker = document.getElementById('ticker-log').innerHTML.includes('Duell mit ' + n.name);
             const vorher = n.meetings.length;
             simulateRestOfMatch(); finishMatch();
+            tickCoachCarousel = karussell;
             out.bilanzEcht = n.meetings.length === vorher + 1 && n.meetings[0].club === team.name;
             // Revanche-Mechanik direkt
             n.record = { w: 0, d: 0, l: 0 }; n.revenge = false; n.trait = 'Provokateur';
