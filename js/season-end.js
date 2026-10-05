@@ -87,9 +87,9 @@
     function getPromotionPrize(level) { return PROMOTION_PRIZE_BY_LEVEL[level] ?? 0; }
 
     function applyPromotionRewards() {
-        game.money += getPromotionPrize(game.leagueLevel);
+        bucheMitLabel('🎉 Aufstiegsprämie', getPromotionPrize(game.leagueLevel));
         let sponsorPromoBonus = game.sponsor.promotionBonus || 0;
-        if (sponsorPromoBonus > 0) game.money += sponsorPromoBonus;
+        if (sponsorPromoBonus > 0) bucheMitLabel('🤝 Sponsor-Aufstiegsbonus', sponsorPromoBonus);
         addManagerXP(1000);
         boostFanBaseFloor(6, `Der Aufstieg in die ${leagueNames[game.leagueLevel]}`);
         if (typeof addSquadHonour === 'function') addSquadHonour(`⬆️ Aufstieg in die ${leagueNames[game.leagueLevel]}`);
@@ -204,19 +204,21 @@ function concludeSeasonAndAdvance() {
             // bekommt nachgezahlt, wer abgerutscht ist, entsprechend weniger.
             let tvAnspruch = calculateCollectiveTvMoney(game.leagueLevel, myRank);
             let bereitsGezahlt = game.tvMoneyPaidThisSeason || 0;
-            let restausschuettung = Math.max(0, tvAnspruch - bereitsGezahlt);
-            game.money += restausschuettung;
+            // Positiv: Nachzahlung; negativ: Rückforderung zu viel gezahlter Raten (die Raten
+            // folgen dem laufenden Tabellenplatz, die Differenz bleibt klein).
+            let restausschuettung = tvAnspruch - bereitsGezahlt;
+            if (restausschuettung !== 0) bucheMitLabel(restausschuettung > 0 ? '📺 TV-Restausschüttung' : '📺 TV-Rückforderung', restausschuettung);
             game.lastLeagueTvPayout = tvAnspruch;
             game.tvMoneyPaidThisSeason = 0;
             addInboxMessage('vertrag', `📺 Liga-TV-Abrechnung: ${formatVal(tvAnspruch)} für Platz ${myRank}`,
-                `Der Verein hat für Platz ${myRank} Anspruch auf ${formatVal(tvAnspruch)} aus dem kollektiven TV-Vertrag. Davon wurden ${formatVal(bereitsGezahlt)} bereits in Spieltagsraten ausgezahlt - die Restausschüttung beträgt ${formatVal(restausschuettung)}.`, 'screen-finances');
+                `Der Verein hat für Platz ${myRank} Anspruch auf ${formatVal(tvAnspruch)} aus dem kollektiven TV-Vertrag. Davon wurden ${formatVal(bereitsGezahlt)} bereits in Spieltagsraten ausgezahlt - ${restausschuettung >= 0 ? `die Restausschüttung beträgt ${formatVal(restausschuettung)}` : `zu viel gezahlte Raten von ${formatVal(-restausschuettung)} werden zurückgefordert`}.`, 'screen-finances');
             mediaRights.seasonTvIncomeTotal = 0;
         }
 
         // Perfekte Saison: keine einzige Ligaspiel-Niederlage über die komplette Spielzeit.
         if (myTeamRecord && myTeamRecord.played >= 30 && myTeamRecord.lost === 0) {
             let bonus = 500000;
-            game.money += bonus;
+            bucheMitLabel('🌟 Prämie ungeschlagene Saison', bonus);
             game.trophies.push(`Ungeschlagene Saison (Saison ${game.season})`);
             boostFanBaseFloor(12, 'Die historische ungeschlagene Saison');
             addManagerXP(600);

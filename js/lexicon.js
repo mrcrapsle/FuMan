@@ -140,7 +140,7 @@ const LEXICON_ENTRIES = [
         text: 'Steht dein Verein im Finale des DFB- oder Landespokals, beginnt drei Spieltage vorher die Finalwoche: Ticketkontingent an die Fans (weniger Geld, Fans +4, +1 Stärke) oder an Sponsoren (mehr Geld, Fans -2), Fan-Sonderzüge (+1,5 Stärke) und ein Kurztrainingslager (+1 Stärke). Nach einem Sieg wählst du die Titelfeier: Autokorso (kostet, Fans +6, Medienimage +3) oder Kabinenfeier (Moral +8).',
         tips: ['Die Vorbereitung wirkt nur im Endspiel, live wie simuliert', 'Alle Endspiele stehen in Historie > Titel'] },
     { cat: 'Wettbewerbe', title: 'Pokale', screen: 'screen-cup',
-        text: 'Landespokal in den unteren Ligen, DFB-Pokal ab der 3. Liga, der Champions Cup für die Spitze. Eigene Pokalspiele laufen live.',
+        text: 'Landespokal in den unteren Ligen, DFB-Pokal ab der 3. Liga, der Champions Cup für die Spitze. Eigene Pokalspiele laufen live. Im DFB-Pokal spielen 32 echte Vereine: 18 aus der Bundesliga, 8 aus der 2. Liga, 4 aus der 3. Liga und 2 aus der Regionalliga.',
         tips: ['Pokaltore zählen nicht für die Ligastatistik und die Noten'] },
     { cat: 'Wettbewerbe', title: 'Champions Cup', screen: 'screen-europe',
         text: 'Qualifiziert sind Platz 1-4 der Bundesliga und der DFB-Pokalsieger - immer nur für die nächste Saison, wer absteigt oder abrutscht, ist wieder raus. Acht Klubs in zwei Gruppen: je Gruppe einer aus jedem der vier Lostöpfe, dazu ein zweiter Bundesligist in der anderen Gruppe. Europas Elite (Topf 1) ist stärker als die Bundesliga-Spitze, Topf 4 deutlich schwächer. Die Gruppenersten und -zweiten spielen Halbfinale und Finale.',

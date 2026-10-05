@@ -51,8 +51,15 @@
     // Spieltage). Zu Saisonbeginn steht die Tabelle noch auf null, ein zufaelliger erster
     // Platz wuerde sonst die ganze Saison ueber 50 % mehr Geld bringen. Der Tabellenplatz
     // entscheidet stattdessen vollstaendig ueber die Restausschuettung am Saisonende.
+    // Langzeittest Bundesliga (21.6): ab Spieltag 6 richtet sich die Rate nach dem aktuellen
+    // Tabellenplatz. Die neutrale Rate entsprach etwa Platz 10 - wer am Ende darunter stand,
+    // bekam bis zu 28 Mio. € zu viel (Platz 18: Anspruch 36 statt gezahlter 64 Mio.), und
+    // die Restausschüttung forderte nie etwas zurück. Die ersten Spieltage bleiben neutral.
+    const TV_RATE_RANK_FROM_MATCHDAY = 6;
     function getTvMoneyInstallment() {
         let base = LEAGUE_BASE_TV_MONEY[game.leagueLevel] ?? 100000;
+        let rank = game.matchday >= TV_RATE_RANK_FROM_MATCHDAY && typeof getOwnLeagueRank === 'function' ? getOwnLeagueRank() : null;
+        if (rank) return Math.round(calculateCollectiveTvMoney(game.leagueLevel, rank) / MATCHDAYS_PER_SEASON);
         return Math.round(base / MATCHDAYS_PER_SEASON);
     }
 

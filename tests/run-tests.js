@@ -2183,6 +2183,13 @@ async function testBundesligaLongRun(browser) {
             bucheMitLabel('🏆 DFB-Pokal-Prämie', 215000);
             out.praemie = game.kontoauszug.some(k => k.label === '🏆 DFB-Pokal-Prämie' && k.amount === 215000);
             out.startkapital = isFfpExemptLabel('🏁 Startkapital');
+            // DFB-Pokal: echte Vereine der Pyramide statt erfundener 75er
+            game.leagueLevel = 0;
+            const teams = buildDfbPokalTeams(true);
+            const ligaVon = n => leaguesData.findIndex(l => l.some(t => t.name === n));
+            out.pokalEcht = teams.length === 32 && new Set(teams).size === 32 && teams.includes(game.clubName)
+                && teams.filter(n => n !== game.clubName).every(n => ligaVon(n) >= 0 && ligaVon(n) <= 3)
+                && teams.filter(n => ligaVon(n) === 0).length >= 17;
             return out;
         } catch (e) { return { crash: e.message + ' ' + e.stack }; }
     });
@@ -2191,6 +2198,7 @@ async function testBundesligaLongRun(browser) {
         assert(r.ruecklagen && r.freigabe, 'Der Vorstand gibt Rücklagen über der Reserve als Transfer- und Gehaltsbudget frei');
         assert(r.sterne && r.untenNormal, 'Bundesliga-Markt mit drei internationalen Stars, untere Ligen unverändert');
         assert(r.praemie && r.startkapital, 'Pokalprämien mit eigener Buchung, Startkapital zählt nicht fürs FFP');
+        assert(r.pokalEcht, 'DFB-Pokal mit 32 echten Vereinen aus Bundesliga bis Regionalliga');
     }
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
     await page.close();

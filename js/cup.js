@@ -2,6 +2,32 @@
 // ==========================================
 // DFB-POKAL SYSTEM
 // ==========================================
+    // Teilnehmerfeld aus echten Vereinen der Pyramide (21.6): 18 aus der Bundesliga, 8 aus
+    // der 2. Liga, 4 aus der 3. Liga, 2 aus der Regionalliga - der eigene Verein belegt einen
+    // Platz seiner Liga. Vorher waren es 31 erfundene Vereine, die in keiner Liga spielten
+    // und pauschal Stärke 75 hatten: ein Bundesligist (~88) gewann den Pokal so fast
+    // automatisch (Langzeittest: ein passiver Verein auf Platz 10-12 dreimal in Folge).
+    const DFB_POKAL_QUOTEN = [18, 8, 4, 2];
+    function buildDfbPokalTeams(mitUns) {
+        let teams = mitUns ? [game.clubName] : [];
+        let zweite = game.secondTeam && game.secondTeam.name;
+        DFB_POKAL_QUOTEN.forEach((quote, l) => {
+            let pool = (leaguesData[l] || []).map(t => t.name).filter(n => n !== game.clubName && n !== zweite);
+            pool.sort(() => Math.random() - 0.5);
+            let frei = quote - (mitUns && game.leagueLevel === l ? 1 : 0);
+            pool.slice(0, Math.max(0, frei)).forEach(n => { if (teams.length < 32) teams.push(n); });
+        });
+        // Notfalls (sehr kleine Pyramide) mit Vereinen der nächsten Ligen auffüllen.
+        for (let l = 0; l < NUM_LEAGUES && teams.length < 32; l++) {
+            (leaguesData[l] || []).forEach(t => { if (teams.length < 32 && !teams.includes(t.name) && t.name !== zweite && t.name !== game.clubName) teams.push(t.name); });
+        }
+        while (teams.length < 32) {
+            let t = generateTeamName();
+            if (!teams.includes(t)) teams.push(t);
+        }
+        return teams.slice(0, 32);
+    }
+
     function initDynamicCup() {
         // Teilnahme wie im echten Fussball: ab der 3. Liga automatisch, darunter nur als
         // Sieger des Landespokals der Vorsaison (siehe js/landescup.js). Vorher startete
@@ -12,11 +38,7 @@
         cupTournament.currentRound = 0;
         cupTournament.roundsHistory = [];
 
-        let cupTeams = game.inCup ? [game.clubName] : [];
-        while (cupTeams.length < 32) {
-            let t = generateTeamName();
-            if (!cupTeams.includes(t)) cupTeams.push(t);
-        }
+        let cupTeams = buildDfbPokalTeams(game.inCup);
 
         cupTeams.sort(() => Math.random() - 0.5);
         let pairings = [];
@@ -115,8 +137,8 @@
             let isOurMatch = (p.home === game.clubName || p.away === game.clubName);
             let isHome = p.home === game.clubName;
             let finalBonus = isOurMatch && typeof getCupFinalBonus === 'function' ? getCupFinalBonus('dfb') : 0; // js/cup-final.js
-            let homeStr = isOurMatch ? (isHome ? calcTeamStrength(true) + finalBonus : getOpponentStrength(p.home)) : (60 + Math.floor(Math.random() * 24));
-            let awayStr = isOurMatch ? (!isHome ? calcTeamStrength(false) + finalBonus : getOpponentStrength(p.away)) : (60 + Math.floor(Math.random() * 24));
+            let homeStr = isOurMatch && isHome ? calcTeamStrength(true) + finalBonus : getOpponentStrength(p.home);
+            let awayStr = isOurMatch && !isHome ? calcTeamStrength(false) + finalBonus : getOpponentStrength(p.away);
 
             let live = isOurMatch && typeof takeLiveCupResult === 'function' ? takeLiveCupResult('dfb', p.home, p.away) : null;
             let goals = live ? { myGoals: live.homeGoals, oppGoals: live.awayGoals } : simulateGoals(homeStr, awayStr);
