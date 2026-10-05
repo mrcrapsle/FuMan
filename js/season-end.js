@@ -305,6 +305,7 @@
         if (typeof agePlayersAtSeasonEnd === 'function') agePlayersAtSeasonEnd();
         // Vorverträge (js/pre-contracts.js): ablösefreie Neuzugänge kommen nach der Alterung dazu.
         if (typeof joinPreContractPlayers === 'function') joinPreContractPlayers();
+        if (typeof tickBuybackOptions === 'function') tickBuybackOptions();
         // Ab 14 Spielern (Startelf + 3 Wechsel) statt erst unter 11: auslaufende Verträge ließen
         // den Kader im Langzeittest regelmäßig auf 12 schrumpfen.
         if (squad.length < 14) {

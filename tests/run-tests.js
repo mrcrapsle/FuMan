@@ -1672,6 +1672,83 @@ async function testPreContracts(browser) {
     await page.close();
 }
 
+async function testBuyback(browser) {
+    console.log('\n[22.7] Rückkaufoption beim Verkauf: 10 % weniger sofort, fester Rückkaufpreis, Entwicklung beim Käufer, nur im Fenster');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            const zufall = Math.random;
+            managerRPG.perks.negotiator = false;
+            game.money = 50000000; game.transferBudget = 50000000; game.wageBudget = 50000000; game.ffpTransferEmbargo = false;
+            incomingOffers = [];
+            const sorted = [...squad].sort((a, b) => a.strength - b.strength);
+            const jung = sorted[0], alt = sorted[1], dritter = sorted[2];
+            [jung, alt, dritter].forEach(p => { p.agent = null; p.isCrowdFavorite = false; p.friendPlayerId = null; });
+            jung.age = 21; alt.age = 30;
+            triggerNewAITransferOffer(jung); triggerNewAITransferOffer(alt);
+            showScreen('screen-transfer'); setTransferTab('offers'); renderTransferView();
+            const liste = document.getElementById('incoming-offers-list').innerHTML;
+            out.knopfNurJung = (liste.match(/Mit Rückkaufoption/g) || []).length === 1;
+            // Annehmen mit Rückkaufoption
+            const angebot = incomingOffers.find(o => o.playerId === jung.id);
+            const geld0 = game.money;
+            acceptTransferOfferWithBuyback(angebot.id);
+            const opt = (game.buybackOptions || [])[0];
+            out.verkauf = !squad.includes(jung) && game.money === geld0 + Math.round(angebot.currentBid * 0.9) && !!opt
+                && opt.price === Math.round(angebot.currentBid * 1.4 / 1000) * 1000 && opt.untilSeason === game.season + 2 && opt.saleStrength === jung.strength;
+            setTransferTab('sell'); renderTransferView();
+            out.box = document.getElementById('buyback-box').innerHTML.includes('RÜCKKAUFOPTIONEN');
+            // Alter Spieler: keine Option
+            const altAngebot = incomingOffers.find(o => o.playerId === alt.id);
+            acceptTransferOfferWithBuyback(altAngebot.id);
+            out.altNein = squad.includes(alt) && game.buybackOptions.length === 1;
+            // Die anderen Annahme-Wege rechnen wie bisher
+            triggerNewAITransferOffer(dritter);
+            const klausel = incomingOffers.find(o => o.playerId === dritter.id);
+            const geld1 = game.money;
+            acceptTransferOfferWithClause(klausel.id);
+            out.klausel = game.money === geld1 + Math.round(klausel.currentBid * 0.94) && game.sellOnClauses.some(c => c.playerName === dritter.name && c.originalSaleValue === Math.round(klausel.currentBid * 0.94));
+            const geld2 = game.money;
+            acceptTransferOffer(altAngebot.id);
+            out.normal = game.money === geld2 + altAngebot.currentBid && !squad.includes(alt);
+            // Entwicklung beim Käufer zum Saisonwechsel
+            const vorher = jung.strength;
+            Math.random = () => 0;
+            tickBuybackOptions();
+            Math.random = zufall;
+            out.entwicklung = jung.age === 22 && jung.strength === vorher + 1 && game.buybackOptions.length === 1;
+            // Außerhalb des Fensters: nicht möglich
+            game.matchday = 10; game.winterWindowActive = false;
+            const geld3 = game.money;
+            exerciseBuyback(jung.id);
+            out.fenster = game.money === geld3 && !squad.includes(jung);
+            // Im Fenster: zurückholen
+            game.matchday = 2;
+            exerciseBuyback(jung.id);
+            out.zurueck = squad.includes(jung) && jung.contracts === 3 && game.money === geld3 - opt.price && game.buybackOptions.length === 0;
+            // Verfall am Ende der letzten Options-Saison
+            game.buybackOptions = [{ player: { id: 'bb1', name: 'Bert', age: 20, strength: 50, pos: 'ST' }, club: 'X', price: 1000, untilSeason: game.season, saleStrength: 50, season: game.season }];
+            tickBuybackOptions();
+            out.verfall = game.buybackOptions.length === 0 && inboxMessages[0].title.includes('verfallen');
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Rückkaufoption ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.knopfNurJung && r.altNein, 'Rückkaufoption nur für Spieler bis 25 Jahre');
+        assert(r.verkauf && r.box, 'Verkauf mit Option: 10 % weniger sofort, Rückkauf für 140 % bis zwei Saisons später, Liste im Verkaufs-Reiter');
+        assert(r.klausel && r.normal, 'Normaler Verkauf und Weiterverkaufsbeteiligung rechnen unverändert');
+        assert(r.entwicklung, 'Der Spieler entwickelt sich beim Käufer weiter');
+        assert(r.fenster && r.zurueck, 'Zurückholen nur im Transferfenster, dann mit 3 Jahren Vertrag');
+        assert(r.verfall, 'Die Option verfällt am Ende der letzten Saison');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testSponsorConflict(browser) {
     console.log('\n[19.x] Sponsoren: Branchenkonflikt nennt den Konkurrenten und kostet 30 %');
     const { page, consoleErrors } = await freshPage(browser);
@@ -7377,6 +7454,7 @@ async function main() {
         testRefereeCritique,
         testMedicalCheck,
         testPreContracts,
+        testBuyback,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,

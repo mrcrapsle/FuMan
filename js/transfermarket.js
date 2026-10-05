@@ -309,43 +309,43 @@
         showToast(`💔 Fans sind empört über den Verkauf von ${departingPlayer.name}!`, 'error');
     }
 
-    function acceptTransferOffer(offerId) {
+    // Gemeinsamer Abschluss für alle Arten, ein Angebot anzunehmen (sofort, mit
+    // Weiterverkaufsbeteiligung, mit Rückkaufoption in js/buyback.js): prüft den Kader,
+    // bucht den Erlös (betrag = Summe vor Verhandlungsfuchs-Perk und Beraterprovision) und
+    // erledigt alle Abgangs-Folgen. Gibt { player, erloes, agentFee } zurück oder null.
+    function completeOfferSale(offerId, betrag) {
         let oIdx = incomingOffers.findIndex(o => o.id === offerId);
-        if (oIdx === -1) return;
+        if (oIdx === -1) return null;
         let offer = incomingOffers[oIdx];
-
-        if (squad.length <= 11) {
-            showToast('Transfer unzulässig: Der Kader muss mindestens 11 Spieler umfassen.', 'error', 4500);
-            return;
-        }
-
+        if (squad.length <= 11) { showToast('Transfer unzulässig: Der Kader muss mindestens 11 Spieler umfassen.', 'error', 4500); return null; }
         let pIdx = squad.findIndex(p => p.id === offer.playerId);
-        if (pIdx === -1) {
-            showToast('Dieser Spieler ist nicht mehr im Kader.', 'error', 4000);
-            incomingOffers.splice(oIdx, 1);
-            renderTransferView();
-            return;
-        }
-        if (!checkHighChemistryBeforeSale(squad[pIdx])) return;
-
+        if (pIdx === -1) { showToast('Dieser Spieler ist nicht mehr im Kader.', 'error', 4000); incomingOffers.splice(oIdx, 1); renderTransferView(); return null; }
+        if (!checkHighChemistryBeforeSale(squad[pIdx])) return null;
         playSound('goal');
         // Verhandlungsfuchs-Perk: +15% Erlöse bei Verkäufen gilt auch für angenommene
         // Transferangebote, nicht nur den direkten Sofortverkauf.
-        if (managerRPG.perks.negotiator) offer.currentBid = Math.round(offer.currentBid * 1.15);
-        let agentFee = getAgentFee(squad[pIdx], offer.currentBid);
-        game.money += offer.currentBid - agentFee;
-        game.transferBudget += Math.round(offer.currentBid * 0.85);
-
-        checkFriendshipDeparture(squad[pIdx]);
-        recordNotablePastPlayer(squad[pIdx]);
-        checkCrowdFavoriteDeparture(squad[pIdx]);
+        let erloes = managerRPG.perks.negotiator ? Math.round(betrag * 1.15) : betrag;
+        let player = squad[pIdx];
+        let agentFee = getAgentFee(player, erloes);
+        game.money += erloes - agentFee;
+        game.transferBudget += Math.round(erloes * 0.85);
+        checkFriendshipDeparture(player);
+        recordNotablePastPlayer(player);
+        checkCrowdFavoriteDeparture(player);
         squad.splice(pIdx, 1);
         lineup = lineup.filter(id => id !== offer.playerId);
         incomingOffers.splice(oIdx, 1);
         if (offer.nemesis && typeof onNemesisOfferAccepted === 'function') onNemesisOfferAccepted(offer);
-
         addManagerXP(120);
-        showToast(`🤝 Transfer perfekt: ${offer.playerName} wechselt für ${formatVal(offer.currentBid)} zu ${offer.clubName}.${agentFee > 0 ? ` Abzüglich ${formatVal(agentFee)} Beraterprovision.` : ''}`, 'success', 6000);
+        return { player, offer, erloes, agentFee };
+    }
+
+    function acceptTransferOffer(offerId) {
+        let offer = incomingOffers.find(o => o.id === offerId);
+        if (!offer) return;
+        let v = completeOfferSale(offerId, offer.currentBid);
+        if (!v) return;
+        showToast(`🤝 Transfer perfekt: ${offer.playerName} wechselt für ${formatVal(v.erloes)} zu ${offer.clubName}.${v.agentFee > 0 ? ` Abzüglich ${formatVal(v.agentFee)} Beraterprovision.` : ''}`, 'success', 6000);
         updateUI();
         renderTransferView();
     }
@@ -358,32 +358,15 @@
     // dafür bekommst du einen Anteil, falls der kaufende Verein den Spieler später mit
     // Gewinn weiterverkauft - eine reale, bekannte Fußball-Transfermechanik.
     function acceptTransferOfferWithClause(offerId) {
-        let oIdx = incomingOffers.findIndex(o => o.id === offerId);
-        if (oIdx === -1) return;
-        let offer = incomingOffers[oIdx];
-        if (squad.length <= 11) { showToast('Transfer unzulässig: Der Kader muss mindestens 11 Spieler umfassen.', 'error', 4500); return; }
-        let pIdx = squad.findIndex(p => p.id === offer.playerId);
-        if (pIdx === -1) { showToast('Dieser Spieler ist nicht mehr im Kader.', 'error', 4000); incomingOffers.splice(oIdx, 1); renderTransferView(); return; }
-        if (!checkHighChemistryBeforeSale(squad[pIdx])) return;
-        playSound('goal');
+        let offer = incomingOffers.find(o => o.id === offerId);
+        if (!offer) return;
         let clausePercent = 15;
         // Der kaufende Verein zahlt für die Weiterverkaufsbeteiligung 6% weniger sofort.
-        let reducedBid = Math.round(offer.currentBid * 0.94);
-        if (managerRPG.perks.negotiator) reducedBid = Math.round(reducedBid * 1.15);
-        let agentFee = getAgentFee(squad[pIdx], reducedBid);
-        game.money += reducedBid - agentFee;
-        game.transferBudget += Math.round(reducedBid * 0.85);
+        let v = completeOfferSale(offerId, Math.round(offer.currentBid * 0.94));
+        if (!v) return;
         if (!Array.isArray(game.sellOnClauses)) game.sellOnClauses = [];
-        game.sellOnClauses.push({ playerName: squad[pIdx].name, buyingClub: offer.clubName, percent: clausePercent, originalSaleValue: reducedBid });
-        checkFriendshipDeparture(squad[pIdx]);
-        recordNotablePastPlayer(squad[pIdx]);
-        checkCrowdFavoriteDeparture(squad[pIdx]);
-        squad.splice(pIdx, 1);
-        lineup = lineup.filter(id => id !== offer.playerId);
-        incomingOffers.splice(oIdx, 1);
-        if (offer.nemesis && typeof onNemesisOfferAccepted === 'function') onNemesisOfferAccepted(offer);
-        addManagerXP(120);
-        showToast(`🤝 ${offer.playerName} wechselt für ${formatVal(reducedBid)} zu ${offer.clubName} - dazu ${clausePercent}% von jedem künftigen Weiterverkauf.`, 'success', 6000);
+        game.sellOnClauses.push({ playerName: v.player.name, buyingClub: offer.clubName, percent: clausePercent, originalSaleValue: v.erloes });
+        showToast(`🤝 ${offer.playerName} wechselt für ${formatVal(v.erloes)} zu ${offer.clubName} - dazu ${clausePercent}% von jedem künftigen Weiterverkauf.`, 'success', 6000);
         updateUI();
         renderTransferView();
     }
@@ -566,6 +549,7 @@
                         <button onclick="rejectTransferOffer('${o.id}')" class="btn-danger" style="font-size:10px;">✖ Ablehnen</button>
                     </div>
                     <button onclick="acceptTransferOfferWithClause('${o.id}')" class="btn-gold" style="font-size:9px; margin-bottom:4px;">📜 Mit 15% Weiterverkaufsbeteiligung (${formatVal(Math.round(o.currentBid*0.94))} sofort)</button>
+                    ${typeof getBuybackTerms === 'function' && p && getBuybackTerms(p, o) ? `<button onclick="acceptTransferOfferWithBuyback('${o.id}')" class="btn-gold" style="font-size:9px; margin-bottom:4px;">↩️ Mit Rückkaufoption (${formatVal(getBuybackTerms(p, o).sofort)} sofort, zurück für ${formatVal(getBuybackTerms(p, o).preis)})</button>` : ''}
                     <button onclick="openNegotiationStepper('${o.id}')" class="btn-secondary" style="font-size:10px; margin-top:4px;">🔧 Nachverhandeln (Schrittweite-Angebot)</button>
                 `;
                 offList.appendChild(card);
@@ -574,6 +558,7 @@
 
         if (typeof renderTransferPokerBox === 'function') renderTransferPokerBox();
         if (typeof renderPreContractBox === 'function') renderPreContractBox();
+        if (typeof renderBuybackBox === 'function') renderBuybackBox();
         let mList = document.getElementById('market-list');
         mList.innerHTML = '';
         marketPlayers.forEach((p, idx) => {
