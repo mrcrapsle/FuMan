@@ -888,6 +888,16 @@
     }
     function loescheBuchungskontext() { buchungsKontext = null; }
 
+    // Einzelne Buchung mit eigener Bezeichnung, ohne einen äußeren Kontext zu verlieren
+    // (z.B. Pokalprämien mitten in der Spieltagssimulation - ohne Label landeten sie als
+    // "Vereinsbüro" im Kontoauszug).
+    function bucheMitLabel(label, betrag) {
+        const aeusserer = buchungsKontext;
+        setzeBuchungskontext(label);
+        game.money += betrag;
+        buchungsKontext = aeusserer;
+    }
+
     // Kontoauszug-Ansicht: chronologische Liste aller Kontobewegungen ausserhalb der
     // Spieltagsabrechnung, plus eine Zusammenfassung je Bereich.
     function renderKontoauszug(box) {

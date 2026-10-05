@@ -14,7 +14,10 @@
         let maxStr = minStr + 9;
 
         for (let i = 0; i < 10; i++) {
-            let p = createPlayer(["TW", "ABW", "MIT", "ST"][Math.floor(Math.random() * 4)], minStr, maxStr);
+            // Bundesliga (21.6): drei internationale Stars über dem Liganiveau - vorher endete
+            // der Markt bei 86, ein Kader mit 83 ließ sich trotz voller Kasse kaum verstärken.
+            let stern = game.leagueLevel === 0 && i >= 7;
+            let p = createPlayer(["TW", "ABW", "MIT", "ST"][Math.floor(Math.random() * 4)], stern ? 87 : minStr, stern ? 93 : maxStr);
             p.marketValue = Math.round(p.marketValue * discount);
             marketPlayers.push(p);
         }

@@ -2734,10 +2734,14 @@
                 if (chosenLevel !== null) game.leagueLevel = parseInt(chosenLevel);
                 // Startkapital und Stadiongroesse skalieren mit der gewaehlten Startliga
                 // (siehe getNewGameStartMoney()/scaleStadiumForLeague() in save.js).
+                // Eigene Buchungsbezeichnung: sonst stand das Startkapital als "Vereinsbüro"-
+                // Einnahme im Kontoauszug und zählte für das Financial Fairplay der 1. Saison.
                 if (chosenMoney !== null) {
+                    setzeBuchungskontext('🏁 Startkapital');
                     game.money = (chosenLevel !== null && typeof getNewGameStartMoney === 'function')
                         ? getNewGameStartMoney(parseInt(chosenLevel), parseInt(chosenMoney))
                         : parseInt(chosenMoney);
+                    loescheBuchungskontext();
                 }
                 if (chosenLevel !== null && typeof scaleStadiumForLeague === 'function') scaleStadiumForLeague(parseInt(chosenLevel));
                 if (chosenLevel !== null && parseInt(chosenLevel) !== 5 && typeof generateSquadForLevel === 'function') {

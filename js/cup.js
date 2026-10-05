@@ -178,7 +178,7 @@
                 if (typeof recordCupResultStats === 'function') recordCupResultStats(weWon, p.ourStr, p.oppStr, oppName, r.name);
                 if (weWon) {
                     let sponsorCupBonus = game.sponsor.cupBonus || 0;
-                    game.money += r.prize + sponsorCupBonus;
+                    bucheMitLabel('🏆 DFB-Pokal-Prämie', r.prize + sponsorCupBonus);
                     // Manager-XP für Erfolge gibt's ab jetzt nur beim tatsächlichen Live-
                     // Spielen des Spieltags, nicht bei reiner Simulation - wer den Spieltag
                     // durchklickt statt zu spielen, verzichtet auf den Fortschritt im

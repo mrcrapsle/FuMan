@@ -90,7 +90,10 @@ function getScenarioForcedSales(s) {
 function applyScenarioStart(id) {
     const sc = CAREER_SCENARIOS[id];
     if (!sc) return;
+    // Startkasse des Szenarios: zählt nicht als Einnahme/Ausgabe (FFP, Kontoauszug-Bereich).
+    if (typeof setzeBuchungskontext === 'function') setzeBuchungskontext('🏁 Startkapital');
     sc.setup();
+    if (typeof loescheBuchungskontext === 'function') loescheBuchungskontext();
     game.scenario = { id, startSeason: game.season, startLevel: game.leagueLevel, lastRank: null, status: 'aktiv', forcedAtStart: game.forcedSalesCount || 0 };
     addInboxMessage('vertrag', `${sc.title}: Die Mission beginnt`, `${sc.desc}\n\nFrist: ${sc.seasons} Saison${sc.seasons > 1 ? 's' : ''}. Bewertet wird jeweils am Saisonende.`, 'screen-dashboard');
 }

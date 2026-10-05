@@ -14,7 +14,7 @@
     // kein echter Gewinn/Verlust) von der Berechnung AUSGENOMMEN. Die Regel soll Vereine
     // nicht davon abhalten, in ihre Zukunft zu investieren, sondern nur laufendes
     // Überleben auf Pump verhindern.
-    const FFP_EXEMPTE_LABELS = ['🏟️ Stadionausbau', '🏘️ Vereinsgelände', '🎓 Jugendarbeit', '💰 Finanzen & Kredite'];
+    const FFP_EXEMPTE_LABELS = ['🏟️ Stadionausbau', '🏘️ Vereinsgelände', '🎓 Jugendarbeit', '💰 Finanzen & Kredite', '🏁 Startkapital'];
     const FFP_MONITORING_SEASONS = 3;
 
     function isFfpExemptLabel(label) {

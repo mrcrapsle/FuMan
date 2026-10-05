@@ -134,7 +134,30 @@
         }
     }
 
-    function concludeSeasonAndAdvance() {
+    // Langzeittest Bundesliga (21.6): die Budgets hingen nur an Liga und Platz, nie an der
+// Kasse. Ein Bundesligist häufte so über 200 Mio. € an, bekam aber ~9 Mio. Transferbudget
+// und ein Gehaltsbudget UNTER seiner Lohnsumme - kein Neuzugang möglich, das Geld lag tot.
+// Jetzt gibt der Vorstand Rücklagen über einer Reserve (eine halbe Saison Gehaltsbudget)
+// teilweise frei: 40 % fürs Transferbudget, 10 % (auf 34 Spieltage) fürs Gehaltsbudget.
+// In den unteren Ligen liegt die Reserve weit über der Kasse - dort ändert sich nichts.
+function getCashSurplusBudgetShare() {
+    const reserve = game.wageBudget * 34 * 0.5;
+    const ueberschuss = Math.max(0, game.money - reserve);
+    return {
+        transfer: Math.round(ueberschuss * 0.4 / 50000) * 50000,
+        wage: Math.round(ueberschuss * 0.1 / 34 / 1000) * 1000
+    };
+}
+
+function applyCashSurplusBudgets() {
+    const anteil = getCashSurplusBudgetShare();
+    if (!anteil.transfer && !anteil.wage) return;
+    game.transferBudget += anteil.transfer;
+    game.wageBudget += anteil.wage;
+    addInboxMessage('finanzen', '🏦 Vorstand gibt Rücklagen frei', `Aus den Rücklagen über der Reserve stehen zusätzlich ${formatVal(anteil.transfer)} Transferbudget und ${formatVal(anteil.wage)} Gehaltsbudget pro Spieltag bereit.`, 'screen-finances');
+}
+
+function concludeSeasonAndAdvance() {
         // Erfolgsbasierte Vertragsboni (js/bonusclauses.js): das Aufstiegsbonus-Flag wird
         // bewusst HIER, ganz am Anfang, zurückgesetzt - nicht in der allgemeinen
         // Saisonstatistik-Reset-Schleife weiter unten. Der Aufstieg dieser (gerade endenden)
@@ -256,6 +279,7 @@
         let placementFactor = myRank <= 4 ? 1.3 : (myRank <= 10 ? 1.0 : 0.8);
         game.transferBudget = Math.round(2500000 * (1 + leagueFactor * 2.5) * placementFactor);
         game.wageBudget = Math.round(450000 * (1 + leagueFactor * 2.5) * placementFactor);
+        if (typeof applyCashSurplusBudgets === 'function') applyCashSurplusBudgets();
         // Manager-Eigengehalt: blieb bisher für immer beim Startwert (1.200 €/SpT),
         // selbst nach mehreren Aufstiegen in die Bundesliga mit Millionenbudgets - ein
         // erfolgreicher Bundesliga-Trainer verdient real deutlich mehr als ein Kreisliga-

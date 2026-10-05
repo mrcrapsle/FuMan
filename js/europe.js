@@ -444,7 +444,7 @@
                     if (h.name === game.clubName || a.name === game.clubName) {
                         let weWon = (h.name === game.clubName && hg > ag) || (a.name === game.clubName && ag > hg);
                         if (weWon) {
-                            game.money += 1500000;
+                            bucheMitLabel('🌍 Europapokal', 1500000);
                             if (isLiveContext) addManagerXP(300);
                             showNotice('🌟 Sieg im Champions Cup', `${h.name} ${hg}:${ag} ${a.name}.\n\n1.500.000 € UEFA-Prämie kassiert.`);
                         }
@@ -482,7 +482,7 @@
 
             let userInSemis = [a1.name, a2.name, b1.name, b2.name].includes(game.clubName);
             if (userInSemis) {
-                game.money += 8000000;
+                bucheMitLabel('🌍 Europapokal', 8000000);
                 if (isLiveContext) addManagerXP(1000);
                 addInboxMessage('vertrag', '🌟 Champions Cup Halbfinal-Hinspiel!', `Das Hinspiel ist gespielt - das Rückspiel entscheidet in ${europeTournament.matchdays[7] - mday} Spieltagen über den Finaleinzug. +8.000.000 € UEFA-Erfolgsprämie für den Halbfinaleinzug bereits erhalten!`, 'screen-europe');
                 showNotice('🌟 Halbfinale erreicht!', 'Das Hinspiel ist absolviert, das Rückspiel entscheidet.\n\n8.000.000 € UEFA-Erfolgsprämie erhalten.');
@@ -506,7 +506,7 @@
                     // der Lokalderby-Regel, aber als einmaliger Bonus statt Faktor).
                     let soldOutAttendance = stadium.total || 16000;
                     let soldOutIncome = Math.round(soldOutAttendance * 0.5 * game.ticketPrices.steh + soldOutAttendance * 0.45 * game.ticketPrices.sitz + (stadium.vipTotal || 50) * game.ticketPrices.vip);
-                    game.money += soldOutIncome;
+                    bucheMitLabel('🌍 Europapokal', soldOutIncome);
                     addInboxMessage('vertrag', '🎟️ Zuschauerrekord im Halbfinal-Rückspiel!', `Das Stadion ist beim wichtigsten Spiel der Saison restlos ausverkauft (${soldOutAttendance.toLocaleString('de-DE')} Zuschauer) - ${formatVal(soldOutIncome)} Ticketeinnahmen!`, 'screen-finances');
                 }
                 // Rückspiel: teamB ist jetzt Heimteam
@@ -562,7 +562,7 @@
             europeTournament.finalMatch = { home: final1, away: final2, score: `${hg} : ${ag}`, winner };
 
             if (weWin) {
-                game.money += 25000000;
+                bucheMitLabel('🌍 Europapokal', 25000000);
                 game.trophies.push(`Champions Cup Sieger (Saison ${game.season})`);
                 boostFanBaseFloor(15, 'Der Champions Cup Sieg');
                 if (isLiveContext) addManagerXP(3000);
