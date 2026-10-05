@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.44', date: '05.10.2026', features: 'Phase 24: Derbys nach Ort und Traditionsduellen - Dauerrivale und Erzfeind entfernt' };
+    const GAME_VERSION = { number: '3.45', date: '05.10.2026', features: 'Phase 21.4: Champions Cup mit Lostöpfen, Europa-Koeffizient und Qualifikation jede Saison neu' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

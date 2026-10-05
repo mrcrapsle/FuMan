@@ -2,46 +2,89 @@
 // ==========================================
 // CHAMPIONS CUP (EUROPAPOKAL)
 // ==========================================
-    function initEuropeCup() {
-        // Nutzt jetzt den bereits an anderer Stelle definierten, dezent verfremdeten
-        // INTERNATIONAL_CLUB_NAMES-Pool statt (wie zuvor fälschlich) exakter echter
-        // Vereinsnamen ("Real Madrid", "FC Bayern" etc.) - Konsistenz mit dem Rest des Spiels.
-        const topEurope = INTERNATIONAL_CLUB_NAMES.filter(n => n !== 'Liverpol FC').slice(0, 7);
-        let participants = game.inEurope ? [game.clubName, ...topEurope] : ["Liverpol FC", ...topEurope];
-        participants.sort(() => Math.random() - 0.5);
+    // Lostöpfe (Phase 21.4): jede Saison ein neues Feld statt immer derselben sieben Klubs.
+    // Topf 1 die europäische Elite, Topf 4 die Außenseiter. Die Stärke richtet sich nach dem
+    // Topf (gleiche Staffelung wie früher die feste Reihenfolge) und am eigenen Niveau.
+    const EUROPE_POTS = [
+        ["Real Madriz", "FC Barcalona", "Manchester Cyty", "Liverpol FC", "Paris St. Germaine", "Inter Milano", "Arsenall London"],
+        ["Atlético Madriz", "Juwentus Turin", "AC Millan", "Chelsea FC London", "Manchester Unitad", "SSC Neapell", "Benfika Lissabon", "FC Porto Portugal"],
+        ["Ajax Amsterdaam", "PSV Eindhofen", "Sporting Lissabonn", "Tottenham Hotspurr", "AS Romm", "Olympique Marseile", "Galatasaray Istanbull", "Club Bruggge", "Feyenoordt Rotterdam"],
+        ["Celtic Glasgoww", "RB Salzborg", "Schachtar Donezkk", "Roter Stern Belgratt", "Young Boys Bernn", "FC Baselll", "Fenerbahce Istanbull", "Olympique Lyonn", "AS Monakko", "FC Sevillia", "Lazio Romm"]
+    ];
+    const EUROPE_POT_STRENGTH = [[9, 6], [4, 2], [0, -2], [-4, -6]];
+    // Punkte je erreichter Runde für den Europa-Koeffizienten (letzte 5 Saisons).
+    const EUROPE_STAGE_POINTS = { gruppe: 1, halbfinale: 3, finale: 4, sieger: 6 };
 
-        // Staerke des Teilnehmerfelds: Frueher bekam JEDER Teilnehmer fest 84-89. Das wurde
-        // offenbar nie gegen die tatsaechlich erreichbare Teamstaerke geprueft - ein
-        // Erstliga-Meister kommt im Spiel effektiv auf rund 72, und ein Rueckstand von
-        // 12 bis 17 Punkten ist ueber sechs Gruppenspiele aussichtslos. Nachgemessen ueber
-        // 20 simulierte Saisons: 18-mal Gruppenletzter, 2-mal Dritter, NIE die K.o.-Runde.
-        // Halbfinale (8 Mio.), Finale und Titel (25 Mio.) waren damit toter Inhalt.
-        //
-        // Jetzt ist das Feld gestaffelt wie ein echter Wettbewerb - zwei Schwergewichte,
-        // dann abfallend - und an das eigene Niveau gekoppelt. Der Titel ist erreichbar,
-        // aber man muss dafuer die Favoriten schlagen.
-        // Bezugsgroesse ist bewusst der reine Kaderschnitt und NICHT calcTeamStrength():
-        // Letzteres schwankt stark mit Fitness, Moral und Form. Die Auslosung findet zum
-        // Saisonstart statt, wo der Kader frisch und topfit ist - dort meldet
-        // calcTeamStrength() rund 97, waehrend derselbe Kader ab Spieltag 20 nur noch auf
-        // etwa 74 kommt. Das Teilnehmerfeld wurde also am Bestwert ausgerichtet und spielte
-        // die ganze Saison gegen einen Verein, der diesen Wert nie wieder erreichte.
-        // Der Abschlag von 6 Punkten bildet genau diesen Formverlust ueber die Saison ab.
-        const FELD_STAFFELUNG = [9, 6, 4, 2, 0, -2, -4, -6];
+    function getEuropeCoefficient() {
+        return (game.europeHistory || []).filter(h => h.season > game.season - 5).reduce((s, h) => s + (EUROPE_STAGE_POINTS[h.stage] || 0), 0);
+    }
+
+    // Topf des eigenen Vereins: Erfolge der letzten Jahre bringen leichtere Gruppen.
+    function getEuropePot() {
+        const k = getEuropeCoefficient();
+        return k >= 12 ? 0 : (k >= 6 ? 1 : (k >= 2 ? 2 : 3));
+    }
+
+    function initEuropeCup() {
+        const zieh = liste => liste.splice(Math.floor(Math.random() * liste.length), 1)[0];
+        const toepfe = EUROPE_POTS.map(t => t.slice());
+        // Ein zweiter deutscher Teilnehmer: der stärkste andere Bundesligist.
+        const deutsche = (leaguesData[0] || []).filter(t => t.name !== game.clubName && t.name !== (game.secondTeam && game.secondTeam.name))
+            .sort((a, b) => b.strength - a.strength);
+        const deutscher = deutsche[0] || null;
+        const eigenerTopf = game.inEurope ? getEuropePot() : -1;
+        const deutscherTopf = deutscher ? (eigenerTopf === 1 ? 2 : 1) : -1;
+
+        // Staerke des Teilnehmerfelds: am reinen Kaderschnitt ausgerichtet (nicht an
+        // calcTeamStrength(), das zum Saisonstart mit frischem Kader ~97 meldet und ab
+        // Spieltag 20 nur noch ~74 - daher der Abschlag von 6). Ohne diese Kopplung war das
+        // Feld 12-17 Punkte stärker und der Titel nie erreichbar (20 Saisons gemessen).
         let kaderSchnitt = squad.length ? squad.reduce((sum, p) => sum + p.strength, 0) / squad.length : 70;
         let feldMitte = Math.max(45, Math.min(84, Math.round(kaderSchnitt) - 6));
-        let baueTeam = (name, idx) => ({
-            name, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, pts: 0,
-            // Der eigene Verein spielt mit seiner ECHTEN Staerke (siehe
-            // simulateEuropeMatchday) - der Wert hier ist fuer ihn nur ein Platzhalter.
-            str: Math.max(45, Math.min(95, feldMitte + FELD_STAFFELUNG[idx] + Math.floor(Math.random() * 3) - 1))
+        const team = (name, str) => ({ name, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, pts: 0, str: Math.max(45, Math.min(95, Math.round(str))) });
+
+        // Je Topf zwei Plätze: einer für Gruppe A, einer für Gruppe B.
+        const gruppen = [[], []];
+        const eigeneGruppe = Math.random() < 0.5 ? 0 : 1;
+        EUROPE_POTS.forEach((_, topf) => {
+            [0, 1].forEach(platz => {
+                const gruppe = platz === 0 ? eigeneGruppe : 1 - eigeneGruppe;
+                const basis = feldMitte + EUROPE_POT_STRENGTH[topf][platz] + Math.floor(Math.random() * 3) - 1;
+                // Eigener Verein in seinem Topf, in "seiner" Gruppe; der deutsche Klub in der anderen.
+                if (topf === eigenerTopf && platz === 0) gruppen[gruppe].push(team(game.clubName, basis));
+                else if (topf === deutscherTopf && platz === 1) gruppen[gruppe].push(team(deutscher.name, deutscher.strength));
+                else gruppen[gruppe].push(team(zieh(toepfe[topf]), basis));
+            });
         });
-        europeTournament.groupA = participants.slice(0, 4).map((name, i) => baueTeam(name, i * 2));
-        europeTournament.groupB = participants.slice(4, 8).map((name, i) => baueTeam(name, i * 2 + 1));
+        europeTournament.groupA = gruppen[0];
+        europeTournament.groupB = gruppen[1];
+        europeTournament.pot = eigenerTopf;
         europeTournament.semiFinals = [];
         europeTournament.finalMatch = null;
         europeTournament.drawCeremonyShown = false;
         europeTournament.startFeePaid = false;
+    }
+
+    // Saisonende (concludeSeasonAndAdvance, vor der neuen Qualifikation): erreichte Runde merken.
+    function recordEuropeSeason() {
+        if (!game.inEurope) return;
+        const us = game.clubName, et = europeTournament;
+        const imHalbfinale = (et.semiFinals || []).some(t => t.teamA === us || t.teamB === us);
+        const imFinale = et.finalMatch && (et.finalMatch.home === us || et.finalMatch.away === us);
+        const stage = et.finalMatch && et.finalMatch.winner === us ? 'sieger' : (imFinale ? 'finale' : (imHalbfinale ? 'halbfinale' : 'gruppe'));
+        if (!game.europeHistory) game.europeHistory = [];
+        game.europeHistory.unshift({ season: game.season, stage, pot: et.pot });
+        if (game.europeHistory.length > 20) game.europeHistory.length = 20;
+    }
+
+    // Qualifikation gilt immer nur für die nächste Saison: Platz 1-4 der Bundesliga oder der
+    // DFB-Pokalsieg dieser Saison. Vorher blieb man nach EINER Qualifikation für immer dabei -
+    // auch nach dem Abstieg in die 6. Liga.
+    function decideEuropeQualification(myRank) {
+        const liga = game.leagueLevel === 0 && myRank <= 4;
+        const pokal = game.europeCupTicket === game.season;
+        game.inEurope = liga || pokal;
+        return game.inEurope ? (liga ? 'liga' : 'pokal') : null;
     }
 
     // ---------- AUSLOSUNGS-ZEREMONIE (EUROPAPOKAL) ----------
@@ -517,6 +560,14 @@
     function renderEuropeView() {
         let tag = document.getElementById('europe-status-tag');
         if (tag) tag.innerText = game.inEurope ? "Status: Aktiv im Wettbewerb" : "Status: Nicht qualifiziert (Platz 1-4 oder Pokalsieg benötigt)";
+        let hist = document.getElementById('europe-history-box');
+        if (hist) {
+            const h = game.europeHistory || [];
+            const namen = { gruppe: 'Gruppenphase', halbfinale: 'Halbfinale', finale: 'Finale', sieger: '👑 Sieger' };
+            hist.innerHTML = `<div class="box" style="font-size:10px;">📊 Europa-Koeffizient (letzte 5 Saisons): <strong>${getEuropeCoefficient()}</strong> · nächste Auslosung aus <strong>Topf ${getEuropePot() + 1}</strong>${game.inEurope && europeTournament.pot >= 0 ? ` · diese Saison Topf ${europeTournament.pot + 1}` : ''}
+                <div style="color:var(--text-muted); margin-top:2px;">Gruppenphase 1, Halbfinale 3, Finale 4, Titel 6 Punkte - ab 2 Punkten Topf 3, ab 6 Topf 2, ab 12 Topf 1 (leichtere Gruppen).</div></div>`
+                + (h.length ? h.map(x => `<div class="player-row" style="font-size:10px;"><span>Saison ${x.season}</span><span>${namen[x.stage] || x.stage}${x.pot >= 0 ? ` · Topf ${x.pot + 1}` : ''}</span></div>`).join('') : '<div class="box" style="font-size:10px; color:var(--text-muted);">Noch keine Teilnahme.</div>');
+        }
 
         let populateGroup = (tbodyId, grp) => {
             let tbody = document.getElementById(tbodyId);

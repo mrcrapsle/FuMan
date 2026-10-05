@@ -2002,6 +2002,85 @@ async function testLocalDerbies(browser) {
     await page.close();
 }
 
+async function testEuropeDraw(browser) {
+    console.log('\n[21.4] Champions Cup: Qualifikation jede Saison neu, Lostöpfe, Koeffizient, Historie');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            squad.forEach(p => { p.strength = 78 + Math.floor(Math.random() * 8); });
+            // Qualifikation: ein altes inEurope bleibt nicht für immer
+            game.inEurope = true; game.leagueLevel = 2;
+            out.altWeg = decideEuropeQualification(1) === null && game.inEurope === false;
+            game.leagueLevel = 0;
+            out.platz4 = decideEuropeQualification(4) === 'liga' && game.inEurope === true;
+            out.platz5 = decideEuropeQualification(5) === null && game.inEurope === false;
+            game.europeCupTicket = game.season;
+            out.pokal = decideEuropeQualification(9) === 'pokal' && game.inEurope === true;
+            game.europeCupTicket = game.season - 1;
+            out.pokalAlt = decideEuropeQualification(9) === null;
+            // Auslosung: 8 Teams, je Gruppe einer aus jedem Topf, ein zweiter Bundesligist in der anderen Gruppe
+            game.inEurope = true; game.europeHistory = [];
+            out.neulingTopf4 = getEuropePot() === 3;
+            const felder = new Set();
+            let ok = true;
+            for (let i = 0; i < 6; i++) {
+                initEuropeCup();
+                const a = europeTournament.groupA, b = europeTournament.groupB;
+                const alle = [...a, ...b];
+                const unsere = a.some(t => t.name === game.clubName) ? a : b;
+                const andere = unsere === a ? b : a;
+                const de = leaguesData[0].filter(t => t.name !== game.clubName).sort((x, y) => y.strength - x.strength)[0];
+                ok = ok && a.length === 4 && b.length === 4 && new Set(alle.map(t => t.name)).size === 8
+                    && unsere.some(t => t.name === game.clubName) && andere.some(t => t.name === de.name)
+                    && europeTournament.pot === 3;
+                felder.add(alle.map(t => t.name).sort().join(','));
+            }
+            out.auslosung = ok;
+            out.wechselnd = felder.size > 1;
+            // Koeffizient: Halbfinale + Titel in den letzten 5 Saisons → Topf 2, ältere zählen nicht
+            game.europeHistory = [{ season: game.season - 1, stage: 'sieger' }, { season: game.season - 2, stage: 'gruppe' }, { season: game.season - 7, stage: 'sieger' }];
+            out.koeffizient = getEuropeCoefficient() === 7 && getEuropePot() === 1;
+            initEuropeCup();
+            const deTopf = leaguesData[0].filter(t => t.name !== game.clubName).sort((x, y) => y.strength - x.strength)[0].name;
+            out.topf2 = europeTournament.pot === 1 && [...europeTournament.groupA, ...europeTournament.groupB].some(t => t.name === deTopf);
+            // Runde festhalten
+            game.europeHistory = [];
+            europeTournament.semiFinals = [{ teamA: game.clubName, teamB: 'X' }];
+            europeTournament.finalMatch = { home: game.clubName, away: 'Y', winner: game.clubName };
+            recordEuropeSeason();
+            europeTournament.finalMatch = { home: 'Z', away: 'Y', winner: 'Z' };
+            recordEuropeSeason();
+            europeTournament.semiFinals = []; europeTournament.finalMatch = null;
+            recordEuropeSeason();
+            out.runden = game.europeHistory.map(h => h.stage).join(',') === 'gruppe,halbfinale,sieger';
+            game.inEurope = false;
+            const n = game.europeHistory.length;
+            recordEuropeSeason();
+            out.ohneTeilnahme = game.europeHistory.length === n;
+            // Europa-Bildschirm: Koeffizient und Historie
+            showScreen('screen-europe');
+            const box = document.getElementById('europe-history-box').innerHTML;
+            out.historie = box.includes('Europa-Koeffizient') && box.includes('Halbfinale') && box.includes('Topf');
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Champions Cup ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.altWeg && r.platz4 && r.platz5, 'Die Qualifikation gilt nur eine Saison: Platz 1-4 der Bundesliga, nach Abstieg ist man raus');
+        assert(r.pokal && r.pokalAlt, 'Der DFB-Pokalsieg dieser Saison qualifiziert, ein alter nicht');
+        assert(r.neulingTopf4 && r.auslosung, 'Auslosung aus vier Töpfen, ein zweiter Bundesligist in der anderen Gruppe');
+        assert(r.wechselnd, 'Das Teilnehmerfeld wechselt von Saison zu Saison');
+        assert(r.koeffizient && r.topf2, 'Erfolge der letzten 5 Saisons bringen einen besseren Topf');
+        assert(r.runden && r.ohneTeilnahme, 'Die erreichte Runde landet in der Europapokal-Historie');
+        assert(r.historie, 'Der Europa-Bildschirm zeigt Koeffizient, Topf und Historie');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testSponsorConflict(browser) {
     console.log('\n[19.x] Sponsoren: Branchenkonflikt nennt den Konkurrenten und kostet 30 %');
     const { page, consoleErrors } = await freshPage(browser);
@@ -7684,6 +7763,7 @@ async function main() {
         testPlayerProfile,
         testHomeRegion,
         testLocalDerbies,
+        testEuropeDraw,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,

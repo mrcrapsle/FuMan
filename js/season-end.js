@@ -204,8 +204,10 @@
         if (typeof awardLeagueHonours === 'function') awardLeagueHonours(myRank);
         if (typeof tickMediaImageSeasonHistory === 'function') tickMediaImageSeasonHistory();
 
-        if (game.leagueLevel === 0 && myRank <= 4) {
-            game.inEurope = true;
+        // Champions Cup (js/europe.js): Runde dieser Saison festhalten, dann neu qualifizieren.
+        if (typeof recordEuropeSeason === 'function') recordEuropeSeason();
+        let europaWeg = typeof decideEuropeQualification === 'function' ? decideEuropeQualification(myRank) : null;
+        if (europaWeg === 'liga') {
             showNotice('🌟 Champions-Cup-Qualifikation!', `Platz ${myRank} erreicht - nächste Saison spielt der Verein in der europäischen Königsklasse.`);
         }
 

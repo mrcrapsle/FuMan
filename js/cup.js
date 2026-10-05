@@ -189,7 +189,7 @@
                     if (roundIdx === 4) {
                         game.trophies.push(`DFB-Pokalsieger (Saison ${game.season})`);
                         boostFanBaseFloor(10, 'Der DFB-Pokalsieg');
-                        game.inEurope = true;
+                        game.europeCupTicket = game.season; // Startplatz für die nächste Saison (decideEuropeQualification)
                         showNotice('🎉 Historischer Triumph!', `${game.clubName} ist DFB-Pokalsieger und für den Champions Cup qualifiziert.`);
                     }
                 } else {
