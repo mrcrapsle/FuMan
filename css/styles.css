@@ -1364,11 +1364,6 @@
 
             /* Modals responsive */
             .generic-modal-overlay { padding: 8px; }
-            .generic-modal {
-                max-width: 95vw;
-                max-height: 85vh;
-                font-size: 10px;
-            }
 
             /* Toast messages */
             .app-toast {

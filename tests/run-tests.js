@@ -2081,6 +2081,79 @@ async function testEuropeDraw(browser) {
     await page.close();
 }
 
+async function testCleanupNine(browser) {
+    console.log('\n[21.5] Aufräumen Teil 9: Spielanalyse, Holding, Europa-Status, Börsenticker ohne Würfelwerte');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            // Spielanalyse: gefährlichster Spieler = echter Star, bei jedem Öffnen derselbe
+            staffMembers.analyst.hired = true;
+            const opp = leaguesData[game.leagueLevel].find(t => t.name !== game.clubName);
+            if (typeof ensureAiStars === 'function') ensureAiStars();
+            pendingMatchInfo = { oppName: opp.name, isHome: true, oppStr: opp.strength };
+            renderPreMatchAnalysis(opp, opp.name);
+            const a1 = document.getElementById('prematch-analysis-box').innerHTML;
+            renderPreMatchAnalysis(opp, opp.name);
+            const a2 = document.getElementById('prematch-analysis-box').innerHTML;
+            out.analyseStabil = a1 === a2 && a1.includes(opp.star.name);
+            // Videoanalyse nur bei Derby/Pokal, nicht wegen Europapokal bei jedem Ligaspiel
+            game.inEurope = true;
+            const normal = leaguesData[game.leagueLevel].find(t => t.name !== game.clubName && !isDerbyOpponent(t.name));
+            renderPreMatchAnalysis(normal, normal.name);
+            out.keinTopspiel = !document.getElementById('prematch-analysis-box').innerHTML.includes('Videoanalyse');
+            pendingMatchInfo = { oppName: normal.name, isHome: true, oppStr: normal.strength, cupTie: { home: game.clubName, away: normal.name } };
+            renderPreMatchAnalysis(normal, normal.name);
+            const pokal = document.getElementById('prematch-analysis-box').innerHTML;
+            const basis = AI_STYLE_ARCHETYPE[getTeamPlaystyle(normal).id] || 'N';
+            out.pokalVideo = pokal.includes('Videoanalyse') && pokal.includes(ARCHETYPE_LABELS[basis]);
+            pendingMatchInfo = null;
+            // Europa-Status folgt der Runde
+            initEuropeCup();
+            out.statusGruppe = getEuropeStatusLabel().includes('Platz');
+            europeTournament.semiFinals = [{ teamA: 'X', teamB: 'Y' }, { teamA: 'Z', teamB: 'W' }];
+            out.statusAus = getEuropeStatusLabel().includes('ausgeschieden');
+            game.inEurope = false;
+            out.statusOhne = getEuropeStatusLabel() === 'Nicht qualifiziert';
+            // Holding: Wert aus den Fabriken, Übernahme nur mit Fabrik
+            const leer = getHoldingValuation();
+            factories.textile.owned = true; factories.textile.lvl = 2;
+            out.holdingWert = leer === 50000 && getHoldingValuation() === 50000 + Math.round(factories.textile.cost * 3 * 0.8);
+            showScreen('screen-holding');
+            out.holdingAnzeige = document.getElementById('holding-enterprise-val').innerText === formatVal(getHoldingValuation());
+            // B2B: zum Saisonstart je Fabrik ein neuer Auftrag
+            holdingCompany.b2bContracts.forEach(c => { c.done = true; });
+            refreshB2BContracts();
+            const neu = holdingCompany.b2bContracts;
+            out.b2b = neu.length === 1 && neu[0].factory === 'textile' && neu[0].reqMat === 'cotton' && neu[0].payout > 0 && !neu[0].done;
+            refreshB2BContracts();
+            out.b2bEinmal = holdingCompany.b2bContracts.length === 1;
+            factories.textile.owned = false; factories.textile.lvl = 1;
+            // Börsenticker: Pfeile folgen dem Kurs
+            stockMarket.techCorp.history = [100, 90];
+            showScreen('screen-finances');
+            const t1 = document.getElementById('fin-stock-ticker').innerHTML;
+            renderStockTicker();
+            out.ticker = t1 === document.getElementById('fin-stock-ticker').innerHTML && t1.includes('DAX <span class="tick-down"');
+            out.monat = document.getElementById('fin-month-title').innerText.includes('Monat 1');
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Aufräumen Teil 9 ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.analyseStabil, 'Spielanalyse: der gefährlichste Spieler ist der echte Star des Gegners, kein neu gewürfelter Name');
+        assert(r.keinTopspiel && r.pokalVideo, 'Videoanalyse nur bei Derby/Pokal und mit dem echten Grundstil des Gegners');
+        assert(r.statusGruppe && r.statusAus && r.statusOhne, 'Dashboard zeigt die echte Europapokal-Runde');
+        assert(r.holdingWert && r.holdingAnzeige, 'Holding-Wert folgt den Fabrik-Investitionen statt fester 125.000 €');
+        assert(r.b2b && r.b2bEinmal, 'Neue Lohnfertigungs-Aufträge zum Saisonstart, je eigener Fabrik einer');
+        assert(r.ticker && r.monat, 'Börsenticker und GuV-Monat zeigen echte Werte');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testSponsorConflict(browser) {
     console.log('\n[19.x] Sponsoren: Branchenkonflikt nennt den Konkurrenten und kostet 30 %');
     const { page, consoleErrors } = await freshPage(browser);
@@ -7764,6 +7837,7 @@ async function main() {
         testHomeRegion,
         testLocalDerbies,
         testEuropeDraw,
+        testCleanupNine,
         testCareerScenarios,
         testAutosaveResume,
         testOpponentTactics,

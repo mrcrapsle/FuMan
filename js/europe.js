@@ -77,6 +77,24 @@
         if (game.europeHistory.length > 20) game.europeHistory.length = 20;
     }
 
+    // Dashboard-Zeile: wo steht der Verein gerade? (vorher stand dort die ganze Saison
+    // "Gruppenphase", auch nach dem Aus oder im Finale)
+    function getEuropeStatusLabel() {
+        if (!game.inEurope) return 'Nicht qualifiziert';
+        const us = game.clubName, et = europeTournament;
+        if (et.finalMatch) {
+            if (et.finalMatch.home === us || et.finalMatch.away === us) return et.finalMatch.winner ? (et.finalMatch.winner === us ? '👑 Champions-Cup-Sieger' : '🥈 Im Finale unterlegen') : '🏆 Champions Cup: Finale';
+            return (et.semiFinals || []).some(t => t.teamA === us || t.teamB === us) ? 'Im Halbfinale ausgeschieden' : 'In der Gruppenphase ausgeschieden';
+        }
+        if ((et.semiFinals || []).length) {
+            const hf = et.semiFinals.find(t => t.teamA === us || t.teamB === us);
+            return hf ? (hf.winner && hf.winner !== us ? 'Im Halbfinale ausgeschieden' : '🏆 Champions Cup: Halbfinale') : 'In der Gruppenphase ausgeschieden';
+        }
+        const grp = (et.groupA || []).some(t => t.name === us) ? et.groupA : (et.groupB || []);
+        const platz = [...grp].sort((a, b) => b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga)).findIndex(t => t.name === us) + 1;
+        return platz ? `🏆 Champions Cup Gruppenphase · Platz ${platz}` : '🏆 Champions Cup Gruppenphase';
+    }
+
     // Qualifikation gilt immer nur für die nächste Saison: Platz 1-4 der Bundesliga oder der
     // DFB-Pokalsieg dieser Saison. Vorher blieb man nach EINER Qualifikation für immer dabei -
     // auch nach dem Abstieg in die 6. Liga.

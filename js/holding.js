@@ -1,5 +1,15 @@
 
+    // Betriebswert der Holding: Grundwert plus 80 % der in Fabriken gesteckten Summe (Kauf
+    // cost, Ausbau auf Stufe k je cost*k). Vorher ein fester Wert von 125.000 €, den kein
+    // Fabrikkauf änderte - Übernahmeangebote lagen weit unter der Investition.
+    function getHoldingValuation() {
+        const investiert = Object.values(factories).filter(f => f.owned).reduce((s, f) => s + f.cost * (f.lvl * (f.lvl + 1) / 2), 0);
+        return Math.round(50000 + investiert * 0.8);
+    }
+
     function renderHoldingView() {
+        let wertEl = document.getElementById('holding-enterprise-val');
+        if (wertEl) wertEl.innerText = formatVal(getHoldingValuation());
         document.getElementById('holding-balance-val').innerText = formatVal(holdingCompany.money);
         let bList = document.getElementById('b2b-contracts-list');
         bList.innerHTML = '';
@@ -15,6 +25,9 @@
             `;
             bList.appendChild(row);
         });
+        if (!holdingCompany.b2bContracts.some(c => !c.done)) {
+            bList.insertAdjacentHTML('beforeend', `<div class="box" style="font-size:10px; color:var(--text-muted);">Keine offenen Aufträge. Neue kommen zum Saisonstart - je eigener Fabrik einer für ihr Produkt (Honorar etwa dreifache Materialkosten).</div>`);
+        }
     }
 
     function transferHoldingToClub(amount) {
@@ -42,6 +55,25 @@
         holdingCompany.money += amount;
         renderHoldingView();
         updateUI();
+    }
+
+    // Neue Lohnfertigungs-Aufträge zum Saisonstart (Phase 21.5): vorher gab es nur die drei
+    // Startaufträge für die ganze Karriere. Jetzt je eigener Fabrik ein Auftrag für ihr
+    // Produkt; Honorar = dreifache Materialkosten, je Ausbaustufe +10 %.
+    const B2B_FACTORY_MATERIAL = { textile: 'cotton', knitting: 'wool', leatherShop: 'leather', plastics: 'plastic' };
+    function refreshB2BContracts() {
+        holdingCompany.b2bContracts = (holdingCompany.b2bContracts || []).filter(c => !c.done);
+        Object.keys(factories).forEach(k => {
+            const f = factories[k], matKey = B2B_FACTORY_MATERIAL[k], mat = rawMaterials[matKey];
+            if (!f.owned || !mat || holdingCompany.b2bContracts.some(c => c.factory === k)) return;
+            const qty = 400 + f.lvl * 200;
+            holdingCompany.b2bContracts.push({
+                id: 'b2b' + Math.random().toString(36).substr(2, 7), factory: k,
+                club: INTERNATIONAL_CLUB_NAMES[Math.floor(Math.random() * INTERNATIONAL_CLUB_NAMES.length)],
+                item: f.product, amount: qty * 2, reqMat: matKey, reqQty: qty,
+                payout: Math.round(qty * mat.basePrice * 3 * (1 + 0.1 * f.lvl) / 1000) * 1000, done: false
+            });
+        });
     }
 
     function completeB2BContract(contractId) {

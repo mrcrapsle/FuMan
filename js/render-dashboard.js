@@ -45,7 +45,7 @@
         if (typeof renderMatchScoutLine === 'function') renderMatchScoutLine();
         if (typeof renderMemberAssemblyPanel === 'function') renderMemberAssemblyPanel();
 
-        document.getElementById('dash-europe-status').innerText = game.inEurope ? "🏆 Champions Cup Gruppenphase" : "Nicht qualifiziert";
+        document.getElementById('dash-europe-status').innerText = typeof getEuropeStatusLabel === 'function' ? getEuropeStatusLabel() : (game.inEurope ? "🏆 Champions Cup" : "Nicht qualifiziert");
         let activePerks = Object.values(managerRPG.perks).filter(Boolean).length;
         let totalPerksCount = Object.keys(managerRPG.perks).length;
         document.getElementById('dash-perks-count').innerText = `${activePerks} / ${totalPerksCount} Aktiv`;

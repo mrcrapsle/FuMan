@@ -190,7 +190,7 @@
             acqBox.style.display = offer ? 'block' : 'none';
             if (offer) {
                 acqBox.innerHTML = `<div class="panel-header" style="color:var(--accent);">💼 ÜBERNAHMEANGEBOT</div>
-                    <div class="box" style="font-size:10px;">${offer.firm} bietet <strong>${formatVal(offer.offer)}</strong> für die komplette Holding (noch ${offer.expiresMatchday - game.matchday} Spieltage gültig).</div>
+                    <div class="box" style="font-size:10px;">${offer.firm} bietet <strong>${formatVal(offer.offer)}</strong> für die komplette Holding (noch ${offer.expiresMatchday - game.matchday} Spieltage gültig). Betriebswert der Fabriken: ${formatVal(getHoldingValuation())} - beim Verkauf gehen alle Fabriken weg, Holding-Konto und Lager bleiben.</div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
                         <button onclick="resolveAcquisitionOffer(true)" class="btn-action">✅ Annehmen</button>
                         <button onclick="resolveAcquisitionOffer(false)" class="btn-secondary">❌ Ablehnen</button>
@@ -270,8 +270,10 @@
             }
         });
         let dominant = rawMaterials.competitorFirms.find(f => f.strength >= 85);
-        if (dominant && rawMaterials.acquisitionOffers.length === 0 && Math.random() < 0.05) {
-            let offer = Math.round(holdingCompany.valuation * (1.1 + Math.random() * 0.3));
+        // Nur wer Fabriken besitzt, hat etwas zu verkaufen (vorher gab es auch ohne Fabrik ~150.000 € geschenkt).
+        let hatFabrik = Object.values(factories).some(f => f.owned);
+        if (dominant && hatFabrik && rawMaterials.acquisitionOffers.length === 0 && Math.random() < 0.05) {
+            let offer = Math.round(getHoldingValuation() * (1.1 + Math.random() * 0.3));
             rawMaterials.acquisitionOffers.push({ firm: dominant.name, offer, expiresMatchday: game.matchday + 5 });
             addInboxMessage('finanzen', `💼 Übernahmeangebot von ${dominant.name}!`, `${dominant.name} bietet ${formatVal(offer)} für deine komplette Holding-Gesellschaft. Angebot gültig für 5 Spieltage (Industrie-Screen).`, 'screen-industry');
         }
@@ -282,7 +284,6 @@
         if (accept) {
             game.money += offer.offer;
             for (let k in factories) { factories[k].owned = false; factories[k].lvl = 1; }
-            holdingCompany.valuation = 50000;
             addInboxMessage('finanzen', '💼 Holding verkauft!', `Die Holding-Gesellschaft wurde für ${formatVal(offer.offer)} an ${offer.firm} verkauft. Ein neuer Anfang in der Industrie ist jederzeit möglich.`, 'screen-industry');
             showToast(`💼 Holding für ${formatVal(offer.offer)} verkauft!`, 'success');
         } else {
@@ -311,7 +312,6 @@
         playSound('goal');
         holdingCompany.money -= cost;
         f.lvl = Math.min(f.max, f.lvl + 1);
-        holdingCompany.valuation += Math.round(cost * 0.6);
         rawMaterials.competitorFirms = rawMaterials.competitorFirms.filter(c => c !== weakFirm);
         addInboxMessage('finanzen', `🤝 Fusion mit ${weakFirm.name}!`, `Die ${f.name} übernimmt ${weakFirm.name} - direkt eine Ausbaustufe gewonnen und der Holding-Wert steigt.`, 'screen-industry');
         showToast(`🤝 Fusion mit ${weakFirm.name} abgeschlossen!`, 'success');

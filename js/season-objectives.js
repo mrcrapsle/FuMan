@@ -1,13 +1,6 @@
 // Season Goals & Objectives System
 // Dynamic season-specific objectives with rewards and progress tracking
 
-let seasonObjectivesState = {
-    activeObjectives: [],
-    completedObjectives: [],
-    objectiveRewards: 0,
-    seasonProgress: {}
-};
-
 const OBJECTIVE_TYPES = {
     PROMOTION: {
         name: 'Aufstieg',

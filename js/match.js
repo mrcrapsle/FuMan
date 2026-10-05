@@ -229,32 +229,31 @@
         }
         let form = (oppObj && oppObj.recentForm) ? oppObj.recentForm.slice(-5) : [];
         let formStr = form.length > 0 ? form.map(r => r === 'W' ? '🟢' : (r === 'D' ? '🟡' : '🔴')).join(' ') : 'Keine Daten';
-        let dangerPos = ['ST', 'MIT', 'ABW'][Math.floor(Math.random() * 3)];
-        let dangerName = getRandomName();
         let baseStr = oppObj ? oppObj.strength : 60;
-        // Bugfix: "garantiert zuverlässige" Spionage-Infos änderten bisher nichts an der
-        // eigentlichen Berechnung - der Zufalls-Schwankungsbereich blieb identisch, obwohl
-        // der Text explizit Präzision versprach. Jetzt fällt die Zufallsstreuung bei aktiver
-        // Spionage komplett weg, der Wert ist dann wirklich exakt statt nur behauptet exakt.
-        let dangerRating = underworld.spyIntelActive
-            ? Math.max(35, Math.min(99, Math.round(baseStr + 5)))
-            : Math.max(35, Math.min(99, Math.round(baseStr + (Math.random() * 12 - 2))));
+        // Gefährlichster Spieler = der echte Star des Gegners (team.star, js/ai-clubs.js) bzw.
+        // seine Sturmspitze - vorher bei jedem Öffnen ein neu ausgewürfelter Name samt Position.
+        // Der Analyst schätzt die Stärke auf 5 Punkte genau, der Spion kennt sie exakt.
+        let star = oppObj && (oppObj.star || oppObj.striker);
+        let dangerLine = 'Gefährlichster Spieler: <strong>unbekannt</strong>';
+        if (star) {
+            let staerke = star.strength || Math.min(99, baseStr + 3);
+            let wert = underworld.spyIntelActive ? `Stärke ${staerke}` : `Stärke ca. ${Math.round(staerke / 5) * 5}`;
+            dangerLine = `Gefährlichster Spieler: <strong>${star.name}</strong> (${star.pos || 'ST'}, ${wert}${star.goals ? `, ${star.goals} Saisontore` : ''})`;
+        }
 
-        // Videoanalyse: bei besonders wichtigen Spielen (Derby, Pokal, Europapokal) liefert
-        // der Chef-Analyst einen ausführlicheren Bericht mit Formations-Tendenz und einem
-        // konkreten Schwachstellen-Hinweis statt nur der Basis-Kennzahlen.
-        let isImportantMatch = isDerbyOpponent(oppName) || currentMatch?.isCup || game.inEurope;
+        // Videoanalyse bei Derby und Pokal: Grundausrichtung des Gegners und der Stil, der sie
+        // im Taktik-Duell schlägt (js/opponent-tactics.js) - vorher zwei Zufallssätze ohne
+        // Bezug zum Spiel, und mit Europapokal-Teilnahme galt jedes Ligaspiel als Topspiel.
+        let isImportantMatch = isDerbyOpponent(oppName) || !!(pendingMatchInfo && pendingMatchInfo.cupTie);
         let spyNote = underworld.spyIntelActive ? `<div style="margin-top:6px; font-size:10px; color:#f97316;">🕵️ <strong>Insider-Info aktiv:</strong> Diese Analyse stammt von einem bezahlten Informanten im gegnerischen Verein und ist garantiert zuverlässig.</div>` : '';
         let videoAnalysisHtml = '';
-        if (isImportantMatch) {
-            const FORMATION_TENDENCIES = ['4-4-2 mit hohem Pressing', '4-3-3 mit breitem Flügelspiel', '3-5-2 mit kompakter Abwehrkette', '4-2-3-1 mit schnellen Kontern'];
-            const WEAKNESSES = ['anfällig bei hohen Bällen in den Strafraum', 'schwach in Umschaltmomenten nach Ballverlust', 'verwundbar bei schnellen Außenverteidiger-Vorstößen', 'nervös bei frühem Gegentor'];
-            let tendency = FORMATION_TENDENCIES[Math.floor(Math.random() * FORMATION_TENDENCIES.length)];
-            let weakness = WEAKNESSES[Math.floor(Math.random() * WEAKNESSES.length)];
+        if (isImportantMatch && oppObj && typeof AI_STYLE_ARCHETYPE !== 'undefined') {
+            let basis = AI_STYLE_ARCHETYPE[getTeamPlaystyle(oppObj).id] || 'N';
+            let konter = getCounterArchetype(basis);
             videoAnalysisHtml = `<div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.15); font-size:10px;">
                 🎥 <strong style="color:var(--teal);">Videoanalyse (Topspiel-Sonderbericht):</strong><br>
-                Formations-Tendenz: <strong>${tendency}</strong><br>
-                Schwachstelle: <strong>${weakness}</strong>
+                Grundausrichtung: <strong>${ARCHETYPE_LABELS[basis]}</strong><br>
+                Schwachstelle: <strong>${konter ? `verwundbar gegen ${ARCHETYPE_LABELS[konter]}` : 'kein klares Muster - schwer auszurechnen'}</strong>
             </div>`;
         }
 
@@ -264,7 +263,7 @@
                 <span style="font-size:10px;">
                     Spielweise: <strong>${getOpponentPlaystyle(oppName)}</strong><br>
                     Team-Stärke: <strong>${baseStr}</strong> · Form (letzte 5): ${formStr}<br>
-                    Gefährlichster Spieler: <strong>${dangerName}</strong> (${dangerPos}, Stärke ${dangerRating})
+                    ${dangerLine}
                     ${typeof getCoachInfoHtml === 'function' && oppObj ? '<br>' + getCoachInfoHtml(oppObj) : ''}
                 </span>
                 ${videoAnalysisHtml}

@@ -44,9 +44,11 @@
         let dax = 16000 + Math.round((stockMarket.techCorp?.price || 100) * 8.4);
         let dollar = (1.02 + ((stockMarket.techCorp?.price || 100) % 30) / 100).toFixed(2);
         let gold = 420 + Math.round((stockMarket.greenEnergy?.price || 45) * 0.7);
-        let daxUp = Math.random() > 0.5;
-        let dollarUp = Math.random() > 0.5;
-        let goldUp = Math.random() > 0.5;
+        // Pfeile folgen der letzten echten Kursbewegung (vorher bei jedem Öffnen ausgewürfelt).
+        let steigt = s => { let h = (s && s.history) || []; return h.length < 2 || h[h.length - 1] >= h[h.length - 2]; };
+        let daxUp = steigt(stockMarket.techCorp);
+        let dollarUp = !steigt(stockMarket.realEstate);
+        let goldUp = steigt(stockMarket.greenEnergy);
         el.innerHTML = `
             <span>📈 DAX <span class="${daxUp ? 'tick-up' : 'tick-down'}">${dax} ${daxUp ? '▲' : '▼'}</span></span>
             <span>💵 DOLLAR <span class="${dollarUp ? 'tick-up' : 'tick-down'}">${dollar} ${dollarUp ? '▲' : '▼'}</span></span>
@@ -97,6 +99,8 @@
         let totalOut = totalWages + totalStaffWages + maintenance + loanInterest + loanInstallments + estTax + estAdvisorFee;
         let net = totalIn - totalOut;
 
+        let monatEl = document.getElementById('fin-month-title');
+        if (monatEl) monatEl.innerText = `Prognose Monat ${Math.min(9, Math.floor(game.matchday / 4) + 1)} (4 Spieltage)`;
         document.getElementById('fin-in-tickets').innerText = formatVal(estTickets);
         let lastAttEl = document.getElementById('fin-last-attendance');
         if (lastAttEl) lastAttEl.innerText = game.lastHomeAttendance > 0 ? `${game.lastHomeAttendance.toLocaleString('de-DE')} (Kapazität: ${(stadium.total || 16000).toLocaleString('de-DE')})` : 'Noch kein Heimspiel gespielt';

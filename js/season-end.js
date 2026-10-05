@@ -333,6 +333,7 @@
         if (typeof evaluateFinancialFairplay === 'function') evaluateFinancialFairplay();
         game.season++;
         if (typeof startNewSeasonObjectives === 'function') startNewSeasonObjectives();
+        if (typeof refreshB2BContracts === 'function') refreshB2BContracts();
         if (typeof openMemberAssembly === 'function') openMemberAssembly();
         checkJubileeCrestUnlock();
         // Leihverein-Beziehungen schwächen sich ab, wenn 2+ Saisons kein neues Geschäft mit

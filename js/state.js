@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.45', date: '05.10.2026', features: 'Phase 21.4: Champions Cup mit Lostöpfen, Europa-Koeffizient und Qualifikation jede Saison neu' };
+    const GAME_VERSION = { number: '3.46', date: '05.10.2026', features: 'Aufräumen Teil 9: echte Spielanalyse, Holding-Wert und neue Lohnfertigungs-Aufträge, Europa-Status' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -256,7 +256,6 @@
 
     let holdingCompany = {
         money: 50000,
-        valuation: 125000,
         b2bContracts: [
             { id: 'b2b1', club: "Real Madrit", item: "Trikots", amount: 1000, reqMat: 'cotton', reqQty: 1000, payout: 65000, done: false },
             { id: 'b2b2', club: "Bayern Munchen", item: "Fan-Schals", amount: 2000, reqMat: 'wool', reqQty: 1200, payout: 38000, done: false },
@@ -608,6 +607,8 @@
         // Holding-Aufträge alter Spielstände trugen echte Vereinsnamen.
         const echteNamen = { 'Real Madrid': 'Real Madrit', 'FC Bayern': 'Bayern Munchen', 'FC Liverpool': 'Liverpol FC' };
         if (typeof holdingCompany !== 'undefined') (holdingCompany.b2bContracts || []).forEach(c => { if (echteNamen[c.club]) c.club = echteNamen[c.club]; });
+        // Phase 21.5: fester Holding-Wert ersetzt durch getHoldingValuation().
+        if (typeof holdingCompany !== 'undefined') delete holdingCompany.valuation;
         squad.forEach(p => { delete p.currentFitnessBoost; delete p.nationalDuty; });
         // Phase 24.2: ausgewürfelte Rivalen-Paare der Ligatabellen (Derbys jetzt nach Ort).
         if (typeof leaguesData !== 'undefined') leaguesData.forEach(t => (t || []).forEach(x => { delete x.rivalName; }));
