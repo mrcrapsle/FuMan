@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.53', date: '06.10.2026', features: 'Phase 23.5: Formations-Optimierer (automatische Formation + Aufstellung)' };
+    const GAME_VERSION = { number: '3.54', date: '06.10.2026', features: 'Phase 23.6: Formations-Statistiken & Historie (Win-Rate, Gegner-Balance)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

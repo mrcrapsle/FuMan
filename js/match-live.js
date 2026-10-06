@@ -501,6 +501,10 @@
         let ourGoalsThisMatch = currentMatch.isHome ? currentMatch.homeGoals : currentMatch.awayGoals;
         let oppGoalsThisMatch = currentMatch.isHome ? currentMatch.awayGoals : currentMatch.homeGoals;
         recordRivalryResult(opponentName, ourGoalsThisMatch, oppGoalsThisMatch);
+        // Formation-Statistiken erfassen (js/formation-stats.js)
+        if (typeof recordFormationResult === 'function' && game.formation) {
+            recordFormationResult(game.formation, ourGoalsThisMatch, oppGoalsThisMatch, opponentName);
+        }
 
         applyMatchdayFinances(currentMatch.isHome, won, oppGoalsThisMatch === 0, isHomeDerby, opponentName, `${ourGoalsThisMatch}:${oppGoalsThisMatch}`);
         processPostMatchRoutine(won ? 'win' : (drawn ? 'draw' : 'loss'), isHomeDerby, true, ourGoalsThisMatch - oppGoalsThisMatch, currentMatch.isHome, { total: currentMatch.homeGoals + currentMatch.awayGoals, bothScored: currentMatch.homeGoals > 0 && currentMatch.awayGoals > 0 });

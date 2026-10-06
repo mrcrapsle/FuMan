@@ -795,6 +795,7 @@
         if (typeof renderTacticSystemPanel === 'function') renderTacticSystemPanel();
         if (typeof renderTacticFinessPanel === 'function') renderTacticFinessPanel();
         if (typeof renderFormationOptimizer === 'function') renderFormationOptimizer();
+        if (typeof renderFormationStatsPanel === 'function') renderFormationStatsPanel();
         if (typeof renderPlayerSeasonStats === 'function') renderPlayerSeasonStats();
         if (typeof renderTeamCouncilPanel === 'function') renderTeamCouncilPanel();
         let container = document.getElementById('bench-list');
