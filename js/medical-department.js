@@ -30,6 +30,9 @@ function getPlayerInjuryRiskIndex(p) {
     return r;
 }
 
+// Phase 23.2: Langzeitverletzungen mit Comeback-Fahrplan
+const LONG_TERM_INJURY_THRESHOLD = 12; // 3+ Monate
+
 // Verletzung durch ein Ereignis (z.B. Krise) - gleiche Regeln wie im Spiel: Ausfallzeit,
 // Verletzungshistorie, Physio/Reha verkürzen. Keine dauerhaften Stärkeverluste.
 function injurePlayerByEvent(p, grund) {
@@ -38,8 +41,36 @@ function injurePlayerByEvent(p, grund) {
     const reduction = Math.max(0.25, 1 - (campusBuildings.reha.lvl * 0.08) - (staffMembers.physio.hired ? 0.5 : 0));
     p.injured = Math.max(1, Math.round(baseDuration * reduction));
     p.timesInjured = (p.timesInjured || 0) + 1;
-    addInboxMessage('verletzung', `${p.name} verletzt`, `${grund ? grund + ': ' : ''}Fällt für ${p.injured} Spiel(e) aus.`, 'screen-squad');
+
+    // Phase 23.2: Langzeitverletzungen tracken
+    if (p.injured >= LONG_TERM_INJURY_THRESHOLD) {
+        p.longTermInjury = { start: game.season, startMatchday: game.matchday, duration: p.injured, comebackProgress: 0 };
+        addInboxMessage('verletzung', `${p.name} LANGZEITVERLETZUNG`, `⚠️ ${grund ? grund + ': ' : ''}Schwere Verletzung! Fällt für mindestens ${p.injured} Spiele aus. Comeback-Training wird nach Heilung empfohlen.`, 'screen-squad');
+    } else {
+        addInboxMessage('verletzung', `${p.name} verletzt`, `${grund ? grund + ': ' : ''}Fällt für ${p.injured} Spiel(e) aus.`, 'screen-squad');
+    }
     return true;
+}
+
+// Phase 23.2: Comeback-Training für genesene Spieler aus Langzeitverletzungen
+function startComebackTraining(p) {
+    if (!p.longTermInjury || p.injured > 0) return false;
+    p.comebackTraining = { startMatchday: game.matchday, progress: 0, intensity: 'leicht' };
+    addInboxMessage('medizin', `${p.name} beginnt Comeback-Training`, `Rückkehrprotokolll eingeleitet - 3 Spieltage leichtes Training vor Rückentritt.`, 'screen-squad');
+    return true;
+}
+
+// Phase 23.2: Comeback-Training jeden Spieltag ticken
+function tickComebackTraining() {
+    squad.forEach(p => {
+        if (p.comebackTraining && !p.injured) {
+            p.comebackTraining.progress++;
+            if (p.comebackTraining.progress >= 3) {
+                delete p.comebackTraining;
+                delete p.longTermInjury;
+            }
+        }
+    });
 }
 
 // Alte Spielstände: Buchführung der abgelösten Parallel-Systeme entfernen (hatte keine
@@ -53,7 +84,9 @@ function renderMedicalDepartmentPanel() {
     if (!box) return;
     cleanupLegacyInjuryState();
     const verletzt = squad.filter(p => (p.injured || 0) > 0).sort((a, b) => b.injured - a.injured);
-    const risiko = squad.filter(p => !(p.injured > 0)).map(p => ({ p, r: getPlayerInjuryRiskIndex(p) }))
+    const langzeitverletzt = squad.filter(p => p.longTermInjury && (p.injured || 0) > 0).sort((a, b) => b.injured - a.injured);
+    const comeback = squad.filter(p => p.comebackTraining).sort((a, b) => b.comebackTraining.progress - a.comebackTraining.progress);
+    const risiko = squad.filter(p => !(p.injured > 0) && !p.comebackTraining).map(p => ({ p, r: getPlayerInjuryRiskIndex(p) }))
         .sort((a, b) => b.r - a.r).slice(0, 5);
     const farbe = r => r >= 1.5 ? 'var(--danger)' : r >= 1.15 ? 'var(--accent)' : 'var(--primary)';
 
@@ -68,6 +101,16 @@ function renderMedicalDepartmentPanel() {
     html += verletzt.length
         ? verletzt.map(p => `<div style="font-size:9px; display:flex; justify-content:space-between;"><span>${p.pos} ${p.name}</span><span style="color:var(--danger);">noch ${p.injured} Spiel(e) · ${p.timesInjured || 1}. Verletzung</span></div>`).join('')
         : '<div style="font-size:9px; color:var(--text-muted);">Keine Verletzten.</div>';
+
+    if (langzeitverletzt.length > 0) {
+        html += '<div style="font-size:9px; font-weight:bold; margin:6px 0 3px;">⚠️ LANGZEITVERLETZUNGEN</div>';
+        html += langzeitverletzt.map(p => `<div style="font-size:9px; display:flex; justify-content:space-between;"><span>${p.name}</span><span style="color:var(--danger);">noch ${p.injured} Spiele</span></div>`).join('');
+    }
+
+    if (comeback.length > 0) {
+        html += '<div style="font-size:9px; font-weight:bold; margin:6px 0 3px;">🏃 COMEBACK-TRAINING</div>';
+        html += comeback.map(p => `<div style="font-size:9px; display:flex; justify-content:space-between;"><span>${p.name}</span><span style="color:var(--primary);">${p.comebackTraining.progress}/3</span></div>`).join('');
+    }
 
     html += '<div style="font-size:9px; font-weight:bold; margin:6px 0 3px;">⚠️ Höchstes Verletzungsrisiko</div>';
     html += risiko.map(({ p, r }) => `<div style="font-size:9px; display:flex; justify-content:space-between;"><span>${p.pos} ${p.name} (${p.age || '?'})</span>
