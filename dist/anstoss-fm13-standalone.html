@@ -31855,6 +31855,8 @@ function concludeSeasonAndAdvance() {
         if (typeof prepareSupercup === 'function') prepareSupercup();
         if (typeof ageAiStars === 'function') ageAiStars();
         advanceLeaguesToNewSeason();
+        // Phase 23.1: Trainer-Roulette nach Auf-/Abstieg
+        if (typeof performEndOfSeasonCoachRoulette === 'function') performEndOfSeasonCoachRoulette();
         if (typeof recordSeasonExpectationRank === 'function') recordSeasonExpectationRank();
         if (typeof createSeasonPreview === 'function') createSeasonPreview();
         if (typeof applyPendingFfpPointDeduction === 'function') applyPendingFfpPointDeduction();
@@ -32978,6 +32980,57 @@ function tickCoachBounce(force = false) {
             delete t.coachBounce;
         }
     }));
+}
+
+// Phase 23.1: Trainer-Roulette am Saisonende (nach Auf-/Abstieg)
+// Trainer wechseln häufiger bei Auf-/Abstieg; sonst gelegentlich auch so.
+function performEndOfSeasonCoachRoulette() {
+    const allTeams = (leaguesData || []).flat().filter(t => t.name !== game.clubName && (!game.secondTeam || t.name !== game.secondTeam.name));
+    const meldungen = [];
+
+    allTeams.forEach(t => {
+        const coach = getTeamCoach(t);
+        if (coach.sackedThisSeason === game.season) return; // Bereits gewechselt diese Saison
+
+        // Chance für Trainerwechsel:
+        // - Abstieg: 70% (neue Philosophie nötig)
+        // - Aufstieg: 40% (vielleicht nicht das richtige Kaliber)
+        // - Normal: 15% (regelmäßiges Roulette)
+        let chance = 0.15;
+        if (t.promoted === game.season) chance = 0.40;
+        if (t.relegated === game.season) chance = 0.70;
+
+        if (Math.random() >= chance) return;
+
+        const alt = coach.name;
+        const altStil = getTeamPlaystyle(t);
+        const neueStile = AI_PLAYSTYLES.filter(s => s.id !== t.playstyle);
+        const neuStil = neueStile[Math.floor(Math.random() * neueStile.length)];
+        t.playstyle = neuStil.id;
+
+        const neu = getRandomName();
+        t.coach = { name: neu, since: game.season + 1, sackedThisSeason: game.season };
+        t.coachBounce = { amount: COACH_BOUNCE, until: 4 + 1 }; // Spieltag 4 der neuen Saison
+        t.baseStrength = (t.baseStrength || t.strength) + COACH_BOUNCE;
+        t.strength += COACH_BOUNCE;
+
+        let reason = '';
+        if (t.promoted === game.season) reason = ' (nach Aufstieg)';
+        else if (t.relegated === game.season) reason = ' (nach Abstieg)';
+
+        meldungen.push({ t, alt, neu, reason, altStil: altStil.label, neuStil: neuStil.label });
+    });
+
+    meldungen.forEach(m => {
+        addInboxMessage('vertrag', `🎠 Trainerwechsel bei ${m.t.name}${m.reason}`,
+            `${m.t.name} trennt sich von Trainer ${m.alt} zum neuen Jahr. Nachfolger ${m.neu} stellt von „${m.altStil}" auf „${m.neuStil}" um - in den ersten ${COACH_BOUNCE_MATCHDAYS} Spieltagen der neuen Saison ist mit einem Trainereffekt zu rechnen.`, 'screen-league');
+    });
+
+    if (!game.coachChanges) game.coachChanges = [];
+    meldungen.forEach(m => {
+        game.coachChanges.push({ season: game.season + 1, matchday: 1, club: m.t.name, alt: m.alt, neu: m.neu, reason: m.reason });
+    });
+    if (game.coachChanges.length > 50) game.coachChanges.splice(0, game.coachChanges.length - 50);
 }
 
 // Kurzinfo für Spielanalyse und Prognose.

@@ -401,6 +401,8 @@ function concludeSeasonAndAdvance() {
         if (typeof prepareSupercup === 'function') prepareSupercup();
         if (typeof ageAiStars === 'function') ageAiStars();
         advanceLeaguesToNewSeason();
+        // Phase 23.1: Trainer-Roulette nach Auf-/Abstieg
+        if (typeof performEndOfSeasonCoachRoulette === 'function') performEndOfSeasonCoachRoulette();
         if (typeof recordSeasonExpectationRank === 'function') recordSeasonExpectationRank();
         if (typeof createSeasonPreview === 'function') createSeasonPreview();
         if (typeof applyPendingFfpPointDeduction === 'function') applyPendingFfpPointDeduction();
