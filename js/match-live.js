@@ -319,6 +319,8 @@
         if (currentMatch.minute >= 90) { endMatchSimulation(); }
         // Co-Trainer im Livespiel (js/co-trainer-live.js): Hinweis aus dem echten Spielstand.
         if (typeof tickCoTrainerLive === 'function') tickCoTrainerLive();
+        // Phase 23.3: Wechsel-Empfehlungen aktualisieren
+        if (typeof renderLiveMidmatchSubSuggestion === 'function') renderLiveMidmatchSubSuggestion();
     }
 
     // ---------- SPIELFELD-BALL-ANIMATION ----------
