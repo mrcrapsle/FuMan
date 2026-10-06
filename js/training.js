@@ -703,6 +703,7 @@
             `;
         }
         renderTrainingHistoryLog();
+        if (typeof renderSetPieceSpecialistsPanel === 'function') renderSetPieceSpecialistsPanel();
 
         let killerSelect = document.getElementById('penalty-killer-select');
         if (killerSelect) {

@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.55', date: '06.10.2026', features: 'Phase 23.7: Gegner-Formations-Analyse (Matchup-Bonus, Empfehlungen)' };
+    const GAME_VERSION = { number: '3.56', date: '06.10.2026', features: 'Phase 23.8: Set-Piece-Spezialisten (Ecken, Freistöße, Elfmeter)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
