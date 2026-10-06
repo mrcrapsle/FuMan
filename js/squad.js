@@ -793,6 +793,7 @@
         if (typeof renderLockerHierarchyBox === 'function') renderLockerHierarchyBox();
         if (typeof renderScandalsPanel === 'function') renderScandalsPanel();
         if (typeof renderTacticSystemPanel === 'function') renderTacticSystemPanel();
+        if (typeof renderTacticFinessPanel === 'function') renderTacticFinessPanel();
         if (typeof renderPlayerSeasonStats === 'function') renderPlayerSeasonStats();
         if (typeof renderTeamCouncilPanel === 'function') renderTeamCouncilPanel();
         let container = document.getElementById('bench-list');

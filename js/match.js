@@ -182,6 +182,10 @@
 
         // Spielstil: Offensiv riskiert mehr für mehr Durchschlagskraft, Defensiv ist solider.
         bonus += getTacticStyleBonus(game.tacticStyle);
+        // Phase 23.4: Taktische Feineinstellungen (Spielaufbau, Pressing, Spielbreite, Defensive Line)
+        if (typeof getTacticFinesseBonusMultiplier === 'function') {
+            bonus += Math.round((getTacticFinesseBonusMultiplier() - 1) * 10);
+        }
         // Formations-Bonus: Off-Wert der gewählten Formation erhöht die Angriffs-
         // durchschlagskraft, siehe FORMATION_RATINGS in squad.js.
         bonus += getFormationOffBonus();
