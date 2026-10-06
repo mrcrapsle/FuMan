@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.52', date: '06.10.2026', features: 'Phase 23.4: Taktische Feineinstellungen (Spielaufbau, Pressing, Spielbreite, Defensive Linie)' };
+    const GAME_VERSION = { number: '3.53', date: '06.10.2026', features: 'Phase 23.5: Formations-Optimierer (automatische Formation + Aufstellung)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
