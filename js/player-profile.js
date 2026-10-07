@@ -44,7 +44,7 @@ function isClubLegend(p) {
 function checkLegendDeparture(p) {
     if (!isClubLegend(p)) return;
     game.fans = Math.max(game.fanBaseFloor || 10, game.fans - 8);
-    game.boardSat = Math.max(1, game.boardSat - 2);
+    game.boardSat = Math.max(10, game.boardSat - 2);
     addInboxMessage('vertrag', `🏛️ Eine Vereinslegende geht: ${p.name}`, `${p.appearances || 0} Pflichtspiele, ${getSeasonsAtClub(p)} Saisons - die Fans verabschieden ${p.name} mit Wehmut (Fans -8, Vorstand -2).`, 'screen-squad');
 }
 

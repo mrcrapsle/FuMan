@@ -155,7 +155,7 @@ function renderMediaDepartmentPanel() {
 // Marschroute); jede Antwort wirkt: Moral, Stärke in genau diesem Spiel, Taktik, Medien-
 // image oder Vorstand. Große Worte werden nach dem Spiel abgerechnet (game.pressPromise).
 function pressMoral(delta) { squad.forEach(p => { p.morale = Math.max(10, Math.min(100, (p.morale || 50) + delta)); }); }
-function pressBoard(delta) { game.boardSat = Math.max(0, Math.min(100, game.boardSat + delta)); }
+function pressBoard(delta) { game.boardSat = Math.max(10, Math.min(100, game.boardSat + delta)); }
 function pressMatchBonus(delta) { game.pressMatchBonus = { season: game.season, matchday: game.matchday, bonus: delta }; }
 function pressPromise(typ) { game.pressPromise = { season: game.season, matchday: game.matchday, typ }; }
 

@@ -62,7 +62,7 @@ function chooseWinterTalk(art) {
         if (!r.expected || r.expected >= r.teams) { showToast('Tiefer lässt sich das Ziel nicht setzen.', 'error'); return; }
         talk.goal = Math.min(r.teams, r.expected + 2);
         exp.expectedRank = talk.goal;
-        game.boardSat = Math.max(1, game.boardSat - 4);
+        game.boardSat = Math.max(10, game.boardSat - 4);
         text = `Neues Ziel Platz ${talk.goal}. Der Vorstand ist enttäuscht (-4), misst die Saison aber daran.`;
     } else if (art === 'budget') {
         if (Math.random() < getWinterBudgetChance()) {
@@ -71,7 +71,7 @@ function chooseWinterTalk(art) {
             talk.budget = betrag;
             text = `Der Vorstand bewilligt ${formatVal(betrag)} Winterbudget.`;
         } else {
-            game.boardSat = Math.max(1, game.boardSat - 3);
+            game.boardSat = Math.max(10, game.boardSat - 3);
             talk.budget = 0;
             text = 'Abgelehnt - erst die Leistung, dann das Geld (Vorstand -3).';
         }
@@ -90,7 +90,7 @@ function chooseWinterTalk(art) {
 function tickWinterTalk() {
     if (game.matchday > WINTER_TALK_LAST_MD && game.matchday <= 34 && !getWinterTalk()) {
         game.winterTalk = { season: game.season, choice: 'verpasst', result: null };
-        game.boardSat = Math.max(1, game.boardSat - 2);
+        game.boardSat = Math.max(10, game.boardSat - 2);
         addInboxMessage('vertrag', '🏛️ Wintergespräch verpasst', 'Der Vorstand hat in der Winterpause vergeblich auf dich gewartet (-2).', 'screen-dashboard');
     }
 }
@@ -105,7 +105,7 @@ function resolveWinterTalk(finalRank) {
         addInboxMessage('vertrag', '🏛️ Winterversprechen gehalten', `Platz ${finalRank} - das im Winter erhöhte Ziel (Platz ${t.goal}) ist erreicht. Vorstand +5.`, 'screen-dashboard');
     } else {
         t.result = 'verfehlt';
-        game.boardSat = Math.max(1, game.boardSat - 10);
+        game.boardSat = Math.max(10, game.boardSat - 10);
         addInboxMessage('vertrag', '🏛️ Winterversprechen gebrochen', `Platz ${finalRank} statt des im Winter versprochenen Platzes ${t.goal}. Vorstand -10.`, 'screen-dashboard');
     }
 }

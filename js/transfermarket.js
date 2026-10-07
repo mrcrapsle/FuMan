@@ -309,7 +309,7 @@
         if (typeof checkLegendDeparture === 'function') checkLegendDeparture(departingPlayer);
         if (!departingPlayer || !departingPlayer.isCrowdFavorite) return;
         game.fans = Math.max(game.fanBaseFloor || 10, game.fans - 15);
-        game.boardSat = Math.max(1, game.boardSat - 5);
+        game.boardSat = Math.max(10, game.boardSat - 5);
         addInboxMessage('vertrag', `💔 Fans empört über Verkauf von ${departingPlayer.name}!`, `Der Verkauf des amtierenden Publikumslieblings sorgt für deutlichen Unmut in der Fankurve - die Stimmung ist spürbar getrübt.`, 'screen-dashboard');
         showToast(`💔 Fans sind empört über den Verkauf von ${departingPlayer.name}!`, 'error');
     }

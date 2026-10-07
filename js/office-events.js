@@ -98,7 +98,7 @@
                     hinweis: () => 'Medienimage steigt, Vorstand wird hellhörig',
                     wirkung: () => {
                         game.managerMediaImage = Math.min(100, (game.managerMediaImage || 50) + 8);
-                        game.boardSat = Math.max(0, (game.boardSat || 50) - 3);
+                        game.boardSat = Math.max(10, (game.boardSat || 50) - 3);
                         return { ok: true, text: 'Eine kernige Ansage - die Schlagzeile ist Ihnen sicher, der Vorstand hebt die Augenbraue.' };
                     }
                 },
@@ -247,7 +247,7 @@
                     hinweis: () => 'Fans begeistert, Vorstand skeptisch',
                     wirkung: () => {
                         game.fans = Math.min(100, game.fans + 7);
-                        game.boardSat = Math.max(0, (game.boardSat || 50) - 4);
+                        game.boardSat = Math.max(10, (game.boardSat || 50) - 4);
                         return { ok: true, text: 'Sie geben ein klares Bekenntnis ab. In der Kurve spricht sich das herum.' };
                     }
                 },

@@ -35,7 +35,7 @@
         // Proteste aus (Banner, Sprechchöre) - zusätzlicher Druck auf Vorstand & Mannschaft.
         if (game.lowBoardSatStreak === 5 && !game.fanProtestActive) {
             game.fanProtestActive = true;
-            game.boardSat = Math.max(1, game.boardSat - 5);
+            game.boardSat = Math.max(10, game.boardSat - 5);
             squad.forEach(p => { p.morale = Math.max(10, p.morale - 4); });
             addInboxMessage('vertrag', '📢 Fan-Proteste vor dem Stadion!', 'Enttäuschte Fans organisieren Proteste mit Bannern und Sprechchören gegen die sportliche Krise - der Druck auf Mannschaft und Vorstand steigt zusätzlich.', 'screen-dashboard');
             showToast('📢 Organisierte Fan-Proteste erhöhen den Druck auf den Verein!', 'error');
@@ -355,7 +355,7 @@
         if (!pendingInterview) return;
         let a = pendingInterview.answers[idx];
         game.fans = Math.max(1, Math.min(100, game.fans + a.fans));
-        game.boardSat = Math.max(1, Math.min(100, game.boardSat + a.board));
+        game.boardSat = Math.max(10, Math.min(100, game.boardSat + a.board));
         document.getElementById('interview-overlay').classList.remove('show');
         showToast(`🎙️ Interview: Fans ${a.fans >= 0 ? '+' : ''}${a.fans}, Vorstand ${a.board >= 0 ? '+' : ''}${a.board}`, 'success');
         // Interview-Historie: kleines Archiv der eigenen Medien-Auftritte über die Karriere,

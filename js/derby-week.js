@@ -173,7 +173,7 @@ function resolveDerbyWeek(opponentName, ourGoals, oppGoals) {
         }
         if (w.presse === 'kampf') {
             if (sieg) { medien(3); fansPlus(2); folgen.push('Kampfansage eingelöst: Medien +3, Fans +2'); }
-            if (niederlage) { medien(-4); fansMinus(3); game.boardSat = Math.max(0, game.boardSat - 2); folgen.push('Kampfansage verpufft: Medien -4, Fans -3, Vorstand -2'); }
+            if (niederlage) { medien(-4); fansMinus(3); game.boardSat = Math.max(10, game.boardSat - 2); folgen.push('Kampfansage verpufft: Medien -4, Fans -3, Vorstand -2'); }
         }
         w.resolved = true;
     }

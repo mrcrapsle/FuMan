@@ -1054,7 +1054,7 @@
             // Vorstand nach Niederlagen - der Manager bleibt auch in schwierigen Phasen
             // glaubwürdig.
             if (matchResult === 'loss' && managerRPG.perks.calmPresence) boardShift = Math.round(boardShift * 0.5);
-            game.boardSat = Math.max(1, Math.min(100, game.boardSat + boardShift));
+            game.boardSat = Math.max(10, Math.min(100, game.boardSat + boardShift));
             checkJobSecurity();
             generatePressHeadline(matchResult, isHomeDerby);
             recordHomeAwayResult(isHomeMatchParam, matchResult);

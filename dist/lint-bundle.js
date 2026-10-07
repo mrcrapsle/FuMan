@@ -484,7 +484,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.74', date: '07.10.2026', features: 'Phase 25.4: Entlassung am Saisonende nur ohne Vertrauensaufbau in den letzten 6 Spielen' };
+    const GAME_VERSION = { number: '3.75', date: '07.10.2026', features: 'Phase 25.5: Vorstandsvertrauen nie unter 10 - Wiederaufbau bleibt möglich' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -7614,7 +7614,7 @@ function renderTransferPokerBox() {
         if (typeof checkLegendDeparture === 'function') checkLegendDeparture(departingPlayer);
         if (!departingPlayer || !departingPlayer.isCrowdFavorite) return;
         game.fans = Math.max(game.fanBaseFloor || 10, game.fans - 15);
-        game.boardSat = Math.max(1, game.boardSat - 5);
+        game.boardSat = Math.max(10, game.boardSat - 5);
         addInboxMessage('vertrag', `💔 Fans empört über Verkauf von ${departingPlayer.name}!`, `Der Verkauf des amtierenden Publikumslieblings sorgt für deutlichen Unmut in der Fankurve - die Stimmung ist spürbar getrübt.`, 'screen-dashboard');
         showToast(`💔 Fans sind empört über den Verkauf von ${departingPlayer.name}!`, 'error');
     }
@@ -8809,7 +8809,7 @@ function renderMediaDepartmentPanel() {
 // Marschroute); jede Antwort wirkt: Moral, Stärke in genau diesem Spiel, Taktik, Medien-
 // image oder Vorstand. Große Worte werden nach dem Spiel abgerechnet (game.pressPromise).
 function pressMoral(delta) { squad.forEach(p => { p.morale = Math.max(10, Math.min(100, (p.morale || 50) + delta)); }); }
-function pressBoard(delta) { game.boardSat = Math.max(0, Math.min(100, game.boardSat + delta)); }
+function pressBoard(delta) { game.boardSat = Math.max(10, Math.min(100, game.boardSat + delta)); }
 function pressMatchBonus(delta) { game.pressMatchBonus = { season: game.season, matchday: game.matchday, bonus: delta }; }
 function pressPromise(typ) { game.pressPromise = { season: game.season, matchday: game.matchday, typ }; }
 
@@ -10353,7 +10353,7 @@ function renderBoardRoomPanel() {
                     hinweis: () => 'Medienimage steigt, Vorstand wird hellhörig',
                     wirkung: () => {
                         game.managerMediaImage = Math.min(100, (game.managerMediaImage || 50) + 8);
-                        game.boardSat = Math.max(0, (game.boardSat || 50) - 3);
+                        game.boardSat = Math.max(10, (game.boardSat || 50) - 3);
                         return { ok: true, text: 'Eine kernige Ansage - die Schlagzeile ist Ihnen sicher, der Vorstand hebt die Augenbraue.' };
                     }
                 },
@@ -10502,7 +10502,7 @@ function renderBoardRoomPanel() {
                     hinweis: () => 'Fans begeistert, Vorstand skeptisch',
                     wirkung: () => {
                         game.fans = Math.min(100, game.fans + 7);
-                        game.boardSat = Math.max(0, (game.boardSat || 50) - 4);
+                        game.boardSat = Math.max(10, (game.boardSat || 50) - 4);
                         return { ok: true, text: 'Sie geben ein klares Bekenntnis ab. In der Kurve spricht sich das herum.' };
                     }
                 },
@@ -21951,7 +21951,7 @@ function resolveDerbyWeek(opponentName, ourGoals, oppGoals) {
         }
         if (w.presse === 'kampf') {
             if (sieg) { medien(3); fansPlus(2); folgen.push('Kampfansage eingelöst: Medien +3, Fans +2'); }
-            if (niederlage) { medien(-4); fansMinus(3); game.boardSat = Math.max(0, game.boardSat - 2); folgen.push('Kampfansage verpufft: Medien -4, Fans -3, Vorstand -2'); }
+            if (niederlage) { medien(-4); fansMinus(3); game.boardSat = Math.max(10, game.boardSat - 2); folgen.push('Kampfansage verpufft: Medien -4, Fans -3, Vorstand -2'); }
         }
         w.resolved = true;
     }
@@ -23200,7 +23200,7 @@ function chooseWinterTalk(art) {
         if (!r.expected || r.expected >= r.teams) { showToast('Tiefer lässt sich das Ziel nicht setzen.', 'error'); return; }
         talk.goal = Math.min(r.teams, r.expected + 2);
         exp.expectedRank = talk.goal;
-        game.boardSat = Math.max(1, game.boardSat - 4);
+        game.boardSat = Math.max(10, game.boardSat - 4);
         text = `Neues Ziel Platz ${talk.goal}. Der Vorstand ist enttäuscht (-4), misst die Saison aber daran.`;
     } else if (art === 'budget') {
         if (Math.random() < getWinterBudgetChance()) {
@@ -23209,7 +23209,7 @@ function chooseWinterTalk(art) {
             talk.budget = betrag;
             text = `Der Vorstand bewilligt ${formatVal(betrag)} Winterbudget.`;
         } else {
-            game.boardSat = Math.max(1, game.boardSat - 3);
+            game.boardSat = Math.max(10, game.boardSat - 3);
             talk.budget = 0;
             text = 'Abgelehnt - erst die Leistung, dann das Geld (Vorstand -3).';
         }
@@ -23228,7 +23228,7 @@ function chooseWinterTalk(art) {
 function tickWinterTalk() {
     if (game.matchday > WINTER_TALK_LAST_MD && game.matchday <= 34 && !getWinterTalk()) {
         game.winterTalk = { season: game.season, choice: 'verpasst', result: null };
-        game.boardSat = Math.max(1, game.boardSat - 2);
+        game.boardSat = Math.max(10, game.boardSat - 2);
         addInboxMessage('vertrag', '🏛️ Wintergespräch verpasst', 'Der Vorstand hat in der Winterpause vergeblich auf dich gewartet (-2).', 'screen-dashboard');
     }
 }
@@ -23243,7 +23243,7 @@ function resolveWinterTalk(finalRank) {
         addInboxMessage('vertrag', '🏛️ Winterversprechen gehalten', `Platz ${finalRank} - das im Winter erhöhte Ziel (Platz ${t.goal}) ist erreicht. Vorstand +5.`, 'screen-dashboard');
     } else {
         t.result = 'verfehlt';
-        game.boardSat = Math.max(1, game.boardSat - 10);
+        game.boardSat = Math.max(10, game.boardSat - 10);
         addInboxMessage('vertrag', '🏛️ Winterversprechen gebrochen', `Platz ${finalRank} statt des im Winter versprochenen Platzes ${t.goal}. Vorstand -10.`, 'screen-dashboard');
     }
 }
@@ -23322,7 +23322,7 @@ function isClubLegend(p) {
 function checkLegendDeparture(p) {
     if (!isClubLegend(p)) return;
     game.fans = Math.max(game.fanBaseFloor || 10, game.fans - 8);
-    game.boardSat = Math.max(1, game.boardSat - 2);
+    game.boardSat = Math.max(10, game.boardSat - 2);
     addInboxMessage('vertrag', `🏛️ Eine Vereinslegende geht: ${p.name}`, `${p.appearances || 0} Pflichtspiele, ${getSeasonsAtClub(p)} Saisons - die Fans verabschieden ${p.name} mit Wehmut (Fans -8, Vorstand -2).`, 'screen-squad');
 }
 
@@ -23495,7 +23495,7 @@ function holdMemberAssembly(automatisch) {
     const entlastet = zustimmung >= 50;
     const boardDelta = zustimmung >= 70 ? 10 : entlastet ? 5 : zustimmung >= 30 ? -10 : -20;
 
-    game.boardSat = Math.max(1, Math.min(100, game.boardSat + boardDelta));
+    game.boardSat = Math.max(10, Math.min(100, game.boardSat + boardDelta));
     game.fans = Math.max(game.fanBaseFloor || 0, Math.min(100, game.fans + fee.fans));
     if (money !== 0) {
         setzeBuchungskontext('🗳️ Mitgliedsbeiträge');
@@ -26301,7 +26301,7 @@ function cleanupLegacyScoutState() {
             // Vorstand nach Niederlagen - der Manager bleibt auch in schwierigen Phasen
             // glaubwürdig.
             if (matchResult === 'loss' && managerRPG.perks.calmPresence) boardShift = Math.round(boardShift * 0.5);
-            game.boardSat = Math.max(1, Math.min(100, game.boardSat + boardShift));
+            game.boardSat = Math.max(10, Math.min(100, game.boardSat + boardShift));
             checkJobSecurity();
             generatePressHeadline(matchResult, isHomeDerby);
             recordHomeAwayResult(isHomeMatchParam, matchResult);
@@ -26757,7 +26757,7 @@ function cleanupLegacyScoutState() {
         // Proteste aus (Banner, Sprechchöre) - zusätzlicher Druck auf Vorstand & Mannschaft.
         if (game.lowBoardSatStreak === 5 && !game.fanProtestActive) {
             game.fanProtestActive = true;
-            game.boardSat = Math.max(1, game.boardSat - 5);
+            game.boardSat = Math.max(10, game.boardSat - 5);
             squad.forEach(p => { p.morale = Math.max(10, p.morale - 4); });
             addInboxMessage('vertrag', '📢 Fan-Proteste vor dem Stadion!', 'Enttäuschte Fans organisieren Proteste mit Bannern und Sprechchören gegen die sportliche Krise - der Druck auf Mannschaft und Vorstand steigt zusätzlich.', 'screen-dashboard');
             showToast('📢 Organisierte Fan-Proteste erhöhen den Druck auf den Verein!', 'error');
@@ -27077,7 +27077,7 @@ function cleanupLegacyScoutState() {
         if (!pendingInterview) return;
         let a = pendingInterview.answers[idx];
         game.fans = Math.max(1, Math.min(100, game.fans + a.fans));
-        game.boardSat = Math.max(1, Math.min(100, game.boardSat + a.board));
+        game.boardSat = Math.max(10, Math.min(100, game.boardSat + a.board));
         document.getElementById('interview-overlay').classList.remove('show');
         showToast(`🎙️ Interview: Fans ${a.fans >= 0 ? '+' : ''}${a.fans}, Vorstand ${a.board >= 0 ? '+' : ''}${a.board}`, 'success');
         // Interview-Historie: kleines Archiv der eigenen Medien-Auftritte über die Karriere,
@@ -27324,7 +27324,7 @@ function cleanupLegacyScoutState() {
         // offenes Wort oft nachvollziehen können.
         if (!game.ultimatumPressLeakOccurred && remaining <= 2 && remaining >= 1 && Math.random() < 0.2) {
             game.ultimatumPressLeakOccurred = true;
-            game.boardSat = Math.max(1, game.boardSat - 4);
+            game.boardSat = Math.max(10, game.boardSat - 4);
             game.fans = Math.min(100, game.fans + 3);
             addInboxMessage('vertrag', `📰 ${p.name} geht an die Presse!`, `${p.name} hat sein Ultimatum öffentlich gemacht - die Presse berichtet ausführlich. Der Vorstand ist verärgert über die Eskalation, viele Fans zeigen aber Verständnis für die Offenheit.`, 'screen-squad');
             showToast(`📰 ${p.name} hat das Ultimatum öffentlich gemacht!`, 'error');
@@ -27341,7 +27341,7 @@ function cleanupLegacyScoutState() {
             // das passive Verstreichenlassen dort gar nicht mitgezählt.
             game.ultimatumHistory.ignored = (game.ultimatumHistory.ignored || 0) + 1;
             p.morale = Math.max(5, p.morale - 25);
-            game.boardSat = Math.max(1, game.boardSat - 5);
+            game.boardSat = Math.max(10, game.boardSat - 5);
             addInboxMessage('vertrag', `😡 Ultimatum verstrichen: ${p.name} tief verärgert!`, `Die Frist ist ungenutzt verstrichen - ${p.name} ist nun offen unzufrieden, die Stimmung im Kader leidet.`, 'screen-squad');
             showToast(`😡 Ultimatum-Frist von ${p.name} verstrichen - Moral eingebrochen!`, 'error');
             game.activeUltimatumPlayerId = null;

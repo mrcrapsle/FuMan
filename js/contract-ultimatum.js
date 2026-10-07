@@ -73,7 +73,7 @@
         // offenes Wort oft nachvollziehen können.
         if (!game.ultimatumPressLeakOccurred && remaining <= 2 && remaining >= 1 && Math.random() < 0.2) {
             game.ultimatumPressLeakOccurred = true;
-            game.boardSat = Math.max(1, game.boardSat - 4);
+            game.boardSat = Math.max(10, game.boardSat - 4);
             game.fans = Math.min(100, game.fans + 3);
             addInboxMessage('vertrag', `📰 ${p.name} geht an die Presse!`, `${p.name} hat sein Ultimatum öffentlich gemacht - die Presse berichtet ausführlich. Der Vorstand ist verärgert über die Eskalation, viele Fans zeigen aber Verständnis für die Offenheit.`, 'screen-squad');
             showToast(`📰 ${p.name} hat das Ultimatum öffentlich gemacht!`, 'error');
@@ -90,7 +90,7 @@
             // das passive Verstreichenlassen dort gar nicht mitgezählt.
             game.ultimatumHistory.ignored = (game.ultimatumHistory.ignored || 0) + 1;
             p.morale = Math.max(5, p.morale - 25);
-            game.boardSat = Math.max(1, game.boardSat - 5);
+            game.boardSat = Math.max(10, game.boardSat - 5);
             addInboxMessage('vertrag', `😡 Ultimatum verstrichen: ${p.name} tief verärgert!`, `Die Frist ist ungenutzt verstrichen - ${p.name} ist nun offen unzufrieden, die Stimmung im Kader leidet.`, 'screen-squad');
             showToast(`😡 Ultimatum-Frist von ${p.name} verstrichen - Moral eingebrochen!`, 'error');
             game.activeUltimatumPlayerId = null;

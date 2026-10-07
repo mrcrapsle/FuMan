@@ -114,7 +114,7 @@ function holdMemberAssembly(automatisch) {
     const entlastet = zustimmung >= 50;
     const boardDelta = zustimmung >= 70 ? 10 : entlastet ? 5 : zustimmung >= 30 ? -10 : -20;
 
-    game.boardSat = Math.max(1, Math.min(100, game.boardSat + boardDelta));
+    game.boardSat = Math.max(10, Math.min(100, game.boardSat + boardDelta));
     game.fans = Math.max(game.fanBaseFloor || 0, Math.min(100, game.fans + fee.fans));
     if (money !== 0) {
         setzeBuchungskontext('🗳️ Mitgliedsbeiträge');
