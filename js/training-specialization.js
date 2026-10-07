@@ -41,6 +41,9 @@ function clearPlayerTrainingFocus(playerId) {
 }
 
 function tickTrainingSpecializationMonthly() {
+    // Nur aktiv wenn tatsächlich Spezialisierungen vorhanden sind
+    if (!game.trainingFocus || Object.keys(game.trainingFocus).length === 0) return;
+
     ensureTrainingSpecialization();
 
     Object.keys(game.trainingFocus).forEach(playerId => {
