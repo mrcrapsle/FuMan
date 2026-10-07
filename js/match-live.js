@@ -1038,7 +1038,7 @@
 
         // Job-Sicherheit: Ergebnisse wirken sich jetzt direkt auf die Vorstands-Stimmung aus,
         // statt (wie vorher) komplett wirkungslos zu bleiben. Anhaltend schlechte Stimmung
-        // kann zur Entlassung führen (siehe checkJobSecurity() weiter unten).
+        // kann am Saisonende zur Entlassung führen (siehe checkSeasonEndSacking()).
         if (matchResult) {
             // Erwartungsabhängig (Langzeittest Phase 19.6): früher fest Sieg +2 / Remis -1 /
             // Niederlage -3 - ein Mittelfeldteam verlor so ~20 Punkte pro Saison und landete

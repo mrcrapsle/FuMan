@@ -4946,7 +4946,13 @@ async function testNoNativeDialogs(browser) {
         // Entlassungen sind erst ab Saison 2 moeglich (siehe checkBoardSatisfaction).
         game.season = 2;
         game.boardSat = 1;
-        game.lowBoardSatStreak = 9;
+        game.lowBoardSatStreak = 12;
+        simulateMatchdays(1);
+        const mitteDerSaisonEntlassen = game.sackPending === true;
+        game.sackPending = false;
+        game.boardSat = 1;
+        game.lowBoardSatStreak = 6;
+        checkSeasonEndSacking();
         let mdVor = game.matchday;
         simulateMatchdays(5);
         let box = document.getElementById('app-notice');
@@ -4955,6 +4961,7 @@ async function testNoNativeDialogs(browser) {
         let nochWeiter = game.matchday !== mdNach;
         return {
             ausgeloest: game.sackPending === true,
+            mitteDerSaisonEntlassen,
             spieltage: mdNach - mdVor,
             simulationGestoppt: !nochWeiter,
             meldungGanzVorn: box.innerHTML.includes('Entlassen'),
@@ -4963,6 +4970,7 @@ async function testNoNativeDialogs(browser) {
     });
 
     assert(entlassung.ausgeloest, 'Die Entlassung wird im Testszenario tatsächlich ausgelöst');
+    assert(!entlassung.mitteDerSaisonEntlassen, 'Mitten in der Saison gibt es trotz langer Serie keine Entlassung');
     assert(entlassung.spieltage <= 2, `Nach der Entlassung wird nicht weitersimuliert (${entlassung.spieltage} Spieltag(e))`);
     assert(entlassung.simulationGestoppt, 'Weitere Simulationsversuche bleiben wirkungslos, bis bestätigt wurde');
     assert(entlassung.meldungGanzVorn, 'Die Entlassungsmeldung steht vor allen anderen Meldungen');

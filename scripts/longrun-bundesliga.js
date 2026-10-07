@@ -98,6 +98,7 @@ async function karriere(browser, lauf) {
                 const eu = (game.europeHistory || []).find(e => e.season === start.season);
                 zeile.europaRunde = eu ? eu.stage : '';
                 zeile.ligaDanach = game.leagueLevel;
+                zeile.entlassenAmEnde = !!game.sackPending;
                 zeile.abgaenge = kaderVorher.filter(id => !squad.some(p => p.id === id)).length;
                 zeile.toasts = Object.entries(window.__fehlerToasts).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, v]) => v + 'x ' + k);
                 zeile.post = window.__post
@@ -106,7 +107,7 @@ async function karriere(browser, lauf) {
             } catch (e) { return { crash: e.message + ' ' + (e.stack || '').split('\n')[1] }; }
         }, modus === 'aktiv');
         zeilen.push(r);
-        if (r.crash || r.entlassen) break;
+        if (r.crash || r.entlassen || r.entlassenAmEnde) break;
     }
     await ctx.close();
     console.log(`\n== Lauf ${lauf} (${modus}) ==`);
@@ -114,7 +115,7 @@ async function karriere(browser, lauf) {
     zeilen.forEach(z => {
         if (z.crash) return console.log('ABSTURZ: ' + z.crash);
         if (z.entlassen) return console.log(`${String(z.season).padStart(3)} ENTLASSEN (Liga ${z.liga + 1})`);
-        console.log(`${String(z.season).padStart(3)} ${String(z.liga + 1).padStart(4)} ${String(z.platz).padStart(2)} ${String(z.punkte).padStart(3)} ${mio(z.geld)} ${mio(z.transfer)} ${String(Math.round(z.gehaltBudget / 1000)).padStart(7)}k ${String(Math.round(z.gehaltSumme / 1000)).padStart(5)}k ${String(z.elf).padStart(4)} ${String(z.ligaSchnitt).padStart(4)} ${String(z.ligaTop).padStart(3)} ${String(z.kader).padStart(3)} ${String(z.vorstand).padStart(3)} ${z.europaRunde ? ('CC:' + z.europaRunde).padEnd(13) : '-'.padEnd(13)} ${z.pokal ? 'Pokal ' + z.pokal : ''}${z.ligaDanach !== z.liga ? ' → Liga ' + (z.ligaDanach + 1) : ''}`);
+        console.log(`${String(z.season).padStart(3)} ${String(z.liga + 1).padStart(4)} ${String(z.platz).padStart(2)} ${String(z.punkte).padStart(3)} ${mio(z.geld)} ${mio(z.transfer)} ${String(Math.round(z.gehaltBudget / 1000)).padStart(7)}k ${String(Math.round(z.gehaltSumme / 1000)).padStart(5)}k ${String(z.elf).padStart(4)} ${String(z.ligaSchnitt).padStart(4)} ${String(z.ligaTop).padStart(3)} ${String(z.kader).padStart(3)} ${String(z.vorstand).padStart(3)} ${z.europaRunde ? ('CC:' + z.europaRunde).padEnd(13) : '-'.padEnd(13)} ${z.pokal ? 'Pokal ' + z.pokal : ''}${z.ligaDanach !== z.liga ? ' → Liga ' + (z.ligaDanach + 1) : ''}${z.entlassenAmEnde ? ' ENTLASSEN (Saisonende)' : ''}`);
     });
     if (process.env.DIAG) zeilen.forEach(z => { if (z.season) console.log(`\n[S${z.season}] Abgänge ${z.abgaenge} | Fehler: ${(z.toasts || []).join(' ; ')}\n      Post: ${(z.post || []).join(' ; ')}`); });
     if (fehler.length) console.log('JS-Fehler: ' + [...new Set(fehler)].slice(0, 5).join(' | '));

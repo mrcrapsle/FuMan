@@ -7,7 +7,7 @@
     // Sponsoren...) wird über denselben bewährten Reload-Mechanismus wie "Neues Spiel
     // starten" komplett zurückgesetzt, damit garantiert nichts vom alten Verein hängen bleibt.
     const BOARD_SAT_WARNING_THRESHOLD = 25;
-    const BOARD_SAT_SACK_STREAK = 10;
+    const BOARD_SAT_SACK_STREAK = 6;
 
     function checkJobSecurity() {
         // Schonfrist in der allerersten Saison: ein frischer, bewusst schwacher Startkader in
@@ -44,10 +44,16 @@
             addInboxMessage('vertrag', '✅ Fan-Proteste beendet', 'Nach besseren Ergebnissen sind die Proteste rund um den Verein wieder abgeklungen.', 'screen-dashboard');
         }
 
-        // Legenden-Status-Vorteil: der Vorstand verzeiht einer echten Vereinslegende deutlich
-        // mehr, bevor es zur Entlassung kommt (höhere Toleranzschwelle statt Immunität).
+    }
+
+    // Entlassung nur am Saisonende (concludeSeasonAndAdvance): mitten in der Saison kann der
+    // Vorstand nach einer schwachen Serie wieder umschwenken. Entscheidend ist der Stand am
+    // Saisonende - Zufriedenheit unter der Warnschwelle und die letzten Pflichtspiele darunter.
+    // Legenden-Bonus bleibt: der Vorstand verzeiht einer Vereinslegende mehr.
+    function checkSeasonEndSacking() {
+        if (game.season <= 1) return;
         let sackThreshold = BOARD_SAT_SACK_STREAK + (game.legendStatus ? 3 : 0);
-        if (game.lowBoardSatStreak >= sackThreshold) {
+        if (game.boardSat <= BOARD_SAT_WARNING_THRESHOLD && game.lowBoardSatStreak >= sackThreshold) {
             getSacked();
         }
     }
