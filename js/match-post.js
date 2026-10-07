@@ -16,6 +16,7 @@
         // vermeidet nebenbei auch unvorhersehbare Seiten-Reloads mitten in Testläufen, die
         // simulateFullSeason() mit dem schwachen Standard-Startkader nutzen.
         if (game.season <= 1) { game.lowBoardSatStreak = 0; return; }
+        game.boardSatVerlauf = [...(game.boardSatVerlauf || []), Math.round(game.boardSat)].slice(-7);
 
         if (game.boardSat <= BOARD_SAT_WARNING_THRESHOLD) {
             game.lowBoardSatStreak = (game.lowBoardSatStreak || 0) + 1;
@@ -48,12 +49,16 @@
 
     // Entlassung nur am Saisonende (concludeSeasonAndAdvance): mitten in der Saison kann der
     // Vorstand nach einer schwachen Serie wieder umschwenken. Entscheidend ist der Stand am
-    // Saisonende - Zufriedenheit unter der Warnschwelle und die letzten Pflichtspiele darunter.
-    // Legenden-Bonus bleibt: der Vorstand verzeiht einer Vereinslegende mehr.
+    // Saisonende - Zufriedenheit unter der Warnschwelle, die letzten Pflichtspiele darunter und
+    // KEIN Vertrauensaufbau: liegt die Zufriedenheit über dem Wert von vor sechs Pflichtspielen,
+    // bleibt der Manager. Legenden-Bonus bleibt: der Vorstand verzeiht einer Vereinslegende mehr.
     function checkSeasonEndSacking() {
         if (game.season <= 1) return;
         let sackThreshold = BOARD_SAT_SACK_STREAK + (game.legendStatus ? 3 : 0);
-        if (game.boardSat <= BOARD_SAT_WARNING_THRESHOLD && game.lowBoardSatStreak >= sackThreshold) {
+        let verlauf = game.boardSatVerlauf || [];
+        let erholt = verlauf.length >= 7 && game.boardSat > verlauf[0];
+        game.boardSatVerlauf = [];
+        if (game.boardSat <= BOARD_SAT_WARNING_THRESHOLD && game.lowBoardSatStreak >= sackThreshold && !erholt) {
             getSacked();
         }
     }
