@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.70', date: '07.10.2026', features: 'Phase 21.7: Startzeit gemessen, kleinere Datei (lokale Namen verkürzt, CSS/HTML verdichtet)' };
+    const GAME_VERSION = { number: '3.71', date: '07.10.2026', features: 'Phase 21.6: Gehaltsbudget nie unter laufende Verträge (Sparkurs nach Verlust), Startliga-Lizenz, Langzeittest-Bot' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
