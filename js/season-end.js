@@ -149,6 +149,17 @@ function getCashSurplusBudgetShare() {
     };
 }
 
+// Laufende Verträge kann der Vorstand nicht kürzen: deckt das Konto eine halbe Saison der
+// aktuellen Gehaltssumme, bleibt das Gehaltsbudget mindestens 5 % darüber. Vorher setzte die
+// Liga/Platz-Formel einen Bundesliga-Elften auf 1,26 Mio. bei 1,5 Mio. Gehältern - jede
+// Verlängerung scheiterte, der Kader lief ablösefrei davon (Langzeittest 21.6).
+function getWageBudgetFloor() {
+    const summe = squad.reduce((s, p) => s + (p.wage || 0), 0)
+        + (game.secondTeam && game.secondTeam.isActive ? secondTeamSquad.reduce((s, p) => s + (p.wage || 0), 0) : 0);
+    if (game.money < summe * 34 * 0.5) return 0;
+    return Math.ceil(summe * 1.05 / 1000) * 1000;
+}
+
 function applyCashSurplusBudgets() {
     const anteil = getCashSurplusBudgetShare();
     if (!anteil.transfer && !anteil.wage) return;
@@ -280,7 +291,7 @@ function concludeSeasonAndAdvance() {
         let leagueFactor = (NUM_LEAGUES - game.leagueLevel) / NUM_LEAGUES;
         let placementFactor = myRank <= 4 ? 1.3 : (myRank <= 10 ? 1.0 : 0.8);
         game.transferBudget = Math.round(2500000 * (1 + leagueFactor * 2.5) * placementFactor);
-        game.wageBudget = Math.round(450000 * (1 + leagueFactor * 2.5) * placementFactor);
+        game.wageBudget = Math.max(Math.round(450000 * (1 + leagueFactor * 2.5) * placementFactor), getWageBudgetFloor());
         if (typeof applyCashSurplusBudgets === 'function') applyCashSurplusBudgets();
         // Manager-Eigengehalt: blieb bisher für immer beim Startwert (1.200 €/SpT),
         // selbst nach mehreren Aufstiegen in die Bundesliga mit Millionenbudgets - ein

@@ -2757,6 +2757,7 @@
                     loescheBuchungskontext();
                 }
                 if (chosenLevel !== null && typeof scaleStadiumForLeague === 'function') scaleStadiumForLeague(parseInt(chosenLevel));
+                if (chosenLevel !== null && typeof grantStartLeagueLicence === 'function') grantStartLeagueLicence(parseInt(chosenLevel));
                 if (chosenLevel !== null && parseInt(chosenLevel) !== 5 && typeof generateSquadForLevel === 'function') {
                     // initDefaultSquad() ist fest auf die unterste Liga kalibriert - für eine
                     // höhere Startliga braucht es einen entsprechend stärkeren Kader (gleicher

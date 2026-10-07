@@ -53,6 +53,18 @@ async function karriere(browser, lauf) {
                     }
                 };
                 const start = { season: game.season, liga: game.leagueLevel, europa: !!game.inEurope };
+                // Diagnose: abgelehnte Aktionen (Fehler-Toasts) und Postfach-Titel dieser Saison
+                window.__fehlerToasts = window.__fehlerToasts || {};
+                if (!window.__toastGewrappt) {
+                    const orig = showToast;
+                    showToast = function (msg, typ) { if (typ === 'error') { const k = String(msg).replace(/[0-9.,]+/g, '#').slice(0, 70); window.__fehlerToasts[k] = (window.__fehlerToasts[k] || 0) + 1; } return orig.apply(this, arguments); };
+                    const origPost = addInboxMessage;
+                    addInboxMessage = function (typ, titel) { window.__post.push(String(titel)); return origPost.apply(this, arguments); };
+                    window.__toastGewrappt = true;
+                }
+                window.__fehlerToasts = {};
+                window.__post = [];
+                const kaderVorher = squad.map(p => p.id);
                 verwalten();
                 simulateMatchdays(17);
                 verwalten();
@@ -72,6 +84,10 @@ async function karriere(browser, lauf) {
                 const eu = (game.europeHistory || []).find(e => e.season === start.season);
                 zeile.europaRunde = eu ? eu.stage : '';
                 zeile.ligaDanach = game.leagueLevel;
+                zeile.abgaenge = kaderVorher.filter(id => !squad.some(p => p.id === id)).length;
+                zeile.toasts = Object.entries(window.__fehlerToasts).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, v]) => v + 'x ' + k);
+                zeile.post = window.__post
+                    .filter(t => /Lizenz|Aufstieg|Abstieg|Nachfrist|Vertrag|verlässt|ablösefrei|Gehaltsbudget|Rücklagen/i.test(t)).slice(0, 12);
                 return zeile;
             } catch (e) { return { crash: e.message + ' ' + (e.stack || '').split('\n')[1] }; }
         }, modus === 'aktiv');
@@ -86,6 +102,7 @@ async function karriere(browser, lauf) {
         if (z.entlassen) return console.log(`${String(z.season).padStart(3)} ENTLASSEN (Liga ${z.liga + 1})`);
         console.log(`${String(z.season).padStart(3)} ${String(z.liga + 1).padStart(4)} ${String(z.platz).padStart(2)} ${String(z.punkte).padStart(3)} ${mio(z.geld)} ${mio(z.transfer)} ${String(Math.round(z.gehaltBudget / 1000)).padStart(7)}k ${String(Math.round(z.gehaltSumme / 1000)).padStart(5)}k ${String(z.elf).padStart(4)} ${String(z.kader).padStart(3)} ${String(z.vorstand).padStart(3)} ${z.europaRunde ? ('CC:' + z.europaRunde).padEnd(13) : '-'.padEnd(13)} ${z.pokal ? 'Pokal ' + z.pokal : ''}${z.ligaDanach !== z.liga ? ' → Liga ' + (z.ligaDanach + 1) : ''}`);
     });
+    if (process.env.DIAG) zeilen.forEach(z => { if (z.season) console.log(`\n[S${z.season}] Abgänge ${z.abgaenge} | Fehler: ${(z.toasts || []).join(' ; ')}\n      Post: ${(z.post || []).join(' ; ')}`); });
     if (fehler.length) console.log('JS-Fehler: ' + [...new Set(fehler)].slice(0, 5).join(' | '));
     return zeilen;
 }

@@ -511,6 +511,15 @@
             if (b && typeof b.cap === 'number') b.cap = Math.round(b.cap * faktor / 50) * 50;
         });
     }
+    // Wer in einer höheren Liga startet, hat deren Lizenz schon: Flutlicht und Internat-Stufe
+    // wie gefordert. Sonst kam ein abgestiegener Bundesliga-Startverein ohne Internat nicht
+    // wieder hoch (Platz 2, Lizenz verweigert - Langzeittest 21.6).
+    function grantStartLeagueLicence(level) {
+        let req = DFB_LICENSING_REQUIREMENTS[level];
+        if (!req) return;
+        if (req.floodlight) stadium.flutlicht = true;
+        if (campusBuildings.internat) campusBuildings.internat.lvl = Math.max(campusBuildings.internat.lvl || 0, req.minYouthLvl || 0);
+    }
     let selectedNewGameLevel = 5;
     let selectedNewGameCity = 'Leipzig';
     let selectedNewGameMoney = 150000;

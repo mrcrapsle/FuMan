@@ -2173,6 +2173,16 @@ async function testBundesligaLongRun(browser) {
             applyCashSurplusBudgets();
             out.freigabe = game.transferBudget === tb + reich.transfer && game.wageBudget === wb + reich.wage
                 && inboxMessages.some(m => m.title.includes('Rücklagen'));
+            // Gehaltsbudget: nie unter die laufenden Gehälter, solange das Konto sie trägt
+            const summe = squad.reduce((a, p) => a + (p.wage || 0), 0);
+            game.money = summe * 34;
+            const boden = getWageBudgetFloor();
+            game.money = summe * 5;
+            out.gehaltsBoden = boden >= summe * 1.04 && getWageBudgetFloor() === 0;
+            // Start in der Bundesliga: Lizenz-Ausstattung der Startliga ist vorhanden
+            stadium.flutlicht = false; campusBuildings.internat.lvl = 0;
+            grantStartLeagueLicence(0);
+            out.startLizenz = stadium.flutlicht === true && campusBuildings.internat.lvl === 2;
             // Markt: in der Bundesliga drei internationale Stars über dem Liganiveau, unten nicht
             game.leagueLevel = 0; refreshTransferMarket();
             out.sterne = marketPlayers.filter(p => p.strength >= 87).length >= 3;
@@ -2196,6 +2206,8 @@ async function testBundesligaLongRun(browser) {
     assert(!r.crash, `Langzeittest Bundesliga ohne Absturz (${r.crash || 'ok'})`);
     if (!r.crash) {
         assert(r.ruecklagen && r.freigabe, 'Der Vorstand gibt Rücklagen über der Reserve als Transfer- und Gehaltsbudget frei');
+        assert(r.gehaltsBoden, 'Gehaltsbudget mindestens 5 % über den laufenden Gehältern, wenn das Konto sie trägt (sonst Formel)');
+        assert(r.startLizenz, 'Neues Spiel in der Bundesliga: Flutlicht und Internat Stufe 2 vorhanden');
         assert(r.sterne && r.untenNormal, 'Bundesliga-Markt mit drei internationalen Stars, untere Ligen unverändert');
         assert(r.praemie && r.startkapital, 'Pokalprämien mit eigener Buchung, Startkapital zählt nicht fürs FFP');
         assert(r.pokalEcht, 'DFB-Pokal mit 32 echten Vereinen aus Bundesliga bis Regionalliga');
