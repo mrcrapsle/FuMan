@@ -8,6 +8,7 @@ Messung: `node scripts/measure-startup.js [datei] [läufe] [profil]` (Playwright
 |---|---|---|---|
 | Neues Spiel | 520 ms | 306 ms | 831 ms |
 | Spielstand laden (nach 1 Saison) | 310 ms | 80 ms | 390 ms |
+| Neues Spiel, nach 21.7 (1,38 MB) | 459 ms | 304 ms | 767 ms |
 
 Die Startzeit ist kein Engpass mehr (der Struktur-Selbsttest beim Start fiel schon früher weg).
 Der Rest ist fast nur Einlesen/Kompilieren des Skripts.
