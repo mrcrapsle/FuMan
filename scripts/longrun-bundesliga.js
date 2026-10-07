@@ -2,7 +2,8 @@
 // schreibt je Saison Platz, Geld, Budgets, Gehaltssumme, Kaderstärke, Pokal/Europa und Vorstand.
 //   node scripts/longrun-bundesliga.js [saisons=20] [modus=aktiv|passiv] [läufe=1] [datei]
 // aktiv:  verlängert gute auslaufende Verträge (auch Legenden/Publikumslieblinge bis 33), kauft in
-//         den Fenstern Verstärkungen, löst Ultimaten nach jedem Spieltag und führt das Wintergespräch.
+//         den Fenstern Verstärkungen, löst Ultimaten nach jedem Spieltag, führt das Wintergespräch
+//         und hält die Mitgliederversammlung mit passender Rede.
 // passiv: spielt nur, der Kader wird nie angefasst.
 const path = require('path');
 const fs = require('fs');
@@ -96,6 +97,13 @@ async function karriere(browser, lauf) {
                         if (game.activeUltimatumPlayerId) resolveUltimatumIgnore();
                     }
                     if (isWinterTalkOpen()) chooseWinterTalk('kurs');
+                    // Mitgliederversammlung selbst halten, Rede passend zur Saison.
+                    const mv = game.memberAssembly;
+                    if (mv && mv.status === 'offen') {
+                        const gut = mv.report.finalRank <= mv.report.expectedRank || mv.report.promoted;
+                        setAssemblyChoice('speech', gut ? 'visionaer' : 'selbstkritisch');
+                        holdMemberAssembly(false);
+                    }
                 };
                 const start = { season: game.season, liga: game.leagueLevel, europa: !!game.inEurope };
                 // Diagnose: abgelehnte Aktionen (Fehler-Toasts) und Postfach-Titel dieser Saison

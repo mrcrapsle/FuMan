@@ -114,7 +114,9 @@ function holdMemberAssembly(automatisch) {
     const zustimmung = Math.round(Math.max(5, Math.min(95, assemblyBaseApproval(r) + speechEffect(a.speech, r) + fee.approval
         + (automatisch ? -5 : 0))));
     const entlastet = zustimmung >= 50;
-    const boardDelta = zustimmung >= 70 ? 10 : entlastet ? 5 : zustimmung >= 30 ? -10 : -20;
+    // Nicht entlastet kostet einheitlich -10 (früher -20 unter 30 % Zustimmung: zusammen mit dem
+    // verfehlten Saisonziel kippte das im Langzeittest fast jede Karriere in die Entlassung).
+    const boardDelta = zustimmung >= 70 ? 10 : entlastet ? 5 : -10;
 
     game.boardSat = Math.max(10, Math.min(100, game.boardSat + boardDelta));
     game.fans = Math.max(game.fanBaseFloor || 0, Math.min(100, game.fans + fee.fans));

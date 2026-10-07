@@ -6684,7 +6684,7 @@ async function testPhase11(browser) {
         const geldVorher = game.money;
         holdMemberAssembly();
         out.versammlungWirkung = a.status === 'abgehalten' && game.money > geldVorher
-            && game.boardSat === Math.max(1, Math.min(100, satVorher + a.boardDelta));
+            && game.boardSat === Math.max(10, Math.min(100, satVorher + a.boardDelta)) && a.boardDelta >= -10;
 
         showScreen('screen-women');
         out.frauenScreen = document.getElementById('women-team-box').innerText.includes('TABELLE');

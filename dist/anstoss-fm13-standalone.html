@@ -4533,7 +4533,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.76', date: '07.10.2026', features: 'Phase 25.6: Neustart nach Abstieg, Mitgliederversammlung findet wieder automatisch statt' };
+    const GAME_VERSION = { number: '3.77', date: '07.10.2026', features: 'Phase 25.7: Mitgliederversammlung ohne Entlastung kostet einheitlich -10' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -27623,7 +27623,9 @@ function holdMemberAssembly(automatisch) {
     const zustimmung = Math.round(Math.max(5, Math.min(95, assemblyBaseApproval(r) + speechEffect(a.speech, r) + fee.approval
         + (automatisch ? -5 : 0))));
     const entlastet = zustimmung >= 50;
-    const boardDelta = zustimmung >= 70 ? 10 : entlastet ? 5 : zustimmung >= 30 ? -10 : -20;
+    // Nicht entlastet kostet einheitlich -10 (früher -20 unter 30 % Zustimmung: zusammen mit dem
+    // verfehlten Saisonziel kippte das im Langzeittest fast jede Karriere in die Entlassung).
+    const boardDelta = zustimmung >= 70 ? 10 : entlastet ? 5 : -10;
 
     game.boardSat = Math.max(10, Math.min(100, game.boardSat + boardDelta));
     game.fans = Math.max(game.fanBaseFloor || 0, Math.min(100, game.fans + fee.fans));
@@ -33284,6 +33286,9 @@ const LEXICON_ENTRIES = [
     { cat: 'Verein', title: 'Vorstandszufriedenheit', screen: 'screen-dashboard',
         text: 'Wie zufrieden der Vorstand ist (10-100). Fällt sie unter 25, warnt er. Entlassen wird nur am Saisonende: wenn sie dann unter 25 liegt, die letzten 6 Pflichtspiele darunter waren und sie in dieser Zeit nicht gestiegen ist. Nach einem Abstieg gibt es einmal einen Neustart (mindestens 60), nach einem zweiten Abstieg in Folge nicht. In der ersten Saison gibt es Schonfrist.',
         tips: ['Siege und erreichte Saisonziele heben sie', 'Schulden, gebrochene Versprechen und Niederlagenserien senken sie', 'Der Vorstandsraum erklärt jedes Mitglied einzeln'] },
+    { cat: 'Verein', title: 'Mitgliederversammlung', screen: 'screen-dashboard',
+        text: 'Nach jeder Saison wollen die Mitglieder deinen Bericht: Platz gegen Erwartung, Aufstieg/Abstieg und Kasse ergeben die Grundstimmung. Rede und Beitragsantrag wählst du im Dashboard. Ab 70 % Zustimmung Vorstand +10, ab 50 % (entlastet) +5, darunter -10. Bereitest du sie nicht innerhalb von 6 Spieltagen vor, findet sie ohne dich statt (-5 % Zustimmung).',
+        tips: ['Selbstkritisch hilft nach einer schwachen Saison, visionär nach einer guten', 'Zahlen sprechen lassen lohnt nur mit Gewinn', 'Beitrag senken kostet Geld, bringt aber Zustimmung und Fans'] },
     { cat: 'Verein', title: 'Wintergespräch mit dem Vorstand', screen: 'screen-dashboard',
         text: 'In der Winterpause (Spieltag 18-20) zieht der Vorstand Zwischenbilanz: Tabellenplatz gegen die Erwartung und Kassenentwicklung. Du wählst einen Weg: Ziel hoch (2 Plätze, Vorstand +5 und sofort Winterbudget - am Saisonende erreicht +5, verfehlt -10), Ziel runter (2 Plätze, Vorstand -4, die Saison und die Mitgliederversammlung messen am leichteren Ziel), Winterbudget beantragen (Chance aus Zwischenbilanz und Vorstandslaune, Absage -3) oder Kurs bestätigen (+2). Wer bis Spieltag 20 nicht kommt, verpasst das Gespräch (-2).',
         tips: ['Läuft es besser als erwartet, ist das Budget leichter zu bekommen', 'Ein höheres Ziel lohnt nur, wenn du es wirklich erreichen kannst'] },
