@@ -805,6 +805,9 @@
         if (typeof renderPlayerPotentialAnalyzerPanel === 'function') renderPlayerPotentialAnalyzerPanel();
         if (typeof renderOpponentWeaknessAnalysisPanel === 'function') renderOpponentWeaknessAnalysisPanel();
         if (typeof renderLeagueTrendsAnalysisPanel === 'function') renderLeagueTrendsAnalysisPanel();
+        if (typeof renderTacticalFlexibilityPanel === 'function') renderTacticalFlexibilityPanel();
+        if (typeof renderOpponentHistoryPanel === 'function') renderOpponentHistoryPanel();
+        if (typeof renderMatchPredictionPanel === 'function') renderMatchPredictionPanel();
         if (typeof renderPlayerSeasonStats === 'function') renderPlayerSeasonStats();
         if (typeof renderTeamCouncilPanel === 'function') renderTeamCouncilPanel();
         let container = document.getElementById('bench-list');
