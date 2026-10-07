@@ -31613,14 +31613,14 @@ function getCashSurplusBudgetShare() {
     };
 }
 
-// Laufende Verträge kann der Vorstand nicht kürzen: deckt das Konto eine halbe Saison der
+// Laufende Verträge kann der Vorstand nicht kürzen: deckt das Konto eine Viertelsaison der
 // aktuellen Gehaltssumme, bleibt das Gehaltsbudget mindestens 5 % darüber. Vorher setzte die
 // Liga/Platz-Formel einen Bundesliga-Elften auf 1,26 Mio. bei 1,5 Mio. Gehältern - jede
 // Verlängerung scheiterte, der Kader lief ablösefrei davon (Langzeittest 21.6).
 function getWageBudgetFloor() {
     const summe = squad.reduce((s, p) => s + (p.wage || 0), 0)
         + (game.secondTeam && game.secondTeam.isActive ? secondTeamSquad.reduce((s, p) => s + (p.wage || 0), 0) : 0);
-    if (game.money < summe * 34 * 0.5) return 0;
+    if (game.money < summe * 34 * 0.25) return 0;
     return Math.ceil(summe * 1.05 / 1000) * 1000;
 }
 
@@ -33135,7 +33135,7 @@ const LEXICON_ENTRIES = [
         tips: ['Der Unternehmenswert = 50.000 € plus 80 % der in Fabriken investierten Summe', 'Übernahmeangebote kommen nur, wenn du Fabriken besitzt - beim Verkauf sind alle Fabriken weg, Konto und Lager bleiben'] },
     { cat: 'Finanzen', title: 'Gehaltsbudget', screen: 'screen-finances',
         text: 'Höchstsumme aller Spielergehälter pro Spieltag. Neue Verträge über dem Budget sind nicht möglich.',
-        tips: ['Verkäufe und auslaufende Verträge schaffen Luft', 'Im Gehaltsgespräch einmal nachverhandeln', 'Zum Saisonstart liegt es mindestens 5 % über den laufenden Gehältern, wenn das Konto eine halbe Saison davon deckt'] },
+        tips: ['Verkäufe und auslaufende Verträge schaffen Luft', 'Im Gehaltsgespräch einmal nachverhandeln', 'Zum Saisonstart liegt es mindestens 5 % über den laufenden Gehältern, wenn das Konto eine Viertelsaison davon deckt'] },
     { cat: 'Finanzen', title: 'Transferbudget', screen: 'screen-finances',
         text: 'Wie viel Ablöse der Vorstand freigibt. Unabhängig vom Kontostand: beides muss reichen.',
         tips: ['Verkäufe erhöhen es', 'Mit dem Vorstand lässt sich nachverhandeln', 'Zum Saisonstart gibt der Vorstand 40 % der Rücklagen über einer Reserve (halbe Saison Gehaltsbudget) zusätzlich frei, 10 % davon gehen ins Gehaltsbudget'] },

@@ -37,19 +37,25 @@ async function karriere(browser, lauf) {
                 const elfStaerke = () => { const ids = pickBestLineupIds(); return squad.filter(p => ids.includes(p.id)).reduce((a, p) => a + p.strength, 0) / Math.max(1, ids.length); };
                 const verwalten = () => {
                     if (!aktiv) return;
+                    const fenster = game.matchday <= 3 || (game.matchday >= 18 && game.matchday <= 20);
                     const median = [...squad].map(p => p.strength).sort((a, b) => a - b)[Math.floor(squad.length / 2)];
                     squad.filter(p => (p.contracts || 0) <= 1 && p.strength >= median && p.age <= 31).forEach(p => {
                         extendContract(p.id);
                         if (contractTalk) acceptContractTalk();
                         contractTalk = null;
                     });
-                    if (game.matchday <= 3 && squad.length < 26) {
+                    // Pro Wechselfenster: erst die Elf verstärken, dann den Kader auf 22 auffüllen.
+                    for (let versuch = 0; fenster && versuch < 6; versuch++) {
                         const ids = pickBestLineupIds();
                         const schwaechster = Math.min(...squad.filter(p => ids.includes(p.id)).map(p => p.strength));
-                        const kandidaten = marketPlayers.map((p, i) => ({ p, i }))
-                            .filter(x => x.p.strength > schwaechster + 2 && getTransferAsking(x.p) <= game.transferBudget && getTransferAsking(x.p) < game.money * 0.6)
-                            .sort((a, b) => b.p.strength - a.p.strength);
-                        if (kandidaten.length) buyPlayer(kandidaten[0].i);
+                        const bezahlbar = x => getTransferAsking(x.p) <= game.transferBudget && getTransferAsking(x.p) < game.money * 0.5;
+                        const alle = marketPlayers.map((p, i) => ({ p, i })).filter(bezahlbar);
+                        let wahl = alle.filter(x => x.p.strength > schwaechster + 2).sort((a, b) => b.p.strength - a.p.strength)[0];
+                        if (!wahl && squad.length < 22) wahl = alle.sort((a, b) => b.p.strength - a.p.strength)[0];
+                        if (!wahl) break;
+                        const vorher = squad.length;
+                        buyPlayer(wahl.i);
+                        if (squad.length === vorher) break;
                     }
                 };
                 const start = { season: game.season, liga: game.leagueLevel, europa: !!game.inEurope };

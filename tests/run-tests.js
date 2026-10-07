@@ -2177,7 +2177,7 @@ async function testBundesligaLongRun(browser) {
             const summe = squad.reduce((a, p) => a + (p.wage || 0), 0);
             game.money = summe * 34;
             const boden = getWageBudgetFloor();
-            game.money = summe * 5;
+            game.money = summe * 8;
             out.gehaltsBoden = boden >= summe * 1.04 && getWageBudgetFloor() === 0;
             // Start in der Bundesliga: Lizenz-Ausstattung der Startliga ist vorhanden
             stadium.flutlicht = false; campusBuildings.internat.lvl = 0;
