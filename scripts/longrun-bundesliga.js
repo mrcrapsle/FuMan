@@ -1,4 +1,4 @@
-// Langzeittest ab der Bundesliga (Phase 21.6): ein Bot spielt N Saisons im gebauten Spiel und
+// Langzeittest (Phase 21.6, Startliga per LIGA=0..5, Standard Bundesliga): ein Bot spielt N Saisons im gebauten Spiel und
 // schreibt je Saison Platz, Geld, Budgets, Gehaltssumme, Kaderstärke, Pokal/Europa und Vorstand.
 //   node scripts/longrun-bundesliga.js [saisons=20] [modus=aktiv|passiv] [läufe=1] [datei]
 // aktiv:  verlängert gute auslaufende Verträge (normale Vertragsgespräche) und kauft im Sommer
@@ -13,6 +13,7 @@ const modus = process.argv[3] || 'aktiv';
 const laeufe = parseInt(process.argv[4] || '1', 10);
 const datei = path.resolve(root, process.argv[5] || 'dist/anstoss-fm13-standalone.html');
 
+const LIGA_START = parseInt(process.env.LIGA || '0', 10);
 const mio = v => (v / 1e6).toFixed(1).padStart(6);
 
 async function karriere(browser, lauf) {
@@ -22,11 +23,11 @@ async function karriere(browser, lauf) {
     const fehler = [];
     page.on('pageerror', e => fehler.push(e.message));
     await page.goto('file://' + datei);
-    await page.evaluate(() => {
+    await page.evaluate((liga) => {
         sessionStorage.setItem('anstoss_fm13_force_new_game', '1');
-        sessionStorage.setItem('anstoss_fm13_newgame_leaguelevel', '0');
+        sessionStorage.setItem('anstoss_fm13_newgame_leaguelevel', String(liga));
         sessionStorage.setItem('anstoss_fm13_newgame_money', '150000');
-    });
+    }, LIGA_START);
     await page.reload();
     await page.waitForFunction(() => !document.getElementById('app-loading'));
     const zeilen = [];
@@ -37,6 +38,9 @@ async function karriere(browser, lauf) {
                 const elfStaerke = () => { const ids = pickBestLineupIds(); return squad.filter(p => ids.includes(p.id)).reduce((a, p) => a + p.strength, 0) / Math.max(1, ids.length); };
                 const verwalten = () => {
                     if (!aktiv) return;
+                    const lizenz = checkDfbLicensingStatus();
+                    const flutlicht = lizenz.missing.length === 1 && lizenz.missing[0].startsWith('Flutlicht');
+                    if (flutlicht && game.money >= getSpecialInstallCost('flutlicht') + 100000) upgradeSpecialInstall('flutlicht');
                     const fenster = game.matchday <= 3 || (game.matchday >= 18 && game.matchday <= 20);
                     const median = [...squad].map(p => p.strength).sort((a, b) => a - b)[Math.floor(squad.length / 2)];
                     squad.filter(p => (p.contracts || 0) <= 1 && p.strength >= median && p.age <= 31).forEach(p => {
