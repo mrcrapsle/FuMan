@@ -2857,6 +2857,22 @@
                         <div class="panel-header" style="color:var(--orange);">🎯 GEGNER-ANALYSE</div>
                         <div id="opponent-formation-box"></div>
                     </div>
+                    <div class="panel">
+                        <div class="panel-header">⚡ SPIELER-ROLLEN & ANWEISUNGEN</div>
+                        <div id="player-roles-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--gold);">🎯 FORMATIONS-SPEZIALISIERUNG</div>
+                        <div id="formation-specialization-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--orange);">🔥 GEGNER-PRESSING-ANALYSE</div>
+                        <div id="opponent-pressing-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--gold);">⚖️ KADER-BALANCE-ANALYSE</div>
+                        <div id="squad-balance-box"></div>
+                    </div>
                 </div>
                 <div id="squad-tab-analyse" style="display:none;">
                     <div class="panel">
@@ -4558,7 +4574,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.57', date: '07.10.2026', features: 'Phase 23.9: Spieler-Positions-Trainer (Alternativ-Positionen)' };
+    const GAME_VERSION = { number: '3.61', date: '07.10.2026', features: 'Phase 23.10-23.13: Rollen, Formations-Spezialisierung, Pressing-Analyse, Squad-Balance' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -7181,6 +7197,10 @@ function getOwnDerbyRivals() {
         if (typeof renderFormationOptimizer === 'function') renderFormationOptimizer();
         if (typeof renderFormationStatsPanel === 'function') renderFormationStatsPanel();
         if (typeof renderOpponentFormationPanel === 'function') renderOpponentFormationPanel();
+        if (typeof renderPlayerRolesPanel === 'function') renderPlayerRolesPanel();
+        if (typeof renderFormationSpecializationPanel === 'function') renderFormationSpecializationPanel();
+        if (typeof renderOpponentPressingPanel === 'function') renderOpponentPressingPanel();
+        if (typeof renderSquadBalancePanel === 'function') renderSquadBalancePanel();
         if (typeof renderPlayerSeasonStats === 'function') renderPlayerSeasonStats();
         if (typeof renderTeamCouncilPanel === 'function') renderTeamCouncilPanel();
         let container = document.getElementById('bench-list');
@@ -26043,6 +26063,570 @@ function renderPositionTrainerPanel() {
 
 </script>
 <script>
+/* eslint-disable no-undef */
+// Phase 23.10: Spieler-Rollen & Anweisungen
+// Gib jedem Spieler spezifische taktische Anweisungen für sein Verhalten
+
+let PLAYER_ROLE_INSTRUCTIONS = {
+    'aggressiv': { label: '⚔️ Aggressiv', desc: 'Presse früh, hohes Risiko', bonus: { strength: 1.5, tackling: 2, passing: -1 } },
+    'defensiv': { label: '🛡️ Defensiv', desc: 'Sicherer spielen, weniger Risiko', bonus: { strength: 1, tackling: 1, passing: 0.5 } },
+    'kreativ': { label: '✨ Kreativ', desc: 'Mehr Dribbling & Pässe nach vorn', bonus: { passing: 2, dribbling: 2, strength: -1 } },
+    'ausbau': { label: '🔄 Aufbau', desc: 'Ballkontrolle von hinten, sichere Pässe', bonus: { passing: 1.5, possession: 1.5, strength: 0 } },
+    'kreuzer': { label: '⚡ Flanker', desc: 'Flügel beherrschen, viele Flanken', bonus: { crossing: 2, strength: 1, passing: 1 } },
+    'standard': { label: '⚪ Standard', desc: 'Normale Spielweise', bonus: { strength: 0, passing: 0, tackling: 0 } }
+};
+
+function ensurePlayerRoles() {
+    if (!game.playerRoles) {
+        game.playerRoles = {};
+    }
+    squad.forEach(p => {
+        if (!game.playerRoles[p.id]) {
+            game.playerRoles[p.id] = 'standard';
+        }
+    });
+}
+
+function applyPlayerRole(playerId, role) {
+    ensurePlayerRoles();
+    let p = squad.find(pl => pl.id === playerId);
+    if (!p || !PLAYER_ROLE_INSTRUCTIONS[role]) return false;
+
+    game.playerRoles[p.id] = role;
+    showToast(`✓ ${p.name} erhält Anweisung: ${PLAYER_ROLE_INSTRUCTIONS[role].label}`, 'success');
+    return true;
+}
+
+function getPlayerRole(playerId) {
+    ensurePlayerRoles();
+    return game.playerRoles[playerId] || 'standard';
+}
+
+function getPlayerRoleBonus(playerId, stat) {
+    let role = getPlayerRole(playerId);
+    let roleData = PLAYER_ROLE_INSTRUCTIONS[role];
+    return roleData?.bonus?.[stat] || 0;
+}
+
+function applyPlayerRoleModifiers(strength) {
+    ensurePlayerRoles();
+    let totalMod = 0;
+    let activeRoles = 0;
+
+    squad.forEach(p => {
+        let role = getPlayerRole(p.id);
+        if (role !== 'standard') {
+            let mod = PLAYER_ROLE_INSTRUCTIONS[role].bonus.strength || 0;
+            totalMod += mod * 0.1;
+            activeRoles++;
+        }
+    });
+
+    return strength * (1 + totalMod / Math.max(1, activeRoles));
+}
+
+function renderPlayerRolesPanel() {
+    ensurePlayerRoles();
+    let box = document.getElementById('player-roles-box');
+    if (!box) return;
+
+    let starterIds = game.lineup?.starters || [];
+    let starters = starterIds.map(id => squad.find(p => p.id === id)).filter(Boolean).slice(0, 11);
+
+    if (starters.length === 0) {
+        box.innerHTML = '<div style="color:var(--text-muted); font-size:10px; padding:8px;">Wähle zuerst eine Aufstellung.</div>';
+        return;
+    }
+
+    let html = '<div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Gib Spielern taktische Rollen für ihre Spielweise:</div>';
+
+    starters.forEach(p => {
+        let currentRole = getPlayerRole(p.id);
+        let roleLabel = PLAYER_ROLE_INSTRUCTIONS[currentRole]?.label || '⚪ Standard';
+
+        html += `
+            <div style="background:rgba(100,150,200,0.1); padding:6px; border-radius:4px; margin-bottom:4px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <div style="font-weight:bold; font-size:10px;">${p.name} (${p.pos})</div>
+                    <div style="font-size:9px; color:var(--accent);">${roleLabel}</div>
+                </div>
+                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:2px;">
+                    ${Object.keys(PLAYER_ROLE_INSTRUCTIONS).map(role => {
+                        let isActive = currentRole === role;
+                        return `<button onclick="applyPlayerRole('${p.id}', '${role}')" class="${isActive ? 'btn-action' : 'btn-secondary'}" style="font-size:7px; padding:2px;">${PLAYER_ROLE_INSTRUCTIONS[role].label}</button>`;
+                    }).join('')}
+                </div>
+                <div style="font-size:8px; color:var(--text-muted); margin-top:3px;">${PLAYER_ROLE_INSTRUCTIONS[currentRole]?.desc || 'Normale Spielweise'}</div>
+            </div>
+        `;
+    });
+
+    html += `
+        <div style="font-size:8px; color:var(--text-muted); margin-top:6px; padding-top:6px; border-top:1px solid var(--border);">
+            💡 Rollen beeinflussen das Spielerverhalten im Live-Spiel und die Teamstärke.
+        </div>
+    `;
+
+    box.innerHTML = html;
+}
+
+</script>
+<script>
+/* eslint-disable no-undef */
+// Phase 23.11: Formationen-Spezialisierung
+// Trainiere das Team auf die aktuelle Formation für bessere Leistung
+
+function ensureFormationSpecialization() {
+    if (!game.formationSpecialization) {
+        game.formationSpecialization = {};
+    }
+
+    ['4-4-2', '4-3-3', '5-3-2', '3-4-3', '4-5-1', '5-4-1'].forEach(form => {
+        if (!game.formationSpecialization[form]) {
+            game.formationSpecialization[form] = {
+                specialization: 0,
+                lastTrained: 0,
+                trainingDays: 0
+            };
+        }
+    });
+}
+
+function getFormationSpecializationBonus(formation) {
+    ensureFormationSpecialization();
+    let spec = game.formationSpecialization[formation];
+    if (!spec) return 0;
+
+    // 0-100 Spezialisierung = 0-3% Stärkebonus
+    return (spec.specialization / 100) * 3;
+}
+
+function tickFormationSpecializationMonthly() {
+    ensureFormationSpecialization();
+
+    // Wenn die aktuelle Formation trainiert wird, erhöhe ihre Spezialisierung
+    let currentSpec = game.formationSpecialization[game.formation];
+    if (currentSpec) {
+        let trainingIntensity = 1;
+
+        // Je nachdem, wie oft diese Formation in den letzten 4 Spieltagen gespielt wurde
+        if (game.tacticRecords && Array.isArray(game.tacticRecords)) {
+            let recentMatches = game.tacticRecords.filter(t => t.matchday >= game.matchday - 4 && t.formation === game.formation);
+            trainingIntensity = Math.min(2, 0.5 + (recentMatches.length * 0.2));
+        }
+
+        currentSpec.specialization = Math.min(100, currentSpec.specialization + 2.5 * trainingIntensity);
+        currentSpec.lastTrained = game.matchday;
+        currentSpec.trainingDays += 1;
+
+        if (currentSpec.specialization >= 50 && currentSpec.specialization <= 52.5) {
+            showToast(`🎯 Formation ${game.formation} erreicht 50% Spezialisierung!`, 'info');
+        }
+        if (currentSpec.specialization >= 100) {
+            showToast(`🏆 Formation ${game.formation} vollständig spezialisiert!`, 'success');
+        }
+    }
+
+    // Andere Formationen verlieren etwas Spezialisierung (Abklingeffekt)
+    Object.keys(game.formationSpecialization).forEach(form => {
+        if (form !== game.formation) {
+            let spec = game.formationSpecialization[form];
+            if (spec.specialization > 0) {
+                spec.specialization = Math.max(0, spec.specialization - 0.5);
+            }
+        }
+    });
+}
+
+function renderFormationSpecializationPanel() {
+    ensureFormationSpecialization();
+    let box = document.getElementById('formation-specialization-box');
+    if (!box) return;
+
+    let formations = Object.keys(game.formationSpecialization)
+        .map(form => ({
+            formation: form,
+            data: game.formationSpecialization[form],
+            bonus: getFormationSpecializationBonus(form),
+            isActive: form === game.formation
+        }))
+        .sort((a, b) => b.data.specialization - a.data.specialization);
+
+    let html = '<div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Spezialisierung auf deine aktuelle Formation: <strong>' + game.formation + '</strong></div>';
+
+    formations.forEach(f => {
+        let percent = Math.round(f.data.specialization);
+        let barWidth = (f.data.specialization / 100) * 100;
+        let bonusText = f.bonus > 0 ? `<span style="color:var(--accent);">+${f.bonus.toFixed(1)}% Stärke</span>` : '';
+
+        html += `
+            <div style="background:rgba(100,150,200,0.1); padding:6px; border-radius:4px; margin-bottom:4px; border:${f.isActive ? '2px solid var(--accent)' : 'none'}">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
+                    <div style="font-weight:bold; font-size:10px;">${f.formation}</div>
+                    <div style="font-size:9px;">${percent}% ${bonusText}</div>
+                </div>
+                <div style="background:rgba(0,0,0,0.3); height:6px; border-radius:3px; overflow:hidden;">
+                    <div style="background:linear-gradient(90deg, var(--accent), var(--primary)); width:${barWidth}%; height:100%; transition:width 0.3s;"></div>
+                </div>
+                <div style="font-size:8px; color:var(--text-muted); margin-top:2px;">
+                    ${f.data.trainingDays > 0 ? `${f.data.trainingDays} Trainingstage · Zuletzt: Spieltag ${f.data.lastTrained}` : 'Noch nicht trainiert'}
+                </div>
+            </div>
+        `;
+    });
+
+    html += `
+        <div style="font-size:8px; color:var(--text-muted); margin-top:6px; padding-top:6px; border-top:1px solid var(--border);">
+            💡 Trainiere deine Formation regelmäßig, um +0,03% Stärke pro Spezialisierungs-Punkt zu erhalten.
+        </div>
+    `;
+
+    box.innerHTML = html;
+}
+
+</script>
+<script>
+/* eslint-disable no-undef */
+// Phase 23.12: Gegner-Pressing-Analyse
+// Erkenne die Pressing-Intensität und empfehle Gegentaktiken
+
+function ensureOpponentPressing() {
+    if (!game.opponentPressing) {
+        game.opponentPressing = {};
+    }
+}
+
+function estimateOpponentPressingIntensity(oppTeam) {
+    // Analyse des Gegnervereins basierend auf verfügbaren Daten
+    if (!oppTeam) return 50;
+
+    let intensity = 50;
+
+    if (oppTeam.strength >= 80) intensity = 75;
+    else if (oppTeam.strength >= 70) intensity = 65;
+    else if (oppTeam.strength >= 60) intensity = 55;
+    else intensity = 45;
+
+    // Varianz hinzufügen (Gegner spielen nicht immer gleich)
+    intensity += (Math.random() - 0.5) * 10;
+
+    return Math.max(30, Math.min(90, intensity));
+}
+
+function getPressingCounterTactic(pressingIntensity) {
+    // Empfehle Gegentaktiken basierend auf Pressing-Intensität
+    if (pressingIntensity >= 75) {
+        return {
+            name: 'Direktspiel',
+            desc: 'Spielen über lange Pässe, Pressing umgehen',
+            bonus: 1.5,
+            recommendation: 'Nutze deine Stürmer!'
+        };
+    } else if (pressingIntensity >= 60) {
+        return {
+            name: 'Kurzes Spiel',
+            desc: 'Schnelle Kurz-Pässe zum Aufbau',
+            bonus: 1.2,
+            recommendation: 'Nutze Ballkontrolle!'
+        };
+    } else if (pressingIntensity >= 45) {
+        return {
+            name: 'Ballbesitz',
+            desc: 'Kontrolliere das Spiel mit Ballbesitz',
+            bonus: 1.1,
+            recommendation: 'Guter Mix!'
+        };
+    } else {
+        return {
+            name: 'Offensiv spielen',
+            desc: 'Der Gegner drückt nicht – nutze das!',
+            bonus: 0.8,
+            recommendation: 'Aggressive Spielweise!'
+        };
+    }
+}
+
+function getOpponentPressingData(oppName) {
+    ensureOpponentPressing();
+    let key = oppName;
+
+    if (!game.opponentPressing[key]) {
+        game.opponentPressing[key] = {
+            lastAnalyzed: game.matchday,
+            intensity: 0,
+            matches: 0,
+            avgIntensity: 50
+        };
+    }
+
+    return game.opponentPressing[key];
+}
+
+function recordOpponentPressingFromMatch(oppName, actualIntensity) {
+    let data = getOpponentPressingData(oppName);
+    data.matches += 1;
+    data.avgIntensity = (data.avgIntensity * (data.matches - 1) + actualIntensity) / data.matches;
+    data.lastAnalyzed = game.matchday;
+}
+
+function getOpponentPressingBonus(pressingIntensity, myTactic) {
+    // Bonus hängt ab vom gewählten Gegentaktik-System
+    // Wenn die tatsächliche Taktik zur Empfehlung passt, gibt es einen Bonus
+    let matchBonus = 0;
+
+    // Generischer Bonus: je besser die Anpassung, desto höher
+    if (pressingIntensity >= 75) {
+        matchBonus = 0.5; // 0,5% Stärkebonus
+    } else if (pressingIntensity >= 60) {
+        matchBonus = 0.3;
+    }
+
+    return matchBonus;
+}
+
+function renderOpponentPressingPanel() {
+    ensureOpponentPressing();
+    let box = document.getElementById('opponent-pressing-box');
+    if (!box) return;
+
+    let match = getUpcomingMatch();
+    if (!match) {
+        box.innerHTML = '<div style="color:var(--text-muted); font-size:10px; padding:8px;">Kein bevorstehender Match.</div>';
+        return;
+    }
+
+    let oppTeam = getTeamByName(match.away === game.clubName ? match.home : match.away);
+    let pressingIntensity = estimateOpponentPressingIntensity(oppTeam);
+    let pressingData = getOpponentPressingData(match.away === game.clubName ? match.home : match.away);
+    let counterTactic = getPressingCounterTactic(pressingIntensity);
+
+    let html = `
+        <div style="background:rgba(100,150,200,0.1); padding:8px; border-radius:4px; margin-bottom:8px;">
+            <div style="font-weight:bold; margin-bottom:4px;">Gegner: ${match.away === game.clubName ? match.home : match.away}</div>
+            <div style="font-size:10px; margin-bottom:8px;">
+                <div>Geschätzte Pressing-Intensität: <strong>${Math.round(pressingIntensity)}/100</strong></div>
+                <div style="background:rgba(0,0,0,0.3); height:8px; border-radius:4px; margin:4px 0; overflow:hidden;">
+                    <div style="background:linear-gradient(90deg, var(--accent), var(--primary)); width:${pressingIntensity}%; height:100%;"></div>
+                </div>
+                ${pressingData.matches > 0 ? `<div style="color:var(--text-muted); font-size:9px;">Basierend auf ${pressingData.matches} vorherigen Spielen (Durchschnitt: ${Math.round(pressingData.avgIntensity)})</div>` : ''}
+            </div>
+        </div>
+
+        <div style="background:linear-gradient(135deg, rgba(76,175,80,0.2), rgba(76,175,80,0.05)); padding:8px; border-radius:4px; border-left:3px solid var(--primary); margin-bottom:8px;">
+            <div style="font-weight:bold; margin-bottom:4px;">💡 Empfohlene Gegentaktik:</div>
+            <div style="font-size:10px; font-weight:bold; color:var(--accent); margin-bottom:4px;">${counterTactic.name}</div>
+            <div style="font-size:9px; margin-bottom:4px;">${counterTactic.desc}</div>
+            <div style="font-size:9px; background:rgba(255,255,255,0.1); padding:4px; border-radius:3px; color:var(--text-muted);">
+                "${counterTactic.recommendation}"
+            </div>
+            <div style="font-size:8px; color:var(--accent); margin-top:4px;">Potentieller Bonus: +${(counterTactic.bonus * 0.1).toFixed(1)}% Stärke</div>
+        </div>
+
+        <div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; font-size:9px;">
+            <strong>Pressing-Intensität erklärt:</strong>
+            <div style="margin-top:4px; font-size:8px; line-height:1.4;">
+                🔴 75+: Aggressive Gegner (hohes Pressing) → Direktspiel nutzen<br>
+                🟠 60-75: Moderates Pressing → Kurzes Spiel empfohlen<br>
+                🟡 45-60: Defensiv organisiert → Ballbesitz-Strategie<br>
+                🟢 &lt;45: Passiv → Aggressiv angreifen!
+            </div>
+        </div>
+    `;
+
+    box.innerHTML = html;
+}
+
+function getUpcomingMatch() {
+    // Gibt die nächste Ligabegegnung zurück
+    if (!leaguesData || !leaguesData[game.leagueLevel]) return null;
+    let league = leaguesData[game.leagueLevel];
+    let fixtures = league.fixtures || [];
+    let upcoming = fixtures.find(f => f.matchday >= game.matchday && (f.home === game.clubName || f.away === game.clubName));
+    return upcoming;
+}
+
+</script>
+<script>
+/* eslint-disable no-undef */
+// Phase 23.13: Squad-Balance-Analyse
+// Analysiere Kader-Zusammensetzung und zeige Schwachstellen auf
+
+function analyzeSquadBalance() {
+    let analysis = {
+        byPosition: {},
+        strengthByPosition: {},
+        balanceScore: 0,
+        recommendations: [],
+        issues: []
+    };
+
+    let positions = ['TW', 'ABW', 'MIT', 'ST'];
+
+    positions.forEach(pos => {
+        let playersByPos = squad.filter(p => p.pos === pos);
+        let strengthSum = playersByPos.reduce((sum, p) => sum + (p.strength || 50), 0);
+        let avgStrength = playersByPos.length > 0 ? strengthSum / playersByPos.length : 0;
+
+        analysis.byPosition[pos] = playersByPos.length;
+        analysis.strengthByPosition[pos] = Math.round(avgStrength);
+    });
+
+    // Berechne Balance-Score (0-100)
+    let positionCounts = Object.values(analysis.byPosition);
+    let variance = calculateVariance(positionCounts);
+    analysis.balanceScore = Math.max(0, 100 - variance * 10);
+
+    // Analysiere Schwachstellen
+    let minPlayersNeeded = { 'TW': 1, 'ABW': 6, 'MIT': 4, 'ST': 2 };
+
+    positions.forEach(pos => {
+        let count = analysis.byPosition[pos];
+        let minNeeded = minPlayersNeeded[pos];
+        let avgStr = analysis.strengthByPosition[pos];
+
+        if (count < minNeeded) {
+            analysis.issues.push({
+                type: 'undersized',
+                position: pos,
+                current: count,
+                needed: minNeeded,
+                severity: minNeeded - count
+            });
+            analysis.recommendations.push({
+                priority: 'high',
+                text: `⚠️ Zu wenige ${pos} (${count}, sollte ≥${minNeeded}). Rekrutiere ${minNeeded - count} mehr!`
+            });
+        }
+
+        if (avgStr < 60 && count > 0) {
+            analysis.issues.push({
+                type: 'weak',
+                position: pos,
+                avgStrength: avgStr,
+                severity: 70 - avgStr
+            });
+            analysis.recommendations.push({
+                priority: 'medium',
+                text: `📉 ${pos}-Spieler sind schwach (Ø ${Math.round(avgStr)}). Verbessere diese Position!`
+            });
+        }
+    });
+
+    // Überprüfe Stärke-Ungleichgewicht
+    let strengths = Object.values(analysis.strengthByPosition).filter(s => s > 0);
+    if (strengths.length > 0) {
+        let maxStr = Math.max(...strengths);
+        let minStr = Math.min(...strengths);
+        if (maxStr - minStr > 15) {
+            analysis.recommendations.push({
+                priority: 'medium',
+                text: `⚖️ Große Stärke-Unterschiede zwischen Positionen (Diff: ${maxStr - minStr}). Baue schwache Positionen aus!`
+            });
+        }
+    }
+
+    return analysis;
+}
+
+function calculateVariance(values) {
+    if (values.length === 0) return 0;
+    let avg = values.reduce((a, b) => a + b, 0) / values.length;
+    let variance = values.reduce((sum, val) => sum + Math.pow(val - avg, 2), 0) / values.length;
+    return Math.sqrt(variance);
+}
+
+function getSquadDepthScore() {
+    let analysis = analyzeSquadBalance();
+
+    // Tiefe = durchschnittliche Spieleranzahl pro Position
+    let totalPlayers = Object.values(analysis.byPosition).reduce((a, b) => a + b, 0);
+    let avgPerPosition = totalPlayers / Object.keys(analysis.byPosition).length;
+
+    return Math.round(avgPerPosition);
+}
+
+function getRecruitmentTargets() {
+    let analysis = analyzeSquadBalance();
+    let targets = [];
+
+    analysis.recommendations
+        .filter(r => r.priority === 'high')
+        .forEach(rec => {
+            // Extrahiere Position aus Empfehlung (grob)
+            let match = rec.text.match(/zu wenige ([A-Z]+)/i);
+            if (match) {
+                targets.push({
+                    position: match[1].toUpperCase(),
+                    priority: 'hoch',
+                    reason: rec.text
+                });
+            }
+        });
+
+    return targets;
+}
+
+function renderSquadBalancePanel() {
+    let box = document.getElementById('squad-balance-box');
+    if (!box) return;
+
+    let analysis = analyzeSquadBalance();
+    let squadDepth = getSquadDepthScore();
+
+    let html = `
+        <div style="background:rgba(100,150,200,0.1); padding:8px; border-radius:4px; margin-bottom:8px;">
+            <div style="font-weight:bold; margin-bottom:6px; font-size:11px;">📊 Kader-Balance Score: <span style="color:var(--accent); font-size:12px;">${Math.round(analysis.balanceScore)}/100</span></div>
+            <div style="background:rgba(0,0,0,0.3); height:8px; border-radius:4px; margin-bottom:4px; overflow:hidden;">
+                <div style="background:linear-gradient(90deg, ${analysis.balanceScore < 50 ? 'var(--danger)' : 'var(--accent)'}, var(--primary)); width:${analysis.balanceScore}%; height:100%;"></div>
+            </div>
+            <div style="font-size:9px; color:var(--text-muted);">
+                Squad-Tiefe: ${squadDepth} Spieler/Position (ideal: 4-5)
+            </div>
+        </div>
+
+        <div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:8px;">
+            <div style="font-weight:bold; font-size:10px; margin-bottom:4px;">⚙️ Positionen-Übersicht:</div>
+            <div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:4px;">
+                ${Object.keys(analysis.byPosition).map(pos => {
+                    let count = analysis.byPosition[pos];
+                    let str = analysis.strengthByPosition[pos];
+                    let color = str >= 65 ? 'var(--accent)' : (str >= 55 ? 'var(--warning)' : 'var(--danger)');
+                    return `
+                        <div style="background:rgba(0,0,0,0.2); padding:4px; border-radius:3px; font-size:9px;">
+                            <div style="font-weight:bold;">${pos}</div>
+                            <div style="color:var(--text-muted);">${count} Spieler</div>
+                            <div style="color:${color}; font-weight:bold;">Ø ${str} Stärke</div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+
+        ${analysis.recommendations.length > 0 ? `
+            <div style="background:rgba(255,152,0,0.1); padding:6px; border-radius:4px; border-left:3px solid var(--warning);">
+                <div style="font-weight:bold; font-size:10px; margin-bottom:4px;">💡 Empfehlungen:</div>
+                ${analysis.recommendations.slice(0, 4).map(rec => `
+                    <div style="font-size:8px; margin-bottom:3px; padding:3px; background:rgba(0,0,0,0.2); border-radius:2px;">
+                        ${rec.text}
+                    </div>
+                `).join('')}
+            </div>
+        ` : `
+            <div style="background:rgba(76,175,80,0.1); padding:6px; border-radius:4px; border-left:3px solid var(--accent); font-size:9px;">
+                ✅ Kader ist ausgewogen! Gute Balance in allen Positionen.
+            </div>
+        `}
+
+        <div style="font-size:8px; color:var(--text-muted); margin-top:6px; padding-top:6px; border-top:1px solid var(--border);">
+            💡 Analysiere deinen Kader regelmäßig auf Schwachstellen und plane Rekrutierungen.
+        </div>
+    `;
+
+    box.innerHTML = html;
+}
+
+</script>
+<script>
 // Season Goals & Objectives System
 // Dynamic season-specific objectives with rewards and progress tracking
 
@@ -32065,6 +32649,7 @@ function cleanupLegacyScoutState() {
         if (typeof tickMemberAssembly === 'function') tickMemberAssembly();
         if (typeof tickSetPieceMonthlyDevelopment === 'function') tickSetPieceMonthlyDevelopment();
         if (typeof tickPositionTrainerMonthlyDevelopment === 'function') tickPositionTrainerMonthlyDevelopment();
+        if (typeof tickFormationSpecializationMonthly === 'function') tickFormationSpecializationMonthly();
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         // Aktiendividende: dividendRate ist ein Jahressatz, ausgezahlt wird monatlich 1/8,5
         // davon; breit gestreute Portfolios bekommen einen kleinen Aufschlag.

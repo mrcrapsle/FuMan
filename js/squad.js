@@ -797,6 +797,10 @@
         if (typeof renderFormationOptimizer === 'function') renderFormationOptimizer();
         if (typeof renderFormationStatsPanel === 'function') renderFormationStatsPanel();
         if (typeof renderOpponentFormationPanel === 'function') renderOpponentFormationPanel();
+        if (typeof renderPlayerRolesPanel === 'function') renderPlayerRolesPanel();
+        if (typeof renderFormationSpecializationPanel === 'function') renderFormationSpecializationPanel();
+        if (typeof renderOpponentPressingPanel === 'function') renderOpponentPressingPanel();
+        if (typeof renderSquadBalancePanel === 'function') renderSquadBalancePanel();
         if (typeof renderPlayerSeasonStats === 'function') renderPlayerSeasonStats();
         if (typeof renderTeamCouncilPanel === 'function') renderTeamCouncilPanel();
         let container = document.getElementById('bench-list');

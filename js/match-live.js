@@ -1414,6 +1414,7 @@
         if (typeof tickMemberAssembly === 'function') tickMemberAssembly();
         if (typeof tickSetPieceMonthlyDevelopment === 'function') tickSetPieceMonthlyDevelopment();
         if (typeof tickPositionTrainerMonthlyDevelopment === 'function') tickPositionTrainerMonthlyDevelopment();
+        if (typeof tickFormationSpecializationMonthly === 'function') tickFormationSpecializationMonthly();
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         // Aktiendividende: dividendRate ist ein Jahressatz, ausgezahlt wird monatlich 1/8,5
         // davon; breit gestreute Portfolios bekommen einen kleinen Aufschlag.
