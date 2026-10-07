@@ -484,7 +484,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.70', date: '07.10.2026', features: 'Phase 21.7: Startzeit gemessen, kleinere Datei (lokale Namen verkürzt, CSS/HTML verdichtet)' };
+    const GAME_VERSION = { number: '3.71', date: '07.10.2026', features: 'Phase 21.6: Gehaltsbudget nie unter laufende Verträge (Sparkurs nach Verlust), Startliga-Lizenz, Langzeittest-Bot' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -27470,6 +27470,19 @@ function getCashSurplusBudgetShare() {
     };
 }
 
+// Laufende Verträge kann der Vorstand nicht kürzen: deckt das Konto eine Viertelsaison der
+// aktuellen Gehaltssumme, bleibt das Gehaltsbudget 5 % darüber - nach einer Saison mit Minus
+// (game.ffpSeasonNet, außer das Konto trägt eine ganze Saison) bei 85 % als Sparkurs.
+// Vorher setzte die Liga/Platz-Formel einen Bundesliga-Elften auf 1,26 Mio. bei 1,5 Mio.
+// Gehältern: jede Verlängerung scheiterte, der Kader lief ablösefrei davon (Langzeittest 21.6).
+function getWageBudgetFloor() {
+    const summe = squad.reduce((s, p) => s + (p.wage || 0), 0)
+        + (game.secondTeam && game.secondTeam.isActive ? secondTeamSquad.reduce((s, p) => s + (p.wage || 0), 0) : 0);
+    if (game.money < summe * 34 * 0.25) return 0;
+    const ohneVerlust = (game.ffpSeasonNet || 0) >= 0 || game.money >= summe * 34;
+    return Math.ceil(summe * (ohneVerlust ? 1.05 : 0.85) / 1000) * 1000;
+}
+
 function applyCashSurplusBudgets() {
     const anteil = getCashSurplusBudgetShare();
     if (!anteil.transfer && !anteil.wage) return;
@@ -27601,7 +27614,7 @@ function concludeSeasonAndAdvance() {
         let leagueFactor = (NUM_LEAGUES - game.leagueLevel) / NUM_LEAGUES;
         let placementFactor = myRank <= 4 ? 1.3 : (myRank <= 10 ? 1.0 : 0.8);
         game.transferBudget = Math.round(2500000 * (1 + leagueFactor * 2.5) * placementFactor);
-        game.wageBudget = Math.round(450000 * (1 + leagueFactor * 2.5) * placementFactor);
+        game.wageBudget = Math.max(Math.round(450000 * (1 + leagueFactor * 2.5) * placementFactor), getWageBudgetFloor());
         if (typeof applyCashSurplusBudgets === 'function') applyCashSurplusBudgets();
         // Manager-Eigengehalt: blieb bisher für immer beim Startwert (1.200 €/SpT),
         // selbst nach mehreren Aufstiegen in die Bundesliga mit Millionenbudgets - ein
@@ -28973,7 +28986,7 @@ const LEXICON_ENTRIES = [
         tips: ['Der Unternehmenswert = 50.000 € plus 80 % der in Fabriken investierten Summe', 'Übernahmeangebote kommen nur, wenn du Fabriken besitzt - beim Verkauf sind alle Fabriken weg, Konto und Lager bleiben'] },
     { cat: 'Finanzen', title: 'Gehaltsbudget', screen: 'screen-finances',
         text: 'Höchstsumme aller Spielergehälter pro Spieltag. Neue Verträge über dem Budget sind nicht möglich.',
-        tips: ['Verkäufe und auslaufende Verträge schaffen Luft', 'Im Gehaltsgespräch einmal nachverhandeln'] },
+        tips: ['Verkäufe und auslaufende Verträge schaffen Luft', 'Im Gehaltsgespräch einmal nachverhandeln', 'Zum Saisonstart liegt es mindestens 5 % über den laufenden Gehältern, wenn das Konto eine Viertelsaison davon deckt - nach einer Saison mit Minus bei 85 % (Sparkurs)'] },
     { cat: 'Finanzen', title: 'Transferbudget', screen: 'screen-finances',
         text: 'Wie viel Ablöse der Vorstand freigibt. Unabhängig vom Kontostand: beides muss reichen.',
         tips: ['Verkäufe erhöhen es', 'Mit dem Vorstand lässt sich nachverhandeln', 'Zum Saisonstart gibt der Vorstand 40 % der Rücklagen über einer Reserve (halbe Saison Gehaltsbudget) zusätzlich frei, 10 % davon gehen ins Gehaltsbudget'] },
@@ -30507,6 +30520,15 @@ function renderSeasonForecastHistory() {
             if (b && typeof b.cap === 'number') b.cap = Math.round(b.cap * faktor / 50) * 50;
         });
     }
+    // Wer in einer höheren Liga startet, hat deren Lizenz schon: Flutlicht und Internat-Stufe
+    // wie gefordert. Sonst kam ein abgestiegener Bundesliga-Startverein ohne Internat nicht
+    // wieder hoch (Platz 2, Lizenz verweigert - Langzeittest 21.6).
+    function grantStartLeagueLicence(level) {
+        let req = DFB_LICENSING_REQUIREMENTS[level];
+        if (!req) return;
+        if (req.floodlight) stadium.flutlicht = true;
+        if (campusBuildings.internat) campusBuildings.internat.lvl = Math.max(campusBuildings.internat.lvl || 0, req.minYouthLvl || 0);
+    }
     let selectedNewGameLevel = 5;
     let selectedNewGameCity = 'Leipzig';
     let selectedNewGameMoney = 150000;
@@ -31027,6 +31049,7 @@ function renderSaveSafetyBox() {
                     loescheBuchungskontext();
                 }
                 if (chosenLevel !== null && typeof scaleStadiumForLeague === 'function') scaleStadiumForLeague(parseInt(chosenLevel));
+                if (chosenLevel !== null && typeof grantStartLeagueLicence === 'function') grantStartLeagueLicence(parseInt(chosenLevel));
                 if (chosenLevel !== null && parseInt(chosenLevel) !== 5 && typeof generateSquadForLevel === 'function') {
                     // initDefaultSquad() ist fest auf die unterste Liga kalibriert - für eine
                     // höhere Startliga braucht es einen entsprechend stärkeren Kader (gleicher
