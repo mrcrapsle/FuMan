@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.72', date: '07.10.2026', features: 'Phase 25.2: Frauenmannschaft mit Spielerinnenmarkt, Potenzial, Zuschauern und Sponsor' };
+    const GAME_VERSION = { number: '3.73', date: '07.10.2026', features: 'Phase 25.3: Entlassung nur am Saisonende geprüft, Frauenmannschaft-Bot-Messung' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
