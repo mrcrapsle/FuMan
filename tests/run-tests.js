@@ -6490,6 +6490,74 @@ async function testCodeIntegrity(browser) {
 // ---------------------------------------------------------------------------
 // PHASE 11: Schiedsrichter, Mannschaftsrat, Mitgliederversammlung, Frauenmannschaft
 // ---------------------------------------------------------------------------
+async function testWomenTeamExtras(browser) {
+    console.log('\n[25.2] Frauenmannschaft: Spielerinnenmarkt, Potenzial, Zuschauer und Sponsor');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            game.money = 5000000;
+            foundWomenTeam();
+            const w = game.womenTeam;
+            out.markt = w.market.length === WOMEN_MARKET_SIZE && w.sponsorOffers.length === WOMEN_SPONSOR_SHARES.length;
+
+            const kandidat = w.market[0], fee = womenMarketFee(kandidat), geld = game.money, kader = w.squad.length;
+            signWomenPlayer(kandidat.id);
+            out.verpflichtet = game.money === geld - fee && w.squad.length === kader + 1 && !w.market.some(p => p.id === kandidat.id);
+
+            game.money = 10;
+            const kader2 = w.squad.length, andere = w.market[0];
+            signWomenPlayer(andere.id);
+            out.geldFehlt = w.squad.length === kader2 && game.money === 10 && w.market.some(p => p.id === andere.id);
+            game.money = 5000000;
+
+            const jung = w.squad[0];
+            jung.age = 20; jung.strength = 60; jung.potential = 61;
+            w.round = WOMEN_MATCHDAYS;
+            concludeWomenSeason();
+            out.potenzialDecke = jung.strength >= 60 && jung.strength <= 61;
+            out.saisonWechsel = w.market.length === WOMEN_MARKET_SIZE && w.sponsorOffers.length === WOMEN_SPONSOR_SHARES.length
+                && w.sponsor === null && w.round === 0;
+
+            w.lastAttendance = 1000;
+            out.tickets = womenMatchdayFinances(true).tickets === 1000 * WOMEN_TICKET_PRICE && womenMatchdayFinances(false).tickets === 0;
+
+            signWomenSponsor(0);
+            const sponsorName = w.sponsor.name;
+            out.sponsor = w.sponsor.season === game.season && womenMatchdayFinances(true).sponsor === w.sponsor.perMatchday
+                && womenMatchdayFinances(false).sponsor === 0;
+            signWomenSponsor(0);
+            out.zweiterSponsor = w.sponsor.name === sponsorName;
+
+            while (game.matchday <= 34) { game.sackPending = false; simulateMatchdays(1); }
+            out.heimspiele = w.zuschauer.spiele === WOMEN_MATCHDAYS / 2 && w.zuschauer.summe > 0;
+
+            showScreen('screen-women');
+            const vorRendern = game.money;
+            renderWomenTeamView();
+            const html = document.getElementById('women-team-box').innerText;
+            out.anzeige = html.includes('SPONSOR') && html.includes('SPIELERINNENMARKT') && html.includes('Ø Zuschauer');
+            out.renderGeld = game.money === vorRendern;
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + (e.stack || '').split('\n')[1] }; }
+    });
+    assert(!r.crash, `Frauenmannschaft ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.markt && r.verpflichtet, 'Spielerinnenmarkt: Ablöse wird abgebucht, Spielerin landet im Kader');
+        assert(r.geldFehlt, 'Ohne Geld keine Verpflichtung, die Kandidatin bleibt auf dem Markt');
+        assert(r.potenzialDecke, 'Junge Spielerin wächst höchstens bis zu ihrem Potenzial');
+        assert(r.saisonWechsel, 'Zum Saisonwechsel neuer Markt, neue Sponsorangebote, kein Sponsor mehr');
+        assert(r.tickets, 'Ticketeinnahmen nur an Heimspieltagen: Zuschauer × Preis');
+        assert(r.sponsor && r.zweiterSponsor, 'Sponsor zahlt pro Spieltag, nur einer je Saison');
+        assert(r.heimspiele, 'Zuschauer werden an genau den Heimspieltagen gezählt');
+        assert(r.anzeige && r.renderGeld, 'Ansicht zeigt Sponsor, Markt und Ø Zuschauer, Rendern ändert kein Geld');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testPhase11(browser) {
     console.log('\n[P11] Schiedsrichter, Mannschaftsrat, Mitgliederversammlung, Frauenmannschaft');
     const { page, consoleErrors } = await freshPage(browser);
@@ -7965,6 +8033,7 @@ async function main() {
         testObjectivesEventsSeasonTickets,
         testCodeIntegrity,
         testPhase11,
+        testWomenTeamExtras,
         testPhase12,
         testPhase13,
         testPhase13Teil2,
