@@ -2873,6 +2873,22 @@
                         <div class="panel-header" style="color:var(--gold);">⚖️ KADER-BALANCE-ANALYSE</div>
                         <div id="squad-balance-box"></div>
                     </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--gold);">🎯 TRAININGS-SPEZIALISIERUNG</div>
+                        <div id="training-specialization-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--gold);">📊 SPIELER-POTENZIAL</div>
+                        <div id="player-potential-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--gold);">⚠️ GEGNER-SCHWACHSTELLEN</div>
+                        <div id="opponent-weakness-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--gold);">📈 LIGA-TENDENZEN</div>
+                        <div id="league-trends-box"></div>
+                    </div>
                 </div>
                 <div id="squad-tab-analyse" style="display:none;">
                     <div class="panel">
@@ -4574,7 +4590,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.61', date: '07.10.2026', features: 'Phase 23.10-23.13: Rollen, Formations-Spezialisierung, Pressing-Analyse, Squad-Balance' };
+    const GAME_VERSION = { number: '3.65', date: '07.10.2026', features: 'Phase 23.14-23.17: Trainings-Spezialisierung, Potenzial-Analyzer, Gegner-Schwachstellen, Liga-Tendenzen' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -7201,6 +7217,10 @@ function getOwnDerbyRivals() {
         if (typeof renderFormationSpecializationPanel === 'function') renderFormationSpecializationPanel();
         if (typeof renderOpponentPressingPanel === 'function') renderOpponentPressingPanel();
         if (typeof renderSquadBalancePanel === 'function') renderSquadBalancePanel();
+        if (typeof renderTrainingSpecializationPanel === 'function') renderTrainingSpecializationPanel();
+        if (typeof renderPlayerPotentialAnalyzerPanel === 'function') renderPlayerPotentialAnalyzerPanel();
+        if (typeof renderOpponentWeaknessAnalysisPanel === 'function') renderOpponentWeaknessAnalysisPanel();
+        if (typeof renderLeagueTrendsAnalysisPanel === 'function') renderLeagueTrendsAnalysisPanel();
         if (typeof renderPlayerSeasonStats === 'function') renderPlayerSeasonStats();
         if (typeof renderTeamCouncilPanel === 'function') renderTeamCouncilPanel();
         let container = document.getElementById('bench-list');
@@ -26627,6 +26647,618 @@ function renderSquadBalancePanel() {
 
 </script>
 <script>
+/* eslint-disable no-undef */
+// Phase 23.14: Trainings-Spezialisierung
+// Konzentriere Training auf einzelne Fähigkeiten für schnellere Entwicklung
+
+function ensureTrainingSpecialization() {
+    if (!game.trainingSpecialization) {
+        game.trainingSpecialization = {};
+    }
+    if (!game.trainingFocus) {
+        game.trainingFocus = {};
+    }
+}
+
+function getTrainingSpecializationBonus(playerId, stat) {
+    ensureTrainingSpecialization();
+    let focus = game.trainingFocus[playerId];
+    if (!focus || focus.stat !== stat) return 0;
+
+    // Je länger fokussiert, desto höher der Bonus (max 25%)
+    return Math.min(25, focus.weeks * 3);
+}
+
+function setPlayerTrainingFocus(playerId, stat) {
+    ensureTrainingSpecialization();
+    let p = squad.find(pl => pl.id === playerId);
+    if (!p || !stat) return false;
+
+    game.trainingFocus[playerId] = {
+        stat: stat,
+        weeks: 0,
+        specialization: 0
+    };
+
+    showToast(`✓ ${p.name} konzentriert sich auf ${stat}`, 'success');
+    return true;
+}
+
+function clearPlayerTrainingFocus(playerId) {
+    ensureTrainingSpecialization();
+    delete game.trainingFocus[playerId];
+}
+
+function tickTrainingSpecializationMonthly() {
+    ensureTrainingSpecialization();
+
+    Object.keys(game.trainingFocus).forEach(playerId => {
+        let focus = game.trainingFocus[playerId];
+        if (!focus) return;
+
+        focus.weeks += 1;
+        focus.specialization = Math.min(100, focus.specialization + 15);
+
+        // Regelmäßig informieren über Fortschritt
+        if (focus.specialization === 50 || focus.specialization === 100) {
+            let p = squad.find(pl => pl.id === playerId);
+            if (p) {
+                let msg = focus.specialization === 50
+                    ? `🎯 ${p.name} macht gute Fortschritte beim ${focus.stat}-Training!`
+                    : `🏆 ${p.name} hat ${focus.stat}-Spezialisierung abgeschlossen!`;
+                showToast(msg, 'info');
+            }
+        }
+    });
+}
+
+function renderTrainingSpecializationPanel() {
+    ensureTrainingSpecialization();
+    let box = document.getElementById('training-specialization-box');
+    if (!box) return;
+
+    let starterIds = game.lineup?.starters || [];
+    let starters = starterIds.map(id => squad.find(p => p.id === id)).filter(Boolean).slice(0, 11);
+
+    if (starters.length === 0) {
+        box.innerHTML = '<div style="color:var(--text-muted); font-size:10px; padding:8px;">Wähle zuerst eine Aufstellung.</div>';
+        return;
+    }
+
+    let TRAINING_STATS = ['passing', 'tackling', 'dribbling', 'strength', 'stamina'];
+    let html = '<div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Spezialisiere Spieler auf einzelne Fähigkeiten:</div>';
+
+    starters.forEach(p => {
+        let focus = game.trainingFocus[p.id];
+        let focusLabel = focus ? focus.stat : 'Keine';
+
+        html += `
+            <div style="background:rgba(100,150,200,0.1); padding:6px; border-radius:4px; margin-bottom:4px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                    <div style="font-weight:bold; font-size:10px;">${p.name}</div>
+                    <div style="font-size:9px; color:var(--accent);">${focusLabel}</div>
+                </div>
+                <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap:2px;">
+                    ${TRAINING_STATS.map(stat => {
+                        let isActive = focus?.stat === stat;
+                        let bonus = getTrainingSpecializationBonus(p.id, stat);
+                        return `
+                            <button onclick="setPlayerTrainingFocus('${p.id}', '${stat}')" class="${isActive ? 'btn-action' : 'btn-secondary'}" style="font-size:8px; padding:3px;">
+                                ${stat.substring(0, 3).toUpperCase()}${bonus > 0 ? '<br>+' + bonus + '%' : ''}
+                            </button>
+                        `;
+                    }).join('')}
+                </div>
+                ${focus ? `
+                    <div style="font-size:8px; color:var(--text-muted); margin-top:3px;">
+                        Woche: ${focus.weeks} · Spezialisierung: ${Math.round(focus.specialization)}%
+                    </div>
+                    <div style="margin-top:3px;">
+                        <button onclick="clearPlayerTrainingFocus('${p.id}')" class="btn-secondary" style="font-size:8px; padding:2px;">Beenden</button>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    });
+
+    html += `
+        <div style="font-size:8px; color:var(--text-muted); margin-top:6px; padding-top:6px; border-top:1px solid var(--border);">
+            💡 Spezialisierte Spieler erhalten bis zu +25% Bonus auf ihre fokussierte Fähigkeit.
+        </div>
+    `;
+
+    box.innerHTML = html;
+}
+
+</script>
+<script>
+/* eslint-disable no-undef */
+// Phase 23.15: Spieler-Potenzial-Analyzer
+// Analysiere Entwicklungspotenzial basierend auf Alter, Stärke und Progression
+
+function ensurePlayerPotential() {
+    if (!game.playerPotential) {
+        game.playerPotential = {};
+    }
+}
+
+function analyzePlayerPotential(p) {
+    let maxAge = 35;
+    let peakAge = 28;
+    let peakStrength = 90;
+
+    let age = p.age || 25;
+    let strength = p.strength || 50;
+    let careerHistory = p.strengthHistory || [];
+
+    // Berechne Entwicklungstrend
+    let trend = 0;
+    if (careerHistory.length >= 2) {
+        let lastStrength = careerHistory[careerHistory.length - 1];
+        let prevStrength = careerHistory[careerHistory.length - 2];
+        trend = (lastStrength - prevStrength) / 5;
+    }
+
+    // Potenzial basierend auf Alter und aktuellem Niveau
+    let potentialStrength;
+    if (age <= peakAge) {
+        let ageProgress = age / peakAge;
+        potentialStrength = strength + (peakStrength - strength) * (1 - ageProgress) * 0.8;
+    } else {
+        let decline = Math.pow((age - peakAge) / (maxAge - peakAge), 1.5);
+        potentialStrength = Math.max(30, strength - (strength - 40) * decline);
+    }
+
+    // Entwicklungs-Rating
+    let developmentRating = 'Stabil';
+    if (trend > 2) developmentRating = 'Aufsteiger';
+    else if (trend > 0.5) developmentRating = 'Wachstum';
+    else if (trend < -2) developmentRating = 'Abnehmend';
+    else if (trend < -0.5) developmentRating = 'Rückgang';
+
+    // Karriere-Fenster Analyse
+    let careerfenster = 'Auslaufend';
+    if (age <= 23) careerfenster = 'Entwicklung';
+    else if (age <= 28) careerfenster = 'Prime Jahre';
+    else if (age <= 32) careerfenster = 'Erfahrung';
+    else careerfenster = 'Rückzug';
+
+    return {
+        currentStrength: strength,
+        potentialStrength: Math.round(potentialStrength),
+        trend: trend.toFixed(1),
+        developmentRating: developmentRating,
+        careerfenster: careerfenster,
+        yearsLeft: Math.max(0, maxAge - age),
+        developmentPotential: Math.max(0, Math.round(potentialStrength - strength))
+    };
+}
+
+function getPlayerPotentialCategory(p) {
+    let analysis = analyzePlayerPotential(p);
+
+    if (analysis.currentStrength >= 80) {
+        return analysis.developmentPotential > 5 ? 'Weltklasse-Potenzial' : 'Elite-Spieler';
+    } else if (analysis.currentStrength >= 70) {
+        return analysis.developmentPotential > 8 ? 'Großes Potenzial' : 'Etabliert';
+    } else if (analysis.currentStrength >= 55) {
+        return analysis.developmentPotential > 10 ? 'Hohes Potenzial' : 'Solid';
+    } else {
+        return analysis.developmentPotential > 5 ? 'Entwicklungsfähig' : 'Begrenztes Potenzial';
+    }
+}
+
+function renderPlayerPotentialAnalyzerPanel() {
+    ensurePlayerPotential();
+    let box = document.getElementById('player-potential-box');
+    if (!box) return;
+
+    let potentialPlayers = squad
+        .map(p => ({
+            player: p,
+            analysis: analyzePlayerPotential(p),
+            category: getPlayerPotentialCategory(p)
+        }))
+        .sort((a, b) => b.analysis.developmentPotential - a.analysis.developmentPotential);
+
+    let html = '<div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Entwicklungspotenzial-Analyse:</div>';
+
+    potentialPlayers.slice(0, 8).forEach(item => {
+        let p = item.player;
+        let a = item.analysis;
+        let trendColor = a.trend > 0 ? 'var(--accent)' : (a.trend < 0 ? 'var(--danger)' : 'var(--text-muted)');
+        let potColor = a.developmentPotential > 8 ? 'var(--accent)' : (a.developmentPotential > 0 ? 'var(--warning)' : 'var(--text-muted)');
+
+        html += `
+            <div style="background:rgba(100,150,200,0.1); padding:6px; border-radius:4px; margin-bottom:4px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
+                    <div style="font-weight:bold; font-size:10px;">${p.name}</div>
+                    <div style="font-size:9px; color:var(--accent);">${a.careerfenster}</div>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px; margin-bottom:3px;">
+                    <div style="font-size:8px;">
+                        <div>Aktuell: <strong>${a.currentStrength}</strong></div>
+                        <div>Potenzial: <strong style="color:${potColor};">${a.potentialStrength}</strong></div>
+                    </div>
+                    <div style="font-size:8px;">
+                        <div style="color:${trendColor};">Trend: ${a.trend > 0 ? '+' : ''}${a.trend}</div>
+                        <div>${a.developmentRating}</div>
+                    </div>
+                </div>
+                <div style="background:rgba(0,0,0,0.2); height:6px; border-radius:3px; overflow:hidden; margin-bottom:3px;">
+                    <div style="background:linear-gradient(90deg, var(--danger), var(--warning), var(--accent)); width:${(a.currentStrength / a.potentialStrength * 100)}%; height:100%; transition:width 0.3s;"></div>
+                </div>
+                <div style="font-size:8px; color:var(--text-muted);">
+                    ${item.category} · ${a.yearsLeft} Jahre Karriere
+                </div>
+            </div>
+        `;
+    });
+
+    html += `
+        <div style="font-size:8px; color:var(--text-muted); margin-top:6px; padding-top:6px; border-top:1px solid var(--border);">
+            💡 Junge Spieler mit hohem Potenzial sind wertvolle Investitionen für die Zukunft.
+        </div>
+    `;
+
+    box.innerHTML = html;
+}
+
+</script>
+<script>
+/* eslint-disable no-undef */
+// Phase 23.16: Gegner-Schwachstellen-Analyse
+// Erkenne schwache Positionen und empfehle Angriff-Strategien
+
+function ensureOpponentWeaknessAnalysis() {
+    if (!game.opponentWeaknesses) {
+        game.opponentWeaknesses = {};
+    }
+}
+
+function analyzeOpponentWeaknesses(oppTeam) {
+    if (!oppTeam) return null;
+
+    let analysis = {
+        team: oppTeam.name || 'Unbekannt',
+        weakPositions: [],
+        recommendations: [],
+        overallStrength: oppTeam.strength || 75
+    };
+
+    // Schwachen Positionen basierend auf Team-Typ
+    if (oppTeam.strength < 55) {
+        analysis.weakPositions.push({
+            position: 'ABW',
+            severity: 'Hoch',
+            recommendation: 'Direkte Angriffe über die Flügel'
+        });
+        analysis.weakPositions.push({
+            position: 'MIT',
+            severity: 'Mittel',
+            recommendation: 'Schnelle Konter durch die Mitte'
+        });
+    } else if (oppTeam.strength < 70) {
+        analysis.weakPositions.push({
+            position: 'TW',
+            severity: 'Mittel',
+            recommendation: 'Viele Schüsse - Torwart ist unsicher'
+        });
+        analysis.weakPositions.push({
+            position: 'ST',
+            severity: 'Mittel',
+            recommendation: 'Hohes Pressing gegen schwache Stürmer'
+        });
+    } else if (oppTeam.strength < 85) {
+        analysis.weakPositions.push({
+            position: 'ABW',
+            severity: 'Niedrig',
+            recommendation: 'Flanken auf schnelle Stürmer'
+        });
+        analysis.weakPositions.push({
+            position: 'MIT',
+            severity: 'Niedrig',
+            recommendation: 'Kreatives Mittelfeld-Spiel'
+        });
+    } else {
+        analysis.weakPositions.push({
+            position: 'Keine klaren',
+            severity: 'Sehr niedrig',
+            recommendation: 'Defensiv organisiert - Konter nutzen'
+        });
+    }
+
+    // Grundlegende Empfehlungen
+    if (oppTeam.strength > 80) {
+        analysis.recommendations.push('Defensive Stabilität hat Priorität');
+        analysis.recommendations.push('Nutze schnelle Konter-Chancen');
+    } else if (oppTeam.strength > 65) {
+        analysis.recommendations.push('Ausgewogenes Spiel - nicht zu aggressiv');
+        analysis.recommendations.push('Kontrolle durch Ballbesitz');
+    } else {
+        analysis.recommendations.push('Aggressive Spielweise empfohlen');
+        analysis.recommendations.push('Frühes Pressing ausüben');
+    }
+
+    return analysis;
+}
+
+function getOpponentWeaknessAttackBonus(oppTeam) {
+    if (!oppTeam) return 0;
+
+    // Bonus basierend auf wie sehr der Gegner schwach ist
+    if (oppTeam.strength < 55) {
+        return 2.5; // 2,5% Stärkebonus gegen sehr schwache Teams
+    } else if (oppTeam.strength < 70) {
+        return 1.5;
+    } else if (oppTeam.strength < 80) {
+        return 0.5;
+    }
+    return 0;
+}
+
+function recordOpponentWeaknessAnalysis(oppName, exploited) {
+    ensureOpponentWeaknessAnalysis();
+
+    if (!game.opponentWeaknesses[oppName]) {
+        game.opponentWeaknesses[oppName] = {
+            times_analyzed: 0,
+            exploitations: 0
+        };
+    }
+
+    game.opponentWeaknesses[oppName].times_analyzed += 1;
+    if (exploited) {
+        game.opponentWeaknesses[oppName].exploitations += 1;
+    }
+}
+
+function renderOpponentWeaknessAnalysisPanel() {
+    ensureOpponentWeaknessAnalysis();
+    let box = document.getElementById('opponent-weakness-box');
+    if (!box) return;
+
+    let match = getUpcomingMatch();
+    if (!match) {
+        box.innerHTML = '<div style="color:var(--text-muted); font-size:10px; padding:8px;">Kein bevorstehender Match.</div>';
+        return;
+    }
+
+    let oppTeam = getTeamByName(match.away === game.clubName ? match.home : match.away);
+    let analysis = analyzeOpponentWeaknesses(oppTeam);
+    let attackBonus = getOpponentWeaknessAttackBonus(oppTeam);
+
+    if (!analysis) {
+        box.innerHTML = '<div style="color:var(--text-muted); font-size:10px; padding:8px;">Keine Gegner-Daten verfügbar.</div>';
+        return;
+    }
+
+    let html = `
+        <div style="background:rgba(100,150,200,0.1); padding:8px; border-radius:4px; margin-bottom:8px;">
+            <div style="font-weight:bold; margin-bottom:4px;">Gegner: ${analysis.team}</div>
+            <div style="font-size:9px;">
+                <div>Team-Stärke: <strong>${analysis.overallStrength}/100</strong></div>
+                <div style="background:rgba(0,0,0,0.3); height:6px; border-radius:3px; overflow:hidden; margin:4px 0;">
+                    <div style="background:linear-gradient(90deg, var(--danger), var(--warning), var(--accent)); width:${analysis.overallStrength}%; height:100%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div style="background:rgba(255,152,0,0.1); padding:6px; border-radius:4px; margin-bottom:8px; border-left:3px solid var(--warning);">
+            <div style="font-weight:bold; font-size:10px; margin-bottom:4px;">⚠️ Schwache Positionen:</div>
+            ${analysis.weakPositions.map(pos => `
+                <div style="font-size:8px; margin-bottom:3px; padding:3px; background:rgba(0,0,0,0.2); border-radius:2px;">
+                    <div style="font-weight:bold;">${pos.position} (${pos.severity})</div>
+                    <div style="color:var(--text-muted);">${pos.recommendation}</div>
+                </div>
+            `).join('')}
+        </div>
+
+        <div style="background:rgba(76,175,80,0.1); padding:6px; border-radius:4px; margin-bottom:8px; border-left:3px solid var(--accent);">
+            <div style="font-weight:bold; font-size:10px; margin-bottom:4px;">💡 Strategie-Empfehlungen:</div>
+            ${analysis.recommendations.map(rec => `
+                <div style="font-size:8px; margin-bottom:2px; padding:2px;">✓ ${rec}</div>
+            `).join('')}
+        </div>
+
+        ${attackBonus > 0 ? `
+            <div style="background:rgba(76,175,80,0.1); padding:6px; border-radius:4px; font-size:9px;">
+                <div style="color:var(--accent); font-weight:bold;">📊 Matchup-Bonus: +${attackBonus.toFixed(1)}% Stärke</div>
+                <div style="color:var(--text-muted); font-size:8px;">Schwache Gegner bieten taktische Vorteile.</div>
+            </div>
+        ` : ''}
+
+        <div style="font-size:8px; color:var(--text-muted); margin-top:6px; padding-top:6px; border-top:1px solid var(--border);">
+            💡 Nutze schwache Positionen des Gegners strategisch aus.
+        </div>
+    `;
+
+    box.innerHTML = html;
+}
+
+</script>
+<script>
+/* eslint-disable no-undef */
+// Phase 23.17: Liga-Tendenzen-Analyse
+// Erkenne Trends in der Liga: erfolgreiche Formationen, Spielstile, wertvolle Spieler-Typen
+
+function ensureLeagueTrendsAnalysis() {
+    if (!game.leagueTrends) {
+        game.leagueTrends = {
+            formations: {},
+            playstyles: {},
+            playerTypes: {},
+            trends: []
+        };
+    }
+}
+
+function analyzeLeagueTrends() {
+    ensureLeagueTrendsAnalysis();
+
+    let league = leaguesData[game.leagueLevel];
+    if (!league || !league.table) return null;
+
+    let trends = {
+        dominantFormation: '',
+        dominantPlaystyle: '',
+        valuablePlayerTypes: [],
+        successMetrics: []
+    };
+
+    // Analysiere Top 5 Teams
+    let topTeams = league.table.slice(0, 5);
+    let formationCount = {};
+    let strengthSum = 0;
+
+    topTeams.forEach(team => {
+        strengthSum += team.strength || 75;
+
+        // Formation wird aus Team-Struktur abgeleitet
+        let formation = '4-3-3'; // default
+        if (team.strength > 85) formation = '4-2-3-1';
+        else if (team.strength > 75) formation = '4-3-3';
+        else formation = '5-3-2';
+
+        formationCount[formation] = (formationCount[formation] || 0) + 1;
+    });
+
+    // Dominanteste Formation
+    let maxCount = 0;
+    Object.keys(formationCount).forEach(form => {
+        if (formationCount[form] > maxCount) {
+            maxCount = formationCount[form];
+            trends.dominantFormation = form;
+        }
+    });
+
+    // Durchschnittliche Stärke Top Teams
+    let avgTopStrength = strengthSum / topTeams.length;
+
+    // Spielstil Analyse basierend auf Liga-Eigenschaften
+    if (game.leagueLevel === 1) {
+        trends.dominantPlaystyle = 'Ballbesitz & Kontrolle';
+        trends.successMetrics.push('Hohe Passquote (>80%)');
+        trends.successMetrics.push('Taktische Flexibilität');
+    } else if (game.leagueLevel === 2) {
+        trends.dominantPlaystyle = 'Ausgewogenes Spiel';
+        trends.successMetrics.push('Robuste Defensive');
+        trends.successMetrics.push('Effiziente Konter');
+    } else {
+        trends.dominantPlaystyle = 'Pressives Spiel';
+        trends.successMetrics.push('Hohes Pressing');
+        trends.successMetrics.push('Schnelle Umschaltungen');
+    }
+
+    // Wertvolle Spieler-Typen basierend auf Liga
+    if (avgTopStrength > 75) {
+        trends.valuablePlayerTypes.push({
+            type: 'Erfahrene Anführer',
+            reason: 'Stabilität und Mentorschaft',
+            bonus: '+2% Moral'
+        });
+        trends.valuablePlayerTypes.push({
+            type: 'Technisch versierte Mittelfeld',
+            reason: 'Ballkontrolle in harten Spielen',
+            bonus: '+1.5% Ballbesitz'
+        });
+    } else {
+        trends.valuablePlayerTypes.push({
+            type: 'Physisch starke Spieler',
+            reason: 'Wichtig für direktes Spiel',
+            bonus: '+3% Zweikämpfe'
+        });
+        trends.valuablePlayerTypes.push({
+            type: 'Schnelle Außenspieler',
+            reason: 'Flügelspiel dominiert',
+            bonus: '+2% Tempo'
+        });
+    }
+
+    game.leagueTrends = {
+        formations: formationCount,
+        dominantFormation: trends.dominantFormation,
+        dominantPlaystyle: trends.dominantPlaystyle,
+        valuablePlayerTypes: trends.valuablePlayerTypes,
+        successMetrics: trends.successMetrics,
+        avgTopStrength: Math.round(avgTopStrength),
+        lastUpdated: game.matchday
+    };
+
+    return trends;
+}
+
+function getLeagueTrendAlignment(myFormation, myPlaystyle) {
+    ensureLeagueTrendsAnalysis();
+
+    let alignment = 0;
+
+    if (game.leagueTrends.dominantFormation === myFormation) {
+        alignment += 2; // 2% Bonus für Formation
+    }
+
+    if (game.leagueTrends.dominantPlaystyle.includes(myPlaystyle)) {
+        alignment += 1.5; // 1,5% Bonus für Spielstil
+    }
+
+    return alignment;
+}
+
+function renderLeagueTrendsAnalysisPanel() {
+    ensureLeagueTrendsAnalysis();
+    let box = document.getElementById('league-trends-box');
+    if (!box) return;
+
+    let trends = analyzeLeagueTrends();
+    if (!trends) {
+        box.innerHTML = '<div style="color:var(--text-muted); font-size:10px; padding:8px;">Keine Liga-Daten verfügbar.</div>';
+        return;
+    }
+
+    let html = `
+        <div style="background:rgba(100,150,200,0.1); padding:8px; border-radius:4px; margin-bottom:8px;">
+            <div style="font-weight:bold; margin-bottom:6px;">📊 Liga-Tendenzen Spieltag ${game.matchday}</div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; font-size:9px;">
+                <div style="background:rgba(0,0,0,0.2); padding:6px; border-radius:3px;">
+                    <div style="color:var(--text-muted); font-size:8px;">Dominant Formation</div>
+                    <div style="font-weight:bold; color:var(--accent);">${game.leagueTrends.dominantFormation}</div>
+                </div>
+                <div style="background:rgba(0,0,0,0.2); padding:6px; border-radius:3px;">
+                    <div style="color:var(--text-muted); font-size:8px;">Top-Teams Ø Stärke</div>
+                    <div style="font-weight:bold; color:var(--accent);">${game.leagueTrends.avgTopStrength}/100</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="background:rgba(76,175,80,0.1); padding:6px; border-radius:4px; margin-bottom:8px; border-left:3px solid var(--accent);">
+            <div style="font-weight:bold; font-size:10px; margin-bottom:4px;">🎯 Dominanter Spielstil:</div>
+            <div style="font-size:9px; color:var(--accent); margin-bottom:4px;">${game.leagueTrends.dominantPlaystyle}</div>
+            <div style="font-size:8px;">
+                ${game.leagueTrends.successMetrics.map(m => `<div>✓ ${m}</div>`).join('')}
+            </div>
+        </div>
+
+        <div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:8px;">
+            <div style="font-weight:bold; font-size:10px; margin-bottom:4px;">⭐ Wertvolle Spieler-Typen:</div>
+            ${game.leagueTrends.valuablePlayerTypes.map(pt => `
+                <div style="font-size:8px; margin-bottom:3px; padding:3px; background:rgba(0,0,0,0.2); border-radius:2px;">
+                    <div style="font-weight:bold;">${pt.type}</div>
+                    <div style="color:var(--text-muted);">→ ${pt.reason}</div>
+                    <div style="color:var(--accent);">${pt.bonus}</div>
+                </div>
+            `).join('')}
+        </div>
+
+        <div style="font-size:8px; color:var(--text-muted); margin-top:6px; padding-top:6px; border-top:1px solid var(--border);">
+            💡 Passe deine Strategie an die Liga-Tendenzen an für bessere Ergebnisse.
+        </div>
+    `;
+
+    box.innerHTML = html;
+}
+
+</script>
+<script>
 // Season Goals & Objectives System
 // Dynamic season-specific objectives with rewards and progress tracking
 
@@ -32650,6 +33282,7 @@ function cleanupLegacyScoutState() {
         if (typeof tickSetPieceMonthlyDevelopment === 'function') tickSetPieceMonthlyDevelopment();
         if (typeof tickPositionTrainerMonthlyDevelopment === 'function') tickPositionTrainerMonthlyDevelopment();
         if (typeof tickFormationSpecializationMonthly === 'function') tickFormationSpecializationMonthly();
+        if (typeof tickTrainingSpecializationMonthly === 'function') tickTrainingSpecializationMonthly();
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         // Aktiendividende: dividendRate ist ein Jahressatz, ausgezahlt wird monatlich 1/8,5
         // davon; breit gestreute Portfolios bekommen einen kleinen Aufschlag.

@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.61', date: '07.10.2026', features: 'Phase 23.10-23.13: Rollen, Formations-Spezialisierung, Pressing-Analyse, Squad-Balance' };
+    const GAME_VERSION = { number: '3.65', date: '07.10.2026', features: 'Phase 23.14-23.17: Trainings-Spezialisierung, Potenzial-Analyzer, Gegner-Schwachstellen, Liga-Tendenzen' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
