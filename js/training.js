@@ -704,6 +704,7 @@
         }
         renderTrainingHistoryLog();
         if (typeof renderSetPieceSpecialistsPanel === 'function') renderSetPieceSpecialistsPanel();
+        if (typeof renderPositionTrainerPanel === 'function') renderPositionTrainerPanel();
 
         let killerSelect = document.getElementById('penalty-killer-select');
         if (killerSelect) {
