@@ -4946,7 +4946,7 @@ async function testNoNativeDialogs(browser) {
         // Entlassungen sind erst ab Saison 2 moeglich (siehe checkBoardSatisfaction).
         game.season = 2;
         game.boardSat = 1;
-        game.lowBoardSatStreak = 5;
+        game.lowBoardSatStreak = 9;
         let mdVor = game.matchday;
         simulateMatchdays(5);
         let box = document.getElementById('app-notice');
