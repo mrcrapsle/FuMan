@@ -6507,6 +6507,54 @@ async function testCodeIntegrity(browser) {
 // ---------------------------------------------------------------------------
 // PHASE 11: Schiedsrichter, Mannschaftsrat, Mitgliederversammlung, Frauenmannschaft
 // ---------------------------------------------------------------------------
+async function testBoardRestart(browser) {
+    console.log('\n[25.6] Vorstand: Neustart nach dem Abstieg, Mitgliederversammlung findet automatisch statt');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            game.season = 3; game.boardSat = 20; game.lowBoardSatStreak = 8; delete game.boardRestartSeason;
+            const erster = grantRelegationRestart();
+            const nachErstem = game.boardSat, streakNull = game.lowBoardSatStreak === 0;
+            const post = inboxMessages.some(m => m.title.includes('Neustart'));
+            game.season = 4; game.boardSat = 20;
+            const zweiter = grantRelegationRestart();
+            const nachZweitem = game.boardSat;
+            game.season = 6; game.boardSat = 30;
+            const spaeter = grantRelegationRestart();
+            const nachSpaeter = game.boardSat;
+            game.season = 8; game.boardSat = 85;
+            grantRelegationRestart();
+            const hoherWertBleibt = game.boardSat === 85;
+            // Mitgliederversammlung: ignoriert man sie, findet sie nach ASSEMBLY_AUTO_AFTER Spieltagen
+            // automatisch statt (vorher wurde sie mit Spieltag 35 eröffnet und nie abgehalten).
+            game.season = 2; game.matchday = 1; game.sackPending = false;
+            while (game.matchday <= 34) { game.sackPending = false; simulateMatchdays(1); }
+            concludeSeasonAndAdvance();
+            game.sackPending = false;
+            const eroeffnet = game.memberAssembly && game.memberAssembly.status === 'offen' && game.memberAssembly.openedMatchday === 1;
+            simulateMatchdays(ASSEMBLY_AUTO_AFTER + 3);
+            const automatisch = game.memberAssembly.status === 'abgehalten';
+            game.memberAssembly.status = 'offen'; game.memberAssembly.openedMatchday = 35;
+            tickMemberAssembly();
+            const altstand = game.memberAssembly.status === 'abgehalten';
+            return { erster, nachErstem, streakNull, zweiter, nachZweitem, spaeter, nachSpaeter, hoherWertBleibt, eroeffnet, automatisch, altstand, post };
+        } catch (e) { return { crash: e.message }; }
+    });
+    assert(!r.crash, `Neustart ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.erster && r.nachErstem === 60 && r.streakNull && r.post, 'Erster Abstieg: Vertrauensvorschuss auf 60, Serie zurückgesetzt, Nachricht im Postfach');
+        assert(!r.zweiter && r.nachZweitem === 20, 'Zweiter Abstieg in Folge: kein Vorschuss');
+        assert(r.spaeter && r.nachSpaeter === 60, 'Nach einer Saison Pause gibt es wieder einen Neustart');
+        assert(r.hoherWertBleibt, 'Ein höherer Wert wird nicht auf 60 gesenkt');
+        assert(r.eroeffnet && r.automatisch, 'Mitgliederversammlung findet ohne Zutun nach einigen Spieltagen statt');
+        assert(r.altstand, 'Alte Spielstände mit Eröffnung an Spieltag 35 werden repariert');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testWomenTeamExtras(browser) {
     console.log('\n[25.2] Frauenmannschaft: Spielerinnenmarkt, Potenzial, Zuschauer und Sponsor');
     const { page, consoleErrors } = await freshPage(browser);
@@ -8051,6 +8099,7 @@ async function main() {
         testCodeIntegrity,
         testPhase11,
         testWomenTeamExtras,
+        testBoardRestart,
         testPhase12,
         testPhase13,
         testPhase13Teil2,

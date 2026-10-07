@@ -8,6 +8,7 @@
     // starten" komplett zurückgesetzt, damit garantiert nichts vom alten Verein hängen bleibt.
     const BOARD_SAT_WARNING_THRESHOLD = 25;
     const BOARD_SAT_SACK_STREAK = 6;
+    const BOARD_RESTART_TRUST = 60;
 
     function checkJobSecurity() {
         // Schonfrist in der allerersten Saison: ein frischer, bewusst schwacher Startkader in
@@ -61,6 +62,19 @@
         if (game.boardSat <= BOARD_SAT_WARNING_THRESHOLD && game.lowBoardSatStreak >= sackThreshold && !erholt) {
             getSacked();
         }
+    }
+
+    // Neustart nach einem Abstieg (concludeSeasonAndAdvance, nach der Entlassungsprüfung): der
+    // Vorstand hält am Manager fest und gibt einmal einen Vertrauensvorschuss. Nach einem
+    // zweiten Abstieg in Folge nicht - sonst wäre eine Fahrstuhlmannschaft unkündbar.
+    function grantRelegationRestart() {
+        if (game.sackPending || game.boardRestartSeason === game.season - 1) return false;
+        game.boardRestartSeason = game.season;
+        game.boardSat = Math.max(game.boardSat, BOARD_RESTART_TRUST);
+        game.lowBoardSatStreak = 0;
+        game.sackWarningIssued = false;
+        addInboxMessage('vertrag', '🤝 Neustart nach dem Abstieg', `Der Vorstand hält an dir fest und setzt neue Ziele für die ${leagueNames[game.leagueLevel]}. Vertrauensvorschuss: Zufriedenheit mindestens ${BOARD_RESTART_TRUST}. Ein zweiter Abstieg in Folge wird nicht noch einmal so verziehen.`, 'screen-dashboard');
+        return true;
     }
 
     // Dauerhaftes Fan-Fundament nach Erfolgen: Aufstiege/Titel erhöhen die Untergrenze, unter

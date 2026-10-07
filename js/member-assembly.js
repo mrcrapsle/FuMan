@@ -70,7 +70,9 @@ function openMemberAssembly() {
     r.financeResult = Math.round(game.money - r.startMoney);
     r.promoted = game.leagueLevel < r.leagueLevel;
     r.relegated = game.leagueLevel > r.leagueLevel;
-    game.memberAssembly = { report: r, status: 'offen', openedMatchday: game.matchday, season: game.season, speech: 'zahlen', fee: 'halten' };
+    // Eröffnet zwischen den Saisons: game.matchday steht hier noch auf 35 und wird erst danach
+    // auf 1 gesetzt - mit 35 fand die Versammlung nie automatisch statt.
+    game.memberAssembly = { report: r, status: 'offen', openedMatchday: 1, season: game.season, speech: 'zahlen', fee: 'halten' };
     addInboxMessage('vertrag', '🗳️ Mitgliederversammlung einberufen',
         `Die Mitglieder erwarten deinen Bericht zur Saison ${r.season} (Platz ${r.finalRank}, erwartet Platz ${r.expectedRank}). Bereite im Dashboard Rede und Beitragsantrag vor.`, 'screen-dashboard');
 }
@@ -133,6 +135,7 @@ function holdMemberAssembly(automatisch) {
 function tickMemberAssembly() {
     if (!game.seasonExpectation || game.seasonExpectation.season !== game.season) recordSeasonExpectation();
     const a = game.memberAssembly;
+    if (a && a.openedMatchday > game.matchday) a.openedMatchday = 1; // Spielstände mit dem alten Wert 35
     if (a && a.status === 'offen' && game.matchday - a.openedMatchday >= ASSEMBLY_AUTO_AFTER) holdMemberAssembly(true);
 }
 
@@ -153,7 +156,7 @@ function renderMemberAssemblyPanel() {
             <div>Fan-Stimmung: ${r.fans}%</div>
         </div>`;
     if (a.status === 'offen') {
-        const rest = ASSEMBLY_AUTO_AFTER - (game.matchday - a.openedMatchday);
+        const rest = ASSEMBLY_AUTO_AFTER - (game.matchday - Math.min(a.openedMatchday, game.matchday));
         html += '<div style="font-size:9px; font-weight:bold;">Deine Rede</div>';
         html += Object.entries(ASSEMBLY_SPEECHES).map(([k, s]) => `<button onclick="setAssemblyChoice('speech','${k}')" class="${a.speech === k ? 'btn-action' : 'btn-secondary'}" style="font-size:8px; padding:3px 6px; margin:2px 3px 2px 0;" title="${s.desc}">${s.label}</button>`).join('');
         html += '<div style="font-size:9px; font-weight:bold; margin-top:4px;">Antrag zum Mitgliedsbeitrag</div>';

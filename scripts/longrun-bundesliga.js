@@ -1,8 +1,8 @@
 // Langzeittest (Phase 21.6, Startliga per LIGA=0..5, Standard Bundesliga): ein Bot spielt N Saisons im gebauten Spiel und
 // schreibt je Saison Platz, Geld, Budgets, Gehaltssumme, Kaderstärke, Pokal/Europa und Vorstand.
 //   node scripts/longrun-bundesliga.js [saisons=20] [modus=aktiv|passiv] [läufe=1] [datei]
-// aktiv:  verlängert gute auslaufende Verträge (normale Vertragsgespräche) und kauft im Sommer
-//         den besten bezahlbaren Marktspieler, der die Elf verstärkt (Sofortkauf).
+// aktiv:  verlängert gute auslaufende Verträge (auch Legenden/Publikumslieblinge bis 33), kauft in
+//         den Fenstern Verstärkungen, löst Ultimaten nach jedem Spieltag und führt das Wintergespräch.
 // passiv: spielt nur, der Kader wird nie angefasst.
 const path = require('path');
 const fs = require('fs');
@@ -62,7 +62,8 @@ async function karriere(browser, lauf) {
                     if (flutlicht && game.money >= getSpecialInstallCost('flutlicht') + 100000) upgradeSpecialInstall('flutlicht');
                     const fenster = game.matchday <= 3 || (game.matchday >= 18 && game.matchday <= 20);
                     const median = [...squad].map(p => p.strength).sort((a, b) => a - b)[Math.floor(squad.length / 2)];
-                    squad.filter(p => (p.contracts || 0) <= 1 && p.strength >= median && p.age <= 31).forEach(p => {
+                    const halten = p => (p.strength >= median && p.age <= 31) || ((isClubLegend(p) || p.isCrowdFavorite) && p.age <= 33);
+                    squad.filter(p => (p.contracts || 0) <= 1 && halten(p)).forEach(p => {
                         extendContract(p.id);
                         if (contractTalk) acceptContractTalk();
                         contractTalk = null;
@@ -83,6 +84,19 @@ async function karriere(browser, lauf) {
                         if (squad.length === vorher) break;
                     }
                 };
+                // Nach jedem Spieltag wie ein Mensch reagieren: Ultimatum lösen statt verstreichen
+                // lassen, Wintergespräch führen.
+                const reagieren = () => {
+                    if (!aktiv) return;
+                    if (game.activeUltimatumPlayerId) {
+                        const p = squad.find(x => x.id === game.activeUltimatumPlayerId);
+                        resolveUltimatumRenew();
+                        if (game.activeUltimatumPlayerId && p && p.agent) resolveUltimatumViaAgent();
+                        if (game.activeUltimatumPlayerId && p && !isClubLegend(p) && !p.isCrowdFavorite) resolveUltimatumSell();
+                        if (game.activeUltimatumPlayerId) resolveUltimatumIgnore();
+                    }
+                    if (isWinterTalkOpen()) chooseWinterTalk('kurs');
+                };
                 const start = { season: game.season, liga: game.leagueLevel, europa: !!game.inEurope };
                 // Diagnose: abgelehnte Aktionen (Fehler-Toasts) und Postfach-Titel dieser Saison
                 window.__fehlerToasts = window.__fehlerToasts || {};
@@ -98,9 +112,11 @@ async function karriere(browser, lauf) {
                 window.__board = {};
                 const kaderVorher = squad.map(p => p.id);
                 verwalten();
-                simulateMatchdays(17);
-                verwalten();
-                simulateMatchdays(17);
+                while (game.matchday <= 34 && !game.sackPending) {
+                    if (game.matchday === 18) verwalten();
+                    simulateMatchdays(1);
+                    reagieren();
+                }
                 if (game.sackPending) return { ...start, entlassen: true };
                 const tabelle = [...leaguesData[game.leagueLevel]].sort(compareTableRows);
                 const ich = tabelle.find(t => t.name === game.clubName);

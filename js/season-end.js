@@ -281,7 +281,8 @@ function concludeSeasonAndAdvance() {
             }
         } else if ((myRank >= 17 || (myRank === 16 && relegation !== 'stayed')) && game.leagueLevel < NUM_LEAGUES - 1) {
             game.leagueLevel++;
-            showNotice('❌ Abstieg', 'Die Klasse konnte nicht gehalten werden. Nächste Saison geht es eine Liga tiefer weiter.', { typ: 'warn' });
+            const neustart = typeof grantRelegationRestart === 'function' && grantRelegationRestart();
+            showNotice('❌ Abstieg', `Die Klasse konnte nicht gehalten werden. Nächste Saison geht es eine Liga tiefer weiter.${neustart ? '\n\nDer Vorstand hält an dir fest und gibt dir einen Neustart.' : ''}`, { typ: 'warn' });
         }
 
         // Der Vorstand legt zu Saisonbeginn neue Budgets fest - abhängig von Ligastärke
