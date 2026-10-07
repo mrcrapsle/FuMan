@@ -484,7 +484,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.75', date: '07.10.2026', features: 'Phase 25.5: Vorstandsvertrauen nie unter 10 - Wiederaufbau bleibt möglich' };
+    const GAME_VERSION = { number: '3.76', date: '07.10.2026', features: 'Phase 25.6: Neustart nach Abstieg, Mitgliederversammlung findet wieder automatisch statt' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -23451,7 +23451,9 @@ function openMemberAssembly() {
     r.financeResult = Math.round(game.money - r.startMoney);
     r.promoted = game.leagueLevel < r.leagueLevel;
     r.relegated = game.leagueLevel > r.leagueLevel;
-    game.memberAssembly = { report: r, status: 'offen', openedMatchday: game.matchday, season: game.season, speech: 'zahlen', fee: 'halten' };
+    // Eröffnet zwischen den Saisons: game.matchday steht hier noch auf 35 und wird erst danach
+    // auf 1 gesetzt - mit 35 fand die Versammlung nie automatisch statt.
+    game.memberAssembly = { report: r, status: 'offen', openedMatchday: 1, season: game.season, speech: 'zahlen', fee: 'halten' };
     addInboxMessage('vertrag', '🗳️ Mitgliederversammlung einberufen',
         `Die Mitglieder erwarten deinen Bericht zur Saison ${r.season} (Platz ${r.finalRank}, erwartet Platz ${r.expectedRank}). Bereite im Dashboard Rede und Beitragsantrag vor.`, 'screen-dashboard');
 }
@@ -23514,6 +23516,7 @@ function holdMemberAssembly(automatisch) {
 function tickMemberAssembly() {
     if (!game.seasonExpectation || game.seasonExpectation.season !== game.season) recordSeasonExpectation();
     const a = game.memberAssembly;
+    if (a && a.openedMatchday > game.matchday) a.openedMatchday = 1; // Spielstände mit dem alten Wert 35
     if (a && a.status === 'offen' && game.matchday - a.openedMatchday >= ASSEMBLY_AUTO_AFTER) holdMemberAssembly(true);
 }
 
@@ -23534,7 +23537,7 @@ function renderMemberAssemblyPanel() {
             <div>Fan-Stimmung: ${r.fans}%</div>
         </div>`;
     if (a.status === 'offen') {
-        const rest = ASSEMBLY_AUTO_AFTER - (game.matchday - a.openedMatchday);
+        const rest = ASSEMBLY_AUTO_AFTER - (game.matchday - Math.min(a.openedMatchday, game.matchday));
         html += '<div style="font-size:9px; font-weight:bold;">Deine Rede</div>';
         html += Object.entries(ASSEMBLY_SPEECHES).map(([k, s]) => `<button onclick="setAssemblyChoice('speech','${k}')" class="${a.speech === k ? 'btn-action' : 'btn-secondary'}" style="font-size:8px; padding:3px 6px; margin:2px 3px 2px 0;" title="${s.desc}">${s.label}</button>`).join('');
         html += '<div style="font-size:9px; font-weight:bold; margin-top:4px;">Antrag zum Mitgliedsbeitrag</div>';
@@ -26730,6 +26733,7 @@ function cleanupLegacyScoutState() {
     // starten" komplett zurückgesetzt, damit garantiert nichts vom alten Verein hängen bleibt.
     const BOARD_SAT_WARNING_THRESHOLD = 25;
     const BOARD_SAT_SACK_STREAK = 6;
+    const BOARD_RESTART_TRUST = 60;
 
     function checkJobSecurity() {
         // Schonfrist in der allerersten Saison: ein frischer, bewusst schwacher Startkader in
@@ -26783,6 +26787,19 @@ function cleanupLegacyScoutState() {
         if (game.boardSat <= BOARD_SAT_WARNING_THRESHOLD && game.lowBoardSatStreak >= sackThreshold && !erholt) {
             getSacked();
         }
+    }
+
+    // Neustart nach einem Abstieg (concludeSeasonAndAdvance, nach der Entlassungsprüfung): der
+    // Vorstand hält am Manager fest und gibt einmal einen Vertrauensvorschuss. Nach einem
+    // zweiten Abstieg in Folge nicht - sonst wäre eine Fahrstuhlmannschaft unkündbar.
+    function grantRelegationRestart() {
+        if (game.sackPending || game.boardRestartSeason === game.season - 1) return false;
+        game.boardRestartSeason = game.season;
+        game.boardSat = Math.max(game.boardSat, BOARD_RESTART_TRUST);
+        game.lowBoardSatStreak = 0;
+        game.sackWarningIssued = false;
+        addInboxMessage('vertrag', '🤝 Neustart nach dem Abstieg', `Der Vorstand hält an dir fest und setzt neue Ziele für die ${leagueNames[game.leagueLevel]}. Vertrauensvorschuss: Zufriedenheit mindestens ${BOARD_RESTART_TRUST}. Ein zweiter Abstieg in Folge wird nicht noch einmal so verziehen.`, 'screen-dashboard');
+        return true;
     }
 
     // Dauerhaftes Fan-Fundament nach Erfolgen: Aufstiege/Titel erhöhen die Untergrenze, unter
@@ -27756,7 +27773,8 @@ function concludeSeasonAndAdvance() {
             }
         } else if ((myRank >= 17 || (myRank === 16 && relegation !== 'stayed')) && game.leagueLevel < NUM_LEAGUES - 1) {
             game.leagueLevel++;
-            showNotice('❌ Abstieg', 'Die Klasse konnte nicht gehalten werden. Nächste Saison geht es eine Liga tiefer weiter.', { typ: 'warn' });
+            const neustart = typeof grantRelegationRestart === 'function' && grantRelegationRestart();
+            showNotice('❌ Abstieg', `Die Klasse konnte nicht gehalten werden. Nächste Saison geht es eine Liga tiefer weiter.${neustart ? '\n\nDer Vorstand hält an dir fest und gibt dir einen Neustart.' : ''}`, { typ: 'warn' });
         }
 
         // Der Vorstand legt zu Saisonbeginn neue Budgets fest - abhängig von Ligastärke
@@ -29113,7 +29131,7 @@ const LEXICON_ENTRIES = [
         text: 'Vor jedem Spiel: drei Antworten mit echter Wirkung (Moral, Stärke im nächsten Spiel, Vorstand, Fans). Versprechen werden nach dem Spiel abgerechnet.',
         tips: ['Wer einen Sieg verspricht und verliert, verliert Ansehen bei Medien, Fans und Vorstand'] },
     { cat: 'Verein', title: 'Vorstandszufriedenheit', screen: 'screen-dashboard',
-        text: 'Wie zufrieden der Vorstand ist (0-100). Bleibt sie mehrere Spieltage unter 25, folgt erst eine Warnung, dann die Entlassung. In der ersten Saison gibt es Schonfrist.',
+        text: 'Wie zufrieden der Vorstand ist (10-100). Fällt sie unter 25, warnt er. Entlassen wird nur am Saisonende: wenn sie dann unter 25 liegt, die letzten 6 Pflichtspiele darunter waren und sie in dieser Zeit nicht gestiegen ist. Nach einem Abstieg gibt es einmal einen Neustart (mindestens 60), nach einem zweiten Abstieg in Folge nicht. In der ersten Saison gibt es Schonfrist.',
         tips: ['Siege und erreichte Saisonziele heben sie', 'Schulden, gebrochene Versprechen und Niederlagenserien senken sie', 'Der Vorstandsraum erklärt jedes Mitglied einzeln'] },
     { cat: 'Verein', title: 'Wintergespräch mit dem Vorstand', screen: 'screen-dashboard',
         text: 'In der Winterpause (Spieltag 18-20) zieht der Vorstand Zwischenbilanz: Tabellenplatz gegen die Erwartung und Kassenentwicklung. Du wählst einen Weg: Ziel hoch (2 Plätze, Vorstand +5 und sofort Winterbudget - am Saisonende erreicht +5, verfehlt -10), Ziel runter (2 Plätze, Vorstand -4, die Saison und die Mitgliederversammlung messen am leichteren Ziel), Winterbudget beantragen (Chance aus Zwischenbilanz und Vorstandslaune, Absage -3) oder Kurs bestätigen (+2). Wer bis Spieltag 20 nicht kommt, verpasst das Gespräch (-2).',

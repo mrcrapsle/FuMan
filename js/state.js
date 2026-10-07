@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.75', date: '07.10.2026', features: 'Phase 25.5: Vorstandsvertrauen nie unter 10 - Wiederaufbau bleibt möglich' };
+    const GAME_VERSION = { number: '3.76', date: '07.10.2026', features: 'Phase 25.6: Neustart nach Abstieg, Mitgliederversammlung findet wieder automatisch statt' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
