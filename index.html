@@ -1338,10 +1338,6 @@
                         <div style="margin-top:6px; font-size:9px; color:#aaa;" id="tackle-hardness-desc">Ausgewogenes Einsteigen ohne besondere Vor-/Nachteile.</div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--violet);">🎯 TAKTISCHE FEINEINSTELLUNGEN</div>
-                        <div id="tactic-finesse-box"></div>
-                    </div>
-                    <div class="panel">
                         <div class="panel-header">🤖 TAKTIK-AUTOMATIK</div>
                         <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Reagiert im laufenden Spiel automatisch auf den Spielstand, ohne dass du das Live-Taktikpanel selbst bedienen musst.</div>
                         <div id="tactic-automation-box"></div>
@@ -1349,62 +1345,6 @@
                     <div class="panel">
                         <div class="panel-header" style="color:var(--purple);">📋 TAKTIK-BILANZ</div>
                         <div id="tactic-system-panel"></div>
-                    </div>
-                    <div class="panel">
-                        <div class="panel-header" style="color:var(--teal);">🎲 FORMATIONS-OPTIMIERER</div>
-                        <div id="formation-optimizer-box"></div>
-                    </div>
-                    <div class="panel">
-                        <div class="panel-header" style="color:var(--gold);">📊 FORMATIONS-STATISTIKEN</div>
-                        <div id="formation-stats-box"></div>
-                    </div>
-                    <div class="panel">
-                        <div class="panel-header" style="color:var(--orange);">🎯 GEGNER-ANALYSE</div>
-                        <div id="opponent-formation-box"></div>
-                    </div>
-                    <div class="panel">
-                        <div class="panel-header">⚡ SPIELER-ROLLEN & ANWEISUNGEN</div>
-                        <div id="player-roles-box"></div>
-                    </div>
-                    <div class="panel">
-                        <div class="panel-header" style="color:var(--gold);">🎯 FORMATIONS-SPEZIALISIERUNG</div>
-                        <div id="formation-specialization-box"></div>
-                    </div>
-                    <div class="panel">
-                        <div class="panel-header" style="color:var(--orange);">🔥 GEGNER-PRESSING-ANALYSE</div>
-                        <div id="opponent-pressing-box"></div>
-                    </div>
-                    <div class="panel">
-                        <div class="panel-header" style="color:var(--gold);">⚖️ KADER-BALANCE-ANALYSE</div>
-                        <div id="squad-balance-box"></div>
-                    </div>
-                    <div class="panel">
-                        <div class="panel-header" style="color:var(--gold);">🎯 TRAININGS-SPEZIALISIERUNG</div>
-                        <div id="training-specialization-box"></div>
-                    </div>
-                    <div class="panel">
-                        <div class="panel-header" style="color:var(--gold);">📊 SPIELER-POTENZIAL</div>
-                        <div id="player-potential-box"></div>
-                    </div>
-                    <div class="panel">
-                        <div class="panel-header" style="color:var(--gold);">⚠️ GEGNER-SCHWACHSTELLEN</div>
-                        <div id="opponent-weakness-box"></div>
-                    </div>
-                    <div class="panel">
-                        <div class="panel-header" style="color:var(--gold);">📈 LIGA-TENDENZEN</div>
-                        <div id="league-trends-box"></div>
-                    </div>
-                    <div class="panel">
-                        <div class="panel-header" style="color:var(--gold);">🔄 TAKTISCHE FLEXIBILITÄT</div>
-                        <div id="tactical-flexibility-box"></div>
-                    </div>
-                    <div class="panel">
-                        <div class="panel-header" style="color:var(--gold);">📚 GEGNER-HISTORISCHE BILANZ</div>
-                        <div id="opponent-history-box"></div>
-                    </div>
-                    <div class="panel">
-                        <div class="panel-header" style="color:var(--gold);">🎯 MATCH-OUTCOME-PROGNOSE</div>
-                        <div id="match-prediction-box"></div>
                     </div>
                 </div>
                 <div id="squad-tab-analyse" style="display:none;">
@@ -1589,14 +1529,6 @@
                     <button onclick="buyTrainingEquipment()" id="btn-buy-equipment" class="btn-secondary" style="margin-bottom:4px;">🎒 Trainingsausrüstung ausbauen</button>
                     <button onclick="runTeamBondingEvent()" class="btn-secondary" style="margin-bottom:4px;">🍖 Team-Bonding-Event [6.000 €]</button>
                     <button onclick="goToTrainingCampBooking()" class="btn-secondary">📅 Trainingslager buchen (Kalender)</button>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">⚽ SET-PIECE-SPEZIALISTEN</div>
-                    <div id="setpiece-specialists-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header">🎯 POSITIONS-TRAINER</div>
-                    <div id="position-trainer-box"></div>
                 </div>
                 <div class="panel">
                     <div class="panel-header">🌟 JUGEND-HOSPITANZ IM PROFITRAINING</div>
@@ -2601,7 +2533,6 @@
                         Auswechslungen: <span id="subs-left-count">5</span> übrig
                         <div id="live-subs-list" style="display:flex; flex-wrap:wrap; gap:3px; margin-top:2px;"></div>
                     </div>
-                    <div id="live-midmatch-sub-suggestion-box"></div>
                     <div id="live-cotrainer-box"></div>
                     <div style="display:flex; gap:4px;" id="matchday-controls">
                         <button onclick="simulateMatchStep()" id="btn-next-step" class="btn-action">▶ Nächste Szene</button>
@@ -2682,23 +2613,6 @@
 <script src="js/player-scandals.js?v=2.1"></script>
 <script src="js/underworld.js?v=2.1"></script>
 <script src="js/tactic-system.js?v=2.1"></script>
-<script src="js/tactic-finesse.js?v=2.1"></script>
-<script src="js/formation-optimizer.js?v=2.1"></script>
-<script src="js/formation-stats.js?v=2.1"></script>
-<script src="js/opponent-formation-analysis.js?v=2.1"></script>
-<script src="js/set-piece-specialists.js?v=2.1"></script>
-<script src="js/position-trainer.js?v=2.1"></script>
-<script src="js/player-roles.js?v=2.1"></script>
-<script src="js/formation-specialization.js?v=2.1"></script>
-<script src="js/opponent-pressing.js?v=2.1"></script>
-<script src="js/squad-balance.js?v=2.1"></script>
-<script src="js/training-specialization.js?v=2.1"></script>
-<script src="js/player-potential-analyzer.js?v=2.1"></script>
-<script src="js/opponent-weakness-analysis.js?v=2.1"></script>
-<script src="js/league-trends-analysis.js?v=2.1"></script>
-<script src="js/tactical-flexibility.js?v=2.1"></script>
-<script src="js/opponent-history-stats.js?v=2.1"></script>
-<script src="js/match-outcome-prediction.js?v=2.1"></script>
 <script src="js/season-objectives.js?v=2.1"></script>
 <script src="js/team-council.js?v=2.1"></script>
 <script src="js/locker-room.js?v=3.23"></script>

@@ -319,8 +319,6 @@
         if (currentMatch.minute >= 90) { endMatchSimulation(); }
         // Co-Trainer im Livespiel (js/co-trainer-live.js): Hinweis aus dem echten Spielstand.
         if (typeof tickCoTrainerLive === 'function') tickCoTrainerLive();
-        // Phase 23.3: Wechsel-Empfehlungen aktualisieren
-        if (typeof renderLiveMidmatchSubSuggestion === 'function') renderLiveMidmatchSubSuggestion();
     }
 
     // ---------- SPIELFELD-BALL-ANIMATION ----------
@@ -1412,11 +1410,6 @@
         if (typeof tickLockerRoom === 'function') tickLockerRoom();
         if (typeof tickCoachCarousel === 'function') tickCoachCarousel();
         if (typeof tickMemberAssembly === 'function') tickMemberAssembly();
-        if (typeof tickSetPieceMonthlyDevelopment === 'function') tickSetPieceMonthlyDevelopment();
-        if (typeof tickPositionTrainerMonthlyDevelopment === 'function') tickPositionTrainerMonthlyDevelopment();
-        if (typeof tickFormationSpecializationMonthly === 'function') tickFormationSpecializationMonthly();
-        if (typeof tickTrainingSpecializationMonthly === 'function') tickTrainingSpecializationMonthly();
-        if (typeof tickTacticalFlexibilityMonthly === 'function') tickTacticalFlexibilityMonthly();
         if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
         // Aktiendividende: dividendRate ist ein Jahressatz, ausgezahlt wird monatlich 1/8,5
         // davon; breit gestreute Portfolios bekommen einen kleinen Aufschlag.

@@ -401,7 +401,7 @@ function concludeSeasonAndAdvance() {
         if (typeof prepareSupercup === 'function') prepareSupercup();
         if (typeof ageAiStars === 'function') ageAiStars();
         advanceLeaguesToNewSeason();
-        // Phase 23.1: Trainer-Roulette nach Auf-/Abstieg
+        // Trainerwechsel in der Sommerpause (js/coach-carousel.js), erst nach dem Ligawechsel.
         if (typeof performEndOfSeasonCoachRoulette === 'function') performEndOfSeasonCoachRoulette();
         if (typeof recordSeasonExpectationRank === 'function') recordSeasonExpectationRank();
         if (typeof createSeasonPreview === 'function') createSeasonPreview();

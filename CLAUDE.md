@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Anstoß Mobile Pro - FM13** is a fully-featured browser-based football manager simulation game. The codebase is modular (index.html + css/styles.css + 88 js/*.js files) that bundles into a single 1.8 MB standalone HTML file. The game runs entirely in the browser with local storage for save games, works offline, and supports mobile devices.
+**Anstoß Mobile Pro - FM13** is a fully-featured browser-based football manager simulation game. The codebase is modular (index.html + css/styles.css + 111 js/*.js files) that bundles into a single 1.8 MB standalone HTML file. The game runs entirely in the browser with local storage for save games, works offline, and supports mobile devices.
 
 ## Working With the User
 
@@ -244,6 +244,8 @@ This ensures users can see exactly where money comes from/goes. Add new income o
 
    **No silent buttons or fake choices** – a button that cannot act (no money, wrong state) must say why via `showToast()`; every option needs a real effect and a trade-off (Phase 18.6: team instructions cost fitness, fan actions are per-match boosts, caps/limits really block/warn).
 
+   **No display-only panels** (Phase 25.1 removed 17 Phase-23 modules): a promised bonus must be called from the strength path (`calcTeamStrength()`, `getOwnLeagueMatchStrength()`, `setupMatch()`), a `record…()` function must be called from the match flow, and a panel must read real data (`lineup` is a global array, there is no `game.lineup.starters`, `league.fixtures` or `league.table`). Before adding an analysis/tactic panel, check the existing one: tactic record `game.tacticRecords`, team instructions, player roles `p.role`/`PLAYER_ROLES`, opponent duel js/opponent-tactics.js, prediction js/match-scout.js, live hints js/co-trainer-live.js, set pieces js/set-pieces.js + js/set-piece-drills.js. Green tests do not prove an effect - grep that the new function is called outside its own file.
+
 2. **Manager's Office: Custom Hit Detection** – The office 3D scene (`js/office.js`) uses custom `getBoundingClientRect()` hit testing, not native browser hit detection. Native hit testing is unreliable on 3D-transformed elements across browser versions. See `officeHotspotAtPoint()`.
 
 3. **Mobile performance (19.8, measured at 4x CPU throttle):** no `backdrop-filter` on elements that appear many times or scroll (`.panel` had `blur(12px)`: squad scroll frames up to 42 ms instead of 17 ms) - only on short-lived overlays. No endless animations on the office start screen: the phone ring (`officePhoneRing`) runs 4 times per visit, idle CPU dropped from ~13 % to <1 %. Infinite animations go into the `prefers-reduced-motion` block at the end of css/styles.css.
@@ -325,7 +327,7 @@ CI runs on every branch; only `main` deploys. Only push to `main` after `npm run
 
 - **index.html** – Main page; embeds CSS, loads all js/ modules, defines screen containers
 - **css/styles.css** – All styles; organized by section (DASHBOARD, SQUAD, MANAGER'S OFFICE, etc.)
-- **js/*.js** – Game logic modules (88 files); loaded in order of dependencies
+- **js/*.js** – Game logic modules (111 files); loaded in order of dependencies
 - **tests/run-tests.js** – Playwright test suite
 - **build.py** – Bundler script; concatenates and lints
 - **server.py** / `npm run serve` – Local dev server

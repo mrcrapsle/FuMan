@@ -62,55 +62,31 @@ function tickCoachBounce(force = false) {
     }));
 }
 
-// Phase 23.1: Trainer-Roulette am Saisonende (nach Auf-/Abstieg)
-// Trainer wechseln häufiger bei Auf-/Abstieg; sonst gelegentlich auch so.
+// Sommerpause: auch ohne Krise wechselt in der eigenen (neuen) Liga gelegentlich ein
+// Trainer. Läuft nach advanceLeaguesToNewSeason(), der Trainereffekt endet an Spieltag 5.
+const SUMMER_COACH_CHANGE_CHANCE = 0.12;
 function performEndOfSeasonCoachRoulette() {
-    const allTeams = (leaguesData || []).flat().filter(t => t.name !== game.clubName && (!game.secondTeam || t.name !== game.secondTeam.name));
     const meldungen = [];
-
-    allTeams.forEach(t => {
-        const coach = getTeamCoach(t);
-        if (coach.sackedThisSeason === game.season) return; // Bereits gewechselt diese Saison
-
-        // Chance für Trainerwechsel:
-        // - Abstieg: 70% (neue Philosophie nötig)
-        // - Aufstieg: 40% (vielleicht nicht das richtige Kaliber)
-        // - Normal: 15% (regelmäßiges Roulette)
-        let chance = 0.15;
-        if (t.promoted === game.season) chance = 0.40;
-        if (t.relegated === game.season) chance = 0.70;
-
-        if (Math.random() >= chance) return;
-
-        const alt = coach.name;
+    coachCarouselTeams().forEach(t => {
+        if (Math.random() >= SUMMER_COACH_CHANGE_CHANCE) return;
+        const alt = getTeamCoach(t).name;
         const altStil = getTeamPlaystyle(t);
         const neueStile = AI_PLAYSTYLES.filter(s => s.id !== t.playstyle);
-        const neuStil = neueStile[Math.floor(Math.random() * neueStile.length)];
-        t.playstyle = neuStil.id;
-
+        t.playstyle = neueStile[Math.floor(Math.random() * neueStile.length)].id;
         const neu = getRandomName();
-        t.coach = { name: neu, since: game.season + 1, sackedThisSeason: game.season };
-        t.coachBounce = { amount: COACH_BOUNCE, until: 4 + 1 }; // Spieltag 4 der neuen Saison
+        t.coach = { name: neu, since: game.season, sackedThisSeason: false };
+        t.coachBounce = { amount: COACH_BOUNCE, until: 1 + COACH_BOUNCE_MATCHDAYS };
         t.baseStrength = (t.baseStrength || t.strength) + COACH_BOUNCE;
         t.strength += COACH_BOUNCE;
-
-        let reason = '';
-        if (t.promoted === game.season) reason = ' (nach Aufstieg)';
-        else if (t.relegated === game.season) reason = ' (nach Abstieg)';
-
-        meldungen.push({ t, alt, neu, reason, altStil: altStil.label, neuStil: neuStil.label });
+        meldungen.push({ t, alt, neu, altStil: altStil.label, neuStil: getTeamPlaystyle(t).label });
     });
-
     meldungen.forEach(m => {
-        addInboxMessage('vertrag', `🎠 Trainerwechsel bei ${m.t.name}${m.reason}`,
-            `${m.t.name} trennt sich von Trainer ${m.alt} zum neuen Jahr. Nachfolger ${m.neu} stellt von „${m.altStil}" auf „${m.neuStil}" um - in den ersten ${COACH_BOUNCE_MATCHDAYS} Spieltagen der neuen Saison ist mit einem Trainereffekt zu rechnen.`, 'screen-league');
+        addInboxMessage('vertrag', `🎠 Trainerwechsel bei ${m.t.name}`,
+            `${m.t.name} geht mit einem neuen Trainer in die Saison: ${m.neu} folgt auf ${m.alt} und stellt von „${m.altStil}“ auf „${m.neuStil}“ um. In den ersten ${COACH_BOUNCE_MATCHDAYS} Spieltagen ist mit einem Trainereffekt zu rechnen.`, 'screen-league');
     });
-
     if (!game.coachChanges) game.coachChanges = [];
-    meldungen.forEach(m => {
-        game.coachChanges.push({ season: game.season + 1, matchday: 1, club: m.t.name, alt: m.alt, neu: m.neu, reason: m.reason });
-    });
-    if (game.coachChanges.length > 50) game.coachChanges.splice(0, game.coachChanges.length - 50);
+    meldungen.forEach(m => game.coachChanges.push({ season: game.season, matchday: 0, club: m.t.name, alt: m.alt, neu: m.neu }));
+    if (game.coachChanges.length > 30) game.coachChanges.splice(0, game.coachChanges.length - 30);
 }
 
 // Kurzinfo für Spielanalyse und Prognose.
@@ -126,6 +102,6 @@ function renderCoachCarouselBox() {
     if (!box) return;
     const wechsel = (game.coachChanges || []).filter(c => c.season === game.season).slice().reverse();
     box.innerHTML = `<div style="font-size:9px;">${wechsel.length
-        ? wechsel.map(c => `<div style="padding:2px 0; border-top:1px solid rgba(255,255,255,0.06);">Spt ${c.matchday}: <strong>${c.club}</strong> - ${c.alt} ➜ ${c.neu}</div>`).join('')
+        ? wechsel.map(c => `<div style="padding:2px 0; border-top:1px solid rgba(255,255,255,0.06);">${c.matchday ? 'Spt ' + c.matchday : 'Sommer'}: <strong>${c.club}</strong> - ${c.alt} ➜ ${c.neu}</div>`).join('')
         : '<span style="color:var(--text-muted);">Diese Saison noch keine Trainerwechsel in deiner Liga.</span>'}</div>`;
 }

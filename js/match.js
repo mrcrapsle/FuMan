@@ -182,10 +182,6 @@
 
         // Spielstil: Offensiv riskiert mehr für mehr Durchschlagskraft, Defensiv ist solider.
         bonus += getTacticStyleBonus(game.tacticStyle);
-        // Phase 23.4: Taktische Feineinstellungen (Spielaufbau, Pressing, Spielbreite, Defensive Line)
-        if (typeof getTacticFinesseBonusMultiplier === 'function') {
-            bonus += Math.round((getTacticFinesseBonusMultiplier() - 1) * 10);
-        }
         // Formations-Bonus: Off-Wert der gewählten Formation erhöht die Angriffs-
         // durchschlagskraft, siehe FORMATION_RATINGS in squad.js.
         bonus += getFormationOffBonus();
@@ -427,7 +423,6 @@
         document.getElementById('btn-finish-match').style.display = 'none';
         document.getElementById('btn-finish-match').innerText = '✔ Spielbericht schließen';
         renderLiveSubs();
-        renderLiveMidmatchSubSuggestion();
         renderLiveTacticsPanel();
         renderLiveMatchStats();
         render3DPitch('live-pitch');
@@ -467,60 +462,6 @@
     function liveEffectiveStrength(p) {
         return p.strength * (p.fitness / 100) * (0.9 + (p.dailyForm ?? 50) / 500);
     }
-    // Phase 23.3: Intelligente Wechsel-Empfehlungen zur Laufzeit - nicht nur zur Halbzeit.
-    // Basiert auf Spielstand, Spielminute und Spieler-Zustand.
-    function getLiveMidmatchSubSuggestion() {
-        let onPitch = squad.filter(p => lineup.includes(p.id) && !currentMatch.sentOff.includes(p.id) && p.pos !== 'TW');
-        if (onPitch.length === 0 || substitutionsLeft <= 0) return null;
-
-        let bench = squad.filter(p => !lineup.includes(p.id) && (p.injured || 0) === 0 && (p.suspended || 0) === 0);
-        if (bench.length === 0) return null;
-
-        let ourGoals = currentMatch.isHome ? currentMatch.homeGoals : currentMatch.awayGoals;
-        let oppGoals = currentMatch.isHome ? currentMatch.awayGoals : currentMatch.homeGoals;
-        let isLosing = ourGoals < oppGoals;
-        let minute = currentMatch.minute;
-
-        // Unterschiedliche Strategien je nach Spielsituation:
-        // - Rückstand im späten Spiel: wechsel den müdesten, wechsel rein stärksten
-        // - Führung im späten Spiel: wechsel den müdesten/verletzungsgeplagtesten
-        // - Früh im Spiel: nur bei extremer Erschöpfung wechseln
-        let candidates = [...onPitch];
-        let suggestion = null;
-
-        if (isLosing && minute >= 65) {
-            // Rückstand + spätes Spiel: stärkster ersetzen den schwächsten
-            let weakest = candidates.sort((a, b) => liveEffectiveStrength(a) - liveEffectiveStrength(b))[0];
-            if (weakest && weakest.fitness < 50) {
-                let replacement = bench.sort((a, b) => liveEffectiveStrength(b) - liveEffectiveStrength(a))[0];
-                if (replacement && liveEffectiveStrength(replacement) > liveEffectiveStrength(weakest)) {
-                    suggestion = { out: weakest, in: replacement, reason: '💪 Offensive Frische - Rückstand aufholen' };
-                }
-            }
-        } else if (!isLosing && minute >= 70) {
-            // Führung oder Unentschieden + spätes Spiel: Ermüdete Spieler runter
-            let tiredest = candidates.sort((a, b) => a.fitness - b.fitness)[0];
-            if (tiredest && tiredest.fitness < 60) {
-                let replacement = bench.filter(p => p.pos === tiredest.pos).sort((a, b) => b.strength - a.strength)[0]
-                    || bench.sort((a, b) => b.strength - a.strength)[0];
-                if (replacement) {
-                    suggestion = { out: tiredest, in: replacement, reason: '🏃 Frische Beine für die Schlussphase' };
-                }
-            }
-        } else if (minute >= 55 && minute < 70) {
-            // Zweite Hälfte: den müdesten austauschen (wie Halbzeit-Empfehlung)
-            let tiredest = candidates.sort((a, b) => a.fitness - b.fitness)[0];
-            if (tiredest && tiredest.fitness < 70) {
-                let replacement = bench.filter(p => p.pos === tiredest.pos).sort((a, b) => b.strength - a.strength)[0]
-                    || bench.sort((a, b) => b.strength - a.strength)[0];
-                if (replacement) {
-                    suggestion = { out: tiredest, in: replacement, reason: '⚡ Frische Kraft in der zweiten Hälfte' };
-                }
-            }
-        }
-
-        return suggestion;
-    }
     // Einwechslung: der gewählte Spieler geht, die Teamstärke ändert sich um die Differenz
     // (wie in calcTeamStrength() durch 11 geteilt); ab der 55. Minute bringen frische Beine
     // einen kleinen Zusatzschub.
@@ -542,28 +483,6 @@
         renderLiveSubs();
         renderLiveMatchStats();
         render3DPitch('live-pitch');
-    }
-    function renderLiveMidmatchSubSuggestion() {
-        let box = document.getElementById('live-midmatch-sub-suggestion-box');
-        if (!box) return;
-        let sugg = getLiveMidmatchSubSuggestion();
-        box.innerHTML = sugg
-            ? `<div class="box" style="font-size:10px; border-left-color:var(--accent);">🧑‍🏫 ${sugg.reason} - ${sugg.out.name} (${sugg.out.fitness}% fit) → ${sugg.in.name}.</div>
-               <button onclick="applyLiveMidmatchSubSuggestion()" class="btn-secondary" style="margin-top:4px;">✅ Wechsel durchführen</button>`
-            : '';
-    }
-    function applyLiveMidmatchSubSuggestion() {
-        let sugg = getLiveMidmatchSubSuggestion();
-        if (!sugg || substitutionsLeft <= 0) return;
-        lineup = lineup.map(id => id === sugg.out.id ? sugg.in.id : id);
-        substitutionsLeft--;
-        currentMatch.ourBaseStr += (liveEffectiveStrength(sugg.in) - liveEffectiveStrength(sugg.out)) / 11 + (currentMatch.minute >= 55 ? 0.4 : 0);
-        document.getElementById('ticker-log').innerHTML += `<div style="color:var(--accent); font-size:10px;">🔄 ${currentMatch.minute}. Min: ${sugg.in.name} kommt für ${sugg.out.name} (Co-Trainer-Empfehlung).</div>`;
-        document.getElementById('ticker-log').scrollTop = document.getElementById('ticker-log').scrollHeight;
-        renderLiveSubs();
-        renderLiveMidmatchSubSuggestion();
-        render3DPitch('live-pitch');
-        renderLiveMatchStats();
     }
 
     // Live-Taktikpanel: erlaubt Formation, Spielstil & Zweikampfhärte auch WÄHREND des

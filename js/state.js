@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.68', date: '07.10.2026', features: 'Phase 23.18-23.20: Taktische Flexibilität, Gegner-Historie, Match-Prognose' };
+    const GAME_VERSION = { number: '3.69', date: '07.10.2026', features: 'Phase 25.1: Phase-23-Panels ohne Spielwirkung entfernt, Sommer-Trainerwechsel nur in der eigenen Liga' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -596,20 +596,26 @@
     // Standard-Training, Stadion-Management, Turniere ohne Austragung, Zufalls-Marktanalyse,
     // Pauschal-Spielerbewertung. Phase 14: zweiter Transfermarkt, zweites Leihsystem,
     // Turnier-Klammern, Schein-Harmonie, Disziplinarsystem ohne Sperren, Krisen, leere
-    // lokale Rivalitäten.
+    // lokale Rivalitäten. Phase 25.1: Phase-23-Analysepanels ohne Spielwirkung.
     function cleanupRemovedModuleState() {
         ['fanclubs', 'fanSatisfaction', 'ultraGroups', 'fanEvents', 'fanEngagement', 'ticketSalesMultiplier', 'sponsorAttractiveness',
             'trainingSchedule', 'trainingSpecialization', 'setPieceTraining', 'stadium',
             'internationalTournaments', 'playerInternationalCaps', 'internationalTournamentHistory', 'nextWorldCup', 'transferMarket', 'postMatchAnalysis',
             'transferBudgetUsed', 'transferMarketPlayers', 'transferLastRefreshMatchday', 'reserves', 'tournamentBrackets',
             'squadHarmony', 'disciplinarySystem', 'crises', 'localRivals', 'tacticsHistory', 'playerRoles', 'formationHistory', 'tacticAnalysis', 'clubSwitchHistory', 'youthNationalCallups', 'licenseRejectionCount', 'seasonPointsHistory', 'forceDerbyMatchdays',
-            'permanentRivalName', 'rivalManagerName', 'rivalManagerTrait', 'rivalHistoryArchive', 'nemesis'].forEach(k => { delete game[k]; });
+            'permanentRivalName', 'rivalManagerName', 'rivalManagerTrait', 'rivalHistoryArchive', 'nemesis',
+            'tacticFinesse', 'formationOptimizer', 'formationStats', 'opponentFormationAnalysis', 'setPieceSpecialists', 'positionTrainer',
+            'formationSpecialization', 'opponentPressing', 'trainingFocus', 'playerPotential', 'opponentWeaknesses', 'leagueTrends',
+            'tacticalFlexibility', 'opponentHistoryStats'].forEach(k => { delete game[k]; });
         // Holding-Aufträge alter Spielstände trugen echte Vereinsnamen.
         const echteNamen = { 'Real Madrid': 'Real Madrit', 'FC Bayern': 'Bayern Munchen', 'FC Liverpool': 'Liverpol FC' };
         if (typeof holdingCompany !== 'undefined') (holdingCompany.b2bContracts || []).forEach(c => { if (echteNamen[c.club]) c.club = echteNamen[c.club]; });
         // Phase 21.5: fester Holding-Wert ersetzt durch getHoldingValuation().
         if (typeof holdingCompany !== 'undefined') delete holdingCompany.valuation;
-        squad.forEach(p => { delete p.currentFitnessBoost; delete p.nationalDuty; });
+        squad.forEach(p => {
+            delete p.currentFitnessBoost; delete p.nationalDuty;
+            delete p.setpieceSkills; delete p.positionFlexibility; delete p.longTermInjury; delete p.comebackTraining;
+        });
         // Phase 24.2: ausgewürfelte Rivalen-Paare der Ligatabellen (Derbys jetzt nach Ort).
         if (typeof leaguesData !== 'undefined') leaguesData.forEach(t => (t || []).forEach(x => { delete x.rivalName; }));
         // Ältere Aufräum-Helfer einzelner Module - laufen jetzt gesammelt auch beim Laden.

@@ -7135,15 +7135,20 @@ async function testTacticRecords(browser) {
         const html = document.getElementById('tactic-system-panel').innerHTML;
         // Alte Spielstände: Felder der entfernten Module verschwinden beim Laden
         const save = buildSaveState();
-        save.game = Object.assign({}, save.game, { tacticAnalysis: { effectiveness: 0.5 }, playerRoles: {}, clubSwitchHistory: [] });
+        save.game = Object.assign({}, save.game, { tacticAnalysis: { effectiveness: 0.5 }, playerRoles: {}, clubSwitchHistory: [],
+            tacticFinesse: { pressing: 'aggressive' }, formationStats: { byFormation: {} }, opponentHistoryStats: {}, tacticalFlexibility: { flexibility: 50 } });
+        if (save.squad && save.squad[0]) Object.assign(save.squad[0], { setpieceSkills: { cornerQuality: 50 }, positionFlexibility: { secondaryPositions: [] } });
         applyLoadedState(JSON.parse(JSON.stringify(save)));
         return {
             spiele, druckSpiele: druck ? druck.spiele : 0, html,
             toreStimmen: rows.every(x => x.tore >= 0 && x.gegentore >= 0 && x.s + x.u + x.n === x.spiele),
-            altWeg: !('tacticAnalysis' in game) && !('playerRoles' in game) && !('clubSwitchHistory' in game),
+            altWeg: !('tacticAnalysis' in game) && !('playerRoles' in game) && !('clubSwitchHistory' in game)
+                && !['tacticFinesse', 'formationStats', 'opponentHistoryStats', 'tacticalFlexibility'].some(k => k in game)
+                && squad.every(p => !('setpieceSkills' in p) && !('positionFlexibility' in p)),
             behalten: game.tacticRecords && Object.keys(game.tacticRecords).length === rows.length,
             modulWeg: typeof switchToNewClub === 'undefined' && typeof renderPlayerRetirementPanel === 'undefined'
                 && typeof getFormationCompletenessFit === 'undefined' && typeof tickPlayerRetirement === 'function'
+                && typeof getTacticFinesseBonusMultiplier === 'undefined' && typeof renderMatchPredictionPanel === 'undefined'
         };
     });
     assert(r.spiele === 10, `Taktik-Bilanz zählt jedes Ligaspiel genau einmal (${r.spiele}/10)`);
