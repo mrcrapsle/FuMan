@@ -484,7 +484,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.72', date: '07.10.2026', features: 'Phase 25.2: Frauenmannschaft mit Spielerinnenmarkt, Potenzial, Zuschauern und Sponsor' };
+    const GAME_VERSION = { number: '3.73', date: '07.10.2026', features: 'Phase 25.3: Entlassung nur am Saisonende geprüft, Frauenmannschaft-Bot-Messung' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -26285,7 +26285,7 @@ function cleanupLegacyScoutState() {
 
         // Job-Sicherheit: Ergebnisse wirken sich jetzt direkt auf die Vorstands-Stimmung aus,
         // statt (wie vorher) komplett wirkungslos zu bleiben. Anhaltend schlechte Stimmung
-        // kann zur Entlassung führen (siehe checkJobSecurity() weiter unten).
+        // kann am Saisonende zur Entlassung führen (siehe checkSeasonEndSacking()).
         if (matchResult) {
             // Erwartungsabhängig (Langzeittest Phase 19.6): früher fest Sieg +2 / Remis -1 /
             // Niederlage -3 - ein Mittelfeldteam verlor so ~20 Punkte pro Saison und landete
@@ -26766,10 +26766,16 @@ function cleanupLegacyScoutState() {
             addInboxMessage('vertrag', '✅ Fan-Proteste beendet', 'Nach besseren Ergebnissen sind die Proteste rund um den Verein wieder abgeklungen.', 'screen-dashboard');
         }
 
-        // Legenden-Status-Vorteil: der Vorstand verzeiht einer echten Vereinslegende deutlich
-        // mehr, bevor es zur Entlassung kommt (höhere Toleranzschwelle statt Immunität).
+    }
+
+    // Entlassung nur am Saisonende (concludeSeasonAndAdvance): mitten in der Saison kann der
+    // Vorstand nach einer schwachen Serie wieder umschwenken. Entscheidend ist der Stand am
+    // Saisonende - Zufriedenheit unter der Warnschwelle und die letzten Pflichtspiele darunter.
+    // Legenden-Bonus bleibt: der Vorstand verzeiht einer Vereinslegende mehr.
+    function checkSeasonEndSacking() {
+        if (game.season <= 1) return;
         let sackThreshold = BOARD_SAT_SACK_STREAK + (game.legendStatus ? 3 : 0);
-        if (game.lowBoardSatStreak >= sackThreshold) {
+        if (game.boardSat <= BOARD_SAT_WARNING_THRESHOLD && game.lowBoardSatStreak >= sackThreshold) {
             getSacked();
         }
     }
@@ -27662,6 +27668,7 @@ function concludeSeasonAndAdvance() {
         let myTeamSnapshot = myTeamRecord ? { ...myTeamRecord } : null;
         // Manager-Statistik: Bilanz der gerade beendeten Saison, bevor Auf-/Abstieg die Liga ändert.
         if (typeof recordSeasonalManagerStats === 'function') recordSeasonalManagerStats(myRank, myTeamRecord, game.leagueLevel);
+        if (typeof checkSeasonEndSacking === 'function') checkSeasonEndSacking();
         if (typeof checkPlaytimePromises === 'function') checkPlaytimePromises();
         if (typeof evaluateSeasonEndObjectives === 'function') evaluateSeasonEndObjectives(myRank);
         if (typeof recordScenarioSeasonRank === 'function') recordScenarioSeasonRank(myRank);
