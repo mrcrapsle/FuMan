@@ -84,7 +84,7 @@ const LEXICON_ENTRIES = [
         tips: ['Der Unternehmenswert = 50.000 € plus 80 % der in Fabriken investierten Summe', 'Übernahmeangebote kommen nur, wenn du Fabriken besitzt - beim Verkauf sind alle Fabriken weg, Konto und Lager bleiben'] },
     { cat: 'Finanzen', title: 'Gehaltsbudget', screen: 'screen-finances',
         text: 'Höchstsumme aller Spielergehälter pro Spieltag. Neue Verträge über dem Budget sind nicht möglich.',
-        tips: ['Verkäufe und auslaufende Verträge schaffen Luft', 'Im Gehaltsgespräch einmal nachverhandeln', 'Zum Saisonstart liegt es mindestens 5 % über den laufenden Gehältern, wenn das Konto eine Viertelsaison davon deckt'] },
+        tips: ['Verkäufe und auslaufende Verträge schaffen Luft', 'Im Gehaltsgespräch einmal nachverhandeln', 'Zum Saisonstart liegt es mindestens 5 % über den laufenden Gehältern, wenn das Konto eine Viertelsaison davon deckt und die Saison kein Minus brachte'] },
     { cat: 'Finanzen', title: 'Transferbudget', screen: 'screen-finances',
         text: 'Wie viel Ablöse der Vorstand freigibt. Unabhängig vom Kontostand: beides muss reichen.',
         tips: ['Verkäufe erhöhen es', 'Mit dem Vorstand lässt sich nachverhandeln', 'Zum Saisonstart gibt der Vorstand 40 % der Rücklagen über einer Reserve (halbe Saison Gehaltsbudget) zusätzlich frei, 10 % davon gehen ins Gehaltsbudget'] },

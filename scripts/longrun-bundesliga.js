@@ -48,7 +48,9 @@ async function karriere(browser, lauf) {
                     for (let versuch = 0; fenster && versuch < 6; versuch++) {
                         const ids = pickBestLineupIds();
                         const schwaechster = Math.min(...squad.filter(p => ids.includes(p.id)).map(p => p.strength));
-                        const bezahlbar = x => getTransferAsking(x.p) <= game.transferBudget && getTransferAsking(x.p) < game.money * 0.5;
+                        const gehaelter = squad.reduce((a, p) => a + (p.wage || 0), 0);
+                        const bezahlbar = x => getTransferAsking(x.p) <= game.transferBudget
+                            && game.money - getTransferAsking(x.p) > (gehaelter + x.p.wage) * 34 * 0.3;
                         const alle = marketPlayers.map((p, i) => ({ p, i })).filter(bezahlbar);
                         let wahl = alle.filter(x => x.p.strength > schwaechster + 2).sort((a, b) => b.p.strength - a.p.strength)[0];
                         if (!wahl && squad.length < 22) wahl = alle.sort((a, b) => b.p.strength - a.p.strength)[0];
@@ -83,7 +85,9 @@ async function karriere(browser, lauf) {
                     platz: tabelle.indexOf(ich) + 1, punkte: ich.pts ?? ich.points,
                     geld: game.money, transfer: game.transferBudget, gehaltBudget: game.wageBudget,
                     gehaltSumme: squad.reduce((a, p) => a + (p.wage || 0), 0),
-                    elf: Math.round(elfStaerke() * 10) / 10, kader: squad.length, vorstand: Math.round(game.boardSat),
+                    elf: Math.round(elfStaerke() * 10) / 10,
+                    ligaSchnitt: Math.round(tabelle.filter(t => t !== ich).reduce((a, t) => a + t.strength, 0) / (tabelle.length - 1)),
+                    ligaTop: Math.max(...tabelle.filter(t => t !== ich).map(t => t.strength)), kader: squad.length, vorstand: Math.round(game.boardSat),
                     pokal: (game.cupFinals || []).filter(f => f.season === game.season && f.won).map(f => f.comp).join('+')
                 };
                 concludeSeasonAndAdvance();
@@ -102,11 +106,11 @@ async function karriere(browser, lauf) {
     }
     await ctx.close();
     console.log(`\n== Lauf ${lauf} (${modus}) ==`);
-    console.log('Ssn Liga Pl Pkt   Geld Transf GehBud/Spt GehSum  Elf Kad Vst Europa        Pokal');
+    console.log('Ssn Liga Pl Pkt   Geld Transf GehBud/Spt GehSum  Elf Liga Top Kad Vst Europa        Pokal');
     zeilen.forEach(z => {
         if (z.crash) return console.log('ABSTURZ: ' + z.crash);
         if (z.entlassen) return console.log(`${String(z.season).padStart(3)} ENTLASSEN (Liga ${z.liga + 1})`);
-        console.log(`${String(z.season).padStart(3)} ${String(z.liga + 1).padStart(4)} ${String(z.platz).padStart(2)} ${String(z.punkte).padStart(3)} ${mio(z.geld)} ${mio(z.transfer)} ${String(Math.round(z.gehaltBudget / 1000)).padStart(7)}k ${String(Math.round(z.gehaltSumme / 1000)).padStart(5)}k ${String(z.elf).padStart(4)} ${String(z.kader).padStart(3)} ${String(z.vorstand).padStart(3)} ${z.europaRunde ? ('CC:' + z.europaRunde).padEnd(13) : '-'.padEnd(13)} ${z.pokal ? 'Pokal ' + z.pokal : ''}${z.ligaDanach !== z.liga ? ' → Liga ' + (z.ligaDanach + 1) : ''}`);
+        console.log(`${String(z.season).padStart(3)} ${String(z.liga + 1).padStart(4)} ${String(z.platz).padStart(2)} ${String(z.punkte).padStart(3)} ${mio(z.geld)} ${mio(z.transfer)} ${String(Math.round(z.gehaltBudget / 1000)).padStart(7)}k ${String(Math.round(z.gehaltSumme / 1000)).padStart(5)}k ${String(z.elf).padStart(4)} ${String(z.ligaSchnitt).padStart(4)} ${String(z.ligaTop).padStart(3)} ${String(z.kader).padStart(3)} ${String(z.vorstand).padStart(3)} ${z.europaRunde ? ('CC:' + z.europaRunde).padEnd(13) : '-'.padEnd(13)} ${z.pokal ? 'Pokal ' + z.pokal : ''}${z.ligaDanach !== z.liga ? ' → Liga ' + (z.ligaDanach + 1) : ''}`);
     });
     if (process.env.DIAG) zeilen.forEach(z => { if (z.season) console.log(`\n[S${z.season}] Abgänge ${z.abgaenge} | Fehler: ${(z.toasts || []).join(' ; ')}\n      Post: ${(z.post || []).join(' ; ')}`); });
     if (fehler.length) console.log('JS-Fehler: ' + [...new Set(fehler)].slice(0, 5).join(' | '));

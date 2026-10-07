@@ -2175,10 +2175,12 @@ async function testBundesligaLongRun(browser) {
                 && inboxMessages.some(m => m.title.includes('Rücklagen'));
             // Gehaltsbudget: nie unter die laufenden Gehälter, solange das Konto sie trägt
             const summe = squad.reduce((a, p) => a + (p.wage || 0), 0);
-            game.money = summe * 34;
+            game.money = summe * 20; game.ffpSeasonNet = 0;
             const boden = getWageBudgetFloor();
-            game.money = summe * 8;
-            out.gehaltsBoden = boden >= summe * 1.04 && getWageBudgetFloor() === 0;
+            game.ffpSeasonNet = -summe * 10;
+            const verlust = getWageBudgetFloor();
+            game.ffpSeasonNet = 0; game.money = summe * 8;
+            out.gehaltsBoden = boden >= summe * 1.04 && verlust === 0 && getWageBudgetFloor() === 0;
             // Start in der Bundesliga: Lizenz-Ausstattung der Startliga ist vorhanden
             stadium.flutlicht = false; campusBuildings.internat.lvl = 0;
             grantStartLeagueLicence(0);
@@ -2206,7 +2208,7 @@ async function testBundesligaLongRun(browser) {
     assert(!r.crash, `Langzeittest Bundesliga ohne Absturz (${r.crash || 'ok'})`);
     if (!r.crash) {
         assert(r.ruecklagen && r.freigabe, 'Der Vorstand gibt Rücklagen über der Reserve als Transfer- und Gehaltsbudget frei');
-        assert(r.gehaltsBoden, 'Gehaltsbudget mindestens 5 % über den laufenden Gehältern, wenn das Konto sie trägt (sonst Formel)');
+        assert(r.gehaltsBoden, 'Gehaltsbudget mindestens 5 % über den laufenden Gehältern, wenn das Konto sie trägt und die Saison kein Minus brachte');
         assert(r.startLizenz, 'Neues Spiel in der Bundesliga: Flutlicht und Internat Stufe 2 vorhanden');
         assert(r.sterne && r.untenNormal, 'Bundesliga-Markt mit drei internationalen Stars, untere Ligen unverändert');
         assert(r.praemie && r.startkapital, 'Pokalprämien mit eigener Buchung, Startkapital zählt nicht fürs FFP');

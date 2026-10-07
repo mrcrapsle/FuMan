@@ -150,13 +150,16 @@ function getCashSurplusBudgetShare() {
 }
 
 // Laufende Verträge kann der Vorstand nicht kürzen: deckt das Konto eine Viertelsaison der
-// aktuellen Gehaltssumme, bleibt das Gehaltsbudget mindestens 5 % darüber. Vorher setzte die
+// aktuellen Gehaltssumme und hat die Saison kein Minus gebracht (game.ffpSeasonNet, oder das
+// Konto trägt eine ganze Saison), bleibt das Gehaltsbudget mindestens 5 % darüber. Ohne die
+// Verlustbedingung zog der Boden die Gehälter eines Vereins mit -35 Mio./Saison weiter mit. Vorher setzte die
 // Liga/Platz-Formel einen Bundesliga-Elften auf 1,26 Mio. bei 1,5 Mio. Gehältern - jede
 // Verlängerung scheiterte, der Kader lief ablösefrei davon (Langzeittest 21.6).
 function getWageBudgetFloor() {
     const summe = squad.reduce((s, p) => s + (p.wage || 0), 0)
         + (game.secondTeam && game.secondTeam.isActive ? secondTeamSquad.reduce((s, p) => s + (p.wage || 0), 0) : 0);
-    if (game.money < summe * 34 * 0.25) return 0;
+    const ohneVerlust = (game.ffpSeasonNet || 0) >= 0 || game.money >= summe * 34;
+    if (game.money < summe * 34 * 0.25 || !ohneVerlust) return 0;
     return Math.ceil(summe * 1.05 / 1000) * 1000;
 }
 
