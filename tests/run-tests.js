@@ -1748,6 +1748,51 @@ async function testRumors(browser) {
     await page.close();
 }
 
+async function testSwapDeals(browser) {
+    console.log('\n[25.20] Tauschgeschäft: eigener Spieler wird auf die Ablöse angerechnet');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            game.money = 1e8; game.transferBudget = 1e8; game.wageBudget = 1e9;
+            while (squad.length < 22) { const n = createPlayer('MIT', 50, 55); n.contracts = 2; squad.push(n); }
+            const ziel = marketPlayers[0];
+            ensureTransferTerms(ziel);
+            const tausch = squad.filter(x => (x.age || 25) <= 30).sort((a, b) => b.strength - a.strength)[0];
+            tausch.strength = Math.max(tausch.strength, ziel.strength - 3);
+            tausch.marketValue = calculatePlayerMarketValue(tausch.strength);
+            openTransferPoker(0);
+            acceptPokerAsking();
+            const fee = transferPoker.agreedFee;
+            showScreen('screen-transfer');
+            renderTransferPokerBox();
+            out.auswahl = document.getElementById('transfer-poker-box').innerHTML.includes('in Zahlung geben');
+            setPokerSwap(tausch.id);
+            const wert = getSwapValue(tausch, ziel, fee);
+            const geld = game.money, tb = game.transferBudget, agent = getAgentFee(ziel, fee);
+            signPokerDeal();
+            out.angerechnet = wert > 0 && wert <= fee && wert <= Math.round(tausch.marketValue * 0.85 / 1000) * 1000;
+            out.bar = game.money === geld - (fee - wert) - agent && game.transferBudget === tb - (fee - wert);
+            out.weg = !squad.some(x => x.id === tausch.id) && squad.some(x => x.id === ziel.id);
+            // Zu schwache oder zu alte Spieler nimmt der Verkäufer nicht
+            const alt = squad[0]; const age0 = alt.age; alt.age = 33;
+            out.zuAlt = !isSwapCandidate(alt, ziel);
+            alt.age = age0;
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Tauschgeschäft ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.auswahl, 'Nach der Einigung lässt sich im Transferpoker ein eigener Spieler in Zahlung geben');
+        assert(r.angerechnet && r.bar, 'Angerechnet werden höchstens 85 % des Marktwerts, Kasse und Transferbudget zahlen nur den Rest');
+        assert(r.weg && r.zuAlt, 'Der Tauschspieler verlässt den Verein; über 30-Jährige nimmt der Verkäufer nicht');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testProLoans(browser) {
     console.log('\n[25.20] Profis verleihen: Gehaltsanteil, raus aus dem Gehaltsbudget, Rückkehr zum Saisonende');
     const { page, consoleErrors } = await freshPage(browser);
@@ -8648,6 +8693,7 @@ async function main() {
         testSponsorRenewal,
         testTrainingGrowthCaps,
         testProLoans,
+        testSwapDeals,
         testPlayerProfile,
         testHomeRegion,
         testLocalDerbies,

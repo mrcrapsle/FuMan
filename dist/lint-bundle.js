@@ -7251,26 +7251,58 @@ function getTransferAsking(p) {
     return ensureTransferTerms(p).askingPrice;
 }
 
+// Tauschgeschäft (25.20): nach der Einigung auf die Ablöse einen eigenen Spieler in Zahlung geben -
+// in der Bundesliga begrenzt meist die Kasse die Käufe, nicht das Budget. Der Verkäufer nimmt Spieler
+// bis 30 Jahre, die höchstens SWAP_MAX_GAP Punkte schwächer sind, zu SWAP_VALUE_SHARE des Marktwerts.
+const SWAP_VALUE_SHARE = 0.85;
+const SWAP_MAX_GAP = 10;
+const SWAP_MIN_SQUAD = 17;
+function isSwapCandidate(tp, p) {
+    return !!tp && (tp.age || 25) <= 30 && tp.strength >= p.strength - SWAP_MAX_GAP
+        && !(incomingLoans || []).some(l => l.playerId === tp.id) && squad.length > SWAP_MIN_SQUAD;
+}
+function getSwapValue(tp, p, ablose) {
+    if (!isSwapCandidate(tp, p)) return 0;
+    return Math.min(ablose, Math.round((tp.marketValue || 0) * SWAP_VALUE_SHARE / 1000) * 1000);
+}
+function setPokerSwap(id) {
+    if (!transferPoker) return;
+    transferPoker.swapId = id || null;
+    renderTransferPokerBox();
+}
+
 // Gemeinsamer Abschluss für Sofortkauf und Verhandlung: alle Budgetprüfungen an einer Stelle.
-function finalizePlayerPurchase(p, ablose, gehalt) {
+function finalizePlayerPurchase(p, ablose, gehalt, tauschId) {
     if (isTransferEmbargoActive()) { showToast(`🚫 Transfersperre aktiv${game.ffpTransferEmbargo ? ' (Financial Fairplay)' : ' - erst die Zahlungsfähigkeit wiederherstellen (siehe Finanzen)'}.`, 'error', 5000); return false; }
     const idx = marketPlayers.indexOf(p);
     if (idx === -1) { showToast(`${p.name} ist nicht mehr auf dem Markt.`, 'error'); return false; }
+    const tausch = tauschId ? squad.find(x => x.id === tauschId) : null;
+    if (tauschId && !isSwapCandidate(tausch, p)) { showToast('Dieser Spieler kommt für den Tausch nicht (mehr) in Frage.', 'error', 4500); return false; }
+    const anrechnung = tausch ? getSwapValue(tausch, p, ablose) : 0;
+    const bar = ablose - anrechnung;
     const agentFee = getAgentFee(p, ablose);
-    const gesamt = ablose + agentFee;
+    const gesamt = bar + agentFee;
     if (game.money < gesamt) { showToast(`Vereinskonto reicht nicht: ${formatVal(gesamt)} nötig${agentFee > 0 ? ` (inkl. ${formatVal(agentFee)} Beraterprovision)` : ''}, ${formatVal(game.money)} vorhanden.`, 'error', 5000); return false; }
-    if (game.transferBudget < ablose) { showToast(`Transferbudget reicht nicht: ${formatVal(ablose)} nötig, ${formatVal(game.transferBudget)} verfügbar. Verhandle mit dem Vorstand oder verkaufe erst einen Spieler.`, 'error', 5500); return false; }
-    const lohnsumme = squad.reduce((s, pl) => s + pl.wage, 0) + (game.secondTeam.isActive ? secondTeamSquad.reduce((s, pl) => s + pl.wage, 0) : 0);
+    if (game.transferBudget < bar) { showToast(`Transferbudget reicht nicht: ${formatVal(bar)} nötig, ${formatVal(game.transferBudget)} verfügbar. Verhandle mit dem Vorstand oder verkaufe erst einen Spieler.`, 'error', 5500); return false; }
+    const lohnsumme = squad.reduce((s, pl) => s + pl.wage, 0) - (tausch ? tausch.wage : 0) + (game.secondTeam.isActive ? secondTeamSquad.reduce((s, pl) => s + pl.wage, 0) : 0);
     if (lohnsumme + gehalt > game.wageBudget) { showToast(`Gehaltsbudget reicht nicht: ${formatVal(lohnsumme + gehalt)} nach der Verpflichtung, erlaubt sind ${formatVal(game.wageBudget)}.`, 'error', 5000); return false; }
     playSound('click');
     bucheMitLabel('🛒 Spielerkauf', -gesamt);
-    game.transferBudget -= ablose;
+    game.transferBudget -= bar;
+    if (tausch) {
+        if (typeof checkFriendshipDeparture === 'function') checkFriendshipDeparture(tausch);
+        if (typeof recordNotablePastPlayer === 'function') recordNotablePastPlayer(tausch);
+        if (typeof checkCrowdFavoriteDeparture === 'function') checkCrowdFavoriteDeparture(tausch);
+        squad = squad.filter(x => x.id !== tausch.id);
+        lineup = lineup.filter(x => x !== tausch.id);
+        addInboxMessage('transfer', `🔄 Tausch: ${tausch.name} geht zu ${p.sellerClub}`, `${tausch.name} wird mit ${formatVal(anrechnung)} auf die Ablöse für ${p.name} angerechnet - bar gezahlt: ${formatVal(bar)}.`, 'screen-transfer');
+    }
     p.wage = gehalt;
     if (typeof stampPlayerJoin === 'function') stampPlayerJoin(p, 'kauf', p.sellerClub, ablose);
     squad.push(p);
     marketPlayers.splice(idx, 1);
     if (transferPoker && transferPoker.playerId === p.id) transferPoker = null;
-    showToast(`✅ ${p.name} kommt von ${p.sellerClub || 'seinem Verein'} für ${formatVal(ablose)}${agentFee > 0 ? ` (+ ${formatVal(agentFee)} Provision an ${p.agent.name})` : ''}.`, 'success', 4500);
+    showToast(`✅ ${p.name} kommt von ${p.sellerClub || 'seinem Verein'} für ${formatVal(ablose)}${tausch ? ` (davon ${formatVal(anrechnung)} durch ${tausch.name})` : ''}${agentFee > 0 ? ` (+ ${formatVal(agentFee)} Provision an ${p.agent.name})` : ''}.`, 'success', 4500);
     // Medizincheck (js/medical-check.js): ein verdeckter Befund wird jetzt Wirklichkeit.
     if (typeof applyMedicalOnArrival === 'function') applyMedicalOnArrival(p);
     renderTransferView();
@@ -7412,7 +7444,18 @@ function signPokerDeal() {
     const p = getPokerPlayer();
     const t = transferPoker;
     if (!p || !t.agreedFee) return;
-    finalizePlayerPurchase(p, t.agreedFee, t.wageDemand);
+    finalizePlayerPurchase(p, t.agreedFee, t.wageDemand, t.swapId || null);
+}
+
+function renderPokerSwapSelect(p, t) {
+    const kandidaten = squad.filter(x => isSwapCandidate(x, p)).sort((a, b) => b.marketValue - a.marketValue);
+    if (!kandidaten.length) return `<div style="font-size:8px; color:var(--text-muted); margin-bottom:4px;">🔄 Tausch: ${p.sellerClub} nimmt nur Spieler bis 30 Jahre mit höchstens ${SWAP_MAX_GAP} Punkten weniger (und mindestens ${SWAP_MIN_SQUAD + 1} im Kader).</div>`;
+    const tausch = t.swapId ? squad.find(x => x.id === t.swapId) : null;
+    const wert = tausch ? getSwapValue(tausch, p, t.agreedFee) : 0;
+    return `<div style="font-size:9px; margin-bottom:4px;">🔄 Spieler in Zahlung geben: <select onchange="setPokerSwap(this.value)" style="font-size:9px;">
+        <option value="">Kein Tausch</option>
+        ${kandidaten.map(x => `<option value="${x.id}" ${t.swapId === x.id ? 'selected' : ''}>${x.name} (${x.pos}, ${x.strength}) - ${formatVal(getSwapValue(x, p, t.agreedFee))}</option>`).join('')}
+    </select>${tausch ? ` → bar nur noch <strong>${formatVal(t.agreedFee - wert)}</strong>` : ''}</div>`;
 }
 
 function renderTransferPokerBox() {
@@ -7429,6 +7472,7 @@ function renderTransferPokerBox() {
         <div style="font-size:9px; max-height:110px; overflow-y:auto; background:rgba(0,0,0,0.15); border-radius:4px; padding:4px; margin-bottom:6px;">${t.log.slice(-6).map(z => `<div>${z}</div>`).join('')}</div>
         ${t.agreedFee ? `
             <div class="box" style="font-size:10px;">Ablöse ${formatVal(t.agreedFee)}${agentFee ? ` + Provision ${formatVal(agentFee)}` : ''} · Gehalt <strong>${formatVal(t.wageDemand)}</strong>/SpT (bisher ${formatVal(p.wage)})</div>
+            ${renderPokerSwapSelect(p, t)}
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
                 <button onclick="signPokerDeal()" class="btn-action">✍️ Unterschreiben</button>
                 <button onclick="haggleWage()" class="btn-secondary" ${t.wageTalked ? 'disabled' : ''}>💬 Gehalt drücken (-10 %)</button>
@@ -30126,6 +30170,9 @@ const LEXICON_ENTRIES = [
     { cat: 'Verein', title: 'Transferstrategie', screen: 'screen-dashboard',
         text: 'Bis Spieltag 3 legst du mit dem Vorstand eine Linie für die Saison fest. Jugend fördern: Transferbudget -30 %, Saisonziel 1 Platz leichter, Sichtung zum halben Preis - am Saisonende mindestens 3 Eigengewächse mit 10+ Ligaspielen: Vorstand +6 und Fans +3, sonst -6. Sofort-Erfolg: +40 % Transferbudget, Ziel 2 Plätze höher - erreicht +5, verfehlt -8. Sparen: -50 % Transferbudget, Ziel 2 Plätze leichter - Saison ohne Verlust +5, sonst -6. Ausgewogen (auch ohne Wahl): alles bleibt.',
         tips: ['Die Prozente beziehen sich auf das Liga-Transferbudget', 'Das neue Saisonziel gilt auch für die Mitgliederversammlung'] },
+    { cat: 'Transfers', title: 'Profis verleihen', screen: 'screen-transfer',
+        text: 'Im Wechselfenster lassen sich bis zu 3 Profis bis Saisonende verleihen (Transfermarkt, Reiter Verkaufen). Der Leihverein kommt aus deiner Liga oder eine darunter und übernimmt 40-100 % des Gehalts - je stärker der Spieler im Vergleich zum Verein, desto mehr. Deinen Anteil zahlst du weiter, im Gehaltsbudget zählt er aber nicht mehr. Nach dem 34. Spieltag kommt er zurück: Moral +5, bis 23 Jahre +1 Stärke. Mindestens 16 Spieler bleiben im Kader.',
+        tips: ['Gut für teure Ergänzungsspieler, die kaum spielen', 'Schafft Platz im Gehaltsbudget für einen Neuzugang'] },
     { cat: 'Spieler', title: 'Kaderplanung & Kadergröße', screen: 'screen-squad-planning',
         text: 'Die Kaderplanung zeigt die Gehälter der nächsten Saison (auslaufende Verträge, Verlängerungskosten, Vorverträge gegen das voraussichtliche Budget), Vorvertrags-Angebote anderer Vereine und die Positionen mit zu wenig Tiefe, zu hohem Alter oder vielen auslaufenden Verträgen. Unter 20 Spielern kommt die Stammelf kaum zu Pausen - im Langzeittest sank ihre Fitness auf rund 88 %, das kostet etwa 4 Punkte Spielstärke. Blieben nach Vertragsende weniger als 14 Spieler, stellt der Vorstand eine schwache Notbesetzung.',
         tips: ['20-24 Spieler sind ein guter Rahmen', 'Talente ab 17 und Vereinslose füllen den Kader günstig auf'] },
