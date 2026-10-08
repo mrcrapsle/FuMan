@@ -491,7 +491,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.88', date: '08.10.2026', features: 'Phase 25.17: Gehaltspuffer für Verlängerungen, Gehaltsplanung, Leihen mit Budget, Jugend nach Liga, realistischerer Langzeit-Bot' };
+    const GAME_VERSION = { number: '3.89', date: '08.10.2026', features: 'Phase 25.18: Aufstiegsschub, Talentverkauf, Transferstrategie, Akademie bis Stufe 5, Gehaltsbudget ohne Ratsche' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -11272,7 +11272,10 @@ function initOneHand() {
         let heroCrest = document.getElementById('dash-hero-crest');
         if (heroCrest && game.clubCrestAnimal) heroCrest.innerText = game.clubCrestAnimal;
         if (typeof applyStadiumVisualTier === 'function') applyStadiumVisualTier('.dashboard-hero-bowl-wrapper');
-        document.getElementById('dash-transfer-budget').innerText = formatVal(game.transferBudget);
+        // Ablösen müssen Budget UND Kasse decken (finalizePlayerPurchase) - in der Bundesliga ist meist
+        // die Kasse knapper (Langzeittest 25.18: 25-97 Mio. € Budget bei 10-50 Mio. € auf dem Konto).
+        document.getElementById('dash-transfer-budget').innerText = formatVal(game.transferBudget)
+            + (game.money < game.transferBudget ? ` (Kasse ${formatVal(Math.max(0, game.money))})` : '');
         document.getElementById('dash-wage-budget').innerText = formatVal(game.wageBudget) + " / SpT";
         document.getElementById('dash-holding-cap').innerText = formatVal(holdingCompany.money);
 
@@ -23693,20 +23696,24 @@ function describePromotionBoost() {
 // Rivalen abgeworben werden (checkYouthPoachingAttempt). Jeden Monat (runMonthlyClubTicks)
 // prüft tickYouthOffers() die Talente ab 16: Chance je Potenzial-Stufe (YOUTH_OFFER_CHANCE),
 // höchstens YOUTH_OFFER_MAX offene Angebote in game.youthOffers, jedes gilt 4 Spieltage.
-// Ablöse = Marktwert auf halbem Weg zum Potenzial (die Scouts der anderen kennen es) × 0,9-1,3.
+// Ablöse = Marktwert der heutigen Stärke × (1 + Potenzial-Luft / 20) × 0,8-1,2, höchstens 30 % des
+// Marktwerts am Potenzial (die Scouts der anderen kennen es). Der erste Entwurf (Marktwert auf halbem
+// Weg zum Potenzial) brachte dem Bundesliga-Bot bis zu 43 Mio. € pro Saison - für 500.000-€-Sichtungen.
 //   annehmen          volle Ablöse, 85 % davon ins Transferbudget (wie bei Profi-Verkäufen)
-//   mit Beteiligung   25 % weniger jetzt, dafür 25 % vom späteren Weiterverkauf
-//                     (game.sellOnClauses mit resaleValue = Marktwert am Potenzial)
+//   mit Beteiligung   20 % weniger jetzt, dafür 20 % vom späteren Weiterverkauf
+//                     (game.sellOnClauses mit resaleValue = Marktwert auf halbem Weg zum Potenzial)
 //   ablehnen          das Talent bleibt; ein Top-Talent (Stufe 3) freut sich (Entwicklung +1)
 
 const YOUTH_OFFER_CHANCE = { 1: 0.015, 2: 0.05, 3: 0.12 };
 const YOUTH_OFFER_MAX = 2;
 const YOUTH_OFFER_DAYS = 4;
-const YOUTH_SELLON_PERCENT = 25;
+const YOUTH_SELLON_PERCENT = 20;
 
 function getYouthOfferAmount(p) {
-    const ziel = Math.round((p.strength + (p.potential || p.strength)) / 2);
-    return Math.max(5000, Math.round(calculatePlayerMarketValue(ziel) * (0.9 + Math.random() * 0.4) / 1000) * 1000);
+    const luft = Math.max(0, (p.potential || p.strength) - p.strength);
+    const wert = calculatePlayerMarketValue(p.strength) * (1 + luft / 20) * (0.8 + Math.random() * 0.4);
+    const deckel = calculatePlayerMarketValue(p.potential || p.strength) * 0.3;
+    return Math.max(5000, Math.round(Math.min(wert, deckel) / 1000) * 1000);
 }
 
 function pickYouthOfferClub() {
@@ -23732,7 +23739,7 @@ function tickYouthOffers() {
         if (game.youthOffers.length >= YOUTH_OFFER_MAX) break;
         if (typeof ensureYouthPotential === 'function') ensureYouthPotential(p);
         if (Math.random() >= (YOUTH_OFFER_CHANCE[p.potentialTier] || 0.015)) continue;
-        const o = { id: 'yo' + Math.random().toString(36).slice(2, 9), playerId: p.id, name: p.name, club: pickYouthOfferClub(),
+        const o = { id: `yo-${p.id}-${game.season}-${game.matchday}`, playerId: p.id, name: p.name, club: pickYouthOfferClub(),
             betrag: getYouthOfferAmount(p), season: game.season, bis: game.matchday + YOUTH_OFFER_DAYS };
         game.youthOffers.push(o);
         addInboxMessage('vertrag', `🌱 Angebot für Talent ${p.name}`, `${o.club} bietet ${formatVal(o.betrag)} für ${p.name} (${p.age} J., Stärke ${p.strength}). Das Angebot gilt bis Spieltag ${o.bis} - Jugendakademie, Reiter Talente.`, 'screen-youth');
@@ -23756,7 +23763,7 @@ function acceptYouthOffer(offerId, mitBeteiligung) {
     if (mitBeteiligung) {
         if (!Array.isArray(game.sellOnClauses)) game.sellOnClauses = [];
         game.sellOnClauses.push({ playerName: p.name, buyingClub: o.club, percent: YOUTH_SELLON_PERCENT, originalSaleValue: jetzt,
-            resaleValue: calculatePlayerMarketValue(p.potential || p.strength) });
+            resaleValue: calculatePlayerMarketValue(Math.round((p.strength + (p.potential || p.strength)) / 2)) });
     }
     removeYouthTalentById(p.id);
     if (typeof addYouthMoment === 'function') addYouthMoment('💶', `${p.name} wechselt für ${formatVal(jetzt)} zu ${o.club}${mitBeteiligung ? ` (+${YOUTH_SELLON_PERCENT} % Weiterverkauf)` : ''}`);
@@ -28187,10 +28194,10 @@ function getCashSurplusBudgetShare() {
     };
 }
 
-// Laufende Verträge kann der Vorstand nicht kürzen: nach einer Saison ohne Verlust bleibt das
-// Gehaltsbudget 5 % über der aktuellen Gehaltssumme plus den Erhöhungen der anstehenden
-// Verlängerungen (getRenewalWageBuffer, 25.17); nach einer Verlustsaison (game.ffpSeasonNet,
-// außer das Konto trägt eine ganze Saison) eingefroren, mit Minus auf dem Konto 95 % (25.18).
+// Laufende Verträge kann der Vorstand nicht kürzen: das Gehaltsbudget deckt die aktuelle
+// Gehaltssumme plus die Erhöhungen der anstehenden Verlängerungen (getRenewalWageBuffer, 25.17),
+// +5 % nur nach einer Saison ohne Verlust (game.ffpSeasonNet, außer das Konto trägt eine ganze
+// Saison) und unter dem 1,5-fachen Liga-Gehaltsbudget; mit Minus auf dem Konto 95 % (25.18).
 // Vorher setzte die Liga/Platz-Formel einen Bundesliga-Elften auf 1,26 Mio. bei 1,5 Mio.
 // Gehältern: jede Verlängerung scheiterte, der Kader lief ablösefrei davon (Langzeittest 21.6).
 // Abstiegsklausel (25.14): seit das Gehaltsbudget der Liga folgt (2. Liga 520.000 € statt
@@ -28212,23 +28219,25 @@ function applyRelegationWageClause() {
     return nachher;
 }
 
+const WAGE_FLOOR_GROWTH_CAP = 1.5;
 function getWageBudgetFloor() {
     const summe = squad.reduce((s, p) => s + (p.wage || 0), 0)
         + (game.secondTeam && game.secondTeam.isActive ? secondTeamSquad.reduce((s, p) => s + (p.wage || 0), 0) : 0);
     // 25.17: vorher galt die Untergrenze nur, wenn die Kasse eine Viertelsaison Gehälter deckte
     // (Bundesliga ~15 Mio. €) - sonst fiel das Budget auf den Ligawert unter die laufenden
     // Gehälter und im Langzeittest scheiterte jede einzelne Verlängerung (Notkader).
-    // 25.18: seit Verlängerungen nur gegen die Gehälter der Bleibenden geprüft werden
-    // (contractWageTotalWith), darf die Untergrenze streng sein - vorher wuchs sie mit +5 % und den
-    // Erhöhungen Saison für Saison mit (Bundesliga-Bot: 1,6 → 2,8 Mio. €/Spieltag), bis der Verein
-    // 27 Mio. € Verlust schrieb, ins Minus rutschte und ohne Untergrenze in den Notkader fiel.
+    // 25.18: vorher wuchs die Untergrenze jede Saison um +5 % plus die Erhöhungen (Bundesliga-Bot:
+    // 1,6 → 2,8 Mio. €/Spieltag), bis der Verein 27 Mio. € Verlust schrieb, ins Minus rutschte und
+    // ohne Untergrenze in den Notkader fiel. Ganz einfrieren half nicht: lief der halbe Kader aus,
+    // reichte das Budget nur für ein Drittel der Verlängerungen (wieder Notkader).
     //   Konto im Minus:   95 % der laufenden Gehälter (der Vorstand verlangt Einsparungen)
-    //   Verlustsaison:    laufende Gehälter eingefroren, keine Erhöhungen eingeplant
-    //   sonst:            +5 % plus die anstehenden Erhöhungen (getRenewalWageBuffer)
+    //   sonst:            laufende Gehälter plus die anstehenden Erhöhungen (getRenewalWageBuffer),
+    //                     +5 % Spielraum nur ohne Verlustsaison und unter dem 1,5-fachen Ligabudget
     if (game.money < 0) return Math.ceil(summe * 0.95 / 1000) * 1000;
     const ohneVerlust = (game.ffpSeasonNet || 0) >= 0 || game.money >= summe * 34;
-    if (!ohneVerlust) return Math.ceil(summe / 1000) * 1000;
-    return Math.ceil((summe * 1.05 + getRenewalWageBuffer()) / 1000) * 1000;
+    const deckel = getLeagueWageBudget(game.leagueLevel) * WAGE_FLOOR_GROWTH_CAP;
+    const spielraum = ohneVerlust && summe < deckel ? summe * 0.05 : 0;
+    return Math.ceil((summe + spielraum + getRenewalWageBuffer()) / 1000) * 1000;
 }
 
 // Verlängerungspuffer (25.17): der Vorstand plant die Gehaltserhöhungen der Spieler ein, deren
@@ -29708,7 +29717,7 @@ const LEXICON_ENTRIES = [
         text: 'Schwankt von Spiel zu Spiel um den Wert 50 und verändert die effektive Stärke leicht - gute Tage und schlechte Tage.',
         tips: ['„Trainer stellt Top-Elf auf“ berücksichtigt Tagesform und Fitness'] },
     { cat: 'Spieler', title: 'Potenzial (Jugend)', screen: 'screen-youth',
-        text: 'Obergrenze, bis zu der sich ein Talent entwickeln kann. Ungeprüft unbekannt; die Potenzial-Prüfung (3.000 €) zeigt eine Spanne. Talente richten sich nach der eigenen Liga: gesichtet starten sie 14-24 Punkte unter dem Liga-Schnitt (Akademie +3, Internat +2 je Stufe); das Potenzial liegt je nach Stufe unter dem Liga-Schnitt (Ergänzungsspieler), auf Stammspieler-Niveau oder bis 10 Punkte darüber. Die Sichtung kostet 2 % des Transferbudgets der Liga (mind. 2.000 €).',
+        text: 'Obergrenze, bis zu der sich ein Talent entwickeln kann. Ungeprüft unbekannt; die Potenzial-Prüfung (3.000 €) zeigt eine Spanne. Talente richten sich nach der eigenen Liga: gesichtet starten sie 14-24 Punkte unter dem Liga-Schnitt (Akademie +2 je Stufe bis Stufe 5, Internat +2 je Stufe; jede Akademie-Stufe ab 2 hebt auch die Chance auf ein Top-Talent um 4 %); das Potenzial liegt je nach Stufe unter dem Liga-Schnitt (Ergänzungsspieler), auf Stammspieler-Niveau oder bis 10 Punkte darüber. Die Sichtung kostet 2 % des Transferbudgets der Liga (mind. 2.000 €).',
         tips: ['Leihe zur Entwicklung bringt mit Stammplatz mehr als die Akademie allein', 'Mentor und Jugendtrainer beschleunigen die Entwicklung', 'Mit 19 ist eine Profivertrag-Entscheidung fällig'] },
     { cat: 'Spieler', title: 'Marktwert', screen: 'screen-transfer',
         text: 'Richtwert für Ablösen. Steigt mit der Stärke, mit Länderspielen, Turniererfolgen und Auszeichnungen.',
@@ -29755,6 +29764,12 @@ const LEXICON_ENTRIES = [
     { cat: 'Verein', title: 'Mitgliederversammlung', screen: 'screen-dashboard',
         text: 'Nach jeder Saison wollen die Mitglieder deinen Bericht: Platz gegen Erwartung, Aufstieg/Abstieg und Kasse ergeben die Grundstimmung. Rede und Beitragsantrag wählst du im Dashboard. Ab 70 % Zustimmung Vorstand +10, ab 50 % (entlastet) +5, darunter -10. Bereitest du sie nicht innerhalb von 6 Spieltagen vor, findet sie ohne dich statt (-5 % Zustimmung).',
         tips: ['Selbstkritisch hilft nach einer schwachen Saison, visionär nach einer guten', 'Zahlen sprechen lassen lohnt nur mit Gewinn', 'Beitrag senken kostet Geld, bringt aber Zustimmung und Fans'] },
+    { cat: 'Verein', title: 'Transferstrategie', screen: 'screen-dashboard',
+        text: 'Bis Spieltag 3 legst du mit dem Vorstand eine Linie für die Saison fest. Jugend fördern: Transferbudget -30 %, Saisonziel 1 Platz leichter, Sichtung zum halben Preis - am Saisonende mindestens 2 Eigengewächse mit 10+ Ligaspielen: Vorstand +6 und Fans +3, sonst -6. Sofort-Erfolg: +40 % Transferbudget, Ziel 2 Plätze höher - erreicht +5, verfehlt -8. Sparen: -50 % Transferbudget, Ziel 2 Plätze leichter - Saison ohne Verlust +5, sonst -6. Ausgewogen (auch ohne Wahl): alles bleibt.',
+        tips: ['Die Prozente beziehen sich auf das Liga-Transferbudget', 'Das neue Saisonziel gilt auch für die Mitgliederversammlung'] },
+    { cat: 'Spieler', title: 'Talente verkaufen', screen: 'screen-youth',
+        text: 'Andere Vereine bieten für Akademie-Talente ab 16 Jahren - je höher das Potenzial, desto öfter und desto mehr (Marktwert der heutigen Stärke plus Aufschlag für das Potenzial, höchstens 30 % des Werts am Potenzial). Höchstens 2 Angebote gleichzeitig, jedes gilt 4 Spieltage. Verkaufen bringt die volle Ablöse (85 % davon ins Transferbudget), mit Beteiligung gibt es 20 % weniger sofort, dafür 20 % vom späteren Weiterverkauf. Lehnst du für ein Top-Talent ab, legt es im Training noch eine Schippe drauf (+1).',
+        tips: ['Wer das Potenzial nicht kennt: hohe Angebote verraten viel', 'Talente, die es nicht in die eigene Elf schaffen, bringen so trotzdem Geld'] },
     { cat: 'Verein', title: 'Wintergespräch mit dem Vorstand', screen: 'screen-dashboard',
         text: 'In der Winterpause (Spieltag 18-20) zieht der Vorstand Zwischenbilanz: Tabellenplatz gegen die Erwartung und Kassenentwicklung. Du wählst einen Weg: Ziel hoch (2 Plätze, Vorstand +5 und sofort Winterbudget - am Saisonende erreicht +5, verfehlt -10), Ziel runter (2 Plätze, Vorstand -4, die Saison und die Mitgliederversammlung messen am leichteren Ziel), Winterbudget beantragen (Chance aus Zwischenbilanz und Vorstandslaune, Absage -3) oder Kurs bestätigen (+2). Wer bis Spieltag 20 nicht kommt, verpasst das Gespräch (-2).',
         tips: ['Läuft es besser als erwartet, ist das Budget leichter zu bekommen', 'Ein höheres Ziel lohnt nur, wenn du es wirklich erreichen kannst'] },
@@ -29784,7 +29799,7 @@ const LEXICON_ENTRIES = [
         tips: ['Ein Aufstieg in die Bundesliga bringt viel mehr TV-Geld, aber auch diese Fixkosten', 'Die Finanz-Prognose zeigt den Monatsanteil'] },
     { cat: 'Finanzen', title: 'Gehaltsbudget', screen: 'screen-finances',
         text: 'Höchstsumme aller Spielergehälter pro Spieltag. Neue Verträge über dem Budget sind nicht möglich. Der Vorstand richtet es nach der Liga aus: Bundesliga 1,575 Mio. €, 2. Liga 520.000 €, 3. Liga 110.000 €, 4. Liga 36.000 €, 5. Liga 11.000 €, 6. Liga 8.000 € - zum Saisonstart mit Platz 1-4 × 1,3, ab Platz 11 × 0,8.',
-        tips: ['Verkäufe und auslaufende Verträge schaffen Luft', 'Im Gehaltsgespräch einmal nachverhandeln', 'Zum Saisonstart liegt es mindestens 5 % über den laufenden Gehältern plus den Gehaltserhöhungen der Verträge, die in der neuen Saison auslaufen - nach einer Verlustsaison eingefroren, mit Minus auf dem Konto bei 95 % der Gehälter', 'Bei einer Verlängerung zählen nur die Gehälter der Spieler, die danach noch da sind - wer ohnehin geht, schafft Luft'] },
+        tips: ['Verkäufe und auslaufende Verträge schaffen Luft', 'Im Gehaltsgespräch einmal nachverhandeln', 'Zum Saisonstart deckt es mindestens die laufenden Gehälter plus die Gehaltserhöhungen der Verträge, die in der neuen Saison auslaufen - dazu 5 % Spielraum, solange die Vorsaison ohne Verlust war und die Gehälter unter dem 1,5-fachen Ligawert liegen; mit Minus auf dem Konto nur 95 % der Gehälter', 'Bei einer Verlängerung zählen nur die Gehälter der Spieler, die danach noch da sind - wer ohnehin geht, schafft Luft'] },
     { cat: 'Finanzen', title: 'Transferbudget', screen: 'screen-finances',
         text: 'Wie viel Ablöse der Vorstand pro Saison freigibt. Unabhängig vom Kontostand: beides muss reichen. Grundbetrag nach Liga: Bundesliga 25 Mio. €, 2. Liga 3 Mio. €, 3. Liga 900.000 €, 4. Liga 250.000 €, 5. Liga 60.000 €, 6. Liga 40.000 € - zum Saisonstart mit Platz 1-4 × 1,3, ab Platz 11 × 0,8.',
         tips: ['Verkäufe erhöhen es', 'Mit dem Vorstand lässt sich nachverhandeln', 'Zum Saisonstart gibt der Vorstand 40 % der Rücklagen über einer Reserve (halbe Saison Gehaltsbudget) zusätzlich frei, 10 % davon gehen ins Gehaltsbudget'] },
