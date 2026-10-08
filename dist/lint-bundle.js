@@ -491,7 +491,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.87', date: '08.10.2026', features: 'Phase 25.16: Marktwertkurve stetig, Winterbudget anteilig, Pleite-Szenario neu justiert' };
+    const GAME_VERSION = { number: '3.88', date: '08.10.2026', features: 'Phase 25.17: Gehaltspuffer für Verlängerungen, Gehaltsplanung, Leihen mit Budget, Jugend nach Liga, realistischerer Langzeit-Bot' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -3869,7 +3869,45 @@ function cleanupLegacyDevelopmentState() {
         box.innerHTML = warnings || '<div class="box" style="font-size:9px; color:var(--primary);">✓ Keine Position zeigt aktuell eine kombinierte Schwäche für die kommenden Saisons.</div>';
     }
 
+    // GEHALTSPLANUNG NÄCHSTE SAISON (25.17): seit das Gehaltsbudget der Liga folgt, scheitern
+    // Verlängerungen schnell am Budget - hier steht vorab, was nach der Saison frei wird, was die
+    // auslaufenden Stammspieler kosten und wie viel Luft das voraussichtliche Budget lässt.
+    function getSquadPlanningWageOutlook() {
+        const auslaufend = squad.filter(p => (p.contracts || 0) <= 1);
+        const elf = pickBestLineupIds();
+        const stamm = auslaufend.filter(p => elf.includes(p.id));
+        const verlaengerung = stamm.reduce((s, p) => s + (typeof getContractDemand === 'function' ? getContractDemand(p).gehalt : p.wage), 0);
+        const bleiben = squad.filter(p => (p.contracts || 0) > 1).reduce((s, p) => s + p.wage, 0);
+        const vorvertraege = (game.preContracts || []).reduce((s, v) => s + v.player.wage, 0);
+        const rang = typeof getOwnLeagueRank === 'function' ? getOwnLeagueRank() : null;
+        const platzFaktor = !rang ? 1 : (rang <= 4 ? 1.3 : (rang <= 10 ? 1.0 : 0.8));
+        const budget = Math.max(Math.round(getLeagueWageBudget(game.leagueLevel) * platzFaktor / 100) * 100,
+            typeof getWageBudgetFloor === 'function' ? getWageBudgetFloor() : 0);
+        const bedarf = bleiben + vorvertraege + verlaengerung;
+        return { jetzt: squad.reduce((s, p) => s + p.wage, 0), auslaufend, frei: auslaufend.reduce((s, p) => s + p.wage, 0), stamm, verlaengerung, vorvertraege, bleiben, bedarf, budget, rang, spielraum: budget - bedarf };
+    }
+
+    function renderSquadPlanningWageBox() {
+        let box = document.getElementById('squad-planning-wage-box');
+        if (!box) return;
+        if (squad.length === 0) { box.innerHTML = ''; return; }
+        const o = getSquadPlanningWageOutlook();
+        const farbe = o.spielraum >= 0 ? 'var(--primary)' : 'var(--danger)';
+        const zeile = (label, wert, extra) => `<div style="display:flex; justify-content:space-between; gap:6px;"><span style="color:var(--text-muted);">${label}</span><strong${extra || ''}>${wert}</strong></div>`;
+        box.innerHTML = `<div class="box" style="font-size:9px; border-left-color:${farbe};">
+            ${zeile('Gehälter jetzt (pro Spieltag)', `${formatVal(o.jetzt)} / Budget ${formatVal(game.wageBudget)}`)}
+            ${zeile(`Laufen aus (${o.auslaufend.length} Spieler)`, `− ${formatVal(o.frei)}`)}
+            ${zeile(`Stammspieler darunter verlängern (${o.stamm.length})`, `+ ${formatVal(o.verlaengerung)}`)}
+            ${o.vorvertraege ? zeile('Vorverträge', `+ ${formatVal(o.vorvertraege)}`) : ''}
+            ${zeile('Bedarf nächste Saison', formatVal(o.bedarf))}
+            ${zeile(`Voraussichtliches Budget${o.rang ? ` (Stand Platz ${o.rang})` : ''}`, formatVal(o.budget))}
+            <div style="margin-top:4px; font-weight:800; color:${farbe};">${o.spielraum >= 0 ? `✓ Spielraum ${formatVal(o.spielraum)} pro Spieltag` : `⚠️ ${formatVal(-o.spielraum)} pro Spieltag über dem Budget - Verlängerungen werden scheitern`}</div>
+            ${o.stamm.length ? `<div style="margin-top:3px; color:var(--text-muted);">Auslaufende Stammspieler: ${o.stamm.map(p => p.name).join(', ')}</div>` : ''}
+        </div>`;
+    }
+
     function renderSquadPlanningView() {
+        renderSquadPlanningWageBox();
         renderSquadPlanningPositionBox();
         renderSquadPlanningAgeBox();
         renderSquadPlanningContractBox();
@@ -7402,8 +7440,14 @@ function renderTransferPokerBox() {
         if (!p) return;
         if (game.money < p.loanFee) { showToast(`Leihgebühr nicht gedeckt: ${formatVal(p.loanFee)} nötig, ${formatVal(game.money)} auf dem Konto.`, 'error', 4500); return; }
         if (squad.length >= 22) { showToast('Kader bereits voll (22 Spieler)!', 'error'); return; }
+        // Leihen laufen über dieselben Budgets wie Käufe (25.17) - vorher nur über die Kasse, eine
+        // Leihe umging so jedes Gehalts- und Transferbudget.
+        if (game.transferBudget < p.loanFee) { showToast(`Transferbudget reicht nicht für die Leihgebühr: ${formatVal(p.loanFee)} nötig, ${formatVal(game.transferBudget)} verfügbar.`, 'error', 4500); return; }
+        let lohnsumme = squad.reduce((s, pl) => s + pl.wage, 0) + (game.secondTeam && game.secondTeam.isActive ? secondTeamSquad.reduce((s, pl) => s + pl.wage, 0) : 0);
+        if (lohnsumme + p.wage > game.wageBudget) { showToast(`Gehaltsbudget reicht nicht: ${formatVal(lohnsumme + p.wage)} mit dem Leihspieler, erlaubt sind ${formatVal(game.wageBudget)}.`, 'error', 5000); return; }
         playSound('whistle');
         game.money -= p.loanFee;
+        game.transferBudget -= p.loanFee;
         p.contracts = 1;
         squad.push(p);
         incomingLoans.push({ playerId: p.id, parentClub: p.loanParentClub, matchdaysLeft: p.loanDurationMatchdays, buyOptionFee: p.loanBuyOptionFee });
@@ -18595,6 +18639,8 @@ function renderStadiumEventsPanel() {
     function renderYouthView() {
         renderYouthLeagueTable();
         document.getElementById('youth-lvl-disp').innerText = game.youthAcademyLvl;
+        let scoutBtn = document.getElementById('btn-scout-youth');
+        if (scoutBtn) scoutBtn.innerText = `🌟 Nachwuchs sichten [${formatVal(getYouthScoutCost())}]`;
         let list = document.getElementById('youth-talents-list');
         list.innerHTML = '';
         let capacity = getYouthAcademyCapacity();
@@ -18933,16 +18979,31 @@ function renderStadiumEventsPanel() {
         updateUI();
     }
 
+    // Talente richten sich nach der eigenen Liga (25.17): vorher immer Stärke 46-58 - in der 6. Liga
+    // (Kader-Median ~35) war ein 8.000-€-Talent besser als der ganze Kader, in der Bundesliga
+    // (Median ~84) nutzlos. Jetzt 4-14 Punkte unter dem Liga-Schnitt, Kosten 2 % des Transferbudgets.
+    function getYouthLeagueBase() {
+        const teams = (leaguesData[game.leagueLevel] || []).filter(t => t.name !== game.clubName);
+        return teams.length ? Math.round(teams.reduce((s, t) => s + t.strength, 0) / teams.length) : 40;
+    }
+    function getYouthScoutCost() {
+        return Math.max(2000, Math.round(getLeagueTransferBudget(game.leagueLevel) * 0.02 / 500) * 500);
+    }
+
     function scoutYouthTalent() {
         if (youthTalents.length >= getYouthAcademyCapacity()) { showToast('Jugendkader-Kapazität erreicht! Erst ausbauen oder Plätze freimachen.', 'error'); return; }
-        if (game.money < 8000) { showToast(`Nicht genug Geld! Benötigt: ${formatVal(8000)}`, 'error'); return; }
+        const kosten = getYouthScoutCost();
+        if (game.money < kosten) { showToast(`Nicht genug Geld! Benötigt: ${formatVal(kosten)}`, 'error'); return; }
         playSound('click');
-        game.money -= 8000;
+        game.money -= kosten;
         // Bugfix: das Jugendinternat bewarb "erhöht Stärke und Potenzial neuer
         // Nachwuchsspieler", wirkte sich aber bisher NUR auf eine DFB-Lizenz-Anforderung aus -
         // die eigentliche Stärke-/Potenzial-Verbesserung war nie verkabelt.
         let internatLvl = campusBuildings.internat?.lvl || 0;
-        let p = createPlayer(["TW", "ABW", "MIT", "ST"][Math.floor(Math.random()*4)], 46 + game.youthAcademyLvl * 3 + internatLvl * 2, 58 + game.youthAcademyLvl * 3 + internatLvl * 2, null, [15, 18]);
+        let basis = getYouthLeagueBase();
+        let bonus = game.youthAcademyLvl * 3 + internatLvl * 2;
+        let p = createPlayer(["TW", "ABW", "MIT", "ST"][Math.floor(Math.random()*4)], Math.max(20, basis - 24 + bonus), Math.max(24, basis - 14 + bonus), null, [15, 18]);
+        p.youthLeagueBase = basis;
         assignYouthPotentialTier(p);
         if (typeof ensureYouthPotential === 'function') ensureYouthPotential(p);
         p.youthFocus = 'allgemein';
@@ -19256,6 +19317,9 @@ function renderYouthDevelopmentChart() {
 //   erste Elf des Spieltags eigener Absolventen landen in game.youthMoments.
 
 const YOUTH_POTENTIAL_RANGE = { 1: [58, 68], 2: [67, 78], 3: [77, 89] };
+// Potenzial relativ zum Liga-Schnitt beim Sichten (p.youthLeagueBase, 25.17): Stufe 1 Ergänzungsspieler
+// unter dem Schnitt, Stufe 2 Stammspieler-Niveau, Stufe 3 klar darüber. Ältere Talente ohne Basis nutzen die festen Spannen.
+const YOUTH_POTENTIAL_OFFSET = { 1: [-10, -3], 2: [-3, 4], 3: [4, 10] };
 const YOUTH_PRO_AGE = 19;
 const YOUTH_DECISION_MATCHDAYS = 8;
 let youthLoanChoiceId = null;
@@ -19264,8 +19328,12 @@ function ensureYouthPotential(p) {
     if (!p) return p;
     if (!p.potentialTier && typeof assignYouthPotentialTier === 'function') assignYouthPotentialTier(p);
     if (typeof p.potential !== 'number') {
-        const [lo, hi] = YOUTH_POTENTIAL_RANGE[p.potentialTier] || [60, 72];
-        p.potential = Math.max(p.strength + 4, lo + Math.floor(Math.random() * (hi - lo + 1)));
+        let [lo, hi] = YOUTH_POTENTIAL_RANGE[p.potentialTier] || [60, 72];
+        if (typeof p.youthLeagueBase === 'number') {
+            const [a, b] = YOUTH_POTENTIAL_OFFSET[p.potentialTier] || [0, 6];
+            lo = p.youthLeagueBase + a; hi = p.youthLeagueBase + b;
+        }
+        p.potential = Math.min(95, Math.max(p.strength + 4, lo + Math.floor(Math.random() * (hi - lo + 1))));
     }
     if (typeof p.youthSeasonStart !== 'number') p.youthSeasonStart = p.strength;
     return p;
@@ -27771,9 +27839,10 @@ function getCashSurplusBudgetShare() {
     };
 }
 
-// Laufende Verträge kann der Vorstand nicht kürzen: deckt das Konto eine Viertelsaison der
-// aktuellen Gehaltssumme, bleibt das Gehaltsbudget 5 % darüber - nach einer Saison mit Minus
-// (game.ffpSeasonNet, außer das Konto trägt eine ganze Saison) bei 85 % als Sparkurs.
+// Laufende Verträge kann der Vorstand nicht kürzen: solange das Konto im Plus ist, bleibt das
+// Gehaltsbudget 5 % über der aktuellen Gehaltssumme - nach einer Saison mit Minus
+// (game.ffpSeasonNet, außer das Konto trägt eine ganze Saison) ohne Zuschlag, jeweils plus
+// den Erhöhungen der anstehenden Verlängerungen (getRenewalWageBuffer, 25.17).
 // Vorher setzte die Liga/Platz-Formel einen Bundesliga-Elften auf 1,26 Mio. bei 1,5 Mio.
 // Gehältern: jede Verlängerung scheiterte, der Kader lief ablösefrei davon (Langzeittest 21.6).
 // Abstiegsklausel (25.14): seit das Gehaltsbudget der Liga folgt (2. Liga 520.000 € statt
@@ -27798,9 +27867,26 @@ function applyRelegationWageClause() {
 function getWageBudgetFloor() {
     const summe = squad.reduce((s, p) => s + (p.wage || 0), 0)
         + (game.secondTeam && game.secondTeam.isActive ? secondTeamSquad.reduce((s, p) => s + (p.wage || 0), 0) : 0);
-    if (game.money < summe * 34 * 0.25) return 0;
+    // 25.17: vorher galt die Untergrenze nur, wenn die Kasse eine Viertelsaison Gehälter deckte
+    // (Bundesliga ~15 Mio. €) - sonst fiel das Budget auf den Ligawert unter die laufenden
+    // Gehälter und im Langzeittest scheiterte jede einzelne Verlängerung (Notkader). Jetzt nur
+    // ohne Geld auf dem Konto keine Untergrenze; nach einer Verlustsaison bleibt es bei den laufenden Gehältern.
+    if (game.money < 0) return 0;
     const ohneVerlust = (game.ffpSeasonNet || 0) >= 0 || game.money >= summe * 34;
-    return Math.ceil(summe * (ohneVerlust ? 1.05 : 0.85) / 1000) * 1000;
+    // Nach einer Verlustsaison friert der Vorstand die Gehälter ein (kein Zuschlag), die anstehenden
+    // Verlängerungen bleiben eingeplant - der alte Sparkurs (85 %) ließ keine einzige Verlängerung zu
+    // und der Kader zerfiel (Bundesliga-Langzeittest 25.17: schon ein Kauf machte die Saison zur Verlustsaison).
+    return Math.ceil((summe * (ohneVerlust ? 1.05 : 1.0) + getRenewalWageBuffer()) / 1000) * 1000;
+}
+
+// Verlängerungspuffer (25.17): der Vorstand plant die Gehaltserhöhungen der Spieler ein, deren
+// Vertrag in der neuen Saison ausläuft (hier noch 2 Jahre - das Herunterzählen folgt erst nach
+// der Budgetrechnung). Ohne ihn scheiterten im Bundesliga-Langzeittest 12 von 17 Verlängerungen
+// am Budget (laufende Gehälter +5 %), obwohl 19 Mio. € auf dem Konto lagen - Notkader.
+function getRenewalWageBuffer() {
+    if (typeof getContractDemand !== 'function') return 0;
+    return squad.filter(p => (p.contracts || 0) === 2)
+        .reduce((s, p) => s + Math.max(0, getContractDemand(p).gehalt - (p.wage || 0)), 0);
 }
 
 function applyCashSurplusBudgets() {
@@ -29267,7 +29353,7 @@ const LEXICON_ENTRIES = [
         text: 'Schwankt von Spiel zu Spiel um den Wert 50 und verändert die effektive Stärke leicht - gute Tage und schlechte Tage.',
         tips: ['„Trainer stellt Top-Elf auf“ berücksichtigt Tagesform und Fitness'] },
     { cat: 'Spieler', title: 'Potenzial (Jugend)', screen: 'screen-youth',
-        text: 'Obergrenze, bis zu der sich ein Talent entwickeln kann. Ungeprüft unbekannt; die Potenzial-Prüfung (3.000 €) zeigt eine Spanne.',
+        text: 'Obergrenze, bis zu der sich ein Talent entwickeln kann. Ungeprüft unbekannt; die Potenzial-Prüfung (3.000 €) zeigt eine Spanne. Talente richten sich nach der eigenen Liga: gesichtet starten sie 14-24 Punkte unter dem Liga-Schnitt (Akademie +3, Internat +2 je Stufe); das Potenzial liegt je nach Stufe unter dem Liga-Schnitt (Ergänzungsspieler), auf Stammspieler-Niveau oder bis 10 Punkte darüber. Die Sichtung kostet 2 % des Transferbudgets der Liga (mind. 2.000 €).',
         tips: ['Leihe zur Entwicklung bringt mit Stammplatz mehr als die Akademie allein', 'Mentor und Jugendtrainer beschleunigen die Entwicklung', 'Mit 19 ist eine Profivertrag-Entscheidung fällig'] },
     { cat: 'Spieler', title: 'Marktwert', screen: 'screen-transfer',
         text: 'Richtwert für Ablösen. Steigt mit der Stärke, mit Länderspielen, Turniererfolgen und Auszeichnungen.',
@@ -29343,7 +29429,7 @@ const LEXICON_ENTRIES = [
         tips: ['Ein Aufstieg in die Bundesliga bringt viel mehr TV-Geld, aber auch diese Fixkosten', 'Die Finanz-Prognose zeigt den Monatsanteil'] },
     { cat: 'Finanzen', title: 'Gehaltsbudget', screen: 'screen-finances',
         text: 'Höchstsumme aller Spielergehälter pro Spieltag. Neue Verträge über dem Budget sind nicht möglich. Der Vorstand richtet es nach der Liga aus: Bundesliga 1,575 Mio. €, 2. Liga 520.000 €, 3. Liga 110.000 €, 4. Liga 36.000 €, 5. Liga 11.000 €, 6. Liga 8.000 € - zum Saisonstart mit Platz 1-4 × 1,3, ab Platz 11 × 0,8.',
-        tips: ['Verkäufe und auslaufende Verträge schaffen Luft', 'Im Gehaltsgespräch einmal nachverhandeln', 'Zum Saisonstart liegt es mindestens 5 % über den laufenden Gehältern, wenn das Konto eine Viertelsaison davon deckt - nach einer Saison mit Minus bei 85 % (Sparkurs)'] },
+        tips: ['Verkäufe und auslaufende Verträge schaffen Luft', 'Im Gehaltsgespräch einmal nachverhandeln', 'Zum Saisonstart liegt es mindestens 5 % über den laufenden Gehältern plus den Gehaltserhöhungen der Verträge, die in der neuen Saison auslaufen - nach einer Verlustsaison eingefroren (ohne Zuschlag), mit Minus auf dem Konto gilt nur der Ligawert'] },
     { cat: 'Finanzen', title: 'Transferbudget', screen: 'screen-finances',
         text: 'Wie viel Ablöse der Vorstand pro Saison freigibt. Unabhängig vom Kontostand: beides muss reichen. Grundbetrag nach Liga: Bundesliga 25 Mio. €, 2. Liga 3 Mio. €, 3. Liga 900.000 €, 4. Liga 250.000 €, 5. Liga 60.000 €, 6. Liga 40.000 € - zum Saisonstart mit Platz 1-4 × 1,3, ab Platz 11 × 0,8.',
         tips: ['Verkäufe erhöhen es', 'Mit dem Vorstand lässt sich nachverhandeln', 'Zum Saisonstart gibt der Vorstand 40 % der Rücklagen über einer Reserve (halbe Saison Gehaltsbudget) zusätzlich frei, 10 % davon gehen ins Gehaltsbudget'] },
