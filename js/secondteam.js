@@ -297,6 +297,11 @@
         for (let i = loanedPlayers.length - 1; i >= 0; i--) {
             let loan = loanedPlayers[i];
             loan.duration--;
+            // Profi-Leihe (js/pro-loans.js): Eigenanteil am Gehalt, nach dem 34. Spieltag zurück in den Kader.
+            if (loan.proLoan) {
+                if (typeof tickProLoan === 'function' && tickProLoan(loan)) loanedPlayers.splice(i, 1);
+                continue;
+            }
             if (loan.youthLoan) {
                 // Leihe zur Entwicklung (youth-pathway.js): Einsätze und Fortschritt je Spieltag,
                 // am Ende zurück in die Akademie.
@@ -516,9 +521,12 @@
 
         let loanedBox = document.getElementById('loaned-players-list');
         if (loanedBox) {
-            loanedBox.innerHTML = loanedPlayers.length === 0
+            // Profi-Leihen (js/pro-loans.js) stehen im Transfer-Bildschirm - eine Rückholung hier würde
+            // sie in die zweite Mannschaft stecken.
+            loanedBox.innerHTML = loanedPlayers.filter(l => !l.proLoan).length === 0
                 ? '<div class="box" style="font-size:10px; color:#94a3b8;">Aktuell keine Spieler verliehen.</div>'
                 : loanedPlayers.map((l, idx) => {
+                    if (l.proLoan) return '';
                     return `<div class="box" style="font-size:10px; display:flex; justify-content:space-between; align-items:center;">
                         <span>📤 ${l.player.name}${l.youthLoan ? ' 🌱' : ''} bei ${l.loanClub} - noch ${l.duration} Spieltage</span>
                         <button onclick="openLoanRecallNegotiation(${idx})" class="btn-secondary" style="width:auto; font-size:9px;" title="Rückholung verhandeln">🔙 Verhandeln</button>

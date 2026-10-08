@@ -1748,6 +1748,52 @@ async function testRumors(browser) {
     await page.close();
 }
 
+async function testProLoans(browser) {
+    console.log('\n[25.20] Profis verleihen: Gehaltsanteil, raus aus dem Gehaltsbudget, Rückkehr zum Saisonende');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            game.matchday = 2;
+            while (squad.length < 20) { const n = createPlayer('MIT', 50, 55); n.contracts = 2; squad.push(n); }
+            const p = [...squad].sort((a, b) => a.strength - b.strength)[0];
+            p.age = 22; p.trainingGains = null;
+            const t = getProLoanTerms(p);
+            out.bedingungen = !!t && t.anteil >= 0.4 && t.anteil <= 1 && t.eigen === Math.round(p.wage * (1 - t.anteil) / 10) * 10;
+            showScreen('screen-transfer');
+            renderTransferView();
+            out.knopf = document.getElementById('sell-list').innerHTML.includes('Verleihen');
+            const summeVor = squad.reduce((a, x) => a + x.wage, 0);
+            loanOutProPlayer(p.id, null);
+            const l = getProLoans()[0];
+            out.verliehen = !squad.some(x => x.id === p.id) && !!l && l.duration === 33 && contractWageTotalWith(squad[0], squad[0].wage) === summeVor - p.wage;
+            // Eigenanteil je Spieltag, Rückkehr nach Ablauf mit Moral und (bis 23) +1
+            game.kontoauszug = [];
+            const staerke = p.strength, moral = p.morale || 50;
+            l.duration = 1;
+            tickLoanedPlayers();
+            out.zurueck = squad.some(x => x.id === p.id) && getProLoans().length === 0 && p.morale === Math.min(100, moral + 5) && p.strength === staerke + 1;
+            out.anteilGebucht = l.eigen === 0 || game.kontoauszug.some(b => b.label.includes('Leihspieler-Gehalt'));
+            // Außerhalb des Fensters nicht möglich
+            game.matchday = 10; game.winterWindowActive = false;
+            loanOutProPlayer(squad[0].id, null);
+            out.nurImFenster = getProLoans().length === 0;
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Profi-Leihe ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.bedingungen && r.knopf, 'Leihbedingungen: Leihverein übernimmt 40-100 % des Gehalts, Knopf in der Verkaufsliste');
+        assert(r.verliehen, 'Verliehen bis Saisonende, der Spieler zählt nicht mehr im Gehaltsbudget');
+        assert(r.zurueck && r.anteilGebucht, 'Eigenanteil wird gebucht, Rückkehr mit Moral +5 und (bis 23 Jahre) +1 Stärke');
+        assert(r.nurImFenster, 'Profis lassen sich nur im Wechselfenster verleihen');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testTrainingGrowthCaps(browser) {
     console.log('\n[25.20] Stärkezuwachs aus Training begrenzt: Einzeltraining nach Alter, Trainingslager einmal pro Saison');
     const { page, consoleErrors } = await freshPage(browser);
@@ -8601,6 +8647,7 @@ async function main() {
         testBookingLabels,
         testSponsorRenewal,
         testTrainingGrowthCaps,
+        testProLoans,
         testPlayerProfile,
         testHomeRegion,
         testLocalDerbies,

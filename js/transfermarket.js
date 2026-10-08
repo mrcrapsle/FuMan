@@ -628,10 +628,13 @@
 
         let sList = document.getElementById('sell-list');
         sList.innerHTML = '';
+        const fensterOffen = typeof isTransferWindowOpen === 'function' && isTransferWindowOpen();
+        if (typeof renderProLoansBox === 'function') renderProLoansBox();
         squad.forEach((p) => {
             let row = document.createElement('div');
             row.className = 'player-row';
-            row.innerHTML = `<span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 26) : ''}${p.name} (${p.pos}|Str:${p.strength})</span><button onclick="sellPlayer('${p.id}', this)" class="btn-danger" style="width:auto;">Blitzverkauf [${formatVal(Math.round(p.marketValue*0.80))}]</button>`;
+            const leihe = fensterOffen && typeof getProLoanTerms === 'function' ? getProLoanTerms(p) : null;
+            row.innerHTML = `<span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 26) : ''}${p.name} (${p.pos}|Str:${p.strength})</span><span style="display:flex; gap:4px;">${leihe ? `<button onclick="loanOutProPlayer('${p.id}', this)" class="btn-secondary" style="width:auto; font-size:9px;" title="Bis Saisonende an ${leihe.club}">🔁 Verleihen (${Math.round(leihe.anteil * 100)} %)</button>` : ''}<button onclick="sellPlayer('${p.id}', this)" class="btn-danger" style="width:auto;">Blitzverkauf [${formatVal(Math.round(p.marketValue*0.80))}]</button></span>`;
             sList.appendChild(row);
         });
 

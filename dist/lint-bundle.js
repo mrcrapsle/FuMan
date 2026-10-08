@@ -4261,6 +4261,11 @@ function cleanupLegacyDevelopmentState() {
         for (let i = loanedPlayers.length - 1; i >= 0; i--) {
             let loan = loanedPlayers[i];
             loan.duration--;
+            // Profi-Leihe (js/pro-loans.js): Eigenanteil am Gehalt, nach dem 34. Spieltag zurück in den Kader.
+            if (loan.proLoan) {
+                if (typeof tickProLoan === 'function' && tickProLoan(loan)) loanedPlayers.splice(i, 1);
+                continue;
+            }
             if (loan.youthLoan) {
                 // Leihe zur Entwicklung (youth-pathway.js): Einsätze und Fortschritt je Spieltag,
                 // am Ende zurück in die Akademie.
@@ -4480,9 +4485,12 @@ function cleanupLegacyDevelopmentState() {
 
         let loanedBox = document.getElementById('loaned-players-list');
         if (loanedBox) {
-            loanedBox.innerHTML = loanedPlayers.length === 0
+            // Profi-Leihen (js/pro-loans.js) stehen im Transfer-Bildschirm - eine Rückholung hier würde
+            // sie in die zweite Mannschaft stecken.
+            loanedBox.innerHTML = loanedPlayers.filter(l => !l.proLoan).length === 0
                 ? '<div class="box" style="font-size:10px; color:#94a3b8;">Aktuell keine Spieler verliehen.</div>'
                 : loanedPlayers.map((l, idx) => {
+                    if (l.proLoan) return '';
                     return `<div class="box" style="font-size:10px; display:flex; justify-content:space-between; align-items:center;">
                         <span>📤 ${l.player.name}${l.youthLoan ? ' 🌱' : ''} bei ${l.loanClub} - noch ${l.duration} Spieltage</span>
                         <button onclick="openLoanRecallNegotiation(${idx})" class="btn-secondary" style="width:auto; font-size:9px;" title="Rückholung verhandeln">🔙 Verhandeln</button>
@@ -8072,10 +8080,13 @@ function renderTransferPokerBox() {
 
         let sList = document.getElementById('sell-list');
         sList.innerHTML = '';
+        const fensterOffen = typeof isTransferWindowOpen === 'function' && isTransferWindowOpen();
+        if (typeof renderProLoansBox === 'function') renderProLoansBox();
         squad.forEach((p) => {
             let row = document.createElement('div');
             row.className = 'player-row';
-            row.innerHTML = `<span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 26) : ''}${p.name} (${p.pos}|Str:${p.strength})</span><button onclick="sellPlayer('${p.id}', this)" class="btn-danger" style="width:auto;">Blitzverkauf [${formatVal(Math.round(p.marketValue*0.80))}]</button>`;
+            const leihe = fensterOffen && typeof getProLoanTerms === 'function' ? getProLoanTerms(p) : null;
+            row.innerHTML = `<span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 26) : ''}${p.name} (${p.pos}|Str:${p.strength})</span><span style="display:flex; gap:4px;">${leihe ? `<button onclick="loanOutProPlayer('${p.id}', this)" class="btn-secondary" style="width:auto; font-size:9px;" title="Bis Saisonende an ${leihe.club}">🔁 Verleihen (${Math.round(leihe.anteil * 100)} %)</button>` : ''}<button onclick="sellPlayer('${p.id}', this)" class="btn-danger" style="width:auto;">Blitzverkauf [${formatVal(Math.round(p.marketValue*0.80))}]</button></span>`;
             sList.appendChild(row);
         });
 
@@ -24053,6 +24064,80 @@ function renderSponsorRenewalBox() {
 
 /* eslint-enable */
 /* eslint-disable no-undef */
+// Profis verleihen (Phase 25.20): bisher ließen sich nur Spieler der zweiten Mannschaft und Talente
+// verleihen - ein teurer Ergänzungsspieler blieb bis zum Verkauf auf der Gehaltsliste. Jetzt im
+// Wechselfenster (isTransferWindowOpen) bis zum Saisonende an einen KI-Verein der eigenen Liga oder
+// eine Liga darunter, bei dem er Stammspieler wäre (getProLoanTerms):
+//   Gehaltsanteil   der Leihverein zahlt 40-100 % (100 %, wenn der Spieler mindestens so stark wie
+//                   der Verein ist, je Punkt darunter 10 % weniger); den Rest zahlt der Verein weiter
+//                   ('🔁 Leihspieler-Gehalt', tickLoanedPlayers)
+//   Gehaltsbudget   der Spieler zählt nicht mehr mit (er steht nicht im Kader)
+//   Rückkehr        nach dem 34. Spieltag, Moral +5, bis 23 Jahre +1 Stärke (grantTrainingStrength)
+// Höchstens PRO_LOAN_MAX gleichzeitig, mindestens PRO_LOAN_MIN_SQUAD Spieler bleiben.
+
+const PRO_LOAN_MAX = 3;
+const PRO_LOAN_MIN_SQUAD = 16;
+
+function getProLoanTerms(p) {
+    const ligen = [game.leagueLevel, Math.min(NUM_LEAGUES - 1, game.leagueLevel + 1)];
+    const vereine = ligen.flatMap(l => leaguesData[l] || [])
+        .filter(t => t && t.name !== game.clubName && !(game.secondTeam && t.name === game.secondTeam.name));
+    if (!vereine.length) return null;
+    const passend = vereine.filter(t => t.strength <= p.strength + 2).sort((a, b) => b.strength - a.strength);
+    const club = passend[0] || [...vereine].sort((a, b) => a.strength - b.strength)[0];
+    const anteil = Math.max(0.4, Math.min(1, 1 - (club.strength - p.strength) * 0.1));
+    return { club: club.name, anteil: Math.round(anteil * 100) / 100, eigen: Math.round((p.wage || 0) * (1 - anteil) / 10) * 10 };
+}
+
+function getProLoans() {
+    return (loanedPlayers || []).filter(l => l.proLoan);
+}
+
+function loanOutProPlayer(id, btn) {
+    const p = squad.find(x => x.id === id);
+    if (!p) return;
+    if (typeof isTransferWindowOpen === 'function' && !isTransferWindowOpen()) { showToast('Profis lassen sich nur im Wechselfenster verleihen (Spieltag 1-3 und 18-20).', 'error', 4500); return; }
+    if (squad.length <= PRO_LOAN_MIN_SQUAD) { showToast(`Mindestens ${PRO_LOAN_MIN_SQUAD} Spieler müssen im Kader bleiben.`, 'error'); return; }
+    if (getProLoans().length >= PRO_LOAN_MAX) { showToast(`Höchstens ${PRO_LOAN_MAX} Profis gleichzeitig verliehen.`, 'error'); return; }
+    if ((incomingLoans || []).some(l => l.playerId === p.id)) { showToast(`${p.name} ist selbst nur ausgeliehen.`, 'error'); return; }
+    const t = getProLoanTerms(p);
+    if (!t) { showToast('Kein Leihverein gefunden.', 'error'); return; }
+    if (!requireConfirm(btn, `Bis Saisonende verleihen? Eigenanteil ${formatVal(t.eigen)}/SpT`)) return;
+    playSound('click');
+    squad = squad.filter(x => x.id !== p.id);
+    lineup = lineup.filter(x => x !== p.id);
+    if (lineup.length < 11 && typeof autoLineup === 'function') autoLineup();
+    loanedPlayers.push({ player: p, loanClub: t.club, duration: Math.max(1, 35 - game.matchday), originalStrength: p.strength, proLoan: true, anteil: t.anteil, eigen: t.eigen });
+    addInboxMessage('vertrag', `🔁 ${p.name} an ${t.club} verliehen`, `${p.name} spielt bis Saisonende bei ${t.club}. Der Leihverein zahlt ${Math.round(t.anteil * 100)} % seines Gehalts, dein Anteil: ${formatVal(t.eigen)} pro Spieltag. Im Gehaltsbudget zählt er nicht mehr.`, 'screen-transfer');
+    showToast(`🔁 ${p.name} bis Saisonende an ${t.club} verliehen (${Math.round(t.anteil * 100)} % Gehalt übernimmt der Leihverein).`, 'success', 5000);
+    if (typeof renderTransferView === 'function') renderTransferView();
+    updateUI();
+}
+
+// Aus tickLoanedPlayers() für jede Profi-Leihe: Eigenanteil buchen, nach dem 34. Spieltag zurück.
+function tickProLoan(loan) {
+    if (loan.eigen > 0 && typeof bucheMitLabel === 'function') bucheMitLabel('🔁 Leihspieler-Gehalt', -loan.eigen);
+    if (loan.duration > 0) return false;
+    const p = loan.player;
+    squad.push(p);
+    p.morale = Math.min(100, (p.morale || 50) + 5);
+    let plus = 0;
+    if ((p.age || 25) <= 23 && typeof grantTrainingStrength === 'function' && grantTrainingStrength(p)) plus = 1;
+    addInboxMessage('vertrag', `📥 ${p.name} von ${loan.loanClub} zurück`, `${p.name} kehrt nach der Leihe mit Spielpraxis zurück (Moral +5${plus ? ', Stärke +1' : ''}).`, 'screen-squad');
+    return true;
+}
+
+function renderProLoansBox() {
+    const box = document.getElementById('pro-loans-box');
+    if (!box) return;
+    const leihen = getProLoans();
+    const fenster = typeof isTransferWindowOpen === 'function' && isTransferWindowOpen();
+    if (!leihen.length) { box.innerHTML = fenster ? `<div class="box" style="font-size:9px; color:var(--text-muted);">🔁 Profis verleihen: bis Saisonende an einen Verein, bei dem sie spielen - der Leihverein übernimmt 40-100 % des Gehalts. Knopf in der Liste unten.</div>` : ''; return; }
+    box.innerHTML = `<div class="box" style="font-size:9px;"><strong>🔁 Verliehene Profis</strong>${leihen.map(l => `<div>${l.player.name} bei ${l.loanClub} - noch ${l.duration} Spieltage, Eigenanteil ${formatVal(l.eigen)}/SpT</div>`).join('')}</div>`;
+}
+
+/* eslint-enable */
+/* eslint-disable no-undef */
 // Spieler-Karriereprofil (Phase 22.10): im Spieler-Popup statt der kurzen Karrierezeile ein
 // echtes Profil - wie und woher er kam (p.joined: Saison, Weg, abgebender Verein, Ablöse),
 // Saison für Saison Spiele/Tore/Vorlagen/Note/Elf des Spieltags (p.strengthHistory plus die
@@ -29996,6 +30081,9 @@ const LEXICON_ENTRIES = [
     { cat: 'Spieler', title: 'Verletzungen', screen: 'screen-squad',
         text: 'Nach jedem Spiel wird für die Eingesetzten gewürfelt. Das Risiko steigt mit harter Trainingsintensität (bis +25 %), dem Alter (ab 32 +20 %, ab 35 +40 %) und früheren Verletzungen; junge Spieler sind robuster.',
         tips: ['Lockeres Training und Erholung senken das Risiko', 'Physiotherapeut (halbe Ausfallzeit) und Reha-Zentrum verkürzen Ausfälle', 'Länderspielreisen bringen ein zusätzliches Risiko'] },
+    { cat: 'Spieler', title: 'Einzeltraining & Trainingslager', screen: 'screen-training',
+        text: 'Ein Trainingsschwerpunkt (Torschuss, Passspiel, Zweikampf, Tempo) hebt den passenden Einzelwert und manchmal die Gesamtstärke - aber höchstens um 3 Punkte pro Saison bis 21 Jahre, 2 bis 25, 1 bis 29 und gar nicht mehr ab 30. Dasselbe gilt für die Trainings-Minispiele. Ein Trainingslager gibt es einmal pro Saison (Kosten nach Liga): volle Fitness, beim Algarve- und Dubai-Lager volle Moral, und für einige Spiele einen Stärke- und Verletzungsschutz-Bonus.',
+        tips: ['Junge Spieler profitieren am meisten vom Einzeltraining', 'Das Lager vor einer schweren Phase buchen - der Bonus hält nur 5-6 Spiele'] },
     { cat: 'Taktik', title: 'Gegnervorbereitung (Match-Prep)', screen: 'screen-training',
         text: 'Mit dem Trainingsschwerpunkt Match-Prep bereitest du dich auf den Spielstil des nächsten Ligagegners vor: tippst du richtig (Pressing, Ballbesitz oder Konter), gibt es +2,5 Stärke - daneben gibt es nichts. Der Schwerpunkt Taktik bringt dagegen sicher +2.',
         tips: ['Ohne Chef-Analyst kennst du nur den Grundstil aus der Presse - ein berechenbarer Manager wird gekontert, dann liegt die Vorbereitung daneben', 'Die Vorbereitung gilt nur für den Spieltag, für den du sie gewählt hast, und nur in der Liga'] },
