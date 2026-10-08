@@ -6,6 +6,7 @@
 //         und hält die Mitgliederversammlung mit passender Rede. Fehlt einer Position Tiefe,
 //         zieht er Jugendspieler hoch oder holt Vereinslose. Als Aufstiegskandidat (Platz <= 6)
 //         baut er die Lizenzauflagen der nächsthöheren Liga und spart dafür in den Fenstern.
+//         Sponsoren: nimmt eingetroffene Angebote an (Haupt, Ausrüster, Ärmel, Banden, Namensrechte).
 // passiv: spielt nur, der Kader wird nie angefasst.
 const path = require('path');
 const fs = require('fs');
@@ -121,8 +122,25 @@ async function karriere(browser, lauf) {
                         else expandBlock(x.key, x.seats, x.kosten);
                     });
                 };
+                // Sponsoren wie ein Mensch: nur natürlich eingetroffene Angebote, jeweils das
+                // wertvollste (Handgeld + Saisonwert, Branchenkonflikt -30 %); Banden füllen, solange
+                // Plätze frei sind; Namensrechte einmal verkaufen.
+                const sponsoren = () => {
+                    if (!aktiv) return;
+                    const wert = (o, slot, proSpieltag) => ((o.signOn || 0) + proSpieltag * 34) * (getExclusivityConflict(o.category, slot) ? 0.7 : 1);
+                    const beste = (liste, slot, f) => [...liste].sort((a, b) => wert(b, slot, f(b)) - wert(a, slot, f(a)))[0];
+                    if ((game.sponsor?.base || 0) <= 500 && sponsorOffers.length) acceptSponsorOffer(beste(sponsorOffers, 'sponsor', o => o.base).id);
+                    if (!(game.kitSupplier?.income > 0) && kitSupplierOffers.length) acceptKitOffer(beste(kitSupplierOffers, 'kit', o => o.income / 2).id);
+                    if (!(game.sleeveSponsor?.income > 0) && sleeveSponsorOffers.length) acceptSleeveOffer(beste(sleeveSponsorOffers, 'sleeve', o => o.income).id);
+                    [...bandenOffers].forEach(o => { if (bandenOffers.some(x => x.id === o.id)) acceptBandenOffer(o.id); });
+                    if (!stadium.namingRightsSponsor) {
+                        sellNamingRights();
+                        if (game.pendingNamingCeremony) resolveNamingCeremony('traditional');
+                    }
+                };
                 const verwalten = () => {
                     if (!aktiv) return;
+                    sponsoren();
                     lizenzBauen();
                     const fenster = game.matchday <= 3 || (game.matchday >= 18 && game.matchday <= 20);
                     const median = [...squad].map(p => p.strength).sort((a, b) => a - b)[Math.floor(squad.length / 2)];
@@ -189,6 +207,7 @@ async function karriere(browser, lauf) {
                         if (game.activeUltimatumPlayerId) resolveUltimatumIgnore();
                     }
                     if (isWinterTalkOpen()) chooseWinterTalk('kurs');
+                    sponsoren();
                     lizenzBauen();
                     // Mitgliederversammlung selbst halten, Rede passend zur Saison.
                     const mv = game.memberAssembly;
