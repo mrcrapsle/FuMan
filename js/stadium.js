@@ -119,8 +119,8 @@
         if (stadium.namingRightsSponsor) { showToast('Namensrechte sind bereits vergeben - erst auflösen, um neu zu verkaufen.', 'error'); return; }
         playSound('goal');
         let sponsor = NAMING_RIGHTS_SPONSORS[Math.floor(Math.random() * NAMING_RIGHTS_SPONSORS.length)];
-        let lumpSum = Math.round((150000 + Math.random() * 200000) * leagueScaleFactor() / 1000) * 1000;
-        let perMatch = Math.round((800 + Math.random() * 1200) * leagueScaleFactor() / 50) * 50;
+        let lumpSum = Math.round((150000 + Math.random() * 200000) * getSponsorLeagueFactor() / 1000) * 1000;
+        let perMatch = Math.round((800 + Math.random() * 1200) * getSponsorLeagueFactor() / 50) * 50;
         stadium.name = `${sponsor}-Arena`;
         stadium.namingRightsSponsor = sponsor;
         stadium.namingRightsIncome = perMatch;

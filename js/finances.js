@@ -527,7 +527,9 @@
     // Langzeittest 25.9: außer Gehältern gab es kaum laufende Kosten - ein Bundesligist mit
     // Startkader machte 40-60 Mio. € Überschuss pro Saison, ein passiver Verein häufte bis zu
     // 770 Mio. € an. Echte Profivereine geben dafür rund ein Drittel ihres Umsatzes aus.
-    const LEAGUE_OPERATING_COST = [20000000, 2000000, 500000, 0, 0, 0];
+    // 25.10: mit realistischen Sponsorgeldern (Bundesliga ~25 Mio. €/Saison) auf 40 / 5 Mio. € angehoben,
+    // damit gutes Sponsoring sich lohnt, ohne dass das Geld sich wieder stapelt.
+    const LEAGUE_OPERATING_COST = [40000000, 5000000, 500000, 0, 0, 0];
     function getOperatingCostPerMatchday() {
         return Math.round((LEAGUE_OPERATING_COST[game.leagueLevel] || 0) / 34);
     }

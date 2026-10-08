@@ -2195,6 +2195,14 @@ async function testBundesligaLongRun(browser) {
             bucheMitLabel('🏆 DFB-Pokal-Prämie', 215000);
             out.praemie = game.kontoauszug.some(k => k.label === '🏆 DFB-Pokal-Prämie' && k.amount === 215000);
             out.startkapital = isFfpExemptLabel('🏁 Startkapital');
+            // Sponsorgelder steigen mit der Liga deutlich stärker als die übrigen Liga-Faktoren
+            game.leagueLevel = 5;
+            const sponsorUnten = getSponsorLeagueFactor(), kostenUnten = leagueScaleFactor();
+            game.leagueLevel = 0;
+            out.sponsorStaffel = getSponsorLeagueFactor() / sponsorUnten >= 50 && leagueScaleFactor() / kostenUnten < 3;
+            sponsorOffers = [];
+            checkIncomingSponsorOffers(true);
+            out.sponsorBundesliga = sponsorOffers.length > 0 && sponsorOffers[sponsorOffers.length - 1].base * 34 >= 3000000;
             // Spielbetrieb & Verwaltung: nur in den Profiligen, als eigener Posten im Journal
             game.leagueLevel = 5;
             out.betriebUnten = getOperatingCostPerMatchday() === 0;
@@ -2222,6 +2230,7 @@ async function testBundesligaLongRun(browser) {
         assert(r.sterne && r.untenNormal, 'Bundesliga-Markt mit drei internationalen Stars, untere Ligen unverändert');
         assert(r.praemie && r.startkapital, 'Pokalprämien mit eigener Buchung, Startkapital zählt nicht fürs FFP');
         assert(r.pokalEcht, 'DFB-Pokal mit 32 echten Vereinen aus Bundesliga bis Regionalliga');
+        assert(r.sponsorStaffel && r.sponsorBundesliga, 'Sponsorgelder skalieren mit der Liga (Bundesliga-Hauptsponsor mehrere Mio. € pro Saison), Kosten-Faktor unverändert');
         assert(r.betriebUnten && r.betriebOben, 'Spielbetrieb & Verwaltung kostet nur in den Profiligen und steht im Buchungsjournal');
     }
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);

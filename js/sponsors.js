@@ -81,6 +81,13 @@
     function leagueScaleFactor() {
         return (4 - game.leagueLevel) * 0.25 + 1;
     }
+    // Sponsorgelder je Liga (Phase 25.10): leagueScaleFactor() stieg von Liga 6 bis zur Bundesliga
+    // nur um den Faktor 2,7 - Sponsoren brachten einem Bundesligisten 0,7 % seiner Einnahmen
+    // (Langzeit-Bot: 0,76 von 107 Mio. €), echte Profivereine erlösen 25-40 %. Ziel: ~25 % je Liga.
+    const SPONSOR_LEAGUE_FACTOR = [74, 20, 6.5, 3.2, 1.0, 0.75];
+    function getSponsorLeagueFactor() {
+        return SPONSOR_LEAGUE_FACTOR[game.leagueLevel] ?? 1;
+    }
 
     // Generischer Verhandlungs-Kern, von allen vier Vertragstypen gleichermaßen genutzt.
     function negotiateOffer(offer, fields) {
@@ -121,7 +128,7 @@
     function checkIncomingSponsorOffers(force = false) {
         if (sponsorOffers.length >= MAX_PENDING_SPONSOR_OFFERS) return;
         if (!force && Math.random() > 0.12) return;
-        let lf = leagueScaleFactor();
+        let lf = getSponsorLeagueFactor();
         let tier = rollDurationTier();
         let base = Math.round((2000 + Math.random() * 2500) * lf * tier.payMult / 100) * 100;
         // Manager-Medienimage: ein beliebter, medienwirksamer Manager macht den Verein
@@ -182,7 +189,7 @@
     function checkIncomingKitOffers(force = false) {
         if (kitSupplierOffers.length >= MAX_PENDING_KIT_OFFERS) return;
         if (!force && Math.random() > 0.12) return;
-        let lf = leagueScaleFactor();
+        let lf = getSponsorLeagueFactor();
         let tier = rollDurationTier();
         let signOn = Math.round((15000 + Math.random() * 35000) * lf * (0.6 + tier.signOnMult) / 500) * 500;
         let income = Math.round((1000 + Math.random() * 2000) * lf * tier.payMult / 100) * 100;
@@ -228,7 +235,7 @@
     function checkIncomingSleeveOffers(force = false) {
         if (sleeveSponsorOffers.length >= MAX_PENDING_SLEEVE_OFFERS) return;
         if (!force && Math.random() > 0.10) return;
-        let lf = leagueScaleFactor();
+        let lf = getSponsorLeagueFactor();
         let tier = rollDurationTier();
         let signOn = Math.round((8000 + Math.random() * 20000) * lf * (0.5 + tier.signOnMult) / 500) * 500;
         let income = Math.round((600 + Math.random() * 1400) * lf * tier.payMult / 50) * 50;
@@ -318,7 +325,7 @@
         let meta = BANDEN_AREA_META[key] || { visibility: 1 };
         let sizeFactor = 0.5 + Math.min(1.5, cap / 3000);
         let typeBase = type === 'LED-Bande' ? (900 + Math.random() * 1000) : (350 + Math.random() * 600);
-        return Math.round(typeBase * leagueScaleFactor() * meta.visibility * sizeFactor * payMult / 50) * 50;
+        return Math.round(typeBase * getSponsorLeagueFactor() * meta.visibility * sizeFactor * payMult / 50) * 50;
     }
 
     // Altbestand aus Spielständen vor der stadionweiten Umstellung: Banden ohne Bereich
@@ -430,7 +437,7 @@
         // Garantierte Angebote (nicht die übliche Zufallschance) - für jeden Vertragstyp
         // mindestens eines, damit direkt zu Saisonbeginn wirklich etwas zu verhandeln da ist.
         for (let i = 0; i < 2; i++) {
-            let lf = leagueScaleFactor();
+            let lf = getSponsorLeagueFactor();
             let tier = rollDurationTier();
             let base = Math.round((2000 + Math.random() * 2500) * lf * tier.payMult / 100) * 100;
             let winBonus = Math.round((800 + Math.random() * 1500) * lf * tier.payMult / 100) * 100;

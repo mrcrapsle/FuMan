@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.80', date: '08.10.2026', features: 'Langzeit-Bot mit Lizenzplanung (Messwerkzeug), keine Spieländerung' };
+    const GAME_VERSION = { number: '3.81', date: '08.10.2026', features: 'Phase 25.10: Sponsorgelder skalieren mit der Liga, Spielbetrieb Bundesliga 40 Mio.' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
