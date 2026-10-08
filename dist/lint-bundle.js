@@ -484,7 +484,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.77', date: '07.10.2026', features: 'Phase 25.7: Mitgliederversammlung ohne Entlastung kostet einheitlich -10' };
+    const GAME_VERSION = { number: '3.78', date: '08.10.2026', features: 'Phase 25.8: Müde Spieler pausieren, Sommerpause für Stress und Moral, Notbesetzung auf Liganiveau' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -2827,11 +2827,19 @@ function getOwnDerbyRivals() {
         }[game.formation] || [4, 4, 2];
         let chosen = [];
         if (tws.length > 0) chosen.push(tws[0].id);
-        abws.slice(0, config[0]).forEach(p => chosen.push(p.id));
-        mits.slice(0, config[1]).forEach(p => chosen.push(p.id));
-        sts.slice(0, config[2]).forEach(p => chosen.push(p.id));
+        // Erschöpfte Feldspieler (unter 50 % Fitness) bekommen ihren Positionsplatz nicht fest:
+        // die freien Plätze gehen unten an den stärksten Rest, also an einen ausgeruhten Spieler
+        // einer anderen Position oder - ohne Alternative - doch an den müden. Vorher spielten bei
+        // nur vier Verteidigern alle vier bis auf 10 % Fitness durch, und "Ausgeruhte Elf
+        // aufstellen" änderte daran nichts (Langzeittest: Elf-Fitness 73 % in Abstiegssaisons).
+        let fit = p => p.fitness >= 50;
+        abws.filter(fit).slice(0, config[0]).forEach(p => chosen.push(p.id));
+        mits.filter(fit).slice(0, config[1]).forEach(p => chosen.push(p.id));
+        sts.filter(fit).slice(0, config[2]).forEach(p => chosen.push(p.id));
 
-        let remaining = available.filter(p => !chosen.includes(p.id)).sort((a, b) => effStr(b) - effStr(a));
+        // Torhüter füllen Feldplätze nur, wenn kein Feldspieler mehr übrig ist.
+        let remaining = available.filter(p => !chosen.includes(p.id))
+            .sort((a, b) => ((a.pos === 'TW') - (b.pos === 'TW')) || (effStr(b) - effStr(a)));
         while (chosen.length < 11 && remaining.length > 0) chosen.push(remaining.shift().id);
         return chosen;
     }
@@ -27806,9 +27814,14 @@ function concludeSeasonAndAdvance() {
             if (game.playerOfSeasonHistory.length > 15) game.playerOfSeasonHistory.pop();
         }
 
+        // Sommerpause: der Manager erholt sich (Stress halbiert, sonst stieg er bei jeder
+        // Niederlage um 3 und fiel nur mit bezahlter Freizeit - nach drei Saisons stand
+        // fast jeder auf 100 = -3 Stärke), am Boden liegende Moral fängt sich zur Hälfte.
+        privateLife.stress = Math.round((privateLife.stress || 0) / 2);
         squad.forEach(p => {
             p.contracts--;
             p.fitness = 100;
+            if ((p.morale || 80) < 70) p.morale = Math.round((p.morale || 80) + (70 - (p.morale || 80)) / 2);
             // Spielerwert-Entwicklungs-Historie: ein Schnappschuss pro Saison, damit im
             // Spieler-Detail eine echte Entwicklungskurve statt nur des aktuellen Werts
             // angezeigt werden kann.
@@ -27859,7 +27872,13 @@ function concludeSeasonAndAdvance() {
             squad.forEach(p => { if (existingByPos[p.pos] !== undefined) existingByPos[p.pos]++; });
             let toFill = [];
             emergencyPlan.forEach(pos => { if (existingByPos[pos] > 0) existingByPos[pos]--; else toFill.push(pos); });
-            let emergencyBase = Math.max(25, 82 - game.leagueLevel * 10 - 14);
+            // Stärke am Niveau der neuen Liga (Schnitt der anderen Vereine -14 bis -6): die alte
+            // Formel 82 - Liga*10 - 14 lag 15-17 Punkte darunter, ein Notkader stieg im
+            // Langzeittest sicher ab. Unter dem Schnitt bleibt sie, damit auslaufen lassen
+            // kein Weg zu kostenlosen Stammspielern ist.
+            let andere = (leaguesData[game.leagueLevel] || []).filter(t => t.name !== game.clubName && t.strength > 0);
+            let ligaSchnitt = andere.length ? andere.reduce((a, t) => a + t.strength, 0) / andere.length : 82 - game.leagueLevel * 10;
+            let emergencyBase = Math.max(25, Math.round(ligaSchnitt) - 14);
             toFill.forEach(pos => squad.push(createPlayer(pos, emergencyBase, emergencyBase + 8)));
             showNotice('⚠️ Vertragskrise', 'Zu viele Spieler haben den Verein wegen auslaufender Verträge verlassen. Der Kader wurde notdürftig mit neuen Spielern aufgefüllt.\n\nAchte künftig auf die Vertragslaufzeiten.', { typ: 'warn' });
         }
@@ -29085,10 +29104,10 @@ const LEXICON_ENTRIES = [
         text: 'Grundwert jedes Spielers (bis 99). Die Startelf zählt: Stärke × Fitness × Tagesform, gemittelt über elf Spieler, plus Boni (Taktik, Heimvorteil, Kapitän, Traits).',
         tips: ['Training und Spielpraxis entwickeln junge Spieler', 'Ab etwa 30 baut die Stärke im Sommer ab (Archetyp entscheidet)', 'Verbesserungen kauft man am Transfermarkt'] },
     { cat: 'Spieler', title: 'Fitness', screen: 'screen-training',
-        text: 'Jedes Spiel kostet Kraft, Pausen bringen sie zurück. Stammspieler erholen sich zwischen den Spieltagen nur zu einem Viertel so stark wie Bankspieler - wer immer dieselbe Elf bringt, wird müde.',
+        text: 'Jedes Spiel kostet Kraft, Pausen bringen sie zurück. Stammspieler erholen sich zwischen den Spieltagen nur zu einem Viertel so stark wie Bankspieler - wer immer dieselbe Elf bringt, wird müde. Unter 50 % Fitness setzt die automatische Aufstellung einen Spieler aus, wenn ein ausgeruhter Feldspieler bereitsteht - auch von einer anderen Position. Mit dünnem Kader (unter 18) geht das kaum.',
         tips: ['Rotieren (Vorbericht bietet „Ausgeruhte Elf“ an)', 'Trainingsschwerpunkt Kondition oder Erholung', 'Gegenpressing und hohe Außenverteidiger kosten zusätzlich Kraft, Tief stehen spart sie'] },
     { cat: 'Spieler', title: 'Moral', screen: 'screen-squad',
-        text: 'Stimmung der Spieler. Der Schnitt der Startelf verschiebt die Teamstärke: über 80 % gibt es einen Bonus, darunter einen Abzug.',
+        text: 'Stimmung der Spieler. Der Schnitt der Startelf verschiebt die Teamstärke: über 80 % gibt es einen Bonus, darunter einen Abzug. In der Sommerpause fängt sich eine Moral unter 70 zur Hälfte.',
         tips: ['Siege, Einsätze, Elf des Spieltags und Länderspiele heben sie', 'Gebrochene Versprechen (Einsatzgarantie, Pressekonferenz) und Bankdrücken senken sie', 'Der Mannschaftsrat dämpft Moralstürze nach Niederlagen'] },
     { cat: 'Spieler', title: 'Tagesform', screen: 'screen-squad',
         text: 'Schwankt von Spiel zu Spiel um den Wert 50 und verändert die effektive Stärke leicht - gute Tage und schlechte Tage.',

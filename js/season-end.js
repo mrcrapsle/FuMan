@@ -312,9 +312,14 @@ function concludeSeasonAndAdvance() {
             if (game.playerOfSeasonHistory.length > 15) game.playerOfSeasonHistory.pop();
         }
 
+        // Sommerpause: der Manager erholt sich (Stress halbiert, sonst stieg er bei jeder
+        // Niederlage um 3 und fiel nur mit bezahlter Freizeit - nach drei Saisons stand
+        // fast jeder auf 100 = -3 Stärke), am Boden liegende Moral fängt sich zur Hälfte.
+        privateLife.stress = Math.round((privateLife.stress || 0) / 2);
         squad.forEach(p => {
             p.contracts--;
             p.fitness = 100;
+            if ((p.morale || 80) < 70) p.morale = Math.round((p.morale || 80) + (70 - (p.morale || 80)) / 2);
             // Spielerwert-Entwicklungs-Historie: ein Schnappschuss pro Saison, damit im
             // Spieler-Detail eine echte Entwicklungskurve statt nur des aktuellen Werts
             // angezeigt werden kann.
@@ -365,7 +370,13 @@ function concludeSeasonAndAdvance() {
             squad.forEach(p => { if (existingByPos[p.pos] !== undefined) existingByPos[p.pos]++; });
             let toFill = [];
             emergencyPlan.forEach(pos => { if (existingByPos[pos] > 0) existingByPos[pos]--; else toFill.push(pos); });
-            let emergencyBase = Math.max(25, 82 - game.leagueLevel * 10 - 14);
+            // Stärke am Niveau der neuen Liga (Schnitt der anderen Vereine -14 bis -6): die alte
+            // Formel 82 - Liga*10 - 14 lag 15-17 Punkte darunter, ein Notkader stieg im
+            // Langzeittest sicher ab. Unter dem Schnitt bleibt sie, damit auslaufen lassen
+            // kein Weg zu kostenlosen Stammspielern ist.
+            let andere = (leaguesData[game.leagueLevel] || []).filter(t => t.name !== game.clubName && t.strength > 0);
+            let ligaSchnitt = andere.length ? andere.reduce((a, t) => a + t.strength, 0) / andere.length : 82 - game.leagueLevel * 10;
+            let emergencyBase = Math.max(25, Math.round(ligaSchnitt) - 14);
             toFill.forEach(pos => squad.push(createPlayer(pos, emergencyBase, emergencyBase + 8)));
             showNotice('⚠️ Vertragskrise', 'Zu viele Spieler haben den Verein wegen auslaufender Verträge verlassen. Der Kader wurde notdürftig mit neuen Spielern aufgefüllt.\n\nAchte künftig auf die Vertragslaufzeiten.', { typ: 'warn' });
         }

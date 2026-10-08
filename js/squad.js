@@ -517,11 +517,19 @@
         }[game.formation] || [4, 4, 2];
         let chosen = [];
         if (tws.length > 0) chosen.push(tws[0].id);
-        abws.slice(0, config[0]).forEach(p => chosen.push(p.id));
-        mits.slice(0, config[1]).forEach(p => chosen.push(p.id));
-        sts.slice(0, config[2]).forEach(p => chosen.push(p.id));
+        // Erschöpfte Feldspieler (unter 50 % Fitness) bekommen ihren Positionsplatz nicht fest:
+        // die freien Plätze gehen unten an den stärksten Rest, also an einen ausgeruhten Spieler
+        // einer anderen Position oder - ohne Alternative - doch an den müden. Vorher spielten bei
+        // nur vier Verteidigern alle vier bis auf 10 % Fitness durch, und "Ausgeruhte Elf
+        // aufstellen" änderte daran nichts (Langzeittest: Elf-Fitness 73 % in Abstiegssaisons).
+        let fit = p => p.fitness >= 50;
+        abws.filter(fit).slice(0, config[0]).forEach(p => chosen.push(p.id));
+        mits.filter(fit).slice(0, config[1]).forEach(p => chosen.push(p.id));
+        sts.filter(fit).slice(0, config[2]).forEach(p => chosen.push(p.id));
 
-        let remaining = available.filter(p => !chosen.includes(p.id)).sort((a, b) => effStr(b) - effStr(a));
+        // Torhüter füllen Feldplätze nur, wenn kein Feldspieler mehr übrig ist.
+        let remaining = available.filter(p => !chosen.includes(p.id))
+            .sort((a, b) => ((a.pos === 'TW') - (b.pos === 'TW')) || (effStr(b) - effStr(a)));
         while (chosen.length < 11 && remaining.length > 0) chosen.push(remaining.shift().id);
         return chosen;
     }

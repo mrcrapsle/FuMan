@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.77', date: '07.10.2026', features: 'Phase 25.7: Mitgliederversammlung ohne Entlastung kostet einheitlich -10' };
+    const GAME_VERSION = { number: '3.78', date: '08.10.2026', features: 'Phase 25.8: Müde Spieler pausieren, Sommerpause für Stress und Moral, Notbesetzung auf Liganiveau' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

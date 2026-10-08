@@ -6531,7 +6531,22 @@ async function testBoardRestart(browser) {
             // automatisch statt (vorher wurde sie mit Spieltag 35 eröffnet und nie abgehalten).
             game.season = 2; game.matchday = 1; game.sackPending = false;
             while (game.matchday <= 34) { game.sackPending = false; simulateMatchdays(1); }
+            // Sommerpause: Stress halbiert, am Boden liegende Moral fängt sich zur Hälfte
+            privateLife.stress = 100;
+            const tief = squad[0], hoch = squad[1];
+            tief.morale = 20; hoch.morale = 95;
+            // Vertragskrise: nur 10 Spieler bleiben, die Notbesetzung kommt auf Ligaschnitt-Niveau
+            squad = squad.slice(0, 10);
+            squad.forEach(p => { p.contracts = 3; });
+            lineup = pickBestLineupIds();
+            const alteIds = squad.map(p => p.id);
             concludeSeasonAndAdvance();
+            const sommer = { stress: privateLife.stress, tief: tief.morale, hoch: hoch.morale };
+            const neu = squad.filter(p => !alteIds.includes(p.id));
+            const andere = leaguesData[game.leagueLevel].filter(t => t.name !== game.clubName);
+            const notkader = { anzahl: neu.length, kader: squad.length,
+                schnitt: Math.round(neu.reduce((a, p) => a + p.strength, 0) / Math.max(1, neu.length)),
+                liga: Math.round(andere.reduce((a, t) => a + t.strength, 0) / andere.length) };
             game.sackPending = false;
             const eroeffnet = game.memberAssembly && game.memberAssembly.status === 'offen' && game.memberAssembly.openedMatchday === 1;
             simulateMatchdays(ASSEMBLY_AUTO_AFTER + 3);
@@ -6539,7 +6554,7 @@ async function testBoardRestart(browser) {
             game.memberAssembly.status = 'offen'; game.memberAssembly.openedMatchday = 35;
             tickMemberAssembly();
             const altstand = game.memberAssembly.status === 'abgehalten';
-            return { erster, nachErstem, streakNull, zweiter, nachZweitem, spaeter, nachSpaeter, hoherWertBleibt, eroeffnet, automatisch, altstand, post };
+            return { erster, nachErstem, streakNull, zweiter, nachZweitem, spaeter, nachSpaeter, hoherWertBleibt, eroeffnet, automatisch, altstand, post, sommer, notkader };
         } catch (e) { return { crash: e.message }; }
     });
     assert(!r.crash, `Neustart ohne Absturz (${r.crash || 'ok'})`);
@@ -6550,6 +6565,8 @@ async function testBoardRestart(browser) {
         assert(r.hoherWertBleibt, 'Ein höherer Wert wird nicht auf 60 gesenkt');
         assert(r.eroeffnet && r.automatisch, 'Mitgliederversammlung findet ohne Zutun nach einigen Spieltagen statt');
         assert(r.altstand, 'Alte Spielstände mit Eröffnung an Spieltag 35 werden repariert');
+        assert(r.notkader.kader >= 18 && r.notkader.schnitt >= r.notkader.liga - 13 && r.notkader.schnitt <= r.notkader.liga - 4, `Notbesetzung nach Vertragskrise nahe am Ligaschnitt (${JSON.stringify(r.notkader)})`);
+        assert(r.sommer.stress <= 50 && r.sommer.tief >= 40 && r.sommer.hoch >= 90, `Sommerpause: Stress halbiert, tiefe Moral erholt sich, hohe bleibt (${JSON.stringify(r.sommer)})`);
     }
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
     await page.close();
@@ -7544,6 +7561,17 @@ async function testCareerBalancing(browser) {
         out.warnung = document.getElementById('prematch-fatigue-box').innerHTML.includes('rotateTiredPlayers');
         rotateTiredPlayers();
         out.rotiert = squad.filter(p => lineup.includes(p.id) && p.fitness < 70).length < 3;
+        // Nur so viele Verteidiger wie die Formation braucht, alle erschöpft: ein ausgeruhter
+        // Feldspieler einer anderen Position spielt statt eines Müden (vorher spielten alle durch).
+        game.formation = '4-4-2';
+        squad.forEach(p => { p.fitness = 100; p.injured = 0; p.suspended = 0; });
+        const abw = squad.filter(p => p.pos === 'ABW');
+        abw.slice(4).forEach(p => { p.injured = 3; });
+        abw.slice(0, 4).forEach(p => { p.fitness = 20; });
+        const ausgeruht = pickBestLineupIds();
+        out.muedeVerteidiger = abw.slice(0, 4).filter(p => ausgeruht.includes(p.id)).length;
+        out.elfVoll = ausgeruht.length === 11 && ausgeruht.filter(id => squad.find(p => p.id === id).pos === 'TW').length === 1;
+        squad.forEach(p => { p.fitness = 100; p.injured = 0; });
         // Transfermarkt: 10 Angebote, frisch zum Winterfenster
         refreshTransferMarket();
         out.markt = marketPlayers.length;
@@ -7561,6 +7589,7 @@ async function testCareerBalancing(browser) {
     });
     assert(r.fitnessMin >= 60, `Unveränderte Startelf nach 6 Spielen noch fit genug (min. ${r.fitnessMin} %)`);
     assert(r.warnung && r.rotiert, 'Vorbericht warnt vor müden Stammspielern, ein Klick rotiert');
+    assert(r.muedeVerteidiger === 0 && r.elfVoll, `Erschöpfte Verteidiger ohne Ersatz auf der Position pausieren, ausgeruhte Feldspieler rücken nach (${r.muedeVerteidiger} müde in der Elf)`);
     assert(r.markt === 10 && r.winterNeu, `Transfermarkt mit 10 Spielern, neu zum Winterfenster (${r.markt})`);
     assert(r.flutlichtLiga4 <= 1000000 && r.flutlichtLiga1 === 3500000, `Flutlicht skaliert mit der Liga (Liga 4: ${r.flutlichtLiga4}, Liga 1: ${r.flutlichtLiga1})`);
     assert(r.internatLiga3 <= 3000000, `Jugendinternat (Lizenz 2. Liga) in der 3. Liga bezahlbar (${r.internatLiga3})`);
