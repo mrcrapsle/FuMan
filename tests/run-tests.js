@@ -2298,6 +2298,8 @@ async function testLexicon(browser) {
             // Betriebskosten, Heimvorteil und Trait-Deckel: die Zahlen im Lexikon folgen den Konstanten
             const betrieb = LEXICON_ENTRIES.find(e => e.title === 'Spielbetrieb & Verwaltung').text;
             out.betriebAktuell = [0, 1, 2].every(i => betrieb.includes((LEAGUE_OPERATING_COST[i] / 1e6).toLocaleString('de-DE') + ' Mio. €'));
+            const gehalt = LEXICON_ENTRIES.find(e => e.title === 'Gehaltsbudget').text;
+            out.gehaltAktuell = LEAGUE_WAGE_BUDGET.every(b => gehalt.includes(b >= 1e6 ? (b / 1e6).toLocaleString('de-DE') + ' Mio. €' : b.toLocaleString('de-DE') + ' €'));
             const staerke = LEXICON_ENTRIES.find(e => e.title === 'Stärke').text;
             out.staerkeAktuell = staerke.includes('Heimvorteil +' + AI_HOME_ADVANTAGE) && staerke.includes('höchstens +' + TRAIT_BONUS_CAP)
                 && staerke.includes('daheim +' + AI_HOME_ADVANTAGE);
@@ -2325,7 +2327,7 @@ async function testLexicon(browser) {
     assert(r.keinTreffer, 'Suche ohne Treffer zeigt einen Hinweis');
     assert(r.kategorie, 'Kategorie „Finanzen“ zeigt genau deren Einträge');
     assert(r.lizenzAktuell, 'Lizenz-Eintrag nennt die aktuellen Kapazitätsauflagen');
-    assert(r.betriebAktuell && r.staerkeAktuell, 'Lexikon nennt die aktuellen Betriebskosten, Heimvorteil und Trait-Deckel');
+    assert(r.betriebAktuell && r.staerkeAktuell && r.gehaltAktuell, 'Lexikon nennt die aktuellen Betriebskosten, Gehaltsbudgets, Heimvorteil und Trait-Deckel');
     assert(r.sprung, '„Zum Bildschirm“ öffnet den passenden Bildschirm');
     assert(r.gefiltert, 'Aus einem Bildschirm-Tipp geöffnet: nur Einträge dieses Bildschirms');
     assert(r.menueAlle, 'Über das Menü geöffnet: wieder alle Einträge');
@@ -6584,6 +6586,13 @@ async function testBoardRestart(browser) {
             game.season = 8; game.boardSat = 85;
             grantRelegationRestart();
             const hoherWertBleibt = game.boardSat === 85;
+            // Abstiegsklausel (25.14): Gehälter -30 %, Moral -3, Nachricht; danach wiederhergestellt
+            const loehne = squad.map(p => p.wage), moral = squad.map(p => p.morale);
+            const summeVor = loehne.reduce((a, b) => a + b, 0);
+            const summeNach = applyRelegationWageClause();
+            const klausel = { anteil: summeNach / summeVor, exakt: squad.every((p, i) => p.wage === Math.max(150, Math.round(loehne[i] * 0.7 / 50) * 50)), moral: squad.every((p, i) => p.morale === Math.max(10, (moral[i] || 50) - 3)),
+                post: inboxMessages.some(m => m.title.includes('Abstiegsklausel')) };
+            squad.forEach((p, i) => { p.wage = loehne[i]; p.morale = moral[i]; });
             // Mitgliederversammlung: ignoriert man sie, findet sie nach ASSEMBLY_AUTO_AFTER Spieltagen
             // automatisch statt (vorher wurde sie mit Spieltag 35 eröffnet und nie abgehalten).
             game.season = 2; game.matchday = 1; game.sackPending = false;
@@ -6611,7 +6620,7 @@ async function testBoardRestart(browser) {
             game.memberAssembly.status = 'offen'; game.memberAssembly.openedMatchday = 35;
             tickMemberAssembly();
             const altstand = game.memberAssembly.status === 'abgehalten';
-            return { erster, nachErstem, streakNull, zweiter, nachZweitem, spaeter, nachSpaeter, hoherWertBleibt, eroeffnet, automatisch, altstand, post, sommer, notkader };
+            return { erster, nachErstem, streakNull, zweiter, nachZweitem, spaeter, nachSpaeter, hoherWertBleibt, eroeffnet, automatisch, altstand, post, sommer, notkader, klausel };
         } catch (e) { return { crash: e.message }; }
     });
     assert(!r.crash, `Neustart ohne Absturz (${r.crash || 'ok'})`);
@@ -6620,6 +6629,7 @@ async function testBoardRestart(browser) {
         assert(!r.zweiter && r.nachZweitem === 20, 'Zweiter Abstieg in Folge: kein Vorschuss');
         assert(r.spaeter && r.nachSpaeter === 60, 'Nach einer Saison Pause gibt es wieder einen Neustart');
         assert(r.hoherWertBleibt, 'Ein höherer Wert wird nicht auf 60 gesenkt');
+        assert(r.klausel.exakt && r.klausel.anteil < 0.85 && r.klausel.moral && r.klausel.post, `Abstiegsklausel senkt jedes Gehalt um 30 % (mind. 150 €) mit Nachricht (${JSON.stringify(r.klausel)})`);
         assert(r.eroeffnet && r.automatisch, 'Mitgliederversammlung findet ohne Zutun nach einigen Spieltagen statt');
         assert(r.altstand, 'Alte Spielstände mit Eröffnung an Spieltag 35 werden repariert');
         assert(r.notkader.gehalt, 'Notbesetzung verdient mindestens das Liga-Mindestgehalt');
@@ -7009,13 +7019,21 @@ async function testPhase13Teil3(browser) {
         setSquadTab('aufstellung');
         out.aufstellungKomplett = !!document.querySelector('#squad-tab-aufstellung #bench-list') && !!document.querySelector('#squad-tab-aufstellung #soccer-pitch');
         // Startkader einer höheren Liga passt ins Gehaltsbudget der Liga
-        out.gehaelterImBudget = [0, 1, 2].every(lvl => {
+        out.gehaelterImBudget = [0, 1, 2, 3, 4].every(lvl => {
             for (let i = 0; i < 8; i++) {
                 const summe = generateSquadForLevel(lvl).reduce((s, p) => s + p.wage, 0);
                 if (summe > getLeagueWageBudget(lvl)) return false;
             }
             return true;
         });
+        // ... und das Budget passt zur Liga (25.14: in der 6. Liga lag es beim 150-Fachen der Gehälter)
+        out.budgetLigaGerecht = [0, 1, 2, 3, 4].map(lvl => {
+            const summen = [...Array(8)].map(() => generateSquadForLevel(lvl).reduce((s, p) => s + p.wage, 0)).sort((a, b) => a - b);
+            return getLeagueWageBudget(lvl) / summen[4];
+        });
+        const altKader = squad; initDefaultSquad();
+        out.budgetLigaGerecht.push(getLeagueWageBudget(5) / squad.reduce((s, p) => s + p.wage, 0));
+        squad = altKader;
         return out;
     });
 
@@ -7024,6 +7042,7 @@ async function testPhase13Teil3(browser) {
     assert(r.radarSichtbar, 'Kader-Radar wird im Analyse-Reiter mit echter Breite gezeichnet');
     assert(r.aufstellungKomplett, 'Kaderliste und Taktiktafel liegen im Start-Reiter');
     assert(r.gehaelterImBudget, 'Startkader höherer Ligen überziehen das Gehaltsbudget ihrer Liga nicht');
+    assert(r.budgetLigaGerecht.every(f => f >= 1 && f <= 2.5), `Gehaltsbudget je Liga liegt beim 1- bis 2,5-Fachen der Startgehälter (${r.budgetLigaGerecht.map(f => f.toFixed(2)).join(' / ')})`);
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler in Phase 13 Teil 3 (${consoleErrors.slice(0, 3).join(' | ')})`);
     await page.close();
 }

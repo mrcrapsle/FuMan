@@ -47,9 +47,14 @@
         return kader;
     }
 
-    // Gehaltsbudget pro Spieltag für eine Liga ohne Platzierungsfaktor (wie beim Vereinswechsel).
+    // Gehaltsbudget pro Spieltag für eine Liga ohne Platzierungsfaktor (Neustart, Vereinswechsel,
+    // Saisonende mit Platzierungsfaktor). 25.14: vorher 450.000 × (1 + Ligafaktor × 2,5) - in der
+    // 6. Liga 637.500 € bei 4.000 € echten Gehältern, das Budget bremste unterhalb der Bundesliga
+    // nie. Jetzt rund das 1,35- (oben) bis 2-fache (unten) der Startkader-Gehälter der Liga
+    // (Median: 1,5 Mio. / 380.000 / 72.000 / 22.500 / 5.200 / 4.100 €).
+    const LEAGUE_WAGE_BUDGET = [1575000, 520000, 110000, 36000, 11000, 8000];
     function getLeagueWageBudget(level) {
-        return Math.round(450000 * (1 + (NUM_LEAGUES - level) / NUM_LEAGUES * 2.5));
+        return LEAGUE_WAGE_BUDGET[Math.max(0, Math.min(LEAGUE_WAGE_BUDGET.length - 1, level))];
     }
 
     const PLAYER_ROLES = {

@@ -92,7 +92,7 @@ const LEXICON_ENTRIES = [
         text: 'Geschäftsstelle, Scouting, Medizin, Nachwuchszentrum und Spieltagsorganisation kosten in den Profiligen jede Saison: Bundesliga 40 Mio. €, 2. Liga 5 Mio. €, 3. Liga 0,5 Mio. € - jeden Spieltag zu 1/34, im Buchungsjournal als eigener Posten. Ab der Regionalliga trägt das Ehrenamt den Spielbetrieb.',
         tips: ['Ein Aufstieg in die Bundesliga bringt viel mehr TV-Geld, aber auch diese Fixkosten', 'Die Finanz-Prognose zeigt den Monatsanteil'] },
     { cat: 'Finanzen', title: 'Gehaltsbudget', screen: 'screen-finances',
-        text: 'Höchstsumme aller Spielergehälter pro Spieltag. Neue Verträge über dem Budget sind nicht möglich.',
+        text: 'Höchstsumme aller Spielergehälter pro Spieltag. Neue Verträge über dem Budget sind nicht möglich. Der Vorstand richtet es nach der Liga aus: Bundesliga 1,575 Mio. €, 2. Liga 520.000 €, 3. Liga 110.000 €, 4. Liga 36.000 €, 5. Liga 11.000 €, 6. Liga 8.000 € - zum Saisonstart mit Platz 1-4 × 1,3, ab Platz 11 × 0,8.',
         tips: ['Verkäufe und auslaufende Verträge schaffen Luft', 'Im Gehaltsgespräch einmal nachverhandeln', 'Zum Saisonstart liegt es mindestens 5 % über den laufenden Gehältern, wenn das Konto eine Viertelsaison davon deckt - nach einer Saison mit Minus bei 85 % (Sparkurs)'] },
     { cat: 'Finanzen', title: 'Transferbudget', screen: 'screen-finances',
         text: 'Wie viel Ablöse der Vorstand freigibt. Unabhängig vom Kontostand: beides muss reichen.',

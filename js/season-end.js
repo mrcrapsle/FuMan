@@ -154,6 +154,25 @@ function getCashSurplusBudgetShare() {
 // (game.ffpSeasonNet, außer das Konto trägt eine ganze Saison) bei 85 % als Sparkurs.
 // Vorher setzte die Liga/Platz-Formel einen Bundesliga-Elften auf 1,26 Mio. bei 1,5 Mio.
 // Gehältern: jede Verlängerung scheiterte, der Kader lief ablösefrei davon (Langzeittest 21.6).
+// Abstiegsklausel (25.14): seit das Gehaltsbudget der Liga folgt (2. Liga 520.000 € statt
+// 1,39 Mio. €), konnte ein Bundesliga-Absteiger mit 1,36 Mio. € Gehältern keinen einzigen
+// Vertrag mehr verlängern - der Kader lief aus, es folgten Notkader und Entlassung. Wie in
+// echten Verträgen sinken die Gehälter beim Abstieg, und im ersten Jahr deckt das Budget
+// mindestens RELEGATION_BUDGET_SHARE der gekürzten Gehälter. Gibt die neue Gehaltssumme zurück.
+const RELEGATION_WAGE_CUT = 0.3;
+const RELEGATION_BUDGET_SHARE = 0.9;
+function applyRelegationWageClause() {
+    if (!squad.length) return 0;
+    const vorher = squad.reduce((s, p) => s + (p.wage || 0), 0);
+    squad.forEach(p => {
+        p.wage = Math.max(150, Math.round(p.wage * (1 - RELEGATION_WAGE_CUT) / 50) * 50);
+        p.morale = Math.max(10, (p.morale || 50) - 3);
+    });
+    const nachher = squad.reduce((s, p) => s + (p.wage || 0), 0);
+    addInboxMessage('finanzen', '✂️ Abstiegsklausel greift', `Mit dem Abstieg sinken alle Spielergehälter vertragsgemäß um ${Math.round(RELEGATION_WAGE_CUT * 100)} % (${formatVal(vorher)} → ${formatVal(nachher)} pro Spieltag). Die Spieler sind wenig begeistert (Moral −3). Das Gehaltsbudget deckt im ersten Jahr mindestens ${Math.round(RELEGATION_BUDGET_SHARE * 100)} % davon.`, 'screen-finances');
+    return nachher;
+}
+
 function getWageBudgetFloor() {
     const summe = squad.reduce((s, p) => s + (p.wage || 0), 0)
         + (game.secondTeam && game.secondTeam.isActive ? secondTeamSquad.reduce((s, p) => s + (p.wage || 0), 0) : 0);
@@ -254,6 +273,7 @@ function concludeSeasonAndAdvance() {
         }
 
         // Relegation (Platz 3 und 16): noch nicht gespielte Partien werden jetzt simuliert.
+        let abstiegsGehaelter = 0;
         let relegation = typeof resolveRelegationForSeasonEnd === 'function' ? resolveRelegationForSeasonEnd() : null;
 
         if ((myRank <= 2 || relegation === 'promoted') && game.leagueLevel > 0) {
@@ -284,6 +304,7 @@ function concludeSeasonAndAdvance() {
             }
         } else if ((myRank >= 17 || (myRank === 16 && relegation !== 'stayed')) && game.leagueLevel < NUM_LEAGUES - 1) {
             game.leagueLevel++;
+            abstiegsGehaelter = applyRelegationWageClause();
             const neustart = typeof grantRelegationRestart === 'function' && grantRelegationRestart();
             showNotice('❌ Abstieg', `Die Klasse konnte nicht gehalten werden. Nächste Saison geht es eine Liga tiefer weiter.${neustart ? '\n\nDer Vorstand hält an dir fest und gibt dir einen Neustart.' : ''}`, { typ: 'warn' });
         }
@@ -298,7 +319,8 @@ function concludeSeasonAndAdvance() {
         let leagueFactor = (NUM_LEAGUES - game.leagueLevel) / NUM_LEAGUES;
         let placementFactor = myRank <= 4 ? 1.3 : (myRank <= 10 ? 1.0 : 0.8);
         game.transferBudget = Math.round(2500000 * (1 + leagueFactor * 2.5) * placementFactor);
-        game.wageBudget = Math.max(Math.round(450000 * (1 + leagueFactor * 2.5) * placementFactor), getWageBudgetFloor());
+        game.wageBudget = Math.max(Math.round(getLeagueWageBudget(game.leagueLevel) * placementFactor / 100) * 100, getWageBudgetFloor(),
+            Math.ceil(abstiegsGehaelter * RELEGATION_BUDGET_SHARE / 1000) * 1000);
         if (typeof applyCashSurplusBudgets === 'function') applyCashSurplusBudgets();
         // Manager-Eigengehalt: blieb bisher für immer beim Startwert (1.200 €/SpT),
         // selbst nach mehreren Aufstiegen in die Bundesliga mit Millionenbudgets - ein
