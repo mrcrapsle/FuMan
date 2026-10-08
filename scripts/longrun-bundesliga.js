@@ -4,7 +4,8 @@
 // aktiv:  verlängert gute auslaufende Verträge (auch Legenden/Publikumslieblinge bis 33), kauft in
 //         den Fenstern Verstärkungen, löst Ultimaten nach jedem Spieltag, führt das Wintergespräch
 //         und hält die Mitgliederversammlung mit passender Rede. Fehlt einer Position Tiefe,
-//         zieht er Jugendspieler hoch oder holt Vereinslose.
+//         zieht er Jugendspieler hoch oder holt Vereinslose. Als Aufstiegskandidat (Platz <= 6)
+//         baut er die Lizenzauflagen der nächsthöheren Liga und spart dafür in den Fenstern.
 // passiv: spielt nur, der Kader wird nie angefasst.
 const path = require('path');
 const fs = require('fs');
@@ -76,11 +77,53 @@ async function karriere(browser, lauf) {
             try {
                 closeTutorial();
                 const elfStaerke = () => { const ids = pickBestLineupIds(); return squad.filter(p => ids.includes(p.id)).reduce((a, p) => a + p.strength, 0) / Math.max(1, ids.length); };
+                // Lizenzplanung wie ein ambitionierter Mensch: wer in der laufenden oder letzten Saison
+                // auf Platz 6 oder besser steht, baut die Auflagen der nächsthöheren Liga rechtzeitig
+                // (Bauzeit!) und hält das Geld dafür in den Wechselfenstern zurück.
+                const ligaSchnitt = () => { const t = (leaguesData[game.leagueLevel] || []).filter(x => x.name !== game.clubName); return t.reduce((a, x) => a + x.strength, 0) / Math.max(1, t.length); };
+                const kandidat = () => game.leagueLevel > 0
+                    && (Math.min(window.__letzterPlatz || 99, game.matchday > 3 ? (getOwnLeagueRank() || 99) : 99) <= 6 || elfStaerke() >= ligaSchnitt());
+                const lizenzPlan = () => {
+                    const req = DFB_LICENSING_REQUIREMENTS[game.leagueLevel - 1];
+                    const q = game.stadiumConstructionQueue || [];
+                    const plan = [];
+                    if (req.floodlight && !stadium.flutlicht && !q.some(p => p.type === 'specialInstall' && p.params.key === 'flutlicht'))
+                        plan.push({ art: 'flutlicht', kosten: getSpecialInstallCost('flutlicht') });
+                    if ((campusBuildings.internat?.lvl || 0) < req.minYouthLvl && !q.some(p => p.type === 'campusBuilding' && p.params.key === 'internat'))
+                        plan.push({ art: 'internat', kosten: getCampusUpgradeCost('internat') });
+                    const imBau = k => q.filter(p => p.type === 'blockExpand' && p.params.blockKey === k).length;
+                    let plaetze = stadium.total + q.filter(p => p.type === 'blockExpand').reduce((a, p) => a + p.params.seats, 0);
+                    const bloecke = Object.entries(stadium.blocks).map(([k, b]) => ({ k, b, exp: b.expansions + imBau(k) }));
+                    while (plaetze < req.minCapacity) {
+                        const w = bloecke.filter(x => x.exp < 5 && x.b.addSeats > 0)
+                            .map(x => ({ x, kosten: Math.round(x.b.cost * (x.exp + 1) * getStadiumCostScale()) }))
+                            .sort((a, b) => a.kosten / a.x.b.addSeats - b.kosten / b.x.b.addSeats)[0];
+                        if (!w) break;
+                        plan.push({ art: 'block', key: w.x.k, seats: w.x.b.addSeats, kosten: w.kosten, frei: imBau(w.x.k) === 0 && w.x.exp === w.x.b.expansions });
+                        w.x.exp++;
+                        plaetze += w.x.b.addSeats;
+                    }
+                    return { plan, reserve: req.minMoney, summe: plan.reduce((a, x) => a + x.kosten, 0) };
+                };
+                const lizenzRuecklage = () => {
+                    if (!kandidat()) return 0;
+                    const l = lizenzPlan();
+                    return l.summe + l.reserve;
+                };
+                const lizenzBauen = () => {
+                    if (!aktiv || !kandidat()) return;
+                    const { plan, reserve } = lizenzPlan();
+                    const puffer = reserve + squad.reduce((a, p) => a + (p.wage || 0), 0) * 6;
+                    plan.forEach(x => {
+                        if ((x.art === 'block' && !x.frei) || game.money - x.kosten < puffer) return;
+                        if (x.art === 'flutlicht') upgradeSpecialInstall('flutlicht');
+                        else if (x.art === 'internat') upgradeCampusBuilding('internat');
+                        else expandBlock(x.key, x.seats, x.kosten);
+                    });
+                };
                 const verwalten = () => {
                     if (!aktiv) return;
-                    const lizenz = checkDfbLicensingStatus();
-                    const flutlicht = lizenz.missing.length === 1 && lizenz.missing[0].startsWith('Flutlicht');
-                    if (flutlicht && game.money >= getSpecialInstallCost('flutlicht') + 100000) upgradeSpecialInstall('flutlicht');
+                    lizenzBauen();
                     const fenster = game.matchday <= 3 || (game.matchday >= 18 && game.matchday <= 20);
                     const median = [...squad].map(p => p.strength).sort((a, b) => a - b)[Math.floor(squad.length / 2)];
                     const halten = p => (p.strength >= median && p.age <= 31) || ((isClubLegend(p) || p.isCrowdFavorite) && p.age <= 33);
@@ -116,13 +159,15 @@ async function karriere(browser, lauf) {
                             if (squad.length === vorher) break;
                         }
                     });
+                    const ruecklage = lizenzRuecklage();
                     // Pro Wechselfenster: erst die Elf verstärken, dann den Kader auf 22 auffüllen.
-                    for (let versuch = 0; fenster && versuch < 6; versuch++) {
+                    // In der DFB-Nachfrist nichts kaufen: dort zählt nur noch die Finanzreserve.
+                    for (let versuch = 0; fenster && !game.dfbGracePeriod && versuch < 6; versuch++) {
                         const ids = pickBestLineupIds();
                         const schwaechster = Math.min(...squad.filter(p => ids.includes(p.id)).map(p => p.strength));
                         const gehaelter = squad.reduce((a, p) => a + (p.wage || 0), 0);
                         const bezahlbar = x => getTransferAsking(x.p) <= game.transferBudget
-                            && game.money - getTransferAsking(x.p) > (gehaelter + x.p.wage) * 34 * 0.3;
+                            && game.money - getTransferAsking(x.p) > (gehaelter + x.p.wage) * 34 * 0.3 + ruecklage;
                         const alle = marketPlayers.map((p, i) => ({ p, i })).filter(bezahlbar);
                         let wahl = alle.filter(x => x.p.strength > schwaechster + 2).sort((a, b) => b.p.strength - a.p.strength)[0];
                         if (!wahl && squad.length < 22) wahl = alle.sort((a, b) => b.p.strength - a.p.strength)[0];
@@ -144,6 +189,7 @@ async function karriere(browser, lauf) {
                         if (game.activeUltimatumPlayerId) resolveUltimatumIgnore();
                     }
                     if (isWinterTalkOpen()) chooseWinterTalk('kurs');
+                    lizenzBauen();
                     // Mitgliederversammlung selbst halten, Rede passend zur Saison.
                     const mv = game.memberAssembly;
                     if (mv && mv.status === 'offen') {
@@ -207,6 +253,7 @@ async function karriere(browser, lauf) {
                     ligaTop: Math.max(...tabelle.filter(t => t !== ich).map(t => t.strength)), kader: squad.length, vorstand: Math.round(game.boardSat),
                     pokal: (game.cupFinals || []).filter(f => f.season === game.season && f.won).map(f => f.comp).join('+')
                 };
+                zeile.lizenzVorEnde = checkDfbLicensingStatus().missing.join(' / ');
                 const geldVorEnde = game.money;
                 concludeSeasonAndAdvance();
                 finSammeln();
@@ -215,6 +262,8 @@ async function karriere(browser, lauf) {
                 const eu = (game.europeHistory || []).find(e => e.season === start.season);
                 zeile.europaRunde = eu ? eu.stage : '';
                 zeile.ligaDanach = game.leagueLevel;
+                window.__letzterPlatz = zeile.ligaDanach === start.liga ? zeile.platz : 99;
+                zeile.lizenzOffen = checkDfbLicensingStatus().missing.length;
                 zeile.entlassenAmEnde = !!game.sackPending;
                 zeile.board = Object.entries(window.__board || {}).sort((a, b) => a[1] - b[1]).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${Math.round(v)}`);
                 if (window.__str) {
@@ -240,9 +289,9 @@ async function karriere(browser, lauf) {
     zeilen.forEach(z => {
         if (z.crash) return console.log('ABSTURZ: ' + z.crash);
         if (z.entlassen) return console.log(`${String(z.season).padStart(3)} ENTLASSEN (Liga ${z.liga + 1})`);
-        console.log(`${String(z.season).padStart(3)} ${String(z.liga + 1).padStart(4)} ${String(z.platz).padStart(2)} ${String(z.punkte).padStart(3)} ${mio(z.geld)} ${mio(z.transfer)} ${String(Math.round(z.gehaltBudget / 1000)).padStart(7)}k ${String(Math.round(z.gehaltSumme / 1000)).padStart(5)}k ${String(z.elf).padStart(4)} ${String(z.ligaSchnitt).padStart(4)} ${String(z.ligaTop).padStart(3)} ${String(z.kader).padStart(3)} ${String(z.vorstand).padStart(3)} ${z.europaRunde ? ('CC:' + z.europaRunde).padEnd(13) : '-'.padEnd(13)} ${z.pokal ? 'Pokal ' + z.pokal : ''}${z.ligaDanach !== z.liga ? ' → Liga ' + (z.ligaDanach + 1) : ''}${z.notkader ? ' NOTKADER' : ''}${z.entlassenAmEnde ? ' ENTLASSEN (Saisonende)' : ''}`);
+        console.log(`${String(z.season).padStart(3)} ${String(z.liga + 1).padStart(4)} ${String(z.platz).padStart(2)} ${String(z.punkte).padStart(3)} ${mio(z.geld)} ${mio(z.transfer)} ${String(Math.round(z.gehaltBudget / 1000)).padStart(7)}k ${String(Math.round(z.gehaltSumme / 1000)).padStart(5)}k ${String(z.elf).padStart(4)} ${String(z.ligaSchnitt).padStart(4)} ${String(z.ligaTop).padStart(3)} ${String(z.kader).padStart(3)} ${String(z.vorstand).padStart(3)} ${z.europaRunde ? ('CC:' + z.europaRunde).padEnd(13) : '-'.padEnd(13)} ${z.pokal ? 'Pokal ' + z.pokal : ''}${z.ligaDanach !== z.liga ? ' → Liga ' + (z.ligaDanach + 1) : ''}${z.lizenzOffen ? ` Liz-offen:${z.lizenzOffen}` : ''}${z.notkader ? ' NOTKADER' : ''}${z.entlassenAmEnde ? ' ENTLASSEN (Saisonende)' : ''}`);
     });
-    if (process.env.DIAG) zeilen.forEach(z => { if (z.season) console.log(`\n[S${z.season}] Verlängerung ${JSON.stringify(z.vl)} | Abgänge ${z.abgaenge} | Fehler: ${(z.toasts || []).join(' ; ')}\n      Post: ${(z.post || []).join(' ; ')}`); });
+    if (process.env.DIAG) zeilen.forEach(z => { if (z.season) console.log(`\n[S${z.season}] Lizenz offen: ${z.lizenzVorEnde || '-'} | Verlängerung ${JSON.stringify(z.vl)} | Abgänge ${z.abgaenge} | Fehler: ${(z.toasts || []).join(' ; ')}\n      Post: ${(z.post || []).join(' ; ')}`); });
     if (process.env.STRDIAG) zeilen.forEach(z => { if (z.str) console.log(`[S${z.season} Liga ${z.liga + 1} Pl ${z.platz}] ${z.str}`); });
     if (process.env.FINDIAG) zeilen.forEach(z => {
         if (!z.fin) return;

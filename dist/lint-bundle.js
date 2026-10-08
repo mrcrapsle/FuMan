@@ -484,7 +484,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.79', date: '08.10.2026', features: 'Phase 25.9: Spielbetrieb & Verwaltung in den Profiligen, Notbesetzung mit Liga-Mindestgehalt' };
+    const GAME_VERSION = { number: '3.80', date: '08.10.2026', features: 'Langzeit-Bot mit Lizenzplanung (Messwerkzeug), keine Spieländerung' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
