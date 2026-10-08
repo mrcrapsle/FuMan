@@ -4,20 +4,24 @@
 // Rivalen abgeworben werden (checkYouthPoachingAttempt). Jeden Monat (runMonthlyClubTicks)
 // prüft tickYouthOffers() die Talente ab 16: Chance je Potenzial-Stufe (YOUTH_OFFER_CHANCE),
 // höchstens YOUTH_OFFER_MAX offene Angebote in game.youthOffers, jedes gilt 4 Spieltage.
-// Ablöse = Marktwert auf halbem Weg zum Potenzial (die Scouts der anderen kennen es) × 0,9-1,3.
+// Ablöse = Marktwert der heutigen Stärke × (1 + Potenzial-Luft / 20) × 0,8-1,2, höchstens 30 % des
+// Marktwerts am Potenzial (die Scouts der anderen kennen es). Der erste Entwurf (Marktwert auf halbem
+// Weg zum Potenzial) brachte dem Bundesliga-Bot bis zu 43 Mio. € pro Saison - für 500.000-€-Sichtungen.
 //   annehmen          volle Ablöse, 85 % davon ins Transferbudget (wie bei Profi-Verkäufen)
-//   mit Beteiligung   25 % weniger jetzt, dafür 25 % vom späteren Weiterverkauf
-//                     (game.sellOnClauses mit resaleValue = Marktwert am Potenzial)
+//   mit Beteiligung   20 % weniger jetzt, dafür 20 % vom späteren Weiterverkauf
+//                     (game.sellOnClauses mit resaleValue = Marktwert auf halbem Weg zum Potenzial)
 //   ablehnen          das Talent bleibt; ein Top-Talent (Stufe 3) freut sich (Entwicklung +1)
 
 const YOUTH_OFFER_CHANCE = { 1: 0.015, 2: 0.05, 3: 0.12 };
 const YOUTH_OFFER_MAX = 2;
 const YOUTH_OFFER_DAYS = 4;
-const YOUTH_SELLON_PERCENT = 25;
+const YOUTH_SELLON_PERCENT = 20;
 
 function getYouthOfferAmount(p) {
-    const ziel = Math.round((p.strength + (p.potential || p.strength)) / 2);
-    return Math.max(5000, Math.round(calculatePlayerMarketValue(ziel) * (0.9 + Math.random() * 0.4) / 1000) * 1000);
+    const luft = Math.max(0, (p.potential || p.strength) - p.strength);
+    const wert = calculatePlayerMarketValue(p.strength) * (1 + luft / 20) * (0.8 + Math.random() * 0.4);
+    const deckel = calculatePlayerMarketValue(p.potential || p.strength) * 0.3;
+    return Math.max(5000, Math.round(Math.min(wert, deckel) / 1000) * 1000);
 }
 
 function pickYouthOfferClub() {
@@ -67,7 +71,7 @@ function acceptYouthOffer(offerId, mitBeteiligung) {
     if (mitBeteiligung) {
         if (!Array.isArray(game.sellOnClauses)) game.sellOnClauses = [];
         game.sellOnClauses.push({ playerName: p.name, buyingClub: o.club, percent: YOUTH_SELLON_PERCENT, originalSaleValue: jetzt,
-            resaleValue: calculatePlayerMarketValue(p.potential || p.strength) });
+            resaleValue: calculatePlayerMarketValue(Math.round((p.strength + (p.potential || p.strength)) / 2)) });
     }
     removeYouthTalentById(p.id);
     if (typeof addYouthMoment === 'function') addYouthMoment('💶', `${p.name} wechselt für ${formatVal(jetzt)} zu ${o.club}${mitBeteiligung ? ` (+${YOUTH_SELLON_PERCENT} % Weiterverkauf)` : ''}`);

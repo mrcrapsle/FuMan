@@ -1782,7 +1782,10 @@ async function testYouthSales(browser) {
             game.sellOnClauses = [];
             acceptYouthOffer(o2.id, true);
             const klausel = game.sellOnClauses[0];
-            out.beteiligung = game.money === geld2 + Math.round(o2.betrag * 0.75 / 1000) * 1000 && klausel && klausel.percent === 25 && klausel.resaleValue > 0;
+            out.beteiligung = game.money === geld2 + Math.round(o2.betrag * 0.8 / 1000) * 1000 && klausel && klausel.percent === 20 && klausel.resaleValue > 0;
+            // Ablöse am heutigen Wert: höchstens 30 % des Marktwerts am Potenzial
+            const t = { strength: 72, potential: 86 };
+            out.ablose = Array.from({ length: 20 }, () => getYouthOfferAmount(t)).every(b => b <= calculatePlayerMarketValue(86) * 0.3 + 1000 && b >= calculatePlayerMarketValue(72));
             // Ablehnen: ein Top-Talent legt zu; abgelaufene Angebote verschwinden
             const top = youthTalents[0];
             top.potentialTier = 3; top.potential = top.strength + 10;
@@ -1808,7 +1811,7 @@ async function testYouthSales(browser) {
     if (!r.crash) {
         assert(r.angebote && r.post && r.box, 'KI-Vereine bieten für Talente ab 16 (höchstens 2 offen, 4 Spieltage gültig), mit Postfach und Box');
         assert(r.verkauft, `Verkaufen: volle Ablöse, 85 % ins Transferbudget, Talent verlässt die Akademie (${JSON.stringify(r.verkaufWerte)})`);
-        assert(r.beteiligung, 'Mit Beteiligung: 25 % weniger sofort, dafür 25 % vom Weiterverkauf am Potenzial');
+        assert(r.beteiligung && r.ablose, 'Mit Beteiligung: 20 % weniger sofort, dafür 20 % vom Weiterverkauf; Ablöse vom heutigen Wert, gedeckelt bei 30 % des Potenzial-Werts');
         assert(r.abgelehnt && r.abgelaufen && r.zuJung, 'Ablehnen hebt ein Top-Talent um 1, abgelaufene Angebote verschwinden, unter 16 keine Angebote');
     }
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
