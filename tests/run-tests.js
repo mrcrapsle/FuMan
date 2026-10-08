@@ -1748,6 +1748,54 @@ async function testRumors(browser) {
     await page.close();
 }
 
+async function testSponsorRenewal(browser) {
+    console.log('\n[25.19] Hauptsponsor bietet vor dem Ablauf eine Verlängerung an');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            const zufall = Math.random;
+            const neu = () => { game.sponsor = { name: 'Testwerke', base: 10000, winBonus: 2000, cupBonus: 0, promotionBonus: 0, duration: SPONSOR_RENEWAL_LEAD + 1, tier: 'mittel', category: null, loyalty: 75, signedLevel: game.leagueLevel }; game.sponsorRenewal = null; };
+            neu();
+            tickContractDurations();
+            const a = getSponsorRenewal();
+            out.angebot = !!a && a.base === Math.round(10000 * (0.8 + 75 / 250) / 100) * 100 && inboxMessages.some(m => m.title.includes('will verlängern'));
+            showScreen('screen-sponsors');
+            out.box = document.getElementById('sponsor-renewal-box').textContent.includes('Verlängerung');
+            acceptSponsorRenewal();
+            out.verlaengert = game.sponsor.duration === SPONSOR_RENEWAL_LEAD + SPONSOR_RENEWAL_DAYS && game.sponsor.base === a.base && game.sponsor.loyalty === 80 && !getSponsorRenewal();
+            // Nachverhandeln: Erfolg +10 %, Misserfolg zieht das Angebot zurück
+            neu(); tickContractDurations();
+            const basis = getSponsorRenewal().base;
+            Math.random = () => 0; haggleSponsorRenewal(); Math.random = zufall;
+            out.mehr = getSponsorRenewal().base === Math.round(basis * 1.1 / 100) * 100;
+            neu(); tickContractDurations();
+            Math.random = () => 0.99; haggleSponsorRenewal(); Math.random = zufall;
+            out.zurueck = !getSponsorRenewal();
+            // Geringe Treue: kein Angebot; Ligawechsel seit der Unterschrift wird eingerechnet
+            neu(); game.sponsor.loyalty = 10; tickContractDurations();
+            out.keinAngebot = !getSponsorRenewal() && inboxMessages.some(m => m.title.includes('verlängert nicht'));
+            neu(); game.sponsor.signedLevel = game.leagueLevel + 1 < 6 ? game.leagueLevel + 1 : game.leagueLevel; tickContractDurations();
+            out.ligaFaktor = game.sponsor.signedLevel === game.leagueLevel || getSponsorRenewal().base > Math.round(10000 * (0.8 + 75 / 250) / 100) * 100;
+            // Ablauf ohne Annahme: Angebot verfällt mit dem Vertrag
+            neu(); tickContractDurations(); game.sponsor.duration = 1; tickContractDurations();
+            out.verfallen = game.sponsor.name === 'Kein Hauptsponsor' && !game.sponsorRenewal;
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Sponsor-Verlängerung ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.angebot && r.box, '6 Spieltage vor Ablauf bietet der Hauptsponsor eine Verlängerung an (Konditionen nach Treue), mit Post und Box');
+        assert(r.verlaengert, 'Annehmen verlängert um 34 Spieltage zu den neuen Konditionen, Treue +5');
+        assert(r.mehr && r.zurueck, 'Nachverhandeln: Erfolg +10 %, sonst zieht der Sponsor das Angebot zurück');
+        assert(r.keinAngebot && r.ligaFaktor && r.verfallen, 'Geringe Treue: kein Angebot; Aufstieg seit der Unterschrift hebt die Konditionen; ohne Annahme verfällt das Angebot');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testBookingLabels(browser) {
     console.log('\n[25.19] Buchungstexte: Käufe, Verkäufe, Handgelder, Sichtung, TV-Prognose');
     const { page, consoleErrors } = await freshPage(browser);
@@ -6836,13 +6884,21 @@ async function testBoardRestart(browser) {
             game.season = 8; game.boardSat = 85;
             grantRelegationRestart();
             const hoherWertBleibt = game.boardSat === 85;
-            // Abstiegsklausel (25.14): Gehälter -30 %, Moral -3, Nachricht; danach wiederhergestellt
+            // Abstiegsklausel (25.14): Gehälter -RELEGATION_WAGE_CUT (25.19: 40 %), Moral -3, Nachricht; danach wiederhergestellt
             const loehne = squad.map(p => p.wage), moral = squad.map(p => p.morale);
             const summeVor = loehne.reduce((a, b) => a + b, 0);
             const summeNach = applyRelegationWageClause();
-            const klausel = { anteil: summeNach / summeVor, exakt: squad.every((p, i) => p.wage === Math.max(150, Math.round(loehne[i] * 0.7 / 50) * 50)), moral: squad.every((p, i) => p.morale === Math.max(10, (moral[i] || 50) - 3)),
+            const klausel = { anteil: summeNach / summeVor, exakt: squad.every((p, i) => p.wage === Math.max(150, Math.round(loehne[i] * (1 - RELEGATION_WAGE_CUT) / 50) * 50)), moral: squad.every((p, i) => p.morale === Math.max(10, (moral[i] || 50) - 3)),
                 post: inboxMessages.some(m => m.title.includes('Abstiegsklausel')) };
             squad.forEach((p, i) => { p.wage = loehne[i]; p.morale = moral[i]; });
+            // Fallschirmgeld (25.19): 25 % des TV-Grundbetrags der alten Liga, eigener Buchungstext
+            const ligaVorher = game.leagueLevel;
+            game.leagueLevel = 1; game.kontoauszug = [];
+            const geldVorFallschirm = game.money;
+            const fallschirm = payRelegationParachute();
+            klausel.fallschirm = fallschirm === 16000000 && game.money === geldVorFallschirm + fallschirm
+                && game.kontoauszug.some(b => b.label.includes('Fallschirmgeld'));
+            game.leagueLevel = ligaVorher;
             // Mitgliederversammlung: ignoriert man sie, findet sie nach ASSEMBLY_AUTO_AFTER Spieltagen
             // automatisch statt (vorher wurde sie mit Spieltag 35 eröffnet und nie abgehalten).
             game.season = 2; game.matchday = 1; game.sackPending = false;
@@ -6879,7 +6935,7 @@ async function testBoardRestart(browser) {
         assert(!r.zweiter && r.nachZweitem === 20, 'Zweiter Abstieg in Folge: kein Vorschuss');
         assert(r.spaeter && r.nachSpaeter === 60, 'Nach einer Saison Pause gibt es wieder einen Neustart');
         assert(r.hoherWertBleibt, 'Ein höherer Wert wird nicht auf 60 gesenkt');
-        assert(r.klausel.exakt && r.klausel.anteil < 0.85 && r.klausel.moral && r.klausel.post, `Abstiegsklausel senkt jedes Gehalt um 30 % (mind. 150 €) mit Nachricht (${JSON.stringify(r.klausel)})`);
+        assert(r.klausel.exakt && r.klausel.anteil < 0.85 && r.klausel.moral && r.klausel.post && r.klausel.fallschirm, `Abstiegsklausel senkt jedes Gehalt um 40 % (mind. 150 €) mit Nachricht, Bundesliga-Absteiger bekommt 16 Mio. € Fallschirmgeld (${JSON.stringify(r.klausel)})`);
         assert(r.eroeffnet && r.automatisch, 'Mitgliederversammlung findet ohne Zutun nach einigen Spieltagen statt');
         assert(r.altstand, 'Alte Spielstände mit Eröffnung an Spieltag 35 werden repariert');
         assert(r.notkader.gehalt, 'Notbesetzung verdient mindestens das Liga-Mindestgehalt');
@@ -8446,6 +8502,7 @@ async function main() {
         testTransferStrategy,
         testYouthSales,
         testBookingLabels,
+        testSponsorRenewal,
         testPlayerProfile,
         testHomeRegion,
         testLocalDerbies,

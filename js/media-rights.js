@@ -67,6 +67,22 @@
         return neutral;
     }
 
+    // Fallschirmgeld (25.19): wie die DFL zahlt die Liga einem Absteiger einmalig 25 % ihres
+    // TV-Grundbetrags (Bundesliga → 16 Mio. €, 2. Liga → 2 Mio. €), damit er den teuren Kader
+    // geordnet verkleinern kann statt Zwangsverkäufe der besten Spieler zu erleben.
+    const RELEGATION_PARACHUTE_SHARE = 0.25;
+    function getRelegationParachute(fromLevel) {
+        return Math.round((LEAGUE_BASE_TV_MONEY[fromLevel] || 0) * RELEGATION_PARACHUTE_SHARE / 1000) * 1000;
+    }
+    // Aus concludeSeasonAndAdvance() direkt nach dem Abstieg (game.leagueLevel ist schon die neue Liga).
+    function payRelegationParachute() {
+        const betrag = getRelegationParachute(game.leagueLevel - 1);
+        if (betrag <= 0) return 0;
+        bucheMitLabel('🪂 Fallschirmgeld (TV)', betrag);
+        addInboxMessage('finanzen', '🪂 Fallschirmgeld', `Die ${leagueNames[game.leagueLevel - 1]} zahlt dem Absteiger einmalig ${formatVal(betrag)} aus dem TV-Topf - Zeit, den Kader an die neue Liga anzupassen.`, 'screen-finances');
+        return betrag;
+    }
+
     // Prognose für die Finanzübersicht (25.19): was die Abrechnung am Saisonende bei
     // gleichbleibendem Tabellenplatz bringt - bisher kam die Restausschüttung (bis 28 Mio. €)
     // oder die Rückforderung (bis 10 Mio. €) ohne Vorwarnung.

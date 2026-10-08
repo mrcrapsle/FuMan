@@ -161,7 +161,7 @@
             cupBonus: offer.cupBonus, promotionBonus: offer.promotionBonus,
             duration: offer.sp, tier: offer.tierKey, category: offer.category,
             themedBonusType: offer.themedBonusType || null, themedBonusAmount: offer.themedBonusAmount || 0,
-            loyalty: 65, lastActivationMatchday: null
+            loyalty: 65, lastActivationMatchday: null, signedLevel: game.leagueLevel
         };
         sponsorOffers = [];
         let conflictNote = conflict ? ` ⚠️ Branchenkonflikt mit bestehendem ${conflict}-Sponsor - Vergütung um 30% reduziert!` : '';
@@ -561,7 +561,9 @@
     function tickContractDurations() {
         if (typeof game.sponsor.duration !== 'number') game.sponsor.duration = 34;
         game.sponsor.duration--;
+        if (typeof checkSponsorRenewalOffer === 'function') checkSponsorRenewalOffer();
         if (game.sponsor.duration <= 0) {
+            game.sponsorRenewal = null;
             game.sponsor = { name: 'Kein Hauptsponsor', base: 500, winBonus: 200, cupBonus: 0, promotionBonus: 0, duration: 999, tier: 'kurz', themedBonusType: null, themedBonusAmount: 0, category: null };
             showToast('📉 Der Hauptsponsoren-Vertrag ist ausgelaufen! Verhandle bald einen neuen.', 'error');
             addInboxMessage('vertrag', 'Hauptsponsor-Vertrag ausgelaufen', 'Verhandle bald einen neuen Hauptsponsor-Vertrag.', 'screen-sponsors');
@@ -715,6 +717,7 @@
 
     function renderSponsorsView() {
         migrateLegacyCoSponsors();
+        if (typeof renderSponsorRenewalBox === 'function') renderSponsorRenewalBox();
         document.getElementById('spons-curr-name').innerText = game.sponsor.name;
         document.getElementById('spons-curr-base').innerText = formatVal(game.sponsor.base);
         document.getElementById('spons-curr-win').innerText = formatVal(game.sponsor.winBonus);

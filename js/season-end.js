@@ -161,7 +161,10 @@ function getCashSurplusBudgetShare() {
 // Vertrag mehr verlängern - der Kader lief aus, es folgten Notkader und Entlassung. Wie in
 // echten Verträgen sinken die Gehälter beim Abstieg, und im ersten Jahr deckt das Budget
 // mindestens RELEGATION_BUDGET_SHARE der gekürzten Gehälter. Gibt die neue Gehaltssumme zurück.
-const RELEGATION_WAGE_CUT = 0.3;
+// 25.19: 40 % statt 30 % (echte Klauseln 30-50 %) - ein Bundesliga-Absteiger trug mit 30 % noch
+// 1,7 Mio. € pro Spieltag (53 Mio. € pro Saison) bei rund 35 Mio. € Einnahmen in der 2. Liga:
+// 62 Mio. € Zwangsverkäufe, Notkader, Vorstand bei 11. Dazu das Fallschirmgeld (media-rights.js).
+const RELEGATION_WAGE_CUT = 0.4;
 const RELEGATION_BUDGET_SHARE = 0.9;
 function applyRelegationWageClause() {
     if (!squad.length) return 0;
@@ -331,6 +334,7 @@ function concludeSeasonAndAdvance() {
         } else if ((myRank >= 17 || (myRank === 16 && relegation !== 'stayed')) && game.leagueLevel < NUM_LEAGUES - 1) {
             game.leagueLevel++;
             abstiegsGehaelter = applyRelegationWageClause();
+            if (typeof payRelegationParachute === 'function') payRelegationParachute();
             const neustart = typeof grantRelegationRestart === 'function' && grantRelegationRestart();
             showNotice('❌ Abstieg', `Die Klasse konnte nicht gehalten werden. Nächste Saison geht es eine Liga tiefer weiter.${neustart ? '\n\nDer Vorstand hält an dir fest und gibt dir einen Neustart.' : ''}`, { typ: 'warn' });
         }

@@ -150,6 +150,8 @@ async function karriere(browser, lauf) {
                     if (!aktiv) return;
                     const wert = (o, slot, proSpieltag) => ((o.signOn || 0) + proSpieltag * 34) * (getExclusivityConflict(o.category, slot) ? 0.7 : 1);
                     const beste = (liste, slot, f) => [...liste].sort((a, b) => wert(b, slot, f(b)) - wert(a, slot, f(a)))[0];
+                    // Verlängerungsangebot des Hauptsponsors (25.19) annehmen.
+                    if (typeof getSponsorRenewal === 'function' && getSponsorRenewal()) acceptSponsorRenewal();
                     if ((game.sponsor?.base || 0) <= 500 && sponsorOffers.length) acceptSponsorOffer(beste(sponsorOffers, 'sponsor', o => o.base).id);
                     if (!(game.kitSupplier?.income > 0) && kitSupplierOffers.length) acceptKitOffer(beste(kitSupplierOffers, 'kit', o => o.income / 2).id);
                     if (!(game.sleeveSponsor?.income > 0) && sleeveSponsorOffers.length) acceptSleeveOffer(beste(sleeveSponsorOffers, 'sleeve', o => o.income).id);
