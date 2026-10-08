@@ -170,6 +170,9 @@ function applyCashSurplusBudgets() {
     addInboxMessage('finanzen', '🏦 Vorstand gibt Rücklagen frei', `Aus den Rücklagen über der Reserve stehen zusätzlich ${formatVal(anteil.transfer)} Transferbudget und ${formatVal(anteil.wage)} Gehaltsbudget pro Spieltag bereit.`, 'screen-finances');
 }
 
+// Mindestgehalt pro Spieltag für Notbesetzungen je Liga (etwa die Hälfte eines üblichen Kadergehalts).
+const EMERGENCY_WAGE_FLOOR = [50000, 15000, 3000, 1000, 400, 150];
+
 function concludeSeasonAndAdvance() {
         // Erfolgsbasierte Vertragsboni (js/bonusclauses.js): das Aufstiegsbonus-Flag wird
         // bewusst HIER, ganz am Anfang, zurückgesetzt - nicht in der allgemeinen
@@ -377,7 +380,15 @@ function concludeSeasonAndAdvance() {
             let andere = (leaguesData[game.leagueLevel] || []).filter(t => t.name !== game.clubName && t.strength > 0);
             let ligaSchnitt = andere.length ? andere.reduce((a, t) => a + t.strength, 0) / andere.length : 82 - game.leagueLevel * 10;
             let emergencyBase = Math.max(25, Math.round(ligaSchnitt) - 14);
-            toFill.forEach(pos => squad.push(createPlayer(pos, emergencyBase, emergencyBase + 8)));
+            // Gehalt mindestens auf Liganiveau: wer kurzfristig zu einem Bundesligisten kommt,
+            // spielt nicht für ein Zweitliga-Gehalt (Langzeittest 25.9: ein passiver Verein lebte
+            // jahrelang mit 5 Mio. € Gehältern in der Bundesliga und häufte 600 Mio. € an).
+            let gehaltsBoden = EMERGENCY_WAGE_FLOOR[game.leagueLevel] || 0;
+            toFill.forEach(pos => {
+                let p = createPlayer(pos, emergencyBase, emergencyBase + 8);
+                p.wage = Math.max(p.wage, gehaltsBoden);
+                squad.push(p);
+            });
             showNotice('⚠️ Vertragskrise', 'Zu viele Spieler haben den Verein wegen auslaufender Verträge verlassen. Der Kader wurde notdürftig mit neuen Spielern aufgefüllt.\n\nAchte künftig auf die Vertragslaufzeiten.', { typ: 'warn' });
         }
 

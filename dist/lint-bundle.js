@@ -484,7 +484,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.78', date: '08.10.2026', features: 'Phase 25.8: Müde Spieler pausieren, Sommerpause für Stress und Moral, Notbesetzung auf Liganiveau' };
+    const GAME_VERSION = { number: '3.79', date: '08.10.2026', features: 'Phase 25.9: Spielbetrieb & Verwaltung in den Profiligen, Notbesetzung mit Liga-Mindestgehalt' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -13132,6 +13132,7 @@ function finishGoalkeeperGame() {
         let campusMaintenanceSumForecast = Object.keys(campusBuildings).reduce((s, k) => s + (k === 'turnstiles' ? 0 : campusBuildings[k].lvl * 650), 0);
         let maintenance = Math.round((baseStadiumMaintenanceForecast + campusMaintenanceSumForecast) * 4);
         if (campusBuildings.turnstiles?.lvl > 0) maintenance = Math.round(maintenance * (1 - campusBuildings.turnstiles.lvl * 0.02));
+        let operations = getOperatingCostPerMatchday() * 4;
         let loanInterest = Math.round(game.loanDebt * 0.04);
         let loanInstallments = activeLoans.reduce((s, l) => s + l.installment, 0) * 4;
 
@@ -13151,7 +13152,7 @@ function finishGoalkeeperGame() {
         let estAdvisorFee = financeCentralState.taxAdvisorHired ? getTaxAdvisorFee() * 4 : 0;
 
         let totalIn = estTickets + estMerch + estSponsors + dividends;
-        let totalOut = totalWages + totalStaffWages + maintenance + loanInterest + loanInstallments + estTax + estAdvisorFee;
+        let totalOut = totalWages + totalStaffWages + maintenance + operations + loanInterest + loanInstallments + estTax + estAdvisorFee;
         let net = totalIn - totalOut;
 
         let monatEl = document.getElementById('fin-month-title');
@@ -13165,6 +13166,8 @@ function finishGoalkeeperGame() {
 
         document.getElementById('fin-out-wages').innerText = formatVal(totalWages + totalStaffWages);
         document.getElementById('fin-out-maintenance').innerText = formatVal(maintenance);
+        let opsEl = document.getElementById('fin-out-operations');
+        if (opsEl) opsEl.innerText = formatVal(operations);
         // Hochrechnung: Ordnerdienst nur bei Heimspielen (~2 pro Monat).
         document.getElementById('fin-out-stewards').innerText = formatVal(getStewardMatchdayCost() * 2);
         document.getElementById('fin-out-interest').innerText = formatVal(loanInterest + loanInstallments);
@@ -13574,6 +13577,16 @@ function finishGoalkeeperGame() {
     // Dadurch ist es eine echte Entscheidung statt eines Selbstläufers: in den unteren
     // Ligen sind die Einnahmen so klein, dass die Ersparnis das Honorar kaum deckt,
     // weiter oben rechnet er sich deutlich.
+    // Spielbetrieb & Verwaltung (Geschäftsstelle, Scouting, Medizin, Nachwuchs-Leistungszentrum,
+    // Spieltagsorganisation): nur in den Profiligen, pro Saison, jeden Spieltag zu 1/34 fällig.
+    // Langzeittest 25.9: außer Gehältern gab es kaum laufende Kosten - ein Bundesligist mit
+    // Startkader machte 40-60 Mio. € Überschuss pro Saison, ein passiver Verein häufte bis zu
+    // 770 Mio. € an. Echte Profivereine geben dafür rund ein Drittel ihres Umsatzes aus.
+    const LEAGUE_OPERATING_COST = [20000000, 2000000, 500000, 0, 0, 0];
+    function getOperatingCostPerMatchday() {
+        return Math.round((LEAGUE_OPERATING_COST[game.leagueLevel] || 0) / 34);
+    }
+
     const TAX_RATE_BASE = 0.12;
     const TAX_RATE_WITH_ADVISOR = 0.07;
     const TAX_ADVISOR_SIGNING_FEE = 15000;
@@ -26000,7 +26013,8 @@ function cleanupLegacyScoutState() {
         let staffWages = (typeof getTotalStaffWages === 'function') ? getTotalStaffWages() : 0;
         let secondTeamStaffWages = (typeof getSecondTeamStaffWages === 'function') ? getSecondTeamStaffWages() : 0;
 
-        let net = grossIncome - taxAmount - advisorFee - wages - staffWages - secondTeamStaffWages - travelCost;
+        let operatingCost = typeof getOperatingCostPerMatchday === 'function' ? getOperatingCostPerMatchday() : 0;
+        let net = grossIncome - taxAmount - advisorFee - wages - staffWages - secondTeamStaffWages - travelCost - operatingCost;
         game.money += net;
 
         // Buchungsjournal: hält für JEDEN Spieltag fest, woraus sich Einnahmen und Ausgaben
@@ -26023,6 +26037,7 @@ function cleanupLegacyScoutState() {
             { label: '💼 Personalgehälter', amount: staffWages },
             { label: '🅱️ Reserve-Trainerstab', amount: secondTeamStaffWages },
             { label: '🔧 Stadion- & Campus-Unterhalt', amount: maintenanceCost },
+            { label: '🏢 Spielbetrieb & Verwaltung', amount: operatingCost },
             { label: '🚌 Auswärtsfahrt', amount: travelCost },
             { label: '🧾 Steuern & Abgaben', amount: taxAmount },
             { label: '📊 Steuerberater-Honorar', amount: advisorFee }
@@ -27672,6 +27687,9 @@ function applyCashSurplusBudgets() {
     addInboxMessage('finanzen', '🏦 Vorstand gibt Rücklagen frei', `Aus den Rücklagen über der Reserve stehen zusätzlich ${formatVal(anteil.transfer)} Transferbudget und ${formatVal(anteil.wage)} Gehaltsbudget pro Spieltag bereit.`, 'screen-finances');
 }
 
+// Mindestgehalt pro Spieltag für Notbesetzungen je Liga (etwa die Hälfte eines üblichen Kadergehalts).
+const EMERGENCY_WAGE_FLOOR = [50000, 15000, 3000, 1000, 400, 150];
+
 function concludeSeasonAndAdvance() {
         // Erfolgsbasierte Vertragsboni (js/bonusclauses.js): das Aufstiegsbonus-Flag wird
         // bewusst HIER, ganz am Anfang, zurückgesetzt - nicht in der allgemeinen
@@ -27879,7 +27897,15 @@ function concludeSeasonAndAdvance() {
             let andere = (leaguesData[game.leagueLevel] || []).filter(t => t.name !== game.clubName && t.strength > 0);
             let ligaSchnitt = andere.length ? andere.reduce((a, t) => a + t.strength, 0) / andere.length : 82 - game.leagueLevel * 10;
             let emergencyBase = Math.max(25, Math.round(ligaSchnitt) - 14);
-            toFill.forEach(pos => squad.push(createPlayer(pos, emergencyBase, emergencyBase + 8)));
+            // Gehalt mindestens auf Liganiveau: wer kurzfristig zu einem Bundesligisten kommt,
+            // spielt nicht für ein Zweitliga-Gehalt (Langzeittest 25.9: ein passiver Verein lebte
+            // jahrelang mit 5 Mio. € Gehältern in der Bundesliga und häufte 600 Mio. € an).
+            let gehaltsBoden = EMERGENCY_WAGE_FLOOR[game.leagueLevel] || 0;
+            toFill.forEach(pos => {
+                let p = createPlayer(pos, emergencyBase, emergencyBase + 8);
+                p.wage = Math.max(p.wage, gehaltsBoden);
+                squad.push(p);
+            });
             showNotice('⚠️ Vertragskrise', 'Zu viele Spieler haben den Verein wegen auslaufender Verträge verlassen. Der Kader wurde notdürftig mit neuen Spielern aufgefüllt.\n\nAchte künftig auf die Vertragslaufzeiten.', { typ: 'warn' });
         }
 
@@ -29181,6 +29207,9 @@ const LEXICON_ENTRIES = [
     { cat: 'Finanzen', title: 'Holding & Fabriken', screen: 'screen-holding',
         text: 'Die Merchandising-Holding hat ein eigenes Konto (Überweisungen vom und zum Verein). Fabriken werden vom Holding-Konto gekauft und produzieren Fanartikel aus Rohstoffen. Zum Saisonstart kommt je eigener Fabrik ein Lohnfertigungs-Auftrag für ihr Produkt (Honorar etwa dreifache Materialkosten, je Ausbaustufe mehr).',
         tips: ['Der Unternehmenswert = 50.000 € plus 80 % der in Fabriken investierten Summe', 'Übernahmeangebote kommen nur, wenn du Fabriken besitzt - beim Verkauf sind alle Fabriken weg, Konto und Lager bleiben'] },
+    { cat: 'Finanzen', title: 'Spielbetrieb & Verwaltung', screen: 'screen-finances',
+        text: 'Geschäftsstelle, Scouting, Medizin, Nachwuchszentrum und Spieltagsorganisation kosten in den Profiligen jede Saison: Bundesliga 20 Mio. €, 2. Liga 2 Mio. €, 3. Liga 0,5 Mio. € - jeden Spieltag zu 1/34, im Buchungsjournal als eigener Posten. Ab der Regionalliga trägt das Ehrenamt den Spielbetrieb.',
+        tips: ['Ein Aufstieg in die Bundesliga bringt viel mehr TV-Geld, aber auch diese Fixkosten', 'Die Finanz-Prognose zeigt den Monatsanteil'] },
     { cat: 'Finanzen', title: 'Gehaltsbudget', screen: 'screen-finances',
         text: 'Höchstsumme aller Spielergehälter pro Spieltag. Neue Verträge über dem Budget sind nicht möglich.',
         tips: ['Verkäufe und auslaufende Verträge schaffen Luft', 'Im Gehaltsgespräch einmal nachverhandeln', 'Zum Saisonstart liegt es mindestens 5 % über den laufenden Gehältern, wenn das Konto eine Viertelsaison davon deckt - nach einer Saison mit Minus bei 85 % (Sparkurs)'] },
@@ -30701,7 +30730,10 @@ function renderSeasonForecastHistory() {
     // Erstliga-Start bekam 150.000 EUR Startkapital bei 2,5 Mio. EUR Gehaltskosten PRO
     // SPIELTAG und ein Stadion, das jede Woche ausverkauft war und trotzdem nur einen
     // Bruchteil der Gehaelter einspielte. Beides skaliert jetzt mit der Liga.
-    const NEW_GAME_LEAGUE_MONEY_SCALE = [40, 10, 3, 1.6, 1.1, 1];
+    // Bundesliga 80 statt 40 (25.9): seit Spielbetrieb & Verwaltung (20 Mio. €/Saison) trägt erst
+    // die TV-Restausschüttung am Saisonende das Jahr - mit 6 Mio. € fiel ein Mittelfeldklub
+    // unterjährig auf ~2 Mio. €.
+    const NEW_GAME_LEAGUE_MONEY_SCALE = [80, 10, 3, 1.6, 1.1, 1];
     const NEW_GAME_LEAGUE_STADIUM_SCALE = [3.0, 2.0, 1.4, 1.0, 1.0, 1.0];
 
     function getNewGameStartMoney(level, amount) {

@@ -495,7 +495,10 @@
     // Erstliga-Start bekam 150.000 EUR Startkapital bei 2,5 Mio. EUR Gehaltskosten PRO
     // SPIELTAG und ein Stadion, das jede Woche ausverkauft war und trotzdem nur einen
     // Bruchteil der Gehaelter einspielte. Beides skaliert jetzt mit der Liga.
-    const NEW_GAME_LEAGUE_MONEY_SCALE = [40, 10, 3, 1.6, 1.1, 1];
+    // Bundesliga 80 statt 40 (25.9): seit Spielbetrieb & Verwaltung (20 Mio. €/Saison) trägt erst
+    // die TV-Restausschüttung am Saisonende das Jahr - mit 6 Mio. € fiel ein Mittelfeldklub
+    // unterjährig auf ~2 Mio. €.
+    const NEW_GAME_LEAGUE_MONEY_SCALE = [80, 10, 3, 1.6, 1.1, 1];
     const NEW_GAME_LEAGUE_STADIUM_SCALE = [3.0, 2.0, 1.4, 1.0, 1.0, 1.0];
 
     function getNewGameStartMoney(level, amount) {

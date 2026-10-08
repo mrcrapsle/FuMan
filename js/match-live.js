@@ -740,7 +740,8 @@
         let staffWages = (typeof getTotalStaffWages === 'function') ? getTotalStaffWages() : 0;
         let secondTeamStaffWages = (typeof getSecondTeamStaffWages === 'function') ? getSecondTeamStaffWages() : 0;
 
-        let net = grossIncome - taxAmount - advisorFee - wages - staffWages - secondTeamStaffWages - travelCost;
+        let operatingCost = typeof getOperatingCostPerMatchday === 'function' ? getOperatingCostPerMatchday() : 0;
+        let net = grossIncome - taxAmount - advisorFee - wages - staffWages - secondTeamStaffWages - travelCost - operatingCost;
         game.money += net;
 
         // Buchungsjournal: hält für JEDEN Spieltag fest, woraus sich Einnahmen und Ausgaben
@@ -763,6 +764,7 @@
             { label: '💼 Personalgehälter', amount: staffWages },
             { label: '🅱️ Reserve-Trainerstab', amount: secondTeamStaffWages },
             { label: '🔧 Stadion- & Campus-Unterhalt', amount: maintenanceCost },
+            { label: '🏢 Spielbetrieb & Verwaltung', amount: operatingCost },
             { label: '🚌 Auswärtsfahrt', amount: travelCost },
             { label: '🧾 Steuern & Abgaben', amount: taxAmount },
             { label: '📊 Steuerberater-Honorar', amount: advisorFee }

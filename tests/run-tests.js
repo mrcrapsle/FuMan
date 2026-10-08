@@ -2195,6 +2195,15 @@ async function testBundesligaLongRun(browser) {
             bucheMitLabel('🏆 DFB-Pokal-Prämie', 215000);
             out.praemie = game.kontoauszug.some(k => k.label === '🏆 DFB-Pokal-Prämie' && k.amount === 215000);
             out.startkapital = isFfpExemptLabel('🏁 Startkapital');
+            // Spielbetrieb & Verwaltung: nur in den Profiligen, als eigener Posten im Journal
+            game.leagueLevel = 5;
+            out.betriebUnten = getOperatingCostPerMatchday() === 0;
+            game.leagueLevel = 0;
+            const proSpieltag = getOperatingCostPerMatchday();
+            applyMatchdayFinances(false);
+            const eintrag = game.financeLedger[game.financeLedger.length - 1];
+            const posten = eintrag.ausgaben.find(a => a.label.includes('Spielbetrieb'));
+            out.betriebOben = proSpieltag >= 290000 && !!posten && posten.amount === proSpieltag && eintrag.summeAus >= proSpieltag;
             // DFB-Pokal: echte Vereine der Pyramide statt erfundener 75er
             game.leagueLevel = 0;
             const teams = buildDfbPokalTeams(true);
@@ -2213,6 +2222,7 @@ async function testBundesligaLongRun(browser) {
         assert(r.sterne && r.untenNormal, 'Bundesliga-Markt mit drei internationalen Stars, untere Ligen unverändert');
         assert(r.praemie && r.startkapital, 'Pokalprämien mit eigener Buchung, Startkapital zählt nicht fürs FFP');
         assert(r.pokalEcht, 'DFB-Pokal mit 32 echten Vereinen aus Bundesliga bis Regionalliga');
+        assert(r.betriebUnten && r.betriebOben, 'Spielbetrieb & Verwaltung kostet nur in den Profiligen und steht im Buchungsjournal');
     }
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
     await page.close();
@@ -4468,13 +4478,22 @@ async function testLeagueEconomy(browser) {
         game.financeLedger = [];
         let start = game.money;
         simulateMatchdays(30);
+        let ende = game.money;
+        simulateMatchdays(4);
+        // Ganze Saison für einen Mittelfeldplatz: Spieltagsgeschäft + TV-Restausschüttung für
+        // Platz 9 + Dauerkartenverkauf (beides erst am Saisonende). Seit 25.9 trägt das
+        // Spieltagsgeschäft allein die Kosten für Spielbetrieb & Verwaltung nicht mehr.
         let l = game.financeLedger;
+        let journal = l.reduce((s, e) => s + e.summeEin - e.summeAus, 0);
+        let rest = calculateCollectiveTvMoney(0, 9) - (game.tvMoneyPaidThisSeason || 0);
+        let vorDauerkarten = game.money;
+        renewSeasonTickets();
+        let dauerkarten = game.money - vorDauerkarten;
         return {
-            start,
-            ende: game.money,
+            start, ende,
             stadion: stadium.total,
-            saldoProSpieltag: Math.round(l.reduce((s, e) => s + e.summeEin - e.summeAus, 0) / l.length),
-            einProSpieltag: Math.round(l.reduce((s, e) => s + e.summeEin, 0) / l.length)
+            saisonSaldo: Math.round(journal + rest + dauerkarten),
+            saisonEin: Math.round(l.reduce((s, e) => s + e.summeEin, 0) + Math.max(0, rest) + dauerkarten)
         };
     });
 
@@ -4487,8 +4506,8 @@ async function testLeagueEconomy(browser) {
     assert(r.kapitalSkaliert, 'Startkapital skaliert mit der gewählten Startliga, die 6. Liga bleibt unverändert');
     assert(r.kaderLigadurchschnitt, 'Generierte Startkader liegen um das Ligamittel statt deutlich darüber');
     assert(profi.stadion > 40000, 'Der Erstliga-Start bekommt ein Stadion passender Größe');
-    assert(profi.saldoProSpieltag > -0.05 * profi.einProSpieltag,
-        `Ein Erstliga-Verein wirtschaftet nicht mehr strukturell ins Minus (Saldo ${profi.saldoProSpieltag} €/Spieltag bei ${profi.einProSpieltag} € Einnahmen)`);
+    assert(profi.saisonSaldo > -0.05 * profi.saisonEin,
+        `Ein Erstliga-Verein auf einem Mittelfeldplatz wirtschaftet nicht strukturell ins Minus (Saison ${profi.saisonSaldo} € bei ${profi.saisonEin} € Einnahmen)`);
     // Liga- und Pokalverlauf sind zufällig, daher schwankt das Endkapital über viele Läufe
     // stark (empirisch beobachtet: ca. das 0,6- bis 3,2-fache des Startkapitals). Die Schwelle
     // prüft nur auf strukturelle Pleite, nicht auf einen konkreten Erfolgsgrad.
@@ -6544,7 +6563,7 @@ async function testBoardRestart(browser) {
             const sommer = { stress: privateLife.stress, tief: tief.morale, hoch: hoch.morale };
             const neu = squad.filter(p => !alteIds.includes(p.id));
             const andere = leaguesData[game.leagueLevel].filter(t => t.name !== game.clubName);
-            const notkader = { anzahl: neu.length, kader: squad.length,
+            const notkader = { anzahl: neu.length, kader: squad.length, gehalt: neu.every(p => p.wage >= EMERGENCY_WAGE_FLOOR[game.leagueLevel]),
                 schnitt: Math.round(neu.reduce((a, p) => a + p.strength, 0) / Math.max(1, neu.length)),
                 liga: Math.round(andere.reduce((a, t) => a + t.strength, 0) / andere.length) };
             game.sackPending = false;
@@ -6565,6 +6584,7 @@ async function testBoardRestart(browser) {
         assert(r.hoherWertBleibt, 'Ein höherer Wert wird nicht auf 60 gesenkt');
         assert(r.eroeffnet && r.automatisch, 'Mitgliederversammlung findet ohne Zutun nach einigen Spieltagen statt');
         assert(r.altstand, 'Alte Spielstände mit Eröffnung an Spieltag 35 werden repariert');
+        assert(r.notkader.gehalt, 'Notbesetzung verdient mindestens das Liga-Mindestgehalt');
         assert(r.notkader.kader >= 18 && r.notkader.schnitt >= r.notkader.liga - 13 && r.notkader.schnitt <= r.notkader.liga - 4, `Notbesetzung nach Vertragskrise nahe am Ligaschnitt (${JSON.stringify(r.notkader)})`);
         assert(r.sommer.stress <= 50 && r.sommer.tief >= 40 && r.sommer.hoch >= 90, `Sommerpause: Stress halbiert, tiefe Moral erholt sich, hohe bleibt (${JSON.stringify(r.sommer)})`);
     }

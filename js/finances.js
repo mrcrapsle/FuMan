@@ -77,6 +77,7 @@
         let campusMaintenanceSumForecast = Object.keys(campusBuildings).reduce((s, k) => s + (k === 'turnstiles' ? 0 : campusBuildings[k].lvl * 650), 0);
         let maintenance = Math.round((baseStadiumMaintenanceForecast + campusMaintenanceSumForecast) * 4);
         if (campusBuildings.turnstiles?.lvl > 0) maintenance = Math.round(maintenance * (1 - campusBuildings.turnstiles.lvl * 0.02));
+        let operations = getOperatingCostPerMatchday() * 4;
         let loanInterest = Math.round(game.loanDebt * 0.04);
         let loanInstallments = activeLoans.reduce((s, l) => s + l.installment, 0) * 4;
 
@@ -96,7 +97,7 @@
         let estAdvisorFee = financeCentralState.taxAdvisorHired ? getTaxAdvisorFee() * 4 : 0;
 
         let totalIn = estTickets + estMerch + estSponsors + dividends;
-        let totalOut = totalWages + totalStaffWages + maintenance + loanInterest + loanInstallments + estTax + estAdvisorFee;
+        let totalOut = totalWages + totalStaffWages + maintenance + operations + loanInterest + loanInstallments + estTax + estAdvisorFee;
         let net = totalIn - totalOut;
 
         let monatEl = document.getElementById('fin-month-title');
@@ -110,6 +111,8 @@
 
         document.getElementById('fin-out-wages').innerText = formatVal(totalWages + totalStaffWages);
         document.getElementById('fin-out-maintenance').innerText = formatVal(maintenance);
+        let opsEl = document.getElementById('fin-out-operations');
+        if (opsEl) opsEl.innerText = formatVal(operations);
         // Hochrechnung: Ordnerdienst nur bei Heimspielen (~2 pro Monat).
         document.getElementById('fin-out-stewards').innerText = formatVal(getStewardMatchdayCost() * 2);
         document.getElementById('fin-out-interest').innerText = formatVal(loanInterest + loanInstallments);
@@ -519,6 +522,16 @@
     // Dadurch ist es eine echte Entscheidung statt eines Selbstläufers: in den unteren
     // Ligen sind die Einnahmen so klein, dass die Ersparnis das Honorar kaum deckt,
     // weiter oben rechnet er sich deutlich.
+    // Spielbetrieb & Verwaltung (Geschäftsstelle, Scouting, Medizin, Nachwuchs-Leistungszentrum,
+    // Spieltagsorganisation): nur in den Profiligen, pro Saison, jeden Spieltag zu 1/34 fällig.
+    // Langzeittest 25.9: außer Gehältern gab es kaum laufende Kosten - ein Bundesligist mit
+    // Startkader machte 40-60 Mio. € Überschuss pro Saison, ein passiver Verein häufte bis zu
+    // 770 Mio. € an. Echte Profivereine geben dafür rund ein Drittel ihres Umsatzes aus.
+    const LEAGUE_OPERATING_COST = [20000000, 2000000, 500000, 0, 0, 0];
+    function getOperatingCostPerMatchday() {
+        return Math.round((LEAGUE_OPERATING_COST[game.leagueLevel] || 0) / 34);
+    }
+
     const TAX_RATE_BASE = 0.12;
     const TAX_RATE_WITH_ADVISOR = 0.07;
     const TAX_ADVISOR_SIGNING_FEE = 15000;

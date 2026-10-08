@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.78', date: '08.10.2026', features: 'Phase 25.8: Müde Spieler pausieren, Sommerpause für Stress und Moral, Notbesetzung auf Liganiveau' };
+    const GAME_VERSION = { number: '3.79', date: '08.10.2026', features: 'Phase 25.9: Spielbetrieb & Verwaltung in den Profiligen, Notbesetzung mit Liga-Mindestgehalt' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

@@ -168,11 +168,31 @@ async function karriere(browser, lauf) {
                 window.__post = [];
                 window.__board = {};
                 const kaderVorher = squad.map(p => p.id);
+                // FINDIAG: jede Kontobewegung der Saison nach Posten (Spieltagsjournal + Kontoauszug).
+                window.__fin = {};
+                window.__finGesehen = window.__finGesehen || new WeakMap();
+                const finSammeln = () => {
+                    const add = (k, v) => { if (v) window.__fin[k] = (window.__fin[k] || 0) + v; };
+                    (game.financeLedger || []).forEach(e => {
+                        if (window.__finGesehen.has(e)) return;
+                        window.__finGesehen.set(e, 1);
+                        e.einnahmen.forEach(x => add(x.label, x.amount));
+                        e.ausgaben.forEach(x => add(x.label, -x.amount));
+                    });
+                    (game.kontoauszug || []).forEach(e => {
+                        const alt = window.__finGesehen.get(e) || 0;
+                        add(e.label, e.amount - alt);
+                        window.__finGesehen.set(e, e.amount);
+                    });
+                };
+                finSammeln();
+                window.__fin = {};
                 verwalten();
                 while (game.matchday <= 34 && !game.sackPending) {
                     if (game.matchday === 18) verwalten();
                     simulateMatchdays(1);
                     reagieren();
+                    finSammeln();
                 }
                 if (game.sackPending) return { ...start, entlassen: true };
                 const tabelle = [...leaguesData[game.leagueLevel]].sort(compareTableRows);
@@ -187,7 +207,11 @@ async function karriere(browser, lauf) {
                     ligaTop: Math.max(...tabelle.filter(t => t !== ich).map(t => t.strength)), kader: squad.length, vorstand: Math.round(game.boardSat),
                     pokal: (game.cupFinals || []).filter(f => f.season === game.season && f.won).map(f => f.comp).join('+')
                 };
+                const geldVorEnde = game.money;
                 concludeSeasonAndAdvance();
+                finSammeln();
+                zeile.saisonEnde = game.money - geldVorEnde;
+                zeile.fin = Object.entries(window.__fin).filter(([, v]) => Math.abs(v) >= 50000).sort((a, b) => b[1] - a[1]);
                 const eu = (game.europeHistory || []).find(e => e.season === start.season);
                 zeile.europaRunde = eu ? eu.stage : '';
                 zeile.ligaDanach = game.leagueLevel;
@@ -220,6 +244,12 @@ async function karriere(browser, lauf) {
     });
     if (process.env.DIAG) zeilen.forEach(z => { if (z.season) console.log(`\n[S${z.season}] Verlängerung ${JSON.stringify(z.vl)} | Abgänge ${z.abgaenge} | Fehler: ${(z.toasts || []).join(' ; ')}\n      Post: ${(z.post || []).join(' ; ')}`); });
     if (process.env.STRDIAG) zeilen.forEach(z => { if (z.str) console.log(`[S${z.season} Liga ${z.liga + 1} Pl ${z.platz}] ${z.str}`); });
+    if (process.env.FINDIAG) zeilen.forEach(z => {
+        if (!z.fin) return;
+        const ein = z.fin.filter(([, v]) => v > 0), aus = z.fin.filter(([, v]) => v < 0).reverse();
+        const f = ([k, v]) => `${k} ${(v / 1e6).toFixed(1)}`;
+        console.log(`[S${z.season} Liga ${z.liga + 1} Pl ${z.platz}] +${(ein.reduce((a, [, v]) => a + v, 0) / 1e6).toFixed(1)} / ${(aus.reduce((a, [, v]) => a + v, 0) / 1e6).toFixed(1)} Mio | Saisonende ${(z.saisonEnde / 1e6).toFixed(1)}\n   EIN: ${ein.map(f).join(' | ')}\n   AUS: ${aus.map(f).join(' | ')}`);
+    });
     if (process.env.BOARDDIAG) zeilen.forEach(z => { if (z.board) console.log(`[S${z.season} Liga ${z.liga + 1} Pl ${z.platz} Vst ${z.vorstand}] ${z.board.join(' | ')}`); });
     if (fehler.length) console.log('JS-Fehler: ' + [...new Set(fehler)].slice(0, 5).join(' | '));
     return zeilen;
