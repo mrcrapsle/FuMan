@@ -7033,6 +7033,10 @@ async function testPhase13Teil3(browser) {
             const summen = [...Array(8)].map(() => generateSquadForLevel(lvl).reduce((s, p) => s + p.wage, 0)).sort((a, b) => a - b);
             return getLeagueWageBudget(lvl) / summen[4];
         });
+        // Marktwert steigt mit der Stärke (25.16: Stärke 58 kostete ~740.000 €, Stärke 59 nur 150.000 €)
+        const mwSchnitt = st => { let s = 0; for (let i = 0; i < 40; i++) s += calculatePlayerMarketValue(st); return s / 40; };
+        const mwKurve = []; for (let st = 30; st <= 99; st++) mwKurve.push(mwSchnitt(st));
+        out.marktwertMonoton = mwKurve.every((v, i) => i === 0 || v >= mwKurve[i - 1] * 0.95);
         // Transferbudget je Liga reicht für 1-4 typische Marktspieler der Liga (25.15: unten lag es beim 250-Fachen)
         const altLiga = game.leagueLevel;
         out.transferLigaGerecht = [0, 1, 2, 3, 4, 5].map(lvl => {
@@ -7052,6 +7056,7 @@ async function testPhase13Teil3(browser) {
     assert(r.radarSichtbar, 'Kader-Radar wird im Analyse-Reiter mit echter Breite gezeichnet');
     assert(r.aufstellungKomplett, 'Kaderliste und Taktiktafel liegen im Start-Reiter');
     assert(r.gehaelterImBudget, 'Startkader höherer Ligen überziehen das Gehaltsbudget ihrer Liga nicht');
+    assert(r.marktwertMonoton, 'Marktwert steigt mit der Stärke (keine Sprünge nach unten an den Segmentgrenzen)');
     assert(r.transferLigaGerecht.every(f => f >= 0.4 && f <= 5), `Transferbudget je Liga reicht für etwa 0,5-5 typische Marktspieler (${r.transferLigaGerecht.map(f => f.toFixed(1)).join(' / ')})`);
     assert(r.budgetLigaGerecht.every(f => f >= 1 && f <= 2.5), `Gehaltsbudget je Liga liegt beim 1- bis 2,5-Fachen der Startgehälter (${r.budgetLigaGerecht.map(f => f.toFixed(2)).join(' / ')})`);
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler in Phase 13 Teil 3 (${consoleErrors.slice(0, 3).join(' | ')})`);

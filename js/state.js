@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.86', date: '08.10.2026', features: 'Phase 25.15: Transferbudget je Liga' };
+    const GAME_VERSION = { number: '3.87', date: '08.10.2026', features: 'Phase 25.16: Marktwertkurve stetig, Winterbudget anteilig, Pleite-Szenario neu justiert' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

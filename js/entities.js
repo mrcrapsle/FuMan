@@ -138,17 +138,24 @@
 
     function getRandomName() { return firstNames[Math.floor(Math.random() * firstNames.length)] + " " + lastNames[Math.floor(Math.random() * lastNames.length)]; }
 
+    // Steigung des untersten Marktwert-Segments (Stärke 45-58). Bis 25.16 war sie 450; die Gehälter
+    // dort hängen am Marktwert und rechnen den alten Faktor heraus (calculatePlayerWage).
+    const MARKET_VALUE_LOW_COEFF = 83;
+    const MARKET_VALUE_LOW_COEFF_OLD = 450;
     function calculatePlayerMarketValue(str) {
         let val = 0;
-        if (str <= 58) val = 15000 + Math.pow(Math.max(0, str - 44), 2.8) * 450;
+        // Stetige Segmente (25.16): vorher kostete Stärke 58 ~740.000 €, Stärke 59 nur 150.000 € -
+        // Spieler der 4./5. Liga waren teurer als Drittligaspieler. Jetzt endet jedes Segment
+        // ungefähr dort, wo das nächste beginnt (58 → 150.000, 68 → 1 Mio., 85 → 35 Mio. €).
+        if (str <= 58) val = 15000 + Math.pow(Math.max(0, str - 44), 2.8) * MARKET_VALUE_LOW_COEFF;
         else if (str <= 68) val = 150000 + Math.pow(str - 58, 3.2) * 550;
-        else if (str <= 77) val = 900000 + Math.pow(str - 68, 3.8) * 1200;
+        else if (str <= 77) val = 1025000 + Math.pow(str - 68, 3.8) * 1200;
         else if (str <= 85) val = 7500000 + Math.pow(str - 77, 4.2) * 4500;
         // Oberstes Segment (86-99, absolute Weltklasse): flacherer Exponent als vorher, sonst
         // explodiert die Kurve bei Stärke 99 auf mehrere MILLIARDEN Euro statt auf einen
         // realistischen Superstar-Wert (~30-200 Mio. €). Zusätzlich eine harte Obergrenze als
         // Sicherheitsnetz, falls hier nochmal jemand an der Formel dreht.
-        else val = 32000000 + Math.pow(str - 85, 2.3) * 400000;
+        else val = 35500000 + Math.pow(str - 85, 2.3) * 400000;
         val = Math.min(val, 250000000);
         return Math.max(10000, Math.round((val * (0.92 + Math.random() * 0.16)) / 5000) * 5000);
     }
@@ -160,7 +167,10 @@
         // Kreisklassenkicker genauso viel wie ein 44er Leistungstraeger, und ueber eine
         // Saison fast so viel wie sein gesamter Marktwert. Jetzt haengt das Gehalt auch
         // unten an der Staerke, und das Niveau passt zum Amateurbereich.
-        let perMatchday = (str <= 58) ? 60 + str * 3 + (marketValue * 0.004) : (str <= 68 ? 1200 + (marketValue * 0.006) : (str <= 77 ? 5000 + (marketValue * 0.0045) : 25000 + (marketValue * 0.0035)));
+        // Bis Stärke 58 gleiche Gehälter wie vor der Marktwert-Korrektur 25.16: der Anteil über dem
+        // Sockel von 15.000 € wird mit dem alten/neuen Steigungsverhältnis hochgerechnet.
+        let unterhalbWert = 15000 + Math.max(0, marketValue - 15000) * MARKET_VALUE_LOW_COEFF_OLD / MARKET_VALUE_LOW_COEFF;
+        let perMatchday = (str <= 58) ? 60 + str * 3 + (unterhalbWert * 0.004) : (str <= 68 ? 1200 + (marketValue * 0.006) : (str <= 77 ? 5000 + (marketValue * 0.0045) : 25000 + (marketValue * 0.0035)));
         if (managerRPG.perks.negotiator) perMatchday *= 0.8;
         return Math.max(150, Math.round(perMatchday / 50) * 50);
     }

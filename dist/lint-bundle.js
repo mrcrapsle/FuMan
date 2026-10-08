@@ -491,7 +491,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.86', date: '08.10.2026', features: 'Phase 25.15: Transferbudget je Liga' };
+    const GAME_VERSION = { number: '3.87', date: '08.10.2026', features: 'Phase 25.16: Marktwertkurve stetig, Winterbudget anteilig, Pleite-Szenario neu justiert' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -1389,17 +1389,24 @@ function compareTableRows(a, b) {
 
     function getRandomName() { return firstNames[Math.floor(Math.random() * firstNames.length)] + " " + lastNames[Math.floor(Math.random() * lastNames.length)]; }
 
+    // Steigung des untersten Marktwert-Segments (Stärke 45-58). Bis 25.16 war sie 450; die Gehälter
+    // dort hängen am Marktwert und rechnen den alten Faktor heraus (calculatePlayerWage).
+    const MARKET_VALUE_LOW_COEFF = 83;
+    const MARKET_VALUE_LOW_COEFF_OLD = 450;
     function calculatePlayerMarketValue(str) {
         let val = 0;
-        if (str <= 58) val = 15000 + Math.pow(Math.max(0, str - 44), 2.8) * 450;
+        // Stetige Segmente (25.16): vorher kostete Stärke 58 ~740.000 €, Stärke 59 nur 150.000 € -
+        // Spieler der 4./5. Liga waren teurer als Drittligaspieler. Jetzt endet jedes Segment
+        // ungefähr dort, wo das nächste beginnt (58 → 150.000, 68 → 1 Mio., 85 → 35 Mio. €).
+        if (str <= 58) val = 15000 + Math.pow(Math.max(0, str - 44), 2.8) * MARKET_VALUE_LOW_COEFF;
         else if (str <= 68) val = 150000 + Math.pow(str - 58, 3.2) * 550;
-        else if (str <= 77) val = 900000 + Math.pow(str - 68, 3.8) * 1200;
+        else if (str <= 77) val = 1025000 + Math.pow(str - 68, 3.8) * 1200;
         else if (str <= 85) val = 7500000 + Math.pow(str - 77, 4.2) * 4500;
         // Oberstes Segment (86-99, absolute Weltklasse): flacherer Exponent als vorher, sonst
         // explodiert die Kurve bei Stärke 99 auf mehrere MILLIARDEN Euro statt auf einen
         // realistischen Superstar-Wert (~30-200 Mio. €). Zusätzlich eine harte Obergrenze als
         // Sicherheitsnetz, falls hier nochmal jemand an der Formel dreht.
-        else val = 32000000 + Math.pow(str - 85, 2.3) * 400000;
+        else val = 35500000 + Math.pow(str - 85, 2.3) * 400000;
         val = Math.min(val, 250000000);
         return Math.max(10000, Math.round((val * (0.92 + Math.random() * 0.16)) / 5000) * 5000);
     }
@@ -1411,7 +1418,10 @@ function compareTableRows(a, b) {
         // Kreisklassenkicker genauso viel wie ein 44er Leistungstraeger, und ueber eine
         // Saison fast so viel wie sein gesamter Marktwert. Jetzt haengt das Gehalt auch
         // unten an der Staerke, und das Niveau passt zum Amateurbereich.
-        let perMatchday = (str <= 58) ? 60 + str * 3 + (marketValue * 0.004) : (str <= 68 ? 1200 + (marketValue * 0.006) : (str <= 77 ? 5000 + (marketValue * 0.0045) : 25000 + (marketValue * 0.0035)));
+        // Bis Stärke 58 gleiche Gehälter wie vor der Marktwert-Korrektur 25.16: der Anteil über dem
+        // Sockel von 15.000 € wird mit dem alten/neuen Steigungsverhältnis hochgerechnet.
+        let unterhalbWert = 15000 + Math.max(0, marketValue - 15000) * MARKET_VALUE_LOW_COEFF_OLD / MARKET_VALUE_LOW_COEFF;
+        let perMatchday = (str <= 58) ? 60 + str * 3 + (unterhalbWert * 0.004) : (str <= 68 ? 1200 + (marketValue * 0.006) : (str <= 77 ? 5000 + (marketValue * 0.0045) : 25000 + (marketValue * 0.0035)));
         if (managerRPG.perks.negotiator) perMatchday *= 0.8;
         return Math.max(150, Math.round(perMatchday / 50) * 50);
     }
@@ -2377,8 +2387,8 @@ function getOwnDerbyRivals() {
     // Transferbudget pro Saison je Liga (25.15): vorher 2,5 Mio. × (1 + Ligafaktor × 2,5) -
     // 3,5-5,6 Mio. € in den Ligen 4-6, wo eine Verstärkung 18.000-370.000 € kostet, aber nur
     // 8,75 Mio. € in der Bundesliga bei ~40 Mio. € pro Verstärkung. Jetzt etwa 1,5-3 typische
-    // Verstärkungen der Liga (Marktmedian 40 Mio. / 1,7 Mio. / 480.000 / 370.000 / 18.000 / 18.000 €).
-    const LEAGUE_TRANSFER_BUDGET = [25000000, 3000000, 900000, 600000, 60000, 40000];
+    // Verstärkungen der Liga (Verstärkungs-Median 40 Mio. / 2,4 Mio. / 470.000 / 85.000 / 18.000 / 18.000 € nach der Marktwert-Korrektur 25.16).
+    const LEAGUE_TRANSFER_BUDGET = [25000000, 3000000, 900000, 250000, 60000, 40000];
     function getLeagueTransferBudget(level) {
         return LEAGUE_TRANSFER_BUDGET[Math.max(0, Math.min(LEAGUE_TRANSFER_BUDGET.length - 1, level))];
     }
@@ -4785,10 +4795,10 @@ const CAREER_SCENARIOS = {
     },
     pleite: {
         title: '💸 Pleiteklub sanieren', level: 3, seasons: 2,
-        desc: 'Ein Viertligist mit 600.000 € Schulden auf dem Konto und überhöhten Gehältern. Im Minus drohen Transfersperre und alle 10 Spieltage ein Zwangsverkauf. Ziel: binnen zwei Saisons schwarze Zahlen (offene Kredite zählen als Schulden), ohne abzusteigen - saniert der Vorstand per Zwangsverkauf, kostet das Sterne, ab zwei Zwangsverkäufen gilt die Sanierung als gescheitert.',
+        desc: 'Ein Viertligist mit 320.000 € Schulden auf dem Konto und überhöhten Gehältern. Im Minus drohen Transfersperre und alle 10 Spieltage ein Zwangsverkauf. Ziel: binnen zwei Saisons schwarze Zahlen (offene Kredite zählen als Schulden), ohne abzusteigen - saniert der Vorstand per Zwangsverkauf, kostet das Sterne, ab zwei Zwangsverkäufen gilt die Sanierung als gescheitert.',
         setup() {
             squad.forEach(p => { p.wage = Math.round(p.wage * 1.15 / 10) * 10; });
-            game.money = -600000; game.boardSat = 50;
+            game.money = -320000; game.boardSat = 50;
         },
         check(s) {
             if (game.leagueLevel > s.startLevel) return { done: true, ok: false, text: 'Abgestiegen - die Sanierung ist gescheitert.' };
@@ -23249,11 +23259,13 @@ function renderRumorBox() {
 const WINTER_TALK_FIRST_MD = 18;
 const WINTER_TALK_LAST_MD = 20;
 
-// Je Liga (Bundesliga ... 6. Liga) - etwa ein Viertel des Start-Transferbudgets eines Aufsteigers.
-const WINTER_BUDGET_BY_LEVEL = [2000000, 800000, 300000, 120000, 50000, 25000];
+// 30 % des Saison-Transferbudgets der Liga (getLeagueTransferBudget in squad.js). 25.16: vorher
+// feste Beträge (2 Mio. ... 25.000 €) - seit 25.15 waren das in der Bundesliga 8 %, in der
+// 6. Liga 62 % des Saisonbudgets.
+const WINTER_BUDGET_SHARE = 0.3;
 
 function getWinterBudgetAmount() {
-    return WINTER_BUDGET_BY_LEVEL[game.leagueLevel] ?? WINTER_BUDGET_BY_LEVEL[WINTER_BUDGET_BY_LEVEL.length - 1];
+    return Math.round(getLeagueTransferBudget(game.leagueLevel) * WINTER_BUDGET_SHARE / 1000) * 1000;
 }
 
 function getWinterTalk() {
@@ -29333,7 +29345,7 @@ const LEXICON_ENTRIES = [
         text: 'Höchstsumme aller Spielergehälter pro Spieltag. Neue Verträge über dem Budget sind nicht möglich. Der Vorstand richtet es nach der Liga aus: Bundesliga 1,575 Mio. €, 2. Liga 520.000 €, 3. Liga 110.000 €, 4. Liga 36.000 €, 5. Liga 11.000 €, 6. Liga 8.000 € - zum Saisonstart mit Platz 1-4 × 1,3, ab Platz 11 × 0,8.',
         tips: ['Verkäufe und auslaufende Verträge schaffen Luft', 'Im Gehaltsgespräch einmal nachverhandeln', 'Zum Saisonstart liegt es mindestens 5 % über den laufenden Gehältern, wenn das Konto eine Viertelsaison davon deckt - nach einer Saison mit Minus bei 85 % (Sparkurs)'] },
     { cat: 'Finanzen', title: 'Transferbudget', screen: 'screen-finances',
-        text: 'Wie viel Ablöse der Vorstand pro Saison freigibt. Unabhängig vom Kontostand: beides muss reichen. Grundbetrag nach Liga: Bundesliga 25 Mio. €, 2. Liga 3 Mio. €, 3. Liga 900.000 €, 4. Liga 600.000 €, 5. Liga 60.000 €, 6. Liga 40.000 € - zum Saisonstart mit Platz 1-4 × 1,3, ab Platz 11 × 0,8.',
+        text: 'Wie viel Ablöse der Vorstand pro Saison freigibt. Unabhängig vom Kontostand: beides muss reichen. Grundbetrag nach Liga: Bundesliga 25 Mio. €, 2. Liga 3 Mio. €, 3. Liga 900.000 €, 4. Liga 250.000 €, 5. Liga 60.000 €, 6. Liga 40.000 € - zum Saisonstart mit Platz 1-4 × 1,3, ab Platz 11 × 0,8.',
         tips: ['Verkäufe erhöhen es', 'Mit dem Vorstand lässt sich nachverhandeln', 'Zum Saisonstart gibt der Vorstand 40 % der Rücklagen über einer Reserve (halbe Saison Gehaltsbudget) zusätzlich frei, 10 % davon gehen ins Gehaltsbudget'] },
     { cat: 'Finanzen', title: 'Financial Fairplay', screen: 'screen-finances',
         text: 'Über drei Saisons darf der Verein nur begrenzt Verlust machen (je nach Liga). Investitionen in Stadion, Gelände und Jugend zählen nicht. Bei Verstoß: Verwarnung, dann Transfersperre und Punktabzug.',

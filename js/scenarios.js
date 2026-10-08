@@ -21,10 +21,10 @@ const CAREER_SCENARIOS = {
     },
     pleite: {
         title: '💸 Pleiteklub sanieren', level: 3, seasons: 2,
-        desc: 'Ein Viertligist mit 600.000 € Schulden auf dem Konto und überhöhten Gehältern. Im Minus drohen Transfersperre und alle 10 Spieltage ein Zwangsverkauf. Ziel: binnen zwei Saisons schwarze Zahlen (offene Kredite zählen als Schulden), ohne abzusteigen - saniert der Vorstand per Zwangsverkauf, kostet das Sterne, ab zwei Zwangsverkäufen gilt die Sanierung als gescheitert.',
+        desc: 'Ein Viertligist mit 320.000 € Schulden auf dem Konto und überhöhten Gehältern. Im Minus drohen Transfersperre und alle 10 Spieltage ein Zwangsverkauf. Ziel: binnen zwei Saisons schwarze Zahlen (offene Kredite zählen als Schulden), ohne abzusteigen - saniert der Vorstand per Zwangsverkauf, kostet das Sterne, ab zwei Zwangsverkäufen gilt die Sanierung als gescheitert.',
         setup() {
             squad.forEach(p => { p.wage = Math.round(p.wage * 1.15 / 10) * 10; });
-            game.money = -600000; game.boardSat = 50;
+            game.money = -320000; game.boardSat = 50;
         },
         check(s) {
             if (game.leagueLevel > s.startLevel) return { done: true, ok: false, text: 'Abgestiegen - die Sanierung ist gescheitert.' };

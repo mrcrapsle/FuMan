@@ -15,11 +15,13 @@
 const WINTER_TALK_FIRST_MD = 18;
 const WINTER_TALK_LAST_MD = 20;
 
-// Je Liga (Bundesliga ... 6. Liga) - etwa ein Viertel des Start-Transferbudgets eines Aufsteigers.
-const WINTER_BUDGET_BY_LEVEL = [2000000, 800000, 300000, 120000, 50000, 25000];
+// 30 % des Saison-Transferbudgets der Liga (getLeagueTransferBudget in squad.js). 25.16: vorher
+// feste Beträge (2 Mio. ... 25.000 €) - seit 25.15 waren das in der Bundesliga 8 %, in der
+// 6. Liga 62 % des Saisonbudgets.
+const WINTER_BUDGET_SHARE = 0.3;
 
 function getWinterBudgetAmount() {
-    return WINTER_BUDGET_BY_LEVEL[game.leagueLevel] ?? WINTER_BUDGET_BY_LEVEL[WINTER_BUDGET_BY_LEVEL.length - 1];
+    return Math.round(getLeagueTransferBudget(game.leagueLevel) * WINTER_BUDGET_SHARE / 1000) * 1000;
 }
 
 function getWinterTalk() {
