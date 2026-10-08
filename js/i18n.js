@@ -218,6 +218,7 @@
         currentLang = lang === 'en' ? 'en' : 'de';
         safeLocalSet('anstoss_fm13_language', currentLang);
         applyI18nToDOM();
+        if (typeof applyUiTranslation === 'function') applyUiTranslation(currentLang);
     }
 
     function toggleLanguage() {
@@ -228,4 +229,5 @@
         let stored = safeLocalGet('anstoss_fm13_language');
         currentLang = stored === 'en' ? 'en' : 'de';
         applyI18nToDOM();
+        if (currentLang === 'en' && typeof applyUiTranslation === 'function') applyUiTranslation('en');
     }

@@ -16,9 +16,8 @@ function getOwnEuropeFixture(md) {
     const staerke = name => (alle.find(t => t.name === name) || {}).str || 84;
     const gi = [3, 7, 11, 15, 19, 23].indexOf(md);
     if (gi !== -1) {
-        for (const [t1, t2, t3, t4] of gruppen) {
-            const paare = gi % 3 === 0 ? [[t1, t2], [t3, t4]] : (gi % 3 === 1 ? [[t1, t3], [t2, t4]] : [[t1, t4], [t2, t3]]);
-            const eigen = paare.find(([h, a]) => h.name === us || a.name === us);
+        for (const g of gruppen) {
+            const eigen = getEuropeGroupPairings(g, gi).find(([h, a]) => h.name === us || a.name === us);
             if (eigen) return { home: eigen[0].name, away: eigen[1].name, runde: 'Gruppenphase', oppStr: staerke(eigen[0].name === us ? eigen[1].name : eigen[0].name) };
         }
         return null;

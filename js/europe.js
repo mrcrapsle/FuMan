@@ -406,6 +406,15 @@
         }
     }
 
+    // Gruppenspiel gi (0-5) einer Vierergruppe als [Heim, Gast]-Paare - auch für das Livespiel
+    // (getOwnEuropeFixture). Rückrunde (25.20) mit getauschtem Heimrecht: vorher spielte t1 (Topf 1)
+    // alle sechs Spiele zu Hause und t4 (Topf 4 - ein Neuling wie der eigene Verein) alle auswärts.
+    function getEuropeGroupPairings(grp, gi) {
+        const [t1, t2, t3, t4] = grp;
+        const paare = gi % 3 === 0 ? [[t1, t2], [t3, t4]] : (gi % 3 === 1 ? [[t1, t3], [t2, t4]] : [[t1, t4], [t2, t3]]);
+        return gi >= 3 ? paare.map(([h, a]) => [a, h]) : paare;
+    }
+
     function simulateEuropeMatchday(mday, isLiveContext = false) {
         if (!game.inEurope) return;
         let groupMatchIdx = [3, 7, 11, 15, 19, 23].indexOf(mday);
@@ -426,10 +435,7 @@
 
         if (groupMatchIdx !== -1) {
             [europeTournament.groupA, europeTournament.groupB].forEach(grp => {
-                let t1 = grp[0], t2 = grp[1], t3 = grp[2], t4 = grp[3];
-                let pairings = (groupMatchIdx % 3 === 0) ? [[t1, t2], [t3, t4]] : ((groupMatchIdx % 3 === 1) ? [[t1, t3], [t2, t4]] : [[t1, t4], [t2, t3]]);
-
-                pairings.forEach(([h, a]) => {
+                getEuropeGroupPairings(grp, groupMatchIdx).forEach(([h, a]) => {
                     let hStr = h.name === game.clubName ? calcTeamStrength(true) : h.str + (a.name === game.clubName ? AI_HOME_ADVANTAGE : 0);
                     let aStr = a.name === game.clubName ? calcTeamStrength(false) : a.str;
                     let live = typeof takeLiveCupResult === 'function' ? takeLiveCupResult('europe', h.name, a.name) : null;

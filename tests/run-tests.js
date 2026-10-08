@@ -1839,6 +1839,46 @@ async function testProLoans(browser) {
     await page.close();
 }
 
+async function testEnglishUi(browser) {
+    console.log('\n[25.20] Englische Oberfläche: feste Texte, neu gerenderte Inhalte, zurück auf Deutsch');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            const kopf = [...document.querySelectorAll('.panel-header')].find(el => el.textContent.trim() === '💼 BUDGETS & VORSTANDS-VERHANDLUNGEN');
+            out.vorhanden = !!kopf;
+            setLanguage('en');
+            out.englisch = !!kopf && kopf.textContent.trim() === I18N_UI_EN['💼 BUDGETS & VORSTANDS-VERHANDLUNGEN'];
+            out.anzahl = Object.keys(I18N_UI_EN).length;
+            setLanguage('de');
+            out.deutsch = !!kopf && kopf.textContent.trim() === '💼 BUDGETS & VORSTANDS-VERHANDLUNGEN';
+            setLanguage('en');
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Sprachwechsel ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.vorhanden && r.englisch && r.anzahl >= 500, `Feste Panel-Texte werden englisch (${r.anzahl} Einträge)`);
+        assert(r.deutsch, 'Zurück auf Deutsch stellt die Originaltexte wieder her');
+    }
+    // Neu gerenderte Inhalte (MutationObserver) werden übersetzt
+    await page.evaluate(() => { const d = document.createElement('div'); d.id = 'i18n-probe'; d.textContent = 'Abbrechen'; document.body.appendChild(d); });
+    await page.waitForTimeout(50);
+    const probe = await page.evaluate(() => document.getElementById('i18n-probe').textContent);
+    assert(probe === 'Cancel', `Neu eingefügte Texte werden übersetzt (${probe})`);
+    // Durch das Spiel geänderte Texte bleiben nicht auf dem alten Original stehen
+    await page.evaluate(() => { const d = document.getElementById('i18n-probe'); d.firstChild.nodeValue = 'Speichern'; });
+    await page.waitForTimeout(50);
+    const probe2 = await page.evaluate(() => { const v = document.getElementById('i18n-probe').textContent; setLanguage('de'); return v + '|' + document.getElementById('i18n-probe').textContent; });
+    assert(probe2 === 'Save|Speichern', `Später geänderte Texte werden neu übersetzt und korrekt zurückgestellt (${probe2})`);
+    // Alle Bildschirme auf Englisch öffnen ohne Fehler
+    await page.evaluate(() => { setLanguage('en'); ['screen-dashboard', 'screen-finances', 'screen-squad', 'screen-transfer', 'screen-training', 'screen-stadium'].forEach(s => { try { showScreen(s); } catch (e) { /* fehlende Screens zählen nicht */ } }); setLanguage('de'); });
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testTrainingGrowthCaps(browser) {
     console.log('\n[25.20] Stärkezuwachs aus Training begrenzt: Einzeltraining nach Alter, Trainingslager einmal pro Saison');
     const { page, consoleErrors } = await freshPage(browser);
@@ -2410,6 +2450,10 @@ async function testEuropeDraw(browser) {
             initEuropeCup();
             const deTopf = leaguesData[0].filter(t => t.name !== game.clubName).sort((x, y) => y.strength - x.strength)[0].name;
             out.topf2 = europeTournament.pot === 1 && [...europeTournament.groupA, ...europeTournament.groupB].some(t => t.name === deTopf);
+            // Gruppenphase (25.20): jedes Team spielt dreimal zu Hause, Livespiel und Simulation gleich
+            const heim = {};
+            [0, 1, 2, 3, 4, 5].forEach(gi => getEuropeGroupPairings(europeTournament.groupA, gi).forEach(([h]) => { heim[h.name] = (heim[h.name] || 0) + 1; }));
+            out.heimrecht = europeTournament.groupA.every(t => heim[t.name] === 3);
             // Runde festhalten
             game.europeHistory = [];
             europeTournament.semiFinals = [{ teamA: game.clubName, teamB: 'X' }];
@@ -2438,6 +2482,7 @@ async function testEuropeDraw(browser) {
         assert(r.neulingTopf4 && r.auslosung, 'Auslosung aus vier Töpfen, ein zweiter Bundesligist in der anderen Gruppe');
         assert(r.wechselnd, 'Das Teilnehmerfeld wechselt von Saison zu Saison');
         assert(r.koeffizient && r.topf2, 'Erfolge der letzten 5 Saisons bringen einen besseren Topf');
+        assert(r.heimrecht, 'Gruppenphase: jedes Team hat drei Heimspiele (vorher Topf 1 sechs, Topf 4 keins)');
         assert(r.runden && r.ohneTeilnahme, 'Die erreichte Runde landet in der Europapokal-Historie');
         assert(r.historie, 'Der Europa-Bildschirm zeigt Koeffizient, Topf und Historie');
     }
@@ -8693,6 +8738,7 @@ async function main() {
         testSponsorRenewal,
         testTrainingGrowthCaps,
         testProLoans,
+        testEnglishUi,
         testSwapDeals,
         testPlayerProfile,
         testHomeRegion,
