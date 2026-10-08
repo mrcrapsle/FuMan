@@ -191,12 +191,16 @@ function getWageBudgetFloor() {
     // reichte das Budget nur für ein Drittel der Verlängerungen (wieder Notkader).
     //   Konto im Minus:   laufende Gehälter eingefroren, keine Erhöhungen eingeplant (25.19: mit 95 %
     //                     reichten 0,7 Mio. € Minus bei einem 17-Mann-Kader für den Notkader)
+    //   ab dem 1,5-fachen Ligabudget: laufende Gehälter eingefroren (25.19)
     //   sonst:            laufende Gehälter plus die anstehenden Erhöhungen (getRenewalWageBuffer),
-    //                     +5 % Spielraum nur ohne Verlustsaison und unter dem 1,5-fachen Ligabudget
+    //                     +5 % Spielraum nur ohne Verlustsaison
     if (game.money < 0) return Math.ceil(summe / 1000) * 1000;
     const ohneVerlust = (game.ffpSeasonNet || 0) >= 0 || game.money >= summe * 34;
     const deckel = getLeagueWageBudget(game.leagueLevel) * WAGE_FLOOR_GROWTH_CAP;
-    const spielraum = ohneVerlust && summe < deckel ? summe * 0.05 : 0;
+    // Über dem Deckel ganz eingefroren (25.19): die eingeplanten Erhöhungen trieben starke Bundesliga-
+    // Kader auf 3-4 Mio. €/Spieltag (Bot: -18 Mio. € Kasse) - verlängert wird dort über Abgänge.
+    if (summe >= deckel) return Math.ceil(summe / 1000) * 1000;
+    const spielraum = ohneVerlust ? summe * 0.05 : 0;
     return Math.ceil((summe + spielraum + getRenewalWageBuffer()) / 1000) * 1000;
 }
 

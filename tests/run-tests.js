@@ -2432,6 +2432,13 @@ async function testBundesligaLongRun(browser) {
             const kandidat = squad.find(p => getContractDemand(p).gehalt > p.wage);
             if (kandidat) kandidat.contracts = 2;
             out.verlaengerungsPuffer = !kandidat || getWageBudgetFloor() >= ohnePuffer + (getContractDemand(kandidat).gehalt - kandidat.wage) - 1000;
+            // 25.19: ab dem 1,5-fachen Liga-Gehaltsbudget eingefroren (kein Zuschlag, keine Erhöhungen)
+            const loehneVorher = squad.map(p => p.wage);
+            const faktor = Math.ceil(getLeagueWageBudget(game.leagueLevel) * WAGE_FLOOR_GROWTH_CAP / Math.max(1, squad.reduce((a, p) => a + p.wage, 0))) + 1;
+            squad.forEach(p => { p.wage *= faktor; });
+            const grosseSumme = squad.reduce((a, p) => a + p.wage, 0);
+            out.deckelEingefroren = getWageBudgetFloor() === Math.ceil(grosseSumme / 1000) * 1000;
+            squad.forEach((p, i) => { p.wage = loehneVorher[i]; });
             // Start in der Bundesliga: Lizenz-Ausstattung der Startliga ist vorhanden
             stadium.flutlicht = false; campusBuildings.internat.lvl = 0;
             grantStartLeagueLicence(0);
@@ -2477,6 +2484,7 @@ async function testBundesligaLongRun(browser) {
     if (!r.crash) {
         assert(r.ruecklagen && r.freigabe, 'Der Vorstand gibt Rücklagen über der Reserve als Transfer- und Gehaltsbudget frei');
         assert(r.gehaltsBoden, `Gehaltsbudget deckt laufende Gehälter plus Erhöhungen (+5 % nur ohne Verlustsaison, mit Minus auf dem Konto eingefroren) (${JSON.stringify(r.gehaltsBodenWerte)})`);
+        assert(r.deckelEingefroren, 'Ab dem 1,5-fachen Liga-Gehaltsbudget friert die Untergrenze die Gehälter ein');
         assert(r.verlaengerungZaehltBleibende, 'Verlängerung eines auslaufenden Vertrags zählt nur die Gehälter der Bleibenden');
         assert(r.verlaengerungsPuffer, 'Gehaltsbudget plant die Gehaltserhöhungen anstehender Verlängerungen ein');
         assert(r.startLizenz, 'Neues Spiel in der Bundesliga: Flutlicht und Internat Stufe 2 vorhanden');
