@@ -2252,13 +2252,21 @@ async function testSponsorConflict(browser) {
             renderSponsorsView();
             const html = document.body.innerHTML;
             const basis = o.base;
+            // Ohne Hauptsponsor: ab Spieltag 3 einmal pro Saison eine Erinnerung (25.13)
+            const vorher = inboxMessages.length;
+            game.matchday = 3;
+            remindMissingMainSponsor(); remindMissingMainSponsor();
+            const erinnert = inboxMessages.length - vorher === 1 && JSON.stringify(inboxMessages).includes('Noch kein Hauptsponsor');
             acceptSponsorOffer(o.id);
-            return { anzeige: html.includes('Branchenkonflikt mit RegioBank Test (Bande)') && html.includes('nur 70 %'), abschlag: game.sponsor.base === Math.round(basis * 0.7) };
+            const n = inboxMessages.length; game.season++; remindMissingMainSponsor();
+            const mitSponsorRuhe = inboxMessages.length === n;
+            return { anzeige: html.includes('Branchenkonflikt mit RegioBank Test (Bande)') && html.includes('nur 70 %'), abschlag: game.sponsor.base === Math.round(basis * 0.7), erinnert, mitSponsorRuhe };
         } catch (e) { return { crash: e.message }; }
     });
     assert(!r.crash, `Sponsoren-Konflikt-Test ohne Absturz (${r.crash || 'ok'})`);
     assert(r.anzeige, 'Angebot nennt den konkurrierenden Sponsor und den Abschlag');
     assert(r.abschlag, 'Beim Annehmen zahlt der Sponsor tatsächlich nur 70 %');
+    assert(r.erinnert && r.mitSponsorRuhe, 'Ohne Hauptsponsor kommt einmal pro Saison eine Erinnerung, mit Sponsor nicht');
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
     await page.close();
 }
@@ -7729,11 +7737,22 @@ async function testLiveMatchEngine(browser) {
         }
         out.paritaet = `live ${(ist[0] / N_PARITAET).toFixed(2)}:${(ist[1] / N_PARITAET).toFixed(2)}, erwartet ${(soll[0] / N_PARITAET).toFixed(2)}:${(soll[1] / N_PARITAET).toFixed(2)}`;
         out.paritaetOk = Math.abs(ist[0] - soll[0]) / N_PARITAET <= 0.45 && Math.abs(ist[1] - soll[1]) / N_PARITAET <= 0.35;
+        // Brechstange/Pressing kosten Kraft (25.13): die Minuten werden gezählt und nach dem Spiel abgerechnet
+        lineup = pickBestLineupIds();
+        setupMatch(game.clubName, 'Kraft FC', calcTeamStrength(true), true, false, null);
+        stopLiveTickerAutoplay(); currentMatch.halftimeShown = true;
+        activeLiveShout = 'pressing';
+        while (currentMatch.minute < 68) { if (currentMatch.awaitingSetPiece) resolveSetPiece(null, true); simulateMatchStep(); }
+        out.kraftMinuten = currentMatch.kraftMinuten || 0;
+        while (currentMatch.minute < 90) { if (currentMatch.awaitingSetPiece) resolveSetPiece(null, true); simulateMatchStep(); }
+        out.kraftMinuten = currentMatch.kraftMinuten === 0 && out.kraftMinuten <= 90 ? out.kraftMinuten : -1; // nach dem Abpfiff abgerechnet
+        activeLiveShout = 'standard';
         return out;
     });
     assert(r.torschuetzenRichtig, `Auswärtstore werden unseren Spielern gutgeschrieben, Heimtore nicht (${r.einzel})`);
     assert(r.dominant, `Klar überlegene Mannschaft gewinnt auswärts (${r.tore})`);
     assert(r.paritaetOk, `Livespiel folgt den erwarteten Toren der Simulation (${r.paritaet})`);
+    assert(r.kraftMinuten >= 45, `Pressing-Minuten werden gezählt und nach dem Abpfiff als Fitnessverlust abgerechnet (${r.kraftMinuten})`);
     assert(r.statistik && r.statistikSichtbar && r.abpfiffZeile, 'Statistik (Ballbesitz, Schüsse) passt zum Spiel und wird angezeigt');
     assert(r.vorauswahlFeldspieler, 'Auswechslung: Vorauswahl ist ein Feldspieler, nicht der Torwart');
     assert(r.wechselWirkt && r.wechselTicker, 'Auswechslung ersetzt den gewählten Spieler und ändert die Teamstärke');

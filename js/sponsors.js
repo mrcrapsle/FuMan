@@ -623,6 +623,18 @@
             game.sponsor = { name: 'Kein Hauptsponsor', base: 500, winBonus: 200, cupBonus: 0, promotionBonus: 0, duration: 999, tier: 'kurz', themedBonusType: null, themedBonusAmount: 0, category: null, loyalty: 65 };
         }
     }
+    // Ohne Hauptsponsor fehlt ein großer Teil der Einnahmen - einmal pro Saison erinnern (25.13:
+    // ein Bundesligist ohne Sponsor verlor ~0,7 Mio. € je Spieltag und nach 10 Spieltagen im
+    // Minus per Zwangsverkauf seinen besten Spieler, ohne dass ihn etwas auf den Grund hinwies).
+    function remindMissingMainSponsor() {
+        if (!game.sponsor || game.sponsor.name !== 'Kein Hauptsponsor') return;
+        if (game.matchday < 3 || game.sponsorReminderSeason === game.season) return;
+        game.sponsorReminderSeason = game.season;
+        let typisch = Math.round(3250 * getSponsorLeagueFactor() / 100) * 100;
+        let angebote = sponsorOffers.length > 0 ? `${sponsorOffers.length} Angebot${sponsorOffers.length > 1 ? 'e liegen' : ' liegt'} in der Sponsoren-Zentrale bereit.` : 'Neue Angebote kommen laufend in die Sponsoren-Zentrale.';
+        addInboxMessage('vertrag', '🤝 Noch kein Hauptsponsor!', `Ein Hauptsponsor zahlt in dieser Liga typischerweise rund ${formatVal(typisch)} pro Spieltag - ohne ihn fehlt das Geld jede Woche. ${angebote} Wer länger im Minus steht, riskiert Transfersperre und Zwangsverkäufe.`, 'screen-sponsors');
+        showToast(`🤝 Noch kein Hauptsponsor - rund ${formatVal(typisch)} pro Spieltag entgehen dir.`, 'error', 5000);
+    }
     function getSponsorLoyaltyPaymentMultiplier() {
         if (!game.sponsor || typeof game.sponsor.loyalty !== 'number') return 1;
         if (game.sponsor.loyalty <= 20) return 0.7;

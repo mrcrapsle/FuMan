@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.83', date: '08.10.2026', features: 'Phase 25.12: Livespiel = Simulation, KI-Heimvorteil, Szenarien neu justiert' };
+    const GAME_VERSION = { number: '3.84', date: '08.10.2026', features: 'Phase 25.13: Live-Zurufe mit Preis, Sponsor-Erinnerung, Bilanz-Messungen' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

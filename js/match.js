@@ -9,6 +9,8 @@
     let currentMatch = null;
     let substitutionsLeft = 0;
 
+    // Zusätzlicher Fitnessverlust der Startelf für 90 Minuten Brechstange/Pressing (anteilig).
+    const LIVE_SHOUT_FITNESS_COST = 8;
     function setLiveShout(shout) {
         playSound('click');
         activeLiveShout = shout;

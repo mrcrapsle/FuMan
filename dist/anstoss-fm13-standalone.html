@@ -4541,7 +4541,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.83', date: '08.10.2026', features: 'Phase 25.12: Livespiel = Simulation, KI-Heimvorteil, Szenarien neu justiert' };
+    const GAME_VERSION = { number: '3.84', date: '08.10.2026', features: 'Phase 25.13: Live-Zurufe mit Preis, Sponsor-Erinnerung, Bilanz-Messungen' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -19396,6 +19396,18 @@ function finishGoalkeeperGame() {
             game.sponsor = { name: 'Kein Hauptsponsor', base: 500, winBonus: 200, cupBonus: 0, promotionBonus: 0, duration: 999, tier: 'kurz', themedBonusType: null, themedBonusAmount: 0, category: null, loyalty: 65 };
         }
     }
+    // Ohne Hauptsponsor fehlt ein großer Teil der Einnahmen - einmal pro Saison erinnern (25.13:
+    // ein Bundesligist ohne Sponsor verlor ~0,7 Mio. € je Spieltag und nach 10 Spieltagen im
+    // Minus per Zwangsverkauf seinen besten Spieler, ohne dass ihn etwas auf den Grund hinwies).
+    function remindMissingMainSponsor() {
+        if (!game.sponsor || game.sponsor.name !== 'Kein Hauptsponsor') return;
+        if (game.matchday < 3 || game.sponsorReminderSeason === game.season) return;
+        game.sponsorReminderSeason = game.season;
+        let typisch = Math.round(3250 * getSponsorLeagueFactor() / 100) * 100;
+        let angebote = sponsorOffers.length > 0 ? `${sponsorOffers.length} Angebot${sponsorOffers.length > 1 ? 'e liegen' : ' liegt'} in der Sponsoren-Zentrale bereit.` : 'Neue Angebote kommen laufend in die Sponsoren-Zentrale.';
+        addInboxMessage('vertrag', '🤝 Noch kein Hauptsponsor!', `Ein Hauptsponsor zahlt in dieser Liga typischerweise rund ${formatVal(typisch)} pro Spieltag - ohne ihn fehlt das Geld jede Woche. ${angebote} Wer länger im Minus steht, riskiert Transfersperre und Zwangsverkäufe.`, 'screen-sponsors');
+        showToast(`🤝 Noch kein Hauptsponsor - rund ${formatVal(typisch)} pro Spieltag entgehen dir.`, 'error', 5000);
+    }
     function getSponsorLoyaltyPaymentMultiplier() {
         if (!game.sponsor || typeof game.sponsor.loyalty !== 'number') return 1;
         if (game.sponsor.loyalty <= 20) return 0.7;
@@ -28873,6 +28885,8 @@ function cleanupLegacyScoutState() {
     let currentMatch = null;
     let substitutionsLeft = 0;
 
+    // Zusätzlicher Fitnessverlust der Startelf für 90 Minuten Brechstange/Pressing (anteilig).
+    const LIVE_SHOUT_FITNESS_COST = 8;
     function setLiveShout(shout) {
         playSound('click');
         activeLiveShout = shout;
@@ -29617,9 +29631,12 @@ function cleanupLegacyScoutState() {
         let ourXg = currentMatch.isHome ? xg.myXg : xg.oppXg;
         let oppXg = currentMatch.isHome ? xg.oppXg : xg.myXg;
         // Live-Extras in erwarteten Toren je 90 Minuten (nur das Livespiel kennt sie).
-        if (activeLiveShout === 'brechstange') { ourXg += 0.6; oppXg += 0.4; }
+        // Brechstange = viel Risiko (fast so viele Gegentore wie eigene Tore): lohnt bei Rückstand,
+        // schadet bei Führung. Pressing = kleiner Vorteil. Beide kosten Kraft (kraftMinuten) -
+        // vorher waren sie gratis und brachten auch beim 0:0 Punkte (25.13).
+        if (activeLiveShout === 'brechstange') { ourXg += 0.9; oppXg += 0.7; }
         if (activeLiveShout === 'bus') { ourXg *= 0.6; oppXg *= 0.7; }
-        if (activeLiveShout === 'pressing') { ourXg += 0.4; oppXg += 0.25; }
+        if (activeLiveShout === 'pressing') { ourXg += 0.3; oppXg += 0.2; }
         if (underworld.activeSabotages.refBribe) { ourXg += 0.5; oppXg = Math.max(0.1, oppXg - 0.2); }
         // Standards-Spezialist und Ecken: Freistöße/Elfmeter laufen über js/set-pieces.js.
         if (staffMembers.setPieceCoach.hired) ourXg += 0.1 * getStaffLevelMultiplier('setPieceCoach');
@@ -29648,6 +29665,10 @@ function cleanupLegacyScoutState() {
             return;
         }
 
+        // Brechstange und Pressing kosten Kraft: die Minuten werden nach dem Spiel als
+        // zusätzlicher Fitnessverlust der Startelf abgerechnet (processPostMatchRoutine). Erst
+        // hier zählen, sonst liefen die Minuten eines Standard-Zugs (carrySpan) doppelt ein.
+        if (activeLiveShout === 'brechstange' || activeLiveShout === 'pressing') currentMatch.kraftMinuten = (currentMatch.kraftMinuten || 0) + spanMin;
         let ourName = currentMatch.isHome ? currentMatch.homeName : currentMatch.awayName;
         let oppName = currentMatch.isHome ? currentMatch.awayName : currentMatch.homeName;
         // Torereignisse dieses Zugs (Poisson wie in der Simulation), in zufälliger Reihenfolge.
@@ -30435,6 +30456,11 @@ function cleanupLegacyScoutState() {
         // Spielstil: Tempo & Pressing bestimmen den läuferischen Aufwand aller 8 Stile
         // einheitlich (siehe getTacticStyleFitnessMultiplier()), statt nur zweier Sonderfälle.
         fitLoss = Math.round(fitLoss * getTacticStyleFitnessMultiplier(game.tacticStyle));
+        // Live-Zurufe Brechstange/Pressing: volle 90 Minuten kosten LIVE_SHOUT_FITNESS_COST extra (25.13).
+        if (isLiveContext && currentMatch && currentMatch.kraftMinuten) {
+            fitLoss += Math.round(LIVE_SHOUT_FITNESS_COST * Math.min(90, currentMatch.kraftMinuten) / 90);
+            currentMatch.kraftMinuten = 0;
+        }
         // Gegenpressing (Team-Anweisung, NEU): zusätzlicher Kraftaufwand oben drauf.
         if (typeof getTeamInstructionFitnessMultiplier === 'function') fitLoss = Math.round(fitLoss * getTeamInstructionFitnessMultiplier());
         // Wetter: Hitze laugt spürbar mehr aus, Regen/Schnee erhöhen v.a. das Verletzungsrisiko
@@ -30585,6 +30611,7 @@ function cleanupLegacyScoutState() {
         if (typeof tickSponsorLoyalty === 'function') {
             tickSponsorLoyalty(matchResult);
             checkSponsorActivationEvent();
+            remindMissingMainSponsor();
         }
         // Block-spezifische Fan-Kultur jeden Spieltag weiterentwickeln.
         if (typeof tickBlockCultures === 'function') tickBlockCultures();
@@ -33365,6 +33392,9 @@ const LEXICON_ENTRIES = [
     { cat: 'Taktik', title: 'Standards & Elfmeter im Livespiel', screen: 'screen-squad',
         text: 'Bei einem Elfmeter oder Freistoß in Tornähe hält das Livespiel an. Elfmeter: Du wählst den Schützen - der feste Schütze hat Routine (+5 %), der Gefoulte will oft selbst, ist aber angeschlagen; in der Schlussphase eines knappen Spiels flattern die Nerven (außer bei Selbstbewussten). Freistoß: direkt (hängt am Schützen), Flanke auf den Kopfballspieler (Konterrisiko) oder kurz (sicher, selten gefährlich). Auch der Gegner bekommt Elfmeter und Freistöße. Der Videobeweis nimmt manches Tor zurück. Livespiel und Simulation rechnen mit denselben erwarteten Toren - live ist kein Vorteil eingebaut, nur deine Eingriffe zählen.',
         tips: ['Feste Schützen stellst du in der Aufstellung ein', 'Im Elfmeterschießen kannst du einen Elfmeter-Killer von der Bank bringen - das kostet einen Wechsel', 'Beim schnellen Durchspielen entscheidet der Trainer automatisch'] },
+    { cat: 'Taktik', title: 'Zurufe im Livespiel', screen: 'screen-squad',
+        text: 'Brechstange: beide Teams kommen zu deutlich mehr Torchancen - das lohnt bei Rückstand, kostet bei Führung Punkte. Pressing: etwas mehr eigene als gegnerische Chancen. Beide kosten Kraft: 90 Minuten Brechstange oder Pressing bedeuten nach dem Spiel bis zu 8 Fitnesspunkte extra für die Startelf. Bus parken: deutlich weniger Tore auf beiden Seiten, die eigenen sinken stärker - gut, um eine Führung über die Zeit zu bringen.',
+        tips: ['Gemessen ab der 60. Minute bei 0:1: Brechstange holt im Schnitt mehr Punkte, der Bus weniger', 'Bei Führung ab der 70. Minute ist der Bus die beste Wahl', 'Der Co-Trainer schlägt Brechstange und Bus in den passenden Lagen vor'] },
     { cat: 'Taktik', title: 'Co-Trainer im Livespiel', screen: 'screen-squad',
         text: 'Ein eingestellter Co-Trainer meldet sich im Livespiel mit Hinweisen aus dem echten Spielstand - jeweils mit einer Aktion per Tipp. Stufe 1: müde Spieler, Rückstand oder knappe Führung in der Schlussphase. Stufe 2: zusätzlich Gelb-Rot-Gefahr und ein verlorenes Taktik-Duell (ab der 20. Minute, mit Chef-Analyst sofort). Stufe 3: erkennt auch ein gewinnbares Taktik-Duell.',
         tips: ['Jede Aktion kostet, was sie sonst auch kostet: einen Wechsel, Zweikampfstärke oder Ordnung hinten', 'Ein schlecht gelaunter Co-Trainer meldet sich seltener - Gehaltserhöhung hebt seine Laune', 'Befolgte Hinweise stärken das Vertrauen in ihn (Kader > Co-Trainer-Historie)'] },

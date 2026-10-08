@@ -138,9 +138,12 @@
         let ourXg = currentMatch.isHome ? xg.myXg : xg.oppXg;
         let oppXg = currentMatch.isHome ? xg.oppXg : xg.myXg;
         // Live-Extras in erwarteten Toren je 90 Minuten (nur das Livespiel kennt sie).
-        if (activeLiveShout === 'brechstange') { ourXg += 0.6; oppXg += 0.4; }
+        // Brechstange = viel Risiko (fast so viele Gegentore wie eigene Tore): lohnt bei Rückstand,
+        // schadet bei Führung. Pressing = kleiner Vorteil. Beide kosten Kraft (kraftMinuten) -
+        // vorher waren sie gratis und brachten auch beim 0:0 Punkte (25.13).
+        if (activeLiveShout === 'brechstange') { ourXg += 0.9; oppXg += 0.7; }
         if (activeLiveShout === 'bus') { ourXg *= 0.6; oppXg *= 0.7; }
-        if (activeLiveShout === 'pressing') { ourXg += 0.4; oppXg += 0.25; }
+        if (activeLiveShout === 'pressing') { ourXg += 0.3; oppXg += 0.2; }
         if (underworld.activeSabotages.refBribe) { ourXg += 0.5; oppXg = Math.max(0.1, oppXg - 0.2); }
         // Standards-Spezialist und Ecken: Freistöße/Elfmeter laufen über js/set-pieces.js.
         if (staffMembers.setPieceCoach.hired) ourXg += 0.1 * getStaffLevelMultiplier('setPieceCoach');
@@ -169,6 +172,10 @@
             return;
         }
 
+        // Brechstange und Pressing kosten Kraft: die Minuten werden nach dem Spiel als
+        // zusätzlicher Fitnessverlust der Startelf abgerechnet (processPostMatchRoutine). Erst
+        // hier zählen, sonst liefen die Minuten eines Standard-Zugs (carrySpan) doppelt ein.
+        if (activeLiveShout === 'brechstange' || activeLiveShout === 'pressing') currentMatch.kraftMinuten = (currentMatch.kraftMinuten || 0) + spanMin;
         let ourName = currentMatch.isHome ? currentMatch.homeName : currentMatch.awayName;
         let oppName = currentMatch.isHome ? currentMatch.awayName : currentMatch.homeName;
         // Torereignisse dieses Zugs (Poisson wie in der Simulation), in zufälliger Reihenfolge.
@@ -956,6 +963,11 @@
         // Spielstil: Tempo & Pressing bestimmen den läuferischen Aufwand aller 8 Stile
         // einheitlich (siehe getTacticStyleFitnessMultiplier()), statt nur zweier Sonderfälle.
         fitLoss = Math.round(fitLoss * getTacticStyleFitnessMultiplier(game.tacticStyle));
+        // Live-Zurufe Brechstange/Pressing: volle 90 Minuten kosten LIVE_SHOUT_FITNESS_COST extra (25.13).
+        if (isLiveContext && currentMatch && currentMatch.kraftMinuten) {
+            fitLoss += Math.round(LIVE_SHOUT_FITNESS_COST * Math.min(90, currentMatch.kraftMinuten) / 90);
+            currentMatch.kraftMinuten = 0;
+        }
         // Gegenpressing (Team-Anweisung, NEU): zusätzlicher Kraftaufwand oben drauf.
         if (typeof getTeamInstructionFitnessMultiplier === 'function') fitLoss = Math.round(fitLoss * getTeamInstructionFitnessMultiplier());
         // Wetter: Hitze laugt spürbar mehr aus, Regen/Schnee erhöhen v.a. das Verletzungsrisiko
@@ -1106,6 +1118,7 @@
         if (typeof tickSponsorLoyalty === 'function') {
             tickSponsorLoyalty(matchResult);
             checkSponsorActivationEvent();
+            remindMissingMainSponsor();
         }
         // Block-spezifische Fan-Kultur jeden Spieltag weiterentwickeln.
         if (typeof tickBlockCultures === 'function') tickBlockCultures();
