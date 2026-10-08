@@ -2722,8 +2722,8 @@ async function testYouthPathway(browser) {
             // Potenzial relativ zum Liga-Schnitt beim Sichten (25.17)
             out.potenzialEcht = youthTalents.every(p => typeof p.potential === 'number' && p.potential >= p.strength + 4
                 && (p.potential >= p.youthLeagueBase + YOUTH_POTENTIAL_OFFSET[p.potentialTier][0] || p.potential === p.strength + 4));
-            // Talente passen zur Liga: Start 4-14 unter dem Liga-Schnitt (ohne Akademie/Internat-Bonus)
-            out.ligaGerecht = youthTalents.every(p => p.strength <= p.youthLeagueBase - 4 + game.youthAcademyLvl * 3 + (campusBuildings.internat?.lvl || 0) * 2);
+            // Talente passen zur Liga: Start 14-24 unter dem Liga-Schnitt (ohne Akademie/Internat-Bonus)
+            out.ligaGerecht = youthTalents.every(p => p.strength <= p.youthLeagueBase - 14 + game.youthAcademyLvl * 3 + (campusBuildings.internat?.lvl || 0) * 2);
             const t0 = youthTalents[0];
             out.unbekannt = getYouthPotentialText(t0).includes('unbekannt');
             revealYouthPotential(t0.id);

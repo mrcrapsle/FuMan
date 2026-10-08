@@ -365,7 +365,7 @@
         let internatLvl = campusBuildings.internat?.lvl || 0;
         let basis = getYouthLeagueBase();
         let bonus = game.youthAcademyLvl * 3 + internatLvl * 2;
-        let p = createPlayer(["TW", "ABW", "MIT", "ST"][Math.floor(Math.random()*4)], Math.max(20, basis - 14 + bonus), Math.max(24, basis - 4 + bonus), null, [15, 18]);
+        let p = createPlayer(["TW", "ABW", "MIT", "ST"][Math.floor(Math.random()*4)], Math.max(20, basis - 24 + bonus), Math.max(24, basis - 14 + bonus), null, [15, 18]);
         p.youthLeagueBase = basis;
         assignYouthPotentialTier(p);
         if (typeof ensureYouthPotential === 'function') ensureYouthPotential(p);

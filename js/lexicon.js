@@ -17,7 +17,7 @@ const LEXICON_ENTRIES = [
         text: 'Schwankt von Spiel zu Spiel um den Wert 50 und verändert die effektive Stärke leicht - gute Tage und schlechte Tage.',
         tips: ['„Trainer stellt Top-Elf auf“ berücksichtigt Tagesform und Fitness'] },
     { cat: 'Spieler', title: 'Potenzial (Jugend)', screen: 'screen-youth',
-        text: 'Obergrenze, bis zu der sich ein Talent entwickeln kann. Ungeprüft unbekannt; die Potenzial-Prüfung (3.000 €) zeigt eine Spanne. Talente richten sich nach der eigenen Liga: gesichtet starten sie 4-14 Punkte unter dem Liga-Schnitt (Akademie +3, Internat +2 je Stufe), das Potenzial liegt je nach Stufe etwa auf Liga-Niveau bis 15 Punkte darüber. Die Sichtung kostet 2 % des Transferbudgets der Liga (mind. 2.000 €).',
+        text: 'Obergrenze, bis zu der sich ein Talent entwickeln kann. Ungeprüft unbekannt; die Potenzial-Prüfung (3.000 €) zeigt eine Spanne. Talente richten sich nach der eigenen Liga: gesichtet starten sie 14-24 Punkte unter dem Liga-Schnitt (Akademie +3, Internat +2 je Stufe); das Potenzial liegt je nach Stufe unter dem Liga-Schnitt (Ergänzungsspieler), auf Stammspieler-Niveau oder bis 10 Punkte darüber. Die Sichtung kostet 2 % des Transferbudgets der Liga (mind. 2.000 €).',
         tips: ['Leihe zur Entwicklung bringt mit Stammplatz mehr als die Akademie allein', 'Mentor und Jugendtrainer beschleunigen die Entwicklung', 'Mit 19 ist eine Profivertrag-Entscheidung fällig'] },
     { cat: 'Spieler', title: 'Marktwert', screen: 'screen-transfer',
         text: 'Richtwert für Ablösen. Steigt mit der Stärke, mit Länderspielen, Turniererfolgen und Auszeichnungen.',
