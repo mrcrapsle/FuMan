@@ -491,7 +491,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.89', date: '08.10.2026', features: 'Phase 25.18: Aufstiegsschub, Talentverkauf, Transferstrategie, Akademie bis Stufe 5, Gehaltsbudget ohne Ratsche' };
+    const GAME_VERSION = { number: '3.90', date: '08.10.2026', features: 'Phase 25.19: Buchungstexte, TV-Prognose, Fallschirmgeld, Sponsor-Verlängerung, Vorvertrags-Warnung, Kadergröße' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -28420,12 +28420,18 @@ function getWageBudgetFloor() {
     // reichte das Budget nur für ein Drittel der Verlängerungen (wieder Notkader).
     //   Konto im Minus:   laufende Gehälter eingefroren, keine Erhöhungen eingeplant (25.19: mit 95 %
     //                     reichten 0,7 Mio. € Minus bei einem 17-Mann-Kader für den Notkader)
+    //   ab dem 1,5-fachen Ligabudget: laufende Gehälter eingefroren, Erhöhungen nur mit einer halben
+    //                     Saison Gehälter auf dem Konto (25.19)
     //   sonst:            laufende Gehälter plus die anstehenden Erhöhungen (getRenewalWageBuffer),
-    //                     +5 % Spielraum nur ohne Verlustsaison und unter dem 1,5-fachen Ligabudget
+    //                     +5 % Spielraum nur ohne Verlustsaison
     if (game.money < 0) return Math.ceil(summe / 1000) * 1000;
     const ohneVerlust = (game.ffpSeasonNet || 0) >= 0 || game.money >= summe * 34;
     const deckel = getLeagueWageBudget(game.leagueLevel) * WAGE_FLOOR_GROWTH_CAP;
-    const spielraum = ohneVerlust && summe < deckel ? summe * 0.05 : 0;
+    // Über dem Deckel eingefroren (25.19): die eingeplanten Erhöhungen trieben starke Bundesliga-Kader
+    // auf 3-4 Mio. €/Spieltag (Bot: -18 Mio. € Kasse) - verlängert wird dort über Abgänge. Trägt die
+    // Kasse eine halbe Saison Gehälter, bleiben die Erhöhungen eingeplant (sonst Notkader mit 106 Mio. €).
+    if (summe >= deckel) return Math.ceil((summe + (game.money >= summe * 17 ? getRenewalWageBuffer() : 0)) / 1000) * 1000;
+    const spielraum = ohneVerlust ? summe * 0.05 : 0;
     return Math.ceil((summe + spielraum + getRenewalWageBuffer()) / 1000) * 1000;
 }
 
@@ -29995,7 +30001,7 @@ const LEXICON_ENTRIES = [
         tips: ['Ein Aufstieg in die Bundesliga bringt viel mehr TV-Geld, aber auch diese Fixkosten', 'Die Finanz-Prognose zeigt den Monatsanteil'] },
     { cat: 'Finanzen', title: 'Gehaltsbudget', screen: 'screen-finances',
         text: 'Höchstsumme aller Spielergehälter pro Spieltag. Neue Verträge über dem Budget sind nicht möglich. Der Vorstand richtet es nach der Liga aus: Bundesliga 1,575 Mio. €, 2. Liga 520.000 €, 3. Liga 110.000 €, 4. Liga 36.000 €, 5. Liga 11.000 €, 6. Liga 8.000 € - zum Saisonstart mit Platz 1-4 × 1,3, ab Platz 11 × 0,8.',
-        tips: ['Verkäufe und auslaufende Verträge schaffen Luft', 'Im Gehaltsgespräch einmal nachverhandeln', 'Zum Saisonstart deckt es mindestens die laufenden Gehälter plus die Gehaltserhöhungen der Verträge, die in der neuen Saison auslaufen - dazu 5 % Spielraum, solange die Vorsaison ohne Verlust war und die Gehälter unter dem 1,5-fachen Ligawert liegen; mit Minus auf dem Konto eingefroren auf die laufenden Gehälter (ohne Erhöhungen)', 'Bei einer Verlängerung zählen nur die Gehälter der Spieler, die danach noch da sind - wer ohnehin geht, schafft Luft'] },
+        tips: ['Verkäufe und auslaufende Verträge schaffen Luft', 'Im Gehaltsgespräch einmal nachverhandeln', 'Zum Saisonstart deckt es mindestens die laufenden Gehälter plus die Gehaltserhöhungen der Verträge, die in der neuen Saison auslaufen - dazu 5 % Spielraum, solange die Vorsaison ohne Verlust war; ab dem 1,5-fachen Ligawert friert der Vorstand die Gehälter ein, außer die Kasse trägt eine halbe Saison Gehälter (verlängert wird dann über Abgänge); mit Minus auf dem Konto eingefroren auf die laufenden Gehälter (ohne Erhöhungen)', 'Bei einer Verlängerung zählen nur die Gehälter der Spieler, die danach noch da sind - wer ohnehin geht, schafft Luft'] },
     { cat: 'Finanzen', title: 'Transferbudget', screen: 'screen-finances',
         text: 'Wie viel Ablöse der Vorstand pro Saison freigibt. Unabhängig vom Kontostand: beides muss reichen. Grundbetrag nach Liga: Bundesliga 25 Mio. €, 2. Liga 3 Mio. €, 3. Liga 900.000 €, 4. Liga 250.000 €, 5. Liga 60.000 €, 6. Liga 40.000 € - zum Saisonstart mit Platz 1-4 × 1,3, ab Platz 11 × 0,8.',
         tips: ['Verkäufe erhöhen es', 'Mit dem Vorstand lässt sich nachverhandeln', 'Zum Saisonstart gibt der Vorstand 40 % der Rücklagen über einer Reserve (halbe Saison Gehaltsbudget) zusätzlich frei, 10 % davon gehen ins Gehaltsbudget'] },
