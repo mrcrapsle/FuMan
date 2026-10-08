@@ -83,6 +83,7 @@
     // nächsten Saison. Bankspieler unterschreiben gegen eine Einsatzgarantie günstiger.
     let contractTalk = null; // { playerId, years, offerFactor, garantie, rounds }
 
+    const CONTRACT_HANDGELD_MATCHDAYS = 4;
     function getContractDemand(p) {
         let marktGehalt = calculatePlayerWage(p.marketValue, p.strength);
         let elf = pickBestLineupIds();
@@ -97,7 +98,10 @@
         let gehalt = Math.round(Math.max(untergrenze, marktGehalt * faktor) / 10) * 10;
         // Vorvertrags-Angebot eines anderen Vereins (js/pre-contracts.js): er weiß, was er wert ist.
         if (p.preContractOffer) gehalt = Math.round(gehalt * 1.15 / 10) * 10;
-        let handgeldProJahr = Math.max(1500, Math.round(p.marketValue * 0.05));
+        // Handgeld (25.20): CONTRACT_HANDGELD_MATCHDAYS Spieltagsgehälter je Vertragsjahr (~12 % eines
+        // Jahresgehalts), wie die Vorverträge (12/24 Spieltagsgehälter). Vorher 5 % des Marktwerts je
+        // Jahr (~27 % eines Jahresgehalts) - ein Bundesligist zahlte 12-35 Mio. € pro Saison.
+        let handgeldProJahr = Math.max(1500, Math.round(gehalt * CONTRACT_HANDGELD_MATCHDAYS / 100) * 100);
         if (staffMembers.sportDir.hired) handgeldProJahr = Math.round(handgeldProJahr * 0.8);
         return { gehalt, handgeldProJahr, stammspieler, star: top3 };
     }

@@ -378,6 +378,13 @@ async function karriere(browser, lauf) {
                     pokal: (game.cupFinals || []).filter(f => f.season === game.season && f.won).map(f => f.comp).join('+')
                 };
                 zeile.lizenzVorEnde = checkDfbLicensingStatus().missing.join(' / ');
+                // LIGADIAG=1 (25.20): Grundstärken der eigenen Liga und der nächsthöheren (Top 5 / Schnitt / Min),
+                // dazu Stadion und Kasse fürs Lizenzbild.
+                if (game.leagueLevel > 0) {
+                    const basis = l => (leaguesData[l] || []).filter(t => t.name !== game.clubName).map(t => Math.round(t.baseStrength ?? t.strength)).sort((a, b) => b - a);
+                    const fmt = a => a.length ? `${a.slice(0, 5).join('/')} Ø${Math.round(a.reduce((x, y) => x + y, 0) / a.length)} min${a[a.length - 1]}` : '-';
+                    zeile.ligaDiag = `eigene ${fmt(basis(game.leagueLevel))} | darüber ${fmt(basis(game.leagueLevel - 1))} | Stadion ${stadium.total} Flutlicht ${stadium.flutlicht ? 'ja' : 'nein'} Internat ${campusBuildings.internat?.lvl || 0}`;
+                }
                 zeile.vvWeg = squad.filter(p => p.preContractSigned).length;
                 const strat = typeof getTransferStrategy === 'function' ? getTransferStrategy() : null;
                 zeile.erwartet = game.seasonExpectation && game.seasonExpectation.season === game.season ? game.seasonExpectation.expectedRank : null;
@@ -437,6 +444,7 @@ async function karriere(browser, lauf) {
         const f = ([k, v]) => `${k} ${(v / 1e6).toFixed(1)}`;
         console.log(`[S${z.season} Liga ${z.liga + 1} Pl ${z.platz}] +${(ein.reduce((a, [, v]) => a + v, 0) / 1e6).toFixed(1)} / ${(aus.reduce((a, [, v]) => a + v, 0) / 1e6).toFixed(1)} Mio | Saisonende ${(z.saisonEnde / 1e6).toFixed(1)}\n   EIN: ${ein.map(f).join(' | ')}\n   AUS: ${aus.map(f).join(' | ')}`);
     });
+    if (process.env.LIGADIAG) zeilen.forEach(z => { if (z.ligaDiag) console.log(`[S${z.season} Liga ${z.liga + 1} Pl ${z.platz}] ${z.ligaDiag}`); });
     if (process.env.VBDIAG) zeilen.forEach(z => { if (z.vb) console.log(`[S${z.season} Liga ${z.liga + 1} VB] ${z.vb.map(([k, v]) => `${k} ${(v / 1e6).toFixed(2)}`).join(' | ')}`); });
     if (process.env.BOARDDIAG) zeilen.forEach(z => { if (z.board) console.log(`[S${z.season} Liga ${z.liga + 1} Pl ${z.platz} Vst ${z.vorstand}] ${z.board.join(' | ')}`); });
     if (fehler.length) console.log('JS-Fehler: ' + [...new Set(fehler)].slice(0, 5).join(' | '));

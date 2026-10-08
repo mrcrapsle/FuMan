@@ -24188,6 +24188,7 @@ function renderYouthPathwayBoxes() {
     // nächsten Saison. Bankspieler unterschreiben gegen eine Einsatzgarantie günstiger.
     let contractTalk = null; // { playerId, years, offerFactor, garantie, rounds }
 
+    const CONTRACT_HANDGELD_MATCHDAYS = 4;
     function getContractDemand(p) {
         let marktGehalt = calculatePlayerWage(p.marketValue, p.strength);
         let elf = pickBestLineupIds();
@@ -24202,7 +24203,10 @@ function renderYouthPathwayBoxes() {
         let gehalt = Math.round(Math.max(untergrenze, marktGehalt * faktor) / 10) * 10;
         // Vorvertrags-Angebot eines anderen Vereins (js/pre-contracts.js): er weiß, was er wert ist.
         if (p.preContractOffer) gehalt = Math.round(gehalt * 1.15 / 10) * 10;
-        let handgeldProJahr = Math.max(1500, Math.round(p.marketValue * 0.05));
+        // Handgeld (25.20): CONTRACT_HANDGELD_MATCHDAYS Spieltagsgehälter je Vertragsjahr (~12 % eines
+        // Jahresgehalts), wie die Vorverträge (12/24 Spieltagsgehälter). Vorher 5 % des Marktwerts je
+        // Jahr (~27 % eines Jahresgehalts) - ein Bundesligist zahlte 12-35 Mio. € pro Saison.
+        let handgeldProJahr = Math.max(1500, Math.round(gehalt * CONTRACT_HANDGELD_MATCHDAYS / 100) * 100);
         if (staffMembers.sportDir.hired) handgeldProJahr = Math.round(handgeldProJahr * 0.8);
         return { gehalt, handgeldProJahr, stammspieler, star: top3 };
     }
@@ -28265,7 +28269,12 @@ function recordSeasonExpectationRank() {
     exp.leagueLevel = game.leagueLevel;
     exp.teams = teams.length;
     exp.expectedRank = 1 + teams.filter(t => t.name !== game.clubName && t.strength > own).length;
+    // Nach einem Abstieg (25.20): die Elf ist fast immer die stärkste der neuen Liga, also lautete die
+    // Erwartung stets Platz 1 - die 2. Liga hat aber selbst zwei, drei Ex-Bundesligisten auf Augenhöhe.
+    // Der Bot wurde als klarer Favorit nach Platz 8 entlassen. Erwartet wird jetzt der Aufstiegskampf.
+    if (game.relegatedIntoSeason === game.season) exp.expectedRank = Math.max(exp.expectedRank, RELEGATION_EXPECTED_RANK);
 }
+const RELEGATION_EXPECTED_RANK = 3;
 
 function recordSeasonExpectation() {
     game.seasonExpectation = { season: game.season, startMoney: Math.round(game.money) };
@@ -32727,6 +32736,8 @@ function concludeSeasonAndAdvance() {
             game.leagueLevel++;
             abstiegsGehaelter = applyRelegationWageClause();
             if (typeof payRelegationParachute === 'function') payRelegationParachute();
+            // Erste Saison nach dem Abstieg (member-assembly.js): Erwartung höchstens Platz RELEGATION_EXPECTED_RANK.
+            game.relegatedIntoSeason = game.season + 1;
             const neustart = typeof grantRelegationRestart === 'function' && grantRelegationRestart();
             showNotice('❌ Abstieg', `Die Klasse konnte nicht gehalten werden. Nächste Saison geht es eine Liga tiefer weiter.${neustart ? '\n\nDer Vorstand hält an dir fest und gibt dir einen Neustart.' : ''}`, { typ: 'warn' });
         }
@@ -34119,7 +34130,7 @@ const LEXICON_ENTRIES = [
         text: 'Vor jedem Spiel: drei Antworten mit echter Wirkung (Moral, Stärke im nächsten Spiel, Vorstand, Fans). Versprechen werden nach dem Spiel abgerechnet.',
         tips: ['Wer einen Sieg verspricht und verliert, verliert Ansehen bei Medien, Fans und Vorstand'] },
     { cat: 'Verein', title: 'Vorstandszufriedenheit', screen: 'screen-dashboard',
-        text: 'Wie zufrieden der Vorstand ist (10-100). Fällt sie unter 25, warnt er. Entlassen wird nur am Saisonende: wenn sie dann unter 25 liegt, die letzten 6 Pflichtspiele darunter waren und sie in dieser Zeit nicht gestiegen ist. Nach einem Abstieg gibt es einmal einen Neustart (mindestens 60), nach einem zweiten Abstieg in Folge nicht. In der ersten Saison gibt es Schonfrist.',
+        text: 'Wie zufrieden der Vorstand ist (10-100). Fällt sie unter 25, warnt er. Entlassen wird nur am Saisonende: wenn sie dann unter 25 liegt, die letzten 6 Pflichtspiele darunter waren und sie in dieser Zeit nicht gestiegen ist. Nach einem Abstieg gibt es einmal einen Neustart (mindestens 60), nach einem zweiten Abstieg in Folge nicht. In der ersten Saison nach einem Abstieg erwartet er höchstens Platz 3 - die Liga hat meist mehrere Ex-Erstligisten auf Augenhöhe. In der ersten Saison gibt es Schonfrist.',
         tips: ['Siege und erreichte Saisonziele heben sie', 'Schulden, gebrochene Versprechen und Niederlagenserien senken sie', 'Der Vorstandsraum erklärt jedes Mitglied einzeln'] },
     { cat: 'Verein', title: 'Mitgliederversammlung', screen: 'screen-dashboard',
         text: 'Nach jeder Saison wollen die Mitglieder deinen Bericht: Platz gegen Erwartung, Aufstieg/Abstieg und Kasse ergeben die Grundstimmung. Rede und Beitragsantrag wählst du im Dashboard. Ab 70 % Zustimmung Vorstand +10, ab 50 % (entlastet) +5, darunter -10. Bereitest du sie nicht innerhalb von 6 Spieltagen vor, findet sie ohne dich statt (-5 % Zustimmung).',
@@ -34203,7 +34214,7 @@ const LEXICON_ENTRIES = [
         text: 'Sommer: Spieltage 1-3, Winter: Spieltage 18-20. Am letzten Tag (Deadline-Day) gibt es Schnäppchen und hektische Wechsel.',
         tips: ['Der Transfer-Ticker zeigt, wohin die Stars der anderen Vereine wechseln'] },
     { cat: 'Transfers', title: 'Vertragsgespräch', screen: 'screen-contracts',
-        text: 'Verlängerungen sind Gehaltsgespräche: Stammspieler und Stars fordern mehr, ältere Spieler weniger. Zähe Charaktere lassen sich schwer drücken; nach zwei geplatzten Runden ist für die Saison Schluss.',
+        text: 'Verlängerungen sind Gehaltsgespräche: Stammspieler und Stars fordern mehr, ältere Spieler weniger. Zähe Charaktere lassen sich schwer drücken; nach zwei geplatzten Runden ist für die Saison Schluss. Dazu kommt ein Handgeld von 4 Spieltagsgehältern je Vertragsjahr (mit Sportdirektor 20 % weniger) plus Beraterprovision.',
         tips: ['Eine Einsatzgarantie macht Spieler billiger - aber wird geprüft'] },
     { cat: 'Wettbewerbe', title: 'Auf- und Abstieg', screen: 'screen-league',
         text: 'Platz 1 und 2 steigen direkt auf, Platz 3 spielt Relegation gegen den 16. der Liga darüber. Platz 16 muss in die Relegation, Platz 17 und 18 steigen ab. Die Aufstiegsprämie richtet sich nach der neuen Liga: 150.000 € (Oberliga) bis 5 Mio. € (Bundesliga). Beim Abstieg sinken alle Spielergehälter vertragsgemäß um 40 % (Abstiegsklausel), und die alte Liga zahlt einmalig ein Fallschirmgeld von 25 % ihres TV-Grundbetrags (Bundesliga 16 Mio. €, 2. Liga 2 Mio. €). Dazu kommen nach jedem Aufstieg ein Aufstiegsbudget (+50 % des Transferbudgets der neuen Liga) und die Aufstiegseuphorie: +3 Stärke in Ligaspielen bis Spieltag 10, +1,5 bis Spieltag 17.',

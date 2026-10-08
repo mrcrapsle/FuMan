@@ -342,6 +342,8 @@ function concludeSeasonAndAdvance() {
             game.leagueLevel++;
             abstiegsGehaelter = applyRelegationWageClause();
             if (typeof payRelegationParachute === 'function') payRelegationParachute();
+            // Erste Saison nach dem Abstieg (member-assembly.js): Erwartung höchstens Platz RELEGATION_EXPECTED_RANK.
+            game.relegatedIntoSeason = game.season + 1;
             const neustart = typeof grantRelegationRestart === 'function' && grantRelegationRestart();
             showNotice('❌ Abstieg', `Die Klasse konnte nicht gehalten werden. Nächste Saison geht es eine Liga tiefer weiter.${neustart ? '\n\nDer Vorstand hält an dir fest und gibt dir einen Neustart.' : ''}`, { typ: 'warn' });
         }

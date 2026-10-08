@@ -6929,6 +6929,15 @@ async function testBoardRestart(browser) {
             klausel.fallschirm = fallschirm === 16000000 && game.money === geldVorFallschirm + fallschirm
                 && game.kontoauszug.some(b => b.label.includes('Fallschirmgeld'));
             game.leagueLevel = ligaVorher;
+            // Erwartung nach Abstieg (25.20): stärkste Elf der Liga, trotzdem höchstens Platz 3 erwartet
+            squad.forEach(p => { p.strengthVorher = p.strength; p.strength = 99; });
+            game.relegatedIntoSeason = game.season;
+            recordSeasonExpectationRank();
+            klausel.erwartung = game.seasonExpectation.expectedRank === RELEGATION_EXPECTED_RANK;
+            game.relegatedIntoSeason = null;
+            recordSeasonExpectationRank();
+            klausel.erwartungSonst = game.seasonExpectation.expectedRank === 1;
+            squad.forEach(p => { p.strength = p.strengthVorher; delete p.strengthVorher; });
             // Mitgliederversammlung: ignoriert man sie, findet sie nach ASSEMBLY_AUTO_AFTER Spieltagen
             // automatisch statt (vorher wurde sie mit Spieltag 35 eröffnet und nie abgehalten).
             game.season = 2; game.matchday = 1; game.sackPending = false;
@@ -6965,6 +6974,7 @@ async function testBoardRestart(browser) {
         assert(!r.zweiter && r.nachZweitem === 20, 'Zweiter Abstieg in Folge: kein Vorschuss');
         assert(r.spaeter && r.nachSpaeter === 60, 'Nach einer Saison Pause gibt es wieder einen Neustart');
         assert(r.hoherWertBleibt, 'Ein höherer Wert wird nicht auf 60 gesenkt');
+        assert(r.klausel.erwartung && r.klausel.erwartungSonst, `Nach einem Abstieg erwartet der Vorstand höchstens Platz 3, sonst Platz 1 für die stärkste Elf (${JSON.stringify(r.klausel)})`);
         assert(r.klausel.exakt && r.klausel.anteil < 0.85 && r.klausel.moral && r.klausel.post && r.klausel.fallschirm, `Abstiegsklausel senkt jedes Gehalt um 40 % (mind. 150 €) mit Nachricht, Bundesliga-Absteiger bekommt 16 Mio. € Fallschirmgeld (${JSON.stringify(r.klausel)})`);
         assert(r.eroeffnet && r.automatisch, 'Mitgliederversammlung findet ohne Zutun nach einigen Spieltagen statt');
         assert(r.altstand, 'Alte Spielstände mit Eröffnung an Spieltag 35 werden repariert');

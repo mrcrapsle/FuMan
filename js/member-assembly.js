@@ -33,7 +33,12 @@ function recordSeasonExpectationRank() {
     exp.leagueLevel = game.leagueLevel;
     exp.teams = teams.length;
     exp.expectedRank = 1 + teams.filter(t => t.name !== game.clubName && t.strength > own).length;
+    // Nach einem Abstieg (25.20): die Elf ist fast immer die stärkste der neuen Liga, also lautete die
+    // Erwartung stets Platz 1 - die 2. Liga hat aber selbst zwei, drei Ex-Bundesligisten auf Augenhöhe.
+    // Der Bot wurde als klarer Favorit nach Platz 8 entlassen. Erwartet wird jetzt der Aufstiegskampf.
+    if (game.relegatedIntoSeason === game.season) exp.expectedRank = Math.max(exp.expectedRank, RELEGATION_EXPECTED_RANK);
 }
+const RELEGATION_EXPECTED_RANK = 3;
 
 function recordSeasonExpectation() {
     game.seasonExpectation = { season: game.season, startMoney: Math.round(game.money) };
