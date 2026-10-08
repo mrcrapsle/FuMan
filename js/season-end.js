@@ -150,10 +150,10 @@ function getCashSurplusBudgetShare() {
     };
 }
 
-// Laufende Verträge kann der Vorstand nicht kürzen: nach einer Saison ohne Verlust bleibt das
-// Gehaltsbudget 5 % über der aktuellen Gehaltssumme plus den Erhöhungen der anstehenden
-// Verlängerungen (getRenewalWageBuffer, 25.17); nach einer Verlustsaison (game.ffpSeasonNet,
-// außer das Konto trägt eine ganze Saison) eingefroren, mit Minus auf dem Konto 95 % (25.18).
+// Laufende Verträge kann der Vorstand nicht kürzen: das Gehaltsbudget deckt die aktuelle
+// Gehaltssumme plus die Erhöhungen der anstehenden Verlängerungen (getRenewalWageBuffer, 25.17),
+// +5 % nur nach einer Saison ohne Verlust (game.ffpSeasonNet, außer das Konto trägt eine ganze
+// Saison) und unter dem 1,5-fachen Liga-Gehaltsbudget; mit Minus auf dem Konto 95 % (25.18).
 // Vorher setzte die Liga/Platz-Formel einen Bundesliga-Elften auf 1,26 Mio. bei 1,5 Mio.
 // Gehältern: jede Verlängerung scheiterte, der Kader lief ablösefrei davon (Langzeittest 21.6).
 // Abstiegsklausel (25.14): seit das Gehaltsbudget der Liga folgt (2. Liga 520.000 € statt
@@ -175,23 +175,25 @@ function applyRelegationWageClause() {
     return nachher;
 }
 
+const WAGE_FLOOR_GROWTH_CAP = 1.5;
 function getWageBudgetFloor() {
     const summe = squad.reduce((s, p) => s + (p.wage || 0), 0)
         + (game.secondTeam && game.secondTeam.isActive ? secondTeamSquad.reduce((s, p) => s + (p.wage || 0), 0) : 0);
     // 25.17: vorher galt die Untergrenze nur, wenn die Kasse eine Viertelsaison Gehälter deckte
     // (Bundesliga ~15 Mio. €) - sonst fiel das Budget auf den Ligawert unter die laufenden
     // Gehälter und im Langzeittest scheiterte jede einzelne Verlängerung (Notkader).
-    // 25.18: seit Verlängerungen nur gegen die Gehälter der Bleibenden geprüft werden
-    // (contractWageTotalWith), darf die Untergrenze streng sein - vorher wuchs sie mit +5 % und den
-    // Erhöhungen Saison für Saison mit (Bundesliga-Bot: 1,6 → 2,8 Mio. €/Spieltag), bis der Verein
-    // 27 Mio. € Verlust schrieb, ins Minus rutschte und ohne Untergrenze in den Notkader fiel.
+    // 25.18: vorher wuchs die Untergrenze jede Saison um +5 % plus die Erhöhungen (Bundesliga-Bot:
+    // 1,6 → 2,8 Mio. €/Spieltag), bis der Verein 27 Mio. € Verlust schrieb, ins Minus rutschte und
+    // ohne Untergrenze in den Notkader fiel. Ganz einfrieren half nicht: lief der halbe Kader aus,
+    // reichte das Budget nur für ein Drittel der Verlängerungen (wieder Notkader).
     //   Konto im Minus:   95 % der laufenden Gehälter (der Vorstand verlangt Einsparungen)
-    //   Verlustsaison:    laufende Gehälter eingefroren, keine Erhöhungen eingeplant
-    //   sonst:            +5 % plus die anstehenden Erhöhungen (getRenewalWageBuffer)
+    //   sonst:            laufende Gehälter plus die anstehenden Erhöhungen (getRenewalWageBuffer),
+    //                     +5 % Spielraum nur ohne Verlustsaison und unter dem 1,5-fachen Ligabudget
     if (game.money < 0) return Math.ceil(summe * 0.95 / 1000) * 1000;
     const ohneVerlust = (game.ffpSeasonNet || 0) >= 0 || game.money >= summe * 34;
-    if (!ohneVerlust) return Math.ceil(summe / 1000) * 1000;
-    return Math.ceil((summe * 1.05 + getRenewalWageBuffer()) / 1000) * 1000;
+    const deckel = getLeagueWageBudget(game.leagueLevel) * WAGE_FLOOR_GROWTH_CAP;
+    const spielraum = ohneVerlust && summe < deckel ? summe * 0.05 : 0;
+    return Math.ceil((summe + spielraum + getRenewalWageBuffer()) / 1000) * 1000;
 }
 
 // Verlängerungspuffer (25.17): der Vorstand plant die Gehaltserhöhungen der Spieler ein, deren

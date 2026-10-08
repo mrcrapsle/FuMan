@@ -2323,7 +2323,7 @@ async function testBundesligaLongRun(browser) {
             const knappeKasse = getWageBudgetFloor();
             game.money = -1;
             out.gehaltsBodenWerte = { summe, boden, verlust, knappeKasse, minus: getWageBudgetFloor() };
-            out.gehaltsBoden = boden >= summe * 1.04 && verlust >= summe && verlust <= summe + 1000 && knappeKasse >= summe * 1.04
+            out.gehaltsBoden = boden >= summe * 1.04 && verlust >= summe && verlust <= boden && knappeKasse >= summe * 1.04
                 && out.gehaltsBodenWerte.minus >= summe * 0.95 - 1 && out.gehaltsBodenWerte.minus <= summe * 0.95 + 1000;
             // 25.18: Verlängerung eines Auslaufenden zählt nur die Bleibenden - eingefrorenes Budget lässt sie zu
             squad.forEach((p, i) => { p.contracts = i < 8 ? 1 : 3; });
@@ -2382,7 +2382,7 @@ async function testBundesligaLongRun(browser) {
     assert(!r.crash, `Langzeittest Bundesliga ohne Absturz (${r.crash || 'ok'})`);
     if (!r.crash) {
         assert(r.ruecklagen && r.freigabe, 'Der Vorstand gibt Rücklagen über der Reserve als Transfer- und Gehaltsbudget frei');
-        assert(r.gehaltsBoden, `Gehaltsbudget 5 % über den laufenden Gehältern (nach Verlustsaison eingefroren, mit Minus auf dem Konto 95 %) (${JSON.stringify(r.gehaltsBodenWerte)})`);
+        assert(r.gehaltsBoden, `Gehaltsbudget deckt laufende Gehälter plus Erhöhungen (+5 % nur ohne Verlustsaison, mit Minus auf dem Konto 95 %) (${JSON.stringify(r.gehaltsBodenWerte)})`);
         assert(r.verlaengerungZaehltBleibende, 'Verlängerung eines auslaufenden Vertrags zählt nur die Gehälter der Bleibenden');
         assert(r.verlaengerungsPuffer, 'Gehaltsbudget plant die Gehaltserhöhungen anstehender Verlängerungen ein');
         assert(r.startLizenz, 'Neues Spiel in der Bundesliga: Flutlicht und Internat Stufe 2 vorhanden');
