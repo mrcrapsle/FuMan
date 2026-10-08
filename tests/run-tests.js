@@ -1946,7 +1946,7 @@ async function testTransferStrategy(browser) {
             game.boardSat = 50;
             resolveTransferStrategy(9);
             out.jugendVerfehlt = game.boardSat === 44;
-            squad.slice(0, 2).forEach(p => { p.academyGraduate = true; p.statsSeason = { spiele: 12, tore: 0, vorlagen: 0, notenSumme: 0, elf: 0 }; });
+            squad.slice(0, STRATEGY_YOUTH_PLAYERS).forEach(p => { p.academyGraduate = true; p.statsSeason = { spiele: 12, tore: 0, vorlagen: 0, notenSumme: 0, elf: 0 }; });
             getTransferStrategy().result = null; game.boardSat = 50; const fans = game.fans;
             resolveTransferStrategy(9);
             out.jugendErreicht = game.boardSat === 56 && game.fans === Math.min(100, fans + 3);
@@ -1972,7 +1972,7 @@ async function testTransferStrategy(browser) {
         assert(r.sofort && r.einmal, 'Sofort-Erfolg: +40 % Liga-Transferbudget, Ziel 2 Plätze höher - nur eine Wahl pro Saison');
         assert(r.sofortVerfehlt && r.sofortErreicht, 'Sofort-Erfolg am Saisonende: verfehlt -8, erreicht +5');
         assert(r.jugend, 'Jugend fördern: -30 % Budget, Ziel 1 Platz leichter, Sichtung zum halben Preis');
-        assert(r.jugendVerfehlt && r.jugendErreicht, 'Jugend fördern: 2 Eigengewächse mit 10+ Ligaspielen bringen +6 und Fans, sonst -6');
+        assert(r.jugendVerfehlt && r.jugendErreicht, 'Jugend fördern: 3 Eigengewächse mit 10+ Ligaspielen bringen +6 und Fans, sonst -6');
         assert(r.sparenBudget && r.sparenVerfehlt, 'Sparen: Budget fällt nicht unter 0, Saison mit Verlust kostet 6');
         assert(r.auto, 'Ohne Wahl bis Spieltag 3 bleibt es ausgewogen - ohne Abrechnung, Karte verschwindet');
     }
@@ -2418,7 +2418,7 @@ async function testBundesligaLongRun(browser) {
             game.money = -1;
             out.gehaltsBodenWerte = { summe, boden, verlust, knappeKasse, minus: getWageBudgetFloor() };
             out.gehaltsBoden = boden >= summe * 1.04 && verlust >= summe && verlust <= boden && knappeKasse >= summe * 1.04
-                && out.gehaltsBodenWerte.minus >= summe * 0.95 - 1 && out.gehaltsBodenWerte.minus <= summe * 0.95 + 1000;
+                && out.gehaltsBodenWerte.minus >= summe && out.gehaltsBodenWerte.minus <= summe + 1000;
             // 25.18: Verlängerung eines Auslaufenden zählt nur die Bleibenden - eingefrorenes Budget lässt sie zu
             squad.forEach((p, i) => { p.contracts = i < 8 ? 1 : 3; });
             const auslaeufer = squad[0];
@@ -2476,7 +2476,7 @@ async function testBundesligaLongRun(browser) {
     assert(!r.crash, `Langzeittest Bundesliga ohne Absturz (${r.crash || 'ok'})`);
     if (!r.crash) {
         assert(r.ruecklagen && r.freigabe, 'Der Vorstand gibt Rücklagen über der Reserve als Transfer- und Gehaltsbudget frei');
-        assert(r.gehaltsBoden, `Gehaltsbudget deckt laufende Gehälter plus Erhöhungen (+5 % nur ohne Verlustsaison, mit Minus auf dem Konto 95 %) (${JSON.stringify(r.gehaltsBodenWerte)})`);
+        assert(r.gehaltsBoden, `Gehaltsbudget deckt laufende Gehälter plus Erhöhungen (+5 % nur ohne Verlustsaison, mit Minus auf dem Konto eingefroren) (${JSON.stringify(r.gehaltsBodenWerte)})`);
         assert(r.verlaengerungZaehltBleibende, 'Verlängerung eines auslaufenden Vertrags zählt nur die Gehälter der Bleibenden');
         assert(r.verlaengerungsPuffer, 'Gehaltsbudget plant die Gehaltserhöhungen anstehender Verlängerungen ein');
         assert(r.startLizenz, 'Neues Spiel in der Bundesliga: Flutlicht und Internat Stufe 2 vorhanden');
@@ -6133,6 +6133,14 @@ async function testSquadPlanningTool(browser) {
         out.vorvertragsWarnung = planHtml.includes('Vorvertrags-Angebot von Testclub') && planHtml.includes(vv[1].name)
             && getPreContractRiskInfo().gefaehrdet.some(p => p.id === vv[1].id);
         delete vv[0].preContractOffer;
+        // Kadergröße (25.19): unter 20 Spielern und bei weniger als 14 Bleibenden warnt die Planung
+        const ganzerKader = squad.slice();
+        squad = squad.slice(0, 16);
+        squad.forEach((p, i) => { p.contracts = i < 4 ? 1 : 3; delete p.preContractSigned; });
+        renderSquadPlanningView();
+        const warnHtml = document.getElementById('squad-planning-warnings-box').innerHTML;
+        out.kaderWarnung = warnHtml.includes('Nur 16 Spieler') && warnHtml.includes('Notbesetzung');
+        squad = ganzerKader;
         out.gehaltsWarnung = getSquadPlanningWageOutlook().spielraum !== 0 && (() => { renderSquadPlanningView(); return document.getElementById('squad-planning-wage-box').innerHTML.includes(getSquadPlanningWageOutlook().spielraum >= 0 ? 'Spielraum' : 'über dem Budget'); })();
 
         return out;
@@ -6152,6 +6160,7 @@ async function testSquadPlanningTool(browser) {
     assert(r.altersverteilungHatInhalt, 'Die Alterspyramide zeigt echte, kaderabhängige Werte');
     assert(r.vertragsklippeNachPosition, 'Auslaufende Verträge werden nach Position aufgeschlüsselt angezeigt');
     assert(r.gehaltsplanung && r.gehaltsWarnung, 'Gehaltsplanung zeigt auslaufende Stammspieler, Verlängerungskosten und Spielraum gegen das Budget');
+    assert(r.kaderWarnung, 'Kaderplanung warnt unter 20 Spielern und wenn nach Vertragsende weniger als 14 blieben');
     assert(r.vorvertragsWarnung, 'Kaderplanung warnt vor Vorvertrags-Angeboten (mit Frist) und nennt gefährdete Leistungsträger');
     assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Kaderplanungstool');
     await page.close();

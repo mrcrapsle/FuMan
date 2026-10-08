@@ -120,6 +120,23 @@
 
     // KRITISCHE SCHWACHSTELLEN: verdichtet die Analyse zu konkreten, handlungsleitenden Sätzen -
     // genau der Mehrwert, der beim bloßen Nebeneinander der einzelnen Kästen fehlte.
+    // Kadergröße (25.19): der Bundesliga-Bot lief mit 17-18 Spielern - die Fitness der Elf sank auf
+    // ~88 % (rund 4 Punkte Spielstärke), und schon ein paar auslaufende Verträge führten unter 14
+    // Spieler (Notbesetzung durch den Vorstand).
+    const SQUAD_RECOMMENDED_SIZE = 20;
+    function getSquadSizeWarningHtml() {
+        const bleiben = squad.filter(p => (p.contracts || 0) > 1 && !p.preContractSigned).length + (game.preContracts || []).length;
+        const teile = [];
+        if (squad.length < SQUAD_RECOMMENDED_SIZE) {
+            const ids = pickBestLineupIds();
+            const elf = squad.filter(p => ids.includes(p.id));
+            const fit = Math.round(elf.reduce((s, p) => s + (p.fitness || 0), 0) / Math.max(1, elf.length));
+            teile.push(`Nur ${squad.length} Spieler im Kader (empfohlen ab ${SQUAD_RECOMMENDED_SIZE}): die Stammelf kommt kaum zu Pausen - Fitness der Elf zurzeit Ø ${fit} %.`);
+        }
+        if (bleiben < 14) teile.push(`Nach Vertragsende blieben nur ${bleiben} Spieler - unter 14 stellt der Vorstand eine schwache Notbesetzung. Verlängern oder verpflichten!`);
+        return teile.length ? `<div class="box" style="border-left-color:var(--danger); margin-bottom:4px; font-size:9px; color:var(--danger); font-weight:800;">⚠️ ${teile.join('<br>⚠️ ')}</div>` : '';
+    }
+
     function renderSquadPlanningWarningsBox() {
         let box = document.getElementById('squad-planning-warnings-box');
         if (!box) return;
@@ -135,7 +152,7 @@
                 <div style="font-size:9px; color:var(--text-muted); margin-top:2px;">${gruende.join(' · ')}</div>
             </div>`;
         }).join('');
-        box.innerHTML = warnings || '<div class="box" style="font-size:9px; color:var(--primary);">✓ Keine Position zeigt aktuell eine kombinierte Schwäche für die kommenden Saisons.</div>';
+        box.innerHTML = getSquadSizeWarningHtml() + (warnings || '<div class="box" style="font-size:9px; color:var(--primary);">✓ Keine Position zeigt aktuell eine kombinierte Schwäche für die kommenden Saisons.</div>');
     }
 
     // GEHALTSPLANUNG NÄCHSTE SAISON (25.17): seit das Gehaltsbudget der Liga folgt, scheitern

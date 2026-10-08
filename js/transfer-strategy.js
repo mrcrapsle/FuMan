@@ -5,7 +5,7 @@
 // daran messen auch Mitgliederversammlung und Vorstand) - am Saisonende rechnet der Vorstand ab
 // (resolveTransferStrategy(myRank) vor prepareMemberAssembly()):
 //   jugend      -30 % Transferbudget, Ziel 1 Platz leichter, Sichtung halb so teuer;
-//               mind. 2 Eigengewächse mit 10+ Ligaspielen: Vorstand +6, Fans +3, sonst -6
+//               mind. 3 Eigengewächse mit 10+ Ligaspielen: Vorstand +6, Fans +3, sonst -6
 //   sofort      +40 % Transferbudget, Ziel 2 Plätze höher; erreicht +5, verfehlt -8
 //   sparen      -50 % Transferbudget, Ziel 2 Plätze leichter; Saison ohne Verlust +5, sonst -6
 //   ausgewogen  keine Änderung (auch, wer bis Spieltag 3 nichts wählt)
@@ -19,7 +19,7 @@ const TRANSFER_STRATEGIES = {
     sparen: { label: '💰 Sparen', budget: -0.5, goalShift: 2 },
     ausgewogen: { label: '⚖️ Ausgewogen', budget: 0, goalShift: 0 }
 };
-const STRATEGY_YOUTH_PLAYERS = 2;
+const STRATEGY_YOUTH_PLAYERS = 3; // 25.19: mit 2 erreichte der Bundesliga-Bot das Ziel in 12 von 18 Saisons
 const STRATEGY_YOUTH_GAMES = 10;
 
 function getTransferStrategy() {

@@ -153,7 +153,7 @@ function getCashSurplusBudgetShare() {
 // Laufende Verträge kann der Vorstand nicht kürzen: das Gehaltsbudget deckt die aktuelle
 // Gehaltssumme plus die Erhöhungen der anstehenden Verlängerungen (getRenewalWageBuffer, 25.17),
 // +5 % nur nach einer Saison ohne Verlust (game.ffpSeasonNet, außer das Konto trägt eine ganze
-// Saison) und unter dem 1,5-fachen Liga-Gehaltsbudget; mit Minus auf dem Konto 95 % (25.18).
+// Saison) und unter dem 1,5-fachen Liga-Gehaltsbudget; mit Minus auf dem Konto eingefroren (25.19, vorher 95 %).
 // Vorher setzte die Liga/Platz-Formel einen Bundesliga-Elften auf 1,26 Mio. bei 1,5 Mio.
 // Gehältern: jede Verlängerung scheiterte, der Kader lief ablösefrei davon (Langzeittest 21.6).
 // Abstiegsklausel (25.14): seit das Gehaltsbudget der Liga folgt (2. Liga 520.000 € statt
@@ -189,10 +189,11 @@ function getWageBudgetFloor() {
     // 1,6 → 2,8 Mio. €/Spieltag), bis der Verein 27 Mio. € Verlust schrieb, ins Minus rutschte und
     // ohne Untergrenze in den Notkader fiel. Ganz einfrieren half nicht: lief der halbe Kader aus,
     // reichte das Budget nur für ein Drittel der Verlängerungen (wieder Notkader).
-    //   Konto im Minus:   95 % der laufenden Gehälter (der Vorstand verlangt Einsparungen)
+    //   Konto im Minus:   laufende Gehälter eingefroren, keine Erhöhungen eingeplant (25.19: mit 95 %
+    //                     reichten 0,7 Mio. € Minus bei einem 17-Mann-Kader für den Notkader)
     //   sonst:            laufende Gehälter plus die anstehenden Erhöhungen (getRenewalWageBuffer),
     //                     +5 % Spielraum nur ohne Verlustsaison und unter dem 1,5-fachen Ligabudget
-    if (game.money < 0) return Math.ceil(summe * 0.95 / 1000) * 1000;
+    if (game.money < 0) return Math.ceil(summe / 1000) * 1000;
     const ohneVerlust = (game.ffpSeasonNet || 0) >= 0 || game.money >= summe * 34;
     const deckel = getLeagueWageBudget(game.leagueLevel) * WAGE_FLOOR_GROWTH_CAP;
     const spielraum = ohneVerlust && summe < deckel ? summe * 0.05 : 0;

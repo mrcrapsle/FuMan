@@ -7,6 +7,7 @@
 //         zieht er Jugendspieler hoch oder holt Vereinslose. Als Aufstiegskandidat (Platz <= 6)
 //         baut er die Lizenzauflagen der nächsthöheren Liga und spart dafür in den Fenstern.
 //         Sponsoren: nimmt eingetroffene Angebote an (Haupt, Ausrüster, Ärmel, Banden, Namensrechte).
+//         Unter 20 Spielern füllt er mit Talenten oder Vereinslosen auf (25.19).
 //         Mehr als 24 Spieler: verkauft in den Fenstern die schwächsten Nicht-Stammspieler (ab 21 J.).
 //         Über dem Gehaltsbudget gibt er die teuersten Nicht-Stammspieler ab (z. B. nach einem Abstieg).
 //         Tabelle: K/V = Käufe/Verkäufe der Saison, E = Platzerwartung des Vorstands,
@@ -216,6 +217,18 @@ async function karriere(browser, lauf) {
                             if (squad.length === vorher) break;
                         }
                     });
+                    // Kadergröße (25.19): mit 17-18 Spielern sank die Fitness der Elf auf ~88 % - bis 20
+                    // mit Talenten (ab 17) oder den besten Vereinslosen auffüllen.
+                    for (let n = squad.length; n < 20; n++) {
+                        const t = youthTalents.map((p, i) => ({ p, i })).filter(x => (x.p.age || 17) >= 17).sort((a, b) => b.p.strength - a.p.strength)[0];
+                        const vorher = squad.length;
+                        if (t) { promoteYouth(t.i, null); if (squad.length === vorher) promoteYouth(t.i, null); }
+                        if (squad.length === vorher) {
+                            const frei = freeAgentPlayers.map((p, i) => ({ p, i })).sort((a, b) => b.p.strength - a.p.strength)[0];
+                            if (frei) { signFreeAgent(frei.i); if (squad.length === vorher) signFreeAgent(frei.i); }
+                        }
+                        if (squad.length === vorher) break;
+                    }
                     // Kader verschlanken wie ein Mensch (25.17): mehr als 24 Spieler kosten nur Gehalt -
                     // im Wechselfenster die schwächsten Nicht-Stammspieler (keine Jugend unter 21) verkaufen.
                     if (fenster) {
