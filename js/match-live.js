@@ -1390,6 +1390,7 @@
         game.viewingMatchday = Math.min(34, game.matchday);
         // Wintergespräch (js/winter-talk.js): nach Spieltag 20 ohne Gespräch -> verpasst.
         if (typeof tickWinterTalk === 'function') tickWinterTalk();
+        if (typeof tickTransferStrategy === 'function') tickTransferStrategy();
         if (typeof maybeAutoSave === 'function') maybeAutoSave();
         updateUI();
     }

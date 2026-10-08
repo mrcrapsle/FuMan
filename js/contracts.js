@@ -103,8 +103,17 @@
     }
 
     function contractWageTotalWith(p, neuesGehalt) {
-        return squad.reduce((s, pl) => s + (pl.id === p.id ? neuesGehalt : pl.wage), 0)
-            + (game.secondTeam && game.secondTeam.isActive ? secondTeamSquad.reduce((s, pl) => s + pl.wage, 0) : 0);
+        const zweite = game.secondTeam && game.secondTeam.isActive ? secondTeamSquad.reduce((s, pl) => s + pl.wage, 0) : 0;
+        // Auslaufender Vertrag (25.18): verlängert wird für die Zeit danach - gezählt werden nur,
+        // wer dann noch da ist (Vertrag > 1 Jahr oder schon verlängert), kommende Vorverträge und
+        // das neue Gehalt. Vorher zählten auch alle anderen Auslaufenden mit: bei eingefrorenem
+        // Budget scheiterte so jede Verlängerung, obwohl die Hälfte des Kaders ohnehin ging.
+        if ((p.contracts || 0) <= 1) {
+            const bleiben = squad.filter(x => x.id !== p.id && (x.contracts || 0) > 1).reduce((s, x) => s + (x.wage || 0), 0);
+            const kommen = (game.preContracts || []).reduce((s, v) => s + (v.player.wage || 0), 0);
+            return bleiben + kommen + neuesGehalt + zweite;
+        }
+        return squad.reduce((s, pl) => s + (pl.id === p.id ? neuesGehalt : pl.wage), 0) + zweite;
     }
 
     // Knopf "Verhandeln": öffnet das Gespräch mit diesem Spieler.

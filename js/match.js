@@ -433,6 +433,7 @@
         if (!isCup && typeof applyDerbyPreparation === 'function') applyDerbyPreparation(oppName);
         if (typeof applyPregameTalk === 'function') applyPregameTalk();
         if (!isCup && typeof applyMatchPrepLive === 'function') applyMatchPrepLive(oppTeamObj);
+        if (!isCup && typeof applyPromotionEuphoriaLive === 'function') applyPromotionEuphoriaLive();
         if (typeof applyRefereeGrudge === 'function') applyRefereeGrudge();
         if (typeof renderRefereeCritiqueBox === 'function') renderRefereeCritiqueBox();
 

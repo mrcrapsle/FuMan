@@ -61,7 +61,9 @@ function getOwnLeagueMatchStrength(isHome, oppTeam) {
     // Derby-Woche (js/derby-week.js): Vorbereitung zählt nur am Derby-Spieltag.
     const derby = typeof getDerbyBonus === 'function' && oppTeam ? getDerbyBonus(oppTeam.name) : 0;
     const vorbereitung = typeof getMatchPrepBonus === 'function' ? getMatchPrepBonus(oppTeam) : 0;
-    return calcTeamStrength(isHome) + getTacticMatchupBonus(plan ? plan.arch : null) + derby + vorbereitung;
+    // Aufstiegseuphorie (js/promotion-boost.js): erste Saisonhälfte nach einem Aufstieg.
+    const euphorie = typeof getPromotionEuphoriaBonus === 'function' ? getPromotionEuphoriaBonus() : 0;
+    return calcTeamStrength(isHome) + getTacticMatchupBonus(plan ? plan.arch : null) + derby + vorbereitung + euphorie;
 }
 
 // Aus processPostMatchRoutine() nach jedem eigenen Ligaspiel.

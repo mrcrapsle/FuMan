@@ -11336,6 +11336,7 @@ function initOneHand() {
         if (typeof renderSeasonPreviewCard === 'function') renderSeasonPreviewCard();
         if (typeof renderCupFinalCard === 'function') renderCupFinalCard();
         if (typeof renderDerbyWeekCard === 'function') renderDerbyWeekCard();
+        if (typeof renderTransferStrategyCard === 'function') renderTransferStrategyCard();
         if (typeof renderWinterTalkCard === 'function') renderWinterTalkCard();
         if (typeof renderJobOfferCard === 'function') renderJobOfferCard();
         if (typeof renderOnboardingBox === 'function') renderOnboardingBox();
@@ -17010,7 +17011,7 @@ function finishGoalkeeperGame() {
             } else if (proj.type === 'youthAcademyLvl') {
                 // Jugendakademie-Ausbau: jetzt mit echter Bauzeit statt Sofort-Ausbau.
                 game.youthAcademyLvl++;
-                addInboxMessage('vertrag', '🎓 Jugendakademie ausgebaut!', `Die Nachwuchsakademie ist jetzt auf Stufe ${game.youthAcademyLvl} - bessere Talente und höheres Potenzial bei künftigen Sichtungen.`, 'screen-youth');
+                addInboxMessage('vertrag', '🎓 Jugendakademie ausgebaut!', `Die Nachwuchsakademie ist jetzt auf Stufe ${game.youthAcademyLvl} - künftige Talente starten +${getYouthAcademyStartBonus()} stärker, Chance auf ein Top-Talent ${Math.round(getYouthTierChances().top * 100)} %.`, 'screen-youth');
             } else if (proj.type === 'youthCapacity') {
                 // Jugendkader-Kapazität: jetzt mit echter Bauzeit statt Sofort-Ausbau.
                 game.youthCapacityBonus = (game.youthCapacityBonus || 0) + 1;
@@ -18638,7 +18639,8 @@ function renderStadiumEventsPanel() {
 
     function renderYouthView() {
         renderYouthLeagueTable();
-        document.getElementById('youth-lvl-disp').innerText = game.youthAcademyLvl;
+        document.getElementById('youth-lvl-disp').innerText = `${game.youthAcademyLvl} / ${YOUTH_ACADEMY_MAX_LVL}`;
+        renderYouthAcademyEffect();
         let scoutBtn = document.getElementById('btn-scout-youth');
         if (scoutBtn) scoutBtn.innerText = `🌟 Nachwuchs sichten [${formatVal(getYouthScoutCost())}]`;
         let list = document.getElementById('youth-talents-list');
@@ -18652,9 +18654,9 @@ function renderStadiumEventsPanel() {
         let academyQueued = (game.stadiumConstructionQueue || []).find(q => q.type === 'youthAcademyLvl');
         let btnAcademy = document.getElementById('btn-upgrade-youth-academy');
         if (btnAcademy) {
-            let cost = Math.max(300000, Math.round(600000 * Math.pow(game.youthAcademyLvl, 1.4) * (typeof getStadiumCostScale === 'function' ? getStadiumCostScale() : 1)));
-            btnAcademy.innerText = academyQueued ? `🏗️ Im Bau... (noch ${academyQueued.daysLeft} SpT)` : `Akademie ausbauen [${formatVal(cost)}]`;
-            btnAcademy.disabled = !!academyQueued;
+            const maxed = game.youthAcademyLvl >= YOUTH_ACADEMY_MAX_LVL;
+            btnAcademy.innerText = academyQueued ? `🏗️ Im Bau... (noch ${academyQueued.daysLeft} SpT)` : (maxed ? '🎓 Höchste Stufe' : `Akademie ausbauen [${formatVal(getYouthAcademyUpgradeCost())}]`);
+            btnAcademy.disabled = !!academyQueued || maxed;
         }
         let capacityQueued = (game.stadiumConstructionQueue || []).find(q => q.type === 'youthCapacity');
         let btnCapacity = document.getElementById('btn-expand-youth-capacity');
@@ -18731,6 +18733,37 @@ function renderStadiumEventsPanel() {
     const POTENTIAL_TIER_LABELS = { 1: '⭐ Mittelmaß', 2: '⭐⭐ Vielversprechend', 3: '⭐⭐⭐ Ausnahmetalent' };
     const POTENTIAL_TIER_COLORS = { 1: 'rgba(228,197,140,0.2)', 2: 'rgba(76,175,122,0.3)', 3: 'rgba(212,169,74,0.4)' };
 
+    // Akademie-Stufe mit klarer Wirkung (25.18): vorher +3 Startstärke je Stufe ohne Obergrenze -
+    // Stufe 8 hätte Talente auf Liga-Niveau sichten lassen, das Potenzial blieb unberührt.
+    // Jetzt höchstens Stufe 5: je Stufe +2 Startstärke und +4 % auf die Potenzial-Stufe.
+    const YOUTH_ACADEMY_MAX_LVL = 5;
+    function getYouthAcademyStartBonus(lvl = game.youthAcademyLvl) {
+        return Math.min(YOUTH_ACADEMY_MAX_LVL, lvl || 0) * 2;
+    }
+    function getYouthAcademyTierShift(lvl = game.youthAcademyLvl) {
+        return (Math.min(YOUTH_ACADEMY_MAX_LVL, lvl || 1) - 1) * 0.04;
+    }
+    // Chance auf ein Top-Talent (Stufe 3) bzw. mindestens Stufe 2 bei der Sichtung.
+    function getYouthTierChances(lvl = game.youthAcademyLvl) {
+        const shift = (campusBuildings.internat?.lvl || 0) * 0.06 + getYouthAcademyTierShift(lvl);
+        return { top: Math.min(1, 0.1 + shift), gut: Math.min(1, 0.4 + shift) };
+    }
+    function getYouthAcademyUpgradeCost() {
+        return Math.max(300000, Math.round(600000 * Math.pow(game.youthAcademyLvl, 1.4) * (typeof getStadiumCostScale === 'function' ? getStadiumCostScale() : 1)));
+    }
+    function renderYouthAcademyEffect() {
+        const box = document.getElementById('youth-academy-effect');
+        if (!box) return;
+        const lvl = game.youthAcademyLvl, ch = getYouthTierChances(lvl);
+        const pct = v => Math.round(v * 100) + ' %';
+        let text = `Talente starten +${getYouthAcademyStartBonus(lvl)} stärker · Top-Talent ${pct(ch.top)} · mind. Stammspieler-Potenzial ${pct(ch.gut)}`;
+        if (lvl < YOUTH_ACADEMY_MAX_LVL) {
+            const n = getYouthTierChances(lvl + 1);
+            text += `<br><span style="color:var(--text-muted);">Stufe ${lvl + 1}: +${getYouthAcademyStartBonus(lvl + 1)} Start · Top-Talent ${pct(n.top)} · +2 Plätze</span>`;
+        } else text += '<br><span style="color:var(--text-muted);">Höchste Stufe erreicht.</span>';
+        box.innerHTML = text;
+    }
+
     // 1. Jugendkader-Kapazität: skaliert mit Akademie-Stufe, zusätzlich ausbaubar.
     function getYouthAcademyCapacity() {
         // Bugfix: bisher nur 3+2×Stufe Plätze (z.B. 5 bei Stufe 1) - viel zu wenig, um wie die
@@ -18761,7 +18794,7 @@ function renderStadiumEventsPanel() {
         // spürbar zu höheren Potenzial-Stufen - die beworbene Wirkung war bisher komplett
         // unverkabelt.
         let internatLvl = campusBuildings.internat?.lvl || 0;
-        let roll = Math.random() + internatLvl * 0.06;
+        let roll = Math.random() + internatLvl * 0.06 + getYouthAcademyTierShift();
         p.potentialTier = roll < 0.6 ? 1 : (roll < 0.9 ? 2 : 3);
         p.potentialRevealed = false;
     }
@@ -18963,7 +18996,9 @@ function renderStadiumEventsPanel() {
         // billiger als der Foodtruck-Garten (550.000 €), obwohl sie den gesamten Nachwuchs
         // trägt. Jetzt auf dem Niveau der großen Campus-Bauten (Internat 5,5 Mio,
         // Reha-Zentrum 4,5 Mio) und mit jeder Stufe deutlich teurer.
-        let cost = Math.max(300000, Math.round(600000 * Math.pow(game.youthAcademyLvl, 1.4) * getStadiumCostScale()));
+        if (game.youthAcademyLvl >= YOUTH_ACADEMY_MAX_LVL) { showToast(`Die Jugendakademie ist bereits auf der höchsten Stufe (${YOUTH_ACADEMY_MAX_LVL}).`, 'error'); return; }
+        if ((game.stadiumConstructionQueue || []).some(q => q.type === 'youthAcademyLvl')) { showToast('Der Akademie-Ausbau läuft bereits.', 'error'); return; }
+        let cost = getYouthAcademyUpgradeCost();
         // Kein stummes Abbrechen mehr: die Deckungsprüfung macht queueStadiumConstruction
         // mit einer klaren Meldung (vorher wurde hier wortlos zurückgesprungen).
         // Bugfix: ließ sich bisher komplett ohne Wartezeit sofort ausbauen - jetzt mit
@@ -18981,13 +19016,15 @@ function renderStadiumEventsPanel() {
 
     // Talente richten sich nach der eigenen Liga (25.17): vorher immer Stärke 46-58 - in der 6. Liga
     // (Kader-Median ~35) war ein 8.000-€-Talent besser als der ganze Kader, in der Bundesliga
-    // (Median ~84) nutzlos. Jetzt 4-14 Punkte unter dem Liga-Schnitt, Kosten 2 % des Transferbudgets.
+    // (Median ~84) nutzlos. Jetzt 14-24 Punkte unter dem Liga-Schnitt, Kosten 2 % des Transferbudgets.
     function getYouthLeagueBase() {
         const teams = (leaguesData[game.leagueLevel] || []).filter(t => t.name !== game.clubName);
         return teams.length ? Math.round(teams.reduce((s, t) => s + t.strength, 0) / teams.length) : 40;
     }
     function getYouthScoutCost() {
-        return Math.max(2000, Math.round(getLeagueTransferBudget(game.leagueLevel) * 0.02 / 500) * 500);
+        const kosten = Math.max(2000, Math.round(getLeagueTransferBudget(game.leagueLevel) * 0.02 / 500) * 500);
+        // Transferstrategie "Jugend fördern" (js/transfer-strategy.js): Sichtung zum halben Preis.
+        return typeof isTransferStrategyActive === 'function' && isTransferStrategyActive('jugend') ? Math.round(kosten / 2) : kosten;
     }
 
     function scoutYouthTalent() {
@@ -19001,7 +19038,7 @@ function renderStadiumEventsPanel() {
         // die eigentliche Stärke-/Potenzial-Verbesserung war nie verkabelt.
         let internatLvl = campusBuildings.internat?.lvl || 0;
         let basis = getYouthLeagueBase();
-        let bonus = game.youthAcademyLvl * 3 + internatLvl * 2;
+        let bonus = getYouthAcademyStartBonus() + internatLvl * 2;
         let p = createPlayer(["TW", "ABW", "MIT", "ST"][Math.floor(Math.random()*4)], Math.max(20, basis - 24 + bonus), Math.max(24, basis - 14 + bonus), null, [15, 18]);
         p.youthLeagueBase = basis;
         assignYouthPotentialTier(p);
@@ -19980,8 +20017,17 @@ function renderYouthPathwayBoxes() {
     }
 
     function contractWageTotalWith(p, neuesGehalt) {
-        return squad.reduce((s, pl) => s + (pl.id === p.id ? neuesGehalt : pl.wage), 0)
-            + (game.secondTeam && game.secondTeam.isActive ? secondTeamSquad.reduce((s, pl) => s + pl.wage, 0) : 0);
+        const zweite = game.secondTeam && game.secondTeam.isActive ? secondTeamSquad.reduce((s, pl) => s + pl.wage, 0) : 0;
+        // Auslaufender Vertrag (25.18): verlängert wird für die Zeit danach - gezählt werden nur,
+        // wer dann noch da ist (Vertrag > 1 Jahr oder schon verlängert), kommende Vorverträge und
+        // das neue Gehalt. Vorher zählten auch alle anderen Auslaufenden mit: bei eingefrorenem
+        // Budget scheiterte so jede Verlängerung, obwohl die Hälfte des Kaders ohnehin ging.
+        if ((p.contracts || 0) <= 1) {
+            const bleiben = squad.filter(x => x.id !== p.id && (x.contracts || 0) > 1).reduce((s, x) => s + (x.wage || 0), 0);
+            const kommen = (game.preContracts || []).reduce((s, v) => s + (v.player.wage || 0), 0);
+            return bleiben + kommen + neuesGehalt + zweite;
+        }
+        return squad.reduce((s, pl) => s + (pl.id === p.id ? neuesGehalt : pl.wage), 0) + zweite;
     }
 
     // Knopf "Verhandeln": öffnet das Gespräch mit diesem Spieler.
@@ -23453,6 +23499,193 @@ function renderWinterTalkCard() {
 
 /* eslint-enable */
 /* eslint-disable no-undef */
+// Transferstrategie mit dem Vorstand (Phase 25.18): zu Saisonbeginn (Spieltag 1-3, Karte
+// #dash-transfer-strategy-box) legst du einmal pro Saison eine Linie fest (game.transferStrategy).
+// Sie verschiebt das Transferbudget und das Saisonziel (game.seasonExpectation.expectedRank,
+// daran messen auch Mitgliederversammlung und Vorstand) - am Saisonende rechnet der Vorstand ab
+// (resolveTransferStrategy(myRank) vor prepareMemberAssembly()):
+//   jugend      -30 % Transferbudget, Ziel 1 Platz leichter, Sichtung halb so teuer;
+//               mind. 2 Eigengewächse mit 10+ Ligaspielen: Vorstand +6, Fans +3, sonst -6
+//   sofort      +40 % Transferbudget, Ziel 2 Plätze höher; erreicht +5, verfehlt -8
+//   sparen      -50 % Transferbudget, Ziel 2 Plätze leichter; Saison ohne Verlust +5, sonst -6
+//   ausgewogen  keine Änderung (auch, wer bis Spieltag 3 nichts wählt)
+// Prozente beziehen sich auf das Liga-Transferbudget (getLeagueTransferBudget), nicht auf
+// Überschüsse aus der Kasse.
+
+const TRANSFER_STRATEGY_LAST_MD = 3;
+const TRANSFER_STRATEGIES = {
+    jugend: { label: '🌱 Jugend fördern', budget: -0.3, goalShift: 1 },
+    sofort: { label: '🚀 Sofort-Erfolg', budget: 0.4, goalShift: -2 },
+    sparen: { label: '💰 Sparen', budget: -0.5, goalShift: 2 },
+    ausgewogen: { label: '⚖️ Ausgewogen', budget: 0, goalShift: 0 }
+};
+const STRATEGY_YOUTH_PLAYERS = 2;
+const STRATEGY_YOUTH_GAMES = 10;
+
+function getTransferStrategy() {
+    return game.transferStrategy && game.transferStrategy.season === game.season ? game.transferStrategy : null;
+}
+
+function isTransferStrategyActive(choice) {
+    const s = getTransferStrategy();
+    return !!s && s.choice === choice;
+}
+
+function isTransferStrategyOpen() {
+    return game.matchday <= TRANSFER_STRATEGY_LAST_MD && !getTransferStrategy();
+}
+
+function getStrategyBudgetDelta(choice) {
+    return Math.round(getLeagueTransferBudget(game.leagueLevel) * TRANSFER_STRATEGIES[choice].budget / 1000) * 1000;
+}
+
+function countStrategyYouthPlayers() {
+    return squad.filter(p => p.academyGraduate && ((p.statsSeason && p.statsSeason.spiele) || 0) >= STRATEGY_YOUTH_GAMES).length;
+}
+
+function chooseTransferStrategy(choice) {
+    const cfg = TRANSFER_STRATEGIES[choice];
+    if (!cfg) return;
+    if (!isTransferStrategyOpen()) { showToast(getTransferStrategy() ? 'Die Transferstrategie für diese Saison steht schon.' : `Die Transferstrategie wird bis Spieltag ${TRANSFER_STRATEGY_LAST_MD} festgelegt.`, 'error'); return; }
+    const exp = typeof getSeasonExpectation === 'function' ? getSeasonExpectation() : game.seasonExpectation;
+    const teams = (leaguesData[game.leagueLevel] || []).length || 18;
+    const alt = exp && exp.expectedRank ? exp.expectedRank : null;
+    const ziel = alt ? Math.max(1, Math.min(teams, alt + cfg.goalShift)) : null;
+    if (choice === 'sofort' && alt === 1) { showToast('Platz 1 ist schon das Ziel - Sofort-Erfolg geht nicht höher.', 'error'); return; }
+    const delta = getStrategyBudgetDelta(choice);
+    const vorher = game.transferBudget;
+    game.transferBudget = Math.max(0, game.transferBudget + delta);
+    if (ziel && exp) exp.expectedRank = ziel;
+    game.transferStrategy = { season: game.season, choice, oldGoal: alt, goal: ziel, budgetDelta: game.transferBudget - vorher, result: null };
+    playSound('click');
+    const budgetText = delta ? ` Transferbudget ${delta > 0 ? '+' : ''}${formatVal(game.transferBudget - vorher)}.` : '';
+    const zielText = ziel && ziel !== alt ? ` Saisonziel jetzt Platz ${ziel}.` : '';
+    showToast(`🏛️ ${cfg.label}:${budgetText}${zielText}`, 'success', 5000);
+    renderTransferStrategyCard();
+    updateUI();
+}
+
+// Jeden Spieltag (nach game.matchday++): wer nichts gewählt hat, bleibt ausgewogen.
+function tickTransferStrategy() {
+    if (game.matchday > TRANSFER_STRATEGY_LAST_MD && game.matchday <= 34 && !getTransferStrategy()) {
+        game.transferStrategy = { season: game.season, choice: 'ausgewogen', goal: null, budgetDelta: 0, result: null, auto: true };
+    }
+}
+
+// Saisonende (concludeSeasonAndAdvance, vor prepareMemberAssembly und dem Zurücksetzen der
+// Saisonstatistik / der FFP-Saisonbilanz).
+function resolveTransferStrategy(finalRank) {
+    const s = getTransferStrategy();
+    if (!s || s.result || s.choice === 'ausgewogen') return;
+    let ok, text;
+    if (s.choice === 'jugend') {
+        const n = countStrategyYouthPlayers();
+        ok = n >= STRATEGY_YOUTH_PLAYERS;
+        text = `${n} Eigengewächs(e) mit ${STRATEGY_YOUTH_GAMES}+ Ligaspielen (Ziel ${STRATEGY_YOUTH_PLAYERS}).`;
+        game.boardSat = ok ? Math.min(100, game.boardSat + 6) : Math.max(10, game.boardSat - 6);
+        if (ok) game.fans = Math.min(100, game.fans + 3);
+        text += ok ? ' Vorstand +6, Fans +3.' : ' Vorstand -6.';
+    } else if (s.choice === 'sofort') {
+        ok = !s.goal || finalRank <= s.goal;
+        text = `Platz ${finalRank}, versprochen war Platz ${s.goal}.`;
+        game.boardSat = ok ? Math.min(100, game.boardSat + 5) : Math.max(10, game.boardSat - 8);
+        text += ok ? ' Vorstand +5.' : ' Vorstand -8.';
+    } else if (s.choice === 'sparen') {
+        const net = Math.round(game.ffpSeasonNet || 0);
+        ok = net >= 0;
+        text = `Saisonbilanz ${net >= 0 ? '+' : ''}${formatVal(net)}.`;
+        game.boardSat = ok ? Math.min(100, game.boardSat + 5) : Math.max(10, game.boardSat - 6);
+        text += ok ? ' Vorstand +5.' : ' Vorstand -6.';
+    } else return;
+    s.result = ok ? 'erreicht' : 'verfehlt';
+    addInboxMessage('vertrag', `🏛️ Transferstrategie ${ok ? 'erfüllt' : 'verfehlt'}: ${TRANSFER_STRATEGIES[s.choice].label}`, text, 'screen-dashboard');
+}
+
+function renderTransferStrategyCard() {
+    const box = document.getElementById('dash-transfer-strategy-box');
+    if (!box) return;
+    const s = getTransferStrategy();
+    if (s && !s.auto) {
+        const cfg = TRANSFER_STRATEGIES[s.choice];
+        let stand = '';
+        if (s.choice === 'jugend') stand = ` Stand: ${countStrategyYouthPlayers()} von ${STRATEGY_YOUTH_PLAYERS} Eigengewächsen mit ${STRATEGY_YOUTH_GAMES}+ Ligaspielen.`;
+        else if (s.choice === 'sofort' && s.goal) stand = ` Ziel: Platz ${s.goal}.`;
+        else if (s.choice === 'sparen') stand = ` Ziel: Saison ohne Verlust (bisher ${(game.ffpSeasonNet || 0) >= 0 ? '+' : ''}${formatVal(Math.round(game.ffpSeasonNet || 0))}).`;
+        box.innerHTML = game.matchday <= 34 ? `<div class="box" style="font-size:10px; border-left-color:var(--gold);">🏛️ Transferstrategie: ${cfg.label}.${stand}</div>` : '';
+        return;
+    }
+    if (!isTransferStrategyOpen()) { box.innerHTML = ''; return; }
+    const exp = typeof getSeasonExpectation === 'function' ? getSeasonExpectation() : game.seasonExpectation;
+    const ziel = exp && exp.expectedRank;
+    const teams = (leaguesData[game.leagueLevel] || []).length || 18;
+    const z = shift => ziel ? `Platz ${Math.max(1, Math.min(teams, ziel + shift))}` : 'Ziel unverändert';
+    const b = choice => formatVal(Math.abs(getStrategyBudgetDelta(choice)));
+    box.innerHTML = `<div class="panel" style="border:1px solid var(--gold);"><div class="panel-header" style="color:var(--gold);">🏛️ TRANSFERSTRATEGIE MIT DEM VORSTAND</div>
+        <div class="box" style="font-size:10px;">Bis Spieltag ${TRANSFER_STRATEGY_LAST_MD}, eine Linie pro Saison. Saisonziel bisher: ${ziel ? 'Platz ' + ziel : '-'}. Abrechnung am Saisonende.</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
+            <button onclick="chooseTransferStrategy('jugend')" class="btn-secondary" style="font-size:10px;">🌱 Jugend fördern: -${b('jugend')} Budget, ${z(1)}, Sichtung halber Preis - ${STRATEGY_YOUTH_PLAYERS} Eigengewächse mit ${STRATEGY_YOUTH_GAMES}+ Spielen: +6, sonst -6</button>
+            <button onclick="chooseTransferStrategy('sofort')" class="btn-action" style="font-size:10px;">🚀 Sofort-Erfolg: +${b('sofort')} Budget, ${z(-2)} - erreicht +5, verfehlt -8</button>
+            <button onclick="chooseTransferStrategy('sparen')" class="btn-secondary" style="font-size:10px;">💰 Sparen: -${b('sparen')} Budget, ${z(2)} - Saison ohne Verlust +5, sonst -6</button>
+            <button onclick="chooseTransferStrategy('ausgewogen')" class="btn-secondary" style="font-size:10px;">⚖️ Ausgewogen: alles bleibt wie geplant</button>
+        </div></div>`;
+}
+
+/* eslint-enable */
+/* eslint-disable no-undef */
+// Aufstiegsschub (Phase 25.18): KI-Aufsteiger rücken beim Saisonwechsel in evolveAiTeamStrength()
+// (js/leagues.js) um rund 4 Punkte an die neue Liga heran - ein simuliertes Transferfenster.
+// Der eigene Verein kam bisher nur mit seinem alten Kader hoch, rund 7 Punkte unter dem Schnitt
+// der neuen Liga (Ligen liegen ~10 Punkte auseinander), und stieg oft sofort wieder ab (Bot:
+// 2. Liga mit 8 und 18 Punkten). Jetzt nach jedem Aufstieg (applyPromotionRewards):
+//   Aufstiegsbudget  +50 % des Liga-Transferbudgets der neuen Liga (getPromotionTransferBonus)
+//   Euphorie         +3 Stärke in Ligaspielen bis Spieltag 10, +1,5 bis Spieltag 17
+//                    (getPromotionEuphoriaBonus: Simulation über getOwnLeagueMatchStrength(),
+//                    live über applyPromotionEuphoriaLive() in setupMatch())
+// game.promotionBoost = { level, season } markiert die erste Saison in der neuen Liga.
+
+const PROMOTION_BUDGET_SHARE = 0.5;
+const PROMOTION_EUPHORIA = [{ bis: 10, bonus: 3 }, { bis: 17, bonus: 1.5 }];
+
+function getPromotionTransferBonus(level = game.leagueLevel) {
+    return Math.round(getLeagueTransferBudget(level) * PROMOTION_BUDGET_SHARE / 1000) * 1000;
+}
+
+// Aus applyPromotionRewards(): am Saisonende (Spieltag > 34) gilt der Schub für die nächste
+// Saison, beim nachträglichen Aufstieg in der DFB-Nachfrist für die laufende.
+function markPromotionBoost() {
+    const season = game.matchday > 34 ? game.season + 1 : game.season;
+    game.promotionBoost = { level: game.leagueLevel, season };
+    // Nachfrist: die Budgets der Saison stehen schon - das Aufstiegsbudget kommt direkt dazu.
+    if (game.matchday <= 34) game.transferBudget += getPromotionTransferBonus();
+}
+
+function isPromotionBoostSeason() {
+    const b = game.promotionBoost;
+    return !!b && b.season === game.season && b.level === game.leagueLevel;
+}
+
+function getPromotionEuphoriaBonus() {
+    if (!isPromotionBoostSeason()) return 0;
+    const stufe = PROMOTION_EUPHORIA.find(s => game.matchday <= s.bis);
+    return stufe ? stufe.bonus : 0;
+}
+
+function applyPromotionEuphoriaLive() {
+    if (!currentMatch || currentMatch.isCup) return;
+    const bonus = getPromotionEuphoriaBonus();
+    if (!bonus) return;
+    currentMatch.ourBaseStr += bonus;
+    if (currentMatch.isHome) currentMatch.homeStr += bonus; else currentMatch.awayStr += bonus;
+    const log = document.getElementById('ticker-log');
+    if (log) log.innerHTML += `<div style="color:var(--primary);">🎉 Aufstiegseuphorie: die Mannschaft spielt befreit auf (+${bonus.toLocaleString('de-DE')} Stärke).</div>`;
+}
+
+function describePromotionBoost() {
+    return `Aufstiegsbudget +${formatVal(getPromotionTransferBonus())} und Aufstiegseuphorie (+${PROMOTION_EUPHORIA[0].bonus} Stärke bis Spieltag ${PROMOTION_EUPHORIA[0].bis}, +${PROMOTION_EUPHORIA[1].bonus.toLocaleString('de-DE')} bis Spieltag ${PROMOTION_EUPHORIA[1].bis}).`;
+}
+
+/* eslint-enable */
+/* eslint-disable no-undef */
 // Spieler-Karriereprofil (Phase 22.10): im Spieler-Popup statt der kurzen Karrierezeile ein
 // echtes Profil - wie und woher er kam (p.joined: Saison, Weg, abgebender Verein, Ablöse),
 // Saison für Saison Spiele/Tore/Vorlagen/Note/Elf des Spieltags (p.strengthHistory plus die
@@ -24716,7 +24949,9 @@ function getOwnLeagueMatchStrength(isHome, oppTeam) {
     // Derby-Woche (js/derby-week.js): Vorbereitung zählt nur am Derby-Spieltag.
     const derby = typeof getDerbyBonus === 'function' && oppTeam ? getDerbyBonus(oppTeam.name) : 0;
     const vorbereitung = typeof getMatchPrepBonus === 'function' ? getMatchPrepBonus(oppTeam) : 0;
-    return calcTeamStrength(isHome) + getTacticMatchupBonus(plan ? plan.arch : null) + derby + vorbereitung;
+    // Aufstiegseuphorie (js/promotion-boost.js): erste Saisonhälfte nach einem Aufstieg.
+    const euphorie = typeof getPromotionEuphoriaBonus === 'function' ? getPromotionEuphoriaBonus() : 0;
+    return calcTeamStrength(isHome) + getTacticMatchupBonus(plan ? plan.arch : null) + derby + vorbereitung + euphorie;
 }
 
 // Aus processPostMatchRoutine() nach jedem eigenen Ligaspiel.
@@ -25262,6 +25497,7 @@ function cleanupLegacyScoutState() {
         if (!isCup && typeof applyDerbyPreparation === 'function') applyDerbyPreparation(oppName);
         if (typeof applyPregameTalk === 'function') applyPregameTalk();
         if (!isCup && typeof applyMatchPrepLive === 'function') applyMatchPrepLive(oppTeamObj);
+        if (!isCup && typeof applyPromotionEuphoriaLive === 'function') applyPromotionEuphoriaLive();
         if (typeof applyRefereeGrudge === 'function') applyRefereeGrudge();
         if (typeof renderRefereeCritiqueBox === 'function') renderRefereeCritiqueBox();
 
@@ -26835,6 +27071,7 @@ function cleanupLegacyScoutState() {
         game.viewingMatchday = Math.min(34, game.matchday);
         // Wintergespräch (js/winter-talk.js): nach Spieltag 20 ohne Gespräch -> verpasst.
         if (typeof tickWinterTalk === 'function') tickWinterTalk();
+        if (typeof tickTransferStrategy === 'function') tickTransferStrategy();
         if (typeof maybeAutoSave === 'function') maybeAutoSave();
         updateUI();
     }
@@ -27784,6 +28021,7 @@ function cleanupLegacyScoutState() {
         boostFanBaseFloor(6, `Der Aufstieg in die ${leagueNames[game.leagueLevel]}`);
         if (typeof addSquadHonour === 'function') addSquadHonour(`⬆️ Aufstieg in die ${leagueNames[game.leagueLevel]}`);
         if (typeof triggerPromotionBonusClauses === 'function') triggerPromotionBonusClauses();
+        if (typeof markPromotionBoost === 'function') markPromotionBoost();
         return sponsorPromoBonus;
     }
 
@@ -27839,10 +28077,10 @@ function getCashSurplusBudgetShare() {
     };
 }
 
-// Laufende Verträge kann der Vorstand nicht kürzen: solange das Konto im Plus ist, bleibt das
-// Gehaltsbudget 5 % über der aktuellen Gehaltssumme - nach einer Saison mit Minus
-// (game.ffpSeasonNet, außer das Konto trägt eine ganze Saison) ohne Zuschlag, jeweils plus
-// den Erhöhungen der anstehenden Verlängerungen (getRenewalWageBuffer, 25.17).
+// Laufende Verträge kann der Vorstand nicht kürzen: nach einer Saison ohne Verlust bleibt das
+// Gehaltsbudget 5 % über der aktuellen Gehaltssumme plus den Erhöhungen der anstehenden
+// Verlängerungen (getRenewalWageBuffer, 25.17); nach einer Verlustsaison (game.ffpSeasonNet,
+// außer das Konto trägt eine ganze Saison) eingefroren, mit Minus auf dem Konto 95 % (25.18).
 // Vorher setzte die Liga/Platz-Formel einen Bundesliga-Elften auf 1,26 Mio. bei 1,5 Mio.
 // Gehältern: jede Verlängerung scheiterte, der Kader lief ablösefrei davon (Langzeittest 21.6).
 // Abstiegsklausel (25.14): seit das Gehaltsbudget der Liga folgt (2. Liga 520.000 € statt
@@ -27869,14 +28107,18 @@ function getWageBudgetFloor() {
         + (game.secondTeam && game.secondTeam.isActive ? secondTeamSquad.reduce((s, p) => s + (p.wage || 0), 0) : 0);
     // 25.17: vorher galt die Untergrenze nur, wenn die Kasse eine Viertelsaison Gehälter deckte
     // (Bundesliga ~15 Mio. €) - sonst fiel das Budget auf den Ligawert unter die laufenden
-    // Gehälter und im Langzeittest scheiterte jede einzelne Verlängerung (Notkader). Jetzt nur
-    // ohne Geld auf dem Konto keine Untergrenze; nach einer Verlustsaison bleibt es bei den laufenden Gehältern.
-    if (game.money < 0) return 0;
+    // Gehälter und im Langzeittest scheiterte jede einzelne Verlängerung (Notkader).
+    // 25.18: seit Verlängerungen nur gegen die Gehälter der Bleibenden geprüft werden
+    // (contractWageTotalWith), darf die Untergrenze streng sein - vorher wuchs sie mit +5 % und den
+    // Erhöhungen Saison für Saison mit (Bundesliga-Bot: 1,6 → 2,8 Mio. €/Spieltag), bis der Verein
+    // 27 Mio. € Verlust schrieb, ins Minus rutschte und ohne Untergrenze in den Notkader fiel.
+    //   Konto im Minus:   95 % der laufenden Gehälter (der Vorstand verlangt Einsparungen)
+    //   Verlustsaison:    laufende Gehälter eingefroren, keine Erhöhungen eingeplant
+    //   sonst:            +5 % plus die anstehenden Erhöhungen (getRenewalWageBuffer)
+    if (game.money < 0) return Math.ceil(summe * 0.95 / 1000) * 1000;
     const ohneVerlust = (game.ffpSeasonNet || 0) >= 0 || game.money >= summe * 34;
-    // Nach einer Verlustsaison friert der Vorstand die Gehälter ein (kein Zuschlag), die anstehenden
-    // Verlängerungen bleiben eingeplant - der alte Sparkurs (85 %) ließ keine einzige Verlängerung zu
-    // und der Kader zerfiel (Bundesliga-Langzeittest 25.17: schon ein Kauf machte die Saison zur Verlustsaison).
-    return Math.ceil((summe * (ohneVerlust ? 1.05 : 1.0) + getRenewalWageBuffer()) / 1000) * 1000;
+    if (!ohneVerlust) return Math.ceil(summe / 1000) * 1000;
+    return Math.ceil((summe * 1.05 + getRenewalWageBuffer()) / 1000) * 1000;
 }
 
 // Verlängerungspuffer (25.17): der Vorstand plant die Gehaltserhöhungen der Spieler ein, deren
@@ -27933,6 +28175,7 @@ function concludeSeasonAndAdvance() {
         if (typeof evaluateSeasonEndObjectives === 'function') evaluateSeasonEndObjectives(myRank);
         if (typeof recordScenarioSeasonRank === 'function') recordScenarioSeasonRank(myRank);
         if (typeof resolveWinterTalk === 'function') resolveWinterTalk(myRank);
+        if (typeof resolveTransferStrategy === 'function') resolveTransferStrategy(myRank);
         if (typeof recordSeasonHonours === 'function') recordSeasonHonours(myRank);
         if (typeof prepareMemberAssembly === 'function') prepareMemberAssembly(myRank);
         // Experten-Check (js/season-preview.js): Prognose gegen Abschlusstabelle, vor dem Ligawechsel.
@@ -28008,7 +28251,7 @@ function concludeSeasonAndAdvance() {
             } else {
                 game.leagueLevel--;
                 let sponsorPromoBonus = applyPromotionRewards();
-                showNotice('🎉 Aufstieg geschafft!', `Glückwunsch zur Beförderung in die ${leagueNames[game.leagueLevel]}.\n\nAufstiegsprämie ${formatVal(getPromotionPrize(game.leagueLevel))}${sponsorPromoBonus > 0 ? ` plus ${formatVal(sponsorPromoBonus)} Sponsoren-Aufstiegsbonus` : ''}.`);
+                showNotice('🎉 Aufstieg geschafft!', `Glückwunsch zur Beförderung in die ${leagueNames[game.leagueLevel]}.\n\nAufstiegsprämie ${formatVal(getPromotionPrize(game.leagueLevel))}${sponsorPromoBonus > 0 ? ` plus ${formatVal(sponsorPromoBonus)} Sponsoren-Aufstiegsbonus` : ''}.${typeof describePromotionBoost === 'function' ? '\n\nDazu ' + describePromotionBoost() : ''}`);
             }
         } else if ((myRank >= 17 || (myRank === 16 && relegation !== 'stayed')) && game.leagueLevel < NUM_LEAGUES - 1) {
             game.leagueLevel++;
@@ -28030,6 +28273,8 @@ function concludeSeasonAndAdvance() {
         game.wageBudget = Math.max(Math.round(getLeagueWageBudget(game.leagueLevel) * placementFactor / 100) * 100, getWageBudgetFloor(),
             Math.ceil(abstiegsGehaelter * RELEGATION_BUDGET_SHARE / 1000) * 1000);
         if (typeof applyCashSurplusBudgets === 'function') applyCashSurplusBudgets();
+        // Aufstiegsbudget (js/promotion-boost.js): KI-Aufsteiger rüsten im simulierten Fenster auf.
+        if (game.promotionBoost && game.promotionBoost.season === game.season + 1 && typeof getPromotionTransferBonus === 'function') game.transferBudget += getPromotionTransferBonus();
         // Manager-Eigengehalt: blieb bisher für immer beim Startwert (1.200 €/SpT),
         // selbst nach mehreren Aufstiegen in die Bundesliga mit Millionenbudgets - ein
         // erfolgreicher Bundesliga-Trainer verdient real deutlich mehr als ein Kreisliga-
@@ -29429,7 +29674,7 @@ const LEXICON_ENTRIES = [
         tips: ['Ein Aufstieg in die Bundesliga bringt viel mehr TV-Geld, aber auch diese Fixkosten', 'Die Finanz-Prognose zeigt den Monatsanteil'] },
     { cat: 'Finanzen', title: 'Gehaltsbudget', screen: 'screen-finances',
         text: 'Höchstsumme aller Spielergehälter pro Spieltag. Neue Verträge über dem Budget sind nicht möglich. Der Vorstand richtet es nach der Liga aus: Bundesliga 1,575 Mio. €, 2. Liga 520.000 €, 3. Liga 110.000 €, 4. Liga 36.000 €, 5. Liga 11.000 €, 6. Liga 8.000 € - zum Saisonstart mit Platz 1-4 × 1,3, ab Platz 11 × 0,8.',
-        tips: ['Verkäufe und auslaufende Verträge schaffen Luft', 'Im Gehaltsgespräch einmal nachverhandeln', 'Zum Saisonstart liegt es mindestens 5 % über den laufenden Gehältern plus den Gehaltserhöhungen der Verträge, die in der neuen Saison auslaufen - nach einer Verlustsaison eingefroren (ohne Zuschlag), mit Minus auf dem Konto gilt nur der Ligawert'] },
+        tips: ['Verkäufe und auslaufende Verträge schaffen Luft', 'Im Gehaltsgespräch einmal nachverhandeln', 'Zum Saisonstart liegt es mindestens 5 % über den laufenden Gehältern plus den Gehaltserhöhungen der Verträge, die in der neuen Saison auslaufen - nach einer Verlustsaison eingefroren, mit Minus auf dem Konto bei 95 % der Gehälter', 'Bei einer Verlängerung zählen nur die Gehälter der Spieler, die danach noch da sind - wer ohnehin geht, schafft Luft'] },
     { cat: 'Finanzen', title: 'Transferbudget', screen: 'screen-finances',
         text: 'Wie viel Ablöse der Vorstand pro Saison freigibt. Unabhängig vom Kontostand: beides muss reichen. Grundbetrag nach Liga: Bundesliga 25 Mio. €, 2. Liga 3 Mio. €, 3. Liga 900.000 €, 4. Liga 250.000 €, 5. Liga 60.000 €, 6. Liga 40.000 € - zum Saisonstart mit Platz 1-4 × 1,3, ab Platz 11 × 0,8.',
         tips: ['Verkäufe erhöhen es', 'Mit dem Vorstand lässt sich nachverhandeln', 'Zum Saisonstart gibt der Vorstand 40 % der Rücklagen über einer Reserve (halbe Saison Gehaltsbudget) zusätzlich frei, 10 % davon gehen ins Gehaltsbudget'] },
@@ -29470,7 +29715,7 @@ const LEXICON_ENTRIES = [
         text: 'Verlängerungen sind Gehaltsgespräche: Stammspieler und Stars fordern mehr, ältere Spieler weniger. Zähe Charaktere lassen sich schwer drücken; nach zwei geplatzten Runden ist für die Saison Schluss.',
         tips: ['Eine Einsatzgarantie macht Spieler billiger - aber wird geprüft'] },
     { cat: 'Wettbewerbe', title: 'Auf- und Abstieg', screen: 'screen-league',
-        text: 'Platz 1 und 2 steigen direkt auf, Platz 3 spielt Relegation gegen den 16. der Liga darüber. Platz 16 muss in die Relegation, Platz 17 und 18 steigen ab. Die Aufstiegsprämie richtet sich nach der neuen Liga: 150.000 € (Oberliga) bis 5 Mio. € (Bundesliga).',
+        text: 'Platz 1 und 2 steigen direkt auf, Platz 3 spielt Relegation gegen den 16. der Liga darüber. Platz 16 muss in die Relegation, Platz 17 und 18 steigen ab. Die Aufstiegsprämie richtet sich nach der neuen Liga: 150.000 € (Oberliga) bis 5 Mio. € (Bundesliga). Dazu kommen nach jedem Aufstieg ein Aufstiegsbudget (+50 % des Transferbudgets der neuen Liga) und die Aufstiegseuphorie: +3 Stärke in Ligaspielen bis Spieltag 10, +1,5 bis Spieltag 17.',
         tips: ['Bei Gleichstand entscheiden Tordifferenz, dann erzielte Tore'] },
     { cat: 'Wettbewerbe', title: 'Saisonvorschau & Experten-Check', screen: 'screen-dashboard',
         text: 'Vor jeder Saison tippen die Experten die ganze Tabelle; dein Platz ist dieselbe Erwartung, an der dich Vorstand und Mitgliederversammlung messen. Am Saisonende zeigt der Rückblick Tipp gegen Wirklichkeit, Überraschung, Flop und den Spieler der Saison (beste Ø-Note, mindestens 10 Ligaspiele).',

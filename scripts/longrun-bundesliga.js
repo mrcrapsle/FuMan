@@ -332,7 +332,10 @@ async function karriere(browser, lauf) {
                 zeile.europaRunde = eu ? eu.stage : '';
                 zeile.ligaDanach = game.leagueLevel;
                 window.__letzterPlatz = zeile.ligaDanach === start.liga ? zeile.platz : 99;
-                zeile.lizenzOffen = checkDfbLicensingStatus().missing.length;
+                // Nur eine echte Sperre zählt (25.18): auf einem Aufstiegsplatz geblieben, weil Auflagen fehlten.
+                // Vorher wurde nach dem Saisonwechsel gezählt - nach jedem Aufstieg also die Lizenz der übernächsten Liga.
+                zeile.lizenzOffen = start.liga > 0 && zeile.platz <= 2 && zeile.ligaDanach === start.liga && zeile.lizenzVorEnde
+                    ? zeile.lizenzVorEnde.split(' / ').length : 0;
                 zeile.entlassenAmEnde = !!game.sackPending;
                 zeile.board = Object.entries(window.__board || {}).sort((a, b) => a[1] - b[1]).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${Math.round(v)}`);
                 if (window.__str) {
@@ -363,7 +366,7 @@ async function karriere(browser, lauf) {
     zeilen.forEach(z => {
         if (z.crash) return console.log('ABSTURZ: ' + z.crash);
         if (z.entlassen) return console.log(`${String(z.season).padStart(3)} ENTLASSEN (Liga ${z.liga + 1})`);
-        console.log(`${String(z.season).padStart(3)} ${String(z.liga + 1).padStart(4)} ${String(z.platz).padStart(2)} ${String(z.punkte).padStart(3)} ${mio(z.geld)} ${mio(z.transfer)} ${String(Math.round(z.gehaltBudget / 1000)).padStart(7)}k ${String(Math.round(z.gehaltSumme / 1000)).padStart(5)}k ${String(z.elf).padStart(4)} ${String(z.ligaSchnitt).padStart(4)} ${String(z.ligaTop).padStart(3)} ${String(z.kader).padStart(3)} ${String(z.vorstand).padStart(3)} ${z.europaRunde ? ('CC:' + z.europaRunde).padEnd(13) : '-'.padEnd(13)} ${z.pokal ? 'Pokal ' + z.pokal : ''}${z.ligaDanach !== z.liga ? ' → Liga ' + (z.ligaDanach + 1) : ''}${z.lizenzOffen ? ` Liz-offen:${z.lizenzOffen}` : ''}${z.notkader ? ' NOTKADER' : ''}${z.entlassenAmEnde ? ' ENTLASSEN (Saisonende)' : ''}${z.kaeufe || z.verkaeufe ? ` K${z.kaeufe}/V${z.verkaeufe}` : ''}${z.erwartet ? ` E${z.erwartet}` : ''}${z.jugend ? ` J${z.jugendElf}/${z.jugend}` : ''}`);
+        console.log(`${String(z.season).padStart(3)} ${String(z.liga + 1).padStart(4)} ${String(z.platz).padStart(2)} ${String(z.punkte).padStart(3)} ${mio(z.geld)} ${mio(z.transfer)} ${String(Math.round(z.gehaltBudget / 1000)).padStart(7)}k ${String(Math.round(z.gehaltSumme / 1000)).padStart(5)}k ${String(z.elf).padStart(4)} ${String(z.ligaSchnitt).padStart(4)} ${String(z.ligaTop).padStart(3)} ${String(z.kader).padStart(3)} ${String(z.vorstand).padStart(3)} ${z.europaRunde ? ('CC:' + z.europaRunde).padEnd(13) : '-'.padEnd(13)} ${z.pokal ? 'Pokal ' + z.pokal : ''}${z.ligaDanach !== z.liga ? ' → Liga ' + (z.ligaDanach + 1) : ''}${z.lizenzOffen ? ` LIZENZ-SPERRE:${z.lizenzOffen}` : ''}${z.notkader ? ' NOTKADER' : ''}${z.entlassenAmEnde ? ' ENTLASSEN (Saisonende)' : ''}${z.kaeufe || z.verkaeufe ? ` K${z.kaeufe}/V${z.verkaeufe}` : ''}${z.erwartet ? ` E${z.erwartet}` : ''}${z.jugend ? ` J${z.jugendElf}/${z.jugend}` : ''}`);
     });
     if (process.env.DIAG) zeilen.forEach(z => { if (z.season) console.log(`\n[S${z.season}] Lizenz offen: ${z.lizenzVorEnde || '-'} | Verlängerung ${JSON.stringify(z.vl)} | Abgänge ${z.abgaenge} | Fehler: ${(z.toasts || []).join(' ; ')}\n      Post: ${(z.post || []).join(' ; ')}`); });
     if (process.env.STRDIAG) zeilen.forEach(z => { if (z.str) console.log(`[S${z.season} Liga ${z.liga + 1} Pl ${z.platz}] ${z.str}`); });

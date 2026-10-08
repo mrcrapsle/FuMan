@@ -1,7 +1,8 @@
 
     function renderYouthView() {
         renderYouthLeagueTable();
-        document.getElementById('youth-lvl-disp').innerText = game.youthAcademyLvl;
+        document.getElementById('youth-lvl-disp').innerText = `${game.youthAcademyLvl} / ${YOUTH_ACADEMY_MAX_LVL}`;
+        renderYouthAcademyEffect();
         let scoutBtn = document.getElementById('btn-scout-youth');
         if (scoutBtn) scoutBtn.innerText = `🌟 Nachwuchs sichten [${formatVal(getYouthScoutCost())}]`;
         let list = document.getElementById('youth-talents-list');
@@ -15,9 +16,9 @@
         let academyQueued = (game.stadiumConstructionQueue || []).find(q => q.type === 'youthAcademyLvl');
         let btnAcademy = document.getElementById('btn-upgrade-youth-academy');
         if (btnAcademy) {
-            let cost = Math.max(300000, Math.round(600000 * Math.pow(game.youthAcademyLvl, 1.4) * (typeof getStadiumCostScale === 'function' ? getStadiumCostScale() : 1)));
-            btnAcademy.innerText = academyQueued ? `🏗️ Im Bau... (noch ${academyQueued.daysLeft} SpT)` : `Akademie ausbauen [${formatVal(cost)}]`;
-            btnAcademy.disabled = !!academyQueued;
+            const maxed = game.youthAcademyLvl >= YOUTH_ACADEMY_MAX_LVL;
+            btnAcademy.innerText = academyQueued ? `🏗️ Im Bau... (noch ${academyQueued.daysLeft} SpT)` : (maxed ? '🎓 Höchste Stufe' : `Akademie ausbauen [${formatVal(getYouthAcademyUpgradeCost())}]`);
+            btnAcademy.disabled = !!academyQueued || maxed;
         }
         let capacityQueued = (game.stadiumConstructionQueue || []).find(q => q.type === 'youthCapacity');
         let btnCapacity = document.getElementById('btn-expand-youth-capacity');
@@ -94,6 +95,37 @@
     const POTENTIAL_TIER_LABELS = { 1: '⭐ Mittelmaß', 2: '⭐⭐ Vielversprechend', 3: '⭐⭐⭐ Ausnahmetalent' };
     const POTENTIAL_TIER_COLORS = { 1: 'rgba(228,197,140,0.2)', 2: 'rgba(76,175,122,0.3)', 3: 'rgba(212,169,74,0.4)' };
 
+    // Akademie-Stufe mit klarer Wirkung (25.18): vorher +3 Startstärke je Stufe ohne Obergrenze -
+    // Stufe 8 hätte Talente auf Liga-Niveau sichten lassen, das Potenzial blieb unberührt.
+    // Jetzt höchstens Stufe 5: je Stufe +2 Startstärke und +4 % auf die Potenzial-Stufe.
+    const YOUTH_ACADEMY_MAX_LVL = 5;
+    function getYouthAcademyStartBonus(lvl = game.youthAcademyLvl) {
+        return Math.min(YOUTH_ACADEMY_MAX_LVL, lvl || 0) * 2;
+    }
+    function getYouthAcademyTierShift(lvl = game.youthAcademyLvl) {
+        return (Math.min(YOUTH_ACADEMY_MAX_LVL, lvl || 1) - 1) * 0.04;
+    }
+    // Chance auf ein Top-Talent (Stufe 3) bzw. mindestens Stufe 2 bei der Sichtung.
+    function getYouthTierChances(lvl = game.youthAcademyLvl) {
+        const shift = (campusBuildings.internat?.lvl || 0) * 0.06 + getYouthAcademyTierShift(lvl);
+        return { top: Math.min(1, 0.1 + shift), gut: Math.min(1, 0.4 + shift) };
+    }
+    function getYouthAcademyUpgradeCost() {
+        return Math.max(300000, Math.round(600000 * Math.pow(game.youthAcademyLvl, 1.4) * (typeof getStadiumCostScale === 'function' ? getStadiumCostScale() : 1)));
+    }
+    function renderYouthAcademyEffect() {
+        const box = document.getElementById('youth-academy-effect');
+        if (!box) return;
+        const lvl = game.youthAcademyLvl, ch = getYouthTierChances(lvl);
+        const pct = v => Math.round(v * 100) + ' %';
+        let text = `Talente starten +${getYouthAcademyStartBonus(lvl)} stärker · Top-Talent ${pct(ch.top)} · mind. Stammspieler-Potenzial ${pct(ch.gut)}`;
+        if (lvl < YOUTH_ACADEMY_MAX_LVL) {
+            const n = getYouthTierChances(lvl + 1);
+            text += `<br><span style="color:var(--text-muted);">Stufe ${lvl + 1}: +${getYouthAcademyStartBonus(lvl + 1)} Start · Top-Talent ${pct(n.top)} · +2 Plätze</span>`;
+        } else text += '<br><span style="color:var(--text-muted);">Höchste Stufe erreicht.</span>';
+        box.innerHTML = text;
+    }
+
     // 1. Jugendkader-Kapazität: skaliert mit Akademie-Stufe, zusätzlich ausbaubar.
     function getYouthAcademyCapacity() {
         // Bugfix: bisher nur 3+2×Stufe Plätze (z.B. 5 bei Stufe 1) - viel zu wenig, um wie die
@@ -124,7 +156,7 @@
         // spürbar zu höheren Potenzial-Stufen - die beworbene Wirkung war bisher komplett
         // unverkabelt.
         let internatLvl = campusBuildings.internat?.lvl || 0;
-        let roll = Math.random() + internatLvl * 0.06;
+        let roll = Math.random() + internatLvl * 0.06 + getYouthAcademyTierShift();
         p.potentialTier = roll < 0.6 ? 1 : (roll < 0.9 ? 2 : 3);
         p.potentialRevealed = false;
     }
@@ -326,7 +358,9 @@
         // billiger als der Foodtruck-Garten (550.000 €), obwohl sie den gesamten Nachwuchs
         // trägt. Jetzt auf dem Niveau der großen Campus-Bauten (Internat 5,5 Mio,
         // Reha-Zentrum 4,5 Mio) und mit jeder Stufe deutlich teurer.
-        let cost = Math.max(300000, Math.round(600000 * Math.pow(game.youthAcademyLvl, 1.4) * getStadiumCostScale()));
+        if (game.youthAcademyLvl >= YOUTH_ACADEMY_MAX_LVL) { showToast(`Die Jugendakademie ist bereits auf der höchsten Stufe (${YOUTH_ACADEMY_MAX_LVL}).`, 'error'); return; }
+        if ((game.stadiumConstructionQueue || []).some(q => q.type === 'youthAcademyLvl')) { showToast('Der Akademie-Ausbau läuft bereits.', 'error'); return; }
+        let cost = getYouthAcademyUpgradeCost();
         // Kein stummes Abbrechen mehr: die Deckungsprüfung macht queueStadiumConstruction
         // mit einer klaren Meldung (vorher wurde hier wortlos zurückgesprungen).
         // Bugfix: ließ sich bisher komplett ohne Wartezeit sofort ausbauen - jetzt mit
@@ -344,13 +378,15 @@
 
     // Talente richten sich nach der eigenen Liga (25.17): vorher immer Stärke 46-58 - in der 6. Liga
     // (Kader-Median ~35) war ein 8.000-€-Talent besser als der ganze Kader, in der Bundesliga
-    // (Median ~84) nutzlos. Jetzt 4-14 Punkte unter dem Liga-Schnitt, Kosten 2 % des Transferbudgets.
+    // (Median ~84) nutzlos. Jetzt 14-24 Punkte unter dem Liga-Schnitt, Kosten 2 % des Transferbudgets.
     function getYouthLeagueBase() {
         const teams = (leaguesData[game.leagueLevel] || []).filter(t => t.name !== game.clubName);
         return teams.length ? Math.round(teams.reduce((s, t) => s + t.strength, 0) / teams.length) : 40;
     }
     function getYouthScoutCost() {
-        return Math.max(2000, Math.round(getLeagueTransferBudget(game.leagueLevel) * 0.02 / 500) * 500);
+        const kosten = Math.max(2000, Math.round(getLeagueTransferBudget(game.leagueLevel) * 0.02 / 500) * 500);
+        // Transferstrategie "Jugend fördern" (js/transfer-strategy.js): Sichtung zum halben Preis.
+        return typeof isTransferStrategyActive === 'function' && isTransferStrategyActive('jugend') ? Math.round(kosten / 2) : kosten;
     }
 
     function scoutYouthTalent() {
@@ -364,7 +400,7 @@
         // die eigentliche Stärke-/Potenzial-Verbesserung war nie verkabelt.
         let internatLvl = campusBuildings.internat?.lvl || 0;
         let basis = getYouthLeagueBase();
-        let bonus = game.youthAcademyLvl * 3 + internatLvl * 2;
+        let bonus = getYouthAcademyStartBonus() + internatLvl * 2;
         let p = createPlayer(["TW", "ABW", "MIT", "ST"][Math.floor(Math.random()*4)], Math.max(20, basis - 24 + bonus), Math.max(24, basis - 14 + bonus), null, [15, 18]);
         p.youthLeagueBase = basis;
         assignYouthPotentialTier(p);

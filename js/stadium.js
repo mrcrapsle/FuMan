@@ -1025,7 +1025,7 @@
             } else if (proj.type === 'youthAcademyLvl') {
                 // Jugendakademie-Ausbau: jetzt mit echter Bauzeit statt Sofort-Ausbau.
                 game.youthAcademyLvl++;
-                addInboxMessage('vertrag', '🎓 Jugendakademie ausgebaut!', `Die Nachwuchsakademie ist jetzt auf Stufe ${game.youthAcademyLvl} - bessere Talente und höheres Potenzial bei künftigen Sichtungen.`, 'screen-youth');
+                addInboxMessage('vertrag', '🎓 Jugendakademie ausgebaut!', `Die Nachwuchsakademie ist jetzt auf Stufe ${game.youthAcademyLvl} - künftige Talente starten +${getYouthAcademyStartBonus()} stärker, Chance auf ein Top-Talent ${Math.round(getYouthTierChances().top * 100)} %.`, 'screen-youth');
             } else if (proj.type === 'youthCapacity') {
                 // Jugendkader-Kapazität: jetzt mit echter Bauzeit statt Sofort-Ausbau.
                 game.youthCapacityBonus = (game.youthCapacityBonus || 0) + 1;

@@ -94,6 +94,7 @@
         boostFanBaseFloor(6, `Der Aufstieg in die ${leagueNames[game.leagueLevel]}`);
         if (typeof addSquadHonour === 'function') addSquadHonour(`⬆️ Aufstieg in die ${leagueNames[game.leagueLevel]}`);
         if (typeof triggerPromotionBonusClauses === 'function') triggerPromotionBonusClauses();
+        if (typeof markPromotionBoost === 'function') markPromotionBoost();
         return sponsorPromoBonus;
     }
 
@@ -149,10 +150,10 @@ function getCashSurplusBudgetShare() {
     };
 }
 
-// Laufende Verträge kann der Vorstand nicht kürzen: solange das Konto im Plus ist, bleibt das
-// Gehaltsbudget 5 % über der aktuellen Gehaltssumme - nach einer Saison mit Minus
-// (game.ffpSeasonNet, außer das Konto trägt eine ganze Saison) ohne Zuschlag, jeweils plus
-// den Erhöhungen der anstehenden Verlängerungen (getRenewalWageBuffer, 25.17).
+// Laufende Verträge kann der Vorstand nicht kürzen: nach einer Saison ohne Verlust bleibt das
+// Gehaltsbudget 5 % über der aktuellen Gehaltssumme plus den Erhöhungen der anstehenden
+// Verlängerungen (getRenewalWageBuffer, 25.17); nach einer Verlustsaison (game.ffpSeasonNet,
+// außer das Konto trägt eine ganze Saison) eingefroren, mit Minus auf dem Konto 95 % (25.18).
 // Vorher setzte die Liga/Platz-Formel einen Bundesliga-Elften auf 1,26 Mio. bei 1,5 Mio.
 // Gehältern: jede Verlängerung scheiterte, der Kader lief ablösefrei davon (Langzeittest 21.6).
 // Abstiegsklausel (25.14): seit das Gehaltsbudget der Liga folgt (2. Liga 520.000 € statt
@@ -179,14 +180,18 @@ function getWageBudgetFloor() {
         + (game.secondTeam && game.secondTeam.isActive ? secondTeamSquad.reduce((s, p) => s + (p.wage || 0), 0) : 0);
     // 25.17: vorher galt die Untergrenze nur, wenn die Kasse eine Viertelsaison Gehälter deckte
     // (Bundesliga ~15 Mio. €) - sonst fiel das Budget auf den Ligawert unter die laufenden
-    // Gehälter und im Langzeittest scheiterte jede einzelne Verlängerung (Notkader). Jetzt nur
-    // ohne Geld auf dem Konto keine Untergrenze; nach einer Verlustsaison bleibt es bei den laufenden Gehältern.
-    if (game.money < 0) return 0;
+    // Gehälter und im Langzeittest scheiterte jede einzelne Verlängerung (Notkader).
+    // 25.18: seit Verlängerungen nur gegen die Gehälter der Bleibenden geprüft werden
+    // (contractWageTotalWith), darf die Untergrenze streng sein - vorher wuchs sie mit +5 % und den
+    // Erhöhungen Saison für Saison mit (Bundesliga-Bot: 1,6 → 2,8 Mio. €/Spieltag), bis der Verein
+    // 27 Mio. € Verlust schrieb, ins Minus rutschte und ohne Untergrenze in den Notkader fiel.
+    //   Konto im Minus:   95 % der laufenden Gehälter (der Vorstand verlangt Einsparungen)
+    //   Verlustsaison:    laufende Gehälter eingefroren, keine Erhöhungen eingeplant
+    //   sonst:            +5 % plus die anstehenden Erhöhungen (getRenewalWageBuffer)
+    if (game.money < 0) return Math.ceil(summe * 0.95 / 1000) * 1000;
     const ohneVerlust = (game.ffpSeasonNet || 0) >= 0 || game.money >= summe * 34;
-    // Nach einer Verlustsaison friert der Vorstand die Gehälter ein (kein Zuschlag), die anstehenden
-    // Verlängerungen bleiben eingeplant - der alte Sparkurs (85 %) ließ keine einzige Verlängerung zu
-    // und der Kader zerfiel (Bundesliga-Langzeittest 25.17: schon ein Kauf machte die Saison zur Verlustsaison).
-    return Math.ceil((summe * (ohneVerlust ? 1.05 : 1.0) + getRenewalWageBuffer()) / 1000) * 1000;
+    if (!ohneVerlust) return Math.ceil(summe / 1000) * 1000;
+    return Math.ceil((summe * 1.05 + getRenewalWageBuffer()) / 1000) * 1000;
 }
 
 // Verlängerungspuffer (25.17): der Vorstand plant die Gehaltserhöhungen der Spieler ein, deren
@@ -243,6 +248,7 @@ function concludeSeasonAndAdvance() {
         if (typeof evaluateSeasonEndObjectives === 'function') evaluateSeasonEndObjectives(myRank);
         if (typeof recordScenarioSeasonRank === 'function') recordScenarioSeasonRank(myRank);
         if (typeof resolveWinterTalk === 'function') resolveWinterTalk(myRank);
+        if (typeof resolveTransferStrategy === 'function') resolveTransferStrategy(myRank);
         if (typeof recordSeasonHonours === 'function') recordSeasonHonours(myRank);
         if (typeof prepareMemberAssembly === 'function') prepareMemberAssembly(myRank);
         // Experten-Check (js/season-preview.js): Prognose gegen Abschlusstabelle, vor dem Ligawechsel.
@@ -318,7 +324,7 @@ function concludeSeasonAndAdvance() {
             } else {
                 game.leagueLevel--;
                 let sponsorPromoBonus = applyPromotionRewards();
-                showNotice('🎉 Aufstieg geschafft!', `Glückwunsch zur Beförderung in die ${leagueNames[game.leagueLevel]}.\n\nAufstiegsprämie ${formatVal(getPromotionPrize(game.leagueLevel))}${sponsorPromoBonus > 0 ? ` plus ${formatVal(sponsorPromoBonus)} Sponsoren-Aufstiegsbonus` : ''}.`);
+                showNotice('🎉 Aufstieg geschafft!', `Glückwunsch zur Beförderung in die ${leagueNames[game.leagueLevel]}.\n\nAufstiegsprämie ${formatVal(getPromotionPrize(game.leagueLevel))}${sponsorPromoBonus > 0 ? ` plus ${formatVal(sponsorPromoBonus)} Sponsoren-Aufstiegsbonus` : ''}.${typeof describePromotionBoost === 'function' ? '\n\nDazu ' + describePromotionBoost() : ''}`);
             }
         } else if ((myRank >= 17 || (myRank === 16 && relegation !== 'stayed')) && game.leagueLevel < NUM_LEAGUES - 1) {
             game.leagueLevel++;
@@ -340,6 +346,8 @@ function concludeSeasonAndAdvance() {
         game.wageBudget = Math.max(Math.round(getLeagueWageBudget(game.leagueLevel) * placementFactor / 100) * 100, getWageBudgetFloor(),
             Math.ceil(abstiegsGehaelter * RELEGATION_BUDGET_SHARE / 1000) * 1000);
         if (typeof applyCashSurplusBudgets === 'function') applyCashSurplusBudgets();
+        // Aufstiegsbudget (js/promotion-boost.js): KI-Aufsteiger rüsten im simulierten Fenster auf.
+        if (game.promotionBoost && game.promotionBoost.season === game.season + 1 && typeof getPromotionTransferBonus === 'function') game.transferBudget += getPromotionTransferBonus();
         // Manager-Eigengehalt: blieb bisher für immer beim Startwert (1.200 €/SpT),
         // selbst nach mehreren Aufstiegen in die Bundesliga mit Millionenbudgets - ein
         // erfolgreicher Bundesliga-Trainer verdient real deutlich mehr als ein Kreisliga-

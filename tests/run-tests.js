@@ -1748,6 +1748,74 @@ async function testRumors(browser) {
     await page.close();
 }
 
+async function testTransferStrategy(browser) {
+    console.log('\n[25.18] Transferstrategie mit dem Vorstand: Budget, Saisonziel, Abrechnung am Saisonende');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            const exp = getSeasonExpectation();
+            const card = () => document.getElementById('dash-transfer-strategy-box').innerHTML;
+            const liga = getLeagueTransferBudget(game.leagueLevel);
+            game.matchday = 1;
+            showScreen('screen-dashboard'); renderTransferStrategyCard();
+            out.karte = card().includes('TRANSFERSTRATEGIE') && card().includes('Sofort-Erfolg');
+            // Sofort-Erfolg: +40 % Budget, Ziel 2 Plätze höher; verfehlt -8, erreicht +5
+            exp.expectedRank = 8; game.transferBudget = 1000000; game.boardSat = 50;
+            chooseTransferStrategy('sofort');
+            out.sofort = exp.expectedRank === 6 && game.transferBudget === 1000000 + Math.round(liga * 0.4 / 1000) * 1000;
+            chooseTransferStrategy('sparen');
+            out.einmal = getTransferStrategy().choice === 'sofort';
+            resolveTransferStrategy(9);
+            out.sofortVerfehlt = game.boardSat === 42 && getTransferStrategy().result === 'verfehlt';
+            getTransferStrategy().result = null; game.boardSat = 50;
+            resolveTransferStrategy(5);
+            out.sofortErreicht = game.boardSat === 55;
+            // Jugend: -30 %, Ziel leichter, Sichtung halb so teuer; zwei Eigengewächse mit 10+ Spielen
+            game.transferStrategy = null; exp.expectedRank = 8; game.transferBudget = liga;
+            const kostenVorher = getYouthScoutCost();
+            chooseTransferStrategy('jugend');
+            out.jugend = exp.expectedRank === 9 && game.transferBudget === liga - Math.round(liga * 0.3 / 1000) * 1000
+                && getYouthScoutCost() === Math.round(kostenVorher / 2);
+            game.boardSat = 50;
+            resolveTransferStrategy(9);
+            out.jugendVerfehlt = game.boardSat === 44;
+            squad.slice(0, 2).forEach(p => { p.academyGraduate = true; p.statsSeason = { spiele: 12, tore: 0, vorlagen: 0, notenSumme: 0, elf: 0 }; });
+            getTransferStrategy().result = null; game.boardSat = 50; const fans = game.fans;
+            resolveTransferStrategy(9);
+            out.jugendErreicht = game.boardSat === 56 && game.fans === Math.min(100, fans + 3);
+            // Sparen: Saison ohne Verlust +5, sonst -6; Budget nie unter 0
+            game.transferStrategy = null; game.transferBudget = 1000;
+            chooseTransferStrategy('sparen');
+            out.sparenBudget = game.transferBudget === 0;
+            game.boardSat = 50; game.ffpSeasonNet = -5000;
+            resolveTransferStrategy(5);
+            out.sparenVerfehlt = game.boardSat === 44;
+            // Ohne Wahl bis Spieltag 3: ausgewogen, ohne Abrechnung
+            game.transferStrategy = null; game.matchday = 4; game.boardSat = 50;
+            tickTransferStrategy();
+            resolveTransferStrategy(18);
+            renderTransferStrategyCard();
+            out.auto = getTransferStrategy().choice === 'ausgewogen' && game.boardSat === 50 && card() === '';
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Transferstrategie ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.karte, 'Die Karte erscheint zu Saisonbeginn auf dem Dashboard');
+        assert(r.sofort && r.einmal, 'Sofort-Erfolg: +40 % Liga-Transferbudget, Ziel 2 Plätze höher - nur eine Wahl pro Saison');
+        assert(r.sofortVerfehlt && r.sofortErreicht, 'Sofort-Erfolg am Saisonende: verfehlt -8, erreicht +5');
+        assert(r.jugend, 'Jugend fördern: -30 % Budget, Ziel 1 Platz leichter, Sichtung zum halben Preis');
+        assert(r.jugendVerfehlt && r.jugendErreicht, 'Jugend fördern: 2 Eigengewächse mit 10+ Ligaspielen bringen +6 und Fans, sonst -6');
+        assert(r.sparenBudget && r.sparenVerfehlt, 'Sparen: Budget fällt nicht unter 0, Saison mit Verlust kostet 6');
+        assert(r.auto, 'Ohne Wahl bis Spieltag 3 bleibt es ausgewogen - ohne Abrechnung, Karte verschwindet');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testWinterTalk(browser) {
     console.log('\n[22.9] Wintergespräch mit dem Vorstand: Zwischenbilanz, vier Wege mit Folgen bis zum Saisonende');
     const { page, consoleErrors } = await freshPage(browser);
@@ -2185,7 +2253,14 @@ async function testBundesligaLongRun(browser) {
             const knappeKasse = getWageBudgetFloor();
             game.money = -1;
             out.gehaltsBodenWerte = { summe, boden, verlust, knappeKasse, minus: getWageBudgetFloor() };
-            out.gehaltsBoden = boden >= summe * 1.04 && verlust >= summe && verlust <= boden && knappeKasse >= summe * 1.04 && out.gehaltsBodenWerte.minus === 0;
+            out.gehaltsBoden = boden >= summe * 1.04 && verlust >= summe && verlust <= summe + 1000 && knappeKasse >= summe * 1.04
+                && out.gehaltsBodenWerte.minus >= summe * 0.95 - 1 && out.gehaltsBodenWerte.minus <= summe * 0.95 + 1000;
+            // 25.18: Verlängerung eines Auslaufenden zählt nur die Bleibenden - eingefrorenes Budget lässt sie zu
+            squad.forEach((p, i) => { p.contracts = i < 8 ? 1 : 3; });
+            const auslaeufer = squad[0];
+            const bleibendeSumme = squad.filter(p => p.contracts > 1).reduce((a, p) => a + (p.wage || 0), 0);
+            out.verlaengerungZaehltBleibende = contractWageTotalWith(auslaeufer, auslaeufer.wage + 100) === bleibendeSumme + auslaeufer.wage + 100
+                && contractWageTotalWith(squad[10], squad[10].wage + 100) === summe + 100;
             // Verlängerungspuffer: die Gehaltserhöhung eines Spielers mit noch 2 Vertragsjahren ist eingeplant
             game.money = summe * 20; game.ffpSeasonNet = 0;
             squad.forEach(p => { p.contracts = 3; });
@@ -2237,7 +2312,8 @@ async function testBundesligaLongRun(browser) {
     assert(!r.crash, `Langzeittest Bundesliga ohne Absturz (${r.crash || 'ok'})`);
     if (!r.crash) {
         assert(r.ruecklagen && r.freigabe, 'Der Vorstand gibt Rücklagen über der Reserve als Transfer- und Gehaltsbudget frei');
-        assert(r.gehaltsBoden, `Gehaltsbudget 5 % über den laufenden Gehältern (nach Verlustsaison eingefroren), nur bei Minus auf dem Konto ohne Untergrenze (${JSON.stringify(r.gehaltsBodenWerte)})`);
+        assert(r.gehaltsBoden, `Gehaltsbudget 5 % über den laufenden Gehältern (nach Verlustsaison eingefroren, mit Minus auf dem Konto 95 %) (${JSON.stringify(r.gehaltsBodenWerte)})`);
+        assert(r.verlaengerungZaehltBleibende, 'Verlängerung eines auslaufenden Vertrags zählt nur die Gehälter der Bleibenden');
         assert(r.verlaengerungsPuffer, 'Gehaltsbudget plant die Gehaltserhöhungen anstehender Verlängerungen ein');
         assert(r.startLizenz, 'Neues Spiel in der Bundesliga: Flutlicht und Internat Stufe 2 vorhanden');
         assert(r.sterne && r.untenNormal, 'Bundesliga-Markt mit drei internationalen Stars, untere Ligen unverändert');
@@ -2723,7 +2799,7 @@ async function testYouthPathway(browser) {
             out.potenzialEcht = youthTalents.every(p => typeof p.potential === 'number' && p.potential >= p.strength + 4
                 && (p.potential >= p.youthLeagueBase + YOUTH_POTENTIAL_OFFSET[p.potentialTier][0] || p.potential === p.strength + 4));
             // Talente passen zur Liga: Start 14-24 unter dem Liga-Schnitt (ohne Akademie/Internat-Bonus)
-            out.ligaGerecht = youthTalents.every(p => p.strength <= Math.max(24, p.youthLeagueBase - 14 + game.youthAcademyLvl * 3 + (campusBuildings.internat?.lvl || 0) * 2));
+            out.ligaGerecht = youthTalents.every(p => p.strength <= Math.max(24, p.youthLeagueBase - 14 + getYouthAcademyStartBonus() + (campusBuildings.internat?.lvl || 0) * 2));
             const t0 = youthTalents[0];
             out.unbekannt = getYouthPotentialText(t0).includes('unbekannt');
             revealYouthPotential(t0.id);
@@ -2840,6 +2916,19 @@ async function testYouthAcademy(browser) {
         results.academyUpgradeQueued = !!proj;
         if (proj) { for (let i = 0; i < proj.totalDays; i++) tickStadiumConstruction(); }
         results.academyUpgradeCompletesAfterTime = game.youthAcademyLvl === lvlBefore + 1;
+        // Höchststufe 5 mit sichtbarer Wirkung (25.18): mehr Startstärke und höhere Top-Talent-Chance
+        const chance2 = getYouthTierChances(2).top, chance5 = getYouthTierChances(5).top;
+        game.youthAcademyLvl = 5;
+        const geldVorMax = game.money;
+        upgradeYouthAcademy();
+        results.academyCapped = game.youthAcademyLvl === 5 && game.money === geldVorMax
+            && !game.stadiumConstructionQueue.some(p => p.type === 'youthAcademyLvl');
+        results.academyEffect = chance5 > chance2 && getYouthAcademyStartBonus(5) > getYouthAcademyStartBonus(2)
+            && getYouthAcademyStartBonus(9) === getYouthAcademyStartBonus(5);
+        showScreen('screen-youth');
+        results.academyEffectShown = /Top-Talent/.test(document.getElementById('youth-academy-effect').textContent)
+            && document.getElementById('btn-upgrade-youth-academy').disabled;
+        game.youthAcademyLvl = lvlBefore + 1;
 
         // Jugendinternat wirkt wirklich auf neue Talente
         campusBuildings.internat.lvl = 0;
@@ -2888,6 +2977,9 @@ async function testYouthAcademy(browser) {
     assert(r.academyUpgradeNotInstant, 'Jugendakademie-Ausbau ist keine Sofort-Aktion mehr');
     assert(r.academyUpgradeQueued, 'Jugendakademie-Ausbau legt eine echte Baustelle an');
     assert(r.academyUpgradeCompletesAfterTime, 'Jugendakademie-Ausbau schließt nach Bauzeit korrekt ab');
+    assert(r.academyCapped, 'Jugendakademie endet bei Stufe 5 (kein weiterer Ausbau, kein Geld weg)');
+    assert(r.academyEffect, 'Akademie-Stufe hebt Startstärke und Top-Talent-Chance, gedeckelt bei Stufe 5');
+    assert(r.academyEffectShown, 'Jugend-Bildschirm zeigt die Wirkung der Akademie-Stufe, Ausbau-Knopf auf Höchststufe gesperrt');
     assert(r.internatIncreasesStrength, 'Jugendinternat erhöht die Stärke neuer Talente spürbar');
     assert(r.mentorAssigned, 'Jugend-Mentor-Zuweisung funktioniert');
     assert(r.penaltyKillerLocked, 'Elfmeterkiller-Fähigkeit ist unter 80 Einsätzen gesperrt');
@@ -8235,6 +8327,7 @@ async function main() {
         testBuyback,
         testRumors,
         testWinterTalk,
+        testTransferStrategy,
         testPlayerProfile,
         testHomeRegion,
         testLocalDerbies,
