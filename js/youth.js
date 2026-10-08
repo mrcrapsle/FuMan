@@ -395,7 +395,7 @@
         const kosten = getYouthScoutCost();
         if (game.money < kosten) { showToast(`Nicht genug Geld! Benötigt: ${formatVal(kosten)}`, 'error'); return; }
         playSound('click');
-        game.money -= kosten;
+        bucheMitLabel('🎓 Jugendarbeit', -kosten); // wie auf dem Jugend-Bildschirm: FFP-frei (Jugend-Investition)
         // Bugfix: das Jugendinternat bewarb "erhöht Stärke und Potenzial neuer
         // Nachwuchsspieler", wirkte sich aber bisher NUR auf eine DFB-Lizenz-Anforderung aus -
         // die eigentliche Stärke-/Potenzial-Verbesserung war nie verkabelt.

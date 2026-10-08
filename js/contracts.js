@@ -169,7 +169,7 @@
         if (game.money < kosten) { showToast(`Handgeld nicht gedeckt: ${formatVal(kosten)} nötig.`, 'error'); return; }
         if (contractWageTotalWith(p, o.angebot) > game.wageBudget) { showToast(`Gehaltsbudget reicht nicht (${formatVal(game.wageBudget)} pro Spieltag).`, 'error', 4500); return; }
         playSound('click');
-        game.money -= kosten;
+        bucheMitLabel('✍️ Handgeld & Berater', -kosten);
         p.wage = o.angebot;
         p.contracts += contractTalk.years;
         if (contractTalk.garantie && !o.stammspieler) p.playtimePromise = { season: game.season + 1, minApps: 15 };

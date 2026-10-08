@@ -67,6 +67,19 @@
         return neutral;
     }
 
+    // Prognose für die Finanzübersicht (25.19): was die Abrechnung am Saisonende bei
+    // gleichbleibendem Tabellenplatz bringt - bisher kam die Restausschüttung (bis 28 Mio. €)
+    // oder die Rückforderung (bis 10 Mio. €) ohne Vorwarnung.
+    function getTvSeasonOutlook() {
+        const rank = typeof getOwnLeagueRank === 'function' ? getOwnLeagueRank() : null;
+        if (!rank) return null;
+        const anspruch = calculateCollectiveTvMoney(game.leagueLevel, rank);
+        const offeneRaten = Math.max(0, MATCHDAYS_PER_SEASON - game.matchday + 1);
+        const rate = Math.min(Math.round((LEAGUE_BASE_TV_MONEY[game.leagueLevel] ?? 100000) / MATCHDAYS_PER_SEASON), Math.round(anspruch / MATCHDAYS_PER_SEASON));
+        const rest = anspruch - (game.tvMoneyPaidThisSeason || 0) - offeneRaten * rate;
+        return { rank, anspruch, rest: Math.round(rest / 1000) * 1000 };
+    }
+
     // 2. Eigener Medienpartner: Angebote generieren, analog zum Sponsoren-System.
     function generateMediaRightsOffers() {
         let scale = typeof leagueScaleFactor === 'function' ? leagueScaleFactor() : 1;

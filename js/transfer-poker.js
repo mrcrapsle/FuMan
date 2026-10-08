@@ -38,7 +38,7 @@ function finalizePlayerPurchase(p, ablose, gehalt) {
     const lohnsumme = squad.reduce((s, pl) => s + pl.wage, 0) + (game.secondTeam.isActive ? secondTeamSquad.reduce((s, pl) => s + pl.wage, 0) : 0);
     if (lohnsumme + gehalt > game.wageBudget) { showToast(`Gehaltsbudget reicht nicht: ${formatVal(lohnsumme + gehalt)} nach der Verpflichtung, erlaubt sind ${formatVal(game.wageBudget)}.`, 'error', 5000); return false; }
     playSound('click');
-    game.money -= gesamt;
+    bucheMitLabel('🛒 Spielerkauf', -gesamt);
     game.transferBudget -= ablose;
     p.wage = gehalt;
     if (typeof stampPlayerJoin === 'function') stampPlayerJoin(p, 'kauf', p.sellerClub, ablose);

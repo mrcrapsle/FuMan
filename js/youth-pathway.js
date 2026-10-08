@@ -98,7 +98,7 @@ function tickYouthProDecisions() {
             youthTalents.splice(i, 1);
             game.youthHospitants = (game.youthHospitants || []).filter(id => id !== p.id);
             const entschaedigung = Math.round(calculatePlayerMarketValue(p.strength) * 0.1 / 100) * 100;
-            game.money += entschaedigung;
+            bucheMitLabel('🌱 Ausbildungsentschädigung', entschaedigung);
             const ziel = getYouthLoanClubs(p)[0];
             addYouthMoment('👋', `${p.name} (${p.strength}) wechselt ohne Profivertrag zu ${ziel ? ziel.name : 'einem anderen Verein'}`);
             addInboxMessage('vertrag', `👋 ${p.name} ist weg`, `Ohne Angebot hat ${p.name} bei ${ziel ? ziel.name : 'einem anderen Verein'} unterschrieben. Ausbildungsentschädigung: ${formatVal(entschaedigung)}.`, 'screen-youth');

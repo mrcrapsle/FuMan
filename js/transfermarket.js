@@ -338,7 +338,7 @@
         let erloes = managerRPG.perks.negotiator ? Math.round(betrag * 1.15) : betrag;
         let player = squad[pIdx];
         let agentFee = getAgentFee(player, erloes);
-        game.money += erloes - agentFee;
+        bucheMitLabel('💸 Spielerverkauf', erloes - agentFee);
         game.transferBudget += Math.round(erloes * 0.85);
         checkFriendshipDeparture(player);
         recordNotablePastPlayer(player);
@@ -394,7 +394,7 @@
                 // Talentverkauf (js/youth-sales.js): Weiterverkauf zum Marktwert am Potenzial.
                 let resaleValue = clause.resaleValue ? Math.round(clause.resaleValue * (0.8 + Math.random() * 0.4)) : Math.round(clause.originalSaleValue * (1.3 + Math.random() * 1.2));
                 let payout = Math.round(resaleValue * (clause.percent / 100));
-                game.money += payout;
+                bucheMitLabel('💰 Weiterverkaufsbeteiligung', payout);
                 addInboxMessage('vertrag', `💰 Weiterverkaufsbeteiligung ausgezahlt!`, `${clause.buyingClub} hat ${clause.playerName} für ${formatVal(resaleValue)} weiterverkauft - deine ${clause.percent}%-Beteiligung: ${formatVal(payout)}!`, 'screen-finances');
                 showToast(`💰 +${formatVal(payout)} Weiterverkaufsbeteiligung für ${clause.playerName}!`, 'success');
                 game.sellOnClauses.splice(i, 1);
@@ -711,7 +711,7 @@
         let totalWages = squad.reduce((s, pl) => s + pl.wage, 0) + (game.secondTeam.isActive ? secondTeamSquad.reduce((s, pl) => s + pl.wage, 0) : 0);
         if (totalWages + p.wage > game.wageBudget) { showToast(`Gehaltsbudget reicht nicht: ${formatVal(totalWages + p.wage)} nach der Verpflichtung, erlaubt sind ${formatVal(game.wageBudget)}.`, 'error', 5000); return; }
         playSound('click');
-        game.money -= finalFee;
+        bucheMitLabel('🆓 Handgeld Vereinslose', -finalFee);
         if (typeof stampPlayerJoin === 'function') stampPlayerJoin(p, 'ablösefrei');
         squad.push(p);
         freeAgentPlayers.splice(idx, 1);
@@ -759,7 +759,7 @@
             // Verhandlungs-Multiplikator wirksam, nicht beim direkten Sofortverkauf).
             if (managerRPG.perks.negotiator) sum = Math.round(sum * 1.15);
             let agentFee = getAgentFee(p, sum);
-            game.money += sum - agentFee;
+            bucheMitLabel('💸 Spielerverkauf', sum - agentFee);
             game.transferBudget += Math.round(sum * 0.8);
             checkFriendshipDeparture(p);
             recordNotablePastPlayer(p);

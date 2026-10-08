@@ -124,7 +124,7 @@
         stadium.name = `${sponsor}-Arena`;
         stadium.namingRightsSponsor = sponsor;
         stadium.namingRightsIncome = perMatch;
-        game.money += lumpSum;
+        bucheMitLabel('🏟️ Namensrechte', lumpSum);
         addInboxMessage('vertrag', '🏟️ Namensrechte verkauft!', `Das Stadion heißt ab sofort "${stadium.name}". Einmalzahlung: ${formatVal(lumpSum)}, laufend +${formatVal(perMatch)}/Heimspiel.`, 'screen-stadium');
         // Namensgebungs-Zeremonie: eigenes Ereignis mit einer echten Entscheidung, statt
         // dass die Umbenennung einfach kommentarlos passiert.

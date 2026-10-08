@@ -1748,6 +1748,52 @@ async function testRumors(browser) {
     await page.close();
 }
 
+async function testBookingLabels(browser) {
+    console.log('\n[25.19] Buchungstexte: Käufe, Verkäufe, Handgelder, Sichtung, TV-Prognose');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            showScreen('screen-dashboard');
+            game.money = 50000000; game.transferBudget = 50000000; game.wageBudget = 1e9;
+            game.kontoauszug = [];
+            const letzte = () => (game.kontoauszug || []).slice(-1)[0] || {};
+            const kader = squad.length;
+            buyPlayer(0);
+            out.kauf = squad.length === kader + 1 && letzte().label === '🛒 Spielerkauf';
+            const weg = squad[squad.length - 1];
+            sellPlayer(weg.id, null);
+            out.verkauf = letzte().label === '💸 Spielerverkauf';
+            scoutYouthTalent();
+            out.sichtung = letzte().label === '🎓 Jugendarbeit';
+            const p = squad[0];
+            p.contracts = 1;
+            extendContract(p.id);
+            if (contractTalk) acceptContractTalk();
+            out.handgeld = p.contracts > 1 ? letzte().label === '✍️ Handgeld & Berater' || letzte().amount === undefined : true;
+            out.keinVereinsbuero = game.kontoauszug.every(b => !b.label.includes('Vereinsbüro'));
+            // TV-Prognose in der Finanzübersicht
+            game.matchday = 10;
+            const tv = getTvSeasonOutlook();
+            out.tv = !!tv && tv.rank >= 1 && typeof tv.rest === 'number';
+            showScreen('screen-finances');
+            out.tvAnzeige = /Platz/.test(document.getElementById('fin-tv-outlook-label').textContent);
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Buchungstexte ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.kauf && r.verkauf, 'Spielerkauf und -verkauf stehen mit eigenem Text im Kontoauszug');
+        assert(r.sichtung && r.handgeld, 'Sichtung und Handgeld einer Verlängerung haben eigene Buchungstexte');
+        assert(r.keinVereinsbuero, 'Nichts davon landet mehr unter "Vereinsbüro"');
+        assert(r.tv && r.tvAnzeige, 'Finanzübersicht zeigt die TV-Abrechnung zum Saisonende beim aktuellen Platz');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testYouthSales(browser) {
     console.log('\n[25.18] Talente verkaufen: KI-Angebote für Akademie-Talente');
     const { page, consoleErrors } = await freshPage(browser);
@@ -8399,6 +8445,7 @@ async function main() {
         testWinterTalk,
         testTransferStrategy,
         testYouthSales,
+        testBookingLabels,
         testPlayerProfile,
         testHomeRegion,
         testLocalDerbies,

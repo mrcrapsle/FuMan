@@ -7204,7 +7204,7 @@ function finalizePlayerPurchase(p, ablose, gehalt) {
     const lohnsumme = squad.reduce((s, pl) => s + pl.wage, 0) + (game.secondTeam.isActive ? secondTeamSquad.reduce((s, pl) => s + pl.wage, 0) : 0);
     if (lohnsumme + gehalt > game.wageBudget) { showToast(`Gehaltsbudget reicht nicht: ${formatVal(lohnsumme + gehalt)} nach der Verpflichtung, erlaubt sind ${formatVal(game.wageBudget)}.`, 'error', 5000); return false; }
     playSound('click');
-    game.money -= gesamt;
+    bucheMitLabel('🛒 Spielerkauf', -gesamt);
     game.transferBudget -= ablose;
     p.wage = gehalt;
     if (typeof stampPlayerJoin === 'function') stampPlayerJoin(p, 'kauf', p.sellerClub, ablose);
@@ -7731,7 +7731,7 @@ function renderTransferPokerBox() {
         let erloes = managerRPG.perks.negotiator ? Math.round(betrag * 1.15) : betrag;
         let player = squad[pIdx];
         let agentFee = getAgentFee(player, erloes);
-        game.money += erloes - agentFee;
+        bucheMitLabel('💸 Spielerverkauf', erloes - agentFee);
         game.transferBudget += Math.round(erloes * 0.85);
         checkFriendshipDeparture(player);
         recordNotablePastPlayer(player);
@@ -7787,7 +7787,7 @@ function renderTransferPokerBox() {
                 // Talentverkauf (js/youth-sales.js): Weiterverkauf zum Marktwert am Potenzial.
                 let resaleValue = clause.resaleValue ? Math.round(clause.resaleValue * (0.8 + Math.random() * 0.4)) : Math.round(clause.originalSaleValue * (1.3 + Math.random() * 1.2));
                 let payout = Math.round(resaleValue * (clause.percent / 100));
-                game.money += payout;
+                bucheMitLabel('💰 Weiterverkaufsbeteiligung', payout);
                 addInboxMessage('vertrag', `💰 Weiterverkaufsbeteiligung ausgezahlt!`, `${clause.buyingClub} hat ${clause.playerName} für ${formatVal(resaleValue)} weiterverkauft - deine ${clause.percent}%-Beteiligung: ${formatVal(payout)}!`, 'screen-finances');
                 showToast(`💰 +${formatVal(payout)} Weiterverkaufsbeteiligung für ${clause.playerName}!`, 'success');
                 game.sellOnClauses.splice(i, 1);
@@ -8104,7 +8104,7 @@ function renderTransferPokerBox() {
         let totalWages = squad.reduce((s, pl) => s + pl.wage, 0) + (game.secondTeam.isActive ? secondTeamSquad.reduce((s, pl) => s + pl.wage, 0) : 0);
         if (totalWages + p.wage > game.wageBudget) { showToast(`Gehaltsbudget reicht nicht: ${formatVal(totalWages + p.wage)} nach der Verpflichtung, erlaubt sind ${formatVal(game.wageBudget)}.`, 'error', 5000); return; }
         playSound('click');
-        game.money -= finalFee;
+        bucheMitLabel('🆓 Handgeld Vereinslose', -finalFee);
         if (typeof stampPlayerJoin === 'function') stampPlayerJoin(p, 'ablösefrei');
         squad.push(p);
         freeAgentPlayers.splice(idx, 1);
@@ -8152,7 +8152,7 @@ function renderTransferPokerBox() {
             // Verhandlungs-Multiplikator wirksam, nicht beim direkten Sofortverkauf).
             if (managerRPG.perks.negotiator) sum = Math.round(sum * 1.15);
             let agentFee = getAgentFee(p, sum);
-            game.money += sum - agentFee;
+            bucheMitLabel('💸 Spielerverkauf', sum - agentFee);
             game.transferBudget += Math.round(sum * 0.8);
             checkFriendshipDeparture(p);
             recordNotablePastPlayer(p);
@@ -13254,6 +13254,15 @@ function finishGoalkeeperGame() {
         document.getElementById('fin-in-merch').innerText = formatVal(estMerch);
         document.getElementById('fin-in-sponsors').innerText = formatVal(estSponsors);
         document.getElementById('fin-in-dividends').innerText = formatVal(dividends);
+        if (typeof getTvSeasonOutlook === 'function') {
+            const tv = getTvSeasonOutlook();
+            const tvEl = document.getElementById('fin-tv-outlook'), tvLabel = document.getElementById('fin-tv-outlook-label');
+            if (tvEl && tv) {
+                tvEl.innerText = (tv.rest >= 0 ? '+' : '') + formatVal(tv.rest);
+                tvEl.style.color = tv.rest >= 0 ? 'var(--primary)' : 'var(--danger)';
+                if (tvLabel) tvLabel.innerText = `↳ TV-Abrechnung zum Saisonende (bei Platz ${tv.rank}):`;
+            }
+        }
 
         document.getElementById('fin-out-wages').innerText = formatVal(totalWages + totalStaffWages);
         document.getElementById('fin-out-maintenance').innerText = formatVal(maintenance);
@@ -14906,7 +14915,7 @@ function finishGoalkeeperGame() {
         playSound('whistle');
         let conflict = getExclusivityConflict(offer.category, 'sponsor');
         let discountFactor = conflict ? 0.7 : 1.0;
-        if (offer.signOn > 0) game.money += Math.round(offer.signOn * discountFactor);
+        if (offer.signOn > 0) bucheMitLabel('🤝 Hauptsponsor', Math.round(offer.signOn * discountFactor));
         game.sponsor = {
             name: offer.name, base: Math.round(offer.base * discountFactor), winBonus: Math.round(offer.winBonus * discountFactor),
             cupBonus: offer.cupBonus, promotionBonus: offer.promotionBonus,
@@ -14957,7 +14966,7 @@ function finishGoalkeeperGame() {
         playSound('whistle');
         let conflict = getExclusivityConflict(offer.category, 'kit');
         let discountFactor = conflict ? 0.7 : 1.0;
-        game.money += Math.round(offer.signOn * discountFactor);
+        bucheMitLabel('🧥 Ausrüster', Math.round(offer.signOn * discountFactor));
         game.kitSupplier = { name: offer.name, income: Math.round(offer.income * discountFactor), duration: offer.sp, category: offer.category };
         kitSupplierOffers = [];
         let conflictNote = conflict ? ` ⚠️ Branchenkonflikt mit bestehendem ${conflict}-Sponsor - Vergütung um 30% reduziert!` : '';
@@ -15003,7 +15012,7 @@ function finishGoalkeeperGame() {
         playSound('whistle');
         let conflict = getExclusivityConflict(offer.category, 'sleeve');
         let discountFactor = conflict ? 0.7 : 1.0;
-        if (offer.signOn > 0) game.money += Math.round(offer.signOn * discountFactor);
+        if (offer.signOn > 0) bucheMitLabel('👔 Ärmelsponsor', Math.round(offer.signOn * discountFactor));
         game.sleeveSponsor = { name: offer.name, income: Math.round(offer.income * discountFactor), duration: offer.sp, category: offer.category };
         sleeveSponsorOffers = [];
         let conflictNote = conflict ? ` ⚠️ Branchenkonflikt mit bestehendem ${conflict}-Sponsor - Vergütung um 30% reduziert!` : '';
@@ -15652,6 +15661,19 @@ function finishGoalkeeperGame() {
         return neutral;
     }
 
+    // Prognose für die Finanzübersicht (25.19): was die Abrechnung am Saisonende bei
+    // gleichbleibendem Tabellenplatz bringt - bisher kam die Restausschüttung (bis 28 Mio. €)
+    // oder die Rückforderung (bis 10 Mio. €) ohne Vorwarnung.
+    function getTvSeasonOutlook() {
+        const rank = typeof getOwnLeagueRank === 'function' ? getOwnLeagueRank() : null;
+        if (!rank) return null;
+        const anspruch = calculateCollectiveTvMoney(game.leagueLevel, rank);
+        const offeneRaten = Math.max(0, MATCHDAYS_PER_SEASON - game.matchday + 1);
+        const rate = Math.min(Math.round((LEAGUE_BASE_TV_MONEY[game.leagueLevel] ?? 100000) / MATCHDAYS_PER_SEASON), Math.round(anspruch / MATCHDAYS_PER_SEASON));
+        const rest = anspruch - (game.tvMoneyPaidThisSeason || 0) - offeneRaten * rate;
+        return { rank, anspruch, rest: Math.round(rest / 1000) * 1000 };
+    }
+
     // 2. Eigener Medienpartner: Angebote generieren, analog zum Sponsoren-System.
     function generateMediaRightsOffers() {
         let scale = typeof leagueScaleFactor === 'function' ? leagueScaleFactor() : 1;
@@ -16114,7 +16136,7 @@ function finishGoalkeeperGame() {
         stadium.name = `${sponsor}-Arena`;
         stadium.namingRightsSponsor = sponsor;
         stadium.namingRightsIncome = perMatch;
-        game.money += lumpSum;
+        bucheMitLabel('🏟️ Namensrechte', lumpSum);
         addInboxMessage('vertrag', '🏟️ Namensrechte verkauft!', `Das Stadion heißt ab sofort "${stadium.name}". Einmalzahlung: ${formatVal(lumpSum)}, laufend +${formatVal(perMatch)}/Heimspiel.`, 'screen-stadium');
         // Namensgebungs-Zeremonie: eigenes Ereignis mit einer echten Entscheidung, statt
         // dass die Umbenennung einfach kommentarlos passiert.
@@ -19037,7 +19059,7 @@ function renderStadiumEventsPanel() {
         const kosten = getYouthScoutCost();
         if (game.money < kosten) { showToast(`Nicht genug Geld! Benötigt: ${formatVal(kosten)}`, 'error'); return; }
         playSound('click');
-        game.money -= kosten;
+        bucheMitLabel('🎓 Jugendarbeit', -kosten); // wie auf dem Jugend-Bildschirm: FFP-frei (Jugend-Investition)
         // Bugfix: das Jugendinternat bewarb "erhöht Stärke und Potenzial neuer
         // Nachwuchsspieler", wirkte sich aber bisher NUR auf eine DFB-Lizenz-Anforderung aus -
         // die eigentliche Stärke-/Potenzial-Verbesserung war nie verkabelt.
@@ -19444,7 +19466,7 @@ function tickYouthProDecisions() {
             youthTalents.splice(i, 1);
             game.youthHospitants = (game.youthHospitants || []).filter(id => id !== p.id);
             const entschaedigung = Math.round(calculatePlayerMarketValue(p.strength) * 0.1 / 100) * 100;
-            game.money += entschaedigung;
+            bucheMitLabel('🌱 Ausbildungsentschädigung', entschaedigung);
             const ziel = getYouthLoanClubs(p)[0];
             addYouthMoment('👋', `${p.name} (${p.strength}) wechselt ohne Profivertrag zu ${ziel ? ziel.name : 'einem anderen Verein'}`);
             addInboxMessage('vertrag', `👋 ${p.name} ist weg`, `Ohne Angebot hat ${p.name} bei ${ziel ? ziel.name : 'einem anderen Verein'} unterschrieben. Ausbildungsentschädigung: ${formatVal(entschaedigung)}.`, 'screen-youth');
@@ -20088,7 +20110,7 @@ function renderYouthPathwayBoxes() {
         if (game.money < kosten) { showToast(`Handgeld nicht gedeckt: ${formatVal(kosten)} nötig.`, 'error'); return; }
         if (contractWageTotalWith(p, o.angebot) > game.wageBudget) { showToast(`Gehaltsbudget reicht nicht (${formatVal(game.wageBudget)} pro Spieltag).`, 'error', 4500); return; }
         playSound('click');
-        game.money -= kosten;
+        bucheMitLabel('✍️ Handgeld & Berater', -kosten);
         p.wage = o.angebot;
         p.contracts += contractTalk.years;
         if (contractTalk.garantie && !o.stammspieler) p.playtimePromise = { season: game.season + 1, minApps: 15 };
@@ -29764,6 +29786,9 @@ const LEXICON_ENTRIES = [
     { cat: 'Verein', title: 'Mitgliederversammlung', screen: 'screen-dashboard',
         text: 'Nach jeder Saison wollen die Mitglieder deinen Bericht: Platz gegen Erwartung, Aufstieg/Abstieg und Kasse ergeben die Grundstimmung. Rede und Beitragsantrag wählst du im Dashboard. Ab 70 % Zustimmung Vorstand +10, ab 50 % (entlastet) +5, darunter -10. Bereitest du sie nicht innerhalb von 6 Spieltagen vor, findet sie ohne dich statt (-5 % Zustimmung).',
         tips: ['Selbstkritisch hilft nach einer schwachen Saison, visionär nach einer guten', 'Zahlen sprechen lassen lohnt nur mit Gewinn', 'Beitrag senken kostet Geld, bringt aber Zustimmung und Fans'] },
+    { cat: 'Finanzen', title: 'TV-Gelder', screen: 'screen-finances',
+        text: 'Die Liga verteilt ihr TV-Geld nach Platz: Bundesliga 64 Mio. €, 2. Liga 8 Mio. €, 3. Liga 1 Mio. €, Regionalliga 620.000 €, darunter 150.000/100.000 € - Platz 1 bekommt das 1,5-fache, jeder Platz darunter 5,5 % weniger (mindestens 0,4-fach). Gezahlt wird jeden Spieltag eine Rate, ab Spieltag 6 nach dem aktuellen Platz, aber höchstens der Liga-Durchschnitt. Am Saisonende folgt die Abrechnung nach dem Endplatz: gute Plätze bekommen eine Restausschüttung, wer spät abrutscht, zahlt zu viel erhaltene Raten zurück.',
+        tips: ['Die Finanzübersicht zeigt, was die Abrechnung beim aktuellen Platz bringt', 'Platz 1 statt 10 sind in der Bundesliga rund 32 Mio. € mehr'] },
     { cat: 'Verein', title: 'Transferstrategie', screen: 'screen-dashboard',
         text: 'Bis Spieltag 3 legst du mit dem Vorstand eine Linie für die Saison fest. Jugend fördern: Transferbudget -30 %, Saisonziel 1 Platz leichter, Sichtung zum halben Preis - am Saisonende mindestens 2 Eigengewächse mit 10+ Ligaspielen: Vorstand +6 und Fans +3, sonst -6. Sofort-Erfolg: +40 % Transferbudget, Ziel 2 Plätze höher - erreicht +5, verfehlt -8. Sparen: -50 % Transferbudget, Ziel 2 Plätze leichter - Saison ohne Verlust +5, sonst -6. Ausgewogen (auch ohne Wahl): alles bleibt.',
         tips: ['Die Prozente beziehen sich auf das Liga-Transferbudget', 'Das neue Saisonziel gilt auch für die Mitgliederversammlung'] },

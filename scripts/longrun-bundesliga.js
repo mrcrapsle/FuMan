@@ -58,6 +58,22 @@ async function karriere(browser, lauf) {
             }
         });
     });
+    // VBDIAG=1 (25.19): Buchungen ohne eigenen Buchungstext (landen unter dem offenen Bildschirm,
+    // im Bot "Vereinsbüro") der auslösenden Funktion zuordnen.
+    if (process.env.VBDIAG) await page.evaluate(() => {
+        const orig = protokolliereBuchung;
+        window.__vb = {};
+        protokolliereBuchung = function (delta) {
+            if (/Vereinsbüro|Sonstige Buchung/.test(buchungsLabelErmitteln())) {
+                const namen = (new Error().stack || '').split('\n').slice(2)
+                    .map(l => (l.match(/at (?:Object\.)?([\w$.]+) \(/) || [])[1]).filter(Boolean)
+                    .filter(n => !/^(Object|Array|eval|set|get)$/.test(n));
+                const k = namen.slice(0, 2).join('<') || '?';
+                window.__vb[k] = (window.__vb[k] || 0) + delta;
+            }
+            return orig.apply(this, arguments);
+        };
+    });
     // STRDIAG=1: je eigenem Ligaspiel die Spielstärke zerlegen (Elf, Fitness, Form, Moral, Boni).
     if (process.env.STRDIAG) await page.evaluate(() => {
         const orig = getOwnLeagueMatchStrength;
@@ -338,6 +354,7 @@ async function karriere(browser, lauf) {
                 concludeSeasonAndAdvance();
                 finSammeln();
                 zeile.saisonEnde = game.money - geldVorEnde;
+                if (window.__vb) { zeile.vb = Object.entries(window.__vb).filter(([, v]) => Math.abs(v) >= 50000).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1])).slice(0, 8); window.__vb = {}; }
                 zeile.fin = Object.entries(window.__fin).filter(([, v]) => Math.abs(v) >= 50000).sort((a, b) => b[1] - a[1]);
                 const eu = (game.europeHistory || []).find(e => e.season === start.season);
                 zeile.europaRunde = eu ? eu.stage : '';
@@ -388,6 +405,7 @@ async function karriere(browser, lauf) {
         const f = ([k, v]) => `${k} ${(v / 1e6).toFixed(1)}`;
         console.log(`[S${z.season} Liga ${z.liga + 1} Pl ${z.platz}] +${(ein.reduce((a, [, v]) => a + v, 0) / 1e6).toFixed(1)} / ${(aus.reduce((a, [, v]) => a + v, 0) / 1e6).toFixed(1)} Mio | Saisonende ${(z.saisonEnde / 1e6).toFixed(1)}\n   EIN: ${ein.map(f).join(' | ')}\n   AUS: ${aus.map(f).join(' | ')}`);
     });
+    if (process.env.VBDIAG) zeilen.forEach(z => { if (z.vb) console.log(`[S${z.season} Liga ${z.liga + 1} VB] ${z.vb.map(([k, v]) => `${k} ${(v / 1e6).toFixed(2)}`).join(' | ')}`); });
     if (process.env.BOARDDIAG) zeilen.forEach(z => { if (z.board) console.log(`[S${z.season} Liga ${z.liga + 1} Pl ${z.platz} Vst ${z.vorstand}] ${z.board.join(' | ')}`); });
     if (fehler.length) console.log('JS-Fehler: ' + [...new Set(fehler)].slice(0, 5).join(' | '));
     return zeilen;

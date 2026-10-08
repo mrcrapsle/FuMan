@@ -108,6 +108,15 @@
         document.getElementById('fin-in-merch').innerText = formatVal(estMerch);
         document.getElementById('fin-in-sponsors').innerText = formatVal(estSponsors);
         document.getElementById('fin-in-dividends').innerText = formatVal(dividends);
+        if (typeof getTvSeasonOutlook === 'function') {
+            const tv = getTvSeasonOutlook();
+            const tvEl = document.getElementById('fin-tv-outlook'), tvLabel = document.getElementById('fin-tv-outlook-label');
+            if (tvEl && tv) {
+                tvEl.innerText = (tv.rest >= 0 ? '+' : '') + formatVal(tv.rest);
+                tvEl.style.color = tv.rest >= 0 ? 'var(--primary)' : 'var(--danger)';
+                if (tvLabel) tvLabel.innerText = `↳ TV-Abrechnung zum Saisonende (bei Platz ${tv.rank}):`;
+            }
+        }
 
         document.getElementById('fin-out-wages').innerText = formatVal(totalWages + totalStaffWages);
         document.getElementById('fin-out-maintenance').innerText = formatVal(maintenance);

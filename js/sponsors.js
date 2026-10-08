@@ -155,7 +155,7 @@
         playSound('whistle');
         let conflict = getExclusivityConflict(offer.category, 'sponsor');
         let discountFactor = conflict ? 0.7 : 1.0;
-        if (offer.signOn > 0) game.money += Math.round(offer.signOn * discountFactor);
+        if (offer.signOn > 0) bucheMitLabel('🤝 Hauptsponsor', Math.round(offer.signOn * discountFactor));
         game.sponsor = {
             name: offer.name, base: Math.round(offer.base * discountFactor), winBonus: Math.round(offer.winBonus * discountFactor),
             cupBonus: offer.cupBonus, promotionBonus: offer.promotionBonus,
@@ -206,7 +206,7 @@
         playSound('whistle');
         let conflict = getExclusivityConflict(offer.category, 'kit');
         let discountFactor = conflict ? 0.7 : 1.0;
-        game.money += Math.round(offer.signOn * discountFactor);
+        bucheMitLabel('🧥 Ausrüster', Math.round(offer.signOn * discountFactor));
         game.kitSupplier = { name: offer.name, income: Math.round(offer.income * discountFactor), duration: offer.sp, category: offer.category };
         kitSupplierOffers = [];
         let conflictNote = conflict ? ` ⚠️ Branchenkonflikt mit bestehendem ${conflict}-Sponsor - Vergütung um 30% reduziert!` : '';
@@ -252,7 +252,7 @@
         playSound('whistle');
         let conflict = getExclusivityConflict(offer.category, 'sleeve');
         let discountFactor = conflict ? 0.7 : 1.0;
-        if (offer.signOn > 0) game.money += Math.round(offer.signOn * discountFactor);
+        if (offer.signOn > 0) bucheMitLabel('👔 Ärmelsponsor', Math.round(offer.signOn * discountFactor));
         game.sleeveSponsor = { name: offer.name, income: Math.round(offer.income * discountFactor), duration: offer.sp, category: offer.category };
         sleeveSponsorOffers = [];
         let conflictNote = conflict ? ` ⚠️ Branchenkonflikt mit bestehendem ${conflict}-Sponsor - Vergütung um 30% reduziert!` : '';
