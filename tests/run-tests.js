@@ -89,8 +89,9 @@ async function testSaveLoad(browser) {
         setReleaseClause(squad[0].id, Math.round(squad[0].marketValue * 1.2));
         let clauseBefore = squad[0].releaseClause;
 
-        // Eingehende Leihe
+        // Eingehende Leihe (Leihen prüfen seit 25.17 Transfer- und Gehaltsbudget)
         refreshTransferMarket();
+        game.transferBudget = Math.max(game.transferBudget, 1e8); game.wageBudget = Math.max(game.wageBudget, 1e8);
         signLoanPlayer(0);
         let incomingLoansBefore = incomingLoans.length;
 
@@ -2179,8 +2180,19 @@ async function testBundesligaLongRun(browser) {
             const boden = getWageBudgetFloor();
             game.ffpSeasonNet = -summe * 10;
             const verlust = getWageBudgetFloor();
-            game.ffpSeasonNet = 0; game.money = summe * 8;
-            out.gehaltsBoden = boden >= summe * 1.04 && verlust >= summe * 0.84 && verlust < summe && getWageBudgetFloor() === 0;
+            // 25.17: auch mit knapper Kasse (unter einer Viertelsaison) gilt der Boden, nur bei Minus nicht
+            game.money = summe * 8; game.ffpSeasonNet = 0; // money ist ein Setter, der ins FFP-Ergebnis bucht
+            const knappeKasse = getWageBudgetFloor();
+            game.money = -1;
+            out.gehaltsBodenWerte = { summe, boden, verlust, knappeKasse, minus: getWageBudgetFloor() };
+            out.gehaltsBoden = boden >= summe * 1.04 && verlust >= summe && verlust <= boden && knappeKasse >= summe * 1.04 && out.gehaltsBodenWerte.minus === 0;
+            // Verlängerungspuffer: die Gehaltserhöhung eines Spielers mit noch 2 Vertragsjahren ist eingeplant
+            game.money = summe * 20; game.ffpSeasonNet = 0;
+            squad.forEach(p => { p.contracts = 3; });
+            const ohnePuffer = getWageBudgetFloor();
+            const kandidat = squad.find(p => getContractDemand(p).gehalt > p.wage);
+            if (kandidat) kandidat.contracts = 2;
+            out.verlaengerungsPuffer = !kandidat || getWageBudgetFloor() >= ohnePuffer + (getContractDemand(kandidat).gehalt - kandidat.wage) - 1000;
             // Start in der Bundesliga: Lizenz-Ausstattung der Startliga ist vorhanden
             stadium.flutlicht = false; campusBuildings.internat.lvl = 0;
             grantStartLeagueLicence(0);
@@ -2225,7 +2237,8 @@ async function testBundesligaLongRun(browser) {
     assert(!r.crash, `Langzeittest Bundesliga ohne Absturz (${r.crash || 'ok'})`);
     if (!r.crash) {
         assert(r.ruecklagen && r.freigabe, 'Der Vorstand gibt Rücklagen über der Reserve als Transfer- und Gehaltsbudget frei');
-        assert(r.gehaltsBoden, 'Gehaltsbudget 5 % über den laufenden Gehältern (nach Minus-Saison 85 %), wenn das Konto eine Viertelsaison trägt');
+        assert(r.gehaltsBoden, `Gehaltsbudget 5 % über den laufenden Gehältern (nach Verlustsaison eingefroren), nur bei Minus auf dem Konto ohne Untergrenze (${JSON.stringify(r.gehaltsBodenWerte)})`);
+        assert(r.verlaengerungsPuffer, 'Gehaltsbudget plant die Gehaltserhöhungen anstehender Verlängerungen ein');
         assert(r.startLizenz, 'Neues Spiel in der Bundesliga: Flutlicht und Internat Stufe 2 vorhanden');
         assert(r.sterne && r.untenNormal, 'Bundesliga-Markt mit drei internationalen Stars, untere Ligen unverändert');
         assert(r.praemie && r.startkapital, 'Pokalprämien mit eigener Buchung, Startkapital zählt nicht fürs FFP');
@@ -2706,8 +2719,11 @@ async function testYouthPathway(browser) {
             game.money = 5000000;
             youthTalents = [];
             for (let i = 0; i < 6; i++) scoutYouthTalent();
+            // Potenzial relativ zum Liga-Schnitt beim Sichten (25.17)
             out.potenzialEcht = youthTalents.every(p => typeof p.potential === 'number' && p.potential >= p.strength + 4
-                && p.potential >= YOUTH_POTENTIAL_RANGE[p.potentialTier][0] - 0 || p.potential === p.strength + 4);
+                && (p.potential >= p.youthLeagueBase + YOUTH_POTENTIAL_OFFSET[p.potentialTier][0] || p.potential === p.strength + 4));
+            // Talente passen zur Liga: Start 4-14 unter dem Liga-Schnitt (ohne Akademie/Internat-Bonus)
+            out.ligaGerecht = youthTalents.every(p => p.strength <= p.youthLeagueBase - 4 + game.youthAcademyLvl * 3 + (campusBuildings.internat?.lvl || 0) * 2);
             const t0 = youthTalents[0];
             out.unbekannt = getYouthPotentialText(t0).includes('unbekannt');
             revealYouthPotential(t0.id);
@@ -2783,6 +2799,7 @@ async function testYouthPathway(browser) {
     assert(!r.crash, `Jugend-Laufbahn-Test ohne Absturz (${r.crash || 'ok'})`);
     if (!r.crash) {
         assert(r.potenzialEcht, 'Jedes gesichtete Talent hat ein echtes Potenzial über seiner Stärke');
+        assert(r.ligaGerecht, 'Gesichtete Talente starten unter dem Liga-Schnitt (statt fest bei Stärke 46-58)');
         assert(r.unbekannt && r.spanne, 'Potenzial ist ungeprüft unbekannt und nach der Prüfung als Spanne sichtbar');
         assert(r.grenze, 'Monatliche Entwicklung bleibt unter dem Potenzial');
         assert(r.altern && r.meldung, 'Talente altern am Saisonende; mit 19 wird eine Profivertrag-Entscheidung fällig (mit Meldung)');
@@ -2896,7 +2913,14 @@ async function testTransferMarket(browser) {
         refreshTransferMarket();
         results.loanablePlayersGenerated = loanablePlayers.length === 3;
         let loanPlayer = loanablePlayers[0];
+        // Gehaltsbudget gilt auch für Leihen (25.17)
+        game.wageBudget = 1;
         signLoanPlayer(0);
+        results.leiheBrauchtGehaltsbudget = !squad.some(p => p.id === loanPlayer.id);
+        game.wageBudget = 1e9;
+        const tbVor = game.transferBudget;
+        signLoanPlayer(0);
+        results.leiheZiehtTransferbudget = game.transferBudget === tbVor - loanPlayer.loanFee;
         results.loanPlayerInSquad = squad.some(p => p.id === loanPlayer.id);
         let loan = incomingLoans.find(l => l.playerId === loanPlayer.id);
         exerciseLoanBuyOption(loanPlayer.id);
@@ -2922,6 +2946,7 @@ async function testTransferMarket(browser) {
 
     assert(r.loanablePlayersGenerated, 'Leihmarkt generiert 3 verfügbare Spieler');
     assert(r.loanPlayerInSquad, 'Eingehende Leihe fügt Spieler korrekt zum Kader hinzu');
+    assert(r.leiheBrauchtGehaltsbudget && r.leiheZiehtTransferbudget, 'Leihen laufen über Gehalts- und Transferbudget');
     assert(r.buyOptionMakesPermanent, 'Kaufoption macht Leihspieler dauerhaft');
     assert(r.releaseClauseMinimumEnforced, 'Ausstiegsklausel erzwingt Mindestbetrag (110% Marktwert)');
     assert(r.releaseClauseSetCorrectly, 'Gültige Ausstiegsklausel wird korrekt gesetzt');
@@ -5831,6 +5856,20 @@ async function testSquadPlanningTool(browser) {
         let contractBox = document.getElementById('squad-planning-contract-box').innerHTML;
         out.vertragsklippeNachPosition = contractBox.includes(squad[0].name);
 
+        // 8. Gehaltsplanung (25.17): auslaufende Stammspieler, Bedarf gegen voraussichtliches Budget
+        const elfIds = pickBestLineupIds();
+        squad.forEach(p => { p.contracts = 3; });
+        const stamm = squad.find(p => elfIds.includes(p.id));
+        stamm.contracts = 1;
+        const o = getSquadPlanningWageOutlook();
+        renderSquadPlanningView();
+        const wageBox = document.getElementById('squad-planning-wage-box').innerHTML;
+        out.gehaltsplanung = o.stamm.length === 1 && o.stamm[0].id === stamm.id && o.verlaengerung === getContractDemand(stamm).gehalt
+            && o.bedarf === squad.filter(p => p.contracts > 1).reduce((s, p) => s + p.wage, 0) + o.verlaengerung + o.vorvertraege
+            && wageBox.includes(stamm.name) && wageBox.includes('Bedarf nächste Saison');
+        game.wageBudget = 1; game.money = 0;
+        out.gehaltsWarnung = getSquadPlanningWageOutlook().spielraum !== 0 && (() => { renderSquadPlanningView(); return document.getElementById('squad-planning-wage-box').innerHTML.includes(getSquadPlanningWageOutlook().spielraum >= 0 ? 'Spielraum' : 'über dem Budget'); })();
+
         return out;
     });
 
@@ -5847,6 +5886,7 @@ async function testSquadPlanningTool(browser) {
     assert(r.keineWarnungBeiGesundemKader, 'Ein durchgehend gesunder Kader löst gar keine Warnung aus');
     assert(r.altersverteilungHatInhalt, 'Die Alterspyramide zeigt echte, kaderabhängige Werte');
     assert(r.vertragsklippeNachPosition, 'Auslaufende Verträge werden nach Position aufgeschlüsselt angezeigt');
+    assert(r.gehaltsplanung && r.gehaltsWarnung, 'Gehaltsplanung zeigt auslaufende Stammspieler, Verlängerungskosten und Spielraum gegen das Budget');
     assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Kaderplanungstool');
     await page.close();
 }

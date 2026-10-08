@@ -1937,7 +1937,7 @@
                         <div class="box" id="youth-capacity-box">Kapazität: 0 / 5</div>
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
                             <button onclick="upgradeYouthAcademy()" id="btn-upgrade-youth-academy" class="btn-secondary">Akademie ausbauen [35.000 €]</button>
-                            <button onclick="scoutYouthTalent()" class="btn-action">🌟 Nachwuchs sichten [8.000 €]</button>
+                            <button onclick="scoutYouthTalent()" id="btn-scout-youth" class="btn-action">🌟 Nachwuchs sichten [8.000 €]</button>
                             <button onclick="expandYouthCapacity()" id="btn-expand-youth-capacity" class="btn-secondary">🏠 Kapazität erweitern</button>
                             <button onclick="holdYouthTournament()" class="btn-secondary">🏆 Jugendturnier [4.000 €]</button>
                         </div>
@@ -1995,6 +1995,10 @@
                         Führt Positionstiefe, Altersstruktur und auslaufende Verträge zusammen - eine Position kann bei jedem Wert für sich unauffällig wirken und trotzdem in Kombination zum Problem werden.
                     </div>
                     <div id="squad-planning-warnings-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">💶 GEHALTSPLANUNG NÄCHSTE SAISON</div>
+                    <div id="squad-planning-wage-box"></div>
                 </div>
                 <div class="panel">
                     <div class="panel-header">🧩 POSITIONSTIEFE, ALTER & VERTRÄGE</div>

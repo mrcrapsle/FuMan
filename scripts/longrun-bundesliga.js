@@ -7,6 +7,10 @@
 //         zieht er Jugendspieler hoch oder holt Vereinslose. Als Aufstiegskandidat (Platz <= 6)
 //         baut er die Lizenzauflagen der nächsthöheren Liga und spart dafür in den Fenstern.
 //         Sponsoren: nimmt eingetroffene Angebote an (Haupt, Ausrüster, Ärmel, Banden, Namensrechte).
+//         Mehr als 24 Spieler: verkauft in den Fenstern die schwächsten Nicht-Stammspieler (ab 21 J.).
+//         Über dem Gehaltsbudget gibt er die teuersten Nicht-Stammspieler ab (z. B. nach einem Abstieg).
+//         Tabelle: K/V = Käufe/Verkäufe der Saison, E = Platzerwartung des Vorstands,
+//         J = eigene Jugendspieler in der besten Elf / im Kader. Talente ab Kader-Median-Stärke zieht er hoch.
 // passiv: spielt nur, der Kader wird nie angefasst.
 const path = require('path');
 const fs = require('fs');
@@ -159,6 +163,17 @@ async function karriere(browser, lauf) {
                         contractTalk = null;
                         if (p.contracts > vorher) window.__vl.verlaengert++;
                     });
+                    // Talente wie ein Mensch (25.17): wer schon so stark ist wie der Kader-Median, kommt hoch.
+                    const kaderMedian = [...squad].map(p => p.strength).sort((a, b) => a - b)[Math.floor(squad.length / 2)];
+                    for (let n = 0; n < 3 && squad.length < 26; n++) {
+                        const t = youthTalents.map((p, i) => ({ p, i })).filter(x => (x.p.age || 17) >= 17 && x.p.strength >= kaderMedian)
+                            .sort((a, b) => b.p.strength - a.p.strength)[0];
+                        if (!t) break;
+                        const vorher = squad.length;
+                        promoteYouth(t.i, null);
+                        if (squad.length === vorher) promoteYouth(t.i, null);
+                        if (squad.length === vorher) break;
+                    }
                     // Kaderplanung wie ein Mensch: fehlt einer Position Tiefe (2 TW/6 ABW/6 MIT/4 ST),
                     // erst passende Jugendspieler hochziehen (kein Gehaltsbudget nötig), dann
                     // Vereinslose holen.
@@ -177,7 +192,41 @@ async function karriere(browser, lauf) {
                             if (squad.length === vorher) break;
                         }
                     });
+                    // Kader verschlanken wie ein Mensch (25.17): mehr als 24 Spieler kosten nur Gehalt -
+                    // im Wechselfenster die schwächsten Nicht-Stammspieler (keine Jugend unter 21) verkaufen.
+                    if (fenster) {
+                        window.__verk = window.__verk || 0;
+                        // Über dem Gehaltsbudget (z. B. nach einem Abstieg): teuerste Nicht-Stammspieler abgeben,
+                        // solange mindestens 18 Spieler bleiben - sonst drohen Minus und Zwangsverkäufe der Besten.
+                        for (let n = 0; n < 6 && squad.length > 18 && squad.reduce((a, p) => a + (p.wage || 0), 0) > game.wageBudget; n++) {
+                            const ids = pickBestLineupIds();
+                            const teuer = squad.filter(p => !ids.includes(p.id) && !isClubLegend(p)).sort((a, b) => b.wage - a.wage)[0];
+                            if (!teuer) break;
+                            const vorher = squad.length;
+                            sellPlayer(teuer.id, null);
+                            if (squad.length === vorher) sellPlayer(teuer.id, null);
+                            if (squad.length === vorher) break;
+                            window.__verk++;
+                        }
+                        for (let n = 0; n < 6 && squad.length > 24; n++) {
+                            const ids = pickBestLineupIds();
+                            const weg = squad.filter(p => !ids.includes(p.id) && (p.age || 25) >= 21 && !isClubLegend(p))
+                                .sort((a, b) => a.strength - b.strength)[0];
+                            if (!weg) break;
+                            const vorher = squad.length;
+                            sellPlayer(weg.id, null);
+                            if (squad.length === vorher) sellPlayer(weg.id, null); // Bestätigung
+                            if (squad.length === vorher) break;
+                            window.__verk++;
+                        }
+                    }
                     const ruecklage = lizenzRuecklage();
+                    // Nachwuchs sichten wie ein Mensch (25.17): am 1. und 18. Spieltag bis zu 2 Talente,
+                    // solange die Akademie Platz hat und die Kasse über der Rücklage bleibt.
+                    if (game.matchday === 1 || game.matchday === 18) {
+                        for (let n = 0; n < 2 && youthTalents.length < getYouthAcademyCapacity()
+                            && game.money - getYouthScoutCost() > ruecklage + getYouthScoutCost() * 10; n++) scoutYouthTalent();
+                    }
                     // Pro Wechselfenster: erst die Elf verstärken, dann den Kader auf 22 auffüllen.
                     // In der DFB-Nachfrist nichts kaufen: dort zählt nur noch die Finanzreserve.
                     for (let versuch = 0; fenster && !game.dfbGracePeriod && versuch < 6; versuch++) {
@@ -273,6 +322,7 @@ async function karriere(browser, lauf) {
                     pokal: (game.cupFinals || []).filter(f => f.season === game.season && f.won).map(f => f.comp).join('+')
                 };
                 zeile.lizenzVorEnde = checkDfbLicensingStatus().missing.join(' / ');
+                zeile.erwartet = game.seasonExpectation && game.seasonExpectation.season === game.season ? game.seasonExpectation.expectedRank : null;
                 const geldVorEnde = game.money;
                 concludeSeasonAndAdvance();
                 finSammeln();
@@ -293,6 +343,11 @@ async function karriere(browser, lauf) {
                 zeile.vl = window.__vl; window.__vl = null;
                 zeile.notkader = window.__post.some(t => t.includes('Vertragskrise'));
                 zeile.abgaenge = kaderVorher.filter(id => !squad.some(p => p.id === id)).length;
+                zeile.kaeufe = squad.filter(p => p.joined && p.joined.via === 'kauf' && p.joined.season === start.season).length;
+                zeile.verkaeufe = window.__verk || 0; window.__verk = 0;
+                const elfIds = pickBestLineupIds();
+                zeile.jugend = squad.filter(p => p.joined && p.joined.via === 'jugend').length;
+                zeile.jugendElf = squad.filter(p => p.joined && p.joined.via === 'jugend' && elfIds.includes(p.id)).length;
                 zeile.toasts = Object.entries(window.__fehlerToasts).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, v]) => v + 'x ' + k);
                 zeile.post = window.__post
                     .filter(t => /Lizenz|Aufstieg|Abstieg|Nachfrist|Vertrag|verlässt|ablösefrei|Gehaltsbudget|Rücklagen/i.test(t)).slice(0, 12);
@@ -308,7 +363,7 @@ async function karriere(browser, lauf) {
     zeilen.forEach(z => {
         if (z.crash) return console.log('ABSTURZ: ' + z.crash);
         if (z.entlassen) return console.log(`${String(z.season).padStart(3)} ENTLASSEN (Liga ${z.liga + 1})`);
-        console.log(`${String(z.season).padStart(3)} ${String(z.liga + 1).padStart(4)} ${String(z.platz).padStart(2)} ${String(z.punkte).padStart(3)} ${mio(z.geld)} ${mio(z.transfer)} ${String(Math.round(z.gehaltBudget / 1000)).padStart(7)}k ${String(Math.round(z.gehaltSumme / 1000)).padStart(5)}k ${String(z.elf).padStart(4)} ${String(z.ligaSchnitt).padStart(4)} ${String(z.ligaTop).padStart(3)} ${String(z.kader).padStart(3)} ${String(z.vorstand).padStart(3)} ${z.europaRunde ? ('CC:' + z.europaRunde).padEnd(13) : '-'.padEnd(13)} ${z.pokal ? 'Pokal ' + z.pokal : ''}${z.ligaDanach !== z.liga ? ' → Liga ' + (z.ligaDanach + 1) : ''}${z.lizenzOffen ? ` Liz-offen:${z.lizenzOffen}` : ''}${z.notkader ? ' NOTKADER' : ''}${z.entlassenAmEnde ? ' ENTLASSEN (Saisonende)' : ''}`);
+        console.log(`${String(z.season).padStart(3)} ${String(z.liga + 1).padStart(4)} ${String(z.platz).padStart(2)} ${String(z.punkte).padStart(3)} ${mio(z.geld)} ${mio(z.transfer)} ${String(Math.round(z.gehaltBudget / 1000)).padStart(7)}k ${String(Math.round(z.gehaltSumme / 1000)).padStart(5)}k ${String(z.elf).padStart(4)} ${String(z.ligaSchnitt).padStart(4)} ${String(z.ligaTop).padStart(3)} ${String(z.kader).padStart(3)} ${String(z.vorstand).padStart(3)} ${z.europaRunde ? ('CC:' + z.europaRunde).padEnd(13) : '-'.padEnd(13)} ${z.pokal ? 'Pokal ' + z.pokal : ''}${z.ligaDanach !== z.liga ? ' → Liga ' + (z.ligaDanach + 1) : ''}${z.lizenzOffen ? ` Liz-offen:${z.lizenzOffen}` : ''}${z.notkader ? ' NOTKADER' : ''}${z.entlassenAmEnde ? ' ENTLASSEN (Saisonende)' : ''}${z.kaeufe || z.verkaeufe ? ` K${z.kaeufe}/V${z.verkaeufe}` : ''}${z.erwartet ? ` E${z.erwartet}` : ''}${z.jugend ? ` J${z.jugendElf}/${z.jugend}` : ''}`);
     });
     if (process.env.DIAG) zeilen.forEach(z => { if (z.season) console.log(`\n[S${z.season}] Lizenz offen: ${z.lizenzVorEnde || '-'} | Verlängerung ${JSON.stringify(z.vl)} | Abgänge ${z.abgaenge} | Fehler: ${(z.toasts || []).join(' ; ')}\n      Post: ${(z.post || []).join(' ; ')}`); });
     if (process.env.STRDIAG) zeilen.forEach(z => { if (z.str) console.log(`[S${z.season} Liga ${z.liga + 1} Pl ${z.platz}] ${z.str}`); });

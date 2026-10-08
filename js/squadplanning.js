@@ -138,7 +138,45 @@
         box.innerHTML = warnings || '<div class="box" style="font-size:9px; color:var(--primary);">✓ Keine Position zeigt aktuell eine kombinierte Schwäche für die kommenden Saisons.</div>';
     }
 
+    // GEHALTSPLANUNG NÄCHSTE SAISON (25.17): seit das Gehaltsbudget der Liga folgt, scheitern
+    // Verlängerungen schnell am Budget - hier steht vorab, was nach der Saison frei wird, was die
+    // auslaufenden Stammspieler kosten und wie viel Luft das voraussichtliche Budget lässt.
+    function getSquadPlanningWageOutlook() {
+        const auslaufend = squad.filter(p => (p.contracts || 0) <= 1);
+        const elf = pickBestLineupIds();
+        const stamm = auslaufend.filter(p => elf.includes(p.id));
+        const verlaengerung = stamm.reduce((s, p) => s + (typeof getContractDemand === 'function' ? getContractDemand(p).gehalt : p.wage), 0);
+        const bleiben = squad.filter(p => (p.contracts || 0) > 1).reduce((s, p) => s + p.wage, 0);
+        const vorvertraege = (game.preContracts || []).reduce((s, v) => s + v.player.wage, 0);
+        const rang = typeof getOwnLeagueRank === 'function' ? getOwnLeagueRank() : null;
+        const platzFaktor = !rang ? 1 : (rang <= 4 ? 1.3 : (rang <= 10 ? 1.0 : 0.8));
+        const budget = Math.max(Math.round(getLeagueWageBudget(game.leagueLevel) * platzFaktor / 100) * 100,
+            typeof getWageBudgetFloor === 'function' ? getWageBudgetFloor() : 0);
+        const bedarf = bleiben + vorvertraege + verlaengerung;
+        return { jetzt: squad.reduce((s, p) => s + p.wage, 0), auslaufend, frei: auslaufend.reduce((s, p) => s + p.wage, 0), stamm, verlaengerung, vorvertraege, bleiben, bedarf, budget, rang, spielraum: budget - bedarf };
+    }
+
+    function renderSquadPlanningWageBox() {
+        let box = document.getElementById('squad-planning-wage-box');
+        if (!box) return;
+        if (squad.length === 0) { box.innerHTML = ''; return; }
+        const o = getSquadPlanningWageOutlook();
+        const farbe = o.spielraum >= 0 ? 'var(--primary)' : 'var(--danger)';
+        const zeile = (label, wert, extra) => `<div style="display:flex; justify-content:space-between; gap:6px;"><span style="color:var(--text-muted);">${label}</span><strong${extra || ''}>${wert}</strong></div>`;
+        box.innerHTML = `<div class="box" style="font-size:9px; border-left-color:${farbe};">
+            ${zeile('Gehälter jetzt (pro Spieltag)', `${formatVal(o.jetzt)} / Budget ${formatVal(game.wageBudget)}`)}
+            ${zeile(`Laufen aus (${o.auslaufend.length} Spieler)`, `− ${formatVal(o.frei)}`)}
+            ${zeile(`Stammspieler darunter verlängern (${o.stamm.length})`, `+ ${formatVal(o.verlaengerung)}`)}
+            ${o.vorvertraege ? zeile('Vorverträge', `+ ${formatVal(o.vorvertraege)}`) : ''}
+            ${zeile('Bedarf nächste Saison', formatVal(o.bedarf))}
+            ${zeile(`Voraussichtliches Budget${o.rang ? ` (Stand Platz ${o.rang})` : ''}`, formatVal(o.budget))}
+            <div style="margin-top:4px; font-weight:800; color:${farbe};">${o.spielraum >= 0 ? `✓ Spielraum ${formatVal(o.spielraum)} pro Spieltag` : `⚠️ ${formatVal(-o.spielraum)} pro Spieltag über dem Budget - Verlängerungen werden scheitern`}</div>
+            ${o.stamm.length ? `<div style="margin-top:3px; color:var(--text-muted);">Auslaufende Stammspieler: ${o.stamm.map(p => p.name).join(', ')}</div>` : ''}
+        </div>`;
+    }
+
     function renderSquadPlanningView() {
+        renderSquadPlanningWageBox();
         renderSquadPlanningPositionBox();
         renderSquadPlanningAgeBox();
         renderSquadPlanningContractBox();

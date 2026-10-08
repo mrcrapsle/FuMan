@@ -47,8 +47,14 @@
         if (!p) return;
         if (game.money < p.loanFee) { showToast(`Leihgebühr nicht gedeckt: ${formatVal(p.loanFee)} nötig, ${formatVal(game.money)} auf dem Konto.`, 'error', 4500); return; }
         if (squad.length >= 22) { showToast('Kader bereits voll (22 Spieler)!', 'error'); return; }
+        // Leihen laufen über dieselben Budgets wie Käufe (25.17) - vorher nur über die Kasse, eine
+        // Leihe umging so jedes Gehalts- und Transferbudget.
+        if (game.transferBudget < p.loanFee) { showToast(`Transferbudget reicht nicht für die Leihgebühr: ${formatVal(p.loanFee)} nötig, ${formatVal(game.transferBudget)} verfügbar.`, 'error', 4500); return; }
+        let lohnsumme = squad.reduce((s, pl) => s + pl.wage, 0) + (game.secondTeam && game.secondTeam.isActive ? secondTeamSquad.reduce((s, pl) => s + pl.wage, 0) : 0);
+        if (lohnsumme + p.wage > game.wageBudget) { showToast(`Gehaltsbudget reicht nicht: ${formatVal(lohnsumme + p.wage)} mit dem Leihspieler, erlaubt sind ${formatVal(game.wageBudget)}.`, 'error', 5000); return; }
         playSound('whistle');
         game.money -= p.loanFee;
+        game.transferBudget -= p.loanFee;
         p.contracts = 1;
         squad.push(p);
         incomingLoans.push({ playerId: p.id, parentClub: p.loanParentClub, matchdaysLeft: p.loanDurationMatchdays, buyOptionFee: p.loanBuyOptionFee });

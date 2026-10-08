@@ -149,9 +149,10 @@ function getCashSurplusBudgetShare() {
     };
 }
 
-// Laufende Verträge kann der Vorstand nicht kürzen: deckt das Konto eine Viertelsaison der
-// aktuellen Gehaltssumme, bleibt das Gehaltsbudget 5 % darüber - nach einer Saison mit Minus
-// (game.ffpSeasonNet, außer das Konto trägt eine ganze Saison) bei 85 % als Sparkurs.
+// Laufende Verträge kann der Vorstand nicht kürzen: solange das Konto im Plus ist, bleibt das
+// Gehaltsbudget 5 % über der aktuellen Gehaltssumme - nach einer Saison mit Minus
+// (game.ffpSeasonNet, außer das Konto trägt eine ganze Saison) ohne Zuschlag, jeweils plus
+// den Erhöhungen der anstehenden Verlängerungen (getRenewalWageBuffer, 25.17).
 // Vorher setzte die Liga/Platz-Formel einen Bundesliga-Elften auf 1,26 Mio. bei 1,5 Mio.
 // Gehältern: jede Verlängerung scheiterte, der Kader lief ablösefrei davon (Langzeittest 21.6).
 // Abstiegsklausel (25.14): seit das Gehaltsbudget der Liga folgt (2. Liga 520.000 € statt
@@ -176,9 +177,26 @@ function applyRelegationWageClause() {
 function getWageBudgetFloor() {
     const summe = squad.reduce((s, p) => s + (p.wage || 0), 0)
         + (game.secondTeam && game.secondTeam.isActive ? secondTeamSquad.reduce((s, p) => s + (p.wage || 0), 0) : 0);
-    if (game.money < summe * 34 * 0.25) return 0;
+    // 25.17: vorher galt die Untergrenze nur, wenn die Kasse eine Viertelsaison Gehälter deckte
+    // (Bundesliga ~15 Mio. €) - sonst fiel das Budget auf den Ligawert unter die laufenden
+    // Gehälter und im Langzeittest scheiterte jede einzelne Verlängerung (Notkader). Jetzt nur
+    // ohne Geld auf dem Konto keine Untergrenze; nach einer Verlustsaison bleibt es bei den laufenden Gehältern.
+    if (game.money < 0) return 0;
     const ohneVerlust = (game.ffpSeasonNet || 0) >= 0 || game.money >= summe * 34;
-    return Math.ceil(summe * (ohneVerlust ? 1.05 : 0.85) / 1000) * 1000;
+    // Nach einer Verlustsaison friert der Vorstand die Gehälter ein (kein Zuschlag), die anstehenden
+    // Verlängerungen bleiben eingeplant - der alte Sparkurs (85 %) ließ keine einzige Verlängerung zu
+    // und der Kader zerfiel (Bundesliga-Langzeittest 25.17: schon ein Kauf machte die Saison zur Verlustsaison).
+    return Math.ceil((summe * (ohneVerlust ? 1.05 : 1.0) + getRenewalWageBuffer()) / 1000) * 1000;
+}
+
+// Verlängerungspuffer (25.17): der Vorstand plant die Gehaltserhöhungen der Spieler ein, deren
+// Vertrag in der neuen Saison ausläuft (hier noch 2 Jahre - das Herunterzählen folgt erst nach
+// der Budgetrechnung). Ohne ihn scheiterten im Bundesliga-Langzeittest 12 von 17 Verlängerungen
+// am Budget (laufende Gehälter +5 %), obwohl 19 Mio. € auf dem Konto lagen - Notkader.
+function getRenewalWageBuffer() {
+    if (typeof getContractDemand !== 'function') return 0;
+    return squad.filter(p => (p.contracts || 0) === 2)
+        .reduce((s, p) => s + Math.max(0, getContractDemand(p).gehalt - (p.wage || 0)), 0);
 }
 
 function applyCashSurplusBudgets() {

@@ -2,6 +2,8 @@
     function renderYouthView() {
         renderYouthLeagueTable();
         document.getElementById('youth-lvl-disp').innerText = game.youthAcademyLvl;
+        let scoutBtn = document.getElementById('btn-scout-youth');
+        if (scoutBtn) scoutBtn.innerText = `🌟 Nachwuchs sichten [${formatVal(getYouthScoutCost())}]`;
         let list = document.getElementById('youth-talents-list');
         list.innerHTML = '';
         let capacity = getYouthAcademyCapacity();
@@ -340,16 +342,31 @@
         updateUI();
     }
 
+    // Talente richten sich nach der eigenen Liga (25.17): vorher immer Stärke 46-58 - in der 6. Liga
+    // (Kader-Median ~35) war ein 8.000-€-Talent besser als der ganze Kader, in der Bundesliga
+    // (Median ~84) nutzlos. Jetzt 4-14 Punkte unter dem Liga-Schnitt, Kosten 2 % des Transferbudgets.
+    function getYouthLeagueBase() {
+        const teams = (leaguesData[game.leagueLevel] || []).filter(t => t.name !== game.clubName);
+        return teams.length ? Math.round(teams.reduce((s, t) => s + t.strength, 0) / teams.length) : 40;
+    }
+    function getYouthScoutCost() {
+        return Math.max(2000, Math.round(getLeagueTransferBudget(game.leagueLevel) * 0.02 / 500) * 500);
+    }
+
     function scoutYouthTalent() {
         if (youthTalents.length >= getYouthAcademyCapacity()) { showToast('Jugendkader-Kapazität erreicht! Erst ausbauen oder Plätze freimachen.', 'error'); return; }
-        if (game.money < 8000) { showToast(`Nicht genug Geld! Benötigt: ${formatVal(8000)}`, 'error'); return; }
+        const kosten = getYouthScoutCost();
+        if (game.money < kosten) { showToast(`Nicht genug Geld! Benötigt: ${formatVal(kosten)}`, 'error'); return; }
         playSound('click');
-        game.money -= 8000;
+        game.money -= kosten;
         // Bugfix: das Jugendinternat bewarb "erhöht Stärke und Potenzial neuer
         // Nachwuchsspieler", wirkte sich aber bisher NUR auf eine DFB-Lizenz-Anforderung aus -
         // die eigentliche Stärke-/Potenzial-Verbesserung war nie verkabelt.
         let internatLvl = campusBuildings.internat?.lvl || 0;
-        let p = createPlayer(["TW", "ABW", "MIT", "ST"][Math.floor(Math.random()*4)], 46 + game.youthAcademyLvl * 3 + internatLvl * 2, 58 + game.youthAcademyLvl * 3 + internatLvl * 2, null, [15, 18]);
+        let basis = getYouthLeagueBase();
+        let bonus = game.youthAcademyLvl * 3 + internatLvl * 2;
+        let p = createPlayer(["TW", "ABW", "MIT", "ST"][Math.floor(Math.random()*4)], Math.max(20, basis - 14 + bonus), Math.max(24, basis - 4 + bonus), null, [15, 18]);
+        p.youthLeagueBase = basis;
         assignYouthPotentialTier(p);
         if (typeof ensureYouthPotential === 'function') ensureYouthPotential(p);
         p.youthFocus = 'allgemein';

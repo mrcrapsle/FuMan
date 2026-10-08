@@ -13,6 +13,9 @@
 //   erste Elf des Spieltags eigener Absolventen landen in game.youthMoments.
 
 const YOUTH_POTENTIAL_RANGE = { 1: [58, 68], 2: [67, 78], 3: [77, 89] };
+// Potenzial relativ zum Liga-Schnitt beim Sichten (p.youthLeagueBase, 25.17): Stufe 1 etwa
+// Liga-Niveau, Stufe 3 deutlich darüber. Ältere Talente ohne Basis nutzen die festen Spannen.
+const YOUTH_POTENTIAL_OFFSET = { 1: [-6, 2], 2: [1, 8], 3: [7, 15] };
 const YOUTH_PRO_AGE = 19;
 const YOUTH_DECISION_MATCHDAYS = 8;
 let youthLoanChoiceId = null;
@@ -21,8 +24,12 @@ function ensureYouthPotential(p) {
     if (!p) return p;
     if (!p.potentialTier && typeof assignYouthPotentialTier === 'function') assignYouthPotentialTier(p);
     if (typeof p.potential !== 'number') {
-        const [lo, hi] = YOUTH_POTENTIAL_RANGE[p.potentialTier] || [60, 72];
-        p.potential = Math.max(p.strength + 4, lo + Math.floor(Math.random() * (hi - lo + 1)));
+        let [lo, hi] = YOUTH_POTENTIAL_RANGE[p.potentialTier] || [60, 72];
+        if (typeof p.youthLeagueBase === 'number') {
+            const [a, b] = YOUTH_POTENTIAL_OFFSET[p.potentialTier] || [0, 6];
+            lo = p.youthLeagueBase + a; hi = p.youthLeagueBase + b;
+        }
+        p.potential = Math.min(95, Math.max(p.strength + 4, lo + Math.floor(Math.random() * (hi - lo + 1))));
     }
     if (typeof p.youthSeasonStart !== 'number') p.youthSeasonStart = p.strength;
     return p;
