@@ -3,6 +3,11 @@
         const months = ["August", "September", "Oktober", "November", "Dezember", "Januar", "Februar", "März", "April", "Mai"];
         let monthIdx = Math.min(9, Math.floor((game.matchday - 1) / 3.5));
         document.getElementById('cal-month-name').innerText = months[monthIdx];
+        const campNamen = { algarve: '🏖️ Trainingslager Algarve', alps: '🏔️ Höhentrainingslager Alpen', dubai: '🌴 Luxus-Camp Dubai' };
+        Object.keys(campNamen).forEach(k => {
+            const b = document.getElementById('btn-camp-' + k);
+            if (b) b.innerText = game.trainingCampSeason === game.season ? `${campNamen[k]} (diese Saison gebucht)` : `${campNamen[k]} [${formatVal(getTrainingCampCost(k))}]`;
+        });
 
         let list = document.getElementById('cal-schedule-list');
         list.innerHTML = '';
@@ -110,14 +115,24 @@
         updateUI();
     }
 
+    // Trainingslager (25.20): vorher beliebig oft buchbar, jedes Mal dauerhaft +1 (Alpen) bzw. +2 (Dubai)
+    // Stärke für den ganzen Kader zu festen 25.000/75.000 € - zehnmal Dubai = +20 für alle. Jetzt einmal
+    // pro Saison, Kosten nach Liga, die Stärke wirkt nur über den zeitlich begrenzten Lager-Bonus.
+    const TRAINING_CAMP_COSTS = { algarve: 40000, alps: 25000, dubai: 75000 };
+    function getTrainingCampCost(camp) {
+        return Math.round(TRAINING_CAMP_COSTS[camp] * (typeof leagueScaleFactor === 'function' ? leagueScaleFactor() : 1) / 1000) * 1000;
+    }
     function bookTrainingCamp(camp) {
-        let costs = { algarve: 40000, alps: 25000, dubai: 75000 };
-        if (game.money < costs[camp]) { showToast(`Vereinskonto reicht nicht: ${formatVal(costs[camp])} nötig, ${formatVal(game.money)} vorhanden.`, 'error', 4500); return; }
+        if (!TRAINING_CAMP_COSTS[camp]) return;
+        if (game.trainingCampSeason === game.season) { showToast('Ein Trainingslager pro Saison - das nächste gibt es erst in der neuen Saison.', 'error', 4500); return; }
+        const kosten = getTrainingCampCost(camp);
+        if (game.money < kosten) { showToast(`Vereinskonto reicht nicht: ${formatVal(kosten)} nötig, ${formatVal(game.money)} vorhanden.`, 'error', 4500); return; }
         playSound('goal');
-        game.money -= costs[camp];
-        if (camp === 'alps') squad.forEach(p => { p.fitness = 100; p.strength = Math.min(99, p.strength + 1); });
+        game.money -= kosten;
+        game.trainingCampSeason = game.season;
+        if (camp === 'alps') squad.forEach(p => { p.fitness = 100; });
         if (camp === 'algarve') squad.forEach(p => { p.fitness = 100; p.morale = 100; });
-        if (camp === 'dubai') squad.forEach(p => { p.fitness = 100; p.morale = 100; p.strength = Math.min(99, p.strength + 2); });
+        if (camp === 'dubai') squad.forEach(p => { p.fitness = 100; p.morale = 100; });
         addManagerXP(100);
 
         // Vertiefter Effekt: zusätzlich zum Sofort-Boost gibt's jetzt einen 5 Spieltage

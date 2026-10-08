@@ -1154,7 +1154,7 @@
                 let statMap = { torschuss: 'shooting', passspiel: 'passing', zweikampf: 'defense', tempo: 'pace', torwart: 'defense' };
                 let stat = statMap[p.individualFocus];
                 if (stat) p[stat] = Math.min(99, (p[stat] || 60) + 1);
-                p.strength = Math.min(99, p.strength + 1);
+                if (typeof grantTrainingStrength === 'function') grantTrainingStrength(p); else p.strength = Math.min(99, p.strength + 1);
                 // Ehrgeizige Spieler geben im Training noch eine Schippe drauf - kleine
                 // Zusatzchance auf einen weiteren Trainingserfolg (war bisher komplett
                 // unverkabelt, obwohl der Charakterzug längst existierte).
@@ -1171,7 +1171,7 @@
                         (weeklyDominant === 'kondition' && p.individualFocus === 'tempo');
                     if (focusMatchesWeekly && Math.random() < 0.3) {
                         if (stat) p[stat] = Math.min(99, (p[stat] || 60) + 1);
-                        p.strength = Math.min(99, p.strength + 1);
+                        if (typeof grantTrainingStrength === 'function') grantTrainingStrength(p); else p.strength = Math.min(99, p.strength + 1);
                     }
                 }
             }

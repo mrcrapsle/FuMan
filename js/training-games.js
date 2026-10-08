@@ -99,7 +99,7 @@ function finishPenaltyGame() {
             boosted = true;
         }
         if (s.goals === s.totalShots && Math.random() < 0.15) {
-            player.strength = Math.min(99, player.strength + 1);
+            if (typeof grantTrainingStrength === 'function') grantTrainingStrength(player); else player.strength = Math.min(99, player.strength + 1);
         }
     }
     game.bestPenaltyScore = Math.max(game.bestPenaltyScore || 0, s.goals);
@@ -196,7 +196,7 @@ function finishCrossingGame() {
             boosted = true;
         }
         if (s.score === maxScore && Math.random() < 0.15) {
-            player.strength = Math.min(99, player.strength + 1);
+            if (typeof grantTrainingStrength === 'function') grantTrainingStrength(player); else player.strength = Math.min(99, player.strength + 1);
         }
     }
     game.bestCrossingScore = Math.max(game.bestCrossingScore || 0, s.score);
@@ -286,7 +286,7 @@ function finishGoalkeeperGame() {
             boosted = true;
         }
         if (s.saves === s.totalShots && Math.random() < 0.15) {
-            player.strength = Math.min(99, player.strength + 1);
+            if (typeof grantTrainingStrength === 'function') grantTrainingStrength(player); else player.strength = Math.min(99, player.strength + 1);
         }
     }
     game.bestGoalkeeperScore = Math.max(game.bestGoalkeeperScore || 0, s.saves);

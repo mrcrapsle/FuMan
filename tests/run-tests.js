@@ -1748,6 +1748,46 @@ async function testRumors(browser) {
     await page.close();
 }
 
+async function testTrainingGrowthCaps(browser) {
+    console.log('\n[25.20] Stärkezuwachs aus Training begrenzt: Einzeltraining nach Alter, Trainingslager einmal pro Saison');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            const jung = squad[0], alt = squad[1];
+            jung.age = 20; alt.age = 31; jung.strength = 60; alt.strength = 60;
+            jung.trainingGains = null; alt.trainingGains = null;
+            for (let i = 0; i < 20; i++) { grantTrainingStrength(jung); grantTrainingStrength(alt); }
+            out.deckel = jung.strength === 63 && alt.strength === 60;
+            // Ganzer Kader mit Schwerpunkt über eine Saison: höchstens 3 Punkte je Spieler
+            squad.forEach(p => { p.individualFocus = 'torschuss'; p.trainingGains = null; p.staerkeStart = p.strength; });
+            game.money = 1e8;
+            for (let i = 0; i < 12; i++) { game.sackPending = false; simulateMatchdays(1); }
+            out.saison = squad.every(p => p.strength - p.staerkeStart <= getTrainingStrengthCap(p) + 1);
+            // Trainingslager: dauerhaft keine Stärke, nur einmal pro Saison, Kosten nach Liga
+            const vorher = squad.map(p => p.strength);
+            game.trainingCampSeason = null;
+            const geld = game.money;
+            bookTrainingCamp('dubai');
+            out.lager = squad.every((p, i) => p.strength === vorher[i]) && game.money === geld - getTrainingCampCost('dubai') && game.trainingCampBuff && game.trainingCampBuff.active;
+            const geld2 = game.money;
+            bookTrainingCamp('alps');
+            out.einmal = game.money === geld2;
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Trainingsdeckel ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.deckel, 'Einzeltraining: bis 21 Jahre höchstens +3 Stärke pro Saison, ab 30 keine');
+        assert(r.saison, 'Ganzer Kader mit Trainingsschwerpunkt wächst über viele Spieltage nicht über den Deckel');
+        assert(r.lager && r.einmal, 'Trainingslager: kein dauerhaftes Stärkeplus mehr, nur einmal pro Saison, Kosten nach Liga');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testSponsorRenewal(browser) {
     console.log('\n[25.19] Hauptsponsor bietet vor dem Ablauf eine Verlängerung an');
     const { page, consoleErrors } = await freshPage(browser);
@@ -8560,6 +8600,7 @@ async function main() {
         testYouthSales,
         testBookingLabels,
         testSponsorRenewal,
+        testTrainingGrowthCaps,
         testPlayerProfile,
         testHomeRegion,
         testLocalDerbies,

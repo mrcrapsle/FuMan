@@ -42,6 +42,22 @@ function agePlayer(p) {
     return p.strength - alt;
 }
 
+// Einzeltraining (25.20): jeder Spieler mit Trainingsschwerpunkt bekam an jedem Spieltag mit 15-20 %
+// +1 Gesamtstärke - mit der Co-Trainer-Automatik der ganze Kader, also ~5-7 Punkte pro Saison ohne
+// Grenze. Jetzt höchstens TRAINING_STRENGTH_CAP Punkte pro Saison, nach Alter; die Einzelwerte
+// (Torschuss, Passspiel ...) steigen weiter.
+function getTrainingStrengthCap(p) {
+    const alter = p.age || 25;
+    return alter <= 21 ? 3 : alter <= 25 ? 2 : alter <= 29 ? 1 : 0;
+}
+function grantTrainingStrength(p) {
+    if (!p.trainingGains || p.trainingGains.season !== game.season) p.trainingGains = { season: game.season, n: 0 };
+    if (p.trainingGains.n >= getTrainingStrengthCap(p) || p.strength >= 99) return false;
+    p.trainingGains.n++;
+    p.strength++;
+    return true;
+}
+
 // Saisonende: ganzer Kader (und zweite Mannschaft) wird ein Jahr älter.
 function agePlayersAtSeasonEnd() {
     const changes = squad.map(p => ({ p, delta: agePlayer(p) }));
