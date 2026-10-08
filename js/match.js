@@ -368,11 +368,14 @@
         // im direkten Duell gegen uns bemerkbar macht (siehe simulateMatchStep()).
         let oppName = isHome ? awayName : homeName;
         let oppTeamObj = leaguesData.flat().find(t => t && t.name === oppName) || null;
+        let ownTeamObj = leaguesData.flat().find(t => t && t.name === game.clubName) || null;
         currentMatch = {
             homeName, awayName,
             homeStr: isHome ? ourStrength : oppStrength,
             awayStr: isHome ? oppStrength : ourStrength,
-            ourBaseStr, isHome, oppPlaystyle: oppTeamObj ? oppTeamObj.playstyle : null,
+            ourBaseStr, isHome,
+            // Spielstile beider Teams für die erwarteten Tore (getExpectedGoals(), wie in der Simulation).
+            homeTeamObj: isHome ? ownTeamObj : oppTeamObj, awayTeamObj: isHome ? oppTeamObj : ownTeamObj,
             // Taktik-Duell (js/opponent-tactics.js): nur im Ligaspiel, Plan steht vor dem Anpfiff fest.
             oppTacticArch: (!isCup && refObj && typeof getOppTacticPlan === 'function') ? (getOppTacticPlan(oppTeamObj) || {}).arch || null : null,
             homeGoals: 0, awayGoals: 0, minute: 0,

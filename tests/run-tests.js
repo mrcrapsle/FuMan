@@ -2287,6 +2287,12 @@ async function testLexicon(browser) {
             // Die Zahlen im Eintrag müssen zu den echten Auflagen passen.
             const lizenz = LEXICON_ENTRIES.find(e => e.title === 'Lizenzauflagen').text;
             out.lizenzAktuell = [0, 1, 2].every(i => lizenz.includes(DFB_LICENSING_REQUIREMENTS[i].minCapacity.toLocaleString('de-DE') + ' Plätze'));
+            // Betriebskosten, Heimvorteil und Trait-Deckel: die Zahlen im Lexikon folgen den Konstanten
+            const betrieb = LEXICON_ENTRIES.find(e => e.title === 'Spielbetrieb & Verwaltung').text;
+            out.betriebAktuell = [0, 1, 2].every(i => betrieb.includes((LEAGUE_OPERATING_COST[i] / 1e6).toLocaleString('de-DE') + ' Mio. €'));
+            const staerke = LEXICON_ENTRIES.find(e => e.title === 'Stärke').text;
+            out.staerkeAktuell = staerke.includes('Heimvorteil +' + AI_HOME_ADVANTAGE) && staerke.includes('höchstens +' + TRAIT_BONUS_CAP)
+                && staerke.includes('daheim +' + AI_HOME_ADVANTAGE);
             // Sprung zum Bildschirm
             const knopf = [...document.querySelectorAll('#lexicon-list button')].find(b => b.getAttribute('onclick').includes('screen-transfer'));
             knopf.click();
@@ -2311,6 +2317,7 @@ async function testLexicon(browser) {
     assert(r.keinTreffer, 'Suche ohne Treffer zeigt einen Hinweis');
     assert(r.kategorie, 'Kategorie „Finanzen“ zeigt genau deren Einträge');
     assert(r.lizenzAktuell, 'Lizenz-Eintrag nennt die aktuellen Kapazitätsauflagen');
+    assert(r.betriebAktuell && r.staerkeAktuell, 'Lexikon nennt die aktuellen Betriebskosten, Heimvorteil und Trait-Deckel');
     assert(r.sprung, '„Zum Bildschirm“ öffnet den passenden Bildschirm');
     assert(r.gefiltert, 'Aus einem Bildschirm-Tipp geöffnet: nur Einträge dieses Bildschirms');
     assert(r.menueAlle, 'Über das Menü geöffnet: wieder alle Einträge');
@@ -3269,6 +3276,10 @@ async function testLeagueStats(browser) {
             const kiBenannt = scorers.filter(x => !x.own).reduce((s, x) => s + x.goals, 0);
             const heimAus = teams.every(t => t.homeRec[0] + t.homeRec[1] + t.homeRec[2] + t.awayRec[0] + t.awayRec[1] + t.awayRec[2] === t.played
                 && t.homeRec[3] + t.awayRec[3] === t.goalsFor);
+            // Heimvorteil auch zwischen KI-Teams: über alle Ligen mehr Heim- als Auswärtssiege
+            const alle = leaguesData.flat();
+            const heimSiege = alle.reduce((s, t) => s + t.homeRec[0], 0), auswSiege = alle.reduce((s, t) => s + t.awayRec[0], 0);
+            const heimvorteil = heimSiege > auswSiege * 1.1;
             const verlauf = teams.every(t => t.rankHist.length === 34 && t.rankHist.every(x => x >= 1 && x <= teams.length));
             const tabelle = sortedTable(eigeneLiga);
             const letzterPlatzStimmt = tabelle.every((t, i) => t.rankHist[33] === i + 1);
@@ -3281,7 +3292,7 @@ async function testLeagueStats(browser) {
             const kanoneEcht = kanone.club === game.clubName || (kiKanone && kanone.winner === kiKanone.name && kanone.value === kiKanone.goals + ' Tore');
             concludeSeasonAndAdvance();
             const zurueckgesetzt = leaguesData.every(l => l.every(t => (t.rankHist || []).length === 0 && (!t.star || !t.star.goals) && (!t.homeRec || t.homeRec[0] === 0)));
-            return { crash: false, ligaUnveraendert, zurueckAufEigene, anteil: kiBenannt / Math.max(1, kiTore), heimAus, verlauf, letzterPlatzStimmt,
+            return { crash: false, ligaUnveraendert, zurueckAufEigene, anteil: kiBenannt / Math.max(1, kiTore), heimAus, heimvorteil, heimSiege, auswSiege, verlauf, letzterPlatzStimmt,
                 hatScorer: html[0].includes('<table'), hatForm: html[1].includes('●'), hatHeim: html[2].includes('Heim'), hatChart: html[3].includes('<polyline'),
                 auswaertsAktiv, kanoneEcht, zurueckgesetzt, altFeld: 'seasonPointsHistory' in game };
         } catch (e) {
@@ -3291,6 +3302,7 @@ async function testLeagueStats(browser) {
 
     assert(r.crash === false, `Liga-Statistik-Test ohne Absturz (${r.crash ? r.error : 'ok'})`);
     if (!r.crash) {
+        assert(r.heimvorteil, `Heimteams gewinnen öfter als Auswärtsteams, auch KI gegen KI (${r.heimSiege}:${r.auswSiege})`);
         assert(r.ligaUnveraendert, 'Liga-Umschalter zeigt nur eine andere Liga an und ändert die eigene Liga nicht');
         assert(r.zurueckAufEigene, 'Liga-Bildschirm öffnet wieder mit der eigenen Liga');
         assert(r.anteil > 0.3 && r.anteil < 0.75, `Benannte KI-Torschützen erzielen einen plausiblen Anteil der Vereinstore (${(r.anteil * 100).toFixed(0)} %)`);
@@ -4985,9 +4997,16 @@ async function testNoNativeDialogs(browser) {
         checkSeasonEndSacking();
         const trotzErholung = game.sackPending === true;
         game.sackPending = false;
+        // Saisonziel erreicht (Meister/Aufstieg oder Erwartung): keine Entlassung trotz Tiefstwerten
+        game.seasonExpectation = Object.assign({}, game.seasonExpectation, { expectedRank: 9 });
         game.boardSat = 1;
         game.boardSatVerlauf = [1, 1, 1, 1, 1, 1, 1];
-        checkSeasonEndSacking();
+        checkSeasonEndSacking(1);
+        const alsMeister = game.sackPending === true;
+        game.sackPending = false;
+        game.boardSat = 1;
+        game.boardSatVerlauf = [1, 1, 1, 1, 1, 1, 1];
+        checkSeasonEndSacking(18);
         let mdVor = game.matchday;
         simulateMatchdays(5);
         let box = document.getElementById('app-notice');
@@ -4998,6 +5017,7 @@ async function testNoNativeDialogs(browser) {
             ausgeloest: game.sackPending === true,
             mitteDerSaisonEntlassen,
             trotzErholung,
+            alsMeister,
             spieltage: mdNach - mdVor,
             simulationGestoppt: !nochWeiter,
             meldungGanzVorn: box.innerHTML.includes('Entlassen'),
@@ -5006,6 +5026,7 @@ async function testNoNativeDialogs(browser) {
     });
 
     assert(entlassung.ausgeloest, 'Die Entlassung wird im Testszenario tatsächlich ausgelöst');
+    assert(!entlassung.alsMeister, 'Wer Meister wird, wird am Saisonende nicht entlassen');
     assert(!entlassung.mitteDerSaisonEntlassen, 'Mitten in der Saison gibt es trotz langer Serie keine Entlassung');
     assert(!entlassung.trotzErholung, 'Wer sich gegenüber vor sechs Spielen verbessert hat, wird am Saisonende nicht entlassen');
     assert(entlassung.spieltage <= 2, `Nach der Entlassung wird nicht weitersimuliert (${entlassung.spieltage} Spieltag(e))`);
@@ -7676,9 +7697,10 @@ async function testLiveMatchEngine(browser) {
         const stand = `${currentMatch.homeGoals}:${currentMatch.awayGoals}`;
         for (let i = 0; i < 5; i++) simulateMatchStep(); // nach dem Abpfiff passiert nichts mehr
         out.nachAbpfiffRuhe = `${currentMatch.homeGoals}:${currentMatch.awayGoals}` === stand;
-        // Überlegenheit über fünf weitere Auswärtsspiele (ein Einzelspiel kann 1:1 enden)
+        // Überlegenheit über zehn weitere Auswärtsspiele (ein Einzelspiel kann 1:1 enden; mit fünf
+        // reichte ein seltener Ausreißer von 3:8 für einen roten Check)
         let wir = unsere, sie = gegner;
-        for (let n = 0; n < 5; n++) {
+        for (let n = 0; n < 10; n++) {
             lineup = pickBestLineupIds();
             setupMatch('Kreisklasse FC', game.clubName, 5, false, false, null);
             stopLiveTickerAutoplay();
@@ -7686,25 +7708,32 @@ async function testLiveMatchEngine(browser) {
             while (currentMatch.minute < 90) { if (currentMatch.awaitingSetPiece) resolveSetPiece(null, true); simulateMatchStep(); }
             wir += currentMatch.awayGoals; sie += currentMatch.homeGoals;
         }
-        out.tore = `${sie}:${wir} in 6 Spielen`;
+        out.tore = `${sie}:${wir} in 11 Spielen`;
         out.dominant = wir >= 3 * Math.max(1, sie);
-        // Tor-Instinkt hilft uns auch auswärts (früher bekam dort der Gegner den Bonus)
-        let gegenMitInstinkt = 0;
-        for (let n = 0; n < 20; n++) {
+        // Livespiel = Simulation (25.12): dieselben erwarteten Tore wie getExpectedGoals(); vorher
+        // gewann der Stärkere live ~25 Prozentpunkte öfter (eigene, steilere Formel + Trait-Extras).
+        let ist = [0, 0], soll = [0, 0];
+        const N_PARITAET = 80;
+        for (let n = 0; n < N_PARITAET; n++) {
+            squad.forEach(p => { p.fitness = 100; });
             lineup = pickBestLineupIds();
-            squad.find(p => p.id === lineup[lineup.length - 1]).trait = 'Tor-Instinkt';
-            setupMatch('Kreisklasse FC', game.clubName, 5, false, false, null);
+            const gegnerStaerke = calcTeamStrength(true) - 16;
+            setupMatch(game.clubName, 'Paritaet FC', gegnerStaerke, true, false, null);
             stopLiveTickerAutoplay();
             currentMatch.halftimeShown = true;
+            const unsere = currentMatch.ourBaseStr + getTacticStyleBonus(game.tacticStyle) + getTackleHardnessBonus(game.tackleHardness) + getFormationDefBonus() * 0.6;
+            const xg = getExpectedGoals(unsere, gegnerStaerke, currentMatch.homeTeamObj, null);
+            soll[0] += xg.myXg; soll[1] += xg.oppXg;
             while (currentMatch.minute < 90) { if (currentMatch.awaitingSetPiece) resolveSetPiece(null, true); simulateMatchStep(); }
-            gegenMitInstinkt += currentMatch.homeGoals;
+            ist[0] += currentMatch.homeGoals; ist[1] += currentMatch.awayGoals;
         }
-        out.instinktGegentore = gegenMitInstinkt;
+        out.paritaet = `live ${(ist[0] / N_PARITAET).toFixed(2)}:${(ist[1] / N_PARITAET).toFixed(2)}, erwartet ${(soll[0] / N_PARITAET).toFixed(2)}:${(soll[1] / N_PARITAET).toFixed(2)}`;
+        out.paritaetOk = Math.abs(ist[0] - soll[0]) / N_PARITAET <= 0.45 && Math.abs(ist[1] - soll[1]) / N_PARITAET <= 0.35;
         return out;
     });
     assert(r.torschuetzenRichtig, `Auswärtstore werden unseren Spielern gutgeschrieben, Heimtore nicht (${r.einzel})`);
     assert(r.dominant, `Klar überlegene Mannschaft gewinnt auswärts (${r.tore})`);
-    assert(r.instinktGegentore <= 5, `Tor-Instinkt stärkt auswärts uns, nicht den Gegner (${r.instinktGegentore} Gegentore in 20 Spielen gegen Stärke 5)`);
+    assert(r.paritaetOk, `Livespiel folgt den erwarteten Toren der Simulation (${r.paritaet})`);
     assert(r.statistik && r.statistikSichtbar && r.abpfiffZeile, 'Statistik (Ballbesitz, Schüsse) passt zum Spiel und wird angezeigt');
     assert(r.vorauswahlFeldspieler, 'Auswechslung: Vorauswahl ist ein Feldspieler, nicht der Torwart');
     assert(r.wechselWirkt && r.wechselTicker, 'Auswechslung ersetzt den gewählten Spieler und ändert die Teamstärke');

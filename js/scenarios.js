@@ -10,7 +10,7 @@ const CAREER_SCENARIOS = {
         title: '🆘 Rettet den Absteiger', level: 2, seasons: 1,
         desc: 'Ein Drittligist mit zu schwachem Kader, fast leerer Kasse und müden Fans. Ziel: Klassenerhalt in der ersten Saison (auch über die Relegation).',
         setup() {
-            squad.forEach(p => { p.strength = Math.max(30, p.strength - 11); p.marketValue = calculatePlayerMarketValue(p.strength); });
+            squad.forEach(p => { p.strength = Math.max(30, p.strength - 7); p.marketValue = calculatePlayerMarketValue(p.strength); });
             game.money = 120000; game.fans = 35; game.boardSat = 45;
         },
         check(s) {
@@ -48,7 +48,12 @@ const CAREER_SCENARIOS = {
         desc: 'Ein abgestürzter Traditionsklub in der 5. Liga: großes Stadion, treue Fans, ungeduldiger Vorstand. Ziel: binnen vier Saisons zurück in die 3. Liga.',
         setup() {
             game.fans = 85; game.boardSat = 55;
+            // Erfahrener Kader eines Ex-Profiklubs (25.12: ohne ihn schaffte auch ein aktiver Bot den Weg kaum)
+            squad.forEach(p => { p.strength = Math.min(95, p.strength + 4); p.marketValue = calculatePlayerMarketValue(p.strength); });
             Object.values(stadium.blocks || {}).forEach(b => { if (b && typeof b.cap === 'number') b.cap = Math.round(b.cap * 1.6 / 50) * 50; });
+            // Das alte Profistadion hat Flutlicht - ohne scheiterte der Aufstieg aus der Regionalliga
+            // im 25.12-Test an der Lizenz, obwohl der Bot Platz 2 erreichte.
+            stadium.flutlicht = true;
         },
         check(s) {
             const jahre = game.season - s.startSeason;
@@ -64,7 +69,14 @@ const CAREER_SCENARIOS = {
         title: '🏆 Meister oder Chaos', level: 0, seasons: 1,
         desc: 'Ein Erstligist mit Starensemble und einem Vorstand, der nur eines akzeptiert. Ziel: Meisterschaft in der ersten Saison.',
         setup() {
-            squad.forEach(p => { p.strength = Math.min(95, p.strength + 3); p.marketValue = calculatePlayerMarketValue(p.strength); });
+            squad.forEach(p => { p.strength = Math.min(95, p.strength + 7); p.marketValue = calculatePlayerMarketValue(p.strength); });
+            // Starensemble: kein Rivale ist besser besetzt als die eigene Elf (+1). Im 25.12-Test lagen
+            // die stärksten KI-Klubs (95) über unserer Elf (91) - der Titel war so kaum zu holen.
+            const elf = squad.filter(p => pickBestLineupIds().includes(p.id));
+            const elfSchnitt = Math.round(elf.reduce((a, p) => a + p.strength, 0) / Math.max(1, elf.length));
+            (leaguesData[0] || []).forEach(t => {
+                if (t.name !== game.clubName && t.strength > elfSchnitt + 1) { t.strength = elfSchnitt + 1; t.baseStrength = Math.min(t.baseStrength || t.strength, t.strength); }
+            });
             game.boardSat = 55;
         },
         check(s) {

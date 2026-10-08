@@ -53,13 +53,17 @@
     // Saisonende - Zufriedenheit unter der Warnschwelle, die letzten Pflichtspiele darunter und
     // KEIN Vertrauensaufbau: liegt die Zufriedenheit über dem Wert von vor sechs Pflichtspielen,
     // bleibt der Manager. Legenden-Bonus bleibt: der Vorstand verzeiht einer Vereinslegende mehr.
-    function checkSeasonEndSacking() {
+    function checkSeasonEndSacking(myRank) {
         if (game.season <= 1) return;
         let sackThreshold = BOARD_SAT_SACK_STREAK + (game.legendStatus ? 3 : 0);
         let verlauf = game.boardSatVerlauf || [];
         let erholt = verlauf.length >= 7 && game.boardSat > verlauf[0];
         game.boardSatVerlauf = [];
-        if (game.boardSat <= BOARD_SAT_WARNING_THRESHOLD && game.lowBoardSatStreak >= sackThreshold && !erholt) {
+        // Saisonziel erreicht (Platz 1-2 oder die Erwartung): keine Entlassung - der 25.12-Langzeittest
+        // entließ einen Manager als Meister der 3. Liga, weil das Vertrauen nach zwei Abstiegen bei 13 lag.
+        let erwartet = game.seasonExpectation && game.seasonExpectation.expectedRank;
+        let zielErreicht = myRank > 0 && (myRank <= 2 || (erwartet && myRank <= erwartet));
+        if (game.boardSat <= BOARD_SAT_WARNING_THRESHOLD && game.lowBoardSatStreak >= sackThreshold && !erholt && !zielErreicht) {
             getSacked();
         }
     }
@@ -491,7 +495,7 @@
                     if (!f.played) {
                         let hTeam = leaguesData[l][f.home];
                         let aTeam = leaguesData[l][f.away];
-                        let hStr = (hTeam.name === game.clubName) ? (typeof getOwnLeagueMatchStrength === 'function' ? getOwnLeagueMatchStrength(true, aTeam) : calcTeamStrength(true)) : (aTeam.name === game.clubName ? getOpponentMatchStrength(hTeam.strength, true) : hTeam.strength);
+                        let hStr = (hTeam.name === game.clubName) ? (typeof getOwnLeagueMatchStrength === 'function' ? getOwnLeagueMatchStrength(true, aTeam) : calcTeamStrength(true)) : (aTeam.name === game.clubName ? getOpponentMatchStrength(hTeam.strength, true) : hTeam.strength + AI_HOME_ADVANTAGE);
                         let aStr = (aTeam.name === game.clubName) ? (typeof getOwnLeagueMatchStrength === 'function' ? getOwnLeagueMatchStrength(false, hTeam) : calcTeamStrength(false)) : (hTeam.name === game.clubName ? getOpponentMatchStrength(aTeam.strength, false) : aTeam.strength);
 
                         let goals = simulateGoals(hStr, aStr, hTeam, aTeam);

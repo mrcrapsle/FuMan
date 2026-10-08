@@ -105,6 +105,7 @@
             document.getElementById('ticker-log').innerHTML += `<div style="color:var(--blue); font-weight:bold;">⏸️ HALBZEITPAUSE (${currentMatch.homeGoals}:${currentMatch.awayGoals})</div>`;
             currentMatch.halftimeShown = true;
             currentMatch.awaitingHalftimeTalk = true;
+            currentMatch.carrySpan = currentMatch.minute - prevMinute; // Minuten zählen im nächsten Zug
             showHalftimeTalkModal();
             return; // dieser Schritt endet hier - Tor/Karten-Auswertung erst nach der Ansprache
         }
@@ -128,70 +129,55 @@
         // Reflexe/Stellungsspiel des Keepers auch im Alltagsgeschäft.
         if (staffMembers.twTrainer.hired) ourDefShift += 0.4 * getStaffLevelMultiplier('twTrainer');
         diff += currentMatch.isHome ? ourDefShift : -ourDefShift;
-        let goalChance = 0.35 * currentWeather.goalMult;
-        // Bugfix: bei großem Stärkegefälle entstehen in der Realität nicht nur bessere
-        // Chancenverwertung, sondern schlicht auch MEHR Torchancen pro Spielabschnitt - bisher
-        // blieb die Chance auf ein Torereignis überhaupt IMMER bei ~35%, unabhängig von der
-        // Dominanz. Das führte dazu, dass selbst krasse Übermacht (Stärke 99 vs. Kreisligist)
-        // viel zu oft 0:0 endete, weil einfach zu wenige Torereignisse pro Partie ausgelöst
-        // wurden - unabhängig davon, wer sie dann verwertet hätte.
-        goalChance += Math.min(0.25, Math.abs(diff) * 0.003);
-        // Gegner-Identität: ein offensiv eingestellter Gegner erhöht die Chance auf ein
-        // Torereignis zusätzlich, ein defensiver senkt sie.
-        if (currentMatch.oppPlaystyle) {
-            let style = getTeamPlaystyle({ playstyle: currentMatch.oppPlaystyle });
-            goalChance = Math.max(0.1, goalChance * (1 + style.goalBonus * 0.4));
-        }
-        let userFavoredProb = Math.max(0.02, Math.min(0.98, 0.5 + diff * 0.02));
-
-        if (activeLiveShout === 'brechstange') { goalChance += 0.15; userFavoredProb += (currentMatch.isHome ? 0.08 : -0.08); }
-        if (activeLiveShout === 'bus') { goalChance -= 0.12; userFavoredProb += (currentMatch.isHome ? -0.05 : 0.05); }
-        if (activeLiveShout === 'pressing') { goalChance += 0.10; }
-
-        if (underworld.activeSabotages.refBribe) { goalChance += 0.08; userFavoredProb += (currentMatch.isHome ? 0.12 : -0.12); }
-
-        let hasGoalInstinct = onPitch.some(p => p.trait === 'Tor-Instinkt');
-        let hasFkGod = onPitch.some(p => p.trait === 'Freistoß-Gott');
-        // Standards-Spezialist: erhöht generell die Chance auf Tore aus Standardsituationen
-        // (Freistöße/Ecken), unabhängig von individuellen Spieler-Eigenschaften.
-        if (staffMembers.setPieceCoach.hired) goalChance += 0.015 * getStaffLevelMultiplier('setPieceCoach');
-        // Standard-Schützen: war bisher rein kosmetisch (nur ein Icon neben dem Namen) -
-        // jetzt geben ein passsicherer Freistoß-/Eckenschütze und ein torgefährlicher
-        // Elfmeterschütze im Kader einen kleinen echten Zusatzbonus, wenn sie auf dem Platz
-        // stehen. Das macht die neue Standards-Spezialist-Automatisierung auch tatsächlich
-        // sinnvoll, statt nur die Anzeige zu ändern.
-        // Freistoß- und Elfmeterschütze wirken seit Phase 20.3 in echten Standardsituationen
-        // (js/set-pieces.js); nur Ecken laufen weiter pauschal über den Eckenschützen.
+        // Tore (25.12): dieselben erwarteten Tore wie simulateGoals() (getExpectedGoals() in
+        // js/utils.js, inkl. Spielstile), anteilig für die Minuten dieses Spielzugs ausgewürfelt.
+        // Vorher hatte das Livespiel eine eigene, steilere Rechnung (Heimanteil 0,5 + 2 % je
+        // Stärkepunkt, dazu Tor-Instinkt/Flügelflitzer/Elfmeter-Killer, die schon in
+        // calcTeamStrength() stecken): eine gleiche Paarung gewann live ~25 Prozentpunkte öfter.
+        let xg = getExpectedGoals(effHomeStr + (currentMatch.isHome ? ourDefShift : 0), effAwayStr + (currentMatch.isHome ? 0 : ourDefShift), currentMatch.homeTeamObj, currentMatch.awayTeamObj);
+        let ourXg = currentMatch.isHome ? xg.myXg : xg.oppXg;
+        let oppXg = currentMatch.isHome ? xg.oppXg : xg.myXg;
+        // Live-Extras in erwarteten Toren je 90 Minuten (nur das Livespiel kennt sie).
+        if (activeLiveShout === 'brechstange') { ourXg += 0.6; oppXg += 0.4; }
+        if (activeLiveShout === 'bus') { ourXg *= 0.6; oppXg *= 0.7; }
+        if (activeLiveShout === 'pressing') { ourXg += 0.4; oppXg += 0.25; }
+        if (underworld.activeSabotages.refBribe) { ourXg += 0.5; oppXg = Math.max(0.1, oppXg - 0.2); }
+        // Standards-Spezialist und Ecken: Freistöße/Elfmeter laufen über js/set-pieces.js.
+        if (staffMembers.setPieceCoach.hired) ourXg += 0.1 * getStaffLevelMultiplier('setPieceCoach');
         let cornerTaker = onPitch.find(p => p.id === game.cornerTakerId);
-        if (cornerTaker && cornerTaker.passing >= 75) goalChance += 0.006;
-        if (typeof getDrillMastery === 'function') goalChance += 0.008 * getDrillMastery('ecke'); // einstudierte Ecken
-        let hasPkKiller = onPitch.some(p => p.trait === 'Elfmeter-Killer' && p.pos === 'TW');
-        let hasWingSpeedster = onPitch.some(p => p.trait === 'Flügelflitzer');
+        if (cornerTaker && cornerTaker.passing >= 75) ourXg += 0.04;
+        if (typeof getDrillMastery === 'function') ourXg += 0.05 * getDrillMastery('ecke'); // einstudierte Ecken
+        // Anteil dieses Spielzugs an 90 Minuten; der Zug mit der Halbzeitpause wertet seine
+        // Minuten erst nach der Ansprache aus (carrySpan).
+        let spanMin = currentMatch.minute - prevMinute + (currentMatch.carrySpan || 0);
+        currentMatch.carrySpan = 0;
+        let anteil = spanMin / 90 * currentWeather.goalMult;
+        // Heimanteil nur noch für Ballanimation und Chancen-Zeilen.
+        let homeXg = currentMatch.isHome ? ourXg : oppXg, awayXg = currentMatch.isHome ? oppXg : ourXg;
+        let userFavoredProb = homeXg / (homeXg + awayXg);
+
+        let hasFkGod = onPitch.some(p => p.trait === 'Freistoß-Gott');
         let hasTackleMonster = onPitch.some(p => p.trait === 'Zweikampfmonster');
-        // userFavoredProb ist die Chance des HEIMteams: der Tor-Instinkt hilft uns also nur
-        // mit Vorzeichen - früher bekam bei Auswärtsspielen der Gegner den Bonus.
-        if (hasGoalInstinct) userFavoredProb += currentMatch.isHome ? 0.06 : -0.06;
-        userFavoredProb = Math.max(0.02, Math.min(0.98, userFavoredProb));
-        if (hasWingSpeedster) goalChance += 0.05;
 
         let eventHandled = false;
 
         // Standards (Elfmeter, Freistoß): unterbrechen den Spielzug und warten auf die Entscheidung.
         if (currentMatch.minute < 88 && typeof rollLiveSetPiece === 'function' && rollLiveSetPiece(currentMatch.isHome ? diff : -diff)) {
+            currentMatch.carrySpan = spanMin; // die Minuten des Spielzugs laufen im nächsten weiter
             document.getElementById('live-score').innerText = currentMatch.homeGoals + " : " + currentMatch.awayGoals;
             renderLiveMatchStats();
             return;
         }
 
-        if (Math.random() < goalChance) {
+        let ourName = currentMatch.isHome ? currentMatch.homeName : currentMatch.awayName;
+        let oppName = currentMatch.isHome ? currentMatch.awayName : currentMatch.homeName;
+        // Torereignisse dieses Zugs (Poisson wie in der Simulation), in zufälliger Reihenfolge.
+        let torEreignisse = [];
+        for (let i = poissonRandom(ourXg * anteil); i > 0; i--) torEreignisse.push(true);
+        for (let i = poissonRandom(oppXg * anteil); i > 0; i--) torEreignisse.push(false);
+        torEreignisse.sort(() => Math.random() - 0.5);
+        torEreignisse.forEach(wirTreffen => {
             eventHandled = true;
-            // userFavoredProb ist die Chance des HEIMteams (diff = Heim - Gast). Früher bekam bei
-            // Auswärtsspielen unser Spieler das Heimtor gutgeschrieben und unsere Tore liefen
-            // namenlos als "Tor für <Gast>".
-            let heimTrifft = Math.random() < userFavoredProb;
-            let wirTreffen = heimTrifft === currentMatch.isHome;
-            let ourName = currentMatch.isHome ? currentMatch.homeName : currentMatch.awayName;
-            let oppName = currentMatch.isHome ? currentMatch.awayName : currentMatch.homeName;
             let art = GOAL_STYLES[Math.floor(Math.random() * GOAL_STYLES.length)];
             // Videobeweis (js/set-pieces.js): ein Teil der Tore wird wegen Abseits zurückgenommen.
             let annulliert = typeof varOverturnsGoal === 'function' && varOverturnsGoal(wirTreffen);
@@ -206,16 +192,13 @@
                 if (hasFkGod && Math.random() < 0.3) art = 'mit einem traumhaften direkten Freistoß';
                 let scorerText = scorer ? `${scorer.name} trifft ${art}${assist ? ` (Vorlage: ${assist.name})` : ''}` : `Tor ${art}`;
                 document.getElementById('ticker-log').innerHTML += `<div style="color:var(--primary); font-weight:bold;">⚽ ${currentMatch.minute}. Min: TOR! ${scorerText} für ${ourName}!</div>`;
-            } else if (hasPkKiller && Math.random() < 0.12) {
-                recordLiveShot(!currentMatch.isHome, true);
-                document.getElementById('ticker-log').innerHTML += `<div style="color:var(--blue);">🧤 ${currentMatch.minute}. Min: GLANZPARADE! Unser Elfmeter-Killer hält überragend!</div>`;
             } else {
                 if (currentMatch.isHome) currentMatch.awayGoals++; else currentMatch.homeGoals++;
                 recordLiveShot(!currentMatch.isHome, true);
                 playSound('goal');
                 document.getElementById('ticker-log').innerHTML += `<div style="color:var(--danger);">⚽ ${currentMatch.minute}. Min: Gegentor - ${oppName} trifft ${art}.</div>`;
             }
-        }
+        });
 
         // Karten-Ereignis (unabhängig vom Tor-Ereignis dieser Runde)
         if (!eventHandled || Math.random() < 0.5) {
@@ -479,7 +462,8 @@
                 if (!f.played) {
                     let homeTeam = leaguesData[l][f.home];
                     let awayTeam = leaguesData[l][f.away];
-                    let hStr = homeTeam?.strength || 60;
+                    // Heimvorteil auch zwischen KI-Teams (25.12), sonst blieb die Heim-/Auswärtstabelle symmetrisch.
+                    let hStr = (homeTeam?.strength || 60) + AI_HOME_ADVANTAGE;
                     let aStr = awayTeam?.strength || 60;
                     let goals = simulateGoals(hStr, aStr, homeTeam, awayTeam);
                     f.homeGoals = goals.myGoals;

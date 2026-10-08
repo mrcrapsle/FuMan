@@ -136,25 +136,32 @@ function compareTableRows(a, b) {
     // Wichtig: Die Torerwartung des schwächeren Teams SINKT mit wachsendem Rückstand
     // (statt wie zuvor konstant bei einem Zufalls-Sockel zu bleiben) - so schlägt sich
     // eine starke Verteidigung/Torwart auch tatsächlich in weniger Gegentoren nieder.
-    function simulateGoals(myStr, oppStr, myTeam = null, oppTeam = null) {
+    // Es ist EINE Formel für die erwarteten Tore - simulateGoals() würfelt sie aus, das Livespiel
+    // (simulateMatchStep() in js/match-live.js) verteilt sie über die Spielzüge (25.12: vorher
+    // hatte das Livespiel eine eigene, viel steilere Rechnung und der Stärkere gewann live
+    // ~25 Prozentpunkte öfter als in der Simulation).
+    function getExpectedGoals(myStr, oppStr, myTeam = null, oppTeam = null) {
         let diff = myStr - oppStr;
         let myXg = Math.max(0.15, Math.min(5.5, 1.35 + diff * 0.045));
         let oppXg = Math.max(0.15, Math.min(5.5, 1.35 - diff * 0.045));
         // Gegner-Identität: Offensiv-/Defensiv-/Konter-Spielstile verschieben die
-        // erwarteten Tore beider Teams tatsächlich, statt dass jedes KI-Team bis auf seine
-        // Stärke identisch spielt.
+        // erwarteten Tore beider Teams. concedeBonus > 0 = kassiert mehr (offensiv),
+        // < 0 = steht hinten sicherer (defensiv) - bis 25.12 wirkte das Vorzeichen verkehrt.
         if (myTeam) {
             let style = getTeamPlaystyle(myTeam);
             myXg *= (1 + style.goalBonus);
-            oppXg *= (1 - style.concedeBonus);
+            oppXg *= (1 + style.concedeBonus);
         }
         if (oppTeam) {
             let style = getTeamPlaystyle(oppTeam);
             oppXg *= (1 + style.goalBonus);
-            myXg *= (1 - style.concedeBonus);
+            myXg *= (1 + style.concedeBonus);
         }
-        myXg = Math.max(0.1, myXg);
-        oppXg = Math.max(0.1, oppXg);
-        return { myGoals: poissonRandom(myXg), oppGoals: poissonRandom(oppXg) };
+        return { myXg: Math.max(0.1, myXg), oppXg: Math.max(0.1, oppXg) };
+    }
+
+    function simulateGoals(myStr, oppStr, myTeam = null, oppTeam = null) {
+        let xg = getExpectedGoals(myStr, oppStr, myTeam, oppTeam);
+        return { myGoals: poissonRandom(xg.myXg), oppGoals: poissonRandom(xg.oppXg) };
     }
 

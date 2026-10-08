@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.82', date: '08.10.2026', features: 'Phase 25.11: Heimvorteil auch für Gegner, Trait-Boni zusammen höchstens +3' };
+    const GAME_VERSION = { number: '3.83', date: '08.10.2026', features: 'Phase 25.12: Livespiel = Simulation, KI-Heimvorteil, Szenarien neu justiert' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

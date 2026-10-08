@@ -67,6 +67,9 @@ function rollLiveSetPiece(ourDiff) {
     if (!onPitch.length) return false;
     const elfmeterUns = Math.max(0.008, Math.min(0.04, SET_PIECE_PENALTY_BASE * (1 + ourDiff * 0.03)));
     const elfmeterGegner = Math.max(0.008, Math.min(0.04, SET_PIECE_PENALTY_BASE * (1 - ourDiff * 0.03)));
+    // Auch der Gegner bekommt Freistöße (25.12) - vorher gab es sie nur für uns.
+    const freistossUns = SET_PIECE_FREEKICK_CHANCE * (ourDiff > -8 ? 1 : 0.5);
+    const freistossGegner = SET_PIECE_FREEKICK_CHANCE * (ourDiff < 8 ? 1 : 0.5);
     const wurf = Math.random();
     if (wurf < elfmeterUns) {
         const gefoult = onPitch[Math.floor(Math.random() * onPitch.length)];
@@ -76,9 +79,12 @@ function rollLiveSetPiece(ourDiff) {
     } else if (wurf < elfmeterUns + elfmeterGegner) {
         playOpponentPenalty();
         return true;
-    } else if (wurf < elfmeterUns + elfmeterGegner + SET_PIECE_FREEKICK_CHANCE * (ourDiff > -8 ? 1 : 0.5)) {
+    } else if (wurf < elfmeterUns + elfmeterGegner + freistossUns) {
         currentMatch.setPiece = { type: 'freistoss', minute: currentMatch.minute };
         tickerLine(`<div style="color:var(--gold);">🎯 ${currentMatch.minute}. Min: Freistoß in aussichtsreicher Position, 20 Meter vor dem Tor!</div>`);
+    } else if (wurf < elfmeterUns + elfmeterGegner + freistossUns + freistossGegner) {
+        playOpponentFreeKick();
+        return true;
     } else {
         return false;
     }
@@ -122,6 +128,22 @@ function playOpponentPenalty() {
     } else {
         tickerLine(`<div style="color:var(--blue); font-weight:bold;">🧤 ${currentMatch.minute}. Min: GEHALTEN! ${keeper ? keeper.name : 'Unser Torwart'} pariert den Elfmeter!</div>`);
         if (keeper) keeper.morale = Math.min(100, (keeper.morale || 50) + 5);
+    }
+    refreshLiveScore();
+}
+
+// Gegnerischer Freistoß: läuft ohne Entscheidung, Trefferchance wie ein durchschnittlicher
+// eigener Freistoß; ein einstudierter Torwart (Torwarttrainer) hält öfter.
+function playOpponentFreeKick() {
+    const oppName = currentMatch.isHome ? currentMatch.awayName : currentMatch.homeName;
+    const prob = 0.08 - (staffMembers.twTrainer && staffMembers.twTrainer.hired ? 0.02 : 0);
+    if (Math.random() < prob) {
+        if (currentMatch.isHome) currentMatch.awayGoals++; else currentMatch.homeGoals++;
+        if (typeof recordLiveShot === 'function') recordLiveShot(!currentMatch.isHome, true);
+        playSound('goal');
+        tickerLine(`<div style="color:var(--danger);">⚽ ${currentMatch.minute}. Min: Freistoß für ${oppName} - direkt verwandelt.</div>`);
+    } else {
+        tickerLine(`<div style="color:#64748b; font-size:10px;">${currentMatch.minute}. Min: Freistoß für ${oppName} - die Mauer steht.</div>`);
     }
     refreshLiveScore();
 }

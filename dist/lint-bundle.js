@@ -221,26 +221,33 @@ function compareTableRows(a, b) {
     // Wichtig: Die Torerwartung des schwächeren Teams SINKT mit wachsendem Rückstand
     // (statt wie zuvor konstant bei einem Zufalls-Sockel zu bleiben) - so schlägt sich
     // eine starke Verteidigung/Torwart auch tatsächlich in weniger Gegentoren nieder.
-    function simulateGoals(myStr, oppStr, myTeam = null, oppTeam = null) {
+    // Es ist EINE Formel für die erwarteten Tore - simulateGoals() würfelt sie aus, das Livespiel
+    // (simulateMatchStep() in js/match-live.js) verteilt sie über die Spielzüge (25.12: vorher
+    // hatte das Livespiel eine eigene, viel steilere Rechnung und der Stärkere gewann live
+    // ~25 Prozentpunkte öfter als in der Simulation).
+    function getExpectedGoals(myStr, oppStr, myTeam = null, oppTeam = null) {
         let diff = myStr - oppStr;
         let myXg = Math.max(0.15, Math.min(5.5, 1.35 + diff * 0.045));
         let oppXg = Math.max(0.15, Math.min(5.5, 1.35 - diff * 0.045));
         // Gegner-Identität: Offensiv-/Defensiv-/Konter-Spielstile verschieben die
-        // erwarteten Tore beider Teams tatsächlich, statt dass jedes KI-Team bis auf seine
-        // Stärke identisch spielt.
+        // erwarteten Tore beider Teams. concedeBonus > 0 = kassiert mehr (offensiv),
+        // < 0 = steht hinten sicherer (defensiv) - bis 25.12 wirkte das Vorzeichen verkehrt.
         if (myTeam) {
             let style = getTeamPlaystyle(myTeam);
             myXg *= (1 + style.goalBonus);
-            oppXg *= (1 - style.concedeBonus);
+            oppXg *= (1 + style.concedeBonus);
         }
         if (oppTeam) {
             let style = getTeamPlaystyle(oppTeam);
             oppXg *= (1 + style.goalBonus);
-            myXg *= (1 - style.concedeBonus);
+            myXg *= (1 + style.concedeBonus);
         }
-        myXg = Math.max(0.1, myXg);
-        oppXg = Math.max(0.1, oppXg);
-        return { myGoals: poissonRandom(myXg), oppGoals: poissonRandom(oppXg) };
+        return { myXg: Math.max(0.1, myXg), oppXg: Math.max(0.1, oppXg) };
+    }
+
+    function simulateGoals(myStr, oppStr, myTeam = null, oppTeam = null) {
+        let xg = getExpectedGoals(myStr, oppStr, myTeam, oppTeam);
+        return { myGoals: poissonRandom(xg.myXg), oppGoals: poissonRandom(xg.oppXg) };
     }
 
 
@@ -484,7 +491,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.82', date: '08.10.2026', features: 'Phase 25.11: Heimvorteil auch für Gegner, Trait-Boni zusammen höchstens +3' };
+    const GAME_VERSION = { number: '3.83', date: '08.10.2026', features: 'Phase 25.12: Livespiel = Simulation, KI-Heimvorteil, Szenarien neu justiert' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -4753,7 +4760,7 @@ const CAREER_SCENARIOS = {
         title: '🆘 Rettet den Absteiger', level: 2, seasons: 1,
         desc: 'Ein Drittligist mit zu schwachem Kader, fast leerer Kasse und müden Fans. Ziel: Klassenerhalt in der ersten Saison (auch über die Relegation).',
         setup() {
-            squad.forEach(p => { p.strength = Math.max(30, p.strength - 11); p.marketValue = calculatePlayerMarketValue(p.strength); });
+            squad.forEach(p => { p.strength = Math.max(30, p.strength - 7); p.marketValue = calculatePlayerMarketValue(p.strength); });
             game.money = 120000; game.fans = 35; game.boardSat = 45;
         },
         check(s) {
@@ -4791,7 +4798,12 @@ const CAREER_SCENARIOS = {
         desc: 'Ein abgestürzter Traditionsklub in der 5. Liga: großes Stadion, treue Fans, ungeduldiger Vorstand. Ziel: binnen vier Saisons zurück in die 3. Liga.',
         setup() {
             game.fans = 85; game.boardSat = 55;
+            // Erfahrener Kader eines Ex-Profiklubs (25.12: ohne ihn schaffte auch ein aktiver Bot den Weg kaum)
+            squad.forEach(p => { p.strength = Math.min(95, p.strength + 4); p.marketValue = calculatePlayerMarketValue(p.strength); });
             Object.values(stadium.blocks || {}).forEach(b => { if (b && typeof b.cap === 'number') b.cap = Math.round(b.cap * 1.6 / 50) * 50; });
+            // Das alte Profistadion hat Flutlicht - ohne scheiterte der Aufstieg aus der Regionalliga
+            // im 25.12-Test an der Lizenz, obwohl der Bot Platz 2 erreichte.
+            stadium.flutlicht = true;
         },
         check(s) {
             const jahre = game.season - s.startSeason;
@@ -4807,7 +4819,14 @@ const CAREER_SCENARIOS = {
         title: '🏆 Meister oder Chaos', level: 0, seasons: 1,
         desc: 'Ein Erstligist mit Starensemble und einem Vorstand, der nur eines akzeptiert. Ziel: Meisterschaft in der ersten Saison.',
         setup() {
-            squad.forEach(p => { p.strength = Math.min(95, p.strength + 3); p.marketValue = calculatePlayerMarketValue(p.strength); });
+            squad.forEach(p => { p.strength = Math.min(95, p.strength + 7); p.marketValue = calculatePlayerMarketValue(p.strength); });
+            // Starensemble: kein Rivale ist besser besetzt als die eigene Elf (+1). Im 25.12-Test lagen
+            // die stärksten KI-Klubs (95) über unserer Elf (91) - der Titel war so kaum zu holen.
+            const elf = squad.filter(p => pickBestLineupIds().includes(p.id));
+            const elfSchnitt = Math.round(elf.reduce((a, p) => a + p.strength, 0) / Math.max(1, elf.length));
+            (leaguesData[0] || []).forEach(t => {
+                if (t.name !== game.clubName && t.strength > elfSchnitt + 1) { t.strength = elfSchnitt + 1; t.baseStrength = Math.min(t.baseStrength || t.strength, t.strength); }
+            });
             game.boardSat = 55;
         },
         check(s) {
@@ -21463,6 +21482,9 @@ function rollLiveSetPiece(ourDiff) {
     if (!onPitch.length) return false;
     const elfmeterUns = Math.max(0.008, Math.min(0.04, SET_PIECE_PENALTY_BASE * (1 + ourDiff * 0.03)));
     const elfmeterGegner = Math.max(0.008, Math.min(0.04, SET_PIECE_PENALTY_BASE * (1 - ourDiff * 0.03)));
+    // Auch der Gegner bekommt Freistöße (25.12) - vorher gab es sie nur für uns.
+    const freistossUns = SET_PIECE_FREEKICK_CHANCE * (ourDiff > -8 ? 1 : 0.5);
+    const freistossGegner = SET_PIECE_FREEKICK_CHANCE * (ourDiff < 8 ? 1 : 0.5);
     const wurf = Math.random();
     if (wurf < elfmeterUns) {
         const gefoult = onPitch[Math.floor(Math.random() * onPitch.length)];
@@ -21472,9 +21494,12 @@ function rollLiveSetPiece(ourDiff) {
     } else if (wurf < elfmeterUns + elfmeterGegner) {
         playOpponentPenalty();
         return true;
-    } else if (wurf < elfmeterUns + elfmeterGegner + SET_PIECE_FREEKICK_CHANCE * (ourDiff > -8 ? 1 : 0.5)) {
+    } else if (wurf < elfmeterUns + elfmeterGegner + freistossUns) {
         currentMatch.setPiece = { type: 'freistoss', minute: currentMatch.minute };
         tickerLine(`<div style="color:var(--gold);">🎯 ${currentMatch.minute}. Min: Freistoß in aussichtsreicher Position, 20 Meter vor dem Tor!</div>`);
+    } else if (wurf < elfmeterUns + elfmeterGegner + freistossUns + freistossGegner) {
+        playOpponentFreeKick();
+        return true;
     } else {
         return false;
     }
@@ -21518,6 +21543,22 @@ function playOpponentPenalty() {
     } else {
         tickerLine(`<div style="color:var(--blue); font-weight:bold;">🧤 ${currentMatch.minute}. Min: GEHALTEN! ${keeper ? keeper.name : 'Unser Torwart'} pariert den Elfmeter!</div>`);
         if (keeper) keeper.morale = Math.min(100, (keeper.morale || 50) + 5);
+    }
+    refreshLiveScore();
+}
+
+// Gegnerischer Freistoß: läuft ohne Entscheidung, Trefferchance wie ein durchschnittlicher
+// eigener Freistoß; ein einstudierter Torwart (Torwarttrainer) hält öfter.
+function playOpponentFreeKick() {
+    const oppName = currentMatch.isHome ? currentMatch.awayName : currentMatch.homeName;
+    const prob = 0.08 - (staffMembers.twTrainer && staffMembers.twTrainer.hired ? 0.02 : 0);
+    if (Math.random() < prob) {
+        if (currentMatch.isHome) currentMatch.awayGoals++; else currentMatch.homeGoals++;
+        if (typeof recordLiveShot === 'function') recordLiveShot(!currentMatch.isHome, true);
+        playSound('goal');
+        tickerLine(`<div style="color:var(--danger);">⚽ ${currentMatch.minute}. Min: Freistoß für ${oppName} - direkt verwandelt.</div>`);
+    } else {
+        tickerLine(`<div style="color:#64748b; font-size:10px;">${currentMatch.minute}. Min: Freistoß für ${oppName} - die Mauer steht.</div>`);
     }
     refreshLiveScore();
 }
@@ -25051,11 +25092,14 @@ function cleanupLegacyScoutState() {
         // im direkten Duell gegen uns bemerkbar macht (siehe simulateMatchStep()).
         let oppName = isHome ? awayName : homeName;
         let oppTeamObj = leaguesData.flat().find(t => t && t.name === oppName) || null;
+        let ownTeamObj = leaguesData.flat().find(t => t && t.name === game.clubName) || null;
         currentMatch = {
             homeName, awayName,
             homeStr: isHome ? ourStrength : oppStrength,
             awayStr: isHome ? oppStrength : ourStrength,
-            ourBaseStr, isHome, oppPlaystyle: oppTeamObj ? oppTeamObj.playstyle : null,
+            ourBaseStr, isHome,
+            // Spielstile beider Teams für die erwarteten Tore (getExpectedGoals(), wie in der Simulation).
+            homeTeamObj: isHome ? ownTeamObj : oppTeamObj, awayTeamObj: isHome ? oppTeamObj : ownTeamObj,
             // Taktik-Duell (js/opponent-tactics.js): nur im Ligaspiel, Plan steht vor dem Anpfiff fest.
             oppTacticArch: (!isCup && refObj && typeof getOppTacticPlan === 'function') ? (getOppTacticPlan(oppTeamObj) || {}).arch || null : null,
             homeGoals: 0, awayGoals: 0, minute: 0,
@@ -25399,6 +25443,7 @@ function cleanupLegacyScoutState() {
             document.getElementById('ticker-log').innerHTML += `<div style="color:var(--blue); font-weight:bold;">⏸️ HALBZEITPAUSE (${currentMatch.homeGoals}:${currentMatch.awayGoals})</div>`;
             currentMatch.halftimeShown = true;
             currentMatch.awaitingHalftimeTalk = true;
+            currentMatch.carrySpan = currentMatch.minute - prevMinute; // Minuten zählen im nächsten Zug
             showHalftimeTalkModal();
             return; // dieser Schritt endet hier - Tor/Karten-Auswertung erst nach der Ansprache
         }
@@ -25422,70 +25467,55 @@ function cleanupLegacyScoutState() {
         // Reflexe/Stellungsspiel des Keepers auch im Alltagsgeschäft.
         if (staffMembers.twTrainer.hired) ourDefShift += 0.4 * getStaffLevelMultiplier('twTrainer');
         diff += currentMatch.isHome ? ourDefShift : -ourDefShift;
-        let goalChance = 0.35 * currentWeather.goalMult;
-        // Bugfix: bei großem Stärkegefälle entstehen in der Realität nicht nur bessere
-        // Chancenverwertung, sondern schlicht auch MEHR Torchancen pro Spielabschnitt - bisher
-        // blieb die Chance auf ein Torereignis überhaupt IMMER bei ~35%, unabhängig von der
-        // Dominanz. Das führte dazu, dass selbst krasse Übermacht (Stärke 99 vs. Kreisligist)
-        // viel zu oft 0:0 endete, weil einfach zu wenige Torereignisse pro Partie ausgelöst
-        // wurden - unabhängig davon, wer sie dann verwertet hätte.
-        goalChance += Math.min(0.25, Math.abs(diff) * 0.003);
-        // Gegner-Identität: ein offensiv eingestellter Gegner erhöht die Chance auf ein
-        // Torereignis zusätzlich, ein defensiver senkt sie.
-        if (currentMatch.oppPlaystyle) {
-            let style = getTeamPlaystyle({ playstyle: currentMatch.oppPlaystyle });
-            goalChance = Math.max(0.1, goalChance * (1 + style.goalBonus * 0.4));
-        }
-        let userFavoredProb = Math.max(0.02, Math.min(0.98, 0.5 + diff * 0.02));
-
-        if (activeLiveShout === 'brechstange') { goalChance += 0.15; userFavoredProb += (currentMatch.isHome ? 0.08 : -0.08); }
-        if (activeLiveShout === 'bus') { goalChance -= 0.12; userFavoredProb += (currentMatch.isHome ? -0.05 : 0.05); }
-        if (activeLiveShout === 'pressing') { goalChance += 0.10; }
-
-        if (underworld.activeSabotages.refBribe) { goalChance += 0.08; userFavoredProb += (currentMatch.isHome ? 0.12 : -0.12); }
-
-        let hasGoalInstinct = onPitch.some(p => p.trait === 'Tor-Instinkt');
-        let hasFkGod = onPitch.some(p => p.trait === 'Freistoß-Gott');
-        // Standards-Spezialist: erhöht generell die Chance auf Tore aus Standardsituationen
-        // (Freistöße/Ecken), unabhängig von individuellen Spieler-Eigenschaften.
-        if (staffMembers.setPieceCoach.hired) goalChance += 0.015 * getStaffLevelMultiplier('setPieceCoach');
-        // Standard-Schützen: war bisher rein kosmetisch (nur ein Icon neben dem Namen) -
-        // jetzt geben ein passsicherer Freistoß-/Eckenschütze und ein torgefährlicher
-        // Elfmeterschütze im Kader einen kleinen echten Zusatzbonus, wenn sie auf dem Platz
-        // stehen. Das macht die neue Standards-Spezialist-Automatisierung auch tatsächlich
-        // sinnvoll, statt nur die Anzeige zu ändern.
-        // Freistoß- und Elfmeterschütze wirken seit Phase 20.3 in echten Standardsituationen
-        // (js/set-pieces.js); nur Ecken laufen weiter pauschal über den Eckenschützen.
+        // Tore (25.12): dieselben erwarteten Tore wie simulateGoals() (getExpectedGoals() in
+        // js/utils.js, inkl. Spielstile), anteilig für die Minuten dieses Spielzugs ausgewürfelt.
+        // Vorher hatte das Livespiel eine eigene, steilere Rechnung (Heimanteil 0,5 + 2 % je
+        // Stärkepunkt, dazu Tor-Instinkt/Flügelflitzer/Elfmeter-Killer, die schon in
+        // calcTeamStrength() stecken): eine gleiche Paarung gewann live ~25 Prozentpunkte öfter.
+        let xg = getExpectedGoals(effHomeStr + (currentMatch.isHome ? ourDefShift : 0), effAwayStr + (currentMatch.isHome ? 0 : ourDefShift), currentMatch.homeTeamObj, currentMatch.awayTeamObj);
+        let ourXg = currentMatch.isHome ? xg.myXg : xg.oppXg;
+        let oppXg = currentMatch.isHome ? xg.oppXg : xg.myXg;
+        // Live-Extras in erwarteten Toren je 90 Minuten (nur das Livespiel kennt sie).
+        if (activeLiveShout === 'brechstange') { ourXg += 0.6; oppXg += 0.4; }
+        if (activeLiveShout === 'bus') { ourXg *= 0.6; oppXg *= 0.7; }
+        if (activeLiveShout === 'pressing') { ourXg += 0.4; oppXg += 0.25; }
+        if (underworld.activeSabotages.refBribe) { ourXg += 0.5; oppXg = Math.max(0.1, oppXg - 0.2); }
+        // Standards-Spezialist und Ecken: Freistöße/Elfmeter laufen über js/set-pieces.js.
+        if (staffMembers.setPieceCoach.hired) ourXg += 0.1 * getStaffLevelMultiplier('setPieceCoach');
         let cornerTaker = onPitch.find(p => p.id === game.cornerTakerId);
-        if (cornerTaker && cornerTaker.passing >= 75) goalChance += 0.006;
-        if (typeof getDrillMastery === 'function') goalChance += 0.008 * getDrillMastery('ecke'); // einstudierte Ecken
-        let hasPkKiller = onPitch.some(p => p.trait === 'Elfmeter-Killer' && p.pos === 'TW');
-        let hasWingSpeedster = onPitch.some(p => p.trait === 'Flügelflitzer');
+        if (cornerTaker && cornerTaker.passing >= 75) ourXg += 0.04;
+        if (typeof getDrillMastery === 'function') ourXg += 0.05 * getDrillMastery('ecke'); // einstudierte Ecken
+        // Anteil dieses Spielzugs an 90 Minuten; der Zug mit der Halbzeitpause wertet seine
+        // Minuten erst nach der Ansprache aus (carrySpan).
+        let spanMin = currentMatch.minute - prevMinute + (currentMatch.carrySpan || 0);
+        currentMatch.carrySpan = 0;
+        let anteil = spanMin / 90 * currentWeather.goalMult;
+        // Heimanteil nur noch für Ballanimation und Chancen-Zeilen.
+        let homeXg = currentMatch.isHome ? ourXg : oppXg, awayXg = currentMatch.isHome ? oppXg : ourXg;
+        let userFavoredProb = homeXg / (homeXg + awayXg);
+
+        let hasFkGod = onPitch.some(p => p.trait === 'Freistoß-Gott');
         let hasTackleMonster = onPitch.some(p => p.trait === 'Zweikampfmonster');
-        // userFavoredProb ist die Chance des HEIMteams: der Tor-Instinkt hilft uns also nur
-        // mit Vorzeichen - früher bekam bei Auswärtsspielen der Gegner den Bonus.
-        if (hasGoalInstinct) userFavoredProb += currentMatch.isHome ? 0.06 : -0.06;
-        userFavoredProb = Math.max(0.02, Math.min(0.98, userFavoredProb));
-        if (hasWingSpeedster) goalChance += 0.05;
 
         let eventHandled = false;
 
         // Standards (Elfmeter, Freistoß): unterbrechen den Spielzug und warten auf die Entscheidung.
         if (currentMatch.minute < 88 && typeof rollLiveSetPiece === 'function' && rollLiveSetPiece(currentMatch.isHome ? diff : -diff)) {
+            currentMatch.carrySpan = spanMin; // die Minuten des Spielzugs laufen im nächsten weiter
             document.getElementById('live-score').innerText = currentMatch.homeGoals + " : " + currentMatch.awayGoals;
             renderLiveMatchStats();
             return;
         }
 
-        if (Math.random() < goalChance) {
+        let ourName = currentMatch.isHome ? currentMatch.homeName : currentMatch.awayName;
+        let oppName = currentMatch.isHome ? currentMatch.awayName : currentMatch.homeName;
+        // Torereignisse dieses Zugs (Poisson wie in der Simulation), in zufälliger Reihenfolge.
+        let torEreignisse = [];
+        for (let i = poissonRandom(ourXg * anteil); i > 0; i--) torEreignisse.push(true);
+        for (let i = poissonRandom(oppXg * anteil); i > 0; i--) torEreignisse.push(false);
+        torEreignisse.sort(() => Math.random() - 0.5);
+        torEreignisse.forEach(wirTreffen => {
             eventHandled = true;
-            // userFavoredProb ist die Chance des HEIMteams (diff = Heim - Gast). Früher bekam bei
-            // Auswärtsspielen unser Spieler das Heimtor gutgeschrieben und unsere Tore liefen
-            // namenlos als "Tor für <Gast>".
-            let heimTrifft = Math.random() < userFavoredProb;
-            let wirTreffen = heimTrifft === currentMatch.isHome;
-            let ourName = currentMatch.isHome ? currentMatch.homeName : currentMatch.awayName;
-            let oppName = currentMatch.isHome ? currentMatch.awayName : currentMatch.homeName;
             let art = GOAL_STYLES[Math.floor(Math.random() * GOAL_STYLES.length)];
             // Videobeweis (js/set-pieces.js): ein Teil der Tore wird wegen Abseits zurückgenommen.
             let annulliert = typeof varOverturnsGoal === 'function' && varOverturnsGoal(wirTreffen);
@@ -25500,16 +25530,13 @@ function cleanupLegacyScoutState() {
                 if (hasFkGod && Math.random() < 0.3) art = 'mit einem traumhaften direkten Freistoß';
                 let scorerText = scorer ? `${scorer.name} trifft ${art}${assist ? ` (Vorlage: ${assist.name})` : ''}` : `Tor ${art}`;
                 document.getElementById('ticker-log').innerHTML += `<div style="color:var(--primary); font-weight:bold;">⚽ ${currentMatch.minute}. Min: TOR! ${scorerText} für ${ourName}!</div>`;
-            } else if (hasPkKiller && Math.random() < 0.12) {
-                recordLiveShot(!currentMatch.isHome, true);
-                document.getElementById('ticker-log').innerHTML += `<div style="color:var(--blue);">🧤 ${currentMatch.minute}. Min: GLANZPARADE! Unser Elfmeter-Killer hält überragend!</div>`;
             } else {
                 if (currentMatch.isHome) currentMatch.awayGoals++; else currentMatch.homeGoals++;
                 recordLiveShot(!currentMatch.isHome, true);
                 playSound('goal');
                 document.getElementById('ticker-log').innerHTML += `<div style="color:var(--danger);">⚽ ${currentMatch.minute}. Min: Gegentor - ${oppName} trifft ${art}.</div>`;
             }
-        }
+        });
 
         // Karten-Ereignis (unabhängig vom Tor-Ereignis dieser Runde)
         if (!eventHandled || Math.random() < 0.5) {
@@ -25773,7 +25800,8 @@ function cleanupLegacyScoutState() {
                 if (!f.played) {
                     let homeTeam = leaguesData[l][f.home];
                     let awayTeam = leaguesData[l][f.away];
-                    let hStr = homeTeam?.strength || 60;
+                    // Heimvorteil auch zwischen KI-Teams (25.12), sonst blieb die Heim-/Auswärtstabelle symmetrisch.
+                    let hStr = (homeTeam?.strength || 60) + AI_HOME_ADVANTAGE;
                     let aStr = awayTeam?.strength || 60;
                     let goals = simulateGoals(hStr, aStr, homeTeam, awayTeam);
                     f.homeGoals = goals.myGoals;
@@ -26824,13 +26852,17 @@ function cleanupLegacyScoutState() {
     // Saisonende - Zufriedenheit unter der Warnschwelle, die letzten Pflichtspiele darunter und
     // KEIN Vertrauensaufbau: liegt die Zufriedenheit über dem Wert von vor sechs Pflichtspielen,
     // bleibt der Manager. Legenden-Bonus bleibt: der Vorstand verzeiht einer Vereinslegende mehr.
-    function checkSeasonEndSacking() {
+    function checkSeasonEndSacking(myRank) {
         if (game.season <= 1) return;
         let sackThreshold = BOARD_SAT_SACK_STREAK + (game.legendStatus ? 3 : 0);
         let verlauf = game.boardSatVerlauf || [];
         let erholt = verlauf.length >= 7 && game.boardSat > verlauf[0];
         game.boardSatVerlauf = [];
-        if (game.boardSat <= BOARD_SAT_WARNING_THRESHOLD && game.lowBoardSatStreak >= sackThreshold && !erholt) {
+        // Saisonziel erreicht (Platz 1-2 oder die Erwartung): keine Entlassung - der 25.12-Langzeittest
+        // entließ einen Manager als Meister der 3. Liga, weil das Vertrauen nach zwei Abstiegen bei 13 lag.
+        let erwartet = game.seasonExpectation && game.seasonExpectation.expectedRank;
+        let zielErreicht = myRank > 0 && (myRank <= 2 || (erwartet && myRank <= erwartet));
+        if (game.boardSat <= BOARD_SAT_WARNING_THRESHOLD && game.lowBoardSatStreak >= sackThreshold && !erholt && !zielErreicht) {
             getSacked();
         }
     }
@@ -27262,7 +27294,7 @@ function cleanupLegacyScoutState() {
                     if (!f.played) {
                         let hTeam = leaguesData[l][f.home];
                         let aTeam = leaguesData[l][f.away];
-                        let hStr = (hTeam.name === game.clubName) ? (typeof getOwnLeagueMatchStrength === 'function' ? getOwnLeagueMatchStrength(true, aTeam) : calcTeamStrength(true)) : (aTeam.name === game.clubName ? getOpponentMatchStrength(hTeam.strength, true) : hTeam.strength);
+                        let hStr = (hTeam.name === game.clubName) ? (typeof getOwnLeagueMatchStrength === 'function' ? getOwnLeagueMatchStrength(true, aTeam) : calcTeamStrength(true)) : (aTeam.name === game.clubName ? getOpponentMatchStrength(hTeam.strength, true) : hTeam.strength + AI_HOME_ADVANTAGE);
                         let aStr = (aTeam.name === game.clubName) ? (typeof getOwnLeagueMatchStrength === 'function' ? getOwnLeagueMatchStrength(false, hTeam) : calcTeamStrength(false)) : (hTeam.name === game.clubName ? getOpponentMatchStrength(aTeam.strength, false) : aTeam.strength);
 
                         let goals = simulateGoals(hStr, aStr, hTeam, aTeam);
@@ -27739,7 +27771,7 @@ function concludeSeasonAndAdvance() {
         let myTeamSnapshot = myTeamRecord ? { ...myTeamRecord } : null;
         // Manager-Statistik: Bilanz der gerade beendeten Saison, bevor Auf-/Abstieg die Liga ändert.
         if (typeof recordSeasonalManagerStats === 'function') recordSeasonalManagerStats(myRank, myTeamRecord, game.leagueLevel);
-        if (typeof checkSeasonEndSacking === 'function') checkSeasonEndSacking();
+        if (typeof checkSeasonEndSacking === 'function') checkSeasonEndSacking(myRank);
         if (typeof checkPlaytimePromises === 'function') checkPlaytimePromises();
         if (typeof evaluateSeasonEndObjectives === 'function') evaluateSeasonEndObjectives(myRank);
         if (typeof recordScenarioSeasonRank === 'function') recordScenarioSeasonRank(myRank);
@@ -29179,7 +29211,7 @@ const LEXICON_ENTRIES = [
         text: 'Pressing schlägt Ballbesitz, Ballbesitz schlägt Konter, Konter schlägt Pressing - ±2 Stärke im Ligaspiel. Ausgeglichen und Kick and Rush sind neutral.',
         tips: ['Wer in 3 von 5 Ligaspielen denselben Ansatz wählt, ist berechenbar - Gegner stellen sich darauf ein', 'Der Chef-Analyst verrät im Vorbericht den Plan des Gegners', 'Im Livespiel zählt die aktuell gewählte Taktik'] },
     { cat: 'Taktik', title: 'Standards & Elfmeter im Livespiel', screen: 'screen-squad',
-        text: 'Bei einem Elfmeter oder Freistoß in Tornähe hält das Livespiel an. Elfmeter: Du wählst den Schützen - der feste Schütze hat Routine (+5 %), der Gefoulte will oft selbst, ist aber angeschlagen; in der Schlussphase eines knappen Spiels flattern die Nerven (außer bei Selbstbewussten). Freistoß: direkt (hängt am Schützen), Flanke auf den Kopfballspieler (Konterrisiko) oder kurz (sicher, selten gefährlich). Der Videobeweis nimmt manches Tor zurück.',
+        text: 'Bei einem Elfmeter oder Freistoß in Tornähe hält das Livespiel an. Elfmeter: Du wählst den Schützen - der feste Schütze hat Routine (+5 %), der Gefoulte will oft selbst, ist aber angeschlagen; in der Schlussphase eines knappen Spiels flattern die Nerven (außer bei Selbstbewussten). Freistoß: direkt (hängt am Schützen), Flanke auf den Kopfballspieler (Konterrisiko) oder kurz (sicher, selten gefährlich). Auch der Gegner bekommt Elfmeter und Freistöße. Der Videobeweis nimmt manches Tor zurück. Livespiel und Simulation rechnen mit denselben erwarteten Toren - live ist kein Vorteil eingebaut, nur deine Eingriffe zählen.',
         tips: ['Feste Schützen stellst du in der Aufstellung ein', 'Im Elfmeterschießen kannst du einen Elfmeter-Killer von der Bank bringen - das kostet einen Wechsel', 'Beim schnellen Durchspielen entscheidet der Trainer automatisch'] },
     { cat: 'Taktik', title: 'Co-Trainer im Livespiel', screen: 'screen-squad',
         text: 'Ein eingestellter Co-Trainer meldet sich im Livespiel mit Hinweisen aus dem echten Spielstand - jeweils mit einer Aktion per Tipp. Stufe 1: müde Spieler, Rückstand oder knappe Führung in der Schlussphase. Stufe 2: zusätzlich Gelb-Rot-Gefahr und ein verlorenes Taktik-Duell (ab der 20. Minute, mit Chef-Analyst sofort). Stufe 3: erkennt auch ein gewinnbares Taktik-Duell.',
@@ -29901,7 +29933,7 @@ function renderSeasonForecastHistory() {
                 fixs?.forEach(f => {
                     if (!f.played) {
                         let hTeam = leaguesData[l][f.home], aTeam = leaguesData[l][f.away];
-                        let hStr = (hTeam.name === game.clubName) ? (typeof getOwnLeagueMatchStrength === 'function' ? getOwnLeagueMatchStrength(true, aTeam) : calcTeamStrength(true)) : (aTeam.name === game.clubName ? getOpponentMatchStrength(hTeam.strength, true) : hTeam.strength);
+                        let hStr = (hTeam.name === game.clubName) ? (typeof getOwnLeagueMatchStrength === 'function' ? getOwnLeagueMatchStrength(true, aTeam) : calcTeamStrength(true)) : (aTeam.name === game.clubName ? getOpponentMatchStrength(hTeam.strength, true) : hTeam.strength + AI_HOME_ADVANTAGE);
                         let aStr = (aTeam.name === game.clubName) ? (typeof getOwnLeagueMatchStrength === 'function' ? getOwnLeagueMatchStrength(false, hTeam) : calcTeamStrength(false)) : (hTeam.name === game.clubName ? getOpponentMatchStrength(aTeam.strength, false) : aTeam.strength);
                         let goals = simulateGoals(hStr, aStr, hTeam, aTeam);
                         f.homeGoals = goals.myGoals;
