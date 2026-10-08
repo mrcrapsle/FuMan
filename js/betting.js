@@ -53,7 +53,7 @@
         let ownTeam = leaguesData[game.leagueLevel].find(t => t.name === game.clubName) || null;
         let oppName = isHome ? leaguesData[game.leagueLevel][ourFixture.away].name : leaguesData[game.leagueLevel][ourFixture.home].name;
         let oppObj = leaguesData[game.leagueLevel].find(t => t.name === oppName);
-        let oppStr = applySabotageToOpponentStrength(oppObj ? oppObj.strength : 60);
+        let oppStr = getOpponentMatchStrength(oppObj ? oppObj.strength : 60, !isHome);
         let pr = simulateBetProbabilities(bettingOwnStrength(isHome), oppStr, isHome, ownTeam, oppObj || null);
         return {
             oppName, isHome, probabilities: pr,

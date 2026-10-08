@@ -491,8 +491,8 @@
                     if (!f.played) {
                         let hTeam = leaguesData[l][f.home];
                         let aTeam = leaguesData[l][f.away];
-                        let hStr = (hTeam.name === game.clubName) ? (typeof getOwnLeagueMatchStrength === 'function' ? getOwnLeagueMatchStrength(true, aTeam) : calcTeamStrength(true)) : (aTeam.name === game.clubName ? applySabotageToOpponentStrength(hTeam.strength) : hTeam.strength);
-                        let aStr = (aTeam.name === game.clubName) ? (typeof getOwnLeagueMatchStrength === 'function' ? getOwnLeagueMatchStrength(false, hTeam) : calcTeamStrength(false)) : (hTeam.name === game.clubName ? applySabotageToOpponentStrength(aTeam.strength) : aTeam.strength);
+                        let hStr = (hTeam.name === game.clubName) ? (typeof getOwnLeagueMatchStrength === 'function' ? getOwnLeagueMatchStrength(true, aTeam) : calcTeamStrength(true)) : (aTeam.name === game.clubName ? getOpponentMatchStrength(hTeam.strength, true) : hTeam.strength);
+                        let aStr = (aTeam.name === game.clubName) ? (typeof getOwnLeagueMatchStrength === 'function' ? getOwnLeagueMatchStrength(false, hTeam) : calcTeamStrength(false)) : (hTeam.name === game.clubName ? getOpponentMatchStrength(aTeam.strength, false) : aTeam.strength);
 
                         let goals = simulateGoals(hStr, aStr, hTeam, aTeam);
                         f.homeGoals = goals.myGoals;

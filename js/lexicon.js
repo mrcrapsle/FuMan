@@ -5,7 +5,7 @@
 
 const LEXICON_ENTRIES = [
     { cat: 'Spieler', title: 'Stärke', screen: 'screen-squad',
-        text: 'Grundwert jedes Spielers (bis 99). Die Startelf zählt: Stärke × Fitness × Tagesform, gemittelt über elf Spieler, plus Boni (Taktik, Heimvorteil, Kapitän, Traits).',
+        text: 'Grundwert jedes Spielers (bis 99). Die Startelf zählt: Stärke × Fitness × Tagesform, gemittelt über elf Spieler, plus Boni (Taktik, Heimvorteil +3, Kapitän, Eingespieltheit, Traits - alle Traits zusammen höchstens +3). Auch der Gegner hat daheim +3 Heimvorteil.',
         tips: ['Training und Spielpraxis entwickeln junge Spieler', 'Ab etwa 30 baut die Stärke im Sommer ab (Archetyp entscheidet)', 'Verbesserungen kauft man am Transfermarkt'] },
     { cat: 'Spieler', title: 'Fitness', screen: 'screen-training',
         text: 'Jedes Spiel kostet Kraft, Pausen bringen sie zurück. Stammspieler erholen sich zwischen den Spieltagen nur zu einem Viertel so stark wie Bankspieler - wer immer dieselbe Elf bringt, wird müde. Unter 50 % Fitness setzt die automatische Aufstellung einen Spieler aus, wenn ein ausgeruhter Feldspieler bereitsteht - auch von einer anderen Position. Mit dünnem Kader (unter 18) geht das kaum.',

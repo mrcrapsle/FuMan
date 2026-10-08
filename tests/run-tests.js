@@ -7603,6 +7603,16 @@ async function testCareerBalancing(browser) {
         out.muedeVerteidiger = abw.slice(0, 4).filter(p => ausgeruht.includes(p.id)).length;
         out.elfVoll = ausgeruht.length === 11 && ausgeruht.filter(id => squad.find(p => p.id === id).pos === 'TW').length === 1;
         squad.forEach(p => { p.fitness = 100; p.injured = 0; });
+        // Heimvorteil auch für den Gegner, Eigenschaften-Boni zusammen höchstens +3
+        out.gegnerHeim = getOpponentMatchStrength(70, true) - getOpponentMatchStrength(70, false) === AI_HOME_ADVANTAGE && AI_HOME_ADVANTAGE > 0;
+        lineup = pickBestLineupIds();
+        const elfSpieler = squad.filter(p => lineup.includes(p.id));
+        const alteTraits = elfSpieler.map(p => p.trait);
+        elfSpieler.forEach(p => { p.trait = 'Kein'; });
+        const ohne = calcTeamStrength(true);
+        ['Leader', 'Tor-Instinkt', 'Freistoß-Gott', 'Eisenfuß', 'Flügelflitzer', 'Zweikampfmonster'].forEach((t, i) => { if (elfSpieler[i + 1]) elfSpieler[i + 1].trait = t; });
+        out.traitDeckel = calcTeamStrength(true) - ohne;
+        elfSpieler.forEach((p, i) => { p.trait = alteTraits[i]; });
         // Transfermarkt: 10 Angebote, frisch zum Winterfenster
         refreshTransferMarket();
         out.markt = marketPlayers.length;
@@ -7620,6 +7630,8 @@ async function testCareerBalancing(browser) {
     });
     assert(r.fitnessMin >= 60, `Unveränderte Startelf nach 6 Spielen noch fit genug (min. ${r.fitnessMin} %)`);
     assert(r.warnung && r.rotiert, 'Vorbericht warnt vor müden Stammspielern, ein Klick rotiert');
+    assert(r.gegnerHeim, 'Auch der Gegner hat daheim Heimvorteil');
+    assert(r.traitDeckel >= 2 && r.traitDeckel <= 3, `Spieler-Eigenschaften bringen zusammen höchstens +3 (${r.traitDeckel})`);
     assert(r.muedeVerteidiger === 0 && r.elfVoll, `Erschöpfte Verteidiger ohne Ersatz auf der Position pausieren, ausgeruhte Feldspieler rücken nach (${r.muedeVerteidiger} müde in der Elf)`);
     assert(r.markt === 10 && r.winterNeu, `Transfermarkt mit 10 Spielern, neu zum Winterfenster (${r.markt})`);
     assert(r.flutlichtLiga4 <= 1000000 && r.flutlichtLiga1 === 3500000, `Flutlicht skaliert mit der Liga (Liga 4: ${r.flutlichtLiga4}, Liga 1: ${r.flutlichtLiga1})`);

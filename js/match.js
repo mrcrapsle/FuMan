@@ -23,6 +23,14 @@
     // wichtig: muss überall verwendet werden, wo Gegnerstärke berechnet wird
     // (Liga-Simulation, Admin-Schnellvorlauf, Live-Match), sonst wirken Sabotagen
     // nur im interaktiven Modus statt in jedem Simulationsmodus.
+    // Heimvorteil auch für den Gegner (Phase 25.11): die eigene Elf bekam daheim +3 über
+    // calcTeamStrength(), KI-Teams spielten auch zuhause mit ihrem nackten Stärkewert - eine
+    // ligaübliche Elf spielte dadurch wie +9 und wurde fast jede zweite Saison Meister.
+    const AI_HOME_ADVANTAGE = 3;
+    const TRAIT_BONUS_CAP = 3;
+    function getOpponentMatchStrength(oppStr, oppIsHome) {
+        return applySabotageToOpponentStrength(oppStr) + (oppIsHome ? AI_HOME_ADVANTAGE : 0);
+    }
     function applySabotageToOpponentStrength(oppStr) {
         if (underworld.activeSabotages.pyroHotel) oppStr = Math.max(30, oppStr - 5);
         if (underworld.activeSabotages.weedKiller) oppStr = Math.max(30, oppStr - 4);
@@ -145,16 +153,20 @@
 
         // Spieler-Traits wirken sich auf die Teamstärke aus - unabhängig vom Simulationsmodus
         // (also auch bei "Saison durchsimulieren", nicht nur im Live-Spiel).
-        if (starting.some(p => p.trait === 'Leader')) bonus += 2;
-        if (starting.some(p => p.trait === 'Tor-Instinkt')) bonus += 1.5;
-        if (starting.some(p => p.trait === 'Freistoß-Gott')) bonus += 1;
-        if (starting.some(p => p.trait === 'Elfmeter-Killer' && p.pos === 'TW')) bonus += 1.5;
-        if (starting.some(p => p.trait === 'Eisenfuß')) bonus += 1;
-        if (starting.some(p => p.trait === 'Flügelflitzer')) bonus += 1;
-        if (starting.some(p => p.trait === 'Zweikampfmonster')) bonus += 1.5;
+        // Zusammen höchstens +3 (Phase 25.11): eine Startelf mit 6-9 Trait-Spielern sammelte
+        // +5 bis +7, KI-Teams haben nichts Vergleichbares.
+        let traitBonus = 0;
+        if (starting.some(p => p.trait === 'Leader')) traitBonus += 2;
+        if (starting.some(p => p.trait === 'Tor-Instinkt')) traitBonus += 1.5;
+        if (starting.some(p => p.trait === 'Freistoß-Gott')) traitBonus += 1;
+        if (starting.some(p => p.trait === 'Elfmeter-Killer' && p.pos === 'TW')) traitBonus += 1.5;
+        if (starting.some(p => p.trait === 'Eisenfuß')) traitBonus += 1;
+        if (starting.some(p => p.trait === 'Flügelflitzer')) traitBonus += 1;
+        if (starting.some(p => p.trait === 'Zweikampfmonster')) traitBonus += 1.5;
         // Wetterfest: gibt bei schlechtem Wetter (Regen/Schnee/Sturm/Hitze) einen kleinen
         // Extra-Bonus, unbeeindruckt von den Bedingungen zu bleiben.
-        if (currentWeather.goalMult < 1 && starting.some(p => p.trait === 'Wetterfest')) bonus += 1.5;
+        if (currentWeather.goalMult < 1 && starting.some(p => p.trait === 'Wetterfest')) traitBonus += 1.5;
+        bonus += Math.min(TRAIT_BONUS_CAP, traitBonus);
         // Block-spezifische Fan-Kultur: tief verwurzelte Block-Kulturen geben bei
         // Heimspielen einen kleinen zusätzlichen Atmosphäre-Bonus.
         if (isHomeMatch && typeof getBlockCultureHomeBonus === 'function') bonus += getBlockCultureHomeBonus();
@@ -304,7 +316,7 @@
         let isHome = leaguesData[game.leagueLevel][ourFixture.home].name === game.clubName;
         let oppName = isHome ? leaguesData[game.leagueLevel][ourFixture.away].name : leaguesData[game.leagueLevel][ourFixture.home].name;
         let oppObj = leaguesData[game.leagueLevel].find(t => t.name === oppName);
-        let oppStr = applySabotageToOpponentStrength(oppObj ? oppObj.strength : 60);
+        let oppStr = getOpponentMatchStrength(oppObj ? oppObj.strength : 60, !isHome);
         pendingMatchInfo = { ourFixture, isHome, oppName, oppStr };
 
         renderPreMatchAnalysis(oppObj, oppName);

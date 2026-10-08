@@ -484,7 +484,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.81', date: '08.10.2026', features: 'Phase 25.10: Sponsorgelder skalieren mit der Liga, Spielbetrieb Bundesliga 40 Mio.' };
+    const GAME_VERSION = { number: '3.82', date: '08.10.2026', features: 'Phase 25.11: Heimvorteil auch für Gegner, Trait-Boni zusammen höchstens +3' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -6083,7 +6083,7 @@ function selectNewGameScenario(id) {
             let isOurMatch = (p.home === game.clubName || p.away === game.clubName);
             let isHome = p.home === game.clubName;
             let finalBonus = isOurMatch && typeof getCupFinalBonus === 'function' ? getCupFinalBonus('dfb') : 0; // js/cup-final.js
-            let homeStr = isOurMatch && isHome ? calcTeamStrength(true) + finalBonus : getOpponentStrength(p.home);
+            let homeStr = isOurMatch && isHome ? calcTeamStrength(true) + finalBonus : getOpponentStrength(p.home) + (isOurMatch ? AI_HOME_ADVANTAGE : 0);
             let awayStr = isOurMatch && !isHome ? calcTeamStrength(false) + finalBonus : getOpponentStrength(p.away);
 
             let live = isOurMatch && typeof takeLiveCupResult === 'function' ? takeLiveCupResult('dfb', p.home, p.away) : null;
@@ -6337,7 +6337,7 @@ function selectNewGameScenario(id) {
             let isOurMatch = (p.home === game.clubName || p.away === game.clubName);
             let isHome = p.home === game.clubName;
             let finalBonus = isOurMatch && typeof getCupFinalBonus === 'function' ? getCupFinalBonus('landes') : 0; // js/cup-final.js
-            let homeStr = isOurMatch ? (isHome ? calcTeamStrength(true) + finalBonus : getOpponentStrength(p.home)) : getOpponentStrength(p.home);
+            let homeStr = isOurMatch ? (isHome ? calcTeamStrength(true) + finalBonus : getOpponentStrength(p.home) + AI_HOME_ADVANTAGE) : getOpponentStrength(p.home);
             let awayStr = isOurMatch ? (!isHome ? calcTeamStrength(false) + finalBonus : getOpponentStrength(p.away)) : getOpponentStrength(p.away);
             let live = isOurMatch && typeof takeLiveCupResult === 'function' ? takeLiveCupResult('landes', p.home, p.away) : null;
             let goals = live ? { myGoals: live.homeGoals, oppGoals: live.awayGoals } : simulateGoals(homeStr, awayStr);
@@ -6880,7 +6880,7 @@ function selectNewGameScenario(id) {
                 let pairings = (groupMatchIdx % 3 === 0) ? [[t1, t2], [t3, t4]] : ((groupMatchIdx % 3 === 1) ? [[t1, t3], [t2, t4]] : [[t1, t4], [t2, t3]]);
 
                 pairings.forEach(([h, a]) => {
-                    let hStr = h.name === game.clubName ? calcTeamStrength(true) : h.str;
+                    let hStr = h.name === game.clubName ? calcTeamStrength(true) : h.str + (a.name === game.clubName ? AI_HOME_ADVANTAGE : 0);
                     let aStr = a.name === game.clubName ? calcTeamStrength(false) : a.str;
                     let live = typeof takeLiveCupResult === 'function' ? takeLiveCupResult('europe', h.name, a.name) : null;
                     let goals = live ? { myGoals: live.homeGoals, oppGoals: live.awayGoals } : simulateGoals(hStr, aStr);
@@ -6919,7 +6919,7 @@ function selectNewGameScenario(id) {
             // fürs Europapokal-Format. Nur das Hinspiel-Tor wird hier simuliert; der Sieger
             // steht erst nach dem Rückspiel (siehe mday===29) fest.
             function simulateLeg(home, away) {
-                let hStr = home.name === game.clubName ? calcTeamStrength(true) : home.str;
+                let hStr = home.name === game.clubName ? calcTeamStrength(true) : home.str + (away.name === game.clubName ? AI_HOME_ADVANTAGE : 0);
                 let aStr = away.name === game.clubName ? calcTeamStrength(false) : away.str;
                 let live = typeof takeLiveCupResult === 'function' ? takeLiveCupResult('europe', home.name, away.name) : null;
                 let goals = live ? { myGoals: live.homeGoals, oppGoals: live.awayGoals } : simulateGoals(hStr, aStr);
@@ -15714,7 +15714,7 @@ function finishGoalkeeperGame() {
         let ownTeam = leaguesData[game.leagueLevel].find(t => t.name === game.clubName) || null;
         let oppName = isHome ? leaguesData[game.leagueLevel][ourFixture.away].name : leaguesData[game.leagueLevel][ourFixture.home].name;
         let oppObj = leaguesData[game.leagueLevel].find(t => t.name === oppName);
-        let oppStr = applySabotageToOpponentStrength(oppObj ? oppObj.strength : 60);
+        let oppStr = getOpponentMatchStrength(oppObj ? oppObj.strength : 60, !isHome);
         let pr = simulateBetProbabilities(bettingOwnStrength(isHome), oppStr, isHome, ownTeam, oppObj || null);
         return {
             oppName, isHome, probabilities: pr,
@@ -24628,7 +24628,7 @@ function predictNextMatch() {
     const m = getNextLeagueMatch();
     if (!m) return null;
     const ownStr = typeof getOwnLeagueMatchStrength === 'function' ? getOwnLeagueMatchStrength(m.isHome, m.opp) : calcTeamStrength(m.isHome);
-    const oppStr = typeof applySabotageToOpponentStrength === 'function' ? applySabotageToOpponentStrength(m.opp.strength) : m.opp.strength;
+    const oppStr = typeof getOpponentMatchStrength === 'function' ? getOpponentMatchStrength(m.opp.strength, !m.isHome) : m.opp.strength;
     const hStr = m.isHome ? ownStr : oppStr, aStr = m.isHome ? oppStr : ownStr;
     const hTeam = m.isHome ? m.ownTeam : m.opp, aTeam = m.isHome ? m.opp : m.ownTeam;
     let sieg = 0, remis = 0, tore = 0, gegentore = 0;
@@ -24706,6 +24706,14 @@ function cleanupLegacyScoutState() {
     // wichtig: muss überall verwendet werden, wo Gegnerstärke berechnet wird
     // (Liga-Simulation, Admin-Schnellvorlauf, Live-Match), sonst wirken Sabotagen
     // nur im interaktiven Modus statt in jedem Simulationsmodus.
+    // Heimvorteil auch für den Gegner (Phase 25.11): die eigene Elf bekam daheim +3 über
+    // calcTeamStrength(), KI-Teams spielten auch zuhause mit ihrem nackten Stärkewert - eine
+    // ligaübliche Elf spielte dadurch wie +9 und wurde fast jede zweite Saison Meister.
+    const AI_HOME_ADVANTAGE = 3;
+    const TRAIT_BONUS_CAP = 3;
+    function getOpponentMatchStrength(oppStr, oppIsHome) {
+        return applySabotageToOpponentStrength(oppStr) + (oppIsHome ? AI_HOME_ADVANTAGE : 0);
+    }
     function applySabotageToOpponentStrength(oppStr) {
         if (underworld.activeSabotages.pyroHotel) oppStr = Math.max(30, oppStr - 5);
         if (underworld.activeSabotages.weedKiller) oppStr = Math.max(30, oppStr - 4);
@@ -24828,16 +24836,20 @@ function cleanupLegacyScoutState() {
 
         // Spieler-Traits wirken sich auf die Teamstärke aus - unabhängig vom Simulationsmodus
         // (also auch bei "Saison durchsimulieren", nicht nur im Live-Spiel).
-        if (starting.some(p => p.trait === 'Leader')) bonus += 2;
-        if (starting.some(p => p.trait === 'Tor-Instinkt')) bonus += 1.5;
-        if (starting.some(p => p.trait === 'Freistoß-Gott')) bonus += 1;
-        if (starting.some(p => p.trait === 'Elfmeter-Killer' && p.pos === 'TW')) bonus += 1.5;
-        if (starting.some(p => p.trait === 'Eisenfuß')) bonus += 1;
-        if (starting.some(p => p.trait === 'Flügelflitzer')) bonus += 1;
-        if (starting.some(p => p.trait === 'Zweikampfmonster')) bonus += 1.5;
+        // Zusammen höchstens +3 (Phase 25.11): eine Startelf mit 6-9 Trait-Spielern sammelte
+        // +5 bis +7, KI-Teams haben nichts Vergleichbares.
+        let traitBonus = 0;
+        if (starting.some(p => p.trait === 'Leader')) traitBonus += 2;
+        if (starting.some(p => p.trait === 'Tor-Instinkt')) traitBonus += 1.5;
+        if (starting.some(p => p.trait === 'Freistoß-Gott')) traitBonus += 1;
+        if (starting.some(p => p.trait === 'Elfmeter-Killer' && p.pos === 'TW')) traitBonus += 1.5;
+        if (starting.some(p => p.trait === 'Eisenfuß')) traitBonus += 1;
+        if (starting.some(p => p.trait === 'Flügelflitzer')) traitBonus += 1;
+        if (starting.some(p => p.trait === 'Zweikampfmonster')) traitBonus += 1.5;
         // Wetterfest: gibt bei schlechtem Wetter (Regen/Schnee/Sturm/Hitze) einen kleinen
         // Extra-Bonus, unbeeindruckt von den Bedingungen zu bleiben.
-        if (currentWeather.goalMult < 1 && starting.some(p => p.trait === 'Wetterfest')) bonus += 1.5;
+        if (currentWeather.goalMult < 1 && starting.some(p => p.trait === 'Wetterfest')) traitBonus += 1.5;
+        bonus += Math.min(TRAIT_BONUS_CAP, traitBonus);
         // Block-spezifische Fan-Kultur: tief verwurzelte Block-Kulturen geben bei
         // Heimspielen einen kleinen zusätzlichen Atmosphäre-Bonus.
         if (isHomeMatch && typeof getBlockCultureHomeBonus === 'function') bonus += getBlockCultureHomeBonus();
@@ -24987,7 +24999,7 @@ function cleanupLegacyScoutState() {
         let isHome = leaguesData[game.leagueLevel][ourFixture.home].name === game.clubName;
         let oppName = isHome ? leaguesData[game.leagueLevel][ourFixture.away].name : leaguesData[game.leagueLevel][ourFixture.home].name;
         let oppObj = leaguesData[game.leagueLevel].find(t => t.name === oppName);
-        let oppStr = applySabotageToOpponentStrength(oppObj ? oppObj.strength : 60);
+        let oppStr = getOpponentMatchStrength(oppObj ? oppObj.strength : 60, !isHome);
         pendingMatchInfo = { ourFixture, isHome, oppName, oppStr };
 
         renderPreMatchAnalysis(oppObj, oppName);
@@ -27250,8 +27262,8 @@ function cleanupLegacyScoutState() {
                     if (!f.played) {
                         let hTeam = leaguesData[l][f.home];
                         let aTeam = leaguesData[l][f.away];
-                        let hStr = (hTeam.name === game.clubName) ? (typeof getOwnLeagueMatchStrength === 'function' ? getOwnLeagueMatchStrength(true, aTeam) : calcTeamStrength(true)) : (aTeam.name === game.clubName ? applySabotageToOpponentStrength(hTeam.strength) : hTeam.strength);
-                        let aStr = (aTeam.name === game.clubName) ? (typeof getOwnLeagueMatchStrength === 'function' ? getOwnLeagueMatchStrength(false, hTeam) : calcTeamStrength(false)) : (hTeam.name === game.clubName ? applySabotageToOpponentStrength(aTeam.strength) : aTeam.strength);
+                        let hStr = (hTeam.name === game.clubName) ? (typeof getOwnLeagueMatchStrength === 'function' ? getOwnLeagueMatchStrength(true, aTeam) : calcTeamStrength(true)) : (aTeam.name === game.clubName ? getOpponentMatchStrength(hTeam.strength, true) : hTeam.strength);
+                        let aStr = (aTeam.name === game.clubName) ? (typeof getOwnLeagueMatchStrength === 'function' ? getOwnLeagueMatchStrength(false, hTeam) : calcTeamStrength(false)) : (hTeam.name === game.clubName ? getOpponentMatchStrength(aTeam.strength, false) : aTeam.strength);
 
                         let goals = simulateGoals(hStr, aStr, hTeam, aTeam);
                         f.homeGoals = goals.myGoals;
@@ -28106,7 +28118,7 @@ function playRelegationLeg(silent = false) {
     const legIdx = r.legs.length;
     const isHome = (r.type === 'aufstieg') === (legIdx === 0);
     const ownStr = calcTeamStrength(isHome);
-    const oppStr = typeof applySabotageToOpponentStrength === 'function' ? applySabotageToOpponentStrength(sit.oppStrength) : sit.oppStrength;
+    const oppStr = typeof getOpponentMatchStrength === 'function' ? getOpponentMatchStrength(sit.oppStrength, !isHome) : sit.oppStrength;
     const ownTeam = (leaguesData[game.leagueLevel] || []).find(t => t.name === game.clubName) || null;
     // Live gespielt (js/cup-live.js)? Dann zählt das Ergebnis aus der Live-Engine.
     const live = typeof takeLiveCupResult === 'function'
@@ -28280,6 +28292,7 @@ function startCupLiveFlow(tie) {
     const us = game.clubName;
     const isHome = tie.home === us;
     const oppName = isHome ? tie.away : tie.home;
+    if (!isHome && tie.comp !== 'relegation' && !tie.heimvorteilDrin) { tie.oppStr += AI_HOME_ADVANTAGE; tie.heimvorteilDrin = true; }
     pendingMatchInfo = { ourFixture: null, isHome, oppName, oppStr: tie.oppStr, cupTie: tie };
     const oppObj = leaguesData.flat().find(t => t.name === oppName) || null;
     renderPreMatchAnalysis(oppObj, oppName);
@@ -28356,7 +28369,7 @@ function startRelegationLive() {
     if (r && r.result) return;
     const legIdx = r ? r.legs.length : 0;
     const isHome = (sit.type === 'aufstieg') === (legIdx === 0);
-    const oppStr = typeof applySabotageToOpponentStrength === 'function' ? applySabotageToOpponentStrength(sit.oppStrength) : sit.oppStrength;
+    const oppStr = typeof getOpponentMatchStrength === 'function' ? getOpponentMatchStrength(sit.oppStrength, !isHome) : sit.oppStrength;
     startCupLiveFlow({
         comp: 'relegation', titel: `⚔️ Relegation · ${legIdx === 0 ? 'Hinspiel' : 'Rückspiel'}`,
         home: isHome ? game.clubName : sit.oppName, away: isHome ? sit.oppName : game.clubName, oppStr, elfmeter: false
@@ -29136,7 +29149,7 @@ function renderCoachCarouselBox() {
 
 const LEXICON_ENTRIES = [
     { cat: 'Spieler', title: 'Stärke', screen: 'screen-squad',
-        text: 'Grundwert jedes Spielers (bis 99). Die Startelf zählt: Stärke × Fitness × Tagesform, gemittelt über elf Spieler, plus Boni (Taktik, Heimvorteil, Kapitän, Traits).',
+        text: 'Grundwert jedes Spielers (bis 99). Die Startelf zählt: Stärke × Fitness × Tagesform, gemittelt über elf Spieler, plus Boni (Taktik, Heimvorteil +3, Kapitän, Eingespieltheit, Traits - alle Traits zusammen höchstens +3). Auch der Gegner hat daheim +3 Heimvorteil.',
         tips: ['Training und Spielpraxis entwickeln junge Spieler', 'Ab etwa 30 baut die Stärke im Sommer ab (Archetyp entscheidet)', 'Verbesserungen kauft man am Transfermarkt'] },
     { cat: 'Spieler', title: 'Fitness', screen: 'screen-training',
         text: 'Jedes Spiel kostet Kraft, Pausen bringen sie zurück. Stammspieler erholen sich zwischen den Spieltagen nur zu einem Viertel so stark wie Bankspieler - wer immer dieselbe Elf bringt, wird müde. Unter 50 % Fitness setzt die automatische Aufstellung einen Spieler aus, wenn ein ausgeruhter Feldspieler bereitsteht - auch von einer anderen Position. Mit dünnem Kader (unter 18) geht das kaum.',
@@ -29888,8 +29901,8 @@ function renderSeasonForecastHistory() {
                 fixs?.forEach(f => {
                     if (!f.played) {
                         let hTeam = leaguesData[l][f.home], aTeam = leaguesData[l][f.away];
-                        let hStr = (hTeam.name === game.clubName) ? (typeof getOwnLeagueMatchStrength === 'function' ? getOwnLeagueMatchStrength(true, aTeam) : calcTeamStrength(true)) : (aTeam.name === game.clubName ? applySabotageToOpponentStrength(hTeam.strength) : hTeam.strength);
-                        let aStr = (aTeam.name === game.clubName) ? (typeof getOwnLeagueMatchStrength === 'function' ? getOwnLeagueMatchStrength(false, hTeam) : calcTeamStrength(false)) : (hTeam.name === game.clubName ? applySabotageToOpponentStrength(aTeam.strength) : aTeam.strength);
+                        let hStr = (hTeam.name === game.clubName) ? (typeof getOwnLeagueMatchStrength === 'function' ? getOwnLeagueMatchStrength(true, aTeam) : calcTeamStrength(true)) : (aTeam.name === game.clubName ? getOpponentMatchStrength(hTeam.strength, true) : hTeam.strength);
+                        let aStr = (aTeam.name === game.clubName) ? (typeof getOwnLeagueMatchStrength === 'function' ? getOwnLeagueMatchStrength(false, hTeam) : calcTeamStrength(false)) : (hTeam.name === game.clubName ? getOpponentMatchStrength(aTeam.strength, false) : aTeam.strength);
                         let goals = simulateGoals(hStr, aStr, hTeam, aTeam);
                         f.homeGoals = goals.myGoals;
                         f.awayGoals = goals.oppGoals;

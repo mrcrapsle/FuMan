@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.81', date: '08.10.2026', features: 'Phase 25.10: Sponsorgelder skalieren mit der Liga, Spielbetrieb Bundesliga 40 Mio.' };
+    const GAME_VERSION = { number: '3.82', date: '08.10.2026', features: 'Phase 25.11: Heimvorteil auch für Gegner, Trait-Boni zusammen höchstens +3' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

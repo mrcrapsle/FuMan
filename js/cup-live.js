@@ -86,6 +86,7 @@ function startCupLiveFlow(tie) {
     const us = game.clubName;
     const isHome = tie.home === us;
     const oppName = isHome ? tie.away : tie.home;
+    if (!isHome && tie.comp !== 'relegation' && !tie.heimvorteilDrin) { tie.oppStr += AI_HOME_ADVANTAGE; tie.heimvorteilDrin = true; }
     pendingMatchInfo = { ourFixture: null, isHome, oppName, oppStr: tie.oppStr, cupTie: tie };
     const oppObj = leaguesData.flat().find(t => t.name === oppName) || null;
     renderPreMatchAnalysis(oppObj, oppName);
@@ -162,7 +163,7 @@ function startRelegationLive() {
     if (r && r.result) return;
     const legIdx = r ? r.legs.length : 0;
     const isHome = (sit.type === 'aufstieg') === (legIdx === 0);
-    const oppStr = typeof applySabotageToOpponentStrength === 'function' ? applySabotageToOpponentStrength(sit.oppStrength) : sit.oppStrength;
+    const oppStr = typeof getOpponentMatchStrength === 'function' ? getOpponentMatchStrength(sit.oppStrength, !isHome) : sit.oppStrength;
     startCupLiveFlow({
         comp: 'relegation', titel: `⚔️ Relegation · ${legIdx === 0 ? 'Hinspiel' : 'Rückspiel'}`,
         home: isHome ? game.clubName : sit.oppName, away: isHome ? sit.oppName : game.clubName, oppStr, elfmeter: false

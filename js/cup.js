@@ -137,7 +137,7 @@
             let isOurMatch = (p.home === game.clubName || p.away === game.clubName);
             let isHome = p.home === game.clubName;
             let finalBonus = isOurMatch && typeof getCupFinalBonus === 'function' ? getCupFinalBonus('dfb') : 0; // js/cup-final.js
-            let homeStr = isOurMatch && isHome ? calcTeamStrength(true) + finalBonus : getOpponentStrength(p.home);
+            let homeStr = isOurMatch && isHome ? calcTeamStrength(true) + finalBonus : getOpponentStrength(p.home) + (isOurMatch ? AI_HOME_ADVANTAGE : 0);
             let awayStr = isOurMatch && !isHome ? calcTeamStrength(false) + finalBonus : getOpponentStrength(p.away);
 
             let live = isOurMatch && typeof takeLiveCupResult === 'function' ? takeLiveCupResult('dfb', p.home, p.away) : null;

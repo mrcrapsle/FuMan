@@ -57,7 +57,7 @@ function playRelegationLeg(silent = false) {
     const legIdx = r.legs.length;
     const isHome = (r.type === 'aufstieg') === (legIdx === 0);
     const ownStr = calcTeamStrength(isHome);
-    const oppStr = typeof applySabotageToOpponentStrength === 'function' ? applySabotageToOpponentStrength(sit.oppStrength) : sit.oppStrength;
+    const oppStr = typeof getOpponentMatchStrength === 'function' ? getOpponentMatchStrength(sit.oppStrength, !isHome) : sit.oppStrength;
     const ownTeam = (leaguesData[game.leagueLevel] || []).find(t => t.name === game.clubName) || null;
     // Live gespielt (js/cup-live.js)? Dann zählt das Ergebnis aus der Live-Engine.
     const live = typeof takeLiveCupResult === 'function'

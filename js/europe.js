@@ -430,7 +430,7 @@
                 let pairings = (groupMatchIdx % 3 === 0) ? [[t1, t2], [t3, t4]] : ((groupMatchIdx % 3 === 1) ? [[t1, t3], [t2, t4]] : [[t1, t4], [t2, t3]]);
 
                 pairings.forEach(([h, a]) => {
-                    let hStr = h.name === game.clubName ? calcTeamStrength(true) : h.str;
+                    let hStr = h.name === game.clubName ? calcTeamStrength(true) : h.str + (a.name === game.clubName ? AI_HOME_ADVANTAGE : 0);
                     let aStr = a.name === game.clubName ? calcTeamStrength(false) : a.str;
                     let live = typeof takeLiveCupResult === 'function' ? takeLiveCupResult('europe', h.name, a.name) : null;
                     let goals = live ? { myGoals: live.homeGoals, oppGoals: live.awayGoals } : simulateGoals(hStr, aStr);
@@ -469,7 +469,7 @@
             // fürs Europapokal-Format. Nur das Hinspiel-Tor wird hier simuliert; der Sieger
             // steht erst nach dem Rückspiel (siehe mday===29) fest.
             function simulateLeg(home, away) {
-                let hStr = home.name === game.clubName ? calcTeamStrength(true) : home.str;
+                let hStr = home.name === game.clubName ? calcTeamStrength(true) : home.str + (away.name === game.clubName ? AI_HOME_ADVANTAGE : 0);
                 let aStr = away.name === game.clubName ? calcTeamStrength(false) : away.str;
                 let live = typeof takeLiveCupResult === 'function' ? takeLiveCupResult('europe', home.name, away.name) : null;
                 let goals = live ? { myGoals: live.homeGoals, oppGoals: live.awayGoals } : simulateGoals(hStr, aStr);
