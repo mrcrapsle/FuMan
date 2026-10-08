@@ -57,6 +57,15 @@
         return LEAGUE_WAGE_BUDGET[Math.max(0, Math.min(LEAGUE_WAGE_BUDGET.length - 1, level))];
     }
 
+    // Transferbudget pro Saison je Liga (25.15): vorher 2,5 Mio. × (1 + Ligafaktor × 2,5) -
+    // 3,5-5,6 Mio. € in den Ligen 4-6, wo eine Verstärkung 18.000-370.000 € kostet, aber nur
+    // 8,75 Mio. € in der Bundesliga bei ~40 Mio. € pro Verstärkung. Jetzt etwa 1,5-3 typische
+    // Verstärkungen der Liga (Marktmedian 40 Mio. / 1,7 Mio. / 480.000 / 370.000 / 18.000 / 18.000 €).
+    const LEAGUE_TRANSFER_BUDGET = [25000000, 3000000, 900000, 600000, 60000, 40000];
+    function getLeagueTransferBudget(level) {
+        return LEAGUE_TRANSFER_BUDGET[Math.max(0, Math.min(LEAGUE_TRANSFER_BUDGET.length - 1, level))];
+    }
+
     const PLAYER_ROLES = {
         TW: [
             { id: 'abwehrtorwart', name: 'Abwehr-Torwart', statKey: 'defense' },

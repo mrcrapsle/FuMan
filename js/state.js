@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.85', date: '08.10.2026', features: 'Phase 25.14: Gehaltsbudget je Liga, Abstiegsklausel' };
+    const GAME_VERSION = { number: '3.86', date: '08.10.2026', features: 'Phase 25.15: Transferbudget je Liga' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -12,7 +12,7 @@
         clubName: "1.FC Moritz Leipzig",
         season: 1,
         money: 150000,
-        transferBudget: 100000,
+        transferBudget: 40000,
         transferHistory: [],
         wageBudget: 8000,
         fans: 75,

@@ -2300,6 +2300,8 @@ async function testLexicon(browser) {
             out.betriebAktuell = [0, 1, 2].every(i => betrieb.includes((LEAGUE_OPERATING_COST[i] / 1e6).toLocaleString('de-DE') + ' Mio. €'));
             const gehalt = LEXICON_ENTRIES.find(e => e.title === 'Gehaltsbudget').text;
             out.gehaltAktuell = LEAGUE_WAGE_BUDGET.every(b => gehalt.includes(b >= 1e6 ? (b / 1e6).toLocaleString('de-DE') + ' Mio. €' : b.toLocaleString('de-DE') + ' €'));
+            const transfer = LEXICON_ENTRIES.find(e => e.title === 'Transferbudget').text;
+            out.transferAktuell = LEAGUE_TRANSFER_BUDGET.every(b => transfer.includes(b >= 1e6 ? (b / 1e6).toLocaleString('de-DE') + ' Mio. €' : b.toLocaleString('de-DE') + ' €'));
             const staerke = LEXICON_ENTRIES.find(e => e.title === 'Stärke').text;
             out.staerkeAktuell = staerke.includes('Heimvorteil +' + AI_HOME_ADVANTAGE) && staerke.includes('höchstens +' + TRAIT_BONUS_CAP)
                 && staerke.includes('daheim +' + AI_HOME_ADVANTAGE);
@@ -2327,7 +2329,7 @@ async function testLexicon(browser) {
     assert(r.keinTreffer, 'Suche ohne Treffer zeigt einen Hinweis');
     assert(r.kategorie, 'Kategorie „Finanzen“ zeigt genau deren Einträge');
     assert(r.lizenzAktuell, 'Lizenz-Eintrag nennt die aktuellen Kapazitätsauflagen');
-    assert(r.betriebAktuell && r.staerkeAktuell && r.gehaltAktuell, 'Lexikon nennt die aktuellen Betriebskosten, Gehaltsbudgets, Heimvorteil und Trait-Deckel');
+    assert(r.betriebAktuell && r.staerkeAktuell && r.gehaltAktuell && r.transferAktuell, 'Lexikon nennt die aktuellen Betriebskosten, Gehalts- und Transferbudgets, Heimvorteil und Trait-Deckel');
     assert(r.sprung, '„Zum Bildschirm“ öffnet den passenden Bildschirm');
     assert(r.gefiltert, 'Aus einem Bildschirm-Tipp geöffnet: nur Einträge dieses Bildschirms');
     assert(r.menueAlle, 'Über das Menü geöffnet: wieder alle Einträge');
@@ -7031,6 +7033,14 @@ async function testPhase13Teil3(browser) {
             const summen = [...Array(8)].map(() => generateSquadForLevel(lvl).reduce((s, p) => s + p.wage, 0)).sort((a, b) => a - b);
             return getLeagueWageBudget(lvl) / summen[4];
         });
+        // Transferbudget je Liga reicht für 1-4 typische Marktspieler der Liga (25.15: unten lag es beim 250-Fachen)
+        const altLiga = game.leagueLevel;
+        out.transferLigaGerecht = [0, 1, 2, 3, 4, 5].map(lvl => {
+            game.leagueLevel = lvl; refreshTransferMarket();
+            const preise = marketPlayers.map(m => ensureTransferTerms(m).askingPrice).sort((a, b) => a - b);
+            return getLeagueTransferBudget(lvl) / preise[Math.floor(preise.length / 2)];
+        });
+        game.leagueLevel = altLiga; refreshTransferMarket();
         const altKader = squad; initDefaultSquad();
         out.budgetLigaGerecht.push(getLeagueWageBudget(5) / squad.reduce((s, p) => s + p.wage, 0));
         squad = altKader;
@@ -7042,6 +7052,7 @@ async function testPhase13Teil3(browser) {
     assert(r.radarSichtbar, 'Kader-Radar wird im Analyse-Reiter mit echter Breite gezeichnet');
     assert(r.aufstellungKomplett, 'Kaderliste und Taktiktafel liegen im Start-Reiter');
     assert(r.gehaelterImBudget, 'Startkader höherer Ligen überziehen das Gehaltsbudget ihrer Liga nicht');
+    assert(r.transferLigaGerecht.every(f => f >= 0.4 && f <= 5), `Transferbudget je Liga reicht für etwa 0,5-5 typische Marktspieler (${r.transferLigaGerecht.map(f => f.toFixed(1)).join(' / ')})`);
     assert(r.budgetLigaGerecht.every(f => f >= 1 && f <= 2.5), `Gehaltsbudget je Liga liegt beim 1- bis 2,5-Fachen der Startgehälter (${r.budgetLigaGerecht.map(f => f.toFixed(2)).join(' / ')})`);
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler in Phase 13 Teil 3 (${consoleErrors.slice(0, 3).join(' | ')})`);
     await page.close();

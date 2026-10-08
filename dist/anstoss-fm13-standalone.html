@@ -4541,7 +4541,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.85', date: '08.10.2026', features: 'Phase 25.14: Gehaltsbudget je Liga, Abstiegsklausel' };
+    const GAME_VERSION = { number: '3.86', date: '08.10.2026', features: 'Phase 25.15: Transferbudget je Liga' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -4549,7 +4549,7 @@ function compareTableRows(a, b) {
         clubName: "1.FC Moritz Leipzig",
         season: 1,
         money: 150000,
-        transferBudget: 100000,
+        transferBudget: 40000,
         transferHistory: [],
         wageBudget: 8000,
         fans: 75,
@@ -6428,6 +6428,15 @@ function getOwnDerbyRivals() {
     const LEAGUE_WAGE_BUDGET = [1575000, 520000, 110000, 36000, 11000, 8000];
     function getLeagueWageBudget(level) {
         return LEAGUE_WAGE_BUDGET[Math.max(0, Math.min(LEAGUE_WAGE_BUDGET.length - 1, level))];
+    }
+
+    // Transferbudget pro Saison je Liga (25.15): vorher 2,5 Mio. × (1 + Ligafaktor × 2,5) -
+    // 3,5-5,6 Mio. € in den Ligen 4-6, wo eine Verstärkung 18.000-370.000 € kostet, aber nur
+    // 8,75 Mio. € in der Bundesliga bei ~40 Mio. € pro Verstärkung. Jetzt etwa 1,5-3 typische
+    // Verstärkungen der Liga (Marktmedian 40 Mio. / 1,7 Mio. / 480.000 / 370.000 / 18.000 / 18.000 €).
+    const LEAGUE_TRANSFER_BUDGET = [25000000, 3000000, 900000, 600000, 60000, 40000];
+    function getLeagueTransferBudget(level) {
+        return LEAGUE_TRANSFER_BUDGET[Math.max(0, Math.min(LEAGUE_TRANSFER_BUDGET.length - 1, level))];
     }
 
     const PLAYER_ROLES = {
@@ -9084,8 +9093,7 @@ function selectNewGameScenario(id) {
 
         // Budgets neu kalibrieren wie beim Saisonwechsel (concludeSeasonAndAdvance), aber
         // ohne Platzierungsbonus/-malus, da noch keine Saison beim neuen Verein gespielt wurde.
-        let leagueFactor = (NUM_LEAGUES - targetLevel) / NUM_LEAGUES;
-        game.transferBudget = Math.round(2500000 * (1 + leagueFactor * 2.5));
+        game.transferBudget = getLeagueTransferBudget(targetLevel);
         game.wageBudget = getLeagueWageBudget(targetLevel);
 
         refreshTransferMarket();
@@ -32064,7 +32072,7 @@ function concludeSeasonAndAdvance() {
         // Mio. € Bauprojekte) musste auch dieser Teil der Wirtschaft entsprechend mitziehen.
         let leagueFactor = (NUM_LEAGUES - game.leagueLevel) / NUM_LEAGUES;
         let placementFactor = myRank <= 4 ? 1.3 : (myRank <= 10 ? 1.0 : 0.8);
-        game.transferBudget = Math.round(2500000 * (1 + leagueFactor * 2.5) * placementFactor);
+        game.transferBudget = Math.round(getLeagueTransferBudget(game.leagueLevel) * placementFactor / 1000) * 1000;
         game.wageBudget = Math.max(Math.round(getLeagueWageBudget(game.leagueLevel) * placementFactor / 100) * 100, getWageBudgetFloor(),
             Math.ceil(abstiegsGehaelter * RELEGATION_BUDGET_SHARE / 1000) * 1000);
         if (typeof applyCashSurplusBudgets === 'function') applyCashSurplusBudgets();
@@ -33477,7 +33485,7 @@ const LEXICON_ENTRIES = [
         text: 'Höchstsumme aller Spielergehälter pro Spieltag. Neue Verträge über dem Budget sind nicht möglich. Der Vorstand richtet es nach der Liga aus: Bundesliga 1,575 Mio. €, 2. Liga 520.000 €, 3. Liga 110.000 €, 4. Liga 36.000 €, 5. Liga 11.000 €, 6. Liga 8.000 € - zum Saisonstart mit Platz 1-4 × 1,3, ab Platz 11 × 0,8.',
         tips: ['Verkäufe und auslaufende Verträge schaffen Luft', 'Im Gehaltsgespräch einmal nachverhandeln', 'Zum Saisonstart liegt es mindestens 5 % über den laufenden Gehältern, wenn das Konto eine Viertelsaison davon deckt - nach einer Saison mit Minus bei 85 % (Sparkurs)'] },
     { cat: 'Finanzen', title: 'Transferbudget', screen: 'screen-finances',
-        text: 'Wie viel Ablöse der Vorstand freigibt. Unabhängig vom Kontostand: beides muss reichen.',
+        text: 'Wie viel Ablöse der Vorstand pro Saison freigibt. Unabhängig vom Kontostand: beides muss reichen. Grundbetrag nach Liga: Bundesliga 25 Mio. €, 2. Liga 3 Mio. €, 3. Liga 900.000 €, 4. Liga 600.000 €, 5. Liga 60.000 €, 6. Liga 40.000 € - zum Saisonstart mit Platz 1-4 × 1,3, ab Platz 11 × 0,8.',
         tips: ['Verkäufe erhöhen es', 'Mit dem Vorstand lässt sich nachverhandeln', 'Zum Saisonstart gibt der Vorstand 40 % der Rücklagen über einer Reserve (halbe Saison Gehaltsbudget) zusätzlich frei, 10 % davon gehen ins Gehaltsbudget'] },
     { cat: 'Finanzen', title: 'Financial Fairplay', screen: 'screen-finances',
         text: 'Über drei Saisons darf der Verein nur begrenzt Verlust machen (je nach Liga). Investitionen in Stadion, Gelände und Jugend zählen nicht. Bei Verstoß: Verwarnung, dann Transfersperre und Punktabzug.',
@@ -35504,11 +35512,11 @@ function renderSaveSafetyBox() {
                     game.freeKickTakerId = squad[9].id;
                     game.cornerTakerId = squad[9].id;
                     autoLineup();
-                    let leagueFactor = (NUM_LEAGUES - game.leagueLevel) / NUM_LEAGUES;
-                    game.transferBudget = Math.round(2500000 * (1 + leagueFactor * 2.5));
+                    game.transferBudget = getLeagueTransferBudget(game.leagueLevel);
                     game.wageBudget = getLeagueWageBudget(game.leagueLevel);
                 } else {
                     initDefaultSquad();
+                    game.transferBudget = getLeagueTransferBudget(game.leagueLevel);
                     game.wageBudget = getLeagueWageBudget(game.leagueLevel);
                 }
                 initLeagues();

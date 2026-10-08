@@ -2769,11 +2769,11 @@
                     game.freeKickTakerId = squad[9].id;
                     game.cornerTakerId = squad[9].id;
                     autoLineup();
-                    let leagueFactor = (NUM_LEAGUES - game.leagueLevel) / NUM_LEAGUES;
-                    game.transferBudget = Math.round(2500000 * (1 + leagueFactor * 2.5));
+                    game.transferBudget = getLeagueTransferBudget(game.leagueLevel);
                     game.wageBudget = getLeagueWageBudget(game.leagueLevel);
                 } else {
                     initDefaultSquad();
+                    game.transferBudget = getLeagueTransferBudget(game.leagueLevel);
                     game.wageBudget = getLeagueWageBudget(game.leagueLevel);
                 }
                 initLeagues();

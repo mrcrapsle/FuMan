@@ -90,8 +90,7 @@
 
         // Budgets neu kalibrieren wie beim Saisonwechsel (concludeSeasonAndAdvance), aber
         // ohne Platzierungsbonus/-malus, da noch keine Saison beim neuen Verein gespielt wurde.
-        let leagueFactor = (NUM_LEAGUES - targetLevel) / NUM_LEAGUES;
-        game.transferBudget = Math.round(2500000 * (1 + leagueFactor * 2.5));
+        game.transferBudget = getLeagueTransferBudget(targetLevel);
         game.wageBudget = getLeagueWageBudget(targetLevel);
 
         refreshTransferMarket();

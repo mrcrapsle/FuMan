@@ -318,7 +318,7 @@ function concludeSeasonAndAdvance() {
         // Mio. € Bauprojekte) musste auch dieser Teil der Wirtschaft entsprechend mitziehen.
         let leagueFactor = (NUM_LEAGUES - game.leagueLevel) / NUM_LEAGUES;
         let placementFactor = myRank <= 4 ? 1.3 : (myRank <= 10 ? 1.0 : 0.8);
-        game.transferBudget = Math.round(2500000 * (1 + leagueFactor * 2.5) * placementFactor);
+        game.transferBudget = Math.round(getLeagueTransferBudget(game.leagueLevel) * placementFactor / 1000) * 1000;
         game.wageBudget = Math.max(Math.round(getLeagueWageBudget(game.leagueLevel) * placementFactor / 100) * 100, getWageBudgetFloor(),
             Math.ceil(abstiegsGehaelter * RELEGATION_BUDGET_SHARE / 1000) * 1000);
         if (typeof applyCashSurplusBudgets === 'function') applyCashSurplusBudgets();
