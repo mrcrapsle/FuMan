@@ -7971,7 +7971,20 @@ function cleanupLegacyDevelopmentState() {
             ${zeile(`Voraussichtliches Budget${o.rang ? ` (Stand Platz ${o.rang})` : ''}`, formatVal(o.budget))}
             <div style="margin-top:4px; font-weight:800; color:${farbe};">${o.spielraum >= 0 ? `✓ Spielraum ${formatVal(o.spielraum)} pro Spieltag` : `⚠️ ${formatVal(-o.spielraum)} pro Spieltag über dem Budget - Verlängerungen werden scheitern`}</div>
             ${o.stamm.length ? `<div style="margin-top:3px; color:var(--text-muted);">Auslaufende Stammspieler: ${o.stamm.map(p => p.name).join(', ')}</div>` : ''}
+            ${renderPreContractRiskLines()}
         </div>`;
+    }
+
+    // Vorverträge anderer Vereine (js/pre-contracts.js): Angebote mit Frist, schon Unterschriebene
+    // und gefährdete Leistungsträger - vorher stand das nur einzeln im Postfach.
+    function renderPreContractRiskLines() {
+        if (typeof getPreContractRiskInfo !== 'function') return '';
+        const r = getPreContractRiskInfo();
+        const zeilen = [];
+        r.angebote.forEach(x => zeilen.push(`<div style="color:var(--danger); font-weight:800;">⚠️ ${x.p.name}: Vorvertrags-Angebot von ${x.club} - verlängern bis Spieltag ${x.bis}</div>`));
+        r.unterschrieben.forEach(x => zeilen.push(`<div style="color:var(--danger);">✍️ ${x.p.name} hat bei ${x.club} unterschrieben - geht ablösefrei (Winterverkauf bringt noch Geld)</div>`));
+        if (r.gefaehrdet.length) zeilen.push(`<div style="color:var(--accent);">👀 ${game.matchday >= PRECONTRACT_START_MD ? 'Jetzt' : `Ab Spieltag ${PRECONTRACT_START_MD}`} können andere Vereine Vorverträge anbieten: ${r.gefaehrdet.map(p => p.name).join(', ')} - früh verlängern schützt</div>`);
+        return zeilen.length ? `<div style="margin-top:4px; padding-top:4px; border-top:1px solid rgba(150,150,150,0.2);">${zeilen.join('')}</div>` : '';
     }
 
     function renderSquadPlanningView() {
@@ -27227,8 +27240,21 @@ function tickPreContracts() {
             if (!verein) return;
             p.preContractOffer = { club: verein.name, deadline: game.matchday + PRECONTRACT_OFFER_DEADLINE };
             addInboxMessage('vertrag', `⚠️ Vorvertrags-Angebot für ${p.name}`, `${verein.name} bietet ${p.name} einen Vorvertrag für die neue Saison an. Verlängere bis Spieltag ${p.preContractOffer.deadline} (er fordert jetzt 15 % mehr Gehalt), sonst unterschreibt er dort.`, 'screen-contracts');
+            showToast(`⚠️ ${verein.name} lockt ${p.name} mit einem Vorvertrag - verlängern bis Spieltag ${p.preContractOffer.deadline}!`, 'error', 5000);
         }
     });
+}
+
+// Frühwarnung für die Kaderplanung (25.19): wer ein Vorvertrags-Angebot hat (mit Frist), wer schon
+// woanders unterschrieben hat, und welche Leistungsträger mit auslaufendem Vertrag ab Spieltag
+// PRECONTRACT_START_MD Angebote bekommen können (je Spieltag PRECONTRACT_OFFER_CHANCE).
+function getPreContractRiskInfo() {
+    const median = [...squad].map(p => p.strength).sort((a, b) => a - b)[Math.floor(squad.length / 2)] || 0;
+    return {
+        angebote: squad.filter(p => p.preContractOffer).map(p => ({ p, club: p.preContractOffer.club, bis: p.preContractOffer.deadline })),
+        unterschrieben: squad.filter(p => p.preContractSigned).map(p => ({ p, club: p.preContractSigned })),
+        gefaehrdet: squad.filter(p => p.contracts === 1 && !p.preContractOffer && !p.preContractSigned && p.strength >= median)
+    };
 }
 
 // Saisonwechsel (concludeSeasonAndAdvance), nach Vertragsende und Alterung.
@@ -34126,7 +34152,7 @@ const LEXICON_ENTRIES = [
         text: 'Für Nationalspieler zahlt der Verband 15.000 € je Spieler und Länderspielpause, bei WM/EM 10.000 bzw. 12.000 € je Spieler und Turniertag.',
         tips: ['Steht im Kontoauszug unter „Abstellungsprämien“'] },
     { cat: 'Finanzen', title: 'Sponsoren & Branchenkonflikt', screen: 'screen-sponsors',
-        text: 'Hauptsponsor, Trikotärmel, Banden und Mannschaftsbus werden einzeln vergeben. Ist bereits ein Partner derselben Branche unter Vertrag, steht am Angebot „Branchenkonflikt mit …“: dann zahlt der neue Sponsor nur 70 % aller Beträge. Die Summen wachsen stark mit der Liga: in der Bundesliga bringen alle Partner zusammen rund 25 Mio. € pro Saison, in der Regionalliga knapp 1 Mio. €.',
+        text: 'Hauptsponsor, Trikotärmel, Banden und Mannschaftsbus werden einzeln vergeben. Ist bereits ein Partner derselben Branche unter Vertrag, steht am Angebot „Branchenkonflikt mit …“: dann zahlt der neue Sponsor nur 70 % aller Beträge. Die Summen wachsen stark mit der Liga: in der Bundesliga bringen alle Partner zusammen rund 25 Mio. € pro Saison, in der Regionalliga knapp 1 Mio. €. 6 Spieltage vor Vertragsende bietet der Hauptsponsor selbst eine Verlängerung um 34 Spieltage an - die Konditionen hängen an seiner Treue (Siege steigern sie) und an der Liga; einmal lässt sich +10 % fordern (Chance = Treue), unter 20 Treue verlängert er nicht.',
         tips: ['Branchen mischen bringt mehr Geld als zwei Partner aus derselben Branche', 'Erfolge und Medienimage locken bessere Sponsoren an'] },
     { cat: 'Finanzen', title: 'Ticketpreise & Zuschauer', screen: 'screen-finances',
         text: 'Ticketerlöse sind neben den TV-Geldern die größte Einnahme. Die Zuschauerzahl hängt von Fanstimmung, Liga, Gegner und Stadionkomfort ab; hohe Preise bringen mehr pro Kopf, aber weniger Zuschauer und schlechtere Stimmung in der Kurve.',

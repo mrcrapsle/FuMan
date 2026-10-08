@@ -172,7 +172,20 @@
             ${zeile(`Voraussichtliches Budget${o.rang ? ` (Stand Platz ${o.rang})` : ''}`, formatVal(o.budget))}
             <div style="margin-top:4px; font-weight:800; color:${farbe};">${o.spielraum >= 0 ? `✓ Spielraum ${formatVal(o.spielraum)} pro Spieltag` : `⚠️ ${formatVal(-o.spielraum)} pro Spieltag über dem Budget - Verlängerungen werden scheitern`}</div>
             ${o.stamm.length ? `<div style="margin-top:3px; color:var(--text-muted);">Auslaufende Stammspieler: ${o.stamm.map(p => p.name).join(', ')}</div>` : ''}
+            ${renderPreContractRiskLines()}
         </div>`;
+    }
+
+    // Vorverträge anderer Vereine (js/pre-contracts.js): Angebote mit Frist, schon Unterschriebene
+    // und gefährdete Leistungsträger - vorher stand das nur einzeln im Postfach.
+    function renderPreContractRiskLines() {
+        if (typeof getPreContractRiskInfo !== 'function') return '';
+        const r = getPreContractRiskInfo();
+        const zeilen = [];
+        r.angebote.forEach(x => zeilen.push(`<div style="color:var(--danger); font-weight:800;">⚠️ ${x.p.name}: Vorvertrags-Angebot von ${x.club} - verlängern bis Spieltag ${x.bis}</div>`));
+        r.unterschrieben.forEach(x => zeilen.push(`<div style="color:var(--danger);">✍️ ${x.p.name} hat bei ${x.club} unterschrieben - geht ablösefrei (Winterverkauf bringt noch Geld)</div>`));
+        if (r.gefaehrdet.length) zeilen.push(`<div style="color:var(--accent);">👀 ${game.matchday >= PRECONTRACT_START_MD ? 'Jetzt' : `Ab Spieltag ${PRECONTRACT_START_MD}`} können andere Vereine Vorverträge anbieten: ${r.gefaehrdet.map(p => p.name).join(', ')} - früh verlängern schützt</div>`);
+        return zeilen.length ? `<div style="margin-top:4px; padding-top:4px; border-top:1px solid rgba(150,150,150,0.2);">${zeilen.join('')}</div>` : '';
     }
 
     function renderSquadPlanningView() {

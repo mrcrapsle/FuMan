@@ -127,8 +127,21 @@ function tickPreContracts() {
             if (!verein) return;
             p.preContractOffer = { club: verein.name, deadline: game.matchday + PRECONTRACT_OFFER_DEADLINE };
             addInboxMessage('vertrag', `⚠️ Vorvertrags-Angebot für ${p.name}`, `${verein.name} bietet ${p.name} einen Vorvertrag für die neue Saison an. Verlängere bis Spieltag ${p.preContractOffer.deadline} (er fordert jetzt 15 % mehr Gehalt), sonst unterschreibt er dort.`, 'screen-contracts');
+            showToast(`⚠️ ${verein.name} lockt ${p.name} mit einem Vorvertrag - verlängern bis Spieltag ${p.preContractOffer.deadline}!`, 'error', 5000);
         }
     });
+}
+
+// Frühwarnung für die Kaderplanung (25.19): wer ein Vorvertrags-Angebot hat (mit Frist), wer schon
+// woanders unterschrieben hat, und welche Leistungsträger mit auslaufendem Vertrag ab Spieltag
+// PRECONTRACT_START_MD Angebote bekommen können (je Spieltag PRECONTRACT_OFFER_CHANCE).
+function getPreContractRiskInfo() {
+    const median = [...squad].map(p => p.strength).sort((a, b) => a - b)[Math.floor(squad.length / 2)] || 0;
+    return {
+        angebote: squad.filter(p => p.preContractOffer).map(p => ({ p, club: p.preContractOffer.club, bis: p.preContractOffer.deadline })),
+        unterschrieben: squad.filter(p => p.preContractSigned).map(p => ({ p, club: p.preContractSigned })),
+        gefaehrdet: squad.filter(p => p.contracts === 1 && !p.preContractOffer && !p.preContractSigned && p.strength >= median)
+    };
 }
 
 // Saisonwechsel (concludeSeasonAndAdvance), nach Vertragsende und Alterung.

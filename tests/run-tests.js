@@ -6124,6 +6124,15 @@ async function testSquadPlanningTool(browser) {
             && o.bedarf === squad.filter(p => p.contracts > 1).reduce((s, p) => s + p.wage, 0) + o.verlaengerung + o.vorvertraege
             && wageBox.includes(stamm.name) && wageBox.includes('Bedarf nächste Saison');
         game.wageBudget = 1; game.money = 0;
+        // Vorvertrags-Frühwarnung (25.19): Angebot mit Frist und gefährdete Leistungsträger in der Planung
+        const vv = [...squad].sort((a, b) => b.strength - a.strength);
+        vv[0].contracts = 1; vv[0].preContractOffer = { club: 'Testclub', deadline: game.matchday + 3 };
+        vv[1].contracts = 1; delete vv[1].preContractOffer; delete vv[1].preContractSigned;
+        renderSquadPlanningView();
+        const planHtml = document.getElementById('squad-planning-wage-box').innerHTML;
+        out.vorvertragsWarnung = planHtml.includes('Vorvertrags-Angebot von Testclub') && planHtml.includes(vv[1].name)
+            && getPreContractRiskInfo().gefaehrdet.some(p => p.id === vv[1].id);
+        delete vv[0].preContractOffer;
         out.gehaltsWarnung = getSquadPlanningWageOutlook().spielraum !== 0 && (() => { renderSquadPlanningView(); return document.getElementById('squad-planning-wage-box').innerHTML.includes(getSquadPlanningWageOutlook().spielraum >= 0 ? 'Spielraum' : 'über dem Budget'); })();
 
         return out;
@@ -6143,6 +6152,7 @@ async function testSquadPlanningTool(browser) {
     assert(r.altersverteilungHatInhalt, 'Die Alterspyramide zeigt echte, kaderabhängige Werte');
     assert(r.vertragsklippeNachPosition, 'Auslaufende Verträge werden nach Position aufgeschlüsselt angezeigt');
     assert(r.gehaltsplanung && r.gehaltsWarnung, 'Gehaltsplanung zeigt auslaufende Stammspieler, Verlängerungskosten und Spielraum gegen das Budget');
+    assert(r.vorvertragsWarnung, 'Kaderplanung warnt vor Vorvertrags-Angeboten (mit Frist) und nennt gefährdete Leistungsträger');
     assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Kaderplanungstool');
     await page.close();
 }
