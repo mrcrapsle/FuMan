@@ -11,6 +11,7 @@
 //         Über dem Gehaltsbudget gibt er die teuersten Nicht-Stammspieler ab (z. B. nach einem Abstieg).
 //         Tabelle: K/V = Käufe/Verkäufe der Saison, E = Platzerwartung des Vorstands,
 //         J = eigene Jugendspieler in der besten Elf / im Kader. Talente ab Kader-Median-Stärke zieht er hoch.
+//         Talentangebote: verkauft (mit Beteiligung), wessen Potenzial unter dem Kader-Median liegt; TV = Erlös.
 // passiv: spielt nur, der Kader wird nie angefasst.
 const path = require('path');
 const fs = require('fs');
@@ -256,6 +257,16 @@ async function karriere(browser, lauf) {
                         if (game.activeUltimatumPlayerId) resolveUltimatumIgnore();
                     }
                     if (isWinterTalkOpen()) chooseWinterTalk('kurs');
+                    // Talentangebote (25.18): verkaufen, wer es nicht über den Kader-Median schafft.
+                    if (typeof getOpenYouthOffers === 'function') {
+                        const med = [...squad].map(p => p.strength).sort((a, b) => a - b)[Math.floor(squad.length / 2)];
+                        getOpenYouthOffers().slice().forEach(o => {
+                            const t = youthTalents.find(p => p.id === o.playerId);
+                            if (!t) return;
+                            if ((t.potential || t.strength) < med) { acceptYouthOffer(o.id, true); window.__talentVerk = (window.__talentVerk || 0) + o.betrag; }
+                            else rejectYouthOffer(o.id);
+                        });
+                    }
                     sponsoren();
                     lizenzBauen();
                     // Mitgliederversammlung selbst halten, Rede passend zur Saison.
@@ -348,6 +359,7 @@ async function karriere(browser, lauf) {
                 zeile.abgaenge = kaderVorher.filter(id => !squad.some(p => p.id === id)).length;
                 zeile.kaeufe = squad.filter(p => p.joined && p.joined.via === 'kauf' && p.joined.season === start.season).length;
                 zeile.verkaeufe = window.__verk || 0; window.__verk = 0;
+                zeile.talentErloes = window.__talentVerk || 0; window.__talentVerk = 0;
                 const elfIds = pickBestLineupIds();
                 zeile.jugend = squad.filter(p => p.joined && p.joined.via === 'jugend').length;
                 zeile.jugendElf = squad.filter(p => p.joined && p.joined.via === 'jugend' && elfIds.includes(p.id)).length;
@@ -366,7 +378,7 @@ async function karriere(browser, lauf) {
     zeilen.forEach(z => {
         if (z.crash) return console.log('ABSTURZ: ' + z.crash);
         if (z.entlassen) return console.log(`${String(z.season).padStart(3)} ENTLASSEN (Liga ${z.liga + 1})`);
-        console.log(`${String(z.season).padStart(3)} ${String(z.liga + 1).padStart(4)} ${String(z.platz).padStart(2)} ${String(z.punkte).padStart(3)} ${mio(z.geld)} ${mio(z.transfer)} ${String(Math.round(z.gehaltBudget / 1000)).padStart(7)}k ${String(Math.round(z.gehaltSumme / 1000)).padStart(5)}k ${String(z.elf).padStart(4)} ${String(z.ligaSchnitt).padStart(4)} ${String(z.ligaTop).padStart(3)} ${String(z.kader).padStart(3)} ${String(z.vorstand).padStart(3)} ${z.europaRunde ? ('CC:' + z.europaRunde).padEnd(13) : '-'.padEnd(13)} ${z.pokal ? 'Pokal ' + z.pokal : ''}${z.ligaDanach !== z.liga ? ' → Liga ' + (z.ligaDanach + 1) : ''}${z.lizenzOffen ? ` LIZENZ-SPERRE:${z.lizenzOffen}` : ''}${z.notkader ? ' NOTKADER' : ''}${z.entlassenAmEnde ? ' ENTLASSEN (Saisonende)' : ''}${z.kaeufe || z.verkaeufe ? ` K${z.kaeufe}/V${z.verkaeufe}` : ''}${z.erwartet ? ` E${z.erwartet}` : ''}${z.jugend ? ` J${z.jugendElf}/${z.jugend}` : ''}`);
+        console.log(`${String(z.season).padStart(3)} ${String(z.liga + 1).padStart(4)} ${String(z.platz).padStart(2)} ${String(z.punkte).padStart(3)} ${mio(z.geld)} ${mio(z.transfer)} ${String(Math.round(z.gehaltBudget / 1000)).padStart(7)}k ${String(Math.round(z.gehaltSumme / 1000)).padStart(5)}k ${String(z.elf).padStart(4)} ${String(z.ligaSchnitt).padStart(4)} ${String(z.ligaTop).padStart(3)} ${String(z.kader).padStart(3)} ${String(z.vorstand).padStart(3)} ${z.europaRunde ? ('CC:' + z.europaRunde).padEnd(13) : '-'.padEnd(13)} ${z.pokal ? 'Pokal ' + z.pokal : ''}${z.ligaDanach !== z.liga ? ' → Liga ' + (z.ligaDanach + 1) : ''}${z.lizenzOffen ? ` LIZENZ-SPERRE:${z.lizenzOffen}` : ''}${z.notkader ? ' NOTKADER' : ''}${z.entlassenAmEnde ? ' ENTLASSEN (Saisonende)' : ''}${z.kaeufe || z.verkaeufe ? ` K${z.kaeufe}/V${z.verkaeufe}` : ''}${z.erwartet ? ` E${z.erwartet}` : ''}${z.jugend ? ` J${z.jugendElf}/${z.jugend}` : ''}${z.talentErloes ? ` TV${(z.talentErloes / 1e6).toFixed(2)}M` : ''}`);
     });
     if (process.env.DIAG) zeilen.forEach(z => { if (z.season) console.log(`\n[S${z.season}] Lizenz offen: ${z.lizenzVorEnde || '-'} | Verlängerung ${JSON.stringify(z.vl)} | Abgänge ${z.abgaenge} | Fehler: ${(z.toasts || []).join(' ; ')}\n      Post: ${(z.post || []).join(' ; ')}`); });
     if (process.env.STRDIAG) zeilen.forEach(z => { if (z.str) console.log(`[S${z.season} Liga ${z.liga + 1} Pl ${z.platz}] ${z.str}`); });

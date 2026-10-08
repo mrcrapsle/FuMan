@@ -7784,7 +7784,8 @@ function renderTransferPokerBox() {
         for (let i = game.sellOnClauses.length - 1; i >= 0; i--) {
             let clause = game.sellOnClauses[i];
             if (Math.random() < 0.015) {
-                let resaleValue = Math.round(clause.originalSaleValue * (1.3 + Math.random() * 1.2));
+                // Talentverkauf (js/youth-sales.js): Weiterverkauf zum Marktwert am Potenzial.
+                let resaleValue = clause.resaleValue ? Math.round(clause.resaleValue * (0.8 + Math.random() * 0.4)) : Math.round(clause.originalSaleValue * (1.3 + Math.random() * 1.2));
                 let payout = Math.round(resaleValue * (clause.percent / 100));
                 game.money += payout;
                 addInboxMessage('vertrag', `💰 Weiterverkaufsbeteiligung ausgezahlt!`, `${clause.buyingClub} hat ${clause.playerName} für ${formatVal(resaleValue)} weiterverkauft - deine ${clause.percent}%-Beteiligung: ${formatVal(payout)}!`, 'screen-finances');
@@ -18641,6 +18642,7 @@ function renderStadiumEventsPanel() {
         renderYouthLeagueTable();
         document.getElementById('youth-lvl-disp').innerText = `${game.youthAcademyLvl} / ${YOUTH_ACADEMY_MAX_LVL}`;
         renderYouthAcademyEffect();
+        if (typeof renderYouthOffersBox === 'function') renderYouthOffersBox();
         let scoutBtn = document.getElementById('btn-scout-youth');
         if (scoutBtn) scoutBtn.innerText = `🌟 Nachwuchs sichten [${formatVal(getYouthScoutCost())}]`;
         let list = document.getElementById('youth-talents-list');
@@ -23686,6 +23688,113 @@ function describePromotionBoost() {
 
 /* eslint-enable */
 /* eslint-disable no-undef */
+// Talente verkaufen (Phase 25.18): KI-Vereine bieten für Akademie-Talente (youthTalents) mit
+// echten Ablösen - bisher konnte ein Talent nur hochgezogen, verliehen, entlassen oder von einem
+// Rivalen abgeworben werden (checkYouthPoachingAttempt). Jeden Monat (runMonthlyClubTicks)
+// prüft tickYouthOffers() die Talente ab 16: Chance je Potenzial-Stufe (YOUTH_OFFER_CHANCE),
+// höchstens YOUTH_OFFER_MAX offene Angebote in game.youthOffers, jedes gilt 4 Spieltage.
+// Ablöse = Marktwert auf halbem Weg zum Potenzial (die Scouts der anderen kennen es) × 0,9-1,3.
+//   annehmen          volle Ablöse, 85 % davon ins Transferbudget (wie bei Profi-Verkäufen)
+//   mit Beteiligung   25 % weniger jetzt, dafür 25 % vom späteren Weiterverkauf
+//                     (game.sellOnClauses mit resaleValue = Marktwert am Potenzial)
+//   ablehnen          das Talent bleibt; ein Top-Talent (Stufe 3) freut sich (Entwicklung +1)
+
+const YOUTH_OFFER_CHANCE = { 1: 0.015, 2: 0.05, 3: 0.12 };
+const YOUTH_OFFER_MAX = 2;
+const YOUTH_OFFER_DAYS = 4;
+const YOUTH_SELLON_PERCENT = 25;
+
+function getYouthOfferAmount(p) {
+    const ziel = Math.round((p.strength + (p.potential || p.strength)) / 2);
+    return Math.max(5000, Math.round(calculatePlayerMarketValue(ziel) * (0.9 + Math.random() * 0.4) / 1000) * 1000);
+}
+
+function pickYouthOfferClub() {
+    const lvl = Math.max(0, game.leagueLevel - (Math.random() < 0.5 ? 1 : 0));
+    const teams = (leaguesData[lvl] || []).filter(t => t.name !== game.clubName && t.name !== (game.secondTeam && game.secondTeam.name));
+    if (!teams.length) return 'ein Ligakonkurrent';
+    const stark = [...teams].sort((a, b) => b.strength - a.strength).slice(0, Math.max(3, Math.ceil(teams.length / 2)));
+    return stark[Math.floor(Math.random() * stark.length)].name;
+}
+
+function getOpenYouthOffers() {
+    if (!Array.isArray(game.youthOffers)) game.youthOffers = [];
+    return game.youthOffers;
+}
+
+function tickYouthOffers() {
+    const offen = getOpenYouthOffers();
+    // Abgelaufene oder verwaiste Angebote (Talent weg, neue Saison) entfernen.
+    game.youthOffers = offen.filter(o => o.season === game.season && o.bis >= game.matchday && youthTalents.some(p => p.id === o.playerId));
+    if (game.youthOffers.length >= YOUTH_OFFER_MAX) return;
+    const kandidaten = youthTalents.filter(p => (p.age || 15) >= 16 && !game.youthOffers.some(o => o.playerId === p.id));
+    for (const p of kandidaten) {
+        if (game.youthOffers.length >= YOUTH_OFFER_MAX) break;
+        if (typeof ensureYouthPotential === 'function') ensureYouthPotential(p);
+        if (Math.random() >= (YOUTH_OFFER_CHANCE[p.potentialTier] || 0.015)) continue;
+        const o = { id: 'yo' + Math.random().toString(36).slice(2, 9), playerId: p.id, name: p.name, club: pickYouthOfferClub(),
+            betrag: getYouthOfferAmount(p), season: game.season, bis: game.matchday + YOUTH_OFFER_DAYS };
+        game.youthOffers.push(o);
+        addInboxMessage('vertrag', `🌱 Angebot für Talent ${p.name}`, `${o.club} bietet ${formatVal(o.betrag)} für ${p.name} (${p.age} J., Stärke ${p.strength}). Das Angebot gilt bis Spieltag ${o.bis} - Jugendakademie, Reiter Talente.`, 'screen-youth');
+    }
+}
+
+function removeYouthTalentById(id) {
+    youthTalents = youthTalents.filter(p => p.id !== id);
+    game.youthHospitants = (game.youthHospitants || []).filter(x => x !== id);
+    game.youthOffers = getOpenYouthOffers().filter(o => o.playerId !== id);
+}
+
+function acceptYouthOffer(offerId, mitBeteiligung) {
+    const o = getOpenYouthOffers().find(x => x.id === offerId);
+    const p = o && youthTalents.find(x => x.id === o.playerId);
+    if (!o || !p) { showToast('Dieses Angebot gilt nicht mehr.', 'error'); return; }
+    const jetzt = mitBeteiligung ? Math.round(o.betrag * (1 - YOUTH_SELLON_PERCENT / 100) / 1000) * 1000 : o.betrag;
+    playSound('goal');
+    if (typeof bucheMitLabel === 'function') bucheMitLabel('🌱 Talentverkauf', jetzt); else game.money += jetzt;
+    game.transferBudget += Math.round(jetzt * 0.85);
+    if (mitBeteiligung) {
+        if (!Array.isArray(game.sellOnClauses)) game.sellOnClauses = [];
+        game.sellOnClauses.push({ playerName: p.name, buyingClub: o.club, percent: YOUTH_SELLON_PERCENT, originalSaleValue: jetzt,
+            resaleValue: calculatePlayerMarketValue(p.potential || p.strength) });
+    }
+    removeYouthTalentById(p.id);
+    if (typeof addYouthMoment === 'function') addYouthMoment('💶', `${p.name} wechselt für ${formatVal(jetzt)} zu ${o.club}${mitBeteiligung ? ` (+${YOUTH_SELLON_PERCENT} % Weiterverkauf)` : ''}`);
+    showToast(`💶 ${p.name} wechselt für ${formatVal(jetzt)} zu ${o.club}${mitBeteiligung ? ` - dazu ${YOUTH_SELLON_PERCENT} % vom Weiterverkauf` : ''}.`, 'success', 5500);
+    if (typeof renderYouthView === 'function') renderYouthView();
+    updateUI();
+}
+
+function rejectYouthOffer(offerId) {
+    const o = getOpenYouthOffers().find(x => x.id === offerId);
+    if (!o) return;
+    const p = youthTalents.find(x => x.id === o.playerId);
+    game.youthOffers = getOpenYouthOffers().filter(x => x.id !== offerId);
+    // Ein Top-Talent fühlt sich bestätigt, wenn der Verein auf ihn setzt.
+    if (p && p.potentialTier === 3 && p.strength < (p.potential || 99)) p.strength++;
+    showToast(p ? `${p.name} bleibt in der Akademie${p.potentialTier === 3 ? ' - und gibt im Training noch mehr Gas (+1)' : ''}.` : 'Angebot abgelehnt.', 'success');
+    if (typeof renderYouthView === 'function') renderYouthView();
+}
+
+function renderYouthOffersBox() {
+    const box = document.getElementById('youth-offers-box');
+    if (!box) return;
+    const offen = getOpenYouthOffers().filter(o => o.season === game.season && o.bis >= game.matchday && youthTalents.some(p => p.id === o.playerId));
+    if (!offen.length) { box.innerHTML = ''; return; }
+    box.innerHTML = `<div class="panel" style="border:1px solid var(--gold);"><div class="panel-header" style="color:var(--gold);">💶 ANGEBOTE FÜR TALENTE</div>` + offen.map(o => {
+        const p = youthTalents.find(x => x.id === o.playerId);
+        const mit = Math.round(o.betrag * (1 - YOUTH_SELLON_PERCENT / 100) / 1000) * 1000;
+        return `<div class="box" style="font-size:10px;">${o.club} bietet <strong>${formatVal(o.betrag)}</strong> für ${p.name} (${p.pos}, ${p.age} J., Stärke ${p.strength}) - gilt bis Spieltag ${o.bis}.
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin-top:4px;">
+                <button onclick="acceptYouthOffer('${o.id}', false)" class="btn-action" style="font-size:9px;">✅ Verkaufen</button>
+                <button onclick="acceptYouthOffer('${o.id}', true)" class="btn-secondary" style="font-size:9px;">📈 ${formatVal(mit)} + ${YOUTH_SELLON_PERCENT} % Weiterverkauf</button>
+                <button onclick="rejectYouthOffer('${o.id}')" class="btn-secondary" style="font-size:9px;">❌ Behalten</button>
+            </div></div>`;
+    }).join('') + '</div>';
+}
+
+/* eslint-enable */
+/* eslint-disable no-undef */
 // Spieler-Karriereprofil (Phase 22.10): im Spieler-Popup statt der kurzen Karrierezeile ein
 // echtes Profil - wie und woher er kam (p.joined: Saison, Weg, abgebender Verein, Ablöse),
 // Saison für Saison Spiele/Tore/Vorlagen/Note/Elf des Spieltags (p.strengthHistory plus die
@@ -27084,6 +27193,7 @@ function cleanupLegacyScoutState() {
         if (typeof tickBoardRoom === 'function') tickBoardRoom();
         if (typeof tickYouthDevelopment === 'function') tickYouthDevelopment();
         if (typeof tickYouthBreakthroughs === 'function') tickYouthBreakthroughs();
+        if (typeof tickYouthOffers === 'function') tickYouthOffers();
         if (typeof tickMediaDepartment === 'function') tickMediaDepartment();
         if (typeof cleanupRemovedModuleState === 'function') cleanupRemovedModuleState();
         if (typeof tickSeasonObjectives === 'function') tickSeasonObjectives();

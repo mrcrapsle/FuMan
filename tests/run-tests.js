@@ -1748,6 +1748,73 @@ async function testRumors(browser) {
     await page.close();
 }
 
+async function testYouthSales(browser) {
+    console.log('\n[25.18] Talente verkaufen: KI-Angebote für Akademie-Talente');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            const zufall = Math.random;
+            game.money = 5000000;
+            youthTalents = [];
+            for (let i = 0; i < 3; i++) scoutYouthTalent();
+            youthTalents.forEach((p, i) => { p.age = 17; p.potentialTier = i === 0 ? 3 : 2; p.potential = p.strength + 12; });
+            game.youthOffers = [];
+            Math.random = () => 0.01;
+            tickYouthOffers();
+            Math.random = zufall;
+            out.angebote = game.youthOffers.length === 2 && game.youthOffers.every(o => o.betrag >= 5000 && o.club && o.bis === game.matchday + 4);
+            out.post = inboxMessages.some(m => m.title.includes('Angebot für Talent'));
+            showScreen('screen-youth');
+            out.box = document.getElementById('youth-offers-box').textContent.includes('ANGEBOTE FÜR TALENTE');
+            // Verkaufen: volle Ablöse, 85 % ins Transferbudget, Talent weg
+            const o1 = game.youthOffers[0];
+            const geld = game.money, tb = game.transferBudget;
+            acceptYouthOffer(o1.id, false);
+            out.verkaufWerte = { betrag: o1.betrag, dGeld: game.money - geld, dTb: game.transferBudget - tb, da: youthTalents.some(p => p.id === o1.playerId), offen: game.youthOffers.map(o => o.id + ":" + o.playerId), o1: o1.id };
+            out.verkauft = game.money === geld + o1.betrag && game.transferBudget === tb + Math.round(o1.betrag * 0.85)
+                && !youthTalents.some(p => p.id === o1.playerId) && !game.youthOffers.some(o => o.id === o1.id);
+            // Mit Beteiligung: 25 % weniger, Klausel mit Weiterverkaufswert am Potenzial
+            const o2 = game.youthOffers[0];
+            const geld2 = game.money;
+            game.sellOnClauses = [];
+            acceptYouthOffer(o2.id, true);
+            const klausel = game.sellOnClauses[0];
+            out.beteiligung = game.money === geld2 + Math.round(o2.betrag * 0.75 / 1000) * 1000 && klausel && klausel.percent === 25 && klausel.resaleValue > 0;
+            // Ablehnen: ein Top-Talent legt zu; abgelaufene Angebote verschwinden
+            const top = youthTalents[0];
+            top.potentialTier = 3; top.potential = top.strength + 10;
+            const vorher = top.strength;
+            game.youthOffers = [{ id: 'x1', playerId: top.id, name: top.name, club: 'Test', betrag: 10000, season: game.season, bis: game.matchday + 4 }];
+            rejectYouthOffer('x1');
+            out.abgelehnt = top.strength === vorher + 1 && game.youthOffers.length === 0;
+            game.youthOffers = [{ id: 'x2', playerId: top.id, name: top.name, club: 'Test', betrag: 10000, season: game.season, bis: game.matchday - 1 }];
+            Math.random = () => 0.99;
+            tickYouthOffers();
+            Math.random = zufall;
+            out.abgelaufen = game.youthOffers.length === 0;
+            // Jünger als 16: keine Angebote
+            youthTalents.forEach(p => { p.age = 15; });
+            Math.random = () => 0.01;
+            tickYouthOffers();
+            Math.random = zufall;
+            out.zuJung = game.youthOffers.length === 0;
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Talentverkauf ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.angebote && r.post && r.box, 'KI-Vereine bieten für Talente ab 16 (höchstens 2 offen, 4 Spieltage gültig), mit Postfach und Box');
+        assert(r.verkauft, `Verkaufen: volle Ablöse, 85 % ins Transferbudget, Talent verlässt die Akademie (${JSON.stringify(r.verkaufWerte)})`);
+        assert(r.beteiligung, 'Mit Beteiligung: 25 % weniger sofort, dafür 25 % vom Weiterverkauf am Potenzial');
+        assert(r.abgelehnt && r.abgelaufen && r.zuJung, 'Ablehnen hebt ein Top-Talent um 1, abgelaufene Angebote verschwinden, unter 16 keine Angebote');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testTransferStrategy(browser) {
     console.log('\n[25.18] Transferstrategie mit dem Vorstand: Budget, Saisonziel, Abrechnung am Saisonende');
     const { page, consoleErrors } = await freshPage(browser);
@@ -8328,6 +8395,7 @@ async function main() {
         testRumors,
         testWinterTalk,
         testTransferStrategy,
+        testYouthSales,
         testPlayerProfile,
         testHomeRegion,
         testLocalDerbies,

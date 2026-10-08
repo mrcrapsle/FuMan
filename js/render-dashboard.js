@@ -8,7 +8,10 @@
         let heroCrest = document.getElementById('dash-hero-crest');
         if (heroCrest && game.clubCrestAnimal) heroCrest.innerText = game.clubCrestAnimal;
         if (typeof applyStadiumVisualTier === 'function') applyStadiumVisualTier('.dashboard-hero-bowl-wrapper');
-        document.getElementById('dash-transfer-budget').innerText = formatVal(game.transferBudget);
+        // Ablösen müssen Budget UND Kasse decken (finalizePlayerPurchase) - in der Bundesliga ist meist
+        // die Kasse knapper (Langzeittest 25.18: 25-97 Mio. € Budget bei 10-50 Mio. € auf dem Konto).
+        document.getElementById('dash-transfer-budget').innerText = formatVal(game.transferBudget)
+            + (game.money < game.transferBudget ? ` (Kasse ${formatVal(Math.max(0, game.money))})` : '');
         document.getElementById('dash-wage-budget').innerText = formatVal(game.wageBudget) + " / SpT";
         document.getElementById('dash-holding-cap').innerText = formatVal(holdingCompany.money);
 

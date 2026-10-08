@@ -3,6 +3,7 @@
         renderYouthLeagueTable();
         document.getElementById('youth-lvl-disp').innerText = `${game.youthAcademyLvl} / ${YOUTH_ACADEMY_MAX_LVL}`;
         renderYouthAcademyEffect();
+        if (typeof renderYouthOffersBox === 'function') renderYouthOffersBox();
         let scoutBtn = document.getElementById('btn-scout-youth');
         if (scoutBtn) scoutBtn.innerText = `🌟 Nachwuchs sichten [${formatVal(getYouthScoutCost())}]`;
         let list = document.getElementById('youth-talents-list');

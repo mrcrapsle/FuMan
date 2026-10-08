@@ -1403,6 +1403,7 @@
         if (typeof tickBoardRoom === 'function') tickBoardRoom();
         if (typeof tickYouthDevelopment === 'function') tickYouthDevelopment();
         if (typeof tickYouthBreakthroughs === 'function') tickYouthBreakthroughs();
+        if (typeof tickYouthOffers === 'function') tickYouthOffers();
         if (typeof tickMediaDepartment === 'function') tickMediaDepartment();
         if (typeof cleanupRemovedModuleState === 'function') cleanupRemovedModuleState();
         if (typeof tickSeasonObjectives === 'function') tickSeasonObjectives();

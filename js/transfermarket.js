@@ -391,7 +391,8 @@
         for (let i = game.sellOnClauses.length - 1; i >= 0; i--) {
             let clause = game.sellOnClauses[i];
             if (Math.random() < 0.015) {
-                let resaleValue = Math.round(clause.originalSaleValue * (1.3 + Math.random() * 1.2));
+                // Talentverkauf (js/youth-sales.js): Weiterverkauf zum Marktwert am Potenzial.
+                let resaleValue = clause.resaleValue ? Math.round(clause.resaleValue * (0.8 + Math.random() * 0.4)) : Math.round(clause.originalSaleValue * (1.3 + Math.random() * 1.2));
                 let payout = Math.round(resaleValue * (clause.percent / 100));
                 game.money += payout;
                 addInboxMessage('vertrag', `💰 Weiterverkaufsbeteiligung ausgezahlt!`, `${clause.buyingClub} hat ${clause.playerName} für ${formatVal(resaleValue)} weiterverkauft - deine ${clause.percent}%-Beteiligung: ${formatVal(payout)}!`, 'screen-finances');
