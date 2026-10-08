@@ -13330,6 +13330,9 @@ function finishGoalkeeperGame() {
         // Budget-Balken
         let currentWages = squad.reduce((s, p) => s + p.wage, 0) + (game.secondTeam.isActive ? secondTeamSquad.reduce((s, p) => s + p.wage, 0) : 0);
         document.getElementById('budget-transfer-bar-label').innerText = `Transferbudget: ${formatVal(game.transferBudget)}`;
+        const askT = document.getElementById('btn-board-budget-transfer'), askW = document.getElementById('btn-board-budget-wage');
+        if (askT) askT.innerText = `+${formatVal(getBoardBudgetAsk('transfer'))} Transferbudget fordern`;
+        if (askW) askW.innerText = `+${formatVal(getBoardBudgetAsk('wage'))}/SpT Gehaltsbudget fordern`;
         document.getElementById('budget-wage-bar-label').innerText = `Gehaltsbudget: ${formatVal(currentWages)} / ${formatVal(game.wageBudget)} pro Spieltag`;
         let wagePct = Math.min(100, Math.round((currentWages / Math.max(1, game.wageBudget)) * 100));
         let wageBar = document.getElementById('budget-wage-bar-fill');
@@ -13403,7 +13406,15 @@ function finishGoalkeeperGame() {
 
     }
 
+    // Budget-Forderung (25.20): Beträge nach Liga - vorher fest 500.000 € / 10.000 € pro Spieltag,
+    // in der 6. Liga mehr als das ganze Gehaltsbudget (8.000 €), in der Bundesliga 0,6 % davon.
+    function getBoardBudgetAsk(type) {
+        return type === 'wage'
+            ? Math.max(1000, Math.round(getLeagueWageBudget(game.leagueLevel) * 0.05 / 1000) * 1000)
+            : Math.max(5000, Math.round(getLeagueTransferBudget(game.leagueLevel) * 0.1 / 5000) * 5000);
+    }
     function negotiateBoardBudget(type, amount) {
+        if (typeof amount !== 'number') amount = getBoardBudgetAsk(type);
         playSound('click');
         let chance = (game.boardSat / 100) * 0.85;
         if (Math.random() < chance) {
@@ -20073,6 +20084,7 @@ function renderYouthPathwayBoxes() {
     // nächsten Saison. Bankspieler unterschreiben gegen eine Einsatzgarantie günstiger.
     let contractTalk = null; // { playerId, years, offerFactor, garantie, rounds }
 
+    const CONTRACT_HANDGELD_MATCHDAYS = 4;
     function getContractDemand(p) {
         let marktGehalt = calculatePlayerWage(p.marketValue, p.strength);
         let elf = pickBestLineupIds();
@@ -20087,7 +20099,10 @@ function renderYouthPathwayBoxes() {
         let gehalt = Math.round(Math.max(untergrenze, marktGehalt * faktor) / 10) * 10;
         // Vorvertrags-Angebot eines anderen Vereins (js/pre-contracts.js): er weiß, was er wert ist.
         if (p.preContractOffer) gehalt = Math.round(gehalt * 1.15 / 10) * 10;
-        let handgeldProJahr = Math.max(1500, Math.round(p.marketValue * 0.05));
+        // Handgeld (25.20): CONTRACT_HANDGELD_MATCHDAYS Spieltagsgehälter je Vertragsjahr (~12 % eines
+        // Jahresgehalts), wie die Vorverträge (12/24 Spieltagsgehälter). Vorher 5 % des Marktwerts je
+        // Jahr (~27 % eines Jahresgehalts) - ein Bundesligist zahlte 12-35 Mio. € pro Saison.
+        let handgeldProJahr = Math.max(1500, Math.round(gehalt * CONTRACT_HANDGELD_MATCHDAYS / 100) * 100);
         if (staffMembers.sportDir.hired) handgeldProJahr = Math.round(handgeldProJahr * 0.8);
         return { gehalt, handgeldProJahr, stammspieler, star: top3 };
     }
@@ -24124,7 +24139,12 @@ function recordSeasonExpectationRank() {
     exp.leagueLevel = game.leagueLevel;
     exp.teams = teams.length;
     exp.expectedRank = 1 + teams.filter(t => t.name !== game.clubName && t.strength > own).length;
+    // Nach einem Abstieg (25.20): die Elf ist fast immer die stärkste der neuen Liga, also lautete die
+    // Erwartung stets Platz 1 - die 2. Liga hat aber selbst zwei, drei Ex-Bundesligisten auf Augenhöhe.
+    // Der Bot wurde als klarer Favorit nach Platz 8 entlassen. Erwartet wird jetzt der Aufstiegskampf.
+    if (game.relegatedIntoSeason === game.season) exp.expectedRank = Math.max(exp.expectedRank, RELEGATION_EXPECTED_RANK);
 }
+const RELEGATION_EXPECTED_RANK = 3;
 
 function recordSeasonExpectation() {
     game.seasonExpectation = { season: game.season, startMoney: Math.round(game.money) };
@@ -28571,6 +28591,8 @@ function concludeSeasonAndAdvance() {
             game.leagueLevel++;
             abstiegsGehaelter = applyRelegationWageClause();
             if (typeof payRelegationParachute === 'function') payRelegationParachute();
+            // Erste Saison nach dem Abstieg (member-assembly.js): Erwartung höchstens Platz RELEGATION_EXPECTED_RANK.
+            game.relegatedIntoSeason = game.season + 1;
             const neustart = typeof grantRelegationRestart === 'function' && grantRelegationRestart();
             showNotice('❌ Abstieg', `Die Klasse konnte nicht gehalten werden. Nächste Saison geht es eine Liga tiefer weiter.${neustart ? '\n\nDer Vorstand hält an dir fest und gibt dir einen Neustart.' : ''}`, { typ: 'warn' });
         }
@@ -29955,7 +29977,7 @@ const LEXICON_ENTRIES = [
         text: 'Vor jedem Spiel: drei Antworten mit echter Wirkung (Moral, Stärke im nächsten Spiel, Vorstand, Fans). Versprechen werden nach dem Spiel abgerechnet.',
         tips: ['Wer einen Sieg verspricht und verliert, verliert Ansehen bei Medien, Fans und Vorstand'] },
     { cat: 'Verein', title: 'Vorstandszufriedenheit', screen: 'screen-dashboard',
-        text: 'Wie zufrieden der Vorstand ist (10-100). Fällt sie unter 25, warnt er. Entlassen wird nur am Saisonende: wenn sie dann unter 25 liegt, die letzten 6 Pflichtspiele darunter waren und sie in dieser Zeit nicht gestiegen ist. Nach einem Abstieg gibt es einmal einen Neustart (mindestens 60), nach einem zweiten Abstieg in Folge nicht. In der ersten Saison gibt es Schonfrist.',
+        text: 'Wie zufrieden der Vorstand ist (10-100). Fällt sie unter 25, warnt er. Entlassen wird nur am Saisonende: wenn sie dann unter 25 liegt, die letzten 6 Pflichtspiele darunter waren und sie in dieser Zeit nicht gestiegen ist. Nach einem Abstieg gibt es einmal einen Neustart (mindestens 60), nach einem zweiten Abstieg in Folge nicht. In der ersten Saison nach einem Abstieg erwartet er höchstens Platz 3 - die Liga hat meist mehrere Ex-Erstligisten auf Augenhöhe. In der ersten Saison gibt es Schonfrist.',
         tips: ['Siege und erreichte Saisonziele heben sie', 'Schulden, gebrochene Versprechen und Niederlagenserien senken sie', 'Der Vorstandsraum erklärt jedes Mitglied einzeln'] },
     { cat: 'Verein', title: 'Mitgliederversammlung', screen: 'screen-dashboard',
         text: 'Nach jeder Saison wollen die Mitglieder deinen Bericht: Platz gegen Erwartung, Aufstieg/Abstieg und Kasse ergeben die Grundstimmung. Rede und Beitragsantrag wählst du im Dashboard. Ab 70 % Zustimmung Vorstand +10, ab 50 % (entlastet) +5, darunter -10. Bereitest du sie nicht innerhalb von 6 Spieltagen vor, findet sie ohne dich statt (-5 % Zustimmung).',
@@ -30004,7 +30026,7 @@ const LEXICON_ENTRIES = [
         tips: ['Verkäufe und auslaufende Verträge schaffen Luft', 'Im Gehaltsgespräch einmal nachverhandeln', 'Zum Saisonstart deckt es mindestens die laufenden Gehälter plus die Gehaltserhöhungen der Verträge, die in der neuen Saison auslaufen - dazu 5 % Spielraum, solange die Vorsaison ohne Verlust war; ab dem 1,5-fachen Ligawert friert der Vorstand die Gehälter ein, außer die Kasse trägt eine halbe Saison Gehälter (verlängert wird dann über Abgänge); mit Minus auf dem Konto eingefroren auf die laufenden Gehälter (ohne Erhöhungen)', 'Bei einer Verlängerung zählen nur die Gehälter der Spieler, die danach noch da sind - wer ohnehin geht, schafft Luft'] },
     { cat: 'Finanzen', title: 'Transferbudget', screen: 'screen-finances',
         text: 'Wie viel Ablöse der Vorstand pro Saison freigibt. Unabhängig vom Kontostand: beides muss reichen. Grundbetrag nach Liga: Bundesliga 25 Mio. €, 2. Liga 3 Mio. €, 3. Liga 900.000 €, 4. Liga 250.000 €, 5. Liga 60.000 €, 6. Liga 40.000 € - zum Saisonstart mit Platz 1-4 × 1,3, ab Platz 11 × 0,8.',
-        tips: ['Verkäufe erhöhen es', 'Mit dem Vorstand lässt sich nachverhandeln', 'Zum Saisonstart gibt der Vorstand 40 % der Rücklagen über einer Reserve (halbe Saison Gehaltsbudget) zusätzlich frei, 10 % davon gehen ins Gehaltsbudget'] },
+        tips: ['Verkäufe erhöhen es (85 % des Erlöses) - das Gehaltsbudget nicht', 'Beim Vorstand lassen sich 10 % des Liga-Transferbudgets bzw. 5 % des Liga-Gehaltsbudgets nachfordern (Chance nach Vorstandslaune, Erfolg -5, Absage -10)', 'Zum Saisonstart gibt der Vorstand 40 % der Rücklagen über einer Reserve (halbe Saison Gehaltsbudget) zusätzlich frei, 10 % davon gehen ins Gehaltsbudget'] },
     { cat: 'Finanzen', title: 'Financial Fairplay', screen: 'screen-finances',
         text: 'Über drei Saisons darf der Verein nur begrenzt Verlust machen (je nach Liga). Investitionen in Stadion, Gelände und Jugend zählen nicht. Bei Verstoß: Verwarnung, dann Transfersperre und Punktabzug.',
         tips: ['Das Buchungsjournal zeigt, wofür das Geld ausgegeben wird', 'Nicht verwechseln mit der Transfersperre bei negativem Kontostand'] },
@@ -30039,7 +30061,7 @@ const LEXICON_ENTRIES = [
         text: 'Sommer: Spieltage 1-3, Winter: Spieltage 18-20. Am letzten Tag (Deadline-Day) gibt es Schnäppchen und hektische Wechsel.',
         tips: ['Der Transfer-Ticker zeigt, wohin die Stars der anderen Vereine wechseln'] },
     { cat: 'Transfers', title: 'Vertragsgespräch', screen: 'screen-contracts',
-        text: 'Verlängerungen sind Gehaltsgespräche: Stammspieler und Stars fordern mehr, ältere Spieler weniger. Zähe Charaktere lassen sich schwer drücken; nach zwei geplatzten Runden ist für die Saison Schluss.',
+        text: 'Verlängerungen sind Gehaltsgespräche: Stammspieler und Stars fordern mehr, ältere Spieler weniger. Zähe Charaktere lassen sich schwer drücken; nach zwei geplatzten Runden ist für die Saison Schluss. Dazu kommt ein Handgeld von 4 Spieltagsgehältern je Vertragsjahr (mit Sportdirektor 20 % weniger) plus Beraterprovision.',
         tips: ['Eine Einsatzgarantie macht Spieler billiger - aber wird geprüft'] },
     { cat: 'Wettbewerbe', title: 'Auf- und Abstieg', screen: 'screen-league',
         text: 'Platz 1 und 2 steigen direkt auf, Platz 3 spielt Relegation gegen den 16. der Liga darüber. Platz 16 muss in die Relegation, Platz 17 und 18 steigen ab. Die Aufstiegsprämie richtet sich nach der neuen Liga: 150.000 € (Oberliga) bis 5 Mio. € (Bundesliga). Beim Abstieg sinken alle Spielergehälter vertragsgemäß um 40 % (Abstiegsklausel), und die alte Liga zahlt einmalig ein Fallschirmgeld von 25 % ihres TV-Grundbetrags (Bundesliga 16 Mio. €, 2. Liga 2 Mio. €). Dazu kommen nach jedem Aufstieg ein Aufstiegsbudget (+50 % des Transferbudgets der neuen Liga) und die Aufstiegseuphorie: +3 Stärke in Ligaspielen bis Spieltag 10, +1,5 bis Spieltag 17.',

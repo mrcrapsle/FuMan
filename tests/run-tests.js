@@ -2440,6 +2440,12 @@ async function testBundesligaLongRun(browser) {
             const geldVorDeckel = game.money;
             game.money = grosseSumme * 5;
             out.deckelEingefroren = getWageBudgetFloor() === Math.ceil(grosseSumme / 1000) * 1000;
+            // Budget-Forderung beim Vorstand skaliert mit der Liga (25.20)
+            const ligaAlt = game.leagueLevel;
+            game.leagueLevel = 0; const askBl = getBoardBudgetAsk('wage');
+            game.leagueLevel = 5; const askL6 = getBoardBudgetAsk('wage');
+            game.leagueLevel = ligaAlt;
+            out.forderungNachLiga = askBl === Math.round(getLeagueWageBudget(0) * 0.05 / 1000) * 1000 && askL6 < askBl && askL6 <= getLeagueWageBudget(5) * 0.2;
             game.money = geldVorDeckel;
             squad.forEach((p, i) => { p.wage = loehneVorher[i]; });
             // Start in der Bundesliga: Lizenz-Ausstattung der Startliga ist vorhanden
@@ -2487,6 +2493,7 @@ async function testBundesligaLongRun(browser) {
     if (!r.crash) {
         assert(r.ruecklagen && r.freigabe, 'Der Vorstand gibt Rücklagen über der Reserve als Transfer- und Gehaltsbudget frei');
         assert(r.gehaltsBoden, `Gehaltsbudget deckt laufende Gehälter plus Erhöhungen (+5 % nur ohne Verlustsaison, mit Minus auf dem Konto eingefroren) (${JSON.stringify(r.gehaltsBodenWerte)})`);
+        assert(r.forderungNachLiga, 'Budget-Forderung beim Vorstand richtet sich nach der Liga (5 % des Liga-Gehaltsbudgets)');
         assert(r.deckelEingefroren, 'Ab dem 1,5-fachen Liga-Gehaltsbudget friert die Untergrenze die Gehälter ein');
         assert(r.verlaengerungZaehltBleibende, 'Verlängerung eines auslaufenden Vertrags zählt nur die Gehälter der Bleibenden');
         assert(r.verlaengerungsPuffer, 'Gehaltsbudget plant die Gehaltserhöhungen anstehender Verlängerungen ein');

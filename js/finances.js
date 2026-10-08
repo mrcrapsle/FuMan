@@ -154,6 +154,9 @@
         // Budget-Balken
         let currentWages = squad.reduce((s, p) => s + p.wage, 0) + (game.secondTeam.isActive ? secondTeamSquad.reduce((s, p) => s + p.wage, 0) : 0);
         document.getElementById('budget-transfer-bar-label').innerText = `Transferbudget: ${formatVal(game.transferBudget)}`;
+        const askT = document.getElementById('btn-board-budget-transfer'), askW = document.getElementById('btn-board-budget-wage');
+        if (askT) askT.innerText = `+${formatVal(getBoardBudgetAsk('transfer'))} Transferbudget fordern`;
+        if (askW) askW.innerText = `+${formatVal(getBoardBudgetAsk('wage'))}/SpT Gehaltsbudget fordern`;
         document.getElementById('budget-wage-bar-label').innerText = `Gehaltsbudget: ${formatVal(currentWages)} / ${formatVal(game.wageBudget)} pro Spieltag`;
         let wagePct = Math.min(100, Math.round((currentWages / Math.max(1, game.wageBudget)) * 100));
         let wageBar = document.getElementById('budget-wage-bar-fill');
@@ -227,7 +230,15 @@
 
     }
 
+    // Budget-Forderung (25.20): Beträge nach Liga - vorher fest 500.000 € / 10.000 € pro Spieltag,
+    // in der 6. Liga mehr als das ganze Gehaltsbudget (8.000 €), in der Bundesliga 0,6 % davon.
+    function getBoardBudgetAsk(type) {
+        return type === 'wage'
+            ? Math.max(1000, Math.round(getLeagueWageBudget(game.leagueLevel) * 0.05 / 1000) * 1000)
+            : Math.max(5000, Math.round(getLeagueTransferBudget(game.leagueLevel) * 0.1 / 5000) * 5000);
+    }
     function negotiateBoardBudget(type, amount) {
+        if (typeof amount !== 'number') amount = getBoardBudgetAsk(type);
         playSound('click');
         let chance = (game.boardSat / 100) * 0.85;
         if (Math.random() < chance) {

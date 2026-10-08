@@ -2614,8 +2614,8 @@
                             <div id="budget-wage-bar-fill" style="height:100%; width:0%; background:var(--primary); transition:width 0.3s;"></div>
                         </div>
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
-                            <button onclick="negotiateBoardBudget('transfer', 500000)" class="btn-secondary">+500.000 € Transferbudget fordern</button>
-                            <button onclick="negotiateBoardBudget('wage', 10000)" class="btn-secondary">+10.000 €/SpT Gehaltsbudget fordern</button>
+                            <button onclick="negotiateBoardBudget('transfer')" id="btn-board-budget-transfer" class="btn-secondary">Transferbudget fordern</button>
+                            <button onclick="negotiateBoardBudget('wage')" id="btn-board-budget-wage" class="btn-secondary">Gehaltsbudget fordern</button>
                         </div>
                     </div>
                     <div class="panel">
@@ -17428,6 +17428,9 @@ function finishGoalkeeperGame() {
         // Budget-Balken
         let currentWages = squad.reduce((s, p) => s + p.wage, 0) + (game.secondTeam.isActive ? secondTeamSquad.reduce((s, p) => s + p.wage, 0) : 0);
         document.getElementById('budget-transfer-bar-label').innerText = `Transferbudget: ${formatVal(game.transferBudget)}`;
+        const askT = document.getElementById('btn-board-budget-transfer'), askW = document.getElementById('btn-board-budget-wage');
+        if (askT) askT.innerText = `+${formatVal(getBoardBudgetAsk('transfer'))} Transferbudget fordern`;
+        if (askW) askW.innerText = `+${formatVal(getBoardBudgetAsk('wage'))}/SpT Gehaltsbudget fordern`;
         document.getElementById('budget-wage-bar-label').innerText = `Gehaltsbudget: ${formatVal(currentWages)} / ${formatVal(game.wageBudget)} pro Spieltag`;
         let wagePct = Math.min(100, Math.round((currentWages / Math.max(1, game.wageBudget)) * 100));
         let wageBar = document.getElementById('budget-wage-bar-fill');
@@ -17501,7 +17504,15 @@ function finishGoalkeeperGame() {
 
     }
 
+    // Budget-Forderung (25.20): Beträge nach Liga - vorher fest 500.000 € / 10.000 € pro Spieltag,
+    // in der 6. Liga mehr als das ganze Gehaltsbudget (8.000 €), in der Bundesliga 0,6 % davon.
+    function getBoardBudgetAsk(type) {
+        return type === 'wage'
+            ? Math.max(1000, Math.round(getLeagueWageBudget(game.leagueLevel) * 0.05 / 1000) * 1000)
+            : Math.max(5000, Math.round(getLeagueTransferBudget(game.leagueLevel) * 0.1 / 5000) * 5000);
+    }
     function negotiateBoardBudget(type, amount) {
+        if (typeof amount !== 'number') amount = getBoardBudgetAsk(type);
         playSound('click');
         let chance = (game.boardSat / 100) * 0.85;
         if (Math.random() < chance) {
@@ -34179,7 +34190,7 @@ const LEXICON_ENTRIES = [
         tips: ['Verkäufe und auslaufende Verträge schaffen Luft', 'Im Gehaltsgespräch einmal nachverhandeln', 'Zum Saisonstart deckt es mindestens die laufenden Gehälter plus die Gehaltserhöhungen der Verträge, die in der neuen Saison auslaufen - dazu 5 % Spielraum, solange die Vorsaison ohne Verlust war; ab dem 1,5-fachen Ligawert friert der Vorstand die Gehälter ein, außer die Kasse trägt eine halbe Saison Gehälter (verlängert wird dann über Abgänge); mit Minus auf dem Konto eingefroren auf die laufenden Gehälter (ohne Erhöhungen)', 'Bei einer Verlängerung zählen nur die Gehälter der Spieler, die danach noch da sind - wer ohnehin geht, schafft Luft'] },
     { cat: 'Finanzen', title: 'Transferbudget', screen: 'screen-finances',
         text: 'Wie viel Ablöse der Vorstand pro Saison freigibt. Unabhängig vom Kontostand: beides muss reichen. Grundbetrag nach Liga: Bundesliga 25 Mio. €, 2. Liga 3 Mio. €, 3. Liga 900.000 €, 4. Liga 250.000 €, 5. Liga 60.000 €, 6. Liga 40.000 € - zum Saisonstart mit Platz 1-4 × 1,3, ab Platz 11 × 0,8.',
-        tips: ['Verkäufe erhöhen es', 'Mit dem Vorstand lässt sich nachverhandeln', 'Zum Saisonstart gibt der Vorstand 40 % der Rücklagen über einer Reserve (halbe Saison Gehaltsbudget) zusätzlich frei, 10 % davon gehen ins Gehaltsbudget'] },
+        tips: ['Verkäufe erhöhen es (85 % des Erlöses) - das Gehaltsbudget nicht', 'Beim Vorstand lassen sich 10 % des Liga-Transferbudgets bzw. 5 % des Liga-Gehaltsbudgets nachfordern (Chance nach Vorstandslaune, Erfolg -5, Absage -10)', 'Zum Saisonstart gibt der Vorstand 40 % der Rücklagen über einer Reserve (halbe Saison Gehaltsbudget) zusätzlich frei, 10 % davon gehen ins Gehaltsbudget'] },
     { cat: 'Finanzen', title: 'Financial Fairplay', screen: 'screen-finances',
         text: 'Über drei Saisons darf der Verein nur begrenzt Verlust machen (je nach Liga). Investitionen in Stadion, Gelände und Jugend zählen nicht. Bei Verstoß: Verwarnung, dann Transfersperre und Punktabzug.',
         tips: ['Das Buchungsjournal zeigt, wofür das Geld ausgegeben wird', 'Nicht verwechseln mit der Transfersperre bei negativem Kontostand'] },
