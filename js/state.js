@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.89', date: '08.10.2026', features: 'Phase 25.18: Aufstiegsschub, Talentverkauf, Transferstrategie, Akademie bis Stufe 5, Gehaltsbudget ohne Ratsche' };
+    const GAME_VERSION = { number: '3.90', date: '08.10.2026', features: 'Phase 25.19: Buchungstexte, TV-Prognose, Fallschirmgeld, Sponsor-Verlängerung, Vorvertrags-Warnung, Kadergröße' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
