@@ -71,6 +71,7 @@
     // von einer kleinen "Transferfenster"-Simulation begleitet, die ihre Stärke je nach
     // Erfolg der letzten Saison und neuem Liganiveau weiterentwickelt - Vereine können sich
     // so über mehrere Saisons hinweg wirklich hocharbeiten oder absacken.
+    const AI_RELEGATED_ADJUST = 0.55;
     function evolveAiTeamStrength(team, info) {
         // Unser eigenes Team wird über den Kader simuliert, nicht über dieses Feld - das
         // Feld selbst ist für uns nur ein ungenutztes Überbleibsel der Tabellenzeile.
@@ -91,7 +92,11 @@
         // Sanfte Annäherung (40% der Distanz) statt Sofort-Sprung, plus etwas Zufallsrauschen
         // fürs simulierte Transferfenster (mal ein Glücksgriff, mal eine verkorkste Saison).
         let noise = (Math.random() - 0.5) * 6;
-        let newStrength = team.strength + (targetStrength - team.strength) * 0.4 + noise;
+        // Absteiger verlieren schneller (25.20, 55 % statt 40 %): ihre besten Spieler gehen sofort -
+        // sonst stauten sich Ex-Bundesligisten mit 80+ an der Spitze der 2. Liga und ein Aufsteiger
+        // (Elf ~73) kam dort kaum an ihnen vorbei.
+        let tempo = info.outcome === 'relegated' ? AI_RELEGATED_ADJUST : 0.4;
+        let newStrength = team.strength + (targetStrength - team.strength) * tempo + noise;
         team.strength = Math.max(35, Math.min(96, Math.round(newStrength)));
         team.baseStrength = team.strength;
     }

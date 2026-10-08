@@ -318,12 +318,10 @@ function concludeSeasonAndAdvance() {
             // vor dem Aufstieg aber eine Lizenzierung (Stadionstandard, Flutlicht, finanzielle
             // Mindestreserve, Jugendarbeit). Ein Tabellenplatz allein reicht ab jetzt nicht mehr.
             let targetLevel = game.leagueLevel - 1;
-            let req = DFB_LICENSING_REQUIREMENTS[targetLevel];
-            let failedReasons = [];
-            if (req.minCapacity > 0 && stadium.total < req.minCapacity) failedReasons.push(`Stadionkapazität zu gering (${stadium.total.toLocaleString('de-DE')} von benötigten ${req.minCapacity.toLocaleString('de-DE')})`);
-            if (req.floodlight && !stadium.flutlicht) failedReasons.push('Kein Flutlicht installiert');
-            if (req.minMoney > 0 && game.money < req.minMoney) failedReasons.push(`Finanzielle Mindestreserve nicht erfüllt (${formatVal(game.money)} von benötigten ${formatVal(req.minMoney)})`);
-            if (req.minYouthLvl > 0 && (campusBuildings.internat?.lvl || 0) < req.minYouthLvl) failedReasons.push(`Jugendinternat zu niedrig ausgebaut (Stufe ${campusBuildings.internat?.lvl || 0} von benötigter Stufe ${req.minYouthLvl})`);
+            // Dieselbe Prüfung wie im Stadion-Bildschirm (checkDfbLicensingStatus): laufende Baustellen
+            // für Kapazität, Flutlicht und Internat gelten als Auflage (25.20), die Reserve nicht.
+            let lizenz = checkDfbLicensingStatus();
+            let failedReasons = lizenz.missing;
 
             if (failedReasons.length > 0) {
                 // Nachfrist statt sofortiger endgültiger Verweigerung: bei knapp verfehlten
@@ -336,7 +334,8 @@ function concludeSeasonAndAdvance() {
             } else {
                 game.leagueLevel--;
                 let sponsorPromoBonus = applyPromotionRewards();
-                showNotice('🎉 Aufstieg geschafft!', `Glückwunsch zur Beförderung in die ${leagueNames[game.leagueLevel]}.\n\nAufstiegsprämie ${formatVal(getPromotionPrize(game.leagueLevel))}${sponsorPromoBonus > 0 ? ` plus ${formatVal(sponsorPromoBonus)} Sponsoren-Aufstiegsbonus` : ''}.${typeof describePromotionBoost === 'function' ? '\n\nDazu ' + describePromotionBoost() : ''}`);
+                if (lizenz.auflagen.length) addInboxMessage('vertrag', '📋 Lizenz unter Auflagen', `Der DFB erteilt die Lizenz für die ${leagueNames[game.leagueLevel]} unter Auflagen - diese Baustellen müssen fertig werden:\n\n${lizenz.auflagen.map(a => '• ' + a).join('\n')}`, 'screen-stadium');
+                showNotice('🎉 Aufstieg geschafft!', `Glückwunsch zur Beförderung in die ${leagueNames[game.leagueLevel]}.${lizenz.auflagen.length ? `\n\nLizenz unter Auflagen: ${lizenz.auflagen.join(', ')}.` : ''}\n\nAufstiegsprämie ${formatVal(getPromotionPrize(game.leagueLevel))}${sponsorPromoBonus > 0 ? ` plus ${formatVal(sponsorPromoBonus)} Sponsoren-Aufstiegsbonus` : ''}.${typeof describePromotionBoost === 'function' ? '\n\nDazu ' + describePromotionBoost() : ''}`);
             }
         } else if ((myRank >= 17 || (myRank === 16 && relegation !== 'stayed')) && game.leagueLevel < NUM_LEAGUES - 1) {
             game.leagueLevel++;

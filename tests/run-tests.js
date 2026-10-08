@@ -2944,6 +2944,15 @@ async function testCleanupPart8(browser) {
             game.sackPending = false; simulateMatchdays(1);
             applyPromotionRewards = origRewards;
             out.aufgestiegen = game.leagueLevel === alt - 1 && !game.dfbGracePeriod;
+            // Lizenz unter Auflagen (25.20): ein laufender Internat-Ausbau zählt, die Reserve nicht
+            const ligaVorher = game.leagueLevel, internatVorher = campusBuildings.internat.lvl, queueVorher = game.stadiumConstructionQueue;
+            game.leagueLevel = 1; campusBuildings.internat.lvl = 1; game.stadiumConstructionQueue = [];
+            const ohneBau = checkDfbLicensingStatus();
+            game.stadiumConstructionQueue = [{ type: 'campusBuilding', params: { key: 'internat' }, daysLeft: 12, totalDays: 12 }];
+            const mitBau = checkDfbLicensingStatus();
+            out.auflagen = ohneBau.missing.some(m => m.includes('Jugendinternat')) && !mitBau.missing.some(m => m.includes('Jugendinternat'))
+                && mitBau.auflagen.some(a => a.includes('Jugendinternat') && a.includes('im Bau'));
+            game.leagueLevel = ligaVorher; campusBuildings.internat.lvl = internatVorher; game.stadiumConstructionQueue = queueVorher;
             out.inNeuerTabelle = leaguesData[game.leagueLevel].some(t => t.name === game.clubName) && !leaguesData[alt].some(t => t.name === game.clubName);
             out.groessen = leaguesData[alt].length === 18 && leaguesData[game.leagueLevel].length === 18;
             out.praemie = praemien === 1;
@@ -2959,7 +2968,8 @@ async function testCleanupPart8(browser) {
         } catch (e) { return { crash: e.message + ' ' + e.stack }; }
     });
     assert(!r.crash, `Aufräum-Test ohne Absturz (${r.crash || 'ok'})`);
-    assert(r.aufgestiegen && r.inNeuerTabelle && r.groessen, 'Nachträglicher Aufstieg: der Verein spielt wirklich in der neuen Liga (vorher nur leagueLevel umgestellt)');
+    assert(r.auflagen, 'Lizenz unter Auflagen: ein laufender Internat-Ausbau zählt für die DFB-Lizenz (die Nachfrist ist kürzer als jede Bauzeit)');
+        assert(r.aufgestiegen && r.inNeuerTabelle && r.groessen, 'Nachträglicher Aufstieg: der Verein spielt wirklich in der neuen Liga (vorher nur leagueLevel umgestellt)');
     assert(r.praemie && r.spieltWeiter, 'Nachträglicher Aufstieg bringt die Aufstiegsprämie, die Saison läuft dort weiter');
     assert(r.altlasten && r.monat, 'Altlasten alter Spielstände werden beim Laden entfernt, Monats-Ticks gebündelt');
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);

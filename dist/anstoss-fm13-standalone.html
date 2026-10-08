@@ -9785,6 +9785,7 @@ function selectNewGameScenario(id) {
     // von einer kleinen "Transferfenster"-Simulation begleitet, die ihre Stärke je nach
     // Erfolg der letzten Saison und neuem Liganiveau weiterentwickelt - Vereine können sich
     // so über mehrere Saisons hinweg wirklich hocharbeiten oder absacken.
+    const AI_RELEGATED_ADJUST = 0.55;
     function evolveAiTeamStrength(team, info) {
         // Unser eigenes Team wird über den Kader simuliert, nicht über dieses Feld - das
         // Feld selbst ist für uns nur ein ungenutztes Überbleibsel der Tabellenzeile.
@@ -9805,7 +9806,11 @@ function selectNewGameScenario(id) {
         // Sanfte Annäherung (40% der Distanz) statt Sofort-Sprung, plus etwas Zufallsrauschen
         // fürs simulierte Transferfenster (mal ein Glücksgriff, mal eine verkorkste Saison).
         let noise = (Math.random() - 0.5) * 6;
-        let newStrength = team.strength + (targetStrength - team.strength) * 0.4 + noise;
+        // Absteiger verlieren schneller (25.20, 55 % statt 40 %): ihre besten Spieler gehen sofort -
+        // sonst stauten sich Ex-Bundesligisten mit 80+ an der Spitze der 2. Liga und ein Aufsteiger
+        // (Elf ~73) kam dort kaum an ihnen vorbei.
+        let tempo = info.outcome === 'relegated' ? AI_RELEGATED_ADJUST : 0.4;
+        let newStrength = team.strength + (targetStrength - team.strength) * tempo + noise;
         team.strength = Math.max(35, Math.min(96, Math.round(newStrength)));
         team.baseStrength = team.strength;
     }
@@ -20369,19 +20374,34 @@ function finishGoalkeeperGame() {
     ];
     // Prüft die Auflagen für die NÄCHSTHÖHERE Liga (relevant, sobald man aufstiegsberechtigt
     // wäre) und gibt eine Liste der noch offenen Punkte zurück (leer = alles erfüllt).
+    // Lizenz unter Auflagen (25.20): laufende Baustellen für Kapazität, Flutlicht und Internat zählen -
+    // die Nachfrist dauert nur 3 Spieltage, ein Internat-Ausbau 10 und mehr. Ein Aufsteiger wurde in
+    // seiner ersten 2.-Liga-Saison Zweiter, bekam ohne Internat Stufe 2 keine Lizenz und stieg danach ab.
+    function getLicenceBuildsInProgress() {
+        const im = { seats: 0, flutlicht: false, internat: 0 };
+        (game.stadiumConstructionQueue || []).forEach(p => {
+            if (p.type === 'blockExpand') im.seats += p.params.seats || 0;
+            else if (p.type === 'capacityProject' && STADIUM_CAPACITY_PROJECTS[p.params.key]) im.seats += STADIUM_CAPACITY_PROJECTS[p.params.key].seats || 0;
+            else if (p.type === 'specialInstall' && p.params.key === 'flutlicht') im.flutlicht = true;
+            else if (p.type === 'campusBuilding' && p.params.key === 'internat') im.internat++;
+        });
+        return im;
+    }
     function checkDfbLicensingStatus() {
-        if (game.leagueLevel === 0) return { targetLevel: null, missing: [], totalCount: 0, metCount: 0 };
+        if (game.leagueLevel === 0) return { targetLevel: null, missing: [], auflagen: [], totalCount: 0, metCount: 0 };
         let targetLevel = game.leagueLevel - 1;
         let req = DFB_LICENSING_REQUIREMENTS[targetLevel];
-        let missing = [];
+        let missing = [], auflagen = [];
+        const bau = getLicenceBuildsInProgress();
+        const internat = campusBuildings.internat?.lvl || 0;
         let checks = [
-            { active: req.minCapacity > 0, met: stadium.total >= req.minCapacity, text: `Stadionkapazität: ${stadium.total.toLocaleString('de-DE')} / ${req.minCapacity.toLocaleString('de-DE')}` },
-            { active: req.floodlight, met: !!stadium.flutlicht, text: 'Flutlichtanlage fehlt' },
-            { active: req.minMoney > 0, met: game.money >= req.minMoney, text: `Finanzreserve: ${formatVal(game.money)} / ${formatVal(req.minMoney)}` },
-            { active: req.minYouthLvl > 0, met: (campusBuildings.internat?.lvl || 0) >= req.minYouthLvl, text: `Jugendinternat: Stufe ${campusBuildings.internat?.lvl || 0} / ${req.minYouthLvl}` }
+            { active: req.minCapacity > 0, met: stadium.total >= req.minCapacity, imBau: stadium.total + bau.seats >= req.minCapacity, text: `Stadionkapazität: ${stadium.total.toLocaleString('de-DE')} / ${req.minCapacity.toLocaleString('de-DE')}` },
+            { active: req.floodlight, met: !!stadium.flutlicht, imBau: bau.flutlicht, text: 'Flutlichtanlage fehlt' },
+            { active: req.minMoney > 0, met: game.money >= req.minMoney, imBau: false, text: `Finanzreserve: ${formatVal(game.money)} / ${formatVal(req.minMoney)}` },
+            { active: req.minYouthLvl > 0, met: internat >= req.minYouthLvl, imBau: internat + bau.internat >= req.minYouthLvl, text: `Jugendinternat: Stufe ${internat} / ${req.minYouthLvl}` }
         ].filter(c => c.active);
-        checks.forEach(c => { if (!c.met) missing.push(c.text); });
-        return { targetLevel, missing, totalCount: checks.length, metCount: checks.filter(c => c.met).length };
+        checks.forEach(c => { if (!c.met && c.imBau) auflagen.push(c.text + ' (im Bau)'); else if (!c.met) missing.push(c.text); });
+        return { targetLevel, missing, auflagen, totalCount: checks.length, metCount: checks.filter(c => c.met || c.imBau).length };
     }
     // Kompakte Anzeige im Stadion-Screen, damit die Auflagen jederzeit einsehbar sind.
     // ==========================================
@@ -20431,12 +20451,12 @@ function finishGoalkeeperGame() {
                 <span style="font-size:10px;">${status.metCount} von ${status.totalCount} Auflagen erfüllt · Noch offen: ${status.missing.join(' · ') || 'Alles erfüllt - Aufstieg steht bevor!'}</span></div>`;
             return;
         }
-        let { targetLevel, missing, totalCount, metCount } = checkDfbLicensingStatus();
+        let { targetLevel, missing, auflagen, totalCount, metCount } = checkDfbLicensingStatus();
         if (targetLevel === null) { box.style.display = 'none'; return; }
         box.style.display = 'block';
         let progressPct = totalCount > 0 ? Math.round((metCount / totalCount) * 100) : 100;
         if (missing.length === 0) {
-            box.innerHTML = `<div class="box" style="border-left-color:var(--primary);"><strong style="color:var(--primary);">✅ DFB-Lizenz für die ${leagueNames[targetLevel]} erfüllt!</strong><br><span style="font-size:10px;">Bei sportlichem Aufstieg steht der Beförderung nichts im Wege.</span></div>`;
+            box.innerHTML = `<div class="box" style="border-left-color:var(--primary);"><strong style="color:var(--primary);">✅ DFB-Lizenz für die ${leagueNames[targetLevel]} erfüllt${auflagen.length ? ' (unter Auflagen)' : ''}!</strong><br><span style="font-size:10px;">${auflagen.length ? `Laufende Baustellen zählen: ${auflagen.join(' · ')}.` : 'Bei sportlichem Aufstieg steht der Beförderung nichts im Wege.'}</span></div>`;
         } else {
             let teams = leaguesData[game.leagueLevel];
             let inPromotionZone = false;
@@ -32723,12 +32743,10 @@ function concludeSeasonAndAdvance() {
             // vor dem Aufstieg aber eine Lizenzierung (Stadionstandard, Flutlicht, finanzielle
             // Mindestreserve, Jugendarbeit). Ein Tabellenplatz allein reicht ab jetzt nicht mehr.
             let targetLevel = game.leagueLevel - 1;
-            let req = DFB_LICENSING_REQUIREMENTS[targetLevel];
-            let failedReasons = [];
-            if (req.minCapacity > 0 && stadium.total < req.minCapacity) failedReasons.push(`Stadionkapazität zu gering (${stadium.total.toLocaleString('de-DE')} von benötigten ${req.minCapacity.toLocaleString('de-DE')})`);
-            if (req.floodlight && !stadium.flutlicht) failedReasons.push('Kein Flutlicht installiert');
-            if (req.minMoney > 0 && game.money < req.minMoney) failedReasons.push(`Finanzielle Mindestreserve nicht erfüllt (${formatVal(game.money)} von benötigten ${formatVal(req.minMoney)})`);
-            if (req.minYouthLvl > 0 && (campusBuildings.internat?.lvl || 0) < req.minYouthLvl) failedReasons.push(`Jugendinternat zu niedrig ausgebaut (Stufe ${campusBuildings.internat?.lvl || 0} von benötigter Stufe ${req.minYouthLvl})`);
+            // Dieselbe Prüfung wie im Stadion-Bildschirm (checkDfbLicensingStatus): laufende Baustellen
+            // für Kapazität, Flutlicht und Internat gelten als Auflage (25.20), die Reserve nicht.
+            let lizenz = checkDfbLicensingStatus();
+            let failedReasons = lizenz.missing;
 
             if (failedReasons.length > 0) {
                 // Nachfrist statt sofortiger endgültiger Verweigerung: bei knapp verfehlten
@@ -32741,7 +32759,8 @@ function concludeSeasonAndAdvance() {
             } else {
                 game.leagueLevel--;
                 let sponsorPromoBonus = applyPromotionRewards();
-                showNotice('🎉 Aufstieg geschafft!', `Glückwunsch zur Beförderung in die ${leagueNames[game.leagueLevel]}.\n\nAufstiegsprämie ${formatVal(getPromotionPrize(game.leagueLevel))}${sponsorPromoBonus > 0 ? ` plus ${formatVal(sponsorPromoBonus)} Sponsoren-Aufstiegsbonus` : ''}.${typeof describePromotionBoost === 'function' ? '\n\nDazu ' + describePromotionBoost() : ''}`);
+                if (lizenz.auflagen.length) addInboxMessage('vertrag', '📋 Lizenz unter Auflagen', `Der DFB erteilt die Lizenz für die ${leagueNames[game.leagueLevel]} unter Auflagen - diese Baustellen müssen fertig werden:\n\n${lizenz.auflagen.map(a => '• ' + a).join('\n')}`, 'screen-stadium');
+                showNotice('🎉 Aufstieg geschafft!', `Glückwunsch zur Beförderung in die ${leagueNames[game.leagueLevel]}.${lizenz.auflagen.length ? `\n\nLizenz unter Auflagen: ${lizenz.auflagen.join(', ')}.` : ''}\n\nAufstiegsprämie ${formatVal(getPromotionPrize(game.leagueLevel))}${sponsorPromoBonus > 0 ? ` plus ${formatVal(sponsorPromoBonus)} Sponsoren-Aufstiegsbonus` : ''}.${typeof describePromotionBoost === 'function' ? '\n\nDazu ' + describePromotionBoost() : ''}`);
             }
         } else if ((myRank >= 17 || (myRank === 16 && relegation !== 'stayed')) && game.leagueLevel < NUM_LEAGUES - 1) {
             game.leagueLevel++;
@@ -34177,7 +34196,7 @@ const LEXICON_ENTRIES = [
         text: 'Ein Wert für dein Bild in der Öffentlichkeit. Beeinflusst Sponsoren und Jobangebote.',
         tips: ['Pressekonferenzen und Interviews wirken direkt darauf'] },
     { cat: 'Verein', title: 'Lizenzauflagen', screen: 'screen-stadium',
-        text: 'Für den Aufstieg verlangt der Verband Mindeststandards: Oberliga 1.000 Plätze · Regionalliga 3.000 Plätze und 30.000 € Reserve · 3. Liga 6.000 Plätze, Flutlicht, 100.000 € · 2. Liga 10.000 Plätze, Internat Stufe 1, 250.000 € · 1. Liga 15.000 Plätze, Internat Stufe 2, 500.000 €. Fehlt etwas, gibt es 3 Spieltage Nachfrist, danach verfällt der Aufstieg.',
+        text: 'Für den Aufstieg verlangt der Verband Mindeststandards: Oberliga 1.000 Plätze · Regionalliga 3.000 Plätze und 30.000 € Reserve · 3. Liga 6.000 Plätze, Flutlicht, 100.000 € · 2. Liga 10.000 Plätze, Internat Stufe 1, 250.000 € · 1. Liga 15.000 Plätze, Internat Stufe 2, 500.000 €. Fehlt etwas, gibt es 3 Spieltage Nachfrist, danach verfällt der Aufstieg. Laufende Baustellen für Plätze, Flutlicht und Internat zählen schon (Lizenz unter Auflagen) - nur die Finanzreserve muss wirklich da sein.',
         tips: ['Die Übersicht steht im Stadion-Bildschirm, an Spieltag 30 warnt das Postfach', 'Das Internat in unteren Ligen bauen - dort kostet es einen Bruchteil', 'Rechtzeitig bauen - Baustellen brauchen einige Spieltage'] },
     { cat: 'Finanzen', title: 'Holding & Fabriken', screen: 'screen-holding',
         text: 'Die Merchandising-Holding hat ein eigenes Konto (Überweisungen vom und zum Verein). Fabriken werden vom Holding-Konto gekauft und produzieren Fanartikel aus Rohstoffen. Zum Saisonstart kommt je eigener Fabrik ein Lohnfertigungs-Auftrag für ihr Produkt (Honorar etwa dreifache Materialkosten, je Ausbaustufe mehr).',
