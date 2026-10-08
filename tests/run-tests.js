@@ -2437,7 +2437,10 @@ async function testBundesligaLongRun(browser) {
             const faktor = Math.ceil(getLeagueWageBudget(game.leagueLevel) * WAGE_FLOOR_GROWTH_CAP / Math.max(1, squad.reduce((a, p) => a + p.wage, 0))) + 1;
             squad.forEach(p => { p.wage *= faktor; });
             const grosseSumme = squad.reduce((a, p) => a + p.wage, 0);
+            const geldVorDeckel = game.money;
+            game.money = grosseSumme * 5;
             out.deckelEingefroren = getWageBudgetFloor() === Math.ceil(grosseSumme / 1000) * 1000;
+            game.money = geldVorDeckel;
             squad.forEach((p, i) => { p.wage = loehneVorher[i]; });
             // Start in der Bundesliga: Lizenz-Ausstattung der Startliga ist vorhanden
             stadium.flutlicht = false; campusBuildings.internat.lvl = 0;
