@@ -5185,6 +5185,10 @@ function selectNewGameScenario(id) {
         // Neuer Arbeitgeber, neuer Vorstand: Vertrauen startet neutral, das Saisonziel gilt für den neuen Kader.
         game.boardSat = 60;
         game.boardSatVerlauf = [];
+        // Schonfrist wie in der ersten Karrieresaison (25.23): der Vorstand kennt den neuen Manager noch
+        // nicht. Vorher galt die Schonfrist nur für Saison 1 - ein Wechsel in Saison 5 wurde am Saisonende
+        // nach einer schwachen Serie sofort mit Entlassung bestraft.
+        game.boardGraceSeason = game.season;
         if (typeof recordSeasonExpectation === 'function') recordSeasonExpectation();
         game.captainId = squad[8].id;
         game.penaltyTakerId = squad[14].id;
@@ -27974,7 +27978,7 @@ function cleanupLegacyScoutState() {
     // KEIN Vertrauensaufbau: liegt die Zufriedenheit über dem Wert von vor sechs Pflichtspielen,
     // bleibt der Manager. Legenden-Bonus bleibt: der Vorstand verzeiht einer Vereinslegende mehr.
     function checkSeasonEndSacking(myRank) {
-        if (game.season <= 1) return;
+        if (game.season <= 1 || game.boardGraceSeason === game.season) return;
         let sackThreshold = BOARD_SAT_SACK_STREAK + (game.legendStatus ? 3 : 0);
         let verlauf = game.boardSatVerlauf || [];
         let erholt = verlauf.length >= 7 && game.boardSat > verlauf[0];
@@ -30456,7 +30460,7 @@ const LEXICON_ENTRIES = [
         text: 'Liga 1 bis 3 sind bundesweit. Darunter ist der deutsche Fußball regional geteilt: welche Regionalliga (Nord, Nordost, West, Südwest, Bayern), Oberliga und 6. Liga du spielst und welcher Landespokal dich in den DFB-Pokal bringt, hängt an der Heimatstadt deines Vereins. Du wählst sie beim neuen Spiel. Jeder Verein hat eine echte Stadt; die Namen sind - wie die Spielernamen - leicht verfremdet. In den oberen Ligen stehen echte Vereine, in den unteren zusätzlich Vereine aus echten Orten der Gegend.',
         tips: ['Spielstände von vor Version 3.43 behalten ihre Ligen (Nordost/Sachsen)', 'In Großstädten wie Berlin oder Hamburg spielen viele Vereine derselben Stadt in einer Liga'] },
     { cat: 'Verein', title: 'Kabine, Cliquen & Kapitän', screen: 'screen-squad',
-        text: 'Ein Mannschaftsrat: Kapitän plus die zwei Spieler mit der größten Führungsqualität (Leader-Eigenschaft, Alter, Erfahrung, Moral). Spieler gruppieren sich nach Nation und Alter; fällt die Stimmung einer Gruppe unter 40, rumort sie: Teamstärke sinkt, und jeden Monat färbt die Laune auf den Rest ab. Ein Kapitän mit Autorität (Moral ab 60) dämpft das. Verlässt der Kapitän den Kader, übernimmt der Spieler mit der größten Führungsqualität die Binde.',
+        text: 'Ein Mannschaftsrat: Kapitän plus die zwei Spieler mit der größten Führungsqualität (Leader-Eigenschaft, Alter, Erfahrung, Moral). Spieler gruppieren sich nach Nation und Alter; fällt die Stimmung einer Gruppe unter 40, rumort sie: Teamstärke sinkt, und jeden Monat färbt die Laune auf den Rest ab. Ein Kapitän mit Autorität (Moral ab 60) dämpft das. Verlässt der Kapitän den Kader oder fällt er verletzt aus, übernimmt vor dem Anpfiff der Spieler mit der größten Führungsqualität die Binde - nur ein Kapitän auf dem Platz bringt den Kapitänsbonus.',
         tips: ['Wortführer melden sich beim Mannschaftsrat (anhören oder klare Ansage)', 'Unzufriedene Leistungsträger kommen ins Büro: Einsatzgarantie, Leistung einfordern oder Wechsel erlauben', 'Kapitän wechseln kostet den alten Kapitän Moral - einen Neuling ohne Standing nimmt der Rat übel'] },
     { cat: 'Verein', title: 'Fanstimmung', screen: 'screen-fans',
         text: 'Wie zufrieden die Anhänger sind (0-100). Beeinflusst Zuschauer, Fanartikel und Mitgliederzahlen.',
@@ -30705,7 +30709,7 @@ const LEXICON_EN = {
         text: 'Leagues 1 to 3 are national. Below that German football is split by region: which Regionalliga (North, North-East, West, South-West, Bavaria), Oberliga and 6th tier you play and which state cup takes you into the DFB-Pokal depends on your club\'s home city. You choose it when starting a new game. Every club has a real city; the names are - like the player names - slightly altered. The upper leagues have real clubs, the lower ones also clubs from real towns of the area.',
         tips: ['Saves from before version 3.43 keep their leagues (North-East/Saxony)', 'In big cities like Berlin or Hamburg many clubs from the same city play in one league'] },
     'Kabine, Cliquen & Kapitän': { title: 'Dressing room, cliques & captain',
-        text: 'One team council: the captain plus the two players with the greatest leadership (leader trait, age, experience, morale). Players group by nationality and age; if a group\'s mood falls below 40 it grumbles: team strength drops, and every month the mood spreads to the rest. A captain with authority (morale from 60) dampens this. If the captain leaves the squad, the player with the greatest leadership takes over the armband.',
+        text: 'One team council: the captain plus the two players with the greatest leadership (leader trait, age, experience, morale). Players group by nationality and age; if a group\'s mood falls below 40 it grumbles: team strength drops, and every month the mood spreads to the rest. A captain with authority (morale from 60) dampens this. If the captain leaves the squad or is injured, the player with the greatest leadership takes over the armband before kick-off - only a captain on the pitch brings the captain bonus.',
         tips: ['Spokesmen approach the team council (listen or lay down the law)', 'Unhappy key players come to the office: playing time guarantee, demand performance or allow a transfer', 'Changing the captain costs the old captain morale - the council resents a newcomer without standing'] },
     'Fanstimmung': { title: 'Fan mood',
         text: 'How happy the supporters are (0-100). Affects attendance, merchandise and membership numbers.',

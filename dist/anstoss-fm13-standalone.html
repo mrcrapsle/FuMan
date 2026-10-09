@@ -9256,6 +9256,10 @@ function selectNewGameScenario(id) {
         // Neuer Arbeitgeber, neuer Vorstand: Vertrauen startet neutral, das Saisonziel gilt für den neuen Kader.
         game.boardSat = 60;
         game.boardSatVerlauf = [];
+        // Schonfrist wie in der ersten Karrieresaison (25.23): der Vorstand kennt den neuen Manager noch
+        // nicht. Vorher galt die Schonfrist nur für Saison 1 - ein Wechsel in Saison 5 wurde am Saisonende
+        // nach einer schwachen Serie sofort mit Entlassung bestraft.
+        game.boardGraceSeason = game.season;
         if (typeof recordSeasonExpectation === 'function') recordSeasonExpectation();
         game.captainId = squad[8].id;
         game.penaltyTakerId = squad[14].id;
@@ -32130,7 +32134,7 @@ function cleanupLegacyScoutState() {
     // KEIN Vertrauensaufbau: liegt die Zufriedenheit über dem Wert von vor sechs Pflichtspielen,
     // bleibt der Manager. Legenden-Bonus bleibt: der Vorstand verzeiht einer Vereinslegende mehr.
     function checkSeasonEndSacking(myRank) {
-        if (game.season <= 1) return;
+        if (game.season <= 1 || game.boardGraceSeason === game.season) return;
         let sackThreshold = BOARD_SAT_SACK_STREAK + (game.legendStatus ? 3 : 0);
         let verlauf = game.boardSatVerlauf || [];
         let erholt = verlauf.length >= 7 && game.boardSat > verlauf[0];
@@ -34592,7 +34596,7 @@ const LEXICON_ENTRIES = [
         text: 'Vor jedem Spiel: drei Antworten mit echter Wirkung (Moral, Stärke im nächsten Spiel, Vorstand, Fans). Versprechen werden nach dem Spiel abgerechnet.',
         tips: ['Wer einen Sieg verspricht und verliert, verliert Ansehen bei Medien, Fans und Vorstand'] },
     { cat: 'Verein', title: 'Vorstandszufriedenheit', screen: 'screen-dashboard',
-        text: 'Wie zufrieden der Vorstand ist (10-100). Fällt sie unter 25, warnt er. Entlassen wird nur am Saisonende: wenn sie dann unter 25 liegt, die letzten 6 Pflichtspiele darunter waren und sie in dieser Zeit nicht gestiegen ist. Nach einem Abstieg gibt es einmal einen Neustart (mindestens 60), nach einem zweiten Abstieg in Folge nicht. In der ersten Saison nach einem Abstieg erwartet er höchstens Platz 3 - die Liga hat meist mehrere Ex-Erstligisten auf Augenhöhe. In der ersten Saison gibt es Schonfrist.',
+        text: 'Wie zufrieden der Vorstand ist (10-100). Fällt sie unter 25, warnt er. Entlassen wird nur am Saisonende: wenn sie dann unter 25 liegt, die letzten 6 Pflichtspiele darunter waren und sie in dieser Zeit nicht gestiegen ist. Nach einem Abstieg gibt es einmal einen Neustart (mindestens 60), nach einem zweiten Abstieg in Folge nicht. In der ersten Saison nach einem Abstieg erwartet er höchstens Platz 3 - die Liga hat meist mehrere Ex-Erstligisten auf Augenhöhe. In der ersten Saison und in der Saison eines Vereinswechsels gibt es Schonfrist.',
         tips: ['Siege und erreichte Saisonziele heben sie', 'Schulden, gebrochene Versprechen und Niederlagenserien senken sie', 'Der Vorstandsraum erklärt jedes Mitglied einzeln'] },
     { cat: 'Verein', title: 'Mitgliederversammlung', screen: 'screen-dashboard',
         text: 'Nach jeder Saison wollen die Mitglieder deinen Bericht: Platz gegen Erwartung, Aufstieg/Abstieg und Kasse ergeben die Grundstimmung. Rede und Beitragsantrag wählst du im Dashboard. Ab 70 % Zustimmung Vorstand +10, ab 50 % (entlastet) +5, darunter -10. Bereitest du sie nicht innerhalb von 6 Spieltagen vor, findet sie ohne dich statt (-5 % Zustimmung).',
@@ -34842,7 +34846,7 @@ const LEXICON_EN = {
         text: 'Before every match: three answers with real effects (morale, strength in the next match, board, fans). Promises are settled after the match.',
         tips: ['Promising a win and losing costs standing with media, fans and board'] },
     'Vorstandszufriedenheit': { title: 'Board satisfaction',
-        text: 'How happy the board is (10-100). Below 25 it warns you. You are only sacked at the end of the season: if it is then below 25, was below that in the last 6 competitive matches and has not risen during that time. After a relegation there is one fresh start (at least 60), not after a second relegation in a row. In the first season after a relegation it expects at most 3rd place - the league usually has several former top-flight clubs at the same level. The first season is a grace period.',
+        text: 'How happy the board is (10-100). Below 25 it warns you. You are only sacked at the end of the season: if it is then below 25, was below that in the last 6 competitive matches and has not risen during that time. After a relegation there is one fresh start (at least 60), not after a second relegation in a row. In the first season after a relegation it expects at most 3rd place - the league usually has several former top-flight clubs at the same level. The first season and the season of a club change are a grace period.',
         tips: ['Wins and reached season goals raise it', 'Debts, broken promises and losing streaks lower it', 'The board room explains every member individually'] },
     'Mitgliederversammlung': { title: 'Members\' meeting',
         text: 'After every season the members want your report: rank against expectation, promotion/relegation and finances set the basic mood. Choose your speech and the membership fee motion on the dashboard. From 70 % approval board +10, from 50 % (discharged) +5, below that -10. If you do not prepare it within 6 matchdays it takes place without you (-5 % approval).',
