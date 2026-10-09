@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.91', date: '08.10.2026', features: 'Phase 25.20: Lizenz unter Auflagen, Abstiegs-Erwartung, Profi-Leihen, Tauschgeschäfte, Trainingsdeckel, Champions-Cup-Heimrecht, englische Oberfläche' };
+    const GAME_VERSION = { number: '3.92', date: '09.10.2026', features: 'Phase 25.21: Tausch wie ein Verkauf, Leih-Randfälle, Trainingsplus im Popup, Kaderplaner-Entlastung, Rücklagen nach echten Gehältern, Englisch Teil 2' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
