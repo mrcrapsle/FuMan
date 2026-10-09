@@ -83,6 +83,39 @@
         return betrag;
     }
 
+    // TV-Vorschuss für Aufsteiger (25.22): wie beim Fallschirmgeld 25 % des TV-Grundbetrags - hier der
+    // NEUEN Liga, sofort beim Aufstieg (Bundesliga 16 Mio. €, 2. Liga 2 Mio. €). Er wird über die Saison
+    // mit den Spieltagsraten verrechnet (getTvAdvanceDeduction), am Ende bleibt die Summe gleich - nur
+    // ist das Geld im Sommerfenster da. Vorher kam ein Bundesliga-Aufsteiger mit ~15 Mio. € Kasse an,
+    // Bundesliga-Spieler kosten 20-40 Mio. €: der Bot hatte 33 Mio. Transferbudget, konnte es aber
+    // nicht ausgeben, die Elf lag 10-14 Punkte unter dem Ligaschnitt und stieg wieder ab.
+    const TV_PROMOTION_ADVANCE_SHARE = 0.25;
+    function payPromotionTvAdvance(season) {
+        const betrag = Math.round((LEAGUE_BASE_TV_MONEY[game.leagueLevel] || 0) * TV_PROMOTION_ADVANCE_SHARE / 1000) * 1000;
+        if (betrag <= 0) return 0;
+        game.tvAdvance = { season, amount: betrag, remaining: betrag };
+        bucheMitLabel('📺 TV-Vorschuss (Aufsteiger)', betrag);
+        addInboxMessage('finanzen', '📺 TV-Vorschuss für den Aufsteiger', `Die ${leagueNames[game.leagueLevel]} zahlt ${formatVal(betrag)} TV-Geld vorab - für Verstärkungen im Sommerfenster. Der Vorschuss wird über die Saison mit den Spieltagsraten verrechnet.`, 'screen-finances');
+        return betrag;
+    }
+    // Aus applyMatchdayFinances(): Anteil des Vorschusses, der von der heutigen TV-Rate abgeht.
+    function getTvAdvanceDeduction() {
+        const v = game.tvAdvance;
+        if (!v || v.season !== game.season || !(v.remaining > 0)) return 0;
+        const abzug = Math.min(v.remaining, Math.round(v.amount / MATCHDAYS_PER_SEASON));
+        v.remaining -= abzug;
+        return abzug;
+    }
+    // Saisonende: was vom Vorschuss noch offen ist (z. B. Aufstieg über die Nachfrist), wird verrechnet.
+    function settleTvAdvanceAtSeasonEnd() {
+        const v = game.tvAdvance;
+        if (!v || v.season !== game.season) return 0;
+        const rest = v.remaining || 0;
+        if (rest > 0) bucheMitLabel('📺 TV-Vorschuss verrechnet', -rest);
+        game.tvAdvance = null;
+        return rest;
+    }
+
     // Prognose für die Finanzübersicht (25.19): was die Abrechnung am Saisonende bei
     // gleichbleibendem Tabellenplatz bringt - bisher kam die Restausschüttung (bis 28 Mio. €)
     // oder die Rückforderung (bis 10 Mio. €) ohne Vorwarnung.
@@ -92,7 +125,8 @@
         const anspruch = calculateCollectiveTvMoney(game.leagueLevel, rank);
         const offeneRaten = Math.max(0, MATCHDAYS_PER_SEASON - game.matchday + 1);
         const rate = Math.min(Math.round((LEAGUE_BASE_TV_MONEY[game.leagueLevel] ?? 100000) / MATCHDAYS_PER_SEASON), Math.round(anspruch / MATCHDAYS_PER_SEASON));
-        const rest = anspruch - (game.tvMoneyPaidThisSeason || 0) - offeneRaten * rate;
+        const vorschussOffen = game.tvAdvance && game.tvAdvance.season === game.season ? (game.tvAdvance.remaining || 0) : 0;
+        const rest = anspruch - (game.tvMoneyPaidThisSeason || 0) - offeneRaten * rate - vorschussOffen;
         return { rank, anspruch, rest: Math.round(rest / 1000) * 1000 };
     }
 

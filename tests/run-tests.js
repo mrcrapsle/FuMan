@@ -1969,6 +1969,37 @@ async function testLexiconEnglish(browser) {
     await page.close();
 }
 
+async function testPromotionTvAdvance(browser) {
+    console.log('\n[25.22] TV-Vorschuss für Aufsteiger: Geld im Sommerfenster, über die Saison verrechnet');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            game.leagueLevel = 0; game.matchday = 35;
+            const geld = game.money;
+            markPromotionBoost();
+            const v = game.tvAdvance;
+            out.vorschuss = !!v && v.amount === 16000000 && v.season === game.season + 1 && game.money === geld + 16000000;
+            game.season = v.season; game.matchday = 1;
+            const abzug = getTvAdvanceDeduction();
+            out.verrechnet = abzug === Math.round(16000000 / 34) && v.remaining === 16000000 - abzug;
+            const vorher = game.money;
+            const rest = settleTvAdvanceAtSeasonEnd();
+            out.rest = rest === 16000000 - abzug && game.money === vorher - rest && game.tvAdvance === null;
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `TV-Vorschuss ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.vorschuss, 'Beim Aufstieg in die Bundesliga kommen 16 Mio. € TV-Vorschuss für die neue Saison');
+        assert(r.verrechnet && r.rest, 'Der Vorschuss geht je Spieltag von der TV-Rate ab, der Rest wird am Saisonende verrechnet');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testTrainingGrowthCaps(browser) {
     console.log('\n[25.20] Stärkezuwachs aus Training begrenzt: Einzeltraining nach Alter, Trainingslager einmal pro Saison');
     const { page, consoleErrors } = await freshPage(browser);
@@ -8868,6 +8899,7 @@ async function main() {
         testProLoans,
         testCaptainSuccession,
         testLexiconEnglish,
+        testPromotionTvAdvance,
         testEnglishUi,
         testSwapDeals,
         testPlayerProfile,

@@ -287,6 +287,7 @@ function concludeSeasonAndAdvance() {
             if (restausschuettung !== 0) bucheMitLabel(restausschuettung > 0 ? '📺 TV-Restausschüttung' : '📺 TV-Rückforderung', restausschuettung);
             game.lastLeagueTvPayout = tvAnspruch;
             game.tvMoneyPaidThisSeason = 0;
+            if (typeof settleTvAdvanceAtSeasonEnd === 'function') settleTvAdvanceAtSeasonEnd();
             addInboxMessage('vertrag', `📺 Liga-TV-Abrechnung: ${formatVal(tvAnspruch)} für Platz ${myRank}`,
                 `Der Verein hat für Platz ${myRank} Anspruch auf ${formatVal(tvAnspruch)} aus dem kollektiven TV-Vertrag. Davon wurden ${formatVal(bereitsGezahlt)} bereits in Spieltagsraten ausgezahlt - ${restausschuettung >= 0 ? `die Restausschüttung beträgt ${formatVal(restausschuettung)}` : `zu viel gezahlte Raten von ${formatVal(-restausschuettung)} werden zurückgefordert`}.`, 'screen-finances');
             mediaRights.seasonTvIncomeTotal = 0;

@@ -22,6 +22,7 @@ function getPromotionTransferBonus(level = game.leagueLevel) {
 function markPromotionBoost() {
     const season = game.matchday > 34 ? game.season + 1 : game.season;
     game.promotionBoost = { level: game.leagueLevel, season };
+    if (typeof payPromotionTvAdvance === 'function') payPromotionTvAdvance(season);
     // Nachfrist: die Budgets der Saison stehen schon - das Aufstiegsbudget kommt direkt dazu.
     if (game.matchday <= 34) game.transferBudget += getPromotionTransferBonus();
 }

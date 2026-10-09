@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.92', date: '09.10.2026', features: 'Phase 25.21: Tausch wie ein Verkauf, Leih-Randfälle, Trainingsplus im Popup, Kaderplaner-Entlastung, Rücklagen nach echten Gehältern, Englisch Teil 2' };
+    const GAME_VERSION = { number: '3.93', date: '09.10.2026', features: 'Phase 25.22: Vereinswechsel ohne Altlasten, Kapitänsnachfolge, Lexikon auf Englisch, TV-Vorschuss für Aufsteiger, Jugend-Potenzial, Tausch nur mit brauchbaren Spielern' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

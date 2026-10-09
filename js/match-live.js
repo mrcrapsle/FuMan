@@ -717,6 +717,8 @@
         let tvInstallment = (typeof getTvMoneyInstallment === 'function') ? getTvMoneyInstallment() : 0;
         game.tvMoneyPaidThisSeason = (game.tvMoneyPaidThisSeason || 0) + tvInstallment;
 
+        // TV-Vorschuss eines Aufsteigers (media-rights.js, 25.22) wird mit der Rate verrechnet.
+        if (typeof getTvAdvanceDeduction === 'function') tvInstallment -= getTvAdvanceDeduction();
         let grossIncome = ticketIncome + merchIncome + sponsorInc + tvInstallment;
         let taxAmount = Math.round(Math.max(0, grossIncome) * getTaxRate());
         let advisorFee = financeCentralState.taxAdvisorHired ? getTaxAdvisorFee() : 0;
