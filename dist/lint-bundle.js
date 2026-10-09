@@ -473,6 +473,7 @@ function compareTableRows(a, b) {
         safeLocalSet('anstoss_fm13_language', currentLang);
         applyI18nToDOM();
         if (typeof applyUiTranslation === 'function') applyUiTranslation(currentLang);
+        if (typeof renderLexicon === 'function') renderLexicon();
     }
 
     function toggleLanguage() {
@@ -493,7 +494,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.92', date: '09.10.2026', features: 'Phase 25.21: Tausch wie ein Verkauf, Leih-Randfälle, Trainingsplus im Popup, Kaderplaner-Entlastung, Rücklagen nach echten Gehältern, Englisch Teil 2' };
+    const GAME_VERSION = { number: '3.93', date: '09.10.2026', features: 'Phase 25.22: Vereinswechsel ohne Altlasten, Kapitänsnachfolge, Lexikon auf Englisch, TV-Vorschuss für Aufsteiger, Jugend-Potenzial, Tausch nur mit brauchbaren Spielern' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -2208,7 +2209,7 @@ function getOwnDerbyRivals() {
             <span class="label">Alter:</span><span class="val">${p.age || '-'}</span>
             <span class="label">Geburtsdatum:</span><span class="val">${p.birthDate || '-'}</span>
             <span class="label">Rating:</span><span class="val">${p.strength}</span>
-            <span class="label">Talent:</span><span class="val">${p.strength}</span>
+            ${typeof p.potential === 'number' && typeof getYouthPotentialText === 'function' ? `<span class="label">Potenzial:</span><span class="val">${getYouthPotentialText(p)}</span>` : ''}
             ${(pool === 'squad' || pool === 'secondTeam') && typeof getTrainingGainsLabel === 'function' ? `<span class="label">Trainingsplus:</span><span class="val">${getTrainingGainsLabel(p)}</span>` : ''}
             <span class="label">Moral:</span><span class="val">${p.morale ?? '-'}</span>
             <span class="label">Fitness:</span><span class="val">${p.fitness ?? '-'}</span>
@@ -5152,6 +5153,7 @@ function selectNewGameScenario(id) {
     // erben. Stadion/Campus/Personal/Fans bleiben bewusst unverändert (reisen als deine
     // eigenen Investitionen mit dir mit) - nur Kader und Transfer-/Gehaltsbudget werden neu
     // auf das Zielniveau kalibriert; Karriere-Level, Trophäen und Vereinskonto bleiben erhalten.
+    // Der neue Vorstand startet bei 60 Vertrauen mit einem Saisonziel für den neuen Kader (25.22).
     function switchToClub(targetName) {
         let targetLevel = -1;
         for (let l = 0; l < NUM_LEAGUES; l++) {
@@ -5159,6 +5161,7 @@ function selectNewGameScenario(id) {
         }
         if (targetLevel === -1) return false;
 
+        const alterName = game.clubName;
         game.clubName = targetName;
         game.leagueLevel = targetLevel;
         squad = generateSquadForLevel(targetLevel);
@@ -5167,6 +5170,22 @@ function selectNewGameScenario(id) {
         loanedPlayers = [];
         incomingLoans = [];
         incomingOffers = [];
+        // Weitere Altlasten (25.22): Rückkaufoptionen, laufender Transferpoker, Abwerbe-Gerüchte über
+        // alte Spieler und die Derbywoche gegen den alten Rivalen gehören zum alten Verein.
+        game.buybackOptions = [];
+        if (typeof transferPoker !== 'undefined') transferPoker = null;
+        if (Array.isArray(game.rumors)) game.rumors = game.rumors.filter(r => r.type !== 'abwerbung');
+        game.derbyWeek = null;
+        // Die zweite Mannschaft hieß weiter "<alter Verein> II" und spielte unter diesem Namen.
+        if (game.secondTeam && game.secondTeam.name === `${alterName} II`) {
+            const stAlt = game.secondTeam.name;
+            game.secondTeam.name = `${targetName} II`;
+            leaguesData.forEach(tab => { const row = tab.find(t => t.name === stAlt); if (row) row.name = game.secondTeam.name; });
+        }
+        // Neuer Arbeitgeber, neuer Vorstand: Vertrauen startet neutral, das Saisonziel gilt für den neuen Kader.
+        game.boardSat = 60;
+        game.boardSatVerlauf = [];
+        if (typeof recordSeasonExpectation === 'function') recordSeasonExpectation();
         game.captainId = squad[8].id;
         game.penaltyTakerId = squad[14].id;
         game.freeKickTakerId = squad[9].id;
@@ -7306,9 +7325,17 @@ function getTransferAsking(p) {
 const SWAP_VALUE_SHARE = 0.85;
 const SWAP_MAX_GAP = 10;
 const SWAP_MIN_SQUAD = 17;
+// Der Verkäufer nimmt nur, wen er brauchen kann (25.22): höchstens SWAP_CLUB_GAP Punkte unter seiner
+// Vereinsstärke. Vorher reichte "10 Punkte unter dem Marktspieler" - der Langzeit-Bot tauschte in
+// der 5. Liga bis zu 12 Ergänzungsspieler pro Saison los.
+const SWAP_CLUB_GAP = 4;
+function getSwapClubMinimum(p) {
+    const verein = leaguesData.flat().find(t => t && t.name === p.sellerClub);
+    return Math.max(p.strength - SWAP_MAX_GAP, (verein ? verein.strength : p.strength) - SWAP_CLUB_GAP);
+}
 function isSwapCandidate(tp, p) {
     // Verletzte nimmt kein Verkäufer in Zahlung (25.21).
-    return !!tp && (tp.age || 25) <= 30 && tp.strength >= p.strength - SWAP_MAX_GAP && !(tp.injured > 0)
+    return !!tp && (tp.age || 25) <= 30 && tp.strength >= getSwapClubMinimum(p) && !(tp.injured > 0)
         && !(incomingLoans || []).some(l => l.playerId === tp.id) && squad.length > SWAP_MIN_SQUAD;
 }
 function getSwapValue(tp, p, ablose) {
@@ -7503,7 +7530,7 @@ function signPokerDeal() {
 
 function renderPokerSwapSelect(p, t) {
     const kandidaten = squad.filter(x => isSwapCandidate(x, p)).sort((a, b) => b.marketValue - a.marketValue);
-    if (!kandidaten.length) return `<div style="font-size:8px; color:var(--text-muted); margin-bottom:4px;">🔄 Tausch: ${p.sellerClub} nimmt nur gesunde Spieler bis 30 Jahre mit höchstens ${SWAP_MAX_GAP} Punkten weniger (und mindestens ${SWAP_MIN_SQUAD + 1} im Kader).</div>`;
+    if (!kandidaten.length) return `<div style="font-size:8px; color:var(--text-muted); margin-bottom:4px;">🔄 Tausch: ${p.sellerClub} nimmt nur gesunde Spieler bis 30 Jahre ab Stärke ${getSwapClubMinimum(p)} - schwächere helfen ihm nicht (und mindestens ${SWAP_MIN_SQUAD + 1} im Kader).</div>`;
     const tausch = t.swapId ? squad.find(x => x.id === t.swapId) : null;
     const wert = tausch ? getSwapValue(tausch, p, t.agreedFee) : 0;
     return `<div style="font-size:9px; margin-bottom:4px;">🔄 Spieler in Zahlung geben: <select onchange="setPokerSwap(this.value)" style="font-size:9px;">
@@ -15866,6 +15893,39 @@ function finishGoalkeeperGame() {
         return betrag;
     }
 
+    // TV-Vorschuss für Aufsteiger (25.22): wie beim Fallschirmgeld 25 % des TV-Grundbetrags - hier der
+    // NEUEN Liga, sofort beim Aufstieg (Bundesliga 16 Mio. €, 2. Liga 2 Mio. €). Er wird über die Saison
+    // mit den Spieltagsraten verrechnet (getTvAdvanceDeduction), am Ende bleibt die Summe gleich - nur
+    // ist das Geld im Sommerfenster da. Vorher kam ein Bundesliga-Aufsteiger mit ~15 Mio. € Kasse an,
+    // Bundesliga-Spieler kosten 20-40 Mio. €: der Bot hatte 33 Mio. Transferbudget, konnte es aber
+    // nicht ausgeben, die Elf lag 10-14 Punkte unter dem Ligaschnitt und stieg wieder ab.
+    const TV_PROMOTION_ADVANCE_SHARE = 0.25;
+    function payPromotionTvAdvance(season) {
+        const betrag = Math.round((LEAGUE_BASE_TV_MONEY[game.leagueLevel] || 0) * TV_PROMOTION_ADVANCE_SHARE / 1000) * 1000;
+        if (betrag <= 0) return 0;
+        game.tvAdvance = { season, amount: betrag, remaining: betrag };
+        bucheMitLabel('📺 TV-Vorschuss (Aufsteiger)', betrag);
+        addInboxMessage('finanzen', '📺 TV-Vorschuss für den Aufsteiger', `Die ${leagueNames[game.leagueLevel]} zahlt ${formatVal(betrag)} TV-Geld vorab - für Verstärkungen im Sommerfenster. Der Vorschuss wird über die Saison mit den Spieltagsraten verrechnet.`, 'screen-finances');
+        return betrag;
+    }
+    // Aus applyMatchdayFinances(): Anteil des Vorschusses, der von der heutigen TV-Rate abgeht.
+    function getTvAdvanceDeduction() {
+        const v = game.tvAdvance;
+        if (!v || v.season !== game.season || !(v.remaining > 0)) return 0;
+        const abzug = Math.min(v.remaining, Math.round(v.amount / MATCHDAYS_PER_SEASON));
+        v.remaining -= abzug;
+        return abzug;
+    }
+    // Saisonende: was vom Vorschuss noch offen ist (z. B. Aufstieg über die Nachfrist), wird verrechnet.
+    function settleTvAdvanceAtSeasonEnd() {
+        const v = game.tvAdvance;
+        if (!v || v.season !== game.season) return 0;
+        const rest = v.remaining || 0;
+        if (rest > 0) bucheMitLabel('📺 TV-Vorschuss verrechnet', -rest);
+        game.tvAdvance = null;
+        return rest;
+    }
+
     // Prognose für die Finanzübersicht (25.19): was die Abrechnung am Saisonende bei
     // gleichbleibendem Tabellenplatz bringt - bisher kam die Restausschüttung (bis 28 Mio. €)
     // oder die Rückforderung (bis 10 Mio. €) ohne Vorwarnung.
@@ -15875,7 +15935,8 @@ function finishGoalkeeperGame() {
         const anspruch = calculateCollectiveTvMoney(game.leagueLevel, rank);
         const offeneRaten = Math.max(0, MATCHDAYS_PER_SEASON - game.matchday + 1);
         const rate = Math.min(Math.round((LEAGUE_BASE_TV_MONEY[game.leagueLevel] ?? 100000) / MATCHDAYS_PER_SEASON), Math.round(anspruch / MATCHDAYS_PER_SEASON));
-        const rest = anspruch - (game.tvMoneyPaidThisSeason || 0) - offeneRaten * rate;
+        const vorschussOffen = game.tvAdvance && game.tvAdvance.season === game.season ? (game.tvAdvance.remaining || 0) : 0;
+        const rest = anspruch - (game.tvMoneyPaidThisSeason || 0) - offeneRaten * rate - vorschussOffen;
         return { rank, anspruch, rest: Math.round(rest / 1000) * 1000 };
     }
 
@@ -19601,9 +19662,12 @@ function renderYouthDevelopmentChart() {
 //   erste Elf des Spieltags eigener Absolventen landen in game.youthMoments.
 
 const YOUTH_POTENTIAL_RANGE = { 1: [58, 68], 2: [67, 78], 3: [77, 89] };
-// Potenzial relativ zum Liga-Schnitt beim Sichten (p.youthLeagueBase, 25.17): Stufe 1 Ergänzungsspieler
-// unter dem Schnitt, Stufe 2 Stammspieler-Niveau, Stufe 3 klar darüber. Ältere Talente ohne Basis nutzen die festen Spannen.
-const YOUTH_POTENTIAL_OFFSET = { 1: [-10, -3], 2: [-3, 4], 3: [4, 10] };
+// Potenzial relativ zum Liga-Schnitt beim Sichten (p.youthLeagueBase, 25.17): Stufe 1 Kaderfüller,
+// Stufe 2 Ergänzung bis Stammspieler, Stufe 3 Stammspieler bis Leistungsträger. Ältere Talente ohne
+// Basis nutzen die festen Spannen. 25.22: vorher -10..-3 / -3..+4 / +4..+10 - mit Internat und Akademie
+// erreichten ~70 % der Talente Stammspieler-Niveau, der Bundesliga-Bot hatte nach 9-10 Saisons 8-10
+// eigene Talente in der besten Elf.
+const YOUTH_POTENTIAL_OFFSET = { 1: [-12, -5], 2: [-6, 0], 3: [0, 6] };
 const YOUTH_PRO_AGE = 19;
 const YOUTH_DECISION_MATCHDAYS = 8;
 let youthLoanChoiceId = null;
@@ -21737,6 +21801,18 @@ function findLockerRoomConcern() {
 
 function getCliqueByKey(key) {
     return computeSquadCliques().cliques.find(c => c.key === key) || null;
+}
+
+// Kapitän weg (Verkauf, Leihe, Tausch, Vertragsende, Karriereende - 25.22): vorher zeigte
+// game.captainId ins Leere, die Elf spielte still ohne Kapitänsbonus und ohne Autorität in der
+// Kabine. Der Spieler mit der größten Führungsqualität übernimmt (ohne Moral-Malus, der alte ist weg).
+function ensureCaptainPresent() {
+    if (!squad.length || squad.some(p => p.id === game.captainId)) return null;
+    const neu = [...squad].filter(p => !(p.injured > 0)).sort((a, b) => getLeadershipScore(b) - getLeadershipScore(a))[0] || squad[0];
+    game.captainId = neu.id;
+    if (typeof electTeamCouncil === 'function') electTeamCouncil(true);
+    addInboxMessage('vertrag', `Ⓒ ${neu.name} übernimmt die Binde`, `Der bisherige Kapitän ist nicht mehr im Kader. ${neu.name} hat die größte Führungsqualität und führt die Mannschaft jetzt an - ändern kannst du das im Kader.`, 'screen-squad');
+    return neu;
 }
 
 // Einziger Weg, die Binde zu wechseln (Auswahlfeld im Kader und Kapitänsfrage des Rats).
@@ -23919,6 +23995,7 @@ function getPromotionTransferBonus(level = game.leagueLevel) {
 function markPromotionBoost() {
     const season = game.matchday > 34 ? game.season + 1 : game.season;
     game.promotionBoost = { level: game.leagueLevel, season };
+    if (typeof payPromotionTvAdvance === 'function') payPromotionTvAdvance(season);
     // Nachfrist: die Budgets der Saison stehen schon - das Aufstiegsbudget kommt direkt dazu.
     if (game.matchday <= 34) game.transferBudget += getPromotionTransferBonus();
 }
@@ -24281,6 +24358,8 @@ const I18N_UI_EN = {
     '💎 PREMIUM-SHOP': '💎 PREMIUM SHOP', 'Dies ist eine reine Offline-App ohne echte Zahlungsanbindung. "Käufe" hier sind simuliert und buchen kein echtes Geld ab - die Premium-Punkte werden direkt gutgeschrieben.': 'This is an offline-only app with no real payments. "Purchases" here are simulated and charge no real money - premium points are credited directly.', 'Premium-Punkte "kaufen" (simuliert)': 'Premium points "buy" (simulated)', 'Booster einlösen': 'Redeem booster', '💎 PREMIUM: FAN-BOOST': '💎 PREMIUM: FAN BOOST', 'Sofortiger Fan-Zufriedenheits-Schub für Diamanten.': 'Instant fan satisfaction boost for diamonds.', '💎 Fan-Zufriedenheit +20 kaufen (90)': '💎 Buy fan satisfaction +20 (90)', '💎 Mit Diamanten sofort abschließen (150)': '💎 Finish now with diamonds (150)', '⭐ Zusätzliche Features': '⭐ Extra features', '💾 SPEICHERSTÄNDE': '💾 SAVE GAMES', '💾 SAVEGAME EXPORT & JSON-IMPORT': '💾 SAVE EXPORT & JSON IMPORT', '💾 Als Datei herunterladen': '💾 Download as file', '📤 Als Datei exportieren': '📤 Export as file', '📥 Aus Datei importieren': '📥 Import from file', '📤 Exportieren': '📤 Export', '📤 JSON Exportieren': '📤 Export JSON', '📥 JSON Importieren': '📥 Import JSON', '📸 Als Bild herunterladen': '📸 Download as image', '📋 Verlauf exportieren': '📋 Export history', '🆕 Neues Spiel starten (frischer Klub)': '🆕 Start a new game (fresh club)', '✅ Neues Spiel mit diesen Einstellungen starten': '✅ Start a new game with these settings', 'Startliga wählen:': 'Choose the starting league:', 'Startkapital wählen:': 'Choose the starting capital:', 'Heimatstadt (bestimmt Regionalliga, Oberliga und Landespokal):': 'Home city (determines the regional leagues and the state cup):', 'Aktueller Vereinsname:': 'Current club name:', '🧪 SZENARIO-PRESETS': '🧪 SCENARIO PRESETS', 'Ausgewogenes Einsteigen ohne besondere Vor-/Nachteile.': 'A balanced start without special pros or cons.', 'Ausgewogener Ansatz ohne besondere Vor-/Nachteile.': 'A balanced approach without special pros or cons.', '🏷️ VEREINSIDENTITÄT': '🏷️ CLUB IDENTITY', '🛡️ VEREINS-WAPPEN': '🛡️ CLUB CREST', '🖼️ VEREINSMUSEUM: WAPPEN-HISTORIE': '🖼️ CLUB MUSEUM: CREST HISTORY', 'Zweite Ebene: Muster-Badge': 'Second layer: pattern badge', 'Dritte Ebene: Tier-/Maskottchen-Symbol': 'Third layer: animal/mascot symbol', 'Symbol': 'Symbol', 'Farbe': 'Colour', 'Auswärtstrikot-Farbe': 'Away kit colour', '✏️ Umbenennen': '✏️ Rename', '🔄 Verein wechseln': '🔄 Change club', 'Eigene Vorlagen': 'Own templates', '✓ Alle als gelesen markieren': '✓ Mark all as read', '★ Wichtig': '★ Important', '📖 SPIEL-LEXIKON': '📖 GAME GLOSSARY', 'Was bedeutet ein Wert, wie wirkt er, wie beeinflusst man ihn? Suchen oder nach Bereich filtern.': 'What does a value mean, what does it do, how do you influence it? Search or filter by area.', '📬 POSTFACH': '📬 INBOX', '🛠️ ADMIN-DIAGNOSE & LIVE-INSPECTOR': '🛠️ ADMIN DIAGNOSTICS & LIVE INSPECTOR', 'Entwickler-Konsole Aktiv': 'Developer console active', '🔍 STRUKTUR-SELBSTTEST': '🔍 STRUCTURE SELF-TEST', '🔍 Jetzt alle Screens testen': '🔍 Test all screens now', 'Prüft, ob jeder Screen nach dem Öffnen wirklich sichtbaren Inhalt zeigt - deckt versteckte HTML-Verschachtelungsfehler auf, bevor sie als "das Spiel geht nicht" auffallen.': 'Checks that every screen shows visible content when opened - finds hidden HTML nesting errors before they show up as "the game is broken".', 'Insolvenz-Test': 'Insolvency test', '💣 Komplett-Reset': '💣 Full reset', '⚠️ Technischer Fehler (bitte melden):': '⚠️ Technical error (please report):', 'Verlauf (letzte Läufe):': 'History (last runs):', 'Stimmung:': 'Mood:', 'Rangordnung': 'Hierarchy',
     // Teil 2 (25.21): Texte, die erst die Module rendern (Scan aller Bildschirme auf Englisch)
     'Einlösen': 'Redeem', 'Spieler': 'Player', '🌟 Champions Cup Spieltag': '🌟 Champions Cup matchday', 'Kaufen für einen festen Geldbetrag (skaliert automatisch mit dem Kurs, egal wie teuer/günstig die Aktie ist):': 'Buy for a fixed amount (scales with the price automatically, however expensive or cheap the share is):', 'Aktueller Börsenkurs:': 'Current share price:', 'Noch nicht aufgestellt': 'Not in the line-up yet', 'Freistoß-Gott': 'Free-kick god', 'Noch kein Scout für diese Region.': 'No scout for this region yet.', 'Wintermütze': 'Winter hat', 'Auswärts-Schal': 'Away scarf', 'Leder-Geldbörse': 'Leather wallet', 'Schlüsselanhänger': 'Key ring', 'Mini-Ball für Kinder': 'Mini ball for kids', 'Handyhülle mit Wappen': 'Phone case with crest', 'Kapuzenpulli mit Wappen': 'Hoodie with crest', 'keine': 'none', 'Saison:': 'Season:', 'Eisenfuß': 'Iron foot', 'Präsident': 'President', 'Kapazität': 'Capacity', 'KAPAZITÄT': 'CAPACITY', 'nur mähen': 'mow only', 'Gründlich': 'Thorough', 'Millionär': 'Millionaire', '→ Höhepunkt': '→ Highlight', 'Vorverträge': 'Pre-contracts', '· Gästeblock': '· away block', 'GESAMTSTÄRKE': 'OVERALL STRENGTH', 'pro Spieltag': 'per matchday', '🌴 Südamerika': '🌴 South America', 'Gerüchteküche': 'Rumour mill', 'Presse-Tribüne': 'Press stand', '↺ Zurücksetzen': '↺ Reset', 'Höchster Sieg:': 'Biggest win:', 'Multimillionär': 'Multimillionaire', 'Rückkaufoption': 'Buy-back option', 'Saisoneröffnung': 'Season opening', '🎯 Saison-Ziele': '🎯 Season goals', 'Nicht gegründet': 'Not founded', 'Auswärtsbilanz:': 'Away record:', 'Nächstes Spiel:': 'Next match:', 'Nächste Lizenz:': 'Next licence:', 'Trophäen gesamt:': 'Total trophies:', '🍀 Glücksbringer': '🍀 Lucky charm', 'Vertragsgespräch': 'Contract talk', 'Auf- und Abstieg': 'Promotion and relegation', 'nur dieser Verein': 'this club only', '🎫 Ticketverkäufe': '🎫 Ticket sales', 'West-Haupttribüne': 'West main stand', 'Ernährungsberater': 'Nutritionist', 'Parkplatz-Gelände': 'Car park site', 'Nur mähen (leicht)': 'Mow only (light)', '💼 Gesamtgehälter:': '💼 Total wages:', 'Villa mit Seeblick': 'Villa with lake view', 'Abstellungsprämien': 'Release fees', 'Höchster Derbysieg:': 'Biggest derby win:', 'Auswärts-Spitzname:': 'Away nickname:', '🔝 Freistoßflanke ·': '🔝 Free-kick cross ·', 'Sanierungsbedürftig': 'Needs renovation', 'NÄCHSTE AUSBAUSTUFE': 'NEXT UPGRADE', '✅ Preise übernehmen': '✅ Apply prices', 'Zustand des Geläufs': 'Pitch condition', 'Höchste Niederlage:': 'Heaviest defeat:', '💛 Loyalitäts-Bonus': '💛 Loyalty bonus', '🎤 Spieler-Interview': '🎤 Player interview', '↪️ Kurz ausgeführt ·': '↪️ Taken short ·', 'Präventionsprogramm:': 'Prevention programme:', 'Trainingsintensität:': 'Training intensity:', 'Einnahmen (Spieltag)': 'Income (matchday)', 'Bedarf nächste Saison': 'Needed next season', 'Noch keine Teilnahme.': 'No participation yet.', 'Finanzielle Stabilität': 'Financial stability', '⚽ Öffentliches Training': '⚽ Open training', 'Noch nicht genug Daten.': 'Not enough data yet.', '· nächste Auslosung aus': '· next draw from', 'Öffentliches Medienimage': 'Public media image', '✔ 🎯 Direkter Freistoß ·': '✔ 🎯 Direct free kick ·', '💡 Empfehlung übernehmen': '💡 Apply recommendation', '🅿️ Parkplätze & Zufahrt': '🅿️ Parking & access', 'Bedienung mit einer Hand': 'One-handed use', 'Gewinne die Meisterschaft': 'Win the championship', 'Spritzguss- & Zubehörwerk': 'Injection moulding & accessories plant', 'Einfamilienhaus im Grünen': 'Detached house in the countryside', 'Biografie veröffentlichen': 'Publish a biography', 'Kaderplanung & Kadergröße': 'Squad planning & squad size', 'Kabine, Cliquen & Kapitän': 'Dressing room, cliques & captain', '🔄 Alle Perks zurücksetzen': '🔄 Reset all perks', 'Verträge laufen bald aus ·': 'Contracts expiring soon ·', '👩 FRAUENMANNSCHAFT GRÜNDEN': '👩 FOUND A WOMEN\'S TEAM', 'Noch kein gemeinsames Spiel': 'No match together yet', 'Noch keine Heimspiel-Daten.': 'No home match data yet.', 'Bürokomplex \'Vereins-Tower\'': 'Office complex \'Club Tower\'', 'Noch keine Tendenz erkennbar': 'No trend yet', 'Noch kein Heimspiel gespielt': 'No home match played yet', '· Zahlungskräftiges Publikum': '· wealthy crowd', 'Länderspielpausen & Turniere': 'International breaks & tournaments', 'Kader und Aufstellung ansehen': 'View squad and line-up', 'Finanzen und Sponsoren prüfen': 'Check finances and sponsors', '⚠️ Höchstes Verletzungsrisiko': '⚠️ Highest injury risk', 'Gehälter jetzt (pro Spieltag)': 'Wages now (per matchday)', 'Bester Torschütze (Karriere):': 'Top scorer (career):', '💪 Fähigkeitstraining-Express': '💪 Skill training express', 'Noch keine Interviews gegeben.': 'No interviews given yet.', 'Trainingsgelände mit Flutlicht': 'Training ground with floodlights', '🤝 Jährliches Personal-Meeting': '🤝 Annual staff meeting', 'Verträge langfristig gesichert': 'Contracts secured long-term', 'Längste Serie ohne Niederlage:': 'Longest unbeaten run:', 'Sofortkauf zahlt die Forderung': 'Instant buy pays the asking price', 'Noch kein Selbsttest gelaufen.': 'No self-test run yet.', 'Wartet die ersten Spieltage ab.': 'Waiting for the first matchdays.', 'Noch kein Pokalfinale erreicht.': 'No cup final reached yet.', '👕 Doppelte Fanartikel-Verkäufe': '👕 Double merchandise sales', 'Wintergespräch mit dem Vorstand': 'Winter talk with the board', '- wie startet ihr in die Saison?': '- how do you start the season?', 'Leihspieler kehren ggf. zurück ·': 'Loan players may return ·', 'Noch keine abgeschlossenen Wetten.': 'No settled bets yet.', 'Noch keine Überraschung geschafft.': 'No upset achieved yet.', 'Persönlichen Werbedeal abschließen': 'Sign a personal endorsement deal', '📱 Soziale-Medien-Präsenz: INAKTIV': '📱 Social media presence: INACTIVE', '📋 Kostenlose Vertragsverlängerung': '📋 Free contract extension', 'Kostenlos: etwas Fannähe und Moral.': 'Free: a little fan closeness and morale.', 'Stabile Weltmärkte zu Saisonbeginn.': 'Stable world markets at the start of the season.', 'Noch keine aktiven Bandensponsoren.': 'No active board sponsors yet.', '(Hektisch) · 🟥 zückt schnell Karten': '(Hectic) · 🟥 quick with cards', 'Zufrieden mit der Gesamtentwicklung.': 'Happy with the overall development.', 'Keine laufenden Produktionsaufträge.': 'No running production orders.', 'Noch keine Pokale im Trophäenschrank.': 'No trophies in the cabinet yet.', 'gegen Vereine aus der eigenen Region.': 'against clubs from your own region.', 'Kostet Geld, bringt Fans und Stimmung.': 'Costs money, brings fans and atmosphere.', 'Fertigt Schals für Wolle-Rohstoffkosten': 'Makes scarves for the cost of wool', 'Halbiert die Ausfallzeit von Verletzten': 'Halves the time injured players are out', 'Näht Spielbälle für Leder-Rohstoffkosten': 'Sews match balls for the cost of leather', 'Noch keine eigenen Vorlagen gespeichert.': 'No own templates saved yet.', 'Ein Magazin zahlt gut für deine Geschichte.': 'A magazine pays well for your story.', 'Vereinsstadion (keine Namensrechte vergeben)': 'Club stadium (no naming rights sold)', 'Noch keine Einträge in der Talent-Datenbank.': 'No entries in the talent database yet.', 'Produziert Trikots für Baumwoll-Rohstoffkosten': 'Produces shirts for the cost of cotton', 'Eine Marke will dein Gesicht für ihre Kampagne.': 'A brand wants your face for its campaign.', 'Presst Caps & Wimpel für Kunststoff-Rohstoffkosten': 'Presses caps & pennants for the cost of plastic', 'Unternehmen zahlen gut für deine Erfolgsgeschichte.': 'Companies pay well for your success story.', 'Noch keine spielerspezifischen Trikot-Verkaufsdaten.': 'No shirt sales data per player yet.', 'Noch nichts nebenbei - vielleicht Zeit für ein Hobby?': 'Nothing on the side yet - maybe time for a hobby?', 'Aktuell wirken keine zusätzlichen Boni auf den Absatz.': 'No extra boosts on sales right now.', 'Diese Saison noch keine Trainerwechsel in deiner Liga.': 'No coaching changes in your league this season yet.', 'Derzeit liegen keine offiziellen Transferanfragen für deine Spieler vor.': 'There are no official transfer requests for your players at the moment.', 'Noch keine Scouting-Missionen abgeschlossen. Entsende oben deine Scouts!': 'No scouting missions completed yet. Send out your scouts above!', 'Tippe auf einen Vereinsnamen in der Tabelle für die Kopf-an-Kopf-Bilanz.': 'Tap a club name in the table for the head-to-head record.', 'Noch keine Verkäufe erfasst - nach dem ersten Spieltag erscheint hier der Verlauf.': 'No sales recorded yet - the history appears here after the first matchday.', '✓ Keine Position hat eine gefährliche Häufung auslaufender Verträge.': '✓ No position has a dangerous cluster of expiring contracts.', 'Trainingsplus:': 'Training gain:', 'Verdoppelt die Ticketeinnahmen beim nächsten Heimspiel.': 'Doubles ticket income at the next home match.', 'Verdoppelt den Fanartikel-Absatz im Stadion beim nächsten Heimspiel.': 'Doubles merchandise sales in the stadium at the next home match.', 'Senkt Verletzungs- und Kartenrisiko im nächsten Spiel spürbar.': 'Noticeably lowers injury and card risk in the next match.', 'Senkt das Ausschreitungsrisiko beim nächsten Heimspiel stark ab.': 'Strongly lowers the risk of riots at the next home match.', 'Schließt alle aktuell laufenden Scouting-Missionen sofort ab.': 'Completes all running scouting missions immediately.', 'Heilt alle Verletzungen und beendet alle Sperren des gesamten Kaders sofort.': 'Heals all injuries and ends all suspensions of the whole squad immediately.', 'Gewährt sofort eine zusätzliche Trainingseinheit, unabhängig vom Tageslimit.': 'Grants an extra training session immediately, regardless of the daily limit.', 'Deckt das Potenzial aller aktuellen Jugendspieler sofort und kostenlos auf.': 'Reveals the potential of all current youth players immediately and for free.', 'Garantiert sonniges Wetter beim nächsten Spiel - keine negativen Wettereffekte.': 'Guarantees sunny weather at the next match - no negative weather effects.', 'Setzt die Eingespieltheit aller aktuellen Startelf-Paarungen sofort auf Maximum.': 'Sets the understanding of all current starting pairings to maximum immediately.', 'Setzt deinen Stamm-Torwart sofort auf Top-Fitness und Top-Tagesform.': 'Puts your first-choice goalkeeper at top fitness and top form immediately.', 'Einmal pro Saison ein aktives Vertrags-Ultimatum kostenlos besänftigen.': 'Calm one active contract ultimatum for free once per season.', 'Sofortiger Bonus aufs Transferbudget, passend zu deiner aktuellen Liga-Stärke.': 'Instant bonus to the transfer budget, matched to your current league.', 'Der nächste abgeschlossene Scouting-Fund ist garantiert ein Spieler mit hoher Stärke.': 'The next completed scouting find is guaranteed to be a strong player.', 'Zusätzlicher Fitness-Erholungsbonus nach Spielen (stapelt mit Konditionstrainer)': 'Extra fitness recovery after matches (stacks with the fitness coach)', 'Vermietete Büroflächen an lokale Unternehmen - stabile, planbare Mieteinnahmen.': 'Office space let to local companies - stable, predictable rent.', 'Mietwohnungen in Stadionnähe - beliebt bei Fans, die nah am Verein wohnen wollen.': 'Rented flats near the stadium - popular with fans who want to live close to the club.', 'Mildert Zwangsverkäufe und Punktabzüge bei Zahlungsunfähigkeit spürbar ab.': 'Noticeably softens forced sales and point deductions when insolvent.', 'Dämpft negative Medienwirkung bei schlechten Ergebnissen & Skandalen': 'Softens negative media impact of bad results & scandals', 'Verbessert Elfmeter-, Freistoß- und Eckballqualität der Mannschaft': 'Improves the team\'s penalties, free kicks and corners', 'Verringert Verletzungszeiten und beschleunigt Regeneration': 'Shortens injury lay-offs and speeds up recovery', 'Erhöht Stärke und Potenzial neuer Nachwuchsspieler': 'Raises strength and potential of new youth players', 'Übernimmt automatisch eine wählbare Aufgabe im Fanshop': 'Automatically takes over a chosen task in the fan shop', 'Halbiert die Wahrscheinlichkeit für Vertrags-Ultimaten unzufriedener Stars - frühzeitige,': 'Halves the chance of contract ultimatums from unhappy stars - early,',
+    // Teil 3 (25.22): Lexikon und Spieler-Popup
+    '➜ Zum Bildschirm': '➜ Go to screen', 'Kein Eintrag gefunden. Anderen Begriff versuchen oder Kategorie „Alle“ wählen.': 'No entry found. Try another term or choose the category "All".', 'Nur Einträge zum Bildschirm, von dem du kommst.': 'Only entries for the screen you came from.', 'Alle zeigen': 'Show all', 'Potenzial:': 'Potential:',
 };
 
 let i18nUiObserver = null;
@@ -26099,6 +26178,7 @@ function cleanupLegacyScoutState() {
     }
 
     function setupMatch(homeName, awayName, oppStrength, isHome, isCup, refObj) {
+        if (typeof ensureCaptainPresent === 'function') ensureCaptainPresent();
         playSound('whistle');
         substitutionsLeft = 5;
         if (typeof resetMatchEvents === 'function') resetMatchEvents();
@@ -27077,6 +27157,8 @@ function cleanupLegacyScoutState() {
         let tvInstallment = (typeof getTvMoneyInstallment === 'function') ? getTvMoneyInstallment() : 0;
         game.tvMoneyPaidThisSeason = (game.tvMoneyPaidThisSeason || 0) + tvInstallment;
 
+        // TV-Vorschuss eines Aufsteigers (media-rights.js, 25.22) wird mit der Rate verrechnet.
+        if (typeof getTvAdvanceDeduction === 'function') tvInstallment -= getTvAdvanceDeduction();
         let grossIncome = ticketIncome + merchIncome + sponsorInc + tvInstallment;
         let taxAmount = Math.round(Math.max(0, grossIncome) * getTaxRate());
         let advisorFee = financeCentralState.taxAdvisorHired ? getTaxAdvisorFee() : 0;
@@ -27240,6 +27322,7 @@ function cleanupLegacyScoutState() {
     }
 
     function processPostMatchRoutine(matchResult = null, isHomeDerby = false, isLiveContext = false, matchMargin = 0, isHomeMatchParam = true, totalGoalsForBets = null) {
+        if (typeof ensureCaptainPresent === 'function') ensureCaptainPresent();
         // Löst die Insider-Wette und die Spionage-Info fürs vergangene Spiel auf/zurück,
         // unabhängig davon ob live gespielt oder automatisch simuliert wurde - beide sind
         // ans jeweils NÄCHSTE (jetzt vergangene) Spiel gebunden, nicht an den Live-Kontext.
@@ -28894,6 +28977,7 @@ function concludeSeasonAndAdvance() {
             if (restausschuettung !== 0) bucheMitLabel(restausschuettung > 0 ? '📺 TV-Restausschüttung' : '📺 TV-Rückforderung', restausschuettung);
             game.lastLeagueTvPayout = tvAnspruch;
             game.tvMoneyPaidThisSeason = 0;
+            if (typeof settleTvAdvanceAtSeasonEnd === 'function') settleTvAdvanceAtSeasonEnd();
             addInboxMessage('vertrag', `📺 Liga-TV-Abrechnung: ${formatVal(tvAnspruch)} für Platz ${myRank}`,
                 `Der Verein hat für Platz ${myRank} Anspruch auf ${formatVal(tvAnspruch)} aus dem kollektiven TV-Vertrag. Davon wurden ${formatVal(bereitsGezahlt)} bereits in Spieltagsraten ausgezahlt - ${restausschuettung >= 0 ? `die Restausschüttung beträgt ${formatVal(restausschuettung)}` : `zu viel gezahlte Raten von ${formatVal(-restausschuettung)} werden zurückgefordert`}.`, 'screen-finances');
             mediaRights.seasonTvIncomeTotal = 0;
@@ -30296,7 +30380,7 @@ const LEXICON_ENTRIES = [
         text: 'Schwankt von Spiel zu Spiel um den Wert 50 und verändert die effektive Stärke leicht - gute Tage und schlechte Tage.',
         tips: ['„Trainer stellt Top-Elf auf“ berücksichtigt Tagesform und Fitness'] },
     { cat: 'Spieler', title: 'Potenzial (Jugend)', screen: 'screen-youth',
-        text: 'Obergrenze, bis zu der sich ein Talent entwickeln kann. Ungeprüft unbekannt; die Potenzial-Prüfung (3.000 €) zeigt eine Spanne. Talente richten sich nach der eigenen Liga: gesichtet starten sie 14-24 Punkte unter dem Liga-Schnitt (Akademie +2 je Stufe bis Stufe 5, Internat +2 je Stufe; jede Akademie-Stufe ab 2 hebt auch die Chance auf ein Top-Talent um 4 %); das Potenzial liegt je nach Stufe unter dem Liga-Schnitt (Ergänzungsspieler), auf Stammspieler-Niveau oder bis 10 Punkte darüber. Die Sichtung kostet 2 % des Transferbudgets der Liga (mind. 2.000 €).',
+        text: 'Obergrenze, bis zu der sich ein Talent entwickeln kann. Ungeprüft unbekannt; die Potenzial-Prüfung (3.000 €) zeigt eine Spanne. Talente richten sich nach der eigenen Liga: gesichtet starten sie 14-24 Punkte unter dem Liga-Schnitt (Akademie +2 je Stufe bis Stufe 5, Internat +2 je Stufe; jede Akademie-Stufe ab 2 hebt auch die Chance auf ein Top-Talent um 4 %); das Potenzial liegt je nach Stufe 5-12 Punkte unter dem Liga-Schnitt (Kaderfüller), bis 6 darunter (Ergänzung bis Stammspieler) oder bis 6 darüber (Leistungsträger). Die Sichtung kostet 2 % des Transferbudgets der Liga (mind. 2.000 €).',
         tips: ['Leihe zur Entwicklung bringt mit Stammplatz mehr als die Akademie allein', 'Mentor und Jugendtrainer beschleunigen die Entwicklung', 'Mit 19 ist eine Profivertrag-Entscheidung fällig'] },
     { cat: 'Spieler', title: 'Marktwert', screen: 'screen-transfer',
         text: 'Richtwert für Ablösen. Steigt mit der Stärke, mit Länderspielen, Turniererfolgen und Auszeichnungen.',
@@ -30371,7 +30455,7 @@ const LEXICON_ENTRIES = [
         text: 'Liga 1 bis 3 sind bundesweit. Darunter ist der deutsche Fußball regional geteilt: welche Regionalliga (Nord, Nordost, West, Südwest, Bayern), Oberliga und 6. Liga du spielst und welcher Landespokal dich in den DFB-Pokal bringt, hängt an der Heimatstadt deines Vereins. Du wählst sie beim neuen Spiel. Jeder Verein hat eine echte Stadt; die Namen sind - wie die Spielernamen - leicht verfremdet. In den oberen Ligen stehen echte Vereine, in den unteren zusätzlich Vereine aus echten Orten der Gegend.',
         tips: ['Spielstände von vor Version 3.43 behalten ihre Ligen (Nordost/Sachsen)', 'In Großstädten wie Berlin oder Hamburg spielen viele Vereine derselben Stadt in einer Liga'] },
     { cat: 'Verein', title: 'Kabine, Cliquen & Kapitän', screen: 'screen-squad',
-        text: 'Ein Mannschaftsrat: Kapitän plus die zwei Spieler mit der größten Führungsqualität (Leader-Eigenschaft, Alter, Erfahrung, Moral). Spieler gruppieren sich nach Nation und Alter; fällt die Stimmung einer Gruppe unter 40, rumort sie: Teamstärke sinkt, und jeden Monat färbt die Laune auf den Rest ab. Ein Kapitän mit Autorität (Moral ab 60) dämpft das.',
+        text: 'Ein Mannschaftsrat: Kapitän plus die zwei Spieler mit der größten Führungsqualität (Leader-Eigenschaft, Alter, Erfahrung, Moral). Spieler gruppieren sich nach Nation und Alter; fällt die Stimmung einer Gruppe unter 40, rumort sie: Teamstärke sinkt, und jeden Monat färbt die Laune auf den Rest ab. Ein Kapitän mit Autorität (Moral ab 60) dämpft das. Verlässt der Kapitän den Kader, übernimmt der Spieler mit der größten Führungsqualität die Binde.',
         tips: ['Wortführer melden sich beim Mannschaftsrat (anhören oder klare Ansage)', 'Unzufriedene Leistungsträger kommen ins Büro: Einsatzgarantie, Leistung einfordern oder Wechsel erlauben', 'Kapitän wechseln kostet den alten Kapitän Moral - einen Neuling ohne Standing nimmt der Rat übel'] },
     { cat: 'Verein', title: 'Fanstimmung', screen: 'screen-fans',
         text: 'Wie zufrieden die Anhänger sind (0-100). Beeinflusst Zuschauer, Fanartikel und Mitgliederzahlen.',
@@ -30411,7 +30495,7 @@ const LEXICON_ENTRIES = [
         tips: ['In unteren Ligen begrenzt das Liga-Interesse die Zuschauer (6. Liga bis etwa 1.000) - ein größeres Stadion hilft dort nicht, Wetter, Form und Preis zählen trotzdem', 'Leere Ränge werden automatisch gesperrt und kosten weniger Unterhalt', 'Fressbuden und Toiletten erhöhen den Komfort und damit die Zuschauer'] },
     { cat: 'Transfers', title: 'Transferpoker', screen: 'screen-transfer',
         text: 'Jeder Marktspieler gehört einem KI-Verein mit Forderung und verdeckter Schmerzgrenze. Unter der Grenze gibt es keine Zusage, sehr niedrige Angebote kosten doppelt Geduld. Bei begehrten Spielern kann ein Rivale mitbieten und den Spieler wegschnappen.',
-        tips: ['Sofortkauf zahlt die Forderung', 'Nach der Einigung folgt das Gehaltsgespräch', 'Tauschgeschäft: nach der Einigung einen eigenen Spieler (gesund, bis 30 Jahre, höchstens 10 Punkte schwächer) in Zahlung geben - angerechnet werden 85 % seines Marktwerts; die Kasse zahlt den Rest, fürs Transferbudget zählt er wie ein Verkauf (85 % der Anrechnung), sein Berater bekommt Provision'] },
+        tips: ['Sofortkauf zahlt die Forderung', 'Nach der Einigung folgt das Gehaltsgespräch', 'Tauschgeschäft: nach der Einigung einen eigenen Spieler (gesund, bis 30 Jahre, höchstens 4 Punkte unter der Stärke des verkaufenden Vereins) in Zahlung geben - angerechnet werden 85 % seines Marktwerts; die Kasse zahlt den Rest, fürs Transferbudget zählt er wie ein Verkauf (85 % der Anrechnung), sein Berater bekommt Provision'] },
     { cat: 'Transfers', title: 'Medizincheck', screen: 'screen-transfer',
         text: 'Jeder Spieler auf dem Transfermarkt hat einen verdeckten Befund: unauffällig, chronische Probleme (im Kader dauerhaft ×1,5 Verletzungsrisiko, 3-5 Verletzungen in der Akte) oder aktuell verletzt (fällt 2-5 Spiele aus). Ältere Spieler haben öfter chronische Probleme. Im Transferpoker kannst du nach der Ablöse-Einigung einen Medizincheck machen lassen: 3 % der Ablöse (mit Chef-Physio die Hälfte, mindestens 1.500 €). Findet er etwas, senkt der Verein die Ablöse (chronisch −20 %, verletzt −15 %) - oder du brichst ab.',
         tips: ['Der Sofortkauf ist blind - ein Befund zeigt sich erst nach der Unterschrift', 'Bei teuren und älteren Spielern lohnt sich der Check fast immer', 'Chronische Probleme erkennst du im Kader am 🩹'] },
@@ -30431,7 +30515,7 @@ const LEXICON_ENTRIES = [
         text: 'Verlängerungen sind Gehaltsgespräche: Stammspieler und Stars fordern mehr, ältere Spieler weniger. Zähe Charaktere lassen sich schwer drücken; nach zwei geplatzten Runden ist für die Saison Schluss. Dazu kommt ein Handgeld von 4 Spieltagsgehältern je Vertragsjahr (mit Sportdirektor 20 % weniger) plus Beraterprovision.',
         tips: ['Eine Einsatzgarantie macht Spieler billiger - aber wird geprüft'] },
     { cat: 'Wettbewerbe', title: 'Auf- und Abstieg', screen: 'screen-league',
-        text: 'Platz 1 und 2 steigen direkt auf, Platz 3 spielt Relegation gegen den 16. der Liga darüber. Platz 16 muss in die Relegation, Platz 17 und 18 steigen ab. Die Aufstiegsprämie richtet sich nach der neuen Liga: 150.000 € (Oberliga) bis 5 Mio. € (Bundesliga). Beim Abstieg sinken alle Spielergehälter vertragsgemäß um 40 % (Abstiegsklausel), und die alte Liga zahlt einmalig ein Fallschirmgeld von 25 % ihres TV-Grundbetrags (Bundesliga 16 Mio. €, 2. Liga 2 Mio. €). Dazu kommen nach jedem Aufstieg ein Aufstiegsbudget (+50 % des Transferbudgets der neuen Liga) und die Aufstiegseuphorie: +3 Stärke in Ligaspielen bis Spieltag 10, +1,5 bis Spieltag 17.',
+        text: 'Platz 1 und 2 steigen direkt auf, Platz 3 spielt Relegation gegen den 16. der Liga darüber. Platz 16 muss in die Relegation, Platz 17 und 18 steigen ab. Die Aufstiegsprämie richtet sich nach der neuen Liga: 150.000 € (Oberliga) bis 5 Mio. € (Bundesliga). Beim Abstieg sinken alle Spielergehälter vertragsgemäß um 40 % (Abstiegsklausel), und die alte Liga zahlt einmalig ein Fallschirmgeld von 25 % ihres TV-Grundbetrags (Bundesliga 16 Mio. €, 2. Liga 2 Mio. €). Dazu kommen nach jedem Aufstieg ein TV-Vorschuss (25 % des TV-Grundbetrags der neuen Liga sofort, über die Saison mit den Raten verrechnet), ein Aufstiegsbudget (+50 % des Transferbudgets der neuen Liga) und die Aufstiegseuphorie: +3 Stärke in Ligaspielen bis Spieltag 10, +1,5 bis Spieltag 17.',
         tips: ['Bei Gleichstand entscheiden Tordifferenz, dann erzielte Tore'] },
     { cat: 'Wettbewerbe', title: 'Saisonvorschau & Experten-Check', screen: 'screen-dashboard',
         text: 'Vor jeder Saison tippen die Experten die ganze Tabelle; dein Platz ist dieselbe Erwartung, an der dich Vorstand und Mitgliederversammlung messen. Am Saisonende zeigt der Rückblick Tipp gegen Wirklichkeit, Überraschung, Flop und den Spieler der Saison (beste Ø-Note, mindestens 10 Ligaspiele).',
@@ -30455,14 +30539,14 @@ const LEXICON_ENTRIES = [
         text: 'Ein Derby ist ein Spiel gegen einen Verein aus deiner Stadt oder ein echtes Traditionsduell (Revierderby, Nordderby, Rheinderby, Frankenderby, Sachsenderby ...). In Großstädten zählen nur die drei stärksten Stadtrivalen deiner Liga, Vereine aus Stadtteilen nur untereinander. Derbys bringen mehr Zuschauer, die Derby-Woche und eine eigene Derby-Bilanz (Historie > Rivalen). Einen festen Dauerrivalen oder Erzfeind-Trainer gibt es nicht mehr.',
         tips: ['Im Kalender gibt es ein Testspiel gegen den Stadtrivalen', 'Wer in einer Stadt ohne zweiten Verein spielt, hat nur Traditionsduelle - oder gar keine Derbys']},
     { cat: 'Karriere', title: 'Jobangebote', screen: 'screen-dashboard',
-        text: 'Erfolgreiche Manager bekommen Angebote von stärkeren Vereinen. Ein Wechsel nimmt Karriere und Trophäen mit, der Kader ist neu.',
+        text: 'Erfolgreiche Manager bekommen Angebote von stärkeren Vereinen. Ein Wechsel nimmt Karriere und Trophäen mit, der Kader ist neu. Der neue Vorstand startet bei 60 Vertrauen mit einem Saisonziel für den neuen Kader.',
         tips: ['Ein Angebot gilt 6 Spieltage', 'Man kann es auch als Druckmittel für den Vorstand nutzen'] },
     { cat: 'Karriere', title: 'Karriere-Szenarien', screen: 'screen-dashboard',
         text: 'Beim neuen Spiel wählbar: Absteiger retten, Pleiteklub sanieren, Traditionsverein zurückführen, Meister oder Chaos - mit Ziel, Frist und 1-3 Sternen.',
         tips: ['Danach geht die Karriere als freies Spiel weiter', 'Pleiteklub: Kredite zählen als Schulden, jeder Zwangsverkauf kostet einen Stern - zwei lassen die Sanierung scheitern'] },
     { cat: 'Bedienung', title: 'Bedienung mit einer Hand', screen: 'screen-dashboard',
         text: 'Auf dem Handy liegt alles Wichtige im Daumenbereich: der Knopf „▶ Spieltag“ startet von jedem Bildschirm den nächsten Spieltag, „☰ Menü“ in der unteren Leiste öffnet alle Bereiche, Fenster fahren von unten ein und im Livespiel bleiben Szene, Pause und Abpfiff über der Leiste stehen. Die Zurück-Taste schließt Meldungen, Fenster und Menü oder geht einen Bildschirm zurück - erst zweimal Zurück auf dem Startbildschirm verlässt das Spiel.',
-        tips: ['Linkshänder: Menü → Einstellungen → „Weiter-Knopf“ nach links stellen (oder ausblenden)', 'Fenster mit ✕ schließen auch per Tipp auf die dunkle Fläche daneben', 'Sprache und Ton stehen auf dem Handy im Menü unter Einstellungen', 'English: alle festen Texte (Menüs, Überschriften, Knöpfe) wechseln, Meldungen und Spielberichte bleiben vorerst deutsch'] },
+        tips: ['Linkshänder: Menü → Einstellungen → „Weiter-Knopf“ nach links stellen (oder ausblenden)', 'Fenster mit ✕ schließen auch per Tipp auf die dunkle Fläche daneben', 'Sprache und Ton stehen auf dem Handy im Menü unter Einstellungen', 'English: alle festen Texte (Menüs, Überschriften, Knöpfe) und dieses Lexikon wechseln, Meldungen und Spielberichte bleiben vorerst deutsch'] },
     { cat: 'Bedienung', title: 'Speichern', screen: 'screen-dashboard',
         text: 'Drei Speicher-Slots plus automatisches Speichern alle 5 Spieltage. Beim Start wird immer der zuletzt gespeicherte Stand geladen - ist er beschädigt, der nächstneuere heile. Jeder Stand wird vor dem Laden geprüft: kaputte Stände lassen das laufende Spiel unangetastet, kleine Schäden werden repariert. Vor dem Laden, dem Überschreiben eines Slots und einem neuen Spiel entsteht eine Sicherheitskopie.',
         tips: ['Wenn der Browser das Speichern blockiert, Spielstand als Datei exportieren', 'In der Dateivorschau mancher Handys geht Speichern nicht - im Browser öffnen', 'Der Füllstand steht unter den Speicherständen - ab 80 % warnt das Spiel, bei vollem Speicher weicht zuerst die Sicherheitskopie', 'Nur eine exportierte Datei übersteht das Leeren des Browserspeichers - das Spiel erinnert alle 3 Saisons daran'] }
@@ -30504,20 +30588,223 @@ function renderLexicon() {
     const suche = (input ? input.value : '').trim().toLowerCase();
     const kategorien = ['Alle', ...new Set(LEXICON_ENTRIES.map(e => e.cat))];
     const chips = document.getElementById('lexicon-categories');
-    if (chips) chips.innerHTML = kategorien.map(k => `<button onclick="setLexiconCategory('${k}')" class="${k === lexiconCategory ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:9px; padding:4px 8px;">${k}</button>`).join('');
+    const katLabel = k => (typeof currentLang !== 'undefined' && currentLang === 'en' && typeof LEXICON_CATEGORY_EN !== 'undefined' && LEXICON_CATEGORY_EN[k]) || k;
+    if (chips) chips.innerHTML = kategorien.map(k => `<button onclick="setLexiconCategory('${k}')" class="${k === lexiconCategory ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:9px; padding:4px 8px;">${katLabel(k)}</button>`).join('');
     const filterHinweis = document.getElementById('lexicon-screen-filter');
     if (filterHinweis) filterHinweis.innerHTML = lexiconScreenFilter ? `<div class="box" style="font-size:10px; display:flex; justify-content:space-between; align-items:center; gap:6px;"><span>Nur Einträge zum Bildschirm, von dem du kommst.</span><button onclick="setLexiconCategory('Alle')" class="btn-secondary" style="width:auto; font-size:9px;">Alle zeigen</button></div>` : '';
-    const treffer = LEXICON_ENTRIES.filter(e => (lexiconCategory === 'Alle' || e.cat === lexiconCategory)
+    // Englisch (js/lexicon-en.js, 25.22): Titel, Text und Tipps in der gewählten Sprache, auch für die Suche.
+    const lokal = e => typeof getLexiconEntryLocalized === 'function' ? getLexiconEntryLocalized(e) : e;
+    const treffer = LEXICON_ENTRIES.map(lokal).filter(e => (lexiconCategory === 'Alle' || e.cat === lexiconCategory)
         && (!lexiconScreenFilter || e.screen === lexiconScreenFilter)
         && (!suche || (e.title + ' ' + e.text + ' ' + e.tips.join(' ')).toLowerCase().includes(suche)));
     box.innerHTML = treffer.length ? treffer.map(e => `<div class="box" style="font-size:10px;">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
-            <strong style="color:var(--accent);">${e.title}</strong><span style="font-size:8px; color:var(--text-muted);">${e.cat}</span>
+            <strong style="color:var(--accent);">${e.title}</strong><span style="font-size:8px; color:var(--text-muted);">${e.catLabel || e.cat}</span>
         </div>
         <div style="margin-top:3px;">${e.text}</div>
         <ul style="margin:4px 0 0 0; padding-left:16px;">${e.tips.map(t => `<li>${t}</li>`).join('')}</ul>
         <button onclick="showScreen('${e.screen}')" class="btn-secondary" style="width:auto; font-size:9px; margin-top:4px;">➜ Zum Bildschirm</button>
     </div>`).join('') : '<div style="font-size:10px; color:var(--text-muted);">Kein Eintrag gefunden. Anderen Begriff versuchen oder Kategorie „Alle“ wählen.</div>';
+}
+
+/* eslint-enable */
+/* eslint-disable no-undef */
+// Englisches Spiel-Lexikon (Phase 25.22): je deutschem Titel aus LEXICON_ENTRIES (js/lexicon.js)
+// Titel, Text und Tipps auf Englisch. renderLexicon() nimmt sie bei currentLang === 'en'.
+// testLexiconEnglish prüft, dass jeder Eintrag übersetzt ist und alle Zahlen des deutschen
+// Textes enthält - wer im Lexikon eine Regel oder Zahl ändert, ändert sie hier mit.
+const LEXICON_CATEGORY_EN = { Alle: 'All', Spieler: 'Players', Taktik: 'Tactics', Verein: 'Club', Finanzen: 'Finances', Transfers: 'Transfers', Wettbewerbe: 'Competitions', Karriere: 'Career', Bedienung: 'Controls' };
+
+const LEXICON_EN = {
+    'Stärke': { title: 'Strength',
+        text: 'Base value of every player (up to 99). The starting XI counts: strength × fitness × form, averaged over eleven players, plus bonuses (tactics, home advantage +3, captain, understanding, traits - all traits together at most +3). The opponent also gets +3 home advantage.',
+        tips: ['Training and match practice develop young players', 'From about 30 strength drops in the summer (the archetype decides)', 'Improvements are bought on the transfer market'] },
+    'Fitness': { title: 'Fitness',
+        text: 'Every match costs energy, rest brings it back. Starters recover only a quarter as much between matchdays as bench players - always fielding the same XI makes it tired. Below 50 % fitness the automatic line-up rests a player if a rested outfield player is available - even from another position. With a thin squad (under 18) this hardly works.',
+        tips: ['Rotate (the preview offers a "Rested XI")', 'Training focus fitness or recovery', 'Counter-pressing and high full-backs cost extra energy, sitting deep saves it'] },
+    'Moral': { title: 'Morale',
+        text: 'The players\' mood. The starting XI average shifts team strength: above 80 % there is a bonus, below it a penalty. In the summer break morale below 70 recovers halfway.',
+        tips: ['Wins, appearances, team of the matchday and internationals raise it', 'Broken promises (playing time guarantee, press conference) and the bench lower it', 'The team council softens morale drops after defeats'] },
+    'Tagesform': { title: 'Form',
+        text: 'Varies from match to match around 50 and changes the effective strength slightly - good days and bad days.',
+        tips: ['"Coach picks the best XI" takes form and fitness into account'] },
+    'Potenzial (Jugend)': { title: 'Potential (youth)',
+        text: 'The ceiling a talent can develop to. Unknown until checked; the potential check (3,000 €) shows a range. Talents follow your own league: scouted, they start 14-24 points below the league average (academy +2 per level up to level 5, boarding school +2 per level; every academy level from 2 also raises the chance of a top talent by 4 %); depending on the tier the potential is 5-12 points below the league average (squad filler), up to 6 below (rotation to starter) or up to 6 above (key player). Scouting costs 2 % of the league\'s transfer budget (at least 2,000 €).',
+        tips: ['A development loan with a regular place brings more than the academy alone', 'Mentor and youth coach speed up development', 'At 19 a pro contract decision is due'] },
+    'Marktwert': { title: 'Market value',
+        text: 'Guide value for transfer fees. Rises with strength, internationals, tournament success and awards.',
+        tips: ['Sellers usually ask a little more than the market value', 'On deadline day there are bargains (-30 %)'] },
+    'Kicker-Noten & Elf des Spieltags': { title: 'Match ratings & team of the matchday',
+        text: 'After every league match each starter gets a rating from 1.0 to 6.0. With 1.5 or better he is named in the team of the matchday and gets a morale boost.',
+        tips: ['An average rating of 2.5 or better lowers the national team threshold'] },
+    'Verletzungen': { title: 'Injuries',
+        text: 'After every match a roll is made for the players who played. The risk rises with hard training intensity (up to +25 %), age (from 32 +20 %, from 35 +40 %) and earlier injuries; young players are more robust.',
+        tips: ['Light training and recovery lower the risk', 'Physiotherapist (half the lay-off) and rehab centre shorten absences', 'International trips add extra risk'] },
+    'Einzeltraining & Trainingslager': { title: 'Individual training & training camp',
+        text: 'A training focus (shooting, passing, tackling, pace) raises the matching attribute and sometimes overall strength - but at most 3 points per season up to 21, 2 up to 25, 1 up to 29 and none from 30. The same applies to the training mini-games. A training camp is available once per season (cost by league): full fitness, full morale at the Algarve and Dubai camps, and a strength and injury protection bonus for a few matches.',
+        tips: ['Young players benefit most from individual training', 'The player popup shows under "Training gain" how much was added this season', 'Book the camp before a hard spell - the bonus lasts only 5-6 matches'] },
+    'Gegnervorbereitung (Match-Prep)': { title: 'Opponent preparation (match prep)',
+        text: 'With the training focus match prep you prepare for the playing style of the next league opponent: if you guess right (pressing, possession or counter) you get +2.5 strength - otherwise nothing. The tactics focus gives a safe +2 instead.',
+        tips: ['Without a chief analyst you only know the base style from the press - a predictable manager gets countered, and then the preparation misses', 'The preparation only counts for the matchday you chose it for, and only in the league'] },
+    'Taktik-Duell': { title: 'Tactical duel',
+        text: 'Pressing beats possession, possession beats counter, counter beats pressing - ±2 strength in league matches. Balanced and kick and rush are neutral.',
+        tips: ['Choosing the same approach in 3 of 5 league matches makes you predictable - opponents adapt', 'The chief analyst reveals the opponent\'s plan in the preview', 'In the live match the currently chosen tactic counts'] },
+    'Standards & Elfmeter im Livespiel': { title: 'Set pieces & penalties in the live match',
+        text: 'For a penalty or a free kick near the goal the live match pauses. Penalty: you choose the taker - the designated taker has routine (+5 %), the fouled player often wants it himself but is shaken; in the closing stage of a tight match nerves flutter (except for confident players). Free kick: direct (depends on the taker), cross to the header (counter risk) or short (safe, rarely dangerous). The opponent gets penalties and free kicks too. VAR takes back some goals. Live match and simulation use the same expected goals - live has no built-in advantage, only your interventions count.',
+        tips: ['Set fixed takers in the line-up', 'In a shoot-out you can bring a penalty-stopping keeper off the bench - it costs a substitution', 'When playing through quickly, the coach decides automatically'] },
+    'Zurufe im Livespiel': { title: 'Shouts in the live match',
+        text: 'All-out attack: both teams get clearly more chances - pays off when trailing, costs points with a lead. Pressing: a few more own chances than the opponent\'s. Both cost energy: 90 minutes of all-out attack or pressing mean up to 8 extra fitness points for the starting XI after the match. Park the bus: clearly fewer goals on both sides, your own drop more - good for seeing out a lead.',
+        tips: ['Measured from the 60th minute at 0:1: all-out attack earns more points on average, the bus fewer', 'With a lead from the 70th minute the bus is the best choice', 'The assistant coach suggests all-out attack and the bus in the right situations'] },
+    'Co-Trainer im Livespiel': { title: 'Assistant coach in the live match',
+        text: 'A hired assistant coach chimes in during the live match with hints from the real match situation - each with a one-tap action. Level 1: tired players, trailing or a narrow lead late on. Level 2: also second-yellow risk and a lost tactical duel (from the 20th minute, immediately with a chief analyst). Level 3: also spots a winnable tactical duel.',
+        tips: ['Every action costs what it always costs: a substitution, tackling strength or defensive order', 'A grumpy assistant coach speaks up less often - a pay rise lifts his mood', 'Followed hints build trust in him (squad > assistant coach history)'] },
+    'Standards einstudieren': { title: 'Practising set pieces',
+        text: 'Set days in the weekly plan to "🚩 Set pieces" and choose a variant below: direct free kick, free-kick cross, taken short, penalties or corners. Every set-piece day gives the variant 10 points per matchday (15 with a set-piece specialist), all others lose 2. At 100 % it brings up to +6 % goal chance or conversion in the live match, the cross also halves the counter risk.',
+        tips: ['Every set-piece day is missing from tactics, technique or fitness', 'The live free kick shows how well a variant is practised'] },
+    'Schiedsrichter-Kritik': { title: 'Criticising the referee',
+        text: 'If the live match had disputed scenes (sending-off, penalty against you, goal disallowed by VAR) and you did not win, reporters ask after the final whistle. Public criticism: fans +3, media −2, a fine by league (each further one in the season doubles it), and the referee is stricter in your next 2 matches under him. Written complaint: fee, 35 % chance that a sending-off is overturned (without a red card only board +1). Silence: board +2, fans −1.',
+        tips: ['The referee preview on the dashboard shows who is still annoyed', 'Against a resentful referee better go into tackles carefully'] },
+    'Mannschaftsanweisungen': { title: 'Team instructions',
+        text: 'Counter-pressing (+1.5 strength, +15 % energy use), high full-backs (+1, +8 %), sit deep (−0.5, −15 %; excludes the others).',
+        tips: ['Save energy in a packed schedule, go all in for important matches'] },
+    'Kabinenansprache vor dem Anpfiff': { title: 'Team talk before kick-off',
+        text: 'In the match preview you choose a talk: "No complacency" works as favourite (and for calm players), "Nothing to lose" as underdog - as favourite it hurts. "Only a win counts today" inspires ambitious and confident players, makes emotional and hot-headed ones tense up; a win then brings morale +3, a defeat costs morale 4.',
+        tips: ['The same talk three times in a row only works half as well', 'The characters of the starting XI are in the preview - the half-time talk uses them too', 'Applies in the live match and with "Result only", in league and cup'] },
+    'Pressekonferenz': { title: 'Press conference',
+        text: 'Before every match: three answers with real effects (morale, strength in the next match, board, fans). Promises are settled after the match.',
+        tips: ['Promising a win and losing costs standing with media, fans and board'] },
+    'Vorstandszufriedenheit': { title: 'Board satisfaction',
+        text: 'How happy the board is (10-100). Below 25 it warns you. You are only sacked at the end of the season: if it is then below 25, was below that in the last 6 competitive matches and has not risen during that time. After a relegation there is one fresh start (at least 60), not after a second relegation in a row. In the first season after a relegation it expects at most 3rd place - the league usually has several former top-flight clubs at the same level. The first season is a grace period.',
+        tips: ['Wins and reached season goals raise it', 'Debts, broken promises and losing streaks lower it', 'The board room explains every member individually'] },
+    'Mitgliederversammlung': { title: 'Members\' meeting',
+        text: 'After every season the members want your report: rank against expectation, promotion/relegation and finances set the basic mood. Choose your speech and the membership fee motion on the dashboard. From 70 % approval board +10, from 50 % (discharged) +5, below that -10. If you do not prepare it within 6 matchdays it takes place without you (-5 % approval).',
+        tips: ['Self-critical helps after a weak season, visionary after a good one', 'Letting the numbers speak only pays off with a profit', 'Lowering the fee costs money but brings approval and fans'] },
+    'TV-Gelder': { title: 'TV money',
+        text: 'The league distributes its TV money by rank: Bundesliga 64 M€, 2. Liga 8 M€, 3. Liga 1 M€, Regionalliga 620,000 €, below that 150,000/100,000 € - 1st place gets 1.5 times, every place below 5.5 % less (at least 0.4 times). An instalment is paid every matchday, from matchday 6 by the current rank, but at most the league average. At the end of the season the settlement follows the final rank: good places get a final payment, clubs that slip late pay back instalments they received in excess.',
+        tips: ['The finance overview shows what the settlement brings at the current rank', '1st instead of 10th place is about 32 M€ more in the Bundesliga'] },
+    'Transferstrategie': { title: 'Transfer strategy',
+        text: 'Until matchday 3 you agree a line for the season with the board. Develop youth: transfer budget -30 %, season goal 1 place easier, scouting at half price - at the end of the season at least 3 home-grown players with 10+ league matches: board +6 and fans +3, otherwise -6. Instant success: +40 % transfer budget, goal 2 places higher - reached +5, missed -8. Save: -50 % transfer budget, goal 2 places easier - season without a loss +5, otherwise -6. Balanced (also without a choice): everything stays.',
+        tips: ['The percentages refer to the league transfer budget', 'The new season goal also applies to the members\' meeting'] },
+    'Profis verleihen': { title: 'Loaning out professionals',
+        text: 'In a transfer window up to 3 professionals can be loaned out until the end of the season (transfer market, tab Sell). The loan club comes from your league or one below and takes over 40-100 % of the wage - the stronger the player compared to the club, the more. You keep paying your share, but he no longer counts towards the wage budget. After matchday 34 he returns: morale +5, up to 23 years +1 strength. At least 16 players stay in the squad. No club takes injured players, open offers for the player lapse, and if you change clubs yourself he stays with the old one.',
+        tips: ['Good for expensive squad players who hardly play', 'Frees room in the wage budget for a new signing'] },
+    'Kaderplanung & Kadergröße': { title: 'Squad planning & squad size',
+        text: 'Squad planning shows next season\'s wages (expiring contracts, renewal costs, pre-contracts against the expected budget), pre-contract offers from other clubs and the positions with too little depth, too high an age or many expiring contracts. With fewer than 20 players the first XI hardly gets rest - in the long-run test its fitness dropped to about 88 %, which costs about 4 points of playing strength. If fewer than 14 players remained after contracts expire, the board provides a weak emergency squad.',
+        tips: ['20-24 players are a good range', 'Above the wage budget it names the most expensive squad players: up to 25 years for a loan, older ones for a sale', 'Talents from 17 and free agents fill the squad cheaply'] },
+    'Talente verkaufen': { title: 'Selling talents',
+        text: 'Other clubs bid for academy talents from 16 - the higher the potential, the more often and the more (market value of today\'s strength plus a premium for the potential, at most 30 % of the value at the potential). At most 2 offers at a time, each valid for 4 matchdays. Selling brings the full fee (85 % of it into the transfer budget), with a sell-on clause you get 20 % less now but 20 % of a later resale. If you turn down an offer for a top talent, he adds a little more in training (+1).',
+        tips: ['If you do not know the potential: high offers reveal a lot', 'Talents who will not make your own XI still bring money this way'] },
+    'Wintergespräch mit dem Vorstand': { title: 'Winter talk with the board',
+        text: 'In the winter break (matchday 18-20) the board takes stock: table position against expectation and cash development. You choose a path: raise the goal (2 places, board +5 and a winter budget right away - at the end of the season reached +5, missed -10), lower the goal (2 places, board -4, the season and the members\' meeting are measured against the easier goal), apply for a winter budget (chance from the interim result and the board\'s mood, refusal -3) or confirm the course (+2). Not coming by matchday 20 means missing the talk (-2).',
+        tips: ['If things go better than expected, the budget is easier to get', 'A higher goal only pays off if you can really reach it'] },
+    'Karriereprofil & Vereinslegenden': { title: 'Career profile & club legends',
+        text: 'The player popup shows a career profile: since when and how the player is at the club (bought for a fee, free, pre-contract, buy-back, youth, loan, reserve), season by season matches, goals, assists, average rating and team of the matchday, internationals as well as titles and awards (champion, promotion, cup win, player of the month/season). From 150 competitive matches or 6 seasons at the club he is a club legend: if he leaves - sale or end of contract - fans (-8) and board (-2) drop.',
+        tips: ['Look at the profile before selling a long-serving regular', 'Better extend a legend\'s expiring contract in time'] },
+    'Heimatstadt & regionale Ligen': { title: 'Home city & regional leagues',
+        text: 'Leagues 1 to 3 are national. Below that German football is split by region: which Regionalliga (North, North-East, West, South-West, Bavaria), Oberliga and 6th tier you play and which state cup takes you into the DFB-Pokal depends on your club\'s home city. You choose it when starting a new game. Every club has a real city; the names are - like the player names - slightly altered. The upper leagues have real clubs, the lower ones also clubs from real towns of the area.',
+        tips: ['Saves from before version 3.43 keep their leagues (North-East/Saxony)', 'In big cities like Berlin or Hamburg many clubs from the same city play in one league'] },
+    'Kabine, Cliquen & Kapitän': { title: 'Dressing room, cliques & captain',
+        text: 'One team council: the captain plus the two players with the greatest leadership (leader trait, age, experience, morale). Players group by nationality and age; if a group\'s mood falls below 40 it grumbles: team strength drops, and every month the mood spreads to the rest. A captain with authority (morale from 60) dampens this. If the captain leaves the squad, the player with the greatest leadership takes over the armband.',
+        tips: ['Spokesmen approach the team council (listen or lay down the law)', 'Unhappy key players come to the office: playing time guarantee, demand performance or allow a transfer', 'Changing the captain costs the old captain morale - the council resents a newcomer without standing'] },
+    'Fanstimmung': { title: 'Fan mood',
+        text: 'How happy the supporters are (0-100). Affects attendance, merchandise and membership numbers.',
+        tips: ['Mega choreo: +2 strength in the next home match', 'Special train: +1.5 in the next away match', 'Set a season goal by matchday 6 - bonus on success, mood loss on failure'] },
+    'Medienimage': { title: 'Media image',
+        text: 'A value for your public image. Affects sponsors and job offers.',
+        tips: ['Press conferences and interviews affect it directly'] },
+    'Lizenzauflagen': { title: 'Licence requirements',
+        text: 'For promotion the association demands minimum standards: Oberliga 1,000 seats · Regionalliga 3,000 seats and 30,000 € reserve · 3. Liga 6,000 seats, floodlights, 100,000 € · 2. Liga 10,000 seats, boarding school level 1, 250,000 € · 1. Liga 15,000 seats, boarding school level 2, 500,000 €. If something is missing there is a grace period of 3 matchdays, then the promotion lapses. Running construction for seats, floodlights and boarding school already counts (licence with conditions) - only the financial reserve must really be there.',
+        tips: ['The overview is on the stadium screen, the inbox warns on matchday 30', 'Build the boarding school in the lower leagues - there it costs a fraction', 'Build in time - construction takes several matchdays'] },
+    'Holding & Fabriken': { title: 'Holding & factories',
+        text: 'The merchandising holding has its own account (transfers from and to the club). Factories are bought from the holding account and produce merchandise from raw materials. At the start of the season each own factory gets a contract manufacturing order for its product (fee about three times the material cost, more per upgrade level).',
+        tips: ['Company value = 50,000 € plus 80 % of the amount invested in factories', 'Takeover offers only come if you own factories - after a sale all factories are gone, account and stock stay'] },
+    'Spielbetrieb & Verwaltung': { title: 'Operations & administration',
+        text: 'Club offices, scouting, medicine, youth centre and matchday organisation cost every season in the professional leagues: Bundesliga 40 M€, 2. Liga 5 M€, 3. Liga 0.5 M€ - booked at 1/34 every matchday as its own item in the ledger. From the Regionalliga downwards volunteers run the matchday operation.',
+        tips: ['Promotion to the Bundesliga brings much more TV money, but also these fixed costs', 'The finance forecast shows the monthly share'] },
+    'Gehaltsbudget': { title: 'Wage budget',
+        text: 'Maximum total of all player wages per matchday. New contracts above the budget are not possible. The board sets it by league: Bundesliga 1.575 M€, 2. Liga 520,000 €, 3. Liga 110,000 €, 4. Liga 36,000 €, 5. Liga 11,000 €, 6. Liga 8,000 € - at the start of the season × 1.3 for places 1-4, × 0.8 from place 11.',
+        tips: ['Sales and expiring contracts create room', 'Renegotiate once in the wage talk', 'At the start of the season it covers at least the current wages plus the raises of the contracts that expire in the new season - plus 5 % leeway as long as the previous season had no loss; from 1.5 times the league value the board freezes wages unless the cash covers half a season of wages (renewals then come from departures); with a negative balance frozen at the current wages (without raises)', 'In a renewal only the wages of the players who are still there afterwards count - those leaving anyway create room'] },
+    'Transferbudget': { title: 'Transfer budget',
+        text: 'How much in fees the board releases per season. Independent of the bank balance: both must be enough. Base amount by league: Bundesliga 25 M€, 2. Liga 3 M€, 3. Liga 900,000 €, 4. Liga 250,000 €, 5. Liga 60,000 €, 6. Liga 40,000 € - at the start of the season × 1.3 for places 1-4, × 0.8 from place 11.',
+        tips: ['Sales raise it (85 % of the proceeds) - the wage budget not', 'You can ask the board for 10 % of the league transfer budget or 5 % of the league wage budget (chance by the board\'s mood, success -5, refusal -10)', 'At the start of the season the board also releases 40 % of the reserves above a buffer (half a season of the real wages, at least of half the wage budget), 10 % of it goes into the wage budget'] },
+    'Financial Fairplay': { title: 'Financial fair play',
+        text: 'Over three seasons the club may only make a limited loss (depending on the league). Investments in stadium, grounds and youth do not count. On a breach: warning, then transfer ban and point deduction.',
+        tips: ['The ledger shows what the money is spent on', 'Not to be confused with the transfer ban for a negative balance'] },
+    'Negativer Kontostand': { title: 'Negative balance',
+        text: 'If the account stays in the red: warning after 3 matchdays, transfer ban after 6, every 10 matchdays a forced sale of the most valuable player.',
+        tips: ['A reserve and a spending warning limit help to react in time'] },
+    'Abstellungsprämien': { title: 'Release fees',
+        text: 'For internationals the association pays 15,000 € per player and international break, at the World Cup/Euros 10,000 or 12,000 € per player and tournament day.',
+        tips: ['Listed in the account statement as "Release fees"'] },
+    'Sponsoren & Branchenkonflikt': { title: 'Sponsors & sector conflict',
+        text: 'Main sponsor, shirt sleeve, boards and team bus are awarded separately. If a partner from the same sector is already under contract, the offer shows "Sector conflict with …": the new sponsor then pays only 70 % of all amounts. The sums grow strongly with the league: in the Bundesliga all partners together bring about 25 M€ per season, in the Regionalliga just under 1 M€. 6 matchdays before the contract ends the main sponsor offers an extension by 34 matchdays himself - the terms depend on his loyalty (wins raise it) and the league; once you can demand +10 % (chance = loyalty), below 20 loyalty he does not extend.',
+        tips: ['Mixing sectors brings more money than two partners from the same sector', 'Success and media image attract better sponsors'] },
+    'Ticketpreise & Zuschauer': { title: 'Ticket prices & attendance',
+        text: 'Ticket income is the biggest income next to TV money. Attendance depends on fan mood, league, opponent and stadium comfort; high prices bring more per head but fewer spectators and a worse mood in the stands.',
+        tips: ['In lower leagues league interest limits the crowd (6th tier up to about 1,000) - a bigger stadium does not help there, weather, form and price still count', 'Empty sections are closed automatically and cost less upkeep', 'Food stalls and toilets raise comfort and with it the crowd'] },
+    'Transferpoker': { title: 'Transfer poker',
+        text: 'Every market player belongs to an AI club with an asking price and a hidden minimum. Below the minimum there is no deal, very low offers cost double patience. For sought-after players a rival can join the bidding and snatch the player away.',
+        tips: ['Instant buy pays the asking price', 'After the agreement comes the wage talk', 'Swap deal: after the agreement give one of your own players in part exchange (healthy, up to 30 years, at most 4 points below the selling club\'s strength) - 85 % of his market value is credited; the cash pays the rest, for the transfer budget he counts like a sale (85 % of the credit), his agent gets a fee'] },
+    'Medizincheck': { title: 'Medical check',
+        text: 'Every player on the transfer market has a hidden finding: clean, chronic problems (in the squad permanently ×1.5 injury risk, 3-5 injuries on record) or currently injured (out for 2-5 matches). Older players have chronic problems more often. In the transfer poker you can order a medical check after agreeing the fee: 3 % of the fee (half with a head physio, at least 1,500 €). If it finds something, the club lowers the fee (chronic −20 %, injured −15 %) - or you walk away.',
+        tips: ['The instant buy is blind - a finding only shows after signing', 'For expensive and older players the check almost always pays off', 'You recognise chronic problems in the squad by the 🩹'] },
+    'Vorverträge': { title: 'Pre-contracts',
+        text: 'From the winter window (matchday 18) four players whose contract expires at the end of the season are listed under "Free agents". A pre-contract costs no fee, but a signing-on fee right away (12 or 24 matchday wages), 20 % more wage, and the player only arrives for the new season. He can refuse - one try per player, a double signing-on fee convinces more often. Other clubs snap up waiting candidates. In turn, other clubs lure your players in the last year of their contract: if you do not extend within 3 matchdays (he then demands 15 % more), he signs elsewhere and leaves on a free at the end of the season.',
+        tips: ['Extend important contracts early - then there is no offer at all', 'If a player has signed elsewhere, only a winter sale still brings money', 'At most 3 open pre-contracts, the wage budget of the new season must be enough', 'Squad planning shows other clubs\' offers with deadline and which key players are at risk from matchday 18'] },
+    'Rückkaufoption': { title: 'Buy-back option',
+        text: 'You can accept an offer for a player up to 25 with a buy-back option: the buyer pays 10 % less now, in return you may bring the player back for 140 % of the offer until the end of the season after next - only in a transfer window. At his new club he keeps developing: young players improve, from 25 he tends to stagnate. Open options are listed in the tab "Sell squad".',
+        tips: ['Ideal for talents who have no place right now or are getting too expensive', 'At the season change the inbox reports how strong he has become'] },
+    'Gerüchteküche': { title: 'Rumour mill',
+        text: 'After matchdays transfer rumours appear (tab "Offers"). Every source has its own hidden hit rate - tabloid, insider blog and specialist magazine; how often it was right is counted. If a rumour about your player is true, a real offer arrives after 1-3 matchdays. Deny: the club often backs off, calm players feel valued (morale +3), ambitious and confident ones are annoyed (-5). Fuel it: a real offer is 15 % higher, the player feels pushed out (-3), and if it was a hoax your media image suffers (-2). If a rumour about a market player is true, he is gone after 2 matchdays.',
+        tips: ['The specialist magazine can usually be trusted, the tabloid rarely', 'If you want a market player surrounded by rumours, act fast'] },
+    'Transferfenster': { title: 'Transfer windows',
+        text: 'Summer: matchdays 1-3, winter: matchdays 18-20. On the last day (deadline day) there are bargains and hectic moves.',
+        tips: ['The transfer ticker shows where the other clubs\' stars move'] },
+    'Vertragsgespräch': { title: 'Contract talk',
+        text: 'Renewals are wage talks: regulars and stars demand more, older players less. Tough characters are hard to push down; after two failed rounds it is over for the season. On top comes a signing-on fee of 4 matchday wages per contract year (20 % less with a sporting director) plus the agent\'s fee.',
+        tips: ['A playing time guarantee makes players cheaper - but it is checked'] },
+    'Auf- und Abstieg': { title: 'Promotion and relegation',
+        text: 'Places 1 and 2 are promoted directly, place 3 plays a play-off against 16th of the league above. Place 16 goes into the play-off, places 17 and 18 are relegated. The promotion bonus follows the new league: 150,000 € (Oberliga) up to 5 M€ (Bundesliga). On relegation all player wages drop by 40 % as contracted (relegation clause), and the old league pays a one-off parachute of 25 % of its TV base amount (Bundesliga 16 M€, 2. Liga 2 M€). After every promotion there is also a TV advance (25 % of the new league\'s TV base amount right away, offset against the instalments over the season), a promotion budget (+50 % of the new league\'s transfer budget) and promotion euphoria: +3 strength in league matches until matchday 10, +1.5 until matchday 17.',
+        tips: ['On equal points goal difference decides, then goals scored'] },
+    'Saisonvorschau & Experten-Check': { title: 'Season preview & expert check',
+        text: 'Before every season the experts predict the whole table; your place is the same expectation the board and the members\' meeting judge you by. At the end of the season the review shows prediction against reality, surprise, flop and the player of the season (best average rating, at least 10 league matches).',
+        tips: ['3 places better than predicted: media image +3, fans +2', '4 places worse: media image -3', 'All years are in History > Chronicle'] },
+    'Länderspielpausen & Turniere': { title: 'International breaks & tournaments',
+        text: 'Breaks after matchdays 6, 13, 24 and 30. A player is called up when he reaches his country\'s threshold. After every even season a World Cup or Euros.',
+        tips: ['No league match is missed, but the trip costs fitness'] },
+    'Derby-Woche': { title: 'Derby week',
+        text: 'From 3 matchdays before a derby (same city or a real traditional rivalry) the derby week appears: choreo (home) or special train (away) brings +1.5 strength, a declaration of war +1 - both only on derby day. A derby counts double for the fans: win +2, defeat -2.',
+        tips: ['The choreo raises the risk of riots (pyro) - the security concept cuts it to a third', 'The bonus raises morale by 5 right away and only costs on a win (2 matchday wages of the starting XI) - a defeat lowers morale by 4', 'Declaration of war: a win brings media +3 and fans +2, a defeat costs media, fans and board'] },
+    'Pokalfinale': { title: 'Cup final',
+        text: 'If your club is in the DFB or state cup final, final week starts three matchdays before: ticket allocation to the fans (less money, fans +4, +1 strength) or to sponsors (more money, fans -2), fan special trains (+1.5 strength) and a short training camp (+1 strength). After a win you choose the celebration: motorcade (costs, fans +6, media image +3) or dressing room party (morale +8).',
+        tips: ['The preparation only works in the final, live or simulated', 'All finals are in History > Titles'] },
+    'Pokale': { title: 'Cups',
+        text: 'State cup in the lower leagues, DFB-Pokal from the 3. Liga, the Champions Cup for the top. Your own cup matches are played live. The DFB-Pokal has 32 real clubs: 18 from the Bundesliga, 8 from the 2. Liga, 4 from the 3. Liga and 2 from the Regionalliga.',
+        tips: ['Cup goals do not count for the league statistics and the ratings'] },
+    'Champions Cup': { title: 'Champions Cup',
+        text: 'Places 1-4 of the Bundesliga and the DFB-Pokal winner qualify - always only for the next season, whoever is relegated or slips down is out again. Eight clubs in two groups: per group one from each of the four pots, plus a second Bundesliga club in the other group. Europe\'s elite (pot 1) is stronger than the Bundesliga top, pot 4 clearly weaker. Every team plays three times at home and three times away; group winners and runners-up play semi-finals and the final. As strong as the Bundesliga top, you get through from pot 4 about every second time.',
+        tips: ['European coefficient of the last 5 seasons: group stage 1, semi-final 3, final 4, title 6 points - from 2 points pot 3, from 6 pot 2, from 12 pot 1 (easier group opponents)', 'Prize money: starting fee, 1.5 M€ per group stage win, 8 M€ for reaching the semi-final, 25 M€ for the title'] },
+    'Derbys': { title: 'Derbies',
+        text: 'A derby is a match against a club from your city or a real traditional rivalry (Revierderby, Nordderby, Rheinderby, Frankenderby, Sachsenderby ...). In big cities only the three strongest city rivals in your league count, clubs from districts only among themselves. Derbies bring bigger crowds, the derby week and their own derby record (History > Rivals). There is no fixed permanent rival or nemesis coach any more.',
+        tips: ['The calendar has a friendly against the city rival', 'Playing in a city without a second club means only traditional rivalries - or no derbies at all'] },
+    'Jobangebote': { title: 'Job offers',
+        text: 'Successful managers get offers from stronger clubs. A move takes career and trophies along, the squad is new. The new board starts at 60 trust with a season goal for the new squad.',
+        tips: ['An offer is valid for 6 matchdays', 'You can also use it as leverage with the board'] },
+    'Karriere-Szenarien': { title: 'Career scenarios',
+        text: 'Selectable for a new game: rescue a relegated club, restructure a bankrupt club, lead a traditional club back, champion or chaos - with goal, deadline and 1-3 stars.',
+        tips: ['Afterwards the career continues as a free game', 'Bankrupt club: loans count as debt, every forced sale costs a star - two make the restructuring fail'] },
+    'Bedienung mit einer Hand': { title: 'One-handed use',
+        text: 'On the phone everything important is within thumb reach: the "▶ Matchday" button starts the next matchday from every screen, "☰ Menu" in the bottom bar opens all areas, windows slide in from below and in the live match scene, pause and final whistle stay above the bar. The back key closes notices, windows and the menu or goes back one screen - only pressing back twice on the start screen leaves the game.',
+        tips: ['Left-handers: Menu → Settings → put the "Continue button" on the left (or hide it)', 'Windows with ✕ also close with a tap on the dark area next to them', 'On the phone language and sound are in the menu under Settings', 'English: all fixed texts (menus, headings, buttons) and this glossary switch, notices and match reports stay German for now'] },
+    'Speichern': { title: 'Saving',
+        text: 'Three save slots plus automatic saving every 5 matchdays. At start-up the most recently saved game is always loaded - if it is damaged, the next most recent intact one. Every save is checked before loading: broken saves leave the running game untouched, small damage is repaired. Before loading, overwriting a slot and a new game a backup is made.',
+        tips: ['If the browser blocks saving, export the game as a file', 'In the file preview of some phones saving does not work - open it in the browser', 'The fill level is shown below the save slots - from 80 % the game warns, when storage is full the backup goes first', 'Only an exported file survives clearing the browser storage - the game reminds you every 3 seasons'] }
+};
+
+// Eintrag in der aktuellen Sprache (deutsches Original, wenn keine Übersetzung da ist).
+function getLexiconEntryLocalized(e) {
+    if (typeof currentLang === 'undefined' || currentLang !== 'en' || !LEXICON_EN[e.title]) return e;
+    return Object.assign({}, e, LEXICON_EN[e.title], { catLabel: LEXICON_CATEGORY_EN[e.cat] || e.cat });
 }
 
 /* eslint-enable */

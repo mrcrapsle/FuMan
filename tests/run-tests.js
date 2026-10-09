@@ -5141,6 +5141,7 @@ async function testLeagueEconomy(browser) {
         let start = game.money;
         simulateMatchdays(30);
         let ende = game.money;
+        let rangNach30 = getOwnLeagueRank();
         simulateMatchdays(4);
         // Ganze Saison für einen Mittelfeldplatz: Spieltagsgeschäft + TV-Restausschüttung für
         // Platz 9 + Dauerkartenverkauf (beides erst am Saisonende). Seit 25.9 trägt das
@@ -5152,7 +5153,7 @@ async function testLeagueEconomy(browser) {
         renewSeasonTickets();
         let dauerkarten = game.money - vorDauerkarten;
         return {
-            start, ende,
+            start, ende, rangNach30,
             stadion: stadium.total,
             saisonSaldo: Math.round(journal + rest + dauerkarten),
             saisonEin: Math.round(l.reduce((s, e) => s + e.summeEin, 0) + Math.max(0, rest) + dauerkarten)
@@ -5173,8 +5174,12 @@ async function testLeagueEconomy(browser) {
     // Liga- und Pokalverlauf sind zufällig, daher schwankt das Endkapital über viele Läufe
     // stark (empirisch beobachtet: ca. das 0,6- bis 3,2-fache des Startkapitals). Die Schwelle
     // prüft nur auf strukturelle Pleite, nicht auf einen konkreten Erfolgsgrad.
-    assert(profi.ende > 0 && profi.ende > profi.start * 0.5,
-        `Nach 30 aktiv bewirtschafteten Spieltagen ist der Erstligist noch solvent (${Math.round(profi.ende)} € statt ${Math.round(profi.start)} €)`);
+    // Im Abstiegskampf (Platz 16-18) zahlt die TV-Rate ab Spieltag 6 nur noch bis zum 0,4-fachen (21.6) -
+    // 14 Läufe (25.22): Mittelfeld +17..+47 Mio. €, Platz 18 -1..+24 Mio. €. Dort darf das Konto knapp
+    // ins Minus rutschen, strukturell pleite (tiefer als das Startkapital) ist der Verein aber nicht.
+    const abstiegskampf = profi.rangNach30 >= 16;
+    assert(abstiegskampf ? profi.ende > -profi.start : (profi.ende > 0 && profi.ende > profi.start * 0.5),
+        `Nach 30 aktiv bewirtschafteten Spieltagen ist der Erstligist noch solvent (${Math.round(profi.ende)} € statt ${Math.round(profi.start)} €, Platz ${profi.rangNach30})`);
     assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler in der Ligaökonomie');
     await page.close();
 }
