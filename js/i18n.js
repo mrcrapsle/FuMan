@@ -220,6 +220,7 @@
         applyI18nToDOM();
         if (typeof applyUiTranslation === 'function') applyUiTranslation(currentLang);
         if (typeof renderLexicon === 'function') renderLexicon();
+        if (typeof renderCalendarView === 'function') renderCalendarView();
     }
 
     function toggleLanguage() {

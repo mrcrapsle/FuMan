@@ -41,6 +41,19 @@
                 if (oppTeam) oppStr = oppTeam.strength;
             }
         }
+        // Pokaltag (25.24): die Begegnung ist die Pokalpartie desselben Spieltags, nicht der Ligagegner.
+        // Heute schon gespielt? Dann bleibt es beim Ligaspiel.
+        const pokalHeute = (game.liveCupResult && game.liveCupResult.season === game.season && game.liveCupResult.matchday === game.matchday);
+        const pokalTie = !pokalHeute && typeof getUpcomingOwnTie === 'function' ? getUpcomingOwnTie(game.matchday) : null;
+        const ligaLabel = document.getElementById('dash-league-name');
+        if (pokalTie) {
+            oppName = pokalTie.gegner;
+            let pokalOpp = leaguesData.flat().find(t => t.name === pokalTie.gegner);
+            if (pokalOpp) oppStr = pokalOpp.strength;
+            if (ligaLabel) ligaLabel.innerText = pokalTie.titel;
+        } else if (ligaLabel) {
+            ligaLabel.innerText = leagueNames[game.leagueLevel];
+        }
         document.getElementById('dash-opp-name').innerText = oppName;
         document.getElementById('dash-opp-str').innerText = oppStr;
         document.getElementById('dash-our-str').innerText = calcTeamStrength(true);

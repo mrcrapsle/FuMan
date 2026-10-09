@@ -11,27 +11,38 @@
 
         let list = document.getElementById('cal-schedule-list');
         list.innerHTML = '';
+        const en = typeof currentLang !== 'undefined' && currentLang === 'en';
+        const L = (de, eng) => en ? eng : de;
         for (let i = 1; i <= 34; i++) {
             let item = document.createElement('div');
             item.className = 'player-row';
             let isCurrent = (i === game.matchday);
-            let isCup = cupTournament.matchdays.includes(i);
-            let isEuro = europeTournament.matchdays.includes(i);
-
             // Pokal und Europa sind KEINE eigenen Tage (25.23): an diesen Spieltagen wird zuerst die Pokalpartie
             // gespielt, danach das Ligaspiel desselben Spieltags (startMatchdayFlow -> "Weiter zum Ligaspiel").
-            // Vorher stand am Pokaltag nur "DFB-Pokal Termin" - das Ligaspiel fehlte im Kalender.
-            let isLandes = typeof landesPokal !== 'undefined' && landesPokal.active && landesPokal.matchdays.includes(i);
+            // 25.24: der DFB-Pokal erscheint nur für Vereine, die noch dabei sind (ab der 3. Liga, nicht
+            // ausgeschieden); kommende Pokal- und Europa-Partien nennen den Gegner, sobald er ausgelost ist.
+            const dfb = cupTournament.matchdays.includes(i) && (typeof istImDfbPokal !== 'function' || istImDfbPokal());
+            const lande = typeof landesPokal !== 'undefined' && landesPokal.active && landesPokal.matchdays.includes(i);
+            const euro = europeTournament.matchdays.includes(i);
+            const kommend = i >= game.matchday;
+            const tie = kommend && typeof getUpcomingOwnTie === 'function' ? getUpcomingOwnTie(i) : null;
             let teile = [];
-            if (isCup) teile.push('🏆 DFB-Pokal');
-            if (isLandes) teile.push('🏅 Landespokal');
-            if (isEuro) teile.push('🌟 Champions Cup');
-            teile.push('⚽ Ligaspiel');
+            if (dfb) teile.push(L('🏆 DFB-Pokal', '🏆 DFB Cup') + (tie && tie.comp === 'dfb' ? ' ' + L('gegen', 'vs') + ' ' + tie.gegner : ''));
+            if (lande) teile.push(L('🏅 Landespokal', '🏅 State cup') + (tie && tie.comp === 'landes' ? ' ' + L('gegen', 'vs') + ' ' + tie.gegner : ''));
+            if (euro) {
+                let europa = L('🌟 Champions Cup', '🌟 Champions Cup');
+                if (tie && tie.comp === 'europe') europa += ' ' + L('gegen', 'vs') + ' ' + tie.gegner;
+                const gruppe = typeof getOwnEuropeGroupStanding === 'function' && kommend ? getOwnEuropeGroupStanding() : null;
+                if (gruppe) europa += ` (${L('Gruppe', 'group')} ${gruppe.name}: ${L('Platz', 'place')} ${gruppe.platz}, ${gruppe.pts} ${L('Pkt.', 'pts')})`;
+                teile.push(europa);
+            }
+            teile.push(L('⚽ Ligaspiel', '⚽ League match'));
             let eventText = teile.join(' + ');
-            let eventColor = (isCup || isLandes) ? 'var(--accent)' : (isEuro ? '#82b1ff' : '#aaa');
+            let hasCup = dfb || lande;
+            let eventColor = hasCup ? 'var(--accent)' : (euro ? '#82b1ff' : '#aaa');
 
             item.innerHTML = `
-                <span><strong>Spieltag ${i}</strong> ${isCurrent ? '<span style="color:var(--primary); font-weight:900;">(HEUTE)</span>' : ''}</span>
+                <span><strong>${L('Spieltag', 'Matchday')} ${i}</strong> ${isCurrent ? `<span style="color:var(--primary); font-weight:900;">(${L('HEUTE', 'TODAY')})</span>` : ''}</span>
                 <span style="color:${eventColor}; font-weight:bold;">${eventText}</span>
             `;
             if (isCurrent) item.style.borderColor = "var(--primary)";

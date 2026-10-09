@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.94', date: '10.10.2026', features: 'Phase 25.23: Kapitän verletzt, Schonfrist nach Vereinswechsel, Pokal und Liga am selben Spieltag im Kalender, Lexikonsuche, Liga-Ökonomie, Aufräumen Spielstand' };
+    const GAME_VERSION = { number: '3.95', date: '10.10.2026', features: 'Phase 25.24: Vorwarnung des Vorstands, Pokalgegner im Dashboard und Kalender, Europa-Gruppenstand im Kalender, englischer Kalender, Lexikon Spielplan' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

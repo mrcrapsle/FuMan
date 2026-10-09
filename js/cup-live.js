@@ -42,13 +42,10 @@ function getOwnEuropeFixture(md) {
     return null;
 }
 
-// Eigene, noch nicht gespielte Pokalpartie an diesem Spieltag (oder null).
-function findOwnCupTieToday() {
-    const md = game.matchday, us = game.clubName;
-    const r0 = game.liveCupResult;
-    if (r0 && r0.season === game.season && r0.matchday === md) return null; // heute schon live gespielt
-    const supercup = typeof getOwnSupercupTie === 'function' ? getOwnSupercupTie() : null;
-    if (supercup) return supercup;
+// Eigene Pokalpartie an einem Spieltag (ob gespielt oder nicht), oder null (25.24).
+// findOwnCupTieToday() nimmt die heute noch offene; Dashboard und Kalender zeigen den Gegner schon vorher.
+function getOwnCupTieOn(md) {
+    const us = game.clubName;
     const offen = r => (r && !r.completed) ? r.pairings.find(p => !p.played && (p.home === us || p.away === us)) : null;
     const gegner = p => p.home === us ? p.away : p.home;
 
@@ -67,6 +64,49 @@ function findOwnCupTieToday() {
     if (europeTournament.matchdays.includes(md)) {
         const e = getOwnEuropeFixture(md);
         if (e) return { comp: 'europe', titel: `🌍 Champions Cup · ${e.runde}`, home: e.home, away: e.away, oppStr: e.oppStr, elfmeter: false };
+    }
+    return null;
+}
+
+function findOwnCupTieToday() {
+    const md = game.matchday;
+    const r0 = game.liveCupResult;
+    if (r0 && r0.season === game.season && r0.matchday === md) return null; // heute schon live gespielt
+    const supercup = typeof getOwnSupercupTie === 'function' ? getOwnSupercupTie() : null;
+    if (supercup) return supercup;
+    return getOwnCupTieOn(md);
+}
+
+// Ist der eigene Verein im DFB-Pokal noch dabei (25.24)? Ab der 3. Liga, und nicht nach einer
+// gespielten Niederlage in einer früheren Runde. Vor der Auslosung gilt: dabei.
+function istImDfbPokal() {
+    if (game.leagueLevel > 2) return false;
+    const us = game.clubName;
+    const gewinner = p => p.penaltyWinner || (p.homeGoals > p.awayGoals ? p.home : (p.awayGoals > p.homeGoals ? p.away : null));
+    return !cupTournament.roundsHistory.some(r => r.pairings.some(p => p.played && (p.home === us || p.away === us)
+        && gewinner(p) && gewinner(p) !== us));
+}
+
+// Eigener Gruppenstand im Champions Cup (25.24): Gruppenname, Platz und Punkte - oder null.
+function getOwnEuropeGroupStanding() {
+    const us = game.clubName;
+    const gruppen = { A: europeTournament.groupA, B: europeTournament.groupB };
+    for (const name of Object.keys(gruppen)) {
+        const g = gruppen[name];
+        if (!Array.isArray(g) || !g.some(t => t.name === us)) continue;
+        const sortiert = [...g].sort((a, b) => b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga));
+        return { name, platz: sortiert.findIndex(t => t.name === us) + 1, pts: (g.find(t => t.name === us) || {}).pts || 0 };
+    }
+    return null;
+}
+
+// Gegner und Wettbewerb eines kommenden Spieltags für Anzeige (Dashboard, Kalender) - 25.24.
+function getUpcomingOwnTie(md) {
+    const tie = getOwnCupTieOn(md);
+    if (tie) {
+        const us = game.clubName;
+        const gegner = tie.home === us ? tie.away : tie.home;
+        return { comp: tie.comp, titel: tie.titel, gegner };
     }
     return null;
 }

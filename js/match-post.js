@@ -26,6 +26,13 @@
             game.sackWarningIssued = false;
         }
 
+        // Frühwarnung (25.23): der Vorstand meldet sich schon, wenn das Vertrauen erstmals unter 50 fällt -
+        // der Langzeit-Bot sank von 99 über 76 und 36 auf 13, die erste Meldung kam erst bei 25.
+        if (game.boardSat < 50 && game.boardEarlyWarnSeason !== game.season) {
+            game.boardEarlyWarnSeason = game.season;
+            addInboxMessage('vertrag', '📉 Der Vorstand wird unruhig', `Die Zufriedenheit des Vorstands ist auf ${Math.round(game.boardSat)} gefallen. Noch ist es kein Problem, aber die nächsten Ergebnisse entscheiden. Der Vorstandsraum zeigt, wer warum unzufrieden ist.`, 'screen-dashboard');
+        }
+
         if (game.lowBoardSatStreak === 3 && !game.sackWarningIssued) {
             game.sackWarningIssued = true;
             addInboxMessage('vertrag', '⚠️ Job-Warnung vom Vorstand!', 'Der Vorstand ist mit dem sportlichen Verlauf sehr unzufrieden. Bessere die Ergebnisse, sonst droht die Entlassung!', 'screen-dashboard');

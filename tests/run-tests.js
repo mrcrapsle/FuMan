@@ -2052,29 +2052,100 @@ async function testTvAdvanceGracePeriod(browser) {
 }
 
 async function testCupAndLeagueSameDay(browser) {
-    console.log('\n[25.23] Pokal und Liga am selben Spieltag: Kalender zeigt beide, das Ligaspiel des Pokaltags existiert');
+    console.log('\n[25.24] Pokal und Liga am selben Spieltag: Kalender und Dashboard zeigen den Pokalgegner');
     const { page, consoleErrors } = await freshPage(browser);
     page.on('dialog', d => d.accept());
     const r = await page.evaluate(() => {
         try {
             closeTutorial();
             const out = {};
+            const us = game.clubName;
+            // Der Spielplan des Pokaltags gilt in der echten Liga des Vereins (vor dem Umsetzen unten prüfen)
+            const echteLiga = game.leagueLevel;
+            const fixsEcht = fixturesData[echteLiga][3] || [];
+            out.ligaspielVorhanden = fixsEcht.some(f => leaguesData[echteLiga][f.home]?.name === us || leaguesData[echteLiga][f.away]?.name === us);
+            // Deterministische Auslosung: Runde 1 am 4. Spieltag mit unserem Verein gegen "Testgegner Pokal"
+            game.leagueLevel = 0; game.matchday = 1; game.liveCupResult = null;
+            cupTournament.roundsHistory = [{ roundIndex: 0, name: cupTournament.roundNames[0], matchday: 4, prize: 0, completed: false,
+                pairings: [{ home: us, away: 'Testgegner Pokal', homeGoals: null, awayGoals: null, penaltyWinner: null, played: false }] }];
             renderCalendarView();
             const eintraege = [...document.getElementById('cal-schedule-list').children].map(e => e.innerText);
             const tag = n => eintraege.find(t => t.includes('Spieltag ' + n + ' ')) || '';
-            out.pokalUndLiga = tag(4).includes('DFB-Pokal') && tag(4).includes('Ligaspiel');
+            out.pokalGegner = tag(4).includes('DFB-Pokal gegen Testgegner Pokal') && tag(4).includes('Ligaspiel');
             out.nurLiga = tag(5).includes('Ligaspiel') && !tag(5).includes('DFB-Pokal');
-            // Die Liga-Partie des Pokaltags ist in den Spielplan eingetragen
-            const fixs = fixturesData[game.leagueLevel][3] || [];
-            out.ligaspielVorhanden = fixs.some(f => leaguesData[game.leagueLevel][f.home]?.name === game.clubName || leaguesData[game.leagueLevel][f.away]?.name === game.clubName);
+            // Dashboard am Pokaltag: Gegner und Wettbewerb der Pokalpartie
+            game.matchday = 4;
+            renderDashboardView();
+            out.dashGegner = document.getElementById('dash-opp-name').innerText === 'Testgegner Pokal';
+            out.dashTitel = document.getElementById('dash-league-name').innerText.includes('DFB-Pokal');
+            // Champions-Cup-Spieltag: eigener Gruppenstand im Kalender
+            europeTournament.groupA = [{ name: us, pts: 4, gf: 3, ga: 1 }, { name: 'Gruppe X', pts: 6, gf: 5, ga: 0 },
+                { name: 'Gruppe Y', pts: 1, gf: 1, ga: 4 }, { name: 'Gruppe Z', pts: 0, gf: 0, ga: 3 }];
+            europeTournament.groupB = [];
+            game.matchday = 1; game.leagueLevel = echteLiga;
+            renderCalendarView();
+            const europaTag = [...document.getElementById('cal-schedule-list').children].map(e => e.innerText).find(t => t.includes('Spieltag 3 ')) || '';
+            out.gruppenstand = europaTag.includes('Gruppe A') && europaTag.includes('Platz 2') && europaTag.includes('4 Pkt.');
+            europeTournament.groupA = []; 
+            // Vorschau vor dem Pokalspiel: Gegner, Stärke und der Hinweis auf das folgende Ligaspiel
+            startCupLiveFlow({ comp: 'dfb', titel: '🏆 DFB-Pokal', home: us, away: 'Testgegner Pokal', oppStr: 61, elfmeter: true });
+            const vorschau = document.getElementById('prematch-analysis-box')?.innerHTML || '';
+            out.vorschauGegner = vorschau.includes('Testgegner Pokal');
+            out.vorschauLiga = vorschau.includes('Das Ligaspiel folgt');
+            // Englische Kalenderbegriffe (25.24): Pokalgegner und Ligaspiel auf Englisch, danach zurück auf Deutsch
+            game.leagueLevel = 0; game.matchday = 1;
+            setLanguage('en');
+            renderCalendarView();
+            const englischTag = [...document.getElementById('cal-schedule-list').children].map(e => e.innerText).find(t => t.includes('Matchday 4 ')) || '';
+            out.englisch = englischTag.includes('DFB Cup vs Testgegner Pokal') && englischTag.includes('League match') && !englischTag.includes('Ligaspiel');
+            setLanguage('de');
+            // Unterklassig: kein DFB-Pokal im Kalender
+            game.leagueLevel = echteLiga; game.matchday = 1;
+            renderCalendarView();
+            out.unterklassig = ![...document.getElementById('cal-schedule-list').children].some(e => e.innerText.includes('DFB-Pokal'));
             return out;
         } catch (e) { return { crash: e.message + ' ' + e.stack }; }
     });
-    assert(!r.crash, `Kalender ohne Absturz (${r.crash || 'ok'})`);
+    assert(!r.crash, `Kalender und Dashboard ohne Absturz (${r.crash || 'ok'})`);
     if (!r.crash) {
-        assert(r.pokalUndLiga, 'Am Pokaltag steht im Kalender Pokal UND Ligaspiel (kein eigener Pokaltag)');
+        assert(r.pokalGegner, 'Am Pokaltag steht im Kalender Pokal gegen den Gegner UND das Ligaspiel');
         assert(r.nurLiga, 'An normalen Spieltagen steht nur das Ligaspiel');
         assert(r.ligaspielVorhanden, 'Die Liga-Partie des Pokaltags ist im Spielplan vorhanden');
+        assert(r.dashGegner && r.dashTitel, 'Das Dashboard zeigt am Pokaltag den Pokalgegner und den Wettbewerb');
+        assert(r.unterklassig, 'Unterhalb der 3. Liga steht im Kalender kein DFB-Pokal');
+        assert(r.englisch, 'Der Kalender zeigt auf Englisch Pokalgegner und League match (ohne deutsche Begriffe)');
+        assert(r.gruppenstand, 'Am Champions-Cup-Spieltag steht der eigene Gruppenstand (Gruppe, Platz, Punkte) im Kalender');
+        assert(r.vorschauGegner && r.vorschauLiga, 'Die Vorschau vor dem Pokalspiel nennt den Gegner und dass das Ligaspiel direkt folgt');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
+async function testBoardEarlyWarning(browser) {
+    console.log('\n[25.24] Vorstand: Frühwarnung schon unter 50 Zufriedenheit, einmal pro Saison');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            game.season = 3; game.boardSat = 60; game.boardEarlyWarnSeason = null; game.lowBoardSatStreak = 0;
+            inboxMessages = [];
+            checkJobSecurity();
+            out.keineWarnungBei60 = !inboxMessages.some(m => m.title.includes('wird unruhig'));
+            game.boardSat = 45; checkJobSecurity();
+            out.warnungUnter50 = inboxMessages.some(m => m.title.includes('wird unruhig'));
+            const anzahl = inboxMessages.filter(m => m.title.includes('wird unruhig')).length;
+            game.boardSat = 40; checkJobSecurity();
+            out.nurEinmal = inboxMessages.filter(m => m.title.includes('wird unruhig')).length === anzahl;
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Vorwarnung ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.keineWarnungBei60, 'Bei Zufriedenheit 60 gibt es keine Vorwarnung');
+        assert(r.warnungUnter50, 'Unter 50 Zufriedenheit meldet sich der Vorstand (Postfach)');
+        assert(r.nurEinmal, 'Die Vorwarnung kommt nur einmal pro Saison');
     }
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
     await page.close();
@@ -9007,6 +9078,7 @@ async function main() {
         testPromotionTvAdvance,
         testTvAdvanceGracePeriod,
         testCupAndLeagueSameDay,
+        testBoardEarlyWarning,
         testEnglishUi,
         testSwapDeals,
         testPlayerProfile,

@@ -4531,6 +4531,7 @@ function compareTableRows(a, b) {
         applyI18nToDOM();
         if (typeof applyUiTranslation === 'function') applyUiTranslation(currentLang);
         if (typeof renderLexicon === 'function') renderLexicon();
+        if (typeof renderCalendarView === 'function') renderCalendarView();
     }
 
     function toggleLanguage() {
@@ -4552,7 +4553,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.94', date: '10.10.2026', features: 'Phase 25.23: Kapitän verletzt, Schonfrist nach Vereinswechsel, Pokal und Liga am selben Spieltag im Kalender, Lexikonsuche, Liga-Ökonomie, Aufräumen Spielstand' };
+    const GAME_VERSION = { number: '3.95', date: '10.10.2026', features: 'Phase 25.24: Vorwarnung des Vorstands, Pokalgegner im Dashboard und Kalender, Europa-Gruppenstand im Kalender, englischer Kalender, Lexikon Spielplan' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -15581,6 +15582,19 @@ function initOneHand() {
                 if (oppTeam) oppStr = oppTeam.strength;
             }
         }
+        // Pokaltag (25.24): die Begegnung ist die Pokalpartie desselben Spieltags, nicht der Ligagegner.
+        // Heute schon gespielt? Dann bleibt es beim Ligaspiel.
+        const pokalHeute = (game.liveCupResult && game.liveCupResult.season === game.season && game.liveCupResult.matchday === game.matchday);
+        const pokalTie = !pokalHeute && typeof getUpcomingOwnTie === 'function' ? getUpcomingOwnTie(game.matchday) : null;
+        const ligaLabel = document.getElementById('dash-league-name');
+        if (pokalTie) {
+            oppName = pokalTie.gegner;
+            let pokalOpp = leaguesData.flat().find(t => t.name === pokalTie.gegner);
+            if (pokalOpp) oppStr = pokalOpp.strength;
+            if (ligaLabel) ligaLabel.innerText = pokalTie.titel;
+        } else if (ligaLabel) {
+            ligaLabel.innerText = leagueNames[game.leagueLevel];
+        }
         document.getElementById('dash-opp-name').innerText = oppName;
         document.getElementById('dash-opp-str').innerText = oppStr;
         document.getElementById('dash-our-str').innerText = calcTeamStrength(true);
@@ -16114,27 +16128,38 @@ function initOneHand() {
 
         let list = document.getElementById('cal-schedule-list');
         list.innerHTML = '';
+        const en = typeof currentLang !== 'undefined' && currentLang === 'en';
+        const L = (de, eng) => en ? eng : de;
         for (let i = 1; i <= 34; i++) {
             let item = document.createElement('div');
             item.className = 'player-row';
             let isCurrent = (i === game.matchday);
-            let isCup = cupTournament.matchdays.includes(i);
-            let isEuro = europeTournament.matchdays.includes(i);
-
             // Pokal und Europa sind KEINE eigenen Tage (25.23): an diesen Spieltagen wird zuerst die Pokalpartie
             // gespielt, danach das Ligaspiel desselben Spieltags (startMatchdayFlow -> "Weiter zum Ligaspiel").
-            // Vorher stand am Pokaltag nur "DFB-Pokal Termin" - das Ligaspiel fehlte im Kalender.
-            let isLandes = typeof landesPokal !== 'undefined' && landesPokal.active && landesPokal.matchdays.includes(i);
+            // 25.24: der DFB-Pokal erscheint nur für Vereine, die noch dabei sind (ab der 3. Liga, nicht
+            // ausgeschieden); kommende Pokal- und Europa-Partien nennen den Gegner, sobald er ausgelost ist.
+            const dfb = cupTournament.matchdays.includes(i) && (typeof istImDfbPokal !== 'function' || istImDfbPokal());
+            const lande = typeof landesPokal !== 'undefined' && landesPokal.active && landesPokal.matchdays.includes(i);
+            const euro = europeTournament.matchdays.includes(i);
+            const kommend = i >= game.matchday;
+            const tie = kommend && typeof getUpcomingOwnTie === 'function' ? getUpcomingOwnTie(i) : null;
             let teile = [];
-            if (isCup) teile.push('🏆 DFB-Pokal');
-            if (isLandes) teile.push('🏅 Landespokal');
-            if (isEuro) teile.push('🌟 Champions Cup');
-            teile.push('⚽ Ligaspiel');
+            if (dfb) teile.push(L('🏆 DFB-Pokal', '🏆 DFB Cup') + (tie && tie.comp === 'dfb' ? ' ' + L('gegen', 'vs') + ' ' + tie.gegner : ''));
+            if (lande) teile.push(L('🏅 Landespokal', '🏅 State cup') + (tie && tie.comp === 'landes' ? ' ' + L('gegen', 'vs') + ' ' + tie.gegner : ''));
+            if (euro) {
+                let europa = L('🌟 Champions Cup', '🌟 Champions Cup');
+                if (tie && tie.comp === 'europe') europa += ' ' + L('gegen', 'vs') + ' ' + tie.gegner;
+                const gruppe = typeof getOwnEuropeGroupStanding === 'function' && kommend ? getOwnEuropeGroupStanding() : null;
+                if (gruppe) europa += ` (${L('Gruppe', 'group')} ${gruppe.name}: ${L('Platz', 'place')} ${gruppe.platz}, ${gruppe.pts} ${L('Pkt.', 'pts')})`;
+                teile.push(europa);
+            }
+            teile.push(L('⚽ Ligaspiel', '⚽ League match'));
             let eventText = teile.join(' + ');
-            let eventColor = (isCup || isLandes) ? 'var(--accent)' : (isEuro ? '#82b1ff' : '#aaa');
+            let hasCup = dfb || lande;
+            let eventColor = hasCup ? 'var(--accent)' : (euro ? '#82b1ff' : '#aaa');
 
             item.innerHTML = `
-                <span><strong>Spieltag ${i}</strong> ${isCurrent ? '<span style="color:var(--primary); font-weight:900;">(HEUTE)</span>' : ''}</span>
+                <span><strong>${L('Spieltag', 'Matchday')} ${i}</strong> ${isCurrent ? `<span style="color:var(--primary); font-weight:900;">(${L('HEUTE', 'TODAY')})</span>` : ''}</span>
                 <span style="color:${eventColor}; font-weight:bold;">${eventText}</span>
             `;
             if (isCurrent) item.style.borderColor = "var(--primary)";
@@ -32108,6 +32133,13 @@ function cleanupLegacyScoutState() {
             game.sackWarningIssued = false;
         }
 
+        // Frühwarnung (25.23): der Vorstand meldet sich schon, wenn das Vertrauen erstmals unter 50 fällt -
+        // der Langzeit-Bot sank von 99 über 76 und 36 auf 13, die erste Meldung kam erst bei 25.
+        if (game.boardSat < 50 && game.boardEarlyWarnSeason !== game.season) {
+            game.boardEarlyWarnSeason = game.season;
+            addInboxMessage('vertrag', '📉 Der Vorstand wird unruhig', `Die Zufriedenheit des Vorstands ist auf ${Math.round(game.boardSat)} gefallen. Noch ist es kein Problem, aber die nächsten Ergebnisse entscheiden. Der Vorstandsraum zeigt, wer warum unzufrieden ist.`, 'screen-dashboard');
+        }
+
         if (game.lowBoardSatStreak === 3 && !game.sackWarningIssued) {
             game.sackWarningIssued = true;
             addInboxMessage('vertrag', '⚠️ Job-Warnung vom Vorstand!', 'Der Vorstand ist mit dem sportlichen Verlauf sehr unzufrieden. Bessere die Ergebnisse, sonst droht die Entlassung!', 'screen-dashboard');
@@ -33635,13 +33667,10 @@ function getOwnEuropeFixture(md) {
     return null;
 }
 
-// Eigene, noch nicht gespielte Pokalpartie an diesem Spieltag (oder null).
-function findOwnCupTieToday() {
-    const md = game.matchday, us = game.clubName;
-    const r0 = game.liveCupResult;
-    if (r0 && r0.season === game.season && r0.matchday === md) return null; // heute schon live gespielt
-    const supercup = typeof getOwnSupercupTie === 'function' ? getOwnSupercupTie() : null;
-    if (supercup) return supercup;
+// Eigene Pokalpartie an einem Spieltag (ob gespielt oder nicht), oder null (25.24).
+// findOwnCupTieToday() nimmt die heute noch offene; Dashboard und Kalender zeigen den Gegner schon vorher.
+function getOwnCupTieOn(md) {
+    const us = game.clubName;
     const offen = r => (r && !r.completed) ? r.pairings.find(p => !p.played && (p.home === us || p.away === us)) : null;
     const gegner = p => p.home === us ? p.away : p.home;
 
@@ -33660,6 +33689,49 @@ function findOwnCupTieToday() {
     if (europeTournament.matchdays.includes(md)) {
         const e = getOwnEuropeFixture(md);
         if (e) return { comp: 'europe', titel: `🌍 Champions Cup · ${e.runde}`, home: e.home, away: e.away, oppStr: e.oppStr, elfmeter: false };
+    }
+    return null;
+}
+
+function findOwnCupTieToday() {
+    const md = game.matchday;
+    const r0 = game.liveCupResult;
+    if (r0 && r0.season === game.season && r0.matchday === md) return null; // heute schon live gespielt
+    const supercup = typeof getOwnSupercupTie === 'function' ? getOwnSupercupTie() : null;
+    if (supercup) return supercup;
+    return getOwnCupTieOn(md);
+}
+
+// Ist der eigene Verein im DFB-Pokal noch dabei (25.24)? Ab der 3. Liga, und nicht nach einer
+// gespielten Niederlage in einer früheren Runde. Vor der Auslosung gilt: dabei.
+function istImDfbPokal() {
+    if (game.leagueLevel > 2) return false;
+    const us = game.clubName;
+    const gewinner = p => p.penaltyWinner || (p.homeGoals > p.awayGoals ? p.home : (p.awayGoals > p.homeGoals ? p.away : null));
+    return !cupTournament.roundsHistory.some(r => r.pairings.some(p => p.played && (p.home === us || p.away === us)
+        && gewinner(p) && gewinner(p) !== us));
+}
+
+// Eigener Gruppenstand im Champions Cup (25.24): Gruppenname, Platz und Punkte - oder null.
+function getOwnEuropeGroupStanding() {
+    const us = game.clubName;
+    const gruppen = { A: europeTournament.groupA, B: europeTournament.groupB };
+    for (const name of Object.keys(gruppen)) {
+        const g = gruppen[name];
+        if (!Array.isArray(g) || !g.some(t => t.name === us)) continue;
+        const sortiert = [...g].sort((a, b) => b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga));
+        return { name, platz: sortiert.findIndex(t => t.name === us) + 1, pts: (g.find(t => t.name === us) || {}).pts || 0 };
+    }
+    return null;
+}
+
+// Gegner und Wettbewerb eines kommenden Spieltags für Anzeige (Dashboard, Kalender) - 25.24.
+function getUpcomingOwnTie(md) {
+    const tie = getOwnCupTieOn(md);
+    if (tie) {
+        const us = game.clubName;
+        const gegner = tie.home === us ? tie.away : tie.home;
+        return { comp: tie.comp, titel: tie.titel, gegner };
     }
     return null;
 }
@@ -34705,6 +34777,9 @@ const LEXICON_ENTRIES = [
     { cat: 'Wettbewerbe', title: 'Pokale', screen: 'screen-cup',
         text: 'Landespokal in den unteren Ligen, DFB-Pokal ab der 3. Liga, der Champions Cup für die Spitze. Eigene Pokalspiele laufen live. Im DFB-Pokal spielen 32 echte Vereine: 18 aus der Bundesliga, 8 aus der 2. Liga, 4 aus der 3. Liga und 2 aus der Regionalliga.',
         tips: ['Pokaltore zählen nicht für die Ligastatistik und die Noten'] },
+    { cat: 'Wettbewerbe', title: 'Spielplan: Pokal und Liga', screen: 'screen-calendar',
+        text: 'Pokal- und Ligaspiele liegen am selben Spieltag: An einem Pokaltag wird zuerst die Pokalpartie gespielt, danach das Ligaspiel. Der Kalender nennt den Gegner, sobald die Runde ausgelost ist. Der DFB-Pokal gilt ab der 3. Liga und endet mit der ersten verlorenen Partie. Der Landespokal läuft nur, wenn er für deine Region aktiv ist. An Champions-Cup-Spieltagen steht dein Gruppenstand dabei.',
+        tips: ['Der Kalender zeigt, welche Wettbewerbe an einem Spieltag stattfinden', 'Die Vorschau vor dem Pokalspiel nennt Gegner und Stärke, wie vor dem Ligaspiel'] },
     { cat: 'Wettbewerbe', title: 'Champions Cup', screen: 'screen-europe',
         text: 'Qualifiziert sind Platz 1-4 der Bundesliga und der DFB-Pokalsieger - immer nur für die nächste Saison, wer absteigt oder abrutscht, ist wieder raus. Acht Klubs in zwei Gruppen: je Gruppe einer aus jedem der vier Lostöpfe, dazu ein zweiter Bundesligist in der anderen Gruppe. Europas Elite (Topf 1) ist stärker als die Bundesliga-Spitze, Topf 4 deutlich schwächer. Jedes Team spielt dreimal zu Hause und dreimal auswärts; die Gruppenersten und -zweiten spielen Halbfinale und Finale. So stark wie die Bundesliga-Spitze kommt man aus Topf 4 etwa jedes zweite Mal weiter.',
         tips: ['Europa-Koeffizient der letzten 5 Saisons: Gruppenphase 1, Halbfinale 3, Finale 4, Titel 6 Punkte - ab 2 Punkten Topf 3, ab 6 Topf 2, ab 12 Topf 1 (leichtere Gruppengegner)', 'Prämien: Startprämie, 1,5 Mio. € je Sieg in der Gruppenphase, 8 Mio. € für den Halbfinaleinzug, 25 Mio. € für den Titel'] },
@@ -34958,6 +35033,9 @@ const LEXICON_EN = {
     'Pokale': { title: 'Cups',
         text: 'State cup in the lower leagues, DFB-Pokal from the 3. Liga, the Champions Cup for the top. Your own cup matches are played live. The DFB-Pokal has 32 real clubs: 18 from the Bundesliga, 8 from the 2. Liga, 4 from the 3. Liga and 2 from the Regionalliga.',
         tips: ['Cup goals do not count for the league statistics and the ratings'] },
+    'Spielplan: Pokal und Liga': { title: 'Schedule: cup and league',
+        text: 'Cup and league matches share a matchday: on a cup day the cup tie is played first, then the league match. The calendar names the opponent as soon as the round is drawn. The DFB Cup applies from the 3rd tier and ends with the first lost tie. The state cup only runs if it is active in your region. On Champions Cup matchdays your group standing is shown too.',
+        tips: ['The calendar shows which competitions take place on a matchday', 'The preview before a cup tie names the opponent and their strength, as before a league match'] },
     'Champions Cup': { title: 'Champions Cup',
         text: 'Places 1-4 of the Bundesliga and the DFB-Pokal winner qualify - always only for the next season, whoever is relegated or slips down is out again. Eight clubs in two groups: per group one from each of the four pots, plus a second Bundesliga club in the other group. Europe\'s elite (pot 1) is stronger than the Bundesliga top, pot 4 clearly weaker. Every team plays three times at home and three times away; group winners and runners-up play semi-finals and the final. As strong as the Bundesliga top, you get through from pot 4 about every second time.',
         tips: ['European coefficient of the last 5 seasons: group stage 1, semi-final 3, final 4, title 6 points - from 2 points pot 3, from 6 pot 2, from 12 pot 1 (easier group opponents)', 'Prize money: starting fee, 1.5 M€ per group stage win, 8 M€ for reaching the semi-final, 25 M€ for the title'] },
