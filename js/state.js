@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.93', date: '09.10.2026', features: 'Phase 25.22: Vereinswechsel ohne Altlasten, Kapitänsnachfolge, Lexikon auf Englisch, TV-Vorschuss für Aufsteiger, Jugend-Potenzial, Tausch nur mit brauchbaren Spielern' };
+    const GAME_VERSION = { number: '3.94', date: '10.10.2026', features: 'Phase 25.23: Kapitän verletzt, Schonfrist nach Vereinswechsel, Pokal und Liga am selben Spieltag im Kalender, Lexikonsuche, Liga-Ökonomie, Aufräumen Spielstand' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -13,7 +13,6 @@
         season: 1,
         money: 150000,
         transferBudget: 40000,
-        transferHistory: [],
         wageBudget: 8000,
         fans: 75,
         matchday: 1,
@@ -36,25 +35,18 @@
         lastVideoAnalysisMatchday: null,
         lastDoubleTrainingMatchday: null,
         lastTechContestMatchday: null,
-        lastAthleticTestSeason: null,
         lastBondingEventMatchday: null,
         youthHospitants: [],
         youthCapacityBonus: 0,
-        youthNationalCallups: 0,
         pendingYouthPoach: null,
         youthCoachId: null,
         youthCoachHistory: [],
-        youthTournaments: [],
-        youthTourneyWins: 0,
         mediaReputation: 50,
         mediaConferences: [],
         mediaConferenceHistory: [],
         playerInterviews: [],
         mediaRelationships: {},
         journalistInteractions: [],
-        stadiumOptimizationHistory: [],
-        namingRightsHistory: [],
-        recentResults: [],
         mentalTrainingLevel: 0,
         videoAnalysisBoostActive: false,
         doubleTrainingBoostActive: false,
@@ -603,6 +595,7 @@
             'internationalTournaments', 'playerInternationalCaps', 'internationalTournamentHistory', 'nextWorldCup', 'transferMarket', 'postMatchAnalysis',
             'transferBudgetUsed', 'transferMarketPlayers', 'transferLastRefreshMatchday', 'reserves', 'tournamentBrackets',
             'squadHarmony', 'disciplinarySystem', 'crises', 'localRivals', 'tacticsHistory', 'playerRoles', 'formationHistory', 'tacticAnalysis', 'clubSwitchHistory', 'youthNationalCallups', 'licenseRejectionCount', 'seasonPointsHistory', 'forceDerbyMatchdays',
+            'youthTournaments', 'youthTourneyWins', 'stadiumOptimizationHistory', 'namingRightsHistory', 'recentResults', 'transferHistory', 'lastAthleticTestSeason',
             'permanentRivalName', 'rivalManagerName', 'rivalManagerTrait', 'rivalHistoryArchive', 'nemesis',
             'tacticFinesse', 'formationOptimizer', 'formationStats', 'opponentFormationAnalysis', 'setPieceSpecialists', 'positionTrainer',
             'formationSpecialization', 'opponentPressing', 'trainingFocus', 'playerPotential', 'opponentWeaknesses', 'leagueTrends',

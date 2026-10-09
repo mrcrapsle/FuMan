@@ -2051,6 +2051,35 @@ async function testTvAdvanceGracePeriod(browser) {
     await page.close();
 }
 
+async function testCupAndLeagueSameDay(browser) {
+    console.log('\n[25.23] Pokal und Liga am selben Spieltag: Kalender zeigt beide, das Ligaspiel des Pokaltags existiert');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            renderCalendarView();
+            const eintraege = [...document.getElementById('cal-schedule-list').children].map(e => e.innerText);
+            const tag = n => eintraege.find(t => t.includes('Spieltag ' + n + ' ')) || '';
+            out.pokalUndLiga = tag(4).includes('DFB-Pokal') && tag(4).includes('Ligaspiel');
+            out.nurLiga = tag(5).includes('Ligaspiel') && !tag(5).includes('DFB-Pokal');
+            // Die Liga-Partie des Pokaltags ist in den Spielplan eingetragen
+            const fixs = fixturesData[game.leagueLevel][3] || [];
+            out.ligaspielVorhanden = fixs.some(f => leaguesData[game.leagueLevel][f.home]?.name === game.clubName || leaguesData[game.leagueLevel][f.away]?.name === game.clubName);
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Kalender ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.pokalUndLiga, 'Am Pokaltag steht im Kalender Pokal UND Ligaspiel (kein eigener Pokaltag)');
+        assert(r.nurLiga, 'An normalen Spieltagen steht nur das Ligaspiel');
+        assert(r.ligaspielVorhanden, 'Die Liga-Partie des Pokaltags ist im Spielplan vorhanden');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testTrainingGrowthCaps(browser) {
     console.log('\n[25.20] Stärkezuwachs aus Training begrenzt: Einzeltraining nach Alter, Trainingslager einmal pro Saison');
     const { page, consoleErrors } = await freshPage(browser);
@@ -2637,6 +2666,16 @@ async function testEuropeDraw(browser) {
             const heim = {};
             [0, 1, 2, 3, 4, 5].forEach(gi => getEuropeGroupPairings(europeTournament.groupA, gi).forEach(([h]) => { heim[h.name] = (heim[h.name] || 0) + 1; }));
             out.heimrecht = europeTournament.groupA.every(t => heim[t.name] === 3);
+            // Livespiel und Simulation nehmen dieselbe Paarung (25.23): jede eigene Gruppenpartie stimmt überein
+            game.inEurope = true;
+            const passt = [3, 7, 11, 15, 19, 23].every((md, gi) => {
+                const live = getOwnEuropeFixture(md);
+                if (!live) return true;
+                const eigene = [europeTournament.groupA, europeTournament.groupB].map(g => getEuropeGroupPairings(g, gi))
+                    .flat().find(([h, a]) => h.name === live.home && a.name === live.away);
+                return !!eigene;
+            });
+            out.liveWieSim = passt;
             // Runde festhalten
             game.europeHistory = [];
             europeTournament.semiFinals = [{ teamA: game.clubName, teamB: 'X' }];
@@ -2666,6 +2705,7 @@ async function testEuropeDraw(browser) {
         assert(r.wechselnd, 'Das Teilnehmerfeld wechselt von Saison zu Saison');
         assert(r.koeffizient && r.topf2, 'Erfolge der letzten 5 Saisons bringen einen besseren Topf');
         assert(r.heimrecht, 'Gruppenphase: jedes Team hat drei Heimspiele (vorher Topf 1 sechs, Topf 4 keins)');
+        assert(r.liveWieSim, 'Das Livespiel spielt dieselben Gruppenpaarungen (Heim/Gast) wie die Simulation');
         assert(r.runden && r.ohneTeilnahme, 'Die erreichte Runde landet in der Europapokal-Historie');
         assert(r.historie, 'Der Europa-Bildschirm zeigt Koeffizient, Topf und Historie');
     }
@@ -8966,6 +9006,7 @@ async function main() {
         testLexiconEnglish,
         testPromotionTvAdvance,
         testTvAdvanceGracePeriod,
+        testCupAndLeagueSameDay,
         testEnglishUi,
         testSwapDeals,
         testPlayerProfile,

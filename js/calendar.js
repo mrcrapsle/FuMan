@@ -18,8 +18,17 @@
             let isCup = cupTournament.matchdays.includes(i);
             let isEuro = europeTournament.matchdays.includes(i);
 
-            let eventText = isCup ? '🏆 DFB-Pokal Termin' : (isEuro ? '🌟 Champions Cup Spieltag' : '⚽ Ligaspiel');
-            let eventColor = isCup ? 'var(--accent)' : (isEuro ? '#82b1ff' : '#aaa');
+            // Pokal und Europa sind KEINE eigenen Tage (25.23): an diesen Spieltagen wird zuerst die Pokalpartie
+            // gespielt, danach das Ligaspiel desselben Spieltags (startMatchdayFlow -> "Weiter zum Ligaspiel").
+            // Vorher stand am Pokaltag nur "DFB-Pokal Termin" - das Ligaspiel fehlte im Kalender.
+            let isLandes = typeof landesPokal !== 'undefined' && landesPokal.active && landesPokal.matchdays.includes(i);
+            let teile = [];
+            if (isCup) teile.push('🏆 DFB-Pokal');
+            if (isLandes) teile.push('🏅 Landespokal');
+            if (isEuro) teile.push('🌟 Champions Cup');
+            teile.push('⚽ Ligaspiel');
+            let eventText = teile.join(' + ');
+            let eventColor = (isCup || isLandes) ? 'var(--accent)' : (isEuro ? '#82b1ff' : '#aaa');
 
             item.innerHTML = `
                 <span><strong>Spieltag ${i}</strong> ${isCurrent ? '<span style="color:var(--primary); font-weight:900;">(HEUTE)</span>' : ''}</span>

@@ -494,7 +494,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.93', date: '09.10.2026', features: 'Phase 25.22: Vereinswechsel ohne Altlasten, Kapitänsnachfolge, Lexikon auf Englisch, TV-Vorschuss für Aufsteiger, Jugend-Potenzial, Tausch nur mit brauchbaren Spielern' };
+    const GAME_VERSION = { number: '3.94', date: '10.10.2026', features: 'Phase 25.23: Kapitän verletzt, Schonfrist nach Vereinswechsel, Pokal und Liga am selben Spieltag im Kalender, Lexikonsuche, Liga-Ökonomie, Aufräumen Spielstand' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -503,7 +503,6 @@ function compareTableRows(a, b) {
         season: 1,
         money: 150000,
         transferBudget: 40000,
-        transferHistory: [],
         wageBudget: 8000,
         fans: 75,
         matchday: 1,
@@ -526,25 +525,18 @@ function compareTableRows(a, b) {
         lastVideoAnalysisMatchday: null,
         lastDoubleTrainingMatchday: null,
         lastTechContestMatchday: null,
-        lastAthleticTestSeason: null,
         lastBondingEventMatchday: null,
         youthHospitants: [],
         youthCapacityBonus: 0,
-        youthNationalCallups: 0,
         pendingYouthPoach: null,
         youthCoachId: null,
         youthCoachHistory: [],
-        youthTournaments: [],
-        youthTourneyWins: 0,
         mediaReputation: 50,
         mediaConferences: [],
         mediaConferenceHistory: [],
         playerInterviews: [],
         mediaRelationships: {},
         journalistInteractions: [],
-        stadiumOptimizationHistory: [],
-        namingRightsHistory: [],
-        recentResults: [],
         mentalTrainingLevel: 0,
         videoAnalysisBoostActive: false,
         doubleTrainingBoostActive: false,
@@ -1093,6 +1085,7 @@ function compareTableRows(a, b) {
             'internationalTournaments', 'playerInternationalCaps', 'internationalTournamentHistory', 'nextWorldCup', 'transferMarket', 'postMatchAnalysis',
             'transferBudgetUsed', 'transferMarketPlayers', 'transferLastRefreshMatchday', 'reserves', 'tournamentBrackets',
             'squadHarmony', 'disciplinarySystem', 'crises', 'localRivals', 'tacticsHistory', 'playerRoles', 'formationHistory', 'tacticAnalysis', 'clubSwitchHistory', 'youthNationalCallups', 'licenseRejectionCount', 'seasonPointsHistory', 'forceDerbyMatchdays',
+            'youthTournaments', 'youthTourneyWins', 'stadiumOptimizationHistory', 'namingRightsHistory', 'recentResults', 'transferHistory', 'lastAthleticTestSeason',
             'permanentRivalName', 'rivalManagerName', 'rivalManagerTrait', 'rivalHistoryArchive', 'nemesis',
             'tacticFinesse', 'formationOptimizer', 'formationStats', 'opponentFormationAnalysis', 'setPieceSpecialists', 'positionTrainer',
             'formationSpecialization', 'opponentPressing', 'trainingFocus', 'playerPotential', 'opponentWeaknesses', 'leagueTrends',
@@ -12033,8 +12026,17 @@ function initOneHand() {
             let isCup = cupTournament.matchdays.includes(i);
             let isEuro = europeTournament.matchdays.includes(i);
 
-            let eventText = isCup ? '🏆 DFB-Pokal Termin' : (isEuro ? '🌟 Champions Cup Spieltag' : '⚽ Ligaspiel');
-            let eventColor = isCup ? 'var(--accent)' : (isEuro ? '#82b1ff' : '#aaa');
+            // Pokal und Europa sind KEINE eigenen Tage (25.23): an diesen Spieltagen wird zuerst die Pokalpartie
+            // gespielt, danach das Ligaspiel desselben Spieltags (startMatchdayFlow -> "Weiter zum Ligaspiel").
+            // Vorher stand am Pokaltag nur "DFB-Pokal Termin" - das Ligaspiel fehlte im Kalender.
+            let isLandes = typeof landesPokal !== 'undefined' && landesPokal.active && landesPokal.matchdays.includes(i);
+            let teile = [];
+            if (isCup) teile.push('🏆 DFB-Pokal');
+            if (isLandes) teile.push('🏅 Landespokal');
+            if (isEuro) teile.push('🌟 Champions Cup');
+            teile.push('⚽ Ligaspiel');
+            let eventText = teile.join(' + ');
+            let eventColor = (isCup || isLandes) ? 'var(--accent)' : (isEuro ? '#82b1ff' : '#aaa');
 
             item.innerHTML = `
                 <span><strong>Spieltag ${i}</strong> ${isCurrent ? '<span style="color:var(--primary); font-weight:900;">(HEUTE)</span>' : ''}</span>
@@ -30590,7 +30592,10 @@ function renderLexicon() {
     const box = document.getElementById('lexicon-list');
     if (!box) return;
     const input = document.getElementById('lexicon-search');
-    const suche = (input ? input.value : '').trim().toLowerCase();
+    // Suche ignoriert Groß-/Kleinschreibung sowie Bindestriche und Leerzeichen: "set-piece", "set piece"
+    // und "setpiece" treffen gleichermaßen (25.23, vorher fand "set-piece" im englischen Text nichts).
+    const normSuche = t => t.toLowerCase().replace(/[-\s]+/g, '');
+    const suche = normSuche((input ? input.value : '').trim());
     const kategorien = ['Alle', ...new Set(LEXICON_ENTRIES.map(e => e.cat))];
     const chips = document.getElementById('lexicon-categories');
     const katLabel = k => (typeof currentLang !== 'undefined' && currentLang === 'en' && typeof LEXICON_CATEGORY_EN !== 'undefined' && LEXICON_CATEGORY_EN[k]) || k;
@@ -30601,7 +30606,7 @@ function renderLexicon() {
     const lokal = e => typeof getLexiconEntryLocalized === 'function' ? getLexiconEntryLocalized(e) : e;
     const treffer = LEXICON_ENTRIES.map(lokal).filter(e => (lexiconCategory === 'Alle' || e.cat === lexiconCategory)
         && (!lexiconScreenFilter || e.screen === lexiconScreenFilter)
-        && (!suche || (e.title + ' ' + e.text + ' ' + e.tips.join(' ')).toLowerCase().includes(suche)));
+        && (!suche || normSuche(e.title + ' ' + e.text + ' ' + e.tips.join(' ')).includes(suche)));
     box.innerHTML = treffer.length ? treffer.map(e => `<div class="box" style="font-size:10px;">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
             <strong style="color:var(--accent);">${e.title}</strong><span style="font-size:8px; color:var(--text-muted);">${e.catLabel || e.cat}</span>
