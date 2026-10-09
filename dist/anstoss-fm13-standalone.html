@@ -32903,11 +32903,16 @@ function cleanupLegacyScoutState() {
     // Langzeittest Bundesliga (21.6): die Budgets hingen nur an Liga und Platz, nie an der
 // Kasse. Ein Bundesligist häufte so über 200 Mio. € an, bekam aber ~9 Mio. Transferbudget
 // und ein Gehaltsbudget UNTER seiner Lohnsumme - kein Neuzugang möglich, das Geld lag tot.
-// Jetzt gibt der Vorstand Rücklagen über einer Reserve (eine halbe Saison Gehaltsbudget)
+// Jetzt gibt der Vorstand Rücklagen über einer Reserve (eine halbe Saison Gehälter, s. u.)
 // teilweise frei: 40 % fürs Transferbudget, 10 % (auf 34 Spieltage) fürs Gehaltsbudget.
 // In den unteren Ligen liegt die Reserve weit über der Kasse - dort ändert sich nichts.
 function getCashSurplusBudgetShare() {
-    const reserve = game.wageBudget * 34 * 0.5;
+    // Reserve = halbe Saison der echten Gehälter, mindestens des halben Gehaltsbudgets (25.21).
+    // Vorher eine halbe Saison des vollen Budgets: ein Aufsteiger in die 2. Liga (120.000 € Gehälter,
+    // 676.000 € Budget) lag mit 10 Mio. € Kasse 1,5 Mio. darunter - das Geld lag tot, die Elf blieb
+    // 10 Punkte unter dem Ligaschnitt und stieg wieder ab (Langzeit-Bot 25.21).
+    const gehaelter = squad.reduce((a, p) => a + (p.wage || 0), 0);
+    const reserve = Math.max(gehaelter, game.wageBudget * 0.5) * 34 * 0.5;
     const ueberschuss = Math.max(0, game.money - reserve);
     return {
         transfer: Math.round(ueberschuss * 0.4 / 50000) * 50000,

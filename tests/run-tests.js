@@ -2593,13 +2593,19 @@ async function testBundesligaLongRun(browser) {
         try {
             closeTutorial();
             const out = {};
-            // Rücklagen: nur was über einer halben Saison Gehaltsbudget liegt, wird freigegeben
+            // Rücklagen: nur was über einer halben Saison Gehälter (mindestens halbes Budget) liegt, wird freigegeben
+            const lohnVorher = squad.map(p => p.wage);
+            squad.forEach(p => { p.wage = Math.round(400000 / squad.length); });
             game.wageBudget = 1000000;
-            game.money = 10000000;
+            game.money = 8000000;
             const knapp = getCashSurplusBudgetShare();
-            game.money = 37000000;
+            game.money = 28500000;
             const reich = getCashSurplusBudgetShare();
             out.ruecklagen = knapp.transfer === 0 && knapp.wage === 0 && reich.transfer === 8000000 && reich.wage === Math.round(2000000 / 34 / 1000) * 1000;
+            // Teurer Kader: die Reserve folgt den echten Gehältern
+            squad.forEach(p => { p.wage = Math.round(1000000 / squad.length); });
+            out.ruecklagenTeuer = getCashSurplusBudgetShare().transfer < reich.transfer;
+            squad.forEach((p, i) => { p.wage = lohnVorher[i]; });
             const tb = game.transferBudget, wb = game.wageBudget;
             applyCashSurplusBudgets();
             out.freigabe = game.transferBudget === tb + reich.transfer && game.wageBudget === wb + reich.wage
@@ -2689,7 +2695,7 @@ async function testBundesligaLongRun(browser) {
     });
     assert(!r.crash, `Langzeittest Bundesliga ohne Absturz (${r.crash || 'ok'})`);
     if (!r.crash) {
-        assert(r.ruecklagen && r.freigabe, 'Der Vorstand gibt Rücklagen über der Reserve als Transfer- und Gehaltsbudget frei');
+        assert(r.ruecklagen && r.ruecklagenTeuer && r.freigabe, 'Der Vorstand gibt Rücklagen über der Reserve (halbe Saison der echten Gehälter, mindestens halbes Budget) als Transfer- und Gehaltsbudget frei');
         assert(r.gehaltsBoden, `Gehaltsbudget deckt laufende Gehälter plus Erhöhungen (+5 % nur ohne Verlustsaison, mit Minus auf dem Konto eingefroren) (${JSON.stringify(r.gehaltsBodenWerte)})`);
         assert(r.forderungNachLiga, 'Budget-Forderung beim Vorstand richtet sich nach der Liga (5 % des Liga-Gehaltsbudgets)');
         assert(r.deckelEingefroren, 'Ab dem 1,5-fachen Liga-Gehaltsbudget friert die Untergrenze die Gehälter ein');
