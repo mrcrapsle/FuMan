@@ -1912,6 +1912,13 @@ async function testCaptainSuccession(browser) {
             const alt = squad.find(p => p.id === game.captainId);
             out.vorher = !!alt;
             out.ohneAenderung = ensureCaptainPresent() === null && game.captainId === alt.id;
+            // Verletzter Kapitän (25.23): er steht nicht auf dem Platz, also übernimmt ein Fitter die Binde
+            const verletzt = squad.find(p => p.id === game.captainId);
+            verletzt.injured = 3;
+            ensureCaptainPresent();
+            out.verletzterWechsel = game.captainId !== verletzt.id && squad.find(p => p.id === game.captainId).injured !== 3;
+            verletzt.injured = 0;
+            game.captainId = alt.id;
             squad = squad.filter(p => p.id !== alt.id);
             simulateMatchdays(1);
             const neu = squad.find(p => p.id === game.captainId);
@@ -1925,6 +1932,7 @@ async function testCaptainSuccession(browser) {
         assert(r.vorher && r.ohneAenderung, 'Ist der Kapitän im Kader, ändert sich nichts');
         assert(r.nachfolger, 'Fehlt der Kapitän, übernimmt nach dem Spieltag ein Nachfolger (Postfach-Hinweis)');
         assert(r.fuehrung, 'Der Nachfolger hat die größte Führungsqualität der fitten Spieler');
+        assert(r.verletzterWechsel, 'Ist der Kapitän verletzt, übernimmt vor dem Anpfiff ein Fitter die Binde (sonst fehlt der Kapitänsbonus auf dem Platz)');
     }
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
     await page.close();

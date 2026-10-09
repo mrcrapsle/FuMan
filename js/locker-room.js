@@ -104,7 +104,8 @@ function getCliqueByKey(key) {
 // game.captainId ins Leere, die Elf spielte still ohne Kapitänsbonus und ohne Autorität in der
 // Kabine. Der Spieler mit der größten Führungsqualität übernimmt (ohne Moral-Malus, der alte ist weg).
 function ensureCaptainPresent() {
-    if (!squad.length || squad.some(p => p.id === game.captainId)) return null;
+    // Verletzt zählt wie weg (25.23): ein Kapitän auf der Tribüne bringt auf dem Platz keinen Bonus.
+    if (!squad.length || squad.some(p => p.id === game.captainId && !(p.injured > 0))) return null;
     const neu = [...squad].filter(p => !(p.injured > 0)).sort((a, b) => getLeadershipScore(b) - getLeadershipScore(a))[0] || squad[0];
     game.captainId = neu.id;
     if (typeof electTeamCouncil === 'function') electTeamCouncil(true);
