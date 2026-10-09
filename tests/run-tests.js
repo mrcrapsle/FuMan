@@ -3770,12 +3770,20 @@ async function testClubRenameAndSwitch(browser) {
         out.secondTeamFollowedRename = game.secondTeam.name === 'FC Testverifikation II';
 
         let target = leaguesData[game.leagueLevel].find(t => t.name !== game.clubName && t.name !== game.secondTeam.name);
-        // Altlasten des alten Vereins (25.22)
+        // Schonfrist nach dem Wechsel (25.23): auch außerhalb von Saison 1 keine Entlassung in der Wechselsaison
+        game.season = 5;
         game.boardSat = 15; game.buybackOptions = [{ id: 'x' }];
         game.rumors = [{ type: 'abwerbung', playerId: squad[0].id }, { type: 'markt', playerId: 'm1' }];
         let switchOk = switchToClub(target.name);
         out.altlasten = game.boardSat === 60 && game.buybackOptions.length === 0 && game.rumors.length === 1
             && game.secondTeam.name === target.name + ' II' && game.seasonExpectation.expectedRank >= 1;
+        game.boardSat = 10; game.lowBoardSatStreak = 99; game.boardSatVerlauf = []; game.sackPending = false;
+        checkSeasonEndSacking(18);
+        out.schonfrist = game.sackPending === false;
+        game.season = 6;
+        checkSeasonEndSacking(18);
+        out.danach = game.sackPending === true;
+        game.sackPending = false; game.lowBoardSatStreak = 0;
         out.switchWorked = switchOk && game.clubName === target.name;
         out.squadRegenerated = squad.length === 18;
         out.oldClubStillExistsAsAi = leaguesData.flat().some(t => t.name === 'FC Testverifikation');
@@ -3792,6 +3800,7 @@ async function testClubRenameAndSwitch(browser) {
     assert(r.oldClubStillExistsAsAi, 'Alter Verein bleibt nach dem Wechsel als KI-Klub bestehen');
     assert(r.ourLeagueTeamMatches, 'getOurLeagueTeam() findet uns nach dem Wechsel am neuen Platz');
     assert(r.altlasten, 'Vereinswechsel: neuer Vorstand (60), neues Saisonziel, zweite Mannschaft heißt "<Neu> II", Rückkaufoptionen und Abwerbe-Gerüchte des alten Vereins verfallen');
+    assert(r.schonfrist && r.danach, 'Nach einem Vereinswechsel gilt die Schonfrist für die Wechselsaison (Entlassung erst in der Folgesaison möglich)');
     assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei Umbenennung/Vereinswechsel');
     await page.close();
 }

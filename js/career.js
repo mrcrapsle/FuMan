@@ -104,6 +104,10 @@
         // Neuer Arbeitgeber, neuer Vorstand: Vertrauen startet neutral, das Saisonziel gilt für den neuen Kader.
         game.boardSat = 60;
         game.boardSatVerlauf = [];
+        // Schonfrist wie in der ersten Karrieresaison (25.23): der Vorstand kennt den neuen Manager noch
+        // nicht. Vorher galt die Schonfrist nur für Saison 1 - ein Wechsel in Saison 5 wurde am Saisonende
+        // nach einer schwachen Serie sofort mit Entlassung bestraft.
+        game.boardGraceSeason = game.season;
         if (typeof recordSeasonExpectation === 'function') recordSeasonExpectation();
         game.captainId = squad[8].id;
         game.penaltyTakerId = squad[14].id;

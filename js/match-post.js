@@ -54,7 +54,7 @@
     // KEIN Vertrauensaufbau: liegt die Zufriedenheit über dem Wert von vor sechs Pflichtspielen,
     // bleibt der Manager. Legenden-Bonus bleibt: der Vorstand verzeiht einer Vereinslegende mehr.
     function checkSeasonEndSacking(myRank) {
-        if (game.season <= 1) return;
+        if (game.season <= 1 || game.boardGraceSeason === game.season) return;
         let sackThreshold = BOARD_SAT_SACK_STREAK + (game.legendStatus ? 3 : 0);
         let verlauf = game.boardSatVerlauf || [];
         let erholt = verlauf.length >= 7 && game.boardSat > verlauf[0];
