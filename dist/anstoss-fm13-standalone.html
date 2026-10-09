@@ -25929,7 +25929,8 @@ function getCliqueByKey(key) {
 // game.captainId ins Leere, die Elf spielte still ohne Kapitänsbonus und ohne Autorität in der
 // Kabine. Der Spieler mit der größten Führungsqualität übernimmt (ohne Moral-Malus, der alte ist weg).
 function ensureCaptainPresent() {
-    if (!squad.length || squad.some(p => p.id === game.captainId)) return null;
+    // Verletzt zählt wie weg (25.23): ein Kapitän auf der Tribüne bringt auf dem Platz keinen Bonus.
+    if (!squad.length || squad.some(p => p.id === game.captainId && !(p.injured > 0))) return null;
     const neu = [...squad].filter(p => !(p.injured > 0)).sort((a, b) => getLeadershipScore(b) - getLeadershipScore(a))[0] || squad[0];
     game.captainId = neu.id;
     if (typeof electTeamCouncil === 'function') electTeamCouncil(true);
@@ -34621,7 +34622,7 @@ const LEXICON_ENTRIES = [
         text: 'Liga 1 bis 3 sind bundesweit. Darunter ist der deutsche Fußball regional geteilt: welche Regionalliga (Nord, Nordost, West, Südwest, Bayern), Oberliga und 6. Liga du spielst und welcher Landespokal dich in den DFB-Pokal bringt, hängt an der Heimatstadt deines Vereins. Du wählst sie beim neuen Spiel. Jeder Verein hat eine echte Stadt; die Namen sind - wie die Spielernamen - leicht verfremdet. In den oberen Ligen stehen echte Vereine, in den unteren zusätzlich Vereine aus echten Orten der Gegend.',
         tips: ['Spielstände von vor Version 3.43 behalten ihre Ligen (Nordost/Sachsen)', 'In Großstädten wie Berlin oder Hamburg spielen viele Vereine derselben Stadt in einer Liga'] },
     { cat: 'Verein', title: 'Kabine, Cliquen & Kapitän', screen: 'screen-squad',
-        text: 'Ein Mannschaftsrat: Kapitän plus die zwei Spieler mit der größten Führungsqualität (Leader-Eigenschaft, Alter, Erfahrung, Moral). Spieler gruppieren sich nach Nation und Alter; fällt die Stimmung einer Gruppe unter 40, rumort sie: Teamstärke sinkt, und jeden Monat färbt die Laune auf den Rest ab. Ein Kapitän mit Autorität (Moral ab 60) dämpft das. Verlässt der Kapitän den Kader, übernimmt der Spieler mit der größten Führungsqualität die Binde.',
+        text: 'Ein Mannschaftsrat: Kapitän plus die zwei Spieler mit der größten Führungsqualität (Leader-Eigenschaft, Alter, Erfahrung, Moral). Spieler gruppieren sich nach Nation und Alter; fällt die Stimmung einer Gruppe unter 40, rumort sie: Teamstärke sinkt, und jeden Monat färbt die Laune auf den Rest ab. Ein Kapitän mit Autorität (Moral ab 60) dämpft das. Verlässt der Kapitän den Kader oder fällt er verletzt aus, übernimmt vor dem Anpfiff der Spieler mit der größten Führungsqualität die Binde - nur ein Kapitän auf dem Platz bringt den Kapitänsbonus.',
         tips: ['Wortführer melden sich beim Mannschaftsrat (anhören oder klare Ansage)', 'Unzufriedene Leistungsträger kommen ins Büro: Einsatzgarantie, Leistung einfordern oder Wechsel erlauben', 'Kapitän wechseln kostet den alten Kapitän Moral - einen Neuling ohne Standing nimmt der Rat übel'] },
     { cat: 'Verein', title: 'Fanstimmung', screen: 'screen-fans',
         text: 'Wie zufrieden die Anhänger sind (0-100). Beeinflusst Zuschauer, Fanartikel und Mitgliederzahlen.',
@@ -34871,7 +34872,7 @@ const LEXICON_EN = {
         text: 'Leagues 1 to 3 are national. Below that German football is split by region: which Regionalliga (North, North-East, West, South-West, Bavaria), Oberliga and 6th tier you play and which state cup takes you into the DFB-Pokal depends on your club\'s home city. You choose it when starting a new game. Every club has a real city; the names are - like the player names - slightly altered. The upper leagues have real clubs, the lower ones also clubs from real towns of the area.',
         tips: ['Saves from before version 3.43 keep their leagues (North-East/Saxony)', 'In big cities like Berlin or Hamburg many clubs from the same city play in one league'] },
     'Kabine, Cliquen & Kapitän': { title: 'Dressing room, cliques & captain',
-        text: 'One team council: the captain plus the two players with the greatest leadership (leader trait, age, experience, morale). Players group by nationality and age; if a group\'s mood falls below 40 it grumbles: team strength drops, and every month the mood spreads to the rest. A captain with authority (morale from 60) dampens this. If the captain leaves the squad, the player with the greatest leadership takes over the armband.',
+        text: 'One team council: the captain plus the two players with the greatest leadership (leader trait, age, experience, morale). Players group by nationality and age; if a group\'s mood falls below 40 it grumbles: team strength drops, and every month the mood spreads to the rest. A captain with authority (morale from 60) dampens this. If the captain leaves the squad or is injured, the player with the greatest leadership takes over the armband before kick-off - only a captain on the pitch brings the captain bonus.',
         tips: ['Spokesmen approach the team council (listen or lay down the law)', 'Unhappy key players come to the office: playing time guarantee, demand performance or allow a transfer', 'Changing the captain costs the old captain morale - the council resents a newcomer without standing'] },
     'Fanstimmung': { title: 'Fan mood',
         text: 'How happy the supporters are (0-100). Affects attendance, merchandise and membership numbers.',
