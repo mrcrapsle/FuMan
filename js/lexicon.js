@@ -222,7 +222,10 @@ function renderLexicon() {
     const box = document.getElementById('lexicon-list');
     if (!box) return;
     const input = document.getElementById('lexicon-search');
-    const suche = (input ? input.value : '').trim().toLowerCase();
+    // Suche ignoriert Groß-/Kleinschreibung sowie Bindestriche und Leerzeichen: "set-piece", "set piece"
+    // und "setpiece" treffen gleichermaßen (25.23, vorher fand "set-piece" im englischen Text nichts).
+    const normSuche = t => t.toLowerCase().replace(/[-\s]+/g, '');
+    const suche = normSuche((input ? input.value : '').trim());
     const kategorien = ['Alle', ...new Set(LEXICON_ENTRIES.map(e => e.cat))];
     const chips = document.getElementById('lexicon-categories');
     const katLabel = k => (typeof currentLang !== 'undefined' && currentLang === 'en' && typeof LEXICON_CATEGORY_EN !== 'undefined' && LEXICON_CATEGORY_EN[k]) || k;
@@ -233,7 +236,7 @@ function renderLexicon() {
     const lokal = e => typeof getLexiconEntryLocalized === 'function' ? getLexiconEntryLocalized(e) : e;
     const treffer = LEXICON_ENTRIES.map(lokal).filter(e => (lexiconCategory === 'Alle' || e.cat === lexiconCategory)
         && (!lexiconScreenFilter || e.screen === lexiconScreenFilter)
-        && (!suche || (e.title + ' ' + e.text + ' ' + e.tips.join(' ')).toLowerCase().includes(suche)));
+        && (!suche || normSuche(e.title + ' ' + e.text + ' ' + e.tips.join(' ')).includes(suche)));
     box.innerHTML = treffer.length ? treffer.map(e => `<div class="box" style="font-size:10px;">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
             <strong style="color:var(--accent);">${e.title}</strong><span style="font-size:8px; color:var(--text-muted);">${e.catLabel || e.cat}</span>

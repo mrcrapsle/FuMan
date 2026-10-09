@@ -1960,7 +1960,13 @@ async function testLexiconEnglish(browser) {
             out.englisch = html.includes('Strength') && html.includes('Base value of every player') && !html.includes('Grundwert jedes Spielers');
             out.kategorie = document.getElementById('lexicon-categories').textContent.includes('Players');
             const suche = document.getElementById('lexicon-search');
-            if (suche) { suche.value = 'pressing'; renderLexicon(); out.suche = document.getElementById('lexicon-list').innerHTML.includes('Tactical duel'); suche.value = ''; } else out.suche = true;
+            if (suche) {
+                suche.value = 'pressing'; renderLexicon(); out.suche = document.getElementById('lexicon-list').innerHTML.includes('Tactical duel');
+                // Zusammengesetzte Begriffe: Bindestrich und Leerzeichen zählen nicht
+                suche.value = 'set-piece'; renderLexicon(); out.suchePunkt = document.getElementById('lexicon-list').innerHTML.includes('Set pieces');
+                suche.value = 'setpieces'; renderLexicon(); out.sucheOhne = document.getElementById('lexicon-list').innerHTML.includes('Set pieces');
+                suche.value = ''; renderLexicon();
+            } else out.suche = out.suchePunkt = out.sucheOhne = true;
             setLanguage('de');
             out.deutsch = document.getElementById('lexicon-list').innerHTML.includes('Grundwert jedes Spielers');
             return out;
@@ -1971,6 +1977,7 @@ async function testLexiconEnglish(browser) {
         assert(r.fehlend.length === 0, `Jeder Lexikon-Eintrag hat eine englische Fassung mit gleich vielen Tipps (${r.fehlend.join(' | ')})`);
         assert(r.zahlen.length === 0, `Die englische Fassung enthält alle Zahlen des deutschen Textes (${r.zahlen.slice(0, 3).join(' | ')})`);
         assert(r.englisch && r.kategorie && r.suche, 'Auf Englisch zeigt das Lexikon englische Titel, Texte und Kategorien, die Suche findet englische Begriffe');
+        assert(r.suchePunkt && r.sucheOhne, 'Die Suche ignoriert Bindestriche und Leerzeichen ("set-piece" findet "Set pieces")');
         assert(r.deutsch, 'Zurück auf Deutsch zeigt das Lexikon wieder deutsch');
     }
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
@@ -2003,6 +2010,42 @@ async function testPromotionTvAdvance(browser) {
     if (!r.crash) {
         assert(r.vorschuss, 'Beim Aufstieg in die Bundesliga kommen 16 Mio. € TV-Vorschuss für die neue Saison');
         assert(r.verrechnet && r.rest, 'Der Vorschuss geht je Spieltag von der TV-Rate ab, der Rest wird am Saisonende verrechnet');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
+async function testTvAdvanceGracePeriod(browser) {
+    console.log('\n[25.23] TV-Vorschuss und DFB-Nachfrist: verlorener Aufstieg zahlt nichts, nachträglicher Aufstieg zahlt einmal');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            const echteLizenz = checkDfbLicensingStatus;
+            // Verlorene Nachfrist: Auflagen fehlen weiter, die Frist läuft ab
+            game.leagueLevel = 1; game.matchday = 1; game.tvAdvance = null;
+            game.dfbGracePeriod = { targetLevel: 0, deadlineMatchday: 1, originalLeagueLevel: 1 };
+            checkDfbLicensingStatus = () => ({ missing: ['Internat fehlt'], auflagen: [], targetLevel: 0, totalCount: 3, metCount: 2 });
+            let geld = game.money;
+            checkDfbLicenseDeadlines();
+            out.verloren = game.dfbGracePeriod === null && game.leagueLevel === 1 && game.tvAdvance === null && game.money === geld;
+            // Nachträglicher Aufstieg: Auflagen erfüllt, der Vorschuss der neuen Liga wird einmal gezahlt
+            game.dfbGracePeriod = { targetLevel: 0, deadlineMatchday: 2, originalLeagueLevel: 1 };
+            checkDfbLicensingStatus = () => ({ missing: [], auflagen: [], targetLevel: 0, totalCount: 3, metCount: 3 });
+            geld = game.money;
+            checkDfbLicenseDeadlines();
+            out.nachtraeglich = game.leagueLevel === 0 && !!game.tvAdvance && game.tvAdvance.amount === 16000000
+                && game.tvAdvance.season === game.season && game.money >= geld + 16000000;
+            checkDfbLicensingStatus = echteLizenz;
+            return out;
+        } catch (e) { checkDfbLicensingStatus = echteLizenz; return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `TV-Vorschuss und Nachfrist ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.verloren, 'Verfällt die DFB-Nachfrist, gibt es weder Vorschuss noch Aufstiegsprämie');
+        assert(r.nachtraeglich, 'Wird der Aufstieg in der Nachfrist nachträglich vollzogen, zahlt der TV-Vorschuss genau einmal');
     }
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
     await page.close();
@@ -8922,6 +8965,7 @@ async function main() {
         testCaptainSuccession,
         testLexiconEnglish,
         testPromotionTvAdvance,
+        testTvAdvanceGracePeriod,
         testEnglishUi,
         testSwapDeals,
         testPlayerProfile,
