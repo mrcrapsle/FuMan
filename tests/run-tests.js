@@ -1920,9 +1920,9 @@ async function testCaptainSuccession(browser) {
             verletzt.injured = 0;
             game.captainId = alt.id;
             squad = squad.filter(p => p.id !== alt.id);
-            simulateMatchdays(1);
-            const neu = squad.find(p => p.id === game.captainId);
-            out.nachfolger = !!neu && inboxMessages.some(m => m.title.includes('übernimmt die Binde'));
+            // Sofort prüfen: nach einem Spieltag verschiebt die Moral die Führungsqualität (Test wäre zufällig)
+            const neu = ensureCaptainPresent();
+            out.nachfolger = !!neu && game.captainId === neu.id && inboxMessages.some(m => m.title.includes('übernimmt die Binde'));
             out.fuehrung = !!neu && squad.filter(p => !(p.injured > 0)).every(p => getLeadershipScore(p) <= getLeadershipScore(neu) || p.id === neu.id);
             return out;
         } catch (e) { return { crash: e.message + ' ' + e.stack }; }
@@ -1930,7 +1930,7 @@ async function testCaptainSuccession(browser) {
     assert(!r.crash, `Kapitänsnachfolge ohne Absturz (${r.crash || 'ok'})`);
     if (!r.crash) {
         assert(r.vorher && r.ohneAenderung, 'Ist der Kapitän im Kader, ändert sich nichts');
-        assert(r.nachfolger, 'Fehlt der Kapitän, übernimmt nach dem Spieltag ein Nachfolger (Postfach-Hinweis)');
+        assert(r.nachfolger, 'Fehlt der Kapitän, übernimmt sofort ein Nachfolger (Postfach-Hinweis)');
         assert(r.fuehrung, 'Der Nachfolger hat die größte Führungsqualität der fitten Spieler');
         assert(r.verletzterWechsel, 'Ist der Kapitän verletzt, übernimmt vor dem Anpfiff ein Fitter die Binde (sonst fehlt der Kapitänsbonus auf dem Platz)');
     }
