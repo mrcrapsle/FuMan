@@ -100,6 +100,18 @@ function getCliqueByKey(key) {
     return computeSquadCliques().cliques.find(c => c.key === key) || null;
 }
 
+// Kapitän weg (Verkauf, Leihe, Tausch, Vertragsende, Karriereende - 25.22): vorher zeigte
+// game.captainId ins Leere, die Elf spielte still ohne Kapitänsbonus und ohne Autorität in der
+// Kabine. Der Spieler mit der größten Führungsqualität übernimmt (ohne Moral-Malus, der alte ist weg).
+function ensureCaptainPresent() {
+    if (!squad.length || squad.some(p => p.id === game.captainId)) return null;
+    const neu = [...squad].filter(p => !(p.injured > 0)).sort((a, b) => getLeadershipScore(b) - getLeadershipScore(a))[0] || squad[0];
+    game.captainId = neu.id;
+    if (typeof electTeamCouncil === 'function') electTeamCouncil(true);
+    addInboxMessage('vertrag', `Ⓒ ${neu.name} übernimmt die Binde`, `Der bisherige Kapitän ist nicht mehr im Kader. ${neu.name} hat die größte Führungsqualität und führt die Mannschaft jetzt an - ändern kannst du das im Kader.`, 'screen-squad');
+    return neu;
+}
+
 // Einziger Weg, die Binde zu wechseln (Auswahlfeld im Kader und Kapitänsfrage des Rats).
 function handleCaptainChange(newId, viaRat) {
     const alt = squad.find(p => p.id === game.captainId);

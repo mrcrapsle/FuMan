@@ -880,6 +880,7 @@
     }
 
     function processPostMatchRoutine(matchResult = null, isHomeDerby = false, isLiveContext = false, matchMargin = 0, isHomeMatchParam = true, totalGoalsForBets = null) {
+        if (typeof ensureCaptainPresent === 'function') ensureCaptainPresent();
         // Löst die Insider-Wette und die Spionage-Info fürs vergangene Spiel auf/zurück,
         // unabhängig davon ob live gespielt oder automatisch simuliert wurde - beide sind
         // ans jeweils NÄCHSTE (jetzt vergangene) Spiel gebunden, nicht an den Live-Kontext.

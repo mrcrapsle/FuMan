@@ -37,7 +37,7 @@
             <span class="label">Alter:</span><span class="val">${p.age || '-'}</span>
             <span class="label">Geburtsdatum:</span><span class="val">${p.birthDate || '-'}</span>
             <span class="label">Rating:</span><span class="val">${p.strength}</span>
-            <span class="label">Talent:</span><span class="val">${p.strength}</span>
+            ${typeof p.potential === 'number' && typeof getYouthPotentialText === 'function' ? `<span class="label">Potenzial:</span><span class="val">${getYouthPotentialText(p)}</span>` : ''}
             ${(pool === 'squad' || pool === 'secondTeam') && typeof getTrainingGainsLabel === 'function' ? `<span class="label">Trainingsplus:</span><span class="val">${getTrainingGainsLabel(p)}</span>` : ''}
             <span class="label">Moral:</span><span class="val">${p.morale ?? '-'}</span>
             <span class="label">Fitness:</span><span class="val">${p.fitness ?? '-'}</span>

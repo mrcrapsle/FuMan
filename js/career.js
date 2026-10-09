@@ -72,6 +72,7 @@
     // erben. Stadion/Campus/Personal/Fans bleiben bewusst unverändert (reisen als deine
     // eigenen Investitionen mit dir mit) - nur Kader und Transfer-/Gehaltsbudget werden neu
     // auf das Zielniveau kalibriert; Karriere-Level, Trophäen und Vereinskonto bleiben erhalten.
+    // Der neue Vorstand startet bei 60 Vertrauen mit einem Saisonziel für den neuen Kader (25.22).
     function switchToClub(targetName) {
         let targetLevel = -1;
         for (let l = 0; l < NUM_LEAGUES; l++) {
@@ -79,6 +80,7 @@
         }
         if (targetLevel === -1) return false;
 
+        const alterName = game.clubName;
         game.clubName = targetName;
         game.leagueLevel = targetLevel;
         squad = generateSquadForLevel(targetLevel);
@@ -87,6 +89,22 @@
         loanedPlayers = [];
         incomingLoans = [];
         incomingOffers = [];
+        // Weitere Altlasten (25.22): Rückkaufoptionen, laufender Transferpoker, Abwerbe-Gerüchte über
+        // alte Spieler und die Derbywoche gegen den alten Rivalen gehören zum alten Verein.
+        game.buybackOptions = [];
+        if (typeof transferPoker !== 'undefined') transferPoker = null;
+        if (Array.isArray(game.rumors)) game.rumors = game.rumors.filter(r => r.type !== 'abwerbung');
+        game.derbyWeek = null;
+        // Die zweite Mannschaft hieß weiter "<alter Verein> II" und spielte unter diesem Namen.
+        if (game.secondTeam && game.secondTeam.name === `${alterName} II`) {
+            const stAlt = game.secondTeam.name;
+            game.secondTeam.name = `${targetName} II`;
+            leaguesData.forEach(tab => { const row = tab.find(t => t.name === stAlt); if (row) row.name = game.secondTeam.name; });
+        }
+        // Neuer Arbeitgeber, neuer Vorstand: Vertrauen startet neutral, das Saisonziel gilt für den neuen Kader.
+        game.boardSat = 60;
+        game.boardSatVerlauf = [];
+        if (typeof recordSeasonExpectation === 'function') recordSeasonExpectation();
         game.captainId = squad[8].id;
         game.penaltyTakerId = squad[14].id;
         game.freeKickTakerId = squad[9].id;

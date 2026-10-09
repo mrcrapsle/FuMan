@@ -356,6 +356,7 @@
     }
 
     function setupMatch(homeName, awayName, oppStrength, isHome, isCup, refObj) {
+        if (typeof ensureCaptainPresent === 'function') ensureCaptainPresent();
         playSound('whistle');
         substitutionsLeft = 5;
         if (typeof resetMatchEvents === 'function') resetMatchEvents();

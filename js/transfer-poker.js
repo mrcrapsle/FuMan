@@ -32,9 +32,17 @@ function getTransferAsking(p) {
 const SWAP_VALUE_SHARE = 0.85;
 const SWAP_MAX_GAP = 10;
 const SWAP_MIN_SQUAD = 17;
+// Der Verkäufer nimmt nur, wen er brauchen kann (25.22): höchstens SWAP_CLUB_GAP Punkte unter seiner
+// Vereinsstärke. Vorher reichte "10 Punkte unter dem Marktspieler" - der Langzeit-Bot tauschte in
+// der 5. Liga bis zu 12 Ergänzungsspieler pro Saison los.
+const SWAP_CLUB_GAP = 4;
+function getSwapClubMinimum(p) {
+    const verein = leaguesData.flat().find(t => t && t.name === p.sellerClub);
+    return Math.max(p.strength - SWAP_MAX_GAP, (verein ? verein.strength : p.strength) - SWAP_CLUB_GAP);
+}
 function isSwapCandidate(tp, p) {
     // Verletzte nimmt kein Verkäufer in Zahlung (25.21).
-    return !!tp && (tp.age || 25) <= 30 && tp.strength >= p.strength - SWAP_MAX_GAP && !(tp.injured > 0)
+    return !!tp && (tp.age || 25) <= 30 && tp.strength >= getSwapClubMinimum(p) && !(tp.injured > 0)
         && !(incomingLoans || []).some(l => l.playerId === tp.id) && squad.length > SWAP_MIN_SQUAD;
 }
 function getSwapValue(tp, p, ablose) {
@@ -229,7 +237,7 @@ function signPokerDeal() {
 
 function renderPokerSwapSelect(p, t) {
     const kandidaten = squad.filter(x => isSwapCandidate(x, p)).sort((a, b) => b.marketValue - a.marketValue);
-    if (!kandidaten.length) return `<div style="font-size:8px; color:var(--text-muted); margin-bottom:4px;">🔄 Tausch: ${p.sellerClub} nimmt nur gesunde Spieler bis 30 Jahre mit höchstens ${SWAP_MAX_GAP} Punkten weniger (und mindestens ${SWAP_MIN_SQUAD + 1} im Kader).</div>`;
+    if (!kandidaten.length) return `<div style="font-size:8px; color:var(--text-muted); margin-bottom:4px;">🔄 Tausch: ${p.sellerClub} nimmt nur gesunde Spieler bis 30 Jahre ab Stärke ${getSwapClubMinimum(p)} - schwächere helfen ihm nicht (und mindestens ${SWAP_MIN_SQUAD + 1} im Kader).</div>`;
     const tausch = t.swapId ? squad.find(x => x.id === t.swapId) : null;
     const wert = tausch ? getSwapValue(tausch, p, t.agreedFee) : 0;
     return `<div style="font-size:9px; margin-bottom:4px;">🔄 Spieler in Zahlung geben: <select onchange="setPokerSwap(this.value)" style="font-size:9px;">

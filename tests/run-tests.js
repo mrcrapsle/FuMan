@@ -1761,7 +1761,12 @@ async function testSwapDeals(browser) {
             const ziel = marketPlayers[0];
             ensureTransferTerms(ziel);
             const tausch = squad.filter(x => (x.age || 25) <= 30).sort((a, b) => b.strength - a.strength)[0];
-            tausch.strength = Math.max(tausch.strength, ziel.strength - 3);
+            tausch.strength = Math.max(tausch.strength, getSwapClubMinimum(ziel));
+            // Zu schwach für den Verkäufer (25.22): unter Vereinsstärke - 4 nimmt er keinen
+            const schwach = squad.find(x => x !== tausch && (x.age || 25) <= 30);
+            const s0 = schwach.strength; schwach.strength = getSwapClubMinimum(ziel) - 1;
+            out.zuSchwach = !isSwapCandidate(schwach, ziel) && getSwapClubMinimum(ziel) >= ziel.strength - 10;
+            schwach.strength = s0;
             tausch.marketValue = calculatePlayerMarketValue(tausch.strength);
             openTransferPoker(0);
             acceptPokerAsking();
@@ -1788,6 +1793,7 @@ async function testSwapDeals(browser) {
         assert(r.auswahl, 'Nach der Einigung lässt sich im Transferpoker ein eigener Spieler in Zahlung geben');
         assert(r.angerechnet && r.bar, 'Angerechnet werden höchstens 85 % des Marktwerts; die Kasse zahlt den Rest, das Transferbudget wie bei einem Verkauf (85 % der Anrechnung), Provision für beide Berater');
         assert(r.weg && r.zuAlt, 'Der Tauschspieler verlässt den Verein; über 30-Jährige nimmt der Verkäufer nicht');
+        assert(r.zuSchwach, 'Der Verkäufer nimmt nur Spieler, die höchstens 4 Punkte unter seiner Vereinsstärke liegen');
     }
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
     await page.close();
@@ -1895,6 +1901,35 @@ async function testEnglishUi(browser) {
     await page.close();
 }
 
+async function testCaptainSuccession(browser) {
+    console.log('\n[25.22] Kapitän weg (Verkauf/Leihe/Vertragsende): Nachfolger übernimmt automatisch');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = {};
+            const alt = squad.find(p => p.id === game.captainId);
+            out.vorher = !!alt;
+            out.ohneAenderung = ensureCaptainPresent() === null && game.captainId === alt.id;
+            squad = squad.filter(p => p.id !== alt.id);
+            simulateMatchdays(1);
+            const neu = squad.find(p => p.id === game.captainId);
+            out.nachfolger = !!neu && inboxMessages.some(m => m.title.includes('übernimmt die Binde'));
+            out.fuehrung = !!neu && squad.filter(p => !(p.injured > 0)).every(p => getLeadershipScore(p) <= getLeadershipScore(neu) || p.id === neu.id);
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Kapitänsnachfolge ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.vorher && r.ohneAenderung, 'Ist der Kapitän im Kader, ändert sich nichts');
+        assert(r.nachfolger, 'Fehlt der Kapitän, übernimmt nach dem Spieltag ein Nachfolger (Postfach-Hinweis)');
+        assert(r.fuehrung, 'Der Nachfolger hat die größte Führungsqualität der fitten Spieler');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testTrainingGrowthCaps(browser) {
     console.log('\n[25.20] Stärkezuwachs aus Training begrenzt: Einzeltraining nach Alter, Trainingslager einmal pro Saison');
     const { page, consoleErrors } = await freshPage(browser);
@@ -1925,7 +1960,12 @@ async function testTrainingGrowthCaps(browser) {
             // Spieler-Popup zeigt den Stand (25.21)
             const pdSpieler = squad[0]; pdSpieler.age = 20; pdSpieler.trainingGains = { season: game.season, n: 3 };
             openPlayerDetail(pdSpieler.id, 'squad');
-            out.popup = document.getElementById('pd-fields').textContent.includes('3/3 Punkte diese Saison');
+            out.popup = document.getElementById('pd-fields').textContent.includes('3/3 Punkte diese Saison')
+                && !document.getElementById('pd-fields').textContent.includes('Talent:');
+            pdSpieler.potential = 80; pdSpieler.potentialRevealed = true;
+            openPlayerDetail(pdSpieler.id, 'squad');
+            out.potenzial = document.getElementById('pd-fields').textContent.includes('Potenzial:');
+            closePlayerDetail();
             closePlayerDetail();
             return out;
         } catch (e) { return { crash: e.message + ' ' + e.stack }; }
@@ -1934,7 +1974,7 @@ async function testTrainingGrowthCaps(browser) {
     if (!r.crash) {
         assert(r.deckel, 'Einzeltraining: bis 21 Jahre höchstens +3 Stärke pro Saison, ab 30 keine');
         assert(r.saison, 'Ganzer Kader mit Trainingsschwerpunkt wächst über viele Spieltage nicht über den Deckel');
-        assert(r.popup, 'Das Spieler-Popup zeigt das Trainingsplus der Saison (3/3)');
+        assert(r.popup && r.potenzial, 'Das Spieler-Popup zeigt das Trainingsplus der Saison (3/3) und statt des doppelten "Talent" das echte Potenzial, wenn bekannt');
         assert(r.lager && r.einmal, 'Trainingslager: kein dauerhaftes Stärkeplus mehr, nur einmal pro Saison, Kosten nach Liga');
     }
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
@@ -3652,7 +3692,12 @@ async function testClubRenameAndSwitch(browser) {
         out.secondTeamFollowedRename = game.secondTeam.name === 'FC Testverifikation II';
 
         let target = leaguesData[game.leagueLevel].find(t => t.name !== game.clubName && t.name !== game.secondTeam.name);
+        // Altlasten des alten Vereins (25.22)
+        game.boardSat = 15; game.buybackOptions = [{ id: 'x' }];
+        game.rumors = [{ type: 'abwerbung', playerId: squad[0].id }, { type: 'markt', playerId: 'm1' }];
         let switchOk = switchToClub(target.name);
+        out.altlasten = game.boardSat === 60 && game.buybackOptions.length === 0 && game.rumors.length === 1
+            && game.secondTeam.name === target.name + ' II' && game.seasonExpectation.expectedRank >= 1;
         out.switchWorked = switchOk && game.clubName === target.name;
         out.squadRegenerated = squad.length === 18;
         out.oldClubStillExistsAsAi = leaguesData.flat().some(t => t.name === 'FC Testverifikation');
@@ -3668,6 +3713,7 @@ async function testClubRenameAndSwitch(browser) {
     assert(r.squadRegenerated, 'Vereinswechsel erzeugt einen vollständigen 18-Spieler-Kader');
     assert(r.oldClubStillExistsAsAi, 'Alter Verein bleibt nach dem Wechsel als KI-Klub bestehen');
     assert(r.ourLeagueTeamMatches, 'getOurLeagueTeam() findet uns nach dem Wechsel am neuen Platz');
+    assert(r.altlasten, 'Vereinswechsel: neuer Vorstand (60), neues Saisonziel, zweite Mannschaft heißt "<Neu> II", Rückkaufoptionen und Abwerbe-Gerüchte des alten Vereins verfallen');
     assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei Umbenennung/Vereinswechsel');
     await page.close();
 }
@@ -8781,6 +8827,7 @@ async function main() {
         testSponsorRenewal,
         testTrainingGrowthCaps,
         testProLoans,
+        testCaptainSuccession,
         testEnglishUi,
         testSwapDeals,
         testPlayerProfile,
