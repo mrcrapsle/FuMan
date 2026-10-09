@@ -35,12 +35,14 @@ function loanOutProPlayer(id, btn) {
     if (squad.length <= PRO_LOAN_MIN_SQUAD) { showToast(`Mindestens ${PRO_LOAN_MIN_SQUAD} Spieler müssen im Kader bleiben.`, 'error'); return; }
     if (getProLoans().length >= PRO_LOAN_MAX) { showToast(`Höchstens ${PRO_LOAN_MAX} Profis gleichzeitig verliehen.`, 'error'); return; }
     if ((incomingLoans || []).some(l => l.playerId === p.id)) { showToast(`${p.name} ist selbst nur ausgeliehen.`, 'error'); return; }
+    if (p.injured > 0) { showToast(`${p.name} ist verletzt - so nimmt ihn kein Verein.`, 'error'); return; }
     const t = getProLoanTerms(p);
     if (!t) { showToast('Kein Leihverein gefunden.', 'error'); return; }
     if (!requireConfirm(btn, `Bis Saisonende verleihen? Eigenanteil ${formatVal(t.eigen)}/SpT`)) return;
     playSound('click');
     squad = squad.filter(x => x.id !== p.id);
     lineup = lineup.filter(x => x !== p.id);
+    incomingOffers = (incomingOffers || []).filter(o => o.playerId !== p.id);
     if (lineup.length < 11 && typeof autoLineup === 'function') autoLineup();
     loanedPlayers.push({ player: p, loanClub: t.club, duration: Math.max(1, 35 - game.matchday), originalStrength: p.strength, proLoan: true, anteil: t.anteil, eigen: t.eigen });
     addInboxMessage('vertrag', `🔁 ${p.name} an ${t.club} verliehen`, `${p.name} spielt bis Saisonende bei ${t.club}. Der Leihverein zahlt ${Math.round(t.anteil * 100)} % seines Gehalts, dein Anteil: ${formatVal(t.eigen)} pro Spieltag. Im Gehaltsbudget zählt er nicht mehr.`, 'screen-transfer');

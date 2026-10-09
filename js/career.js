@@ -82,6 +82,11 @@
         game.clubName = targetName;
         game.leagueLevel = targetLevel;
         squad = generateSquadForLevel(targetLevel);
+        // Leihen und offene Angebote gehören zum alten Verein (25.21): verliehene Profis kamen sonst
+        // am 34. Spieltag zum neuen Verein zurück, sein Gehaltsanteil wurde weiter gebucht.
+        loanedPlayers = [];
+        incomingLoans = [];
+        incomingOffers = [];
         game.captainId = squad[8].id;
         game.penaltyTakerId = squad[14].id;
         game.freeKickTakerId = squad[9].id;

@@ -33,7 +33,8 @@ const SWAP_VALUE_SHARE = 0.85;
 const SWAP_MAX_GAP = 10;
 const SWAP_MIN_SQUAD = 17;
 function isSwapCandidate(tp, p) {
-    return !!tp && (tp.age || 25) <= 30 && tp.strength >= p.strength - SWAP_MAX_GAP
+    // Verletzte nimmt kein Verkäufer in Zahlung (25.21).
+    return !!tp && (tp.age || 25) <= 30 && tp.strength >= p.strength - SWAP_MAX_GAP && !(tp.injured > 0)
         && !(incomingLoans || []).some(l => l.playerId === tp.id) && squad.length > SWAP_MIN_SQUAD;
 }
 function getSwapValue(tp, p, ablose) {
@@ -55,15 +56,19 @@ function finalizePlayerPurchase(p, ablose, gehalt, tauschId) {
     if (tauschId && !isSwapCandidate(tausch, p)) { showToast('Dieser Spieler kommt für den Tausch nicht (mehr) in Frage.', 'error', 4500); return false; }
     const anrechnung = tausch ? getSwapValue(tausch, p, ablose) : 0;
     const bar = ablose - anrechnung;
-    const agentFee = getAgentFee(p, ablose);
+    // Der Tauschspieler zählt wie ein Verkauf (completeOfferSale): sein Berater kassiert Provision
+    // auf die Anrechnung, ins Transferbudget fließen nur 85 % davon (25.21 - vorher volle Anrechnung
+    // ohne Provision, ein Tausch war fürs Budget besser als jeder Verkauf).
+    const agentFee = getAgentFee(p, ablose) + (tausch ? getAgentFee(tausch, anrechnung) : 0);
+    const budgetBedarf = bar + Math.round(anrechnung * 0.15);
     const gesamt = bar + agentFee;
     if (game.money < gesamt) { showToast(`Vereinskonto reicht nicht: ${formatVal(gesamt)} nötig${agentFee > 0 ? ` (inkl. ${formatVal(agentFee)} Beraterprovision)` : ''}, ${formatVal(game.money)} vorhanden.`, 'error', 5000); return false; }
-    if (game.transferBudget < bar) { showToast(`Transferbudget reicht nicht: ${formatVal(bar)} nötig, ${formatVal(game.transferBudget)} verfügbar. Verhandle mit dem Vorstand oder verkaufe erst einen Spieler.`, 'error', 5500); return false; }
+    if (game.transferBudget < budgetBedarf) { showToast(`Transferbudget reicht nicht: ${formatVal(budgetBedarf)} nötig, ${formatVal(game.transferBudget)} verfügbar. Verhandle mit dem Vorstand oder verkaufe erst einen Spieler.`, 'error', 5500); return false; }
     const lohnsumme = squad.reduce((s, pl) => s + pl.wage, 0) - (tausch ? tausch.wage : 0) + (game.secondTeam.isActive ? secondTeamSquad.reduce((s, pl) => s + pl.wage, 0) : 0);
     if (lohnsumme + gehalt > game.wageBudget) { showToast(`Gehaltsbudget reicht nicht: ${formatVal(lohnsumme + gehalt)} nach der Verpflichtung, erlaubt sind ${formatVal(game.wageBudget)}.`, 'error', 5000); return false; }
     playSound('click');
     bucheMitLabel('🛒 Spielerkauf', -gesamt);
-    game.transferBudget -= bar;
+    game.transferBudget -= budgetBedarf;
     if (tausch) {
         if (typeof checkFriendshipDeparture === 'function') checkFriendshipDeparture(tausch);
         if (typeof recordNotablePastPlayer === 'function') recordNotablePastPlayer(tausch);
@@ -77,7 +82,7 @@ function finalizePlayerPurchase(p, ablose, gehalt, tauschId) {
     squad.push(p);
     marketPlayers.splice(idx, 1);
     if (transferPoker && transferPoker.playerId === p.id) transferPoker = null;
-    showToast(`✅ ${p.name} kommt von ${p.sellerClub || 'seinem Verein'} für ${formatVal(ablose)}${tausch ? ` (davon ${formatVal(anrechnung)} durch ${tausch.name})` : ''}${agentFee > 0 ? ` (+ ${formatVal(agentFee)} Provision an ${p.agent.name})` : ''}.`, 'success', 4500);
+    showToast(`✅ ${p.name} kommt von ${p.sellerClub || 'seinem Verein'} für ${formatVal(ablose)}${tausch ? ` (davon ${formatVal(anrechnung)} durch ${tausch.name})` : ''}${agentFee > 0 ? ` (+ ${formatVal(agentFee)} Beraterprovision)` : ''}.`, 'success', 4500);
     // Medizincheck (js/medical-check.js): ein verdeckter Befund wird jetzt Wirklichkeit.
     if (typeof applyMedicalOnArrival === 'function') applyMedicalOnArrival(p);
     renderTransferView();
@@ -224,13 +229,13 @@ function signPokerDeal() {
 
 function renderPokerSwapSelect(p, t) {
     const kandidaten = squad.filter(x => isSwapCandidate(x, p)).sort((a, b) => b.marketValue - a.marketValue);
-    if (!kandidaten.length) return `<div style="font-size:8px; color:var(--text-muted); margin-bottom:4px;">🔄 Tausch: ${p.sellerClub} nimmt nur Spieler bis 30 Jahre mit höchstens ${SWAP_MAX_GAP} Punkten weniger (und mindestens ${SWAP_MIN_SQUAD + 1} im Kader).</div>`;
+    if (!kandidaten.length) return `<div style="font-size:8px; color:var(--text-muted); margin-bottom:4px;">🔄 Tausch: ${p.sellerClub} nimmt nur gesunde Spieler bis 30 Jahre mit höchstens ${SWAP_MAX_GAP} Punkten weniger (und mindestens ${SWAP_MIN_SQUAD + 1} im Kader).</div>`;
     const tausch = t.swapId ? squad.find(x => x.id === t.swapId) : null;
     const wert = tausch ? getSwapValue(tausch, p, t.agreedFee) : 0;
     return `<div style="font-size:9px; margin-bottom:4px;">🔄 Spieler in Zahlung geben: <select onchange="setPokerSwap(this.value)" style="font-size:9px;">
         <option value="">Kein Tausch</option>
         ${kandidaten.map(x => `<option value="${x.id}" ${t.swapId === x.id ? 'selected' : ''}>${x.name} (${x.pos}, ${x.strength}) - ${formatVal(getSwapValue(x, p, t.agreedFee))}</option>`).join('')}
-    </select>${tausch ? ` → bar nur noch <strong>${formatVal(t.agreedFee - wert)}</strong>` : ''}</div>`;
+    </select>${tausch ? ` → bar nur noch <strong>${formatVal(t.agreedFee - wert)}</strong>, Transferbudget ${formatVal(t.agreedFee - wert + Math.round(wert * 0.15))} (der Tausch zählt wie ein Verkauf: 85 % fürs Budget, Provision für seinen Berater)` : ''}</div>`;
 }
 
 function renderTransferPokerBox() {

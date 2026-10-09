@@ -58,6 +58,14 @@ function grantTrainingStrength(p) {
     return true;
 }
 
+// Spieler-Popup (25.21): wie viel Training diese Saison noch bringen kann.
+function getTrainingGainsLabel(p) {
+    const cap = getTrainingStrengthCap(p);
+    if (!cap) return 'ausgereizt (ab 30 nur noch Spielpraxis)';
+    const n = p.trainingGains && p.trainingGains.season === game.season ? p.trainingGains.n : 0;
+    return `${n}/${cap} Punkte diese Saison${n >= cap ? ' - mehr bringt Training erst nächste Saison' : ''}`;
+}
+
 // Saisonende: ganzer Kader (und zweite Mannschaft) wird ein Jahr älter.
 function agePlayersAtSeasonEnd() {
     const changes = squad.map(p => ({ p, delta: agePlayer(p) }));

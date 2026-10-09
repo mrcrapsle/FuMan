@@ -189,7 +189,34 @@
             ${zeile(`Voraussichtliches Budget${o.rang ? ` (Stand Platz ${o.rang})` : ''}`, formatVal(o.budget))}
             <div style="margin-top:4px; font-weight:800; color:${farbe};">${o.spielraum >= 0 ? `✓ Spielraum ${formatVal(o.spielraum)} pro Spieltag` : `⚠️ ${formatVal(-o.spielraum)} pro Spieltag über dem Budget - Verlängerungen werden scheitern`}</div>
             ${o.stamm.length ? `<div style="margin-top:3px; color:var(--text-muted);">Auslaufende Stammspieler: ${o.stamm.map(p => p.name).join(', ')}</div>` : ''}
+            ${renderWageReliefLines(o)}
             ${renderPreContractRiskLines()}
+        </div>`;
+    }
+
+    // Gehaltsüberhang (25.21): die teuersten Ergänzungsspieler mit dem passenden Ausweg - bis 25 Jahre
+    // eine Profi-Leihe (js/pro-loans.js, der Leihverein zahlt mit), ältere verkaufen.
+    function getWageReliefCandidates(anzahl = 3) {
+        const elf = pickBestLineupIds();
+        return squad.filter(p => !elf.includes(p.id) && !(typeof isClubLegend === 'function' && isClubLegend(p)))
+            .sort((a, b) => b.wage - a.wage).slice(0, anzahl).map(p => {
+                const leihe = (p.age || 25) <= 25 && !(p.injured > 0) && typeof getProLoanTerms === 'function' ? getProLoanTerms(p) : null;
+                return { p, leihe, ersparnis: leihe ? p.wage - leihe.eigen : p.wage };
+            });
+    }
+
+    function renderWageReliefLines(o) {
+        const ueber = Math.max(o.jetzt - game.wageBudget, -o.spielraum);
+        if (ueber <= 0) return '';
+        const fenster = typeof isTransferWindowOpen === 'function' && isTransferWindowOpen();
+        const zeilen = getWageReliefCandidates().map(k => `<div>• ${k.p.name} (${k.p.age}, ${formatVal(k.p.wage)}/SpT): ${k.leihe
+            ? `verleihen an ${k.leihe.club} - spart ${formatVal(k.ersparnis)}/SpT`
+            : `verkaufen - spart ${formatVal(k.ersparnis)}/SpT`}</div>`);
+        if (!zeilen.length) return '';
+        return `<div style="margin-top:4px; padding-top:4px; border-top:1px solid rgba(150,150,150,0.2);">
+            <div style="font-weight:800; color:var(--accent);">💡 Entlastung (teuerste Ergänzungsspieler):</div>${zeilen.join('')}
+            <div style="color:var(--text-muted);">${fenster ? 'Wechselfenster offen: Transfermarkt → Verkaufen.' : 'Leihen und Verkäufe im nächsten Wechselfenster (Spieltag 1-3 und 18-20).'}</div>
+            ${fenster ? `<button class="btn-secondary" style="margin-top:3px; font-size:9px;" onclick="showScreen('screen-transfer'); if (typeof setTransferTab === 'function') setTransferTab('sell');">→ Zur Verkaufsliste</button>` : ''}
         </div>`;
     }
 

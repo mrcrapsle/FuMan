@@ -9,8 +9,10 @@
 //         Sponsoren: nimmt eingetroffene Angebote an (Haupt, Ausrüster, Ärmel, Banden, Namensrechte).
 //         Unter 20 Spielern füllt er mit Talenten oder Vereinslosen auf (25.19).
 //         Mehr als 24 Spieler: verkauft in den Fenstern die schwächsten Nicht-Stammspieler (ab 21 J.).
-//         Über dem Gehaltsbudget gibt er die teuersten Nicht-Stammspieler ab (z. B. nach einem Abstieg).
-//         Tabelle: K/V = Käufe/Verkäufe der Saison, E = Platzerwartung des Vorstands,
+//         Über dem Gehaltsbudget gibt er die teuersten Nicht-Stammspieler ab (z. B. nach einem Abstieg) -
+//         bis 25 Jahre als Profi-Leihe (25.21), ältere per Verkauf; ab 22 Spielern gibt er bei Käufen einen
+//         passenden Ergänzungsspieler in Zahlung (Tausch).
+//         Tabelle: K/V = Käufe/Verkäufe der Saison, L = Profi-Leihen, T = Tauschgeschäfte, E = Platzerwartung des Vorstands,
 //         J = eigene Jugendspieler in der besten Elf / im Kader. Talente ab Kader-Median-Stärke zieht er hoch.
 //         Talentangebote: verkauft (mit Beteiligung), wessen Potenzial unter dem Kader-Median liegt; TV = Erlös.
 //         Vorvertrags-Angebote anderer Vereine: verlängert sofort (bis 31 J.); VV = trotzdem woanders unterschrieben.
@@ -240,6 +242,11 @@ async function karriere(browser, lauf) {
                             const teuer = squad.filter(p => !ids.includes(p.id) && !isClubLegend(p)).sort((a, b) => b.wage - a.wage)[0];
                             if (!teuer) break;
                             const vorher = squad.length;
+                            // Junge Ergänzungsspieler verleihen statt verkaufen (25.21): Gehalt runter, Spieler bleibt.
+                            if ((teuer.age || 25) <= 25 && !(teuer.injured > 0) && getProLoans().length < PRO_LOAN_MAX && squad.length > PRO_LOAN_MIN_SQUAD) {
+                                loanOutProPlayer(teuer.id, null);
+                                if (squad.length < vorher) { window.__leih = (window.__leih || 0) + 1; continue; }
+                            }
                             sellPlayer(teuer.id, null);
                             if (squad.length === vorher) sellPlayer(teuer.id, null);
                             if (squad.length === vorher) break;
@@ -277,6 +284,13 @@ async function karriere(browser, lauf) {
                         if (!wahl && squad.length < 22) wahl = alle.sort((a, b) => b.p.strength - a.p.strength)[0];
                         if (!wahl) break;
                         const vorher = squad.length;
+                        // Ab 22 Spielern den schwächsten passenden Ergänzungsspieler in Zahlung geben (25.21).
+                        const tausch = squad.length >= 22 && squad.filter(p => !ids.includes(p.id) && !isClubLegend(p) && isSwapCandidate(p, wahl.p))
+                            .sort((a, b) => a.strength - b.strength)[0];
+                        if (tausch) {
+                            finalizePlayerPurchase(wahl.p, getTransferAsking(wahl.p), wahl.p.wage, tausch.id);
+                            if (!squad.some(p => p.id === tausch.id)) { window.__tausch = (window.__tausch || 0) + 1; continue; }
+                        }
                         buyPlayer(wahl.i);
                         if (squad.length === vorher) break;
                     }
@@ -415,6 +429,8 @@ async function karriere(browser, lauf) {
                 zeile.abgaenge = kaderVorher.filter(id => !squad.some(p => p.id === id)).length;
                 zeile.kaeufe = squad.filter(p => p.joined && p.joined.via === 'kauf' && p.joined.season === start.season).length;
                 zeile.verkaeufe = window.__verk || 0; window.__verk = 0;
+                zeile.leihen = window.__leih || 0; window.__leih = 0;
+                zeile.tausch = window.__tausch || 0; window.__tausch = 0;
                 zeile.talentErloes = window.__talentVerk || 0; window.__talentVerk = 0;
                 const elfIds = pickBestLineupIds();
                 zeile.jugend = squad.filter(p => p.joined && p.joined.via === 'jugend').length;
@@ -434,7 +450,7 @@ async function karriere(browser, lauf) {
     zeilen.forEach(z => {
         if (z.crash) return console.log('ABSTURZ: ' + z.crash);
         if (z.entlassen) return console.log(`${String(z.season).padStart(3)} ENTLASSEN (Liga ${z.liga + 1})`);
-        console.log(`${String(z.season).padStart(3)} ${String(z.liga + 1).padStart(4)} ${String(z.platz).padStart(2)} ${String(z.punkte).padStart(3)} ${mio(z.geld)} ${mio(z.transfer)} ${String(Math.round(z.gehaltBudget / 1000)).padStart(7)}k ${String(Math.round(z.gehaltSumme / 1000)).padStart(5)}k ${String(z.elf).padStart(4)} ${String(z.ligaSchnitt).padStart(4)} ${String(z.ligaTop).padStart(3)} ${String(z.kader).padStart(3)} ${String(z.vorstand).padStart(3)} ${z.europaRunde ? ('CC:' + z.europaRunde).padEnd(13) : '-'.padEnd(13)} ${z.pokal ? 'Pokal ' + z.pokal : ''}${z.ligaDanach !== z.liga ? ' → Liga ' + (z.ligaDanach + 1) : ''}${z.lizenzOffen ? ` LIZENZ-SPERRE:${z.lizenzOffen}` : ''}${z.notkader ? ' NOTKADER' : ''}${z.entlassenAmEnde ? ' ENTLASSEN (Saisonende)' : ''}${z.kaeufe || z.verkaeufe ? ` K${z.kaeufe}/V${z.verkaeufe}` : ''}${z.erwartet ? ` E${z.erwartet}` : ''}${z.jugend ? ` J${z.jugendElf}/${z.jugend}` : ''}${z.talentErloes ? ` TV${(z.talentErloes / 1e6).toFixed(2)}M` : ''}${z.vvWeg ? ` VV${z.vvWeg}` : ''}${z.strat ? ` S:${z.strat}` : ''}`);
+        console.log(`${String(z.season).padStart(3)} ${String(z.liga + 1).padStart(4)} ${String(z.platz).padStart(2)} ${String(z.punkte).padStart(3)} ${mio(z.geld)} ${mio(z.transfer)} ${String(Math.round(z.gehaltBudget / 1000)).padStart(7)}k ${String(Math.round(z.gehaltSumme / 1000)).padStart(5)}k ${String(z.elf).padStart(4)} ${String(z.ligaSchnitt).padStart(4)} ${String(z.ligaTop).padStart(3)} ${String(z.kader).padStart(3)} ${String(z.vorstand).padStart(3)} ${z.europaRunde ? ('CC:' + z.europaRunde).padEnd(13) : '-'.padEnd(13)} ${z.pokal ? 'Pokal ' + z.pokal : ''}${z.ligaDanach !== z.liga ? ' → Liga ' + (z.ligaDanach + 1) : ''}${z.lizenzOffen ? ` LIZENZ-SPERRE:${z.lizenzOffen}` : ''}${z.notkader ? ' NOTKADER' : ''}${z.entlassenAmEnde ? ' ENTLASSEN (Saisonende)' : ''}${z.kaeufe || z.verkaeufe ? ` K${z.kaeufe}/V${z.verkaeufe}` : ''}${z.leihen ? ` L${z.leihen}` : ''}${z.tausch ? ` T${z.tausch}` : ''}${z.erwartet ? ` E${z.erwartet}` : ''}${z.jugend ? ` J${z.jugendElf}/${z.jugend}` : ''}${z.talentErloes ? ` TV${(z.talentErloes / 1e6).toFixed(2)}M` : ''}${z.vvWeg ? ` VV${z.vvWeg}` : ''}${z.strat ? ` S:${z.strat}` : ''}`);
     });
     if (process.env.DIAG) zeilen.forEach(z => { if (z.season) console.log(`\n[S${z.season}] Lizenz offen: ${z.lizenzVorEnde || '-'} | Verlängerung ${JSON.stringify(z.vl)} | Abgänge ${z.abgaenge} | Fehler: ${(z.toasts || []).join(' ; ')}\n      Post: ${(z.post || []).join(' ; ')}`); });
     if (process.env.STRDIAG) zeilen.forEach(z => { if (z.str) console.log(`[S${z.season} Liga ${z.liga + 1} Pl ${z.platz}] ${z.str}`); });

@@ -1771,10 +1771,10 @@ async function testSwapDeals(browser) {
             out.auswahl = document.getElementById('transfer-poker-box').innerHTML.includes('in Zahlung geben');
             setPokerSwap(tausch.id);
             const wert = getSwapValue(tausch, ziel, fee);
-            const geld = game.money, tb = game.transferBudget, agent = getAgentFee(ziel, fee);
+            const geld = game.money, tb = game.transferBudget, agent = getAgentFee(ziel, fee) + getAgentFee(tausch, wert);
             signPokerDeal();
             out.angerechnet = wert > 0 && wert <= fee && wert <= Math.round(tausch.marketValue * 0.85 / 1000) * 1000;
-            out.bar = game.money === geld - (fee - wert) - agent && game.transferBudget === tb - (fee - wert);
+            out.bar = game.money === geld - (fee - wert) - agent && game.transferBudget === tb - (fee - wert) - Math.round(wert * 0.15);
             out.weg = !squad.some(x => x.id === tausch.id) && squad.some(x => x.id === ziel.id);
             // Zu schwache oder zu alte Spieler nimmt der Verkäufer nicht
             const alt = squad[0]; const age0 = alt.age; alt.age = 33;
@@ -1786,7 +1786,7 @@ async function testSwapDeals(browser) {
     assert(!r.crash, `Tauschgeschäft ohne Absturz (${r.crash || 'ok'})`);
     if (!r.crash) {
         assert(r.auswahl, 'Nach der Einigung lässt sich im Transferpoker ein eigener Spieler in Zahlung geben');
-        assert(r.angerechnet && r.bar, 'Angerechnet werden höchstens 85 % des Marktwerts, Kasse und Transferbudget zahlen nur den Rest');
+        assert(r.angerechnet && r.bar, 'Angerechnet werden höchstens 85 % des Marktwerts; die Kasse zahlt den Rest, das Transferbudget wie bei einem Verkauf (85 % der Anrechnung), Provision für beide Berater');
         assert(r.weg && r.zuAlt, 'Der Tauschspieler verlässt den Verein; über 30-Jährige nimmt der Verkäufer nicht');
     }
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
@@ -1821,6 +1821,20 @@ async function testProLoans(browser) {
             tickLoanedPlayers();
             out.zurueck = squad.some(x => x.id === p.id) && getProLoans().length === 0 && p.morale === Math.min(100, moral + 5) && p.strength === staerke + 1;
             out.anteilGebucht = l.eigen === 0 || game.kontoauszug.some(b => b.label.includes('Leihspieler-Gehalt'));
+            // Randfälle (25.21): Verletzte bleiben, Speichern/Laden behält die Leihe, Vereinswechsel löst sie
+            const verletzt = squad.find(x => x.id !== p.id); verletzt.injured = 3;
+            loanOutProPlayer(verletzt.id, null);
+            out.verletztBleibt = squad.some(x => x.id === verletzt.id);
+            verletzt.injured = 0;
+            const leihling = squad.find(x => x.id !== p.id && x.id !== verletzt.id);
+            incomingOffers.push({ id: 'test-off', playerId: leihling.id, amount: 1000 });
+            loanOutProPlayer(leihling.id, null);
+            out.angebotWeg = !incomingOffers.some(o => o.playerId === leihling.id);
+            const gespeichert = JSON.parse(JSON.stringify(buildSaveState()));
+            out.gespeichert = (gespeichert.loanedPlayers || []).some(l => l.proLoan && l.player.id === leihling.id);
+            const ziel = leaguesData[game.leagueLevel].find(t => t.name !== game.clubName && !(game.secondTeam && t.name === game.secondTeam.name));
+            switchToClub(ziel.name);
+            out.wechselLoest = getProLoans().length === 0 && !squad.some(x => x.id === leihling.id);
             // Außerhalb des Fensters nicht möglich
             game.matchday = 10; game.winterWindowActive = false;
             loanOutProPlayer(squad[0].id, null);
@@ -1834,6 +1848,8 @@ async function testProLoans(browser) {
         assert(r.verliehen, 'Verliehen bis Saisonende, der Spieler zählt nicht mehr im Gehaltsbudget');
         assert(r.zurueck && r.anteilGebucht, 'Eigenanteil wird gebucht, Rückkehr mit Moral +5 und (bis 23 Jahre) +1 Stärke');
         assert(r.nurImFenster, 'Profis lassen sich nur im Wechselfenster verleihen');
+        assert(r.verletztBleibt && r.angebotWeg, 'Verletzte lassen sich nicht verleihen; offene Angebote für einen verliehenen Spieler verfallen');
+        assert(r.gespeichert && r.wechselLoest, 'Die Leihe steht im Spielstand; ein Vereinswechsel löst sie (der Spieler bleibt beim alten Verein)');
     }
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
     await page.close();
@@ -1906,6 +1922,11 @@ async function testTrainingGrowthCaps(browser) {
             const geld2 = game.money;
             bookTrainingCamp('alps');
             out.einmal = game.money === geld2;
+            // Spieler-Popup zeigt den Stand (25.21)
+            const pdSpieler = squad[0]; pdSpieler.age = 20; pdSpieler.trainingGains = { season: game.season, n: 3 };
+            openPlayerDetail(pdSpieler.id, 'squad');
+            out.popup = document.getElementById('pd-fields').textContent.includes('3/3 Punkte diese Saison');
+            closePlayerDetail();
             return out;
         } catch (e) { return { crash: e.message + ' ' + e.stack }; }
     });
@@ -1913,6 +1934,7 @@ async function testTrainingGrowthCaps(browser) {
     if (!r.crash) {
         assert(r.deckel, 'Einzeltraining: bis 21 Jahre höchstens +3 Stärke pro Saison, ab 30 keine');
         assert(r.saison, 'Ganzer Kader mit Trainingsschwerpunkt wächst über viele Spieltage nicht über den Deckel');
+        assert(r.popup, 'Das Spieler-Popup zeigt das Trainingsplus der Saison (3/3)');
         assert(r.lager && r.einmal, 'Trainingslager: kein dauerhaftes Stärkeplus mehr, nur einmal pro Saison, Kosten nach Liga');
     }
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
@@ -6346,6 +6368,20 @@ async function testSquadPlanningTool(browser) {
         out.kaderWarnung = warnHtml.includes('Nur 16 Spieler') && warnHtml.includes('Notbesetzung');
         squad = ganzerKader;
         out.gehaltsWarnung = getSquadPlanningWageOutlook().spielraum !== 0 && (() => { renderSquadPlanningView(); return document.getElementById('squad-planning-wage-box').innerHTML.includes(getSquadPlanningWageOutlook().spielraum >= 0 ? 'Spielraum' : 'über dem Budget'); })();
+        // Gehaltsüberhang (25.21): Vorschläge mit Leihe (bis 25) oder Verkauf, sonst kein Hinweis
+        const budgetAlt = game.wageBudget;
+        game.wageBudget = 1;
+        const entlElf = pickBestLineupIds();
+        const ergaenzer = squad.filter(p => !entlElf.includes(p.id)).sort((a, b) => b.wage - a.wage);
+        ergaenzer[0].age = 22; if (ergaenzer[1]) ergaenzer[1].age = 31;
+        renderSquadPlanningView();
+        const entlastung = document.getElementById('squad-planning-wage-box').innerHTML;
+        out.entlastung = entlastung.includes('Entlastung') && entlastung.includes(ergaenzer[0].name + ' (22') && entlastung.includes('verleihen an')
+            && (!ergaenzer[1] || entlastung.includes('verkaufen - spart'));
+        game.wageBudget = 1e9;
+        renderSquadPlanningView();
+        out.keineEntlastung = getSquadPlanningWageOutlook().spielraum < 0 || !document.getElementById('squad-planning-wage-box').innerHTML.includes('Entlastung');
+        game.wageBudget = budgetAlt;
 
         return out;
     });
@@ -6365,6 +6401,7 @@ async function testSquadPlanningTool(browser) {
     assert(r.vertragsklippeNachPosition, 'Auslaufende Verträge werden nach Position aufgeschlüsselt angezeigt');
     assert(r.gehaltsplanung && r.gehaltsWarnung, 'Gehaltsplanung zeigt auslaufende Stammspieler, Verlängerungskosten und Spielraum gegen das Budget');
     assert(r.kaderWarnung, 'Kaderplanung warnt unter 20 Spielern und wenn nach Vertragsende weniger als 14 blieben');
+    assert(r.entlastung && r.keineEntlastung, 'Bei Gehaltsüberhang schlägt die Kaderplanung die teuersten Ergänzungsspieler vor (bis 25 Jahre Leihe, sonst Verkauf)');
     assert(r.vorvertragsWarnung, 'Kaderplanung warnt vor Vorvertrags-Angeboten (mit Frist) und nennt gefährdete Leistungsträger');
     assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Kaderplanungstool');
     await page.close();

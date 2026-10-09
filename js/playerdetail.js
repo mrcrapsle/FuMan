@@ -38,6 +38,7 @@
             <span class="label">Geburtsdatum:</span><span class="val">${p.birthDate || '-'}</span>
             <span class="label">Rating:</span><span class="val">${p.strength}</span>
             <span class="label">Talent:</span><span class="val">${p.strength}</span>
+            ${(pool === 'squad' || pool === 'secondTeam') && typeof getTrainingGainsLabel === 'function' ? `<span class="label">Trainingsplus:</span><span class="val">${getTrainingGainsLabel(p)}</span>` : ''}
             <span class="label">Moral:</span><span class="val">${p.morale ?? '-'}</span>
             <span class="label">Fitness:</span><span class="val">${p.fitness ?? '-'}</span>
             <span class="label">Größe:</span><span class="val">${p.height ? p.height + ' cm' : '-'}</span>
