@@ -13,9 +13,12 @@
 //   erste Elf des Spieltags eigener Absolventen landen in game.youthMoments.
 
 const YOUTH_POTENTIAL_RANGE = { 1: [58, 68], 2: [67, 78], 3: [77, 89] };
-// Potenzial relativ zum Liga-Schnitt beim Sichten (p.youthLeagueBase, 25.17): Stufe 1 Ergänzungsspieler
-// unter dem Schnitt, Stufe 2 Stammspieler-Niveau, Stufe 3 klar darüber. Ältere Talente ohne Basis nutzen die festen Spannen.
-const YOUTH_POTENTIAL_OFFSET = { 1: [-10, -3], 2: [-3, 4], 3: [4, 10] };
+// Potenzial relativ zum Liga-Schnitt beim Sichten (p.youthLeagueBase, 25.17): Stufe 1 Kaderfüller,
+// Stufe 2 Ergänzung bis Stammspieler, Stufe 3 Stammspieler bis Leistungsträger. Ältere Talente ohne
+// Basis nutzen die festen Spannen. 25.22: vorher -10..-3 / -3..+4 / +4..+10 - mit Internat und Akademie
+// erreichten ~70 % der Talente Stammspieler-Niveau, der Bundesliga-Bot hatte nach 9-10 Saisons 8-10
+// eigene Talente in der besten Elf.
+const YOUTH_POTENTIAL_OFFSET = { 1: [-12, -5], 2: [-6, 0], 3: [0, 6] };
 const YOUTH_PRO_AGE = 19;
 const YOUTH_DECISION_MATCHDAYS = 8;
 let youthLoanChoiceId = null;

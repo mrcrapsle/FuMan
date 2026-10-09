@@ -219,6 +219,7 @@
         safeLocalSet('anstoss_fm13_language', currentLang);
         applyI18nToDOM();
         if (typeof applyUiTranslation === 'function') applyUiTranslation(currentLang);
+        if (typeof renderLexicon === 'function') renderLexicon();
     }
 
     function toggleLanguage() {

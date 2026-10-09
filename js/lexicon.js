@@ -17,7 +17,7 @@ const LEXICON_ENTRIES = [
         text: 'Schwankt von Spiel zu Spiel um den Wert 50 und verändert die effektive Stärke leicht - gute Tage und schlechte Tage.',
         tips: ['„Trainer stellt Top-Elf auf“ berücksichtigt Tagesform und Fitness'] },
     { cat: 'Spieler', title: 'Potenzial (Jugend)', screen: 'screen-youth',
-        text: 'Obergrenze, bis zu der sich ein Talent entwickeln kann. Ungeprüft unbekannt; die Potenzial-Prüfung (3.000 €) zeigt eine Spanne. Talente richten sich nach der eigenen Liga: gesichtet starten sie 14-24 Punkte unter dem Liga-Schnitt (Akademie +2 je Stufe bis Stufe 5, Internat +2 je Stufe; jede Akademie-Stufe ab 2 hebt auch die Chance auf ein Top-Talent um 4 %); das Potenzial liegt je nach Stufe unter dem Liga-Schnitt (Ergänzungsspieler), auf Stammspieler-Niveau oder bis 10 Punkte darüber. Die Sichtung kostet 2 % des Transferbudgets der Liga (mind. 2.000 €).',
+        text: 'Obergrenze, bis zu der sich ein Talent entwickeln kann. Ungeprüft unbekannt; die Potenzial-Prüfung (3.000 €) zeigt eine Spanne. Talente richten sich nach der eigenen Liga: gesichtet starten sie 14-24 Punkte unter dem Liga-Schnitt (Akademie +2 je Stufe bis Stufe 5, Internat +2 je Stufe; jede Akademie-Stufe ab 2 hebt auch die Chance auf ein Top-Talent um 4 %); das Potenzial liegt je nach Stufe 5-12 Punkte unter dem Liga-Schnitt (Kaderfüller), bis 6 darunter (Ergänzung bis Stammspieler) oder bis 6 darüber (Leistungsträger). Die Sichtung kostet 2 % des Transferbudgets der Liga (mind. 2.000 €).',
         tips: ['Leihe zur Entwicklung bringt mit Stammplatz mehr als die Akademie allein', 'Mentor und Jugendtrainer beschleunigen die Entwicklung', 'Mit 19 ist eine Profivertrag-Entscheidung fällig'] },
     { cat: 'Spieler', title: 'Marktwert', screen: 'screen-transfer',
         text: 'Richtwert für Ablösen. Steigt mit der Stärke, mit Länderspielen, Turniererfolgen und Auszeichnungen.',
@@ -92,7 +92,7 @@ const LEXICON_ENTRIES = [
         text: 'Liga 1 bis 3 sind bundesweit. Darunter ist der deutsche Fußball regional geteilt: welche Regionalliga (Nord, Nordost, West, Südwest, Bayern), Oberliga und 6. Liga du spielst und welcher Landespokal dich in den DFB-Pokal bringt, hängt an der Heimatstadt deines Vereins. Du wählst sie beim neuen Spiel. Jeder Verein hat eine echte Stadt; die Namen sind - wie die Spielernamen - leicht verfremdet. In den oberen Ligen stehen echte Vereine, in den unteren zusätzlich Vereine aus echten Orten der Gegend.',
         tips: ['Spielstände von vor Version 3.43 behalten ihre Ligen (Nordost/Sachsen)', 'In Großstädten wie Berlin oder Hamburg spielen viele Vereine derselben Stadt in einer Liga'] },
     { cat: 'Verein', title: 'Kabine, Cliquen & Kapitän', screen: 'screen-squad',
-        text: 'Ein Mannschaftsrat: Kapitän plus die zwei Spieler mit der größten Führungsqualität (Leader-Eigenschaft, Alter, Erfahrung, Moral). Spieler gruppieren sich nach Nation und Alter; fällt die Stimmung einer Gruppe unter 40, rumort sie: Teamstärke sinkt, und jeden Monat färbt die Laune auf den Rest ab. Ein Kapitän mit Autorität (Moral ab 60) dämpft das.',
+        text: 'Ein Mannschaftsrat: Kapitän plus die zwei Spieler mit der größten Führungsqualität (Leader-Eigenschaft, Alter, Erfahrung, Moral). Spieler gruppieren sich nach Nation und Alter; fällt die Stimmung einer Gruppe unter 40, rumort sie: Teamstärke sinkt, und jeden Monat färbt die Laune auf den Rest ab. Ein Kapitän mit Autorität (Moral ab 60) dämpft das. Verlässt der Kapitän den Kader, übernimmt der Spieler mit der größten Führungsqualität die Binde.',
         tips: ['Wortführer melden sich beim Mannschaftsrat (anhören oder klare Ansage)', 'Unzufriedene Leistungsträger kommen ins Büro: Einsatzgarantie, Leistung einfordern oder Wechsel erlauben', 'Kapitän wechseln kostet den alten Kapitän Moral - einen Neuling ohne Standing nimmt der Rat übel'] },
     { cat: 'Verein', title: 'Fanstimmung', screen: 'screen-fans',
         text: 'Wie zufrieden die Anhänger sind (0-100). Beeinflusst Zuschauer, Fanartikel und Mitgliederzahlen.',
@@ -176,14 +176,14 @@ const LEXICON_ENTRIES = [
         text: 'Ein Derby ist ein Spiel gegen einen Verein aus deiner Stadt oder ein echtes Traditionsduell (Revierderby, Nordderby, Rheinderby, Frankenderby, Sachsenderby ...). In Großstädten zählen nur die drei stärksten Stadtrivalen deiner Liga, Vereine aus Stadtteilen nur untereinander. Derbys bringen mehr Zuschauer, die Derby-Woche und eine eigene Derby-Bilanz (Historie > Rivalen). Einen festen Dauerrivalen oder Erzfeind-Trainer gibt es nicht mehr.',
         tips: ['Im Kalender gibt es ein Testspiel gegen den Stadtrivalen', 'Wer in einer Stadt ohne zweiten Verein spielt, hat nur Traditionsduelle - oder gar keine Derbys']},
     { cat: 'Karriere', title: 'Jobangebote', screen: 'screen-dashboard',
-        text: 'Erfolgreiche Manager bekommen Angebote von stärkeren Vereinen. Ein Wechsel nimmt Karriere und Trophäen mit, der Kader ist neu.',
+        text: 'Erfolgreiche Manager bekommen Angebote von stärkeren Vereinen. Ein Wechsel nimmt Karriere und Trophäen mit, der Kader ist neu. Der neue Vorstand startet bei 60 Vertrauen mit einem Saisonziel für den neuen Kader.',
         tips: ['Ein Angebot gilt 6 Spieltage', 'Man kann es auch als Druckmittel für den Vorstand nutzen'] },
     { cat: 'Karriere', title: 'Karriere-Szenarien', screen: 'screen-dashboard',
         text: 'Beim neuen Spiel wählbar: Absteiger retten, Pleiteklub sanieren, Traditionsverein zurückführen, Meister oder Chaos - mit Ziel, Frist und 1-3 Sternen.',
         tips: ['Danach geht die Karriere als freies Spiel weiter', 'Pleiteklub: Kredite zählen als Schulden, jeder Zwangsverkauf kostet einen Stern - zwei lassen die Sanierung scheitern'] },
     { cat: 'Bedienung', title: 'Bedienung mit einer Hand', screen: 'screen-dashboard',
         text: 'Auf dem Handy liegt alles Wichtige im Daumenbereich: der Knopf „▶ Spieltag“ startet von jedem Bildschirm den nächsten Spieltag, „☰ Menü“ in der unteren Leiste öffnet alle Bereiche, Fenster fahren von unten ein und im Livespiel bleiben Szene, Pause und Abpfiff über der Leiste stehen. Die Zurück-Taste schließt Meldungen, Fenster und Menü oder geht einen Bildschirm zurück - erst zweimal Zurück auf dem Startbildschirm verlässt das Spiel.',
-        tips: ['Linkshänder: Menü → Einstellungen → „Weiter-Knopf“ nach links stellen (oder ausblenden)', 'Fenster mit ✕ schließen auch per Tipp auf die dunkle Fläche daneben', 'Sprache und Ton stehen auf dem Handy im Menü unter Einstellungen', 'English: alle festen Texte (Menüs, Überschriften, Knöpfe) wechseln, Meldungen und Spielberichte bleiben vorerst deutsch'] },
+        tips: ['Linkshänder: Menü → Einstellungen → „Weiter-Knopf“ nach links stellen (oder ausblenden)', 'Fenster mit ✕ schließen auch per Tipp auf die dunkle Fläche daneben', 'Sprache und Ton stehen auf dem Handy im Menü unter Einstellungen', 'English: alle festen Texte (Menüs, Überschriften, Knöpfe) und dieses Lexikon wechseln, Meldungen und Spielberichte bleiben vorerst deutsch'] },
     { cat: 'Bedienung', title: 'Speichern', screen: 'screen-dashboard',
         text: 'Drei Speicher-Slots plus automatisches Speichern alle 5 Spieltage. Beim Start wird immer der zuletzt gespeicherte Stand geladen - ist er beschädigt, der nächstneuere heile. Jeder Stand wird vor dem Laden geprüft: kaputte Stände lassen das laufende Spiel unangetastet, kleine Schäden werden repariert. Vor dem Laden, dem Überschreiben eines Slots und einem neuen Spiel entsteht eine Sicherheitskopie.',
         tips: ['Wenn der Browser das Speichern blockiert, Spielstand als Datei exportieren', 'In der Dateivorschau mancher Handys geht Speichern nicht - im Browser öffnen', 'Der Füllstand steht unter den Speicherständen - ab 80 % warnt das Spiel, bei vollem Speicher weicht zuerst die Sicherheitskopie', 'Nur eine exportierte Datei übersteht das Leeren des Browserspeichers - das Spiel erinnert alle 3 Saisons daran'] }
@@ -225,15 +225,18 @@ function renderLexicon() {
     const suche = (input ? input.value : '').trim().toLowerCase();
     const kategorien = ['Alle', ...new Set(LEXICON_ENTRIES.map(e => e.cat))];
     const chips = document.getElementById('lexicon-categories');
-    if (chips) chips.innerHTML = kategorien.map(k => `<button onclick="setLexiconCategory('${k}')" class="${k === lexiconCategory ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:9px; padding:4px 8px;">${k}</button>`).join('');
+    const katLabel = k => (typeof currentLang !== 'undefined' && currentLang === 'en' && typeof LEXICON_CATEGORY_EN !== 'undefined' && LEXICON_CATEGORY_EN[k]) || k;
+    if (chips) chips.innerHTML = kategorien.map(k => `<button onclick="setLexiconCategory('${k}')" class="${k === lexiconCategory ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:9px; padding:4px 8px;">${katLabel(k)}</button>`).join('');
     const filterHinweis = document.getElementById('lexicon-screen-filter');
     if (filterHinweis) filterHinweis.innerHTML = lexiconScreenFilter ? `<div class="box" style="font-size:10px; display:flex; justify-content:space-between; align-items:center; gap:6px;"><span>Nur Einträge zum Bildschirm, von dem du kommst.</span><button onclick="setLexiconCategory('Alle')" class="btn-secondary" style="width:auto; font-size:9px;">Alle zeigen</button></div>` : '';
-    const treffer = LEXICON_ENTRIES.filter(e => (lexiconCategory === 'Alle' || e.cat === lexiconCategory)
+    // Englisch (js/lexicon-en.js, 25.22): Titel, Text und Tipps in der gewählten Sprache, auch für die Suche.
+    const lokal = e => typeof getLexiconEntryLocalized === 'function' ? getLexiconEntryLocalized(e) : e;
+    const treffer = LEXICON_ENTRIES.map(lokal).filter(e => (lexiconCategory === 'Alle' || e.cat === lexiconCategory)
         && (!lexiconScreenFilter || e.screen === lexiconScreenFilter)
         && (!suche || (e.title + ' ' + e.text + ' ' + e.tips.join(' ')).toLowerCase().includes(suche)));
     box.innerHTML = treffer.length ? treffer.map(e => `<div class="box" style="font-size:10px;">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
-            <strong style="color:var(--accent);">${e.title}</strong><span style="font-size:8px; color:var(--text-muted);">${e.cat}</span>
+            <strong style="color:var(--accent);">${e.title}</strong><span style="font-size:8px; color:var(--text-muted);">${e.catLabel || e.cat}</span>
         </div>
         <div style="margin-top:3px;">${e.text}</div>
         <ul style="margin:4px 0 0 0; padding-left:16px;">${e.tips.map(t => `<li>${t}</li>`).join('')}</ul>

@@ -1930,6 +1930,45 @@ async function testCaptainSuccession(browser) {
     await page.close();
 }
 
+async function testLexiconEnglish(browser) {
+    console.log('\n[25.22] Lexikon auf Englisch: jeder Eintrag übersetzt, Zahlen wie im Original');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const out = { fehlend: [], zahlen: [] };
+            const ziffern = t => (t.match(/\d+/g) || []);
+            LEXICON_ENTRIES.forEach(e => {
+                const en = LEXICON_EN[e.title];
+                if (!en || !en.title || !en.text || !Array.isArray(en.tips) || en.tips.length !== e.tips.length) { out.fehlend.push(e.title); return; }
+                const enZ = ziffern(en.text + ' ' + en.tips.join(' '));
+                const fehlt = ziffern(e.text + ' ' + e.tips.join(' ')).filter(z => !enZ.includes(z));
+                if (fehlt.length) out.zahlen.push(e.title + ': ' + fehlt.join(','));
+            });
+            showScreen('screen-lexicon');
+            setLanguage('en');
+            const html = document.getElementById('lexicon-list').innerHTML;
+            out.englisch = html.includes('Strength') && html.includes('Base value of every player') && !html.includes('Grundwert jedes Spielers');
+            out.kategorie = document.getElementById('lexicon-categories').textContent.includes('Players');
+            const suche = document.getElementById('lexicon-search');
+            if (suche) { suche.value = 'pressing'; renderLexicon(); out.suche = document.getElementById('lexicon-list').innerHTML.includes('Tactical duel'); suche.value = ''; } else out.suche = true;
+            setLanguage('de');
+            out.deutsch = document.getElementById('lexicon-list').innerHTML.includes('Grundwert jedes Spielers');
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Lexikon englisch ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.fehlend.length === 0, `Jeder Lexikon-Eintrag hat eine englische Fassung mit gleich vielen Tipps (${r.fehlend.join(' | ')})`);
+        assert(r.zahlen.length === 0, `Die englische Fassung enthält alle Zahlen des deutschen Textes (${r.zahlen.slice(0, 3).join(' | ')})`);
+        assert(r.englisch && r.kategorie && r.suche, 'Auf Englisch zeigt das Lexikon englische Titel, Texte und Kategorien, die Suche findet englische Begriffe');
+        assert(r.deutsch, 'Zurück auf Deutsch zeigt das Lexikon wieder deutsch');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testTrainingGrowthCaps(browser) {
     console.log('\n[25.20] Stärkezuwachs aus Training begrenzt: Einzeltraining nach Alter, Trainingslager einmal pro Saison');
     const { page, consoleErrors } = await freshPage(browser);
@@ -8828,6 +8867,7 @@ async function main() {
         testTrainingGrowthCaps,
         testProLoans,
         testCaptainSuccession,
+        testLexiconEnglish,
         testEnglishUi,
         testSwapDeals,
         testPlayerProfile,
