@@ -495,7 +495,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.100', date: '10.10.2026', features: 'Phase 25.28: Vorwarnung bei fallendem Vertrauen mit Dashboard-Zeile und Autosave, Dominanz-Hinweis des Co-Trainers, zwei Karriere-Stände als Fixtures, Startzeit-Test mit Bestwert aus drei Läufen' };
+    const GAME_VERSION = { number: '3.101', date: '10.10.2026', features: 'Phase 25.29-25.30: Speicher-voll-Hinweis mit Sicherheitskopie, Transferpoker mit Geduld-Zahl und Angebotsanteil, Bot-Messungen Vorstand/Liga 6/Bundesliga/Talente, Poker-Messskript, Testfestigkeit' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
