@@ -1065,17 +1065,17 @@ async function testCoTrainerLive(browser) {
             const box = document.getElementById('live-cotrainer-box').innerHTML;
             out.rueckstand = box.includes('Brechstange') && document.getElementById('ticker-log').innerHTML.includes('Co-Trainer');
             followCoTrainerHint(0);
-            out.befolgt = activeLiveShout === 'brechstange' && game.coTrainerTrust === Math.min(100, trust + 1) && game.coTrainerHistory.liveFollowed === 1 && document.getElementById('live-cotrainer-box').innerHTML === '';
+            out.befolgt = activeLiveShout === 'brechstange' && game.coTrainerTrust === Math.min(100, trust + 1) && game.coTrainerHistory.liveFollowed === 1 && !document.getElementById('live-cotrainer-box').innerHTML.includes('Nein danke');
             // Abstand: sofort danach kein neuer Hinweis
             currentMatch.minute = 75;
             tickCoTrainerLive();
-            out.abstand = document.getElementById('live-cotrainer-box').innerHTML === '';
+            out.abstand = !document.getElementById('live-cotrainer-box').innerHTML.includes('Nein danke');
             // Stufe 1 kennt keine Karten-Hinweise
             const elf = squad.filter(p => lineup.includes(p.id) && p.pos !== 'TW');
             stand(1, 1); frisch(); currentMatch.minute = 40; game.tackleHardness = 'normal';
             currentMatch.yellowCards[elf[0].id] = 1;
             tickCoTrainerLive();
-            out.stufe1OhneKarte = document.getElementById('live-cotrainer-box').innerHTML === '';
+            out.stufe1OhneKarte = !document.getElementById('live-cotrainer-box').innerHTML.includes('Nein danke');
             // Stufe 2: Gelb-Rot-Gefahr -> Härte runter
             ensureStaffMeta('coTrainer').level = 2; frisch();
             tickCoTrainerLive();
@@ -1107,7 +1107,7 @@ async function testCoTrainerLive(browser) {
             ensureStaffMeta('coTrainer').morale = 20; frisch(); currentMatch.minute = 79; stand(1, 0); activeLiveShout = 'standard';
             Math.random = () => 0.9;
             tickCoTrainerLive();
-            out.laune = document.getElementById('live-cotrainer-box').innerHTML === '';
+            out.laune = !document.getElementById('live-cotrainer-box').innerHTML.includes('Nein danke');
             Math.random = () => 0;
             ensureStaffMeta('coTrainer').morale = 80;
             tickCoTrainerLive();
@@ -1979,6 +1979,7 @@ async function testLexiconEnglish(browser) {
                 suche.value = 'set-piece'; renderLexicon(); out.suchePunkt = document.getElementById('lexicon-list').innerHTML.includes('Set pieces');
                 suche.value = 'setpieces'; renderLexicon(); out.sucheOhne = document.getElementById('lexicon-list').innerHTML.includes('Set pieces');
                 suche.value = 'Base value'; renderLexicon(); out.sucheLeerzeichen = document.getElementById('lexicon-list').innerHTML.includes('Strength');
+                suche.value = 'focus'; renderLexicon(); out.sucheFokus = document.getElementById('lexicon-list').innerHTML.includes('Keyboard and focus');
                 suche.value = ''; renderLexicon();
             } else out.suche = out.suchePunkt = out.sucheOhne = true;
             setLanguage('de');
@@ -1991,6 +1992,7 @@ async function testLexiconEnglish(browser) {
         assert(r.fehlend.length === 0, `Jeder Lexikon-Eintrag hat eine englische Fassung mit gleich vielen Tipps (${r.fehlend.join(' | ')})`);
         assert(r.zahlen.length === 0, `Die englische Fassung enthält alle Zahlen des deutschen Textes (${r.zahlen.slice(0, 3).join(' | ')})`);
         assert(r.englisch && r.kategorie && r.suche, 'Auf Englisch zeigt das Lexikon englische Titel, Texte und Kategorien, die Suche findet englische Begriffe');
+        assert(r.sucheFokus, 'Der englische Lexikon-Eintrag zur Tastatur findet sich über "focus"');
         assert(r.sucheLeerzeichen, 'Die englische Suche findet mit Leerzeichen ("Base value" → Strength)');
         assert(r.suchePunkt && r.sucheOhne, 'Die Suche ignoriert Bindestriche und Leerzeichen ("set-piece" findet "Set pieces")');
         assert(r.deutsch, 'Zurück auf Deutsch zeigt das Lexikon wieder deutsch');
@@ -9224,7 +9226,7 @@ async function testAeltereStaende(browser) {
     for (const datei of dateien) {
         const raw = fs.readFileSync(path.join(ordner, datei), 'utf8');
         const erwartet = JSON.parse(raw);
-        const version = datei.replace(/^v|\.json$/g, '');
+        const version = datei.replace(/\.json$/, '').replace(/^v/, '');
         const { page, consoleErrors } = await freshPage(browser);
         page.on('dialog', d => d.accept());
         const r = await page.evaluate((raw) => {
@@ -9243,6 +9245,18 @@ async function testAeltereStaende(browser) {
             assert(Math.round(r.money) === Math.round(erwartet.game.money), `Stand ${version}: Geld bleibt erhalten (${Math.round(r.money)} statt ${Math.round(erwartet.game.money)})`);
             assert(r.kader === erwartet.squad.length && r.verein === erwartet.game.clubName, `Stand ${version}: Verein und Kader bleiben erhalten`);
         }
+        // Derselbe Stand als Autosave, und danach läuft ein Spieltag normal weiter (25.26)
+        const weiter = await page.evaluate((raw) => {
+            try {
+                localStorage.setItem(AUTOSAVE_KEY, raw);
+                const autoOk = loadAutoSave() === true;
+                const md = game.matchday;
+                simulateMatchdays(1);
+                return { autoOk, weiter: game.matchday === md + 1 };
+            } catch (e) { return { crash: e.message }; }
+        }, raw);
+        assert(!weiter.crash && weiter.autoOk, `Stand ${version}: lädt auch als Autosave`);
+        assert(!weiter.crash && weiter.weiter, `Stand ${version}: nach dem Laden läuft ein Spieltag normal weiter (${weiter.crash || ''})`);
         assert(consoleErrors.length === 0, `Stand ${version}: keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
         await page.close();
     }
@@ -9328,6 +9342,34 @@ async function testEnglischDynamischeTexte(browser) {
     assert(!r.crash && r.bilanz.includes('Live match record') && r.bilanz.includes('1/1 wins'), `Co-Trainer-Bilanz auf Englisch (${r.bilanz || r.crash})`);
     assert(!r.crash && r.vorvertrag.includes('Pre-contract offers') && r.vorvertrag.includes('deadline matchday 27'), 'Vorvertrags-Frist auf Englisch');
     assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei den englischen Texten');
+    await page.close();
+}
+
+async function testHinweisAnzeige(browser) {
+    console.log('\n[25.26] Co-Trainer im Livespiel: ohne offenen Hinweis steht da, wie viele es seit Anpfiff gab');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            staffMembers.coTrainer.hired = true;
+            lineup = pickBestLineupIds();
+            setupMatch(game.clubName, 'Testgegner Live', calcTeamStrength(true), true, false, null);
+            stopLiveTickerAutoplay();
+            currentMatch.halftimeShown = true;
+            coTrainerActiveHint = null;
+            currentMatch.coHintsUsed = [];
+            renderCoTrainerLiveBox();
+            const null0 = document.getElementById('live-cotrainer-box').innerText;
+            currentMatch.coHintsUsed = ['muede'];
+            renderCoTrainerLiveBox();
+            const eins = document.getElementById('live-cotrainer-box').innerText;
+            return { null0, eins };
+        } catch (e) { return { crash: e.message }; }
+    });
+    assert(!r.crash && r.null0.includes('Bisher kein Hinweis seit Anpfiff'), `Ohne Hinweis steht im Kasten: noch kein Hinweis (${r.crash || r.null0})`);
+    assert(!r.crash && r.eins.includes('Der Co-Trainer hat seit Anpfiff 1 Hinweis gegeben'), `Mit einem Hinweis zählt der Kasten ihn (${r.eins})`);
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei der Hinweisanzeige');
     await page.close();
 }
 
@@ -9485,6 +9527,7 @@ async function main() {
         testModalFokus,
         testAutosaveLadeMeldung,
         testEnglischDynamischeTexte,
+        testHinweisAnzeige,
         testRuntimeRoundTrip,
     ];
 

@@ -22646,6 +22646,9 @@ function renderDerbyHistory() {
 // mit allen echten Kosten (Wechselkontingent, Stärke, Gegentorrisiko).
 
 const COTRAINER_HINT_GAP = 15;
+// Ersatz für den müden Spieler: mindestens so stark wie er in Prozent der Stärke (25.26). Bei 0,95 fand
+// fast nie ein Ersatz - Bankspieler sind meist schwächer als die Stammelf. Gemessen: Müde-Hinweise pro 1000 Spiele.
+const COTRAINER_MUEDE_ERSATZ = 0.85;
 const COTRAINER_STYLE_FOR_ARCH = { P: 'pressing', B: 'ballbesitz', K: 'konter' };
 let coTrainerActiveHint = null;
 
@@ -22715,7 +22718,7 @@ function findCoTrainerHint() {
     if (frei('muede') && min >= 55 && substitutionsLeft > 0) {
         const kandidat = elf.filter(p => p.pos !== 'TW' && (p.fitness ?? 100) < 80).sort((a, b) => (a.fitness ?? 100) - (b.fitness ?? 100))[0];
         const ersatz = kandidat ? coTrainerBestBench(kandidat) : null;
-        if (kandidat && ersatz && liveEffectiveStrength(ersatz) >= liveEffectiveStrength(kandidat) * 0.95) {
+        if (kandidat && ersatz && liveEffectiveStrength(ersatz) >= liveEffectiveStrength(kandidat) * COTRAINER_MUEDE_ERSATZ) {
             return { id: 'muede', text: `${kandidat.name} baut ab (${kandidat.fitness}% Fitness). ${ersatz.name} bringt frische Beine.`,
                 actions: [{ label: `🔄 ${ersatz.name} für ${kandidat.name}`, run: () => coTrainerSubstitute(kandidat.id, ersatz.id) }] };
         }
@@ -22778,7 +22781,18 @@ function renderCoTrainerLiveBox() {
     const box = document.getElementById('live-cotrainer-box');
     if (!box) return;
     const h = coTrainerActiveHint;
-    if (!h) { box.innerHTML = ''; return; }
+    if (!h) {
+        // Während des Spiels ohne offenen Hinweis: zeigen, dass der Co-Trainer da ist und wie viel er bisher gesagt hat (25.26)
+        const laeuft = currentMatch && currentMatch.minute < 90 && staffMembers.coTrainer && staffMembers.coTrainer.hired;
+        if (!laeuft) { box.innerHTML = ''; return; }
+        const en = typeof currentLang !== 'undefined' && currentLang === 'en';
+        const anzahl = (currentMatch.coHintsUsed || []).length;
+        const text = en
+            ? (anzahl ? `The assistant has given ${anzahl} hint(s) since kick-off.` : 'No hint yet since kick-off - he speaks up when the situation calls for it.')
+            : (anzahl ? `Der Co-Trainer hat seit Anpfiff ${anzahl} Hinweis${anzahl === 1 ? '' : 'e'} gegeben.` : 'Bisher kein Hinweis seit Anpfiff - er meldet sich, wenn die Lage es verlangt.');
+        box.innerHTML = `<div style="font-size:9px; color:var(--text-muted); margin:4px 0;">🧑‍🏫 ${text}</div>`;
+        return;
+    }
     box.innerHTML = `<div class="box" style="font-size:10px; border-left-color:var(--teal); margin:4px 0;">🧑‍🏫 <strong>Co-Trainer:</strong> ${h.text}
         <div style="display:flex; gap:4px; flex-wrap:wrap; margin-top:4px;">
             ${h.actions.map((a, i) => `<button onclick="followCoTrainerHint(${i})" class="btn-action" style="width:auto; font-size:10px;">${a.label}</button>`).join('')}
@@ -30711,6 +30725,9 @@ const LEXICON_ENTRIES = [
     { cat: 'Karriere', title: 'Karriere-Szenarien', screen: 'screen-dashboard',
         text: 'Beim neuen Spiel wählbar: Absteiger retten, Pleiteklub sanieren, Traditionsverein zurückführen, Meister oder Chaos - mit Ziel, Frist und 1-3 Sternen.',
         tips: ['Danach geht die Karriere als freies Spiel weiter', 'Pleiteklub: Kredite zählen als Schulden, jeder Zwangsverkauf kostet einen Stern - zwei lassen die Sanierung scheitern'] },
+    { cat: 'Bedienung', title: 'Tastatur und Fokus', screen: 'screen-dashboard',
+        text: 'Fenster wie das Spielerprofil oder die Aufstellung setzen beim Öffnen den Fokus hinein. Tab bleibt im Fenster, und beim Schließen geht der Fokus zurück zu der Schaltfläche, die es geöffnet hat. Bei Tastaturbedienung zeigen Schaltflächen und Eingabefelder einen Rahmen.',
+        tips: ['Der Fokusrahmen erscheint nur bei Tastatur, Mausklicks zeigen ihn nicht', 'Im Livespiel gehören die Knöpfe des Co-Trainer-Kastens zu den Bedienelementen, die per Tab erreichbar sind'] },
     { cat: 'Bedienung', title: 'Bedienung mit einer Hand', screen: 'screen-dashboard',
         text: 'Auf dem Handy liegt alles Wichtige im Daumenbereich: der Knopf „▶ Spieltag“ startet von jedem Bildschirm den nächsten Spieltag, „☰ Menü“ in der unteren Leiste öffnet alle Bereiche, Fenster fahren von unten ein und im Livespiel bleiben Szene, Pause und Abpfiff über der Leiste stehen. Die Zurück-Taste schließt Meldungen, Fenster und Menü oder geht einen Bildschirm zurück - erst zweimal Zurück auf dem Startbildschirm verlässt das Spiel.',
         tips: ['Linkshänder: Menü → Einstellungen → „Weiter-Knopf“ nach links stellen (oder ausblenden)', 'Fenster mit ✕ schließen auch per Tipp auf die dunkle Fläche daneben', 'Sprache und Ton stehen auf dem Handy im Menü unter Einstellungen', 'English: alle festen Texte (Menüs, Überschriften, Knöpfe) und dieses Lexikon wechseln, Meldungen und Spielberichte bleiben vorerst deutsch'] },
@@ -30825,6 +30842,9 @@ const LEXICON_EN = {
     'Zurufe im Livespiel': { title: 'Shouts in the live match',
         text: 'All-out attack: both teams get clearly more chances - pays off when trailing, costs points with a lead. Pressing: a few more own chances than the opponent\'s. Both cost energy: 90 minutes of all-out attack or pressing mean up to 8 extra fitness points for the starting XI after the match. Park the bus: clearly fewer goals on both sides, your own drop more - good for seeing out a lead.',
         tips: ['Measured from the 60th minute at 0:1: all-out attack earns more points on average, the bus fewer', 'With a lead from the 70th minute the bus is the best choice', 'The assistant coach suggests all-out attack and the bus in the right situations'] },
+    'Tastatur und Fokus': { title: 'Keyboard and focus',
+        text: 'Windows such as the player profile or the lineup move the focus inside when they open. Tab stays inside the window, and on close the focus returns to the button that opened it. With keyboard use, buttons and input fields show a frame.',
+        tips: ['The focus frame appears only with the keyboard, mouse clicks do not show it', 'In a live match the buttons of the assistant coach box are among the controls reachable with Tab'] },
     'Co-Trainer im Livespiel': { title: 'Assistant coach in the live match',
         text: 'A hired assistant coach chimes in during the live match with hints from the real match situation - each with a one-tap action. Level 1: tired players, trailing or a narrow lead late on. Level 2: also second-yellow risk and a lost tactical duel (from the 20th minute, immediately with a chief analyst). Level 3: also spots a winnable tactical duel. The record is under squad > assistant coach history: wins with followed hints against wins without.',
         tips: ['Every action costs what it always costs: a substitution, tackling strength or defensive order', 'A grumpy assistant coach speaks up less often - a pay rise lifts his mood', 'Followed hints build trust in him (squad > assistant coach history)'] },

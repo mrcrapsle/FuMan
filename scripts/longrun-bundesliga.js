@@ -22,6 +22,7 @@ const path = require('path');
 const fs = require('fs');
 const root = path.resolve(__dirname, '..');
 const { chromium } = require(path.join(root, 'tests/node_modules/playwright'));
+const { messeLiveSpiele, zusammenfassung } = require('./cotrainer-live.js');
 const saisons = parseInt(process.argv[2] || '20', 10);
 const modus = process.argv[3] || 'aktiv';
 const laeufe = parseInt(process.argv[4] || '1', 10);
@@ -445,7 +446,6 @@ async function karriere(browser, lauf) {
         zeilen.push(r);
         if (r.crash || r.entlassen || r.entlassenAmEnde) break;
     }
-    await ctx.close();
     console.log(`\n== Lauf ${lauf} (${modus}) ==`);
     console.log('Ssn Liga Pl Pkt   Geld Transf GehBud/Spt GehSum  Elf Liga Top Kad Vst Europa        Pokal');
     zeilen.forEach(z => {
@@ -461,10 +461,22 @@ async function karriere(browser, lauf) {
         const f = ([k, v]) => `${k} ${(v / 1e6).toFixed(1)}`;
         console.log(`[S${z.season} Liga ${z.liga + 1} Pl ${z.platz}] +${(ein.reduce((a, [, v]) => a + v, 0) / 1e6).toFixed(1)} / ${(aus.reduce((a, [, v]) => a + v, 0) / 1e6).toFixed(1)} Mio | Saisonende ${(z.saisonEnde / 1e6).toFixed(1)}\n   EIN: ${ein.map(f).join(' | ')}\n   AUS: ${aus.map(f).join(' | ')}`);
     });
+    // SPEICHERN=<datei>: den Stand nach der Karriere als Fixture ablegen (Test testAeltereStaende)
+    if (process.env.SPEICHERN) {
+        const raw = await page.evaluate(() => { closeTutorial(); saveGameToSlot(1); return localStorage.getItem(SAVE_SLOT_PREFIX + 1); });
+        fs.writeFileSync(path.resolve(root, process.env.SPEICHERN), raw);
+        console.log(`Spielstand gespeichert: ${process.env.SPEICHERN} (${Math.round(raw.length / 1024)} KB)`);
+    }
+    // COTRAINER=<n>: n Livespiele mit Hinweis-Strategie am Ende der Karriere messen (scripts/cotrainer-live.js)
+    if (process.env.COTRAINER) {
+        const messung = await messeLiveSpiele(page, parseInt(process.env.COTRAINER, 10), 100);
+        zusammenfassung(messung.zeilen, messung.historie);
+    }
     if (process.env.LIGADIAG) zeilen.forEach(z => { if (z.ligaDiag) console.log(`[S${z.season} Liga ${z.liga + 1} Pl ${z.platz}] ${z.ligaDiag}`); });
     if (process.env.VBDIAG) zeilen.forEach(z => { if (z.vb) console.log(`[S${z.season} Liga ${z.liga + 1} VB] ${z.vb.map(([k, v]) => `${k} ${(v / 1e6).toFixed(2)}`).join(' | ')}`); });
     if (process.env.BOARDDIAG) zeilen.forEach(z => { if (z.board) console.log(`[S${z.season} Liga ${z.liga + 1} Pl ${z.platz} Vst ${z.vorstand}] ${z.board.join(' | ')}`); });
     if (fehler.length) console.log('JS-Fehler: ' + [...new Set(fehler)].slice(0, 5).join(' | '));
+    await ctx.close();
     return zeilen;
 }
 
