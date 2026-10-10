@@ -495,7 +495,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.97', date: '10.10.2026', features: 'Phase 25.25: Pokalgegner mit Stärke, Champions-Cup-Gruppenplatz, Autosave im Dashboard, Co-Trainer-Bilanz, Lade-Meldungen, Vorvertrags-Frist, Tastatur-Fokus, Spielstand-Kompatibilität' };
+    const GAME_VERSION = { number: '3.98', date: '10.10.2026', features: 'Phase 25.26: Spielstände aus alten Builds (3.22.1 bis 3.94) laden, Fokus in Overlays, Autosave-Meldung, Englisch dynamischer Texte, Bot-Spalte Vorwarnung, Co-Trainer-Messung' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
