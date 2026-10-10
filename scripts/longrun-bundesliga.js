@@ -16,6 +16,8 @@
 //         J = eigene Jugendspieler in der besten Elf / im Kader. Talente ab Kader-Median-Stärke zieht er hoch.
 //         Talentangebote: verkauft (mit Beteiligung), wessen Potenzial unter dem Kader-Median liegt; TV = Erlös,
 //         TA = abgelehnte Talentangebote (Potenzial über dem Kader-Median).
+//         Schalter per Umgebung: TALENT_AUFSCHLAG=n (Talente bis n Punkte über dem Median verkaufen),
+//         KASSE_ANTEIL=n (Anteil des Kassenüberschusses fürs Transferbudget, Standard 0.4), ENTLASSUNG nur im Log.
 //         Vorvertrags-Angebote anderer Vereine: verlängert sofort (bis 31 J.); VV = trotzdem woanders unterschrieben.
 //         STRAT=jugend|sofort|sparen: wählt jede Saison diese Transferstrategie (S:… = erreicht +/verfehlt -).
 // passiv: spielt nur, der Kader wird nie angefasst.
@@ -69,6 +71,14 @@ async function karriere(browser, lauf) {
     if (process.env.STRAT) await page.evaluate(s => { window.__strat = s; }, process.env.STRAT);
     // TALENT_AUFSCHLAG=n: Talente bis n Punkte über dem Kadermedian ebenfalls verkaufen (Punkt 3, Messung)
     if (process.env.TALENT_AUFSCHLAG) await page.evaluate(v => { window.__talentAufschlag = v; }, Number(process.env.TALENT_AUFSCHLAG));
+    // KASSE_ANTEIL=n: Anteil des Kassenüberschusses, der ins Transferbudget fließt (Standard 0.4), ohne Kopie des Spiels
+    if (process.env.KASSE_ANTEIL) await page.evaluate(a => {
+        const original = getCashSurplusBudgetShare;
+        getCashSurplusBudgetShare = () => {
+            const r = original();
+            return { transfer: Math.round(r.transfer * a / 0.4 / 50000) * 50000, wage: r.wage };
+        };
+    }, Number(process.env.KASSE_ANTEIL));
     // VBDIAG=1 (25.19): Buchungen ohne eigenen Buchungstext (landen unter dem offenen Bildschirm,
     // im Bot "Vereinsbüro") der auslösenden Funktion zuordnen.
     if (process.env.VBDIAG) await page.evaluate(() => {
