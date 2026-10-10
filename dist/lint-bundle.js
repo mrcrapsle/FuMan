@@ -7302,6 +7302,11 @@ let transferPoker = null;
 const POKER_TOUGHNESS = { Ehrgeizig: 1.35, Selbstbewusst: 1.2, Emotional: 1.1, Hitzköpfig: 1.15, Ruhig: 0.9, Bescheiden: 0.75 };
 
 // Verkaufender Verein, Forderung und Schmerzgrenze - einmal je Marktspieler festgelegt.
+// Beträge unter 100.000 € auf 100 € genau (Ligen 5-6: Ablösen um 17.000 €); darüber auf 1.000 €.
+function pokerRunden(betrag) {
+    return betrag < 100000 ? Math.round(betrag / 100) * 100 : Math.round(betrag / 1000) * 1000;
+}
+
 function ensureTransferTerms(p) {
     if (p.askingPrice) return p;
     const pool = [game.leagueLevel, Math.max(0, game.leagueLevel - 1)].flatMap(l => (leaguesData[l] || []).filter(t => typeof isAiClub === 'function' ? isAiClub(t) : t.name !== game.clubName));
@@ -7309,8 +7314,8 @@ function ensureTransferTerms(p) {
     p.sellerClub = verein ? verein.name : 'ein Ligakonkurrent';
     const vertrag = Math.max(1, Math.min(4, p.contracts || 2));
     // Lange Verträge machen den Spieler teuer und den Verkäufer zäh.
-    p.sellerMinimum = Math.round(p.marketValue * (0.82 + vertrag * 0.05) / 1000) * 1000;
-    p.askingPrice = Math.max(p.sellerMinimum + 1000, Math.round(p.marketValue * (1.0 + vertrag * 0.04 + Math.random() * 0.12) / 1000) * 1000);
+    p.sellerMinimum = pokerRunden(p.marketValue * (0.82 + vertrag * 0.05));
+    p.askingPrice = Math.max(pokerRunden(p.sellerMinimum * 1.01), pokerRunden(p.marketValue * (1.0 + vertrag * 0.04 + Math.random() * 0.12)));
     return p;
 }
 
@@ -7400,7 +7405,7 @@ function openTransferPoker(idx) {
         const begehrt = p.strength >= Math.max(...marketPlayers.map(m => m.strength)) - 3;
         transferPoker = {
             playerId: p.id, rounds: 0, patience: 3 + Math.floor(Math.random() * 3),
-            offer: Math.round(p.askingPrice * 0.85 / 1000) * 1000,
+            offer: pokerRunden(p.askingPrice * 0.85),
             rivalChance: begehrt ? 0.45 : 0.15, rival: null, agreedFee: null, wageDemand: null, wageTalked: false,
             log: [`${p.sellerClub} verlangt ${formatVal(p.askingPrice)} für ${p.name} (Marktwert ${formatVal(p.marketValue)}).`]
         };
@@ -7422,8 +7427,8 @@ function getPokerPlayer() {
 function adjustPokerOffer(prozent) {
     const p = getPokerPlayer();
     if (!p || transferPoker.agreedFee) return;
-    const schritt = Math.max(1000, Math.round(p.marketValue * Math.abs(prozent) / 100 / 1000) * 1000);
-    transferPoker.offer = Math.max(1000, transferPoker.offer + Math.sign(prozent) * schritt);
+    const schritt = Math.max(100, pokerRunden(p.marketValue * Math.abs(prozent) / 100));
+    transferPoker.offer = Math.max(100, transferPoker.offer + Math.sign(prozent) * schritt);
     renderTransferPokerBox();
 }
 
@@ -7442,7 +7447,7 @@ function tickPokerRival(p) {
     if (!t.rival && t.rounds >= 1 && Math.random() < t.rivalChance) {
         const vereine = (leaguesData[game.leagueLevel] || []).filter(v => v.name !== p.sellerClub && (typeof isAiClub === 'function' ? isAiClub(v) : v.name !== game.clubName));
         const rivale = vereine.sort((a, b) => b.strength - a.strength)[Math.floor(Math.random() * Math.min(5, vereine.length))];
-        const gebot = Math.round(p.sellerMinimum * (1.05 + Math.random() * 0.12) / 1000) * 1000;
+        const gebot = pokerRunden(p.sellerMinimum * (1.05 + Math.random() * 0.12));
         t.rival = { club: rivale ? rivale.name : 'Ein Konkurrent', bid: gebot };
         p.sellerMinimum = gebot + 1000;
         p.askingPrice = Math.max(p.askingPrice, p.sellerMinimum);
@@ -7479,7 +7484,7 @@ function submitPokerOffer() {
         t.patience -= frech ? 2 : 1;
         if (t.patience <= 0) {
             p.pokerBroken = true;
-            p.askingPrice = Math.round(p.askingPrice * 1.1 / 1000) * 1000;
+            p.askingPrice = pokerRunden(p.askingPrice * 1.1);
             t.log.push(`🚪 ${p.sellerClub} bricht die Gespräche ab. Nur noch Sofortkauf für ${formatVal(p.askingPrice)}.`);
             showToast(`${p.sellerClub} bricht die Verhandlung ab - der Preis steigt auf ${formatVal(p.askingPrice)}.`, 'error', 5000);
             transferPoker = null;
@@ -7487,7 +7492,7 @@ function submitPokerOffer() {
             return;
         }
         // Gegenangebot: der Verkäufer kommt ein Stück entgegen, nie unter die Schmerzgrenze.
-        p.askingPrice = Math.max(p.sellerMinimum, Math.round((p.askingPrice - (p.askingPrice - angebot) * (frech ? 0.05 : 0.35)) / 1000) * 1000);
+        p.askingPrice = Math.max(p.sellerMinimum, pokerRunden(p.askingPrice - (p.askingPrice - angebot) * (frech ? 0.05 : 0.35)));
         t.log.push(frech ? `😠 ${p.sellerClub}: „Das ist eine Frechheit.“ Forderung bleibt bei ${formatVal(p.askingPrice)}.` : `${p.sellerClub} kontert: ${formatVal(p.askingPrice)}.`);
         if (tickPokerRival(p)) return;
     }
@@ -19693,6 +19698,7 @@ function renderYouthAcademyPanel() {
         html += `<div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:4px; font-size:9px;">
             <div><strong>${idx + 1}. ${p.name}</strong> (${p.pos} | Str: ${p.strength})</div>
             <div style="color:var(--text-muted); font-size:8px;">Potenzial: ${typeof getYouthPotentialText === 'function' ? getYouthPotentialText(p) : '?'} | Talentwert: ${p.talentScore}</div>
+            ${p.potentialRevealed && typeof getYouthOfferSquadHint === 'function' ? `<div style="color:var(--text-muted); font-size:8px;">${getYouthOfferSquadHint(p)}</div>` : ''}
             <div style="color:var(--accent); font-size:8px;">${trend}</div>
         </div>`;
     });
@@ -28163,7 +28169,7 @@ function cleanupLegacyScoutState() {
         let erwartet = game.seasonExpectation && game.seasonExpectation.expectedRank;
         let zielErreicht = myRank > 0 && (myRank <= 2 || (erwartet && myRank <= erwartet));
         if (game.boardSat <= BOARD_SAT_WARNING_THRESHOLD && game.lowBoardSatStreak >= sackThreshold && !erholt && !zielErreicht) {
-            getSacked();
+            getSacked(myRank);
         }
     }
 
@@ -28357,7 +28363,7 @@ function cleanupLegacyScoutState() {
         updateUI();
     }
 
-    function getSacked() {
+    function getSacked(myRank) {
         // Mehrfachausloesung verhindern: processPostMatchRoutine() laeuft pro simuliertem
         // Spieltag, und die Bedingung (lowBoardSatStreak) bleibt ja erfuellt.
         if (game.sackPending) return;
@@ -28372,8 +28378,12 @@ function cleanupLegacyScoutState() {
         safeSessionSet('anstoss_fm13_force_new_game', '1');
         // Der Neustart haengt bewusst an der Bestaetigung: vorher lief er direkt nach dem
         // alert() - war das unterdrueckt, verschwand der Verein ohne ein Wort der Erklaerung.
+        // Grund für den Spieler (25.34): Vertrauen, Serie und die Erwartung des Vorstands am Saisonende
+        const erwartetRang = game.seasonExpectation && game.seasonExpectation.expectedRank;
+        const grund = `Grund: Vertrauen ${Math.round(game.boardSat)} von 100, ${game.lowBoardSatStreak || 0} Pflichtspiele in Folge unter der Warnschwelle` +
+            (erwartetRang ? `, Erwartung Platz ${erwartetRang}` : '') + (myRank > 0 ? `, erreicht: Platz ${myRank}` : '') + '.';
         showNotice('🚪 Entlassen!',
-            'Der Vorstand hat genug gesehen und trennt sich mit sofortiger Wirkung von dir.\n\nDeine Karriere-Erfahrung und deine Trophäen nimmst du mit - bei deinem neuen Klub beginnst du aber wieder ganz von unten.',
+            `Der Vorstand hat genug gesehen und trennt sich mit sofortiger Wirkung von dir.\n\n${grund}\n\nDeine Karriere-Erfahrung und deine Trophäen nimmst du mit - bei deinem neuen Klub beginnst du aber wieder ganz von unten.`,
             { typ: 'warn', sofort: true, knopf: 'Neuen Klub suchen', danach: () => location.reload() });
     }
 
@@ -30664,7 +30674,7 @@ const LEXICON_ENTRIES = [
         tips: ['20-24 Spieler sind ein guter Rahmen', 'Über dem Gehaltsbudget nennt sie die teuersten Ergänzungsspieler: bis 25 Jahre als Leihe, ältere zum Verkauf', 'Talente ab 17 und Vereinslose füllen den Kader günstig auf'] },
     { cat: 'Spieler', title: 'Talente verkaufen', screen: 'screen-youth',
         text: 'Andere Vereine bieten für Akademie-Talente ab 16 Jahren - je höher das Potenzial, desto öfter und desto mehr (Marktwert der heutigen Stärke plus Aufschlag für das Potenzial, höchstens 30 % des Werts am Potenzial). Höchstens 2 Angebote gleichzeitig, jedes gilt 4 Spieltage. Verkaufen bringt die volle Ablöse (85 % davon ins Transferbudget), mit Beteiligung gibt es 20 % weniger sofort, dafür 20 % vom späteren Weiterverkauf. Lehnst du für ein Top-Talent ab, legt es im Training noch eine Schippe drauf (+1).',
-        tips: ['Wer das Potenzial nicht kennt: hohe Angebote verraten viel', 'Talente, die es nicht in die eigene Elf schaffen, bringen so trotzdem Geld'] },
+        tips: ['Wer das Potenzial nicht kennt: hohe Angebote verraten viel', 'Talente, die es nicht in die eigene Elf schaffen, bringen so trotzdem Geld', 'Jedes Angebot nennt den Kader-Median: liegt das Potenzial darunter, kostet der Verkauf die Elf voraussichtlich nichts'] },
     { cat: 'Verein', title: 'Wintergespräch mit dem Vorstand', screen: 'screen-dashboard',
         text: 'In der Winterpause (Spieltag 18-20) zieht der Vorstand Zwischenbilanz: Tabellenplatz gegen die Erwartung und Kassenentwicklung. Du wählst einen Weg: Ziel hoch (2 Plätze, Vorstand +5 und sofort Winterbudget - am Saisonende erreicht +5, verfehlt -10), Ziel runter (2 Plätze, Vorstand -4, die Saison und die Mitgliederversammlung messen am leichteren Ziel), Winterbudget beantragen (Chance aus Zwischenbilanz und Vorstandslaune, Absage -3) oder Kurs bestätigen (+2). Wer bis Spieltag 20 nicht kommt, verpasst das Gespräch (-2).',
         tips: ['Läuft es besser als erwartet, ist das Budget leichter zu bekommen', 'Ein höheres Ziel lohnt nur, wenn du es wirklich erreichen kannst'] },
@@ -30925,7 +30935,7 @@ const LEXICON_EN = {
         tips: ['20-24 players are a good range', 'Above the wage budget it names the most expensive squad players: up to 25 years for a loan, older ones for a sale', 'Talents from 17 and free agents fill the squad cheaply'] },
     'Talente verkaufen': { title: 'Selling talents',
         text: 'Other clubs bid for academy talents from 16 - the higher the potential, the more often and the more (market value of today\'s strength plus a premium for the potential, at most 30 % of the value at the potential). At most 2 offers at a time, each valid for 4 matchdays. Selling brings the full fee (85 % of it into the transfer budget), with a sell-on clause you get 20 % less now but 20 % of a later resale. If you turn down an offer for a top talent, he adds a little more in training (+1).',
-        tips: ['If you do not know the potential: high offers reveal a lot', 'Talents who will not make your own XI still bring money this way'] },
+        tips: ['If you do not know the potential: high offers reveal a lot', 'Talents who will not make your own XI still bring money this way', 'Each offer names the squad median: if the potential is below it, selling should not cost your XI'] },
     'Wintergespräch mit dem Vorstand': { title: 'Winter talk with the board',
         text: 'In the winter break (matchday 18-20) the board takes stock: table position against expectation and cash development. You choose a path: raise the goal (2 places, board +5 and a winter budget right away - at the end of the season reached +5, missed -10), lower the goal (2 places, board -4, the season and the members\' meeting are measured against the easier goal), apply for a winter budget (chance from the interim result and the board\'s mood, refusal -3) or confirm the course (+2). Not coming by matchday 20 means missing the talk (-2).',
         tips: ['If things go better than expected, the budget is easier to get', 'A higher goal only pays off if you can really reach it'] },
