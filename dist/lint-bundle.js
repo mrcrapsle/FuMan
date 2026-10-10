@@ -495,7 +495,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.103', date: '10.10.2026', features: 'Phase 25.32-25.33: Talentangebote mit Kader-Median und Potenzial-Einordnung, Bot-Schalter für Kassenanteil und Vorstand, Handy-Prüfung mit langen Vereinsnamen, Entscheidungen dokumentiert' };
+    const GAME_VERSION = { number: '3.104', date: '10.10.2026', features: 'Phase 25.34: Entlassungsmeldung nennt den Grund, Transferpoker rundet unter 100.000 € auf 100 €, Kader-Median in der Jugendliste und im Lexikon, Fixture 3.103, Poker-Messung je Liga' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

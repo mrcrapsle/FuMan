@@ -7995,8 +7995,11 @@ async function testPhase13Teil3(browser) {
         // Transferbudget je Liga reicht für 1-4 typische Marktspieler der Liga (25.15: unten lag es beim 250-Fachen)
         const altLiga = game.leagueLevel;
         out.transferLigaGerecht = [0, 1, 2, 3, 4, 5].map(lvl => {
-            game.leagueLevel = lvl; refreshTransferMarket();
-            const preise = marketPlayers.map(m => ensureTransferTerms(m).askingPrice).sort((a, b) => a - b);
+            game.leagueLevel = lvl;
+            // Median über sechs frische Märkte (60 Preise): ein einzelner Markt mit 10 Spielern streut zu stark
+            const preise = [];
+            for (let m = 0; m < 6; m++) { refreshTransferMarket(); marketPlayers.forEach(x => preise.push(ensureTransferTerms(x).askingPrice)); }
+            preise.sort((a, b) => a - b);
             return getLeagueTransferBudget(lvl) / preise[Math.floor(preise.length / 2)];
         });
         game.leagueLevel = altLiga; refreshTransferMarket();
