@@ -1904,7 +1904,8 @@ async function testEnglishUi(browser) {
     }
     // Neu gerenderte Inhalte (MutationObserver) werden übersetzt
     await page.evaluate(() => { const d = document.createElement('div'); d.id = 'i18n-probe'; d.textContent = 'Abbrechen'; document.body.appendChild(d); });
-    await page.waitForTimeout(50);
+    // Der MutationObserver übersetzt asynchron: auf die Übersetzung warten statt 50 ms zu hoffen
+    await page.waitForFunction(() => { const e = document.getElementById('i18n-probe'); return !!e && e.textContent !== 'Abbrechen'; }, null, { timeout: 2000 }).catch(() => null);
     const probe = await page.evaluate(() => document.getElementById('i18n-probe').textContent);
     assert(probe === 'Cancel', `Neu eingefügte Texte werden übersetzt (${probe})`);
     // Durch das Spiel geänderte Texte bleiben nicht auf dem alten Original stehen
@@ -4204,7 +4205,7 @@ async function testConfigurableNewGameStart(browser) {
     // "Neues Spiel"-Knopf liegt dort und muss erst sichtbar geschaltet werden.
     await page.evaluate(() => showScreen('screen-dashboard'));
     await page.click('#btn-new-game');
-    await page.waitForTimeout(150);
+    await page.waitForFunction(() => document.getElementById('new-game-setup-box').style.display === 'block', null, { timeout: 3000 }).catch(() => null);
     const boxVisible = await page.evaluate(() => document.getElementById('new-game-setup-box').style.display === 'block');
 
     await page.evaluate(() => { selectedNewGameLevel = 0; selectedNewGameMoney = 500000; renderNewGameSetupOptions(); });
