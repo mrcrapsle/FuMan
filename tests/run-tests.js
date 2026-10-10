@@ -4361,7 +4361,12 @@ async function testManagerOffice(browser) {
         if (!c) { unreachable.push(id + ' (nicht sichtbar)'); continue; }
         await page.mouse.move(c.x, c.y);
         await page.waitForTimeout(60);
-        const resolved = await page.evaluate(({ x, y }) => officeHotspotAtPoint(x, y), c);
+        // Der Hover-Zustand kann das Objekt leicht verschieben (Animation): im Hover neu messen,
+        // denn genau dort soll der Mittelpunkt treffen. Ohne das scheiterte der Test unter Last.
+        const cHover = (await centerOf(id)) || c;
+        await page.mouse.move(cHover.x, cHover.y);
+        await page.waitForTimeout(60);
+        const resolved = await page.evaluate(({ x, y }) => officeHotspotAtPoint(x, y), cHover);
         if (resolved !== id) unreachable.push(`${id} (traf: ${resolved})`);
     }
 
