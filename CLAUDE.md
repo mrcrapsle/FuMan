@@ -314,6 +314,9 @@ This ensures users can see exactly where money comes from/goes. Add new income o
 cd tests && npm install && npm test
 # Single suite by function name
 cd tests && TEST_ONLY=LandesPokal node run-tests.js
+# Suites run 3 in parallel (TEST_JOBS, default 3; TEST_JOBS=1 = serial, ~2.5x slower).
+# Each suite gets its own browser context (own localStorage); its console output is buffered
+# and printed as one block. Full run ~60 s parallel. A suite must not depend on another suite's storage.
 
 # The test file (tests/run-tests.js) includes:
 # - testManagerOffice: 3D hotspot hit-detection for all office objects

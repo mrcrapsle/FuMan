@@ -6,12 +6,24 @@
 // gravierendsten bisher gefundenen Bugs!), Wirtschaft, Kader, Jugend, Transfer,
 // Stadion und die Match-Simulation über mehrere Saisons hinweg.
 //
-// Aufruf: node run-tests.js  (aus dem tests/-Ordner heraus)
+// Aufruf: node run-tests.js  (aus dem tests/-Ordner heraus; TEST_JOBS=1 läuft seriell, Standard 3 parallel)
 // Erwartet eine bereits gebaute dist/anstoss-fm13-standalone.html (via build.py).
 // ============================================================================
 
 const { chromium } = require('playwright');
 const path = require('path');
+const util = require('util');
+const { AsyncLocalStorage } = require('async_hooks');
+
+// Parallele Suiten schreiben über console.log: Jede Suite sammelt ihre Zeilen im eigenen
+// Puffer (AsyncLocalStorage folgt den await-Ketten), ausgegeben wird der Puffer am Suitenende.
+const originalLog = console.log;
+const suiteAusgabe = new AsyncLocalStorage();
+console.log = (...args) => {
+    const puffer = suiteAusgabe.getStore();
+    if (puffer) puffer.push(util.format(...args));
+    else originalLog(...args);
+};
 
 // GAME_FILE env var erlaubt, dieselbe Suite auch gegen die minifizierte Variante laufen
 // zu lassen (siehe minify.js/CI) - Standard bleibt die normale, lesbare Build-Ausgabe.
@@ -34,9 +46,10 @@ function assert(condition, label) {
 
 async function freshPage(browser) {
     const page = await browser.newPage();
-    // Tests teilen sich den lokalen Speicher (file://): ohne diesen Schritt würde jeder neue
-    // Test den Autosave eines vorherigen Tests laden (Start lädt den zuletzt geschriebenen
-    // Stand). testAutosaveResume prüft dieses Startverhalten bewusst ohne Bereinigung.
+    // Jede Suite hat ihren eigenen Browser-Kontext (eigener Speicher, siehe main()). Innerhalb
+    // einer Suite teilen sich die Seiten aber den Speicher: ohne diesen Schritt würde eine neue
+    // Seite den Autosave einer vorherigen laden (Start lädt den zuletzt geschriebenen Stand).
+    // testAutosaveResume prüft dieses Startverhalten bewusst ohne Bereinigung.
     await page.addInitScript(() => { try { localStorage.removeItem('anstoss_fm13_last_save'); } catch (e) { /* egal */ } });
     let consoleErrors = [];
     page.on('pageerror', e => consoleErrors.push(e.message));
@@ -9170,15 +9183,49 @@ async function main() {
 
     // TEST_ONLY=Landes npm test -> nur Suiten, deren Name den Text enthält
     const only = process.env.TEST_ONLY;
-    for (const suite of only ? suites.filter(s => s.name.includes(only)) : suites) {
-        try {
-            await suite(browser);
-        } catch (e) {
-            failed++;
-            failedTests.push(`${suite.name} (Testlauf abgebrochen: ${e.message})`);
-            console.log(`\nTestlauf abgebrochen in ${suite.name}: ${e.message}`);
+    const liste = only ? suites.filter(s => s.name.includes(only)) : suites;
+
+    // Suiten laufen parallel (TEST_JOBS, Standard 3). Jede Suite bekommt einen eigenen
+    // Browser-Kontext = eigener Speicher, so sieht keine Suite den Stand einer anderen.
+    // Ihre Ausgabe wird gesammelt und am Stück ausgegeben, damit sich die Protokolle nicht mischen.
+    const jobs = Math.max(1, parseInt(process.env.TEST_JOBS || '3', 10) || 3);
+    let naechste = 0;
+    const laufen = async () => {
+        while (naechste < liste.length) {
+            const suite = liste[naechste++];
+            const ausgabe = [];
+            const start = Date.now();
+            const ctx = await browser.newContext();
+            // Eigene Kontexte (z.B. mit Viewport) gehören zur Suite und werden mit ihr geschlossen,
+            // denn BrowserContext.newPage() nimmt keine Optionen.
+            const eigene = [];
+            const browserShim = {
+                newPage: async opts => {
+                    if (!opts) return ctx.newPage();
+                    const neu = await browser.newContext(opts);
+                    eigene.push(neu);
+                    return neu.newPage();
+                },
+                newContext: async opts => {
+                    const neu = await browser.newContext(opts);
+                    eigene.push(neu);
+                    return neu;
+                },
+            };
+            try {
+                await suiteAusgabe.run(ausgabe, () => suite(browserShim));
+            } catch (e) {
+                failed++;
+                failedTests.push(`${suite.name} (Testlauf abgebrochen: ${e.message})`);
+                ausgabe.push(`\nTestlauf abgebrochen in ${suite.name}: ${e.message}`);
+            } finally {
+                for (const c of [ctx, ...eigene]) await c.close().catch(() => {});
+            }
+            ausgabe.push(`  ⏱ ${suite.name}: ${((Date.now() - start) / 1000).toFixed(1)} s`);
+            originalLog(ausgabe.join('\n'));
         }
-    }
+    };
+    await Promise.all(Array.from({ length: Math.min(jobs, liste.length) }, laufen));
 
     await browser.close();
 
