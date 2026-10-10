@@ -9215,6 +9215,122 @@ async function testVorvertragsFrist(browser) {
     await page.close();
 }
 
+async function testAeltereStaende(browser) {
+    console.log('\n[25.25] Spielstände aus älteren Versionen (tests/fixtures/saves) laden in den aktuellen Build');
+    const fs = require('fs');
+    const ordner = path.resolve(__dirname, 'fixtures/saves');
+    const dateien = fs.readdirSync(ordner).filter(f => f.endsWith('.json')).sort();
+    assert(dateien.length >= 3, `Es liegen Fixtures aus mehreren Versionen vor (${dateien.join(', ')})`);
+    for (const datei of dateien) {
+        const raw = fs.readFileSync(path.join(ordner, datei), 'utf8');
+        const erwartet = JSON.parse(raw);
+        const version = datei.replace(/^v|\.json$/g, '');
+        const { page, consoleErrors } = await freshPage(browser);
+        page.on('dialog', d => d.accept());
+        const r = await page.evaluate((raw) => {
+            try {
+                closeTutorial();
+                localStorage.setItem(SAVE_SLOT_PREFIX + 2, raw);
+                const ok = loadGameFromSlot(2, true);
+                updateUI();
+                renderDashboardView();
+                return { ok: ok === true, money: game.money, kader: squad.length, verein: game.clubName };
+            } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+        }, raw);
+        assert(!r.crash, `Stand ${version} lädt ohne Absturz (${r.crash || 'ok'})`);
+        if (!r.crash) {
+            assert(r.ok, `Stand ${version} wird angenommen, nicht als beschädigt abgewiesen`);
+            assert(Math.round(r.money) === Math.round(erwartet.game.money), `Stand ${version}: Geld bleibt erhalten (${Math.round(r.money)} statt ${Math.round(erwartet.game.money)})`);
+            assert(r.kader === erwartet.squad.length && r.verein === erwartet.game.clubName, `Stand ${version}: Verein und Kader bleiben erhalten`);
+        }
+        assert(consoleErrors.length === 0, `Stand ${version}: keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+        await page.close();
+    }
+}
+
+async function testModalFokus(browser) {
+    console.log('\n[25.25] Tastatur in Overlays: Fokus springt hinein, Tab bleibt drin, Schließen geht zum Auslöser zurück');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    await page.evaluate(() => {
+        closeTutorial();
+        const sichtbar = [...document.querySelectorAll('button')].find(b => b.offsetParent !== null);
+        sichtbar.id = 'test-ausloeser';
+        sichtbar.focus();
+    });
+    const oeffnen = await page.evaluate(async () => {
+        const ov = document.getElementById('formation-modal-overlay');
+        ov.classList.add('show');
+        await new Promise(res => setTimeout(res, 60));
+        const els = modalFokusElemente(ov);
+        return { innen: ov.contains(document.activeElement), anzahl: els.length };
+    });
+    assert(oeffnen.innen, 'Beim Öffnen springt der Fokus in den Dialog');
+    assert(oeffnen.anzahl > 1, `Der Dialog hat mehrere Tastaturziele (${oeffnen.anzahl})`);
+    await page.evaluate(() => { const els = modalFokusElemente(document.getElementById('formation-modal-overlay')); els[els.length - 1].focus(); });
+    await page.keyboard.press('Tab');
+    const tab = await page.evaluate(() => {
+        const ov = document.getElementById('formation-modal-overlay');
+        const els = modalFokusElemente(ov);
+        return ov.contains(document.activeElement) && document.activeElement === els[0];
+    });
+    assert(tab, 'Tab auf dem letzten Element springt zum ersten - der Fokus verlässt den Dialog nicht');
+    const zurueck = await page.evaluate(async () => {
+        document.getElementById('formation-modal-overlay').classList.remove('show');
+        await new Promise(res => setTimeout(res, 60));
+        return document.activeElement && document.activeElement.id === 'test-ausloeser';
+    });
+    assert(zurueck, 'Beim Schließen kehrt der Fokus zum Auslöser zurück');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei Overlays mit Tastatur');
+    await page.close();
+}
+
+async function testAutosaveLadeMeldung(browser) {
+    console.log('\n[25.25] Beschädigter Autosave: Meldung nennt den Autosave und den Ausweg über einen Slot');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            localStorage.setItem(AUTOSAVE_KEY, '{"kaputt":');
+            loadAutoSave();
+            return document.getElementById('app-toast').innerText;
+        } catch (e) { return 'CRASH ' + e.message; }
+    });
+    assert(r.includes('Autosave') && r.includes('nicht lesbar'), `Die Meldung nennt den Autosave als unlesbar (${r})`);
+    assert(r.includes('lade einen Spielstand aus einem Slot') && r.includes('bleibt unverändert'), 'Die Meldung sagt, dass das Spiel bleibt und welcher Slot der Ausweg ist');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Laden eines beschädigten Autosaves');
+    await page.close();
+}
+
+async function testEnglischDynamischeTexte(browser) {
+    console.log('\n[25.25] Englisch: Autosave-Zeile, Co-Trainer-Bilanz und Vorvertrags-Frist sind übersetzt');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            setLanguage('en');
+            localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({ meta: { season: 3, matchday: 5, savedAt: '12:34' } }));
+            renderDashAutosaveLine();
+            const auto = document.getElementById('dash-autosave-line').textContent;
+            game.coTrainerHistory = { followedMatches: 0, followedWins: 0, ownMatches: 0, ownWins: 0 };
+            recordLiveCoTrainerMatch('win', { coTrainerFollowed: 1 });
+            const bilanz = coTrainerLiveBilanzText(game.coTrainerHistory);
+            squad[0].preContractOffer = { club: 'Testklub Vorvertrag', deadline: 27 };
+            renderPreContractBox();
+            const vorvertrag = document.getElementById('precontract-box').textContent;
+            setLanguage('de');
+            return { auto, bilanz, vorvertrag };
+        } catch (e) { setLanguage('de'); return { crash: e.message }; }
+    });
+    assert(!r.crash && r.auto.includes('Autosave: season 3') && r.auto.includes('matchday 5/34'), `Autosave-Zeile auf Englisch (${r.auto || r.crash})`);
+    assert(!r.crash && r.bilanz.includes('Live match record') && r.bilanz.includes('1/1 wins'), `Co-Trainer-Bilanz auf Englisch (${r.bilanz || r.crash})`);
+    assert(!r.crash && r.vorvertrag.includes('Pre-contract offers') && r.vorvertrag.includes('deadline matchday 27'), 'Vorvertrags-Frist auf Englisch');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei den englischen Texten');
+    await page.close();
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -9365,12 +9481,19 @@ async function main() {
         testCoTrainerLiveBilanz,
         testEuropaGruppenPlatz,
         testVorvertragsFrist,
+        testAeltereStaende,
+        testModalFokus,
+        testAutosaveLadeMeldung,
+        testEnglischDynamischeTexte,
         testRuntimeRoundTrip,
     ];
 
     // TEST_ONLY=Landes npm test -> nur Suiten, deren Name den Text enthält
     const only = process.env.TEST_ONLY;
-    const liste = only ? suites.filter(s => s.name.includes(only)) : suites;
+    // Die langsamsten Suiten (rund 5 s) starten zuerst, dann füllen die kurzen Suiten die Lücken (25.25)
+    const vorne = new Set(['testManagerOffice', 'testMobileLayout', 'testLoadingGuard']);
+    const liste = (only ? suites.filter(s => s.name.includes(only)) : [...suites])
+        .sort((a, b) => (vorne.has(b.name) ? 1 : 0) - (vorne.has(a.name) ? 1 : 0));
 
     // Suiten laufen parallel (TEST_JOBS, Standard 3). Jede Suite bekommt einen eigenen
     // Browser-Kontext = eigener Speicher, so sieht keine Suite den Stand einer anderen.

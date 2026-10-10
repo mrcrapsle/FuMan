@@ -135,6 +135,9 @@ function recordLiveCoTrainerMatch(matchResult, match) {
 function coTrainerLiveBilanzText(h) {
     const gefolgt = h.liveMatchesFollowed || 0, eigen = h.liveMatchesOwn || 0;
     if (!gefolgt && !eigen) return '';
+    if (typeof currentLang !== 'undefined' && currentLang === 'en') {
+        return `<br>Live match record: with followed hints ${h.liveFollowedWins || 0}/${gefolgt} wins, without a followed hint ${h.liveOwnWins || 0}/${eigen} wins`;
+    }
     return `<br>Livespiel-Bilanz: mit befolgten Hinweisen ${h.liveFollowedWins || 0}/${gefolgt} Siege, ohne befolgten Hinweis ${h.liveOwnWins || 0}/${eigen} Siege`;
 }
 

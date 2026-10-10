@@ -325,3 +325,49 @@
         }
     }
 
+// Tastatur in Overlays (25.25): Beim Öffnen springt der Fokus in den Dialog, Tab bleibt darin,
+// beim Schließen kehrt er zum Auslöser zurück. Overlays werden an vielen Stellen per classList
+// geöffnet, darum beobachtet ein MutationObserver die Klasse 'show' der generischen Overlays.
+const modalFokusAusloeser = new Map();
+function modalFokusElemente(overlay) {
+    return [...overlay.querySelectorAll('button, input, select, textarea, a[href], [tabindex]:not([tabindex="-1"])')]
+        .filter(el => !el.disabled && el.offsetParent !== null);
+}
+function offeneOverlays() {
+    return [...document.querySelectorAll('.generic-modal-overlay.show')];
+}
+function initModalFocus() {
+    if (typeof MutationObserver === 'undefined') return;
+    document.querySelectorAll('.generic-modal-overlay').forEach(ov => {
+        if (ov.__fokusBeobachtet) return;
+        ov.__fokusBeobachtet = true;
+        new MutationObserver(() => {
+            if (ov.classList.contains('show')) {
+                if (!modalFokusAusloeser.has(ov)) modalFokusAusloeser.set(ov, document.activeElement);
+                if (!ov.contains(document.activeElement)) {
+                    const erste = modalFokusElemente(ov)[0];
+                    if (erste) erste.focus({ preventScroll: true });
+                }
+            } else if (modalFokusAusloeser.has(ov)) {
+                const zurueck = modalFokusAusloeser.get(ov);
+                modalFokusAusloeser.delete(ov);
+                if (ov.contains(document.activeElement) && zurueck && zurueck.focus && document.contains(zurueck)) {
+                    zurueck.focus({ preventScroll: true });
+                }
+            }
+        }).observe(ov, { attributes: true, attributeFilter: ['class'] });
+    });
+    document.addEventListener('keydown', e => {
+        if (e.key !== 'Tab') return;
+        const ov = offeneOverlays().pop();
+        if (!ov) return;
+        const els = modalFokusElemente(ov);
+        if (!els.length) return;
+        const erste = els[0], letzte = els[els.length - 1];
+        const innen = ov.contains(document.activeElement);
+        if (e.shiftKey && (!innen || document.activeElement === erste)) { e.preventDefault(); letzte.focus(); }
+        else if (!e.shiftKey && (!innen || document.activeElement === letzte)) { e.preventDefault(); erste.focus(); }
+    });
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initModalFocus);
+else initModalFocus();

@@ -171,8 +171,13 @@ function renderPreContractBox() {
     const offen = game.preContracts || [];
     const kopf = `<div class="panel-header">📝 VORVERTRÄGE - ABLÖSEFREI ZUR NEUEN SAISON</div>`;
     // Eigene Spieler mit Vorvertrags-Angebot: Frist steht oben, nicht versteckt im Spielerprofil (25.25)
-    const eigene = squad.filter(p => p.preContractOffer).map(p => `<strong>${p.name}</strong> (${p.preContractOffer.club}, Frist Spieltag ${p.preContractOffer.deadline})`);
-    const eigeneZeile = eigene.length ? `<div class="box" style="font-size:10px; border-left-color:var(--danger);">⚠️ Vorvertrags-Angebote an deine Spieler: ${eigene.join(', ')} - verlängern, sonst gehen sie zum Saisonende.</div>` : '';
+    const en = typeof currentLang !== 'undefined' && currentLang === 'en';
+    const eigene = squad.filter(p => p.preContractOffer).map(p => en
+        ? `<strong>${p.name}</strong> (${p.preContractOffer.club}, deadline matchday ${p.preContractOffer.deadline})`
+        : `<strong>${p.name}</strong> (${p.preContractOffer.club}, Frist Spieltag ${p.preContractOffer.deadline})`);
+    const eigeneZeile = eigene.length ? `<div class="box" style="font-size:10px; border-left-color:var(--danger);">${en
+        ? `⚠️ Pre-contract offers for your players: ${eigene.join(', ')} - extend, or they leave at season end.`
+        : `⚠️ Vorvertrags-Angebote an deine Spieler: ${eigene.join(', ')} - verlängern, sonst gehen sie zum Saisonende.`}</div>` : '';
     const unterschrieben = offen.length ? `<div class="box" style="font-size:10px; border-left-color:var(--primary);">✍️ Unterschrieben: ${offen.map(v => `<strong>${v.player.name}</strong> (${v.player.pos}, ${v.player.strength}, von ${v.from})`).join(', ')} - kommen zur neuen Saison.</div>` : '';
     if (game.matchday < PRECONTRACT_START_MD) {
         box.innerHTML = `<div class="panel">${kopf}<div class="box" style="font-size:10px;">Ab dem Winterfenster (Spieltag ${PRECONTRACT_START_MD}) kannst du Spieler verpflichten, deren Vertrag zum Saisonende ausläuft - ohne Ablöse.</div>${unterschrieben}${eigeneZeile}</div>`;

@@ -11283,6 +11283,52 @@ function renderBoardRoomPanel() {
         }
     }
 
+// Tastatur in Overlays (25.25): Beim Öffnen springt der Fokus in den Dialog, Tab bleibt darin,
+// beim Schließen kehrt er zum Auslöser zurück. Overlays werden an vielen Stellen per classList
+// geöffnet, darum beobachtet ein MutationObserver die Klasse 'show' der generischen Overlays.
+const modalFokusAusloeser = new Map();
+function modalFokusElemente(overlay) {
+    return [...overlay.querySelectorAll('button, input, select, textarea, a[href], [tabindex]:not([tabindex="-1"])')]
+        .filter(el => !el.disabled && el.offsetParent !== null);
+}
+function offeneOverlays() {
+    return [...document.querySelectorAll('.generic-modal-overlay.show')];
+}
+function initModalFocus() {
+    if (typeof MutationObserver === 'undefined') return;
+    document.querySelectorAll('.generic-modal-overlay').forEach(ov => {
+        if (ov.__fokusBeobachtet) return;
+        ov.__fokusBeobachtet = true;
+        new MutationObserver(() => {
+            if (ov.classList.contains('show')) {
+                if (!modalFokusAusloeser.has(ov)) modalFokusAusloeser.set(ov, document.activeElement);
+                if (!ov.contains(document.activeElement)) {
+                    const erste = modalFokusElemente(ov)[0];
+                    if (erste) erste.focus({ preventScroll: true });
+                }
+            } else if (modalFokusAusloeser.has(ov)) {
+                const zurueck = modalFokusAusloeser.get(ov);
+                modalFokusAusloeser.delete(ov);
+                if (ov.contains(document.activeElement) && zurueck && zurueck.focus && document.contains(zurueck)) {
+                    zurueck.focus({ preventScroll: true });
+                }
+            }
+        }).observe(ov, { attributes: true, attributeFilter: ['class'] });
+    });
+    document.addEventListener('keydown', e => {
+        if (e.key !== 'Tab') return;
+        const ov = offeneOverlays().pop();
+        if (!ov) return;
+        const els = modalFokusElemente(ov);
+        if (!els.length) return;
+        const erste = els[0], letzte = els[els.length - 1];
+        const innen = ov.contains(document.activeElement);
+        if (e.shiftKey && (!innen || document.activeElement === erste)) { e.preventDefault(); letzte.focus(); }
+        else if (!e.shiftKey && (!innen || document.activeElement === letzte)) { e.preventDefault(); erste.focus(); }
+    });
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initModalFocus);
+else initModalFocus();
 
 /* eslint-enable */
 /* eslint-disable no-undef */
@@ -22722,6 +22768,9 @@ function recordLiveCoTrainerMatch(matchResult, match) {
 function coTrainerLiveBilanzText(h) {
     const gefolgt = h.liveMatchesFollowed || 0, eigen = h.liveMatchesOwn || 0;
     if (!gefolgt && !eigen) return '';
+    if (typeof currentLang !== 'undefined' && currentLang === 'en') {
+        return `<br>Live match record: with followed hints ${h.liveFollowedWins || 0}/${gefolgt} wins, without a followed hint ${h.liveOwnWins || 0}/${eigen} wins`;
+    }
     return `<br>Livespiel-Bilanz: mit befolgten Hinweisen ${h.liveFollowedWins || 0}/${gefolgt} Siege, ohne befolgten Hinweis ${h.liveOwnWins || 0}/${eigen} Siege`;
 }
 
@@ -23479,8 +23528,13 @@ function renderPreContractBox() {
     const offen = game.preContracts || [];
     const kopf = `<div class="panel-header">📝 VORVERTRÄGE - ABLÖSEFREI ZUR NEUEN SAISON</div>`;
     // Eigene Spieler mit Vorvertrags-Angebot: Frist steht oben, nicht versteckt im Spielerprofil (25.25)
-    const eigene = squad.filter(p => p.preContractOffer).map(p => `<strong>${p.name}</strong> (${p.preContractOffer.club}, Frist Spieltag ${p.preContractOffer.deadline})`);
-    const eigeneZeile = eigene.length ? `<div class="box" style="font-size:10px; border-left-color:var(--danger);">⚠️ Vorvertrags-Angebote an deine Spieler: ${eigene.join(', ')} - verlängern, sonst gehen sie zum Saisonende.</div>` : '';
+    const en = typeof currentLang !== 'undefined' && currentLang === 'en';
+    const eigene = squad.filter(p => p.preContractOffer).map(p => en
+        ? `<strong>${p.name}</strong> (${p.preContractOffer.club}, deadline matchday ${p.preContractOffer.deadline})`
+        : `<strong>${p.name}</strong> (${p.preContractOffer.club}, Frist Spieltag ${p.preContractOffer.deadline})`);
+    const eigeneZeile = eigene.length ? `<div class="box" style="font-size:10px; border-left-color:var(--danger);">${en
+        ? `⚠️ Pre-contract offers for your players: ${eigene.join(', ')} - extend, or they leave at season end.`
+        : `⚠️ Vorvertrags-Angebote an deine Spieler: ${eigene.join(', ')} - verlängern, sonst gehen sie zum Saisonende.`}</div>` : '';
     const unterschrieben = offen.length ? `<div class="box" style="font-size:10px; border-left-color:var(--primary);">✍️ Unterschrieben: ${offen.map(v => `<strong>${v.player.name}</strong> (${v.player.pos}, ${v.player.strength}, von ${v.from})`).join(', ')} - kommen zur neuen Saison.</div>` : '';
     if (game.matchday < PRECONTRACT_START_MD) {
         box.innerHTML = `<div class="panel">${kopf}<div class="box" style="font-size:10px;">Ab dem Winterfenster (Spieltag ${PRECONTRACT_START_MD}) kannst du Spieler verpflichten, deren Vertrag zum Saisonende ausläuft - ohne Ablöse.</div>${unterschrieben}${eigeneZeile}</div>`;
@@ -30517,7 +30571,7 @@ const LEXICON_ENTRIES = [
         text: 'Brechstange: beide Teams kommen zu deutlich mehr Torchancen - das lohnt bei Rückstand, kostet bei Führung Punkte. Pressing: etwas mehr eigene als gegnerische Chancen. Beide kosten Kraft: 90 Minuten Brechstange oder Pressing bedeuten nach dem Spiel bis zu 8 Fitnesspunkte extra für die Startelf. Bus parken: deutlich weniger Tore auf beiden Seiten, die eigenen sinken stärker - gut, um eine Führung über die Zeit zu bringen.',
         tips: ['Gemessen ab der 60. Minute bei 0:1: Brechstange holt im Schnitt mehr Punkte, der Bus weniger', 'Bei Führung ab der 70. Minute ist der Bus die beste Wahl', 'Der Co-Trainer schlägt Brechstange und Bus in den passenden Lagen vor'] },
     { cat: 'Taktik', title: 'Co-Trainer im Livespiel', screen: 'screen-squad',
-        text: 'Ein eingestellter Co-Trainer meldet sich im Livespiel mit Hinweisen aus dem echten Spielstand - jeweils mit einer Aktion per Tipp. Stufe 1: müde Spieler, Rückstand oder knappe Führung in der Schlussphase. Stufe 2: zusätzlich Gelb-Rot-Gefahr und ein verlorenes Taktik-Duell (ab der 20. Minute, mit Chef-Analyst sofort). Stufe 3: erkennt auch ein gewinnbares Taktik-Duell.',
+        text: 'Ein eingestellter Co-Trainer meldet sich im Livespiel mit Hinweisen aus dem echten Spielstand - jeweils mit einer Aktion per Tipp. Stufe 1: müde Spieler, Rückstand oder knappe Führung in der Schlussphase. Stufe 2: zusätzlich Gelb-Rot-Gefahr und ein verlorenes Taktik-Duell (ab der 20. Minute, mit Chef-Analyst sofort). Stufe 3: erkennt auch ein gewinnbares Taktik-Duell. Die Bilanz steht unter Kader > Co-Trainer-Historie: Siege mit befolgten Hinweisen gegen Siege ohne.',
         tips: ['Jede Aktion kostet, was sie sonst auch kostet: einen Wechsel, Zweikampfstärke oder Ordnung hinten', 'Ein schlecht gelaunter Co-Trainer meldet sich seltener - Gehaltserhöhung hebt seine Laune', 'Befolgte Hinweise stärken das Vertrauen in ihn (Kader > Co-Trainer-Historie)'] },
     { cat: 'Taktik', title: 'Standards einstudieren', screen: 'screen-training',
         text: 'Setze im Wochenplan Tage auf „🚩 Standards“ und wähle darunter eine Variante: direkter Freistoß, Freistoßflanke, kurz ausgeführt, Elfmeter oder Ecken. Jeder Standards-Tag bringt der Variante 10 Punkte pro Spieltag (mit Standards-Spezialist 15), alle anderen verlieren 2. Bei 100 % bringt sie im Livespiel bis zu +6 % Torchance bzw. Trefferquote, die Flanke halbiert zusätzlich das Konterrisiko.',
@@ -30610,7 +30664,7 @@ const LEXICON_ENTRIES = [
         text: 'Jeder Spieler auf dem Transfermarkt hat einen verdeckten Befund: unauffällig, chronische Probleme (im Kader dauerhaft ×1,5 Verletzungsrisiko, 3-5 Verletzungen in der Akte) oder aktuell verletzt (fällt 2-5 Spiele aus). Ältere Spieler haben öfter chronische Probleme. Im Transferpoker kannst du nach der Ablöse-Einigung einen Medizincheck machen lassen: 3 % der Ablöse (mit Chef-Physio die Hälfte, mindestens 1.500 €). Findet er etwas, senkt der Verein die Ablöse (chronisch −20 %, verletzt −15 %) - oder du brichst ab.',
         tips: ['Der Sofortkauf ist blind - ein Befund zeigt sich erst nach der Unterschrift', 'Bei teuren und älteren Spielern lohnt sich der Check fast immer', 'Chronische Probleme erkennst du im Kader am 🩹'] },
     { cat: 'Transfers', title: 'Vorverträge', screen: 'screen-transfer',
-        text: 'Ab dem Winterfenster (Spieltag 18) stehen unter „Vereinslose“ vier Spieler, deren Vertrag zum Saisonende ausläuft. Ein Vorvertrag kostet keine Ablöse, aber Handgeld sofort (12 oder 24 Spieltagsgehälter), 20 % mehr Gehalt und der Spieler kommt erst zur neuen Saison. Er kann ablehnen - ein Versuch je Spieler, doppeltes Handgeld überzeugt eher. Wartende Kandidaten schnappen sich andere Vereine. Umgekehrt locken andere Vereine deine Spieler im letzten Vertragsjahr: verlängerst du nicht innerhalb von 3 Spieltagen (er fordert dann 15 % mehr), unterschreibt er woanders und geht am Saisonende ablösefrei.',
+        text: 'Ab dem Winterfenster (Spieltag 18) stehen unter „Vereinslose“ vier Spieler, deren Vertrag zum Saisonende ausläuft. Ein Vorvertrag kostet keine Ablöse, aber Handgeld sofort (12 oder 24 Spieltagsgehälter), 20 % mehr Gehalt und der Spieler kommt erst zur neuen Saison. Er kann ablehnen - ein Versuch je Spieler, doppeltes Handgeld überzeugt eher. Wartende Kandidaten schnappen sich andere Vereine. Die Box nennt auch die Frist der Angebote an deine eigenen Spieler. Umgekehrt locken andere Vereine deine Spieler im letzten Vertragsjahr: verlängerst du nicht innerhalb von 3 Spieltagen (er fordert dann 15 % mehr), unterschreibt er woanders und geht am Saisonende ablösefrei.',
         tips: ['Wichtige Verträge früh verlängern - dann gibt es gar kein Angebot', 'Hat ein Spieler woanders unterschrieben, bringt nur ein Verkauf im Winter noch Geld', 'Höchstens 3 offene Vorverträge, das Gehaltsbudget der neuen Saison muss reichen', 'Die Kaderplanung zeigt Angebote anderer Vereine mit Frist und welche Leistungsträger ab Spieltag 18 gefährdet sind'] },
     { cat: 'Transfers', title: 'Rückkaufoption', screen: 'screen-transfer',
         text: 'Ein Angebot für einen Spieler bis 25 Jahre kannst du mit Rückkaufoption annehmen: der Käufer zahlt 10 % weniger sofort, dafür darfst du den Spieler bis zum Ende der übernächsten Saison für 140 % des Angebots zurückholen - nur im Transferfenster. Beim neuen Verein entwickelt er sich weiter: junge Spieler legen zu, ab 25 stagniert er eher. Offene Optionen stehen im Reiter „Kader verkaufen“.',
@@ -30772,7 +30826,7 @@ const LEXICON_EN = {
         text: 'All-out attack: both teams get clearly more chances - pays off when trailing, costs points with a lead. Pressing: a few more own chances than the opponent\'s. Both cost energy: 90 minutes of all-out attack or pressing mean up to 8 extra fitness points for the starting XI after the match. Park the bus: clearly fewer goals on both sides, your own drop more - good for seeing out a lead.',
         tips: ['Measured from the 60th minute at 0:1: all-out attack earns more points on average, the bus fewer', 'With a lead from the 70th minute the bus is the best choice', 'The assistant coach suggests all-out attack and the bus in the right situations'] },
     'Co-Trainer im Livespiel': { title: 'Assistant coach in the live match',
-        text: 'A hired assistant coach chimes in during the live match with hints from the real match situation - each with a one-tap action. Level 1: tired players, trailing or a narrow lead late on. Level 2: also second-yellow risk and a lost tactical duel (from the 20th minute, immediately with a chief analyst). Level 3: also spots a winnable tactical duel.',
+        text: 'A hired assistant coach chimes in during the live match with hints from the real match situation - each with a one-tap action. Level 1: tired players, trailing or a narrow lead late on. Level 2: also second-yellow risk and a lost tactical duel (from the 20th minute, immediately with a chief analyst). Level 3: also spots a winnable tactical duel. The record is under squad > assistant coach history: wins with followed hints against wins without.',
         tips: ['Every action costs what it always costs: a substitution, tackling strength or defensive order', 'A grumpy assistant coach speaks up less often - a pay rise lifts his mood', 'Followed hints build trust in him (squad > assistant coach history)'] },
     'Standards einstudieren': { title: 'Practising set pieces',
         text: 'Set days in the weekly plan to "🚩 Set pieces" and choose a variant below: direct free kick, free-kick cross, taken short, penalties or corners. Every set-piece day gives the variant 10 points per matchday (15 with a set-piece specialist), all others lose 2. At 100 % it brings up to +6 % goal chance or conversion in the live match, the cross also halves the counter risk.',
@@ -30865,7 +30919,7 @@ const LEXICON_EN = {
         text: 'Every player on the transfer market has a hidden finding: clean, chronic problems (in the squad permanently ×1.5 injury risk, 3-5 injuries on record) or currently injured (out for 2-5 matches). Older players have chronic problems more often. In the transfer poker you can order a medical check after agreeing the fee: 3 % of the fee (half with a head physio, at least 1,500 €). If it finds something, the club lowers the fee (chronic −20 %, injured −15 %) - or you walk away.',
         tips: ['The instant buy is blind - a finding only shows after signing', 'For expensive and older players the check almost always pays off', 'You recognise chronic problems in the squad by the 🩹'] },
     'Vorverträge': { title: 'Pre-contracts',
-        text: 'From the winter window (matchday 18) four players whose contract expires at the end of the season are listed under "Free agents". A pre-contract costs no fee, but a signing-on fee right away (12 or 24 matchday wages), 20 % more wage, and the player only arrives for the new season. He can refuse - one try per player, a double signing-on fee convinces more often. Other clubs snap up waiting candidates. In turn, other clubs lure your players in the last year of their contract: if you do not extend within 3 matchdays (he then demands 15 % more), he signs elsewhere and leaves on a free at the end of the season.',
+        text: 'From the winter window (matchday 18) four players whose contract expires at the end of the season are listed under "Free agents". A pre-contract costs no fee, but a signing-on fee right away (12 or 24 matchday wages), 20 % more wage, and the player only arrives for the new season. He can refuse - one try per player, a double signing-on fee convinces more often. Other clubs snap up waiting candidates. In turn, other clubs lure your players in the last year of their contract: if you do not extend within 3 matchdays (he then demands 15 % more), he signs elsewhere and leaves on a free at the end of the season. The box also shows the deadline for offers to your own players.',
         tips: ['Extend important contracts early - then there is no offer at all', 'If a player has signed elsewhere, only a winter sale still brings money', 'At most 3 open pre-contracts, the wage budget of the new season must be enough', 'Squad planning shows other clubs\' offers with deadline and which key players are at risk from matchday 18'] },
     'Rückkaufoption': { title: 'Buy-back option',
         text: 'You can accept an offer for a player up to 25 with a buy-back option: the buyer pays 10 % less now, in return you may bring the player back for 140 % of the offer until the end of the season after next - only in a transfer window. At his new club he keeps developing: young players improve, from 25 he tends to stagnate. Open options are listed in the tab "Sell squad".',
@@ -32233,9 +32287,14 @@ function renderSeasonForecastHistory() {
         const raw = safeLocalGet(AUTOSAVE_KEY);
         let m = null;
         try { m = raw ? (JSON.parse(raw).meta || null) : null; } catch (e) { m = null; }
+        const en = typeof currentLang !== 'undefined' && currentLang === 'en';
         box.innerHTML = m
-            ? `🔄 Autosave: Saison ${m.season} · Spieltag ${m.matchday}/34${m.savedAt ? ` · gespeichert ${m.savedAt}` : ''} <span style="color:var(--text-muted);">(alle ${AUTOSAVE_INTERVAL} Spieltage erneuert)</span>`
-            : `🔄 Autosave: noch keiner - er wird alle ${AUTOSAVE_INTERVAL} Spieltage angelegt.`;
+            ? (en
+                ? `🔄 Autosave: season ${m.season} · matchday ${m.matchday}/34${m.savedAt ? ` · saved ${m.savedAt}` : ''} <span style="color:var(--text-muted);">(renewed every ${AUTOSAVE_INTERVAL} matchdays)</span>`
+                : `🔄 Autosave: Saison ${m.season} · Spieltag ${m.matchday}/34${m.savedAt ? ` · gespeichert ${m.savedAt}` : ''} <span style="color:var(--text-muted);">(alle ${AUTOSAVE_INTERVAL} Spieltage erneuert)</span>`)
+            : (en
+                ? `🔄 Autosave: none yet - it is created every ${AUTOSAVE_INTERVAL} matchdays.`
+                : `🔄 Autosave: noch keiner - er wird alle ${AUTOSAVE_INTERVAL} Spieltage angelegt.`);
     }
 
     function renderSaveSlotsUI() {
@@ -32591,10 +32650,10 @@ function compareGameVersions(a, b) {
 // Einziger Weg, einen Spielstand zu übernehmen: prüfen, Sicherheitskopie, laden, nachreparieren.
 // options: { label, backup (bool), silent (bool) } → true/false
 // Was nach einem abgewiesenen Laden gilt und wo der Ausweg liegt (25.25).
-function saveLoadHinweis() {
-    return safeLocalGet(SAVE_BACKUP_KEY)
-        ? 'Das laufende Spiel bleibt unverändert; eine Sicherheitskopie liegt unter „🛟 Sicherheitskopie wiederherstellen“ (Speicherstände) bereit.'
-        : 'Das laufende Spiel bleibt unverändert; lade einen anderen Slot oder den Autosave.';
+function saveLoadHinweis(label) {
+    if (safeLocalGet(SAVE_BACKUP_KEY)) return 'Das laufende Spiel bleibt unverändert; eine Sicherheitskopie liegt unter „🛟 Sicherheitskopie wiederherstellen“ (Speicherstände) bereit.';
+    const ausweg = label === 'Autosave' ? 'lade einen Spielstand aus einem Slot' : 'lade einen anderen Slot oder den Autosave';
+    return `Das laufende Spiel bleibt unverändert; ${ausweg}.`;
 }
 
 function loadSaveSafely(raw, options) {
@@ -32603,12 +32662,12 @@ function loadSaveSafely(raw, options) {
     let p;
     try { p = typeof raw === 'string' ? JSON.parse(raw) : raw; }
     catch (e) {
-        if (!o.silent) showToast(`⛔ ${name} ist beschädigt und nicht lesbar. ${saveLoadHinweis()}`, 'error', 6000);
+        if (!o.silent) showToast(`⛔ ${name} ist beschädigt und nicht lesbar. ${saveLoadHinweis(o.label)}`, 'error', 6000);
         return false;
     }
     const check = validateAndRepairSave(p);
     if (check.fatal) {
-        if (!o.silent) showToast(`⛔ ${name} ist beschädigt (${check.fatal}). ${saveLoadHinweis()}`, 'error', 6000);
+        if (!o.silent) showToast(`⛔ ${name} ist beschädigt (${check.fatal}). ${saveLoadHinweis(o.label)}`, 'error', 6000);
         return false;
     }
     if (o.backup) backupCurrentGame(`vor dem Laden von „${o.label}“`);

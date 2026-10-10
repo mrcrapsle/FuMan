@@ -414,9 +414,14 @@
         const raw = safeLocalGet(AUTOSAVE_KEY);
         let m = null;
         try { m = raw ? (JSON.parse(raw).meta || null) : null; } catch (e) { m = null; }
+        const en = typeof currentLang !== 'undefined' && currentLang === 'en';
         box.innerHTML = m
-            ? `🔄 Autosave: Saison ${m.season} · Spieltag ${m.matchday}/34${m.savedAt ? ` · gespeichert ${m.savedAt}` : ''} <span style="color:var(--text-muted);">(alle ${AUTOSAVE_INTERVAL} Spieltage erneuert)</span>`
-            : `🔄 Autosave: noch keiner - er wird alle ${AUTOSAVE_INTERVAL} Spieltage angelegt.`;
+            ? (en
+                ? `🔄 Autosave: season ${m.season} · matchday ${m.matchday}/34${m.savedAt ? ` · saved ${m.savedAt}` : ''} <span style="color:var(--text-muted);">(renewed every ${AUTOSAVE_INTERVAL} matchdays)</span>`
+                : `🔄 Autosave: Saison ${m.season} · Spieltag ${m.matchday}/34${m.savedAt ? ` · gespeichert ${m.savedAt}` : ''} <span style="color:var(--text-muted);">(alle ${AUTOSAVE_INTERVAL} Spieltage erneuert)</span>`)
+            : (en
+                ? `🔄 Autosave: none yet - it is created every ${AUTOSAVE_INTERVAL} matchdays.`
+                : `🔄 Autosave: noch keiner - er wird alle ${AUTOSAVE_INTERVAL} Spieltage angelegt.`);
     }
 
     function renderSaveSlotsUI() {
