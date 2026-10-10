@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.104', date: '10.10.2026', features: 'Phase 25.34: Entlassungsmeldung nennt den Grund, Transferpoker rundet unter 100.000 € auf 100 €, Kader-Median in der Jugendliste und im Lexikon, Fixture 3.103, Poker-Messung je Liga' };
+    const GAME_VERSION = { number: '3.105', date: '10.10.2026', features: 'Phase 25.35: Job-Warnung mit Zahlen, kleine KI-Angebote auf 500 € genau, Profivertrag mit Kader-Median, Karriere-Fixture aus der 4. Liga, Bot-Schalter für Entlassung, reproduzierbare Europa- und Pokal-Tests' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
