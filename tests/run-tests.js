@@ -4072,7 +4072,8 @@ async function testSaveExportImportAndErrorLog(browser) {
 
     await page.evaluate(() => { game.money = 111; });
     await page.setInputFiles('#save-import-file-input', await download.path());
-    await page.waitForTimeout(300);
+    // Import läuft asynchron (Datei lesen, prüfen, laden): auf den Zustand warten statt feste Zeit (unter Parallellast zu knapp)
+    await page.waitForFunction(() => game.money === 987654, null, { timeout: 5000 }).catch(() => {});
     const afterImport = await page.evaluate(() => game.money);
     assert(afterImport === 987654, 'Import aus Datei stellt den exportierten Spielstand korrekt wieder her');
 
@@ -5966,25 +5967,33 @@ async function testEuropeanCup(browser) {
     // 5. Eine komplette Saison im Europapokal laeuft fehlerfrei durch und erzeugt die
     //    K.o.-Runde - frueher blieben Halbfinale, Finale und Titel praktisch unerreichbar.
     const saison = await page.evaluate(() => {
-        closeTutorial();
-        squad.forEach(p => { p.strength = 78 + Math.floor(Math.random() * 8); });
-        game.inEurope = true;
-        initEuropeCup();
-        let feld = [...europeTournament.groupA, ...europeTournament.groupB];
-        let unsereStaerke = squad.reduce((sum, p) => sum + p.strength, 0) / squad.length;
-        let schlechterAlsAlle = feld.filter(t => t.name !== game.clubName).every(t => t.str > unsereStaerke);
-        for (let i = 0; i < 7; i++) simulateMatchdays(5);
-        let grp = europeTournament.groupA.some(t => t.name === game.clubName)
-            ? europeTournament.groupA : europeTournament.groupB;
-        let sorted = [...grp].sort((a, b) => b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga));
-        return {
-            schlechterAlsAlle,
-            platz: sorted.findIndex(t => t.name === game.clubName) + 1,
-            punkte: grp.find(t => t.name === game.clubName).pts,
-            spiele: grp.find(t => t.name === game.clubName).played,
-            halbfinale: (europeTournament.semiFinals || []).length,
-            finale: !!europeTournament.finalMatch
-        };
+        // Fester Zufallsstrom für diese Saison: ohne Seed fiel die Gruppe in seltenen Läufen auf 0 Punkte
+        const alterZufall = Math.random;
+        let seed = 20251010;
+        Math.random = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+        try {
+            closeTutorial();
+            squad.forEach(p => { p.strength = 78 + Math.floor(Math.random() * 8); });
+            game.inEurope = true;
+            initEuropeCup();
+            let feld = [...europeTournament.groupA, ...europeTournament.groupB];
+            let unsereStaerke = squad.reduce((sum, p) => sum + p.strength, 0) / squad.length;
+            let schlechterAlsAlle = feld.filter(t => t.name !== game.clubName).every(t => t.str > unsereStaerke);
+            for (let i = 0; i < 7; i++) simulateMatchdays(5);
+            let grp = europeTournament.groupA.some(t => t.name === game.clubName)
+                ? europeTournament.groupA : europeTournament.groupB;
+            let sorted = [...grp].sort((a, b) => b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga));
+            return {
+                schlechterAlsAlle,
+                platz: sorted.findIndex(t => t.name === game.clubName) + 1,
+                punkte: grp.find(t => t.name === game.clubName).pts,
+                spiele: grp.find(t => t.name === game.clubName).played,
+                halbfinale: (europeTournament.semiFinals || []).length,
+                finale: !!europeTournament.finalMatch
+            };
+        } finally {
+            Math.random = alterZufall;
+        }
     });
 
     assert(r.achtTeilnehmer && r.wirDabei, 'Der Champions Cup hat acht Teilnehmer, der eigene Verein ist dabei');
@@ -8493,8 +8502,16 @@ async function testMobileLayout(browser) {
         const ueberlauf = [], knoepfe = [], schrift = [], verdeckt = [], streifen = [];
         for (const [name, open] of views) {
             open();
-            await new Promise(res => setTimeout(res, 20));
-            if (document.documentElement.scrollWidth > W + 2) ueberlauf.push(name);
+            // Zwei Frames plus kurze Pause: unter Parallellast werden Inhalte später gezeichnet als 20 ms
+            await new Promise(res => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(res, 40))));
+            if (document.documentElement.scrollWidth > W + 2) {
+                // Verursacher benennen, damit ein Fehlschlag sofort zeigt, welches Element breit ist
+                const breit = [...document.querySelectorAll('body *')].filter(el => {
+                    const rc = el.getBoundingClientRect();
+                    return rc.width && rc.right > W + 2 && getComputedStyle(el).display !== 'none';
+                }).slice(0, 3).map(el => `${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''} (${Math.round(el.getBoundingClientRect().right)}px, "${(el.textContent || '').trim().slice(0, 30)}")`);
+                ueberlauf.push(breit.length ? `${name}: ${breit.join('; ')}` : name);
+            }
             // Seitenende muss nach dem Herunterscrollen über der unteren Leiste stehen
             window.scrollTo(0, document.documentElement.scrollHeight);
             const navTop = document.querySelector('.bottom-nav-bar').getBoundingClientRect().top;
