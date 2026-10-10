@@ -256,7 +256,7 @@ function renderTransferPokerBox() {
     const geduld = '🟢'.repeat(Math.max(0, t.patience)) + '⚪'.repeat(Math.max(0, 5 - t.patience));
     box.innerHTML = `<div class="panel" style="border:1px solid var(--accent); margin-bottom:8px;">
         <div class="panel-header" style="color:var(--accent);">🃏 TRANSFERPOKER: ${p.name} (${p.pos}, ${p.strength})</div>
-        <div style="font-size:9px; margin-bottom:6px;">Verkäufer: <strong>${p.sellerClub}</strong> · Forderung <strong>${formatVal(p.askingPrice)}</strong> · Marktwert ${formatVal(p.marketValue)} · Vertrag ${p.contracts || 2} J. · Geduld ${geduld}${t.rival ? ` · ⚔️ ${t.rival.club} bietet ${formatVal(t.rival.bid)}` : ''}</div>
+        <div style="font-size:9px; margin-bottom:6px;">Verkäufer: <strong>${p.sellerClub}</strong> · Forderung <strong>${formatVal(p.askingPrice)}</strong> · Marktwert ${formatVal(p.marketValue)} · Vertrag ${p.contracts || 2} J. · Geduld ${geduld} (noch ${Math.max(0, t.patience)} Runden)${t.rival ? ` · ⚔️ ${t.rival.club} bietet ${formatVal(t.rival.bid)}` : ''}</div>
         <div style="font-size:9px; max-height:110px; overflow-y:auto; background:rgba(0,0,0,0.15); border-radius:4px; padding:4px; margin-bottom:6px;">${t.log.slice(-6).map(z => `<div>${z}</div>`).join('')}</div>
         ${t.agreedFee ? `
             <div class="box" style="font-size:10px;">Ablöse ${formatVal(t.agreedFee)}${agentFee ? ` + Provision ${formatVal(agentFee)}` : ''} · Gehalt <strong>${formatVal(t.wageDemand)}</strong>/SpT (bisher ${formatVal(p.wage)})</div>
@@ -269,14 +269,14 @@ function renderTransferPokerBox() {
             </div>` : `
             <div style="display:flex; align-items:center; justify-content:space-between; gap:4px; margin-bottom:6px;">
                 <button onclick="adjustPokerOffer(-5)" class="btn-secondary" style="width:auto;">−5 %</button>
-                <strong style="font-size:13px;">${formatVal(t.offer)}</strong>
+                <div style="text-align:center;"><strong style="font-size:13px;">${formatVal(t.offer)}</strong><div style="font-size:8px; color:var(--text-muted);">${p.askingPrice ? Math.round(t.offer / p.askingPrice * 100) : 0} % der Forderung</div></div>
                 <button onclick="adjustPokerOffer(5)" class="btn-secondary" style="width:auto;">+5 %</button>
             </div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
                 <button onclick="submitPokerOffer()" class="btn-action">📨 Angebot abgeben</button>
-                <button onclick="acceptPokerAsking()" class="btn-secondary">Forderung annehmen</button>
+                <button onclick="acceptPokerAsking()" class="btn-secondary">Forderung annehmen (${formatVal(p.askingPrice)})</button>
                 <button onclick="closeTransferPoker()" class="btn-secondary" style="grid-column: span 2;">Abbrechen</button>
             </div>`}
-        <div style="font-size:8px; color:var(--text-muted); margin-top:4px;">Unter der Schmerzgrenze sagt der Verein nie zu; sehr niedrige Angebote kosten doppelt Geduld. Bei begehrten Spielern kann ein Rivale mitbieten und den Spieler wegschnappen.</div>
+        <div style="font-size:8px; color:var(--text-muted); margin-top:4px;">Unter der Schmerzgrenze sagt der Verein nie zu. Jede Runde kostet 1 Geduld, ein Angebot unter 75 % der Schmerzgrenze kostet 2. Bei begehrten Spielern kann ein Rivale mitbieten und den Spieler wegschnappen.</div>
     </div>`;
 }

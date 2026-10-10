@@ -56,13 +56,16 @@ function writeSaveVerified(key, json) {
         catch (e) { return { ok: false, reason: isQuotaError(e) ? 'voll' : 'blockiert' }; }
     };
     let r = versuch();
+    let backupWeg = false;
     // Speicher voll: die Sicherheitskopie ist der entbehrlichste Stand - sie weicht zuerst.
     if (!r.ok && r.reason === 'voll' && key !== SAVE_BACKUP_KEY && safeLocalGet(SAVE_BACKUP_KEY)) {
         safeLocalRemove(SAVE_BACKUP_KEY);
+        backupWeg = true;
         r = versuch();
         if (r.ok) r.backupDropped = true;
     }
-    if (!r.ok) return r;
+    // backupDropped auch bei Fehlschlag: die Meldung nennt dann, dass die Kopie umsonst weg ist
+    if (!r.ok) return { ...r, backupDropped: backupWeg };
     if (safeLocalGet(key) !== json) return { ok: false, reason: 'pruefung' };
     if (key !== SAVE_BACKUP_KEY) maybeWarnStorageFull();
     return r;
@@ -71,7 +74,8 @@ function writeSaveVerified(key, json) {
 function describeSaveFailure(r) {
     if (r.reason === 'voll') {
         const u = getStorageUsage();
-        return `💾 Speicher voll (${Math.round(u.used / 1000)} von ~${Math.round(u.budget / 1000)} Tsd. Zeichen belegt): lösche einen alten Slot oder exportiere den Spielstand als Datei.`;
+        const kopie = r.backupDropped ? ' Die Sicherheitskopie wurde dafür schon entfernt und reicht trotzdem nicht.' : '';
+        return `💾 Speicher voll (${Math.round(u.used / 1000)} von ~${Math.round(u.budget / 1000)} Tsd. Zeichen belegt): lösche einen alten Slot oder exportiere den Spielstand als Datei.${kopie}`;
     }
     if (r.reason === 'pruefung') return '💾 Speichern fehlgeschlagen: der Stand ließ sich nicht fehlerfrei zurücklesen. Bitte erneut speichern oder als Datei exportieren.';
     return '💾 Speichern nicht möglich: Dieser Browser/diese Ansicht blockiert lokalen Speicher für diese Datei. Öffne die Datei in einem normalen Browser (z.B. "Öffnen mit..." → Chrome), nicht in der Dateivorschau.';

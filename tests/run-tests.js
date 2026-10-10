@@ -757,6 +757,8 @@ async function testSaveSafety(browser) {
             saveGameToSlot(3);
             out.vollGemeldet = letzterToast().includes('Speicher voll') && !localStorage.getItem(SAVE_SLOT_PREFIX + 3);
             out.warnungBeiVoll = getStorageUsage().share > 0.8;
+            out.kopieHinweis = describeSaveFailure({ reason: 'voll', backupDropped: true }).includes('Sicherheitskopie wurde dafür schon entfernt');
+            out.ohneKopieKeinHinweis = !describeSaveFailure({ reason: 'voll' }).includes('Sicherheitskopie');
             for (let i = 0; i <= n; i++) localStorage.removeItem('fueller_' + i);
             // 8. Anzeige: Füllstand, Sicherheitskopie, letzter Export.
             backupCurrentGame('Test');
@@ -784,6 +786,7 @@ async function testSaveSafety(browser) {
         assert(r.neuereVersion, 'Spielstand aus einer neueren Version wird gemeldet');
         assert(r.fuellerGeschrieben && r.kopieWeicht, 'Speicher voll: die Sicherheitskopie weicht, damit der Spielstand passt');
         assert(r.vollGemeldet && r.warnungBeiVoll, 'Passt gar nichts mehr, meldet das Spiel "Speicher voll" statt still zu scheitern');
+        assert(r.kopieHinweis && r.ohneKopieKeinHinweis, 'Ist die Sicherheitskopie umsonst entfernt worden, sagt die Meldung das ausdrücklich');
         assert(r.anzeige, 'Speicherstände zeigen Füllstand, Sicherheitskopie und letzten Datei-Export');
         assert(r.erinnerung && r.exportGemerkt, 'Export-Erinnerung einmal pro Saison, der Export merkt sich die Saison');
     }
@@ -917,7 +920,8 @@ async function testOneHandControls(browser) {
     // Echte Zurück-Taste (Browser-History): erst das Fenster, ein Druck auf dem Startbildschirm warnt nur.
     await page.evaluate(() => openPlayerDetail(squad[0].id));
     await page.goBack().catch(() => null);
-    await page.waitForTimeout(300);
+    // Auf das Schließen warten statt fester Zeit (unter Parallellast kam das Fenster später)
+    await page.waitForFunction(() => !document.getElementById('player-detail-overlay').classList.contains('show'), null, { timeout: 3000 }).catch(() => null);
     const nachBack = await page.evaluate(() => ({ zu: !document.getElementById('player-detail-overlay').classList.contains('show'), da: typeof game === 'object' }));
     assert(nachBack.zu && nachBack.da, 'Browser-Zurück schließt das Fenster und bleibt im Spiel');
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 3).join(' | ')})`);
