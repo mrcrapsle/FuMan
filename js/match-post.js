@@ -39,7 +39,8 @@
 
         if (game.lowBoardSatStreak === 3 && !game.sackWarningIssued) {
             game.sackWarningIssued = true;
-            addInboxMessage('vertrag', '⚠️ Job-Warnung vom Vorstand!', 'Der Vorstand ist mit dem sportlichen Verlauf sehr unzufrieden. Bessere die Ergebnisse, sonst droht die Entlassung!', 'screen-dashboard');
+            const erwartetRang = game.seasonExpectation && game.seasonExpectation.expectedRank;
+            addInboxMessage('vertrag', '⚠️ Job-Warnung vom Vorstand!', `Der Vorstand ist mit dem sportlichen Verlauf sehr unzufrieden: Vertrauen ${Math.round(game.boardSat)} von 100, ${game.lowBoardSatStreak} Pflichtspiele in Folge unter der Warnschwelle${erwartetRang ? `, Erwartung für diese Saison: Platz ${erwartetRang}` : ''}. Bessere die Ergebnisse - Siege im Liga-Spiel heben das Vertrauen, am Saisonende zählt der Stand - sonst droht die Entlassung!`, 'screen-dashboard');
             showToast('⚠️ Der Vorstand erwägt deine Entlassung, wenn sich die Ergebnisse nicht bessern!', 'error');
         }
 

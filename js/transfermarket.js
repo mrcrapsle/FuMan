@@ -263,7 +263,12 @@
         // Spitzenspieler eines Amateur-/Unterligisten werben.
         let buyerClub = (optionen && optionen.club) || pickRandomOpposingClubName(true);
         let initialMultiplier = (optionen && optionen.multiplier) || ((managerRPG.perks.negotiator ? 1.05 : 0.85) + Math.random() * 0.35);
-        let offerSum = Math.max(10000, Math.round((targetPlayer.marketValue * initialMultiplier) / 5000) * 5000);
+        // Kleine Ablösen (Ligen 5-6: Marktwerte um 17.000 €) auf 500 € genau (25.35); die alte Untergrenze von
+        // 10.000 € und die 5.000-€-Schritte waren dort grob. Ab 50.000 € wie bisher auf 5.000 €.
+        const rohAngebot = targetPlayer.marketValue * initialMultiplier;
+        let offerSum = rohAngebot < 50000
+            ? Math.max(1000, Math.round(rohAngebot / 500) * 500)
+            : Math.max(10000, Math.round(rohAngebot / 5000) * 5000);
 
         let newOffer = {
             id: 'bid_' + Math.random().toString(36).substr(2, 7),
@@ -469,7 +474,9 @@
         let o = incomingOffers.find(x => x.id === offerId);
         if (!o) return;
         negoAmount = o.currentBid;
-        negoStepSize = Math.max(5000, Math.round(o.currentBid * 0.02 / 1000) * 1000);
+        negoStepSize = o.currentBid < 100000
+            ? Math.max(500, Math.round(o.currentBid * 0.02 / 500) * 500)
+            : Math.max(5000, Math.round(o.currentBid * 0.02 / 1000) * 1000);
         negoResellPct = o.resellPct || 0;
         document.getElementById('negotiation-stepper-overlay').classList.add('show');
         renderNegotiationStepper(offerId);
@@ -479,7 +486,8 @@
         negoCurrentOfferId = null;
     }
     function negoAdjustStep(mult) {
-        negoStepSize = Math.max(1000, Math.round(negoStepSize * mult / 1000) * 1000);
+        const einheit = negoStepSize < 5000 ? 100 : 1000;
+        negoStepSize = Math.max(einheit, Math.round(negoStepSize * mult / einheit) * einheit);
         renderNegotiationStepper(negoCurrentOfferId);
     }
     function negoAdjustAmount(dir) {

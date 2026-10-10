@@ -71,6 +71,9 @@ async function karriere(browser, lauf) {
     if (process.env.STRAT) await page.evaluate(s => { window.__strat = s; }, process.env.STRAT);
     // TALENT_AUFSCHLAG=n: Talente bis n Punkte über dem Kadermedian ebenfalls verkaufen (Punkt 3, Messung)
     if (process.env.TALENT_AUFSCHLAG) await page.evaluate(v => { window.__talentAufschlag = v; }, Number(process.env.TALENT_AUFSCHLAG));
+    // ENTLASSUNG_ERZWINGEN=n: am Ende von Saison n (ab 2) Vertrauen/Serie so setzen, dass die Entlassung greift -
+    // prüft die Ausgabe mit Grund im Bot (25.35)
+    if (process.env.ENTLASSUNG_ERZWINGEN) await page.evaluate(v => { window.__erzwingeEntlassung = v; }, Number(process.env.ENTLASSUNG_ERZWINGEN));
     // VORSTAND_START=n: Vertrauen zu Beginn auf n setzen (prüft z. B. die Entlassungsausgabe)
     if (process.env.VORSTAND_START) await page.evaluate(v => { game.boardSat = v; }, Number(process.env.VORSTAND_START));
     // KASSE_ANTEIL=n: Anteil des Kassenüberschusses, der ins Transferbudget fließt (Standard 0.4), ohne Kopie des Spiels
@@ -418,6 +421,13 @@ async function karriere(browser, lauf) {
                 zeile.vvWeg = squad.filter(p => p.preContractSigned).length;
                 const strat = typeof getTransferStrategy === 'function' ? getTransferStrategy() : null;
                 zeile.erwartet = game.seasonExpectation && game.seasonExpectation.season === game.season ? game.seasonExpectation.expectedRank : null;
+                if (window.__erzwingeEntlassung && game.season === window.__erzwingeEntlassung && game.season > 1) {
+                    game.boardSat = 5; game.lowBoardSatStreak = 99; game.boardSatVerlauf = [20, 19, 18, 17, 16, 15, 14];
+                    game.boardGraceSeason = 0; game.legendStatus = false;
+                    if (game.seasonExpectation) game.seasonExpectation.expectedRank = 1;
+                }
+                // Stand VOR dem Saisonwechsel merken: danach ist der Verlauf geleert und die Erwartung gehört zur neuen Saison
+                const vorGrund = { vorstand: Math.round(game.boardSat), verlauf: (game.boardSatVerlauf || []).slice(-4).map(v => Math.round(v)), erwartet: game.seasonExpectation && game.seasonExpectation.expectedRank, platz: (leaguesData[game.leagueLevel] ? [...leaguesData[game.leagueLevel]].sort(compareTableRows).findIndex(t => t.name === game.clubName) + 1 : null) };
                 const geldVorEnde = game.money;
                 concludeSeasonAndAdvance();
                 if (strat && strat.choice !== 'ausgewogen') zeile.strat = `${strat.choice}:${strat.result === 'erreicht' ? '+' : '-'}`;
@@ -434,7 +444,7 @@ async function karriere(browser, lauf) {
                 zeile.lizenzOffen = start.liga > 0 && zeile.platz <= 2 && zeile.ligaDanach === start.liga && zeile.lizenzVorEnde
                     ? zeile.lizenzVorEnde.split(' / ').length : 0;
                 zeile.entlassenAmEnde = !!game.sackPending;
-                if (game.sackPending) zeile.grund = { vorstand: Math.round(game.boardSat), verlauf: (game.boardSatVerlauf || []).slice(-4).map(v => Math.round(v)), erwartet: game.seasonExpectation && game.seasonExpectation.expectedRank, platz: (leaguesData[game.leagueLevel] ? [...leaguesData[game.leagueLevel]].sort(compareTableRows).findIndex(t => t.name === game.clubName) + 1 : null) };
+                if (game.sackPending) zeile.grund = vorGrund;
                 zeile.board = Object.entries(window.__board || {}).sort((a, b) => a[1] - b[1]).map(([k, v]) => `${k} ${v > 0 ? '+' : ''}${Math.round(v)}`);
                 if (window.__str) {
                     const st = window.__str, m = f => Math.round(st.reduce((a, x) => a + f(x), 0) / Math.max(1, st.length) * 10) / 10;

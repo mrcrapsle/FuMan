@@ -11930,7 +11930,12 @@ function renderTransferPokerBox() {
         // Spitzenspieler eines Amateur-/Unterligisten werben.
         let buyerClub = (optionen && optionen.club) || pickRandomOpposingClubName(true);
         let initialMultiplier = (optionen && optionen.multiplier) || ((managerRPG.perks.negotiator ? 1.05 : 0.85) + Math.random() * 0.35);
-        let offerSum = Math.max(10000, Math.round((targetPlayer.marketValue * initialMultiplier) / 5000) * 5000);
+        // Kleine Ablösen (Ligen 5-6: Marktwerte um 17.000 €) auf 500 € genau (25.35); die alte Untergrenze von
+        // 10.000 € und die 5.000-€-Schritte waren dort grob. Ab 50.000 € wie bisher auf 5.000 €.
+        const rohAngebot = targetPlayer.marketValue * initialMultiplier;
+        let offerSum = rohAngebot < 50000
+            ? Math.max(1000, Math.round(rohAngebot / 500) * 500)
+            : Math.max(10000, Math.round(rohAngebot / 5000) * 5000);
 
         let newOffer = {
             id: 'bid_' + Math.random().toString(36).substr(2, 7),
@@ -12136,7 +12141,9 @@ function renderTransferPokerBox() {
         let o = incomingOffers.find(x => x.id === offerId);
         if (!o) return;
         negoAmount = o.currentBid;
-        negoStepSize = Math.max(5000, Math.round(o.currentBid * 0.02 / 1000) * 1000);
+        negoStepSize = o.currentBid < 100000
+            ? Math.max(500, Math.round(o.currentBid * 0.02 / 500) * 500)
+            : Math.max(5000, Math.round(o.currentBid * 0.02 / 1000) * 1000);
         negoResellPct = o.resellPct || 0;
         document.getElementById('negotiation-stepper-overlay').classList.add('show');
         renderNegotiationStepper(offerId);
@@ -12146,7 +12153,8 @@ function renderTransferPokerBox() {
         negoCurrentOfferId = null;
     }
     function negoAdjustStep(mult) {
-        negoStepSize = Math.max(1000, Math.round(negoStepSize * mult / 1000) * 1000);
+        const einheit = negoStepSize < 5000 ? 100 : 1000;
+        negoStepSize = Math.max(einheit, Math.round(negoStepSize * mult / einheit) * einheit);
         renderNegotiationStepper(negoCurrentOfferId);
     }
     function negoAdjustAmount(dir) {
@@ -24086,6 +24094,7 @@ function renderYouthDecisionBox() {
             const idx = youthTalents.indexOf(p);
             return `<div class="box" style="font-size:10px;">
                 <strong>${p.name}</strong> (${p.pos}, ${p.age} J., Stärke ${p.strength}, Potenzial ${getYouthPotentialText(p)}) - noch <strong>${p.proDecisionLeft}</strong> Spieltage
+                ${p.potentialRevealed && typeof getYouthOfferSquadHint === 'function' ? `<div style="font-size:9px; color:var(--text-muted); margin-top:2px;">${getYouthOfferSquadHint(p, 'profi')}</div>` : ''}
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:6px;">
                     <button onclick="promoteYouth(${idx}, this)" class="btn-action" style="font-size:9px;">✍️ Profivertrag (3 J., ${formatVal(getYouthProWage(p))}/SpT)</button>
                     <button onclick="openYouthLoanChoice('${p.id}')" class="btn-secondary" style="font-size:9px;">📤 Verleihen</button>
@@ -28427,12 +28436,18 @@ function rejectYouthOffer(offerId) {
 // Entscheidungshilfe (25.33): Potenzial gegen den Kader-Median. Im Bundesliga-Langzeittest kostete der
 // Verkauf von Talenten unter dem Median die erste Elf nichts messbar (Elf -1,1 gegenüber -1,4 zum
 // Ligaschnitt, auch mit Median + 5), brachte aber 16 bis 45 Mio. € je 10 Saisons.
-function getYouthOfferSquadHint(p) {
+function getYouthOfferSquadHint(p, modus) {
     const staerken = squad.map(s => s.strength || 0).sort((a, b) => a - b);
     if (!staerken.length) return '';
     const median = staerken[Math.floor(staerken.length / 2)];
     if (!p.potentialRevealed) return `Kader-Median ${median}, Potenzial unbekannt - der Potenzial-Check zeigt, ob er den Kader erreicht.`;
     const pot = typeof getYouthPotentialText === 'function' ? getYouthPotentialText(p) : p.potential;
+    // modus 'profi' (Profivertrag-Entscheidung, 25.35): derselbe Vergleich, andere Folge
+    if (modus === 'profi') {
+        return p.potential < median
+            ? `Potenzial ${pot} liegt unter dem Kader-Median ${median}: er wird voraussichtlich kein Stammspieler - Verleihen oder Verkaufen ist oft besser als ein 3-Jahres-Vertrag.`
+            : `Potenzial ${pot} erreicht den Kader-Median ${median}: er kann ein Stammspieler werden.`;
+    }
     return p.potential < median
         ? `Potenzial ${pot} liegt unter dem Kader-Median ${median}: ein Verkauf kostet die Elf voraussichtlich nichts.`
         : `Potenzial ${pot} erreicht den Kader-Median ${median}: er kann ein Stammspieler werden.`;
@@ -32297,7 +32312,8 @@ function cleanupLegacyScoutState() {
 
         if (game.lowBoardSatStreak === 3 && !game.sackWarningIssued) {
             game.sackWarningIssued = true;
-            addInboxMessage('vertrag', '⚠️ Job-Warnung vom Vorstand!', 'Der Vorstand ist mit dem sportlichen Verlauf sehr unzufrieden. Bessere die Ergebnisse, sonst droht die Entlassung!', 'screen-dashboard');
+            const erwartetRang = game.seasonExpectation && game.seasonExpectation.expectedRank;
+            addInboxMessage('vertrag', '⚠️ Job-Warnung vom Vorstand!', `Der Vorstand ist mit dem sportlichen Verlauf sehr unzufrieden: Vertrauen ${Math.round(game.boardSat)} von 100, ${game.lowBoardSatStreak} Pflichtspiele in Folge unter der Warnschwelle${erwartetRang ? `, Erwartung für diese Saison: Platz ${erwartetRang}` : ''}. Bessere die Ergebnisse - Siege im Liga-Spiel heben das Vertrauen, am Saisonende zählt der Stand - sonst droht die Entlassung!`, 'screen-dashboard');
             showToast('⚠️ Der Vorstand erwägt deine Entlassung, wenn sich die Ergebnisse nicht bessern!', 'error');
         }
 
@@ -34829,7 +34845,7 @@ const LEXICON_ENTRIES = [
         text: 'Vor jedem Spiel: drei Antworten mit echter Wirkung (Moral, Stärke im nächsten Spiel, Vorstand, Fans). Versprechen werden nach dem Spiel abgerechnet.',
         tips: ['Wer einen Sieg verspricht und verliert, verliert Ansehen bei Medien, Fans und Vorstand'] },
     { cat: 'Verein', title: 'Vorstandszufriedenheit', screen: 'screen-dashboard',
-        text: 'Wie zufrieden der Vorstand ist (10-100). Fällt sie unter 50 - oder sinkt sie dreimal in Folge und liegt unter 60 -, warnt er einmal pro Saison im Postfach und auf dem Dashboard. Entlassen wird nur am Saisonende: wenn sie dann unter 25 liegt, die letzten 6 Pflichtspiele darunter waren und sie in dieser Zeit nicht gestiegen ist. Nach einem Abstieg gibt es einmal einen Neustart (mindestens 60), nach einem zweiten Abstieg in Folge nicht. In der ersten Saison nach einem Abstieg erwartet er höchstens Platz 3 - die Liga hat meist mehrere Ex-Erstligisten auf Augenhöhe. In der ersten Saison und in der Saison eines Vereinswechsels gibt es Schonfrist.',
+        text: 'Wie zufrieden der Vorstand ist (10-100). Fällt sie unter 50 - oder sinkt sie dreimal in Folge und liegt unter 60 -, warnt er einmal pro Saison im Postfach und auf dem Dashboard. Entlassen wird nur am Saisonende: wenn sie dann unter 25 liegt, die letzten 6 Pflichtspiele darunter waren und sie in dieser Zeit nicht gestiegen ist. Nach einem Abstieg gibt es einmal einen Neustart (mindestens 60), nach einem zweiten Abstieg in Folge nicht. In der ersten Saison nach einem Abstieg erwartet er höchstens Platz 3 - die Liga hat meist mehrere Ex-Erstligisten auf Augenhöhe. In der ersten Saison und in der Saison eines Vereinswechsels gibt es Schonfrist. Die Job-Warnung und die Entlassungsmeldung nennen den Grund: Vertrauen, Pflichtspiele in Folge unter der Warnschwelle, erwartete und erreichte Platzierung.',
         tips: ['Siege und erreichte Saisonziele heben sie', 'Schulden, gebrochene Versprechen und Niederlagenserien senken sie', 'Der Vorstandsraum erklärt jedes Mitglied einzeln'] },
     { cat: 'Verein', title: 'Mitgliederversammlung', screen: 'screen-dashboard',
         text: 'Nach jeder Saison wollen die Mitglieder deinen Bericht: Platz gegen Erwartung, Aufstieg/Abstieg und Kasse ergeben die Grundstimmung. Rede und Beitragsantrag wählst du im Dashboard. Ab 70 % Zustimmung Vorstand +10, ab 50 % (entlastet) +5, darunter -10. Bereitest du sie nicht innerhalb von 6 Spieltagen vor, findet sie ohne dich statt (-5 % Zustimmung).',
@@ -35091,7 +35107,7 @@ const LEXICON_EN = {
         text: 'Before every match: three answers with real effects (morale, strength in the next match, board, fans). Promises are settled after the match.',
         tips: ['Promising a win and losing costs standing with media, fans and board'] },
     'Vorstandszufriedenheit': { title: 'Board satisfaction',
-        text: 'How happy the board is (10-100). Below 50 - or falling three times in a row and under 60 - it warns you once a season in the inbox and on the dashboard. You are only sacked at the end of the season: if it is then below 25, was below that in the last 6 competitive matches and has not risen during that time. After a relegation there is one fresh start (at least 60), not after a second relegation in a row. In the first season after a relegation it expects at most 3rd place - the league usually has several former top-flight clubs at the same level. The first season and the season of a club change are a grace period.',
+        text: 'How happy the board is (10-100). Below 50 - or falling three times in a row and under 60 - it warns you once a season in the inbox and on the dashboard. You are only sacked at the end of the season: if it is then below 25, was below that in the last 6 competitive matches and has not risen during that time. After a relegation there is one fresh start (at least 60), not after a second relegation in a row. In the first season after a relegation it expects at most 3rd place - the league usually has several former top-flight clubs at the same level. The first season and the season of a club change are a grace period. The job warning and the dismissal notice name the reason: trust, competitive matches in a row below the warning level, expected and reached place.',
         tips: ['Wins and reached season goals raise it', 'Debts, broken promises and losing streaks lower it', 'The board room explains every member individually'] },
     'Mitgliederversammlung': { title: 'Members\' meeting',
         text: 'After every season the members want your report: rank against expectation, promotion/relegation and finances set the basic mood. Choose your speech and the membership fee motion on the dashboard. From 70 % approval board +10, from 50 % (discharged) +5, below that -10. If you do not prepare it within 6 matchdays it takes place without you (-5 % approval).',

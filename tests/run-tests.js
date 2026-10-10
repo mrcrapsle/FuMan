@@ -54,7 +54,9 @@ async function freshPage(browser) {
     let consoleErrors = [];
     page.on('pageerror', e => consoleErrors.push(e.message));
     await page.goto(GAME_PATH);
-    await page.waitForTimeout(400);
+    // Boot fertig = die Ladeebene ist entfernt (finally im window.onload); statt fester 400 ms darauf warten
+    await page.waitForFunction(() => !document.getElementById('app-loading'), null, { timeout: 20000 }).catch(() => null);
+    await page.waitForTimeout(100);
     return { page, consoleErrors };
 }
 
@@ -1724,7 +1726,7 @@ async function testRumors(browser) {
             Math.random = zufall;
             const angebot = incomingOffers.find(o => o.playerId === star.id);
             const mult = (0.85 + 0.5 * 0.35) * 1.15;
-            out.anheizen = star.morale === 47 && !!angebot && angebot.clubName === 'Testclub' && angebot.currentBid === Math.max(10000, Math.round(star.marketValue * mult / 5000) * 5000);
+            out.anheizen = star.morale === 47 && !!angebot && angebot.clubName === 'Testclub' && angebot.currentBid === (star.marketValue * mult < 50000 ? Math.max(1000, Math.round(star.marketValue * mult / 500) * 500) : Math.max(10000, Math.round(star.marketValue * mult / 5000) * 5000));
             // Ente beim Anheizen kostet Ruf
             const zweiter = [...squad].sort((a, b) => b.strength - a.strength)[1];
             const ruf = game.managerMediaImage;
@@ -2170,6 +2172,37 @@ async function testEntlassungsGrund(browser) {
     assert(r.entlassen && r.meldung, 'Bei dauerhaft niedrigem Vertrauen am Saisonende folgt die Entlassung mit Meldung');
     assert(r.grund, 'Die Entlassungsmeldung nennt Vertrauen, Serie, Erwartung und erreichten Platz');
     assert(r.danach, 'Die Meldung führt weiter zum Neustart (bestätigen)');
+    // Job-Warnung mit Zahlen (25.35)
+    const w = await page.evaluate(() => {
+        closeTutorial();
+        game.season = 3; game.boardGraceSeason = 0; game.sackPending = false; game.sackWarningIssued = false;
+        game.boardSat = 20; game.lowBoardSatStreak = 2; game.seasonExpectation = { expectedRank: 4 };
+        inboxMessages = [];
+        checkJobSecurity();
+        const m = inboxMessages.find(x => x.title.includes('Job-Warnung'));
+        return { da: !!m, zahlen: !!m && m.body.includes('Vertrauen 20 von 100') && m.body.includes('Platz 4') && /3 Pflichtspiele/.test(m.body) };
+    });
+    assert(w.da && w.zahlen, 'Die Job-Warnung nennt Vertrauen, Serie und die Erwartung des Vorstands');
+    // Kleine KI-Angebote (Ligen 5-6) auf 500 € genau, Verhandlungsschritt 500 € (25.35)
+    const o = await page.evaluate(() => {
+        closeTutorial();
+        const p = squad[5]; p.marketValue = 15200;
+        incomingOffers = [];
+        triggerNewAITransferOffer(p, { club: 'Testclub', multiplier: 1.0 });
+        const a = incomingOffers.find(x => x.clubName === 'Testclub');
+        const bid = a ? a.currentBid : null;
+        if (a) openNegotiationStepper(a.id);
+        const schritt = negoStepSize;
+        closeNegotiationStepper();
+        incomingOffers = [];
+        const q = squad[6]; q.marketValue = 400000;
+        triggerNewAITransferOffer(q, { club: 'Testclub', multiplier: 1.0 });
+        const g = incomingOffers.find(x => x.clubName === 'Testclub');
+        return { bid, schritt, gross: g ? g.currentBid : null };
+    });
+    assert(o.bid === 15000, `Kleines Angebot (Marktwert 15.200 €) auf 500 € genau statt auf 10.000 € Untergrenze (${o.bid})`);
+    assert(o.schritt === 500, `Verhandlungsschritt bei kleinem Angebot 500 € (${o.schritt})`);
+    assert(o.gross === 400000, `Große Angebote bleiben auf 5.000 € gerundet (${o.gross})`);
     assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei der Entlassung');
     await page.close();
 }
@@ -2376,6 +2409,8 @@ async function testYouthSales(browser) {
             const altRev = tHinweis.potentialRevealed, altPot = tHinweis.potential;
             tHinweis.potentialRevealed = true; tHinweis.potential = 1;
             out.unterMedian = getYouthOfferSquadHint(tHinweis).includes('unter dem Kader-Median');
+            tHinweis.potential = 1;
+            out.profiHinweis = getYouthOfferSquadHint(tHinweis, 'profi').includes('Verleihen oder Verkaufen');
             tHinweis.potential = 99;
             out.ueberMedian = getYouthOfferSquadHint(tHinweis).includes('erreicht den Kader-Median');
             tHinweis.potentialRevealed = altRev; tHinweis.potential = altPot;
@@ -2420,6 +2455,7 @@ async function testYouthSales(browser) {
     assert(!r.crash, `Talentverkauf ohne Absturz (${r.crash || 'ok'})`);
     if (!r.crash) {
         assert(r.angebote && r.post && r.box, 'KI-Vereine bieten für Talente ab 16 (höchstens 2 offen, 4 Spieltage gültig), mit Postfach und Box');
+        assert(r.profiHinweis, 'Die Profivertrags-Entscheidung ordnet ein schwaches Potenzial gegen den Kader-Median ein (Verleihen oder Verkaufen)');
         assert(r.medianHinweis && r.unterMedian && r.ueberMedian, 'Talentangebote nennen den Kader-Median und ordnen ein bekanntes Potenzial darüber oder darunter ein');
         assert(r.verkauft, `Verkaufen: volle Ablöse, 85 % ins Transferbudget, Talent verlässt die Akademie (${JSON.stringify(r.verkaufWerte)})`);
         assert(r.beteiligung && r.ablose, 'Mit Beteiligung: 20 % weniger sofort, dafür 20 % vom Weiterverkauf; Ablöse vom heutigen Wert, gedeckelt bei 30 % des Potenzial-Werts');
@@ -5947,6 +5983,12 @@ async function testEuropeanCup(browser) {
     console.log('\n[31] Europapokal: erreichbares Teilnehmerfeld und Startprämie');
     const { page, consoleErrors } = await freshPage(browser);
     page.on('dialog', d => d.accept());
+    // 25.35: fester Zufall schon vor dem Boot (Ligen, Teams, Spielverlauf) - sonst fiel die Gruppe in seltenen Läufen
+    // auf 0 Punkte. Schwellen unverändert.
+    await page.addInitScript(() => { let seed = 20251010; Math.random = () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; });
+    await page.reload();
+    await page.waitForFunction(() => !document.getElementById('app-loading'), null, { timeout: 20000 }).catch(() => null);
+    await page.waitForTimeout(100);
 
     const r = await page.evaluate(() => {
         let out = {};
@@ -8383,6 +8425,12 @@ async function testCupLive(browser) {
     console.log('\n[P15c] Pokal, Champions Cup und Relegation als Livespiel');
     const { page, consoleErrors } = await freshPage(browser);
     page.on('dialog', d => d.accept());
+    // 25.35: fester Zufall vor dem Boot - der Relegationsteil setzt den Verein per Simulation auf einen Tabellenplatz
+    // und scheiterte in seltenen Läufen. Schwellen unverändert.
+    await page.addInitScript(() => { let seed = 20251010; Math.random = () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; });
+    await page.reload();
+    await page.waitForFunction(() => !document.getElementById('app-loading'), null, { timeout: 20000 }).catch(() => null);
+    await page.waitForTimeout(100);
     const r = await page.evaluate(() => {
         closeTutorial();
         const out = {};

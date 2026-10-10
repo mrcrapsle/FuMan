@@ -216,6 +216,7 @@ function renderYouthDecisionBox() {
             const idx = youthTalents.indexOf(p);
             return `<div class="box" style="font-size:10px;">
                 <strong>${p.name}</strong> (${p.pos}, ${p.age} J., Stärke ${p.strength}, Potenzial ${getYouthPotentialText(p)}) - noch <strong>${p.proDecisionLeft}</strong> Spieltage
+                ${p.potentialRevealed && typeof getYouthOfferSquadHint === 'function' ? `<div style="font-size:9px; color:var(--text-muted); margin-top:2px;">${getYouthOfferSquadHint(p, 'profi')}</div>` : ''}
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:6px;">
                     <button onclick="promoteYouth(${idx}, this)" class="btn-action" style="font-size:9px;">✍️ Profivertrag (3 J., ${formatVal(getYouthProWage(p))}/SpT)</button>
                     <button onclick="openYouthLoanChoice('${p.id}')" class="btn-secondary" style="font-size:9px;">📤 Verleihen</button>
