@@ -91,6 +91,20 @@ function rejectYouthOffer(offerId) {
     if (typeof renderYouthView === 'function') renderYouthView();
 }
 
+// Entscheidungshilfe (25.33): Potenzial gegen den Kader-Median. Im Bundesliga-Langzeittest kostete der
+// Verkauf von Talenten unter dem Median die erste Elf nichts messbar (Elf -1,1 gegenüber -1,4 zum
+// Ligaschnitt, auch mit Median + 5), brachte aber 16 bis 45 Mio. € je 10 Saisons.
+function getYouthOfferSquadHint(p) {
+    const staerken = squad.map(s => s.strength || 0).sort((a, b) => a - b);
+    if (!staerken.length) return '';
+    const median = staerken[Math.floor(staerken.length / 2)];
+    if (!p.potentialRevealed) return `Kader-Median ${median}, Potenzial unbekannt - der Potenzial-Check zeigt, ob er den Kader erreicht.`;
+    const pot = typeof getYouthPotentialText === 'function' ? getYouthPotentialText(p) : p.potential;
+    return p.potential < median
+        ? `Potenzial ${pot} liegt unter dem Kader-Median ${median}: ein Verkauf kostet die Elf voraussichtlich nichts.`
+        : `Potenzial ${pot} erreicht den Kader-Median ${median}: er kann ein Stammspieler werden.`;
+}
+
 function renderYouthOffersBox() {
     const box = document.getElementById('youth-offers-box');
     if (!box) return;
@@ -100,6 +114,7 @@ function renderYouthOffersBox() {
         const p = youthTalents.find(x => x.id === o.playerId);
         const mit = Math.round(o.betrag * (1 - YOUTH_SELLON_PERCENT / 100) / 1000) * 1000;
         return `<div class="box" style="font-size:10px;">${o.club} bietet <strong>${formatVal(o.betrag)}</strong> für ${p.name} (${p.pos}, ${p.age} J., Stärke ${p.strength}) - gilt bis Spieltag ${o.bis}.
+            <div style="font-size:9px; color:var(--text-muted); margin-top:2px;">${getYouthOfferSquadHint(p)}</div>
             <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin-top:4px;">
                 <button onclick="acceptYouthOffer('${o.id}', false)" class="btn-action" style="font-size:9px;">✅ Verkaufen</button>
                 <button onclick="acceptYouthOffer('${o.id}', true)" class="btn-secondary" style="font-size:9px;">📈 ${formatVal(mit)} + ${YOUTH_SELLON_PERCENT} % Weiterverkauf</button>

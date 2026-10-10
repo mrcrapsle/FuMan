@@ -2343,6 +2343,15 @@ async function testYouthSales(browser) {
             out.post = inboxMessages.some(m => m.title.includes('Angebot für Talent'));
             showScreen('screen-youth');
             out.box = document.getElementById('youth-offers-box').textContent.includes('ANGEBOTE FÜR TALENTE');
+            // Entscheidungshilfe: jedes Angebot nennt den Kader-Median; mit bekanntem Potenzial die Einordnung
+            out.medianHinweis = document.getElementById('youth-offers-box').textContent.includes('Kader-Median');
+            const tHinweis = youthTalents.find(x => x.id === game.youthOffers[0].playerId);
+            const altRev = tHinweis.potentialRevealed, altPot = tHinweis.potential;
+            tHinweis.potentialRevealed = true; tHinweis.potential = 1;
+            out.unterMedian = getYouthOfferSquadHint(tHinweis).includes('unter dem Kader-Median');
+            tHinweis.potential = 99;
+            out.ueberMedian = getYouthOfferSquadHint(tHinweis).includes('erreicht den Kader-Median');
+            tHinweis.potentialRevealed = altRev; tHinweis.potential = altPot;
             // Verkaufen: volle Ablöse, 85 % ins Transferbudget, Talent weg
             const o1 = game.youthOffers[0];
             const geld = game.money, tb = game.transferBudget;
@@ -2384,6 +2393,7 @@ async function testYouthSales(browser) {
     assert(!r.crash, `Talentverkauf ohne Absturz (${r.crash || 'ok'})`);
     if (!r.crash) {
         assert(r.angebote && r.post && r.box, 'KI-Vereine bieten für Talente ab 16 (höchstens 2 offen, 4 Spieltage gültig), mit Postfach und Box');
+        assert(r.medianHinweis && r.unterMedian && r.ueberMedian, 'Talentangebote nennen den Kader-Median und ordnen ein bekanntes Potenzial darüber oder darunter ein');
         assert(r.verkauft, `Verkaufen: volle Ablöse, 85 % ins Transferbudget, Talent verlässt die Akademie (${JSON.stringify(r.verkaufWerte)})`);
         assert(r.beteiligung && r.ablose, 'Mit Beteiligung: 20 % weniger sofort, dafür 20 % vom Weiterverkauf; Ablöse vom heutigen Wert, gedeckelt bei 30 % des Potenzial-Werts');
         assert(r.abgelehnt && r.abgelaufen && r.zuJung, 'Ablehnen hebt ein Top-Talent um 1, abgelaufene Angebote verschwinden, unter 16 keine Angebote');
