@@ -1,357 +1,91 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Anleitung für Claude Code in diesem Repository. Die vollständige Historie mit Messungen und Begründungen steht in `docs/PROJEKT-HISTORIE.md` und wird nur bei Bedarf gelesen.
 
-## Project Overview
+## Projekt
 
-**Anstoß Mobile Pro - FM13** is a fully-featured browser-based football manager simulation game. The codebase is modular (index.html + css/styles.css + 111 js/*.js files) that bundles into a single 1.8 MB standalone HTML file. The game runs entirely in the browser with local storage for save games, works offline, and supports mobile devices.
+**Anstoß Mobile Pro - FM13**: browserbasierter Fußballmanager. Modular aufgebaut (`index.html`, `css/styles.css`, `js/*.js`), gebaut zu einer einzelnen standalone HTML-Datei. Läuft offline, speichert lokal und ist auf Handys bedienbar.
 
-## Working With the User
+## Zusammenarbeit
 
-- Always reply in German.
-- After every merge to `main`, send a ZIP `anstoss-fm13-vX.zip` containing the minified build as `anstoss-fm13.html` PLUS the source code in a folder `anstoss-fm13/` (`git archive origin/main` without `dist/`: css, js, tests, build.py, index.html, README.md, ...), and always include both links:
+- Antworten immer auf Deutsch.
+- Vor jedem Merge auf `main`: `npm run check` muss grün sein. Erst auf ausdrücklichen Wunsch mergen.
+- Die Version in `js/state.js` (`GAME_VERSION`) bei jedem Merge erhöhen. Sie erscheint in der Kopfzeile (`#header-version-tag`).
+- Nach jedem Merge eine ZIP `anstoss-fm13-vX.zip` schicken: minifizierter Build als `anstoss-fm13.html` plus Quellcode im Ordner `anstoss-fm13/` (`git archive origin/main -- . ':!dist'`). Mit beiden Links:
   - Spielen: https://mrcrapsle.github.io/FuMan/
   - Download: https://github.com/mrcrapsle/FuMan/raw/main/dist/anstoss-fm13-standalone.min.html
-- The game version is shown in the header (`#header-version-tag`, from `GAME_VERSION`); bump it on every merge.
+- Eine Runde bündeln: alle Änderungen sammeln, einmal `npm run check`, Fehler gesammelt beheben, gezielte Wiederholung mit `TEST_ONLY=<Name>`.
 
-## Common Commands
-
-```bash
-# PFLICHT vor jedem Merge/Push auf main: Build, Lint, Tests (normal + minifiziert)
-npm run check          # "npm run check -- fast" lässt die minifizierte Variante weg
-# Logs bei Fehlern: dist/check-logs/
-
-# Build standalone HTML (required before deploying)
-python3 build.py
-# Output: dist/anstoss-fm13-standalone.html
-
-# Serve for local development (recommended - rebuilds automatically)
-npm run serve        # or: python3 server.py
-# Serves on http://localhost:8000
-# Watches source files and rebuilds dist/ on changes
-# Two versions available:
-#   - http://localhost:8000/       (modular, immediate edits visible)
-#   - http://localhost:8000/spiel  (built standalone, auto-rebuilt)
-
-# Run tests against the built game
-python3 build.py
-cd tests && npm install && npm test
-
-# Lint all JavaScript (including inline <script> blocks from index.html)
-npm install && npm run lint
-
-# Minify the standalone file (optional, ~30% smaller)
-npm run minify
-# Output: dist/anstoss-fm13-standalone.min.html
-```
-
-**Dev Workflow:** Run `npm run serve` once, then edit files and reload the browser. The page at `/` loads index.html with your changes immediately; `/spiel` shows the built version (which rebuilds automatically when sources change).
-
-## High-Level Architecture
-
-### State Management: Global `game` Object
-
-All persistent game state lives in a single `game` object (defined in `js/state.js`). This contains:
-- Season, matchday, money, squad roster
-- All club facilities, upgrades, finances
-- Results history, achievements
-- Settings and customizations
-
-**Pattern:** Never pass state as function parameters. All systems read from and write to `game` directly.
-
-### Feature System Pattern (Key Architecture)
-
-Each major feature (manager analytics, player scandals, fanclub management, etc.) follows an identical pattern:
-
-```javascript
-// 1. State isolation: Feature-specific state object (never pollute global `game`)
-let featureNameState = {
-    data: [],
-    settings: { ... }
-};
-
-// 2. Initialization/tick functions (called during game loop)
-function tickFeatureName() { ... }
-
-// 3. Render function: updates HTML panel from state
-function renderFeatureNamePanel() {
-    const container = document.getElementById('feature-name-box');
-    if (!container) return;
-    // Build HTML and set container.innerHTML
-}
-
-// 4. HTML container: always added to index.html
-<div id="feature-name-box"></div>
-
-// 5. Safe loading: typeof check in render and monthly ticks
-if (typeof tickFeatureName === 'function') tickFeatureName();
-if (typeof renderFeatureNamePanel === 'function') renderFeatureNamePanel();
-```
-
-This pattern ensures:
-- New features don't break if files aren't loaded
-- State is encapsulated and debuggable
-- Render functions are idempotent (safe to call multiple times)
-- Testing individual features is straightforward
-
-**Current Integrated Systems:**
-- Manager Analytics (career stats, rating breakdown)
-- Player Scandals (controversies, suspensions, team morale)
-- Tactic record (`game.tacticRecords`: real results per formation + style, js/tactic-system.js; formation/style effects live in `FORMATION_RATINGS` / `TACTIC_STYLE_CONFIG`)
-- Fans (fan groups, actions, club network) in `js/fans.js`
-- Board Room (four members explaining `game.boardSat`)
-- Hall of Fame, Youth Academy, Player Development
-- Plus 60+ other game systems
-
-**One system per area** (Phases 12/13 merged duplicates - don't add parallel ones again):
-- Injuries: only the post-match roll in `processPostMatchRoutine()`; extra factors and the panel live in `js/medical-department.js`. Events injure via `injurePlayerByEvent()` (never reduce strength).
-- Media: `game.managerMediaImage` is the single image; actions/events and the pre-match press conference (`renderPressConference()`, situation-based answers with real effects, promises settled in `resolvePressPromise()`) in `js/media-department.js`.
-- Youth: `youthTalents` (js/youth.js) plus coach/ranking/monthly development in `js/youth-academy-extended.js` / `js/academy-ranking.js`. The pathway lives in `js/youth-pathway.js`: real ceiling `p.potential` (`ensureYouthPotential()`, shown only after the paid check), aging via `ageYouthAtSeasonEnd()` (from `agePlayersAtSeasonEnd()`), pro-contract decision at 19 (`p.proDecisionLeft`, `promoteYouth()` signs via `signYouthProContract()`), development loans through `loanedPlayers` with `youthLoan: true` (ticked in `tickLoanedPlayers()`), moments in `game.youthMoments` (breakthroughs, debut/first goal via `checkYouthMilestones()` in `gradeOwnMatch()`). Youth screen uses sub-tabs `setSubTab('jug', …)`. Scouting is league-relative (25.17): `scoutYouthTalent()` costs `getYouthScoutCost()` (2 % of `getLeagueTransferBudget()`, min 2,000 €) and starts the talent at `getYouthLeagueBase()` (average AI strength of the own league) -24..-14 plus academy/internat bonus (25.18: academy max level `YOUTH_ACADEMY_MAX_LVL` 5, `getYouthAcademyStartBonus()` +2 per level, `getYouthAcademyTierShift()` +4 % top-talent chance per level above 1, shown in `#youth-academy-effect` - before +3 per level without a cap); `p.youthLeagueBase` makes `ensureYouthPotential()` use `YOUTH_POTENTIAL_OFFSET` per tier (25.22: 1: -12..-5, 2: -6..0, 3: 0..+6 around that base - with -10..-3 / -3..+4 / +4..+10 the Bundesliga bot had 8-10 own talents in its best XI after 9-10 seasons, now ~5; a first try at -14..-4 / up to +15 gave the Bundesliga bot 7-8 own youth players in the XI after 5 seasons) - before, a fixed 46-58 start was a starter in Liga 6 and useless in the Bundesliga. Talent sales: `js/youth-sales.js` - monthly `tickYouthOffers()` (runMonthlyClubTicks) creates AI offers for talents >= 16 (`YOUTH_OFFER_CHANCE` per tier, max 2 in `game.youthOffers`, 4 matchdays), fee = market value of the current strength × (1 + headroom/20), capped at 30 % of the value at the potential (the first draft, value halfway to the potential, paid the Bundesliga bot up to 43 M€ per season); `acceptYouthOffer(id, mitBeteiligung)` (85 % into the transfer budget; with sell-on 20 % less now + `game.sellOnClauses` entry with `resaleValue` halfway to the potential), `rejectYouthOffer()` (tier 3 +1), box `#youth-offers-box`; each offer shows `getYouthOfferSquadHint(p)` (squad median vs the revealed potential, 25.33 - the Bundesliga bot selling talents below the median, or up to median +5, lost no measurable XI strength and earned 16-45 M€ per 10 seasons; selling stays the player's choice).
-- Sponsoring: `js/sponsors.js` (main, kit, sleeve, boards, bus). Same-branch sponsors pay only 70 % (`getExclusivityRival()` names the active rival on the offer). Without a main sponsor `remindMissingMainSponsor()` (per matchday from md 3, once per season via `game.sponsorReminderSeason`) sends an inbox message + toast - a Bundesliga club without one loses ~0.7 M€ per matchday and after 10 matchdays in the red the board sells the BEST player (`checkInsolvencyRisk()`).
-- Sponsor renewal: `js/sponsor-renewal.js` (25.19) - `checkSponsorRenewalOffer()` from `tickContractDurations()` when the main sponsor has `SPONSOR_RENEWAL_LEAD` (6) matchdays left: `game.sponsorRenewal` with base/win bonus × (0.8 + loyalty/250) × league factor change since `game.sponsor.signedLevel`; accept (+34 matchdays, loyalty +5), haggle once (+10 % with chance = loyalty, else withdrawn), decline; no offer below loyalty 20. Box `#sponsor-renewal-box`; the bot accepts.
-- Squad planning: `js/squadplanning.js` (screen-squad-planning) - positions/age/contract cliffs plus the wage outlook `getSquadPlanningWageOutlook()` (#squad-planning-wage-box, 25.17): expiring wages, cost of renewing the expiring starters, pre-contracts vs the expected next budget.
-- Contracts: `p.contracts` = remaining years (counted down in season-end.js); extensions are salary talks via `getContractDemand(p)` (sign-on fee `CONTRACT_HANDGELD_MATCHDAYS` 4 matchday wages per contract year since 25.20 - 5 % of the market value per year cost a Bundesliga club 12-35 M€ per season; the wage check `contractWageTotalWith()` counts, for an expiring contract, only the players who stay - 25.18) (manual talk, sport director and ultimatum all use it; playtime promises checked in `checkPlaytimePromises()`), release clauses in `js/contracts.js`, ultimatums in `js/contract-ultimatum.js`. Wages are `p.wage` per matchday (there is no `p.salary`). Agents are `p.agent` (fee via `getAgentFee()`).
-- Scouting: the regional network in `js/scouting.js`. Opponent prediction: `js/match-scout.js` (uses `simulateGoals` on real fixtures).
-- Board: `game.boardSat`, explained per member in `js/board-room.js`. Trust never drops below 10 (the board can be angry, not gone for good); sacking is only checked at season end (`checkSeasonEndSacking()` in js/match-post.js) and not when the trust has risen over the last 6 league matches (`game.boardSatVerlauf`) or the season goal was reached (`checkSeasonEndSacking(myRank)`: rank 1-2 or `seasonExpectation.expectedRank` - 25.12 long run sacked a 3. Liga champion after two relegations). After a relegation the expectation is at least rank `RELEGATION_EXPECTED_RANK` 3 for one season (`game.relegatedIntoSeason`, 25.20 - the strongest XI always meant 'rank 1', a relegated favourite was sacked after rank 8); `grantRelegationRestart()` lifts it to at least 60 once - not after a second relegation in a row (`game.boardRestartSeason`). The per-match shift is expectation-based (`getOwnMatchExpectation()` in js/match.js: favorite/open/underdog by opponent strength vs. own XI, ±4 = open) - a flat win/loss shift sank mid-table clubs to ~5 in the 20-season test.
-- Locker room: ONE council (`js/team-council.js`: captain + 2 by `getLeadershipScore()`, concerns, `getCouncilMoraleStabilizer()` used by calcTeamStrength and the post-defeat morale) - the old second "Führungsspieler-Rat" in campus-staff.js is gone. `js/locker-room.js`: status (`getLockerRoomStatus()`), cliques by nation+age (`computeSquadCliques()`, mood < 40 = rumort: strength malus in `getCliqueChemistryModifier()`, monthly `tickLockerRoom()` drags the rest down unless a captain with authority), council concerns `clique`/`kapitaen` via `findLockerRoomConcern()`, captain changes only through `handleCaptainChange()` (select in `assignRoles()` and the council), unhappy key players visit the office (`pickUnhappyVisitor()` → `OFFICE_VISITOR_UNHAPPY` in js/office-events.js: playtime promise / demand performance / allow transfer = `triggerNewAITransferOffer(p)`).
-- Fans: `js/fans.js` (`game.fans`, fan actions/groups). Training: `js/training.js` + minigames in `js/training-games.js`. Stadium: `js/stadium.js` (blocks/capacity) + `js/stadium-events.js`.
-- DFB-Pokal field: `buildDfbPokalTeams()` in js/cup.js - 32 real clubs (`DFB_POKAL_QUOTEN` 18 Bundesliga / 8 2. Liga / 4 3. Liga / 2 Regionalliga, own club takes a slot of its league), every match uses `getOpponentStrength()` (21.6: before, 31 invented clubs with a flat 75 let a mid-table Bundesliga club win three cups in a row).
-- Cup and league share a matchday: the cup tie is played live first, then `finishMatch()` (match-post.js) starts the league match of the same matchday ('Weiter zum Ligaspiel'); the calendar (`renderCalendarView()` in js/calendar.js) lists the cup/Landespokal/Europe tie together with '⚽ Ligaspiel' (25.23, it showed only the cup before, so the league game looked missing). 25.24: `getUpcomingOwnTie(md)` / `getOwnCupTieOn(md)` / `istImDfbPokal()` / `getOwnEuropeGroupStanding()` in js/cup-live.js feed the calendar (opponent per tie, DFB only when the club is in the cup, group standing) and the dashboard (`renderDashboardView()` shows the cup opponent and the cup title on a cup day until the tie is played). Board early warning: `checkJobSecurity()` (match-post.js) sends one inbox message per season when `game.boardSat < 50`, or below 60 after three falls in a row (`game.boardSatVerlauf`, 25.26); it also writes an autosave at once (`writeAutoSaveNow()` in save.js, the cadence stays `maybeAutoSave()`) and the dashboard shows the warning with its way out in `#dash-board-warn-line` (`renderDashBoardWarnLine()`, until trust is 60 again). Measured with 5 passive bot runs: first warning in seasons 2-8, lead before dismissal 0-2 seasons (5 runs each side, small sample). Calendar labels switch with `setLanguage()`. Lexicon entry 'Tastatur und Fokus' (cat Bedienung) describes the focus behaviour. The generic overlays (`.generic-modal-overlay`) get focus handling in js/ui-core.js (`initModalFocus()`, 25.25): focus moves in on open, Tab stays inside, focus returns to the opener on close (watched via the `show` class).
-- Cup matches live: `js/cup-live.js` - on a cup matchday `startMatchdayFlow()` first plays the own DFB-Pokal/Landespokal/Champions-Cup tie in the live engine (relegation legs via `startRelegationLive()`); the result goes to `game.liveCupResult` and the competitions take it via `takeLiveCupResult(comp, home, away)` instead of `simulateGoals`.
-- Season events: `js/season-events.js` (season opening at matchday 1, Hallenturnier invite after md 15 / played after md 17 via `tickSeasonEvents()`, farewell matches from `registerFarewellMatch()`, Supercup prepared in `prepareSupercup()` before leagues advance and resolved in `resolveSupercup()`); all shown in `#dash-season-events-box`.
-- AI clubs: `js/ai-clubs.js` - every AI team has `team.star`; `tickAiTransfers()` (matchdays 2 and 19, via `tickTransferWindows()`) moves stars to top clubs with strength moving along (zero-sum), news in `game.aiTransferNews`; `ageAiStars()` at season end.
-- Player stats: `js/player-stats.js` - every own goal goes through `creditOwnGoal()` (scorer + 75 % assist, live and simulated); `gradeOwnMatch()` in `processPostMatchRoutine()` gives Kicker grades (`p.statsSeason`, `p.lastGrade`, Elf des Spieltags <= 1.5); cup matches reset `matchEvents` so they don't count for league grades.
-- Onboarding: `js/onboarding.js` - "Erste Schritte" checklist (`game.onboarding`, `#dash-onboarding-box`, first season only) ticks off via `onScreenShown()` in `showScreen()` (ignored while `runStructuralSelfTest()` visits every screen at boot) and `markOnboardingStep('speichern')` in `saveGameToSlot()`; per-screen tips in `SCREEN_HINTS`. Tutorial texts in js/i18n.js use `{CLUB}`/`{LIGA}`.
-- Buying from the market: `js/transfer-poker.js` - every market player gets a real AI seller (`ensureTransferTerms()`: `p.sellerClub`, `p.askingPrice`, hidden `p.sellerMinimum`); the poker (`openTransferPoker()`/`submitPokerOffer()`) has limited patience, lowballs cost double, a rival can raise the floor and snatch the player, then a wage talk (`haggleWage()`). `buyPlayer()` is the instant buy at the asking price; both end in `finalizePlayerPurchase(p, ablose, gehalt, tauschId)` (all budget checks). Swap deals (25.20): after the fee is agreed `setPokerSwap(id)` picks an own player (`isSwapCandidate()`: <= 30, healthy, at least `getSwapClubMinimum()` = seller club strength - `SWAP_CLUB_GAP` 4 (25.22, before 10 below the market player: the bot swapped up to 12 squad players per season), squad > 17) credited at `SWAP_VALUE_SHARE` 85 % of his market value (`getSwapValue()`); cash and the wage check only see the rest, the transfer budget is charged like a sale (`bar` + 15 % of the credit = 85 % of the credit flows back, as in `completeOfferSale()`) and his agent gets a fee on the credit (25.21 - before the full credit without fee made a swap better for the budget than any sale; injured players are no candidates), the player leaves with the usual departure hooks.
-- Medical check: `js/medical-check.js` - every market player gets a hidden `p.medical` (`ensureMedicalProfile()`: ok / chronisch / verletzt, older players more often chronic); `runMedicalCheck()` only in the transfer poker AFTER the fee is agreed (3 % of the fee, half with the physio, min 1,500 €; a finding lowers `t.agreedFee`, `p.askingPrice` and `p.sellerMinimum`: chronic -20 %, injured -15 %). `applyMedicalOnArrival()` in `finalizePlayerPurchase()` makes it real (the instant buy is blind): chronic → `p.chronicIssue` (x1.5 via `getChronicInjuryFactor()` in the post-match injury roll and `getPlayerInjuryRiskIndex()`) + `p.timesInjured`, injured → `p.injured`; unchecked findings send an inbox message. Tags via `getMedicalTag()` (market list, poker), `describeMedical()` in the player popup.
-- Pre-contracts: `js/pre-contracts.js` - from matchday 18 `ensurePreContractPool()` creates 4 AI players with expiring contracts per season (`game.preContractPool`, box `#precontract-box` in the transfer tab "Vereinslose"); `offerPreContract(id, 'normal'|'doppelt')`: no fee, sign-on 12/24 matchday wages paid now, wage +20 %, one try per player (`getPreContractChance()`), max 3 pending in `game.preContracts`, wage check against next season (`getNextSeasonWageTotal()`); they join via `joinPreContractPlayers()` in `concludeSeasonAndAdvance()` after aging (dropped after a club change). `tickPreContracts()` per matchday: rivals take waiting candidates (8 %), own last-year players (>= median) get `p.preContractOffer` (deadline +3, `getContractDemand()` +15 %); missed → `p.preContractSigned` (extension blocked, leaves at season end).
-- Pro loans: `js/pro-loans.js` (25.20) - in a transfer window `loanOutProPlayer(id, btn)` (button in the sell list, box `#pro-loans-box`) loans a first-team player until season end to an AI club of the own or next-lower league (`getProLoanTerms()`: club pays 40-100 % of the wage), stored in `loanedPlayers` with `proLoan: true`; `tickLoanedPlayers()` (secondteam.js) calls `tickProLoan()`: own share booked as '🔁 Leihspieler-Gehalt', return after md 34 (morale +5, <= 23 +1 via `grantTrainingStrength`). The player is out of `squad`, so the wage budget ignores him; max 3, at least 16 stay; the second-team loan list skips pro loans. 25.21: no injured players, open `incomingOffers` for him are dropped, `switchToClub()` clears `loanedPlayers`/`incomingLoans`/`incomingOffers` (they belonged to the old club - a pro loan used to return to the new squad). The squad planner's wage box lists the 3 most expensive non-starters when over budget (`getWageReliefCandidates()`: <= 25 loan via `getProLoanTerms()`, else sell).
-- Selling offers: every way to accept an incoming offer goes through `completeOfferSale(offerId, betrag)` in js/transfermarket.js (squad minimum, chemistry check, negotiator perk, agent fee, departure hooks); variants: `acceptTransferOffer`, `acceptTransferOfferWithClause` (15 % sell-on, 6 % less now), `acceptTransferOfferWithBuyback` (js/buyback.js: players <= 25, 10 % less now, buy-back for 140 % until the end of season+2 in `game.buybackOptions`; `tickBuybackOptions()` before `game.season++` develops/ages the player and expires options; `exerciseBuyback()` only in a transfer window, box `#buyback-box` in the sell tab).
-- Rumours: `js/rumors.js` - `tickRumors()` per matchday (after `tickPreContracts()`) resolves due rumours and adds one (30 %, max 3 open) to `game.rumors`; sources `RUMOR_SOURCES` with a hidden truth rate (boulevard 0.3, blog 0.5, fach 0.75), hits/misses in `game.rumorStats`. 'abwerbung' (own player): if true, `resolveRumor()` sends a real offer via `triggerNewAITransferOffer(p, {club, multiplier})`; `reactToRumor(id, 'dementieren'|'anheizen'|'schweigen')`: deny = club backs off 50 % if true, morale +3 (Ehrgeizig/Selbstbewusst -5); hype = offer +15 %, morale -3, media -2 on a fake. 'markt': if true the market player is gone after 2 matchdays. Box `#rumor-box` in the transfer tab Angebote.
-- Transfer strategy: `js/transfer-strategy.js` - card `#dash-transfer-strategy-box` until matchday 3, one choice per season in `game.transferStrategy` via `chooseTransferStrategy('jugend'|'sofort'|'sparen'|'ausgewogen')` (`TRANSFER_STRATEGIES`: transfer budget ±share of `getLeagueTransferBudget()`, `expectedRank` shift; 'jugend' halves `getYouthScoutCost()`), `tickTransferStrategy()` after `game.matchday++` sets 'ausgewogen' when missed, `resolveTransferStrategy(myRank)` after `resolveWinterTalk()` (jugend: `STRATEGY_YOUTH_PLAYERS` 3 academy graduates with 10+ league games +6/fans +3 else -6 - with 2 the Bundesliga bot hit it in 12 of 18 seasons; sofort: goal reached +5 else -8; sparen: `ffpSeasonNet` >= 0 +5 else -6).
-- DFB licence (25.20): `checkDfbLicensingStatus()` (js/stadium.js) counts running constructions for capacity, floodlight and internat (`getLicenceBuildsInProgress()`, returned as `auflagen`) - the grace period is 3 matchdays, every build takes 10+, so a promoted 2. Liga runner-up without internat level 2 lost promotion and went down the next season; the season-end promotion check uses the same function (only the cash reserve must really be there). AI relegated clubs adjust with `AI_RELEGATED_ADJUST` 0.55 instead of 0.4 in `evolveAiTeamStrength()` (ex-Bundesliga clubs at 80+ crowded the top of the 2. Liga).
-- Promotion boost: `js/promotion-boost.js` - AI promoted clubs gain ~4 strength in `evolveAiTeamStrength()`, our club came up ~7 below the new league average and went straight back down (bot: 2. Liga with 8 and 18 points). `applyPromotionRewards()` calls `markPromotionBoost()` (`game.promotionBoost` {level, season}, plus the TV advance `payPromotionTvAdvance()` in js/media-rights.js: 25 % of the new league's TV base at once - Bundesliga 16 M€ - in `game.tvAdvance`, deducted from each TV instalment via `getTvAdvanceDeduction()` in `applyMatchdayFinances()`, rest settled by `settleTvAdvanceAtSeasonEnd()`; 25.22: a promoted club arrived with ~15 M€ cash and could not spend its 33 M€ transfer budget on 20-40 M€ Bundesliga players): transfer budget +`getPromotionTransferBonus()` (50 % of the new league budget, added after the season-end budgets or directly in the DFB grace period) and `getPromotionEuphoriaBonus()` (+3 strength until md 10, +1.5 until md 17) in `getOwnLeagueMatchStrength()` and live via `applyPromotionEuphoriaLive()` in `setupMatch()`. Bot after 25.18: promoted to 2. Liga 26-33 points (1 of 3 straight down), Bundesliga 35-48.
-- Winter board talk: `js/winter-talk.js` - card `#dash-winter-talk-box` while `game.matchday` is 18-20 (`isWinterTalkOpen()`), one choice per season in `game.winterTalk` via `chooseWinterTalk('hoch'|'runter'|'budget'|'kurs')`: hoch/runter move `game.seasonExpectation.expectedRank` by 2 (so the member assembly and the sport board member judge against the new goal), hoch +5 board and `getWinterBudgetAmount()` (30 % of `getLeagueTransferBudget()`, `WINTER_BUDGET_SHARE` - 25.16, the old fixed amounts were 8 % of the new Bundesliga budget and 62 % in Liga 6) now, settled by `resolveWinterTalk(myRank)` before `prepareMemberAssembly()` (+5 / -10); budget chance `getWinterBudgetChance()` from rank vs expectation and boardSat (refusal -3); kurs +2. `tickWinterTalk()` right after `game.matchday++`: missed after md 20 → -2.
-- Player career profile: `js/player-profile.js` - `renderPlayerProfile(p)` in the player popup (`#pd-career-progression`, replaces the old short `renderPlayerCareerPanel`): join info `p.joined` {season, via, from, fee} set by `stampPlayerJoin()` at every way into the squad (finalizePlayerPurchase, signFreeAgent, loan buy option, joinPreContractPlayers, exerciseBuyback (overwrites), signYouthProContract, reserve promotion), season rows from `p.strengthHistory` (now also `elf` from `resetPlayerSeasonStats()`) plus the running season, honours `p.honours` via `addPlayerHonour()`/`addSquadHonour()` (champion + player of the season in `recordSeasonHonours(myRank)` before `prepareMemberAssembly()`, promotion in `applyPromotionRewards()`, cup wins in `recordCupFinal()`, player of the month). `isClubLegend()` (>= 150 apps or 6 seasons): `checkLegendDeparture()` from `checkCrowdFavoriteDeparture()` (every departure) costs fans 8 and board 2.
-- Club geography & regional leagues: `js/club-geo.js` - every club has a real city (`getClubCity(name)`; names stay minimally altered). Leagues 1-3 are national (`TOP_LEAGUE_CLUB_NAMES` in entities.js); leagues 4-6 come from the home region of `game.homeCity` (`HOME_CITIES`: state, region, Oberliga key, 6th-tier key, Landesverband): `REGIONALLIGA_CLUBS` (5 regions × 18 real clubs), `OBERLIGEN` (real clubs, filled from `REGION_TOWNS`), `LIGA6` (Sachsenliga real, else clubs from real towns via `buildTownClubs()`). `getLeagueClubPool(level)` / `generateTeamName(level)` take real clubs first (`getRegionalRealCount()`). `applyHomeRegion()` sets `leagueNames[3..5]` and `landesPokal.region` (window.onload and every load in save.js; old saves without homeCity → `ensureHomeCity()` = Leipzig/Nordost). New-game dialog: `#new-game-city-box`, sessionStorage `anstoss_fm13_newgame_city` (default club name follows the city). A club switch keeps the home region.
-- Tactic duel: `js/opponent-tactics.js` - rock-paper-scissors of archetypes (Pressing > Ballbesitz > Konter > Pressing, ±2 strength, `getTacticMatchupBonus()`), league matches only. AI coaches read `game.recentTacticStyles` (recorded after each own league match) and counter a predictable manager (3 of 5); the plan is fixed per matchday in `game.oppTacticPlan` (`getOppTacticPlan()`), used by the live engine (current style each step), the matchday simulation and match-scout via `getOwnLeagueMatchStrength()`; shown in `#prematch-tactic-box` (full plan only with the analyst).
-- Opponent preparation: `js/match-prep.js` - the 'matchprep' team focus (formerly a flat +1, dominated by 'taktik' +2) now needs a target style for the next league opponent (`setMatchPrepTarget(arch)`, `game.matchPrep` stamped with season/matchday): +2.5 when it matches `getOppTacticPlan(opp).arch`, else 0; added in `getOwnLeagueMatchStrength()` and live via `applyMatchPrepLive()` in `setupMatch()` (league only). UI `#matchprep-target-box` in the training screen; the fitness coach's 'auto-matchprep' task calls `autoSetMatchPrepTarget()` (public base style).
-- Set pieces (live only): `js/set-pieces.js` - `rollLiveSetPiece()` in `simulateMatchStep()` (before the goal roll, not after minute 88) starts an own penalty (shooter choice via `getPenaltyCandidates()`/`getLivePenaltyChance()`) or a free kick (`getFreeKickOptions()`: direkt/flanke/kurz) and pauses like the halftime talk (`currentMatch.awaitingSetPiece`, `#setpiece-overlay`); `simulateRestOfMatch()` auto-resolves via `resolveSetPiece(null, true)`. Opponent penalties and VAR (`varOverturnsGoal()`) need no decision. Goals with a fixed scorer go through `creditOwnGoal(players, scorer, assist)`. Shootouts: keeper choice in the shooter modal (`chooseShootoutKeeper()`, bench keeper costs a substitution), `getShootoutKeeperModifier()` in `simulatePenaltyShootout()`. Measured over 400 live matches: goals per match unchanged (1.10:0.76 vs 1.12:0.72).
-- Set-piece drills: `js/set-piece-drills.js` - 'standards' is a real weekly plan unit (the presets already wrote it before it existed; `computeWeeklyTrainingStats()` maps a standards-dominant week to 'ausgeglichen'); `game.setPieceDrills` {focus, mastery 0-100 per direkt/flanke/kurz/elfmeter/ecke}, `tickSetPieceDrills()` per matchday in `processPostMatchRoutine()` (+10 per standards day for the focus, x1.5 with the set-piece coach, others -2); `getDrillMastery()` used in set-pieces.js (penalty +6 %, free kick options, flank counter risk halved) and the corner line in `simulateMatchStep()`. Box `#setpiece-drill-box` in the training screen.
-- Referee critique: `js/referee-critique.js` - the live match records disputed scenes in `currentMatch.controversies` via `noteRefereeControversy()` (own red card in the card branch, opponent penalty in `playOpponentPenalty()`, own goal overturned by VAR); `offerRefereeCritique()` in `endMatchSimulation()` (before the cup early return) shows `#ref-critique-box` only without a win: kritik (fine by league `REF_CRITIQUE_FINES`, doubled per critique in `game.refCritiques` season, fans +3, media -2, `game.refereeGrudges[refId]` = 2), beschwerde (fee, 35 % lifts a red-card ban, else board +1), schweigen (board +2, fans -1); one choice per match (`currentMatch.critiquePending`), log `game.refereeCritiqueLog` shown in `renderRefereePreview()` via `getRefereeGrudgeNote()`. `applyRefereeGrudge()` in `setupMatch()` makes that referee's `cardMult` x1.2 for the next 2 own matches under him.
-- Co-trainer live: `js/co-trainer-live.js` - `tickCoTrainerLive()` at the end of `simulateMatchStep()` picks ONE hint from the real match state (`findCoTrainerHint()`: level 1 tired starter/late deficit/late 1-goal lead, level 2 + second-yellow risk/lost tactic duel, level 3 + winnable duel; each type once per match, 15-minute gap, reliability = `getStaffEffectivenessMultiplier('coTrainer')`), shown in `#live-cotrainer-box` (sticky above the controls on phones); actions use the normal live functions (`coTrainerSubstitute()` → `makeLiveSubstitution()`, `liveSetTackleHardness`, `liveSetTacticStyle`, `setLiveShout`). Counts in `game.coTrainerHistory.liveFollowed/liveIgnored`, following raises `game.coTrainerTrust`. 25.25: per live match `recordLiveCoTrainerMatch(result, currentMatch)` (called in `processPostMatchRoutine()` when live) fills `liveMatchesFollowed/liveFollowedWins` (match with a followed hint) and `liveMatchesOwn/liveOwnWins` (without); `coTrainerLiveBilanzText(h)` shows it in the co-trainer box. Hints are rare: `scripts/cotrainer-live.js [spiele] [datei] [fitness]` (module: `messeLiveSpiele`, `zusammenfassung`, also run by the bot with `COTRAINER=<n>`) measured hints in about 1-2 % of simulated matches (rueckstand after minute 70 is the usual one). The fatigue hint (`muede`) needs a bench player at least `COTRAINER_MUEDE_ERSATZ` (0.85, was 0.95 - then almost never) of the tired starter's strength: 2 -> 20 hints per 1000 matches at fitness 65. Between minutes, the box shows how many hints were given since kick-off (`renderCoTrainerLiveBox()`, 25.26). Following vs ignoring cannot be told apart at a few hundred matches; at 5000 matches (fitness 65) 31.3 % wins for following against 31.6 % for ignoring. Hint 'druck' (25.26): at minute 60+ with an opponent at least 4 shots ahead it offers 'Bus parken'. The opponent's plan is fixed before kickoff - never invent an "opponent switches" hint. 25.33 decision: the hints stay although following them shows no win-rate effect - they are shortcuts to real live actions, not a bonus.
-- Pre-match team talk: `js/pregame-talk.js` - `#prematch-talk-box` (rendered in `startMatchdayFlow()` and `startCupLiveFlow()`), `choosePregameTalk(type)` stores `game.pregameTalk` for this matchday; `computePregameTalkBonus()` = situation (`getPregameSituation()` from own XI vs `pendingMatchInfo.oppStr`) + starting XI characters (`p.character`), halved when the same talk was used twice in a row (`game.pregameTalkHistory`); applied once in `setupMatch()` via `applyPregameTalk()` (live and "Nur Ergebnis", league and cup), 'druck' settled in `endMatchSimulation()` via `resolvePregameTalk()` (win morale +3, loss -4).
-- Cup finals: `js/cup-final.js` - DFB-Pokal and Landespokal final (`getUpcomingOwnFinal()`), "Finalwoche" card `#dash-cup-final-box` from 3 matchdays before (tickets fans/sponsors, trains, camp → `getCupFinalBonus(comp)`, only on the final matchday; live via `applyCupFinalPreparation()` in `markCupLiveMatch()`, simulated via the strength lines in cup.js/landescup.js), `recordCupFinal()` from the round finalizers writes `game.cupFinals` (Historie > Titel) and opens the celebration choice (`chooseCupCelebration()`). Dashboard cards are not redrawn by `updateUI()` - every card action re-renders its own card.
-- Derby week: `js/derby-week.js` - `isDerbyOpponent(name)` is the ONE derby check for the own club (place-based, see Derbys); card `#dash-derby-box` from 3 matchdays before (`getUpcomingDerby()`, state `game.derbyWeek`: choreo/special train, security (home only), premium (morale +5, paid only on a win), press kampf/respekt). `getDerbyBonus(opp)` only on the derby matchday (simulation via `getOwnLeagueMatchStrength()`, live via `applyDerbyPreparation()` after the ticker is initialised in `setupMatch()`), `getDerbyRiskFactor()` in `checkHooliganIncident()`, `resolveDerbyWeek()` from `recordRivalryResult()` (all three matchday paths) → `game.derbyHistory` (Historie > Rivalen). The old test leftover `forceDerbyMatchdays` (first 3 matchdays of every career were derbies) is gone.
-- Derbys: `isDerbyMatch(a, b)` in js/club-geo.js is THE derby rule (Phase 24.2): same locality (`getClubLocality()`: city, or the district for generated district clubs in Berlin/Hamburg/Bremen) or a real tradition pair in `TRADITION_DERBIES` (`getDerbyLabel()`); within a league only the `DERBY_LOCAL_CAP` (3) strongest same-locality clubs count (`getLocalDerbyCircle()`), otherwise big-city leagues were all derbies. `isDerbyOpponent(name)` (derby-week.js) = `isDerbyMatch(game.clubName, name)`; used by live/sim/admin matchday paths, league fixtures, media, training, league stats, shootout 'Nervenkrieg'. There is NO permanent rival, NO random `rivalName` pairs and NO nemesis coach any more (all removed in 24.2/24.3; `cleanupRemovedModuleState()` deletes `permanentRivalName`, `rivalManager*`, `rivalHistoryArchive`, `nemesis` and team `rivalName`). `rivalryRecord` = derby record over all derby opponents (`matches[].opp`), filled by `recordRivalryResult()`; `getOwnDerbyRivals()` feeds Historie > Rivalen and the derby friendly (`scheduleDerbyFriendly()`).
-- Champions Cup: `js/europe.js` - qualification only for the next season via `decideEuropeQualification(myRank)` in `concludeSeasonAndAdvance()` (Bundesliga rank 1-4 or `game.europeCupTicket === game.season` from the DFB-Pokal win; formerly `game.inEurope` was never reset, even after relegation). `initEuropeCup()` draws from `EUROPE_POTS` (4 pots, strength `EUROPE_POT_STRENGTH` around the average of the 4 strongest other Bundesliga clubs - 21.6: anchored to the squad average the elite was weaker than the Bundesliga's third and a passive club won the title twice in a row), one per pot per group, plus the strongest other Bundesliga club (its `team.strength`) in the other group; own pot from `getEuropePot()`; group home/away via `getEuropeGroupPairings(grp, gi)` (also used by `getOwnEuropeFixture()` in cup-live.js - before 25.20 the return round kept the home side, so pot 1 played six home games and a pot-4 newcomer six away: group survival at Bundesliga-top strength 40 % → now 49 %) (coefficient `getEuropeCoefficient()` over the last 5 seasons of `game.europeHistory`, written by `recordEuropeSeason()` before the new qualification). Box `#europe-history-box`.
-- Transfer windows: matchday-based (summer 1-3, winter 18-20) with `runDeadlineDay()` in `js/transfermarket.js`, driven by `tickTransferWindows()` after every matchday.
-- Season end extras: `js/relegation.js` (own club on rank 3/16, legs on the dashboard, auto-resolved in `concludeSeasonAndAdvance()`), `js/league-awards.js` (`game.leagueAwards`), `js/coach-carousel.js` (AI `team.coach`, temporary `team.coachBounce` - removed via `tickCoachBounce(true)` before leagues advance).
-- League statistics: `js/league-stats.js` (tab "Statistik" on the league screen: league-wide scorer list from `getLeagueScorers()` - own `p.goalsSeason` plus AI `team.star`/`team.striker` goals credited by `creditAiLeagueGoals()` in js/ai-clubs.js -, form table, home/away table `t.homeRec`/`t.awayRec`, rank history `t.rankHist`). The league screen views `getLeagueViewLevel()`; never change `game.leagueLevel` from UI buttons. The Torjägerkanone (league-awards.js) uses the same scorer list.
-- Statistics: manager career in `game.managerCareer` (js/manager-analytics.js), Hall of Fame computed from squad + `game.playerRetirement` + `game.managerCareer` (js/hall-of-fame.js). Loans: `js/secondteam.js` / transfermarket loans only (incoming loans check transfer budget for the fee and the wage budget since 25.17 - before only the cash, a loan bypassed both budgets).
-- Holding: `js/holding.js` - `getHoldingValuation()` (50k + 80 % of the factory investment; the old fixed `holdingCompany.valuation` is gone) feeds the screen and the acquisition offers in js/industry.js (only with an owned factory); `refreshB2BContracts()` after `game.season++` adds one contract per owned factory (payout ~3x material cost). The pre-match analysis (`renderPreMatchAnalysis()`) shows the real `team.star` and, for derby/cup only, the base style from `getTeamPlaystyle()` - never random names or tips in render functions.
-- Side income: stock `dividendRate` is an annual rate (paid monthly as rate/8.5); betting odds come from `simulateBetProbabilities()` (same `simulateGoals` as matches) using the best available XI (`pickBestLineupIds()`), no bets on own defeat; real estate income grows with cumulative cost (~10 seasons payback). Measure new income sources before adding them - several were money machines. Long-run bot: `node scripts/longrun-bundesliga.js [seasons] [aktiv|passiv] [runs] [file]` (start league `LIGA=0..5`; DIAG=1 lists refused actions, open licence items and inbox per season, FINDIAG=1 bookings by label, STRDIAG=1 the matchday strength split, BOARDDIAG=1 board changes by function). The aktiv bot extends contracts (keeps >= 18 players), fills thin positions with youth/free agents, answers ultimatums, holds the member assembly and plans the DFB licence of the next league as a promotion candidate (rank <= 6 or XI >= league average: floodlight, internat, cheapest seats per block - builds take >= 10 matchdays, the grace period only 3) while holding that money back in transfer windows; it accepts the sponsor offers that arrive (best value, sector conflict -30 %) and sells the naming rights once; since 25.17 it scouts up to 2 talents on matchdays 1 and 18 (cash above the licence reserve), sells talents whose potential is below the squad median when an offer arrives (with sell-on, TV column = revenue), prints LIZENZ-SPERRE only when a promotion place was blocked by the licence (before 'Liz-offen' counted the next league after every promotion), promotes youth at squad-median strength, sells the weakest non-starters above 24 players and the most expensive non-starters while over the wage budget, and prints K/V (buys/sales), L/T (pro loans for over-budget players <= 25 instead of a sale, swaps of the weakest fitting non-starter when buying with >= 22 players - 25.21), E (board expected rank) and J (own youth in XI/squad) per season. Start time: `node scripts/measure-startup.js`.
-- Career balance (Phase 16, measured with an active-manager bot over 10-14 seasons: Liga 6 -> 2. Liga in 6-9 seasons, passive clubs sink; 25.13 after the home/trait/live changes: Liga 6 -> 2. Liga in 10 seasons, Liga 4 -> 2. Liga in 4, passive clubs end in Liga 6; 25.19 (promotion boost, youth, relegation parachute; 4 runs × 14 seasons): Liga 6 -> 2. Liga in 9-13 seasons, then mid-table in the 2. Liga, no Bundesliga promotion within 14 seasons; 25.23 (captain on the pitch, switch-season grace, TV advance/DFB grace test, youth gaps 10/16/22 relative to the league base at every level - no league anomaly, lexicon search ignoring hyphens/spaces); 25.22 (TV advance, youth offsets; 6 runs from the 3. Liga/2. Liga): 5 of 8 Bundesliga promotions stayed up in the first season (before the 25.21 reserve change 1 of 4); 25.21 (training cap, licence conditions, pro loans/swaps; 6 runs × 14 from Liga 6, 5 runs × 12 from the 3. Liga): Liga 6 -> 2. Liga in 8-12 seasons (1 of 6 stuck in the 3. Liga), from the 3. Liga to the Bundesliga in 8-10 seasons, Bundesliga newcomers 77-80 vs league average 84-88; cups over ~350 bot seasons: DFB-Pokal ~4 % per Bundesliga season, never from 2./3. Liga, Landespokal 28 % in Liga 4; Champions Cup group at field strength 51 %, title 9 %): starters recover a quarter of the bench recovery between matchdays; the market has 10 players and refreshes at the winter window; licence items scale with the league (`getSpecialInstallCost()`, campus via `getStadiumCostScale()`). Promotion walls must stay affordable for a club of that league (19.6, 20 seasons: a 2. Liga club grosses ~15 M€/season, so the 1. Liga licence needs 15,000 seats like the DFL - 20,000 cost a climber from the 15,550 start stadium ~25 M€ with the internat).
-- Budgets at season end (season-end.js): league/placement formula (transfer budget = `getLeagueTransferBudget(level)` from `LEAGUE_TRANSFER_BUDGET` in js/squad.js: 25 M / 3 M / 900k / 250k / 60k / 40k per season ≈ 1-3.5x a typical reinforcement of that league (40 M / 2.4 M / 470k / 85k / 18k / 18k) - 25.15: before 2.5 M × (1 + league factor × 2.5), 3.5-5.6 M€ in leagues 4-6 but only 8.75 M€ in the Bundesliga; wage budget = `getLeagueWageBudget(level)` from `LEAGUE_WAGE_BUDGET` in js/squad.js: 1.575 M / 520k / 110k / 36k / 11k / 8k per matchday ≈ 1.35-2x the start squad wages of that league, × placement 1.3/1.0/0.8 - 25.14: before it was 450k × (1 + league factor × 2.5), 637,500 € in Liga 6 with 4,000 € wages, so it never limited anything below the Bundesliga; new game, club switch and season end all use it; on relegation `applyRelegationWageClause()` cuts every wage by `RELEGATION_WAGE_CUT` (40 % since 25.19, was 30 %; min 150 €, morale -3, inbox) and `payRelegationParachute()` (js/media-rights.js) books 25 % of the old league's TV base once (Bundesliga 16 M€ - with 30 % and no parachute a relegated Bundesliga club carried 53 M€ wages against ~35 M€ 2. Liga income: 62 M€ forced sales, emergency squad) and the first budget covers at least `RELEGATION_BUDGET_SHARE` (90 %) of the cut wages - without it a relegated Bundesliga squad (1.36 M€) could not extend a single contract under the 2. Liga budget), wage budget never below `getWageBudgetFloor()` (25.18: current wage bill plus `getRenewalWageBuffer()`, +5 % only after a season without loss; from `WAGE_FLOOR_GROWTH_CAP` (1.5) × the league wage budget frozen at the bill, the renewal buffer only with half a season of wages in cash (25.19: the raises drove strong Bundesliga squads to 3-4 M€ per matchday and -18 M€ cash; frozen without the cash exception a club with 106 M€ fell into the emergency squad); with negative cash frozen at the bill without buffer (25.19 - 95 % let 0.7 M€ in the red plus a 17-man squad end in the emergency squad) - the old unconditional +5 % let a Bundesliga bot climb from 1.6 to 2.8 M€ per matchday, lose 27 M€ and drop into the emergency squad once the floor vanished at negative cash; freezing the bill after a loss season was tried and failed when half the squad expired at once; `contractWageTotalWith()` ignores the other expiring players. Before 25.18: +5 %, after a loss season +0 %, plus `getRenewalWageBuffer()` = the raises `getContractDemand()` asks from players whose contract runs out in the new season (`contracts === 2` before the countdown); no floor only while the cash is negative - 21.6 long run: the formula put a Bundesliga mid-table club at 1.26 M€ with 1.5 M€ wages; 25.17: the old 'cash covers a quarter season' condition (~15 M€ in the Bundesliga) and the 85 % after a loss season still failed every extension in about a third of the Bundesliga seasons (emergency squad), now 3 of 31), plus `applyCashSurplusBudgets()` (21.6 Bundesliga long run: 40 % of the cash above half a season of wages into the transfer budget, 10 %/34 into the wage budget - since 25.21 the reserve is half a season of the real wage bill, at least of half the wage budget: with the full budget a club promoted to the 2. Liga (120k wages, 676k budget, 10 M€ cash) never got anything, stayed 10 below the league average and 3 of 4 bot promotions to the Bundesliga went straight back down - afterwards 1 of 4 - before, a Bundesliga club piled up 200+ M€ with a wage budget below its wage bill). 25.31 Test: 60 % statt 40 % Überschuss ins Transferbudget (Bot-Schalter `KASSE_ANTEIL=0.6`, Liga 6, 6 Läufe × 12 Saisons): nur 3 von 6 Läufen am Ende in der 2. Liga gegen 5 von 6 in der Basis, Elf im Rauschen - nicht übernommen. The Bundesliga market has 3 international stars (87-93, slots 7-9 in `refreshTransferMarket()`). Prize money inside the matchday simulation goes through `bucheMitLabel(label, betrag)` (finances.js) - unlabeled bookings take the label of the open screen (the bot plays from the dashboard: "Vereinsbüro"); 25.19 labelled buys ('🛒 Spielerkauf'), sales ('💸 Spielerverkauf'), contract sign-on fees ('✍️ Handgeld & Berater', 12-35 M€ per Bundesliga season), free agents, sponsor sign-on bonuses, naming rights, sell-on payouts, training compensation and scouting (VBDIAG=1 lists what is still unlabeled); the finance overview shows the expected TV settlement (`getTvSeasonOutlook()`, `#fin-tv-outlook`); new-game/scenario start money is booked as '🏁 Startkapital' (FFP-exempt).
-- Sponsor money (25.10): every sponsor income (main, kit, sleeve, boards, naming rights) scales with `getSponsorLeagueFactor()` (`SPONSOR_LEAGUE_FACTOR` in js/sponsors.js: 74/20/6.5/3.2/1/0.75) - `leagueScaleFactor()` (2 … 0.75) stays for costs, ticket prices, media partners and events. Before, sponsors were 0.7 % of a Bundesliga club's income (bot, all slots filled), now ~25 M€/season (~17-25 % per league).
-- Operating costs (25.9/25.10): `getOperatingCostPerMatchday()` in js/finances.js (`LEAGUE_OPERATING_COST` per season: 40 M Bundesliga, 5 M 2. Liga, 0.5 M 3. Liga, 0 below; raised with the sponsor money) is booked every matchday in `applyMatchdayFinances()` as '🏢 Spielbetrieb & Verwaltung' and shown in the forecast (`#fin-out-operations`). Before, a Bundesliga club with the start squad made +40-60 M€ per season and passive long-run clubs piled up 200-770 M€; with 20 M an active Bundesliga club holds ~0-40 M€. Emergency squads get at least `EMERGENCY_WAGE_FLOOR` (season-end.js) per matchday - their strength-based wages were 2. Liga level, a passive club lived years in the Bundesliga on 5 M€ wages. The long-run bot's `FINDIAG=1` sums every booking per season by label (journal + Kontoauszug).
-- Attendance: `calculateMatchAttendance()` (js/stadium.js) is the only place a home crowd is computed: min(capacity share via `getAttendanceFactor()`, league interest `getLeagueAttendanceCap()` × matchday swing). The swing (weather/form/crowd favourite from `getMatchdayAttendanceMood()`, ticket price elasticity, noise, max 1.12) also applies at the cap - without it lower-league clubs with big stadiums saw exactly the cap every match (6. Liga: always 1,000) and ticket prices had no attendance cost.
-- Autosave every 5 matchdays (`maybeAutoSave()`, own key); every save writes `anstoss_fm13_last_save` ('auto' or 'slotN') and the boot loads exactly that one via `loadMostRecentGame()` (formerly always slot 1, so autosaves seemed lost). A failing autosave warns once per session. Tests: `freshPage()` removes that key; each `browser.newPage()` is its own storage context.
-- Save safety: `js/save-safety.js` - EVERY load (slots, autosave, import, admin JSON, boot) goes through `loadSaveSafely(raw, {label, backup, silent})`: `validateAndRepairSave()` rejects unusable states BEFORE applying (current game untouched) and repairs small damage (duplicate ids, NaN values, orphan lineup → `autoLineup()`); never call `applyLoadedState()` directly. One backup key (`SAVE_BACKUP_KEY`): current game before a load/new game, old slot content before an overwrite (`restoreSaveBackup()` is reversible). Writes go through `writeSaveVerified()` (blocked vs. quota, read-back check, the backup is dropped first when full); meta from `buildSaveMeta()` (`savedTs`, `version`). Boot: `loadNewestIntactSave()` falls back to the newest intact save. A rejected load says which slot is broken and what stays (`saveLoadHinweis(label)`, 25.25; the autosave names a slot as the way out); the dashboard shows the last autosave in `#dash-autosave-line` (`renderDashAutosaveLine()`, save.js). Usage gauge counts ALL keys (file:// shares the origin); export reminder every 3 seasons (`remindSaveExport()`, `game.lastExportSeason`).
-- Save format: `buildSaveState()` packs `fixturesData` as `[home, away, hg, ag]` arrays (`packFixtures()`/`unpackFixtures()` in js/save.js, old object saves still load). There is no structural self-test at boot any more (it cost ~1.5 s on the first start after every update, 4x CPU throttle); `testStructuralSelfTest` covers it and the admin button still runs it.
-- Removed modules leave save-game fields behind: add them to `cleanupRemovedModuleState()` in js/state.js (runs on load and monthly). 25.23: eight never-read fields (transferHistory, recentResults, namingRightsHistory, …) left the initial game object and are listed there too.
-- Career scenarios: `js/scenarios.js` - `CAREER_SCENARIOS` (absteiger, pleite, tradition, titel) chosen in the new-game dialog (`selectNewGameScenario()`, sessionStorage marker read in window.onload → `applyScenarioStart()`); `recordScenarioSeasonRank(myRank)` before promotion, `evaluateScenarioAtSeasonEnd()` after season change (stars 1-3, `game.scenario`, `game.scenarioResults` shown in the career summary); card `#dash-scenario-box`. Balance measured with a scenario bot (20.6, aktiv/passiv/sparen × 8 runs): active play should usually win, passive mostly fail - pleite counts loans as debt (`getScenarioNetCash()`) and forced sales (`game.forcedSalesCount`, -1 star each, 2 = failed) because forced sales alone used to rescue a passive club with 3 stars; absteiger starts -7 strength (with -5 the 'too weak' squad was the league's strongest before 25.11; -11 after the 25.11 home/trait change saved only 1 of 4 active runs). 25.12 remeasure (6 runs each): absteiger aktiv 4/6 passiv 0/6, tradition (+4 strength, floodlight already built - the licence blocked a 2nd place in the Regionalliga) aktiv 4/6 passiv 1/6, titel (+7, no AI club above own XI +1 in `setup()`) ~50 %, pleite: sparen 3/4, aktiv 1/4, passiv 0/4.
-- Club change: `switchToClub()` in js/career.js (25.22: the new board starts at boardSat 60 with `recordSeasonExpectation()` for the new squad and the switch season is a grace season (`game.boardGraceSeason`, checked in `checkSeasonEndSacking()` like season 1 - 25.23, before a switch in season 5 could be sacked at its first season end); buy-back options, transfer poker, 'abwerbung' rumours, derby week, loans and offers of the old club are dropped; the reserve is renamed '<new> II'; stadium/campus/staff/fans/cash travel by design) - used by `showClubSwitchOptions()` and by job offers (`checkJobOfferApproach()` in js/match.js: chance from rank/media/level every 6 matchdays and at season end, offering clubs from own or next-higher league, move recorded in `game.careerStations`). Player retirements: `tickPlayerRetirement()` (js/player-retirement.js), shown in the Hall of Fame.
-- National teams: `js/national-team.js` - fixed international breaks after matchdays 6/13/24/30 (`tickInternationalBreak()` in `processPostMatchRoutine()`), nomination by country threshold (`getNominationThreshold()`, good grades lower it); no league match is missed, the trip costs fitness/injury risk and adds caps (`p.caps`, `p.intlGoals`), morale and market value. The club receives release fees via `payReleaseFee()` (booked as "🌍 Abstellungsprämien": 15,000 € per player and break, 10,000/12,000 € per player and tournament day for WC/EC). WC/EC after every even season via `playSummerTournament()` in `concludeSeasonAndAdvance()` (`game.intlTournaments`, `p.intlTitles`). Panel `#national-team-box` in the squad tab Analyse (the Team tab is capped at 3 panels by a test).
-- Season preview: `js/season-preview.js` - `createSeasonPreview()` after `recordSeasonExpectationRank()` (own predicted rank = `game.seasonExpectation.expectedRank`, AI teams by strength ±3 noise) in `game.seasonPreview`, card `#dash-season-preview-box` (matchdays 1-8); `buildSeasonExpertCheck(myRank)` before leagues advance writes `game.seasonReviews` (3+ places better: media +3/fans +2, 4+ worse: media -3), shown in the season review overlay and Historie > Chronik. `pickPlayerOfSeason()` (best avg grade, >= 10 league games) is the ONLY player-of-the-season pick (gala, chronicle, review). `showSeasonReviewSummary()` gets a snapshot of the table row (the live row is reset by `advanceLeaguesToNewSeason()`).
-- English UI: `js/i18n.js` (`t()` keys: nav, header, office, tutorial) plus `js/i18n-ui.js` (25.20): `I18N_UI_EN` maps exact trimmed German texts (text nodes, title/placeholder) to English; `applyUiTranslation(lang)` from `setLanguage()`/`initLanguage()` translates the DOM and keeps a MutationObserver for new content, 'de' restores the stored originals (`node.__i18nDe`; text changed by the game since then is dropped). The lexicon has its own English version: `LEXICON_EN` in js/lexicon-en.js keyed by the German title (`getLexiconEntryLocalized()` in `renderLexicon()`, `setLanguage()` re-renders it; `testLexiconEnglish` requires every entry with the same tip count and all digits of the German text - change both when a rule changes). Dynamic texts with numbers/names (notices, inbox, match report) stay German; 25.21 added ~170 texts that only modules render (found by scanning every screen in English). Cost: +71 KB minified, switching ~0.1 s at 4x CPU throttle, start time unchanged. New fixed UI texts: add the English to `I18N_UI_EN` (no duplicate keys - lint `no-dupe-keys`).
-- One-handed use: `js/one-hand.js` (phone, <= 650 px) - FAB `#one-hand-fab` (`oneHandContinue()` → `startMatchdayFlow()`, hidden on prematch/matchday, right/left/off per device in `anstoss_fm13_ui_fab`), back button via one history guard entry (`initOneHand()`, `handleOneHandBack()`: notice without `danach` → overlay with ✕/close button → office visitor → drawer → previous screen from `recordScreenVisit()` (called at the start of `showScreen()`); decision overlays like the interview stay; a second back on the start screen leaves), backdrop tap closes overlays with ✕, lang/sound buttons move into the drawer (`#one-hand-settings-toggles`). CSS: generic modals and notices are bottom sheets, `#matchday-controls` is sticky above the bottom nav (`--bottom-nav-h`), body padding leaves room for the FAB, bottom nav has 7 items incl. "☰ Menü".
-- Game glossary: `js/lexicon.js` - `LEXICON_ENTRIES` (cat, title, text, tips, target screen) on `screen-lexicon` (menu "Karriere & Spezial"; search `#lexicon-search`, category chips, `openLexiconForScreen()` from the per-screen hints filters to one screen). When a rule or number changes, update its entry - `testLexicon` checks the licence capacities against `DFB_LICENSING_REQUIREMENTS`.
-- Match balance (25.11): own matches use `getOpponentMatchStrength(str, oppIsHome)` (js/match.js: sabotage + `AI_HOME_ADVANTAGE` 3 when the opponent is at home) in league sim/live/admin, prediction, betting, relegation and the cups/Champions Cup; trait bonuses in `calcTeamStrength()` are capped at `TRAIT_BONUS_CAP` (3). Before, only our club had a home advantage and traits stacked to +5..7: a league-average XI played ~+9 above an equal AI team and won the 3. Liga in 7-9 of 16 starts (now 3 of 16, Bundesliga start median rank 5.5, 4/12 relegated in 3 seasons).
-- Live = simulation (25.12): `getExpectedGoals(myStr, oppStr, myTeam, oppTeam)` in js/utils.js is THE goal formula - `simulateGoals()` rolls it as Poisson, `simulateMatchStep()` rolls `poissonRandom(xg * minutes/90)` per side for each step's minutes (the halftime and set-piece steps carry their minutes on via `currentMatch.carrySpan`); team playstyles via `currentMatch.homeTeamObj/awayTeamObj`. Live-only extras are xG per 90 (shouts, sabotage, set-piece coach, corners); traits only act through `calcTeamStrength()` (no extra live share/saves). The opponent also gets free kicks (`playOpponentFreeKick()`). Playstyle `concedeBonus` > 0 = concedes more (the sign was inverted before). Before, live had its own steeper formula (home share 0.5 + 2 %/point plus trait extras): the same pairing won ~25 points more often live (`testLiveMatchEngine` checks parity). AI vs AI also gets `AI_HOME_ADVANTAGE` (match-post.js, match-live.js, admin.js). Live shouts (25.13, measured from minute 60/70 over 800 matches): brechstange +0.9/+0.7 xG (pays when trailing: 0.39 → 0.51 points at 0:1, costs with a lead), pressing +0.3/+0.2, bus ×0.6/×0.7 (2.60 → 2.70 points at 1:0, halves a comeback); brechstange/pressing minutes (`currentMatch.kraftMinuten`, counted after the set-piece check) cost the XI up to `LIVE_SHOUT_FITNESS_COST` (8) extra fitness in `processPostMatchRoutine()` (live only) - before, shouts were free and brechstange paid even at 0:0.
-- Market value (25.16): `calculatePlayerMarketValue(str)` (js/entities.js) is continuous across its segments (58 → ~150k, 68 → ~1 M, 85 → ~35 M; `testPhase13Teil3` checks it never falls) - before, the lowest segment (`MARKET_VALUE_LOW_COEFF` was 450, now 83) priced a 58 at ~740k and a 59 at 150k, so Regionalliga players cost more than 3. Liga players and forced sales in the pleite scenario brought ~380k each. Wages up to strength 58 stay as before: `calculatePlayerWage()` scales the value above 15k back by `MARKET_VALUE_LOW_COEFF_OLD / MARKET_VALUE_LOW_COEFF`. The pleite scenario starts at -320k (was -600k; with the real values sparen 3/6, passiv 1/6 - at -600k nobody could avoid 2+ forced sales). The winter talk budget is 30 % of the season transfer budget (`WINTER_BUDGET_SHARE`).
-- Captain: `ensureCaptainPresent()` (js/locker-room.js, from `setupMatch()` and `processPostMatchRoutine()`) hands the armband to the best `getLeadershipScore()` when the captain left (sale, loan, swap, expiry - 25.22, before `game.captainId` dangled and the bonus silently vanished) or is injured (25.23: an injured captain is not on the pitch, so the bonus of `calcTeamStrength()` was lost too). The player popup shows 'Potenzial' (`getYouthPotentialText()`) instead of the old 'Talent' field that repeated the strength.
-- Player aging/development: only `agePlayersAtSeasonEnd()` in `js/player-development.js` (age +1, strength by archetype). Training gains go through `grantTrainingStrength(p)` (25.20, `getTrainingStrengthCap()`: +3/+2/+1/0 per season up to 21/25/29/older; individual focus in processPostMatchRoutine and the training minigames; shown as 'Trainingsplus' in the player popup via `getTrainingGainsLabel()`) - before every player with a focus (the co-trainer automation sets one for all) got +1 with 15-20 % per matchday without limit. Training camps (`bookTrainingCamp()`, js/calendar.js) once per season (`game.trainingCampSeason`), cost × `leagueScaleFactor()`, no permanent strength (before: unlimited bookings, +1/+2 for the whole squad each).
-- Fatigue & summer break (25.8, long-run bot: XI fitness fell to ~73 % in relegation seasons): `pickBestLineupIds()` gives position slots only to outfield players with fitness >= 50, the free slots go to the strongest rest (fresh players of other positions, else the tired one; a goalkeeper only when no outfield player is left) - before, four defenders played down to 10 % and "Ausgeruhte Elf" changed nothing. Season end halves `privateLife.stress` (it only rose: loss +3, max -3 strength) and lifts morale < 70 halfway to 70. The emergency squad (< 14 players after expiries, season-end.js) is created at the new league's average -14..-6 (passive long-run clubs live on it - -12..-4 kept one in the Bundesliga for 11 seasons) (formerly 82 - level*10 - 14, 15-17 below average).
-
-### Game Loop & Monthly Ticks
-
-The main game loop is in `js/match.js` → `playMatch()` → `processPostMatchRoutine()`.
-
-**Monthly Ticks** (every 4 matchdays, since 34 matchdays ≈ 8.5 months) live in `runMonthlyClubTicks()` (js/match.js), called from `processPostMatchRoutine()`; the block below shows the idea:
-```javascript
-if (game.matchday % 4 === 0) {
-    // Financial ticks: income, expenses, board salary
-    if (typeof tickRealEstateIncome === 'function') tickRealEstateIncome();
-    if (typeof tickSponsoringIncome === 'function') tickSponsoringIncome();
-    if (typeof processFanRevenue === 'function') {
-        game.money += processFanRevenue();
-    }
-    
-    // Relationship ticks: fan engagement, board relations, youth programs
-    if (typeof tickFanEngagement === 'function') tickFanEngagement();
-    if (typeof tickBoardRelations === 'function') tickBoardRelations();
-    if (typeof tickYouthAcademyPrograms === 'function') tickYouthAcademyPrograms();
-    
-    // Post-match analysis and record-keeping
-    if (typeof recordFinancialMonth === 'function') recordFinancialMonth();
-}
-```
-
-**Season End** (called in `js/season-end.js` → `concludeSeasonAndAdvance()`):
-```javascript
-// before promotion/relegation changes game.leagueLevel:
-if (typeof recordSeasonalManagerStats === 'function') recordSeasonalManagerStats(myRank, myTeamRecord, game.leagueLevel);
-if (typeof awardLeagueHonours === 'function') awardLeagueHonours(myRank);
-if (typeof agePlayersAtSeasonEnd === 'function') agePlayersAtSeasonEnd();
-```
-
-Always use `typeof ... === 'function'` checks before calling feature functions—this allows features to be optional.
-
-### UI Rendering Pattern
-
-Most game screens follow this pattern:
-1. Main render function collects all data from `game` state
-2. Calls sub-render functions via typeof checks
-3. Each sub-render builds HTML and updates a specific container
-4. Container exists in index.html with a fixed `id` (e.g., `<div id="squad-box"></div>`)
-
-Long screens use sub-tabs instead of stacking panels (`setTrainingTab()`, `setSquadTab()` with `squad-tab-*` containers, and the generic `setSubTab(prefix, tab)` in js/ui-core.js with `subtab-<prefix>-<tab>` containers for history `hist` and finances `fin`): put a new panel into the matching tab, not directly into the screen.
-
-Screen render functions are typically called:
-- On screen switch: `showScreen('screen-squad')` calls `renderSquadView()`
-- After match: `updateUI()` re-renders all visible panels
-- On monthly tick: feature panels update their state and re-render
-
-### Financial System
-
-Finances are tracked per matchday in a **ledger** (`game.financeLedger`):
-```javascript
-let net = grossIncome - taxAmount - advisorFee - wages - staffWages 
-          - secondTeamStaffWages - boardExpenses - travelCost;
-game.money += net;
-
-// All income/expense items recorded for transparency
-let einnahmen = [...]; // income items
-let ausgaben = [...];  // expense items
-```
-
-This ensures users can see exactly where money comes from/goes. Add new income or expense items to these arrays (they auto-filter out zero amounts).
-
-### Building & Bundling
-
-`build.py` does:
-1. Reads `index.html` for `<script src="js/*.js">` tags - the ONLY list of modules (no second list in build.py)
-2. Aborts on duplicate script tags, missing files, or `js/*.js` files without a script tag
-3. Embeds every referenced .js file and the CSS from `css/styles.css`
-4. Writes single `dist/anstoss-fm13-standalone.html`
-5. `npm run lint` lints the combined bundle (all files treated as one global scope)
-
-**Lint rules that matter:** a file-level `/* eslint-disable no-undef */` only applies to that file (the lint bundle re-enables rules between files). `no-redeclare` catches two modules defining the same global name - a later `function x()` would otherwise silently replace an existing one. Rename the new one instead. `no-unused-vars` (local variables) is an error since Phase 19.5 - delete leftovers instead of keeping them.
-
-**Monthly ticks:** feature ticks belong into `runMonthlyClubTicks()` (js/match.js), not into `processPostMatchRoutine()` itself - otherwise they run every matchday. Per-matchday blocks were split out of the 585-line routine in 20.5 (`checkDfbLicenseDeadlines()` in season-end.js, `tickLockerFriendships()` in locker-room.js); legacy save cleanups all run from `cleanupRemovedModuleState()` (load + monthly). Promotion rewards only via `applyPromotionRewards()` (prize by the NEW league, `getPromotionPrize()`: 150k Oberliga … 5 M Bundesliga - a flat 1.5 M was more than a whole Regionalliga season) (season end and the DFB grace period, which now also moves the club via `insertOurTeamIntoLeagues()`). Render functions must never change `game.money` (checked by the runtime round-trip test). Measure sizes with a fallback (`el.offsetWidth || 320`): screens are `display:none` while not shown.
-
-**Why one big file:** Game must run offline as a single draggable-and-droppable file on Android/mobile (Chrome, Firefox, etc.). No server, no network, no external dependencies.
-
-### Important Architectural Decisions & Gotchas
-
-1. **No `alert()`, `confirm()` or `prompt()`** – Many Android WebViews suppress native dialogs silently. Use `showToast()` for notifications, `requireConfirm()` for confirmations and an inline input for text. `testNoNativeDialogs` scans all js/*.js.
-
-   **No silent buttons or fake choices** – a button that cannot act (no money, wrong state) must say why via `showToast()`; every option needs a real effect and a trade-off (Phase 18.6: team instructions cost fitness, fan actions are per-match boosts, caps/limits really block/warn).
-
-   **No display-only panels** (Phase 25.1 removed 17 Phase-23 modules): a promised bonus must be called from the strength path (`calcTeamStrength()`, `getOwnLeagueMatchStrength()`, `setupMatch()`), a `record…()` function must be called from the match flow, and a panel must read real data (`lineup` is a global array, there is no `game.lineup.starters`, `league.fixtures` or `league.table`). Before adding an analysis/tactic panel, check the existing one: tactic record `game.tacticRecords`, team instructions, player roles `p.role`/`PLAYER_ROLES`, opponent duel js/opponent-tactics.js, prediction js/match-scout.js, live hints js/co-trainer-live.js, set pieces js/set-pieces.js + js/set-piece-drills.js. Green tests do not prove an effect - grep that the new function is called outside its own file.
-
-2. **Manager's Office: Custom Hit Detection** – The office 3D scene (`js/office.js`) uses custom `getBoundingClientRect()` hit testing, not native browser hit detection. Native hit testing is unreliable on 3D-transformed elements across browser versions. See `officeHotspotAtPoint()`.
-
-3. **Mobile performance (19.8, measured at 4x CPU throttle):** no `backdrop-filter` on elements that appear many times or scroll (`.panel` had `blur(12px)`: squad scroll frames up to 42 ms instead of 17 ms) - only on short-lived overlays. No endless animations on the office start screen: the phone ring (`officePhoneRing`) runs 4 times per visit, idle CPU dropped from ~13 % to <1 %. Infinite animations go into the `prefers-reduced-motion` block at the end of css/styles.css.
-
-4. **CSS-3D Pitfalls:**
-   - Never use `filter` or `opacity` on 3D-positioned elements (forces `transform-style: flat`)
-   - Use `box-shadow` for shading, not `filter`
-   - Don't animate `transform` properties (breaks compositing); use `box-shadow` animations instead
-
-5. **localStorage Access** – Android WebViews block localStorage on `file://` URLs completely. Always serve over `http://` for development/testing. `safeLocalSet()` wraps all storage access in try-catch for WebViews that don't support it.
-
-6. **Squad Array Consistency** – The squad roster is a simple array (`let squad = [...]` in `js/state.js`). When adding players in transfers/recruitment, ensure each player has a unique `id`, else state becomes ambiguous. Use `squad.find(p => p.id === X)` for lookups, never array indices.
-
-7. **Game Version & Compatibility** – `GAME_VERSION` in state.js is user-facing and logged when save games load. Update it on major features; it helps debug save-state issues.
-
-## Common Editing Tasks
-
-### Adding a New Feature System
-
-1. Create `js/new-feature.js` with your `featureState` object
-2. Export render function: `function renderNewFeaturePanel() { ... }`
-3. Export tick functions if needed: `function tickNewFeature() { ... }`
-4. Add `<div id="new-feature-box"></div>` to appropriate screen in `index.html`
-5. Add `<script src="js/new-feature.js?v=2.1"></script>` to index.html script section
-6. Add typeof-guarded calls in render and tick functions:
-   - Monthly tick in `match.js`: `if (typeof tickNewFeature === 'function') tickNewFeature();`
-   - Screen render in (e.g.) `squad.js`: `if (typeof renderNewFeaturePanel === 'function') renderNewFeaturePanel();`
-   - Season-end in `season-end.js` if needed: `if (typeof recordNewFeatureStats === 'function') recordNewFeatureStats();`
-7. Run `python3 build.py` to bundle
-8. Commit: describe the feature and note its integration points
-
-### Fixing a Finance Bug
-
-1. Identify which `tickXXXIncome()` or expense is wrong
-2. Check it's being called during monthly ticks (line ~1722 in match.js)
-3. Verify the amount is added/subtracted correctly
-4. Add it to the `einnahmen` or `ausgaben` array in `processPostMatchRoutine()`
-5. Run `npm run lint` and test with `npm test`
-
-### Modifying Squad/Player State
-
-1. Always use `squad.find(p => p.id === X)` for lookups
-2. Never modify `squad[index]` directly—get the player object first
-3. Update `game` object if the change affects carry-over state (e.g., `game.money`, `game.season`)
-4. Call `updateUI()` after state changes to re-render all panels
-
-## Testing
+## Befehle
 
 ```bash
-# Full test suite (Playwright, runs against built standalone HTML)
-cd tests && npm install && npm test
-# Single suite by function name
-cd tests && TEST_ONLY=LandesPokal node run-tests.js
-# Suites run 3 in parallel (TEST_JOBS, default 3; TEST_JOBS=1 = serial, ~2.5x slower). The slowest suites start first (25.25).
-# Timing suites (testStartzeit: new game until playable, 4x CPU throttled, best of 3, limit 3500 ms; standalone build measures 2200-2400 ms) run alone after the parallel ones (25.26).
-# Old saves: tests/fixtures/saves/v<version>.json (3.22.1, 3.26, 3.77, 3.94) and karriere-*.json (careers after 3 seasons, written
-# by the bot with SPEICHERN=... : v3.98 start Bundesliga, liga6 with LIGA=5, passiv) are loaded by testAeltereStaende, each also as autosave and with one matchday played.
-# Regenerate old ones with: node scripts/make-old-saves.js tests/fixtures/saves <version>=<old build html> ...
-# Each suite gets its own browser context (own localStorage); its console output is buffered
-# and printed as one block. Full run ~60 s parallel. A suite must not depend on another suite's storage. The 30-matchday economy test seeds `Math.random` via `addInitScript` (fixed seed, same threshold) - unseeded it failed in about 1 of 7 runs.
-
-# The test file (tests/run-tests.js) includes:
-# - testManagerOffice: 3D hotspot hit-detection for all office objects
-# - Dialog suppression: verifies no alert/confirm in codebase
-# - Financial ledger: spot-checks income/expense calculations
-# - Screen rendering: loads key screens and checks for errors
-# - Save/load: verifies game state persists and loads correctly
+npm run check            # Build, Lint, Tests standalone und minifiziert (Logs: dist/check-logs/)
+npm run check -- fast    # ohne die minifizierte Variante
+python3 build.py         # baut dist/anstoss-fm13-standalone.html
+npm run lint             # Lint über alle JS-Dateien inkl. Inline-Skripte in index.html
+npm run minify           # dist/anstoss-fm13-standalone.min.html
+npm run serve            # Entwicklungsserver mit Neubau auf http://localhost:8000 (/ = modular, /spiel = gebaut)
+cd tests && npm test     # Testsuite gegen den gebauten Stand
+cd tests && TEST_ONLY=Name node run-tests.js   # einzelne Suite (Teilstring des Funktionsnamens)
 ```
 
-`testCodeIntegrity` checks statically and in the browser: every function called from an `on*` attribute (index.html and generated HTML) exists, every `getElementById('…')` id exists somewhere, charts rendered while their screen is hidden (`offsetWidth` 0) have no negative sizes, and no `filter`/`opacity` sits on a `preserve-3d` element or its ancestors (office light/dark, every office event, stadium).
+## Architektur
 
-`testNoWriteOnlyGameFields` fails when a `game.x` field is only ever written (or only counts itself up) - either use it or remove it (plus `cleanupRemovedModuleState()`). `testMobileLayout` checks every screen/tab at 412 px (no overflow, buttons >= 32 px, no font < 8 px).
+**Zentraler Zustand:** Alle persistenten Spieldaten liegen im globalen Objekt `game` (`js/state.js`). Funktionen lesen und schreiben `game` direkt, Zustand wird nicht als Parameter weitergereicht. Der Kader ist das Array `squad`; Spieler immer über `squad.find(p => p.id === X)` suchen, nie über Indizes.
 
-`testRuntimeRoundTrip` wraps every game function, plays two seasons and opens every screen; it lists ALL runtime errors with the function name at once, plus screens that move money. When it fails, fix each listed function.
+**Feature-Muster:** Jedes Feature hat einen eigenen Zustand, eine Tick-Funktion (monatlich oder pro Spieltag), eine Render-Funktion für einen Container mit fester `id` in `index.html`. Aufrufe immer mit `typeof … === 'function'` absichern, damit optionale Module nicht brechen. Render-Funktionen dürfen nie `game.money` ändern.
+
+**Monatliche Ticks** laufen in `runMonthlyClubTicks()` (`js/match.js`), nicht in `processPostMatchRoutine()`. Der Spieltag-Ablauf ist `playMatch()` → `processPostMatchRoutine()`. Saisonende: `concludeSeasonAndAdvance()` (`js/season-end.js`).
+
+**Finanzen:** Buchungen laufen über `bucheMitLabel(label, betrag)` (`js/finances.js`), damit jede Position im Kontoauszug ein Etikett hat. Neue Einnahmen oder Ausgaben mit Etikett buchen.
+
+**Systeme nach Datei** (nur Orientierung; Details im Code und in der Historie):
+- Jugend: `js/youth.js`, `js/youth-pathway.js`, `js/youth-sales.js` (Angebote, Entscheidungshilfe `getYouthOfferSquadHint`).
+- Transfers: `js/transfermarket.js` (Angebote, `completeOfferSale`), `js/transfer-poker.js` (Verhandlung, `pokerRunden`), `js/medical-check.js`, `js/pre-contracts.js`, `js/buyback.js`, `js/rumors.js`.
+- Verträge und Kader: `js/contracts.js`, `js/contract-ultimatum.js`, `js/squadplanning.js`, `js/pro-loans.js`, `js/secondteam.js`.
+- Vorstand und Entlassung: `js/match-post.js` (`checkJobSecurity`, `checkSeasonEndSacking`, `getSacked`), `js/winter-talk.js`, `js/board-room.js`.
+- Spielstand: `js/save.js`, `js/save-safety.js` (jedes Laden über `loadSaveSafely`, jedes Schreiben über `writeSaveVerified`; nie `applyLoadedState()` direkt aufrufen).
+- Liga und Pokal: `js/leagues.js`, `js/cup.js`, `js/cup-live.js`, `js/europe.js`, `js/relegation.js`, `js/promotion-boost.js`.
+- Live-Spiel: `js/match-live.js`, `js/co-trainer-live.js`, `js/set-pieces.js`, `js/referee-critique.js`; Simulation und Live nutzen dieselbe Torformel `getExpectedGoals()` (`js/utils.js`).
+- Finanzsystem: `js/season-end.js` (Budgets, `applyCashSurplusBudgets`, `getWageBudgetFloor`), `js/sponsors.js`, `js/sponsor-renewal.js`.
+- Geografie und Derbys: `js/club-geo.js` (`isDerbyMatch` ist die einzige Derby-Regel), `js/derby-week.js`.
+- Büro: `js/office.js` (eigene Trefferprüfung über `officeHotspotAtPoint()`), `js/one-hand.js` (Bedienung mit einer Hand, Handy bis 650 px).
+- Sprache: `js/i18n.js` (`t()`), `js/i18n-ui.js` (`I18N_UI_EN`), `js/lexicon.js` und `js/lexicon-en.js` (Lexikon, Englisch muss dieselbe Tippzahl und dieselben Ziffern haben).
+
+**Ein System pro Bereich:** Verletzungen nur über die Rolle nach dem Spiel in `processPostMatchRoutine()` und `js/medical-department.js`; Medien über `js/media-department.js`; Jugend über `youthTalents`. Vor einem neuen Panel prüfen, ob es das Thema schon gibt. Ein Panel muss echte Daten zeigen, ein Bonus muss aus dem Stärke-Pfad (`calcTeamStrength()`, `getOwnLeagueMatchStrength()`) kommen.
+
+## Grundregeln
+
+- **Keine nativen Dialoge** (`alert`, `confirm`, `prompt`). Stattdessen `showToast()`, `showNotice()` und `requireConfirm()`. `testNoNativeDialogs` prüft das.
+- **Keine stillen Knöpfe:** Ein Knopf, der nichts tun kann, sagt per `showToast()`, warum.
+- **Speicher:** Jedes Laden geht durch `loadSaveSafely()`, jedes Schreiben durch `writeSaveVerified()`. Entfernte Felder in `cleanupRemovedModuleState()` (`js/state.js`) aufräumen.
+- **Lint:** `no-redeclare` verhindert doppelte globale Funktionsnamen. `no-unused-vars` ist ein Fehler. `no-dupe-keys` gilt auch für `I18N_UI_EN`.
+- **CSS-3D:** Kein `filter` oder `opacity` auf 3D-Elementen oder deren Vorfahren. Schatten über `box-shadow`. Keine Dauer-Animationen auf dem Startbildschirm des Büros; unendliche Animationen gehören in den `prefers-reduced-motion`-Block.
+- **Mobile Leistung:** Kein `backdrop-filter` auf oft wiederholten oder scrollenden Elementen.
+- **Handy-Layout:** Kein horizontaler Überlauf, Knöpfe mindestens 32 px, Schrift mindestens 8 px. Messungen mit Rückfall `el.offsetWidth || 320`, da Bildschirme ausgeblendet sein können.
+- **localStorage:** Auf `file://` blockiert Android WebView den Zugriff. Alle Zugriffe über `safeLocalSet()` und Gegenstücke.
+
+## Tests
+
+- `tests/run-tests.js` (Playwright) läuft gegen den gebauten Stand. Suiten laufen parallel (`TEST_JOBS`, Standard 3) in eigenen Browser-Kontexten. Zeitmessungen laufen allein am Ende.
+- Feste Wartezeiten möglichst durch Zustandsprüfungen ersetzen (`waitForFunction`). Der Zufall wird in Suiten, die Reihenfolgen oder Tabellen auswerten, mit festem Seed gesetzt.
+- Wichtige Querschnittstests: `testCodeIntegrity` (on*-Funktionen, `getElementById`-IDs), `testNoWriteOnlyGameFields`, `testRuntimeRoundTrip`, `testMobileLayout`, `testLexiconEnglish`.
+- Alte Spielstände liegen in `tests/fixtures/saves/`. Jede Datei wird automatisch geladen (`testAeltereStaende`, auch als Autosave). Neue Fixtures mit `node scripts/make-old-saves.js tests/fixtures/saves <version>=<html>` erzeugen.
+
+## Bot-Messungen
+
+`node scripts/longrun-bundesliga.js [saisons] [aktiv|passiv] [läufe] [datei]`. Umgebungsschalter: `LIGA` (Startliga 0 bis 5), `SPEICHERN`, `COTRAINER`, `TALENT_AUFSCHLAG`, `KASSE_ANTEIL`, `VORSTAND_START`, `ENTLASSUNG_ERZWINGEN`, `FINDIAG`, `DIAG`. Lange Läufe im Hintergrund starten, nicht im Vordergrund. Die Messergebnisse stehen in `docs/PROJEKT-HISTORIE.md`.
 
 ## Deployment
 
-Commits to `main` branch trigger an automated build-and-deploy via GitHub Actions (`.github/workflows/build-test.yml`):
-1. Run test suite on the built standalone HTML
-2. If tests pass, deploy dist/anstoss-fm13-standalone.html to GitHub Pages
-3. Live at https://mrcrapsle.github.io/FuMan/
+Commits auf `main` lösen über `.github/workflows/build-test.yml` den Test und das Veröffentlichen auf GitHub Pages aus. Nur auf `main` pushen, wenn `npm run check` grün ist. Feature-Arbeit auf `claude/…`-Branches.
 
-CI runs on every branch; only `main` deploys. Only push to `main` after `npm run check` is green. Use feature branches (e.g., `claude/feature-name`) for development and testing.
+## Repository
 
-## Repository Structure
-
-- **index.html** – Main page; embeds CSS, loads all js/ modules, defines screen containers
-- **css/styles.css** – All styles; organized by section (DASHBOARD, SQUAD, MANAGER'S OFFICE, etc.)
-- **js/*.js** – Game logic modules (111 files); loaded in order of dependencies
-- **tests/run-tests.js** – Playwright test suite
-- **build.py** – Bundler script; concatenates and lints
-- **server.py** / `npm run serve` – Local dev server
-- **dist/anstoss-fm13-standalone.html** – Built game file (1.8 MB, generated by build.py)
-- **.github/workflows/build-test.yml** – CI/CD automation
+- `index.html` – Seite, lädt alle Module, enthält die Bildschirm-Container.
+- `css/styles.css` – alle Styles, nach Bereichen gegliedert.
+- `js/` – Spiellogik (über 100 Module, Reihenfolge in `index.html`).
+- `tests/run-tests.js` – Testsuite.
+- `scripts/` – Bot, Messungen, Hilfsskripte.
+- `build.py` – Bundler und Lint-Vorlauf.
+- `docs/PROJEKT-HISTORIE.md` – Archiv der früheren Fassung dieser Datei mit allen Phasen und Messungen.
