@@ -1499,6 +1499,12 @@
     .off-phone-ringing .off-phone-handset, .office-quicknav-alert, .off-visitor-badge { animation: none !important; }
 }
 
+/* Tastatur-Bedienung (25.25): sichtbarer Fokusrahmen; Mausklicks zeigen ihn nicht (focus-visible) */
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible {
+    outline: 2px solid var(--accent, #82b1ff);
+    outline-offset: 2px;
+}
+
 </style>
 </head>
 <body class="office-bg">
@@ -2241,6 +2247,7 @@
                     <div id="dash-winter-talk-box"></div>
                     <div id="dash-joboffer-box"></div>
                     <div id="dash-onboarding-box"></div>
+                    <div id="dash-autosave-line" style="font-size:10px; color:var(--text-muted); padding:2px 4px;"></div>
                     <div id="dash-relegation-box"></div>
                     <div id="dash-season-events-box"></div>
                     <div id="dash-season-end-actions" style="display:none;">
@@ -3593,11 +3600,11 @@
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin:8px 0;">
                         <div class="panel">
                             <div class="panel-header" style="font-size:11px; color:#82b1ff;">GRUPPE A</div>
-                            <table><thead><tr><th>Team</th><th>Sp</th><th>Tore</th><th>Pkt</th></tr></thead><tbody id="europe-group-a-body"></tbody></table>
+                            <table><thead><tr><th>Pl</th><th>Team</th><th>Sp</th><th>Tore</th><th>Pkt</th></tr></thead><tbody id="europe-group-a-body"></tbody></table>
                         </div>
                         <div class="panel">
                             <div class="panel-header" style="font-size:11px; color:#82b1ff;">GRUPPE B</div>
-                            <table><thead><tr><th>Team</th><th>Sp</th><th>Tore</th><th>Pkt</th></tr></thead><tbody id="europe-group-b-body"></tbody></table>
+                            <table><thead><tr><th>Pl</th><th>Team</th><th>Sp</th><th>Tore</th><th>Pkt</th></tr></thead><tbody id="europe-group-b-body"></tbody></table>
                         </div>
                     </div>
 
@@ -6556,7 +6563,7 @@ function getOwnDerbyRivals() {
             <div class="box" style="font-size:10px; margin-top:6px;">
                 <strong>📊 Co-Trainer-Historie:</strong><br>
                 Vorschlag übernommen: ${h.followedWins}/${h.followedMatches} Siege${followedRate !== null ? ` (${followedRate}%)` : ''}<br>
-                Eigene Entscheidung: ${h.ownWins}/${h.ownMatches} Siege${ownRate !== null ? ` (${ownRate}%)` : ''}${(h.liveFollowed || h.liveIgnored) ? `<br>Hinweise im Livespiel: ${h.liveFollowed || 0} befolgt, ${h.liveIgnored || 0} ignoriert` : ''}
+                Eigene Entscheidung: ${h.ownWins}/${h.ownMatches} Siege${ownRate !== null ? ` (${ownRate}%)` : ''}${(h.liveFollowed || h.liveIgnored) ? `<br>Hinweise im Livespiel: ${h.liveFollowed || 0} befolgt, ${h.liveIgnored || 0} ignoriert` : ''}${coTrainerLiveBilanzText(h)}
             </div>` : '';
         box.innerHTML = `
             ${hasSwaps ? `<div class="panel-header">🧑‍🏫 CO-TRAINER-EMPFEHLUNG</div>
@@ -11327,9 +11334,10 @@ function selectNewGameScenario(id) {
             if (!tbody) return;
             tbody.innerHTML = '';
             let sorted = [...grp].sort((a, b) => b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga));
-            sorted.forEach(t => {
+            sorted.forEach((t, i) => {
                 let isUs = t.name === game.clubName;
-                tbody.innerHTML += `<tr><td style="text-align:left; ${isUs?'color:var(--primary); font-weight:bold;':''}">${t.name}</td><td>${t.played}</td><td>${t.gf}:${t.ga}</td><td><strong>${t.pts}</strong></td></tr>`;
+                // Die beiden Ersten kommen in die K.O.-Runde (25.25: Platz-Spalte, Weiterkommer farbig)
+                tbody.innerHTML += `<tr><td style="${i < 2 ? 'color:var(--primary); font-weight:bold;' : ''}">${i + 1}</td><td style="text-align:left; ${isUs?'color:var(--primary); font-weight:bold;':''}">${t.name}</td><td>${t.played}</td><td>${t.gf}:${t.ga}</td><td><strong>${t.pts}</strong></td></tr>`;
             });
         };
 
@@ -15638,6 +15646,7 @@ function initOneHand() {
         if (typeof renderSeasonEventsBox === 'function') renderSeasonEventsBox();
 
         renderSaveSlotsUI();
+        if (typeof renderDashAutosaveLine === 'function') renderDashAutosaveLine();
         renderNextGoalsList();
         renderWeeklyRecap();
         if (typeof renderSeasonObjectivesPanel === 'function') renderSeasonObjectivesPanel();
@@ -16143,12 +16152,14 @@ function initOneHand() {
             const euro = europeTournament.matchdays.includes(i);
             const kommend = i >= game.matchday;
             const tie = kommend && typeof getUpcomingOwnTie === 'function' ? getUpcomingOwnTie(i) : null;
+            // Gegner mit Spielstärke (25.25): die Pokalpartie lässt sich so vorab einordnen.
+            const gegnerText = t => { const team = leaguesData.flat().find(x => x.name === t.gegner); return t.gegner + (team ? ` (${L('Stärke', 'strength')} ${team.strength})` : ''); };
             let teile = [];
-            if (dfb) teile.push(L('🏆 DFB-Pokal', '🏆 DFB Cup') + (tie && tie.comp === 'dfb' ? ' ' + L('gegen', 'vs') + ' ' + tie.gegner : ''));
-            if (lande) teile.push(L('🏅 Landespokal', '🏅 State cup') + (tie && tie.comp === 'landes' ? ' ' + L('gegen', 'vs') + ' ' + tie.gegner : ''));
+            if (dfb) teile.push(L('🏆 DFB-Pokal', '🏆 DFB Cup') + (tie && tie.comp === 'dfb' ? ' ' + L('gegen', 'vs') + ' ' + gegnerText(tie) : ''));
+            if (lande) teile.push(L('🏅 Landespokal', '🏅 State cup') + (tie && tie.comp === 'landes' ? ' ' + L('gegen', 'vs') + ' ' + gegnerText(tie) : ''));
             if (euro) {
                 let europa = L('🌟 Champions Cup', '🌟 Champions Cup');
-                if (tie && tie.comp === 'europe') europa += ' ' + L('gegen', 'vs') + ' ' + tie.gegner;
+                if (tie && tie.comp === 'europe') europa += ' ' + L('gegen', 'vs') + ' ' + gegnerText(tie);
                 const gruppe = typeof getOwnEuropeGroupStanding === 'function' && kommend ? getOwnEuropeGroupStanding() : null;
                 if (gruppe) europa += ` (${L('Gruppe', 'group')} ${gruppe.name}: ${L('Platz', 'place')} ${gruppe.platz}, ${gruppe.pts} ${L('Pkt.', 'pts')})`;
                 teile.push(europa);
@@ -26825,6 +26836,28 @@ function tickCoTrainerLive() {
     renderCoTrainerLiveBox();
 }
 
+// Bilanz pro Livespiel (25.25): Spiele mit mindestens einem befolgten Hinweis gegen Spiele ohne
+// (dort hat der Co-Trainer nichts umgesetzt). Nur für Livespiele aus processPostMatchRoutine().
+function recordLiveCoTrainerMatch(matchResult, match) {
+    if (!match || matchResult === null || matchResult === undefined) return;
+    const hist = coTrainerHistory();
+    const gewonnen = matchResult === 'win';
+    if ((match.coTrainerFollowed || 0) > 0) {
+        hist.liveMatchesFollowed = (hist.liveMatchesFollowed || 0) + 1;
+        if (gewonnen) hist.liveFollowedWins = (hist.liveFollowedWins || 0) + 1;
+    } else {
+        hist.liveMatchesOwn = (hist.liveMatchesOwn || 0) + 1;
+        if (gewonnen) hist.liveOwnWins = (hist.liveOwnWins || 0) + 1;
+    }
+}
+
+// Zeile für den Co-Trainer-Bereich; leer, solange noch kein Livespiel gewertet ist.
+function coTrainerLiveBilanzText(h) {
+    const gefolgt = h.liveMatchesFollowed || 0, eigen = h.liveMatchesOwn || 0;
+    if (!gefolgt && !eigen) return '';
+    return `<br>Livespiel-Bilanz: mit befolgten Hinweisen ${h.liveFollowedWins || 0}/${gefolgt} Siege, ohne befolgten Hinweis ${h.liveOwnWins || 0}/${eigen} Siege`;
+}
+
 function renderCoTrainerLiveBox() {
     const box = document.getElementById('live-cotrainer-box');
     if (!box) return;
@@ -26850,6 +26883,7 @@ function followCoTrainerHint(i) {
     aktion.run();
     const hist = coTrainerHistory();
     hist.liveFollowed = (hist.liveFollowed || 0) + 1;
+    if (currentMatch) currentMatch.coTrainerFollowed = (currentMatch.coTrainerFollowed || 0) + 1;
     game.coTrainerTrust = Math.min(100, (game.coTrainerTrust ?? 66) + 1);
     coTrainerActiveHint = null;
     renderCoTrainerLiveBox();
@@ -27583,9 +27617,12 @@ function renderPreContractBox() {
     if (!box) return;
     const offen = game.preContracts || [];
     const kopf = `<div class="panel-header">📝 VORVERTRÄGE - ABLÖSEFREI ZUR NEUEN SAISON</div>`;
+    // Eigene Spieler mit Vorvertrags-Angebot: Frist steht oben, nicht versteckt im Spielerprofil (25.25)
+    const eigene = squad.filter(p => p.preContractOffer).map(p => `<strong>${p.name}</strong> (${p.preContractOffer.club}, Frist Spieltag ${p.preContractOffer.deadline})`);
+    const eigeneZeile = eigene.length ? `<div class="box" style="font-size:10px; border-left-color:var(--danger);">⚠️ Vorvertrags-Angebote an deine Spieler: ${eigene.join(', ')} - verlängern, sonst gehen sie zum Saisonende.</div>` : '';
     const unterschrieben = offen.length ? `<div class="box" style="font-size:10px; border-left-color:var(--primary);">✍️ Unterschrieben: ${offen.map(v => `<strong>${v.player.name}</strong> (${v.player.pos}, ${v.player.strength}, von ${v.from})`).join(', ')} - kommen zur neuen Saison.</div>` : '';
     if (game.matchday < PRECONTRACT_START_MD) {
-        box.innerHTML = `<div class="panel">${kopf}<div class="box" style="font-size:10px;">Ab dem Winterfenster (Spieltag ${PRECONTRACT_START_MD}) kannst du Spieler verpflichten, deren Vertrag zum Saisonende ausläuft - ohne Ablöse.</div>${unterschrieben}</div>`;
+        box.innerHTML = `<div class="panel">${kopf}<div class="box" style="font-size:10px;">Ab dem Winterfenster (Spieltag ${PRECONTRACT_START_MD}) kannst du Spieler verpflichten, deren Vertrag zum Saisonende ausläuft - ohne Ablöse.</div>${unterschrieben}${eigeneZeile}</div>`;
         return;
     }
     const pool = ensurePreContractPool();
@@ -27603,7 +27640,7 @@ function renderPreContractBox() {
     }).join('');
     box.innerHTML = `<div class="panel">${kopf}
         <div class="box" style="font-size:9px; color:var(--text-muted);">Keine Ablöse - aber Handgeld sofort, 20 % mehr Gehalt, Ankunft erst zur neuen Saison, ein Versuch je Spieler. Andere Vereine schnappen sich Kandidaten, je länger du wartest. Höchstens ${PRECONTRACT_MAX_PENDING} offene Vorverträge.</div>
-        ${unterschrieben}${zeilen || '<div class="box" style="font-size:10px;">Alle Kandidaten dieser Saison sind vergeben.</div>'}</div>`;
+        ${unterschrieben}${eigeneZeile}${zeilen || '<div class="box" style="font-size:10px;">Alle Kandidaten dieser Saison sind vergeben.</div>'}</div>`;
 }
 
 </script>
@@ -31560,6 +31597,7 @@ function cleanupLegacyScoutState() {
                 }
             });
         }
+        if (matchResult !== null && isLiveContext && typeof recordLiveCoTrainerMatch === 'function') recordLiveCoTrainerMatch(matchResult, currentMatch);
         // Co-Trainer-Historie: trackt, ob die AKTUELLE taktische Ausrichtung vom Co-Trainer
         // vorgeschlagen oder selbst gewählt wurde, und ob das jeweilige Spiel gewonnen wurde.
         if (matchResult !== null) {
@@ -36366,6 +36404,18 @@ function renderSeasonForecastHistory() {
         }
     }
 
+    // Dashboard: letzter Autosave in einer Zeile (25.25), ohne Umweg über das Speichermenü.
+    function renderDashAutosaveLine() {
+        const box = document.getElementById('dash-autosave-line');
+        if (!box) return;
+        const raw = safeLocalGet(AUTOSAVE_KEY);
+        let m = null;
+        try { m = raw ? (JSON.parse(raw).meta || null) : null; } catch (e) { m = null; }
+        box.innerHTML = m
+            ? `🔄 Autosave: Saison ${m.season} · Spieltag ${m.matchday}/34${m.savedAt ? ` · gespeichert ${m.savedAt}` : ''} <span style="color:var(--text-muted);">(alle ${AUTOSAVE_INTERVAL} Spieltage erneuert)</span>`
+            : `🔄 Autosave: noch keiner - er wird alle ${AUTOSAVE_INTERVAL} Spieltage angelegt.`;
+    }
+
     function renderSaveSlotsUI() {
         renderAutoSaveBox();
         if (typeof renderSaveSafetyBox === 'function') renderSaveSafetyBox();
@@ -36719,18 +36769,25 @@ function compareGameVersions(a, b) {
 
 // Einziger Weg, einen Spielstand zu übernehmen: prüfen, Sicherheitskopie, laden, nachreparieren.
 // options: { label, backup (bool), silent (bool) } → true/false
+// Was nach einem abgewiesenen Laden gilt und wo der Ausweg liegt (25.25).
+function saveLoadHinweis() {
+    return safeLocalGet(SAVE_BACKUP_KEY)
+        ? 'Das laufende Spiel bleibt unverändert; eine Sicherheitskopie liegt unter „🛟 Sicherheitskopie wiederherstellen“ (Speicherstände) bereit.'
+        : 'Das laufende Spiel bleibt unverändert; lade einen anderen Slot oder den Autosave.';
+}
+
 function loadSaveSafely(raw, options) {
     const o = Object.assign({ label: 'Spielstand', backup: true, silent: false }, options || {});
     const name = `Spielstand „${o.label}“`;
     let p;
     try { p = typeof raw === 'string' ? JSON.parse(raw) : raw; }
     catch (e) {
-        if (!o.silent) showToast(`⛔ ${name} ist beschädigt (unlesbar) - das laufende Spiel bleibt unverändert.`, 'error', 6000);
+        if (!o.silent) showToast(`⛔ ${name} ist beschädigt und nicht lesbar. ${saveLoadHinweis()}`, 'error', 6000);
         return false;
     }
     const check = validateAndRepairSave(p);
     if (check.fatal) {
-        if (!o.silent) showToast(`⛔ ${name} ist beschädigt (${check.fatal}) - das laufende Spiel bleibt unverändert.`, 'error', 6000);
+        if (!o.silent) showToast(`⛔ ${name} ist beschädigt (${check.fatal}). ${saveLoadHinweis()}`, 'error', 6000);
         return false;
     }
     if (o.backup) backupCurrentGame(`vor dem Laden von „${o.label}“`);

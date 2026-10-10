@@ -933,6 +933,7 @@
                 }
             });
         }
+        if (matchResult !== null && isLiveContext && typeof recordLiveCoTrainerMatch === 'function') recordLiveCoTrainerMatch(matchResult, currentMatch);
         // Co-Trainer-Historie: trackt, ob die AKTUELLE taktische Ausrichtung vom Co-Trainer
         // vorgeschlagen oder selbst gewählt wurde, und ob das jeweilige Spiel gewonnen wurde.
         if (matchResult !== null) {

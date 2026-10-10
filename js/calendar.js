@@ -26,12 +26,14 @@
             const euro = europeTournament.matchdays.includes(i);
             const kommend = i >= game.matchday;
             const tie = kommend && typeof getUpcomingOwnTie === 'function' ? getUpcomingOwnTie(i) : null;
+            // Gegner mit Spielstärke (25.25): die Pokalpartie lässt sich so vorab einordnen.
+            const gegnerText = t => { const team = leaguesData.flat().find(x => x.name === t.gegner); return t.gegner + (team ? ` (${L('Stärke', 'strength')} ${team.strength})` : ''); };
             let teile = [];
-            if (dfb) teile.push(L('🏆 DFB-Pokal', '🏆 DFB Cup') + (tie && tie.comp === 'dfb' ? ' ' + L('gegen', 'vs') + ' ' + tie.gegner : ''));
-            if (lande) teile.push(L('🏅 Landespokal', '🏅 State cup') + (tie && tie.comp === 'landes' ? ' ' + L('gegen', 'vs') + ' ' + tie.gegner : ''));
+            if (dfb) teile.push(L('🏆 DFB-Pokal', '🏆 DFB Cup') + (tie && tie.comp === 'dfb' ? ' ' + L('gegen', 'vs') + ' ' + gegnerText(tie) : ''));
+            if (lande) teile.push(L('🏅 Landespokal', '🏅 State cup') + (tie && tie.comp === 'landes' ? ' ' + L('gegen', 'vs') + ' ' + gegnerText(tie) : ''));
             if (euro) {
                 let europa = L('🌟 Champions Cup', '🌟 Champions Cup');
-                if (tie && tie.comp === 'europe') europa += ' ' + L('gegen', 'vs') + ' ' + tie.gegner;
+                if (tie && tie.comp === 'europe') europa += ' ' + L('gegen', 'vs') + ' ' + gegnerText(tie);
                 const gruppe = typeof getOwnEuropeGroupStanding === 'function' && kommend ? getOwnEuropeGroupStanding() : null;
                 if (gruppe) europa += ` (${L('Gruppe', 'group')} ${gruppe.name}: ${L('Platz', 'place')} ${gruppe.platz}, ${gruppe.pts} ${L('Pkt.', 'pts')})`;
                 teile.push(europa);

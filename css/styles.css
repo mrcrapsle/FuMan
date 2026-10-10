@@ -1491,3 +1491,9 @@
     .office-mote, .off-weather-rain, .off-weather-snow, .off-weather-storm,
     .off-phone-ringing .off-phone-handset, .office-quicknav-alert, .off-visitor-badge { animation: none !important; }
 }
+
+/* Tastatur-Bedienung (25.25): sichtbarer Fokusrahmen; Mausklicks zeigen ihn nicht (focus-visible) */
+button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible {
+    outline: 2px solid var(--accent, #82b1ff);
+    outline-offset: 2px;
+}

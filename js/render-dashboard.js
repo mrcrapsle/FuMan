@@ -97,6 +97,7 @@
         if (typeof renderSeasonEventsBox === 'function') renderSeasonEventsBox();
 
         renderSaveSlotsUI();
+        if (typeof renderDashAutosaveLine === 'function') renderDashAutosaveLine();
         renderNextGoalsList();
         renderWeeklyRecap();
         if (typeof renderSeasonObjectivesPanel === 'function') renderSeasonObjectivesPanel();

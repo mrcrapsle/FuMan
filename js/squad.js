@@ -167,7 +167,7 @@
             <div class="box" style="font-size:10px; margin-top:6px;">
                 <strong>📊 Co-Trainer-Historie:</strong><br>
                 Vorschlag übernommen: ${h.followedWins}/${h.followedMatches} Siege${followedRate !== null ? ` (${followedRate}%)` : ''}<br>
-                Eigene Entscheidung: ${h.ownWins}/${h.ownMatches} Siege${ownRate !== null ? ` (${ownRate}%)` : ''}${(h.liveFollowed || h.liveIgnored) ? `<br>Hinweise im Livespiel: ${h.liveFollowed || 0} befolgt, ${h.liveIgnored || 0} ignoriert` : ''}
+                Eigene Entscheidung: ${h.ownWins}/${h.ownMatches} Siege${ownRate !== null ? ` (${ownRate}%)` : ''}${(h.liveFollowed || h.liveIgnored) ? `<br>Hinweise im Livespiel: ${h.liveFollowed || 0} befolgt, ${h.liveIgnored || 0} ignoriert` : ''}${coTrainerLiveBilanzText(h)}
             </div>` : '';
         box.innerHTML = `
             ${hasSwaps ? `<div class="panel-header">🧑‍🏫 CO-TRAINER-EMPFEHLUNG</div>

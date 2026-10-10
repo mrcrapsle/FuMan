@@ -116,6 +116,28 @@ function tickCoTrainerLive() {
     renderCoTrainerLiveBox();
 }
 
+// Bilanz pro Livespiel (25.25): Spiele mit mindestens einem befolgten Hinweis gegen Spiele ohne
+// (dort hat der Co-Trainer nichts umgesetzt). Nur für Livespiele aus processPostMatchRoutine().
+function recordLiveCoTrainerMatch(matchResult, match) {
+    if (!match || matchResult === null || matchResult === undefined) return;
+    const hist = coTrainerHistory();
+    const gewonnen = matchResult === 'win';
+    if ((match.coTrainerFollowed || 0) > 0) {
+        hist.liveMatchesFollowed = (hist.liveMatchesFollowed || 0) + 1;
+        if (gewonnen) hist.liveFollowedWins = (hist.liveFollowedWins || 0) + 1;
+    } else {
+        hist.liveMatchesOwn = (hist.liveMatchesOwn || 0) + 1;
+        if (gewonnen) hist.liveOwnWins = (hist.liveOwnWins || 0) + 1;
+    }
+}
+
+// Zeile für den Co-Trainer-Bereich; leer, solange noch kein Livespiel gewertet ist.
+function coTrainerLiveBilanzText(h) {
+    const gefolgt = h.liveMatchesFollowed || 0, eigen = h.liveMatchesOwn || 0;
+    if (!gefolgt && !eigen) return '';
+    return `<br>Livespiel-Bilanz: mit befolgten Hinweisen ${h.liveFollowedWins || 0}/${gefolgt} Siege, ohne befolgten Hinweis ${h.liveOwnWins || 0}/${eigen} Siege`;
+}
+
 function renderCoTrainerLiveBox() {
     const box = document.getElementById('live-cotrainer-box');
     if (!box) return;
@@ -141,6 +163,7 @@ function followCoTrainerHint(i) {
     aktion.run();
     const hist = coTrainerHistory();
     hist.liveFollowed = (hist.liveFollowed || 0) + 1;
+    if (currentMatch) currentMatch.coTrainerFollowed = (currentMatch.coTrainerFollowed || 0) + 1;
     game.coTrainerTrust = Math.min(100, (game.coTrainerTrust ?? 66) + 1);
     coTrainerActiveHint = null;
     renderCoTrainerLiveBox();

@@ -170,9 +170,12 @@ function renderPreContractBox() {
     if (!box) return;
     const offen = game.preContracts || [];
     const kopf = `<div class="panel-header">📝 VORVERTRÄGE - ABLÖSEFREI ZUR NEUEN SAISON</div>`;
+    // Eigene Spieler mit Vorvertrags-Angebot: Frist steht oben, nicht versteckt im Spielerprofil (25.25)
+    const eigene = squad.filter(p => p.preContractOffer).map(p => `<strong>${p.name}</strong> (${p.preContractOffer.club}, Frist Spieltag ${p.preContractOffer.deadline})`);
+    const eigeneZeile = eigene.length ? `<div class="box" style="font-size:10px; border-left-color:var(--danger);">⚠️ Vorvertrags-Angebote an deine Spieler: ${eigene.join(', ')} - verlängern, sonst gehen sie zum Saisonende.</div>` : '';
     const unterschrieben = offen.length ? `<div class="box" style="font-size:10px; border-left-color:var(--primary);">✍️ Unterschrieben: ${offen.map(v => `<strong>${v.player.name}</strong> (${v.player.pos}, ${v.player.strength}, von ${v.from})`).join(', ')} - kommen zur neuen Saison.</div>` : '';
     if (game.matchday < PRECONTRACT_START_MD) {
-        box.innerHTML = `<div class="panel">${kopf}<div class="box" style="font-size:10px;">Ab dem Winterfenster (Spieltag ${PRECONTRACT_START_MD}) kannst du Spieler verpflichten, deren Vertrag zum Saisonende ausläuft - ohne Ablöse.</div>${unterschrieben}</div>`;
+        box.innerHTML = `<div class="panel">${kopf}<div class="box" style="font-size:10px;">Ab dem Winterfenster (Spieltag ${PRECONTRACT_START_MD}) kannst du Spieler verpflichten, deren Vertrag zum Saisonende ausläuft - ohne Ablöse.</div>${unterschrieben}${eigeneZeile}</div>`;
         return;
     }
     const pool = ensurePreContractPool();
@@ -190,5 +193,5 @@ function renderPreContractBox() {
     }).join('');
     box.innerHTML = `<div class="panel">${kopf}
         <div class="box" style="font-size:9px; color:var(--text-muted);">Keine Ablöse - aber Handgeld sofort, 20 % mehr Gehalt, Ankunft erst zur neuen Saison, ein Versuch je Spieler. Andere Vereine schnappen sich Kandidaten, je länger du wartest. Höchstens ${PRECONTRACT_MAX_PENDING} offene Vorverträge.</div>
-        ${unterschrieben}${zeilen || '<div class="box" style="font-size:10px;">Alle Kandidaten dieser Saison sind vergeben.</div>'}</div>`;
+        ${unterschrieben}${eigeneZeile}${zeilen || '<div class="box" style="font-size:10px;">Alle Kandidaten dieser Saison sind vergeben.</div>'}</div>`;
 }

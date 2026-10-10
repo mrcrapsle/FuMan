@@ -407,6 +407,18 @@
         }
     }
 
+    // Dashboard: letzter Autosave in einer Zeile (25.25), ohne Umweg über das Speichermenü.
+    function renderDashAutosaveLine() {
+        const box = document.getElementById('dash-autosave-line');
+        if (!box) return;
+        const raw = safeLocalGet(AUTOSAVE_KEY);
+        let m = null;
+        try { m = raw ? (JSON.parse(raw).meta || null) : null; } catch (e) { m = null; }
+        box.innerHTML = m
+            ? `🔄 Autosave: Saison ${m.season} · Spieltag ${m.matchday}/34${m.savedAt ? ` · gespeichert ${m.savedAt}` : ''} <span style="color:var(--text-muted);">(alle ${AUTOSAVE_INTERVAL} Spieltage erneuert)</span>`
+            : `🔄 Autosave: noch keiner - er wird alle ${AUTOSAVE_INTERVAL} Spieltage angelegt.`;
+    }
+
     function renderSaveSlotsUI() {
         renderAutoSaveBox();
         if (typeof renderSaveSafetyBox === 'function') renderSaveSafetyBox();

@@ -153,18 +153,25 @@ function compareGameVersions(a, b) {
 
 // Einziger Weg, einen Spielstand zu übernehmen: prüfen, Sicherheitskopie, laden, nachreparieren.
 // options: { label, backup (bool), silent (bool) } → true/false
+// Was nach einem abgewiesenen Laden gilt und wo der Ausweg liegt (25.25).
+function saveLoadHinweis() {
+    return safeLocalGet(SAVE_BACKUP_KEY)
+        ? 'Das laufende Spiel bleibt unverändert; eine Sicherheitskopie liegt unter „🛟 Sicherheitskopie wiederherstellen“ (Speicherstände) bereit.'
+        : 'Das laufende Spiel bleibt unverändert; lade einen anderen Slot oder den Autosave.';
+}
+
 function loadSaveSafely(raw, options) {
     const o = Object.assign({ label: 'Spielstand', backup: true, silent: false }, options || {});
     const name = `Spielstand „${o.label}“`;
     let p;
     try { p = typeof raw === 'string' ? JSON.parse(raw) : raw; }
     catch (e) {
-        if (!o.silent) showToast(`⛔ ${name} ist beschädigt (unlesbar) - das laufende Spiel bleibt unverändert.`, 'error', 6000);
+        if (!o.silent) showToast(`⛔ ${name} ist beschädigt und nicht lesbar. ${saveLoadHinweis()}`, 'error', 6000);
         return false;
     }
     const check = validateAndRepairSave(p);
     if (check.fatal) {
-        if (!o.silent) showToast(`⛔ ${name} ist beschädigt (${check.fatal}) - das laufende Spiel bleibt unverändert.`, 'error', 6000);
+        if (!o.silent) showToast(`⛔ ${name} ist beschädigt (${check.fatal}). ${saveLoadHinweis()}`, 'error', 6000);
         return false;
     }
     if (o.backup) backupCurrentGame(`vor dem Laden von „${o.label}“`);

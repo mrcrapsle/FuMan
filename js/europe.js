@@ -602,9 +602,10 @@
             if (!tbody) return;
             tbody.innerHTML = '';
             let sorted = [...grp].sort((a, b) => b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga));
-            sorted.forEach(t => {
+            sorted.forEach((t, i) => {
                 let isUs = t.name === game.clubName;
-                tbody.innerHTML += `<tr><td style="text-align:left; ${isUs?'color:var(--primary); font-weight:bold;':''}">${t.name}</td><td>${t.played}</td><td>${t.gf}:${t.ga}</td><td><strong>${t.pts}</strong></td></tr>`;
+                // Die beiden Ersten kommen in die K.O.-Runde (25.25: Platz-Spalte, Weiterkommer farbig)
+                tbody.innerHTML += `<tr><td style="${i < 2 ? 'color:var(--primary); font-weight:bold;' : ''}">${i + 1}</td><td style="text-align:left; ${isUs?'color:var(--primary); font-weight:bold;':''}">${t.name}</td><td>${t.played}</td><td>${t.gf}:${t.ga}</td><td><strong>${t.pts}</strong></td></tr>`;
             });
         };
 

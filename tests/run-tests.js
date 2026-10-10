@@ -1978,6 +1978,7 @@ async function testLexiconEnglish(browser) {
                 // Zusammengesetzte Begriffe: Bindestrich und Leerzeichen zählen nicht
                 suche.value = 'set-piece'; renderLexicon(); out.suchePunkt = document.getElementById('lexicon-list').innerHTML.includes('Set pieces');
                 suche.value = 'setpieces'; renderLexicon(); out.sucheOhne = document.getElementById('lexicon-list').innerHTML.includes('Set pieces');
+                suche.value = 'Base value'; renderLexicon(); out.sucheLeerzeichen = document.getElementById('lexicon-list').innerHTML.includes('Strength');
                 suche.value = ''; renderLexicon();
             } else out.suche = out.suchePunkt = out.sucheOhne = true;
             setLanguage('de');
@@ -1990,6 +1991,7 @@ async function testLexiconEnglish(browser) {
         assert(r.fehlend.length === 0, `Jeder Lexikon-Eintrag hat eine englische Fassung mit gleich vielen Tipps (${r.fehlend.join(' | ')})`);
         assert(r.zahlen.length === 0, `Die englische Fassung enthält alle Zahlen des deutschen Textes (${r.zahlen.slice(0, 3).join(' | ')})`);
         assert(r.englisch && r.kategorie && r.suche, 'Auf Englisch zeigt das Lexikon englische Titel, Texte und Kategorien, die Suche findet englische Begriffe');
+        assert(r.sucheLeerzeichen, 'Die englische Suche findet mit Leerzeichen ("Base value" → Strength)');
         assert(r.suchePunkt && r.sucheOhne, 'Die Suche ignoriert Bindestriche und Leerzeichen ("set-piece" findet "Set pieces")');
         assert(r.deutsch, 'Zurück auf Deutsch zeigt das Lexikon wieder deutsch');
     }
@@ -2081,10 +2083,13 @@ async function testCupAndLeagueSameDay(browser) {
             game.leagueLevel = 0; game.matchday = 1; game.liveCupResult = null;
             cupTournament.roundsHistory = [{ roundIndex: 0, name: cupTournament.roundNames[0], matchday: 4, prize: 0, completed: false,
                 pairings: [{ home: us, away: 'Testgegner Pokal', homeGoals: null, awayGoals: null, penaltyWinner: null, played: false }] }];
+            // Der Pokalgegner hat eine Spielstärke (25.25): sie steht im Kalender neben dem Namen
+            leaguesData[0].push({ name: 'Testgegner Pokal', strength: 61, played: 0, gf: 0, ga: 0, pts: 0 });
             renderCalendarView();
             const eintraege = [...document.getElementById('cal-schedule-list').children].map(e => e.innerText);
             const tag = n => eintraege.find(t => t.includes('Spieltag ' + n + ' ')) || '';
             out.pokalGegner = tag(4).includes('DFB-Pokal gegen Testgegner Pokal') && tag(4).includes('Ligaspiel');
+            out.pokalStaerke = tag(4).includes('Testgegner Pokal (Stärke 61)');
             out.nurLiga = tag(5).includes('Ligaspiel') && !tag(5).includes('DFB-Pokal');
             // Dashboard am Pokaltag: Gegner und Wettbewerb der Pokalpartie
             game.matchday = 4;
@@ -2122,6 +2127,7 @@ async function testCupAndLeagueSameDay(browser) {
     assert(!r.crash, `Kalender und Dashboard ohne Absturz (${r.crash || 'ok'})`);
     if (!r.crash) {
         assert(r.pokalGegner, 'Am Pokaltag steht im Kalender Pokal gegen den Gegner UND das Ligaspiel');
+        assert(r.pokalStaerke, 'Im Kalender steht die Spielstärke des Pokalgegners');
         assert(r.nurLiga, 'An normalen Spieltagen steht nur das Ligaspiel');
         assert(r.ligaspielVorhanden, 'Die Liga-Partie des Pokaltags ist im Spielplan vorhanden');
         assert(r.dashGegner && r.dashTitel, 'Das Dashboard zeigt am Pokaltag den Pokalgegner und den Wettbewerb');
@@ -5311,6 +5317,9 @@ async function testLeagueEconomy(browser) {
         sessionStorage.setItem('anstoss_fm13_newgame_money', '150000');
         sessionStorage.setItem('anstoss_fm13_force_new_game', '1');
     });
+    // 25.25: Der Zufall (Mannschaften, Spielverlauf) wird vor jedem Dokument mit einem festen Seed gesetzt,
+    // damit der 30-Spieltage-Lauf reproduzierbar ist. Die Schwelle bleibt unverändert.
+    await page.addInitScript(() => { let seed = 20251010; Math.random = () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; });
     await page.reload();
     await page.waitForTimeout(400);
     const profi = await page.evaluate(() => {
@@ -9035,6 +9044,177 @@ async function testJobOffers(browser) {
     await page.close();
 }
 
+async function testSpielstandAeltereVersion(browser) {
+    console.log('\n[25.25] Spielstand aus älterer Version: lädt ohne Fehler, Verein und Kader bleiben erhalten');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            game.money = 222333;
+            saveGameToSlot(1);
+            const alt = JSON.parse(localStorage.getItem(SAVE_SLOT_PREFIX + 1));
+            alt.meta.version = '3.94';
+            // Felder, die erst spätere Versionen eingeführt haben, fehlen im alten Stand
+            ['boardEarlyWarnSeason', 'coTrainerTrust', 'preContracts', 'boardGraceSeason', 'tvAdvance'].forEach(k => delete alt.game[k]);
+            localStorage.setItem(SAVE_SLOT_PREFIX + 2, JSON.stringify(alt));
+            const verein = game.clubName, kader = squad.length;
+            const ok = loadGameFromSlot(2, true);
+            const out = { ok: ok === true, geladen: game.money === 222333, verein: game.clubName === verein, kader: squad.length === kader };
+            updateUI();
+            renderDashboardView();
+            return out;
+        } catch (e) { return { crash: e.message + ' ' + e.stack }; }
+    });
+    assert(!r.crash, `Ältere Version lädt ohne Absturz (${r.crash || 'ok'})`);
+    if (!r.crash) {
+        assert(r.ok && r.geladen, 'Der Spielstand aus 3.94 wird geladen, das Geld bleibt erhalten');
+        assert(r.verein && r.kader, 'Verein und Kader bleiben nach dem Laden erhalten');
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler beim Laden älterer Stände (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
+async function testTastaturFokus(browser) {
+    console.log('\n[25.25] Tastatur: sichtbarer Fokusrahmen auf Schaltflächen');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    await page.evaluate(() => { try { closeTutorial(); } catch (e) { /* egal */ } });
+    // Bis zu 8 Tabs: die ersten Stationen können Bildelemente sein, die kein Tastaturziel sind
+    let treffer = { fokus: false, sichtbar: false, tag: '-' };
+    for (let i = 0; i < 8 && !treffer.fokus; i++) {
+        await page.keyboard.press('Tab');
+        treffer = await page.evaluate(() => {
+            const el = document.activeElement;
+            if (!el || el === document.body) return { fokus: false, sichtbar: false, tag: '-' };
+            return { fokus: el.matches('button, input, select, textarea, a[href]'), sichtbar: getComputedStyle(el).outlineStyle === 'solid', tag: el.tagName };
+        });
+    }
+    assert(treffer.fokus && treffer.sichtbar, `Die Tab-Taste setzt den Fokus auf eine Schaltfläche mit sichtbarem Rahmen (${treffer.tag})`);
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei der Tastaturbedienung');
+    await page.close();
+}
+
+async function testDashAutosaveZeile(browser) {
+    console.log('\n[25.25] Dashboard: letzter Autosave in einer Zeile');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            localStorage.removeItem(AUTOSAVE_KEY);
+            renderDashboardView();
+            const leer = document.getElementById('dash-autosave-line').innerText;
+            localStorage.setItem(AUTOSAVE_KEY, JSON.stringify({ meta: { season: 3, matchday: 5, savedAt: '12:34', clubName: 'X', league: 'L', money: 1 } }));
+            renderDashboardView();
+            const mit = document.getElementById('dash-autosave-line').innerText;
+            return { leer: leer.includes('noch keiner'), mit: mit.includes('Spieltag 5/34') && mit.includes('12:34') };
+        } catch (e) { return { crash: e.message }; }
+    });
+    assert(!r.crash && r.leer, 'Ohne Autosave steht auf dem Dashboard: noch keiner');
+    assert(!r.crash && r.mit, 'Mit Autosave steht Saison, Spieltag und Uhrzeit auf dem Dashboard');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Dashboard mit Autosave');
+    await page.close();
+}
+
+async function testSpielstandFehlermeldung(browser) {
+    console.log('\n[25.25] Beschädigter Spielstand: Meldung nennt den Slot und sagt, was bleibt');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            localStorage.setItem(SAVE_SLOT_PREFIX + 2, '{"kaputt":');
+            loadGameFromSlot(2, false);
+            const ohneKopie = document.getElementById('app-toast').innerText;
+            // Ein erfolgreiches Laden legt eine Sicherheitskopie des laufenden Spiels an
+            saveGameToSlot(1);
+            loadGameFromSlot(1, false);
+            localStorage.setItem(SAVE_SLOT_PREFIX + 2, '{"kaputt":');
+            loadGameFromSlot(2, false);
+            const mitKopie = document.getElementById('app-toast').innerText;
+            return { ohneKopie, mitKopie };
+        } catch (e) { return { crash: e.message }; }
+    });
+    assert(!r.crash && r.ohneKopie.includes('Slot 2') && r.ohneKopie.includes('nicht lesbar'), `Die Meldung nennt den beschädigten Slot (${r.ohneKopie || r.crash})`);
+    assert(!r.crash && r.ohneKopie.includes('bleibt unverändert') && r.ohneKopie.includes('anderen Slot oder den Autosave'), 'Ohne Sicherheitskopie: das laufende Spiel bleibt, es gibt einen Ausweg');
+    assert(!r.crash && r.mitKopie.includes('Sicherheitskopie wiederherstellen'), 'Mit Sicherheitskopie verweist die Meldung auf die Wiederherstellung');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Laden eines beschädigten Stands');
+    await page.close();
+}
+
+async function testCoTrainerLiveBilanz(browser) {
+    console.log('\n[25.25] Co-Trainer im Livespiel: Bilanz mit befolgten Hinweisen gegen ohne');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            game.coTrainerHistory = { followedMatches: 0, followedWins: 0, ownMatches: 0, ownWins: 0 };
+            recordLiveCoTrainerMatch('win', { coTrainerFollowed: 2 });
+            recordLiveCoTrainerMatch('loss', { coTrainerFollowed: 1 });
+            recordLiveCoTrainerMatch('win', {});
+            recordLiveCoTrainerMatch('draw', null);
+            const h = game.coTrainerHistory;
+            return { h: { mf: h.liveMatchesFollowed, fw: h.liveFollowedWins, mo: h.liveMatchesOwn, ow: h.liveOwnWins }, text: coTrainerLiveBilanzText(h), leer: coTrainerLiveBilanzText({}) };
+        } catch (e) { return { crash: e.message }; }
+    });
+    assert(!r.crash && r.h.mf === 2 && r.h.fw === 1 && r.h.mo === 1 && r.h.ow === 1, `Befolgte Hinweise: 2 Spiele (1 Sieg), ohne: 1 Spiel (1 Sieg), ein Spiel ohne Lauf wird nicht gewertet (${r.crash || JSON.stringify(r.h)})`);
+    assert(!r.crash && r.text.includes('1/2 Siege') && r.text.includes('1/1 Siege'), `Die Bilanz steht im Co-Trainer-Bereich (${r.text || r.crash})`);
+    assert(!r.crash && r.leer === '', 'Ohne gewertetes Livespiel bleibt die Zeile leer');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei der Co-Trainer-Bilanz');
+    await page.close();
+}
+
+async function testEuropaGruppenPlatz(browser) {
+    console.log('\n[25.25] Champions Cup: Gruppentabelle mit Platz, die beiden Ersten sind hervorgehoben');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            const us = game.clubName;
+            europeTournament.groupA = [
+                { name: 'Gruppe Z', played: 2, gf: 0, ga: 3, pts: 0 },
+                { name: us, played: 2, gf: 3, ga: 1, pts: 4 },
+                { name: 'Gruppe X', played: 2, gf: 5, ga: 0, pts: 6 },
+                { name: 'Gruppe Y', played: 2, gf: 1, ga: 4, pts: 1 }];
+            europeTournament.groupB = [];
+            renderEuropeView();
+            const tabelle = document.getElementById('europe-group-a-body').closest('table');
+            return {
+                kopf: tabelle.querySelector('th').innerText,
+                zeilen: [...tabelle.querySelectorAll('tbody tr')].map(tr => [tr.children[0].innerText, tr.children[1].innerText]),
+                verein: us
+            };
+        } catch (e) { return { crash: e.message }; }
+    });
+    assert(!r.crash && r.kopf === 'Pl', `Die Gruppentabelle hat eine Platz-Spalte (${r.kopf || r.crash})`);
+    assert(!r.crash && r.zeilen[0] && r.zeilen[0][0] === '1' && r.zeilen[0][1] === 'Gruppe X' && r.zeilen[1][0] === '2' && r.zeilen[1][1] === r.verein, 'Die Tabelle ist nach Punkten sortiert, Platz 1 und 2 stehen oben');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei der Gruppentabelle');
+    await page.close();
+}
+
+async function testVorvertragsFrist(browser) {
+    console.log('\n[25.25] Vorverträge: Frist der eigenen Spieler steht in der Vorvertrags-Box');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            game.matchday = 20;
+            const p = squad[0];
+            p.preContractOffer = { club: 'Testklub Vorvertrag', deadline: 27 };
+            renderPreContractBox();
+            const t = document.getElementById('precontract-box').innerText;
+            return { name: p.name, t };
+        } catch (e) { return { crash: e.message }; }
+    });
+    assert(!r.crash && r.t.includes(r.name) && r.t.includes('Spieltag 27') && r.t.includes('Testklub Vorvertrag'), `Die Vorvertrags-Box nennt Spieler, Verein und Frist (${r.crash || 'Frist fehlt'})`);
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei der Vorvertrags-Box');
+    await page.close();
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -9178,6 +9358,13 @@ async function main() {
         testPressConference,
         testContractTalks,
         testJobOffers,
+        testSpielstandAeltereVersion,
+        testTastaturFokus,
+        testDashAutosaveZeile,
+        testSpielstandFehlermeldung,
+        testCoTrainerLiveBilanz,
+        testEuropaGruppenPlatz,
+        testVorvertragsFrist,
         testRuntimeRoundTrip,
     ];
 
