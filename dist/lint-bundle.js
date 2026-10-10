@@ -495,7 +495,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.96', date: '10.10.2026', features: 'Phase 25.25: Testsuite parallel (eigener Browser-Kontext je Suite, Ausgabe gepuffert), Vorwarnung des Vorstands, Pokalgegner im Dashboard und Kalender, Europa-Gruppenstand im Kalender, Lexikon Spielplan' };
+    const GAME_VERSION = { number: '3.97', date: '10.10.2026', features: 'Phase 25.25: Pokalgegner mit Stärke, Champions-Cup-Gruppenplatz, Autosave im Dashboard, Co-Trainer-Bilanz, Lade-Meldungen, Vorvertrags-Frist, Tastatur-Fokus, Spielstand-Kompatibilität' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
