@@ -605,7 +605,7 @@
             sorted.forEach((t, i) => {
                 let isUs = t.name === game.clubName;
                 // Die beiden Ersten kommen in die K.O.-Runde (25.25: Platz-Spalte, Weiterkommer farbig)
-                tbody.innerHTML += `<tr><td style="${i < 2 ? 'color:var(--primary); font-weight:bold;' : ''}">${i + 1}</td><td style="text-align:left; ${isUs?'color:var(--primary); font-weight:bold;':''}">${t.name}</td><td>${t.played}</td><td>${t.gf}:${t.ga}</td><td><strong>${t.pts}</strong></td></tr>`;
+                tbody.innerHTML += `<tr><td style="${i < 2 ? 'color:var(--primary); font-weight:bold;' : ''}">${i + 1}</td><td style="text-align:left; max-width:120px;"><span title="${t.name}" style="display:inline-block; max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom; ${isUs?'color:var(--primary); font-weight:bold;':''}">${t.name}</span></td><td>${t.played}</td><td>${t.gf}:${t.ga}</td><td><strong>${t.pts}</strong></td></tr>`;
             });
         };
 

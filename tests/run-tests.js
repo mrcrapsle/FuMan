@@ -4352,6 +4352,8 @@ async function testManagerOffice(browser) {
     // unverändert, aber die Trefferfläche wandert weg und die Objekte sind - völlig lautlos -
     // nicht mehr anklickbar. Ohne diesen Test fällt so etwas erst dem Spieler auf.
     const centerOf = async (id) => {
+        // Die Bühne folgt dem Mauszeiger mit einer 0,5-s-Übergangsanimation (Parallax): erst messen, wenn sie steht
+        await page.waitForFunction(() => { const st = document.getElementById('office-stage'); return !st || st.getAnimations().length === 0; }, null, { timeout: 3000 }).catch(() => null);
         const box = await page.locator('#office-hs-' + id).boundingBox();
         return box ? { x: box.x + box.width / 2, y: box.y + box.height / 2 } : null;
     };
@@ -4393,7 +4395,8 @@ async function testManagerOffice(browser) {
 
     // Klick auf ein Objekt führt in den zugehörigen Screen
     await page.mouse.click(calCenter.x, calCenter.y);
-    await page.waitForTimeout(900);
+    // Der Wechsel in den Kalender kommt nach dem Zoom (ca. 520 ms): auf den Bildschirm warten statt 900 ms zu raten
+    await page.waitForFunction(() => document.getElementById('screen-calendar').style.display === 'block', null, { timeout: 4000 }).catch(() => null);
     const navigated = await page.evaluate(() => document.getElementById('screen-calendar').style.display === 'block');
 
     // Vom Dashboard aus wieder ins Büro und per HUD-Knopf zurück
@@ -8551,6 +8554,14 @@ async function testMobileLayout(browser) {
         return { anzahl: views.length, ueberlauf, knoepfe: [...new Set(knoepfe)], schrift: [...new Set(schrift)], navZeilen, verdeckt, streifen: [...new Set(streifen)] };
     });
     assert(r.ueberlauf.length === 0, `Kein horizontaler Überlauf auf ${r.anzahl} Bildschirmen/Reitern (${r.ueberlauf.join(', ')})`);
+    // Lange Vereinsnamen in den Europa-Gruppen (Punkt 9): die Tabellen dürfen die Handy-Breite nicht sprengen
+    const langEuropa = await page.evaluate(() => {
+        closeTutorial(); game.inEurope = true; initEuropeCup(); simulateMatchdays(3);
+        [...europeTournament.groupA, ...europeTournament.groupB].forEach((t, i) => { if (t.name !== game.clubName) t.name = 'Fußballclub Sportverein Bürgerschaft ' + i; });
+        showScreen('screen-europe');
+        return new Promise(res => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(() => res(document.documentElement.scrollWidth <= document.documentElement.clientWidth + 2), 40))));
+    });
+    assert(langEuropa, 'Lange Vereinsnamen in den Europa-Gruppen laufen nicht über die Handy-Breite');
     assert(r.knoepfe.length === 0, `Alle Knöpfe mindestens 32 px hoch (${r.knoepfe.slice(0, 4).join(' | ')})`);
     assert(r.schrift.length === 0, `Keine Schrift unter 8 px (${r.schrift.slice(0, 4).join(' | ')})`);
     assert(r.navZeilen === 1, `Untere Leiste in einer Zeile (${r.navZeilen})`);
