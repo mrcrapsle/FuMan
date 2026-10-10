@@ -2248,6 +2248,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
                     <div id="dash-joboffer-box"></div>
                     <div id="dash-onboarding-box"></div>
                     <div id="dash-autosave-line" style="font-size:10px; color:var(--text-muted); padding:2px 4px;"></div>
+                    <div id="dash-board-warn-line"></div>
                     <div id="dash-relegation-box"></div>
                     <div id="dash-season-events-box"></div>
                     <div id="dash-season-end-actions" style="display:none;">
@@ -15597,7 +15598,20 @@ function initOneHand() {
     function renderDashboardView() {
         document.getElementById('dash-mday').innerText = Math.min(34, game.matchday);
         document.getElementById('dash-league-name').innerText = leagueNames[game.leagueLevel];
-        // Dashboard-Hero: Liga & Spieltag auch in der neuen 3D-Stadion-Ansicht anzeigen.
+        // Vorstands-Warnung dieser Saison mit Ausweg (25.26); verschwindet, sobald das Vertrauen wieder über 60 liegt.
+    function renderDashBoardWarnLine() {
+        const box = document.getElementById('dash-board-warn-line');
+        if (!box) return;
+        const aktiv = game.boardEarlyWarnSeason === game.season && game.boardSat < 60;
+        const en = typeof currentLang !== 'undefined' && currentLang === 'en';
+        box.innerHTML = aktiv
+            ? `<div class="box" style="font-size:10px; border-left-color:var(--danger); margin:4px 0;">${en
+                ? `📉 The board is restless (${Math.round(game.boardSat)}). Wins in the league raise trust; the winter talk (matchdays 18-20) is the chance to negotiate expectation or budget.`
+                : `📉 Der Vorstand ist unruhig (${Math.round(game.boardSat)}). Siege im Liga-Spiel heben das Vertrauen; das Wintergespräch (Spieltag 18-20) ist die Gelegenheit, Erwartung oder Budget zu verhandeln.`}</div>`
+            : '';
+    }
+
+    // Dashboard-Hero: Liga & Spieltag auch in der neuen 3D-Stadion-Ansicht anzeigen.
         let heroSubline = document.getElementById('dash-hero-subline');
         if (heroSubline) heroSubline.innerText = `${leagueNames[game.leagueLevel]} · Spieltag ${Math.min(34, game.matchday)}/34`;
         let heroCrest = document.getElementById('dash-hero-crest');
@@ -15693,6 +15707,7 @@ function initOneHand() {
 
         renderSaveSlotsUI();
         if (typeof renderDashAutosaveLine === 'function') renderDashAutosaveLine();
+        renderDashBoardWarnLine();
         renderNextGoalsList();
         renderWeeklyRecap();
         if (typeof renderSeasonObjectivesPanel === 'function') renderSeasonObjectivesPanel();
@@ -26856,6 +26871,15 @@ function findCoTrainerHint() {
                 actions: [{ label: `🔄 ${ersatz.name} für ${kandidat.name}`, run: () => coTrainerSubstitute(kandidat.id, ersatz.id) }] };
         }
     }
+    // Gegner erspielt sich klar mehr Abschlüsse (25.26): tiefer stehen und auf Konter lauern
+    const schuesse = currentMatch.stats && currentMatch.stats.shots;
+    if (schuesse && frei('druck') && min >= 60 && activeLiveShout !== 'bus') {
+        const eigen = currentMatch.isHome ? 0 : 1;
+        if (schuesse[1 - eigen] - schuesse[eigen] >= 4) {
+            return { id: 'druck', text: `Der Gegner hat schon ${schuesse[1 - eigen]} Abschlüsse gegen unsere ${schuesse[eigen]}. Tiefer stehen und auf Konter lauern?`,
+                actions: [{ label: '🚌 Bus parken', run: () => setLiveShout('bus') }] };
+        }
+    }
     if (frei('rueckstand') && min >= 70 && unsere < deren && activeLiveShout !== 'brechstange') {
         return { id: 'rueckstand', text: `${deren - unsere === 1 ? 'Ein Tor' : 'Zwei Tore'} fehlen noch - alles nach vorn? Hinten wird es dann offen.`,
             actions: [{ label: '💥 Brechstange', run: () => setLiveShout('brechstange') }] };
@@ -32241,8 +32265,12 @@ function cleanupLegacyScoutState() {
 
         // Frühwarnung (25.23): der Vorstand meldet sich schon, wenn das Vertrauen erstmals unter 50 fällt -
         // der Langzeit-Bot sank von 99 über 76 und 36 auf 13, die erste Meldung kam erst bei 25.
-        if (game.boardSat < 50 && game.boardEarlyWarnSeason !== game.season) {
+        // 25.26: auch wenn das Vertrauen unter 60 dreimal in Folge fällt - so kommt die Warnung vor dem Tiefpunkt.
+        const letzte3 = (game.boardSatVerlauf || []).slice(-3);
+        const fallend = letzte3.length === 3 && letzte3[0] > letzte3[1] && letzte3[1] > letzte3[2];
+        if ((game.boardSat < 50 || (game.boardSat < 60 && fallend)) && game.boardEarlyWarnSeason !== game.season) {
             game.boardEarlyWarnSeason = game.season;
+            if (typeof writeAutoSaveNow === 'function') writeAutoSaveNow();
             addInboxMessage('vertrag', '📉 Der Vorstand wird unruhig', `Die Zufriedenheit des Vorstands ist auf ${Math.round(game.boardSat)} gefallen. Noch ist es kein Problem, aber die nächsten Ergebnisse entscheiden. Der Vorstandsraum zeigt, wer warum unzufrieden ist.`, 'screen-dashboard');
         }
 
@@ -34776,7 +34804,7 @@ const LEXICON_ENTRIES = [
         text: 'Vor jedem Spiel: drei Antworten mit echter Wirkung (Moral, Stärke im nächsten Spiel, Vorstand, Fans). Versprechen werden nach dem Spiel abgerechnet.',
         tips: ['Wer einen Sieg verspricht und verliert, verliert Ansehen bei Medien, Fans und Vorstand'] },
     { cat: 'Verein', title: 'Vorstandszufriedenheit', screen: 'screen-dashboard',
-        text: 'Wie zufrieden der Vorstand ist (10-100). Fällt sie unter 25, warnt er. Entlassen wird nur am Saisonende: wenn sie dann unter 25 liegt, die letzten 6 Pflichtspiele darunter waren und sie in dieser Zeit nicht gestiegen ist. Nach einem Abstieg gibt es einmal einen Neustart (mindestens 60), nach einem zweiten Abstieg in Folge nicht. In der ersten Saison nach einem Abstieg erwartet er höchstens Platz 3 - die Liga hat meist mehrere Ex-Erstligisten auf Augenhöhe. In der ersten Saison und in der Saison eines Vereinswechsels gibt es Schonfrist.',
+        text: 'Wie zufrieden der Vorstand ist (10-100). Fällt sie unter 50 - oder sinkt sie dreimal in Folge und liegt unter 60 -, warnt er einmal pro Saison im Postfach und auf dem Dashboard. Entlassen wird nur am Saisonende: wenn sie dann unter 25 liegt, die letzten 6 Pflichtspiele darunter waren und sie in dieser Zeit nicht gestiegen ist. Nach einem Abstieg gibt es einmal einen Neustart (mindestens 60), nach einem zweiten Abstieg in Folge nicht. In der ersten Saison nach einem Abstieg erwartet er höchstens Platz 3 - die Liga hat meist mehrere Ex-Erstligisten auf Augenhöhe. In der ersten Saison und in der Saison eines Vereinswechsels gibt es Schonfrist.',
         tips: ['Siege und erreichte Saisonziele heben sie', 'Schulden, gebrochene Versprechen und Niederlagenserien senken sie', 'Der Vorstandsraum erklärt jedes Mitglied einzeln'] },
     { cat: 'Verein', title: 'Mitgliederversammlung', screen: 'screen-dashboard',
         text: 'Nach jeder Saison wollen die Mitglieder deinen Bericht: Platz gegen Erwartung, Aufstieg/Abstieg und Kasse ergeben die Grundstimmung. Rede und Beitragsantrag wählst du im Dashboard. Ab 70 % Zustimmung Vorstand +10, ab 50 % (entlastet) +5, darunter -10. Bereitest du sie nicht innerhalb von 6 Spieltagen vor, findet sie ohne dich statt (-5 % Zustimmung).',
@@ -35038,7 +35066,7 @@ const LEXICON_EN = {
         text: 'Before every match: three answers with real effects (morale, strength in the next match, board, fans). Promises are settled after the match.',
         tips: ['Promising a win and losing costs standing with media, fans and board'] },
     'Vorstandszufriedenheit': { title: 'Board satisfaction',
-        text: 'How happy the board is (10-100). Below 25 it warns you. You are only sacked at the end of the season: if it is then below 25, was below that in the last 6 competitive matches and has not risen during that time. After a relegation there is one fresh start (at least 60), not after a second relegation in a row. In the first season after a relegation it expects at most 3rd place - the league usually has several former top-flight clubs at the same level. The first season and the season of a club change are a grace period.',
+        text: 'How happy the board is (10-100). Below 50 - or falling three times in a row and under 60 - it warns you once a season in the inbox and on the dashboard. You are only sacked at the end of the season: if it is then below 25, was below that in the last 6 competitive matches and has not risen during that time. After a relegation there is one fresh start (at least 60), not after a second relegation in a row. In the first season after a relegation it expects at most 3rd place - the league usually has several former top-flight clubs at the same level. The first season and the season of a club change are a grace period.',
         tips: ['Wins and reached season goals raise it', 'Debts, broken promises and losing streaks lower it', 'The board room explains every member individually'] },
     'Mitgliederversammlung': { title: 'Members\' meeting',
         text: 'After every season the members want your report: rank against expectation, promotion/relegation and finances set the basic mood. Choose your speech and the membership fee motion on the dashboard. From 70 % approval board +10, from 50 % (discharged) +5, below that -10. If you do not prepare it within 6 matchdays it takes place without you (-5 % approval).',
@@ -36413,6 +36441,12 @@ function renderSeasonForecastHistory() {
     function maybeAutoSave() {
         let letzter = game.lastAutoSaveMatchday || 0;
         if (game.matchday - letzter < AUTOSAVE_INTERVAL && game.matchday >= letzter) return;
+        writeAutoSaveNow();
+    }
+
+    // Schreibt den Autosave jetzt, auch außerhalb des Intervalls (25.26: bei einer Vorstands-Warnung,
+    // damit der Stand vor der Krise erhalten bleibt).
+    function writeAutoSaveNow() {
         try {
             let state = buildSaveState();
             state.meta = buildSaveMeta();

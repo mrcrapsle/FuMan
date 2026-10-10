@@ -9373,6 +9373,102 @@ async function testHinweisAnzeige(browser) {
     await page.close();
 }
 
+async function testVorwarnungTrend(browser) {
+    console.log('\n[25.26] Vorstands-Warnung: auch bei dreimal fallendem Vertrauen unter 60, dazu sofort ein Autosave');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            game.season = 3; game.boardEarlyWarnSeason = null; game.boardSatVerlauf = [70, 60]; game.boardSat = 55;
+            localStorage.removeItem(AUTOSAVE_KEY);
+            checkJobSecurity();
+            const out = { warnt: game.boardEarlyWarnSeason === 3, autosave: !!localStorage.getItem(AUTOSAVE_KEY) };
+            game.boardEarlyWarnSeason = null; game.boardSatVerlauf = [60, 60]; game.boardSat = 55;
+            checkJobSecurity();
+            out.keinTrend = game.boardEarlyWarnSeason !== 3;
+            return out;
+        } catch (e) { return { crash: e.message }; }
+    });
+    assert(!r.crash && r.warnt, `Fällt das Vertrauen dreimal in Folge und liegt unter 60, warnt der Vorstand (${r.crash || 'keine Warnung'})`);
+    assert(!r.crash && r.autosave, 'Die Warnung schreibt sofort einen Autosave');
+    assert(!r.crash && r.keinTrend, 'Ohne fallenden Trend (60, 60, 55) gibt es keine Warnung unter 60');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei der Vorstands-Warnung');
+    await page.close();
+}
+
+async function testDashVorwarnZeile(browser) {
+    console.log('\n[25.26] Dashboard: Vorstands-Warnung mit Ausweg, verschwindet bei Vertrauen über 60');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            game.season = 3; game.boardEarlyWarnSeason = 3; game.boardSat = 45;
+            renderDashboardView();
+            const mit = document.getElementById('dash-board-warn-line').textContent;
+            game.boardSat = 80;
+            renderDashboardView();
+            const ohne = document.getElementById('dash-board-warn-line').textContent;
+            return { mit, ohne };
+        } catch (e) { return { crash: e.message }; }
+    });
+    assert(!r.crash && r.mit.includes('Der Vorstand ist unruhig') && r.mit.includes('Wintergespräch'), `Die Warnung steht auf dem Dashboard mit Ausweg (${r.crash || r.mit})`);
+    assert(!r.crash && r.ohne === '', 'Bei Vertrauen über 60 verschwindet die Zeile');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Dashboard mit Warnung');
+    await page.close();
+}
+
+async function testDruckHinweis(browser) {
+    console.log('\n[25.26] Co-Trainer: Hinweis, wenn der Gegner klar mehr Abschlüsse hat');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        try {
+            closeTutorial();
+            staffMembers.coTrainer.hired = true;
+            lineup = pickBestLineupIds();
+            setupMatch(game.clubName, 'Testgegner Live', calcTeamStrength(true), true, false, null);
+            stopLiveTickerAutoplay();
+            currentMatch.halftimeShown = true;
+            currentMatch.minute = 62;
+            coTrainerActiveHint = null;
+            currentMatch.coHintsUsed = [];
+            activeLiveShout = 'standard';
+            currentMatch.stats = currentMatch.stats || {};
+            currentMatch.stats.shots = [1, 6];
+            const a = findCoTrainerHint();
+            currentMatch.stats.shots = [4, 5];
+            const b = findCoTrainerHint();
+            return { mit: a && a.id, ohne: b && b.id };
+        } catch (e) { return { crash: e.message }; }
+    });
+    assert(!r.crash && r.mit === 'druck', `Bei 1:6 Abschlüssen nach der 60. Minute kommt der Hinweis „druck“ (${r.crash || r.mit})`);
+    assert(!r.crash && r.ohne !== 'druck', 'Bei 4:5 Abschlüssen kommt kein Dominanz-Hinweis');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Dominanz-Hinweis');
+    await page.close();
+}
+
+async function testStartzeit(browser) {
+    console.log('\n[25.26] Startzeit: Neues Spiel bis bedienbar, 4x CPU gedrosselt, allein gemessen (bestes von 3 Läufen)');
+    const werte = [];
+    for (let i = 0; i < 3; i++) {
+        const ctx = await browser.newContext();
+        const page = await ctx.newPage();
+        page.on('dialog', d => d.accept());
+        await page.addInitScript(() => { try { localStorage.clear(); } catch (e) { /* egal */ } });
+        const cdp = await ctx.newCDPSession(page);
+        await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+        const t0 = Date.now();
+        await page.goto(GAME_PATH);
+        await page.waitForFunction(() => !document.getElementById('app-loading'), null, { timeout: 120000 });
+        werte.push(Date.now() - t0);
+        await ctx.close();
+    }
+    const bestes = Math.min(...werte);
+    assert(bestes < 3500, `Neues Spiel ist bedienbar nach ${bestes} ms (Läufe ${werte.join(', ')} ms; Obergrenze 3500 ms, gemessen 2200-2400 ms bei der Standalone-Datei)`);
+}
+
 async function main() {
     console.log('='.repeat(60));
     console.log('ANSTOSS FM13 - AUTOMATISIERTE TESTSUITE');
@@ -9528,15 +9624,23 @@ async function main() {
         testAutosaveLadeMeldung,
         testEnglischDynamischeTexte,
         testHinweisAnzeige,
+        testVorwarnungTrend,
+        testDashVorwarnZeile,
+        testDruckHinweis,
+        testStartzeit,
         testRuntimeRoundTrip,
     ];
 
     // TEST_ONLY=Landes npm test -> nur Suiten, deren Name den Text enthält
     const only = process.env.TEST_ONLY;
     // Die langsamsten Suiten (rund 5 s) starten zuerst, dann füllen die kurzen Suiten die Lücken (25.25)
-    const vorne = new Set(['testManagerOffice', 'testMobileLayout', 'testLoadingGuard']);
-    const liste = (only ? suites.filter(s => s.name.includes(only)) : [...suites])
+    const vorne = new Set(['testAeltereStaende', 'testManagerOffice', 'testMobileLayout', 'testLoadingGuard']);
+    const alle = (only ? suites.filter(s => s.name.includes(only)) : [...suites])
         .sort((a, b) => (vorne.has(b.name) ? 1 : 0) - (vorne.has(a.name) ? 1 : 0));
+    // Zeitmessungen laufen allein nach den übrigen Suiten - parallele Last würde sie verfälschen (25.26)
+    const einzeln = new Set(['testStartzeit']);
+    const liste = alle.filter(s => !einzeln.has(s.name));
+    const allein = alle.filter(s => einzeln.has(s.name));
 
     // Suiten laufen parallel (TEST_JOBS, Standard 3). Jede Suite bekommt einen eigenen
     // Browser-Kontext = eigener Speicher, so sieht keine Suite den Stand einer anderen.
@@ -9579,6 +9683,9 @@ async function main() {
         }
     };
     await Promise.all(Array.from({ length: Math.min(jobs, liste.length) }, laufen));
+    liste.splice(0, liste.length, ...allein);
+    naechste = 0;
+    await laufen();
 
     await browser.close();
 

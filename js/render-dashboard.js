@@ -2,7 +2,20 @@
     function renderDashboardView() {
         document.getElementById('dash-mday').innerText = Math.min(34, game.matchday);
         document.getElementById('dash-league-name').innerText = leagueNames[game.leagueLevel];
-        // Dashboard-Hero: Liga & Spieltag auch in der neuen 3D-Stadion-Ansicht anzeigen.
+        // Vorstands-Warnung dieser Saison mit Ausweg (25.26); verschwindet, sobald das Vertrauen wieder über 60 liegt.
+    function renderDashBoardWarnLine() {
+        const box = document.getElementById('dash-board-warn-line');
+        if (!box) return;
+        const aktiv = game.boardEarlyWarnSeason === game.season && game.boardSat < 60;
+        const en = typeof currentLang !== 'undefined' && currentLang === 'en';
+        box.innerHTML = aktiv
+            ? `<div class="box" style="font-size:10px; border-left-color:var(--danger); margin:4px 0;">${en
+                ? `📉 The board is restless (${Math.round(game.boardSat)}). Wins in the league raise trust; the winter talk (matchdays 18-20) is the chance to negotiate expectation or budget.`
+                : `📉 Der Vorstand ist unruhig (${Math.round(game.boardSat)}). Siege im Liga-Spiel heben das Vertrauen; das Wintergespräch (Spieltag 18-20) ist die Gelegenheit, Erwartung oder Budget zu verhandeln.`}</div>`
+            : '';
+    }
+
+    // Dashboard-Hero: Liga & Spieltag auch in der neuen 3D-Stadion-Ansicht anzeigen.
         let heroSubline = document.getElementById('dash-hero-subline');
         if (heroSubline) heroSubline.innerText = `${leagueNames[game.leagueLevel]} · Spieltag ${Math.min(34, game.matchday)}/34`;
         let heroCrest = document.getElementById('dash-hero-crest');
@@ -98,6 +111,7 @@
 
         renderSaveSlotsUI();
         if (typeof renderDashAutosaveLine === 'function') renderDashAutosaveLine();
+        renderDashBoardWarnLine();
         renderNextGoalsList();
         renderWeeklyRecap();
         if (typeof renderSeasonObjectivesPanel === 'function') renderSeasonObjectivesPanel();

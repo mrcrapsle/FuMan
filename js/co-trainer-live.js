@@ -90,6 +90,15 @@ function findCoTrainerHint() {
                 actions: [{ label: `🔄 ${ersatz.name} für ${kandidat.name}`, run: () => coTrainerSubstitute(kandidat.id, ersatz.id) }] };
         }
     }
+    // Gegner erspielt sich klar mehr Abschlüsse (25.26): tiefer stehen und auf Konter lauern
+    const schuesse = currentMatch.stats && currentMatch.stats.shots;
+    if (schuesse && frei('druck') && min >= 60 && activeLiveShout !== 'bus') {
+        const eigen = currentMatch.isHome ? 0 : 1;
+        if (schuesse[1 - eigen] - schuesse[eigen] >= 4) {
+            return { id: 'druck', text: `Der Gegner hat schon ${schuesse[1 - eigen]} Abschlüsse gegen unsere ${schuesse[eigen]}. Tiefer stehen und auf Konter lauern?`,
+                actions: [{ label: '🚌 Bus parken', run: () => setLiveShout('bus') }] };
+        }
+    }
     if (frei('rueckstand') && min >= 70 && unsere < deren && activeLiveShout !== 'brechstange') {
         return { id: 'rueckstand', text: `${deren - unsere === 1 ? 'Ein Tor' : 'Zwei Tore'} fehlen noch - alles nach vorn? Hinten wird es dann offen.`,
             actions: [{ label: '💥 Brechstange', run: () => setLiveShout('brechstange') }] };

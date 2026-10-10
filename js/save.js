@@ -342,6 +342,12 @@
     function maybeAutoSave() {
         let letzter = game.lastAutoSaveMatchday || 0;
         if (game.matchday - letzter < AUTOSAVE_INTERVAL && game.matchday >= letzter) return;
+        writeAutoSaveNow();
+    }
+
+    // Schreibt den Autosave jetzt, auch außerhalb des Intervalls (25.26: bei einer Vorstands-Warnung,
+    // damit der Stand vor der Krise erhalten bleibt).
+    function writeAutoSaveNow() {
         try {
             let state = buildSaveState();
             state.meta = buildSaveMeta();

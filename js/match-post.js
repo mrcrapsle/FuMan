@@ -28,8 +28,12 @@
 
         // Frühwarnung (25.23): der Vorstand meldet sich schon, wenn das Vertrauen erstmals unter 50 fällt -
         // der Langzeit-Bot sank von 99 über 76 und 36 auf 13, die erste Meldung kam erst bei 25.
-        if (game.boardSat < 50 && game.boardEarlyWarnSeason !== game.season) {
+        // 25.26: auch wenn das Vertrauen unter 60 dreimal in Folge fällt - so kommt die Warnung vor dem Tiefpunkt.
+        const letzte3 = (game.boardSatVerlauf || []).slice(-3);
+        const fallend = letzte3.length === 3 && letzte3[0] > letzte3[1] && letzte3[1] > letzte3[2];
+        if ((game.boardSat < 50 || (game.boardSat < 60 && fallend)) && game.boardEarlyWarnSeason !== game.season) {
             game.boardEarlyWarnSeason = game.season;
+            if (typeof writeAutoSaveNow === 'function') writeAutoSaveNow();
             addInboxMessage('vertrag', '📉 Der Vorstand wird unruhig', `Die Zufriedenheit des Vorstands ist auf ${Math.round(game.boardSat)} gefallen. Noch ist es kein Problem, aber die nächsten Ergebnisse entscheiden. Der Vorstandsraum zeigt, wer warum unzufrieden ist.`, 'screen-dashboard');
         }
 
