@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.98', date: '10.10.2026', features: 'Phase 25.26: Spielstände aus alten Builds (3.22.1 bis 3.94) laden, Fokus in Overlays, Autosave-Meldung, Englisch dynamischer Texte, Bot-Spalte Vorwarnung, Co-Trainer-Messung' };
+    const GAME_VERSION = { number: '3.99', date: '10.10.2026', features: 'Phase 25.27: Müdigkeits-Hinweis mit 85 % Ersatz, Hinweisanzeige im Livespiel, Karriere-Stand als Kompatibilitäts-Fixture, Bot-Messung der Co-Trainer-Hinweise, Lexikon Tastatur' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
