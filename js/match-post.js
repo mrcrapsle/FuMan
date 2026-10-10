@@ -75,7 +75,7 @@
         let erwartet = game.seasonExpectation && game.seasonExpectation.expectedRank;
         let zielErreicht = myRank > 0 && (myRank <= 2 || (erwartet && myRank <= erwartet));
         if (game.boardSat <= BOARD_SAT_WARNING_THRESHOLD && game.lowBoardSatStreak >= sackThreshold && !erholt && !zielErreicht) {
-            getSacked();
+            getSacked(myRank);
         }
     }
 
@@ -269,7 +269,7 @@
         updateUI();
     }
 
-    function getSacked() {
+    function getSacked(myRank) {
         // Mehrfachausloesung verhindern: processPostMatchRoutine() laeuft pro simuliertem
         // Spieltag, und die Bedingung (lowBoardSatStreak) bleibt ja erfuellt.
         if (game.sackPending) return;
@@ -284,8 +284,12 @@
         safeSessionSet('anstoss_fm13_force_new_game', '1');
         // Der Neustart haengt bewusst an der Bestaetigung: vorher lief er direkt nach dem
         // alert() - war das unterdrueckt, verschwand der Verein ohne ein Wort der Erklaerung.
+        // Grund für den Spieler (25.34): Vertrauen, Serie und die Erwartung des Vorstands am Saisonende
+        const erwartetRang = game.seasonExpectation && game.seasonExpectation.expectedRank;
+        const grund = `Grund: Vertrauen ${Math.round(game.boardSat)} von 100, ${game.lowBoardSatStreak || 0} Pflichtspiele in Folge unter der Warnschwelle` +
+            (erwartetRang ? `, Erwartung Platz ${erwartetRang}` : '') + (myRank > 0 ? `, erreicht: Platz ${myRank}` : '') + '.';
         showNotice('🚪 Entlassen!',
-            'Der Vorstand hat genug gesehen und trennt sich mit sofortiger Wirkung von dir.\n\nDeine Karriere-Erfahrung und deine Trophäen nimmst du mit - bei deinem neuen Klub beginnst du aber wieder ganz von unten.',
+            `Der Vorstand hat genug gesehen und trennt sich mit sofortiger Wirkung von dir.\n\n${grund}\n\nDeine Karriere-Erfahrung und deine Trophäen nimmst du mit - bei deinem neuen Klub beginnst du aber wieder ganz von unten.`,
             { typ: 'warn', sofort: true, knopf: 'Neuen Klub suchen', danach: () => location.reload() });
     }
 

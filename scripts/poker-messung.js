@@ -1,6 +1,6 @@
 // Transferpoker-Messung (Punkt 9 der Runde 25.30): spielt je Markt-Spieler eine Verhandlung
 // mit einer festen Strategie durch und zählt Abschlüsse, Preis gegen Forderung und verbrauchte Geduld.
-//   node scripts/poker-messung.js [spiele=20] [datei]
+//   LIGA=0..5 node scripts/poker-messung.js [spiele=20] [datei]   (Startliga, Standard 5 = Liga 6)
 // Strategien: start = Anteil der Forderung für das erste Angebot, schritt = Erhöhung je Runde (Prozentpunkte).
 const path = require('path');
 const root = path.resolve(__dirname, '..');
@@ -16,6 +16,14 @@ async function spiel(browser, datei, strategie) {
     const ctx = await browser.newContext();
     const page = await ctx.newPage();
     await page.goto('file://' + datei);
+    // Startliga wie im Bot: LIGA=0 Bundesliga … 5 Liga 6 (Standard 5)
+    await page.evaluate((liga) => {
+        sessionStorage.setItem('anstoss_fm13_force_new_game', '1');
+        sessionStorage.setItem('anstoss_fm13_newgame_leaguelevel', String(liga));
+        sessionStorage.setItem('anstoss_fm13_newgame_money', '150000');
+    }, Number(process.env.LIGA || 5));
+    await page.reload();
+    await page.waitForFunction(() => !document.getElementById('app-loading'));
     await page.waitForTimeout(400);
     const ergebnisse = await page.evaluate(({ start, schritt }) => {
         closeTutorial();

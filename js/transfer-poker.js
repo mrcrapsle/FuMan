@@ -10,6 +10,11 @@ let transferPoker = null;
 const POKER_TOUGHNESS = { Ehrgeizig: 1.35, Selbstbewusst: 1.2, Emotional: 1.1, Hitzköpfig: 1.15, Ruhig: 0.9, Bescheiden: 0.75 };
 
 // Verkaufender Verein, Forderung und Schmerzgrenze - einmal je Marktspieler festgelegt.
+// Beträge unter 100.000 € auf 100 € genau (Ligen 5-6: Ablösen um 17.000 €); darüber auf 1.000 €.
+function pokerRunden(betrag) {
+    return betrag < 100000 ? Math.round(betrag / 100) * 100 : Math.round(betrag / 1000) * 1000;
+}
+
 function ensureTransferTerms(p) {
     if (p.askingPrice) return p;
     const pool = [game.leagueLevel, Math.max(0, game.leagueLevel - 1)].flatMap(l => (leaguesData[l] || []).filter(t => typeof isAiClub === 'function' ? isAiClub(t) : t.name !== game.clubName));
@@ -17,8 +22,8 @@ function ensureTransferTerms(p) {
     p.sellerClub = verein ? verein.name : 'ein Ligakonkurrent';
     const vertrag = Math.max(1, Math.min(4, p.contracts || 2));
     // Lange Verträge machen den Spieler teuer und den Verkäufer zäh.
-    p.sellerMinimum = Math.round(p.marketValue * (0.82 + vertrag * 0.05) / 1000) * 1000;
-    p.askingPrice = Math.max(p.sellerMinimum + 1000, Math.round(p.marketValue * (1.0 + vertrag * 0.04 + Math.random() * 0.12) / 1000) * 1000);
+    p.sellerMinimum = pokerRunden(p.marketValue * (0.82 + vertrag * 0.05));
+    p.askingPrice = Math.max(pokerRunden(p.sellerMinimum * 1.01), pokerRunden(p.marketValue * (1.0 + vertrag * 0.04 + Math.random() * 0.12)));
     return p;
 }
 
@@ -108,7 +113,7 @@ function openTransferPoker(idx) {
         const begehrt = p.strength >= Math.max(...marketPlayers.map(m => m.strength)) - 3;
         transferPoker = {
             playerId: p.id, rounds: 0, patience: 3 + Math.floor(Math.random() * 3),
-            offer: Math.round(p.askingPrice * 0.85 / 1000) * 1000,
+            offer: pokerRunden(p.askingPrice * 0.85),
             rivalChance: begehrt ? 0.45 : 0.15, rival: null, agreedFee: null, wageDemand: null, wageTalked: false,
             log: [`${p.sellerClub} verlangt ${formatVal(p.askingPrice)} für ${p.name} (Marktwert ${formatVal(p.marketValue)}).`]
         };
@@ -130,8 +135,8 @@ function getPokerPlayer() {
 function adjustPokerOffer(prozent) {
     const p = getPokerPlayer();
     if (!p || transferPoker.agreedFee) return;
-    const schritt = Math.max(1000, Math.round(p.marketValue * Math.abs(prozent) / 100 / 1000) * 1000);
-    transferPoker.offer = Math.max(1000, transferPoker.offer + Math.sign(prozent) * schritt);
+    const schritt = Math.max(100, pokerRunden(p.marketValue * Math.abs(prozent) / 100));
+    transferPoker.offer = Math.max(100, transferPoker.offer + Math.sign(prozent) * schritt);
     renderTransferPokerBox();
 }
 
@@ -150,7 +155,7 @@ function tickPokerRival(p) {
     if (!t.rival && t.rounds >= 1 && Math.random() < t.rivalChance) {
         const vereine = (leaguesData[game.leagueLevel] || []).filter(v => v.name !== p.sellerClub && (typeof isAiClub === 'function' ? isAiClub(v) : v.name !== game.clubName));
         const rivale = vereine.sort((a, b) => b.strength - a.strength)[Math.floor(Math.random() * Math.min(5, vereine.length))];
-        const gebot = Math.round(p.sellerMinimum * (1.05 + Math.random() * 0.12) / 1000) * 1000;
+        const gebot = pokerRunden(p.sellerMinimum * (1.05 + Math.random() * 0.12));
         t.rival = { club: rivale ? rivale.name : 'Ein Konkurrent', bid: gebot };
         p.sellerMinimum = gebot + 1000;
         p.askingPrice = Math.max(p.askingPrice, p.sellerMinimum);
@@ -187,7 +192,7 @@ function submitPokerOffer() {
         t.patience -= frech ? 2 : 1;
         if (t.patience <= 0) {
             p.pokerBroken = true;
-            p.askingPrice = Math.round(p.askingPrice * 1.1 / 1000) * 1000;
+            p.askingPrice = pokerRunden(p.askingPrice * 1.1);
             t.log.push(`🚪 ${p.sellerClub} bricht die Gespräche ab. Nur noch Sofortkauf für ${formatVal(p.askingPrice)}.`);
             showToast(`${p.sellerClub} bricht die Verhandlung ab - der Preis steigt auf ${formatVal(p.askingPrice)}.`, 'error', 5000);
             transferPoker = null;
@@ -195,7 +200,7 @@ function submitPokerOffer() {
             return;
         }
         // Gegenangebot: der Verkäufer kommt ein Stück entgegen, nie unter die Schmerzgrenze.
-        p.askingPrice = Math.max(p.sellerMinimum, Math.round((p.askingPrice - (p.askingPrice - angebot) * (frech ? 0.05 : 0.35)) / 1000) * 1000);
+        p.askingPrice = Math.max(p.sellerMinimum, pokerRunden(p.askingPrice - (p.askingPrice - angebot) * (frech ? 0.05 : 0.35)));
         t.log.push(frech ? `😠 ${p.sellerClub}: „Das ist eine Frechheit.“ Forderung bleibt bei ${formatVal(p.askingPrice)}.` : `${p.sellerClub} kontert: ${formatVal(p.askingPrice)}.`);
         if (tickPokerRival(p)) return;
     }

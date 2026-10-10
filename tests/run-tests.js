@@ -2147,6 +2147,33 @@ async function testCupAndLeagueSameDay(browser) {
     await page.close();
 }
 
+async function testEntlassungsGrund(browser) {
+    console.log('\n[25.34] Entlassung: die Meldung nennt Vertrauen, Serie und Erwartung');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        game.season = 4; game.boardGraceSeason = 0; game.sackPending = false;
+        game.boardSat = 12; game.boardSatVerlauf = [20, 19, 18, 17, 16, 15, 14];
+        game.lowBoardSatStreak = 99; game.legendStatus = false;
+        game.seasonExpectation = { expectedRank: 3 };
+        noticeQueue = [];
+        checkSeasonEndSacking(14);
+        const m = noticeQueue.find(x => x.titel && x.titel.includes('Entlassen'));
+        return {
+            entlassen: game.sackPending === true,
+            meldung: !!m,
+            grund: !!m && m.text.includes('Grund: Vertrauen 12 von 100') && m.text.includes('Erwartung Platz 3') && m.text.includes('erreicht: Platz 14'),
+            danach: !!m && typeof m.danach === 'function'
+        };
+    });
+    assert(r.entlassen && r.meldung, 'Bei dauerhaft niedrigem Vertrauen am Saisonende folgt die Entlassung mit Meldung');
+    assert(r.grund, 'Die Entlassungsmeldung nennt Vertrauen, Serie, Erwartung und erreichten Platz');
+    assert(r.danach, 'Die Meldung führt weiter zum Neustart (bestätigen)');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei der Entlassung');
+    await page.close();
+}
+
 async function testBoardEarlyWarning(browser) {
     console.log('\n[25.24] Vorstand: Frühwarnung schon unter 50 Zufriedenheit, einmal pro Saison');
     const { page, consoleErrors } = await freshPage(browser);
@@ -9574,6 +9601,7 @@ async function main() {
         testTvAdvanceGracePeriod,
         testCupAndLeagueSameDay,
         testBoardEarlyWarning,
+        testEntlassungsGrund,
         testEnglishUi,
         testSwapDeals,
         testPlayerProfile,

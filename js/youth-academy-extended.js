@@ -198,6 +198,7 @@ function renderYouthAcademyPanel() {
         html += `<div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:4px; font-size:9px;">
             <div><strong>${idx + 1}. ${p.name}</strong> (${p.pos} | Str: ${p.strength})</div>
             <div style="color:var(--text-muted); font-size:8px;">Potenzial: ${typeof getYouthPotentialText === 'function' ? getYouthPotentialText(p) : '?'} | Talentwert: ${p.talentScore}</div>
+            ${p.potentialRevealed && typeof getYouthOfferSquadHint === 'function' ? `<div style="color:var(--text-muted); font-size:8px;">${getYouthOfferSquadHint(p)}</div>` : ''}
             <div style="color:var(--accent); font-size:8px;">${trend}</div>
         </div>`;
     });
