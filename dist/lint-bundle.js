@@ -2204,6 +2204,7 @@ function getOwnDerbyRivals() {
             <span class="label">Geburtsdatum:</span><span class="val">${p.birthDate || '-'}</span>
             <span class="label">Rating:</span><span class="val">${p.strength}</span>
             ${typeof p.potential === 'number' && typeof getYouthPotentialText === 'function' ? `<span class="label">Potenzial:</span><span class="val">${getYouthPotentialText(p)}</span>` : ''}
+            ${p.potentialRevealed && typeof p.potential === 'number' && typeof getKaderMedian === 'function' && getKaderMedian() !== null ? `<span class="label">Kader-Median:</span><span class="val">${getKaderMedian()} (Potenzial ${p.potential < getKaderMedian() ? 'darunter' : 'erreicht oder darüber'})</span>` : ''}
             ${(pool === 'squad' || pool === 'secondTeam') && typeof getTrainingGainsLabel === 'function' ? `<span class="label">Trainingsplus:</span><span class="val">${getTrainingGainsLabel(p)}</span>` : ''}
             <span class="label">Moral:</span><span class="val">${p.morale ?? '-'}</span>
             <span class="label">Fitness:</span><span class="val">${p.fitness ?? '-'}</span>
@@ -11520,7 +11521,7 @@ function initOneHand() {
         box.innerHTML = aktiv
             ? `<div class="box" style="font-size:10px; border-left-color:var(--danger); margin:4px 0;">${en
                 ? `📉 The board is restless (${Math.round(game.boardSat)}). Wins in the league raise trust; the winter talk (matchdays 18-20) is the chance to negotiate expectation or budget.`
-                : `📉 Der Vorstand ist unruhig (${Math.round(game.boardSat)}). Siege im Liga-Spiel heben das Vertrauen; das Wintergespräch (Spieltag 18-20) ist die Gelegenheit, Erwartung oder Budget zu verhandeln.`}</div>`
+                : `📉 Der Vorstand ist unruhig (${Math.round(game.boardSat)}${game.seasonExpectation && game.seasonExpectation.expectedRank ? `, Erwartung Platz ${game.seasonExpectation.expectedRank}` : ''}). Siege im Liga-Spiel heben das Vertrauen; das Wintergespräch (Spieltag 18-20) ist die Gelegenheit, Erwartung oder Budget zu verhandeln.`}</div>`
             : '';
     }
 
@@ -24290,10 +24291,15 @@ function rejectYouthOffer(offerId) {
 // Entscheidungshilfe (25.33): Potenzial gegen den Kader-Median. Im Bundesliga-Langzeittest kostete der
 // Verkauf von Talenten unter dem Median die erste Elf nichts messbar (Elf -1,1 gegenüber -1,4 zum
 // Ligaschnitt, auch mit Median + 5), brachte aber 16 bis 45 Mio. € je 10 Saisons.
-function getYouthOfferSquadHint(p, modus) {
+// Kader-Median der Stärke (25.36): ein Wert für Jugend, Angebote, Profivertrag und Spielerkarte
+function getKaderMedian() {
     const staerken = squad.map(s => s.strength || 0).sort((a, b) => a - b);
-    if (!staerken.length) return '';
-    const median = staerken[Math.floor(staerken.length / 2)];
+    return staerken.length ? staerken[Math.floor(staerken.length / 2)] : null;
+}
+
+function getYouthOfferSquadHint(p, modus) {
+    const median = getKaderMedian();
+    if (median === null) return '';
     if (!p.potentialRevealed) return `Kader-Median ${median}, Potenzial unbekannt - der Potenzial-Check zeigt, ob er den Kader erreicht.`;
     const pot = typeof getYouthPotentialText === 'function' ? getYouthPotentialText(p) : p.potential;
     // modus 'profi' (Profivertrag-Entscheidung, 25.35): derselbe Vergleich, andere Folge

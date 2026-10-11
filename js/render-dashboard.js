@@ -11,7 +11,7 @@
         box.innerHTML = aktiv
             ? `<div class="box" style="font-size:10px; border-left-color:var(--danger); margin:4px 0;">${en
                 ? `📉 The board is restless (${Math.round(game.boardSat)}). Wins in the league raise trust; the winter talk (matchdays 18-20) is the chance to negotiate expectation or budget.`
-                : `📉 Der Vorstand ist unruhig (${Math.round(game.boardSat)}). Siege im Liga-Spiel heben das Vertrauen; das Wintergespräch (Spieltag 18-20) ist die Gelegenheit, Erwartung oder Budget zu verhandeln.`}</div>`
+                : `📉 Der Vorstand ist unruhig (${Math.round(game.boardSat)}${game.seasonExpectation && game.seasonExpectation.expectedRank ? `, Erwartung Platz ${game.seasonExpectation.expectedRank}` : ''}). Siege im Liga-Spiel heben das Vertrauen; das Wintergespräch (Spieltag 18-20) ist die Gelegenheit, Erwartung oder Budget zu verhandeln.`}</div>`
             : '';
     }
 
