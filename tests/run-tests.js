@@ -2614,6 +2614,39 @@ async function testPersonalGrundAnzeige(browser) {
     await page.close();
 }
 
+async function testVorstandHub(browser) {
+    console.log('\n[25.49] Vorstand-Hub: Vorstandsraum und Budgets liegen zusammen');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        const out = {};
+        showScreen('screen-vorstand-raum');
+        const hub = document.getElementById('screen-hub-vorstand');
+        out.hubSichtbar = hub.style.display === 'block';
+        out.raumSichtbar = document.getElementById('screen-vorstand-raum').style.display === 'block';
+        out.budgetAus = document.getElementById('screen-vorstand-budget').style.display === 'none';
+        showScreen('screen-vorstand-budget');
+        out.budgetSichtbar = document.getElementById('screen-vorstand-budget').style.display === 'block';
+        out.raumAus = document.getElementById('screen-vorstand-raum').style.display === 'none';
+        out.budgetButton = !!document.getElementById('btn-board-budget-transfer');
+        out.raumBox = !!document.getElementById('board-room-box');
+        // Die Budgets sind aus den Finanzen ausgezogen
+        out.nichtMehrInFinanzen = !document.getElementById('subtab-fin-budget').querySelector('#btn-board-budget-transfer');
+        return out;
+    });
+    assert(r.hubSichtbar, 'Der Vorstand-Hub wird angezeigt');
+    assert(r.raumSichtbar, 'Reiter Vorstandsraum ist sichtbar');
+    assert(r.budgetAus, 'Reiter Budgets ist beim Öffnen des Raums ausgeblendet');
+    assert(r.budgetSichtbar, 'Reiter Budgets lässt sich öffnen');
+    assert(r.raumAus, 'Beim Wechsel auf Budgets wird der Raum ausgeblendet');
+    assert(r.budgetButton, 'Budget-Verhandlung (Knopf) ist im Vorstand-Hub vorhanden');
+    assert(r.raumBox, 'Vorstandsraum-Kasten ist im Hub vorhanden');
+    assert(r.nichtMehrInFinanzen, 'Die Budget-Verhandlung steht nicht mehr in den Finanzen');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler im Vorstand-Hub');
+    await page.close();
+}
+
 async function testBoardEarlyWarning(browser) {
     console.log('\n[25.24] Vorstand: Frühwarnung schon unter 50 Zufriedenheit, einmal pro Saison');
     const { page, consoleErrors } = await freshPage(browser);
@@ -10084,6 +10117,7 @@ async function main() {
         testPersonalEinstellenHandy,
         testAnalystErnaehrung,
         testPersonalGrundAnzeige,
+        testVorstandHub,
         testEntlassungsGrund,
         testEnglishUi,
         testSwapDeals,

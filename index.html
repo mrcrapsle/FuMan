@@ -514,6 +514,9 @@
             <button class="nav-btn" onclick="showScreen('screen-calendar')" data-i18n="nav_calendar">📅 Kalender & Termine</button>
             <button class="nav-btn" onclick="showScreen('screen-inbox')" id="nav-btn-inbox"><span data-i18n="nav_inbox">📬 Postfach</span> <span id="sidebar-inbox-badge" class="badge-count" style="display:none; margin-left:auto;">0</span></button>
 
+            <div class="nav-category">Vorstand</div>
+            <button class="nav-btn" onclick="showScreen('screen-vorstand-raum')">🏛️ Vorstand & Budgets</button>
+
             <div class="nav-category" data-i18n="nav_category_team">Team & Kader</div>
             <button class="nav-btn" onclick="showScreen('screen-squad')" data-i18n="nav_squad">⚽ Kader & 3D Taktik</button>
             <button class="nav-btn" onclick="showScreen('screen-second-team')" data-i18n="nav_second_team">🥈 Zweite Mannschaft</button>
@@ -523,6 +526,7 @@
 
             <div class="nav-category" data-i18n="nav_category_infra">Ausbau & Infrastruktur</div>
             <button class="nav-btn" onclick="showScreen('screen-stadium')" data-i18n="nav_stadium">🏟️ Ausbau & Infrastruktur</button>
+            <button class="nav-btn" onclick="showScreen('screen-staff')">👔 Personal</button>
 
             <div class="nav-category" data-i18n="nav_category_finance">Finanzen & Wirtschaft</div>
             <button class="nav-btn" onclick="showScreen('screen-finances')" data-i18n="nav_finances">🏦 Finanzen & Kapitalmarkt</button>
@@ -535,6 +539,7 @@
             <div class="nav-category" data-i18n="nav_category_career">Karriere & Spezial</div>
             <button class="nav-btn special-gold" onclick="showScreen('screen-manager-tree')" data-i18n="nav_manager_tree">🌳 Manager-Talentbaum</button>
             <button class="nav-btn special-red" onclick="showScreen('screen-private')" data-i18n="nav_private">🎩 Spezial & Privatleben</button>
+            <div class="nav-category">System & Hilfe</div>
             <button class="nav-btn" onclick="showScreen('screen-lexicon')" data-i18n="nav_lexicon">📖 Spiel-Lexikon</button>
             <button class="nav-btn special-gold" onclick="showScreen('screen-admin')" data-i18n="nav_admin">🛠️ Admin & Cheats PRO</button>
 
@@ -694,6 +699,39 @@
                 </div>
             </div>
 
+            <!-- VORSTAND: Hub mit zwei Reitern (25.49). Alles, was zum Vorstand gehört, liegt hier. -->
+            <div id="screen-hub-vorstand" style="display:none;">
+                <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(2, 1fr); gap:4px; margin-bottom:8px;">
+                    <button onclick="showScreen('screen-vorstand-raum')" id="hubtab-btn-screen-vorstand-raum" class="btn-action" style="font-size:10px; padding:6px 4px;">🏛️ Vorstandsraum</button>
+                    <button onclick="showScreen('screen-vorstand-budget')" id="hubtab-btn-screen-vorstand-budget" class="btn-secondary" style="font-size:10px; padding:6px 4px;">💼 Budgets</button>
+                </div>
+                <div id="screen-vorstand-raum" style="display:none;">
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--gold);">🏛️ VORSTAND</div>
+                        <div id="board-room-box"></div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header">📋 ERWARTUNG & WARNUNG</div>
+                        <div id="dash-board-warn-line"></div>
+                    </div>
+                </div>
+                <div id="screen-vorstand-budget" style="display:none;">
+                    <div class="panel">
+                        <div class="panel-header">💼 BUDGETS & VORSTANDS-VERHANDLUNGEN</div>
+                        <div id="insolvency-status-box" class="box" style="display:none; border-color:var(--danger); color:var(--danger); font-size:11px; margin-bottom:6px;"></div>
+                        <div style="font-size:11px; margin-bottom:2px;" id="budget-transfer-bar-label">Transferbudget: 0 €</div>
+                        <div style="font-size:11px; margin-bottom:2px;" id="budget-wage-bar-label">Gehaltsbudget: 0 / 0</div>
+                        <div style="background:#1e293b; border-radius:6px; height:10px; overflow:hidden; margin-bottom:8px;">
+                            <div id="budget-wage-bar-fill" style="height:100%; width:0%; background:var(--primary); transition:width 0.3s;"></div>
+                        </div>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
+                            <button onclick="negotiateBoardBudget('transfer')" id="btn-board-budget-transfer" class="btn-secondary">Transferbudget fordern</button>
+                            <button onclick="negotiateBoardBudget('wage')" id="btn-board-budget-wage" class="btn-secondary">Gehaltsbudget fordern</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- 1. DASHBOARD -->
             <div id="screen-dashboard">
                 <button onclick="showScreen('screen-office')" class="btn-action" style="margin-bottom:10px;" data-i18n="office_enter">🏢 Ins Managerbüro</button>
@@ -747,7 +785,6 @@
                     <div id="dash-joboffer-box"></div>
                     <div id="dash-onboarding-box"></div>
                     <div id="dash-autosave-line" style="font-size:10px; color:var(--text-muted); padding:2px 4px;"></div>
-                    <div id="dash-board-warn-line"></div>
                     <div id="dash-relegation-box"></div>
                     <div id="dash-season-events-box"></div>
                     <div id="dash-season-end-actions" style="display:none;">
@@ -871,10 +908,6 @@
                 <div class="panel">
                     <div class="panel-header" style="color:var(--gold);">🗞️ MEDIENABTEILUNG</div>
                     <div id="media-department-box"></div>
-                </div>
-                <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">🏛️ VORSTAND</div>
-                    <div id="board-room-box"></div>
                 </div>
                 <div class="panel">
                     <div class="panel-header" style="color:var(--gold);">
@@ -1111,19 +1144,6 @@
                     <div class="panel">
                         <div class="panel-header">⚖️ FINANCIAL FAIRPLAY</div>
                         <div id="ffp-status-box"></div>
-                    </div>
-                    <div class="panel">
-                        <div class="panel-header">💼 BUDGETS & VORSTANDS-VERHANDLUNGEN</div>
-                        <div id="insolvency-status-box" class="box" style="display:none; border-color:var(--danger); color:var(--danger); font-size:11px; margin-bottom:6px;"></div>
-                        <div style="font-size:11px; margin-bottom:2px;" id="budget-transfer-bar-label">Transferbudget: 0 €</div>
-                        <div style="font-size:11px; margin-bottom:2px;" id="budget-wage-bar-label">Gehaltsbudget: 0 / 0</div>
-                        <div style="background:#1e293b; border-radius:6px; height:10px; overflow:hidden; margin-bottom:8px;">
-                            <div id="budget-wage-bar-fill" style="height:100%; width:0%; background:var(--primary); transition:width 0.3s;"></div>
-                        </div>
-                        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
-                            <button onclick="negotiateBoardBudget('transfer')" id="btn-board-budget-transfer" class="btn-secondary">Transferbudget fordern</button>
-                            <button onclick="negotiateBoardBudget('wage')" id="btn-board-budget-wage" class="btn-secondary">Gehaltsbudget fordern</button>
-                        </div>
                     </div>
                     <div class="panel">
                         <div class="panel-header" style="color:var(--gold);">📺 MEDIENRECHTE & TV-VERTRAG</div>

@@ -11203,7 +11203,8 @@ function renderBoardRoomPanel() {
         'screen-hub-ausbau': ['screen-stadium', 'screen-campus', 'screen-staff', 'screen-fans', 'screen-real-estate'],
         'screen-hub-kaderplanung': ['screen-transfer', 'screen-scouting-global', 'screen-youth', 'screen-contracts', 'screen-squad-planning'],
         'screen-hub-wettbewerbe': ['screen-league', 'screen-europe', 'screen-history'],
-        'screen-hub-spezial': ['screen-private', 'screen-underworld', 'screen-premium']
+        'screen-hub-spezial': ['screen-private', 'screen-underworld', 'screen-premium'],
+        'screen-hub-vorstand': ['screen-vorstand-raum', 'screen-vorstand-budget']
     };
     // Kehrt HUB_MEMBERS um: Mitglieds-Screen -> zugehöriger Hub
     const SUB_SCREEN_TO_HUB = {};
@@ -11356,7 +11357,7 @@ function renderBoardRoomPanel() {
             'screen-manager-tree', 'screen-admin', 'screen-cup', 'screen-lexicon',
             'screen-hub-wirtschaft', 'screen-hub-finanzen', 'screen-hub-ausbau',
             'screen-hub-kaderplanung', 'screen-hub-wettbewerbe', 'screen-hub-spezial',
-            'screen-prematch-press', 'screen-matchday'
+            'screen-prematch-press', 'screen-matchday', 'screen-hub-vorstand'
         ];
         // Wenn screenId ein Hub-Mitglied ist (z.B. "screen-stocks"), muss der ÜBERGEORDNETE
         // Hub-Container ("screen-hub-finanzen") sichtbar geschaltet werden, nicht das Mitglied direkt.
