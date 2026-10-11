@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.106', date: '11.10.2026', features: 'Phase 25.36: Vorstand-Erwartung in der Dashboard-Warnung, Kader-Median in der Spielerkarte, Auswertungsskript für Bot-Läufe, CLAUDE.md gestrafft mit Historie im Archiv' };
+    const GAME_VERSION = { number: '3.107', date: '11.10.2026', features: 'Phase 25.37: Transferpoker-Messung in Liga 5 und 6, Ladezustand statt fester Wartezeit in Tests, Tests für Dashboard-Erwartung und Spielerkarte, Karriere-Stand mit gesetzter Entlassung' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
