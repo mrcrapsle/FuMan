@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.117', date: '11.10.2026', features: 'Phase 25.49: Vorstand-Hub mit Vorstandsraum und Budgets, Menü in kürzere Gruppen, Personal im Menü, Analyst und Ernährungsberater mit Aufgaben' };
+    const GAME_VERSION = { number: '3.118', date: '11.10.2026', features: 'Phase 25.50: Veröffentlichung repariert (Workflow-Datei war ungültig), damit Vorstand-Hub und alle Änderungen seit 3.53 online sind' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
