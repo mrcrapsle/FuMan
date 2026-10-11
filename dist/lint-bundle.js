@@ -495,7 +495,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.112', date: '11.10.2026', features: 'Phase 25.42: Legenden behalten ihre Rückennummer, Transferbilanz im Kontoauszug, Reisekosten nach Entfernung, Spielernotizen und Saisonwette im Vorstandsraum' };
+    const GAME_VERSION = { number: '3.113', date: '11.10.2026', features: 'Phase 25.43: Entscheidungen zur Legenden-Sperre und zu den Zahlen dokumentiert, Historie aktualisiert' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

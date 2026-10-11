@@ -7760,6 +7760,10 @@ async function testBoardRestart(browser) {
     console.log('\n[25.6] Vorstand: Neustart nach dem Abstieg, Mitgliederversammlung findet automatisch statt');
     const { page, consoleErrors } = await freshPage(browser);
     page.on('dialog', d => d.accept());
+    // Die Notbesetzung ist zufällig: die Schwelle zum Ligaschnitt wird mit festem Seed geprüft (sonst unter Last selten rot)
+    await page.addInitScript(() => { let seed = 20251010; Math.random = () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; });
+    await page.reload();
+    await page.waitForFunction(() => !document.getElementById('app-loading'), null, { timeout: 20000 }).catch(() => null);
     const r = await page.evaluate(() => {
         try {
             closeTutorial();
