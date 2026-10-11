@@ -25,17 +25,17 @@
         let toggleBox = document.getElementById('sponsor-leaderboard-toggle');
         if (toggleBox) {
             toggleBox.innerHTML = `
-                <button onclick="setSponsorLeaderboardMode('sponsor')" class="${sponsorLeaderboardMode === 'sponsor' ? 'btn-action' : 'btn-secondary'}" style="font-size:9px; padding:4px 8px;">Nach Sponsor</button>
-                <button onclick="setSponsorLeaderboardMode('category')" class="${sponsorLeaderboardMode === 'category' ? 'btn-action' : 'btn-secondary'}" style="font-size:9px; padding:4px 8px;">Nach Branche</button>
+                <button onclick="setSponsorLeaderboardMode('sponsor')" class="${sponsorLeaderboardMode === 'sponsor' ? 'btn-action' : 'btn-secondary'}" style="font-size:var(--fs-caption); padding:4px 8px;">Nach Sponsor</button>
+                <button onclick="setSponsorLeaderboardMode('category')" class="${sponsorLeaderboardMode === 'category' ? 'btn-action' : 'btn-secondary'}" style="font-size:var(--fs-caption); padding:4px 8px;">Nach Branche</button>
             `;
         }
         let source = sponsorLeaderboardMode === 'category' ? (game.sponsorEarningsByCategory || {}) : (game.sponsorEarningsHistory || {});
         let entries = Object.entries(source).sort((a, b) => b[1] - a[1]).slice(0, 5);
         if (entries.length === 0) {
-            box.innerHTML = '<div class="box" style="font-size:10px; color:#94a3b8;">Noch keine Sponsoreneinnahmen erfasst.</div>';
+            box.innerHTML = '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Sponsoreneinnahmen erfasst.</div>';
             return;
         }
-        box.innerHTML = entries.map(([name, total], idx) => `<div class="box" style="display:flex; justify-content:space-between; font-size:10px;"><span>#${idx + 1} ${name}</span><strong style="color:var(--accent);">${formatVal(Math.round(total))}</strong></div>`).join('');
+        box.innerHTML = entries.map(([name, total], idx) => `<div class="box" style="display:flex; justify-content:space-between; font-size:var(--fs-small);"><span>#${idx + 1} ${name}</span><strong style="color:var(--accent);">${formatVal(Math.round(total))}</strong></div>`).join('');
     }
 
     function renderStockTicker() {
@@ -172,7 +172,7 @@
                 insolvencyBox.style.display = 'block';
                 insolvencyBox.innerHTML = `⚠️ Konto seit <strong>${game.negativeStreak}</strong> Spieltagen im Minus.` +
                     (game.transferEmbargo ? ' <strong style="color:var(--danger);">TRANSFERSPERRE AKTIV!</strong>' : '') +
-                    `<br><span style="font-size:9px;">Bei 6 Spieltagen in Folge droht eine Transfersperre, bei Vielfachen von 10 ein Zwangsverkauf, bei Vielfachen von 15 Punktabzug.</span>`;
+                    `<br><span style="font-size:var(--fs-caption);">Bei 6 Spieltagen in Folge droht eine Transfersperre, bei Vielfachen von 10 ein Zwangsverkauf, bei Vielfachen von 15 Punktabzug.</span>`;
             } else {
                 insolvencyBox.style.display = 'none';
             }
@@ -182,7 +182,7 @@
         let loansList = document.getElementById('active-loans-list');
         if (loansList) {
             loansList.innerHTML = activeLoans.length === 0
-                ? '<div style="font-size:10px; color:#64748b;">Keine laufenden Kredite.</div>'
+                ? '<div style="font-size:var(--fs-small); color:var(--text-muted);">Keine laufenden Kredite.</div>'
                 : activeLoans.map(l => `<div class="player-row"><span>${l.tierName}: noch ${formatVal(l.installment)}/SpT für ${l.matchdaysLeft} Spieltage</span></div>`).join('');
         }
         let legacyDebtEl = document.getElementById('legacy-loan-debt');
@@ -193,8 +193,8 @@
         if (fdBox) {
             let fd = financeCentralState.fixedDeposit;
             fdBox.innerHTML = fd
-                ? `<div class="box" style="font-size:10px;">🏦 Festgeld: ${formatVal(fd.principal)} → ${formatVal(fd.payout)} in ${fd.matchdaysLeft} SpT</div>`
-                : '<div style="font-size:9px; color:var(--text-muted);">Keine aktive Festgeldanlage.</div>';
+                ? `<div class="box" style="font-size:var(--fs-small);">🏦 Festgeld: ${formatVal(fd.principal)} → ${formatVal(fd.payout)} in ${fd.matchdaysLeft} SpT</div>`
+                : '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Keine aktive Festgeldanlage.</div>';
         }
         let taxBtn = document.getElementById('btn-tax-advisor');
         if (taxBtn) {
@@ -225,7 +225,7 @@
         if (investorBtn) investorBtn.innerText = financeCentralState.strategicInvestorTaken ? '💼 Strategischer Investor bereits an Bord' : '💼 Strategischen Investor aufnehmen [+400.000 €]';
         let loansListExt = document.getElementById('active-loans-list');
         if (loansListExt && activeLoans.length > 0) {
-            loansListExt.innerHTML = activeLoans.map(l => `<div class="player-row"><span>${l.tierName}: noch ${formatVal(l.installment)}/SpT für ${l.matchdaysLeft} Spieltage</span><button onclick="specialRepayLoan(${l.id})" class="btn-secondary" style="width:auto; font-size:8px;">Sondertilgung</button></div>`).join('');
+            loansListExt.innerHTML = activeLoans.map(l => `<div class="player-row"><span>${l.tierName}: noch ${formatVal(l.installment)}/SpT für ${l.matchdaysLeft} Spieltage</span><button onclick="specialRepayLoan(${l.id})" class="btn-secondary" style="width:auto; font-size:var(--fs-micro);">Sondertilgung</button></div>`).join('');
         }
 
     }
@@ -348,14 +348,14 @@
             let val = prices[category];
             return `
                 <div style="margin-bottom:10px;">
-                    <div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:2px;">
+                    <div style="display:flex; justify-content:space-between; font-size:var(--fs-small); margin-bottom:2px;">
                         <strong>${label}</strong>
-                        <strong style="color:var(--accent); font-size:13px;">${val} ${unit}</strong>
+                        <strong style="color:var(--accent); font-size:var(--fs-title-sm);">${val} ${unit}</strong>
                     </div>
                     <div style="display:flex; align-items:center; gap:6px;">
-                        <span style="font-size:8px; color:var(--text-muted);">${range.min}€</span>
+                        <span style="font-size:var(--fs-micro); color:var(--text-muted);">${range.min}€</span>
                         <input type="range" min="${range.min}" max="${range.max}" value="${val}" oninput="updateTicketPriceSlider('${category}', this.value)" style="flex:1;">
-                        <span style="font-size:8px; color:var(--text-muted);">${range.max}€</span>
+                        <span style="font-size:var(--fs-micro); color:var(--text-muted);">${range.max}€</span>
                     </div>
                 </div>`;
         };
@@ -364,19 +364,19 @@
         let dauerkartenPct = kapazitaet > 0 ? Math.round(((game.seasonTicketHolders || 0) / kapazitaet) * 100) : 0;
         let marktpreisDauerkarte = typeof getMarketSeasonTicketPrice === 'function' ? getMarketSeasonTicketPrice() : prices.dauerkarte;
         box.innerHTML = `
-            <div style="font-size:9px; color:var(--text-muted); margin-bottom:10px;">Marktüblich: Steh ${getMarketTicketPrice('steh')}€ · Sitz ${getMarketTicketPrice('sitz')}€ · VIP ${getMarketTicketPrice('vip')}€ · Dauerkarte ${marktpreisDauerkarte}€</div>
+            <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:10px;">Marktüblich: Steh ${getMarketTicketPrice('steh')}€ · Sitz ${getMarketTicketPrice('sitz')}€ · VIP ${getMarketTicketPrice('vip')}€ · Dauerkarte ${marktpreisDauerkarte}€</div>
             ${sliderRow('Stehplatz', 'steh')}
             ${sliderRow('Sitzplatz', 'sitz')}
             ${sliderRow('VIP-Loge', 'vip')}
             ${sliderRow('Dauerkarte', 'dauerkarte')}
-            <div class="box" style="font-size:9px; margin-bottom:10px;">🎟️ Aktuell <strong>${(game.seasonTicketHolders || 0).toLocaleString('de-DE')}</strong> Dauerkarten (${dauerkartenPct}% der Plätze). Ein neuer Preis wirkt erst beim nächsten Saisonverkauf - die Vorschau rechts zeigt nur das Tagesgeschäft.</div>
+            <div class="box" style="font-size:var(--fs-caption); margin-bottom:10px;">🎟️ Aktuell <strong>${(game.seasonTicketHolders || 0).toLocaleString('de-DE')}</strong> Dauerkarten (${dauerkartenPct}% der Plätze). Ein neuer Preis wirkt erst beim nächsten Saisonverkauf - die Vorschau rechts zeigt nur das Tagesgeschäft.</div>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin:12px 0;">
-                <div class="box"><div style="font-size:8px; color:var(--text-muted);">ERWARTETE ZUSCHAUER</div><div style="font-size:16px; font-weight:900;">${stats.totalAtt.toLocaleString('de-DE')}</div><div style="font-size:8px; color:var(--text-muted);">Steh ${stats.stehAtt.toLocaleString('de-DE')} · Sitz ${stats.sitzAtt.toLocaleString('de-DE')} · VIP ${stats.vipAtt} · Dauerkarte ${stats.dauerkartenAnwesend.toLocaleString('de-DE')}</div></div>
-                <div class="box"><div style="font-size:8px; color:var(--text-muted);">AUSLASTUNG</div><div style="font-size:16px; font-weight:900; color:${stats.utilization>=70?'var(--primary)':'var(--accent)'};">${stats.utilization.toFixed(1)}%</div></div>
-                <div class="box"><div style="font-size:8px; color:var(--text-muted);">TAGESKASSE JE HEIMSPIEL</div><div style="font-size:16px; font-weight:900; color:var(--gold);">${formatVal(stats.matchRevenue)}</div><div style="font-size:8px; color:${changePercent>=0?'var(--primary)':'var(--danger)'};">${changePercent>=0?'+':''}${changePercent.toFixed(1)}% ggü. jetzt</div></div>
-                <div class="box"><div style="font-size:8px; color:var(--text-muted);">HOCHRECHNUNG SAISON</div><div style="font-size:16px; font-weight:900; color:var(--gold);">${formatVal(stats.seasonProjection)}</div><div style="font-size:8px; color:var(--text-muted);">17 Heimspiele, geschätzt (ohne Dauerkarten-Erlös)</div></div>
+                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">ERWARTETE ZUSCHAUER</div><div style="font-size:var(--fs-title); font-weight:900;">${stats.totalAtt.toLocaleString('de-DE')}</div><div style="font-size:var(--fs-micro); color:var(--text-muted);">Steh ${stats.stehAtt.toLocaleString('de-DE')} · Sitz ${stats.sitzAtt.toLocaleString('de-DE')} · VIP ${stats.vipAtt} · Dauerkarte ${stats.dauerkartenAnwesend.toLocaleString('de-DE')}</div></div>
+                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">AUSLASTUNG</div><div style="font-size:var(--fs-title); font-weight:900; color:${stats.utilization>=70?'var(--primary)':'var(--accent)'};">${stats.utilization.toFixed(1)}%</div></div>
+                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">TAGESKASSE JE HEIMSPIEL</div><div style="font-size:var(--fs-title); font-weight:900; color:var(--gold);">${formatVal(stats.matchRevenue)}</div><div style="font-size:var(--fs-micro); color:${changePercent>=0?'var(--primary)':'var(--danger)'};">${changePercent>=0?'+':''}${changePercent.toFixed(1)}% ggü. jetzt</div></div>
+                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">HOCHRECHNUNG SAISON</div><div style="font-size:var(--fs-title); font-weight:900; color:var(--gold);">${formatVal(stats.seasonProjection)}</div><div style="font-size:var(--fs-micro); color:var(--text-muted);">17 Heimspiele, geschätzt (ohne Dauerkarten-Erlös)</div></div>
             </div>
-            <div style="font-size:10px; margin-bottom:10px;">${feedbackText}</div>
+            <div style="font-size:var(--fs-small); margin-bottom:10px;">${feedbackText}</div>
             <button onclick="commitTicketPrices()" class="btn-action" style="margin-bottom:6px;">✅ Preise übernehmen</button>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
                 <button onclick="applyTicketRecommendation()" class="btn-gold">💡 Empfehlung übernehmen</button>
@@ -493,7 +493,7 @@
         let netPerMonth = netEl ? parseInt(netEl.innerText.replace(/[^\d-]/g, '')) || 0 : 0;
         let netPerMatchday = Math.round(netPerMonth / 4);
         let projections = [1, 2, 3, 4].map(n => Math.round(game.money + netPerMatchday * n));
-        box.innerHTML = `<div class="box" style="font-size:9px;">📈 Prognose (bei gleichbleibender Bilanz): ${projections.map((v, i) => `SpT+${i+1}: <strong style="color:${v >= 0 ? 'var(--primary)' : 'var(--danger)'};">${formatVal(v)}</strong>`).join(' · ')}</div>`;
+        box.innerHTML = `<div class="box" style="font-size:var(--fs-caption);">📈 Prognose (bei gleichbleibender Bilanz): ${projections.map((v, i) => `SpT+${i+1}: <strong style="color:${v >= 0 ? 'var(--primary)' : 'var(--danger)'};">${formatVal(v)}</strong>`).join(' · ')}</div>`;
     }
 
     // 2. Festgeldanlage: Geld für eine feste Laufzeit anlegen, garantierte Rendite am Ende,
@@ -620,7 +620,7 @@
         let box = document.getElementById('money-history-chart-box');
         if (!box) return;
         let hist = financeCentralState.moneyHistory || [];
-        if (hist.length < 2) { box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Noch nicht genug Daten.</div>'; return; }
+        if (hist.length < 2) { box.innerHTML = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch nicht genug Daten.</div>'; return; }
         let values = hist.map(h => h.money);
         let minV = Math.min(...values, 0), maxV = Math.max(...values, 1);
         box.innerHTML = `<div style="display:flex; align-items:flex-end; gap:2px; height:50px; background:rgba(0,0,0,0.2); border-radius:6px; padding:5px;">
@@ -695,7 +695,7 @@
         let pct = maxAmount > 0 ? Math.round((amount / maxAmount) * 100) : 0;
         return `
             <div style="margin-bottom:4px;">
-                <div style="display:flex; justify-content:space-between; gap:4px; font-size:11px;">
+                <div style="display:flex; justify-content:space-between; gap:4px; font-size:var(--fs-body);">
                     <span style="min-width:0;">${label}</span><span style="color:${color}; font-weight:bold; white-space:nowrap;">${formatVal(amount)}</span>
                 </div>
                 <div style="background:#1e293b; border-radius:4px; height:4px; overflow:hidden;">
@@ -716,7 +716,7 @@
 
         let ledger = game.financeLedger || [];
         if (ledger.length === 0) {
-            box.innerHTML = `<div class="box" style="font-size:11px; color:#94a3b8;">Noch keine Spieltagsabrechnung vorhanden. Nach dem ersten Spieltag steht hier jede Buchung einzeln aufgeschlüsselt.</div>`;
+            box.innerHTML = `<div class="box" style="font-size:var(--fs-body); color:var(--text-muted);">Noch keine Spieltagsabrechnung vorhanden. Nach dem ersten Spieltag steht hier jede Buchung einzeln aufgeschlüsselt.</div>`;
             return;
         }
 
@@ -745,17 +745,17 @@
         let maxEin = Math.max(1, ...einnahmen.map(p => p.amount));
         let maxAus = Math.max(1, ...ausgaben.map(p => p.amount));
 
-        let anteil = (amount, ges) => ges > 0 ? ` <span style="color:#64748b; font-size:9px;">(${Math.round((amount / ges) * 100)}%)</span>` : '';
+        let anteil = (amount, ges) => ges > 0 ? ` <span style="color:var(--text-muted); font-size:var(--fs-caption);">(${Math.round((amount / ges) * 100)}%)</span>` : '';
 
         let verlauf = '';
         if (ledgerView === 'letzter' && ledger.length > 1) {
             verlauf = `<div class="box" style="margin-top:6px;">
-                <strong style="font-size:11px;">📈 LETZTE SPIELTAGE</strong>
+                <strong style="font-size:var(--fs-body);">📈 LETZTE SPIELTAGE</strong>
                 ${ledger.slice(-6).reverse().map(e => {
                     let s = (e.summeEin || 0) - (e.summeAus || 0);
-                    return `<div style="display:flex; justify-content:space-between; font-size:10px; margin-top:2px;">
+                    return `<div style="display:flex; justify-content:space-between; font-size:var(--fs-small); margin-top:2px;">
                         <span>${e.heimspiel ? '🏟️' : '🚌'} ST ${e.matchday} (S${e.season})</span>
-                        <span style="color:#94a3b8;">+${formatVal(e.summeEin || 0)} / -${formatVal(e.summeAus || 0)}</span>
+                        <span style="color:var(--text-muted);">+${formatVal(e.summeEin || 0)} / -${formatVal(e.summeAus || 0)}</span>
                         <span style="color:${s >= 0 ? 'var(--primary)' : 'var(--danger)'}; font-weight:bold;">${s >= 0 ? '+' : ''}${formatVal(s)}</span>
                     </div>`;
                 }).join('')}
@@ -763,22 +763,22 @@
         }
 
         box.innerHTML = `
-            <div style="font-size:10px; color:#94a3b8; margin-bottom:6px;">${kopf}</div>
+            <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:6px;">${kopf}</div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
                 <div class="box">
-                    <strong style="color:var(--primary); font-size:11px;">EINNAHMEN ${formatVal(sumEinGes)}</strong>
+                    <strong style="color:var(--primary); font-size:var(--fs-body);">EINNAHMEN ${formatVal(sumEinGes)}</strong>
                     <div style="margin-top:5px;">
-                        ${einnahmen.length ? einnahmen.map(p => ledgerRow(p.label + anteil(p.amount, sumEinGes), p.amount, maxEin, 'var(--primary)')).join('') : '<span style="font-size:10px; color:#64748b;">Keine Einnahmen verbucht.</span>'}
+                        ${einnahmen.length ? einnahmen.map(p => ledgerRow(p.label + anteil(p.amount, sumEinGes), p.amount, maxEin, 'var(--primary)')).join('') : '<span style="font-size:var(--fs-small); color:var(--text-muted);">Keine Einnahmen verbucht.</span>'}
                     </div>
                 </div>
                 <div class="box">
-                    <strong style="color:var(--danger); font-size:11px;">AUSGABEN ${formatVal(sumAusGes)}</strong>
+                    <strong style="color:var(--danger); font-size:var(--fs-body);">AUSGABEN ${formatVal(sumAusGes)}</strong>
                     <div style="margin-top:5px;">
-                        ${ausgaben.length ? ausgaben.map(p => ledgerRow(p.label + anteil(p.amount, sumAusGes), p.amount, maxAus, 'var(--danger)')).join('') : '<span style="font-size:10px; color:#64748b;">Keine Ausgaben verbucht.</span>'}
+                        ${ausgaben.length ? ausgaben.map(p => ledgerRow(p.label + anteil(p.amount, sumAusGes), p.amount, maxAus, 'var(--danger)')).join('') : '<span style="font-size:var(--fs-small); color:var(--text-muted);">Keine Ausgaben verbucht.</span>'}
                     </div>
                 </div>
             </div>
-            <div style="text-align:right; font-size:12px; margin-top:6px;">
+            <div style="text-align:right; font-size:var(--fs-body-lg); margin-top:6px;">
                 ${ledgerView === 'saison' ? 'Saison-Saldo' : 'Saldo des Spieltags'}:
                 <strong style="color:${saldo >= 0 ? 'var(--primary)' : 'var(--danger)'};">${saldo >= 0 ? '+' : ''}${formatVal(saldo)}</strong>
             </div>
@@ -952,23 +952,23 @@
     function renderTransferBilanzBox() {
         const b = getTransferBilanz(game.season);
         if (b.verkauf + b.weiterverkauf + b.kauf + b.handgeld === 0) {
-            return `<div class="box" style="margin-bottom:6px; font-size:10px; color:#94a3b8;">🔁 Noch keine Transfer-Buchungen in dieser Saison.</div>`;
+            return `<div class="box" style="margin-bottom:6px; font-size:var(--fs-small); color:var(--text-muted);">🔁 Noch keine Transfer-Buchungen in dieser Saison.</div>`;
         }
-        const zeile = (name, wert, farbe) => `<div style="display:flex; justify-content:space-between; font-size:10px; margin-top:3px;"><span>${name}</span><strong style="color:${farbe};">${formatVal(wert)}</strong></div>`;
+        const zeile = (name, wert, farbe) => `<div style="display:flex; justify-content:space-between; font-size:var(--fs-small); margin-top:3px;"><span>${name}</span><strong style="color:${farbe};">${formatVal(wert)}</strong></div>`;
         return `<div class="box" style="margin-bottom:6px;">
-            <strong style="font-size:11px;">🔁 TRANSFERBILANZ DIESE SAISON</strong>
+            <strong style="font-size:var(--fs-body);">🔁 TRANSFERBILANZ DIESE SAISON</strong>
             ${zeile('Spielerverkäufe', b.verkauf, 'var(--primary)')}
             ${zeile('Weiterverkaufsbeteiligungen', b.weiterverkauf, 'var(--primary)')}
             ${zeile('Spielerkäufe', -b.kauf, 'var(--danger)')}
             ${zeile('Handgelder', -b.handgeld, 'var(--danger)')}
-            <div style="display:flex; justify-content:space-between; font-size:11px; margin-top:4px; border-top:1px solid #1e293b; padding-top:3px;"><span>Netto</span><strong style="color:${b.netto >= 0 ? 'var(--primary)' : 'var(--danger)'};">${b.netto >= 0 ? '+' : ''}${formatVal(b.netto)}</strong></div>
+            <div style="display:flex; justify-content:space-between; font-size:var(--fs-body); margin-top:4px; border-top:1px solid #1e293b; padding-top:3px;"><span>Netto</span><strong style="color:${b.netto >= 0 ? 'var(--primary)' : 'var(--danger)'};">${b.netto >= 0 ? '+' : ''}${formatVal(b.netto)}</strong></div>
         </div>`;
     }
 
     function renderKontoauszug(box) {
         let auszug = game.kontoauszug || [];
         if (auszug.length === 0) {
-            box.innerHTML = `<div class="box" style="font-size:11px; color:#94a3b8;">Noch keine Buchungen ausserhalb der Spieltagsabrechnung. Sobald Sie kaufen, bauen, Personal einstellen oder Kredite aufnehmen, steht hier jede Bewegung mit Bereich und Kontostand.</div>`;
+            box.innerHTML = `<div class="box" style="font-size:var(--fs-body); color:var(--text-muted);">Noch keine Buchungen ausserhalb der Spieltagsabrechnung. Sobald Sie kaufen, bauen, Personal einstellen oder Kredite aufnehmen, steht hier jede Bewegung mit Bereich und Kontostand.</div>`;
             return;
         }
         let proBereich = {};
@@ -983,24 +983,24 @@
 
         box.innerHTML = `
             ${renderTransferBilanzBox()}
-            <div style="font-size:10px; color:#94a3b8; margin-bottom:6px;">Alle Kontobewegungen ausserhalb der Spieltagsabrechnung (letzte ${MAX_KONTOAUSZUG} Buchungen). Die Spieltagsposten finden Sie in den beiden anderen Reitern.</div>
+            <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:6px;">Alle Kontobewegungen ausserhalb der Spieltagsabrechnung (letzte ${MAX_KONTOAUSZUG} Buchungen). Die Spieltagsposten finden Sie in den beiden anderen Reitern.</div>
             <div class="box" style="margin-bottom:6px;">
-                <strong style="font-size:11px;">📊 NACH BEREICH</strong>
+                <strong style="font-size:var(--fs-body);">📊 NACH BEREICH</strong>
                 ${bereiche.map(b => `
-                    <div style="display:flex; justify-content:space-between; font-size:10px; margin-top:3px;">
+                    <div style="display:flex; justify-content:space-between; font-size:var(--fs-small); margin-top:3px;">
                         <span>${b.label}</span>
                         <span><span style="color:var(--primary);">+${formatVal(b.ein)}</span> / <span style="color:var(--danger);">-${formatVal(b.aus)}</span>
                         <strong style="color:${b.netto >= 0 ? 'var(--primary)' : 'var(--danger)'};">${b.netto >= 0 ? '+' : ''}${formatVal(b.netto)}</strong></span>
                     </div>`).join('')}
             </div>
             <div class="box">
-                <strong style="font-size:11px;">🧾 EINZELBUCHUNGEN (neueste zuerst)</strong>
+                <strong style="font-size:var(--fs-body);">🧾 EINZELBUCHUNGEN (neueste zuerst)</strong>
                 ${auszug.slice().reverse().map(b => `
-                    <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:10px; margin-top:3px; border-bottom:1px solid #1e293b; padding-bottom:2px;">
-                        <span style="color:#94a3b8;">S${b.season}/ST${b.matchday}</span>
+                    <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:var(--fs-small); margin-top:3px; border-bottom:1px solid #1e293b; padding-bottom:2px;">
+                        <span style="color:var(--text-muted);">S${b.season}/ST${b.matchday}</span>
                         <span style="flex:1; margin:0 6px;">${b.label}</span>
                         <span style="color:${b.amount >= 0 ? 'var(--primary)' : 'var(--danger)'}; font-weight:bold;">${b.amount >= 0 ? '+' : '-'}${formatVal(Math.abs(b.amount))}</span>
-                        <span style="color:#64748b; margin-left:6px; min-width:58px; text-align:right;">${formatVal(b.saldo)}</span>
+                        <span style="color:var(--text-muted); margin-left:6px; min-width:58px; text-align:right;">${formatVal(b.saldo)}</span>
                     </div>`).join('')}
             </div>`;
     }

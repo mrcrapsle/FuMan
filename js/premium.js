@@ -239,8 +239,8 @@
         if (packagesBox) {
             packagesBox.innerHTML = PREMIUM_POINT_PACKAGES.map(pkg => `
                 <div class="panel" style="text-align:center;">
-                    <div style="font-size:16px; font-weight:900; color:var(--accent);">💎 ${pkg.points.toLocaleString('de-DE')}</div>
-                    ${pkg.bonus ? `<div style="font-size:8px; color:var(--primary);">${pkg.bonus}</div>` : ''}
+                    <div style="font-size:var(--fs-title); font-weight:900; color:var(--accent);">💎 ${pkg.points.toLocaleString('de-DE')}</div>
+                    ${pkg.bonus ? `<div style="font-size:var(--fs-micro); color:var(--primary);">${pkg.bonus}</div>` : ''}
                     <button onclick="purchasePremiumPackage('${pkg.id}')" class="btn-gold" style="margin-top:4px;">${pkg.priceLabel}</button>
                 </div>
             `).join('');
@@ -251,7 +251,7 @@
             boostersBox.innerHTML = PREMIUM_BOOSTERS.map(b => `
                 <div class="panel">
                     <div class="panel-header"><span>${b.name}</span><strong style="color:var(--accent);">💎 ${b.cost}</strong></div>
-                    <div style="font-size:9px; color:#aaa; margin-bottom:4px;">${b.desc}</div>
+                    <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${b.desc}</div>
                     <button onclick="buyPremiumBooster('${b.id}')" class="btn-action" ${(game.premiumPoints || 0) < b.cost ? 'disabled' : ''}>Einlösen</button>
                 </div>
             `).join('');

@@ -124,12 +124,12 @@ function renderYouthOffersBox() {
     box.innerHTML = `<div class="panel" style="border:1px solid var(--gold);"><div class="panel-header" style="color:var(--gold);">💶 ANGEBOTE FÜR TALENTE</div>` + offen.map(o => {
         const p = youthTalents.find(x => x.id === o.playerId);
         const mit = Math.round(o.betrag * (1 - YOUTH_SELLON_PERCENT / 100) / 1000) * 1000;
-        return `<div class="box" style="font-size:10px;">${o.club} bietet <strong>${formatVal(o.betrag)}</strong> für ${p.name} (${p.pos}, ${p.age} J., Stärke ${p.strength}) - gilt bis Spieltag ${o.bis}.
-            <div style="font-size:9px; color:var(--text-muted); margin-top:2px;">${getYouthOfferSquadHint(p)}</div>
+        return `<div class="box" style="font-size:var(--fs-small);">${o.club} bietet <strong>${formatVal(o.betrag)}</strong> für ${p.name} (${p.pos}, ${p.age} J., Stärke ${p.strength}) - gilt bis Spieltag ${o.bis}.
+            <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:2px;">${getYouthOfferSquadHint(p)}</div>
             <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin-top:4px;">
-                <button onclick="acceptYouthOffer('${o.id}', false)" class="btn-action" style="font-size:9px;">✅ Verkaufen</button>
-                <button onclick="acceptYouthOffer('${o.id}', true)" class="btn-secondary" style="font-size:9px;">📈 ${formatVal(mit)} + ${YOUTH_SELLON_PERCENT} % Weiterverkauf</button>
-                <button onclick="rejectYouthOffer('${o.id}')" class="btn-secondary" style="font-size:9px;">❌ Behalten</button>
+                <button onclick="acceptYouthOffer('${o.id}', false)" class="btn-action" style="font-size:var(--fs-caption);">✅ Verkaufen</button>
+                <button onclick="acceptYouthOffer('${o.id}', true)" class="btn-secondary" style="font-size:var(--fs-caption);">📈 ${formatVal(mit)} + ${YOUTH_SELLON_PERCENT} % Weiterverkauf</button>
+                <button onclick="rejectYouthOffer('${o.id}')" class="btn-secondary" style="font-size:var(--fs-caption);">❌ Behalten</button>
             </div></div>`;
     }).join('') + '</div>';
 }

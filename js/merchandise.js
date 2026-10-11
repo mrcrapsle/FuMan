@@ -213,8 +213,8 @@
         if (!box) return;
         let entries = Object.values(merchExtras.jerseySalesByPlayer || {}).sort((a, b) => b.total - a.total).slice(0, 5);
         box.innerHTML = entries.length === 0
-            ? '<div style="font-size:9px; color:var(--text-muted);">Noch keine spielerspezifischen Trikot-Verkaufsdaten.</div>'
-            : entries.map((e, i) => `<div class="box" style="display:flex; justify-content:space-between; font-size:9px;"><span>#${i+1} ${e.name}</span><strong>${e.total.toLocaleString('de-DE')} Trikots</strong></div>`).join('');
+            ? '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch keine spielerspezifischen Trikot-Verkaufsdaten.</div>'
+            : entries.map((e, i) => `<div class="box" style="display:flex; justify-content:space-between; font-size:var(--fs-caption);"><span>#${i+1} ${e.name}</span><strong>${e.total.toLocaleString('de-DE')} Trikots</strong></div>`).join('');
     }
 
     // Macht sichtbar, welche Boni gerade tatsächlich auf den Absatz wirken - vorher steckten
@@ -224,16 +224,16 @@
         if (!box) return;
         let mods = getMerchModifiers(null);
         let avgAtt = getAverageHomeAttendance();
-        let kopf = `<div class="box" style="font-size:9px;">Grundlage: <strong>${avgAtt.toLocaleString('de-DE')}</strong> Zuschauer im Schnitt der letzten Heimspiele · `
+        let kopf = `<div class="box" style="font-size:var(--fs-caption);">Grundlage: <strong>${avgAtt.toLocaleString('de-DE')}</strong> Zuschauer im Schnitt der letzten Heimspiele · `
             + `rund <strong>${MERCH_SPEND_PER_VISITOR.toFixed(2).replace('.', ',')} €</strong> Fanartikel-Umsatz pro Stadionbesucher.</div>`;
         if (mods.length === 0) {
-            box.innerHTML = kopf + '<div style="font-size:9px; color:var(--text-muted);">Aktuell wirken keine zusätzlichen Boni auf den Absatz.</div>';
+            box.innerHTML = kopf + '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Aktuell wirken keine zusätzlichen Boni auf den Absatz.</div>';
             return;
         }
         box.innerHTML = kopf + mods.map(m => {
             let pct = Math.round((m.mult - 1) * 100);
             let farbe = pct >= 0 ? 'var(--primary)' : 'var(--danger)';
-            return `<div class="player-row" style="font-size:9px;"><span>${m.label} <span style="color:var(--text-muted);">(${m.channel})</span></span>`
+            return `<div class="player-row" style="font-size:var(--fs-caption);"><span>${m.label} <span style="color:var(--text-muted);">(${m.channel})</span></span>`
                 + `<strong style="color:${farbe};">${pct >= 0 ? '+' : ''}${pct}%</strong></div>`;
         }).join('');
     }
@@ -245,7 +245,7 @@
         if (!box) return;
         let hist = (merchExtras.salesHistory || []).slice(-10).reverse();
         if (hist.length === 0) {
-            box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Noch keine Verkäufe erfasst - nach dem ersten Spieltag erscheint hier der Verlauf.</div>';
+            box.innerHTML = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch keine Verkäufe erfasst - nach dem ersten Spieltag erscheint hier der Verlauf.</div>';
             return;
         }
         // Saisonsumme je Artikel über den gesamten mitgeschriebenen Verlauf.
@@ -258,14 +258,14 @@
             }
         });
         let summeHtml = Object.values(summe).sort((a, b) => b.revenue - a.revenue).map(v =>
-            `<div class="player-row" style="font-size:9px;"><span>${v.name}</span><span><strong>${v.sold.toLocaleString('de-DE')}</strong> Stk. · <strong style="color:var(--accent);">${formatVal(v.revenue)}</strong></span></div>`
+            `<div class="player-row" style="font-size:var(--fs-caption);"><span>${v.name}</span><span><strong>${v.sold.toLocaleString('de-DE')}</strong> Stk. · <strong style="color:var(--accent);">${formatVal(v.revenue)}</strong></span></div>`
         ).join('');
 
         let verlaufHtml = hist.map(e => {
             let artikel = Object.values(e.items).sort((a, b) => b.sold - a.sold)
                 .map(i => `${i.name.split(' ')[0]}: ${i.sold}`).join(' · ') || 'nichts verkauft';
             let verpasst = Object.values(e.items).reduce((s, i) => s + i.missed, 0);
-            return `<div class="box" style="font-size:9px; margin-bottom:3px;">
+            return `<div class="box" style="font-size:var(--fs-caption); margin-bottom:3px;">
                         <div style="display:flex; justify-content:space-between;">
                             <strong>S${e.season} · Spieltag ${e.matchday}${e.attendance > 0 ? ` · ${e.attendance.toLocaleString('de-DE')} Zuschauer` : ' · auswärts'}</strong>
                             <strong style="color:var(--accent);">${formatVal(e.revenue)}</strong>
@@ -274,8 +274,8 @@
                     </div>`;
         }).join('');
 
-        box.innerHTML = `<div style="font-size:9px; font-weight:800; margin:4px 0;">Bisher verkauft (gesamter Verlauf)</div>${summeHtml}`
-            + `<div style="font-size:9px; font-weight:800; margin:6px 0 4px;">Letzte Spieltage</div>${verlaufHtml}`;
+        box.innerHTML = `<div style="font-size:var(--fs-caption); font-weight:800; margin:4px 0;">Bisher verkauft (gesamter Verlauf)</div>${summeHtml}`
+            + `<div style="font-size:var(--fs-caption); font-weight:800; margin:6px 0 4px;">Letzte Spieltage</div>${verlaufHtml}`;
     }
 
     function renderMerchView() {
@@ -286,14 +286,14 @@
         if (leBox) {
             let le = merchExtras.limitedEdition;
             leBox.innerHTML = (le && le.stock > 0)
-                ? `<div class="box" style="font-size:10px;">✨ <strong>${le.name}</strong>: noch ${le.stock}/${le.initialStock} Stück @ ${formatVal(le.price)} · bisheriger Erlös: ${formatVal(le.revenue)}</div>`
+                ? `<div class="box" style="font-size:var(--fs-small);">✨ <strong>${le.name}</strong>: noch ${le.stock}/${le.initialStock} Stück @ ${formatVal(le.price)} · bisheriger Erlös: ${formatVal(le.revenue)}</div>`
                 : `<button onclick="launchLimitedEdition('Jubiläums-Sondertrikot', 200, 95)" class="btn-gold">✨ Limitierte Edition starten (200 Stk. @ 95 €)</button>`;
         }
         let scBox = document.getElementById('seasonal-collection-box');
         if (scBox) {
             let sc = merchExtras.seasonalCollection;
             scBox.innerHTML = sc.active
-                ? `<div class="box" style="font-size:10px;">🎽 Saisonale Kollektion aktiv: +${sc.boostPercent}% Verkäufe, noch ${sc.expiresMatchday - game.matchday} Spieltage</div>`
+                ? `<div class="box" style="font-size:var(--fs-small);">🎽 Saisonale Kollektion aktiv: +${sc.boostPercent}% Verkäufe, noch ${sc.expiresMatchday - game.matchday} Spieltage</div>`
                 : `<button onclick="launchSeasonalCollection(25, 6)" class="btn-secondary">🎽 Saisonale Kollektion starten (+25%, 6 Spieltage)</button>`;
         }
         let grid = document.getElementById('merch-items-grid');
@@ -313,19 +313,19 @@
                     <strong style="color:var(--primary);">${m.stock} Stk. am Lager</strong>
                 </div>
                 <div style="margin:6px 0;">
-                    <div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:2px;">
+                    <div style="display:flex; justify-content:space-between; font-size:var(--fs-small); margin-bottom:2px;">
                         <span>Verkaufspreis</span>
-                        <strong id="merch-price-val-${key}" style="color:var(--accent); font-size:13px;">${m.price} €</strong>
+                        <strong id="merch-price-val-${key}" style="color:var(--accent); font-size:var(--fs-title-sm);">${m.price} €</strong>
                     </div>
                     <div style="display:flex; align-items:center; gap:6px;">
-                        <span style="font-size:8px; color:var(--text-muted);">${sliderMin}€</span>
+                        <span style="font-size:var(--fs-micro); color:var(--text-muted);">${sliderMin}€</span>
                         <input type="range" min="${sliderMin}" max="${sliderMax}" value="${m.price}" oninput="document.getElementById('merch-price-val-${key}').innerText = this.value + ' €'; setMerchPrice('${key}', this.value)" style="flex:1;">
-                        <span style="font-size:8px; color:var(--text-muted);">${sliderMax}€</span>
+                        <span style="font-size:var(--fs-micro); color:var(--text-muted);">${sliderMax}€</span>
                     </div>
                 </div>
-                <div style="font-size:10px; margin-bottom:6px;">Marktlage: <strong id="merch-elasticity-label-${key}" style="color:${elast.color};">${elast.label}</strong></div>
+                <div style="font-size:var(--fs-small); margin-bottom:6px;">Marktlage: <strong id="merch-elasticity-label-${key}" style="color:${elast.color};">${elast.label}</strong></div>
                 
-                <div class="box" style="font-size:10px; background:rgba(0,0,0,0.4); padding:6px 6px 6px 13px;">
+                <div class="box" style="font-size:var(--fs-small); background:rgba(0,0,0,0.4); padding:6px 6px 6px 13px;">
                     <strong style="color:var(--accent);">Absatz letzter Spieltag: ${s.total} Stk. (+${formatVal(s.revenue)})</strong><br>
                     🏟️ Stadion: <strong>${s.stadium}</strong> | 🏬 City: <strong>${s.city}</strong> | 🌐 Online: <strong>${s.online}</strong>
                     ${s.missed > 0 ? `<div style="color:var(--danger); font-weight:bold; margin-top:2px;">⚠️ ${s.missed} Kunden gingen wegen Lagermangel leer aus!</div>` : ''}

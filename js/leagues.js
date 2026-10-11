@@ -353,11 +353,11 @@
             // Kopf-an-Kopf-Statistik: Klick auf einen Gegnernamen zeigt die historische
             // Bilanz gegen genau diesen Verein.
             let nameCell = isUs ? t.name : `<span onclick="showHeadToHeadStats('${t.name.replace(/'/g, "\\'")}')" style="text-decoration:underline dotted; cursor:pointer;">${t.name}</span>`;
-            tr.innerHTML = `<td>${idx+1}</td><td style="text-align:left; ${isUs?'color:var(--primary); font-weight:bold;':''}">${nameCell}</td><td>${t.played}</td><td>${t.goalsFor}:${t.goalsAgainst}</td><td>${t.goalsFor-t.goalsAgainst}</td><td><strong>${t.points}</strong></td><td style="font-size:9px; white-space:nowrap;">${formHtml}</td>`;
+            tr.innerHTML = `<td>${idx+1}</td><td style="text-align:left; ${isUs?'color:var(--primary); font-weight:bold;':''}">${nameCell}</td><td>${t.played}</td><td>${t.goalsFor}:${t.goalsAgainst}</td><td>${t.goalsFor-t.goalsAgainst}</td><td><strong>${t.points}</strong></td><td style="font-size:var(--fs-caption); white-space:nowrap;">${formHtml}</td>`;
             tbody.appendChild(tr);
         });
         let h2hBox = document.getElementById('head-to-head-box');
-        if (h2hBox) h2hBox.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Tippe auf einen Vereinsnamen in der Tabelle für die Kopf-an-Kopf-Bilanz.</div>';
+        if (h2hBox) h2hBox.innerHTML = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Tippe auf einen Vereinsnamen in der Tabelle für die Kopf-an-Kopf-Bilanz.</div>';
 
         let md = game.viewingMatchday || game.matchday;
         let titleEl = document.getElementById('fixture-view-mday-title');
@@ -378,7 +378,7 @@
                 let attendanceTag = '';
                 if (f.played && h === game.clubName) {
                     let entry = (game.attendanceHistory || []).find(e => e.season === game.season && e.matchday === md && e.opponent === a);
-                    if (entry) attendanceTag = `<div style="font-size:9px; color:var(--text-muted); width:100%; text-align:center;">👥 ${entry.attendance.toLocaleString('de-DE')} Zuschauer</div>`;
+                    if (entry) attendanceTag = `<div style="font-size:var(--fs-caption); color:var(--text-muted); width:100%; text-align:center;">👥 ${entry.attendance.toLocaleString('de-DE')} Zuschauer</div>`;
                 }
                 let row = document.createElement('div');
                 row.className = 'fixture-row';
@@ -415,7 +415,7 @@
             ? `Noch keine Duelle gegen ${oppName} ausgetragen.`
             : `${rec.wins}S ${rec.draws}U ${rec.losses}N · Tore ${rec.goalsFor}:${rec.goalsAgainst}<br>Letzte Ergebnisse: ${rec.lastResults.join(', ')}`;
 
-        box.innerHTML = `<div class="box" style="font-size:10px;">
+        box.innerHTML = `<div class="box" style="font-size:var(--fs-small);">
             <strong style="color:var(--accent);">🗂️ Vereinsakte: ${oppName}</strong><br>
             ${profileLine}${typeof getAiStarLine === 'function' ? getAiStarLine(team) : ''}${formLine}
             <div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.12);">${h2hLine}</div>

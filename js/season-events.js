@@ -215,7 +215,7 @@ function renderSeasonEventsBox() {
             <div style="display:flex; flex-direction:column; gap:4px; margin-top:4px;">${Object.entries(SEASON_OPENING_OPTIONS).map(([k, o]) => {
                 const betrag = Math.round(o.kosten * skala / 500) * 500;
                 const geld = betrag > 0 ? ` (-${formatVal(betrag)})` : (betrag < 0 ? ` (+${formatVal(-betrag)})` : '');
-                return `<button onclick="chooseSeasonOpening('${k}')" class="btn-secondary" style="font-size:10px; text-align:left;">${o.label}${geld}<br><span style="font-size:9px; color:var(--text-muted);">${o.text}</span></button>`;
+                return `<button onclick="chooseSeasonOpening('${k}')" class="btn-secondary" style="font-size:var(--fs-small); text-align:left;">${o.label}${geld}<br><span style="font-size:var(--fs-caption); color:var(--text-muted);">${o.text}</span></button>`;
             }).join('')}</div>`);
     }
     const sc = getOwnSupercupTie();
@@ -235,5 +235,5 @@ function renderSeasonEventsBox() {
         teile.push(`👋 <strong>Abschiedsspiel</strong> für ${f.name}${f.tier ? ' (Vereinslegende)' : ''} - volles Haus, Einnahmen fürs Stadion.
             <div style="margin-top:4px;"><button onclick="holdFarewellMatch('${f.name.replace(/'/g, "\\'")}')" class="btn-action">👋 Abschiedsspiel ausrichten</button></div>`);
     });
-    box.innerHTML = teile.map(t => `<div class="box" style="font-size:10px; border-left-color:var(--gold); margin-bottom:6px;">${t}</div>`).join('');
+    box.innerHTML = teile.map(t => `<div class="box" style="font-size:var(--fs-small); border-left-color:var(--gold); margin-bottom:6px;">${t}</div>`).join('');
 }

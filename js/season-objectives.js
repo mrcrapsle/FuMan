@@ -333,11 +333,11 @@ function renderSeasonObjectivesPanel() {
     // Summary
     const summary = getSeasonObjectivesSummary();
     html += '<div style="background:#1a1a1a; padding:8px; border-radius:4px; margin-bottom:10px;">';
-    html += `<p style="font-size:9px; margin:0;"><strong>Saison ${game.season}</strong> | `;
+    html += `<p style="font-size:var(--fs-caption); margin:0;"><strong>Saison ${game.season}</strong> | `;
     html += `Ziele erreicht: <span style="color:var(--primary);">${summary.completed}</span> | `;
     html += `Aktiv: <span style="color:var(--accent);">${summary.active}</span></p>`;
     if (summary.rewards > 0) {
-        html += `<p style="font-size:9px; margin:4px 0 0 0; color:var(--primary);">📈 Bonuse diese Saison: €${(summary.rewards / 1000).toFixed(0)}k</p>`;
+        html += `<p style="font-size:var(--fs-caption); margin:4px 0 0 0; color:var(--primary);">📈 Bonuse diese Saison: €${(summary.rewards / 1000).toFixed(0)}k</p>`;
     }
     html += '</div>';
 
@@ -352,21 +352,21 @@ function renderSeasonObjectivesPanel() {
 
             html += `<div style="background:#222; padding:8px; margin-bottom:6px; border-radius:4px;">`;
             html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">`;
-            html += `<strong style="font-size:10px;">${obj.name}</strong>`;
-            html += `<span style="font-size:8px; color:${diffColor};">${obj.difficulty}</span>`;
+            html += `<strong style="font-size:var(--fs-small);">${obj.name}</strong>`;
+            html += `<span style="font-size:var(--fs-micro); color:${diffColor};">${obj.difficulty}</span>`;
             html += `</div>`;
-            html += `<p style="font-size:9px; color:var(--text-muted); margin:0 0 4px 0;">${obj.description}</p>`;
+            html += `<p style="font-size:var(--fs-caption); color:var(--text-muted); margin:0 0 4px 0;">${obj.description}</p>`;
             html += `<div style="width:100%; height:8px; background:#333; border-radius:2px; overflow:hidden; margin-bottom:4px;">`;
             html += `<div style="width:${obj.progress}%; height:100%; background:${diffColor};"></div>`;
             html += `</div>`;
-            html += `<p style="font-size:8px; color:var(--text-muted); margin:0;">${obj.progress_label || obj.progress + '%'}</p>`;
-            html += `<p style="font-size:9px; margin:4px 0 0 0; color:var(--primary);">💰 €${(obj.reward / 1000).toFixed(0)}k</p>`;
+            html += `<p style="font-size:var(--fs-micro); color:var(--text-muted); margin:0;">${obj.progress_label || obj.progress + '%'}</p>`;
+            html += `<p style="font-size:var(--fs-caption); margin:4px 0 0 0; color:var(--primary);">💰 €${(obj.reward / 1000).toFixed(0)}k</p>`;
             html += `</div>`;
         });
 
         html += '</div>';
     } else {
-        html += '<p style="font-size:9px; color:var(--primary);">✓ Alle Ziele dieser Saison erreicht!</p>';
+        html += '<p style="font-size:var(--fs-caption); color:var(--primary);">✓ Alle Ziele dieser Saison erreicht!</p>';
     }
 
     // Completed This Season
@@ -377,7 +377,7 @@ function renderSeasonObjectivesPanel() {
         html += '<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap:4px;">';
 
         seasonCompleted.forEach(obj => {
-            html += `<div style="background:#1a3a1a; padding:6px; border-radius:3px; border-left:3px solid var(--primary); font-size:8px;">`;
+            html += `<div style="background:#1a3a1a; padding:6px; border-radius:3px; border-left:3px solid var(--primary); font-size:var(--fs-micro);">`;
             html += `<strong>${obj.name}</strong><br/>`;
             html += `€${(obj.reward / 1000).toFixed(0)}k`;
             html += `</div>`;

@@ -152,24 +152,24 @@
 
         const scandals = (game.scandals || []).filter(s => !s.resolved);
 
-        let html = `<div style="font-size:10px; font-weight:bold; margin-bottom:6px;">⚠️ SPIELER-SKANDALE</div>`;
+        let html = `<div style="font-size:var(--fs-small); font-weight:bold; margin-bottom:6px;">⚠️ SPIELER-SKANDALE</div>`;
 
         if (scandals.length === 0) {
-            html += '<div style="font-size:9px; color:var(--text-muted); margin-bottom:8px;">Keine aktuellen Skandale</div>';
+            html += '<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:8px;">Keine aktuellen Skandale</div>';
         } else {
             scandals.forEach((scandal, idx) => {
                 let player = squad.find(p => p.id === scandal.playerId);
                 html += `<div style="background:rgba(255,84,104,0.15); padding:6px; border-radius:4px; margin-bottom:6px; border-left:3px solid var(--danger);">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
                         <strong>${scandal.icon} ${scandal.name}</strong>
-                        <span style="font-size:8px; color:var(--text-muted);">${scandal.daysLeft} SpT</span>
+                        <span style="font-size:var(--fs-micro); color:var(--text-muted);">${scandal.daysLeft} SpT</span>
                     </div>
-                    <div style="font-size:8px; color:var(--text-muted); margin-bottom:4px;">
+                    <div style="font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:4px;">
                         Spieler: <strong>${player?.name || 'Unbekannt'}</strong>
                     </div>
                     <div style="display:flex; gap:3px;">
-                        <button onclick="resolveScandale(${idx}, true)" class="btn-secondary" style="font-size:8px; padding:3px 6px; flex:1;">Konsequenzen</button>
-                        <button onclick="resolveScandale(${idx}, false)" class="btn-secondary" style="font-size:8px; padding:3px 6px; flex:1;">Dementieren</button>
+                        <button onclick="resolveScandale(${idx}, true)" class="btn-secondary" style="font-size:var(--fs-micro); padding:3px 6px; flex:1;">Konsequenzen</button>
+                        <button onclick="resolveScandale(${idx}, false)" class="btn-secondary" style="font-size:var(--fs-micro); padding:3px 6px; flex:1;">Dementieren</button>
                     </div>
                 </div>`;
             });

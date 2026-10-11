@@ -115,11 +115,11 @@
                 }).join('');
             document.getElementById('pd-fields').insertAdjacentHTML('beforeend', `<div style="grid-column:1 / -1; margin-top:6px;">
                 <span class="label">🎽 Rückennummer:</span>
-                <select id="pd-nummer" style="font-size:11px; margin-top:3px;" onchange="speichereRueckennummer('${p.id}', this.value)">${nummernOptionen}</select>
+                <select id="pd-nummer" style="font-size:var(--fs-body); margin-top:3px;" onchange="speichereRueckennummer('${p.id}', this.value)">${nummernOptionen}</select>
             </div>
             <div style="grid-column:1 / -1; margin-top:6px;">
                 <span class="label">📝 Notiz (Saison ${game.season}):</span>
-                <textarea id="pd-notiz" maxlength="300" rows="2" style="width:100%; box-sizing:border-box; font-size:11px; margin-top:3px;" onchange="speichereSpielerNotiz('${p.id}', this.value)">${notizText}</textarea>
+                <textarea id="pd-notiz" maxlength="300" rows="2" style="width:100%; box-sizing:border-box; font-size:var(--fs-body); margin-top:3px;" onchange="speichereSpielerNotiz('${p.id}', this.value)">${notizText}</textarea>
             </div>`);
         }
         document.getElementById('pd-stats').innerHTML = statOrder.map(k => `<div class="modal-stat-chip"><span class="k">${k}</span><span class="v">${stats[k]}</span></div>`).join('');
@@ -146,7 +146,7 @@
                 let trendUp = hist[hist.length - 1].strength >= hist[0].strength;
                 let color = trendUp ? 'var(--primary)' : 'var(--danger)';
                 historyBox.innerHTML = `
-                    <div style="font-size:9px; color:var(--text-muted); margin-bottom:2px; text-align:left;">📈 Werteentwicklung (${hist[0].season}-${hist[hist.length-1].season})</div>
+                    <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:2px; text-align:left;">📈 Werteentwicklung (${hist[0].season}-${hist[hist.length-1].season})</div>
                     <svg viewBox="0 0 ${w} ${h}" style="width:100%; height:${h}px;">
                         <polyline points="${points}" fill="none" stroke="${color}" stroke-width="2"/>
                         ${hist.map((entry, i) => {
@@ -180,7 +180,7 @@
             if (pool === 'scout') {
                 let report = generateScoutingReport(p);
                 reportBox.style.display = 'block';
-                reportBox.innerHTML = `<div class="box" style="font-size:10px; text-align:left;">
+                reportBox.innerHTML = `<div class="box" style="font-size:var(--fs-small); text-align:left;">
                     <strong style="color:var(--primary);">Stärken:</strong> ${report.strengths.join(', ')}<br>
                     <strong style="color:var(--danger);">Schwächen:</strong> ${report.weaknesses.join(', ')}
                 </div>`;

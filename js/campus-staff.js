@@ -16,7 +16,7 @@
                     : `<button onclick="upgradeCampusBuilding('${key}')" class="btn-action">Ausbauen auf Stufe ${b.lvl+1} [${formatVal(cost)}] · Bauzeit ${getConstructionDays(cost)} SpT</button>`;
             row.innerHTML = `
                 <div class="panel-header"><span>${b.name}</span><span style="color:var(--accent);">Stufe ${b.lvl}/${b.max}</span></div>
-                <div style="font-size:9px; color:#aaa; margin-bottom:4px;">${b.desc}</div>
+                <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${b.desc}</div>
                 ${buttonHtml}
             `;
             container.appendChild(row);
@@ -53,6 +53,13 @@
         renderCampusView();
         updateUI();
     }
+
+    // Bild der Personalkarte (Kartenmuster, js/ui-cards.js)
+    const STAFF_ICONS = {
+        coTrainer: '🧑‍🏫', twTrainer: '🧤', fitCoach: '🏃', physio: '💆', scout: '🔭', sportDir: '💼',
+        fanLiaison: '📣', marketingDir: '📈', greenkeeper: '🌱', secChief: '🛡️', fanshopManager: '🛍️',
+        analyst: '📊', nutritionist: '🥗', pressOfficer: '🎤', setPieceCoach: '🎯'
+    };
 
     const STAFF_TASK_CONFIG = {
         fanshopManager: { tasks: () => FANSHOP_TASKS, setter: 'setFanshopManagerTask' },
@@ -251,15 +258,15 @@
                 <div class="box" style="${overBudget ? 'border-left-color:var(--danger);' : ''}">
                     💼 Gesamtgehälter: <strong style="color:${overBudget ? 'var(--danger)' : 'var(--accent)'};">${formatVal(totalWages)}/SpT</strong>
                     ${staffCentralState.wageBudgetCap > 0 ? ` (Obergrenze: ${formatVal(staffCentralState.wageBudgetCap)})` : ''}
-                    ${overBudget ? '<br><span style="color:var(--danger); font-size:9px;">⚠️ Budget überschritten!</span>' : ''}
+                    ${overBudget ? '<br><span style="color:var(--danger); font-size:var(--fs-caption);">⚠️ Budget überschritten!</span>' : ''}
                 </div>
                 <div style="display:flex; gap:4px; margin:4px 0;">
-                    <button onclick="setStaffWageBudgetCap(5000)" class="btn-secondary" style="font-size:9px;">Cap 5.000 €</button>
-                    <button onclick="setStaffWageBudgetCap(10000)" class="btn-secondary" style="font-size:9px;">Cap 10.000 €</button>
-                    <button onclick="setStaffWageBudgetCap(0)" class="btn-secondary" style="font-size:9px;">Kein Cap</button>
+                    <button onclick="setStaffWageBudgetCap(5000)" class="btn-secondary" style="font-size:var(--fs-caption);">Cap 5.000 €</button>
+                    <button onclick="setStaffWageBudgetCap(10000)" class="btn-secondary" style="font-size:var(--fs-caption);">Cap 10.000 €</button>
+                    <button onclick="setStaffWageBudgetCap(0)" class="btn-secondary" style="font-size:var(--fs-caption);">Kein Cap</button>
                 </div>
                 <button onclick="holdAnnualStaffMeeting()" class="btn-secondary" style="margin-bottom:4px;">🤝 Jährliches Personal-Meeting</button>
-                ${synergies.length > 0 ? synergies.map(s => `<div class="box" style="border-left-color:var(--primary); font-size:10px;">⚡ Synergie "${s.label}": ${s.desc}</div>`).join('') : ''}
+                ${synergies.length > 0 ? synergies.map(s => `<div class="box" style="border-left-color:var(--primary); font-size:var(--fs-small);">⚡ Synergie "${s.label}": ${s.desc}</div>`).join('') : ''}
             `;
         }
         let poachBox = document.getElementById('staff-poach-box');
@@ -269,7 +276,7 @@
             if (p) {
                 let s = staffMembers[p.key];
                 poachBox.innerHTML = `<div class="panel-header" style="color:var(--danger);">🎯 ABWERBEVERSUCH: ${s.name}</div>
-                    <div class="box" style="font-size:10px;">Bindungsprämie zahlen (${formatVal(p.retentionCost)}) oder ziehen lassen?</div>
+                    <div class="box" style="font-size:var(--fs-small);">Bindungsprämie zahlen (${formatVal(p.retentionCost)}) oder ziehen lassen?</div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
                         <button onclick="resolveStaffPoaching(true)" class="btn-action">💰 Halten</button>
                         <button onclick="resolveStaffPoaching(false)" class="btn-secondary">👋 Ziehen lassen</button>
@@ -287,9 +294,9 @@
                         // Der Grund steht direkt beim Knopf: sonst wirkte "Einstellen" ohne Wirkung (Kasse oder Obergrenze).
                         const preis = Math.round(s.cost * c.costMult);
                         const grund = game.money < preis ? `Kasse zu klein (${formatVal(preis)} nötig)` : (staffHireBreaksCap(s) ? `Personalbudget-Obergrenze von ${formatVal(staffCentralState.wageBudgetCap)}/SpT würde gesprengt` : '');
-                        return `<div class="box" style="display:flex; justify-content:space-between; align-items:center; gap:6px; font-size:10px;">
-                        <span>${c.label} (${c.qualityLabel})${grund ? `<br><span style="color:var(--danger); font-size:9px;">${grund}</span>` : ''}</span>
-                        <button onclick="hireFromCandidatePool(${idx})" ${grund ? 'disabled' : ''} class="btn-secondary" style="width:auto; font-size:9px;">${formatVal(preis)}</button>
+                        return `<div class="box" style="display:flex; justify-content:space-between; align-items:center; gap:6px; font-size:var(--fs-small);">
+                        <span>${c.label} (${c.qualityLabel})${grund ? `<br><span style="color:var(--danger); font-size:var(--fs-caption);">${grund}</span>` : ''}</span>
+                        <button onclick="hireFromCandidatePool(${idx})" ${grund ? 'disabled' : ''} class="btn-secondary" style="width:auto; font-size:var(--fs-caption);">${formatVal(preis)}</button>
                     </div>`;
                     }).join('') +
                     `<button onclick="staffCentralState.candidatePool=null; renderStaffView();" class="btn-secondary" style="margin-top:4px;">Abbrechen</button>`;
@@ -310,43 +317,45 @@
                 let options = tasks.map(t => `<option value="${t.id}" ${s.task === t.id ? 'selected' : ''}>${t.name}</option>`).join('');
                 let currentTask = tasks.find(t => t.id === (s.task || tasks[0].id));
                 taskSelector = `
-                    <div style="margin-top:6px; font-size:9px;">
-                        Aktuelle Aufgabe: <select class="input-inline" style="width:190px;" onchange="${taskCfg.setter}(this.value)">${options}</select><br>
-                        <span style="color:#aaa;">${currentTask ? currentTask.desc : ''}</span>
-                    </div>`;
+                    <label class="ui-field">
+                        <span class="ui-field-label">Aktuelle Aufgabe</span>
+                        <select class="input-inline" onchange="${taskCfg.setter}(this.value)">${options}</select>
+                        <span class="ui-field-hint">${currentTask ? currentTask.desc : ''}</span>
+                    </label>`;
             }
             let hiredExtras = '';
             if (s.hired) {
-                let moraleColor = meta.morale >= 70 ? 'var(--primary)' : (meta.morale >= 40 ? 'var(--accent)' : 'var(--danger)');
                 let onLeave = meta.onLeave > 0;
                 hiredExtras = `
-                    <div style="display:flex; justify-content:space-between; font-size:9px; margin-top:6px; color:var(--text-muted);">
-                        <span>⭐ Stufe ${meta.level}/3</span>
-                        <span>📄 Vertrag: ${meta.contractMatchdays} SpT</span>
-                        <span style="color:${moraleColor};">😊 Moral: ${Math.round(meta.morale)}%</span>
-                        <span>🕐 ${getStaffTenureSeasons(key)} Saison(en) dabei</span>
-                    </div>
-                    ${onLeave ? `<div class="box" style="border-left-color:var(--danger); font-size:9px; margin-top:4px;">🤒 Fällt noch ${meta.onLeave} SpT aus.${meta.interimActive ? ' (Interims-Ersatz aktiv)' : ` <button onclick="hireEmergencyInterim('${key}')" class="btn-secondary" style="width:auto; font-size:8px;">Interim buchen [${formatVal(s.wage*3)}]</button>`}</div>` : ''}
+                    ${onLeave ? `<div class="box" style="border-left-color:var(--danger); font-size:var(--fs-caption); margin-top:4px;">🤒 Fällt noch ${meta.onLeave} SpT aus.${meta.interimActive ? ' (Interims-Ersatz aktiv)' : ` <button onclick="hireEmergencyInterim('${key}')" class="btn-secondary" style="width:auto; font-size:var(--fs-micro);">Interim buchen [${formatVal(s.wage*3)}]</button>`}</div>` : ''}
                     <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:3px; margin-top:4px;">
                         ${(() => {
                             let trainingQueued = (game.stadiumConstructionQueue || []).find(q => q.type === 'staffTraining' && q.params.key === key);
-                            if (meta.level >= 3) return `<button class="btn-secondary" disabled style="font-size:8px;">⭐ Max. Stufe ✓</button>`;
-                            if (trainingQueued) return `<button class="btn-secondary" disabled style="font-size:8px;">🎓 In Weiterbildung (noch ${trainingQueued.daysLeft} SpT)</button>`;
-                            return `<button onclick="upgradeStaffMember('${key}')" class="btn-secondary" style="font-size:8px;">⭐ Weiterbilden [${formatVal(Math.round(s.cost*STAFF_UPGRADE_COST_FACTOR*meta.level))}]</button>`;
+                            if (meta.level >= 3) return `<button class="btn-secondary" disabled style="font-size:var(--fs-micro);">⭐ Max. Stufe ✓</button>`;
+                            if (trainingQueued) return `<button class="btn-secondary" disabled style="font-size:var(--fs-micro);">🎓 In Weiterbildung (noch ${trainingQueued.daysLeft} SpT)</button>`;
+                            return `<button onclick="upgradeStaffMember('${key}')" class="btn-secondary" style="font-size:var(--fs-micro);">⭐ Weiterbilden [${formatVal(Math.round(s.cost*STAFF_UPGRADE_COST_FACTOR*meta.level))}]</button>`;
                         })()}
-                        <button onclick="renewStaffContract('${key}')" class="btn-secondary" style="font-size:8px;">📄 Verlängern [${formatVal(Math.round(s.cost*0.4))}]</button>
-                        <button onclick="giveStaffRaise('${key}')" class="btn-secondary" style="font-size:8px;">💰 Gehaltserhöhung [${formatVal(s.wage*5)}]</button>
+                        <button onclick="renewStaffContract('${key}')" class="btn-secondary" style="font-size:var(--fs-micro);">📄 Verlängern [${formatVal(Math.round(s.cost*0.4))}]</button>
+                        <button onclick="giveStaffRaise('${key}')" class="btn-secondary" style="font-size:var(--fs-micro);">💰 Gehaltserhöhung [${formatVal(s.wage*5)}]</button>
                     </div>
                 `;
             }
-            row.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-                    <div><strong>${s.name}</strong> (${s.hired ? '<span style="color:var(--primary);">Aktiv</span>' : 'Frei'})<br><span style="color:#aaa;">${s.desc}</span></div>
-                    <button onclick="${s.hired ? `toggleStaffMember('${key}', this)` : `openCandidatePool('${key}')`}" class="${s.hired ? 'btn-danger' : 'btn-action'}" style="width:auto;">${s.hired ? 'Entlassen' : 'Einstellen'}</button>
-                </div>
-                ${taskSelector}
-                ${hiredExtras}
-            `;
+            const moralTon = !s.hired ? '' : (meta.morale >= 70 ? 'gut' : (meta.morale >= 40 ? 'warn' : 'schlecht'));
+            row.innerHTML = renderUiCard({
+                thumb: `<span class="ui-thumb-icon">${STAFF_ICONS[key] || '👤'}</span>`,
+                title: s.name,
+                sub: s.desc,
+                meta: [
+                    s.hired ? uiChip('● Aktiv', 'gut') : uiChip('Frei'),
+                    uiChip(`💶 ${formatVal(s.wage)}/SpT`),
+                    s.hired ? uiChip(`⭐ Stufe ${meta.level}/3`) : '',
+                    s.hired ? uiChip(`📄 Vertrag: ${meta.contractMatchdays} SpT`) : '',
+                    s.hired ? uiChip(`😊 Moral: ${Math.round(meta.morale)}%`, moralTon) : '',
+                    s.hired ? uiChip(`🕐 ${getStaffTenureSeasons(key)} Saison(en) dabei`) : ''
+                ],
+                aside: `<button onclick="${s.hired ? `toggleStaffMember('${key}', this)` : `openCandidatePool('${key}')`}" class="${s.hired ? 'btn-danger' : 'btn-action'} ui-card-cta">${s.hired ? 'Entlassen' : 'Einstellen'}</button>`,
+                body: (taskSelector || hiredExtras) ? taskSelector + hiredExtras : ''
+            });
             container.appendChild(row);
         }
     }

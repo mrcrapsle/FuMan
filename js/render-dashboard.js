@@ -9,7 +9,7 @@
         const aktiv = game.boardEarlyWarnSeason === game.season && game.boardSat < 60;
         const en = typeof currentLang !== 'undefined' && currentLang === 'en';
         box.innerHTML = aktiv
-            ? `<div class="box" style="font-size:10px; border-left-color:var(--danger); margin:4px 0;">${en
+            ? `<div class="box" style="font-size:var(--fs-small); border-left-color:var(--danger); margin:4px 0;">${en
                 ? `📉 The board is restless (${Math.round(game.boardSat)}). Wins in the league raise trust; the winter talk (matchdays 18-20) is the chance to negotiate expectation or budget.`
                 : `📉 Der Vorstand ist unruhig (${Math.round(game.boardSat)}${game.seasonExpectation && game.seasonExpectation.expectedRank ? `, Erwartung Platz ${game.seasonExpectation.expectedRank}` : ''}). Siege im Liga-Spiel heben das Vertrauen; das Wintergespräch (Spieltag 18-20) ist die Gelegenheit, Erwartung oder Budget zu verhandeln.`}</div>`
             : '';
@@ -147,7 +147,7 @@
             goals.push(`🏆 DFB-Pokal: nächste Runde erreichen (${cupTournament.roundNames[cupTournament.currentRound]})`);
         }
         if (goals.length === 0) goals.push('✅ Aktuell keine dringenden Ziele - alles im grünen Bereich!');
-        box.innerHTML = goals.slice(0, 4).map(g => `<div class="box" style="font-size:10px;">${g}</div>`).join('');
+        box.innerHTML = goals.slice(0, 4).map(g => `<div class="box" style="font-size:var(--fs-small);">${g}</div>`).join('');
     }
 
     // 2. Wochenrückblick: kompakte Zusammenfassung der letzten paar Spieltage statt das
@@ -157,7 +157,7 @@
         if (!box) return;
         let recentMessages = inboxMessages.filter(m => m.matchday >= game.matchday - 3 && m.season === game.season).slice(0, 4);
         box.innerHTML = recentMessages.length === 0
-            ? '<div style="font-size:9px; color:var(--text-muted);">Keine besonderen Ereignisse in den letzten Spieltagen.</div>'
-            : recentMessages.map(m => `<div style="font-size:9px; margin-bottom:3px;">• ${m.title}</div>`).join('');
+            ? '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Keine besonderen Ereignisse in den letzten Spieltagen.</div>'
+            : recentMessages.map(m => `<div style="font-size:var(--fs-caption); margin-bottom:3px;">• ${m.title}</div>`).join('');
     }
 

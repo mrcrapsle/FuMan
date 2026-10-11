@@ -47,9 +47,9 @@ function getPredictionHtml(oppName) {
     const p = predictNextMatch();
     if (!p || (oppName && p.opp.name !== oppName)) return '';
     const pct = x => Math.round(x * 100) + '%';
-    return `<div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.15); font-size:10px;">
+    return `<div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.15); font-size:var(--fs-small);">
         🔮 <strong style="color:var(--teal);">Prognose des Analysten</strong> (${SCOUT_SIMULATIONS} simulierte Spiele)
-        <div style="display:flex; height:14px; border-radius:3px; overflow:hidden; font-size:8px; font-weight:bold; color:#fff; text-align:center; line-height:14px; margin:4px 0;">
+        <div style="display:flex; height:14px; border-radius:3px; overflow:hidden; font-size:var(--fs-micro); font-weight:bold; color:#fff; text-align:center; line-height:14px; margin:4px 0;">
             <div style="width:${pct(p.sieg)}; background:var(--primary);">${p.sieg >= 0.12 ? pct(p.sieg) : ''}</div>
             <div style="width:${pct(p.remis)}; background:#8a8f98;">${p.remis >= 0.12 ? pct(p.remis) : ''}</div>
             <div style="width:${pct(p.niederlage)}; background:var(--danger);">${p.niederlage >= 0.12 ? pct(p.niederlage) : ''}</div>
@@ -64,8 +64,8 @@ function renderMatchScoutLine() {
     const box = document.getElementById('dash-prediction-box');
     if (!box) return;
     const p = hasMatchAnalyst() ? predictNextMatch() : null;
-    if (!p) { box.innerHTML = hasMatchAnalyst() ? '' : '<div style="font-size:9px; color:var(--text-muted); margin-bottom:4px;">🔮 Spielprognosen liefert ein Chef-Analyst (Personal).</div>'; return; }
-    box.innerHTML = `<div style="font-size:9px; color:var(--text-muted); margin-bottom:4px;">🔮 Prognose: <span style="color:var(--primary);">Sieg ${Math.round(p.sieg * 100)}%</span> · Remis ${Math.round(p.remis * 100)}% · <span style="color:var(--danger);">Niederlage ${Math.round(p.niederlage * 100)}%</span></div>`;
+    if (!p) { box.innerHTML = hasMatchAnalyst() ? '' : '<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">🔮 Spielprognosen liefert ein Chef-Analyst (Personal).</div>'; return; }
+    box.innerHTML = `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">🔮 Prognose: <span style="color:var(--primary);">Sieg ${Math.round(p.sieg * 100)}%</span> · Remis ${Math.round(p.remis * 100)}% · <span style="color:var(--danger);">Niederlage ${Math.round(p.niederlage * 100)}%</span></div>`;
 }
 
 // Alte Spielstände: Daten der abgelösten Analyse-Module entfernen.

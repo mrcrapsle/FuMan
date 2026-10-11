@@ -35,7 +35,7 @@
         ['alle', 'wichtig', 'transfer', 'verletzung', 'finanzen', 'scouting', 'archiv'].forEach(c => {
             let btn = document.getElementById('inbox-filter-' + c);
             if (btn) btn.className = (c === cat) ? 'btn-action' : 'btn-secondary';
-            if (btn) btn.style.fontSize = '9px';
+            if (btn) btn.style.fontSize = 'var(--fs-caption)';
         });
         renderInboxView();
     }
@@ -105,28 +105,28 @@
         if (summaryEl) summaryEl.innerText = unreadTotal > 0 ? ` — ${unreadTotal} ungelesen` : ' — alles gelesen';
 
         if (filtered.length === 0) {
-            list.innerHTML = `<div class="box" style="font-size:10px; color:#64748b;">${inboxFilter === 'archiv' ? 'Archiv ist leer.' : 'Keine Nachrichten in dieser Kategorie.'}</div>`;
+            list.innerHTML = `<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">${inboxFilter === 'archiv' ? 'Archiv ist leer.' : 'Keine Nachrichten in dieser Kategorie.'}</div>`;
             return;
         }
         let isArchiveView = inboxFilter === 'archiv';
         list.innerHTML = filtered.map(m => {
             let meta = INBOX_CATEGORY_META[m.category] || { icon: '📌', color: 'var(--accent)' };
-            let linkBtn = m.screenLink ? `<button onclick="markInboxRead(${m.id}); showScreen('${m.screenLink}')" class="btn-secondary" style="font-size:9px; width:auto; margin-top:4px;">Ansehen →</button>` : '';
+            let linkBtn = m.screenLink ? `<button onclick="markInboxRead(${m.id}); showScreen('${m.screenLink}')" class="btn-secondary" style="font-size:var(--fs-caption); width:auto; margin-top:4px;">Ansehen →</button>` : '';
             let archiveBtn = isArchiveView
-                ? `<button onclick="event.stopPropagation(); restoreInboxMessage(${m.id})" style="background:none; border:none; color:var(--primary); cursor:pointer; font-size:11px; padding:0 2px;" title="Wiederherstellen">↺</button>`
-                : `<button onclick="event.stopPropagation(); archiveInboxMessage(${m.id})" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:11px; padding:0 2px;" title="Archivieren">🗄️</button>`;
+                ? `<button onclick="event.stopPropagation(); restoreInboxMessage(${m.id})" style="background:none; border:none; color:var(--primary); cursor:pointer; font-size:var(--fs-body); padding:0 2px;" title="Wiederherstellen">↺</button>`
+                : `<button onclick="event.stopPropagation(); archiveInboxMessage(${m.id})" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:var(--fs-body); padding:0 2px;" title="Archivieren">🗄️</button>`;
             return `
                 <div class="box" style="border-left-color:${m.important ? 'var(--gold)' : meta.color}; ${m.read ? 'opacity:0.6;' : ''} cursor:pointer;" onclick="markInboxRead(${m.id})">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                         <strong style="color:${meta.color};">${meta.icon} ${m.title}</strong>
                         <span>
-                            <button onclick="event.stopPropagation(); toggleInboxImportant(${m.id})" style="background:none; border:none; color:${m.important ? 'var(--gold)' : '#64748b'}; cursor:pointer; font-size:12px; padding:0 2px;" title="Als wichtig markieren">${m.important ? '★' : '☆'}</button>
+                            <button onclick="event.stopPropagation(); toggleInboxImportant(${m.id})" style="background:none; border:none; color:${m.important ? 'var(--gold)' : '#64748b'}; cursor:pointer; font-size:var(--fs-body-lg); padding:0 2px;" title="Als wichtig markieren">${m.important ? '★' : '☆'}</button>
                             ${archiveBtn}
-                            <button onclick="event.stopPropagation(); deleteInboxMessage(${m.id})" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:11px; padding:0 2px;" title="Endgültig löschen">✕</button>
+                            <button onclick="event.stopPropagation(); deleteInboxMessage(${m.id})" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:var(--fs-body); padding:0 2px;" title="Endgültig löschen">✕</button>
                         </span>
                     </div>
-                    <div style="font-size:10px; margin-top:3px;">${m.body}</div>
-                    <div style="font-size:8px; color:#64748b; margin-top:4px;">Saison ${m.season} · Spieltag ${m.matchday}/34 ${m.read ? '' : ' · <span style="color:var(--primary);">● Neu</span>'}</div>
+                    <div style="font-size:var(--fs-small); margin-top:3px;">${m.body}</div>
+                    <div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:4px;">Saison ${m.season} · Spieltag ${m.matchday}/34 ${m.read ? '' : ' · <span style="color:var(--primary);">● Neu</span>'}</div>
                     ${linkBtn}
                 </div>`;
         }).join('');

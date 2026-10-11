@@ -54,11 +54,11 @@
         let analysis = getSquadPlanningAnalysis();
         box.innerHTML = analysis.map(a => `
             <div class="box" style="border-left-color:${a.riskColor}; margin-bottom:5px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; margin-bottom:2px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; font-size:var(--fs-small); margin-bottom:2px;">
                     <span>${a.label}</span>
                     <strong style="color:${a.riskColor};">${a.riskLabel}</strong>
                 </div>
-                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:3px; font-size:8px; color:var(--text-muted);">
+                <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:3px; font-size:var(--fs-micro); color:var(--text-muted);">
                     <div>Besetzung: <strong style="color:${a.thin ? 'var(--danger)' : 'var(--text-primary)'};">${a.count} / ${a.minHealthy}+</strong></div>
                     <div>Ø Alter: <strong style="color:${a.agingRisk ? 'var(--danger)' : 'var(--text-primary)'};">${a.avgAge.toFixed(1)} J.</strong></div>
                     <div>Vertrag ≤${SQUAD_PLANNING_CONTRACT_URGENT} J.: <strong style="color:${a.cliffRisk ? 'var(--danger)' : 'var(--text-primary)'};">${a.cliff.length} Spieler</strong></div>
@@ -87,7 +87,7 @@
             let pct = Math.round((count / maxCount) * 100);
             let isOld = b.label === '32+';
             return `
-                <div style="display:flex; align-items:center; gap:6px; margin-bottom:3px; font-size:9px;">
+                <div style="display:flex; align-items:center; gap:6px; margin-bottom:3px; font-size:var(--fs-caption);">
                     <span style="width:42px; color:var(--text-muted);">${b.label}</span>
                     <div style="flex:1; background:rgba(255,255,255,0.06); border-radius:999px; height:8px; overflow:hidden;">
                         <div style="width:${pct}%; height:100%; background:${isOld ? 'var(--accent)' : 'var(--primary)'}; border-radius:999px;"></div>
@@ -108,11 +108,11 @@
         let analysis = getSquadPlanningAnalysis();
         let totalCliff = analysis.reduce((s, a) => s + a.cliff.length, 0);
         if (totalCliff === 0) {
-            box.innerHTML = '<div class="box" style="font-size:9px; color:var(--primary);">✓ Keine Position hat eine gefährliche Häufung auslaufender Verträge.</div>';
+            box.innerHTML = '<div class="box" style="font-size:var(--fs-caption); color:var(--primary);">✓ Keine Position hat eine gefährliche Häufung auslaufender Verträge.</div>';
             return;
         }
         box.innerHTML = analysis.filter(a => a.cliff.length > 0).map(a => `
-            <div class="box" style="font-size:9px; display:flex; justify-content:space-between;${a.cliffRisk ? ' border-left-color:var(--danger);' : ''}">
+            <div class="box" style="font-size:var(--fs-caption); display:flex; justify-content:space-between;${a.cliffRisk ? ' border-left-color:var(--danger);' : ''}">
                 <span>${a.label}</span>
                 <strong style="color:${a.cliffRisk ? 'var(--danger)' : 'var(--text-primary)'};">${a.cliff.map(p => p.name).join(', ')}</strong>
             </div>`).join('');
@@ -134,7 +134,7 @@
             teile.push(`Nur ${squad.length} Spieler im Kader (empfohlen ab ${SQUAD_RECOMMENDED_SIZE}): die Stammelf kommt kaum zu Pausen - Fitness der Elf zurzeit Ø ${fit} %.`);
         }
         if (bleiben < 14) teile.push(`Nach Vertragsende blieben nur ${bleiben} Spieler - unter 14 stellt der Vorstand eine schwache Notbesetzung. Verlängern oder verpflichten!`);
-        return teile.length ? `<div class="box" style="border-left-color:var(--danger); margin-bottom:4px; font-size:9px; color:var(--danger); font-weight:800;">⚠️ ${teile.join('<br>⚠️ ')}</div>` : '';
+        return teile.length ? `<div class="box" style="border-left-color:var(--danger); margin-bottom:4px; font-size:var(--fs-caption); color:var(--danger); font-weight:800;">⚠️ ${teile.join('<br>⚠️ ')}</div>` : '';
     }
 
     function renderSquadPlanningWarningsBox() {
@@ -148,11 +148,11 @@
             if (a.agingRisk) gruende.push(`Ø-Alter ${a.avgAge.toFixed(1)} Jahre (${a.aging.length} Spieler ab ${SQUAD_PLANNING_AGING_THRESHOLD})`);
             if (a.cliffRisk) gruende.push(`${a.cliff.length} Vertrag(e) laufen in ≤${SQUAD_PLANNING_CONTRACT_URGENT} Jahr(en) aus`);
             return `<div class="box" style="border-left-color:${a.riskColor}; margin-bottom:4px;">
-                <div style="font-size:10px; font-weight:800; color:${a.riskColor};">${a.riskLabel} · ${a.label}</div>
-                <div style="font-size:9px; color:var(--text-muted); margin-top:2px;">${gruende.join(' · ')}</div>
+                <div style="font-size:var(--fs-small); font-weight:800; color:${a.riskColor};">${a.riskLabel} · ${a.label}</div>
+                <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:2px;">${gruende.join(' · ')}</div>
             </div>`;
         }).join('');
-        box.innerHTML = getSquadSizeWarningHtml() + (warnings || '<div class="box" style="font-size:9px; color:var(--primary);">✓ Keine Position zeigt aktuell eine kombinierte Schwäche für die kommenden Saisons.</div>');
+        box.innerHTML = getSquadSizeWarningHtml() + (warnings || '<div class="box" style="font-size:var(--fs-caption); color:var(--primary);">✓ Keine Position zeigt aktuell eine kombinierte Schwäche für die kommenden Saisons.</div>');
     }
 
     // GEHALTSPLANUNG NÄCHSTE SAISON (25.17): seit das Gehaltsbudget der Liga folgt, scheitern
@@ -180,7 +180,7 @@
         const o = getSquadPlanningWageOutlook();
         const farbe = o.spielraum >= 0 ? 'var(--primary)' : 'var(--danger)';
         const zeile = (label, wert, extra) => `<div style="display:flex; justify-content:space-between; gap:6px;"><span style="color:var(--text-muted);">${label}</span><strong${extra || ''}>${wert}</strong></div>`;
-        box.innerHTML = `<div class="box" style="font-size:9px; border-left-color:${farbe};">
+        box.innerHTML = `<div class="box" style="font-size:var(--fs-caption); border-left-color:${farbe};">
             ${zeile('Gehälter jetzt (pro Spieltag)', `${formatVal(o.jetzt)} / Budget ${formatVal(game.wageBudget)}`)}
             ${zeile(`Laufen aus (${o.auslaufend.length} Spieler)`, `− ${formatVal(o.frei)}`)}
             ${zeile(`Stammspieler darunter verlängern (${o.stamm.length})`, `+ ${formatVal(o.verlaengerung)}`)}
@@ -216,7 +216,7 @@
         return `<div style="margin-top:4px; padding-top:4px; border-top:1px solid rgba(150,150,150,0.2);">
             <div style="font-weight:800; color:var(--accent);">💡 Entlastung (teuerste Ergänzungsspieler):</div>${zeilen.join('')}
             <div style="color:var(--text-muted);">${fenster ? 'Wechselfenster offen: Transfermarkt → Verkaufen.' : 'Leihen und Verkäufe im nächsten Wechselfenster (Spieltag 1-3 und 18-20).'}</div>
-            ${fenster ? `<button class="btn-secondary" style="margin-top:3px; font-size:9px;" onclick="showScreen('screen-transfer'); if (typeof setTransferTab === 'function') setTransferTab('sell');">→ Zur Verkaufsliste</button>` : ''}
+            ${fenster ? `<button class="btn-secondary" style="margin-top:3px; font-size:var(--fs-caption);" onclick="showScreen('screen-transfer'); if (typeof setTransferTab === 'function') setTransferTab('sell');">→ Zur Verkaufsliste</button>` : ''}
         </div>`;
     }
 

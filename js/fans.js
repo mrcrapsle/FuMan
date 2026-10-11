@@ -7,7 +7,7 @@
         let box = document.getElementById(targetBoxId);
         if (!box) return;
         let history = (game.attendanceHistory || []).slice(-10);
-        if (history.length === 0) { box.innerHTML = '<div class="box" style="font-size:10px; color:var(--text-muted);">Noch keine Heimspiel-Daten.</div>'; return; }
+        if (history.length === 0) { box.innerHTML = '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Heimspiel-Daten.</div>'; return; }
         // Liga-Vergleich: durchschnittlich zu erwartende Zuschauerzahl bei "normaler" (75%)
         // Fan-Zufriedenheit in der aktuellen Liga, als Referenzlinie im Diagramm.
         let leagueAvgAttendance = Math.round((stadium.total || 16000) * (LEAGUE_ATTENDANCE_CEILING[game.leagueLevel] ?? LEAGUE_ATTENDANCE_CEILING[LEAGUE_ATTENDANCE_CEILING.length - 1]));
@@ -24,7 +24,7 @@
                 }).join('')}
             </div>
         </div>
-        <div style="display:flex; justify-content:space-between; font-size:8px; color:var(--text-muted); margin-top:2px;">
+        <div style="display:flex; justify-content:space-between; font-size:var(--fs-micro); color:var(--text-muted); margin-top:2px;">
             <span>Spieltag ${history[0].matchday}</span>
             <span style="color:var(--accent);">- - - Liga-Ø: ${leagueAvgAttendance.toLocaleString('de-DE')}</span>
             <span>Spieltag ${history[history.length - 1].matchday}</span>
@@ -36,12 +36,12 @@
         if (!box) return;
         let history = (game.attendanceHistory || []).slice().sort((a, b) => b.attendance - a.attendance).slice(0, 8);
         if (history.length === 0) {
-            box.innerHTML = '<div class="box" style="font-size:10px; color:var(--text-muted);">Noch keine Heimspiele ausgetragen.</div>';
+            box.innerHTML = '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Heimspiele ausgetragen.</div>';
             return;
         }
         box.innerHTML = history.map((e, idx) => {
             let pct = Math.round((e.attendance / e.capacity) * 100);
-            return `<div class="box" style="display:flex; justify-content:space-between; font-size:10px;">
+            return `<div class="box" style="display:flex; justify-content:space-between; font-size:var(--fs-small);">
                 <span>#${idx + 1} Saison ${e.season}, Spieltag ${e.matchday} vs. ${e.opponent}</span>
                 <strong style="color:var(--accent);">${e.attendance.toLocaleString('de-DE')} (${pct}%)</strong>
             </div>`;
@@ -92,14 +92,14 @@
             let row = document.createElement('div');
             row.className = 'box';
             row.innerHTML = `<div style="display:flex; justify-content:space-between;"><strong>${g.name}</strong><span style="color:var(--primary);">${g.mood}%</span></div>
-                <div style="color:#94a3b8; font-size:10px; margin-bottom:4px;">${g.desc}</div>
-                ${action ? `<button onclick="runFanGroupAction('${g.id}')" class="btn-secondary" style="font-size:9px;" title="${action.desc}">${action.label}${action.cost > 0 ? ` [${formatVal(action.cost)}]` : ''}</button>` : ''}`;
+                <div style="color:var(--text-muted); font-size:var(--fs-small); margin-bottom:4px;">${g.desc}</div>
+                ${action ? `<button onclick="runFanGroupAction('${g.id}')" class="btn-secondary" style="font-size:var(--fs-caption);" title="${action.desc}">${action.label}${action.cost > 0 ? ` [${formatVal(action.cost)}]` : ''}</button>` : ''}`;
             list.appendChild(row);
         });
 
         // Neue Fan-Zentrale-Funktionen: Mitgliedschaften, Fanprojekt & Fanbus-Status
         let memberBox = document.getElementById('fan-membership-box');
-        if (memberBox) memberBox.innerHTML = `<span>👥 Vereinsmitglieder: <strong style="color:var(--accent);">${(fanCentralState.memberships || 0).toLocaleString('de-DE')}</strong></span><span style="font-size:9px; color:var(--text-muted);"> (~${formatVal(collectMembershipFees())}/Heimspiel)</span>`;
+        if (memberBox) memberBox.innerHTML = `<span>👥 Vereinsmitglieder: <strong style="color:var(--accent);">${(fanCentralState.memberships || 0).toLocaleString('de-DE')}</strong></span><span style="font-size:var(--fs-caption); color:var(--text-muted);"> (~${formatVal(collectMembershipFees())}/Heimspiel)</span>`;
         let projectBtn = document.getElementById('btn-fan-project');
         if (projectBtn) projectBtn.innerText = fanCentralState.fanProjectFunded ? '🤝 Fanprojekt AKTIV (auflösen)' : '🤝 Fanprojekt einrichten [4.000 €]';
         let busBtn = document.getElementById('btn-fan-bus');
@@ -122,8 +122,8 @@
         if (sponsorBox) {
             let unsponsored = youthTalents.filter(p => !fanCentralState.youthSponsorships.some(s => s.playerId === p.id));
             sponsorBox.innerHTML = unsponsored.length === 0
-                ? '<div style="font-size:9px; color:var(--text-muted);">Alle Jugendspieler haben bereits eine Patenschaft, oder die Akademie ist leer.</div>'
-                : unsponsored.slice(0, 5).map(p => `<div class="player-row" style="font-size:9px;"><span>${p.name} (${p.pos})</span><button onclick="sponsorYouthPlayerByFans('${p.id}')" class="btn-secondary" style="width:auto; font-size:9px;">🌟 Patenschaft</button></div>`).join('');
+                ? '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Alle Jugendspieler haben bereits eine Patenschaft, oder die Akademie ist leer.</div>'
+                : unsponsored.slice(0, 5).map(p => `<div class="player-row" style="font-size:var(--fs-caption);"><span>${p.name} (${p.pos})</span><button onclick="sponsorYouthPlayerByFans('${p.id}')" class="btn-secondary" style="width:auto; font-size:var(--fs-caption);">🌟 Patenschaft</button></div>`).join('');
         }
     }
 
@@ -253,13 +253,13 @@
         let maxPermanent = academyLvl * 15;
         let maxSkill = Math.min(5, academyLvl + 1);
         box.innerHTML = `
-            <div class="box" style="font-size:10px; margin-bottom:6px;">
+            <div class="box" style="font-size:var(--fs-small); margin-bottom:6px;">
                 🛡️ Fest angestellte Ordner: <strong>${securityWorkforce.permanentStewards} / ${maxPermanent}</strong><br>
                 🎓 Ausbildungsstufe: <strong>${securityWorkforce.skillLevel} / ${maxSkill}</strong>${academyLvl === 0 ? ' <span style="color:var(--danger);">(Sicherheitsakademie fehlt!)</span>' : ''}
             </div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
-                <button onclick="hirePermanentStewards(5)" class="btn-secondary" style="font-size:9px;" ${academyLvl===0?'disabled':''}>+5 Ordner fest anstellen [40.000 €]</button>
-                <button onclick="trainStewardSkill()" class="btn-secondary" style="font-size:9px;" ${academyLvl===0?'disabled':''}>🎓 Schulung [${formatVal(15000*securityWorkforce.skillLevel)}]</button>
+                <button onclick="hirePermanentStewards(5)" class="btn-secondary" style="font-size:var(--fs-caption);" ${academyLvl===0?'disabled':''}>+5 Ordner fest anstellen [40.000 €]</button>
+                <button onclick="trainStewardSkill()" class="btn-secondary" style="font-size:var(--fs-caption);" ${academyLvl===0?'disabled':''}>🎓 Schulung [${formatVal(15000*securityWorkforce.skillLevel)}]</button>
             </div>
         `;
     }
@@ -598,6 +598,6 @@
         if (!box) return;
         let feed = fanCentralState.feed || [];
         box.innerHTML = feed.length === 0
-            ? '<div class="box" style="font-size:10px; color:var(--text-muted);">Noch keine Fan-Ereignisse.</div>'
-            : feed.slice(0, 10).map(e => `<div class="box" style="font-size:10px;"><span style="color:var(--text-muted);">S${e.season}/${e.matchday}:</span> ${e.text}</div>`).join('');
+            ? '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Fan-Ereignisse.</div>'
+            : feed.slice(0, 10).map(e => `<div class="box" style="font-size:var(--fs-small);"><span style="color:var(--text-muted);">S${e.season}/${e.matchday}:</span> ${e.text}</div>`).join('');
     }

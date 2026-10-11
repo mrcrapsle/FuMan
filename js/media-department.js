@@ -130,23 +130,23 @@ function renderMediaDepartmentPanel() {
     if (!box) return;
     const md = initMediaDepartment();
     const blocked = getMediaActionBlockReason();
-    let html = '<div style="font-size:9px;">';
+    let html = '<div style="font-size:var(--fs-caption);">';
     if (md.event) {
         html += `<div style="background:rgba(255,84,104,0.1); border-left:3px solid var(--danger); padding:6px; border-radius:4px; margin-bottom:6px;">
             <div style="font-weight:bold;">${md.event.title}</div><div style="color:var(--text-muted); margin:3px 0;">${md.event.text}</div>
-            ${MEDIA_EVENT_OPTIONS[md.event.type].map((o, i) => `<button onclick="answerMediaEvent(${i})" class="${i === 0 ? 'btn-action' : 'btn-secondary'}" style="font-size:8px; padding:3px 6px; margin:2px 4px 0 0;">${o.label}</button>`).join('')}
+            ${MEDIA_EVENT_OPTIONS[md.event.type].map((o, i) => `<button onclick="answerMediaEvent(${i})" class="${i === 0 ? 'btn-action' : 'btn-secondary'}" style="font-size:var(--fs-micro); padding:3px 6px; margin:2px 4px 0 0;">${o.label}</button>`).join('')}
         </div>`;
     }
     if (blocked) html += `<div style="color:var(--text-muted); margin-bottom:4px;">${blocked}</div>`;
     const dis = blocked ? 'disabled' : '';
     const kosten = key => { const c = MEDIA_ACTIONS[key].cost(); return c ? ` (${formatVal(c)})` : ''; };
-    html += `<button onclick="runMediaAction('kampagne')" class="btn-secondary" ${dis} style="width:100%; font-size:9px; padding:4px; margin-bottom:3px;">${MEDIA_ACTIONS.kampagne.label}${kosten('kampagne')}</button>`;
-    html += `<div style="display:flex; gap:4px; margin-bottom:3px;"><select id="media-interview-player" class="input-inline" style="flex:1; font-size:9px;">
+    html += `<button onclick="runMediaAction('kampagne')" class="btn-secondary" ${dis} style="width:100%; font-size:var(--fs-caption); padding:4px; margin-bottom:3px;">${MEDIA_ACTIONS.kampagne.label}${kosten('kampagne')}</button>`;
+    html += `<div style="display:flex; gap:4px; margin-bottom:3px;"><select id="media-interview-player" class="input-inline" style="flex:1; font-size:var(--fs-caption);">
         ${interviewCandidates().map(p => `<option value="${p.id}">${p.name} (Moral ${Math.round(p.morale || 50)})</option>`).join('')}</select>
-        <button onclick="runMediaAction('interview', document.getElementById('media-interview-player').value)" class="btn-secondary" ${dis} style="font-size:9px; padding:4px;">${MEDIA_ACTIONS.interview.label}</button></div>`;
-    html += `<button onclick="runMediaAction('hintergrund')" class="btn-secondary" ${dis} style="width:100%; font-size:9px; padding:4px;">${MEDIA_ACTIONS.hintergrund.label}${kosten('hintergrund')}</button>`;
-    html += '<div style="font-size:8px; color:var(--text-muted); margin-top:4px;">Schlechte Laune im Interview schadet. Wohlwollen der Presse mildert die nächste Kritikwelle.</div>';
-    if (md.log.length) html += '<div style="margin-top:6px; font-weight:bold;">Zuletzt</div>' + md.log.slice(0, 3).map(l => `<div style="color:var(--text-muted); font-size:8px;">S${l.season}/ST${l.matchday}: ${l.text}</div>`).join('');
+        <button onclick="runMediaAction('interview', document.getElementById('media-interview-player').value)" class="btn-secondary" ${dis} style="font-size:var(--fs-caption); padding:4px;">${MEDIA_ACTIONS.interview.label}</button></div>`;
+    html += `<button onclick="runMediaAction('hintergrund')" class="btn-secondary" ${dis} style="width:100%; font-size:var(--fs-caption); padding:4px;">${MEDIA_ACTIONS.hintergrund.label}${kosten('hintergrund')}</button>`;
+    html += '<div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:4px;">Schlechte Laune im Interview schadet. Wohlwollen der Presse mildert die nächste Kritikwelle.</div>';
+    if (md.log.length) html += '<div style="margin-top:6px; font-weight:bold;">Zuletzt</div>' + md.log.slice(0, 3).map(l => `<div style="color:var(--text-muted); font-size:var(--fs-micro);">S${l.season}/ST${l.matchday}: ${l.text}</div>`).join('');
     box.innerHTML = html + '</div>';
 }
 
@@ -208,7 +208,7 @@ function renderPressConference(ctx) {
     if (q) q.innerHTML = `<strong>Journalist fragt:</strong> "${pressSituation.frage(c)}"`;
     const box = document.getElementById('press-answers-container');
     if (!box) return;
-    box.innerHTML = pressSituation.antworten.map((a, i) => `<button onclick="answerPressConference(${i})" class="btn-action" style="margin:3px 0; text-align:left;">${a.text}<br><span style="font-size:9px; font-weight:600; opacity:0.8;">${a.hint}</span></button>`).join('');
+    box.innerHTML = pressSituation.antworten.map((a, i) => `<button onclick="answerPressConference(${i})" class="btn-action" style="margin:3px 0; text-align:left;">${a.text}<br><span style="font-size:var(--fs-caption); font-weight:600; opacity:0.8;">${a.hint}</span></button>`).join('');
 }
 
 function answerPressConference(index) {

@@ -159,8 +159,8 @@ function renderNationalTeamPanel() {
             · ${p.caps || 0} Sp., ${p.intlGoals || 0} T.${p.intlTitles ? ` · 🏆${p.intlTitles}` : ''}</span>
         </div>`;
     }).join('') : '<div style="color:var(--text-muted);">Noch niemand in Reichweite einer Nominierung (Deutschland ab Stärke 73, kleinere Nationen ab 64).</div>';
-    const historie = (game.intlTournaments || []).slice(0, 3).map(t => `<div class="box" style="font-size:9px;"><strong>${t.name} ${t.season}</strong>: ${t.nations.map(n => `${NATIONS[n.nation] ? NATIONS[n.nation].flag : ''} ${n.nation} - ${n.stage === 'Titel' ? '🏆 Titel' : n.stage}`).join(' · ')}${t.fee ? ` · Prämie ${formatVal(t.fee)}` : ''}</div>`).join('');
-    box.innerHTML = `<div style="font-size:9px;">
+    const historie = (game.intlTournaments || []).slice(0, 3).map(t => `<div class="box" style="font-size:var(--fs-caption);"><strong>${t.name} ${t.season}</strong>: ${t.nations.map(n => `${NATIONS[n.nation] ? NATIONS[n.nation].flag : ''} ${n.nation} - ${n.stage === 'Titel' ? '🏆 Titel' : n.stage}`).join(' · ')}${t.fee ? ` · Prämie ${formatVal(t.fee)}` : ''}</div>`).join('');
+    box.innerHTML = `<div style="font-size:var(--fs-caption);">
         <div style="color:var(--text-muted); margin-bottom:4px;">Länderspielpausen nach den Spieltagen ${INTL_BREAK_MATCHDAYS.join(', ')}${naechste ? ` (nächste: nach Spieltag ${naechste})` : ''}. Nominiert wird, wer die Schwelle seines Landes erreicht; ein Notenschnitt von 2,5 oder besser senkt sie um 2. Reise: Fitness -12, Verletzungsrisiko - dafür Moral, Marktwert, Fans und ${formatVal(INTL_BREAK_FEE)} Abstellungsprämie je Spieler. Turniere: ${formatVal(TOURNAMENT_DAY_FEE.Weltmeisterschaft)} (WM) bzw. ${formatVal(TOURNAMENT_DAY_FEE.Europameisterschaft)} (EM) je Spieler und Turniertag.
         ${saisonGerade ? `<br>🏆 Nach dieser Saison: <strong>${getTournamentName(game.season)}</strong>.` : '<br>Nach der nächsten Saison steht wieder ein Turnier an.'}</div>
         ${zeilen}

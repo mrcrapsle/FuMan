@@ -136,7 +136,7 @@ function startCupLiveFlow(tie) {
     const danach = tie.comp === 'relegation' ? '' : '<br><span style="color:var(--text-muted);">Das Ligaspiel folgt direkt im Anschluss.</span>';
     const finalBonus = typeof getCupFinalBonus === 'function' ? getCupFinalBonus(tie.comp) : 0;
     const finalZeile = finalBonus > 0 ? `<br>🏟️ Finalvorbereitung: +${String(finalBonus).replace('.', ',')} Stärke` : '';
-    if (box) box.innerHTML = `<div class="box" style="font-size:11px; border-left-color:var(--gold);"><strong>${tie.titel}</strong><br>${tie.home} - ${tie.away} (Gegner-Stärke ${Math.round(tie.oppStr)})${finalZeile}${danach}</div>` + box.innerHTML;
+    if (box) box.innerHTML = `<div class="box" style="font-size:var(--fs-body); border-left-color:var(--gold);"><strong>${tie.titel}</strong><br>${tie.home} - ${tie.away} (Gegner-Stärke ${Math.round(tie.oppStr)})${finalZeile}${danach}</div>` + box.innerHTML;
     renderPressConference({ oppName, oppStr: tie.oppStr, isHome, cup: true });
     showScreen('screen-prematch-press');
 }

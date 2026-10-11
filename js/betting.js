@@ -171,7 +171,7 @@
                     ? { over: 'Über 2.5 Tore', under: 'Unter 2.5 Tore', bttsYes: 'Beide Teams treffen', bttsNo: 'Nicht beide treffen' }[activeBet.outcome]
                     : `Kombi: ${activeBet.outcome === 'win' ? 'Sieg' : (activeBet.outcome === 'draw' ? 'Remis' : 'Niederlage')} + Sonderwette`;
             box.innerHTML = `
-                <div class="box" style="font-size:11px;">
+                <div class="box" style="font-size:var(--fs-body);">
                     Aktive Wette: <strong>${formatVal(activeBet.stake)}</strong> auf <strong>${label}</strong> @ ${activeBet.odds}<br>
                     Mögliche Auszahlung: <strong style="color:var(--primary);">${formatVal(Math.round(activeBet.stake * activeBet.odds))}</strong>
                 </div>
@@ -182,32 +182,32 @@
         }
         let odds = calcNextMatchOdds();
         if (!odds) {
-            box.innerHTML = '<div class="box" style="font-size:10px; color:#64748b;">Kein anstehendes Ligaspiel zum Wetten gefunden.</div>';
+            box.innerHTML = '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Kein anstehendes Ligaspiel zum Wetten gefunden.</div>';
             renderBetHistory();
             return;
         }
         let homeLabel = odds.isHome ? game.clubName : odds.oppName;
         let awayLabel = odds.isHome ? odds.oppName : game.clubName;
         box.innerHTML = `
-            <div class="box" style="font-size:11px; margin-bottom:6px;">
+            <div class="box" style="font-size:var(--fs-body); margin-bottom:6px;">
                 Nächstes Spiel: <strong>${homeLabel}</strong> vs <strong>${awayLabel}</strong><br>
-                <span style="font-size:9px; color:#64748b;">Quoten von ${BETTING_PROVIDER_NAME} · Höchsteinsatz: ${formatVal(Math.max(MIN_BET_STAKE, Math.round(game.money * MAX_BET_STAKE_FRACTION)))}</span>
+                <span style="font-size:var(--fs-caption); color:var(--text-muted);">Quoten von ${BETTING_PROVIDER_NAME} · Höchsteinsatz: ${formatVal(Math.max(MIN_BET_STAKE, Math.round(game.money * MAX_BET_STAKE_FRACTION)))}</span>
             </div>
             <input type="number" id="bet-stake-input" placeholder="Einsatz in €" class="input-inline" style="width:100%; margin-bottom:6px;">
-            <div style="font-size:9px; font-weight:800; color:var(--text-muted); margin-bottom:3px;">SPIELAUSGANG</div>
+            <div style="font-size:var(--fs-caption); font-weight:800; color:var(--text-muted); margin-bottom:3px;">SPIELAUSGANG</div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-bottom:4px;">
-                <button onclick="placeBet('win', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-action" style="font-size:10px;">Sieg @ ${odds.oddsWin}</button>
-                <button onclick="placeBet('draw', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-secondary" style="font-size:10px;">Remis @ ${odds.oddsDraw}</button>
+                <button onclick="placeBet('win', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-action" style="font-size:var(--fs-small);">Sieg @ ${odds.oddsWin}</button>
+                <button onclick="placeBet('draw', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-secondary" style="font-size:var(--fs-small);">Remis @ ${odds.oddsDraw}</button>
             </div>
-            <div style="font-size:8px; color:var(--text-muted); margin-bottom:8px;">🚫 Auf eine Niederlage der eigenen Mannschaft zu wetten ist verboten. Quoten gelten für deine beste verfügbare Elf.</div>
-            <div style="font-size:9px; font-weight:800; color:var(--text-muted); margin-bottom:3px;">SONDERWETTEN</div>
+            <div style="font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:8px;">🚫 Auf eine Niederlage der eigenen Mannschaft zu wetten ist verboten. Quoten gelten für deine beste verfügbare Elf.</div>
+            <div style="font-size:var(--fs-caption); font-weight:800; color:var(--text-muted); margin-bottom:3px;">SONDERWETTEN</div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-bottom:4px;">
-                <button onclick="placeSpecialBet('over', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-secondary" style="font-size:10px;">Über 2.5 @ ${odds.oddsOver}</button>
-                <button onclick="placeSpecialBet('under', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-secondary" style="font-size:10px;">Unter 2.5 @ ${odds.oddsUnder}</button>
-                <button onclick="placeSpecialBet('bttsYes', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-secondary" style="font-size:10px;">Beide treffen @ ${odds.oddsBttsYes}</button>
-                <button onclick="placeSpecialBet('bttsNo', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-secondary" style="font-size:10px;">Nicht beide @ ${odds.oddsBttsNo}</button>
+                <button onclick="placeSpecialBet('over', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-secondary" style="font-size:var(--fs-small);">Über 2.5 @ ${odds.oddsOver}</button>
+                <button onclick="placeSpecialBet('under', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-secondary" style="font-size:var(--fs-small);">Unter 2.5 @ ${odds.oddsUnder}</button>
+                <button onclick="placeSpecialBet('bttsYes', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-secondary" style="font-size:var(--fs-small);">Beide treffen @ ${odds.oddsBttsYes}</button>
+                <button onclick="placeSpecialBet('bttsNo', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-secondary" style="font-size:var(--fs-small);">Nicht beide @ ${odds.oddsBttsNo}</button>
             </div>
-            <div style="font-size:9px; font-weight:800; color:var(--text-muted); margin-bottom:3px;">KOMBIWETTE (Sieg + Über 2.5)</div>
+            <div style="font-size:var(--fs-caption); font-weight:800; color:var(--text-muted); margin-bottom:3px;">KOMBIWETTE (Sieg + Über 2.5)</div>
             <button onclick="placeComboBet('win', 'over', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-gold">Kombi Sieg + Über 2.5 @ ${odds.oddsWinOver}</button>
         `;
         renderBetHistory();
@@ -218,7 +218,7 @@
         if (!box) return;
         let hist = betHistory || [];
         box.innerHTML = hist.length === 0
-            ? '<div style="font-size:9px; color:var(--text-muted);">Noch keine abgeschlossenen Wetten.</div>'
-            : hist.slice(0, 8).map(b => `<div class="box" style="font-size:9px; display:flex; justify-content:space-between; ${b.won ? 'border-left-color:var(--primary);' : 'border-left-color:var(--danger);'}"><span>S${b.season}/${b.matchday}: ${formatVal(b.stake)} @ ${b.odds}</span><span style="color:${b.won ? 'var(--primary)' : 'var(--danger)'};">${b.won ? '+' + formatVal(b.payout) : 'Verloren'}</span></div>`).join('');
+            ? '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch keine abgeschlossenen Wetten.</div>'
+            : hist.slice(0, 8).map(b => `<div class="box" style="font-size:var(--fs-caption); display:flex; justify-content:space-between; ${b.won ? 'border-left-color:var(--primary);' : 'border-left-color:var(--danger);'}"><span>S${b.season}/${b.matchday}: ${formatVal(b.stake)} @ ${b.odds}</span><span style="color:${b.won ? 'var(--primary)' : 'var(--danger)'};">${b.won ? '+' + formatVal(b.payout) : 'Verloren'}</span></div>`).join('');
     }
 

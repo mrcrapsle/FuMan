@@ -2647,6 +2647,80 @@ async function testVorstandHub(browser) {
     await page.close();
 }
 
+async function testDesignThemes(browser) {
+    console.log('\n[25.51] Darstellung: Farb-Themes mit WCAG-Kontrast, Textgröße, Speicherung und Karten');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 412, height: 900 });
+    const r = await page.evaluate(async () => {
+        closeTutorial();
+        const out = { kontrast: [], ueberlauf: [] };
+        const probe = document.createElement('div');
+        document.querySelector('.app-content').appendChild(probe);
+        const farbe = (prop, wert) => { probe.style[prop] = wert; const c = getComputedStyle(probe)[prop].match(/[\d.]+/g).map(Number); probe.style[prop] = ''; return c; };
+        const lum = ([r, g, b]) => [r, g, b].map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }).reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
+        const mische = (oben, unten) => { const a = oben.length > 3 ? oben[3] : 1; return [0, 1, 2].map(i => oben[i] * a + unten[i] * (1 - a)); };
+        const verhaeltnis = (a, b) => { const [h, d] = [lum(a), lum(b)].sort((x, y) => y - x); return (h + 0.05) / (d + 0.05); };
+        for (const t of DESIGN_THEMES) {
+            setzeDesignTheme(t.id);
+            const app = farbe('backgroundColor', 'var(--surface-app)');
+            const panel = mische(farbe('backgroundColor', 'var(--surface-panel)'), app);
+            for (const tok of ['--text-main', '--text-muted', '--accent', '--primary', '--danger']) {
+                const v = verhaeltnis(farbe('color', `var(${tok})`), panel);
+                if (v < 4.5) out.kontrast.push(`${t.id} ${tok} ${v.toFixed(2)}`);
+            }
+        }
+        out.kontrastMin = out.kontrast.length;
+        // Speichern pro Gerät und ungültige Werte
+        setzeDesignTheme('kontrast');
+        setzeDesignTheme('gibtsnicht');
+        out.ungueltigIgnoriert = document.documentElement.getAttribute('data-theme') === 'kontrast';
+        const normal = parseFloat(getComputedStyle(document.body).fontSize);
+        setzeTextGroesse('sehr-gross');
+        out.groesser = parseFloat(getComputedStyle(document.body).fontSize) / normal;
+        // Handy: bei sehr großer Schrift läuft nichts über
+        const W = document.documentElement.clientWidth;
+        for (const [name, open] of [['dashboard', () => showScreen('screen-dashboard')], ['personal', () => showScreen('screen-staff')],
+            ['markt', () => { showScreen('screen-transfer'); setTransferTab('market'); }], ['darstellung', () => showScreen('screen-design')],
+            ['talentbaum', () => showScreen('screen-manager-tree')]]) {
+            open();
+            await new Promise(res => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(res, 40))));
+            if (document.documentElement.scrollWidth > W + 2) out.ueberlauf.push(name);
+        }
+        // Bildschirm "Darstellung": alle Themes und Größen als Knöpfe, Vorschau mit echtem Spieler
+        showScreen('screen-design');
+        out.karten = document.querySelectorAll('#design-settings-box .design-theme-card').length;
+        out.groessen = document.querySelectorAll('#design-settings-box .design-size-btn').length;
+        out.vorschau = document.querySelector('#design-settings-box .ui-card-title')?.textContent === [...squad].sort((a, b) => b.strength - a.strength)[0].name;
+        out.navKnopf = !!document.querySelector(`.nav-btn[onclick="showScreen('screen-design')"]`);
+        // Transfermarkt-Karte nach dem Kartenmuster: Titel, Kennzahl Stärke, Chips
+        showScreen('screen-transfer'); setTransferTab('market');
+        const karte = document.querySelector('#market-list .ui-card-head');
+        out.marktKarte = !!karte && karte.querySelector('.ui-card-title').textContent === marketPlayers[0].name
+            && karte.querySelector('.ui-card-kpi-wert').textContent.trim() === String(marketPlayers[0].strength)
+            && karte.querySelectorAll('.ui-chip').length >= 2;
+        probe.remove();
+        return out;
+    });
+    await page.evaluate(() => showScreen('screen-design'));
+    await page.click('#design-settings-box .design-theme-card:nth-child(2)');
+    const geklickt = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+    await page.reload();
+    await page.waitForFunction(() => !document.getElementById('app-loading'), null, { timeout: 20000 }).catch(() => null);
+    const nachStart = await page.evaluate(() => ({ theme: document.documentElement.getAttribute('data-theme'), groesse: document.documentElement.getAttribute('data-text-size') }));
+    assert(r.kontrast.length === 0, `Alle Themes: Text, Nebentext, Akzent, Gut und Schlecht erreichen 4,5:1 auf Karten (${r.kontrast.join(', ')})`);
+    assert(r.ungueltigIgnoriert, 'Ein unbekanntes Theme ändert nichts');
+    assert(r.groesser > 1.2, `Textgröße "sehr groß" vergrößert die Schrift (Faktor ${r.groesser.toFixed(2)})`);
+    assert(r.ueberlauf.length === 0, `Sehr große Schrift läuft auf dem Handy nirgends über (${r.ueberlauf.join(', ')})`);
+    assert(r.karten === 5 && r.groessen === 3, `Darstellung zeigt 5 Themes und 3 Textgrößen (${r.karten}/${r.groessen})`);
+    assert(r.vorschau, 'Die Vorschau zeigt den stärksten eigenen Spieler');
+    assert(r.navKnopf, 'Menüpunkt "Darstellung" ist vorhanden');
+    assert(r.marktKarte, 'Transfermarkt-Karte: Name als Titel, Stärke als Kennzahl, Chips mit Zusatzangaben');
+    assert(geklickt === 'klassik', `Antippen einer Theme-Karte wechselt das Farbschema (${geklickt})`);
+    assert(nachStart.theme === 'klassik' && nachStart.groesse === 'sehr-gross', `Theme und Textgröße bleiben nach dem Neustart erhalten (${JSON.stringify(nachStart)})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler in der Darstellung (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testBoardEarlyWarning(browser) {
     console.log('\n[25.24] Vorstand: Frühwarnung schon unter 50 Zufriedenheit, einmal pro Saison');
     const { page, consoleErrors } = await freshPage(browser);
@@ -9078,7 +9152,7 @@ async function testMobileLayout(browser) {
             document.querySelectorAll('.app-content *').forEach(el => {
                 if (el.getBoundingClientRect().height === 0) return;
                 if (![...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) return;
-                if (parseFloat(getComputedStyle(el).fontSize) < 8) schrift.push(`${name}: "${el.textContent.trim().slice(0, 20)}"`);
+                if (parseFloat(getComputedStyle(el).fontSize) < 11) schrift.push(`${name}: "${el.textContent.trim().slice(0, 20)}" ${getComputedStyle(el).fontSize}`);
             });
             // Akzentstreifen (.box::before, bis 9 px vom Rand) darf nicht auf dem Text liegen
             document.querySelectorAll('.app-content .box').forEach(el => {
@@ -9102,7 +9176,7 @@ async function testMobileLayout(browser) {
     });
     assert(langEuropa, 'Lange Vereinsnamen in den Europa-Gruppen laufen nicht über die Handy-Breite');
     assert(r.knoepfe.length === 0, `Alle Knöpfe mindestens 32 px hoch (${r.knoepfe.slice(0, 4).join(' | ')})`);
-    assert(r.schrift.length === 0, `Keine Schrift unter 8 px (${r.schrift.slice(0, 4).join(' | ')})`);
+    assert(r.schrift.length === 0, `Keine Schrift unter 11 px auf dem Handy (${r.schrift.length}: ${r.schrift.slice(0, 60).join(' | ')})`);
     assert(r.navZeilen === 1, `Untere Leiste in einer Zeile (${r.navZeilen})`);
     assert(r.streifen.length === 0, `Akzentstreifen der Kästen liegt nirgends auf dem Text (${r.streifen.length}: ${r.streifen.slice(0, 4).join(' | ')})`);
     assert(r.verdeckt.length === 0, `Seitenende nirgends von der unteren Leiste verdeckt (${r.verdeckt.slice(0, 5).join(', ')})`);
@@ -10118,6 +10192,7 @@ async function main() {
         testAnalystErnaehrung,
         testPersonalGrundAnzeige,
         testVorstandHub,
+        testDesignThemes,
         testEntlassungsGrund,
         testEnglishUi,
         testSwapDeals,

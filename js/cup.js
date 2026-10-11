@@ -114,11 +114,11 @@
         let h = game.cupHistory || { titlesWon: 0, schrecksErlitten: [], schrecksVerursacht: [], matchesPlayed: 0, wins: 0 };
         let winRate = h.matchesPlayed > 0 ? Math.round((h.wins / h.matchesPlayed) * 100) : 0;
         box.innerHTML = `
-            <div class="box" style="font-size:10px;">🏆 Pokaltitel: <strong>${(game.trophies || []).filter(t => t.includes('Pokalsieger')).length}</strong> · Bilanz: ${h.wins}/${h.matchesPlayed} Siege (${winRate}%)</div>
-            <div style="font-size:9px; font-weight:800; color:var(--text-muted); margin:6px 0 3px;">😱 ERLITTENE POKALSCHRECKS</div>
-            ${h.schrecksErlitten.length === 0 ? '<div style="font-size:9px; color:var(--text-muted);">Noch keiner - gut so!</div>' : h.schrecksErlitten.slice(0, 3).map(s => `<div class="box" style="font-size:9px;">Saison ${s.season}, ${s.round}: Aus gegen ${s.opponent} (-${s.diff} Stärke unterlegen)</div>`).join('')}
-            <div style="font-size:9px; font-weight:800; color:var(--text-muted); margin:6px 0 3px;">🎉 VERURSACHTE SENSATIONEN</div>
-            ${h.schrecksVerursacht.length === 0 ? '<div style="font-size:9px; color:var(--text-muted);">Noch keine Überraschung geschafft.</div>' : h.schrecksVerursacht.slice(0, 3).map(s => `<div class="box" style="font-size:9px;">Saison ${s.season}, ${s.round}: Sieg gegen favorisierten ${s.opponent} (+${s.diff} Stärke unterlegen)</div>`).join('')}
+            <div class="box" style="font-size:var(--fs-small);">🏆 Pokaltitel: <strong>${(game.trophies || []).filter(t => t.includes('Pokalsieger')).length}</strong> · Bilanz: ${h.wins}/${h.matchesPlayed} Siege (${winRate}%)</div>
+            <div style="font-size:var(--fs-caption); font-weight:800; color:var(--text-muted); margin:6px 0 3px;">😱 ERLITTENE POKALSCHRECKS</div>
+            ${h.schrecksErlitten.length === 0 ? '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch keiner - gut so!</div>' : h.schrecksErlitten.slice(0, 3).map(s => `<div class="box" style="font-size:var(--fs-caption);">Saison ${s.season}, ${s.round}: Aus gegen ${s.opponent} (-${s.diff} Stärke unterlegen)</div>`).join('')}
+            <div style="font-size:var(--fs-caption); font-weight:800; color:var(--text-muted); margin:6px 0 3px;">🎉 VERURSACHTE SENSATIONEN</div>
+            ${h.schrecksVerursacht.length === 0 ? '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch keine Überraschung geschafft.</div>' : h.schrecksVerursacht.slice(0, 3).map(s => `<div class="box" style="font-size:var(--fs-caption);">Saison ${s.season}, ${s.round}: Sieg gegen favorisierten ${s.opponent} (+${s.diff} Stärke unterlegen)</div>`).join('')}
         `;
     }
 
@@ -288,9 +288,9 @@
             box.innerHTML = `
                 <div class="panel-header">
                     <span>${r.name} (Termin: Spieltag ${r.matchday})</span>
-                    <span style="color:var(--primary); font-size:10px;">Prämie: +${formatVal(r.prize)}</span>
+                    <span style="color:var(--primary); font-size:var(--fs-small);">Prämie: +${formatVal(r.prize)}</span>
                 </div>
-                ${ourMatch ? `<div style="font-weight:bold; margin-bottom:4px; color:var(--accent);">Dein Spiel: ${ourMatch.home} vs ${ourMatch.away} ${ourMatch.played ? `[${ourMatch.homeGoals}:${ourMatch.awayGoals}${ourMatch.penaltyWinner ? ' (i.E.)' : ''}]` : ''}</div>` : '<div style="color:var(--danger); font-size:10px; margin-bottom:4px;">Nicht mehr vertreten</div>'}
+                ${ourMatch ? `<div style="font-weight:bold; margin-bottom:4px; color:var(--accent);">Dein Spiel: ${ourMatch.home} vs ${ourMatch.away} ${ourMatch.played ? `[${ourMatch.homeGoals}:${ourMatch.awayGoals}${ourMatch.penaltyWinner ? ' (i.E.)' : ''}]` : ''}</div>` : '<div style="color:var(--danger); font-size:var(--fs-small); margin-bottom:4px;">Nicht mehr vertreten</div>'}
                 <div style="max-height:160px; overflow-y:auto;">${pairingsHtml}</div>
             `;
             container.appendChild(box);

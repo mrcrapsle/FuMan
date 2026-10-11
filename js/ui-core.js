@@ -92,7 +92,7 @@
     // lief. Dieser Test hätte das beim nächsten Bauen sofort sichtbar gemacht.
     let selbsttestLaeuft = false;
     function runStructuralSelfTest(silent = true) {
-        let topScreens = ['screen-office', 'screen-dashboard', 'screen-calendar', 'screen-inbox', 'screen-squad', 'screen-second-team', 'screen-women', 'screen-training', 'screen-manager-tree', 'screen-admin', 'screen-lexicon', 'screen-prematch-press', 'screen-matchday'];
+        let topScreens = ['screen-office', 'screen-dashboard', 'screen-calendar', 'screen-inbox', 'screen-squad', 'screen-second-team', 'screen-women', 'screen-training', 'screen-manager-tree', 'screen-admin', 'screen-lexicon', 'screen-design', 'screen-prematch-press', 'screen-matchday'];
         let allTestIds = [...topScreens, ...Object.keys(HUB_MEMBERS), ...Object.values(HUB_MEMBERS).flat()];
         let problems = [];
         let originalTopScreen = topScreens.find(s => document.getElementById(s)?.style.display === 'block') || 'screen-dashboard';
@@ -223,7 +223,7 @@
         const screens = [
             'screen-office',
             'screen-dashboard', 'screen-calendar', 'screen-inbox', 'screen-squad', 'screen-second-team', 'screen-women', 'screen-training',
-            'screen-manager-tree', 'screen-admin', 'screen-cup', 'screen-lexicon',
+            'screen-manager-tree', 'screen-admin', 'screen-cup', 'screen-lexicon', 'screen-design',
             'screen-hub-wirtschaft', 'screen-hub-finanzen', 'screen-hub-ausbau',
             'screen-hub-kaderplanung', 'screen-hub-wettbewerbe', 'screen-hub-spezial',
             'screen-prematch-press', 'screen-matchday', 'screen-hub-vorstand'
@@ -290,6 +290,7 @@
         if (screenId === 'screen-history') renderHistoryView();
         if (screenId === 'screen-admin' && typeof renderAdminView === 'function') renderAdminView();
         if (screenId === 'screen-lexicon' && typeof showLexiconView === 'function') showLexiconView();
+        if (screenId === 'screen-design' && typeof renderDesignSettings === 'function') renderDesignSettings();
         updateUI();
     }
 

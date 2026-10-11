@@ -16,20 +16,20 @@
         }).filter(Boolean);
 
         box.innerHTML = `
-            <div class="box" style="font-size:10px; margin-bottom:6px;">
+            <div class="box" style="font-size:var(--fs-small); margin-bottom:6px;">
                 📋 <strong>${urgent.length}</strong> Verträge laufen bald aus · <strong>${returningLoans.length}</strong> Leihspieler kehren ggf. zurück · <strong>${safe.length}</strong> Verträge langfristig gesichert
             </div>
             ${urgent.length > 0 ? `
-                <div style="font-size:9px; font-weight:800; color:var(--danger); margin:6px 0 3px;">🔴 DRINGEND - VERTRAG LÄUFT AUS (0-1 JAHR)</div>
-                ${urgent.map(p => `<div class="box" style="font-size:9px; border-left-color:var(--danger); display:flex; justify-content:space-between;"><span>${p.name} (${p.pos}, Str ${p.strength})</span><span>${p.contracts === 0 ? 'Läuft diese Saison aus!' : '1 Jahr Rest'}</span></div>`).join('')}
+                <div style="font-size:var(--fs-caption); font-weight:800; color:var(--danger); margin:6px 0 3px;">🔴 DRINGEND - VERTRAG LÄUFT AUS (0-1 JAHR)</div>
+                ${urgent.map(p => `<div class="box" style="font-size:var(--fs-caption); border-left-color:var(--danger); display:flex; justify-content:space-between;"><span>${p.name} (${p.pos}, Str ${p.strength})</span><span>${p.contracts === 0 ? 'Läuft diese Saison aus!' : '1 Jahr Rest'}</span></div>`).join('')}
             ` : ''}
             ${soon.length > 0 ? `
-                <div style="font-size:9px; font-weight:800; color:var(--accent); margin:6px 0 3px;">🟡 BALD PLANEN (2 JAHRE REST)</div>
-                ${soon.map(p => `<div class="box" style="font-size:9px; border-left-color:var(--accent); display:flex; justify-content:space-between;"><span>${p.name} (${p.pos})</span><span>2 Jahre Rest</span></div>`).join('')}
+                <div style="font-size:var(--fs-caption); font-weight:800; color:var(--accent); margin:6px 0 3px;">🟡 BALD PLANEN (2 JAHRE REST)</div>
+                ${soon.map(p => `<div class="box" style="font-size:var(--fs-caption); border-left-color:var(--accent); display:flex; justify-content:space-between;"><span>${p.name} (${p.pos})</span><span>2 Jahre Rest</span></div>`).join('')}
             ` : ''}
             ${returningLoans.length > 0 ? `
-                <div style="font-size:9px; font-weight:800; color:var(--blue); margin:6px 0 3px;">📋 LEIHSPIELER - RÜCKKEHR ODER KAUFOPTION</div>
-                ${returningLoans.map(l => `<div class="box" style="font-size:9px; border-left-color:var(--blue); display:flex; justify-content:space-between;"><span>${l.name}</span><span>noch ${l.matchdaysLeft} SpT · Kaufoption ${formatVal(l.buyOptionFee)}</span></div>`).join('')}
+                <div style="font-size:var(--fs-caption); font-weight:800; color:var(--blue); margin:6px 0 3px;">📋 LEIHSPIELER - RÜCKKEHR ODER KAUFOPTION</div>
+                ${returningLoans.map(l => `<div class="box" style="font-size:var(--fs-caption); border-left-color:var(--blue); display:flex; justify-content:space-between;"><span>${l.name}</span><span>noch ${l.matchdaysLeft} SpT · Kaufoption ${formatVal(l.buyOptionFee)}</span></div>`).join('')}
             ` : ''}
         `;
     }
@@ -50,12 +50,12 @@
                     ${imGespraech ? '' : `<button onclick="extendContract('${p.id}')" class="btn-secondary" style="width:auto;" ${gesperrt ? 'disabled' : ''}>${p.preContractSigned ? 'Geht am Saisonende' : (gesperrt ? 'Gespräche ruhen' : '📝 Verhandeln')}</button>`}
                 </div>
                 ${imGespraech ? renderContractTalkBox(p) : ''}
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; font-size:9px; flex-wrap:wrap; gap:3px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; font-size:var(--fs-caption); flex-wrap:wrap; gap:3px;">
                     ${p.releaseClause
-                        ? `<span>📜 Ausstiegsklausel: <strong style="color:var(--accent);">${formatVal(p.releaseClause)}</strong></span><button onclick="removeReleaseClause('${p.id}')" class="btn-secondary" style="width:auto; font-size:8px;">Entfernen</button>`
+                        ? `<span>📜 Ausstiegsklausel: <strong style="color:var(--accent);">${formatVal(p.releaseClause)}</strong></span><button onclick="removeReleaseClause('${p.id}')" class="btn-secondary" style="width:auto; font-size:var(--fs-micro);">Entfernen</button>`
                         : `<span style="color:var(--text-muted);">Keine Ausstiegsklausel</span>
-                           <input type="number" id="release-clause-input-${p.id}" placeholder="mind. ${formatVal(Math.round(p.marketValue * 1.1))}" class="input-inline" style="width:110px; font-size:8px;">
-                           <button onclick="confirmSetReleaseClause('${p.id}')" class="btn-secondary" style="width:auto; font-size:8px;">📜 Klausel festlegen</button>`
+                           <input type="number" id="release-clause-input-${p.id}" placeholder="mind. ${formatVal(Math.round(p.marketValue * 1.1))}" class="input-inline" style="width:110px; font-size:var(--fs-micro);">
+                           <button onclick="confirmSetReleaseClause('${p.id}')" class="btn-secondary" style="width:auto; font-size:var(--fs-micro);">📜 Klausel festlegen</button>`
                     }
                 </div>
                 ${(typeof renderBonusClausesBlock === 'function') ? renderBonusClausesBlock(p) : ''}
@@ -200,7 +200,7 @@
     function renderContractTalkBox(p) {
         let o = getContractTalkOffer(p);
         let jahr = y => `<button onclick="setContractTalkYears(${y})" class="${contractTalk.years === y ? 'btn-action' : 'btn-secondary'}" style="width:auto; padding:4px 10px;">${y} J.</button>`;
-        return `<div class="box" style="font-size:10px; margin-top:6px; border-left-color:var(--gold);">
+        return `<div class="box" style="font-size:var(--fs-small); margin-top:6px; border-left-color:var(--gold);">
             <strong>📝 Vertragsgespräch</strong>${o.star ? ' · ⭐ Leistungsträger' : (o.stammspieler ? ' · Stammspieler' : ' · Ergänzungsspieler')}<br>
             Gehalt: ${formatVal(p.wage)} → <strong>${formatVal(o.angebot)}</strong> pro Spieltag${contractTalk.offerFactor < 1 ? ` (Gegenangebot ${Math.round((1 - contractTalk.offerFactor) * 100)} % unter Forderung)` : ''}<br>
             Handgeld: ${formatVal(o.handgeld)}${o.berater > 0 ? ` + ${formatVal(o.berater)} Berater` : ''}

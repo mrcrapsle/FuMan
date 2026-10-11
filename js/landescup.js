@@ -172,7 +172,7 @@
         if (kopf) kopf.innerText = `🏅 ${landesPokal.region.toUpperCase()}POKAL`;
 
         if (!playsLandespokal()) {
-            box.innerHTML = `<div class="box" style="font-size:11px; color:var(--text-muted);">
+            box.innerHTML = `<div class="box" style="font-size:var(--fs-body); color:var(--text-muted);">
                 Ab der ${leagueNames[DFB_POKAL_DIREKT_AB_LIGA]} ist der Verein direkt für den DFB-Pokal gesetzt - ein Landespokal wird dann nicht mehr gespielt.
             </div>`;
             return;
@@ -180,20 +180,20 @@
         let runden = landesPokal.roundsHistory || [];
         let status = landesPokal.won ? 'Gewonnen ✓' : (landesPokal.active ? 'Im Wettbewerb' : 'Ausgeschieden ❌');
         box.innerHTML = `
-            <div class="box" style="font-size:10px; margin-bottom:6px;">
+            <div class="box" style="font-size:var(--fs-small); margin-bottom:6px;">
                 Der Weg in den DFB-Pokal führt für Vereine unterhalb der ${leagueNames[DFB_POKAL_DIREKT_AB_LIGA]}
                 ausschliesslich über den Landespokal. Gespielt wird an den Spieltagen
                 <strong>${landesPokal.matchdays.join(', ')}</strong> gegen Vereine aus der eigenen Region.
                 <div style="margin-top:4px;">Status: <strong style="color:${landesPokal.won ? 'var(--gold)' : (landesPokal.active ? 'var(--primary)' : 'var(--danger)')};">${status}</strong>
                 ${game.dfbPokalViaLandespokal ? ' · <strong style="color:var(--gold);">DFB-Pokal-Startplatz gesichert</strong>' : ''}</div>
             </div>
-            ${runden.length === 0 ? '<div class="box" style="font-size:10px;">Die Auslosung steht noch aus.</div>' : runden.map(r => `
+            ${runden.length === 0 ? '<div class="box" style="font-size:var(--fs-small);">Die Auslosung steht noch aus.</div>' : runden.map(r => `
                 <div class="box" style="margin-bottom:4px;">
-                    <div style="font-size:10px; font-weight:900; color:var(--accent);">${r.name} · Spieltag ${r.matchday} · ${formatVal(r.prize)}</div>
+                    <div style="font-size:var(--fs-small); font-weight:900; color:var(--accent);">${r.name} · Spieltag ${r.matchday} · ${formatVal(r.prize)}</div>
                     ${r.pairings.filter(p => p.home === game.clubName || p.away === game.clubName || !r.completed).slice(0, 8).map(p => {
                         let uns = p.home === game.clubName || p.away === game.clubName;
                         let erg = p.played ? `<strong>${p.homeGoals}:${p.awayGoals}</strong>${p.penaltyWinner ? ' i.E.' : ''}` : 'vs';
-                        return `<div style="display:flex; justify-content:space-between; font-size:9px; margin-top:2px; ${uns ? 'color:var(--primary); font-weight:bold;' : ''}">
+                        return `<div style="display:flex; justify-content:space-between; font-size:var(--fs-caption); margin-top:2px; ${uns ? 'color:var(--primary); font-weight:bold;' : ''}">
                             <span>${p.home}</span><span>${erg}</span><span>${p.away}</span>
                         </div>`;
                     }).join('')}

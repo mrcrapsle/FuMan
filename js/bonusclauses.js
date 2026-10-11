@@ -119,19 +119,19 @@
                 : type === 'appearances' ? ` (${p.appearancesSeason || 0}/${clause.threshold})` : '';
             return `<div class="box" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;${paid ? ' border-left-color:var(--primary);' : ''}">
                 <span>${label}${type !== 'promotion' ? ` ab ${clause.threshold}${progress}` : ''}: <strong style="color:var(--accent);">${formatVal(clause.amount)}</strong>${paid ? ' <span style="color:var(--primary);">✓ ausgezahlt</span>' : ''}</span>
-                <button onclick="removeBonusClause('${p.id}', '${type}')" class="btn-secondary" style="width:auto; font-size:8px;">Entfernen</button>
+                <button onclick="removeBonusClause('${p.id}', '${type}')" class="btn-secondary" style="width:auto; font-size:var(--fs-micro);">Entfernen</button>
             </div>`;
         }
         let minAmount = getBonusClauseMinAmount(p, type);
         return `<div class="box" style="display:flex; align-items:center; gap:3px; margin-bottom:2px; flex-wrap:wrap;">
             <span style="flex:1;">${label} <span style="color:var(--text-muted);">(mind. ${formatVal(minAmount)})</span></span>
-            ${type !== 'promotion' ? `<input type="number" id="bonus-${type}-thresh-${p.id}" placeholder="${type === 'goals' ? 'Tore' : 'Einsätze'}" class="input-inline" style="width:58px; font-size:8px;">` : ''}
-            <input type="number" id="bonus-${type}-amount-${p.id}" placeholder="Betrag €" class="input-inline" style="width:74px; font-size:8px;">
-            <button onclick="confirmBonusClause('${p.id}', '${type}')" class="btn-secondary" style="width:auto; font-size:8px;">Festlegen</button>
+            ${type !== 'promotion' ? `<input type="number" id="bonus-${type}-thresh-${p.id}" placeholder="${type === 'goals' ? 'Tore' : 'Einsätze'}" class="input-inline" style="width:58px; font-size:var(--fs-micro);">` : ''}
+            <input type="number" id="bonus-${type}-amount-${p.id}" placeholder="Betrag €" class="input-inline" style="width:74px; font-size:var(--fs-micro);">
+            <button onclick="confirmBonusClause('${p.id}', '${type}')" class="btn-secondary" style="width:auto; font-size:var(--fs-micro);">Festlegen</button>
         </div>`;
     }
     function renderBonusClausesBlock(p) {
-        return `<div style="font-size:9px; margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">
+        return `<div style="font-size:var(--fs-caption); margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">
             <div style="font-weight:800; color:var(--text-muted); margin-bottom:2px;">🎯 ERFOLGSBASIERTE BONI</div>
             ${renderBonusClauseRow(p, 'goals')}
             ${renderBonusClauseRow(p, 'appearances')}

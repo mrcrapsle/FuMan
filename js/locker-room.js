@@ -150,15 +150,15 @@ function renderCliqueBox() {
     const box = document.getElementById('squad-cliques-box');
     if (!box) return;
     const { cliques, largestClique } = computeSquadCliques();
-    if (cliques.length === 0) { box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Noch keine erkennbaren Grüppchen im Kader.</div>'; return; }
+    if (cliques.length === 0) { box.innerHTML = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch keine erkennbaren Grüppchen im Kader.</div>'; return; }
     const mod = getCliqueChemistryModifier();
     box.innerHTML = [...cliques].sort((a, b) => b.size - a.size).slice(0, 5).map(c => {
         const dominant = largestClique && c.key === largestClique.key;
         const farbe = c.unruhig ? 'var(--danger)' : (c.mood >= 75 ? 'var(--primary)' : 'var(--text-muted)');
-        return `<div class="box" style="font-size:9px; ${c.unruhig ? 'border-left-color:var(--danger);' : (dominant ? 'border-left-color:var(--primary);' : '')}">
+        return `<div class="box" style="font-size:var(--fs-caption); ${c.unruhig ? 'border-left-color:var(--danger);' : (dominant ? 'border-left-color:var(--primary);' : '')}">
             ${dominant ? '👑 ' : ''}<strong>${c.name}</strong> (${c.size}) · <span style="color:${farbe};">Stimmung ${c.mood}${c.unruhig ? ' - rumort!' : ''}</span><br>
             <span style="color:var(--text-muted);">Wortführer: ${c.leader ? c.leader.name : '-'} · ${c.members.map(m => m.name.split(' ').pop()).join(', ')}</span></div>`;
-    }).join('') + `<div style="font-size:9px; color:var(--text-muted); margin-top:4px;">Wirkung auf die Teamstärke: ${mod >= 0 ? '+' : ''}${mod.toFixed(1)} · Unter Stimmung ${CLIQUE_UNREST_MOOD} rumort eine Gruppe und zieht jeden Monat den Rest der Kabine runter${captainHasAuthority() ? ' (dein Kapitän hat Autorität und dämpft das)' : ''}.</div>`;
+    }).join('') + `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">Wirkung auf die Teamstärke: ${mod >= 0 ? '+' : ''}${mod.toFixed(1)} · Unter Stimmung ${CLIQUE_UNREST_MOOD} rumort eine Gruppe und zieht jeden Monat den Rest der Kabine runter${captainHasAuthority() ? ' (dein Kapitän hat Autorität und dämpft das)' : ''}.</div>`;
 }
 
 function renderLockerHierarchyBox() {
@@ -168,9 +168,9 @@ function renderLockerHierarchyBox() {
     squad.forEach(p => { const s = getLockerRoomStatus(p); (gruppen[s.key] = gruppen[s.key] || { label: s.label, spieler: [] }).spieler.push(p); });
     const reihenfolge = ['kapitaen', 'rat', 'etabliert', 'mitlaeufer', 'talent'];
     const unzufrieden = squad.filter(p => (p.morale || 50) < 35);
-    box.innerHTML = reihenfolge.filter(k => gruppen[k]).map(k => `<div style="font-size:9px; padding:2px 0;"><strong>${gruppen[k].label}</strong> (${gruppen[k].spieler.length}): <span style="color:var(--text-muted);">${gruppen[k].spieler.map(p => p.name.split(' ').pop()).join(', ')}</span></div>`).join('')
-        + (unzufrieden.length ? `<div class="box" style="font-size:9px; border-left-color:var(--danger); margin-top:4px;">😠 Unzufrieden: ${unzufrieden.map(p => `${p.name} (${Math.round(p.morale || 50)})`).join(', ')} - unzufriedene Leistungsträger stehen irgendwann im Büro.</div>` : '')
-        + `<div style="font-size:9px; color:var(--text-muted); margin-top:4px;">Kapitän wechseln geht im Reiter Aufstellung - der alte Kapitän ist enttäuscht, ohne Standing des Neuen auch der Rat.</div>`;
+    box.innerHTML = reihenfolge.filter(k => gruppen[k]).map(k => `<div style="font-size:var(--fs-caption); padding:2px 0;"><strong>${gruppen[k].label}</strong> (${gruppen[k].spieler.length}): <span style="color:var(--text-muted);">${gruppen[k].spieler.map(p => p.name.split(' ').pop()).join(', ')}</span></div>`).join('')
+        + (unzufrieden.length ? `<div class="box" style="font-size:var(--fs-caption); border-left-color:var(--danger); margin-top:4px;">😠 Unzufrieden: ${unzufrieden.map(p => `${p.name} (${Math.round(p.morale || 50)})`).join(', ')} - unzufriedene Leistungsträger stehen irgendwann im Büro.</div>` : '')
+        + `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">Kapitän wechseln geht im Reiter Aufstellung - der alte Kapitän ist enttäuscht, ohne Standing des Neuen auch der Rat.</div>`;
 }
 
 // Jeden Spieltag: wer lange genug gemeinsam im Kader ist, wird gelegentlich "bester Freund"

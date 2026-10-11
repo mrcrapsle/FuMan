@@ -143,7 +143,7 @@
         if (!box) return;
         let lvl = campusBuildings.museum ? campusBuildings.museum.lvl : 0;
         if (lvl === 0) {
-            box.innerHTML = '<div class="box" style="font-size:10px; color:#94a3b8;">Baue das Vereinsmuseum aus (mind. Stufe 1), um hier vergangene Wappen-Designs zu sehen.</div>';
+            box.innerHTML = '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Baue das Vereinsmuseum aus (mind. Stufe 1), um hier vergangene Wappen-Designs zu sehen.</div>';
             return;
         }
         // Höhere Museumsstufen zeigen mehr archivierte Wappen gleichzeitig UND schalten
@@ -155,34 +155,34 @@
 
         let html = '';
         if (shown.length === 0) {
-            html += '<div class="box" style="font-size:10px; color:#94a3b8;">Noch keine früheren Wappen-Designs archiviert - ändere das Wappen im Manager-Talentbaum-Screen.</div>';
+            html += '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine früheren Wappen-Designs archiviert - ändere das Wappen im Manager-Talentbaum-Screen.</div>';
         } else {
-            html += `<div style="font-size:9px; color:#94a3b8; margin-bottom:6px;">Zeigt die letzten ${shown.length} von ${crestHistory.length} archivierten Designs (Museum Stufe ${lvl}).</div>`;
+            html += `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Zeigt die letzten ${shown.length} von ${crestHistory.length} archivierten Designs (Museum Stufe ${lvl}).</div>`;
             html += '<div style="display:flex; gap:8px; flex-wrap:wrap;">' + shown.map(c => {
                 let patternMeta = CREST_PATTERN_PRESETS.find(p => p.key === c.pattern);
                 return `
                     <div style="text-align:center;">
                         <div style="position:relative; width:48px; height:48px; border-radius:50%; margin:0 auto; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:900; color:#1a1200; border:2px solid rgba(255,255,255,0.6); background:radial-gradient(circle at 35% 30%, ${hexToRgba(c.color, 0.65)} 0%, ${c.color} 55%, ${hexToRgba(c.color, 0.75)} 100%);">
                             ${c.symbol}
-                            ${patternMeta && patternMeta.icon ? `<span style="position:absolute; bottom:-2px; right:-2px; width:14px; height:14px; background:#0d1220; border-radius:50%; font-size:8px; display:flex; align-items:center; justify-content:center;">${patternMeta.icon}</span>` : ''}
+                            ${patternMeta && patternMeta.icon ? `<span style="position:absolute; bottom:-2px; right:-2px; width:14px; height:14px; background:#0d1220; border-radius:50%; font-size:var(--fs-micro); display:flex; align-items:center; justify-content:center;">${patternMeta.icon}</span>` : ''}
                         </div>
-                        <div style="font-size:8px; color:#94a3b8; margin-top:2px;">Saison ${c.season}</div>
+                        <div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:2px;">Saison ${c.season}</div>
                     </div>`;
             }).join('') + '</div>';
         }
 
         if (lvl >= 3) {
-            html += `<div class="box" style="margin-top:10px; font-size:10px;"><strong style="color:var(--teal);">🆚 Derby-Vitrine:</strong> Bilanz aller Derbys: ${rivalryRecord.wins}S ${rivalryRecord.draws}U ${rivalryRecord.losses}N${(rivalryRecord.shootoutsVsRival || 0) >= 2 ? ` · 😰 ${rivalryRecord.shootoutsVsRival}× Elfmeterschießen im Derby` : ''}</div>`;
+            html += `<div class="box" style="margin-top:10px; font-size:var(--fs-small);"><strong style="color:var(--teal);">🆚 Derby-Vitrine:</strong> Bilanz aller Derbys: ${rivalryRecord.wins}S ${rivalryRecord.draws}U ${rivalryRecord.losses}N${(rivalryRecord.shootoutsVsRival || 0) >= 2 ? ` · 😰 ${rivalryRecord.shootoutsVsRival}× Elfmeterschießen im Derby` : ''}</div>`;
         }
         if (lvl >= 5) {
-            html += `<div class="box" style="margin-top:6px; font-size:10px;"><strong style="color:var(--gold);">🏅 Karriere-Vitrine:</strong> Level ${managerRPG.level} · ${(game.trophies || []).length} Trophäen · ${game.timesSacked || 0}× entlassen${game.legendStatus ? ' · 👑 Vereinslegende' : ''}</div>`;
+            html += `<div class="box" style="margin-top:6px; font-size:var(--fs-small);"><strong style="color:var(--gold);">🏅 Karriere-Vitrine:</strong> Level ${managerRPG.level} · ${(game.trophies || []).length} Trophäen · ${game.timesSacked || 0}× entlassen${game.legendStatus ? ' · 👑 Vereinslegende' : ''}</div>`;
             let milestones = (game.attendanceMilestonesReached || []).slice().sort((a,b) => b - a);
             let milestoneText = milestones.length > 0 ? `Höchster Meilenstein: ${milestones[0].toLocaleString('de-DE')} Zuschauer` : 'Noch keine Zuschauer-Meilensteine';
             let jubileeText = (game.jubileeMatchesPlayed || []).length > 0 ? ` · 🎖️ ${game.jubileeMatchesPlayed.length} Jubiläumssaison(en) gefeiert` : '';
-            html += `<div class="box" style="margin-top:6px; font-size:10px;"><strong style="color:var(--blue);">📊 Meilenstein-Vitrine:</strong> Zuschauerrekord ${(game.recordAttendance || 0).toLocaleString('de-DE')} (Saison ${game.recordAttendanceSeason || '-'}) · ${milestoneText}${jubileeText}</div>`;
+            html += `<div class="box" style="margin-top:6px; font-size:var(--fs-small);"><strong style="color:var(--blue);">📊 Meilenstein-Vitrine:</strong> Zuschauerrekord ${(game.recordAttendance || 0).toLocaleString('de-DE')} (Saison ${game.recordAttendanceSeason || '-'}) · ${milestoneText}${jubileeText}</div>`;
             let favorites = (game.crowdFavoriteHistory || []).slice(-6).reverse();
             let favoritesText = favorites.length > 0 ? favorites.map(f => `${f.name} (S${f.season})`).join(' · ') : 'Noch keine Gala ausgetragen';
-            html += `<div class="box" style="margin-top:6px; font-size:10px;"><strong style="color:#ff6b9d;">❤️ Publikumslieblings-Vitrine:</strong> ${favoritesText}</div>`;
+            html += `<div class="box" style="margin-top:6px; font-size:var(--fs-small);"><strong style="color:#ff6b9d;">❤️ Publikumslieblings-Vitrine:</strong> ${favoritesText}</div>`;
         }
         box.innerHTML = html;
     }
@@ -222,7 +222,7 @@
         if (!box) return;
         box.innerHTML = CREST_ANIMAL_OPTIONS.map(a => {
             let active = (game.clubCrestAnimal || null) === a;
-            return `<button onclick="setCrestAnimal(${a ? `'${a}'` : 'null'})" class="${active ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:16px; padding:6px 10px;">${a || '✕'}</button>`;
+            return `<button onclick="setCrestAnimal(${a ? `'${a}'` : 'null'})" class="${active ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:var(--fs-title); padding:6px 10px;">${a || '✕'}</button>`;
         }).join('');
     }
     function setCrestPattern(key) {
@@ -241,10 +241,10 @@
             colorBox.innerHTML = CREST_COLOR_PRESETS.map(c => `<button onclick="setCrestColor('${c}')" style="width:32px; height:32px; border-radius:50%; background:${c}; border:${game.clubCrestColor === c ? '3px solid #fff' : '1px solid rgba(255,255,255,0.3)'}; cursor:pointer;"></button>`).join('');
         }
         if (symbolBox) {
-            symbolBox.innerHTML = CREST_SYMBOL_PRESETS.map(s => `<button onclick="setCrestSymbol('${s}')" class="${game.clubCrestSymbol === s ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:16px; padding:6px 12px;">${s}</button>`).join('');
+            symbolBox.innerHTML = CREST_SYMBOL_PRESETS.map(s => `<button onclick="setCrestSymbol('${s}')" class="${game.clubCrestSymbol === s ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:var(--fs-title); padding:6px 12px;">${s}</button>`).join('');
         }
         if (patternBox) {
-            patternBox.innerHTML = CREST_PATTERN_PRESETS.filter(p => !p.locked || game.jubileePatternUnlocked).map(p => `<button onclick="setCrestPattern('${p.key}')" class="${(game.clubCrestPattern || 'keins') === p.key ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:13px; padding:6px 10px;">${p.icon ? p.icon + ' ' : ''}${p.label}</button>`).join('');
+            patternBox.innerHTML = CREST_PATTERN_PRESETS.filter(p => !p.locked || game.jubileePatternUnlocked).map(p => `<button onclick="setCrestPattern('${p.key}')" class="${(game.clubCrestPattern || 'keins') === p.key ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:var(--fs-title-sm); padding:6px 10px;">${p.icon ? p.icon + ' ' : ''}${p.label}</button>`).join('');
         }
         let awayColorBox = document.getElementById('crest-away-color-options');
         if (awayColorBox) {

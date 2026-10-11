@@ -212,17 +212,17 @@
         if (mediaRights.currentDeal) {
             let d = mediaRights.currentDeal;
             box.innerHTML = `
-                <div class="box" style="font-size:10px;">
+                <div class="box" style="font-size:var(--fs-small);">
                     <strong style="color:var(--accent);">📺 ${d.name}</strong> (${d.label})<br>
                     Laufend: <strong>+${formatVal(d.base)}</strong>/Heimspiel · Restlaufzeit: <strong>${d.remainingMatchdays} SpT</strong><br>
-                    <span style="color:var(--text-muted); font-size:9px;">Bonus bei Derby (+80%) & Pokalspielen (+50%)</span>
+                    <span style="color:var(--text-muted); font-size:var(--fs-caption);">Bonus bei Derby (+80%) & Pokalspielen (+50%)</span>
                 </div>
                 <button onclick="cancelMediaRightsDeal()" class="btn-secondary" style="margin-top:4px;">Vertrag kündigen</button>
             `;
         } else {
-            box.innerHTML = '<div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Kein aktiver Medienvertrag - wähle einen Partner:</div>' +
+            box.innerHTML = '<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Kein aktiver Medienvertrag - wähle einen Partner:</div>' +
                 mediaRights.dealOffers.map(o => `
-                    <div class="box" style="font-size:10px; margin-bottom:4px;">
+                    <div class="box" style="font-size:var(--fs-small); margin-bottom:4px;">
                         <strong>${o.name}</strong> (${o.label})<br>
                         Handgeld: ${formatVal(o.signOn)} · Laufend: +${formatVal(o.base)}/Heimspiel · ${o.duration} SpT
                         <button onclick="acceptMediaRightsOffer('${o.id}')" class="btn-action" style="margin-top:4px;">Unterschreiben</button>
@@ -232,8 +232,8 @@
         let tvHistBox = document.getElementById('tv-income-history-box');
         if (tvHistBox) {
             tvHistBox.innerHTML = `
-                <div class="box" style="font-size:10px;">Medienpartner-Einnahmen diese Saison: <strong style="color:var(--gold);">${formatVal(mediaRights.seasonTvIncomeTotal || 0)}</strong></div>
-                <div class="box" style="font-size:10px;">Letzte Liga-TV-Ausschüttung: <strong style="color:var(--gold);">${formatVal(game.lastLeagueTvPayout || 0)}</strong></div>
+                <div class="box" style="font-size:var(--fs-small);">Medienpartner-Einnahmen diese Saison: <strong style="color:var(--gold);">${formatVal(mediaRights.seasonTvIncomeTotal || 0)}</strong></div>
+                <div class="box" style="font-size:var(--fs-small);">Letzte Liga-TV-Ausschüttung: <strong style="color:var(--gold);">${formatVal(game.lastLeagueTvPayout || 0)}</strong></div>
             `;
         }
     }

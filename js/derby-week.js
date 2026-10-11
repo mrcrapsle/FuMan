@@ -198,18 +198,18 @@ function renderDerbyWeekCard() {
     const bilanz = duelle.length ? `${duelle.filter(h => h.result === 'S').length}S ${duelle.filter(h => h.result === 'U').length}U ${duelle.filter(h => h.result === 'N').length}N` : 'erstes Derby';
     const art = typeof getDerbyLabel === 'function' ? getDerbyLabel(game.clubName, d.opp) : 'Derby';
     const wann = d.inDays === 0 ? 'heute' : `in ${d.inDays} Spieltag${d.inDays > 1 ? 'en' : ''}`;
-    const knopf = (fn, text, fertig) => `<button onclick="${fn}" class="${fertig ? 'btn-action' : 'btn-secondary'}" style="font-size:9px; padding:5px 3px;">${fertig ? '✔ ' : ''}${text}</button>`;
+    const knopf = (fn, text, fertig) => `<button onclick="${fn}" class="${fertig ? 'btn-action' : 'btn-secondary'}" style="font-size:var(--fs-caption); padding:5px 3px;">${fertig ? '✔ ' : ''}${text}</button>`;
     const stimmungText = d.home ? `🔥 Choreo (${formatVal(k.stimmung)})` : `🚂 Sonderzug (${formatVal(k.stimmung)})`;
     const praemie = w.praemie ? `💰 Prämie ${formatVal(w.praemie)}` : `💰 Siegprämie (~${formatVal(getDerbyPremiumAmount())})`;
-    box.innerHTML = `<div class="box" style="font-size:10px; border-left-color:var(--danger);">🔥 <strong>Derby-Woche (${art}):</strong> ${wann} ${d.home ? 'zu Hause' : 'auswärts'} gegen <strong>${d.opp}</strong> · Bilanz ${bilanz}
+    box.innerHTML = `<div class="box" style="font-size:var(--fs-small); border-left-color:var(--danger);">🔥 <strong>Derby-Woche (${art}):</strong> ${wann} ${d.home ? 'zu Hause' : 'auswärts'} gegen <strong>${d.opp}</strong> · Bilanz ${bilanz}
         <div style="color:var(--text-muted); margin-top:2px;">Ein Derby zählt für die Fans doppelt (Sieg +2, Niederlage -2). Die Vorbereitung wirkt nur am Derby-Spieltag.</div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:4px;">
             ${knopf('chooseDerbyMood()', stimmungText, w.stimmung)}
-            ${d.home ? knopf('chooseDerbySecurity()', `🛡️ Sicherheit (${formatVal(k.sicherheit)})`, w.sicherheit) : '<div style="font-size:9px; color:var(--text-muted); align-self:center;">🛡️ Sicherheit: Sache des Gastgebers</div>'}
+            ${d.home ? knopf('chooseDerbySecurity()', `🛡️ Sicherheit (${formatVal(k.sicherheit)})`, w.sicherheit) : '<div style="font-size:var(--fs-caption); color:var(--text-muted); align-self:center;">🛡️ Sicherheit: Sache des Gastgebers</div>'}
             ${knopf('chooseDerbyPremium()', praemie, !!w.praemie)}
             ${w.presse ? knopf(`chooseDerbyPress('${w.presse}')`, w.presse === 'kampf' ? '🎙️ Kampfansage' : '🎙️ Respekt', true) : `<div style="display:grid; grid-template-columns:1fr 1fr; gap:3px;">${knopf("chooseDerbyPress('kampf')", '🎙️ Kampf', false)}${knopf("chooseDerbyPress('respekt')", '🎙️ Respekt', false)}</div>`}
         </div>
-        <div style="color:var(--text-muted); margin-top:3px; font-size:9px;">Choreo/Sonderzug +1,5 Stärke (Choreo: Pyro-Risiko) · Sicherheit: Ausschreitungsrisiko x0,35 · Prämie: Moral +5, nur bei Sieg fällig, Niederlage Moral -4 · Kampfansage +1 Stärke mit Fallhöhe, Respekt beruhigt.</div></div>`;
+        <div style="color:var(--text-muted); margin-top:3px; font-size:var(--fs-caption);">Choreo/Sonderzug +1,5 Stärke (Choreo: Pyro-Risiko) · Sicherheit: Ausschreitungsrisiko x0,35 · Prämie: Moral +5, nur bei Sieg fällig, Niederlage Moral -4 · Kampfansage +1 Stärke mit Fallhöhe, Respekt beruhigt.</div></div>`;
 }
 
 // Historie > Rivalen: die letzten Derbys mit Vorbereitung und Folgen.
@@ -217,8 +217,8 @@ function renderDerbyHistory() {
     const box = document.getElementById('derby-history-box');
     if (!box) return;
     const liste = game.derbyHistory || [];
-    if (!liste.length) { box.innerHTML = '<div style="font-size:10px; color:var(--text-muted);">Noch kein Derby gespielt.</div>'; return; }
+    if (!liste.length) { box.innerHTML = '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch kein Derby gespielt.</div>'; return; }
     const farbe = { S: 'var(--primary)', U: 'var(--text-muted)', N: 'var(--danger)' };
-    box.innerHTML = liste.map(e => `<div class="box" style="font-size:10px;"><strong style="color:${farbe[e.result]};">${e.score}</strong> gegen ${e.opp} · Saison ${e.season}, Spieltag ${e.matchday}${e.home === null ? '' : (e.home ? ' (Heim)' : ' (Auswärts)')}
+    box.innerHTML = liste.map(e => `<div class="box" style="font-size:var(--fs-small);"><strong style="color:${farbe[e.result]};">${e.score}</strong> gegen ${e.opp} · Saison ${e.season}, Spieltag ${e.matchday}${e.home === null ? '' : (e.home ? ' (Heim)' : ' (Auswärts)')}
         <div style="color:var(--text-muted);">${e.prep.length ? 'Vorbereitung: ' + e.prep.join(', ') : 'ohne Vorbereitung'}${e.effects.length ? ' · ' + e.effects.join(', ') : ''}</div></div>`).join('');
 }

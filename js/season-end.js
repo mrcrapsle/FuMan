@@ -20,7 +20,7 @@
         let leader = weighted[0]?.p;
         if (!leader) { box.style.display = 'none'; return; }
         box.style.display = 'block';
-        box.innerHTML = `<div class="box" style="font-size:10px; border-left-color:var(--gold);">🗳️ <strong style="color:var(--gold);">${leader.name}</strong> liegt aktuell vorne im Rennen um den Publikumsliebling der Saison - die Fan-Abstimmung entscheidet final bei der Saisonabschluss-Gala!</div>`;
+        box.innerHTML = `<div class="box" style="font-size:var(--fs-small); border-left-color:var(--gold);">🗳️ <strong style="color:var(--gold);">${leader.name}</strong> liegt aktuell vorne im Rennen um den Publikumsliebling der Saison - die Fan-Abstimmung entscheidet final bei der Saisonabschluss-Gala!</div>`;
     }
 
     function holdSeasonEndGala() {
@@ -550,8 +550,8 @@ function concludeSeasonAndAdvance() {
 
         document.getElementById('season-review-content').innerHTML = `
             <div style="text-align:center; margin-bottom:10px;">
-                <div style="font-size:15px; font-weight:900; color:var(--accent);">📆 SAISON-RÜCKBLICK</div>
-                <div style="font-size:11px; color:var(--text-muted);">Tabellenplatz ${myRank} · ${myTeamRecord?.points || 0} Punkte${prevSeason ? compareArrow(myTeamRecord?.points || 0, prevSeason.points) : ''}</div>
+                <div style="font-size:var(--fs-title); font-weight:900; color:var(--accent);">📆 SAISON-RÜCKBLICK</div>
+                <div style="font-size:var(--fs-body); color:var(--text-muted);">Tabellenplatz ${myRank} · ${myTeamRecord?.points || 0} Punkte${prevSeason ? compareArrow(myTeamRecord?.points || 0, prevSeason.points) : ''}</div>
             </div>
             <div class="modal-field-grid">
                 <span class="label">Zuschauerschnitt:</span><span class="val">${avgAttendance.toLocaleString('de-DE')}${prevSeason ? compareArrow(avgAttendance, prevSeason.avgAttendance) : ''}</span>
@@ -561,13 +561,13 @@ function concludeSeasonAndAdvance() {
                 <span class="label">DFB-Lizenzstatus:</span><span class="val">${dfbText}</span>
                 <span class="label">Trophäen gesamt:</span><span class="val">${(game.trophies || []).length}</span>
             </div>
-            ${expertCheck ? `<div style="font-size:10px; font-weight:800; color:var(--text-muted); margin:10px 0 4px 0;">🔮 Experten-Check</div><div style="font-size:10px;">${describeExpertCheck(expertCheck)}</div>` : ''}
+            ${expertCheck ? `<div style="font-size:var(--fs-small); font-weight:800; color:var(--text-muted); margin:10px 0 4px 0;">🔮 Experten-Check</div><div style="font-size:var(--fs-small);">${describeExpertCheck(expertCheck)}</div>` : ''}
             ${game.seasonReviewArchive.length > 1 ? `
-            <div style="font-size:10px; font-weight:800; color:var(--text-muted); margin:10px 0 4px 0;">Frühere Saisons im Vergleich</div>
+            <div style="font-size:var(--fs-small); font-weight:800; color:var(--text-muted); margin:10px 0 4px 0;">Frühere Saisons im Vergleich</div>
             <div style="max-height:100px; overflow-y:auto;">
-                ${game.seasonReviewArchive.slice(-6).reverse().map(e => `<div class="player-row" style="font-size:9px;"><span>Saison ${e.season}</span><span>Platz ${e.rank} · ${e.points} Pkt · ${e.avgAttendance.toLocaleString('de-DE')} Zuschauer</span></div>`).join('')}
+                ${game.seasonReviewArchive.slice(-6).reverse().map(e => `<div class="player-row" style="font-size:var(--fs-caption);"><span>Saison ${e.season}</span><span>Platz ${e.rank} · ${e.points} Pkt · ${e.avgAttendance.toLocaleString('de-DE')} Zuschauer</span></div>`).join('')}
             </div>
-            <div style="font-size:10px; font-weight:800; color:var(--text-muted); margin:10px 0 4px 0;">Zuschauerschnitt-Verlauf</div>
+            <div style="font-size:var(--fs-small); font-weight:800; color:var(--text-muted); margin:10px 0 4px 0;">Zuschauerschnitt-Verlauf</div>
             ${renderSeasonArchiveChart()}` : ''}
         `;
         document.getElementById('season-review-overlay').classList.add('show');

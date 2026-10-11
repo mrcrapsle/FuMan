@@ -132,7 +132,7 @@
                 playSound('whistle');
                 return;
             }
-            document.getElementById('europe-draw-opponents-list').innerHTML += `<div style="font-size:16px; font-weight:900; color:#fff; margin:6px 0;">⚽ ${opponents[revealed]}</div>`;
+            document.getElementById('europe-draw-opponents-list').innerHTML += `<div style="font-size:var(--fs-title); font-weight:900; color:#fff; margin:6px 0;">⚽ ${opponents[revealed]}</div>`;
             revealed++;
             europeDrawRevealTimer = setTimeout(revealNext, 1000);
         }
@@ -154,13 +154,13 @@
 
         document.getElementById('europe-draw-round-name').innerText = 'Champions Cup - Halbfinale';
         document.getElementById('europe-draw-reveal-text').innerText = '🎟️ Die Kugeln rollen...';
-        document.getElementById('europe-draw-opponents-list').innerHTML = '<div style="font-size:9px; color:#94a3b8; margin-top:8px;">Hin- und Rückspiel, Gesamtergebnis entscheidet. Bei Gleichstand nach 180 Minuten: Elfmeterschießen.</div>';
+        document.getElementById('europe-draw-opponents-list').innerHTML = '<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:8px;">Hin- und Rückspiel, Gesamtergebnis entscheidet. Bei Gleichstand nach 180 Minuten: Elfmeterschießen.</div>';
         document.getElementById('europe-draw-overlay').classList.add('show');
 
         clearTimeout(europeDrawRevealTimer);
         europeDrawRevealTimer = setTimeout(() => {
             document.getElementById('europe-draw-reveal-text').innerText = 'Euer Halbfinal-Gegner steht fest!';
-            document.getElementById('europe-draw-opponents-list').innerHTML = `<div style="font-size:18px; font-weight:900; color:#fff; margin:6px 0;">⚽ ${opponent}</div><div style="font-size:9px; color:#94a3b8; margin-top:8px;">Hin- und Rückspiel, Gesamtergebnis entscheidet. Bei Gleichstand nach 180 Minuten: Elfmeterschießen.</div>`;
+            document.getElementById('europe-draw-opponents-list').innerHTML = `<div style="font-size:18px; font-weight:900; color:#fff; margin:6px 0;">⚽ ${opponent}</div><div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:8px;">Hin- und Rückspiel, Gesamtergebnis entscheidet. Bei Gleichstand nach 180 Minuten: Elfmeterschießen.</div>`;
             playSound('whistle');
         }, 1400);
     }
@@ -266,7 +266,7 @@
             if (entry.round === 'V' && !suddenDeathAnnounced) {
                 suddenDeathAnnounced = true;
                 let logEl = document.getElementById('shootout-log');
-                logEl.innerHTML += `<div style="color:var(--gold); font-size:13px; font-weight:900; text-align:center; margin:6px 0; text-shadow:0 0 8px currentColor;">⚡ ES GEHT IN DIE VERLÄNGERUNG - JEDER SCHUSS KANN ENTSCHEIDEN! ⚡</div>`;
+                logEl.innerHTML += `<div style="color:var(--gold); font-size:var(--fs-title-sm); font-weight:900; text-align:center; margin:6px 0; text-shadow:0 0 8px currentColor;">⚡ ES GEHT IN DIE VERLÄNGERUNG - JEDER SCHUSS KANN ENTSCHEIDEN! ⚡</div>`;
                 logEl.scrollTop = logEl.scrollHeight;
                 playSound('whistle');
                 shootoutRevealTimer = setTimeout(revealNext, 900);
@@ -277,7 +277,7 @@
             let logEl = document.getElementById('shootout-log');
             let roundLabel = entry.round === 'V' ? '🔥 TODESSCHUSS' : `Runde ${entry.round}`;
             let extraStyle = entry.round === 'V' ? 'font-weight:900; text-shadow:0 0 6px currentColor;' : '';
-            logEl.innerHTML += `<div style="color:${color}; font-size:11px; ${extraStyle}">${icon} ${roundLabel}: ${entry.team} ${entry.scored ? 'verwandelt!' : 'verschießt!'}</div>`;
+            logEl.innerHTML += `<div style="color:${color}; font-size:var(--fs-body); ${extraStyle}">${icon} ${roundLabel}: ${entry.team} ${entry.scored ? 'verwandelt!' : 'verschießt!'}</div>`;
             logEl.scrollTop = logEl.scrollHeight;
             playSound(entry.scored ? 'goal' : 'click');
             idx++;
@@ -333,7 +333,7 @@
             let quoteText = (p.penaltiesTaken || 0) > 0 ? ` · Quote: ${Math.round((p.penaltiesScored / p.penaltiesTaken) * 100)}% (${p.penaltiesScored}/${p.penaltiesTaken})` : ' · Quote: -';
             let specialistTag = p.individualFocus === 'elfmeter' ? ' 🥅' : '';
             return `<div class="player-row" onclick="toggleShooterSelection('${p.id}')" style="cursor:pointer; ${orderIdx !== -1 ? 'border-color:var(--primary); background:rgba(34,224,168,0.1);' : ''}">
-                <span>${orderIdx !== -1 ? `#${orderIdx + 1} ` : ''}${p.name}${specialistTag} <span style="color:#94a3b8; font-size:9px;">(Schuss: ${p.shooting}${quoteText})</span></span>
+                <span>${orderIdx !== -1 ? `#${orderIdx + 1} ` : ''}${p.name}${specialistTag} <span style="color:var(--text-muted); font-size:var(--fs-caption);">(Schuss: ${p.shooting}${quoteText})</span></span>
             </div>`;
         }).join('');
         document.getElementById('shooter-select-count').innerText = `${selectedShooters.length}/5 gewählt`;
@@ -592,9 +592,9 @@
         if (hist) {
             const h = game.europeHistory || [];
             const namen = { gruppe: 'Gruppenphase', halbfinale: 'Halbfinale', finale: 'Finale', sieger: '👑 Sieger' };
-            hist.innerHTML = `<div class="box" style="font-size:10px;">📊 Europa-Koeffizient (letzte 5 Saisons): <strong>${getEuropeCoefficient()}</strong> · nächste Auslosung aus <strong>Topf ${getEuropePot() + 1}</strong>${game.inEurope && europeTournament.pot >= 0 ? ` · diese Saison Topf ${europeTournament.pot + 1}` : ''}
+            hist.innerHTML = `<div class="box" style="font-size:var(--fs-small);">📊 Europa-Koeffizient (letzte 5 Saisons): <strong>${getEuropeCoefficient()}</strong> · nächste Auslosung aus <strong>Topf ${getEuropePot() + 1}</strong>${game.inEurope && europeTournament.pot >= 0 ? ` · diese Saison Topf ${europeTournament.pot + 1}` : ''}
                 <div style="color:var(--text-muted); margin-top:2px;">Gruppenphase 1, Halbfinale 3, Finale 4, Titel 6 Punkte - ab 2 Punkten Topf 3, ab 6 Topf 2, ab 12 Topf 1 (leichtere Gruppen).</div></div>`
-                + (h.length ? h.map(x => `<div class="player-row" style="font-size:10px;"><span>Saison ${x.season}</span><span>${namen[x.stage] || x.stage}${x.pot >= 0 ? ` · Topf ${x.pot + 1}` : ''}</span></div>`).join('') : '<div class="box" style="font-size:10px; color:var(--text-muted);">Noch keine Teilnahme.</div>');
+                + (h.length ? h.map(x => `<div class="player-row" style="font-size:var(--fs-small);"><span>Saison ${x.season}</span><span>${namen[x.stage] || x.stage}${x.pot >= 0 ? ` · Topf ${x.pot + 1}` : ''}</span></div>`).join('') : '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Teilnahme.</div>');
         }
 
         let populateGroup = (tbodyId, grp) => {
@@ -630,7 +630,7 @@
                             <span>${s.teamA} vs ${s.teamB}</span>
                             <span style="color:var(--primary);">${s.winner ? `Sieger: ${s.winner}` : 'Läuft...'}</span>
                         </div>
-                        <span style="font-size:9px; color:#94a3b8;">${legInfo}</span>
+                        <span style="font-size:var(--fs-caption); color:var(--text-muted);">${legInfo}</span>
                     </div>`;
                 }).join('');
                 let finalHtml = europeTournament.finalMatch ? `<div class="box" style="border-color:var(--gold); color:var(--gold);">👑 FINALE: ${europeTournament.finalMatch.home} vs ${europeTournament.finalMatch.away} [${europeTournament.finalMatch.score}] => Sieger: <strong>${europeTournament.finalMatch.winner}</strong></div>` : '';

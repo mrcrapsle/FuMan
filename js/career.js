@@ -47,7 +47,7 @@
         if (box.innerHTML) { box.innerHTML = ''; return; }
         box.innerHTML = `<div class="box" style="display:flex; gap:6px; align-items:center;">
             <input type="text" id="club-rename-input" class="input-inline" maxlength="40" style="flex:1;" value="${game.clubName}">
-            <button onclick="confirmRenameClub()" class="btn-action" style="width:auto; font-size:10px;">Übernehmen</button>
+            <button onclick="confirmRenameClub()" class="btn-action" style="width:auto; font-size:var(--fs-small);">Übernehmen</button>
         </div>`;
     }
     function confirmRenameClub() {
@@ -143,14 +143,14 @@
         if (!box) return;
         if (!clubSwitchCandidates) { box.innerHTML = ''; return; }
         box.innerHTML = `
-            <div style="font-size:10px; color:var(--danger); margin:8px 0 4px;">⚠️ Ein Vereinswechsel ersetzt deinen kompletten Kader durch einen frischen, zum neuen Liganiveau passenden Kader. Karriere-Level, Trophäen und Vereinskonto bleiben erhalten.</div>
+            <div style="font-size:var(--fs-small); color:var(--danger); margin:8px 0 4px;">⚠️ Ein Vereinswechsel ersetzt deinen kompletten Kader durch einen frischen, zum neuen Liganiveau passenden Kader. Karriere-Level, Trophäen und Vereinskonto bleiben erhalten.</div>
             ${clubSwitchCandidates.map(c => `
                 <div class="box" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                    <span>${c.name} <span style="color:var(--text-muted); font-size:9px;">(${leagueNames[c.level]})</span></span>
-                    <button onclick="confirmClubSwitch('${c.name.replace(/'/g, "\\'")}', this)" data-confirming="false" class="btn-secondary" style="width:auto; padding:4px 10px; font-size:10px;">Übernehmen</button>
+                    <span>${c.name} <span style="color:var(--text-muted); font-size:var(--fs-caption);">(${leagueNames[c.level]})</span></span>
+                    <button onclick="confirmClubSwitch('${c.name.replace(/'/g, "\\'")}', this)" data-confirming="false" class="btn-secondary" style="width:auto; padding:4px 10px; font-size:var(--fs-small);">Übernehmen</button>
                 </div>
             `).join('')}
-            <button onclick="clubSwitchCandidates = null; renderClubSwitchOptions();" class="btn-secondary" style="margin-top:4px; font-size:10px;">Abbrechen</button>
+            <button onclick="clubSwitchCandidates = null; renderClubSwitchOptions();" class="btn-secondary" style="margin-top:4px; font-size:var(--fs-small);">Abbrechen</button>
         `;
     }
     function confirmClubSwitch(targetName, btn) {
@@ -192,7 +192,7 @@
                 <span class="label">Ultimaten (Vertrag/Verkauf/Ignoriert):</span><span class="val">${game.ultimatumHistory?.renewed || 0} / ${game.ultimatumHistory?.sold || 0} / ${game.ultimatumHistory?.ignored || 0}</span>
                 <span class="label">Berater-Vermittlungen (vorab/im Modal):</span><span class="val">${game.ultimatumHistory?.agentPreEmpted || 0} / ${game.ultimatumHistory?.agentMediated || 0}</span>
             </div>
-            ${(game.trophies || []).length > 0 ? `<div style="margin-top:8px; font-size:11px; color:var(--gold);">🏆 ${(game.trophies || []).join(' · ')}</div>` : ''}
+            ${(game.trophies || []).length > 0 ? `<div style="margin-top:8px; font-size:var(--fs-body); color:var(--gold);">🏆 ${(game.trophies || []).join(' · ')}</div>` : ''}
         `;
         // Trainer-Interview-Historie: letzte Medien-Auftritte, um den eigenen "Medien-
         // Charakter" über die Karriere nachvollziehen zu können.
@@ -200,8 +200,8 @@
         if (interviewBox) {
             let recent = (game.interviewHistory || []).slice(-5).reverse();
             interviewBox.innerHTML = recent.length === 0
-                ? '<div class="box" style="font-size:10px; color:#94a3b8;">Noch keine Interviews gegeben.</div>'
-                : recent.map(h => `<div class="box" style="font-size:10px;"><span style="color:#94a3b8;">S${h.season}/${h.matchday}:</span> „${h.question}“ → <strong>${h.answer}</strong> <span style="color:${h.fans >= 0 ? 'var(--primary)' : 'var(--danger)'};">(Fans ${h.fans >= 0 ? '+' : ''}${h.fans})</span></div>`).join('');
+                ? '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Interviews gegeben.</div>'
+                : recent.map(h => `<div class="box" style="font-size:var(--fs-small);"><span style="color:var(--text-muted);">S${h.season}/${h.matchday}:</span> „${h.question}“ → <strong>${h.answer}</strong> <span style="color:${h.fans >= 0 ? 'var(--primary)' : 'var(--danger)'};">(Fans ${h.fans >= 0 ? '+' : ''}${h.fans})</span></div>`).join('');
         }
     }
 
@@ -227,17 +227,17 @@
     // vollzogen wird - als Erinnerung, da nach dem Neustart alles zurückgesetzt wird.
     function showCareerCertificate() {
         let trophyLines = (game.trophies || []).length > 0
-            ? game.trophies.map((t, i) => `<div style="font-size:10px; margin:2px 0;">#${i + 1} · ${t}</div>`).join('')
-            : '<div style="font-size:10px; color:#94a3b8;">Keine Trophäen errungen.</div>';
+            ? game.trophies.map((t, i) => `<div style="font-size:var(--fs-small); margin:2px 0;">#${i + 1} · ${t}</div>`).join('')
+            : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Keine Trophäen errungen.</div>';
 
         let crestThumbs = crestHistory.slice(-8).map(c => {
-            return `<div style="width:32px; height:32px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:13px; font-weight:900; color:#1a1200; border:1px solid rgba(255,255,255,0.5); margin:2px; background:radial-gradient(circle at 35% 30%, ${hexToRgba(c.color, 0.65)} 0%, ${c.color} 55%, ${hexToRgba(c.color, 0.75)} 100%);">${c.symbol}</div>`;
+            return `<div style="width:32px; height:32px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:var(--fs-title-sm); font-weight:900; color:#1a1200; border:1px solid rgba(255,255,255,0.5); margin:2px; background:radial-gradient(circle at 35% 30%, ${hexToRgba(c.color, 0.65)} 0%, ${c.color} 55%, ${hexToRgba(c.color, 0.75)} 100%);">${c.symbol}</div>`;
         }).join('');
 
         document.getElementById('career-certificate-content').innerHTML = `
             <div style="text-align:center; margin-bottom:12px;">
-                <div style="font-size:16px; font-weight:900; color:var(--gold);">🏆 KARRIERE-URKUNDE 🏆</div>
-                <div style="font-size:11px; color:#94a3b8;">${game.season} Saison(en) als Manager von ${game.clubName}</div>
+                <div style="font-size:var(--fs-title); font-weight:900; color:var(--gold);">🏆 KARRIERE-URKUNDE 🏆</div>
+                <div style="font-size:var(--fs-body); color:var(--text-muted);">${game.season} Saison(en) als Manager von ${game.clubName}</div>
             </div>
             <div class="modal-field-grid">
                 <span class="label">Höchstes Manager-Level:</span><span class="val">${managerRPG.level} (${managerRPG.xp} XP)</span>
@@ -249,11 +249,11 @@
                 <span class="label">Zuschauerrekord:</span><span class="val">${game.recordAttendance > 0 ? `${game.recordAttendance.toLocaleString('de-DE')} (Saison ${game.recordAttendanceSeason})` : '-'}</span>
                 <span class="label">Ultimaten gelöst (V/Vk/I):</span><span class="val">${game.ultimatumHistory?.renewed || 0} / ${game.ultimatumHistory?.sold || 0} / ${game.ultimatumHistory?.ignored || 0}</span>
             </div>
-            <div style="font-size:11px; font-weight:800; color:var(--accent); margin-top:10px;">Trophäen-Zeitstrahl</div>
+            <div style="font-size:var(--fs-body); font-weight:800; color:var(--accent); margin-top:10px;">Trophäen-Zeitstrahl</div>
             ${trophyLines}
-            <div style="font-size:11px; font-weight:800; color:var(--accent); margin-top:10px;">Wappen-Historie</div>
-            <div>${crestThumbs || '<div style="font-size:10px; color:#94a3b8;">Keine früheren Wappen-Designs.</div>'}</div>
-            <div style="font-size:9px; color:#64748b; margin-top:10px; text-align:center;">📸 Lade dir die Urkunde als Bild herunter oder mach einen Screenshot - nach Bestätigung ist die Karriere unwiderruflich beendet!</div>
+            <div style="font-size:var(--fs-body); font-weight:800; color:var(--accent); margin-top:10px;">Wappen-Historie</div>
+            <div>${crestThumbs || '<div style="font-size:var(--fs-small); color:var(--text-muted);">Keine früheren Wappen-Designs.</div>'}</div>
+            <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:10px; text-align:center;">📸 Lade dir die Urkunde als Bild herunter oder mach einen Screenshot - nach Bestätigung ist die Karriere unwiderruflich beendet!</div>
         `;
         document.getElementById('career-certificate-overlay').classList.add('show');
     }

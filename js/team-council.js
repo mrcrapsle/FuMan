@@ -162,25 +162,25 @@ function renderTeamCouncilPanel() {
     if (!box) return;
     const tc = initTeamCouncil();
     const members = getCouncilMembers();
-    let html = '<div style="font-size:9px;">';
+    let html = '<div style="font-size:var(--fs-caption);">';
     html += members.map(p => `<div style="display:flex; justify-content:space-between; padding:2px 0;">
         <span>${p.id === game.captainId ? 'Ⓒ ' : ''}${p.name} (${p.age || '?'})</span>
         <span style="color:${(p.morale || 50) >= 60 ? 'var(--primary)' : (p.morale || 50) < 40 ? 'var(--danger)' : 'var(--accent)'};">Moral ${Math.round(p.morale || 50)}</span></div>`).join('');
-    html += '<button onclick="electTeamCouncil()" class="btn-secondary" style="width:100%; font-size:8px; padding:3px; margin:4px 0;">Rat neu wählen</button>';
+    html += '<button onclick="electTeamCouncil()" class="btn-secondary" style="width:100%; font-size:var(--fs-micro); padding:3px; margin:4px 0;">Rat neu wählen</button>';
 
     if (tc.concern) {
         const opts = COUNCIL_OPTIONS[tc.concern.type] || [];
         html += `<div style="background:rgba(212,169,74,0.12); border-left:3px solid var(--gold); padding:6px; border-radius:4px; margin-top:4px;">
             <div style="font-weight:bold;">${tc.concern.title}</div>
             <div style="color:var(--text-muted); margin:3px 0;">${tc.concern.text}</div>
-            ${opts.map((o, i) => `<button onclick="answerCouncilConcern(${i})" class="${i === 0 ? 'btn-action' : 'btn-secondary'}" style="font-size:8px; padding:3px 6px; margin:2px 4px 0 0;">${o.label(tc.concern)}</button>`).join('')}
+            ${opts.map((o, i) => `<button onclick="answerCouncilConcern(${i})" class="${i === 0 ? 'btn-action' : 'btn-secondary'}" style="font-size:var(--fs-micro); padding:3px 6px; margin:2px 4px 0 0;">${o.label(tc.concern)}</button>`).join('')}
         </div>`;
     } else {
         html += '<div style="color:var(--text-muted); margin-top:4px;">Keine offenen Anliegen. Der Rat meldet sich einmal im Monat.</div>';
     }
     if (tc.history.length) {
         html += '<div style="margin-top:6px; font-weight:bold;">Letzte Entscheidungen</div>';
-        html += tc.history.slice(0, 3).map(h => `<div style="color:var(--text-muted); font-size:8px;">S${h.season}/ST${h.matchday}: ${h.title} - ${h.result}</div>`).join('');
+        html += tc.history.slice(0, 3).map(h => `<div style="color:var(--text-muted); font-size:var(--fs-micro);">S${h.season}/ST${h.matchday}: ${h.title} - ${h.result}</div>`).join('');
     }
     box.innerHTML = html + '</div>';
 }

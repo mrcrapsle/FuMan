@@ -546,7 +546,7 @@
         document.getElementById('nego-amount-value').innerText = formatVal(negoAmount);
         document.getElementById('nego-resell-value').innerText = negoResellPct + '%';
         let histList = document.getElementById('nego-history-list');
-        histList.innerHTML = (o.history || []).slice().reverse().map(h => `<div style="font-size:10px; color:#94a3b8;">Runde ${h.round}: ${formatVal(h.demanded)} gefordert</div>`).join('') || '<div style="font-size:10px; color:#64748b;">Noch keine Nachverhandlung.</div>';
+        histList.innerHTML = (o.history || []).slice().reverse().map(h => `<div style="font-size:var(--fs-small); color:var(--text-muted);">Runde ${h.round}: ${formatVal(h.demanded)} gefordert</div>`).join('') || '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Nachverhandlung.</div>';
         let negoAvatarBox = document.getElementById('player-detail-link-nego');
         if (negoAvatarBox) {
             negoAvatarBox.innerHTML = (p && typeof getPlayerAvatarSVG === 'function') ? getPlayerAvatarSVG(p, 76) : '👤';
@@ -572,36 +572,28 @@
 
                 let card = document.createElement('div');
                 card.className = 'panel box-offer';
-                card.innerHTML = `
-                    <div class="panel-header" style="color:var(--blue);">
-                        <span>💼 Angebot von <strong>${o.clubName}</strong></span>
-                        <span style="font-size:9px; color:#aaa;">Gültig: ${o.expiresIn} SpT</span>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                        <div style="display:flex; align-items:center; gap:6px;">
-                            ${p && typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 32) : ''}
-                            <span>
-                                <span class="badge ${badgeClass}">${o.playerPos}</span>
-                                <button onclick="openPlayerDetail('${o.playerId}','squad')" class="btn-secondary" style="width:auto; padding:2px 6px; font-size:9px;" title="Details">ℹ️</button>
-                                <strong>${o.playerName}</strong> (Stärke: ${o.playerStr})
-                                <div style="font-size:9px; color:#aaa;">Marktwert: ${formatVal(o.marketValue)}</div>
-                            </span>
-                        </div>
-                        <div style="text-align:right;">
-                            <div style="font-size:13px; font-weight:900; color:var(--accent);">${formatVal(o.currentBid)}</div>
-                            <div style="font-size:9px; color:${diffColor}; font-weight:bold;">${diffText} vs MW</div>
-                        </div>
-                    </div>
-                    <div style="font-size:10px; color:#cbd5e1; margin-bottom:8px;">${o.statusText}</div>
-                    
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px; margin-bottom:4px;">
-                        <button onclick="acceptTransferOffer('${o.id}')" class="btn-primary" style="font-size:10px;">✔ Annehmen (${formatVal(o.currentBid)})</button>
-                        <button onclick="rejectTransferOffer('${o.id}')" class="btn-danger" style="font-size:10px;">✖ Ablehnen</button>
-                    </div>
-                    <button onclick="acceptTransferOfferWithClause('${o.id}')" class="btn-gold" style="font-size:9px; margin-bottom:4px;">📜 Mit 15% Weiterverkaufsbeteiligung (${formatVal(Math.round(o.currentBid*0.94))} sofort)</button>
-                    ${typeof getBuybackTerms === 'function' && p && getBuybackTerms(p, o) ? `<button onclick="acceptTransferOfferWithBuyback('${o.id}')" class="btn-gold" style="font-size:9px; margin-bottom:4px;">↩️ Mit Rückkaufoption (${formatVal(getBuybackTerms(p, o).sofort)} sofort, zurück für ${formatVal(getBuybackTerms(p, o).preis)})</button>` : ''}
-                    <button onclick="openNegotiationStepper('${o.id}')" class="btn-secondary" style="font-size:10px; margin-top:4px;">🔧 Nachverhandeln (Schrittweite-Angebot)</button>
-                `;
+                const rueckkauf = typeof getBuybackTerms === 'function' && p ? getBuybackTerms(p, o) : null;
+                card.innerHTML = renderUiCard({
+                    thumb: `${p && typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 48) : ''}<span class="badge ${badgeClass}">${o.playerPos}</span>`,
+                    title: o.playerName,
+                    sub: `💼 Angebot von ${o.clubName}`,
+                    meta: [
+                        uiChip(`Stärke ${o.playerStr}`),
+                        uiChip(`MW ${formatVal(o.marketValue)}`),
+                        uiChip(`${diffText} vs MW`, diff >= 0 ? 'gut' : 'schlecht'),
+                        uiChip(`⏳ Gültig: ${o.expiresIn} SpT`, o.expiresIn <= 1 ? 'warn' : '')
+                    ],
+                    kpi: { wert: formatVal(o.currentBid), label: 'Gebot', farbe: diffColor },
+                    aside: `<button onclick="openPlayerDetail('${o.playerId}','squad')" class="btn-secondary ui-card-info" title="Details" aria-label="Details zu ${o.playerName}">ℹ️</button>`,
+                    body: o.statusText ? `<span style="color:var(--text-box);">${o.statusText}</span>` : '',
+                    actions: `<button onclick="acceptTransferOffer('${o.id}')" class="btn-primary">✔ Annehmen (${formatVal(o.currentBid)})</button>
+                        <button onclick="rejectTransferOffer('${o.id}')" class="btn-danger">✖ Ablehnen</button>`
+                }) + `
+                    <div class="ui-card-more">
+                        <button onclick="acceptTransferOfferWithClause('${o.id}')" class="btn-gold">📜 Mit 15% Weiterverkaufsbeteiligung (${formatVal(Math.round(o.currentBid*0.94))} sofort)</button>
+                        ${rueckkauf ? `<button onclick="acceptTransferOfferWithBuyback('${o.id}')" class="btn-gold">↩️ Mit Rückkaufoption (${formatVal(rueckkauf.sofort)} sofort, zurück für ${formatVal(rueckkauf.preis)})</button>` : ''}
+                        <button onclick="openNegotiationStepper('${o.id}')" class="btn-secondary">🔧 Nachverhandeln (Schrittweite-Angebot)</button>
+                    </div>`;
                 offList.appendChild(card);
             });
         }
@@ -617,31 +609,24 @@
             row.className = 'panel player-card';
             row.style.cssText = 'margin-bottom:6px; padding:8px;';
             let badgeClass = 'badge-' + (p.pos || 'mit').toLowerCase();
-            let traitBadge = (p.trait && p.trait !== 'Kein') ? `<span class="badge badge-trait">${p.trait}</span>` : '';
-            if (p.deadlineBargain) traitBadge += '<span class="badge badge-trait" style="background:var(--danger);">⏰ Schnäppchen -30 %</span>';
-            row.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                    <div style="display:flex; align-items:center; gap:6px;">
-                        ${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 32) : ''}
-                        <span class="badge ${badgeClass}">${p.pos}</span>
-                        <strong style="font-size:12px;">${p.name}</strong>
-                        ${traitBadge}
-                    </div>
-                    <button onclick="openPlayerDetail('${p.id}','market')" class="btn-secondary" style="width:auto; padding:3px 7px; font-size:9px;" title="Details">ℹ️</button>
-                </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap:2px; font-size:9px; color:#aaa; text-align:center; margin-bottom:6px; background:rgba(228,197,140,0.05); border-radius:4px; padding:4px 0;">
-                    <div>STR<br><strong style="color:var(--accent); font-size:11px;">${p.strength}</strong></div>
-                    <div>PAC<br><strong>${p.pace}</strong></div>
-                    <div>SHO<br><strong>${p.shooting}</strong></div>
-                    <div>PAS<br><strong>${p.passing}</strong></div>
-                    <div>DEF<br><strong>${p.defense}</strong></div>
-                </div>
-                <div style="font-size:9px; color:var(--text-muted); margin-bottom:4px;">🏟️ ${ensureTransferTerms(p).sellerClub} · Marktwert ${formatVal(p.marketValue)}${typeof getMedicalTag === 'function' ? ` · ${getMedicalTag(p)}` : ''}${p.pokerBroken ? ' · <span style="color:var(--danger);">Gespräche abgebrochen</span>' : ''}</div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
-                    <button onclick="openTransferPoker(${idx})" class="btn-action" ${p.pokerBroken ? 'disabled' : ''}>🃏 Verhandeln</button>
-                    <button onclick="buyPlayer(${idx})" class="btn-secondary">Sofortkauf [${formatVal(p.askingPrice)}]</button>
-                </div>
-            `;
+            const avatar = typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 48) : '';
+            row.innerHTML = renderUiCard({
+                thumb: `${avatar}<span class="badge ${badgeClass}">${p.pos}</span>`,
+                title: p.name,
+                sub: `${p.age ? p.age + ' J. · ' : ''}🏟️ ${ensureTransferTerms(p).sellerClub}`,
+                meta: [
+                    uiChip(`💶 ${formatVal(p.marketValue)}`),
+                    p.deadlineBargain ? uiChip('⏰ Schnäppchen -30 %', 'schlecht') : '',
+                    (p.trait && p.trait !== 'Kein') ? uiChip(p.trait) : '',
+                    typeof getMedicalTag === 'function' ? uiChip(getMedicalTag(p)) : '',
+                    p.pokerBroken ? uiChip('Gespräche abgebrochen', 'schlecht') : ''
+                ],
+                kpi: { wert: p.strength, label: 'Stärke' },
+                aside: `<button onclick="openPlayerDetail('${p.id}','market')" class="btn-secondary ui-card-info" title="Details" aria-label="Details zu ${p.name}">ℹ️</button>`,
+                body: renderUiStatRow([['Tempo', p.pace], ['Schuss', p.shooting], ['Pass', p.passing], ['Abwehr', p.defense]]),
+                actions: `<button onclick="openTransferPoker(${idx})" class="btn-action" ${p.pokerBroken ? 'disabled' : ''}>🃏 Verhandeln</button>
+                    <button onclick="buyPlayer(${idx})" class="btn-secondary">Sofortkauf ${formatVal(p.askingPrice)}</button>`
+            });
             mList.appendChild(row);
         });
 
@@ -653,16 +638,15 @@
             row.style.cssText = 'margin-bottom:6px; padding:8px;';
             let isNegotiating = pendingFreeAgentNegotiation && pendingFreeAgentNegotiation.playerId === p.id;
             let feeDisplay = isNegotiating ? pendingFreeAgentNegotiation.counterFee : p.signOnFee;
-            row.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="display:flex; align-items:center; gap:6px;">
-                        ${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 28) : ''}
-                        <span><strong class="badge badge-${(p.pos||'mit').toLowerCase()}">${p.pos}</strong> ${p.name} (Str: ${p.strength}) <span style="font-size:8px; color:var(--text-muted);">${p.character || ''}</span></span>
-                    </span>
-                    <button onclick="signFreeAgent(${idx})" class="btn-blue" style="width:auto;">Verpflichten [Handgeld: ${formatVal(feeDisplay)}]</button>
-                </div>
-                ${isNegotiating ? `<div class="box" style="font-size:9px; margin-top:4px; border-left-color:var(--danger);">💬 Gegenangebot: ${p.name} verlangt ${formatVal(pendingFreeAgentNegotiation.counterFee)} statt ursprünglich ${formatVal(p.signOnFee)}. <button onclick="rejectFreeAgentCounter()" class="btn-secondary" style="width:auto; font-size:8px; margin-left:4px;">Ablehnen</button></div>` : ''}
-            `;
+            row.innerHTML = renderUiCard({
+                thumb: `${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 48) : ''}<span class="badge badge-${(p.pos||'mit').toLowerCase()}">${p.pos}</span>`,
+                title: p.name,
+                sub: `${p.age ? p.age + ' J. · ' : ''}vereinslos${p.character ? ' · ' + p.character : ''}`,
+                meta: [uiChip(`💶 Handgeld ${formatVal(feeDisplay)}`, isNegotiating ? 'warn' : '')],
+                kpi: { wert: p.strength, label: 'Stärke' },
+                body: isNegotiating ? `<div class="box" style="margin:0; border-left-color:var(--danger);">💬 Gegenangebot: ${p.name} verlangt ${formatVal(pendingFreeAgentNegotiation.counterFee)} statt ursprünglich ${formatVal(p.signOnFee)}. <button onclick="rejectFreeAgentCounter()" class="btn-secondary" style="width:auto; margin-left:4px;">Ablehnen</button></div>` : '',
+                actions: `<button onclick="signFreeAgent(${idx})" class="btn-blue">Verpflichten [Handgeld: ${formatVal(feeDisplay)}]</button>`
+            });
             fList.appendChild(row);
         });
 
@@ -674,7 +658,7 @@
             let row = document.createElement('div');
             row.className = 'player-row';
             const leihe = fensterOffen && typeof getProLoanTerms === 'function' ? getProLoanTerms(p) : null;
-            row.innerHTML = `<span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 26) : ''}${p.name} (${p.pos}|Str:${p.strength})</span><span style="display:flex; gap:4px;">${leihe ? `<button onclick="loanOutProPlayer('${p.id}', this)" class="btn-secondary" style="width:auto; font-size:9px;" title="Bis Saisonende an ${leihe.club}">🔁 Verleihen (${Math.round(leihe.anteil * 100)} %)</button>` : ''}<button onclick="sellPlayer('${p.id}', this)" class="btn-danger" style="width:auto;">Blitzverkauf [${formatVal(Math.round(p.marketValue*0.80))}]</button></span>`;
+            row.innerHTML = `<span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 26) : ''}${p.name} (${p.pos}|Str:${p.strength})</span><span style="display:flex; gap:4px;">${leihe ? `<button onclick="loanOutProPlayer('${p.id}', this)" class="btn-secondary" style="width:auto; font-size:var(--fs-caption);" title="Bis Saisonende an ${leihe.club}">🔁 Verleihen (${Math.round(leihe.anteil * 100)} %)</button>` : ''}<button onclick="sellPlayer('${p.id}', this)" class="btn-danger" style="width:auto;">Blitzverkauf [${formatVal(Math.round(p.marketValue*0.80))}]</button></span>`;
             sList.appendChild(row);
         });
 
@@ -697,21 +681,21 @@
         if (loanablePlayers.length === 0) { box.innerHTML = '<div class="box">Aktuell keine Leihspieler verfügbar.</div>'; return; }
         box.innerHTML = loanablePlayers.map((p, idx) => `
             <div class="panel">
-                <div class="panel-header"><span>${p.name} (${p.pos}, Str ${p.strength})</span><span style="color:var(--text-muted); font-size:9px;">von ${p.loanParentClub}</span></div>
-                <div style="font-size:9px; color:#aaa; margin-bottom:4px;">Leihgebühr: <strong style="color:var(--accent);">${formatVal(p.loanFee)}</strong> · Kaufoption später: <strong>${formatVal(p.loanBuyOptionFee)}</strong> · Dauer: Saisonende</div>
+                <div class="panel-header"><span>${p.name} (${p.pos}, Str ${p.strength})</span><span style="color:var(--text-muted); font-size:var(--fs-caption);">von ${p.loanParentClub}</span></div>
+                <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">Leihgebühr: <strong style="color:var(--accent);">${formatVal(p.loanFee)}</strong> · Kaufoption später: <strong>${formatVal(p.loanBuyOptionFee)}</strong> · Dauer: Saisonende</div>
                 <button onclick="signLoanPlayer(${idx})" class="btn-action">Ausleihen</button>
             </div>
         `).join('');
         let activeBox = document.getElementById('active-loans-in-list');
         if (activeBox) {
-            if (incomingLoans.length === 0) { activeBox.innerHTML = '<div class="box" style="font-size:9px; color:var(--text-muted);">Aktuell keine eigenen Leihspieler im Kader.</div>'; }
+            if (incomingLoans.length === 0) { activeBox.innerHTML = '<div class="box" style="font-size:var(--fs-caption); color:var(--text-muted);">Aktuell keine eigenen Leihspieler im Kader.</div>'; }
             else {
                 activeBox.innerHTML = incomingLoans.map(loan => {
                     let p = squad.find(x => x.id === loan.playerId);
                     if (!p) return '';
                     return `<div class="panel">
-                        <div class="panel-header" style="font-size:10px;"><span>${p.name}</span><span style="color:var(--text-muted); font-size:8px;">von ${loan.parentClub}</span></div>
-                        <div style="font-size:9px; margin-bottom:4px;">Restlaufzeit: ${loan.matchdaysLeft} SpT · Kaufoption: ${formatVal(loan.buyOptionFee)}</div>
+                        <div class="panel-header" style="font-size:var(--fs-small);"><span>${p.name}</span><span style="color:var(--text-muted); font-size:var(--fs-micro);">von ${loan.parentClub}</span></div>
+                        <div style="font-size:var(--fs-caption); margin-bottom:4px;">Restlaufzeit: ${loan.matchdaysLeft} SpT · Kaufoption: ${formatVal(loan.buyOptionFee)}</div>
                         <button onclick="exerciseLoanBuyOption('${p.id}')" class="btn-gold">Kaufoption ziehen</button>
                     </div>`;
                 }).join('');

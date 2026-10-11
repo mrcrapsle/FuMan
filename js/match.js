@@ -241,7 +241,7 @@
         let box = document.getElementById('prematch-analysis-box');
         if (!box) return;
         if (!(staffMembers.analyst.hired && getAnalystEffekt().bericht) && !underworld.spyIntelActive) {
-            box.innerHTML = `<div class="box" style="font-size:10px; color:#64748b;">📋 Ohne Chef-Analyst bleibt die gegnerische Spielweise unbekannt. (Personal-Abteilung → Chef-Analyst einstellen)</div>`;
+            box.innerHTML = `<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">📋 Ohne Chef-Analyst bleibt die gegnerische Spielweise unbekannt. (Personal-Abteilung → Chef-Analyst einstellen)</div>`;
             return;
         }
         let form = (oppObj && oppObj.recentForm) ? oppObj.recentForm.slice(-5) : [];
@@ -262,12 +262,12 @@
         // im Taktik-Duell schlägt (js/opponent-tactics.js) - vorher zwei Zufallssätze ohne
         // Bezug zum Spiel, und mit Europapokal-Teilnahme galt jedes Ligaspiel als Topspiel.
         let isImportantMatch = isDerbyOpponent(oppName) || !!(pendingMatchInfo && pendingMatchInfo.cupTie);
-        let spyNote = underworld.spyIntelActive ? `<div style="margin-top:6px; font-size:10px; color:#f97316;">🕵️ <strong>Insider-Info aktiv:</strong> Diese Analyse stammt von einem bezahlten Informanten im gegnerischen Verein und ist garantiert zuverlässig.</div>` : '';
+        let spyNote = underworld.spyIntelActive ? `<div style="margin-top:6px; font-size:var(--fs-small); color:#f97316;">🕵️ <strong>Insider-Info aktiv:</strong> Diese Analyse stammt von einem bezahlten Informanten im gegnerischen Verein und ist garantiert zuverlässig.</div>` : '';
         let videoAnalysisHtml = '';
         if (isImportantMatch && oppObj && typeof AI_STYLE_ARCHETYPE !== 'undefined') {
             let basis = AI_STYLE_ARCHETYPE[getTeamPlaystyle(oppObj).id] || 'N';
             let konter = getCounterArchetype(basis);
-            videoAnalysisHtml = `<div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.15); font-size:10px;">
+            videoAnalysisHtml = `<div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.15); font-size:var(--fs-small);">
                 🎥 <strong style="color:var(--teal);">Videoanalyse (Topspiel-Sonderbericht):</strong><br>
                 Grundausrichtung: <strong>${ARCHETYPE_LABELS[basis]}</strong><br>
                 Schwachstelle: <strong>${konter ? `verwundbar gegen ${ARCHETYPE_LABELS[konter]}` : 'kein klares Muster - schwer auszurechnen'}</strong>
@@ -277,7 +277,7 @@
         box.innerHTML = `
             <div class="box box-underworld" style="border-left-color:var(--violet);">
                 <strong style="color:var(--violet);">📋 SPIELANALYSE: ${oppName}</strong><br>
-                <span style="font-size:10px;">
+                <span style="font-size:var(--fs-small);">
                     Spielweise: <strong>${getOpponentPlaystyle(oppName)}</strong><br>
                     Team-Stärke: <strong>${baseStr}</strong> · Form (letzte 5): ${formStr}<br>
                     ${dangerLine}
@@ -296,7 +296,7 @@
         if (!box) return;
         let muede = squad.filter(p => lineup.includes(p.id) && p.fitness < 70);
         if (!muede.length) { box.innerHTML = ''; return; }
-        box.innerHTML = `<div class="box" style="font-size:11px; border-left-color:var(--danger); margin-bottom:8px;">
+        box.innerHTML = `<div class="box" style="font-size:var(--fs-body); border-left-color:var(--danger); margin-bottom:8px;">
             😮‍💨 <strong>${muede.length} Stammspieler erschöpft:</strong> ${muede.map(p => `${p.name} (${p.fitness}%)`).join(', ')}.
             Fitness zählt voll in die Teamstärke.
             <button onclick="rotateTiredPlayers()" class="btn-action" style="margin-top:6px;">🔄 Ausgeruhte Elf aufstellen</button></div>`;
@@ -475,7 +475,7 @@
         bench.forEach(p => {
             let btn = document.createElement('button');
             btn.className = 'btn-secondary';
-            btn.style.fontSize = '10px'; btn.style.padding = '4px 6px'; btn.style.width = 'auto';
+            btn.style.fontSize = 'var(--fs-small)'; btn.style.padding = '4px 6px'; btn.style.width = 'auto';
             btn.innerText = `+ ${p.name} (${p.pos}, ${p.strength})`;
             btn.onclick = () => makeLiveSubstitution(p.id);
             container.appendChild(btn);
@@ -499,7 +499,7 @@
         currentMatch.ourBaseStr += delta;
         let log = document.getElementById('ticker-log');
         if (log) {
-            log.innerHTML += `<div style="color:var(--teal); font-size:10px;">🔄 ${currentMatch.minute}. Min: ${rein.name} kommt für ${aus.name} (Stärke ${delta >= 0 ? '+' : ''}${delta.toFixed(1)}).</div>`;
+            log.innerHTML += `<div style="color:var(--teal); font-size:var(--fs-small);">🔄 ${currentMatch.minute}. Min: ${rein.name} kommt für ${aus.name} (Stärke ${delta >= 0 ? '+' : ''}${delta.toFixed(1)}).</div>`;
             log.scrollTop = log.scrollHeight;
         }
         renderLiveSubs();
@@ -513,13 +513,13 @@
     function liveSetTacticStyle(style) {
         setTacticStyle(style);
         renderLiveTacticsPanel();
-        document.getElementById('ticker-log').innerHTML += `<div style="color:var(--violet); font-size:10px;">🧠 Spielstil live umgestellt: ${style}.</div>`;
+        document.getElementById('ticker-log').innerHTML += `<div style="color:var(--violet); font-size:var(--fs-small);">🧠 Spielstil live umgestellt: ${style}.</div>`;
         document.getElementById('ticker-log').scrollTop = document.getElementById('ticker-log').scrollHeight;
     }
     function liveSetTackleHardness(level) {
         setTackleHardness(level);
         renderLiveTacticsPanel();
-        document.getElementById('ticker-log').innerHTML += `<div style="color:var(--violet); font-size:10px;">🥊 Zweikampfhärte live umgestellt: ${level}.</div>`;
+        document.getElementById('ticker-log').innerHTML += `<div style="color:var(--violet); font-size:var(--fs-small);">🥊 Zweikampfhärte live umgestellt: ${level}.</div>`;
         document.getElementById('ticker-log').scrollTop = document.getElementById('ticker-log').scrollHeight;
     }
     function liveSetFormation(form) {
@@ -530,7 +530,7 @@
         game.formation = form;
         renderLiveTacticsPanel();
         render3DPitch('live-pitch');
-        document.getElementById('ticker-log').innerHTML += `<div style="color:var(--violet); font-size:10px;">📋 Formation live auf ${form} umgestellt.</div>`;
+        document.getElementById('ticker-log').innerHTML += `<div style="color:var(--violet); font-size:var(--fs-small);">📋 Formation live auf ${form} umgestellt.</div>`;
         document.getElementById('ticker-log').scrollTop = document.getElementById('ticker-log').scrollHeight;
     }
 
@@ -562,13 +562,13 @@
         if (game.tacticAutomation.offensivBeiRueckstand && currentMatch.minute >= 46 && ourGoals < oppGoals
             && game.tacticStyle !== 'offensiv' && !currentMatch.tacticAutomationFired.offensiv) {
             currentMatch.tacticAutomationFired.offensiv = true;
-            if (log) log.innerHTML += `<div style="color:var(--gold); font-size:10px;">🤖 Taktik-Automatik: Rückstand erkannt.</div>`;
+            if (log) log.innerHTML += `<div style="color:var(--gold); font-size:var(--fs-small);">🤖 Taktik-Automatik: Rückstand erkannt.</div>`;
             liveSetTacticStyle('offensiv');
         }
         if (game.tacticAutomation.defensivBeiFuehrung && currentMatch.minute >= 75 && ourGoals > oppGoals
             && game.tacticStyle !== 'defensiv' && !currentMatch.tacticAutomationFired.defensiv) {
             currentMatch.tacticAutomationFired.defensiv = true;
-            if (log) log.innerHTML += `<div style="color:var(--gold); font-size:10px;">🤖 Taktik-Automatik: Führung kurz vor Schluss wird verteidigt.</div>`;
+            if (log) log.innerHTML += `<div style="color:var(--gold); font-size:var(--fs-small);">🤖 Taktik-Automatik: Führung kurz vor Schluss wird verteidigt.</div>`;
             liveSetTacticStyle('defensiv');
         }
     }

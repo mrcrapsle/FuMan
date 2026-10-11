@@ -89,10 +89,10 @@ function renderOppTacticBox(oppTeam) {
     if (!plan) { box.innerHTML = ''; return; }
     const lesbar = getPredictableArchetype();
     const warnung = lesbar ? `<div style="color:var(--accent);">⚠️ Du bist berechenbar: zuletzt meist ${ARCHETYPE_LABELS[lesbar]}. Gute Gegner stellen sich darauf ein.</div>` : '';
-    const regel = '<div style="color:var(--text-muted); font-size:8px; margin-top:3px;">Pressing schlägt Ballbesitz · Ballbesitz schlägt Konter · Konter schlägt Pressing (±2 Stärke)</div>';
+    const regel = '<div style="color:var(--text-muted); font-size:var(--fs-micro); margin-top:3px;">Pressing schlägt Ballbesitz · Ballbesitz schlägt Konter · Konter schlägt Pressing (±2 Stärke)</div>';
     if (!staffMembers.analyst.hired && !(typeof underworld !== 'undefined' && underworld.spyIntelActive)) {
-        box.innerHTML = `<div class="box" style="font-size:10px;">🧠 <strong>Taktik-Duell:</strong> Laut Presse spielt ${plan.opp} meist <strong>${ARCHETYPE_LABELS[plan.base]}</strong> - ob sich der Trainer auf dich einstellt, weiß nur ein Chef-Analyst.${warnung}${regel}</div>`;
+        box.innerHTML = `<div class="box" style="font-size:var(--fs-small);">🧠 <strong>Taktik-Duell:</strong> Laut Presse spielt ${plan.opp} meist <strong>${ARCHETYPE_LABELS[plan.base]}</strong> - ob sich der Trainer auf dich einstellt, weiß nur ein Chef-Analyst.${warnung}${regel}</div>`;
         return;
     }
-    box.innerHTML = `<div class="box" style="font-size:10px;">🧠 <strong>Taktik-Duell (Analyst):</strong> ${plan.opp} plant <strong>${ARCHETYPE_LABELS[plan.arch]}</strong>${plan.reacted ? ` - <span style="color:var(--danger);">der Trainer reagiert auf dein ${ARCHETYPE_LABELS[plan.readAs]}!</span>` : ''}<br>${describeMatchup(plan.arch)}${warnung}${regel}</div>`;
+    box.innerHTML = `<div class="box" style="font-size:var(--fs-small);">🧠 <strong>Taktik-Duell (Analyst):</strong> ${plan.opp} plant <strong>${ARCHETYPE_LABELS[plan.arch]}</strong>${plan.reacted ? ` - <span style="color:var(--danger);">der Trainer reagiert auf dein ${ARCHETYPE_LABELS[plan.readAs]}!</span>` : ''}<br>${describeMatchup(plan.arch)}${warnung}${regel}</div>`;
 }

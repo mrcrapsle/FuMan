@@ -219,25 +219,25 @@
                 let mission = scoutingNetwork.activeMissions.find(m => m.scoutId === s.id);
                 let body;
                 if (!s.hired) {
-                    body = `<div style="font-size:9px; color:#aaa; margin-bottom:6px;">Noch kein Scout für diese Region.</div>
+                    body = `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Noch kein Scout für diese Region.</div>
                             <button onclick="hireRegionalScout('${s.id}')" class="btn-action">Scout einstellen [${formatVal(cfg.hireCost)}]</button>`;
                 } else if (mission) {
                     let segments = Array.from({ length: mission.totalMatchdays }, (_, i) => i < (mission.totalMatchdays - mission.matchdaysLeft));
-                    body = `<div style="font-size:9px; color:#aaa; margin-bottom:4px;">${s.name} · Skill ${s.skill} (Stufe ${s.level})</div>
+                    body = `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${s.name} · Skill ${s.skill} (Stufe ${s.level})</div>
                             <div style="display:flex; align-items:center; gap:8px;">
                                 <div style="font-size:18px; font-weight:900; color:var(--accent);">${mission.matchdaysLeft}</div>
                                 <div style="flex:1; display:flex; gap:2px;">${segments.map(done => `<div style="flex:1; height:10px; border-radius:2px; background:${done ? 'var(--accent)' : 'rgba(228,197,140,0.15)'};"></div>`).join('')}</div>
                             </div>
-                            <div style="font-size:8px; color:#aaa; margin-top:3px;">✈️ Unterwegs - kehrt in ${mission.matchdaysLeft} SpT zurück</div>`;
+                            <div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:3px;">✈️ Unterwegs - kehrt in ${mission.matchdaysLeft} SpT zurück</div>`;
                 } else {
-                    body = `<div style="font-size:9px; color:#aaa; margin-bottom:6px;">${s.name} · Skill ${s.skill} (Stufe ${s.level}) · Dauer: ${getMissionDuration(s)} SpT</div>
+                    body = `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">${s.name} · Skill ${s.skill} (Stufe ${s.level}) · Dauer: ${getMissionDuration(s)} SpT</div>
                             <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
-                                <button onclick="startScoutingMission('${s.region}')" class="btn-action" style="font-size:10px;">Entsenden [${formatVal(cfg.baseCost)}]</button>
-                                <button onclick="openScoutFilterModal('${s.region}')" class="btn-secondary" style="font-size:10px;">🎛️ Fokus</button>
+                                <button onclick="startScoutingMission('${s.region}')" class="btn-action" style="font-size:var(--fs-small);">Entsenden [${formatVal(cfg.baseCost)}]</button>
+                                <button onclick="openScoutFilterModal('${s.region}')" class="btn-secondary" style="font-size:var(--fs-small);">🎛️ Fokus</button>
                             </div>
-                            ${s.level < 5 ? `<button onclick="upgradeRegionalScout('${s.id}')" class="btn-secondary" style="margin-top:4px; font-size:9px;">📈 Ausbilden (Stufe ${s.level+1}) [${formatVal(20000*s.level)}]</button>` : '<div style="font-size:8px; color:var(--primary); margin-top:4px;">Maximalstufe erreicht ✓</div>'}`;
+                            ${s.level < 5 ? `<button onclick="upgradeRegionalScout('${s.id}')" class="btn-secondary" style="margin-top:4px; font-size:var(--fs-caption);">📈 Ausbilden (Stufe ${s.level+1}) [${formatVal(20000*s.level)}]</button>` : '<div style="font-size:var(--fs-micro); color:var(--primary); margin-top:4px;">Maximalstufe erreicht ✓</div>'}`;
                 }
-                return `<div class="panel"><div class="panel-header" style="font-size:11px;">${cfg.label}</div>${body}</div>`;
+                return `<div class="panel"><div class="panel-header" style="font-size:var(--fs-body);">${cfg.label}</div>${body}</div>`;
             }).join('');
         }
 
@@ -260,16 +260,16 @@
                     row.className = 'panel';
                     row.innerHTML = `
                         <div class="panel-header"><span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 28) : ''}⭐ ${p.name} (${p.pos})</span><strong style="color:var(--accent);">Stärke: ~${p.strength}</strong></div>
-                        <div style="font-size:9px; margin-bottom:4px;">
+                        <div style="font-size:var(--fs-caption); margin-bottom:4px;">
                             <span style="color:${confColor};">🔎 Vertrauens-Level: ${confidence}%${confidence < 95 ? ' (Werte unscharf)' : ' (bestätigt)'}</span>
                         </div>
-                        <div style="font-size:10px; margin-bottom:4px;">
+                        <div style="font-size:var(--fs-small); margin-bottom:4px;">
                             Spezial-Perk: <span class="badge badge-trait">${p.trait}</span> | Tempo: <strong>${paceF.isFoggy ? paceF.range[0]+'-'+paceF.range[1] : paceF.display}</strong> | Schuss: <strong>${shootF.isFoggy ? shootF.range[0]+'-'+shootF.range[1] : shootF.display}</strong> | Pass: <strong>${passF.isFoggy ? passF.range[0]+'-'+passF.range[1] : passF.display}</strong> | Physis: <strong>${physF.isFoggy ? physF.range[0]+'-'+physF.range[1] : physF.display}</strong>
                         </div>
                         <button onclick="openPlayerDetail('${p.id}','scout')" class="btn-secondary" style="margin-bottom:4px;">ℹ️ Details ansehen</button>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-bottom:4px;">
-                            ${confidence < 95 ? `<button onclick="investigateScoutedPlayer('${p.id}')" class="btn-secondary" style="font-size:9px;">🔍 Genauer beobachten [1.500 €]</button>` : '<div></div>'}
-                            <button onclick="${isWatched ? `removeFromWatchlist('${p.id}')` : `addToWatchlist('${p.id}')`}" class="btn-secondary" style="font-size:9px;">${isWatched ? '👁️ Von Liste entfernen' : '👁️ Beobachten (passiv)'}</button>
+                            ${confidence < 95 ? `<button onclick="investigateScoutedPlayer('${p.id}')" class="btn-secondary" style="font-size:var(--fs-caption);">🔍 Genauer beobachten [1.500 €]</button>` : '<div></div>'}
+                            <button onclick="${isWatched ? `removeFromWatchlist('${p.id}')` : `addToWatchlist('${p.id}')`}" class="btn-secondary" style="font-size:var(--fs-caption);">${isWatched ? '👁️ Von Liste entfernen' : '👁️ Beobachten (passiv)'}</button>
                         </div>
                         <button onclick="signGlobalScoutPlayer(${idx})" class="btn-primary">Verpflichten [Ablöse: ~${formatVal(displayPrice)}${discount < 1 ? ' (Scout-Rabatt!)' : ''}]</button>
                     `;
@@ -285,12 +285,12 @@
         let box = document.getElementById('talent-database-box');
         if (!box) return;
         let db = scoutingNetwork.talentDatabase || [];
-        if (db.length === 0) { box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Noch keine Einträge in der Talent-Datenbank.</div>'; return; }
+        if (db.length === 0) { box.innerHTML = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch keine Einträge in der Talent-Datenbank.</div>'; return; }
         let sorted = [...db].sort((a, b) => b.strength - a.strength).slice(0, 15);
         box.innerHTML = sorted.map(e => {
             let stillAvailable = globalScoutResults.some(p => p.id === e.id);
             let statusLabel = squad.some(p => p.id === e.id) ? '<span style="color:var(--primary);">Im Kader</span>' : (stillAvailable ? '<span style="color:var(--accent);">Verfügbar</span>' : '<span style="color:var(--text-muted);">Vergangen</span>');
-            return `<div class="box" style="display:flex; justify-content:space-between; font-size:9px;"><span>${e.name} (${e.pos}, S${e.season}/${e.matchday})</span><span>Stärke ${e.strength} · ${statusLabel}</span></div>`;
+            return `<div class="box" style="display:flex; justify-content:space-between; font-size:var(--fs-caption);"><span>${e.name} (${e.pos}, S${e.season}/${e.matchday})</span><span>Stärke ${e.strength} · ${statusLabel}</span></div>`;
         }).join('');
     }
 

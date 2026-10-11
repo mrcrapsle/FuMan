@@ -214,14 +214,14 @@ function renderYouthDecisionBox() {
         <div class="panel-header" style="color:var(--accent);">✍️ PROFIVERTRAG-ENTSCHEIDUNG</div>
         ${offen.map(p => {
             const idx = youthTalents.indexOf(p);
-            return `<div class="box" style="font-size:10px;">
+            return `<div class="box" style="font-size:var(--fs-small);">
                 <strong>${p.name}</strong> (${p.pos}, ${p.age} J., Stärke ${p.strength}, Potenzial ${getYouthPotentialText(p)}) - noch <strong>${p.proDecisionLeft}</strong> Spieltage
-                ${p.potentialRevealed && typeof getYouthOfferSquadHint === 'function' ? `<div style="font-size:9px; color:var(--text-muted); margin-top:2px;">${getYouthOfferSquadHint(p, 'profi')}</div>` : ''}
+                ${p.potentialRevealed && typeof getYouthOfferSquadHint === 'function' ? `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:2px;">${getYouthOfferSquadHint(p, 'profi')}</div>` : ''}
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:6px;">
-                    <button onclick="promoteYouth(${idx}, this)" class="btn-action" style="font-size:9px;">✍️ Profivertrag (3 J., ${formatVal(getYouthProWage(p))}/SpT)</button>
-                    <button onclick="openYouthLoanChoice('${p.id}')" class="btn-secondary" style="font-size:9px;">📤 Verleihen</button>
-                    ${game.secondTeam.isActive ? `<button onclick="promoteYouthToSecondTeam(${idx}, this)" class="btn-secondary" style="font-size:9px;">🅱️ In die Reserve</button>` : ''}
-                    <button onclick="releaseYouthTalent('${p.id}', this)" class="btn-secondary" style="font-size:9px; color:var(--danger);">👋 Ziehen lassen</button>
+                    <button onclick="promoteYouth(${idx}, this)" class="btn-action" style="font-size:var(--fs-caption);">✍️ Profivertrag (3 J., ${formatVal(getYouthProWage(p))}/SpT)</button>
+                    <button onclick="openYouthLoanChoice('${p.id}')" class="btn-secondary" style="font-size:var(--fs-caption);">📤 Verleihen</button>
+                    ${game.secondTeam.isActive ? `<button onclick="promoteYouthToSecondTeam(${idx}, this)" class="btn-secondary" style="font-size:var(--fs-caption);">🅱️ In die Reserve</button>` : ''}
+                    <button onclick="releaseYouthTalent('${p.id}', this)" class="btn-secondary" style="font-size:var(--fs-caption); color:var(--danger);">👋 Ziehen lassen</button>
                 </div>
             </div>`;
         }).join('')}
@@ -236,16 +236,16 @@ function renderYouthLoanChoiceBox() {
     const dauer = Math.max(8, Math.min(17, 34 - game.matchday));
     box.innerHTML = `<div class="panel" style="border:1px solid var(--teal);">
         <div class="panel-header" style="color:var(--teal);">📤 LEIHE ZUR ENTWICKLUNG: ${p.name} (${p.strength})</div>
-        <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">${dauer} Spieltage. Mehr Spielzeit oder höheres Niveau - beides bringt Entwicklung.</div>
+        <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">${dauer} Spieltage. Mehr Spielzeit oder höheres Niveau - beides bringt Entwicklung.</div>
         ${getYouthLoanClubs(p).map(c => {
             const spielzeit = Math.round(getYouthLoanPlayChance(p, c.strength) * 100);
             const proSpiel = getYouthLoanDevPerApp(p, c.strength);
-            return `<div class="box" style="display:flex; justify-content:space-between; align-items:center; gap:6px; font-size:9px;">
+            return `<div class="box" style="display:flex; justify-content:space-between; align-items:center; gap:6px; font-size:var(--fs-caption);">
                 <span><strong>${c.name}</strong> · ${leagueNames[c.level]} · Stärke ${c.strength}<br>Spielzeit ca. ${spielzeit} % · Entwicklung je Einsatz ${proSpiel >= 0.3 ? 'hoch' : 'normal'}</span>
-                <button onclick="loanYouthForDevelopment('${p.id}', '${c.name.replace(/'/g, "\\'")}')" class="btn-action" style="width:auto; font-size:9px;">Verleihen</button>
+                <button onclick="loanYouthForDevelopment('${p.id}', '${c.name.replace(/'/g, "\\'")}')" class="btn-action" style="width:auto; font-size:var(--fs-caption);">Verleihen</button>
             </div>`;
         }).join('')}
-        <button onclick="openYouthLoanChoice('${p.id}')" class="btn-secondary" style="width:auto; font-size:9px;">Abbrechen</button>
+        <button onclick="openYouthLoanChoice('${p.id}')" class="btn-secondary" style="width:auto; font-size:var(--fs-caption);">Abbrechen</button>
     </div>`;
 }
 
@@ -254,25 +254,25 @@ function renderYouthLoansBox() {
     if (!box) return;
     const leihen = (loanedPlayers || []).filter(l => l.youthLoan);
     box.innerHTML = leihen.length
-        ? leihen.map(l => `<div class="box" style="font-size:9px;">📤 <strong>${l.player.name}</strong> bei ${l.loanClub} · noch ${l.duration} SpT · ${l.apps} Einsätze, ${l.goals} Tore · Stärke ${l.originalStrength} → ${l.player.strength}</div>`).join('')
-        : '<div style="font-size:9px; color:var(--text-muted);">Kein Talent verliehen. Ab 17 Jahren kann ein Talent bei einem anderen Verein Spielpraxis sammeln.</div>';
+        ? leihen.map(l => `<div class="box" style="font-size:var(--fs-caption);">📤 <strong>${l.player.name}</strong> bei ${l.loanClub} · noch ${l.duration} SpT · ${l.apps} Einsätze, ${l.goals} Tore · Stärke ${l.originalStrength} → ${l.player.strength}</div>`).join('')
+        : '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Kein Talent verliehen. Ab 17 Jahren kann ein Talent bei einem anderen Verein Spielpraxis sammeln.</div>';
 }
 
 function renderYouthPotentialBox() {
     const box = document.getElementById('youth-leaderboard-box');
     if (!box) return;
     const liste = [...youthTalents].map(ensureYouthPotential).sort((a, b) => b.strength - a.strength);
-    if (!liste.length) { box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Keine Talente in der Akademie.</div>'; return; }
+    if (!liste.length) { box.innerHTML = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Keine Talente in der Akademie.</div>'; return; }
     box.innerHTML = liste.map(p => {
         const plus = p.strength - p.youthSeasonStart;
         const ziel = p.potentialRevealed ? p.potential : Math.max(p.strength + 1, 90);
         const breite = Math.round(Math.min(100, p.strength / ziel * 100));
-        return `<div style="font-size:9px; margin-bottom:6px;">
+        return `<div style="font-size:var(--fs-caption); margin-bottom:6px;">
             <div style="display:flex; justify-content:space-between;"><span>${p.name} <span style="color:var(--text-muted);">${p.pos}, ${p.age} J.</span></span>
                 <span>Stärke <strong>${p.strength}</strong>${plus ? ` <span style="color:${plus > 0 ? 'var(--primary)' : 'var(--danger)'};">(${plus > 0 ? '+' : ''}${plus} diese Saison)</span>` : ''} · Potenzial ${getYouthPotentialText(p)}</span></div>
             <div style="height:6px; background:rgba(150,150,150,0.2); border-radius:3px; margin-top:2px;"><div style="height:6px; width:${breite}%; background:${p.potentialRevealed ? 'var(--primary)' : 'var(--text-muted)'}; border-radius:3px;"></div></div>
         </div>`;
-    }).join('') + '<div style="font-size:8px; color:var(--text-muted);">Balken: Stärke im Verhältnis zum Potenzial (grau = Potenzial noch nicht geprüft).</div>';
+    }).join('') + '<div style="font-size:var(--fs-micro); color:var(--text-muted);">Balken: Stärke im Verhältnis zum Potenzial (grau = Potenzial noch nicht geprüft).</div>';
 }
 
 function renderYouthMomentsBox() {
@@ -280,8 +280,8 @@ function renderYouthMomentsBox() {
     if (!box) return;
     const liste = game.youthMoments || [];
     box.innerHTML = liste.length
-        ? liste.slice(0, 10).map(m => `<div class="box" style="font-size:9px;">${m.icon} <span style="color:var(--text-muted);">S${m.season}/SpT ${m.matchday}:</span> ${m.text}</div>`).join('')
-        : '<div style="font-size:9px; color:var(--text-muted);">Noch keine besonderen Momente. Durchbrüche, Leihen und Profidebüts eigener Talente erscheinen hier.</div>';
+        ? liste.slice(0, 10).map(m => `<div class="box" style="font-size:var(--fs-caption);">${m.icon} <span style="color:var(--text-muted);">S${m.season}/SpT ${m.matchday}:</span> ${m.text}</div>`).join('')
+        : '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch keine besonderen Momente. Durchbrüche, Leihen und Profidebüts eigener Talente erscheinen hier.</div>';
 }
 
 function renderYouthPathwayBoxes() {

@@ -125,12 +125,12 @@ function renderAiTransferNews() {
     const box = document.getElementById('ai-transfer-news-box');
     if (!box) return;
     const news = (game.aiTransferNews || []).slice(0, 10);
-    if (!news.length) { box.innerHTML = '<div style="font-size:10px; color:var(--text-muted);">Noch keine Wechsel zwischen anderen Vereinen. Die Fenster öffnen am 2. und 19. Spieltag.</div>'; return; }
+    if (!news.length) { box.innerHTML = '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Wechsel zwischen anderen Vereinen. Die Fenster öffnen am 2. und 19. Spieltag.</div>'; return; }
     box.innerHTML = news.map(n => {
         const eigeneLiga = n.toLeague === game.leagueLevel || n.fromLeague === game.leagueLevel;
         const text = n.retired
             ? `👋 ${n.player} (${n.pos}) beendet bei ${n.from} seine Karriere`
             : `🔁 <strong>${n.player}</strong> (${n.pos}, ${n.strength}): ${n.from} → <strong>${n.to}</strong> · ${formatVal(n.fee)}`;
-        return `<div class="box" style="font-size:10px; ${eigeneLiga ? 'border-left-color:var(--accent);' : ''}">S${n.season}/SpT ${n.matchday}: ${text}</div>`;
+        return `<div class="box" style="font-size:var(--fs-small); ${eigeneLiga ? 'border-left-color:var(--accent);' : ''}">S${n.season}/SpT ${n.matchday}: ${text}</div>`;
     }).join('');
 }

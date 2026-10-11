@@ -79,7 +79,7 @@
         let barWidth = Math.max(20, Math.floor((breite - 40) / data.length));
 
         let html = `
-            <div style="font-size:9px; color:#94a3b8; margin-bottom:4px;">Gewinn- & Verlusttrend (letzte 12 Monate)</div>
+            <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">Gewinn- & Verlusttrend (letzte 12 Monate)</div>
             <div style="display:flex; align-items:flex-end; justify-content:space-around; height:${chartHeight}px; background:rgba(255,255,255,0.03); border-radius:6px; padding:8px; gap:3px; border:1px solid rgba(255,255,255,0.1);">
         `;
 
@@ -93,14 +93,14 @@
                         <div style="width:${Math.max(2, barWidth/3)}px; height:${incomeHeight}px; background:var(--primary); border-radius:2px 2px 0 0; opacity:0.7;" title="+${formatVal(d.income)}"></div>
                         <div style="width:${Math.max(2, barWidth/3)}px; height:${expenseHeight}px; background:var(--danger); border-radius:2px 2px 0 0; opacity:0.7;" title="-${formatVal(d.expenses)}"></div>
                     </div>
-                    <span style="font-size:8px; color:#666; white-space:nowrap;">M${d.seasonMonth}</span>
+                    <span style="font-size:var(--fs-micro); color:var(--text-muted); white-space:nowrap;">M${d.seasonMonth}</span>
                 </div>
             `;
         });
 
         html += `
             </div>
-            <div style="display:flex; justify-content:space-between; font-size:8px; color:#94a3b8; margin-top:4px;">
+            <div style="display:flex; justify-content:space-between; font-size:var(--fs-micro); color:var(--text-muted); margin-top:4px;">
                 <span><span style="display:inline-block; width:8px; height:8px; background:var(--primary); border-radius:2px; margin-right:2px;"></span>Einnahmen</span>
                 <span><span style="display:inline-block; width:8px; height:8px; background:var(--danger); border-radius:2px; margin-right:2px;"></span>Ausgaben</span>
             </div>
@@ -126,7 +126,7 @@
 
         let total = tickets + merch + sponsoring + dividends;
         if (total === 0) {
-            container.innerHTML = '<div style="font-size:9px; color:#94a3b8;">Noch keine Einnahmen diesen Monat</div>';
+            container.innerHTML = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch keine Einnahmen diesen Monat</div>';
             return;
         }
 
@@ -137,12 +137,12 @@
             { label: '📈 Dividenden', amount: Math.max(0, dividends), color: 'var(--teal)' }
         ].filter(b => b.amount > 0);
 
-        let html = '<div style="font-size:9px; color:#94a3b8; margin-bottom:4px;">Einnahmen-Quellen</div>';
+        let html = '<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">Einnahmen-Quellen</div>';
         breakdown.forEach(b => {
             let pct = (b.amount / total * 100).toFixed(0);
             html += `
                 <div style="margin-bottom:6px;">
-                    <div style="display:flex; justify-content:space-between; font-size:9px; margin-bottom:2px;">
+                    <div style="display:flex; justify-content:space-between; font-size:var(--fs-caption); margin-bottom:2px;">
                         <span>${b.label}</span>
                         <strong style="color:${b.color};">${pct}% (${formatVal(b.amount)})</strong>
                     </div>
@@ -192,34 +192,34 @@
         let total = income + expenses;
 
         container.innerHTML = `
-            <div style="font-size:9px; color:#94a3b8; margin-bottom:4px;">Monatlicher Cashflow</div>
+            <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">Monatlicher Cashflow</div>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:6px;">
                 <div>
-                    <div style="font-size:9px; margin-bottom:2px;">
+                    <div style="font-size:var(--fs-caption); margin-bottom:2px;">
                         <strong style="color:var(--primary);">+ Einnahmen</strong>
                     </div>
-                    <div style="font-size:11px; color:var(--primary); font-weight:700;">${formatVal(income)}</div>
+                    <div style="font-size:var(--fs-body); color:var(--primary); font-weight:700;">${formatVal(income)}</div>
                 </div>
                 <div>
-                    <div style="font-size:9px; margin-bottom:2px;">
+                    <div style="font-size:var(--fs-caption); margin-bottom:2px;">
                         <strong style="color:var(--danger);">- Ausgaben</strong>
                     </div>
-                    <div style="font-size:11px; color:var(--danger); font-weight:700;">-${formatVal(expenses)}</div>
+                    <div style="font-size:var(--fs-body); color:var(--danger); font-weight:700;">-${formatVal(expenses)}</div>
                 </div>
             </div>
             <div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:8px; margin-bottom:4px;">
                 <div style="display:flex; height:20px; border-radius:4px; overflow:hidden; gap:1px;">
                     <div style="flex:${income}; background:var(--primary); position:relative;">
-                        <span style="position:absolute; left:50%; transform:translateX(-50%); top:50%; transform:translate(-50%, -50%); font-size:10px; color:#000; white-space:nowrap; font-weight:700;">${total > 0 ? (income/total*100).toFixed(0) : '0'}%</span>
+                        <span style="position:absolute; left:50%; transform:translateX(-50%); top:50%; transform:translate(-50%, -50%); font-size:var(--fs-small); color:#000; white-space:nowrap; font-weight:700;">${total > 0 ? (income/total*100).toFixed(0) : '0'}%</span>
                     </div>
                     <div style="flex:${expenses}; background:var(--danger); position:relative;">
-                        <span style="position:absolute; left:50%; transform:translateX(-50%); top:50%; transform:translate(-50%, -50%); font-size:10px; color:#fff; white-space:nowrap; font-weight:700;">${total > 0 ? (expenses/total*100).toFixed(0) : '0'}%</span>
+                        <span style="position:absolute; left:50%; transform:translateX(-50%); top:50%; transform:translate(-50%, -50%); font-size:var(--fs-small); color:#fff; white-space:nowrap; font-weight:700;">${total > 0 ? (expenses/total*100).toFixed(0) : '0'}%</span>
                     </div>
                 </div>
             </div>
-            <div style="text-align:center; font-size:10px; padding:6px; background:${isProfit ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)'}; border-radius:4px; color:${statusColor}; border:1px solid ${statusColor};">
-                <div style="font-size:9px; color:#aaa;">Monatlicher Gewinn/Verlust</div>
-                <div style="font-size:14px; font-weight:700;">${isProfit ? '+' : '-'}${formatVal(Math.abs(balance))}</div>
+            <div style="text-align:center; font-size:var(--fs-small); padding:6px; background:${isProfit ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)'}; border-radius:4px; color:${statusColor}; border:1px solid ${statusColor};">
+                <div style="font-size:var(--fs-caption); color:var(--text-muted);">Monatlicher Gewinn/Verlust</div>
+                <div style="font-size:var(--fs-title-sm); font-weight:700;">${isProfit ? '+' : '-'}${formatVal(Math.abs(balance))}</div>
             </div>
         `;
     }

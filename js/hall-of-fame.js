@@ -28,7 +28,7 @@
         const zeile = (links, rechts, gold) => `<div style="display:flex; justify-content:space-between; gap:6px; padding:2px 0; border-top:1px solid rgba(255,255,255,0.06);${gold ? ' color:var(--gold);' : ''}"><span>${links}</span><strong style="white-space:nowrap;">${rechts}</strong></div>`;
         const block = (titel, inhalt, leer) => `<div style="margin-bottom:8px;"><div style="font-weight:700; color:var(--accent); margin-bottom:2px;">${titel}</div>${inhalt || `<div style="color:var(--text-muted);">${leer}</div>`}</div>`;
         const tier = { ICON: 'Vereins-Ikone', LEGEND: 'Legende', CLUB_HERO: 'Vereinsheld' };
-        box.innerHTML = `<div style="font-size:9px;">
+        box.innerHTML = `<div style="font-size:var(--fs-caption);">
             ${block('⚽ Ewige Torjäger', h.torjaeger.map(e => zeile(`${e.name}${e.aktiv ? '' : ' (ehemalig)'}`, `${e.goals} Tore`)).join(''), 'Noch keine Tore.')}
             ${block('🏟️ Rekordspieler', h.rekordspieler.map(e => zeile(`${e.name}${e.aktiv ? '' : ' (ehemalig)'}`, `${e.apps} Spiele`)).join(''), 'Noch keine Einsätze.')}
             ${block('⭐ Vereinslegenden', h.legenden.map(e => zeile(`${e.name} (Karriereende Saison ${e.season})`, tier[e.tier] || e.tier, true)).join(''), 'Legende wird, wer mit Stärke 85+ und 100+ Spielen seine Karriere beendet.')}

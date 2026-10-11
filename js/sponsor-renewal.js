@@ -90,10 +90,10 @@ function renderSponsorRenewalBox() {
     if (!r) { box.innerHTML = ''; return; }
     const sp = game.sponsor;
     const treue = typeof sp.loyalty === 'number' ? sp.loyalty : 65;
-    box.innerHTML = `<div class="box" style="border-left-color:var(--gold); font-size:10px;">🤝 <strong>${r.name}</strong> bietet eine Verlängerung um ${SPONSOR_RENEWAL_DAYS} Spieltage (noch ${sp.duration} Spieltage Laufzeit): Sockel <strong>${formatVal(r.base)}</strong> (bisher ${formatVal(sp.base)}), Siegprämie ${formatVal(r.winBonus)}.
+    box.innerHTML = `<div class="box" style="border-left-color:var(--gold); font-size:var(--fs-small);">🤝 <strong>${r.name}</strong> bietet eine Verlängerung um ${SPONSOR_RENEWAL_DAYS} Spieltage (noch ${sp.duration} Spieltage Laufzeit): Sockel <strong>${formatVal(r.base)}</strong> (bisher ${formatVal(sp.base)}), Siegprämie ${formatVal(r.winBonus)}.
         <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin-top:4px;">
-            <button onclick="acceptSponsorRenewal()" class="btn-action" style="font-size:9px;">✅ Verlängern</button>
-            <button onclick="haggleSponsorRenewal()" class="btn-secondary" style="font-size:9px;"${r.haggled ? ' disabled' : ''}>📈 +10 % fordern (${treue} %)</button>
-            <button onclick="declineSponsorRenewal()" class="btn-secondary" style="font-size:9px;">❌ Auslaufen lassen</button>
+            <button onclick="acceptSponsorRenewal()" class="btn-action" style="font-size:var(--fs-caption);">✅ Verlängern</button>
+            <button onclick="haggleSponsorRenewal()" class="btn-secondary" style="font-size:var(--fs-caption);"${r.haggled ? ' disabled' : ''}>📈 +10 % fordern (${treue} %)</button>
+            <button onclick="declineSponsorRenewal()" class="btn-secondary" style="font-size:var(--fs-caption);">❌ Auslaufen lassen</button>
         </div></div>`;
 }

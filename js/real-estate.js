@@ -103,17 +103,17 @@
             return `
                 <div class="panel">
                     <div class="panel-header"><span>${p.name}</span><span style="color:var(--accent);">Stufe ${p.lvl}/${p.max}</span></div>
-                    <div style="font-size:9px; color:#aaa; margin-bottom:4px;">${p.desc}</div>
-                    ${p.owned ? `<div class="box" style="font-size:10px; margin-bottom:4px;">💰 Laufende Mieteinnahmen: <strong style="color:var(--gold);">+${formatVal(income)}</strong> pro Spieltag</div>` : ''}
+                    <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${p.desc}</div>
+                    ${p.owned ? `<div class="box" style="font-size:var(--fs-small); margin-bottom:4px;">💰 Laufende Mieteinnahmen: <strong style="color:var(--gold);">+${formatVal(income)}</strong> pro Spieltag</div>` : ''}
                     ${buttonHtml}
-                    ${p.owned ? `<button onclick="sellRealEstate('${key}', this)" class="btn-secondary" style="margin-top:4px; font-size:9px;">Verkaufen (55% Rückerstattung)</button>` : ''}
+                    ${p.owned ? `<button onclick="sellRealEstate('${key}', this)" class="btn-secondary" style="margin-top:4px; font-size:var(--fs-caption);">Verkaufen (55% Rückerstattung)</button>` : ''}
                 </div>
             `;
         }).join('');
         let summaryBox = document.getElementById('real-estate-summary');
         if (summaryBox) {
             let ownedCount = Object.values(realEstatePortfolio).filter(p => p.owned).length;
-            summaryBox.innerHTML = `<div class="box" style="font-size:10px;">🏢 <strong>${ownedCount}</strong> Objekte im Portfolio · Gesamteinnahmen: <strong style="color:var(--gold);">+${formatVal(totalIncome)}</strong> pro Spieltag</div>`;
+            summaryBox.innerHTML = `<div class="box" style="font-size:var(--fs-small);">🏢 <strong>${ownedCount}</strong> Objekte im Portfolio · Gesamteinnahmen: <strong style="color:var(--gold);">+${formatVal(totalIncome)}</strong> pro Spieltag</div>`;
         }
     }
 

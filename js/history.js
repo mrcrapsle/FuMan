@@ -23,10 +23,10 @@
             let m = spiele.filter(x => x.opp === name);
             return m.length ? `${m.filter(x => x.ourGoals > x.oppGoals).length}S ${m.filter(x => x.ourGoals === x.oppGoals).length}U ${m.filter(x => x.ourGoals < x.oppGoals).length}N` : 'noch kein Derby';
         };
-        let kopf = `<div class="box" style="font-size:10px;">🏙️ Heimat: <strong>${typeof getClubCity === 'function' ? getClubCity(game.clubName) : '-'}</strong> · Derby-Bilanz gesamt: ${rivalryRecord.wins}S ${rivalryRecord.draws}U ${rivalryRecord.losses}N</div>`;
+        let kopf = `<div class="box" style="font-size:var(--fs-small);">🏙️ Heimat: <strong>${typeof getClubCity === 'function' ? getClubCity(game.clubName) : '-'}</strong> · Derby-Bilanz gesamt: ${rivalryRecord.wins}S ${rivalryRecord.draws}U ${rivalryRecord.losses}N</div>`;
         box.innerHTML = kopf + (gegner.length
-            ? gegner.slice(0, 12).map(g => `<div class="box" style="display:flex; justify-content:space-between; gap:6px; font-size:10px;"><span>${g.name} <span style="color:var(--text-muted);">(${g.label}, ${leagueNames[g.level]})</span></span><strong>${bilanz(g.name)}</strong></div>`).join('')
-            : '<div class="box" style="font-size:10px; color:#94a3b8;">Kein anderer Verein aus deiner Stadt und kein Traditionsrivale in der Pyramide.</div>');
+            ? gegner.slice(0, 12).map(g => `<div class="box" style="display:flex; justify-content:space-between; gap:6px; font-size:var(--fs-small);"><span>${g.name} <span style="color:var(--text-muted);">(${g.label}, ${leagueNames[g.level]})</span></span><strong>${bilanz(g.name)}</strong></div>`).join('')
+            : '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Kein anderer Verein aus deiner Stadt und kein Traditionsrivale in der Pyramide.</div>');
     }
 
     // Generationsübergreifende Legenden-Vergleiche: gruppiert alle ehemaligen Spieler
@@ -35,14 +35,14 @@
         let box = document.getElementById('legend-generations-box');
         if (!box) return;
         let players = game.notablePastPlayers || [];
-        if (players.length === 0) { box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Noch keine ehemaligen Spieler in der Vereinshistorie.</div>'; return; }
+        if (players.length === 0) { box.innerHTML = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch keine ehemaligen Spieler in der Vereinshistorie.</div>'; return; }
         let generations = {};
         players.forEach(p => {
             let genKey = Math.floor((p.season - 1) / 5); // 5-Saison-Generationen
             let genLabel = `Saison ${genKey * 5 + 1}-${genKey * 5 + 5}`;
             if (!generations[genLabel] || generations[genLabel].strength < p.strength) generations[genLabel] = p;
         });
-        box.innerHTML = Object.entries(generations).map(([label, p]) => `<div class="box" style="display:flex; justify-content:space-between; font-size:10px;"><span>${label}</span><strong>${p.name} (${p.strength})</strong></div>`).join('');
+        box.innerHTML = Object.entries(generations).map(([label, p]) => `<div class="box" style="display:flex; justify-content:space-between; font-size:var(--fs-small);"><span>${label}</span><strong>${p.name} (${p.strength})</strong></div>`).join('');
     }
 
     // Vereinsrekorde: dauerhaftes Rekordarchiv für den gesamten Verein.
@@ -53,12 +53,12 @@
         let topScorerCareer = [...squad].sort((a, b) => (b.goalsCareer || 0) - (a.goalsCareer || 0))[0];
         let fmt = (rec) => rec ? `${rec.ourGoals}:${rec.oppGoals} vs. ${rec.opponent} (S${rec.season}/${rec.matchday})` : 'Noch nicht aufgestellt';
         box.innerHTML = `
-            <div class="box" style="font-size:10px;">🏆 <strong>Höchster Sieg:</strong> ${fmt(r.biggestWin)}</div>
-            <div class="box" style="font-size:10px;">💔 <strong>Höchste Niederlage:</strong> ${fmt(r.biggestLoss)}</div>
-            <div class="box" style="font-size:10px;">⚽ <strong>Torreichstes Spiel:</strong> ${r.mostGoalsInMatch ? `${r.mostGoalsInMatch.total} Tore (${r.mostGoalsInMatch.score} vs. ${r.mostGoalsInMatch.opponent})` : 'Noch nicht aufgestellt'}</div>
-            <div class="box" style="font-size:10px;">🎟️ <strong>Zuschauerrekord:</strong> ${(game.recordAttendance || 0).toLocaleString('de-DE')}${game.recordAttendanceSeason ? ` (Saison ${game.recordAttendanceSeason})` : ''}</div>
-            <div class="box" style="font-size:10px;">🔥 <strong>Längste Serie ohne Niederlage:</strong> ${r.longestUnbeatenStreak || 0} Spiele</div>
-            <div class="box" style="font-size:10px;">👑 <strong>Bester Torschütze (Karriere):</strong> ${topScorerCareer && topScorerCareer.goalsCareer > 0 ? `${topScorerCareer.name} (${topScorerCareer.goalsCareer} Tore)` : 'Noch nicht aufgestellt'}</div>
+            <div class="box" style="font-size:var(--fs-small);">🏆 <strong>Höchster Sieg:</strong> ${fmt(r.biggestWin)}</div>
+            <div class="box" style="font-size:var(--fs-small);">💔 <strong>Höchste Niederlage:</strong> ${fmt(r.biggestLoss)}</div>
+            <div class="box" style="font-size:var(--fs-small);">⚽ <strong>Torreichstes Spiel:</strong> ${r.mostGoalsInMatch ? `${r.mostGoalsInMatch.total} Tore (${r.mostGoalsInMatch.score} vs. ${r.mostGoalsInMatch.opponent})` : 'Noch nicht aufgestellt'}</div>
+            <div class="box" style="font-size:var(--fs-small);">🎟️ <strong>Zuschauerrekord:</strong> ${(game.recordAttendance || 0).toLocaleString('de-DE')}${game.recordAttendanceSeason ? ` (Saison ${game.recordAttendanceSeason})` : ''}</div>
+            <div class="box" style="font-size:var(--fs-small);">🔥 <strong>Längste Serie ohne Niederlage:</strong> ${r.longestUnbeatenStreak || 0} Spiele</div>
+            <div class="box" style="font-size:var(--fs-small);">👑 <strong>Bester Torschütze (Karriere):</strong> ${topScorerCareer && topScorerCareer.goalsCareer > 0 ? `${topScorerCareer.name} (${topScorerCareer.goalsCareer} Tore)` : 'Noch nicht aufgestellt'}</div>
         `;
     }
 
@@ -76,17 +76,17 @@
                 return { name: t.name, prev, curr: t.strength, delta: t.strength - prev };
             });
         if (deltas.length === 0) {
-            box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Die Chronik füllt sich, sobald die erste Saison in der Liga-Pyramide abgeschlossen ist.</div>';
+            box.innerHTML = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Die Chronik füllt sich, sobald die erste Saison in der Liga-Pyramide abgeschlossen ist.</div>';
             return;
         }
         let risers = [...deltas].filter(d => d.delta > 0).sort((a, b) => b.delta - a.delta).slice(0, 3);
         let fallers = [...deltas].filter(d => d.delta < 0).sort((a, b) => a.delta - b.delta).slice(0, 3);
-        let row = d => `<div class="box" style="display:flex; justify-content:space-between; font-size:10px;"><span>${d.name}</span><strong style="color:${d.delta > 0 ? 'var(--primary)' : 'var(--danger)'};">${d.prev} → ${d.curr} (${d.delta > 0 ? '+' : ''}${d.delta})</strong></div>`;
+        let row = d => `<div class="box" style="display:flex; justify-content:space-between; font-size:var(--fs-small);"><span>${d.name}</span><strong style="color:${d.delta > 0 ? 'var(--primary)' : 'var(--danger)'};">${d.prev} → ${d.curr} (${d.delta > 0 ? '+' : ''}${d.delta})</strong></div>`;
         box.innerHTML = `
-            <div style="font-size:9px; font-weight:800; color:var(--primary); margin:6px 0 3px;">📈 GRÖSSTE AUFSTEIGER (STÄRKE)</div>
-            ${risers.length === 0 ? '<div style="font-size:9px; color:var(--text-muted);">Keine nennenswerten Aufsteiger diese Saison.</div>' : risers.map(row).join('')}
-            <div style="font-size:9px; font-weight:800; color:var(--danger); margin:6px 0 3px;">📉 GRÖSSTE ABSTEIGER (STÄRKE)</div>
-            ${fallers.length === 0 ? '<div style="font-size:9px; color:var(--text-muted);">Keine nennenswerten Absteiger diese Saison.</div>' : fallers.map(row).join('')}
+            <div style="font-size:var(--fs-caption); font-weight:800; color:var(--primary); margin:6px 0 3px;">📈 GRÖSSTE AUFSTEIGER (STÄRKE)</div>
+            ${risers.length === 0 ? '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Keine nennenswerten Aufsteiger diese Saison.</div>' : risers.map(row).join('')}
+            <div style="font-size:var(--fs-caption); font-weight:800; color:var(--danger); margin:6px 0 3px;">📉 GRÖSSTE ABSTEIGER (STÄRKE)</div>
+            ${fallers.length === 0 ? '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Keine nennenswerten Absteiger diese Saison.</div>' : fallers.map(row).join('')}
         `;
     }
 
@@ -115,18 +115,18 @@
                     <div class="box" style="border-left-color:${meta.color}; display:flex; align-items:center; gap:10px;">
                         <span style="font-size:20px;">${meta.icon}</span>
                         <span style="flex:1;">
-                            <span style="font-size:8px; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px;">${meta.category} · #${idx + 1}</span><br>
+                            <span style="font-size:var(--fs-micro); color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">${meta.category} · #${idx + 1}</span><br>
                             <strong style="color:${meta.color};">${t}</strong>
                         </span>
                     </div>`;
             });
         }
         if (game.legendStatus) {
-            list.innerHTML = `<div class="box box-admin" style="text-align:center; margin-bottom:10px;"><strong style="color:var(--gold); font-size:13px;">👑 VEREINSLEGENDE 👑</strong><br><span style="font-size:10px;">${game.loyaltyDeclineCount || 0}× Abwerbeversuchen widerstanden</span></div>` + list.innerHTML;
+            list.innerHTML = `<div class="box box-admin" style="text-align:center; margin-bottom:10px;"><strong style="color:var(--gold); font-size:var(--fs-title-sm);">👑 VEREINSLEGENDE 👑</strong><br><span style="font-size:var(--fs-small);">${game.loyaltyDeclineCount || 0}× Abwerbeversuchen widerstanden</span></div>` + list.innerHTML;
         }
         // Zuschauerrekord als dedizierte Statistik-Zeile statt Trophäen-Eintrag.
         if (game.recordAttendance > 0) {
-            list.innerHTML += `<div class="box" style="border-left-color:var(--blue); margin-top:10px;"><span style="font-size:9px; color:#94a3b8; text-transform:uppercase;">Statistik</span><br><strong style="color:var(--blue);">📊 Zuschauerrekord: ${game.recordAttendance.toLocaleString('de-DE')} (Saison ${game.recordAttendanceSeason})</strong></div>`;
+            list.innerHTML += `<div class="box" style="border-left-color:var(--blue); margin-top:10px;"><span style="font-size:var(--fs-caption); color:var(--text-muted); text-transform:uppercase;">Statistik</span><br><strong style="color:var(--blue);">📊 Zuschauerrekord: ${game.recordAttendance.toLocaleString('de-DE')} (Saison ${game.recordAttendanceSeason})</strong></div>`;
         }
     }
 

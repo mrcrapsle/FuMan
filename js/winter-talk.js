@@ -118,7 +118,7 @@ function renderWinterTalkCard() {
     const t = getWinterTalk();
     if (t && t.choice !== 'verpasst' && game.matchday <= WINTER_TALK_LAST_MD + 2) {
         const was = { hoch: `Ziel erhöht auf Platz ${t.goal}`, runter: `Ziel gesenkt auf Platz ${t.goal}`, budget: t.budget ? `Winterbudget ${formatVal(t.budget)} bewilligt` : 'Winterbudget abgelehnt', kurs: 'Kurs bestätigt' }[t.choice];
-        box.innerHTML = `<div class="box" style="font-size:10px; border-left-color:var(--gold);">🏛️ Wintergespräch: ${was}.</div>`;
+        box.innerHTML = `<div class="box" style="font-size:var(--fs-small); border-left-color:var(--gold);">🏛️ Wintergespräch: ${was}.</div>`;
         return;
     }
     if (!isWinterTalkOpen()) { box.innerHTML = ''; return; }
@@ -130,11 +130,11 @@ function renderWinterTalkCard() {
     const hochGeht = !!r.expected && r.expected > 1;
     const runterGeht = !!r.expected && r.expected < r.teams;
     box.innerHTML = `<div class="panel" style="border:1px solid var(--gold);"><div class="panel-header" style="color:var(--gold);">🏛️ WINTERPAUSE: GESPRÄCH MIT DEM VORSTAND</div>
-        <div class="box" style="font-size:10px;">Zwischenbilanz: Platz <strong>${r.rank || '-'}</strong>, erwartet Platz ${r.expected || '-'} - ${urteil}. Kasse seit Saisonbeginn ${r.geld >= 0 ? '+' : ''}${formatVal(r.geld)}. Nur bis Spieltag ${WINTER_TALK_LAST_MD}, ein Weg pro Saison.</div>
+        <div class="box" style="font-size:var(--fs-small);">Zwischenbilanz: Platz <strong>${r.rank || '-'}</strong>, erwartet Platz ${r.expected || '-'} - ${urteil}. Kasse seit Saisonbeginn ${r.geld >= 0 ? '+' : ''}${formatVal(r.geld)}. Nur bis Spieltag ${WINTER_TALK_LAST_MD}, ein Weg pro Saison.</div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
-            <button onclick="chooseWinterTalk('hoch')" class="${hochGeht ? 'btn-action' : 'btn-secondary'}" style="font-size:10px;">${hochGeht ? `🎯 Ziel hoch (Platz ${Math.max(1, r.expected - 2)}): +5, ${formatVal(betrag)} sofort - verfehlt -10` : '🎯 Platz 1 ist schon das Ziel - höher geht es nicht'}</button>
-            <button onclick="chooseWinterTalk('runter')" class="btn-secondary" style="font-size:10px;">${runterGeht ? `🛡️ Ziel runter (Platz ${Math.min(r.teams, r.expected + 2)}): -4, die Saison zählt am leichteren Ziel` : '🛡️ Tiefer geht das Ziel nicht'}</button>
-            <button onclick="chooseWinterTalk('budget')" class="btn-secondary" style="font-size:10px;">💶 Winterbudget ${formatVal(betrag)} beantragen (${chance} %, sonst -3)</button>
-            <button onclick="chooseWinterTalk('kurs')" class="btn-secondary" style="font-size:10px;">🤝 Kurs bestätigen: Vorstand +2</button>
+            <button onclick="chooseWinterTalk('hoch')" class="${hochGeht ? 'btn-action' : 'btn-secondary'}" style="font-size:var(--fs-small);">${hochGeht ? `🎯 Ziel hoch (Platz ${Math.max(1, r.expected - 2)}): +5, ${formatVal(betrag)} sofort - verfehlt -10` : '🎯 Platz 1 ist schon das Ziel - höher geht es nicht'}</button>
+            <button onclick="chooseWinterTalk('runter')" class="btn-secondary" style="font-size:var(--fs-small);">${runterGeht ? `🛡️ Ziel runter (Platz ${Math.min(r.teams, r.expected + 2)}): -4, die Saison zählt am leichteren Ziel` : '🛡️ Tiefer geht das Ziel nicht'}</button>
+            <button onclick="chooseWinterTalk('budget')" class="btn-secondary" style="font-size:var(--fs-small);">💶 Winterbudget ${formatVal(betrag)} beantragen (${chance} %, sonst -3)</button>
+            <button onclick="chooseWinterTalk('kurs')" class="btn-secondary" style="font-size:var(--fs-small);">🤝 Kurs bestätigen: Vorstand +2</button>
         </div></div>`;
 }

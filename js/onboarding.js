@@ -55,7 +55,7 @@ function onScreenShown(screenId) {
     if (!hint) {
         hint = document.createElement('div');
         hint.className = 'box screen-hint';
-        hint.style.cssText = 'font-size:11px; border-left-color:var(--teal); margin-bottom:8px;';
+        hint.style.cssText = 'font-size:var(--fs-body); border-left-color:var(--teal); margin-bottom:8px;';
         screen.insertBefore(hint, screen.firstChild);
     }
     hint.innerHTML = `💡 ${text}
@@ -84,7 +84,7 @@ function renderOnboardingBox() {
     if (game.matchday > 1 || game.season > 1) ob.done.spiel = true;
     if (ob.hidden || ob.finished) { box.innerHTML = ''; return; }
     const erledigt = ONBOARDING_STEPS.filter(s => ob.done[s.key]).length;
-    box.innerHTML = `<div class="box" style="font-size:11px; border-left-color:var(--teal); margin-bottom:6px;">
+    box.innerHTML = `<div class="box" style="font-size:var(--fs-body); border-left-color:var(--teal); margin-bottom:6px;">
         🎓 <strong>Erste Schritte</strong> (${erledigt}/${ONBOARDING_STEPS.length})
         ${ONBOARDING_STEPS.map(s => `<div style="margin-top:4px;">${ob.done[s.key] ? '✅' : '⬜'} ${s.screen && !ob.done[s.key] && s.screen !== 'screen-dashboard'
             ? `<a href="#" onclick="showScreen('${s.screen}'); return false;" style="color:var(--teal);">${s.label}</a>` : s.label}</div>`).join('')}

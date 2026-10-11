@@ -91,8 +91,8 @@ function renderLeagueAwardsBox() {
     const box = document.getElementById('league-awards-box');
     if (!box) return;
     const liste = (game.leagueAwards || []).slice().reverse();
-    if (!liste.length) { box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Die ersten Auszeichnungen werden am Saisonende vergeben.</div>'; return; }
-    box.innerHTML = liste.slice(0, 5).map(e => `<div class="box" style="font-size:9px; margin-bottom:4px;">
+    if (!liste.length) { box.innerHTML = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Die ersten Auszeichnungen werden am Saisonende vergeben.</div>'; return; }
+    box.innerHTML = liste.slice(0, 5).map(e => `<div class="box" style="font-size:var(--fs-caption); margin-bottom:4px;">
         <strong>Saison ${e.season} · ${e.league}</strong>
         ${e.awards.map(a => `<div style="${a.own ? 'color:var(--gold); font-weight:700;' : ''}">${a.award}: ${a.winner} (${a.club}) - ${a.value}</div>`).join('')}
         <div style="color:var(--text-muted);">⭐ Elf: ${e.elf.filter(x => x.own).length} eigene Spieler${e.elf.some(x => x.own) ? ` (${e.elf.filter(x => x.own).map(x => x.name).join(', ')})` : ''}</div>

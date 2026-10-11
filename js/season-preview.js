@@ -134,11 +134,11 @@ function renderSeasonPreviewCard() {
     const n = pv.order.length;
     const tabelle = seasonPreviewExpanded ? `<div style="margin-top:4px; columns:2; column-gap:10px;">${pv.order.map((name, i) =>
         `<div style="${name === game.clubName ? 'color:var(--primary); font-weight:800;' : ''}">${i + 1}. ${name}</div>`).join('')}</div>` : '';
-    box.innerHTML = `<div class="box" style="font-size:10px; border-left-color:var(--blue);">📰 <strong>Saisonvorschau ${pv.season}:</strong> Die Experten sehen dich auf <strong>Platz ${pv.own} von ${n}</strong> - ${pv.verdict}.
+    box.innerHTML = `<div class="box" style="font-size:var(--fs-small); border-left-color:var(--blue);">📰 <strong>Saisonvorschau ${pv.season}:</strong> Die Experten sehen dich auf <strong>Platz ${pv.own} von ${n}</strong> - ${pv.verdict}.
         <div style="color:var(--text-muted); margin-top:2px;">Favoriten: ${pv.order.slice(0, 3).filter(x => x !== game.clubName).join(', ')} · Abstiegskandidaten: ${pv.order.slice(-3).filter(x => x !== game.clubName).join(', ')}${pv.darkHorse ? ` · Geheimtipp: ${pv.darkHorse}` : ''}</div>
         <div style="color:var(--text-muted); margin-top:2px;">Schlägst du den Tipp um 3 Plätze, gibt es Medienimage und Fans - 4 Plätze darunter kosten Ansehen.</div>
         ${tabelle}
-        <button onclick="toggleSeasonPreviewTable()" class="btn-secondary" style="width:auto; font-size:9px; margin-top:4px;">${seasonPreviewExpanded ? 'Tabelle zuklappen' : '📋 Ganze Expertentabelle'}</button></div>`;
+        <button onclick="toggleSeasonPreviewTable()" class="btn-secondary" style="width:auto; font-size:var(--fs-caption); margin-top:4px;">${seasonPreviewExpanded ? 'Tabelle zuklappen' : '📋 Ganze Expertentabelle'}</button></div>`;
 }
 
 // Historie > Chronik: Prognose gegen Wirklichkeit über die letzten Saisons.
@@ -146,6 +146,6 @@ function renderSeasonForecastHistory() {
     const box = document.getElementById('season-forecast-history-box');
     if (!box) return;
     const liste = game.seasonReviews || [];
-    if (!liste.length) { box.innerHTML = '<div style="font-size:10px; color:var(--text-muted);">Noch keine Saison abgeschlossen.</div>'; return; }
-    box.innerHTML = liste.map(r => `<div class="box" style="font-size:10px;"><strong>Saison ${r.season} · ${r.league}</strong>${describeExpertCheck(r)}</div>`).join('');
+    if (!liste.length) { box.innerHTML = '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Saison abgeschlossen.</div>'; return; }
+    box.innerHTML = liste.map(r => `<div class="box" style="font-size:var(--fs-small);"><strong>Saison ${r.season} · ${r.league}</strong>${describeExpertCheck(r)}</div>`).join('');
 }

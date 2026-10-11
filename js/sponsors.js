@@ -676,7 +676,7 @@
         let rivale = getExclusivityRival(category, slot);
         return rivale
             ? ` · <span style="color:var(--danger);">🏷️ ${category} ⚠️ Branchenkonflikt mit ${rivale.name} (${rivale.slot}): alle Beträge nur 70 %</span>`
-            : ` · <span style="color:#94a3b8;">🏷️ ${category}</span>`;
+            : ` · <span style="color:var(--text-muted);">🏷️ ${category}</span>`;
     }
 
     function renderOfferCard(o, kind, extraLine) {
@@ -686,11 +686,11 @@
         return `
             <div class="box box-offer" style="margin-bottom:6px;">
                 <strong style="color:var(--accent);">${o.name}</strong> <span class="badge-trait">${o.tierLabel} · ${o.sp} SpT</span><br>
-                <span style="font-size:10px;">${extraLine}</span>
+                <span style="font-size:var(--fs-small);">${extraLine}</span>
                 <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin-top:6px;">
-                    <button onclick="${acceptFn}(${o.id})" class="btn-action" style="font-size:9px;">Annehmen</button>
-                    <button onclick="${negoFn}(${o.id})" class="btn-secondary" style="font-size:9px;" ${o.negotiationsUsed >= MAX_NEGOTIATIONS ? 'disabled' : ''}>Nachverhandeln (${MAX_NEGOTIATIONS - o.negotiationsUsed})</button>
-                    <button onclick="${rejectFn}(${o.id})" class="btn-secondary" style="font-size:9px; color:var(--danger);">Ablehnen</button>
+                    <button onclick="${acceptFn}(${o.id})" class="btn-action" style="font-size:var(--fs-caption);">Annehmen</button>
+                    <button onclick="${negoFn}(${o.id})" class="btn-secondary" style="font-size:var(--fs-caption);" ${o.negotiationsUsed >= MAX_NEGOTIATIONS ? 'disabled' : ''}>Nachverhandeln (${MAX_NEGOTIATIONS - o.negotiationsUsed})</button>
+                    <button onclick="${rejectFn}(${o.id})" class="btn-secondary" style="font-size:var(--fs-caption); color:var(--danger);">Ablehnen</button>
                 </div>
             </div>`;
     }
@@ -728,7 +728,7 @@
             else {
                 let loy = Math.round(game.sponsor.loyalty ?? 65);
                 let color = loy >= 60 ? 'var(--primary)' : (loy >= 30 ? 'var(--accent)' : 'var(--danger)');
-                loyaltyBox.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span style="font-size:10px;">Sponsoren-Zufriedenheit</span><strong style="color:${color};">${loy}/100</strong></div>
+                loyaltyBox.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span style="font-size:var(--fs-small);">Sponsoren-Zufriedenheit</span><strong style="color:${color};">${loy}/100</strong></div>
                     <div style="background:rgba(228,197,140,0.1); border-radius:4px; height:8px; overflow:hidden;"><div style="width:${loy}%; height:100%; background:${color};"></div></div>`;
             }
         }
@@ -738,7 +738,7 @@
             activationBox.style.display = ev ? 'block' : 'none';
             if (ev) {
                 activationBox.innerHTML = `<div class="panel-header" style="color:var(--accent);">📸 AKTIVIERUNGS-EVENT: ${ev.sponsorName}</div>
-                    <div class="box" style="font-size:10px;">Exklusiver Werbedreh - Teilnahme bringt ${formatVal(ev.reward)} und mehr Loyalität, kostet aber etwas Fitness.</div>
+                    <div class="box" style="font-size:var(--fs-small);">Exklusiver Werbedreh - Teilnahme bringt ${formatVal(ev.reward)} und mehr Loyalität, kostet aber etwas Fitness.</div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
                         <button onclick="resolveSponsorActivationEvent(true)" class="btn-action">✅ Teilnehmen</button>
                         <button onclick="resolveSponsorActivationEvent(false)" class="btn-secondary">❌ Ablehnen</button>
@@ -765,24 +765,24 @@
 
         let offersList = document.getElementById('sponsors-offers-list');
         offersList.innerHTML = sponsorOffers.length === 0
-            ? '<div class="box" style="font-size:10px; color:#64748b;">Aktuell keine neuen Hauptsponsor-Angebote. Schau nach ein paar Spieltagen wieder vorbei.</div>'
+            ? '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Aktuell keine neuen Hauptsponsor-Angebote. Schau nach ein paar Spieltagen wieder vorbei.</div>'
             : sponsorOffers.map(o => renderOfferCard(o, 'sponsor', `Sockel: ${formatVal(o.base)}/SpT · Siegprämie: ${formatVal(o.winBonus)} · Pokalsieg: ${formatVal(o.cupBonus)} · Aufstieg: ${formatVal(o.promotionBonus)}${o.signOn > 0 ? ` · Handgeld: ${formatVal(o.signOn)}` : ''}${o.themedBonusType === 'cleanSheet' ? ` · 🧤 ${formatVal(o.themedBonusAmount)} pro Zu-Null-Spiel` : ''}${o.themedBonusType === 'attendance' ? ` · 🎟️ ${o.themedBonusAmount}€ pro Zuschauer` : ''}${categoryBadgeHtml(o.category, 'sponsor')}`)).join('');
 
         let kitOffersList = document.getElementById('kit-offers-list');
         kitOffersList.innerHTML = kitSupplierOffers.length === 0
-            ? '<div class="box" style="font-size:10px; color:#64748b;">Aktuell keine neuen Ausrüster-Angebote. Schau nach ein paar Spieltagen wieder vorbei.</div>'
+            ? '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Aktuell keine neuen Ausrüster-Angebote. Schau nach ein paar Spieltagen wieder vorbei.</div>'
             : kitSupplierOffers.map(o => renderOfferCard(o, 'kit', `Handgeld: ${formatVal(o.signOn)} · Laufend: ${formatVal(o.income)}/SpT${categoryBadgeHtml(o.category, 'kit')}`)).join('');
 
         let sleeveOffersList = document.getElementById('sleeve-offers-list');
         if (sleeveOffersList) {
             sleeveOffersList.innerHTML = sleeveSponsorOffers.length === 0
-                ? '<div class="box" style="font-size:10px; color:#64748b;">Aktuell keine neuen Ärmelsponsor-Angebote.</div>'
+                ? '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Aktuell keine neuen Ärmelsponsor-Angebote.</div>'
                 : sleeveSponsorOffers.map(o => renderOfferCard(o, 'sleeve', `Handgeld: ${formatVal(o.signOn)} · Laufend: ${formatVal(o.income)}/Spiel (Heim & Auswärts)${categoryBadgeHtml(o.category, 'sleeve')}`)).join('');
         }
 
         let bandenOffersList = document.getElementById('banden-offers-list');
         bandenOffersList.innerHTML = bandenOffers.length === 0
-            ? '<div class="box" style="font-size:10px; color:#64748b;">Aktuell keine neuen Bandenwerbe-Angebote.</div>'
+            ? '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Aktuell keine neuen Bandenwerbe-Angebote.</div>'
             : bandenOffers.map(o => renderOfferCard(o, 'banden', `${o.areaName || 'Stadion'} · ${o.type} · ${formatVal(o.income)}/Heimspiel${categoryBadgeHtml(o.category, 'banden')}`)).join('');
 
         // Bandenplätze nach Stadionbereich gegliedert: zeigt pro Block die belegten und
@@ -797,18 +797,18 @@
                 let meta = BANDEN_AREA_META[key];
                 let areaIncome = occupants.filter(o => o.active).reduce((s, o) => s + o.income, 0);
                 let rows = occupants.map(b =>
-                    `<div class="player-row" style="font-size:9px;"><span>${b.name} (${b.type}) — ${formatVal(b.income)}/Heimspiel · noch ${b.duration ?? '?'} SpT</span>`
-                    + `<button onclick="toggleBande(${b.id})" class="btn-secondary" style="width:auto; font-size:8px;">${b.active ? 'Aktiv ✓' : 'Inaktiv'}</button></div>`).join('');
+                    `<div class="player-row" style="font-size:var(--fs-caption);"><span>${b.name} (${b.type}) — ${formatVal(b.income)}/Heimspiel · noch ${b.duration ?? '?'} SpT</span>`
+                    + `<button onclick="toggleBande(${b.id})" class="btn-secondary" style="width:auto; font-size:var(--fs-micro);">${b.active ? 'Aktiv ✓' : 'Inaktiv'}</button></div>`).join('');
                 let freeCount = slots - occupants.length;
                 let freeNote = freeCount > 0
-                    ? `<div style="font-size:9px; color:var(--text-muted); padding:2px 0;">${freeCount} ${freeCount === 1 ? 'freier Bandenplatz' : 'freie Bandenplätze'}</div>`
+                    ? `<div style="font-size:var(--fs-caption); color:var(--text-muted); padding:2px 0;">${freeCount} ${freeCount === 1 ? 'freier Bandenplatz' : 'freie Bandenplätze'}</div>`
                     : '';
                 return `<div class="box" style="margin-bottom:5px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:10px; font-weight:800;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:var(--fs-small); font-weight:800;">
                             <span>${getBandenAreaName(key)} <span style="color:var(--text-muted); font-weight:400;">${meta.note ? '· ' + meta.note : ''}</span></span>
                             <span style="color:${occupants.length === slots ? 'var(--primary)' : 'var(--accent)'};">${occupants.length}/${slots}</span>
                         </div>
-                        ${areaIncome > 0 ? `<div style="font-size:9px; color:var(--teal);">${formatVal(areaIncome)}/Heimspiel</div>` : ''}
+                        ${areaIncome > 0 ? `<div style="font-size:var(--fs-caption); color:var(--teal);">${formatVal(areaIncome)}/Heimspiel</div>` : ''}
                         ${rows}${freeNote}
                     </div>`;
             }).join('');
@@ -828,8 +828,8 @@
             let totalIncomePerHome = bandenSponsors.filter(b => b.active).reduce((s, b) => s + b.income, 0);
             let areasUsed = new Set(bandenSponsors.filter(b => b.active).map(b => b.area)).size;
             portfolioBox.innerHTML = activeCount === 0
-                ? '<div class="box" style="font-size:10px; color:#94a3b8;">Noch keine aktiven Bandensponsoren.</div>'
-                : `<div class="box" style="font-size:10px;"><strong style="color:var(--teal);">📢 ${activeCount} aktive ${activeCount === 1 ? 'Bande' : 'Banden'} in ${areasUsed} ${areasUsed === 1 ? 'Stadionbereich' : 'Stadionbereichen'}</strong> · Gesamt: ${formatVal(totalIncomePerHome)}/Heimspiel</div>`;
+                ? '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine aktiven Bandensponsoren.</div>'
+                : `<div class="box" style="font-size:var(--fs-small);"><strong style="color:var(--teal);">📢 ${activeCount} aktive ${activeCount === 1 ? 'Bande' : 'Banden'} in ${areasUsed} ${areasUsed === 1 ? 'Stadionbereich' : 'Stadionbereichen'}</strong> · Gesamt: ${formatVal(totalIncomePerHome)}/Heimspiel</div>`;
         }
     }
 

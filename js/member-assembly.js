@@ -156,7 +156,7 @@ function renderMemberAssemblyPanel() {
     const r = a.report;
     const verlauf = r.promoted ? '⬆️ Aufstieg' : r.relegated ? '⬇️ Abstieg' : 'Klassenerhalt';
     let html = `<div class="panel-header" style="color:var(--gold);">🗳️ MITGLIEDERVERSAMMLUNG (SAISON ${r.season})</div>
-        <div style="font-size:9px; display:grid; grid-template-columns:1fr 1fr; gap:3px; margin-bottom:6px;">
+        <div style="font-size:var(--fs-caption); display:grid; grid-template-columns:1fr 1fr; gap:3px; margin-bottom:6px;">
             <div>Endplatz: <strong>${r.finalRank}.</strong> (erwartet: ${r.expectedRank}.)</div>
             <div>${verlauf}</div>
             <div>Finanzergebnis: <strong style="color:${r.financeResult >= 0 ? 'var(--primary)' : 'var(--danger)'};">${r.financeResult >= 0 ? '+' : ''}${formatVal(r.financeResult)}</strong></div>
@@ -164,18 +164,18 @@ function renderMemberAssemblyPanel() {
         </div>`;
     if (a.status === 'offen') {
         const rest = ASSEMBLY_AUTO_AFTER - (game.matchday - Math.min(a.openedMatchday, game.matchday));
-        html += '<div style="font-size:9px; font-weight:bold;">Deine Rede</div>';
-        html += Object.entries(ASSEMBLY_SPEECHES).map(([k, s]) => `<button onclick="setAssemblyChoice('speech','${k}')" class="${a.speech === k ? 'btn-action' : 'btn-secondary'}" style="font-size:8px; padding:3px 6px; margin:2px 3px 2px 0;" title="${s.desc}">${s.label}</button>`).join('');
-        html += '<div style="font-size:9px; font-weight:bold; margin-top:4px;">Antrag zum Mitgliedsbeitrag</div>';
+        html += '<div style="font-size:var(--fs-caption); font-weight:bold;">Deine Rede</div>';
+        html += Object.entries(ASSEMBLY_SPEECHES).map(([k, s]) => `<button onclick="setAssemblyChoice('speech','${k}')" class="${a.speech === k ? 'btn-action' : 'btn-secondary'}" style="font-size:var(--fs-micro); padding:3px 6px; margin:2px 3px 2px 0;" title="${s.desc}">${s.label}</button>`).join('');
+        html += '<div style="font-size:var(--fs-caption); font-weight:bold; margin-top:4px;">Antrag zum Mitgliedsbeitrag</div>';
         html += Object.entries(ASSEMBLY_FEES).map(([k, f]) => {
             const m = Math.round(f.money * assemblyLeagueFactor(game.leagueLevel) / 1000) * 1000;
-            return `<button onclick="setAssemblyChoice('fee','${k}')" class="${a.fee === k ? 'btn-action' : 'btn-secondary'}" style="font-size:8px; padding:3px 6px; margin:2px 3px 2px 0;">${f.label}${m ? ` (${m > 0 ? '+' : ''}${formatVal(m)})` : ''}</button>`;
+            return `<button onclick="setAssemblyChoice('fee','${k}')" class="${a.fee === k ? 'btn-action' : 'btn-secondary'}" style="font-size:var(--fs-micro); padding:3px 6px; margin:2px 3px 2px 0;">${f.label}${m ? ` (${m > 0 ? '+' : ''}${formatVal(m)})` : ''}</button>`;
         }).join('');
-        html += `<button onclick="holdMemberAssembly()" class="btn-gold" style="width:100%; font-size:10px; padding:6px; margin-top:6px;">🗳️ Versammlung durchführen</button>
-            <div style="font-size:8px; color:var(--text-muted); margin-top:3px;">Ohne dich findet sie in ${Math.max(0, rest)} Spieltag(en) statt - unvorbereitet kostet das Zustimmung.</div>`;
+        html += `<button onclick="holdMemberAssembly()" class="btn-gold" style="width:100%; font-size:var(--fs-small); padding:6px; margin-top:6px;">🗳️ Versammlung durchführen</button>
+            <div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:3px;">Ohne dich findet sie in ${Math.max(0, rest)} Spieltag(en) statt - unvorbereitet kostet das Zustimmung.</div>`;
     } else {
-        html += `<div style="font-size:10px; font-weight:bold; color:${a.entlastet ? 'var(--primary)' : 'var(--danger)'};">${a.entlastet ? '✅ Entlastet' : '❌ Nicht entlastet'} - ${a.zustimmung}% Zustimmung</div>
-            <div style="font-size:9px; color:var(--text-muted);">Vorstandszufriedenheit ${a.boardDelta > 0 ? '+' : ''}${a.boardDelta}${a.money ? ` · Beiträge ${a.money > 0 ? '+' : ''}${formatVal(a.money)}` : ''}${a.automatisch ? ' · ohne Vorbereitung abgehalten' : ''}</div>`;
+        html += `<div style="font-size:var(--fs-small); font-weight:bold; color:${a.entlastet ? 'var(--primary)' : 'var(--danger)'};">${a.entlastet ? '✅ Entlastet' : '❌ Nicht entlastet'} - ${a.zustimmung}% Zustimmung</div>
+            <div style="font-size:var(--fs-caption); color:var(--text-muted);">Vorstandszufriedenheit ${a.boardDelta > 0 ? '+' : ''}${a.boardDelta}${a.money ? ` · Beiträge ${a.money > 0 ? '+' : ''}${formatVal(a.money)}` : ''}${a.automatisch ? ' · ohne Vorbereitung abgehalten' : ''}</div>`;
     }
     box.innerHTML = html;
 }

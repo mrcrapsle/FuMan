@@ -116,7 +116,7 @@ function renderBoardRoomPanel() {
     const room = getBoardRoom();
     const views = getBoardMemberViews();
     const farbe = m => m >= 60 ? 'var(--primary)' : m >= 35 ? 'var(--accent)' : 'var(--danger)';
-    box.innerHTML = `<div style="font-size:9px;">
+    box.innerHTML = `<div style="font-size:var(--fs-caption);">
         <div style="margin-bottom:6px;">Vorstandszufriedenheit: <strong style="color:${farbe(game.boardSat)};">${Math.round(game.boardSat)}%</strong>
             <span style="color:var(--text-muted);">- bleibt sie lange unter 25%, droht ab der 2. Saison die Entlassung.</span></div>
         ${BOARD_ROLES.map((role, i) => {
@@ -131,7 +131,7 @@ function renderBoardRoomPanel() {
                 if (w) return `🎯 Saisonwette aktiv: Platz ${w.platz} oder besser.`;
                 const erwartet = game.seasonExpectation && game.seasonExpectation.expectedRank;
                 if (!erwartet) return `🎯 Saisonwette: erst mit einem Saisonziel des Vorstands möglich.`;
-                return `<button onclick="setzeSaisonWette()" style="min-height:32px; padding:6px 10px; font-size:10px;">🎯 Saisonwette setzen: Platz ${Math.max(1, erwartet - 2)} oder besser</button>`;
+                return `<button onclick="setzeSaisonWette()" style="min-height:32px; padding:6px 10px; font-size:var(--fs-small);">🎯 Saisonwette setzen: Platz ${Math.max(1, erwartet - 2)} oder besser</button>`;
             })()}
         </div>
     </div>`;

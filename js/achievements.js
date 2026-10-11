@@ -37,13 +37,13 @@
         if (!box) return;
         let unlocked = new Set((game.achievements || []).map(a => a.id));
         box.innerHTML = `
-            <div style="font-size:9px; color:var(--text-muted); margin-bottom:4px;">${unlocked.size} / ${ACHIEVEMENT_DEFINITIONS.length} freigeschaltet</div>
+            <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${unlocked.size} / ${ACHIEVEMENT_DEFINITIONS.length} freigeschaltet</div>
             <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:6px;">
                 ${ACHIEVEMENT_DEFINITIONS.map(def => {
                     let isUnlocked = unlocked.has(def.id);
                     return `<div title="${def.desc}" style="text-align:center; padding:6px 2px; border-radius:8px; background:${isUnlocked ? 'rgba(23,201,184,0.15)' : 'rgba(255,255,255,0.04)'}; opacity:${isUnlocked ? '1' : '0.35'};">
                         <div style="font-size:20px;">${def.icon}</div>
-                        <div style="font-size:8px; margin-top:2px;">${def.label}</div>
+                        <div style="font-size:var(--fs-micro); margin-top:2px;">${def.label}</div>
                     </div>`;
                 }).join('')}
             </div>

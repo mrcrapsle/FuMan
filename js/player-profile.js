@@ -87,13 +87,13 @@ function renderPlayerProfile(p) {
     const tabelle = saisons.slice(-6).reverse().map(z => `<tr${z.laufend ? ' style="color:var(--accent);"' : ''}><td>${z.season}${z.laufend ? '*' : ''}</td><td>${z.apps}</td><td>${z.goals}</td><td>${fmt(z.assists)}</td><td>${z.grade ? fmt(z.grade.toFixed(2)) : '-'}</td><td>${fmt(z.elf)}</td><td>${z.strength}</td></tr>`).join('');
     const titel = (p.honours || []).slice().reverse();
     const intl = (p.caps || 0) > 0 ? `🌍 ${p.caps} Länderspiele, ${p.intlGoals || 0} Tore${(p.intlTitles || []).length ? ` · ${p.intlTitles.length} Turniertitel` : ''}<br>` : '';
-    return `<div class="box" style="font-size:9px; text-align:left;">
+    return `<div class="box" style="font-size:var(--fs-caption); text-align:left;">
         <div style="font-weight:700; color:var(--accent); margin-bottom:4px;">📊 KARRIEREPROFIL${legende ? ' · <span style="color:var(--gold);">🏛️ VEREINSLEGENDE</span>' : ''}</div>
         🏟️ Im Verein ${describeJoin(p)}${legende ? '' : ` · Legende ab ${LEGEND_APPS} Pflichtspielen oder ${LEGEND_SEASONS} Saisons`}<br>
         ${arch ? `${arch.icon} ${arch.name} - Höhepunkt mit etwa ${arch.peakAge} Jahren${typeof formatDevelopmentRange === 'function' ? ` · nächster Sommer: ${formatDevelopmentRange(p)}` : ''}<br>` : ''}
         ⚽ ${p.appearances || 0} Pflichtspiele · ${p.goalsCareer || 0} Tore · ${vorlagen} Vorlagen · ${elf}× Elf des Spieltags${besteNote ? ` · beste Saisonnote ${fmt(besteNote.toFixed(2))}` : ''}<br>
         ${intl}
-        <table style="width:100%; font-size:9px; margin-top:4px; border-collapse:collapse; text-align:center;">
+        <table style="width:100%; font-size:var(--fs-caption); margin-top:4px; border-collapse:collapse; text-align:center;">
             <tr style="color:var(--text-muted);"><th>Saison</th><th>Sp</th><th>T</th><th>V</th><th>Note</th><th>Elf</th><th>Stärke</th></tr>${tabelle}
         </table>
         ${titel.length ? `<div style="margin-top:4px;">${titel.map(h => `${h.text} (Saison ${h.season})`).join(' · ')}</div>` : '<div style="margin-top:4px; color:var(--text-muted);">Noch keine Titel und Auszeichnungen.</div>'}

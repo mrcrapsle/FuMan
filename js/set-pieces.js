@@ -143,7 +143,7 @@ function playOpponentFreeKick() {
         playSound('goal');
         tickerLine(`<div style="color:var(--danger);">⚽ ${currentMatch.minute}. Min: Freistoß für ${oppName} - direkt verwandelt.</div>`);
     } else {
-        tickerLine(`<div style="color:#64748b; font-size:10px;">${currentMatch.minute}. Min: Freistoß für ${oppName} - die Mauer steht.</div>`);
+        tickerLine(`<div style="color:var(--text-muted); font-size:var(--fs-small);">${currentMatch.minute}. Min: Freistoß für ${oppName} - die Mauer steht.</div>`);
     }
     refreshLiveScore();
 }
@@ -152,7 +152,7 @@ function playOpponentFreeKick() {
 function varOverturnsGoal(ourGoal) {
     if (Math.random() >= VAR_CHECK_CHANCE) return false;
     const zurueck = Math.random() < 0.4;
-    tickerLine(`<div style="color:#94a3b8;">📺 ${currentMatch.minute}. Min: Der Videoassistent prüft das Tor${ourGoal ? '' : ' des Gegners'}... ${zurueck ? '<strong>Abseits - Tor zurückgenommen!</strong>' : 'Tor zählt!'}</div>`);
+    tickerLine(`<div style="color:var(--text-muted);">📺 ${currentMatch.minute}. Min: Der Videoassistent prüft das Tor${ourGoal ? '' : ' des Gegners'}... ${zurueck ? '<strong>Abseits - Tor zurückgenommen!</strong>' : 'Tor zählt!'}</div>`);
     return zurueck;
 }
 
@@ -164,11 +164,11 @@ function showSetPiecePanel() {
     if (sp.type === 'elfmeter') {
         titel.innerText = '❗ Elfmeter - wer schießt?';
         box.innerHTML = getPenaltyCandidates(sp.gefoultId).map(c => `<button onclick="resolveSetPiece('${c.p.id}')" class="btn-secondary" style="text-align:left; margin-bottom:4px;">
-            <strong>${c.p.name}</strong> · ${Math.round(c.prob * 100)} % <span style="font-size:9px; color:var(--text-muted);">(${c.grund})</span></button>`).join('');
+            <strong>${c.p.name}</strong> · ${Math.round(c.prob * 100)} % <span style="font-size:var(--fs-caption); color:var(--text-muted);">(${c.grund})</span></button>`).join('');
     } else {
         titel.innerText = '🎯 Freistoß - wie ausführen?';
         box.innerHTML = Object.entries(getFreeKickOptions()).map(([k, o]) => `<button onclick="resolveSetPiece('${k}')" class="btn-secondary" style="text-align:left; margin-bottom:4px;">
-            <strong>${o.label}</strong> · ${Math.round(o.prob * 100)} % Torchance<br><span style="font-size:9px; color:var(--text-muted);">${o.hinweis}${o.risiko ? ` (Konterrisiko ${Math.round(o.risiko * 100)} %)` : ''}</span></button>`).join('');
+            <strong>${o.label}</strong> · ${Math.round(o.prob * 100)} % Torchance<br><span style="font-size:var(--fs-caption); color:var(--text-muted);">${o.hinweis}${o.risiko ? ` (Konterrisiko ${Math.round(o.risiko * 100)} %)` : ''}</span></button>`).join('');
     }
     const ov = document.getElementById('setpiece-overlay');
     if (ov) ov.classList.add('show');
@@ -210,7 +210,7 @@ function resolveSetPiece(choice, silent) {
                 tickerLine(`<div style="color:var(--danger);">⚽ ${sp.minute}. Min: Gegentor nach dem Konter.</div>`);
             }
         } else {
-            tickerLine(`<div style="color:#64748b; font-size:10px;">${sp.minute}. Min: Der Freistoß bringt nichts ein.</div>`);
+            tickerLine(`<div style="color:var(--text-muted); font-size:var(--fs-small);">${sp.minute}. Min: Der Freistoß bringt nichts ein.</div>`);
         }
     }
     currentMatch.setPiece = null;
@@ -243,6 +243,6 @@ function renderShootoutKeeperChoice() {
     const aktuell = getShootoutKeeper();
     return torhueter.map(k => {
         const imSpiel = lineup.includes(k.id);
-        return `<button onclick="chooseShootoutKeeper('${k.id}')" class="${aktuell && aktuell.id === k.id ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:9px; margin:0 4px 4px 0;">🧤 ${k.name} (${k.strength}${k.trait === 'Elfmeter-Killer' ? ', Elfmeter-Killer' : ''})${imSpiel ? '' : ' · Einwechslung'}</button>`;
+        return `<button onclick="chooseShootoutKeeper('${k.id}')" class="${aktuell && aktuell.id === k.id ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:var(--fs-caption); margin:0 4px 4px 0;">🧤 ${k.name} (${k.strength}${k.trait === 'Elfmeter-Killer' ? ', Elfmeter-Killer' : ''})${imSpiel ? '' : ' · Einwechslung'}</button>`;
     }).join('');
 }

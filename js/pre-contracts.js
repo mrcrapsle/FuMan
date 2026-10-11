@@ -175,28 +175,28 @@ function renderPreContractBox() {
     const eigene = squad.filter(p => p.preContractOffer).map(p => en
         ? `<strong>${p.name}</strong> (${p.preContractOffer.club}, deadline matchday ${p.preContractOffer.deadline})`
         : `<strong>${p.name}</strong> (${p.preContractOffer.club}, Frist Spieltag ${p.preContractOffer.deadline})`);
-    const eigeneZeile = eigene.length ? `<div class="box" style="font-size:10px; border-left-color:var(--danger);">${en
+    const eigeneZeile = eigene.length ? `<div class="box" style="font-size:var(--fs-small); border-left-color:var(--danger);">${en
         ? `⚠️ Pre-contract offers for your players: ${eigene.join(', ')} - extend, or they leave at season end.`
         : `⚠️ Vorvertrags-Angebote an deine Spieler: ${eigene.join(', ')} - verlängern, sonst gehen sie zum Saisonende.`}</div>` : '';
-    const unterschrieben = offen.length ? `<div class="box" style="font-size:10px; border-left-color:var(--primary);">✍️ Unterschrieben: ${offen.map(v => `<strong>${v.player.name}</strong> (${v.player.pos}, ${v.player.strength}, von ${v.from})`).join(', ')} - kommen zur neuen Saison.</div>` : '';
+    const unterschrieben = offen.length ? `<div class="box" style="font-size:var(--fs-small); border-left-color:var(--primary);">✍️ Unterschrieben: ${offen.map(v => `<strong>${v.player.name}</strong> (${v.player.pos}, ${v.player.strength}, von ${v.from})`).join(', ')} - kommen zur neuen Saison.</div>` : '';
     if (game.matchday < PRECONTRACT_START_MD) {
-        box.innerHTML = `<div class="panel">${kopf}<div class="box" style="font-size:10px;">Ab dem Winterfenster (Spieltag ${PRECONTRACT_START_MD}) kannst du Spieler verpflichten, deren Vertrag zum Saisonende ausläuft - ohne Ablöse.</div>${unterschrieben}${eigeneZeile}</div>`;
+        box.innerHTML = `<div class="panel">${kopf}<div class="box" style="font-size:var(--fs-small);">Ab dem Winterfenster (Spieltag ${PRECONTRACT_START_MD}) kannst du Spieler verpflichten, deren Vertrag zum Saisonende ausläuft - ohne Ablöse.</div>${unterschrieben}${eigeneZeile}</div>`;
         return;
     }
     const pool = ensurePreContractPool();
     const zeilen = pool.players.map(p => {
         const n = getPreContractTerms(p, 'normal'), d = getPreContractTerms(p, 'doppelt');
         const cn = Math.round(getPreContractChance(p, 'normal') * 100), cd = Math.round(getPreContractChance(p, 'doppelt') * 100);
-        return `<div class="box" style="font-size:10px;">
+        return `<div class="box" style="font-size:var(--fs-small);">
             <div style="display:flex; justify-content:space-between; gap:4px;"><span><strong>${p.name}</strong> (${p.pos}, Stärke ${p.strength}, ${p.age} J.) · ${p.sellerClub}</span>
-            <button onclick="openPlayerDetail('${p.id}','precontract')" class="btn-secondary" style="width:auto; padding:3px 7px; font-size:9px;">ℹ️</button></div>
+            <button onclick="openPlayerDetail('${p.id}','precontract')" class="btn-secondary" style="width:auto; padding:3px 7px; font-size:var(--fs-caption);">ℹ️</button></div>
             <div style="color:var(--text-muted);">Gehalt ab neuer Saison ${formatVal(n.gehalt)}/SpT</div>
             ${p.preRefused ? '<div style="color:var(--danger);">Hat abgesagt.</div>' : `<div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:4px;">
-                <button onclick="offerPreContract('${p.id}','normal')" class="btn-secondary" style="font-size:10px;">Handgeld ${formatVal(n.handgeld)} · ${cn} % Zusage</button>
-                <button onclick="offerPreContract('${p.id}','doppelt')" class="btn-action" style="font-size:10px;">Doppelt ${formatVal(d.handgeld)} · ${cd} % Zusage</button></div>`}
+                <button onclick="offerPreContract('${p.id}','normal')" class="btn-secondary" style="font-size:var(--fs-small);">Handgeld ${formatVal(n.handgeld)} · ${cn} % Zusage</button>
+                <button onclick="offerPreContract('${p.id}','doppelt')" class="btn-action" style="font-size:var(--fs-small);">Doppelt ${formatVal(d.handgeld)} · ${cd} % Zusage</button></div>`}
         </div>`;
     }).join('');
     box.innerHTML = `<div class="panel">${kopf}
-        <div class="box" style="font-size:9px; color:var(--text-muted);">Keine Ablöse - aber Handgeld sofort, 20 % mehr Gehalt, Ankunft erst zur neuen Saison, ein Versuch je Spieler. Andere Vereine schnappen sich Kandidaten, je länger du wartest. Höchstens ${PRECONTRACT_MAX_PENDING} offene Vorverträge.</div>
-        ${unterschrieben}${eigeneZeile}${zeilen || '<div class="box" style="font-size:10px;">Alle Kandidaten dieser Saison sind vergeben.</div>'}</div>`;
+        <div class="box" style="font-size:var(--fs-caption); color:var(--text-muted);">Keine Ablöse - aber Handgeld sofort, 20 % mehr Gehalt, Ankunft erst zur neuen Saison, ein Versuch je Spieler. Andere Vereine schnappen sich Kandidaten, je länger du wartest. Höchstens ${PRECONTRACT_MAX_PENDING} offene Vorverträge.</div>
+        ${unterschrieben}${eigeneZeile}${zeilen || '<div class="box" style="font-size:var(--fs-small);">Alle Kandidaten dieser Saison sind vergeben.</div>'}</div>`;
 }

@@ -57,21 +57,21 @@ function renderMedicalDepartmentPanel() {
         .sort((a, b) => b.r - a.r).slice(0, 5);
     const farbe = r => r >= 1.5 ? 'var(--danger)' : r >= 1.15 ? 'var(--accent)' : 'var(--primary)';
 
-    let html = `<div style="font-size:9px; display:grid; grid-template-columns:1fr 1fr; gap:3px; margin-bottom:6px;">
+    let html = `<div style="font-size:var(--fs-caption); display:grid; grid-template-columns:1fr 1fr; gap:3px; margin-bottom:6px;">
         <div>Physiotherapeut: <strong>${staffMembers.physio.hired ? 'eingestellt' : 'fehlt'}</strong></div>
         <div>Reha-Zentrum: <strong>Stufe ${campusBuildings.reha.lvl}</strong></div>
         <div>Präventionsprogramm: <strong>${game.injuryPreventionProgram ? 'aktiv' : 'aus'}</strong></div>
         <div>Trainingsintensität: <strong style="color:${farbe(getTrainingIntensityInjuryFactor())};">${game.trainingIntensity || 'normal'}</strong></div>
     </div>`;
 
-    html += `<div style="font-size:9px; font-weight:bold; margin-bottom:3px;">🩼 Verletzt (${verletzt.length})</div>`;
+    html += `<div style="font-size:var(--fs-caption); font-weight:bold; margin-bottom:3px;">🩼 Verletzt (${verletzt.length})</div>`;
     html += verletzt.length
-        ? verletzt.map(p => `<div style="font-size:9px; display:flex; justify-content:space-between;"><span>${p.pos} ${p.name}</span><span style="color:var(--danger);">noch ${p.injured} Spiel(e) · ${p.timesInjured || 1}. Verletzung</span></div>`).join('')
-        : '<div style="font-size:9px; color:var(--text-muted);">Keine Verletzten.</div>';
+        ? verletzt.map(p => `<div style="font-size:var(--fs-caption); display:flex; justify-content:space-between;"><span>${p.pos} ${p.name}</span><span style="color:var(--danger);">noch ${p.injured} Spiel(e) · ${p.timesInjured || 1}. Verletzung</span></div>`).join('')
+        : '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Keine Verletzten.</div>';
 
-    html += '<div style="font-size:9px; font-weight:bold; margin:6px 0 3px;">⚠️ Höchstes Verletzungsrisiko</div>';
-    html += risiko.map(({ p, r }) => `<div style="font-size:9px; display:flex; justify-content:space-between;"><span>${p.pos} ${p.name} (${p.age || '?'})</span>
+    html += '<div style="font-size:var(--fs-caption); font-weight:bold; margin:6px 0 3px;">⚠️ Höchstes Verletzungsrisiko</div>';
+    html += risiko.map(({ p, r }) => `<div style="font-size:var(--fs-caption); display:flex; justify-content:space-between;"><span>${p.pos} ${p.name} (${p.age || '?'})</span>
         <span style="color:${farbe(r)};">${r >= 1.5 ? 'hoch' : r >= 1.15 ? 'erhöht' : 'normal'} (×${r.toFixed(2)})</span></div>`).join('');
-    html += '<div style="font-size:8px; color:var(--text-muted); margin-top:4px;">Risiko steigt mit Trainingshärte, Alter, früheren Verletzungen und niedriger Fitness. Physio und Reha verkürzen die Ausfallzeit.</div>';
+    html += '<div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:4px;">Risiko steigt mit Trainingshärte, Alter, früheren Verletzungen und niedriger Fitness. Physio und Reha verkürzen die Ausfallzeit.</div>';
     box.innerHTML = html;
 }

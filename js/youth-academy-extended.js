@@ -167,15 +167,15 @@ function renderYouthAcademyPanel() {
 
     if (coach) {
         html += `<div style="background:rgba(62,224,138,0.1); padding:6px; border-radius:4px; margin-bottom:8px; border-left:3px solid var(--primary);">
-            <div style="font-size:9px; font-weight:bold; color:var(--primary);">👨‍🏫 Jugendtrainer: ${coach.name}</div>
-            <div style="font-size:8px; color:var(--text-muted);">Entwicklungsbonus: +${Math.round((coachBonus - 1) * 100)}%</div>
-            <button onclick="removeYouthCoach()" class="btn-secondary" style="font-size:8px; padding:2px 4px; margin-top:4px;">Entfernen</button>
+            <div style="font-size:var(--fs-caption); font-weight:bold; color:var(--primary);">👨‍🏫 Jugendtrainer: ${coach.name}</div>
+            <div style="font-size:var(--fs-micro); color:var(--text-muted);">Entwicklungsbonus: +${Math.round((coachBonus - 1) * 100)}%</div>
+            <button onclick="removeYouthCoach()" class="btn-secondary" style="font-size:var(--fs-micro); padding:2px 4px; margin-top:4px;">Entfernen</button>
         </div>`;
     } else {
         const coachCandidates = squad.filter(s => s.age >= 28 && s.strength >= 60 && !(s.injured > 0));
         if (coachCandidates.length > 0) {
-            html += '<div style="margin-bottom:8px;"><div style="font-size:9px; font-weight:bold; margin-bottom:4px;">👨‍🏫 Jugendtrainer auswählen:</div>';
-            html += '<select class="input-inline" style="font-size:8px; width:100%; padding:4px; margin-bottom:4px;" onchange="this.value && chooseYouthCoach(this.value)">';
+            html += '<div style="margin-bottom:8px;"><div style="font-size:var(--fs-caption); font-weight:bold; margin-bottom:4px;">👨‍🏫 Jugendtrainer auswählen:</div>';
+            html += '<select class="input-inline" style="font-size:var(--fs-micro); width:100%; padding:4px; margin-bottom:4px;" onchange="this.value && chooseYouthCoach(this.value)">';
             html += '<option value="">-- Kein Trainer --</option>';
             coachCandidates.forEach(p => {
                 html += `<option value="${p.id}">${p.name} (${p.age}J., Str${p.strength})</option>`;
@@ -184,7 +184,7 @@ function renderYouthAcademyPanel() {
         }
     }
 
-    html += '<div style="font-size:10px; font-weight:bold; margin-bottom:6px; color:var(--accent);">🌟 Top-Talente:</div>';
+    html += '<div style="font-size:var(--fs-small); font-weight:bold; margin-bottom:6px; color:var(--accent);">🌟 Top-Talente:</div>';
     ranking.slice(0, 5).forEach((p, idx) => {
         const trend = {
             'excellent': '📈 stark verbessert',
@@ -195,11 +195,11 @@ function renderYouthAcademyPanel() {
             'new': '✨ neu in der Akademie'
         }[p.developmentTrend];
 
-        html += `<div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:4px; font-size:9px;">
+        html += `<div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:4px; font-size:var(--fs-caption);">
             <div><strong>${idx + 1}. ${p.name}</strong> (${p.pos} | Str: ${p.strength})</div>
-            <div style="color:var(--text-muted); font-size:8px;">Potenzial: ${typeof getYouthPotentialText === 'function' ? getYouthPotentialText(p) : '?'} | Talentwert: ${p.talentScore}</div>
-            ${p.potentialRevealed && typeof getYouthOfferSquadHint === 'function' ? `<div style="color:var(--text-muted); font-size:8px;">${getYouthOfferSquadHint(p)}</div>` : ''}
-            <div style="color:var(--accent); font-size:8px;">${trend}</div>
+            <div style="color:var(--text-muted); font-size:var(--fs-micro);">Potenzial: ${typeof getYouthPotentialText === 'function' ? getYouthPotentialText(p) : '?'} | Talentwert: ${p.talentScore}</div>
+            ${p.potentialRevealed && typeof getYouthOfferSquadHint === 'function' ? `<div style="color:var(--text-muted); font-size:var(--fs-micro);">${getYouthOfferSquadHint(p)}</div>` : ''}
+            <div style="color:var(--accent); font-size:var(--fs-micro);">${trend}</div>
         </div>`;
     });
 
@@ -214,16 +214,16 @@ function renderYouthDevelopmentChart() {
 
     const ranking = getYouthTalentRanking();
     if (ranking.length === 0) {
-        box.innerHTML = '<div style="color:var(--text-muted); font-size:9px;">Noch keine Talente in der Akademie</div>';
+        box.innerHTML = '<div style="color:var(--text-muted); font-size:var(--fs-caption);">Noch keine Talente in der Akademie</div>';
         return;
     }
 
-    let html = '<div style="font-size:10px; font-weight:bold; margin-bottom:6px;">📊 Entwicklung Top 3:</div>';
+    let html = '<div style="font-size:var(--fs-small); font-weight:bold; margin-bottom:6px;">📊 Entwicklung Top 3:</div>';
 
     ranking.slice(0, 3).forEach(p => {
         const history = (youthDevelopmentHistory[p.id] || []).slice(-10);
         if (history.length === 0) {
-            html += `<div style="font-size:8px; color:var(--text-muted); margin-bottom:4px;">${p.name}: Keine Daten</div>`;
+            html += `<div style="font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:4px;">${p.name}: Keine Daten</div>`;
             return;
         }
 
@@ -233,7 +233,7 @@ function renderYouthDevelopmentChart() {
         const barHeight = 30;
 
         html += `<div style="margin-bottom:8px;">
-            <div style="font-size:9px; font-weight:bold; margin-bottom:2px;">${p.name} (${minStr}-${maxStr})</div>
+            <div style="font-size:var(--fs-caption); font-weight:bold; margin-bottom:2px;">${p.name} (${minStr}-${maxStr})</div>
             <div style="display:flex; align-items:flex-end; gap:2px; height:${barHeight}px; background:rgba(100,100,100,0.05); padding:4px; border-radius:4px;">`;
 
         history.forEach(str => {

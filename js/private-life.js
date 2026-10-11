@@ -24,7 +24,7 @@
             assetsList.innerHTML = LIFESTYLE_ASSETS.map(a => {
                 let owned = privateLife.assets.includes(a.id);
                 return `<div class="player-row">
-                    <span><strong>${a.name}</strong> <span style="color:#64748b; font-size:9px;">(${a.category})</span><br><span style="font-size:9px; color:#aaa;">${a.desc} · +${a.prestige} Prestige, -${a.stressRelief}% Stress</span></span>
+                    <span><strong>${a.name}</strong> <span style="color:var(--text-muted); font-size:var(--fs-caption);">(${a.category})</span><br><span style="font-size:var(--fs-caption); color:var(--text-muted);">${a.desc} · +${a.prestige} Prestige, -${a.stressRelief}% Stress</span></span>
                     <button onclick="buyLifestyleAsset('${a.id}')" class="${owned ? 'btn-secondary' : 'btn-action'}" style="width:auto;" ${owned ? 'disabled' : ''}>${owned ? 'Besessen ✓' : `Kaufen [${formatVal(a.cost)}]`}</button>
                 </div>`;
             }).join('');
@@ -39,8 +39,8 @@
                 let disabled = locked || cdLeft > 0;
                 let label = locked ? `Benötigt ${a.minPrestige} Prestige` : (cdLeft > 0 ? `Noch ${cdLeft} SpT gesperrt` : `+${formatVal(a.income)} (-${a.stressCost}% Stress)`);
                 return `<div class="player-row">
-                    <span><strong>${a.name}</strong><br><span style="font-size:9px; color:#aaa;">${a.desc}</span></span>
-                    <button onclick="doPrestigeActivity('${a.id}')" class="btn-action" style="width:auto; font-size:9px;" ${disabled ? 'disabled' : ''}>${label}</button>
+                    <span><strong>${a.name}</strong><br><span style="font-size:var(--fs-caption); color:var(--text-muted);">${a.desc}</span></span>
+                    <button onclick="doPrestigeActivity('${a.id}')" class="btn-action" style="width:auto; font-size:var(--fs-caption);" ${disabled ? 'disabled' : ''}>${label}</button>
                 </div>`;
             }).join('');
         }

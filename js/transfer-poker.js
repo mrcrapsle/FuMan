@@ -242,10 +242,10 @@ function signPokerDeal() {
 
 function renderPokerSwapSelect(p, t) {
     const kandidaten = squad.filter(x => isSwapCandidate(x, p)).sort((a, b) => b.marketValue - a.marketValue);
-    if (!kandidaten.length) return `<div style="font-size:8px; color:var(--text-muted); margin-bottom:4px;">🔄 Tausch: ${p.sellerClub} nimmt nur gesunde Spieler bis 30 Jahre ab Stärke ${getSwapClubMinimum(p)} - schwächere helfen ihm nicht (und mindestens ${SWAP_MIN_SQUAD + 1} im Kader).</div>`;
+    if (!kandidaten.length) return `<div style="font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:4px;">🔄 Tausch: ${p.sellerClub} nimmt nur gesunde Spieler bis 30 Jahre ab Stärke ${getSwapClubMinimum(p)} - schwächere helfen ihm nicht (und mindestens ${SWAP_MIN_SQUAD + 1} im Kader).</div>`;
     const tausch = t.swapId ? squad.find(x => x.id === t.swapId) : null;
     const wert = tausch ? getSwapValue(tausch, p, t.agreedFee) : 0;
-    return `<div style="font-size:9px; margin-bottom:4px;">🔄 Spieler in Zahlung geben: <select onchange="setPokerSwap(this.value)" style="font-size:9px;">
+    return `<div style="font-size:var(--fs-caption); margin-bottom:4px;">🔄 Spieler in Zahlung geben: <select onchange="setPokerSwap(this.value)" style="font-size:var(--fs-caption);">
         <option value="">Kein Tausch</option>
         ${kandidaten.map(x => `<option value="${x.id}" ${t.swapId === x.id ? 'selected' : ''}>${x.name} (${x.pos}, ${x.strength}) - ${formatVal(getSwapValue(x, p, t.agreedFee))}</option>`).join('')}
     </select>${tausch ? ` → bar nur noch <strong>${formatVal(t.agreedFee - wert)}</strong>, Transferbudget ${formatVal(t.agreedFee - wert + Math.round(wert * 0.15))} (der Tausch zählt wie ein Verkauf: 85 % fürs Budget, Provision für seinen Berater)` : ''}</div>`;
@@ -261,10 +261,10 @@ function renderTransferPokerBox() {
     const geduld = '🟢'.repeat(Math.max(0, t.patience)) + '⚪'.repeat(Math.max(0, 5 - t.patience));
     box.innerHTML = `<div class="panel" style="border:1px solid var(--accent); margin-bottom:8px;">
         <div class="panel-header" style="color:var(--accent);">🃏 TRANSFERPOKER: ${p.name} (${p.pos}, ${p.strength})</div>
-        <div style="font-size:9px; margin-bottom:6px;">Verkäufer: <strong>${p.sellerClub}</strong> · Forderung <strong>${formatVal(p.askingPrice)}</strong> · Marktwert ${formatVal(p.marketValue)} · Vertrag ${p.contracts || 2} J. · Geduld ${geduld} (noch ${Math.max(0, t.patience)} Runden)${t.rival ? ` · ⚔️ ${t.rival.club} bietet ${formatVal(t.rival.bid)}` : ''}</div>
-        <div style="font-size:9px; max-height:110px; overflow-y:auto; background:rgba(0,0,0,0.15); border-radius:4px; padding:4px; margin-bottom:6px;">${t.log.slice(-6).map(z => `<div>${z}</div>`).join('')}</div>
+        <div style="font-size:var(--fs-caption); margin-bottom:6px;">Verkäufer: <strong>${p.sellerClub}</strong> · Forderung <strong>${formatVal(p.askingPrice)}</strong> · Marktwert ${formatVal(p.marketValue)} · Vertrag ${p.contracts || 2} J. · Geduld ${geduld} (noch ${Math.max(0, t.patience)} Runden)${t.rival ? ` · ⚔️ ${t.rival.club} bietet ${formatVal(t.rival.bid)}` : ''}</div>
+        <div style="font-size:var(--fs-caption); max-height:110px; overflow-y:auto; background:rgba(0,0,0,0.15); border-radius:4px; padding:4px; margin-bottom:6px;">${t.log.slice(-6).map(z => `<div>${z}</div>`).join('')}</div>
         ${t.agreedFee ? `
-            <div class="box" style="font-size:10px;">Ablöse ${formatVal(t.agreedFee)}${agentFee ? ` + Provision ${formatVal(agentFee)}` : ''} · Gehalt <strong>${formatVal(t.wageDemand)}</strong>/SpT (bisher ${formatVal(p.wage)})</div>
+            <div class="box" style="font-size:var(--fs-small);">Ablöse ${formatVal(t.agreedFee)}${agentFee ? ` + Provision ${formatVal(agentFee)}` : ''} · Gehalt <strong>${formatVal(t.wageDemand)}</strong>/SpT (bisher ${formatVal(p.wage)})</div>
             ${renderPokerSwapSelect(p, t)}
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
                 <button onclick="signPokerDeal()" class="btn-action">✍️ Unterschreiben</button>
@@ -274,7 +274,7 @@ function renderTransferPokerBox() {
             </div>` : `
             <div style="display:flex; align-items:center; justify-content:space-between; gap:4px; margin-bottom:6px;">
                 <button onclick="adjustPokerOffer(-5)" class="btn-secondary" style="width:auto;">−5 %</button>
-                <div style="text-align:center;"><strong style="font-size:13px;">${formatVal(t.offer)}</strong><div style="font-size:8px; color:var(--text-muted);">${p.askingPrice ? Math.round(t.offer / p.askingPrice * 100) : 0} % der Forderung</div></div>
+                <div style="text-align:center;"><strong style="font-size:var(--fs-title-sm);">${formatVal(t.offer)}</strong><div style="font-size:var(--fs-micro); color:var(--text-muted);">${p.askingPrice ? Math.round(t.offer / p.askingPrice * 100) : 0} % der Forderung</div></div>
                 <button onclick="adjustPokerOffer(5)" class="btn-secondary" style="width:auto;">+5 %</button>
             </div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
@@ -282,6 +282,6 @@ function renderTransferPokerBox() {
                 <button onclick="acceptPokerAsking()" class="btn-secondary">Forderung annehmen (${formatVal(p.askingPrice)})</button>
                 <button onclick="closeTransferPoker()" class="btn-secondary" style="grid-column: span 2;">Abbrechen</button>
             </div>`}
-        <div style="font-size:8px; color:var(--text-muted); margin-top:4px;">Unter der Schmerzgrenze sagt der Verein nie zu. Jede Runde kostet 1 Geduld, ein Angebot unter 75 % der Schmerzgrenze kostet 2. Bei begehrten Spielern kann ein Rivale mitbieten und den Spieler wegschnappen.</div>
+        <div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:4px;">Unter der Schmerzgrenze sagt der Verein nie zu. Jede Runde kostet 1 Geduld, ein Angebot unter 75 % der Schmerzgrenze kostet 2. Bei begehrten Spielern kann ein Rivale mitbieten und den Spieler wegschnappen.</div>
     </div>`;
 }

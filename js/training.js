@@ -76,8 +76,8 @@
         box.innerHTML = Object.keys(WEEKDAY_LABELS).map(day => {
             let current = game.weeklyTrainingPlan[day] || 'ausgeglichen';
             return `<div style="text-align:center;">
-                <div style="font-size:9px; color:var(--text-muted); margin-bottom:2px;">${WEEKDAY_LABELS[day]}</div>
-                <select class="input-inline" style="width:100%; font-size:9px; padding:4px 2px;" onchange="setWeeklyTrainingDay('${day}', this.value)">
+                <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:2px;">${WEEKDAY_LABELS[day]}</div>
+                <select class="input-inline" style="width:100%; font-size:var(--fs-caption); padding:4px 2px;" onchange="setWeeklyTrainingDay('${day}', this.value)">
                     ${Object.entries(WEEKLY_TRAINING_UNITS).map(([key, u]) => `<option value="${key}" ${current === key ? 'selected' : ''}>${u.icon} ${u.label}</option>`).join('')}
                 </select>
             </div>`;
@@ -130,12 +130,12 @@
         if (!box) return;
         let templates = game.customWeeklyPlanTemplates || [];
         box.innerHTML = templates.length === 0
-            ? '<div style="font-size:9px; color:var(--text-muted);">Noch keine eigenen Vorlagen gespeichert.</div>'
-            : templates.map((t, idx) => `<div class="player-row" style="font-size:10px;">
+            ? '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch keine eigenen Vorlagen gespeichert.</div>'
+            : templates.map((t, idx) => `<div class="player-row" style="font-size:var(--fs-small);">
                 <span>${t.name}</span>
                 <div>
-                    <button onclick="applyCustomWeeklyPlanTemplate(${idx})" class="btn-secondary" style="width:auto; font-size:9px; padding:3px 8px;">Übernehmen</button>
-                    <button onclick="deleteCustomWeeklyPlanTemplate(${idx})" class="btn-secondary" style="width:auto; font-size:9px; padding:3px 8px; color:var(--danger);">✕</button>
+                    <button onclick="applyCustomWeeklyPlanTemplate(${idx})" class="btn-secondary" style="width:auto; font-size:var(--fs-caption); padding:3px 8px;">Übernehmen</button>
+                    <button onclick="deleteCustomWeeklyPlanTemplate(${idx})" class="btn-secondary" style="width:auto; font-size:var(--fs-caption); padding:3px 8px; color:var(--danger);">✕</button>
                 </div>
             </div>`).join('');
     }
@@ -226,7 +226,7 @@
         let queue = game.skillTrainingQueue || [];
         if (queue.length === 0) { box.innerHTML = ''; return; }
         box.innerHTML = queue.map(s => `
-            <div class="box" style="font-size:9px; display:flex; justify-content:space-between;">
+            <div class="box" style="font-size:var(--fs-caption); display:flex; justify-content:space-between;">
                 <span>${s.playerName}: ${s.statLabel} (+${s.boost}) mit ${s.coachName}</span>
                 <strong>noch ${s.matchdaysLeft} SpT</strong>
             </div>`).join('');
@@ -571,7 +571,7 @@
         if (!box) return;
         let entries = getUpcomingFixtureCalendar();
         if (entries.length === 0) {
-            box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Saisonende erreicht - keine weiteren Spieltage.</div>';
+            box.innerHTML = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Saisonende erreicht - keine weiteren Spieltage.</div>';
             return;
         }
         let stretch = findCongestedStretch(entries);
@@ -581,13 +581,13 @@
                     let info = FIXTURE_TYPE_LABELS[e.type];
                     let isHot = !!stretch && e.matchday >= stretch.from && e.matchday <= stretch.to;
                     return `<div style="flex:0 0 auto; text-align:center; padding:4px 6px; border-radius:6px; background:${isHot ? 'rgba(239,68,68,0.15)' : 'var(--bg-card)'}; border:1px solid ${isHot ? 'var(--danger)' : 'var(--border)'};">
-                        <div style="font-size:8px; color:var(--text-muted);">SpT ${e.matchday}</div>
-                        <div style="font-size:14px;">${info.icon}</div>
-                        <div style="font-size:8px;">${info.label}</div>
+                        <div style="font-size:var(--fs-micro); color:var(--text-muted);">SpT ${e.matchday}</div>
+                        <div style="font-size:var(--fs-title-sm);">${info.icon}</div>
+                        <div style="font-size:var(--fs-micro);">${info.label}</div>
                     </div>`;
                 }).join('')}
             </div>
-            ${stretch ? `<div class="box" style="border-left-color:var(--danger); font-size:10px; margin-top:6px;">⚠️ Belastungsphase Spieltag ${stretch.from}-${stretch.to} (mehrere wichtige Spiele dicht hintereinander)! <button onclick="applyCongestionRecommendation()" class="btn-secondary" style="width:auto; font-size:9px;">Schonplan übernehmen</button></div>` : ''}
+            ${stretch ? `<div class="box" style="border-left-color:var(--danger); font-size:var(--fs-small); margin-top:6px;">⚠️ Belastungsphase Spieltag ${stretch.from}-${stretch.to} (mehrere wichtige Spiele dicht hintereinander)! <button onclick="applyCongestionRecommendation()" class="btn-secondary" style="width:auto; font-size:var(--fs-caption);">Schonplan übernehmen</button></div>` : ''}
         `;
     }
     function applyCongestionRecommendation() {
@@ -619,8 +619,8 @@
         if (!box) return;
         let hist = game.trainingHistory || [];
         box.innerHTML = hist.length === 0
-            ? '<div style="font-size:9px; color:var(--text-muted);">Noch keine Trainingsereignisse.</div>'
-            : hist.slice(0, 8).map(e => `<div class="box" style="font-size:9px;"><span style="color:var(--text-muted);">S${e.season}/${e.matchday}:</span> ${e.text}</div>`).join('');
+            ? '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch keine Trainingsereignisse.</div>'
+            : hist.slice(0, 8).map(e => `<div class="box" style="font-size:var(--fs-caption);"><span style="color:var(--text-muted);">S${e.season}/${e.matchday}:</span> ${e.text}</div>`).join('');
     }
 
     // 14. Elfmeterkiller-Förderprogramm: dediziertes Training mit Chance, einem Torhüter die
@@ -697,9 +697,9 @@
             let available = youthTalents.filter(p => !game.youthHospitants.includes(p.id));
             let current = game.youthHospitants.map(id => youthTalents.find(p => p.id === id)).filter(Boolean);
             hospitantBox.innerHTML = `
-                ${current.map(p => `<div class="player-row" style="font-size:9px;"><span>⬆️ ${p.name} (hospitiert)</span><button onclick="removeYouthHospitant('${p.id}')" class="btn-secondary" style="width:auto; font-size:8px;">Zurück</button></div>`).join('')}
-                ${available.slice(0, 4).map(p => `<div class="player-row" style="font-size:9px;"><span>${p.name}</span><button onclick="addYouthHospitant('${p.id}')" class="btn-secondary" style="width:auto; font-size:8px;">⬆️ Hospitieren</button></div>`).join('')}
-                ${(current.length === 0 && available.length === 0) ? '<div style="font-size:9px; color:var(--text-muted);">Keine Jugendspieler in der Akademie.</div>' : ''}
+                ${current.map(p => `<div class="player-row" style="font-size:var(--fs-caption);"><span>⬆️ ${p.name} (hospitiert)</span><button onclick="removeYouthHospitant('${p.id}')" class="btn-secondary" style="width:auto; font-size:var(--fs-micro);">Zurück</button></div>`).join('')}
+                ${available.slice(0, 4).map(p => `<div class="player-row" style="font-size:var(--fs-caption);"><span>${p.name}</span><button onclick="addYouthHospitant('${p.id}')" class="btn-secondary" style="width:auto; font-size:var(--fs-micro);">⬆️ Hospitieren</button></div>`).join('')}
+                ${(current.length === 0 && available.length === 0) ? '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Keine Jugendspieler in der Akademie.</div>' : ''}
             `;
         }
         renderTrainingHistoryLog();
@@ -841,23 +841,23 @@
         let rest = game.trainingAutopilotMatchdays || 0;
         let log = (game.trainingAutopilotLog || []).slice(-5).reverse();
         box.innerHTML = `
-            <div class="box" style="font-size:10px;">
+            <div class="box" style="font-size:var(--fs-small);">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <strong>🤖 Trainingsstab-Automatik</strong>
                     <span style="color:${rest > 0 ? 'var(--primary)' : 'var(--text-muted)'};">${rest > 0 ? `noch ${rest} Spieltage aktiv` : 'inaktiv'}</span>
                 </div>
-                <div style="color:#94a3b8; margin:3px 0 6px 0;">
+                <div style="color:var(--text-muted); margin:3px 0 6px 0;">
                     Der Trainerstab wählt selbst Spieler, Attribut und Trainer und startet die Förderung -
                     auch während du ganze Saisons durchsimulierst. Die Trainingsgebühr zahlt weiterhin der Verein,
                     und die Automatik bucht nie ins Minus.
                 </div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
-                    <button onclick="autoPickSkillTraining()" class="btn-secondary" style="font-size:9px;">🎯 Einmal vorschlagen [${TRAINING_AUTOPICK_COST} 💎]</button>
-                    <button onclick="activateTrainingAutopilot()" class="btn-action" style="font-size:9px;">🤖 ${TRAINING_AUTOPILOT_DURATION} Spieltage übernehmen [${TRAINING_AUTOPILOT_COST} 💎]</button>
+                    <button onclick="autoPickSkillTraining()" class="btn-secondary" style="font-size:var(--fs-caption);">🎯 Einmal vorschlagen [${TRAINING_AUTOPICK_COST} 💎]</button>
+                    <button onclick="activateTrainingAutopilot()" class="btn-action" style="font-size:var(--fs-caption);">🤖 ${TRAINING_AUTOPILOT_DURATION} Spieltage übernehmen [${TRAINING_AUTOPILOT_COST} 💎]</button>
                 </div>
-                <div style="font-size:9px; color:var(--text-muted); margin-top:4px;">Dein Guthaben: <strong style="color:var(--gold);">${game.premiumPoints || 0} 💎</strong></div>
+                <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">Dein Guthaben: <strong style="color:var(--gold);">${game.premiumPoints || 0} 💎</strong></div>
                 ${log.length > 0 ? `<div style="margin-top:6px; border-top:1px solid #1e293b; padding-top:4px;">
-                    ${log.map(l => `<div style="font-size:9px; color:#94a3b8;">ST ${l.matchday}: ${l.text}</div>`).join('')}
+                    ${log.map(l => `<div style="font-size:var(--fs-caption); color:var(--text-muted);">ST ${l.matchday}: ${l.text}</div>`).join('')}
                 </div>` : ''}
             </div>`;
     }

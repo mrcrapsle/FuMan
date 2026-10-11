@@ -435,3 +435,17 @@ Die Basis-Datei nennt die Schwelle nicht im Inhalt, die Zuordnung folgt nur dem 
 **Legenden-Sperre nur bei Karriereende.** Der Legendenstatus entsteht im Spiel nur beim Karriereende (`checkForLegendStatus()` in `js/player-retirement.js`). Ein verkaufter Spieler wird nie Legende. Die Sperre der Rückennummer gilt deshalb nur für Legenden aus dem Karriereende. Eine Änderung wäre erst nötig, wenn ein Verkauf den Legendenstatus bekommen soll.
 
 **Zahlen für Reisekosten und Saisonwette bleiben.** Die Auswärtsfahrt wird nach Bundesland mit dem Faktor 0,7 (gleiches Bundesland) oder 1,3 (anderes) verrechnet, die bisherigen Kosten liegen je Ligastufe bei 800 bis 2.300 €. Die Saisonwette zahlt 150.000 € je Ligastufe unter der 1. Bundesliga und hebt das Vertrauen um 12, bei Verlust senkt sie es um 10. Beides liegt in der Größenordnung der bestehenden Buchungen. Eine Messung mit dem Bot ist offen und kann die Werte später nachjustieren.
+
+## Phase 25.51: Designsystem, Lesbarkeit und Farb-Themes
+
+**Befund (Handy, 390 px):** Im Code standen über 1.270 feste Schriftgrößen, die meisten 8 bis 10 px; die Handy-Regeln verkleinerten Kästen und Überschriften zusätzlich. Abschnittstitel (12 px, gold) hoben sich kaum vom Fließtext ab, Karten hatten keine feste Rangfolge (Name, Werte, Verein und Marktwert in gleicher Größe). Das Zoomen war per `user-scalable=no` gesperrt (WCAG 1.4.4), Nebentext in `#64748b` lag unter 4,5:1.
+
+**Umsetzung:**
+- Schriftskala als Tokens (`--fs-micro` bis `--fs-display`): alte Pixelwerte 8/9/10/11/12/13-14/15-16 sind auf Stufen abgebildet, die Rangfolge bleibt. Desktop beginnt bei 10 px, Handy bei 11 px. Die Handy-Regeln verkleinern nicht mehr. Eingabefelder auf dem Handy mindestens 16 px (kein Zoom-Sprung auf iOS).
+- Textgröße einstellbar (Normal, Groß ×1,12, Sehr groß ×1,25) über `--fs-scale`.
+- Kartenmuster `renderUiCard()` (`js/ui-cards.js`): Bild mit Positionsabzeichen, Titel (2 Zeilen), Untertitel, Chips, große Kennzahl, Werteleiste, Knöpfe. Umgestellt: Transfermarkt, Personal; die Vorschau unter Darstellung nutzt es ebenfalls.
+- Flächen als Tokens (`--surface-*`, `--chip-bg`, `--text-box`, `--nav-*`), Themes setzen nur Tokens: Flutlicht-Nacht (Standard), Anstoß-Klassik, Rasengrün, Hoher Kontrast (Text ≥ 7:1), Farbsicher (Okabe-Ito, Blau/Orange statt Grün/Rot). Auswahl unter Menü → System & Hilfe → 🎨 Darstellung, pro Gerät gespeichert, nicht im Spielstand.
+- Zoomen wieder erlaubt, sichtbarer Tastaturfokus (`:focus-visible`), Menü-Kategorien kontrastreicher.
+- `testMobileLayout` prüft jetzt mindestens 11 px statt 8 px; `testDesignThemes` prüft Kontrast aller Themes (Text, Nebentext, Akzent, Gut, Schlecht ≥ 4,5:1 auf Karten), Speicherung, Textgröße und Überlauf bei sehr großer Schrift.
+
+**Offen (bewusst nicht in dieser Runde):** helles Theme (rund 135 fest eingetragene Farben in JS, z. B. weiße Texte, würden auf hellem Grund unlesbar), weitere Karten auf das Muster umstellen (Kader-Liste, Postfach, Angebote, Jugend), Großbuchstaben-Überschriften in `index.html` auf normale Schreibung.

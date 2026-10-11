@@ -102,7 +102,7 @@ function renderPlayerDevelopmentPanel() {
             <span style="white-space:nowrap;">${formatDevelopmentRange(p)}</span>
         </div>`;
     }).join('');
-    box.innerHTML = `<div style="font-size:9px;">
+    box.innerHTML = `<div style="font-size:var(--fs-caption);">
         <div style="color:var(--text-muted); margin-bottom:4px;">Am Saisonende altern alle Spieler um ein Jahr. Rechts: erwartete Stärkeänderung im Sommer (Klammer: seit Saisonbeginn).</div>
         <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:4px;">${Object.values(ARCHETYPES).map(a => `<span>${a.icon} ${a.name} (${a.peakAge})</span>`).join('')}</div>
         ${rows}

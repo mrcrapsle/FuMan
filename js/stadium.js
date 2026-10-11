@@ -170,7 +170,7 @@
         box.style.display = 'block';
         box.innerHTML = `<div class="box" style="border-left-color:#ff6b9d; text-align:center;">
             <strong style="color:#ff6b9d;">❤️ EHRENWAND DER PUBLIKUMSLIEBLINGE</strong><br>
-            <span style="font-size:10px;">${uniqueNames.slice(-8).join(' · ')}</span>
+            <span style="font-size:var(--fs-small);">${uniqueNames.slice(-8).join(' · ')}</span>
         </div>`;
     }
 
@@ -253,8 +253,8 @@
             let block = stadium.blocks[blockKey];
             let strength = Math.round(block?.cultureStrength || 30);
             let color = strength >= 75 ? 'var(--primary)' : (strength >= 40 ? 'var(--accent)' : 'var(--text-muted)');
-            return `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:10px;"><span>${labels[groupId]} (${block?.name || blockKey})</span><strong style="color:${color};">${strength}%</strong></div>`;
-        }).join('') + `<div style="font-size:9px; color:var(--text-muted); margin-top:4px;">Heimstärke-Bonus durch tief verwurzelte Kulturen: +${getBlockCultureHomeBonus().toFixed(1)}</div>`;
+            return `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; font-size:var(--fs-small);"><span>${labels[groupId]} (${block?.name || blockKey})</span><strong style="color:${color};">${strength}%</strong></div>`;
+        }).join('') + `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">Heimstärke-Bonus durch tief verwurzelte Kulturen: +${getBlockCultureHomeBonus().toFixed(1)}</div>`;
     }
 
     function renderDfbLicensingStatus() {
@@ -266,7 +266,7 @@
             let progressPct = status.totalCount > 0 ? Math.round((status.metCount / status.totalCount) * 100) : 100;
             box.innerHTML = `<div class="box" style="border-left-color:var(--danger);"><strong style="color:var(--danger);">⏳ DFB-Nachfrist läuft: noch ${game.dfbGracePeriod.deadlineMatchday} Spieltag(e)!</strong>
                 <div style="background:rgba(228,197,140,0.1); border-radius:4px; height:6px; margin:6px 0; overflow:hidden;"><div style="width:${progressPct}%; height:100%; background:var(--accent);"></div></div>
-                <span style="font-size:10px;">${status.metCount} von ${status.totalCount} Auflagen erfüllt · Noch offen: ${status.missing.join(' · ') || 'Alles erfüllt - Aufstieg steht bevor!'}</span></div>`;
+                <span style="font-size:var(--fs-small);">${status.metCount} von ${status.totalCount} Auflagen erfüllt · Noch offen: ${status.missing.join(' · ') || 'Alles erfüllt - Aufstieg steht bevor!'}</span></div>`;
             return;
         }
         let { targetLevel, missing, auflagen, totalCount, metCount } = checkDfbLicensingStatus();
@@ -274,7 +274,7 @@
         box.style.display = 'block';
         let progressPct = totalCount > 0 ? Math.round((metCount / totalCount) * 100) : 100;
         if (missing.length === 0) {
-            box.innerHTML = `<div class="box" style="border-left-color:var(--primary);"><strong style="color:var(--primary);">✅ DFB-Lizenz für die ${leagueNames[targetLevel]} erfüllt${auflagen.length ? ' (unter Auflagen)' : ''}!</strong><br><span style="font-size:10px;">${auflagen.length ? `Laufende Baustellen zählen: ${auflagen.join(' · ')}.` : 'Bei sportlichem Aufstieg steht der Beförderung nichts im Wege.'}</span></div>`;
+            box.innerHTML = `<div class="box" style="border-left-color:var(--primary);"><strong style="color:var(--primary);">✅ DFB-Lizenz für die ${leagueNames[targetLevel]} erfüllt${auflagen.length ? ' (unter Auflagen)' : ''}!</strong><br><span style="font-size:var(--fs-small);">${auflagen.length ? `Laufende Baustellen zählen: ${auflagen.join(' · ')}.` : 'Bei sportlichem Aufstieg steht der Beförderung nichts im Wege.'}</span></div>`;
         } else {
             let teams = leaguesData[game.leagueLevel];
             let inPromotionZone = false;
@@ -284,11 +284,11 @@
                 inPromotionZone = myRank > 0 && myRank <= 2;
             }
             let urgencyNote = (game.matchday >= 30 && inPromotionZone)
-                ? `<div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(217,89,79,0.3); color:var(--danger); font-weight:800; font-size:10px;">🚨 Du liegst aktuell in Aufstiegsposition, aber die Lizenz fehlt noch - nur noch ${34 - game.matchday} Spieltag(e) bis Saisonende!</div>`
+                ? `<div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(217,89,79,0.3); color:var(--danger); font-weight:800; font-size:var(--fs-small);">🚨 Du liegst aktuell in Aufstiegsposition, aber die Lizenz fehlt noch - nur noch ${34 - game.matchday} Spieltag(e) bis Saisonende!</div>`
                 : '';
             box.innerHTML = `<div class="box" style="border-left-color:var(--danger);"><strong style="color:var(--danger);">📋 DFB-Auflagen für die ${leagueNames[targetLevel]}: ${metCount} von ${totalCount} erfüllt</strong>
                 <div style="background:rgba(228,197,140,0.1); border-radius:4px; height:6px; margin:6px 0; overflow:hidden;"><div style="width:${progressPct}%; height:100%; background:${progressPct >= 75 ? 'var(--accent)' : 'var(--danger)'};"></div></div>
-                <span style="font-size:10px;">${missing.map(m => '• ' + m).join('<br>')}</span>${urgencyNote}</div>`;
+                <span style="font-size:var(--fs-small);">${missing.map(m => '• ' + m).join('<br>')}</span>${urgencyNote}</div>`;
         }
     }
 
@@ -333,16 +333,16 @@
         let utilization = capacity > 0 ? Math.round((lastAttendance / capacity) * 100) : 0;
         box.innerHTML = `
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
-                <div class="box"><div style="font-size:8px; color:var(--text-muted);">KAPAZITÄT</div><div style="font-size:15px; font-weight:900;">${capacity.toLocaleString('de-DE')}</div></div>
-                <div class="box"><div style="font-size:8px; color:var(--text-muted);">LETZTE ZUSCHAUERZAHL</div><div style="font-size:15px; font-weight:900;">${lastAttendance.toLocaleString('de-DE')}</div></div>
-                <div class="box"><div style="font-size:8px; color:var(--text-muted);">AUSLASTUNG</div><div style="font-size:15px; font-weight:900; color:${utilization>=70?'var(--primary)':(utilization>=40?'var(--accent)':'var(--danger)')};">${utilization}%</div></div>
-                <div class="box"><div style="font-size:8px; color:var(--text-muted);">STADIONWERT</div><div style="font-size:15px; font-weight:900; color:var(--gold);">${(getStadiumMarketValue()/1000000).toFixed(2)} Mio €</div></div>
+                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">KAPAZITÄT</div><div style="font-size:var(--fs-title); font-weight:900;">${capacity.toLocaleString('de-DE')}</div></div>
+                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">LETZTE ZUSCHAUERZAHL</div><div style="font-size:var(--fs-title); font-weight:900;">${lastAttendance.toLocaleString('de-DE')}</div></div>
+                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">AUSLASTUNG</div><div style="font-size:var(--fs-title); font-weight:900; color:${utilization>=70?'var(--primary)':(utilization>=40?'var(--accent)':'var(--danger)')};">${utilization}%</div></div>
+                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">STADIONWERT</div><div style="font-size:var(--fs-title); font-weight:900; color:var(--gold);">${(getStadiumMarketValue()/1000000).toFixed(2)} Mio €</div></div>
             </div>
-            <div class="box" style="margin-top:4px;"><div style="font-size:8px; color:var(--text-muted);">BAUWERT (INVESTIERTE SUMME)</div><div style="font-size:15px; font-weight:900; color:var(--industry);">${((stadium.totalInvested||0)/1000000).toFixed(2)} Mio €</div></div>
+            <div class="box" style="margin-top:4px;"><div style="font-size:var(--fs-micro); color:var(--text-muted);">BAUWERT (INVESTIERTE SUMME)</div><div style="font-size:var(--fs-title); font-weight:900; color:var(--industry);">${((stadium.totalInvested||0)/1000000).toFixed(2)} Mio €</div></div>
             <div class="box" style="margin-top:4px;">
-                <div style="font-size:8px; color:var(--text-muted);">BETRIEBSKOSTEN PRO SPIELTAG</div>
-                <div style="font-size:15px; font-weight:900; color:var(--danger);">${formatVal(Math.round(getStadiumBaseMaintenance()))}</div>
-                <div style="font-size:9px; color:var(--text-muted); margin-top:2px;">
+                <div style="font-size:var(--fs-micro); color:var(--text-muted);">BETRIEBSKOSTEN PRO SPIELTAG</div>
+                <div style="font-size:var(--fs-title); font-weight:900; color:var(--danger);">${formatVal(Math.round(getStadiumBaseMaintenance()))}</div>
+                <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:2px;">
                     ${getMothballedCapacity() > 0
                         ? `${getUsedStadiumCapacity().toLocaleString('de-DE')} Plätze in Betrieb, ${getMothballedCapacity().toLocaleString('de-DE')} stillgelegt (nur ${Math.round(MOTHBALLED_MAINTENANCE_RATE * 100)}% Unterhalt). Wächst der Zuschauerschnitt, werden gesperrte Ränge automatisch wieder geöffnet - und teurer.`
                         : 'Das gesamte Stadion ist in Betrieb.'}
@@ -389,20 +389,20 @@
         metricsBox.innerHTML = `
             <div class="stadium-hero-metric-chip"><div class="shm-label">Kapazität</div><div class="shm-value">${capacity.toLocaleString('de-DE')}</div></div>
             <div class="stadium-hero-metric-chip"><div class="shm-label">Auslastung</div><div class="shm-value" style="color:${utilization>=70?'var(--primary)':'var(--accent)'};">${utilization}%</div></div>
-            <div class="stadium-hero-metric-chip"><div class="shm-label">Einnahmen (Spieltag)</div><div class="shm-value" style="color:var(--gold); font-size:12px;">${formatVal(lastTicketIncome)}</div></div>
+            <div class="stadium-hero-metric-chip"><div class="shm-label">Einnahmen (Spieltag)</div><div class="shm-value" style="color:var(--gold); font-size:var(--fs-body-lg);">${formatVal(lastTicketIncome)}</div></div>
         `;
         let condBox = document.getElementById('stadium-condition-card');
         if (condBox) {
             let cond = getStadiumConditionRating();
             let suggestion = findNextStadiumSuggestion();
             condBox.innerHTML = `
-                <div style="font-size:9px; color:var(--text-muted);">STADION-ZUSTAND</div>
-                <div style="font-size:14px; font-weight:900; color:${cond.color}; margin-bottom:6px;">${cond.label}</div>
+                <div style="font-size:var(--fs-caption); color:var(--text-muted);">STADION-ZUSTAND</div>
+                <div style="font-size:var(--fs-title-sm); font-weight:900; color:${cond.color}; margin-bottom:6px;">${cond.label}</div>
                 ${suggestion ? `
-                    <div style="font-size:9px; color:var(--text-muted);">NÄCHSTE AUSBAUSTUFE</div>
-                    <div style="font-size:11px; margin-bottom:6px;">${suggestion.label} (${formatVal(suggestion.cost)})</div>
+                    <div style="font-size:var(--fs-caption); color:var(--text-muted);">NÄCHSTE AUSBAUSTUFE</div>
+                    <div style="font-size:var(--fs-body); margin-bottom:6px;">${suggestion.label} (${formatVal(suggestion.cost)})</div>
                     <button onclick="${suggestion.action}" class="btn-action">Ausbau Planen</button>
-                ` : '<div style="font-size:10px; color:var(--primary);">Alle Erweiterungen bereits gebaut! ✓</div>'}
+                ` : '<div style="font-size:var(--fs-small); color:var(--primary);">Alle Erweiterungen bereits gebaut! ✓</div>'}
             `;
         }
         let nameOverlay = document.getElementById('stadium-hero-name-overlay');
@@ -509,7 +509,7 @@
             let displayMax = unit === '%' ? Math.round(max * 100) : Math.round(max);
             return `
                 <div style="margin-bottom:8px;">
-                    <div style="display:flex; justify-content:space-between; font-size:9px; margin-bottom:2px;">
+                    <div style="display:flex; justify-content:space-between; font-size:var(--fs-caption); margin-bottom:2px;">
                         <span>${label}</span>
                         <strong style="color:var(--accent);">${displayCurrent}${unit === '%' ? '%' : ''} / ${displayMax}${unit === '%' ? '%' : ''} maximal${extra}</strong>
                     </div>
@@ -527,8 +527,8 @@
             ${bar('📈 Sponsoreneinnahmen-Bonus', getStadiumSponsorBonus(), 0.24)}
             ${bar('⚡ Heimvorteil (Teamstärke-Punkte)', getStadiumHomeAdvantageBonus(), 1.2, 'pt')}
             ${bar('🎤 Medienimage pro Heimspiel', getStadiumMediaImageMatchdayBonus(), 0.8, 'pt')}
-            <div class="box" style="font-size:10px; margin-top:4px;">💰 Feste Zusatzeinnahmen pro Heimspiel: <strong style="color:var(--gold);">${formatVal(getStadiumMatchdayIncome())}</strong> (max. ${formatVal(Math.round((8000+3500+1800)*scale))})</div>
-            <div class="box" style="font-size:10px;">☀️/❄️ Wetterschutz: <strong>${stadium.upgrades?.klimaanlage ? 'Hitze neutralisiert ✓' : 'Klimaanlage fehlt noch'}</strong></div>
+            <div class="box" style="font-size:var(--fs-small); margin-top:4px;">💰 Feste Zusatzeinnahmen pro Heimspiel: <strong style="color:var(--gold);">${formatVal(getStadiumMatchdayIncome())}</strong> (max. ${formatVal(Math.round((8000+3500+1800)*scale))})</div>
+            <div class="box" style="font-size:var(--fs-small);">☀️/❄️ Wetterschutz: <strong>${stadium.upgrades?.klimaanlage ? 'Hitze neutralisiert ✓' : 'Klimaanlage fehlt noch'}</strong></div>
         `;
     }
 
@@ -547,8 +547,8 @@
                     ? `<button class="btn-secondary" disabled>🏗️ Im Bau... (noch ${queued.daysLeft} SpT)</button>`
                     : `<button onclick="buyStadiumUpgrade('${key}')" class="btn-secondary">Bauen [${formatVal(cost)}] · ${getConstructionDays(cost)} SpT</button>`;
             return `<div class="panel">
-                <div class="panel-header" style="font-size:10px;">${u.name}</div>
-                <div style="font-size:9px; color:#aaa; margin-bottom:4px;">${u.desc}</div>
+                <div class="panel-header" style="font-size:var(--fs-small);">${u.name}</div>
+                <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${u.desc}</div>
                 ${buttonHtml}
             </div>`;
         }).join('');
@@ -686,23 +686,23 @@
         let cost = getPitchMaintenanceCost(pitchMaintenanceIntensity);
         let color = cond >= max * 0.9 ? 'var(--primary)' : (cond >= max * 0.6 ? 'var(--accent)' : 'var(--danger)');
         box.innerHTML = `
-            <div style="display:flex; justify-content:space-between; font-size:10px; margin-bottom:2px;">
+            <div style="display:flex; justify-content:space-between; font-size:var(--fs-small); margin-bottom:2px;">
                 <span>Zustand des Geläufs${stadium.rasenheizung && stadium.hybridrasen ? '' : ''}</span>
                 <strong style="color:${color};">${cond} / ${max}</strong>
             </div>
             <div style="background:rgba(255,255,255,0.06); border-radius:999px; height:8px; overflow:hidden; margin-bottom:8px;">
                 <div style="width:${Math.min(100, Math.round((cond / 99) * 100))}%; height:100%; background:linear-gradient(90deg, var(--primary), var(--accent)); border-radius:999px;"></div>
             </div>
-            <div style="display:flex; justify-content:space-between; font-size:8px; color:var(--text-muted); margin-bottom:2px;">
+            <div style="display:flex; justify-content:space-between; font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:2px;">
                 <span>nur mähen</span><span>Komplettsanierung</span>
             </div>
             <input type="range" min="0" max="100" value="${pitchMaintenanceIntensity}" oninput="setPitchMaintenanceIntensity(this.value)" style="width:100%;">
-            <div style="font-size:10px; margin:6px 0;">Erwarteter Gewinn: rund ${gain} Punkte auf ${Math.min(max, cond + gain)}. Geschätzte Kosten: ${formatVal(cost)}.</div>
+            <div style="font-size:var(--fs-small); margin:6px 0;">Erwarteter Gewinn: rund ${gain} Punkte auf ${Math.min(max, cond + gain)}. Geschätzte Kosten: ${formatVal(cost)}.</div>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
-                <button onclick="maintainPitch(0)" class="btn-secondary" style="font-size:9px;">Nur mähen (leicht)</button>
-                <button onclick="maintainPitch(pitchMaintenanceIntensity)" class="btn-action" style="font-size:9px;">Pflegen [${formatVal(cost)}]</button>
-                <button onclick="maintainPitch(60)" class="btn-secondary" style="font-size:9px;">Gründlich</button>
-                <button onclick="maintainPitch(100)" class="btn-gold" style="font-size:9px;">Komplettsanierung</button>
+                <button onclick="maintainPitch(0)" class="btn-secondary" style="font-size:var(--fs-caption);">Nur mähen (leicht)</button>
+                <button onclick="maintainPitch(pitchMaintenanceIntensity)" class="btn-action" style="font-size:var(--fs-caption);">Pflegen [${formatVal(cost)}]</button>
+                <button onclick="maintainPitch(60)" class="btn-secondary" style="font-size:var(--fs-caption);">Gründlich</button>
+                <button onclick="maintainPitch(100)" class="btn-gold" style="font-size:var(--fs-caption);">Komplettsanierung</button>
             </div>
         `;
     }
@@ -770,10 +770,10 @@
             let seatsLabel = p.seats > 0 ? `+${p.seats.toLocaleString('de-DE')} Plätze` : (p.seats < 0 ? `${p.seats.toLocaleString('de-DE')} Plätze` : '');
             let disabled = queued || !gateOk;
             return `<div class="panel" style="margin-bottom:4px;">
-                <div class="panel-header" style="font-size:10px;">${p.name}</div>
-                <div style="font-size:9px; color:#aaa; margin-bottom:4px;">${p.desc}</div>
-                ${seatsLabel ? `<div style="font-size:9px; margin-bottom:2px;">${seatsLabel}</div>` : ''}
-                ${!gateOk ? `<div style="font-size:9px; color:var(--danger); margin-bottom:4px;">${p.gateText}</div>` : ''}
+                <div class="panel-header" style="font-size:var(--fs-small);">${p.name}</div>
+                <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${p.desc}</div>
+                ${seatsLabel ? `<div style="font-size:var(--fs-caption); margin-bottom:2px;">${seatsLabel}</div>` : ''}
+                ${!gateOk ? `<div style="font-size:var(--fs-caption); color:var(--danger); margin-bottom:4px;">${p.gateText}</div>` : ''}
                 <button onclick="buyCapacityProject('${key}')" class="btn-secondary" ${disabled ? 'disabled' : ''}>${queued ? '🏗️ Im Bau...' : `Beauftragen [${formatVal(cost)}]`}</button>
             </div>`;
         }).join('');
@@ -805,12 +805,12 @@
         if (!box) return;
         let e = computeAncillaryIncomeEstimate();
         let row = (label, key, lvl, max = 5) => `
-            <div class="box" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px; font-size:9px;">
+            <div class="box" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px; font-size:var(--fs-caption);">
                 <span>${label} <span style="color:var(--text-muted);">(Campus-Stufe ${lvl}/${max})</span></span>
                 <strong style="color:var(--gold);">${formatVal(e[key])}</strong>
             </div>`;
         box.innerHTML = `
-            <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">Geschätzte Erlöse je Heimspiel aus den Campus-Gebäuden - die Ausbaustufen werden dort verwaltet.</div>
+            <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Geschätzte Erlöse je Heimspiel aus den Campus-Gebäuden - die Ausbaustufen werden dort verwaltet.</div>
             ${row('🍺 Gastronomie', 'gastronomie', (campusBuildings.fankneipe?.lvl || 0) + (campusBuildings.foodtrucks?.lvl || 0), 10)}
             ${row('🅿️ Parkplätze & Zufahrt', 'parken', campusBuildings.parkhaus?.lvl || 0)}
             ${row('🥂 VIP-Bewirtung', 'vipBewirtung', campusBuildings.hotel?.lvl || 0)}
@@ -818,7 +818,7 @@
             <div class="box" style="display:flex; justify-content:space-between; font-weight:800; margin-top:4px;">
                 <span>Summe je Heimspiel</span><strong style="color:var(--gold);">${formatVal(e.summe)}</strong>
             </div>
-            <div class="box" style="display:flex; justify-content:space-between; font-size:9px;">
+            <div class="box" style="display:flex; justify-content:space-between; font-size:var(--fs-caption);">
                 <span>Hochrechnung Saison (17 Heimspiele)</span><strong>${formatVal(e.seasonProjection)}</strong>
             </div>
             <button onclick="showScreen('screen-campus')" class="btn-secondary" style="margin-top:6px;">🏢 Zu den Campus-Ausbauten ▶</button>
@@ -847,7 +847,7 @@
             ceremonyBox.style.display = ev ? 'block' : 'none';
             if (ev) {
                 ceremonyBox.innerHTML = `<div class="panel-header" style="color:var(--accent);">🎪 NAMENSGEBUNGS-ZEREMONIE</div>
-                    <div class="box" style="font-size:10px;">Wie soll die Enthüllung von "${ev.stadiumName}" gestaltet werden?</div>
+                    <div class="box" style="font-size:var(--fs-small);">Wie soll die Enthüllung von "${ev.stadiumName}" gestaltet werden?</div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
                         <button onclick="resolveNamingCeremony('traditional')" class="btn-secondary">🏛️ Mit Tradition verbinden</button>
                         <button onclick="resolveNamingCeremony('commercial')" class="btn-action">🎉 Große Show</button>
@@ -863,16 +863,16 @@
             let next = milestones.find(m => !reached.includes(m));
             if (next) {
                 let remaining = Math.max(0, next - (game.recordAttendance || 0));
-                countdownBox.innerHTML = `<div class="box" style="font-size:10px;">📊 Noch <strong style="color:var(--accent);">${remaining.toLocaleString('de-DE')}</strong> Zuschauer bis zum nächsten Meilenstein (${next.toLocaleString('de-DE')})!</div>`;
+                countdownBox.innerHTML = `<div class="box" style="font-size:var(--fs-small);">📊 Noch <strong style="color:var(--accent);">${remaining.toLocaleString('de-DE')}</strong> Zuschauer bis zum nächsten Meilenstein (${next.toLocaleString('de-DE')})!</div>`;
             } else {
-                countdownBox.innerHTML = `<div class="box" style="font-size:10px; color:var(--gold);">🏆 Alle Zuschauer-Meilensteine erreicht! Aktueller Rekord: ${(game.recordAttendance || 0).toLocaleString('de-DE')}</div>`;
+                countdownBox.innerHTML = `<div class="box" style="font-size:var(--fs-small); color:var(--gold);">🏆 Alle Zuschauer-Meilensteine erreicht! Aktueller Rekord: ${(game.recordAttendance || 0).toLocaleString('de-DE')}</div>`;
             }
         }
         let nameBox = document.getElementById('stadium-naming-box');
         if (nameBox) {
             nameBox.innerHTML = stadium.namingRightsSponsor
                 ? `<div class="box">Aktueller Name: <strong style="color:var(--accent);">${stadium.name}</strong> (Sponsor: ${stadium.namingRightsSponsor})<br>Laufende Einnahmen: +${formatVal(stadium.namingRightsIncome)}/Heimspiel</div><button onclick="cancelNamingRights()" class="btn-secondary" style="margin-top:4px;">Namensrechte auflösen</button>`
-                : `<div class="box" style="font-size:10px; color:#94a3b8;">Kein Namensgeber - verkaufe die Namensrechte für eine große Einmalzahlung plus laufende Einnahmen.</div><button onclick="sellNamingRights()" class="btn-primary" style="margin-top:4px;">🏟️ Namensrechte verkaufen</button>`;
+                : `<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Kein Namensgeber - verkaufe die Namensrechte für eine große Einmalzahlung plus laufende Einnahmen.</div><button onclick="sellNamingRights()" class="btn-primary" style="margin-top:4px;">🏟️ Namensrechte verkaufen</button>`;
         }
         for (let key in stadium.blocks) {
             let el = document.getElementById('cap-' + key);
@@ -907,12 +907,12 @@
         let toiletCost = Math.max(35000, Math.round(10000 * scale * 20));
         let box = document.getElementById('stadium-action-box');
         box.innerHTML = `
-            <div style="font-size:12px; font-weight:bold; color:var(--accent);">${b.name} (${b.cap.toLocaleString()} Plätze)</div>
-            <div>Wohlfühlfaktor: <strong style="color:var(--primary);">${comfort}%</strong> <span style="font-size:8px; color:var(--text-muted);">(wirkt sich stadionweit leicht auf die Zuschauerzahl aus)</span></div>
+            <div style="font-size:var(--fs-body-lg); font-weight:bold; color:var(--accent);">${b.name} (${b.cap.toLocaleString()} Plätze)</div>
+            <div>Wohlfühlfaktor: <strong style="color:var(--primary);">${comfort}%</strong> <span style="font-size:var(--fs-micro); color:var(--text-muted);">(wirkt sich stadionweit leicht auf die Zuschauerzahl aus)</span></div>
             <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:3px; margin:4px 0;">
-                <button onclick="upgradeBlockInfra('${blockKey}', 'foodLvl', ${foodCost})" class="btn-secondary" style="font-size:9px;" ${b.foodLvl>=3?'disabled':''}>🌭 Fressbude [${b.foodLvl}/3]<br>${b.foodLvl>=3?'Max. ✓':formatVal(foodCost)}<br><span style="font-size:8px; color:var(--text-muted);">+Komfort → mehr Zuschauer</span></button>
-                <button onclick="upgradeBlockInfra('${blockKey}', 'merchLvl', ${merchCost})" class="btn-secondary" style="font-size:9px;" ${b.merchLvl>=3?'disabled':''}>👕 Merch-Stand [${b.merchLvl}/3]<br>${b.merchLvl>=3?'Max. ✓':formatVal(merchCost)}<br><span style="font-size:8px; color:var(--text-muted);">+5% Fanartikel-Absatz</span></button>
-                <button onclick="upgradeBlockInfra('${blockKey}', 'toiletLvl', ${toiletCost})" class="btn-secondary" style="font-size:9px;" ${b.toiletLvl>=3?'disabled':''}>🚻 Toiletten [${b.toiletLvl}/3]<br>${b.toiletLvl>=3?'Max. ✓':formatVal(toiletCost)}<br><span style="font-size:8px; color:var(--text-muted);">+Komfort → mehr Zuschauer</span></button>
+                <button onclick="upgradeBlockInfra('${blockKey}', 'foodLvl', ${foodCost})" class="btn-secondary" style="font-size:var(--fs-caption);" ${b.foodLvl>=3?'disabled':''}>🌭 Fressbude [${b.foodLvl}/3]<br>${b.foodLvl>=3?'Max. ✓':formatVal(foodCost)}<br><span style="font-size:var(--fs-micro); color:var(--text-muted);">+Komfort → mehr Zuschauer</span></button>
+                <button onclick="upgradeBlockInfra('${blockKey}', 'merchLvl', ${merchCost})" class="btn-secondary" style="font-size:var(--fs-caption);" ${b.merchLvl>=3?'disabled':''}>👕 Merch-Stand [${b.merchLvl}/3]<br>${b.merchLvl>=3?'Max. ✓':formatVal(merchCost)}<br><span style="font-size:var(--fs-micro); color:var(--text-muted);">+5% Fanartikel-Absatz</span></button>
+                <button onclick="upgradeBlockInfra('${blockKey}', 'toiletLvl', ${toiletCost})" class="btn-secondary" style="font-size:var(--fs-caption);" ${b.toiletLvl>=3?'disabled':''}>🚻 Toiletten [${b.toiletLvl}/3]<br>${b.toiletLvl>=3?'Max. ✓':formatVal(toiletCost)}<br><span style="font-size:var(--fs-micro); color:var(--text-muted);">+Komfort → mehr Zuschauer</span></button>
             </div>
             <button onclick="expandBlock('${blockKey}', ${b.addSeats}, ${nextCost})" class="btn-action" style="margin-top:2px;" ${b.expansions >= maxExpansions ? 'disabled' : ''}>
                 ${b.expansions >= maxExpansions ? `Maximaler Ausbau erreicht (${maxExpansions}/${maxExpansions}) ✓` : `+${b.addSeats.toLocaleString()} Plätze ausbauen (${b.expansions}/${maxExpansions}) [${formatVal(nextCost)}]`}
@@ -1084,18 +1084,18 @@
         let box = document.getElementById(targetBoxId);
         if (!box) return;
         let queue = (game.stadiumConstructionQueue || []).filter(p => !filterType || p.type === filterType);
-        if (queue.length === 0) { box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Keine laufenden Bauprojekte.</div>'; return; }
+        if (queue.length === 0) { box.innerHTML = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Keine laufenden Bauprojekte.</div>'; return; }
         box.innerHTML = queue.map(proj => {
             let segments = Array.from({ length: proj.totalDays }, (_, i) => i < (proj.totalDays - proj.daysLeft));
             return `<div class="box" style="display:flex; align-items:center; gap:10px; padding:8px 8px 8px 13px;">
                 <div style="min-width:40px; text-align:center;">
                     <div style="font-size:20px; font-weight:900; color:var(--accent); line-height:1;">${proj.daysLeft}</div>
-                    <div style="font-size:8px; color:var(--text-muted); text-transform:uppercase;">SpT übrig</div>
+                    <div style="font-size:var(--fs-micro); color:var(--text-muted); text-transform:uppercase;">SpT übrig</div>
                 </div>
                 <div style="flex:1;">
-                    <div style="font-size:10px; margin-bottom:4px;">🏗️ ${proj.label}</div>
+                    <div style="font-size:var(--fs-small); margin-bottom:4px;">🏗️ ${proj.label}</div>
                     <div style="display:flex; gap:2px;">${segments.map(done => `<div style="flex:1; height:10px; border-radius:2px; background:${done ? 'var(--accent)' : 'rgba(228,197,140,0.15)'};"></div>`).join('')}</div>
-                    <div style="font-size:8px; color:var(--text-muted); margin-top:3px;">${proj.remainingPayment > 0 ? `Restzahlung bei Fertigstellung: ${formatVal(proj.remainingPayment)}` : `Vollständig bezahlt: ${formatVal(proj.totalCost)}`}</div>
+                    <div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:3px;">${proj.remainingPayment > 0 ? `Restzahlung bei Fertigstellung: ${formatVal(proj.remainingPayment)}` : `Vollständig bezahlt: ${formatVal(proj.totalCost)}`}</div>
                 </div>
             </div>`;
         }).join('');

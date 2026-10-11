@@ -40,7 +40,7 @@
         list.innerHTML = '';
 
         if (stockMarket.activeMarketEvent) {
-            list.innerHTML += `<div class="box" style="border-color:var(--accent); margin-bottom:6px; font-size:10px;">${stockMarket.activeMarketEvent}</div>`;
+            list.innerHTML += `<div class="box" style="border-color:var(--accent); margin-bottom:6px; font-size:var(--fs-small);">${stockMarket.activeMarketEvent}</div>`;
         }
 
         let totalVal = 0;
@@ -63,7 +63,7 @@
             card.style.alignItems = 'stretch';
             card.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-                    <div><strong>${s.name}</strong><br><span style="color:#aaa; font-size:10px;">Kurs: ${formatVal(s.price)} | Dividende: ${(s.dividendRate*100).toFixed(1)}%</span></div>
+                    <div><strong>${s.name}</strong><br><span style="color:var(--text-muted); font-size:var(--fs-small);">Kurs: ${formatVal(s.price)} | Dividende: ${(s.dividendRate*100).toFixed(1)}%</span></div>
                     <div style="text-align:right;">
                         <span style="color:${trendUp ? 'var(--primary)' : 'var(--danger)'}; font-weight:900;">${trendUp ? '▲' : '▼'}</span><br>
                         Besitz: <strong style="color:var(--blue);">${s.owned}</strong>
@@ -72,15 +72,15 @@
                 <div class="stock-chart-3d-wrapper">
                     <div class="stock-chart-3d">${bars}</div>
                 </div>
-                <div style="font-size:9px; color:#64748b; margin-top:4px;">Kaufen für einen festen Geldbetrag (skaliert automatisch mit dem Kurs, egal wie teuer/günstig die Aktie ist):</div>
+                <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">Kaufen für einen festen Geldbetrag (skaliert automatisch mit dem Kurs, egal wie teuer/günstig die Aktie ist):</div>
                 <div style="display:flex; gap:3px; margin-top:4px; flex-wrap:wrap;">
-                    <button onclick="buyStockByAmount('${key}', 1000)" class="btn-action" style="font-size:9px; width:auto;">+1.000 €</button>
-                    <button onclick="buyStockByAmount('${key}', 10000)" class="btn-action" style="font-size:9px; width:auto;">+10.000 €</button>
-                    <button onclick="buyStockByAmount('${key}', 50000)" class="btn-action" style="font-size:9px; width:auto;">+50.000 €</button>
-                    <button onclick="buyMaxStockShares('${key}')" class="btn-action" style="font-size:9px; width:auto; background:var(--purple);">MAX</button>
-                    <button onclick="sellStockSharesPct('${key}', 0.25)" class="btn-secondary" style="font-size:9px; width:auto;">-25%</button>
-                    <button onclick="sellStockSharesPct('${key}', 0.5)" class="btn-secondary" style="font-size:9px; width:auto;">-50%</button>
-                    <button onclick="sellStockShares('${key}', ${s.owned})" class="btn-secondary" style="font-size:9px; width:auto; color:var(--danger);">Alles</button>
+                    <button onclick="buyStockByAmount('${key}', 1000)" class="btn-action" style="font-size:var(--fs-caption); width:auto;">+1.000 €</button>
+                    <button onclick="buyStockByAmount('${key}', 10000)" class="btn-action" style="font-size:var(--fs-caption); width:auto;">+10.000 €</button>
+                    <button onclick="buyStockByAmount('${key}', 50000)" class="btn-action" style="font-size:var(--fs-caption); width:auto;">+50.000 €</button>
+                    <button onclick="buyMaxStockShares('${key}')" class="btn-action" style="font-size:var(--fs-caption); width:auto; background:var(--purple);">MAX</button>
+                    <button onclick="sellStockSharesPct('${key}', 0.25)" class="btn-secondary" style="font-size:var(--fs-caption); width:auto;">-25%</button>
+                    <button onclick="sellStockSharesPct('${key}', 0.5)" class="btn-secondary" style="font-size:var(--fs-caption); width:auto;">-50%</button>
+                    <button onclick="sellStockShares('${key}', ${s.owned})" class="btn-secondary" style="font-size:var(--fs-caption); width:auto; color:var(--danger);">Alles</button>
                 </div>
             `;
             list.appendChild(card);
@@ -95,8 +95,8 @@
         let ordersBox = document.getElementById('limit-orders-list');
         if (ordersBox) {
             let orders = financeCentralState.limitOrders || [];
-            ordersBox.innerHTML = orders.length === 0 ? '<div style="font-size:9px; color:var(--text-muted);">Keine offenen Orders.</div>' :
-                orders.map(o => `<div class="player-row" style="font-size:9px;"><span>${o.type === 'buy' ? 'Kauf' : 'Verkauf'} ${o.amount}x ${stockMarket[o.key]?.name} @ ${formatVal(o.targetPrice)}</span><button onclick="cancelLimitOrder(${o.id})" class="btn-secondary" style="width:auto; font-size:8px;">✕</button></div>`).join('');
+            ordersBox.innerHTML = orders.length === 0 ? '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Keine offenen Orders.</div>' :
+                orders.map(o => `<div class="player-row" style="font-size:var(--fs-caption);"><span>${o.type === 'buy' ? 'Kauf' : 'Verkauf'} ${o.amount}x ${stockMarket[o.key]?.name} @ ${formatVal(o.targetPrice)}</span><button onclick="cancelLimitOrder(${o.id})" class="btn-secondary" style="width:auto; font-size:var(--fs-micro);">✕</button></div>`).join('');
         }
         let savingsStatus = document.getElementById('savings-plan-status');
         if (savingsStatus) {

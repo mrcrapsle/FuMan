@@ -64,7 +64,8 @@ python3 scripts/auswertung.py <datei>…         # Zusammenfassung je Bot-Lauf (
 - **Lint:** `no-redeclare` verhindert doppelte globale Funktionsnamen. `no-unused-vars` ist ein Fehler. `no-dupe-keys` gilt auch für `I18N_UI_EN`.
 - **CSS-3D:** Kein `filter` oder `opacity` auf 3D-Elementen oder deren Vorfahren. Schatten über `box-shadow`. Keine Dauer-Animationen auf dem Startbildschirm des Büros; unendliche Animationen gehören in den `prefers-reduced-motion`-Block.
 - **Mobile Leistung:** Kein `backdrop-filter` auf oft wiederholten oder scrollenden Elementen.
-- **Handy-Layout:** Kein horizontaler Überlauf, Knöpfe mindestens 32 px, Schrift mindestens 8 px. Messungen mit Rückfall `el.offsetWidth || 320`, da Bildschirme ausgeblendet sein können.
+- **Designsystem (Phase 25.51):** Schriftgrößen nur über die Stufen `var(--fs-micro|caption|small|body|body-lg|title-sm|title|display)` (`css/styles.css`, `:root`), nie feste Pixel; die Stufen wachsen auf dem Handy und mit der Textgröße (`--fs-scale`). Farben und Flächen nur über Tokens (`--text-main`, `--text-muted`, `--accent`, `--surface-panel`, `--chip-bg` …), damit die Themes (`html[data-theme]`, `js/design-settings.js`) alles umfärben. Neue Karten mit `renderUiCard()` und `uiChip()` (`js/ui-cards.js`): Bild, Titel, Untertitel, Chips, Kennzahl, Knöpfe. Neue Themes müssen `testDesignThemes` (WCAG 4,5:1) bestehen.
+- **Handy-Layout:** Kein horizontaler Überlauf, Knöpfe mindestens 32 px, Schrift mindestens 11 px. Messungen mit Rückfall `el.offsetWidth || 320`, da Bildschirme ausgeblendet sein können.
 - **localStorage:** Auf `file://` blockiert Android WebView den Zugriff. Alle Zugriffe über `safeLocalSet()` und Gegenstücke.
 
 ## Tests

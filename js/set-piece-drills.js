@@ -76,11 +76,11 @@ function renderSetPieceDrillBox() {
     const zeilen = Object.entries(SET_PIECE_DRILLS).map(([k, v]) => {
         const m = Math.round(getDrillMastery(k) * 100);
         const aktiv = d.focus === k;
-        return `<button onclick="setSetPieceDrillFocus('${k}')" class="${aktiv ? 'btn-action' : 'btn-secondary'}" style="text-align:left; font-size:10px; margin-bottom:3px;">
-            ${aktiv ? '✔ ' : ''}${v.icon} ${v.label} · <strong>${m} %</strong> <span style="font-size:9px; opacity:0.8;">(${v.wirkung} bei 100 %)</span>
+        return `<button onclick="setSetPieceDrillFocus('${k}')" class="${aktiv ? 'btn-action' : 'btn-secondary'}" style="text-align:left; font-size:var(--fs-small); margin-bottom:3px;">
+            ${aktiv ? '✔ ' : ''}${v.icon} ${v.label} · <strong>${m} %</strong> <span style="font-size:var(--fs-caption); opacity:0.8;">(${v.wirkung} bei 100 %)</span>
             <div style="height:4px; background:rgba(255,255,255,0.08); border-radius:2px; margin-top:2px;"><div style="height:4px; width:${m}%; background:var(--accent); border-radius:2px;"></div></div></button>`;
     }).join('');
-    box.innerHTML = `<div class="box" style="font-size:10px;">🚩 <strong>Standards einstudieren:</strong> ${tage
+    box.innerHTML = `<div class="box" style="font-size:var(--fs-small);">🚩 <strong>Standards einstudieren:</strong> ${tage
         ? `${tage} Standards-Tag${tage > 1 ? 'e' : ''} im Wochenplan - die gewählte Variante gewinnt ${plus} Punkte pro Spieltag.`
         : '<span style="color:var(--accent);">Kein Standards-Tag im Wochenplan - setze oben einen Tag auf „🚩 Standards“.</span>'}
         <div style="color:var(--text-muted); margin-top:2px;">Nicht geübte Varianten verlieren ${DRILL_DECAY} Punkte pro Spieltag. Jeder Standards-Tag fehlt Taktik, Technik oder Kondition.</div></div>${zeilen}`;

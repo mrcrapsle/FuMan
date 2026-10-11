@@ -107,13 +107,13 @@ function renderPregameTalkBox() {
     const t = getPendingPregameTalk();
     const knopf = type => {
         const gewaehlt = t && t.type === type;
-        const alt = isPregameTalkWornOut(type) ? ' <span style="font-size:8px; opacity:0.8;">(kennen sie schon)</span>' : '';
-        return `<button onclick="choosePregameTalk('${type}')" class="${gewaehlt ? 'btn-action' : 'btn-secondary'}" style="font-size:10px; margin-bottom:4px;">${gewaehlt ? '✔ ' : ''}${PREGAME_TALKS[type].label}${alt}</button>`;
+        const alt = isPregameTalkWornOut(type) ? ' <span style="font-size:var(--fs-micro); opacity:0.8;">(kennen sie schon)</span>' : '';
+        return `<button onclick="choosePregameTalk('${type}')" class="${gewaehlt ? 'btn-action' : 'btn-secondary'}" style="font-size:var(--fs-small); margin-bottom:4px;">${gewaehlt ? '✔ ' : ''}${PREGAME_TALKS[type].label}${alt}</button>`;
     };
     box.innerHTML = `<div class="panel"><div class="panel-header">🗣️ KABINENANSPRACHE VOR DEM ANPFIFF</div>
-        <div class="box" style="font-size:10px;">${lage}. In der Startelf: ${c.count('Ruhig') + c.count('Bescheiden')} ruhige/bescheidene, ${c.count('Ehrgeizig') + c.count('Selbstbewusst')} ehrgeizige/selbstbewusste, ${c.count('Emotional') + c.count('Hitzköpfig')} emotionale/hitzköpfige Spieler.
+        <div class="box" style="font-size:var(--fs-small);">${lage}. In der Startelf: ${c.count('Ruhig') + c.count('Bescheiden')} ruhige/bescheidene, ${c.count('Ehrgeizig') + c.count('Selbstbewusst')} ehrgeizige/selbstbewusste, ${c.count('Emotional') + c.count('Hitzköpfig')} emotionale/hitzköpfige Spieler.
             <div style="color:var(--text-muted); margin-top:2px;">Konzentration wirkt als Favorit, Mut als Außenseiter, Druck spaltet: Ehrgeizige wachsen, Hitzköpfe verkrampfen - und nach einer Niederlage kostet er Moral.</div></div>
         ${knopf('fokus')}${knopf('mut')}${knopf('druck')}
-        ${t ? `<div style="font-size:10px; color:${t.bonus >= 0 ? 'var(--primary)' : 'var(--danger)'}; margin-top:2px;">Wirkung heute: ${t.bonus >= 0 ? '+' : ''}${String(t.bonus).replace('.', ',')} Stärke</div>` : '<div style="font-size:10px; color:var(--text-muted);">Ohne Ansprache geht die Mannschaft ohne Extra-Impuls aufs Feld.</div>'}
+        ${t ? `<div style="font-size:var(--fs-small); color:${t.bonus >= 0 ? 'var(--primary)' : 'var(--danger)'}; margin-top:2px;">Wirkung heute: ${t.bonus >= 0 ? '+' : ''}${String(t.bonus).replace('.', ',')} Stärke</div>` : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Ohne Ansprache geht die Mannschaft ohne Extra-Impuls aufs Feld.</div>'}
     </div>`;
 }

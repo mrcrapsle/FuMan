@@ -152,10 +152,10 @@ function renderCupFinalCard() {
     if (cf0 && cf0.celebration === 'offen') {
         if (cf0.season !== game.season || game.matchday > (cf0.decideBy || 0)) { cf0.celebration = 'verpasst'; box.innerHTML = ''; return; }
         const k = CUP_FINAL_COSTS[cf0.comp];
-        box.innerHTML = `<div class="box" style="font-size:10px; border-left-color:var(--gold);">🏆 <strong>${getCupFinalName(cf0.comp)} gewonnen!</strong> Wie wird gefeiert?
+        box.innerHTML = `<div class="box" style="font-size:var(--fs-small); border-left-color:var(--gold);">🏆 <strong>${getCupFinalName(cf0.comp)} gewonnen!</strong> Wie wird gefeiert?
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-top:4px;">
-                <button onclick="chooseCupCelebration('korso')" class="btn-action" style="font-size:9px;">🚗 Autokorso (${formatVal(k.korso)})<br><span style="font-size:8px;">Fans +6, Medienimage +3</span></button>
-                <button onclick="chooseCupCelebration('kabine')" class="btn-secondary" style="font-size:9px;">🍾 Kabinenfeier<br><span style="font-size:8px;">kostenlos, Moral +8</span></button>
+                <button onclick="chooseCupCelebration('korso')" class="btn-action" style="font-size:var(--fs-caption);">🚗 Autokorso (${formatVal(k.korso)})<br><span style="font-size:var(--fs-micro);">Fans +6, Medienimage +3</span></button>
+                <button onclick="chooseCupCelebration('kabine')" class="btn-secondary" style="font-size:var(--fs-caption);">🍾 Kabinenfeier<br><span style="font-size:var(--fs-micro);">kostenlos, Moral +8</span></button>
             </div></div>`;
         return;
     }
@@ -165,11 +165,11 @@ function renderCupFinalCard() {
     const k = CUP_FINAL_COSTS[f.comp];
     const bonus = (cf.tickets === 'fans' ? 1 : 0) + (cf.zug ? 1.5 : 0) + (cf.camp ? 1 : 0);
     const zeile = (erledigt, text, knoepfe) => `<div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-top:4px;"><span>${erledigt ? '✅' : '⬜'} ${text}</span>${erledigt ? '' : `<span style="display:flex; gap:4px;">${knoepfe}</span>`}</div>`;
-    box.innerHTML = `<div class="box" style="font-size:10px; border-left-color:var(--gold);">🏟️ <strong>Finalwoche: ${getCupFinalName(f.comp)}</strong> gegen ${f.opponent} (Spieltag ${f.matchday}) · Prämie ${formatVal(f.prize)}
+    box.innerHTML = `<div class="box" style="font-size:var(--fs-small); border-left-color:var(--gold);">🏟️ <strong>Finalwoche: ${getCupFinalName(f.comp)}</strong> gegen ${f.opponent} (Spieltag ${f.matchday}) · Prämie ${formatVal(f.prize)}
         ${zeile(!!cf.tickets, `Ticketkontingent (${k.tickets.toLocaleString('de-DE')} Karten)${cf.tickets ? `: ${cf.tickets === 'fans' ? 'an die Fans' : 'an Sponsoren'}` : ''}`,
-            `<button onclick="chooseCupFinalTickets('fans')" class="btn-secondary" style="width:auto; font-size:9px;">Fans (${formatVal(k.tickets * k.preisFans)}, +1 Stärke)</button><button onclick="chooseCupFinalTickets('sponsoren')" class="btn-secondary" style="width:auto; font-size:9px;">Sponsoren (${formatVal(k.tickets * k.preisSponsor)})</button>`)}
-        ${zeile(cf.zug, 'Fan-Sonderzüge (+1,5 Stärke)', `<button onclick="bookCupFinalTrains()" class="btn-secondary" style="width:auto; font-size:9px;">${formatVal(k.zug)}</button>`)}
-        ${zeile(cf.camp, 'Kurztrainingslager (+1 Stärke)', `<button onclick="bookCupFinalCamp()" class="btn-secondary" style="width:auto; font-size:9px;">${formatVal(k.camp)}</button>`)}
+            `<button onclick="chooseCupFinalTickets('fans')" class="btn-secondary" style="width:auto; font-size:var(--fs-caption);">Fans (${formatVal(k.tickets * k.preisFans)}, +1 Stärke)</button><button onclick="chooseCupFinalTickets('sponsoren')" class="btn-secondary" style="width:auto; font-size:var(--fs-caption);">Sponsoren (${formatVal(k.tickets * k.preisSponsor)})</button>`)}
+        ${zeile(cf.zug, 'Fan-Sonderzüge (+1,5 Stärke)', `<button onclick="bookCupFinalTrains()" class="btn-secondary" style="width:auto; font-size:var(--fs-caption);">${formatVal(k.zug)}</button>`)}
+        ${zeile(cf.camp, 'Kurztrainingslager (+1 Stärke)', `<button onclick="bookCupFinalCamp()" class="btn-secondary" style="width:auto; font-size:var(--fs-caption);">${formatVal(k.camp)}</button>`)}
         <div style="color:var(--text-muted); margin-top:4px;">Vorbereitung bisher: +${String(bonus).replace('.', ',')} Stärke im Endspiel.</div></div>`;
 }
 
@@ -177,6 +177,6 @@ function renderCupFinalHistory() {
     const box = document.getElementById('cup-finals-history-box');
     if (!box) return;
     const liste = game.cupFinals || [];
-    box.innerHTML = liste.length ? liste.map(e => `<div class="box" style="font-size:10px; border-left-color:${e.won ? 'var(--gold)' : 'var(--text-muted)'};">${e.won ? '🏆' : '🥈'} <strong>${e.name} ${e.season}</strong>: ${e.score}${e.penalties ? ' (n. E.)' : ''} gegen ${e.opponent}${e.prep.length ? `<br><span style="color:var(--text-muted);">Vorbereitung: ${e.prep.join(', ')}</span>` : ''}</div>`).join('')
-        : '<div style="font-size:10px; color:var(--text-muted);">Noch kein Pokalfinale erreicht.</div>';
+    box.innerHTML = liste.length ? liste.map(e => `<div class="box" style="font-size:var(--fs-small); border-left-color:${e.won ? 'var(--gold)' : 'var(--text-muted)'};">${e.won ? '🏆' : '🥈'} <strong>${e.name} ${e.season}</strong>: ${e.score}${e.penalties ? ' (n. E.)' : ''} gegen ${e.opponent}${e.prep.length ? `<br><span style="color:var(--text-muted);">Vorbereitung: ${e.prep.join(', ')}</span>` : ''}</div>`).join('')
+        : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch kein Pokalfinale erreicht.</div>';
 }

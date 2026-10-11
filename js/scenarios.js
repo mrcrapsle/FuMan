@@ -153,19 +153,19 @@ function renderScenarioCard() {
     } else {
         inhalt = `<div>${s.status === 'geschafft' ? `✅ Geschafft ${'⭐'.repeat(s.stars)}${'☆'.repeat(3 - s.stars)}` : '❌ Gescheitert'} - ${s.result}</div><div style="color:var(--text-muted); margin-top:2px;">Die Karriere läuft als freies Spiel weiter.</div>`;
     }
-    box.innerHTML = `<div class="box" style="font-size:10px; border-left-color:var(--accent); margin-bottom:6px;">🎯 <strong>Szenario: ${sc.title}</strong>${inhalt}</div>`;
+    box.innerHTML = `<div class="box" style="font-size:var(--fs-small); border-left-color:var(--accent); margin-bottom:6px;">🎯 <strong>Szenario: ${sc.title}</strong>${inhalt}</div>`;
 }
 
 function renderNewGameScenarioOptions() {
     const box = document.getElementById('new-game-scenario-btns');
     if (!box) return;
-    const knopf = (id, text) => `<button onclick="selectNewGameScenario(${id ? `'${id}'` : 'null'})" class="${selectedNewGameScenario === id ? 'btn-action' : 'btn-secondary'}" style="font-size:9px; padding:5px 2px;">${text}</button>`;
+    const knopf = (id, text) => `<button onclick="selectNewGameScenario(${id ? `'${id}'` : 'null'})" class="${selectedNewGameScenario === id ? 'btn-action' : 'btn-secondary'}" style="font-size:var(--fs-caption); padding:5px 2px;">${text}</button>`;
     const sc = selectedNewGameScenario ? CAREER_SCENARIOS[selectedNewGameScenario] : null;
     box.innerHTML = `<div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
         ${knopf(null, '🎮 Freies Spiel')}
         ${Object.entries(CAREER_SCENARIOS).map(([id, s]) => knopf(id, s.title)).join('')}
     </div>
-    <div style="font-size:9px; color:var(--text-muted); margin-top:4px;">${sc ? `${sc.desc} (Startliga: ${leagueNames[sc.level]}, Liga- und Kapitalwahl entfallen.)` : 'Freies Spiel: Liga und Startkapital frei wählbar, kein festes Ziel.'}</div>`;
+    <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">${sc ? `${sc.desc} (Startliga: ${leagueNames[sc.level]}, Liga- und Kapitalwahl entfallen.)` : 'Freies Spiel: Liga und Startkapital frei wählbar, kein festes Ziel.'}</div>`;
 }
 
 function selectNewGameScenario(id) {

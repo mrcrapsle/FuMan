@@ -20,13 +20,13 @@
             let mat = rawMaterials[c.reqMat];
             row.innerHTML = `
                 <div class="panel-header"><span>${c.club}: ${c.amount}x ${c.item}</span><strong style="color:var(--primary);">Honorar: +${formatVal(c.payout)}</strong></div>
-                <div style="font-size:10px; margin-bottom:4px;">Materialbedarf: ${c.reqQty} kg ${mat.name} (Lager: ${mat.stock} kg)</div>
+                <div style="font-size:var(--fs-small); margin-bottom:4px;">Materialbedarf: ${c.reqQty} kg ${mat.name} (Lager: ${mat.stock} kg)</div>
                 <button onclick="completeB2BContract('${c.id}')" class="btn-industry" ${c.done?'disabled':''}>${c.done ? 'Auftrag ausgeliefert ✓' : 'Lohnfertigung produzieren & liefern'}</button>
             `;
             bList.appendChild(row);
         });
         if (!holdingCompany.b2bContracts.some(c => !c.done)) {
-            bList.insertAdjacentHTML('beforeend', `<div class="box" style="font-size:10px; color:var(--text-muted);">Keine offenen Aufträge. Neue kommen zum Saisonstart - je eigener Fabrik einer für ihr Produkt (Honorar etwa dreifache Materialkosten).</div>`);
+            bList.insertAdjacentHTML('beforeend', `<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Keine offenen Aufträge. Neue kommen zum Saisonstart - je eigener Fabrik einer für ihr Produkt (Honorar etwa dreifache Materialkosten).</div>`);
         }
     }
 

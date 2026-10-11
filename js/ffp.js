@@ -118,15 +118,15 @@
         let r = game.ffpLastResult;
         let strikes = game.ffpStrikes || 0;
         box.innerHTML = `
-            <div style="font-size:10px; color:var(--text-muted); margin-bottom:4px;">
+            <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:4px;">
                 Überwacht die Bilanzen der letzten ${FFP_MONITORING_SEASONS} Saisons (ohne Investitionen in Stadion, Vereinsgelände, Jugendarbeit und Kredite/Festgeld - die zählen nicht als Verlust). Geprüft wird am Saisonende.
             </div>
-            <div style="display:flex; justify-content:space-between; font-size:11px;">
+            <div style="display:flex; justify-content:space-between; font-size:var(--fs-body);">
                 <span>Status:</span>
                 <strong style="color:${strikes === 0 ? 'var(--primary)' : 'var(--danger)'};">${strikes === 0 ? 'Regelkonform ✓' : `${strikes}. Verstoß`}</strong>
             </div>
-            ${game.ffpTransferEmbargo ? '<div style="font-size:10px; color:var(--danger); margin-top:2px;">🚫 Transfersperre wegen Financial Fairplay aktiv</div>' : ''}
-            ${r ? `<div style="font-size:10px; color:var(--text-muted); margin-top:4px;">
+            ${game.ffpTransferEmbargo ? '<div style="font-size:var(--fs-small); color:var(--danger); margin-top:2px;">🚫 Transfersperre wegen Financial Fairplay aktiv</div>' : ''}
+            ${r ? `<div style="font-size:var(--fs-small); color:var(--text-muted); margin-top:4px;">
                 Letzte Prüfung (nach Saison ${r.season}): ${formatVal(r.kumulativ)} über ${r.ueberwachteSaisons} Saison(en), erlaubt wären mindestens ${formatVal(-r.erlaubt)}.
-            </div>` : '<div style="font-size:10px; color:var(--text-muted); margin-top:4px;">Noch keine Prüfung erfolgt - die erste Bilanzkontrolle findet am Ende dieser Saison statt.</div>'}`;
+            </div>` : '<div style="font-size:var(--fs-small); color:var(--text-muted); margin-top:4px;">Noch keine Prüfung erfolgt - die erste Bilanzkontrolle findet am Ende dieser Saison statt.</div>'}`;
     }

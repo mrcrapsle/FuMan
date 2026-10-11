@@ -208,7 +208,7 @@
         if (!box) return;
         let o = pendingJobApproach;
         if (!o || game.season > o.season || game.matchday - o.matchday >= 6) { box.innerHTML = ''; return; }
-        box.innerHTML = `<div class="box" style="font-size:11px; border-left-color:var(--gold); margin-bottom:6px;">
+        box.innerHTML = `<div class="box" style="font-size:var(--fs-body); border-left-color:var(--gold); margin-bottom:6px;">
             💼 <strong>Jobangebot:</strong> ${o.clubName} (${leagueNames[o.level]}, Stärke ${o.strength}) will dich als Trainer.
             <div style="display:flex; flex-direction:column; gap:4px; margin-top:6px;">
                 <button onclick="acceptJobOfferMove(this)" class="btn-action">🔄 Wechseln (Karriere bleibt, Kader neu)</button>
@@ -459,15 +459,15 @@
         let box = document.getElementById('player-of-month-box');
         if (!box) return;
         let hist = game.playerOfMonthHistory || [];
-        if (hist.length === 0) { box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Noch keine Auszeichnung vergeben.</div>'; return; }
-        box.innerHTML = hist.slice(0, 6).map(h => `<div class="box" style="font-size:10px; display:flex; justify-content:space-between;"><span>🌟 ${h.playerName} (S${h.season}/${h.matchday})</span><span>${h.goals} Tore</span></div>`).join('');
+        if (hist.length === 0) { box.innerHTML = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch keine Auszeichnung vergeben.</div>'; return; }
+        box.innerHTML = hist.slice(0, 6).map(h => `<div class="box" style="font-size:var(--fs-small); display:flex; justify-content:space-between;"><span>🌟 ${h.playerName} (S${h.season}/${h.matchday})</span><span>${h.goals} Tore</span></div>`).join('');
     }
     function renderPlayerOfSeasonBox() {
         let box = document.getElementById('player-of-season-box');
         if (!box) return;
         let hist = game.playerOfSeasonHistory || [];
-        if (hist.length === 0) { box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Noch keine Saison abgeschlossen.</div>'; return; }
-        box.innerHTML = hist.map(h => `<div class="box" style="font-size:10px; display:flex; justify-content:space-between;"><span>🏆 ${h.playerName} (Saison ${h.season})</span><span>${h.grade ? `Ø ${formatGrade(h.grade)} · ` : ''}${h.goals} Tore</span></div>`).join('');
+        if (hist.length === 0) { box.innerHTML = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch keine Saison abgeschlossen.</div>'; return; }
+        box.innerHTML = hist.map(h => `<div class="box" style="font-size:var(--fs-small); display:flex; justify-content:space-between;"><span>🏆 ${h.playerName} (Saison ${h.season})</span><span>${h.grade ? `Ø ${formatGrade(h.grade)} · ` : ''}${h.goals} Tore</span></div>`).join('');
     }
 
     function attributeGoalsToScorers(goalCount) {

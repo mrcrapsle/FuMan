@@ -284,12 +284,12 @@ function renderSaveSafetyBox() {
         let m = {};
         try { m = JSON.parse(raw).meta || {}; } catch (e) { m = { backupReason: 'beschädigt' }; }
         backup = `<div style="margin-top:6px;">🛟 <strong>Sicherheitskopie</strong> (${m.backupReason || 'ohne Angabe'}): ${m.clubName || '-'} · Saison ${m.season ?? '?'} · Spieltag ${m.matchday ?? '?'} · ${m.savedAt || ''}
-            <button onclick="restoreSaveBackup()" class="btn-secondary" style="font-size:9px; margin-top:4px;">🛟 Sicherheitskopie wiederherstellen</button></div>`;
+            <button onclick="restoreSaveBackup()" class="btn-secondary" style="font-size:var(--fs-caption); margin-top:4px;">🛟 Sicherheitskopie wiederherstellen</button></div>`;
     } else {
         backup = '<div style="margin-top:6px; color:var(--text-muted);">🛟 Sicherheitskopie: entsteht automatisch vor dem Laden, vor dem Überschreiben eines Slots und vor einem neuen Spiel.</div>';
     }
     const exp = game.lastExportSeason ? `Saison ${game.lastExportSeason}` : 'noch nie';
-    box.innerHTML = `<div style="font-size:10px;">
+    box.innerHTML = `<div style="font-size:var(--fs-small);">
         <div>📦 Speicher belegt: <strong style="color:${farbe};">${prozent} %</strong> (${Math.round(u.used / 1000)} von ~${Math.round(u.budget / 1000)} Tsd. Zeichen${u.foreign > 50000 ? `, davon ${Math.round(u.foreign / 1000)} Tsd. durch andere Seiten/Dateien` : ''})${u.blocked ? ' - <span style="color:var(--danger);">Speicher blockiert!</span>' : ''}</div>
         <div style="height:6px; background:rgba(255,255,255,0.08); border-radius:3px; margin-top:3px;"><div style="height:6px; width:${prozent}%; background:${farbe}; border-radius:3px;"></div></div>
         <div style="margin-top:4px; color:var(--text-muted);">📤 Letzter Datei-Export: ${exp} - nur eine exportierte Datei übersteht das Leeren des Browserspeichers.</div>

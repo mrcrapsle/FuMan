@@ -58,7 +58,7 @@ function renderRefereePreview() {
     const rec = (game.refereeHistory || {})[ref.id] || { spiele: 0 };
     const strenge = ref.cardMult >= 1.25 ? '🟥 zückt schnell Karten' : ref.cardMult <= 0.8 ? '🟩 lässt viel laufen' : '🟨 durchschnittlich streng';
     const bilanz = rec.spiele ? `Bisherige Bilanz: ${rec.siege}S ${rec.remis}U ${rec.niederlagen}N` : 'Noch kein gemeinsames Spiel';
-    box.innerHTML = `<div style="font-size:9px; color:var(--text-muted); margin:6px 0; padding:6px; background:rgba(255,255,255,0.03); border-radius:4px;">
+    box.innerHTML = `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin:6px 0; padding:6px; background:rgba(255,255,255,0.03); border-radius:4px;">
         🧑‍⚖️ Schiedsrichter: <strong style="color:var(--text);">${ref.name}</strong> (${ref.style}) · ${strenge}<br>${bilanz}
         ${game.tackleHardness === 'hart' && ref.cardMult >= 1.2 ? '<br><span style="color:var(--accent);">⚠️ Harte Zweikampfführung gegen diesen Schiedsrichter ist riskant.</span>' : ''}
         ${typeof getRefereeGrudgeNote === 'function' ? getRefereeGrudgeNote(ref.id, ref.name) : ''}

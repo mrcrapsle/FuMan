@@ -32,13 +32,13 @@
         let personality = getManagerMediaPersonalityLabel();
         box.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <span style="font-size:10px;">Öffentliches Medienimage</span>
+                <span style="font-size:var(--fs-small);">Öffentliches Medienimage</span>
                 <strong style="color:${personality.color};">${img}/100 · ${personality.label}</strong>
             </div>
             <div style="background:rgba(228,197,140,0.1); border-radius:4px; height:8px; overflow:hidden; margin-bottom:6px;">
                 <div style="width:${img}%; height:100%; background:${personality.color};"></div>
             </div>
-            <div style="font-size:9px; color:var(--text-muted);">Beeinflusst durch Interview-Antworten - ein positives Image lockt bessere Sponsoren-Erstangebote an.</div>
+            <div style="font-size:var(--fs-caption); color:var(--text-muted);">Beeinflusst durch Interview-Antworten - ein positives Image lockt bessere Sponsoren-Erstangebote an.</div>
             <div id="media-image-trend-chart" style="margin-top:6px;"></div>
         `;
         renderMediaImageTrendChart();
@@ -88,10 +88,11 @@
             let synBox = document.createElement('div');
             synBox.className = 'panel';
             synBox.style.borderColor = 'var(--gold)';
+            synBox.style.gridColumn = '1 / -1';
             synBox.innerHTML = `<div class="panel-header" style="color:var(--gold);">✨ AKTIVE PERK-SYNERGIEN</div>` +
                 game.unlockedSynergies.map(id => {
                     let syn = PERK_SYNERGIES.find(s => s.id === id);
-                    return syn ? `<div style="font-size:10px; margin-bottom:4px;"><strong>${syn.label}:</strong> ${syn.desc}</div>` : '';
+                    return syn ? `<div style="font-size:var(--fs-small); margin-bottom:4px;"><strong>${syn.label}:</strong> ${syn.desc}</div>` : '';
                 }).join('');
             grid.appendChild(synBox);
         }
@@ -99,7 +100,7 @@
         // "Krisenmanager" (Stabilität & Schadensbegrenzung) - unabhängig kombinierbar, keine
         // exklusive Wahl, aber klar erkennbar als zwei unterschiedliche Spielstile.
         let aufbauHeader = document.createElement('div');
-        aufbauHeader.style.cssText = 'font-size:11px; font-weight:800; color:var(--primary); margin:8px 0 4px 4px;';
+        aufbauHeader.style.cssText = 'grid-column:1 / -1; font-size:var(--fs-body); font-weight:800; color:var(--primary); margin:8px 0 4px 4px;';
         aufbauHeader.innerText = '🏗️ ZWEIG: AUFBAU-SPEZIALIST';
         grid.appendChild(aufbauHeader);
         perkData.filter(p => p.branch === 'aufbau').forEach(p => {
@@ -109,7 +110,7 @@
             card.style.borderColor = active ? 'var(--primary)' : 'var(--border)';
             card.innerHTML = `
                 <div class="panel-header"><span>${p.name}</span><strong style="color:${active?'var(--primary)':'#aaa'};">${active?'Aktiviert ✓':'Gesperrt'}</strong></div>
-                <div style="font-size:10px; color:#aaa; margin-bottom:6px;">${p.desc}</div>
+                <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:6px;">${p.desc}</div>
                 <button onclick="unlockManagerPerk('${p.id}')" class="${active?'btn-secondary':'btn-action'}" ${active||managerRPG.points<1?'disabled':''}>
                     ${active ? 'Bereits freigeschaltet' : 'Freischalten (1 Skill-Punkt)'}
                 </button>
@@ -117,7 +118,7 @@
             grid.appendChild(card);
         });
         let kriseHeader = document.createElement('div');
-        kriseHeader.style.cssText = 'font-size:11px; font-weight:800; color:var(--danger); margin:12px 0 4px 4px;';
+        kriseHeader.style.cssText = 'grid-column:1 / -1; font-size:var(--fs-body); font-weight:800; color:var(--danger); margin:12px 0 4px 4px;';
         kriseHeader.innerText = '🛡️ ZWEIG: KRISENMANAGER';
         grid.appendChild(kriseHeader);
         perkData.filter(p => p.branch === 'krise').forEach(p => {
@@ -127,7 +128,7 @@
             card.style.borderColor = active ? 'var(--danger)' : 'var(--border)';
             card.innerHTML = `
                 <div class="panel-header"><span>${p.name}</span><strong style="color:${active?'var(--danger)':'#aaa'};">${active?'Aktiviert ✓':'Gesperrt'}</strong></div>
-                <div style="font-size:10px; color:#aaa; margin-bottom:6px;">${p.desc}</div>
+                <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:6px;">${p.desc}</div>
                 <button onclick="unlockManagerPerk('${p.id}')" class="${active?'btn-secondary':'btn-action'}" ${active||managerRPG.points<1?'disabled':''}>
                     ${active ? 'Bereits freigeschaltet' : 'Freischalten (1 Skill-Punkt)'}
                 </button>

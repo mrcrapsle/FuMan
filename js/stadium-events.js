@@ -94,30 +94,30 @@ function renderStadiumEventsPanel() {
 
     if (pending) {
         const ready = game.matchday >= pending.scheduledMatchday || pending.season !== game.season;
-        html += `<div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:8px; font-size:9px;">
+        html += `<div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:8px; font-size:var(--fs-caption);">
             <div><strong>${pending.name}</strong> · geplant für Spieltag ${pending.scheduledMatchday}</div>
-            <div style="color:var(--text-muted); font-size:8px;">Organisationskosten bezahlt: ${formatVal(pending.cost)}</div>
+            <div style="color:var(--text-muted); font-size:var(--fs-micro);">Organisationskosten bezahlt: ${formatVal(pending.cost)}</div>
             ${ready
-                ? `<button onclick="runStadiumEvent('${pending.id}')" class="btn-primary" style="font-size:9px; padding:4px 6px; margin-top:4px;">Event durchführen</button>`
-                : '<div style="font-size:8px; color:var(--accent); margin-top:4px;">Vorbereitung läuft …</div>'}
+                ? `<button onclick="runStadiumEvent('${pending.id}')" class="btn-primary" style="font-size:var(--fs-caption); padding:4px 6px; margin-top:4px;">Event durchführen</button>`
+                : '<div style="font-size:var(--fs-micro); color:var(--accent); margin-top:4px;">Vorbereitung läuft …</div>'}
         </div>`;
     } else {
         const blocked = getStadiumEventBlockReason();
-        if (blocked) html += `<div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">${blocked}</div>`;
+        if (blocked) html += `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">${blocked}</div>`;
         STADIUM_EVENT_TYPES.forEach(t => {
             const expected = getStadiumEventExpectedRevenue(t);
             const cost = Math.round(expected * STADIUM_EVENT_COST_SHARE);
             html += `<button onclick="scheduleStadiumEvent('${t.key}')" class="btn-secondary" ${blocked ? 'disabled' : ''}
-                style="width:100%; font-size:9px; padding:5px; margin-bottom:3px; text-align:left;">
+                style="width:100%; font-size:var(--fs-caption); padding:5px; margin-bottom:3px; text-align:left;">
                 ${t.icon} ${t.name} · Kosten ${formatVal(cost)} · erwartet ~${formatVal(expected)}</button>`;
         });
     }
 
     const done = (stadium.events || []).filter(e => e.completed).slice(-3).reverse();
     if (done.length) {
-        html += '<div style="font-size:9px; font-weight:bold; margin:8px 0 4px;">Letzte Events</div>';
+        html += '<div style="font-size:var(--fs-caption); font-weight:bold; margin:8px 0 4px;">Letzte Events</div>';
         done.forEach(e => {
-            html += `<div style="font-size:8px; color:var(--text-muted);">S${e.season}/ST${e.completedMatchday}: ${e.name} - ${(e.visitors || 0).toLocaleString('de-DE')} Besucher, ${formatVal((e.revenue || 0) - (e.cost || 0))}</div>`;
+            html += `<div style="font-size:var(--fs-micro); color:var(--text-muted);">S${e.season}/ST${e.completedMatchday}: ${e.name} - ${(e.visitors || 0).toLocaleString('de-DE')} Besucher, ${formatVal((e.revenue || 0) - (e.cost || 0))}</div>`;
         });
     }
     box.innerHTML = html;

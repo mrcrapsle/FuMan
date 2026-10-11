@@ -72,15 +72,15 @@ function renderMatchPrepBox() {
     const box = document.getElementById('matchprep-target-box');
     if (!box) return;
     const opp = getNextLeagueOpponentTeam();
-    if (!opp) { box.innerHTML = '<div class="box" style="font-size:10px;">🎯 Match-Prep: am nächsten Spieltag kein Ligaspiel - dafür lohnt sich ein anderer Schwerpunkt.</div>'; return; }
+    if (!opp) { box.innerHTML = '<div class="box" style="font-size:var(--fs-small);">🎯 Match-Prep: am nächsten Spieltag kein Ligaspiel - dafür lohnt sich ein anderer Schwerpunkt.</div>'; return; }
     const basis = AI_STYLE_ARCHETYPE[opp.playstyle] || 'B';
     const analyst = staffMembers.analyst && staffMembers.analyst.hired && getAnalystEffekt().bericht;
     const plan = analyst && typeof getOppTacticPlan === 'function' ? getOppTacticPlan(opp) : null;
     const m = getActiveMatchPrep() || (game.matchPrep && game.matchPrep.season === game.season && game.matchPrep.matchday === game.matchday ? game.matchPrep : null);
     const info = plan ? `Chef-Analyst: ${opp.name} plant <strong>${ARCHETYPE_LABELS[plan.arch]}</strong>.` : `Laut Presse spielt ${opp.name} meist <strong>${ARCHETYPE_LABELS[basis]}</strong> - ob der Trainer auf dich reagiert, weiß nur ein Chef-Analyst.`;
-    const knopf = arch => `<button onclick="setMatchPrepTarget('${arch}')" class="${m && m.arch === arch ? 'btn-action' : 'btn-secondary'}" style="font-size:10px;">${m && m.arch === arch ? '✔ ' : ''}${ARCHETYPE_LABELS[arch]}</button>`;
+    const knopf = arch => `<button onclick="setMatchPrepTarget('${arch}')" class="${m && m.arch === arch ? 'btn-action' : 'btn-secondary'}" style="font-size:var(--fs-small);">${m && m.arch === arch ? '✔ ' : ''}${ARCHETYPE_LABELS[arch]}</button>`;
     const aktiv = game.teamTraining === 'matchprep';
-    box.innerHTML = `<div class="box" style="font-size:10px; border-left-color:var(--accent);">🎯 <strong>Gegnervorbereitung</strong> (Schwerpunkt Match-Prep${aktiv ? '' : ' - derzeit nicht aktiv'}): nächster Ligagegner ${opp.name}. ${info}
+    box.innerHTML = `<div class="box" style="font-size:var(--fs-small); border-left-color:var(--accent);">🎯 <strong>Gegnervorbereitung</strong> (Schwerpunkt Match-Prep${aktiv ? '' : ' - derzeit nicht aktiv'}): nächster Ligagegner ${opp.name}. ${info}
         <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:4px; margin-top:4px;">${knopf('P')}${knopf('B')}${knopf('K')}</div>
         <div style="color:var(--text-muted); margin-top:3px;">Richtig getippt: +2,5 Stärke · daneben oder ohne Ziel: 0 (Taktik-Schwerpunkt bringt sicher +2). Nur Ligaspiele.</div></div>`;
 }

@@ -166,13 +166,13 @@ function renderCoTrainerLiveBox() {
         const text = en
             ? (anzahl ? `The assistant has given ${anzahl} hint(s) since kick-off.` : 'No hint yet since kick-off - he speaks up when the situation calls for it.')
             : (anzahl ? `Der Co-Trainer hat seit Anpfiff ${anzahl} Hinweis${anzahl === 1 ? '' : 'e'} gegeben.` : 'Bisher kein Hinweis seit Anpfiff - er meldet sich, wenn die Lage es verlangt.');
-        box.innerHTML = `<div style="font-size:9px; color:var(--text-muted); margin:4px 0;">🧑‍🏫 ${text}</div>`;
+        box.innerHTML = `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin:4px 0;">🧑‍🏫 ${text}</div>`;
         return;
     }
-    box.innerHTML = `<div class="box" style="font-size:10px; border-left-color:var(--teal); margin:4px 0;">🧑‍🏫 <strong>Co-Trainer:</strong> ${h.text}
+    box.innerHTML = `<div class="box" style="font-size:var(--fs-small); border-left-color:var(--teal); margin:4px 0;">🧑‍🏫 <strong>Co-Trainer:</strong> ${h.text}
         <div style="display:flex; gap:4px; flex-wrap:wrap; margin-top:4px;">
-            ${h.actions.map((a, i) => `<button onclick="followCoTrainerHint(${i})" class="btn-action" style="width:auto; font-size:10px;">${a.label}</button>`).join('')}
-            <button onclick="ignoreCoTrainerHint()" class="btn-secondary" style="width:auto; font-size:10px;">Nein danke</button>
+            ${h.actions.map((a, i) => `<button onclick="followCoTrainerHint(${i})" class="btn-action" style="width:auto; font-size:var(--fs-small);">${a.label}</button>`).join('')}
+            <button onclick="ignoreCoTrainerHint()" class="btn-secondary" style="width:auto; font-size:var(--fs-small);">Nein danke</button>
         </div></div>`;
 }
 

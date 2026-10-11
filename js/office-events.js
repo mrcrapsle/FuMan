@@ -405,16 +405,16 @@
         let rest = Math.max(0, OFFICE_EVENT_TIMEOUT - gewartet);
         panel.innerHTML = `
             <div class="office-event-card" style="border-color:${ereignis.farbe};">
-                <div style="font-size:10px; color:${ereignis.farbe}; font-weight:900; letter-spacing:0.5px;">${ereignis.person.toUpperCase()}</div>
-                <div style="font-size:13px; font-weight:900; margin:4px 0;">${game.officeEvent.titel}</div>
-                <div style="font-size:11px; color:#cbd5e1; font-style:italic; margin-bottom:8px;">${game.officeEvent.text}</div>
+                <div style="font-size:var(--fs-small); color:${ereignis.farbe}; font-weight:900; letter-spacing:0.5px;">${ereignis.person.toUpperCase()}</div>
+                <div style="font-size:var(--fs-title-sm); font-weight:900; margin:4px 0;">${game.officeEvent.titel}</div>
+                <div style="font-size:var(--fs-body); color:#cbd5e1; font-style:italic; margin-bottom:8px;">${game.officeEvent.text}</div>
                 ${ereignis.optionen.map((o, i) => `
-                    <button onclick="resolveOfficeEvent(${i})" class="btn-secondary" style="font-size:10px; text-align:left; margin-bottom:4px;">
-                        <strong>${o.label}</strong><br><span style="font-size:9px; color:var(--text-muted);">${o.hinweis()}</span>
+                    <button onclick="resolveOfficeEvent(${i})" class="btn-secondary" style="font-size:var(--fs-small); text-align:left; margin-bottom:4px;">
+                        <strong>${o.label}</strong><br><span style="font-size:var(--fs-caption); color:var(--text-muted);">${o.hinweis()}</span>
                     </button>`).join('')}
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-top:6px;">
-                    <span style="font-size:9px; color:var(--text-muted);">Geduldet sich noch ${rest} Spieltag${rest === 1 ? '' : 'e'}</span>
-                    <button onclick="closeOfficeEventPanel()" class="btn-secondary" style="width:auto; font-size:9px;">Später</button>
+                    <span style="font-size:var(--fs-caption); color:var(--text-muted);">Geduldet sich noch ${rest} Spieltag${rest === 1 ? '' : 'e'}</span>
+                    <button onclick="closeOfficeEventPanel()" class="btn-secondary" style="width:auto; font-size:var(--fs-caption);">Später</button>
                 </div>
             </div>`;
     }

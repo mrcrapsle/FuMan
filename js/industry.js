@@ -12,15 +12,15 @@
             card.innerHTML = `
                 <div class="panel-header" style="color:var(--industry);">
                     <span>${f.name}</span>
-                    <span>${f.owned ? `<strong style="color:var(--primary);">Stufe ${f.lvl}</strong>` : '<span style="color:#aaa;">Nicht im Besitz</span>'}</span>
+                    <span>${f.owned ? `<strong style="color:var(--primary);">Stufe ${f.lvl}</strong>` : '<span style="color:var(--text-muted);">Nicht im Besitz</span>'}</span>
                 </div>
-                <div style="font-size:10px; color:#aaa; margin-bottom:4px;">${f.desc}${f.owned ? ` · Produktionsdauer: ${getProductionDuration(k)} SpT` : ''}</div>
+                <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:4px;">${f.desc}${f.owned ? ` · Produktionsdauer: ${getProductionDuration(k)} SpT` : ''}</div>
                 ${f.owned ?
                     `<button onclick="upgradeFactory('${k}')" class="btn-industry" ${f.lvl>=f.max || holdingCompany.money < f.cost*(f.lvl+1) ?'disabled':''}>${f.lvl>=f.max?'Maximalstufe ✓':`Fabrik ausbauen (Stufe ${f.lvl+1}) [${formatVal(f.cost*(f.lvl+1))}]`}</button>
-                     ${f.lvl < f.max && holdingCompany.money < f.cost*(f.lvl+1) ? `<div style="font-size:8px; color:var(--danger);">Es fehlen ${formatVal(f.cost*(f.lvl+1) - holdingCompany.money)} auf dem Holding-Konto.</div>` : ''}
+                     ${f.lvl < f.max && holdingCompany.money < f.cost*(f.lvl+1) ? `<div style="font-size:var(--fs-micro); color:var(--danger);">Es fehlen ${formatVal(f.cost*(f.lvl+1) - holdingCompany.money)} auf dem Holding-Konto.</div>` : ''}
                      <button onclick="mergeFactoryWithCompetitor('${k}')" class="btn-secondary" style="margin-top:4px;">🤝 Mit Konkurrent fusionieren [${formatVal(f.cost*1.5)}]</button>` :
                     `<button onclick="buyFactory('${k}')" class="btn-action" ${holdingCompany.money < f.cost ? 'disabled' : ''}>🏭 Fabrik kaufen [${formatVal(f.cost)}]</button>
-                     ${holdingCompany.money < f.cost ? `<div style="font-size:8px; color:var(--danger); margin-top:3px;">Bezahlt wird vom <strong>Holding-Konto</strong> (${formatVal(holdingCompany.money)}) - es fehlen ${formatVal(f.cost - holdingCompany.money)}. Überweise Geld in der Holding-Zentrale.</div>` : ''}`
+                     ${holdingCompany.money < f.cost ? `<div style="font-size:var(--fs-micro); color:var(--danger); margin-top:3px;">Bezahlt wird vom <strong>Holding-Konto</strong> (${formatVal(holdingCompany.money)}) - es fehlen ${formatVal(f.cost - holdingCompany.money)}. Überweise Geld in der Holding-Zentrale.</div>` : ''}`
                 }
             `;
             grid.appendChild(card);
@@ -38,7 +38,7 @@
             row.className = 'panel';
             row.innerHTML = `
                 <div class="panel-header"><span>${m.name}</span><span style="color:var(--primary);">${m.stock} Stk. am Lager</span></div>
-                <div style="font-size:10px; margin-bottom:4px;">
+                <div style="font-size:var(--fs-small); margin-bottom:4px;">
                     Bedarf: <strong>${m.reqQty} kg ${mat.name}</strong> pro Stück (Börsenwert: ~${(mat.currentPrice * m.reqQty).toFixed(2)} €)<br>
                     Produktionsstatus: ${f.owned ? `<strong style="color:var(--primary);">Fabrik einsatzbereit ✓ (Dauer: ${duration} SpT)</strong>` : '<span style="color:var(--danger);">Fabrik fehlt!</span>'}
                 </div>
@@ -121,7 +121,7 @@
         let box = document.getElementById('production-queue-box');
         if (!box) return;
         if (!productionQueue || productionQueue.length === 0) {
-            box.innerHTML = '<div style="font-size:9px; color:var(--text-muted);">Keine laufenden Produktionsaufträge.</div>';
+            box.innerHTML = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Keine laufenden Produktionsaufträge.</div>';
             return;
         }
         // Deutlich sichtbarere grafische Countdown-Anzeige: große Tage-Zahl links,
@@ -133,10 +133,10 @@
             return `<div class="box" style="display:flex; align-items:center; gap:10px; padding:8px 8px 8px 13px;">
                 <div style="min-width:44px; text-align:center;">
                     <div style="font-size:22px; font-weight:900; color:var(--industry); line-height:1;">${order.matchdaysLeft}</div>
-                    <div style="font-size:8px; color:var(--text-muted); text-transform:uppercase;">SpT übrig</div>
+                    <div style="font-size:var(--fs-micro); color:var(--text-muted); text-transform:uppercase;">SpT übrig</div>
                 </div>
                 <div style="flex:1;">
-                    <div style="font-size:10px; margin-bottom:4px;">⚙️ ${order.amount}x ${m ? m.name : order.merchKey}</div>
+                    <div style="font-size:var(--fs-small); margin-bottom:4px;">⚙️ ${order.amount}x ${m ? m.name : order.merchKey}</div>
                     <div style="display:flex; gap:3px;">
                         ${segments.map(done => `<div style="flex:1; height:14px; border-radius:3px; background:${done ? 'var(--industry)' : 'rgba(228,197,140,0.15)'}; border:1px solid ${done ? 'var(--industry)' : 'rgba(228,197,140,0.3)'};"></div>`).join('')}
                     </div>
@@ -166,11 +166,11 @@
                     <span>${r.name}</span>
                     <strong style="color:var(--primary);">${r.stock.toLocaleString()} ${r.unit}</strong>
                 </div>
-                <div style="font-size:11px; margin-bottom:4px;">
+                <div style="font-size:var(--fs-body); margin-bottom:4px;">
                     Aktueller Börsenkurs: <strong>${r.currentPrice.toFixed(2)} € / kg</strong> 
-                    <span style="color:${deltaClass}; font-size:9px; font-weight:bold;">(${deltaIcon}${r.delta.toFixed(2)} €)</span>
+                    <span style="color:${deltaClass}; font-size:var(--fs-caption); font-weight:bold;">(${deltaIcon}${r.delta.toFixed(2)} €)</span>
                 </div>
-                <div style="font-size:9px; color:#aaa; margin-bottom:6px;">Basispreis: ${r.basePrice.toFixed(2)} € | Spanne: ${r.minPrice.toFixed(2)} - ${r.maxPrice.toFixed(2)} €</div>
+                <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Basispreis: ${r.basePrice.toFixed(2)} € | Spanne: ${r.minPrice.toFixed(2)} - ${r.maxPrice.toFixed(2)} €</div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
                     <button onclick="buyRawMaterial('${k}', 500)" class="btn-secondary">+500 kg [${formatVal(Math.round(r.currentPrice * 500))}]</button>
                     <button onclick="buyRawMaterial('${k}', 2000)" class="btn-secondary">+2.000 kg [${formatVal(Math.round(r.currentPrice * 2000))}]</button>
@@ -182,7 +182,7 @@
         // Konkurrenzfirmen & Übernahmeangebote
         let competitorBox = document.getElementById('competitor-firms-box');
         if (competitorBox) {
-            competitorBox.innerHTML = rawMaterials.competitorFirms.map(f => `<div class="box" style="font-size:10px;"><strong>${f.name}</strong> · Marktmacht: ${f.strength}${f.lastAction ? ` · <span style="color:var(--text-muted);">${f.lastAction}</span>` : ''}</div>`).join('');
+            competitorBox.innerHTML = rawMaterials.competitorFirms.map(f => `<div class="box" style="font-size:var(--fs-small);"><strong>${f.name}</strong> · Marktmacht: ${f.strength}${f.lastAction ? ` · <span style="color:var(--text-muted);">${f.lastAction}</span>` : ''}</div>`).join('');
         }
         let acqBox = document.getElementById('acquisition-offer-box');
         if (acqBox) {
@@ -190,7 +190,7 @@
             acqBox.style.display = offer ? 'block' : 'none';
             if (offer) {
                 acqBox.innerHTML = `<div class="panel-header" style="color:var(--accent);">💼 ÜBERNAHMEANGEBOT</div>
-                    <div class="box" style="font-size:10px;">${offer.firm} bietet <strong>${formatVal(offer.offer)}</strong> für die komplette Holding (noch ${offer.expiresMatchday - game.matchday} Spieltage gültig). Betriebswert der Fabriken: ${formatVal(getHoldingValuation())} - beim Verkauf gehen alle Fabriken weg, Holding-Konto und Lager bleiben.</div>
+                    <div class="box" style="font-size:var(--fs-small);">${offer.firm} bietet <strong>${formatVal(offer.offer)}</strong> für die komplette Holding (noch ${offer.expiresMatchday - game.matchday} Spieltage gültig). Betriebswert der Fabriken: ${formatVal(getHoldingValuation())} - beim Verkauf gehen alle Fabriken weg, Holding-Konto und Lager bleiben.</div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
                         <button onclick="resolveAcquisitionOffer(true)" class="btn-action">✅ Annehmen</button>
                         <button onclick="resolveAcquisitionOffer(false)" class="btn-secondary">❌ Ablehnen</button>

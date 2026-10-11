@@ -317,7 +317,7 @@ function renderWomenTeamView() {
     if (!box) return;
     const w = game.womenTeam;
     if (!w || !w.founded) {
-        box.innerHTML = `<div class="panel"><div class="panel-header">👩 FRAUENMANNSCHAFT GRÜNDEN</div><div class="box" style="font-size:10px;">
+        box.innerHTML = `<div class="panel"><div class="panel-header">👩 FRAUENMANNSCHAFT GRÜNDEN</div><div class="box" style="font-size:var(--fs-small);">
             Gründe eine eigene Frauenmannschaft. Sie startet in der ${WOMEN_LEAGUES[WOMEN_LEAGUES.length - 1].name} und kann bis in die
             ${WOMEN_LEAGUES[0].name} aufsteigen. Ihre Spiele laufen parallel zu den Herren-Spieltagen, Gehälter und Einnahmen
             erscheinen im Buchungsjournal.</div>
@@ -331,7 +331,7 @@ function renderWomenTeamView() {
     const zuschauerSchnitt = w.zuschauer.spiele ? Math.round(w.zuschauer.summe / w.zuschauer.spiele).toLocaleString('de-DE') : '–';
     const sponsorAktiv = w.sponsor && w.sponsor.season === game.season;
     let html = `<div class="panel"><div class="panel-header">👩 ${w.name.toUpperCase()}</div>
-        <div style="font-size:10px; display:grid; grid-template-columns:1fr 1fr; gap:4px;">
+        <div style="font-size:var(--fs-small); display:grid; grid-template-columns:1fr 1fr; gap:4px;">
             <div>Liga: <strong>${WOMEN_LEAGUES[w.leagueLevel].name}</strong></div>
             <div>Platz: <strong>${rank}.</strong> · Spieltag ${Math.min(w.round, WOMEN_MATCHDAYS)}/${WOMEN_MATCHDAYS}</div>
             <div>Teamstärke: <strong>${Math.round(womenOwnStrength())}</strong></div>
@@ -339,24 +339,24 @@ function renderWomenTeamView() {
             <div>Ø Zuschauer: <strong>${zuschauerSchnitt}</strong>${w.letztesHeim !== null ? ` · zuletzt ${w.letztesHeim.toLocaleString('de-DE')}` : ''}</div>
             <div>Sponsor: <strong>${sponsorAktiv ? `${w.sponsor.name} (${formatVal(w.sponsor.perMatchday)}/Spt)` : 'keiner'}</strong></div>
         </div>
-        ${w.lastResults.length ? `<div style="font-size:9px; color:var(--text-muted); margin-top:4px;">Letztes Spiel: ${w.lastResults.join(' · ')}</div>` : ''}
-        ${w.round >= WOMEN_MATCHDAYS ? '<div style="font-size:9px; color:var(--accent); margin-top:4px;">Saison beendet - Auf-/Abstieg zum Saisonwechsel.</div>' : ''}
-        ${next ? `<button onclick="upgradeWomenFoerderung()" class="btn-secondary" style="width:100%; font-size:9px; padding:5px; margin-top:6px;">⬆️ ${next.name} (${formatVal(next.cost)}, Entwicklung +${next.growth}/Saison, Gehälter ×${next.wageMult})</button>` : ''}
+        ${w.lastResults.length ? `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">Letztes Spiel: ${w.lastResults.join(' · ')}</div>` : ''}
+        ${w.round >= WOMEN_MATCHDAYS ? '<div style="font-size:var(--fs-caption); color:var(--accent); margin-top:4px;">Saison beendet - Auf-/Abstieg zum Saisonwechsel.</div>' : ''}
+        ${next ? `<button onclick="upgradeWomenFoerderung()" class="btn-secondary" style="width:100%; font-size:var(--fs-caption); padding:5px; margin-top:6px;">⬆️ ${next.name} (${formatVal(next.cost)}, Entwicklung +${next.growth}/Saison, Gehälter ×${next.wageMult})</button>` : ''}
         </div>`;
 
-    html += `<div class="panel"><div class="panel-header">🤝 SPONSOR</div><div style="font-size:9px;">`;
+    html += `<div class="panel"><div class="panel-header">🤝 SPONSOR</div><div style="font-size:var(--fs-caption);">`;
     if (sponsorAktiv) {
         html += `<div class="box">${w.sponsor.name} zahlt ${formatVal(w.sponsor.perMatchday)} pro Spieltag bis zum Saisonende.</div>`;
     } else if (w.sponsorOffers.length) {
         html += w.sponsorOffers.map((o, i) => `<div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin:3px 0;">
             <span>${o.name} · ${formatVal(o.perMatchday)} pro Spieltag</span>
-            <button onclick="signWomenSponsor(${i})" class="btn-secondary" style="font-size:9px; padding:3px 6px;">Unterschreiben</button></div>`).join('');
+            <button onclick="signWomenSponsor(${i})" class="btn-secondary" style="font-size:var(--fs-caption); padding:3px 6px;">Unterschreiben</button></div>`).join('');
     } else {
         html += '<div style="color:var(--text-muted);">Keine Angebote. Nach Saisonende gibt es neue.</div>';
     }
     html += '</div></div>';
 
-    html += `<div class="panel"><div class="panel-header">📊 TABELLE</div><table style="width:100%; font-size:9px; border-collapse:collapse;">
+    html += `<div class="panel"><div class="panel-header">📊 TABELLE</div><table style="width:100%; font-size:var(--fs-caption); border-collapse:collapse;">
         <tr style="color:var(--text-muted);"><td>#</td><td>Verein</td><td>Sp</td><td>Tore</td><td style="text-align:right;">Pkt</td></tr>`;
     tabelle.forEach((t, i) => {
         const zone = i === 0 && w.leagueLevel > 0 ? 'var(--primary)' : i >= WOMEN_TEAMS_PER_LEAGUE - 2 && w.leagueLevel < WOMEN_LEAGUES.length - 1 ? 'var(--danger)' : 'inherit';
@@ -364,20 +364,20 @@ function renderWomenTeamView() {
     });
     html += '</table></div>';
 
-    html += `<div class="panel"><div class="panel-header">🔁 SPIELERINNENMARKT</div><div style="font-size:9px;">`;
+    html += `<div class="panel"><div class="panel-header">🔁 SPIELERINNENMARKT</div><div style="font-size:var(--fs-caption);">`;
     html += w.market.map(p => `<div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin:3px 0;">
         <span>${p.pos} ${p.name} (${p.age}) · <strong>${p.strength}</strong>${p.age <= 27 ? ` · Pot. ${womenPotential(p)}` : ''}</span>
-        <button onclick="signWomenPlayer('${p.id}')" class="btn-secondary" style="font-size:9px; padding:3px 6px; white-space:nowrap;">${formatVal(womenMarketFee(p))}</button></div>`).join('')
+        <button onclick="signWomenPlayer('${p.id}')" class="btn-secondary" style="font-size:var(--fs-caption); padding:3px 6px; white-space:nowrap;">${formatVal(womenMarketFee(p))}</button></div>`).join('')
         || '<div style="color:var(--text-muted);">Keine Kandidatinnen mehr. Neue gibt es zum Saisonwechsel.</div>';
     html += `<div style="color:var(--text-muted); margin-top:4px;">Kader ${w.squad.length}/${WOMEN_MAX_SQUAD} · Ablöse wird sofort fällig</div></div></div>`;
 
     const kader = [...w.squad].sort((a, b) => b.strength - a.strength);
-    html += `<div class="panel"><div class="panel-header">👟 KADER (${kader.length})</div><div style="font-size:9px; display:grid; grid-template-columns:1fr 1fr; gap:2px 8px;">`;
+    html += `<div class="panel"><div class="panel-header">👟 KADER (${kader.length})</div><div style="font-size:var(--fs-caption); display:grid; grid-template-columns:1fr 1fr; gap:2px 8px;">`;
     html += kader.map(p => `<div>${p.pos} ${p.name} (${p.age}) · <strong>${p.strength}</strong>${p.age <= 27 ? ` · Pot. ${womenPotential(p)}` : ''}${p.goals ? ` · ⚽${p.goals}` : ''}</div>`).join('');
     html += '</div></div>';
 
     if (w.history.length) {
-        html += '<div class="panel"><div class="panel-header">📜 SAISONHISTORIE</div><div style="font-size:9px;">'
+        html += '<div class="panel"><div class="panel-header">📜 SAISONHISTORIE</div><div style="font-size:var(--fs-caption);">'
             + w.history.map(h => `<div>Saison ${h.season}: Platz ${h.rank} in der ${h.liga}</div>`).join('') + '</div></div>';
     }
     box.innerHTML = html;

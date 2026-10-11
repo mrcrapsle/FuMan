@@ -69,6 +69,6 @@ function renderProLoansBox() {
     if (!box) return;
     const leihen = getProLoans();
     const fenster = typeof isTransferWindowOpen === 'function' && isTransferWindowOpen();
-    if (!leihen.length) { box.innerHTML = fenster ? `<div class="box" style="font-size:9px; color:var(--text-muted);">🔁 Profis verleihen: bis Saisonende an einen Verein, bei dem sie spielen - der Leihverein übernimmt 40-100 % des Gehalts. Knopf in der Liste unten.</div>` : ''; return; }
-    box.innerHTML = `<div class="box" style="font-size:9px;"><strong>🔁 Verliehene Profis</strong>${leihen.map(l => `<div>${l.player.name} bei ${l.loanClub} - noch ${l.duration} Spieltage, Eigenanteil ${formatVal(l.eigen)}/SpT</div>`).join('')}</div>`;
+    if (!leihen.length) { box.innerHTML = fenster ? `<div class="box" style="font-size:var(--fs-caption); color:var(--text-muted);">🔁 Profis verleihen: bis Saisonende an einen Verein, bei dem sie spielen - der Leihverein übernimmt 40-100 % des Gehalts. Knopf in der Liste unten.</div>` : ''; return; }
+    box.innerHTML = `<div class="box" style="font-size:var(--fs-caption);"><strong>🔁 Verliehene Profis</strong>${leihen.map(l => `<div>${l.player.name} bei ${l.loanClub} - noch ${l.duration} Spieltage, Eigenanteil ${formatVal(l.eigen)}/SpT</div>`).join('')}</div>`;
 }

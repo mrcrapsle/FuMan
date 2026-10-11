@@ -57,12 +57,12 @@ function renderRefereeCritiqueBox() {
     const ref = currentMatch.referee;
     const rot = (currentMatch.controversies || []).some(c => c.type === 'rot');
     const gebuehr = REF_COMPLAINT_FEE[game.leagueLevel] ?? 250;
-    box.innerHTML = `<div class="box" style="font-size:10px; border-left-color:var(--danger);">🧑‍⚖️ <strong>Strittige Szenen mit ${ref.name}:</strong>
+    box.innerHTML = `<div class="box" style="font-size:var(--fs-small); border-left-color:var(--danger);">🧑‍⚖️ <strong>Strittige Szenen mit ${ref.name}:</strong>
         <div style="color:var(--text-muted);">${currentMatch.controversies.map(describeControversy).join(' · ')}</div>
         <div style="margin-top:4px;">Die Reporter warten - was sagst du zum Schiedsrichter?</div>
-        <button onclick="chooseRefereeCritique('kritik')" class="btn-danger" style="font-size:10px; margin-top:4px;">😠 Öffentlich kritisieren · Fans +3, Medien -2, Strafe ${formatVal(getRefCritiqueFine())}, er pfeift dich 2 Spiele strenger</button>
-        <button onclick="chooseRefereeCritique('beschwerde')" class="btn-secondary" style="font-size:10px; margin-top:4px;">📝 Schriftliche Beschwerde · ${formatVal(gebuehr)} Gebühr, ${rot ? '35 % Chance: Rot-Sperre aufgehoben' : 'ohne Rot nur Vorstand +1'}</button>
-        <button onclick="chooseRefereeCritique('schweigen')" class="btn-secondary" style="font-size:10px; margin-top:4px;">🤐 Nichts sagen · Vorstand +2, Fans -1</button></div>`;
+        <button onclick="chooseRefereeCritique('kritik')" class="btn-danger" style="font-size:var(--fs-small); margin-top:4px;">😠 Öffentlich kritisieren · Fans +3, Medien -2, Strafe ${formatVal(getRefCritiqueFine())}, er pfeift dich 2 Spiele strenger</button>
+        <button onclick="chooseRefereeCritique('beschwerde')" class="btn-secondary" style="font-size:var(--fs-small); margin-top:4px;">📝 Schriftliche Beschwerde · ${formatVal(gebuehr)} Gebühr, ${rot ? '35 % Chance: Rot-Sperre aufgehoben' : 'ohne Rot nur Vorstand +1'}</button>
+        <button onclick="chooseRefereeCritique('schweigen')" class="btn-secondary" style="font-size:var(--fs-small); margin-top:4px;">🤐 Nichts sagen · Vorstand +2, Fans -1</button></div>`;
 }
 
 function chooseRefereeCritique(art) {

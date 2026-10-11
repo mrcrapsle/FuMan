@@ -95,13 +95,13 @@ function renderBuybackBox() {
     if (!liste.length) { box.innerHTML = ''; return; }
     const fenster = typeof isTransferWindowOpen === 'function' ? isTransferWindowOpen() : true;
     box.innerHTML = `<div class="panel"><div class="panel-header">↩️ RÜCKKAUFOPTIONEN</div>
-        ${fenster ? '' : '<div class="box" style="font-size:9px;">Zurückholen geht nur im Transferfenster (Spieltag 1-3 oder Winterfenster).</div>'}
+        ${fenster ? '' : '<div class="box" style="font-size:var(--fs-caption);">Zurückholen geht nur im Transferfenster (Spieltag 1-3 oder Winterfenster).</div>'}
         ${liste.map(o => {
             const diff = o.player.strength - o.saleStrength;
-            return `<div class="box" style="font-size:10px;">
+            return `<div class="box" style="font-size:var(--fs-small);">
                 <div><strong>${o.player.name}</strong> (${o.player.pos}, ${o.player.age} J.) bei ${o.club} · Stärke <strong>${o.player.strength}</strong> <span style="color:${diff > 0 ? 'var(--primary)' : diff < 0 ? 'var(--danger)' : 'var(--text-muted)'};">(${diff >= 0 ? '+' : ''}${diff} seit dem Verkauf)</span></div>
                 <div style="color:var(--text-muted);">Marktwert ${formatVal(o.player.marketValue)} · Option bis Saison ${o.untilSeason}</div>
-                <button onclick="exerciseBuyback('${o.player.id}')" class="${fenster ? 'btn-action' : 'btn-secondary'}" style="font-size:10px; margin-top:4px;">↩️ Zurückholen für ${formatVal(o.price)}</button>
+                <button onclick="exerciseBuyback('${o.player.id}')" class="${fenster ? 'btn-action' : 'btn-secondary'}" style="font-size:var(--fs-small); margin-top:4px;">↩️ Zurückholen für ${formatVal(o.price)}</button>
             </div>`;
         }).join('')}</div>`;
 }

@@ -42,7 +42,7 @@
     function renderSquadRadar() {
         let container = document.getElementById('squad-radar-container');
         if (!container || squad.length === 0) {
-            if (container) container.innerHTML = '<div style="font-size:9px; color:#94a3b8;">Kader erforderlich</div>';
+            if (container) container.innerHTML = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Kader erforderlich</div>';
             return;
         }
 
@@ -102,7 +102,7 @@
             let labelRadius = (size / 2) * 1.15;
             let x = center + labelRadius * Math.cos(angle);
             let y = center + labelRadius * Math.sin(angle);
-            return `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" fill="#aaa" font-size="10" font-weight="600">${attr.label}</text>`;
+            return `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" fill="var(--text-muted)" font-size="12" font-weight="600">${attr.label}</text>`;
         }).join('');
 
         // Wert-Labels auf den Datenpunkten
@@ -111,7 +111,7 @@
             let valueRadius = (size / 2) * (attr.value / maxValue) * 0.7;
             let x = center + valueRadius * Math.cos(angle);
             let y = center + valueRadius * Math.sin(angle);
-            return `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" fill="var(--primary)" font-size="9" font-weight="700">${attr.value}</text>`;
+            return `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" fill="var(--primary)" font-size="11" font-weight="700">${attr.value}</text>`;
         }).join('');
 
         let svg = `
@@ -159,8 +159,8 @@
             let pct = (m.value / m.max * 100).toFixed(0);
             html += `
                 <div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:8px; border:1px solid rgba(255,255,255,0.1);">
-                    <div style="font-size:9px; color:#aaa; margin-bottom:4px;">${m.label}</div>
-                    <div style="font-size:16px; font-weight:700; color:${m.color}; margin-bottom:4px;">${m.value}</div>
+                    <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${m.label}</div>
+                    <div style="font-size:var(--fs-title); font-weight:700; color:${m.color}; margin-bottom:4px;">${m.value}</div>
                     <div style="height:4px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden;">
                         <div style="height:100%; width:${pct}%; background:${m.color}; border-radius:2px;"></div>
                     </div>
@@ -185,7 +185,7 @@
 
         let otherTeams = currentLeague.filter(t => t.id !== game.clubId && t.stats);
         if (otherTeams.length === 0) {
-            container.innerHTML = '<div style="font-size:9px; color:#94a3b8;">Vergleichsdaten nicht verfügbar</div>';
+            container.innerHTML = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Vergleichsdaten nicht verfügbar</div>';
             return;
         }
 
@@ -194,7 +194,7 @@
         let leagueAvgPass = Math.round(otherTeams.reduce((s, t) => s + (t.avgPassing || 50), 0) / otherTeams.length);
 
         let html = `
-            <div style="font-size:9px; color:#94a3b8; margin-bottom:6px;">Vergleich zum Liga-Durchschnitt</div>
+            <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Vergleich zum Liga-Durchschnitt</div>
             <div style="display:grid; gap:6px;">
         `;
 
@@ -212,7 +212,7 @@
 
             html += `
                 <div>
-                    <div style="display:flex; justify-content:space-between; font-size:9px; margin-bottom:2px;">
+                    <div style="display:flex; justify-content:space-between; font-size:var(--fs-caption); margin-bottom:2px;">
                         <span>${c.label}</span>
                         <span style="color:${diffColor}; font-weight:700;">${diff > 0 ? '+' : ''}${diff}</span>
                     </div>

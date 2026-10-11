@@ -111,7 +111,7 @@ function renderTransferStrategyCard() {
         if (s.choice === 'jugend') stand = ` Stand: ${countStrategyYouthPlayers()} von ${STRATEGY_YOUTH_PLAYERS} Eigengewächsen mit ${STRATEGY_YOUTH_GAMES}+ Ligaspielen.`;
         else if (s.choice === 'sofort' && s.goal) stand = ` Ziel: Platz ${s.goal}.`;
         else if (s.choice === 'sparen') stand = ` Ziel: Saison ohne Verlust (bisher ${(game.ffpSeasonNet || 0) >= 0 ? '+' : ''}${formatVal(Math.round(game.ffpSeasonNet || 0))}).`;
-        box.innerHTML = game.matchday <= 34 ? `<div class="box" style="font-size:10px; border-left-color:var(--gold);">🏛️ Transferstrategie: ${cfg.label}.${stand}</div>` : '';
+        box.innerHTML = game.matchday <= 34 ? `<div class="box" style="font-size:var(--fs-small); border-left-color:var(--gold);">🏛️ Transferstrategie: ${cfg.label}.${stand}</div>` : '';
         return;
     }
     if (!isTransferStrategyOpen()) { box.innerHTML = ''; return; }
@@ -121,11 +121,11 @@ function renderTransferStrategyCard() {
     const z = shift => ziel ? `Platz ${Math.max(1, Math.min(teams, ziel + shift))}` : 'Ziel unverändert';
     const b = choice => formatVal(Math.abs(getStrategyBudgetDelta(choice)));
     box.innerHTML = `<div class="panel" style="border:1px solid var(--gold);"><div class="panel-header" style="color:var(--gold);">🏛️ TRANSFERSTRATEGIE MIT DEM VORSTAND</div>
-        <div class="box" style="font-size:10px;">Bis Spieltag ${TRANSFER_STRATEGY_LAST_MD}, eine Linie pro Saison. Saisonziel bisher: ${ziel ? 'Platz ' + ziel : '-'}. Abrechnung am Saisonende.</div>
+        <div class="box" style="font-size:var(--fs-small);">Bis Spieltag ${TRANSFER_STRATEGY_LAST_MD}, eine Linie pro Saison. Saisonziel bisher: ${ziel ? 'Platz ' + ziel : '-'}. Abrechnung am Saisonende.</div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
-            <button onclick="chooseTransferStrategy('jugend')" class="btn-secondary" style="font-size:10px;">🌱 Jugend fördern: -${b('jugend')} Budget, ${z(1)}, Sichtung halber Preis - ${STRATEGY_YOUTH_PLAYERS} Eigengewächse mit ${STRATEGY_YOUTH_GAMES}+ Spielen: +6, sonst -6</button>
-            <button onclick="chooseTransferStrategy('sofort')" class="btn-action" style="font-size:10px;">🚀 Sofort-Erfolg: +${b('sofort')} Budget, ${z(-2)} - erreicht +5, verfehlt -8</button>
-            <button onclick="chooseTransferStrategy('sparen')" class="btn-secondary" style="font-size:10px;">💰 Sparen: -${b('sparen')} Budget, ${z(2)} - Saison ohne Verlust +5, sonst -6</button>
-            <button onclick="chooseTransferStrategy('ausgewogen')" class="btn-secondary" style="font-size:10px;">⚖️ Ausgewogen: alles bleibt wie geplant</button>
+            <button onclick="chooseTransferStrategy('jugend')" class="btn-secondary" style="font-size:var(--fs-small);">🌱 Jugend fördern: -${b('jugend')} Budget, ${z(1)}, Sichtung halber Preis - ${STRATEGY_YOUTH_PLAYERS} Eigengewächse mit ${STRATEGY_YOUTH_GAMES}+ Spielen: +6, sonst -6</button>
+            <button onclick="chooseTransferStrategy('sofort')" class="btn-action" style="font-size:var(--fs-small);">🚀 Sofort-Erfolg: +${b('sofort')} Budget, ${z(-2)} - erreicht +5, verfehlt -8</button>
+            <button onclick="chooseTransferStrategy('sparen')" class="btn-secondary" style="font-size:var(--fs-small);">💰 Sparen: -${b('sparen')} Budget, ${z(2)} - Saison ohne Verlust +5, sonst -6</button>
+            <button onclick="chooseTransferStrategy('ausgewogen')" class="btn-secondary" style="font-size:var(--fs-small);">⚖️ Ausgewogen: alles bleibt wie geplant</button>
         </div></div>`;
 }

@@ -400,18 +400,18 @@
         if (!box) return;
         let raw = safeLocalGet(AUTOSAVE_KEY);
         if (!raw) {
-            box.innerHTML = `<div style="font-size:10px; color:#64748b;">🔄 Automatisches Speichern: alle ${AUTOSAVE_INTERVAL} Spieltage - bisher noch keiner angelegt.</div>`;
+            box.innerHTML = `<div style="font-size:var(--fs-small); color:var(--text-muted);">🔄 Automatisches Speichern: alle ${AUTOSAVE_INTERVAL} Spieltage - bisher noch keiner angelegt.</div>`;
             return;
         }
         try {
             let m = JSON.parse(raw).meta || {};
             box.innerHTML = `
                 <div style="font-weight:bold; color:var(--teal);">🔄 Automatisch: ${m.clubName || '-'}</div>
-                <div style="font-size:10px; color:#94a3b8;">${m.league || '-'} · Saison ${m.season} · Spieltag ${m.matchday}/34 · ${formatVal(m.money || 0)}</div>
-                <div style="font-size:9px; color:#64748b;">Gespeichert: ${m.savedAt || '-'} · wird alle ${AUTOSAVE_INTERVAL} Spieltage erneuert · beim Start wird automatisch der neueste Stand geladen</div>
-                <button onclick="loadAutoSave()" class="btn-secondary" style="font-size:9px; margin-top:4px;">Automatischen Stand laden</button>`;
+                <div style="font-size:var(--fs-small); color:var(--text-muted);">${m.league || '-'} · Saison ${m.season} · Spieltag ${m.matchday}/34 · ${formatVal(m.money || 0)}</div>
+                <div style="font-size:var(--fs-caption); color:var(--text-muted);">Gespeichert: ${m.savedAt || '-'} · wird alle ${AUTOSAVE_INTERVAL} Spieltage erneuert · beim Start wird automatisch der neueste Stand geladen</div>
+                <button onclick="loadAutoSave()" class="btn-secondary" style="font-size:var(--fs-caption); margin-top:4px;">Automatischen Stand laden</button>`;
         } catch (e) {
-            box.innerHTML = '<div style="font-size:10px; color:var(--danger);">Automatischer Spielstand ist beschädigt.</div>';
+            box.innerHTML = '<div style="font-size:var(--fs-small); color:var(--danger);">Automatischer Spielstand ist beschädigt.</div>';
         }
     }
 
@@ -444,17 +444,17 @@
             if (meta) {
                 box.innerHTML = `
                     <div style="font-weight:bold; color:var(--accent);">Slot ${i}: ${meta.clubName}</div>
-                    <div style="font-size:10px; color:#94a3b8;">${meta.league} · Saison ${meta.season} · Spieltag ${meta.matchday}/34 · ${formatVal(meta.money)}</div>
-                    <div style="font-size:9px; color:#64748b;">Gespeichert: ${meta.savedAt}${meta.version ? ` · Version ${meta.version}` : ''}</div>
+                    <div style="font-size:var(--fs-small); color:var(--text-muted);">${meta.league} · Saison ${meta.season} · Spieltag ${meta.matchday}/34 · ${formatVal(meta.money)}</div>
+                    <div style="font-size:var(--fs-caption); color:var(--text-muted);">Gespeichert: ${meta.savedAt}${meta.version ? ` · Version ${meta.version}` : ''}</div>
                     <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin-top:4px;">
-                        <button onclick="saveGameToSlot(${i})" class="btn-blue" style="font-size:9px;">Speichern</button>
-                        <button onclick="loadGameFromSlot(${i}, false)" class="btn-secondary" style="font-size:9px;">Laden</button>
-                        <button onclick="deleteSaveSlot(${i})" id="btn-delete-slot-${i}" data-confirming="false" class="btn-secondary" style="font-size:9px; color:var(--danger);">Löschen</button>
+                        <button onclick="saveGameToSlot(${i})" class="btn-blue" style="font-size:var(--fs-caption);">Speichern</button>
+                        <button onclick="loadGameFromSlot(${i}, false)" class="btn-secondary" style="font-size:var(--fs-caption);">Laden</button>
+                        <button onclick="deleteSaveSlot(${i})" id="btn-delete-slot-${i}" data-confirming="false" class="btn-secondary" style="font-size:var(--fs-caption); color:var(--danger);">Löschen</button>
                     </div>
                 `;
             } else {
                 box.innerHTML = `
-                    <div style="color:#64748b;">Slot ${i}: Leer</div>
+                    <div style="color:var(--text-muted);">Slot ${i}: Leer</div>
                     <button onclick="saveGameToSlot(${i})" class="btn-blue" style="margin-top:4px;">💾 Hier speichern</button>
                 `;
             }
@@ -564,20 +564,20 @@
         let cityBox = document.getElementById('new-game-city-box');
         if (cityBox && typeof getHomeCityOptions === 'function') {
             let info = HOME_CITIES[selectedNewGameCity];
-            cityBox.innerHTML = `<select id="new-game-city" onchange="selectedNewGameCity=this.value; renderNewGameSetupOptions();" class="input-inline" style="width:100%; font-size:11px; padding:6px;">
+            cityBox.innerHTML = `<select id="new-game-city" onchange="selectedNewGameCity=this.value; renderNewGameSetupOptions();" class="input-inline" style="width:100%; font-size:var(--fs-body); padding:6px;">
                 ${getHomeCityOptions().map(o => `<option value="${o.city}" ${o.city === selectedNewGameCity ? 'selected' : ''}>${o.city} (${o.state})</option>`).join('')}
-            </select><div style="font-size:9px; color:var(--text-muted); margin-top:3px;">Region ${HOME_REGIONS[info.region].label}: ${HOME_REGIONS[info.region].regionalliga} · ${OBERLIGEN[info.ol].name} · ${LIGA6[info.l6].name} · ${info.verband}pokal</div>`;
+            </select><div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:3px;">Region ${HOME_REGIONS[info.region].label}: ${HOME_REGIONS[info.region].regionalliga} · ${OBERLIGEN[info.ol].name} · ${LIGA6[info.l6].name} · ${info.verband}pokal</div>`;
         }
         let levelBox = document.getElementById('new-game-level-btns');
         if (levelBox) {
             levelBox.innerHTML = NEW_GAME_LEVEL_OPTIONS.map(o =>
-                `<button onclick="selectedNewGameLevel=${o.level}; renderNewGameSetupOptions();" class="${o.level === selectedNewGameLevel ? 'btn-action' : 'btn-secondary'}" style="font-size:9px; padding:5px 2px;">${o.label}</button>`
+                `<button onclick="selectedNewGameLevel=${o.level}; renderNewGameSetupOptions();" class="${o.level === selectedNewGameLevel ? 'btn-action' : 'btn-secondary'}" style="font-size:var(--fs-caption); padding:5px 2px;">${o.label}</button>`
             ).join('');
         }
         let moneyBox = document.getElementById('new-game-money-btns');
         if (moneyBox) {
             moneyBox.innerHTML = NEW_GAME_MONEY_OPTIONS.map(o =>
-                `<button onclick="selectedNewGameMoney=${o.amount}; renderNewGameSetupOptions();" class="${o.amount === selectedNewGameMoney ? 'btn-action' : 'btn-secondary'}" style="font-size:9px; padding:5px 2px;">${o.label}<br><span style="font-size:8px; opacity:0.85;">${formatVal(getNewGameStartMoney(selectedNewGameLevel, o.amount))}</span></button>`
+                `<button onclick="selectedNewGameMoney=${o.amount}; renderNewGameSetupOptions();" class="${o.amount === selectedNewGameMoney ? 'btn-action' : 'btn-secondary'}" style="font-size:var(--fs-caption); padding:5px 2px;">${o.label}<br><span style="font-size:var(--fs-micro); opacity:0.85;">${formatVal(getNewGameStartMoney(selectedNewGameLevel, o.amount))}</span></button>`
             ).join('');
         }
     }

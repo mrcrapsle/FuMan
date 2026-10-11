@@ -235,20 +235,20 @@ function renderLexicon() {
     const kategorien = ['Alle', ...new Set(LEXICON_ENTRIES.map(e => e.cat))];
     const chips = document.getElementById('lexicon-categories');
     const katLabel = k => (typeof currentLang !== 'undefined' && currentLang === 'en' && typeof LEXICON_CATEGORY_EN !== 'undefined' && LEXICON_CATEGORY_EN[k]) || k;
-    if (chips) chips.innerHTML = kategorien.map(k => `<button onclick="setLexiconCategory('${k}')" class="${k === lexiconCategory ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:9px; padding:4px 8px;">${katLabel(k)}</button>`).join('');
+    if (chips) chips.innerHTML = kategorien.map(k => `<button onclick="setLexiconCategory('${k}')" class="${k === lexiconCategory ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:var(--fs-caption); padding:4px 8px;">${katLabel(k)}</button>`).join('');
     const filterHinweis = document.getElementById('lexicon-screen-filter');
-    if (filterHinweis) filterHinweis.innerHTML = lexiconScreenFilter ? `<div class="box" style="font-size:10px; display:flex; justify-content:space-between; align-items:center; gap:6px;"><span>Nur Einträge zum Bildschirm, von dem du kommst.</span><button onclick="setLexiconCategory('Alle')" class="btn-secondary" style="width:auto; font-size:9px;">Alle zeigen</button></div>` : '';
+    if (filterHinweis) filterHinweis.innerHTML = lexiconScreenFilter ? `<div class="box" style="font-size:var(--fs-small); display:flex; justify-content:space-between; align-items:center; gap:6px;"><span>Nur Einträge zum Bildschirm, von dem du kommst.</span><button onclick="setLexiconCategory('Alle')" class="btn-secondary" style="width:auto; font-size:var(--fs-caption);">Alle zeigen</button></div>` : '';
     // Englisch (js/lexicon-en.js, 25.22): Titel, Text und Tipps in der gewählten Sprache, auch für die Suche.
     const lokal = e => typeof getLexiconEntryLocalized === 'function' ? getLexiconEntryLocalized(e) : e;
     const treffer = LEXICON_ENTRIES.map(lokal).filter(e => (lexiconCategory === 'Alle' || e.cat === lexiconCategory)
         && (!lexiconScreenFilter || e.screen === lexiconScreenFilter)
         && (!suche || normSuche(e.title + ' ' + e.text + ' ' + e.tips.join(' ')).includes(suche)));
-    box.innerHTML = treffer.length ? treffer.map(e => `<div class="box" style="font-size:10px;">
+    box.innerHTML = treffer.length ? treffer.map(e => `<div class="box" style="font-size:var(--fs-small);">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
-            <strong style="color:var(--accent);">${e.title}</strong><span style="font-size:8px; color:var(--text-muted);">${e.catLabel || e.cat}</span>
+            <strong style="color:var(--accent);">${e.title}</strong><span style="font-size:var(--fs-micro); color:var(--text-muted);">${e.catLabel || e.cat}</span>
         </div>
         <div style="margin-top:3px;">${e.text}</div>
         <ul style="margin:4px 0 0 0; padding-left:16px;">${e.tips.map(t => `<li>${t}</li>`).join('')}</ul>
-        <button onclick="showScreen('${e.screen}')" class="btn-secondary" style="width:auto; font-size:9px; margin-top:4px;">➜ Zum Bildschirm</button>
-    </div>`).join('') : '<div style="font-size:10px; color:var(--text-muted);">Kein Eintrag gefunden. Anderen Begriff versuchen oder Kategorie „Alle“ wählen.</div>';
+        <button onclick="showScreen('${e.screen}')" class="btn-secondary" style="width:auto; font-size:var(--fs-caption); margin-top:4px;">➜ Zum Bildschirm</button>
+    </div>`).join('') : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Kein Eintrag gefunden. Anderen Begriff versuchen oder Kategorie „Alle“ wählen.</div>';
 }

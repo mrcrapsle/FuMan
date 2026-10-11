@@ -38,18 +38,18 @@ function renderTacticSystemPanel() {
     const angriff = getFormationOffBonus() + getTacticStyleBonus(game.tacticStyle);
     const abwehr = getFormationDefBonus() * 0.6;
     const kraft = Math.round((getTacticStyleFitnessMultiplier(game.tacticStyle) - 1) * 100);
-    html += `<div style="font-size:10px; line-height:1.6;">Aktuell: <b>${game.formation}</b> · <b>${stilLabel(game.tacticStyle)}</b><br>`
+    html += `<div style="font-size:var(--fs-small); line-height:1.6;">Aktuell: <b>${game.formation}</b> · <b>${stilLabel(game.tacticStyle)}</b><br>`
       + `Formation: Abwehr ${rating.def} / Angriff ${rating.off}<br>`
       + `Teamstärke-Effekt: Angriff <b>${vz(angriff)}</b> · Abwehr <b>${vz(abwehr)}</b> · Kraftverbrauch <b>${kraft > 0 ? '+' : ''}${kraft}%</b></div>`;
   }
 
   const rows = getTacticRecordRows().sort((a, b) => b.spiele - a.spiele);
   if (!rows.length) {
-    html += '<div style="font-size:10px; color:var(--text-muted); margin-top:6px;">Noch keine Ligaspiele mit Taktik-Bilanz.</div>';
+    html += '<div style="font-size:var(--fs-small); color:var(--text-muted); margin-top:6px;">Noch keine Ligaspiele mit Taktik-Bilanz.</div>';
     panel.innerHTML = html;
     return;
   }
-  html += '<table style="width:100%; font-size:10px; margin-top:6px; border-collapse:collapse;">'
+  html += '<table style="width:100%; font-size:var(--fs-small); margin-top:6px; border-collapse:collapse;">'
     + '<tr style="color:var(--text-muted); text-align:left;"><th>Formation</th><th>Stil</th><th>Sp.</th><th>S-U-N</th><th>Tore</th><th>Pkt/Sp.</th></tr>';
   rows.slice(0, 8).forEach(r => {
     const aktiv = r.formation === game.formation && r.stil === game.tacticStyle;
@@ -61,7 +61,7 @@ function renderTacticSystemPanel() {
   const erprobt = rows.filter(r => r.spiele >= 5).sort((a, b) => b.schnitt - a.schnitt);
   if (erprobt.length >= 2) {
     const best = erprobt[0];
-    html += `<div style="font-size:10px; color:var(--gold, #FFC107); margin-top:6px;">💡 Beste erprobte Kombination: ${best.formation} · ${stilLabel(best.stil)} (${best.schnitt.toFixed(2)} Punkte pro Spiel)</div>`;
+    html += `<div style="font-size:var(--fs-small); color:var(--gold, #FFC107); margin-top:6px;">💡 Beste erprobte Kombination: ${best.formation} · ${stilLabel(best.stil)} (${best.schnitt.toFixed(2)} Punkte pro Spiel)</div>`;
   }
   panel.innerHTML = html;
 }

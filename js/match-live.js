@@ -25,13 +25,13 @@
         let [bh, ba] = getLivePossession();
         let ourStr = Math.round(currentMatch.ourBaseStr + getTacticStyleBonus(game.tacticStyle) + getTackleHardnessBonus(game.tackleHardness) + (currentMatch.halftimeTalkBonus || 0));
         let oppStr = Math.round(currentMatch.isHome ? currentMatch.awayStr : currentMatch.homeStr);
-        let zeile = (label, h, a) => `<div style="display:grid; grid-template-columns: 1fr auto 1fr; gap:6px; align-items:center;"><span style="text-align:right; font-weight:800;">${h}</span><span style="color:var(--text-muted); font-size:9px;">${label}</span><span style="font-weight:800;">${a}</span></div>`;
-        box.innerHTML = `<div class="box" style="font-size:10px; margin:4px 0;">
+        let zeile = (label, h, a) => `<div style="display:grid; grid-template-columns: 1fr auto 1fr; gap:6px; align-items:center;"><span style="text-align:right; font-weight:800;">${h}</span><span style="color:var(--text-muted); font-size:var(--fs-caption);">${label}</span><span style="font-weight:800;">${a}</span></div>`;
+        box.innerHTML = `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">
             <div style="display:flex; height:8px; border-radius:4px; overflow:hidden; margin-bottom:4px;"><div style="flex:${bh}; background:${currentMatch.isHome ? 'var(--primary)' : 'var(--danger)'};"></div><div style="flex:${ba}; background:${currentMatch.isHome ? 'var(--danger)' : 'var(--primary)'};"></div></div>
             ${zeile('Ballbesitz', bh + '%', ba + '%')}
             ${zeile('Schüsse (aufs Tor)', `${st.shots[0]} (${st.onTarget[0]})`, `${st.shots[1]} (${st.onTarget[1]})`)}
             ${zeile('Karten', `🟨${st.yellow[0]} 🟥${st.red[0]}`, `🟨${st.yellow[1]} 🟥${st.red[1]}`)}
-            <div style="text-align:center; color:var(--text-muted); font-size:9px; margin-top:2px;">Aktuelle Stärke: wir ${ourStr} · Gegner ${oppStr}</div>
+            <div style="text-align:center; color:var(--text-muted); font-size:var(--fs-caption); margin-top:2px;">Aktuelle Stärke: wir ${ourStr} · Gegner ${oppStr}</div>
         </div>`;
     }
     function liveStatsSummaryLine() {
@@ -263,7 +263,7 @@
                     document.getElementById('ticker-log').innerHTML += `<div style="color:var(--blue);">🟥 ${currentMatch.minute}. Min: Platzverweis bei ${oppName}! Der Gegner muss in Unterzahl weiterspielen.</div>`;
                 } else {
                     let oppName = currentMatch.isHome ? currentMatch.awayName : currentMatch.homeName;
-                    document.getElementById('ticker-log').innerHTML += `<div style="color:#94a3b8;">🟨 ${currentMatch.minute}. Min: Gelbe Karte bei ${oppName}.</div>`;
+                    document.getElementById('ticker-log').innerHTML += `<div style="color:var(--text-muted);">🟨 ${currentMatch.minute}. Min: Gelbe Karte bei ${oppName}.</div>`;
                 }
             }
         }
@@ -276,7 +276,7 @@
             let line = pool[Math.floor(Math.random() * pool.length)];
             if (pool === OUR_CHANCE_EVENTS) recordLiveShot(currentMatch.isHome, Math.random() < 0.45);
             if (pool === OPP_CHANCE_EVENTS) recordLiveShot(!currentMatch.isHome, Math.random() < 0.45);
-            document.getElementById('ticker-log').innerHTML += `<div style="color:#64748b; font-size:10px;">${currentMatch.minute}. Min: ${line}</div>`;
+            document.getElementById('ticker-log').innerHTML += `<div style="color:var(--text-muted); font-size:var(--fs-small);">${currentMatch.minute}. Min: ${line}</div>`;
         }
 
         document.getElementById('ticker-log').scrollTop = document.getElementById('ticker-log').scrollHeight;
@@ -296,7 +296,7 @@
         // Co-Kommentator: unabhängig vom Spielgeschehen, ca. jeder 5. Spielzug
         if (Math.random() < 0.2) {
             let line = pickContextualCommentaryLine();
-            document.getElementById('ticker-log').innerHTML += `<div style="color:var(--teal); font-size:9px; font-style:italic;">${line}</div>`;
+            document.getElementById('ticker-log').innerHTML += `<div style="color:var(--teal); font-size:var(--fs-caption); font-style:italic;">${line}</div>`;
             document.getElementById('ticker-log').scrollTop = document.getElementById('ticker-log').scrollHeight;
         }
 
@@ -394,7 +394,7 @@
         if (!box) return;
         let sugg = getHalftimeSubSuggestion();
         box.innerHTML = sugg
-            ? `<div class="box" style="font-size:10px; border-left-color:var(--teal);">🧑‍🏫 Co-Trainer-Tipp: ${sugg.out.name} ist erschöpft (${sugg.out.fitness}% Fitness) - ${sugg.in.name} bereitsteht.</div>
+            ? `<div class="box" style="font-size:var(--fs-small); border-left-color:var(--teal);">🧑‍🏫 Co-Trainer-Tipp: ${sugg.out.name} ist erschöpft (${sugg.out.fitness}% Fitness) - ${sugg.in.name} bereitsteht.</div>
                <button onclick="applyHalftimeSubSuggestion()" class="btn-secondary" style="margin-top:4px;">🔄 Vorschlag übernehmen</button>`
             : '';
     }
@@ -404,7 +404,7 @@
         lineup = lineup.map(id => id === sugg.out.id ? sugg.in.id : id);
         substitutionsLeft--;
         currentMatch.ourBaseStr += (liveEffectiveStrength(sugg.in) - liveEffectiveStrength(sugg.out)) / 11;
-        document.getElementById('ticker-log').innerHTML += `<div style="color:var(--teal); font-size:10px;">🔄 Halbzeit-Wechsel: ${sugg.in.name} für ${sugg.out.name} (Co-Trainer-Empfehlung).</div>`;
+        document.getElementById('ticker-log').innerHTML += `<div style="color:var(--teal); font-size:var(--fs-small);">🔄 Halbzeit-Wechsel: ${sugg.in.name} für ${sugg.out.name} (Co-Trainer-Empfehlung).</div>`;
         document.getElementById('ticker-log').scrollTop = document.getElementById('ticker-log').scrollHeight;
         renderLiveSubs();
         render3DPitch('live-pitch');
@@ -447,7 +447,7 @@
         stopLiveTickerAutoplay();
         if (currentMatch.stats) {
             let log = document.getElementById('ticker-log');
-            if (log) log.innerHTML += `<div style="color:var(--accent); font-weight:bold;">🏁 Abpfiff! ${currentMatch.homeName} ${currentMatch.homeGoals}:${currentMatch.awayGoals} ${currentMatch.awayName}</div><div style="font-size:10px; color:#94a3b8;">${liveStatsSummaryLine()}</div>`;
+            if (log) log.innerHTML += `<div style="color:var(--accent); font-weight:bold;">🏁 Abpfiff! ${currentMatch.homeName} ${currentMatch.homeGoals}:${currentMatch.awayGoals} ${currentMatch.awayName}</div><div style="font-size:var(--fs-small); color:var(--text-muted);">${liveStatsSummaryLine()}</div>`;
             renderLiveMatchStats();
         }
         document.getElementById('btn-next-step').style.display = 'none';
@@ -847,7 +847,7 @@
                 // direkt im Ticker gefeiert statt nur im Nachhinein im Postfach zu stehen.
                 let tickerLog = document.getElementById('ticker-log');
                 if (tickerLog && document.getElementById('screen-matchday')?.style.display === 'block') {
-                    tickerLog.innerHTML += `<div style="text-align:center; color:var(--gold); font-weight:900; font-size:11px; margin:6px 0;">📢 STADIONANSAGE: „${m.label}“ - ${att.toLocaleString('de-DE')} Zuschauer im Stadion!</div>`;
+                    tickerLog.innerHTML += `<div style="text-align:center; color:var(--gold); font-weight:900; font-size:var(--fs-body); margin:6px 0;">📢 STADIONANSAGE: „${m.label}“ - ${att.toLocaleString('de-DE')} Zuschauer im Stadion!</div>`;
                     tickerLog.scrollTop = tickerLog.scrollHeight;
                 }
             }

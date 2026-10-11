@@ -101,7 +101,7 @@ function renderCoachCarouselBox() {
     const box = document.getElementById('coach-carousel-box');
     if (!box) return;
     const wechsel = (game.coachChanges || []).filter(c => c.season === game.season).slice().reverse();
-    box.innerHTML = `<div style="font-size:9px;">${wechsel.length
+    box.innerHTML = `<div style="font-size:var(--fs-caption);">${wechsel.length
         ? wechsel.map(c => `<div style="padding:2px 0; border-top:1px solid rgba(255,255,255,0.06);">${c.matchday ? 'Spt ' + c.matchday : 'Sommer'}: <strong>${c.club}</strong> - ${c.alt} ➜ ${c.neu}</div>`).join('')
         : '<span style="color:var(--text-muted);">Diese Saison noch keine Trainerwechsel in deiner Liga.</span>'}</div>`;
 }

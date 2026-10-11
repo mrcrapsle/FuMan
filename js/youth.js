@@ -37,29 +37,29 @@
             row.style.alignItems = 'stretch';
             let potentialHtml = p.potentialRevealed
                 ? `<span class="badge" style="background:${POTENTIAL_TIER_COLORS[p.potentialTier]};">${POTENTIAL_TIER_LABELS[p.potentialTier]}</span>`
-                : `<button onclick="revealYouthPotential('${p.id}')" class="btn-secondary" style="width:auto; font-size:8px;">🔍 Potenzial prüfen [3.000 €]</button>`;
+                : `<button onclick="revealYouthPotential('${p.id}')" class="btn-secondary" style="width:auto; font-size:var(--fs-micro);">🔍 Potenzial prüfen [3.000 €]</button>`;
             row.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 28) : ''}${p.name} (${p.pos}, ${p.age} J., Str ${p.strength})${p.proDecisionLeft ? ' <span class="badge" style="background:rgba(255,193,7,0.3);">✍️ Entscheidung</span>' : ''} ${p.trait && p.trait!=='Kein'?`<span class="badge badge-trait">${p.trait}</span>`:''}</span>
                     <span style="display:flex; gap:4px;">
-                        <button onclick="promoteYouth(${idx}, this)" class="btn-action" style="width:auto; font-size:9px;">In Profikader</button>
-                        ${(p.age || 0) >= 17 ? `<button onclick="openYouthLoanChoice('${p.id}')" class="btn-secondary" style="width:auto; font-size:9px;" title="Leihe zur Entwicklung">📤 Leihe</button>` : ''}
-                        ${game.secondTeam.isActive ? `<button onclick="promoteYouthToSecondTeam(${idx}, this)" class="btn-secondary" style="width:auto; font-size:9px; color:var(--teal);" title="Behutsamer Weg: erst Spielpraxis in der Reserve sammeln">In die Reserve</button>` : ''}
+                        <button onclick="promoteYouth(${idx}, this)" class="btn-action" style="width:auto; font-size:var(--fs-caption);">In Profikader</button>
+                        ${(p.age || 0) >= 17 ? `<button onclick="openYouthLoanChoice('${p.id}')" class="btn-secondary" style="width:auto; font-size:var(--fs-caption);" title="Leihe zur Entwicklung">📤 Leihe</button>` : ''}
+                        ${game.secondTeam.isActive ? `<button onclick="promoteYouthToSecondTeam(${idx}, this)" class="btn-secondary" style="width:auto; font-size:var(--fs-caption); color:var(--teal);" title="Behutsamer Weg: erst Spielpraxis in der Reserve sammeln">In die Reserve</button>` : ''}
                     </span>
                 </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; font-size:9px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; font-size:var(--fs-caption);">
                     <span>${potentialHtml}</span>
-                    <span>Fokus: <select class="input-inline" style="font-size:8px; padding:2px;" onchange="setYouthTrainingFocus('${p.id}', this.value)">
+                    <span>Fokus: <select class="input-inline" style="font-size:var(--fs-micro); padding:2px;" onchange="setYouthTrainingFocus('${p.id}', this.value)">
                         <option value="allgemein" ${p.youthFocus==='allgemein'?'selected':''}>Allgemein</option>
                         <option value="torschuss" ${p.youthFocus==='torschuss'?'selected':''}>Torschuss</option>
                         <option value="passspiel" ${p.youthFocus==='passspiel'?'selected':''}>Passspiel</option>
                         <option value="zweikampf" ${p.youthFocus==='zweikampf'?'selected':''}>Zweikampf</option>
                         <option value="tempo" ${p.youthFocus==='tempo'?'selected':''}>Tempo</option>
                     </select></span>
-                    <button onclick="releaseYouthTalent('${p.id}', this)" class="btn-secondary" style="width:auto; font-size:8px; color:var(--danger);">Freilassen</button>
+                    <button onclick="releaseYouthTalent('${p.id}', this)" class="btn-secondary" style="width:auto; font-size:var(--fs-micro); color:var(--danger);">Freilassen</button>
                 </div>
-                <div style="margin-top:4px; font-size:9px;">
-                    🎓 Mentor: <select class="input-inline" style="font-size:8px; padding:2px;" onchange="this.value ? assignYouthMentor('${p.id}', this.value) : removeYouthMentor('${p.id}')">
+                <div style="margin-top:4px; font-size:var(--fs-caption);">
+                    🎓 Mentor: <select class="input-inline" style="font-size:var(--fs-micro); padding:2px;" onchange="this.value ? assignYouthMentor('${p.id}', this.value) : removeYouthMentor('${p.id}')">
                         <option value="">Kein Mentor</option>
                         ${squad.filter(s => s.age >= 27 && s.strength >= 55).map(s => `<option value="${s.id}" ${p.mentorId===s.id?'selected':''}>${s.name} (${s.age} J., Str ${s.strength})</option>`).join('')}
                     </select>
@@ -75,7 +75,7 @@
             poachBox.style.display = pend ? 'block' : 'none';
             if (pend) {
                 poachBox.innerHTML = `<div class="panel-header" style="color:var(--danger);">🎯 ABWERBEVERSUCH: ${pend.name}</div>
-                    <div class="box" style="font-size:10px;">Ein Rivale will ${pend.name} abwerben! Ablösesumme zahlen (${formatVal(pend.retentionCost)}) oder ziehen lassen?</div>
+                    <div class="box" style="font-size:var(--fs-small);">Ein Rivale will ${pend.name} abwerben! Ablösesumme zahlen (${formatVal(pend.retentionCost)}) oder ziehen lassen?</div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
                         <button onclick="resolveYouthPoaching(true)" class="btn-action">💰 Halten</button>
                         <button onclick="resolveYouthPoaching(false)" class="btn-secondary">👋 Ziehen lassen</button>
@@ -263,7 +263,7 @@
             <table><thead><tr><th>Pl</th><th>Team</th><th>Sp</th><th>Tore</th><th>Pkt</th></tr></thead><tbody>
             ${sorted.map((t, i) => `<tr style="${t.isOwn ? 'font-weight:900; color:var(--accent);' : ''}"><td>${i+1}</td><td style="text-align:left;">${t.name}</td><td>${t.played}</td><td>${t.goalsFor}:${t.goalsAgainst}</td><td>${t.points}</td></tr>`).join('')}
             </tbody></table>
-            <div style="font-size:8px; color:var(--text-muted); margin-top:4px;">Spieltag ${youthLeagueMatchday}/26 · nächstes Spiel automatisch alle 4 Spieltage</div>
+            <div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:4px;">Spieltag ${youthLeagueMatchday}/26 · nächstes Spiel automatisch alle 4 Spieltage</div>
         `;
     }
 

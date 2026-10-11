@@ -131,12 +131,12 @@ function renderRumorBox() {
         ${liste.map(r => {
             const text = r.type === 'abwerbung' ? `${r.club} will <strong>${r.playerName}</strong>` : `<strong>${r.playerName}</strong> (Markt) vor Wechsel zu ${r.club}`;
             const knoepfe = r.type === 'abwerbung' && !r.outcome && !r.reaction ? `<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:4px; margin-top:4px;">
-                <button onclick="reactToRumor('${r.id}','dementieren')" class="btn-secondary" style="font-size:9px;">🙅 Dementieren</button>
-                <button onclick="reactToRumor('${r.id}','anheizen')" class="btn-secondary" style="font-size:9px;">🔥 Anheizen</button>
-                <button onclick="reactToRumor('${r.id}','schweigen')" class="btn-secondary" style="font-size:9px;">🤐 Schweigen</button></div>` : '';
+                <button onclick="reactToRumor('${r.id}','dementieren')" class="btn-secondary" style="font-size:var(--fs-caption);">🙅 Dementieren</button>
+                <button onclick="reactToRumor('${r.id}','anheizen')" class="btn-secondary" style="font-size:var(--fs-caption);">🔥 Anheizen</button>
+                <button onclick="reactToRumor('${r.id}','schweigen')" class="btn-secondary" style="font-size:var(--fs-caption);">🤐 Schweigen</button></div>` : '';
             const status = r.outcome ? ausgang[r.outcome] : (r.reaction ? `Deine Reaktion: ${r.reaction}` : 'offen');
-            return `<div class="box" style="font-size:10px;">${text}
+            return `<div class="box" style="font-size:var(--fs-small);">${text}
                 <div style="color:var(--text-muted);">${RUMOR_SOURCES[r.source].label}${quote(r.source)} · ${status}</div>${knoepfe}</div>`;
         }).join('')}
-        <div style="font-size:8px; color:var(--text-muted);">Dementieren: ein interessierter Verein zieht oft zurück, Ehrgeizige ärgert das. Anheizen: ein echtes Angebot fällt 15 % höher aus, bei einer Ente leidet dein Ruf.</div></div>`;
+        <div style="font-size:var(--fs-micro); color:var(--text-muted);">Dementieren: ein interessierter Verein zieht oft zurück, Ehrgeizige ärgert das. Anheizen: ein echtes Angebot fällt 15 % höher aus, bei einer Ente leidet dein Ruf.</div></div>`;
 }

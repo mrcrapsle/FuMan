@@ -5,13 +5,13 @@
         if (!box) return;
         let history = game.selfTestHistory || [];
         if (history.length === 0) {
-            box.innerHTML = '<div class="box" style="font-size:10px; color:#94a3b8;">Noch kein Selbsttest gelaufen.</div>';
+            box.innerHTML = '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Noch kein Selbsttest gelaufen.</div>';
             return;
         }
         box.innerHTML = history.map(h => {
             let color = h.problemsCount === 0 ? 'var(--primary)' : 'var(--danger)';
             let statusText = h.problemsCount === 0 ? '✅ Alles OK' : `⚠️ ${h.problemsCount} Problem(e)`;
-            return `<div class="box" style="font-size:10px; border-left-color:${color};">${h.timestamp}: <strong style="color:${color};">${statusText}</strong></div>`;
+            return `<div class="box" style="font-size:var(--fs-small); border-left-color:${color};">${h.timestamp}: <strong style="color:${color};">${statusText}</strong></div>`;
         }).join('');
     }
 
@@ -330,8 +330,8 @@
         if (!box) return;
         let hist = game.adminCheckpointHistory || [];
         box.innerHTML = hist.length === 0
-            ? '<div style="font-size:9px; color:var(--text-muted);">Noch keine Zeitraffer-Simulation durchgeführt.</div>'
-            : hist.map(c => `<div class="box" style="display:flex; justify-content:space-between; font-size:9px;"><span>Spieltag ${c.matchday}</span><span>Platz ${c.rank} · ${c.points} Pkt · ${formatVal(c.money)}</span></div>`).join('');
+            ? '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch keine Zeitraffer-Simulation durchgeführt.</div>'
+            : hist.map(c => `<div class="box" style="display:flex; justify-content:space-between; font-size:var(--fs-caption);"><span>Spieltag ${c.matchday}</span><span>Platz ${c.rank} · ${c.points} Pkt · ${formatVal(c.money)}</span></div>`).join('');
     }
 
     // 2. Szenario-Presets: bereitet den Spielzustand gezielt für einen bestimmten Testfall vor,

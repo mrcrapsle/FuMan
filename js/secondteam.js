@@ -53,8 +53,8 @@
         if (!box) return;
         let ready = getPromotionReadyPlayers();
         box.innerHTML = ready.length === 0
-            ? '<div style="font-size:9px; color:var(--text-muted);">Aktuell kein Perspektivspieler in Reichweite des Profi-Niveaus.</div>'
-            : ready.map(p => `<div class="player-row" style="font-size:9px;"><span>⬆️ ${p.name} (${p.pos}, Stärke ${p.strength}, ${p.age} J.)</span><span style="color:var(--primary);">Bereit!</span></div>`).join('');
+            ? '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Aktuell kein Perspektivspieler in Reichweite des Profi-Niveaus.</div>'
+            : ready.map(p => `<div class="player-row" style="font-size:var(--fs-caption);"><span>⬆️ ${p.name} (${p.pos}, Stärke ${p.strength}, ${p.age} J.)</span><span style="color:var(--primary);">Bereit!</span></div>`).join('');
     }
 
     // 3. Rivalität in der eigenen Liga: wie beim Profikader, aber für die Reserve - trackt
@@ -426,10 +426,10 @@
         if (!box) return;
         let entries = Object.entries(loanClubRelationships || {}).sort((a, b) => b[1] - a[1]);
         if (entries.length === 0) {
-            box.innerHTML = '<div class="box" style="font-size:10px; color:#94a3b8;">Noch keine Leihverein-Beziehungen aufgebaut.</div>';
+            box.innerHTML = '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Leihverein-Beziehungen aufgebaut.</div>';
             return;
         }
-        box.innerHTML = entries.map(([club, level]) => `<div class="box" style="display:flex; justify-content:space-between; font-size:10px;"><span>🤝 ${club}</span><strong style="color:var(--teal);">${level}× erfolgreich${level > 0 ? ` (+${Math.min(25, level*8)}% Verhandlungsbonus)` : ''}</strong></div>`).join('');
+        box.innerHTML = entries.map(([club, level]) => `<div class="box" style="display:flex; justify-content:space-between; font-size:var(--fs-small);"><span>🤝 ${club}</span><strong style="color:var(--teal);">${level}× erfolgreich${level > 0 ? ` (+${Math.min(25, level*8)}% Verhandlungsbonus)` : ''}</strong></div>`).join('');
     }
 
     function renderSecondTeamView() {
@@ -504,16 +504,16 @@
                 row.innerHTML = `
                     ${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 30) : ''}
                     <span class="badge ${badgeClass}">${p.pos}</span>
-                    <button onclick="openPlayerDetail('${p.id}','secondTeam')" class="btn-secondary" style="width:auto; padding:2px 6px; font-size:9px;" title="Details">ℹ️</button>
+                    <button onclick="openPlayerDetail('${p.id}','secondTeam')" class="btn-secondary" style="width:auto; padding:2px 6px; font-size:var(--fs-caption);" title="Details">ℹ️</button>
                     <span style="flex:1; text-align:left; padding-left:6px;">
                         <strong>${p.name}</strong><br>
-                        <span style="font-size:9px; color:#aaa;">Str: <strong>${p.strength}</strong> | Fit: ${p.fitness}% | Marktwert: ${formatVal(p.marketValue)}</span>
+                        <span style="font-size:var(--fs-caption); color:var(--text-muted);">Str: <strong>${p.strength}</strong> | Fit: ${p.fitness}% | Marktwert: ${formatVal(p.marketValue)}</span>
                     </span>
-                    <span style="font-size:9px; color:${isStarting ? 'var(--teal)' : '#64748b'};">${isStarting ? 'Startelf' : 'Bank'}</span>
-                    <button onclick="promoteToFirstTeam('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:9px; color:var(--primary);" title="In die 1. Mannschaft hochziehen">⬆️</button>
-                    <button onclick="loanOutPlayer('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:9px; color:var(--teal);" title="An anderen Klub verleihen">📤</button>
-                    <button onclick="sellSecondTeamPlayer('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:9px;" title="Verkaufen">💰</button>
-                    <button onclick="releaseSecondTeamPlayer('${p.id}', this)" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:9px; color:var(--danger);" title="Ablösefrei entlassen">✕</button>
+                    <span style="font-size:var(--fs-caption); color:${isStarting ? 'var(--teal)' : '#64748b'};">${isStarting ? 'Startelf' : 'Bank'}</span>
+                    <button onclick="promoteToFirstTeam('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:var(--fs-caption); color:var(--primary);" title="In die 1. Mannschaft hochziehen">⬆️</button>
+                    <button onclick="loanOutPlayer('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:var(--fs-caption); color:var(--teal);" title="An anderen Klub verleihen">📤</button>
+                    <button onclick="sellSecondTeamPlayer('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:var(--fs-caption);" title="Verkaufen">💰</button>
+                    <button onclick="releaseSecondTeamPlayer('${p.id}', this)" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:var(--fs-caption); color:var(--danger);" title="Ablösefrei entlassen">✕</button>
                 `;
                 list.appendChild(row);
             });
@@ -524,12 +524,12 @@
             // Profi-Leihen (js/pro-loans.js) stehen im Transfer-Bildschirm - eine Rückholung hier würde
             // sie in die zweite Mannschaft stecken.
             loanedBox.innerHTML = loanedPlayers.filter(l => !l.proLoan).length === 0
-                ? '<div class="box" style="font-size:10px; color:#94a3b8;">Aktuell keine Spieler verliehen.</div>'
+                ? '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Aktuell keine Spieler verliehen.</div>'
                 : loanedPlayers.map((l, idx) => {
                     if (l.proLoan) return '';
-                    return `<div class="box" style="font-size:10px; display:flex; justify-content:space-between; align-items:center;">
+                    return `<div class="box" style="font-size:var(--fs-small); display:flex; justify-content:space-between; align-items:center;">
                         <span>📤 ${l.player.name}${l.youthLoan ? ' 🌱' : ''} bei ${l.loanClub} - noch ${l.duration} Spieltage</span>
-                        <button onclick="openLoanRecallNegotiation(${idx})" class="btn-secondary" style="width:auto; font-size:9px;" title="Rückholung verhandeln">🔙 Verhandeln</button>
+                        <button onclick="openLoanRecallNegotiation(${idx})" class="btn-secondary" style="width:auto; font-size:var(--fs-caption);" title="Rückholung verhandeln">🔙 Verhandeln</button>
                     </div>`;
                 }).join('');
         }
@@ -538,12 +538,12 @@
         let marketList = document.getElementById('st-market-list');
         if (marketList) {
             marketList.innerHTML = secondTeamMarketPlayers.length === 0
-                ? '<div class="box" style="font-size:10px; color:#64748b;">Kein Markt verfügbar - erst nächste Saison aktualisiert sich das Angebot.</div>'
+                ? '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Kein Markt verfügbar - erst nächste Saison aktualisiert sich das Angebot.</div>'
                 : secondTeamMarketPlayers.map((p, idx) => `
                     <div class="market-row">
                         <span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 26) : ''}<span class="badge badge-${(p.pos||'mit').toLowerCase()}">${p.pos}</span> ${p.name} (Str: ${p.strength})</span>
                         <span>${formatVal(p.marketValue)}</span>
-                        <button onclick="buySecondTeamMarketPlayer(${idx})" class="btn-action" style="width:auto; font-size:9px;">Kaufen</button>
+                        <button onclick="buySecondTeamMarketPlayer(${idx})" class="btn-action" style="width:auto; font-size:var(--fs-caption);">Kaufen</button>
                     </div>`).join('');
         }
 
@@ -553,8 +553,8 @@
                 <div class="player-row">
                     ${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 26) : ''}
                     <span class="badge badge-${(p.pos||'mit').toLowerCase()}">${p.pos}</span>
-                    <span style="flex:1; text-align:left; padding-left:6px;"><strong>${p.name}</strong> <span style="font-size:9px; color:#aaa;">(Str: ${p.strength})</span></span>
-                    <button onclick="demoteToSecondTeam('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:9px; color:var(--teal);" title="In die 2. Mannschaft verschieben">⬇️</button>
+                    <span style="flex:1; text-align:left; padding-left:6px;"><strong>${p.name}</strong> <span style="font-size:var(--fs-caption); color:var(--text-muted);">(Str: ${p.strength})</span></span>
+                    <button onclick="demoteToSecondTeam('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:var(--fs-caption); color:var(--teal);" title="In die 2. Mannschaft verschieben">⬇️</button>
                 </div>`).join('');
         }
     }
@@ -640,24 +640,24 @@
         if (!box) return;
         let wages = getSecondTeamStaffWages();
         box.innerHTML = `
-            <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">
+            <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">
                 Eigener Stab, unabhängig vom Profipersonal. Gehälter laufen über das Vereinskonto
                 und stehen im Buchungsjournal als eigener Posten.
                 Aktuell: <strong style="color:var(--danger);">${formatVal(wages)}</strong> pro Spieltag.
             </div>
             ${Object.keys(secondTeamStaff).map(key => {
                 let st = secondTeamStaff[key];
-                return `<div class="box" style="font-size:10px;">
+                return `<div class="box" style="font-size:var(--fs-small);">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <strong>${st.icon} ${st.name}</strong>
                         <span style="color:${st.hired ? 'var(--primary)' : 'var(--text-muted)'};">${st.hired ? 'angestellt' : formatVal(st.cost)}</span>
                     </div>
-                    <div style="color:#94a3b8; margin:2px 0 4px 0;">${st.desc}</div>
+                    <div style="color:var(--text-muted); margin:2px 0 4px 0;">${st.desc}</div>
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span style="font-size:9px; color:var(--text-muted);">Gehalt ${formatVal(st.wage)} / Spieltag</span>
+                        <span style="font-size:var(--fs-caption); color:var(--text-muted);">Gehalt ${formatVal(st.wage)} / Spieltag</span>
                         ${st.hired
-                            ? `<button onclick="fireSecondTeamStaff('${key}', this)" class="btn-secondary" style="width:auto; font-size:9px; color:var(--danger);">Entlassen</button>`
-                            : `<button onclick="hireSecondTeamStaff('${key}')" class="btn-action" style="width:auto; font-size:9px;">Einstellen</button>`}
+                            ? `<button onclick="fireSecondTeamStaff('${key}', this)" class="btn-secondary" style="width:auto; font-size:var(--fs-caption); color:var(--danger);">Entlassen</button>`
+                            : `<button onclick="hireSecondTeamStaff('${key}')" class="btn-action" style="width:auto; font-size:var(--fs-caption);">Einstellen</button>`}
                     </div>
                 </div>`;
             }).join('')}`;
@@ -721,17 +721,17 @@
                 return alt ? { name: p.name, diff: p.strength - alt.strength, jetzt: p.strength } : null;
             }).filter(e => e && e.diff !== 0).sort((a, b) => b.diff - a.diff);
             zeilen = veraendert.length === 0
-                ? '<div style="font-size:9px; color:var(--text-muted);">Seit Saisonstart hat sich noch kein Spieler verändert. Ein Nachwuchs-Koordinator beschleunigt die Entwicklung deutlich.</div>'
-                : veraendert.map(e => `<div style="display:flex; justify-content:space-between; font-size:10px;">
+                ? '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Seit Saisonstart hat sich noch kein Spieler verändert. Ein Nachwuchs-Koordinator beschleunigt die Entwicklung deutlich.</div>'
+                : veraendert.map(e => `<div style="display:flex; justify-content:space-between; font-size:var(--fs-small);">
                         <span>${e.diff > 0 ? '📈' : '📉'} ${e.name}</span>
                         <strong style="color:${e.diff > 0 ? 'var(--primary)' : 'var(--danger)'};">${e.diff > 0 ? '+' : ''}${e.diff} (jetzt ${e.jetzt})</strong>
                     </div>`).join('');
         } else {
-            zeilen = '<div style="font-size:9px; color:var(--text-muted);">Der Bericht startet mit der nächsten Saison.</div>';
+            zeilen = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Der Bericht startet mit der nächsten Saison.</div>';
         }
         box.innerHTML = `${zeilen}
             ${log.length > 0 ? `<div style="margin-top:6px; border-top:1px solid #1e293b; padding-top:4px;">
-                ${log.map(l => `<div style="font-size:9px; color:#94a3b8;">ST ${l.matchday}: ${l.text}</div>`).join('')}
+                ${log.map(l => `<div style="font-size:var(--fs-caption); color:var(--text-muted);">ST ${l.matchday}: ${l.text}</div>`).join('')}
             </div>` : ''}`;
     }
 
@@ -877,22 +877,22 @@
         let kosten = Math.max(300, Math.round(800 * (NUM_LEAGUES - game.secondTeam.leagueLevel)));
         let log = (game.secondTeamMatchLog || []).slice(-5).reverse();
         box.innerHTML = `
-            <div style="font-size:9px; color:var(--text-muted); margin-bottom:6px;">
+            <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">
                 Spielpraxis zwischen den Ligaspieltagen. Junge Spieler entwickeln sich dabei am stärksten -
                 mit Nachwuchs-Koordinator noch deutlicher.
             </div>
-            <button onclick="scheduleReserveFriendly()" class="${restF > 0 ? 'btn-secondary' : 'btn-action'}" style="font-size:10px; margin-bottom:4px;">
+            <button onclick="scheduleReserveFriendly()" class="${restF > 0 ? 'btn-secondary' : 'btn-action'}" style="font-size:var(--fs-small); margin-bottom:4px;">
                 🤝 Freundschaftsspiel vereinbaren [${formatVal(kosten)} Organisation]${restF > 0 ? ` - noch ${restF} SpT gesperrt` : ''}
             </button>
-            <button onclick="scheduleInternalTestMatch()" class="${restI > 0 ? 'btn-secondary' : 'btn-action'}" style="font-size:10px;">
+            <button onclick="scheduleInternalTestMatch()" class="${restI > 0 ? 'btn-secondary' : 'btn-action'}" style="font-size:var(--fs-small);">
                 ⚔️ Internes Testspiel gegen die Erste${restI > 0 ? ` - noch ${restI} SpT gesperrt` : ''}
             </button>
-            <div style="font-size:9px; color:var(--text-muted); margin-top:4px;">
+            <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">
                 Das interne Testspiel bringt kein Geld, kostet beide Mannschaften Kraft - dafür lernen die Talente am meisten.
             </div>
             ${log.length > 0 ? `<div class="box" style="margin-top:6px;">
-                <strong style="font-size:10px;">LETZTE SPIELE</strong>
-                ${log.map(e => `<div style="display:flex; justify-content:space-between; font-size:9px; margin-top:2px;">
+                <strong style="font-size:var(--fs-small);">LETZTE SPIELE</strong>
+                ${log.map(e => `<div style="display:flex; justify-content:space-between; font-size:var(--fs-caption); margin-top:2px;">
                     <span>${e.art === 'intern' ? '⚔️' : '🤝'} ST ${e.matchday} vs. ${e.gegner}</span>
                     <span><strong>${e.ergebnis}</strong>${e.saldo !== 0 ? ` · <span style="color:${e.saldo > 0 ? 'var(--primary)' : 'var(--danger)'};">${e.saldo > 0 ? '+' : ''}${formatVal(e.saldo)}</span>` : ''}${e.entwickelt && e.entwickelt.length ? ` · <span style="color:var(--primary);">+${e.entwickelt.length} 🌱</span>` : ''}</span>
                 </div>`).join('')}
