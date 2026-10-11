@@ -2771,6 +2771,9 @@
             return ((perfMarks[to] - perfMarks[from]).toFixed(2));
         }
         mark('window.onload-start');
+        // Farbschema und Textgröße zuerst: unabhängig vom Spielstand, kein Aufblitzen des
+        // Standard-Themes und auch dann gesetzt, wenn der weitere Start in den Notfallpfad läuft.
+        try { if (typeof applyDesignSettings === 'function') applyDesignSettings(); } catch (e) { console.error('Darstellung konnte nicht gesetzt werden', e); }
         try {
             restoreGetters();
             mark('restoreGetters');
@@ -2865,7 +2868,6 @@
             initLanguage();
             warnIfStorageBlocked();
             maybeShowTutorial();
-            if (typeof applyDesignSettings === 'function') applyDesignSettings();
             if (typeof initOneHand === 'function') initOneHand();
             // Kein Struktur-Selbsttest beim Start mehr: er öffnete alle Bildschirme und kostete
             // beim ersten Start nach jedem Update rund 1,5 s auf dem Handy. Die Testsuite prüft

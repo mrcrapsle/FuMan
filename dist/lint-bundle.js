@@ -550,7 +550,7 @@ function renderUiStatRow(werte) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.118', date: '11.10.2026', features: 'Phase 25.50: Veröffentlichung repariert (Workflow-Datei war ungültig), damit Vorstand-Hub und alle Änderungen seit 3.53 online sind' };
+    const GAME_VERSION = { number: '3.120', date: '11.10.2026', features: 'Phase 25.51-25.52 (Theme lädt als Erstes beim Start): Designsystem mit Schriftskala und Textgröße, Kartenmuster, zentrale Farb-Tokens, 6 Themes inkl. Tageslicht, WCAG-Kontrast auf allen Bildschirmen, Überschriften in normaler Schreibung' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -33456,6 +33456,9 @@ function renderSaveSafetyBox() {
             return ((perfMarks[to] - perfMarks[from]).toFixed(2));
         }
         mark('window.onload-start');
+        // Farbschema und Textgröße zuerst: unabhängig vom Spielstand, kein Aufblitzen des
+        // Standard-Themes und auch dann gesetzt, wenn der weitere Start in den Notfallpfad läuft.
+        try { if (typeof applyDesignSettings === 'function') applyDesignSettings(); } catch (e) { console.error('Darstellung konnte nicht gesetzt werden', e); }
         try {
             restoreGetters();
             mark('restoreGetters');
@@ -33550,7 +33553,6 @@ function renderSaveSafetyBox() {
             initLanguage();
             warnIfStorageBlocked();
             maybeShowTutorial();
-            if (typeof applyDesignSettings === 'function') applyDesignSettings();
             if (typeof initOneHand === 'function') initOneHand();
             // Kein Struktur-Selbsttest beim Start mehr: er öffnete alle Bildschirme und kostete
             // beim ersten Start nach jedem Update rund 1,5 s auf dem Handy. Die Testsuite prüft

@@ -2521,8 +2521,13 @@ async function testPersonalEinstellenHandy(browser) {
     await page.evaluate(() => { closeTutorial(); game.money = 90000000; showScreen('screen-staff'); renderStaffView(); });
     await page.evaluate(() => { const l = document.getElementById('staff-list-container'); l.scrollTop = l.scrollHeight; });
     await page.locator('#staff-list-container button', { hasText: 'Einstellen' }).last().click();
-    // Nach dem Tippen scrollt die Seite zum Pool; er soll im sichtbaren Bereich liegen
-    await page.waitForTimeout(600);
+    // Nach dem Tippen scrollt die Seite (sanft) zum Pool: auf den Zustand warten statt fester 600 ms,
+    // unter paralleler Last dauert das Scrollen länger
+    await page.waitForFunction(() => {
+        const b = document.getElementById('staff-candidate-pool-box');
+        const t = b ? b.getBoundingClientRect().top : -1;
+        return t >= 0 && t < window.innerHeight;
+    }, null, { timeout: 4000 }).catch(() => null);
     const r = await page.evaluate(() => {
         const b = document.getElementById('staff-candidate-pool-box');
         const t = b ? b.getBoundingClientRect().top : -1;
@@ -2706,7 +2711,9 @@ async function testDesignThemes(browser) {
     const geklickt = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
     await page.reload();
     await page.waitForFunction(() => !document.getElementById('app-loading'), null, { timeout: 20000 }).catch(() => null);
-    const nachStart = await page.evaluate(() => ({ theme: document.documentElement.getAttribute('data-theme'), groesse: document.documentElement.getAttribute('data-text-size') }));
+    await page.waitForFunction(() => document.documentElement.getAttribute('data-theme') === 'klassik', null, { timeout: 5000 }).catch(() => null);
+    const nachStart = await page.evaluate(() => ({ theme: document.documentElement.getAttribute('data-theme'), groesse: document.documentElement.getAttribute('data-text-size'),
+        gespeichert: safeLocalGet(DESIGN_THEME_KEY) }));
     assert(r.kontrast.length === 0, `Alle Themes: Text, Nebentext, Akzent, Gut und Schlecht erreichen 4,5:1 auf Karten (${r.kontrast.join(', ')})`);
     assert(r.ungueltigIgnoriert, 'Ein unbekanntes Theme ändert nichts');
     assert(r.groesser > 1.2, `Textgröße "sehr groß" vergrößert die Schrift (Faktor ${r.groesser.toFixed(2)})`);
