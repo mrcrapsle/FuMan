@@ -2471,7 +2471,7 @@ async function testStaffAufgabenModi(browser) {
 }
 
 async function testPersonalEinstellen(browser) {
-    console.log('\n[25.45] Personal einstellen: der Bewerbungspool erscheint sichtbar und lässt sich nutzen');
+    console.log('\n[25.45] Personal einstellen: der Bewerbungspool öffnet als Fenster mitten im Bild und lässt sich direkt nutzen');
     const { page, consoleErrors } = await freshPage(browser);
     page.on('dialog', d => d.accept());
     await page.evaluate(() => { closeTutorial(); game.money = 90000000; showScreen('screen-staff'); renderStaffView(); });
@@ -2479,11 +2479,25 @@ async function testPersonalEinstellen(browser) {
     await page.evaluate(() => { const l = document.getElementById('staff-list-container'); l.scrollTop = l.scrollHeight; });
     const knopf = page.locator('#staff-list-container button', { hasText: 'Einstellen' }).last();
     await knopf.click();
-    const sichtbar = await page.evaluate(() => { const b = document.getElementById('staff-candidate-pool-box'); const t = b ? b.getBoundingClientRect().top : -1; return t >= 0 && t < window.innerHeight; });
-    await page.locator('#staff-candidate-pool-box button').first().click();
-    const eingestellt = await page.evaluate(() => Object.keys(staffMembers).filter(k => staffMembers[k].hired).length);
-    assert(sichtbar, 'Nach dem Tippen auf „Einstellen“ liegt der Bewerbungspool im sichtbaren Bereich');
-    assert(eingestellt >= 1, 'Ein Bewerber lässt sich aus dem Pool einstellen');
+    await page.waitForFunction(() => document.getElementById('staff-pool-overlay').classList.contains('show'), null, { timeout: 3000 }).catch(() => null);
+    const fenster = await page.evaluate(() => {
+        const ov = document.getElementById('staff-pool-overlay');
+        const box = ov.querySelector('.generic-modal-box').getBoundingClientRect();
+        const knoepfe = [...ov.querySelectorAll('button[onclick^="hireFromCandidatePool"]')];
+        return { offen: ov.classList.contains('show'), imBild: box.top >= 0 && box.bottom <= window.innerHeight + 1, bewerber: knoepfe.length,
+            titel: ov.querySelector('.ui-card-title')?.textContent || '', zeigtKasse: ov.innerText.includes('Kasse') };
+    });
+    // Abbrechen schließt ohne Einstellung
+    await page.locator('#staff-pool-overlay button', { hasText: 'Abbrechen' }).click();
+    const nachAbbruch = await page.evaluate(() => ({ offen: document.getElementById('staff-pool-overlay').classList.contains('show'), eingestellt: Object.keys(staffMembers).filter(k => staffMembers[k].hired).length, pool: staffCentralState.candidatePool }));
+    await page.locator('#staff-list-container button', { hasText: 'Einstellen' }).last().click();
+    await page.locator('#staff-pool-overlay button[onclick^="hireFromCandidatePool"]').first().click();
+    const eingestellt = await page.evaluate(() => ({ anzahl: Object.keys(staffMembers).filter(k => staffMembers[k].hired).length, offen: document.getElementById('staff-pool-overlay').classList.contains('show') }));
+    assert(fenster.offen && fenster.imBild, 'Nach dem Tippen auf „Einstellen“ öffnet sich das Bewerbungsfenster vollständig im sichtbaren Bereich');
+    assert(fenster.bewerber === 3, `Das Fenster zeigt alle 3 Bewerber zur direkten Auswahl (${fenster.bewerber})`);
+    assert(fenster.zeigtKasse && fenster.titel.length > 0, 'Das Fenster nennt die Stelle und die aktuelle Kasse');
+    assert(!nachAbbruch.offen && nachAbbruch.eingestellt === 0 && nachAbbruch.pool === null, 'Abbrechen schließt das Fenster, ohne jemanden einzustellen');
+    assert(eingestellt.anzahl >= 1 && !eingestellt.offen, 'Ein Bewerber lässt sich direkt im Fenster einstellen, danach schließt es');
     assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Einstellen');
     await page.close();
 }
@@ -2514,31 +2528,45 @@ async function testGreenkeeperAufgabe(browser) {
 }
 
 async function testPersonalEinstellenHandy(browser) {
-    console.log('\n[25.46] Personal einstellen auf dem Handy (390 x 844): Pool sichtbar, kein seitlicher Überlauf');
+    console.log('\n[25.46] Personal einstellen auf dem Handy (390 x 844): Fenster ohne Scrollen bedienbar, kein seitlicher Überlauf');
     const { page, consoleErrors } = await freshPage(browser);
     page.on('dialog', d => d.accept());
     await page.setViewportSize({ width: 390, height: 844 });
     await page.evaluate(() => { closeTutorial(); game.money = 90000000; showScreen('screen-staff'); renderStaffView(); });
-    await page.evaluate(() => { const l = document.getElementById('staff-list-container'); l.scrollTop = l.scrollHeight; });
-    await page.locator('#staff-list-container button', { hasText: 'Einstellen' }).last().click();
-    // Nach dem Tippen scrollt die Seite (sanft) zum Pool: auf den Zustand warten statt fester 600 ms,
-    // unter paralleler Last dauert das Scrollen länger
-    await page.waitForFunction(() => {
-        const b = document.getElementById('staff-candidate-pool-box');
-        const t = b ? b.getBoundingClientRect().top : -1;
-        return t >= 0 && t < window.innerHeight;
-    }, null, { timeout: 4000 }).catch(() => null);
-    const r = await page.evaluate(() => {
-        const b = document.getElementById('staff-candidate-pool-box');
-        const t = b ? b.getBoundingClientRect().top : -1;
-        return { sichtbar: t >= 0 && t < window.innerHeight, ueberlauf: document.documentElement.scrollWidth > window.innerWidth };
+    await page.evaluate(() => { const l = document.getElementById('staff-list-container'); l.scrollTop = l.scrollHeight; window.scrollTo(0, document.documentElement.scrollHeight); });
+    // Den Knopf selbst ins Bild holen und per Seitenskript antippen: Playwrights eigenes Scrollen vor dem Klick
+    // würde sonst die Messung verfälschen, ob die Seite beim Öffnen des Fensters springt.
+    const scrollVorher = await page.evaluate(() => {
+        const knopf = [...document.querySelectorAll('#staff-list-container button')].filter(b => b.textContent.includes('Einstellen')).pop();
+        knopf.scrollIntoView({ block: 'center' });
+        return window.scrollY;
     });
-    await page.locator('#staff-candidate-pool-box button').first().click();
+    await page.evaluate(() => [...document.querySelectorAll('#staff-list-container button')].filter(b => b.textContent.includes('Einstellen')).pop().click());
+    await page.waitForFunction(() => document.getElementById('staff-pool-overlay').classList.contains('show'), null, { timeout: 3000 }).catch(() => null);
+    const r = await page.evaluate(() => {
+        const ov = document.getElementById('staff-pool-overlay');
+        const box = ov.querySelector('.generic-modal-box');
+        const rc = box.getBoundingClientRect();
+        // Alle Einstell-Knöpfe müssen ohne Scrollen im Fenster erreichbar sein (im Bild und nicht verdeckt)
+        const knoepfe = [...ov.querySelectorAll('button[onclick^="hireFromCandidatePool"]')];
+        const imBild = knoepfe.every(b => { const k = b.getBoundingClientRect(); return k.top >= 0 && k.bottom <= window.innerHeight; });
+        return { offen: ov.classList.contains('show'), imBild, anzahl: knoepfe.length, fensterImBild: rc.top >= 0 && rc.bottom <= window.innerHeight + 1,
+            scrollY: window.scrollY, ueberlauf: document.documentElement.scrollWidth > window.innerWidth,
+            boxUeberlauf: box.scrollWidth > box.clientWidth + 1 };
+    });
+    // Tipp neben das Fenster (auf die abgedunkelte Fläche) schließt es
+    await page.mouse.click(195, 8);
+    const zu = await page.evaluate(() => !document.getElementById('staff-pool-overlay').classList.contains('show'));
+    await page.locator('#staff-list-container button', { hasText: 'Einstellen' }).last().click();
+    await page.locator('#staff-pool-overlay button[onclick^="hireFromCandidatePool"]').nth(1).click();
     const eingestellt = await page.evaluate(() => Object.keys(staffMembers).filter(k => staffMembers[k].hired).length);
-    assert(r.sichtbar, 'Auf dem Handy liegt der Bewerbungspool nach dem Tippen im sichtbaren Bereich');
-    assert(!r.ueberlauf, 'Auf dem Handy gibt es keinen seitlichen Überlauf im Personal-Bildschirm');
-    assert(eingestellt >= 1, 'Auf dem Handy lässt sich ein Bewerber einstellen');
-    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler auf dem Handy-Bildschirm');
+    assert(r.offen && r.fensterImBild, 'Auf dem Handy öffnet sich das Bewerbungsfenster vollständig im Bild');
+    assert(r.anzahl === 3 && r.imBild, 'Alle drei Einstell-Knöpfe sind direkt sichtbar, ohne Scrollen im Fenster');
+    assert(r.scrollY === scrollVorher, `Die Seite springt beim Öffnen nicht (Scroll ${scrollVorher} → ${r.scrollY})`);
+    assert(!r.ueberlauf && !r.boxUeberlauf, 'Auf dem Handy gibt es keinen seitlichen Überlauf im Personal-Bildschirm und im Fenster');
+    assert(zu, 'Ein Tipp neben das Fenster schließt es');
+    assert(eingestellt >= 1, 'Auf dem Handy lässt sich ein Bewerber im Fenster einstellen');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler auf dem Handy');
     await page.close();
 }
 
@@ -2592,7 +2620,7 @@ async function testPersonalGrundAnzeige(browser) {
         showScreen('screen-staff');
         game.money = 1000;
         openCandidatePool('fanshopManager');
-        const box = document.getElementById('staff-candidate-pool-box');
+        const box = document.getElementById('staff-pool-content');
         out.kasseGrund = box.innerText.includes('Kasse zu klein');
         out.kasseDeaktiviert = [...box.querySelectorAll('button[onclick^="hireFromCandidatePool"]')].every(b => b.disabled);
         // Obergrenze: Kasse reicht, aber der Personalbudget-Cap wird gesprengt
@@ -2600,13 +2628,13 @@ async function testPersonalGrundAnzeige(browser) {
         game.money = 90000000;
         staffCentralState.wageBudgetCap = 1;
         openCandidatePool('marketingDir');
-        const box2 = document.getElementById('staff-candidate-pool-box');
+        const box2 = document.getElementById('staff-pool-content');
         out.capGrund = box2.innerText.includes('Obergrenze');
         out.capDeaktiviert = [...box2.querySelectorAll('button[onclick^="hireFromCandidatePool"]')].every(b => b.disabled);
         // Ohne Grund ist der Knopf aktiv
         staffCentralState.wageBudgetCap = 0;
         openCandidatePool('marketingDir');
-        const box3 = document.getElementById('staff-candidate-pool-box');
+        const box3 = document.getElementById('staff-pool-content');
         out.frei = [...box3.querySelectorAll('button[onclick^="hireFromCandidatePool"]')].some(b => !b.disabled);
         return out;
     });
@@ -2709,11 +2737,13 @@ async function testDesignThemes(browser) {
     await page.evaluate(() => showScreen('screen-design'));
     await page.click('#design-settings-box .design-theme-card:nth-child(2)');
     const geklickt = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
+    // Diagnose: ob der Speicher in dieser Umgebung überhaupt schreibt (vor dem Neustart gelesen)
+    const vorNeustart = await page.evaluate(() => { try { return { theme: localStorage.getItem(DESIGN_THEME_KEY), groesse: localStorage.getItem(DESIGN_TEXT_KEY) }; } catch (e) { return { fehler: String(e) }; } });
     await page.reload();
     await page.waitForFunction(() => !document.getElementById('app-loading'), null, { timeout: 20000 }).catch(() => null);
     await page.waitForFunction(() => document.documentElement.getAttribute('data-theme') === 'klassik', null, { timeout: 5000 }).catch(() => null);
     const nachStart = await page.evaluate(() => ({ theme: document.documentElement.getAttribute('data-theme'), groesse: document.documentElement.getAttribute('data-text-size'),
-        gespeichert: safeLocalGet(DESIGN_THEME_KEY) }));
+        gespeichert: safeLocalGet(DESIGN_THEME_KEY), schreibtNochmal: (() => { try { localStorage.setItem('probe_x', '1'); return localStorage.getItem('probe_x') === '1'; } catch (e) { return String(e); } })() }));
     assert(r.kontrast.length === 0, `Alle Themes: Text, Nebentext, Akzent, Gut und Schlecht erreichen 4,5:1 auf Karten (${r.kontrast.join(', ')})`);
     assert(r.ungueltigIgnoriert, 'Ein unbekanntes Theme ändert nichts');
     assert(r.groesser > 1.2, `Textgröße "sehr groß" vergrößert die Schrift (Faktor ${r.groesser.toFixed(2)})`);
@@ -2723,7 +2753,7 @@ async function testDesignThemes(browser) {
     assert(r.navKnopf, 'Menüpunkt "Darstellung" ist vorhanden');
     assert(r.marktKarte, 'Transfermarkt-Karte: Name als Titel, Stärke als Kennzahl, Chips mit Zusatzangaben');
     assert(geklickt === 'klassik', `Antippen einer Theme-Karte wechselt das Farbschema (${geklickt})`);
-    assert(nachStart.theme === 'klassik' && nachStart.groesse === 'sehr-gross', `Theme und Textgröße bleiben nach dem Neustart erhalten (${JSON.stringify(nachStart)})`);
+    assert(nachStart.theme === 'klassik' && nachStart.groesse === 'sehr-gross', `Theme und Textgröße bleiben nach dem Neustart erhalten (vorher ${JSON.stringify(vorNeustart)}, nachher ${JSON.stringify(nachStart)})`);
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler in der Darstellung (${consoleErrors.slice(0, 2).join(' | ')})`);
     await page.close();
 }

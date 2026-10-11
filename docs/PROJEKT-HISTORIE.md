@@ -457,3 +457,10 @@ Die Basis-Datei nennt die Schwelle nicht im Inhalt, die Zuordnung folgt nur dem 
 - **Kartenmuster** jetzt auch für Kaderliste, Postfach und Jugend. Postfach: gelesene Nachrichten nicht mehr per Transparenz (Kontrast), Symbol-Knöpfe mit 32 px Tippfläche.
 - **Schreibung:** rund 250 Überschriften von Großbuchstaben auf korrekte deutsche Schreibung (von Hand festgelegt), kurze Etiketten über `.ui-overline` in Großbuchstaben per CSS; englische Übersetzungen mitgezogen.
 - **Tests:** `testKeineFestenFarben` (Quelltext), `testKontrastAlleThemes` (Laufzeit, ca. 20 s).
+
+## Phase 25.53: Bewerbungspool als Fenster
+
+- **Befund:** Der Bewerbungspool erschien als Kasten oben im Personal-Bildschirm; die Seite scrollte per `scrollIntoView` dorthin. Das schlug auf dem Handy zeitweise fehl (sanftes Scrollen unter Layoutänderungen), dann sah „Einstellen“ wirkungslos aus.
+- **Umsetzung:** `openCandidatePool()` öffnet das Fenster `#staff-pool-overlay` (Kartenmuster: Stelle, Gehalt, Kasse; je Bewerber Preis, Qualität, Start-Stufe, Start-Moral, Grund bei Sperre, Einstellen-Knopf). Kein Scrollen mehr; schließen per ✕, „Abbrechen“, Tipp neben das Fenster oder Zurück-Taste. Beim Laden wird ein alter Pool-Zustand verworfen.
+- **Nebenbei:** Nicht verfügbare Knöpfe (`disabled`) sehen jetzt gedämpft und gestrichelt aus, vorher waren sie von aktiven nicht zu unterscheiden.
+- **Tests:** `testPersonalEinstellen` und `testPersonalEinstellenHandy` prüfen, dass das Fenster vollständig im Bild liegt, alle drei Einstell-Knöpfe ohne Scrollen erreichbar sind, die Seite nicht springt und Abbrechen/Tipp daneben schließen.

@@ -139,7 +139,7 @@
         if (p.fanGroups) fanGroups = p.fanGroups;
         if (p.fanCentralState) Object.assign(fanCentralState, p.fanCentralState);
         if (p.staffMeta) Object.assign(staffMeta, p.staffMeta);
-        if (p.staffCentralState) Object.assign(staffCentralState, p.staffCentralState);
+        if (p.staffCentralState) { Object.assign(staffCentralState, p.staffCentralState); staffCentralState.candidatePool = null; }
         if (p.financeCentralState) Object.assign(financeCentralState, p.financeCentralState);
         if (p.merchExtras) Object.assign(merchExtras, p.merchExtras);
         if (p.productionQueue) productionQueue = p.productionQueue;

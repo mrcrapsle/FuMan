@@ -552,6 +552,26 @@
             .ui-card-head > .ui-card-kpi:has(.ui-card-kpi-lang) { grid-column: 2 / -1; grid-row: 2; flex-direction: row; align-items: baseline; gap: 6px; margin-top: 6px; }
             .ui-card-head:has(.ui-card-kpi-lang) > .ui-card-meta { grid-row: 3; }
         }
+        /* Bewerbungspool-Fenster (Personal): kompakt, damit alle Bewerber ohne Scrollen ins Bild passen */
+        .ui-pool-card .ui-card-actions { margin-top: 8px; }
+        .ui-pool-card .ui-card-meta { margin-top: 6px; }
+        .ui-pool-cancel { min-height: 36px; margin: 2px 0 0; }
+        .ui-pool-head .ui-card-sub { display: none; }
+        @media (max-height: 760px) {
+            .ui-pool-card .ui-card-thumb { display: none; }
+            .ui-pool-card .ui-card-head { grid-template-columns: minmax(0, 1fr) auto; }
+            .ui-pool-card .ui-card-head > .ui-card-text { grid-column: 1; }
+            .ui-pool-card .ui-card-head > .ui-card-kpi { grid-column: 2; grid-row: 1; }
+            .ui-pool-card .ui-card-head > .ui-card-meta { grid-column: 1 / -1; grid-row: 2; }
+            .ui-pool-card .ui-card-kpi-wert { font-size: var(--fs-title); }
+            .ui-pool-card .ui-card-kpi-label { display: none; }
+        }
+        /* Nicht verfügbare Knöpfe sehen auch so aus: flach und gedämpft, mit passendem Mauszeiger */
+        button:disabled { cursor: not-allowed; }
+        .btn-action:disabled, .btn-gold:disabled, .btn-primary:disabled, .btn-blue:disabled, .btn-industry:disabled, .btn-europe:disabled, .btn-danger:disabled {
+            background: var(--surface-3); color: var(--text-muted); box-shadow: none; border: 1px dashed var(--border-strong);
+        }
+        .btn-secondary:disabled { color: var(--text-muted); border-style: dashed; background: transparent; }
         .ui-btn-aktiv { background: var(--violet-fill) !important; color: var(--on-strong) !important; border-color: var(--violet-fill) !important; }
         .ui-card-more { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
         .ui-card-more button { margin: 0; }
@@ -2011,6 +2031,14 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
             <button onclick="confirmFormationModal()" class="btn-primary">Bestätigen</button>
             <button onclick="closeFormationModal()" class="btn-secondary">Abbrechen</button>
         </div>
+    </div>
+</div>
+
+<!-- PERSONAL: BEWERBUNGSPOOL (js/campus-staff.js, openCandidatePool) -->
+<div id="staff-pool-overlay" class="generic-modal-overlay">
+    <div class="generic-modal-box">
+        <button onclick="closeCandidatePool()" class="generic-modal-close" aria-label="Schließen">✕</button>
+        <div id="staff-pool-content"></div>
     </div>
 </div>
 
@@ -3580,7 +3608,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
                     <div id="staff-summary-box"></div>
                 </div>
                 <div class="panel" id="staff-poach-box" style="display:none; border: 1px solid var(--danger);"></div>
-                <div class="panel" id="staff-candidate-pool-box" style="display:none;"></div>
                 <div class="panel">
                     <div class="panel-header">👔 Personal & Expertenstab</div>
                     <div id="staff-list-container" style="max-height:450px; overflow-y:auto;"></div>
@@ -22981,26 +23008,6 @@ function renderStadiumEventsPanel() {
                     </div>`;
             }
         }
-        let poolBox = document.getElementById('staff-candidate-pool-box');
-        if (poolBox) {
-            let pool = staffCentralState.candidatePool;
-            poolBox.style.display = pool ? 'block' : 'none';
-            if (pool) {
-                let s = staffMembers[pool.key];
-                poolBox.innerHTML = `<div class="panel-header">📋 Bewerbungspool: ${s.name}</div>` +
-                    pool.candidates.map((c, idx) => {
-                        // Der Grund steht direkt beim Knopf: sonst wirkte "Einstellen" ohne Wirkung (Kasse oder Obergrenze).
-                        const preis = Math.round(s.cost * c.costMult);
-                        const grund = game.money < preis ? `Kasse zu klein (${formatVal(preis)} nötig)` : (staffHireBreaksCap(s) ? `Personalbudget-Obergrenze von ${formatVal(staffCentralState.wageBudgetCap)}/SpT würde gesprengt` : '');
-                        return `<div class="box" style="display:flex; justify-content:space-between; align-items:center; gap:6px; font-size:var(--fs-small);">
-                        <span>${c.label} (${c.qualityLabel})${grund ? `<br><span style="color:var(--danger); font-size:var(--fs-caption);">${grund}</span>` : ''}</span>
-                        <button onclick="hireFromCandidatePool(${idx})" ${grund ? 'disabled' : ''} class="btn-secondary" style="width:auto; font-size:var(--fs-caption);">${formatVal(preis)}</button>
-                    </div>`;
-                    }).join('') +
-                    `<button onclick="staffCentralState.candidatePool=null; renderStaffView();" class="btn-secondary" style="margin-top:4px;">Abbrechen</button>`;
-            }
-        }
-
         for (let key in staffMembers) {
             let s = staffMembers[key];
             let meta = ensureStaffMeta(key);
@@ -23246,14 +23253,51 @@ function renderStadiumEventsPanel() {
             { label: 'Renommierte Fachkraft', costMult: 1.6, moraleStart: 95, qualityLabel: 'Elite' }
         ];
         staffCentralState.candidatePool = { key, candidates };
-        renderStaffView();
-        // Der Bewerbungspool steht über der Personalliste. Unten in der Liste getippt, war er sonst außer Sicht
-        // (das wirkte wie ein Knopf ohne Wirkung) - deshalb hinscrollen und darauf hinweisen.
-        const poolBox = document.getElementById('staff-candidate-pool-box');
-        if (poolBox) {
-            poolBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            showToast(`📋 Bewerber für ${s.name} oben im Personal-Bereich - dort auswählen.`, 'info', 3000);
-        }
+        // Fenster statt Kasten über der Liste: erscheint immer mitten im Bild, egal wie weit unten
+        // man getippt hat - kein Scrollen, kein Knopf ohne sichtbare Wirkung.
+        renderCandidatePoolModal();
+        const overlay = document.getElementById('staff-pool-overlay');
+        if (overlay) overlay.classList.add('show');
+        playSound('click');
+    }
+    function closeCandidatePool() {
+        staffCentralState.candidatePool = null;
+        const overlay = document.getElementById('staff-pool-overlay');
+        if (overlay) overlay.classList.remove('show');
+    }
+    // Inhalt des Fensters: Kopf mit Stelle, Gehalt und Kasse, darunter je Bewerber eine Karte
+    // (Kartenmuster) mit Preis, Qualität, Startstufe und Startmoral und einem Einstellen-Knopf.
+    function renderCandidatePoolModal() {
+        const box = document.getElementById('staff-pool-content');
+        const pool = staffCentralState.candidatePool;
+        if (!box || !pool) return;
+        const s = staffMembers[pool.key];
+        const grundCap = staffHireBreaksCap(s) ? `Personalbudget-Obergrenze von ${formatVal(staffCentralState.wageBudgetCap)}/SpT würde gesprengt` : '';
+        box.innerHTML = `
+            <div class="ui-card-head ui-pool-head" style="margin-bottom:8px; padding-right:34px;">
+                <div class="ui-card-thumb"><span class="ui-thumb-icon">${STAFF_ICONS[pool.key] || '👤'}</span></div>
+                <div class="ui-card-text">
+                    <div class="ui-overline">Bewerbungspool</div>
+                    <div class="ui-card-title">${s.name}</div>
+                    <div class="ui-card-sub">${s.desc}</div>
+                </div>
+                <div class="ui-card-meta">${uiChip(`💶 Gehalt ${formatVal(s.wage)}/SpT`)}${uiChip(`🏦 Kasse ${formatVal(game.money)}`, game.money >= Math.round(s.cost * 0.7) ? 'gut' : 'schlecht')}</div>
+            </div>
+            ${pool.candidates.map((c, idx) => {
+                // Der Grund steht direkt bei der Karte: sonst wirkte "Einstellen" ohne Wirkung (Kasse oder Obergrenze).
+                const preis = Math.round(s.cost * c.costMult);
+                const grund = game.money < preis ? `Kasse zu klein (${formatVal(preis)} nötig)` : grundCap;
+                const stufe = c.costMult >= 1.6 ? 2 : 1;
+                return `<div class="panel player-card ui-pool-card" style="margin:0 0 8px; padding:10px;">${renderUiCard({
+                    thumb: `<span class="ui-thumb-icon">${c.costMult >= 1.6 ? '🌟' : (c.costMult >= 1 ? '👤' : '🌱')}</span>`,
+                    title: c.label,
+                    sub: `Qualität ${c.qualityLabel}`,
+                    kpi: { wert: formatVal(preis), label: 'Einmalig' },
+                    meta: [uiChip(`⭐ Stufe ${stufe}`), uiChip(`😊 Moral ${c.moraleStart}%`), grund ? uiChip(`⚠️ ${grund}`, 'schlecht') : ''],
+                    actions: `<button onclick="hireFromCandidatePool(${idx})" ${grund ? 'disabled' : ''} class="btn-action">✅ Einstellen für ${formatVal(preis)}</button>`
+                })}</div>`;
+            }).join('')}
+            <button onclick="closeCandidatePool()" class="btn-secondary ui-pool-cancel">Abbrechen</button>`;
     }
     function hireFromCandidatePool(idx) {
         let pool = staffCentralState.candidatePool;
@@ -23272,7 +23316,7 @@ function renderStadiumEventsPanel() {
         meta.morale = cand.moraleStart;
         meta.hiredSeason = game.season;
         meta.level = cand.costMult >= 1.6 ? 2 : 1;
-        staffCentralState.candidatePool = null;
+        closeCandidatePool();
         showToast(`✅ ${cand.label} als ${s.name} eingestellt!`, 'success');
         renderStaffView();
         updateUI();
@@ -37088,7 +37132,7 @@ function renderSeasonForecastHistory() {
         if (p.fanGroups) fanGroups = p.fanGroups;
         if (p.fanCentralState) Object.assign(fanCentralState, p.fanCentralState);
         if (p.staffMeta) Object.assign(staffMeta, p.staffMeta);
-        if (p.staffCentralState) Object.assign(staffCentralState, p.staffCentralState);
+        if (p.staffCentralState) { Object.assign(staffCentralState, p.staffCentralState); staffCentralState.candidatePool = null; }
         if (p.financeCentralState) Object.assign(financeCentralState, p.financeCentralState);
         if (p.merchExtras) Object.assign(merchExtras, p.merchExtras);
         if (p.productionQueue) productionQueue = p.productionQueue;

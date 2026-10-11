@@ -192,6 +192,14 @@
     </div>
 </div>
 
+<!-- PERSONAL: BEWERBUNGSPOOL (js/campus-staff.js, openCandidatePool) -->
+<div id="staff-pool-overlay" class="generic-modal-overlay">
+    <div class="generic-modal-box">
+        <button onclick="closeCandidatePool()" class="generic-modal-close" aria-label="Schließen">✕</button>
+        <div id="staff-pool-content"></div>
+    </div>
+</div>
+
 <!-- TRANSFER-VERHANDLUNGS-STEPPER-MODAL -->
 <div id="negotiation-stepper-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
@@ -1758,7 +1766,6 @@
                     <div id="staff-summary-box"></div>
                 </div>
                 <div class="panel" id="staff-poach-box" style="display:none; border: 1px solid var(--danger);"></div>
-                <div class="panel" id="staff-candidate-pool-box" style="display:none;"></div>
                 <div class="panel">
                     <div class="panel-header">👔 Personal & Expertenstab</div>
                     <div id="staff-list-container" style="max-height:450px; overflow-y:auto;"></div>
