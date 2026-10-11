@@ -410,3 +410,22 @@ Sechs Läufe mit je bis zu zehn Saisons, Startliga 0 (1. Liga), `passiv`. Lauf 1
 Die Gründe stehen jetzt in der Ausgabe, und zwar vor dem Saisonwechsel. Auffällig ist Lauf 3: Der Verein wird mit Platz 4 entlassen, obwohl Platz 1 erwartet war und der Vorstand bei 19 steht. Die Regel in `checkSeasonEndSacking()` (`js/match-post.js`) wirkt so: Entlassung, wenn der Vertrauenswert sechs Pflichtspiele in Folge unter 25 lag (Schwelle plus 3 mit Legendenstatus) und das Saisonziel verfehlt ist (Platz 1 bis 2 oder die Erwartung). Der Verlauf geht nur in die Prüfung „erholt“ ein, und die braucht sieben Werte. Platz 4 bei Erwartung 1 ist kein erreichtes Ziel, deshalb greift die Entlassung. Das ist eine Spielregel-Frage und wird nicht geändert, solange der Nutzer nicht freigibt.
 
 Vergleich mit den früheren passiven Läufen derselben Auswertung: 4 von 10, 5 von 10 und 7 von 8 Läufen mit Entlassung. Die Startliga der älteren Läufe ist in der Ausgabe nicht gesichert vermerkt, deshalb ist der Vergleich nur grob.
+
+## Diagnosen der Runde 25.38 (ohne Regeländerung)
+
+**Talentschwelle (Punkt 2).** Je 6 Läufe mit 10 Saisons, ausgewertet mit dem Talent-Skript aus der Messung:
+
+| Schwelle | Talent-Erlös Schnitt | Abgelehnte Angebote Schnitt |
+|---|---|---|
+| Basis (Datei `talent-basis2`) | 15,9 M€ | 12,2 |
+| Aufschlag 5 (`TALENT_AUFSCHLAG=5`) | 45,5 M€ | 6,2 |
+
+Die Basis-Datei nennt die Schwelle nicht im Inhalt, die Zuordnung folgt nur dem Dateinamen. Die Wirkung auf die Elf ist nicht gemessen. Vor einer Regel ist das nötig.
+
+**Aufsteiger-Anschub (Punkt 3).** Aus der Tabelle der Runden 25.35 bis 25.37: Elf-Lücke bei Aufstieg in Liga 3 −3,6, in Liga 2 −5,7, in Liga 1 −7,5. Nach dem ersten Jahr nicht abgestiegen: 12/12, 14/16, 5/5. Die Lücke ist messbar, der Abstieg kommt selten vor. Eine Anschubhilfe ist durch die Daten nicht gedeckt. Die frühere Aussage, Aufsteiger in der 3. Liga stiegen oft sofort ab, war falsch.
+
+**Transferpoker-Korridor (Punkt 4).** Die Messung aus 25.37 liegt bei Preis 88 bis 98 % der Forderung und Abschluss 90 bis 100 %. Ein Zielkorridor ist nicht festgelegt. Ohne Zielwert gibt es keinen Eingriff, der Zielwert ist eine Spielregel-Entscheidung.
+
+**Testlaufzeit (Punkt 5).** Je ein Lauf der Testsuite: vier Jobs 103 Sekunden, drei Jobs 109 Sekunden, beide 1377 von 1377 grün. Der Unterschied liegt im Rauschen. Der Standard bleibt bei drei Jobs, weil mehr Parallelität die Zeit- und Ladezustandstests unter Last riskiert.
+
+**Kader-Median im Transferdialog (Punkt 7).** Nicht umgesetzt. Das Potenzial wird in den Transferdialogen (`js/transfermarket.js`, `js/transfer-poker.js`) nicht angezeigt, ein Median hätte dort also keinen Bezug. Der Hinweis bleibt bei Jugendspielern und auf der Spielerkarte.
