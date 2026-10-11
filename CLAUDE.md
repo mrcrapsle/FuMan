@@ -27,6 +27,8 @@ npm run minify           # dist/anstoss-fm13-standalone.min.html
 npm run serve            # Entwicklungsserver mit Neubau auf http://localhost:8000 (/ = modular, /spiel = gebaut)
 cd tests && npm test     # Testsuite gegen den gebauten Stand
 cd tests && TEST_ONLY=Name node run-tests.js   # einzelne Suite (Teilstring des Funktionsnamens)
+scripts/bot-hintergrund.sh <datei> <bot-args>  # Bot-Lauf mit Abschlusszeile "=== ENDE exit=<code> ===" in der Datei
+python3 scripts/auswertung.py <datei>…         # Zusammenfassung je Bot-Lauf (Saisons, Liga, Entlassungen, Talente)
 ```
 
 ## Architektur

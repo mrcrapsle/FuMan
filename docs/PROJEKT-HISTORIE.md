@@ -407,6 +407,6 @@ Sechs Läufe mit je bis zu zehn Saisons, Startliga 0 (1. Liga), `passiv`. Lauf 1
 | 5 | 6 | 2. Liga | 10 | 10/10/10/10 | Platz 16 → 18 |
 | 6 | – | 3. Liga (Ende) | – | – | – |
 
-Die Gründe stehen jetzt in der Ausgabe, und zwar vor dem Saisonwechsel. Auffällig ist Lauf 3: Der Verein wird mit Platz 4 entlassen, obwohl Platz 1 erwartet war und der Vorstand bei 19 steht. Die Verlaufsdaten zeigen einen dreijährigen Rückgang, also greift die Regel nach Verlauf und nicht nach dem letzten Platz allein. Das ist eine Spielregel-Frage und wird nicht geändert, solange der Nutzer nicht freigibt.
+Die Gründe stehen jetzt in der Ausgabe, und zwar vor dem Saisonwechsel. Auffällig ist Lauf 3: Der Verein wird mit Platz 4 entlassen, obwohl Platz 1 erwartet war und der Vorstand bei 19 steht. Die Regel in `checkSeasonEndSacking()` (`js/match-post.js`) wirkt so: Entlassung, wenn der Vertrauenswert sechs Pflichtspiele in Folge unter 25 lag (Schwelle plus 3 mit Legendenstatus) und das Saisonziel verfehlt ist (Platz 1 bis 2 oder die Erwartung). Der Verlauf geht nur in die Prüfung „erholt“ ein, und die braucht sieben Werte. Platz 4 bei Erwartung 1 ist kein erreichtes Ziel, deshalb greift die Entlassung. Das ist eine Spielregel-Frage und wird nicht geändert, solange der Nutzer nicht freigibt.
 
 Vergleich mit den früheren passiven Läufen derselben Auswertung: 4 von 10, 5 von 10 und 7 von 8 Läufen mit Entlassung. Die Startliga der älteren Läufe ist in der Ausgabe nicht gesichert vermerkt, deshalb ist der Vergleich nur grob.
