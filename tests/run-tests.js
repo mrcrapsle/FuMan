@@ -2248,6 +2248,43 @@ async function testRunde36Anzeigen(browser) {
     await page.close();
 }
 
+async function testKiAngebotObergrenze(browser) {
+    console.log('\n[25.38] KI-Angebote: ein Klub kann nur so viel bieten, wie seine Liga zahlen kann');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        game.leagueLevel = 3; // 4. Liga: vorher konnte hier ein Bundesliga-Klub mit 367 Mio. bieten
+        const star = squad[0];
+        star.marketValue = 300000000;
+        const obergrenzen = [];
+        let zuHoch = 0, kaeuferFalsch = 0;
+        for (let i = 0; i < 20; i++) {
+            incomingOffers.length = 0;
+            triggerNewAITransferOffer(star);
+            const o = incomingOffers[0];
+            if (!o) continue;
+            obergrenzen.push(o.currentBid);
+            if (o.currentBid > KI_ANGEBOT_OBERGRENZE[0]) zuHoch++;
+            // Teurer Spieler: Käufer nur aus der Bundesliga (Stufe 0), weil nur dort 250 Mio. gezahlt werden können
+            if (kiStufeVonVerein(o.clubName) !== 0) kaeuferFalsch++;
+        }
+        // Normaler Spieler: kein Kappen, Käufer aus allen Stufen erlaubt
+        const klein = squad[1];
+        klein.marketValue = 2000000;
+        incomingOffers.length = 0;
+        triggerNewAITransferOffer(klein);
+        const kleinesAngebot = incomingOffers[0] ? incomingOffers[0].currentBid : 0;
+        return { anzahl: obergrenzen.length, zuHoch, kaeuferFalsch, kleinesAngebot, max: Math.max(0, ...obergrenzen) };
+    });
+    assert(r.anzahl === 20, 'Bei jedem Versuch entsteht ein Angebot');
+    assert(r.zuHoch === 0, 'Kein Angebot über der Obergrenze der Bundesliga (250 Mio. €)');
+    assert(r.kaeuferFalsch === 0, 'Für einen Spieler für 300 Mio. € kommt der Käufer nur aus der Bundesliga');
+    assert(r.kleinesAngebot > 0 && r.kleinesAngebot < 3000000, 'Ein normales Angebot (2 Mio. € Marktwert) wird nicht gekappt');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei den KI-Angeboten');
+    await page.close();
+}
+
 async function testBoardEarlyWarning(browser) {
     console.log('\n[25.24] Vorstand: Frühwarnung schon unter 50 Zufriedenheit, einmal pro Saison');
     const { page, consoleErrors } = await freshPage(browser);
@@ -9700,6 +9737,7 @@ async function main() {
         testCupAndLeagueSameDay,
         testBoardEarlyWarning,
         testRunde36Anzeigen,
+        testKiAngebotObergrenze,
         testEntlassungsGrund,
         testEnglishUi,
         testSwapDeals,

@@ -6010,10 +6010,16 @@ function selectNewGameScenario(id) {
     // um den Manager). So tauchen dieselben Vereine, die man aus der eigenen Liga-Tabelle
     // kennt, auch dort als handelnde Akteure auf, statt dass jedes Mal ein neuer, nie wieder
     // auftauchender Fantasiename erscheint.
-    function pickRandomOpposingClubName(preferHigherOrEqualLevel = false) {
+    // hoechstesLevel (optional): nur Klubs bis zu dieser Liga-Stufe (kleinerer Index = höhere Liga) -
+    // etwa damit nur ein Klub, der den Betrag zahlen kann, als Käufer auftritt (25.38).
+    function pickRandomOpposingClubName(preferHigherOrEqualLevel = false, hoechstesLevel = null) {
         let excluded = [game.clubName, game.secondTeam.name];
         let pool = leaguesData.flatMap((table, l) => table.filter(t => !excluded.includes(t.name)).map(t => ({ team: t, level: l })));
         if (pool.length === 0) return generateTeamName();
+        if (hoechstesLevel !== null) {
+            let erlaubt = pool.filter(p => p.level <= hoechstesLevel);
+            if (erlaubt.length > 0) pool = erlaubt;
+        }
         if (preferHigherOrEqualLevel) {
             let higher = pool.filter(p => p.level <= game.leagueLevel); // kleinerer Index = höhere Liga
             if (higher.length > 0) pool = higher;
@@ -7830,6 +7836,24 @@ function renderTransferPokerBox() {
         return Math.max(20, Math.round(schnitt));
     }
 
+    // Obergrenze je Liga-Stufe (Index wie leagueNames: 0 = 1. Bundesliga). Ein Klub kann nur so viel
+    // bieten, wie seine Liga zahlen kann. Vorher konnte ein 4.-Liga-Klub 367 Mio. € bieten, weil jeder
+    // Klub aus allen höheren Ligen als Käufer auftrat, ohne Blick aufs Geld. Die Werte sind Setzungen.
+    const KI_ANGEBOT_OBERGRENZE = [250000000, 60000000, 15000000, 5000000, 1500000, 400000];
+
+    // Höchste Liga-Stufe (kleinster Index), die ein Gebot dieser Höhe noch zahlen kann - und damit
+    // die Stufen, aus denen ein Käufer kommen darf.
+    function kiHoechsteStufeFuer(betrag) {
+        let stufe = 0;
+        KI_ANGEBOT_OBERGRENZE.forEach((grenze, l) => { if (grenze >= betrag) stufe = l; });
+        return stufe;
+    }
+
+    // Liga-Stufe eines Klubs aus der Liga-Pyramide, -1 wenn er dort nicht vorkommt.
+    function kiStufeVonVerein(name) {
+        return leaguesData.findIndex(table => table.some(t => t.name === name));
+    }
+
     // gezielt: ein Spieler, für den der Verein selbst grünes Licht gibt (Bürotermin "Wechsel erlauben").
     // optionen: { club, multiplier } - gezieltes Angebot eines bestimmten Vereins (Gerüchteküche).
     function triggerNewAITransferOffer(gezielt, optionen) {
@@ -7843,14 +7867,17 @@ function renderTransferPokerBox() {
         // einem frisch ausgewürfelten, nie wieder auftauchenden Fantasienamen - bevorzugt
         // Vereine auf oder über dem eigenen Liganiveau, da eher etablierte Klubs um
         // Spitzenspieler eines Amateur-/Unterligisten werben.
-        let buyerClub = (optionen && optionen.club) || pickRandomOpposingClubName(true);
         let initialMultiplier = (optionen && optionen.multiplier) || ((managerRPG.perks.negotiator ? 1.05 : 0.85) + Math.random() * 0.35);
         // Kleine Ablösen (Ligen 5-6: Marktwerte um 17.000 €) auf 500 € genau (25.35); die alte Untergrenze von
         // 10.000 € und die 5.000-€-Schritte waren dort grob. Ab 50.000 € wie bisher auf 5.000 €.
         const rohAngebot = targetPlayer.marketValue * initialMultiplier;
-        let offerSum = rohAngebot < 50000
+        // Nur Käufer aus Ligen, die den Betrag zahlen können; das Gebot wird auf die Obergrenze des Käufers gekappt.
+        let buyerClub = (optionen && optionen.club) || pickRandomOpposingClubName(true, kiHoechsteStufeFuer(rohAngebot));
+        let kaeuferStufe = kiStufeVonVerein(buyerClub);
+        let obergrenze = KI_ANGEBOT_OBERGRENZE[kaeuferStufe >= 0 ? kaeuferStufe : 0];
+        let offerSum = Math.min(obergrenze, rohAngebot < 50000
             ? Math.max(1000, Math.round(rohAngebot / 500) * 500)
-            : Math.max(10000, Math.round(rohAngebot / 5000) * 5000);
+            : Math.max(10000, Math.round(rohAngebot / 5000) * 5000));
 
         let newOffer = {
             id: 'bid_' + Math.random().toString(36).substr(2, 7),

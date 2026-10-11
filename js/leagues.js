@@ -284,10 +284,16 @@
     // um den Manager). So tauchen dieselben Vereine, die man aus der eigenen Liga-Tabelle
     // kennt, auch dort als handelnde Akteure auf, statt dass jedes Mal ein neuer, nie wieder
     // auftauchender Fantasiename erscheint.
-    function pickRandomOpposingClubName(preferHigherOrEqualLevel = false) {
+    // hoechstesLevel (optional): nur Klubs bis zu dieser Liga-Stufe (kleinerer Index = höhere Liga) -
+    // etwa damit nur ein Klub, der den Betrag zahlen kann, als Käufer auftritt (25.38).
+    function pickRandomOpposingClubName(preferHigherOrEqualLevel = false, hoechstesLevel = null) {
         let excluded = [game.clubName, game.secondTeam.name];
         let pool = leaguesData.flatMap((table, l) => table.filter(t => !excluded.includes(t.name)).map(t => ({ team: t, level: l })));
         if (pool.length === 0) return generateTeamName();
+        if (hoechstesLevel !== null) {
+            let erlaubt = pool.filter(p => p.level <= hoechstesLevel);
+            if (erlaubt.length > 0) pool = erlaubt;
+        }
         if (preferHigherOrEqualLevel) {
             let higher = pool.filter(p => p.level <= game.leagueLevel); // kleinerer Index = höhere Liga
             if (higher.length > 0) pool = higher;
