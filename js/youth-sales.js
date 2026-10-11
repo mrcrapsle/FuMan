@@ -121,7 +121,7 @@ function renderYouthOffersBox() {
     if (!box) return;
     const offen = getOpenYouthOffers().filter(o => o.season === game.season && o.bis >= game.matchday && youthTalents.some(p => p.id === o.playerId));
     if (!offen.length) { box.innerHTML = ''; return; }
-    box.innerHTML = `<div class="panel" style="border:1px solid var(--gold);"><div class="panel-header" style="color:var(--gold);">💶 ANGEBOTE FÜR TALENTE</div>` + offen.map(o => {
+    box.innerHTML = `<div class="panel" style="border:1px solid var(--gold);"><div class="panel-header" style="color:var(--gold);">💶 Angebote für Talente</div>` + offen.map(o => {
         const p = youthTalents.find(x => x.id === o.playerId);
         const mit = Math.round(o.betrag * (1 - YOUTH_SELLON_PERCENT / 100) / 1000) * 1000;
         return `<div class="box" style="font-size:var(--fs-small);">${o.club} bietet <strong>${formatVal(o.betrag)}</strong> für ${p.name} (${p.pos}, ${p.age} J., Stärke ${p.strength}) - gilt bis Spieltag ${o.bis}.

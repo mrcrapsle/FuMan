@@ -317,7 +317,7 @@ function renderWomenTeamView() {
     if (!box) return;
     const w = game.womenTeam;
     if (!w || !w.founded) {
-        box.innerHTML = `<div class="panel"><div class="panel-header">👩 FRAUENMANNSCHAFT GRÜNDEN</div><div class="box" style="font-size:var(--fs-small);">
+        box.innerHTML = `<div class="panel"><div class="panel-header">👩 Frauenmannschaft gründen</div><div class="box" style="font-size:var(--fs-small);">
             Gründe eine eigene Frauenmannschaft. Sie startet in der ${WOMEN_LEAGUES[WOMEN_LEAGUES.length - 1].name} und kann bis in die
             ${WOMEN_LEAGUES[0].name} aufsteigen. Ihre Spiele laufen parallel zu den Herren-Spieltagen, Gehälter und Einnahmen
             erscheinen im Buchungsjournal.</div>
@@ -344,7 +344,7 @@ function renderWomenTeamView() {
         ${next ? `<button onclick="upgradeWomenFoerderung()" class="btn-secondary" style="width:100%; font-size:var(--fs-caption); padding:5px; margin-top:6px;">⬆️ ${next.name} (${formatVal(next.cost)}, Entwicklung +${next.growth}/Saison, Gehälter ×${next.wageMult})</button>` : ''}
         </div>`;
 
-    html += `<div class="panel"><div class="panel-header">🤝 SPONSOR</div><div style="font-size:var(--fs-caption);">`;
+    html += `<div class="panel"><div class="panel-header">🤝 Sponsor</div><div style="font-size:var(--fs-caption);">`;
     if (sponsorAktiv) {
         html += `<div class="box">${w.sponsor.name} zahlt ${formatVal(w.sponsor.perMatchday)} pro Spieltag bis zum Saisonende.</div>`;
     } else if (w.sponsorOffers.length) {
@@ -356,7 +356,7 @@ function renderWomenTeamView() {
     }
     html += '</div></div>';
 
-    html += `<div class="panel"><div class="panel-header">📊 TABELLE</div><table style="width:100%; font-size:var(--fs-caption); border-collapse:collapse;">
+    html += `<div class="panel"><div class="panel-header">📊 Tabelle</div><table style="width:100%; font-size:var(--fs-caption); border-collapse:collapse;">
         <tr style="color:var(--text-muted);"><td>#</td><td>Verein</td><td>Sp</td><td>Tore</td><td style="text-align:right;">Pkt</td></tr>`;
     tabelle.forEach((t, i) => {
         const zone = i === 0 && w.leagueLevel > 0 ? 'var(--primary)' : i >= WOMEN_TEAMS_PER_LEAGUE - 2 && w.leagueLevel < WOMEN_LEAGUES.length - 1 ? 'var(--danger)' : 'inherit';
@@ -364,7 +364,7 @@ function renderWomenTeamView() {
     });
     html += '</table></div>';
 
-    html += `<div class="panel"><div class="panel-header">🔁 SPIELERINNENMARKT</div><div style="font-size:var(--fs-caption);">`;
+    html += `<div class="panel"><div class="panel-header">🔁 Spielerinnenmarkt</div><div style="font-size:var(--fs-caption);">`;
     html += w.market.map(p => `<div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin:3px 0;">
         <span>${p.pos} ${p.name} (${p.age}) · <strong>${p.strength}</strong>${p.age <= 27 ? ` · Pot. ${womenPotential(p)}` : ''}</span>
         <button onclick="signWomenPlayer('${p.id}')" class="btn-secondary" style="font-size:var(--fs-caption); padding:3px 6px; white-space:nowrap;">${formatVal(womenMarketFee(p))}</button></div>`).join('')
@@ -377,7 +377,7 @@ function renderWomenTeamView() {
     html += '</div></div>';
 
     if (w.history.length) {
-        html += '<div class="panel"><div class="panel-header">📜 SAISONHISTORIE</div><div style="font-size:var(--fs-caption);">'
+        html += '<div class="panel"><div class="panel-header">📜 Saisonhistorie</div><div style="font-size:var(--fs-caption);">'
             + w.history.map(h => `<div>Saison ${h.season}: Platz ${h.rank} in der ${h.liga}</div>`).join('') + '</div></div>';
     }
     box.innerHTML = html;

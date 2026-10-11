@@ -276,7 +276,7 @@
 
         box.innerHTML = `
             <div class="box box-underworld" style="border-left-color:var(--violet);">
-                <strong style="color:var(--violet);">📋 SPIELANALYSE: ${oppName}</strong><br>
+                <strong style="color:var(--violet);">📋 Spielanalyse: ${oppName}</strong><br>
                 <span style="font-size:var(--fs-small);">
                     Spielweise: <strong>${getOpponentPlaystyle(oppName)}</strong><br>
                     Team-Stärke: <strong>${baseStr}</strong> · Form (letzte 5): ${formStr}<br>

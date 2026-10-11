@@ -1,5 +1,5 @@
 
-    // ---------- STADIONNAME & NAMENSRECHTE ----------
+    // ---------- STADIONNAME & Namensrechte ----------
     // Stadion-Kostenskalierung: deutlich steiler als der generische Liga-Faktor, damit
     // ein Kreisligist sich keine Bundesliga-Arena leisten muss, ein Spitzenklub aber echte
     // zweistellige Millionenbeträge zahlt (wie in der Realität) - Index = leagueLevel
@@ -169,7 +169,7 @@
         if (uniqueNames.length < 3) { box.style.display = 'none'; return; }
         box.style.display = 'block';
         box.innerHTML = `<div class="box" style="border-left-color:#ff6b9d; text-align:center;">
-            <strong style="color:#ff6b9d;">❤️ EHRENWAND DER PUBLIKUMSLIEBLINGE</strong><br>
+            <strong style="color:#ff6b9d;">❤️ Ehrenwand der Publikumslieblinge</strong><br>
             <span style="font-size:var(--fs-small);">${uniqueNames.slice(-8).join(' · ')}</span>
         </div>`;
     }
@@ -223,7 +223,7 @@
     }
     // Kompakte Anzeige im Stadion-Screen, damit die Auflagen jederzeit einsehbar sind.
     // ==========================================
-    // BLOCK-SPEZIFISCHE FAN-KULTUR
+    // Block-spezifische Fan-Kultur
     // ==========================================
     // Jeder Stadion-Block hat eine natürliche kulturelle Zugehörigkeit zu einer der vier
     // Fan-Gruppen. Ist diese Fan-Gruppe gut gelaunt, stärkt sich die Block-Kultur über die
@@ -333,14 +333,14 @@
         let utilization = capacity > 0 ? Math.round((lastAttendance / capacity) * 100) : 0;
         box.innerHTML = `
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">KAPAZITÄT</div><div style="font-size:var(--fs-title); font-weight:900;">${capacity.toLocaleString('de-DE')}</div></div>
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">LETZTE ZUSCHAUERZAHL</div><div style="font-size:var(--fs-title); font-weight:900;">${lastAttendance.toLocaleString('de-DE')}</div></div>
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">AUSLASTUNG</div><div style="font-size:var(--fs-title); font-weight:900; color:${utilization>=70?'var(--primary)':(utilization>=40?'var(--accent)':'var(--danger)')};">${utilization}%</div></div>
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">STADIONWERT</div><div style="font-size:var(--fs-title); font-weight:900; color:var(--gold);">${(getStadiumMarketValue()/1000000).toFixed(2)} Mio €</div></div>
+                <div class="box"><div class="ui-overline">Kapazität</div><div style="font-size:var(--fs-title); font-weight:900;">${capacity.toLocaleString('de-DE')}</div></div>
+                <div class="box"><div class="ui-overline" style="font-size:var(--fs-micro); color:var(--text-muted);">Letzte Zuschauerzahl</div><div style="font-size:var(--fs-title); font-weight:900;">${lastAttendance.toLocaleString('de-DE')}</div></div>
+                <div class="box"><div class="ui-overline">Auslastung</div><div style="font-size:var(--fs-title); font-weight:900; color:${utilization>=70?'var(--primary)':(utilization>=40?'var(--accent)':'var(--danger)')};">${utilization}%</div></div>
+                <div class="box"><div class="ui-overline">Stadionwert</div><div style="font-size:var(--fs-title); font-weight:900; color:var(--gold);">${(getStadiumMarketValue()/1000000).toFixed(2)} Mio €</div></div>
             </div>
-            <div class="box" style="margin-top:4px;"><div style="font-size:var(--fs-micro); color:var(--text-muted);">BAUWERT (INVESTIERTE SUMME)</div><div style="font-size:var(--fs-title); font-weight:900; color:var(--industry);">${((stadium.totalInvested||0)/1000000).toFixed(2)} Mio €</div></div>
+            <div class="box" style="margin-top:4px;"><div class="ui-overline" style="font-size:var(--fs-micro); color:var(--text-muted);">Bauwert (investierte Summe)</div><div style="font-size:var(--fs-title); font-weight:900; color:var(--industry);">${((stadium.totalInvested||0)/1000000).toFixed(2)} Mio €</div></div>
             <div class="box" style="margin-top:4px;">
-                <div style="font-size:var(--fs-micro); color:var(--text-muted);">BETRIEBSKOSTEN PRO SPIELTAG</div>
+                <div class="ui-overline" style="font-size:var(--fs-micro); color:var(--text-muted);">Betriebskosten pro Spieltag</div>
                 <div style="font-size:var(--fs-title); font-weight:900; color:var(--danger);">${formatVal(Math.round(getStadiumBaseMaintenance()))}</div>
                 <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:2px;">
                     ${getMothballedCapacity() > 0
@@ -396,10 +396,10 @@
             let cond = getStadiumConditionRating();
             let suggestion = findNextStadiumSuggestion();
             condBox.innerHTML = `
-                <div style="font-size:var(--fs-caption); color:var(--text-muted);">STADION-ZUSTAND</div>
+                <div class="ui-overline" style="font-size:var(--fs-caption); color:var(--text-muted);">Stadion-Zustand</div>
                 <div style="font-size:var(--fs-title-sm); font-weight:900; color:${cond.color}; margin-bottom:6px;">${cond.label}</div>
                 ${suggestion ? `
-                    <div style="font-size:var(--fs-caption); color:var(--text-muted);">NÄCHSTE AUSBAUSTUFE</div>
+                    <div class="ui-overline" style="font-size:var(--fs-caption); color:var(--text-muted);">Nächste Ausbaustufe</div>
                     <div style="font-size:var(--fs-body); margin-bottom:6px;">${suggestion.label} (${formatVal(suggestion.cost)})</div>
                     <button onclick="${suggestion.action}" class="btn-action">Ausbau Planen</button>
                 ` : '<div style="font-size:var(--fs-small); color:var(--primary);">Alle Erweiterungen bereits gebaut! ✓</div>'}
@@ -623,7 +623,7 @@
     }
 
     // ==========================================
-    // RASENPFLEGE
+    // Rasenpflege
     // ==========================================
     // Zustand des Geläufs auf einer 0-99-Skala, unabhängig von den festen Stadion-
     // Erweiterungen (Medizinzentrum/Rasenpflege-System, die das VERLETZUNGSRISIKO senken) -
@@ -780,7 +780,7 @@
     }
 
     // ==========================================
-    // NEBENEINNAHMEN-ÜBERSICHT
+    // Nebeneinnahmen-ÜBERSICHT
     // ==========================================
     // Rein informative Aufschlüsselung der bereits bestehenden Campus-Einnahmequellen
     // (Fan-Kneipe/Foodtrucks = Gastronomie, Parkhaus = Parkplätze, VIP-Tagungshotel =
@@ -846,7 +846,7 @@
             let ev = game.pendingNamingCeremony;
             ceremonyBox.style.display = ev ? 'block' : 'none';
             if (ev) {
-                ceremonyBox.innerHTML = `<div class="panel-header" style="color:var(--accent);">🎪 NAMENSGEBUNGS-ZEREMONIE</div>
+                ceremonyBox.innerHTML = `<div class="panel-header" style="color:var(--accent);">🎪 Namensgebungs-Zeremonie</div>
                     <div class="box" style="font-size:var(--fs-small);">Wie soll die Enthüllung von "${ev.stadiumName}" gestaltet werden?</div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
                         <button onclick="resolveNamingCeremony('traditional')" class="btn-secondary">🏛️ Mit Tradition verbinden</button>
@@ -1223,7 +1223,7 @@
     }
 
     // ==========================================
-    // INTERACTIVE STADION-VISUALISIERUNG
+    // Interaktive Stadion-Visualisierung
     // ==========================================
     // Aktualisiert die interaktive Stadion-Visualisierung basierend auf der aktuellen Kapazität.
     // Die Visualisierung zeigt 5 Level: Level 1 (klein), Level 2-5 (immer größer werdend).

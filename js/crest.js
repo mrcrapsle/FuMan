@@ -1,6 +1,6 @@
 
     // ==========================================
-    // VEREINS-WAPPEN-EDITOR
+    // Vereins-Wappen-EDITOR
     // ==========================================
     const CREST_COLOR_PRESETS = ['#f5b942', '#3fb6ff', '#ff4d6d', '#22e0a8', '#8b5cf6', '#ff8a5c', '#ffffff', '#c0c0c0'];
     const CREST_SYMBOL_PRESETS = ['FCM', '⚽', '🦁', '🐺', '🦅', '⚡', '🔥', '★'];

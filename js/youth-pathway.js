@@ -211,7 +211,7 @@ function renderYouthDecisionBox() {
     const offen = youthTalents.filter(p => p.proDecisionLeft);
     if (!offen.length) { box.innerHTML = ''; return; }
     box.innerHTML = `<div class="panel" style="border:1px solid var(--accent);">
-        <div class="panel-header" style="color:var(--accent);">✍️ PROFIVERTRAG-ENTSCHEIDUNG</div>
+        <div class="panel-header" style="color:var(--accent);">✍️ Profivertrag-Entscheidung</div>
         ${offen.map(p => {
             const idx = youthTalents.indexOf(p);
             return `<div class="box" style="font-size:var(--fs-small);">
@@ -235,7 +235,7 @@ function renderYouthLoanChoiceBox() {
     if (!p) { box.innerHTML = ''; youthLoanChoiceId = null; return; }
     const dauer = Math.max(8, Math.min(17, 34 - game.matchday));
     box.innerHTML = `<div class="panel" style="border:1px solid var(--teal);">
-        <div class="panel-header" style="color:var(--teal);">📤 LEIHE ZUR ENTWICKLUNG: ${p.name} (${p.strength})</div>
+        <div class="panel-header" style="color:var(--teal);">📤 Leihe zur Entwicklung: ${p.name} (${p.strength})</div>
         <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">${dauer} Spieltage. Mehr Spielzeit oder höheres Niveau - beides bringt Entwicklung.</div>
         ${getYouthLoanClubs(p).map(c => {
             const spielzeit = Math.round(getYouthLoanPlayChance(p, c.strength) * 100);

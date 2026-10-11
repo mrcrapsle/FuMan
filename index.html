@@ -583,10 +583,10 @@
                 </div>
             </div>
 
-            <!-- 0. POSTFACH -->
+            <!-- 0. Postfach -->
             <div id="screen-inbox" style="display:none;">
                 <div class="panel">
-                    <div class="panel-header">📬 POSTFACH<span id="inbox-unread-summary" style="font-size:var(--fs-small); color:var(--text-muted); font-weight:normal;"></span></div>
+                    <div class="panel-header">📬 Postfach<span id="inbox-unread-summary" style="font-size:var(--fs-small); color:var(--text-muted); font-weight:normal;"></span></div>
                     <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:8px;">
                         <button onclick="setInboxFilter('alle')" id="inbox-filter-alle" class="btn-action" style="font-size:var(--fs-caption);">Alle</button>
                         <button onclick="setInboxFilter('wichtig')" id="inbox-filter-wichtig" class="btn-secondary" style="font-size:var(--fs-caption);">★ Wichtig</button>
@@ -608,7 +608,7 @@
 
             <div id="screen-second-team" style="display:none;">
                 <div id="st-not-founded-box" class="panel">
-                    <div class="panel-header">🥈 ZWEITE MANNSCHAFT GRÜNDEN</div>
+                    <div class="panel-header">🥈 Zweite Mannschaft gründen</div>
                     <div class="box">
                         Gründe einen zweiten, eigenständigen Klub ("1.FC Moritz Leipzig II"), der ganz unten in der niedrigsten Liga startet und sich - komplett unabhängig von deiner ersten Mannschaft - über die Spielzeiten nach oben arbeiten kann. Du verwaltest Kader, Formation & Spielstil; die Spiele selbst laufen automatisch wie bei allen anderen Vereinen der Liga.<br><br>
                         Kosten: <strong style="color:var(--accent);" id="st-found-cost">350.000 €</strong><br>
@@ -631,7 +631,7 @@
                         <div id="second-team-rival-box" class="box" style="margin-top:6px; font-size:var(--fs-small);"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header">🏋️ TRAININGSSTEUERUNG (RESERVE)</div>
+                        <div class="panel-header">🏋️ Trainingssteuerung (Reserve)</div>
                         <div id="second-team-training-focus" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px;">
                             <button onclick="setSecondTeamTrainingFocus('ausgeglichen')" id="st-focus-ausgeglichen" class="btn-action">⚖️ Ausgeglichen</button>
                             <button onclick="setSecondTeamTrainingFocus('kondition')" id="st-focus-kondition" class="btn-secondary">🏃 Kondition</button>
@@ -639,27 +639,27 @@
                         </div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header">🌟 PERSPEKTIVSPIELER</div>
+                        <div class="panel-header">🌟 Perspektivspieler</div>
                         <div id="second-team-perspective-box"></div>
                     </div>
 
                     <div class="panel">
-                        <div class="panel-header">🧑‍🏫 EIGENER TRAINERSTAB</div>
+                        <div class="panel-header">🧑‍🏫 Eigener Trainerstab</div>
                         <div id="second-team-staff-box"></div>
                     </div>
 
                     <div class="panel">
-                        <div class="panel-header">⚽ FREUNDSCHAFTS- & TESTSPIELE</div>
+                        <div class="panel-header">⚽ Freundschafts- & Testspiele</div>
                         <div id="second-team-friendly-box"></div>
                     </div>
 
                     <div class="panel">
-                        <div class="panel-header">📈 ENTWICKLUNGSBERICHT</div>
+                        <div class="panel-header">📈 Entwicklungsbericht</div>
                         <div id="second-team-development-box"></div>
                     </div>
 
                     <div class="panel">
-                        <div class="panel-header">📋 FORMATION & SPIELSTIL</div>
+                        <div class="panel-header">📋 Formation & Spielstil</div>
                         <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:6px;">
                             <button onclick="setSecondTeamFormation('4-4-2')" id="st-f-4-4-2" class="btn-action">4-4-2</button>
                             <button onclick="setSecondTeamFormation('4-3-3')" id="st-f-4-3-3" class="btn-secondary">4-3-3</button>
@@ -674,35 +674,35 @@
                     </div>
 
                     <div class="panel">
-                        <div class="panel-header">👥 KADER (ZWEITE MANNSCHAFT)</div>
+                        <div class="panel-header">👥 Kader (Zweite Mannschaft)</div>
                         <div id="st-squad-list"></div>
                     </div>
 
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--teal);">📤 AKTIVE LEIHGESCHÄFTE</div>
+                        <div class="panel-header" style="color:var(--teal);">📤 Aktive Leihgeschäfte</div>
                         <div id="loaned-players-list"></div>
                     </div>
 
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--teal);">🤝 LEIHVEREIN-RANKING</div>
+                        <div class="panel-header" style="color:var(--teal);">🤝 Leihverein-Ranking</div>
                         <div id="loan-club-ranking-box"></div>
                     </div>
 
                     <div class="panel">
-                        <div class="panel-header">🛒 AMATEUR-TRANSFERMARKT</div>
+                        <div class="panel-header">🛒 Amateur-Transfermarkt</div>
                         <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Eigener, günstigerer Markt für die zweite Mannschaft - finanziert über das Vereinskonto, nicht über das Transferbudget der ersten Mannschaft. Aktualisiert sich einmal pro Saison.</div>
                         <div id="st-market-list"></div>
                     </div>
 
                     <div class="panel">
-                        <div class="panel-header">🔁 SPIELER AUS DER 1. MANNSCHAFT VERSCHIEBEN</div>
+                        <div class="panel-header">🔁 Spieler aus der 1. Mannschaft verschieben</div>
                         <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Interner Wechsel, kostenlos & ohne Ablöse (kein echter Transfer zwischen den eigenen Vereinen).</div>
                         <div id="st-firstteam-transfer-list"></div>
                     </div>
                 </div>
             </div>
 
-            <!-- VORSTAND: Hub mit zwei Reitern (25.49). Alles, was zum Vorstand gehört, liegt hier. -->
+            <!-- Vorstand: Hub mit zwei Reitern (25.49). Alles, was zum Vorstand gehört, liegt hier. -->
             <div id="screen-hub-vorstand" style="display:none;">
                 <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(2, 1fr); gap:4px; margin-bottom:8px;">
                     <button onclick="showScreen('screen-vorstand-raum')" id="hubtab-btn-screen-vorstand-raum" class="btn-action" style="font-size:var(--fs-small); padding:6px 4px;">🏛️ Vorstandsraum</button>
@@ -710,17 +710,17 @@
                 </div>
                 <div id="screen-vorstand-raum" style="display:none;">
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--gold);">🏛️ VORSTAND</div>
+                        <div class="panel-header" style="color:var(--gold);">🏛️ Vorstand</div>
                         <div id="board-room-box"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header">📋 ERWARTUNG & WARNUNG</div>
+                        <div class="panel-header">📋 Erwartung & Warnung</div>
                         <div id="dash-board-warn-line"></div>
                     </div>
                 </div>
                 <div id="screen-vorstand-budget" style="display:none;">
                     <div class="panel">
-                        <div class="panel-header">💼 BUDGETS & VORSTANDS-VERHANDLUNGEN</div>
+                        <div class="panel-header">💼 Budgets & Vorstands-Verhandlungen</div>
                         <div id="insolvency-status-box" class="box" style="display:none; border-color:var(--danger); color:var(--danger); font-size:var(--fs-body); margin-bottom:6px;"></div>
                         <div style="font-size:var(--fs-body); margin-bottom:2px;" id="budget-transfer-bar-label">Transferbudget: 0 €</div>
                         <div style="font-size:var(--fs-body); margin-bottom:2px;" id="budget-wage-bar-label">Gehaltsbudget: 0 / 0</div>
@@ -758,7 +758,7 @@
 
                 <div class="panel">
                     <div class="panel-header">
-                        <span>⚽ NÄCHSTE BEGEGNUNG (SPIELTAG <span id="dash-mday">1</span>)</span>
+                        <span>⚽ Nächste Begegnung (Spieltag <span id="dash-mday">1</span>)</span>
                         <span id="dash-league-name" style="color:var(--text-main); font-size:var(--fs-small);">4. Liga</span>
                     </div>
                     <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:color-mix(in srgb, var(--shade) 30%, transparent); border-radius:8px; margin-bottom:8px;">
@@ -797,38 +797,38 @@
 
                 <div class="panel-grid">
                     <div class="panel">
-                        <div class="panel-header">🎯 NÄCHSTE ZIELE</div>
+                        <div class="panel-header">🎯 Nächste Ziele</div>
                         <div id="dash-next-goals-box"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header">📰 WOCHENRÜCKBLICK</div>
+                        <div class="panel-header">📰 Wochenrückblick</div>
                         <div id="dash-weekly-recap-box"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header">💰 VEREINS- & TRANSFERBUDGET</div>
+                        <div class="panel-header">💰 Vereins- & Transferbudget</div>
                         <div>Transferbudget: <strong id="dash-transfer-budget" style="color:var(--primary);">100.000 €</strong></div>
                         <div>Gehaltsbudget: <strong id="dash-wage-budget">15.000 € / SpT</strong></div>
                         <div>Monatssaldo (GuV): <strong id="dash-monthly-net" style="color:var(--accent);">+0 €</strong></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--industry);">🏭 INDUSTRIE & HOLDING</div>
+                        <div class="panel-header" style="color:var(--industry);">🏭 Industrie & Holding</div>
                         <div>Holding-Kapital: <strong id="dash-holding-cap" style="color:var(--industry);">50.000 €</strong></div>
                         <div>Aktive Fabriken: <strong id="dash-active-factories">0 / 4</strong></div>
                         <div>Lager-Rohstoffe: <strong id="dash-raw-total">1.750 kg</strong></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--europe);">🌟 EUROPA & MANAGER</div>
+                        <div class="panel-header" style="color:var(--europe);">🌟 Europa & Manager</div>
                         <div>Champions Cup: <strong id="dash-europe-status" style="color:var(--europe);">Nicht qualifiziert</strong></div>
                         <div>Trainer-Perks: <strong id="dash-perks-count" style="color:var(--gold);">0 / 5 Aktiv</strong></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header">🎯 SAISON-ZIELE</div>
+                        <div class="panel-header">🎯 Saison-Ziele</div>
                         <div id="season-objectives-box"></div>
                     </div>
                 </div>
 
                 <div class="panel">
-                    <div class="panel-header">💾 SPEICHERSTÄNDE</div>
+                    <div class="panel-header">💾 Speicherstände</div>
                     <button onclick="startNewGame()" id="btn-new-game" data-confirming="false" class="btn-danger" style="margin-bottom:10px;">🆕 Neues Spiel starten (frischer Klub)</button>
                     <div id="new-game-setup-box" class="box" style="display:none; margin-bottom:10px;">
                         <div style="font-size:var(--fs-small); font-weight:800; margin-bottom:4px;">Spielart wählen:</div>
@@ -863,7 +863,7 @@
             <div id="screen-manager-tree" style="display:none;">
                 <div class="panel">
                     <div class="panel-header" style="color:var(--accent);">
-                        <span>🏷️ VEREINSIDENTITÄT</span>
+                        <span>🏷️ Vereinsidentität</span>
                     </div>
                     <div class="box" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px;">
                         <span>Aktueller Vereinsname: <strong id="career-club-name-display" style="color:var(--primary);">1.FC Moritz Leipzig</strong></span>
@@ -877,7 +877,7 @@
                 </div>
                 <div class="panel">
                     <div class="panel-header" style="color:var(--accent);">
-                        <span>🏆 KARRIERE-RÜCKBLICK</span>
+                        <span>🏆 Karriere-Rückblick</span>
                     </div>
                     <div id="career-summary-box"></div>
                     <div style="font-size:var(--fs-body); font-weight:800; color:var(--accent); margin-top:10px;">🎙️ Interview-Historie (letzte 5)</div>
@@ -885,7 +885,7 @@
                     <button onclick="retireCareer()" id="btn-retire" data-confirming="false" class="btn-danger" style="margin-top:8px;">🚪 In den Ruhestand gehen (neue Karriere beginnen)</button>
                 </div>
                 <div class="panel">
-                    <div class="panel-header" style="color:var(--accent);"><span>🛡️ VEREINS-WAPPEN</span></div>
+                    <div class="panel-header" style="color:var(--accent);"><span>🛡️ Vereins-Wappen</span></div>
                     <div style="display:flex; justify-content:center; margin-bottom:12px;">
                         <div id="crest-preview-large" style="position:relative; width:96px; height:96px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:38px; font-weight:900; color:#1a1200; border:2px solid rgba(255,255,255,0.85);">
                             <span id="crest-preview-symbol-text">FCM</span>
@@ -905,16 +905,16 @@
                     <div id="crest-away-color-options" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">📰 MANAGER-MEDIENIMAGE</div>
+                    <div class="panel-header" style="color:var(--gold);">📰 Manager-Medienimage</div>
                     <div id="manager-media-image-box"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">🗞️ MEDIENABTEILUNG</div>
+                    <div class="panel-header" style="color:var(--gold);">🗞️ Medienabteilung</div>
                     <div id="media-department-box"></div>
                 </div>
                 <div class="panel">
                     <div class="panel-header" style="color:var(--gold);">
-                        <span>🌳 MANAGER-TALENTBAUM & SKILL-PUNKTE</span>
+                        <span>🌳 Manager-Talentbaum & Skill-Punkte</span>
                         <span>Verfügbare Skill-Punkte: <strong id="rpg-available-points" style="color:var(--gold); font-size:var(--fs-title-sm);">0</strong></span>
                     </div>
                     <div class="box">
@@ -942,7 +942,7 @@
             <div id="screen-industry" style="display:none;">
                 <div class="panel">
                     <div class="panel-header" style="color:var(--industry);">
-                        <span>🏭 EIGENE PRODUKTIONS-FABRIKEN</span>
+                        <span>🏭 Eigene Produktions-Fabriken</span>
                         <span>Holding-Budget: <strong id="ind-holding-money" style="color:var(--industry);">50.000 €</strong></span>
                     </div>
                     <div class="box box-industry">
@@ -951,12 +951,12 @@
                     <div id="factories-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header" style="color:var(--industry);">⏳ LAUFENDE PRODUKTIONSAUFTRÄGE</div>
+                    <div class="panel-header" style="color:var(--industry);">⏳ Laufende Produktionsaufträge</div>
                     <div id="production-queue-box"></div>
                 </div>
 
                 <div class="panel">
-                    <div class="panel-header">⚙️ PRODUKTIONSAUFTRÄGE ANSTOSSEN</div>
+                    <div class="panel-header">⚙️ Produktionsaufträge anstoßen</div>
                     <div class="box">Wähle einen Fanartikel und starte die Fertigung in deinen Fabriken:</div>
                     <div id="production-recipes-list" style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;"></div>
                 </div>
@@ -964,7 +964,7 @@
             <div id="screen-raw-materials" style="display:none;">
                 <div class="panel">
                     <div class="panel-header" style="color:var(--industry);">
-                        <span>📦 ROHSTOFF-MARKT & DYNAMISCHE BÖRSE</span>
+                        <span>📦 Rohstoff-Markt & dynamische Börse</span>
                         <span>Lager-Stufe: <strong id="raw-wh-level" style="color:var(--accent);">1 / 5</strong></span>
                     </div>
                     <div class="box box-industry" id="raw-market-news">
@@ -975,14 +975,14 @@
                 </div>
                 <div class="panel" id="acquisition-offer-box" style="display:none; border: 1px solid var(--accent);"></div>
                 <div class="panel">
-                    <div class="panel-header" style="color:var(--industry);">🏢 KONKURRENZFIRMEN</div>
+                    <div class="panel-header" style="color:var(--industry);">🏢 Konkurrenzfirmen</div>
                     <div id="competitor-firms-box"></div>
                 </div>
             </div>
             <div id="screen-holding" style="display:none;">
                 <div class="panel">
                     <div class="panel-header" style="color:var(--industry);">
-                        <span>💼 MERCHANDISING HOLDING GMBH (FIRMENZENTRALE)</span>
+                        <span>💼 Merchandising Holding GmbH (Firmenzentrale)</span>
                         <span>Unternehmenswert: <strong id="holding-enterprise-val" style="color:var(--primary);">125.000 €</strong></span>
                     </div>
                     <div class="box box-industry">
@@ -1005,7 +1005,7 @@
             <div id="screen-merch" style="display:none;">
                 <div class="panel">
                     <div class="panel-header">
-                        <span>🏪 3-KANAL FANSHOP-VERTRIEB & PREIS-ELASTIZITÄT</span>
+                        <span>🏪 3-Kanal-Fanshop-Vertrieb & Preiselastizität</span>
                         <span>Absatzkanäle: <strong>🏟️ Stadion | 🏬 Megastore | 🌐 Online</strong></span>
                     </div>
                     <div class="box">
@@ -1014,20 +1014,20 @@
                     <div id="merch-items-grid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr)); gap:8px;"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">📊 VERKAUFSVERLAUF & WIRKSAME BONI</div>
+                    <div class="panel-header">📊 Verkaufsverlauf & wirksame Boni</div>
                     <div id="merch-modifiers-box" style="margin-bottom:6px;"></div>
                     <div id="merch-sales-history"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">✨ LIMITIERTE EDITION</div>
+                    <div class="panel-header">✨ Limitierte Edition</div>
                     <div id="limited-edition-box"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">🎽 SAISONALE KOLLEKTION</div>
+                    <div class="panel-header">🎽 Saisonale Kollektion</div>
                     <div id="seasonal-collection-box"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">👕 TRIKOT-VERKAUFS-BESTENLISTE</div>
+                    <div class="panel-header">👕 Trikot-Verkaufs-Bestenliste</div>
                     <div id="jersey-sales-leaderboard-box"></div>
                 </div>
             </div>
@@ -1046,7 +1046,7 @@
             <div id="screen-calendar" style="display:none;">
                 <div class="panel">
                     <div class="panel-header">
-                        <span>📅 SAISON-KALENDER & TERMINE</span>
+                        <span>📅 Saison-Kalender & Termine</span>
                         <span>Aktueller Monat: <strong id="cal-month-name" style="color:var(--text-main);">August</strong></span>
                     </div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin:6px 0;">
@@ -1080,19 +1080,19 @@
                 <div class="stock-ticker-bar" id="fin-stock-ticker"></div>
                 <div id="subtab-fin-uebersicht" class="subtab-fin">
                     <div class="panel">
-                        <div class="panel-header">📊 FINANZ-CHARTS</div>
+                        <div class="panel-header">📊 Finanz-Charts</div>
                         <div id="fin-trend-chart" style="margin-bottom:12px;"></div>
                         <div id="fin-revenue-breakdown" style="margin-bottom:12px;"></div>
                         <div id="fin-cashflow-bar"></div>
                     </div>
                     <div class="panel">
                         <div class="panel-header">
-                            <span>🏦 MONATLICHE GEWINN- & VERLUSTRECHNUNG (GuV)</span>
+                            <span>🏦 Monatliche Gewinn- & Verlustrechnung (GuV)</span>
                             <span id="fin-month-title" style="color:var(--text-main);">Monat 1</span>
                         </div>
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
                             <div class="box">
-                                <strong style="color:var(--primary);">EINNAHMEN</strong>
+                                <strong class="ui-overline" style="color:var(--primary);">Einnahmen</strong>
                                 <div style="display:flex; justify-content:space-between;"><span>Ticketverkäufe:</span><span id="fin-in-tickets">0 €</span></div>
                                 <div style="display:flex; justify-content:space-between; font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;"><span>↳ Zuschauer beim letzten Heimspiel:</span><span id="fin-last-attendance">-</span></div>
                                 <div style="display:flex; justify-content:space-between;"><span>Merchandising (Shop):</span><span id="fin-in-merch">0 €</span></div>
@@ -1101,7 +1101,7 @@
                                 <div style="display:flex; justify-content:space-between;"><span>Börsendividenden:</span><span id="fin-in-dividends">0 €</span></div>
                             </div>
                             <div class="box">
-                                <strong style="color:var(--danger);">AUSGABEN</strong>
+                                <strong class="ui-overline" style="color:var(--danger);">Ausgaben</strong>
                                 <div style="display:flex; justify-content:space-between;"><span>Spieler- & Staffgehälter:</span><span id="fin-out-wages">0 €</span></div>
                                 <div style="display:flex; justify-content:space-between;"><span>Stadion & Campus-Unterhalt:</span><span id="fin-out-maintenance">0 €</span></div>
                                 <div style="display:flex; justify-content:space-between;"><span>Spielbetrieb & Verwaltung:</span><span id="fin-out-operations">0 €</span></div>
@@ -1121,19 +1121,19 @@
                         </div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header">📈 FINANZPROGNOSE & VERLAUF</div>
+                        <div class="panel-header">📈 Finanzprognose & Verlauf</div>
                         <div id="finance-forecast-box" style="margin-bottom:8px;"></div>
                         <div id="money-history-chart-box"></div>
                     </div>
                 </div>
                 <div id="subtab-fin-journal" class="subtab-fin" style="display:none;">
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--accent);">🏆 SPONSOREN-RANKING (KARRIERE)</div>
+                        <div class="panel-header" style="color:var(--accent);">🏆 Sponsoren-Ranking (Karriere)</div>
                         <div id="sponsor-leaderboard-toggle" style="display:flex; gap:6px; margin-bottom:8px;"></div>
                         <div id="sponsor-leaderboard-box"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header">📒 BUCHUNGSJOURNAL – WOHER KOMMT DAS GELD?</div>
+                        <div class="panel-header">📒 Buchungsjournal – woher kommt das Geld?</div>
                         <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:6px;">Jede Spieltagsabrechnung einzeln aufgeschlüsselt. So sehen Sie genau, welcher Posten wie viel gebracht oder gekostet hat.</div>
                         <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin-bottom:8px;">
                             <button onclick="setLedgerView('letzter')" id="ledger-tab-letzter" class="btn-action" style="font-size:var(--fs-caption); padding:5px 2px;">📄 Letzter Spieltag</button>
@@ -1145,18 +1145,18 @@
                 </div>
                 <div id="subtab-fin-budget" class="subtab-fin" style="display:none;">
                     <div class="panel">
-                        <div class="panel-header">⚖️ FINANCIAL FAIRPLAY</div>
+                        <div class="panel-header">⚖️ Financial Fairplay</div>
                         <div id="ffp-status-box"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--gold);">📺 MEDIENRECHTE & TV-VERTRAG</div>
+                        <div class="panel-header" style="color:var(--gold);">📺 Medienrechte & TV-Vertrag</div>
                         <div id="media-rights-box"></div>
                         <div id="tv-income-history-box" style="margin-top:6px;"></div>
                     </div>
                 </div>
                 <div id="subtab-fin-bank" class="subtab-fin" style="display:none;">
                     <div class="panel">
-                        <div class="panel-header">🏦 KREDITE</div>
+                        <div class="panel-header">🏦 Kredite</div>
                         <div id="active-loans-list" style="margin-bottom:6px;"></div>
                         <input type="number" id="loan-amount-input" placeholder="Kreditsumme in €" class="input-inline" style="width:100%; margin-bottom:6px;">
                         <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px;">
@@ -1171,7 +1171,7 @@
                         </div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header">🏦 FESTGELDANLAGE</div>
+                        <div class="panel-header">🏦 Festgeldanlage</div>
                         <div id="fixed-deposit-box" style="margin-bottom:6px;"></div>
                         <input type="number" id="fixed-deposit-amount" placeholder="Betrag in €" class="input-inline" style="width:100%; margin-bottom:6px;">
                         <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px;">
@@ -1181,7 +1181,7 @@
                         </div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header">🐷 RÜCKLAGEN & BONITÄT</div>
+                        <div class="panel-header">🐷 Rücklagen & Bonität</div>
                         <div id="reserve-fund-box" class="box" style="margin-bottom:4px;"></div>
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px; margin-bottom:6px;">
                             <button onclick="toggleAutoReserve(10)" class="btn-secondary" style="font-size:var(--fs-caption);">🐷 Auto-Rücklage 10%</button>
@@ -1198,25 +1198,25 @@
             </div>
             <div id="screen-betting" style="display:none;">
                 <div class="panel">
-                    <div class="panel-header">🎰 WETTBÜRO (QUOTENFUCHS)</div>
+                    <div class="panel-header">🎰 Wettbüro (Quotenfuchs)</div>
                     <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:8px;">Setze auf den Ausgang deines nächsten Ligaspiels. Die Quoten spiegeln den Stärkeunterschied wider - inklusive Buchmacher-Marge, ganz wie bei einem echten Wettanbieter.</div>
                     <div id="betting-odds-box"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">📜 WETT-HISTORIE</div>
+                    <div class="panel-header">📜 Wett-Historie</div>
                     <div id="bet-history-box"></div>
                 </div>
             </div>
             <div id="screen-stocks" style="display:none;">
                 <div class="panel">
                     <div class="panel-header">
-                        <span>📈 VEREINS-BÖRSE & INVESTMENT-DEPOT</span>
+                        <span>📈 Vereins-Börse & Investment-Depot</span>
                         <span>Depotwert: <strong id="stocks-total-val" style="color:var(--blue);">0 €</strong></span>
                     </div>
                     <div id="stocks-market-list"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">📜 OPTIONSSCHEINE & LIMIT-ORDERS</div>
+                    <div class="panel-header">📜 Optionsscheine & Limit-Orders</div>
                     <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Hebelprodukt: Wette auf steigenden/fallenden Kurs (3 Spieltage Laufzeit, höheres Risiko).</div>
                     <select id="option-stock-select" class="input-inline" style="width:100%; margin-bottom:4px;"></select>
                     <input type="number" id="option-stake-input" placeholder="Einsatz in €" class="input-inline" style="width:100%; margin-bottom:6px;">
@@ -1234,7 +1234,7 @@
                     <div id="limit-orders-list" style="margin-top:6px;"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">📅 AKTIEN-SPARPLAN & MEILENSTEINE</div>
+                    <div class="panel-header">📅 Aktien-Sparplan & Meilensteine</div>
                     <div style="display:flex; gap:6px; align-items:center; margin-bottom:6px;">
                         <select id="savings-plan-select" class="input-inline" style="flex:1;"></select>
                         <input type="number" id="savings-plan-amount" placeholder="€/SpT" class="input-inline" style="width:80px;">
@@ -1249,7 +1249,7 @@
             </div>
             <div id="screen-sponsors" style="display:none;">
                 <div class="panel">
-                    <div class="panel-header">🤝 HAUPTSPONSOR</div>
+                    <div class="panel-header">🤝 Hauptsponsor</div>
                     <div class="box">
                         <strong>Aktuell:</strong> <span id="spons-curr-name" style="color:var(--accent);">Stadtwerke</span> (Sockel: <span id="spons-curr-base">3.000 €</span>/SpT | Siegprämie: <span id="spons-curr-win">1.500 €</span>)<br>
                         <span id="spons-curr-extra" style="font-size:var(--fs-caption); color:var(--text-muted);"></span>
@@ -1260,7 +1260,7 @@
                 </div>
                 <div class="panel" id="sponsor-activation-box" style="display:none; border: 1px solid var(--accent);"></div>
                 <div class="panel">
-                    <div class="panel-header">👕 TRIKOT-AUSRÜSTER</div>
+                    <div class="panel-header">👕 Trikot-Ausrüster</div>
                     <div class="box">
                         <strong>Aktuell:</strong> <span id="kit-supplier-name" style="color:var(--blue);">Keiner</span> (+<span id="kit-supplier-income">0 €</span>/Heimspiel)<br>
                         <span id="kit-supplier-extra" style="font-size:var(--fs-caption); color:var(--text-muted);"></span>
@@ -1268,7 +1268,7 @@
                     <div id="kit-offers-list"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">🎽 ÄRMELSPONSOR</div>
+                    <div class="panel-header">🎽 Ärmelsponsor</div>
                     <div class="box">
                         <strong>Aktuell:</strong> <span id="sleeve-supplier-name" style="color:var(--teal);">Keiner</span> (+<span id="sleeve-supplier-income">0 €</span>/Spiel)<br>
                         <span id="sleeve-supplier-extra" style="font-size:var(--fs-caption); color:var(--text-muted);"></span>
@@ -1276,7 +1276,7 @@
                     <div id="sleeve-offers-list"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">📢 BANDENWERBUNG</div>
+                    <div class="panel-header">📢 Bandenwerbung</div>
                     <div id="banden-portfolio-summary" style="margin-bottom:6px;"></div>
                     <div id="banden-slots-list"></div>
                     <div id="banden-slots-note" style="font-size:var(--fs-caption); color:var(--text-muted); margin:4px 0;"></div>
@@ -1305,7 +1305,7 @@
                 <div id="injury-crisis-warning" style="display:none;"></div>
                 <div id="squad-tab-aufstellung">
                     <div class="panel">
-                        <div class="panel-header">⚽ KADER & AUFSTELLUNG</div>
+                        <div class="panel-header">⚽ Kader & Aufstellung</div>
                         <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px; margin-bottom:6px;">
                             <div>Kapitän: <select id="sel-captain" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
                             <div>Elfmeter: <select id="sel-penalty" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
@@ -1317,7 +1317,7 @@
                         <button onclick="autoLineup()" class="btn-action" style="margin-top:6px;">🤖 Trainer stellt Top-Elf auf</button>
                     </div>
                     <div class="panel" style="text-align:center;">
-                        <div class="panel-header"><span>🏟️ 3D TAKTIKTAFEL (<span id="squad-form-name">4-4-2</span>)</span></div>
+                        <div class="panel-header"><span>🏟️ 3D-Taktiktafel (<span id="squad-form-name">4-4-2</span>)</span></div>
                         <div id="tactics-board-stat-bar" style="margin-bottom:8px;"></div>
                         <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">🔁 Tippe zwei Spieler nacheinander an (Feld oder Liste), um sie exakt zu tauschen.</div>
                         <div class="pitch-3d-wrapper">
@@ -1328,7 +1328,7 @@
                         </div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header">KADERLISTE & ATTRIBUTE</div>
+                        <div class="panel-header">Kaderliste & Attribute</div>
                         <div id="role-fit-summary" style="font-size:var(--fs-caption); color:var(--accent); margin-bottom:6px;"></div>
                         <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:4px;">
                             <button onclick="setSquadSort('staerke')" id="ss-staerke" class="btn-action" style="font-size:var(--fs-micro); padding:5px 2px;">Stärke</button>
@@ -1349,16 +1349,16 @@
                 </div>
                 <div id="squad-tab-taktik" style="display:none;">
                     <div class="panel">
-                        <div class="panel-header">🧠 SPIELSTIL</div>
+                        <div class="panel-header">🧠 Spielstil</div>
                         <div id="tactic-style-cards-grid" style="display:grid; grid-template-columns: repeat(2, 1fr); gap:4px;"></div>
                         <div style="margin-top:6px; font-size:var(--fs-caption); color:var(--text-muted);" id="tactic-style-desc">Ausgewogener Ansatz ohne besondere Vor-/Nachteile.</div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header">📐 TEAM-ANWEISUNGEN</div>
+                        <div class="panel-header">📐 Team-Anweisungen</div>
                         <div id="team-instructions-box"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header">🥊 ZWEIKAMPFHÄRTE</div>
+                        <div class="panel-header">🥊 Zweikampfhärte</div>
                         <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:3px;">
                             <button onclick="setTackleHardness('vorsichtig')" id="th-vorsichtig" class="btn-secondary">🕊️ Vorsichtig</button>
                             <button onclick="setTackleHardness('normal')" id="th-normal" class="btn-action">⚖️ Normal</button>
@@ -1367,52 +1367,52 @@
                         <div style="margin-top:6px; font-size:var(--fs-caption); color:var(--text-muted);" id="tackle-hardness-desc">Ausgewogenes Einsteigen ohne besondere Vor-/Nachteile.</div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header">🤖 TAKTIK-AUTOMATIK</div>
+                        <div class="panel-header">🤖 Taktik-Automatik</div>
                         <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Reagiert im laufenden Spiel automatisch auf den Spielstand, ohne dass du das Live-Taktikpanel selbst bedienen musst.</div>
                         <div id="tactic-automation-box"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--purple);">📋 TAKTIK-BILANZ</div>
+                        <div class="panel-header" style="color:var(--purple);">📋 Taktik-Bilanz</div>
                         <div id="tactic-system-panel"></div>
                     </div>
                 </div>
                 <div id="squad-tab-analyse" style="display:none;">
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--gold);">📋 SAISONSTATISTIK & NOTEN</div>
+                        <div class="panel-header" style="color:var(--gold);">📋 Saisonstatistik & Noten</div>
                         <div id="player-season-stats-box"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--blue);">🌍 NATIONALSPIELER</div>
+                        <div class="panel-header" style="color:var(--blue);">🌍 Nationalspieler</div>
                         <div id="national-team-box"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--gold);">📊 KADER-ÜBERBLICK</div>
+                        <div class="panel-header" style="color:var(--gold);">📊 Kader-Überblick</div>
                         <div id="squad-overview-box"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--gold);">📐 KADERTIEFE NACH POSITION</div>
+                        <div class="panel-header" style="color:var(--gold);">📐 Kadertiefe nach Position</div>
                         <div id="squad-depth-chart-box"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--gold);">🏅 KADER-BESTENLISTE</div>
+                        <div class="panel-header" style="color:var(--gold);">🏅 Kader-Bestenliste</div>
                         <div id="squad-leaderboard-box"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header">📡 KADER-RADAR (ATTRIBUTE)</div>
+                        <div class="panel-header">📡 Kader-Radar (Attribute)</div>
                         <div id="squad-radar-container" style="margin-bottom:12px;"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header">📊 KADER-METRIKEN</div>
+                        <div class="panel-header">📊 Kader-Metriken</div>
                         <div id="squad-strength-metrics"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header">⚖️ LIGA-VERGLEICH</div>
+                        <div class="panel-header">⚖️ Liga-Vergleich</div>
                         <div id="squad-comparison-box"></div>
                     </div>
                 </div>
                 <div id="squad-tab-team" style="display:none;">
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--purple);">🤝 KABINE</div>
+                        <div class="panel-header" style="color:var(--purple);">🤝 Kabine</div>
                         <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Eingespieltheit, Grüppchen und Rangordnung - rumorende Gruppen kosten Teamstärke und ziehen die Kabine runter. Wortführer melden sich beim Mannschaftsrat, Unzufriedene im Büro.</div>
                         <div id="team-chemistry-box" style="display:none;"></div>
                         <div style="font-size:var(--fs-caption); font-weight:800; margin:6px 0 3px;">👥 Grüppchen</div>
@@ -1421,11 +1421,11 @@
                         <div id="locker-hierarchy-box"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--danger);">⚠️ SPIELER-SKANDALE</div>
+                        <div class="panel-header" style="color:var(--danger);">⚠️ Spieler-Skandale</div>
                         <div id="scandals-panel"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header">🤝 MANNSCHAFTSRAT</div>
+                        <div class="panel-header">🤝 Mannschaftsrat</div>
                         <div id="team-council-box"></div>
                     </div>
                 </div>
@@ -1442,7 +1442,7 @@
 
                 <div id="training-tab-plan">
                 <div class="panel">
-                    <div class="panel-header">🏋️ TEAM-TRAINING & WOCHENPLAN</div>
+                    <div class="panel-header">🏋️ Team-Training & Wochenplan</div>
                     <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px;">
                         <button onclick="setTeamTraining('kondition')" id="tr-kondition" class="btn-secondary">🏃 Kondition</button>
                         <button onclick="setTeamTraining('taktik')" id="tr-taktik" class="btn-secondary">📋 Taktik</button>
@@ -1450,11 +1450,11 @@
                         <button onclick="setTeamTraining('matchprep')" id="tr-matchprep" class="btn-secondary">🎯 Match-Prep</button>
                         <button onclick="setTeamTraining('erholung')" id="tr-erholung" class="btn-secondary">🧘 Erholung</button>
                     </div>
-                    <div style="margin-top:6px; font-size:var(--fs-caption); color:var(--text-muted);">Schwerpunkt: <strong id="cur-team-training" style="color:var(--accent);">AUSGEGLICHEN</strong></div>
+                    <div style="margin-top:6px; font-size:var(--fs-caption); color:var(--text-muted);">Schwerpunkt: <strong id="cur-team-training" style="color:var(--accent);">Ausgeglichen</strong></div>
                     <div id="matchprep-target-box" style="margin-top:6px;"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">📅 WOCHENPLAN (7 TAGE)</div>
+                    <div class="panel-header">📅 Wochenplan (7 Tage)</div>
                     <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:8px;">
                         <button onclick="applyWeeklyTrainingPreset('ausgeglichen')" class="btn-secondary" style="font-size:var(--fs-caption); padding:5px 2px;">⚖️ Standard</button>
                         <button onclick="applyWeeklyTrainingPreset('kondition')" class="btn-secondary" style="font-size:var(--fs-caption); padding:5px 2px;">🏃 Kondition</button>
@@ -1475,7 +1475,7 @@
                     </div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">🔥 TRAININGSINTENSITÄT</div>
+                    <div class="panel-header">🔥 Trainingsintensität</div>
                     <div id="training-intensity-buttons" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px;">
                         <button onclick="setTrainingIntensity('locker')" id="intensity-btn-locker" class="btn-secondary">😌 Locker</button>
                         <button onclick="setTrainingIntensity('normal')" id="intensity-btn-normal" class="btn-action">⚖️ Normal</button>
@@ -1484,11 +1484,11 @@
                     <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">Hart: mehr Trainingserfolg, mehr Fitnessverlust. Locker: umgekehrt.</div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header" style="color:var(--danger);">🏥 MEDIZINISCHE ABTEILUNG</div>
+                    <div class="panel-header" style="color:var(--danger);">🏥 Medizinische Abteilung</div>
                     <div id="medical-department-box"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">📅 TRAININGSKALENDER</div>
+                    <div class="panel-header">📅 Trainingskalender</div>
                     <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Liga, DFB-Pokal, Landespokal und Europapokal für die nächsten Spieltage im Überblick.</div>
                     <div id="training-calendar-box"></div>
                 </div>
@@ -1496,7 +1496,7 @@
 
                 <div id="training-tab-minigames" style="display:none;">
                 <div class="panel">
-                    <div class="panel-header">🎮 TRAININGS-MINISPIELE</div>
+                    <div class="panel-header">🎮 Trainings-Minispiele</div>
                     <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:6px;">
                         Trainiere echte Fähigkeiten deiner Spieler direkt im Minispiel. Einheiten heute übrig: <strong id="training-sessions-left" style="color:var(--accent);">2</strong> / 2
                     </div>
@@ -1516,7 +1516,7 @@
 
                 <div id="training-tab-individual" style="display:none;">
                 <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">💪 FÄHIGKEITEN GEZIELT ANTRAINIEREN</div>
+                    <div class="panel-header" style="color:var(--gold);">💪 Fähigkeiten gezielt antrainieren</div>
                     <div class="box" style="font-size:var(--fs-caption); margin-bottom:6px;">Ein zugewiesener Trainer bildet einen Spieler über mehrere Spieltage gezielt in einer Fähigkeit fort - kostet Geld und Zeit, aber garantiert eine echte Verbesserung.</div>
                     <div id="skill-training-active-list" style="margin-bottom:6px;"></div>
                     <select id="skill-training-player-select" class="input-inline" style="width:100%; margin-bottom:4px;"></select>
@@ -1527,11 +1527,11 @@
                     <div id="training-autopilot-box" style="margin-top:8px;"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">🎯 INDIVIDUELLES SPIELERTRAINING</div>
+                    <div class="panel-header">🎯 Individuelles Spielertraining</div>
                     <div id="individual-training-list" style="max-height:220px; overflow-y:auto;"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">🥅 ELFMETERKILLER-FÖRDERPROGRAMM</div>
+                    <div class="panel-header">🥅 Elfmeterkiller-Förderprogramm</div>
                     <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Nur für erfahrene Torhüter (mind. 80 Pflichtspiel-Einsätze) - Chance auf die seltene Eigenschaft "Elfmeter-Killer" [12.000 €].</div>
                     <select id="penalty-killer-select" class="input-inline" style="width:100%; margin-bottom:6px;">
                         <option value="">Torhüter wählen...</option>
@@ -1539,7 +1539,7 @@
                     <button onclick="runPenaltyKillerProgram(document.getElementById('penalty-killer-select').value)" class="btn-secondary">🥅 Programm durchführen</button>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">🏃‍♂️ ATHLETIK-TEST</div>
+                    <div class="panel-header">🏃‍♂️ Athletik-Test</div>
                     <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Ermittelt die athletischen Werte eines Spielers präziser, kleine Chance auf Tempo-Kick.</div>
                     <select id="athletic-test-select" class="input-inline" style="width:100%; margin-bottom:6px;"></select>
                     <button onclick="runAthleticTest(document.getElementById('athletic-test-select').value)" class="btn-secondary">🏃‍♂️ Test durchführen</button>
@@ -1548,7 +1548,7 @@
 
                 <div id="training-tab-special" style="display:none;">
                 <div class="panel">
-                    <div class="panel-header">🎥 SPEZIAL-EINHEITEN</div>
+                    <div class="panel-header">🎥 Spezial-Einheiten</div>
                     <button onclick="runVideoAnalysisSession()" id="btn-video-analysis" class="btn-secondary" style="margin-bottom:4px;">🎥 Video-Analyse-Einheit [2.500 €]</button>
                     <button onclick="runMentalTrainingSession()" class="btn-secondary" style="margin-bottom:4px;">🧠 Mentaltraining-Einheit [3.500 €]</button>
                     <div id="mental-training-status" class="box" style="font-size:var(--fs-caption); margin-bottom:4px;"></div>
@@ -1560,11 +1560,11 @@
                     <button onclick="goToTrainingCampBooking()" class="btn-secondary">📅 Trainingslager buchen (Kalender)</button>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">🌟 JUGEND-HOSPITANZ IM PROFITRAINING</div>
+                    <div class="panel-header">🌟 Jugend-Hospitanz im Profitraining</div>
                     <div id="youth-hospitant-list"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">📜 TRAININGS-HISTORIE</div>
+                    <div class="panel-header">📜 Trainings-Historie</div>
                     <div id="training-history-box"></div>
                 </div>
                 </div>
@@ -1596,12 +1596,12 @@
                     </div>
                     <div class="accordion-content active">
                         <div class="panel">
-                            <div class="panel-header" style="color:var(--gold);">📊 KENNZAHLEN</div>
+                            <div class="panel-header" style="color:var(--gold);">📊 Kennzahlen</div>
                             <div id="stadium-name-header" style="text-align:center; font-size:var(--fs-title-sm); font-weight:900; color:var(--accent); margin-bottom:8px;">Vereinsstadion</div>
                             <div id="stadium-key-figures-box"></div>
                         </div>
                         <div class="panel">
-                            <div class="panel-header">📈 ZUSCHAUERENTWICKLUNG</div>
+                            <div class="panel-header">📈 Zuschauerentwicklung</div>
                             <div id="stadium-attendance-chart-box"></div>
                         </div>
                     </div>
@@ -1614,11 +1614,11 @@
                     </div>
                     <div class="accordion-content active">
                         <div class="panel">
-                            <div class="panel-header">🎟️ TICKETPREISE</div>
+                            <div class="panel-header">🎟️ Ticketpreise</div>
                             <div id="ticket-price-sliders-box"></div>
                         </div>
                         <div class="panel">
-                            <div class="panel-header" style="color:var(--gold);">💰 NEBENEINNAHMEN</div>
+                            <div class="panel-header" style="color:var(--gold);">💰 Nebeneinnahmen</div>
                             <div id="stadium-ancillary-income-box"></div>
                         </div>
                     </div>
@@ -1631,7 +1631,7 @@
                     </div>
                     <div class="accordion-content active">
                         <div class="panel">
-                            <div class="panel-header">🌱 RASENPFLEGE</div>
+                            <div class="panel-header">🌱 Rasenpflege</div>
                             <div id="pitch-maintenance-box"></div>
                         </div>
                     </div>
@@ -1644,7 +1644,7 @@
                     </div>
                     <div class="accordion-content accordion-3d active">
                         <div class="panel">
-                            <div class="panel-header">🏟️ STADION-AUSBAU (8 BLÖCKE)</div>
+                            <div class="panel-header">🏟️ Stadion-Ausbau (8 Blöcke)</div>
                             <div class="stadium-bowl-wrapper">
                                 <div class="stadium-bowl" id="stadium-bowl-container" style="position:relative;">
                                     <div class="stand stand-vip" onclick="selectStadiumBlock('vipLogen')">VIP-Logen<br><span id="cap-vipLogen">50</span><div class="stand-infra-row" id="infra-vipLogen"></div></div>
@@ -1665,7 +1665,7 @@
                             <div id="stadium-action-box" class="box" style="margin-top:6px;">Tippe oben auf einen Block für Erweiterungen & Infrastruktur.</div>
                         </div>
                         <div class="panel">
-                            <div class="panel-header" style="color:var(--accent);">🏟️ INTERACTIVE STADION-VISUALISIERUNG</div>
+                            <div class="panel-header" style="color:var(--accent);">🏟️ Interaktive Stadion-Visualisierung</div>
                             <div id="stadium-container" class="stadium-level-1">
                                 <div class="floodlight top-left"></div>
                                 <div class="floodlight top-right"></div>
@@ -1680,7 +1680,7 @@
                             <div style="margin-top:8px; font-size:var(--fs-caption); color:var(--text-muted); text-align:center;">Stadion-Ausbaustufe: <strong id="stadium-level-display">1</strong></div>
                         </div>
                         <div class="panel">
-                            <div class="panel-header">SPEZIAL-INSTALLATIONEN</div>
+                            <div class="panel-header">Spezial-Installationen</div>
                             <div id="special-installs-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;"></div>
                         </div>
                     </div>
@@ -1693,16 +1693,16 @@
                     </div>
                     <div class="accordion-content">
                         <div class="panel">
-                            <div class="panel-header" style="color:var(--gold);">🏗️ NAMENTLICHE AUSBAUPROJEKTE</div>
+                            <div class="panel-header" style="color:var(--gold);">🏗️ Namentliche Ausbauprojekte</div>
                             <div class="box" style="font-size:var(--fs-caption); margin-bottom:6px;">Zusätzlich zum block-für-block-Ausbau unten: konkrete Großprojekte mit eigenem Effekt auf Kapazität und Sitzplatz-Zusammensetzung.</div>
                             <div id="capacity-projects-grid"></div>
                         </div>
                         <div class="panel">
-                            <div class="panel-header" style="color:var(--gold);">🏗️ LAUFENDE BAUPROJEKTE</div>
+                            <div class="panel-header" style="color:var(--gold);">🏗️ Laufende Bauprojekte</div>
                             <div id="stadium-construction-box"></div>
                         </div>
                         <div class="panel">
-                            <div class="panel-header" style="color:var(--gold);">🏗️ STADION-ERWEITERUNGEN (20 NEU)</div>
+                            <div class="panel-header" style="color:var(--gold);">🏗️ Stadion-Erweiterungen (20 neu)</div>
                             <div class="box" style="font-size:var(--fs-caption); margin-bottom:6px;">Zusätzliche Anlagen für Sicherheit, Komfort, Einnahmen und mehr - jede mit einer echten, spürbaren Wirkung.</div>
                             <div id="stadium-upgrades-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;"></div>
                         </div>
@@ -1716,19 +1716,19 @@
                     </div>
                     <div class="accordion-content">
                         <div class="panel">
-                            <div class="panel-header">🏟️ NAMENSRECHTE</div>
+                            <div class="panel-header">🏟️ Namensrechte</div>
                             <div id="stadium-naming-box"></div>
                             <div id="attendance-milestone-countdown" style="margin-top:6px;"></div>
                         </div>
                         <div id="dfb-licensing-status-box" style="display:none;"></div>
                         <div class="panel" id="naming-ceremony-box" style="display:none;"></div>
                         <div class="panel">
-                            <div class="panel-header" style="color:var(--gold);">🎭 BLOCK-SPEZIFISCHE FAN-KULTUR</div>
+                            <div class="panel-header" style="color:var(--gold);">🎭 Block-spezifische Fan-Kultur</div>
                             <div id="block-culture-box"></div>
                         </div>
                         <div id="crowd-favorite-monument-box" style="display:none;"></div>
                         <div class="panel">
-                            <div class="panel-header" style="color:var(--gold);">📊 GESAMTÜBERSICHT DER STADION-BONI</div>
+                            <div class="panel-header" style="color:var(--gold);">📊 Gesamtübersicht der Stadion-Boni</div>
                             <div id="stadium-upgrades-summary"></div>
                         </div>
                     </div>
@@ -1736,31 +1736,31 @@
             </div>
             <div id="screen-campus" style="display:none;">
                 <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">🏗️ LAUFENDE CAMPUS-BAUPROJEKTE</div>
+                    <div class="panel-header" style="color:var(--gold);">🏗️ Laufende Campus-Bauprojekte</div>
                     <div id="campus-construction-box"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">🏢 STADIONUMFELD & GEBÄUDE-CAMPUS</div>
+                    <div class="panel-header">🏢 Stadionumfeld & Gebäude-Campus</div>
                     <div id="campus-buildings-list" style="max-height:450px; overflow-y:auto;"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">🖼️ VEREINSMUSEUM: WAPPEN-HISTORIE</div>
+                    <div class="panel-header">🖼️ Vereinsmuseum: Wappen-Historie</div>
                     <div id="crest-museum-gallery"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header" style="color:var(--accent);">📅 STADION-EVENTS</div>
+                    <div class="panel-header" style="color:var(--accent);">📅 Stadion-Events</div>
                     <div id="stadium-events-panel"></div>
                 </div>
             </div>
             <div id="screen-staff" style="display:none;">
                 <div class="panel">
-                    <div class="panel-header">💼 PERSONAL-ÜBERBLICK</div>
+                    <div class="panel-header">💼 Personal-Überblick</div>
                     <div id="staff-summary-box"></div>
                 </div>
                 <div class="panel" id="staff-poach-box" style="display:none; border: 1px solid var(--danger);"></div>
                 <div class="panel" id="staff-candidate-pool-box" style="display:none;"></div>
                 <div class="panel">
-                    <div class="panel-header">👔 PERSONAL & EXPERTENSTAB</div>
+                    <div class="panel-header">👔 Personal & Expertenstab</div>
                     <div id="staff-list-container" style="max-height:450px; overflow-y:auto;"></div>
                 </div>
             </div>
@@ -1774,7 +1774,7 @@
                 <div id="fans-tab-sicherheit">
                 <div class="panel">
                     <div class="panel-header">
-                        <span>📢 FAN-ZENTRALE & ORDNERDIENST</span>
+                        <span>📢 Fan-Zentrale & Ordnerdienst</span>
                         <span>Stimmung: <strong id="fan-mood-val" style="color:var(--primary);">75%</strong></span>
                     </div>
                     <div class="box">
@@ -1789,11 +1789,11 @@
                     </div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">🛡️ EIGENE ORDNER & SICHERHEITSKRÄFTE</div>
+                    <div class="panel-header">🛡️ Eigene Ordner & Sicherheitskräfte</div>
                     <div id="security-workforce-box"></div>
                 </div>
                 <div class="panel" id="critical-fan-letter-box" style="display:none; border: 1px solid var(--danger);">
-                    <div class="panel-header" style="color:var(--danger);">✉️ KRITISCHER FAN-BRIEF</div>
+                    <div class="panel-header" style="color:var(--danger);">✉️ Kritischer Fan-Brief</div>
                     <div class="box" style="font-size:var(--fs-small);">Besorgte Fans fordern eine Reaktion. Wie antwortet der Verein?</div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
                         <button onclick="respondToCriticalFanLetter('zuhören')" class="btn-secondary">🗣️ Zuhören & Verständnis zeigen</button>
@@ -1811,19 +1811,19 @@
                     </div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">📊 ZUSCHAUERRANKING</div>
+                    <div class="panel-header">📊 Zuschauerranking</div>
                     <div id="attendance-chart-box" style="margin-bottom:10px;"></div>
                     <div id="attendance-ranking-box"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">📰 FAN-FEED</div>
+                    <div class="panel-header">📰 Fan-Feed</div>
                     <div id="fan-feed-box"></div>
                 </div>
                 </div>
 
                 <div id="fans-tab-programme" style="display:none;">
                 <div class="panel">
-                    <div class="panel-header">👥 MITGLIEDSCHAFTEN & EVENTS</div>
+                    <div class="panel-header">👥 Mitgliedschaften & Events</div>
                     <div id="fan-membership-box" class="box" style="margin-bottom:6px;"></div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px; margin-bottom:6px;">
                         <button onclick="runMembershipCampaign()" class="btn-secondary">📋 Mitgliedschafts-Kampagne [8.000 €]</button>
@@ -1835,7 +1835,7 @@
                     </div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">📊 FAN-UMFRAGE & PROGRAMME</div>
+                    <div class="panel-header">📊 Fan-Umfrage & Programme</div>
                     <div id="fan-survey-result" class="box" style="margin-bottom:6px; font-size:var(--fs-small);">Noch keine Umfrage durchgeführt.</div>
                     <button onclick="runFanSurvey()" class="btn-secondary" style="margin-bottom:6px;">📊 Fan-Umfrage durchführen</button>
                     <button onclick="toggleFanProject()" id="btn-fan-project" class="btn-secondary" style="margin-bottom:6px;">🤝 Fanprojekt einrichten [4.000 €]</button>
@@ -1849,11 +1849,11 @@
                     <div id="fan-mood-target-box" style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">🌟 JUGEND-PATENSCHAFTEN DER FANS</div>
+                    <div class="panel-header">🌟 Jugend-Patenschaften der Fans</div>
                     <div id="youth-sponsorship-list"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">💎 PREMIUM: FAN-BOOST</div>
+                    <div class="panel-header" style="color:var(--gold);">💎 Premium: Fan-Boost</div>
                     <div class="box" style="font-size:var(--fs-caption);">Sofortiger Fan-Zufriedenheits-Schub für Diamanten.</div>
                     <button onclick="buyPremiumBooster('fan_love')" class="btn-secondary">💎 Fan-Zufriedenheit +20 kaufen (90)</button>
                 </div>
@@ -1863,7 +1863,7 @@
             <!-- 15b. IMMOBILIEN -->
             <div id="screen-real-estate" style="display:none;">
                 <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">🏢 IMMOBILIEN-PORTFOLIO</div>
+                    <div class="panel-header" style="color:var(--gold);">🏢 Immobilien-Portfolio</div>
                     <div class="box" style="font-size:var(--fs-small); margin-bottom:6px;">
                         Investiere in Immobilien rund ums Stadion für eine zweite, fußballunabhängige Einnahmequelle - einmalige Kaufsumme, danach laufende Mieteinnahmen pro Spieltag.
                     </div>
@@ -1895,7 +1895,7 @@
                 <div id="winter-window-banner" style="display:none; background:linear-gradient(135deg, color-mix(in srgb, var(--blue) 25%, transparent), color-mix(in srgb, var(--teal) 15%, transparent)); border:1px solid var(--blue); border-radius:10px; padding:8px 12px; margin-bottom:8px; font-size:var(--fs-body); color:var(--on-strong);"></div>
                 <div class="panel">
                     <div class="panel-header">
-                        <span>🤝 TRANSFERMARKT, SCOUTING & VERHANDLUNGEN</span>
+                        <span>🤝 Transfermarkt, Scouting & Verhandlungen</span>
                     </div>
                     <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:6px;">
                         <button onclick="setTransferTab('offers')" id="btn-tab-tr-offers" class="btn-action">📩 Angebote (<span id="tab-offers-badge">0</span>)</button>
@@ -1914,12 +1914,12 @@
                     </div>
 
                     <div id="transfer-tab-market" style="display:none;"><div id="transfer-poker-box"></div><div id="market-list"></div>
-                        <div class="panel" style="margin-top:8px;"><div class="panel-header">📰 TRANSFER-TICKER DER ANDEREN VEREINE</div><div id="ai-transfer-news-box"></div></div>
+                        <div class="panel" style="margin-top:8px;"><div class="panel-header">📰 Transfer-Ticker der anderen Vereine</div><div id="ai-transfer-news-box"></div></div>
                     </div>
                     <div id="transfer-tab-free" style="display:none;"><div id="precontract-box"></div><div id="free-agents-list"></div></div>
                     <div id="transfer-tab-loan" style="display:none;">
                         <div class="panel">
-                            <div class="panel-header" style="color:var(--gold);">📋 EIGENE LEIHSPIELER</div>
+                            <div class="panel-header" style="color:var(--gold);">📋 Eigene Leihspieler</div>
                             <div id="active-loans-in-list"></div>
                         </div>
                         <div class="panel">
@@ -1934,7 +1934,7 @@
             <div id="screen-scouting-global" style="display:none;">
                 <div class="panel">
                     <div class="panel-header">
-                        <span>🌍 SCOUTING-NETZWERK 2.0</span>
+                        <span>🌍 Scouting-Netzwerk 2.0</span>
                     </div>
                     <div class="box">
                         Baue ein Netzwerk aus Regional-Scouts auf. Jeder Scout deckt eine Weltregion ab, kann ausgebildet werden (schnellere Reisen, bessere Funde) und bringt nach einer echten Reisedauer neue Talente mit - deren Werte zunächst nur ungefähr bekannt sind, bis du genauer hinschaust.
@@ -1942,11 +1942,11 @@
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;" id="scouting-regions-grid"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">🎯 GEFUNDENE KANDIDATEN</div>
+                    <div class="panel-header">🎯 Gefundene Kandidaten</div>
                     <div id="global-scouting-results"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">📚 TALENT-DATENBANK (Top 15 aller Zeiten)</div>
+                    <div class="panel-header" style="color:var(--gold);">📚 Talent-Datenbank (Top 15 aller Zeiten)</div>
                     <div id="talent-database-box"></div>
                 </div>
             </div>
@@ -1961,7 +1961,7 @@
                     <div id="youth-offers-box"></div>
                     <div id="youth-loan-choice-box"></div>
                     <div class="panel">
-                        <div class="panel-header">🌱 JUGENDAKADEMIE</div>
+                        <div class="panel-header">🌱 Jugendakademie</div>
                         <div class="box">Akademie-Stufe: <strong id="youth-lvl-disp">1</strong><div id="youth-academy-effect" style="font-size:var(--fs-small); margin-top:4px;"></div></div>
                         <div class="box" id="youth-capacity-box">Kapazität: 0 / 5</div>
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
@@ -1974,75 +1974,75 @@
                     </div>
                     <div class="panel" id="youth-poach-box" style="display:none; border: 1px solid var(--danger);"></div>
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--teal);">📤 VERLIEHENE TALENTE</div>
+                        <div class="panel-header" style="color:var(--teal);">📤 Verliehene Talente</div>
                         <div id="youth-loans-box"></div>
                     </div>
                 </div>
                 <div id="subtab-jug-entwicklung" class="subtab-jug" style="display:none;">
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--accent);">💥 MOMENTE DER AKADEMIE</div>
+                        <div class="panel-header" style="color:var(--accent);">💥 Momente der Akademie</div>
                         <div id="youth-moments-box"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header">📊 POTENZIAL & ENTWICKLUNG</div>
+                        <div class="panel-header">📊 Potenzial & Entwicklung</div>
                         <div id="youth-leaderboard-box"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--blue);">🌟 JUGENDTRAINER & TOP-TALENTE</div>
+                        <div class="panel-header" style="color:var(--blue);">🌟 Jugendtrainer & Top-Talente</div>
                         <div id="youth-academy-extended-panel"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--primary);">📈 ENTWICKLUNGSFORTSCHRITT</div>
+                        <div class="panel-header" style="color:var(--primary);">📈 Entwicklungsfortschritt</div>
                         <div id="youth-development-chart-panel"></div>
                     </div>
                 </div>
                 <div id="subtab-jug-liga" class="subtab-jug" style="display:none;">
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--gold);">🏆 JUGENDLIGA</div>
+                        <div class="panel-header" style="color:var(--gold);">🏆 Jugendliga</div>
                         <div id="youth-league-table-box"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--gold);">🎓 AKADEMIE-RANGLISTE</div>
+                        <div class="panel-header" style="color:var(--gold);">🎓 Akademie-Rangliste</div>
                         <div id="academy-ranking-panel"></div>
                     </div>
                 </div>
             </div>
             <div id="screen-contracts" style="display:none;">
                 <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">📅 SAISONPLANUNG</div>
+                    <div class="panel-header" style="color:var(--gold);">📅 Saisonplanung</div>
                     <div id="season-planning-box"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">📝 VERTRAGSVERWALTUNG</div>
+                    <div class="panel-header">📝 Vertragsverwaltung</div>
                     <div id="contracts-list"></div>
                 </div>
             </div>
             <div id="screen-squad-planning" style="display:none;">
                 <div class="panel">
-                    <div class="panel-header" style="color:var(--danger);">🚨 KRITISCHE SCHWACHSTELLEN FÜR KOMMENDE SAISONS</div>
+                    <div class="panel-header" style="color:var(--danger);">🚨 Kritische Schwachstellen für kommende Saisons</div>
                     <div class="box" style="font-size:var(--fs-caption); margin-bottom:6px;">
                         Führt Positionstiefe, Altersstruktur und auslaufende Verträge zusammen - eine Position kann bei jedem Wert für sich unauffällig wirken und trotzdem in Kombination zum Problem werden.
                     </div>
                     <div id="squad-planning-warnings-box"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">💶 GEHALTSPLANUNG NÄCHSTE SAISON</div>
+                    <div class="panel-header">💶 Gehaltsplanung nächste Saison</div>
                     <div id="squad-planning-wage-box"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">🧩 POSITIONSTIEFE, ALTER & VERTRÄGE</div>
+                    <div class="panel-header">🧩 Positionstiefe, Alter & Verträge</div>
                     <div id="squad-planning-position-box"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">📊 ALTERSPYRAMIDE DES GESAMTKADERS</div>
+                    <div class="panel-header">📊 Alterspyramide des Gesamtkaders</div>
                     <div id="squad-planning-age-box"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">📅 AUSLAUFENDE VERTRÄGE NACH POSITION</div>
+                    <div class="panel-header">📅 Auslaufende Verträge nach Position</div>
                     <div id="squad-planning-contract-box"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">📈 SPIELERENTWICKLUNG &amp; ALTERUNG</div>
+                    <div class="panel-header">📈 Spielerentwicklung &amp; Alterung</div>
                     <div id="player-development-box"></div>
                 </div>
             </div>
@@ -2057,7 +2057,7 @@
             </div>
             <div id="screen-league" style="display:none;">
                 <div class="panel">
-                    <div class="panel-header">🏆 WETTBEWERBE & STATISTIKEN</div>
+                    <div class="panel-header">🏆 Wettbewerbe & Statistiken</div>
                     <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:2px; margin-bottom:6px;">
                         <button onclick="setLeagueLevel(0)" id="btn-lvl-0" class="btn-secondary">1. Liga</button>
                         <button onclick="setLeagueLevel(1)" id="btn-lvl-1" class="btn-secondary">2. Liga</button>
@@ -2084,24 +2084,24 @@
                     </div>
                     <div id="league-tab-stats" style="display:none;">
                         <div class="panel" style="margin-bottom:8px;">
-                            <div class="panel-header" style="color:var(--gold);">👑 TORJÄGERLISTE</div>
+                            <div class="panel-header" style="color:var(--gold);">👑 Torjägerliste</div>
                             <div id="top-scorers-box"></div>
                         </div>
                         <div class="panel" style="margin-bottom:8px;">
-                            <div class="panel-header" style="color:var(--primary);">📈 TABELLENVERLAUF</div>
+                            <div class="panel-header" style="color:var(--primary);">📈 Tabellenverlauf</div>
                             <div id="league-rank-chart-box"></div>
                         </div>
                         <div class="panel" style="margin-bottom:8px;">
-                            <div class="panel-header" style="color:var(--accent);">🔥 FORMTABELLE (LETZTE 5 SPIELE)</div>
+                            <div class="panel-header" style="color:var(--accent);">🔥 Formtabelle (letzte 5 Spiele)</div>
                             <div id="league-form-table-box"></div>
                         </div>
                         <div class="panel" style="margin-bottom:8px;">
-                            <div class="panel-header" style="color:var(--teal);">🏠 HEIM- & AUSWÄRTSTABELLE</div>
+                            <div class="panel-header" style="color:var(--teal);">🏠 Heim- & Auswärtstabelle</div>
                             <div id="league-homeaway-box"></div>
                         </div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--accent);">🎠 TRAINERKARUSSELL</div>
+                        <div class="panel-header" style="color:var(--accent);">🎠 Trainerkarussell</div>
                         <div id="coach-carousel-box"></div>
                     </div>
                 </div>
@@ -2109,7 +2109,7 @@
             <div id="screen-europe" style="display:none;">
                 <div class="panel box-europe">
                     <div class="panel-header" style="color:var(--europe);">
-                        <span>🌟 UEFA CHAMPIONS CUP (KÖNIGSKLASSE)</span>
+                        <span>🌟 UEFA Champions Cup (Königsklasse)</span>
                         <span id="europe-status-tag" style="font-size:var(--fs-small); color:var(--text-main);">Status: Gruppenphase</span>
                     </div>
                     <div class="box">
@@ -2122,21 +2122,21 @@
 
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:8px; margin:8px 0;">
                         <div class="panel">
-                            <div class="panel-header" style="font-size:var(--fs-body); color:var(--europe);">GRUPPE A</div>
+                            <div class="panel-header" style="font-size:var(--fs-body); color:var(--europe);">Gruppe A</div>
                             <table><thead><tr><th>Pl</th><th>Team</th><th>Sp</th><th>Tore</th><th>Pkt</th></tr></thead><tbody id="europe-group-a-body"></tbody></table>
                         </div>
                         <div class="panel">
-                            <div class="panel-header" style="font-size:var(--fs-body); color:var(--europe);">GRUPPE B</div>
+                            <div class="panel-header" style="font-size:var(--fs-body); color:var(--europe);">Gruppe B</div>
                             <table><thead><tr><th>Pl</th><th>Team</th><th>Sp</th><th>Tore</th><th>Pkt</th></tr></thead><tbody id="europe-group-b-body"></tbody></table>
                         </div>
                     </div>
 
                     <div class="panel">
-                        <div class="panel-header" style="font-size:var(--fs-body);">🏆 K.O.-PHASE & FINALE</div>
+                        <div class="panel-header" style="font-size:var(--fs-body);">🏆 K.-o.-Phase & Finale</div>
                         <div id="europe-ko-tree"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header" style="font-size:var(--fs-body); color:var(--europe);">📜 EUROPAPOKAL-HISTORIE</div>
+                        <div class="panel-header" style="font-size:var(--fs-body); color:var(--europe);">📜 Europapokal-Historie</div>
                         <div id="europe-history-box"></div>
                     </div>
                 </div>
@@ -2150,67 +2150,67 @@
                 </div>
                 <div id="subtab-hist-titel" class="subtab-hist">
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--gold);">🏟️ POKALFINALS</div>
+                        <div class="panel-header" style="color:var(--gold);">🏟️ Pokalfinals</div>
                         <div id="cup-finals-history-box"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--gold);">📖 VEREINSREKORDE</div>
+                        <div class="panel-header" style="color:var(--gold);">📖 Vereinsrekorde</div>
                         <div id="club-records-box"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--teal);">🎖️ ACHIEVEMENTS</div>
+                        <div class="panel-header" style="color:var(--teal);">🎖️ Achievements</div>
                         <div id="achievements-box"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--gold);">🏅 LIGA-AUSZEICHNUNGEN</div>
+                        <div class="panel-header" style="color:var(--gold);">🏅 Liga-Auszeichnungen</div>
                         <div id="league-awards-box"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header">🌟 TROPHÄENRAUM</div>
+                        <div class="panel-header">🌟 Trophäenraum</div>
                         <div id="trophies-list"></div>
                     </div>
                 </div>
                 <div id="subtab-hist-legenden" class="subtab-hist" style="display:none;">
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--gold);">🌟 SPIELER DES MONATS</div>
+                        <div class="panel-header" style="color:var(--gold);">🌟 Spieler des Monats</div>
                         <div id="player-of-month-box"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--gold);">🏆 SPIELER DER SAISON</div>
+                        <div class="panel-header" style="color:var(--gold);">🏆 Spieler der Saison</div>
                         <div id="player-of-season-box"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--gold);">⭐ HALL OF FAME</div>
+                        <div class="panel-header" style="color:var(--gold);">⭐ Hall of Fame</div>
                         <div id="hall-of-fame-box"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--gold);">👑 GENERATIONEN-VERGLEICH</div>
+                        <div class="panel-header" style="color:var(--gold);">👑 Generationen-Vergleich</div>
                         <div id="legend-generations-box"></div>
                     </div>
                 </div>
                 <div id="subtab-hist-chronik" class="subtab-hist" style="display:none;">
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--purple);">👔 MANAGER-STATISTIK</div>
+                        <div class="panel-header" style="color:var(--purple);">👔 Manager-Statistik</div>
                         <div id="manager-analytics-box"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--blue);">📰 PROGNOSE & WIRKLICHKEIT</div>
+                        <div class="panel-header" style="color:var(--blue);">📰 Prognose & Wirklichkeit</div>
                         <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">Expertentipp vor der Saison gegen den tatsächlichen Abschluss.</div>
                         <div id="season-forecast-history-box"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--blue);">📊 LIGA-CHRONIK</div>
+                        <div class="panel-header" style="color:var(--blue);">📊 Liga-Chronik</div>
                         <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">Die größten Stärke-Veränderungen der letzten Saison über alle 108 Vereine der Liga-Pyramide hinweg.</div>
                         <div id="league-chronik-box"></div>
                     </div>
                 </div>
                 <div id="subtab-hist-rivalen" class="subtab-hist" style="display:none;">
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--danger);">🔥 DERBY-CHRONIK</div>
+                        <div class="panel-header" style="color:var(--danger);">🔥 Derby-Chronik</div>
                         <div id="derby-history-box"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header" style="color:var(--teal);">📖 DERBYGEGNER & BILANZ</div>
+                        <div class="panel-header" style="color:var(--teal);">📖 Derbygegner & Bilanz</div>
                         <div id="rivalry-history-book"></div>
                     </div>
                 </div>
@@ -2221,7 +2221,7 @@
             <div id="screen-cup" style="display:none;">
                 <div class="panel">
                     <div class="panel-header">
-                        <span>🏆 DFB-POKAL TURNIERBAUM</span>
+                        <span>🏆 DFB-Pokal-Turnierbaum</span>
                         <span id="cup-status-badge" style="font-size:var(--fs-small); color:var(--primary); font-weight:bold;">Im Wettbewerb</span>
                     </div>
                     <div class="box" style="margin-bottom:8px;">
@@ -2232,11 +2232,11 @@
                     <div id="cup-tree-container"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header"><span id="landescup-header">🏅 LANDESPOKAL</span></div>
+                    <div class="panel-header"><span id="landescup-header">🏅 Landespokal</span></div>
                     <div id="landescup-container"></div>
                 </div>
                 <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">📊 EIGENE POKAL-STATISTIK</div>
+                    <div class="panel-header" style="color:var(--gold);">📊 Eigene Pokal-Statistik</div>
                     <div id="cup-own-stats-box"></div>
                 </div>
             </div>
@@ -2256,7 +2256,7 @@
             </div>
             <div id="screen-private" style="display:none;">
                 <div class="panel">
-                    <div class="panel-header">🎩 TRAINER-PRIVATLEBEN</div>
+                    <div class="panel-header">🎩 Trainer-Privatleben</div>
                     <div class="box">
                         Privatvermögen: <strong id="priv-money" style="color:var(--primary);">15.000 €</strong> | Gehalt: <strong id="priv-wage">1.200 €</strong>/SpT<br>
                         Lizenz: <strong id="priv-license" style="color:var(--blue);">C-Lizenz</strong> | Stress: <strong id="priv-stress" style="color:var(--primary);">15%</strong> | Prestige: <strong id="priv-prestige" style="color:var(--accent);">10</strong>
@@ -2270,18 +2270,18 @@
                 </div>
 
                 <div class="panel">
-                    <div class="panel-header">🏠 LIFESTYLE & BESITZ</div>
+                    <div class="panel-header">🏠 Lifestyle & Besitz</div>
                     <div id="priv-assets-list"></div>
                 </div>
 
                 <div class="panel">
-                    <div class="panel-header">💼 PERSÖNLICHE EINKOMMENSQUELLEN</div>
+                    <div class="panel-header">💼 Persönliche Einkommensquellen</div>
                     <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Mit steigendem Prestige schaltest du lukrativere Nebentätigkeiten frei - jede hat eine Abklingzeit.</div>
                     <div id="priv-income-activities"></div>
                 </div>
 
                 <div class="panel">
-                    <div class="panel-header">🎣 HOBBY & BEZIEHUNGSSTATUS</div>
+                    <div class="panel-header">🎣 Hobby & Beziehungsstatus</div>
                     <div style="margin-bottom:8px;">
                         Hobby: <select id="priv-hobby-select" class="input-inline" style="width:180px;" onchange="setHobby(this.value)"></select>
                         <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:2px;" id="priv-hobby-desc"></div>
@@ -2293,14 +2293,14 @@
                 </div>
 
                 <div class="panel">
-                    <div class="panel-header">❤️ WOHLTÄTIGKEIT & KAPITALTRANSFER</div>
+                    <div class="panel-header">❤️ Wohltätigkeit & Kapitaltransfer</div>
                     <input type="number" id="priv-charity-input" placeholder="Spendenbetrag in €" class="input-inline" style="width:100%; margin-bottom:6px;">
                     <button onclick="makeCharityDonation(parseInt(document.getElementById('priv-charity-input').value)||0)" class="btn-action" style="margin-bottom:8px;">❤️ Spenden (Fans & Vorstand freuen sich)</button>
                     <input type="number" id="priv-deposit-input" placeholder="Betrag in €" class="input-inline" style="width:100%; margin-bottom:6px;">
                     <button onclick="depositToClub(parseInt(document.getElementById('priv-deposit-input').value)||0)" class="btn-secondary">🏦 Ins Vereinskonto einzahlen (Notkapital)</button>
                 </div>
                 <div class="panel">
-                    <div class="panel-header">🌟 ÖFFENTLICHES LEBEN</div>
+                    <div class="panel-header">🌟 Öffentliches Leben</div>
                     <button onclick="writeAutobiography()" id="btn-priv-autobio" class="btn-action" style="margin-bottom:6px;">📖 Autobiografie schreiben (ab 40 Prestige, einmalig)</button>
                     <button onclick="toggleSocialMediaPresence()" id="btn-priv-social" class="btn-secondary" style="margin-bottom:6px;">📱 Soziale-Medien-Präsenz umschalten</button>
                     <button onclick="toggleAssistant()" id="btn-priv-assistant" class="btn-secondary">🧑‍💼 Persönlichen Assistenten umschalten [5.000 € Antritt, 400 €/SpT]</button>
@@ -2308,7 +2308,7 @@
             </div>
             <div id="screen-underworld" style="display:none;">
                 <div class="panel">
-                    <div class="panel-header" style="color:var(--purple);">🕵️ UNTERWELT, SABOTAGE & MANIPULATION</div>
+                    <div class="panel-header" style="color:var(--purple);">🕵️ Unterwelt, Sabotage & Manipulation</div>
                     <div class="box box-underworld">
                         DFB-Ermittlungsdruck: <strong id="uw-pressure" style="color:var(--danger);">0%</strong><br>
                         Aktive Aktionen für nächstes Spiel: <strong id="uw-active-tricks" style="color:var(--accent);">Keine</strong><br>
@@ -2332,10 +2332,10 @@
                 </div>
             </div>
 
-            <!-- 24b. PREMIUM-SHOP -->
+            <!-- 24b. Premium-Shop -->
             <div id="screen-premium" style="display:none;">
                 <div class="panel">
-                    <div class="panel-header" style="color:var(--gold);">💎 PREMIUM-SHOP</div>
+                    <div class="panel-header" style="color:var(--gold);">💎 Premium-Shop</div>
                     <div class="box" style="font-size:var(--fs-caption);">
                         ⚠️ <strong>Hinweis:</strong> Dies ist eine reine Offline-App ohne echte Zahlungsanbindung. "Käufe" hier sind simuliert und buchen kein echtes Geld ab - die Premium-Punkte werden direkt gutgeschrieben.
                     </div>
@@ -2361,19 +2361,19 @@
             <!-- 26. TROPHÄEN -->
             
 
-            <!-- DARSTELLUNG: Farbschema und Textgröße (js/design-settings.js) -->
+            <!-- Darstellung: Farbschema und Textgröße (js/design-settings.js) -->
             <div id="screen-design" style="display:none;">
                 <div class="panel">
-                    <div class="panel-header"><span>🎨 DARSTELLUNG</span></div>
+                    <div class="panel-header"><span>🎨 Darstellung</span></div>
                     <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:10px;">Wähle Farben und Textgröße so, wie du am besten lesen kannst.</div>
                     <div id="design-settings-box"></div>
                 </div>
             </div>
 
-            <!-- SPIEL-LEXIKON (js/lexicon.js) -->
+            <!-- Spiel-Lexikon (js/lexicon.js) -->
             <div id="screen-lexicon" style="display:none;">
                 <div class="panel">
-                    <div class="panel-header"><span>📖 SPIEL-LEXIKON</span></div>
+                    <div class="panel-header"><span>📖 Spiel-Lexikon</span></div>
                     <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:6px;">Was bedeutet ein Wert, wie wirkt er, wie beeinflusst man ihn? Suchen oder nach Bereich filtern.</div>
                     <input id="lexicon-search" type="search" oninput="renderLexicon()" placeholder="Suchen, z.B. Fitness, Lizenz, Sponsor ..." style="width:100%; box-sizing:border-box; padding:8px; font-size:var(--fs-body-lg); margin-bottom:6px;">
                     <div id="lexicon-categories" style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px;"></div>
@@ -2386,7 +2386,7 @@
             <div id="screen-admin" style="display:none;">
                 <div class="panel box-admin">
                     <div class="panel-header" style="color:var(--gold);">
-                        <span>🛠️ ADMIN-DIAGNOSE & LIVE-INSPECTOR</span>
+                        <span>🛠️ Admin-Diagnose & Live-Inspector</span>
                         <span style="font-size:var(--fs-small); color:var(--text-main);">Entwickler-Konsole Aktiv</span>
                     </div>
                     <div style="text-align:center; font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;" id="admin-version-tag">Version wird geladen...</div>
@@ -2401,7 +2401,7 @@
                 </div>
 
                 <div class="panel">
-                    <div class="panel-header" style="color:var(--primary);">💰 FINANZEN, KONTEN & ROHSTOFFE</div>
+                    <div class="panel-header" style="color:var(--primary);">💰 Finanzen, Konten & Rohstoffe</div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px; margin-bottom:6px;">
                         <button onclick="adminAddClubMoney(10000000)" class="btn-action">💵 +10.000.000 € Vereinskonto</button>
                         <button onclick="adminAddClubMoney(100000000)" class="btn-primary">💰 +100.000.000 € Vereinskonto</button>
@@ -2415,7 +2415,7 @@
                 </div>
 
                 <div class="panel">
-                    <div class="panel-header" style="color:var(--accent);">⚽ KADER, SPIELER & TRAINER-KARRIERE</div>
+                    <div class="panel-header" style="color:var(--accent);">⚽ Kader, Spieler & Trainer-Karriere</div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px; margin-bottom:6px;">
                         <button onclick="adminHealAndBoostSquad()" class="btn-primary">✨ 100% Fitness & 100% Moral & Geheilt</button>
                         <button onclick="adminUpgradeEntireSquad(5)" class="btn-action">⚡ Alle Spieler im Kader +5 Stärke</button>
@@ -2438,7 +2438,7 @@
                 </div>
 
                 <div class="panel">
-                    <div class="panel-header" style="color:var(--blue);">🏟️ STADION, CAMPUS & EXPERTENSTAB</div>
+                    <div class="panel-header" style="color:var(--blue);">🏟️ Stadion, Campus & Expertenstab</div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
                         <button onclick="adminMaxOutAllBuildings()" class="btn-action">🌟 Stadion & Alle 8 Blöcke Max (100.000 Plätze)</button>
                         <button onclick="adminHireAllStaffFree()" class="btn-blue">👔 Alle 10 Staff-Experten sofort anstellen</button>
@@ -2446,7 +2446,7 @@
                 </div>
 
                 <div class="panel">
-                    <div class="panel-header" style="color:var(--danger);">🏆 WETTBEWERBE, ZEITREISE & TELEPORT</div>
+                    <div class="panel-header" style="color:var(--danger);">🏆 Wettbewerbe, Zeitreise & Teleport</div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px; margin-bottom:6px;">
                         <button onclick="adminTeleportLeague(0)" class="btn-action">🚀 Teleport 1. Bundesliga</button>
                         <button onclick="adminTeleportLeague(1)" class="btn-secondary">🚀 Teleport 2. Liga</button>
@@ -2465,7 +2465,7 @@
                         <button onclick="adminAdvanceMatchdaysWithCheckpoints(20)" class="btn-secondary" style="margin-bottom:4px;">⏩ Zeitraffer mit Zwischenständen (20 SpT, 5er-Etappen)</button>
                         <div id="admin-checkpoint-history-box"></div>
                     </div>
-                    <div style="font-size:var(--fs-caption); font-weight:800; color:var(--text-muted); margin-bottom:4px;">🧪 SZENARIO-PRESETS</div>
+                    <div class="ui-overline" style="font-size:var(--fs-caption); font-weight:800; color:var(--text-muted); margin-bottom:4px;">🧪 Szenario-Presets</div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px; margin-bottom:6px;">
                         <button onclick="applyAdminScenarioPreset('insolvenz')" class="btn-danger" style="font-size:var(--fs-caption);">Insolvenz-Test</button>
                         <button onclick="applyAdminScenarioPreset('meisterrennen')" class="btn-gold" style="font-size:var(--fs-caption);">Meister-Endspurt</button>
@@ -2474,7 +2474,7 @@
                 </div>
 
                 <div class="panel">
-                    <div class="panel-header">💾 SAVEGAME EXPORT & JSON-IMPORT</div>
+                    <div class="panel-header">💾 Savegame-Export & JSON-Import</div>
                     <textarea id="adm-save-json" style="width:100%; height:65px; background:var(--surface-0); color:var(--primary); font-family:monospace; font-size:var(--fs-caption); border:1px solid color-mix(in srgb, var(--europe) 30%, var(--surface-1)); border-radius:4px; padding:4px;" placeholder="Hier Savegame-JSON einfügen oder exportieren..."></textarea>
                     <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px; margin-top:4px;">
                         <button onclick="adminExportSaveJson()" class="btn-blue">📤 JSON Exportieren</button>
@@ -2484,7 +2484,7 @@
                 </div>
 
                 <div class="panel">
-                    <div class="panel-header" style="color:var(--teal);">🔍 STRUKTUR-SELBSTTEST</div>
+                    <div class="panel-header" style="color:var(--teal);">🔍 Struktur-Selbsttest</div>
                     <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:6px;">Prüft, ob jeder Screen nach dem Öffnen wirklich sichtbaren Inhalt zeigt - deckt versteckte HTML-Verschachtelungsfehler auf, bevor sie als "das Spiel geht nicht" auffallen.</div>
                     <button onclick="runStructuralSelfTest(false)" class="btn-primary" style="margin-bottom:8px;">🔍 Jetzt alle Screens testen</button>
                     <div style="font-size:var(--fs-small); font-weight:800; color:var(--text-muted); margin-bottom:4px;">Verlauf (letzte Läufe):</div>
@@ -2505,7 +2505,7 @@
                 <div id="prematch-tactic-box" style="margin-bottom:10px;"></div>
                 <div id="prematch-talk-box"></div>
                 <div class="panel">
-                    <div class="panel-header">🎙️ PRE-MATCH PRESSEKONFERENZ</div>
+                    <div class="panel-header">🎙️ Pre-Match-Pressekonferenz</div>
                     <div id="press-question-container" class="box"></div>
                     <div id="press-answers-container"></div>
                     <button onclick="skipPressAndPlay()" class="btn-secondary" style="margin-top:6px;">⏩ Direkt zum Spiel</button>
@@ -2538,7 +2538,7 @@
 
                     <!-- LIVE SHOUTS -->
                     <div class="panel" style="margin:4px 0; padding:6px; background:color-mix(in srgb, var(--shade) 50%, transparent);">
-                        <div style="font-size:var(--fs-caption); font-weight:bold; color:var(--accent); margin-bottom:3px;">📢 LIVE-COACHING ANWEISUNGEN:</div>
+                        <div class="ui-overline" style="font-size:var(--fs-caption); font-weight:bold; color:var(--accent); margin-bottom:3px;">📢 Live-Coaching-Anweisungen:</div>
                         <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px;">
                             <button onclick="setLiveShout('standard')" id="shout-standard" class="btn-action" style="font-size:var(--fs-micro); padding:4px 2px;">⚖️ Standard</button>
                             <button onclick="setLiveShout('brechstange')" id="shout-brechstange" class="btn-secondary" style="font-size:var(--fs-micro); padding:4px 2px;">💥 Brechstange</button>

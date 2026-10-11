@@ -81,7 +81,7 @@
         HUB_MEMBERS[hubId].forEach(memberId => { SUB_SCREEN_TO_HUB[memberId] = hubId; });
     }
 
-    // ---------- HTML-STRUKTUR-SELBSTTEST ----------
+    // ---------- HTML-Struktur-Selbsttest ----------
     // Prüft automatisch, ob JEDER Screen (Top-Level + alle Hub-Unterscreens) nach
     // showScreen() tatsächlich sichtbar UND mit Inhalt gefüllt ist. Entstanden aus einem
     // sehr hartnäckigen Bug: eine einzelne fehlende schließende </div> irgendwo im

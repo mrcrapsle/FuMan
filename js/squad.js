@@ -170,7 +170,7 @@
                 Eigene Entscheidung: ${h.ownWins}/${h.ownMatches} Siege${ownRate !== null ? ` (${ownRate}%)` : ''}${(h.liveFollowed || h.liveIgnored) ? `<br>Hinweise im Livespiel: ${h.liveFollowed || 0} befolgt, ${h.liveIgnored || 0} ignoriert` : ''}${coTrainerLiveBilanzText(h)}
             </div>` : '';
         box.innerHTML = `
-            ${hasSwaps ? `<div class="panel-header">🧑‍🏫 CO-TRAINER-EMPFEHLUNG</div>
+            ${hasSwaps ? `<div class="panel-header">🧑‍🏫 Co-Trainer-Empfehlung</div>
             ${suggestions.map(s => `<div class="box" style="font-size:var(--fs-small);">🔁 <strong>${s.inName}</strong> statt <strong>${s.outName}</strong> (${s.diff > 0 ? '+' : ''}${s.diff} eff. Stärke)</div>`).join('')}
             <button onclick="applyCoTrainerAdvice()" class="btn-primary" style="margin-top:6px; margin-bottom:10px;">✅ Alle Empfehlungen übernehmen</button>` : ''}
             ${tacticalHtml}
@@ -246,7 +246,7 @@
         let trust = game.coTrainerTrust ?? 66;
         let trustColor = trust >= 60 ? 'var(--primary)' : (trust >= 35 ? 'var(--accent)' : 'var(--danger)');
         return `
-            <div class="panel-header">📋 TAKTIK-VORSCHLAG DES CO-TRAINERS${sugg.opponentAware ? ' <span style="font-size:var(--fs-caption); color:var(--teal);">🎥 gegnerbezogen</span>' : ''}${sugg.selfCritical ? ' <span style="font-size:var(--fs-caption); color:var(--danger);">😟 verunsichert</span>' : ''}</div>
+            <div class="panel-header">📋 Taktik-Vorschlag des Co-Trainers${sugg.opponentAware ? ' <span style="font-size:var(--fs-caption); color:var(--teal);">🎥 gegnerbezogen</span>' : ''}${sugg.selfCritical ? ' <span style="font-size:var(--fs-caption); color:var(--danger);">😟 verunsichert</span>' : ''}</div>
             <div style="font-size:var(--fs-small); margin-bottom:6px;">Vertrauen in seinen Rat</div>
             <div style="background:color-mix(in srgb, var(--accent) 10%, transparent); border-radius:4px; height:8px; margin-bottom:8px; overflow:hidden;">
                 <div style="width:${trust}%; height:100%; background:${trustColor};"></div>
@@ -351,9 +351,9 @@
         let str = calcTeamStrength(true);
         box.innerHTML = `
             <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:4px; text-align:center;">
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">GESAMTSTÄRKE</div><div style="font-size:18px; font-weight:900; color:var(--accent);">${str}</div><div style="font-size:var(--fs-micro); color:var(--text-muted);">${starting.length} / 11 besetzt</div></div>
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">CHEMIE</div><div style="font-size:18px; font-weight:900; color:var(--teal);">${chem}%</div></div>
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">Ø FITNESS</div><div style="font-size:18px; font-weight:900; color:${avgFitness>=70?'var(--primary)':'var(--danger)'};">${avgFitness}%</div></div>
+                <div class="box"><div class="ui-overline" style="font-size:var(--fs-micro); color:var(--text-muted);">Gesamtstärke</div><div style="font-size:18px; font-weight:900; color:var(--accent);">${str}</div><div style="font-size:var(--fs-micro); color:var(--text-muted);">${starting.length} / 11 besetzt</div></div>
+                <div class="box"><div class="ui-overline">Chemie</div><div style="font-size:18px; font-weight:900; color:var(--teal);">${chem}%</div></div>
+                <div class="box"><div class="ui-overline">Ø Fitness</div><div style="font-size:18px; font-weight:900; color:${avgFitness>=70?'var(--primary)':'var(--danger)'};">${avgFitness}%</div></div>
                 <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">Ø FORM</div><div style="font-size:18px; font-weight:900; color:${avgForm>=55?'var(--primary)':(avgForm>=40?'var(--accent)':'var(--danger)')};">${avgForm}</div><div style="font-size:var(--fs-micro); color:var(--text-muted);">Tagesform 0-100</div></div>
             </div>`;
     }
@@ -689,7 +689,7 @@
         suggestions.push('🛒 Freien Markt nach kurzfristig verfügbaren Spielern durchsuchen (Kaderplanung & Transfers)');
         box.innerHTML = `
             <div class="box" style="border-left-color:var(--danger); background:color-mix(in srgb, var(--danger) 8%, transparent);">
-                <strong style="color:var(--danger);">🚨 VERLETZUNGSKRISE!</strong><br>
+                <strong style="color:var(--danger);">🚨 Verletzungskrise!</strong><br>
                 <span style="font-size:var(--fs-small);">Nur noch ${available} einsatzbereite Spieler im Kader - dringender Handlungsbedarf:</span>
                 <ul style="font-size:var(--fs-small); margin:6px 0 0 16px; padding:0;">${suggestions.map(s => `<li>${s}</li>`).join('')}</ul>
             </div>`;
@@ -704,7 +704,7 @@
         renderSquadView();
     }
 
-    // KADER-ÜBERBLICK: Gesamtkennzahlen auf einen Blick - Kaderwert, Durchschnittsalter,
+    // Kader-Überblick: Gesamtkennzahlen auf einen Blick - Kaderwert, Durchschnittsalter,
     // Durchschnittsmoral, Gehaltssumme, Größe - macht den Kader-Screen zu einem echten
     // Management-Dashboard statt einer reinen Spielerliste.
     function renderSquadOverviewBox() {
@@ -720,18 +720,18 @@
         let suspendedCount = squad.filter(p => (p.suspended || 0) > 0).length;
         box.innerHTML = `
             <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px;">
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">KADERWERT</div><div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--gold);">${formatVal(totalValue)}</div></div>
+                <div class="box"><div class="ui-overline">Kaderwert</div><div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--gold);">${formatVal(totalValue)}</div></div>
                 <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">Ø ALTER</div><div style="font-size:var(--fs-title-sm); font-weight:900;">${avgAge} J.</div></div>
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">Ø STÄRKE</div><div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--accent);">${avgStrength}</div></div>
+                <div class="box"><div class="ui-overline">Ø Stärke</div><div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--accent);">${avgStrength}</div></div>
                 <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">Ø MORAL</div><div style="font-size:var(--fs-title-sm); font-weight:900; color:${avgMorale>=70?'var(--primary)':(avgMorale>=40?'var(--accent)':'var(--danger)')};">${avgMorale}%</div></div>
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">GEHÄLTER/SPT</div><div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--industry);">${formatVal(totalWage)}</div></div>
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">KADERGRÖSSE</div><div style="font-size:var(--fs-title-sm); font-weight:900;">${squad.length} Spieler</div></div>
+                <div class="box"><div class="ui-overline" style="font-size:var(--fs-micro); color:var(--text-muted);">Gehälter/SpT</div><div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--industry);">${formatVal(totalWage)}</div></div>
+                <div class="box"><div class="ui-overline" style="font-size:var(--fs-micro); color:var(--text-muted);">Kadergröße</div><div style="font-size:var(--fs-title-sm); font-weight:900;">${squad.length} Spieler</div></div>
             </div>
             ${(injuredCount > 0 || suspendedCount > 0) ? `<div class="box" style="margin-top:4px; font-size:var(--fs-caption); color:var(--danger);">⚠️ ${injuredCount} verletzt, ${suspendedCount} gesperrt - nicht einsatzbereit</div>` : ''}
         `;
     }
 
-    // KADERTIEFE NACH POSITION: zeigt auf einen Blick, wo der Kader dünn besetzt ist -
+    // Kadertiefe nach Position: zeigt auf einen Blick, wo der Kader dünn besetzt ist -
     // pro Positionsgruppe Anzahl + durchschnittliche Stärke, farblich nach Tiefe markiert.
     function renderSquadDepthChart() {
         let box = document.getElementById('squad-depth-chart-box');
@@ -757,7 +757,7 @@
         }).join('');
     }
 
-    // KADER-BESTENLISTE: Top-Torschütze, meiste Einsätze, jüngstes/ältestes Talent,
+    // Kader-Bestenliste: Top-Torschütze, meiste Einsätze, jüngstes/ältestes Talent,
     // wertvollster Spieler - ein schneller Statistik-Überblick ohne extra Screen wechseln zu müssen.
     function renderSquadLeaderboardBox() {
         let box = document.getElementById('squad-leaderboard-box');
@@ -834,58 +834,43 @@
             let isStarting = lineup.includes(p.id);
             let row = document.createElement('div');
             row.className = 'panel player-card';
-            row.style.cssText = `margin-bottom:6px; padding:8px; border-left: 3px solid ${isStarting ? 'var(--primary)' : 'var(--border)'};`;
+            row.style.cssText = `margin-bottom:8px; padding:12px; border-left: 3px solid ${isStarting ? 'var(--primary)' : 'var(--border)'};`;
             let badgeClass = 'badge-' + (p.pos || 'mit').toLowerCase();
-            let status = (p.injured || 0) > 0 ? `<span style="color:var(--danger);">Verletzt (${p.injured} Sp.)</span>` : ((p.suspended || 0) > 0 ? `<span style="color:var(--accent);">Gesperrt (${p.suspended} Sp.)</span>` : `Fit: ${p.fitness}%`);
-            let moraleColor = p.morale >= 70 ? 'var(--primary)' : (p.morale >= 40 ? 'var(--accent)' : 'var(--danger)');
-            let moraleLine = ((p.injured || 0) === 0 && (p.suspended || 0) === 0) ? ` · <span style="color:${moraleColor};">Moral: ${p.morale}%</span>` : '';
+            const verletzt = (p.injured || 0) > 0, gesperrt = (p.suspended || 0) > 0;
+            const statusChip = verletzt ? uiChip(`🩹 Verletzt (${p.injured} Sp.)`, 'schlecht')
+                : gesperrt ? uiChip(`🟥 Gesperrt (${p.suspended} Sp.)`, 'warn')
+                : uiChip(`Fit ${p.fitness}%`, p.fitness >= 80 ? 'gut' : (p.fitness >= 60 ? '' : 'warn'));
+            const moralChip = (!verletzt && !gesperrt) ? uiChip(`Moral ${p.morale}%`, p.morale >= 70 ? 'gut' : (p.morale >= 40 ? 'warn' : 'schlecht')) : '';
             let roleBadge = p.id === game.captainId ? ' Ⓒ' : (p.id === game.penaltyTakerId ? ' ⚽' : (p.id === game.freeKickTakerId ? ' 🎯' : (p.id === game.cornerTakerId ? ' 🚩' : '')));
             if (p.individualFocus === 'elfmeter') roleBadge += ' <span title="Elfmeter-Spezialist" style="font-size:var(--fs-caption);">🥅</span>';
             if (p.isCrowdFavorite) roleBadge += ' <span title="Publikumsliebling der Saison" style="font-size:var(--fs-caption);">❤️</span>';
             if ((p.timesInjured || 0) >= 2) roleBadge += ' <span title="Wird vom Physio-Stab individuell geschont (verletzungsanfällig)" style="font-size:var(--fs-caption);">🛡️</span>';
             if (p.chronicIssue) roleBadge += ' <span title="Chronische Probleme: dauerhaft x1,5 Verletzungsrisiko" style="font-size:var(--fs-caption);">🩹</span>';
-            let traitBadge = (p.trait && p.trait !== 'Kein') ? `<span class="badge badge-trait">${p.trait}</span>` : '';
             let posRoles = getRolesForPosition(p.pos);
             let roleOptions = '<option value="">Keine Rolle</option>' + posRoles.map(r => `<option value="${r.id}" ${p.role === r.id ? 'selected' : ''}>${r.name}</option>`).join('');
             let roleFits = p.role && posRoles.find(r => r.id === p.role && (p[r.statKey] || 0) >= p.strength);
 
-            row.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
-                    <div style="display:flex; align-items:center; gap:6px;">
-                        ${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 32) : ''}
-                        <span class="badge ${badgeClass}">${p.pos}</span>
-                        <strong style="font-size:var(--fs-body-lg);">${p.name}${roleBadge}</strong>
-                        ${traitBadge}
-                    </div>
-                    <button onclick="toggleLineupPlayer('${p.id}')" style="width:auto; padding:4px 10px; font-size:var(--fs-caption); border-radius:6px; border:none; background:${isStarting ? 'var(--danger-fill)' : 'var(--primary-fill)'}; color:${isStarting ? 'var(--on-strong)' : 'var(--on-accent)'}; font-weight:700;">
-                        ${isStarting ? 'Bank' : 'Startelf'}
-                    </button>
-                </div>
-                <div style="font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:4px; display:flex; justify-content:space-between;">
-                    <span>${p.age} Jahre · ${p.contracts} J. Vertrag</span>
-                    <span>${formatVal(p.marketValue||0)} · ⚽ ${p.goalsSeason||0} Saisontore · 🎽 ${p.appearances||0} Einsätze</span>
-                </div>
-                <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:2px; font-size:var(--fs-micro); color:var(--text-muted); text-align:center; margin-bottom:6px; background:color-mix(in srgb, var(--accent) 5%, transparent); border-radius:4px; padding:4px 0;">
-                    <div>STR<br><strong style="color:var(--accent); font-size:var(--fs-body);">${p.strength}</strong></div>
-                    <div>PAC<br><strong>${p.pace}</strong></div>
-                    <div>SHO<br><strong>${p.shooting}</strong></div>
-                    <div>PAS<br><strong>${p.passing}</strong></div>
-                    <div>DEF<br><strong>${p.defense}</strong></div>
-                    <div>KOP<br><strong>${p.KOP ?? '-'}</strong></div>
-                    <div>FIT<br><strong>${p.fitness}</strong></div>
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
-                    <span style="font-size:var(--fs-caption);">${status}${moraleLine}</span>
-                    <div style="display:flex; gap:4px; align-items:center;">
-                        <button onclick="openPlayerDetail('${p.id}','squad')" class="btn-secondary" style="width:auto; padding:3px 7px; font-size:var(--fs-caption);" title="Details">ℹ️</button>
-                        <button onclick="selectForSwap('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 7px; font-size:var(--fs-caption); ${p.id === selectedSwapId ? 'background:var(--violet); color:var(--on-strong); border-color:var(--violet);' : ''}" title="Position tauschen">🔁</button>
-                    </div>
-                </div>
-                <div style="margin-top:6px;">
-                    <span style="font-size:var(--fs-caption); color:var(--text-muted);">Rolle:</span>
-                    <select class="input-inline" style="width:100%; font-size:var(--fs-caption); margin-top:2px; ${roleFits ? 'color:var(--primary);' : ''}" onchange="setPlayerRole('${p.id}', this.value)">${roleOptions}</select>
-                </div>
-            `;
+            // Kartenmuster: Bild mit Position, Name, Alter/Vertrag/Marktwert, Zustand als Chips, Stärke groß
+            row.innerHTML = renderUiCard({
+                thumb: `${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 48) : ''}<span class="badge ${badgeClass}">${p.pos}</span>`,
+                title: `${p.name}${roleBadge}`,
+                sub: `${p.age} J. · Vertrag ${p.contracts} J. · ${formatVal(p.marketValue || 0)}`,
+                meta: [
+                    isStarting ? uiChip('Startelf', 'gut') : '',
+                    statusChip, moralChip,
+                    (p.trait && p.trait !== 'Kein') ? uiChip(p.trait) : '',
+                    uiChip(`⚽ ${p.goalsSeason || 0} · 🎽 ${p.appearances || 0}`)
+                ],
+                kpi: { wert: p.strength, label: 'Stärke' },
+                body: renderUiStatRow([['Tempo', p.pace], ['Schuss', p.shooting], ['Pass', p.passing], ['Abwehr', p.defense], ['Kopf', p.KOP ?? '-'], ['Fitness', p.fitness]])
+                    + `<label class="ui-field" style="margin-top:8px;">
+                        <span class="ui-field-label">Rolle</span>
+                        <select class="input-inline" style="${roleFits ? 'color:var(--primary);' : ''}" onchange="setPlayerRole('${p.id}', this.value)">${roleOptions}</select>
+                    </label>`,
+                actions: `<button onclick="toggleLineupPlayer('${p.id}')" class="${isStarting ? 'btn-danger' : 'btn-action'}">${isStarting ? 'Auf die Bank' : 'In die Startelf'}</button>
+                    <button onclick="openPlayerDetail('${p.id}','squad')" class="btn-secondary" title="Details">ℹ️ Details</button>
+                    <button onclick="selectForSwap('${p.id}')" class="btn-secondary${p.id === selectedSwapId ? ' ui-btn-aktiv' : ''}" title="Position tauschen">🔁 Tauschen</button>`
+            });
             container.appendChild(row);
         });
 

@@ -89,7 +89,7 @@
             synBox.className = 'panel';
             synBox.style.borderColor = 'var(--gold)';
             synBox.style.gridColumn = '1 / -1';
-            synBox.innerHTML = `<div class="panel-header" style="color:var(--gold);">✨ AKTIVE PERK-SYNERGIEN</div>` +
+            synBox.innerHTML = `<div class="panel-header" style="color:var(--gold);">✨ Aktive Perk-Synergien</div>` +
                 game.unlockedSynergies.map(id => {
                     let syn = PERK_SYNERGIES.find(s => s.id === id);
                     return syn ? `<div style="font-size:var(--fs-small); margin-bottom:4px;"><strong>${syn.label}:</strong> ${syn.desc}</div>` : '';
@@ -100,8 +100,9 @@
         // "Krisenmanager" (Stabilität & Schadensbegrenzung) - unabhängig kombinierbar, keine
         // exklusive Wahl, aber klar erkennbar als zwei unterschiedliche Spielstile.
         let aufbauHeader = document.createElement('div');
+        aufbauHeader.className = 'ui-overline';
         aufbauHeader.style.cssText = 'grid-column:1 / -1; font-size:var(--fs-body); font-weight:800; color:var(--primary); margin:8px 0 4px 4px;';
-        aufbauHeader.innerText = '🏗️ ZWEIG: AUFBAU-SPEZIALIST';
+        aufbauHeader.innerText = '🏗️ Zweig: Aufbau-Spezialist';
         grid.appendChild(aufbauHeader);
         perkData.filter(p => p.branch === 'aufbau').forEach(p => {
             let active = managerRPG.perks[p.id];
@@ -118,8 +119,9 @@
             grid.appendChild(card);
         });
         let kriseHeader = document.createElement('div');
+        kriseHeader.className = 'ui-overline';
         kriseHeader.style.cssText = 'grid-column:1 / -1; font-size:var(--fs-body); font-weight:800; color:var(--danger); margin:12px 0 4px 4px;';
-        kriseHeader.innerText = '🛡️ ZWEIG: KRISENMANAGER';
+        kriseHeader.innerText = '🛡️ Zweig: Krisenmanager';
         grid.appendChild(kriseHeader);
         perkData.filter(p => p.branch === 'krise').forEach(p => {
             let active = managerRPG.perks[p.id];

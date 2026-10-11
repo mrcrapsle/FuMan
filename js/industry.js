@@ -189,7 +189,7 @@
             let offer = rawMaterials.acquisitionOffers[0];
             acqBox.style.display = offer ? 'block' : 'none';
             if (offer) {
-                acqBox.innerHTML = `<div class="panel-header" style="color:var(--accent);">💼 ÜBERNAHMEANGEBOT</div>
+                acqBox.innerHTML = `<div class="panel-header" style="color:var(--accent);">💼 Übernahmeangebot</div>
                     <div class="box" style="font-size:var(--fs-small);">${offer.firm} bietet <strong>${formatVal(offer.offer)}</strong> für die komplette Holding (noch ${offer.expiresMatchday - game.matchday} Spieltage gültig). Betriebswert der Fabriken: ${formatVal(getHoldingValuation())} - beim Verkauf gehen alle Fabriken weg, Holding-Konto und Lager bleiben.</div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
                         <button onclick="resolveAcquisitionOffer(true)" class="btn-action">✅ Annehmen</button>

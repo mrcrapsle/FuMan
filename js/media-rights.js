@@ -1,6 +1,6 @@
 
     // ==========================================
-    // MEDIENRECHTE & TV-VERTRAG
+    // Medienrechte & TV-Vertrag
     // ==========================================
     // Im echten Fußball sind TV-/Medienrechte oft die GRÖSSTE Einnahmequelle eines Vereins -
     // bisher fehlte das im Spiel komplett. Zwei Säulen:

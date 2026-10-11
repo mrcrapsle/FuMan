@@ -120,7 +120,7 @@ function renderTransferStrategyCard() {
     const teams = (leaguesData[game.leagueLevel] || []).length || 18;
     const z = shift => ziel ? `Platz ${Math.max(1, Math.min(teams, ziel + shift))}` : 'Ziel unverändert';
     const b = choice => formatVal(Math.abs(getStrategyBudgetDelta(choice)));
-    box.innerHTML = `<div class="panel" style="border:1px solid var(--gold);"><div class="panel-header" style="color:var(--gold);">🏛️ TRANSFERSTRATEGIE MIT DEM VORSTAND</div>
+    box.innerHTML = `<div class="panel" style="border:1px solid var(--gold);"><div class="panel-header" style="color:var(--gold);">🏛️ Transferstrategie mit dem Vorstand</div>
         <div class="box" style="font-size:var(--fs-small);">Bis Spieltag ${TRANSFER_STRATEGY_LAST_MD}, eine Linie pro Saison. Saisonziel bisher: ${ziel ? 'Platz ' + ziel : '-'}. Abrechnung am Saisonende.</div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
             <button onclick="chooseTransferStrategy('jugend')" class="btn-secondary" style="font-size:var(--fs-small);">🌱 Jugend fördern: -${b('jugend')} Budget, ${z(1)}, Sichtung halber Preis - ${STRATEGY_YOUTH_PLAYERS} Eigengewächse mit ${STRATEGY_YOUTH_GAMES}+ Spielen: +6, sonst -6</button>

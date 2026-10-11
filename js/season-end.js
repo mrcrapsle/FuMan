@@ -550,7 +550,7 @@ function concludeSeasonAndAdvance() {
 
         document.getElementById('season-review-content').innerHTML = `
             <div style="text-align:center; margin-bottom:10px;">
-                <div style="font-size:var(--fs-title); font-weight:900; color:var(--accent);">📆 SAISON-RÜCKBLICK</div>
+                <div style="font-size:var(--fs-title); font-weight:900; color:var(--accent);">📆 Saison-Rückblick</div>
                 <div style="font-size:var(--fs-body); color:var(--text-muted);">Tabellenplatz ${myRank} · ${myTeamRecord?.points || 0} Punkte${prevSeason ? compareArrow(myTeamRecord?.points || 0, prevSeason.points) : ''}</div>
             </div>
             <div class="modal-field-grid">

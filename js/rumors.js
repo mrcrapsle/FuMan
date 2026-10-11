@@ -127,7 +127,7 @@ function renderRumorBox() {
     if (!liste.length) { box.innerHTML = ''; return; }
     const quote = src => { const s = rumorStatsFor(src); const n = s.hit + s.miss; return n ? ` · lag ${s.hit} von ${n} Mal richtig` : ''; };
     const ausgang = { ente: '🦆 Ente', wahr: '✅ bestätigt', zurueckgezogen: '↩️ Interesse zurückgezogen', erledigt: '– erledigt' };
-    box.innerHTML = `<div class="panel"><div class="panel-header">🗞️ GERÜCHTEKÜCHE</div>
+    box.innerHTML = `<div class="panel"><div class="panel-header">🗞️ Gerüchteküche</div>
         ${liste.map(r => {
             const text = r.type === 'abwerbung' ? `${r.club} will <strong>${r.playerName}</strong>` : `<strong>${r.playerName}</strong> (Markt) vor Wechsel zu ${r.club}`;
             const knoepfe = r.type === 'abwerbung' && !r.outcome && !r.reaction ? `<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:4px; margin-top:4px;">

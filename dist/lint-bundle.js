@@ -1167,7 +1167,7 @@ function renderUiStatRow(werte) {
 /* eslint-enable */
 
     // ==========================================
-    // POSTFACH: zentrales Nachrichtensystem für Transferangebote, Verletzungen,
+    // Postfach: zentrales Nachrichtensystem für Transferangebote, Verletzungen,
     // auslaufende Verträge, Finanzwarnungen, Scouting-Ergebnisse & Spielanalysen.
     // Ergänzt die bestehenden Toasts (die bleiben für sofortiges Feedback), gibt aber
     // zusätzlich eine durchsuchbare, dauerhafte Übersicht wie in der Referenz-App.
@@ -1250,12 +1250,12 @@ function renderUiStatRow(werte) {
     }
 
     const INBOX_CATEGORY_META = {
-        transfer: { icon: '🤝', color: 'var(--blue)' },
-        verletzung: { icon: '🩹', color: 'var(--danger)' },
-        finanzen: { icon: '💰', color: 'var(--accent)' },
-        scouting: { icon: '🔭', color: 'var(--teal)' },
-        analyse: { icon: '📋', color: 'var(--violet)' },
-        vertrag: { icon: '📄', color: 'var(--purple)' }
+        transfer: { icon: '🤝', color: 'var(--blue)', label: 'Transfer' },
+        verletzung: { icon: '🩹', color: 'var(--danger)', label: 'Verletzung' },
+        finanzen: { icon: '💰', color: 'var(--accent)', label: 'Finanzen' },
+        scouting: { icon: '🔭', color: 'var(--teal)', label: 'Scouting' },
+        analyse: { icon: '📋', color: 'var(--violet)', label: 'Analyse' },
+        vertrag: { icon: '📄', color: 'var(--purple)', label: 'Vertrag' }
     };
 
     function renderInboxView() {
@@ -1277,24 +1277,27 @@ function renderUiStatRow(werte) {
         }
         let isArchiveView = inboxFilter === 'archiv';
         list.innerHTML = filtered.map(m => {
-            let meta = INBOX_CATEGORY_META[m.category] || { icon: '📌', color: 'var(--accent)' };
-            let linkBtn = m.screenLink ? `<button onclick="markInboxRead(${m.id}); showScreen('${m.screenLink}')" class="btn-secondary" style="font-size:var(--fs-caption); width:auto; margin-top:4px;">Ansehen →</button>` : '';
+            let meta = INBOX_CATEGORY_META[m.category] || { icon: '📌', color: 'var(--accent)', label: 'Info' };
+            let linkBtn = m.screenLink ? `<button onclick="markInboxRead(${m.id}); showScreen('${m.screenLink}')" class="btn-secondary">Ansehen →</button>` : '';
             let archiveBtn = isArchiveView
-                ? `<button onclick="event.stopPropagation(); restoreInboxMessage(${m.id})" style="background:none; border:none; color:var(--primary); cursor:pointer; font-size:var(--fs-body); padding:0 2px;" title="Wiederherstellen">↺</button>`
-                : `<button onclick="event.stopPropagation(); archiveInboxMessage(${m.id})" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:var(--fs-body); padding:0 2px;" title="Archivieren">🗄️</button>`;
+                ? `<button onclick="event.stopPropagation(); restoreInboxMessage(${m.id})" class="ui-icon-btn" style="color:var(--primary);" title="Wiederherstellen" aria-label="Wiederherstellen">↺</button>`
+                : `<button onclick="event.stopPropagation(); archiveInboxMessage(${m.id})" class="ui-icon-btn" title="Archivieren" aria-label="Archivieren">🗄️</button>`;
+            // Kartenmuster: Kategorie als Bild, Titel, Kategorie und Datum, Chips, Aktionen rechts
             return `
-                <div class="box" style="border-left-color:${m.important ? 'var(--gold)' : meta.color}; ${m.read ? 'opacity:0.6;' : ''} cursor:pointer;" onclick="markInboxRead(${m.id})">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                        <strong style="color:${meta.color};">${meta.icon} ${m.title}</strong>
-                        <span>
-                            <button onclick="event.stopPropagation(); toggleInboxImportant(${m.id})" style="background:none; border:none; color:${m.important ? 'var(--gold)' : 'var(--europe)'}; cursor:pointer; font-size:var(--fs-body-lg); padding:0 2px;" title="Als wichtig markieren">${m.important ? '★' : '☆'}</button>
+                <div class="box ui-mail${m.read ? ' ui-mail-gelesen' : ''}" style="border-left-color:${m.important ? 'var(--gold)' : meta.color}; cursor:pointer;" onclick="markInboxRead(${m.id})">
+                    ${renderUiCard({
+                        thumb: `<span class="ui-thumb-icon" style="background:color-mix(in srgb, ${meta.color} 16%, transparent); border-color:color-mix(in srgb, ${meta.color} 40%, transparent);">${meta.icon}</span>`,
+                        title: `<span style="color:${meta.color};">${m.title}</span>`,
+                        sub: `${meta.label} · SpT ${m.matchday} · Saison ${m.season}`,
+                        meta: [m.read ? '' : uiChip('● Neu', 'gut'), m.important ? uiChip('★ Wichtig', 'warn') : ''],
+                        aside: `<span class="ui-icon-row">
+                            <button onclick="event.stopPropagation(); toggleInboxImportant(${m.id})" class="ui-icon-btn" style="color:${m.important ? 'var(--gold)' : 'var(--text-muted)'};" title="Als wichtig markieren" aria-label="Als wichtig markieren">${m.important ? '★' : '☆'}</button>
                             ${archiveBtn}
-                            <button onclick="event.stopPropagation(); deleteInboxMessage(${m.id})" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:var(--fs-body); padding:0 2px;" title="Endgültig löschen">✕</button>
-                        </span>
-                    </div>
-                    <div style="font-size:var(--fs-small); margin-top:3px;">${m.body}</div>
-                    <div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:4px;">Saison ${m.season} · Spieltag ${m.matchday}/34 ${m.read ? '' : ' · <span style="color:var(--primary);">● Neu</span>'}</div>
-                    ${linkBtn}
+                            <button onclick="event.stopPropagation(); deleteInboxMessage(${m.id})" class="ui-icon-btn" title="Endgültig löschen" aria-label="Endgültig löschen">✕</button>
+                        </span>`,
+                        body: m.body,
+                        actions: linkBtn
+                    })}
                 </div>`;
         }).join('');
     }
@@ -2629,7 +2632,7 @@ function getOwnDerbyRivals() {
                 Eigene Entscheidung: ${h.ownWins}/${h.ownMatches} Siege${ownRate !== null ? ` (${ownRate}%)` : ''}${(h.liveFollowed || h.liveIgnored) ? `<br>Hinweise im Livespiel: ${h.liveFollowed || 0} befolgt, ${h.liveIgnored || 0} ignoriert` : ''}${coTrainerLiveBilanzText(h)}
             </div>` : '';
         box.innerHTML = `
-            ${hasSwaps ? `<div class="panel-header">🧑‍🏫 CO-TRAINER-EMPFEHLUNG</div>
+            ${hasSwaps ? `<div class="panel-header">🧑‍🏫 Co-Trainer-Empfehlung</div>
             ${suggestions.map(s => `<div class="box" style="font-size:var(--fs-small);">🔁 <strong>${s.inName}</strong> statt <strong>${s.outName}</strong> (${s.diff > 0 ? '+' : ''}${s.diff} eff. Stärke)</div>`).join('')}
             <button onclick="applyCoTrainerAdvice()" class="btn-primary" style="margin-top:6px; margin-bottom:10px;">✅ Alle Empfehlungen übernehmen</button>` : ''}
             ${tacticalHtml}
@@ -2705,7 +2708,7 @@ function getOwnDerbyRivals() {
         let trust = game.coTrainerTrust ?? 66;
         let trustColor = trust >= 60 ? 'var(--primary)' : (trust >= 35 ? 'var(--accent)' : 'var(--danger)');
         return `
-            <div class="panel-header">📋 TAKTIK-VORSCHLAG DES CO-TRAINERS${sugg.opponentAware ? ' <span style="font-size:var(--fs-caption); color:var(--teal);">🎥 gegnerbezogen</span>' : ''}${sugg.selfCritical ? ' <span style="font-size:var(--fs-caption); color:var(--danger);">😟 verunsichert</span>' : ''}</div>
+            <div class="panel-header">📋 Taktik-Vorschlag des Co-Trainers${sugg.opponentAware ? ' <span style="font-size:var(--fs-caption); color:var(--teal);">🎥 gegnerbezogen</span>' : ''}${sugg.selfCritical ? ' <span style="font-size:var(--fs-caption); color:var(--danger);">😟 verunsichert</span>' : ''}</div>
             <div style="font-size:var(--fs-small); margin-bottom:6px;">Vertrauen in seinen Rat</div>
             <div style="background:color-mix(in srgb, var(--accent) 10%, transparent); border-radius:4px; height:8px; margin-bottom:8px; overflow:hidden;">
                 <div style="width:${trust}%; height:100%; background:${trustColor};"></div>
@@ -2810,9 +2813,9 @@ function getOwnDerbyRivals() {
         let str = calcTeamStrength(true);
         box.innerHTML = `
             <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:4px; text-align:center;">
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">GESAMTSTÄRKE</div><div style="font-size:18px; font-weight:900; color:var(--accent);">${str}</div><div style="font-size:var(--fs-micro); color:var(--text-muted);">${starting.length} / 11 besetzt</div></div>
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">CHEMIE</div><div style="font-size:18px; font-weight:900; color:var(--teal);">${chem}%</div></div>
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">Ø FITNESS</div><div style="font-size:18px; font-weight:900; color:${avgFitness>=70?'var(--primary)':'var(--danger)'};">${avgFitness}%</div></div>
+                <div class="box"><div class="ui-overline" style="font-size:var(--fs-micro); color:var(--text-muted);">Gesamtstärke</div><div style="font-size:18px; font-weight:900; color:var(--accent);">${str}</div><div style="font-size:var(--fs-micro); color:var(--text-muted);">${starting.length} / 11 besetzt</div></div>
+                <div class="box"><div class="ui-overline">Chemie</div><div style="font-size:18px; font-weight:900; color:var(--teal);">${chem}%</div></div>
+                <div class="box"><div class="ui-overline">Ø Fitness</div><div style="font-size:18px; font-weight:900; color:${avgFitness>=70?'var(--primary)':'var(--danger)'};">${avgFitness}%</div></div>
                 <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">Ø FORM</div><div style="font-size:18px; font-weight:900; color:${avgForm>=55?'var(--primary)':(avgForm>=40?'var(--accent)':'var(--danger)')};">${avgForm}</div><div style="font-size:var(--fs-micro); color:var(--text-muted);">Tagesform 0-100</div></div>
             </div>`;
     }
@@ -3148,7 +3151,7 @@ function getOwnDerbyRivals() {
         suggestions.push('🛒 Freien Markt nach kurzfristig verfügbaren Spielern durchsuchen (Kaderplanung & Transfers)');
         box.innerHTML = `
             <div class="box" style="border-left-color:var(--danger); background:color-mix(in srgb, var(--danger) 8%, transparent);">
-                <strong style="color:var(--danger);">🚨 VERLETZUNGSKRISE!</strong><br>
+                <strong style="color:var(--danger);">🚨 Verletzungskrise!</strong><br>
                 <span style="font-size:var(--fs-small);">Nur noch ${available} einsatzbereite Spieler im Kader - dringender Handlungsbedarf:</span>
                 <ul style="font-size:var(--fs-small); margin:6px 0 0 16px; padding:0;">${suggestions.map(s => `<li>${s}</li>`).join('')}</ul>
             </div>`;
@@ -3163,7 +3166,7 @@ function getOwnDerbyRivals() {
         renderSquadView();
     }
 
-    // KADER-ÜBERBLICK: Gesamtkennzahlen auf einen Blick - Kaderwert, Durchschnittsalter,
+    // Kader-Überblick: Gesamtkennzahlen auf einen Blick - Kaderwert, Durchschnittsalter,
     // Durchschnittsmoral, Gehaltssumme, Größe - macht den Kader-Screen zu einem echten
     // Management-Dashboard statt einer reinen Spielerliste.
     function renderSquadOverviewBox() {
@@ -3179,18 +3182,18 @@ function getOwnDerbyRivals() {
         let suspendedCount = squad.filter(p => (p.suspended || 0) > 0).length;
         box.innerHTML = `
             <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px;">
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">KADERWERT</div><div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--gold);">${formatVal(totalValue)}</div></div>
+                <div class="box"><div class="ui-overline">Kaderwert</div><div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--gold);">${formatVal(totalValue)}</div></div>
                 <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">Ø ALTER</div><div style="font-size:var(--fs-title-sm); font-weight:900;">${avgAge} J.</div></div>
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">Ø STÄRKE</div><div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--accent);">${avgStrength}</div></div>
+                <div class="box"><div class="ui-overline">Ø Stärke</div><div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--accent);">${avgStrength}</div></div>
                 <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">Ø MORAL</div><div style="font-size:var(--fs-title-sm); font-weight:900; color:${avgMorale>=70?'var(--primary)':(avgMorale>=40?'var(--accent)':'var(--danger)')};">${avgMorale}%</div></div>
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">GEHÄLTER/SPT</div><div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--industry);">${formatVal(totalWage)}</div></div>
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">KADERGRÖSSE</div><div style="font-size:var(--fs-title-sm); font-weight:900;">${squad.length} Spieler</div></div>
+                <div class="box"><div class="ui-overline" style="font-size:var(--fs-micro); color:var(--text-muted);">Gehälter/SpT</div><div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--industry);">${formatVal(totalWage)}</div></div>
+                <div class="box"><div class="ui-overline" style="font-size:var(--fs-micro); color:var(--text-muted);">Kadergröße</div><div style="font-size:var(--fs-title-sm); font-weight:900;">${squad.length} Spieler</div></div>
             </div>
             ${(injuredCount > 0 || suspendedCount > 0) ? `<div class="box" style="margin-top:4px; font-size:var(--fs-caption); color:var(--danger);">⚠️ ${injuredCount} verletzt, ${suspendedCount} gesperrt - nicht einsatzbereit</div>` : ''}
         `;
     }
 
-    // KADERTIEFE NACH POSITION: zeigt auf einen Blick, wo der Kader dünn besetzt ist -
+    // Kadertiefe nach Position: zeigt auf einen Blick, wo der Kader dünn besetzt ist -
     // pro Positionsgruppe Anzahl + durchschnittliche Stärke, farblich nach Tiefe markiert.
     function renderSquadDepthChart() {
         let box = document.getElementById('squad-depth-chart-box');
@@ -3216,7 +3219,7 @@ function getOwnDerbyRivals() {
         }).join('');
     }
 
-    // KADER-BESTENLISTE: Top-Torschütze, meiste Einsätze, jüngstes/ältestes Talent,
+    // Kader-Bestenliste: Top-Torschütze, meiste Einsätze, jüngstes/ältestes Talent,
     // wertvollster Spieler - ein schneller Statistik-Überblick ohne extra Screen wechseln zu müssen.
     function renderSquadLeaderboardBox() {
         let box = document.getElementById('squad-leaderboard-box');
@@ -3293,58 +3296,43 @@ function getOwnDerbyRivals() {
             let isStarting = lineup.includes(p.id);
             let row = document.createElement('div');
             row.className = 'panel player-card';
-            row.style.cssText = `margin-bottom:6px; padding:8px; border-left: 3px solid ${isStarting ? 'var(--primary)' : 'var(--border)'};`;
+            row.style.cssText = `margin-bottom:8px; padding:12px; border-left: 3px solid ${isStarting ? 'var(--primary)' : 'var(--border)'};`;
             let badgeClass = 'badge-' + (p.pos || 'mit').toLowerCase();
-            let status = (p.injured || 0) > 0 ? `<span style="color:var(--danger);">Verletzt (${p.injured} Sp.)</span>` : ((p.suspended || 0) > 0 ? `<span style="color:var(--accent);">Gesperrt (${p.suspended} Sp.)</span>` : `Fit: ${p.fitness}%`);
-            let moraleColor = p.morale >= 70 ? 'var(--primary)' : (p.morale >= 40 ? 'var(--accent)' : 'var(--danger)');
-            let moraleLine = ((p.injured || 0) === 0 && (p.suspended || 0) === 0) ? ` · <span style="color:${moraleColor};">Moral: ${p.morale}%</span>` : '';
+            const verletzt = (p.injured || 0) > 0, gesperrt = (p.suspended || 0) > 0;
+            const statusChip = verletzt ? uiChip(`🩹 Verletzt (${p.injured} Sp.)`, 'schlecht')
+                : gesperrt ? uiChip(`🟥 Gesperrt (${p.suspended} Sp.)`, 'warn')
+                : uiChip(`Fit ${p.fitness}%`, p.fitness >= 80 ? 'gut' : (p.fitness >= 60 ? '' : 'warn'));
+            const moralChip = (!verletzt && !gesperrt) ? uiChip(`Moral ${p.morale}%`, p.morale >= 70 ? 'gut' : (p.morale >= 40 ? 'warn' : 'schlecht')) : '';
             let roleBadge = p.id === game.captainId ? ' Ⓒ' : (p.id === game.penaltyTakerId ? ' ⚽' : (p.id === game.freeKickTakerId ? ' 🎯' : (p.id === game.cornerTakerId ? ' 🚩' : '')));
             if (p.individualFocus === 'elfmeter') roleBadge += ' <span title="Elfmeter-Spezialist" style="font-size:var(--fs-caption);">🥅</span>';
             if (p.isCrowdFavorite) roleBadge += ' <span title="Publikumsliebling der Saison" style="font-size:var(--fs-caption);">❤️</span>';
             if ((p.timesInjured || 0) >= 2) roleBadge += ' <span title="Wird vom Physio-Stab individuell geschont (verletzungsanfällig)" style="font-size:var(--fs-caption);">🛡️</span>';
             if (p.chronicIssue) roleBadge += ' <span title="Chronische Probleme: dauerhaft x1,5 Verletzungsrisiko" style="font-size:var(--fs-caption);">🩹</span>';
-            let traitBadge = (p.trait && p.trait !== 'Kein') ? `<span class="badge badge-trait">${p.trait}</span>` : '';
             let posRoles = getRolesForPosition(p.pos);
             let roleOptions = '<option value="">Keine Rolle</option>' + posRoles.map(r => `<option value="${r.id}" ${p.role === r.id ? 'selected' : ''}>${r.name}</option>`).join('');
             let roleFits = p.role && posRoles.find(r => r.id === p.role && (p[r.statKey] || 0) >= p.strength);
 
-            row.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px;">
-                    <div style="display:flex; align-items:center; gap:6px;">
-                        ${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 32) : ''}
-                        <span class="badge ${badgeClass}">${p.pos}</span>
-                        <strong style="font-size:var(--fs-body-lg);">${p.name}${roleBadge}</strong>
-                        ${traitBadge}
-                    </div>
-                    <button onclick="toggleLineupPlayer('${p.id}')" style="width:auto; padding:4px 10px; font-size:var(--fs-caption); border-radius:6px; border:none; background:${isStarting ? 'var(--danger-fill)' : 'var(--primary-fill)'}; color:${isStarting ? 'var(--on-strong)' : 'var(--on-accent)'}; font-weight:700;">
-                        ${isStarting ? 'Bank' : 'Startelf'}
-                    </button>
-                </div>
-                <div style="font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:4px; display:flex; justify-content:space-between;">
-                    <span>${p.age} Jahre · ${p.contracts} J. Vertrag</span>
-                    <span>${formatVal(p.marketValue||0)} · ⚽ ${p.goalsSeason||0} Saisontore · 🎽 ${p.appearances||0} Einsätze</span>
-                </div>
-                <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:2px; font-size:var(--fs-micro); color:var(--text-muted); text-align:center; margin-bottom:6px; background:color-mix(in srgb, var(--accent) 5%, transparent); border-radius:4px; padding:4px 0;">
-                    <div>STR<br><strong style="color:var(--accent); font-size:var(--fs-body);">${p.strength}</strong></div>
-                    <div>PAC<br><strong>${p.pace}</strong></div>
-                    <div>SHO<br><strong>${p.shooting}</strong></div>
-                    <div>PAS<br><strong>${p.passing}</strong></div>
-                    <div>DEF<br><strong>${p.defense}</strong></div>
-                    <div>KOP<br><strong>${p.KOP ?? '-'}</strong></div>
-                    <div>FIT<br><strong>${p.fitness}</strong></div>
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
-                    <span style="font-size:var(--fs-caption);">${status}${moraleLine}</span>
-                    <div style="display:flex; gap:4px; align-items:center;">
-                        <button onclick="openPlayerDetail('${p.id}','squad')" class="btn-secondary" style="width:auto; padding:3px 7px; font-size:var(--fs-caption);" title="Details">ℹ️</button>
-                        <button onclick="selectForSwap('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 7px; font-size:var(--fs-caption); ${p.id === selectedSwapId ? 'background:var(--violet); color:var(--on-strong); border-color:var(--violet);' : ''}" title="Position tauschen">🔁</button>
-                    </div>
-                </div>
-                <div style="margin-top:6px;">
-                    <span style="font-size:var(--fs-caption); color:var(--text-muted);">Rolle:</span>
-                    <select class="input-inline" style="width:100%; font-size:var(--fs-caption); margin-top:2px; ${roleFits ? 'color:var(--primary);' : ''}" onchange="setPlayerRole('${p.id}', this.value)">${roleOptions}</select>
-                </div>
-            `;
+            // Kartenmuster: Bild mit Position, Name, Alter/Vertrag/Marktwert, Zustand als Chips, Stärke groß
+            row.innerHTML = renderUiCard({
+                thumb: `${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 48) : ''}<span class="badge ${badgeClass}">${p.pos}</span>`,
+                title: `${p.name}${roleBadge}`,
+                sub: `${p.age} J. · Vertrag ${p.contracts} J. · ${formatVal(p.marketValue || 0)}`,
+                meta: [
+                    isStarting ? uiChip('Startelf', 'gut') : '',
+                    statusChip, moralChip,
+                    (p.trait && p.trait !== 'Kein') ? uiChip(p.trait) : '',
+                    uiChip(`⚽ ${p.goalsSeason || 0} · 🎽 ${p.appearances || 0}`)
+                ],
+                kpi: { wert: p.strength, label: 'Stärke' },
+                body: renderUiStatRow([['Tempo', p.pace], ['Schuss', p.shooting], ['Pass', p.passing], ['Abwehr', p.defense], ['Kopf', p.KOP ?? '-'], ['Fitness', p.fitness]])
+                    + `<label class="ui-field" style="margin-top:8px;">
+                        <span class="ui-field-label">Rolle</span>
+                        <select class="input-inline" style="${roleFits ? 'color:var(--primary);' : ''}" onchange="setPlayerRole('${p.id}', this.value)">${roleOptions}</select>
+                    </label>`,
+                actions: `<button onclick="toggleLineupPlayer('${p.id}')" class="${isStarting ? 'btn-danger' : 'btn-action'}">${isStarting ? 'Auf die Bank' : 'In die Startelf'}</button>
+                    <button onclick="openPlayerDetail('${p.id}','squad')" class="btn-secondary" title="Details">ℹ️ Details</button>
+                    <button onclick="selectForSwap('${p.id}')" class="btn-secondary${p.id === selectedSwapId ? ' ui-btn-aktiv' : ''}" title="Position tauschen">🔁 Tauschen</button>`
+            });
             container.appendChild(row);
         });
 
@@ -3928,7 +3916,7 @@ function cleanupLegacyDevelopmentState() {
             let cliffRisk = cliff.length >= Math.ceil(minHealthy / 2);
 
             let riskScore = (thin ? 1 : 0) + (agingRisk ? 1 : 0) + (cliffRisk ? 1 : 0);
-            let riskLabel = riskScore >= 2 ? '🔴 KRITISCH' : (riskScore === 1 ? '🟡 BEOBACHTEN' : '🟢 SOLIDE');
+            let riskLabel = riskScore >= 2 ? '🔴 Kritisch' : (riskScore === 1 ? '🟡 Beobachten' : '🟢 Solide');
             let riskColor = riskScore >= 2 ? 'var(--danger)' : (riskScore === 1 ? 'var(--accent)' : 'var(--primary)');
 
             return { pos, label: SQUAD_PLANNING_POS_LABELS[pos], players, count, avgAge, aging, cliff, minHealthy, thin, agingRisk, cliffRisk, riskScore, riskLabel, riskColor };
@@ -3944,7 +3932,7 @@ function cleanupLegacyDevelopmentState() {
             <div class="box" style="border-left-color:${a.riskColor}; margin-bottom:5px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; font-size:var(--fs-small); margin-bottom:2px;">
                     <span>${a.label}</span>
-                    <strong style="color:${a.riskColor};">${a.riskLabel}</strong>
+                    <strong class="ui-overline" style="color:${a.riskColor};">${a.riskLabel}</strong>
                 </div>
                 <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:3px; font-size:var(--fs-micro); color:var(--text-muted);">
                     <div>Besetzung: <strong style="color:${a.thin ? 'var(--danger)' : 'var(--text-main)'};">${a.count} / ${a.minHealthy}+</strong></div>
@@ -3985,7 +3973,7 @@ function cleanupLegacyDevelopmentState() {
         }).join('');
     }
 
-    // AUSLAUFENDE VERTRÄGE NACH POSITION: renderSeasonPlanningBox() (contracts.js) listet
+    // Auslaufende Verträge nach Position: renderSeasonPlanningBox() (contracts.js) listet
     // bereits alle dringenden Fälle namentlich auf - hier geht es NICHT um dieselbe Liste
     // nochmal, sondern um die Häufung PRO POSITION, damit sichtbar wird, WO die Vertragsklippe
     // tatsächlich liegt statt nur, DASS es welche gibt.
@@ -4043,7 +4031,7 @@ function cleanupLegacyDevelopmentState() {
         box.innerHTML = getSquadSizeWarningHtml() + (warnings || '<div class="box" style="font-size:var(--fs-caption); color:var(--primary);">✓ Keine Position zeigt aktuell eine kombinierte Schwäche für die kommenden Saisons.</div>');
     }
 
-    // GEHALTSPLANUNG NÄCHSTE SAISON (25.17): seit das Gehaltsbudget der Liga folgt, scheitern
+    // Gehaltsplanung nächste Saison (25.17): seit das Gehaltsbudget der Liga folgt, scheitern
     // Verlängerungen schnell am Budget - hier steht vorab, was nach der Saison frei wird, was die
     // auslaufenden Stammspieler kosten und wie viel Luft das voraussichtliche Budget lässt.
     function getSquadPlanningWageOutlook() {
@@ -4500,7 +4488,7 @@ function cleanupLegacyDevelopmentState() {
         showToast(`⬇️ ${p.name} in die zweite Mannschaft verschoben!`, 'success');
     }
 
-    // ---------- EIGENER AMATEUR-TRANSFERMARKT ----------
+    // ---------- EIGENER Amateur-Transfermarkt ----------
     // Bewusst schwächer/günstiger skaliert als der Erstliga-Markt (refreshTransferMarket()
     // in transfermarket.js) und über game.money statt des Transferbudgets der ersten
     // Mannschaft finanziert - beide Kader konkurrieren so nicht um dasselbe Budget.
@@ -4727,7 +4715,7 @@ function cleanupLegacyDevelopmentState() {
     }
 
     // ==========================================
-    // EIGENER TRAINERSTAB DER ZWEITEN MANNSCHAFT
+    // Eigener Trainerstab DER ZWEITEN MANNSCHAFT
     // ==========================================
     // Die Reserve wurde bisher gar nicht betreut: zwischen zwei Saisons veränderte sich ihr
     // Kader überhaupt nicht, Fitness wurde nie verbraucht oder aufgebaut, junge Spieler
@@ -5023,7 +5011,7 @@ function cleanupLegacyDevelopmentState() {
                 Das interne Testspiel bringt kein Geld, kostet beide Mannschaften Kraft - dafür lernen die Talente am meisten.
             </div>
             ${log.length > 0 ? `<div class="box" style="margin-top:6px;">
-                <strong style="font-size:var(--fs-small);">LETZTE SPIELE</strong>
+                <strong style="font-size:var(--fs-small);">Letzte Spiele</strong>
                 ${log.map(e => `<div style="display:flex; justify-content:space-between; font-size:var(--fs-caption); margin-top:2px;">
                     <span>${e.art === 'intern' ? '⚔️' : '🤝'} ST ${e.matchday} vs. ${e.gegner}</span>
                     <span><strong>${e.ergebnis}</strong>${e.saldo !== 0 ? ` · <span style="color:${e.saldo > 0 ? 'var(--primary)' : 'var(--danger)'};">${e.saldo > 0 ? '+' : ''}${formatVal(e.saldo)}</span>` : ''}${e.entwickelt && e.entwickelt.length ? ` · <span style="color:var(--primary);">+${e.entwickelt.length} 🌱</span>` : ''}</span>
@@ -5210,7 +5198,7 @@ function selectNewGameScenario(id) {
 /* eslint-enable */
 
     // ==========================================
-    // VEREINSIDENTITÄT: FREIE UMBENENNUNG
+    // Vereinsidentität: FREIE UMBENENNUNG
     // ==========================================
     // Der Klubname war bisher an ~120 Stellen im Code hart als "1.FC Moritz Leipzig"
     // verankert - jetzt läuft jeder dieser Vergleiche über game.clubName, wodurch eine
@@ -5378,7 +5366,7 @@ function selectNewGameScenario(id) {
     }
 
     // ==========================================
-    // KARRIERE-RÜCKBLICK & RUHESTAND
+    // Karriere-Rückblick & RUHESTAND
     // ==========================================
     function renderCareerSummary() {
         let box = document.getElementById('career-summary-box');
@@ -5604,7 +5592,7 @@ function selectNewGameScenario(id) {
 /* eslint-enable */
 
     // ==========================================
-    // VEREINS-WAPPEN-EDITOR
+    // Vereins-Wappen-EDITOR
     // ==========================================
     const CREST_COLOR_PRESETS = ['#f5b942', '#3fb6ff', '#ff4d6d', '#22e0a8', '#8b5cf6', '#ff8a5c', '#ffffff', '#c0c0c0'];
     const CREST_SYMBOL_PRESETS = ['FCM', '⚽', '🦁', '🐺', '🦅', '⚡', '🔥', '★'];
@@ -6374,7 +6362,7 @@ function selectNewGameScenario(id) {
     }
 
     // ==========================================
-    // POKALSCHRECK-TRACKING & EIGENE POKAL-STATISTIK
+    // POKALSCHRECK-TRACKING & Eigene Pokal-Statistik
     // ==========================================
     function recordCupResultStats(weWon, ourStr, oppStr, oppName, roundName) {
         if (!game.cupHistory) game.cupHistory = { titlesWon: 0, schrecksErlitten: [], schrecksVerursacht: [], bestRunEver: null, matchesPlayed: 0, wins: 0 };
@@ -6401,9 +6389,9 @@ function selectNewGameScenario(id) {
         let winRate = h.matchesPlayed > 0 ? Math.round((h.wins / h.matchesPlayed) * 100) : 0;
         box.innerHTML = `
             <div class="box" style="font-size:var(--fs-small);">🏆 Pokaltitel: <strong>${(game.trophies || []).filter(t => t.includes('Pokalsieger')).length}</strong> · Bilanz: ${h.wins}/${h.matchesPlayed} Siege (${winRate}%)</div>
-            <div style="font-size:var(--fs-caption); font-weight:800; color:var(--text-muted); margin:6px 0 3px;">😱 ERLITTENE POKALSCHRECKS</div>
+            <div class="ui-overline" style="font-size:var(--fs-caption); font-weight:800; color:var(--text-muted); margin:6px 0 3px;">😱 Erlittene Pokalschrecks</div>
             ${h.schrecksErlitten.length === 0 ? '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch keiner - gut so!</div>' : h.schrecksErlitten.slice(0, 3).map(s => `<div class="box" style="font-size:var(--fs-caption);">Saison ${s.season}, ${s.round}: Aus gegen ${s.opponent} (-${s.diff} Stärke unterlegen)</div>`).join('')}
-            <div style="font-size:var(--fs-caption); font-weight:800; color:var(--text-muted); margin:6px 0 3px;">🎉 VERURSACHTE SENSATIONEN</div>
+            <div class="ui-overline" style="font-size:var(--fs-caption); font-weight:800; color:var(--text-muted); margin:6px 0 3px;">🎉 Verursachte Sensationen</div>
             ${h.schrecksVerursacht.length === 0 ? '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch keine Überraschung geschafft.</div>' : h.schrecksVerursacht.slice(0, 3).map(s => `<div class="box" style="font-size:var(--fs-caption);">Saison ${s.season}, ${s.round}: Sieg gegen favorisierten ${s.opponent} (+${s.diff} Stärke unterlegen)</div>`).join('')}
         `;
     }
@@ -6756,7 +6744,7 @@ function selectNewGameScenario(id) {
         let box = document.getElementById('landescup-container');
         if (!box) return;
         let kopf = document.getElementById('landescup-header');
-        if (kopf) kopf.innerText = `🏅 ${landesPokal.region.toUpperCase()}POKAL`;
+        if (kopf) kopf.innerText = `🏅 ${landesPokal.region}pokal`;
 
         if (!playsLandespokal()) {
             box.innerHTML = `<div class="box" style="font-size:var(--fs-body); color:var(--text-muted);">
@@ -7423,7 +7411,7 @@ function selectNewGameScenario(id) {
                         <span style="font-size:var(--fs-caption); color:var(--text-muted);">${legInfo}</span>
                     </div>`;
                 }).join('');
-                let finalHtml = europeTournament.finalMatch ? `<div class="box" style="border-color:var(--gold); color:var(--gold);">👑 FINALE: ${europeTournament.finalMatch.home} vs ${europeTournament.finalMatch.away} [${europeTournament.finalMatch.score}] => Sieger: <strong>${europeTournament.finalMatch.winner}</strong></div>` : '';
+                let finalHtml = europeTournament.finalMatch ? `<div class="box" style="border-color:var(--gold); color:var(--gold);">👑 Finale: ${europeTournament.finalMatch.home} vs ${europeTournament.finalMatch.away} [${europeTournament.finalMatch.score}] => Sieger: <strong>${europeTournament.finalMatch.winner}</strong></div>` : '';
                 koTree.innerHTML = semiHtml + finalHtml;
             }
         }
@@ -7693,7 +7681,7 @@ function renderTransferPokerBox() {
     const agentFee = t.agreedFee ? getAgentFee(p, t.agreedFee) : 0;
     const geduld = '🟢'.repeat(Math.max(0, t.patience)) + '⚪'.repeat(Math.max(0, 5 - t.patience));
     box.innerHTML = `<div class="panel" style="border:1px solid var(--accent); margin-bottom:8px;">
-        <div class="panel-header" style="color:var(--accent);">🃏 TRANSFERPOKER: ${p.name} (${p.pos}, ${p.strength})</div>
+        <div class="panel-header" style="color:var(--accent);">🃏 Transferpoker: ${p.name} (${p.pos}, ${p.strength})</div>
         <div style="font-size:var(--fs-caption); margin-bottom:6px;">Verkäufer: <strong>${p.sellerClub}</strong> · Forderung <strong>${formatVal(p.askingPrice)}</strong> · Marktwert ${formatVal(p.marketValue)} · Vertrag ${p.contracts || 2} J. · Geduld ${geduld} (noch ${Math.max(0, t.patience)} Runden)${t.rival ? ` · ⚔️ ${t.rival.club} bietet ${formatVal(t.rival.bid)}` : ''}</div>
         <div style="font-size:var(--fs-caption); max-height:110px; overflow-y:auto; background:color-mix(in srgb, var(--shade) 15%, transparent); border-radius:4px; padding:4px; margin-bottom:6px;">${t.log.slice(-6).map(z => `<div>${z}</div>`).join('')}</div>
         ${t.agreedFee ? `
@@ -8967,7 +8955,7 @@ function renderOnboardingBox() {
             synBox.className = 'panel';
             synBox.style.borderColor = 'var(--gold)';
             synBox.style.gridColumn = '1 / -1';
-            synBox.innerHTML = `<div class="panel-header" style="color:var(--gold);">✨ AKTIVE PERK-SYNERGIEN</div>` +
+            synBox.innerHTML = `<div class="panel-header" style="color:var(--gold);">✨ Aktive Perk-Synergien</div>` +
                 game.unlockedSynergies.map(id => {
                     let syn = PERK_SYNERGIES.find(s => s.id === id);
                     return syn ? `<div style="font-size:var(--fs-small); margin-bottom:4px;"><strong>${syn.label}:</strong> ${syn.desc}</div>` : '';
@@ -8978,8 +8966,9 @@ function renderOnboardingBox() {
         // "Krisenmanager" (Stabilität & Schadensbegrenzung) - unabhängig kombinierbar, keine
         // exklusive Wahl, aber klar erkennbar als zwei unterschiedliche Spielstile.
         let aufbauHeader = document.createElement('div');
+        aufbauHeader.className = 'ui-overline';
         aufbauHeader.style.cssText = 'grid-column:1 / -1; font-size:var(--fs-body); font-weight:800; color:var(--primary); margin:8px 0 4px 4px;';
-        aufbauHeader.innerText = '🏗️ ZWEIG: AUFBAU-SPEZIALIST';
+        aufbauHeader.innerText = '🏗️ Zweig: Aufbau-Spezialist';
         grid.appendChild(aufbauHeader);
         perkData.filter(p => p.branch === 'aufbau').forEach(p => {
             let active = managerRPG.perks[p.id];
@@ -8996,8 +8985,9 @@ function renderOnboardingBox() {
             grid.appendChild(card);
         });
         let kriseHeader = document.createElement('div');
+        kriseHeader.className = 'ui-overline';
         kriseHeader.style.cssText = 'grid-column:1 / -1; font-size:var(--fs-body); font-weight:800; color:var(--danger); margin:12px 0 4px 4px;';
-        kriseHeader.innerText = '🛡️ ZWEIG: KRISENMANAGER';
+        kriseHeader.innerText = '🛡️ Zweig: Krisenmanager';
         grid.appendChild(kriseHeader);
         perkData.filter(p => p.branch === 'krise').forEach(p => {
             let active = managerRPG.perks[p.id];
@@ -9491,7 +9481,7 @@ function renderBoardRoomPanel() {
 /* eslint-enable */
 
     // ==========================================
-    // WELTWEITES SCOUTING-NETZWERK 2.0 (komplett neu aufgebaut)
+    // WELTWEITES Scouting-Netzwerk 2.0 (komplett neu aufgebaut)
     // ==========================================
     // Kernideen der Neufassung:
     // 1. Scout-Netzwerk: bis zu 4 Regional-Scouts, jeweils eigenes Skill-Level, das die
@@ -10131,7 +10121,7 @@ function renderBoardRoomPanel() {
         }).join('');
 
         box.innerHTML = `<div style="font-size:var(--fs-caption); font-weight:800; margin:4px 0;">Bisher verkauft (gesamter Verlauf)</div>${summeHtml}`
-            + `<div style="font-size:var(--fs-caption); font-weight:800; margin:6px 0 4px;">Letzte Spieltage</div>${verlaufHtml}`;
+            + `<div class="ui-overline" style="font-size:var(--fs-caption); font-weight:800; margin:6px 0 4px;">Letzte Spieltage</div>${verlaufHtml}`;
     }
 
     function renderMerchView() {
@@ -11253,7 +11243,7 @@ function renderBoardRoomPanel() {
         HUB_MEMBERS[hubId].forEach(memberId => { SUB_SCREEN_TO_HUB[memberId] = hubId; });
     }
 
-    // ---------- HTML-STRUKTUR-SELBSTTEST ----------
+    // ---------- HTML-Struktur-Selbsttest ----------
     // Prüft automatisch, ob JEDER Screen (Top-Level + alle Hub-Unterscreens) nach
     // showScreen() tatsächlich sichtbar UND mit Inhalt gefüllt ist. Entstanden aus einem
     // sehr hartnäckigen Bug: eine einzelne fehlende schließende </div> irgendwo im
@@ -11711,7 +11701,7 @@ function initOneHand() {
 
 /* eslint-enable */
 // ============================================================================
-// DARSTELLUNG (Phase 25.51): Farb-Theme und Textgröße, pro Gerät gespeichert.
+// Darstellung (Phase 25.51): Farb-Theme und Textgröße, pro Gerät gespeichert.
 // Die Themes sind reine Token-Sätze in css/styles.css (html[data-theme=…]),
 // die Textgröße setzt --fs-scale (html[data-text-size=…]). Bildschirm:
 // screen-design, Menü "System & Hilfe". Kein Spielzustand - nichts davon
@@ -12173,7 +12163,7 @@ function renderDesignSettings() {
             let offer = rawMaterials.acquisitionOffers[0];
             acqBox.style.display = offer ? 'block' : 'none';
             if (offer) {
-                acqBox.innerHTML = `<div class="panel-header" style="color:var(--accent);">💼 ÜBERNAHMEANGEBOT</div>
+                acqBox.innerHTML = `<div class="panel-header" style="color:var(--accent);">💼 Übernahmeangebot</div>
                     <div class="box" style="font-size:var(--fs-small);">${offer.firm} bietet <strong>${formatVal(offer.offer)}</strong> für die komplette Holding (noch ${offer.expiresMatchday - game.matchday} Spieltage gültig). Betriebswert der Fabriken: ${formatVal(getHoldingValuation())} - beim Verkauf gehen alle Fabriken weg, Holding-Konto und Lager bleiben.</div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
                         <button onclick="resolveAcquisitionOffer(true)" class="btn-action">✅ Annehmen</button>
@@ -12753,7 +12743,7 @@ function renderDesignSettings() {
     }
 
     // ==========================================
-    // FÄHIGKEITEN GEZIELT ANTRAINIEREN
+    // Fähigkeiten gezielt antrainieren
     // ==========================================
     // Ein zugewiesener Trainer (Personal) bildet einen Spieler über mehrere Spieltage gezielt
     // in einer Fähigkeit fort - kostet echtes Geld UND Zeit, garantiert dafür eine echte,
@@ -13817,7 +13807,7 @@ function finishGoalkeeperGame() {
         let goldUp = steigt(stockMarket.greenEnergy);
         el.innerHTML = `
             <span>📈 DAX <span class="${daxUp ? 'tick-up' : 'tick-down'}">${dax} ${daxUp ? '▲' : '▼'}</span></span>
-            <span>💵 DOLLAR <span class="${dollarUp ? 'tick-up' : 'tick-down'}">${dollar} ${dollarUp ? '▲' : '▼'}</span></span>
+            <span>💵 Dollar <span class="${dollarUp ? 'tick-up' : 'tick-down'}">${dollar} ${dollarUp ? '▲' : '▼'}</span></span>
             <span>🥇 GOLD <span class="${goldUp ? 'tick-up' : 'tick-down'}">${gold} ${goldUp ? '▲' : '▼'}</span></span>
         `;
     }
@@ -13937,7 +13927,7 @@ function finishGoalkeeperGame() {
             if (game.negativeStreak > 0) {
                 insolvencyBox.style.display = 'block';
                 insolvencyBox.innerHTML = `⚠️ Konto seit <strong>${game.negativeStreak}</strong> Spieltagen im Minus.` +
-                    (game.transferEmbargo ? ' <strong style="color:var(--danger);">TRANSFERSPERRE AKTIV!</strong>' : '') +
+                    (game.transferEmbargo ? ' <strong style="color:var(--danger);">Transfersperre aktiv!</strong>' : '') +
                     `<br><span style="font-size:var(--fs-caption);">Bei 6 Spieltagen in Folge droht eine Transfersperre, bei Vielfachen von 10 ein Zwangsverkauf, bei Vielfachen von 15 Punktabzug.</span>`;
             } else {
                 insolvencyBox.style.display = 'none';
@@ -14021,7 +14011,7 @@ function finishGoalkeeperGame() {
     }
 
     // ==========================================
-    // TICKETPREISE MIT SCHIEBEREGLERN & LIVE-VORSCHAU
+    // Ticketpreise MIT SCHIEBEREGLERN & LIVE-VORSCHAU
     // ==========================================
     // Ersetzt die einfachen Zahlenfelder durch Schieberegler mit sofortiger Vorschau
     // (erwartete Zuschauer, Auslastung, Tageskasse, Saison-Hochrechnung) - Preise werden
@@ -14137,10 +14127,10 @@ function finishGoalkeeperGame() {
             ${sliderRow('Dauerkarte', 'dauerkarte')}
             <div class="box" style="font-size:var(--fs-caption); margin-bottom:10px;">🎟️ Aktuell <strong>${(game.seasonTicketHolders || 0).toLocaleString('de-DE')}</strong> Dauerkarten (${dauerkartenPct}% der Plätze). Ein neuer Preis wirkt erst beim nächsten Saisonverkauf - die Vorschau rechts zeigt nur das Tagesgeschäft.</div>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin:12px 0;">
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">ERWARTETE ZUSCHAUER</div><div style="font-size:var(--fs-title); font-weight:900;">${stats.totalAtt.toLocaleString('de-DE')}</div><div style="font-size:var(--fs-micro); color:var(--text-muted);">Steh ${stats.stehAtt.toLocaleString('de-DE')} · Sitz ${stats.sitzAtt.toLocaleString('de-DE')} · VIP ${stats.vipAtt} · Dauerkarte ${stats.dauerkartenAnwesend.toLocaleString('de-DE')}</div></div>
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">AUSLASTUNG</div><div style="font-size:var(--fs-title); font-weight:900; color:${stats.utilization>=70?'var(--primary)':'var(--accent)'};">${stats.utilization.toFixed(1)}%</div></div>
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">TAGESKASSE JE HEIMSPIEL</div><div style="font-size:var(--fs-title); font-weight:900; color:var(--gold);">${formatVal(stats.matchRevenue)}</div><div style="font-size:var(--fs-micro); color:${changePercent>=0?'var(--primary)':'var(--danger)'};">${changePercent>=0?'+':''}${changePercent.toFixed(1)}% ggü. jetzt</div></div>
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">HOCHRECHNUNG SAISON</div><div style="font-size:var(--fs-title); font-weight:900; color:var(--gold);">${formatVal(stats.seasonProjection)}</div><div style="font-size:var(--fs-micro); color:var(--text-muted);">17 Heimspiele, geschätzt (ohne Dauerkarten-Erlös)</div></div>
+                <div class="box"><div class="ui-overline" style="font-size:var(--fs-micro); color:var(--text-muted);">Erwartete Zuschauer</div><div style="font-size:var(--fs-title); font-weight:900;">${stats.totalAtt.toLocaleString('de-DE')}</div><div style="font-size:var(--fs-micro); color:var(--text-muted);">Steh ${stats.stehAtt.toLocaleString('de-DE')} · Sitz ${stats.sitzAtt.toLocaleString('de-DE')} · VIP ${stats.vipAtt} · Dauerkarte ${stats.dauerkartenAnwesend.toLocaleString('de-DE')}</div></div>
+                <div class="box"><div class="ui-overline">Auslastung</div><div style="font-size:var(--fs-title); font-weight:900; color:${stats.utilization>=70?'var(--primary)':'var(--accent)'};">${stats.utilization.toFixed(1)}%</div></div>
+                <div class="box"><div class="ui-overline" style="font-size:var(--fs-micro); color:var(--text-muted);">Tageskasse je Heimspiel</div><div style="font-size:var(--fs-title); font-weight:900; color:var(--gold);">${formatVal(stats.matchRevenue)}</div><div style="font-size:var(--fs-micro); color:${changePercent>=0?'var(--primary)':'var(--danger)'};">${changePercent>=0?'+':''}${changePercent.toFixed(1)}% ggü. jetzt</div></div>
+                <div class="box"><div class="ui-overline" style="font-size:var(--fs-micro); color:var(--text-muted);">Hochrechnung Saison</div><div style="font-size:var(--fs-title); font-weight:900; color:var(--gold);">${formatVal(stats.seasonProjection)}</div><div style="font-size:var(--fs-micro); color:var(--text-muted);">17 Heimspiele, geschätzt (ohne Dauerkarten-Erlös)</div></div>
             </div>
             <div style="font-size:var(--fs-small); margin-bottom:10px;">${feedbackText}</div>
             <button onclick="commitTicketPrices()" class="btn-action" style="margin-bottom:6px;">✅ Preise übernehmen</button>
@@ -14516,7 +14506,7 @@ function finishGoalkeeperGame() {
         let verlauf = '';
         if (ledgerView === 'letzter' && ledger.length > 1) {
             verlauf = `<div class="box" style="margin-top:6px;">
-                <strong style="font-size:var(--fs-body);">📈 LETZTE SPIELTAGE</strong>
+                <strong class="ui-overline" style="font-size:var(--fs-body);">📈 Letzte Spieltage</strong>
                 ${ledger.slice(-6).reverse().map(e => {
                     let s = (e.summeEin || 0) - (e.summeAus || 0);
                     return `<div style="display:flex; justify-content:space-between; font-size:var(--fs-small); margin-top:2px;">
@@ -14532,13 +14522,13 @@ function finishGoalkeeperGame() {
             <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:6px;">${kopf}</div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
                 <div class="box">
-                    <strong style="color:var(--primary); font-size:var(--fs-body);">EINNAHMEN ${formatVal(sumEinGes)}</strong>
+                    <strong class="ui-overline" style="color:var(--primary); font-size:var(--fs-body);">Einnahmen ${formatVal(sumEinGes)}</strong>
                     <div style="margin-top:5px;">
                         ${einnahmen.length ? einnahmen.map(p => ledgerRow(p.label + anteil(p.amount, sumEinGes), p.amount, maxEin, 'var(--primary)')).join('') : '<span style="font-size:var(--fs-small); color:var(--text-muted);">Keine Einnahmen verbucht.</span>'}
                     </div>
                 </div>
                 <div class="box">
-                    <strong style="color:var(--danger); font-size:var(--fs-body);">AUSGABEN ${formatVal(sumAusGes)}</strong>
+                    <strong class="ui-overline" style="color:var(--danger); font-size:var(--fs-body);">Ausgaben ${formatVal(sumAusGes)}</strong>
                     <div style="margin-top:5px;">
                         ${ausgaben.length ? ausgaben.map(p => ledgerRow(p.label + anteil(p.amount, sumAusGes), p.amount, maxAus, 'var(--danger)')).join('') : '<span style="font-size:var(--fs-small); color:var(--text-muted);">Keine Ausgaben verbucht.</span>'}
                     </div>
@@ -14722,7 +14712,7 @@ function finishGoalkeeperGame() {
         }
         const zeile = (name, wert, farbe) => `<div style="display:flex; justify-content:space-between; font-size:var(--fs-small); margin-top:3px;"><span>${name}</span><strong style="color:${farbe};">${formatVal(wert)}</strong></div>`;
         return `<div class="box" style="margin-bottom:6px;">
-            <strong style="font-size:var(--fs-body);">🔁 TRANSFERBILANZ DIESE SAISON</strong>
+            <strong style="font-size:var(--fs-body);">🔁 Transferbilanz diese Saison</strong>
             ${zeile('Spielerverkäufe', b.verkauf, 'var(--primary)')}
             ${zeile('Weiterverkaufsbeteiligungen', b.weiterverkauf, 'var(--primary)')}
             ${zeile('Spielerkäufe', -b.kauf, 'var(--danger)')}
@@ -14751,7 +14741,7 @@ function finishGoalkeeperGame() {
             ${renderTransferBilanzBox()}
             <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:6px;">Alle Kontobewegungen ausserhalb der Spieltagsabrechnung (letzte ${MAX_KONTOAUSZUG} Buchungen). Die Spieltagsposten finden Sie in den beiden anderen Reitern.</div>
             <div class="box" style="margin-bottom:6px;">
-                <strong style="font-size:var(--fs-body);">📊 NACH BEREICH</strong>
+                <strong style="font-size:var(--fs-body);">📊 Nach Bereich</strong>
                 ${bereiche.map(b => `
                     <div style="display:flex; justify-content:space-between; font-size:var(--fs-small); margin-top:3px;">
                         <span>${b.label}</span>
@@ -15002,7 +14992,7 @@ function finishGoalkeeperGame() {
 
 /* eslint-enable */
     // ==========================================
-    // FINANCIAL FAIRPLAY
+    // Financial Fairplay
     // ==========================================
     // Echte UEFA/DFB-Regel: nicht der aktuelle Kontostand entscheidet, sondern ob ein Verein
     // über mehrere Saisons hinweg strukturell mehr ausgibt, als er einnimmt. Bewusst getrennt
@@ -15422,7 +15412,7 @@ function finishGoalkeeperGame() {
 /* eslint-enable */
 
     // ==========================================
-    // SPONSOREN: HAUPTSPONSOR, AUSRÜSTER, ÄRMEL & BANDEN - ALLE MIT ECHTEN VERHANDLUNGEN,
+    // SPONSOREN: Hauptsponsor, AUSRÜSTER, ÄRMEL & BANDEN - ALLE MIT ECHTEN VERHANDLUNGEN,
     // VARIABLEN LAUFZEITEN, ABLAUF & ERFOLGSABHÄNGIGEN BONI (POKAL/AUFSTIEG)
     // ==========================================
     const SPONSOR_NAME_PREFIXES = ["Nord", "Rhein", "Metro", "City", "Regio", "Vital", "Elektro", "Bau", "Agrar", "Media"];
@@ -15546,7 +15536,7 @@ function finishGoalkeeperGame() {
         return { type: null, amount: 0, label: '' };
     }
 
-    // ---------- HAUPTSPONSOR ----------
+    // ---------- Hauptsponsor ----------
     function checkIncomingSponsorOffers(force = false) {
         if (sponsorOffers.length >= MAX_PENDING_SPONSOR_OFFERS) return;
         if (!force && Math.random() > 0.12) return;
@@ -15607,7 +15597,7 @@ function finishGoalkeeperGame() {
         renderSponsorsView();
     }
 
-    // ---------- TRIKOT-AUSRÜSTER ----------
+    // ---------- Trikot-Ausrüster ----------
     function checkIncomingKitOffers(force = false) {
         if (kitSupplierOffers.length >= MAX_PENDING_KIT_OFFERS) return;
         if (!force && Math.random() > 0.12) return;
@@ -15652,7 +15642,7 @@ function finishGoalkeeperGame() {
         renderSponsorsView();
     }
 
-    // ---------- ÄRMELSPONSOR ----------
+    // ---------- Ärmelsponsor ----------
     // Vierter Vertragstyp: zahlt (anders als Ausrüster/Banden) bei JEDEM Spiel, nicht nur daheim.
     function checkIncomingSleeveOffers(force = false) {
         if (sleeveSponsorOffers.length >= MAX_PENDING_SLEEVE_OFFERS) return;
@@ -15698,7 +15688,7 @@ function finishGoalkeeperGame() {
         renderSponsorsView();
     }
 
-    // ---------- BANDENWERBUNG (STADIONWEIT) ----------
+    // ---------- Bandenwerbung (STADIONWEIT) ----------
     // Werbeflächen hängen jetzt an den echten Stadionbereichen statt an acht anonymen
     // Plätzen: jeder Block des Stadions (siehe stadium.blocks) hat eigene Bandenplätze,
     // deren Anzahl mit seiner Kapazität wächst. Wer das Stadion ausbaut, schafft damit
@@ -16159,7 +16149,7 @@ function finishGoalkeeperGame() {
             let ev = game.pendingSponsorActivation;
             activationBox.style.display = ev ? 'block' : 'none';
             if (ev) {
-                activationBox.innerHTML = `<div class="panel-header" style="color:var(--accent);">📸 AKTIVIERUNGS-EVENT: ${ev.sponsorName}</div>
+                activationBox.innerHTML = `<div class="panel-header" style="color:var(--accent);">📸 Aktivierungs-Event: ${ev.sponsorName}</div>
                     <div class="box" style="font-size:var(--fs-small);">Exklusiver Werbedreh - Teilnahme bringt ${formatVal(ev.reward)} und mehr Loyalität, kostet aber etwas Fitness.</div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
                         <button onclick="resolveSponsorActivationEvent(true)" class="btn-action">✅ Teilnehmen</button>
@@ -16259,7 +16249,7 @@ function finishGoalkeeperGame() {
 /* eslint-enable */
 
     // ==========================================
-    // MEDIENRECHTE & TV-VERTRAG
+    // Medienrechte & TV-Vertrag
     // ==========================================
     // Im echten Fußball sind TV-/Medienrechte oft die GRÖSSTE Einnahmequelle eines Vereins -
     // bisher fehlte das im Spiel komplett. Zwei Säulen:
@@ -16695,13 +16685,13 @@ function finishGoalkeeperGame() {
                 <span style="font-size:var(--fs-caption); color:var(--text-muted);">Quoten von ${BETTING_PROVIDER_NAME} · Höchsteinsatz: ${formatVal(Math.max(MIN_BET_STAKE, Math.round(game.money * MAX_BET_STAKE_FRACTION)))}</span>
             </div>
             <input type="number" id="bet-stake-input" placeholder="Einsatz in €" class="input-inline" style="width:100%; margin-bottom:6px;">
-            <div style="font-size:var(--fs-caption); font-weight:800; color:var(--text-muted); margin-bottom:3px;">SPIELAUSGANG</div>
+            <div class="ui-overline" style="font-size:var(--fs-caption); font-weight:800; color:var(--text-muted); margin-bottom:3px;">Spielausgang</div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-bottom:4px;">
                 <button onclick="placeBet('win', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-action" style="font-size:var(--fs-small);">Sieg @ ${odds.oddsWin}</button>
                 <button onclick="placeBet('draw', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-secondary" style="font-size:var(--fs-small);">Remis @ ${odds.oddsDraw}</button>
             </div>
             <div style="font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:8px;">🚫 Auf eine Niederlage der eigenen Mannschaft zu wetten ist verboten. Quoten gelten für deine beste verfügbare Elf.</div>
-            <div style="font-size:var(--fs-caption); font-weight:800; color:var(--text-muted); margin-bottom:3px;">SONDERWETTEN</div>
+            <div class="ui-overline" style="font-size:var(--fs-caption); font-weight:800; color:var(--text-muted); margin-bottom:3px;">Sonderwetten</div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-bottom:4px;">
                 <button onclick="placeSpecialBet('over', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-secondary" style="font-size:var(--fs-small);">Über 2.5 @ ${odds.oddsOver}</button>
                 <button onclick="placeSpecialBet('under', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-secondary" style="font-size:var(--fs-small);">Unter 2.5 @ ${odds.oddsUnder}</button>
@@ -16726,7 +16716,7 @@ function finishGoalkeeperGame() {
 
 /* eslint-enable */
 
-    // ---------- STADIONNAME & NAMENSRECHTE ----------
+    // ---------- STADIONNAME & Namensrechte ----------
     // Stadion-Kostenskalierung: deutlich steiler als der generische Liga-Faktor, damit
     // ein Kreisligist sich keine Bundesliga-Arena leisten muss, ein Spitzenklub aber echte
     // zweistellige Millionenbeträge zahlt (wie in der Realität) - Index = leagueLevel
@@ -16896,7 +16886,7 @@ function finishGoalkeeperGame() {
         if (uniqueNames.length < 3) { box.style.display = 'none'; return; }
         box.style.display = 'block';
         box.innerHTML = `<div class="box" style="border-left-color:#ff6b9d; text-align:center;">
-            <strong style="color:#ff6b9d;">❤️ EHRENWAND DER PUBLIKUMSLIEBLINGE</strong><br>
+            <strong style="color:#ff6b9d;">❤️ Ehrenwand der Publikumslieblinge</strong><br>
             <span style="font-size:var(--fs-small);">${uniqueNames.slice(-8).join(' · ')}</span>
         </div>`;
     }
@@ -16950,7 +16940,7 @@ function finishGoalkeeperGame() {
     }
     // Kompakte Anzeige im Stadion-Screen, damit die Auflagen jederzeit einsehbar sind.
     // ==========================================
-    // BLOCK-SPEZIFISCHE FAN-KULTUR
+    // Block-spezifische Fan-Kultur
     // ==========================================
     // Jeder Stadion-Block hat eine natürliche kulturelle Zugehörigkeit zu einer der vier
     // Fan-Gruppen. Ist diese Fan-Gruppe gut gelaunt, stärkt sich die Block-Kultur über die
@@ -17060,14 +17050,14 @@ function finishGoalkeeperGame() {
         let utilization = capacity > 0 ? Math.round((lastAttendance / capacity) * 100) : 0;
         box.innerHTML = `
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">KAPAZITÄT</div><div style="font-size:var(--fs-title); font-weight:900;">${capacity.toLocaleString('de-DE')}</div></div>
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">LETZTE ZUSCHAUERZAHL</div><div style="font-size:var(--fs-title); font-weight:900;">${lastAttendance.toLocaleString('de-DE')}</div></div>
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">AUSLASTUNG</div><div style="font-size:var(--fs-title); font-weight:900; color:${utilization>=70?'var(--primary)':(utilization>=40?'var(--accent)':'var(--danger)')};">${utilization}%</div></div>
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">STADIONWERT</div><div style="font-size:var(--fs-title); font-weight:900; color:var(--gold);">${(getStadiumMarketValue()/1000000).toFixed(2)} Mio €</div></div>
+                <div class="box"><div class="ui-overline">Kapazität</div><div style="font-size:var(--fs-title); font-weight:900;">${capacity.toLocaleString('de-DE')}</div></div>
+                <div class="box"><div class="ui-overline" style="font-size:var(--fs-micro); color:var(--text-muted);">Letzte Zuschauerzahl</div><div style="font-size:var(--fs-title); font-weight:900;">${lastAttendance.toLocaleString('de-DE')}</div></div>
+                <div class="box"><div class="ui-overline">Auslastung</div><div style="font-size:var(--fs-title); font-weight:900; color:${utilization>=70?'var(--primary)':(utilization>=40?'var(--accent)':'var(--danger)')};">${utilization}%</div></div>
+                <div class="box"><div class="ui-overline">Stadionwert</div><div style="font-size:var(--fs-title); font-weight:900; color:var(--gold);">${(getStadiumMarketValue()/1000000).toFixed(2)} Mio €</div></div>
             </div>
-            <div class="box" style="margin-top:4px;"><div style="font-size:var(--fs-micro); color:var(--text-muted);">BAUWERT (INVESTIERTE SUMME)</div><div style="font-size:var(--fs-title); font-weight:900; color:var(--industry);">${((stadium.totalInvested||0)/1000000).toFixed(2)} Mio €</div></div>
+            <div class="box" style="margin-top:4px;"><div class="ui-overline" style="font-size:var(--fs-micro); color:var(--text-muted);">Bauwert (investierte Summe)</div><div style="font-size:var(--fs-title); font-weight:900; color:var(--industry);">${((stadium.totalInvested||0)/1000000).toFixed(2)} Mio €</div></div>
             <div class="box" style="margin-top:4px;">
-                <div style="font-size:var(--fs-micro); color:var(--text-muted);">BETRIEBSKOSTEN PRO SPIELTAG</div>
+                <div class="ui-overline" style="font-size:var(--fs-micro); color:var(--text-muted);">Betriebskosten pro Spieltag</div>
                 <div style="font-size:var(--fs-title); font-weight:900; color:var(--danger);">${formatVal(Math.round(getStadiumBaseMaintenance()))}</div>
                 <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:2px;">
                     ${getMothballedCapacity() > 0
@@ -17123,10 +17113,10 @@ function finishGoalkeeperGame() {
             let cond = getStadiumConditionRating();
             let suggestion = findNextStadiumSuggestion();
             condBox.innerHTML = `
-                <div style="font-size:var(--fs-caption); color:var(--text-muted);">STADION-ZUSTAND</div>
+                <div class="ui-overline" style="font-size:var(--fs-caption); color:var(--text-muted);">Stadion-Zustand</div>
                 <div style="font-size:var(--fs-title-sm); font-weight:900; color:${cond.color}; margin-bottom:6px;">${cond.label}</div>
                 ${suggestion ? `
-                    <div style="font-size:var(--fs-caption); color:var(--text-muted);">NÄCHSTE AUSBAUSTUFE</div>
+                    <div class="ui-overline" style="font-size:var(--fs-caption); color:var(--text-muted);">Nächste Ausbaustufe</div>
                     <div style="font-size:var(--fs-body); margin-bottom:6px;">${suggestion.label} (${formatVal(suggestion.cost)})</div>
                     <button onclick="${suggestion.action}" class="btn-action">Ausbau Planen</button>
                 ` : '<div style="font-size:var(--fs-small); color:var(--primary);">Alle Erweiterungen bereits gebaut! ✓</div>'}
@@ -17350,7 +17340,7 @@ function finishGoalkeeperGame() {
     }
 
     // ==========================================
-    // RASENPFLEGE
+    // Rasenpflege
     // ==========================================
     // Zustand des Geläufs auf einer 0-99-Skala, unabhängig von den festen Stadion-
     // Erweiterungen (Medizinzentrum/Rasenpflege-System, die das VERLETZUNGSRISIKO senken) -
@@ -17507,7 +17497,7 @@ function finishGoalkeeperGame() {
     }
 
     // ==========================================
-    // NEBENEINNAHMEN-ÜBERSICHT
+    // Nebeneinnahmen-ÜBERSICHT
     // ==========================================
     // Rein informative Aufschlüsselung der bereits bestehenden Campus-Einnahmequellen
     // (Fan-Kneipe/Foodtrucks = Gastronomie, Parkhaus = Parkplätze, VIP-Tagungshotel =
@@ -17573,7 +17563,7 @@ function finishGoalkeeperGame() {
             let ev = game.pendingNamingCeremony;
             ceremonyBox.style.display = ev ? 'block' : 'none';
             if (ev) {
-                ceremonyBox.innerHTML = `<div class="panel-header" style="color:var(--accent);">🎪 NAMENSGEBUNGS-ZEREMONIE</div>
+                ceremonyBox.innerHTML = `<div class="panel-header" style="color:var(--accent);">🎪 Namensgebungs-Zeremonie</div>
                     <div class="box" style="font-size:var(--fs-small);">Wie soll die Enthüllung von "${ev.stadiumName}" gestaltet werden?</div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
                         <button onclick="resolveNamingCeremony('traditional')" class="btn-secondary">🏛️ Mit Tradition verbinden</button>
@@ -17950,7 +17940,7 @@ function finishGoalkeeperGame() {
     }
 
     // ==========================================
-    // INTERACTIVE STADION-VISUALISIERUNG
+    // Interaktive Stadion-Visualisierung
     // ==========================================
     // Aktualisiert die interaktive Stadion-Visualisierung basierend auf der aktuellen Kapazität.
     // Die Visualisierung zeigt 5 Level: Level 1 (klein), Level 2-5 (immer größer werdend).
@@ -18116,7 +18106,7 @@ function renderStadiumEventsPanel() {
 /* eslint-enable */
 
     // ==========================================
-    // IMMOBILIEN-PORTFOLIO
+    // Immobilien-Portfolio
     // ==========================================
     // Der Verein investiert in Immobilien rund ums Stadion, um sich eine zweite,
     // fußballunabhängige Einnahmequelle aufzubauen - je Objekt eine einmalige
@@ -18512,7 +18502,7 @@ function renderStadiumEventsPanel() {
             poachBox.style.display = p ? 'block' : 'none';
             if (p) {
                 let s = staffMembers[p.key];
-                poachBox.innerHTML = `<div class="panel-header" style="color:var(--danger);">🎯 ABWERBEVERSUCH: ${s.name}</div>
+                poachBox.innerHTML = `<div class="panel-header" style="color:var(--danger);">🎯 Abwerbeversuch: ${s.name}</div>
                     <div class="box" style="font-size:var(--fs-small);">Bindungsprämie zahlen (${formatVal(p.retentionCost)}) oder ziehen lassen?</div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
                         <button onclick="resolveStaffPoaching(true)" class="btn-action">💰 Halten</button>
@@ -18526,7 +18516,7 @@ function renderStadiumEventsPanel() {
             poolBox.style.display = pool ? 'block' : 'none';
             if (pool) {
                 let s = staffMembers[pool.key];
-                poolBox.innerHTML = `<div class="panel-header">📋 BEWERBUNGSPOOL: ${s.name}</div>` +
+                poolBox.innerHTML = `<div class="panel-header">📋 Bewerbungspool: ${s.name}</div>` +
                     pool.candidates.map((c, idx) => {
                         // Der Grund steht direkt beim Knopf: sonst wirkte "Einstellen" ohne Wirkung (Kasse oder Obergrenze).
                         const preis = Math.round(s.cost * c.costMult);
@@ -19526,40 +19516,50 @@ function renderStadiumEventsPanel() {
         youthTalents.forEach((p, idx) => {
             if (typeof ensureYouthPotential === 'function') ensureYouthPotential(p);
             let row = document.createElement('div');
-            row.className = 'player-row';
-            row.style.flexDirection = 'column';
-            row.style.alignItems = 'stretch';
-            let potentialHtml = p.potentialRevealed
-                ? `<span class="badge" style="background:${POTENTIAL_TIER_COLORS[p.potentialTier]};">${POTENTIAL_TIER_LABELS[p.potentialTier]}</span>`
-                : `<button onclick="revealYouthPotential('${p.id}')" class="btn-secondary" style="width:auto; font-size:var(--fs-micro);">🔍 Potenzial prüfen [3.000 €]</button>`;
-            row.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 28) : ''}${p.name} (${p.pos}, ${p.age} J., Str ${p.strength})${p.proDecisionLeft ? ' <span class="badge" style="background:color-mix(in srgb, var(--gold) 30%, transparent);">✍️ Entscheidung</span>' : ''} ${p.trait && p.trait!=='Kein'?`<span class="badge badge-trait">${p.trait}</span>`:''}</span>
-                    <span style="display:flex; gap:4px;">
-                        <button onclick="promoteYouth(${idx}, this)" class="btn-action" style="width:auto; font-size:var(--fs-caption);">In Profikader</button>
-                        ${(p.age || 0) >= 17 ? `<button onclick="openYouthLoanChoice('${p.id}')" class="btn-secondary" style="width:auto; font-size:var(--fs-caption);" title="Leihe zur Entwicklung">📤 Leihe</button>` : ''}
-                        ${game.secondTeam.isActive ? `<button onclick="promoteYouthToSecondTeam(${idx}, this)" class="btn-secondary" style="width:auto; font-size:var(--fs-caption); color:var(--teal);" title="Behutsamer Weg: erst Spielpraxis in der Reserve sammeln">In die Reserve</button>` : ''}
-                    </span>
-                </div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; font-size:var(--fs-caption);">
-                    <span>${potentialHtml}</span>
-                    <span>Fokus: <select class="input-inline" style="font-size:var(--fs-micro); padding:2px;" onchange="setYouthTrainingFocus('${p.id}', this.value)">
-                        <option value="allgemein" ${p.youthFocus==='allgemein'?'selected':''}>Allgemein</option>
-                        <option value="torschuss" ${p.youthFocus==='torschuss'?'selected':''}>Torschuss</option>
-                        <option value="passspiel" ${p.youthFocus==='passspiel'?'selected':''}>Passspiel</option>
-                        <option value="zweikampf" ${p.youthFocus==='zweikampf'?'selected':''}>Zweikampf</option>
-                        <option value="tempo" ${p.youthFocus==='tempo'?'selected':''}>Tempo</option>
-                    </select></span>
-                    <button onclick="releaseYouthTalent('${p.id}', this)" class="btn-secondary" style="width:auto; font-size:var(--fs-micro); color:var(--danger);">Freilassen</button>
-                </div>
-                <div style="margin-top:4px; font-size:var(--fs-caption);">
-                    🎓 Mentor: <select class="input-inline" style="font-size:var(--fs-micro); padding:2px;" onchange="this.value ? assignYouthMentor('${p.id}', this.value) : removeYouthMentor('${p.id}')">
-                        <option value="">Kein Mentor</option>
-                        ${squad.filter(s => s.age >= 27 && s.strength >= 55).map(s => `<option value="${s.id}" ${p.mentorId===s.id?'selected':''}>${s.name} (${s.age} J., Str ${s.strength})</option>`).join('')}
-                    </select>
-                    ${p.mentorId && squad.some(s=>s.id===p.mentorId) ? '<span style="color:var(--primary);"> +35% Entwicklungstempo während Hospitanz</span>' : ''}
-                </div>
-            `;
+            row.className = 'panel player-card';
+            row.style.cssText = 'margin-bottom:8px; padding:12px;';
+            const potenzialChip = p.potentialRevealed
+                ? `<span class="ui-chip" style="background:${POTENTIAL_TIER_COLORS[p.potentialTier]};">🌟 ${POTENTIAL_TIER_LABELS[p.potentialTier]}</span>`
+                : uiChip('🔍 Potenzial unbekannt');
+            const mentorAktiv = p.mentorId && squad.some(s => s.id === p.mentorId);
+            // Kartenmuster: Bild mit Position, Name, Alter und Fokus, Potenzial als Chip, Stärke groß
+            row.innerHTML = renderUiCard({
+                thumb: `${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 48) : ''}<span class="badge badge-${(p.pos || 'mit').toLowerCase()}">${p.pos}</span>`,
+                title: p.name,
+                sub: `${p.age} J. · Jugendakademie`,
+                meta: [
+                    potenzialChip,
+                    p.proDecisionLeft ? uiChip('✍️ Entscheidung fällig', 'warn') : '',
+                    (p.trait && p.trait !== 'Kein') ? uiChip(p.trait) : '',
+                    mentorAktiv ? uiChip('🎓 Mentor +35 %', 'gut') : ''
+                ],
+                kpi: { wert: p.strength, label: 'Stärke' },
+                body: `<div class="ui-field-grid">
+                        <label class="ui-field">
+                            <span class="ui-field-label">Trainingsfokus</span>
+                            <select class="input-inline" onchange="setYouthTrainingFocus('${p.id}', this.value)">
+                                <option value="allgemein" ${p.youthFocus==='allgemein'?'selected':''}>Allgemein</option>
+                                <option value="torschuss" ${p.youthFocus==='torschuss'?'selected':''}>Torschuss</option>
+                                <option value="passspiel" ${p.youthFocus==='passspiel'?'selected':''}>Passspiel</option>
+                                <option value="zweikampf" ${p.youthFocus==='zweikampf'?'selected':''}>Zweikampf</option>
+                                <option value="tempo" ${p.youthFocus==='tempo'?'selected':''}>Tempo</option>
+                            </select>
+                        </label>
+                        <label class="ui-field">
+                            <span class="ui-field-label">🎓 Mentor</span>
+                            <select class="input-inline" onchange="this.value ? assignYouthMentor('${p.id}', this.value) : removeYouthMentor('${p.id}')">
+                                <option value="">Kein Mentor</option>
+                                ${squad.filter(s => s.age >= 27 && s.strength >= 55).map(s => `<option value="${s.id}" ${p.mentorId===s.id?'selected':''}>${s.name} (${s.age} J., Str ${s.strength})</option>`).join('')}
+                            </select>
+                            ${mentorAktiv ? '<span class="ui-field-hint" style="color:var(--primary);">+35% Entwicklungstempo während Hospitanz</span>' : ''}
+                        </label>
+                    </div>`,
+                actions: `<button onclick="promoteYouth(${idx}, this)" class="btn-action">In Profikader</button>
+                    ${game.secondTeam.isActive ? `<button onclick="promoteYouthToSecondTeam(${idx}, this)" class="btn-secondary" title="Behutsamer Weg: erst Spielpraxis in der Reserve sammeln">In die Reserve</button>` : ''}
+                    ${(p.age || 0) >= 17 ? `<button onclick="openYouthLoanChoice('${p.id}')" class="btn-secondary" title="Leihe zur Entwicklung">📤 Leihe</button>` : ''}
+                    ${p.potentialRevealed ? '' : `<button onclick="revealYouthPotential('${p.id}')" class="btn-secondary">🔍 Potenzial prüfen [3.000 €]</button>`}
+                    <button onclick="releaseYouthTalent('${p.id}', this)" class="btn-secondary" style="color:var(--danger);">Freilassen</button>`
+            });
             list.appendChild(row);
         });
 
@@ -19568,7 +19568,7 @@ function renderStadiumEventsPanel() {
             let pend = game.pendingYouthPoach;
             poachBox.style.display = pend ? 'block' : 'none';
             if (pend) {
-                poachBox.innerHTML = `<div class="panel-header" style="color:var(--danger);">🎯 ABWERBEVERSUCH: ${pend.name}</div>
+                poachBox.innerHTML = `<div class="panel-header" style="color:var(--danger);">🎯 Abwerbeversuch: ${pend.name}</div>
                     <div class="box" style="font-size:var(--fs-small);">Ein Rivale will ${pend.name} abwerben! Ablösesumme zahlen (${formatVal(pend.retentionCost)}) oder ziehen lassen?</div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
                         <button onclick="resolveYouthPoaching(true)" class="btn-action">💰 Halten</button>
@@ -19585,7 +19585,7 @@ function renderStadiumEventsPanel() {
     }
 
     // ==========================================
-    // JUGENDAKADEMIE: NEUE FUNKTIONEN
+    // Jugendakademie: NEUE FUNKTIONEN
     // ==========================================
     const POTENTIAL_TIER_LABELS = { 1: '⭐ Mittelmaß', 2: '⭐⭐ Vielversprechend', 3: '⭐⭐⭐ Ausnahmetalent' };
     const POTENTIAL_TIER_COLORS = { 1: 'color-mix(in srgb, var(--ink) 18%, transparent)', 2: 'color-mix(in srgb, var(--primary) 30%, transparent)', 3: 'color-mix(in srgb, var(--accent) 40%, transparent)' };
@@ -19680,7 +19680,7 @@ function renderStadiumEventsPanel() {
     }
 
     // ==========================================
-    // JUGENDLIGA-TABELLE
+    // Jugendliga-TABELLE
     // ==========================================
     // Bisher gab es nur ein einmaliges "Jugendturnier"-Ereignis ohne jeden Wettbewerbs-
     // kontext. Jetzt eine echte Liga mit 7 KI-Nachwuchsakademien, gegen die automatisch
@@ -19948,7 +19948,7 @@ function renderStadiumEventsPanel() {
 
 /* eslint-enable */
 // ==========================================
-// JUGENDAKADEMIE ERWEITERTE FUNKTIONEN
+// Jugendakademie ERWEITERTE FUNKTIONEN
 // ==========================================
 /* eslint-disable no-undef */
 
@@ -20410,7 +20410,7 @@ function renderYouthDecisionBox() {
     const offen = youthTalents.filter(p => p.proDecisionLeft);
     if (!offen.length) { box.innerHTML = ''; return; }
     box.innerHTML = `<div class="panel" style="border:1px solid var(--accent);">
-        <div class="panel-header" style="color:var(--accent);">✍️ PROFIVERTRAG-ENTSCHEIDUNG</div>
+        <div class="panel-header" style="color:var(--accent);">✍️ Profivertrag-Entscheidung</div>
         ${offen.map(p => {
             const idx = youthTalents.indexOf(p);
             return `<div class="box" style="font-size:var(--fs-small);">
@@ -20434,7 +20434,7 @@ function renderYouthLoanChoiceBox() {
     if (!p) { box.innerHTML = ''; youthLoanChoiceId = null; return; }
     const dauer = Math.max(8, Math.min(17, 34 - game.matchday));
     box.innerHTML = `<div class="panel" style="border:1px solid var(--teal);">
-        <div class="panel-header" style="color:var(--teal);">📤 LEIHE ZUR ENTWICKLUNG: ${p.name} (${p.strength})</div>
+        <div class="panel-header" style="color:var(--teal);">📤 Leihe zur Entwicklung: ${p.name} (${p.strength})</div>
         <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">${dauer} Spieltage. Mehr Spielzeit oder höheres Niveau - beides bringt Entwicklung.</div>
         ${getYouthLoanClubs(p).map(c => {
             const spielzeit = Math.round(getYouthLoanPlayChance(p, c.strength) * 100);
@@ -20494,7 +20494,7 @@ function renderYouthPathwayBoxes() {
 /* eslint-enable */
 
     // ==========================================
-    // AKADEMIE-RANGLISTE
+    // Akademie-Rangliste
     // ==========================================
     // Wettbewerb mit anderen Academies in der Liga - wer entwickelt
     // die besten Spieler? Rankings, Boni für Platzierungen.
@@ -20582,7 +20582,7 @@ function renderYouthPathwayBoxes() {
         let rankColor = myRank === 1 ? 'var(--primary)' : myRank <= 3 ? 'var(--accent)' : 'var(--text-muted)';
         let rankEmoji = myRank === 1 ? '🥇' : myRank === 2 ? '🥈' : myRank === 3 ? '🥉' : '⭐';
 
-        let html = `<div style="font-size:var(--fs-small); font-weight:bold; margin-bottom:6px;">🎓 AKADEMIE-RANGLISTE</div>`;
+        let html = `<div style="font-size:var(--fs-small); font-weight:bold; margin-bottom:6px;">🎓 Akademie-Rangliste</div>`;
 
         html += `<div style="background:color-mix(in srgb, var(--primary) 10%, transparent); padding:8px; border-radius:4px; margin-bottom:8px; border-left:4px solid ${rankColor}">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
@@ -20603,7 +20603,7 @@ function renderYouthPathwayBoxes() {
         ];
         allAcademies.sort((a, b) => b.points - a.points);
 
-        html += `<div style="font-size:var(--fs-caption); font-weight:bold; margin-bottom:4px;">🏆 TOP ACADEMIES</div>`;
+        html += `<div class="ui-overline" style="font-size:var(--fs-caption); font-weight:bold; margin-bottom:4px;">🏆 Top Academies</div>`;
         allAcademies.forEach((academy, idx) => {
             let isOwnAcademy = academy.name === game.clubName + ' U23';
             let color = isOwnAcademy ? 'var(--primary)' : 'var(--text-muted)';
@@ -20766,7 +20766,7 @@ function renderYouthPathwayBoxes() {
     }
     function renderBonusClausesBlock(p) {
         return `<div style="font-size:var(--fs-caption); margin-top:4px; border-top:1px solid var(--border); padding-top:4px;">
-            <div style="font-weight:800; color:var(--text-muted); margin-bottom:2px;">🎯 ERFOLGSBASIERTE BONI</div>
+            <div class="ui-overline" style="font-weight:800; color:var(--text-muted); margin-bottom:2px;">🎯 Erfolgsbasierte Boni</div>
             ${renderBonusClauseRow(p, 'goals')}
             ${renderBonusClauseRow(p, 'appearances')}
             ${renderBonusClauseRow(p, 'promotion')}
@@ -20776,7 +20776,7 @@ function renderYouthPathwayBoxes() {
 /* eslint-enable */
 
     // ==========================================
-    // SAISONPLANUNG-ÜBERSICHT
+    // Saisonplanung-ÜBERSICHT
     // ==========================================
     // Zeigt auf einen Blick, wer wirklich für die kommende Saison zur Verfügung steht: welche
     // Verträge bald auslaufen, wer zurück zum Leihverein muss, und wo eine Entscheidung ansteht.
@@ -20796,11 +20796,11 @@ function renderYouthPathwayBoxes() {
                 📋 <strong>${urgent.length}</strong> Verträge laufen bald aus · <strong>${returningLoans.length}</strong> Leihspieler kehren ggf. zurück · <strong>${safe.length}</strong> Verträge langfristig gesichert
             </div>
             ${urgent.length > 0 ? `
-                <div style="font-size:var(--fs-caption); font-weight:800; color:var(--danger); margin:6px 0 3px;">🔴 DRINGEND - VERTRAG LÄUFT AUS (0-1 JAHR)</div>
+                <div class="ui-overline" style="font-size:var(--fs-caption); font-weight:800; color:var(--danger); margin:6px 0 3px;">🔴 Dringend – Vertrag läuft aus (0-1 Jahr)</div>
                 ${urgent.map(p => `<div class="box" style="font-size:var(--fs-caption); border-left-color:var(--danger); display:flex; justify-content:space-between;"><span>${p.name} (${p.pos}, Str ${p.strength})</span><span>${p.contracts === 0 ? 'Läuft diese Saison aus!' : '1 Jahr Rest'}</span></div>`).join('')}
             ` : ''}
             ${soon.length > 0 ? `
-                <div style="font-size:var(--fs-caption); font-weight:800; color:var(--accent); margin:6px 0 3px;">🟡 BALD PLANEN (2 JAHRE REST)</div>
+                <div class="ui-overline" style="font-size:var(--fs-caption); font-weight:800; color:var(--accent); margin:6px 0 3px;">🟡 Bald planen (2 Jahre Rest)</div>
                 ${soon.map(p => `<div class="box" style="font-size:var(--fs-caption); border-left-color:var(--accent); display:flex; justify-content:space-between;"><span>${p.name} (${p.pos})</span><span>2 Jahre Rest</span></div>`).join('')}
             ` : ''}
             ${returningLoans.length > 0 ? `
@@ -21049,7 +21049,7 @@ function renderYouthPathwayBoxes() {
 /* eslint-enable */
 
     // ==========================================
-    // TRAINER-PRIVATLEBEN: GEHALT, LIFESTYLE, HOBBYS, EINKOMMENSQUELLEN
+    // Trainer-Privatleben: GEHALT, LIFESTYLE, HOBBYS, EINKOMMENSQUELLEN
     // ==========================================
     function renderPrivateLifeView() {
         document.getElementById('priv-money').innerText = formatVal(privateLife.money);
@@ -21171,7 +21171,7 @@ function renderYouthPathwayBoxes() {
         showToast(`💰 ${activity.name}: +${formatVal(activity.income)}!`, 'success');
     }
 
-    // ---------- HOBBY & BEZIEHUNGSSTATUS ----------
+    // ---------- Hobby & Beziehungsstatus ----------
     function setHobby(hobbyId) {
         if (!HOBBIES.some(h => h.id === hobbyId)) return;
         privateLife.hobby = hobbyId;
@@ -21184,7 +21184,7 @@ function renderYouthPathwayBoxes() {
         renderPrivateLifeView();
     }
 
-    // ---------- WOHLTÄTIGKEIT & KAPITALTRANSFER ----------
+    // ---------- Wohltätigkeit & Kapitaltransfer ----------
     function makeCharityDonation(amount) {
         if (!amount || amount <= 0 || privateLife.money < amount) { showToast('Ungültiger Betrag oder nicht genug Privatvermögen!', 'error'); return; }
         playSound('click');
@@ -21278,7 +21278,7 @@ function renderYouthPathwayBoxes() {
 /* eslint-enable */
 
     // ==========================================
-    // SPIELER-SKANDALE
+    // Spieler-Skandale
     // ==========================================
     // Spieler können in negative Schlagzeilen geraten: Verletzungs-Vortäuschung,
     // schlechte Disziplin, Doping-Vorwürfe - mit echten Konsequenzen für die Karriere.
@@ -21430,7 +21430,7 @@ function renderYouthPathwayBoxes() {
 
         const scandals = (game.scandals || []).filter(s => !s.resolved);
 
-        let html = `<div style="font-size:var(--fs-small); font-weight:bold; margin-bottom:6px;">⚠️ SPIELER-SKANDALE</div>`;
+        let html = `<div style="font-size:var(--fs-small); font-weight:bold; margin-bottom:6px;">⚠️ Spieler-Skandale</div>`;
 
         if (scandals.length === 0) {
             html += '<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:8px;">Keine aktuellen Skandale</div>';
@@ -23428,7 +23428,7 @@ function renderPregameTalkBox() {
         const alt = isPregameTalkWornOut(type) ? ' <span style="font-size:var(--fs-micro); opacity:0.8;">(kennen sie schon)</span>' : '';
         return `<button onclick="choosePregameTalk('${type}')" class="${gewaehlt ? 'btn-action' : 'btn-secondary'}" style="font-size:var(--fs-small); margin-bottom:4px;">${gewaehlt ? '✔ ' : ''}${PREGAME_TALKS[type].label}${alt}</button>`;
     };
-    box.innerHTML = `<div class="panel"><div class="panel-header">🗣️ KABINENANSPRACHE VOR DEM ANPFIFF</div>
+    box.innerHTML = `<div class="panel"><div class="panel-header">🗣️ Kabinenansprache vor dem Anpfiff</div>
         <div class="box" style="font-size:var(--fs-small);">${lage}. In der Startelf: ${c.count('Ruhig') + c.count('Bescheiden')} ruhige/bescheidene, ${c.count('Ehrgeizig') + c.count('Selbstbewusst')} ehrgeizige/selbstbewusste, ${c.count('Emotional') + c.count('Hitzköpfig')} emotionale/hitzköpfige Spieler.
             <div style="color:var(--text-muted); margin-top:2px;">Konzentration wirkt als Favorit, Mut als Außenseiter, Druck spaltet: Ehrgeizige wachsen, Hitzköpfe verkrampfen - und nach einer Niederlage kostet er Moral.</div></div>
         ${knopf('fokus')}${knopf('mut')}${knopf('druck')}
@@ -24019,7 +24019,7 @@ function renderPreContractBox() {
     const box = document.getElementById('precontract-box');
     if (!box) return;
     const offen = game.preContracts || [];
-    const kopf = `<div class="panel-header">📝 VORVERTRÄGE - ABLÖSEFREI ZUR NEUEN SAISON</div>`;
+    const kopf = `<div class="panel-header">📝 Vorverträge – ablösefrei zur neuen Saison</div>`;
     // Eigene Spieler mit Vorvertrags-Angebot: Frist steht oben, nicht versteckt im Spielerprofil (25.25)
     const en = typeof currentLang !== 'undefined' && currentLang === 'en';
     const eigene = squad.filter(p => p.preContractOffer).map(p => en
@@ -24148,7 +24148,7 @@ function renderBuybackBox() {
     const liste = game.buybackOptions || [];
     if (!liste.length) { box.innerHTML = ''; return; }
     const fenster = typeof isTransferWindowOpen === 'function' ? isTransferWindowOpen() : true;
-    box.innerHTML = `<div class="panel"><div class="panel-header">↩️ RÜCKKAUFOPTIONEN</div>
+    box.innerHTML = `<div class="panel"><div class="panel-header">↩️ Rückkaufoptionen</div>
         ${fenster ? '' : '<div class="box" style="font-size:var(--fs-caption);">Zurückholen geht nur im Transferfenster (Spieltag 1-3 oder Winterfenster).</div>'}
         ${liste.map(o => {
             const diff = o.player.strength - o.saleStrength;
@@ -24290,7 +24290,7 @@ function renderRumorBox() {
     if (!liste.length) { box.innerHTML = ''; return; }
     const quote = src => { const s = rumorStatsFor(src); const n = s.hit + s.miss; return n ? ` · lag ${s.hit} von ${n} Mal richtig` : ''; };
     const ausgang = { ente: '🦆 Ente', wahr: '✅ bestätigt', zurueckgezogen: '↩️ Interesse zurückgezogen', erledigt: '– erledigt' };
-    box.innerHTML = `<div class="panel"><div class="panel-header">🗞️ GERÜCHTEKÜCHE</div>
+    box.innerHTML = `<div class="panel"><div class="panel-header">🗞️ Gerüchteküche</div>
         ${liste.map(r => {
             const text = r.type === 'abwerbung' ? `${r.club} will <strong>${r.playerName}</strong>` : `<strong>${r.playerName}</strong> (Markt) vor Wechsel zu ${r.club}`;
             const knoepfe = r.type === 'abwerbung' && !r.outcome && !r.reaction ? `<div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:4px; margin-top:4px;">
@@ -24436,7 +24436,7 @@ function renderWinterTalkCard() {
     const betrag = getWinterBudgetAmount();
     const hochGeht = !!r.expected && r.expected > 1;
     const runterGeht = !!r.expected && r.expected < r.teams;
-    box.innerHTML = `<div class="panel" style="border:1px solid var(--gold);"><div class="panel-header" style="color:var(--gold);">🏛️ WINTERPAUSE: GESPRÄCH MIT DEM VORSTAND</div>
+    box.innerHTML = `<div class="panel" style="border:1px solid var(--gold);"><div class="panel-header" style="color:var(--gold);">🏛️ Winterpause: Gespräch mit dem Vorstand</div>
         <div class="box" style="font-size:var(--fs-small);">Zwischenbilanz: Platz <strong>${r.rank || '-'}</strong>, erwartet Platz ${r.expected || '-'} - ${urteil}. Kasse seit Saisonbeginn ${r.geld >= 0 ? '+' : ''}${formatVal(r.geld)}. Nur bis Spieltag ${WINTER_TALK_LAST_MD}, ein Weg pro Saison.</div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
             <button onclick="chooseWinterTalk('hoch')" class="${hochGeht ? 'btn-action' : 'btn-secondary'}" style="font-size:var(--fs-small);">${hochGeht ? `🎯 Ziel hoch (Platz ${Math.max(1, r.expected - 2)}): +5, ${formatVal(betrag)} sofort - verfehlt -10` : '🎯 Platz 1 ist schon das Ziel - höher geht es nicht'}</button>
@@ -24569,7 +24569,7 @@ function renderTransferStrategyCard() {
     const teams = (leaguesData[game.leagueLevel] || []).length || 18;
     const z = shift => ziel ? `Platz ${Math.max(1, Math.min(teams, ziel + shift))}` : 'Ziel unverändert';
     const b = choice => formatVal(Math.abs(getStrategyBudgetDelta(choice)));
-    box.innerHTML = `<div class="panel" style="border:1px solid var(--gold);"><div class="panel-header" style="color:var(--gold);">🏛️ TRANSFERSTRATEGIE MIT DEM VORSTAND</div>
+    box.innerHTML = `<div class="panel" style="border:1px solid var(--gold);"><div class="panel-header" style="color:var(--gold);">🏛️ Transferstrategie mit dem Vorstand</div>
         <div class="box" style="font-size:var(--fs-small);">Bis Spieltag ${TRANSFER_STRATEGY_LAST_MD}, eine Linie pro Saison. Saisonziel bisher: ${ziel ? 'Platz ' + ziel : '-'}. Abrechnung am Saisonende.</div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
             <button onclick="chooseTransferStrategy('jugend')" class="btn-secondary" style="font-size:var(--fs-small);">🌱 Jugend fördern: -${b('jugend')} Budget, ${z(1)}, Sichtung halber Preis - ${STRATEGY_YOUTH_PLAYERS} Eigengewächse mit ${STRATEGY_YOUTH_GAMES}+ Spielen: +6, sonst -6</button>
@@ -24758,7 +24758,7 @@ function renderYouthOffersBox() {
     if (!box) return;
     const offen = getOpenYouthOffers().filter(o => o.season === game.season && o.bis >= game.matchday && youthTalents.some(p => p.id === o.playerId));
     if (!offen.length) { box.innerHTML = ''; return; }
-    box.innerHTML = `<div class="panel" style="border:1px solid var(--gold);"><div class="panel-header" style="color:var(--gold);">💶 ANGEBOTE FÜR TALENTE</div>` + offen.map(o => {
+    box.innerHTML = `<div class="panel" style="border:1px solid var(--gold);"><div class="panel-header" style="color:var(--gold);">💶 Angebote für Talente</div>` + offen.map(o => {
         const p = youthTalents.find(x => x.id === o.playerId);
         const mit = Math.round(o.betrag * (1 - YOUTH_SELLON_PERCENT / 100) / 1000) * 1000;
         return `<div class="box" style="font-size:var(--fs-small);">${o.club} bietet <strong>${formatVal(o.betrag)}</strong> für ${p.name} (${p.pos}, ${p.age} J., Stärke ${p.strength}) - gilt bis Spieltag ${o.bis}.
@@ -24965,34 +24965,34 @@ const I18N_UI_EN = {
     // Positionen & Tabellen
     'TW': 'GK', 'ABW': 'DEF', 'MIT': 'MID', 'ST': 'FWD', 'Torwart': 'Goalkeeper', 'Abwehr': 'Defence', 'Mittelfeld': 'Midfield', 'Sturm': 'Attack', 'Position': 'Position', 'Alter': 'Age', 'Stärke': 'Strength', 'Form': 'Form', 'Moral': 'Morale', 'Marktwert': 'Market value', 'Spielername': 'Player name', 'Pl': 'Pos', 'Sp': 'P', 'Sp.': 'P', 'Pkt': 'Pts', 'Pkt.': 'Pts', 'Tore': 'Goals', 'Diff': 'Diff', 'Heim': 'Home', 'Gast': 'Away', 'Gegner': 'Opponent', 'VS': 'VS', 'Kapitän:': 'Captain:', 'Auswechslungen:': 'Substitutions:', 'Ecken:': 'Corners:', 'Freistöße:': 'Free kicks:', 'Elfmeter:': 'Penalties:', '0. Minute': "0th minute", 'Mindest-Stärke': 'Min. strength', 'Höchst-Stärke': 'Max. strength', 'Mindestalter': 'Min. age', 'Höchstalter': 'Max. age', 'Kader-Größe': 'Squad size', 'Kaderstärke Ø': 'Avg. squad strength', '1. Liga': '1st division', '2. Liga': '2nd division', '3. Liga': '3rd division', '4. Liga': '4th division', '5. Liga': '5th division', '6. Liga': '6th division', '4. Liga (Regionalliga)': '4th division (Regionalliga)', 'Liga-Level': 'League level', 'Fähigkeiten': 'Skills', 'Kurzfristig': 'Short term', 'Mittelfristig': 'Medium term', 'Langfristig': 'Long term',
     // Dashboard & Spieltag
-    '▶ Spieltag starten (Livespiel)': '▶ Start matchday (live)', '▶ Spieltag 1': '▶ Matchday 1', '⏩ 5 Spieltage simulieren': '⏩ Simulate 5 matchdays', '⚡ Saison durchsimulieren': '⚡ Simulate the season', '🏆 Saison abschließen & Neue Saison starten': '🏆 Finish season & start the new one', '⚡ Nur Ergebnis (kompletter Spielbericht sofort)': '⚡ Result only (full match report at once)', '⏩ Direkt zum Spiel': '⏩ Straight to the match', '⏩ Zeitraffer mit Zwischenständen (20 SpT, 5er-Etappen)': '⏩ Time-lapse with standings (20 MD, steps of 5)', 'Spielart wählen:': 'Choose how to play:', '▶ Nächste Szene': '▶ Next scene', '⏸ Ticker pausieren': '⏸ Pause ticker', '⚡ Spiel abpfeifen': '⚡ Blow the final whistle', '✔ Spielbericht schließen': '✔ Close match report', 'Halbzeit - was sagst du der Mannschaft?': 'Half-time - what do you tell the team?', '🎤 Kabinenansprache': '🎤 Team talk', '🎙️ Interview nach dem Spiel': '🎙️ Post-match interview', '🎙️ PRE-MATCH PRESSEKONFERENZ': '🎙️ PRE-MATCH PRESS CONFERENCE', '🎙️ Interview-Historie (letzte 5)': '🎙️ Interview history (last 5)', 'Frage der Presse...': 'Question from the press...', '🎯 NÄCHSTE ZIELE': '🎯 NEXT GOALS', '🎯 SAISON-ZIELE': '🎯 SEASON GOALS', '📰 WOCHENRÜCKBLICK': '📰 WEEKLY REVIEW', '📰 FAN-FEED': '📰 FAN FEED', '⚽ NÄCHSTE BEGEGNUNG (SPIELTAG': '⚽ NEXT MATCH (MATCHDAY', 'Erwarteter Monatsüberschuss:': 'Expected monthly surplus:', 'Transferbudget:': 'Transfer budget:', 'Gehaltsbudget:': 'Wage budget:', '☀️ Sonnig': '☀️ Sunny', '📄 Letzter Spieltag': '📄 Last matchday', '📊 Saison gesamt': '📊 Whole season',
-    '🧠 LIVE-TAKTIK (wirkt sofort auf den Rest der Partie):': '🧠 LIVE TACTICS (takes effect for the rest of the match):', '📢 LIVE-COACHING ANWEISUNGEN:': '📢 LIVE COACHING INSTRUCTIONS:', '⚔️ Offensiv': '⚔️ Attacking', '⚖️ Ausgeglichen': '⚖️ Balanced', '🛡️ Defensiv': '🛡️ Defensive', '⚡ Pressing': '⚡ Pressing', '🛡️ Bus parken': '🛡️ Park the bus', '💥 Brechstange': '💥 All-out attack', '🔥 Anfeuern': '🔥 Fire them up', '🧊 Ruhig bleiben': '🧊 Stay calm', '🥊 Hart': '🥊 Hard', '⚖️ Normal': '⚖️ Normal', '🕊️ Vorsichtig': '🕊️ Careful', '🔥 Hart': '🔥 Hard', '😌 Locker': '😌 Light', '⚖️ Standard': '⚖️ Standard', 'Torwart im Elfmeterschießen (Ersatztorwart kostet einen Wechsel):': 'Goalkeeper for the shoot-out (a bench keeper costs a substitution):', 'Wähle genau 5 Schützen in der gewünschten Reihenfolge (antippen zum Hinzufügen/Entfernen).': 'Pick exactly 5 takers in order (tap to add/remove).', '🎯 Schützen-Reihenfolge festlegen': '🎯 Set the penalty order', '🔁 Letzte Reihenfolge übernehmen': '🔁 Use the last order', 'Torhüter wählen...': 'Choose goalkeeper...', 'In welche Ecke wirfst du dich?': 'Which corner do you dive to?', 'Das Spiel ruht, bis du entscheidest.': 'The match waits for your decision.',
+    '▶ Spieltag starten (Livespiel)': '▶ Start matchday (live)', '▶ Spieltag 1': '▶ Matchday 1', '⏩ 5 Spieltage simulieren': '⏩ Simulate 5 matchdays', '⚡ Saison durchsimulieren': '⚡ Simulate the season', '🏆 Saison abschließen & Neue Saison starten': '🏆 Finish season & start the new one', '⚡ Nur Ergebnis (kompletter Spielbericht sofort)': '⚡ Result only (full match report at once)', '⏩ Direkt zum Spiel': '⏩ Straight to the match', '⏩ Zeitraffer mit Zwischenständen (20 SpT, 5er-Etappen)': '⏩ Time-lapse with standings (20 MD, steps of 5)', 'Spielart wählen:': 'Choose how to play:', '▶ Nächste Szene': '▶ Next scene', '⏸ Ticker pausieren': '⏸ Pause ticker', '⚡ Spiel abpfeifen': '⚡ Blow the final whistle', '✔ Spielbericht schließen': '✔ Close match report', 'Halbzeit - was sagst du der Mannschaft?': 'Half-time - what do you tell the team?', '🎤 Kabinenansprache': '🎤 Team talk', '🎙️ Interview nach dem Spiel': '🎙️ Post-match interview', '🎙️ Pre-Match-Pressekonferenz': '🎙️ Pre-match press conference', '🎙️ Interview-Historie (letzte 5)': '🎙️ Interview history (last 5)', 'Frage der Presse...': 'Question from the press...', '🎯 Nächste Ziele': '🎯 Next goals', '🎯 Saison-Ziele': '🎯 Season goals', '📰 Wochenrückblick': '📰 Weekly review', '📰 Fan-Feed': '📰 Fan feed', '⚽ NÄCHSTE BEGEGNUNG (SPIELTAG': '⚽ NEXT MATCH (MATCHDAY', 'Erwarteter Monatsüberschuss:': 'Expected monthly surplus:', 'Transferbudget:': 'Transfer budget:', 'Gehaltsbudget:': 'Wage budget:', '☀️ Sonnig': '☀️ Sunny', '📄 Letzter Spieltag': '📄 Last matchday', '📊 Saison gesamt': '📊 Whole season',
+    '🧠 LIVE-TAKTIK (wirkt sofort auf den Rest der Partie):': '🧠 LIVE TACTICS (takes effect for the rest of the match):', '📢 Live-Coaching-Anweisungen:': '📢 Live coaching instructions:', '⚔️ Offensiv': '⚔️ Attacking', '⚖️ Ausgeglichen': '⚖️ Balanced', '🛡️ Defensiv': '🛡️ Defensive', '⚡ Pressing': '⚡ Pressing', '🛡️ Bus parken': '🛡️ Park the bus', '💥 Brechstange': '💥 All-out attack', '🔥 Anfeuern': '🔥 Fire them up', '🧊 Ruhig bleiben': '🧊 Stay calm', '🥊 Hart': '🥊 Hard', '⚖️ Normal': '⚖️ Normal', '🕊️ Vorsichtig': '🕊️ Careful', '🔥 Hart': '🔥 Hard', '😌 Locker': '😌 Light', '⚖️ Standard': '⚖️ Standard', 'Torwart im Elfmeterschießen (Ersatztorwart kostet einen Wechsel):': 'Goalkeeper for the shoot-out (a bench keeper costs a substitution):', 'Wähle genau 5 Schützen in der gewünschten Reihenfolge (antippen zum Hinzufügen/Entfernen).': 'Pick exactly 5 takers in order (tap to add/remove).', '🎯 Schützen-Reihenfolge festlegen': '🎯 Set the penalty order', '🔁 Letzte Reihenfolge übernehmen': '🔁 Use the last order', 'Torhüter wählen...': 'Choose goalkeeper...', 'In welche Ecke wirfst du dich?': 'Which corner do you dive to?', 'Das Spiel ruht, bis du entscheidest.': 'The match waits for your decision.',
     // Kader & Taktik
-    'KADERLISTE & ATTRIBUTE': 'SQUAD LIST & ATTRIBUTES', '⚽ KADER & AUFSTELLUNG': '⚽ SQUAD & LINE-UP', '⚽ KADER, SPIELER & TRAINER-KARRIERE': '⚽ SQUAD, PLAYERS & MANAGER CAREER', '⚽ Aufstellung': '⚽ Line-up', '📋 Taktik': '📋 Tactics', '🧠 Taktik': '🧠 Tactics', '📊 Analyse': '📊 Analysis', '🤝 Mannschaft': '🤝 Team', '🏟️ 3D TAKTIKTAFEL (': '🏟️ 3D TACTICS BOARD (', '📋 FORMATION & SPIELSTIL': '📋 FORMATION & STYLE', '🧠 SPIELSTIL': '🧠 PLAYING STYLE', '🥊 ZWEIKAMPFHÄRTE': '🥊 TACKLING', '📐 TEAM-ANWEISUNGEN': '📐 TEAM INSTRUCTIONS', '📋 TAKTIK-BILANZ': '📋 TACTICS RECORD', '🤖 TAKTIK-AUTOMATIK': '🤖 TACTICS AUTOMATION', '🤖 Trainer stellt Top-Elf auf': '🤖 Coach picks the best XI', '🎛️ Formation im Detail wählen (Grid + Vorschau)': '🎛️ Pick the formation in detail (grid + preview)', 'Mannschaft › Taktiktafel › Formation': 'Team › Tactics board › Formation', '🔁 Tippe zwei Spieler nacheinander an (Feld oder Liste), um sie exakt zu tauschen.': '🔁 Tap two players (pitch or list) to swap them.', 'Reagiert im laufenden Spiel automatisch auf den Spielstand, ohne dass du das Live-Taktikpanel selbst bedienen musst.': 'Reacts to the score during the match automatically, without you using the live tactics panel.', '📊 KADER-METRIKEN': '📊 SQUAD METRICS', '📊 KADER-ÜBERBLICK': '📊 SQUAD OVERVIEW', '📡 KADER-RADAR (ATTRIBUTE)': '📡 SQUAD RADAR (ATTRIBUTES)', '🏅 KADER-BESTENLISTE': '🏅 SQUAD LEADERBOARD', '📋 SAISONSTATISTIK & NOTEN': '📋 SEASON STATS & GRADES', '🌍 NATIONALSPIELER': '🌍 INTERNATIONALS', '🌟 SPIELER DES MONATS': '🌟 PLAYER OF THE MONTH', '🏆 SPIELER DER SAISON': '🏆 PLAYER OF THE SEASON', '🤝 KABINE': '🤝 DRESSING ROOM', '🤝 MANNSCHAFTSRAT': '🤝 TEAM COUNCIL', '🏛️ Rangordnung': '🏛️ Hierarchy', '👥 Grüppchen': '👥 Cliques', 'Eingespieltheit, Grüppchen und Rangordnung - rumorende Gruppen kosten Teamstärke und ziehen die Kabine runter. Wortführer melden sich beim Mannschaftsrat, Unzufriedene im Büro.': 'Cohesion, cliques and hierarchy - restless groups cost team strength and drag the dressing room down. Ringleaders go to the team council, unhappy players come to your office.', '⚠️ SPIELER-SKANDALE': '⚠️ PLAYER SCANDALS', '📈 SPIELERENTWICKLUNG & ALTERUNG': '📈 PLAYER DEVELOPMENT & AGEING', '📊 ALTERSPYRAMIDE DES GESAMTKADERS': '📊 AGE PYRAMID OF THE SQUAD', '📐 KADERTIEFE NACH POSITION': '📐 SQUAD DEPTH BY POSITION', '📅 AUSLAUFENDE VERTRÄGE NACH POSITION': '📅 EXPIRING CONTRACTS BY POSITION', '🧩 POSITIONSTIEFE, ALTER & VERTRÄGE': '🧩 DEPTH, AGE & CONTRACTS', '🚨 KRITISCHE SCHWACHSTELLEN FÜR KOMMENDE SAISONS': '🚨 CRITICAL WEAK SPOTS FOR THE COMING SEASONS', 'Führt Positionstiefe, Altersstruktur und auslaufende Verträge zusammen - eine Position kann bei jedem Wert für sich unauffällig wirken und trotzdem in Kombination zum Problem werden.': 'Combines positional depth, age structure and expiring contracts - a position can look fine on each count and still be a problem in combination.', '💶 GEHALTSPLANUNG NÄCHSTE SAISON': '💶 WAGE PLANNING NEXT SEASON', '📊 Planungstool': '📊 Planning tool', '📝 VERTRAGSVERWALTUNG': '📝 CONTRACT MANAGEMENT', '✅ Neuen Vertrag anbieten': '✅ Offer a new contract', '⚠️ Vertrags-Ultimatum!': '⚠️ Contract ultimatum!', '„Entweder ich bekomme einen neuen Vertrag, oder ich will verkauft werden!“': '"Either I get a new contract or I want to be sold!"', '😠 Ultimatum ignorieren': '😠 Ignore the ultimatum', '🕴️ Über Berater lösen': '🕴️ Settle through the agent', '💰 Verkauf einleiten': '💰 Start a sale', '💬 Mit Spieler sprechen': '💬 Talk to the player', '🩹 Verletzt': '🩹 Injured', '⭐ Legenden': '⭐ Legends',
+    'Kaderliste & Attribute': 'Squad list & attributes', '⚽ Kader & Aufstellung': '⚽ Squad & line-up', '⚽ Kader, Spieler & Trainer-Karriere': '⚽ Squad, players & manager career', '⚽ Aufstellung': '⚽ Line-up', '📋 Taktik': '📋 Tactics', '🧠 Taktik': '🧠 Tactics', '📊 Analyse': '📊 Analysis', '🤝 Mannschaft': '🤝 Team', '🏟️ 3D-Taktiktafel (': '🏟️ 3D tactics board (', '📋 Formation & Spielstil': '📋 Formation & style', '🧠 Spielstil': '🧠 Playing style', '🥊 Zweikampfhärte': '🥊 Tackling', '📐 Team-Anweisungen': '📐 Team instructions', '📋 Taktik-Bilanz': '📋 Tactics record', '🤖 Taktik-Automatik': '🤖 Tactics automation', '🤖 Trainer stellt Top-Elf auf': '🤖 Coach picks the best XI', '🎛️ Formation im Detail wählen (Grid + Vorschau)': '🎛️ Pick the formation in detail (grid + preview)', 'Mannschaft › Taktiktafel › Formation': 'Team › Tactics board › Formation', '🔁 Tippe zwei Spieler nacheinander an (Feld oder Liste), um sie exakt zu tauschen.': '🔁 Tap two players (pitch or list) to swap them.', 'Reagiert im laufenden Spiel automatisch auf den Spielstand, ohne dass du das Live-Taktikpanel selbst bedienen musst.': 'Reacts to the score during the match automatically, without you using the live tactics panel.', '📊 Kader-Metriken': '📊 Squad metrics', '📊 Kader-Überblick': '📊 Squad overview', '📡 Kader-Radar (Attribute)': '📡 Squad radar (attributes)', '🏅 Kader-Bestenliste': '🏅 Squad leaderboard', '📋 Saisonstatistik & Noten': '📋 Season stats & grades', '🌍 Nationalspieler': '🌍 Internationals', '🌟 Spieler des Monats': '🌟 Player of the month', '🏆 Spieler der Saison': '🏆 Player of the season', '🤝 Kabine': '🤝 Dressing room', '🤝 Mannschaftsrat': '🤝 Team council', '🏛️ Rangordnung': '🏛️ Hierarchy', '👥 Grüppchen': '👥 Cliques', 'Eingespieltheit, Grüppchen und Rangordnung - rumorende Gruppen kosten Teamstärke und ziehen die Kabine runter. Wortführer melden sich beim Mannschaftsrat, Unzufriedene im Büro.': 'Cohesion, cliques and hierarchy - restless groups cost team strength and drag the dressing room down. Ringleaders go to the team council, unhappy players come to your office.', '⚠️ Spieler-Skandale': '⚠️ Player scandals', '📈 Spielerentwicklung & Alterung': '📈 Player development & ageing', '📊 Alterspyramide des Gesamtkaders': '📊 Age pyramid of the squad', '📐 Kadertiefe nach Position': '📐 Squad depth by position', '📅 Auslaufende Verträge nach Position': '📅 Expiring contracts by position', '🧩 Positionstiefe, Alter & Verträge': '🧩 Depth, age & contracts', '🚨 Kritische Schwachstellen für kommende Saisons': '🚨 Critical weak spots for the coming seasons', 'Führt Positionstiefe, Altersstruktur und auslaufende Verträge zusammen - eine Position kann bei jedem Wert für sich unauffällig wirken und trotzdem in Kombination zum Problem werden.': 'Combines positional depth, age structure and expiring contracts - a position can look fine on each count and still be a problem in combination.', '💶 Gehaltsplanung nächste Saison': '💶 Wage planning next season', '📊 Planungstool': '📊 Planning tool', '📝 Vertragsverwaltung': '📝 Contract management', '✅ Neuen Vertrag anbieten': '✅ Offer a new contract', '⚠️ Vertrags-Ultimatum!': '⚠️ Contract ultimatum!', '„Entweder ich bekomme einen neuen Vertrag, oder ich will verkauft werden!“': '"Either I get a new contract or I want to be sold!"', '😠 Ultimatum ignorieren': '😠 Ignore the ultimatum', '🕴️ Über Berater lösen': '🕴️ Settle through the agent', '💰 Verkauf einleiten': '💰 Start a sale', '💬 Mit Spieler sprechen': '💬 Talk to the player', '🩹 Verletzt': '🩹 Injured', '⭐ Legenden': '⭐ Legends',
     // Training
-    '🏋️ TEAM-TRAINING & WOCHENPLAN': '🏋️ TEAM TRAINING & WEEKLY PLAN', '📅 WOCHENPLAN (7 TAGE)': '📅 WEEKLY PLAN (7 DAYS)', '📅 Wochenplan': '📅 Weekly plan', '🔥 TRAININGSINTENSITÄT': '🔥 TRAINING INTENSITY', 'Hart: mehr Trainingserfolg, mehr Fitnessverlust. Locker: umgekehrt.': 'Hard: more progress, more fatigue. Light: the opposite.', '🎯 INDIVIDUELLES SPIELERTRAINING': '🎯 INDIVIDUAL TRAINING', '🎯 Individuell': '🎯 Individual', '🏃 Kondition': '🏃 Fitness', '⚽ Technik': '⚽ Technique', '🧘 Erholung': '🧘 Recovery', '🧘 Regeneration': '🧘 Recovery', '🎯 Match-Prep': '🎯 Match prep', '📅 TRAININGSKALENDER': '📅 TRAINING CALENDAR', '📜 TRAININGS-HISTORIE': '📜 TRAINING HISTORY', '🎥 SPEZIAL-EINHEITEN': '🎥 SPECIAL SESSIONS', '🎥 Spezial': '🎥 Special', '🎥 Video-Analyse-Einheit [2.500 €]': '🎥 Video analysis session [2.500 €]', '🧠 Mentaltraining-Einheit [3.500 €]': '🧠 Mental training session [3.500 €]', '🍖 Team-Bonding-Event [6.000 €]': '🍖 Team bonding event [6.000 €]', '🩹 Verletzungspräventions-Programm [5.000 €]': '🩹 Injury prevention programme [5.000 €]', '💪 Doppeltraining-Tag durchführen': '💪 Hold a double session', '🎒 Trainingsausrüstung ausbauen': '🎒 Upgrade training equipment', '📅 Trainingslager buchen (Kalender)': '📅 Book a training camp (calendar)', '💪 FÄHIGKEITEN GEZIELT ANTRAINIEREN': '💪 TRAIN SPECIFIC SKILLS', 'Fähigkeitstraining starten': 'Start skill training', 'Ein zugewiesener Trainer bildet einen Spieler über mehrere Spieltage gezielt in einer Fähigkeit fort - kostet Geld und Zeit, aber garantiert eine echte Verbesserung.': 'An assigned coach trains one skill of a player over several matchdays - costs money and time, but guarantees a real improvement.', '🎮 TRAININGS-MINISPIELE': '🎮 TRAINING MINIGAMES', '🎮 Minispiele': '🎮 Minigames', 'Trainiere echte Fähigkeiten deiner Spieler direkt im Minispiel. Einheiten heute übrig:': "Train your players' real skills in a minigame. Sessions left today:", '⚽ Elfmeterschießen': '⚽ Penalty shoot-out', 'Elfmeterschießen': 'Penalty shoot-out', 'Elfmeterschießen starten': 'Start the shoot-out', '🎯 Flanke schlagen!': '🎯 Cross it!', '🎯 Flankentraining': '🎯 Crossing drill', '🧤 Elfmeter halten (nur Torhüter)': '🧤 Save penalties (goalkeepers only)', '🎯 Ziel: 60%': '🎯 Target: 60%', '🎯 Ziel: 75%': '🎯 Target: 75%', '🎯 Ziel: 90%': '🎯 Target: 90%', 'Bestleistung Elfmeter:': 'Best penalty score:', '· Bestleistung Flanke:': '· Best crossing score:', '· Bestleistung Torwart:': '· Best goalkeeper score:', '🏆 Internes Techniktraining-Turnier': '🏆 Internal technique tournament', '🏃‍♂️ ATHLETIK-TEST': '🏃‍♂️ ATHLETICS TEST', '🏃‍♂️ Test durchführen': '🏃‍♂️ Run the test', 'Ermittelt die athletischen Werte eines Spielers präziser, kleine Chance auf Tempo-Kick.': "Measures a player's athletic values more precisely, small chance of a pace boost.", '🥅 ELFMETERKILLER-FÖRDERPROGRAMM': '🥅 PENALTY-KILLER PROGRAMME', '🥅 Programm durchführen': '🥅 Run the programme', 'Nur für erfahrene Torhüter (mind. 80 Pflichtspiel-Einsätze) - Chance auf die seltene Eigenschaft "Elfmeter-Killer" [12.000 €].': 'Experienced goalkeepers only (at least 80 competitive games) - chance of the rare trait "Penalty killer" [12.000 €].', '🧑‍🏫 EIGENER TRAINERSTAB': '🧑‍🏫 COACHING STAFF', 'Schwerpunkt:': 'Focus:', '🏔️ Höhentrainingslager Alpen': '🏔️ Altitude camp in the Alps', '🏖️ Trainingslager Algarve': '🏖️ Training camp Algarve', '🌴 Luxus-Camp Dubai': '🌴 Luxury camp Dubai',
+    '🏋️ Team-Training & Wochenplan': '🏋️ Team training & weekly plan', '📅 Wochenplan (7 Tage)': '📅 Weekly plan (7 days)', '📅 Wochenplan': '📅 Weekly plan', '🔥 Trainingsintensität': '🔥 Training intensity', 'Hart: mehr Trainingserfolg, mehr Fitnessverlust. Locker: umgekehrt.': 'Hard: more progress, more fatigue. Light: the opposite.', '🎯 Individuelles Spielertraining': '🎯 Individual training', '🎯 Individuell': '🎯 Individual', '🏃 Kondition': '🏃 Fitness', '⚽ Technik': '⚽ Technique', '🧘 Erholung': '🧘 Recovery', '🧘 Regeneration': '🧘 Recovery', '🎯 Match-Prep': '🎯 Match prep', '📅 Trainingskalender': '📅 Training calendar', '📜 Trainings-Historie': '📜 Training history', '🎥 Spezial-Einheiten': '🎥 Special sessions', '🎥 Spezial': '🎥 Special', '🎥 Video-Analyse-Einheit [2.500 €]': '🎥 Video analysis session [2.500 €]', '🧠 Mentaltraining-Einheit [3.500 €]': '🧠 Mental training session [3.500 €]', '🍖 Team-Bonding-Event [6.000 €]': '🍖 Team bonding event [6.000 €]', '🩹 Verletzungspräventions-Programm [5.000 €]': '🩹 Injury prevention programme [5.000 €]', '💪 Doppeltraining-Tag durchführen': '💪 Hold a double session', '🎒 Trainingsausrüstung ausbauen': '🎒 Upgrade training equipment', '📅 Trainingslager buchen (Kalender)': '📅 Book a training camp (calendar)', '💪 Fähigkeiten gezielt antrainieren': '💪 Train specific skills', 'Fähigkeitstraining starten': 'Start skill training', 'Ein zugewiesener Trainer bildet einen Spieler über mehrere Spieltage gezielt in einer Fähigkeit fort - kostet Geld und Zeit, aber garantiert eine echte Verbesserung.': 'An assigned coach trains one skill of a player over several matchdays - costs money and time, but guarantees a real improvement.', '🎮 Trainings-Minispiele': '🎮 Training minigames', '🎮 Minispiele': '🎮 Minigames', 'Trainiere echte Fähigkeiten deiner Spieler direkt im Minispiel. Einheiten heute übrig:': "Train your players' real skills in a minigame. Sessions left today:", '⚽ Elfmeterschießen': '⚽ Penalty shoot-out', 'Elfmeterschießen': 'Penalty shoot-out', 'Elfmeterschießen starten': 'Start the shoot-out', '🎯 Flanke schlagen!': '🎯 Cross it!', '🎯 Flankentraining': '🎯 Crossing drill', '🧤 Elfmeter halten (nur Torhüter)': '🧤 Save penalties (goalkeepers only)', '🎯 Ziel: 60%': '🎯 Target: 60%', '🎯 Ziel: 75%': '🎯 Target: 75%', '🎯 Ziel: 90%': '🎯 Target: 90%', 'Bestleistung Elfmeter:': 'Best penalty score:', '· Bestleistung Flanke:': '· Best crossing score:', '· Bestleistung Torwart:': '· Best goalkeeper score:', '🏆 Internes Techniktraining-Turnier': '🏆 Internal technique tournament', '🏃‍♂️ Athletik-Test': '🏃‍♂️ Athletics test', '🏃‍♂️ Test durchführen': '🏃‍♂️ Run the test', 'Ermittelt die athletischen Werte eines Spielers präziser, kleine Chance auf Tempo-Kick.': "Measures a player's athletic values more precisely, small chance of a pace boost.", '🥅 Elfmeterkiller-Förderprogramm': '🥅 Penalty-killer programme', '🥅 Programm durchführen': '🥅 Run the programme', 'Nur für erfahrene Torhüter (mind. 80 Pflichtspiel-Einsätze) - Chance auf die seltene Eigenschaft "Elfmeter-Killer" [12.000 €].': 'Experienced goalkeepers only (at least 80 competitive games) - chance of the rare trait "Penalty killer" [12.000 €].', '🧑‍🏫 Eigener Trainerstab': '🧑‍🏫 Coaching staff', 'Schwerpunkt:': 'Focus:', '🏔️ Höhentrainingslager Alpen': '🏔️ Altitude camp in the Alps', '🏖️ Trainingslager Algarve': '🏖️ Training camp Algarve', '🌴 Luxus-Camp Dubai': '🌴 Luxury camp Dubai',
     // Transfers
-    '🤝 TRANSFERMARKT, SCOUTING & VERHANDLUNGEN': '🤝 TRANSFER MARKET, SCOUTING & NEGOTIATIONS', 'Transfermarkt': 'Transfer market', 'Vereinslose': 'Free agents', 'Leihe': 'Loans', '📋 Leihe': '📋 Loans', 'Kader verkaufen': 'Sell squad players', 'Transfer-Zentrale:': 'Transfer centre:', '📩 Angebote (': '📩 Offers (', 'offene Transferangebote für deine Spieler!': 'open transfer offers for your players!', 'Hier treffen offizielle Transferanfragen von anderen Vereinen für deine Spieler ein. Verhandle klug, fordere mehr Ablöse oder riskiere das Scheitern der Gespräche!': 'Official transfer requests from other clubs for your players arrive here. Negotiate wisely, ask for more or risk the talks breaking down!', 'Verkaufsverhandlung': 'Sale negotiation', 'Verhandlung mit': 'Negotiation with', 'Verhandlung mit Leihverein': 'Negotiation with the loan club', 'Der Manager erwartet dein Angebot.': 'The manager awaits your offer.', 'Angebot (€)': 'Offer (€)', 'Ablöse (€)': 'Fee (€)', 'Weiterverkauf (%)': 'Sell-on (%)', 'Angebot senden': 'Send offer', 'Schrittweite': 'Step size', 'Verfügbare Leihspieler': 'Available loan players', 'Günstiger als ein Kauf, mit optionaler Kaufoption für später - der Spieler kehrt nach der Saison zum Mutterverein zurück, falls die Option nicht gezogen wird.': 'Cheaper than buying, with an optional purchase option - the player returns to his parent club after the season unless the option is used.', '📋 EIGENE LEIHSPIELER': '📋 OWN LOAN PLAYERS', '📤 AKTIVE LEIHGESCHÄFTE': '📤 ACTIVE LOANS', '📤 VERLIEHENE TALENTE': '📤 TALENTS ON LOAN', '📥 Rückholung verhandeln': '📥 Negotiate a recall', '🤝 LEIHVEREIN-RANKING': '🤝 LOAN CLUB RANKING', '🛒 AMATEUR-TRANSFERMARKT': '🛒 AMATEUR TRANSFER MARKET', 'Eigener, günstigerer Markt für die zweite Mannschaft - finanziert über das Vereinskonto, nicht über das Transferbudget der ersten Mannschaft. Aktualisiert sich einmal pro Saison.': 'A separate, cheaper market for the reserve team - paid from the club account, not the first-team transfer budget. Refreshes once per season.', '📰 TRANSFER-TICKER DER ANDEREN VEREINE': '📰 TRANSFER TICKER OF OTHER CLUBS', 'Die größten Stärke-Veränderungen der letzten Saison über alle 108 Vereine der Liga-Pyramide hinweg.': 'The biggest strength changes of last season across all 108 clubs of the league pyramid.', '🌍 SCOUTING-NETZWERK 2.0': '🌍 SCOUTING NETWORK 2.0', 'Baue ein Netzwerk aus Regional-Scouts auf. Jeder Scout deckt eine Weltregion ab, kann ausgebildet werden (schnellere Reisen, bessere Funde) und bringt nach einer echten Reisedauer neue Talente mit - deren Werte zunächst nur ungefähr bekannt sind, bis du genauer hinschaust.': 'Build a network of regional scouts. Each covers a world region, can be trained (faster trips, better finds) and brings back new talents after a real travel time - their values are only roughly known until you look closer.', '🔭 Scouting': '🔭 Scouting', '🔭 Scouting-Fokus einstellen': '🔭 Set the scouting focus', '✈️ Scouting-Mission mit diesem Fokus starten': '✈️ Start a scouting mission with this focus', '🎯 GEFUNDENE KANDIDATEN': '🎯 CANDIDATES FOUND', '📚 TALENT-DATENBANK (Top 15 aller Zeiten)': '📚 TALENT DATABASE (all-time top 15)', '💼 Interesse von außen': '💼 Outside interest', 'will dich als Trainer. Wechseln, das Interesse beim eigenen Vorstand als Druckmittel nutzen oder Vereinstreue zeigen?': 'wants you as manager. Move, use the interest as leverage with your own board, or show loyalty?', '🔄 Wechseln (Karriere bleibt, Kader neu)': '🔄 Move (career stays, new squad)', '💰 Für mehr Budget nutzen': '💰 Use it for a bigger budget', '❤️ Vereinstreue zeigen': '❤️ Show loyalty',
+    '🤝 Transfermarkt, Scouting & Verhandlungen': '🤝 Transfer market, scouting & negotiations', 'Transfermarkt': 'Transfer market', 'Vereinslose': 'Free agents', 'Leihe': 'Loans', '📋 Leihe': '📋 Loans', 'Kader verkaufen': 'Sell squad players', 'Transfer-Zentrale:': 'Transfer centre:', '📩 Angebote (': '📩 Offers (', 'offene Transferangebote für deine Spieler!': 'open transfer offers for your players!', 'Hier treffen offizielle Transferanfragen von anderen Vereinen für deine Spieler ein. Verhandle klug, fordere mehr Ablöse oder riskiere das Scheitern der Gespräche!': 'Official transfer requests from other clubs for your players arrive here. Negotiate wisely, ask for more or risk the talks breaking down!', 'Verkaufsverhandlung': 'Sale negotiation', 'Verhandlung mit': 'Negotiation with', 'Verhandlung mit Leihverein': 'Negotiation with the loan club', 'Der Manager erwartet dein Angebot.': 'The manager awaits your offer.', 'Angebot (€)': 'Offer (€)', 'Ablöse (€)': 'Fee (€)', 'Weiterverkauf (%)': 'Sell-on (%)', 'Angebot senden': 'Send offer', 'Schrittweite': 'Step size', 'Verfügbare Leihspieler': 'Available loan players', 'Günstiger als ein Kauf, mit optionaler Kaufoption für später - der Spieler kehrt nach der Saison zum Mutterverein zurück, falls die Option nicht gezogen wird.': 'Cheaper than buying, with an optional purchase option - the player returns to his parent club after the season unless the option is used.', '📋 Eigene Leihspieler': '📋 Own loan players', '📤 Aktive Leihgeschäfte': '📤 Active loans', '📤 Verliehene Talente': '📤 Talents on loan', '📥 Rückholung verhandeln': '📥 Negotiate a recall', '🤝 Leihverein-Ranking': '🤝 Loan club ranking', '🛒 Amateur-Transfermarkt': '🛒 Amateur transfer market', 'Eigener, günstigerer Markt für die zweite Mannschaft - finanziert über das Vereinskonto, nicht über das Transferbudget der ersten Mannschaft. Aktualisiert sich einmal pro Saison.': 'A separate, cheaper market for the reserve team - paid from the club account, not the first-team transfer budget. Refreshes once per season.', '📰 Transfer-Ticker der anderen Vereine': '📰 Transfer ticker of other clubs', 'Die größten Stärke-Veränderungen der letzten Saison über alle 108 Vereine der Liga-Pyramide hinweg.': 'The biggest strength changes of last season across all 108 clubs of the league pyramid.', '🌍 Scouting-Netzwerk 2.0': '🌍 Scouting network 2.0', 'Baue ein Netzwerk aus Regional-Scouts auf. Jeder Scout deckt eine Weltregion ab, kann ausgebildet werden (schnellere Reisen, bessere Funde) und bringt nach einer echten Reisedauer neue Talente mit - deren Werte zunächst nur ungefähr bekannt sind, bis du genauer hinschaust.': 'Build a network of regional scouts. Each covers a world region, can be trained (faster trips, better finds) and brings back new talents after a real travel time - their values are only roughly known until you look closer.', '🔭 Scouting': '🔭 Scouting', '🔭 Scouting-Fokus einstellen': '🔭 Set the scouting focus', '✈️ Scouting-Mission mit diesem Fokus starten': '✈️ Start a scouting mission with this focus', '🎯 Gefundene Kandidaten': '🎯 Candidates found', '📚 Talent-Datenbank (Top 15 aller Zeiten)': '📚 TALENT DATABASE (all-time top 15)', '💼 Interesse von außen': '💼 Outside interest', 'will dich als Trainer. Wechseln, das Interesse beim eigenen Vorstand als Druckmittel nutzen oder Vereinstreue zeigen?': 'wants you as manager. Move, use the interest as leverage with your own board, or show loyalty?', '🔄 Wechseln (Karriere bleibt, Kader neu)': '🔄 Move (career stays, new squad)', '💰 Für mehr Budget nutzen': '💰 Use it for a bigger budget', '❤️ Vereinstreue zeigen': '❤️ Show loyalty',
     // Finanzen
-    '🏦 MONATLICHE GEWINN- & VERLUSTRECHNUNG (GuV)': '🏦 MONTHLY PROFIT & LOSS', 'EINNAHMEN': 'INCOME', 'AUSGABEN': 'EXPENSES', 'Ticketverkäufe:': 'Ticket sales:', 'Merchandising (Shop):': 'Merchandising (shop):', 'Sponsoren, TV & Banden:': 'Sponsors, TV & boards:', 'Börsendividenden:': 'Stock dividends:', 'Spieler- & Staffgehälter:': 'Player & staff wages:', 'Stadion & Campus-Unterhalt:': 'Stadium & campus upkeep:', 'Spielbetrieb & Verwaltung:': 'Operations & administration:', 'Ordnerdienst:': 'Stewarding:', 'Auswärtsfahrten (Ø/Monat):': 'Away travel (avg/month):', 'Kreditzinsen:': 'Loan interest:', 'Steuern & Abgaben:': 'Taxes & levies:', 'Monatssaldo (GuV):': 'Monthly balance (P&L):', '↳ Zuschauer beim letzten Heimspiel:': '↳ Attendance at the last home match:', '↳ TV-Abrechnung zum Saisonende:': '↳ TV settlement at season end:', '✈️ Flugzeug': '✈️ Plane', '🚌 Bus (günstiger)': '🚌 Bus (cheaper)', '🚌 Bus-Sponsoring verhandeln': '🚌 Negotiate bus sponsoring', '📊 FINANZ-CHARTS': '📊 FINANCE CHARTS', '📈 FINANZPROGNOSE & VERLAUF': '📈 FINANCIAL FORECAST & HISTORY', '📒 BUCHUNGSJOURNAL – WOHER KOMMT DAS GELD?': '📒 LEDGER – WHERE DOES THE MONEY COME FROM?', 'Jede Spieltagsabrechnung einzeln aufgeschlüsselt. So sehen Sie genau, welcher Posten wie viel gebracht oder gekostet hat.': 'Every matchday statement itemised, so you can see exactly what each item earned or cost.', '📒 Journal': '📒 Ledger', '💳 Kontoauszug': '💳 Account statement', '📊 Übersicht': '📊 Overview', 'GuV & Budget': 'P&L & budget', '💼 Budget': '💼 Budget', '🏦 Bank': '🏦 Bank', '💼 BUDGETS & VORSTANDS-VERHANDLUNGEN': '💼 BUDGETS & BOARD NEGOTIATIONS', 'Transferbudget fordern': 'Request transfer budget', 'Gehaltsbudget fordern': 'Request wage budget', 'Höhere Angebote werden eher akzeptiert.': 'Higher offers are more likely to be accepted.', 'Höhere Angebote werden eher akzeptiert. Der Erfolg hängt auch von der Vorstands-Stimmung ab.': "Higher offers are more likely to be accepted. Success also depends on the board's mood.", '💰 VEREINS- & TRANSFERBUDGET': '💰 CLUB & TRANSFER BUDGET', '🏦 KREDITE': '🏦 LOANS', 'Alt-Sofortkredit (freie Tilgung):': 'Old instant loan (flexible repayment):', '+ 100.000 € Soforthilfe': '+ 100.000 € emergency aid', '- 50.000 € Tilgen': '- 50.000 € repay', 'Verbindlichkeiten': 'Liabilities', '🏦 FESTGELDANLAGE': '🏦 FIXED-TERM DEPOSIT', '🐷 RÜCKLAGEN & BONITÄT': '🐷 RESERVES & CREDIT RATING', '🐷 Auto-Rücklage 10%': '🐷 Auto reserve 10%', '💰 Rücklage entnehmen': '💰 Withdraw reserve', '⚖️ FINANCIAL FAIRPLAY': '⚖️ FINANCIAL FAIR PLAY', '📈 VEREINS-BÖRSE & INVESTMENT-DEPOT': '📈 CLUB STOCK MARKET & PORTFOLIO', 'Börsen-Ticker:': 'Stock ticker:', 'Depotwert:': 'Portfolio value:', '📜 OPTIONSSCHEINE & LIMIT-ORDERS': '📜 WARRANTS & LIMIT ORDERS', 'Hebelprodukt: Wette auf steigenden/fallenden Kurs (3 Spieltage Laufzeit, höheres Risiko).': 'Leveraged product: bet on a rising/falling price (3 matchdays, higher risk).', '📈 Auf STEIGEND wetten': '📈 Bet on RISING', '📉 Auf FALLEND wetten': '📉 Bet on FALLING', 'Limit-Order: automatischer Kauf/Verkauf bei Zielkurs.': 'Limit order: automatic buy/sell at a target price.', 'Kauf-Order anlegen': 'Place buy order', 'Verkauf-Order anlegen': 'Place sell order', '📅 AKTIEN-SPARPLAN & MEILENSTEINE': '📅 STOCK SAVINGS PLAN & MILESTONES', '📅 Sparplan einrichten': '📅 Set up a savings plan', 'Sparplan stoppen': 'Stop the savings plan', 'Stabile Märkte zu Saisonbeginn.': 'Stable markets at the start of the season.', '⚠️ Warnlimit setzen': '⚠️ Set a warning limit', '📺 MEDIENRECHTE & TV-VERTRAG': '📺 MEDIA RIGHTS & TV DEAL', '📊 Steuerberater engagieren [15.000 €]': '📊 Hire a tax adviser [15.000 €]', '💰 NEBENEINNAHMEN': '💰 SIDE INCOME', '🎰 WETTBÜRO (QUOTENFUCHS)': '🎰 BETTING OFFICE', 'Setze auf den Ausgang deines nächsten Ligaspiels. Die Quoten spiegeln den Stärkeunterschied wider - inklusive Buchmacher-Marge, ganz wie bei einem echten Wettanbieter.': 'Bet on the outcome of your next league match. The odds reflect the difference in strength - including a bookmaker margin, just like a real bookmaker.', '📜 WETT-HISTORIE': '📜 BETTING HISTORY', '🏢 IMMOBILIEN-PORTFOLIO': '🏢 REAL ESTATE PORTFOLIO', 'Investiere in Immobilien rund ums Stadion für eine zweite, fußballunabhängige Einnahmequelle - einmalige Kaufsumme, danach laufende Mieteinnahmen pro Spieltag.': 'Invest in property around the stadium for a second income independent of football - a one-off price, then rental income every matchday.', '💰 FINANZEN, KONTEN & ROHSTOFFE': '💰 FINANCES, ACCOUNTS & RAW MATERIALS',
+    '🏦 Monatliche Gewinn- & Verlustrechnung (GuV)': '🏦 Monthly profit & loss', 'EINNAHMEN': 'INCOME', 'AUSGABEN': 'EXPENSES', 'Ticketverkäufe:': 'Ticket sales:', 'Merchandising (Shop):': 'Merchandising (shop):', 'Sponsoren, TV & Banden:': 'Sponsors, TV & boards:', 'Börsendividenden:': 'Stock dividends:', 'Spieler- & Staffgehälter:': 'Player & staff wages:', 'Stadion & Campus-Unterhalt:': 'Stadium & campus upkeep:', 'Spielbetrieb & Verwaltung:': 'Operations & administration:', 'Ordnerdienst:': 'Stewarding:', 'Auswärtsfahrten (Ø/Monat):': 'Away travel (avg/month):', 'Kreditzinsen:': 'Loan interest:', 'Steuern & Abgaben:': 'Taxes & levies:', 'Monatssaldo (GuV):': 'Monthly balance (P&L):', '↳ Zuschauer beim letzten Heimspiel:': '↳ Attendance at the last home match:', '↳ TV-Abrechnung zum Saisonende:': '↳ TV settlement at season end:', '✈️ Flugzeug': '✈️ Plane', '🚌 Bus (günstiger)': '🚌 Bus (cheaper)', '🚌 Bus-Sponsoring verhandeln': '🚌 Negotiate bus sponsoring', '📊 Finanz-Charts': '📊 Finance charts', '📈 Finanzprognose & Verlauf': '📈 Financial forecast & history', '📒 Buchungsjournal – woher kommt das Geld?': '📒 Ledger – where does the money come from?', 'Jede Spieltagsabrechnung einzeln aufgeschlüsselt. So sehen Sie genau, welcher Posten wie viel gebracht oder gekostet hat.': 'Every matchday statement itemised, so you can see exactly what each item earned or cost.', '📒 Journal': '📒 Ledger', '💳 Kontoauszug': '💳 Account statement', '📊 Übersicht': '📊 Overview', 'GuV & Budget': 'P&L & budget', '💼 Budget': '💼 Budget', '🏦 Bank': '🏦 Bank', '💼 Budgets & Vorstands-Verhandlungen': '💼 Budgets & board negotiations', 'Transferbudget fordern': 'Request transfer budget', 'Gehaltsbudget fordern': 'Request wage budget', 'Höhere Angebote werden eher akzeptiert.': 'Higher offers are more likely to be accepted.', 'Höhere Angebote werden eher akzeptiert. Der Erfolg hängt auch von der Vorstands-Stimmung ab.': "Higher offers are more likely to be accepted. Success also depends on the board's mood.", '💰 Vereins- & Transferbudget': '💰 Club & transfer budget', '🏦 Kredite': '🏦 Loans', 'Alt-Sofortkredit (freie Tilgung):': 'Old instant loan (flexible repayment):', '+ 100.000 € Soforthilfe': '+ 100.000 € emergency aid', '- 50.000 € Tilgen': '- 50.000 € repay', 'Verbindlichkeiten': 'Liabilities', '🏦 Festgeldanlage': '🏦 Fixed-term deposit', '🐷 Rücklagen & Bonität': '🐷 Reserves & credit rating', '🐷 Auto-Rücklage 10%': '🐷 Auto reserve 10%', '💰 Rücklage entnehmen': '💰 Withdraw reserve', '⚖️ Financial Fairplay': '⚖️ Financial fair play', '📈 Vereins-Börse & Investment-Depot': '📈 Club stock market & portfolio', 'Börsen-Ticker:': 'Stock ticker:', 'Depotwert:': 'Portfolio value:', '📜 Optionsscheine & Limit-Orders': '📜 Warrants & limit orders', 'Hebelprodukt: Wette auf steigenden/fallenden Kurs (3 Spieltage Laufzeit, höheres Risiko).': 'Leveraged product: bet on a rising/falling price (3 matchdays, higher risk).', '📈 Auf STEIGEND wetten': '📈 Bet on RISING', '📉 Auf FALLEND wetten': '📉 Bet on FALLING', 'Limit-Order: automatischer Kauf/Verkauf bei Zielkurs.': 'Limit order: automatic buy/sell at a target price.', 'Kauf-Order anlegen': 'Place buy order', 'Verkauf-Order anlegen': 'Place sell order', '📅 Aktien-Sparplan & Meilensteine': '📅 Stock savings plan & milestones', '📅 Sparplan einrichten': '📅 Set up a savings plan', 'Sparplan stoppen': 'Stop the savings plan', 'Stabile Märkte zu Saisonbeginn.': 'Stable markets at the start of the season.', '⚠️ Warnlimit setzen': '⚠️ Set a warning limit', '📺 Medienrechte & TV-Vertrag': '📺 Media rights & TV deal', '📊 Steuerberater engagieren [15.000 €]': '📊 Hire a tax adviser [15.000 €]', '💰 Nebeneinnahmen': '💰 Side income', '🎰 Wettbüro (Quotenfuchs)': '🎰 Betting office', 'Setze auf den Ausgang deines nächsten Ligaspiels. Die Quoten spiegeln den Stärkeunterschied wider - inklusive Buchmacher-Marge, ganz wie bei einem echten Wettanbieter.': 'Bet on the outcome of your next league match. The odds reflect the difference in strength - including a bookmaker margin, just like a real bookmaker.', '📜 Wett-Historie': '📜 Betting history', '🏢 Immobilien-Portfolio': '🏢 Real estate portfolio', 'Investiere in Immobilien rund ums Stadion für eine zweite, fußballunabhängige Einnahmequelle - einmalige Kaufsumme, danach laufende Mieteinnahmen pro Spieltag.': 'Invest in property around the stadium for a second income independent of football - a one-off price, then rental income every matchday.', '💰 Finanzen, Konten & Rohstoffe': '💰 Finances, accounts & raw materials',
     // Sponsoren & Fans
-    '🤝 HAUPTSPONSOR': '🤝 MAIN SPONSOR', '👕 TRIKOT-AUSRÜSTER': '👕 KIT SUPPLIER', '🎽 ÄRMELSPONSOR': '🎽 SLEEVE SPONSOR', '📢 BANDENWERBUNG': '📢 PERIMETER ADVERTISING', '🏟️ NAMENSRECHTE': '🏟️ NAMING RIGHTS', '🏆 SPONSOREN-RANKING (KARRIERE)': '🏆 SPONSOR RANKING (CAREER)', 'Stadtwerke': 'Municipal utility', '/SpT': '/MD', '/SpT | Siegprämie:': '/MD | Win bonus:', '(Sockel:': '(Base:', '/Heimspiel)': '/home match)', '/Spiel)': '/match)', '📢 FAN-ZENTRALE & ORDNERDIENST': '📢 FAN CENTRE & STEWARDING', '🎨 Fangruppen': '🎨 Fan groups', '📋 Programme': '📋 Programmes', '🛡️ Sicherheit': '🛡️ Security', '📊 FAN-UMFRAGE & PROGRAMME': '📊 FAN SURVEY & PROGRAMMES', '📊 Fan-Umfrage durchführen': '📊 Run a fan survey', 'Noch keine Umfrage durchgeführt.': 'No survey yet.', '🛡️ EIGENE ORDNER & SICHERHEITSKRÄFTE': '🛡️ OWN STEWARDS & SECURITY', 'Vorgehaltene Ordner:': 'Stewards on duty:', '(Sicherheitsquote:': '(Security ratio:', '50 (Sparflamme)': '50 (minimal)', '100 (Standard)': '100 (standard)', '200 (Erhöht)': '200 (raised)', '350 (Hochsicherheit)': '350 (high security)', '🌍 Fanclub-Netzwerk ausbauen [20.000 €]': '🌍 Expand the fan club network [20.000 €]', '🎨 Mega-Choreo [8.000 €]': '🎨 Mega choreography [8.000 €]', '🚆 Sonderzug [5.000 €]': '🚆 Special train [5.000 €]', '🚌 Fanbus-Programm einrichten [6.000 €]': '🚌 Set up a fan bus programme [6.000 €]', '🤝 Fanprojekt einrichten [4.000 €]': '🤝 Set up a fan project [4.000 €]', '🤝 Jugend-Meet & Greet [2.000 €]': '🤝 Youth meet & greet [2.000 €]', '🧣 Schal-Design-Wettbewerb [3.000 €]': '🧣 Scarf design contest [3.000 €]', '📋 Mitgliedschafts-Kampagne [8.000 €]': '📋 Membership campaign [8.000 €]', '👥 MITGLIEDSCHAFTEN & EVENTS': '👥 MEMBERSHIPS & EVENTS', 'Aktive Aktionen für nächstes Spiel:': 'Active actions for the next match:', 'Besorgte Fans fordern eine Reaktion. Wie antwortet der Verein?': 'Worried fans demand a reaction. How does the club respond?', '✉️ KRITISCHER FAN-BRIEF': '✉️ CRITICAL FAN LETTER', '🗣️ Zuhören & Verständnis zeigen': '🗣️ Listen and show understanding', '🛡️ Kritik zurückweisen': '🛡️ Reject the criticism', '📋 Taktische Anpassung betonen': '📋 Stress the tactical adjustment', '🎭 BLOCK-SPEZIFISCHE FAN-KULTUR': '🎭 FAN CULTURE BY BLOCK', '🌟 JUGEND-PATENSCHAFTEN DER FANS': '🌟 FAN SPONSORSHIPS FOR YOUTH', '🎟️ TICKETPREISE': '🎟️ TICKET PRICES', 'Preiselastizität aktiv:': 'Price elasticity active:', '📈 ZUSCHAUERENTWICKLUNG': '📈 ATTENDANCE TREND', '📊 ZUSCHAUERRANKING': '📊 ATTENDANCE RANKING', 'Familien-': 'Family', 'Gäste-Block': 'Away block', 'Presse-': 'Press', 'Ost-': 'East', 'West-': 'West', 'Gegen-': 'Opposite', 'Tribüne': 'stand', 'Südtribüne (Ultras)': 'South stand (ultras)', 'Nord-Oberrang': 'North upper tier', 'Nord-Unterrang': 'North lower tier', 'Süd-Oberrang': 'South upper tier', 'VIP-Logen': 'VIP boxes', 'Vereinsstadion': 'Club stadium',
+    '🤝 Hauptsponsor': '🤝 Main sponsor', '👕 Trikot-Ausrüster': '👕 Kit supplier', '🎽 Ärmelsponsor': '🎽 Sleeve sponsor', '📢 Bandenwerbung': '📢 Perimeter advertising', '🏟️ Namensrechte': '🏟️ Naming rights', '🏆 Sponsoren-Ranking (Karriere)': '🏆 Sponsor ranking (career)', 'Stadtwerke': 'Municipal utility', '/SpT': '/MD', '/SpT | Siegprämie:': '/MD | Win bonus:', '(Sockel:': '(Base:', '/Heimspiel)': '/home match)', '/Spiel)': '/match)', '📢 Fan-Zentrale & Ordnerdienst': '📢 Fan centre & stewarding', '🎨 Fangruppen': '🎨 Fan groups', '📋 Programme': '📋 Programmes', '🛡️ Sicherheit': '🛡️ Security', '📊 Fan-Umfrage & Programme': '📊 Fan survey & programmes', '📊 Fan-Umfrage durchführen': '📊 Run a fan survey', 'Noch keine Umfrage durchgeführt.': 'No survey yet.', '🛡️ Eigene Ordner & Sicherheitskräfte': '🛡️ Own stewards & security', 'Vorgehaltene Ordner:': 'Stewards on duty:', '(Sicherheitsquote:': '(Security ratio:', '50 (Sparflamme)': '50 (minimal)', '100 (Standard)': '100 (standard)', '200 (Erhöht)': '200 (raised)', '350 (Hochsicherheit)': '350 (high security)', '🌍 Fanclub-Netzwerk ausbauen [20.000 €]': '🌍 Expand the fan club network [20.000 €]', '🎨 Mega-Choreo [8.000 €]': '🎨 Mega choreography [8.000 €]', '🚆 Sonderzug [5.000 €]': '🚆 Special train [5.000 €]', '🚌 Fanbus-Programm einrichten [6.000 €]': '🚌 Set up a fan bus programme [6.000 €]', '🤝 Fanprojekt einrichten [4.000 €]': '🤝 Set up a fan project [4.000 €]', '🤝 Jugend-Meet & Greet [2.000 €]': '🤝 Youth meet & greet [2.000 €]', '🧣 Schal-Design-Wettbewerb [3.000 €]': '🧣 Scarf design contest [3.000 €]', '📋 Mitgliedschafts-Kampagne [8.000 €]': '📋 Membership campaign [8.000 €]', '👥 Mitgliedschaften & Events': '👥 Memberships & events', 'Aktive Aktionen für nächstes Spiel:': 'Active actions for the next match:', 'Besorgte Fans fordern eine Reaktion. Wie antwortet der Verein?': 'Worried fans demand a reaction. How does the club respond?', '✉️ Kritischer Fan-Brief': '✉️ Critical fan letter', '🗣️ Zuhören & Verständnis zeigen': '🗣️ Listen and show understanding', '🛡️ Kritik zurückweisen': '🛡️ Reject the criticism', '📋 Taktische Anpassung betonen': '📋 Stress the tactical adjustment', '🎭 Block-spezifische Fan-Kultur': '🎭 Fan culture by block', '🌟 Jugend-Patenschaften der Fans': '🌟 Fan sponsorships for youth', '🎟️ Ticketpreise': '🎟️ Ticket prices', 'Preiselastizität aktiv:': 'Price elasticity active:', '📈 Zuschauerentwicklung': '📈 Attendance trend', '📊 Zuschauerranking': '📊 Attendance ranking', 'Familien-': 'Family', 'Gäste-Block': 'Away block', 'Presse-': 'Press', 'Ost-': 'East', 'West-': 'West', 'Gegen-': 'Opposite', 'Tribüne': 'stand', 'Südtribüne (Ultras)': 'South stand (ultras)', 'Nord-Oberrang': 'North upper tier', 'Nord-Unterrang': 'North lower tier', 'Süd-Oberrang': 'South upper tier', 'VIP-Logen': 'VIP boxes', 'Vereinsstadion': 'Club stadium',
     // Stadion & Campus
-    '🏟️ STADION, CAMPUS & EXPERTENSTAB': '🏟️ STADIUM, CAMPUS & EXPERT STAFF', '🏟️ Stadion-Ausbau': '🏟️ Stadium expansion', '🏟️ STADION-AUSBAU (8 BLÖCKE)': '🏟️ STADIUM EXPANSION (8 BLOCKS)', '🏟️ INTERACTIVE STADION-VISUALISIERUNG': '🏟️ INTERACTIVE STADIUM VIEW', 'Tippe oben auf einen Block für Erweiterungen & Infrastruktur.': 'Tap a block above for expansions & infrastructure.', 'Stadion-Ausbaustufe:': 'Stadium level:', '🏗️ Bauprojekte': '🏗️ Construction', '🏗️ LAUFENDE BAUPROJEKTE': '🏗️ RUNNING CONSTRUCTION', '🏗️ LAUFENDE CAMPUS-BAUPROJEKTE': '🏗️ RUNNING CAMPUS CONSTRUCTION', '🏗️ NAMENTLICHE AUSBAUPROJEKTE': '🏗️ MAJOR STADIUM PROJECTS', 'Zusätzlich zum block-für-block-Ausbau unten: konkrete Großprojekte mit eigenem Effekt auf Kapazität und Sitzplatz-Zusammensetzung.': 'In addition to the block-by-block expansion below: major projects with their own effect on capacity and seating mix.', '🏗️ STADION-ERWEITERUNGEN (20 NEU)': '🏗️ STADIUM UPGRADES (20 NEW)', 'Zusätzliche Anlagen für Sicherheit, Komfort, Einnahmen und mehr - jede mit einer echten, spürbaren Wirkung.': 'Additional facilities for security, comfort, revenue and more - each with a real, noticeable effect.', 'SPEZIAL-INSTALLATIONEN': 'SPECIAL INSTALLATIONS', '📊 GESAMTÜBERSICHT DER STADION-BONI': '📊 OVERVIEW OF STADIUM BONUSES', '🌱 RASENPFLEGE': '🌱 PITCH CARE', '🌱 Instandhaltung': '🌱 Maintenance', '📅 STADION-EVENTS': '📅 STADIUM EVENTS', '🚶 Stadion-Führungen anbieten': '🚶 Offer stadium tours', '🏢 STADIONUMFELD & GEBÄUDE-CAMPUS': '🏢 STADIUM SURROUNDINGS & CAMPUS', '👔 PERSONAL & EXPERTENSTAB': '👔 STAFF & EXPERTS', '💼 PERSONAL-ÜBERBLICK': '💼 STAFF OVERVIEW', '🏥 MEDIZINISCHE ABTEILUNG': '🏥 MEDICAL DEPARTMENT', '🗞️ MEDIENABTEILUNG': '🗞️ MEDIA DEPARTMENT', '📰 MANAGER-MEDIENIMAGE': '📰 MANAGER MEDIA IMAGE', '🏛️ VORSTAND': '🏛️ BOARD',
+    '🏟️ Stadion, Campus & Expertenstab': '🏟️ Stadium, campus & expert staff', '🏟️ Stadion-Ausbau': '🏟️ Stadium expansion', '🏟️ Stadion-Ausbau (8 Blöcke)': '🏟️ Stadium expansion (8 blocks)', '🏟️ Interaktive Stadion-Visualisierung': '🏟️ Interactive stadium view', 'Tippe oben auf einen Block für Erweiterungen & Infrastruktur.': 'Tap a block above for expansions & infrastructure.', 'Stadion-Ausbaustufe:': 'Stadium level:', '🏗️ Bauprojekte': '🏗️ Construction', '🏗️ Laufende Bauprojekte': '🏗️ Running construction', '🏗️ Laufende Campus-Bauprojekte': '🏗️ Running campus construction', '🏗️ Namentliche Ausbauprojekte': '🏗️ Major stadium projects', 'Zusätzlich zum block-für-block-Ausbau unten: konkrete Großprojekte mit eigenem Effekt auf Kapazität und Sitzplatz-Zusammensetzung.': 'In addition to the block-by-block expansion below: major projects with their own effect on capacity and seating mix.', '🏗️ Stadion-Erweiterungen (20 neu)': '🏗️ Stadium upgrades (20 new)', 'Zusätzliche Anlagen für Sicherheit, Komfort, Einnahmen und mehr - jede mit einer echten, spürbaren Wirkung.': 'Additional facilities for security, comfort, revenue and more - each with a real, noticeable effect.', 'Spezial-Installationen': 'Special installations', '📊 Gesamtübersicht der Stadion-Boni': '📊 Overview of stadium bonuses', '🌱 Rasenpflege': '🌱 Pitch care', '🌱 Instandhaltung': '🌱 Maintenance', '📅 Stadion-Events': '📅 Stadium events', '🚶 Stadion-Führungen anbieten': '🚶 Offer stadium tours', '🏢 Stadionumfeld & Gebäude-Campus': '🏢 Stadium surroundings & campus', '👔 Personal & Expertenstab': '👔 Staff & experts', '💼 Personal-Überblick': '💼 Staff overview', '🏥 Medizinische Abteilung': '🏥 Medical department', '🗞️ Medienabteilung': '🗞️ Media department', '📰 Manager-Medienimage': '📰 Manager media image', '🏛️ Vorstand': '🏛️ Board',
     // Jugend & Reserve
-    '🌱 JUGENDAKADEMIE': '🌱 YOUTH ACADEMY', '🌱 Talente': '🌱 Talents', '📈 Entwicklung': '📈 Development', '🏆 Jugendliga': '🏆 Youth league', '🏆 JUGENDLIGA': '🏆 YOUTH LEAGUE', 'Akademie-Stufe:': 'Academy level:', 'Kapazität: 0 / 5': 'Capacity: 0 / 5', '🌟 Nachwuchs sichten [8.000 €]': '🌟 Scout youngsters [8.000 €]', '🏠 Kapazität erweitern': '🏠 Expand capacity', '🏆 Jugendturnier [4.000 €]': '🏆 Youth tournament [4.000 €]', 'Akademie ausbauen [35.000 €]': 'Expand academy [35.000 €]', '🌟 JUGENDTRAINER & TOP-TALENTE': '🌟 YOUTH COACHES & TOP TALENTS', '🌟 JUGEND-HOSPITANZ IM PROFITRAINING': '🌟 YOUTH IN FIRST-TEAM TRAINING', '🌟 PERSPEKTIVSPIELER': '🌟 PROSPECTS', '📊 POTENZIAL & ENTWICKLUNG': '📊 POTENTIAL & DEVELOPMENT', '📈 ENTWICKLUNGSBERICHT': '📈 DEVELOPMENT REPORT', '📈 ENTWICKLUNGSFORTSCHRITT': '📈 DEVELOPMENT PROGRESS', '💥 MOMENTE DER AKADEMIE': '💥 ACADEMY MOMENTS', '🎓 AKADEMIE-RANGLISTE': '🎓 ACADEMY RANKING', '🥈 ZWEITE MANNSCHAFT GRÜNDEN': '🥈 FOUND A RESERVE TEAM', '🥈 Zweite Mannschaft gründen': '🥈 Found a reserve team', '👥 KADER (ZWEITE MANNSCHAFT)': '👥 SQUAD (RESERVE TEAM)', '🏋️ TRAININGSSTEUERUNG (RESERVE)': '🏋️ TRAINING (RESERVE)', '🔁 SPIELER AUS DER 1. MANNSCHAFT VERSCHIEBEN': '🔁 MOVE PLAYERS FROM THE FIRST TEAM', 'Interner Wechsel, kostenlos & ohne Ablöse (kein echter Transfer zwischen den eigenen Vereinen).': 'Internal move, free and without a fee (not a real transfer between your own clubs).',
+    '🌱 Jugendakademie': '🌱 Youth academy', '🌱 Talente': '🌱 Talents', '📈 Entwicklung': '📈 Development', '🏆 Jugendliga': '🏆 Youth league', 'Akademie-Stufe:': 'Academy level:', 'Kapazität: 0 / 5': 'Capacity: 0 / 5', '🌟 Nachwuchs sichten [8.000 €]': '🌟 Scout youngsters [8.000 €]', '🏠 Kapazität erweitern': '🏠 Expand capacity', '🏆 Jugendturnier [4.000 €]': '🏆 Youth tournament [4.000 €]', 'Akademie ausbauen [35.000 €]': 'Expand academy [35.000 €]', '🌟 Jugendtrainer & Top-Talente': '🌟 Youth coaches & top talents', '🌟 Jugend-Hospitanz im Profitraining': '🌟 Youth in first-team training', '🌟 Perspektivspieler': '🌟 Prospects', '📊 Potenzial & Entwicklung': '📊 Potential & development', '📈 Entwicklungsbericht': '📈 Development report', '📈 Entwicklungsfortschritt': '📈 Development progress', '💥 Momente der Akademie': '💥 Academy moments', '🎓 Akademie-Rangliste': '🎓 Academy ranking', '🥈 Zweite Mannschaft gründen': '🥈 Found a reserve team', '👥 Kader (Zweite Mannschaft)': '👥 Squad (reserve team)', '🏋️ Trainingssteuerung (Reserve)': '🏋️ Training (reserve)', '🔁 Spieler aus der 1. Mannschaft verschieben': '🔁 Move players from the first team', 'Interner Wechsel, kostenlos & ohne Ablöse (kein echter Transfer zwischen den eigenen Vereinen).': 'Internal move, free and without a fee (not a real transfer between your own clubs).',
     // Wettbewerbe
-    'Champions Cup': 'Champions Cup', 'Champions Cup:': 'Champions Cup:', '🏆 DFB-Pokal': '🏆 DFB Cup', '🏆 DFB-POKAL TURNIERBAUM': '🏆 DFB CUP BRACKET', '📊 EIGENE POKAL-STATISTIK': '📊 OWN CUP RECORD', '🏟️ POKALFINALS': '🏟️ CUP FINALS', '🏅 LANDESPOKAL': '🏅 STATE CUP', '🌟 UEFA CHAMPIONS CUP (KÖNIGSKLASSE)': '🌟 UEFA CHAMPIONS CUP', 'GRUPPE A': 'GROUP A', 'GRUPPE B': 'GROUP B', '🏆 K.O.-PHASE & FINALE': '🏆 KNOCKOUT STAGE & FINAL', '📜 EUROPAPOKAL-HISTORIE': '📜 EUROPEAN HISTORY', 'Im Wettbewerb': 'In the competition', 'Nicht qualifiziert': 'Not qualified', 'Qualifikation:': 'Qualification:', 'Prämien:': 'Prize money:', 'Titelgewinn: +25.000.000 €': 'Title: +25.000.000 €', '🎟️ Auslosung ansehen': '🎟️ Watch the draw', '🎟️ Gruppenauslosung ansehen': '🎟️ Watch the group draw', '🎟️ Halbfinal-Auslosung ansehen': '🎟️ Watch the semi-final draw', '🎟️ Die Kugeln rollen...': '🎟️ The balls are rolling...', '🏆 WETTBEWERBE & STATISTIKEN': '🏆 COMPETITIONS & STATISTICS', '🏆 WETTBEWERBE, ZEITREISE & TELEPORT': '🏆 COMPETITIONS, TIME TRAVEL & TELEPORT', '🔥 FORMTABELLE (LETZTE 5 SPIELE)': '🔥 FORM TABLE (LAST 5 GAMES)', '🏠 HEIM- & AUSWÄRTSTABELLE': '🏠 HOME & AWAY TABLE', '📈 TABELLENVERLAUF': '📈 TABLE HISTORY', '👑 TORJÄGERLISTE': '👑 TOP SCORERS', '🏅 LIGA-AUSZEICHNUNGEN': '🏅 LEAGUE AWARDS', '⚖️ LIGA-VERGLEICH': '⚖️ LEAGUE COMPARISON', '📊 LIGA-CHRONIK': '📊 LEAGUE CHRONICLE', '🎠 TRAINERKARUSSELL': '🎠 MANAGER MERRY-GO-ROUND', '📰 PROGNOSE & WIRKLICHKEIT': '📰 PREDICTION & REALITY', 'Expertentipp vor der Saison gegen den tatsächlichen Abschluss.': 'Pre-season expert prediction against the final table.', '⚔️ Rivalen': '⚔️ Rivals', '🔥 DERBY-CHRONIK': '🔥 DERBY CHRONICLE', '📖 DERBYGEGNER & BILANZ': '📖 DERBY OPPONENTS & RECORD', '🏆 Titel': '🏆 Titles', '📊 Chronik': '📊 Chronicle', '🗄️ Archiv': '🗄️ Archive', '📖 VEREINSREKORDE': '📖 CLUB RECORDS', '🌟 TROPHÄENRAUM': '🌟 TROPHY ROOM', '⭐ HALL OF FAME': '⭐ HALL OF FAME', '🏆 KARRIERE-RÜCKBLICK': '🏆 CAREER REVIEW', '👔 MANAGER-STATISTIK': '👔 MANAGER STATISTICS', '👑 GENERATIONEN-VERGLEICH': '👑 GENERATION COMPARISON', '🎖️ ACHIEVEMENTS': '🎖️ ACHIEVEMENTS', 'Liga, DFB-Pokal, Landespokal und Europapokal für die nächsten Spieltage im Überblick.': 'League, DFB Cup, state cup and European cup for the next matchdays at a glance.', 'Platz 1-4 der Bundesliga oder DFB-Pokalsieg - immer nur für die nächste Saison. Die Gegner werden jedes Jahr aus vier Töpfen gelost, dazu ein zweiter Bundesligist.': 'Bundesliga places 1-4 or a DFB Cup win - always for the next season only. Opponents are drawn from four pots every year, plus a second Bundesliga club.', 'Abstiegskampf': 'Relegation battle', 'Meister-Endspurt': 'Title run-in',
+    'Champions Cup': 'Champions Cup', 'Champions Cup:': 'Champions Cup:', '🏆 DFB-Pokal': '🏆 DFB Cup', '🏆 DFB-Pokal-Turnierbaum': '🏆 DFB cup bracket', '📊 Eigene Pokal-Statistik': '📊 Own cup record', '🏟️ Pokalfinals': '🏟️ Cup finals', '🏅 Landespokal': '🏅 State cup', '🌟 UEFA Champions Cup (Königsklasse)': '🌟 UEFA champions cup', 'Gruppe A': 'Group a', 'Gruppe B': 'Group b', '🏆 K.-o.-Phase & Finale': '🏆 Knockout stage & final', '📜 Europapokal-Historie': '📜 European history', 'Im Wettbewerb': 'In the competition', 'Nicht qualifiziert': 'Not qualified', 'Qualifikation:': 'Qualification:', 'Prämien:': 'Prize money:', 'Titelgewinn: +25.000.000 €': 'Title: +25.000.000 €', '🎟️ Auslosung ansehen': '🎟️ Watch the draw', '🎟️ Gruppenauslosung ansehen': '🎟️ Watch the group draw', '🎟️ Halbfinal-Auslosung ansehen': '🎟️ Watch the semi-final draw', '🎟️ Die Kugeln rollen...': '🎟️ The balls are rolling...', '🏆 Wettbewerbe & Statistiken': '🏆 Competitions & statistics', '🏆 Wettbewerbe, Zeitreise & Teleport': '🏆 Competitions, time travel & teleport', '🔥 Formtabelle (letzte 5 Spiele)': '🔥 Form table (last 5 games)', '🏠 Heim- & Auswärtstabelle': '🏠 Home & away table', '📈 Tabellenverlauf': '📈 Table history', '👑 Torjägerliste': '👑 Top scorers', '🏅 Liga-Auszeichnungen': '🏅 League awards', '⚖️ Liga-Vergleich': '⚖️ League comparison', '📊 Liga-Chronik': '📊 League chronicle', '🎠 Trainerkarussell': '🎠 Manager merry-go-round', '📰 Prognose & Wirklichkeit': '📰 Prediction & reality', 'Expertentipp vor der Saison gegen den tatsächlichen Abschluss.': 'Pre-season expert prediction against the final table.', '⚔️ Rivalen': '⚔️ Rivals', '🔥 Derby-Chronik': '🔥 Derby chronicle', '📖 Derbygegner & Bilanz': '📖 Derby opponents & record', '🏆 Titel': '🏆 Titles', '📊 Chronik': '📊 Chronicle', '🗄️ Archiv': '🗄️ Archive', '📖 Vereinsrekorde': '📖 Club records', '🌟 Trophäenraum': '🌟 Trophy room', '⭐ Hall of Fame': '⭐ Hall of Fame', '🏆 Karriere-Rückblick': '🏆 Career review', '👔 Manager-Statistik': '👔 Manager statistics', '👑 Generationen-Vergleich': '👑 Generation comparison', '🎖️ Achievements': '🎖️ Achievements', 'Liga, DFB-Pokal, Landespokal und Europapokal für die nächsten Spieltage im Überblick.': 'League, DFB Cup, state cup and European cup for the next matchdays at a glance.', 'Platz 1-4 der Bundesliga oder DFB-Pokalsieg - immer nur für die nächste Saison. Die Gegner werden jedes Jahr aus vier Töpfen gelost, dazu ein zweiter Bundesligist.': 'Bundesliga places 1-4 or a DFB Cup win - always for the next season only. Opponents are drawn from four pots every year, plus a second Bundesliga club.', 'Abstiegskampf': 'Relegation battle', 'Meister-Endspurt': 'Title run-in',
     // Kalender
-    '📅 SAISON-KALENDER & TERMINE': '📅 SEASON CALENDAR & FIXTURES', '📅 SAISONPLANUNG': '📅 SEASON PLANNING', '⚽ FREUNDSCHAFTS- & TESTSPIELE': '⚽ FRIENDLIES', '⚽ Freundschaftsspiel vereinbaren (+Einnahmen)': '⚽ Arrange a friendly (+income)', '✈️ Auslandsreise: Testspiel gegen Top-Klub': '✈️ Trip abroad: friendly against a top club', '🧳 Komplette Vorsaison-Tour (3 Stationen)': '🧳 Full pre-season tour (3 stops)', '🔥 Testspiel gegen den Stadtrivalen': '🔥 Friendly against the local rival',
+    '📅 Saison-Kalender & Termine': '📅 Season calendar & fixtures', '📅 Saisonplanung': '📅 Season planning', '⚽ Freundschafts- & Testspiele': '⚽ Friendlies', '⚽ Freundschaftsspiel vereinbaren (+Einnahmen)': '⚽ Arrange a friendly (+income)', '✈️ Auslandsreise: Testspiel gegen Top-Klub': '✈️ Trip abroad: friendly against a top club', '🧳 Komplette Vorsaison-Tour (3 Stationen)': '🧳 Full pre-season tour (3 stops)', '🔥 Testspiel gegen den Stadtrivalen': '🔥 Friendly against the local rival',
     // Industrie & Holding
-    '🏭 INDUSTRIE & HOLDING': '🏭 INDUSTRY & HOLDING', '💼 MERCHANDISING HOLDING GMBH (FIRMENZENTRALE)': '💼 MERCHANDISING HOLDING (HEADQUARTERS)', 'Holding & B2B': 'Holding & B2B', 'Holding-Kapital:': 'Holding capital:', 'Holding-Budget:': 'Holding budget:', 'Guthaben der Holding:': 'Holding balance:', 'Unternehmenswert:': 'Company value:', 'Hier kannst du Firmenkapital als Dividende an den Verein oder auf dein Privatkonto auszahlen!': 'Pay out company capital as a dividend to the club or to your private account!', '💵 50.000 € an Verein ausschütten': '💵 Pay 50.000 € to the club', '📥 50.000 € vom Verein in Holding investieren': '📥 Invest 50.000 € from the club in the holding', '🎩 25.000 € Manager-Dividende (Privatkonto)': '🎩 25.000 € manager dividend (private account)', '🏭 EIGENE PRODUKTIONS-FABRIKEN': '🏭 OWN FACTORIES', 'Kaufe Fabriken, um Fanartikel aus Rohstoffen zu fertigen. Eigenproduktion spart bis zu': 'Buy factories to make merchandise from raw materials. Own production saves up to', '75% der Einkaufskosten': '75% of purchase costs', 'und generiert maximale Gewinnmargen!': 'and generates maximum margins!', 'Aktive Fabriken:': 'Active factories:', 'Lager-Stufe:': 'Storage level:', 'Lager-Rohstoffe:': 'Stored raw materials:', 'Rohstoffe Total': 'Raw materials total', '📦 ROHSTOFF-MARKT & DYNAMISCHE BÖRSE': '📦 RAW MATERIAL MARKET', '📦 Zentrallager ausbauen (+2.000 kg Kapazität) [30.000 €]': '📦 Expand central storage (+2.000 kg) [30.000 €]', '⚙️ PRODUKTIONSAUFTRÄGE ANSTOSSEN': '⚙️ START PRODUCTION ORDERS', 'Wähle einen Fanartikel und starte die Fertigung in deinen Fabriken:': 'Pick an item and start production in your factories:', '⏳ LAUFENDE PRODUKTIONSAUFTRÄGE': '⏳ RUNNING PRODUCTION ORDERS', '🏪 3-KANAL FANSHOP-VERTRIEB & PREIS-ELASTIZITÄT': '🏪 3-CHANNEL SHOP SALES & PRICE ELASTICITY', 'Setze deine Endkundenpreise fest.': 'Set your retail prices.', 'Ein zu hoher Preis lässt den Absatz einbrechen. Günstige Preise steigern den Absatz bei geringerer Marge!': 'Too high a price kills sales. Low prices raise sales at a lower margin!', 'Absatzkanäle:': 'Sales channels:', '🏟️ Stadion | 🏬 Megastore | 🌐 Online': '🏟️ Stadium | 🏬 Megastore | 🌐 Online', '📊 VERKAUFSVERLAUF & WIRKSAME BONI': '📊 SALES HISTORY & ACTIVE BONUSES', '👕 TRIKOT-VERKAUFS-BESTENLISTE': '👕 SHIRT SALES CHART', '✨ LIMITIERTE EDITION': '✨ LIMITED EDITION', '🎽 SAISONALE KOLLEKTION': '🎽 SEASONAL COLLECTION', 'B2B-Lohnfertigung (Aufträge für Spitzenklubs)': 'B2B contract manufacturing (orders for top clubs)', 'Produziere für europäische Topklubs und kassiere sofortige Lohnfertigungs-Honorare in dein Firmenkonto:': 'Produce for top European clubs and collect contract fees straight into your company account:', '🏢 KONKURRENZFIRMEN': '🏢 COMPETITORS', '💼 Strategischen Investor aufnehmen [+400.000 €]': '💼 Take on a strategic investor [+400.000 €]',
+    '🏭 Industrie & Holding': '🏭 Industry & holding', '💼 Merchandising Holding GmbH (Firmenzentrale)': '💼 Merchandising holding (headquarters)', 'Holding & B2B': 'Holding & B2B', 'Holding-Kapital:': 'Holding capital:', 'Holding-Budget:': 'Holding budget:', 'Guthaben der Holding:': 'Holding balance:', 'Unternehmenswert:': 'Company value:', 'Hier kannst du Firmenkapital als Dividende an den Verein oder auf dein Privatkonto auszahlen!': 'Pay out company capital as a dividend to the club or to your private account!', '💵 50.000 € an Verein ausschütten': '💵 Pay 50.000 € to the club', '📥 50.000 € vom Verein in Holding investieren': '📥 Invest 50.000 € from the club in the holding', '🎩 25.000 € Manager-Dividende (Privatkonto)': '🎩 25.000 € manager dividend (private account)', '🏭 Eigene Produktions-Fabriken': '🏭 Own factories', 'Kaufe Fabriken, um Fanartikel aus Rohstoffen zu fertigen. Eigenproduktion spart bis zu': 'Buy factories to make merchandise from raw materials. Own production saves up to', '75% der Einkaufskosten': '75% of purchase costs', 'und generiert maximale Gewinnmargen!': 'and generates maximum margins!', 'Aktive Fabriken:': 'Active factories:', 'Lager-Stufe:': 'Storage level:', 'Lager-Rohstoffe:': 'Stored raw materials:', 'Rohstoffe Total': 'Raw materials total', '📦 Rohstoff-Markt & dynamische Börse': '📦 Raw material market', '📦 Zentrallager ausbauen (+2.000 kg Kapazität) [30.000 €]': '📦 Expand central storage (+2.000 kg) [30.000 €]', '⚙️ Produktionsaufträge anstoßen': '⚙️ Start production orders', 'Wähle einen Fanartikel und starte die Fertigung in deinen Fabriken:': 'Pick an item and start production in your factories:', '⏳ Laufende Produktionsaufträge': '⏳ Running production orders', '🏪 3-Kanal-Fanshop-Vertrieb & Preiselastizität': '🏪 3-channel shop sales & price elasticity', 'Setze deine Endkundenpreise fest.': 'Set your retail prices.', 'Ein zu hoher Preis lässt den Absatz einbrechen. Günstige Preise steigern den Absatz bei geringerer Marge!': 'Too high a price kills sales. Low prices raise sales at a lower margin!', 'Absatzkanäle:': 'Sales channels:', '🏟️ Stadion | 🏬 Megastore | 🌐 Online': '🏟️ Stadium | 🏬 Megastore | 🌐 Online', '📊 Verkaufsverlauf & wirksame Boni': '📊 Sales history & active bonuses', '👕 Trikot-Verkaufs-Bestenliste': '👕 Shirt sales chart', '✨ Limitierte Edition': '✨ Limited edition', '🎽 Saisonale Kollektion': '🎽 Seasonal collection', 'B2B-Lohnfertigung (Aufträge für Spitzenklubs)': 'B2B contract manufacturing (orders for top clubs)', 'Produziere für europäische Topklubs und kassiere sofortige Lohnfertigungs-Honorare in dein Firmenkonto:': 'Produce for top European clubs and collect contract fees straight into your company account:', '🏢 Konkurrenzfirmen': '🏢 Competitors', '💼 Strategischen Investor aufnehmen [+400.000 €]': '💼 Take on a strategic investor [+400.000 €]',
     // Manager, Privatleben, Unterwelt
-    '🌳 MANAGER-TALENTBAUM & SKILL-PUNKTE': '🌳 MANAGER TALENT TREE & SKILL POINTS', 'Sammle Manager-XP durch Siege (+150 XP), Pokalerfolge (+300 XP) und Saisonziele. Jeder Level-Up gewährt 1 Skill-Punkt!': 'Earn manager XP from wins (+150 XP), cup success (+300 XP) and season goals. Every level-up grants 1 skill point!', 'Verfügbare Skill-Punkte:': 'Available skill points:', 'Lvl 1 (0 XP)': 'Lvl 1 (0 XP)', 'Trainer-Perks:': 'Manager perks:', 'Voraussetzung: Manager-Level': 'Requires manager level', '🎓 UEFA Pro Lizenz': '🎓 UEFA Pro Licence', 'C-Lizenz': 'C licence', '🎩 TRAINER-PRIVATLEBEN': "🎩 MANAGER'S PRIVATE LIFE", 'Privatvermögen:': 'Private wealth:', '| Gehalt:': '| Salary:', '| Prestige:': '| Prestige:', '| Stress:': '| Stress:', '| XP:': '| XP:', '🏠 LIFESTYLE & BESITZ': '🏠 LIFESTYLE & POSSESSIONS', '🎣 HOBBY & BEZIEHUNGSSTATUS': '🎣 HOBBY & RELATIONSHIP', 'Hobby:': 'Hobby:', 'Beziehung:': 'Relationship:', '🌟 ÖFFENTLICHES LEBEN': '🌟 PUBLIC LIFE', '💼 PERSÖNLICHE EINKOMMENSQUELLEN': '💼 PERSONAL INCOME', 'Mit steigendem Prestige schaltest du lukrativere Nebentätigkeiten frei - jede hat eine Abklingzeit.': 'Rising prestige unlocks more lucrative side jobs - each has a cooldown.', '⛳ Golf (-15% Stress) [500 €]': '⛳ Golf (-15% stress) [500 €]', '🧖 Wellness (-25% Stress) [1.800 €]': '🧖 Spa (-25% stress) [1.800 €]', '🏖️ Luxusurlaub (-40% Stress) [4.500 €]': '🏖️ Luxury holiday (-40% stress) [4.500 €]', '✍️ Autogrammstunde [5.000 €]': '✍️ Autograph session [5.000 €]', '📱 Soziale-Medien-Präsenz umschalten': '📱 Toggle social media presence', '📖 Autobiografie schreiben (ab 40 Prestige, einmalig)': '📖 Write an autobiography (from 40 prestige, once)', '🧑‍💼 Persönlichen Assistenten umschalten [5.000 € Antritt, 400 €/SpT]': '🧑‍💼 Toggle personal assistant [5.000 € start, 400 €/MD]', '❤️ WOHLTÄTIGKEIT & KAPITALTRANSFER': '❤️ CHARITY & CAPITAL TRANSFER', '❤️ Spenden (Fans & Vorstand freuen sich)': '❤️ Donate (fans & board are pleased)', '🏦 Ins Vereinskonto einzahlen (Notkapital)': '🏦 Pay into the club account (emergency capital)', 'Kapital-Transfer': 'Capital transfer', '🚪 In den Ruhestand gehen (neue Karriere beginnen)': '🚪 Retire (start a new career)', '🚪 Ruhestand endgültig antreten': '🚪 Retire for good', '🕵️ UNTERWELT, SABOTAGE & MANIPULATION': '🕵️ UNDERWORLD, SABOTAGE & MANIPULATION', 'Sabotagen wirken exakt für das nächste anstehende Pflichtspiel und verfallen nach dem Abpfiff. Höherer Ermittlungsdruck riskiert drastische DFB-Strafen.': 'Sabotage works for the next competitive match only and expires at the final whistle. More investigative pressure risks drastic FA penalties.', 'DFB-Ermittlungsdruck:': 'FA investigation pressure:', 'DFB-Druck': 'FA pressure', 'Bereits aufgeflogene Vergehen:': 'Offences already exposed:', 'Wiederholungstäter riskieren echten Punktabzug in der Tabelle!': 'Repeat offenders risk a real points deduction!', '⌚ Rolex für Schiri (+Elfer-Chance) [15.000 €]': '⌚ Rolex for the referee (+penalty chance) [15.000 €]', '🧨 Hotel-Feuerwerk (-5 Gegnerstärke) [4.000 €]': '🧨 Hotel fireworks (-5 opponent strength) [4.000 €]', '🧪 Rasen-Sabotage (-4 Gegner) [6.000 €]': '🧪 Pitch sabotage (-4 opponent) [6.000 €]', '💰 Gegenspieler schmieren (-7 Gegner) [12.000 €]': '💰 Bribe opponents (-7 opponent) [12.000 €]', '☠️ Dopingmittel (+8 Teamstärke, Testrisiko!) [18.000 €]': '☠️ Doping (+8 team strength, test risk!) [18.000 €]', '🕵️ Spionage beim Gegner [15.000 €]': '🕵️ Spy on the opponent [15.000 €]', '🏴‍☠️ Zaunfahne klauen (+100% Fans) [7.500 €]': "🏴‍☠️ Steal the rivals' banner (+100% fans) [7.500 €]", '💰 Insider-Wett-Coup [10.000 € Einsatz]': '💰 Insider betting coup [10.000 € stake]', '🤫 Schweigegeld zahlen (-15% Druck) [8.000 €]': '🤫 Pay hush money (-15% pressure) [8.000 €]', '🛡️ Star-Anwalt Dr. Gauner beauftragen (-40% Druck) [20.000 €]': '🛡️ Hire star lawyer Dr. Gauner (-40% pressure) [20.000 €]',
+    '🌳 Manager-Talentbaum & Skill-Punkte': '🌳 Manager talent tree & skill points', 'Sammle Manager-XP durch Siege (+150 XP), Pokalerfolge (+300 XP) und Saisonziele. Jeder Level-Up gewährt 1 Skill-Punkt!': 'Earn manager XP from wins (+150 XP), cup success (+300 XP) and season goals. Every level-up grants 1 skill point!', 'Verfügbare Skill-Punkte:': 'Available skill points:', 'Lvl 1 (0 XP)': 'Lvl 1 (0 XP)', 'Trainer-Perks:': 'Manager perks:', 'Voraussetzung: Manager-Level': 'Requires manager level', '🎓 UEFA Pro Lizenz': '🎓 UEFA Pro Licence', 'C-Lizenz': 'C licence', '🎩 Trainer-Privatleben': "🎩 MANAGER'S PRIVATE LIFE", 'Privatvermögen:': 'Private wealth:', '| Gehalt:': '| Salary:', '| Prestige:': '| Prestige:', '| Stress:': '| Stress:', '| XP:': '| XP:', '🏠 Lifestyle & Besitz': '🏠 Lifestyle & possessions', '🎣 Hobby & Beziehungsstatus': '🎣 Hobby & relationship', 'Hobby:': 'Hobby:', 'Beziehung:': 'Relationship:', '🌟 Öffentliches Leben': '🌟 Public life', '💼 Persönliche Einkommensquellen': '💼 Personal income', 'Mit steigendem Prestige schaltest du lukrativere Nebentätigkeiten frei - jede hat eine Abklingzeit.': 'Rising prestige unlocks more lucrative side jobs - each has a cooldown.', '⛳ Golf (-15% Stress) [500 €]': '⛳ Golf (-15% stress) [500 €]', '🧖 Wellness (-25% Stress) [1.800 €]': '🧖 Spa (-25% stress) [1.800 €]', '🏖️ Luxusurlaub (-40% Stress) [4.500 €]': '🏖️ Luxury holiday (-40% stress) [4.500 €]', '✍️ Autogrammstunde [5.000 €]': '✍️ Autograph session [5.000 €]', '📱 Soziale-Medien-Präsenz umschalten': '📱 Toggle social media presence', '📖 Autobiografie schreiben (ab 40 Prestige, einmalig)': '📖 Write an autobiography (from 40 prestige, once)', '🧑‍💼 Persönlichen Assistenten umschalten [5.000 € Antritt, 400 €/SpT]': '🧑‍💼 Toggle personal assistant [5.000 € start, 400 €/MD]', '❤️ Wohltätigkeit & Kapitaltransfer': '❤️ Charity & capital transfer', '❤️ Spenden (Fans & Vorstand freuen sich)': '❤️ Donate (fans & board are pleased)', '🏦 Ins Vereinskonto einzahlen (Notkapital)': '🏦 Pay into the club account (emergency capital)', 'Kapital-Transfer': 'Capital transfer', '🚪 In den Ruhestand gehen (neue Karriere beginnen)': '🚪 Retire (start a new career)', '🚪 Ruhestand endgültig antreten': '🚪 Retire for good', '🕵️ Unterwelt, Sabotage & Manipulation': '🕵️ Underworld, sabotage & manipulation', 'Sabotagen wirken exakt für das nächste anstehende Pflichtspiel und verfallen nach dem Abpfiff. Höherer Ermittlungsdruck riskiert drastische DFB-Strafen.': 'Sabotage works for the next competitive match only and expires at the final whistle. More investigative pressure risks drastic FA penalties.', 'DFB-Ermittlungsdruck:': 'FA investigation pressure:', 'DFB-Druck': 'FA pressure', 'Bereits aufgeflogene Vergehen:': 'Offences already exposed:', 'Wiederholungstäter riskieren echten Punktabzug in der Tabelle!': 'Repeat offenders risk a real points deduction!', '⌚ Rolex für Schiri (+Elfer-Chance) [15.000 €]': '⌚ Rolex for the referee (+penalty chance) [15.000 €]', '🧨 Hotel-Feuerwerk (-5 Gegnerstärke) [4.000 €]': '🧨 Hotel fireworks (-5 opponent strength) [4.000 €]', '🧪 Rasen-Sabotage (-4 Gegner) [6.000 €]': '🧪 Pitch sabotage (-4 opponent) [6.000 €]', '💰 Gegenspieler schmieren (-7 Gegner) [12.000 €]': '💰 Bribe opponents (-7 opponent) [12.000 €]', '☠️ Dopingmittel (+8 Teamstärke, Testrisiko!) [18.000 €]': '☠️ Doping (+8 team strength, test risk!) [18.000 €]', '🕵️ Spionage beim Gegner [15.000 €]': '🕵️ Spy on the opponent [15.000 €]', '🏴‍☠️ Zaunfahne klauen (+100% Fans) [7.500 €]': "🏴‍☠️ Steal the rivals' banner (+100% fans) [7.500 €]", '💰 Insider-Wett-Coup [10.000 € Einsatz]': '💰 Insider betting coup [10.000 € stake]', '🤫 Schweigegeld zahlen (-15% Druck) [8.000 €]': '🤫 Pay hush money (-15% pressure) [8.000 €]', '🛡️ Star-Anwalt Dr. Gauner beauftragen (-40% Druck) [20.000 €]': '🛡️ Hire star lawyer Dr. Gauner (-40% pressure) [20.000 €]',
     // Premium & Admin & Verschiedenes
-    '💎 PREMIUM-SHOP': '💎 PREMIUM SHOP', 'Dies ist eine reine Offline-App ohne echte Zahlungsanbindung. "Käufe" hier sind simuliert und buchen kein echtes Geld ab - die Premium-Punkte werden direkt gutgeschrieben.': 'This is an offline-only app with no real payments. "Purchases" here are simulated and charge no real money - premium points are credited directly.', 'Premium-Punkte "kaufen" (simuliert)': 'Premium points "buy" (simulated)', 'Booster einlösen': 'Redeem booster', '💎 PREMIUM: FAN-BOOST': '💎 PREMIUM: FAN BOOST', 'Sofortiger Fan-Zufriedenheits-Schub für Diamanten.': 'Instant fan satisfaction boost for diamonds.', '💎 Fan-Zufriedenheit +20 kaufen (90)': '💎 Buy fan satisfaction +20 (90)', '💎 Mit Diamanten sofort abschließen (150)': '💎 Finish now with diamonds (150)', '⭐ Zusätzliche Features': '⭐ Extra features', '💾 SPEICHERSTÄNDE': '💾 SAVE GAMES', '💾 SAVEGAME EXPORT & JSON-IMPORT': '💾 SAVE EXPORT & JSON IMPORT', '💾 Als Datei herunterladen': '💾 Download as file', '📤 Als Datei exportieren': '📤 Export as file', '📥 Aus Datei importieren': '📥 Import from file', '📤 Exportieren': '📤 Export', '📤 JSON Exportieren': '📤 Export JSON', '📥 JSON Importieren': '📥 Import JSON', '📸 Als Bild herunterladen': '📸 Download as image', '📋 Verlauf exportieren': '📋 Export history', '🆕 Neues Spiel starten (frischer Klub)': '🆕 Start a new game (fresh club)', '✅ Neues Spiel mit diesen Einstellungen starten': '✅ Start a new game with these settings', 'Startliga wählen:': 'Choose the starting league:', 'Startkapital wählen:': 'Choose the starting capital:', 'Heimatstadt (bestimmt Regionalliga, Oberliga und Landespokal):': 'Home city (determines the regional leagues and the state cup):', 'Aktueller Vereinsname:': 'Current club name:', '🧪 SZENARIO-PRESETS': '🧪 SCENARIO PRESETS', 'Ausgewogenes Einsteigen ohne besondere Vor-/Nachteile.': 'A balanced start without special pros or cons.', 'Ausgewogener Ansatz ohne besondere Vor-/Nachteile.': 'A balanced approach without special pros or cons.', '🏷️ VEREINSIDENTITÄT': '🏷️ CLUB IDENTITY', '🛡️ VEREINS-WAPPEN': '🛡️ CLUB CREST', '🖼️ VEREINSMUSEUM: WAPPEN-HISTORIE': '🖼️ CLUB MUSEUM: CREST HISTORY', 'Zweite Ebene: Muster-Badge': 'Second layer: pattern badge', 'Dritte Ebene: Tier-/Maskottchen-Symbol': 'Third layer: animal/mascot symbol', 'Symbol': 'Symbol', 'Farbe': 'Colour', 'Auswärtstrikot-Farbe': 'Away kit colour', '✏️ Umbenennen': '✏️ Rename', '🔄 Verein wechseln': '🔄 Change club', 'Eigene Vorlagen': 'Own templates', '✓ Alle als gelesen markieren': '✓ Mark all as read', '★ Wichtig': '★ Important', '📖 SPIEL-LEXIKON': '📖 GAME GLOSSARY', 'Was bedeutet ein Wert, wie wirkt er, wie beeinflusst man ihn? Suchen oder nach Bereich filtern.': 'What does a value mean, what does it do, how do you influence it? Search or filter by area.', '📬 POSTFACH': '📬 INBOX', '🛠️ ADMIN-DIAGNOSE & LIVE-INSPECTOR': '🛠️ ADMIN DIAGNOSTICS & LIVE INSPECTOR', 'Entwickler-Konsole Aktiv': 'Developer console active', '🔍 STRUKTUR-SELBSTTEST': '🔍 STRUCTURE SELF-TEST', '🔍 Jetzt alle Screens testen': '🔍 Test all screens now', 'Prüft, ob jeder Screen nach dem Öffnen wirklich sichtbaren Inhalt zeigt - deckt versteckte HTML-Verschachtelungsfehler auf, bevor sie als "das Spiel geht nicht" auffallen.': 'Checks that every screen shows visible content when opened - finds hidden HTML nesting errors before they show up as "the game is broken".', 'Insolvenz-Test': 'Insolvency test', '💣 Komplett-Reset': '💣 Full reset', '⚠️ Technischer Fehler (bitte melden):': '⚠️ Technical error (please report):', 'Verlauf (letzte Läufe):': 'History (last runs):', 'Stimmung:': 'Mood:', 'Rangordnung': 'Hierarchy',
+    '💎 Premium-Shop': '💎 Premium shop', 'Dies ist eine reine Offline-App ohne echte Zahlungsanbindung. "Käufe" hier sind simuliert und buchen kein echtes Geld ab - die Premium-Punkte werden direkt gutgeschrieben.': 'This is an offline-only app with no real payments. "Purchases" here are simulated and charge no real money - premium points are credited directly.', 'Premium-Punkte "kaufen" (simuliert)': 'Premium points "buy" (simulated)', 'Booster einlösen': 'Redeem booster', '💎 Premium: Fan-Boost': '💎 Premium: fan boost', 'Sofortiger Fan-Zufriedenheits-Schub für Diamanten.': 'Instant fan satisfaction boost for diamonds.', '💎 Fan-Zufriedenheit +20 kaufen (90)': '💎 Buy fan satisfaction +20 (90)', '💎 Mit Diamanten sofort abschließen (150)': '💎 Finish now with diamonds (150)', '⭐ Zusätzliche Features': '⭐ Extra features', '💾 Speicherstände': '💾 Save games', '💾 Savegame-Export & JSON-Import': '💾 Save export & JSON import', '💾 Als Datei herunterladen': '💾 Download as file', '📤 Als Datei exportieren': '📤 Export as file', '📥 Aus Datei importieren': '📥 Import from file', '📤 Exportieren': '📤 Export', '📤 JSON Exportieren': '📤 Export JSON', '📥 JSON Importieren': '📥 Import JSON', '📸 Als Bild herunterladen': '📸 Download as image', '📋 Verlauf exportieren': '📋 Export history', '🆕 Neues Spiel starten (frischer Klub)': '🆕 Start a new game (fresh club)', '✅ Neues Spiel mit diesen Einstellungen starten': '✅ Start a new game with these settings', 'Startliga wählen:': 'Choose the starting league:', 'Startkapital wählen:': 'Choose the starting capital:', 'Heimatstadt (bestimmt Regionalliga, Oberliga und Landespokal):': 'Home city (determines the regional leagues and the state cup):', 'Aktueller Vereinsname:': 'Current club name:', '🧪 Szenario-Presets': '🧪 Scenario presets', 'Ausgewogenes Einsteigen ohne besondere Vor-/Nachteile.': 'A balanced start without special pros or cons.', 'Ausgewogener Ansatz ohne besondere Vor-/Nachteile.': 'A balanced approach without special pros or cons.', '🏷️ Vereinsidentität': '🏷️ Club identity', '🛡️ Vereins-Wappen': '🛡️ Club crest', '🖼️ Vereinsmuseum: Wappen-Historie': '🖼️ Club museum: crest history', 'Zweite Ebene: Muster-Badge': 'Second layer: pattern badge', 'Dritte Ebene: Tier-/Maskottchen-Symbol': 'Third layer: animal/mascot symbol', 'Symbol': 'Symbol', 'Farbe': 'Colour', 'Auswärtstrikot-Farbe': 'Away kit colour', '✏️ Umbenennen': '✏️ Rename', '🔄 Verein wechseln': '🔄 Change club', 'Eigene Vorlagen': 'Own templates', '✓ Alle als gelesen markieren': '✓ Mark all as read', '★ Wichtig': '★ Important', 'Was bedeutet ein Wert, wie wirkt er, wie beeinflusst man ihn? Suchen oder nach Bereich filtern.': 'What does a value mean, what does it do, how do you influence it? Search or filter by area.', '🛠️ Admin-Diagnose & Live-Inspector': '🛠️ Admin diagnostics & live inspector', 'Entwickler-Konsole Aktiv': 'Developer console active', '🔍 Struktur-Selbsttest': '🔍 Structure self-test', '🔍 Jetzt alle Screens testen': '🔍 Test all screens now', 'Prüft, ob jeder Screen nach dem Öffnen wirklich sichtbaren Inhalt zeigt - deckt versteckte HTML-Verschachtelungsfehler auf, bevor sie als "das Spiel geht nicht" auffallen.': 'Checks that every screen shows visible content when opened - finds hidden HTML nesting errors before they show up as "the game is broken".', 'Insolvenz-Test': 'Insolvency test', '💣 Komplett-Reset': '💣 Full reset', '⚠️ Technischer Fehler (bitte melden):': '⚠️ Technical error (please report):', 'Verlauf (letzte Läufe):': 'History (last runs):', 'Stimmung:': 'Mood:', 'Rangordnung': 'Hierarchy',
     // Teil 2 (25.21): Texte, die erst die Module rendern (Scan aller Bildschirme auf Englisch)
-    'Einlösen': 'Redeem', 'Spieler': 'Player', '🌟 Champions Cup Spieltag': '🌟 Champions Cup matchday', 'Kaufen für einen festen Geldbetrag (skaliert automatisch mit dem Kurs, egal wie teuer/günstig die Aktie ist):': 'Buy for a fixed amount (scales with the price automatically, however expensive or cheap the share is):', 'Aktueller Börsenkurs:': 'Current share price:', 'Noch nicht aufgestellt': 'Not in the line-up yet', 'Freistoß-Gott': 'Free-kick god', 'Noch kein Scout für diese Region.': 'No scout for this region yet.', 'Wintermütze': 'Winter hat', 'Auswärts-Schal': 'Away scarf', 'Leder-Geldbörse': 'Leather wallet', 'Schlüsselanhänger': 'Key ring', 'Mini-Ball für Kinder': 'Mini ball for kids', 'Handyhülle mit Wappen': 'Phone case with crest', 'Kapuzenpulli mit Wappen': 'Hoodie with crest', 'keine': 'none', 'Saison:': 'Season:', 'Eisenfuß': 'Iron foot', 'Präsident': 'President', 'Kapazität': 'Capacity', 'KAPAZITÄT': 'CAPACITY', 'nur mähen': 'mow only', 'Gründlich': 'Thorough', 'Millionär': 'Millionaire', '→ Höhepunkt': '→ Highlight', 'Vorverträge': 'Pre-contracts', '· Gästeblock': '· away block', 'GESAMTSTÄRKE': 'OVERALL STRENGTH', 'pro Spieltag': 'per matchday', '🌴 Südamerika': '🌴 South America', 'Gerüchteküche': 'Rumour mill', 'Presse-Tribüne': 'Press stand', '↺ Zurücksetzen': '↺ Reset', 'Höchster Sieg:': 'Biggest win:', 'Multimillionär': 'Multimillionaire', 'Rückkaufoption': 'Buy-back option', 'Saisoneröffnung': 'Season opening', '🎯 Saison-Ziele': '🎯 Season goals', 'Nicht gegründet': 'Not founded', 'Auswärtsbilanz:': 'Away record:', 'Nächstes Spiel:': 'Next match:', 'Nächste Lizenz:': 'Next licence:', 'Trophäen gesamt:': 'Total trophies:', '🍀 Glücksbringer': '🍀 Lucky charm', 'Vertragsgespräch': 'Contract talk', 'Auf- und Abstieg': 'Promotion and relegation', 'nur dieser Verein': 'this club only', '🎫 Ticketverkäufe': '🎫 Ticket sales', 'West-Haupttribüne': 'West main stand', 'Ernährungsberater': 'Nutritionist', 'Parkplatz-Gelände': 'Car park site', 'Nur mähen (leicht)': 'Mow only (light)', '💼 Gesamtgehälter:': '💼 Total wages:', 'Villa mit Seeblick': 'Villa with lake view', 'Abstellungsprämien': 'Release fees', 'Höchster Derbysieg:': 'Biggest derby win:', 'Auswärts-Spitzname:': 'Away nickname:', '🔝 Freistoßflanke ·': '🔝 Free-kick cross ·', 'Sanierungsbedürftig': 'Needs renovation', 'NÄCHSTE AUSBAUSTUFE': 'NEXT UPGRADE', '✅ Preise übernehmen': '✅ Apply prices', 'Zustand des Geläufs': 'Pitch condition', 'Höchste Niederlage:': 'Heaviest defeat:', '💛 Loyalitäts-Bonus': '💛 Loyalty bonus', '🎤 Spieler-Interview': '🎤 Player interview', '↪️ Kurz ausgeführt ·': '↪️ Taken short ·', 'Präventionsprogramm:': 'Prevention programme:', 'Trainingsintensität:': 'Training intensity:', 'Einnahmen (Spieltag)': 'Income (matchday)', 'Bedarf nächste Saison': 'Needed next season', 'Noch keine Teilnahme.': 'No participation yet.', 'Finanzielle Stabilität': 'Financial stability', '⚽ Öffentliches Training': '⚽ Open training', 'Noch nicht genug Daten.': 'Not enough data yet.', '· nächste Auslosung aus': '· next draw from', 'Öffentliches Medienimage': 'Public media image', '✔ 🎯 Direkter Freistoß ·': '✔ 🎯 Direct free kick ·', '💡 Empfehlung übernehmen': '💡 Apply recommendation', '🅿️ Parkplätze & Zufahrt': '🅿️ Parking & access', 'Bedienung mit einer Hand': 'One-handed use', 'Gewinne die Meisterschaft': 'Win the championship', 'Spritzguss- & Zubehörwerk': 'Injection moulding & accessories plant', 'Einfamilienhaus im Grünen': 'Detached house in the countryside', 'Biografie veröffentlichen': 'Publish a biography', 'Kaderplanung & Kadergröße': 'Squad planning & squad size', 'Kabine, Cliquen & Kapitän': 'Dressing room, cliques & captain', '🔄 Alle Perks zurücksetzen': '🔄 Reset all perks', 'Verträge laufen bald aus ·': 'Contracts expiring soon ·', '👩 FRAUENMANNSCHAFT GRÜNDEN': '👩 FOUND A WOMEN\'S TEAM', 'Noch kein gemeinsames Spiel': 'No match together yet', 'Noch keine Heimspiel-Daten.': 'No home match data yet.', 'Bürokomplex \'Vereins-Tower\'': 'Office complex \'Club Tower\'', 'Noch keine Tendenz erkennbar': 'No trend yet', 'Noch kein Heimspiel gespielt': 'No home match played yet', '· Zahlungskräftiges Publikum': '· wealthy crowd', 'Länderspielpausen & Turniere': 'International breaks & tournaments', 'Kader und Aufstellung ansehen': 'View squad and line-up', 'Finanzen und Sponsoren prüfen': 'Check finances and sponsors', '⚠️ Höchstes Verletzungsrisiko': '⚠️ Highest injury risk', 'Gehälter jetzt (pro Spieltag)': 'Wages now (per matchday)', 'Bester Torschütze (Karriere):': 'Top scorer (career):', '💪 Fähigkeitstraining-Express': '💪 Skill training express', 'Noch keine Interviews gegeben.': 'No interviews given yet.', 'Trainingsgelände mit Flutlicht': 'Training ground with floodlights', '🤝 Jährliches Personal-Meeting': '🤝 Annual staff meeting', 'Verträge langfristig gesichert': 'Contracts secured long-term', 'Längste Serie ohne Niederlage:': 'Longest unbeaten run:', 'Sofortkauf zahlt die Forderung': 'Instant buy pays the asking price', 'Noch kein Selbsttest gelaufen.': 'No self-test run yet.', 'Wartet die ersten Spieltage ab.': 'Waiting for the first matchdays.', 'Noch kein Pokalfinale erreicht.': 'No cup final reached yet.', '👕 Doppelte Fanartikel-Verkäufe': '👕 Double merchandise sales', 'Wintergespräch mit dem Vorstand': 'Winter talk with the board', '- wie startet ihr in die Saison?': '- how do you start the season?', 'Leihspieler kehren ggf. zurück ·': 'Loan players may return ·', 'Noch keine abgeschlossenen Wetten.': 'No settled bets yet.', 'Noch keine Überraschung geschafft.': 'No upset achieved yet.', 'Persönlichen Werbedeal abschließen': 'Sign a personal endorsement deal', '📱 Soziale-Medien-Präsenz: INAKTIV': '📱 Social media presence: INACTIVE', '📋 Kostenlose Vertragsverlängerung': '📋 Free contract extension', 'Kostenlos: etwas Fannähe und Moral.': 'Free: a little fan closeness and morale.', 'Stabile Weltmärkte zu Saisonbeginn.': 'Stable world markets at the start of the season.', 'Noch keine aktiven Bandensponsoren.': 'No active board sponsors yet.', '(Hektisch) · 🟥 zückt schnell Karten': '(Hectic) · 🟥 quick with cards', 'Zufrieden mit der Gesamtentwicklung.': 'Happy with the overall development.', 'Keine laufenden Produktionsaufträge.': 'No running production orders.', 'Noch keine Pokale im Trophäenschrank.': 'No trophies in the cabinet yet.', 'gegen Vereine aus der eigenen Region.': 'against clubs from your own region.', 'Kostet Geld, bringt Fans und Stimmung.': 'Costs money, brings fans and atmosphere.', 'Fertigt Schals für Wolle-Rohstoffkosten': 'Makes scarves for the cost of wool', 'Halbiert die Ausfallzeit von Verletzten': 'Halves the time injured players are out', 'Näht Spielbälle für Leder-Rohstoffkosten': 'Sews match balls for the cost of leather', 'Noch keine eigenen Vorlagen gespeichert.': 'No own templates saved yet.', 'Ein Magazin zahlt gut für deine Geschichte.': 'A magazine pays well for your story.', 'Vereinsstadion (keine Namensrechte vergeben)': 'Club stadium (no naming rights sold)', 'Noch keine Einträge in der Talent-Datenbank.': 'No entries in the talent database yet.', 'Produziert Trikots für Baumwoll-Rohstoffkosten': 'Produces shirts for the cost of cotton', 'Eine Marke will dein Gesicht für ihre Kampagne.': 'A brand wants your face for its campaign.', 'Presst Caps & Wimpel für Kunststoff-Rohstoffkosten': 'Presses caps & pennants for the cost of plastic', 'Unternehmen zahlen gut für deine Erfolgsgeschichte.': 'Companies pay well for your success story.', 'Noch keine spielerspezifischen Trikot-Verkaufsdaten.': 'No shirt sales data per player yet.', 'Noch nichts nebenbei - vielleicht Zeit für ein Hobby?': 'Nothing on the side yet - maybe time for a hobby?', 'Aktuell wirken keine zusätzlichen Boni auf den Absatz.': 'No extra boosts on sales right now.', 'Diese Saison noch keine Trainerwechsel in deiner Liga.': 'No coaching changes in your league this season yet.', 'Derzeit liegen keine offiziellen Transferanfragen für deine Spieler vor.': 'There are no official transfer requests for your players at the moment.', 'Noch keine Scouting-Missionen abgeschlossen. Entsende oben deine Scouts!': 'No scouting missions completed yet. Send out your scouts above!', 'Tippe auf einen Vereinsnamen in der Tabelle für die Kopf-an-Kopf-Bilanz.': 'Tap a club name in the table for the head-to-head record.', 'Noch keine Verkäufe erfasst - nach dem ersten Spieltag erscheint hier der Verlauf.': 'No sales recorded yet - the history appears here after the first matchday.', '✓ Keine Position hat eine gefährliche Häufung auslaufender Verträge.': '✓ No position has a dangerous cluster of expiring contracts.', 'Trainingsplus:': 'Training gain:', 'Verdoppelt die Ticketeinnahmen beim nächsten Heimspiel.': 'Doubles ticket income at the next home match.', 'Verdoppelt den Fanartikel-Absatz im Stadion beim nächsten Heimspiel.': 'Doubles merchandise sales in the stadium at the next home match.', 'Senkt Verletzungs- und Kartenrisiko im nächsten Spiel spürbar.': 'Noticeably lowers injury and card risk in the next match.', 'Senkt das Ausschreitungsrisiko beim nächsten Heimspiel stark ab.': 'Strongly lowers the risk of riots at the next home match.', 'Schließt alle aktuell laufenden Scouting-Missionen sofort ab.': 'Completes all running scouting missions immediately.', 'Heilt alle Verletzungen und beendet alle Sperren des gesamten Kaders sofort.': 'Heals all injuries and ends all suspensions of the whole squad immediately.', 'Gewährt sofort eine zusätzliche Trainingseinheit, unabhängig vom Tageslimit.': 'Grants an extra training session immediately, regardless of the daily limit.', 'Deckt das Potenzial aller aktuellen Jugendspieler sofort und kostenlos auf.': 'Reveals the potential of all current youth players immediately and for free.', 'Garantiert sonniges Wetter beim nächsten Spiel - keine negativen Wettereffekte.': 'Guarantees sunny weather at the next match - no negative weather effects.', 'Setzt die Eingespieltheit aller aktuellen Startelf-Paarungen sofort auf Maximum.': 'Sets the understanding of all current starting pairings to maximum immediately.', 'Setzt deinen Stamm-Torwart sofort auf Top-Fitness und Top-Tagesform.': 'Puts your first-choice goalkeeper at top fitness and top form immediately.', 'Einmal pro Saison ein aktives Vertrags-Ultimatum kostenlos besänftigen.': 'Calm one active contract ultimatum for free once per season.', 'Sofortiger Bonus aufs Transferbudget, passend zu deiner aktuellen Liga-Stärke.': 'Instant bonus to the transfer budget, matched to your current league.', 'Der nächste abgeschlossene Scouting-Fund ist garantiert ein Spieler mit hoher Stärke.': 'The next completed scouting find is guaranteed to be a strong player.', 'Zusätzlicher Fitness-Erholungsbonus nach Spielen (stapelt mit Konditionstrainer)': 'Extra fitness recovery after matches (stacks with the fitness coach)', 'Vermietete Büroflächen an lokale Unternehmen - stabile, planbare Mieteinnahmen.': 'Office space let to local companies - stable, predictable rent.', 'Mietwohnungen in Stadionnähe - beliebt bei Fans, die nah am Verein wohnen wollen.': 'Rented flats near the stadium - popular with fans who want to live close to the club.', 'Mildert Zwangsverkäufe und Punktabzüge bei Zahlungsunfähigkeit spürbar ab.': 'Noticeably softens forced sales and point deductions when insolvent.', 'Dämpft negative Medienwirkung bei schlechten Ergebnissen & Skandalen': 'Softens negative media impact of bad results & scandals', 'Verbessert Elfmeter-, Freistoß- und Eckballqualität der Mannschaft': 'Improves the team\'s penalties, free kicks and corners', 'Verringert Verletzungszeiten und beschleunigt Regeneration': 'Shortens injury lay-offs and speeds up recovery', 'Erhöht Stärke und Potenzial neuer Nachwuchsspieler': 'Raises strength and potential of new youth players', 'Übernimmt automatisch eine wählbare Aufgabe im Fanshop': 'Automatically takes over a chosen task in the fan shop', 'Halbiert die Wahrscheinlichkeit für Vertrags-Ultimaten unzufriedener Stars - frühzeitige,': 'Halves the chance of contract ultimatums from unhappy stars - early,',
+    'Einlösen': 'Redeem', 'Spieler': 'Player', '🌟 Champions Cup Spieltag': '🌟 Champions Cup matchday', 'Kaufen für einen festen Geldbetrag (skaliert automatisch mit dem Kurs, egal wie teuer/günstig die Aktie ist):': 'Buy for a fixed amount (scales with the price automatically, however expensive or cheap the share is):', 'Aktueller Börsenkurs:': 'Current share price:', 'Noch nicht aufgestellt': 'Not in the line-up yet', 'Freistoß-Gott': 'Free-kick god', 'Noch kein Scout für diese Region.': 'No scout for this region yet.', 'Wintermütze': 'Winter hat', 'Auswärts-Schal': 'Away scarf', 'Leder-Geldbörse': 'Leather wallet', 'Schlüsselanhänger': 'Key ring', 'Mini-Ball für Kinder': 'Mini ball for kids', 'Handyhülle mit Wappen': 'Phone case with crest', 'Kapuzenpulli mit Wappen': 'Hoodie with crest', 'keine': 'none', 'Saison:': 'Season:', 'Eisenfuß': 'Iron foot', 'Präsident': 'President', 'Kapazität': 'Capacity', 'KAPAZITÄT': 'CAPACITY', 'nur mähen': 'mow only', 'Gründlich': 'Thorough', 'Millionär': 'Millionaire', '→ Höhepunkt': '→ Highlight', 'Vorverträge': 'Pre-contracts', '· Gästeblock': '· away block', 'Gesamtstärke': 'Overall strength', 'pro Spieltag': 'per matchday', '🌴 Südamerika': '🌴 South America', 'Gerüchteküche': 'Rumour mill', 'Presse-Tribüne': 'Press stand', '↺ Zurücksetzen': '↺ Reset', 'Höchster Sieg:': 'Biggest win:', 'Multimillionär': 'Multimillionaire', 'Rückkaufoption': 'Buy-back option', 'Saisoneröffnung': 'Season opening', 'Nicht gegründet': 'Not founded', 'Auswärtsbilanz:': 'Away record:', 'Nächstes Spiel:': 'Next match:', 'Nächste Lizenz:': 'Next licence:', 'Trophäen gesamt:': 'Total trophies:', '🍀 Glücksbringer': '🍀 Lucky charm', 'Vertragsgespräch': 'Contract talk', 'Auf- und Abstieg': 'Promotion and relegation', 'nur dieser Verein': 'this club only', '🎫 Ticketverkäufe': '🎫 Ticket sales', 'West-Haupttribüne': 'West main stand', 'Ernährungsberater': 'Nutritionist', 'Parkplatz-Gelände': 'Car park site', 'Nur mähen (leicht)': 'Mow only (light)', '💼 Gesamtgehälter:': '💼 Total wages:', 'Villa mit Seeblick': 'Villa with lake view', 'Abstellungsprämien': 'Release fees', 'Höchster Derbysieg:': 'Biggest derby win:', 'Auswärts-Spitzname:': 'Away nickname:', '🔝 Freistoßflanke ·': '🔝 Free-kick cross ·', 'Sanierungsbedürftig': 'Needs renovation', 'Nächste Ausbaustufe': 'Next upgrade', '✅ Preise übernehmen': '✅ Apply prices', 'Zustand des Geläufs': 'Pitch condition', 'Höchste Niederlage:': 'Heaviest defeat:', '💛 Loyalitäts-Bonus': '💛 Loyalty bonus', '🎤 Spieler-Interview': '🎤 Player interview', '↪️ Kurz ausgeführt ·': '↪️ Taken short ·', 'Präventionsprogramm:': 'Prevention programme:', 'Trainingsintensität:': 'Training intensity:', 'Einnahmen (Spieltag)': 'Income (matchday)', 'Bedarf nächste Saison': 'Needed next season', 'Noch keine Teilnahme.': 'No participation yet.', 'Finanzielle Stabilität': 'Financial stability', '⚽ Öffentliches Training': '⚽ Open training', 'Noch nicht genug Daten.': 'Not enough data yet.', '· nächste Auslosung aus': '· next draw from', 'Öffentliches Medienimage': 'Public media image', '✔ 🎯 Direkter Freistoß ·': '✔ 🎯 Direct free kick ·', '💡 Empfehlung übernehmen': '💡 Apply recommendation', '🅿️ Parkplätze & Zufahrt': '🅿️ Parking & access', 'Bedienung mit einer Hand': 'One-handed use', 'Gewinne die Meisterschaft': 'Win the championship', 'Spritzguss- & Zubehörwerk': 'Injection moulding & accessories plant', 'Einfamilienhaus im Grünen': 'Detached house in the countryside', 'Biografie veröffentlichen': 'Publish a biography', 'Kaderplanung & Kadergröße': 'Squad planning & squad size', 'Kabine, Cliquen & Kapitän': 'Dressing room, cliques & captain', '🔄 Alle Perks zurücksetzen': '🔄 Reset all perks', 'Verträge laufen bald aus ·': 'Contracts expiring soon ·', '👩 Frauenmannschaft gründen': '👩 FOUND A WOMEN\'S TEAM', 'Noch kein gemeinsames Spiel': 'No match together yet', 'Noch keine Heimspiel-Daten.': 'No home match data yet.', 'Bürokomplex \'Vereins-Tower\'': 'Office complex \'Club Tower\'', 'Noch keine Tendenz erkennbar': 'No trend yet', 'Noch kein Heimspiel gespielt': 'No home match played yet', '· Zahlungskräftiges Publikum': '· wealthy crowd', 'Länderspielpausen & Turniere': 'International breaks & tournaments', 'Kader und Aufstellung ansehen': 'View squad and line-up', 'Finanzen und Sponsoren prüfen': 'Check finances and sponsors', '⚠️ Höchstes Verletzungsrisiko': '⚠️ Highest injury risk', 'Gehälter jetzt (pro Spieltag)': 'Wages now (per matchday)', 'Bester Torschütze (Karriere):': 'Top scorer (career):', '💪 Fähigkeitstraining-Express': '💪 Skill training express', 'Noch keine Interviews gegeben.': 'No interviews given yet.', 'Trainingsgelände mit Flutlicht': 'Training ground with floodlights', '🤝 Jährliches Personal-Meeting': '🤝 Annual staff meeting', 'Verträge langfristig gesichert': 'Contracts secured long-term', 'Längste Serie ohne Niederlage:': 'Longest unbeaten run:', 'Sofortkauf zahlt die Forderung': 'Instant buy pays the asking price', 'Noch kein Selbsttest gelaufen.': 'No self-test run yet.', 'Wartet die ersten Spieltage ab.': 'Waiting for the first matchdays.', 'Noch kein Pokalfinale erreicht.': 'No cup final reached yet.', '👕 Doppelte Fanartikel-Verkäufe': '👕 Double merchandise sales', 'Wintergespräch mit dem Vorstand': 'Winter talk with the board', '- wie startet ihr in die Saison?': '- how do you start the season?', 'Leihspieler kehren ggf. zurück ·': 'Loan players may return ·', 'Noch keine abgeschlossenen Wetten.': 'No settled bets yet.', 'Noch keine Überraschung geschafft.': 'No upset achieved yet.', 'Persönlichen Werbedeal abschließen': 'Sign a personal endorsement deal', '📱 Soziale-Medien-Präsenz: INAKTIV': '📱 Social media presence: INACTIVE', '📋 Kostenlose Vertragsverlängerung': '📋 Free contract extension', 'Kostenlos: etwas Fannähe und Moral.': 'Free: a little fan closeness and morale.', 'Stabile Weltmärkte zu Saisonbeginn.': 'Stable world markets at the start of the season.', 'Noch keine aktiven Bandensponsoren.': 'No active board sponsors yet.', '(Hektisch) · 🟥 zückt schnell Karten': '(Hectic) · 🟥 quick with cards', 'Zufrieden mit der Gesamtentwicklung.': 'Happy with the overall development.', 'Keine laufenden Produktionsaufträge.': 'No running production orders.', 'Noch keine Pokale im Trophäenschrank.': 'No trophies in the cabinet yet.', 'gegen Vereine aus der eigenen Region.': 'against clubs from your own region.', 'Kostet Geld, bringt Fans und Stimmung.': 'Costs money, brings fans and atmosphere.', 'Fertigt Schals für Wolle-Rohstoffkosten': 'Makes scarves for the cost of wool', 'Halbiert die Ausfallzeit von Verletzten': 'Halves the time injured players are out', 'Näht Spielbälle für Leder-Rohstoffkosten': 'Sews match balls for the cost of leather', 'Noch keine eigenen Vorlagen gespeichert.': 'No own templates saved yet.', 'Ein Magazin zahlt gut für deine Geschichte.': 'A magazine pays well for your story.', 'Vereinsstadion (keine Namensrechte vergeben)': 'Club stadium (no naming rights sold)', 'Noch keine Einträge in der Talent-Datenbank.': 'No entries in the talent database yet.', 'Produziert Trikots für Baumwoll-Rohstoffkosten': 'Produces shirts for the cost of cotton', 'Eine Marke will dein Gesicht für ihre Kampagne.': 'A brand wants your face for its campaign.', 'Presst Caps & Wimpel für Kunststoff-Rohstoffkosten': 'Presses caps & pennants for the cost of plastic', 'Unternehmen zahlen gut für deine Erfolgsgeschichte.': 'Companies pay well for your success story.', 'Noch keine spielerspezifischen Trikot-Verkaufsdaten.': 'No shirt sales data per player yet.', 'Noch nichts nebenbei - vielleicht Zeit für ein Hobby?': 'Nothing on the side yet - maybe time for a hobby?', 'Aktuell wirken keine zusätzlichen Boni auf den Absatz.': 'No extra boosts on sales right now.', 'Diese Saison noch keine Trainerwechsel in deiner Liga.': 'No coaching changes in your league this season yet.', 'Derzeit liegen keine offiziellen Transferanfragen für deine Spieler vor.': 'There are no official transfer requests for your players at the moment.', 'Noch keine Scouting-Missionen abgeschlossen. Entsende oben deine Scouts!': 'No scouting missions completed yet. Send out your scouts above!', 'Tippe auf einen Vereinsnamen in der Tabelle für die Kopf-an-Kopf-Bilanz.': 'Tap a club name in the table for the head-to-head record.', 'Noch keine Verkäufe erfasst - nach dem ersten Spieltag erscheint hier der Verlauf.': 'No sales recorded yet - the history appears here after the first matchday.', '✓ Keine Position hat eine gefährliche Häufung auslaufender Verträge.': '✓ No position has a dangerous cluster of expiring contracts.', 'Trainingsplus:': 'Training gain:', 'Verdoppelt die Ticketeinnahmen beim nächsten Heimspiel.': 'Doubles ticket income at the next home match.', 'Verdoppelt den Fanartikel-Absatz im Stadion beim nächsten Heimspiel.': 'Doubles merchandise sales in the stadium at the next home match.', 'Senkt Verletzungs- und Kartenrisiko im nächsten Spiel spürbar.': 'Noticeably lowers injury and card risk in the next match.', 'Senkt das Ausschreitungsrisiko beim nächsten Heimspiel stark ab.': 'Strongly lowers the risk of riots at the next home match.', 'Schließt alle aktuell laufenden Scouting-Missionen sofort ab.': 'Completes all running scouting missions immediately.', 'Heilt alle Verletzungen und beendet alle Sperren des gesamten Kaders sofort.': 'Heals all injuries and ends all suspensions of the whole squad immediately.', 'Gewährt sofort eine zusätzliche Trainingseinheit, unabhängig vom Tageslimit.': 'Grants an extra training session immediately, regardless of the daily limit.', 'Deckt das Potenzial aller aktuellen Jugendspieler sofort und kostenlos auf.': 'Reveals the potential of all current youth players immediately and for free.', 'Garantiert sonniges Wetter beim nächsten Spiel - keine negativen Wettereffekte.': 'Guarantees sunny weather at the next match - no negative weather effects.', 'Setzt die Eingespieltheit aller aktuellen Startelf-Paarungen sofort auf Maximum.': 'Sets the understanding of all current starting pairings to maximum immediately.', 'Setzt deinen Stamm-Torwart sofort auf Top-Fitness und Top-Tagesform.': 'Puts your first-choice goalkeeper at top fitness and top form immediately.', 'Einmal pro Saison ein aktives Vertrags-Ultimatum kostenlos besänftigen.': 'Calm one active contract ultimatum for free once per season.', 'Sofortiger Bonus aufs Transferbudget, passend zu deiner aktuellen Liga-Stärke.': 'Instant bonus to the transfer budget, matched to your current league.', 'Der nächste abgeschlossene Scouting-Fund ist garantiert ein Spieler mit hoher Stärke.': 'The next completed scouting find is guaranteed to be a strong player.', 'Zusätzlicher Fitness-Erholungsbonus nach Spielen (stapelt mit Konditionstrainer)': 'Extra fitness recovery after matches (stacks with the fitness coach)', 'Vermietete Büroflächen an lokale Unternehmen - stabile, planbare Mieteinnahmen.': 'Office space let to local companies - stable, predictable rent.', 'Mietwohnungen in Stadionnähe - beliebt bei Fans, die nah am Verein wohnen wollen.': 'Rented flats near the stadium - popular with fans who want to live close to the club.', 'Mildert Zwangsverkäufe und Punktabzüge bei Zahlungsunfähigkeit spürbar ab.': 'Noticeably softens forced sales and point deductions when insolvent.', 'Dämpft negative Medienwirkung bei schlechten Ergebnissen & Skandalen': 'Softens negative media impact of bad results & scandals', 'Verbessert Elfmeter-, Freistoß- und Eckballqualität der Mannschaft': 'Improves the team\'s penalties, free kicks and corners', 'Verringert Verletzungszeiten und beschleunigt Regeneration': 'Shortens injury lay-offs and speeds up recovery', 'Erhöht Stärke und Potenzial neuer Nachwuchsspieler': 'Raises strength and potential of new youth players', 'Übernimmt automatisch eine wählbare Aufgabe im Fanshop': 'Automatically takes over a chosen task in the fan shop', 'Halbiert die Wahrscheinlichkeit für Vertrags-Ultimaten unzufriedener Stars - frühzeitige,': 'Halves the chance of contract ultimatums from unhappy stars - early,',
     // Teil 3 (25.22): Lexikon und Spieler-Popup
     '➜ Zum Bildschirm': '➜ Go to screen', 'Kein Eintrag gefunden. Anderen Begriff versuchen oder Kategorie „Alle“ wählen.': 'No entry found. Try another term or choose the category "All".', 'Nur Einträge zum Bildschirm, von dem du kommst.': 'Only entries for the screen you came from.', 'Alle zeigen': 'Show all', 'Potenzial:': 'Potential:',
 };
@@ -25163,7 +25163,7 @@ function renderPlayerProfile(p) {
     const titel = (p.honours || []).slice().reverse();
     const intl = (p.caps || 0) > 0 ? `🌍 ${p.caps} Länderspiele, ${p.intlGoals || 0} Tore${(p.intlTitles || []).length ? ` · ${p.intlTitles.length} Turniertitel` : ''}<br>` : '';
     return `<div class="box" style="font-size:var(--fs-caption); text-align:left;">
-        <div style="font-weight:700; color:var(--accent); margin-bottom:4px;">📊 KARRIEREPROFIL${legende ? ' · <span style="color:var(--gold);">🏛️ VEREINSLEGENDE</span>' : ''}</div>
+        <div style="font-weight:700; color:var(--accent); margin-bottom:4px;">📊 Karriereprofil${legende ? ' · <span style="color:var(--gold);">🏛️ Vereinslegende</span>' : ''}</div>
         🏟️ Im Verein ${describeJoin(p)}${legende ? '' : ` · Legende ab ${LEGEND_APPS} Pflichtspielen oder ${LEGEND_SEASONS} Saisons`}<br>
         ${arch ? `${arch.icon} ${arch.name} - Höhepunkt mit etwa ${arch.peakAge} Jahren${typeof formatDevelopmentRange === 'function' ? ` · nächster Sommer: ${formatDevelopmentRange(p)}` : ''}<br>` : ''}
         ⚽ ${p.appearances || 0} Pflichtspiele · ${p.goalsCareer || 0} Tore · ${vorlagen} Vorlagen · ${elf}× Elf des Spieltags${besteNote ? ` · beste Saisonnote ${fmt(besteNote.toFixed(2))}` : ''}<br>
@@ -25333,7 +25333,7 @@ function renderMemberAssemblyPanel() {
     box.style.display = 'block';
     const r = a.report;
     const verlauf = r.promoted ? '⬆️ Aufstieg' : r.relegated ? '⬇️ Abstieg' : 'Klassenerhalt';
-    let html = `<div class="panel-header" style="color:var(--gold);">🗳️ MITGLIEDERVERSAMMLUNG (SAISON ${r.season})</div>
+    let html = `<div class="panel-header" style="color:var(--gold);">🗳️ Mitgliederversammlung (Saison ${r.season})</div>
         <div style="font-size:var(--fs-caption); display:grid; grid-template-columns:1fr 1fr; gap:3px; margin-bottom:6px;">
             <div>Endplatz: <strong>${r.finalRank}.</strong> (erwartet: ${r.expectedRank}.)</div>
             <div>${verlauf}</div>
@@ -25678,7 +25678,7 @@ function renderWomenTeamView() {
     if (!box) return;
     const w = game.womenTeam;
     if (!w || !w.founded) {
-        box.innerHTML = `<div class="panel"><div class="panel-header">👩 FRAUENMANNSCHAFT GRÜNDEN</div><div class="box" style="font-size:var(--fs-small);">
+        box.innerHTML = `<div class="panel"><div class="panel-header">👩 Frauenmannschaft gründen</div><div class="box" style="font-size:var(--fs-small);">
             Gründe eine eigene Frauenmannschaft. Sie startet in der ${WOMEN_LEAGUES[WOMEN_LEAGUES.length - 1].name} und kann bis in die
             ${WOMEN_LEAGUES[0].name} aufsteigen. Ihre Spiele laufen parallel zu den Herren-Spieltagen, Gehälter und Einnahmen
             erscheinen im Buchungsjournal.</div>
@@ -25705,7 +25705,7 @@ function renderWomenTeamView() {
         ${next ? `<button onclick="upgradeWomenFoerderung()" class="btn-secondary" style="width:100%; font-size:var(--fs-caption); padding:5px; margin-top:6px;">⬆️ ${next.name} (${formatVal(next.cost)}, Entwicklung +${next.growth}/Saison, Gehälter ×${next.wageMult})</button>` : ''}
         </div>`;
 
-    html += `<div class="panel"><div class="panel-header">🤝 SPONSOR</div><div style="font-size:var(--fs-caption);">`;
+    html += `<div class="panel"><div class="panel-header">🤝 Sponsor</div><div style="font-size:var(--fs-caption);">`;
     if (sponsorAktiv) {
         html += `<div class="box">${w.sponsor.name} zahlt ${formatVal(w.sponsor.perMatchday)} pro Spieltag bis zum Saisonende.</div>`;
     } else if (w.sponsorOffers.length) {
@@ -25717,7 +25717,7 @@ function renderWomenTeamView() {
     }
     html += '</div></div>';
 
-    html += `<div class="panel"><div class="panel-header">📊 TABELLE</div><table style="width:100%; font-size:var(--fs-caption); border-collapse:collapse;">
+    html += `<div class="panel"><div class="panel-header">📊 Tabelle</div><table style="width:100%; font-size:var(--fs-caption); border-collapse:collapse;">
         <tr style="color:var(--text-muted);"><td>#</td><td>Verein</td><td>Sp</td><td>Tore</td><td style="text-align:right;">Pkt</td></tr>`;
     tabelle.forEach((t, i) => {
         const zone = i === 0 && w.leagueLevel > 0 ? 'var(--primary)' : i >= WOMEN_TEAMS_PER_LEAGUE - 2 && w.leagueLevel < WOMEN_LEAGUES.length - 1 ? 'var(--danger)' : 'inherit';
@@ -25725,7 +25725,7 @@ function renderWomenTeamView() {
     });
     html += '</table></div>';
 
-    html += `<div class="panel"><div class="panel-header">🔁 SPIELERINNENMARKT</div><div style="font-size:var(--fs-caption);">`;
+    html += `<div class="panel"><div class="panel-header">🔁 Spielerinnenmarkt</div><div style="font-size:var(--fs-caption);">`;
     html += w.market.map(p => `<div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin:3px 0;">
         <span>${p.pos} ${p.name} (${p.age}) · <strong>${p.strength}</strong>${p.age <= 27 ? ` · Pot. ${womenPotential(p)}` : ''}</span>
         <button onclick="signWomenPlayer('${p.id}')" class="btn-secondary" style="font-size:var(--fs-caption); padding:3px 6px; white-space:nowrap;">${formatVal(womenMarketFee(p))}</button></div>`).join('')
@@ -25738,7 +25738,7 @@ function renderWomenTeamView() {
     html += '</div></div>';
 
     if (w.history.length) {
-        html += '<div class="panel"><div class="panel-header">📜 SAISONHISTORIE</div><div style="font-size:var(--fs-caption);">'
+        html += '<div class="panel"><div class="panel-header">📜 Saisonhistorie</div><div style="font-size:var(--fs-caption);">'
             + w.history.map(h => `<div>Saison ${h.season}: Platz ${h.rank} in der ${h.liga}</div>`).join('') + '</div></div>';
     }
     box.innerHTML = html;
@@ -25995,7 +25995,7 @@ function tickPlayerRetirement() {
 /* eslint-enable */
 
     // ==========================================
-    // ACHIEVEMENTS: VON TROPHÄEN LOSGELÖSTE MEILENSTEINE
+    // Achievements: VON TROPHÄEN LOSGELÖSTE MEILENSTEINE
     // ==========================================
     // Trophäen (game.trophies) markieren sportliche Erfolge (Meisterschaft, Pokalsieg).
     // Achievements sind bewusst BREITER angelegt - auch wirtschaftliche/strukturelle
@@ -26048,7 +26048,7 @@ function tickPlayerRetirement() {
 /* eslint-enable */
 
     // ==========================================
-    // HALL OF FAME
+    // Hall of Fame
     // ==========================================
     // Ewige Bestenlisten des Vereins aus gespeicherten Daten: aktueller Kader (goalsCareer,
     // appearances), Spieler, die ihre Karriere beendet haben (game.playerRetirement), und die
@@ -26087,7 +26087,7 @@ function tickPlayerRetirement() {
 /* eslint-enable */
 
     // ==========================================
-    // MANAGER-STATISTIK
+    // Manager-Statistik
     // ==========================================
     // Karrierebilanz des Managers über alle Saisons und Vereine, gespeichert in
     // game.managerCareer. Die alte Version hielt ihre Daten nur im Arbeitsspeicher, zählte Siege
@@ -26734,7 +26734,7 @@ function cleanupLegacyScoutState() {
 
         box.innerHTML = `
             <div class="box box-underworld" style="border-left-color:var(--violet);">
-                <strong style="color:var(--violet);">📋 SPIELANALYSE: ${oppName}</strong><br>
+                <strong style="color:var(--violet);">📋 Spielanalyse: ${oppName}</strong><br>
                 <span style="font-size:var(--fs-small);">
                     Spielweise: <strong>${getOpponentPlaystyle(oppName)}</strong><br>
                     Team-Stärke: <strong>${baseStr}</strong> · Form (letzte 5): ${formStr}<br>
@@ -29899,7 +29899,7 @@ function concludeSeasonAndAdvance() {
 
         document.getElementById('season-review-content').innerHTML = `
             <div style="text-align:center; margin-bottom:10px;">
-                <div style="font-size:var(--fs-title); font-weight:900; color:var(--accent);">📆 SAISON-RÜCKBLICK</div>
+                <div style="font-size:var(--fs-title); font-weight:900; color:var(--accent);">📆 Saison-Rückblick</div>
                 <div style="font-size:var(--fs-body); color:var(--text-muted);">Tabellenplatz ${myRank} · ${myTeamRecord?.points || 0} Punkte${prevSeason ? compareArrow(myTeamRecord?.points || 0, prevSeason.points) : ''}</div>
             </div>
             <div class="modal-field-grid">
@@ -30076,7 +30076,7 @@ function renderRelegationBox() {
     const ziel = sit.type === 'aufstieg' ? `Aufstieg in die ${leagueNames[sit.oppLevel]}` : `Klassenerhalt gegen den Dritten der ${leagueNames[sit.oppLevel]}`;
     const gespielt = (r ? r.legs : []).map((l, i) => `<div>${i === 0 ? 'Hinspiel' : 'Rückspiel'} (${l.isHome ? 'Heim' : 'Auswärts'}): <strong>${l.ourGoals}:${l.oppGoals}</strong></div>`).join('');
     box.innerHTML = `<div class="box" style="font-size:var(--fs-small); border-left-color:var(--accent); margin-bottom:6px;">
-        ⚔️ <strong>RELEGATION</strong> - Platz ${sit.rank}: ${ziel}<br>Gegner: <strong>${sit.oppName}</strong> (Stärke ${sit.oppStrength})
+        ⚔️ <strong>Relegation</strong> - Platz ${sit.rank}: ${ziel}<br>Gegner: <strong>${sit.oppName}</strong> (Stärke ${sit.oppStrength})
         ${gespielt}
         ${r && r.result ? `<div style="margin-top:4px; font-weight:800;">Gesamt ${r.aggregate}${r.penalties ? ' n.E.' : ''}: ${({ promoted: '🎉 Aufstieg geschafft!', stayed: sit.type === 'abstieg' ? '💪 Klasse gehalten!' : 'Kein Aufstieg.', relegated: '💔 Abstieg.' })[r.result]}</div>`
             : `<div style="display:flex; gap:6px; margin-top:6px;"><button onclick="startRelegationLive()" class="btn-action">🎮 ${r && r.legs.length === 1 ? 'Rückspiel' : 'Hinspiel'} live</button><button onclick="playRelegationLeg()" class="btn-secondary">⚡ Nur Ergebnis</button></div>`}
@@ -32153,7 +32153,7 @@ function renderSeasonForecastHistory() {
 /* eslint-enable */
 
     // ==========================================
-    // PREMIUM-SHOP (SIMULIERT)
+    // Premium-Shop (SIMULIERT)
     // ==========================================
     // WICHTIGER HINWEIS: Diese Einzeldatei-HTML-App hat keine Anbindung an einen echten
     // Zahlungsanbieter (Stripe, Google Play Billing, App Store usw.) - eine solche Anbindung

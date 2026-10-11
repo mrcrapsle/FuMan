@@ -1,6 +1,6 @@
 
     // ==========================================
-    // VEREINSIDENTITÄT: FREIE UMBENENNUNG
+    // Vereinsidentität: FREIE UMBENENNUNG
     // ==========================================
     // Der Klubname war bisher an ~120 Stellen im Code hart als "1.FC Moritz Leipzig"
     // verankert - jetzt läuft jeder dieser Vergleiche über game.clubName, wodurch eine
@@ -168,7 +168,7 @@
     }
 
     // ==========================================
-    // KARRIERE-RÜCKBLICK & RUHESTAND
+    // Karriere-Rückblick & RUHESTAND
     // ==========================================
     function renderCareerSummary() {
         let box = document.getElementById('career-summary-box');

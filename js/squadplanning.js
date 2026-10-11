@@ -40,7 +40,7 @@
             let cliffRisk = cliff.length >= Math.ceil(minHealthy / 2);
 
             let riskScore = (thin ? 1 : 0) + (agingRisk ? 1 : 0) + (cliffRisk ? 1 : 0);
-            let riskLabel = riskScore >= 2 ? '🔴 KRITISCH' : (riskScore === 1 ? '🟡 BEOBACHTEN' : '🟢 SOLIDE');
+            let riskLabel = riskScore >= 2 ? '🔴 Kritisch' : (riskScore === 1 ? '🟡 Beobachten' : '🟢 Solide');
             let riskColor = riskScore >= 2 ? 'var(--danger)' : (riskScore === 1 ? 'var(--accent)' : 'var(--primary)');
 
             return { pos, label: SQUAD_PLANNING_POS_LABELS[pos], players, count, avgAge, aging, cliff, minHealthy, thin, agingRisk, cliffRisk, riskScore, riskLabel, riskColor };
@@ -56,7 +56,7 @@
             <div class="box" style="border-left-color:${a.riskColor}; margin-bottom:5px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; font-size:var(--fs-small); margin-bottom:2px;">
                     <span>${a.label}</span>
-                    <strong style="color:${a.riskColor};">${a.riskLabel}</strong>
+                    <strong class="ui-overline" style="color:${a.riskColor};">${a.riskLabel}</strong>
                 </div>
                 <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:3px; font-size:var(--fs-micro); color:var(--text-muted);">
                     <div>Besetzung: <strong style="color:${a.thin ? 'var(--danger)' : 'var(--text-main)'};">${a.count} / ${a.minHealthy}+</strong></div>
@@ -97,7 +97,7 @@
         }).join('');
     }
 
-    // AUSLAUFENDE VERTRÄGE NACH POSITION: renderSeasonPlanningBox() (contracts.js) listet
+    // Auslaufende Verträge nach Position: renderSeasonPlanningBox() (contracts.js) listet
     // bereits alle dringenden Fälle namentlich auf - hier geht es NICHT um dieselbe Liste
     // nochmal, sondern um die Häufung PRO POSITION, damit sichtbar wird, WO die Vertragsklippe
     // tatsächlich liegt statt nur, DASS es welche gibt.
@@ -155,7 +155,7 @@
         box.innerHTML = getSquadSizeWarningHtml() + (warnings || '<div class="box" style="font-size:var(--fs-caption); color:var(--primary);">✓ Keine Position zeigt aktuell eine kombinierte Schwäche für die kommenden Saisons.</div>');
     }
 
-    // GEHALTSPLANUNG NÄCHSTE SAISON (25.17): seit das Gehaltsbudget der Liga folgt, scheitern
+    // Gehaltsplanung nächste Saison (25.17): seit das Gehaltsbudget der Liga folgt, scheitern
     // Verlängerungen schnell am Budget - hier steht vorab, was nach der Saison frei wird, was die
     // auslaufenden Stammspieler kosten und wie viel Luft das voraussichtliche Budget lässt.
     function getSquadPlanningWageOutlook() {

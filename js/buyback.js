@@ -94,7 +94,7 @@ function renderBuybackBox() {
     const liste = game.buybackOptions || [];
     if (!liste.length) { box.innerHTML = ''; return; }
     const fenster = typeof isTransferWindowOpen === 'function' ? isTransferWindowOpen() : true;
-    box.innerHTML = `<div class="panel"><div class="panel-header">↩️ RÜCKKAUFOPTIONEN</div>
+    box.innerHTML = `<div class="panel"><div class="panel-header">↩️ Rückkaufoptionen</div>
         ${fenster ? '' : '<div class="box" style="font-size:var(--fs-caption);">Zurückholen geht nur im Transferfenster (Spieltag 1-3 oder Winterfenster).</div>'}
         ${liste.map(o => {
             const diff = o.player.strength - o.saleStrength;

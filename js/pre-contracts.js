@@ -169,7 +169,7 @@ function renderPreContractBox() {
     const box = document.getElementById('precontract-box');
     if (!box) return;
     const offen = game.preContracts || [];
-    const kopf = `<div class="panel-header">📝 VORVERTRÄGE - ABLÖSEFREI ZUR NEUEN SAISON</div>`;
+    const kopf = `<div class="panel-header">📝 Vorverträge – ablösefrei zur neuen Saison</div>`;
     // Eigene Spieler mit Vorvertrags-Angebot: Frist steht oben, nicht versteckt im Spielerprofil (25.25)
     const en = typeof currentLang !== 'undefined' && currentLang === 'en';
     const eigene = squad.filter(p => p.preContractOffer).map(p => en

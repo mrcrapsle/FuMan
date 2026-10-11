@@ -1,6 +1,6 @@
 
     // ==========================================
-    // MANAGER-STATISTIK
+    // Manager-Statistik
     // ==========================================
     // Karrierebilanz des Managers über alle Saisons und Vereine, gespeichert in
     // game.managerCareer. Die alte Version hielt ihre Daten nur im Arbeitsspeicher, zählte Siege

@@ -295,7 +295,7 @@ async function testSquadAndTactics(browser) {
 }
 
 // ---------------------------------------------------------------------------
-// [6] JUGENDAKADEMIE
+// [6] Jugendakademie
 // ---------------------------------------------------------------------------
 async function testNationalTeam(browser) {
     console.log('\n[19.1] Länderspiele & Turniere');
@@ -397,7 +397,7 @@ async function testTransferPoker(browser) {
             const p1 = marketPlayers[0];
             openTransferPoker(0);
             transferPoker.rivalChance = 0; transferPoker.patience = 5;
-            out.box = document.getElementById('transfer-poker-box').innerHTML.includes('TRANSFERPOKER');
+            out.box = document.getElementById('transfer-poker-box').innerHTML.includes('Transferpoker');
             Math.random = () => 0;
             transferPoker.offer = p1.sellerMinimum - 1000;
             submitPokerOffer();
@@ -1157,7 +1157,7 @@ async function testPregameTalk(browser) {
             game.sackPending = false;
             startMatchdayFlow();
             const box = () => document.getElementById('prematch-talk-box').innerHTML;
-            out.box = box().includes('KABINENANSPRACHE') && box().includes('Keine Überheblichkeit') && box().includes('nichts zu verlieren') && box().includes('zählt nur der Sieg');
+            out.box = box().includes('Kabinenansprache') && box().includes('Keine Überheblichkeit') && box().includes('nichts zu verlieren') && box().includes('zählt nur der Sieg');
             const elf = squad.filter(p => lineup.includes(p.id));
             const avg = elf.reduce((a, p) => a + p.strength, 0) / elf.length;
             const merk = { ...pendingMatchInfo };
@@ -1527,7 +1527,7 @@ async function testPreContracts(browser) {
             game.matchday = 18;
             renderPreContractBox();
             const pool = game.preContractPool;
-            out.pool = pool.season === game.season && pool.players.length === 4 && box().includes('VORVERTRÄGE') && box().includes('% Zusage');
+            out.pool = pool.season === game.season && pool.players.length === 4 && box().includes('Vorverträge') && box().includes('% Zusage');
             out.doppeltBesser = pool.players.every(p => getPreContractChance(p, 'doppelt') > getPreContractChance(p, 'normal') || getPreContractChance(p, 'normal') === 0.95);
             // Zusage: Handgeld sofort, 20 % mehr Gehalt, Spieler wartet auf die neue Saison
             const a = pool.players[0];
@@ -1639,7 +1639,7 @@ async function testBuyback(browser) {
             out.verkauf = !squad.includes(jung) && game.money === geld0 + Math.round(angebot.currentBid * 0.9) && !!opt
                 && opt.price === Math.round(angebot.currentBid * 1.4 / 1000) * 1000 && opt.untilSeason === game.season + 2 && opt.saleStrength === jung.strength;
             setTransferTab('sell'); renderTransferView();
-            out.box = document.getElementById('buyback-box').innerHTML.includes('RÜCKKAUFOPTIONEN');
+            out.box = document.getElementById('buyback-box').innerHTML.includes('Rückkaufoptionen');
             // Alter Spieler: keine Option
             const altAngebot = incomingOffers.find(o => o.playerId === alt.id);
             acceptTransferOfferWithBuyback(altAngebot.id);
@@ -1755,7 +1755,7 @@ async function testRumors(browser) {
             out.stats = game.rumorStats.boulevard.hit === 1 && game.rumorStats.boulevard.miss === 1 && game.rumorStats.fach.hit === 1;
             showScreen('screen-transfer'); setTransferTab('offers'); renderTransferView();
             const html = document.getElementById('rumor-box').innerHTML;
-            out.box = html.includes('GERÜCHTEKÜCHE') && html.includes('lag 1 von 2 Mal richtig') && html.includes('Ente');
+            out.box = html.includes('Gerüchteküche') && html.includes('lag 1 von 2 Mal richtig') && html.includes('Ente');
             return out;
         } catch (e) { return { crash: e.message + ' ' + e.stack }; }
     });
@@ -1893,13 +1893,13 @@ async function testEnglishUi(browser) {
         try {
             closeTutorial();
             const out = {};
-            const kopf = [...document.querySelectorAll('.panel-header')].find(el => el.textContent.trim() === '💼 BUDGETS & VORSTANDS-VERHANDLUNGEN');
+            const kopf = [...document.querySelectorAll('.panel-header')].find(el => el.textContent.trim() === '💼 Budgets & Vorstands-Verhandlungen');
             out.vorhanden = !!kopf;
             setLanguage('en');
-            out.englisch = !!kopf && kopf.textContent.trim() === I18N_UI_EN['💼 BUDGETS & VORSTANDS-VERHANDLUNGEN'];
+            out.englisch = !!kopf && kopf.textContent.trim() === I18N_UI_EN['💼 Budgets & Vorstands-Verhandlungen'];
             out.anzahl = Object.keys(I18N_UI_EN).length;
             setLanguage('de');
-            out.deutsch = !!kopf && kopf.textContent.trim() === '💼 BUDGETS & VORSTANDS-VERHANDLUNGEN';
+            out.deutsch = !!kopf && kopf.textContent.trim() === '💼 Budgets & Vorstands-Verhandlungen';
             setLanguage('en');
             return out;
         } catch (e) { return { crash: e.message + ' ' + e.stack }; }
@@ -2299,7 +2299,7 @@ async function testRunde40Funktionen(browser) {
         ];
         const b = getTransferBilanz(game.season);
         out.verkauf = b.verkauf; out.kauf = b.kauf; out.netto = b.netto;
-        out.boxText = renderTransferBilanzBox().includes('TRANSFERBILANZ');
+        out.boxText = renderTransferBilanzBox().includes('Transferbilanz');
         // Reisefaktor: eigener Verein liegt in der Heimatstadt, also im eigenen Bundesland
         out.faktorEigen = getReiseFaktor(game.clubName);
         out.faktorUnbekannt = getReiseFaktor('Gibt Es Nicht FC');
@@ -3022,7 +3022,7 @@ async function testYouthSales(browser) {
             out.angebote = game.youthOffers.length === 2 && game.youthOffers.every(o => o.betrag >= 5000 && o.club && o.bis === game.matchday + 4);
             out.post = inboxMessages.some(m => m.title.includes('Angebot für Talent'));
             showScreen('screen-youth');
-            out.box = document.getElementById('youth-offers-box').textContent.includes('ANGEBOTE FÜR TALENTE');
+            out.box = document.getElementById('youth-offers-box').textContent.includes('Angebote für Talente');
             // Entscheidungshilfe: jedes Angebot nennt den Kader-Median; mit bekanntem Potenzial die Einordnung
             out.medianHinweis = document.getElementById('youth-offers-box').textContent.includes('Kader-Median');
             const tHinweis = youthTalents.find(x => x.id === game.youthOffers[0].playerId);
@@ -3098,7 +3098,7 @@ async function testTransferStrategy(browser) {
             const liga = getLeagueTransferBudget(game.leagueLevel);
             game.matchday = 1;
             showScreen('screen-dashboard'); renderTransferStrategyCard();
-            out.karte = card().includes('TRANSFERSTRATEGIE') && card().includes('Sofort-Erfolg');
+            out.karte = card().includes('Transferstrategie') && card().includes('Sofort-Erfolg');
             // Sofort-Erfolg: +40 % Budget, Ziel 2 Plätze höher; verfehlt -8, erreicht +5
             exp.expectedRank = 8; game.transferBudget = 1000000; game.boardSat = 50;
             chooseTransferStrategy('sofort');
@@ -3170,7 +3170,7 @@ async function testWinterTalk(browser) {
             out.zuFrueh = card() === '' && !getWinterTalk();
             game.matchday = 18;
             renderWinterTalkCard();
-            out.karte = card().includes('WINTERPAUSE') && card().includes('Zwischenbilanz');
+            out.karte = card().includes('Winterpause') && card().includes('Zwischenbilanz');
             const betrag = getWinterBudgetAmount();
             // Ziel hoch: +5, Budget sofort; gehalten +5 / gebrochen -10
             exp.expectedRank = 8; game.boardSat = 50; game.transferBudget = 1000000;
@@ -3258,7 +3258,7 @@ async function testPlayerProfile(browser) {
             addPlayerHonour(p, '📅 Spieler des Monats');
             openPlayerDetail(p.id, 'squad');
             const html = document.getElementById('pd-career-progression').innerHTML;
-            out.profil = html.includes('KARRIEREPROFIL') && html.includes('<td>9</td>') && html.includes('2,80') && html.includes('2,50') && html.includes('5 Vorlagen') && html.includes('4× Elf des Spieltags') && html.includes('Spieler des Monats');
+            out.profil = html.includes('Karriereprofil') && html.includes('<td>9</td>') && html.includes('2,80') && html.includes('2,50') && html.includes('5 Vorlagen') && html.includes('4× Elf des Spieltags') && html.includes('Spieler des Monats');
             closePlayerDetail();
             // Saisonhistorie speichert jetzt auch die Elf des Spieltags
             p.strengthHistory.push({ season: game.season, strength: p.strength, apps: 2, goals: 1 });
@@ -4203,7 +4203,7 @@ async function testYouthPathway(browser) {
             out.altern = youthTalents[3].age === 18 && a.age === 19 && a.proDecisionLeft === YOUTH_DECISION_MATCHDAYS && b.proDecisionLeft === YOUTH_DECISION_MATCHDAYS;
             out.meldung = inboxMessages.length > inboxVor;
             showScreen('screen-youth');
-            out.karte = document.getElementById('youth-decision-box').innerHTML.includes('PROFIVERTRAG-ENTSCHEIDUNG');
+            out.karte = document.getElementById('youth-decision-box').innerHTML.includes('Profivertrag-Entscheidung');
             // a bekommt den Profivertrag, b wartet ab und geht
             const lohn = getYouthProWage(a);
             promoteYouth(youthTalents.indexOf(a), null);
@@ -4509,7 +4509,7 @@ async function testAllScreensRender(browser) {
 }
 
 // ---------------------------------------------------------------------------
-// [10] ALTE SPEICHERSTÄNDE (MIGRATION)
+// [10] ALTE Speicherstände (MIGRATION)
 // ---------------------------------------------------------------------------
 async function testOldSaveMigration(browser) {
     console.log('\n[10] Migration alter Spielstände');
@@ -4585,7 +4585,7 @@ async function testTrainingOverhaul(browser) {
 }
 
 // ---------------------------------------------------------------------------
-// [12] LEBENDE LIGA, VEREINSIDENTITÄT & TRANSFERMARKT-ANBINDUNG
+// [12] LEBENDE LIGA, Vereinsidentität & TRANSFERMARKT-ANBINDUNG
 // ---------------------------------------------------------------------------
 // Bisher nur per Wegwerf-Skripten während der Entwicklung verifiziert - jetzt fest in der
 // Suite, damit ein künftiger Change diese Systeme nicht stillschweigend wieder kaputt macht.
@@ -5606,7 +5606,7 @@ async function testFinanceLedgerAndStatement(browser) {
         showScreen('screen-finances');
         setLedgerView('letzter');
         let boxLetzter = document.getElementById('finance-ledger-box').innerHTML;
-        out.ansichtLetzter = boxLetzter.includes('EINNAHMEN') && boxLetzter.includes('AUSGABEN');
+        out.ansichtLetzter = boxLetzter.includes('Einnahmen') && boxLetzter.includes('Ausgaben');
         setLedgerView('saison');
         let boxSaison = document.getElementById('finance-ledger-box').innerHTML;
         out.ansichtSaison = boxSaison.includes('abgerechnete Spieltage');
@@ -5653,7 +5653,7 @@ async function testFinanceLedgerAndStatement(browser) {
 
         setLedgerView('konto');
         let boxKonto = document.getElementById('finance-ledger-box').innerHTML;
-        out.ansichtKonto = boxKonto.includes('NACH BEREICH') && boxKonto.includes('Stadionausbau');
+        out.ansichtKonto = boxKonto.includes('Nach Bereich') && boxKonto.includes('Stadionausbau');
 
         // 5. Laden eines Spielstands darf keine Phantom-Buchung erzeugen.
         saveGameToSlot(1);
@@ -7356,7 +7356,7 @@ async function testSquadPlanningTool(browser) {
 
         renderSquadPlanningView();
         let warnBox = document.getElementById('squad-planning-warnings-box').innerHTML;
-        out.warnungNenntAbwehrUndKritisch = warnBox.includes('Abwehr') && warnBox.includes('KRITISCH');
+        out.warnungNenntAbwehrUndKritisch = warnBox.includes('Abwehr') && warnBox.includes('Kritisch');
         out.warnungNenntMittelfeldNicht = !warnBox.includes('Mittelfeld');
 
         // 5. Ein rundum gesunder Kader (jede Position gut besetzt, jung, langfristige Verträge)
@@ -7717,7 +7717,7 @@ async function testPlayerAvatars(browser) {
 }
 
 // ---------------------------------------------------------------------------
-// [41] TRAININGSKALENDER: MEHRSPIELTAGE-VORSCHAU
+// [41] Trainingskalender: MEHRSPIELTAGE-VORSCHAU
 // ---------------------------------------------------------------------------
 // Die bisherige Belastungswarnung sah nur den unmittelbar nächsten Spieltag. Der neue
 // Trainingskalender zeigt Liga/DFB-Pokal/Landespokal/Europapokal für die kommenden
@@ -7825,7 +7825,7 @@ async function testTrainingCalendar(browser) {
 }
 
 // ---------------------------------------------------------------------------
-// [42] TAKTIKTAFEL: TAKTIK-AUTOMATIK
+// [42] TAKTIKTAFEL: Taktik-Automatik
 // ---------------------------------------------------------------------------
 // Neue STANDING-Einstellung in der Taktiktafel: reagiert im laufenden Spiel automatisch auf
 // den Spielstand (offensiver bei Rückstand, defensiver bei knapper Führung kurz vor Schluss),
@@ -8320,7 +8320,7 @@ async function testWomenTeamExtras(browser) {
             const vorRendern = game.money;
             renderWomenTeamView();
             const html = document.getElementById('women-team-box').innerText;
-            out.anzeige = html.includes('SPONSOR') && html.includes('SPIELERINNENMARKT') && html.includes('Ø Zuschauer');
+            out.anzeige = html.includes('Sponsor') && html.includes('Spielerinnenmarkt') && html.includes('Ø Zuschauer');
             out.renderGeld = game.money === vorRendern;
             return out;
         } catch (e) { return { crash: e.message + ' ' + (e.stack || '').split('\n')[1] }; }
@@ -8404,7 +8404,7 @@ async function testPhase11(browser) {
             && game.boardSat === Math.max(10, Math.min(100, satVorher + a.boardDelta)) && a.boardDelta >= -10;
 
         showScreen('screen-women');
-        out.frauenScreen = document.getElementById('women-team-box').innerText.includes('TABELLE');
+        out.frauenScreen = document.getElementById('women-team-box').innerText.includes('Tabelle');
         out.selbsttest = runStructuralSelfTest(true);
         return out;
     });
@@ -8850,7 +8850,7 @@ async function testPhase14Teil2(browser) {
 
         showScreen('screen-squad'); setSquadTab('team');
         const tab = document.getElementById('squad-tab-team');
-        const kabine = [...tab.querySelectorAll(':scope > .panel')].find(p => p.innerText.includes('KABINE'));
+        const kabine = [...tab.querySelectorAll(':scope > .panel')].find(p => p.innerText.includes('Kabine'));
         out.kabine = !!kabine && !!kabine.querySelector('#squad-cliques-box') && !!kabine.querySelector('#locker-hierarchy-box') && !!kabine.querySelector('#team-chemistry-box');
         out.kabineInhalt = kabine ? kabine.innerText.includes('Rangordnung') : false;
         out.teamPanels = tab.querySelectorAll(':scope > .panel').length;

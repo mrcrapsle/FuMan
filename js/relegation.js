@@ -135,7 +135,7 @@ function renderRelegationBox() {
     const ziel = sit.type === 'aufstieg' ? `Aufstieg in die ${leagueNames[sit.oppLevel]}` : `Klassenerhalt gegen den Dritten der ${leagueNames[sit.oppLevel]}`;
     const gespielt = (r ? r.legs : []).map((l, i) => `<div>${i === 0 ? 'Hinspiel' : 'Rückspiel'} (${l.isHome ? 'Heim' : 'Auswärts'}): <strong>${l.ourGoals}:${l.oppGoals}</strong></div>`).join('');
     box.innerHTML = `<div class="box" style="font-size:var(--fs-small); border-left-color:var(--accent); margin-bottom:6px;">
-        ⚔️ <strong>RELEGATION</strong> - Platz ${sit.rank}: ${ziel}<br>Gegner: <strong>${sit.oppName}</strong> (Stärke ${sit.oppStrength})
+        ⚔️ <strong>Relegation</strong> - Platz ${sit.rank}: ${ziel}<br>Gegner: <strong>${sit.oppName}</strong> (Stärke ${sit.oppStrength})
         ${gespielt}
         ${r && r.result ? `<div style="margin-top:4px; font-weight:800;">Gesamt ${r.aggregate}${r.penalties ? ' n.E.' : ''}: ${({ promoted: '🎉 Aufstieg geschafft!', stayed: sit.type === 'abstieg' ? '💪 Klasse gehalten!' : 'Kein Aufstieg.', relegated: '💔 Abstieg.' })[r.result]}</div>`
             : `<div style="display:flex; gap:6px; margin-top:6px;"><button onclick="startRelegationLive()" class="btn-action">🎮 ${r && r.legs.length === 1 ? 'Rückspiel' : 'Hinspiel'} live</button><button onclick="playRelegationLeg()" class="btn-secondary">⚡ Nur Ergebnis</button></div>`}

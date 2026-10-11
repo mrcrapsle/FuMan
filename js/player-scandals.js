@@ -1,6 +1,6 @@
 
     // ==========================================
-    // SPIELER-SKANDALE
+    // Spieler-Skandale
     // ==========================================
     // Spieler können in negative Schlagzeilen geraten: Verletzungs-Vortäuschung,
     // schlechte Disziplin, Doping-Vorwürfe - mit echten Konsequenzen für die Karriere.
@@ -152,7 +152,7 @@
 
         const scandals = (game.scandals || []).filter(s => !s.resolved);
 
-        let html = `<div style="font-size:var(--fs-small); font-weight:bold; margin-bottom:6px;">⚠️ SPIELER-SKANDALE</div>`;
+        let html = `<div style="font-size:var(--fs-small); font-weight:bold; margin-bottom:6px;">⚠️ Spieler-Skandale</div>`;
 
         if (scandals.length === 0) {
             html += '<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:8px;">Keine aktuellen Skandale</div>';

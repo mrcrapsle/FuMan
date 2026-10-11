@@ -514,6 +514,24 @@
         }
         .ui-card-head .ui-card-cta { width: auto; flex: 0 0 auto; margin: 0; align-self: center; }
         .ui-card-sub { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+        /* Symbol-Knöpfe in Karten (Postfach): klein im Bild, aber 32 px Tippfläche */
+        .ui-icon-row { display: inline-flex; gap: 2px; }
+        .ui-icon-btn {
+            min-width: 32px; min-height: 32px; padding: 0 4px; border: none; border-radius: 8px; background: none;
+            color: var(--text-muted); font-size: var(--fs-body-lg); cursor: pointer; line-height: 1;
+        }
+        .ui-icon-btn:hover { background: var(--chip-bg); }
+        /* Postfach: gelesene Nachrichten treten zurück, bleiben aber voll lesbar */
+        .ui-mail { padding: 10px 10px 10px 15px; }
+        .ui-mail .ui-card-title { font-weight: var(--fw-title); }
+        .ui-mail-gelesen .ui-card-title { font-weight: 600; }
+        .ui-mail-gelesen .ui-card-body { color: var(--text-muted); }
+        .ui-mail .ui-card-actions { grid-template-columns: max-content; }
+        .ui-field-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: 8px; }
+        /* Kurze Zwischenüberschriften und Etiketten: im Code normal geschrieben, angezeigt in
+           Großbuchstaben (Phase 25.52). Abschnittstitel (.panel-header) bleiben in normaler Schreibung. */
+        .ui-overline, .ui-field-label, .kpi-chip > span:first-child { text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; }
+        .ui-overline { font-size: var(--fs-micro); color: var(--text-muted); }
         .ui-field { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
         .ui-field-label { font-size: var(--fs-caption); font-weight: var(--fw-meta); color: var(--text-muted); letter-spacing: 0.3px; }
         .ui-field select { width: 100%; max-width: 320px; min-height: 36px; }
@@ -525,6 +543,7 @@
             .ui-card-head > .ui-card-kpi:has(.ui-card-kpi-lang) { grid-column: 2 / -1; grid-row: 2; flex-direction: row; align-items: baseline; gap: 6px; margin-top: 6px; }
             .ui-card-head:has(.ui-card-kpi-lang) > .ui-card-meta { grid-row: 3; }
         }
+        .ui-btn-aktiv { background: var(--violet-fill) !important; color: var(--on-strong) !important; border-color: var(--violet-fill) !important; }
         .ui-card-more { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
         .ui-card-more button { margin: 0; }
         .ui-card-body { margin-top: 10px; font-size: var(--fs-body); line-height: var(--lh-body); }

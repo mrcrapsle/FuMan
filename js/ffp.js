@@ -1,5 +1,5 @@
     // ==========================================
-    // FINANCIAL FAIRPLAY
+    // Financial Fairplay
     // ==========================================
     // Echte UEFA/DFB-Regel: nicht der aktuelle Kontostand entscheidet, sondern ob ein Verein
     // über mehrere Saisons hinweg strukturell mehr ausgibt, als er einnimmt. Bewusst getrennt

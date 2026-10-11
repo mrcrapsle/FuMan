@@ -275,7 +275,7 @@
         }).join('');
 
         box.innerHTML = `<div style="font-size:var(--fs-caption); font-weight:800; margin:4px 0;">Bisher verkauft (gesamter Verlauf)</div>${summeHtml}`
-            + `<div style="font-size:var(--fs-caption); font-weight:800; margin:6px 0 4px;">Letzte Spieltage</div>${verlaufHtml}`;
+            + `<div class="ui-overline" style="font-size:var(--fs-caption); font-weight:800; margin:6px 0 4px;">Letzte Spieltage</div>${verlaufHtml}`;
     }
 
     function renderMerchView() {

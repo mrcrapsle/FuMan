@@ -1,5 +1,5 @@
 // ==========================================
-// JUGENDAKADEMIE ERWEITERTE FUNKTIONEN
+// Jugendakademie ERWEITERTE FUNKTIONEN
 // ==========================================
 /* eslint-disable no-undef */
 

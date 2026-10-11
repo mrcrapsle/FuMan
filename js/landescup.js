@@ -169,7 +169,7 @@
         let box = document.getElementById('landescup-container');
         if (!box) return;
         let kopf = document.getElementById('landescup-header');
-        if (kopf) kopf.innerText = `🏅 ${landesPokal.region.toUpperCase()}POKAL`;
+        if (kopf) kopf.innerText = `🏅 ${landesPokal.region}pokal`;
 
         if (!playsLandespokal()) {
             box.innerHTML = `<div class="box" style="font-size:var(--fs-body); color:var(--text-muted);">

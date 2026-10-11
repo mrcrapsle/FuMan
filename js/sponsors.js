@@ -1,6 +1,6 @@
 
     // ==========================================
-    // SPONSOREN: HAUPTSPONSOR, AUSRÜSTER, ÄRMEL & BANDEN - ALLE MIT ECHTEN VERHANDLUNGEN,
+    // SPONSOREN: Hauptsponsor, AUSRÜSTER, ÄRMEL & BANDEN - ALLE MIT ECHTEN VERHANDLUNGEN,
     // VARIABLEN LAUFZEITEN, ABLAUF & ERFOLGSABHÄNGIGEN BONI (POKAL/AUFSTIEG)
     // ==========================================
     const SPONSOR_NAME_PREFIXES = ["Nord", "Rhein", "Metro", "City", "Regio", "Vital", "Elektro", "Bau", "Agrar", "Media"];
@@ -124,7 +124,7 @@
         return { type: null, amount: 0, label: '' };
     }
 
-    // ---------- HAUPTSPONSOR ----------
+    // ---------- Hauptsponsor ----------
     function checkIncomingSponsorOffers(force = false) {
         if (sponsorOffers.length >= MAX_PENDING_SPONSOR_OFFERS) return;
         if (!force && Math.random() > 0.12) return;
@@ -185,7 +185,7 @@
         renderSponsorsView();
     }
 
-    // ---------- TRIKOT-AUSRÜSTER ----------
+    // ---------- Trikot-Ausrüster ----------
     function checkIncomingKitOffers(force = false) {
         if (kitSupplierOffers.length >= MAX_PENDING_KIT_OFFERS) return;
         if (!force && Math.random() > 0.12) return;
@@ -230,7 +230,7 @@
         renderSponsorsView();
     }
 
-    // ---------- ÄRMELSPONSOR ----------
+    // ---------- Ärmelsponsor ----------
     // Vierter Vertragstyp: zahlt (anders als Ausrüster/Banden) bei JEDEM Spiel, nicht nur daheim.
     function checkIncomingSleeveOffers(force = false) {
         if (sleeveSponsorOffers.length >= MAX_PENDING_SLEEVE_OFFERS) return;
@@ -276,7 +276,7 @@
         renderSponsorsView();
     }
 
-    // ---------- BANDENWERBUNG (STADIONWEIT) ----------
+    // ---------- Bandenwerbung (STADIONWEIT) ----------
     // Werbeflächen hängen jetzt an den echten Stadionbereichen statt an acht anonymen
     // Plätzen: jeder Block des Stadions (siehe stadium.blocks) hat eigene Bandenplätze,
     // deren Anzahl mit seiner Kapazität wächst. Wer das Stadion ausbaut, schafft damit
@@ -737,7 +737,7 @@
             let ev = game.pendingSponsorActivation;
             activationBox.style.display = ev ? 'block' : 'none';
             if (ev) {
-                activationBox.innerHTML = `<div class="panel-header" style="color:var(--accent);">📸 AKTIVIERUNGS-EVENT: ${ev.sponsorName}</div>
+                activationBox.innerHTML = `<div class="panel-header" style="color:var(--accent);">📸 Aktivierungs-Event: ${ev.sponsorName}</div>
                     <div class="box" style="font-size:var(--fs-small);">Exklusiver Werbedreh - Teilnahme bringt ${formatVal(ev.reward)} und mehr Loyalität, kostet aber etwas Fitness.</div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
                         <button onclick="resolveSponsorActivationEvent(true)" class="btn-action">✅ Teilnehmen</button>

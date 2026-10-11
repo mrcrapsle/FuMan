@@ -153,7 +153,7 @@
     }
 
     // ==========================================
-    // FÄHIGKEITEN GEZIELT ANTRAINIEREN
+    // Fähigkeiten gezielt antrainieren
     // ==========================================
     // Ein zugewiesener Trainer (Personal) bildet einen Spieler über mehrere Spieltage gezielt
     // in einer Fähigkeit fort - kostet echtes Geld UND Zeit, garantiert dafür eine echte,

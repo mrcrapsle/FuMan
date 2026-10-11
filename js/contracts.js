@@ -1,6 +1,6 @@
 
     // ==========================================
-    // SAISONPLANUNG-ÜBERSICHT
+    // Saisonplanung-ÜBERSICHT
     // ==========================================
     // Zeigt auf einen Blick, wer wirklich für die kommende Saison zur Verfügung steht: welche
     // Verträge bald auslaufen, wer zurück zum Leihverein muss, und wo eine Entscheidung ansteht.
@@ -20,11 +20,11 @@
                 📋 <strong>${urgent.length}</strong> Verträge laufen bald aus · <strong>${returningLoans.length}</strong> Leihspieler kehren ggf. zurück · <strong>${safe.length}</strong> Verträge langfristig gesichert
             </div>
             ${urgent.length > 0 ? `
-                <div style="font-size:var(--fs-caption); font-weight:800; color:var(--danger); margin:6px 0 3px;">🔴 DRINGEND - VERTRAG LÄUFT AUS (0-1 JAHR)</div>
+                <div class="ui-overline" style="font-size:var(--fs-caption); font-weight:800; color:var(--danger); margin:6px 0 3px;">🔴 Dringend – Vertrag läuft aus (0-1 Jahr)</div>
                 ${urgent.map(p => `<div class="box" style="font-size:var(--fs-caption); border-left-color:var(--danger); display:flex; justify-content:space-between;"><span>${p.name} (${p.pos}, Str ${p.strength})</span><span>${p.contracts === 0 ? 'Läuft diese Saison aus!' : '1 Jahr Rest'}</span></div>`).join('')}
             ` : ''}
             ${soon.length > 0 ? `
-                <div style="font-size:var(--fs-caption); font-weight:800; color:var(--accent); margin:6px 0 3px;">🟡 BALD PLANEN (2 JAHRE REST)</div>
+                <div class="ui-overline" style="font-size:var(--fs-caption); font-weight:800; color:var(--accent); margin:6px 0 3px;">🟡 Bald planen (2 Jahre Rest)</div>
                 ${soon.map(p => `<div class="box" style="font-size:var(--fs-caption); border-left-color:var(--accent); display:flex; justify-content:space-between;"><span>${p.name} (${p.pos})</span><span>2 Jahre Rest</span></div>`).join('')}
             ` : ''}
             ${returningLoans.length > 0 ? `

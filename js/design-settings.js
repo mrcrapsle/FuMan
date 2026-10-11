@@ -1,5 +1,5 @@
 // ============================================================================
-// DARSTELLUNG (Phase 25.51): Farb-Theme und Textgröße, pro Gerät gespeichert.
+// Darstellung (Phase 25.51): Farb-Theme und Textgröße, pro Gerät gespeichert.
 // Die Themes sind reine Token-Sätze in css/styles.css (html[data-theme=…]),
 // die Textgröße setzt --fs-scale (html[data-text-size=…]). Bildschirm:
 // screen-design, Menü "System & Hilfe". Kein Spielzustand - nichts davon

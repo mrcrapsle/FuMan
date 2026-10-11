@@ -1,6 +1,6 @@
 
     // ==========================================
-    // HALL OF FAME
+    // Hall of Fame
     // ==========================================
     // Ewige Bestenlisten des Vereins aus gespeicherten Daten: aktueller Kader (goalsCareer,
     // appearances), Spieler, die ihre Karriere beendet haben (game.playerRetirement), und die

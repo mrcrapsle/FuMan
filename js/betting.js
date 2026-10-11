@@ -194,13 +194,13 @@
                 <span style="font-size:var(--fs-caption); color:var(--text-muted);">Quoten von ${BETTING_PROVIDER_NAME} · Höchsteinsatz: ${formatVal(Math.max(MIN_BET_STAKE, Math.round(game.money * MAX_BET_STAKE_FRACTION)))}</span>
             </div>
             <input type="number" id="bet-stake-input" placeholder="Einsatz in €" class="input-inline" style="width:100%; margin-bottom:6px;">
-            <div style="font-size:var(--fs-caption); font-weight:800; color:var(--text-muted); margin-bottom:3px;">SPIELAUSGANG</div>
+            <div class="ui-overline" style="font-size:var(--fs-caption); font-weight:800; color:var(--text-muted); margin-bottom:3px;">Spielausgang</div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-bottom:4px;">
                 <button onclick="placeBet('win', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-action" style="font-size:var(--fs-small);">Sieg @ ${odds.oddsWin}</button>
                 <button onclick="placeBet('draw', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-secondary" style="font-size:var(--fs-small);">Remis @ ${odds.oddsDraw}</button>
             </div>
             <div style="font-size:var(--fs-micro); color:var(--text-muted); margin-bottom:8px;">🚫 Auf eine Niederlage der eigenen Mannschaft zu wetten ist verboten. Quoten gelten für deine beste verfügbare Elf.</div>
-            <div style="font-size:var(--fs-caption); font-weight:800; color:var(--text-muted); margin-bottom:3px;">SONDERWETTEN</div>
+            <div class="ui-overline" style="font-size:var(--fs-caption); font-weight:800; color:var(--text-muted); margin-bottom:3px;">Sonderwetten</div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-bottom:4px;">
                 <button onclick="placeSpecialBet('over', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-secondary" style="font-size:var(--fs-small);">Über 2.5 @ ${odds.oddsOver}</button>
                 <button onclick="placeSpecialBet('under', parseInt(document.getElementById('bet-stake-input').value)||0)" class="btn-secondary" style="font-size:var(--fs-small);">Unter 2.5 @ ${odds.oddsUnder}</button>

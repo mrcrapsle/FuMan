@@ -1,6 +1,6 @@
 
     // ==========================================
-    // AKADEMIE-RANGLISTE
+    // Akademie-Rangliste
     // ==========================================
     // Wettbewerb mit anderen Academies in der Liga - wer entwickelt
     // die besten Spieler? Rankings, Boni für Platzierungen.
@@ -88,7 +88,7 @@
         let rankColor = myRank === 1 ? 'var(--primary)' : myRank <= 3 ? 'var(--accent)' : 'var(--text-muted)';
         let rankEmoji = myRank === 1 ? '🥇' : myRank === 2 ? '🥈' : myRank === 3 ? '🥉' : '⭐';
 
-        let html = `<div style="font-size:var(--fs-small); font-weight:bold; margin-bottom:6px;">🎓 AKADEMIE-RANGLISTE</div>`;
+        let html = `<div style="font-size:var(--fs-small); font-weight:bold; margin-bottom:6px;">🎓 Akademie-Rangliste</div>`;
 
         html += `<div style="background:color-mix(in srgb, var(--primary) 10%, transparent); padding:8px; border-radius:4px; margin-bottom:8px; border-left:4px solid ${rankColor}">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
@@ -109,7 +109,7 @@
         ];
         allAcademies.sort((a, b) => b.points - a.points);
 
-        html += `<div style="font-size:var(--fs-caption); font-weight:bold; margin-bottom:4px;">🏆 TOP ACADEMIES</div>`;
+        html += `<div class="ui-overline" style="font-size:var(--fs-caption); font-weight:bold; margin-bottom:4px;">🏆 Top Academies</div>`;
         allAcademies.forEach((academy, idx) => {
             let isOwnAcademy = academy.name === game.clubName + ' U23';
             let color = isOwnAcademy ? 'var(--primary)' : 'var(--text-muted)';

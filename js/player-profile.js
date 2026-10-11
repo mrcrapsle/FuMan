@@ -88,7 +88,7 @@ function renderPlayerProfile(p) {
     const titel = (p.honours || []).slice().reverse();
     const intl = (p.caps || 0) > 0 ? `🌍 ${p.caps} Länderspiele, ${p.intlGoals || 0} Tore${(p.intlTitles || []).length ? ` · ${p.intlTitles.length} Turniertitel` : ''}<br>` : '';
     return `<div class="box" style="font-size:var(--fs-caption); text-align:left;">
-        <div style="font-weight:700; color:var(--accent); margin-bottom:4px;">📊 KARRIEREPROFIL${legende ? ' · <span style="color:var(--gold);">🏛️ VEREINSLEGENDE</span>' : ''}</div>
+        <div style="font-weight:700; color:var(--accent); margin-bottom:4px;">📊 Karriereprofil${legende ? ' · <span style="color:var(--gold);">🏛️ Vereinslegende</span>' : ''}</div>
         🏟️ Im Verein ${describeJoin(p)}${legende ? '' : ` · Legende ab ${LEGEND_APPS} Pflichtspielen oder ${LEGEND_SEASONS} Saisons`}<br>
         ${arch ? `${arch.icon} ${arch.name} - Höhepunkt mit etwa ${arch.peakAge} Jahren${typeof formatDevelopmentRange === 'function' ? ` · nächster Sommer: ${formatDevelopmentRange(p)}` : ''}<br>` : ''}
         ⚽ ${p.appearances || 0} Pflichtspiele · ${p.goalsCareer || 0} Tore · ${vorlagen} Vorlagen · ${elf}× Elf des Spieltags${besteNote ? ` · beste Saisonnote ${fmt(besteNote.toFixed(2))}` : ''}<br>

@@ -88,7 +88,7 @@
     }
 
     // ==========================================
-    // POKALSCHRECK-TRACKING & EIGENE POKAL-STATISTIK
+    // POKALSCHRECK-TRACKING & Eigene Pokal-Statistik
     // ==========================================
     function recordCupResultStats(weWon, ourStr, oppStr, oppName, roundName) {
         if (!game.cupHistory) game.cupHistory = { titlesWon: 0, schrecksErlitten: [], schrecksVerursacht: [], bestRunEver: null, matchesPlayed: 0, wins: 0 };
@@ -115,9 +115,9 @@
         let winRate = h.matchesPlayed > 0 ? Math.round((h.wins / h.matchesPlayed) * 100) : 0;
         box.innerHTML = `
             <div class="box" style="font-size:var(--fs-small);">🏆 Pokaltitel: <strong>${(game.trophies || []).filter(t => t.includes('Pokalsieger')).length}</strong> · Bilanz: ${h.wins}/${h.matchesPlayed} Siege (${winRate}%)</div>
-            <div style="font-size:var(--fs-caption); font-weight:800; color:var(--text-muted); margin:6px 0 3px;">😱 ERLITTENE POKALSCHRECKS</div>
+            <div class="ui-overline" style="font-size:var(--fs-caption); font-weight:800; color:var(--text-muted); margin:6px 0 3px;">😱 Erlittene Pokalschrecks</div>
             ${h.schrecksErlitten.length === 0 ? '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch keiner - gut so!</div>' : h.schrecksErlitten.slice(0, 3).map(s => `<div class="box" style="font-size:var(--fs-caption);">Saison ${s.season}, ${s.round}: Aus gegen ${s.opponent} (-${s.diff} Stärke unterlegen)</div>`).join('')}
-            <div style="font-size:var(--fs-caption); font-weight:800; color:var(--text-muted); margin:6px 0 3px;">🎉 VERURSACHTE SENSATIONEN</div>
+            <div class="ui-overline" style="font-size:var(--fs-caption); font-weight:800; color:var(--text-muted); margin:6px 0 3px;">🎉 Verursachte Sensationen</div>
             ${h.schrecksVerursacht.length === 0 ? '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch keine Überraschung geschafft.</div>' : h.schrecksVerursacht.slice(0, 3).map(s => `<div class="box" style="font-size:var(--fs-caption);">Saison ${s.season}, ${s.round}: Sieg gegen favorisierten ${s.opponent} (+${s.diff} Stärke unterlegen)</div>`).join('')}
         `;
     }

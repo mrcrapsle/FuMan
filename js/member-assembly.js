@@ -155,7 +155,7 @@ function renderMemberAssemblyPanel() {
     box.style.display = 'block';
     const r = a.report;
     const verlauf = r.promoted ? '⬆️ Aufstieg' : r.relegated ? '⬇️ Abstieg' : 'Klassenerhalt';
-    let html = `<div class="panel-header" style="color:var(--gold);">🗳️ MITGLIEDERVERSAMMLUNG (SAISON ${r.season})</div>
+    let html = `<div class="panel-header" style="color:var(--gold);">🗳️ Mitgliederversammlung (Saison ${r.season})</div>
         <div style="font-size:var(--fs-caption); display:grid; grid-template-columns:1fr 1fr; gap:3px; margin-bottom:6px;">
             <div>Endplatz: <strong>${r.finalRank}.</strong> (erwartet: ${r.expectedRank}.)</div>
             <div>${verlauf}</div>

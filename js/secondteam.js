@@ -368,7 +368,7 @@
         showToast(`⬇️ ${p.name} in die zweite Mannschaft verschoben!`, 'success');
     }
 
-    // ---------- EIGENER AMATEUR-TRANSFERMARKT ----------
+    // ---------- EIGENER Amateur-Transfermarkt ----------
     // Bewusst schwächer/günstiger skaliert als der Erstliga-Markt (refreshTransferMarket()
     // in transfermarket.js) und über game.money statt des Transferbudgets der ersten
     // Mannschaft finanziert - beide Kader konkurrieren so nicht um dasselbe Budget.
@@ -595,7 +595,7 @@
     }
 
     // ==========================================
-    // EIGENER TRAINERSTAB DER ZWEITEN MANNSCHAFT
+    // Eigener Trainerstab DER ZWEITEN MANNSCHAFT
     // ==========================================
     // Die Reserve wurde bisher gar nicht betreut: zwischen zwei Saisons veränderte sich ihr
     // Kader überhaupt nicht, Fitness wurde nie verbraucht oder aufgebaut, junge Spieler
@@ -891,7 +891,7 @@
                 Das interne Testspiel bringt kein Geld, kostet beide Mannschaften Kraft - dafür lernen die Talente am meisten.
             </div>
             ${log.length > 0 ? `<div class="box" style="margin-top:6px;">
-                <strong style="font-size:var(--fs-small);">LETZTE SPIELE</strong>
+                <strong style="font-size:var(--fs-small);">Letzte Spiele</strong>
                 ${log.map(e => `<div style="display:flex; justify-content:space-between; font-size:var(--fs-caption); margin-top:2px;">
                     <span>${e.art === 'intern' ? '⚔️' : '🤝'} ST ${e.matchday} vs. ${e.gegner}</span>
                     <span><strong>${e.ergebnis}</strong>${e.saldo !== 0 ? ` · <span style="color:${e.saldo > 0 ? 'var(--primary)' : 'var(--danger)'};">${e.saldo > 0 ? '+' : ''}${formatVal(e.saldo)}</span>` : ''}${e.entwickelt && e.entwickelt.length ? ` · <span style="color:var(--primary);">+${e.entwickelt.length} 🌱</span>` : ''}</span>

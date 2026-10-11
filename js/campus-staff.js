@@ -275,7 +275,7 @@
             poachBox.style.display = p ? 'block' : 'none';
             if (p) {
                 let s = staffMembers[p.key];
-                poachBox.innerHTML = `<div class="panel-header" style="color:var(--danger);">🎯 ABWERBEVERSUCH: ${s.name}</div>
+                poachBox.innerHTML = `<div class="panel-header" style="color:var(--danger);">🎯 Abwerbeversuch: ${s.name}</div>
                     <div class="box" style="font-size:var(--fs-small);">Bindungsprämie zahlen (${formatVal(p.retentionCost)}) oder ziehen lassen?</div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
                         <button onclick="resolveStaffPoaching(true)" class="btn-action">💰 Halten</button>
@@ -289,7 +289,7 @@
             poolBox.style.display = pool ? 'block' : 'none';
             if (pool) {
                 let s = staffMembers[pool.key];
-                poolBox.innerHTML = `<div class="panel-header">📋 BEWERBUNGSPOOL: ${s.name}</div>` +
+                poolBox.innerHTML = `<div class="panel-header">📋 Bewerbungspool: ${s.name}</div>` +
                     pool.candidates.map((c, idx) => {
                         // Der Grund steht direkt beim Knopf: sonst wirkte "Einstellen" ohne Wirkung (Kasse oder Obergrenze).
                         const preis = Math.round(s.cost * c.costMult);

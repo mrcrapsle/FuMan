@@ -51,7 +51,7 @@
         let goldUp = steigt(stockMarket.greenEnergy);
         el.innerHTML = `
             <span>📈 DAX <span class="${daxUp ? 'tick-up' : 'tick-down'}">${dax} ${daxUp ? '▲' : '▼'}</span></span>
-            <span>💵 DOLLAR <span class="${dollarUp ? 'tick-up' : 'tick-down'}">${dollar} ${dollarUp ? '▲' : '▼'}</span></span>
+            <span>💵 Dollar <span class="${dollarUp ? 'tick-up' : 'tick-down'}">${dollar} ${dollarUp ? '▲' : '▼'}</span></span>
             <span>🥇 GOLD <span class="${goldUp ? 'tick-up' : 'tick-down'}">${gold} ${goldUp ? '▲' : '▼'}</span></span>
         `;
     }
@@ -171,7 +171,7 @@
             if (game.negativeStreak > 0) {
                 insolvencyBox.style.display = 'block';
                 insolvencyBox.innerHTML = `⚠️ Konto seit <strong>${game.negativeStreak}</strong> Spieltagen im Minus.` +
-                    (game.transferEmbargo ? ' <strong style="color:var(--danger);">TRANSFERSPERRE AKTIV!</strong>' : '') +
+                    (game.transferEmbargo ? ' <strong style="color:var(--danger);">Transfersperre aktiv!</strong>' : '') +
                     `<br><span style="font-size:var(--fs-caption);">Bei 6 Spieltagen in Folge droht eine Transfersperre, bei Vielfachen von 10 ein Zwangsverkauf, bei Vielfachen von 15 Punktabzug.</span>`;
             } else {
                 insolvencyBox.style.display = 'none';
@@ -255,7 +255,7 @@
     }
 
     // ==========================================
-    // TICKETPREISE MIT SCHIEBEREGLERN & LIVE-VORSCHAU
+    // Ticketpreise MIT SCHIEBEREGLERN & LIVE-VORSCHAU
     // ==========================================
     // Ersetzt die einfachen Zahlenfelder durch Schieberegler mit sofortiger Vorschau
     // (erwartete Zuschauer, Auslastung, Tageskasse, Saison-Hochrechnung) - Preise werden
@@ -371,10 +371,10 @@
             ${sliderRow('Dauerkarte', 'dauerkarte')}
             <div class="box" style="font-size:var(--fs-caption); margin-bottom:10px;">🎟️ Aktuell <strong>${(game.seasonTicketHolders || 0).toLocaleString('de-DE')}</strong> Dauerkarten (${dauerkartenPct}% der Plätze). Ein neuer Preis wirkt erst beim nächsten Saisonverkauf - die Vorschau rechts zeigt nur das Tagesgeschäft.</div>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin:12px 0;">
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">ERWARTETE ZUSCHAUER</div><div style="font-size:var(--fs-title); font-weight:900;">${stats.totalAtt.toLocaleString('de-DE')}</div><div style="font-size:var(--fs-micro); color:var(--text-muted);">Steh ${stats.stehAtt.toLocaleString('de-DE')} · Sitz ${stats.sitzAtt.toLocaleString('de-DE')} · VIP ${stats.vipAtt} · Dauerkarte ${stats.dauerkartenAnwesend.toLocaleString('de-DE')}</div></div>
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">AUSLASTUNG</div><div style="font-size:var(--fs-title); font-weight:900; color:${stats.utilization>=70?'var(--primary)':'var(--accent)'};">${stats.utilization.toFixed(1)}%</div></div>
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">TAGESKASSE JE HEIMSPIEL</div><div style="font-size:var(--fs-title); font-weight:900; color:var(--gold);">${formatVal(stats.matchRevenue)}</div><div style="font-size:var(--fs-micro); color:${changePercent>=0?'var(--primary)':'var(--danger)'};">${changePercent>=0?'+':''}${changePercent.toFixed(1)}% ggü. jetzt</div></div>
-                <div class="box"><div style="font-size:var(--fs-micro); color:var(--text-muted);">HOCHRECHNUNG SAISON</div><div style="font-size:var(--fs-title); font-weight:900; color:var(--gold);">${formatVal(stats.seasonProjection)}</div><div style="font-size:var(--fs-micro); color:var(--text-muted);">17 Heimspiele, geschätzt (ohne Dauerkarten-Erlös)</div></div>
+                <div class="box"><div class="ui-overline" style="font-size:var(--fs-micro); color:var(--text-muted);">Erwartete Zuschauer</div><div style="font-size:var(--fs-title); font-weight:900;">${stats.totalAtt.toLocaleString('de-DE')}</div><div style="font-size:var(--fs-micro); color:var(--text-muted);">Steh ${stats.stehAtt.toLocaleString('de-DE')} · Sitz ${stats.sitzAtt.toLocaleString('de-DE')} · VIP ${stats.vipAtt} · Dauerkarte ${stats.dauerkartenAnwesend.toLocaleString('de-DE')}</div></div>
+                <div class="box"><div class="ui-overline">Auslastung</div><div style="font-size:var(--fs-title); font-weight:900; color:${stats.utilization>=70?'var(--primary)':'var(--accent)'};">${stats.utilization.toFixed(1)}%</div></div>
+                <div class="box"><div class="ui-overline" style="font-size:var(--fs-micro); color:var(--text-muted);">Tageskasse je Heimspiel</div><div style="font-size:var(--fs-title); font-weight:900; color:var(--gold);">${formatVal(stats.matchRevenue)}</div><div style="font-size:var(--fs-micro); color:${changePercent>=0?'var(--primary)':'var(--danger)'};">${changePercent>=0?'+':''}${changePercent.toFixed(1)}% ggü. jetzt</div></div>
+                <div class="box"><div class="ui-overline" style="font-size:var(--fs-micro); color:var(--text-muted);">Hochrechnung Saison</div><div style="font-size:var(--fs-title); font-weight:900; color:var(--gold);">${formatVal(stats.seasonProjection)}</div><div style="font-size:var(--fs-micro); color:var(--text-muted);">17 Heimspiele, geschätzt (ohne Dauerkarten-Erlös)</div></div>
             </div>
             <div style="font-size:var(--fs-small); margin-bottom:10px;">${feedbackText}</div>
             <button onclick="commitTicketPrices()" class="btn-action" style="margin-bottom:6px;">✅ Preise übernehmen</button>
@@ -750,7 +750,7 @@
         let verlauf = '';
         if (ledgerView === 'letzter' && ledger.length > 1) {
             verlauf = `<div class="box" style="margin-top:6px;">
-                <strong style="font-size:var(--fs-body);">📈 LETZTE SPIELTAGE</strong>
+                <strong class="ui-overline" style="font-size:var(--fs-body);">📈 Letzte Spieltage</strong>
                 ${ledger.slice(-6).reverse().map(e => {
                     let s = (e.summeEin || 0) - (e.summeAus || 0);
                     return `<div style="display:flex; justify-content:space-between; font-size:var(--fs-small); margin-top:2px;">
@@ -766,13 +766,13 @@
             <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:6px;">${kopf}</div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
                 <div class="box">
-                    <strong style="color:var(--primary); font-size:var(--fs-body);">EINNAHMEN ${formatVal(sumEinGes)}</strong>
+                    <strong class="ui-overline" style="color:var(--primary); font-size:var(--fs-body);">Einnahmen ${formatVal(sumEinGes)}</strong>
                     <div style="margin-top:5px;">
                         ${einnahmen.length ? einnahmen.map(p => ledgerRow(p.label + anteil(p.amount, sumEinGes), p.amount, maxEin, 'var(--primary)')).join('') : '<span style="font-size:var(--fs-small); color:var(--text-muted);">Keine Einnahmen verbucht.</span>'}
                     </div>
                 </div>
                 <div class="box">
-                    <strong style="color:var(--danger); font-size:var(--fs-body);">AUSGABEN ${formatVal(sumAusGes)}</strong>
+                    <strong class="ui-overline" style="color:var(--danger); font-size:var(--fs-body);">Ausgaben ${formatVal(sumAusGes)}</strong>
                     <div style="margin-top:5px;">
                         ${ausgaben.length ? ausgaben.map(p => ledgerRow(p.label + anteil(p.amount, sumAusGes), p.amount, maxAus, 'var(--danger)')).join('') : '<span style="font-size:var(--fs-small); color:var(--text-muted);">Keine Ausgaben verbucht.</span>'}
                     </div>
@@ -956,7 +956,7 @@
         }
         const zeile = (name, wert, farbe) => `<div style="display:flex; justify-content:space-between; font-size:var(--fs-small); margin-top:3px;"><span>${name}</span><strong style="color:${farbe};">${formatVal(wert)}</strong></div>`;
         return `<div class="box" style="margin-bottom:6px;">
-            <strong style="font-size:var(--fs-body);">🔁 TRANSFERBILANZ DIESE SAISON</strong>
+            <strong style="font-size:var(--fs-body);">🔁 Transferbilanz diese Saison</strong>
             ${zeile('Spielerverkäufe', b.verkauf, 'var(--primary)')}
             ${zeile('Weiterverkaufsbeteiligungen', b.weiterverkauf, 'var(--primary)')}
             ${zeile('Spielerkäufe', -b.kauf, 'var(--danger)')}
@@ -985,7 +985,7 @@
             ${renderTransferBilanzBox()}
             <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:6px;">Alle Kontobewegungen ausserhalb der Spieltagsabrechnung (letzte ${MAX_KONTOAUSZUG} Buchungen). Die Spieltagsposten finden Sie in den beiden anderen Reitern.</div>
             <div class="box" style="margin-bottom:6px;">
-                <strong style="font-size:var(--fs-body);">📊 NACH BEREICH</strong>
+                <strong style="font-size:var(--fs-body);">📊 Nach Bereich</strong>
                 ${bereiche.map(b => `
                     <div style="display:flex; justify-content:space-between; font-size:var(--fs-small); margin-top:3px;">
                         <span>${b.label}</span>

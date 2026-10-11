@@ -1,6 +1,6 @@
 
     // ==========================================
-    // TRAINER-PRIVATLEBEN: GEHALT, LIFESTYLE, HOBBYS, EINKOMMENSQUELLEN
+    // Trainer-Privatleben: GEHALT, LIFESTYLE, HOBBYS, EINKOMMENSQUELLEN
     // ==========================================
     function renderPrivateLifeView() {
         document.getElementById('priv-money').innerText = formatVal(privateLife.money);
@@ -122,7 +122,7 @@
         showToast(`💰 ${activity.name}: +${formatVal(activity.income)}!`, 'success');
     }
 
-    // ---------- HOBBY & BEZIEHUNGSSTATUS ----------
+    // ---------- Hobby & Beziehungsstatus ----------
     function setHobby(hobbyId) {
         if (!HOBBIES.some(h => h.id === hobbyId)) return;
         privateLife.hobby = hobbyId;
@@ -135,7 +135,7 @@
         renderPrivateLifeView();
     }
 
-    // ---------- WOHLTÄTIGKEIT & KAPITALTRANSFER ----------
+    // ---------- Wohltätigkeit & Kapitaltransfer ----------
     function makeCharityDonation(amount) {
         if (!amount || amount <= 0 || privateLife.money < amount) { showToast('Ungültiger Betrag oder nicht genug Privatvermögen!', 'error'); return; }
         playSound('click');

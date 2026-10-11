@@ -1,6 +1,6 @@
 
     // ==========================================
-    // POSTFACH: zentrales Nachrichtensystem für Transferangebote, Verletzungen,
+    // Postfach: zentrales Nachrichtensystem für Transferangebote, Verletzungen,
     // auslaufende Verträge, Finanzwarnungen, Scouting-Ergebnisse & Spielanalysen.
     // Ergänzt die bestehenden Toasts (die bleiben für sofortiges Feedback), gibt aber
     // zusätzlich eine durchsuchbare, dauerhafte Übersicht wie in der Referenz-App.
@@ -83,12 +83,12 @@
     }
 
     const INBOX_CATEGORY_META = {
-        transfer: { icon: '🤝', color: 'var(--blue)' },
-        verletzung: { icon: '🩹', color: 'var(--danger)' },
-        finanzen: { icon: '💰', color: 'var(--accent)' },
-        scouting: { icon: '🔭', color: 'var(--teal)' },
-        analyse: { icon: '📋', color: 'var(--violet)' },
-        vertrag: { icon: '📄', color: 'var(--purple)' }
+        transfer: { icon: '🤝', color: 'var(--blue)', label: 'Transfer' },
+        verletzung: { icon: '🩹', color: 'var(--danger)', label: 'Verletzung' },
+        finanzen: { icon: '💰', color: 'var(--accent)', label: 'Finanzen' },
+        scouting: { icon: '🔭', color: 'var(--teal)', label: 'Scouting' },
+        analyse: { icon: '📋', color: 'var(--violet)', label: 'Analyse' },
+        vertrag: { icon: '📄', color: 'var(--purple)', label: 'Vertrag' }
     };
 
     function renderInboxView() {
@@ -110,24 +110,27 @@
         }
         let isArchiveView = inboxFilter === 'archiv';
         list.innerHTML = filtered.map(m => {
-            let meta = INBOX_CATEGORY_META[m.category] || { icon: '📌', color: 'var(--accent)' };
-            let linkBtn = m.screenLink ? `<button onclick="markInboxRead(${m.id}); showScreen('${m.screenLink}')" class="btn-secondary" style="font-size:var(--fs-caption); width:auto; margin-top:4px;">Ansehen →</button>` : '';
+            let meta = INBOX_CATEGORY_META[m.category] || { icon: '📌', color: 'var(--accent)', label: 'Info' };
+            let linkBtn = m.screenLink ? `<button onclick="markInboxRead(${m.id}); showScreen('${m.screenLink}')" class="btn-secondary">Ansehen →</button>` : '';
             let archiveBtn = isArchiveView
-                ? `<button onclick="event.stopPropagation(); restoreInboxMessage(${m.id})" style="background:none; border:none; color:var(--primary); cursor:pointer; font-size:var(--fs-body); padding:0 2px;" title="Wiederherstellen">↺</button>`
-                : `<button onclick="event.stopPropagation(); archiveInboxMessage(${m.id})" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:var(--fs-body); padding:0 2px;" title="Archivieren">🗄️</button>`;
+                ? `<button onclick="event.stopPropagation(); restoreInboxMessage(${m.id})" class="ui-icon-btn" style="color:var(--primary);" title="Wiederherstellen" aria-label="Wiederherstellen">↺</button>`
+                : `<button onclick="event.stopPropagation(); archiveInboxMessage(${m.id})" class="ui-icon-btn" title="Archivieren" aria-label="Archivieren">🗄️</button>`;
+            // Kartenmuster: Kategorie als Bild, Titel, Kategorie und Datum, Chips, Aktionen rechts
             return `
-                <div class="box" style="border-left-color:${m.important ? 'var(--gold)' : meta.color}; ${m.read ? 'opacity:0.6;' : ''} cursor:pointer;" onclick="markInboxRead(${m.id})">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                        <strong style="color:${meta.color};">${meta.icon} ${m.title}</strong>
-                        <span>
-                            <button onclick="event.stopPropagation(); toggleInboxImportant(${m.id})" style="background:none; border:none; color:${m.important ? 'var(--gold)' : 'var(--europe)'}; cursor:pointer; font-size:var(--fs-body-lg); padding:0 2px;" title="Als wichtig markieren">${m.important ? '★' : '☆'}</button>
+                <div class="box ui-mail${m.read ? ' ui-mail-gelesen' : ''}" style="border-left-color:${m.important ? 'var(--gold)' : meta.color}; cursor:pointer;" onclick="markInboxRead(${m.id})">
+                    ${renderUiCard({
+                        thumb: `<span class="ui-thumb-icon" style="background:color-mix(in srgb, ${meta.color} 16%, transparent); border-color:color-mix(in srgb, ${meta.color} 40%, transparent);">${meta.icon}</span>`,
+                        title: `<span style="color:${meta.color};">${m.title}</span>`,
+                        sub: `${meta.label} · SpT ${m.matchday} · Saison ${m.season}`,
+                        meta: [m.read ? '' : uiChip('● Neu', 'gut'), m.important ? uiChip('★ Wichtig', 'warn') : ''],
+                        aside: `<span class="ui-icon-row">
+                            <button onclick="event.stopPropagation(); toggleInboxImportant(${m.id})" class="ui-icon-btn" style="color:${m.important ? 'var(--gold)' : 'var(--text-muted)'};" title="Als wichtig markieren" aria-label="Als wichtig markieren">${m.important ? '★' : '☆'}</button>
                             ${archiveBtn}
-                            <button onclick="event.stopPropagation(); deleteInboxMessage(${m.id})" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:var(--fs-body); padding:0 2px;" title="Endgültig löschen">✕</button>
-                        </span>
-                    </div>
-                    <div style="font-size:var(--fs-small); margin-top:3px;">${m.body}</div>
-                    <div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:4px;">Saison ${m.season} · Spieltag ${m.matchday}/34 ${m.read ? '' : ' · <span style="color:var(--primary);">● Neu</span>'}</div>
-                    ${linkBtn}
+                            <button onclick="event.stopPropagation(); deleteInboxMessage(${m.id})" class="ui-icon-btn" title="Endgültig löschen" aria-label="Endgültig löschen">✕</button>
+                        </span>`,
+                        body: m.body,
+                        actions: linkBtn
+                    })}
                 </div>`;
         }).join('');
     }

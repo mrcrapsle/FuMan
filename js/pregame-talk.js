@@ -110,7 +110,7 @@ function renderPregameTalkBox() {
         const alt = isPregameTalkWornOut(type) ? ' <span style="font-size:var(--fs-micro); opacity:0.8;">(kennen sie schon)</span>' : '';
         return `<button onclick="choosePregameTalk('${type}')" class="${gewaehlt ? 'btn-action' : 'btn-secondary'}" style="font-size:var(--fs-small); margin-bottom:4px;">${gewaehlt ? '✔ ' : ''}${PREGAME_TALKS[type].label}${alt}</button>`;
     };
-    box.innerHTML = `<div class="panel"><div class="panel-header">🗣️ KABINENANSPRACHE VOR DEM ANPFIFF</div>
+    box.innerHTML = `<div class="panel"><div class="panel-header">🗣️ Kabinenansprache vor dem Anpfiff</div>
         <div class="box" style="font-size:var(--fs-small);">${lage}. In der Startelf: ${c.count('Ruhig') + c.count('Bescheiden')} ruhige/bescheidene, ${c.count('Ehrgeizig') + c.count('Selbstbewusst')} ehrgeizige/selbstbewusste, ${c.count('Emotional') + c.count('Hitzköpfig')} emotionale/hitzköpfige Spieler.
             <div style="color:var(--text-muted); margin-top:2px;">Konzentration wirkt als Favorit, Mut als Außenseiter, Druck spaltet: Ehrgeizige wachsen, Hitzköpfe verkrampfen - und nach einer Niederlage kostet er Moral.</div></div>
         ${knopf('fokus')}${knopf('mut')}${knopf('druck')}

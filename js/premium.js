@@ -1,6 +1,6 @@
 
     // ==========================================
-    // PREMIUM-SHOP (SIMULIERT)
+    // Premium-Shop (SIMULIERT)
     // ==========================================
     // WICHTIGER HINWEIS: Diese Einzeldatei-HTML-App hat keine Anbindung an einen echten
     // Zahlungsanbieter (Stripe, Google Play Billing, App Store usw.) - eine solche Anbindung

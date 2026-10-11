@@ -1,6 +1,6 @@
 
     // ==========================================
-    // IMMOBILIEN-PORTFOLIO
+    // Immobilien-Portfolio
     // ==========================================
     // Der Verein investiert in Immobilien rund ums Stadion, um sich eine zweite,
     // fußballunabhängige Einnahmequelle aufzubauen - je Objekt eine einmalige

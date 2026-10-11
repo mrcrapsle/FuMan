@@ -132,7 +132,7 @@
     }
     function renderBonusClausesBlock(p) {
         return `<div style="font-size:var(--fs-caption); margin-top:4px; border-top:1px solid var(--border); padding-top:4px;">
-            <div style="font-weight:800; color:var(--text-muted); margin-bottom:2px;">🎯 ERFOLGSBASIERTE BONI</div>
+            <div class="ui-overline" style="font-weight:800; color:var(--text-muted); margin-bottom:2px;">🎯 Erfolgsbasierte Boni</div>
             ${renderBonusClauseRow(p, 'goals')}
             ${renderBonusClauseRow(p, 'appearances')}
             ${renderBonusClauseRow(p, 'promotion')}

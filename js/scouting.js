@@ -1,6 +1,6 @@
 
     // ==========================================
-    // WELTWEITES SCOUTING-NETZWERK 2.0 (komplett neu aufgebaut)
+    // WELTWEITES Scouting-Netzwerk 2.0 (komplett neu aufgebaut)
     // ==========================================
     // Kernideen der Neufassung:
     // 1. Scout-Netzwerk: bis zu 4 Regional-Scouts, jeweils eigenes Skill-Level, das die

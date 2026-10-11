@@ -129,7 +129,7 @@ function renderWinterTalkCard() {
     const betrag = getWinterBudgetAmount();
     const hochGeht = !!r.expected && r.expected > 1;
     const runterGeht = !!r.expected && r.expected < r.teams;
-    box.innerHTML = `<div class="panel" style="border:1px solid var(--gold);"><div class="panel-header" style="color:var(--gold);">🏛️ WINTERPAUSE: GESPRÄCH MIT DEM VORSTAND</div>
+    box.innerHTML = `<div class="panel" style="border:1px solid var(--gold);"><div class="panel-header" style="color:var(--gold);">🏛️ Winterpause: Gespräch mit dem Vorstand</div>
         <div class="box" style="font-size:var(--fs-small);">Zwischenbilanz: Platz <strong>${r.rank || '-'}</strong>, erwartet Platz ${r.expected || '-'} - ${urteil}. Kasse seit Saisonbeginn ${r.geld >= 0 ? '+' : ''}${formatVal(r.geld)}. Nur bis Spieltag ${WINTER_TALK_LAST_MD}, ein Weg pro Saison.</div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
             <button onclick="chooseWinterTalk('hoch')" class="${hochGeht ? 'btn-action' : 'btn-secondary'}" style="font-size:var(--fs-small);">${hochGeht ? `🎯 Ziel hoch (Platz ${Math.max(1, r.expected - 2)}): +5, ${formatVal(betrag)} sofort - verfehlt -10` : '🎯 Platz 1 ist schon das Ziel - höher geht es nicht'}</button>

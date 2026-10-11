@@ -449,3 +449,11 @@ Die Basis-Datei nennt die Schwelle nicht im Inhalt, die Zuordnung folgt nur dem 
 - `testMobileLayout` prüft jetzt mindestens 11 px statt 8 px; `testDesignThemes` prüft Kontrast aller Themes (Text, Nebentext, Akzent, Gut, Schlecht ≥ 4,5:1 auf Karten), Speicherung, Textgröße und Überlauf bei sehr großer Schrift.
 
 **Offen (bewusst nicht in dieser Runde):** helles Theme (rund 135 fest eingetragene Farben in JS, z. B. weiße Texte, würden auf hellem Grund unlesbar), weitere Karten auf das Muster umstellen (Kader-Liste, Postfach, Angebote, Jugend), Großbuchstaben-Überschriften in `index.html` auf normale Schreibung.
+
+## Phase 25.52: Zentrales Farbsystem, helles Theme, Kartenmuster Teil 2, Schreibung
+
+- **Farben:** rund 330 feste Farbwerte in CSS, JS und HTML auf Tokens umgestellt (Konverter: weiße Aufhellungen → `--ink`, Schatten → `--shade`, Tönungen → Farb-Token per `color-mix`, dunkle Flächen → `--surface-0…3`, Schrift auf Füllungen → `--on-strong`/`--on-accent`). Knöpfe und Positionsabzeichen haben eigene Füll-Tokens (`--accent-fill`, `--danger-fill`, `--violet-fill`, `--pos-*`). Undefinierte Tokens (`--green`, `--text`, `--bg-panel`, `--text-primary` …) ersetzt. Illustrationen behalten ihre Farben und setzen lokal Nacht-Tokens.
+- **Neues Theme Tageslicht** (hell). Kontrast-Scan über alle Bildschirme × 6 Themes: vorher über 300 Stellen unter WCAG AA, danach 0. Dabei auch im Standard-Theme verbessert: violette Hauptknöpfe (3,0 → 5,5:1), Rot (#ff6b7a), Nebentext (#91a3c4).
+- **Kartenmuster** jetzt auch für Kaderliste, Postfach und Jugend. Postfach: gelesene Nachrichten nicht mehr per Transparenz (Kontrast), Symbol-Knöpfe mit 32 px Tippfläche.
+- **Schreibung:** rund 250 Überschriften von Großbuchstaben auf korrekte deutsche Schreibung (von Hand festgelegt), kurze Etiketten über `.ui-overline` in Großbuchstaben per CSS; englische Übersetzungen mitgezogen.
+- **Tests:** `testKeineFestenFarben` (Quelltext), `testKontrastAlleThemes` (Laufzeit, ca. 20 s).
