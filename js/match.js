@@ -124,7 +124,7 @@
         let bonus = licenseConfig[privateLife.license].boost + (staffMembers.coTrainer.hired ? 2 * getStaffLevelMultiplier('coTrainer') * getStaffEffectivenessMultiplier('coTrainer') : 0) + (isHomeMatch ? 3 : 0);
         // Head-Greenkeeper: perfekt gepflegter Rasen gibt bei Heimspielen einen spürbaren
         // Vorteil (war bisher nur Text ohne tatsächliche Wirkung), skaliert mit Ausbaustufe.
-        if (isHomeMatch && staffMembers.greenkeeper.hired) bonus += 2 * getStaffLevelMultiplier('greenkeeper');
+        if (isHomeMatch && staffMembers.greenkeeper.hired) bonus += getGreenkeeperEffekt().heim * getStaffLevelMultiplier('greenkeeper');
         // Trainingsgelände mit Flutlicht (Campus): permanenter Stärkebonus für die gesamte
         // Mannschaft, unabhängig vom Spielort (war bisher nur Text ohne tatsächliche Wirkung).
         bonus += (campusBuildings.trainingground?.lvl || 0) * 1;

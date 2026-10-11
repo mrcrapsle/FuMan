@@ -2488,6 +2488,55 @@ async function testPersonalEinstellen(browser) {
     await page.close();
 }
 
+async function testGreenkeeperAufgabe(browser) {
+    console.log('\n[25.46] Greenkeeper: Rasenpflege oder Schnellrasen');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        staffMembers.greenkeeper.hired = true;
+        const out = {};
+        out.standard = getGreenkeeperEffekt().heim === 2 && getGreenkeeperEffekt().ermuedung === 1;
+        setGreenkeeperTask('tempo');
+        out.tempo = getGreenkeeperEffekt().heim === 3 && getGreenkeeperEffekt().ermuedung === 1.1;
+        setGreenkeeperTask('unbekannt');
+        out.ungueltig = staffMembers.greenkeeper.task === 'tempo';
+        renderStaffView();
+        out.sichtbar = document.getElementById('staff-list-container').innerText.includes('Schnellrasen');
+        return out;
+    });
+    assert(r.standard, 'Ohne Wahl: Heimvorteil +2 je Stufe, normale Ermüdung');
+    assert(r.tempo, 'Schnellrasen: Heimvorteil +3 je Stufe, Ermüdung auf Heimspielen +10 %');
+    assert(r.ungueltig, 'Eine unbekannte Greenkeeper-Aufgabe wird nicht übernommen');
+    assert(r.sichtbar, 'Die Greenkeeper-Aufgabe erscheint in der Personalliste');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Greenkeeper');
+    await page.close();
+}
+
+async function testPersonalEinstellenHandy(browser) {
+    console.log('\n[25.46] Personal einstellen auf dem Handy (390 x 844): Pool sichtbar, kein seitlicher Überlauf');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => { closeTutorial(); game.money = 90000000; showScreen('screen-staff'); renderStaffView(); });
+    await page.evaluate(() => { const l = document.getElementById('staff-list-container'); l.scrollTop = l.scrollHeight; });
+    await page.locator('#staff-list-container button', { hasText: 'Einstellen' }).last().click();
+    // Nach dem Tippen scrollt die Seite zum Pool; er soll im sichtbaren Bereich liegen
+    await page.waitForTimeout(600);
+    const r = await page.evaluate(() => {
+        const b = document.getElementById('staff-candidate-pool-box');
+        const t = b ? b.getBoundingClientRect().top : -1;
+        return { sichtbar: t >= 0 && t < window.innerHeight, ueberlauf: document.documentElement.scrollWidth > window.innerWidth };
+    });
+    await page.locator('#staff-candidate-pool-box button').first().click();
+    const eingestellt = await page.evaluate(() => Object.keys(staffMembers).filter(k => staffMembers[k].hired).length);
+    assert(r.sichtbar, 'Auf dem Handy liegt der Bewerbungspool nach dem Tippen im sichtbaren Bereich');
+    assert(!r.ueberlauf, 'Auf dem Handy gibt es keinen seitlichen Überlauf im Personal-Bildschirm');
+    assert(eingestellt >= 1, 'Auf dem Handy lässt sich ein Bewerber einstellen');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler auf dem Handy-Bildschirm');
+    await page.close();
+}
+
 async function testBoardEarlyWarning(browser) {
     console.log('\n[25.24] Vorstand: Frühwarnung schon unter 50 Zufriedenheit, einmal pro Saison');
     const { page, consoleErrors } = await freshPage(browser);
@@ -9954,6 +10003,8 @@ async function main() {
         testAlteAngebotKappung,
         testStaffAufgabenModi,
         testPersonalEinstellen,
+        testGreenkeeperAufgabe,
+        testPersonalEinstellenHandy,
         testEntlassungsGrund,
         testEnglishUi,
         testSwapDeals,

@@ -962,6 +962,7 @@
         if (staffMembers.fitCoach.hired) fitLoss = Math.round(fitLoss * 0.7);
         if (staffMembers.nutritionist.hired) fitLoss = Math.round(fitLoss * (0.92 - 0.04 * getStaffLevelMultiplier('nutritionist')));
         if (staffMembers.physio.hired) fitLoss = Math.round(fitLoss * getPhysioEffekt().fitFaktor);
+        if (isHomeMatchParam && staffMembers.greenkeeper.hired) fitLoss = Math.round(fitLoss * getGreenkeeperEffekt().ermuedung);
         // Trainingsintensität-Regler (Training & Förderung): Hart beansprucht mehr, Locker schont.
         if (typeof getTrainingIntensityFitnessMultiplier === 'function') fitLoss = Math.round(fitLoss * getTrainingIntensityFitnessMultiplier());
         // Team-Trainingsschwerpunkt wirkt sich spürbar, aber begrenzt aus

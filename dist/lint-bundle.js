@@ -18153,7 +18153,8 @@ function renderStadiumEventsPanel() {
         secChief: { tasks: () => SEC_CHIEF_TASKS, setter: 'setSecChiefTask' },
         twTrainer: { tasks: () => TW_TRAINER_TASKS, setter: 'setTwTrainerTask' },
         physio: { tasks: () => PHYSIO_TASKS, setter: 'setPhysioTask' },
-        pressOfficer: { tasks: () => PRESS_OFFICER_TASKS, setter: 'setPressOfficerTask' }
+        pressOfficer: { tasks: () => PRESS_OFFICER_TASKS, setter: 'setPressOfficerTask' },
+        greenkeeper: { tasks: () => GREENKEEPER_TASKS, setter: 'setGreenkeeperTask' }
     };
 
     // Aufgaben-Modi (25.45): jede dieser Rollen hat einen Standardmodus und einen Alternativmodus mit
@@ -18170,6 +18171,17 @@ function renderStadiumEventsPanel() {
         { id: 'defensiv', name: 'Defensiv (Standard)', desc: 'Vorstand und Fans werden bei Kritik deutlich weniger verärgert.' },
         { id: 'offensiv', name: 'Offensiv', desc: 'Fans werden halb so stark verärgert, dafür trifft der Vorstand Kritik voll.' }
     ];
+
+    const GREENKEEPER_TASKS = [
+        { id: 'pflege', name: 'Rasenpflege (Standard)', desc: 'Heimvorteil +2 je Stufe, die Spieler ermüden normal.' },
+        { id: 'tempo', name: 'Schnellrasen', desc: 'Heimvorteil +3 je Stufe, dafür ermüden die Spieler auf Heimspielen 10 % stärker.' }
+    ];
+    function setGreenkeeperTask(id) { setzeStaffAufgabe('greenkeeper', GREENKEEPER_TASKS, id); }
+    // Heimvorteil und Ermüdung auf Heimspielen (25.46). Ohne Wahl gilt der Standard.
+    function getGreenkeeperEffekt() {
+        const tempo = staffMembers.greenkeeper.task === 'tempo';
+        return { heim: tempo ? 3 : 2, ermuedung: tempo ? 1.1 : 1 };
+    }
 
     function setzeStaffAufgabe(key, tasks, id) {
         if (!tasks.some(t => t.id === id)) return;
@@ -26381,7 +26393,7 @@ function cleanupLegacyScoutState() {
         let bonus = licenseConfig[privateLife.license].boost + (staffMembers.coTrainer.hired ? 2 * getStaffLevelMultiplier('coTrainer') * getStaffEffectivenessMultiplier('coTrainer') : 0) + (isHomeMatch ? 3 : 0);
         // Head-Greenkeeper: perfekt gepflegter Rasen gibt bei Heimspielen einen spürbaren
         // Vorteil (war bisher nur Text ohne tatsächliche Wirkung), skaliert mit Ausbaustufe.
-        if (isHomeMatch && staffMembers.greenkeeper.hired) bonus += 2 * getStaffLevelMultiplier('greenkeeper');
+        if (isHomeMatch && staffMembers.greenkeeper.hired) bonus += getGreenkeeperEffekt().heim * getStaffLevelMultiplier('greenkeeper');
         // Trainingsgelände mit Flutlicht (Campus): permanenter Stärkebonus für die gesamte
         // Mannschaft, unabhängig vom Spielort (war bisher nur Text ohne tatsächliche Wirkung).
         bonus += (campusBuildings.trainingground?.lvl || 0) * 1;
@@ -27837,6 +27849,7 @@ function cleanupLegacyScoutState() {
         if (staffMembers.fitCoach.hired) fitLoss = Math.round(fitLoss * 0.7);
         if (staffMembers.nutritionist.hired) fitLoss = Math.round(fitLoss * (0.92 - 0.04 * getStaffLevelMultiplier('nutritionist')));
         if (staffMembers.physio.hired) fitLoss = Math.round(fitLoss * getPhysioEffekt().fitFaktor);
+        if (isHomeMatchParam && staffMembers.greenkeeper.hired) fitLoss = Math.round(fitLoss * getGreenkeeperEffekt().ermuedung);
         // Trainingsintensität-Regler (Training & Förderung): Hart beansprucht mehr, Locker schont.
         if (typeof getTrainingIntensityFitnessMultiplier === 'function') fitLoss = Math.round(fitLoss * getTrainingIntensityFitnessMultiplier());
         // Team-Trainingsschwerpunkt wirkt sich spürbar, aber begrenzt aus
