@@ -495,7 +495,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.114', date: '11.10.2026', features: 'Phase 25.44: Gebote aus älteren Spielständen werden auf die Obergrenze des Käufers gekappt, Vorstands-Neustart-Test mit festem Seed' };
+    const GAME_VERSION = { number: '3.115', date: '11.10.2026', features: 'Phase 25.45: Torwarttrainer, Physio und Pressesprecher mit wählbarer Aufgabe, Bewerbungspool beim Einstellen sichtbar' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
