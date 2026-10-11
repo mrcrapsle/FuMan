@@ -429,3 +429,9 @@ Die Basis-Datei nennt die Schwelle nicht im Inhalt, die Zuordnung folgt nur dem 
 **Testlaufzeit (Punkt 5).** Je ein Lauf der Testsuite: vier Jobs 103 Sekunden, drei Jobs 109 Sekunden, beide 1377 von 1377 grün. Der Unterschied liegt im Rauschen. Der Standard bleibt bei drei Jobs, weil mehr Parallelität die Zeit- und Ladezustandstests unter Last riskiert.
 
 **Kader-Median im Transferdialog (Punkt 7).** Nicht umgesetzt. Das Potenzial wird in den Transferdialogen (`js/transfermarket.js`, `js/transfer-poker.js`) nicht angezeigt, ein Median hätte dort also keinen Bezug. Der Hinweis bleibt bei Jugendspielern und auf der Spielerkarte.
+
+## Entscheidungen der Runde 25.42 (ohne Rückfrage)
+
+**Legenden-Sperre nur bei Karriereende.** Der Legendenstatus entsteht im Spiel nur beim Karriereende (`checkForLegendStatus()` in `js/player-retirement.js`). Ein verkaufter Spieler wird nie Legende. Die Sperre der Rückennummer gilt deshalb nur für Legenden aus dem Karriereende. Eine Änderung wäre erst nötig, wenn ein Verkauf den Legendenstatus bekommen soll.
+
+**Zahlen für Reisekosten und Saisonwette bleiben.** Die Auswärtsfahrt wird nach Bundesland mit dem Faktor 0,7 (gleiches Bundesland) oder 1,3 (anderes) verrechnet, die bisherigen Kosten liegen je Ligastufe bei 800 bis 2.300 €. Die Saisonwette zahlt 150.000 € je Ligastufe unter der 1. Bundesliga und hebt das Vertrauen um 12, bei Verlust senkt sie es um 10. Beides liegt in der Größenordnung der bestehenden Buchungen. Eine Messung mit dem Bot ist offen und kann die Werte später nachjustieren.
