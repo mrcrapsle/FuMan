@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.116', date: '11.10.2026', features: 'Phase 25.46: Greenkeeper mit Schnellrasen-Modus, Torwarttrainer, Physio und Pressesprecher mit wählbarer Aufgabe, Bewerbungspool beim Einstellen sichtbar' };
+    const GAME_VERSION = { number: '3.117', date: '11.10.2026', features: 'Phase 25.49: Vorstand-Hub mit Vorstandsraum und Budgets, Menü in kürzere Gruppen, Personal im Menü, Analyst und Ernährungsberater mit Aufgaben' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
