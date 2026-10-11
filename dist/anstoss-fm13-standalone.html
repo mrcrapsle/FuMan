@@ -6264,21 +6264,33 @@ function getOwnDerbyRivals() {
         return squad.find(p => p.id === id);
     }
 
-    // Kleinste Rückennummer, die im Kader noch frei ist (25.40). Null, wenn alle 1-99 belegt sind.
+    // Legenden behalten ihre Nummer: nach dem Karriereende bleibt sie für neue Spieler gesperrt (25.41).
+    // Gibt eine Map Nummer → Legendenname zurück.
+    function gesperrteRueckennummern() {
+        const map = new Map();
+        ((game.playerRetirement && game.playerRetirement.legendPlayers) || [])
+            .forEach(l => { if (l.nummer) map.set(l.nummer, l.playerName || l.name || 'eine Legende'); });
+        return map;
+    }
+
+    // Kleinste Rückennummer, die im Kader und bei den Legenden noch frei ist (25.40). Null, wenn alle 1-99 belegt sind.
     function naechsteFreieRueckennummer(p) {
         const belegt = new Set(squad.filter(s => s !== p && s.nummer).map(s => s.nummer));
-        for (let n = 1; n <= 99; n++) if (!belegt.has(n)) return n;
+        const gesperrt = gesperrteRueckennummern();
+        for (let n = 1; n <= 99; n++) if (!belegt.has(n) && !gesperrt.has(n)) return n;
         return null;
     }
 
-    // Rückennummer setzen. Eine Nummer, die ein anderer Spieler im Kader trägt, wird abgelehnt - mit Meldung.
+    // Rückennummer setzen. Eine Nummer, die ein anderer Spieler im Kader trägt oder die einer Legende gehört,
+    // wird abgelehnt - mit Meldung.
     function speichereRueckennummer(id, wert) {
         const p = squad.find(x => String(x.id) === String(id));
         if (!p) return false;
         const n = parseInt(wert, 10);
         const andere = squad.find(s => s !== p && s.nummer === n);
-        if (andere) {
-            showToast(`🎽 Nummer ${n} trägt schon ${andere.name}.`, 'error', 3000);
+        const legende = gesperrteRueckennummern().get(n);
+        if (andere || legende) {
+            showToast(andere ? `🎽 Nummer ${n} trägt schon ${andere.name}.` : `🎽 Nummer ${n} gehört der Legende ${legende}.`, 'error', 3000);
             const auswahl = document.getElementById('pd-nummer');
             if (auswahl) auswahl.value = p.nummer;
             return false;
@@ -6342,8 +6354,12 @@ function getOwnDerbyRivals() {
             // Rückennummer (25.40): ohne Nummer bekommt der Spieler die kleinste freie zugewiesen.
             if (!p.nummer) p.nummer = naechsteFreieRueckennummer(p);
             const belegt = new Set(squad.filter(s => s !== p && s.nummer).map(s => s.nummer));
+            const gesperrt = gesperrteRueckennummern();
             const nummernOptionen = Array.from({ length: 99 }, (_, i) => i + 1)
-                .map(n => `<option value="${n}" ${n === p.nummer ? 'selected' : ''} ${belegt.has(n) ? 'disabled' : ''}>${n}${belegt.has(n) ? ' (belegt)' : ''}</option>`).join('');
+                .map(n => {
+                    const sperre = gesperrt.has(n) ? ' (Legende)' : (belegt.has(n) ? ' (belegt)' : '');
+                    return `<option value="${n}" ${n === p.nummer ? 'selected' : ''} ${sperre ? 'disabled' : ''}>${n}${sperre}</option>`;
+                }).join('');
             document.getElementById('pd-fields').insertAdjacentHTML('beforeend', `<div style="grid-column:1 / -1; margin-top:6px;">
                 <span class="label">🎽 Rückennummer:</span>
                 <select id="pd-nummer" style="font-size:11px; margin-top:3px;" onchange="speichereRueckennummer('${p.id}', this.value)">${nummernOptionen}</select>
@@ -29685,6 +29701,7 @@ function schedulePlayerRetirement(playerId) {
         goals: player.goalsCareer || 0,
         assists: player.assists || 0,
         legendTier: legendTier,
+        nummer: player.nummer || null,
         retirementMatchday: game.matchday,
         retirementSeason: game.season,
         timestamp: new Date().getTime()

@@ -2376,6 +2376,39 @@ async function testRueckennummerUndWette(browser) {
     await page.close();
 }
 
+async function testLegendenNummer(browser) {
+    console.log('\n[25.41] Legenden behalten ihre Rückennummer, die Nummer bleibt gesperrt');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        const out = {};
+        // Jeder ausgeschiedene Spieler wird in diesem Test zur Legende
+        window.checkForLegendStatus = () => 'LEGEND';
+        const legende = squad[3];
+        legende.nummer = 21;
+        const id = legende.id;
+        out.pensioniert = schedulePlayerRetirement(id) === true;
+        const eintrag = (game.playerRetirement.legendPlayers || []).slice(-1)[0];
+        out.nummerGespeichert = !!eintrag && eintrag.nummer === 21;
+        out.ausKader = !squad.some(s => s.id === id);
+        const p0 = squad[0];
+        p0.nummer = null;
+        out.nichtVergeben = naechsteFreieRueckennummer(p0) !== 21;
+        out.gesetztAbgelehnt = speichereRueckennummer(p0.id, 21) === false && !p0.nummer;
+        out.sperreInListe = gesperrteRueckennummern().has(21);
+        return out;
+    });
+    assert(r.pensioniert, 'Der Spieler tritt als Legende zurück');
+    assert(r.nummerGespeichert, 'Der Karriereende-Eintrag der Legende behält die Rückennummer');
+    assert(r.ausKader, 'Die Legende ist nicht mehr im Kader');
+    assert(r.sperreInListe, 'Die Nummer der Legende steht auf der Sperrliste');
+    assert(r.nichtVergeben, 'Die Nummer der Legende wird keinem neuen Spieler zugewiesen');
+    assert(r.gesetztAbgelehnt, 'Die Nummer der Legende lässt sich nicht setzen');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei Karriereende und Sperre');
+    await page.close();
+}
+
 async function testBoardEarlyWarning(browser) {
     console.log('\n[25.24] Vorstand: Frühwarnung schon unter 50 Zufriedenheit, einmal pro Saison');
     const { page, consoleErrors } = await freshPage(browser);
@@ -9834,6 +9867,7 @@ async function main() {
         testKiAngebotObergrenze,
         testRunde40Funktionen,
         testRueckennummerUndWette,
+        testLegendenNummer,
         testEntlassungsGrund,
         testEnglishUi,
         testSwapDeals,

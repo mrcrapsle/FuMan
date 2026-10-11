@@ -62,6 +62,7 @@ function schedulePlayerRetirement(playerId) {
         goals: player.goalsCareer || 0,
         assists: player.assists || 0,
         legendTier: legendTier,
+        nummer: player.nummer || null,
         retirementMatchday: game.matchday,
         retirementSeason: game.season,
         timestamp: new Date().getTime()
