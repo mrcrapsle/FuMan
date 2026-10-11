@@ -94,7 +94,7 @@ function renderStadiumEventsPanel() {
 
     if (pending) {
         const ready = game.matchday >= pending.scheduledMatchday || pending.season !== game.season;
-        html += `<div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:8px; font-size:var(--fs-caption);">
+        html += `<div style="background:color-mix(in srgb, var(--ink) 10%, transparent); padding:6px; border-radius:4px; margin-bottom:8px; font-size:var(--fs-caption);">
             <div><strong>${pending.name}</strong> · geplant für Spieltag ${pending.scheduledMatchday}</div>
             <div style="color:var(--text-muted); font-size:var(--fs-micro);">Organisationskosten bezahlt: ${formatVal(pending.cost)}</div>
             ${ready

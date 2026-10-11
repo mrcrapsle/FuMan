@@ -59,9 +59,9 @@
                     <strong style="color:${a.riskColor};">${a.riskLabel}</strong>
                 </div>
                 <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:3px; font-size:var(--fs-micro); color:var(--text-muted);">
-                    <div>Besetzung: <strong style="color:${a.thin ? 'var(--danger)' : 'var(--text-primary)'};">${a.count} / ${a.minHealthy}+</strong></div>
-                    <div>Ø Alter: <strong style="color:${a.agingRisk ? 'var(--danger)' : 'var(--text-primary)'};">${a.avgAge.toFixed(1)} J.</strong></div>
-                    <div>Vertrag ≤${SQUAD_PLANNING_CONTRACT_URGENT} J.: <strong style="color:${a.cliffRisk ? 'var(--danger)' : 'var(--text-primary)'};">${a.cliff.length} Spieler</strong></div>
+                    <div>Besetzung: <strong style="color:${a.thin ? 'var(--danger)' : 'var(--text-main)'};">${a.count} / ${a.minHealthy}+</strong></div>
+                    <div>Ø Alter: <strong style="color:${a.agingRisk ? 'var(--danger)' : 'var(--text-main)'};">${a.avgAge.toFixed(1)} J.</strong></div>
+                    <div>Vertrag ≤${SQUAD_PLANNING_CONTRACT_URGENT} J.: <strong style="color:${a.cliffRisk ? 'var(--danger)' : 'var(--text-main)'};">${a.cliff.length} Spieler</strong></div>
                 </div>
             </div>`).join('');
     }
@@ -89,7 +89,7 @@
             return `
                 <div style="display:flex; align-items:center; gap:6px; margin-bottom:3px; font-size:var(--fs-caption);">
                     <span style="width:42px; color:var(--text-muted);">${b.label}</span>
-                    <div style="flex:1; background:rgba(255,255,255,0.06); border-radius:999px; height:8px; overflow:hidden;">
+                    <div style="flex:1; background:color-mix(in srgb, var(--ink) 6%, transparent); border-radius:999px; height:8px; overflow:hidden;">
                         <div style="width:${pct}%; height:100%; background:${isOld ? 'var(--accent)' : 'var(--primary)'}; border-radius:999px;"></div>
                     </div>
                     <strong style="width:20px; text-align:right;">${count}</strong>
@@ -114,7 +114,7 @@
         box.innerHTML = analysis.filter(a => a.cliff.length > 0).map(a => `
             <div class="box" style="font-size:var(--fs-caption); display:flex; justify-content:space-between;${a.cliffRisk ? ' border-left-color:var(--danger);' : ''}">
                 <span>${a.label}</span>
-                <strong style="color:${a.cliffRisk ? 'var(--danger)' : 'var(--text-primary)'};">${a.cliff.map(p => p.name).join(', ')}</strong>
+                <strong style="color:${a.cliffRisk ? 'var(--danger)' : 'var(--text-main)'};">${a.cliff.map(p => p.name).join(', ')}</strong>
             </div>`).join('');
     }
 
@@ -213,7 +213,7 @@
             ? `verleihen an ${k.leihe.club} - spart ${formatVal(k.ersparnis)}/SpT`
             : `verkaufen - spart ${formatVal(k.ersparnis)}/SpT`}</div>`);
         if (!zeilen.length) return '';
-        return `<div style="margin-top:4px; padding-top:4px; border-top:1px solid rgba(150,150,150,0.2);">
+        return `<div style="margin-top:4px; padding-top:4px; border-top:1px solid color-mix(in srgb, var(--ink) 20%, transparent);">
             <div style="font-weight:800; color:var(--accent);">💡 Entlastung (teuerste Ergänzungsspieler):</div>${zeilen.join('')}
             <div style="color:var(--text-muted);">${fenster ? 'Wechselfenster offen: Transfermarkt → Verkaufen.' : 'Leihen und Verkäufe im nächsten Wechselfenster (Spieltag 1-3 und 18-20).'}</div>
             ${fenster ? `<button class="btn-secondary" style="margin-top:3px; font-size:var(--fs-caption);" onclick="showScreen('screen-transfer'); if (typeof setTransferTab === 'function') setTransferTab('sell');">→ Zur Verkaufsliste</button>` : ''}
@@ -229,7 +229,7 @@
         r.angebote.forEach(x => zeilen.push(`<div style="color:var(--danger); font-weight:800;">⚠️ ${x.p.name}: Vorvertrags-Angebot von ${x.club} - verlängern bis Spieltag ${x.bis}</div>`));
         r.unterschrieben.forEach(x => zeilen.push(`<div style="color:var(--danger);">✍️ ${x.p.name} hat bei ${x.club} unterschrieben - geht ablösefrei (Winterverkauf bringt noch Geld)</div>`));
         if (r.gefaehrdet.length) zeilen.push(`<div style="color:var(--accent);">👀 ${game.matchday >= PRECONTRACT_START_MD ? 'Jetzt' : `Ab Spieltag ${PRECONTRACT_START_MD}`} können andere Vereine Vorverträge anbieten: ${r.gefaehrdet.map(p => p.name).join(', ')} - früh verlängern schützt</div>`);
-        return zeilen.length ? `<div style="margin-top:4px; padding-top:4px; border-top:1px solid rgba(150,150,150,0.2);">${zeilen.join('')}</div>` : '';
+        return zeilen.length ? `<div style="margin-top:4px; padding-top:4px; border-top:1px solid color-mix(in srgb, var(--ink) 20%, transparent);">${zeilen.join('')}</div>` : '';
     }
 
     function renderSquadPlanningView() {

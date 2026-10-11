@@ -153,7 +153,7 @@ function renderNationalTeamPanel() {
         .sort((a, b) => (b.p.strength - b.schwelle) - (a.p.strength - a.schwelle));
     const zeilen = kandidaten.length ? kandidaten.slice(0, 12).map(({ p, schwelle }) => {
         const drin = isNominated(p);
-        return `<div style="display:flex; justify-content:space-between; gap:6px; padding:2px 0; border-top:1px solid rgba(255,255,255,0.06);">
+        return `<div style="display:flex; justify-content:space-between; gap:6px; padding:2px 0; border-top:1px solid color-mix(in srgb, var(--ink) 6%, transparent);">
             <span>${NATIONS[getNation(p)].flag} ${p.name} <span style="color:var(--text-muted);">${p.pos}</span></span>
             <span>${drin ? '<span style="color:var(--primary);">✅ nominiert</span>' : `<span style="color:var(--text-muted);">Stärke ${p.strength}/${schwelle}</span>`}
             · ${p.caps || 0} Sp., ${p.intlGoals || 0} T.${p.intlTitles ? ` · 🏆${p.intlTitles}` : ''}</span>

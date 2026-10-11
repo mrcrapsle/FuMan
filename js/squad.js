@@ -248,7 +248,7 @@
         return `
             <div class="panel-header">📋 TAKTIK-VORSCHLAG DES CO-TRAINERS${sugg.opponentAware ? ' <span style="font-size:var(--fs-caption); color:var(--teal);">🎥 gegnerbezogen</span>' : ''}${sugg.selfCritical ? ' <span style="font-size:var(--fs-caption); color:var(--danger);">😟 verunsichert</span>' : ''}</div>
             <div style="font-size:var(--fs-small); margin-bottom:6px;">Vertrauen in seinen Rat</div>
-            <div style="background:rgba(228,197,140,0.1); border-radius:4px; height:8px; margin-bottom:8px; overflow:hidden;">
+            <div style="background:color-mix(in srgb, var(--accent) 10%, transparent); border-radius:4px; height:8px; margin-bottom:8px; overflow:hidden;">
                 <div style="width:${trust}%; height:100%; background:${trustColor};"></div>
             </div>
             <div class="box" style="font-size:var(--fs-small);">
@@ -322,7 +322,7 @@
         list.innerHTML = ALL_FORMATIONS.map(f => {
             let dots = (FORMATION_MINI_ICONS[f] || []).slice(0, 9);
             while (dots.length < 9) dots.push(0);
-            let dotHtml = dots.slice(0, 9).map(d => `<div style="background:${d ? 'var(--teal)' : 'rgba(255,255,255,0.12)'};"></div>`).join('');
+            let dotHtml = dots.slice(0, 9).map(d => `<div style="background:${d ? 'var(--teal)' : 'color-mix(in srgb, var(--ink) 12%, transparent)'};"></div>`).join('');
             return `<div class="formation-grid-item ${f === selected ? 'active' : ''}" onclick="renderFormationModalList('${f}')">
                 <div class="formation-mini-dots">${dotHtml}</div>
                 <span>${f}</span>
@@ -401,7 +401,7 @@
         box.innerHTML = items.map(it => `
             <div class="box" style="cursor:pointer;" onclick="toggleTeamInstruction('${it.key}')">
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <div style="width:18px; height:18px; border:2px solid ${game.teamInstructions[it.key] ? 'var(--primary)' : '#666'}; border-radius:3px; background:${game.teamInstructions[it.key] ? 'var(--primary)' : 'transparent'}; display:flex; align-items:center; justify-content:center; font-size:var(--fs-body); color:#000; flex-shrink:0;">${game.teamInstructions[it.key] ? '✓' : ''}</div>
+                    <div style="width:18px; height:18px; border:2px solid ${game.teamInstructions[it.key] ? 'var(--primary)' : 'var(--border-strong)'}; border-radius:3px; background:${game.teamInstructions[it.key] ? 'var(--primary)' : 'transparent'}; display:flex; align-items:center; justify-content:center; font-size:var(--fs-body); color:var(--on-accent); flex-shrink:0;">${game.teamInstructions[it.key] ? '✓' : ''}</div>
                     <strong style="font-size:var(--fs-body);">${it.label}</strong>
                 </div>
                 <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:3px; margin-left:26px;">${it.desc}</div>
@@ -430,7 +430,7 @@
         box.innerHTML = items.map(it => `
             <div class="box" style="cursor:pointer;" onclick="toggleTacticAutomation('${it.key}')">
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <div style="width:18px; height:18px; border:2px solid ${game.tacticAutomation[it.key] ? 'var(--primary)' : '#666'}; border-radius:3px; background:${game.tacticAutomation[it.key] ? 'var(--primary)' : 'transparent'}; display:flex; align-items:center; justify-content:center; font-size:var(--fs-body); color:#000; flex-shrink:0;">${game.tacticAutomation[it.key] ? '✓' : ''}</div>
+                    <div style="width:18px; height:18px; border:2px solid ${game.tacticAutomation[it.key] ? 'var(--primary)' : 'var(--border-strong)'}; border-radius:3px; background:${game.tacticAutomation[it.key] ? 'var(--primary)' : 'transparent'}; display:flex; align-items:center; justify-content:center; font-size:var(--fs-body); color:var(--on-accent); flex-shrink:0;">${game.tacticAutomation[it.key] ? '✓' : ''}</div>
                     <strong style="font-size:var(--fs-body);">${it.label}</strong>
                 </div>
                 <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:3px; margin-left:26px;">${it.desc}</div>
@@ -633,7 +633,7 @@
         box.style.display = 'block';
         let remaining = Math.max(0, game.ultimatumDeadlineMatchday - game.matchday);
         box.innerHTML = `
-            <div class="box" style="border-left-color:var(--danger); background:rgba(255,77,109,0.08); display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            <div class="box" style="border-left-color:var(--danger); background:color-mix(in srgb, var(--danger) 8%, transparent); display:flex; justify-content:space-between; align-items:center; gap:8px;">
                 <span style="display:flex; align-items:center; gap:8px; font-size:var(--fs-small);">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 32) : ''}<span><strong style="color:var(--danger);">⚠️ Ultimatum von ${p.name}</strong><br>Noch ${remaining} Spieltag(e) bis zur Frist.</span></span>
                 <button onclick="openUltimatumModal()" class="btn-secondary" style="width:auto; font-size:var(--fs-caption);">Jetzt entscheiden</button>
             </div>`;
@@ -667,7 +667,7 @@
                 <span style="font-size:var(--fs-small);">Eingespieltheit der Startelf</span>
                 <strong style="color:${color};">${stats.percent}% ${stats.bonus > 0 ? `(+${stats.bonus} Stärke)` : ''}</strong>
             </div>
-            <div style="position:relative; background:rgba(228,197,140,0.1); border-radius:4px; height:8px; margin-bottom:4px; overflow:visible;">
+            <div style="position:relative; background:color-mix(in srgb, var(--accent) 10%, transparent); border-radius:4px; height:8px; margin-bottom:4px; overflow:visible;">
                 <div style="width:${stats.percent}%; height:100%; background:${color}; border-radius:4px;"></div>
                 <div style="position:absolute; left:${leagueAvgChemistry}%; top:-2px; bottom:-2px; border-left:1px dashed var(--accent);" title="Liga-Durchschnitt: ${leagueAvgChemistry}%"></div>
             </div>
@@ -688,7 +688,7 @@
         if (secondTeamSquad.length > 0) suggestions.push('🥈 Spieler aus der zweiten Mannschaft hochziehen');
         suggestions.push('🛒 Freien Markt nach kurzfristig verfügbaren Spielern durchsuchen (Kaderplanung & Transfers)');
         box.innerHTML = `
-            <div class="box" style="border-left-color:var(--danger); background:rgba(255,77,109,0.08);">
+            <div class="box" style="border-left-color:var(--danger); background:color-mix(in srgb, var(--danger) 8%, transparent);">
                 <strong style="color:var(--danger);">🚨 VERLETZUNGSKRISE!</strong><br>
                 <span style="font-size:var(--fs-small);">Nur noch ${available} einsatzbereite Spieler im Kader - dringender Handlungsbedarf:</span>
                 <ul style="font-size:var(--fs-small); margin:6px 0 0 16px; padding:0;">${suggestions.map(s => `<li>${s}</li>`).join('')}</ul>
@@ -750,7 +750,7 @@
                         <span>${POS_LABELS[pos]}</span>
                         <strong style="color:${depthColor};">${players.length} Spieler (${fitCount} fit) · Ø ${avgStr}</strong>
                     </div>
-                    <div style="background:rgba(255,255,255,0.06); border-radius:999px; height:6px; overflow:hidden;">
+                    <div style="background:color-mix(in srgb, var(--ink) 6%, transparent); border-radius:999px; height:6px; overflow:hidden;">
                         <div style="width:${depthPct}%; height:100%; background:${depthColor}; border-radius:999px;"></div>
                     </div>
                 </div>`;
@@ -857,7 +857,7 @@
                         <strong style="font-size:var(--fs-body-lg);">${p.name}${roleBadge}</strong>
                         ${traitBadge}
                     </div>
-                    <button onclick="toggleLineupPlayer('${p.id}')" style="width:auto; padding:4px 10px; font-size:var(--fs-caption); border-radius:6px; border:none; background:${isStarting ? 'var(--danger)' : 'var(--primary)'}; color:${isStarting ? '#fff' : '#000'}; font-weight:700;">
+                    <button onclick="toggleLineupPlayer('${p.id}')" style="width:auto; padding:4px 10px; font-size:var(--fs-caption); border-radius:6px; border:none; background:${isStarting ? 'var(--danger-fill)' : 'var(--primary-fill)'}; color:${isStarting ? 'var(--on-strong)' : 'var(--on-accent)'}; font-weight:700;">
                         ${isStarting ? 'Bank' : 'Startelf'}
                     </button>
                 </div>
@@ -865,7 +865,7 @@
                     <span>${p.age} Jahre · ${p.contracts} J. Vertrag</span>
                     <span>${formatVal(p.marketValue||0)} · ⚽ ${p.goalsSeason||0} Saisontore · 🎽 ${p.appearances||0} Einsätze</span>
                 </div>
-                <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:2px; font-size:var(--fs-micro); color:var(--text-muted); text-align:center; margin-bottom:6px; background:rgba(228,197,140,0.05); border-radius:4px; padding:4px 0;">
+                <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:2px; font-size:var(--fs-micro); color:var(--text-muted); text-align:center; margin-bottom:6px; background:color-mix(in srgb, var(--accent) 5%, transparent); border-radius:4px; padding:4px 0;">
                     <div>STR<br><strong style="color:var(--accent); font-size:var(--fs-body);">${p.strength}</strong></div>
                     <div>PAC<br><strong>${p.pace}</strong></div>
                     <div>SHO<br><strong>${p.shooting}</strong></div>
@@ -878,7 +878,7 @@
                     <span style="font-size:var(--fs-caption);">${status}${moraleLine}</span>
                     <div style="display:flex; gap:4px; align-items:center;">
                         <button onclick="openPlayerDetail('${p.id}','squad')" class="btn-secondary" style="width:auto; padding:3px 7px; font-size:var(--fs-caption);" title="Details">ℹ️</button>
-                        <button onclick="selectForSwap('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 7px; font-size:var(--fs-caption); ${p.id === selectedSwapId ? 'background:var(--violet); color:#fff; border-color:var(--violet);' : ''}" title="Position tauschen">🔁</button>
+                        <button onclick="selectForSwap('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 7px; font-size:var(--fs-caption); ${p.id === selectedSwapId ? 'background:var(--violet); color:var(--on-strong); border-color:var(--violet);' : ''}" title="Position tauschen">🔁</button>
                     </div>
                 </div>
                 <div style="margin-top:6px;">
@@ -923,6 +923,7 @@
             pin.style.top = coords[idx].top + '%';
             pin.style.left = coords[idx].left + '%';
             pin.style.background = pinBg;
+            pin.style.color = lesbareSchriftAuf(crestColor);
             // Eingespieltheit: Spieler mit überdurchschnittlich hoher Chemie zu ihren
             // Mitspielern bekommen einen dezenten goldenen Rand als visuellen Hinweis.
             let chemWithOthers = lineup.filter(oid => oid !== pid).map(oid => {

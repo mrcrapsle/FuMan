@@ -13,7 +13,7 @@
         let leagueAvgAttendance = Math.round((stadium.total || 16000) * (LEAGUE_ATTENDANCE_CEILING[game.leagueLevel] ?? LEAGUE_ATTENDANCE_CEILING[LEAGUE_ATTENDANCE_CEILING.length - 1]));
         let maxAtt = Math.max(...history.map(e => e.attendance), leagueAvgAttendance, 1);
         let refLinePct = Math.round((leagueAvgAttendance / maxAtt) * 100);
-        box.innerHTML = `<div style="position:relative; height:70px; background:rgba(0,0,0,0.2); border-radius:6px; padding:6px;">
+        box.innerHTML = `<div style="position:relative; height:70px; background:color-mix(in srgb, var(--shade) 20%, transparent); border-radius:6px; padding:6px;">
             <div style="position:absolute; left:6px; right:6px; bottom:${6 + refLinePct * 0.58}px; border-top:1px dashed var(--accent); z-index:2;" title="Liga-Durchschnitt: ${leagueAvgAttendance.toLocaleString('de-DE')}"></div>
             <div style="display:flex; align-items:flex-end; gap:3px; height:100%;">
                 ${history.map(e => {

@@ -23,22 +23,22 @@
             --bg-body: #070b14;
             --bg-sidebar: #0b111f;
             --bg-header: #101a2e;
-            --bg-card: rgba(24, 38, 63, 0.55);
-            --bg-card-hover: rgba(32, 50, 82, 0.68);
+            --bg-card: color-mix(in srgb, var(--surface-3) 55%, transparent);
+            --bg-card-hover: color-mix(in srgb, var(--surface-3) 75%, transparent);
 
             
             --primary: #3ee08a;
             --primary-glow: rgba(62, 224, 138, 0.32);
             --accent: #ffc23c;
             --accent-glow: rgba(255, 194, 60, 0.35);
-            --danger: #ff5468;
+            --danger: #ff6b7a;
             --blue: #4fc3ff;
             --purple: #b18aff;
             --industry: #ff9142;
             --gold: #ffd54a;
             --europe: #6f8dff;
             --text-main: #eaf2ff;
-            --text-muted: #8496b8;
+            --text-muted: #91a3c4;
             --border: rgba(79, 195, 255, 0.14);
             --border-highlight: rgba(62, 224, 138, 0.4);
 
@@ -70,6 +70,40 @@
             --text-box: #dbe6f5;
             --nav-text: #cbb896;
             --nav-category: #a8916b;
+
+            /* Farbrollen (Phase 25.52): Kein Farbwert steht mehr in JS, HTML oder den
+               UI-Regeln. Aufhellungen mischen --ink, Schatten --shade, Tönungen das
+               jeweilige Farb-Token per color-mix(); ein Theme setzt nur diese Werte.
+               Ausgenommen sind Illustrationen (Büro, Stadion, Spielfeld, Avatare,
+               Wappen) - ein Holzschreibtisch bleibt braun. */
+            --ink: var(--text-main);   /* Grundton für Aufhellungen und Linien - folgt der Textfarbe */
+            --shade: #000000;          /* Grundton für Schatten und Abdunklungen */
+            --on-strong: #ffffff;      /* Schrift auf kräftigen Füllungen (Rot, Blau, Violett) */
+            --on-accent: #241800;      /* Schrift auf hellen Füllungen (Gold, Gelb, Grün) */
+            --surface-0: #070b14;      /* Flächenstufen, dunkel nach hell */
+            --surface-1: #0d1424;
+            --surface-2: #151f33;
+            --surface-3: #22304a;
+            --border-strong: color-mix(in srgb, var(--ink) 28%, transparent);
+            --accent-fill: #ffc23c;    /* Füllungen der Knöpfe (bleiben in jedem Theme kräftig) */
+            --accent-fill-hi: #ffd875;
+            --gold-fill-hi: #ffe58a;
+            --danger-fill: #c73545;
+            --danger-fill-lo: #a82838;
+            --europe-fill: #3d54c9;
+            --europe-fill-lo: #2c3f9e;
+            --gold-fill: #ffd54a;
+            --blue-fill: #4fc3ff;
+            --blue-fill-hi: #8fd6ff;
+            --industry-fill: #ff9142;
+            --industry-fill-hi: #ffb684;
+            --primary-fill: #3ee08a;   /* Grün als Füllung mit dunkler Schrift */
+            --violet-fill: #4f5ce0;    /* Violett als Füllung mit weißer Schrift */
+            --violet-fill-lo: #3a44b0;
+            --pos-tw: #a8631f;         /* Positionsabzeichen mit weißer Schrift */
+            --pos-abw: #3a5aa8;
+            --pos-mit: #2f7d5f;
+            --pos-st: #a83550;
 
             /* ============================================================
                SCHRIFTSKALA (Phase 25.51): jede Schriftgröße im Spiel läuft über
@@ -108,10 +142,11 @@
            ============================================================ */
         html[data-theme="klassik"] {
             /* Anstoß-Klassik: Holz, Leder und Messing wie im Manager-Büro der 90er */
+            --surface-0: #110c07; --surface-1: #1a130c; --surface-2: #241a11; --surface-3: #352719;
             --bg-body: #120d08; --bg-sidebar: #1a130c; --bg-header: #241a10;
             --primary: #8fd16a; --primary-glow: rgba(143, 209, 106, 0.3);
             --accent: #e8b84e; --accent-glow: rgba(232, 184, 78, 0.35);
-            --danger: #ff6f5e; --blue: #7fc4e8; --gold: #f2cf63;
+            --danger: #ff8a7a; --blue: #7fc4e8; --gold: #f2cf63;
             --text-main: #f5ead6; --text-muted: #c2ad8c;
             --border: rgba(232, 184, 78, 0.18); --border-highlight: rgba(232, 184, 78, 0.45);
             --violet: #b98a4e; --violet-dark: #6e4a22; --violet-glow: rgba(185, 138, 78, 0.35);
@@ -129,10 +164,11 @@
         }
         html[data-theme="rasen"] {
             /* Rasengrün: tiefes Stadiongrün mit Kreideweiß und Trikotgelb */
+            --surface-0: #04130b; --surface-1: #081d11; --surface-2: #0d2a19; --surface-3: #163b25;
             --bg-body: #04110a; --bg-sidebar: #071a10; --bg-header: #0a2416;
             --primary: #6ef0a6; --primary-glow: rgba(110, 240, 166, 0.3);
             --accent: #ffd84d; --accent-glow: rgba(255, 216, 77, 0.32);
-            --danger: #ff6b7a; --blue: #7fd0ff; --gold: #ffe27a;
+            --danger: #ff8590; --blue: #7fd0ff; --gold: #ffe27a;
             --text-main: #effcf4; --text-muted: #9ec6ad;
             --border: rgba(110, 240, 166, 0.16); --border-highlight: rgba(255, 216, 77, 0.45);
             --violet: #2fa36b; --violet-dark: #17643f; --violet-glow: rgba(47, 163, 107, 0.4);
@@ -150,6 +186,7 @@
         }
         html[data-theme="kontrast"] {
             /* Hoher Kontrast: Schwarz, Weiß und Signalgelb - Text erreicht mindestens 7:1 (AAA) */
+            --surface-0: #000; --surface-1: #0a0a0a; --surface-2: #141414; --surface-3: #262626; --border-strong: rgba(255, 255, 255, 0.6);
             --bg-body: #000; --bg-sidebar: #000; --bg-header: #000;
             --primary: #4dff9a; --primary-glow: rgba(77, 255, 154, 0.25);
             --accent: #ffe600; --accent-glow: rgba(255, 230, 0, 0.3);
@@ -173,6 +210,45 @@
             --danger: #e69f00; --blue: #9ad3f5; --gold: #f0e442; --purple: #cc79a7; --industry: #e69f00;
             --border-highlight: rgba(86, 180, 233, 0.45);
         }
+        html[data-theme="tageslicht"] {
+            /* Tageslicht: helles Theme für Sonne und Büro - dunkle Schrift auf Weiß,
+               Akzente abgedunkelt, damit sie als Text 4,5:1 erreichen; Knopf-Füllungen
+               bleiben kräftig mit eigener Schriftfarbe. */
+            --bg-body: #eef2f7; --bg-sidebar: #ffffff; --bg-header: #ffffff;
+            --primary: #095c33; --primary-glow: rgba(9, 92, 51, 0.22);
+            --accent: #6e4000; --accent-glow: rgba(240, 170, 40, 0.35);
+            --danger: #a8182f; --blue: #0a5690; --purple: #5c32a8; --industry: #8f3f06;
+            --gold: #6f5100; --europe: #2a3ea3;
+            --text-main: #152033; --text-muted: #4a5870; --text-box: #23304a;
+            --border: rgba(21, 32, 51, 0.14); --border-highlight: rgba(14, 122, 68, 0.45);
+            --violet: #4a5be0; --violet-dark: #2f3fae; --violet-glow: rgba(74, 91, 224, 0.25);
+            --teal: #0c7b74; --teal-dark: #075c56; --teal-glow: rgba(12, 123, 116, 0.25);
+            --shade: #8593a8;
+            --surface-0: #f6f8fb; --surface-1: #eef2f7; --surface-2: #e4eaf2; --surface-3: #d5deea;
+            --surface-body: linear-gradient(180deg, #f4f7fb 0%, #e6edf6 100%);
+            --surface-app: #f1f4f9;
+            --surface-layout: #f6f8fb;
+            --surface-header: linear-gradient(135deg, #ffffff, #eef3fa);
+            --surface-sidebar: #ffffff;
+            --surface-nav: #ffffff;
+            --surface-panel: #ffffff; --surface-panel-border: rgba(21, 32, 51, 0.12);
+            --surface-box: rgba(21, 32, 51, 0.035); --surface-box-border: rgba(21, 32, 51, 0.1);
+            --chip-bg: rgba(21, 32, 51, 0.06);
+            --nav-text: #24324a; --nav-category: #5d6b82;
+        }
+        /* Illustrationen sind Nachtbilder (Himmel, Stadion, Spielfeld, Büro): darin gelten
+           unabhängig vom Theme die Nacht-Farben, damit Schrift auf dem dunklen Bild hell bleibt. */
+        .dashboard-hero-sky, .stadium-bowl-wrapper, .stadium-hero-visual-wrapper, .live-stadium-frame, .pitch-3d-wrapper, .office-viewport {
+            --text-main: #eaf2ff; --text-muted: #b4c3dc; --ink: #eaf2ff; --shade: #000000;
+            --accent: #ffc23c; --primary: #3ee08a; --danger: #ff6b7a; --gold: #ffd54a; --blue: #4fc3ff;
+            color: var(--text-main);
+        }
+        /* Dekorative Flutlicht-Kegel und Vignette gehören zum Nachtbild */
+        html[data-theme="tageslicht"] body::before, html[data-theme="tageslicht"] body::after,
+        html[data-theme="tageslicht"] .office-bg::before, html[data-theme="kontrast"] .office-bg::before { display: none; }
+        /* Der Seitenhintergrund (body.office-bg) folgt in den anderen Themes deren Fläche */
+        html[data-theme] .office-bg { background: var(--surface-body); }
+
         /* Hoher Kontrast: Verläufe und Glanz auf Knöpfen weg, klare Kanten */
         html[data-theme="kontrast"] .panel::before, html[data-theme="kontrast"] .panel-header::after { display: none; }
         html[data-theme="kontrast"] .btn-primary, html[data-theme="kontrast"] .btn-secondary { background: #000; color: #fff; border: 2px solid #fff; box-shadow: none; }
@@ -209,16 +285,16 @@
         .app-layout {
             display: flex; flex-direction: column; min-height: 100vh; max-width: 940px; margin: auto;
             background: var(--surface-layout);
-            border: 1px solid rgba(228, 197, 140, 0.10);
+            border: 1px solid color-mix(in srgb, var(--accent) 10%, transparent);
             border-radius: 0;
-            box-shadow: 0 25px 70px rgba(0,0,0,0.85), inset 0 1px 0 rgba(228, 197, 140, 0.05);
+            box-shadow: 0 25px 70px color-mix(in srgb, var(--shade) 85%, transparent), inset 0 1px 0 color-mix(in srgb, var(--accent) 5%, transparent);
         }
 
         
         .app-header {
             background: var(--surface-header);
             border-bottom: 1px solid var(--border);
-            box-shadow: 0 2px 0 rgba(212, 169, 74, 0.18), 0 8px 24px rgba(0,0,0,0.4);
+            box-shadow: 0 2px 0 color-mix(in srgb, var(--accent) 18%, transparent), 0 8px 24px color-mix(in srgb, var(--shade) 40%, transparent);
             padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;
             position: relative; z-index: 5;
         }
@@ -227,7 +303,7 @@
         .header-version {
             font-size: var(--fs-body); font-weight: 800; color: var(--text-muted); letter-spacing: 0.5px;
             padding: 3px 8px; border: 1px solid var(--border); border-radius: 10px;
-            background: rgba(255,255,255,0.04); white-space: nowrap; margin-right: auto;
+            background: color-mix(in srgb, var(--ink) 4%, transparent); white-space: nowrap; margin-right: auto;
         }
         .club-logo {
             width: 36px; height: 36px; border-radius: 50%;
@@ -241,8 +317,8 @@
 
         .header-kpis { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
         .kpi-chip {
-            background: rgba(212, 169, 74, 0.06);
-            border: 1px solid rgba(212, 169, 74, 0.18);
+            background: color-mix(in srgb, var(--accent) 6%, transparent);
+            border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
             padding: 5px 10px; border-radius: 6px; text-align: center;
         }
         .kpi-chip span { font-size: var(--fs-caption); color: var(--text-muted); display: block; letter-spacing: 0.4px; }
@@ -250,10 +326,10 @@
         
         .kpi-chip strong span { display: inline; font-size: inherit; color: inherit; letter-spacing: normal; }
         .sound-btn {
-            background: rgba(90, 108, 255, 0.15); border: 1px solid rgba(90, 108, 255, 0.5); color: #dce8ff;
+            background: color-mix(in srgb, var(--violet) 15%, transparent); border: 1px solid color-mix(in srgb, var(--violet) 50%, transparent); color: var(--text-main);
             font-size: var(--fs-small); font-weight: 800; padding: 6px 10px; border-radius: 999px; cursor: pointer;
         }
-        .sound-btn.active { color: #0a1f0f; background: var(--primary); border-color: var(--primary); box-shadow: 0 0 10px var(--primary-glow); }
+        .sound-btn.active { color: var(--on-accent); background: var(--primary); border-color: var(--primary); box-shadow: 0 0 10px var(--primary-glow); }
 
         
         .main-wrapper { display: flex; flex: 1; min-height: 580px; }
@@ -271,26 +347,26 @@
             padding: 8px 10px; text-align: left; font-size: var(--fs-body); font-weight: 700;
             display: flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.18s;
         }
-        .nav-btn:hover { background: rgba(212, 169, 74, 0.07); color: var(--text-main); }
+        .nav-btn:hover { background: color-mix(in srgb, var(--accent) 7%, transparent); color: var(--text-main); }
         .nav-btn.active {
-            background: linear-gradient(90deg, rgba(90, 108, 255, 0.35), rgba(61, 138, 108, 0.18));
-            color: var(--text-main); border-color: rgba(212, 169, 74, 0.45); font-weight: 900;
-            box-shadow: 0 0 14px rgba(90, 108, 255, 0.2), inset 0 1px 0 rgba(228, 197, 140, 0.06);
+            background: linear-gradient(90deg, color-mix(in srgb, var(--violet) 35%, transparent), color-mix(in srgb, var(--primary) 18%, transparent));
+            color: var(--text-main); border-color: color-mix(in srgb, var(--accent) 45%, transparent); font-weight: 900;
+            box-shadow: 0 0 14px color-mix(in srgb, var(--violet) 20%, transparent), inset 0 1px 0 color-mix(in srgb, var(--accent) 6%, transparent);
         }
         .nav-btn.special-industry { color: var(--industry); }
-        .nav-btn.special-industry.active { background: linear-gradient(90deg, rgba(217, 130, 74, 0.25), rgba(217, 130, 74, 0.08)); border-color: var(--industry); }
+        .nav-btn.special-industry.active { background: linear-gradient(90deg, color-mix(in srgb, var(--industry) 25%, transparent), color-mix(in srgb, var(--industry) 8%, transparent)); border-color: var(--industry); }
         .nav-btn.special-gold { color: var(--accent); }
-        .nav-btn.special-gold.active { background: linear-gradient(90deg, rgba(212, 169, 74, 0.25), rgba(212, 169, 74, 0.08)); border-color: var(--accent); }
+        .nav-btn.special-gold.active { background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 25%, transparent), color-mix(in srgb, var(--accent) 8%, transparent)); border-color: var(--accent); }
         .nav-btn.special-red { color: var(--danger); }
-        .nav-btn.special-red.active { background: linear-gradient(90deg, rgba(217, 89, 79, 0.25), rgba(217, 89, 79, 0.08)); border-color: var(--danger); }
-        .nav-btn.special-europe { color: #9fb0e0; }
-        .nav-btn.special-europe.active { background: linear-gradient(90deg, rgba(119, 136, 196, 0.3), rgba(119, 136, 196, 0.08)); border-color: var(--europe); }
+        .nav-btn.special-red.active { background: linear-gradient(90deg, color-mix(in srgb, var(--danger) 25%, transparent), color-mix(in srgb, var(--danger) 8%, transparent)); border-color: var(--danger); }
+        .nav-btn.special-europe { color: var(--europe); }
+        .nav-btn.special-europe.active { background: linear-gradient(90deg, color-mix(in srgb, var(--europe) 30%, transparent), color-mix(in srgb, var(--europe) 8%, transparent)); border-color: var(--europe); }
 
         
         .app-content {
             flex: 1; padding: 14px; overflow-y: auto; max-height: calc(100vh - 70px);
             background:
-                radial-gradient(ellipse at 50% -10%, rgba(90, 108, 255, 0.07), transparent 55%),
+                radial-gradient(ellipse at 50% -10%, color-mix(in srgb, var(--violet) 7%, transparent), transparent 55%),
                 var(--surface-app);
         }
 
@@ -300,7 +376,7 @@
             background: var(--surface-panel);
             border: 1px solid var(--surface-panel-border);
             border-radius: 18px; padding: 15px; margin-bottom: 12px;
-            box-shadow: 0 14px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+            box-shadow: 0 14px 32px color-mix(in srgb, var(--shade) 50%, transparent), inset 0 1px 0 color-mix(in srgb, var(--ink) 6%, transparent);
             position: relative;
         }
         .panel::before {
@@ -331,8 +407,8 @@
         
         button { font-family: inherit; touch-action: manipulation; }
         .btn-primary {
-            background: linear-gradient(135deg, var(--violet), var(--violet-dark)); color: var(--text-main); font-weight: 800;
-            border: 1px solid rgba(255,255,255,0.12); padding: 10px 14px; border-radius: 999px; cursor: pointer;
+            background: linear-gradient(135deg, var(--violet-fill), var(--violet-fill-lo)); color: var(--on-strong); font-weight: 800;
+            border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent); padding: 10px 14px; border-radius: 999px; cursor: pointer;
             transition: 0.15s; width: 100%; margin: 4px 0; box-shadow: 0 6px 18px var(--violet-glow);
         }
         .btn-primary:active { transform: scale(0.97); }
@@ -341,81 +417,81 @@
             font-weight: 700; padding: 8px 12px; border-radius: 999px; cursor: pointer; width: 100%; margin: 4px 0;
             transition: 0.15s;
         }
-        .btn-secondary:hover { background: rgba(34, 184, 176, 0.16); border-color: var(--teal); color: var(--text-main); }
+        .btn-secondary:hover { background: color-mix(in srgb, var(--teal) 16%, transparent); border-color: var(--teal); color: var(--text-main); }
         .btn-action {
-            background: linear-gradient(135deg, #ffd875, var(--accent)); color: #2b1f08; font-weight: 900;
+            background: linear-gradient(135deg, var(--accent-fill-hi), var(--accent-fill)); color: var(--on-accent); font-weight: 900;
             border: none; padding: 10px 16px; border-radius: 999px; cursor: pointer; width: 100%; margin: 4px 0;
             box-shadow: 0 6px 18px var(--accent-glow);
         }
         .btn-gold {
-            background: linear-gradient(135deg, #ffe58a, var(--gold)); color: #2b2000; font-weight: 900; border: none;
+            background: linear-gradient(135deg, var(--gold-fill-hi), var(--gold-fill)); color: var(--on-accent); font-weight: 900; border: none;
             padding: 10px 14px; border-radius: 999px; cursor: pointer; width: 100%; margin: 4px 0;
-            box-shadow: 0 6px 18px rgba(255, 213, 74, 0.35);
+            box-shadow: 0 6px 18px color-mix(in srgb, var(--gold) 35%, transparent);
         }
         .btn-danger {
             
-            background: linear-gradient(135deg, #c73545, #a82838); color: #fff; font-weight: 800; border: none;
+            background: linear-gradient(135deg, var(--danger-fill), var(--danger-fill-lo)); color: var(--on-strong); font-weight: 800; border: none;
             padding: 8px 12px; border-radius: 999px; cursor: pointer; width: 100%; margin: 4px 0;
-            box-shadow: 0 6px 18px rgba(255, 84, 104, 0.35);
+            box-shadow: 0 6px 18px color-mix(in srgb, var(--danger) 35%, transparent);
         }
         .btn-blue {
-            background: linear-gradient(135deg, #8fd6ff, var(--blue)); color: #0e1f2b; font-weight: 800; border: none;
+            background: linear-gradient(135deg, var(--blue-fill-hi), var(--blue-fill)); color: var(--on-accent); font-weight: 800; border: none;
             padding: 8px 12px; border-radius: 999px; cursor: pointer; width: 100%; margin: 4px 0;
-            box-shadow: 0 6px 18px rgba(79, 195, 255, 0.35);
+            box-shadow: 0 6px 18px color-mix(in srgb, var(--blue) 35%, transparent);
         }
         .btn-industry {
-            background: linear-gradient(135deg, #ffb684, var(--industry)); color: #2c1400; font-weight: 900; border: none;
+            background: linear-gradient(135deg, var(--industry-fill-hi), var(--industry-fill)); color: var(--on-accent); font-weight: 900; border: none;
             padding: 8px 12px; border-radius: 999px; cursor: pointer; width: 100%; margin: 4px 0;
-            box-shadow: 0 6px 18px rgba(255, 145, 66, 0.35);
+            box-shadow: 0 6px 18px color-mix(in srgb, var(--industry) 35%, transparent);
         }
         .btn-europe {
             
-            background: linear-gradient(135deg, #3d54c9, #2c3f9e); color: #fff; font-weight: 900; border: none;
+            background: linear-gradient(135deg, var(--europe-fill), var(--europe-fill-lo)); color: var(--on-strong); font-weight: 900; border: none;
             padding: 10px 14px; border-radius: 999px; cursor: pointer; width: 100%; margin: 4px 0;
-            box-shadow: 0 6px 18px rgba(111, 141, 255, 0.35);
+            box-shadow: 0 6px 18px color-mix(in srgb, var(--europe) 35%, transparent);
         }
 
         
         table { width: 100%; border-collapse: collapse; font-size: var(--fs-body); }
         th, td { border: 1px solid var(--border); padding: 6px 6px; text-align: center; }
-        th { background: rgba(90, 108, 255, 0.14); color: var(--accent); font-weight: 800; }
-        tr:nth-child(even) { background: rgba(228, 197, 140, 0.02); }
-        tr:hover { background: rgba(90, 108, 255, 0.1); }
+        th { background: color-mix(in srgb, var(--violet) 14%, transparent); color: var(--accent); font-weight: 800; }
+        tr:nth-child(even) { background: color-mix(in srgb, var(--accent) 2%, transparent); }
+        tr:hover { background: color-mix(in srgb, var(--violet) 10%, transparent); }
 
         .player-row, .market-row, .fixture-row {
             display: flex; justify-content: space-between; align-items: center;
             background: var(--surface-box); padding: 10px 12px; margin: 6px 0; border-radius: 14px;
             font-size: var(--fs-body); border: 1px solid var(--surface-box-border); color: var(--text-main);
-            transition: 0.15s; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            transition: 0.15s; box-shadow: 0 4px 10px color-mix(in srgb, var(--shade) 20%, transparent);
         }
-        .player-row:hover, .market-row:hover, .fixture-row:hover { background: rgba(90, 108, 255, 0.12); border-color: rgba(90, 108, 255, 0.4); }
+        .player-row:hover, .market-row:hover, .fixture-row:hover { background: color-mix(in srgb, var(--violet) 12%, transparent); border-color: color-mix(in srgb, var(--violet) 40%, transparent); }
         .badge { display: inline-block; padding: 2px 6px; border-radius: 999px; font-size: var(--fs-micro); font-weight: 800; }
-        .badge-tw { background: #a8631f; color: #fff; }
-        .badge-abw { background: #3a5aa8; color: #fff; }
-        .badge-mit { background: #2f7d5f; color: #fff; }
-        .badge-st { background: #a83550; color: #fff; }
-        .badge-trait { background: rgba(90, 108, 255, 0.25); color: #dce8ff; border: 1px solid var(--violet); font-size: var(--fs-micro); font-weight: bold; border-radius: 999px; padding: 1px 6px; }
-        .badge-count { background: var(--danger); color: #fff; padding: 1px 7px; border-radius: 999px; font-size: var(--fs-caption); font-weight: 900; }
+        .badge-tw { background: var(--pos-tw); color: var(--on-strong); }
+        .badge-abw { background: var(--pos-abw); color: var(--on-strong); }
+        .badge-mit { background: var(--pos-mit); color: var(--on-strong); }
+        .badge-st { background: var(--pos-st); color: var(--on-strong); }
+        .badge-trait { background: color-mix(in srgb, var(--violet) 25%, transparent); color: var(--text-main); border: 1px solid var(--violet); font-size: var(--fs-micro); font-weight: bold; border-radius: 999px; padding: 1px 6px; }
+        .badge-count { background: var(--danger); color: var(--on-strong); padding: 1px 7px; border-radius: 999px; font-size: var(--fs-caption); font-weight: 900; }
 
         .box {
             background: var(--surface-box); border: 1px solid var(--surface-box-border); padding: 10px 13px; margin: 6px 0;
             border-left: none; font-size: var(--fs-body); line-height: 1.45; border-radius: 12px; color: var(--text-box);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+            box-shadow: 0 4px 12px color-mix(in srgb, var(--shade) 25%, transparent);
             position: relative; padding-left: 15px;
         }
         .box::before {
             content: ''; position: absolute; left: 5px; top: 10px; bottom: 10px; width: 3px;
             border-radius: 3px; background: var(--accent); opacity: 0.7;
         }
-        .box-underworld { background: rgba(90, 108, 255, 0.09); }
+        .box-underworld { background: color-mix(in srgb, var(--violet) 9%, transparent); }
         .box-underworld::before { background: var(--purple); }
-        .box-industry { background: rgba(255, 145, 66, 0.08); border-color: rgba(255, 145, 66, 0.22); }
+        .box-industry { background: color-mix(in srgb, var(--industry) 8%, transparent); border-color: color-mix(in srgb, var(--industry) 22%, transparent); }
         .box-industry::before { background: var(--industry); }
-        .box-offer { background: rgba(79, 195, 255, 0.09); }
+        .box-offer { background: color-mix(in srgb, var(--blue) 9%, transparent); }
         .box-offer::before { background: var(--blue); width: 4px; }
-        .box-admin { background: rgba(255, 213, 74, 0.08); border-color: rgba(255, 213, 74, 0.22); }
+        .box-admin { background: color-mix(in srgb, var(--gold) 8%, transparent); border-color: color-mix(in srgb, var(--gold) 22%, transparent); }
         .box-admin::before { background: var(--gold); width: 4px; }
-        .box-europe { background: rgba(111, 141, 255, 0.09); }
+        .box-europe { background: color-mix(in srgb, var(--europe) 9%, transparent); }
         .box-europe::before { background: var(--europe); width: 4px; }
         /* ---------- Karten-Muster (js/ui-cards.js) ---------- */
         /* Raster: Bild | Titel+Untertitel | Kennzahl | Knopf; die Chips stehen in Zeile 2 unter dem Titel */
@@ -469,9 +545,9 @@
             background: var(--chip-bg); color: var(--text-main); border: 1px solid var(--border);
             white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
         }
-        .ui-chip-gut { background: color-mix(in srgb, var(--primary) 16%, transparent); border-color: color-mix(in srgb, var(--primary) 45%, transparent); color: var(--primary); }
-        .ui-chip-warn { background: color-mix(in srgb, var(--accent) 16%, transparent); border-color: color-mix(in srgb, var(--accent) 45%, transparent); color: var(--accent); }
-        .ui-chip-schlecht { background: color-mix(in srgb, var(--danger) 16%, transparent); border-color: color-mix(in srgb, var(--danger) 45%, transparent); color: var(--danger); }
+        .ui-chip-gut { background: color-mix(in srgb, var(--primary) 16%, transparent); border-color: color-mix(in srgb, var(--primary) 45%, transparent); color: color-mix(in srgb, var(--primary) 78%, var(--text-main)); }
+        .ui-chip-warn { background: color-mix(in srgb, var(--accent) 16%, transparent); border-color: color-mix(in srgb, var(--accent) 45%, transparent); color: color-mix(in srgb, var(--accent) 78%, var(--text-main)); }
+        .ui-chip-schlecht { background: color-mix(in srgb, var(--danger) 16%, transparent); border-color: color-mix(in srgb, var(--danger) 45%, transparent); color: color-mix(in srgb, var(--danger) 78%, var(--text-main)); }
         .ui-stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(52px, 1fr)); gap: 4px; margin-top: 10px; }
         .ui-stat-row > div { display: flex; flex-direction: column; align-items: center; padding: 5px 2px; border-radius: 8px; background: var(--chip-bg); }
         .ui-stat-row span { font-size: var(--fs-micro); color: var(--text-muted); font-weight: var(--fw-meta); letter-spacing: 0.4px; }
@@ -501,7 +577,7 @@
         :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
         .ticker-log {
-            max-height: 140px; overflow-y: auto; background: rgba(0,0,0,0.3); padding: 9px;
+            max-height: 140px; overflow-y: auto; background: color-mix(in srgb, var(--shade) 30%, transparent); padding: 9px;
             border: 1px solid var(--border); font-size: var(--fs-body); border-radius: 12px; margin-bottom: 6px;
         }
 
@@ -564,8 +640,8 @@
         .bottom-nav-bar {
             position: fixed; bottom: 0; left: 0; right: 0; z-index: 500;
             display: grid; grid-template-columns: repeat(7, 1fr);
-            background: var(--surface-nav);  border-top: 1px solid rgba(228,197,140,0.25);
-            box-shadow: 0 -6px 20px rgba(0,0,0,0.5);
+            background: var(--surface-nav);  border-top: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+            box-shadow: 0 -6px 20px color-mix(in srgb, var(--shade) 50%, transparent);
             padding-bottom: env(safe-area-inset-bottom, 0px);
         }
         .bottom-nav-item {
@@ -578,7 +654,7 @@
         
         .bottom-nav-bar .bottom-nav-item { padding: 8px 2px 6px; font-size: 11px; letter-spacing: -0.1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .bottom-nav-item.active { color: var(--accent); transform: translateY(-2px); }
-        .bottom-nav-item.active .bn-icon { filter: drop-shadow(0 0 6px rgba(212,169,74,0.6)); }
+        .bottom-nav-item.active .bn-icon { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 60%, transparent)); }
         
         body { padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px)); }
         
@@ -651,7 +727,7 @@
             box-shadow: inset 0 3px 6px rgba(255,255,255,0.08), inset 0 -4px 8px rgba(0,0,0,0.35);
         }
         .stand:active { filter: brightness(1.3); transform: translateZ(4px); }
-        .stand span { color: var(--accent); font-weight: 900; }
+        .stand span { color: #fff; font-weight: 900; text-shadow: 0 1px 2px rgba(0,0,0,0.85); }
         .stand-north-outer { grid-column: 2 / 4; grid-row: 1; }
         .stand-north-inner { grid-column: 2 / 4; grid-row: 2; }
         .stand-south-inner { grid-column: 2 / 4; grid-row: 4; background: repeating-linear-gradient(0deg, rgba(0,0,0,0.22) 0px, rgba(0,0,0,0.22) 2px, transparent 2px, transparent 5px), linear-gradient(160deg, rgba(217, 89, 79, 0.45), rgba(120, 40, 35, 0.9)); }
@@ -682,16 +758,16 @@
             display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px;
         }
         .stadium-hero-metric-chip {
-            background: linear-gradient(165deg, rgba(28,44,74,0.7), rgba(10,15,28,0.85));
-            border: 1px solid rgba(79,195,255,0.18); border-radius: 12px; padding: 8px 6px;
-            text-align: center; box-shadow: 0 6px 14px rgba(0,0,0,0.4);
+            background: linear-gradient(165deg, var(--surface-2), var(--surface-1));
+            border: 1px solid color-mix(in srgb, var(--blue) 18%, transparent); border-radius: 12px; padding: 8px 6px;
+            text-align: center; box-shadow: 0 6px 14px color-mix(in srgb, var(--shade) 40%, transparent);
         }
         .stadium-hero-metric-chip .shm-label { font-size: var(--fs-micro); color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; }
         .stadium-hero-metric-chip .shm-value { font-size: var(--fs-title); font-weight: 900; color: var(--text-main); margin-top: 2px; }
         .stadium-condition-card {
-            background: linear-gradient(165deg, rgba(28,44,74,0.7), rgba(10,15,28,0.85));
-            border: 1px solid rgba(79,195,255,0.18); border-radius: 14px; padding: 12px;
-            margin-bottom: 10px; box-shadow: 0 8px 18px rgba(0,0,0,0.4);
+            background: linear-gradient(165deg, var(--surface-2), var(--surface-1));
+            border: 1px solid color-mix(in srgb, var(--blue) 18%, transparent); border-radius: 14px; padding: 12px;
+            margin-bottom: 10px; box-shadow: 0 8px 18px color-mix(in srgb, var(--shade) 40%, transparent);
         }
         .stadium-hero-visual-wrapper {
             border-radius: 20px; overflow: hidden; position: relative; margin-bottom: 10px;
@@ -764,7 +840,7 @@
         .stand-infra-row span { filter: grayscale(0.15); }
 
         .input-inline {
-            background: rgba(0,0,0,0.3); border: 1px solid rgba(228, 197, 140, 0.18); color: var(--accent);
+            background: color-mix(in srgb, var(--shade) 30%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent);
             padding: 5px 7px; border-radius: 5px; width: 70px; font-weight: bold; text-align: center; font-size: var(--fs-body);
         }
 
@@ -775,7 +851,7 @@
                 position: fixed; top: 0; left: 0; bottom: 0; width: 78%; max-width: 300px;
                 z-index: 900; flex-direction: column; flex-wrap: nowrap;
                 transform: translateX(-105%); transition: transform 0.28s ease;
-                box-shadow: 8px 0 30px rgba(0,0,0,0.6); overflow-y: auto; max-height: 100vh;
+                box-shadow: 8px 0 30px color-mix(in srgb, var(--shade) 60%, transparent); overflow-y: auto; max-height: 100vh;
                 padding-top: 16px;
             }
             .app-sidebar.menu-open { transform: translateX(0); }
@@ -783,13 +859,13 @@
             .nav-btn { flex: none; font-size: var(--fs-body); padding: 9px 10px; }
             .menu-backdrop {
                 display: none; position: fixed; inset: 0; z-index: 899;
-                background: rgba(0,0,0,0.55); backdrop-filter: blur(2px);
+                background: color-mix(in srgb, var(--shade) 55%, transparent); backdrop-filter: blur(2px);
             }
             .menu-backdrop.menu-open { display: block; }
             .hamburger-btn {
                 display: flex; align-items: center; justify-content: center;
                 width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border);
-                background: rgba(255,255,255,0.05); color: var(--text-main); font-size: var(--fs-title);
+                background: color-mix(in srgb, var(--ink) 5%, transparent); color: var(--text-main); font-size: var(--fs-title);
                 cursor: pointer; flex-shrink: 0;
             }
             .app-content { max-height: none; overflow-y: visible; }
@@ -798,9 +874,9 @@
         
         .app-toast {
             position: fixed; bottom: calc(70px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%) translateY(20px); 
-            background: linear-gradient(135deg, #3a2a1a, #221810); color: var(--text-main); padding: 12px 22px;
+            background: linear-gradient(135deg, color-mix(in srgb, var(--industry) 30%, var(--surface-1)), var(--surface-0)); color: var(--text-main); padding: 12px 22px;
             border-radius: 6px; font-size: var(--fs-body-lg); font-weight: 700;
-            box-shadow: 0 8px 26px rgba(0,0,0,0.6), inset 0 1px 0 rgba(228, 197, 140, 0.06);
+            box-shadow: 0 8px 26px color-mix(in srgb, var(--shade) 60%, transparent), inset 0 1px 0 color-mix(in srgb, var(--accent) 6%, transparent);
             opacity: 0; pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease;
             z-index: 9999; max-width: 88vw; text-align: center; border-left: 4px solid var(--primary);
         }
@@ -809,25 +885,25 @@
 
         
         .hubtab-btn.tab-industry { color: var(--industry); }
-        .hubtab-btn.tab-industry.btn-action { background: linear-gradient(135deg, rgba(255,138,92,0.9), rgba(255,138,92,0.55)); color: #2c0f00; }
-        .hubtab-btn.tab-europe { color: #9db4ff; }
-        .hubtab-btn.tab-europe.btn-action { background: linear-gradient(135deg, #3d54c9, #2c3f9e); color: #fff; } 
+        .hubtab-btn.tab-industry.btn-action { background: linear-gradient(135deg, var(--industry-fill-hi), var(--industry-fill)); color: var(--on-accent); }
+        .hubtab-btn.tab-europe { color: var(--europe); }
+        .hubtab-btn.tab-europe.btn-action { background: linear-gradient(135deg, var(--europe-fill), var(--europe-fill-lo)); color: var(--on-strong); } 
         .hubtab-btn.tab-gold { color: var(--accent); }
-        .hubtab-btn.tab-gold.btn-action { background: linear-gradient(135deg, #ffe27a, var(--accent)); color: #241800; }
+        .hubtab-btn.tab-gold.btn-action { background: linear-gradient(135deg, var(--gold-fill-hi), var(--accent-fill)); color: var(--on-accent); }
         .hubtab-btn.tab-red { color: var(--danger); }
-        .hubtab-btn.tab-red.btn-action { background: linear-gradient(135deg, #c73545, #a82838); color: #fff; } 
+        .hubtab-btn.tab-red.btn-action { background: linear-gradient(135deg, var(--danger-fill), var(--danger-fill-lo)); color: var(--on-strong); } 
 
         
         .tutorial-overlay {
-            position: fixed; inset: 0; background: rgba(8, 5, 3, 0.82); backdrop-filter: blur(3px);
+            position: fixed; inset: 0; background: color-mix(in srgb, var(--shade) 82%, transparent); backdrop-filter: blur(3px);
             display: none; align-items: center; justify-content: center; z-index: 10000; padding: 16px;
         }
         .tutorial-overlay.show { display: flex; }
         .tutorial-box {
-            background: linear-gradient(165deg, rgba(24, 38, 63, 0.98), rgba(9, 14, 26, 0.98));
-            border: 1px solid rgba(212, 169, 74, 0.4); border-radius: 10px; padding: 20px;
+            background: linear-gradient(165deg, color-mix(in srgb, var(--surface-1) 98%, transparent), color-mix(in srgb, var(--shade) 98%, transparent));
+            border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); border-radius: 10px; padding: 20px;
             max-width: 380px; max-height: 85vh; overflow-y: auto;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.7), 0 0 30px rgba(212, 169, 74, 0.12);
+            box-shadow: 0 20px 50px color-mix(in srgb, var(--shade) 70%, transparent), 0 0 30px color-mix(in srgb, var(--accent) 12%, transparent);
         }
 
         
@@ -838,45 +914,45 @@
         }
         .goal-zone-btn { background: rgba(228,197,140,0.07); border:1px solid #6b5a42; color:var(--text-main); font-size:22px; padding:16px 0; border-radius:8px; cursor:pointer; transition:0.15s; }
         .goal-zone-btn:hover { background: rgba(61, 138, 108, 0.28); border-color: var(--teal); }
-        .crossing-bar { position:relative; height:38px; background:rgba(228,197,140,0.05); border-radius:8px; overflow:hidden; margin-top:6px; }
+        .crossing-bar { position:relative; height:38px; background:color-mix(in srgb, var(--accent) 5%, transparent); border-radius:8px; overflow:hidden; margin-top:6px; }
         .crossing-bar > div[class^="crossing-zone"] { position:absolute; top:0; bottom:0; }
         .crossing-zone-schlecht-l { left:0; width:26%; background:rgba(217,89,79,0.25); }
         .crossing-zone-gut-l { left:26%; width:16%; background:rgba(212,169,74,0.3); }
         .crossing-zone-perfekt { left:42%; width:16%; background:rgba(76,175,122,0.4); }
         .crossing-zone-gut-r { left:58%; width:16%; background:rgba(212,169,74,0.3); }
         .crossing-zone-schlecht-r { left:74%; width:26%; background:rgba(217,89,79,0.25); }
-        #crossing-marker { position:absolute; top:-4px; width:4px; height:46px; background:var(--text-main); left:0%; box-shadow:0 0 6px rgba(240,230,210,0.8); }
+        #crossing-marker { position:absolute; top:-4px; width:4px; height:46px; background:var(--text-main); left:0%; box-shadow:0 0 6px color-mix(in srgb, var(--ink) 80%, transparent); }
 
         
         .stock-chart-3d-wrapper { perspective: 400px; width: 100%; height: 46px; margin: 4px 0; }
         .stock-chart-3d {
             display: flex; align-items: flex-end; gap: 2px; width: 100%; height: 100%;
             transform: rotateX(18deg); transform-style: preserve-3d;
-            background: rgba(0,0,0,0.3); border-radius: 6px; padding: 3px 4px;
+            background: color-mix(in srgb, var(--shade) 30%, transparent); border-radius: 6px; padding: 3px 4px;
         }
-        .stock-bar-3d { flex: 1; min-width: 3px; background: linear-gradient(to top, var(--teal), #7ecfa8); border-radius: 2px 2px 0 0; transition: height 0.3s ease; }
+        .stock-bar-3d { flex: 1; min-width: 3px; background: linear-gradient(to top, var(--teal), var(--primary)); border-radius: 2px 2px 0 0; transition: height 0.3s ease; }
 
         
         .generic-modal-overlay {
-            position: fixed; inset: 0; background: rgba(8, 5, 3, 0.78); backdrop-filter: blur(3px);
+            position: fixed; inset: 0; background: color-mix(in srgb, var(--shade) 78%, transparent); backdrop-filter: blur(3px);
             display: none; align-items: center; justify-content: center; z-index: 9500; padding: 14px;
         }
         .generic-modal-overlay.show { display: flex; }
         .generic-modal-box {
-            background: linear-gradient(165deg, rgba(24, 38, 63, 0.98), rgba(9, 14, 26, 0.98));
-            border: 1px solid rgba(212, 169, 74, 0.4); border-radius: 10px; padding: 18px;
+            background: linear-gradient(165deg, color-mix(in srgb, var(--surface-1) 98%, transparent), color-mix(in srgb, var(--shade) 98%, transparent));
+            border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); border-radius: 10px; padding: 18px;
             max-width: 480px; width: 100%; max-height: 88vh; overflow-y: auto;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.7), 0 0 30px rgba(212, 169, 74, 0.1);
+            box-shadow: 0 20px 50px color-mix(in srgb, var(--shade) 70%, transparent), 0 0 30px color-mix(in srgb, var(--accent) 10%, transparent);
             position: relative;
         }
         .generic-modal-close {
-            position: absolute; top: 12px; right: 12px; background: rgba(228,197,140,0.08);
-            border: 1px solid rgba(228,197,140,0.18); color: var(--text-main); width: 28px; height: 28px;
+            position: absolute; top: 12px; right: 12px; background: color-mix(in srgb, var(--accent) 8%, transparent);
+            border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent); color: var(--text-main); width: 28px; height: 28px;
             border-radius: 50%; cursor: pointer; font-size: var(--fs-title-sm); line-height: 1;
         }
         .modal-avatar-photo {
             width: 84px; height: 84px; border-radius: 8px; margin: 0 auto 10px;
-            background: linear-gradient(160deg, #3a2c1c, #1c1408);
+            background: linear-gradient(160deg, color-mix(in srgb, var(--industry) 30%, var(--surface-1)), var(--surface-0));
             border: 2px solid var(--teal); display: flex; align-items: center; justify-content: center;
             font-size: 34px;
         }
@@ -885,7 +961,7 @@
         .modal-field-grid span.val { color: var(--teal); font-weight: 700; }
         .modal-stat-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin: 8px 0; }
         .modal-stat-chip {
-            background: rgba(228,197,140,0.05); border: 1px solid var(--border); border-radius: 6px;
+            background: color-mix(in srgb, var(--accent) 5%, transparent); border: 1px solid var(--border); border-radius: 6px;
             padding: 4px 2px; text-align: center; font-size: var(--fs-caption);
         }
         .modal-stat-chip .k { color: var(--text-muted); display: block; }
@@ -895,8 +971,8 @@
         .stepper-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 8px 0; font-size: var(--fs-body); }
         .stepper-controls { display: flex; align-items: center; gap: 8px; }
         .stepper-btn {
-            width: 30px; height: 30px; border-radius: 6px; background: rgba(90, 108, 255, 0.22);
-            border: 1px solid rgba(90, 108, 255, 0.45); color: var(--text-main); font-size: var(--fs-title); font-weight: 900; cursor: pointer;
+            width: 30px; height: 30px; border-radius: 6px; background: color-mix(in srgb, var(--violet) 22%, transparent);
+            border: 1px solid color-mix(in srgb, var(--violet) 45%, transparent); color: var(--text-main); font-size: var(--fs-title); font-weight: 900; cursor: pointer;
         }
         .stepper-value { min-width: 90px; text-align: center; font-weight: 800; color: var(--accent); font-size: var(--fs-title-sm); }
 
@@ -904,9 +980,9 @@
         .formation-grid-list { display: flex; flex-direction: column; gap: 4px; max-height: 320px; overflow-y: auto; }
         .formation-grid-item {
             display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px;
-            background: rgba(228,197,140,0.04); border: 1px solid var(--border); cursor: pointer; font-size: var(--fs-body-lg); font-weight: 700;
+            background: color-mix(in srgb, var(--accent) 4%, transparent); border: 1px solid var(--border); cursor: pointer; font-size: var(--fs-body-lg); font-weight: 700;
         }
-        .formation-grid-item.active { background: rgba(90, 108, 255, 0.25); border-color: var(--violet); }
+        .formation-grid-item.active { background: color-mix(in srgb, var(--violet) 25%, transparent); border-color: var(--violet); }
         .formation-mini-dots { display: grid; grid-template-columns: repeat(3, 5px); gap: 2px; width: 19px; }
         .formation-mini-dots div { width: 5px; height: 5px; border-radius: 50%; background: var(--teal); }
         .formation-preview-pitch {
@@ -920,7 +996,7 @@
 
         
         .stock-ticker-bar {
-            display: flex; gap: 16px; overflow-x: auto; background: rgba(0,0,0,0.3);
+            display: flex; gap: 16px; overflow-x: auto; background: color-mix(in srgb, var(--shade) 30%, transparent);
             border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; margin-bottom: 10px;
             font-family: 'Courier New', monospace; font-size: var(--fs-body-lg); white-space: nowrap;
         }
@@ -966,7 +1042,7 @@
            (siehe js/office.js). Der Raum ist eine echte 3D-Box aus fünf Ebenen, die
            Kamera sitzt in der Mitte und dreht sich leicht mit der Maus/dem Finger. */
         
-        #screen-office { position: fixed; inset: 0; z-index: 940; background: #04070d; }
+        #screen-office { position: fixed; inset: 0; z-index: 940; background: var(--surface-0); }
         .office-viewport { position: absolute; inset: 0; overflow: hidden; background: #04070d; }
         
         #office-scaler { position: absolute; left: 50%; top: 50%; width: 900px; height: 560px; margin: -280px 0 0 -450px; transform-origin: 50% 50%; }
@@ -1242,8 +1318,8 @@
         
         .off-phone-ringing .off-phone-handset { animation: officePhoneRing 1.3s ease-in-out 4; }
         @keyframes officePhoneRing {
-            0%, 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,0.14); }
-            50% { box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), 0 0 15px 4px rgba(199,53,69,0.9); }
+            0%, 100% { box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ink) 14%, transparent); }
+            50% { box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ink) 14%, transparent), 0 0 15px 4px color-mix(in srgb, var(--danger) 90%, transparent); }
         }
 
         /* --- Schreibtischlampe (schaltet die Raumbeleuchtung) --- */
@@ -1266,24 +1342,24 @@
 
         
         
-        .app-loading { position: fixed; inset: 0; z-index: 99999; display: flex; align-items: center; justify-content: center; background: #070d18; }
+        .app-loading { position: fixed; inset: 0; z-index: 99999; display: flex; align-items: center; justify-content: center; background: var(--surface-0); }
         .app-loading-inner { text-align: center; padding: 20px; }
         .app-loading-ball { font-size: 44px; animation: appLoadingSpin 1.4s linear infinite; }
         @keyframes appLoadingSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .app-loading-title { font-size: var(--fs-title); font-weight: 900; color: #f8fafc; margin-top: 10px; }
-        .app-loading-sub { font-size: var(--fs-body); color: #94a3b8; margin-top: 4px; }
+        .app-loading-title { font-size: var(--fs-title); font-weight: 900; color: var(--text-main); margin-top: 10px; }
+        .app-loading-sub { font-size: var(--fs-body); color: var(--europe); margin-top: 4px; }
 
         
-        .app-notice-overlay { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center; padding: 18px; background: rgba(3, 7, 15, 0.8); }
-        .app-notice-card { width: 100%; max-width: 360px; max-height: 84vh; overflow-y: auto; background: var(--bg-panel, #111a2b); border: 2px solid var(--primary); border-radius: 14px; padding: 16px; box-shadow: 0 22px 60px rgba(0,0,0,0.6); text-align: center; }
+        .app-notice-overlay { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center; padding: 18px; background: color-mix(in srgb, var(--shade) 80%, transparent); }
+        .app-notice-card { width: 100%; max-width: 360px; max-height: 84vh; overflow-y: auto; background: var(--surface-2); border: 2px solid var(--primary); border-radius: 14px; padding: 16px; box-shadow: 0 22px 60px color-mix(in srgb, var(--shade) 60%, transparent); text-align: center; }
         .app-notice-card.app-notice-warn { border-color: var(--danger); }
         .app-notice-title { font-size: var(--fs-title); font-weight: 900; margin-bottom: 8px; }
-        .app-notice-text { font-size: var(--fs-body-lg); line-height: 1.55; color: #cbd5e1; margin-bottom: 14px; text-align: left; }
+        .app-notice-text { font-size: var(--fs-body-lg); line-height: 1.55; color: var(--text-main); margin-bottom: 14px; text-align: left; }
         .app-notice-card button { width: 100%; }
         .app-notice-count { font-size: var(--fs-caption); color: var(--text-muted); margin-top: 8px; }
 
         .office-event-overlay { position: absolute; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(4, 9, 18, 0.72); }
-        .office-event-card { width: 100%; max-width: 340px; max-height: 88%; overflow-y: auto; background: var(--bg-panel, #111a2b); border: 2px solid var(--primary); border-radius: 12px; padding: 12px; box-shadow: 0 18px 40px rgba(0,0,0,0.55); }
+        .office-event-card { width: 100%; max-width: 340px; max-height: 88%; overflow-y: auto; background: var(--surface-2); border: 2px solid var(--primary); border-radius: 12px; padding: 12px; box-shadow: 0 18px 40px rgba(0,0,0,0.55); }
         .office-event-card button { width: 100%; }
 
         .off-lamp-foot { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: 76px; height: 12px; border-radius: 999px; background: linear-gradient(180deg, #6b7683, #333a44); }
@@ -1324,7 +1400,7 @@
             transform: translate(-50%, -50%);
             width: 40px;
             height: 40px;
-            border: 2px solid rgba(255,255,255,0.6);
+            border: 2px solid color-mix(in srgb, var(--ink) 60%, transparent);
             border-radius: 50%;
         }
 
@@ -1351,9 +1427,9 @@
             position: absolute;
             width: 8px;
             height: 8px;
-            background: #ffeb3b;
+            background: var(--gold);
             border-radius: 50%;
-            box-shadow: 0 0 12px rgba(255, 235, 59, 0.6), 0 0 24px rgba(255, 235, 59, 0.3);
+            box-shadow: 0 0 12px color-mix(in srgb, var(--gold) 60%, transparent), 0 0 24px color-mix(in srgb, var(--gold) 30%, transparent);
         }
 
         .top-left { top: 2%; left: 8%; }
@@ -1450,7 +1526,7 @@
                 position: fixed; top: 0; left: 0; bottom: 0; width: 78%; max-width: 300px;
                 z-index: 900; flex-direction: column; flex-wrap: nowrap;
                 transform: translateX(-105%); transition: transform 0.28s ease;
-                box-shadow: 8px 0 30px rgba(0,0,0,0.6); overflow-y: auto; max-height: 100vh;
+                box-shadow: 8px 0 30px color-mix(in srgb, var(--shade) 60%, transparent); overflow-y: auto; max-height: 100vh;
                 padding-top: 16px;
             }
             .app-sidebar.menu-open { transform: translateX(0); }
@@ -1458,13 +1534,13 @@
             .nav-btn { flex: none; padding: 9px 10px; }
             .menu-backdrop {
                 display: none; position: fixed; inset: 0; z-index: 899;
-                background: rgba(0,0,0,0.55); backdrop-filter: blur(2px);
+                background: color-mix(in srgb, var(--shade) 55%, transparent); backdrop-filter: blur(2px);
             }
             .menu-backdrop.menu-open { display: block; }
             .hamburger-btn {
                 display: flex; align-items: center; justify-content: center;
                 width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--border);
-                background: rgba(255,255,255,0.05); color: var(--text-main);
+                background: color-mix(in srgb, var(--ink) 5%, transparent); color: var(--text-main);
                 cursor: pointer; flex-shrink: 0;
             }
             .app-content { max-height: none; overflow-y: visible; padding: 8px; }
@@ -1552,8 +1628,8 @@
 
             
             ::-webkit-scrollbar { width: 6px; height: 6px; }
-            ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
-            ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+            ::-webkit-scrollbar-track { background: color-mix(in srgb, var(--shade) 20%, transparent); }
+            ::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--ink) 10%, transparent); border-radius: 3px; }
         }
 
         
@@ -1614,8 +1690,8 @@
         }
 
         .accordion-header {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
+            background: var(--surface-2);
+            border: 1px solid var(--border);
             padding: 8px 12px;
             cursor: pointer;
             display: flex;
@@ -1630,7 +1706,7 @@
         }
 
         .accordion-header:hover {
-            background: var(--bg-tertiary);
+            background: var(--surface-3);
             border-color: var(--primary);
         }
 
@@ -1686,10 +1762,10 @@
         display: flex; align-items: center; gap: 4px;
         position: fixed; right: 12px; bottom: calc(var(--bottom-nav-h, 58px) + 10px + env(safe-area-inset-bottom, 0px));
         z-index: 600; min-height: 46px; padding: 0 16px; border-radius: 999px;
-        border: 2px solid rgba(240, 230, 210, 0.75); cursor: pointer;
-        background: linear-gradient(135deg, #f0d98a, var(--accent)); color: #241800;
+        border: 2px solid color-mix(in srgb, var(--ink) 75%, transparent); cursor: pointer;
+        background: linear-gradient(135deg, var(--gold-fill-hi), var(--accent-fill)); color: var(--on-accent);
         font-size: var(--fs-title-sm); font-weight: 900; font-family: inherit;
-        box-shadow: 0 6px 18px rgba(0,0,0,0.55), 0 0 14px var(--accent-glow);
+        box-shadow: 0 6px 18px color-mix(in srgb, var(--shade) 55%, transparent), 0 0 14px var(--accent-glow);
     }
     body.fab-left .one-hand-fab { right: auto; left: 12px; }
     .one-hand-fab.fab-hidden, body.fab-off .one-hand-fab { display: none; }
@@ -1705,15 +1781,15 @@
     
     #matchday-controls, #btn-finish-match {
         position: sticky; bottom: calc(var(--bottom-nav-h, 58px) + 6px + env(safe-area-inset-bottom, 0px)); z-index: 40;
-        background: rgb(16, 12, 8); border: 1px solid rgba(228,197,140,0.25); border-radius: 10px;
-        padding: 6px; box-shadow: 0 -6px 18px rgba(0,0,0,0.55);
+        background: var(--surface-0); border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent); border-radius: 10px;
+        padding: 6px; box-shadow: 0 -6px 18px color-mix(in srgb, var(--shade) 55%, transparent);
     }
 
     
     #live-cotrainer-box:not(:empty) {
         position: sticky; bottom: calc(var(--bottom-nav-h, 58px) + 64px + env(safe-area-inset-bottom, 0px)); z-index: 40;
     }
-    #live-cotrainer-box .box { background: rgb(16, 22, 20); }
+    #live-cotrainer-box .box { background: var(--surface-0); }
 
     
     .header-kpis { flex-wrap: nowrap; overflow-x: auto; width: 100%; scrollbar-width: none; }
@@ -1729,7 +1805,7 @@
 
 /* Tastatur-Bedienung (25.25): sichtbarer Fokusrahmen; Mausklicks zeigen ihn nicht (focus-visible) */
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, a:focus-visible {
-    outline: 2px solid var(--accent, #82b1ff);
+    outline: 2px solid var(--accent, var(--europe));
     outline-offset: 2px;
 }
 
@@ -1742,12 +1818,12 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
      Entwicklertools untersuchen lassen (z.B. Dateimanager-Vorschauen auf Android). Bewusst
      als ALLERERSTES Skript im <body>, damit es auch ganz frühe Boot-Fehler einfängt.
 -->
-<div id="global-error-banner" style="display:none; position:fixed; top:0; left:0; right:0; z-index:999999; background:#5a0a15; color:#fff; padding:10px 12px; font-size:var(--fs-body); font-family:monospace; max-height:40vh; overflow-y:auto; border-bottom:3px solid #ff4d6d; word-break:break-word;">
+<div id="global-error-banner" style="display:none; position:fixed; top:0; left:0; right:0; z-index:999999; background:var(--danger); color:var(--on-strong); padding:10px 12px; font-size:var(--fs-body); font-family:monospace; max-height:40vh; overflow-y:auto; border-bottom:3px solid var(--danger); word-break:break-word;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-        <strong style="color:#ff8a9b;">⚠️ Technischer Fehler (bitte melden):</strong>
+        <strong style="color:var(--danger);">⚠️ Technischer Fehler (bitte melden):</strong>
         <div>
-            <button onclick="window.__exportRuntimeErrorLog && window.__exportRuntimeErrorLog()" style="background:#ffe27a; color:#5a0a15; border:none; border-radius:4px; padding:2px 8px; font-weight:bold; margin-right:4px;">📤 Exportieren</button>
-            <button onclick="document.getElementById('global-error-banner').style.display='none'" style="background:#fff; color:#5a0a15; border:none; border-radius:4px; padding:2px 8px; font-weight:bold;">✕</button>
+            <button onclick="window.__exportRuntimeErrorLog && window.__exportRuntimeErrorLog()" style="background:var(--gold); color:var(--danger); border:none; border-radius:4px; padding:2px 8px; font-weight:bold; margin-right:4px;">📤 Exportieren</button>
+            <button onclick="document.getElementById('global-error-banner').style.display='none'" style="background:var(--on-strong); color:var(--danger-fill); border:none; border-radius:4px; padding:2px 8px; font-weight:bold;">✕</button>
         </div>
     </div>
     <div id="global-error-content"></div>
@@ -1780,7 +1856,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
             if (!banner || !content) return;
             banner.style.display = 'block';
             var line = document.createElement('div');
-            line.style.borderTop = '1px solid rgba(255,255,255,0.2)';
+            line.style.borderTop = '1px solid color-mix(in srgb, var(--ink) 20%, transparent)';
             line.style.padding = '4px 0';
             line.textContent = '[' + new Date().toLocaleTimeString('de-DE') + '] ' + msg;
             content.appendChild(line);
@@ -1818,7 +1894,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
     </div>
 </div>
 <div class="app-notice-overlay" id="app-notice" style="display:none;"></div>
-<div id="version-info" style="position:fixed; bottom:8px; right:8px; background:rgba(0,0,0,0.7); color:#FFC107; padding:6px 12px; border-radius:4px; font-size:var(--fs-small); font-weight:bold; z-index:100; border:1px solid #FFC107; cursor:help;" title="Anstoss FM13 - Spielversion">
+<div id="version-info" style="position:fixed; bottom:8px; right:8px; background:color-mix(in srgb, var(--shade) 70%, transparent); color:var(--gold); padding:6px 12px; border-radius:4px; font-size:var(--fs-small); font-weight:bold; z-index:100; border:1px solid var(--gold); cursor:help;" title="Anstoss FM13 - Spielversion">
     <span id="version-display"></span>
 </div>
 <div id="app-toast" class="app-toast"></div>
@@ -1887,7 +1963,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
     <div class="generic-modal-box">
         <button onclick="closePlayerDetail()" class="generic-modal-close">✕</button>
         <div id="pd-avatar" class="modal-avatar-photo">👤</div>
-        <div style="text-align:center; font-size:var(--fs-title); font-weight:900; color:#fff;" id="pd-name">Spielername</div>
+        <div style="text-align:center; font-size:var(--fs-title); font-weight:900; color:var(--text-main);" id="pd-name">Spielername</div>
         <div class="modal-field-grid" id="pd-fields"></div>
         <div style="font-size:var(--fs-body); font-weight:800; color:var(--accent); margin-top:6px;">Fähigkeiten</div>
         <div class="modal-stat-grid" id="pd-stats"></div>
@@ -1908,7 +1984,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
         <div style="display:grid; grid-template-columns: 1fr 1.1fr; gap:12px;">
             <div class="formation-grid-list" id="formation-modal-list"></div>
             <div>
-                <div style="text-align:center; font-weight:900; color:#fff; margin-bottom:4px;" id="formation-modal-title">4-4-2</div>
+                <div style="text-align:center; font-weight:900; color:var(--text-main); margin-bottom:4px;" id="formation-modal-title">4-4-2</div>
                 <div class="formation-preview-pitch" id="formation-preview-pitch"></div>
             </div>
         </div>
@@ -1923,7 +1999,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 <div id="negotiation-stepper-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
         <button onclick="closeNegotiationStepper()" class="generic-modal-close">✕</button>
-        <div style="font-size:var(--fs-title); font-weight:900; color:#fff;" id="nego-player-name">Spielername</div>
+        <div style="font-size:var(--fs-title); font-weight:900; color:var(--text-main);" id="nego-player-name">Spielername</div>
         <div style="font-size:var(--fs-body); color:var(--text-muted); margin-bottom:10px;" id="nego-club-name">Verkaufsverhandlung</div>
         <div class="modal-avatar-photo" style="cursor:pointer;" id="player-detail-link-nego">👤</div>
         <div style="font-size:var(--fs-body); color:var(--accent); font-weight:800; margin:6px 0;">Der Manager erwartet dein Angebot.</div>
@@ -1964,7 +2040,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 <div id="scout-filter-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
         <button onclick="closeScoutFilterModal()" class="generic-modal-close">✕</button>
-        <div style="font-size:var(--fs-title); font-weight:900; color:#fff; margin-bottom:10px;">🔭 Scouting-Fokus einstellen</div>
+        <div style="font-size:var(--fs-title); font-weight:900; color:var(--text-main); margin-bottom:10px;">🔭 Scouting-Fokus einstellen</div>
 
         <div class="stepper-row">
             <span>Mindest-Stärke</span>
@@ -2016,7 +2092,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 <!-- HALBZEIT-ANSPRACHE -->
 <div id="halftime-talk-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
-        <div style="font-size:var(--fs-title); font-weight:900; color:#fff; margin-bottom:6px;">🎤 Kabinenansprache</div>
+        <div style="font-size:var(--fs-title); font-weight:900; color:var(--text-main); margin-bottom:6px;">🎤 Kabinenansprache</div>
         <div style="font-size:var(--fs-body-lg); color:var(--text-muted); margin-bottom:12px;" id="halftime-score-summary">Halbzeit - was sagst du der Mannschaft?</div>
         <div id="halftime-sub-suggestion-box" style="margin-bottom:10px;"></div>
         <button onclick="chooseHalftimeTalk('anfeuern')" class="btn-action" style="margin-bottom:6px;">🔥 Anfeuern</button>
@@ -2029,7 +2105,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 <!-- STANDARDSITUATION IM LIVESPIEL (js/set-pieces.js) -->
 <div id="setpiece-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
-        <div style="font-size:var(--fs-title); font-weight:900; color:#fff; margin-bottom:6px;" id="setpiece-title">Standard</div>
+        <div style="font-size:var(--fs-title); font-weight:900; color:var(--text-main); margin-bottom:6px;" id="setpiece-title">Standard</div>
         <div style="font-size:var(--fs-body); color:var(--text-muted); margin-bottom:10px;">Das Spiel ruht, bis du entscheidest.</div>
         <div id="setpiece-options"></div>
     </div>
@@ -2038,7 +2114,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 <!-- MANAGER-INTERVIEW (POST-MATCH) -->
 <div id="interview-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
-        <div style="font-size:var(--fs-title); font-weight:900; color:#fff; margin-bottom:6px;">🎙️ Interview nach dem Spiel</div>
+        <div style="font-size:var(--fs-title); font-weight:900; color:var(--text-main); margin-bottom:6px;">🎙️ Interview nach dem Spiel</div>
         <div style="font-size:var(--fs-body-lg); color:var(--text-muted); margin-bottom:12px;" id="interview-question-text">Frage der Presse...</div>
         <div id="interview-answers-box"></div>
     </div>
@@ -2048,8 +2124,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 <div id="cup-draw-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box" style="text-align:center;">
         <div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--accent); margin-bottom:10px;" id="cup-draw-round-name">Runde</div>
-        <div style="font-size:var(--fs-title-sm); color:#cbd5e1; margin-bottom:14px;" id="cup-draw-reveal-text">🎟️ Die Kugeln rollen...</div>
-        <div style="font-size:22px; font-weight:900; color:#fff; display:none; margin-bottom:14px;" id="cup-draw-opponent-name"></div>
+        <div style="font-size:var(--fs-title-sm); color:var(--text-main); margin-bottom:14px;" id="cup-draw-reveal-text">🎟️ Die Kugeln rollen...</div>
+        <div style="font-size:22px; font-weight:900; color:var(--text-main); display:none; margin-bottom:14px;" id="cup-draw-opponent-name"></div>
         <button onclick="closeCupDrawCeremony()" class="btn-primary">Schließen</button>
     </div>
 </div>
@@ -2057,8 +2133,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 <!-- EUROPAPOKAL-AUSLOSUNGS-ZEREMONIE -->
 <div id="europe-draw-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box" style="text-align:center;">
-        <div style="font-size:var(--fs-title-sm); font-weight:900; color:#82b1ff; margin-bottom:10px;" id="europe-draw-round-name">Champions Cup</div>
-        <div style="font-size:var(--fs-title-sm); color:#cbd5e1; margin-bottom:14px;" id="europe-draw-reveal-text">🎟️ Die Kugeln rollen...</div>
+        <div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--europe); margin-bottom:10px;" id="europe-draw-round-name">Champions Cup</div>
+        <div style="font-size:var(--fs-title-sm); color:var(--text-main); margin-bottom:14px;" id="europe-draw-reveal-text">🎟️ Die Kugeln rollen...</div>
         <div id="europe-draw-opponents-list"></div>
         <button onclick="closeEuropeDrawCeremony()" class="btn-europe" style="margin-top:10px;">Schließen</button>
     </div>
@@ -2067,7 +2143,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 <!-- ELFMETERSCHIESSEN-TICKER -->
 <div id="shootout-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
-        <div style="font-size:var(--fs-title-sm); font-weight:900; color:#fff; margin-bottom:8px;" id="shootout-title">Elfmeterschießen</div>
+        <div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--text-main); margin-bottom:8px;" id="shootout-title">Elfmeterschießen</div>
         <div id="shootout-log" style="max-height:220px; overflow-y:auto; margin-bottom:10px;"></div>
         <div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--gold); text-align:center; margin-bottom:10px;" id="shootout-result"></div>
         <button onclick="closeShootoutTicker()" class="btn-primary">Schließen</button>
@@ -2077,7 +2153,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 <!-- ELFMETERSCHÜTZEN-AUSWAHL -->
 <div id="shooter-select-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
-        <div style="font-size:var(--fs-title-sm); font-weight:900; color:#fff; margin-bottom:6px;">🎯 Schützen-Reihenfolge festlegen</div>
+        <div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--text-main); margin-bottom:6px;">🎯 Schützen-Reihenfolge festlegen</div>
         <div style="font-size:var(--fs-body); color:var(--text-muted); margin-bottom:8px;">Wähle genau 5 Schützen in der gewünschten Reihenfolge (antippen zum Hinzufügen/Entfernen).</div>
         <div style="font-size:var(--fs-body); color:var(--accent); font-weight:bold; margin-bottom:6px;" id="shooter-select-count">0/5 gewählt</div>
         <button onclick="useLastShooterOrder()" id="shooter-select-last-order" class="btn-secondary" style="display:none; margin-bottom:8px; font-size:var(--fs-small);">🔁 Letzte Reihenfolge übernehmen</button>
@@ -2109,7 +2185,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 <!-- BUS-SPONSORING-VERHANDLUNG -->
 <div id="bus-sponsor-nego-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
-        <div style="font-size:var(--fs-title); font-weight:900; color:#fff; margin-bottom:4px;">🚌 Bus-Sponsoring verhandeln</div>
+        <div style="font-size:var(--fs-title); font-weight:900; color:var(--text-main); margin-bottom:4px;">🚌 Bus-Sponsoring verhandeln</div>
         <div style="font-size:var(--fs-body); color:var(--text-muted); margin-bottom:10px;">Verhandlung mit <strong id="bus-nego-sponsor-name">Sponsor</strong></div>
 
         <div class="stepper-row">
@@ -2137,7 +2213,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 <!-- LEIH-RÜCKRUF-VERHANDLUNG -->
 <div id="loan-recall-nego-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
-        <div style="font-size:var(--fs-title); font-weight:900; color:#fff; margin-bottom:4px;">📥 Rückholung verhandeln</div>
+        <div style="font-size:var(--fs-title); font-weight:900; color:var(--text-main); margin-bottom:4px;">📥 Rückholung verhandeln</div>
         <div style="font-size:var(--fs-body); color:var(--text-muted); margin-bottom:10px;" id="loan-recall-nego-club">Verhandlung mit Leihverein</div>
 
         <div class="stepper-row">
@@ -2165,7 +2241,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 <!-- ABWERBEVERSUCH ANDERER KLUBS -->
 <div id="joboffer-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
-        <div style="font-size:var(--fs-title); font-weight:900; color:#fff; margin-bottom:8px;">💼 Interesse von außen</div>
+        <div style="font-size:var(--fs-title); font-weight:900; color:var(--text-main); margin-bottom:8px;">💼 Interesse von außen</div>
         <div style="font-size:var(--fs-body-lg); color:var(--text-muted); margin-bottom:14px;"><strong id="joboffer-club-name">Ein Klub</strong> will dich als Trainer. Wechseln, das Interesse beim eigenen Vorstand als Druckmittel nutzen oder Vereinstreue zeigen?</div>
         <button onclick="acceptJobOfferMove(this)" class="btn-action" style="margin-bottom:8px;">🔄 Wechseln (Karriere bleibt, Kader neu)</button>
         <button onclick="acceptJobOfferLeverage()" class="btn-primary" style="margin-bottom:8px;">💰 Für mehr Budget nutzen</button>
@@ -2178,9 +2254,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
     <div class="generic-modal-box">
         <div style="font-size:var(--fs-title); font-weight:900; color:var(--danger); margin-bottom:8px;">⚠️ Vertrags-Ultimatum!</div>
         <div id="ultimatum-player-avatar" style="display:flex; justify-content:center; margin-bottom:6px;"></div>
-        <div style="font-size:var(--fs-title-sm); font-weight:900; color:#fff; text-align:center;" id="ultimatum-player-name">Spielername</div>
+        <div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--text-main); text-align:center;" id="ultimatum-player-name">Spielername</div>
         <div style="font-size:var(--fs-body); color:var(--text-muted); margin-bottom:14px;" id="ultimatum-player-info">Details</div>
-        <div style="font-size:var(--fs-body); color:#cbd5e1; margin-bottom:14px;">„Entweder ich bekomme einen neuen Vertrag, oder ich will verkauft werden!“</div>
+        <div style="font-size:var(--fs-body); color:var(--text-main); margin-bottom:14px;">„Entweder ich bekomme einen neuen Vertrag, oder ich will verkauft werden!“</div>
         <button onclick="resolveUltimatumRenew()" class="btn-primary" style="margin-bottom:8px;">✅ Neuen Vertrag anbieten</button>
         <button onclick="resolveUltimatumViaAgent()" id="btn-ultimatum-agent" class="btn-secondary" style="margin-bottom:8px; display:none;">🕴️ Über Berater lösen</button>
         <button onclick="extendUltimatumDeadline()" id="btn-ultimatum-extend" class="btn-secondary" style="margin-bottom:8px;">⏳ Vorschuss zahlen, Frist +2 Spieltage</button>
@@ -2198,8 +2274,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
         <div class="club-brand">
             <div class="club-logo" id="club-logo-display" style="position:relative;">
                 <span id="club-logo-symbol-text">FCM</span>
-                <span id="club-logo-pattern-badge" style="display:none; position:absolute; bottom:-3px; right:-3px; width:16px; height:16px; background:#0d1220; border-radius:50%; align-items:center; justify-content:center; font-size:var(--fs-caption); border:1px solid rgba(255,255,255,0.3);"></span>
-                <span id="club-logo-animal-badge" style="display:none; position:absolute; top:-3px; left:-3px; width:16px; height:16px; background:#0d1220; border-radius:50%; align-items:center; justify-content:center; font-size:var(--fs-caption); border:1px solid rgba(255,255,255,0.3);"></span>
+                <span id="club-logo-pattern-badge" style="display:none; position:absolute; bottom:-3px; right:-3px; width:16px; height:16px; background:var(--surface-0); border-radius:50%; align-items:center; justify-content:center; font-size:var(--fs-caption); border:1px solid color-mix(in srgb, var(--ink) 30%, transparent);"></span>
+                <span id="club-logo-animal-badge" style="display:none; position:absolute; top:-3px; left:-3px; width:16px; height:16px; background:var(--surface-0); border-radius:50%; align-items:center; justify-content:center; font-size:var(--fs-caption); border:1px solid color-mix(in srgb, var(--ink) 30%, transparent);"></span>
             </div>
             <div>
                 <div class="club-name" id="header-club-name">1.FC Moritz Leipzig</div>
@@ -2451,7 +2527,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
                         <div id="insolvency-status-box" class="box" style="display:none; border-color:var(--danger); color:var(--danger); font-size:var(--fs-body); margin-bottom:6px;"></div>
                         <div style="font-size:var(--fs-body); margin-bottom:2px;" id="budget-transfer-bar-label">Transferbudget: 0 €</div>
                         <div style="font-size:var(--fs-body); margin-bottom:2px;" id="budget-wage-bar-label">Gehaltsbudget: 0 / 0</div>
-                        <div style="background:#1e293b; border-radius:6px; height:10px; overflow:hidden; margin-bottom:8px;">
+                        <div style="background:color-mix(in srgb, var(--europe) 30%, var(--surface-1)); border-radius:6px; height:10px; overflow:hidden; margin-bottom:8px;">
                             <div id="budget-wage-bar-fill" style="height:100%; width:0%; background:var(--primary); transition:width 0.3s;"></div>
                         </div>
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
@@ -2469,8 +2545,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
                     <div class="dashboard-hero-club">
                         <div class="crest-fallback" id="dash-hero-crest" style="display:flex; align-items:center; justify-content:center; font-size:var(--fs-title);">🦁</div>
                         <div>
-                            <div style="font-size:var(--fs-title-sm); font-weight:900; color:#fff;" id="dash-hero-club-name">1.FC Moritz Leipzig</div>
-                            <div style="font-size:var(--fs-caption); color:rgba(255,255,255,0.75);" id="dash-hero-subline">6. Liga · Spieltag 1</div>
+                            <div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--text-main);" id="dash-hero-club-name">1.FC Moritz Leipzig</div>
+                            <div style="font-size:var(--fs-caption); color:color-mix(in srgb, var(--ink) 75%, transparent);" id="dash-hero-subline">6. Liga · Spieltag 1</div>
                         </div>
                     </div>
                     <div class="dashboard-hero-bowl-wrapper"></div>
@@ -2486,9 +2562,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
                 <div class="panel">
                     <div class="panel-header">
                         <span>⚽ NÄCHSTE BEGEGNUNG (SPIELTAG <span id="dash-mday">1</span>)</span>
-                        <span id="dash-league-name" style="color:#fff; font-size:var(--fs-small);">4. Liga</span>
+                        <span id="dash-league-name" style="color:var(--text-main); font-size:var(--fs-small);">4. Liga</span>
                     </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(0,0,0,0.3); border-radius:8px; margin-bottom:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:color-mix(in srgb, var(--shade) 30%, transparent); border-radius:8px; margin-bottom:8px;">
                         <div style="text-align:center; flex:1;">
                             <div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--primary);" id="dash-our-club-name">1.FC Moritz Leipzig</div>
                             <div style="font-size:var(--fs-caption); color:var(--text-muted);">Heimteam (Str: <span id="dash-our-str">60</span>)</div>
@@ -2504,7 +2580,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
                     <div id="dash-match-actions" style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
                         <button onclick="startMatchdayFlow()" class="btn-action" style="font-size:var(--fs-body-lg);">▶ Spieltag starten (Livespiel)</button>
                         <button onclick="simulateMatchdays(5)" class="btn-secondary">⏩ 5 Spieltage simulieren</button>
-                        <button onclick="simulateFullSeason()" class="btn-primary" style="background:#f59e0b; color:#000;">⚡ Saison durchsimulieren</button>
+                        <button onclick="simulateFullSeason()" class="btn-action">⚡ Saison durchsimulieren</button>
                     </div>
                     <div id="dash-scenario-box"></div>
                     <div id="dash-season-preview-box"></div>
@@ -2545,7 +2621,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
                     </div>
                     <div class="panel">
                         <div class="panel-header" style="color:var(--europe);">🌟 EUROPA & MANAGER</div>
-                        <div>Champions Cup: <strong id="dash-europe-status" style="color:#82b1ff;">Nicht qualifiziert</strong></div>
+                        <div>Champions Cup: <strong id="dash-europe-status" style="color:var(--europe);">Nicht qualifiziert</strong></div>
                         <div>Trainer-Perks: <strong id="dash-perks-count" style="color:var(--gold);">0 / 5 Aktiv</strong></div>
                     </div>
                     <div class="panel">
@@ -2774,7 +2850,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
                 <div class="panel">
                     <div class="panel-header">
                         <span>📅 SAISON-KALENDER & TERMINE</span>
-                        <span>Aktueller Monat: <strong id="cal-month-name" style="color:#fff;">August</strong></span>
+                        <span>Aktueller Monat: <strong id="cal-month-name" style="color:var(--text-main);">August</strong></span>
                     </div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin:6px 0;">
                         <button onclick="scheduleFriendlyMatch()" class="btn-action">⚽ Freundschaftsspiel vereinbaren (+Einnahmen)</button>
@@ -2815,7 +2891,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
                     <div class="panel">
                         <div class="panel-header">
                             <span>🏦 MONATLICHE GEWINN- & VERLUSTRECHNUNG (GuV)</span>
-                            <span id="fin-month-title" style="color:#fff;">Monat 1</span>
+                            <span id="fin-month-title" style="color:var(--text-main);">Monat 1</span>
                         </div>
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
                             <div class="box">
@@ -3619,7 +3695,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
                 <button onclick="showScreen('screen-squad-planning')" id="hubtab-btn-screen-squad-planning" class="btn-secondary" style="font-size:var(--fs-small); padding:6px 4px;">📊 Planungstool</button>
             </div>
             <div id="screen-transfer" style="display:none;">
-                <div id="winter-window-banner" style="display:none; background:linear-gradient(135deg, rgba(63,182,255,0.25), rgba(23,201,184,0.15)); border:1px solid var(--blue); border-radius:10px; padding:8px 12px; margin-bottom:8px; font-size:var(--fs-body); color:#fff;"></div>
+                <div id="winter-window-banner" style="display:none; background:linear-gradient(135deg, color-mix(in srgb, var(--blue) 25%, transparent), color-mix(in srgb, var(--teal) 15%, transparent)); border:1px solid var(--blue); border-radius:10px; padding:8px 12px; margin-bottom:8px; font-size:var(--fs-body); color:var(--on-strong);"></div>
                 <div class="panel">
                     <div class="panel-header">
                         <span>🤝 TRANSFERMARKT, SCOUTING & VERHANDLUNGEN</span>
@@ -3835,9 +3911,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
             </div>
             <div id="screen-europe" style="display:none;">
                 <div class="panel box-europe">
-                    <div class="panel-header" style="color:#82b1ff;">
+                    <div class="panel-header" style="color:var(--europe);">
                         <span>🌟 UEFA CHAMPIONS CUP (KÖNIGSKLASSE)</span>
-                        <span id="europe-status-tag" style="font-size:var(--fs-small); color:#fff;">Status: Gruppenphase</span>
+                        <span id="europe-status-tag" style="font-size:var(--fs-small); color:var(--text-main);">Status: Gruppenphase</span>
                     </div>
                     <div class="box">
                         Hier duellieren sich Europas 8 beste Spitzenvereine in 2 Vierergruppen. Spieltage finden an den Spieltagen <strong>3, 7, 11, 15, 19 und 23</strong> statt (Halbfinale: SpT 27, Finale: SpT 31)!<br>
@@ -3849,11 +3925,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:8px; margin:8px 0;">
                         <div class="panel">
-                            <div class="panel-header" style="font-size:var(--fs-body); color:#82b1ff;">GRUPPE A</div>
+                            <div class="panel-header" style="font-size:var(--fs-body); color:var(--europe);">GRUPPE A</div>
                             <table><thead><tr><th>Pl</th><th>Team</th><th>Sp</th><th>Tore</th><th>Pkt</th></tr></thead><tbody id="europe-group-a-body"></tbody></table>
                         </div>
                         <div class="panel">
-                            <div class="panel-header" style="font-size:var(--fs-body); color:#82b1ff;">GRUPPE B</div>
+                            <div class="panel-header" style="font-size:var(--fs-body); color:var(--europe);">GRUPPE B</div>
                             <table><thead><tr><th>Pl</th><th>Team</th><th>Sp</th><th>Tore</th><th>Pkt</th></tr></thead><tbody id="europe-group-b-body"></tbody></table>
                         </div>
                     </div>
@@ -3863,7 +3939,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
                         <div id="europe-ko-tree"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header" style="font-size:var(--fs-body); color:#82b1ff;">📜 EUROPAPOKAL-HISTORIE</div>
+                        <div class="panel-header" style="font-size:var(--fs-body); color:var(--europe);">📜 EUROPAPOKAL-HISTORIE</div>
                         <div id="europe-history-box"></div>
                     </div>
                 </div>
@@ -4114,7 +4190,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
                 <div class="panel box-admin">
                     <div class="panel-header" style="color:var(--gold);">
                         <span>🛠️ ADMIN-DIAGNOSE & LIVE-INSPECTOR</span>
-                        <span style="font-size:var(--fs-small); color:#fff;">Entwickler-Konsole Aktiv</span>
+                        <span style="font-size:var(--fs-small); color:var(--text-main);">Entwickler-Konsole Aktiv</span>
                     </div>
                     <div style="text-align:center; font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;" id="admin-version-tag">Version wird geladen...</div>
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:6px; font-size:var(--fs-small);" id="admin-inspector-grid">
@@ -4146,7 +4222,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px; margin-bottom:6px;">
                         <button onclick="adminHealAndBoostSquad()" class="btn-primary">✨ 100% Fitness & 100% Moral & Geheilt</button>
                         <button onclick="adminUpgradeEntireSquad(5)" class="btn-action">⚡ Alle Spieler im Kader +5 Stärke</button>
-                        <button onclick="adminMaxOutEntireSquad()" class="btn-danger" style="background:#7c2d12;">🌟 GESAMTES TEAM AUF MAXIMALWERT (99 überall!)</button>
+                        <button onclick="adminMaxOutEntireSquad()" class="btn-industry">🌟 GESAMTES TEAM AUF MAXIMALWERT (99 überall!)</button>
                         <button onclick="adminGrantPremiumPoints()" class="btn-gold" style="margin-top:6px;">💎 Admin: +5.000 Premium-Punkte kostenlos</button>
                         <button onclick="adminBoostSquadStrengthBy5()" class="btn-secondary" style="margin-top:6px;">📈 Kaderstärke um 5 Schritte erhöhen</button>
                         <button onclick="adminMaxOutYouthAndSecondTeam()" class="btn-secondary">🌟 Auch Jugend & zweite Mannschaft maximieren</button>
@@ -4202,11 +4278,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
                 <div class="panel">
                     <div class="panel-header">💾 SAVEGAME EXPORT & JSON-IMPORT</div>
-                    <textarea id="adm-save-json" style="width:100%; height:65px; background:#07090e; color:var(--primary); font-family:monospace; font-size:var(--fs-caption); border:1px solid #334155; border-radius:4px; padding:4px;" placeholder="Hier Savegame-JSON einfügen oder exportieren..."></textarea>
+                    <textarea id="adm-save-json" style="width:100%; height:65px; background:var(--surface-0); color:var(--primary); font-family:monospace; font-size:var(--fs-caption); border:1px solid color-mix(in srgb, var(--europe) 30%, var(--surface-1)); border-radius:4px; padding:4px;" placeholder="Hier Savegame-JSON einfügen oder exportieren..."></textarea>
                     <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px; margin-top:4px;">
                         <button onclick="adminExportSaveJson()" class="btn-blue">📤 JSON Exportieren</button>
                         <button onclick="adminImportSaveJson()" class="btn-danger">📥 JSON Importieren</button>
-                        <button onclick="adminHardResetGame()" id="btn-admin-hard-reset" data-confirming="false" class="btn-danger" style="background:#b91c1c;">💣 Komplett-Reset</button>
+                        <button onclick="adminHardResetGame()" id="btn-admin-hard-reset" data-confirming="false" class="btn-danger">💣 Komplett-Reset</button>
                     </div>
                 </div>
 
@@ -4219,7 +4295,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
                     <button onclick="exportSelfTestArchive()" class="btn-secondary" style="margin-top:6px;">📋 Verlauf exportieren</button>
                     <button onclick="downloadSelfTestArchiveFile()" class="btn-secondary" style="margin-top:6px;">💾 Als Datei herunterladen</button>
                     <div id="self-test-export-fallback" style="display:none; margin-top:6px;">
-                        <textarea readonly style="width:100%; height:80px; background:#07090e; color:var(--primary); font-family:monospace; font-size:var(--fs-caption); border:1px solid #334155; border-radius:4px; padding:4px;" onclick="this.select()"></textarea>
+                        <textarea readonly style="width:100%; height:80px; background:var(--surface-0); color:var(--primary); font-family:monospace; font-size:var(--fs-caption); border:1px solid color-mix(in srgb, var(--europe) 30%, var(--surface-1)); border-radius:4px; padding:4px;" onclick="this.select()"></textarea>
                     </div>
                 </div>
 
@@ -4264,7 +4340,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
                     <div class="ticker-log" id="ticker-log"></div>
 
                     <!-- LIVE SHOUTS -->
-                    <div class="panel" style="margin:4px 0; padding:6px; background:rgba(0,0,0,0.5);">
+                    <div class="panel" style="margin:4px 0; padding:6px; background:color-mix(in srgb, var(--shade) 50%, transparent);">
                         <div style="font-size:var(--fs-caption); font-weight:bold; color:var(--accent); margin-bottom:3px;">📢 LIVE-COACHING ANWEISUNGEN:</div>
                         <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px;">
                             <button onclick="setLiveShout('standard')" id="shout-standard" class="btn-action" style="font-size:var(--fs-micro); padding:4px 2px;">⚖️ Standard</button>
@@ -4275,7 +4351,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
                     </div>
 
                     <!-- LIVE-TAKTIK: Formation/Spielstil/Zweikampfhärte auch WÄHREND des Spiels änderbar -->
-                    <div class="panel" style="margin:4px 0; padding:6px; background:rgba(0,0,0,0.5);">
+                    <div class="panel" style="margin:4px 0; padding:6px; background:color-mix(in srgb, var(--shade) 50%, transparent);">
                         <div style="font-size:var(--fs-caption); font-weight:bold; color:var(--violet); margin-bottom:3px;">🧠 LIVE-TAKTIK (wirkt sofort auf den Rest der Partie):</div>
                         <select id="live-formation-select" class="input-inline" style="width:100%; margin-bottom:4px;" onchange="liveSetFormation(this.value)">
                             <option value="4-4-2">4-4-2</option>
@@ -4506,8 +4582,8 @@ function compareTableRows(a, b) {
         btn.dataset.confirmOrigBg = btn.style.background;
         btn.dataset.confirmOrigColor = btn.style.color;
         btn.innerHTML = frage;
-        btn.style.background = 'linear-gradient(135deg, #c73545, #a82838)';
-        btn.style.color = '#fff';
+        btn.style.background = 'linear-gradient(135deg, var(--danger), var(--danger))';
+        btn.style.color = 'var(--text-main)';
         confirmTimers.set(btn, setTimeout(() => {
             if (btn.isConnected && btn.dataset.confirming === 'true') {
                 btn.dataset.confirming = 'false';
@@ -4612,6 +4688,16 @@ function renderUiCard(opts = {}) {
         </div>
         ${opts.body ? `<div class="ui-card-body">${opts.body}</div>` : ''}
         ${opts.actions ? `<div class="ui-card-actions">${opts.actions}</div>` : ''}`;
+}
+
+// Schrift auf einer frei gewählten Farbe (z. B. Wappenfarbe): dunkel auf hellen,
+// weiß auf dunklen Farben - damit der Text in jedem Theme lesbar bleibt.
+function lesbareSchriftAuf(hex) {
+    const m = String(hex || '').replace('#', '').match(/^([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+    if (!m) return 'var(--on-strong)';
+    const lin = v => { v = parseInt(v, 16) / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    const L = 0.2126 * lin(m[1]) + 0.7152 * lin(m[2]) + 0.0722 * lin(m[3]);
+    return L > 0.36 ? 'var(--on-accent)' : 'var(--on-strong)';
 }
 
 // Kleine Werteleiste unter dem Kopf (z. B. Tempo, Schuss, Pass, Abwehr)
@@ -5603,7 +5689,7 @@ function renderUiStatRow(werte) {
                     <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                         <strong style="color:${meta.color};">${meta.icon} ${m.title}</strong>
                         <span>
-                            <button onclick="event.stopPropagation(); toggleInboxImportant(${m.id})" style="background:none; border:none; color:${m.important ? 'var(--gold)' : '#64748b'}; cursor:pointer; font-size:var(--fs-body-lg); padding:0 2px;" title="Als wichtig markieren">${m.important ? '★' : '☆'}</button>
+                            <button onclick="event.stopPropagation(); toggleInboxImportant(${m.id})" style="background:none; border:none; color:${m.important ? 'var(--gold)' : 'var(--europe)'}; cursor:pointer; font-size:var(--fs-body-lg); padding:0 2px;" title="Als wichtig markieren">${m.important ? '★' : '☆'}</button>
                             ${archiveBtn}
                             <button onclick="event.stopPropagation(); deleteInboxMessage(${m.id})" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:var(--fs-body); padding:0 2px;" title="Endgültig löschen">✕</button>
                         </span>
@@ -7028,7 +7114,7 @@ function getOwnDerbyRivals() {
         return `
             <div class="panel-header">📋 TAKTIK-VORSCHLAG DES CO-TRAINERS${sugg.opponentAware ? ' <span style="font-size:var(--fs-caption); color:var(--teal);">🎥 gegnerbezogen</span>' : ''}${sugg.selfCritical ? ' <span style="font-size:var(--fs-caption); color:var(--danger);">😟 verunsichert</span>' : ''}</div>
             <div style="font-size:var(--fs-small); margin-bottom:6px;">Vertrauen in seinen Rat</div>
-            <div style="background:rgba(228,197,140,0.1); border-radius:4px; height:8px; margin-bottom:8px; overflow:hidden;">
+            <div style="background:color-mix(in srgb, var(--accent) 10%, transparent); border-radius:4px; height:8px; margin-bottom:8px; overflow:hidden;">
                 <div style="width:${trust}%; height:100%; background:${trustColor};"></div>
             </div>
             <div class="box" style="font-size:var(--fs-small);">
@@ -7102,7 +7188,7 @@ function getOwnDerbyRivals() {
         list.innerHTML = ALL_FORMATIONS.map(f => {
             let dots = (FORMATION_MINI_ICONS[f] || []).slice(0, 9);
             while (dots.length < 9) dots.push(0);
-            let dotHtml = dots.slice(0, 9).map(d => `<div style="background:${d ? 'var(--teal)' : 'rgba(255,255,255,0.12)'};"></div>`).join('');
+            let dotHtml = dots.slice(0, 9).map(d => `<div style="background:${d ? 'var(--teal)' : 'color-mix(in srgb, var(--ink) 12%, transparent)'};"></div>`).join('');
             return `<div class="formation-grid-item ${f === selected ? 'active' : ''}" onclick="renderFormationModalList('${f}')">
                 <div class="formation-mini-dots">${dotHtml}</div>
                 <span>${f}</span>
@@ -7181,7 +7267,7 @@ function getOwnDerbyRivals() {
         box.innerHTML = items.map(it => `
             <div class="box" style="cursor:pointer;" onclick="toggleTeamInstruction('${it.key}')">
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <div style="width:18px; height:18px; border:2px solid ${game.teamInstructions[it.key] ? 'var(--primary)' : '#666'}; border-radius:3px; background:${game.teamInstructions[it.key] ? 'var(--primary)' : 'transparent'}; display:flex; align-items:center; justify-content:center; font-size:var(--fs-body); color:#000; flex-shrink:0;">${game.teamInstructions[it.key] ? '✓' : ''}</div>
+                    <div style="width:18px; height:18px; border:2px solid ${game.teamInstructions[it.key] ? 'var(--primary)' : 'var(--border-strong)'}; border-radius:3px; background:${game.teamInstructions[it.key] ? 'var(--primary)' : 'transparent'}; display:flex; align-items:center; justify-content:center; font-size:var(--fs-body); color:var(--on-accent); flex-shrink:0;">${game.teamInstructions[it.key] ? '✓' : ''}</div>
                     <strong style="font-size:var(--fs-body);">${it.label}</strong>
                 </div>
                 <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:3px; margin-left:26px;">${it.desc}</div>
@@ -7210,7 +7296,7 @@ function getOwnDerbyRivals() {
         box.innerHTML = items.map(it => `
             <div class="box" style="cursor:pointer;" onclick="toggleTacticAutomation('${it.key}')">
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <div style="width:18px; height:18px; border:2px solid ${game.tacticAutomation[it.key] ? 'var(--primary)' : '#666'}; border-radius:3px; background:${game.tacticAutomation[it.key] ? 'var(--primary)' : 'transparent'}; display:flex; align-items:center; justify-content:center; font-size:var(--fs-body); color:#000; flex-shrink:0;">${game.tacticAutomation[it.key] ? '✓' : ''}</div>
+                    <div style="width:18px; height:18px; border:2px solid ${game.tacticAutomation[it.key] ? 'var(--primary)' : 'var(--border-strong)'}; border-radius:3px; background:${game.tacticAutomation[it.key] ? 'var(--primary)' : 'transparent'}; display:flex; align-items:center; justify-content:center; font-size:var(--fs-body); color:var(--on-accent); flex-shrink:0;">${game.tacticAutomation[it.key] ? '✓' : ''}</div>
                     <strong style="font-size:var(--fs-body);">${it.label}</strong>
                 </div>
                 <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:3px; margin-left:26px;">${it.desc}</div>
@@ -7413,7 +7499,7 @@ function getOwnDerbyRivals() {
         box.style.display = 'block';
         let remaining = Math.max(0, game.ultimatumDeadlineMatchday - game.matchday);
         box.innerHTML = `
-            <div class="box" style="border-left-color:var(--danger); background:rgba(255,77,109,0.08); display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            <div class="box" style="border-left-color:var(--danger); background:color-mix(in srgb, var(--danger) 8%, transparent); display:flex; justify-content:space-between; align-items:center; gap:8px;">
                 <span style="display:flex; align-items:center; gap:8px; font-size:var(--fs-small);">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 32) : ''}<span><strong style="color:var(--danger);">⚠️ Ultimatum von ${p.name}</strong><br>Noch ${remaining} Spieltag(e) bis zur Frist.</span></span>
                 <button onclick="openUltimatumModal()" class="btn-secondary" style="width:auto; font-size:var(--fs-caption);">Jetzt entscheiden</button>
             </div>`;
@@ -7447,7 +7533,7 @@ function getOwnDerbyRivals() {
                 <span style="font-size:var(--fs-small);">Eingespieltheit der Startelf</span>
                 <strong style="color:${color};">${stats.percent}% ${stats.bonus > 0 ? `(+${stats.bonus} Stärke)` : ''}</strong>
             </div>
-            <div style="position:relative; background:rgba(228,197,140,0.1); border-radius:4px; height:8px; margin-bottom:4px; overflow:visible;">
+            <div style="position:relative; background:color-mix(in srgb, var(--accent) 10%, transparent); border-radius:4px; height:8px; margin-bottom:4px; overflow:visible;">
                 <div style="width:${stats.percent}%; height:100%; background:${color}; border-radius:4px;"></div>
                 <div style="position:absolute; left:${leagueAvgChemistry}%; top:-2px; bottom:-2px; border-left:1px dashed var(--accent);" title="Liga-Durchschnitt: ${leagueAvgChemistry}%"></div>
             </div>
@@ -7468,7 +7554,7 @@ function getOwnDerbyRivals() {
         if (secondTeamSquad.length > 0) suggestions.push('🥈 Spieler aus der zweiten Mannschaft hochziehen');
         suggestions.push('🛒 Freien Markt nach kurzfristig verfügbaren Spielern durchsuchen (Kaderplanung & Transfers)');
         box.innerHTML = `
-            <div class="box" style="border-left-color:var(--danger); background:rgba(255,77,109,0.08);">
+            <div class="box" style="border-left-color:var(--danger); background:color-mix(in srgb, var(--danger) 8%, transparent);">
                 <strong style="color:var(--danger);">🚨 VERLETZUNGSKRISE!</strong><br>
                 <span style="font-size:var(--fs-small);">Nur noch ${available} einsatzbereite Spieler im Kader - dringender Handlungsbedarf:</span>
                 <ul style="font-size:var(--fs-small); margin:6px 0 0 16px; padding:0;">${suggestions.map(s => `<li>${s}</li>`).join('')}</ul>
@@ -7530,7 +7616,7 @@ function getOwnDerbyRivals() {
                         <span>${POS_LABELS[pos]}</span>
                         <strong style="color:${depthColor};">${players.length} Spieler (${fitCount} fit) · Ø ${avgStr}</strong>
                     </div>
-                    <div style="background:rgba(255,255,255,0.06); border-radius:999px; height:6px; overflow:hidden;">
+                    <div style="background:color-mix(in srgb, var(--ink) 6%, transparent); border-radius:999px; height:6px; overflow:hidden;">
                         <div style="width:${depthPct}%; height:100%; background:${depthColor}; border-radius:999px;"></div>
                     </div>
                 </div>`;
@@ -7637,7 +7723,7 @@ function getOwnDerbyRivals() {
                         <strong style="font-size:var(--fs-body-lg);">${p.name}${roleBadge}</strong>
                         ${traitBadge}
                     </div>
-                    <button onclick="toggleLineupPlayer('${p.id}')" style="width:auto; padding:4px 10px; font-size:var(--fs-caption); border-radius:6px; border:none; background:${isStarting ? 'var(--danger)' : 'var(--primary)'}; color:${isStarting ? '#fff' : '#000'}; font-weight:700;">
+                    <button onclick="toggleLineupPlayer('${p.id}')" style="width:auto; padding:4px 10px; font-size:var(--fs-caption); border-radius:6px; border:none; background:${isStarting ? 'var(--danger-fill)' : 'var(--primary-fill)'}; color:${isStarting ? 'var(--on-strong)' : 'var(--on-accent)'}; font-weight:700;">
                         ${isStarting ? 'Bank' : 'Startelf'}
                     </button>
                 </div>
@@ -7645,7 +7731,7 @@ function getOwnDerbyRivals() {
                     <span>${p.age} Jahre · ${p.contracts} J. Vertrag</span>
                     <span>${formatVal(p.marketValue||0)} · ⚽ ${p.goalsSeason||0} Saisontore · 🎽 ${p.appearances||0} Einsätze</span>
                 </div>
-                <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:2px; font-size:var(--fs-micro); color:var(--text-muted); text-align:center; margin-bottom:6px; background:rgba(228,197,140,0.05); border-radius:4px; padding:4px 0;">
+                <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:2px; font-size:var(--fs-micro); color:var(--text-muted); text-align:center; margin-bottom:6px; background:color-mix(in srgb, var(--accent) 5%, transparent); border-radius:4px; padding:4px 0;">
                     <div>STR<br><strong style="color:var(--accent); font-size:var(--fs-body);">${p.strength}</strong></div>
                     <div>PAC<br><strong>${p.pace}</strong></div>
                     <div>SHO<br><strong>${p.shooting}</strong></div>
@@ -7658,7 +7744,7 @@ function getOwnDerbyRivals() {
                     <span style="font-size:var(--fs-caption);">${status}${moraleLine}</span>
                     <div style="display:flex; gap:4px; align-items:center;">
                         <button onclick="openPlayerDetail('${p.id}','squad')" class="btn-secondary" style="width:auto; padding:3px 7px; font-size:var(--fs-caption);" title="Details">ℹ️</button>
-                        <button onclick="selectForSwap('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 7px; font-size:var(--fs-caption); ${p.id === selectedSwapId ? 'background:var(--violet); color:#fff; border-color:var(--violet);' : ''}" title="Position tauschen">🔁</button>
+                        <button onclick="selectForSwap('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 7px; font-size:var(--fs-caption); ${p.id === selectedSwapId ? 'background:var(--violet); color:var(--on-strong); border-color:var(--violet);' : ''}" title="Position tauschen">🔁</button>
                     </div>
                 </div>
                 <div style="margin-top:6px;">
@@ -7703,6 +7789,7 @@ function getOwnDerbyRivals() {
             pin.style.top = coords[idx].top + '%';
             pin.style.left = coords[idx].left + '%';
             pin.style.background = pinBg;
+            pin.style.color = lesbareSchriftAuf(crestColor);
             // Eingespieltheit: Spieler mit überdurchschnittlich hoher Chemie zu ihren
             // Mitspielern bekommen einen dezenten goldenen Rand als visuellen Hinweis.
             let chemWithOthers = lineup.filter(oid => oid !== pid).map(oid => {
@@ -7856,7 +7943,7 @@ function getOwnDerbyRivals() {
                 let y = center + radius * Math.sin(angle);
                 return `${x},${y}`;
             }).join(' ');
-            gridLines += `<polygon points="${points}" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>`;
+            gridLines += `<polygon points="${points}" fill="none" stroke="color-mix(in srgb, var(--ink) 12%, transparent)" stroke-width="1"/>`;
         }
 
         // Achsen-Linien
@@ -7864,7 +7951,7 @@ function getOwnDerbyRivals() {
             let angle = angleSlice * idx - Math.PI / 2;
             let x2 = center + (size / 2) * Math.cos(angle);
             let y2 = center + (size / 2) * Math.sin(angle);
-            return `<line x1="${center}" y1="${center}" x2="${x2}" y2="${y2}" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/>`;
+            return `<line x1="${center}" y1="${center}" x2="${x2}" y2="${y2}" stroke="color-mix(in srgb, var(--ink) 12%, transparent)" stroke-width="0.5"/>`;
         }).join('');
 
         // Daten-Polygon
@@ -7910,7 +7997,7 @@ function getOwnDerbyRivals() {
                     let radius = (size / 2) * (attr.value / maxValue);
                     let x = center + radius * Math.cos(angle);
                     let y = center + radius * Math.sin(angle);
-                    return `<circle cx="${x}" cy="${y}" r="3" fill="var(--primary)" stroke="var(--text)" stroke-width="1"/>`;
+                    return `<circle cx="${x}" cy="${y}" r="3" fill="var(--primary)" stroke="var(--text-main)" stroke-width="1"/>`;
                 }).join('')}
                 ${labels}
                 ${valueLabels}
@@ -7938,10 +8025,10 @@ function getOwnDerbyRivals() {
         metrics.forEach(m => {
             let pct = (m.value / m.max * 100).toFixed(0);
             html += `
-                <div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:8px; border:1px solid rgba(255,255,255,0.1);">
+                <div style="background:color-mix(in srgb, var(--ink) 5%, transparent); border-radius:6px; padding:8px; border:1px solid color-mix(in srgb, var(--ink) 10%, transparent);">
                     <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${m.label}</div>
                     <div style="font-size:var(--fs-title); font-weight:700; color:${m.color}; margin-bottom:4px;">${m.value}</div>
-                    <div style="height:4px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden;">
+                    <div style="height:4px; background:color-mix(in srgb, var(--ink) 5%, transparent); border-radius:2px; overflow:hidden;">
                         <div style="height:100%; width:${pct}%; background:${m.color}; border-radius:2px;"></div>
                     </div>
                 </div>
@@ -7986,7 +8073,7 @@ function getOwnDerbyRivals() {
 
         comparisons.forEach(c => {
             let diff = c.our - c.league;
-            let diffColor = diff > 0 ? 'var(--primary)' : (diff < 0 ? 'var(--danger)' : '#aaa');
+            let diffColor = diff > 0 ? 'var(--primary)' : (diff < 0 ? 'var(--danger)' : 'var(--text-muted)');
             let ourWidth = (c.our / Math.max(c.league, c.our) * 100);
             let leagueWidth = (c.league / Math.max(c.league, c.our) * 100);
 
@@ -7998,7 +8085,7 @@ function getOwnDerbyRivals() {
                     </div>
                     <div style="display:flex; gap:2px; height:8px;">
                         <div style="flex:${ourWidth}; background:var(--primary); border-radius:2px; opacity:0.8;" title="Dein Team: ${c.our}"></div>
-                        <div style="flex:${Math.max(1, leagueWidth - ourWidth)}; background:#666; border-radius:2px;" title="Liga-Ø: ${c.league}"></div>
+                        <div style="flex:${Math.max(1, leagueWidth - ourWidth)}; background:var(--surface-3); border-radius:2px;" title="Liga-Ø: ${c.league}"></div>
                     </div>
                 </div>
             `;
@@ -8187,7 +8274,7 @@ function renderPlayerDevelopmentPanel() {
         const arch = getPlayerArchetype(p);
         const hist = p.strengthHistory || [];
         const letzte = hist.length ? p.strength - hist[hist.length - 1].strength : 0;
-        return `<div style="display:grid; grid-template-columns: 1fr auto auto auto; gap:6px; padding:2px 0; border-top:1px solid rgba(255,255,255,0.06); align-items:center;">
+        return `<div style="display:grid; grid-template-columns: 1fr auto auto auto; gap:6px; padding:2px 0; border-top:1px solid color-mix(in srgb, var(--ink) 6%, transparent); align-items:center;">
             <span>${p.name} <span style="color:var(--text-muted);">${p.pos}, ${p.age} J.</span></span>
             <span title="${arch.name}, Höhepunkt mit ${arch.peakAge}">${arch.icon}</span>
             <span>${p.strength}${letzte ? ` <span style="color:${letzte > 0 ? 'var(--primary)' : 'var(--danger)'};">(${letzte > 0 ? '+' : ''}${letzte})</span>` : ''}</span>
@@ -8271,9 +8358,9 @@ function cleanupLegacyDevelopmentState() {
                     <strong style="color:${a.riskColor};">${a.riskLabel}</strong>
                 </div>
                 <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:3px; font-size:var(--fs-micro); color:var(--text-muted);">
-                    <div>Besetzung: <strong style="color:${a.thin ? 'var(--danger)' : 'var(--text-primary)'};">${a.count} / ${a.minHealthy}+</strong></div>
-                    <div>Ø Alter: <strong style="color:${a.agingRisk ? 'var(--danger)' : 'var(--text-primary)'};">${a.avgAge.toFixed(1)} J.</strong></div>
-                    <div>Vertrag ≤${SQUAD_PLANNING_CONTRACT_URGENT} J.: <strong style="color:${a.cliffRisk ? 'var(--danger)' : 'var(--text-primary)'};">${a.cliff.length} Spieler</strong></div>
+                    <div>Besetzung: <strong style="color:${a.thin ? 'var(--danger)' : 'var(--text-main)'};">${a.count} / ${a.minHealthy}+</strong></div>
+                    <div>Ø Alter: <strong style="color:${a.agingRisk ? 'var(--danger)' : 'var(--text-main)'};">${a.avgAge.toFixed(1)} J.</strong></div>
+                    <div>Vertrag ≤${SQUAD_PLANNING_CONTRACT_URGENT} J.: <strong style="color:${a.cliffRisk ? 'var(--danger)' : 'var(--text-main)'};">${a.cliff.length} Spieler</strong></div>
                 </div>
             </div>`).join('');
     }
@@ -8301,7 +8388,7 @@ function cleanupLegacyDevelopmentState() {
             return `
                 <div style="display:flex; align-items:center; gap:6px; margin-bottom:3px; font-size:var(--fs-caption);">
                     <span style="width:42px; color:var(--text-muted);">${b.label}</span>
-                    <div style="flex:1; background:rgba(255,255,255,0.06); border-radius:999px; height:8px; overflow:hidden;">
+                    <div style="flex:1; background:color-mix(in srgb, var(--ink) 6%, transparent); border-radius:999px; height:8px; overflow:hidden;">
                         <div style="width:${pct}%; height:100%; background:${isOld ? 'var(--accent)' : 'var(--primary)'}; border-radius:999px;"></div>
                     </div>
                     <strong style="width:20px; text-align:right;">${count}</strong>
@@ -8326,7 +8413,7 @@ function cleanupLegacyDevelopmentState() {
         box.innerHTML = analysis.filter(a => a.cliff.length > 0).map(a => `
             <div class="box" style="font-size:var(--fs-caption); display:flex; justify-content:space-between;${a.cliffRisk ? ' border-left-color:var(--danger);' : ''}">
                 <span>${a.label}</span>
-                <strong style="color:${a.cliffRisk ? 'var(--danger)' : 'var(--text-primary)'};">${a.cliff.map(p => p.name).join(', ')}</strong>
+                <strong style="color:${a.cliffRisk ? 'var(--danger)' : 'var(--text-main)'};">${a.cliff.map(p => p.name).join(', ')}</strong>
             </div>`).join('');
     }
 
@@ -8425,7 +8512,7 @@ function cleanupLegacyDevelopmentState() {
             ? `verleihen an ${k.leihe.club} - spart ${formatVal(k.ersparnis)}/SpT`
             : `verkaufen - spart ${formatVal(k.ersparnis)}/SpT`}</div>`);
         if (!zeilen.length) return '';
-        return `<div style="margin-top:4px; padding-top:4px; border-top:1px solid rgba(150,150,150,0.2);">
+        return `<div style="margin-top:4px; padding-top:4px; border-top:1px solid color-mix(in srgb, var(--ink) 20%, transparent);">
             <div style="font-weight:800; color:var(--accent);">💡 Entlastung (teuerste Ergänzungsspieler):</div>${zeilen.join('')}
             <div style="color:var(--text-muted);">${fenster ? 'Wechselfenster offen: Transfermarkt → Verkaufen.' : 'Leihen und Verkäufe im nächsten Wechselfenster (Spieltag 1-3 und 18-20).'}</div>
             ${fenster ? `<button class="btn-secondary" style="margin-top:3px; font-size:var(--fs-caption);" onclick="showScreen('screen-transfer'); if (typeof setTransferTab === 'function') setTransferTab('sell');">→ Zur Verkaufsliste</button>` : ''}
@@ -8441,7 +8528,7 @@ function cleanupLegacyDevelopmentState() {
         r.angebote.forEach(x => zeilen.push(`<div style="color:var(--danger); font-weight:800;">⚠️ ${x.p.name}: Vorvertrags-Angebot von ${x.club} - verlängern bis Spieltag ${x.bis}</div>`));
         r.unterschrieben.forEach(x => zeilen.push(`<div style="color:var(--danger);">✍️ ${x.p.name} hat bei ${x.club} unterschrieben - geht ablösefrei (Winterverkauf bringt noch Geld)</div>`));
         if (r.gefaehrdet.length) zeilen.push(`<div style="color:var(--accent);">👀 ${game.matchday >= PRECONTRACT_START_MD ? 'Jetzt' : `Ab Spieltag ${PRECONTRACT_START_MD}`} können andere Vereine Vorverträge anbieten: ${r.gefaehrdet.map(p => p.name).join(', ')} - früh verlängern schützt</div>`);
-        return zeilen.length ? `<div style="margin-top:4px; padding-top:4px; border-top:1px solid rgba(150,150,150,0.2);">${zeilen.join('')}</div>` : '';
+        return zeilen.length ? `<div style="margin-top:4px; padding-top:4px; border-top:1px solid color-mix(in srgb, var(--ink) 20%, transparent);">${zeilen.join('')}</div>` : '';
     }
 
     function renderSquadPlanningView() {
@@ -8966,7 +9053,7 @@ function cleanupLegacyDevelopmentState() {
                         <strong>${p.name}</strong><br>
                         <span style="font-size:var(--fs-caption); color:var(--text-muted);">Str: <strong>${p.strength}</strong> | Fit: ${p.fitness}% | Marktwert: ${formatVal(p.marketValue)}</span>
                     </span>
-                    <span style="font-size:var(--fs-caption); color:${isStarting ? 'var(--teal)' : '#64748b'};">${isStarting ? 'Startelf' : 'Bank'}</span>
+                    <span style="font-size:var(--fs-caption); color:${isStarting ? 'var(--teal)' : 'var(--europe)'};">${isStarting ? 'Startelf' : 'Bank'}</span>
                     <button onclick="promoteToFirstTeam('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:var(--fs-caption); color:var(--primary);" title="In die 1. Mannschaft hochziehen">⬆️</button>
                     <button onclick="loanOutPlayer('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:var(--fs-caption); color:var(--teal);" title="An anderen Klub verleihen">📤</button>
                     <button onclick="sellSecondTeamPlayer('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:var(--fs-caption);" title="Verkaufen">💰</button>
@@ -9187,7 +9274,7 @@ function cleanupLegacyDevelopmentState() {
             zeilen = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Der Bericht startet mit der nächsten Saison.</div>';
         }
         box.innerHTML = `${zeilen}
-            ${log.length > 0 ? `<div style="margin-top:6px; border-top:1px solid #1e293b; padding-top:4px;">
+            ${log.length > 0 ? `<div style="margin-top:6px; border-top:1px solid color-mix(in srgb, var(--europe) 30%, var(--surface-1)); padding-top:4px;">
                 ${log.map(l => `<div style="font-size:var(--fs-caption); color:var(--text-muted);">ST ${l.matchday}: ${l.text}</div>`).join('')}
             </div>` : ''}`;
     }
@@ -10607,7 +10694,7 @@ function selectNewGameScenario(id) {
         box.innerHTML = `<div class="box" style="font-size:var(--fs-small);">
             <strong style="color:var(--accent);">🗂️ Vereinsakte: ${oppName}</strong><br>
             ${profileLine}${typeof getAiStarLine === 'function' ? getAiStarLine(team) : ''}${formLine}
-            <div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.12);">${h2hLine}</div>
+            <div style="margin-top:6px; padding-top:6px; border-top:1px solid color-mix(in srgb, var(--ink) 12%, transparent);">${h2hLine}</div>
         </div>`;
     }
 
@@ -10894,7 +10981,7 @@ function selectNewGameScenario(id) {
                 let isOur = (p.home === game.clubName || p.away === game.clubName);
                 let penStr = p.penaltyWinner ? ` (i.E. ${p.penaltyWinner})` : '';
                 let res = p.played ? `<strong>${p.homeGoals} : ${p.awayGoals}</strong>${penStr}` : 'vs';
-                return `<div class="player-row" style="${isOur ? 'border-color:var(--accent); background:rgba(255,193,7,0.1);' : ''}">
+                return `<div class="player-row" style="${isOur ? 'border-color:var(--accent); background:color-mix(in srgb, var(--gold) 10%, transparent);' : ''}">
                     <span style="${p.home===game.clubName?'color:var(--primary); font-weight:bold;':''}">${p.home}</span>
                     <span>${res}</span>
                     <span style="${p.away===game.clubName?'color:var(--primary); font-weight:bold;':''}">${p.away}</span>
@@ -11254,7 +11341,7 @@ function selectNewGameScenario(id) {
                 playSound('whistle');
                 return;
             }
-            document.getElementById('europe-draw-opponents-list').innerHTML += `<div style="font-size:var(--fs-title); font-weight:900; color:#fff; margin:6px 0;">⚽ ${opponents[revealed]}</div>`;
+            document.getElementById('europe-draw-opponents-list').innerHTML += `<div style="font-size:var(--fs-title); font-weight:900; color:var(--text-main); margin:6px 0;">⚽ ${opponents[revealed]}</div>`;
             revealed++;
             europeDrawRevealTimer = setTimeout(revealNext, 1000);
         }
@@ -11282,7 +11369,7 @@ function selectNewGameScenario(id) {
         clearTimeout(europeDrawRevealTimer);
         europeDrawRevealTimer = setTimeout(() => {
             document.getElementById('europe-draw-reveal-text').innerText = 'Euer Halbfinal-Gegner steht fest!';
-            document.getElementById('europe-draw-opponents-list').innerHTML = `<div style="font-size:18px; font-weight:900; color:#fff; margin:6px 0;">⚽ ${opponent}</div><div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:8px;">Hin- und Rückspiel, Gesamtergebnis entscheidet. Bei Gleichstand nach 180 Minuten: Elfmeterschießen.</div>`;
+            document.getElementById('europe-draw-opponents-list').innerHTML = `<div style="font-size:18px; font-weight:900; color:var(--text-main); margin:6px 0;">⚽ ${opponent}</div><div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:8px;">Hin- und Rückspiel, Gesamtergebnis entscheidet. Bei Gleichstand nach 180 Minuten: Elfmeterschießen.</div>`;
             playSound('whistle');
         }, 1400);
     }
@@ -11454,7 +11541,7 @@ function selectNewGameScenario(id) {
             let orderIdx = selectedShooters.indexOf(p.id);
             let quoteText = (p.penaltiesTaken || 0) > 0 ? ` · Quote: ${Math.round((p.penaltiesScored / p.penaltiesTaken) * 100)}% (${p.penaltiesScored}/${p.penaltiesTaken})` : ' · Quote: -';
             let specialistTag = p.individualFocus === 'elfmeter' ? ' 🥅' : '';
-            return `<div class="player-row" onclick="toggleShooterSelection('${p.id}')" style="cursor:pointer; ${orderIdx !== -1 ? 'border-color:var(--primary); background:rgba(34,224,168,0.1);' : ''}">
+            return `<div class="player-row" onclick="toggleShooterSelection('${p.id}')" style="cursor:pointer; ${orderIdx !== -1 ? 'border-color:var(--primary); background:color-mix(in srgb, var(--primary) 10%, transparent);' : ''}">
                 <span>${orderIdx !== -1 ? `#${orderIdx + 1} ` : ''}${p.name}${specialistTag} <span style="color:var(--text-muted); font-size:var(--fs-caption);">(Schuss: ${p.shooting}${quoteText})</span></span>
             </div>`;
         }).join('');
@@ -12028,7 +12115,7 @@ function renderTransferPokerBox() {
     box.innerHTML = `<div class="panel" style="border:1px solid var(--accent); margin-bottom:8px;">
         <div class="panel-header" style="color:var(--accent);">🃏 TRANSFERPOKER: ${p.name} (${p.pos}, ${p.strength})</div>
         <div style="font-size:var(--fs-caption); margin-bottom:6px;">Verkäufer: <strong>${p.sellerClub}</strong> · Forderung <strong>${formatVal(p.askingPrice)}</strong> · Marktwert ${formatVal(p.marketValue)} · Vertrag ${p.contracts || 2} J. · Geduld ${geduld} (noch ${Math.max(0, t.patience)} Runden)${t.rival ? ` · ⚔️ ${t.rival.club} bietet ${formatVal(t.rival.bid)}` : ''}</div>
-        <div style="font-size:var(--fs-caption); max-height:110px; overflow-y:auto; background:rgba(0,0,0,0.15); border-radius:4px; padding:4px; margin-bottom:6px;">${t.log.slice(-6).map(z => `<div>${z}</div>`).join('')}</div>
+        <div style="font-size:var(--fs-caption); max-height:110px; overflow-y:auto; background:color-mix(in srgb, var(--shade) 15%, transparent); border-radius:4px; padding:4px; margin-bottom:6px;">${t.log.slice(-6).map(z => `<div>${z}</div>`).join('')}</div>
         ${t.agreedFee ? `
             <div class="box" style="font-size:var(--fs-small);">Ablöse ${formatVal(t.agreedFee)}${agentFee ? ` + Provision ${formatVal(agentFee)}` : ''} · Gehalt <strong>${formatVal(t.wageDemand)}</strong>/SpT (bisher ${formatVal(p.wage)})</div>
             ${renderPokerSwapSelect(p, t)}
@@ -12617,7 +12704,7 @@ function renderTransferPokerBox() {
         let offList = document.getElementById('incoming-offers-list');
         offList.innerHTML = '';
         if (incomingOffers.length === 0) {
-            offList.innerHTML = `<div class="box" style="text-align:center; color:#888;">Derzeit liegen keine offiziellen Transferanfragen für deine Spieler vor.</div>`;
+            offList.innerHTML = `<div class="box" style="text-align:center; color:var(--text-muted);">Derzeit liegen keine offiziellen Transferanfragen für deine Spieler vor.</div>`;
         } else {
             incomingOffers.forEach(o => {
                 let p = squad.find(x => x.id === o.playerId);
@@ -13108,7 +13195,7 @@ function renderPlayerSeasonStats() {
     const best = game.lastMatchBestPlayer && game.lastMatchBestPlayer.season === game.season
         ? `<div style="font-size:var(--fs-small); margin-bottom:6px;">🏅 Spieler des letzten Spiels: <strong>${game.lastMatchBestPlayer.name}</strong> (Note ${formatGrade(game.lastMatchBestPlayer.note)}, ${game.lastMatchBestPlayer.matchday}. Spieltag)</div>` : '';
     if (!rows.length) { box.innerHTML = best + '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Ligaspiele in dieser Saison.</div>'; return; }
-    const farbe = n => n <= 2.5 ? 'var(--primary)' : (n <= 3.5 ? 'var(--gold, #FFC107)' : 'var(--danger)');
+    const farbe = n => n <= 2.5 ? 'var(--primary)' : (n <= 3.5 ? 'var(--gold)' : 'var(--danger)');
     box.innerHTML = best + `<table style="width:100%; font-size:var(--fs-small); border-collapse:collapse;">
         <tr style="color:var(--text-muted); text-align:left;"><th>Spieler</th><th>Sp.</th><th>Tore</th><th>Vorl.</th><th>Ø-Note</th><th>Elf</th></tr>
         ${rows.map(({ p, st, schnitt }) => `<tr><td>${p.name} <span style="color:var(--text-muted);">${p.pos}</span></td><td>${st.spiele}</td><td>${st.tore}</td><td>${st.vorlagen}</td>
@@ -13251,7 +13338,7 @@ function renderOnboardingBox() {
                 <span style="font-size:var(--fs-small);">Öffentliches Medienimage</span>
                 <strong style="color:${personality.color};">${img}/100 · ${personality.label}</strong>
             </div>
-            <div style="background:rgba(228,197,140,0.1); border-radius:4px; height:8px; overflow:hidden; margin-bottom:6px;">
+            <div style="background:color-mix(in srgb, var(--accent) 10%, transparent); border-radius:4px; height:8px; overflow:hidden; margin-bottom:6px;">
                 <div style="width:${img}%; height:100%; background:${personality.color};"></div>
             </div>
             <div style="font-size:var(--fs-caption); color:var(--text-muted);">Beeinflusst durch Interview-Antworten - ein positives Image lockt bessere Sponsoren-Erstangebote an.</div>
@@ -13266,7 +13353,7 @@ function renderOnboardingBox() {
         if (!box) return;
         let hist = game.mediaImageHistory || [];
         if (hist.length < 2) { box.innerHTML = ''; return; }
-        box.innerHTML = `<div style="display:flex; align-items:flex-end; gap:2px; height:30px; background:rgba(0,0,0,0.2); border-radius:4px; padding:3px;">
+        box.innerHTML = `<div style="display:flex; align-items:flex-end; gap:2px; height:30px; background:color-mix(in srgb, var(--shade) 20%, transparent); border-radius:4px; padding:3px;">
             ${hist.slice(-10).map(h => `<div style="flex:1; height:${Math.max(4, h.value)}%; background:linear-gradient(to top, var(--teal), var(--gold)); border-radius:1px;" title="Saison ${h.season}: ${h.value}"></div>`).join('')}
         </div>`;
     }
@@ -13325,7 +13412,7 @@ function renderOnboardingBox() {
             card.className = 'panel';
             card.style.borderColor = active ? 'var(--primary)' : 'var(--border)';
             card.innerHTML = `
-                <div class="panel-header"><span>${p.name}</span><strong style="color:${active?'var(--primary)':'#aaa'};">${active?'Aktiviert ✓':'Gesperrt'}</strong></div>
+                <div class="panel-header"><span>${p.name}</span><strong style="color:${active?'var(--primary)':'var(--text-muted)'};">${active?'Aktiviert ✓':'Gesperrt'}</strong></div>
                 <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:6px;">${p.desc}</div>
                 <button onclick="unlockManagerPerk('${p.id}')" class="${active?'btn-secondary':'btn-action'}" ${active||managerRPG.points<1?'disabled':''}>
                     ${active ? 'Bereits freigeschaltet' : 'Freischalten (1 Skill-Punkt)'}
@@ -13343,7 +13430,7 @@ function renderOnboardingBox() {
             card.className = 'panel';
             card.style.borderColor = active ? 'var(--danger)' : 'var(--border)';
             card.innerHTML = `
-                <div class="panel-header"><span>${p.name}</span><strong style="color:${active?'var(--danger)':'#aaa'};">${active?'Aktiviert ✓':'Gesperrt'}</strong></div>
+                <div class="panel-header"><span>${p.name}</span><strong style="color:${active?'var(--danger)':'var(--text-muted)'};">${active?'Aktiviert ✓':'Gesperrt'}</strong></div>
                 <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:6px;">${p.desc}</div>
                 <button onclick="unlockManagerPerk('${p.id}')" class="${active?'btn-secondary':'btn-action'}" ${active||managerRPG.points<1?'disabled':''}>
                     ${active ? 'Bereits freigeschaltet' : 'Freischalten (1 Skill-Punkt)'}
@@ -13577,7 +13664,7 @@ function renderMediaDepartmentPanel() {
     const blocked = getMediaActionBlockReason();
     let html = '<div style="font-size:var(--fs-caption);">';
     if (md.event) {
-        html += `<div style="background:rgba(255,84,104,0.1); border-left:3px solid var(--danger); padding:6px; border-radius:4px; margin-bottom:6px;">
+        html += `<div style="background:color-mix(in srgb, var(--danger) 10%, transparent); border-left:3px solid var(--danger); padding:6px; border-radius:4px; margin-bottom:6px;">
             <div style="font-weight:bold;">${md.event.title}</div><div style="color:var(--text-muted); margin:3px 0;">${md.event.text}</div>
             ${MEDIA_EVENT_OPTIONS[md.event.type].map((o, i) => `<button onclick="answerMediaEvent(${i})" class="${i === 0 ? 'btn-action' : 'btn-secondary'}" style="font-size:var(--fs-micro); padding:3px 6px; margin:2px 4px 0 0;">${o.label}</button>`).join('')}
         </div>`;
@@ -13812,11 +13899,11 @@ function renderBoardRoomPanel() {
             <span style="color:var(--text-muted);">- bleibt sie lange unter 25%, droht ab der 2. Saison die Entlassung.</span></div>
         ${BOARD_ROLES.map((role, i) => {
             const v = views[role.key];
-            return `<div style="display:flex; justify-content:space-between; gap:6px; padding:3px 0; border-top:1px solid rgba(255,255,255,0.06);">
+            return `<div style="display:flex; justify-content:space-between; gap:6px; padding:3px 0; border-top:1px solid color-mix(in srgb, var(--ink) 6%, transparent);">
                 <span>${role.icon} <strong>${role.title}</strong> ${room.names[i]}<br><span style="color:var(--text-muted);">${v.reason}</span></span>
                 <strong style="color:${farbe(v.mood)}; white-space:nowrap;">${v.mood}%</strong></div>`;
         }).join('')}
-        <div style="margin-top:8px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.06);">
+        <div style="margin-top:8px; padding-top:6px; border-top:1px solid color-mix(in srgb, var(--ink) 6%, transparent);">
             ${(() => {
                 const w = getSaisonWette();
                 if (w) return `🎯 Saisonwette aktiv: Platz ${w.platz} oder besser.`;
@@ -14058,7 +14145,7 @@ function renderBoardRoomPanel() {
                     body = `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${s.name} · Skill ${s.skill} (Stufe ${s.level})</div>
                             <div style="display:flex; align-items:center; gap:8px;">
                                 <div style="font-size:18px; font-weight:900; color:var(--accent);">${mission.matchdaysLeft}</div>
-                                <div style="flex:1; display:flex; gap:2px;">${segments.map(done => `<div style="flex:1; height:10px; border-radius:2px; background:${done ? 'var(--accent)' : 'rgba(228,197,140,0.15)'};"></div>`).join('')}</div>
+                                <div style="flex:1; display:flex; gap:2px;">${segments.map(done => `<div style="flex:1; height:10px; border-radius:2px; background:${done ? 'var(--accent)' : 'color-mix(in srgb, var(--accent) 15%, transparent)'};"></div>`).join('')}</div>
                             </div>
                             <div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:3px;">✈️ Unterwegs - kehrt in ${mission.matchdaysLeft} SpT zurück</div>`;
                 } else {
@@ -14524,7 +14611,7 @@ function renderBoardRoomPanel() {
                 </div>
                 <div style="font-size:var(--fs-small); margin-bottom:6px;">Marktlage: <strong id="merch-elasticity-label-${key}" style="color:${elast.color};">${elast.label}</strong></div>
                 
-                <div class="box" style="font-size:var(--fs-small); background:rgba(0,0,0,0.4); padding:6px 6px 6px 13px;">
+                <div class="box" style="font-size:var(--fs-small); background:color-mix(in srgb, var(--shade) 40%, transparent); padding:6px 6px 6px 13px;">
                     <strong style="color:var(--accent);">Absatz letzter Spieltag: ${s.total} Stk. (+${formatVal(s.revenue)})</strong><br>
                     🏟️ Stadion: <strong>${s.stadium}</strong> | 🏬 City: <strong>${s.city}</strong> | 🌐 Online: <strong>${s.online}</strong>
                     ${s.missed > 0 ? `<div style="color:var(--danger); font-weight:bold; margin-top:2px;">⚠️ ${s.missed} Kunden gingen wegen Lagermangel leer aus!</div>` : ''}
@@ -15557,7 +15644,7 @@ function renderBoardRoomPanel() {
         let prevBtn = document.getElementById('tutorial-prev-btn');
         if (titleEl) titleEl.innerHTML = t(page.titleKey).replace('{CLUB}', game.clubName);
         if (bodyEl) bodyEl.innerHTML = t(page.bodyKey).replace('{LIGA}', leagueNames[game.leagueLevel] || '');
-        if (dotsEl) dotsEl.innerHTML = TUTORIAL_PAGES.map((_, i) => `<span style="display:inline-block; width:6px; height:6px; border-radius:50%; margin:0 2px; background:${i === tutorialPage ? 'var(--accent)' : 'rgba(255,255,255,0.25)'};"></span>`).join('');
+        if (dotsEl) dotsEl.innerHTML = TUTORIAL_PAGES.map((_, i) => `<span style="display:inline-block; width:6px; height:6px; border-radius:50%; margin:0 2px; background:${i === tutorialPage ? 'var(--accent)' : 'color-mix(in srgb, var(--ink) 25%, transparent)'};"></span>`).join('');
         if (prevBtn) {
             prevBtn.style.visibility = tutorialPage === 0 ? 'hidden' : 'visible';
             prevBtn.innerText = t('tutorial_prev');
@@ -15664,7 +15751,7 @@ function renderBoardRoomPanel() {
                 banner.style.display = 'block';
                 problems.forEach(p => {
                     let line = document.createElement('div');
-                    line.style.borderTop = '1px solid rgba(255,255,255,0.2)';
+                    line.style.borderTop = '1px solid color-mix(in srgb, var(--ink) 20%, transparent)';
                     line.style.padding = '4px 0';
                     line.textContent = '[Struktur-Test] ' + p;
                     content.appendChild(line);
@@ -15672,10 +15759,10 @@ function renderBoardRoomPanel() {
                 // Hinweis auf die Export-Funktion, damit gefundene Probleme einfach gemeldet
                 // werden können statt nur per Screenshot.
                 let hintLine = document.createElement('div');
-                hintLine.style.borderTop = '1px solid rgba(255,255,255,0.3)';
+                hintLine.style.borderTop = '1px solid color-mix(in srgb, var(--ink) 30%, transparent)';
                 hintLine.style.padding = '6px 0';
                 hintLine.style.fontWeight = 'bold';
-                hintLine.style.color = '#ffe27a';
+                hintLine.style.color = 'var(--gold)';
                 hintLine.textContent = '💡 Tipp: Im Admin-Bereich unter "Struktur-Selbsttest" kannst du diesen Verlauf per Knopfdruck exportieren, um ihn zu melden.';
                 content.appendChild(hintLine);
             }
@@ -16074,6 +16161,7 @@ const DESIGN_THEMES = [
     { id: 'flutlicht', name: 'Flutlicht-Nacht', desc: 'Standard: Mitternachtsblau, Rasengrün und Flutlicht-Gold.', farben: ['#070b14', '#111827', '#ffc23c', '#3ee08a', '#ff5468', '#eaf2ff'] },
     { id: 'klassik', name: 'Anstoß-Klassik', desc: 'Holz, Leder und Messing wie im Managerbüro der 90er.', farben: ['#110c07', '#241a11', '#e8b84e', '#8fd16a', '#ff6f5e', '#f5ead6'] },
     { id: 'rasen', name: 'Rasengrün', desc: 'Tiefes Stadiongrün mit Kreideweiß und Trikotgelb.', farben: ['#04130b', '#0a2215', '#ffd84d', '#6ef0a6', '#ff6b7a', '#effcf4'] },
+    { id: 'tageslicht', name: 'Tageslicht', desc: 'Hell mit dunkler Schrift - für Sonne, Büro und helle Räume.', farben: ['#f1f4f9', '#ffffff', '#985a00', '#0e7a44', '#c21f3a', '#152033'] },
     { id: 'kontrast', name: 'Hoher Kontrast', desc: 'Schwarz, Weiß, Signalgelb. Für helle Umgebungen und schwache Augen.', farben: ['#000000', '#0a0a0a', '#ffe600', '#4dff9a', '#ff7a7a', '#ffffff'] },
     { id: 'farbsicher', name: 'Farbsicher', desc: 'Gut und Schlecht als Blau und Orange - auch bei Rot-Grün-Schwäche klar.', farben: ['#070b14', '#111827', '#f0e442', '#56b4e9', '#e69f00', '#eaf2ff'] }
 ];
@@ -16471,7 +16559,7 @@ function renderDesignSettings() {
                 <div style="flex:1;">
                     <div style="font-size:var(--fs-small); margin-bottom:4px;">⚙️ ${order.amount}x ${m ? m.name : order.merchKey}</div>
                     <div style="display:flex; gap:3px;">
-                        ${segments.map(done => `<div style="flex:1; height:14px; border-radius:3px; background:${done ? 'var(--industry)' : 'rgba(228,197,140,0.15)'}; border:1px solid ${done ? 'var(--industry)' : 'rgba(228,197,140,0.3)'};"></div>`).join('')}
+                        ${segments.map(done => `<div style="flex:1; height:14px; border-radius:3px; background:${done ? 'var(--industry)' : 'color-mix(in srgb, var(--accent) 15%, transparent)'}; border:1px solid ${done ? 'var(--industry)' : 'color-mix(in srgb, var(--accent) 30%, transparent)'};"></div>`).join('')}
                     </div>
                 </div>
             </div>`;
@@ -16799,7 +16887,7 @@ function renderDesignSettings() {
             teile.push(L('⚽ Ligaspiel', '⚽ League match'));
             let eventText = teile.join(' + ');
             let hasCup = dfb || lande;
-            let eventColor = hasCup ? 'var(--accent)' : (euro ? '#82b1ff' : '#aaa');
+            let eventColor = hasCup ? 'var(--accent)' : (euro ? 'var(--europe)' : 'var(--text-muted)');
 
             item.innerHTML = `
                 <span><strong>${L('Spieltag', 'Matchday')} ${i}</strong> ${isCurrent ? `<span style="color:var(--primary); font-weight:900;">(${L('HEUTE', 'TODAY')})</span>` : ''}</span>
@@ -17532,7 +17620,7 @@ function renderDesignSettings() {
                 ${entries.map(e => {
                     let info = FIXTURE_TYPE_LABELS[e.type];
                     let isHot = !!stretch && e.matchday >= stretch.from && e.matchday <= stretch.to;
-                    return `<div style="flex:0 0 auto; text-align:center; padding:4px 6px; border-radius:6px; background:${isHot ? 'rgba(239,68,68,0.15)' : 'var(--bg-card)'}; border:1px solid ${isHot ? 'var(--danger)' : 'var(--border)'};">
+                    return `<div style="flex:0 0 auto; text-align:center; padding:4px 6px; border-radius:6px; background:${isHot ? 'color-mix(in srgb, var(--danger) 15%, transparent)' : 'var(--bg-card)'}; border:1px solid ${isHot ? 'var(--danger)' : 'var(--border)'};">
                         <div style="font-size:var(--fs-micro); color:var(--text-muted);">SpT ${e.matchday}</div>
                         <div style="font-size:var(--fs-title-sm);">${info.icon}</div>
                         <div style="font-size:var(--fs-micro);">${info.label}</div>
@@ -17808,7 +17896,7 @@ function renderDesignSettings() {
                     <button onclick="activateTrainingAutopilot()" class="btn-action" style="font-size:var(--fs-caption);">🤖 ${TRAINING_AUTOPILOT_DURATION} Spieltage übernehmen [${TRAINING_AUTOPILOT_COST} 💎]</button>
                 </div>
                 <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">Dein Guthaben: <strong style="color:var(--gold);">${game.premiumPoints || 0} 💎</strong></div>
-                ${log.length > 0 ? `<div style="margin-top:6px; border-top:1px solid #1e293b; padding-top:4px;">
+                ${log.length > 0 ? `<div style="margin-top:6px; border-top:1px solid color-mix(in srgb, var(--europe) 30%, var(--surface-1)); padding-top:4px;">
                     ${log.map(l => `<div style="font-size:var(--fs-caption); color:var(--text-muted);">ST ${l.matchday}: ${l.text}</div>`).join('')}
                 </div>` : ''}
             </div>`;
@@ -18743,7 +18831,7 @@ function finishGoalkeeperGame() {
         if (hist.length < 2) { box.innerHTML = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch nicht genug Daten.</div>'; return; }
         let values = hist.map(h => h.money);
         let minV = Math.min(...values, 0), maxV = Math.max(...values, 1);
-        box.innerHTML = `<div style="display:flex; align-items:flex-end; gap:2px; height:50px; background:rgba(0,0,0,0.2); border-radius:6px; padding:5px;">
+        box.innerHTML = `<div style="display:flex; align-items:flex-end; gap:2px; height:50px; background:color-mix(in srgb, var(--shade) 20%, transparent); border-radius:6px; padding:5px;">
             ${hist.map(h => {
                 let pct = Math.max(4, Math.round(((h.money - minV) / Math.max(1, maxV - minV)) * 100));
                 return `<div style="flex:1; height:${pct}%; background:linear-gradient(to top, var(--violet), var(--accent)); border-radius:2px 2px 0 0;" title="SpT ${h.matchday}: ${formatVal(h.money)}"></div>`;
@@ -18818,7 +18906,7 @@ function finishGoalkeeperGame() {
                 <div style="display:flex; justify-content:space-between; gap:4px; font-size:var(--fs-body);">
                     <span style="min-width:0;">${label}</span><span style="color:${color}; font-weight:bold; white-space:nowrap;">${formatVal(amount)}</span>
                 </div>
-                <div style="background:#1e293b; border-radius:4px; height:4px; overflow:hidden;">
+                <div style="background:color-mix(in srgb, var(--europe) 30%, var(--surface-1)); border-radius:4px; height:4px; overflow:hidden;">
                     <div style="height:100%; width:${pct}%; background:${color};"></div>
                 </div>
             </div>`;
@@ -19081,7 +19169,7 @@ function finishGoalkeeperGame() {
             ${zeile('Weiterverkaufsbeteiligungen', b.weiterverkauf, 'var(--primary)')}
             ${zeile('Spielerkäufe', -b.kauf, 'var(--danger)')}
             ${zeile('Handgelder', -b.handgeld, 'var(--danger)')}
-            <div style="display:flex; justify-content:space-between; font-size:var(--fs-body); margin-top:4px; border-top:1px solid #1e293b; padding-top:3px;"><span>Netto</span><strong style="color:${b.netto >= 0 ? 'var(--primary)' : 'var(--danger)'};">${b.netto >= 0 ? '+' : ''}${formatVal(b.netto)}</strong></div>
+            <div style="display:flex; justify-content:space-between; font-size:var(--fs-body); margin-top:4px; border-top:1px solid color-mix(in srgb, var(--europe) 30%, var(--surface-1)); padding-top:3px;"><span>Netto</span><strong style="color:${b.netto >= 0 ? 'var(--primary)' : 'var(--danger)'};">${b.netto >= 0 ? '+' : ''}${formatVal(b.netto)}</strong></div>
         </div>`;
     }
 
@@ -19116,7 +19204,7 @@ function finishGoalkeeperGame() {
             <div class="box">
                 <strong style="font-size:var(--fs-body);">🧾 EINZELBUCHUNGEN (neueste zuerst)</strong>
                 ${auszug.slice().reverse().map(b => `
-                    <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:var(--fs-small); margin-top:3px; border-bottom:1px solid #1e293b; padding-bottom:2px;">
+                    <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:var(--fs-small); margin-top:3px; border-bottom:1px solid color-mix(in srgb, var(--europe) 30%, var(--surface-1)); padding-bottom:2px;">
                         <span style="color:var(--text-muted);">S${b.season}/ST${b.matchday}</span>
                         <span style="flex:1; margin:0 6px;">${b.label}</span>
                         <span style="color:${b.amount >= 0 ? 'var(--primary)' : 'var(--danger)'}; font-weight:bold;">${b.amount >= 0 ? '+' : '-'}${formatVal(Math.abs(b.amount))}</span>
@@ -19211,7 +19299,7 @@ function finishGoalkeeperGame() {
 
         let html = `
             <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">Gewinn- & Verlusttrend (letzte 12 Monate)</div>
-            <div style="display:flex; align-items:flex-end; justify-content:space-around; height:${chartHeight}px; background:rgba(255,255,255,0.03); border-radius:6px; padding:8px; gap:3px; border:1px solid rgba(255,255,255,0.1);">
+            <div style="display:flex; align-items:flex-end; justify-content:space-around; height:${chartHeight}px; background:color-mix(in srgb, var(--ink) 3%, transparent); border-radius:6px; padding:8px; gap:3px; border:1px solid color-mix(in srgb, var(--ink) 10%, transparent);">
         `;
 
         data.forEach((d, i) => {
@@ -19277,7 +19365,7 @@ function finishGoalkeeperGame() {
                         <span>${b.label}</span>
                         <strong style="color:${b.color};">${pct}% (${formatVal(b.amount)})</strong>
                     </div>
-                    <div style="height:6px; background:rgba(255,255,255,0.05); border-radius:3px; overflow:hidden;">
+                    <div style="height:6px; background:color-mix(in srgb, var(--ink) 5%, transparent); border-radius:3px; overflow:hidden;">
                         <div style="height:100%; width:${pct}%; background:${b.color}; border-radius:3px;"></div>
                     </div>
                 </div>
@@ -19338,17 +19426,17 @@ function finishGoalkeeperGame() {
                     <div style="font-size:var(--fs-body); color:var(--danger); font-weight:700;">-${formatVal(expenses)}</div>
                 </div>
             </div>
-            <div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:8px; margin-bottom:4px;">
+            <div style="background:color-mix(in srgb, var(--ink) 5%, transparent); border-radius:6px; padding:8px; margin-bottom:4px;">
                 <div style="display:flex; height:20px; border-radius:4px; overflow:hidden; gap:1px;">
-                    <div style="flex:${income}; background:var(--primary); position:relative;">
-                        <span style="position:absolute; left:50%; transform:translateX(-50%); top:50%; transform:translate(-50%, -50%); font-size:var(--fs-small); color:#000; white-space:nowrap; font-weight:700;">${total > 0 ? (income/total*100).toFixed(0) : '0'}%</span>
+                    <div style="flex:${income}; background:var(--primary-fill); position:relative;">
+                        <span style="position:absolute; left:50%; transform:translateX(-50%); top:50%; transform:translate(-50%, -50%); font-size:var(--fs-small); color:var(--on-accent); white-space:nowrap; font-weight:700;">${total > 0 ? (income/total*100).toFixed(0) : '0'}%</span>
                     </div>
-                    <div style="flex:${expenses}; background:var(--danger); position:relative;">
-                        <span style="position:absolute; left:50%; transform:translateX(-50%); top:50%; transform:translate(-50%, -50%); font-size:var(--fs-small); color:#fff; white-space:nowrap; font-weight:700;">${total > 0 ? (expenses/total*100).toFixed(0) : '0'}%</span>
+                    <div style="flex:${expenses}; background:var(--danger-fill); position:relative;">
+                        <span style="position:absolute; left:50%; transform:translateX(-50%); top:50%; transform:translate(-50%, -50%); font-size:var(--fs-small); color:var(--on-strong); white-space:nowrap; font-weight:700;">${total > 0 ? (expenses/total*100).toFixed(0) : '0'}%</span>
                     </div>
                 </div>
             </div>
-            <div style="text-align:center; font-size:var(--fs-small); padding:6px; background:${isProfit ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)'}; border-radius:4px; color:${statusColor}; border:1px solid ${statusColor};">
+            <div style="text-align:center; font-size:var(--fs-small); padding:6px; background:${isProfit ? 'color-mix(in srgb, var(--primary) 10%, transparent)' : 'color-mix(in srgb, var(--danger) 10%, transparent)'}; border-radius:4px; color:${statusColor}; border:1px solid ${statusColor};">
                 <div style="font-size:var(--fs-caption); color:var(--text-muted);">Monatlicher Gewinn/Verlust</div>
                 <div style="font-size:var(--fs-title-sm); font-weight:700;">${isProfit ? '+' : '-'}${formatVal(Math.abs(balance))}</div>
             </div>
@@ -19571,7 +19659,7 @@ function finishGoalkeeperGame() {
                     <button onclick="buyStockByAmount('${key}', 1000)" class="btn-action" style="font-size:var(--fs-caption); width:auto;">+1.000 €</button>
                     <button onclick="buyStockByAmount('${key}', 10000)" class="btn-action" style="font-size:var(--fs-caption); width:auto;">+10.000 €</button>
                     <button onclick="buyStockByAmount('${key}', 50000)" class="btn-action" style="font-size:var(--fs-caption); width:auto;">+50.000 €</button>
-                    <button onclick="buyMaxStockShares('${key}')" class="btn-action" style="font-size:var(--fs-caption); width:auto; background:var(--purple);">MAX</button>
+                    <button onclick="buyMaxStockShares('${key}')" class="btn-primary" style="font-size:var(--fs-caption); width:auto;">MAX</button>
                     <button onclick="sellStockSharesPct('${key}', 0.25)" class="btn-secondary" style="font-size:var(--fs-caption); width:auto;">-25%</button>
                     <button onclick="sellStockSharesPct('${key}', 0.5)" class="btn-secondary" style="font-size:var(--fs-caption); width:auto;">-50%</button>
                     <button onclick="sellStockShares('${key}', ${s.owned})" class="btn-secondary" style="font-size:var(--fs-caption); width:auto; color:var(--danger);">Alles</button>
@@ -20509,7 +20597,7 @@ function finishGoalkeeperGame() {
                 let loy = Math.round(game.sponsor.loyalty ?? 65);
                 let color = loy >= 60 ? 'var(--primary)' : (loy >= 30 ? 'var(--accent)' : 'var(--danger)');
                 loyaltyBox.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span style="font-size:var(--fs-small);">Sponsoren-Zufriedenheit</span><strong style="color:${color};">${loy}/100</strong></div>
-                    <div style="background:rgba(228,197,140,0.1); border-radius:4px; height:8px; overflow:hidden;"><div style="width:${loy}%; height:100%; background:${color};"></div></div>`;
+                    <div style="background:color-mix(in srgb, var(--accent) 10%, transparent); border-radius:4px; height:8px; overflow:hidden;"><div style="width:${loy}%; height:100%; background:${color};"></div></div>`;
             }
         }
         let activationBox = document.getElementById('sponsor-activation-box');
@@ -22446,7 +22534,7 @@ function renderStadiumEventsPanel() {
 
     if (pending) {
         const ready = game.matchday >= pending.scheduledMatchday || pending.season !== game.season;
-        html += `<div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:8px; font-size:var(--fs-caption);">
+        html += `<div style="background:color-mix(in srgb, var(--ink) 10%, transparent); padding:6px; border-radius:4px; margin-bottom:8px; font-size:var(--fs-caption);">
             <div><strong>${pending.name}</strong> · geplant für Spieltag ${pending.scheduledMatchday}</div>
             <div style="color:var(--text-muted); font-size:var(--fs-micro);">Organisationskosten bezahlt: ${formatVal(pending.cost)}</div>
             ${ready
@@ -23267,7 +23355,7 @@ function renderStadiumEventsPanel() {
         let leagueAvgAttendance = Math.round((stadium.total || 16000) * (LEAGUE_ATTENDANCE_CEILING[game.leagueLevel] ?? LEAGUE_ATTENDANCE_CEILING[LEAGUE_ATTENDANCE_CEILING.length - 1]));
         let maxAtt = Math.max(...history.map(e => e.attendance), leagueAvgAttendance, 1);
         let refLinePct = Math.round((leagueAvgAttendance / maxAtt) * 100);
-        box.innerHTML = `<div style="position:relative; height:70px; background:rgba(0,0,0,0.2); border-radius:6px; padding:6px;">
+        box.innerHTML = `<div style="position:relative; height:70px; background:color-mix(in srgb, var(--shade) 20%, transparent); border-radius:6px; padding:6px;">
             <div style="position:absolute; left:6px; right:6px; bottom:${6 + refLinePct * 0.58}px; border-top:1px dashed var(--accent); z-index:2;" title="Liga-Durchschnitt: ${leagueAvgAttendance.toLocaleString('de-DE')}"></div>
             <div style="display:flex; align-items:flex-end; gap:3px; height:100%;">
                 ${history.map(e => {
@@ -23900,7 +23988,7 @@ function renderStadiumEventsPanel() {
                 : `<button onclick="revealYouthPotential('${p.id}')" class="btn-secondary" style="width:auto; font-size:var(--fs-micro);">🔍 Potenzial prüfen [3.000 €]</button>`;
             row.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 28) : ''}${p.name} (${p.pos}, ${p.age} J., Str ${p.strength})${p.proDecisionLeft ? ' <span class="badge" style="background:rgba(255,193,7,0.3);">✍️ Entscheidung</span>' : ''} ${p.trait && p.trait!=='Kein'?`<span class="badge badge-trait">${p.trait}</span>`:''}</span>
+                    <span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 28) : ''}${p.name} (${p.pos}, ${p.age} J., Str ${p.strength})${p.proDecisionLeft ? ' <span class="badge" style="background:color-mix(in srgb, var(--gold) 30%, transparent);">✍️ Entscheidung</span>' : ''} ${p.trait && p.trait!=='Kein'?`<span class="badge badge-trait">${p.trait}</span>`:''}</span>
                     <span style="display:flex; gap:4px;">
                         <button onclick="promoteYouth(${idx}, this)" class="btn-action" style="width:auto; font-size:var(--fs-caption);">In Profikader</button>
                         ${(p.age || 0) >= 17 ? `<button onclick="openYouthLoanChoice('${p.id}')" class="btn-secondary" style="width:auto; font-size:var(--fs-caption);" title="Leihe zur Entwicklung">📤 Leihe</button>` : ''}
@@ -23954,7 +24042,7 @@ function renderStadiumEventsPanel() {
     // JUGENDAKADEMIE: NEUE FUNKTIONEN
     // ==========================================
     const POTENTIAL_TIER_LABELS = { 1: '⭐ Mittelmaß', 2: '⭐⭐ Vielversprechend', 3: '⭐⭐⭐ Ausnahmetalent' };
-    const POTENTIAL_TIER_COLORS = { 1: 'rgba(228,197,140,0.2)', 2: 'rgba(76,175,122,0.3)', 3: 'rgba(212,169,74,0.4)' };
+    const POTENTIAL_TIER_COLORS = { 1: 'color-mix(in srgb, var(--ink) 18%, transparent)', 2: 'color-mix(in srgb, var(--primary) 30%, transparent)', 3: 'color-mix(in srgb, var(--accent) 40%, transparent)' };
 
     // Akademie-Stufe mit klarer Wirkung (25.18): vorher +3 Startstärke je Stufe ohne Obergrenze -
     // Stufe 8 hätte Talente auf Liga-Niveau sichten lassen, das Potenzial blieb unberührt.
@@ -24482,7 +24570,7 @@ function renderYouthAcademyPanel() {
     let html = '<div style="margin-bottom:12px;">';
 
     if (coach) {
-        html += `<div style="background:rgba(62,224,138,0.1); padding:6px; border-radius:4px; margin-bottom:8px; border-left:3px solid var(--primary);">
+        html += `<div style="background:color-mix(in srgb, var(--primary) 10%, transparent); padding:6px; border-radius:4px; margin-bottom:8px; border-left:3px solid var(--primary);">
             <div style="font-size:var(--fs-caption); font-weight:bold; color:var(--primary);">👨‍🏫 Jugendtrainer: ${coach.name}</div>
             <div style="font-size:var(--fs-micro); color:var(--text-muted);">Entwicklungsbonus: +${Math.round((coachBonus - 1) * 100)}%</div>
             <button onclick="removeYouthCoach()" class="btn-secondary" style="font-size:var(--fs-micro); padding:2px 4px; margin-top:4px;">Entfernen</button>
@@ -24511,7 +24599,7 @@ function renderYouthAcademyPanel() {
             'new': '✨ neu in der Akademie'
         }[p.developmentTrend];
 
-        html += `<div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:4px; font-size:var(--fs-caption);">
+        html += `<div style="background:color-mix(in srgb, var(--ink) 10%, transparent); padding:6px; border-radius:4px; margin-bottom:4px; font-size:var(--fs-caption);">
             <div><strong>${idx + 1}. ${p.name}</strong> (${p.pos} | Str: ${p.strength})</div>
             <div style="color:var(--text-muted); font-size:var(--fs-micro);">Potenzial: ${typeof getYouthPotentialText === 'function' ? getYouthPotentialText(p) : '?'} | Talentwert: ${p.talentScore}</div>
             ${p.potentialRevealed && typeof getYouthOfferSquadHint === 'function' ? `<div style="color:var(--text-muted); font-size:var(--fs-micro);">${getYouthOfferSquadHint(p)}</div>` : ''}
@@ -24550,7 +24638,7 @@ function renderYouthDevelopmentChart() {
 
         html += `<div style="margin-bottom:8px;">
             <div style="font-size:var(--fs-caption); font-weight:bold; margin-bottom:2px;">${p.name} (${minStr}-${maxStr})</div>
-            <div style="display:flex; align-items:flex-end; gap:2px; height:${barHeight}px; background:rgba(100,100,100,0.05); padding:4px; border-radius:4px;">`;
+            <div style="display:flex; align-items:flex-end; gap:2px; height:${barHeight}px; background:color-mix(in srgb, var(--ink) 5%, transparent); padding:4px; border-radius:4px;">`;
 
         history.forEach(str => {
             const height = ((str - minStr + 2.5) / range) * (barHeight - 8);
@@ -24837,7 +24925,7 @@ function renderYouthPotentialBox() {
         return `<div style="font-size:var(--fs-caption); margin-bottom:6px;">
             <div style="display:flex; justify-content:space-between;"><span>${p.name} <span style="color:var(--text-muted);">${p.pos}, ${p.age} J.</span></span>
                 <span>Stärke <strong>${p.strength}</strong>${plus ? ` <span style="color:${plus > 0 ? 'var(--primary)' : 'var(--danger)'};">(${plus > 0 ? '+' : ''}${plus} diese Saison)</span>` : ''} · Potenzial ${getYouthPotentialText(p)}</span></div>
-            <div style="height:6px; background:rgba(150,150,150,0.2); border-radius:3px; margin-top:2px;"><div style="height:6px; width:${breite}%; background:${p.potentialRevealed ? 'var(--primary)' : 'var(--text-muted)'}; border-radius:3px;"></div></div>
+            <div style="height:6px; background:color-mix(in srgb, var(--ink) 20%, transparent); border-radius:3px; margin-top:2px;"><div style="height:6px; width:${breite}%; background:${p.potentialRevealed ? 'var(--primary)' : 'var(--text-muted)'}; border-radius:3px;"></div></div>
         </div>`;
     }).join('') + '<div style="font-size:var(--fs-micro); color:var(--text-muted);">Balken: Stärke im Verhältnis zum Potenzial (grau = Potenzial noch nicht geprüft).</div>';
 }
@@ -24953,7 +25041,7 @@ function renderYouthPathwayBoxes() {
 
         let html = `<div style="font-size:var(--fs-small); font-weight:bold; margin-bottom:6px;">🎓 AKADEMIE-RANGLISTE</div>`;
 
-        html += `<div style="background:rgba(62,224,138,0.1); padding:8px; border-radius:4px; margin-bottom:8px; border-left:4px solid ${rankColor}">
+        html += `<div style="background:color-mix(in srgb, var(--primary) 10%, transparent); padding:8px; border-radius:4px; margin-bottom:8px; border-left:4px solid ${rankColor}">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                 <div>
                     <div style="font-size:var(--fs-caption); font-weight:bold;">${rankEmoji} Deine Akademie</div>
@@ -24978,7 +25066,7 @@ function renderYouthPathwayBoxes() {
             let color = isOwnAcademy ? 'var(--primary)' : 'var(--text-muted)';
             let emoji = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`;
 
-            html += `<div style="background:rgba(100,100,100,0.1); padding:4px; border-radius:3px; margin-bottom:3px; font-size:var(--fs-micro); display:flex; justify-content:space-between; align-items:center; ${isOwnAcademy ? 'border-left:2px solid var(--primary);' : ''}">
+            html += `<div style="background:color-mix(in srgb, var(--ink) 10%, transparent); padding:4px; border-radius:3px; margin-bottom:3px; font-size:var(--fs-micro); display:flex; justify-content:space-between; align-items:center; ${isOwnAcademy ? 'border-left:2px solid var(--primary);' : ''}">
                 <div style="display:flex; align-items:center; gap:4px;">
                     <span style="color:${color}; font-weight:bold; min-width:18px;">${emoji}</span>
                     <span style="color:${color};">${academy.name}</span>
@@ -24990,7 +25078,7 @@ function renderYouthPathwayBoxes() {
         // Bonusinfo
         const bonus = getAcademyRankingBonus();
         if (bonus.money > 0 || bonus.reputation > 0) {
-            html += `<div style="background:rgba(255,194,60,0.1); padding:6px; border-radius:4px; margin-top:8px; font-size:var(--fs-caption); border-left:3px solid var(--accent)">
+            html += `<div style="background:color-mix(in srgb, var(--accent) 10%, transparent); padding:6px; border-radius:4px; margin-top:8px; font-size:var(--fs-caption); border-left:3px solid var(--accent)">
                 <strong>🎁 Saisonende-Bonus (Top 3):</strong><br>
                 ${bonus.money > 0 ? `+ ${formatVal(bonus.money)}` : ''} ${bonus.reputation > 0 ? `+ ${bonus.reputation} Reputation` : ''}
             </div>`;
@@ -25135,7 +25223,7 @@ function renderYouthPathwayBoxes() {
         </div>`;
     }
     function renderBonusClausesBlock(p) {
-        return `<div style="font-size:var(--fs-caption); margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">
+        return `<div style="font-size:var(--fs-caption); margin-top:4px; border-top:1px solid var(--border); padding-top:4px;">
             <div style="font-weight:800; color:var(--text-muted); margin-bottom:2px;">🎯 ERFOLGSBASIERTE BONI</div>
             ${renderBonusClauseRow(p, 'goals')}
             ${renderBonusClauseRow(p, 'appearances')}
@@ -25810,7 +25898,7 @@ function renderYouthPathwayBoxes() {
         } else {
             scandals.forEach((scandal, idx) => {
                 let player = squad.find(p => p.id === scandal.playerId);
-                html += `<div style="background:rgba(255,84,104,0.15); padding:6px; border-radius:4px; margin-bottom:6px; border-left:3px solid var(--danger);">
+                html += `<div style="background:color-mix(in srgb, var(--danger) 15%, transparent); padding:6px; border-radius:4px; margin-bottom:6px; border-left:3px solid var(--danger);">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
                         <strong>${scandal.icon} ${scandal.name}</strong>
                         <span style="font-size:var(--fs-micro); color:var(--text-muted);">${scandal.daysLeft} SpT</span>
@@ -25858,7 +25946,7 @@ function renderYouthPathwayBoxes() {
         for (let k in btnMap) {
             let b = document.getElementById(btnMap[k]);
             if (b) {
-                b.style.borderColor = underworld.activeSabotages[k] ? 'var(--primary)' : '#334155';
+                b.style.borderColor = underworld.activeSabotages[k] ? 'var(--primary)' : 'var(--border-strong)';
                 b.style.color = underworld.activeSabotages[k] ? 'var(--primary)' : 'var(--accent)';
             }
         }
@@ -26031,7 +26119,7 @@ function renderTacticSystemPanel() {
     + '<tr style="color:var(--text-muted); text-align:left;"><th>Formation</th><th>Stil</th><th>Sp.</th><th>S-U-N</th><th>Tore</th><th>Pkt/Sp.</th></tr>';
   rows.slice(0, 8).forEach(r => {
     const aktiv = r.formation === game.formation && r.stil === game.tacticStyle;
-    const farbe = r.schnitt >= 1.8 ? 'var(--green, #4CAF50)' : r.schnitt >= 1.1 ? 'var(--gold, #FFC107)' : 'var(--red, #FF5252)';
+    const farbe = r.schnitt >= 1.8 ? 'var(--primary)' : r.schnitt >= 1.1 ? 'var(--gold)' : 'var(--danger)';
     html += `<tr style="${aktiv ? 'font-weight:bold;' : ''}"><td>${r.formation}</td><td>${stilLabel(r.stil)}</td><td>${r.spiele}</td>`
       + `<td>${r.s}-${r.u}-${r.n}</td><td>${r.tore}:${r.gegentore}</td><td style="color:${farbe};">${r.schnitt.toFixed(2)}</td></tr>`;
   });
@@ -26039,7 +26127,7 @@ function renderTacticSystemPanel() {
   const erprobt = rows.filter(r => r.spiele >= 5).sort((a, b) => b.schnitt - a.schnitt);
   if (erprobt.length >= 2) {
     const best = erprobt[0];
-    html += `<div style="font-size:var(--fs-small); color:var(--gold, #FFC107); margin-top:6px;">💡 Beste erprobte Kombination: ${best.formation} · ${stilLabel(best.stil)} (${best.schnitt.toFixed(2)} Punkte pro Spiel)</div>`;
+    html += `<div style="font-size:var(--fs-small); color:var(--gold, var(--gold)); margin-top:6px;">💡 Beste erprobte Kombination: ${best.formation} · ${stilLabel(best.stil)} (${best.schnitt.toFixed(2)} Punkte pro Spiel)</div>`;
   }
   panel.innerHTML = html;
 }
@@ -26380,7 +26468,7 @@ function renderSeasonObjectivesPanel() {
 
     // Summary
     const summary = getSeasonObjectivesSummary();
-    html += '<div style="background:#1a1a1a; padding:8px; border-radius:4px; margin-bottom:10px;">';
+    html += '<div style="background:var(--surface-0); padding:8px; border-radius:4px; margin-bottom:10px;">';
     html += `<p style="font-size:var(--fs-caption); margin:0;"><strong>Saison ${game.season}</strong> | `;
     html += `Ziele erreicht: <span style="color:var(--primary);">${summary.completed}</span> | `;
     html += `Aktiv: <span style="color:var(--accent);">${summary.active}</span></p>`;
@@ -26398,13 +26486,13 @@ function renderSeasonObjectivesPanel() {
             const diffColor = obj.difficulty === 'HARD' ? 'var(--danger)' :
                             obj.difficulty === 'MEDIUM' ? 'var(--accent)' : 'var(--primary)';
 
-            html += `<div style="background:#222; padding:8px; margin-bottom:6px; border-radius:4px;">`;
+            html += `<div style="background:var(--surface-1); padding:8px; margin-bottom:6px; border-radius:4px;">`;
             html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">`;
             html += `<strong style="font-size:var(--fs-small);">${obj.name}</strong>`;
             html += `<span style="font-size:var(--fs-micro); color:${diffColor};">${obj.difficulty}</span>`;
             html += `</div>`;
             html += `<p style="font-size:var(--fs-caption); color:var(--text-muted); margin:0 0 4px 0;">${obj.description}</p>`;
-            html += `<div style="width:100%; height:8px; background:#333; border-radius:2px; overflow:hidden; margin-bottom:4px;">`;
+            html += `<div style="width:100%; height:8px; background:var(--surface-2); border-radius:2px; overflow:hidden; margin-bottom:4px;">`;
             html += `<div style="width:${obj.progress}%; height:100%; background:${diffColor};"></div>`;
             html += `</div>`;
             html += `<p style="font-size:var(--fs-micro); color:var(--text-muted); margin:0;">${obj.progress_label || obj.progress + '%'}</p>`;
@@ -26425,7 +26513,7 @@ function renderSeasonObjectivesPanel() {
         html += '<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap:4px;">';
 
         seasonCompleted.forEach(obj => {
-            html += `<div style="background:#1a3a1a; padding:6px; border-radius:3px; border-left:3px solid var(--primary); font-size:var(--fs-micro);">`;
+            html += `<div style="background:color-mix(in srgb, var(--primary) 30%, var(--surface-1)); padding:6px; border-radius:3px; border-left:3px solid var(--primary); font-size:var(--fs-micro);">`;
             html += `<strong>${obj.name}</strong><br/>`;
             html += `€${(obj.reward / 1000).toFixed(0)}k`;
             html += `</div>`;
@@ -26613,7 +26701,7 @@ function renderTeamCouncilPanel() {
 
     if (tc.concern) {
         const opts = COUNCIL_OPTIONS[tc.concern.type] || [];
-        html += `<div style="background:rgba(212,169,74,0.12); border-left:3px solid var(--gold); padding:6px; border-radius:4px; margin-top:4px;">
+        html += `<div style="background:color-mix(in srgb, var(--accent) 12%, transparent); border-left:3px solid var(--gold); padding:6px; border-radius:4px; margin-top:4px;">
             <div style="font-weight:bold;">${tc.concern.title}</div>
             <div style="color:var(--text-muted); margin:3px 0;">${tc.concern.text}</div>
             ${opts.map((o, i) => `<button onclick="answerCouncilConcern(${i})" class="${i === 0 ? 'btn-action' : 'btn-secondary'}" style="font-size:var(--fs-micro); padding:3px 6px; margin:2px 4px 0 0;">${o.label(tc.concern)}</button>`).join('')}
@@ -27990,7 +28078,7 @@ function renderSetPieceDrillBox() {
         const aktiv = d.focus === k;
         return `<button onclick="setSetPieceDrillFocus('${k}')" class="${aktiv ? 'btn-action' : 'btn-secondary'}" style="text-align:left; font-size:var(--fs-small); margin-bottom:3px;">
             ${aktiv ? '✔ ' : ''}${v.icon} ${v.label} · <strong>${m} %</strong> <span style="font-size:var(--fs-caption); opacity:0.8;">(${v.wirkung} bei 100 %)</span>
-            <div style="height:4px; background:rgba(255,255,255,0.08); border-radius:2px; margin-top:2px;"><div style="height:4px; width:${m}%; background:var(--accent); border-radius:2px;"></div></div></button>`;
+            <div style="height:4px; background:color-mix(in srgb, var(--ink) 8%, transparent); border-radius:2px; margin-top:2px;"><div style="height:4px; width:${m}%; background:var(--accent); border-radius:2px;"></div></div></button>`;
     }).join('');
     box.innerHTML = `<div class="box" style="font-size:var(--fs-small);">🚩 <strong>Standards einstudieren:</strong> ${tage
         ? `${tage} Standards-Tag${tage > 1 ? 'e' : ''} im Wochenplan - die gewählte Variante gewinnt ${plus} Punkte pro Spieltag.`
@@ -30267,12 +30355,12 @@ function tickPlayerRetirement() {
     // zur Geltung statt ihn zwischen normalen Pokal-Einträgen untergehen zu lassen).
     function classifyTrophyEntry(t) {
         if (t.includes('Vereinslegende')) return { icon: '👑', color: 'var(--gold)', category: 'Legenden-Status' };
-        if (t.includes('Champions Cup')) return { icon: '🌟', color: '#82b1ff', category: 'Europapokal' };
+        if (t.includes('Champions Cup')) return { icon: '🌟', color: 'var(--europe)', category: 'Europapokal' };
         if (t.includes('DFB-Pokal')) return { icon: '🏆', color: 'var(--accent)', category: 'Pokal' };
         if (t.includes('Supercup')) return { icon: '🏆', color: 'var(--gold)', category: 'Supercup' };
-        if (t.includes('Hallenmasters')) return { icon: '🏟️', color: '#cbd5e1', category: 'Hallenturnier' };
+        if (t.includes('Hallenmasters')) return { icon: '🏟️', color: 'var(--text-main)', category: 'Hallenturnier' };
         if (t.includes('Ungeschlagene Saison')) return { icon: '💯', color: 'var(--primary)', category: 'Perfekte Saison' };
-        return { icon: '🏅', color: '#cbd5e1', category: 'Erfolg' };
+        return { icon: '🏅', color: 'var(--text-main)', category: 'Erfolg' };
     }
 
     // Derbygegner (Phase 24.2): wer aus derselben Stadt oder per Traditionsduell ein Derby ist,
@@ -30439,7 +30527,7 @@ function tickPlayerRetirement() {
             <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:6px;">
                 ${ACHIEVEMENT_DEFINITIONS.map(def => {
                     let isUnlocked = unlocked.has(def.id);
-                    return `<div title="${def.desc}" style="text-align:center; padding:6px 2px; border-radius:8px; background:${isUnlocked ? 'rgba(23,201,184,0.15)' : 'rgba(255,255,255,0.04)'}; opacity:${isUnlocked ? '1' : '0.35'};">
+                    return `<div title="${def.desc}" style="text-align:center; padding:6px 2px; border-radius:8px; background:${isUnlocked ? 'color-mix(in srgb, var(--teal) 15%, transparent)' : 'color-mix(in srgb, var(--ink) 4%, transparent)'}; opacity:${isUnlocked ? '1' : '0.35'};">
                         <div style="font-size:20px;">${def.icon}</div>
                         <div style="font-size:var(--fs-micro); margin-top:2px;">${def.label}</div>
                     </div>`;
@@ -30477,7 +30565,7 @@ function tickPlayerRetirement() {
         const box = document.getElementById('hall-of-fame-box');
         if (!box) return;
         const h = getHallOfFameEntries();
-        const zeile = (links, rechts, gold) => `<div style="display:flex; justify-content:space-between; gap:6px; padding:2px 0; border-top:1px solid rgba(255,255,255,0.06);${gold ? ' color:var(--gold);' : ''}"><span>${links}</span><strong style="white-space:nowrap;">${rechts}</strong></div>`;
+        const zeile = (links, rechts, gold) => `<div style="display:flex; justify-content:space-between; gap:6px; padding:2px 0; border-top:1px solid color-mix(in srgb, var(--ink) 6%, transparent);${gold ? ' color:var(--gold);' : ''}"><span>${links}</span><strong style="white-space:nowrap;">${rechts}</strong></div>`;
         const block = (titel, inhalt, leer) => `<div style="margin-bottom:8px;"><div style="font-weight:700; color:var(--accent); margin-bottom:2px;">${titel}</div>${inhalt || `<div style="color:var(--text-muted);">${leer}</div>`}</div>`;
         const tier = { ICON: 'Vereins-Ikone', LEGEND: 'Legende', CLUB_HERO: 'Vereinsheld' };
         box.innerHTML = `<div style="font-size:var(--fs-caption);">
@@ -30539,7 +30627,7 @@ function tickPlayerRetirement() {
         }
         const t = getManagerCareerTotals();
         const quote = t.matches ? Math.round(t.won / t.matches * 100) : 0;
-        const kachel = (label, wert, sub) => `<div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:6px; text-align:center;">
+        const kachel = (label, wert, sub) => `<div style="background:color-mix(in srgb, var(--ink) 5%, transparent); border-radius:6px; padding:6px; text-align:center;">
             <div style="font-size:var(--fs-micro); color:var(--text-muted);">${label}</div><div style="font-size:var(--fs-title); font-weight:800;">${wert}</div><div style="font-size:var(--fs-micro); color:var(--text-muted);">${sub}</div></div>`;
         box.innerHTML = `<div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:6px; margin-bottom:8px;">
                 ${kachel('Bilanz', `${t.won}-${t.drawn}-${t.lost}`, `${t.matches} Ligaspiele · ${quote}% Siege`)}
@@ -30547,7 +30635,7 @@ function tickPlayerRetirement() {
                 ${kachel('Meisterschaften', t.titles, `${t.promotions} Aufstieg(e) · ${t.relegations} Abstieg(e)`)}
                 ${kachel('Bestes Ergebnis', `Platz ${t.best.rank}`, t.best.league)}
             </div>
-            <div style="font-size:var(--fs-caption);">${liste.slice(-6).reverse().map(e => `<div style="display:flex; justify-content:space-between; gap:6px; padding:2px 0; border-top:1px solid rgba(255,255,255,0.06);">
+            <div style="font-size:var(--fs-caption);">${liste.slice(-6).reverse().map(e => `<div style="display:flex; justify-content:space-between; gap:6px; padding:2px 0; border-top:1px solid color-mix(in srgb, var(--ink) 6%, transparent);">
                 <span>Saison ${e.season} · ${e.club}</span><span style="white-space:nowrap;">${e.league.replace(/ \(.*\)/, '')} · Platz <strong>${e.rank}</strong> · ${e.won}-${e.drawn}-${e.lost} · ${e.points} P.</span></div>`).join('')}</div>`;
     }
 
@@ -30679,8 +30767,8 @@ function renderRefereePreview() {
     const rec = (game.refereeHistory || {})[ref.id] || { spiele: 0 };
     const strenge = ref.cardMult >= 1.25 ? '🟥 zückt schnell Karten' : ref.cardMult <= 0.8 ? '🟩 lässt viel laufen' : '🟨 durchschnittlich streng';
     const bilanz = rec.spiele ? `Bisherige Bilanz: ${rec.siege}S ${rec.remis}U ${rec.niederlagen}N` : 'Noch kein gemeinsames Spiel';
-    box.innerHTML = `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin:6px 0; padding:6px; background:rgba(255,255,255,0.03); border-radius:4px;">
-        🧑‍⚖️ Schiedsrichter: <strong style="color:var(--text);">${ref.name}</strong> (${ref.style}) · ${strenge}<br>${bilanz}
+    box.innerHTML = `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin:6px 0; padding:6px; background:color-mix(in srgb, var(--ink) 3%, transparent); border-radius:4px;">
+        🧑‍⚖️ Schiedsrichter: <strong style="color:var(--text-main);">${ref.name}</strong> (${ref.style}) · ${strenge}<br>${bilanz}
         ${game.tackleHardness === 'hart' && ref.cardMult >= 1.2 ? '<br><span style="color:var(--accent);">⚠️ Harte Zweikampfführung gegen diesen Schiedsrichter ist riskant.</span>' : ''}
         ${typeof getRefereeGrudgeNote === 'function' ? getRefereeGrudgeNote(ref.id, ref.name) : ''}
     </div>`;
@@ -30838,11 +30926,11 @@ function getPredictionHtml(oppName) {
     const p = predictNextMatch();
     if (!p || (oppName && p.opp.name !== oppName)) return '';
     const pct = x => Math.round(x * 100) + '%';
-    return `<div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.15); font-size:var(--fs-small);">
+    return `<div style="margin-top:6px; padding-top:6px; border-top:1px solid color-mix(in srgb, var(--ink) 15%, transparent); font-size:var(--fs-small);">
         🔮 <strong style="color:var(--teal);">Prognose des Analysten</strong> (${SCOUT_SIMULATIONS} simulierte Spiele)
-        <div style="display:flex; height:14px; border-radius:3px; overflow:hidden; font-size:var(--fs-micro); font-weight:bold; color:#fff; text-align:center; line-height:14px; margin:4px 0;">
+        <div style="display:flex; height:14px; border-radius:3px; overflow:hidden; font-size:var(--fs-micro); font-weight:bold; color:var(--text-main); text-align:center; line-height:14px; margin:4px 0;">
             <div style="width:${pct(p.sieg)}; background:var(--primary);">${p.sieg >= 0.12 ? pct(p.sieg) : ''}</div>
-            <div style="width:${pct(p.remis)}; background:#8a8f98;">${p.remis >= 0.12 ? pct(p.remis) : ''}</div>
+            <div style="width:${pct(p.remis)}; background:color-mix(in srgb, var(--ink) 35%, var(--surface-2)); color:var(--text-main);">${p.remis >= 0.12 ? pct(p.remis) : ''}</div>
             <div style="width:${pct(p.niederlage)}; background:var(--danger);">${p.niederlage >= 0.12 ? pct(p.niederlage) : ''}</div>
         </div>
         Sieg ${pct(p.sieg)} · Remis ${pct(p.remis)} · Niederlage ${pct(p.niederlage)} · erwartet ${p.xTore.toFixed(1)}:${p.xGegentore.toFixed(1)}
@@ -31130,12 +31218,12 @@ function cleanupLegacyScoutState() {
         // im Taktik-Duell schlägt (js/opponent-tactics.js) - vorher zwei Zufallssätze ohne
         // Bezug zum Spiel, und mit Europapokal-Teilnahme galt jedes Ligaspiel als Topspiel.
         let isImportantMatch = isDerbyOpponent(oppName) || !!(pendingMatchInfo && pendingMatchInfo.cupTie);
-        let spyNote = underworld.spyIntelActive ? `<div style="margin-top:6px; font-size:var(--fs-small); color:#f97316;">🕵️ <strong>Insider-Info aktiv:</strong> Diese Analyse stammt von einem bezahlten Informanten im gegnerischen Verein und ist garantiert zuverlässig.</div>` : '';
+        let spyNote = underworld.spyIntelActive ? `<div style="margin-top:6px; font-size:var(--fs-small); color:var(--industry);">🕵️ <strong>Insider-Info aktiv:</strong> Diese Analyse stammt von einem bezahlten Informanten im gegnerischen Verein und ist garantiert zuverlässig.</div>` : '';
         let videoAnalysisHtml = '';
         if (isImportantMatch && oppObj && typeof AI_STYLE_ARCHETYPE !== 'undefined') {
             let basis = AI_STYLE_ARCHETYPE[getTeamPlaystyle(oppObj).id] || 'N';
             let konter = getCounterArchetype(basis);
-            videoAnalysisHtml = `<div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.15); font-size:var(--fs-small);">
+            videoAnalysisHtml = `<div style="margin-top:6px; padding-top:6px; border-top:1px solid color-mix(in srgb, var(--ink) 15%, transparent); font-size:var(--fs-small);">
                 🎥 <strong style="color:var(--teal);">Videoanalyse (Topspiel-Sonderbericht):</strong><br>
                 Grundausrichtung: <strong>${ARCHETYPE_LABELS[basis]}</strong><br>
                 Schwachstelle: <strong>${konter ? `verwundbar gegen ${ARCHETYPE_LABELS[konter]}` : 'kein klares Muster - schwer auszurechnen'}</strong>
@@ -34342,7 +34430,7 @@ function concludeSeasonAndAdvance() {
         let history = (game.seasonReviewArchive || []).slice(-8);
         if (history.length < 2) return '';
         let maxVal = Math.max(...history.map(e => e.avgAttendance), 1);
-        return `<div style="display:flex; align-items:flex-end; gap:3px; height:50px; background:rgba(0,0,0,0.2); border-radius:6px; padding:5px;">
+        return `<div style="display:flex; align-items:flex-end; gap:3px; height:50px; background:color-mix(in srgb, var(--shade) 20%, transparent); border-radius:6px; padding:5px;">
             ${history.map(e => {
                 let heightPct = Math.max(4, Math.round((e.avgAttendance / maxVal) * 100));
                 return `<div style="flex:1; display:flex; flex-direction:column; align-items:center;" title="Saison ${e.season}: ${e.avgAttendance.toLocaleString('de-DE')}">
@@ -35072,7 +35160,7 @@ function renderLeagueRankChart(level) {
     const eigen = teams.find(t => t.name === game.clubName);
     const fokus = eigen || teams[0];
     const rivale = teams.find(t => t !== fokus && isDerbyOpponent(t.name));
-    const hinten = teams.filter(t => t !== fokus && t !== rivale).map(t => `<polyline points="${linie(t)}" fill="none" stroke="rgba(150,150,150,0.35)" stroke-width="1" />`).join('');
+    const hinten = teams.filter(t => t !== fokus && t !== rivale).map(t => `<polyline points="${linie(t)}" fill="none" stroke="color-mix(in srgb, var(--ink) 35%, transparent)" stroke-width="1" />`).join('');
     const vorn = (rivale ? `<polyline points="${linie(rivale)}" fill="none" stroke="var(--danger)" stroke-width="1.5" />` : '')
         + `<polyline points="${linie(fokus)}" fill="none" stroke="var(--primary)" stroke-width="2.5" />`;
     const hist = (fokus.rankHist || []).filter(Boolean);
@@ -35253,7 +35341,7 @@ function renderNationalTeamPanel() {
         .sort((a, b) => (b.p.strength - b.schwelle) - (a.p.strength - a.schwelle));
     const zeilen = kandidaten.length ? kandidaten.slice(0, 12).map(({ p, schwelle }) => {
         const drin = isNominated(p);
-        return `<div style="display:flex; justify-content:space-between; gap:6px; padding:2px 0; border-top:1px solid rgba(255,255,255,0.06);">
+        return `<div style="display:flex; justify-content:space-between; gap:6px; padding:2px 0; border-top:1px solid color-mix(in srgb, var(--ink) 6%, transparent);">
             <span>${NATIONS[getNation(p)].flag} ${p.name} <span style="color:var(--text-muted);">${p.pos}</span></span>
             <span>${drin ? '<span style="color:var(--primary);">✅ nominiert</span>' : `<span style="color:var(--text-muted);">Stärke ${p.strength}/${schwelle}</span>`}
             · ${p.caps || 0} Sp., ${p.intlGoals || 0} T.${p.intlTitles ? ` · 🏆${p.intlTitles}` : ''}</span>
@@ -35477,7 +35565,7 @@ function renderCoachCarouselBox() {
     if (!box) return;
     const wechsel = (game.coachChanges || []).filter(c => c.season === game.season).slice().reverse();
     box.innerHTML = `<div style="font-size:var(--fs-caption);">${wechsel.length
-        ? wechsel.map(c => `<div style="padding:2px 0; border-top:1px solid rgba(255,255,255,0.06);">${c.matchday ? 'Spt ' + c.matchday : 'Sommer'}: <strong>${c.club}</strong> - ${c.alt} ➜ ${c.neu}</div>`).join('')
+        ? wechsel.map(c => `<div style="padding:2px 0; border-top:1px solid color-mix(in srgb, var(--ink) 6%, transparent);">${c.matchday ? 'Spt ' + c.matchday : 'Sommer'}: <strong>${c.club}</strong> - ${c.alt} ➜ ${c.neu}</div>`).join('')
         : '<span style="color:var(--text-muted);">Diese Saison noch keine Trainerwechsel in deiner Liga.</span>'}</div>`;
 }
 
@@ -37164,7 +37252,7 @@ function renderSeasonForecastHistory() {
         if (btn && btn.dataset.confirming !== 'true') {
             btn.dataset.confirming = 'true';
             btn.innerText = 'Wirklich?';
-            btn.style.color = '#fff';
+            btn.style.color = 'var(--text-main)';
             btn.style.background = 'var(--danger)';
             deleteConfirmTimers[slotNum] = setTimeout(() => {
                 if (btn && btn.isConnected) {
@@ -37765,7 +37853,7 @@ function renderSaveSafetyBox() {
     const exp = game.lastExportSeason ? `Saison ${game.lastExportSeason}` : 'noch nie';
     box.innerHTML = `<div style="font-size:var(--fs-small);">
         <div>📦 Speicher belegt: <strong style="color:${farbe};">${prozent} %</strong> (${Math.round(u.used / 1000)} von ~${Math.round(u.budget / 1000)} Tsd. Zeichen${u.foreign > 50000 ? `, davon ${Math.round(u.foreign / 1000)} Tsd. durch andere Seiten/Dateien` : ''})${u.blocked ? ' - <span style="color:var(--danger);">Speicher blockiert!</span>' : ''}</div>
-        <div style="height:6px; background:rgba(255,255,255,0.08); border-radius:3px; margin-top:3px;"><div style="height:6px; width:${prozent}%; background:${farbe}; border-radius:3px;"></div></div>
+        <div style="height:6px; background:color-mix(in srgb, var(--ink) 8%, transparent); border-radius:3px; margin-top:3px;"><div style="height:6px; width:${prozent}%; background:${farbe}; border-radius:3px;"></div></div>
         <div style="margin-top:4px; color:var(--text-muted);">📤 Letzter Datei-Export: ${exp} - nur eine exportierte Datei übersteht das Leeren des Browserspeichers.</div>
         ${backup}</div>`;
 }

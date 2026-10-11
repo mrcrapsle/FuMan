@@ -291,7 +291,7 @@ function renderSaveSafetyBox() {
     const exp = game.lastExportSeason ? `Saison ${game.lastExportSeason}` : 'noch nie';
     box.innerHTML = `<div style="font-size:var(--fs-small);">
         <div>📦 Speicher belegt: <strong style="color:${farbe};">${prozent} %</strong> (${Math.round(u.used / 1000)} von ~${Math.round(u.budget / 1000)} Tsd. Zeichen${u.foreign > 50000 ? `, davon ${Math.round(u.foreign / 1000)} Tsd. durch andere Seiten/Dateien` : ''})${u.blocked ? ' - <span style="color:var(--danger);">Speicher blockiert!</span>' : ''}</div>
-        <div style="height:6px; background:rgba(255,255,255,0.08); border-radius:3px; margin-top:3px;"><div style="height:6px; width:${prozent}%; background:${farbe}; border-radius:3px;"></div></div>
+        <div style="height:6px; background:color-mix(in srgb, var(--ink) 8%, transparent); border-radius:3px; margin-top:3px;"><div style="height:6px; width:${prozent}%; background:${farbe}; border-radius:3px;"></div></div>
         <div style="margin-top:4px; color:var(--text-muted);">📤 Letzter Datei-Export: ${exp} - nur eine exportierte Datei übersteht das Leeren des Browserspeichers.</div>
         ${backup}</div>`;
 }

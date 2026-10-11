@@ -95,7 +95,7 @@ function renderPlayerDevelopmentPanel() {
         const arch = getPlayerArchetype(p);
         const hist = p.strengthHistory || [];
         const letzte = hist.length ? p.strength - hist[hist.length - 1].strength : 0;
-        return `<div style="display:grid; grid-template-columns: 1fr auto auto auto; gap:6px; padding:2px 0; border-top:1px solid rgba(255,255,255,0.06); align-items:center;">
+        return `<div style="display:grid; grid-template-columns: 1fr auto auto auto; gap:6px; padding:2px 0; border-top:1px solid color-mix(in srgb, var(--ink) 6%, transparent); align-items:center;">
             <span>${p.name} <span style="color:var(--text-muted);">${p.pos}, ${p.age} J.</span></span>
             <span title="${arch.name}, Höhepunkt mit ${arch.peakAge}">${arch.icon}</span>
             <span>${p.strength}${letzte ? ` <span style="color:${letzte > 0 ? 'var(--primary)' : 'var(--danger)'};">(${letzte > 0 ? '+' : ''}${letzte})</span>` : ''}</span>

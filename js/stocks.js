@@ -77,7 +77,7 @@
                     <button onclick="buyStockByAmount('${key}', 1000)" class="btn-action" style="font-size:var(--fs-caption); width:auto;">+1.000 €</button>
                     <button onclick="buyStockByAmount('${key}', 10000)" class="btn-action" style="font-size:var(--fs-caption); width:auto;">+10.000 €</button>
                     <button onclick="buyStockByAmount('${key}', 50000)" class="btn-action" style="font-size:var(--fs-caption); width:auto;">+50.000 €</button>
-                    <button onclick="buyMaxStockShares('${key}')" class="btn-action" style="font-size:var(--fs-caption); width:auto; background:var(--purple);">MAX</button>
+                    <button onclick="buyMaxStockShares('${key}')" class="btn-primary" style="font-size:var(--fs-caption); width:auto;">MAX</button>
                     <button onclick="sellStockSharesPct('${key}', 0.25)" class="btn-secondary" style="font-size:var(--fs-caption); width:auto;">-25%</button>
                     <button onclick="sellStockSharesPct('${key}', 0.5)" class="btn-secondary" style="font-size:var(--fs-caption); width:auto;">-50%</button>
                     <button onclick="sellStockShares('${key}', ${s.owned})" class="btn-secondary" style="font-size:var(--fs-caption); width:auto; color:var(--danger);">Alles</button>

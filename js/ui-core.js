@@ -39,7 +39,7 @@
         let prevBtn = document.getElementById('tutorial-prev-btn');
         if (titleEl) titleEl.innerHTML = t(page.titleKey).replace('{CLUB}', game.clubName);
         if (bodyEl) bodyEl.innerHTML = t(page.bodyKey).replace('{LIGA}', leagueNames[game.leagueLevel] || '');
-        if (dotsEl) dotsEl.innerHTML = TUTORIAL_PAGES.map((_, i) => `<span style="display:inline-block; width:6px; height:6px; border-radius:50%; margin:0 2px; background:${i === tutorialPage ? 'var(--accent)' : 'rgba(255,255,255,0.25)'};"></span>`).join('');
+        if (dotsEl) dotsEl.innerHTML = TUTORIAL_PAGES.map((_, i) => `<span style="display:inline-block; width:6px; height:6px; border-radius:50%; margin:0 2px; background:${i === tutorialPage ? 'var(--accent)' : 'color-mix(in srgb, var(--ink) 25%, transparent)'};"></span>`).join('');
         if (prevBtn) {
             prevBtn.style.visibility = tutorialPage === 0 ? 'hidden' : 'visible';
             prevBtn.innerText = t('tutorial_prev');
@@ -146,7 +146,7 @@
                 banner.style.display = 'block';
                 problems.forEach(p => {
                     let line = document.createElement('div');
-                    line.style.borderTop = '1px solid rgba(255,255,255,0.2)';
+                    line.style.borderTop = '1px solid color-mix(in srgb, var(--ink) 20%, transparent)';
                     line.style.padding = '4px 0';
                     line.textContent = '[Struktur-Test] ' + p;
                     content.appendChild(line);
@@ -154,10 +154,10 @@
                 // Hinweis auf die Export-Funktion, damit gefundene Probleme einfach gemeldet
                 // werden können statt nur per Screenshot.
                 let hintLine = document.createElement('div');
-                hintLine.style.borderTop = '1px solid rgba(255,255,255,0.3)';
+                hintLine.style.borderTop = '1px solid color-mix(in srgb, var(--ink) 30%, transparent)';
                 hintLine.style.padding = '6px 0';
                 hintLine.style.fontWeight = 'bold';
-                hintLine.style.color = '#ffe27a';
+                hintLine.style.color = 'var(--gold)';
                 hintLine.textContent = '💡 Tipp: Im Admin-Bereich unter "Struktur-Selbsttest" kannst du diesen Verlauf per Knopfdruck exportieren, um ihn zu melden.';
                 content.appendChild(hintLine);
             }

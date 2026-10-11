@@ -132,7 +132,7 @@
                 playSound('whistle');
                 return;
             }
-            document.getElementById('europe-draw-opponents-list').innerHTML += `<div style="font-size:var(--fs-title); font-weight:900; color:#fff; margin:6px 0;">⚽ ${opponents[revealed]}</div>`;
+            document.getElementById('europe-draw-opponents-list').innerHTML += `<div style="font-size:var(--fs-title); font-weight:900; color:var(--text-main); margin:6px 0;">⚽ ${opponents[revealed]}</div>`;
             revealed++;
             europeDrawRevealTimer = setTimeout(revealNext, 1000);
         }
@@ -160,7 +160,7 @@
         clearTimeout(europeDrawRevealTimer);
         europeDrawRevealTimer = setTimeout(() => {
             document.getElementById('europe-draw-reveal-text').innerText = 'Euer Halbfinal-Gegner steht fest!';
-            document.getElementById('europe-draw-opponents-list').innerHTML = `<div style="font-size:18px; font-weight:900; color:#fff; margin:6px 0;">⚽ ${opponent}</div><div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:8px;">Hin- und Rückspiel, Gesamtergebnis entscheidet. Bei Gleichstand nach 180 Minuten: Elfmeterschießen.</div>`;
+            document.getElementById('europe-draw-opponents-list').innerHTML = `<div style="font-size:18px; font-weight:900; color:var(--text-main); margin:6px 0;">⚽ ${opponent}</div><div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:8px;">Hin- und Rückspiel, Gesamtergebnis entscheidet. Bei Gleichstand nach 180 Minuten: Elfmeterschießen.</div>`;
             playSound('whistle');
         }, 1400);
     }
@@ -332,7 +332,7 @@
             let orderIdx = selectedShooters.indexOf(p.id);
             let quoteText = (p.penaltiesTaken || 0) > 0 ? ` · Quote: ${Math.round((p.penaltiesScored / p.penaltiesTaken) * 100)}% (${p.penaltiesScored}/${p.penaltiesTaken})` : ' · Quote: -';
             let specialistTag = p.individualFocus === 'elfmeter' ? ' 🥅' : '';
-            return `<div class="player-row" onclick="toggleShooterSelection('${p.id}')" style="cursor:pointer; ${orderIdx !== -1 ? 'border-color:var(--primary); background:rgba(34,224,168,0.1);' : ''}">
+            return `<div class="player-row" onclick="toggleShooterSelection('${p.id}')" style="cursor:pointer; ${orderIdx !== -1 ? 'border-color:var(--primary); background:color-mix(in srgb, var(--primary) 10%, transparent);' : ''}">
                 <span>${orderIdx !== -1 ? `#${orderIdx + 1} ` : ''}${p.name}${specialistTag} <span style="color:var(--text-muted); font-size:var(--fs-caption);">(Schuss: ${p.shooting}${quoteText})</span></span>
             </div>`;
         }).join('');

@@ -580,7 +580,7 @@
                 ${entries.map(e => {
                     let info = FIXTURE_TYPE_LABELS[e.type];
                     let isHot = !!stretch && e.matchday >= stretch.from && e.matchday <= stretch.to;
-                    return `<div style="flex:0 0 auto; text-align:center; padding:4px 6px; border-radius:6px; background:${isHot ? 'rgba(239,68,68,0.15)' : 'var(--bg-card)'}; border:1px solid ${isHot ? 'var(--danger)' : 'var(--border)'};">
+                    return `<div style="flex:0 0 auto; text-align:center; padding:4px 6px; border-radius:6px; background:${isHot ? 'color-mix(in srgb, var(--danger) 15%, transparent)' : 'var(--bg-card)'}; border:1px solid ${isHot ? 'var(--danger)' : 'var(--border)'};">
                         <div style="font-size:var(--fs-micro); color:var(--text-muted);">SpT ${e.matchday}</div>
                         <div style="font-size:var(--fs-title-sm);">${info.icon}</div>
                         <div style="font-size:var(--fs-micro);">${info.label}</div>
@@ -856,7 +856,7 @@
                     <button onclick="activateTrainingAutopilot()" class="btn-action" style="font-size:var(--fs-caption);">🤖 ${TRAINING_AUTOPILOT_DURATION} Spieltage übernehmen [${TRAINING_AUTOPILOT_COST} 💎]</button>
                 </div>
                 <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">Dein Guthaben: <strong style="color:var(--gold);">${game.premiumPoints || 0} 💎</strong></div>
-                ${log.length > 0 ? `<div style="margin-top:6px; border-top:1px solid #1e293b; padding-top:4px;">
+                ${log.length > 0 ? `<div style="margin-top:6px; border-top:1px solid color-mix(in srgb, var(--europe) 30%, var(--surface-1)); padding-top:4px;">
                     ${log.map(l => `<div style="font-size:var(--fs-caption); color:var(--text-muted);">ST ${l.matchday}: ${l.text}</div>`).join('')}
                 </div>` : ''}
             </div>`;

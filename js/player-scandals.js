@@ -159,7 +159,7 @@
         } else {
             scandals.forEach((scandal, idx) => {
                 let player = squad.find(p => p.id === scandal.playerId);
-                html += `<div style="background:rgba(255,84,104,0.15); padding:6px; border-radius:4px; margin-bottom:6px; border-left:3px solid var(--danger);">
+                html += `<div style="background:color-mix(in srgb, var(--danger) 15%, transparent); padding:6px; border-radius:4px; margin-bottom:6px; border-left:3px solid var(--danger);">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
                         <strong>${scandal.icon} ${scandal.name}</strong>
                         <span style="font-size:var(--fs-micro); color:var(--text-muted);">${scandal.daysLeft} SpT</span>

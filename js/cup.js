@@ -278,7 +278,7 @@
                 let isOur = (p.home === game.clubName || p.away === game.clubName);
                 let penStr = p.penaltyWinner ? ` (i.E. ${p.penaltyWinner})` : '';
                 let res = p.played ? `<strong>${p.homeGoals} : ${p.awayGoals}</strong>${penStr}` : 'vs';
-                return `<div class="player-row" style="${isOur ? 'border-color:var(--accent); background:rgba(255,193,7,0.1);' : ''}">
+                return `<div class="player-row" style="${isOur ? 'border-color:var(--accent); background:color-mix(in srgb, var(--gold) 10%, transparent);' : ''}">
                     <span style="${p.home===game.clubName?'color:var(--primary); font-weight:bold;':''}">${p.home}</span>
                     <span>${res}</span>
                     <span style="${p.away===game.clubName?'color:var(--primary); font-weight:bold;':''}">${p.away}</span>

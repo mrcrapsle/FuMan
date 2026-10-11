@@ -262,7 +262,7 @@ function renderTransferPokerBox() {
     box.innerHTML = `<div class="panel" style="border:1px solid var(--accent); margin-bottom:8px;">
         <div class="panel-header" style="color:var(--accent);">🃏 TRANSFERPOKER: ${p.name} (${p.pos}, ${p.strength})</div>
         <div style="font-size:var(--fs-caption); margin-bottom:6px;">Verkäufer: <strong>${p.sellerClub}</strong> · Forderung <strong>${formatVal(p.askingPrice)}</strong> · Marktwert ${formatVal(p.marketValue)} · Vertrag ${p.contracts || 2} J. · Geduld ${geduld} (noch ${Math.max(0, t.patience)} Runden)${t.rival ? ` · ⚔️ ${t.rival.club} bietet ${formatVal(t.rival.bid)}` : ''}</div>
-        <div style="font-size:var(--fs-caption); max-height:110px; overflow-y:auto; background:rgba(0,0,0,0.15); border-radius:4px; padding:4px; margin-bottom:6px;">${t.log.slice(-6).map(z => `<div>${z}</div>`).join('')}</div>
+        <div style="font-size:var(--fs-caption); max-height:110px; overflow-y:auto; background:color-mix(in srgb, var(--shade) 15%, transparent); border-radius:4px; padding:4px; margin-bottom:6px;">${t.log.slice(-6).map(z => `<div>${z}</div>`).join('')}</div>
         ${t.agreedFee ? `
             <div class="box" style="font-size:var(--fs-small);">Ablöse ${formatVal(t.agreedFee)}${agentFee ? ` + Provision ${formatVal(agentFee)}` : ''} · Gehalt <strong>${formatVal(t.wageDemand)}</strong>/SpT (bisher ${formatVal(p.wage)})</div>
             ${renderPokerSwapSelect(p, t)}

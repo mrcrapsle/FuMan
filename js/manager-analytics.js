@@ -47,7 +47,7 @@
         }
         const t = getManagerCareerTotals();
         const quote = t.matches ? Math.round(t.won / t.matches * 100) : 0;
-        const kachel = (label, wert, sub) => `<div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:6px; text-align:center;">
+        const kachel = (label, wert, sub) => `<div style="background:color-mix(in srgb, var(--ink) 5%, transparent); border-radius:6px; padding:6px; text-align:center;">
             <div style="font-size:var(--fs-micro); color:var(--text-muted);">${label}</div><div style="font-size:var(--fs-title); font-weight:800;">${wert}</div><div style="font-size:var(--fs-micro); color:var(--text-muted);">${sub}</div></div>`;
         box.innerHTML = `<div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:6px; margin-bottom:8px;">
                 ${kachel('Bilanz', `${t.won}-${t.drawn}-${t.lost}`, `${t.matches} Ligaspiele · ${quote}% Siege`)}
@@ -55,6 +55,6 @@
                 ${kachel('Meisterschaften', t.titles, `${t.promotions} Aufstieg(e) · ${t.relegations} Abstieg(e)`)}
                 ${kachel('Bestes Ergebnis', `Platz ${t.best.rank}`, t.best.league)}
             </div>
-            <div style="font-size:var(--fs-caption);">${liste.slice(-6).reverse().map(e => `<div style="display:flex; justify-content:space-between; gap:6px; padding:2px 0; border-top:1px solid rgba(255,255,255,0.06);">
+            <div style="font-size:var(--fs-caption);">${liste.slice(-6).reverse().map(e => `<div style="display:flex; justify-content:space-between; gap:6px; padding:2px 0; border-top:1px solid color-mix(in srgb, var(--ink) 6%, transparent);">
                 <span>Saison ${e.season} · ${e.club}</span><span style="white-space:nowrap;">${e.league.replace(/ \(.*\)/, '')} · Platz <strong>${e.rank}</strong> · ${e.won}-${e.drawn}-${e.lost} · ${e.points} P.</span></div>`).join('')}</div>`;
     }

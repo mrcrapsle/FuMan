@@ -47,11 +47,11 @@ function getPredictionHtml(oppName) {
     const p = predictNextMatch();
     if (!p || (oppName && p.opp.name !== oppName)) return '';
     const pct = x => Math.round(x * 100) + '%';
-    return `<div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.15); font-size:var(--fs-small);">
+    return `<div style="margin-top:6px; padding-top:6px; border-top:1px solid color-mix(in srgb, var(--ink) 15%, transparent); font-size:var(--fs-small);">
         🔮 <strong style="color:var(--teal);">Prognose des Analysten</strong> (${SCOUT_SIMULATIONS} simulierte Spiele)
-        <div style="display:flex; height:14px; border-radius:3px; overflow:hidden; font-size:var(--fs-micro); font-weight:bold; color:#fff; text-align:center; line-height:14px; margin:4px 0;">
+        <div style="display:flex; height:14px; border-radius:3px; overflow:hidden; font-size:var(--fs-micro); font-weight:bold; color:var(--text-main); text-align:center; line-height:14px; margin:4px 0;">
             <div style="width:${pct(p.sieg)}; background:var(--primary);">${p.sieg >= 0.12 ? pct(p.sieg) : ''}</div>
-            <div style="width:${pct(p.remis)}; background:#8a8f98;">${p.remis >= 0.12 ? pct(p.remis) : ''}</div>
+            <div style="width:${pct(p.remis)}; background:color-mix(in srgb, var(--ink) 35%, var(--surface-2)); color:var(--text-main);">${p.remis >= 0.12 ? pct(p.remis) : ''}</div>
             <div style="width:${pct(p.niederlage)}; background:var(--danger);">${p.niederlage >= 0.12 ? pct(p.niederlage) : ''}</div>
         </div>
         Sieg ${pct(p.sieg)} · Remis ${pct(p.remis)} · Niederlage ${pct(p.niederlage)} · erwartet ${p.xTore.toFixed(1)}:${p.xGegentore.toFixed(1)}

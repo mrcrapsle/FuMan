@@ -24,7 +24,7 @@
         for (let k in btnMap) {
             let b = document.getElementById(btnMap[k]);
             if (b) {
-                b.style.borderColor = underworld.activeSabotages[k] ? 'var(--primary)' : '#334155';
+                b.style.borderColor = underworld.activeSabotages[k] ? 'var(--primary)' : 'var(--border-strong)';
                 b.style.color = underworld.activeSabotages[k] ? 'var(--primary)' : 'var(--accent)';
             }
         }

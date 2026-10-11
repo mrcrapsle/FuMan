@@ -418,7 +418,7 @@
         box.innerHTML = `<div class="box" style="font-size:var(--fs-small);">
             <strong style="color:var(--accent);">🗂️ Vereinsakte: ${oppName}</strong><br>
             ${profileLine}${typeof getAiStarLine === 'function' ? getAiStarLine(team) : ''}${formLine}
-            <div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.12);">${h2hLine}</div>
+            <div style="margin-top:6px; padding-top:6px; border-top:1px solid color-mix(in srgb, var(--ink) 12%, transparent);">${h2hLine}</div>
         </div>`;
     }
 

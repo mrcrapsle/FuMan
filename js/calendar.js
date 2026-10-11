@@ -41,7 +41,7 @@
             teile.push(L('⚽ Ligaspiel', '⚽ League match'));
             let eventText = teile.join(' + ');
             let hasCup = dfb || lande;
-            let eventColor = hasCup ? 'var(--accent)' : (euro ? '#82b1ff' : '#aaa');
+            let eventColor = hasCup ? 'var(--accent)' : (euro ? 'var(--europe)' : 'var(--text-muted)');
 
             item.innerHTML = `
                 <span><strong>${L('Spieltag', 'Matchday')} ${i}</strong> ${isCurrent ? `<span style="color:var(--primary); font-weight:900;">(${L('HEUTE', 'TODAY')})</span>` : ''}</span>

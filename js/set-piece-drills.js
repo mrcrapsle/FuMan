@@ -78,7 +78,7 @@ function renderSetPieceDrillBox() {
         const aktiv = d.focus === k;
         return `<button onclick="setSetPieceDrillFocus('${k}')" class="${aktiv ? 'btn-action' : 'btn-secondary'}" style="text-align:left; font-size:var(--fs-small); margin-bottom:3px;">
             ${aktiv ? '✔ ' : ''}${v.icon} ${v.label} · <strong>${m} %</strong> <span style="font-size:var(--fs-caption); opacity:0.8;">(${v.wirkung} bei 100 %)</span>
-            <div style="height:4px; background:rgba(255,255,255,0.08); border-radius:2px; margin-top:2px;"><div style="height:4px; width:${m}%; background:var(--accent); border-radius:2px;"></div></div></button>`;
+            <div style="height:4px; background:color-mix(in srgb, var(--ink) 8%, transparent); border-radius:2px; margin-top:2px;"><div style="height:4px; width:${m}%; background:var(--accent); border-radius:2px;"></div></div></button>`;
     }).join('');
     box.innerHTML = `<div class="box" style="font-size:var(--fs-small);">🚩 <strong>Standards einstudieren:</strong> ${tage
         ? `${tage} Standards-Tag${tage > 1 ? 'e' : ''} im Wochenplan - die gewählte Variante gewinnt ${plus} Punkte pro Spieltag.`

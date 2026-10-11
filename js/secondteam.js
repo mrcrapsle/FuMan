@@ -509,7 +509,7 @@
                         <strong>${p.name}</strong><br>
                         <span style="font-size:var(--fs-caption); color:var(--text-muted);">Str: <strong>${p.strength}</strong> | Fit: ${p.fitness}% | Marktwert: ${formatVal(p.marketValue)}</span>
                     </span>
-                    <span style="font-size:var(--fs-caption); color:${isStarting ? 'var(--teal)' : '#64748b'};">${isStarting ? 'Startelf' : 'Bank'}</span>
+                    <span style="font-size:var(--fs-caption); color:${isStarting ? 'var(--teal)' : 'var(--europe)'};">${isStarting ? 'Startelf' : 'Bank'}</span>
                     <button onclick="promoteToFirstTeam('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:var(--fs-caption); color:var(--primary);" title="In die 1. Mannschaft hochziehen">⬆️</button>
                     <button onclick="loanOutPlayer('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:var(--fs-caption); color:var(--teal);" title="An anderen Klub verleihen">📤</button>
                     <button onclick="sellSecondTeamPlayer('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:var(--fs-caption);" title="Verkaufen">💰</button>
@@ -730,7 +730,7 @@
             zeilen = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Der Bericht startet mit der nächsten Saison.</div>';
         }
         box.innerHTML = `${zeilen}
-            ${log.length > 0 ? `<div style="margin-top:6px; border-top:1px solid #1e293b; padding-top:4px;">
+            ${log.length > 0 ? `<div style="margin-top:6px; border-top:1px solid color-mix(in srgb, var(--europe) 30%, var(--surface-1)); padding-top:4px;">
                 ${log.map(l => `<div style="font-size:var(--fs-caption); color:var(--text-muted);">ST ${l.matchday}: ${l.text}</div>`).join('')}
             </div>` : ''}`;
     }

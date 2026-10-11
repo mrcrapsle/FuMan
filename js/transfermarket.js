@@ -561,7 +561,7 @@
         let offList = document.getElementById('incoming-offers-list');
         offList.innerHTML = '';
         if (incomingOffers.length === 0) {
-            offList.innerHTML = `<div class="box" style="text-align:center; color:#888;">Derzeit liegen keine offiziellen Transferanfragen für deine Spieler vor.</div>`;
+            offList.innerHTML = `<div class="box" style="text-align:center; color:var(--text-muted);">Derzeit liegen keine offiziellen Transferanfragen für deine Spieler vor.</div>`;
         } else {
             incomingOffers.forEach(o => {
                 let p = squad.find(x => x.id === o.playerId);

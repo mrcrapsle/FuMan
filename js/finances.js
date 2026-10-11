@@ -623,7 +623,7 @@
         if (hist.length < 2) { box.innerHTML = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch nicht genug Daten.</div>'; return; }
         let values = hist.map(h => h.money);
         let minV = Math.min(...values, 0), maxV = Math.max(...values, 1);
-        box.innerHTML = `<div style="display:flex; align-items:flex-end; gap:2px; height:50px; background:rgba(0,0,0,0.2); border-radius:6px; padding:5px;">
+        box.innerHTML = `<div style="display:flex; align-items:flex-end; gap:2px; height:50px; background:color-mix(in srgb, var(--shade) 20%, transparent); border-radius:6px; padding:5px;">
             ${hist.map(h => {
                 let pct = Math.max(4, Math.round(((h.money - minV) / Math.max(1, maxV - minV)) * 100));
                 return `<div style="flex:1; height:${pct}%; background:linear-gradient(to top, var(--violet), var(--accent)); border-radius:2px 2px 0 0;" title="SpT ${h.matchday}: ${formatVal(h.money)}"></div>`;
@@ -698,7 +698,7 @@
                 <div style="display:flex; justify-content:space-between; gap:4px; font-size:var(--fs-body);">
                     <span style="min-width:0;">${label}</span><span style="color:${color}; font-weight:bold; white-space:nowrap;">${formatVal(amount)}</span>
                 </div>
-                <div style="background:#1e293b; border-radius:4px; height:4px; overflow:hidden;">
+                <div style="background:color-mix(in srgb, var(--europe) 30%, var(--surface-1)); border-radius:4px; height:4px; overflow:hidden;">
                     <div style="height:100%; width:${pct}%; background:${color};"></div>
                 </div>
             </div>`;
@@ -961,7 +961,7 @@
             ${zeile('Weiterverkaufsbeteiligungen', b.weiterverkauf, 'var(--primary)')}
             ${zeile('Spielerkäufe', -b.kauf, 'var(--danger)')}
             ${zeile('Handgelder', -b.handgeld, 'var(--danger)')}
-            <div style="display:flex; justify-content:space-between; font-size:var(--fs-body); margin-top:4px; border-top:1px solid #1e293b; padding-top:3px;"><span>Netto</span><strong style="color:${b.netto >= 0 ? 'var(--primary)' : 'var(--danger)'};">${b.netto >= 0 ? '+' : ''}${formatVal(b.netto)}</strong></div>
+            <div style="display:flex; justify-content:space-between; font-size:var(--fs-body); margin-top:4px; border-top:1px solid color-mix(in srgb, var(--europe) 30%, var(--surface-1)); padding-top:3px;"><span>Netto</span><strong style="color:${b.netto >= 0 ? 'var(--primary)' : 'var(--danger)'};">${b.netto >= 0 ? '+' : ''}${formatVal(b.netto)}</strong></div>
         </div>`;
     }
 
@@ -996,7 +996,7 @@
             <div class="box">
                 <strong style="font-size:var(--fs-body);">🧾 EINZELBUCHUNGEN (neueste zuerst)</strong>
                 ${auszug.slice().reverse().map(b => `
-                    <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:var(--fs-small); margin-top:3px; border-bottom:1px solid #1e293b; padding-bottom:2px;">
+                    <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:var(--fs-small); margin-top:3px; border-bottom:1px solid color-mix(in srgb, var(--europe) 30%, var(--surface-1)); padding-bottom:2px;">
                         <span style="color:var(--text-muted);">S${b.season}/ST${b.matchday}</span>
                         <span style="flex:1; margin:0 6px;">${b.label}</span>
                         <span style="color:${b.amount >= 0 ? 'var(--primary)' : 'var(--danger)'}; font-weight:bold;">${b.amount >= 0 ? '+' : '-'}${formatVal(Math.abs(b.amount))}</span>

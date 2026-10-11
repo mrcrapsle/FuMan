@@ -25,7 +25,7 @@
         const box = document.getElementById('hall-of-fame-box');
         if (!box) return;
         const h = getHallOfFameEntries();
-        const zeile = (links, rechts, gold) => `<div style="display:flex; justify-content:space-between; gap:6px; padding:2px 0; border-top:1px solid rgba(255,255,255,0.06);${gold ? ' color:var(--gold);' : ''}"><span>${links}</span><strong style="white-space:nowrap;">${rechts}</strong></div>`;
+        const zeile = (links, rechts, gold) => `<div style="display:flex; justify-content:space-between; gap:6px; padding:2px 0; border-top:1px solid color-mix(in srgb, var(--ink) 6%, transparent);${gold ? ' color:var(--gold);' : ''}"><span>${links}</span><strong style="white-space:nowrap;">${rechts}</strong></div>`;
         const block = (titel, inhalt, leer) => `<div style="margin-bottom:8px;"><div style="font-weight:700; color:var(--accent); margin-bottom:2px;">${titel}</div>${inhalt || `<div style="color:var(--text-muted);">${leer}</div>`}</div>`;
         const tier = { ICON: 'Vereins-Ikone', LEGEND: 'Legende', CLUB_HERO: 'Vereinsheld' };
         box.innerHTML = `<div style="font-size:var(--fs-caption);">

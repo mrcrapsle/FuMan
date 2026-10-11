@@ -14,6 +14,7 @@ const DESIGN_THEMES = [
     { id: 'flutlicht', name: 'Flutlicht-Nacht', desc: 'Standard: Mitternachtsblau, Rasengrün und Flutlicht-Gold.', farben: ['#070b14', '#111827', '#ffc23c', '#3ee08a', '#ff5468', '#eaf2ff'] },
     { id: 'klassik', name: 'Anstoß-Klassik', desc: 'Holz, Leder und Messing wie im Managerbüro der 90er.', farben: ['#110c07', '#241a11', '#e8b84e', '#8fd16a', '#ff6f5e', '#f5ead6'] },
     { id: 'rasen', name: 'Rasengrün', desc: 'Tiefes Stadiongrün mit Kreideweiß und Trikotgelb.', farben: ['#04130b', '#0a2215', '#ffd84d', '#6ef0a6', '#ff6b7a', '#effcf4'] },
+    { id: 'tageslicht', name: 'Tageslicht', desc: 'Hell mit dunkler Schrift - für Sonne, Büro und helle Räume.', farben: ['#f1f4f9', '#ffffff', '#985a00', '#0e7a44', '#c21f3a', '#152033'] },
     { id: 'kontrast', name: 'Hoher Kontrast', desc: 'Schwarz, Weiß, Signalgelb. Für helle Umgebungen und schwache Augen.', farben: ['#000000', '#0a0a0a', '#ffe600', '#4dff9a', '#ff7a7a', '#ffffff'] },
     { id: 'farbsicher', name: 'Farbsicher', desc: 'Gut und Schlecht als Blau und Orange - auch bei Rot-Grün-Schwäche klar.', farben: ['#070b14', '#111827', '#f0e442', '#56b4e9', '#e69f00', '#eaf2ff'] }
 ];

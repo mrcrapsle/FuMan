@@ -40,7 +40,7 @@
                 : `<button onclick="revealYouthPotential('${p.id}')" class="btn-secondary" style="width:auto; font-size:var(--fs-micro);">🔍 Potenzial prüfen [3.000 €]</button>`;
             row.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 28) : ''}${p.name} (${p.pos}, ${p.age} J., Str ${p.strength})${p.proDecisionLeft ? ' <span class="badge" style="background:rgba(255,193,7,0.3);">✍️ Entscheidung</span>' : ''} ${p.trait && p.trait!=='Kein'?`<span class="badge badge-trait">${p.trait}</span>`:''}</span>
+                    <span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 28) : ''}${p.name} (${p.pos}, ${p.age} J., Str ${p.strength})${p.proDecisionLeft ? ' <span class="badge" style="background:color-mix(in srgb, var(--gold) 30%, transparent);">✍️ Entscheidung</span>' : ''} ${p.trait && p.trait!=='Kein'?`<span class="badge badge-trait">${p.trait}</span>`:''}</span>
                     <span style="display:flex; gap:4px;">
                         <button onclick="promoteYouth(${idx}, this)" class="btn-action" style="width:auto; font-size:var(--fs-caption);">In Profikader</button>
                         ${(p.age || 0) >= 17 ? `<button onclick="openYouthLoanChoice('${p.id}')" class="btn-secondary" style="width:auto; font-size:var(--fs-caption);" title="Leihe zur Entwicklung">📤 Leihe</button>` : ''}
@@ -94,7 +94,7 @@
     // JUGENDAKADEMIE: NEUE FUNKTIONEN
     // ==========================================
     const POTENTIAL_TIER_LABELS = { 1: '⭐ Mittelmaß', 2: '⭐⭐ Vielversprechend', 3: '⭐⭐⭐ Ausnahmetalent' };
-    const POTENTIAL_TIER_COLORS = { 1: 'rgba(228,197,140,0.2)', 2: 'rgba(76,175,122,0.3)', 3: 'rgba(212,169,74,0.4)' };
+    const POTENTIAL_TIER_COLORS = { 1: 'color-mix(in srgb, var(--ink) 18%, transparent)', 2: 'color-mix(in srgb, var(--primary) 30%, transparent)', 3: 'color-mix(in srgb, var(--accent) 40%, transparent)' };
 
     // Akademie-Stufe mit klarer Wirkung (25.18): vorher +3 Startstärke je Stufe ohne Obergrenze -
     // Stufe 8 hätte Talente auf Liga-Niveau sichten lassen, das Potenzial blieb unberührt.

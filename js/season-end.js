@@ -579,7 +579,7 @@ function concludeSeasonAndAdvance() {
         let history = (game.seasonReviewArchive || []).slice(-8);
         if (history.length < 2) return '';
         let maxVal = Math.max(...history.map(e => e.avgAttendance), 1);
-        return `<div style="display:flex; align-items:flex-end; gap:3px; height:50px; background:rgba(0,0,0,0.2); border-radius:6px; padding:5px;">
+        return `<div style="display:flex; align-items:flex-end; gap:3px; height:50px; background:color-mix(in srgb, var(--shade) 20%, transparent); border-radius:6px; padding:5px;">
             ${history.map(e => {
                 let heightPct = Math.max(4, Math.round((e.avgAttendance / maxVal) * 100));
                 return `<div style="flex:1; display:flex; flex-direction:column; align-items:center;" title="Saison ${e.season}: ${e.avgAttendance.toLocaleString('de-DE')}">

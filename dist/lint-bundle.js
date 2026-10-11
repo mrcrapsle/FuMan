@@ -184,8 +184,8 @@ function compareTableRows(a, b) {
         btn.dataset.confirmOrigBg = btn.style.background;
         btn.dataset.confirmOrigColor = btn.style.color;
         btn.innerHTML = frage;
-        btn.style.background = 'linear-gradient(135deg, #c73545, #a82838)';
-        btn.style.color = '#fff';
+        btn.style.background = 'linear-gradient(135deg, var(--danger), var(--danger))';
+        btn.style.color = 'var(--text-main)';
         confirmTimers.set(btn, setTimeout(() => {
             if (btn.isConnected && btn.dataset.confirming === 'true') {
                 btn.dataset.confirming = 'false';
@@ -289,6 +289,16 @@ function renderUiCard(opts = {}) {
         </div>
         ${opts.body ? `<div class="ui-card-body">${opts.body}</div>` : ''}
         ${opts.actions ? `<div class="ui-card-actions">${opts.actions}</div>` : ''}`;
+}
+
+// Schrift auf einer frei gewählten Farbe (z. B. Wappenfarbe): dunkel auf hellen,
+// weiß auf dunklen Farben - damit der Text in jedem Theme lesbar bleibt.
+function lesbareSchriftAuf(hex) {
+    const m = String(hex || '').replace('#', '').match(/^([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+    if (!m) return 'var(--on-strong)';
+    const lin = v => { v = parseInt(v, 16) / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    const L = 0.2126 * lin(m[1]) + 0.7152 * lin(m[2]) + 0.0722 * lin(m[3]);
+    return L > 0.36 ? 'var(--on-accent)' : 'var(--on-strong)';
 }
 
 // Kleine Werteleiste unter dem Kopf (z. B. Tempo, Schuss, Pass, Abwehr)
@@ -1277,7 +1287,7 @@ function renderUiStatRow(werte) {
                     <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                         <strong style="color:${meta.color};">${meta.icon} ${m.title}</strong>
                         <span>
-                            <button onclick="event.stopPropagation(); toggleInboxImportant(${m.id})" style="background:none; border:none; color:${m.important ? 'var(--gold)' : '#64748b'}; cursor:pointer; font-size:var(--fs-body-lg); padding:0 2px;" title="Als wichtig markieren">${m.important ? '★' : '☆'}</button>
+                            <button onclick="event.stopPropagation(); toggleInboxImportant(${m.id})" style="background:none; border:none; color:${m.important ? 'var(--gold)' : 'var(--europe)'}; cursor:pointer; font-size:var(--fs-body-lg); padding:0 2px;" title="Als wichtig markieren">${m.important ? '★' : '☆'}</button>
                             ${archiveBtn}
                             <button onclick="event.stopPropagation(); deleteInboxMessage(${m.id})" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:var(--fs-body); padding:0 2px;" title="Endgültig löschen">✕</button>
                         </span>
@@ -2697,7 +2707,7 @@ function getOwnDerbyRivals() {
         return `
             <div class="panel-header">📋 TAKTIK-VORSCHLAG DES CO-TRAINERS${sugg.opponentAware ? ' <span style="font-size:var(--fs-caption); color:var(--teal);">🎥 gegnerbezogen</span>' : ''}${sugg.selfCritical ? ' <span style="font-size:var(--fs-caption); color:var(--danger);">😟 verunsichert</span>' : ''}</div>
             <div style="font-size:var(--fs-small); margin-bottom:6px;">Vertrauen in seinen Rat</div>
-            <div style="background:rgba(228,197,140,0.1); border-radius:4px; height:8px; margin-bottom:8px; overflow:hidden;">
+            <div style="background:color-mix(in srgb, var(--accent) 10%, transparent); border-radius:4px; height:8px; margin-bottom:8px; overflow:hidden;">
                 <div style="width:${trust}%; height:100%; background:${trustColor};"></div>
             </div>
             <div class="box" style="font-size:var(--fs-small);">
@@ -2771,7 +2781,7 @@ function getOwnDerbyRivals() {
         list.innerHTML = ALL_FORMATIONS.map(f => {
             let dots = (FORMATION_MINI_ICONS[f] || []).slice(0, 9);
             while (dots.length < 9) dots.push(0);
-            let dotHtml = dots.slice(0, 9).map(d => `<div style="background:${d ? 'var(--teal)' : 'rgba(255,255,255,0.12)'};"></div>`).join('');
+            let dotHtml = dots.slice(0, 9).map(d => `<div style="background:${d ? 'var(--teal)' : 'color-mix(in srgb, var(--ink) 12%, transparent)'};"></div>`).join('');
             return `<div class="formation-grid-item ${f === selected ? 'active' : ''}" onclick="renderFormationModalList('${f}')">
                 <div class="formation-mini-dots">${dotHtml}</div>
                 <span>${f}</span>
@@ -2850,7 +2860,7 @@ function getOwnDerbyRivals() {
         box.innerHTML = items.map(it => `
             <div class="box" style="cursor:pointer;" onclick="toggleTeamInstruction('${it.key}')">
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <div style="width:18px; height:18px; border:2px solid ${game.teamInstructions[it.key] ? 'var(--primary)' : '#666'}; border-radius:3px; background:${game.teamInstructions[it.key] ? 'var(--primary)' : 'transparent'}; display:flex; align-items:center; justify-content:center; font-size:var(--fs-body); color:#000; flex-shrink:0;">${game.teamInstructions[it.key] ? '✓' : ''}</div>
+                    <div style="width:18px; height:18px; border:2px solid ${game.teamInstructions[it.key] ? 'var(--primary)' : 'var(--border-strong)'}; border-radius:3px; background:${game.teamInstructions[it.key] ? 'var(--primary)' : 'transparent'}; display:flex; align-items:center; justify-content:center; font-size:var(--fs-body); color:var(--on-accent); flex-shrink:0;">${game.teamInstructions[it.key] ? '✓' : ''}</div>
                     <strong style="font-size:var(--fs-body);">${it.label}</strong>
                 </div>
                 <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:3px; margin-left:26px;">${it.desc}</div>
@@ -2879,7 +2889,7 @@ function getOwnDerbyRivals() {
         box.innerHTML = items.map(it => `
             <div class="box" style="cursor:pointer;" onclick="toggleTacticAutomation('${it.key}')">
                 <div style="display:flex; align-items:center; gap:8px;">
-                    <div style="width:18px; height:18px; border:2px solid ${game.tacticAutomation[it.key] ? 'var(--primary)' : '#666'}; border-radius:3px; background:${game.tacticAutomation[it.key] ? 'var(--primary)' : 'transparent'}; display:flex; align-items:center; justify-content:center; font-size:var(--fs-body); color:#000; flex-shrink:0;">${game.tacticAutomation[it.key] ? '✓' : ''}</div>
+                    <div style="width:18px; height:18px; border:2px solid ${game.tacticAutomation[it.key] ? 'var(--primary)' : 'var(--border-strong)'}; border-radius:3px; background:${game.tacticAutomation[it.key] ? 'var(--primary)' : 'transparent'}; display:flex; align-items:center; justify-content:center; font-size:var(--fs-body); color:var(--on-accent); flex-shrink:0;">${game.tacticAutomation[it.key] ? '✓' : ''}</div>
                     <strong style="font-size:var(--fs-body);">${it.label}</strong>
                 </div>
                 <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:3px; margin-left:26px;">${it.desc}</div>
@@ -3082,7 +3092,7 @@ function getOwnDerbyRivals() {
         box.style.display = 'block';
         let remaining = Math.max(0, game.ultimatumDeadlineMatchday - game.matchday);
         box.innerHTML = `
-            <div class="box" style="border-left-color:var(--danger); background:rgba(255,77,109,0.08); display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            <div class="box" style="border-left-color:var(--danger); background:color-mix(in srgb, var(--danger) 8%, transparent); display:flex; justify-content:space-between; align-items:center; gap:8px;">
                 <span style="display:flex; align-items:center; gap:8px; font-size:var(--fs-small);">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 32) : ''}<span><strong style="color:var(--danger);">⚠️ Ultimatum von ${p.name}</strong><br>Noch ${remaining} Spieltag(e) bis zur Frist.</span></span>
                 <button onclick="openUltimatumModal()" class="btn-secondary" style="width:auto; font-size:var(--fs-caption);">Jetzt entscheiden</button>
             </div>`;
@@ -3116,7 +3126,7 @@ function getOwnDerbyRivals() {
                 <span style="font-size:var(--fs-small);">Eingespieltheit der Startelf</span>
                 <strong style="color:${color};">${stats.percent}% ${stats.bonus > 0 ? `(+${stats.bonus} Stärke)` : ''}</strong>
             </div>
-            <div style="position:relative; background:rgba(228,197,140,0.1); border-radius:4px; height:8px; margin-bottom:4px; overflow:visible;">
+            <div style="position:relative; background:color-mix(in srgb, var(--accent) 10%, transparent); border-radius:4px; height:8px; margin-bottom:4px; overflow:visible;">
                 <div style="width:${stats.percent}%; height:100%; background:${color}; border-radius:4px;"></div>
                 <div style="position:absolute; left:${leagueAvgChemistry}%; top:-2px; bottom:-2px; border-left:1px dashed var(--accent);" title="Liga-Durchschnitt: ${leagueAvgChemistry}%"></div>
             </div>
@@ -3137,7 +3147,7 @@ function getOwnDerbyRivals() {
         if (secondTeamSquad.length > 0) suggestions.push('🥈 Spieler aus der zweiten Mannschaft hochziehen');
         suggestions.push('🛒 Freien Markt nach kurzfristig verfügbaren Spielern durchsuchen (Kaderplanung & Transfers)');
         box.innerHTML = `
-            <div class="box" style="border-left-color:var(--danger); background:rgba(255,77,109,0.08);">
+            <div class="box" style="border-left-color:var(--danger); background:color-mix(in srgb, var(--danger) 8%, transparent);">
                 <strong style="color:var(--danger);">🚨 VERLETZUNGSKRISE!</strong><br>
                 <span style="font-size:var(--fs-small);">Nur noch ${available} einsatzbereite Spieler im Kader - dringender Handlungsbedarf:</span>
                 <ul style="font-size:var(--fs-small); margin:6px 0 0 16px; padding:0;">${suggestions.map(s => `<li>${s}</li>`).join('')}</ul>
@@ -3199,7 +3209,7 @@ function getOwnDerbyRivals() {
                         <span>${POS_LABELS[pos]}</span>
                         <strong style="color:${depthColor};">${players.length} Spieler (${fitCount} fit) · Ø ${avgStr}</strong>
                     </div>
-                    <div style="background:rgba(255,255,255,0.06); border-radius:999px; height:6px; overflow:hidden;">
+                    <div style="background:color-mix(in srgb, var(--ink) 6%, transparent); border-radius:999px; height:6px; overflow:hidden;">
                         <div style="width:${depthPct}%; height:100%; background:${depthColor}; border-radius:999px;"></div>
                     </div>
                 </div>`;
@@ -3306,7 +3316,7 @@ function getOwnDerbyRivals() {
                         <strong style="font-size:var(--fs-body-lg);">${p.name}${roleBadge}</strong>
                         ${traitBadge}
                     </div>
-                    <button onclick="toggleLineupPlayer('${p.id}')" style="width:auto; padding:4px 10px; font-size:var(--fs-caption); border-radius:6px; border:none; background:${isStarting ? 'var(--danger)' : 'var(--primary)'}; color:${isStarting ? '#fff' : '#000'}; font-weight:700;">
+                    <button onclick="toggleLineupPlayer('${p.id}')" style="width:auto; padding:4px 10px; font-size:var(--fs-caption); border-radius:6px; border:none; background:${isStarting ? 'var(--danger-fill)' : 'var(--primary-fill)'}; color:${isStarting ? 'var(--on-strong)' : 'var(--on-accent)'}; font-weight:700;">
                         ${isStarting ? 'Bank' : 'Startelf'}
                     </button>
                 </div>
@@ -3314,7 +3324,7 @@ function getOwnDerbyRivals() {
                     <span>${p.age} Jahre · ${p.contracts} J. Vertrag</span>
                     <span>${formatVal(p.marketValue||0)} · ⚽ ${p.goalsSeason||0} Saisontore · 🎽 ${p.appearances||0} Einsätze</span>
                 </div>
-                <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:2px; font-size:var(--fs-micro); color:var(--text-muted); text-align:center; margin-bottom:6px; background:rgba(228,197,140,0.05); border-radius:4px; padding:4px 0;">
+                <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:2px; font-size:var(--fs-micro); color:var(--text-muted); text-align:center; margin-bottom:6px; background:color-mix(in srgb, var(--accent) 5%, transparent); border-radius:4px; padding:4px 0;">
                     <div>STR<br><strong style="color:var(--accent); font-size:var(--fs-body);">${p.strength}</strong></div>
                     <div>PAC<br><strong>${p.pace}</strong></div>
                     <div>SHO<br><strong>${p.shooting}</strong></div>
@@ -3327,7 +3337,7 @@ function getOwnDerbyRivals() {
                     <span style="font-size:var(--fs-caption);">${status}${moraleLine}</span>
                     <div style="display:flex; gap:4px; align-items:center;">
                         <button onclick="openPlayerDetail('${p.id}','squad')" class="btn-secondary" style="width:auto; padding:3px 7px; font-size:var(--fs-caption);" title="Details">ℹ️</button>
-                        <button onclick="selectForSwap('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 7px; font-size:var(--fs-caption); ${p.id === selectedSwapId ? 'background:var(--violet); color:#fff; border-color:var(--violet);' : ''}" title="Position tauschen">🔁</button>
+                        <button onclick="selectForSwap('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 7px; font-size:var(--fs-caption); ${p.id === selectedSwapId ? 'background:var(--violet); color:var(--on-strong); border-color:var(--violet);' : ''}" title="Position tauschen">🔁</button>
                     </div>
                 </div>
                 <div style="margin-top:6px;">
@@ -3372,6 +3382,7 @@ function getOwnDerbyRivals() {
             pin.style.top = coords[idx].top + '%';
             pin.style.left = coords[idx].left + '%';
             pin.style.background = pinBg;
+            pin.style.color = lesbareSchriftAuf(crestColor);
             // Eingespieltheit: Spieler mit überdurchschnittlich hoher Chemie zu ihren
             // Mitspielern bekommen einen dezenten goldenen Rand als visuellen Hinweis.
             let chemWithOthers = lineup.filter(oid => oid !== pid).map(oid => {
@@ -3524,7 +3535,7 @@ function getOwnDerbyRivals() {
                 let y = center + radius * Math.sin(angle);
                 return `${x},${y}`;
             }).join(' ');
-            gridLines += `<polygon points="${points}" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>`;
+            gridLines += `<polygon points="${points}" fill="none" stroke="color-mix(in srgb, var(--ink) 12%, transparent)" stroke-width="1"/>`;
         }
 
         // Achsen-Linien
@@ -3532,7 +3543,7 @@ function getOwnDerbyRivals() {
             let angle = angleSlice * idx - Math.PI / 2;
             let x2 = center + (size / 2) * Math.cos(angle);
             let y2 = center + (size / 2) * Math.sin(angle);
-            return `<line x1="${center}" y1="${center}" x2="${x2}" y2="${y2}" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/>`;
+            return `<line x1="${center}" y1="${center}" x2="${x2}" y2="${y2}" stroke="color-mix(in srgb, var(--ink) 12%, transparent)" stroke-width="0.5"/>`;
         }).join('');
 
         // Daten-Polygon
@@ -3578,7 +3589,7 @@ function getOwnDerbyRivals() {
                     let radius = (size / 2) * (attr.value / maxValue);
                     let x = center + radius * Math.cos(angle);
                     let y = center + radius * Math.sin(angle);
-                    return `<circle cx="${x}" cy="${y}" r="3" fill="var(--primary)" stroke="var(--text)" stroke-width="1"/>`;
+                    return `<circle cx="${x}" cy="${y}" r="3" fill="var(--primary)" stroke="var(--text-main)" stroke-width="1"/>`;
                 }).join('')}
                 ${labels}
                 ${valueLabels}
@@ -3606,10 +3617,10 @@ function getOwnDerbyRivals() {
         metrics.forEach(m => {
             let pct = (m.value / m.max * 100).toFixed(0);
             html += `
-                <div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:8px; border:1px solid rgba(255,255,255,0.1);">
+                <div style="background:color-mix(in srgb, var(--ink) 5%, transparent); border-radius:6px; padding:8px; border:1px solid color-mix(in srgb, var(--ink) 10%, transparent);">
                     <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${m.label}</div>
                     <div style="font-size:var(--fs-title); font-weight:700; color:${m.color}; margin-bottom:4px;">${m.value}</div>
-                    <div style="height:4px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden;">
+                    <div style="height:4px; background:color-mix(in srgb, var(--ink) 5%, transparent); border-radius:2px; overflow:hidden;">
                         <div style="height:100%; width:${pct}%; background:${m.color}; border-radius:2px;"></div>
                     </div>
                 </div>
@@ -3654,7 +3665,7 @@ function getOwnDerbyRivals() {
 
         comparisons.forEach(c => {
             let diff = c.our - c.league;
-            let diffColor = diff > 0 ? 'var(--primary)' : (diff < 0 ? 'var(--danger)' : '#aaa');
+            let diffColor = diff > 0 ? 'var(--primary)' : (diff < 0 ? 'var(--danger)' : 'var(--text-muted)');
             let ourWidth = (c.our / Math.max(c.league, c.our) * 100);
             let leagueWidth = (c.league / Math.max(c.league, c.our) * 100);
 
@@ -3666,7 +3677,7 @@ function getOwnDerbyRivals() {
                     </div>
                     <div style="display:flex; gap:2px; height:8px;">
                         <div style="flex:${ourWidth}; background:var(--primary); border-radius:2px; opacity:0.8;" title="Dein Team: ${c.our}"></div>
-                        <div style="flex:${Math.max(1, leagueWidth - ourWidth)}; background:#666; border-radius:2px;" title="Liga-Ø: ${c.league}"></div>
+                        <div style="flex:${Math.max(1, leagueWidth - ourWidth)}; background:var(--surface-3); border-radius:2px;" title="Liga-Ø: ${c.league}"></div>
                     </div>
                 </div>
             `;
@@ -3853,7 +3864,7 @@ function renderPlayerDevelopmentPanel() {
         const arch = getPlayerArchetype(p);
         const hist = p.strengthHistory || [];
         const letzte = hist.length ? p.strength - hist[hist.length - 1].strength : 0;
-        return `<div style="display:grid; grid-template-columns: 1fr auto auto auto; gap:6px; padding:2px 0; border-top:1px solid rgba(255,255,255,0.06); align-items:center;">
+        return `<div style="display:grid; grid-template-columns: 1fr auto auto auto; gap:6px; padding:2px 0; border-top:1px solid color-mix(in srgb, var(--ink) 6%, transparent); align-items:center;">
             <span>${p.name} <span style="color:var(--text-muted);">${p.pos}, ${p.age} J.</span></span>
             <span title="${arch.name}, Höhepunkt mit ${arch.peakAge}">${arch.icon}</span>
             <span>${p.strength}${letzte ? ` <span style="color:${letzte > 0 ? 'var(--primary)' : 'var(--danger)'};">(${letzte > 0 ? '+' : ''}${letzte})</span>` : ''}</span>
@@ -3936,9 +3947,9 @@ function cleanupLegacyDevelopmentState() {
                     <strong style="color:${a.riskColor};">${a.riskLabel}</strong>
                 </div>
                 <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:3px; font-size:var(--fs-micro); color:var(--text-muted);">
-                    <div>Besetzung: <strong style="color:${a.thin ? 'var(--danger)' : 'var(--text-primary)'};">${a.count} / ${a.minHealthy}+</strong></div>
-                    <div>Ø Alter: <strong style="color:${a.agingRisk ? 'var(--danger)' : 'var(--text-primary)'};">${a.avgAge.toFixed(1)} J.</strong></div>
-                    <div>Vertrag ≤${SQUAD_PLANNING_CONTRACT_URGENT} J.: <strong style="color:${a.cliffRisk ? 'var(--danger)' : 'var(--text-primary)'};">${a.cliff.length} Spieler</strong></div>
+                    <div>Besetzung: <strong style="color:${a.thin ? 'var(--danger)' : 'var(--text-main)'};">${a.count} / ${a.minHealthy}+</strong></div>
+                    <div>Ø Alter: <strong style="color:${a.agingRisk ? 'var(--danger)' : 'var(--text-main)'};">${a.avgAge.toFixed(1)} J.</strong></div>
+                    <div>Vertrag ≤${SQUAD_PLANNING_CONTRACT_URGENT} J.: <strong style="color:${a.cliffRisk ? 'var(--danger)' : 'var(--text-main)'};">${a.cliff.length} Spieler</strong></div>
                 </div>
             </div>`).join('');
     }
@@ -3966,7 +3977,7 @@ function cleanupLegacyDevelopmentState() {
             return `
                 <div style="display:flex; align-items:center; gap:6px; margin-bottom:3px; font-size:var(--fs-caption);">
                     <span style="width:42px; color:var(--text-muted);">${b.label}</span>
-                    <div style="flex:1; background:rgba(255,255,255,0.06); border-radius:999px; height:8px; overflow:hidden;">
+                    <div style="flex:1; background:color-mix(in srgb, var(--ink) 6%, transparent); border-radius:999px; height:8px; overflow:hidden;">
                         <div style="width:${pct}%; height:100%; background:${isOld ? 'var(--accent)' : 'var(--primary)'}; border-radius:999px;"></div>
                     </div>
                     <strong style="width:20px; text-align:right;">${count}</strong>
@@ -3991,7 +4002,7 @@ function cleanupLegacyDevelopmentState() {
         box.innerHTML = analysis.filter(a => a.cliff.length > 0).map(a => `
             <div class="box" style="font-size:var(--fs-caption); display:flex; justify-content:space-between;${a.cliffRisk ? ' border-left-color:var(--danger);' : ''}">
                 <span>${a.label}</span>
-                <strong style="color:${a.cliffRisk ? 'var(--danger)' : 'var(--text-primary)'};">${a.cliff.map(p => p.name).join(', ')}</strong>
+                <strong style="color:${a.cliffRisk ? 'var(--danger)' : 'var(--text-main)'};">${a.cliff.map(p => p.name).join(', ')}</strong>
             </div>`).join('');
     }
 
@@ -4090,7 +4101,7 @@ function cleanupLegacyDevelopmentState() {
             ? `verleihen an ${k.leihe.club} - spart ${formatVal(k.ersparnis)}/SpT`
             : `verkaufen - spart ${formatVal(k.ersparnis)}/SpT`}</div>`);
         if (!zeilen.length) return '';
-        return `<div style="margin-top:4px; padding-top:4px; border-top:1px solid rgba(150,150,150,0.2);">
+        return `<div style="margin-top:4px; padding-top:4px; border-top:1px solid color-mix(in srgb, var(--ink) 20%, transparent);">
             <div style="font-weight:800; color:var(--accent);">💡 Entlastung (teuerste Ergänzungsspieler):</div>${zeilen.join('')}
             <div style="color:var(--text-muted);">${fenster ? 'Wechselfenster offen: Transfermarkt → Verkaufen.' : 'Leihen und Verkäufe im nächsten Wechselfenster (Spieltag 1-3 und 18-20).'}</div>
             ${fenster ? `<button class="btn-secondary" style="margin-top:3px; font-size:var(--fs-caption);" onclick="showScreen('screen-transfer'); if (typeof setTransferTab === 'function') setTransferTab('sell');">→ Zur Verkaufsliste</button>` : ''}
@@ -4106,7 +4117,7 @@ function cleanupLegacyDevelopmentState() {
         r.angebote.forEach(x => zeilen.push(`<div style="color:var(--danger); font-weight:800;">⚠️ ${x.p.name}: Vorvertrags-Angebot von ${x.club} - verlängern bis Spieltag ${x.bis}</div>`));
         r.unterschrieben.forEach(x => zeilen.push(`<div style="color:var(--danger);">✍️ ${x.p.name} hat bei ${x.club} unterschrieben - geht ablösefrei (Winterverkauf bringt noch Geld)</div>`));
         if (r.gefaehrdet.length) zeilen.push(`<div style="color:var(--accent);">👀 ${game.matchday >= PRECONTRACT_START_MD ? 'Jetzt' : `Ab Spieltag ${PRECONTRACT_START_MD}`} können andere Vereine Vorverträge anbieten: ${r.gefaehrdet.map(p => p.name).join(', ')} - früh verlängern schützt</div>`);
-        return zeilen.length ? `<div style="margin-top:4px; padding-top:4px; border-top:1px solid rgba(150,150,150,0.2);">${zeilen.join('')}</div>` : '';
+        return zeilen.length ? `<div style="margin-top:4px; padding-top:4px; border-top:1px solid color-mix(in srgb, var(--ink) 20%, transparent);">${zeilen.join('')}</div>` : '';
     }
 
     function renderSquadPlanningView() {
@@ -4630,7 +4641,7 @@ function cleanupLegacyDevelopmentState() {
                         <strong>${p.name}</strong><br>
                         <span style="font-size:var(--fs-caption); color:var(--text-muted);">Str: <strong>${p.strength}</strong> | Fit: ${p.fitness}% | Marktwert: ${formatVal(p.marketValue)}</span>
                     </span>
-                    <span style="font-size:var(--fs-caption); color:${isStarting ? 'var(--teal)' : '#64748b'};">${isStarting ? 'Startelf' : 'Bank'}</span>
+                    <span style="font-size:var(--fs-caption); color:${isStarting ? 'var(--teal)' : 'var(--europe)'};">${isStarting ? 'Startelf' : 'Bank'}</span>
                     <button onclick="promoteToFirstTeam('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:var(--fs-caption); color:var(--primary);" title="In die 1. Mannschaft hochziehen">⬆️</button>
                     <button onclick="loanOutPlayer('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:var(--fs-caption); color:var(--teal);" title="An anderen Klub verleihen">📤</button>
                     <button onclick="sellSecondTeamPlayer('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:var(--fs-caption);" title="Verkaufen">💰</button>
@@ -4851,7 +4862,7 @@ function cleanupLegacyDevelopmentState() {
             zeilen = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Der Bericht startet mit der nächsten Saison.</div>';
         }
         box.innerHTML = `${zeilen}
-            ${log.length > 0 ? `<div style="margin-top:6px; border-top:1px solid #1e293b; padding-top:4px;">
+            ${log.length > 0 ? `<div style="margin-top:6px; border-top:1px solid color-mix(in srgb, var(--europe) 30%, var(--surface-1)); padding-top:4px;">
                 ${log.map(l => `<div style="font-size:var(--fs-caption); color:var(--text-muted);">ST ${l.matchday}: ${l.text}</div>`).join('')}
             </div>` : ''}`;
     }
@@ -6267,7 +6278,7 @@ function selectNewGameScenario(id) {
         box.innerHTML = `<div class="box" style="font-size:var(--fs-small);">
             <strong style="color:var(--accent);">🗂️ Vereinsakte: ${oppName}</strong><br>
             ${profileLine}${typeof getAiStarLine === 'function' ? getAiStarLine(team) : ''}${formLine}
-            <div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.12);">${h2hLine}</div>
+            <div style="margin-top:6px; padding-top:6px; border-top:1px solid color-mix(in srgb, var(--ink) 12%, transparent);">${h2hLine}</div>
         </div>`;
     }
 
@@ -6553,7 +6564,7 @@ function selectNewGameScenario(id) {
                 let isOur = (p.home === game.clubName || p.away === game.clubName);
                 let penStr = p.penaltyWinner ? ` (i.E. ${p.penaltyWinner})` : '';
                 let res = p.played ? `<strong>${p.homeGoals} : ${p.awayGoals}</strong>${penStr}` : 'vs';
-                return `<div class="player-row" style="${isOur ? 'border-color:var(--accent); background:rgba(255,193,7,0.1);' : ''}">
+                return `<div class="player-row" style="${isOur ? 'border-color:var(--accent); background:color-mix(in srgb, var(--gold) 10%, transparent);' : ''}">
                     <span style="${p.home===game.clubName?'color:var(--primary); font-weight:bold;':''}">${p.home}</span>
                     <span>${res}</span>
                     <span style="${p.away===game.clubName?'color:var(--primary); font-weight:bold;':''}">${p.away}</span>
@@ -6911,7 +6922,7 @@ function selectNewGameScenario(id) {
                 playSound('whistle');
                 return;
             }
-            document.getElementById('europe-draw-opponents-list').innerHTML += `<div style="font-size:var(--fs-title); font-weight:900; color:#fff; margin:6px 0;">⚽ ${opponents[revealed]}</div>`;
+            document.getElementById('europe-draw-opponents-list').innerHTML += `<div style="font-size:var(--fs-title); font-weight:900; color:var(--text-main); margin:6px 0;">⚽ ${opponents[revealed]}</div>`;
             revealed++;
             europeDrawRevealTimer = setTimeout(revealNext, 1000);
         }
@@ -6939,7 +6950,7 @@ function selectNewGameScenario(id) {
         clearTimeout(europeDrawRevealTimer);
         europeDrawRevealTimer = setTimeout(() => {
             document.getElementById('europe-draw-reveal-text').innerText = 'Euer Halbfinal-Gegner steht fest!';
-            document.getElementById('europe-draw-opponents-list').innerHTML = `<div style="font-size:18px; font-weight:900; color:#fff; margin:6px 0;">⚽ ${opponent}</div><div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:8px;">Hin- und Rückspiel, Gesamtergebnis entscheidet. Bei Gleichstand nach 180 Minuten: Elfmeterschießen.</div>`;
+            document.getElementById('europe-draw-opponents-list').innerHTML = `<div style="font-size:18px; font-weight:900; color:var(--text-main); margin:6px 0;">⚽ ${opponent}</div><div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:8px;">Hin- und Rückspiel, Gesamtergebnis entscheidet. Bei Gleichstand nach 180 Minuten: Elfmeterschießen.</div>`;
             playSound('whistle');
         }, 1400);
     }
@@ -7111,7 +7122,7 @@ function selectNewGameScenario(id) {
             let orderIdx = selectedShooters.indexOf(p.id);
             let quoteText = (p.penaltiesTaken || 0) > 0 ? ` · Quote: ${Math.round((p.penaltiesScored / p.penaltiesTaken) * 100)}% (${p.penaltiesScored}/${p.penaltiesTaken})` : ' · Quote: -';
             let specialistTag = p.individualFocus === 'elfmeter' ? ' 🥅' : '';
-            return `<div class="player-row" onclick="toggleShooterSelection('${p.id}')" style="cursor:pointer; ${orderIdx !== -1 ? 'border-color:var(--primary); background:rgba(34,224,168,0.1);' : ''}">
+            return `<div class="player-row" onclick="toggleShooterSelection('${p.id}')" style="cursor:pointer; ${orderIdx !== -1 ? 'border-color:var(--primary); background:color-mix(in srgb, var(--primary) 10%, transparent);' : ''}">
                 <span>${orderIdx !== -1 ? `#${orderIdx + 1} ` : ''}${p.name}${specialistTag} <span style="color:var(--text-muted); font-size:var(--fs-caption);">(Schuss: ${p.shooting}${quoteText})</span></span>
             </div>`;
         }).join('');
@@ -7684,7 +7695,7 @@ function renderTransferPokerBox() {
     box.innerHTML = `<div class="panel" style="border:1px solid var(--accent); margin-bottom:8px;">
         <div class="panel-header" style="color:var(--accent);">🃏 TRANSFERPOKER: ${p.name} (${p.pos}, ${p.strength})</div>
         <div style="font-size:var(--fs-caption); margin-bottom:6px;">Verkäufer: <strong>${p.sellerClub}</strong> · Forderung <strong>${formatVal(p.askingPrice)}</strong> · Marktwert ${formatVal(p.marketValue)} · Vertrag ${p.contracts || 2} J. · Geduld ${geduld} (noch ${Math.max(0, t.patience)} Runden)${t.rival ? ` · ⚔️ ${t.rival.club} bietet ${formatVal(t.rival.bid)}` : ''}</div>
-        <div style="font-size:var(--fs-caption); max-height:110px; overflow-y:auto; background:rgba(0,0,0,0.15); border-radius:4px; padding:4px; margin-bottom:6px;">${t.log.slice(-6).map(z => `<div>${z}</div>`).join('')}</div>
+        <div style="font-size:var(--fs-caption); max-height:110px; overflow-y:auto; background:color-mix(in srgb, var(--shade) 15%, transparent); border-radius:4px; padding:4px; margin-bottom:6px;">${t.log.slice(-6).map(z => `<div>${z}</div>`).join('')}</div>
         ${t.agreedFee ? `
             <div class="box" style="font-size:var(--fs-small);">Ablöse ${formatVal(t.agreedFee)}${agentFee ? ` + Provision ${formatVal(agentFee)}` : ''} · Gehalt <strong>${formatVal(t.wageDemand)}</strong>/SpT (bisher ${formatVal(p.wage)})</div>
             ${renderPokerSwapSelect(p, t)}
@@ -8272,7 +8283,7 @@ function renderTransferPokerBox() {
         let offList = document.getElementById('incoming-offers-list');
         offList.innerHTML = '';
         if (incomingOffers.length === 0) {
-            offList.innerHTML = `<div class="box" style="text-align:center; color:#888;">Derzeit liegen keine offiziellen Transferanfragen für deine Spieler vor.</div>`;
+            offList.innerHTML = `<div class="box" style="text-align:center; color:var(--text-muted);">Derzeit liegen keine offiziellen Transferanfragen für deine Spieler vor.</div>`;
         } else {
             incomingOffers.forEach(o => {
                 let p = squad.find(x => x.id === o.playerId);
@@ -8761,7 +8772,7 @@ function renderPlayerSeasonStats() {
     const best = game.lastMatchBestPlayer && game.lastMatchBestPlayer.season === game.season
         ? `<div style="font-size:var(--fs-small); margin-bottom:6px;">🏅 Spieler des letzten Spiels: <strong>${game.lastMatchBestPlayer.name}</strong> (Note ${formatGrade(game.lastMatchBestPlayer.note)}, ${game.lastMatchBestPlayer.matchday}. Spieltag)</div>` : '';
     if (!rows.length) { box.innerHTML = best + '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Ligaspiele in dieser Saison.</div>'; return; }
-    const farbe = n => n <= 2.5 ? 'var(--primary)' : (n <= 3.5 ? 'var(--gold, #FFC107)' : 'var(--danger)');
+    const farbe = n => n <= 2.5 ? 'var(--primary)' : (n <= 3.5 ? 'var(--gold)' : 'var(--danger)');
     box.innerHTML = best + `<table style="width:100%; font-size:var(--fs-small); border-collapse:collapse;">
         <tr style="color:var(--text-muted); text-align:left;"><th>Spieler</th><th>Sp.</th><th>Tore</th><th>Vorl.</th><th>Ø-Note</th><th>Elf</th></tr>
         ${rows.map(({ p, st, schnitt }) => `<tr><td>${p.name} <span style="color:var(--text-muted);">${p.pos}</span></td><td>${st.spiele}</td><td>${st.tore}</td><td>${st.vorlagen}</td>
@@ -8902,7 +8913,7 @@ function renderOnboardingBox() {
                 <span style="font-size:var(--fs-small);">Öffentliches Medienimage</span>
                 <strong style="color:${personality.color};">${img}/100 · ${personality.label}</strong>
             </div>
-            <div style="background:rgba(228,197,140,0.1); border-radius:4px; height:8px; overflow:hidden; margin-bottom:6px;">
+            <div style="background:color-mix(in srgb, var(--accent) 10%, transparent); border-radius:4px; height:8px; overflow:hidden; margin-bottom:6px;">
                 <div style="width:${img}%; height:100%; background:${personality.color};"></div>
             </div>
             <div style="font-size:var(--fs-caption); color:var(--text-muted);">Beeinflusst durch Interview-Antworten - ein positives Image lockt bessere Sponsoren-Erstangebote an.</div>
@@ -8917,7 +8928,7 @@ function renderOnboardingBox() {
         if (!box) return;
         let hist = game.mediaImageHistory || [];
         if (hist.length < 2) { box.innerHTML = ''; return; }
-        box.innerHTML = `<div style="display:flex; align-items:flex-end; gap:2px; height:30px; background:rgba(0,0,0,0.2); border-radius:4px; padding:3px;">
+        box.innerHTML = `<div style="display:flex; align-items:flex-end; gap:2px; height:30px; background:color-mix(in srgb, var(--shade) 20%, transparent); border-radius:4px; padding:3px;">
             ${hist.slice(-10).map(h => `<div style="flex:1; height:${Math.max(4, h.value)}%; background:linear-gradient(to top, var(--teal), var(--gold)); border-radius:1px;" title="Saison ${h.season}: ${h.value}"></div>`).join('')}
         </div>`;
     }
@@ -8976,7 +8987,7 @@ function renderOnboardingBox() {
             card.className = 'panel';
             card.style.borderColor = active ? 'var(--primary)' : 'var(--border)';
             card.innerHTML = `
-                <div class="panel-header"><span>${p.name}</span><strong style="color:${active?'var(--primary)':'#aaa'};">${active?'Aktiviert ✓':'Gesperrt'}</strong></div>
+                <div class="panel-header"><span>${p.name}</span><strong style="color:${active?'var(--primary)':'var(--text-muted)'};">${active?'Aktiviert ✓':'Gesperrt'}</strong></div>
                 <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:6px;">${p.desc}</div>
                 <button onclick="unlockManagerPerk('${p.id}')" class="${active?'btn-secondary':'btn-action'}" ${active||managerRPG.points<1?'disabled':''}>
                     ${active ? 'Bereits freigeschaltet' : 'Freischalten (1 Skill-Punkt)'}
@@ -8994,7 +9005,7 @@ function renderOnboardingBox() {
             card.className = 'panel';
             card.style.borderColor = active ? 'var(--danger)' : 'var(--border)';
             card.innerHTML = `
-                <div class="panel-header"><span>${p.name}</span><strong style="color:${active?'var(--danger)':'#aaa'};">${active?'Aktiviert ✓':'Gesperrt'}</strong></div>
+                <div class="panel-header"><span>${p.name}</span><strong style="color:${active?'var(--danger)':'var(--text-muted)'};">${active?'Aktiviert ✓':'Gesperrt'}</strong></div>
                 <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:6px;">${p.desc}</div>
                 <button onclick="unlockManagerPerk('${p.id}')" class="${active?'btn-secondary':'btn-action'}" ${active||managerRPG.points<1?'disabled':''}>
                     ${active ? 'Bereits freigeschaltet' : 'Freischalten (1 Skill-Punkt)'}
@@ -9227,7 +9238,7 @@ function renderMediaDepartmentPanel() {
     const blocked = getMediaActionBlockReason();
     let html = '<div style="font-size:var(--fs-caption);">';
     if (md.event) {
-        html += `<div style="background:rgba(255,84,104,0.1); border-left:3px solid var(--danger); padding:6px; border-radius:4px; margin-bottom:6px;">
+        html += `<div style="background:color-mix(in srgb, var(--danger) 10%, transparent); border-left:3px solid var(--danger); padding:6px; border-radius:4px; margin-bottom:6px;">
             <div style="font-weight:bold;">${md.event.title}</div><div style="color:var(--text-muted); margin:3px 0;">${md.event.text}</div>
             ${MEDIA_EVENT_OPTIONS[md.event.type].map((o, i) => `<button onclick="answerMediaEvent(${i})" class="${i === 0 ? 'btn-action' : 'btn-secondary'}" style="font-size:var(--fs-micro); padding:3px 6px; margin:2px 4px 0 0;">${o.label}</button>`).join('')}
         </div>`;
@@ -9461,11 +9472,11 @@ function renderBoardRoomPanel() {
             <span style="color:var(--text-muted);">- bleibt sie lange unter 25%, droht ab der 2. Saison die Entlassung.</span></div>
         ${BOARD_ROLES.map((role, i) => {
             const v = views[role.key];
-            return `<div style="display:flex; justify-content:space-between; gap:6px; padding:3px 0; border-top:1px solid rgba(255,255,255,0.06);">
+            return `<div style="display:flex; justify-content:space-between; gap:6px; padding:3px 0; border-top:1px solid color-mix(in srgb, var(--ink) 6%, transparent);">
                 <span>${role.icon} <strong>${role.title}</strong> ${room.names[i]}<br><span style="color:var(--text-muted);">${v.reason}</span></span>
                 <strong style="color:${farbe(v.mood)}; white-space:nowrap;">${v.mood}%</strong></div>`;
         }).join('')}
-        <div style="margin-top:8px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.06);">
+        <div style="margin-top:8px; padding-top:6px; border-top:1px solid color-mix(in srgb, var(--ink) 6%, transparent);">
             ${(() => {
                 const w = getSaisonWette();
                 if (w) return `🎯 Saisonwette aktiv: Platz ${w.platz} oder besser.`;
@@ -9706,7 +9717,7 @@ function renderBoardRoomPanel() {
                     body = `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${s.name} · Skill ${s.skill} (Stufe ${s.level})</div>
                             <div style="display:flex; align-items:center; gap:8px;">
                                 <div style="font-size:18px; font-weight:900; color:var(--accent);">${mission.matchdaysLeft}</div>
-                                <div style="flex:1; display:flex; gap:2px;">${segments.map(done => `<div style="flex:1; height:10px; border-radius:2px; background:${done ? 'var(--accent)' : 'rgba(228,197,140,0.15)'};"></div>`).join('')}</div>
+                                <div style="flex:1; display:flex; gap:2px;">${segments.map(done => `<div style="flex:1; height:10px; border-radius:2px; background:${done ? 'var(--accent)' : 'color-mix(in srgb, var(--accent) 15%, transparent)'};"></div>`).join('')}</div>
                             </div>
                             <div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:3px;">✈️ Unterwegs - kehrt in ${mission.matchdaysLeft} SpT zurück</div>`;
                 } else {
@@ -10170,7 +10181,7 @@ function renderBoardRoomPanel() {
                 </div>
                 <div style="font-size:var(--fs-small); margin-bottom:6px;">Marktlage: <strong id="merch-elasticity-label-${key}" style="color:${elast.color};">${elast.label}</strong></div>
                 
-                <div class="box" style="font-size:var(--fs-small); background:rgba(0,0,0,0.4); padding:6px 6px 6px 13px;">
+                <div class="box" style="font-size:var(--fs-small); background:color-mix(in srgb, var(--shade) 40%, transparent); padding:6px 6px 6px 13px;">
                     <strong style="color:var(--accent);">Absatz letzter Spieltag: ${s.total} Stk. (+${formatVal(s.revenue)})</strong><br>
                     🏟️ Stadion: <strong>${s.stadium}</strong> | 🏬 City: <strong>${s.city}</strong> | 🌐 Online: <strong>${s.online}</strong>
                     ${s.missed > 0 ? `<div style="color:var(--danger); font-weight:bold; margin-top:2px;">⚠️ ${s.missed} Kunden gingen wegen Lagermangel leer aus!</div>` : ''}
@@ -11200,7 +11211,7 @@ function renderBoardRoomPanel() {
         let prevBtn = document.getElementById('tutorial-prev-btn');
         if (titleEl) titleEl.innerHTML = t(page.titleKey).replace('{CLUB}', game.clubName);
         if (bodyEl) bodyEl.innerHTML = t(page.bodyKey).replace('{LIGA}', leagueNames[game.leagueLevel] || '');
-        if (dotsEl) dotsEl.innerHTML = TUTORIAL_PAGES.map((_, i) => `<span style="display:inline-block; width:6px; height:6px; border-radius:50%; margin:0 2px; background:${i === tutorialPage ? 'var(--accent)' : 'rgba(255,255,255,0.25)'};"></span>`).join('');
+        if (dotsEl) dotsEl.innerHTML = TUTORIAL_PAGES.map((_, i) => `<span style="display:inline-block; width:6px; height:6px; border-radius:50%; margin:0 2px; background:${i === tutorialPage ? 'var(--accent)' : 'color-mix(in srgb, var(--ink) 25%, transparent)'};"></span>`).join('');
         if (prevBtn) {
             prevBtn.style.visibility = tutorialPage === 0 ? 'hidden' : 'visible';
             prevBtn.innerText = t('tutorial_prev');
@@ -11307,7 +11318,7 @@ function renderBoardRoomPanel() {
                 banner.style.display = 'block';
                 problems.forEach(p => {
                     let line = document.createElement('div');
-                    line.style.borderTop = '1px solid rgba(255,255,255,0.2)';
+                    line.style.borderTop = '1px solid color-mix(in srgb, var(--ink) 20%, transparent)';
                     line.style.padding = '4px 0';
                     line.textContent = '[Struktur-Test] ' + p;
                     content.appendChild(line);
@@ -11315,10 +11326,10 @@ function renderBoardRoomPanel() {
                 // Hinweis auf die Export-Funktion, damit gefundene Probleme einfach gemeldet
                 // werden können statt nur per Screenshot.
                 let hintLine = document.createElement('div');
-                hintLine.style.borderTop = '1px solid rgba(255,255,255,0.3)';
+                hintLine.style.borderTop = '1px solid color-mix(in srgb, var(--ink) 30%, transparent)';
                 hintLine.style.padding = '6px 0';
                 hintLine.style.fontWeight = 'bold';
-                hintLine.style.color = '#ffe27a';
+                hintLine.style.color = 'var(--gold)';
                 hintLine.textContent = '💡 Tipp: Im Admin-Bereich unter "Struktur-Selbsttest" kannst du diesen Verlauf per Knopfdruck exportieren, um ihn zu melden.';
                 content.appendChild(hintLine);
             }
@@ -11715,6 +11726,7 @@ const DESIGN_THEMES = [
     { id: 'flutlicht', name: 'Flutlicht-Nacht', desc: 'Standard: Mitternachtsblau, Rasengrün und Flutlicht-Gold.', farben: ['#070b14', '#111827', '#ffc23c', '#3ee08a', '#ff5468', '#eaf2ff'] },
     { id: 'klassik', name: 'Anstoß-Klassik', desc: 'Holz, Leder und Messing wie im Managerbüro der 90er.', farben: ['#110c07', '#241a11', '#e8b84e', '#8fd16a', '#ff6f5e', '#f5ead6'] },
     { id: 'rasen', name: 'Rasengrün', desc: 'Tiefes Stadiongrün mit Kreideweiß und Trikotgelb.', farben: ['#04130b', '#0a2215', '#ffd84d', '#6ef0a6', '#ff6b7a', '#effcf4'] },
+    { id: 'tageslicht', name: 'Tageslicht', desc: 'Hell mit dunkler Schrift - für Sonne, Büro und helle Räume.', farben: ['#f1f4f9', '#ffffff', '#985a00', '#0e7a44', '#c21f3a', '#152033'] },
     { id: 'kontrast', name: 'Hoher Kontrast', desc: 'Schwarz, Weiß, Signalgelb. Für helle Umgebungen und schwache Augen.', farben: ['#000000', '#0a0a0a', '#ffe600', '#4dff9a', '#ff7a7a', '#ffffff'] },
     { id: 'farbsicher', name: 'Farbsicher', desc: 'Gut und Schlecht als Blau und Orange - auch bei Rot-Grün-Schwäche klar.', farben: ['#070b14', '#111827', '#f0e442', '#56b4e9', '#e69f00', '#eaf2ff'] }
 ];
@@ -12110,7 +12122,7 @@ function renderDesignSettings() {
                 <div style="flex:1;">
                     <div style="font-size:var(--fs-small); margin-bottom:4px;">⚙️ ${order.amount}x ${m ? m.name : order.merchKey}</div>
                     <div style="display:flex; gap:3px;">
-                        ${segments.map(done => `<div style="flex:1; height:14px; border-radius:3px; background:${done ? 'var(--industry)' : 'rgba(228,197,140,0.15)'}; border:1px solid ${done ? 'var(--industry)' : 'rgba(228,197,140,0.3)'};"></div>`).join('')}
+                        ${segments.map(done => `<div style="flex:1; height:14px; border-radius:3px; background:${done ? 'var(--industry)' : 'color-mix(in srgb, var(--accent) 15%, transparent)'}; border:1px solid ${done ? 'var(--industry)' : 'color-mix(in srgb, var(--accent) 30%, transparent)'};"></div>`).join('')}
                     </div>
                 </div>
             </div>`;
@@ -12436,7 +12448,7 @@ function renderDesignSettings() {
             teile.push(L('⚽ Ligaspiel', '⚽ League match'));
             let eventText = teile.join(' + ');
             let hasCup = dfb || lande;
-            let eventColor = hasCup ? 'var(--accent)' : (euro ? '#82b1ff' : '#aaa');
+            let eventColor = hasCup ? 'var(--accent)' : (euro ? 'var(--europe)' : 'var(--text-muted)');
 
             item.innerHTML = `
                 <span><strong>${L('Spieltag', 'Matchday')} ${i}</strong> ${isCurrent ? `<span style="color:var(--primary); font-weight:900;">(${L('HEUTE', 'TODAY')})</span>` : ''}</span>
@@ -13168,7 +13180,7 @@ function renderDesignSettings() {
                 ${entries.map(e => {
                     let info = FIXTURE_TYPE_LABELS[e.type];
                     let isHot = !!stretch && e.matchday >= stretch.from && e.matchday <= stretch.to;
-                    return `<div style="flex:0 0 auto; text-align:center; padding:4px 6px; border-radius:6px; background:${isHot ? 'rgba(239,68,68,0.15)' : 'var(--bg-card)'}; border:1px solid ${isHot ? 'var(--danger)' : 'var(--border)'};">
+                    return `<div style="flex:0 0 auto; text-align:center; padding:4px 6px; border-radius:6px; background:${isHot ? 'color-mix(in srgb, var(--danger) 15%, transparent)' : 'var(--bg-card)'}; border:1px solid ${isHot ? 'var(--danger)' : 'var(--border)'};">
                         <div style="font-size:var(--fs-micro); color:var(--text-muted);">SpT ${e.matchday}</div>
                         <div style="font-size:var(--fs-title-sm);">${info.icon}</div>
                         <div style="font-size:var(--fs-micro);">${info.label}</div>
@@ -13444,7 +13456,7 @@ function renderDesignSettings() {
                     <button onclick="activateTrainingAutopilot()" class="btn-action" style="font-size:var(--fs-caption);">🤖 ${TRAINING_AUTOPILOT_DURATION} Spieltage übernehmen [${TRAINING_AUTOPILOT_COST} 💎]</button>
                 </div>
                 <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">Dein Guthaben: <strong style="color:var(--gold);">${game.premiumPoints || 0} 💎</strong></div>
-                ${log.length > 0 ? `<div style="margin-top:6px; border-top:1px solid #1e293b; padding-top:4px;">
+                ${log.length > 0 ? `<div style="margin-top:6px; border-top:1px solid color-mix(in srgb, var(--europe) 30%, var(--surface-1)); padding-top:4px;">
                     ${log.map(l => `<div style="font-size:var(--fs-caption); color:var(--text-muted);">ST ${l.matchday}: ${l.text}</div>`).join('')}
                 </div>` : ''}
             </div>`;
@@ -14377,7 +14389,7 @@ function finishGoalkeeperGame() {
         if (hist.length < 2) { box.innerHTML = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch nicht genug Daten.</div>'; return; }
         let values = hist.map(h => h.money);
         let minV = Math.min(...values, 0), maxV = Math.max(...values, 1);
-        box.innerHTML = `<div style="display:flex; align-items:flex-end; gap:2px; height:50px; background:rgba(0,0,0,0.2); border-radius:6px; padding:5px;">
+        box.innerHTML = `<div style="display:flex; align-items:flex-end; gap:2px; height:50px; background:color-mix(in srgb, var(--shade) 20%, transparent); border-radius:6px; padding:5px;">
             ${hist.map(h => {
                 let pct = Math.max(4, Math.round(((h.money - minV) / Math.max(1, maxV - minV)) * 100));
                 return `<div style="flex:1; height:${pct}%; background:linear-gradient(to top, var(--violet), var(--accent)); border-radius:2px 2px 0 0;" title="SpT ${h.matchday}: ${formatVal(h.money)}"></div>`;
@@ -14452,7 +14464,7 @@ function finishGoalkeeperGame() {
                 <div style="display:flex; justify-content:space-between; gap:4px; font-size:var(--fs-body);">
                     <span style="min-width:0;">${label}</span><span style="color:${color}; font-weight:bold; white-space:nowrap;">${formatVal(amount)}</span>
                 </div>
-                <div style="background:#1e293b; border-radius:4px; height:4px; overflow:hidden;">
+                <div style="background:color-mix(in srgb, var(--europe) 30%, var(--surface-1)); border-radius:4px; height:4px; overflow:hidden;">
                     <div style="height:100%; width:${pct}%; background:${color};"></div>
                 </div>
             </div>`;
@@ -14715,7 +14727,7 @@ function finishGoalkeeperGame() {
             ${zeile('Weiterverkaufsbeteiligungen', b.weiterverkauf, 'var(--primary)')}
             ${zeile('Spielerkäufe', -b.kauf, 'var(--danger)')}
             ${zeile('Handgelder', -b.handgeld, 'var(--danger)')}
-            <div style="display:flex; justify-content:space-between; font-size:var(--fs-body); margin-top:4px; border-top:1px solid #1e293b; padding-top:3px;"><span>Netto</span><strong style="color:${b.netto >= 0 ? 'var(--primary)' : 'var(--danger)'};">${b.netto >= 0 ? '+' : ''}${formatVal(b.netto)}</strong></div>
+            <div style="display:flex; justify-content:space-between; font-size:var(--fs-body); margin-top:4px; border-top:1px solid color-mix(in srgb, var(--europe) 30%, var(--surface-1)); padding-top:3px;"><span>Netto</span><strong style="color:${b.netto >= 0 ? 'var(--primary)' : 'var(--danger)'};">${b.netto >= 0 ? '+' : ''}${formatVal(b.netto)}</strong></div>
         </div>`;
     }
 
@@ -14750,7 +14762,7 @@ function finishGoalkeeperGame() {
             <div class="box">
                 <strong style="font-size:var(--fs-body);">🧾 EINZELBUCHUNGEN (neueste zuerst)</strong>
                 ${auszug.slice().reverse().map(b => `
-                    <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:var(--fs-small); margin-top:3px; border-bottom:1px solid #1e293b; padding-bottom:2px;">
+                    <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:var(--fs-small); margin-top:3px; border-bottom:1px solid color-mix(in srgb, var(--europe) 30%, var(--surface-1)); padding-bottom:2px;">
                         <span style="color:var(--text-muted);">S${b.season}/ST${b.matchday}</span>
                         <span style="flex:1; margin:0 6px;">${b.label}</span>
                         <span style="color:${b.amount >= 0 ? 'var(--primary)' : 'var(--danger)'}; font-weight:bold;">${b.amount >= 0 ? '+' : '-'}${formatVal(Math.abs(b.amount))}</span>
@@ -14844,7 +14856,7 @@ function finishGoalkeeperGame() {
 
         let html = `
             <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">Gewinn- & Verlusttrend (letzte 12 Monate)</div>
-            <div style="display:flex; align-items:flex-end; justify-content:space-around; height:${chartHeight}px; background:rgba(255,255,255,0.03); border-radius:6px; padding:8px; gap:3px; border:1px solid rgba(255,255,255,0.1);">
+            <div style="display:flex; align-items:flex-end; justify-content:space-around; height:${chartHeight}px; background:color-mix(in srgb, var(--ink) 3%, transparent); border-radius:6px; padding:8px; gap:3px; border:1px solid color-mix(in srgb, var(--ink) 10%, transparent);">
         `;
 
         data.forEach((d, i) => {
@@ -14910,7 +14922,7 @@ function finishGoalkeeperGame() {
                         <span>${b.label}</span>
                         <strong style="color:${b.color};">${pct}% (${formatVal(b.amount)})</strong>
                     </div>
-                    <div style="height:6px; background:rgba(255,255,255,0.05); border-radius:3px; overflow:hidden;">
+                    <div style="height:6px; background:color-mix(in srgb, var(--ink) 5%, transparent); border-radius:3px; overflow:hidden;">
                         <div style="height:100%; width:${pct}%; background:${b.color}; border-radius:3px;"></div>
                     </div>
                 </div>
@@ -14971,17 +14983,17 @@ function finishGoalkeeperGame() {
                     <div style="font-size:var(--fs-body); color:var(--danger); font-weight:700;">-${formatVal(expenses)}</div>
                 </div>
             </div>
-            <div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:8px; margin-bottom:4px;">
+            <div style="background:color-mix(in srgb, var(--ink) 5%, transparent); border-radius:6px; padding:8px; margin-bottom:4px;">
                 <div style="display:flex; height:20px; border-radius:4px; overflow:hidden; gap:1px;">
-                    <div style="flex:${income}; background:var(--primary); position:relative;">
-                        <span style="position:absolute; left:50%; transform:translateX(-50%); top:50%; transform:translate(-50%, -50%); font-size:var(--fs-small); color:#000; white-space:nowrap; font-weight:700;">${total > 0 ? (income/total*100).toFixed(0) : '0'}%</span>
+                    <div style="flex:${income}; background:var(--primary-fill); position:relative;">
+                        <span style="position:absolute; left:50%; transform:translateX(-50%); top:50%; transform:translate(-50%, -50%); font-size:var(--fs-small); color:var(--on-accent); white-space:nowrap; font-weight:700;">${total > 0 ? (income/total*100).toFixed(0) : '0'}%</span>
                     </div>
-                    <div style="flex:${expenses}; background:var(--danger); position:relative;">
-                        <span style="position:absolute; left:50%; transform:translateX(-50%); top:50%; transform:translate(-50%, -50%); font-size:var(--fs-small); color:#fff; white-space:nowrap; font-weight:700;">${total > 0 ? (expenses/total*100).toFixed(0) : '0'}%</span>
+                    <div style="flex:${expenses}; background:var(--danger-fill); position:relative;">
+                        <span style="position:absolute; left:50%; transform:translateX(-50%); top:50%; transform:translate(-50%, -50%); font-size:var(--fs-small); color:var(--on-strong); white-space:nowrap; font-weight:700;">${total > 0 ? (expenses/total*100).toFixed(0) : '0'}%</span>
                     </div>
                 </div>
             </div>
-            <div style="text-align:center; font-size:var(--fs-small); padding:6px; background:${isProfit ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)'}; border-radius:4px; color:${statusColor}; border:1px solid ${statusColor};">
+            <div style="text-align:center; font-size:var(--fs-small); padding:6px; background:${isProfit ? 'color-mix(in srgb, var(--primary) 10%, transparent)' : 'color-mix(in srgb, var(--danger) 10%, transparent)'}; border-radius:4px; color:${statusColor}; border:1px solid ${statusColor};">
                 <div style="font-size:var(--fs-caption); color:var(--text-muted);">Monatlicher Gewinn/Verlust</div>
                 <div style="font-size:var(--fs-title-sm); font-weight:700;">${isProfit ? '+' : '-'}${formatVal(Math.abs(balance))}</div>
             </div>
@@ -15202,7 +15214,7 @@ function finishGoalkeeperGame() {
                     <button onclick="buyStockByAmount('${key}', 1000)" class="btn-action" style="font-size:var(--fs-caption); width:auto;">+1.000 €</button>
                     <button onclick="buyStockByAmount('${key}', 10000)" class="btn-action" style="font-size:var(--fs-caption); width:auto;">+10.000 €</button>
                     <button onclick="buyStockByAmount('${key}', 50000)" class="btn-action" style="font-size:var(--fs-caption); width:auto;">+50.000 €</button>
-                    <button onclick="buyMaxStockShares('${key}')" class="btn-action" style="font-size:var(--fs-caption); width:auto; background:var(--purple);">MAX</button>
+                    <button onclick="buyMaxStockShares('${key}')" class="btn-primary" style="font-size:var(--fs-caption); width:auto;">MAX</button>
                     <button onclick="sellStockSharesPct('${key}', 0.25)" class="btn-secondary" style="font-size:var(--fs-caption); width:auto;">-25%</button>
                     <button onclick="sellStockSharesPct('${key}', 0.5)" class="btn-secondary" style="font-size:var(--fs-caption); width:auto;">-50%</button>
                     <button onclick="sellStockShares('${key}', ${s.owned})" class="btn-secondary" style="font-size:var(--fs-caption); width:auto; color:var(--danger);">Alles</button>
@@ -16139,7 +16151,7 @@ function finishGoalkeeperGame() {
                 let loy = Math.round(game.sponsor.loyalty ?? 65);
                 let color = loy >= 60 ? 'var(--primary)' : (loy >= 30 ? 'var(--accent)' : 'var(--danger)');
                 loyaltyBox.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span style="font-size:var(--fs-small);">Sponsoren-Zufriedenheit</span><strong style="color:${color};">${loy}/100</strong></div>
-                    <div style="background:rgba(228,197,140,0.1); border-radius:4px; height:8px; overflow:hidden;"><div style="width:${loy}%; height:100%; background:${color};"></div></div>`;
+                    <div style="background:color-mix(in srgb, var(--accent) 10%, transparent); border-radius:4px; height:8px; overflow:hidden;"><div style="width:${loy}%; height:100%; background:${color};"></div></div>`;
             }
         }
         let activationBox = document.getElementById('sponsor-activation-box');
@@ -18072,7 +18084,7 @@ function renderStadiumEventsPanel() {
 
     if (pending) {
         const ready = game.matchday >= pending.scheduledMatchday || pending.season !== game.season;
-        html += `<div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:8px; font-size:var(--fs-caption);">
+        html += `<div style="background:color-mix(in srgb, var(--ink) 10%, transparent); padding:6px; border-radius:4px; margin-bottom:8px; font-size:var(--fs-caption);">
             <div><strong>${pending.name}</strong> · geplant für Spieltag ${pending.scheduledMatchday}</div>
             <div style="color:var(--text-muted); font-size:var(--fs-micro);">Organisationskosten bezahlt: ${formatVal(pending.cost)}</div>
             ${ready
@@ -18890,7 +18902,7 @@ function renderStadiumEventsPanel() {
         let leagueAvgAttendance = Math.round((stadium.total || 16000) * (LEAGUE_ATTENDANCE_CEILING[game.leagueLevel] ?? LEAGUE_ATTENDANCE_CEILING[LEAGUE_ATTENDANCE_CEILING.length - 1]));
         let maxAtt = Math.max(...history.map(e => e.attendance), leagueAvgAttendance, 1);
         let refLinePct = Math.round((leagueAvgAttendance / maxAtt) * 100);
-        box.innerHTML = `<div style="position:relative; height:70px; background:rgba(0,0,0,0.2); border-radius:6px; padding:6px;">
+        box.innerHTML = `<div style="position:relative; height:70px; background:color-mix(in srgb, var(--shade) 20%, transparent); border-radius:6px; padding:6px;">
             <div style="position:absolute; left:6px; right:6px; bottom:${6 + refLinePct * 0.58}px; border-top:1px dashed var(--accent); z-index:2;" title="Liga-Durchschnitt: ${leagueAvgAttendance.toLocaleString('de-DE')}"></div>
             <div style="display:flex; align-items:flex-end; gap:3px; height:100%;">
                 ${history.map(e => {
@@ -19522,7 +19534,7 @@ function renderStadiumEventsPanel() {
                 : `<button onclick="revealYouthPotential('${p.id}')" class="btn-secondary" style="width:auto; font-size:var(--fs-micro);">🔍 Potenzial prüfen [3.000 €]</button>`;
             row.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 28) : ''}${p.name} (${p.pos}, ${p.age} J., Str ${p.strength})${p.proDecisionLeft ? ' <span class="badge" style="background:rgba(255,193,7,0.3);">✍️ Entscheidung</span>' : ''} ${p.trait && p.trait!=='Kein'?`<span class="badge badge-trait">${p.trait}</span>`:''}</span>
+                    <span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 28) : ''}${p.name} (${p.pos}, ${p.age} J., Str ${p.strength})${p.proDecisionLeft ? ' <span class="badge" style="background:color-mix(in srgb, var(--gold) 30%, transparent);">✍️ Entscheidung</span>' : ''} ${p.trait && p.trait!=='Kein'?`<span class="badge badge-trait">${p.trait}</span>`:''}</span>
                     <span style="display:flex; gap:4px;">
                         <button onclick="promoteYouth(${idx}, this)" class="btn-action" style="width:auto; font-size:var(--fs-caption);">In Profikader</button>
                         ${(p.age || 0) >= 17 ? `<button onclick="openYouthLoanChoice('${p.id}')" class="btn-secondary" style="width:auto; font-size:var(--fs-caption);" title="Leihe zur Entwicklung">📤 Leihe</button>` : ''}
@@ -19576,7 +19588,7 @@ function renderStadiumEventsPanel() {
     // JUGENDAKADEMIE: NEUE FUNKTIONEN
     // ==========================================
     const POTENTIAL_TIER_LABELS = { 1: '⭐ Mittelmaß', 2: '⭐⭐ Vielversprechend', 3: '⭐⭐⭐ Ausnahmetalent' };
-    const POTENTIAL_TIER_COLORS = { 1: 'rgba(228,197,140,0.2)', 2: 'rgba(76,175,122,0.3)', 3: 'rgba(212,169,74,0.4)' };
+    const POTENTIAL_TIER_COLORS = { 1: 'color-mix(in srgb, var(--ink) 18%, transparent)', 2: 'color-mix(in srgb, var(--primary) 30%, transparent)', 3: 'color-mix(in srgb, var(--accent) 40%, transparent)' };
 
     // Akademie-Stufe mit klarer Wirkung (25.18): vorher +3 Startstärke je Stufe ohne Obergrenze -
     // Stufe 8 hätte Talente auf Liga-Niveau sichten lassen, das Potenzial blieb unberührt.
@@ -20103,7 +20115,7 @@ function renderYouthAcademyPanel() {
     let html = '<div style="margin-bottom:12px;">';
 
     if (coach) {
-        html += `<div style="background:rgba(62,224,138,0.1); padding:6px; border-radius:4px; margin-bottom:8px; border-left:3px solid var(--primary);">
+        html += `<div style="background:color-mix(in srgb, var(--primary) 10%, transparent); padding:6px; border-radius:4px; margin-bottom:8px; border-left:3px solid var(--primary);">
             <div style="font-size:var(--fs-caption); font-weight:bold; color:var(--primary);">👨‍🏫 Jugendtrainer: ${coach.name}</div>
             <div style="font-size:var(--fs-micro); color:var(--text-muted);">Entwicklungsbonus: +${Math.round((coachBonus - 1) * 100)}%</div>
             <button onclick="removeYouthCoach()" class="btn-secondary" style="font-size:var(--fs-micro); padding:2px 4px; margin-top:4px;">Entfernen</button>
@@ -20132,7 +20144,7 @@ function renderYouthAcademyPanel() {
             'new': '✨ neu in der Akademie'
         }[p.developmentTrend];
 
-        html += `<div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:4px; font-size:var(--fs-caption);">
+        html += `<div style="background:color-mix(in srgb, var(--ink) 10%, transparent); padding:6px; border-radius:4px; margin-bottom:4px; font-size:var(--fs-caption);">
             <div><strong>${idx + 1}. ${p.name}</strong> (${p.pos} | Str: ${p.strength})</div>
             <div style="color:var(--text-muted); font-size:var(--fs-micro);">Potenzial: ${typeof getYouthPotentialText === 'function' ? getYouthPotentialText(p) : '?'} | Talentwert: ${p.talentScore}</div>
             ${p.potentialRevealed && typeof getYouthOfferSquadHint === 'function' ? `<div style="color:var(--text-muted); font-size:var(--fs-micro);">${getYouthOfferSquadHint(p)}</div>` : ''}
@@ -20171,7 +20183,7 @@ function renderYouthDevelopmentChart() {
 
         html += `<div style="margin-bottom:8px;">
             <div style="font-size:var(--fs-caption); font-weight:bold; margin-bottom:2px;">${p.name} (${minStr}-${maxStr})</div>
-            <div style="display:flex; align-items:flex-end; gap:2px; height:${barHeight}px; background:rgba(100,100,100,0.05); padding:4px; border-radius:4px;">`;
+            <div style="display:flex; align-items:flex-end; gap:2px; height:${barHeight}px; background:color-mix(in srgb, var(--ink) 5%, transparent); padding:4px; border-radius:4px;">`;
 
         history.forEach(str => {
             const height = ((str - minStr + 2.5) / range) * (barHeight - 8);
@@ -20457,7 +20469,7 @@ function renderYouthPotentialBox() {
         return `<div style="font-size:var(--fs-caption); margin-bottom:6px;">
             <div style="display:flex; justify-content:space-between;"><span>${p.name} <span style="color:var(--text-muted);">${p.pos}, ${p.age} J.</span></span>
                 <span>Stärke <strong>${p.strength}</strong>${plus ? ` <span style="color:${plus > 0 ? 'var(--primary)' : 'var(--danger)'};">(${plus > 0 ? '+' : ''}${plus} diese Saison)</span>` : ''} · Potenzial ${getYouthPotentialText(p)}</span></div>
-            <div style="height:6px; background:rgba(150,150,150,0.2); border-radius:3px; margin-top:2px;"><div style="height:6px; width:${breite}%; background:${p.potentialRevealed ? 'var(--primary)' : 'var(--text-muted)'}; border-radius:3px;"></div></div>
+            <div style="height:6px; background:color-mix(in srgb, var(--ink) 20%, transparent); border-radius:3px; margin-top:2px;"><div style="height:6px; width:${breite}%; background:${p.potentialRevealed ? 'var(--primary)' : 'var(--text-muted)'}; border-radius:3px;"></div></div>
         </div>`;
     }).join('') + '<div style="font-size:var(--fs-micro); color:var(--text-muted);">Balken: Stärke im Verhältnis zum Potenzial (grau = Potenzial noch nicht geprüft).</div>';
 }
@@ -20572,7 +20584,7 @@ function renderYouthPathwayBoxes() {
 
         let html = `<div style="font-size:var(--fs-small); font-weight:bold; margin-bottom:6px;">🎓 AKADEMIE-RANGLISTE</div>`;
 
-        html += `<div style="background:rgba(62,224,138,0.1); padding:8px; border-radius:4px; margin-bottom:8px; border-left:4px solid ${rankColor}">
+        html += `<div style="background:color-mix(in srgb, var(--primary) 10%, transparent); padding:8px; border-radius:4px; margin-bottom:8px; border-left:4px solid ${rankColor}">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                 <div>
                     <div style="font-size:var(--fs-caption); font-weight:bold;">${rankEmoji} Deine Akademie</div>
@@ -20597,7 +20609,7 @@ function renderYouthPathwayBoxes() {
             let color = isOwnAcademy ? 'var(--primary)' : 'var(--text-muted)';
             let emoji = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}.`;
 
-            html += `<div style="background:rgba(100,100,100,0.1); padding:4px; border-radius:3px; margin-bottom:3px; font-size:var(--fs-micro); display:flex; justify-content:space-between; align-items:center; ${isOwnAcademy ? 'border-left:2px solid var(--primary);' : ''}">
+            html += `<div style="background:color-mix(in srgb, var(--ink) 10%, transparent); padding:4px; border-radius:3px; margin-bottom:3px; font-size:var(--fs-micro); display:flex; justify-content:space-between; align-items:center; ${isOwnAcademy ? 'border-left:2px solid var(--primary);' : ''}">
                 <div style="display:flex; align-items:center; gap:4px;">
                     <span style="color:${color}; font-weight:bold; min-width:18px;">${emoji}</span>
                     <span style="color:${color};">${academy.name}</span>
@@ -20609,7 +20621,7 @@ function renderYouthPathwayBoxes() {
         // Bonusinfo
         const bonus = getAcademyRankingBonus();
         if (bonus.money > 0 || bonus.reputation > 0) {
-            html += `<div style="background:rgba(255,194,60,0.1); padding:6px; border-radius:4px; margin-top:8px; font-size:var(--fs-caption); border-left:3px solid var(--accent)">
+            html += `<div style="background:color-mix(in srgb, var(--accent) 10%, transparent); padding:6px; border-radius:4px; margin-top:8px; font-size:var(--fs-caption); border-left:3px solid var(--accent)">
                 <strong>🎁 Saisonende-Bonus (Top 3):</strong><br>
                 ${bonus.money > 0 ? `+ ${formatVal(bonus.money)}` : ''} ${bonus.reputation > 0 ? `+ ${bonus.reputation} Reputation` : ''}
             </div>`;
@@ -20753,7 +20765,7 @@ function renderYouthPathwayBoxes() {
         </div>`;
     }
     function renderBonusClausesBlock(p) {
-        return `<div style="font-size:var(--fs-caption); margin-top:4px; border-top:1px solid var(--border-color); padding-top:4px;">
+        return `<div style="font-size:var(--fs-caption); margin-top:4px; border-top:1px solid var(--border); padding-top:4px;">
             <div style="font-weight:800; color:var(--text-muted); margin-bottom:2px;">🎯 ERFOLGSBASIERTE BONI</div>
             ${renderBonusClauseRow(p, 'goals')}
             ${renderBonusClauseRow(p, 'appearances')}
@@ -21425,7 +21437,7 @@ function renderYouthPathwayBoxes() {
         } else {
             scandals.forEach((scandal, idx) => {
                 let player = squad.find(p => p.id === scandal.playerId);
-                html += `<div style="background:rgba(255,84,104,0.15); padding:6px; border-radius:4px; margin-bottom:6px; border-left:3px solid var(--danger);">
+                html += `<div style="background:color-mix(in srgb, var(--danger) 15%, transparent); padding:6px; border-radius:4px; margin-bottom:6px; border-left:3px solid var(--danger);">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
                         <strong>${scandal.icon} ${scandal.name}</strong>
                         <span style="font-size:var(--fs-micro); color:var(--text-muted);">${scandal.daysLeft} SpT</span>
@@ -21472,7 +21484,7 @@ function renderYouthPathwayBoxes() {
         for (let k in btnMap) {
             let b = document.getElementById(btnMap[k]);
             if (b) {
-                b.style.borderColor = underworld.activeSabotages[k] ? 'var(--primary)' : '#334155';
+                b.style.borderColor = underworld.activeSabotages[k] ? 'var(--primary)' : 'var(--border-strong)';
                 b.style.color = underworld.activeSabotages[k] ? 'var(--primary)' : 'var(--accent)';
             }
         }
@@ -21644,7 +21656,7 @@ function renderTacticSystemPanel() {
     + '<tr style="color:var(--text-muted); text-align:left;"><th>Formation</th><th>Stil</th><th>Sp.</th><th>S-U-N</th><th>Tore</th><th>Pkt/Sp.</th></tr>';
   rows.slice(0, 8).forEach(r => {
     const aktiv = r.formation === game.formation && r.stil === game.tacticStyle;
-    const farbe = r.schnitt >= 1.8 ? 'var(--green, #4CAF50)' : r.schnitt >= 1.1 ? 'var(--gold, #FFC107)' : 'var(--red, #FF5252)';
+    const farbe = r.schnitt >= 1.8 ? 'var(--primary)' : r.schnitt >= 1.1 ? 'var(--gold)' : 'var(--danger)';
     html += `<tr style="${aktiv ? 'font-weight:bold;' : ''}"><td>${r.formation}</td><td>${stilLabel(r.stil)}</td><td>${r.spiele}</td>`
       + `<td>${r.s}-${r.u}-${r.n}</td><td>${r.tore}:${r.gegentore}</td><td style="color:${farbe};">${r.schnitt.toFixed(2)}</td></tr>`;
   });
@@ -21652,7 +21664,7 @@ function renderTacticSystemPanel() {
   const erprobt = rows.filter(r => r.spiele >= 5).sort((a, b) => b.schnitt - a.schnitt);
   if (erprobt.length >= 2) {
     const best = erprobt[0];
-    html += `<div style="font-size:var(--fs-small); color:var(--gold, #FFC107); margin-top:6px;">💡 Beste erprobte Kombination: ${best.formation} · ${stilLabel(best.stil)} (${best.schnitt.toFixed(2)} Punkte pro Spiel)</div>`;
+    html += `<div style="font-size:var(--fs-small); color:var(--gold, var(--gold)); margin-top:6px;">💡 Beste erprobte Kombination: ${best.formation} · ${stilLabel(best.stil)} (${best.schnitt.toFixed(2)} Punkte pro Spiel)</div>`;
   }
   panel.innerHTML = html;
 }
@@ -21992,7 +22004,7 @@ function renderSeasonObjectivesPanel() {
 
     // Summary
     const summary = getSeasonObjectivesSummary();
-    html += '<div style="background:#1a1a1a; padding:8px; border-radius:4px; margin-bottom:10px;">';
+    html += '<div style="background:var(--surface-0); padding:8px; border-radius:4px; margin-bottom:10px;">';
     html += `<p style="font-size:var(--fs-caption); margin:0;"><strong>Saison ${game.season}</strong> | `;
     html += `Ziele erreicht: <span style="color:var(--primary);">${summary.completed}</span> | `;
     html += `Aktiv: <span style="color:var(--accent);">${summary.active}</span></p>`;
@@ -22010,13 +22022,13 @@ function renderSeasonObjectivesPanel() {
             const diffColor = obj.difficulty === 'HARD' ? 'var(--danger)' :
                             obj.difficulty === 'MEDIUM' ? 'var(--accent)' : 'var(--primary)';
 
-            html += `<div style="background:#222; padding:8px; margin-bottom:6px; border-radius:4px;">`;
+            html += `<div style="background:var(--surface-1); padding:8px; margin-bottom:6px; border-radius:4px;">`;
             html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">`;
             html += `<strong style="font-size:var(--fs-small);">${obj.name}</strong>`;
             html += `<span style="font-size:var(--fs-micro); color:${diffColor};">${obj.difficulty}</span>`;
             html += `</div>`;
             html += `<p style="font-size:var(--fs-caption); color:var(--text-muted); margin:0 0 4px 0;">${obj.description}</p>`;
-            html += `<div style="width:100%; height:8px; background:#333; border-radius:2px; overflow:hidden; margin-bottom:4px;">`;
+            html += `<div style="width:100%; height:8px; background:var(--surface-2); border-radius:2px; overflow:hidden; margin-bottom:4px;">`;
             html += `<div style="width:${obj.progress}%; height:100%; background:${diffColor};"></div>`;
             html += `</div>`;
             html += `<p style="font-size:var(--fs-micro); color:var(--text-muted); margin:0;">${obj.progress_label || obj.progress + '%'}</p>`;
@@ -22037,7 +22049,7 @@ function renderSeasonObjectivesPanel() {
         html += '<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap:4px;">';
 
         seasonCompleted.forEach(obj => {
-            html += `<div style="background:#1a3a1a; padding:6px; border-radius:3px; border-left:3px solid var(--primary); font-size:var(--fs-micro);">`;
+            html += `<div style="background:color-mix(in srgb, var(--primary) 30%, var(--surface-1)); padding:6px; border-radius:3px; border-left:3px solid var(--primary); font-size:var(--fs-micro);">`;
             html += `<strong>${obj.name}</strong><br/>`;
             html += `€${(obj.reward / 1000).toFixed(0)}k`;
             html += `</div>`;
@@ -22224,7 +22236,7 @@ function renderTeamCouncilPanel() {
 
     if (tc.concern) {
         const opts = COUNCIL_OPTIONS[tc.concern.type] || [];
-        html += `<div style="background:rgba(212,169,74,0.12); border-left:3px solid var(--gold); padding:6px; border-radius:4px; margin-top:4px;">
+        html += `<div style="background:color-mix(in srgb, var(--accent) 12%, transparent); border-left:3px solid var(--gold); padding:6px; border-radius:4px; margin-top:4px;">
             <div style="font-weight:bold;">${tc.concern.title}</div>
             <div style="color:var(--text-muted); margin:3px 0;">${tc.concern.text}</div>
             ${opts.map((o, i) => `<button onclick="answerCouncilConcern(${i})" class="${i === 0 ? 'btn-action' : 'btn-secondary'}" style="font-size:var(--fs-micro); padding:3px 6px; margin:2px 4px 0 0;">${o.label(tc.concern)}</button>`).join('')}
@@ -23593,7 +23605,7 @@ function renderSetPieceDrillBox() {
         const aktiv = d.focus === k;
         return `<button onclick="setSetPieceDrillFocus('${k}')" class="${aktiv ? 'btn-action' : 'btn-secondary'}" style="text-align:left; font-size:var(--fs-small); margin-bottom:3px;">
             ${aktiv ? '✔ ' : ''}${v.icon} ${v.label} · <strong>${m} %</strong> <span style="font-size:var(--fs-caption); opacity:0.8;">(${v.wirkung} bei 100 %)</span>
-            <div style="height:4px; background:rgba(255,255,255,0.08); border-radius:2px; margin-top:2px;"><div style="height:4px; width:${m}%; background:var(--accent); border-radius:2px;"></div></div></button>`;
+            <div style="height:4px; background:color-mix(in srgb, var(--ink) 8%, transparent); border-radius:2px; margin-top:2px;"><div style="height:4px; width:${m}%; background:var(--accent); border-radius:2px;"></div></div></button>`;
     }).join('');
     box.innerHTML = `<div class="box" style="font-size:var(--fs-small);">🚩 <strong>Standards einstudieren:</strong> ${tage
         ? `${tage} Standards-Tag${tage > 1 ? 'e' : ''} im Wochenplan - die gewählte Variante gewinnt ${plus} Punkte pro Spieltag.`
@@ -25853,12 +25865,12 @@ function tickPlayerRetirement() {
     // zur Geltung statt ihn zwischen normalen Pokal-Einträgen untergehen zu lassen).
     function classifyTrophyEntry(t) {
         if (t.includes('Vereinslegende')) return { icon: '👑', color: 'var(--gold)', category: 'Legenden-Status' };
-        if (t.includes('Champions Cup')) return { icon: '🌟', color: '#82b1ff', category: 'Europapokal' };
+        if (t.includes('Champions Cup')) return { icon: '🌟', color: 'var(--europe)', category: 'Europapokal' };
         if (t.includes('DFB-Pokal')) return { icon: '🏆', color: 'var(--accent)', category: 'Pokal' };
         if (t.includes('Supercup')) return { icon: '🏆', color: 'var(--gold)', category: 'Supercup' };
-        if (t.includes('Hallenmasters')) return { icon: '🏟️', color: '#cbd5e1', category: 'Hallenturnier' };
+        if (t.includes('Hallenmasters')) return { icon: '🏟️', color: 'var(--text-main)', category: 'Hallenturnier' };
         if (t.includes('Ungeschlagene Saison')) return { icon: '💯', color: 'var(--primary)', category: 'Perfekte Saison' };
-        return { icon: '🏅', color: '#cbd5e1', category: 'Erfolg' };
+        return { icon: '🏅', color: 'var(--text-main)', category: 'Erfolg' };
     }
 
     // Derbygegner (Phase 24.2): wer aus derselben Stadt oder per Traditionsduell ein Derby ist,
@@ -26024,7 +26036,7 @@ function tickPlayerRetirement() {
             <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:6px;">
                 ${ACHIEVEMENT_DEFINITIONS.map(def => {
                     let isUnlocked = unlocked.has(def.id);
-                    return `<div title="${def.desc}" style="text-align:center; padding:6px 2px; border-radius:8px; background:${isUnlocked ? 'rgba(23,201,184,0.15)' : 'rgba(255,255,255,0.04)'}; opacity:${isUnlocked ? '1' : '0.35'};">
+                    return `<div title="${def.desc}" style="text-align:center; padding:6px 2px; border-radius:8px; background:${isUnlocked ? 'color-mix(in srgb, var(--teal) 15%, transparent)' : 'color-mix(in srgb, var(--ink) 4%, transparent)'}; opacity:${isUnlocked ? '1' : '0.35'};">
                         <div style="font-size:20px;">${def.icon}</div>
                         <div style="font-size:var(--fs-micro); margin-top:2px;">${def.label}</div>
                     </div>`;
@@ -26061,7 +26073,7 @@ function tickPlayerRetirement() {
         const box = document.getElementById('hall-of-fame-box');
         if (!box) return;
         const h = getHallOfFameEntries();
-        const zeile = (links, rechts, gold) => `<div style="display:flex; justify-content:space-between; gap:6px; padding:2px 0; border-top:1px solid rgba(255,255,255,0.06);${gold ? ' color:var(--gold);' : ''}"><span>${links}</span><strong style="white-space:nowrap;">${rechts}</strong></div>`;
+        const zeile = (links, rechts, gold) => `<div style="display:flex; justify-content:space-between; gap:6px; padding:2px 0; border-top:1px solid color-mix(in srgb, var(--ink) 6%, transparent);${gold ? ' color:var(--gold);' : ''}"><span>${links}</span><strong style="white-space:nowrap;">${rechts}</strong></div>`;
         const block = (titel, inhalt, leer) => `<div style="margin-bottom:8px;"><div style="font-weight:700; color:var(--accent); margin-bottom:2px;">${titel}</div>${inhalt || `<div style="color:var(--text-muted);">${leer}</div>`}</div>`;
         const tier = { ICON: 'Vereins-Ikone', LEGEND: 'Legende', CLUB_HERO: 'Vereinsheld' };
         box.innerHTML = `<div style="font-size:var(--fs-caption);">
@@ -26122,7 +26134,7 @@ function tickPlayerRetirement() {
         }
         const t = getManagerCareerTotals();
         const quote = t.matches ? Math.round(t.won / t.matches * 100) : 0;
-        const kachel = (label, wert, sub) => `<div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:6px; text-align:center;">
+        const kachel = (label, wert, sub) => `<div style="background:color-mix(in srgb, var(--ink) 5%, transparent); border-radius:6px; padding:6px; text-align:center;">
             <div style="font-size:var(--fs-micro); color:var(--text-muted);">${label}</div><div style="font-size:var(--fs-title); font-weight:800;">${wert}</div><div style="font-size:var(--fs-micro); color:var(--text-muted);">${sub}</div></div>`;
         box.innerHTML = `<div style="display:grid; grid-template-columns: repeat(2, 1fr); gap:6px; margin-bottom:8px;">
                 ${kachel('Bilanz', `${t.won}-${t.drawn}-${t.lost}`, `${t.matches} Ligaspiele · ${quote}% Siege`)}
@@ -26130,7 +26142,7 @@ function tickPlayerRetirement() {
                 ${kachel('Meisterschaften', t.titles, `${t.promotions} Aufstieg(e) · ${t.relegations} Abstieg(e)`)}
                 ${kachel('Bestes Ergebnis', `Platz ${t.best.rank}`, t.best.league)}
             </div>
-            <div style="font-size:var(--fs-caption);">${liste.slice(-6).reverse().map(e => `<div style="display:flex; justify-content:space-between; gap:6px; padding:2px 0; border-top:1px solid rgba(255,255,255,0.06);">
+            <div style="font-size:var(--fs-caption);">${liste.slice(-6).reverse().map(e => `<div style="display:flex; justify-content:space-between; gap:6px; padding:2px 0; border-top:1px solid color-mix(in srgb, var(--ink) 6%, transparent);">
                 <span>Saison ${e.season} · ${e.club}</span><span style="white-space:nowrap;">${e.league.replace(/ \(.*\)/, '')} · Platz <strong>${e.rank}</strong> · ${e.won}-${e.drawn}-${e.lost} · ${e.points} P.</span></div>`).join('')}</div>`;
     }
 
@@ -26260,8 +26272,8 @@ function renderRefereePreview() {
     const rec = (game.refereeHistory || {})[ref.id] || { spiele: 0 };
     const strenge = ref.cardMult >= 1.25 ? '🟥 zückt schnell Karten' : ref.cardMult <= 0.8 ? '🟩 lässt viel laufen' : '🟨 durchschnittlich streng';
     const bilanz = rec.spiele ? `Bisherige Bilanz: ${rec.siege}S ${rec.remis}U ${rec.niederlagen}N` : 'Noch kein gemeinsames Spiel';
-    box.innerHTML = `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin:6px 0; padding:6px; background:rgba(255,255,255,0.03); border-radius:4px;">
-        🧑‍⚖️ Schiedsrichter: <strong style="color:var(--text);">${ref.name}</strong> (${ref.style}) · ${strenge}<br>${bilanz}
+    box.innerHTML = `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin:6px 0; padding:6px; background:color-mix(in srgb, var(--ink) 3%, transparent); border-radius:4px;">
+        🧑‍⚖️ Schiedsrichter: <strong style="color:var(--text-main);">${ref.name}</strong> (${ref.style}) · ${strenge}<br>${bilanz}
         ${game.tackleHardness === 'hart' && ref.cardMult >= 1.2 ? '<br><span style="color:var(--accent);">⚠️ Harte Zweikampfführung gegen diesen Schiedsrichter ist riskant.</span>' : ''}
         ${typeof getRefereeGrudgeNote === 'function' ? getRefereeGrudgeNote(ref.id, ref.name) : ''}
     </div>`;
@@ -26417,11 +26429,11 @@ function getPredictionHtml(oppName) {
     const p = predictNextMatch();
     if (!p || (oppName && p.opp.name !== oppName)) return '';
     const pct = x => Math.round(x * 100) + '%';
-    return `<div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.15); font-size:var(--fs-small);">
+    return `<div style="margin-top:6px; padding-top:6px; border-top:1px solid color-mix(in srgb, var(--ink) 15%, transparent); font-size:var(--fs-small);">
         🔮 <strong style="color:var(--teal);">Prognose des Analysten</strong> (${SCOUT_SIMULATIONS} simulierte Spiele)
-        <div style="display:flex; height:14px; border-radius:3px; overflow:hidden; font-size:var(--fs-micro); font-weight:bold; color:#fff; text-align:center; line-height:14px; margin:4px 0;">
+        <div style="display:flex; height:14px; border-radius:3px; overflow:hidden; font-size:var(--fs-micro); font-weight:bold; color:var(--text-main); text-align:center; line-height:14px; margin:4px 0;">
             <div style="width:${pct(p.sieg)}; background:var(--primary);">${p.sieg >= 0.12 ? pct(p.sieg) : ''}</div>
-            <div style="width:${pct(p.remis)}; background:#8a8f98;">${p.remis >= 0.12 ? pct(p.remis) : ''}</div>
+            <div style="width:${pct(p.remis)}; background:color-mix(in srgb, var(--ink) 35%, var(--surface-2)); color:var(--text-main);">${p.remis >= 0.12 ? pct(p.remis) : ''}</div>
             <div style="width:${pct(p.niederlage)}; background:var(--danger);">${p.niederlage >= 0.12 ? pct(p.niederlage) : ''}</div>
         </div>
         Sieg ${pct(p.sieg)} · Remis ${pct(p.remis)} · Niederlage ${pct(p.niederlage)} · erwartet ${p.xTore.toFixed(1)}:${p.xGegentore.toFixed(1)}
@@ -26708,12 +26720,12 @@ function cleanupLegacyScoutState() {
         // im Taktik-Duell schlägt (js/opponent-tactics.js) - vorher zwei Zufallssätze ohne
         // Bezug zum Spiel, und mit Europapokal-Teilnahme galt jedes Ligaspiel als Topspiel.
         let isImportantMatch = isDerbyOpponent(oppName) || !!(pendingMatchInfo && pendingMatchInfo.cupTie);
-        let spyNote = underworld.spyIntelActive ? `<div style="margin-top:6px; font-size:var(--fs-small); color:#f97316;">🕵️ <strong>Insider-Info aktiv:</strong> Diese Analyse stammt von einem bezahlten Informanten im gegnerischen Verein und ist garantiert zuverlässig.</div>` : '';
+        let spyNote = underworld.spyIntelActive ? `<div style="margin-top:6px; font-size:var(--fs-small); color:var(--industry);">🕵️ <strong>Insider-Info aktiv:</strong> Diese Analyse stammt von einem bezahlten Informanten im gegnerischen Verein und ist garantiert zuverlässig.</div>` : '';
         let videoAnalysisHtml = '';
         if (isImportantMatch && oppObj && typeof AI_STYLE_ARCHETYPE !== 'undefined') {
             let basis = AI_STYLE_ARCHETYPE[getTeamPlaystyle(oppObj).id] || 'N';
             let konter = getCounterArchetype(basis);
-            videoAnalysisHtml = `<div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.15); font-size:var(--fs-small);">
+            videoAnalysisHtml = `<div style="margin-top:6px; padding-top:6px; border-top:1px solid color-mix(in srgb, var(--ink) 15%, transparent); font-size:var(--fs-small);">
                 🎥 <strong style="color:var(--teal);">Videoanalyse (Topspiel-Sonderbericht):</strong><br>
                 Grundausrichtung: <strong>${ARCHETYPE_LABELS[basis]}</strong><br>
                 Schwachstelle: <strong>${konter ? `verwundbar gegen ${ARCHETYPE_LABELS[konter]}` : 'kein klares Muster - schwer auszurechnen'}</strong>
@@ -29916,7 +29928,7 @@ function concludeSeasonAndAdvance() {
         let history = (game.seasonReviewArchive || []).slice(-8);
         if (history.length < 2) return '';
         let maxVal = Math.max(...history.map(e => e.avgAttendance), 1);
-        return `<div style="display:flex; align-items:flex-end; gap:3px; height:50px; background:rgba(0,0,0,0.2); border-radius:6px; padding:5px;">
+        return `<div style="display:flex; align-items:flex-end; gap:3px; height:50px; background:color-mix(in srgb, var(--shade) 20%, transparent); border-radius:6px; padding:5px;">
             ${history.map(e => {
                 let heightPct = Math.max(4, Math.round((e.avgAttendance / maxVal) * 100));
                 return `<div style="flex:1; display:flex; flex-direction:column; align-items:center;" title="Saison ${e.season}: ${e.avgAttendance.toLocaleString('de-DE')}">
@@ -30642,7 +30654,7 @@ function renderLeagueRankChart(level) {
     const eigen = teams.find(t => t.name === game.clubName);
     const fokus = eigen || teams[0];
     const rivale = teams.find(t => t !== fokus && isDerbyOpponent(t.name));
-    const hinten = teams.filter(t => t !== fokus && t !== rivale).map(t => `<polyline points="${linie(t)}" fill="none" stroke="rgba(150,150,150,0.35)" stroke-width="1" />`).join('');
+    const hinten = teams.filter(t => t !== fokus && t !== rivale).map(t => `<polyline points="${linie(t)}" fill="none" stroke="color-mix(in srgb, var(--ink) 35%, transparent)" stroke-width="1" />`).join('');
     const vorn = (rivale ? `<polyline points="${linie(rivale)}" fill="none" stroke="var(--danger)" stroke-width="1.5" />` : '')
         + `<polyline points="${linie(fokus)}" fill="none" stroke="var(--primary)" stroke-width="2.5" />`;
     const hist = (fokus.rankHist || []).filter(Boolean);
@@ -30822,7 +30834,7 @@ function renderNationalTeamPanel() {
         .sort((a, b) => (b.p.strength - b.schwelle) - (a.p.strength - a.schwelle));
     const zeilen = kandidaten.length ? kandidaten.slice(0, 12).map(({ p, schwelle }) => {
         const drin = isNominated(p);
-        return `<div style="display:flex; justify-content:space-between; gap:6px; padding:2px 0; border-top:1px solid rgba(255,255,255,0.06);">
+        return `<div style="display:flex; justify-content:space-between; gap:6px; padding:2px 0; border-top:1px solid color-mix(in srgb, var(--ink) 6%, transparent);">
             <span>${NATIONS[getNation(p)].flag} ${p.name} <span style="color:var(--text-muted);">${p.pos}</span></span>
             <span>${drin ? '<span style="color:var(--primary);">✅ nominiert</span>' : `<span style="color:var(--text-muted);">Stärke ${p.strength}/${schwelle}</span>`}
             · ${p.caps || 0} Sp., ${p.intlGoals || 0} T.${p.intlTitles ? ` · 🏆${p.intlTitles}` : ''}</span>
@@ -31044,7 +31056,7 @@ function renderCoachCarouselBox() {
     if (!box) return;
     const wechsel = (game.coachChanges || []).filter(c => c.season === game.season).slice().reverse();
     box.innerHTML = `<div style="font-size:var(--fs-caption);">${wechsel.length
-        ? wechsel.map(c => `<div style="padding:2px 0; border-top:1px solid rgba(255,255,255,0.06);">${c.matchday ? 'Spt ' + c.matchday : 'Sommer'}: <strong>${c.club}</strong> - ${c.alt} ➜ ${c.neu}</div>`).join('')
+        ? wechsel.map(c => `<div style="padding:2px 0; border-top:1px solid color-mix(in srgb, var(--ink) 6%, transparent);">${c.matchday ? 'Spt ' + c.matchday : 'Sommer'}: <strong>${c.club}</strong> - ${c.alt} ➜ ${c.neu}</div>`).join('')
         : '<span style="color:var(--text-muted);">Diese Saison noch keine Trainerwechsel in deiner Liga.</span>'}</div>`;
 }
 
@@ -32725,7 +32737,7 @@ function renderSeasonForecastHistory() {
         if (btn && btn.dataset.confirming !== 'true') {
             btn.dataset.confirming = 'true';
             btn.innerText = 'Wirklich?';
-            btn.style.color = '#fff';
+            btn.style.color = 'var(--text-main)';
             btn.style.background = 'var(--danger)';
             deleteConfirmTimers[slotNum] = setTimeout(() => {
                 if (btn && btn.isConnected) {
@@ -33325,7 +33337,7 @@ function renderSaveSafetyBox() {
     const exp = game.lastExportSeason ? `Saison ${game.lastExportSeason}` : 'noch nie';
     box.innerHTML = `<div style="font-size:var(--fs-small);">
         <div>📦 Speicher belegt: <strong style="color:${farbe};">${prozent} %</strong> (${Math.round(u.used / 1000)} von ~${Math.round(u.budget / 1000)} Tsd. Zeichen${u.foreign > 50000 ? `, davon ${Math.round(u.foreign / 1000)} Tsd. durch andere Seiten/Dateien` : ''})${u.blocked ? ' - <span style="color:var(--danger);">Speicher blockiert!</span>' : ''}</div>
-        <div style="height:6px; background:rgba(255,255,255,0.08); border-radius:3px; margin-top:3px;"><div style="height:6px; width:${prozent}%; background:${farbe}; border-radius:3px;"></div></div>
+        <div style="height:6px; background:color-mix(in srgb, var(--ink) 8%, transparent); border-radius:3px; margin-top:3px;"><div style="height:6px; width:${prozent}%; background:${farbe}; border-radius:3px;"></div></div>
         <div style="margin-top:4px; color:var(--text-muted);">📤 Letzter Datei-Export: ${exp} - nur eine exportierte Datei übersteht das Leeren des Browserspeichers.</div>
         ${backup}</div>`;
 }
@@ -33359,7 +33371,7 @@ function renderSaveSafetyBox() {
             if (!banner || !content) return;
             banner.style.display = 'block';
             var line = document.createElement('div');
-            line.style.borderTop = '1px solid rgba(255,255,255,0.2)';
+            line.style.borderTop = '1px solid color-mix(in srgb, var(--ink) 20%, transparent)';
             line.style.padding = '4px 0';
             line.textContent = '[' + new Date().toLocaleTimeString('de-DE') + '] ' + msg;
             content.appendChild(line);

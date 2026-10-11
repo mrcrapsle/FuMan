@@ -115,7 +115,7 @@ function renderLeagueRankChart(level) {
     const eigen = teams.find(t => t.name === game.clubName);
     const fokus = eigen || teams[0];
     const rivale = teams.find(t => t !== fokus && isDerbyOpponent(t.name));
-    const hinten = teams.filter(t => t !== fokus && t !== rivale).map(t => `<polyline points="${linie(t)}" fill="none" stroke="rgba(150,150,150,0.35)" stroke-width="1" />`).join('');
+    const hinten = teams.filter(t => t !== fokus && t !== rivale).map(t => `<polyline points="${linie(t)}" fill="none" stroke="color-mix(in srgb, var(--ink) 35%, transparent)" stroke-width="1" />`).join('');
     const vorn = (rivale ? `<polyline points="${linie(rivale)}" fill="none" stroke="var(--danger)" stroke-width="1.5" />` : '')
         + `<polyline points="${linie(fokus)}" fill="none" stroke="var(--primary)" stroke-width="2.5" />`;
     const hist = (fokus.rankHist || []).filter(Boolean);

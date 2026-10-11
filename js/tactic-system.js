@@ -53,7 +53,7 @@ function renderTacticSystemPanel() {
     + '<tr style="color:var(--text-muted); text-align:left;"><th>Formation</th><th>Stil</th><th>Sp.</th><th>S-U-N</th><th>Tore</th><th>Pkt/Sp.</th></tr>';
   rows.slice(0, 8).forEach(r => {
     const aktiv = r.formation === game.formation && r.stil === game.tacticStyle;
-    const farbe = r.schnitt >= 1.8 ? 'var(--green, #4CAF50)' : r.schnitt >= 1.1 ? 'var(--gold, #FFC107)' : 'var(--red, #FF5252)';
+    const farbe = r.schnitt >= 1.8 ? 'var(--primary)' : r.schnitt >= 1.1 ? 'var(--gold)' : 'var(--danger)';
     html += `<tr style="${aktiv ? 'font-weight:bold;' : ''}"><td>${r.formation}</td><td>${stilLabel(r.stil)}</td><td>${r.spiele}</td>`
       + `<td>${r.s}-${r.u}-${r.n}</td><td>${r.tore}:${r.gegentore}</td><td style="color:${farbe};">${r.schnitt.toFixed(2)}</td></tr>`;
   });
@@ -61,7 +61,7 @@ function renderTacticSystemPanel() {
   const erprobt = rows.filter(r => r.spiele >= 5).sort((a, b) => b.schnitt - a.schnitt);
   if (erprobt.length >= 2) {
     const best = erprobt[0];
-    html += `<div style="font-size:var(--fs-small); color:var(--gold, #FFC107); margin-top:6px;">💡 Beste erprobte Kombination: ${best.formation} · ${stilLabel(best.stil)} (${best.schnitt.toFixed(2)} Punkte pro Spiel)</div>`;
+    html += `<div style="font-size:var(--fs-small); color:var(--gold, var(--gold)); margin-top:6px;">💡 Beste erprobte Kombination: ${best.formation} · ${stilLabel(best.stil)} (${best.schnitt.toFixed(2)} Punkte pro Spiel)</div>`;
   }
   panel.innerHTML = html;
 }

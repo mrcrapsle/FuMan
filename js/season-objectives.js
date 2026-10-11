@@ -332,7 +332,7 @@ function renderSeasonObjectivesPanel() {
 
     // Summary
     const summary = getSeasonObjectivesSummary();
-    html += '<div style="background:#1a1a1a; padding:8px; border-radius:4px; margin-bottom:10px;">';
+    html += '<div style="background:var(--surface-0); padding:8px; border-radius:4px; margin-bottom:10px;">';
     html += `<p style="font-size:var(--fs-caption); margin:0;"><strong>Saison ${game.season}</strong> | `;
     html += `Ziele erreicht: <span style="color:var(--primary);">${summary.completed}</span> | `;
     html += `Aktiv: <span style="color:var(--accent);">${summary.active}</span></p>`;
@@ -350,13 +350,13 @@ function renderSeasonObjectivesPanel() {
             const diffColor = obj.difficulty === 'HARD' ? 'var(--danger)' :
                             obj.difficulty === 'MEDIUM' ? 'var(--accent)' : 'var(--primary)';
 
-            html += `<div style="background:#222; padding:8px; margin-bottom:6px; border-radius:4px;">`;
+            html += `<div style="background:var(--surface-1); padding:8px; margin-bottom:6px; border-radius:4px;">`;
             html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">`;
             html += `<strong style="font-size:var(--fs-small);">${obj.name}</strong>`;
             html += `<span style="font-size:var(--fs-micro); color:${diffColor};">${obj.difficulty}</span>`;
             html += `</div>`;
             html += `<p style="font-size:var(--fs-caption); color:var(--text-muted); margin:0 0 4px 0;">${obj.description}</p>`;
-            html += `<div style="width:100%; height:8px; background:#333; border-radius:2px; overflow:hidden; margin-bottom:4px;">`;
+            html += `<div style="width:100%; height:8px; background:var(--surface-2); border-radius:2px; overflow:hidden; margin-bottom:4px;">`;
             html += `<div style="width:${obj.progress}%; height:100%; background:${diffColor};"></div>`;
             html += `</div>`;
             html += `<p style="font-size:var(--fs-micro); color:var(--text-muted); margin:0;">${obj.progress_label || obj.progress + '%'}</p>`;
@@ -377,7 +377,7 @@ function renderSeasonObjectivesPanel() {
         html += '<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap:4px;">';
 
         seasonCompleted.forEach(obj => {
-            html += `<div style="background:#1a3a1a; padding:6px; border-radius:3px; border-left:3px solid var(--primary); font-size:var(--fs-micro);">`;
+            html += `<div style="background:color-mix(in srgb, var(--primary) 30%, var(--surface-1)); padding:6px; border-radius:3px; border-left:3px solid var(--primary); font-size:var(--fs-micro);">`;
             html += `<strong>${obj.name}</strong><br/>`;
             html += `€${(obj.reward / 1000).toFixed(0)}k`;
             html += `</div>`;

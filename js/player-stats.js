@@ -108,7 +108,7 @@ function renderPlayerSeasonStats() {
     const best = game.lastMatchBestPlayer && game.lastMatchBestPlayer.season === game.season
         ? `<div style="font-size:var(--fs-small); margin-bottom:6px;">🏅 Spieler des letzten Spiels: <strong>${game.lastMatchBestPlayer.name}</strong> (Note ${formatGrade(game.lastMatchBestPlayer.note)}, ${game.lastMatchBestPlayer.matchday}. Spieltag)</div>` : '';
     if (!rows.length) { box.innerHTML = best + '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Ligaspiele in dieser Saison.</div>'; return; }
-    const farbe = n => n <= 2.5 ? 'var(--primary)' : (n <= 3.5 ? 'var(--gold, #FFC107)' : 'var(--danger)');
+    const farbe = n => n <= 2.5 ? 'var(--primary)' : (n <= 3.5 ? 'var(--gold)' : 'var(--danger)');
     box.innerHTML = best + `<table style="width:100%; font-size:var(--fs-small); border-collapse:collapse;">
         <tr style="color:var(--text-muted); text-align:left;"><th>Spieler</th><th>Sp.</th><th>Tore</th><th>Vorl.</th><th>Ø-Note</th><th>Elf</th></tr>
         ${rows.map(({ p, st, schnitt }) => `<tr><td>${p.name} <span style="color:var(--text-muted);">${p.pos}</span></td><td>${st.spiele}</td><td>${st.tore}</td><td>${st.vorlagen}</td>

@@ -262,12 +262,12 @@
         // im Taktik-Duell schlägt (js/opponent-tactics.js) - vorher zwei Zufallssätze ohne
         // Bezug zum Spiel, und mit Europapokal-Teilnahme galt jedes Ligaspiel als Topspiel.
         let isImportantMatch = isDerbyOpponent(oppName) || !!(pendingMatchInfo && pendingMatchInfo.cupTie);
-        let spyNote = underworld.spyIntelActive ? `<div style="margin-top:6px; font-size:var(--fs-small); color:#f97316;">🕵️ <strong>Insider-Info aktiv:</strong> Diese Analyse stammt von einem bezahlten Informanten im gegnerischen Verein und ist garantiert zuverlässig.</div>` : '';
+        let spyNote = underworld.spyIntelActive ? `<div style="margin-top:6px; font-size:var(--fs-small); color:var(--industry);">🕵️ <strong>Insider-Info aktiv:</strong> Diese Analyse stammt von einem bezahlten Informanten im gegnerischen Verein und ist garantiert zuverlässig.</div>` : '';
         let videoAnalysisHtml = '';
         if (isImportantMatch && oppObj && typeof AI_STYLE_ARCHETYPE !== 'undefined') {
             let basis = AI_STYLE_ARCHETYPE[getTeamPlaystyle(oppObj).id] || 'N';
             let konter = getCounterArchetype(basis);
-            videoAnalysisHtml = `<div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.15); font-size:var(--fs-small);">
+            videoAnalysisHtml = `<div style="margin-top:6px; padding-top:6px; border-top:1px solid color-mix(in srgb, var(--ink) 15%, transparent); font-size:var(--fs-small);">
                 🎥 <strong style="color:var(--teal);">Videoanalyse (Topspiel-Sonderbericht):</strong><br>
                 Grundausrichtung: <strong>${ARCHETYPE_LABELS[basis]}</strong><br>
                 Schwachstelle: <strong>${konter ? `verwundbar gegen ${ARCHETYPE_LABELS[konter]}` : 'kein klares Muster - schwer auszurechnen'}</strong>

@@ -2711,13 +2711,119 @@ async function testDesignThemes(browser) {
     assert(r.ungueltigIgnoriert, 'Ein unbekanntes Theme ändert nichts');
     assert(r.groesser > 1.2, `Textgröße "sehr groß" vergrößert die Schrift (Faktor ${r.groesser.toFixed(2)})`);
     assert(r.ueberlauf.length === 0, `Sehr große Schrift läuft auf dem Handy auf keinem Bildschirm über (${r.ueberlauf.join(', ')})`);
-    assert(r.karten === 5 && r.groessen === 3, `Darstellung zeigt 5 Themes und 3 Textgrößen (${r.karten}/${r.groessen})`);
+    assert(r.karten === 6 && r.groessen === 3, `Darstellung zeigt 6 Themes und 3 Textgrößen (${r.karten}/${r.groessen})`);
     assert(r.vorschau, 'Die Vorschau zeigt den stärksten eigenen Spieler');
     assert(r.navKnopf, 'Menüpunkt "Darstellung" ist vorhanden');
     assert(r.marktKarte, 'Transfermarkt-Karte: Name als Titel, Stärke als Kennzahl, Chips mit Zusatzangaben');
     assert(geklickt === 'klassik', `Antippen einer Theme-Karte wechselt das Farbschema (${geklickt})`);
     assert(nachStart.theme === 'klassik' && nachStart.groesse === 'sehr-gross', `Theme und Textgröße bleiben nach dem Neustart erhalten (${JSON.stringify(nachStart)})`);
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler in der Darstellung (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
+// Phase 25.52: Farben nur über Tokens. Ausnahmen: Illustrationen (Büro, Stadion, Spielfeld,
+// Avatare, Wappen), Canvas-Grafiken (Karrierekarte) und die Token-/Theme-Blöcke selbst.
+function findeFesteFarben() {
+    const fs = require('fs');
+    const root = path.join(__dirname, '..');
+    const literal = /#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+/g;
+    const ausnahmeDateien = ['avatars.js', 'office.js', 'office-events.js', 'crest.js', 'stadium.js', 'career.js', 'design-settings.js'];
+    const ausnahmeZeile = /ctx\.|fillStyle|strokeStyle|addColorStop|crest|theme-color|^\s*(\/\/|\*|\/\*)/i;
+    const funde = [];
+    const pruefe = (datei, text) => text.split('\n').forEach((zeile, i) => {
+        if (ausnahmeZeile.test(zeile)) return;
+        const ohneEntities = zeile.replace(/&#\d+;|&#x[0-9a-f]+;/gi, '');
+        const m = ohneEntities.match(literal);
+        if (m) funde.push(`${datei}:${i + 1} ${m[0]}`);
+    });
+    fs.readdirSync(path.join(root, 'js')).filter(f => f.endsWith('.js') && !ausnahmeDateien.includes(f))
+        .forEach(f => pruefe('js/' + f, fs.readFileSync(path.join(root, 'js', f), 'utf-8')));
+    pruefe('index.html', fs.readFileSync(path.join(root, 'index.html'), 'utf-8'));
+    // CSS: nur Regeln außerhalb der Token-/Theme-Blöcke und Illustrationen
+    const css = fs.readFileSync(path.join(root, 'css', 'styles.css'), 'utf-8');
+    const illu = /^\s*(:root|html\[data-|\.office|\.off-|#office|\.stadium-(?!hero-metric|condition)|#stadium|\.stand\b|\.stand-|\.live-stadium|\.soccer-pitch|\.pitch|\.player-pin|\.dashboard-hero|\.club-logo|\.crossing-zone|\.goal-|\.formation-preview|#live-ball|\.design-swatches|body::|\.office-bg)/;
+    for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+        const sel = m[1].trim().split('\n').pop().replace(/\/\*[\s\S]*?\*\//g, '').trim();
+        if (illu.test(sel)) continue;
+        const f = m[2].replace(/\/\*[\s\S]*?\*\//g, '').match(literal);
+        if (f) funde.push(`css ${sel.slice(0, 50)} ${f[0]}`);
+    }
+    return funde;
+}
+
+async function testKeineFestenFarben() {
+    console.log('\n[25.52] Farben nur über Tokens (kein fester Farbwert in JS, HTML und UI-Regeln)');
+    const funde = findeFesteFarben();
+    assert(funde.length === 0, `Kein fester Farbwert außerhalb der Tokens und Illustrationen (${funde.length}: ${funde.slice(0, 8).join(' | ')})`);
+}
+
+async function testKontrastAlleThemes(browser) {
+    console.log('\n[25.52] Kontrast: jeder sichtbare Text in jedem Theme mindestens 4,5:1 (große Schrift 3:1)');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 390, height: 900 });
+    const themes = await page.evaluate(() => DESIGN_THEMES.map(t => t.id));
+    await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false; simulateMatchdays(4);
+        const st = document.createElement('style');
+        st.textContent = '*, *::before, *::after { transition: none !important; animation: none !important; }';
+        document.head.appendChild(st);
+    });
+    const fehler = {};
+    for (const theme of themes) {
+        fehler[theme] = await page.evaluate(async (theme) => {
+            setzeDesignTheme(theme);
+            document.querySelectorAll('.app-toast').forEach(t => t.remove());
+            const parse = c => {
+                const m = c && c.match(/[\d.]+/g); if (!m) return null; const n = m.map(Number);
+                if (/^color\(/.test(c)) return [n[0] * 255, n[1] * 255, n[2] * 255, n.length > 3 ? n[3] : 1];
+                return [n[0], n[1], n[2], n.length > 3 ? n[3] : 1];
+            };
+            const lum = ([r, g, b]) => [r, g, b].map(v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }).reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
+            const ueber = (o, u) => [0, 1, 2].map(i => o[i] * o[3] + u[i] * (1 - o[3])).concat(1);
+            const verh = (a, b) => { const [h, d] = [lum(a), lum(b)].sort((x, y) => y - x); return (h + 0.05) / (d + 0.05); };
+            const probe = document.createElement('div'); document.body.appendChild(probe);
+            const aufloesen = c => { probe.style.color = ''; probe.style.color = c; return parse(getComputedStyle(probe).color); };
+            const hintergrund = el => {
+                const lagen = [];
+                for (let e = el; e && e !== document.documentElement; e = e.parentElement) {
+                    const cs = getComputedStyle(e);
+                    if (/gradient/.test(cs.backgroundImage)) {
+                        const f = cs.backgroundImage.match(/(rgba?|color)\([^()]*(\([^()]*\)[^()]*)*\)|#[0-9a-f]{3,6}/gi) || [];
+                        const c = f.length ? aufloesen(f[0]) : null;
+                        if (c) { lagen.push(c); if (c[3] > 0.95) break; }
+                    }
+                    const c = parse(cs.backgroundColor);
+                    if (c && c[3] > 0) { lagen.push(c); if (c[3] > 0.95) break; }
+                }
+                const basis = aufloesen('var(--surface-app)') || [0, 0, 0, 1];
+                return lagen.reverse().reduce((u, o) => ueber(o, u), basis);
+            };
+            const ids = [...document.querySelectorAll('[id^="screen-"]')].map(e => e.id).filter(id => !id.includes('prematch') && id !== 'screen-matchday' && id !== 'screen-office');
+            const out = new Set();
+            for (const id of ids) {
+                showScreen(id);
+                await new Promise(res => setTimeout(res, 10));
+                document.querySelectorAll('.app-content *, .app-header *, .bottom-nav-bar *').forEach(el => {
+                    if (!el.offsetParent && getComputedStyle(el).position !== 'fixed') return;
+                    if (![...el.childNodes].some(n => n.nodeType === 3 && /[A-Za-z0-9ÄÖÜäöü€]/.test(n.textContent))) return;
+                    if (el.closest('button[disabled], .office-viewport, svg, .club-logo')) return;
+                    const cs = getComputedStyle(el);
+                    if (cs.visibility === 'hidden' || parseFloat(cs.opacity) < 0.5) return;
+                    const fg = parse(cs.color); if (!fg) return;
+                    const bg = hintergrund(el);
+                    const v = verh(ueber(fg, bg), bg);
+                    const gross = parseFloat(cs.fontSize) >= 24 || (parseFloat(cs.fontSize) >= 18.6 && parseInt(cs.fontWeight) >= 700);
+                    if (v < (gross ? 3 : 4.5)) out.add(`${id} "${el.textContent.trim().slice(0, 24)}" ${v.toFixed(2)}`);
+                });
+            }
+            probe.remove();
+            return [...out];
+        }, theme);
+    }
+    for (const theme of themes) {
+        assert(fehler[theme].length === 0, `Theme ${theme}: jeder Text erreicht den WCAG-Kontrast (${fehler[theme].length}: ${fehler[theme].slice(0, 5).join(' | ')})`);
+    }
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Kontrast-Scan');
     await page.close();
 }
 
@@ -10193,6 +10299,8 @@ async function main() {
         testPersonalGrundAnzeige,
         testVorstandHub,
         testDesignThemes,
+        testKeineFestenFarben,
+        testKontrastAlleThemes,
         testEntlassungsGrund,
         testEnglishUi,
         testSwapDeals,

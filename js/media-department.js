@@ -132,7 +132,7 @@ function renderMediaDepartmentPanel() {
     const blocked = getMediaActionBlockReason();
     let html = '<div style="font-size:var(--fs-caption);">';
     if (md.event) {
-        html += `<div style="background:rgba(255,84,104,0.1); border-left:3px solid var(--danger); padding:6px; border-radius:4px; margin-bottom:6px;">
+        html += `<div style="background:color-mix(in srgb, var(--danger) 10%, transparent); border-left:3px solid var(--danger); padding:6px; border-radius:4px; margin-bottom:6px;">
             <div style="font-weight:bold;">${md.event.title}</div><div style="color:var(--text-muted); margin:3px 0;">${md.event.text}</div>
             ${MEDIA_EVENT_OPTIONS[md.event.type].map((o, i) => `<button onclick="answerMediaEvent(${i})" class="${i === 0 ? 'btn-action' : 'btn-secondary'}" style="font-size:var(--fs-micro); padding:3px 6px; margin:2px 4px 0 0;">${o.label}</button>`).join('')}
         </div>`;

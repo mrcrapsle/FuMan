@@ -15,12 +15,12 @@
      Entwicklertools untersuchen lassen (z.B. Dateimanager-Vorschauen auf Android). Bewusst
      als ALLERERSTES Skript im <body>, damit es auch ganz frühe Boot-Fehler einfängt.
 -->
-<div id="global-error-banner" style="display:none; position:fixed; top:0; left:0; right:0; z-index:999999; background:#5a0a15; color:#fff; padding:10px 12px; font-size:var(--fs-body); font-family:monospace; max-height:40vh; overflow-y:auto; border-bottom:3px solid #ff4d6d; word-break:break-word;">
+<div id="global-error-banner" style="display:none; position:fixed; top:0; left:0; right:0; z-index:999999; background:var(--danger); color:var(--on-strong); padding:10px 12px; font-size:var(--fs-body); font-family:monospace; max-height:40vh; overflow-y:auto; border-bottom:3px solid var(--danger); word-break:break-word;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-        <strong style="color:#ff8a9b;">⚠️ Technischer Fehler (bitte melden):</strong>
+        <strong style="color:var(--danger);">⚠️ Technischer Fehler (bitte melden):</strong>
         <div>
-            <button onclick="window.__exportRuntimeErrorLog && window.__exportRuntimeErrorLog()" style="background:#ffe27a; color:#5a0a15; border:none; border-radius:4px; padding:2px 8px; font-weight:bold; margin-right:4px;">📤 Exportieren</button>
-            <button onclick="document.getElementById('global-error-banner').style.display='none'" style="background:#fff; color:#5a0a15; border:none; border-radius:4px; padding:2px 8px; font-weight:bold;">✕</button>
+            <button onclick="window.__exportRuntimeErrorLog && window.__exportRuntimeErrorLog()" style="background:var(--gold); color:var(--danger); border:none; border-radius:4px; padding:2px 8px; font-weight:bold; margin-right:4px;">📤 Exportieren</button>
+            <button onclick="document.getElementById('global-error-banner').style.display='none'" style="background:var(--on-strong); color:var(--danger-fill); border:none; border-radius:4px; padding:2px 8px; font-weight:bold;">✕</button>
         </div>
     </div>
     <div id="global-error-content"></div>
@@ -53,7 +53,7 @@
             if (!banner || !content) return;
             banner.style.display = 'block';
             var line = document.createElement('div');
-            line.style.borderTop = '1px solid rgba(255,255,255,0.2)';
+            line.style.borderTop = '1px solid color-mix(in srgb, var(--ink) 20%, transparent)';
             line.style.padding = '4px 0';
             line.textContent = '[' + new Date().toLocaleTimeString('de-DE') + '] ' + msg;
             content.appendChild(line);
@@ -91,7 +91,7 @@
     </div>
 </div>
 <div class="app-notice-overlay" id="app-notice" style="display:none;"></div>
-<div id="version-info" style="position:fixed; bottom:8px; right:8px; background:rgba(0,0,0,0.7); color:#FFC107; padding:6px 12px; border-radius:4px; font-size:var(--fs-small); font-weight:bold; z-index:100; border:1px solid #FFC107; cursor:help;" title="Anstoss FM13 - Spielversion">
+<div id="version-info" style="position:fixed; bottom:8px; right:8px; background:color-mix(in srgb, var(--shade) 70%, transparent); color:var(--gold); padding:6px 12px; border-radius:4px; font-size:var(--fs-small); font-weight:bold; z-index:100; border:1px solid var(--gold); cursor:help;" title="Anstoss FM13 - Spielversion">
     <span id="version-display"></span>
 </div>
 <div id="app-toast" class="app-toast"></div>
@@ -160,7 +160,7 @@
     <div class="generic-modal-box">
         <button onclick="closePlayerDetail()" class="generic-modal-close">✕</button>
         <div id="pd-avatar" class="modal-avatar-photo">👤</div>
-        <div style="text-align:center; font-size:var(--fs-title); font-weight:900; color:#fff;" id="pd-name">Spielername</div>
+        <div style="text-align:center; font-size:var(--fs-title); font-weight:900; color:var(--text-main);" id="pd-name">Spielername</div>
         <div class="modal-field-grid" id="pd-fields"></div>
         <div style="font-size:var(--fs-body); font-weight:800; color:var(--accent); margin-top:6px;">Fähigkeiten</div>
         <div class="modal-stat-grid" id="pd-stats"></div>
@@ -181,7 +181,7 @@
         <div style="display:grid; grid-template-columns: 1fr 1.1fr; gap:12px;">
             <div class="formation-grid-list" id="formation-modal-list"></div>
             <div>
-                <div style="text-align:center; font-weight:900; color:#fff; margin-bottom:4px;" id="formation-modal-title">4-4-2</div>
+                <div style="text-align:center; font-weight:900; color:var(--text-main); margin-bottom:4px;" id="formation-modal-title">4-4-2</div>
                 <div class="formation-preview-pitch" id="formation-preview-pitch"></div>
             </div>
         </div>
@@ -196,7 +196,7 @@
 <div id="negotiation-stepper-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
         <button onclick="closeNegotiationStepper()" class="generic-modal-close">✕</button>
-        <div style="font-size:var(--fs-title); font-weight:900; color:#fff;" id="nego-player-name">Spielername</div>
+        <div style="font-size:var(--fs-title); font-weight:900; color:var(--text-main);" id="nego-player-name">Spielername</div>
         <div style="font-size:var(--fs-body); color:var(--text-muted); margin-bottom:10px;" id="nego-club-name">Verkaufsverhandlung</div>
         <div class="modal-avatar-photo" style="cursor:pointer;" id="player-detail-link-nego">👤</div>
         <div style="font-size:var(--fs-body); color:var(--accent); font-weight:800; margin:6px 0;">Der Manager erwartet dein Angebot.</div>
@@ -237,7 +237,7 @@
 <div id="scout-filter-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
         <button onclick="closeScoutFilterModal()" class="generic-modal-close">✕</button>
-        <div style="font-size:var(--fs-title); font-weight:900; color:#fff; margin-bottom:10px;">🔭 Scouting-Fokus einstellen</div>
+        <div style="font-size:var(--fs-title); font-weight:900; color:var(--text-main); margin-bottom:10px;">🔭 Scouting-Fokus einstellen</div>
 
         <div class="stepper-row">
             <span>Mindest-Stärke</span>
@@ -289,7 +289,7 @@
 <!-- HALBZEIT-ANSPRACHE -->
 <div id="halftime-talk-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
-        <div style="font-size:var(--fs-title); font-weight:900; color:#fff; margin-bottom:6px;">🎤 Kabinenansprache</div>
+        <div style="font-size:var(--fs-title); font-weight:900; color:var(--text-main); margin-bottom:6px;">🎤 Kabinenansprache</div>
         <div style="font-size:var(--fs-body-lg); color:var(--text-muted); margin-bottom:12px;" id="halftime-score-summary">Halbzeit - was sagst du der Mannschaft?</div>
         <div id="halftime-sub-suggestion-box" style="margin-bottom:10px;"></div>
         <button onclick="chooseHalftimeTalk('anfeuern')" class="btn-action" style="margin-bottom:6px;">🔥 Anfeuern</button>
@@ -302,7 +302,7 @@
 <!-- STANDARDSITUATION IM LIVESPIEL (js/set-pieces.js) -->
 <div id="setpiece-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
-        <div style="font-size:var(--fs-title); font-weight:900; color:#fff; margin-bottom:6px;" id="setpiece-title">Standard</div>
+        <div style="font-size:var(--fs-title); font-weight:900; color:var(--text-main); margin-bottom:6px;" id="setpiece-title">Standard</div>
         <div style="font-size:var(--fs-body); color:var(--text-muted); margin-bottom:10px;">Das Spiel ruht, bis du entscheidest.</div>
         <div id="setpiece-options"></div>
     </div>
@@ -311,7 +311,7 @@
 <!-- MANAGER-INTERVIEW (POST-MATCH) -->
 <div id="interview-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
-        <div style="font-size:var(--fs-title); font-weight:900; color:#fff; margin-bottom:6px;">🎙️ Interview nach dem Spiel</div>
+        <div style="font-size:var(--fs-title); font-weight:900; color:var(--text-main); margin-bottom:6px;">🎙️ Interview nach dem Spiel</div>
         <div style="font-size:var(--fs-body-lg); color:var(--text-muted); margin-bottom:12px;" id="interview-question-text">Frage der Presse...</div>
         <div id="interview-answers-box"></div>
     </div>
@@ -321,8 +321,8 @@
 <div id="cup-draw-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box" style="text-align:center;">
         <div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--accent); margin-bottom:10px;" id="cup-draw-round-name">Runde</div>
-        <div style="font-size:var(--fs-title-sm); color:#cbd5e1; margin-bottom:14px;" id="cup-draw-reveal-text">🎟️ Die Kugeln rollen...</div>
-        <div style="font-size:22px; font-weight:900; color:#fff; display:none; margin-bottom:14px;" id="cup-draw-opponent-name"></div>
+        <div style="font-size:var(--fs-title-sm); color:var(--text-main); margin-bottom:14px;" id="cup-draw-reveal-text">🎟️ Die Kugeln rollen...</div>
+        <div style="font-size:22px; font-weight:900; color:var(--text-main); display:none; margin-bottom:14px;" id="cup-draw-opponent-name"></div>
         <button onclick="closeCupDrawCeremony()" class="btn-primary">Schließen</button>
     </div>
 </div>
@@ -330,8 +330,8 @@
 <!-- EUROPAPOKAL-AUSLOSUNGS-ZEREMONIE -->
 <div id="europe-draw-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box" style="text-align:center;">
-        <div style="font-size:var(--fs-title-sm); font-weight:900; color:#82b1ff; margin-bottom:10px;" id="europe-draw-round-name">Champions Cup</div>
-        <div style="font-size:var(--fs-title-sm); color:#cbd5e1; margin-bottom:14px;" id="europe-draw-reveal-text">🎟️ Die Kugeln rollen...</div>
+        <div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--europe); margin-bottom:10px;" id="europe-draw-round-name">Champions Cup</div>
+        <div style="font-size:var(--fs-title-sm); color:var(--text-main); margin-bottom:14px;" id="europe-draw-reveal-text">🎟️ Die Kugeln rollen...</div>
         <div id="europe-draw-opponents-list"></div>
         <button onclick="closeEuropeDrawCeremony()" class="btn-europe" style="margin-top:10px;">Schließen</button>
     </div>
@@ -340,7 +340,7 @@
 <!-- ELFMETERSCHIESSEN-TICKER -->
 <div id="shootout-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
-        <div style="font-size:var(--fs-title-sm); font-weight:900; color:#fff; margin-bottom:8px;" id="shootout-title">Elfmeterschießen</div>
+        <div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--text-main); margin-bottom:8px;" id="shootout-title">Elfmeterschießen</div>
         <div id="shootout-log" style="max-height:220px; overflow-y:auto; margin-bottom:10px;"></div>
         <div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--gold); text-align:center; margin-bottom:10px;" id="shootout-result"></div>
         <button onclick="closeShootoutTicker()" class="btn-primary">Schließen</button>
@@ -350,7 +350,7 @@
 <!-- ELFMETERSCHÜTZEN-AUSWAHL -->
 <div id="shooter-select-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
-        <div style="font-size:var(--fs-title-sm); font-weight:900; color:#fff; margin-bottom:6px;">🎯 Schützen-Reihenfolge festlegen</div>
+        <div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--text-main); margin-bottom:6px;">🎯 Schützen-Reihenfolge festlegen</div>
         <div style="font-size:var(--fs-body); color:var(--text-muted); margin-bottom:8px;">Wähle genau 5 Schützen in der gewünschten Reihenfolge (antippen zum Hinzufügen/Entfernen).</div>
         <div style="font-size:var(--fs-body); color:var(--accent); font-weight:bold; margin-bottom:6px;" id="shooter-select-count">0/5 gewählt</div>
         <button onclick="useLastShooterOrder()" id="shooter-select-last-order" class="btn-secondary" style="display:none; margin-bottom:8px; font-size:var(--fs-small);">🔁 Letzte Reihenfolge übernehmen</button>
@@ -382,7 +382,7 @@
 <!-- BUS-SPONSORING-VERHANDLUNG -->
 <div id="bus-sponsor-nego-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
-        <div style="font-size:var(--fs-title); font-weight:900; color:#fff; margin-bottom:4px;">🚌 Bus-Sponsoring verhandeln</div>
+        <div style="font-size:var(--fs-title); font-weight:900; color:var(--text-main); margin-bottom:4px;">🚌 Bus-Sponsoring verhandeln</div>
         <div style="font-size:var(--fs-body); color:var(--text-muted); margin-bottom:10px;">Verhandlung mit <strong id="bus-nego-sponsor-name">Sponsor</strong></div>
 
         <div class="stepper-row">
@@ -410,7 +410,7 @@
 <!-- LEIH-RÜCKRUF-VERHANDLUNG -->
 <div id="loan-recall-nego-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
-        <div style="font-size:var(--fs-title); font-weight:900; color:#fff; margin-bottom:4px;">📥 Rückholung verhandeln</div>
+        <div style="font-size:var(--fs-title); font-weight:900; color:var(--text-main); margin-bottom:4px;">📥 Rückholung verhandeln</div>
         <div style="font-size:var(--fs-body); color:var(--text-muted); margin-bottom:10px;" id="loan-recall-nego-club">Verhandlung mit Leihverein</div>
 
         <div class="stepper-row">
@@ -438,7 +438,7 @@
 <!-- ABWERBEVERSUCH ANDERER KLUBS -->
 <div id="joboffer-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
-        <div style="font-size:var(--fs-title); font-weight:900; color:#fff; margin-bottom:8px;">💼 Interesse von außen</div>
+        <div style="font-size:var(--fs-title); font-weight:900; color:var(--text-main); margin-bottom:8px;">💼 Interesse von außen</div>
         <div style="font-size:var(--fs-body-lg); color:var(--text-muted); margin-bottom:14px;"><strong id="joboffer-club-name">Ein Klub</strong> will dich als Trainer. Wechseln, das Interesse beim eigenen Vorstand als Druckmittel nutzen oder Vereinstreue zeigen?</div>
         <button onclick="acceptJobOfferMove(this)" class="btn-action" style="margin-bottom:8px;">🔄 Wechseln (Karriere bleibt, Kader neu)</button>
         <button onclick="acceptJobOfferLeverage()" class="btn-primary" style="margin-bottom:8px;">💰 Für mehr Budget nutzen</button>
@@ -451,9 +451,9 @@
     <div class="generic-modal-box">
         <div style="font-size:var(--fs-title); font-weight:900; color:var(--danger); margin-bottom:8px;">⚠️ Vertrags-Ultimatum!</div>
         <div id="ultimatum-player-avatar" style="display:flex; justify-content:center; margin-bottom:6px;"></div>
-        <div style="font-size:var(--fs-title-sm); font-weight:900; color:#fff; text-align:center;" id="ultimatum-player-name">Spielername</div>
+        <div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--text-main); text-align:center;" id="ultimatum-player-name">Spielername</div>
         <div style="font-size:var(--fs-body); color:var(--text-muted); margin-bottom:14px;" id="ultimatum-player-info">Details</div>
-        <div style="font-size:var(--fs-body); color:#cbd5e1; margin-bottom:14px;">„Entweder ich bekomme einen neuen Vertrag, oder ich will verkauft werden!“</div>
+        <div style="font-size:var(--fs-body); color:var(--text-main); margin-bottom:14px;">„Entweder ich bekomme einen neuen Vertrag, oder ich will verkauft werden!“</div>
         <button onclick="resolveUltimatumRenew()" class="btn-primary" style="margin-bottom:8px;">✅ Neuen Vertrag anbieten</button>
         <button onclick="resolveUltimatumViaAgent()" id="btn-ultimatum-agent" class="btn-secondary" style="margin-bottom:8px; display:none;">🕴️ Über Berater lösen</button>
         <button onclick="extendUltimatumDeadline()" id="btn-ultimatum-extend" class="btn-secondary" style="margin-bottom:8px;">⏳ Vorschuss zahlen, Frist +2 Spieltage</button>
@@ -471,8 +471,8 @@
         <div class="club-brand">
             <div class="club-logo" id="club-logo-display" style="position:relative;">
                 <span id="club-logo-symbol-text">FCM</span>
-                <span id="club-logo-pattern-badge" style="display:none; position:absolute; bottom:-3px; right:-3px; width:16px; height:16px; background:#0d1220; border-radius:50%; align-items:center; justify-content:center; font-size:var(--fs-caption); border:1px solid rgba(255,255,255,0.3);"></span>
-                <span id="club-logo-animal-badge" style="display:none; position:absolute; top:-3px; left:-3px; width:16px; height:16px; background:#0d1220; border-radius:50%; align-items:center; justify-content:center; font-size:var(--fs-caption); border:1px solid rgba(255,255,255,0.3);"></span>
+                <span id="club-logo-pattern-badge" style="display:none; position:absolute; bottom:-3px; right:-3px; width:16px; height:16px; background:var(--surface-0); border-radius:50%; align-items:center; justify-content:center; font-size:var(--fs-caption); border:1px solid color-mix(in srgb, var(--ink) 30%, transparent);"></span>
+                <span id="club-logo-animal-badge" style="display:none; position:absolute; top:-3px; left:-3px; width:16px; height:16px; background:var(--surface-0); border-radius:50%; align-items:center; justify-content:center; font-size:var(--fs-caption); border:1px solid color-mix(in srgb, var(--ink) 30%, transparent);"></span>
             </div>
             <div>
                 <div class="club-name" id="header-club-name">1.FC Moritz Leipzig</div>
@@ -724,7 +724,7 @@
                         <div id="insolvency-status-box" class="box" style="display:none; border-color:var(--danger); color:var(--danger); font-size:var(--fs-body); margin-bottom:6px;"></div>
                         <div style="font-size:var(--fs-body); margin-bottom:2px;" id="budget-transfer-bar-label">Transferbudget: 0 €</div>
                         <div style="font-size:var(--fs-body); margin-bottom:2px;" id="budget-wage-bar-label">Gehaltsbudget: 0 / 0</div>
-                        <div style="background:#1e293b; border-radius:6px; height:10px; overflow:hidden; margin-bottom:8px;">
+                        <div style="background:color-mix(in srgb, var(--europe) 30%, var(--surface-1)); border-radius:6px; height:10px; overflow:hidden; margin-bottom:8px;">
                             <div id="budget-wage-bar-fill" style="height:100%; width:0%; background:var(--primary); transition:width 0.3s;"></div>
                         </div>
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
@@ -742,8 +742,8 @@
                     <div class="dashboard-hero-club">
                         <div class="crest-fallback" id="dash-hero-crest" style="display:flex; align-items:center; justify-content:center; font-size:var(--fs-title);">🦁</div>
                         <div>
-                            <div style="font-size:var(--fs-title-sm); font-weight:900; color:#fff;" id="dash-hero-club-name">1.FC Moritz Leipzig</div>
-                            <div style="font-size:var(--fs-caption); color:rgba(255,255,255,0.75);" id="dash-hero-subline">6. Liga · Spieltag 1</div>
+                            <div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--text-main);" id="dash-hero-club-name">1.FC Moritz Leipzig</div>
+                            <div style="font-size:var(--fs-caption); color:color-mix(in srgb, var(--ink) 75%, transparent);" id="dash-hero-subline">6. Liga · Spieltag 1</div>
                         </div>
                     </div>
                     <div class="dashboard-hero-bowl-wrapper"></div>
@@ -759,9 +759,9 @@
                 <div class="panel">
                     <div class="panel-header">
                         <span>⚽ NÄCHSTE BEGEGNUNG (SPIELTAG <span id="dash-mday">1</span>)</span>
-                        <span id="dash-league-name" style="color:#fff; font-size:var(--fs-small);">4. Liga</span>
+                        <span id="dash-league-name" style="color:var(--text-main); font-size:var(--fs-small);">4. Liga</span>
                     </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:rgba(0,0,0,0.3); border-radius:8px; margin-bottom:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:10px; background:color-mix(in srgb, var(--shade) 30%, transparent); border-radius:8px; margin-bottom:8px;">
                         <div style="text-align:center; flex:1;">
                             <div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--primary);" id="dash-our-club-name">1.FC Moritz Leipzig</div>
                             <div style="font-size:var(--fs-caption); color:var(--text-muted);">Heimteam (Str: <span id="dash-our-str">60</span>)</div>
@@ -777,7 +777,7 @@
                     <div id="dash-match-actions" style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;">
                         <button onclick="startMatchdayFlow()" class="btn-action" style="font-size:var(--fs-body-lg);">▶ Spieltag starten (Livespiel)</button>
                         <button onclick="simulateMatchdays(5)" class="btn-secondary">⏩ 5 Spieltage simulieren</button>
-                        <button onclick="simulateFullSeason()" class="btn-primary" style="background:#f59e0b; color:#000;">⚡ Saison durchsimulieren</button>
+                        <button onclick="simulateFullSeason()" class="btn-action">⚡ Saison durchsimulieren</button>
                     </div>
                     <div id="dash-scenario-box"></div>
                     <div id="dash-season-preview-box"></div>
@@ -818,7 +818,7 @@
                     </div>
                     <div class="panel">
                         <div class="panel-header" style="color:var(--europe);">🌟 EUROPA & MANAGER</div>
-                        <div>Champions Cup: <strong id="dash-europe-status" style="color:#82b1ff;">Nicht qualifiziert</strong></div>
+                        <div>Champions Cup: <strong id="dash-europe-status" style="color:var(--europe);">Nicht qualifiziert</strong></div>
                         <div>Trainer-Perks: <strong id="dash-perks-count" style="color:var(--gold);">0 / 5 Aktiv</strong></div>
                     </div>
                     <div class="panel">
@@ -1047,7 +1047,7 @@
                 <div class="panel">
                     <div class="panel-header">
                         <span>📅 SAISON-KALENDER & TERMINE</span>
-                        <span>Aktueller Monat: <strong id="cal-month-name" style="color:#fff;">August</strong></span>
+                        <span>Aktueller Monat: <strong id="cal-month-name" style="color:var(--text-main);">August</strong></span>
                     </div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin:6px 0;">
                         <button onclick="scheduleFriendlyMatch()" class="btn-action">⚽ Freundschaftsspiel vereinbaren (+Einnahmen)</button>
@@ -1088,7 +1088,7 @@
                     <div class="panel">
                         <div class="panel-header">
                             <span>🏦 MONATLICHE GEWINN- & VERLUSTRECHNUNG (GuV)</span>
-                            <span id="fin-month-title" style="color:#fff;">Monat 1</span>
+                            <span id="fin-month-title" style="color:var(--text-main);">Monat 1</span>
                         </div>
                         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
                             <div class="box">
@@ -1892,7 +1892,7 @@
                 <button onclick="showScreen('screen-squad-planning')" id="hubtab-btn-screen-squad-planning" class="btn-secondary" style="font-size:var(--fs-small); padding:6px 4px;">📊 Planungstool</button>
             </div>
             <div id="screen-transfer" style="display:none;">
-                <div id="winter-window-banner" style="display:none; background:linear-gradient(135deg, rgba(63,182,255,0.25), rgba(23,201,184,0.15)); border:1px solid var(--blue); border-radius:10px; padding:8px 12px; margin-bottom:8px; font-size:var(--fs-body); color:#fff;"></div>
+                <div id="winter-window-banner" style="display:none; background:linear-gradient(135deg, color-mix(in srgb, var(--blue) 25%, transparent), color-mix(in srgb, var(--teal) 15%, transparent)); border:1px solid var(--blue); border-radius:10px; padding:8px 12px; margin-bottom:8px; font-size:var(--fs-body); color:var(--on-strong);"></div>
                 <div class="panel">
                     <div class="panel-header">
                         <span>🤝 TRANSFERMARKT, SCOUTING & VERHANDLUNGEN</span>
@@ -2108,9 +2108,9 @@
             </div>
             <div id="screen-europe" style="display:none;">
                 <div class="panel box-europe">
-                    <div class="panel-header" style="color:#82b1ff;">
+                    <div class="panel-header" style="color:var(--europe);">
                         <span>🌟 UEFA CHAMPIONS CUP (KÖNIGSKLASSE)</span>
-                        <span id="europe-status-tag" style="font-size:var(--fs-small); color:#fff;">Status: Gruppenphase</span>
+                        <span id="europe-status-tag" style="font-size:var(--fs-small); color:var(--text-main);">Status: Gruppenphase</span>
                     </div>
                     <div class="box">
                         Hier duellieren sich Europas 8 beste Spitzenvereine in 2 Vierergruppen. Spieltage finden an den Spieltagen <strong>3, 7, 11, 15, 19 und 23</strong> statt (Halbfinale: SpT 27, Finale: SpT 31)!<br>
@@ -2122,11 +2122,11 @@
 
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:8px; margin:8px 0;">
                         <div class="panel">
-                            <div class="panel-header" style="font-size:var(--fs-body); color:#82b1ff;">GRUPPE A</div>
+                            <div class="panel-header" style="font-size:var(--fs-body); color:var(--europe);">GRUPPE A</div>
                             <table><thead><tr><th>Pl</th><th>Team</th><th>Sp</th><th>Tore</th><th>Pkt</th></tr></thead><tbody id="europe-group-a-body"></tbody></table>
                         </div>
                         <div class="panel">
-                            <div class="panel-header" style="font-size:var(--fs-body); color:#82b1ff;">GRUPPE B</div>
+                            <div class="panel-header" style="font-size:var(--fs-body); color:var(--europe);">GRUPPE B</div>
                             <table><thead><tr><th>Pl</th><th>Team</th><th>Sp</th><th>Tore</th><th>Pkt</th></tr></thead><tbody id="europe-group-b-body"></tbody></table>
                         </div>
                     </div>
@@ -2136,7 +2136,7 @@
                         <div id="europe-ko-tree"></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header" style="font-size:var(--fs-body); color:#82b1ff;">📜 EUROPAPOKAL-HISTORIE</div>
+                        <div class="panel-header" style="font-size:var(--fs-body); color:var(--europe);">📜 EUROPAPOKAL-HISTORIE</div>
                         <div id="europe-history-box"></div>
                     </div>
                 </div>
@@ -2387,7 +2387,7 @@
                 <div class="panel box-admin">
                     <div class="panel-header" style="color:var(--gold);">
                         <span>🛠️ ADMIN-DIAGNOSE & LIVE-INSPECTOR</span>
-                        <span style="font-size:var(--fs-small); color:#fff;">Entwickler-Konsole Aktiv</span>
+                        <span style="font-size:var(--fs-small); color:var(--text-main);">Entwickler-Konsole Aktiv</span>
                     </div>
                     <div style="text-align:center; font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;" id="admin-version-tag">Version wird geladen...</div>
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:6px; font-size:var(--fs-small);" id="admin-inspector-grid">
@@ -2419,7 +2419,7 @@
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px; margin-bottom:6px;">
                         <button onclick="adminHealAndBoostSquad()" class="btn-primary">✨ 100% Fitness & 100% Moral & Geheilt</button>
                         <button onclick="adminUpgradeEntireSquad(5)" class="btn-action">⚡ Alle Spieler im Kader +5 Stärke</button>
-                        <button onclick="adminMaxOutEntireSquad()" class="btn-danger" style="background:#7c2d12;">🌟 GESAMTES TEAM AUF MAXIMALWERT (99 überall!)</button>
+                        <button onclick="adminMaxOutEntireSquad()" class="btn-industry">🌟 GESAMTES TEAM AUF MAXIMALWERT (99 überall!)</button>
                         <button onclick="adminGrantPremiumPoints()" class="btn-gold" style="margin-top:6px;">💎 Admin: +5.000 Premium-Punkte kostenlos</button>
                         <button onclick="adminBoostSquadStrengthBy5()" class="btn-secondary" style="margin-top:6px;">📈 Kaderstärke um 5 Schritte erhöhen</button>
                         <button onclick="adminMaxOutYouthAndSecondTeam()" class="btn-secondary">🌟 Auch Jugend & zweite Mannschaft maximieren</button>
@@ -2475,11 +2475,11 @@
 
                 <div class="panel">
                     <div class="panel-header">💾 SAVEGAME EXPORT & JSON-IMPORT</div>
-                    <textarea id="adm-save-json" style="width:100%; height:65px; background:#07090e; color:var(--primary); font-family:monospace; font-size:var(--fs-caption); border:1px solid #334155; border-radius:4px; padding:4px;" placeholder="Hier Savegame-JSON einfügen oder exportieren..."></textarea>
+                    <textarea id="adm-save-json" style="width:100%; height:65px; background:var(--surface-0); color:var(--primary); font-family:monospace; font-size:var(--fs-caption); border:1px solid color-mix(in srgb, var(--europe) 30%, var(--surface-1)); border-radius:4px; padding:4px;" placeholder="Hier Savegame-JSON einfügen oder exportieren..."></textarea>
                     <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px; margin-top:4px;">
                         <button onclick="adminExportSaveJson()" class="btn-blue">📤 JSON Exportieren</button>
                         <button onclick="adminImportSaveJson()" class="btn-danger">📥 JSON Importieren</button>
-                        <button onclick="adminHardResetGame()" id="btn-admin-hard-reset" data-confirming="false" class="btn-danger" style="background:#b91c1c;">💣 Komplett-Reset</button>
+                        <button onclick="adminHardResetGame()" id="btn-admin-hard-reset" data-confirming="false" class="btn-danger">💣 Komplett-Reset</button>
                     </div>
                 </div>
 
@@ -2492,7 +2492,7 @@
                     <button onclick="exportSelfTestArchive()" class="btn-secondary" style="margin-top:6px;">📋 Verlauf exportieren</button>
                     <button onclick="downloadSelfTestArchiveFile()" class="btn-secondary" style="margin-top:6px;">💾 Als Datei herunterladen</button>
                     <div id="self-test-export-fallback" style="display:none; margin-top:6px;">
-                        <textarea readonly style="width:100%; height:80px; background:#07090e; color:var(--primary); font-family:monospace; font-size:var(--fs-caption); border:1px solid #334155; border-radius:4px; padding:4px;" onclick="this.select()"></textarea>
+                        <textarea readonly style="width:100%; height:80px; background:var(--surface-0); color:var(--primary); font-family:monospace; font-size:var(--fs-caption); border:1px solid color-mix(in srgb, var(--europe) 30%, var(--surface-1)); border-radius:4px; padding:4px;" onclick="this.select()"></textarea>
                     </div>
                 </div>
 
@@ -2537,7 +2537,7 @@
                     <div class="ticker-log" id="ticker-log"></div>
 
                     <!-- LIVE SHOUTS -->
-                    <div class="panel" style="margin:4px 0; padding:6px; background:rgba(0,0,0,0.5);">
+                    <div class="panel" style="margin:4px 0; padding:6px; background:color-mix(in srgb, var(--shade) 50%, transparent);">
                         <div style="font-size:var(--fs-caption); font-weight:bold; color:var(--accent); margin-bottom:3px;">📢 LIVE-COACHING ANWEISUNGEN:</div>
                         <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px;">
                             <button onclick="setLiveShout('standard')" id="shout-standard" class="btn-action" style="font-size:var(--fs-micro); padding:4px 2px;">⚖️ Standard</button>
@@ -2548,7 +2548,7 @@
                     </div>
 
                     <!-- LIVE-TAKTIK: Formation/Spielstil/Zweikampfhärte auch WÄHREND des Spiels änderbar -->
-                    <div class="panel" style="margin:4px 0; padding:6px; background:rgba(0,0,0,0.5);">
+                    <div class="panel" style="margin:4px 0; padding:6px; background:color-mix(in srgb, var(--shade) 50%, transparent);">
                         <div style="font-size:var(--fs-caption); font-weight:bold; color:var(--violet); margin-bottom:3px;">🧠 LIVE-TAKTIK (wirkt sofort auf den Rest der Partie):</div>
                         <select id="live-formation-select" class="input-inline" style="width:100%; margin-bottom:4px;" onchange="liveSetFormation(this.value)">
                             <option value="4-4-2">4-4-2</option>

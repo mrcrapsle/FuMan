@@ -729,7 +729,7 @@
                 let loy = Math.round(game.sponsor.loyalty ?? 65);
                 let color = loy >= 60 ? 'var(--primary)' : (loy >= 30 ? 'var(--accent)' : 'var(--danger)');
                 loyaltyBox.innerHTML = `<div style="display:flex; justify-content:space-between; margin-bottom:4px;"><span style="font-size:var(--fs-small);">Sponsoren-Zufriedenheit</span><strong style="color:${color};">${loy}/100</strong></div>
-                    <div style="background:rgba(228,197,140,0.1); border-radius:4px; height:8px; overflow:hidden;"><div style="width:${loy}%; height:100%; background:${color};"></div></div>`;
+                    <div style="background:color-mix(in srgb, var(--accent) 10%, transparent); border-radius:4px; height:8px; overflow:hidden;"><div style="width:${loy}%; height:100%; background:${color};"></div></div>`;
             }
         }
         let activationBox = document.getElementById('sponsor-activation-box');

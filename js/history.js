@@ -4,12 +4,12 @@
     // zur Geltung statt ihn zwischen normalen Pokal-Einträgen untergehen zu lassen).
     function classifyTrophyEntry(t) {
         if (t.includes('Vereinslegende')) return { icon: '👑', color: 'var(--gold)', category: 'Legenden-Status' };
-        if (t.includes('Champions Cup')) return { icon: '🌟', color: '#82b1ff', category: 'Europapokal' };
+        if (t.includes('Champions Cup')) return { icon: '🌟', color: 'var(--europe)', category: 'Europapokal' };
         if (t.includes('DFB-Pokal')) return { icon: '🏆', color: 'var(--accent)', category: 'Pokal' };
         if (t.includes('Supercup')) return { icon: '🏆', color: 'var(--gold)', category: 'Supercup' };
-        if (t.includes('Hallenmasters')) return { icon: '🏟️', color: '#cbd5e1', category: 'Hallenturnier' };
+        if (t.includes('Hallenmasters')) return { icon: '🏟️', color: 'var(--text-main)', category: 'Hallenturnier' };
         if (t.includes('Ungeschlagene Saison')) return { icon: '💯', color: 'var(--primary)', category: 'Perfekte Saison' };
-        return { icon: '🏅', color: '#cbd5e1', category: 'Erfolg' };
+        return { icon: '🏅', color: 'var(--text-main)', category: 'Erfolg' };
     }
 
     // Derbygegner (Phase 24.2): wer aus derselben Stadt oder per Traditionsduell ein Derby ist,

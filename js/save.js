@@ -322,7 +322,7 @@
         if (btn && btn.dataset.confirming !== 'true') {
             btn.dataset.confirming = 'true';
             btn.innerText = 'Wirklich?';
-            btn.style.color = '#fff';
+            btn.style.color = 'var(--text-main)';
             btn.style.background = 'var(--danger)';
             deleteConfirmTimers[slotNum] = setTimeout(() => {
                 if (btn && btn.isConnected) {

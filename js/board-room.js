@@ -121,11 +121,11 @@ function renderBoardRoomPanel() {
             <span style="color:var(--text-muted);">- bleibt sie lange unter 25%, droht ab der 2. Saison die Entlassung.</span></div>
         ${BOARD_ROLES.map((role, i) => {
             const v = views[role.key];
-            return `<div style="display:flex; justify-content:space-between; gap:6px; padding:3px 0; border-top:1px solid rgba(255,255,255,0.06);">
+            return `<div style="display:flex; justify-content:space-between; gap:6px; padding:3px 0; border-top:1px solid color-mix(in srgb, var(--ink) 6%, transparent);">
                 <span>${role.icon} <strong>${role.title}</strong> ${room.names[i]}<br><span style="color:var(--text-muted);">${v.reason}</span></span>
                 <strong style="color:${farbe(v.mood)}; white-space:nowrap;">${v.mood}%</strong></div>`;
         }).join('')}
-        <div style="margin-top:8px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.06);">
+        <div style="margin-top:8px; padding-top:6px; border-top:1px solid color-mix(in srgb, var(--ink) 6%, transparent);">
             ${(() => {
                 const w = getSaisonWette();
                 if (w) return `🎯 Saisonwette aktiv: Platz ${w.platz} oder besser.`;

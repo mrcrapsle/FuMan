@@ -170,7 +170,7 @@ function renderTeamCouncilPanel() {
 
     if (tc.concern) {
         const opts = COUNCIL_OPTIONS[tc.concern.type] || [];
-        html += `<div style="background:rgba(212,169,74,0.12); border-left:3px solid var(--gold); padding:6px; border-radius:4px; margin-top:4px;">
+        html += `<div style="background:color-mix(in srgb, var(--accent) 12%, transparent); border-left:3px solid var(--gold); padding:6px; border-radius:4px; margin-top:4px;">
             <div style="font-weight:bold;">${tc.concern.title}</div>
             <div style="color:var(--text-muted); margin:3px 0;">${tc.concern.text}</div>
             ${opts.map((o, i) => `<button onclick="answerCouncilConcern(${i})" class="${i === 0 ? 'btn-action' : 'btn-secondary'}" style="font-size:var(--fs-micro); padding:3px 6px; margin:2px 4px 0 0;">${o.label(tc.concern)}</button>`).join('')}

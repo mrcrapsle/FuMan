@@ -80,7 +80,7 @@
 
         let html = `
             <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">Gewinn- & Verlusttrend (letzte 12 Monate)</div>
-            <div style="display:flex; align-items:flex-end; justify-content:space-around; height:${chartHeight}px; background:rgba(255,255,255,0.03); border-radius:6px; padding:8px; gap:3px; border:1px solid rgba(255,255,255,0.1);">
+            <div style="display:flex; align-items:flex-end; justify-content:space-around; height:${chartHeight}px; background:color-mix(in srgb, var(--ink) 3%, transparent); border-radius:6px; padding:8px; gap:3px; border:1px solid color-mix(in srgb, var(--ink) 10%, transparent);">
         `;
 
         data.forEach((d, i) => {
@@ -146,7 +146,7 @@
                         <span>${b.label}</span>
                         <strong style="color:${b.color};">${pct}% (${formatVal(b.amount)})</strong>
                     </div>
-                    <div style="height:6px; background:rgba(255,255,255,0.05); border-radius:3px; overflow:hidden;">
+                    <div style="height:6px; background:color-mix(in srgb, var(--ink) 5%, transparent); border-radius:3px; overflow:hidden;">
                         <div style="height:100%; width:${pct}%; background:${b.color}; border-radius:3px;"></div>
                     </div>
                 </div>
@@ -207,17 +207,17 @@
                     <div style="font-size:var(--fs-body); color:var(--danger); font-weight:700;">-${formatVal(expenses)}</div>
                 </div>
             </div>
-            <div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:8px; margin-bottom:4px;">
+            <div style="background:color-mix(in srgb, var(--ink) 5%, transparent); border-radius:6px; padding:8px; margin-bottom:4px;">
                 <div style="display:flex; height:20px; border-radius:4px; overflow:hidden; gap:1px;">
-                    <div style="flex:${income}; background:var(--primary); position:relative;">
-                        <span style="position:absolute; left:50%; transform:translateX(-50%); top:50%; transform:translate(-50%, -50%); font-size:var(--fs-small); color:#000; white-space:nowrap; font-weight:700;">${total > 0 ? (income/total*100).toFixed(0) : '0'}%</span>
+                    <div style="flex:${income}; background:var(--primary-fill); position:relative;">
+                        <span style="position:absolute; left:50%; transform:translateX(-50%); top:50%; transform:translate(-50%, -50%); font-size:var(--fs-small); color:var(--on-accent); white-space:nowrap; font-weight:700;">${total > 0 ? (income/total*100).toFixed(0) : '0'}%</span>
                     </div>
-                    <div style="flex:${expenses}; background:var(--danger); position:relative;">
-                        <span style="position:absolute; left:50%; transform:translateX(-50%); top:50%; transform:translate(-50%, -50%); font-size:var(--fs-small); color:#fff; white-space:nowrap; font-weight:700;">${total > 0 ? (expenses/total*100).toFixed(0) : '0'}%</span>
+                    <div style="flex:${expenses}; background:var(--danger-fill); position:relative;">
+                        <span style="position:absolute; left:50%; transform:translateX(-50%); top:50%; transform:translate(-50%, -50%); font-size:var(--fs-small); color:var(--on-strong); white-space:nowrap; font-weight:700;">${total > 0 ? (expenses/total*100).toFixed(0) : '0'}%</span>
                     </div>
                 </div>
             </div>
-            <div style="text-align:center; font-size:var(--fs-small); padding:6px; background:${isProfit ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)'}; border-radius:4px; color:${statusColor}; border:1px solid ${statusColor};">
+            <div style="text-align:center; font-size:var(--fs-small); padding:6px; background:${isProfit ? 'color-mix(in srgb, var(--primary) 10%, transparent)' : 'color-mix(in srgb, var(--danger) 10%, transparent)'}; border-radius:4px; color:${statusColor}; border:1px solid ${statusColor};">
                 <div style="font-size:var(--fs-caption); color:var(--text-muted);">Monatlicher Gewinn/Verlust</div>
                 <div style="font-size:var(--fs-title-sm); font-weight:700;">${isProfit ? '+' : '-'}${formatVal(Math.abs(balance))}</div>
             </div>

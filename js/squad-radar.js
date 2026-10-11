@@ -76,7 +76,7 @@
                 let y = center + radius * Math.sin(angle);
                 return `${x},${y}`;
             }).join(' ');
-            gridLines += `<polygon points="${points}" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>`;
+            gridLines += `<polygon points="${points}" fill="none" stroke="color-mix(in srgb, var(--ink) 12%, transparent)" stroke-width="1"/>`;
         }
 
         // Achsen-Linien
@@ -84,7 +84,7 @@
             let angle = angleSlice * idx - Math.PI / 2;
             let x2 = center + (size / 2) * Math.cos(angle);
             let y2 = center + (size / 2) * Math.sin(angle);
-            return `<line x1="${center}" y1="${center}" x2="${x2}" y2="${y2}" stroke="rgba(255,255,255,0.1)" stroke-width="0.5"/>`;
+            return `<line x1="${center}" y1="${center}" x2="${x2}" y2="${y2}" stroke="color-mix(in srgb, var(--ink) 12%, transparent)" stroke-width="0.5"/>`;
         }).join('');
 
         // Daten-Polygon
@@ -130,7 +130,7 @@
                     let radius = (size / 2) * (attr.value / maxValue);
                     let x = center + radius * Math.cos(angle);
                     let y = center + radius * Math.sin(angle);
-                    return `<circle cx="${x}" cy="${y}" r="3" fill="var(--primary)" stroke="var(--text)" stroke-width="1"/>`;
+                    return `<circle cx="${x}" cy="${y}" r="3" fill="var(--primary)" stroke="var(--text-main)" stroke-width="1"/>`;
                 }).join('')}
                 ${labels}
                 ${valueLabels}
@@ -158,10 +158,10 @@
         metrics.forEach(m => {
             let pct = (m.value / m.max * 100).toFixed(0);
             html += `
-                <div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:8px; border:1px solid rgba(255,255,255,0.1);">
+                <div style="background:color-mix(in srgb, var(--ink) 5%, transparent); border-radius:6px; padding:8px; border:1px solid color-mix(in srgb, var(--ink) 10%, transparent);">
                     <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${m.label}</div>
                     <div style="font-size:var(--fs-title); font-weight:700; color:${m.color}; margin-bottom:4px;">${m.value}</div>
-                    <div style="height:4px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden;">
+                    <div style="height:4px; background:color-mix(in srgb, var(--ink) 5%, transparent); border-radius:2px; overflow:hidden;">
                         <div style="height:100%; width:${pct}%; background:${m.color}; border-radius:2px;"></div>
                     </div>
                 </div>
@@ -206,7 +206,7 @@
 
         comparisons.forEach(c => {
             let diff = c.our - c.league;
-            let diffColor = diff > 0 ? 'var(--primary)' : (diff < 0 ? 'var(--danger)' : '#aaa');
+            let diffColor = diff > 0 ? 'var(--primary)' : (diff < 0 ? 'var(--danger)' : 'var(--text-muted)');
             let ourWidth = (c.our / Math.max(c.league, c.our) * 100);
             let leagueWidth = (c.league / Math.max(c.league, c.our) * 100);
 
@@ -218,7 +218,7 @@
                     </div>
                     <div style="display:flex; gap:2px; height:8px;">
                         <div style="flex:${ourWidth}; background:var(--primary); border-radius:2px; opacity:0.8;" title="Dein Team: ${c.our}"></div>
-                        <div style="flex:${Math.max(1, leagueWidth - ourWidth)}; background:#666; border-radius:2px;" title="Liga-Ø: ${c.league}"></div>
+                        <div style="flex:${Math.max(1, leagueWidth - ourWidth)}; background:var(--surface-3); border-radius:2px;" title="Liga-Ø: ${c.league}"></div>
                     </div>
                 </div>
             `;

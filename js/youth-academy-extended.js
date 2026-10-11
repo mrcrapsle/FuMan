@@ -166,7 +166,7 @@ function renderYouthAcademyPanel() {
     let html = '<div style="margin-bottom:12px;">';
 
     if (coach) {
-        html += `<div style="background:rgba(62,224,138,0.1); padding:6px; border-radius:4px; margin-bottom:8px; border-left:3px solid var(--primary);">
+        html += `<div style="background:color-mix(in srgb, var(--primary) 10%, transparent); padding:6px; border-radius:4px; margin-bottom:8px; border-left:3px solid var(--primary);">
             <div style="font-size:var(--fs-caption); font-weight:bold; color:var(--primary);">👨‍🏫 Jugendtrainer: ${coach.name}</div>
             <div style="font-size:var(--fs-micro); color:var(--text-muted);">Entwicklungsbonus: +${Math.round((coachBonus - 1) * 100)}%</div>
             <button onclick="removeYouthCoach()" class="btn-secondary" style="font-size:var(--fs-micro); padding:2px 4px; margin-top:4px;">Entfernen</button>
@@ -195,7 +195,7 @@ function renderYouthAcademyPanel() {
             'new': '✨ neu in der Akademie'
         }[p.developmentTrend];
 
-        html += `<div style="background:rgba(100,100,100,0.1); padding:6px; border-radius:4px; margin-bottom:4px; font-size:var(--fs-caption);">
+        html += `<div style="background:color-mix(in srgb, var(--ink) 10%, transparent); padding:6px; border-radius:4px; margin-bottom:4px; font-size:var(--fs-caption);">
             <div><strong>${idx + 1}. ${p.name}</strong> (${p.pos} | Str: ${p.strength})</div>
             <div style="color:var(--text-muted); font-size:var(--fs-micro);">Potenzial: ${typeof getYouthPotentialText === 'function' ? getYouthPotentialText(p) : '?'} | Talentwert: ${p.talentScore}</div>
             ${p.potentialRevealed && typeof getYouthOfferSquadHint === 'function' ? `<div style="color:var(--text-muted); font-size:var(--fs-micro);">${getYouthOfferSquadHint(p)}</div>` : ''}
@@ -234,7 +234,7 @@ function renderYouthDevelopmentChart() {
 
         html += `<div style="margin-bottom:8px;">
             <div style="font-size:var(--fs-caption); font-weight:bold; margin-bottom:2px;">${p.name} (${minStr}-${maxStr})</div>
-            <div style="display:flex; align-items:flex-end; gap:2px; height:${barHeight}px; background:rgba(100,100,100,0.05); padding:4px; border-radius:4px;">`;
+            <div style="display:flex; align-items:flex-end; gap:2px; height:${barHeight}px; background:color-mix(in srgb, var(--ink) 5%, transparent); padding:4px; border-radius:4px;">`;
 
         history.forEach(str => {
             const height = ((str - minStr + 2.5) / range) * (barHeight - 8);

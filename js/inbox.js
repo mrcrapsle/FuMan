@@ -120,7 +120,7 @@
                     <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                         <strong style="color:${meta.color};">${meta.icon} ${m.title}</strong>
                         <span>
-                            <button onclick="event.stopPropagation(); toggleInboxImportant(${m.id})" style="background:none; border:none; color:${m.important ? 'var(--gold)' : '#64748b'}; cursor:pointer; font-size:var(--fs-body-lg); padding:0 2px;" title="Als wichtig markieren">${m.important ? '★' : '☆'}</button>
+                            <button onclick="event.stopPropagation(); toggleInboxImportant(${m.id})" style="background:none; border:none; color:${m.important ? 'var(--gold)' : 'var(--europe)'}; cursor:pointer; font-size:var(--fs-body-lg); padding:0 2px;" title="Als wichtig markieren">${m.important ? '★' : '☆'}</button>
                             ${archiveBtn}
                             <button onclick="event.stopPropagation(); deleteInboxMessage(${m.id})" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:var(--fs-body); padding:0 2px;" title="Endgültig löschen">✕</button>
                         </span>

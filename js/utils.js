@@ -99,8 +99,8 @@ function compareTableRows(a, b) {
         btn.dataset.confirmOrigBg = btn.style.background;
         btn.dataset.confirmOrigColor = btn.style.color;
         btn.innerHTML = frage;
-        btn.style.background = 'linear-gradient(135deg, #c73545, #a82838)';
-        btn.style.color = '#fff';
+        btn.style.background = 'linear-gradient(135deg, var(--danger), var(--danger))';
+        btn.style.color = 'var(--text-main)';
         confirmTimers.set(btn, setTimeout(() => {
             if (btn.isConnected && btn.dataset.confirming === 'true') {
                 btn.dataset.confirming = 'false';

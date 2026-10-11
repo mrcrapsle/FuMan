@@ -226,7 +226,7 @@
                     body = `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${s.name} · Skill ${s.skill} (Stufe ${s.level})</div>
                             <div style="display:flex; align-items:center; gap:8px;">
                                 <div style="font-size:18px; font-weight:900; color:var(--accent);">${mission.matchdaysLeft}</div>
-                                <div style="flex:1; display:flex; gap:2px;">${segments.map(done => `<div style="flex:1; height:10px; border-radius:2px; background:${done ? 'var(--accent)' : 'rgba(228,197,140,0.15)'};"></div>`).join('')}</div>
+                                <div style="flex:1; display:flex; gap:2px;">${segments.map(done => `<div style="flex:1; height:10px; border-radius:2px; background:${done ? 'var(--accent)' : 'color-mix(in srgb, var(--accent) 15%, transparent)'};"></div>`).join('')}</div>
                             </div>
                             <div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:3px;">✈️ Unterwegs - kehrt in ${mission.matchdaysLeft} SpT zurück</div>`;
                 } else {

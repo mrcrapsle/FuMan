@@ -138,7 +138,7 @@
                 <div style="flex:1;">
                     <div style="font-size:var(--fs-small); margin-bottom:4px;">⚙️ ${order.amount}x ${m ? m.name : order.merchKey}</div>
                     <div style="display:flex; gap:3px;">
-                        ${segments.map(done => `<div style="flex:1; height:14px; border-radius:3px; background:${done ? 'var(--industry)' : 'rgba(228,197,140,0.15)'}; border:1px solid ${done ? 'var(--industry)' : 'rgba(228,197,140,0.3)'};"></div>`).join('')}
+                        ${segments.map(done => `<div style="flex:1; height:14px; border-radius:3px; background:${done ? 'var(--industry)' : 'color-mix(in srgb, var(--accent) 15%, transparent)'}; border:1px solid ${done ? 'var(--industry)' : 'color-mix(in srgb, var(--accent) 30%, transparent)'};"></div>`).join('')}
                     </div>
                 </div>
             </div>`;

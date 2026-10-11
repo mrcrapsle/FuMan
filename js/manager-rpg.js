@@ -35,7 +35,7 @@
                 <span style="font-size:var(--fs-small);">Öffentliches Medienimage</span>
                 <strong style="color:${personality.color};">${img}/100 · ${personality.label}</strong>
             </div>
-            <div style="background:rgba(228,197,140,0.1); border-radius:4px; height:8px; overflow:hidden; margin-bottom:6px;">
+            <div style="background:color-mix(in srgb, var(--accent) 10%, transparent); border-radius:4px; height:8px; overflow:hidden; margin-bottom:6px;">
                 <div style="width:${img}%; height:100%; background:${personality.color};"></div>
             </div>
             <div style="font-size:var(--fs-caption); color:var(--text-muted);">Beeinflusst durch Interview-Antworten - ein positives Image lockt bessere Sponsoren-Erstangebote an.</div>
@@ -50,7 +50,7 @@
         if (!box) return;
         let hist = game.mediaImageHistory || [];
         if (hist.length < 2) { box.innerHTML = ''; return; }
-        box.innerHTML = `<div style="display:flex; align-items:flex-end; gap:2px; height:30px; background:rgba(0,0,0,0.2); border-radius:4px; padding:3px;">
+        box.innerHTML = `<div style="display:flex; align-items:flex-end; gap:2px; height:30px; background:color-mix(in srgb, var(--shade) 20%, transparent); border-radius:4px; padding:3px;">
             ${hist.slice(-10).map(h => `<div style="flex:1; height:${Math.max(4, h.value)}%; background:linear-gradient(to top, var(--teal), var(--gold)); border-radius:1px;" title="Saison ${h.season}: ${h.value}"></div>`).join('')}
         </div>`;
     }
@@ -109,7 +109,7 @@
             card.className = 'panel';
             card.style.borderColor = active ? 'var(--primary)' : 'var(--border)';
             card.innerHTML = `
-                <div class="panel-header"><span>${p.name}</span><strong style="color:${active?'var(--primary)':'#aaa'};">${active?'Aktiviert ✓':'Gesperrt'}</strong></div>
+                <div class="panel-header"><span>${p.name}</span><strong style="color:${active?'var(--primary)':'var(--text-muted)'};">${active?'Aktiviert ✓':'Gesperrt'}</strong></div>
                 <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:6px;">${p.desc}</div>
                 <button onclick="unlockManagerPerk('${p.id}')" class="${active?'btn-secondary':'btn-action'}" ${active||managerRPG.points<1?'disabled':''}>
                     ${active ? 'Bereits freigeschaltet' : 'Freischalten (1 Skill-Punkt)'}
@@ -127,7 +127,7 @@
             card.className = 'panel';
             card.style.borderColor = active ? 'var(--danger)' : 'var(--border)';
             card.innerHTML = `
-                <div class="panel-header"><span>${p.name}</span><strong style="color:${active?'var(--danger)':'#aaa'};">${active?'Aktiviert ✓':'Gesperrt'}</strong></div>
+                <div class="panel-header"><span>${p.name}</span><strong style="color:${active?'var(--danger)':'var(--text-muted)'};">${active?'Aktiviert ✓':'Gesperrt'}</strong></div>
                 <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:6px;">${p.desc}</div>
                 <button onclick="unlockManagerPerk('${p.id}')" class="${active?'btn-secondary':'btn-action'}" ${active||managerRPG.points<1?'disabled':''}>
                     ${active ? 'Bereits freigeschaltet' : 'Freischalten (1 Skill-Punkt)'}

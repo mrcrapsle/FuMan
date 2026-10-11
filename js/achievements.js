@@ -41,7 +41,7 @@
             <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:6px;">
                 ${ACHIEVEMENT_DEFINITIONS.map(def => {
                     let isUnlocked = unlocked.has(def.id);
-                    return `<div title="${def.desc}" style="text-align:center; padding:6px 2px; border-radius:8px; background:${isUnlocked ? 'rgba(23,201,184,0.15)' : 'rgba(255,255,255,0.04)'}; opacity:${isUnlocked ? '1' : '0.35'};">
+                    return `<div title="${def.desc}" style="text-align:center; padding:6px 2px; border-radius:8px; background:${isUnlocked ? 'color-mix(in srgb, var(--teal) 15%, transparent)' : 'color-mix(in srgb, var(--ink) 4%, transparent)'}; opacity:${isUnlocked ? '1' : '0.35'};">
                         <div style="font-size:20px;">${def.icon}</div>
                         <div style="font-size:var(--fs-micro); margin-top:2px;">${def.label}</div>
                     </div>`;

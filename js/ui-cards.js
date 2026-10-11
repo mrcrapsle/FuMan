@@ -37,6 +37,16 @@ function renderUiCard(opts = {}) {
         ${opts.actions ? `<div class="ui-card-actions">${opts.actions}</div>` : ''}`;
 }
 
+// Schrift auf einer frei gewählten Farbe (z. B. Wappenfarbe): dunkel auf hellen,
+// weiß auf dunklen Farben - damit der Text in jedem Theme lesbar bleibt.
+function lesbareSchriftAuf(hex) {
+    const m = String(hex || '').replace('#', '').match(/^([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+    if (!m) return 'var(--on-strong)';
+    const lin = v => { v = parseInt(v, 16) / 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    const L = 0.2126 * lin(m[1]) + 0.7152 * lin(m[2]) + 0.0722 * lin(m[3]);
+    return L > 0.36 ? 'var(--on-accent)' : 'var(--on-strong)';
+}
+
 // Kleine Werteleiste unter dem Kopf (z. B. Tempo, Schuss, Pass, Abwehr)
 function renderUiStatRow(werte) {
     return `<div class="ui-stat-row">${werte.map(([label, wert]) => `<div><span>${label}</span><strong>${wert}</strong></div>`).join('')}</div>`;
