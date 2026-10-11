@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.107', date: '11.10.2026', features: 'Phase 25.37: Transferpoker-Messung in Liga 5 und 6, Ladezustand statt fester Wartezeit in Tests, Tests für Dashboard-Erwartung und Spielerkarte, Karriere-Stand mit gesetzter Entlassung' };
+    const GAME_VERSION = { number: '3.108', date: '11.10.2026', features: 'Phase 25.38: Büro-Tests ohne feste Wartezeiten, passive Entlassungs-Messung mit Gründen, Historie um die Messungen ergänzt' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
