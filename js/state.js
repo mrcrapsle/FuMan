@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.113', date: '11.10.2026', features: 'Phase 25.43: Entscheidungen zur Legenden-Sperre und zu den Zahlen dokumentiert, Historie aktualisiert' };
+    const GAME_VERSION = { number: '3.114', date: '11.10.2026', features: 'Phase 25.44: Gebote aus älteren Spielständen werden auf die Obergrenze des Käufers gekappt, Vorstands-Neustart-Test mit festem Seed' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

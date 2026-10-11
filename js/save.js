@@ -202,6 +202,8 @@
             if (p.cupTournament) cupTournament = renameOldClubName(cupTournament);
             if (p.europeTournament) europeTournament = renameOldClubName(europeTournament);
         }
+        // Gebote aus einem Spielstand von vor der Obergrenze je Liga (25.40) nachträglich kappen.
+        if (p.incomingOffers && typeof bereinigeEingehendeAngebote === 'function') bereinigeEingehendeAngebote();
         // Felder entfernter Module sofort loswerden, nicht erst beim nächsten Monatswechsel.
         if (typeof cleanupRemovedModuleState === 'function') cleanupRemovedModuleState();
         // Heimatstadt (js/club-geo.js): alte Spielstände bekommen sie, Ligennamen/Landespokal passend.

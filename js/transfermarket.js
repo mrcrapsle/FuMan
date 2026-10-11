@@ -266,6 +266,17 @@
         return leaguesData.findIndex(table => table.some(t => t.name === name));
     }
 
+    // Gebote aus einem Spielstand von vor der Obergrenze kappen (25.40/25.44). Wird beim Laden aufgerufen,
+    // nachdem die Liga-Daten da sind. Ein Verein aus der 4. Liga konnte so noch 367 Mio. € auf dem Angebot haben.
+    function bereinigeEingehendeAngebote() {
+        incomingOffers.forEach(o => {
+            const stufe = kiStufeVonVerein(o.clubName);
+            const grenze = KI_ANGEBOT_OBERGRENZE[stufe >= 0 ? stufe : 0];
+            if (o.currentBid > grenze) o.currentBid = grenze;
+            if (o.originalBid > grenze) o.originalBid = grenze;
+        });
+    }
+
     // gezielt: ein Spieler, für den der Verein selbst grünes Licht gibt (Bürotermin "Wechsel erlauben").
     // optionen: { club, multiplier } - gezieltes Angebot eines bestimmten Vereins (Gerüchteküche).
     function triggerNewAITransferOffer(gezielt, optionen) {

@@ -495,7 +495,7 @@ function compareTableRows(a, b) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.113', date: '11.10.2026', features: 'Phase 25.43: Entscheidungen zur Legenden-Sperre und zu den Zahlen dokumentiert, Historie aktualisiert' };
+    const GAME_VERSION = { number: '3.114', date: '11.10.2026', features: 'Phase 25.44: Gebote aus älteren Spielständen werden auf die Obergrenze des Käufers gekappt, Vorstands-Neustart-Test mit festem Seed' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -7930,6 +7930,17 @@ function renderTransferPokerBox() {
     // Liga-Stufe eines Klubs aus der Liga-Pyramide, -1 wenn er dort nicht vorkommt.
     function kiStufeVonVerein(name) {
         return leaguesData.findIndex(table => table.some(t => t.name === name));
+    }
+
+    // Gebote aus einem Spielstand von vor der Obergrenze kappen (25.40/25.44). Wird beim Laden aufgerufen,
+    // nachdem die Liga-Daten da sind. Ein Verein aus der 4. Liga konnte so noch 367 Mio. € auf dem Angebot haben.
+    function bereinigeEingehendeAngebote() {
+        incomingOffers.forEach(o => {
+            const stufe = kiStufeVonVerein(o.clubName);
+            const grenze = KI_ANGEBOT_OBERGRENZE[stufe >= 0 ? stufe : 0];
+            if (o.currentBid > grenze) o.currentBid = grenze;
+            if (o.originalBid > grenze) o.originalBid = grenze;
+        });
     }
 
     // gezielt: ein Spieler, für den der Verein selbst grünes Licht gibt (Bürotermin "Wechsel erlauben").
@@ -32351,6 +32362,8 @@ function renderSeasonForecastHistory() {
             if (p.cupTournament) cupTournament = renameOldClubName(cupTournament);
             if (p.europeTournament) europeTournament = renameOldClubName(europeTournament);
         }
+        // Gebote aus einem Spielstand von vor der Obergrenze je Liga (25.40) nachträglich kappen.
+        if (p.incomingOffers && typeof bereinigeEingehendeAngebote === 'function') bereinigeEingehendeAngebote();
         // Felder entfernter Module sofort loswerden, nicht erst beim nächsten Monatswechsel.
         if (typeof cleanupRemovedModuleState === 'function') cleanupRemovedModuleState();
         // Heimatstadt (js/club-geo.js): alte Spielstände bekommen sie, Ligennamen/Landespokal passend.

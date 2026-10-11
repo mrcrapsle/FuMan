@@ -2409,6 +2409,28 @@ async function testLegendenNummer(browser) {
     await page.close();
 }
 
+async function testAlteAngebotKappung(browser) {
+    console.log('\n[25.44] Gebote aus älteren Spielständen werden beim Laden auf die Obergrenze gekappt');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        const vier = leaguesData[3][0].name;   // 4. Liga: Obergrenze 5 Mio. €
+        const zwei = leaguesData[2][0].name;   // 3. Liga: Obergrenze 15 Mio. €
+        incomingOffers = [
+            { id: 'a', playerId: 1, clubName: vier, currentBid: 367380000, originalBid: 367380000 },
+            { id: 'b', playerId: 2, clubName: zwei, currentBid: 300000, originalBid: 300000 }
+        ];
+        bereinigeEingehendeAngebote();
+        return { hoch: incomingOffers[0].currentBid, hochOriginal: incomingOffers[0].originalBid, klein: incomingOffers[1].currentBid };
+    });
+    assert(r.hoch === 5000000, 'Ein Gebot von 367 Mio. € aus der 4. Liga wird auf 5 Mio. € gekappt');
+    assert(r.hochOriginal === 5000000, 'Auch das Ursprungsgebot wird gekappt');
+    assert(r.klein === 300000, 'Ein kleines Gebot bleibt unverändert');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei der Kappung');
+    await page.close();
+}
+
 async function testBoardEarlyWarning(browser) {
     console.log('\n[25.24] Vorstand: Frühwarnung schon unter 50 Zufriedenheit, einmal pro Saison');
     const { page, consoleErrors } = await freshPage(browser);
@@ -9872,6 +9894,7 @@ async function main() {
         testRunde40Funktionen,
         testRueckennummerUndWette,
         testLegendenNummer,
+        testAlteAngebotKappung,
         testEntlassungsGrund,
         testEnglishUi,
         testSwapDeals,
