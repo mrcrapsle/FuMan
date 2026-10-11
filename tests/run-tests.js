@@ -547,7 +547,8 @@ async function testAutosaveResume(browser) {
     page1.on('pageerror', e => fehler.push(e.message));
     page1.on('dialog', d => d.accept());
     await page1.goto(GAME_PATH);
-    await page1.waitForTimeout(400);
+    await page1.waitForFunction(() => !document.getElementById('app-loading'), null, { timeout: 20000 }).catch(() => null);
+    await page1.waitForTimeout(100);
     const vorher = await page1.evaluate(() => {
         closeTutorial();
         game.sackPending = false;
@@ -561,7 +562,8 @@ async function testAutosaveResume(browser) {
     const page2 = await ctx.newPage();
     page2.on('pageerror', e => fehler.push(e.message));
     await page2.goto(GAME_PATH);
-    await page2.waitForTimeout(600);
+    await page2.waitForFunction(() => !document.getElementById('app-loading'), null, { timeout: 20000 }).catch(() => null);
+    await page2.waitForTimeout(100);
     const nachher = await page2.evaluate(() => {
         const out = { club: game.clubName, matchday: game.matchday };
         // Danach von Hand in Slot 2 speichern: dieser Stand gilt beim nächsten Start
@@ -800,7 +802,8 @@ async function testSaveSafety(browser) {
     const fehler2 = [];
     p2.on('pageerror', e => fehler2.push(e.message));
     await p2.goto(GAME_PATH);
-    await p2.waitForTimeout(400);
+    await p2.waitForFunction(() => !document.getElementById('app-loading'), null, { timeout: 20000 }).catch(() => null);
+    await p2.waitForTimeout(100);
     await p2.evaluate(() => {
         closeTutorial();
         game.money = 345678; saveGameToSlot(1);
@@ -808,7 +811,8 @@ async function testSaveSafety(browser) {
         localStorage.setItem('anstoss_fm13_last_save', 'slot2');
     });
     await p2.reload();
-    await p2.waitForTimeout(600);
+    await p2.waitForFunction(() => !document.getElementById('app-loading'), null, { timeout: 20000 }).catch(() => null);
+    await p2.waitForTimeout(100);
     const start = await p2.evaluate(() => ({ money: game.money, toast: (document.getElementById('app-toast') || {}).innerText || '' }));
     assert(start.money === 345678, `Start: beschädigter letzter Stand (Slot 2) wird übersprungen, Slot 1 geladen (${start.money})`);
     assert(fehler2.length === 0, `Keine JS-Fehler beim Start mit beschädigtem Stand (${fehler2.slice(0, 2).join(' | ')})`);
@@ -822,7 +826,8 @@ async function testOneHandControls(browser) {
     page.on('pageerror', e => consoleErrors.push(e.message));
     await page.addInitScript(() => { try { localStorage.removeItem('anstoss_fm13_last_save'); localStorage.removeItem('anstoss_fm13_ui_fab'); } catch (e) { /* egal */ } });
     await page.goto(GAME_PATH);
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => !document.getElementById('app-loading'), null, { timeout: 20000 }).catch(() => null);
+    await page.waitForTimeout(100);
     const r = await page.evaluate(() => {
         try {
             closeTutorial();
@@ -2204,6 +2209,42 @@ async function testEntlassungsGrund(browser) {
     assert(o.schritt === 500, `Verhandlungsschritt bei kleinem Angebot 500 € (${o.schritt})`);
     assert(o.gross === 400000, `Große Angebote bleiben auf 5.000 € gerundet (${o.gross})`);
     assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei der Entlassung');
+    await page.close();
+}
+
+async function testRunde36Anzeigen(browser) {
+    console.log('\n[25.36] Dashboard-Warnung nennt die Erwartung, Spielerkarte zeigt den Kader-Median');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        const out = {};
+        game.season = 3; game.boardGraceSeason = 0; game.boardSat = 40; game.boardEarlyWarnSeason = 3;
+        game.seasonExpectation = { expectedRank: 5 };
+        renderDashboardView();
+        const box = document.getElementById('dash-board-warn-line');
+        // Die Ansicht setzt die Erwartung beim Rendern selbst neu: gegen den Wert danach prüfen
+        const erwartet = game.seasonExpectation && game.seasonExpectation.expectedRank;
+        out.erwartung = !!box && !!erwartet && box.innerHTML.includes('Erwartung Platz ' + erwartet);
+        // Spielerkarte: nur mit bekanntem Potenzial und Kader-Median
+        const p = squad[0];
+        p.potentialRevealed = true; p.potential = 1;
+        openPlayerDetail(p.id, 'squad');
+        const ov = document.getElementById('player-detail-overlay');
+        out.medianDarunter = !!ov && ov.innerText.includes('Kader-Median') && ov.innerText.includes('darunter');
+        p.potential = 99;
+        openPlayerDetail(p.id, 'squad');
+        out.medianErreicht = document.getElementById('player-detail-overlay').innerText.includes('erreicht oder darüber');
+        p.potentialRevealed = false;
+        openPlayerDetail(p.id, 'squad');
+        out.ohneBekanntes = !document.getElementById('player-detail-overlay').innerText.includes('Kader-Median');
+        return out;
+    });
+    assert(r.erwartung, 'Die Dashboard-Warnung nennt die Erwartung des Vorstands');
+    assert(r.medianDarunter, 'Spielerkarte: bei bekanntem schwachem Potenzial steht „Kader-Median … darunter“');
+    assert(r.medianErreicht, 'Spielerkarte: bei starkem Potenzial steht „erreicht oder darüber“');
+    assert(r.ohneBekanntes, 'Ohne bekanntes Potenzial zeigt die Spielerkarte keinen Median');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei den neuen Anzeigen');
     await page.close();
 }
 
@@ -4355,7 +4396,8 @@ async function testLanguageToggle(browser) {
     const consoleErrors = [];
     page.on('pageerror', e => consoleErrors.push(e.message));
     await page.goto(GAME_PATH);
-    await page.waitForTimeout(400);
+    await page.waitForFunction(() => !document.getElementById('app-loading'), null, { timeout: 20000 }).catch(() => null);
+    await page.waitForTimeout(100);
     await page.evaluate(() => closeTutorial());
     // Startbildschirm ist das Managerbüro und deckt das ganze Display ab - für die
     // Kopfzeilen-/Seitenmenü-Knöpfe muss der Test es zuerst verlassen.
@@ -4382,7 +4424,8 @@ async function testLanguageToggle(browser) {
     }
     await zweite.close();
     await page.reload();
-    await page.waitForTimeout(400);
+    await page.waitForFunction(() => !document.getElementById('app-loading'), null, { timeout: 20000 }).catch(() => null);
+    await page.waitForTimeout(100);
     await page.evaluate(() => { closeTutorial(); showScreen('screen-dashboard'); });
     await page.waitForTimeout(150);
     const enTextAfterReload = await page.evaluate(() => document.querySelector('[onclick*="screen-calendar"]').textContent.trim());
@@ -5173,7 +5216,8 @@ async function testEconomyBalance(browser) {
         return true;
     });
     await page.reload();
-    await page.waitForTimeout(400);
+    await page.waitForFunction(() => !document.getElementById('app-loading'), null, { timeout: 20000 }).catch(() => null);
+    await page.waitForTimeout(100);
     const passiv = await page.evaluate(() => {
         closeTutorial();
         let start = game.money;
@@ -5410,7 +5454,8 @@ async function testLeagueEconomy(browser) {
     // damit der 30-Spieltage-Lauf reproduzierbar ist. Die Schwelle bleibt unverändert.
     await page.addInitScript(() => { let seed = 20251010; Math.random = () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; });
     await page.reload();
-    await page.waitForTimeout(400);
+    await page.waitForFunction(() => !document.getElementById('app-loading'), null, { timeout: 20000 }).catch(() => null);
+    await page.waitForTimeout(100);
     const profi = await page.evaluate(() => {
         closeTutorial();
         checkIncomingSponsorOffers(true); acceptSponsorOffer(sponsorOffers[0].id);
@@ -6118,7 +6163,8 @@ async function testLoadingGuard(browser) {
     const ctx = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 430, height: 880 } });
     const page = await ctx.newPage();
     await page.goto(GAME_PATH);
-    await page.waitForTimeout(500);  // Längeres Timeout um sicherzustellen, dass Ladeanzeige vollständig sichtbar ist
+    await page.waitForFunction(() => !document.getElementById('app-loading'), null, { timeout: 20000 }).catch(() => null);
+    await page.waitForTimeout(100);  // Längeres Timeout um sicherzustellen, dass Ladeanzeige vollständig sichtbar ist
 
     const ladeEbene = await page.$('#app-loading');
     assert(!!ladeEbene, 'Vor dem Start liegt eine Ladeanzeige über der Seite');
@@ -9377,12 +9423,14 @@ async function testAeltereStaende(browser) {
                 localStorage.setItem(AUTOSAVE_KEY, raw);
                 const autoOk = loadAutoSave() === true;
                 const md = game.matchday;
+                // Ein Stand mit gesetzter Entlassung bleibt stehen, bis die Meldung bestätigt ist (Regel, kein Fehler)
+                const entlassen = game.sackPending === true;
                 simulateMatchdays(1);
-                return { autoOk, weiter: game.matchday === md + 1 };
+                return { autoOk, entlassen, weiter: entlassen ? game.matchday === md : game.matchday === md + 1 };
             } catch (e) { return { crash: e.message }; }
         }, raw);
         assert(!weiter.crash && weiter.autoOk, `Stand ${version}: lädt auch als Autosave`);
-        assert(!weiter.crash && weiter.weiter, `Stand ${version}: nach dem Laden läuft ein Spieltag normal weiter (${weiter.crash || ''})`);
+        assert(!weiter.crash && weiter.weiter, `Stand ${version}: nach dem Laden läuft ein Spieltag normal weiter bzw. steht bei gesetzter Entlassung still (${weiter.crash || ''})`);
         assert(consoleErrors.length === 0, `Stand ${version}: keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
         await page.close();
     }
@@ -9652,6 +9700,7 @@ async function main() {
         testTvAdvanceGracePeriod,
         testCupAndLeagueSameDay,
         testBoardEarlyWarning,
+        testRunde36Anzeigen,
         testEntlassungsGrund,
         testEnglishUi,
         testSwapDeals,
