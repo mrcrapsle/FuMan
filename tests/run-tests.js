@@ -4501,13 +4501,13 @@ async function testManagerOffice(browser) {
     // unzuverlässig, weshalb das Büro seine Treffer selbst auflöst (siehe officeHotspotAtPoint).
     const lampCenter = await centerOf('lamp');
     await page.mouse.click(lampCenter.x, lampCenter.y);
-    await page.waitForTimeout(250);
+    await page.waitForFunction(() => document.getElementById('screen-office').classList.contains('office-dark'), null, { timeout: 2000 }).catch(() => null);
     const lampState = await page.evaluate(() => ({
         dark: document.getElementById('screen-office').classList.contains('office-dark'),
         stillInOffice: document.getElementById('screen-office').style.display === 'block'
     }));
     await page.mouse.click(lampCenter.x, lampCenter.y);
-    await page.waitForTimeout(250);
+    await page.waitForFunction(() => !document.getElementById('screen-office').classList.contains('office-dark'), null, { timeout: 2000 }).catch(() => null);
 
     // Klick auf ein Objekt führt in den zugehörigen Screen
     await page.mouse.click(calCenter.x, calCenter.y);
@@ -4517,12 +4517,11 @@ async function testManagerOffice(browser) {
 
     // Vom Dashboard aus wieder ins Büro und per HUD-Knopf zurück
     await page.evaluate(() => showScreen('screen-dashboard'));
-    await page.waitForTimeout(250);
     await page.click('#screen-dashboard button[data-i18n="office_enter"]');
-    await page.waitForTimeout(250);
+    await page.waitForFunction(() => document.getElementById('screen-office').style.display === 'block', null, { timeout: 4000 }).catch(() => null);
     const backInOffice = await page.evaluate(() => document.getElementById('screen-office').style.display === 'block');
     await page.evaluate(() => showScreen('screen-dashboard'));
-    await page.waitForTimeout(250);
+    await page.waitForFunction(() => document.getElementById('screen-office').style.display === 'none', null, { timeout: 2000 }).catch(() => null);
     const leftOffice = await page.evaluate(() => document.getElementById('screen-office').style.display === 'none');
 
     // Telefon zeigt ungelesene Post an
