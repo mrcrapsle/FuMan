@@ -935,6 +935,36 @@
 
     // Kontoauszug-Ansicht: chronologische Liste aller Kontobewegungen ausserhalb der
     // Spieltagsabrechnung, plus eine Zusammenfassung je Bereich.
+    // Transferbilanz einer Saison aus den Kontobuchungen (25.40). Das Journal hält nur die letzten
+    // MAX_KONTOAUSZUG Buchungen, deshalb ist die Bilanz für weit zurückliegende Saisons unvollständig.
+    function getTransferBilanz(saison) {
+        const b = { verkauf: 0, weiterverkauf: 0, kauf: 0, handgeld: 0 };
+        (game.kontoauszug || []).filter(x => x.season === saison).forEach(x => {
+            if (x.label.includes('Spielerverkauf')) b.verkauf += Math.max(0, x.amount);
+            else if (x.label.includes('Weiterverkaufsbeteiligung')) b.weiterverkauf += Math.max(0, x.amount);
+            else if (x.label.includes('Spielerkauf')) b.kauf += Math.max(0, -x.amount);
+            else if (x.label.includes('Handgeld')) b.handgeld += Math.max(0, -x.amount);
+        });
+        b.netto = b.verkauf + b.weiterverkauf - b.kauf - b.handgeld;
+        return b;
+    }
+
+    function renderTransferBilanzBox() {
+        const b = getTransferBilanz(game.season);
+        if (b.verkauf + b.weiterverkauf + b.kauf + b.handgeld === 0) {
+            return `<div class="box" style="margin-bottom:6px; font-size:10px; color:#94a3b8;">🔁 Noch keine Transfer-Buchungen in dieser Saison.</div>`;
+        }
+        const zeile = (name, wert, farbe) => `<div style="display:flex; justify-content:space-between; font-size:10px; margin-top:3px;"><span>${name}</span><strong style="color:${farbe};">${formatVal(wert)}</strong></div>`;
+        return `<div class="box" style="margin-bottom:6px;">
+            <strong style="font-size:11px;">🔁 TRANSFERBILANZ DIESE SAISON</strong>
+            ${zeile('Spielerverkäufe', b.verkauf, 'var(--primary)')}
+            ${zeile('Weiterverkaufsbeteiligungen', b.weiterverkauf, 'var(--primary)')}
+            ${zeile('Spielerkäufe', -b.kauf, 'var(--danger)')}
+            ${zeile('Handgelder', -b.handgeld, 'var(--danger)')}
+            <div style="display:flex; justify-content:space-between; font-size:11px; margin-top:4px; border-top:1px solid #1e293b; padding-top:3px;"><span>Netto</span><strong style="color:${b.netto >= 0 ? 'var(--primary)' : 'var(--danger)'};">${b.netto >= 0 ? '+' : ''}${formatVal(b.netto)}</strong></div>
+        </div>`;
+    }
+
     function renderKontoauszug(box) {
         let auszug = game.kontoauszug || [];
         if (auszug.length === 0) {
@@ -952,6 +982,7 @@
             .sort((a, b) => (b.ein + b.aus) - (a.ein + a.aus));
 
         box.innerHTML = `
+            ${renderTransferBilanzBox()}
             <div style="font-size:10px; color:#94a3b8; margin-bottom:6px;">Alle Kontobewegungen ausserhalb der Spieltagsabrechnung (letzte ${MAX_KONTOAUSZUG} Buchungen). Die Spieltagsposten finden Sie in den beiden anderen Reitern.</div>
             <div class="box" style="margin-bottom:6px;">
                 <strong style="font-size:11px;">📊 NACH BEREICH</strong>

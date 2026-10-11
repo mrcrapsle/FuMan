@@ -76,6 +76,40 @@ function tickBoardRoom() {
     Object.keys(room.warned).forEach(k => { if (!k.startsWith(game.season + '-')) delete room.warned[k]; });
 }
 
+// Saisonwette (25.40): der Manager setzt ein schärferes Ziel als den Vorstandswunsch (zwei Plätze besser).
+// Gewonnen gibt es Prämie und Vertrauen, verloren zieht der Vorstand Vertrauen ab. Keine Gebühr.
+const SAISONWETTE_PRAEMIE_JE_LIGA = 150000; // Prämie je Liga-Stufe unter der 1. Bundesliga
+
+function getSaisonWette() {
+    return game.saisonWette && game.saisonWette.season === game.season ? game.saisonWette : null;
+}
+
+function setzeSaisonWette() {
+    const erwartet = game.seasonExpectation && game.seasonExpectation.expectedRank;
+    if (!erwartet) { showToast('🎯 Ohne Saisonziel des Vorstands gibt es keine Wette.', 'error', 3000); return; }
+    if (getSaisonWette()) { showToast('🎯 Die Wette läuft in dieser Saison schon.', 'error', 3000); return; }
+    const platz = Math.max(1, erwartet - 2);
+    game.saisonWette = { season: game.season, platz };
+    showToast(`🎯 Wette gesetzt: Platz ${platz} oder besser.`, 'success', 3000);
+    renderBoardRoomPanel();
+}
+
+// Am Saisonende aufgerufen (concludeSeasonAndAdvance), mit dem erreichten Tabellenplatz.
+function resolveSaisonWette(myRank) {
+    const w = game.saisonWette;
+    if (!w || w.season !== game.season) return;
+    if (myRank > 0 && myRank <= w.platz) {
+        const praemie = (NUM_LEAGUES - game.leagueLevel) * SAISONWETTE_PRAEMIE_JE_LIGA;
+        game.boardSat = Math.min(100, game.boardSat + 12);
+        bucheMitLabel('🎯 Saisonwette gewonnen', praemie);
+        addInboxMessage('vertrag', '🎯 Wette gewonnen', `Platz ${myRank}: die Wette auf Platz ${w.platz} oder besser ist aufgegangen. Der Vorstand zahlt ${formatVal(praemie)} und hebt das Vertrauen an.`, 'screen-dashboard');
+    } else {
+        game.boardSat = Math.max(0, game.boardSat - 10);
+        addInboxMessage('vertrag', '🎯 Wette verloren', `Platz ${myRank > 0 ? myRank : '-'}: die Wette auf Platz ${w.platz} oder besser ist verloren. Der Vorstand zieht Vertrauen ab.`, 'screen-dashboard');
+    }
+    game.saisonWette = null;
+}
+
 function renderBoardRoomPanel() {
     const box = document.getElementById('board-room-box');
     if (!box) return;
@@ -91,5 +125,14 @@ function renderBoardRoomPanel() {
                 <span>${role.icon} <strong>${role.title}</strong> ${room.names[i]}<br><span style="color:var(--text-muted);">${v.reason}</span></span>
                 <strong style="color:${farbe(v.mood)}; white-space:nowrap;">${v.mood}%</strong></div>`;
         }).join('')}
+        <div style="margin-top:8px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.06);">
+            ${(() => {
+                const w = getSaisonWette();
+                if (w) return `🎯 Saisonwette aktiv: Platz ${w.platz} oder besser.`;
+                const erwartet = game.seasonExpectation && game.seasonExpectation.expectedRank;
+                if (!erwartet) return `🎯 Saisonwette: erst mit einem Saisonziel des Vorstands möglich.`;
+                return `<button onclick="setzeSaisonWette()" style="min-height:32px; padding:6px 10px; font-size:10px;">🎯 Saisonwette setzen: Platz ${Math.max(1, erwartet - 2)} oder besser</button>`;
+            })()}
+        </div>
     </div>`;
 }

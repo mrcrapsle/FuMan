@@ -2285,6 +2285,97 @@ async function testKiAngebotObergrenze(browser) {
     await page.close();
 }
 
+async function testRunde40Funktionen(browser) {
+    console.log('\n[25.40] Transferbilanz, Reisefaktor und Spielernotizen');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        const out = {};
+        game.kontoauszug = [
+            { season: game.season, matchday: 1, label: '💸 Spielerverkauf', amount: 1000000, saldo: 0 },
+            { season: game.season, matchday: 2, label: '🛒 Spielerkauf', amount: -400000, saldo: 0 },
+            { season: game.season - 1, matchday: 9, label: '💸 Spielerverkauf', amount: 5000000, saldo: 0 }
+        ];
+        const b = getTransferBilanz(game.season);
+        out.verkauf = b.verkauf; out.kauf = b.kauf; out.netto = b.netto;
+        out.boxText = renderTransferBilanzBox().includes('TRANSFERBILANZ');
+        // Reisefaktor: eigener Verein liegt in der Heimatstadt, also im eigenen Bundesland
+        out.faktorEigen = getReiseFaktor(game.clubName);
+        out.faktorUnbekannt = getReiseFaktor('Gibt Es Nicht FC');
+        // Notiz: speichern, mit Leerzeichen trimmen, leeren entfernt sie
+        const p = squad[0];
+        speichereSpielerNotiz(p.id, '  Testnotiz  ');
+        out.notiz = (p.notizen || {})[game.season];
+        openPlayerDetail(p.id, 'squad');
+        out.notizFeld = document.getElementById('pd-notiz') ? document.getElementById('pd-notiz').value : null;
+        speichereSpielerNotiz(p.id, '   ');
+        out.notizWeg = !((p.notizen || {})[game.season]);
+        return out;
+    });
+    assert(r.verkauf === 1000000 && r.kauf === 400000, 'Transferbilanz zählt Verkäufe und Käufe der laufenden Saison');
+    assert(r.netto === 600000, 'Transferbilanz-Netto ist Verkäufe minus Käufe (alte Saison bleibt außen vor)');
+    assert(r.boxText, 'Der Transferbilanz-Kasten wird gerendert');
+    assert(r.faktorEigen === 0.7, 'Reisefaktor: Gegner im eigenen Bundesland kostet weniger (0,7)');
+    assert(r.faktorUnbekannt === 1, 'Reisefaktor: unbekannter Gegner bleibt bei 1');
+    assert(r.notiz === 'Testnotiz', 'Notiz wird gespeichert und getrimmt');
+    assert(r.notizFeld === 'Testnotiz', 'Notizfeld auf der Spielerkarte zeigt die gespeicherte Notiz');
+    assert(r.notizWeg, 'Eine leere Notiz wird entfernt');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei den neuen Funktionen');
+    await page.close();
+}
+
+async function testRueckennummerUndWette(browser) {
+    console.log('\n[25.40] Rückennummern im Kader und Saisonwette mit dem Vorstand');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        const out = {};
+        const p0 = squad[0], p1 = squad[1];
+        p1.nummer = 1; p0.nummer = null;
+        out.naechste = naechsteFreieRueckennummer(p0);
+        out.abgelehnt = speichereRueckennummer(p0.id, 1) === false && p0.nummer !== 1;
+        out.gesetzt = speichereRueckennummer(p0.id, 12) === true && p0.nummer === 12;
+        openPlayerDetail(p0.id, 'squad');
+        const auswahl = document.getElementById('pd-nummer');
+        out.auswahlDa = !!auswahl;
+        out.belegteDeaktiviert = !!auswahl && auswahl.querySelector('option[value="1"]').disabled === true;
+        // Saisonwette
+        game.seasonExpectation = { expectedRank: 6 };
+        game.boardSat = 40;
+        setzeSaisonWette();
+        out.platz = game.saisonWette && game.saisonWette.platz;
+        setzeSaisonWette();
+        out.keinDoppelt = game.saisonWette && game.saisonWette.platz === 4;
+        const geld0 = game.money;
+        resolveSaisonWette(3);
+        out.gewonnenGeld = game.money > geld0;
+        out.gewonnenVertrauen = game.boardSat === 52;
+        out.gewonnenAufgeraeumt = game.saisonWette === null;
+        setzeSaisonWette();
+        const sat1 = game.boardSat;
+        resolveSaisonWette(9);
+        out.verlorenVertrauen = game.boardSat === sat1 - 10;
+        out.verlorenAufgeraeumt = game.saisonWette === null;
+        return out;
+    });
+    assert(r.naechste === 2, 'Die kleinste freie Rückennummer im Kader ist 2, wenn 1 vergeben ist');
+    assert(r.abgelehnt, 'Eine schon vergebene Rückennummer wird abgelehnt');
+    assert(r.gesetzt, 'Eine freie Rückennummer wird gesetzt');
+    assert(r.auswahlDa, 'Die Spielerkarte zeigt die Rückennummer-Auswahl');
+    assert(r.belegteDeaktiviert, 'Belegte Nummern sind in der Auswahl gesperrt');
+    assert(r.platz === 4, 'Die Saisonwette verlangt zwei Plätze mehr als der Vorstandswunsch (6 → 4)');
+    assert(r.keinDoppelt, 'Eine zweite Wette in derselben Saison wird nicht angenommen');
+    assert(r.gewonnenGeld, 'Gewonnene Wette zahlt eine Prämie');
+    assert(r.gewonnenVertrauen, 'Gewonnene Wette hebt das Vertrauen um 12');
+    assert(r.gewonnenAufgeraeumt, 'Nach der Auflösung ist keine Wette mehr aktiv');
+    assert(r.verlorenVertrauen, 'Verlorene Wette zieht das Vertrauen um 10 ab');
+    assert(r.verlorenAufgeraeumt, 'Auch eine verlorene Wette wird danach aufgeräumt');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei Rückennummern und Wette');
+    await page.close();
+}
+
 async function testBoardEarlyWarning(browser) {
     console.log('\n[25.24] Vorstand: Frühwarnung schon unter 50 Zufriedenheit, einmal pro Saison');
     const { page, consoleErrors } = await freshPage(browser);
@@ -9738,6 +9829,8 @@ async function main() {
         testBoardEarlyWarning,
         testRunde36Anzeigen,
         testKiAngebotObergrenze,
+        testRunde40Funktionen,
+        testRueckennummerUndWette,
         testEntlassungsGrund,
         testEnglishUi,
         testSwapDeals,

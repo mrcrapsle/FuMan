@@ -674,7 +674,8 @@
         // (höhere Ligen = bundesweite/größere Auswärtsfahrten statt reiner Lokalderbys).
         // Bus statt Flugzeug spart ~45% der Kosten, kostet dafür mehr Kondition (siehe
         // processPostMatchRoutine() für den Ermüdungs-Teil).
-        let baseTravelCost = (!isHomeMatch) ? Math.round((800 + (NUM_LEAGUES - game.leagueLevel) * 300)) : 0;
+        // Entfernung zum Gegner (club-geo.js getReiseFaktor): gleiches Bundesland günstiger, weiter weg teurer.
+        let baseTravelCost = (!isHomeMatch) ? Math.round((800 + (NUM_LEAGUES - game.leagueLevel) * 300) * getReiseFaktor(opponentNameForRecord)) : 0;
         let travelCost = (game.travelMode === 'bus') ? Math.round(baseTravelCost * 0.55) : baseTravelCost;
         // Sponsoren-Themenbonus: manche Sponsoren zahlen zusätzlich eine an ein bestimmtes
         // Ereignis geknüpfte Sonderprämie (siehe rollThemedBonus() in sponsors.js).

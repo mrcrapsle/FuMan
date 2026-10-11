@@ -17,6 +17,41 @@
         return squad.find(p => p.id === id);
     }
 
+    // Kleinste Rückennummer, die im Kader noch frei ist (25.40). Null, wenn alle 1-99 belegt sind.
+    function naechsteFreieRueckennummer(p) {
+        const belegt = new Set(squad.filter(s => s !== p && s.nummer).map(s => s.nummer));
+        for (let n = 1; n <= 99; n++) if (!belegt.has(n)) return n;
+        return null;
+    }
+
+    // Rückennummer setzen. Eine Nummer, die ein anderer Spieler im Kader trägt, wird abgelehnt - mit Meldung.
+    function speichereRueckennummer(id, wert) {
+        const p = squad.find(x => String(x.id) === String(id));
+        if (!p) return false;
+        const n = parseInt(wert, 10);
+        const andere = squad.find(s => s !== p && s.nummer === n);
+        if (andere) {
+            showToast(`🎽 Nummer ${n} trägt schon ${andere.name}.`, 'error', 3000);
+            const auswahl = document.getElementById('pd-nummer');
+            if (auswahl) auswahl.value = p.nummer;
+            return false;
+        }
+        p.nummer = n;
+        showToast(`🎽 Rückennummer ${n} gesetzt`, 'success', 1500);
+        return true;
+    }
+
+    // Notiz zu einem Spieler für die laufende Saison (25.40). Eine leere Notiz wird entfernt.
+    function speichereSpielerNotiz(id, text) {
+        const p = squad.find(x => String(x.id) === String(id));
+        if (!p) return;
+        if (!p.notizen) p.notizen = {};
+        const sauber = String(text || '').trim().slice(0, 300);
+        if (sauber) p.notizen[game.season] = sauber;
+        else delete p.notizen[game.season];
+        showToast('📝 Notiz gespeichert', 'success', 1200);
+    }
+
     function openPlayerDetail(id, pool = 'squad') {
         let p = findPlayerInPool(id, pool);
         if (!p) return;
@@ -54,6 +89,23 @@
             <span class="label">Publikumsliebling:</span><span class="val">${p.isCrowdFavorite ? '❤️ Ja (aktuelle Saison)' : 'Nein'}</span>
             <span class="label">Marktwert:</span><span class="val">${formatVal(p.marketValue || 0)}</span>
         `;
+        // Eigene Notiz zu diesem Spieler für die laufende Saison (25.40), nur für den eigenen Kader.
+        if (pool === 'squad') {
+            const notizText = ((p.notizen || {})[game.season] || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+            // Rückennummer (25.40): ohne Nummer bekommt der Spieler die kleinste freie zugewiesen.
+            if (!p.nummer) p.nummer = naechsteFreieRueckennummer(p);
+            const belegt = new Set(squad.filter(s => s !== p && s.nummer).map(s => s.nummer));
+            const nummernOptionen = Array.from({ length: 99 }, (_, i) => i + 1)
+                .map(n => `<option value="${n}" ${n === p.nummer ? 'selected' : ''} ${belegt.has(n) ? 'disabled' : ''}>${n}${belegt.has(n) ? ' (belegt)' : ''}</option>`).join('');
+            document.getElementById('pd-fields').insertAdjacentHTML('beforeend', `<div style="grid-column:1 / -1; margin-top:6px;">
+                <span class="label">🎽 Rückennummer:</span>
+                <select id="pd-nummer" style="font-size:11px; margin-top:3px;" onchange="speichereRueckennummer('${p.id}', this.value)">${nummernOptionen}</select>
+            </div>
+            <div style="grid-column:1 / -1; margin-top:6px;">
+                <span class="label">📝 Notiz (Saison ${game.season}):</span>
+                <textarea id="pd-notiz" maxlength="300" rows="2" style="width:100%; box-sizing:border-box; font-size:11px; margin-top:3px;" onchange="speichereSpielerNotiz('${p.id}', this.value)">${notizText}</textarea>
+            </div>`);
+        }
         document.getElementById('pd-stats').innerHTML = statOrder.map(k => `<div class="modal-stat-chip"><span class="k">${k}</span><span class="v">${stats[k]}</span></div>`).join('');
         document.getElementById('pd-talk-btn').style.display = (pool === 'squad' || pool === 'secondTeam') ? 'block' : 'none';
 

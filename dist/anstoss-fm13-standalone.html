@@ -5959,6 +5959,16 @@ function getClubCity(name) {
     return eintrag ? townCityOf(eintrag).stadt : treffer;
 }
 
+// Reisekosten-Faktor einer Auswärtsfahrt (25.40): Gegner im selben Bundesland liegen nah (0,7), in einem
+// anderen Bundesland weiter weg (1,3). Liegt der Ort des Gegners nicht in HOME_CITIES, bleibt es bei 1,0.
+function getReiseFaktor(gegnerName) {
+    const heimat = getHomeInfo();
+    const ort = getClubCity(gegnerName);
+    const gegnerInfo = ort && HOME_CITIES[ort];
+    if (!heimat || !gegnerInfo) return 1;
+    return gegnerInfo.state === heimat.state ? 0.7 : 1.3;
+}
+
 // Namen-Pool einer regionalen Liga (Stufe 3-5) für die Heimat - echte Vereine zuerst, dann Orte.
 function getRegionalClubPool(level) {
     const info = getHomeInfo();
@@ -6254,6 +6264,41 @@ function getOwnDerbyRivals() {
         return squad.find(p => p.id === id);
     }
 
+    // Kleinste Rückennummer, die im Kader noch frei ist (25.40). Null, wenn alle 1-99 belegt sind.
+    function naechsteFreieRueckennummer(p) {
+        const belegt = new Set(squad.filter(s => s !== p && s.nummer).map(s => s.nummer));
+        for (let n = 1; n <= 99; n++) if (!belegt.has(n)) return n;
+        return null;
+    }
+
+    // Rückennummer setzen. Eine Nummer, die ein anderer Spieler im Kader trägt, wird abgelehnt - mit Meldung.
+    function speichereRueckennummer(id, wert) {
+        const p = squad.find(x => String(x.id) === String(id));
+        if (!p) return false;
+        const n = parseInt(wert, 10);
+        const andere = squad.find(s => s !== p && s.nummer === n);
+        if (andere) {
+            showToast(`🎽 Nummer ${n} trägt schon ${andere.name}.`, 'error', 3000);
+            const auswahl = document.getElementById('pd-nummer');
+            if (auswahl) auswahl.value = p.nummer;
+            return false;
+        }
+        p.nummer = n;
+        showToast(`🎽 Rückennummer ${n} gesetzt`, 'success', 1500);
+        return true;
+    }
+
+    // Notiz zu einem Spieler für die laufende Saison (25.40). Eine leere Notiz wird entfernt.
+    function speichereSpielerNotiz(id, text) {
+        const p = squad.find(x => String(x.id) === String(id));
+        if (!p) return;
+        if (!p.notizen) p.notizen = {};
+        const sauber = String(text || '').trim().slice(0, 300);
+        if (sauber) p.notizen[game.season] = sauber;
+        else delete p.notizen[game.season];
+        showToast('📝 Notiz gespeichert', 'success', 1200);
+    }
+
     function openPlayerDetail(id, pool = 'squad') {
         let p = findPlayerInPool(id, pool);
         if (!p) return;
@@ -6291,6 +6336,23 @@ function getOwnDerbyRivals() {
             <span class="label">Publikumsliebling:</span><span class="val">${p.isCrowdFavorite ? '❤️ Ja (aktuelle Saison)' : 'Nein'}</span>
             <span class="label">Marktwert:</span><span class="val">${formatVal(p.marketValue || 0)}</span>
         `;
+        // Eigene Notiz zu diesem Spieler für die laufende Saison (25.40), nur für den eigenen Kader.
+        if (pool === 'squad') {
+            const notizText = ((p.notizen || {})[game.season] || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+            // Rückennummer (25.40): ohne Nummer bekommt der Spieler die kleinste freie zugewiesen.
+            if (!p.nummer) p.nummer = naechsteFreieRueckennummer(p);
+            const belegt = new Set(squad.filter(s => s !== p && s.nummer).map(s => s.nummer));
+            const nummernOptionen = Array.from({ length: 99 }, (_, i) => i + 1)
+                .map(n => `<option value="${n}" ${n === p.nummer ? 'selected' : ''} ${belegt.has(n) ? 'disabled' : ''}>${n}${belegt.has(n) ? ' (belegt)' : ''}</option>`).join('');
+            document.getElementById('pd-fields').insertAdjacentHTML('beforeend', `<div style="grid-column:1 / -1; margin-top:6px;">
+                <span class="label">🎽 Rückennummer:</span>
+                <select id="pd-nummer" style="font-size:11px; margin-top:3px;" onchange="speichereRueckennummer('${p.id}', this.value)">${nummernOptionen}</select>
+            </div>
+            <div style="grid-column:1 / -1; margin-top:6px;">
+                <span class="label">📝 Notiz (Saison ${game.season}):</span>
+                <textarea id="pd-notiz" maxlength="300" rows="2" style="width:100%; box-sizing:border-box; font-size:11px; margin-top:3px;" onchange="speichereSpielerNotiz('${p.id}', this.value)">${notizText}</textarea>
+            </div>`);
+        }
         document.getElementById('pd-stats').innerHTML = statOrder.map(k => `<div class="modal-stat-chip"><span class="k">${k}</span><span class="v">${stats[k]}</span></div>`).join('');
         document.getElementById('pd-talk-btn').style.display = (pool === 'squad' || pool === 'secondTeam') ? 'block' : 'none';
 
@@ -13389,6 +13451,40 @@ function tickBoardRoom() {
     Object.keys(room.warned).forEach(k => { if (!k.startsWith(game.season + '-')) delete room.warned[k]; });
 }
 
+// Saisonwette (25.40): der Manager setzt ein schärferes Ziel als den Vorstandswunsch (zwei Plätze besser).
+// Gewonnen gibt es Prämie und Vertrauen, verloren zieht der Vorstand Vertrauen ab. Keine Gebühr.
+const SAISONWETTE_PRAEMIE_JE_LIGA = 150000; // Prämie je Liga-Stufe unter der 1. Bundesliga
+
+function getSaisonWette() {
+    return game.saisonWette && game.saisonWette.season === game.season ? game.saisonWette : null;
+}
+
+function setzeSaisonWette() {
+    const erwartet = game.seasonExpectation && game.seasonExpectation.expectedRank;
+    if (!erwartet) { showToast('🎯 Ohne Saisonziel des Vorstands gibt es keine Wette.', 'error', 3000); return; }
+    if (getSaisonWette()) { showToast('🎯 Die Wette läuft in dieser Saison schon.', 'error', 3000); return; }
+    const platz = Math.max(1, erwartet - 2);
+    game.saisonWette = { season: game.season, platz };
+    showToast(`🎯 Wette gesetzt: Platz ${platz} oder besser.`, 'success', 3000);
+    renderBoardRoomPanel();
+}
+
+// Am Saisonende aufgerufen (concludeSeasonAndAdvance), mit dem erreichten Tabellenplatz.
+function resolveSaisonWette(myRank) {
+    const w = game.saisonWette;
+    if (!w || w.season !== game.season) return;
+    if (myRank > 0 && myRank <= w.platz) {
+        const praemie = (NUM_LEAGUES - game.leagueLevel) * SAISONWETTE_PRAEMIE_JE_LIGA;
+        game.boardSat = Math.min(100, game.boardSat + 12);
+        bucheMitLabel('🎯 Saisonwette gewonnen', praemie);
+        addInboxMessage('vertrag', '🎯 Wette gewonnen', `Platz ${myRank}: die Wette auf Platz ${w.platz} oder besser ist aufgegangen. Der Vorstand zahlt ${formatVal(praemie)} und hebt das Vertrauen an.`, 'screen-dashboard');
+    } else {
+        game.boardSat = Math.max(0, game.boardSat - 10);
+        addInboxMessage('vertrag', '🎯 Wette verloren', `Platz ${myRank > 0 ? myRank : '-'}: die Wette auf Platz ${w.platz} oder besser ist verloren. Der Vorstand zieht Vertrauen ab.`, 'screen-dashboard');
+    }
+    game.saisonWette = null;
+}
+
 function renderBoardRoomPanel() {
     const box = document.getElementById('board-room-box');
     if (!box) return;
@@ -13404,6 +13500,15 @@ function renderBoardRoomPanel() {
                 <span>${role.icon} <strong>${role.title}</strong> ${room.names[i]}<br><span style="color:var(--text-muted);">${v.reason}</span></span>
                 <strong style="color:${farbe(v.mood)}; white-space:nowrap;">${v.mood}%</strong></div>`;
         }).join('')}
+        <div style="margin-top:8px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.06);">
+            ${(() => {
+                const w = getSaisonWette();
+                if (w) return `🎯 Saisonwette aktiv: Platz ${w.platz} oder besser.`;
+                const erwartet = game.seasonExpectation && game.seasonExpectation.expectedRank;
+                if (!erwartet) return `🎯 Saisonwette: erst mit einem Saisonziel des Vorstands möglich.`;
+                return `<button onclick="setzeSaisonWette()" style="min-height:32px; padding:6px 10px; font-size:10px;">🎯 Saisonwette setzen: Platz ${Math.max(1, erwartet - 2)} oder besser</button>`;
+            })()}
+        </div>
     </div>`;
 }
 
@@ -18525,6 +18630,36 @@ function finishGoalkeeperGame() {
 
     // Kontoauszug-Ansicht: chronologische Liste aller Kontobewegungen ausserhalb der
     // Spieltagsabrechnung, plus eine Zusammenfassung je Bereich.
+    // Transferbilanz einer Saison aus den Kontobuchungen (25.40). Das Journal hält nur die letzten
+    // MAX_KONTOAUSZUG Buchungen, deshalb ist die Bilanz für weit zurückliegende Saisons unvollständig.
+    function getTransferBilanz(saison) {
+        const b = { verkauf: 0, weiterverkauf: 0, kauf: 0, handgeld: 0 };
+        (game.kontoauszug || []).filter(x => x.season === saison).forEach(x => {
+            if (x.label.includes('Spielerverkauf')) b.verkauf += Math.max(0, x.amount);
+            else if (x.label.includes('Weiterverkaufsbeteiligung')) b.weiterverkauf += Math.max(0, x.amount);
+            else if (x.label.includes('Spielerkauf')) b.kauf += Math.max(0, -x.amount);
+            else if (x.label.includes('Handgeld')) b.handgeld += Math.max(0, -x.amount);
+        });
+        b.netto = b.verkauf + b.weiterverkauf - b.kauf - b.handgeld;
+        return b;
+    }
+
+    function renderTransferBilanzBox() {
+        const b = getTransferBilanz(game.season);
+        if (b.verkauf + b.weiterverkauf + b.kauf + b.handgeld === 0) {
+            return `<div class="box" style="margin-bottom:6px; font-size:10px; color:#94a3b8;">🔁 Noch keine Transfer-Buchungen in dieser Saison.</div>`;
+        }
+        const zeile = (name, wert, farbe) => `<div style="display:flex; justify-content:space-between; font-size:10px; margin-top:3px;"><span>${name}</span><strong style="color:${farbe};">${formatVal(wert)}</strong></div>`;
+        return `<div class="box" style="margin-bottom:6px;">
+            <strong style="font-size:11px;">🔁 TRANSFERBILANZ DIESE SAISON</strong>
+            ${zeile('Spielerverkäufe', b.verkauf, 'var(--primary)')}
+            ${zeile('Weiterverkaufsbeteiligungen', b.weiterverkauf, 'var(--primary)')}
+            ${zeile('Spielerkäufe', -b.kauf, 'var(--danger)')}
+            ${zeile('Handgelder', -b.handgeld, 'var(--danger)')}
+            <div style="display:flex; justify-content:space-between; font-size:11px; margin-top:4px; border-top:1px solid #1e293b; padding-top:3px;"><span>Netto</span><strong style="color:${b.netto >= 0 ? 'var(--primary)' : 'var(--danger)'};">${b.netto >= 0 ? '+' : ''}${formatVal(b.netto)}</strong></div>
+        </div>`;
+    }
+
     function renderKontoauszug(box) {
         let auszug = game.kontoauszug || [];
         if (auszug.length === 0) {
@@ -18542,6 +18677,7 @@ function finishGoalkeeperGame() {
             .sort((a, b) => (b.ein + b.aus) - (a.ein + a.aus));
 
         box.innerHTML = `
+            ${renderTransferBilanzBox()}
             <div style="font-size:10px; color:#94a3b8; margin-bottom:6px;">Alle Kontobewegungen ausserhalb der Spieltagsabrechnung (letzte ${MAX_KONTOAUSZUG} Buchungen). Die Spieltagsposten finden Sie in den beiden anderen Reitern.</div>
             <div class="box" style="margin-bottom:6px;">
                 <strong style="font-size:11px;">📊 NACH BEREICH</strong>
@@ -31499,7 +31635,8 @@ function cleanupLegacyScoutState() {
         // (höhere Ligen = bundesweite/größere Auswärtsfahrten statt reiner Lokalderbys).
         // Bus statt Flugzeug spart ~45% der Kosten, kostet dafür mehr Kondition (siehe
         // processPostMatchRoutine() für den Ermüdungs-Teil).
-        let baseTravelCost = (!isHomeMatch) ? Math.round((800 + (NUM_LEAGUES - game.leagueLevel) * 300)) : 0;
+        // Entfernung zum Gegner (club-geo.js getReiseFaktor): gleiches Bundesland günstiger, weiter weg teurer.
+        let baseTravelCost = (!isHomeMatch) ? Math.round((800 + (NUM_LEAGUES - game.leagueLevel) * 300) * getReiseFaktor(opponentNameForRecord)) : 0;
         let travelCost = (game.travelMode === 'bus') ? Math.round(baseTravelCost * 0.55) : baseTravelCost;
         // Sponsoren-Themenbonus: manche Sponsoren zahlen zusätzlich eine an ein bestimmtes
         // Ereignis geknüpfte Sonderprämie (siehe rollThemedBonus() in sponsors.js).
@@ -33356,6 +33493,7 @@ function concludeSeasonAndAdvance() {
         // Manager-Statistik: Bilanz der gerade beendeten Saison, bevor Auf-/Abstieg die Liga ändert.
         if (typeof recordSeasonalManagerStats === 'function') recordSeasonalManagerStats(myRank, myTeamRecord, game.leagueLevel);
         if (typeof checkSeasonEndSacking === 'function') checkSeasonEndSacking(myRank);
+        if (typeof resolveSaisonWette === 'function') resolveSaisonWette(myRank);
         if (typeof checkPlaytimePromises === 'function') checkPlaytimePromises();
         if (typeof evaluateSeasonEndObjectives === 'function') evaluateSeasonEndObjectives(myRank);
         if (typeof recordScenarioSeasonRank === 'function') recordScenarioSeasonRank(myRank);

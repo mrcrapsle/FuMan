@@ -326,6 +326,16 @@ function getClubCity(name) {
     return eintrag ? townCityOf(eintrag).stadt : treffer;
 }
 
+// Reisekosten-Faktor einer Auswärtsfahrt (25.40): Gegner im selben Bundesland liegen nah (0,7), in einem
+// anderen Bundesland weiter weg (1,3). Liegt der Ort des Gegners nicht in HOME_CITIES, bleibt es bei 1,0.
+function getReiseFaktor(gegnerName) {
+    const heimat = getHomeInfo();
+    const ort = getClubCity(gegnerName);
+    const gegnerInfo = ort && HOME_CITIES[ort];
+    if (!heimat || !gegnerInfo) return 1;
+    return gegnerInfo.state === heimat.state ? 0.7 : 1.3;
+}
+
 // Namen-Pool einer regionalen Liga (Stufe 3-5) für die Heimat - echte Vereine zuerst, dann Orte.
 function getRegionalClubPool(level) {
     const info = getHomeInfo();

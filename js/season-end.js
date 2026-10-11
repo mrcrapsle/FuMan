@@ -261,6 +261,7 @@ function concludeSeasonAndAdvance() {
         // Manager-Statistik: Bilanz der gerade beendeten Saison, bevor Auf-/Abstieg die Liga ändert.
         if (typeof recordSeasonalManagerStats === 'function') recordSeasonalManagerStats(myRank, myTeamRecord, game.leagueLevel);
         if (typeof checkSeasonEndSacking === 'function') checkSeasonEndSacking(myRank);
+        if (typeof resolveSaisonWette === 'function') resolveSaisonWette(myRank);
         if (typeof checkPlaytimePromises === 'function') checkPlaytimePromises();
         if (typeof evaluateSeasonEndObjectives === 'function') evaluateSeasonEndObjectives(myRank);
         if (typeof recordScenarioSeasonRank === 'function') recordScenarioSeasonRank(myRank);
