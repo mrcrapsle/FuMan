@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.105', date: '10.10.2026', features: 'Phase 25.35: Job-Warnung mit Zahlen, kleine KI-Angebote auf 500 € genau, Profivertrag mit Kader-Median, Karriere-Fixture aus der 4. Liga, Bot-Schalter für Entlassung, reproduzierbare Europa- und Pokal-Tests' };
+    const GAME_VERSION = { number: '3.106', date: '11.10.2026', features: 'Phase 25.36: Vorstand-Erwartung in der Dashboard-Warnung, Kader-Median in der Spielerkarte, Auswertungsskript für Bot-Läufe, CLAUDE.md gestrafft mit Historie im Archiv' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
