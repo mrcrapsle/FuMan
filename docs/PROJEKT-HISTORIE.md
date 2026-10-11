@@ -393,3 +393,20 @@ Die Rundung auf 100 € unter 100.000 € ändert gegenüber der Messung mit 1.0
 **Entlassung im Bot (25.37, `ENTLASSUNG_ERZWINGEN=2`):** Die Ausgabe nennt jetzt den Stand vor dem Saisonwechsel, also Vertrauen, die letzten Werte, Erwartung und den erreichten Platz. Beispiel: „Vorstand 5 Verlauf 17/16/15/14 erwartet Platz 1 Platz 5“.
 
 **Transferbudget je Liga (25.36):** Der Test nimmt jetzt sechs Märkte mit je zehn Spielern statt einem. Vorher lag das Verhältnis von Budget zu typischem Marktpreis über alle Ligen zwischen 1,9 und 5,1 und sprang von Lauf zu Lauf; mit sechs Märkten je Liga liegt es zwischen 0,9 und 3,3, und die Werte aus drei Läufen stimmen gut überein.
+
+## Passive Entlassungs-Messung (r38)
+
+Sechs Läufe mit je bis zu zehn Saisons, Startliga 0 (1. Liga), `passiv`. Lauf 1 bis 5 enden mit einer Entlassung, Lauf 6 läuft alle zehn Saisons durch.
+
+| Lauf | Entlassung in Saison | Liga bei Entlassung | Vorstand | Verlauf | Erwartung → Platz |
+|---|---|---|---|---|---|
+| 1 | 8 | 3. Liga | 13 | 14/13/12/13 | Platz 15 → 18 |
+| 2 | 6 | 3. Liga | 10 | 11/12/11/10 | Platz 3 → 12 |
+| 3 | 3 | 2. Liga | 19 | 23/24/20/19 | Platz 1 → 4 |
+| 4 | 6 | 2. Liga | 10 | 10/11/12/10 | Platz 8 → 18 |
+| 5 | 6 | 2. Liga | 10 | 10/10/10/10 | Platz 16 → 18 |
+| 6 | – | 3. Liga (Ende) | – | – | – |
+
+Die Gründe stehen jetzt in der Ausgabe, und zwar vor dem Saisonwechsel. Auffällig ist Lauf 3: Der Verein wird mit Platz 4 entlassen, obwohl Platz 1 erwartet war und der Vorstand bei 19 steht. Die Verlaufsdaten zeigen einen dreijährigen Rückgang, also greift die Regel nach Verlauf und nicht nach dem letzten Platz allein. Das ist eine Spielregel-Frage und wird nicht geändert, solange der Nutzer nicht freigibt.
+
+Vergleich mit den früheren passiven Läufen derselben Auswertung: 4 von 10, 5 von 10 und 7 von 8 Läufen mit Entlassung. Die Startliga der älteren Läufe ist in der Ausgabe nicht gesichert vermerkt, deshalb ist der Vergleich nur grob.
