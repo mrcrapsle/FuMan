@@ -309,6 +309,10 @@
         }
         .panel-header > * { min-width: 0; }
         .panel-grid > * { min-width: 0; }
+        /* Rasterzellen dürfen schrumpfen: sonst schiebt ein langes Wort bei großer Schrift die Seite breiter als das Handy */
+        [style*="grid-template-columns"] > * { min-width: 0; overflow-wrap: anywhere; }
+        /* Breite Tabellen (Liga-Tabelle bei großer Schrift) scrollen in ihrem Kasten statt die Seite zu verbreitern */
+        .app-content div:has(> table) { overflow-x: auto; }
         .panel-header::after {
             content: ''; position: absolute; bottom: 0; left: 0; width: 34px; height: 3px;
             border-radius: 3px; background: linear-gradient(90deg, var(--accent), transparent);
@@ -440,6 +444,11 @@
         .ui-field-hint { font-size: var(--fs-small); color: var(--text-muted); line-height: var(--lh-body); }
         .ui-card-head .ui-card-info { width: 36px; min-width: 36px; height: 36px; padding: 0; margin: 0; flex: 0 0 auto; border-radius: 10px; }
         .ui-card-kpi-lang { font-size: var(--fs-title); }
+        /* Lange Kennzahlen (Geldbeträge) auf dem Handy als eigene Zeile unter dem Titel */
+        @media (max-width: 650px) {
+            .ui-card-head > .ui-card-kpi:has(.ui-card-kpi-lang) { grid-column: 2 / -1; grid-row: 2; flex-direction: row; align-items: baseline; gap: 6px; margin-top: 6px; }
+            .ui-card-head:has(.ui-card-kpi-lang) > .ui-card-meta { grid-row: 3; }
+        }
         .ui-card-more { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
         .ui-card-more button { margin: 0; }
         .ui-card-body { margin-top: 10px; font-size: var(--fs-body); line-height: var(--lh-body); }

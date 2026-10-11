@@ -2653,6 +2653,7 @@ async function testDesignThemes(browser) {
     await page.setViewportSize({ width: 412, height: 900 });
     const r = await page.evaluate(async () => {
         closeTutorial();
+        game.sackPending = false; simulateMatchdays(3);
         const out = { kontrast: [], ueberlauf: [] };
         const probe = document.createElement('div');
         document.querySelector('.app-content').appendChild(probe);
@@ -2679,10 +2680,9 @@ async function testDesignThemes(browser) {
         out.groesser = parseFloat(getComputedStyle(document.body).fontSize) / normal;
         // Handy: bei sehr großer Schrift läuft nichts über
         const W = document.documentElement.clientWidth;
-        for (const [name, open] of [['dashboard', () => showScreen('screen-dashboard')], ['personal', () => showScreen('screen-staff')],
-            ['markt', () => { showScreen('screen-transfer'); setTransferTab('market'); }], ['darstellung', () => showScreen('screen-design')],
-            ['talentbaum', () => showScreen('screen-manager-tree')]]) {
-            open();
+        const alle = [...document.querySelectorAll('[id^="screen-"]')].map(e => e.id).filter(id => !id.includes('prematch') && id !== 'screen-matchday' && id !== 'screen-office');
+        for (const name of alle) {
+            showScreen(name);
             await new Promise(res => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(res, 40))));
             if (document.documentElement.scrollWidth > W + 2) out.ueberlauf.push(name);
         }
@@ -2710,7 +2710,7 @@ async function testDesignThemes(browser) {
     assert(r.kontrast.length === 0, `Alle Themes: Text, Nebentext, Akzent, Gut und Schlecht erreichen 4,5:1 auf Karten (${r.kontrast.join(', ')})`);
     assert(r.ungueltigIgnoriert, 'Ein unbekanntes Theme ändert nichts');
     assert(r.groesser > 1.2, `Textgröße "sehr groß" vergrößert die Schrift (Faktor ${r.groesser.toFixed(2)})`);
-    assert(r.ueberlauf.length === 0, `Sehr große Schrift läuft auf dem Handy nirgends über (${r.ueberlauf.join(', ')})`);
+    assert(r.ueberlauf.length === 0, `Sehr große Schrift läuft auf dem Handy auf keinem Bildschirm über (${r.ueberlauf.join(', ')})`);
     assert(r.karten === 5 && r.groessen === 3, `Darstellung zeigt 5 Themes und 3 Textgrößen (${r.karten}/${r.groessen})`);
     assert(r.vorschau, 'Die Vorschau zeigt den stärksten eigenen Spieler');
     assert(r.navKnopf, 'Menüpunkt "Darstellung" ist vorhanden');

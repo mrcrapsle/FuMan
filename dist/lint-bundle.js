@@ -273,7 +273,7 @@ function renderUiCard(opts = {}) {
     const meta = (opts.meta || []).filter(Boolean).join('');
     const kpi = opts.kpi ? `
         <div class="ui-card-kpi"${opts.kpi.farbe ? ` style="color:${opts.kpi.farbe};"` : ''}>
-            <span class="ui-card-kpi-wert">${opts.kpi.wert}</span>
+            <span class="ui-card-kpi-wert${String(opts.kpi.wert).length > 5 ? ' ui-card-kpi-lang' : ''}">${opts.kpi.wert}</span>
             ${opts.kpi.label ? `<span class="ui-card-kpi-label">${opts.kpi.label}</span>` : ''}
         </div>` : '';
     const aside = opts.aside || '';
@@ -1262,7 +1262,7 @@ function renderUiStatRow(werte) {
         if (summaryEl) summaryEl.innerText = unreadTotal > 0 ? ` — ${unreadTotal} ungelesen` : ' — alles gelesen';
 
         if (filtered.length === 0) {
-            list.innerHTML = `<div class="box" style="font-size:var(--fs-small); color:#64748b;">${inboxFilter === 'archiv' ? 'Archiv ist leer.' : 'Keine Nachrichten in dieser Kategorie.'}</div>`;
+            list.innerHTML = `<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">${inboxFilter === 'archiv' ? 'Archiv ist leer.' : 'Keine Nachrichten in dieser Kategorie.'}</div>`;
             return;
         }
         let isArchiveView = inboxFilter === 'archiv';
@@ -1271,7 +1271,7 @@ function renderUiStatRow(werte) {
             let linkBtn = m.screenLink ? `<button onclick="markInboxRead(${m.id}); showScreen('${m.screenLink}')" class="btn-secondary" style="font-size:var(--fs-caption); width:auto; margin-top:4px;">Ansehen →</button>` : '';
             let archiveBtn = isArchiveView
                 ? `<button onclick="event.stopPropagation(); restoreInboxMessage(${m.id})" style="background:none; border:none; color:var(--primary); cursor:pointer; font-size:var(--fs-body); padding:0 2px;" title="Wiederherstellen">↺</button>`
-                : `<button onclick="event.stopPropagation(); archiveInboxMessage(${m.id})" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:var(--fs-body); padding:0 2px;" title="Archivieren">🗄️</button>`;
+                : `<button onclick="event.stopPropagation(); archiveInboxMessage(${m.id})" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:var(--fs-body); padding:0 2px;" title="Archivieren">🗄️</button>`;
             return `
                 <div class="box" style="border-left-color:${m.important ? 'var(--gold)' : meta.color}; ${m.read ? 'opacity:0.6;' : ''} cursor:pointer;" onclick="markInboxRead(${m.id})">
                     <div style="display:flex; justify-content:space-between; align-items:flex-start;">
@@ -1279,11 +1279,11 @@ function renderUiStatRow(werte) {
                         <span>
                             <button onclick="event.stopPropagation(); toggleInboxImportant(${m.id})" style="background:none; border:none; color:${m.important ? 'var(--gold)' : '#64748b'}; cursor:pointer; font-size:var(--fs-body-lg); padding:0 2px;" title="Als wichtig markieren">${m.important ? '★' : '☆'}</button>
                             ${archiveBtn}
-                            <button onclick="event.stopPropagation(); deleteInboxMessage(${m.id})" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:var(--fs-body); padding:0 2px;" title="Endgültig löschen">✕</button>
+                            <button onclick="event.stopPropagation(); deleteInboxMessage(${m.id})" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:var(--fs-body); padding:0 2px;" title="Endgültig löschen">✕</button>
                         </span>
                     </div>
                     <div style="font-size:var(--fs-small); margin-top:3px;">${m.body}</div>
-                    <div style="font-size:var(--fs-micro); color:#64748b; margin-top:4px;">Saison ${m.season} · Spieltag ${m.matchday}/34 ${m.read ? '' : ' · <span style="color:var(--primary);">● Neu</span>'}</div>
+                    <div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:4px;">Saison ${m.season} · Spieltag ${m.matchday}/34 ${m.read ? '' : ' · <span style="color:var(--primary);">● Neu</span>'}</div>
                     ${linkBtn}
                 </div>`;
         }).join('');
@@ -2853,7 +2853,7 @@ function getOwnDerbyRivals() {
                     <div style="width:18px; height:18px; border:2px solid ${game.teamInstructions[it.key] ? 'var(--primary)' : '#666'}; border-radius:3px; background:${game.teamInstructions[it.key] ? 'var(--primary)' : 'transparent'}; display:flex; align-items:center; justify-content:center; font-size:var(--fs-body); color:#000; flex-shrink:0;">${game.teamInstructions[it.key] ? '✓' : ''}</div>
                     <strong style="font-size:var(--fs-body);">${it.label}</strong>
                 </div>
-                <div style="font-size:var(--fs-caption); color:#aaa; margin-top:3px; margin-left:26px;">${it.desc}</div>
+                <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:3px; margin-left:26px;">${it.desc}</div>
             </div>`).join('');
     }
 
@@ -2882,7 +2882,7 @@ function getOwnDerbyRivals() {
                     <div style="width:18px; height:18px; border:2px solid ${game.tacticAutomation[it.key] ? 'var(--primary)' : '#666'}; border-radius:3px; background:${game.tacticAutomation[it.key] ? 'var(--primary)' : 'transparent'}; display:flex; align-items:center; justify-content:center; font-size:var(--fs-body); color:#000; flex-shrink:0;">${game.tacticAutomation[it.key] ? '✓' : ''}</div>
                     <strong style="font-size:var(--fs-body);">${it.label}</strong>
                 </div>
-                <div style="font-size:var(--fs-caption); color:#aaa; margin-top:3px; margin-left:26px;">${it.desc}</div>
+                <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:3px; margin-left:26px;">${it.desc}</div>
             </div>`).join('');
     }
 
@@ -2906,7 +2906,7 @@ function getOwnDerbyRivals() {
             let active = f === game.formation;
             return `<div onclick="setFormation('${f}')" class="panel" style="cursor:pointer; margin:0; padding:8px; ${active ? 'border-color:var(--accent); border-width:2px;' : ''}">
                 <div style="font-weight:800; font-size:var(--fs-body-lg); ${active ? 'color:var(--accent);' : ''}">${f}</div>
-                <div style="font-size:var(--fs-caption); color:#aaa; margin-top:2px;">Def ${r.def} · Off ${r.off}</div>
+                <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:2px;">Def ${r.def} · Off ${r.off}</div>
             </div>`;
         }).join('');
     }
@@ -2919,7 +2919,7 @@ function getOwnDerbyRivals() {
             let active = key === game.tacticStyle;
             return `<div onclick="setTacticStyle('${key}')" class="panel" style="cursor:pointer; margin:0; padding:8px; ${active ? 'border-color:var(--accent); border-width:2px;' : ''}">
                 <div style="font-weight:800; font-size:var(--fs-body); ${active ? 'color:var(--accent);' : ''}">${cfg.label}</div>
-                <div style="font-size:var(--fs-caption); color:#aaa; margin-top:2px;">Tempo ${cfg.tempo} · Press ${cfg.press}</div>
+                <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:2px;">Tempo ${cfg.tempo} · Press ${cfg.press}</div>
             </div>`;
         }).join('');
     }
@@ -3314,7 +3314,7 @@ function getOwnDerbyRivals() {
                     <span>${p.age} Jahre · ${p.contracts} J. Vertrag</span>
                     <span>${formatVal(p.marketValue||0)} · ⚽ ${p.goalsSeason||0} Saisontore · 🎽 ${p.appearances||0} Einsätze</span>
                 </div>
-                <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:2px; font-size:var(--fs-micro); color:#aaa; text-align:center; margin-bottom:6px; background:rgba(228,197,140,0.05); border-radius:4px; padding:4px 0;">
+                <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:2px; font-size:var(--fs-micro); color:var(--text-muted); text-align:center; margin-bottom:6px; background:rgba(228,197,140,0.05); border-radius:4px; padding:4px 0;">
                     <div>STR<br><strong style="color:var(--accent); font-size:var(--fs-body);">${p.strength}</strong></div>
                     <div>PAC<br><strong>${p.pace}</strong></div>
                     <div>SHO<br><strong>${p.shooting}</strong></div>
@@ -3490,7 +3490,7 @@ function getOwnDerbyRivals() {
     function renderSquadRadar() {
         let container = document.getElementById('squad-radar-container');
         if (!container || squad.length === 0) {
-            if (container) container.innerHTML = '<div style="font-size:var(--fs-caption); color:#94a3b8;">Kader erforderlich</div>';
+            if (container) container.innerHTML = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Kader erforderlich</div>';
             return;
         }
 
@@ -3607,7 +3607,7 @@ function getOwnDerbyRivals() {
             let pct = (m.value / m.max * 100).toFixed(0);
             html += `
                 <div style="background:rgba(255,255,255,0.05); border-radius:6px; padding:8px; border:1px solid rgba(255,255,255,0.1);">
-                    <div style="font-size:var(--fs-caption); color:#aaa; margin-bottom:4px;">${m.label}</div>
+                    <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${m.label}</div>
                     <div style="font-size:var(--fs-title); font-weight:700; color:${m.color}; margin-bottom:4px;">${m.value}</div>
                     <div style="height:4px; background:rgba(255,255,255,0.05); border-radius:2px; overflow:hidden;">
                         <div style="height:100%; width:${pct}%; background:${m.color}; border-radius:2px;"></div>
@@ -3633,7 +3633,7 @@ function getOwnDerbyRivals() {
 
         let otherTeams = currentLeague.filter(t => t.id !== game.clubId && t.stats);
         if (otherTeams.length === 0) {
-            container.innerHTML = '<div style="font-size:var(--fs-caption); color:#94a3b8;">Vergleichsdaten nicht verfügbar</div>';
+            container.innerHTML = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Vergleichsdaten nicht verfügbar</div>';
             return;
         }
 
@@ -3642,7 +3642,7 @@ function getOwnDerbyRivals() {
         let leagueAvgPass = Math.round(otherTeams.reduce((s, t) => s + (t.avgPassing || 50), 0) / otherTeams.length);
 
         let html = `
-            <div style="font-size:var(--fs-caption); color:#94a3b8; margin-bottom:6px;">Vergleich zum Liga-Durchschnitt</div>
+            <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Vergleich zum Liga-Durchschnitt</div>
             <div style="display:grid; gap:6px;">
         `;
 
@@ -4547,7 +4547,7 @@ function cleanupLegacyDevelopmentState() {
         if (!box) return;
         let entries = Object.entries(loanClubRelationships || {}).sort((a, b) => b[1] - a[1]);
         if (entries.length === 0) {
-            box.innerHTML = '<div class="box" style="font-size:var(--fs-small); color:#94a3b8;">Noch keine Leihverein-Beziehungen aufgebaut.</div>';
+            box.innerHTML = '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Leihverein-Beziehungen aufgebaut.</div>';
             return;
         }
         box.innerHTML = entries.map(([club, level]) => `<div class="box" style="display:flex; justify-content:space-between; font-size:var(--fs-small);"><span>🤝 ${club}</span><strong style="color:var(--teal);">${level}× erfolgreich${level > 0 ? ` (+${Math.min(25, level*8)}% Verhandlungsbonus)` : ''}</strong></div>`).join('');
@@ -4628,7 +4628,7 @@ function cleanupLegacyDevelopmentState() {
                     <button onclick="openPlayerDetail('${p.id}','secondTeam')" class="btn-secondary" style="width:auto; padding:2px 6px; font-size:var(--fs-caption);" title="Details">ℹ️</button>
                     <span style="flex:1; text-align:left; padding-left:6px;">
                         <strong>${p.name}</strong><br>
-                        <span style="font-size:var(--fs-caption); color:#aaa;">Str: <strong>${p.strength}</strong> | Fit: ${p.fitness}% | Marktwert: ${formatVal(p.marketValue)}</span>
+                        <span style="font-size:var(--fs-caption); color:var(--text-muted);">Str: <strong>${p.strength}</strong> | Fit: ${p.fitness}% | Marktwert: ${formatVal(p.marketValue)}</span>
                     </span>
                     <span style="font-size:var(--fs-caption); color:${isStarting ? 'var(--teal)' : '#64748b'};">${isStarting ? 'Startelf' : 'Bank'}</span>
                     <button onclick="promoteToFirstTeam('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:var(--fs-caption); color:var(--primary);" title="In die 1. Mannschaft hochziehen">⬆️</button>
@@ -4645,7 +4645,7 @@ function cleanupLegacyDevelopmentState() {
             // Profi-Leihen (js/pro-loans.js) stehen im Transfer-Bildschirm - eine Rückholung hier würde
             // sie in die zweite Mannschaft stecken.
             loanedBox.innerHTML = loanedPlayers.filter(l => !l.proLoan).length === 0
-                ? '<div class="box" style="font-size:var(--fs-small); color:#94a3b8;">Aktuell keine Spieler verliehen.</div>'
+                ? '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Aktuell keine Spieler verliehen.</div>'
                 : loanedPlayers.map((l, idx) => {
                     if (l.proLoan) return '';
                     return `<div class="box" style="font-size:var(--fs-small); display:flex; justify-content:space-between; align-items:center;">
@@ -4659,7 +4659,7 @@ function cleanupLegacyDevelopmentState() {
         let marketList = document.getElementById('st-market-list');
         if (marketList) {
             marketList.innerHTML = secondTeamMarketPlayers.length === 0
-                ? '<div class="box" style="font-size:var(--fs-small); color:#64748b;">Kein Markt verfügbar - erst nächste Saison aktualisiert sich das Angebot.</div>'
+                ? '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Kein Markt verfügbar - erst nächste Saison aktualisiert sich das Angebot.</div>'
                 : secondTeamMarketPlayers.map((p, idx) => `
                     <div class="market-row">
                         <span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 26) : ''}<span class="badge badge-${(p.pos||'mit').toLowerCase()}">${p.pos}</span> ${p.name} (Str: ${p.strength})</span>
@@ -4674,7 +4674,7 @@ function cleanupLegacyDevelopmentState() {
                 <div class="player-row">
                     ${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 26) : ''}
                     <span class="badge badge-${(p.pos||'mit').toLowerCase()}">${p.pos}</span>
-                    <span style="flex:1; text-align:left; padding-left:6px;"><strong>${p.name}</strong> <span style="font-size:var(--fs-caption); color:#aaa;">(Str: ${p.strength})</span></span>
+                    <span style="flex:1; text-align:left; padding-left:6px;"><strong>${p.name}</strong> <span style="font-size:var(--fs-caption); color:var(--text-muted);">(Str: ${p.strength})</span></span>
                     <button onclick="demoteToSecondTeam('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:var(--fs-caption); color:var(--teal);" title="In die 2. Mannschaft verschieben">⬇️</button>
                 </div>`).join('');
         }
@@ -4773,7 +4773,7 @@ function cleanupLegacyDevelopmentState() {
                         <strong>${st.icon} ${st.name}</strong>
                         <span style="color:${st.hired ? 'var(--primary)' : 'var(--text-muted)'};">${st.hired ? 'angestellt' : formatVal(st.cost)}</span>
                     </div>
-                    <div style="color:#94a3b8; margin:2px 0 4px 0;">${st.desc}</div>
+                    <div style="color:var(--text-muted); margin:2px 0 4px 0;">${st.desc}</div>
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <span style="font-size:var(--fs-caption); color:var(--text-muted);">Gehalt ${formatVal(st.wage)} / Spieltag</span>
                         ${st.hired
@@ -4852,7 +4852,7 @@ function cleanupLegacyDevelopmentState() {
         }
         box.innerHTML = `${zeilen}
             ${log.length > 0 ? `<div style="margin-top:6px; border-top:1px solid #1e293b; padding-top:4px;">
-                ${log.map(l => `<div style="font-size:var(--fs-caption); color:#94a3b8;">ST ${l.matchday}: ${l.text}</div>`).join('')}
+                ${log.map(l => `<div style="font-size:var(--fs-caption); color:var(--text-muted);">ST ${l.matchday}: ${l.text}</div>`).join('')}
             </div>` : ''}`;
     }
 
@@ -5399,8 +5399,8 @@ function selectNewGameScenario(id) {
         if (interviewBox) {
             let recent = (game.interviewHistory || []).slice(-5).reverse();
             interviewBox.innerHTML = recent.length === 0
-                ? '<div class="box" style="font-size:var(--fs-small); color:#94a3b8;">Noch keine Interviews gegeben.</div>'
-                : recent.map(h => `<div class="box" style="font-size:var(--fs-small);"><span style="color:#94a3b8;">S${h.season}/${h.matchday}:</span> „${h.question}“ → <strong>${h.answer}</strong> <span style="color:${h.fans >= 0 ? 'var(--primary)' : 'var(--danger)'};">(Fans ${h.fans >= 0 ? '+' : ''}${h.fans})</span></div>`).join('');
+                ? '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Interviews gegeben.</div>'
+                : recent.map(h => `<div class="box" style="font-size:var(--fs-small);"><span style="color:var(--text-muted);">S${h.season}/${h.matchday}:</span> „${h.question}“ → <strong>${h.answer}</strong> <span style="color:${h.fans >= 0 ? 'var(--primary)' : 'var(--danger)'};">(Fans ${h.fans >= 0 ? '+' : ''}${h.fans})</span></div>`).join('');
         }
     }
 
@@ -5427,7 +5427,7 @@ function selectNewGameScenario(id) {
     function showCareerCertificate() {
         let trophyLines = (game.trophies || []).length > 0
             ? game.trophies.map((t, i) => `<div style="font-size:var(--fs-small); margin:2px 0;">#${i + 1} · ${t}</div>`).join('')
-            : '<div style="font-size:var(--fs-small); color:#94a3b8;">Keine Trophäen errungen.</div>';
+            : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Keine Trophäen errungen.</div>';
 
         let crestThumbs = crestHistory.slice(-8).map(c => {
             return `<div style="width:32px; height:32px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:var(--fs-title-sm); font-weight:900; color:#1a1200; border:1px solid rgba(255,255,255,0.5); margin:2px; background:radial-gradient(circle at 35% 30%, ${hexToRgba(c.color, 0.65)} 0%, ${c.color} 55%, ${hexToRgba(c.color, 0.75)} 100%);">${c.symbol}</div>`;
@@ -5436,7 +5436,7 @@ function selectNewGameScenario(id) {
         document.getElementById('career-certificate-content').innerHTML = `
             <div style="text-align:center; margin-bottom:12px;">
                 <div style="font-size:var(--fs-title); font-weight:900; color:var(--gold);">🏆 KARRIERE-URKUNDE 🏆</div>
-                <div style="font-size:var(--fs-body); color:#94a3b8;">${game.season} Saison(en) als Manager von ${game.clubName}</div>
+                <div style="font-size:var(--fs-body); color:var(--text-muted);">${game.season} Saison(en) als Manager von ${game.clubName}</div>
             </div>
             <div class="modal-field-grid">
                 <span class="label">Höchstes Manager-Level:</span><span class="val">${managerRPG.level} (${managerRPG.xp} XP)</span>
@@ -5451,8 +5451,8 @@ function selectNewGameScenario(id) {
             <div style="font-size:var(--fs-body); font-weight:800; color:var(--accent); margin-top:10px;">Trophäen-Zeitstrahl</div>
             ${trophyLines}
             <div style="font-size:var(--fs-body); font-weight:800; color:var(--accent); margin-top:10px;">Wappen-Historie</div>
-            <div>${crestThumbs || '<div style="font-size:var(--fs-small); color:#94a3b8;">Keine früheren Wappen-Designs.</div>'}</div>
-            <div style="font-size:var(--fs-caption); color:#64748b; margin-top:10px; text-align:center;">📸 Lade dir die Urkunde als Bild herunter oder mach einen Screenshot - nach Bestätigung ist die Karriere unwiderruflich beendet!</div>
+            <div>${crestThumbs || '<div style="font-size:var(--fs-small); color:var(--text-muted);">Keine früheren Wappen-Designs.</div>'}</div>
+            <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:10px; text-align:center;">📸 Lade dir die Urkunde als Bild herunter oder mach einen Screenshot - nach Bestätigung ist die Karriere unwiderruflich beendet!</div>
         `;
         document.getElementById('career-certificate-overlay').classList.add('show');
     }
@@ -5736,7 +5736,7 @@ function selectNewGameScenario(id) {
         if (!box) return;
         let lvl = campusBuildings.museum ? campusBuildings.museum.lvl : 0;
         if (lvl === 0) {
-            box.innerHTML = '<div class="box" style="font-size:var(--fs-small); color:#94a3b8;">Baue das Vereinsmuseum aus (mind. Stufe 1), um hier vergangene Wappen-Designs zu sehen.</div>';
+            box.innerHTML = '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Baue das Vereinsmuseum aus (mind. Stufe 1), um hier vergangene Wappen-Designs zu sehen.</div>';
             return;
         }
         // Höhere Museumsstufen zeigen mehr archivierte Wappen gleichzeitig UND schalten
@@ -5748,9 +5748,9 @@ function selectNewGameScenario(id) {
 
         let html = '';
         if (shown.length === 0) {
-            html += '<div class="box" style="font-size:var(--fs-small); color:#94a3b8;">Noch keine früheren Wappen-Designs archiviert - ändere das Wappen im Manager-Talentbaum-Screen.</div>';
+            html += '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine früheren Wappen-Designs archiviert - ändere das Wappen im Manager-Talentbaum-Screen.</div>';
         } else {
-            html += `<div style="font-size:var(--fs-caption); color:#94a3b8; margin-bottom:6px;">Zeigt die letzten ${shown.length} von ${crestHistory.length} archivierten Designs (Museum Stufe ${lvl}).</div>`;
+            html += `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Zeigt die letzten ${shown.length} von ${crestHistory.length} archivierten Designs (Museum Stufe ${lvl}).</div>`;
             html += '<div style="display:flex; gap:8px; flex-wrap:wrap;">' + shown.map(c => {
                 let patternMeta = CREST_PATTERN_PRESETS.find(p => p.key === c.pattern);
                 return `
@@ -5759,7 +5759,7 @@ function selectNewGameScenario(id) {
                             ${c.symbol}
                             ${patternMeta && patternMeta.icon ? `<span style="position:absolute; bottom:-2px; right:-2px; width:14px; height:14px; background:#0d1220; border-radius:50%; font-size:var(--fs-micro); display:flex; align-items:center; justify-content:center;">${patternMeta.icon}</span>` : ''}
                         </div>
-                        <div style="font-size:var(--fs-micro); color:#94a3b8; margin-top:2px;">Saison ${c.season}</div>
+                        <div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:2px;">Saison ${c.season}</div>
                     </div>`;
             }).join('') + '</div>';
         }
@@ -6933,13 +6933,13 @@ function selectNewGameScenario(id) {
 
         document.getElementById('europe-draw-round-name').innerText = 'Champions Cup - Halbfinale';
         document.getElementById('europe-draw-reveal-text').innerText = '🎟️ Die Kugeln rollen...';
-        document.getElementById('europe-draw-opponents-list').innerHTML = '<div style="font-size:var(--fs-caption); color:#94a3b8; margin-top:8px;">Hin- und Rückspiel, Gesamtergebnis entscheidet. Bei Gleichstand nach 180 Minuten: Elfmeterschießen.</div>';
+        document.getElementById('europe-draw-opponents-list').innerHTML = '<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:8px;">Hin- und Rückspiel, Gesamtergebnis entscheidet. Bei Gleichstand nach 180 Minuten: Elfmeterschießen.</div>';
         document.getElementById('europe-draw-overlay').classList.add('show');
 
         clearTimeout(europeDrawRevealTimer);
         europeDrawRevealTimer = setTimeout(() => {
             document.getElementById('europe-draw-reveal-text').innerText = 'Euer Halbfinal-Gegner steht fest!';
-            document.getElementById('europe-draw-opponents-list').innerHTML = `<div style="font-size:18px; font-weight:900; color:#fff; margin:6px 0;">⚽ ${opponent}</div><div style="font-size:var(--fs-caption); color:#94a3b8; margin-top:8px;">Hin- und Rückspiel, Gesamtergebnis entscheidet. Bei Gleichstand nach 180 Minuten: Elfmeterschießen.</div>`;
+            document.getElementById('europe-draw-opponents-list').innerHTML = `<div style="font-size:18px; font-weight:900; color:#fff; margin:6px 0;">⚽ ${opponent}</div><div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:8px;">Hin- und Rückspiel, Gesamtergebnis entscheidet. Bei Gleichstand nach 180 Minuten: Elfmeterschießen.</div>`;
             playSound('whistle');
         }, 1400);
     }
@@ -7112,7 +7112,7 @@ function selectNewGameScenario(id) {
             let quoteText = (p.penaltiesTaken || 0) > 0 ? ` · Quote: ${Math.round((p.penaltiesScored / p.penaltiesTaken) * 100)}% (${p.penaltiesScored}/${p.penaltiesTaken})` : ' · Quote: -';
             let specialistTag = p.individualFocus === 'elfmeter' ? ' 🥅' : '';
             return `<div class="player-row" onclick="toggleShooterSelection('${p.id}')" style="cursor:pointer; ${orderIdx !== -1 ? 'border-color:var(--primary); background:rgba(34,224,168,0.1);' : ''}">
-                <span>${orderIdx !== -1 ? `#${orderIdx + 1} ` : ''}${p.name}${specialistTag} <span style="color:#94a3b8; font-size:var(--fs-caption);">(Schuss: ${p.shooting}${quoteText})</span></span>
+                <span>${orderIdx !== -1 ? `#${orderIdx + 1} ` : ''}${p.name}${specialistTag} <span style="color:var(--text-muted); font-size:var(--fs-caption);">(Schuss: ${p.shooting}${quoteText})</span></span>
             </div>`;
         }).join('');
         document.getElementById('shooter-select-count').innerText = `${selectedShooters.length}/5 gewählt`;
@@ -7409,7 +7409,7 @@ function selectNewGameScenario(id) {
                             <span>${s.teamA} vs ${s.teamB}</span>
                             <span style="color:var(--primary);">${s.winner ? `Sieger: ${s.winner}` : 'Läuft...'}</span>
                         </div>
-                        <span style="font-size:var(--fs-caption); color:#94a3b8;">${legInfo}</span>
+                        <span style="font-size:var(--fs-caption); color:var(--text-muted);">${legInfo}</span>
                     </div>`;
                 }).join('');
                 let finalHtml = europeTournament.finalMatch ? `<div class="box" style="border-color:var(--gold); color:var(--gold);">👑 FINALE: ${europeTournament.finalMatch.home} vs ${europeTournament.finalMatch.away} [${europeTournament.finalMatch.score}] => Sieger: <strong>${europeTournament.finalMatch.winner}</strong></div>` : '';
@@ -8257,7 +8257,7 @@ function renderTransferPokerBox() {
         document.getElementById('nego-amount-value').innerText = formatVal(negoAmount);
         document.getElementById('nego-resell-value').innerText = negoResellPct + '%';
         let histList = document.getElementById('nego-history-list');
-        histList.innerHTML = (o.history || []).slice().reverse().map(h => `<div style="font-size:var(--fs-small); color:#94a3b8;">Runde ${h.round}: ${formatVal(h.demanded)} gefordert</div>`).join('') || '<div style="font-size:var(--fs-small); color:#64748b;">Noch keine Nachverhandlung.</div>';
+        histList.innerHTML = (o.history || []).slice().reverse().map(h => `<div style="font-size:var(--fs-small); color:var(--text-muted);">Runde ${h.round}: ${formatVal(h.demanded)} gefordert</div>`).join('') || '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Nachverhandlung.</div>';
         let negoAvatarBox = document.getElementById('player-detail-link-nego');
         if (negoAvatarBox) {
             negoAvatarBox.innerHTML = (p && typeof getPlayerAvatarSVG === 'function') ? getPlayerAvatarSVG(p, 76) : '👤';
@@ -8283,36 +8283,28 @@ function renderTransferPokerBox() {
 
                 let card = document.createElement('div');
                 card.className = 'panel box-offer';
-                card.innerHTML = `
-                    <div class="panel-header" style="color:var(--blue);">
-                        <span>💼 Angebot von <strong>${o.clubName}</strong></span>
-                        <span style="font-size:var(--fs-caption); color:#aaa;">Gültig: ${o.expiresIn} SpT</span>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                        <div style="display:flex; align-items:center; gap:6px;">
-                            ${p && typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 32) : ''}
-                            <span>
-                                <span class="badge ${badgeClass}">${o.playerPos}</span>
-                                <button onclick="openPlayerDetail('${o.playerId}','squad')" class="btn-secondary" style="width:auto; padding:2px 6px; font-size:var(--fs-caption);" title="Details">ℹ️</button>
-                                <strong>${o.playerName}</strong> (Stärke: ${o.playerStr})
-                                <div style="font-size:var(--fs-caption); color:#aaa;">Marktwert: ${formatVal(o.marketValue)}</div>
-                            </span>
-                        </div>
-                        <div style="text-align:right;">
-                            <div style="font-size:var(--fs-title-sm); font-weight:900; color:var(--accent);">${formatVal(o.currentBid)}</div>
-                            <div style="font-size:var(--fs-caption); color:${diffColor}; font-weight:bold;">${diffText} vs MW</div>
-                        </div>
-                    </div>
-                    <div style="font-size:var(--fs-small); color:#cbd5e1; margin-bottom:8px;">${o.statusText}</div>
-                    
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px; margin-bottom:4px;">
-                        <button onclick="acceptTransferOffer('${o.id}')" class="btn-primary" style="font-size:var(--fs-small);">✔ Annehmen (${formatVal(o.currentBid)})</button>
-                        <button onclick="rejectTransferOffer('${o.id}')" class="btn-danger" style="font-size:var(--fs-small);">✖ Ablehnen</button>
-                    </div>
-                    <button onclick="acceptTransferOfferWithClause('${o.id}')" class="btn-gold" style="font-size:var(--fs-caption); margin-bottom:4px;">📜 Mit 15% Weiterverkaufsbeteiligung (${formatVal(Math.round(o.currentBid*0.94))} sofort)</button>
-                    ${typeof getBuybackTerms === 'function' && p && getBuybackTerms(p, o) ? `<button onclick="acceptTransferOfferWithBuyback('${o.id}')" class="btn-gold" style="font-size:var(--fs-caption); margin-bottom:4px;">↩️ Mit Rückkaufoption (${formatVal(getBuybackTerms(p, o).sofort)} sofort, zurück für ${formatVal(getBuybackTerms(p, o).preis)})</button>` : ''}
-                    <button onclick="openNegotiationStepper('${o.id}')" class="btn-secondary" style="font-size:var(--fs-small); margin-top:4px;">🔧 Nachverhandeln (Schrittweite-Angebot)</button>
-                `;
+                const rueckkauf = typeof getBuybackTerms === 'function' && p ? getBuybackTerms(p, o) : null;
+                card.innerHTML = renderUiCard({
+                    thumb: `${p && typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 48) : ''}<span class="badge ${badgeClass}">${o.playerPos}</span>`,
+                    title: o.playerName,
+                    sub: `💼 Angebot von ${o.clubName}`,
+                    meta: [
+                        uiChip(`Stärke ${o.playerStr}`),
+                        uiChip(`MW ${formatVal(o.marketValue)}`),
+                        uiChip(`${diffText} vs MW`, diff >= 0 ? 'gut' : 'schlecht'),
+                        uiChip(`⏳ Gültig: ${o.expiresIn} SpT`, o.expiresIn <= 1 ? 'warn' : '')
+                    ],
+                    kpi: { wert: formatVal(o.currentBid), label: 'Gebot', farbe: diffColor },
+                    aside: `<button onclick="openPlayerDetail('${o.playerId}','squad')" class="btn-secondary ui-card-info" title="Details" aria-label="Details zu ${o.playerName}">ℹ️</button>`,
+                    body: o.statusText ? `<span style="color:var(--text-box);">${o.statusText}</span>` : '',
+                    actions: `<button onclick="acceptTransferOffer('${o.id}')" class="btn-primary">✔ Annehmen (${formatVal(o.currentBid)})</button>
+                        <button onclick="rejectTransferOffer('${o.id}')" class="btn-danger">✖ Ablehnen</button>`
+                }) + `
+                    <div class="ui-card-more">
+                        <button onclick="acceptTransferOfferWithClause('${o.id}')" class="btn-gold">📜 Mit 15% Weiterverkaufsbeteiligung (${formatVal(Math.round(o.currentBid*0.94))} sofort)</button>
+                        ${rueckkauf ? `<button onclick="acceptTransferOfferWithBuyback('${o.id}')" class="btn-gold">↩️ Mit Rückkaufoption (${formatVal(rueckkauf.sofort)} sofort, zurück für ${formatVal(rueckkauf.preis)})</button>` : ''}
+                        <button onclick="openNegotiationStepper('${o.id}')" class="btn-secondary">🔧 Nachverhandeln (Schrittweite-Angebot)</button>
+                    </div>`;
                 offList.appendChild(card);
             });
         }
@@ -8357,16 +8349,15 @@ function renderTransferPokerBox() {
             row.style.cssText = 'margin-bottom:6px; padding:8px;';
             let isNegotiating = pendingFreeAgentNegotiation && pendingFreeAgentNegotiation.playerId === p.id;
             let feeDisplay = isNegotiating ? pendingFreeAgentNegotiation.counterFee : p.signOnFee;
-            row.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="display:flex; align-items:center; gap:6px;">
-                        ${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 28) : ''}
-                        <span><strong class="badge badge-${(p.pos||'mit').toLowerCase()}">${p.pos}</strong> ${p.name} (Str: ${p.strength}) <span style="font-size:var(--fs-micro); color:var(--text-muted);">${p.character || ''}</span></span>
-                    </span>
-                    <button onclick="signFreeAgent(${idx})" class="btn-blue" style="width:auto;">Verpflichten [Handgeld: ${formatVal(feeDisplay)}]</button>
-                </div>
-                ${isNegotiating ? `<div class="box" style="font-size:var(--fs-caption); margin-top:4px; border-left-color:var(--danger);">💬 Gegenangebot: ${p.name} verlangt ${formatVal(pendingFreeAgentNegotiation.counterFee)} statt ursprünglich ${formatVal(p.signOnFee)}. <button onclick="rejectFreeAgentCounter()" class="btn-secondary" style="width:auto; font-size:var(--fs-micro); margin-left:4px;">Ablehnen</button></div>` : ''}
-            `;
+            row.innerHTML = renderUiCard({
+                thumb: `${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 48) : ''}<span class="badge badge-${(p.pos||'mit').toLowerCase()}">${p.pos}</span>`,
+                title: p.name,
+                sub: `${p.age ? p.age + ' J. · ' : ''}vereinslos${p.character ? ' · ' + p.character : ''}`,
+                meta: [uiChip(`💶 Handgeld ${formatVal(feeDisplay)}`, isNegotiating ? 'warn' : '')],
+                kpi: { wert: p.strength, label: 'Stärke' },
+                body: isNegotiating ? `<div class="box" style="margin:0; border-left-color:var(--danger);">💬 Gegenangebot: ${p.name} verlangt ${formatVal(pendingFreeAgentNegotiation.counterFee)} statt ursprünglich ${formatVal(p.signOnFee)}. <button onclick="rejectFreeAgentCounter()" class="btn-secondary" style="width:auto; margin-left:4px;">Ablehnen</button></div>` : '',
+                actions: `<button onclick="signFreeAgent(${idx})" class="btn-blue">Verpflichten [Handgeld: ${formatVal(feeDisplay)}]</button>`
+            });
             fList.appendChild(row);
         });
 
@@ -8402,7 +8393,7 @@ function renderTransferPokerBox() {
         box.innerHTML = loanablePlayers.map((p, idx) => `
             <div class="panel">
                 <div class="panel-header"><span>${p.name} (${p.pos}, Str ${p.strength})</span><span style="color:var(--text-muted); font-size:var(--fs-caption);">von ${p.loanParentClub}</span></div>
-                <div style="font-size:var(--fs-caption); color:#aaa; margin-bottom:4px;">Leihgebühr: <strong style="color:var(--accent);">${formatVal(p.loanFee)}</strong> · Kaufoption später: <strong>${formatVal(p.loanBuyOptionFee)}</strong> · Dauer: Saisonende</div>
+                <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">Leihgebühr: <strong style="color:var(--accent);">${formatVal(p.loanFee)}</strong> · Kaufoption später: <strong>${formatVal(p.loanBuyOptionFee)}</strong> · Dauer: Saisonende</div>
                 <button onclick="signLoanPlayer(${idx})" class="btn-action">Ausleihen</button>
             </div>
         `).join('');
@@ -8986,7 +8977,7 @@ function renderOnboardingBox() {
             card.style.borderColor = active ? 'var(--primary)' : 'var(--border)';
             card.innerHTML = `
                 <div class="panel-header"><span>${p.name}</span><strong style="color:${active?'var(--primary)':'#aaa'};">${active?'Aktiviert ✓':'Gesperrt'}</strong></div>
-                <div style="font-size:var(--fs-small); color:#aaa; margin-bottom:6px;">${p.desc}</div>
+                <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:6px;">${p.desc}</div>
                 <button onclick="unlockManagerPerk('${p.id}')" class="${active?'btn-secondary':'btn-action'}" ${active||managerRPG.points<1?'disabled':''}>
                     ${active ? 'Bereits freigeschaltet' : 'Freischalten (1 Skill-Punkt)'}
                 </button>
@@ -9004,7 +8995,7 @@ function renderOnboardingBox() {
             card.style.borderColor = active ? 'var(--danger)' : 'var(--border)';
             card.innerHTML = `
                 <div class="panel-header"><span>${p.name}</span><strong style="color:${active?'var(--danger)':'#aaa'};">${active?'Aktiviert ✓':'Gesperrt'}</strong></div>
-                <div style="font-size:var(--fs-small); color:#aaa; margin-bottom:6px;">${p.desc}</div>
+                <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:6px;">${p.desc}</div>
                 <button onclick="unlockManagerPerk('${p.id}')" class="${active?'btn-secondary':'btn-action'}" ${active||managerRPG.points<1?'disabled':''}>
                     ${active ? 'Bereits freigeschaltet' : 'Freischalten (1 Skill-Punkt)'}
                 </button>
@@ -9708,18 +9699,18 @@ function renderBoardRoomPanel() {
                 let mission = scoutingNetwork.activeMissions.find(m => m.scoutId === s.id);
                 let body;
                 if (!s.hired) {
-                    body = `<div style="font-size:var(--fs-caption); color:#aaa; margin-bottom:6px;">Noch kein Scout für diese Region.</div>
+                    body = `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Noch kein Scout für diese Region.</div>
                             <button onclick="hireRegionalScout('${s.id}')" class="btn-action">Scout einstellen [${formatVal(cfg.hireCost)}]</button>`;
                 } else if (mission) {
                     let segments = Array.from({ length: mission.totalMatchdays }, (_, i) => i < (mission.totalMatchdays - mission.matchdaysLeft));
-                    body = `<div style="font-size:var(--fs-caption); color:#aaa; margin-bottom:4px;">${s.name} · Skill ${s.skill} (Stufe ${s.level})</div>
+                    body = `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${s.name} · Skill ${s.skill} (Stufe ${s.level})</div>
                             <div style="display:flex; align-items:center; gap:8px;">
                                 <div style="font-size:18px; font-weight:900; color:var(--accent);">${mission.matchdaysLeft}</div>
                                 <div style="flex:1; display:flex; gap:2px;">${segments.map(done => `<div style="flex:1; height:10px; border-radius:2px; background:${done ? 'var(--accent)' : 'rgba(228,197,140,0.15)'};"></div>`).join('')}</div>
                             </div>
-                            <div style="font-size:var(--fs-micro); color:#aaa; margin-top:3px;">✈️ Unterwegs - kehrt in ${mission.matchdaysLeft} SpT zurück</div>`;
+                            <div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:3px;">✈️ Unterwegs - kehrt in ${mission.matchdaysLeft} SpT zurück</div>`;
                 } else {
-                    body = `<div style="font-size:var(--fs-caption); color:#aaa; margin-bottom:6px;">${s.name} · Skill ${s.skill} (Stufe ${s.level}) · Dauer: ${getMissionDuration(s)} SpT</div>
+                    body = `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">${s.name} · Skill ${s.skill} (Stufe ${s.level}) · Dauer: ${getMissionDuration(s)} SpT</div>
                             <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
                                 <button onclick="startScoutingMission('${s.region}')" class="btn-action" style="font-size:var(--fs-small);">Entsenden [${formatVal(cfg.baseCost)}]</button>
                                 <button onclick="openScoutFilterModal('${s.region}')" class="btn-secondary" style="font-size:var(--fs-small);">🎛️ Fokus</button>
@@ -11993,9 +11984,9 @@ function renderDesignSettings() {
             card.innerHTML = `
                 <div class="panel-header" style="color:var(--industry);">
                     <span>${f.name}</span>
-                    <span>${f.owned ? `<strong style="color:var(--primary);">Stufe ${f.lvl}</strong>` : '<span style="color:#aaa;">Nicht im Besitz</span>'}</span>
+                    <span>${f.owned ? `<strong style="color:var(--primary);">Stufe ${f.lvl}</strong>` : '<span style="color:var(--text-muted);">Nicht im Besitz</span>'}</span>
                 </div>
-                <div style="font-size:var(--fs-small); color:#aaa; margin-bottom:4px;">${f.desc}${f.owned ? ` · Produktionsdauer: ${getProductionDuration(k)} SpT` : ''}</div>
+                <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:4px;">${f.desc}${f.owned ? ` · Produktionsdauer: ${getProductionDuration(k)} SpT` : ''}</div>
                 ${f.owned ?
                     `<button onclick="upgradeFactory('${k}')" class="btn-industry" ${f.lvl>=f.max || holdingCompany.money < f.cost*(f.lvl+1) ?'disabled':''}>${f.lvl>=f.max?'Maximalstufe ✓':`Fabrik ausbauen (Stufe ${f.lvl+1}) [${formatVal(f.cost*(f.lvl+1))}]`}</button>
                      ${f.lvl < f.max && holdingCompany.money < f.cost*(f.lvl+1) ? `<div style="font-size:var(--fs-micro); color:var(--danger);">Es fehlen ${formatVal(f.cost*(f.lvl+1) - holdingCompany.money)} auf dem Holding-Konto.</div>` : ''}
@@ -12151,7 +12142,7 @@ function renderDesignSettings() {
                     Aktueller Börsenkurs: <strong>${r.currentPrice.toFixed(2)} € / kg</strong> 
                     <span style="color:${deltaClass}; font-size:var(--fs-caption); font-weight:bold;">(${deltaIcon}${r.delta.toFixed(2)} €)</span>
                 </div>
-                <div style="font-size:var(--fs-caption); color:#aaa; margin-bottom:6px;">Basispreis: ${r.basePrice.toFixed(2)} € | Spanne: ${r.minPrice.toFixed(2)} - ${r.maxPrice.toFixed(2)} €</div>
+                <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Basispreis: ${r.basePrice.toFixed(2)} € | Spanne: ${r.minPrice.toFixed(2)} - ${r.maxPrice.toFixed(2)} €</div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
                     <button onclick="buyRawMaterial('${k}', 500)" class="btn-secondary">+500 kg [${formatVal(Math.round(r.currentPrice * 500))}]</button>
                     <button onclick="buyRawMaterial('${k}', 2000)" class="btn-secondary">+2.000 kg [${formatVal(Math.round(r.currentPrice * 2000))}]</button>
@@ -13443,7 +13434,7 @@ function renderDesignSettings() {
                     <strong>🤖 Trainingsstab-Automatik</strong>
                     <span style="color:${rest > 0 ? 'var(--primary)' : 'var(--text-muted)'};">${rest > 0 ? `noch ${rest} Spieltage aktiv` : 'inaktiv'}</span>
                 </div>
-                <div style="color:#94a3b8; margin:3px 0 6px 0;">
+                <div style="color:var(--text-muted); margin:3px 0 6px 0;">
                     Der Trainerstab wählt selbst Spieler, Attribut und Trainer und startet die Förderung -
                     auch während du ganze Saisons durchsimulierst. Die Trainingsgebühr zahlt weiterhin der Verein,
                     und die Automatik bucht nie ins Minus.
@@ -13454,7 +13445,7 @@ function renderDesignSettings() {
                 </div>
                 <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">Dein Guthaben: <strong style="color:var(--gold);">${game.premiumPoints || 0} 💎</strong></div>
                 ${log.length > 0 ? `<div style="margin-top:6px; border-top:1px solid #1e293b; padding-top:4px;">
-                    ${log.map(l => `<div style="font-size:var(--fs-caption); color:#94a3b8;">ST ${l.matchday}: ${l.text}</div>`).join('')}
+                    ${log.map(l => `<div style="font-size:var(--fs-caption); color:var(--text-muted);">ST ${l.matchday}: ${l.text}</div>`).join('')}
                 </div>` : ''}
             </div>`;
     }
@@ -13795,7 +13786,7 @@ function finishGoalkeeperGame() {
         let source = sponsorLeaderboardMode === 'category' ? (game.sponsorEarningsByCategory || {}) : (game.sponsorEarningsHistory || {});
         let entries = Object.entries(source).sort((a, b) => b[1] - a[1]).slice(0, 5);
         if (entries.length === 0) {
-            box.innerHTML = '<div class="box" style="font-size:var(--fs-small); color:#94a3b8;">Noch keine Sponsoreneinnahmen erfasst.</div>';
+            box.innerHTML = '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Sponsoreneinnahmen erfasst.</div>';
             return;
         }
         box.innerHTML = entries.map(([name, total], idx) => `<div class="box" style="display:flex; justify-content:space-between; font-size:var(--fs-small);"><span>#${idx + 1} ${name}</span><strong style="color:var(--accent);">${formatVal(Math.round(total))}</strong></div>`).join('');
@@ -13945,7 +13936,7 @@ function finishGoalkeeperGame() {
         let loansList = document.getElementById('active-loans-list');
         if (loansList) {
             loansList.innerHTML = activeLoans.length === 0
-                ? '<div style="font-size:var(--fs-small); color:#64748b;">Keine laufenden Kredite.</div>'
+                ? '<div style="font-size:var(--fs-small); color:var(--text-muted);">Keine laufenden Kredite.</div>'
                 : activeLoans.map(l => `<div class="player-row"><span>${l.tierName}: noch ${formatVal(l.installment)}/SpT für ${l.matchdaysLeft} Spieltage</span></div>`).join('');
         }
         let legacyDebtEl = document.getElementById('legacy-loan-debt');
@@ -14479,7 +14470,7 @@ function finishGoalkeeperGame() {
 
         let ledger = game.financeLedger || [];
         if (ledger.length === 0) {
-            box.innerHTML = `<div class="box" style="font-size:var(--fs-body); color:#94a3b8;">Noch keine Spieltagsabrechnung vorhanden. Nach dem ersten Spieltag steht hier jede Buchung einzeln aufgeschlüsselt.</div>`;
+            box.innerHTML = `<div class="box" style="font-size:var(--fs-body); color:var(--text-muted);">Noch keine Spieltagsabrechnung vorhanden. Nach dem ersten Spieltag steht hier jede Buchung einzeln aufgeschlüsselt.</div>`;
             return;
         }
 
@@ -14508,7 +14499,7 @@ function finishGoalkeeperGame() {
         let maxEin = Math.max(1, ...einnahmen.map(p => p.amount));
         let maxAus = Math.max(1, ...ausgaben.map(p => p.amount));
 
-        let anteil = (amount, ges) => ges > 0 ? ` <span style="color:#64748b; font-size:var(--fs-caption);">(${Math.round((amount / ges) * 100)}%)</span>` : '';
+        let anteil = (amount, ges) => ges > 0 ? ` <span style="color:var(--text-muted); font-size:var(--fs-caption);">(${Math.round((amount / ges) * 100)}%)</span>` : '';
 
         let verlauf = '';
         if (ledgerView === 'letzter' && ledger.length > 1) {
@@ -14518,7 +14509,7 @@ function finishGoalkeeperGame() {
                     let s = (e.summeEin || 0) - (e.summeAus || 0);
                     return `<div style="display:flex; justify-content:space-between; font-size:var(--fs-small); margin-top:2px;">
                         <span>${e.heimspiel ? '🏟️' : '🚌'} ST ${e.matchday} (S${e.season})</span>
-                        <span style="color:#94a3b8;">+${formatVal(e.summeEin || 0)} / -${formatVal(e.summeAus || 0)}</span>
+                        <span style="color:var(--text-muted);">+${formatVal(e.summeEin || 0)} / -${formatVal(e.summeAus || 0)}</span>
                         <span style="color:${s >= 0 ? 'var(--primary)' : 'var(--danger)'}; font-weight:bold;">${s >= 0 ? '+' : ''}${formatVal(s)}</span>
                     </div>`;
                 }).join('')}
@@ -14526,18 +14517,18 @@ function finishGoalkeeperGame() {
         }
 
         box.innerHTML = `
-            <div style="font-size:var(--fs-small); color:#94a3b8; margin-bottom:6px;">${kopf}</div>
+            <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:6px;">${kopf}</div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px;">
                 <div class="box">
                     <strong style="color:var(--primary); font-size:var(--fs-body);">EINNAHMEN ${formatVal(sumEinGes)}</strong>
                     <div style="margin-top:5px;">
-                        ${einnahmen.length ? einnahmen.map(p => ledgerRow(p.label + anteil(p.amount, sumEinGes), p.amount, maxEin, 'var(--primary)')).join('') : '<span style="font-size:var(--fs-small); color:#64748b;">Keine Einnahmen verbucht.</span>'}
+                        ${einnahmen.length ? einnahmen.map(p => ledgerRow(p.label + anteil(p.amount, sumEinGes), p.amount, maxEin, 'var(--primary)')).join('') : '<span style="font-size:var(--fs-small); color:var(--text-muted);">Keine Einnahmen verbucht.</span>'}
                     </div>
                 </div>
                 <div class="box">
                     <strong style="color:var(--danger); font-size:var(--fs-body);">AUSGABEN ${formatVal(sumAusGes)}</strong>
                     <div style="margin-top:5px;">
-                        ${ausgaben.length ? ausgaben.map(p => ledgerRow(p.label + anteil(p.amount, sumAusGes), p.amount, maxAus, 'var(--danger)')).join('') : '<span style="font-size:var(--fs-small); color:#64748b;">Keine Ausgaben verbucht.</span>'}
+                        ${ausgaben.length ? ausgaben.map(p => ledgerRow(p.label + anteil(p.amount, sumAusGes), p.amount, maxAus, 'var(--danger)')).join('') : '<span style="font-size:var(--fs-small); color:var(--text-muted);">Keine Ausgaben verbucht.</span>'}
                     </div>
                 </div>
             </div>
@@ -14715,7 +14706,7 @@ function finishGoalkeeperGame() {
     function renderTransferBilanzBox() {
         const b = getTransferBilanz(game.season);
         if (b.verkauf + b.weiterverkauf + b.kauf + b.handgeld === 0) {
-            return `<div class="box" style="margin-bottom:6px; font-size:var(--fs-small); color:#94a3b8;">🔁 Noch keine Transfer-Buchungen in dieser Saison.</div>`;
+            return `<div class="box" style="margin-bottom:6px; font-size:var(--fs-small); color:var(--text-muted);">🔁 Noch keine Transfer-Buchungen in dieser Saison.</div>`;
         }
         const zeile = (name, wert, farbe) => `<div style="display:flex; justify-content:space-between; font-size:var(--fs-small); margin-top:3px;"><span>${name}</span><strong style="color:${farbe};">${formatVal(wert)}</strong></div>`;
         return `<div class="box" style="margin-bottom:6px;">
@@ -14731,7 +14722,7 @@ function finishGoalkeeperGame() {
     function renderKontoauszug(box) {
         let auszug = game.kontoauszug || [];
         if (auszug.length === 0) {
-            box.innerHTML = `<div class="box" style="font-size:var(--fs-body); color:#94a3b8;">Noch keine Buchungen ausserhalb der Spieltagsabrechnung. Sobald Sie kaufen, bauen, Personal einstellen oder Kredite aufnehmen, steht hier jede Bewegung mit Bereich und Kontostand.</div>`;
+            box.innerHTML = `<div class="box" style="font-size:var(--fs-body); color:var(--text-muted);">Noch keine Buchungen ausserhalb der Spieltagsabrechnung. Sobald Sie kaufen, bauen, Personal einstellen oder Kredite aufnehmen, steht hier jede Bewegung mit Bereich und Kontostand.</div>`;
             return;
         }
         let proBereich = {};
@@ -14746,7 +14737,7 @@ function finishGoalkeeperGame() {
 
         box.innerHTML = `
             ${renderTransferBilanzBox()}
-            <div style="font-size:var(--fs-small); color:#94a3b8; margin-bottom:6px;">Alle Kontobewegungen ausserhalb der Spieltagsabrechnung (letzte ${MAX_KONTOAUSZUG} Buchungen). Die Spieltagsposten finden Sie in den beiden anderen Reitern.</div>
+            <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:6px;">Alle Kontobewegungen ausserhalb der Spieltagsabrechnung (letzte ${MAX_KONTOAUSZUG} Buchungen). Die Spieltagsposten finden Sie in den beiden anderen Reitern.</div>
             <div class="box" style="margin-bottom:6px;">
                 <strong style="font-size:var(--fs-body);">📊 NACH BEREICH</strong>
                 ${bereiche.map(b => `
@@ -14760,10 +14751,10 @@ function finishGoalkeeperGame() {
                 <strong style="font-size:var(--fs-body);">🧾 EINZELBUCHUNGEN (neueste zuerst)</strong>
                 ${auszug.slice().reverse().map(b => `
                     <div style="display:flex; justify-content:space-between; align-items:baseline; font-size:var(--fs-small); margin-top:3px; border-bottom:1px solid #1e293b; padding-bottom:2px;">
-                        <span style="color:#94a3b8;">S${b.season}/ST${b.matchday}</span>
+                        <span style="color:var(--text-muted);">S${b.season}/ST${b.matchday}</span>
                         <span style="flex:1; margin:0 6px;">${b.label}</span>
                         <span style="color:${b.amount >= 0 ? 'var(--primary)' : 'var(--danger)'}; font-weight:bold;">${b.amount >= 0 ? '+' : '-'}${formatVal(Math.abs(b.amount))}</span>
-                        <span style="color:#64748b; margin-left:6px; min-width:58px; text-align:right;">${formatVal(b.saldo)}</span>
+                        <span style="color:var(--text-muted); margin-left:6px; min-width:58px; text-align:right;">${formatVal(b.saldo)}</span>
                     </div>`).join('')}
             </div>`;
     }
@@ -14852,7 +14843,7 @@ function finishGoalkeeperGame() {
         let barWidth = Math.max(20, Math.floor((breite - 40) / data.length));
 
         let html = `
-            <div style="font-size:var(--fs-caption); color:#94a3b8; margin-bottom:4px;">Gewinn- & Verlusttrend (letzte 12 Monate)</div>
+            <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">Gewinn- & Verlusttrend (letzte 12 Monate)</div>
             <div style="display:flex; align-items:flex-end; justify-content:space-around; height:${chartHeight}px; background:rgba(255,255,255,0.03); border-radius:6px; padding:8px; gap:3px; border:1px solid rgba(255,255,255,0.1);">
         `;
 
@@ -14866,14 +14857,14 @@ function finishGoalkeeperGame() {
                         <div style="width:${Math.max(2, barWidth/3)}px; height:${incomeHeight}px; background:var(--primary); border-radius:2px 2px 0 0; opacity:0.7;" title="+${formatVal(d.income)}"></div>
                         <div style="width:${Math.max(2, barWidth/3)}px; height:${expenseHeight}px; background:var(--danger); border-radius:2px 2px 0 0; opacity:0.7;" title="-${formatVal(d.expenses)}"></div>
                     </div>
-                    <span style="font-size:var(--fs-micro); color:#666; white-space:nowrap;">M${d.seasonMonth}</span>
+                    <span style="font-size:var(--fs-micro); color:var(--text-muted); white-space:nowrap;">M${d.seasonMonth}</span>
                 </div>
             `;
         });
 
         html += `
             </div>
-            <div style="display:flex; justify-content:space-between; font-size:var(--fs-micro); color:#94a3b8; margin-top:4px;">
+            <div style="display:flex; justify-content:space-between; font-size:var(--fs-micro); color:var(--text-muted); margin-top:4px;">
                 <span><span style="display:inline-block; width:8px; height:8px; background:var(--primary); border-radius:2px; margin-right:2px;"></span>Einnahmen</span>
                 <span><span style="display:inline-block; width:8px; height:8px; background:var(--danger); border-radius:2px; margin-right:2px;"></span>Ausgaben</span>
             </div>
@@ -14899,7 +14890,7 @@ function finishGoalkeeperGame() {
 
         let total = tickets + merch + sponsoring + dividends;
         if (total === 0) {
-            container.innerHTML = '<div style="font-size:var(--fs-caption); color:#94a3b8;">Noch keine Einnahmen diesen Monat</div>';
+            container.innerHTML = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch keine Einnahmen diesen Monat</div>';
             return;
         }
 
@@ -14910,7 +14901,7 @@ function finishGoalkeeperGame() {
             { label: '📈 Dividenden', amount: Math.max(0, dividends), color: 'var(--teal)' }
         ].filter(b => b.amount > 0);
 
-        let html = '<div style="font-size:var(--fs-caption); color:#94a3b8; margin-bottom:4px;">Einnahmen-Quellen</div>';
+        let html = '<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">Einnahmen-Quellen</div>';
         breakdown.forEach(b => {
             let pct = (b.amount / total * 100).toFixed(0);
             html += `
@@ -14965,7 +14956,7 @@ function finishGoalkeeperGame() {
         let total = income + expenses;
 
         container.innerHTML = `
-            <div style="font-size:var(--fs-caption); color:#94a3b8; margin-bottom:4px;">Monatlicher Cashflow</div>
+            <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">Monatlicher Cashflow</div>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:6px;">
                 <div>
                     <div style="font-size:var(--fs-caption); margin-bottom:2px;">
@@ -14991,7 +14982,7 @@ function finishGoalkeeperGame() {
                 </div>
             </div>
             <div style="text-align:center; font-size:var(--fs-small); padding:6px; background:${isProfit ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)'}; border-radius:4px; color:${statusColor}; border:1px solid ${statusColor};">
-                <div style="font-size:var(--fs-caption); color:#aaa;">Monatlicher Gewinn/Verlust</div>
+                <div style="font-size:var(--fs-caption); color:var(--text-muted);">Monatlicher Gewinn/Verlust</div>
                 <div style="font-size:var(--fs-title-sm); font-weight:700;">${isProfit ? '+' : '-'}${formatVal(Math.abs(balance))}</div>
             </div>
         `;
@@ -15197,7 +15188,7 @@ function finishGoalkeeperGame() {
             card.style.alignItems = 'stretch';
             card.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
-                    <div><strong>${s.name}</strong><br><span style="color:#aaa; font-size:var(--fs-small);">Kurs: ${formatVal(s.price)} | Dividende: ${(s.dividendRate*100).toFixed(1)}%</span></div>
+                    <div><strong>${s.name}</strong><br><span style="color:var(--text-muted); font-size:var(--fs-small);">Kurs: ${formatVal(s.price)} | Dividende: ${(s.dividendRate*100).toFixed(1)}%</span></div>
                     <div style="text-align:right;">
                         <span style="color:${trendUp ? 'var(--primary)' : 'var(--danger)'}; font-weight:900;">${trendUp ? '▲' : '▼'}</span><br>
                         Besitz: <strong style="color:var(--blue);">${s.owned}</strong>
@@ -15206,7 +15197,7 @@ function finishGoalkeeperGame() {
                 <div class="stock-chart-3d-wrapper">
                     <div class="stock-chart-3d">${bars}</div>
                 </div>
-                <div style="font-size:var(--fs-caption); color:#64748b; margin-top:4px;">Kaufen für einen festen Geldbetrag (skaliert automatisch mit dem Kurs, egal wie teuer/günstig die Aktie ist):</div>
+                <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">Kaufen für einen festen Geldbetrag (skaliert automatisch mit dem Kurs, egal wie teuer/günstig die Aktie ist):</div>
                 <div style="display:flex; gap:3px; margin-top:4px; flex-wrap:wrap;">
                     <button onclick="buyStockByAmount('${key}', 1000)" class="btn-action" style="font-size:var(--fs-caption); width:auto;">+1.000 €</button>
                     <button onclick="buyStockByAmount('${key}', 10000)" class="btn-action" style="font-size:var(--fs-caption); width:auto;">+10.000 €</button>
@@ -16095,7 +16086,7 @@ function finishGoalkeeperGame() {
         let rivale = getExclusivityRival(category, slot);
         return rivale
             ? ` · <span style="color:var(--danger);">🏷️ ${category} ⚠️ Branchenkonflikt mit ${rivale.name} (${rivale.slot}): alle Beträge nur 70 %</span>`
-            : ` · <span style="color:#94a3b8;">🏷️ ${category}</span>`;
+            : ` · <span style="color:var(--text-muted);">🏷️ ${category}</span>`;
     }
 
     function renderOfferCard(o, kind, extraLine) {
@@ -16184,24 +16175,24 @@ function finishGoalkeeperGame() {
 
         let offersList = document.getElementById('sponsors-offers-list');
         offersList.innerHTML = sponsorOffers.length === 0
-            ? '<div class="box" style="font-size:var(--fs-small); color:#64748b;">Aktuell keine neuen Hauptsponsor-Angebote. Schau nach ein paar Spieltagen wieder vorbei.</div>'
+            ? '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Aktuell keine neuen Hauptsponsor-Angebote. Schau nach ein paar Spieltagen wieder vorbei.</div>'
             : sponsorOffers.map(o => renderOfferCard(o, 'sponsor', `Sockel: ${formatVal(o.base)}/SpT · Siegprämie: ${formatVal(o.winBonus)} · Pokalsieg: ${formatVal(o.cupBonus)} · Aufstieg: ${formatVal(o.promotionBonus)}${o.signOn > 0 ? ` · Handgeld: ${formatVal(o.signOn)}` : ''}${o.themedBonusType === 'cleanSheet' ? ` · 🧤 ${formatVal(o.themedBonusAmount)} pro Zu-Null-Spiel` : ''}${o.themedBonusType === 'attendance' ? ` · 🎟️ ${o.themedBonusAmount}€ pro Zuschauer` : ''}${categoryBadgeHtml(o.category, 'sponsor')}`)).join('');
 
         let kitOffersList = document.getElementById('kit-offers-list');
         kitOffersList.innerHTML = kitSupplierOffers.length === 0
-            ? '<div class="box" style="font-size:var(--fs-small); color:#64748b;">Aktuell keine neuen Ausrüster-Angebote. Schau nach ein paar Spieltagen wieder vorbei.</div>'
+            ? '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Aktuell keine neuen Ausrüster-Angebote. Schau nach ein paar Spieltagen wieder vorbei.</div>'
             : kitSupplierOffers.map(o => renderOfferCard(o, 'kit', `Handgeld: ${formatVal(o.signOn)} · Laufend: ${formatVal(o.income)}/SpT${categoryBadgeHtml(o.category, 'kit')}`)).join('');
 
         let sleeveOffersList = document.getElementById('sleeve-offers-list');
         if (sleeveOffersList) {
             sleeveOffersList.innerHTML = sleeveSponsorOffers.length === 0
-                ? '<div class="box" style="font-size:var(--fs-small); color:#64748b;">Aktuell keine neuen Ärmelsponsor-Angebote.</div>'
+                ? '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Aktuell keine neuen Ärmelsponsor-Angebote.</div>'
                 : sleeveSponsorOffers.map(o => renderOfferCard(o, 'sleeve', `Handgeld: ${formatVal(o.signOn)} · Laufend: ${formatVal(o.income)}/Spiel (Heim & Auswärts)${categoryBadgeHtml(o.category, 'sleeve')}`)).join('');
         }
 
         let bandenOffersList = document.getElementById('banden-offers-list');
         bandenOffersList.innerHTML = bandenOffers.length === 0
-            ? '<div class="box" style="font-size:var(--fs-small); color:#64748b;">Aktuell keine neuen Bandenwerbe-Angebote.</div>'
+            ? '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Aktuell keine neuen Bandenwerbe-Angebote.</div>'
             : bandenOffers.map(o => renderOfferCard(o, 'banden', `${o.areaName || 'Stadion'} · ${o.type} · ${formatVal(o.income)}/Heimspiel${categoryBadgeHtml(o.category, 'banden')}`)).join('');
 
         // Bandenplätze nach Stadionbereich gegliedert: zeigt pro Block die belegten und
@@ -16247,7 +16238,7 @@ function finishGoalkeeperGame() {
             let totalIncomePerHome = bandenSponsors.filter(b => b.active).reduce((s, b) => s + b.income, 0);
             let areasUsed = new Set(bandenSponsors.filter(b => b.active).map(b => b.area)).size;
             portfolioBox.innerHTML = activeCount === 0
-                ? '<div class="box" style="font-size:var(--fs-small); color:#94a3b8;">Noch keine aktiven Bandensponsoren.</div>'
+                ? '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine aktiven Bandensponsoren.</div>'
                 : `<div class="box" style="font-size:var(--fs-small);"><strong style="color:var(--teal);">📢 ${activeCount} aktive ${activeCount === 1 ? 'Bande' : 'Banden'} in ${areasUsed} ${areasUsed === 1 ? 'Stadionbereich' : 'Stadionbereichen'}</strong> · Gesamt: ${formatVal(totalIncomePerHome)}/Heimspiel</div>`;
         }
     }
@@ -16680,7 +16671,7 @@ function finishGoalkeeperGame() {
         }
         let odds = calcNextMatchOdds();
         if (!odds) {
-            box.innerHTML = '<div class="box" style="font-size:var(--fs-small); color:#64748b;">Kein anstehendes Ligaspiel zum Wetten gefunden.</div>';
+            box.innerHTML = '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Kein anstehendes Ligaspiel zum Wetten gefunden.</div>';
             renderBetHistory();
             return;
         }
@@ -16689,7 +16680,7 @@ function finishGoalkeeperGame() {
         box.innerHTML = `
             <div class="box" style="font-size:var(--fs-body); margin-bottom:6px;">
                 Nächstes Spiel: <strong>${homeLabel}</strong> vs <strong>${awayLabel}</strong><br>
-                <span style="font-size:var(--fs-caption); color:#64748b;">Quoten von ${BETTING_PROVIDER_NAME} · Höchsteinsatz: ${formatVal(Math.max(MIN_BET_STAKE, Math.round(game.money * MAX_BET_STAKE_FRACTION)))}</span>
+                <span style="font-size:var(--fs-caption); color:var(--text-muted);">Quoten von ${BETTING_PROVIDER_NAME} · Höchsteinsatz: ${formatVal(Math.max(MIN_BET_STAKE, Math.round(game.money * MAX_BET_STAKE_FRACTION)))}</span>
             </div>
             <input type="number" id="bet-stake-input" placeholder="Einsatz in €" class="input-inline" style="width:100%; margin-bottom:6px;">
             <div style="font-size:var(--fs-caption); font-weight:800; color:var(--text-muted); margin-bottom:3px;">SPIELAUSGANG</div>
@@ -17272,7 +17263,7 @@ function finishGoalkeeperGame() {
                     : `<button onclick="buyStadiumUpgrade('${key}')" class="btn-secondary">Bauen [${formatVal(cost)}] · ${getConstructionDays(cost)} SpT</button>`;
             return `<div class="panel">
                 <div class="panel-header" style="font-size:var(--fs-small);">${u.name}</div>
-                <div style="font-size:var(--fs-caption); color:#aaa; margin-bottom:4px;">${u.desc}</div>
+                <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${u.desc}</div>
                 ${buttonHtml}
             </div>`;
         }).join('');
@@ -17495,7 +17486,7 @@ function finishGoalkeeperGame() {
             let disabled = queued || !gateOk;
             return `<div class="panel" style="margin-bottom:4px;">
                 <div class="panel-header" style="font-size:var(--fs-small);">${p.name}</div>
-                <div style="font-size:var(--fs-caption); color:#aaa; margin-bottom:4px;">${p.desc}</div>
+                <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${p.desc}</div>
                 ${seatsLabel ? `<div style="font-size:var(--fs-caption); margin-bottom:2px;">${seatsLabel}</div>` : ''}
                 ${!gateOk ? `<div style="font-size:var(--fs-caption); color:var(--danger); margin-bottom:4px;">${p.gateText}</div>` : ''}
                 <button onclick="buyCapacityProject('${key}')" class="btn-secondary" ${disabled ? 'disabled' : ''}>${queued ? '🏗️ Im Bau...' : `Beauftragen [${formatVal(cost)}]`}</button>
@@ -17596,7 +17587,7 @@ function finishGoalkeeperGame() {
         if (nameBox) {
             nameBox.innerHTML = stadium.namingRightsSponsor
                 ? `<div class="box">Aktueller Name: <strong style="color:var(--accent);">${stadium.name}</strong> (Sponsor: ${stadium.namingRightsSponsor})<br>Laufende Einnahmen: +${formatVal(stadium.namingRightsIncome)}/Heimspiel</div><button onclick="cancelNamingRights()" class="btn-secondary" style="margin-top:4px;">Namensrechte auflösen</button>`
-                : `<div class="box" style="font-size:var(--fs-small); color:#94a3b8;">Kein Namensgeber - verkaufe die Namensrechte für eine große Einmalzahlung plus laufende Einnahmen.</div><button onclick="sellNamingRights()" class="btn-primary" style="margin-top:4px;">🏟️ Namensrechte verkaufen</button>`;
+                : `<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Kein Namensgeber - verkaufe die Namensrechte für eine große Einmalzahlung plus laufende Einnahmen.</div><button onclick="sellNamingRights()" class="btn-primary" style="margin-top:4px;">🏟️ Namensrechte verkaufen</button>`;
         }
         for (let key in stadium.blocks) {
             let el = document.getElementById('cap-' + key);
@@ -18216,7 +18207,7 @@ function renderStadiumEventsPanel() {
             return `
                 <div class="panel">
                     <div class="panel-header"><span>${p.name}</span><span style="color:var(--accent);">Stufe ${p.lvl}/${p.max}</span></div>
-                    <div style="font-size:var(--fs-caption); color:#aaa; margin-bottom:4px;">${p.desc}</div>
+                    <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${p.desc}</div>
                     ${p.owned ? `<div class="box" style="font-size:var(--fs-small); margin-bottom:4px;">💰 Laufende Mieteinnahmen: <strong style="color:var(--gold);">+${formatVal(income)}</strong> pro Spieltag</div>` : ''}
                     ${buttonHtml}
                     ${p.owned ? `<button onclick="sellRealEstate('${key}', this)" class="btn-secondary" style="margin-top:4px; font-size:var(--fs-caption);">Verkaufen (55% Rückerstattung)</button>` : ''}
@@ -18250,7 +18241,7 @@ function renderStadiumEventsPanel() {
                     : `<button onclick="upgradeCampusBuilding('${key}')" class="btn-action">Ausbauen auf Stufe ${b.lvl+1} [${formatVal(cost)}] · Bauzeit ${getConstructionDays(cost)} SpT</button>`;
             row.innerHTML = `
                 <div class="panel-header"><span>${b.name}</span><span style="color:var(--accent);">Stufe ${b.lvl}/${b.max}</span></div>
-                <div style="font-size:var(--fs-caption); color:#aaa; margin-bottom:4px;">${b.desc}</div>
+                <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${b.desc}</div>
                 ${buttonHtml}
             `;
             container.appendChild(row);
@@ -18978,7 +18969,7 @@ function renderStadiumEventsPanel() {
             let row = document.createElement('div');
             row.className = 'box';
             row.innerHTML = `<div style="display:flex; justify-content:space-between;"><strong>${g.name}</strong><span style="color:var(--primary);">${g.mood}%</span></div>
-                <div style="color:#94a3b8; font-size:var(--fs-small); margin-bottom:4px;">${g.desc}</div>
+                <div style="color:var(--text-muted); font-size:var(--fs-small); margin-bottom:4px;">${g.desc}</div>
                 ${action ? `<button onclick="runFanGroupAction('${g.id}')" class="btn-secondary" style="font-size:var(--fs-caption);" title="${action.desc}">${action.label}${action.cost > 0 ? ` [${formatVal(action.cost)}]` : ''}</button>` : ''}`;
             list.appendChild(row);
         });
@@ -21070,7 +21061,7 @@ function renderYouthPathwayBoxes() {
             assetsList.innerHTML = LIFESTYLE_ASSETS.map(a => {
                 let owned = privateLife.assets.includes(a.id);
                 return `<div class="player-row">
-                    <span><strong>${a.name}</strong> <span style="color:#64748b; font-size:var(--fs-caption);">(${a.category})</span><br><span style="font-size:var(--fs-caption); color:#aaa;">${a.desc} · +${a.prestige} Prestige, -${a.stressRelief}% Stress</span></span>
+                    <span><strong>${a.name}</strong> <span style="color:var(--text-muted); font-size:var(--fs-caption);">(${a.category})</span><br><span style="font-size:var(--fs-caption); color:var(--text-muted);">${a.desc} · +${a.prestige} Prestige, -${a.stressRelief}% Stress</span></span>
                     <button onclick="buyLifestyleAsset('${a.id}')" class="${owned ? 'btn-secondary' : 'btn-action'}" style="width:auto;" ${owned ? 'disabled' : ''}>${owned ? 'Besessen ✓' : `Kaufen [${formatVal(a.cost)}]`}</button>
                 </div>`;
             }).join('');
@@ -21085,7 +21076,7 @@ function renderYouthPathwayBoxes() {
                 let disabled = locked || cdLeft > 0;
                 let label = locked ? `Benötigt ${a.minPrestige} Prestige` : (cdLeft > 0 ? `Noch ${cdLeft} SpT gesperrt` : `+${formatVal(a.income)} (-${a.stressCost}% Stress)`);
                 return `<div class="player-row">
-                    <span><strong>${a.name}</strong><br><span style="font-size:var(--fs-caption); color:#aaa;">${a.desc}</span></span>
+                    <span><strong>${a.name}</strong><br><span style="font-size:var(--fs-caption); color:var(--text-muted);">${a.desc}</span></span>
                     <button onclick="doPrestigeActivity('${a.id}')" class="btn-action" style="width:auto; font-size:var(--fs-caption);" ${disabled ? 'disabled' : ''}>${label}</button>
                 </div>`;
             }).join('');
@@ -22583,7 +22574,7 @@ function playOpponentFreeKick() {
         playSound('goal');
         tickerLine(`<div style="color:var(--danger);">⚽ ${currentMatch.minute}. Min: Freistoß für ${oppName} - direkt verwandelt.</div>`);
     } else {
-        tickerLine(`<div style="color:#64748b; font-size:var(--fs-small);">${currentMatch.minute}. Min: Freistoß für ${oppName} - die Mauer steht.</div>`);
+        tickerLine(`<div style="color:var(--text-muted); font-size:var(--fs-small);">${currentMatch.minute}. Min: Freistoß für ${oppName} - die Mauer steht.</div>`);
     }
     refreshLiveScore();
 }
@@ -22592,7 +22583,7 @@ function playOpponentFreeKick() {
 function varOverturnsGoal(ourGoal) {
     if (Math.random() >= VAR_CHECK_CHANCE) return false;
     const zurueck = Math.random() < 0.4;
-    tickerLine(`<div style="color:#94a3b8;">📺 ${currentMatch.minute}. Min: Der Videoassistent prüft das Tor${ourGoal ? '' : ' des Gegners'}... ${zurueck ? '<strong>Abseits - Tor zurückgenommen!</strong>' : 'Tor zählt!'}</div>`);
+    tickerLine(`<div style="color:var(--text-muted);">📺 ${currentMatch.minute}. Min: Der Videoassistent prüft das Tor${ourGoal ? '' : ' des Gegners'}... ${zurueck ? '<strong>Abseits - Tor zurückgenommen!</strong>' : 'Tor zählt!'}</div>`);
     return zurueck;
 }
 
@@ -22650,7 +22641,7 @@ function resolveSetPiece(choice, silent) {
                 tickerLine(`<div style="color:var(--danger);">⚽ ${sp.minute}. Min: Gegentor nach dem Konter.</div>`);
             }
         } else {
-            tickerLine(`<div style="color:#64748b; font-size:var(--fs-small);">${sp.minute}. Min: Der Freistoß bringt nichts ein.</div>`);
+            tickerLine(`<div style="color:var(--text-muted); font-size:var(--fs-small);">${sp.minute}. Min: Der Freistoß bringt nichts ein.</div>`);
         }
     }
     currentMatch.setPiece = null;
@@ -25884,7 +25875,7 @@ function tickPlayerRetirement() {
         let kopf = `<div class="box" style="font-size:var(--fs-small);">🏙️ Heimat: <strong>${typeof getClubCity === 'function' ? getClubCity(game.clubName) : '-'}</strong> · Derby-Bilanz gesamt: ${rivalryRecord.wins}S ${rivalryRecord.draws}U ${rivalryRecord.losses}N</div>`;
         box.innerHTML = kopf + (gegner.length
             ? gegner.slice(0, 12).map(g => `<div class="box" style="display:flex; justify-content:space-between; gap:6px; font-size:var(--fs-small);"><span>${g.name} <span style="color:var(--text-muted);">(${g.label}, ${leagueNames[g.level]})</span></span><strong>${bilanz(g.name)}</strong></div>`).join('')
-            : '<div class="box" style="font-size:var(--fs-small); color:#94a3b8;">Kein anderer Verein aus deiner Stadt und kein Traditionsrivale in der Pyramide.</div>');
+            : '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Kein anderer Verein aus deiner Stadt und kein Traditionsrivale in der Pyramide.</div>');
     }
 
     // Generationsübergreifende Legenden-Vergleiche: gruppiert alle ehemaligen Spieler
@@ -25973,7 +25964,7 @@ function tickPlayerRetirement() {
                     <div class="box" style="border-left-color:${meta.color}; display:flex; align-items:center; gap:10px;">
                         <span style="font-size:20px;">${meta.icon}</span>
                         <span style="flex:1;">
-                            <span style="font-size:var(--fs-micro); color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px;">${meta.category} · #${idx + 1}</span><br>
+                            <span style="font-size:var(--fs-micro); color:var(--text-muted); text-transform:uppercase; letter-spacing:0.5px;">${meta.category} · #${idx + 1}</span><br>
                             <strong style="color:${meta.color};">${t}</strong>
                         </span>
                     </div>`;
@@ -25984,7 +25975,7 @@ function tickPlayerRetirement() {
         }
         // Zuschauerrekord als dedizierte Statistik-Zeile statt Trophäen-Eintrag.
         if (game.recordAttendance > 0) {
-            list.innerHTML += `<div class="box" style="border-left-color:var(--blue); margin-top:10px;"><span style="font-size:var(--fs-caption); color:#94a3b8; text-transform:uppercase;">Statistik</span><br><strong style="color:var(--blue);">📊 Zuschauerrekord: ${game.recordAttendance.toLocaleString('de-DE')} (Saison ${game.recordAttendanceSeason})</strong></div>`;
+            list.innerHTML += `<div class="box" style="border-left-color:var(--blue); margin-top:10px;"><span style="font-size:var(--fs-caption); color:var(--text-muted); text-transform:uppercase;">Statistik</span><br><strong style="color:var(--blue);">📊 Zuschauerrekord: ${game.recordAttendance.toLocaleString('de-DE')} (Saison ${game.recordAttendanceSeason})</strong></div>`;
         }
     }
 
@@ -26696,7 +26687,7 @@ function cleanupLegacyScoutState() {
         let box = document.getElementById('prematch-analysis-box');
         if (!box) return;
         if (!(staffMembers.analyst.hired && getAnalystEffekt().bericht) && !underworld.spyIntelActive) {
-            box.innerHTML = `<div class="box" style="font-size:var(--fs-small); color:#64748b;">📋 Ohne Chef-Analyst bleibt die gegnerische Spielweise unbekannt. (Personal-Abteilung → Chef-Analyst einstellen)</div>`;
+            box.innerHTML = `<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">📋 Ohne Chef-Analyst bleibt die gegnerische Spielweise unbekannt. (Personal-Abteilung → Chef-Analyst einstellen)</div>`;
             return;
         }
         let form = (oppObj && oppObj.recentForm) ? oppObj.recentForm.slice(-5) : [];
@@ -27339,7 +27330,7 @@ function cleanupLegacyScoutState() {
                     document.getElementById('ticker-log').innerHTML += `<div style="color:var(--blue);">🟥 ${currentMatch.minute}. Min: Platzverweis bei ${oppName}! Der Gegner muss in Unterzahl weiterspielen.</div>`;
                 } else {
                     let oppName = currentMatch.isHome ? currentMatch.awayName : currentMatch.homeName;
-                    document.getElementById('ticker-log').innerHTML += `<div style="color:#94a3b8;">🟨 ${currentMatch.minute}. Min: Gelbe Karte bei ${oppName}.</div>`;
+                    document.getElementById('ticker-log').innerHTML += `<div style="color:var(--text-muted);">🟨 ${currentMatch.minute}. Min: Gelbe Karte bei ${oppName}.</div>`;
                 }
             }
         }
@@ -27352,7 +27343,7 @@ function cleanupLegacyScoutState() {
             let line = pool[Math.floor(Math.random() * pool.length)];
             if (pool === OUR_CHANCE_EVENTS) recordLiveShot(currentMatch.isHome, Math.random() < 0.45);
             if (pool === OPP_CHANCE_EVENTS) recordLiveShot(!currentMatch.isHome, Math.random() < 0.45);
-            document.getElementById('ticker-log').innerHTML += `<div style="color:#64748b; font-size:var(--fs-small);">${currentMatch.minute}. Min: ${line}</div>`;
+            document.getElementById('ticker-log').innerHTML += `<div style="color:var(--text-muted); font-size:var(--fs-small);">${currentMatch.minute}. Min: ${line}</div>`;
         }
 
         document.getElementById('ticker-log').scrollTop = document.getElementById('ticker-log').scrollHeight;
@@ -27523,7 +27514,7 @@ function cleanupLegacyScoutState() {
         stopLiveTickerAutoplay();
         if (currentMatch.stats) {
             let log = document.getElementById('ticker-log');
-            if (log) log.innerHTML += `<div style="color:var(--accent); font-weight:bold;">🏁 Abpfiff! ${currentMatch.homeName} ${currentMatch.homeGoals}:${currentMatch.awayGoals} ${currentMatch.awayName}</div><div style="font-size:var(--fs-small); color:#94a3b8;">${liveStatsSummaryLine()}</div>`;
+            if (log) log.innerHTML += `<div style="color:var(--accent); font-weight:bold;">🏁 Abpfiff! ${currentMatch.homeName} ${currentMatch.homeGoals}:${currentMatch.awayGoals} ${currentMatch.awayName}</div><div style="font-size:var(--fs-small); color:var(--text-muted);">${liveStatsSummaryLine()}</div>`;
             renderLiveMatchStats();
         }
         document.getElementById('btn-next-step').style.display = 'none';
@@ -31680,7 +31671,7 @@ function renderSeasonForecastHistory() {
         if (!box) return;
         let history = game.selfTestHistory || [];
         if (history.length === 0) {
-            box.innerHTML = '<div class="box" style="font-size:var(--fs-small); color:#94a3b8;">Noch kein Selbsttest gelaufen.</div>';
+            box.innerHTML = '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Noch kein Selbsttest gelaufen.</div>';
             return;
         }
         box.innerHTML = history.map(h => {
@@ -32401,7 +32392,7 @@ function renderSeasonForecastHistory() {
             boostersBox.innerHTML = PREMIUM_BOOSTERS.map(b => `
                 <div class="panel">
                     <div class="panel-header"><span>${b.name}</span><strong style="color:var(--accent);">💎 ${b.cost}</strong></div>
-                    <div style="font-size:var(--fs-caption); color:#aaa; margin-bottom:4px;">${b.desc}</div>
+                    <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${b.desc}</div>
                     <button onclick="buyPremiumBooster('${b.id}')" class="btn-action" ${(game.premiumPoints || 0) < b.cost ? 'disabled' : ''}>Einlösen</button>
                 </div>
             `).join('');
@@ -32812,15 +32803,15 @@ function renderSeasonForecastHistory() {
         if (!box) return;
         let raw = safeLocalGet(AUTOSAVE_KEY);
         if (!raw) {
-            box.innerHTML = `<div style="font-size:var(--fs-small); color:#64748b;">🔄 Automatisches Speichern: alle ${AUTOSAVE_INTERVAL} Spieltage - bisher noch keiner angelegt.</div>`;
+            box.innerHTML = `<div style="font-size:var(--fs-small); color:var(--text-muted);">🔄 Automatisches Speichern: alle ${AUTOSAVE_INTERVAL} Spieltage - bisher noch keiner angelegt.</div>`;
             return;
         }
         try {
             let m = JSON.parse(raw).meta || {};
             box.innerHTML = `
                 <div style="font-weight:bold; color:var(--teal);">🔄 Automatisch: ${m.clubName || '-'}</div>
-                <div style="font-size:var(--fs-small); color:#94a3b8;">${m.league || '-'} · Saison ${m.season} · Spieltag ${m.matchday}/34 · ${formatVal(m.money || 0)}</div>
-                <div style="font-size:var(--fs-caption); color:#64748b;">Gespeichert: ${m.savedAt || '-'} · wird alle ${AUTOSAVE_INTERVAL} Spieltage erneuert · beim Start wird automatisch der neueste Stand geladen</div>
+                <div style="font-size:var(--fs-small); color:var(--text-muted);">${m.league || '-'} · Saison ${m.season} · Spieltag ${m.matchday}/34 · ${formatVal(m.money || 0)}</div>
+                <div style="font-size:var(--fs-caption); color:var(--text-muted);">Gespeichert: ${m.savedAt || '-'} · wird alle ${AUTOSAVE_INTERVAL} Spieltage erneuert · beim Start wird automatisch der neueste Stand geladen</div>
                 <button onclick="loadAutoSave()" class="btn-secondary" style="font-size:var(--fs-caption); margin-top:4px;">Automatischen Stand laden</button>`;
         } catch (e) {
             box.innerHTML = '<div style="font-size:var(--fs-small); color:var(--danger);">Automatischer Spielstand ist beschädigt.</div>';
@@ -32856,8 +32847,8 @@ function renderSeasonForecastHistory() {
             if (meta) {
                 box.innerHTML = `
                     <div style="font-weight:bold; color:var(--accent);">Slot ${i}: ${meta.clubName}</div>
-                    <div style="font-size:var(--fs-small); color:#94a3b8;">${meta.league} · Saison ${meta.season} · Spieltag ${meta.matchday}/34 · ${formatVal(meta.money)}</div>
-                    <div style="font-size:var(--fs-caption); color:#64748b;">Gespeichert: ${meta.savedAt}${meta.version ? ` · Version ${meta.version}` : ''}</div>
+                    <div style="font-size:var(--fs-small); color:var(--text-muted);">${meta.league} · Saison ${meta.season} · Spieltag ${meta.matchday}/34 · ${formatVal(meta.money)}</div>
+                    <div style="font-size:var(--fs-caption); color:var(--text-muted);">Gespeichert: ${meta.savedAt}${meta.version ? ` · Version ${meta.version}` : ''}</div>
                     <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin-top:4px;">
                         <button onclick="saveGameToSlot(${i})" class="btn-blue" style="font-size:var(--fs-caption);">Speichern</button>
                         <button onclick="loadGameFromSlot(${i}, false)" class="btn-secondary" style="font-size:var(--fs-caption);">Laden</button>
@@ -32866,7 +32857,7 @@ function renderSeasonForecastHistory() {
                 `;
             } else {
                 box.innerHTML = `
-                    <div style="color:#64748b;">Slot ${i}: Leer</div>
+                    <div style="color:var(--text-muted);">Slot ${i}: Leer</div>
                     <button onclick="saveGameToSlot(${i})" class="btn-blue" style="margin-top:4px;">💾 Hier speichern</button>
                 `;
             }
