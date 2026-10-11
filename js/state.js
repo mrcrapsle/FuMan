@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.110', date: '11.10.2026', features: 'Phase 25.40: KI-Vereine bieten nur noch so viel, wie ihre Liga zahlen kann - Obergrenze je Liga-Stufe, Bot-Startskript, Diagnosen zu Talenten, Aufsteigern und Transferpoker' };
+    const GAME_VERSION = { number: '3.111', date: '11.10.2026', features: 'Phase 25.41: Transferbilanz im Kontoauszug, Reisekosten nach Entfernung, Spielernotizen, Rückennummern im Kader und Saisonwette im Vorstandsraum' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

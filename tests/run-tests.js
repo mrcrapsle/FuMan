@@ -4324,10 +4324,13 @@ async function testSaveExportImportAndErrorLog(browser) {
     const afterImport = await page.evaluate(() => game.money);
     assert(afterImport === 987654, 'Import aus Datei stellt den exportierten Spielstand korrekt wieder her');
 
+    await page.evaluate(() => { setTimeout(() => { nichtExistierendeFunktionXYZ(); }, 10); });
+    // Auf den Eintrag im gespeicherten Fehlerprotokoll warten statt einer festen Zeit (unter Parallellast zu knapp).
+    // Gelesen wird der Zwischenspeicher, nicht der Export: der würde einen Download auslösen.
+    await page.waitForFunction(() => ((window.sessionStorage && sessionStorage.getItem('anstoss_fm13_runtime_errors')) || '').includes('nichtExistierendeFunktionXYZ'), null, { timeout: 10000 });
     const [download2] = await Promise.all([
         page.waitForEvent('download'),
-        page.evaluate(() => { setTimeout(() => { nichtExistierendeFunktionXYZ(); }, 10); })
-            .then(() => page.waitForTimeout(200)).then(() => page.evaluate(() => window.__exportRuntimeErrorLog()))
+        page.evaluate(() => window.__exportRuntimeErrorLog())
     ]);
     const errorLog = JSON.parse(fs.readFileSync(await download2.path(), 'utf-8'));
     assert(errorLog.some(e => e.msg.includes('nichtExistierendeFunktionXYZ')), 'Fehlerprotokoll-Export enthält den tatsächlich aufgetretenen Laufzeitfehler');
