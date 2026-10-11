@@ -68,7 +68,7 @@ function findCoTrainerHint() {
         }
     }
     const oppArch = currentMatch.oppTacticArch;
-    const kennt = level >= 2 && (min >= 20 || (staffMembers.analyst && staffMembers.analyst.hired));
+    const kennt = level >= 2 && (min >= 20 || (staffMembers.analyst && staffMembers.analyst.hired && getAnalystEffekt().bericht));
     if (kennt && oppArch && typeof getTacticMatchupBonus === 'function') {
         const jetzt = getTacticMatchupBonus(oppArch);
         const zielArch = getCounterArchetype(oppArch);

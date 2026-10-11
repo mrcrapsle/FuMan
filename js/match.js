@@ -125,6 +125,9 @@
         // Head-Greenkeeper: perfekt gepflegter Rasen gibt bei Heimspielen einen spürbaren
         // Vorteil (war bisher nur Text ohne tatsächliche Wirkung), skaliert mit Ausbaustufe.
         if (isHomeMatch && staffMembers.greenkeeper.hired) bonus += getGreenkeeperEffekt().heim * getStaffLevelMultiplier('greenkeeper');
+        // Chef-Analyst (Tiefenanalyse) und Leistungsküche des Ernährungsberaters geben jeweils Teamstärke je Stufe (25.47).
+        if (staffMembers.analyst.hired) bonus += getAnalystEffekt().staerke * getStaffLevelMultiplier('analyst');
+        if (staffMembers.nutritionist.hired) bonus += getNutritionistEffekt().staerke * getStaffLevelMultiplier('nutritionist');
         // Trainingsgelände mit Flutlicht (Campus): permanenter Stärkebonus für die gesamte
         // Mannschaft, unabhängig vom Spielort (war bisher nur Text ohne tatsächliche Wirkung).
         bonus += (campusBuildings.trainingground?.lvl || 0) * 1;
@@ -237,7 +240,7 @@
     function renderPreMatchAnalysis(oppObj, oppName) {
         let box = document.getElementById('prematch-analysis-box');
         if (!box) return;
-        if (!staffMembers.analyst.hired && !underworld.spyIntelActive) {
+        if (!(staffMembers.analyst.hired && getAnalystEffekt().bericht) && !underworld.spyIntelActive) {
             box.innerHTML = `<div class="box" style="font-size:10px; color:#64748b;">📋 Ohne Chef-Analyst bleibt die gegnerische Spielweise unbekannt. (Personal-Abteilung → Chef-Analyst einstellen)</div>`;
             return;
         }

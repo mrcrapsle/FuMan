@@ -39,7 +39,7 @@ function predictNextMatch() {
 }
 
 function hasMatchAnalyst() {
-    return !!(staffMembers.analyst && staffMembers.analyst.hired) || !!(underworld && underworld.spyIntelActive);
+    return !!(staffMembers.analyst && staffMembers.analyst.hired && getAnalystEffekt().bericht) || !!(underworld && underworld.spyIntelActive);
 }
 
 // oppName: Gegner der angezeigten Spielanalyse - bei Pokalspielen passt die Liga-Prognose nicht.

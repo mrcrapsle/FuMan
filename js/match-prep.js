@@ -74,7 +74,7 @@ function renderMatchPrepBox() {
     const opp = getNextLeagueOpponentTeam();
     if (!opp) { box.innerHTML = '<div class="box" style="font-size:10px;">🎯 Match-Prep: am nächsten Spieltag kein Ligaspiel - dafür lohnt sich ein anderer Schwerpunkt.</div>'; return; }
     const basis = AI_STYLE_ARCHETYPE[opp.playstyle] || 'B';
-    const analyst = staffMembers.analyst && staffMembers.analyst.hired;
+    const analyst = staffMembers.analyst && staffMembers.analyst.hired && getAnalystEffekt().bericht;
     const plan = analyst && typeof getOppTacticPlan === 'function' ? getOppTacticPlan(opp) : null;
     const m = getActiveMatchPrep() || (game.matchPrep && game.matchPrep.season === game.season && game.matchPrep.matchday === game.matchday ? game.matchPrep : null);
     const info = plan ? `Chef-Analyst: ${opp.name} plant <strong>${ARCHETYPE_LABELS[plan.arch]}</strong>.` : `Laut Presse spielt ${opp.name} meist <strong>${ARCHETYPE_LABELS[basis]}</strong> - ob der Trainer auf dich reagiert, weiß nur ein Chef-Analyst.`;

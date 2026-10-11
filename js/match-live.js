@@ -960,7 +960,7 @@
         // Athletik- & Konditionstrainer: -30% Fitnessverlust nach Spielen (war bisher nur
         // Text ohne tatsächliche Wirkung). Ernährungsberater (neu) stapelt zusätzlich obendrauf.
         if (staffMembers.fitCoach.hired) fitLoss = Math.round(fitLoss * 0.7);
-        if (staffMembers.nutritionist.hired) fitLoss = Math.round(fitLoss * (0.92 - 0.04 * getStaffLevelMultiplier('nutritionist')));
+        if (staffMembers.nutritionist.hired) fitLoss = Math.round(fitLoss * getNutritionistEffekt().ermuedung);
         if (staffMembers.physio.hired) fitLoss = Math.round(fitLoss * getPhysioEffekt().fitFaktor);
         if (isHomeMatchParam && staffMembers.greenkeeper.hired) fitLoss = Math.round(fitLoss * getGreenkeeperEffekt().ermuedung);
         // Trainingsintensität-Regler (Training & Förderung): Hart beansprucht mehr, Locker schont.
