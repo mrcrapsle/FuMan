@@ -67,7 +67,9 @@
         twTrainer: { tasks: () => TW_TRAINER_TASKS, setter: 'setTwTrainerTask' },
         physio: { tasks: () => PHYSIO_TASKS, setter: 'setPhysioTask' },
         pressOfficer: { tasks: () => PRESS_OFFICER_TASKS, setter: 'setPressOfficerTask' },
-        greenkeeper: { tasks: () => GREENKEEPER_TASKS, setter: 'setGreenkeeperTask' }
+        greenkeeper: { tasks: () => GREENKEEPER_TASKS, setter: 'setGreenkeeperTask' },
+        analyst: { tasks: () => ANALYST_TASKS, setter: 'setAnalystTask' },
+        nutritionist: { tasks: () => NUTRITIONIST_TASKS, setter: 'setNutritionistTask' }
     };
 
     // Aufgaben-Modi (25.45): jede dieser Rollen hat einen Standardmodus und einen Alternativmodus mit
@@ -94,6 +96,29 @@
     function getGreenkeeperEffekt() {
         const tempo = staffMembers.greenkeeper.task === 'tempo';
         return { heim: tempo ? 3 : 2, ermuedung: tempo ? 1.1 : 1 };
+    }
+
+    // Chef-Analyst (25.47): Vorbericht über den Gegner oder Tiefenanalyse mit Stärkebonus.
+    const ANALYST_TASKS = [
+        { id: 'vorbericht', name: 'Vorbericht (Standard)', desc: 'Vor jedem Spiel kennst du die Spielweise des Gegners.' },
+        { id: 'tiefe', name: 'Tiefenanalyse', desc: 'Kein Vorbericht über den Gegner, dafür +1 Teamstärke je Stufe in jedem Spiel.' }
+    ];
+    function setAnalystTask(id) { setzeStaffAufgabe('analyst', ANALYST_TASKS, id); }
+    function getAnalystEffekt() {
+        const tiefe = staffMembers.analyst.task === 'tiefe';
+        return { bericht: !tiefe, staerke: tiefe ? 1 : 0 };
+    }
+
+    // Ernährungsberater (25.47): Fitness-Ernährung oder Leistungsküche mit Stärkebonus.
+    const NUTRITIONIST_TASKS = [
+        { id: 'fitness', name: 'Fitness-Ernährung (Standard)', desc: 'Dämpft den Fitnessverlust nach Spielen deutlich.' },
+        { id: 'leistung', name: 'Leistungsküche', desc: 'Dämpft den Fitnessverlust schwächer, dafür +1 Teamstärke je Stufe in jedem Spiel.' }
+    ];
+    function setNutritionistTask(id) { setzeStaffAufgabe('nutritionist', NUTRITIONIST_TASKS, id); }
+    function getNutritionistEffekt() {
+        const lvl = getStaffLevelMultiplier('nutritionist');
+        const leistung = staffMembers.nutritionist.task === 'leistung';
+        return { ermuedung: leistung ? 0.98 - 0.02 * lvl : 0.92 - 0.04 * lvl, staerke: leistung ? 1 : 0 };
     }
 
     function setzeStaffAufgabe(key, tasks, id) {
@@ -258,10 +283,15 @@
             if (pool) {
                 let s = staffMembers[pool.key];
                 poolBox.innerHTML = `<div class="panel-header">📋 BEWERBUNGSPOOL: ${s.name}</div>` +
-                    pool.candidates.map((c, idx) => `<div class="box" style="display:flex; justify-content:space-between; align-items:center; font-size:10px;">
-                        <span>${c.label} (${c.qualityLabel})</span>
-                        <button onclick="hireFromCandidatePool(${idx})" class="btn-secondary" style="width:auto; font-size:9px;">${formatVal(Math.round(s.cost * c.costMult))}</button>
-                    </div>`).join('') +
+                    pool.candidates.map((c, idx) => {
+                        // Der Grund steht direkt beim Knopf: sonst wirkte "Einstellen" ohne Wirkung (Kasse oder Obergrenze).
+                        const preis = Math.round(s.cost * c.costMult);
+                        const grund = game.money < preis ? `Kasse zu klein (${formatVal(preis)} nötig)` : (staffHireBreaksCap(s) ? `Personalbudget-Obergrenze von ${formatVal(staffCentralState.wageBudgetCap)}/SpT würde gesprengt` : '');
+                        return `<div class="box" style="display:flex; justify-content:space-between; align-items:center; gap:6px; font-size:10px;">
+                        <span>${c.label} (${c.qualityLabel})${grund ? `<br><span style="color:var(--danger); font-size:9px;">${grund}</span>` : ''}</span>
+                        <button onclick="hireFromCandidatePool(${idx})" ${grund ? 'disabled' : ''} class="btn-secondary" style="width:auto; font-size:9px;">${formatVal(preis)}</button>
+                    </div>`;
+                    }).join('') +
                     `<button onclick="staffCentralState.candidatePool=null; renderStaffView();" class="btn-secondary" style="margin-top:4px;">Abbrechen</button>`;
             }
         }

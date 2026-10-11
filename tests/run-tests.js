@@ -2537,6 +2537,83 @@ async function testPersonalEinstellenHandy(browser) {
     await page.close();
 }
 
+async function testAnalystErnaehrung(browser) {
+    console.log('\n[25.47] Chef-Analyst und Ernährungsberater: Vorbericht oder Tiefenanalyse, Fitness oder Leistungsküche');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        staffMembers.analyst.hired = true;
+        staffMembers.nutritionist.hired = true;
+        const out = {};
+        out.analystStandard = getAnalystEffekt().bericht === true && getAnalystEffekt().staerke === 0;
+        out.vorberichtDa = hasMatchAnalyst() === true;
+        setAnalystTask('tiefe');
+        out.tiefe = getAnalystEffekt().bericht === false && getAnalystEffekt().staerke === 1;
+        out.keinVorbericht = hasMatchAnalyst() === false;
+        setAnalystTask('unbekannt');
+        out.analystUngueltig = staffMembers.analyst.task === 'tiefe';
+        const lvl = getStaffLevelMultiplier('nutritionist');
+        out.ernStandard = Math.abs(getNutritionistEffekt().ermuedung - (0.92 - 0.04 * lvl)) < 1e-9 && getNutritionistEffekt().staerke === 0;
+        setNutritionistTask('leistung');
+        out.ernLeistung = Math.abs(getNutritionistEffekt().ermuedung - (0.98 - 0.02 * lvl)) < 1e-9 && getNutritionistEffekt().staerke === 1;
+        setNutritionistTask('unbekannt');
+        out.ernUngueltig = staffMembers.nutritionist.task === 'leistung';
+        renderStaffView();
+        const liste = document.getElementById('staff-list-container').innerText;
+        out.sichtbar = liste.includes('Tiefenanalyse') && liste.includes('Leistungsküche');
+        return out;
+    });
+    assert(r.analystStandard, 'Chef-Analyst ohne Wahl: Vorbericht, kein Stärkebonus');
+    assert(r.vorberichtDa, 'Mit Vorbericht ist die Gegneranalyse verfügbar');
+    assert(r.tiefe, 'Tiefenanalyse: kein Vorbericht, +1 Teamstärke je Stufe');
+    assert(r.keinVorbericht, 'Im Modus Tiefenanalyse ist keine Gegneranalyse mehr verfügbar');
+    assert(r.analystUngueltig, 'Eine unbekannte Analyst-Aufgabe wird nicht übernommen');
+    assert(r.ernStandard, 'Ernährungsberater ohne Wahl: bisheriger Fitnessverlust, kein Stärkebonus');
+    assert(r.ernLeistung, 'Leistungsküche: schwächer gedämpfter Fitnessverlust, +1 Teamstärke je Stufe');
+    assert(r.ernUngueltig, 'Eine unbekannte Ernährungs-Aufgabe wird nicht übernommen');
+    assert(r.sichtbar, 'Beide Aufgaben erscheinen in der Personalliste');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei Analyst und Ernährung');
+    await page.close();
+}
+
+async function testPersonalGrundAnzeige(browser) {
+    console.log('\n[25.48] Personal: wer nicht einstellbar ist, sieht den Grund beim Bewerber');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        const out = {};
+        showScreen('screen-staff');
+        game.money = 1000;
+        openCandidatePool('fanshopManager');
+        const box = document.getElementById('staff-candidate-pool-box');
+        out.kasseGrund = box.innerText.includes('Kasse zu klein');
+        out.kasseDeaktiviert = [...box.querySelectorAll('button[onclick^="hireFromCandidatePool"]')].every(b => b.disabled);
+        // Obergrenze: Kasse reicht, aber der Personalbudget-Cap wird gesprengt
+        staffCentralState.candidatePool = null;
+        game.money = 90000000;
+        staffCentralState.wageBudgetCap = 1;
+        openCandidatePool('marketingDir');
+        const box2 = document.getElementById('staff-candidate-pool-box');
+        out.capGrund = box2.innerText.includes('Obergrenze');
+        out.capDeaktiviert = [...box2.querySelectorAll('button[onclick^="hireFromCandidatePool"]')].every(b => b.disabled);
+        // Ohne Grund ist der Knopf aktiv
+        staffCentralState.wageBudgetCap = 0;
+        openCandidatePool('marketingDir');
+        const box3 = document.getElementById('staff-candidate-pool-box');
+        out.frei = [...box3.querySelectorAll('button[onclick^="hireFromCandidatePool"]')].some(b => !b.disabled);
+        return out;
+    });
+    assert(r.kasseGrund, 'Bei zu wenig Geld steht beim Bewerber der Grund „Kasse zu klein“');
+    assert(r.kasseDeaktiviert, 'Bei zu wenig Geld ist der Einstell-Knopf deaktiviert');
+    assert(r.capGrund, 'Bei gesprengter Personalbudget-Obergrenze steht der Grund beim Bewerber');
+    assert(r.capDeaktiviert, 'Bei gesprengter Obergrenze ist der Einstell-Knopf deaktiviert');
+    assert(r.frei, 'Ohne Hindernis ist der Einstell-Knopf aktiv');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei der Grundanzeige');
+    await page.close();
+}
+
 async function testBoardEarlyWarning(browser) {
     console.log('\n[25.24] Vorstand: Frühwarnung schon unter 50 Zufriedenheit, einmal pro Saison');
     const { page, consoleErrors } = await freshPage(browser);
@@ -10005,6 +10082,8 @@ async function main() {
         testPersonalEinstellen,
         testGreenkeeperAufgabe,
         testPersonalEinstellenHandy,
+        testAnalystErnaehrung,
+        testPersonalGrundAnzeige,
         testEntlassungsGrund,
         testEnglishUi,
         testSwapDeals,
