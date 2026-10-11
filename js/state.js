@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.108', date: '11.10.2026', features: 'Phase 25.38: Büro-Tests ohne feste Wartezeiten, passive Entlassungs-Messung mit Gründen, Historie um die Messungen ergänzt' };
+    const GAME_VERSION = { number: '3.109', date: '11.10.2026', features: 'Phase 25.39: Bot-Startskript mit Abschlusszeile, Befehle in CLAUDE.md, Diagnosen zu Talenten, Aufsteigern, Transferpoker und Testlaufzeit' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
