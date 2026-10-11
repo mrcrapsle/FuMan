@@ -3669,7 +3669,7 @@ function getPlayerInjuryRiskIndex(p) {
 function injurePlayerByEvent(p, grund) {
     if (!p || (p.injured || 0) > 0) return false;
     const baseDuration = Math.floor(Math.random() * 4) + 1;
-    const reduction = Math.max(0.25, 1 - (campusBuildings.reha.lvl * 0.08) - (staffMembers.physio.hired ? 0.5 : 0));
+    const reduction = Math.max(0.25, 1 - (campusBuildings.reha.lvl * 0.08) - (staffMembers.physio.hired ? 1 - getPhysioEffekt().ausfall : 0));
     p.injured = Math.max(1, Math.round(baseDuration * reduction));
     p.timesInjured = (p.timesInjured || 0) + 1;
     addInboxMessage('verletzung', `${p.name} verletzt`, `${grund ? grund + ': ' : ''}Fällt für ${p.injured} Spiel(e) aus.`, 'screen-squad');
@@ -18150,8 +18150,50 @@ function renderStadiumEventsPanel() {
         sportDir: { tasks: () => SPORT_DIR_TASKS, setter: 'setSportDirTask' },
         marketingDir: { tasks: () => MARKETING_DIR_TASKS, setter: 'setMarketingDirTask' },
         setPieceCoach: { tasks: () => SET_PIECE_TASKS, setter: 'setSetPieceCoachTask' },
-        secChief: { tasks: () => SEC_CHIEF_TASKS, setter: 'setSecChiefTask' }
+        secChief: { tasks: () => SEC_CHIEF_TASKS, setter: 'setSecChiefTask' },
+        twTrainer: { tasks: () => TW_TRAINER_TASKS, setter: 'setTwTrainerTask' },
+        physio: { tasks: () => PHYSIO_TASKS, setter: 'setPhysioTask' },
+        pressOfficer: { tasks: () => PRESS_OFFICER_TASKS, setter: 'setPressOfficerTask' }
     };
+
+    // Aufgaben-Modi (25.45): jede dieser Rollen hat einen Standardmodus und einen Alternativmodus mit
+    // einem echten Zielkonflikt. Die Effekte unten werden dort gelesen, wo der Bonus heute schon wirkt.
+    const TW_TRAINER_TASKS = [
+        { id: 'paraden', name: 'Paraden-Training (Standard)', desc: 'Elfmeter-Abwehr +4 %, Abwehrstärke +0,4 je Stufe.' },
+        { id: 'elfmeter', name: 'Elfmeter-Spezialtraining', desc: 'Elfmeter-Abwehr +7 %, dafür nur +0,1 Abwehrstärke je Stufe.' }
+    ];
+    const PHYSIO_TASKS = [
+        { id: 'reha', name: 'Reha-Schwerpunkt (Standard)', desc: 'Halbiert die Ausfallzeit von Verletzten.' },
+        { id: 'belastung', name: 'Belastungssteuerung', desc: 'Ausfallzeit nur um 30 % verkürzt, dafür -10 % Fitnessverlust nach Spielen.' }
+    ];
+    const PRESS_OFFICER_TASKS = [
+        { id: 'defensiv', name: 'Defensiv (Standard)', desc: 'Vorstand und Fans werden bei Kritik deutlich weniger verärgert.' },
+        { id: 'offensiv', name: 'Offensiv', desc: 'Fans werden halb so stark verärgert, dafür trifft der Vorstand Kritik voll.' }
+    ];
+
+    function setzeStaffAufgabe(key, tasks, id) {
+        if (!tasks.some(t => t.id === id)) return;
+        staffMembers[key].task = id;
+        renderStaffView();
+    }
+    function setTwTrainerTask(id) { setzeStaffAufgabe('twTrainer', TW_TRAINER_TASKS, id); }
+    function setPhysioTask(id) { setzeStaffAufgabe('physio', PHYSIO_TASKS, id); }
+    function setPressOfficerTask(id) { setzeStaffAufgabe('pressOfficer', PRESS_OFFICER_TASKS, id); }
+
+    // Effektwerte je Aufgabe (nur gelesen, wenn die Rolle eingestellt ist).
+    function getTwTrainerEffekt() {
+        const elf = staffMembers.twTrainer.task === 'elfmeter';
+        return { elfmeter: elf ? 0.07 : 0.04, abwehr: elf ? 0.1 : 0.4 };
+    }
+    function getPhysioEffekt() {
+        const belastung = staffMembers.physio.task === 'belastung';
+        return { ausfall: belastung ? 0.3 : 0.5, fitFaktor: belastung ? 0.9 : 1 };
+    }
+    function getPressOfficerEffekt() {
+        const lvl = getStaffLevelMultiplier('pressOfficer');
+        if (staffMembers.pressOfficer.task === 'offensiv') return { vorstand: 1, fans: 0.5 };
+        return { vorstand: 0.85 - 0.1 * lvl, fans: 0.85 - 0.1 * lvl };
+    }
 
     // ==========================================
     // ERWEITERTE PERSONAL-AUTOMATISIERUNG: 4 weitere Rollen mit wählbaren
@@ -18543,6 +18585,13 @@ function renderStadiumEventsPanel() {
         ];
         staffCentralState.candidatePool = { key, candidates };
         renderStaffView();
+        // Der Bewerbungspool steht über der Personalliste. Unten in der Liste getippt, war er sonst außer Sicht
+        // (das wirkte wie ein Knopf ohne Wirkung) - deshalb hinscrollen und darauf hinweisen.
+        const poolBox = document.getElementById('staff-candidate-pool-box');
+        if (poolBox) {
+            poolBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            showToast(`📋 Bewerber für ${s.name} oben im Personal-Bereich - dort auswählen.`, 'info', 3000);
+        }
     }
     function hireFromCandidatePool(idx) {
         let pool = staffCentralState.candidatePool;
@@ -22309,7 +22358,7 @@ function ownSetPieceGoal(scorer, assist, text) {
 
 function playOpponentPenalty() {
     const keeper = setPieceOnPitch().find(p => p.pos === 'TW');
-    let prob = 0.76 - (keeper && keeper.trait === 'Elfmeter-Killer' ? 0.12 : 0) - (staffMembers.twTrainer && staffMembers.twTrainer.hired ? 0.04 : 0);
+    let prob = 0.76 - (keeper && keeper.trait === 'Elfmeter-Killer' ? 0.12 : 0) - (staffMembers.twTrainer && staffMembers.twTrainer.hired ? getTwTrainerEffekt().elfmeter : 0);
     const oppName = currentMatch.isHome ? currentMatch.awayName : currentMatch.homeName;
     tickerLine(`<div style="color:var(--danger);">❗ ${currentMatch.minute}. Min: Elfmeter für ${oppName}...</div>`);
     if (typeof noteRefereeControversy === 'function') noteRefereeControversy('elfmeter');
@@ -23531,7 +23580,7 @@ function ensureMedicalProfile(p) {
 }
 
 function getMedicalCheckFee(ablose) {
-    const physio = staffMembers.physio && staffMembers.physio.hired ? 0.5 : 1;
+    const physio = staffMembers.physio && staffMembers.physio.hired ? getPhysioEffekt().ausfall : 1;
     return Math.max(MEDICAL_CHECK_MIN, Math.round(ablose * MEDICAL_CHECK_RATE * physio / 100) * 100);
 }
 
@@ -26953,7 +27002,7 @@ function cleanupLegacyScoutState() {
         // Torwarttrainer: wirkte bisher nur im seltenen Elfmeterschießen, nie im
         // regulären 90-minütigen Spielverlauf - ein guter Torwart-Coach verbessert
         // Reflexe/Stellungsspiel des Keepers auch im Alltagsgeschäft.
-        if (staffMembers.twTrainer.hired) ourDefShift += 0.4 * getStaffLevelMultiplier('twTrainer');
+        if (staffMembers.twTrainer.hired) ourDefShift += getTwTrainerEffekt().abwehr * getStaffLevelMultiplier('twTrainer');
         diff += currentMatch.isHome ? ourDefShift : -ourDefShift;
         // Tore (25.12): dieselben erwarteten Tore wie simulateGoals() (getExpectedGoals() in
         // js/utils.js, inkl. Spielstile), anteilig für die Minuten dieses Spielzugs ausgewürfelt.
@@ -27787,6 +27836,7 @@ function cleanupLegacyScoutState() {
         // Text ohne tatsächliche Wirkung). Ernährungsberater (neu) stapelt zusätzlich obendrauf.
         if (staffMembers.fitCoach.hired) fitLoss = Math.round(fitLoss * 0.7);
         if (staffMembers.nutritionist.hired) fitLoss = Math.round(fitLoss * (0.92 - 0.04 * getStaffLevelMultiplier('nutritionist')));
+        if (staffMembers.physio.hired) fitLoss = Math.round(fitLoss * getPhysioEffekt().fitFaktor);
         // Trainingsintensität-Regler (Training & Förderung): Hart beansprucht mehr, Locker schont.
         if (typeof getTrainingIntensityFitnessMultiplier === 'function') fitLoss = Math.round(fitLoss * getTrainingIntensityFitnessMultiplier());
         // Team-Trainingsschwerpunkt wirkt sich spürbar, aber begrenzt aus
@@ -28099,8 +28149,8 @@ function cleanupLegacyScoutState() {
                 game.money = Math.max(0, game.money - fine);
                 // Pressesprecher: dämpft den Image-Schaden bei Skandalen und schlechten
                 // Ergebnissen spürbar ab (professionelles Krisenmanagement).
-                let boardHit = staffMembers.pressOfficer.hired ? Math.round(15 * (0.85 - 0.1 * getStaffLevelMultiplier('pressOfficer'))) : 15;
-                let fanHit = staffMembers.pressOfficer.hired ? Math.round(10 * (0.85 - 0.1 * getStaffLevelMultiplier('pressOfficer'))) : 10;
+                let boardHit = staffMembers.pressOfficer.hired ? Math.round(15 * getPressOfficerEffekt().vorstand) : 15;
+                let fanHit = staffMembers.pressOfficer.hired ? Math.round(10 * getPressOfficerEffekt().fans) : 10;
                 game.boardSat = Math.max(10, game.boardSat - boardHit);
                 game.fans = Math.max(game.fanBaseFloor, game.fans - fanHit);
                 underworld.pressure = Math.max(0, underworld.pressure - 30);

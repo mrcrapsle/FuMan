@@ -28,7 +28,7 @@ function ensureMedicalProfile(p) {
 }
 
 function getMedicalCheckFee(ablose) {
-    const physio = staffMembers.physio && staffMembers.physio.hired ? 0.5 : 1;
+    const physio = staffMembers.physio && staffMembers.physio.hired ? getPhysioEffekt().ausfall : 1;
     return Math.max(MEDICAL_CHECK_MIN, Math.round(ablose * MEDICAL_CHECK_RATE * physio / 100) * 100);
 }
 

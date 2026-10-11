@@ -63,8 +63,50 @@
         sportDir: { tasks: () => SPORT_DIR_TASKS, setter: 'setSportDirTask' },
         marketingDir: { tasks: () => MARKETING_DIR_TASKS, setter: 'setMarketingDirTask' },
         setPieceCoach: { tasks: () => SET_PIECE_TASKS, setter: 'setSetPieceCoachTask' },
-        secChief: { tasks: () => SEC_CHIEF_TASKS, setter: 'setSecChiefTask' }
+        secChief: { tasks: () => SEC_CHIEF_TASKS, setter: 'setSecChiefTask' },
+        twTrainer: { tasks: () => TW_TRAINER_TASKS, setter: 'setTwTrainerTask' },
+        physio: { tasks: () => PHYSIO_TASKS, setter: 'setPhysioTask' },
+        pressOfficer: { tasks: () => PRESS_OFFICER_TASKS, setter: 'setPressOfficerTask' }
     };
+
+    // Aufgaben-Modi (25.45): jede dieser Rollen hat einen Standardmodus und einen Alternativmodus mit
+    // einem echten Zielkonflikt. Die Effekte unten werden dort gelesen, wo der Bonus heute schon wirkt.
+    const TW_TRAINER_TASKS = [
+        { id: 'paraden', name: 'Paraden-Training (Standard)', desc: 'Elfmeter-Abwehr +4 %, Abwehrstärke +0,4 je Stufe.' },
+        { id: 'elfmeter', name: 'Elfmeter-Spezialtraining', desc: 'Elfmeter-Abwehr +7 %, dafür nur +0,1 Abwehrstärke je Stufe.' }
+    ];
+    const PHYSIO_TASKS = [
+        { id: 'reha', name: 'Reha-Schwerpunkt (Standard)', desc: 'Halbiert die Ausfallzeit von Verletzten.' },
+        { id: 'belastung', name: 'Belastungssteuerung', desc: 'Ausfallzeit nur um 30 % verkürzt, dafür -10 % Fitnessverlust nach Spielen.' }
+    ];
+    const PRESS_OFFICER_TASKS = [
+        { id: 'defensiv', name: 'Defensiv (Standard)', desc: 'Vorstand und Fans werden bei Kritik deutlich weniger verärgert.' },
+        { id: 'offensiv', name: 'Offensiv', desc: 'Fans werden halb so stark verärgert, dafür trifft der Vorstand Kritik voll.' }
+    ];
+
+    function setzeStaffAufgabe(key, tasks, id) {
+        if (!tasks.some(t => t.id === id)) return;
+        staffMembers[key].task = id;
+        renderStaffView();
+    }
+    function setTwTrainerTask(id) { setzeStaffAufgabe('twTrainer', TW_TRAINER_TASKS, id); }
+    function setPhysioTask(id) { setzeStaffAufgabe('physio', PHYSIO_TASKS, id); }
+    function setPressOfficerTask(id) { setzeStaffAufgabe('pressOfficer', PRESS_OFFICER_TASKS, id); }
+
+    // Effektwerte je Aufgabe (nur gelesen, wenn die Rolle eingestellt ist).
+    function getTwTrainerEffekt() {
+        const elf = staffMembers.twTrainer.task === 'elfmeter';
+        return { elfmeter: elf ? 0.07 : 0.04, abwehr: elf ? 0.1 : 0.4 };
+    }
+    function getPhysioEffekt() {
+        const belastung = staffMembers.physio.task === 'belastung';
+        return { ausfall: belastung ? 0.3 : 0.5, fitFaktor: belastung ? 0.9 : 1 };
+    }
+    function getPressOfficerEffekt() {
+        const lvl = getStaffLevelMultiplier('pressOfficer');
+        if (staffMembers.pressOfficer.task === 'offensiv') return { vorstand: 1, fans: 0.5 };
+        return { vorstand: 0.85 - 0.1 * lvl, fans: 0.85 - 0.1 * lvl };
+    }
 
     // ==========================================
     // ERWEITERTE PERSONAL-AUTOMATISIERUNG: 4 weitere Rollen mit wählbaren
@@ -456,6 +498,13 @@
         ];
         staffCentralState.candidatePool = { key, candidates };
         renderStaffView();
+        // Der Bewerbungspool steht über der Personalliste. Unten in der Liste getippt, war er sonst außer Sicht
+        // (das wirkte wie ein Knopf ohne Wirkung) - deshalb hinscrollen und darauf hinweisen.
+        const poolBox = document.getElementById('staff-candidate-pool-box');
+        if (poolBox) {
+            poolBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            showToast(`📋 Bewerber für ${s.name} oben im Personal-Bereich - dort auswählen.`, 'info', 3000);
+        }
     }
     function hireFromCandidatePool(idx) {
         let pool = staffCentralState.candidatePool;

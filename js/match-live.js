@@ -127,7 +127,7 @@
         // Torwarttrainer: wirkte bisher nur im seltenen Elfmeterschießen, nie im
         // regulären 90-minütigen Spielverlauf - ein guter Torwart-Coach verbessert
         // Reflexe/Stellungsspiel des Keepers auch im Alltagsgeschäft.
-        if (staffMembers.twTrainer.hired) ourDefShift += 0.4 * getStaffLevelMultiplier('twTrainer');
+        if (staffMembers.twTrainer.hired) ourDefShift += getTwTrainerEffekt().abwehr * getStaffLevelMultiplier('twTrainer');
         diff += currentMatch.isHome ? ourDefShift : -ourDefShift;
         // Tore (25.12): dieselben erwarteten Tore wie simulateGoals() (getExpectedGoals() in
         // js/utils.js, inkl. Spielstile), anteilig für die Minuten dieses Spielzugs ausgewürfelt.
@@ -961,6 +961,7 @@
         // Text ohne tatsächliche Wirkung). Ernährungsberater (neu) stapelt zusätzlich obendrauf.
         if (staffMembers.fitCoach.hired) fitLoss = Math.round(fitLoss * 0.7);
         if (staffMembers.nutritionist.hired) fitLoss = Math.round(fitLoss * (0.92 - 0.04 * getStaffLevelMultiplier('nutritionist')));
+        if (staffMembers.physio.hired) fitLoss = Math.round(fitLoss * getPhysioEffekt().fitFaktor);
         // Trainingsintensität-Regler (Training & Förderung): Hart beansprucht mehr, Locker schont.
         if (typeof getTrainingIntensityFitnessMultiplier === 'function') fitLoss = Math.round(fitLoss * getTrainingIntensityFitnessMultiplier());
         // Team-Trainingsschwerpunkt wirkt sich spürbar, aber begrenzt aus
@@ -1273,8 +1274,8 @@
                 game.money = Math.max(0, game.money - fine);
                 // Pressesprecher: dämpft den Image-Schaden bei Skandalen und schlechten
                 // Ergebnissen spürbar ab (professionelles Krisenmanagement).
-                let boardHit = staffMembers.pressOfficer.hired ? Math.round(15 * (0.85 - 0.1 * getStaffLevelMultiplier('pressOfficer'))) : 15;
-                let fanHit = staffMembers.pressOfficer.hired ? Math.round(10 * (0.85 - 0.1 * getStaffLevelMultiplier('pressOfficer'))) : 10;
+                let boardHit = staffMembers.pressOfficer.hired ? Math.round(15 * getPressOfficerEffekt().vorstand) : 15;
+                let fanHit = staffMembers.pressOfficer.hired ? Math.round(10 * getPressOfficerEffekt().fans) : 10;
                 game.boardSat = Math.max(10, game.boardSat - boardHit);
                 game.fans = Math.max(game.fanBaseFloor, game.fans - fanHit);
                 underworld.pressure = Math.max(0, underworld.pressure - 30);

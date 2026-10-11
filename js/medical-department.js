@@ -35,7 +35,7 @@ function getPlayerInjuryRiskIndex(p) {
 function injurePlayerByEvent(p, grund) {
     if (!p || (p.injured || 0) > 0) return false;
     const baseDuration = Math.floor(Math.random() * 4) + 1;
-    const reduction = Math.max(0.25, 1 - (campusBuildings.reha.lvl * 0.08) - (staffMembers.physio.hired ? 0.5 : 0));
+    const reduction = Math.max(0.25, 1 - (campusBuildings.reha.lvl * 0.08) - (staffMembers.physio.hired ? 1 - getPhysioEffekt().ausfall : 0));
     p.injured = Math.max(1, Math.round(baseDuration * reduction));
     p.timesInjured = (p.timesInjured || 0) + 1;
     addInboxMessage('verletzung', `${p.name} verletzt`, `${grund ? grund + ': ' : ''}Fällt für ${p.injured} Spiel(e) aus.`, 'screen-squad');

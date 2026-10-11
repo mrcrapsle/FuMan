@@ -116,7 +116,7 @@ function ownSetPieceGoal(scorer, assist, text) {
 
 function playOpponentPenalty() {
     const keeper = setPieceOnPitch().find(p => p.pos === 'TW');
-    let prob = 0.76 - (keeper && keeper.trait === 'Elfmeter-Killer' ? 0.12 : 0) - (staffMembers.twTrainer && staffMembers.twTrainer.hired ? 0.04 : 0);
+    let prob = 0.76 - (keeper && keeper.trait === 'Elfmeter-Killer' ? 0.12 : 0) - (staffMembers.twTrainer && staffMembers.twTrainer.hired ? getTwTrainerEffekt().elfmeter : 0);
     const oppName = currentMatch.isHome ? currentMatch.awayName : currentMatch.homeName;
     tickerLine(`<div style="color:var(--danger);">❗ ${currentMatch.minute}. Min: Elfmeter für ${oppName}...</div>`);
     if (typeof noteRefereeControversy === 'function') noteRefereeControversy('elfmeter');

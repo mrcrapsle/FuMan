@@ -2431,6 +2431,63 @@ async function testAlteAngebotKappung(browser) {
     await page.close();
 }
 
+async function testStaffAufgabenModi(browser) {
+    console.log('\n[25.45] Personal: Torwarttrainer, Physio und Pressesprecher haben wählbare Aufgaben');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        const out = {};
+        ['twTrainer', 'physio', 'pressOfficer'].forEach(k => { staffMembers[k].hired = true; });
+        // Standard ohne gesetzte Aufgabe
+        out.twStandard = getTwTrainerEffekt().elfmeter === 0.04 && getTwTrainerEffekt().abwehr === 0.4;
+        out.physioStandard = getPhysioEffekt().ausfall === 0.5 && getPhysioEffekt().fitFaktor === 1;
+        out.pressStandard = getPressOfficerEffekt().fans === getPressOfficerEffekt().vorstand && getPressOfficerEffekt().fans < 0.85;
+        // Alternativmodi
+        setTwTrainerTask('elfmeter');
+        out.twElfmeter = staffMembers.twTrainer.task === 'elfmeter' && getTwTrainerEffekt().elfmeter === 0.07;
+        setTwTrainerTask('unbekannt');
+        out.ungueltigAbgelehnt = staffMembers.twTrainer.task === 'elfmeter';
+        setPhysioTask('belastung');
+        out.physioBelastung = getPhysioEffekt().ausfall === 0.3 && getPhysioEffekt().fitFaktor === 0.9;
+        setPressOfficerTask('offensiv');
+        out.pressOffensiv = getPressOfficerEffekt().vorstand === 1 && getPressOfficerEffekt().fans === 0.5;
+        // Die Auswahl erscheint in der Personalliste
+        renderStaffView();
+        const liste = document.getElementById('staff-list-container').innerText;
+        out.auswahlSichtbar = liste.includes('Elfmeter-Spezialtraining') && liste.includes('Belastungssteuerung') && liste.includes('Offensiv');
+        return out;
+    });
+    assert(r.twStandard, 'Torwarttrainer ohne Wahl: Standardwerte (4 %, 0,4)');
+    assert(r.physioStandard, 'Physio ohne Wahl: Standardwerte (Ausfall halbiert, kein Fitnessbonus)');
+    assert(r.pressStandard, 'Pressesprecher ohne Wahl: Standard-Dämpfung für Vorstand und Fans');
+    assert(r.twElfmeter, 'Elfmeter-Spezialtraining erhöht die Elfmeterabwehr auf 7 %');
+    assert(r.ungueltigAbgelehnt, 'Eine unbekannte Aufgabe wird nicht übernommen');
+    assert(r.physioBelastung, 'Belastungssteuerung: Ausfall nur um 30 % verkürzt, Fitnessverlust -10 %');
+    assert(r.pressOffensiv, 'Offensiv: Vorstand trifft voll, Fans nur halb');
+    assert(r.auswahlSichtbar, 'Die Aufgabenauswahl erscheint in der Personalliste');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei den Aufgaben');
+    await page.close();
+}
+
+async function testPersonalEinstellen(browser) {
+    console.log('\n[25.45] Personal einstellen: der Bewerbungspool erscheint sichtbar und lässt sich nutzen');
+    const { page, consoleErrors } = await freshPage(browser);
+    page.on('dialog', d => d.accept());
+    await page.evaluate(() => { closeTutorial(); game.money = 90000000; showScreen('screen-staff'); renderStaffView(); });
+    // Liste ans Ende scrollen: genau dort war der Pool vorher außer Sicht
+    await page.evaluate(() => { const l = document.getElementById('staff-list-container'); l.scrollTop = l.scrollHeight; });
+    const knopf = page.locator('#staff-list-container button', { hasText: 'Einstellen' }).last();
+    await knopf.click();
+    const sichtbar = await page.evaluate(() => { const b = document.getElementById('staff-candidate-pool-box'); const t = b ? b.getBoundingClientRect().top : -1; return t >= 0 && t < window.innerHeight; });
+    await page.locator('#staff-candidate-pool-box button').first().click();
+    const eingestellt = await page.evaluate(() => Object.keys(staffMembers).filter(k => staffMembers[k].hired).length);
+    assert(sichtbar, 'Nach dem Tippen auf „Einstellen“ liegt der Bewerbungspool im sichtbaren Bereich');
+    assert(eingestellt >= 1, 'Ein Bewerber lässt sich aus dem Pool einstellen');
+    assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler beim Einstellen');
+    await page.close();
+}
+
 async function testBoardEarlyWarning(browser) {
     console.log('\n[25.24] Vorstand: Frühwarnung schon unter 50 Zufriedenheit, einmal pro Saison');
     const { page, consoleErrors } = await freshPage(browser);
@@ -9895,6 +9952,8 @@ async function main() {
         testRueckennummerUndWette,
         testLegendenNummer,
         testAlteAngebotKappung,
+        testStaffAufgabenModi,
+        testPersonalEinstellen,
         testEntlassungsGrund,
         testEnglishUi,
         testSwapDeals,
