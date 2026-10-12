@@ -11236,6 +11236,7 @@ function renderBoardRoomPanel() {
         let toast = document.getElementById('app-toast');
         if (!toast) return;
         toast.innerText = message;
+        toast.onclick = () => { toast.classList.remove('show'); }; // Antippen schließt die Meldung sofort
         toast.className = 'app-toast show' + (type === 'error' ? ' toast-error' : '');
         clearTimeout(toast._hideTimer);
         toast._hideTimer = setTimeout(() => { toast.classList.remove('show'); }, duration);
@@ -12035,6 +12036,38 @@ function a11yHatName(el) {
     return !!el.closest('label') || !!el.getAttribute('placeholder');
 }
 
+// Reiterleisten (Hub-Reiter und Unterreiter "btn-tab-…"): Leiste = tablist, Knopf = tab, aktiver Reiter
+// = aria-selected (folgt der Knopfklasse btn-action), Pfeiltasten/Pos1/Ende wechseln den Reiter.
+const A11Y_TAB_SEL = 'button[id^="hubtab-btn-"], button[id^="btn-tab-"]';
+function a11yTabsSynchron(leiste) {
+    leiste.querySelectorAll(A11Y_TAB_SEL).forEach(b => b.setAttribute('aria-selected', String(b.classList.contains('btn-action'))));
+}
+function verbesserTabs(root) {
+    const knoepfe = [...root.querySelectorAll(A11Y_TAB_SEL)];
+    if (root.matches && root.matches(A11Y_TAB_SEL)) knoepfe.push(root);
+    const leisten = new Set(knoepfe.map(b => b.parentElement).filter(Boolean));
+    leisten.forEach(leiste => {
+        if (leiste.__a11yTabs) { a11yTabsSynchron(leiste); return; }
+        leiste.__a11yTabs = true;
+        if (!leiste.getAttribute('role')) leiste.setAttribute('role', 'tablist');
+        if (!leiste.getAttribute('aria-label')) leiste.setAttribute('aria-label', 'Bereiche');
+        leiste.querySelectorAll(A11Y_TAB_SEL).forEach(b => b.setAttribute('role', 'tab'));
+        a11yTabsSynchron(leiste);
+        if (typeof MutationObserver !== 'undefined') new MutationObserver(() => a11yTabsSynchron(leiste)).observe(leiste, { attributes: true, subtree: true, attributeFilter: ['class'] });
+        leiste.addEventListener('keydown', e => {
+            if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) return;
+            const tabs = [...leiste.querySelectorAll(A11Y_TAB_SEL)].filter(b => !b.disabled && b.offsetParent !== null);
+            const i = tabs.indexOf(document.activeElement);
+            if (i < 0) return;
+            e.preventDefault();
+            const ziel = e.key === 'Home' ? tabs[0] : e.key === 'End' ? tabs[tabs.length - 1] : tabs[(i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
+            ziel.click();
+            const neu = document.getElementById(ziel.id);
+            if (neu) neu.focus({ preventScroll: true });
+        });
+    });
+}
+
 function verbessereZugaenglichkeit(wurzel) {
     const root = wurzel || document;
     if (!root.querySelectorAll) return 0;
@@ -12046,6 +12079,7 @@ function verbessereZugaenglichkeit(wurzel) {
         const name = a11yName(el);
         if (name) { el.setAttribute('aria-label', name); n++; }
     }
+    verbesserTabs(root);
     return n;
 }
 
@@ -12982,13 +13016,12 @@ function initZugaenglichkeit() {
         let templates = game.customWeeklyPlanTemplates || [];
         box.innerHTML = templates.length === 0
             ? '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch keine eigenen Vorlagen gespeichert.</div>'
-            : templates.map((t, idx) => `<div class="player-row" style="font-size:var(--fs-small);">
-                <span>${t.name}</span>
-                <div>
-                    <button onclick="applyCustomWeeklyPlanTemplate(${idx})" class="btn-secondary" style="width:auto; font-size:var(--fs-caption); padding:3px 8px;">Übernehmen</button>
-                    <button onclick="deleteCustomWeeklyPlanTemplate(${idx})" class="btn-secondary" style="width:auto; font-size:var(--fs-caption); padding:3px 8px; color:var(--danger);">✕</button>
-                </div>
-            </div>`).join('');
+            : templates.map((t, idx) => `<div class="panel player-card" style="margin-bottom:6px; padding:8px 10px;">${renderUiCard({
+                title: t.name,
+                sub: 'Eigene Wochenplan-Vorlage',
+                actions: `<button onclick="applyCustomWeeklyPlanTemplate(${idx})" class="btn-secondary">Übernehmen</button>
+                    <button onclick="deleteCustomWeeklyPlanTemplate(${idx})" class="btn-secondary" style="color:var(--danger);" title="Vorlage löschen">✕ Löschen</button>`
+            })}</div>`).join('');
     }
 
     // Reiter-Navigation: teilt den bisher sehr langen Trainings-Screen in 4 Reiter auf,
@@ -13547,8 +13580,21 @@ function initZugaenglichkeit() {
             let available = youthTalents.filter(p => !game.youthHospitants.includes(p.id));
             let current = game.youthHospitants.map(id => youthTalents.find(p => p.id === id)).filter(Boolean);
             hospitantBox.innerHTML = `
-                ${current.map(p => `<div class="player-row" style="font-size:var(--fs-caption);"><span>⬆️ ${p.name} (hospitiert)</span><button onclick="removeYouthHospitant('${p.id}')" class="btn-secondary" style="width:auto; font-size:var(--fs-micro);">Zurück</button></div>`).join('')}
-                ${available.slice(0, 4).map(p => `<div class="player-row" style="font-size:var(--fs-caption);"><span>${p.name}</span><button onclick="addYouthHospitant('${p.id}')" class="btn-secondary" style="width:auto; font-size:var(--fs-micro);">⬆️ Hospitieren</button></div>`).join('')}
+                ${current.map(p => `<div class="panel player-card" style="margin-bottom:6px; padding:8px 10px;">${renderUiCard({
+                    thumb: `<span class="badge badge-${(p.pos || 'mit').toLowerCase()}">${p.pos}</span>`,
+                    title: p.name,
+                    sub: `${p.age} J. · Jugendakademie`,
+                    meta: [uiChip('⬆️ hospitiert', 'gut')],
+                    kpi: { wert: p.strength, label: 'Stärke' },
+                    actions: `<button onclick="removeYouthHospitant('${p.id}')" class="btn-secondary">Zurück in die Jugend</button>`
+                })}</div>`).join('')}
+                ${available.slice(0, 4).map(p => `<div class="panel player-card" style="margin-bottom:6px; padding:8px 10px;">${renderUiCard({
+                    thumb: `<span class="badge badge-${(p.pos || 'mit').toLowerCase()}">${p.pos}</span>`,
+                    title: p.name,
+                    sub: `${p.age} J. · Jugendakademie`,
+                    kpi: { wert: p.strength, label: 'Stärke' },
+                    actions: `<button onclick="addYouthHospitant('${p.id}')" class="btn-secondary">⬆️ Hospitieren</button>`
+                })}</div>`).join('')}
                 ${(current.length === 0 && available.length === 0) ? '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Keine Jugendspieler in der Akademie.</div>' : ''}
             `;
         }
@@ -16359,7 +16405,7 @@ function finishGoalkeeperGame() {
             <div class="box box-offer" style="margin-bottom:6px;">
                 <strong style="color:var(--accent);">${o.name}</strong> <span class="badge-trait">${o.tierLabel} · ${o.sp} SpT</span><br>
                 <span style="font-size:var(--fs-small);">${extraLine}</span>
-                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin-top:6px;">
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(118px, 1fr)); gap:4px; margin-top:6px;">
                     <button onclick="${acceptFn}(${o.id})" class="btn-action" style="font-size:var(--fs-caption);">Annehmen</button>
                     <button onclick="${negoFn}(${o.id})" class="btn-secondary" style="font-size:var(--fs-caption);" ${o.negotiationsUsed >= MAX_NEGOTIATIONS ? 'disabled' : ''}>Nachverhandeln (${MAX_NEGOTIATIONS - o.negotiationsUsed})</button>
                     <button onclick="${rejectFn}(${o.id})" class="btn-secondary" style="font-size:var(--fs-caption); color:var(--danger);">Ablehnen</button>
@@ -21088,6 +21134,12 @@ function renderYouthPathwayBoxes() {
         `;
     }
 
+    // Welche Klausel-Bereiche aufgeklappt sind, bleibt beim Neuzeichnen der Liste erhalten
+    const contractsFoldOffen = new Set();
+    function toggleContractFold(id, offen) {
+        if (offen) contractsFoldOffen.add(id); else contractsFoldOffen.delete(id);
+    }
+
     function renderContractsView() {
         renderSeasonPlanningBox();
         let list = document.getElementById('contracts-list');
@@ -21096,14 +21148,26 @@ function renderYouthPathwayBoxes() {
             let imGespraech = contractTalk && contractTalk.playerId === p.id;
             let gesperrt = p.talksBlockedSeason === game.season || !!p.preContractSigned;
             let row = document.createElement('div');
-            row.className = 'panel';
-            row.style.cssText = 'margin-bottom:4px; padding:6px;';
-            row.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 28) : ''}${p.name} (${p.contracts} J. Rest · ${formatVal(p.wage)}/SpT)${p.agent ? ` <span class="badge badge-trait" title="${p.agent.name}">🕴️ Berater</span>` : ''}${p.playtimePromise ? ' <span class="badge">🤝 Einsatzgarantie</span>' : ''}${p.preContractOffer ? ` <span class="badge" style="background:var(--danger);">⚠️ ${p.preContractOffer.club} lockt - Frist SpT ${p.preContractOffer.deadline}</span>` : ''}${p.preContractSigned ? ` <span class="badge" style="background:var(--danger);">✍️ Vorvertrag bei ${p.preContractSigned}</span>` : ''}</span>
-                    ${imGespraech ? '' : `<button onclick="extendContract('${p.id}')" class="btn-secondary" style="width:auto;" ${gesperrt ? 'disabled' : ''}>${p.preContractSigned ? 'Geht am Saisonende' : (gesperrt ? 'Gespräche ruhen' : '📝 Verhandeln')}</button>`}
-                </div>
-                ${imGespraech ? renderContractTalkBox(p) : ''}
+            row.className = 'panel player-card';
+            row.style.cssText = 'margin-bottom:8px; padding:10px;';
+            const laufzeitTon = p.contracts <= 1 ? 'schlecht' : (p.contracts === 2 ? 'warn' : '');
+            const offen = contractsFoldOffen.has(p.id) || imGespraech;
+            // Kartenmuster: Bild mit Position, Name, Laufzeit und Gehalt, Zustand als Chips, Stärke groß; Klauseln und Boni klappen auf
+            row.innerHTML = renderUiCard({
+                thumb: `${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 40) : ''}<span class="badge badge-${(p.pos || 'mit').toLowerCase()}">${p.pos}</span>`,
+                title: p.name,
+                sub: `${p.age ? p.age + ' J. · ' : ''}${formatVal(p.wage)}/SpT`,
+                meta: [
+                    uiChip(`📄 ${p.contracts} J. Rest`, laufzeitTon),
+                    p.agent ? uiChip(`🕴️ Berater`) : '',
+                    p.playtimePromise ? uiChip('🤝 Einsatzgarantie') : '',
+                    p.preContractOffer ? uiChip(`⚠️ ${p.preContractOffer.club} lockt - Frist SpT ${p.preContractOffer.deadline}`, 'schlecht') : '',
+                    p.preContractSigned ? uiChip(`✍️ Vorvertrag bei ${p.preContractSigned}`, 'schlecht') : ''
+                ],
+                kpi: { wert: p.strength, label: 'Stärke' },
+                body: (imGespraech ? renderContractTalkBox(p) : '') + `
+                    <details class="ui-fold"${offen ? ' open' : ''} ontoggle="toggleContractFold('${p.id}', this.open)">
+                        <summary>📜 Klausel und Boni${p.releaseClause ? ' · Ausstiegsklausel aktiv' : ''}</summary>
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; font-size:var(--fs-caption); flex-wrap:wrap; gap:3px;">
                     ${p.releaseClause
                         ? `<span>📜 Ausstiegsklausel: <strong style="color:var(--accent);">${formatVal(p.releaseClause)}</strong></span><button onclick="removeReleaseClause('${p.id}')" class="btn-secondary" style="width:auto; font-size:var(--fs-micro);">Entfernen</button>`
@@ -21112,8 +21176,10 @@ function renderYouthPathwayBoxes() {
                            <button onclick="confirmSetReleaseClause('${p.id}')" class="btn-secondary" style="width:auto; font-size:var(--fs-micro);">📜 Klausel festlegen</button>`
                     }
                 </div>
-                ${(typeof renderBonusClausesBlock === 'function') ? renderBonusClausesBlock(p) : ''}
-            `;
+                        ${(typeof renderBonusClausesBlock === 'function') ? renderBonusClausesBlock(p) : ''}
+                    </details>`,
+                actions: imGespraech ? '' : `<button onclick="extendContract('${p.id}')" class="btn-secondary" ${gesperrt ? 'disabled' : ''}>${p.preContractSigned ? 'Geht am Saisonende' : (gesperrt ? 'Gespräche ruhen' : '📝 Verhandeln')}</button>`
+            });
             list.appendChild(row);
         });
 
@@ -25143,7 +25209,7 @@ function renderSponsorRenewalBox() {
     const sp = game.sponsor;
     const treue = typeof sp.loyalty === 'number' ? sp.loyalty : 65;
     box.innerHTML = `<div class="box" style="border-left-color:var(--gold); font-size:var(--fs-small);">🤝 <strong>${r.name}</strong> bietet eine Verlängerung um ${SPONSOR_RENEWAL_DAYS} Spieltage (noch ${sp.duration} Spieltage Laufzeit): Sockel <strong>${formatVal(r.base)}</strong> (bisher ${formatVal(sp.base)}), Siegprämie ${formatVal(r.winBonus)}.
-        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin-top:4px;">
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(118px, 1fr)); gap:4px; margin-top:4px;">
             <button onclick="acceptSponsorRenewal()" class="btn-action" style="font-size:var(--fs-caption);">✅ Verlängern</button>
             <button onclick="haggleSponsorRenewal()" class="btn-secondary" style="font-size:var(--fs-caption);"${r.haggled ? ' disabled' : ''}>📈 +10 % fordern (${treue} %)</button>
             <button onclick="declineSponsorRenewal()" class="btn-secondary" style="font-size:var(--fs-caption);">❌ Auslaufen lassen</button>

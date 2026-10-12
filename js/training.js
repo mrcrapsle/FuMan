@@ -131,13 +131,12 @@
         let templates = game.customWeeklyPlanTemplates || [];
         box.innerHTML = templates.length === 0
             ? '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch keine eigenen Vorlagen gespeichert.</div>'
-            : templates.map((t, idx) => `<div class="player-row" style="font-size:var(--fs-small);">
-                <span>${t.name}</span>
-                <div>
-                    <button onclick="applyCustomWeeklyPlanTemplate(${idx})" class="btn-secondary" style="width:auto; font-size:var(--fs-caption); padding:3px 8px;">Übernehmen</button>
-                    <button onclick="deleteCustomWeeklyPlanTemplate(${idx})" class="btn-secondary" style="width:auto; font-size:var(--fs-caption); padding:3px 8px; color:var(--danger);">✕</button>
-                </div>
-            </div>`).join('');
+            : templates.map((t, idx) => `<div class="panel player-card" style="margin-bottom:6px; padding:8px 10px;">${renderUiCard({
+                title: t.name,
+                sub: 'Eigene Wochenplan-Vorlage',
+                actions: `<button onclick="applyCustomWeeklyPlanTemplate(${idx})" class="btn-secondary">Übernehmen</button>
+                    <button onclick="deleteCustomWeeklyPlanTemplate(${idx})" class="btn-secondary" style="color:var(--danger);" title="Vorlage löschen">✕ Löschen</button>`
+            })}</div>`).join('');
     }
 
     // Reiter-Navigation: teilt den bisher sehr langen Trainings-Screen in 4 Reiter auf,
@@ -696,8 +695,21 @@
             let available = youthTalents.filter(p => !game.youthHospitants.includes(p.id));
             let current = game.youthHospitants.map(id => youthTalents.find(p => p.id === id)).filter(Boolean);
             hospitantBox.innerHTML = `
-                ${current.map(p => `<div class="player-row" style="font-size:var(--fs-caption);"><span>⬆️ ${p.name} (hospitiert)</span><button onclick="removeYouthHospitant('${p.id}')" class="btn-secondary" style="width:auto; font-size:var(--fs-micro);">Zurück</button></div>`).join('')}
-                ${available.slice(0, 4).map(p => `<div class="player-row" style="font-size:var(--fs-caption);"><span>${p.name}</span><button onclick="addYouthHospitant('${p.id}')" class="btn-secondary" style="width:auto; font-size:var(--fs-micro);">⬆️ Hospitieren</button></div>`).join('')}
+                ${current.map(p => `<div class="panel player-card" style="margin-bottom:6px; padding:8px 10px;">${renderUiCard({
+                    thumb: `<span class="badge badge-${(p.pos || 'mit').toLowerCase()}">${p.pos}</span>`,
+                    title: p.name,
+                    sub: `${p.age} J. · Jugendakademie`,
+                    meta: [uiChip('⬆️ hospitiert', 'gut')],
+                    kpi: { wert: p.strength, label: 'Stärke' },
+                    actions: `<button onclick="removeYouthHospitant('${p.id}')" class="btn-secondary">Zurück in die Jugend</button>`
+                })}</div>`).join('')}
+                ${available.slice(0, 4).map(p => `<div class="panel player-card" style="margin-bottom:6px; padding:8px 10px;">${renderUiCard({
+                    thumb: `<span class="badge badge-${(p.pos || 'mit').toLowerCase()}">${p.pos}</span>`,
+                    title: p.name,
+                    sub: `${p.age} J. · Jugendakademie`,
+                    kpi: { wert: p.strength, label: 'Stärke' },
+                    actions: `<button onclick="addYouthHospitant('${p.id}')" class="btn-secondary">⬆️ Hospitieren</button>`
+                })}</div>`).join('')}
                 ${(current.length === 0 && available.length === 0) ? '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Keine Jugendspieler in der Akademie.</div>' : ''}
             `;
         }

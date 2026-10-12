@@ -34,6 +34,12 @@
         `;
     }
 
+    // Welche Klausel-Bereiche aufgeklappt sind, bleibt beim Neuzeichnen der Liste erhalten
+    const contractsFoldOffen = new Set();
+    function toggleContractFold(id, offen) {
+        if (offen) contractsFoldOffen.add(id); else contractsFoldOffen.delete(id);
+    }
+
     function renderContractsView() {
         renderSeasonPlanningBox();
         let list = document.getElementById('contracts-list');
@@ -42,14 +48,26 @@
             let imGespraech = contractTalk && contractTalk.playerId === p.id;
             let gesperrt = p.talksBlockedSeason === game.season || !!p.preContractSigned;
             let row = document.createElement('div');
-            row.className = 'panel';
-            row.style.cssText = 'margin-bottom:4px; padding:6px;';
-            row.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 28) : ''}${p.name} (${p.contracts} J. Rest · ${formatVal(p.wage)}/SpT)${p.agent ? ` <span class="badge badge-trait" title="${p.agent.name}">🕴️ Berater</span>` : ''}${p.playtimePromise ? ' <span class="badge">🤝 Einsatzgarantie</span>' : ''}${p.preContractOffer ? ` <span class="badge" style="background:var(--danger);">⚠️ ${p.preContractOffer.club} lockt - Frist SpT ${p.preContractOffer.deadline}</span>` : ''}${p.preContractSigned ? ` <span class="badge" style="background:var(--danger);">✍️ Vorvertrag bei ${p.preContractSigned}</span>` : ''}</span>
-                    ${imGespraech ? '' : `<button onclick="extendContract('${p.id}')" class="btn-secondary" style="width:auto;" ${gesperrt ? 'disabled' : ''}>${p.preContractSigned ? 'Geht am Saisonende' : (gesperrt ? 'Gespräche ruhen' : '📝 Verhandeln')}</button>`}
-                </div>
-                ${imGespraech ? renderContractTalkBox(p) : ''}
+            row.className = 'panel player-card';
+            row.style.cssText = 'margin-bottom:8px; padding:10px;';
+            const laufzeitTon = p.contracts <= 1 ? 'schlecht' : (p.contracts === 2 ? 'warn' : '');
+            const offen = contractsFoldOffen.has(p.id) || imGespraech;
+            // Kartenmuster: Bild mit Position, Name, Laufzeit und Gehalt, Zustand als Chips, Stärke groß; Klauseln und Boni klappen auf
+            row.innerHTML = renderUiCard({
+                thumb: `${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 40) : ''}<span class="badge badge-${(p.pos || 'mit').toLowerCase()}">${p.pos}</span>`,
+                title: p.name,
+                sub: `${p.age ? p.age + ' J. · ' : ''}${formatVal(p.wage)}/SpT`,
+                meta: [
+                    uiChip(`📄 ${p.contracts} J. Rest`, laufzeitTon),
+                    p.agent ? uiChip(`🕴️ Berater`) : '',
+                    p.playtimePromise ? uiChip('🤝 Einsatzgarantie') : '',
+                    p.preContractOffer ? uiChip(`⚠️ ${p.preContractOffer.club} lockt - Frist SpT ${p.preContractOffer.deadline}`, 'schlecht') : '',
+                    p.preContractSigned ? uiChip(`✍️ Vorvertrag bei ${p.preContractSigned}`, 'schlecht') : ''
+                ],
+                kpi: { wert: p.strength, label: 'Stärke' },
+                body: (imGespraech ? renderContractTalkBox(p) : '') + `
+                    <details class="ui-fold"${offen ? ' open' : ''} ontoggle="toggleContractFold('${p.id}', this.open)">
+                        <summary>📜 Klausel und Boni${p.releaseClause ? ' · Ausstiegsklausel aktiv' : ''}</summary>
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px; font-size:var(--fs-caption); flex-wrap:wrap; gap:3px;">
                     ${p.releaseClause
                         ? `<span>📜 Ausstiegsklausel: <strong style="color:var(--accent);">${formatVal(p.releaseClause)}</strong></span><button onclick="removeReleaseClause('${p.id}')" class="btn-secondary" style="width:auto; font-size:var(--fs-micro);">Entfernen</button>`
@@ -58,8 +76,10 @@
                            <button onclick="confirmSetReleaseClause('${p.id}')" class="btn-secondary" style="width:auto; font-size:var(--fs-micro);">📜 Klausel festlegen</button>`
                     }
                 </div>
-                ${(typeof renderBonusClausesBlock === 'function') ? renderBonusClausesBlock(p) : ''}
-            `;
+                        ${(typeof renderBonusClausesBlock === 'function') ? renderBonusClausesBlock(p) : ''}
+                    </details>`,
+                actions: imGespraech ? '' : `<button onclick="extendContract('${p.id}')" class="btn-secondary" ${gesperrt ? 'disabled' : ''}>${p.preContractSigned ? 'Geht am Saisonende' : (gesperrt ? 'Gespräche ruhen' : '📝 Verhandeln')}</button>`
+            });
             list.appendChild(row);
         });
 

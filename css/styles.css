@@ -551,6 +551,9 @@
         .ui-pool-card .ui-card-meta { margin-top: 6px; }
         .ui-pool-cancel { min-height: 36px; margin: 2px 0 0; }
         .ui-pool-head .ui-card-sub { display: none; }
+        .ui-fold { margin-top: 8px; border-top: 1px solid var(--border); padding-top: 6px; }
+        .ui-fold > summary { cursor: pointer; font-size: var(--fs-small); font-weight: 700; color: var(--text-muted); min-height: 32px; display: flex; align-items: center; list-style-position: inside; }
+        .ui-fold[open] > summary { color: var(--text-main); }
         .ui-card-voll .ui-card-sub { display: block; -webkit-line-clamp: unset; overflow: visible; white-space: normal; }
         @media (max-height: 760px) {
             .ui-pool-card .ui-card-thumb { display: none; }
@@ -914,7 +917,7 @@
             opacity: 0; pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease;
             z-index: 9999; max-width: 88vw; text-align: center; border-left: 4px solid var(--primary);
         }
-        .app-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+        .app-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; cursor: pointer; }
         .app-toast.toast-error { border-left-color: var(--danger); }
 
         
@@ -1650,7 +1653,8 @@
 
                 padding: 10px 16px;
                 max-width: 90vw;
-                bottom: calc(66px + env(safe-area-inset-bottom, 0px)); 
+                /* über dem Weiter-Knopf (FAB) statt auf ihm: der sitzt direkt über der Tab-Leiste */
+                bottom: calc(132px + env(safe-area-inset-bottom, 0px)); 
             }
 
             

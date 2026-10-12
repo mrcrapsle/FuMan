@@ -687,7 +687,7 @@
             <div class="box box-offer" style="margin-bottom:6px;">
                 <strong style="color:var(--accent);">${o.name}</strong> <span class="badge-trait">${o.tierLabel} · ${o.sp} SpT</span><br>
                 <span style="font-size:var(--fs-small);">${extraLine}</span>
-                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin-top:6px;">
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(118px, 1fr)); gap:4px; margin-top:6px;">
                     <button onclick="${acceptFn}(${o.id})" class="btn-action" style="font-size:var(--fs-caption);">Annehmen</button>
                     <button onclick="${negoFn}(${o.id})" class="btn-secondary" style="font-size:var(--fs-caption);" ${o.negotiationsUsed >= MAX_NEGOTIATIONS ? 'disabled' : ''}>Nachverhandeln (${MAX_NEGOTIATIONS - o.negotiationsUsed})</button>
                     <button onclick="${rejectFn}(${o.id})" class="btn-secondary" style="font-size:var(--fs-caption); color:var(--danger);">Ablehnen</button>

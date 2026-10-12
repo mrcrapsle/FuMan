@@ -93,6 +93,38 @@ function a11yHatName(el) {
     return !!el.closest('label') || !!el.getAttribute('placeholder');
 }
 
+// Reiterleisten (Hub-Reiter und Unterreiter "btn-tab-…"): Leiste = tablist, Knopf = tab, aktiver Reiter
+// = aria-selected (folgt der Knopfklasse btn-action), Pfeiltasten/Pos1/Ende wechseln den Reiter.
+const A11Y_TAB_SEL = 'button[id^="hubtab-btn-"], button[id^="btn-tab-"]';
+function a11yTabsSynchron(leiste) {
+    leiste.querySelectorAll(A11Y_TAB_SEL).forEach(b => b.setAttribute('aria-selected', String(b.classList.contains('btn-action'))));
+}
+function verbesserTabs(root) {
+    const knoepfe = [...root.querySelectorAll(A11Y_TAB_SEL)];
+    if (root.matches && root.matches(A11Y_TAB_SEL)) knoepfe.push(root);
+    const leisten = new Set(knoepfe.map(b => b.parentElement).filter(Boolean));
+    leisten.forEach(leiste => {
+        if (leiste.__a11yTabs) { a11yTabsSynchron(leiste); return; }
+        leiste.__a11yTabs = true;
+        if (!leiste.getAttribute('role')) leiste.setAttribute('role', 'tablist');
+        if (!leiste.getAttribute('aria-label')) leiste.setAttribute('aria-label', 'Bereiche');
+        leiste.querySelectorAll(A11Y_TAB_SEL).forEach(b => b.setAttribute('role', 'tab'));
+        a11yTabsSynchron(leiste);
+        if (typeof MutationObserver !== 'undefined') new MutationObserver(() => a11yTabsSynchron(leiste)).observe(leiste, { attributes: true, subtree: true, attributeFilter: ['class'] });
+        leiste.addEventListener('keydown', e => {
+            if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(e.key)) return;
+            const tabs = [...leiste.querySelectorAll(A11Y_TAB_SEL)].filter(b => !b.disabled && b.offsetParent !== null);
+            const i = tabs.indexOf(document.activeElement);
+            if (i < 0) return;
+            e.preventDefault();
+            const ziel = e.key === 'Home' ? tabs[0] : e.key === 'End' ? tabs[tabs.length - 1] : tabs[(i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
+            ziel.click();
+            const neu = document.getElementById(ziel.id);
+            if (neu) neu.focus({ preventScroll: true });
+        });
+    });
+}
+
 function verbessereZugaenglichkeit(wurzel) {
     const root = wurzel || document;
     if (!root.querySelectorAll) return 0;
@@ -104,6 +136,7 @@ function verbessereZugaenglichkeit(wurzel) {
         const name = a11yName(el);
         if (name) { el.setAttribute('aria-label', name); n++; }
     }
+    verbesserTabs(root);
     return n;
 }
 
