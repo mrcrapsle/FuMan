@@ -2989,10 +2989,13 @@ async function testKopfzeileHinweisUndPokerFenster(browser) {
         closeTutorial();
         const out = {};
         const el = document.querySelector('.header-kpis');
+        // Die Hinweis-Klassen folgen Scroll-Ereignissen und Layout; unter Last dauert das länger als 150 ms
+        const warteBis = async (bedingung) => { for (let i = 0; i < 60 && !bedingung(); i++) await new Promise(res => setTimeout(res, 50)); };
         await new Promise(res => setTimeout(res, 150));
+        await warteBis(() => !(el.scrollWidth > el.clientWidth) || el.classList.contains('kpi-mehr-rechts'));
         out.anfang = { rechts: el.classList.contains('kpi-mehr-rechts'), links: el.classList.contains('kpi-mehr-links'), scrollbar: el.scrollWidth > el.clientWidth };
         el.scrollLeft = el.scrollWidth;
-        await new Promise(res => setTimeout(res, 150));
+        await warteBis(() => !(el.scrollWidth > el.clientWidth) || (el.classList.contains('kpi-mehr-links') && !el.classList.contains('kpi-mehr-rechts')));
         out.ende = { rechts: el.classList.contains('kpi-mehr-rechts'), links: el.classList.contains('kpi-mehr-links') };
         // Transferpoker: Fenster statt Kasten über der Liste
         showScreen('screen-transfer'); setTransferTab('market');

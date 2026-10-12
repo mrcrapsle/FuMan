@@ -550,7 +550,7 @@ function renderUiStatRow(werte) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.121', date: '12.10.2026', features: 'Phase 25.54 (Zugänglichkeit und Darstellung): Bedienelemente mit Namen, Theme Automatisch, Bewegungs-Einstellung, Transferpoker und Bewerbungspool als Fenster, Kopfzeilen-Hinweis am Handy, Kartenmuster für Training, Zweite Mannschaft und Schützenwahl' };
+    const GAME_VERSION = { number: '3.122', date: '12.10.2026', features: 'Phase 25.54 (Zugänglichkeit und Darstellung): Bedienelemente mit Namen, Theme Automatisch, Bewegungs-Einstellung, Transferpoker und Bewerbungspool als Fenster, Kopfzeilen-Hinweis am Handy, Kartenmuster für Training, Zweite Mannschaft und Schützenwahl' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
