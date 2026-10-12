@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.120', date: '11.10.2026', features: 'Phase 25.51-25.52 (Theme lädt als Erstes beim Start): Designsystem mit Schriftskala und Textgröße, Kartenmuster, zentrale Farb-Tokens, 6 Themes inkl. Tageslicht, WCAG-Kontrast auf allen Bildschirmen, Überschriften in normaler Schreibung' };
+    const GAME_VERSION = { number: '3.121', date: '12.10.2026', features: 'Phase 25.54 (Zugänglichkeit und Darstellung): Bedienelemente mit Namen, Theme Automatisch, Bewegungs-Einstellung, Transferpoker und Bewerbungspool als Fenster, Kopfzeilen-Hinweis am Handy, Kartenmuster für Training, Zweite Mannschaft und Schützenwahl' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
