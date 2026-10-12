@@ -69,6 +69,7 @@
                Wappen) - ein Holzschreibtisch bleibt braun. */
             --ink: var(--text-main);   /* Grundton für Aufhellungen und Linien - folgt der Textfarbe */
             --shade: #000000;          /* Grundton für Schatten und Abdunklungen */
+            --mask-voll: #000000;      /* nur Deckkraft zählt: Randverläufe per mask-image */
             --on-strong: #ffffff;      /* Schrift auf kräftigen Füllungen (Rot, Blau, Violett) */
             --on-accent: #241800;      /* Schrift auf hellen Füllungen (Gold, Gelb, Grün) */
             --surface-0: #070b14;      /* Flächenstufen, dunkel nach hell */
@@ -544,6 +545,8 @@
             .ui-card-head:has(.ui-card-kpi-lang) > .ui-card-meta { grid-row: 3; }
         }
         /* Bewerbungspool-Fenster (Personal): kompakt, damit alle Bewerber ohne Scrollen ins Bild passen */
+        .generic-modal-box .ui-poker-panel { border: none !important; box-shadow: none; background: none; padding: 0; margin: 0 !important; }
+        .generic-modal-box .ui-poker-panel::before { display: none; }
         .ui-pool-card .ui-card-actions { margin-top: 8px; }
         .ui-pool-card .ui-card-meta { margin-top: 6px; }
         .ui-pool-cancel { min-height: 36px; margin: 2px 0 0; }
@@ -1826,8 +1829,21 @@
     .header-kpis::-webkit-scrollbar { display: none; }
     .header-kpis .kpi-chip { flex: 0 0 auto; padding: 4px 8px; }
     .header-kpis .kpi-chip strong { white-space: nowrap; }
+    .header-kpis.kpi-mehr-rechts { -webkit-mask-image: linear-gradient(90deg, var(--mask-voll) calc(100% - 34px), transparent); mask-image: linear-gradient(90deg, var(--mask-voll) calc(100% - 34px), transparent); }
+    .header-kpis.kpi-mehr-links { -webkit-mask-image: linear-gradient(270deg, var(--mask-voll) calc(100% - 34px), transparent); mask-image: linear-gradient(270deg, var(--mask-voll) calc(100% - 34px), transparent); }
+    .header-kpis.kpi-mehr-links.kpi-mehr-rechts { -webkit-mask-image: linear-gradient(90deg, transparent, var(--mask-voll) 34px, var(--mask-voll) calc(100% - 34px), transparent); mask-image: linear-gradient(90deg, transparent, var(--mask-voll) 34px, var(--mask-voll) calc(100% - 34px), transparent); }
 }
 
+/* Bewegung reduzieren (Phase 25.54): Handy-Einstellung oder eigene Wahl unter Darstellung.
+   "Normal" (data-motion="normal") überstimmt die Handy-Einstellung. */
+@media (prefers-reduced-motion: reduce) {
+    html:not([data-motion="normal"]) *, html:not([data-motion="normal"]) *::before, html:not([data-motion="normal"]) *::after {
+        animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important;
+    }
+}
+html[data-motion="reduziert"] *, html[data-motion="reduziert"] *::before, html[data-motion="reduziert"] *::after {
+    animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important;
+}
 @media (prefers-reduced-motion: reduce) {
     .office-mote, .off-weather-rain, .off-weather-snow, .off-weather-storm,
     .off-phone-ringing .off-phone-handset, .office-quicknav-alert, .off-visitor-badge { animation: none !important; }

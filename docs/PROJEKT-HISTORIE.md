@@ -464,3 +464,13 @@ Die Basis-Datei nennt die Schwelle nicht im Inhalt, die Zuordnung folgt nur dem 
 - **Umsetzung:** `openCandidatePool()` öffnet das Fenster `#staff-pool-overlay` (Kartenmuster: Stelle, Gehalt, Kasse; je Bewerber Preis, Qualität, Start-Stufe, Start-Moral, Grund bei Sperre, Einstellen-Knopf). Kein Scrollen mehr; schließen per ✕, „Abbrechen“, Tipp neben das Fenster oder Zurück-Taste. Beim Laden wird ein alter Pool-Zustand verworfen.
 - **Nebenbei:** Nicht verfügbare Knöpfe (`disabled`) sehen jetzt gedämpft und gestrichelt aus, vorher waren sie von aktiven nicht zu unterscheiden.
 - **Tests:** `testPersonalEinstellen` und `testPersonalEinstellenHandy` prüfen, dass das Fenster vollständig im Bild liegt, alle drei Einstell-Knöpfe ohne Scrollen erreichbar sind, die Seite nicht springt und Abbrechen/Tipp daneben schließen.
+
+## Phase 25.54: Zugänglichkeit, Automatisch-Theme, Bewegung, Fenster statt Scroll-Sprung
+
+- **Namen für Bedienelemente:** `js/a11y.js` setzt fehlende `aria-label` für Symbol-Knöpfe (✕, −, ☆ …), Farbpunkte, Wappen-Auswahl, Auswahlfelder und Regler nach dem Rendern (MutationObserver, gebündelt). Vorhandene `title`/`aria-label` bleiben. `testBedienelementeHabenNamen` prüft das über alle Bildschirme.
+- **Theme „Automatisch“:** folgt `prefers-color-scheme` (hell → Tageslicht, dunkel → Flutlicht) und `prefers-contrast: more` (→ Hoher Kontrast), wandert bei Wechsel mit. Die Medienabfragen werden global festgehalten (Chromium verliert Listener kurzlebiger `matchMedia`-Objekte).
+- **Bewegung:** „Wie Handy“ / „Reduziert“ / „Normal“ (`html[data-motion]`), zusätzlich zu `prefers-reduced-motion`.
+- **Transferpoker** öffnet als Fenster (`#transfer-poker-overlay`) statt per `scrollIntoView`; **Kopfzeile** auf dem Handy zeigt per Randverlauf, dass sich seitlich mehr Kennzahlen verbergen (`kpi-mehr-rechts/-links`).
+- **Kartenmuster** nun auch für Training (individueller Fokus), Zweite Mannschaft (beschriftete Knöpfe statt reiner Symbole) und die Schützenauswahl im Elfmeterschießen.
+- **FAB-Verdeckung** geprüft: kein Problem, `testMobileLayout` prüft Verdeckung durch `#one-hand-fab` jetzt mit.
+- **Offen:** seltener Fehler „Theme bleibt nach Neustart nicht erhalten“ (CI, nicht lokal reproduzierbar); Diagnose im Test eingebaut.

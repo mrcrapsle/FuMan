@@ -119,8 +119,6 @@ function openTransferPoker(idx) {
         };
     }
     renderTransferPokerBox();
-    const box = document.getElementById('transfer-poker-box');
-    if (box && box.scrollIntoView) box.scrollIntoView({ block: 'nearest' });
 }
 
 function closeTransferPoker() {
@@ -255,11 +253,14 @@ function renderTransferPokerBox() {
     const box = document.getElementById('transfer-poker-box');
     if (!box) return;
     const p = getPokerPlayer();
+    // Fenster nur offen, solange eine Verhandlung läuft (die Verhandlung steht im Kasten darin)
+    const fenster = document.getElementById('transfer-poker-overlay');
+    if (fenster) fenster.classList.toggle('show', !!p);
     if (!p) { box.innerHTML = ''; if (transferPoker) transferPoker = null; return; }
     const t = transferPoker;
     const agentFee = t.agreedFee ? getAgentFee(p, t.agreedFee) : 0;
     const geduld = '🟢'.repeat(Math.max(0, t.patience)) + '⚪'.repeat(Math.max(0, 5 - t.patience));
-    box.innerHTML = `<div class="panel" style="border:1px solid var(--accent); margin-bottom:8px;">
+    box.innerHTML = `<div class="panel ui-poker-panel" style="border:1px solid var(--accent); margin-bottom:8px;">
         <div class="panel-header" style="color:var(--accent);">🃏 Transferpoker: ${p.name} (${p.pos}, ${p.strength})</div>
         <div style="font-size:var(--fs-caption); margin-bottom:6px;">Verkäufer: <strong>${p.sellerClub}</strong> · Forderung <strong>${formatVal(p.askingPrice)}</strong> · Marktwert ${formatVal(p.marketValue)} · Vertrag ${p.contracts || 2} J. · Geduld ${geduld} (noch ${Math.max(0, t.patience)} Runden)${t.rival ? ` · ⚔️ ${t.rival.club} bietet ${formatVal(t.rival.bid)}` : ''}</div>
         <div style="font-size:var(--fs-caption); max-height:110px; overflow-y:auto; background:color-mix(in srgb, var(--shade) 15%, transparent); border-radius:4px; padding:4px; margin-bottom:6px;">${t.log.slice(-6).map(z => `<div>${z}</div>`).join('')}</div>

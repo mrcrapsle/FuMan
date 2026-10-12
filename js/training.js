@@ -275,22 +275,21 @@
         list.innerHTML = '';
         squad.forEach(p => {
             let row = document.createElement('div');
-            row.className = 'player-row';
-            row.innerHTML = `
-                <span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 26) : ''}<strong class="badge badge-${(p.pos||'mit').toLowerCase()}">${p.pos}</strong> ${p.name} (Str: ${p.strength})</span>
-                <div>
-                    Fokus:
-                    <select class="input-inline" style="width:100px;" onchange="setIndividualFocus('${p.id}', this.value)">
-                        <option value="allgemein" ${p.individualFocus==='allgemein'?'selected':''}>Allgemein</option>
-                        <option value="torschuss" ${p.individualFocus==='torschuss'?'selected':''}>Torschuss</option>
-                        <option value="passspiel" ${p.individualFocus==='passspiel'?'selected':''}>Passspiel</option>
-                        <option value="zweikampf" ${p.individualFocus==='zweikampf'?'selected':''}>Zweikampf</option>
-                        <option value="tempo" ${p.individualFocus==='tempo'?'selected':''}>Tempo/Athletik</option>
-                        <option value="torwart" ${p.individualFocus==='torwart'?'selected':''}>🧤 Torwart-Spezialist</option>
-                        <option value="elfmeter" ${p.individualFocus==='elfmeter'?'selected':''}>🥅 Elfmeter-Spezialist</option>
-                    </select>
-                </div>
-            `;
+            row.className = 'panel player-card';
+            row.style.cssText = 'margin-bottom:8px; padding:10px;';
+            const fokusOptionen = [['allgemein', 'Allgemein'], ['torschuss', 'Torschuss'], ['passspiel', 'Passspiel'], ['zweikampf', 'Zweikampf'], ['tempo', 'Tempo/Athletik'], ['torwart', '🧤 Torwart-Spezialist'], ['elfmeter', '🥅 Elfmeter-Spezialist']]
+                .map(([id, name]) => `<option value="${id}" ${p.individualFocus === id ? 'selected' : ''}>${name}</option>`).join('');
+            // Kartenmuster: Bild mit Position, Name, Stärke groß, Fokus als Auswahlfeld darunter
+            row.innerHTML = renderUiCard({
+                thumb: `${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 40) : ''}<span class="badge badge-${(p.pos || 'mit').toLowerCase()}">${p.pos}</span>`,
+                title: p.name,
+                sub: `${p.age ? p.age + ' J. · ' : ''}Fitness ${p.fitness}%`,
+                kpi: { wert: p.strength, label: 'Stärke' },
+                body: `<label class="ui-field">
+                        <span class="ui-field-label">Fokus</span>
+                        <select class="input-inline" onchange="setIndividualFocus('${p.id}', this.value)">${fokusOptionen}</select>
+                    </label>`
+            });
             list.appendChild(row);
         });
         if (typeof renderMedicalDepartmentPanel === 'function') renderMedicalDepartmentPanel();

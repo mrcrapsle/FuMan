@@ -332,8 +332,15 @@
             let orderIdx = selectedShooters.indexOf(p.id);
             let quoteText = (p.penaltiesTaken || 0) > 0 ? ` · Quote: ${Math.round((p.penaltiesScored / p.penaltiesTaken) * 100)}% (${p.penaltiesScored}/${p.penaltiesTaken})` : ' · Quote: -';
             let specialistTag = p.individualFocus === 'elfmeter' ? ' 🥅' : '';
-            return `<div class="player-row" onclick="toggleShooterSelection('${p.id}')" style="cursor:pointer; ${orderIdx !== -1 ? 'border-color:var(--primary); background:color-mix(in srgb, var(--primary) 10%, transparent);' : ''}">
-                <span>${orderIdx !== -1 ? `#${orderIdx + 1} ` : ''}${p.name}${specialistTag} <span style="color:var(--text-muted); font-size:var(--fs-caption);">(Schuss: ${p.shooting}${quoteText})</span></span>
+            const gewaehlt = orderIdx !== -1;
+            // Kartenmuster: Reihenfolge-Nummer als Kennzahl, Quote als Chip; ganze Karte antippbar
+            return `<div class="panel player-card" role="button" tabindex="0" aria-pressed="${gewaehlt}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" onclick="toggleShooterSelection('${p.id}')" style="cursor:pointer; margin-bottom:6px; padding:8px 10px; ${gewaehlt ? 'border-color:var(--primary); background:color-mix(in srgb, var(--primary) 10%, transparent);' : ''}">
+                ${renderUiCard({
+                    thumb: `<span class="badge badge-${(p.pos || 'mit').toLowerCase()}">${p.pos}</span>`,
+                    title: `${gewaehlt ? `#${orderIdx + 1} ` : ''}${p.name}${specialistTag}`,
+                    sub: `Schuss ${p.shooting}${quoteText}`,
+                    kpi: gewaehlt ? { wert: `#${orderIdx + 1}`, label: 'Schütze' } : null
+                })}
             </div>`;
         }).join('');
         document.getElementById('shooter-select-count').innerText = `${selectedShooters.length}/5 gewählt`;

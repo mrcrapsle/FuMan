@@ -142,7 +142,26 @@ function renderOneHandSettings() {
     box.innerHTML = `<button class="nav-btn" onclick="cycleOneHandFabMode()">✋ Weiter-Knopf: ${modus === 'aus' ? 'aus' : modus}</button>`;
 }
 
+// Kopfzeile auf dem Handy: die Kennzahlen-Chips scrollen seitlich. Ein weicher Rand zeigt,
+// wo es weitergeht (rechts: noch mehr, links: schon gescrollt) - sonst wirkte der letzte Chip abgeschnitten.
+function aktualisiereKopfHinweis() {
+    const el = document.querySelector('.header-kpis');
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    el.classList.toggle('kpi-mehr-rechts', max > 2 && el.scrollLeft < max - 2);
+    el.classList.toggle('kpi-mehr-links', el.scrollLeft > 2);
+}
+
 function initOneHand() {
+    const kpis = document.querySelector('.header-kpis');
+    if (kpis) {
+        kpis.addEventListener('scroll', aktualisiereKopfHinweis, { passive: true });
+        window.addEventListener('resize', aktualisiereKopfHinweis);
+        if (typeof ResizeObserver !== 'undefined') new ResizeObserver(aktualisiereKopfHinweis).observe(kpis);
+        // Kennzahlen ändern ihren Text (länger/kürzer) ohne dass sich die Größe des Kastens ändert
+        if (typeof MutationObserver !== 'undefined') new MutationObserver(() => requestAnimationFrame(aktualisiereKopfHinweis)).observe(kpis, { childList: true, subtree: true, characterData: true });
+        aktualisiereKopfHinweis();
+    }
     oneHandScreenStack = []; // Bildschirmwechsel während des Starts zählen nicht
     document.addEventListener('click', onOneHandBackdropClick);
     const mq = window.matchMedia ? window.matchMedia('(max-width: 650px)') : null;

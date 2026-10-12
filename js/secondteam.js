@@ -499,22 +499,22 @@
             secondTeamSquad.forEach(p => {
                 let isStarting = secondTeamLineup.includes(p.id);
                 let row = document.createElement('div');
-                row.className = 'player-row';
+                row.className = 'panel player-card';
+                row.style.cssText = 'margin-bottom:8px; padding:10px;';
                 let badgeClass = 'badge-' + (p.pos || 'mit').toLowerCase();
-                row.innerHTML = `
-                    ${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 30) : ''}
-                    <span class="badge ${badgeClass}">${p.pos}</span>
-                    <button onclick="openPlayerDetail('${p.id}','secondTeam')" class="btn-secondary" style="width:auto; padding:2px 6px; font-size:var(--fs-caption);" title="Details">ℹ️</button>
-                    <span style="flex:1; text-align:left; padding-left:6px;">
-                        <strong>${p.name}</strong><br>
-                        <span style="font-size:var(--fs-caption); color:var(--text-muted);">Str: <strong>${p.strength}</strong> | Fit: ${p.fitness}% | Marktwert: ${formatVal(p.marketValue)}</span>
-                    </span>
-                    <span style="font-size:var(--fs-caption); color:${isStarting ? 'var(--teal)' : 'var(--europe)'};">${isStarting ? 'Startelf' : 'Bank'}</span>
-                    <button onclick="promoteToFirstTeam('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:var(--fs-caption); color:var(--primary);" title="In die 1. Mannschaft hochziehen">⬆️</button>
-                    <button onclick="loanOutPlayer('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:var(--fs-caption); color:var(--teal);" title="An anderen Klub verleihen">📤</button>
-                    <button onclick="sellSecondTeamPlayer('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:var(--fs-caption);" title="Verkaufen">💰</button>
-                    <button onclick="releaseSecondTeamPlayer('${p.id}', this)" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:var(--fs-caption); color:var(--danger);" title="Ablösefrei entlassen">✕</button>
-                `;
+                // Kartenmuster: Bild mit Position, Name, Marktwert, Zustand als Chips, Stärke groß, Knöpfe mit Beschriftung
+                row.innerHTML = renderUiCard({
+                    thumb: `${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 40) : ''}<span class="badge ${badgeClass}">${p.pos}</span>`,
+                    title: p.name,
+                    sub: `${p.age ? p.age + ' J. · ' : ''}${formatVal(p.marketValue)}`,
+                    meta: [uiChip(isStarting ? 'Startelf' : 'Bank', isStarting ? 'gut' : ''), uiChip(`Fit ${p.fitness}%`, p.fitness < 60 ? 'warn' : '')],
+                    kpi: { wert: p.strength, label: 'Stärke' },
+                    actions: `<button onclick="openPlayerDetail('${p.id}','secondTeam')" class="btn-secondary" title="Details" aria-label="Details zu ${p.name}">ℹ️ Details</button>
+                        <button onclick="promoteToFirstTeam('${p.id}')" class="btn-action" title="In die 1. Mannschaft hochziehen">⬆️ Hochziehen</button>
+                        <button onclick="loanOutPlayer('${p.id}')" class="btn-secondary" title="An anderen Klub verleihen">📤 Verleihen</button>
+                        <button onclick="sellSecondTeamPlayer('${p.id}')" class="btn-secondary" title="Verkaufen">💰 Verkaufen</button>
+                        <button onclick="releaseSecondTeamPlayer('${p.id}', this)" class="btn-secondary" style="color:var(--danger);" title="Ablösefrei entlassen">✕ Entlassen</button>`
+                });
                 list.appendChild(row);
             });
         }

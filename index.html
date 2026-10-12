@@ -192,6 +192,14 @@
     </div>
 </div>
 
+<!-- TRANSFERPOKER als Fenster (js/transfer-poker.js): öffnet mitten im Bild, kein Scrollen zu einem Kasten -->
+<div id="transfer-poker-overlay" class="generic-modal-overlay">
+    <div class="generic-modal-box">
+        <button onclick="closeTransferPoker()" class="generic-modal-close" aria-label="Schließen">✕</button>
+        <div id="transfer-poker-box"></div>
+    </div>
+</div>
+
 <!-- PERSONAL: BEWERBUNGSPOOL (js/campus-staff.js, openCandidatePool) -->
 <div id="staff-pool-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
@@ -1920,7 +1928,7 @@
                         <div id="incoming-offers-list"></div>
                     </div>
 
-                    <div id="transfer-tab-market" style="display:none;"><div id="transfer-poker-box"></div><div id="market-list"></div>
+                    <div id="transfer-tab-market" style="display:none;"><div id="market-list"></div>
                         <div class="panel" style="margin-top:8px;"><div class="panel-header">📰 Transfer-Ticker der anderen Vereine</div><div id="ai-transfer-news-box"></div></div>
                     </div>
                     <div id="transfer-tab-free" style="display:none;"><div id="precontract-box"></div><div id="free-agents-list"></div></div>
@@ -2637,6 +2645,7 @@
 <script src="js/ui-core.js?v=2.1"></script>
 <script src="js/one-hand.js?v=3.29"></script>
 <script src="js/design-settings.js?v=3.119"></script>
+<script src="js/a11y.js?v=3.121"></script>
 <script src="js/render-dashboard.js?v=2.1"></script>
 <script src="js/industry.js?v=2.1"></script>
 <script src="js/holding.js?v=2.1"></script>
@@ -2876,6 +2885,7 @@
             warnIfStorageBlocked();
             maybeShowTutorial();
             if (typeof initOneHand === 'function') initOneHand();
+            if (typeof initZugaenglichkeit === 'function') initZugaenglichkeit();
             // Kein Struktur-Selbsttest beim Start mehr: er öffnete alle Bildschirme und kostete
             // beim ersten Start nach jedem Update rund 1,5 s auf dem Handy. Die Testsuite prüft
             // dieselbe Struktur vor jeder Veröffentlichung (testStructuralSelfTest); im Admin-

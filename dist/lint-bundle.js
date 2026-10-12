@@ -4619,22 +4619,22 @@ function cleanupLegacyDevelopmentState() {
             secondTeamSquad.forEach(p => {
                 let isStarting = secondTeamLineup.includes(p.id);
                 let row = document.createElement('div');
-                row.className = 'player-row';
+                row.className = 'panel player-card';
+                row.style.cssText = 'margin-bottom:8px; padding:10px;';
                 let badgeClass = 'badge-' + (p.pos || 'mit').toLowerCase();
-                row.innerHTML = `
-                    ${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 30) : ''}
-                    <span class="badge ${badgeClass}">${p.pos}</span>
-                    <button onclick="openPlayerDetail('${p.id}','secondTeam')" class="btn-secondary" style="width:auto; padding:2px 6px; font-size:var(--fs-caption);" title="Details">ℹ️</button>
-                    <span style="flex:1; text-align:left; padding-left:6px;">
-                        <strong>${p.name}</strong><br>
-                        <span style="font-size:var(--fs-caption); color:var(--text-muted);">Str: <strong>${p.strength}</strong> | Fit: ${p.fitness}% | Marktwert: ${formatVal(p.marketValue)}</span>
-                    </span>
-                    <span style="font-size:var(--fs-caption); color:${isStarting ? 'var(--teal)' : 'var(--europe)'};">${isStarting ? 'Startelf' : 'Bank'}</span>
-                    <button onclick="promoteToFirstTeam('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:var(--fs-caption); color:var(--primary);" title="In die 1. Mannschaft hochziehen">⬆️</button>
-                    <button onclick="loanOutPlayer('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:var(--fs-caption); color:var(--teal);" title="An anderen Klub verleihen">📤</button>
-                    <button onclick="sellSecondTeamPlayer('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:var(--fs-caption);" title="Verkaufen">💰</button>
-                    <button onclick="releaseSecondTeamPlayer('${p.id}', this)" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:var(--fs-caption); color:var(--danger);" title="Ablösefrei entlassen">✕</button>
-                `;
+                // Kartenmuster: Bild mit Position, Name, Marktwert, Zustand als Chips, Stärke groß, Knöpfe mit Beschriftung
+                row.innerHTML = renderUiCard({
+                    thumb: `${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 40) : ''}<span class="badge ${badgeClass}">${p.pos}</span>`,
+                    title: p.name,
+                    sub: `${p.age ? p.age + ' J. · ' : ''}${formatVal(p.marketValue)}`,
+                    meta: [uiChip(isStarting ? 'Startelf' : 'Bank', isStarting ? 'gut' : ''), uiChip(`Fit ${p.fitness}%`, p.fitness < 60 ? 'warn' : '')],
+                    kpi: { wert: p.strength, label: 'Stärke' },
+                    actions: `<button onclick="openPlayerDetail('${p.id}','secondTeam')" class="btn-secondary" title="Details" aria-label="Details zu ${p.name}">ℹ️ Details</button>
+                        <button onclick="promoteToFirstTeam('${p.id}')" class="btn-action" title="In die 1. Mannschaft hochziehen">⬆️ Hochziehen</button>
+                        <button onclick="loanOutPlayer('${p.id}')" class="btn-secondary" title="An anderen Klub verleihen">📤 Verleihen</button>
+                        <button onclick="sellSecondTeamPlayer('${p.id}')" class="btn-secondary" title="Verkaufen">💰 Verkaufen</button>
+                        <button onclick="releaseSecondTeamPlayer('${p.id}', this)" class="btn-secondary" style="color:var(--danger);" title="Ablösefrei entlassen">✕ Entlassen</button>`
+                });
                 list.appendChild(row);
             });
         }
@@ -7110,8 +7110,15 @@ function selectNewGameScenario(id) {
             let orderIdx = selectedShooters.indexOf(p.id);
             let quoteText = (p.penaltiesTaken || 0) > 0 ? ` · Quote: ${Math.round((p.penaltiesScored / p.penaltiesTaken) * 100)}% (${p.penaltiesScored}/${p.penaltiesTaken})` : ' · Quote: -';
             let specialistTag = p.individualFocus === 'elfmeter' ? ' 🥅' : '';
-            return `<div class="player-row" onclick="toggleShooterSelection('${p.id}')" style="cursor:pointer; ${orderIdx !== -1 ? 'border-color:var(--primary); background:color-mix(in srgb, var(--primary) 10%, transparent);' : ''}">
-                <span>${orderIdx !== -1 ? `#${orderIdx + 1} ` : ''}${p.name}${specialistTag} <span style="color:var(--text-muted); font-size:var(--fs-caption);">(Schuss: ${p.shooting}${quoteText})</span></span>
+            const gewaehlt = orderIdx !== -1;
+            // Kartenmuster: Reihenfolge-Nummer als Kennzahl, Quote als Chip; ganze Karte antippbar
+            return `<div class="panel player-card" role="button" tabindex="0" aria-pressed="${gewaehlt}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" onclick="toggleShooterSelection('${p.id}')" style="cursor:pointer; margin-bottom:6px; padding:8px 10px; ${gewaehlt ? 'border-color:var(--primary); background:color-mix(in srgb, var(--primary) 10%, transparent);' : ''}">
+                ${renderUiCard({
+                    thumb: `<span class="badge badge-${(p.pos || 'mit').toLowerCase()}">${p.pos}</span>`,
+                    title: `${gewaehlt ? `#${orderIdx + 1} ` : ''}${p.name}${specialistTag}`,
+                    sub: `Schuss ${p.shooting}${quoteText}`,
+                    kpi: gewaehlt ? { wert: `#${orderIdx + 1}`, label: 'Schütze' } : null
+                })}
             </div>`;
         }).join('');
         document.getElementById('shooter-select-count').innerText = `${selectedShooters.length}/5 gewählt`;
@@ -7540,8 +7547,6 @@ function openTransferPoker(idx) {
         };
     }
     renderTransferPokerBox();
-    const box = document.getElementById('transfer-poker-box');
-    if (box && box.scrollIntoView) box.scrollIntoView({ block: 'nearest' });
 }
 
 function closeTransferPoker() {
@@ -7676,11 +7681,14 @@ function renderTransferPokerBox() {
     const box = document.getElementById('transfer-poker-box');
     if (!box) return;
     const p = getPokerPlayer();
+    // Fenster nur offen, solange eine Verhandlung läuft (die Verhandlung steht im Kasten darin)
+    const fenster = document.getElementById('transfer-poker-overlay');
+    if (fenster) fenster.classList.toggle('show', !!p);
     if (!p) { box.innerHTML = ''; if (transferPoker) transferPoker = null; return; }
     const t = transferPoker;
     const agentFee = t.agreedFee ? getAgentFee(p, t.agreedFee) : 0;
     const geduld = '🟢'.repeat(Math.max(0, t.patience)) + '⚪'.repeat(Math.max(0, 5 - t.patience));
-    box.innerHTML = `<div class="panel" style="border:1px solid var(--accent); margin-bottom:8px;">
+    box.innerHTML = `<div class="panel ui-poker-panel" style="border:1px solid var(--accent); margin-bottom:8px;">
         <div class="panel-header" style="color:var(--accent);">🃏 Transferpoker: ${p.name} (${p.pos}, ${p.strength})</div>
         <div style="font-size:var(--fs-caption); margin-bottom:6px;">Verkäufer: <strong>${p.sellerClub}</strong> · Forderung <strong>${formatVal(p.askingPrice)}</strong> · Marktwert ${formatVal(p.marketValue)} · Vertrag ${p.contracts || 2} J. · Geduld ${geduld} (noch ${Math.max(0, t.patience)} Runden)${t.rival ? ` · ⚔️ ${t.rival.club} bietet ${formatVal(t.rival.bid)}` : ''}</div>
         <div style="font-size:var(--fs-caption); max-height:110px; overflow-y:auto; background:color-mix(in srgb, var(--shade) 15%, transparent); border-radius:4px; padding:4px; margin-bottom:6px;">${t.log.slice(-6).map(z => `<div>${z}</div>`).join('')}</div>
@@ -11681,7 +11689,26 @@ function renderOneHandSettings() {
     box.innerHTML = `<button class="nav-btn" onclick="cycleOneHandFabMode()">✋ Weiter-Knopf: ${modus === 'aus' ? 'aus' : modus}</button>`;
 }
 
+// Kopfzeile auf dem Handy: die Kennzahlen-Chips scrollen seitlich. Ein weicher Rand zeigt,
+// wo es weitergeht (rechts: noch mehr, links: schon gescrollt) - sonst wirkte der letzte Chip abgeschnitten.
+function aktualisiereKopfHinweis() {
+    const el = document.querySelector('.header-kpis');
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    el.classList.toggle('kpi-mehr-rechts', max > 2 && el.scrollLeft < max - 2);
+    el.classList.toggle('kpi-mehr-links', el.scrollLeft > 2);
+}
+
 function initOneHand() {
+    const kpis = document.querySelector('.header-kpis');
+    if (kpis) {
+        kpis.addEventListener('scroll', aktualisiereKopfHinweis, { passive: true });
+        window.addEventListener('resize', aktualisiereKopfHinweis);
+        if (typeof ResizeObserver !== 'undefined') new ResizeObserver(aktualisiereKopfHinweis).observe(kpis);
+        // Kennzahlen ändern ihren Text (länger/kürzer) ohne dass sich die Größe des Kastens ändert
+        if (typeof MutationObserver !== 'undefined') new MutationObserver(() => requestAnimationFrame(aktualisiereKopfHinweis)).observe(kpis, { childList: true, subtree: true, characterData: true });
+        aktualisiereKopfHinweis();
+    }
     oneHandScreenStack = []; // Bildschirmwechsel während des Starts zählen nicht
     document.addEventListener('click', onOneHandBackdropClick);
     const mq = window.matchMedia ? window.matchMedia('(max-width: 650px)') : null;
@@ -11701,24 +11728,35 @@ function initOneHand() {
 
 /* eslint-enable */
 // ============================================================================
-// Darstellung (Phase 25.51): Farb-Theme und Textgröße, pro Gerät gespeichert.
+// Darstellung (Phase 25.51/25.54): Farb-Theme, Textgröße und Bewegung, pro Gerät gespeichert.
 // Die Themes sind reine Token-Sätze in css/styles.css (html[data-theme=…]),
-// die Textgröße setzt --fs-scale (html[data-text-size=…]). Bildschirm:
+// die Textgröße setzt --fs-scale (html[data-text-size=…]), die Bewegung steuert
+// html[data-motion=…]. "Automatisch" folgt der Handy-Einstellung (hell/dunkel, hoher
+// Kontrast, weniger Bewegung). Bildschirm:
 // screen-design, Menü "System & Hilfe". Kein Spielzustand - nichts davon
 // landet im Spielstand.
 // ============================================================================
 
 const DESIGN_THEME_KEY = 'anstoss_fm13_theme';
 const DESIGN_TEXT_KEY = 'anstoss_fm13_textgroesse';
+const DESIGN_MOTION_KEY = 'anstoss_fm13_bewegung';
 
 // farben: Vorschau-Streifen (Fläche, Karte, Akzent, Gut, Schlecht, Text)
 const DESIGN_THEMES = [
+    { id: 'auto', name: 'Automatisch', desc: 'Folgt deinem Handy: hell oder dunkel, bei Bedarf hoher Kontrast.', farben: ['#070b14', '#f1f4f9', '#ffc23c', '#0e7a44', '#c21f3a', '#eaf2ff'] },
     { id: 'flutlicht', name: 'Flutlicht-Nacht', desc: 'Standard: Mitternachtsblau, Rasengrün und Flutlicht-Gold.', farben: ['#070b14', '#111827', '#ffc23c', '#3ee08a', '#ff5468', '#eaf2ff'] },
     { id: 'klassik', name: 'Anstoß-Klassik', desc: 'Holz, Leder und Messing wie im Managerbüro der 90er.', farben: ['#110c07', '#241a11', '#e8b84e', '#8fd16a', '#ff6f5e', '#f5ead6'] },
     { id: 'rasen', name: 'Rasengrün', desc: 'Tiefes Stadiongrün mit Kreideweiß und Trikotgelb.', farben: ['#04130b', '#0a2215', '#ffd84d', '#6ef0a6', '#ff6b7a', '#effcf4'] },
     { id: 'tageslicht', name: 'Tageslicht', desc: 'Hell mit dunkler Schrift - für Sonne, Büro und helle Räume.', farben: ['#f1f4f9', '#ffffff', '#985a00', '#0e7a44', '#c21f3a', '#152033'] },
     { id: 'kontrast', name: 'Hoher Kontrast', desc: 'Schwarz, Weiß, Signalgelb. Für helle Umgebungen und schwache Augen.', farben: ['#000000', '#0a0a0a', '#ffe600', '#4dff9a', '#ff7a7a', '#ffffff'] },
     { id: 'farbsicher', name: 'Farbsicher', desc: 'Gut und Schlecht als Blau und Orange - auch bei Rot-Grün-Schwäche klar.', farben: ['#070b14', '#111827', '#f0e442', '#56b4e9', '#e69f00', '#eaf2ff'] }
+];
+
+// Bewegung: "system" übernimmt die Handy-Einstellung "Bewegung reduzieren"
+const DESIGN_MOTION_MODES = [
+    { id: 'system', name: 'Wie Handy' },
+    { id: 'reduziert', name: 'Reduziert' },
+    { id: 'normal', name: 'Normal' }
 ];
 
 const DESIGN_TEXT_SIZES = [
@@ -11732,6 +11770,30 @@ function getDesignTheme() {
     return DESIGN_THEMES.some(x => x.id === t) ? t : 'flutlicht';
 }
 
+function getBewegung() {
+    const m = typeof safeLocalGet === 'function' ? safeLocalGet(DESIGN_MOTION_KEY) : null;
+    return DESIGN_MOTION_MODES.some(x => x.id === m) ? m : 'system';
+}
+
+// Die Medienabfragen werden einmal angelegt und festgehalten: sowohl zum Auflösen als auch zum
+// Beobachten. Kurzlebige matchMedia()-Objekte verlieren sonst ihre Wechsel-Meldung (im Test beobachtet).
+let designMedien = null;
+function getDesignMedien() {
+    if (!designMedien && typeof window.matchMedia === 'function') {
+        designMedien = { hell: window.matchMedia('(prefers-color-scheme: light)'), kontrast: window.matchMedia('(prefers-contrast: more)') };
+    }
+    return designMedien;
+}
+
+// "Automatisch" wird zu einem echten Theme aufgelöst: hoher Kontrast hat Vorrang, sonst hell/dunkel
+function loeseThemeAuf(id) {
+    if (id !== 'auto') return id;
+    const m = getDesignMedien();
+    if (!m) return 'flutlicht';
+    if (m.kontrast.matches) return 'kontrast';
+    return m.hell.matches ? 'tageslicht' : 'flutlicht';
+}
+
 function getTextGroesse() {
     const g = typeof safeLocalGet === 'function' ? safeLocalGet(DESIGN_TEXT_KEY) : null;
     return DESIGN_TEXT_SIZES.some(x => x.id === g) ? g : 'normal';
@@ -11740,14 +11802,32 @@ function getTextGroesse() {
 // Setzt die Attribute am <html>; Standardwerte entfernen das Attribut wieder.
 function applyDesignSettings() {
     const html = document.documentElement;
-    const theme = getDesignTheme();
+    const gewaehlt = getDesignTheme();
+    const theme = loeseThemeAuf(gewaehlt);
     const groesse = getTextGroesse();
+    const bewegung = getBewegung();
     if (theme === 'flutlicht') html.removeAttribute('data-theme'); else html.setAttribute('data-theme', theme);
     if (groesse === 'normal') html.removeAttribute('data-text-size'); else html.setAttribute('data-text-size', groesse);
+    if (bewegung === 'system') html.removeAttribute('data-motion'); else html.setAttribute('data-motion', bewegung);
+    beobachteSystemTheme(gewaehlt === 'auto');
     // Browserleiste auf dem Handy passend zur Fläche färben
     const meta = document.querySelector('meta[name="theme-color"]');
     const t = DESIGN_THEMES.find(x => x.id === theme);
     if (meta && t) meta.setAttribute('content', t.farben[0]);
+}
+
+// Bei "Automatisch" mitwandern, wenn das Handy zwischen hell und dunkel wechselt (z. B. abends)
+let designSystemAbos = false;
+function beobachteSystemTheme(aktiv) {
+    const m = getDesignMedien();
+    if (!m || designSystemAbos === aktiv) return;
+    designSystemAbos = aktiv;
+    const fn = () => { if (getDesignTheme() === 'auto') applyDesignSettings(); };
+    [m.hell, m.kontrast].forEach(mq => {
+        if (aktiv && mq.addEventListener) mq.addEventListener('change', fn);
+        else if (!aktiv && mq.removeEventListener && mq.__designFn) mq.removeEventListener('change', mq.__designFn);
+        mq.__designFn = aktiv ? fn : null;
+    });
 }
 
 function setzeDesignTheme(id) {
@@ -11757,6 +11837,15 @@ function setzeDesignTheme(id) {
     applyDesignSettings();
     renderDesignSettings();
     showToast(`🎨 Farbschema: ${t.name}`, 'success', 1800);
+}
+
+function setzeBewegung(id) {
+    const m = DESIGN_MOTION_MODES.find(x => x.id === id);
+    if (!m) { showToast('Unbekannte Bewegungs-Einstellung.', 'error'); return; }
+    if (typeof safeLocalSet === 'function') safeLocalSet(DESIGN_MOTION_KEY, id);
+    applyDesignSettings();
+    renderDesignSettings();
+    showToast(`🎞️ Bewegung: ${m.name}`, 'success', 1800);
 }
 
 function setzeTextGroesse(id) {
@@ -11773,6 +11862,7 @@ function renderDesignSettings() {
     if (!box) return;
     const aktiv = getDesignTheme();
     const groesse = getTextGroesse();
+    const bewegung = getBewegung();
     const themes = DESIGN_THEMES.map(t => `
         <button class="design-theme-card${t.id === aktiv ? ' active' : ''}" onclick="setzeDesignTheme('${t.id}')" aria-pressed="${t.id === aktiv}">
             <span class="design-swatches" aria-hidden="true">${t.farben.map(f => `<span style="background:${f};"></span>`).join('')}</span>
@@ -11783,6 +11873,10 @@ function renderDesignSettings() {
         <button class="design-size-btn${g.id === groesse ? ' active' : ''}" onclick="setzeTextGroesse('${g.id}')" aria-pressed="${g.id === groesse}">
             <span style="font-size:${15 + i * 3}px; font-weight:900;">${g.beispiel}</span>
             <span>${g.name}</span>
+        </button>`).join('');
+    const bewegungen = DESIGN_MOTION_MODES.map(m => `
+        <button class="design-size-btn${m.id === bewegung ? ' active' : ''}" onclick="setzeBewegung('${m.id}')" aria-pressed="${m.id === bewegung}">
+            <span>${m.name}</span>
         </button>`).join('');
     // Vorschau mit echten Daten: der stärkste Spieler des eigenen Kaders
     const star = (typeof squad !== 'undefined' && squad.length) ? [...squad].sort((a, b) => b.strength - a.strength)[0] : null;
@@ -11802,8 +11896,138 @@ function renderDesignSettings() {
         <div class="design-theme-grid">${themes}</div>
         <div class="ui-field-label" style="margin:14px 0 6px;">Textgröße</div>
         <div class="design-size-row">${groessen}</div>
+        <div class="ui-field-label" style="margin:14px 0 6px;">Bewegung (Animationen)</div>
+        <div class="design-size-row">${bewegungen}</div>
         ${vorschau}
         <div class="design-hinweis">Gilt nur für dieses Gerät und bleibt beim Laden anderer Spielstände erhalten.</div>`;
+}
+
+/* eslint-enable */
+// ============================================================================
+// ZUGÄNGLICHKEIT (Phase 25.54): jedes Bedienelement bekommt einen Namen.
+// Knöpfe, die nur ein Symbol zeigen (✕, −, ☆, 🦊 …), Farbpunkte, Auswahlfelder und
+// Schieberegler ohne Beschriftung wären für Screenreader (TalkBack, VoiceOver) stumm.
+// Statt jede Stelle einzeln zu ergänzen, setzt dieses Modul fehlende aria-label nach
+// dem Rendern: einmal für die ganze Seite und danach für jeden neu eingefügten Teil.
+// Vorhandene aria-label und title bleiben unangetastet. Kein Spielzustand.
+// ============================================================================
+
+const A11Y_SYMBOLE = {
+    '✕': 'Schließen', '✖': 'Schließen', '×': 'Schließen', '−': 'Verringern', '-': 'Verringern', '+': 'Erhöhen', '＋': 'Erhöhen',
+    '☰': 'Menü öffnen', '★': 'Als wichtig markiert', '☆': 'Als wichtig markieren', '🗄️': 'Archivieren', '↺': 'Wiederherstellen',
+    'ℹ️': 'Details', '🔁': 'Tauschen', '▶': 'Starten', '⏩': 'Vorspulen', '❮': 'Zurück', '❯': 'Weiter', '←': 'Zurück', '→': 'Weiter',
+    '↖': 'Ecke oben links', '⬆': 'Mitte oben', '↗': 'Ecke oben rechts', '↙': 'Ecke unten links', '⬇': 'Mitte unten', '↘': 'Ecke unten rechts',
+    '⬅': 'Links', '➡': 'Rechts', '⬆️': 'Mitte oben', '⬇️': 'Mitte unten', '⬅️': 'Links', '➡️': 'Rechts', '↩️': 'Rückgängig'
+};
+const A11Y_TIERE = { '🦊': 'Fuchs', '🦅': 'Adler', '🦁': 'Löwe', '🐻': 'Bär', '🐺': 'Wolf', '🐴': 'Pferd', '🐗': 'Wildschwein', '🐂': 'Stier', '🐉': 'Drache', '🦈': 'Hai', '🐯': 'Tiger', '🦌': 'Hirsch' };
+const A11Y_SYMBOLE_WAPPEN = { '⚽': 'Fußball', '⚡': 'Blitz', '★': 'Stern', '🔥': 'Flamme', '🦅': 'Adler', '🦁': 'Löwe', '🐺': 'Wolf', '👑': 'Krone', '🛡️': 'Schild' };
+const A11Y_FARBEN = [
+    ['weiß', 255, 255, 255], ['schwarz', 0, 0, 0], ['rot', 255, 77, 109], ['orange', 255, 138, 92], ['gelb', 245, 185, 66], ['gold', 255, 194, 60],
+    ['silber', 192, 192, 192], ['violett', 139, 92, 246], ['blau', 63, 182, 255], ['türkis', 34, 224, 168], ['grün', 62, 224, 138], ['grau', 128, 128, 128]
+];
+
+function a11yFarbname(farbe) {
+    const m = String(farbe || '').trim();
+    let rgb = null;
+    const hex = m.match(/^#([0-9a-f]{6})$/i);
+    if (hex) rgb = [0, 2, 4].map(i => parseInt(hex[1].slice(i, i + 2), 16));
+    else { const f = m.match(/\d+/g); if (f && f.length >= 3) rgb = f.slice(0, 3).map(Number); }
+    if (!rgb) return 'Farbe';
+    let best = A11Y_FARBEN[0], d0 = Infinity;
+    for (const c of A11Y_FARBEN) { const d = (c[1] - rgb[0]) ** 2 + (c[2] - rgb[1]) ** 2 + (c[3] - rgb[2]) ** 2; if (d < d0) { d0 = d; best = c; } }
+    return best[0];
+}
+
+// Nächster beschreibender Text im Umfeld (Zeile, Beschriftung davor, Kasten), ohne die Knöpfe selbst
+function a11yUmfeldText(el) {
+    const roh = a11yUmfeldTextRoh(el);
+    // Zahlen und Einheiten am Ende gehören zum Wert, nicht zum Namen ("Verkaufspreis 22 €" -> "Verkaufspreis")
+    const sauber = roh.replace(/\s*[\d.,]+\s*(€|%|Stk\.?)?\s*$/, '').trim();
+    return /^[\d.,\s€%]*$/.test(sauber) ? '' : sauber;
+}
+function a11yUmfeldTextRoh(el) {
+    for (let e = el, tiefe = 0; e && e !== document.body && tiefe < 4; e = e.parentElement, tiefe++) {
+        const lab = e.querySelector && e.querySelector(':scope > label, :scope > .ui-field-label, :scope > .stepper-row > span:first-child, :scope > strong, :scope > .ui-overline');
+        if (lab && lab !== el && !lab.contains(el)) { const t = lab.textContent.replace(/\s+/g, ' ').trim(); if (t) return t.slice(0, 40); }
+        // Text-Geschwister direkt davor
+        for (let s = e.previousElementSibling, n = 0; s && n < 2; s = s.previousElementSibling, n++) {
+            if (/^(BUTTON|SELECT|INPUT)$/.test(s.tagName)) continue;
+            const t = s.textContent.replace(/\s+/g, ' ').trim();
+            if (t && t.length <= 60 && !/^[\d.,\s€%]+$/.test(t)) return t;
+        }
+        const eigen = [...e.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent).join(' ').replace(/\s+/g, ' ').trim();
+        if (eigen) return eigen.replace(/[:：]\s*$/, '').slice(0, 40);
+    }
+    return '';
+}
+
+function a11yName(el) {
+    const onclick = el.getAttribute('onclick') || '';
+    const text = (el.textContent || '').trim();
+    if (el.tagName === 'BUTTON' || el.getAttribute('role') === 'button') {
+        let m = onclick.match(/setCrestAnimal\('([^']*)'\)/); if (m) return 'Wappentier ' + (A11Y_TIERE[m[1]] || m[1]);
+        if (/setCrestAnimal\(null\)/.test(onclick)) return 'Kein Wappentier';
+        m = onclick.match(/setCrestSymbol\('([^']*)'\)/); if (m) return 'Wappensymbol ' + (A11Y_SYMBOLE_WAPPEN[m[1]] || A11Y_TIERE[m[1]] || m[1]);
+        m = onclick.match(/setCrestColor\('([^']*)'\)/); if (m) return 'Heimfarbe ' + a11yFarbname(m[1]);
+        m = onclick.match(/setAwayColor\('([^']*)'\)/); if (m) return 'Auswärtsfarbe ' + a11yFarbname(m[1]);
+        const sym = A11Y_SYMBOLE[text];
+        if (sym) {
+            // Zähler-Knöpfe: Zeilenbezug anhängen ("Schrittweite verringern")
+            if (/^(Verringern|Erhöhen)$/.test(sym)) { const u = a11yUmfeldText(el); return u ? `${u} ${sym.toLowerCase()}` : sym; }
+            return sym;
+        }
+        if (!text.replace(/[^A-Za-zÄÖÜäöüß0-9]/g, '')) {
+            const farbe = el.style && el.style.background ? el.style.background : '';
+            if (farbe && el.offsetWidth <= 48) return 'Farbe ' + a11yFarbname(farbe);
+            const u = a11yUmfeldText(el);
+            return u ? `Aktion bei ${u}` : '';
+        }
+        return '';
+    }
+    // Auswahlfelder und Eingaben
+    const u = a11yUmfeldText(el);
+    if (u) return u;
+    if (el.id) return el.id.replace(/^(sel|priv|st|sf)-?/, '').replace(/[-_]+/g, ' ').trim();
+    return el.getAttribute('placeholder') || '';
+}
+
+function a11yHatName(el) {
+    if (el.getAttribute('aria-label') || el.getAttribute('aria-labelledby') || (el.getAttribute('title') || '').trim()) return true;
+    if (el.tagName === 'BUTTON' || el.getAttribute('role') === 'button') return !!(el.textContent || '').replace(/[^A-Za-zÄÖÜäöüß0-9]/g, '');
+    if (el.id && document.querySelector(`label[for="${el.id}"]`)) return true;
+    return !!el.closest('label') || !!el.getAttribute('placeholder');
+}
+
+function verbessereZugaenglichkeit(wurzel) {
+    const root = wurzel || document;
+    if (!root.querySelectorAll) return 0;
+    let n = 0;
+    const kandidaten = [...root.querySelectorAll('button, [role="button"], select, input:not([type="hidden"]), textarea')];
+    if (root.matches && root.matches('button, [role="button"], select, input, textarea')) kandidaten.push(root);
+    for (const el of kandidaten) {
+        if (a11yHatName(el)) continue;
+        const name = a11yName(el);
+        if (name) { el.setAttribute('aria-label', name); n++; }
+    }
+    return n;
+}
+
+let a11yBeobachter = null;
+function initZugaenglichkeit() {
+    verbessereZugaenglichkeit(document);
+    if (typeof MutationObserver === 'undefined' || a11yBeobachter) return;
+    let wartend = new Set(), geplant = false;
+    a11yBeobachter = new MutationObserver(records => {
+        records.forEach(r => r.addedNodes.forEach(n => { if (n.nodeType === 1) wartend.add(n); }));
+        if (geplant || !wartend.size) return;
+        geplant = true;
+        // gebündelt, damit schnelle Aktualisierungen (Live-Ticker) nichts bremsen
+        setTimeout(() => {
+            const arbeit = [...wartend]; wartend = new Set(); geplant = false;
+            arbeit.forEach(n => { if (document.contains(n)) verbessereZugaenglichkeit(n); });
+        }, 120);
+    });
+    a11yBeobachter.observe(document.body, { childList: true, subtree: true });
 }
 
 /* eslint-enable */
@@ -12865,22 +13089,21 @@ function renderDesignSettings() {
         list.innerHTML = '';
         squad.forEach(p => {
             let row = document.createElement('div');
-            row.className = 'player-row';
-            row.innerHTML = `
-                <span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 26) : ''}<strong class="badge badge-${(p.pos||'mit').toLowerCase()}">${p.pos}</strong> ${p.name} (Str: ${p.strength})</span>
-                <div>
-                    Fokus:
-                    <select class="input-inline" style="width:100px;" onchange="setIndividualFocus('${p.id}', this.value)">
-                        <option value="allgemein" ${p.individualFocus==='allgemein'?'selected':''}>Allgemein</option>
-                        <option value="torschuss" ${p.individualFocus==='torschuss'?'selected':''}>Torschuss</option>
-                        <option value="passspiel" ${p.individualFocus==='passspiel'?'selected':''}>Passspiel</option>
-                        <option value="zweikampf" ${p.individualFocus==='zweikampf'?'selected':''}>Zweikampf</option>
-                        <option value="tempo" ${p.individualFocus==='tempo'?'selected':''}>Tempo/Athletik</option>
-                        <option value="torwart" ${p.individualFocus==='torwart'?'selected':''}>🧤 Torwart-Spezialist</option>
-                        <option value="elfmeter" ${p.individualFocus==='elfmeter'?'selected':''}>🥅 Elfmeter-Spezialist</option>
-                    </select>
-                </div>
-            `;
+            row.className = 'panel player-card';
+            row.style.cssText = 'margin-bottom:8px; padding:10px;';
+            const fokusOptionen = [['allgemein', 'Allgemein'], ['torschuss', 'Torschuss'], ['passspiel', 'Passspiel'], ['zweikampf', 'Zweikampf'], ['tempo', 'Tempo/Athletik'], ['torwart', '🧤 Torwart-Spezialist'], ['elfmeter', '🥅 Elfmeter-Spezialist']]
+                .map(([id, name]) => `<option value="${id}" ${p.individualFocus === id ? 'selected' : ''}>${name}</option>`).join('');
+            // Kartenmuster: Bild mit Position, Name, Stärke groß, Fokus als Auswahlfeld darunter
+            row.innerHTML = renderUiCard({
+                thumb: `${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 40) : ''}<span class="badge badge-${(p.pos || 'mit').toLowerCase()}">${p.pos}</span>`,
+                title: p.name,
+                sub: `${p.age ? p.age + ' J. · ' : ''}Fitness ${p.fitness}%`,
+                kpi: { wert: p.strength, label: 'Stärke' },
+                body: `<label class="ui-field">
+                        <span class="ui-field-label">Fokus</span>
+                        <select class="input-inline" onchange="setIndividualFocus('${p.id}', this.value)">${fokusOptionen}</select>
+                    </label>`
+            });
             list.appendChild(row);
         });
         if (typeof renderMedicalDepartmentPanel === 'function') renderMedicalDepartmentPanel();
@@ -33571,6 +33794,7 @@ function renderSaveSafetyBox() {
             warnIfStorageBlocked();
             maybeShowTutorial();
             if (typeof initOneHand === 'function') initOneHand();
+            if (typeof initZugaenglichkeit === 'function') initZugaenglichkeit();
             // Kein Struktur-Selbsttest beim Start mehr: er öffnete alle Bildschirme und kostete
             // beim ersten Start nach jedem Update rund 1,5 s auf dem Handy. Die Testsuite prüft
             // dieselbe Struktur vor jeder Veröffentlichung (testStructuralSelfTest); im Admin-
