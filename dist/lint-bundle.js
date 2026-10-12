@@ -4647,10 +4647,14 @@ function cleanupLegacyDevelopmentState() {
                 ? '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Aktuell keine Spieler verliehen.</div>'
                 : loanedPlayers.map((l, idx) => {
                     if (l.proLoan) return '';
-                    return `<div class="box" style="font-size:var(--fs-small); display:flex; justify-content:space-between; align-items:center;">
-                        <span>📤 ${l.player.name}${l.youthLoan ? ' 🌱' : ''} bei ${l.loanClub} - noch ${l.duration} Spieltage</span>
-                        <button onclick="openLoanRecallNegotiation(${idx})" class="btn-secondary" style="width:auto; font-size:var(--fs-caption);" title="Rückholung verhandeln">🔙 Verhandeln</button>
-                    </div>`;
+                    return `<div class="panel player-card" style="margin-bottom:8px; padding:10px;">${renderUiCard({
+                        thumb: `<span class="badge badge-${(l.player.pos || 'mit').toLowerCase()}">${l.player.pos}</span>`,
+                        title: `📤 ${l.player.name}${l.youthLoan ? ' 🌱' : ''}`,
+                        sub: `bei ${l.loanClub}`,
+                        meta: [uiChip(`noch ${l.duration} Spieltage`)],
+                        kpi: { wert: l.player.strength, label: 'Stärke' },
+                        actions: `<button onclick="openLoanRecallNegotiation(${idx})" class="btn-secondary" title="Rückholung verhandeln">🔙 Verhandeln</button>`
+                    })}</div>`;
                 }).join('');
         }
         renderLoanClubRanking();
@@ -4660,22 +4664,26 @@ function cleanupLegacyDevelopmentState() {
             marketList.innerHTML = secondTeamMarketPlayers.length === 0
                 ? '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Kein Markt verfügbar - erst nächste Saison aktualisiert sich das Angebot.</div>'
                 : secondTeamMarketPlayers.map((p, idx) => `
-                    <div class="market-row">
-                        <span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 26) : ''}<span class="badge badge-${(p.pos||'mit').toLowerCase()}">${p.pos}</span> ${p.name} (Str: ${p.strength})</span>
-                        <span>${formatVal(p.marketValue)}</span>
-                        <button onclick="buySecondTeamMarketPlayer(${idx})" class="btn-action" style="width:auto; font-size:var(--fs-caption);">Kaufen</button>
-                    </div>`).join('');
+                    <div class="panel player-card" style="margin-bottom:8px; padding:10px;">${renderUiCard({
+                        thumb: `${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 40) : ''}<span class="badge badge-${(p.pos || 'mit').toLowerCase()}">${p.pos}</span>`,
+                        title: p.name,
+                        sub: `${p.age ? p.age + ' J. · ' : ''}Zweite Mannschaft`,
+                        meta: [uiChip(`💶 ${formatVal(p.marketValue)}`)],
+                        kpi: { wert: p.strength, label: 'Stärke' },
+                        actions: `<button onclick="buySecondTeamMarketPlayer(${idx})" class="btn-action">Kaufen</button>`
+                    })}</div>`).join('');
         }
 
         let firstTeamList = document.getElementById('st-firstteam-transfer-list');
         if (firstTeamList) {
             firstTeamList.innerHTML = squad.map(p => `
-                <div class="player-row">
-                    ${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 26) : ''}
-                    <span class="badge badge-${(p.pos||'mit').toLowerCase()}">${p.pos}</span>
-                    <span style="flex:1; text-align:left; padding-left:6px;"><strong>${p.name}</strong> <span style="font-size:var(--fs-caption); color:var(--text-muted);">(Str: ${p.strength})</span></span>
-                    <button onclick="demoteToSecondTeam('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:var(--fs-caption); color:var(--teal);" title="In die 2. Mannschaft verschieben">⬇️</button>
-                </div>`).join('');
+                <div class="panel player-card" style="margin-bottom:8px; padding:10px;">${renderUiCard({
+                    thumb: `${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 40) : ''}<span class="badge badge-${(p.pos || 'mit').toLowerCase()}">${p.pos}</span>`,
+                    title: p.name,
+                    sub: `${p.age ? p.age + ' J. · ' : ''}1. Mannschaft`,
+                    kpi: { wert: p.strength, label: 'Stärke' },
+                    actions: `<button onclick="demoteToSecondTeam('${p.id}')" class="btn-secondary" title="In die 2. Mannschaft verschieben">⬇️ In die Zweite</button>`
+                })}</div>`).join('');
         }
     }
 
@@ -7410,13 +7418,11 @@ function selectNewGameScenario(id) {
                     let legInfo = s.leg2Home === null
                         ? `Hinspiel: ${s.leg1Home}:${s.leg1Away} · Rückspiel steht aus`
                         : `Hin: ${s.leg1Home}:${s.leg1Away} · Rück: ${s.leg2Away}:${s.leg2Home} · Gesamt: ${aggA}:${aggB}${s.penalties ? ` (n.E. ${s.shootoutScore})` : ''}`;
-                    return `<div class="player-row" style="flex-direction:column; align-items:flex-start;">
-                        <div style="display:flex; justify-content:space-between; width:100%;">
-                            <span>${s.teamA} vs ${s.teamB}</span>
-                            <span style="color:var(--primary);">${s.winner ? `Sieger: ${s.winner}` : 'Läuft...'}</span>
-                        </div>
-                        <span style="font-size:var(--fs-caption); color:var(--text-muted);">${legInfo}</span>
-                    </div>`;
+                    return `<div class="panel player-card" style="margin-bottom:8px; padding:10px;">${renderUiCard({
+                        title: `${s.teamA} vs ${s.teamB}`,
+                        sub: legInfo,
+                        meta: [s.winner ? uiChip(`Sieger: ${s.winner}`, 'gut') : uiChip('Läuft …')]
+                    })}</div>`;
                 }).join('');
                 let finalHtml = europeTournament.finalMatch ? `<div class="box" style="border-color:var(--gold); color:var(--gold);">👑 Finale: ${europeTournament.finalMatch.home} vs ${europeTournament.finalMatch.away} [${europeTournament.finalMatch.score}] => Sieger: <strong>${europeTournament.finalMatch.winner}</strong></div>` : '';
                 koTree.innerHTML = semiHtml + finalHtml;
@@ -11529,7 +11535,21 @@ function initModalFocus() {
             }
         }).observe(ov, { attributes: true, attributeFilter: ['class'] });
     });
+    // Fenster als Dialog kennzeichnen (Screenreader), Escape schließt das oberste Fenster wie "Tipp daneben"
+    document.querySelectorAll('.generic-modal-overlay').forEach(ov => {
+        if (!ov.getAttribute('role')) ov.setAttribute('role', 'dialog');
+        if (!ov.getAttribute('aria-modal')) ov.setAttribute('aria-modal', 'true');
+        const titel = ov.querySelector('h1, h2, h3, .generic-modal-title');
+        if (titel && !ov.getAttribute('aria-label') && !ov.getAttribute('aria-labelledby')) ov.setAttribute('aria-label', titel.textContent.replace(/\s+/g, ' ').trim().slice(0, 60));
+    });
     document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+            const oben = offeneOverlays().pop();
+            if (!oben) return;
+            const zu = oben.querySelector('.generic-modal-close');
+            if (zu) { e.preventDefault(); zu.click(); }
+            return;
+        }
         if (e.key !== 'Tab') return;
         const ov = offeneOverlays().pop();
         if (!ov) return;
@@ -11765,13 +11785,30 @@ const DESIGN_TEXT_SIZES = [
     { id: 'sehr-gross', name: 'Sehr groß', beispiel: 'Aa' }
 ];
 
+// Darstellungs-Einstellungen liegen doppelt: im localStorage (dauerhaft) und im sessionStorage (überlebt
+// das Neuladen des Tabs, auch wenn der dauerhafte Speicher kurz leer zurückkommt). Fehlt der Wert im
+// localStorage, wird er aus dem sessionStorage übernommen und zurückgeschrieben.
+function designLesen(key) {
+    let v = typeof safeLocalGet === 'function' ? safeLocalGet(key) : null;
+    if (v !== null && v !== undefined) return v;
+    try {
+        v = window.sessionStorage.getItem(key);
+        if (v !== null && typeof safeLocalSet === 'function') safeLocalSet(key, v);
+    } catch (e) { v = null; }
+    return v;
+}
+function designSchreiben(key, wert) {
+    if (typeof safeLocalSet === 'function') safeLocalSet(key, wert);
+    try { window.sessionStorage.setItem(key, wert); } catch (e) { /* gesperrt: dann bleibt nur der dauerhafte Speicher */ }
+}
+
 function getDesignTheme() {
-    const t = typeof safeLocalGet === 'function' ? safeLocalGet(DESIGN_THEME_KEY) : null;
+    const t = designLesen(DESIGN_THEME_KEY);
     return DESIGN_THEMES.some(x => x.id === t) ? t : 'flutlicht';
 }
 
 function getBewegung() {
-    const m = typeof safeLocalGet === 'function' ? safeLocalGet(DESIGN_MOTION_KEY) : null;
+    const m = designLesen(DESIGN_MOTION_KEY);
     return DESIGN_MOTION_MODES.some(x => x.id === m) ? m : 'system';
 }
 
@@ -11795,7 +11832,7 @@ function loeseThemeAuf(id) {
 }
 
 function getTextGroesse() {
-    const g = typeof safeLocalGet === 'function' ? safeLocalGet(DESIGN_TEXT_KEY) : null;
+    const g = designLesen(DESIGN_TEXT_KEY);
     return DESIGN_TEXT_SIZES.some(x => x.id === g) ? g : 'normal';
 }
 
@@ -11833,7 +11870,7 @@ function beobachteSystemTheme(aktiv) {
 function setzeDesignTheme(id) {
     const t = DESIGN_THEMES.find(x => x.id === id);
     if (!t) { showToast('Unbekanntes Farbschema.', 'error'); return; }
-    if (typeof safeLocalSet === 'function') safeLocalSet(DESIGN_THEME_KEY, id);
+    designSchreiben(DESIGN_THEME_KEY, id);
     applyDesignSettings();
     renderDesignSettings();
     showToast(`🎨 Farbschema: ${t.name}`, 'success', 1800);
@@ -11842,7 +11879,7 @@ function setzeDesignTheme(id) {
 function setzeBewegung(id) {
     const m = DESIGN_MOTION_MODES.find(x => x.id === id);
     if (!m) { showToast('Unbekannte Bewegungs-Einstellung.', 'error'); return; }
-    if (typeof safeLocalSet === 'function') safeLocalSet(DESIGN_MOTION_KEY, id);
+    designSchreiben(DESIGN_MOTION_KEY, id);
     applyDesignSettings();
     renderDesignSettings();
     showToast(`🎞️ Bewegung: ${m.name}`, 'success', 1800);
@@ -11851,7 +11888,7 @@ function setzeBewegung(id) {
 function setzeTextGroesse(id) {
     const g = DESIGN_TEXT_SIZES.find(x => x.id === id);
     if (!g) { showToast('Unbekannte Textgröße.', 'error'); return; }
-    if (typeof safeLocalSet === 'function') safeLocalSet(DESIGN_TEXT_KEY, id);
+    designSchreiben(DESIGN_TEXT_KEY, id);
     applyDesignSettings();
     renderDesignSettings();
     showToast(`🔠 Textgröße: ${g.name}`, 'success', 1800);
@@ -18771,6 +18808,7 @@ function renderStadiumEventsPanel() {
                 `;
             }
             const moralTon = !s.hired ? '' : (meta.morale >= 70 ? 'gut' : (meta.morale >= 40 ? 'warn' : 'schlecht'));
+            row.classList.add('ui-card-voll'); // Aufgabenbeschreibung nicht abschneiden
             row.innerHTML = renderUiCard({
                 thumb: `<span class="ui-thumb-icon">${STAFF_ICONS[key] || '👤'}</span>`,
                 title: s.name,
@@ -21070,7 +21108,7 @@ function renderYouthPathwayBoxes() {
                     ${p.releaseClause
                         ? `<span>📜 Ausstiegsklausel: <strong style="color:var(--accent);">${formatVal(p.releaseClause)}</strong></span><button onclick="removeReleaseClause('${p.id}')" class="btn-secondary" style="width:auto; font-size:var(--fs-micro);">Entfernen</button>`
                         : `<span style="color:var(--text-muted);">Keine Ausstiegsklausel</span>
-                           <input type="number" id="release-clause-input-${p.id}" placeholder="mind. ${formatVal(Math.round(p.marketValue * 1.1))}" class="input-inline" style="width:110px; font-size:var(--fs-micro);">
+                           <input type="number" id="release-clause-input-${p.id}" placeholder="mind. ${formatVal(Math.round(p.marketValue * 1.1))}" class="input-inline" style="width:auto; flex:1 1 130px; min-width:130px; max-width:200px; font-size:var(--fs-caption);">
                            <button onclick="confirmSetReleaseClause('${p.id}')" class="btn-secondary" style="width:auto; font-size:var(--fs-micro);">📜 Klausel festlegen</button>`
                     }
                 </div>

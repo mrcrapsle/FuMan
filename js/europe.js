@@ -632,13 +632,11 @@
                     let legInfo = s.leg2Home === null
                         ? `Hinspiel: ${s.leg1Home}:${s.leg1Away} · Rückspiel steht aus`
                         : `Hin: ${s.leg1Home}:${s.leg1Away} · Rück: ${s.leg2Away}:${s.leg2Home} · Gesamt: ${aggA}:${aggB}${s.penalties ? ` (n.E. ${s.shootoutScore})` : ''}`;
-                    return `<div class="player-row" style="flex-direction:column; align-items:flex-start;">
-                        <div style="display:flex; justify-content:space-between; width:100%;">
-                            <span>${s.teamA} vs ${s.teamB}</span>
-                            <span style="color:var(--primary);">${s.winner ? `Sieger: ${s.winner}` : 'Läuft...'}</span>
-                        </div>
-                        <span style="font-size:var(--fs-caption); color:var(--text-muted);">${legInfo}</span>
-                    </div>`;
+                    return `<div class="panel player-card" style="margin-bottom:8px; padding:10px;">${renderUiCard({
+                        title: `${s.teamA} vs ${s.teamB}`,
+                        sub: legInfo,
+                        meta: [s.winner ? uiChip(`Sieger: ${s.winner}`, 'gut') : uiChip('Läuft …')]
+                    })}</div>`;
                 }).join('');
                 let finalHtml = europeTournament.finalMatch ? `<div class="box" style="border-color:var(--gold); color:var(--gold);">👑 Finale: ${europeTournament.finalMatch.home} vs ${europeTournament.finalMatch.away} [${europeTournament.finalMatch.score}] => Sieger: <strong>${europeTournament.finalMatch.winner}</strong></div>` : '';
                 koTree.innerHTML = semiHtml + finalHtml;

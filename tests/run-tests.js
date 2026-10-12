@@ -596,7 +596,7 @@ async function testCareerScenarios(browser) {
     await page.evaluate(() => { closeTutorial(); startNewGame(); selectNewGameScenario('absteiger'); });
     const dialog = await page.evaluate(() => document.getElementById('new-game-scenario-btns').innerHTML);
     await Promise.all([page.waitForNavigation(), page.evaluate(() => confirmNewGameWithSettings(null))]);
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => !document.getElementById('app-loading') && typeof game !== 'undefined', null, { timeout: 20000 }).catch(() => null);
     const r = await page.evaluate(() => {
         try {
             const out = {};
@@ -1919,7 +1919,7 @@ async function testEnglishUi(browser) {
     assert(probe === 'Cancel', `Neu eingefügte Texte werden übersetzt (${probe})`);
     // Durch das Spiel geänderte Texte bleiben nicht auf dem alten Original stehen
     await page.evaluate(() => { const d = document.getElementById('i18n-probe'); d.firstChild.nodeValue = 'Speichern'; });
-    await page.waitForTimeout(50);
+    await page.waitForFunction(() => document.getElementById('i18n-probe').textContent === 'Save', null, { timeout: 3000 }).catch(() => null);
     const probe2 = await page.evaluate(() => { const v = document.getElementById('i18n-probe').textContent; setLanguage('de'); return v + '|' + document.getElementById('i18n-probe').textContent; });
     assert(probe2 === 'Save|Speichern', `Später geänderte Texte werden neu übersetzt und korrekt zurückgestellt (${probe2})`);
     // Alle Bildschirme auf Englisch öffnen ohne Fehler
@@ -2890,18 +2890,19 @@ async function testBedienelementeHabenNamen(browser) {
             || (el.tagName === 'BUTTON' || el.getAttribute('role') === 'button' ? (el.textContent || '').replace(/[^A-Za-zÄÖÜäöüß0-9]/g, '') : '')
             || (el.id && document.querySelector(`label[for="${el.id}"]`) ? 'label' : '') || (el.closest('label') ? 'label' : '') || el.getAttribute('placeholder') || '';
         const stumm = [];
-        const pruefe = wo => document.querySelectorAll('button, [role="button"], select, input:not([type="hidden"]), textarea').forEach(el => {
-            if (!el.offsetParent && getComputedStyle(el).position !== 'fixed') return;
-            if (!name(el)) stumm.push(`${wo}: ${el.tagName.toLowerCase()}#${el.id || ''} "${(el.textContent || '').trim().slice(0, 8)}" ${(el.getAttribute('onclick') || '').slice(0, 36)}`);
-        });
+        const finde = wo => [...document.querySelectorAll('button, [role="button"], select, input:not([type="hidden"]), textarea')].filter(el => (el.offsetParent || getComputedStyle(el).position === 'fixed') && !name(el))
+            .map(el => `${wo}: ${el.tagName.toLowerCase()}#${el.id || ''} "${(el.textContent || '').trim().slice(0, 8)}" ${(el.getAttribute('onclick') || '').slice(0, 36)}`);
+        const pruefe = wo => stumm.push(...finde(wo));
+        // Der Beobachter arbeitet gebündelt (120 ms): warten, bis nichts Unbenanntes mehr übrig ist oder sich nichts mehr ändert
+        const ruhe = async () => { let letzte = -1, still = 0; for (let i = 0; i < 60 && still < 5; i++) { await new Promise(res => setTimeout(res, 50)); const n = finde('').length; still = (n === 0 || n === letzte) ? still + 1 : 0; letzte = n; if (n === 0 && i > 0) break; } };
         const ids = [...document.querySelectorAll('[id^="screen-"]')].map(e => e.id).filter(id => id !== 'screen-office');
         for (const id of ids) {
             showScreen(id);
-            await new Promise(res => setTimeout(res, 220));
+            await ruhe();
             pruefe(id);
         }
         document.querySelectorAll('.generic-modal-overlay').forEach(o => o.classList.add('show'));
-        await new Promise(res => setTimeout(res, 220));
+        await ruhe();
         pruefe('Fenster');
         document.querySelectorAll('.generic-modal-overlay').forEach(o => o.classList.remove('show'));
         // Beispiele: Namen sind verständlich, vorhandene Beschriftungen bleiben
@@ -2909,14 +2910,14 @@ async function testBedienelementeHabenNamen(browser) {
         const out = { stumm: [...new Set(stumm)] };
         out.schliessen = [...document.querySelectorAll('.generic-modal-close')].every(b => /schlie/i.test(b.getAttribute('aria-label') || b.title || ''));
         out.elfmeter = beispiel('button[onclick="takePenaltyShot(1)"]');
-        showScreen('screen-manager-tree'); await new Promise(res => setTimeout(res, 220));
+        showScreen('screen-manager-tree'); await ruhe();
         out.wappen = beispiel('button[onclick="setCrestAnimal(\'🦊\')"]');
         out.farbe = beispiel('button[onclick^="setCrestColor("]');
         // Neu gerenderte Teile werden ebenfalls benannt (Beobachter)
         const probe = document.createElement('div');
         probe.innerHTML = '<button id="probe-btn" onclick="void 0">✕</button><select id="probe-sel"><option>a</option></select>';
         document.body.appendChild(probe);
-        await new Promise(res => setTimeout(res, 300));
+        for (let i = 0; i < 60 && !(document.getElementById('probe-sel').getAttribute('aria-label') && document.getElementById('probe-btn').getAttribute('aria-label')); i++) await new Promise(res => setTimeout(res, 50));
         out.neu = beispiel('#probe-btn') === 'Schließen' && !!document.getElementById('probe-sel').getAttribute('aria-label');
         const eigen = document.createElement('button'); eigen.title = 'Eigener Titel'; eigen.textContent = '✕'; document.body.appendChild(eigen);
         verbessereZugaenglichkeit(document);
@@ -3002,7 +3003,8 @@ async function testKopfzeileHinweisUndPokerFenster(browser) {
         window.scrollTo(0, document.documentElement.scrollHeight);
         const y0 = window.scrollY;
         openTransferPoker(marketPlayers.length - 1);
-        await new Promise(res => setTimeout(res, 150));
+        await warteBis(() => document.getElementById('transfer-poker-overlay').classList.contains('show'));
+        await new Promise(res => requestAnimationFrame(() => requestAnimationFrame(res)));
         const ov = document.getElementById('transfer-poker-overlay');
         const box = ov.querySelector('.generic-modal-box').getBoundingClientRect();
         out.poker = { offen: ov.classList.contains('show'), imBild: box.top >= 0 && box.bottom <= window.innerHeight + 1, sprung: Math.abs(window.scrollY - y0), inhalt: ov.innerText.includes('Transferpoker'),
@@ -3017,6 +3019,43 @@ async function testKopfzeileHinweisUndPokerFenster(browser) {
     assert(r.poker.sprung <= 1, `Die Seite springt beim Öffnen des Transferpokers nicht (${r.poker.sprung} px)`);
     assert(r.zu, 'Abbrechen schließt das Poker-Fenster');
     assert(consoleErrors.length === 0, 'Keine JS-Konsolenfehler bei Kopfzeile und Poker');
+    await page.close();
+}
+
+async function testFensterTastaturUndSpeicher(browser) {
+    console.log('\n[25.55] Fenster per Tastatur, kein Seitensprung im Code, Darstellung doppelt gespeichert');
+    // Quelltext: keine Seitensprünge (scrollIntoView / window.scrollTo); innere Ticker-Listen dürfen scrollen
+    const fs = require('fs');
+    const jsDir = path.join(__dirname, '..', 'js');
+    const sprung = fs.readdirSync(jsDir).filter(f => f.endsWith('.js')).filter(f => /scrollIntoView|window\.scrollTo\(|window\.scrollBy\(/.test(fs.readFileSync(path.join(jsDir, f), 'utf8')));
+    assert(sprung.length === 0, `Kein Modul scrollt die ganze Seite per Code - Meldungen öffnen als Fenster (${sprung.join(', ')})`);
+
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => { closeTutorial(); showScreen('screen-staff'); });
+    const r = await page.evaluate(() => {
+        const ovs = [...document.querySelectorAll('.generic-modal-overlay')];
+        const out = { dialoge: ovs.length, alleDialog: ovs.every(o => o.getAttribute('role') === 'dialog' && o.getAttribute('aria-modal') === 'true') };
+        const key = Object.keys(staffMembers).find(k => !staffMembers[k].hired);
+        out.key = key || null;
+        if (key) openCandidatePool(key);
+        out.offen = document.getElementById('staff-pool-overlay').classList.contains('show');
+        return out;
+    });
+    await page.keyboard.press('Escape');
+    const zu = await page.evaluate(() => !document.getElementById('staff-pool-overlay').classList.contains('show'));
+    await page.keyboard.press('Escape'); // ohne offenes Fenster: nichts passiert, kein Fehler
+    // Darstellung: fehlt der dauerhafte Wert nach dem Neuladen, kommt er aus dem Tab-Speicher zurück
+    await page.evaluate(() => { setzeDesignTheme('klassik'); setzeTextGroesse('gross'); localStorage.removeItem(DESIGN_THEME_KEY); localStorage.removeItem(DESIGN_TEXT_KEY); });
+    await page.reload();
+    await page.waitForFunction(() => !document.getElementById('app-loading'), null, { timeout: 20000 }).catch(() => null);
+    const nach = await page.evaluate(() => ({ theme: document.documentElement.getAttribute('data-theme'), groesse: document.documentElement.getAttribute('data-text-size'),
+        zurueck: localStorage.getItem(DESIGN_THEME_KEY) === 'klassik' }));
+    assert(r.dialoge >= 10 && r.alleDialog, `Alle Fenster sind als Dialog gekennzeichnet (${r.dialoge}, role=dialog und aria-modal)`);
+    assert(r.key && r.offen, `Das Bewerbungs-Fenster lässt sich öffnen (${r.key})`);
+    assert(zu, 'Escape schließt das oberste Fenster');
+    assert(nach.theme === 'klassik' && nach.groesse === 'gross' && nach.zurueck, `Darstellung kommt nach leerem Speicher aus dem Tab-Speicher zurück (${JSON.stringify(nach)})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
     await page.close();
 }
 
@@ -3511,7 +3550,7 @@ async function testHomeRegion(browser) {
     // Neues Spiel über den Dialog in Hamburg
     const dialog = await page.evaluate(() => { startNewGame(); selectedNewGameCity = 'Hamburg'; renderNewGameSetupOptions(); return document.getElementById('new-game-city-box').innerHTML; });
     await Promise.all([page.waitForNavigation(), page.evaluate(() => confirmNewGameWithSettings(null))]);
-    await page.waitForTimeout(500);
+    await page.waitForFunction(() => !document.getElementById('app-loading') && typeof game !== 'undefined', null, { timeout: 20000 }).catch(() => null);
     const r = await page.evaluate(() => {
         try {
             try { closeTutorial(); } catch (e) { /* egal */ }
@@ -5177,7 +5216,7 @@ async function testLanguageToggle(browser) {
     // Startbildschirm ist das Managerbüro und deckt das ganze Display ab - für die
     // Kopfzeilen-/Seitenmenü-Knöpfe muss der Test es zuerst verlassen.
     await page.evaluate(() => showScreen('screen-dashboard'));
-    await page.waitForTimeout(150);
+    await page.waitForFunction(() => document.getElementById('screen-dashboard').style.display === 'block', null, { timeout: 5000 }).catch(() => null);
 
     const deText = await page.evaluate(() => document.querySelector('[onclick*="screen-calendar"]').textContent.trim());
     await page.click('#btn-lang-toggle');
@@ -5202,7 +5241,7 @@ async function testLanguageToggle(browser) {
     await page.waitForFunction(() => !document.getElementById('app-loading'), null, { timeout: 20000 }).catch(() => null);
     await page.waitForTimeout(100);
     await page.evaluate(() => { closeTutorial(); showScreen('screen-dashboard'); });
-    await page.waitForTimeout(150);
+    await page.waitForFunction(() => document.getElementById('screen-dashboard').style.display === 'block', null, { timeout: 5000 }).catch(() => null);
     const enTextAfterReload = await page.evaluate(() => document.querySelector('[onclick*="screen-calendar"]').textContent.trim());
     const langDiag = await page.evaluate(() => ({ lang: currentLang, gespeichert: localStorage.getItem('anstoss_fm13_language'), schluessel: Object.keys(localStorage).length }));
 
@@ -5224,7 +5263,7 @@ async function testManagerOffice(browser) {
     console.log('\n[15] Managerbüro (Point-and-Click-Startbildschirm)');
     const { page, consoleErrors } = await freshPage(browser);
     await page.evaluate(() => closeTutorial());
-    await page.waitForTimeout(200);
+    await page.waitForFunction(() => document.getElementById('screen-office').style.display === 'block', null, { timeout: 5000 }).catch(() => null);
 
     const isStartScreen = await page.evaluate(() => document.getElementById('screen-office').style.display === 'block');
     const hotspotIds = await page.evaluate(() => OFFICE_HOTSPOTS.map(h => h.id));
@@ -5267,7 +5306,7 @@ async function testManagerOffice(browser) {
     // Satzzeile (das SCUMM-Stilmittel) folgt dem überfahrenen Objekt
     const calCenter = await centerOf('calendar');
     await page.mouse.move(calCenter.x, calCenter.y);
-    await page.waitForTimeout(120);
+    await page.waitForFunction(() => ((document.getElementById('office-sentence') || {}).textContent || '').trim().length > 0, null, { timeout: 5000 }).catch(() => null);
     const sentence = await page.textContent('#office-sentence');
 
     // Lampe schaltet nur das Licht, navigiert NICHT weg. Bewusst per mouse.click auf die
@@ -5515,7 +5554,7 @@ async function testOfficeAtmosphereAndCrest(browser) {
     if (box) {
         await page.waitForTimeout(200);  // Stelle sicher, dass das Office vollständig geladen ist
         await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-        await page.waitForTimeout(1200);  // Längeres Timeout für Navigationsübergang
+        await page.waitForFunction(() => document.getElementById('screen-manager-tree').style.display === 'block', null, { timeout: 5000 }).catch(() => null);  // Navigationsübergang
     }
     const zumEditor = await page.evaluate(() => document.getElementById('screen-manager-tree').style.display === 'block');
 
@@ -7462,14 +7501,13 @@ async function testBonusClauses(browser) {
         while (box && box.style.display === 'flex') dismissNotice();
         showScreen('screen-contracts');
     });
-    await page.waitForTimeout(150);
     const spielerId = await page.evaluate(() => squad[1].id);
     await page.fill(`#bonus-goals-thresh-${spielerId}`, '4');
     await page.fill(`#bonus-goals-amount-${spielerId}`, '30000');
     await page.click(`button[onclick="confirmBonusClause('${spielerId}', 'goals')"]`);
     await page.fill(`#release-clause-input-${spielerId}`, '500000000');
     await page.click(`button[onclick="confirmSetReleaseClause('${spielerId}')"]`);
-    await page.waitForTimeout(150);
+    await page.waitForFunction((pid) => squad.find(x => x.id === pid).releaseClause === 500000000, spielerId, { timeout: 5000 }).catch(() => null);
     const uiErgebnis = await page.evaluate((pid) => {
         let p = squad.find(x => x.id === pid);
         return { bonusPerKlickGesetzt: !!p.bonusClauses.goals && p.bonusClauses.goals.threshold === 4, klauselPerKlickGesetzt: p.releaseClause === 500000000 };
@@ -7758,7 +7796,7 @@ async function testStadiumAusbau2(browser) {
     await page.evaluate(() => closeTutorial());
     await page.evaluate(() => showScreen('screen-dashboard'));
     await page.click('#btn-new-game');
-    await page.waitForTimeout(150);
+    await page.waitForFunction(() => { const b = document.getElementById('btn-confirm-new-game'); return !!b && b.offsetParent !== null; }, null, { timeout: 5000 }).catch(() => null);
     await page.evaluate(() => { selectedNewGameLevel = 3; selectedNewGameMoney = 300000; renderNewGameSetupOptions(); });
     await page.click('#btn-confirm-new-game');
     await page.waitForTimeout(100);
@@ -10497,6 +10535,7 @@ async function main() {
         testBedienelementeHabenNamen,
         testAutoThemeUndBewegung,
         testKopfzeileHinweisUndPokerFenster,
+        testFensterTastaturUndSpeicher,
         testEntlassungsGrund,
         testEnglishUi,
         testSwapDeals,

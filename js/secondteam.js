@@ -527,10 +527,14 @@
                 ? '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Aktuell keine Spieler verliehen.</div>'
                 : loanedPlayers.map((l, idx) => {
                     if (l.proLoan) return '';
-                    return `<div class="box" style="font-size:var(--fs-small); display:flex; justify-content:space-between; align-items:center;">
-                        <span>📤 ${l.player.name}${l.youthLoan ? ' 🌱' : ''} bei ${l.loanClub} - noch ${l.duration} Spieltage</span>
-                        <button onclick="openLoanRecallNegotiation(${idx})" class="btn-secondary" style="width:auto; font-size:var(--fs-caption);" title="Rückholung verhandeln">🔙 Verhandeln</button>
-                    </div>`;
+                    return `<div class="panel player-card" style="margin-bottom:8px; padding:10px;">${renderUiCard({
+                        thumb: `<span class="badge badge-${(l.player.pos || 'mit').toLowerCase()}">${l.player.pos}</span>`,
+                        title: `📤 ${l.player.name}${l.youthLoan ? ' 🌱' : ''}`,
+                        sub: `bei ${l.loanClub}`,
+                        meta: [uiChip(`noch ${l.duration} Spieltage`)],
+                        kpi: { wert: l.player.strength, label: 'Stärke' },
+                        actions: `<button onclick="openLoanRecallNegotiation(${idx})" class="btn-secondary" title="Rückholung verhandeln">🔙 Verhandeln</button>`
+                    })}</div>`;
                 }).join('');
         }
         renderLoanClubRanking();
@@ -540,22 +544,26 @@
             marketList.innerHTML = secondTeamMarketPlayers.length === 0
                 ? '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Kein Markt verfügbar - erst nächste Saison aktualisiert sich das Angebot.</div>'
                 : secondTeamMarketPlayers.map((p, idx) => `
-                    <div class="market-row">
-                        <span style="display:flex; align-items:center; gap:6px;">${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 26) : ''}<span class="badge badge-${(p.pos||'mit').toLowerCase()}">${p.pos}</span> ${p.name} (Str: ${p.strength})</span>
-                        <span>${formatVal(p.marketValue)}</span>
-                        <button onclick="buySecondTeamMarketPlayer(${idx})" class="btn-action" style="width:auto; font-size:var(--fs-caption);">Kaufen</button>
-                    </div>`).join('');
+                    <div class="panel player-card" style="margin-bottom:8px; padding:10px;">${renderUiCard({
+                        thumb: `${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 40) : ''}<span class="badge badge-${(p.pos || 'mit').toLowerCase()}">${p.pos}</span>`,
+                        title: p.name,
+                        sub: `${p.age ? p.age + ' J. · ' : ''}Zweite Mannschaft`,
+                        meta: [uiChip(`💶 ${formatVal(p.marketValue)}`)],
+                        kpi: { wert: p.strength, label: 'Stärke' },
+                        actions: `<button onclick="buySecondTeamMarketPlayer(${idx})" class="btn-action">Kaufen</button>`
+                    })}</div>`).join('');
         }
 
         let firstTeamList = document.getElementById('st-firstteam-transfer-list');
         if (firstTeamList) {
             firstTeamList.innerHTML = squad.map(p => `
-                <div class="player-row">
-                    ${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 26) : ''}
-                    <span class="badge badge-${(p.pos||'mit').toLowerCase()}">${p.pos}</span>
-                    <span style="flex:1; text-align:left; padding-left:6px;"><strong>${p.name}</strong> <span style="font-size:var(--fs-caption); color:var(--text-muted);">(Str: ${p.strength})</span></span>
-                    <button onclick="demoteToSecondTeam('${p.id}')" class="btn-secondary" style="width:auto; padding:3px 6px; font-size:var(--fs-caption); color:var(--teal);" title="In die 2. Mannschaft verschieben">⬇️</button>
-                </div>`).join('');
+                <div class="panel player-card" style="margin-bottom:8px; padding:10px;">${renderUiCard({
+                    thumb: `${typeof renderPlayerAvatarTag === 'function' ? renderPlayerAvatarTag(p, 40) : ''}<span class="badge badge-${(p.pos || 'mit').toLowerCase()}">${p.pos}</span>`,
+                    title: p.name,
+                    sub: `${p.age ? p.age + ' J. · ' : ''}1. Mannschaft`,
+                    kpi: { wert: p.strength, label: 'Stärke' },
+                    actions: `<button onclick="demoteToSecondTeam('${p.id}')" class="btn-secondary" title="In die 2. Mannschaft verschieben">⬇️ In die Zweite</button>`
+                })}</div>`).join('');
         }
     }
 

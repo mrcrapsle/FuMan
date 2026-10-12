@@ -551,6 +551,7 @@
         .ui-pool-card .ui-card-meta { margin-top: 6px; }
         .ui-pool-cancel { min-height: 36px; margin: 2px 0 0; }
         .ui-pool-head .ui-card-sub { display: none; }
+        .ui-card-voll .ui-card-sub { display: block; -webkit-line-clamp: unset; overflow: visible; white-space: normal; }
         @media (max-height: 760px) {
             .ui-pool-card .ui-card-thumb { display: none; }
             .ui-pool-card .ui-card-head { grid-template-columns: minmax(0, 1fr) auto; }

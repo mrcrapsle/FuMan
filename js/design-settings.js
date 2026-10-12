@@ -36,13 +36,30 @@ const DESIGN_TEXT_SIZES = [
     { id: 'sehr-gross', name: 'Sehr groß', beispiel: 'Aa' }
 ];
 
+// Darstellungs-Einstellungen liegen doppelt: im localStorage (dauerhaft) und im sessionStorage (überlebt
+// das Neuladen des Tabs, auch wenn der dauerhafte Speicher kurz leer zurückkommt). Fehlt der Wert im
+// localStorage, wird er aus dem sessionStorage übernommen und zurückgeschrieben.
+function designLesen(key) {
+    let v = typeof safeLocalGet === 'function' ? safeLocalGet(key) : null;
+    if (v !== null && v !== undefined) return v;
+    try {
+        v = window.sessionStorage.getItem(key);
+        if (v !== null && typeof safeLocalSet === 'function') safeLocalSet(key, v);
+    } catch (e) { v = null; }
+    return v;
+}
+function designSchreiben(key, wert) {
+    if (typeof safeLocalSet === 'function') safeLocalSet(key, wert);
+    try { window.sessionStorage.setItem(key, wert); } catch (e) { /* gesperrt: dann bleibt nur der dauerhafte Speicher */ }
+}
+
 function getDesignTheme() {
-    const t = typeof safeLocalGet === 'function' ? safeLocalGet(DESIGN_THEME_KEY) : null;
+    const t = designLesen(DESIGN_THEME_KEY);
     return DESIGN_THEMES.some(x => x.id === t) ? t : 'flutlicht';
 }
 
 function getBewegung() {
-    const m = typeof safeLocalGet === 'function' ? safeLocalGet(DESIGN_MOTION_KEY) : null;
+    const m = designLesen(DESIGN_MOTION_KEY);
     return DESIGN_MOTION_MODES.some(x => x.id === m) ? m : 'system';
 }
 
@@ -66,7 +83,7 @@ function loeseThemeAuf(id) {
 }
 
 function getTextGroesse() {
-    const g = typeof safeLocalGet === 'function' ? safeLocalGet(DESIGN_TEXT_KEY) : null;
+    const g = designLesen(DESIGN_TEXT_KEY);
     return DESIGN_TEXT_SIZES.some(x => x.id === g) ? g : 'normal';
 }
 
@@ -104,7 +121,7 @@ function beobachteSystemTheme(aktiv) {
 function setzeDesignTheme(id) {
     const t = DESIGN_THEMES.find(x => x.id === id);
     if (!t) { showToast('Unbekanntes Farbschema.', 'error'); return; }
-    if (typeof safeLocalSet === 'function') safeLocalSet(DESIGN_THEME_KEY, id);
+    designSchreiben(DESIGN_THEME_KEY, id);
     applyDesignSettings();
     renderDesignSettings();
     showToast(`🎨 Farbschema: ${t.name}`, 'success', 1800);
@@ -113,7 +130,7 @@ function setzeDesignTheme(id) {
 function setzeBewegung(id) {
     const m = DESIGN_MOTION_MODES.find(x => x.id === id);
     if (!m) { showToast('Unbekannte Bewegungs-Einstellung.', 'error'); return; }
-    if (typeof safeLocalSet === 'function') safeLocalSet(DESIGN_MOTION_KEY, id);
+    designSchreiben(DESIGN_MOTION_KEY, id);
     applyDesignSettings();
     renderDesignSettings();
     showToast(`🎞️ Bewegung: ${m.name}`, 'success', 1800);
@@ -122,7 +139,7 @@ function setzeBewegung(id) {
 function setzeTextGroesse(id) {
     const g = DESIGN_TEXT_SIZES.find(x => x.id === id);
     if (!g) { showToast('Unbekannte Textgröße.', 'error'); return; }
-    if (typeof safeLocalSet === 'function') safeLocalSet(DESIGN_TEXT_KEY, id);
+    designSchreiben(DESIGN_TEXT_KEY, id);
     applyDesignSettings();
     renderDesignSettings();
     showToast(`🔠 Textgröße: ${g.name}`, 'success', 1800);

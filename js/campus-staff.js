@@ -321,6 +321,7 @@
                 `;
             }
             const moralTon = !s.hired ? '' : (meta.morale >= 70 ? 'gut' : (meta.morale >= 40 ? 'warn' : 'schlecht'));
+            row.classList.add('ui-card-voll'); // Aufgabenbeschreibung nicht abschneiden
             row.innerHTML = renderUiCard({
                 thumb: `<span class="ui-thumb-icon">${STAFF_ICONS[key] || '👤'}</span>`,
                 title: s.name,

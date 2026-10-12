@@ -359,7 +359,21 @@ function initModalFocus() {
             }
         }).observe(ov, { attributes: true, attributeFilter: ['class'] });
     });
+    // Fenster als Dialog kennzeichnen (Screenreader), Escape schließt das oberste Fenster wie "Tipp daneben"
+    document.querySelectorAll('.generic-modal-overlay').forEach(ov => {
+        if (!ov.getAttribute('role')) ov.setAttribute('role', 'dialog');
+        if (!ov.getAttribute('aria-modal')) ov.setAttribute('aria-modal', 'true');
+        const titel = ov.querySelector('h1, h2, h3, .generic-modal-title');
+        if (titel && !ov.getAttribute('aria-label') && !ov.getAttribute('aria-labelledby')) ov.setAttribute('aria-label', titel.textContent.replace(/\s+/g, ' ').trim().slice(0, 60));
+    });
     document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') {
+            const oben = offeneOverlays().pop();
+            if (!oben) return;
+            const zu = oben.querySelector('.generic-modal-close');
+            if (zu) { e.preventDefault(); zu.click(); }
+            return;
+        }
         if (e.key !== 'Tab') return;
         const ov = offeneOverlays().pop();
         if (!ov) return;

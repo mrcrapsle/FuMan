@@ -474,3 +474,13 @@ Die Basis-Datei nennt die Schwelle nicht im Inhalt, die Zuordnung folgt nur dem 
 - **Kartenmuster** nun auch für Training (individueller Fokus), Zweite Mannschaft (beschriftete Knöpfe statt reiner Symbole) und die Schützenauswahl im Elfmeterschießen.
 - **FAB-Verdeckung** geprüft: kein Problem, `testMobileLayout` prüft Verdeckung durch `#one-hand-fab` jetzt mit.
 - **Offen:** seltener Fehler „Theme bleibt nach Neustart nicht erhalten“ (CI, nicht lokal reproduzierbar); Diagnose im Test eingebaut.
+
+## Phase 25.55: Test-Stabilität, Fenster per Tastatur, Karten, Sichtprüfung
+
+- **Feste Wartezeiten:** 11 `waitForTimeout`/`setTimeout`-Stellen in `tests/run-tests.js` durch Zustandsprüfungen ersetzt (Neues-Spiel-Neustart, Dashboard/Büro, Verträge, i18n, Poker, a11y-Test mit „Ruhe“-Schleife). Übrig sind 100-ms-Beruhigungszeiten nach dem Start (`app-loading` weg) und Hover-Animationen im Büro-Test. Auslöser: der CI-Fehler von 3.121 („Kopfzeile am Ende“, 150 ms zu knapp).
+- **Darstellung doppelt:** `designLesen`/`designSchreiben` halten Theme, Textgröße und Bewegung in localStorage und sessionStorage; fehlt der dauerhafte Wert nach dem Neuladen, kommt er aus dem Tab-Speicher zurück. Hintergrund: der seltene Fehler „Theme nach Neustart leer“ in CI (Ursache im Browser, nicht im Spiel gefunden).
+- **Seitensprünge:** Im Code gibt es kein `scrollIntoView`/`window.scrollTo` mehr (nur innere Ticker-Listen scrollen); der Test prüft den Quelltext.
+- **Fenster:** alle 19 Fenster tragen `role="dialog"`, `aria-modal` und einen Namen aus der Überschrift; Escape schließt das oberste Fenster (Fokus-Fang und Rückgabe des Fokus gab es schon).
+- **Kartenmuster:** Zweite Mannschaft (Markt, Wechsel in die Zweite, Verliehene) und K.O.-Spiele im Europapokal; Personal-Karten zeigen die Aufgabenbeschreibung vollständig (`ui-card-voll`), Ausstiegsklausel-Feld wächst bei großer Schrift.
+- **Messung Start:** Neues Spiel 1,4 s, Spielstand laden 1,0 s (CPU 4x gedrosselt, minifiziert).
+- **Sichtprüfung:** Screenshots von 12 Bildschirmen in Flutlicht, Tageslicht und „Sehr groß“ auf 390 px; gefunden und behoben: abgeschnittene Personal-Beschreibung, zu schmales Ausstiegsklausel-Feld.
