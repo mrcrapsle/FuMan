@@ -1869,6 +1869,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
     outline-offset: 2px;
 }
 
+/* Sprunglink für Tastatur und Screenreader: unsichtbar, bis er den Fokus bekommt */
+.skip-link { position: fixed; top: 6px; left: 6px; z-index: 10001; width: auto; padding: 8px 14px; border-radius: 8px; font-size: var(--fs-small); font-weight: 800; background: var(--accent); color: var(--on-accent); border: 2px solid var(--text-main); transform: translateY(-200%); }
+.skip-link:focus { transform: translateY(0); }
+.app-content:focus { outline: none; }
+
 </style>
 </head>
 <body class="office-bg">
@@ -2024,6 +2029,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
         <button onclick="closePlayerDetail()" class="generic-modal-close">✕</button>
         <div id="pd-avatar" class="modal-avatar-photo">👤</div>
         <div style="text-align:center; font-size:var(--fs-title); font-weight:900; color:var(--text-main);" id="pd-name">Spielername</div>
+        <div id="pd-summary"></div>
         <div class="modal-field-grid" id="pd-fields"></div>
         <div style="font-size:var(--fs-body); font-weight:800; color:var(--accent); margin-top:6px;">Fähigkeiten</div>
         <div class="modal-stat-grid" id="pd-stats"></div>
@@ -2342,6 +2348,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
     </div>
 </div>
 
+<button class="skip-link" onclick="var m=document.getElementById('main-content'); if (m) { m.focus({ preventScroll: false }); }">Zum Inhalt springen</button>
 <div class="app-layout">
     <!-- HEADER -->
     <header class="app-header">
@@ -2388,7 +2395,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
     <div class="main-wrapper">
         <div class="menu-backdrop" id="menu-backdrop" onclick="closeMenuDrawer()"></div>
         <!-- SIDEBAR -->
-        <nav class="app-sidebar" id="app-sidebar">
+        <nav class="app-sidebar" id="app-sidebar" aria-label="Hauptmenü">
             <div class="nav-category" data-i18n="nav_category_main">Hauptzentrale</div>
             <button class="nav-btn active" onclick="showScreen('screen-office')" data-i18n="nav_office">🏢 Managerbüro</button>
             <button class="nav-btn" onclick="showScreen('screen-dashboard')" data-i18n="nav_dashboard">📊 FM13 Dashboard</button>
@@ -2433,7 +2440,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
         </nav>
 
         <!-- MAIN WORKSPACE -->
-        <main class="app-content">
+        <main class="app-content" id="main-content" tabindex="-1">
 
             <!-- MANAGERBÜRO: Point-and-Click-Startbildschirm (CSS-3D, siehe js/office.js) -->
             <div id="screen-office" style="display:none;">
@@ -6793,6 +6800,23 @@ function getOwnDerbyRivals() {
         // Emoji durch ein pro Spieler eindeutiges, deterministisch generiertes Porträt.
         let avatarBox = document.getElementById('pd-avatar');
         if (avatarBox) avatarBox.innerHTML = (typeof getPlayerAvatarSVG === 'function') ? getPlayerAvatarSVG(p, 76) : (({ TW: '🧤', ABW: '🛡️', MIT: '⚙️', ST: '⚽' }[p.pos] || '👤'));
+        // Kopf nach dem Kartenmuster: das Wichtigste als Chips und Werteleiste, darunter die vollständige Liste
+        let summaryBox = document.getElementById('pd-summary');
+        if (summaryBox) {
+            const verletzt = (p.timesInjured || 0) >= 3 || p.chronicIssue ? 'schlecht' : ((p.timesInjured || 0) >= 1 ? 'warn' : 'gut');
+            summaryBox.innerHTML = `
+                <div class="ui-card-meta" style="justify-content:center; margin:8px 0;">${[
+                    uiChip(`<span class="badge badge-${(p.pos || 'mit').toLowerCase()}">${p.pos}</span>`),
+                    p.age ? uiChip(`${p.age} J.`) : '',
+                    uiChip(p.nation || 'Deutschland'),
+                    p.character ? uiChip(p.character) : '',
+                    p.agent ? uiChip('🕴️ Berater') : '',
+                    pool === 'squad' || pool === 'secondTeam' ? uiChip(`📄 ${p.contracts ?? '-'} J. Vertrag`, (p.contracts ?? 9) <= 1 ? 'schlecht' : ((p.contracts ?? 9) === 2 ? 'warn' : '')) : '',
+                    (pool === 'squad' || pool === 'secondTeam') ? uiChip(verletzt === 'gut' ? 'Robust' : 'Verletzungsanfällig', verletzt) : ''
+                ].join('')}</div>
+                ${renderUiStatRow([['Stärke', p.strength], ['Moral', p.morale ?? '-'], ['Fitness', p.fitness ?? '-'], ['Marktwert', formatVal(p.marketValue || 0)]])}
+                <div class="ui-overline" style="font-size:var(--fs-caption); color:var(--text-muted); margin:12px 0 4px; text-align:left;">Alle Angaben</div>`;
+        }
         document.getElementById('pd-fields').innerHTML = `
             <span class="label">Position:</span><span class="val">${p.pos}${p.secondaryPositions && p.secondaryPositions.length ? ' (' + p.secondaryPositions.join(', ') + ')' : ''}</span>
             <span class="label">Nation:</span><span class="val">${p.nation || 'Deutschland'}</span>
@@ -38485,7 +38509,7 @@ function renderSaveSafetyBox() {
     };
 </script>
     <!-- BOTTOM-NAVIGATION: Schnellzugriff auf die 5 wichtigsten Bereiche -->
-    <nav class="bottom-nav-bar">
+    <nav class="bottom-nav-bar" aria-label="Schnellzugriff">
         <button class="nav-btn bottom-nav-item active" onclick="showScreen('screen-dashboard')"><span class="bn-icon">📊</span>Start</button>
         <button class="nav-btn bottom-nav-item" onclick="showScreen('screen-squad')"><span class="bn-icon">⚽</span>Kader</button>
         <button class="nav-btn bottom-nav-item" onclick="showScreen('screen-transfer')"><span class="bn-icon">🤝</span>Transfer</button>

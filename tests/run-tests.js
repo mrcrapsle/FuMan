@@ -3052,6 +3052,21 @@ async function testFensterTastaturUndSpeicher(browser) {
     const nachPfeil = await page.evaluate(() => ({ fans: document.getElementById('screen-fans').style.display === 'block', aktiv: document.querySelector('#hubtab-btn-screen-fans')?.getAttribute('aria-selected'), fokus: document.activeElement.id }));
     await page.keyboard.press('Home');
     const nachHome = await page.evaluate(() => document.getElementById('screen-stadium').style.display === 'block');
+    // Orientierung: ein Hauptbereich, benannte Navigationen, Sprunglink setzt den Fokus auf den Inhalt
+    const orient = await page.evaluate(() => {
+        document.querySelector('.skip-link').click();
+        return { main: document.querySelectorAll('main').length, header: document.querySelectorAll('header').length,
+            navs: [...document.querySelectorAll('nav')].map(n => n.getAttribute('aria-label') || ''), fokus: document.activeElement.id, skip: !!document.querySelector('.skip-link') };
+    });
+    // Spielerdetail: Kopf mit Chips und Werteleiste vor der vollständigen Liste
+    const detail = await page.evaluate(() => {
+        openPlayerDetail(squad[0].id);
+        const sum = document.getElementById('pd-summary');
+        const werte = [...sum.querySelectorAll('.ui-stat-row span')].map(e => e.textContent.trim());
+        const out = { chips: sum.querySelectorAll('.ui-chip').length, werte, alleAngaben: sum.textContent.includes('Alle Angaben'), liste: document.getElementById('pd-fields').textContent.includes('Marktwert') };
+        document.querySelectorAll('.generic-modal-overlay.show').forEach(o => o.classList.remove('show'));
+        return out;
+    });
     // Meldung: Statusbereich, Antippen schließt, sie verdeckt den Weiter-Knopf nicht
     const toast = await page.evaluate(async () => {
         showToast('Probe-Meldung', 'success', 8000);
@@ -3079,6 +3094,8 @@ async function testFensterTastaturUndSpeicher(browser) {
     assert(toast.rolle === 'status' && toast.live === 'polite' && toast.sichtbar, `Meldung ist ein Statusbereich (${JSON.stringify(toast)})`);
     assert(toast.fab && !toast.ueberdeckt, `Meldung verdeckt den sichtbaren Weiter-Knopf nicht (${JSON.stringify(toast)})`);
     assert(toast.zu, 'Antippen schließt die Meldung');
+    assert(orient.main === 1 && orient.header === 1 && orient.navs.length >= 2 && orient.navs.every(n => n.length > 2) && orient.fokus === 'main-content' && orient.skip, `Genau ein Hauptbereich, benannte Navigationen, Sprunglink fokussiert den Inhalt (${JSON.stringify(orient)})`);
+    assert(detail.chips >= 4 && ['Stärke', 'Moral', 'Fitness', 'Marktwert'].every(w => detail.werte.includes(w)) && detail.alleAngaben && detail.liste, `Spielerdetail zeigt Chips und Werteleiste vor der vollständigen Liste (${JSON.stringify(detail)})`);
     assert(nach.theme === 'klassik' && nach.groesse === 'gross' && nach.zurueck, `Darstellung kommt nach leerem Speicher aus dem Tab-Speicher zurück (${JSON.stringify(nach)})`);
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
     await page.close();

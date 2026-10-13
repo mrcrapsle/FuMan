@@ -1859,3 +1859,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
     outline: 2px solid var(--accent, var(--europe));
     outline-offset: 2px;
 }
+
+/* Sprunglink für Tastatur und Screenreader: unsichtbar, bis er den Fokus bekommt */
+.skip-link { position: fixed; top: 6px; left: 6px; z-index: 10001; width: auto; padding: 8px 14px; border-radius: 8px; font-size: var(--fs-small); font-weight: 800; background: var(--accent); color: var(--on-accent); border: 2px solid var(--text-main); transform: translateY(-200%); }
+.skip-link:focus { transform: translateY(0); }
+.app-content:focus { outline: none; }

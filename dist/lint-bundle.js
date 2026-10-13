@@ -2312,6 +2312,23 @@ function getOwnDerbyRivals() {
         // Emoji durch ein pro Spieler eindeutiges, deterministisch generiertes Porträt.
         let avatarBox = document.getElementById('pd-avatar');
         if (avatarBox) avatarBox.innerHTML = (typeof getPlayerAvatarSVG === 'function') ? getPlayerAvatarSVG(p, 76) : (({ TW: '🧤', ABW: '🛡️', MIT: '⚙️', ST: '⚽' }[p.pos] || '👤'));
+        // Kopf nach dem Kartenmuster: das Wichtigste als Chips und Werteleiste, darunter die vollständige Liste
+        let summaryBox = document.getElementById('pd-summary');
+        if (summaryBox) {
+            const verletzt = (p.timesInjured || 0) >= 3 || p.chronicIssue ? 'schlecht' : ((p.timesInjured || 0) >= 1 ? 'warn' : 'gut');
+            summaryBox.innerHTML = `
+                <div class="ui-card-meta" style="justify-content:center; margin:8px 0;">${[
+                    uiChip(`<span class="badge badge-${(p.pos || 'mit').toLowerCase()}">${p.pos}</span>`),
+                    p.age ? uiChip(`${p.age} J.`) : '',
+                    uiChip(p.nation || 'Deutschland'),
+                    p.character ? uiChip(p.character) : '',
+                    p.agent ? uiChip('🕴️ Berater') : '',
+                    pool === 'squad' || pool === 'secondTeam' ? uiChip(`📄 ${p.contracts ?? '-'} J. Vertrag`, (p.contracts ?? 9) <= 1 ? 'schlecht' : ((p.contracts ?? 9) === 2 ? 'warn' : '')) : '',
+                    (pool === 'squad' || pool === 'secondTeam') ? uiChip(verletzt === 'gut' ? 'Robust' : 'Verletzungsanfällig', verletzt) : ''
+                ].join('')}</div>
+                ${renderUiStatRow([['Stärke', p.strength], ['Moral', p.morale ?? '-'], ['Fitness', p.fitness ?? '-'], ['Marktwert', formatVal(p.marketValue || 0)]])}
+                <div class="ui-overline" style="font-size:var(--fs-caption); color:var(--text-muted); margin:12px 0 4px; text-align:left;">Alle Angaben</div>`;
+        }
         document.getElementById('pd-fields').innerHTML = `
             <span class="label">Position:</span><span class="val">${p.pos}${p.secondaryPositions && p.secondaryPositions.length ? ' (' + p.secondaryPositions.join(', ') + ')' : ''}</span>
             <span class="label">Nation:</span><span class="val">${p.nation || 'Deutschland'}</span>
