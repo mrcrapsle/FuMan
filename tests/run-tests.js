@@ -3190,6 +3190,80 @@ async function testSpielvorbereitung(browser) {
     await page.close();
 }
 
+async function testVertragsWerkzeuge(browser) {
+    console.log('\n[26.2] Vertrags- und Transfer-Werkzeuge: Gehalts-Ampel, Verlängerungs-Assistent, Marktwert-Kurve, Transferbilanz, Entwicklungsprognose');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        const out = {};
+        // Gehalts-Ampel
+        const p = squad[3]; const markt = calculatePlayerWage(p.marketValue, p.strength);
+        const text = f => { p.wage = Math.round(markt * f); return getWageRating(p); };
+        out.ampel = [text(0.7).ton, text(1.0).ton, text(1.3).ton, text(1.6).ton].join(',');
+        p.wage = Math.round(markt * 1.6);
+        showScreen('screen-contracts'); renderContractsView();
+        out.ampelImKartenChip = document.getElementById('contracts-list').textContent.includes('Überbezahlt');
+        p.wage = markt;
+        // Verlängerungs-Assistent
+        squad.forEach(x => { x.contracts = 4; });
+        const a = squad[0], b = squad[1], c = squad[2];
+        a.contracts = 1; b.contracts = 0; c.contracts = 1; c.preContractSigned = 'FC Test';
+        game.money = 900000000; game.wageBudget = 900000000;
+        openRenewalAssistant();
+        out.offen = document.getElementById('renewal-assistant-overlay').classList.contains('show');
+        out.karten = document.querySelectorAll('#renewal-assistant-content .player-card').length;
+        out.gesperrt = [...document.querySelectorAll('#renewal-assistant-content .player-card')].some(k => k.textContent.includes(c.name) && k.textContent.includes('Vorvertrag') && k.querySelector('button.btn-action').disabled);
+        const v = getRenewalProposal(a); const geldVor = game.money; const restVor = a.contracts;
+        renewWithProposal(a.id);
+        out.verlaengert = a.contracts === restVor + v.jahre && a.wage === v.gehalt && game.money === geldVor - v.kosten;
+        out.talkFrei = typeof contractTalk === 'undefined' || contractTalk === null;
+        // Kasse zu knapp: nichts passiert, kein offenes Gespräch
+        game.money = 0; const bVor = b.contracts; renewWithProposal(b.id);
+        out.kasse = b.contracts === bVor && (typeof contractTalk === 'undefined' || contractTalk === null);
+        closeRenewalAssistant();
+        game.money = 900000000;
+        // Marktwert-Kurve
+        const q = squad[4]; q.strengthHistory = [{ season: 1, strength: q.strength - 6 }, { season: 2, strength: q.strength - 3 }, { season: 3, strength: q.strength }];
+        game.season = 3;
+        showScreen('screen-squad'); openPlayerDetail(q.id);
+        const kurve = document.getElementById('pd-marketcurve');
+        out.kurve = kurve.querySelectorAll('circle').length === 3 && kurve.textContent.includes('Marktwert');
+        out.kurveWerte = getMarketValueCurve(q).length === 3 && getMarketValueCurve(q)[0].wert <= getMarketValueCurve(q)[2].wert;
+        // Entwicklungsprognose
+        const jung = squad[5]; jung.age = 20; jung.archetype = 'early-bloomer';
+        const alt = squad[6]; alt.age = 34; alt.archetype = 'steady-eddy';
+        const fj = getDevelopmentForecast(jung), fa = getDevelopmentForecast(alt);
+        out.prognoseJung = fj.ergebnis.length === 3 && fj.ergebnis.every(e => e.tief <= e.hoch) && fj.ergebnis[2].hoch > jung.strength && fj.ergebnis[0].alter === 21;
+        out.prognoseAlt = fa.ergebnis[2].tief < alt.strength && fa.ergebnis[2].hoch <= alt.strength;
+        openPlayerDetail(jung.id);
+        out.prognoseBox = document.getElementById('pd-forecast').textContent.includes('Entwicklungsprognose') && document.getElementById('pd-forecast').querySelectorAll('.ui-chip').length === 3;
+        document.querySelectorAll('.generic-modal-overlay.show').forEach(o => o.classList.remove('show'));
+        // Transferbilanz je Saison
+        game.kontoauszug = [{ season: 3, matchday: 5, label: '🛒 Spielerkauf', amount: -500000, saldo: 0 }, { season: 3, matchday: 9, label: '💰 Spielerverkauf', amount: 800000, saldo: 0 }];
+        archiveTransferBilanz(); archiveTransferBilanz();
+        const hist = game.transferBilanzHistory;
+        out.bilanz = hist.length === 1 && hist[0].season === 3 && hist[0].kauf === 500000 && hist[0].verkauf === 800000 && hist[0].netto === 300000;
+        game.kontoauszug = [];
+        out.bilanzAnzeige = renderTransferBilanzBox().includes('Frühere Saisons') && renderTransferBilanzBox().includes('Saison 3');
+        delete game.transferBilanzHistory; archiveTransferBilanz(); out.altesFeld = Array.isArray(game.transferBilanzHistory);
+        return out;
+    });
+    assert(r.ampel === 'gut,,warn,schlecht', `Gehalts-Ampel: günstig, marktüblich, teuer, überbezahlt (${r.ampel})`);
+    assert(r.ampelImKartenChip, 'Die Vertragskarte zeigt die Gehalts-Ampel');
+    assert(r.offen && r.karten === 3, `Der Verlängerungs-Assistent listet auslaufende Verträge (${r.karten})`);
+    assert(r.gesperrt, 'Wer einen Vorvertrag unterschrieben hat, ist gesperrt, mit Begründung');
+    assert(r.verlaengert && r.talkFrei, 'Verlängern zum Angebot: Laufzeit, Gehalt und Handgeld wie im Vorschlag, kein Gespräch bleibt offen');
+    assert(r.kasse, 'Bei zu knapper Kasse passiert nichts');
+    assert(r.kurve && r.kurveWerte, 'Marktwert-Kurve im Spielerdetail mit einem Punkt je Saison');
+    assert(r.prognoseJung && r.prognoseAlt, `Prognose: Junge legen zu, Alte bauen ab (${JSON.stringify([r.prognoseJung, r.prognoseAlt])})`);
+    assert(r.prognoseBox, 'Das Spielerdetail zeigt die Entwicklungsprognose mit drei Jahren');
+    assert(r.bilanz && r.altesFeld, 'Transferbilanz wird je Saison festgehalten (nur einmal je Saison, alte Spielstände ergänzt)');
+    assert(r.bilanzAnzeige, 'Frühere Saisons erscheinen in der Transferbilanz');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testBoardEarlyWarning(browser) {
     console.log('\n[25.24] Vorstand: Frühwarnung schon unter 50 Zufriedenheit, einmal pro Saison');
     const { page, consoleErrors } = await freshPage(browser);
@@ -10672,6 +10746,7 @@ async function main() {
         testKopfzeileHinweisUndPokerFenster,
         testFensterTastaturUndSpeicher,
         testSpielvorbereitung,
+        testVertragsWerkzeuge,
         testEntlassungsGrund,
         testEnglishUi,
         testSwapDeals,

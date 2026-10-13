@@ -233,6 +233,7 @@ function applyCashSurplusBudgets() {
 const EMERGENCY_WAGE_FLOOR = [50000, 15000, 3000, 1000, 400, 150];
 
 function concludeSeasonAndAdvance() {
+        if (typeof archiveTransferBilanz === 'function') archiveTransferBilanz();
         // Erfolgsbasierte Vertragsboni (js/bonusclauses.js): das Aufstiegsbonus-Flag wird
         // bewusst HIER, ganz am Anfang, zurückgesetzt - nicht in der allgemeinen
         // Saisonstatistik-Reset-Schleife weiter unten. Der Aufstieg dieser (gerade endenden)

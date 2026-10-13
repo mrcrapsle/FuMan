@@ -51,6 +51,7 @@
             row.className = 'panel player-card';
             row.style.cssText = 'margin-bottom:8px; padding:10px;';
             const laufzeitTon = p.contracts <= 1 ? 'schlecht' : (p.contracts === 2 ? 'warn' : '');
+            const lohn = typeof getWageRating === 'function' ? getWageRating(p) : null;
             const offen = contractsFoldOffen.has(p.id) || imGespraech;
             // Kartenmuster: Bild mit Position, Name, Laufzeit und Gehalt, Zustand als Chips, Stärke groß; Klauseln und Boni klappen auf
             row.innerHTML = renderUiCard({
@@ -59,6 +60,7 @@
                 sub: `${p.age ? p.age + ' J. · ' : ''}${formatVal(p.wage)}/SpT`,
                 meta: [
                     uiChip(`📄 ${p.contracts} J. Rest`, laufzeitTon),
+                    lohn ? uiChip(lohn.text, lohn.ton) : '',
                     p.agent ? uiChip(`🕴️ Berater`) : '',
                     p.playtimePromise ? uiChip('🤝 Einsatzgarantie') : '',
                     p.preContractOffer ? uiChip(`⚠️ ${p.preContractOffer.club} lockt - Frist SpT ${p.preContractOffer.deadline}`, 'schlecht') : '',

@@ -89,6 +89,7 @@
                     uiChip(p.nation || 'Deutschland'),
                     p.character ? uiChip(p.character) : '',
                     p.agent ? uiChip('🕴️ Berater') : '',
+                    (pool === 'squad' && typeof getWageRating === 'function') ? (w => uiChip(w.text, w.ton))(getWageRating(p)) : '',
                     pool === 'squad' || pool === 'secondTeam' ? uiChip(`📄 ${p.contracts ?? '-'} J. Vertrag`, (p.contracts ?? 9) <= 1 ? 'schlecht' : ((p.contracts ?? 9) === 2 ? 'warn' : '')) : '',
                     (pool === 'squad' || pool === 'secondTeam') ? uiChip(verletzt === 'gut' ? 'Robust' : 'Verletzungsanfällig', verletzt) : ''
                 ].join('')}</div>
@@ -145,6 +146,8 @@
         // Spielerwert-Entwicklungskurve: eine kleine SVG-Sparkline zeigt, wie sich die
         // Stärke des Spielers über die Saisons entwickelt hat - bisher gab es nur den
         // aktuellen Momentanwert ohne jede historische Einordnung.
+        if (typeof renderMarketValueCurve === 'function') renderMarketValueCurve(p);
+        if (typeof renderDevelopmentForecast === 'function') renderDevelopmentForecast(p);
         let historyBox = document.getElementById('pd-strength-history');
         if (historyBox) {
             let hist = p.strengthHistory && p.strengthHistory.length > 1 ? p.strengthHistory : null;

@@ -951,8 +951,9 @@
 
     function renderTransferBilanzBox() {
         const b = getTransferBilanz(game.season);
+        const fruehere = typeof renderTransferBilanzHistory === 'function' ? renderTransferBilanzHistory() : '';
         if (b.verkauf + b.weiterverkauf + b.kauf + b.handgeld === 0) {
-            return `<div class="box" style="margin-bottom:6px; font-size:var(--fs-small); color:var(--text-muted);">🔁 Noch keine Transfer-Buchungen in dieser Saison.</div>`;
+            return `<div class="box" style="margin-bottom:6px; font-size:var(--fs-small); color:var(--text-muted);">🔁 Noch keine Transfer-Buchungen in dieser Saison.</div>` + fruehere;
         }
         const zeile = (name, wert, farbe) => `<div style="display:flex; justify-content:space-between; font-size:var(--fs-small); margin-top:3px;"><span>${name}</span><strong style="color:${farbe};">${formatVal(wert)}</strong></div>`;
         return `<div class="box" style="margin-bottom:6px;">
@@ -962,7 +963,7 @@
             ${zeile('Spielerkäufe', -b.kauf, 'var(--danger)')}
             ${zeile('Handgelder', -b.handgeld, 'var(--danger)')}
             <div style="display:flex; justify-content:space-between; font-size:var(--fs-body); margin-top:4px; border-top:1px solid color-mix(in srgb, var(--europe) 30%, var(--surface-1)); padding-top:3px;"><span>Netto</span><strong style="color:${b.netto >= 0 ? 'var(--primary)' : 'var(--danger)'};">${b.netto >= 0 ? '+' : ''}${formatVal(b.netto)}</strong></div>
-        </div>`;
+        </div>` + fruehere;
     }
 
     function renderKontoauszug(box) {

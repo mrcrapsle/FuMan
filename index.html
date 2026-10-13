@@ -166,6 +166,8 @@
         <div style="font-size:var(--fs-body); font-weight:800; color:var(--accent); margin-top:6px;">Fähigkeiten</div>
         <div class="modal-stat-grid" id="pd-stats"></div>
         <div id="pd-strength-history" style="margin-top:8px; text-align:center;"></div>
+        <div id="pd-marketcurve" style="margin-top:8px; text-align:center;"></div>
+        <div id="pd-forecast"></div>
         <div id="pd-career-progression" style="display:none; margin-top:6px;"></div>
         <div id="pd-scouting-report" style="display:none; margin-top:6px;"></div>
         <button onclick="closePlayerDetail()" class="btn-primary" style="margin-top:10px;">Schließen</button>
@@ -206,6 +208,14 @@
     <div class="generic-modal-box">
         <button onclick="closeCandidatePool()" class="generic-modal-close" aria-label="Schließen">✕</button>
         <div id="staff-pool-content"></div>
+    </div>
+</div>
+
+<!-- VERLÄNGERUNGS-ASSISTENT (js/contract-tools.js) -->
+<div id="renewal-assistant-overlay" class="generic-modal-overlay">
+    <div class="generic-modal-box">
+        <button onclick="closeRenewalAssistant()" class="generic-modal-close" aria-label="Schließen">✕</button>
+        <div id="renewal-assistant-content"></div>
     </div>
 </div>
 
@@ -2033,6 +2043,7 @@
                 </div>
                 <div class="panel">
                     <div class="panel-header">📝 Vertragsverwaltung</div>
+                    <button onclick="openRenewalAssistant()" class="btn-action" style="margin-bottom:8px;">🤝 Verlängerungs-Assistent (auslaufende Verträge)</button>
                     <div id="contracts-list"></div>
                 </div>
             </div>
@@ -2677,6 +2688,7 @@
 <script src="js/academy-ranking.js?v=2.1"></script>
 <script src="js/bonusclauses.js?v=2.1"></script>
 <script src="js/contracts.js?v=2.1"></script>
+<script src="js/contract-tools.js?v=3.127"></script>
 <script src="js/private-life.js?v=2.1"></script>
 <script src="js/player-scandals.js?v=2.1"></script>
 <script src="js/underworld.js?v=2.1"></script>

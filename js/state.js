@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.126', date: '13.10.2026', features: 'Phase 26.1 (Spielvorbereitung): Aufstellungs- und Taktikvorlagen, Spieltag-Check mit Aufstellungs-Check, Wer fehlt? und Rotations-Assistent' };
+    const GAME_VERSION = { number: '3.127', date: '13.10.2026', features: 'Phase 26.2 (Verträge und Transfers): Gehalts-Ampel, Verlängerungs-Assistent, Marktwert-Kurve, Transferbilanz je Saison, Entwicklungsprognose' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -109,6 +109,7 @@
         pendingSponsorActivation: null,
         teamInstructions: { gegenpressing: false, tiefStehen: false, hoheAV: false },
         tacticAutomation: { offensivBeiRueckstand: false, defensivBeiFuehrung: false },
+        transferBilanzHistory: [],
         lineupPresets: [null, null, null, null, null],
         tacticPresets: [null, null, null, null, null],
         fanSupport: {},
