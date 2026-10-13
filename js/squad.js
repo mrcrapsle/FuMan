@@ -796,6 +796,7 @@
 
     function renderSquadView() {
         if (typeof renderMatchPrepPanels === 'function') renderMatchPrepPanels();
+        if (typeof renderInsightsPanels === 'function') renderInsightsPanels();
         if (typeof renderNationalTeamPanel === 'function') renderNationalTeamPanel();
         renderSquadOverviewBox();
         renderSquadDepthChart();

@@ -74,6 +74,7 @@ function gradeOwnMatch(ourGoals, oppGoals) {
         st.notenSumme += note;
         if (note <= 1.5) st.elf++;
         p.lastGrade = note;
+        if (typeof recordPlayerFormGrade === 'function') recordPlayerFormGrade(p, note);
         if (!bester || note < bester.note) bester = { p, note };
     });
     const elf = starter.filter(p => p.lastGrade <= 1.5);

@@ -93,7 +93,7 @@
                     pool === 'squad' || pool === 'secondTeam' ? uiChip(`📄 ${p.contracts ?? '-'} J. Vertrag`, (p.contracts ?? 9) <= 1 ? 'schlecht' : ((p.contracts ?? 9) === 2 ? 'warn' : '')) : '',
                     (pool === 'squad' || pool === 'secondTeam') ? uiChip(verletzt === 'gut' ? 'Robust' : 'Verletzungsanfällig', verletzt) : ''
                 ].join('')}</div>
-                ${renderUiStatRow([['Stärke', p.strength], ['Moral', p.morale ?? '-'], ['Fitness', p.fitness ?? '-'], ['Marktwert', formatVal(p.marketValue || 0)]])}
+                ${renderUiStatRow(typeof fw === 'function' ? [[fw('Stärke'), p.strength], [fw('Moral'), p.morale ?? '-'], [fw('Fitness'), p.fitness ?? '-'], [fw('Marktwert'), formatVal(p.marketValue || 0)]] : [['Stärke', p.strength], ['Moral', p.morale ?? '-'], ['Fitness', p.fitness ?? '-'], ['Marktwert', formatVal(p.marketValue || 0)]])}
                 <div class="ui-overline" style="font-size:var(--fs-caption); color:var(--text-muted); margin:12px 0 4px; text-align:left;">Alle Angaben</div>`;
         }
         document.getElementById('pd-fields').innerHTML = `
@@ -105,8 +105,8 @@
             ${typeof p.potential === 'number' && typeof getYouthPotentialText === 'function' ? `<span class="label">Potenzial:</span><span class="val">${getYouthPotentialText(p)}</span>` : ''}
             ${p.potentialRevealed && typeof p.potential === 'number' && typeof getKaderMedian === 'function' && getKaderMedian() !== null ? `<span class="label">Kader-Median:</span><span class="val">${getKaderMedian()} (Potenzial ${p.potential < getKaderMedian() ? 'darunter' : 'erreicht oder darüber'})</span>` : ''}
             ${(pool === 'squad' || pool === 'secondTeam') && typeof getTrainingGainsLabel === 'function' ? `<span class="label">Trainingsplus:</span><span class="val">${getTrainingGainsLabel(p)}</span>` : ''}
-            <span class="label">Moral:</span><span class="val">${p.morale ?? '-'}</span>
-            <span class="label">Fitness:</span><span class="val">${p.fitness ?? '-'}</span>
+            <span class="label">${typeof fw === 'function' ? fw('Moral') : 'Moral'}:</span><span class="val">${p.morale ?? '-'}</span>
+            <span class="label">${typeof fw === 'function' ? fw('Fitness') : 'Fitness'}:</span><span class="val">${p.fitness ?? '-'}</span>
             <span class="label">Größe:</span><span class="val">${p.height ? p.height + ' cm' : '-'}</span>
             <span class="label">Persönlichkeit:</span><span class="val">${p.personality || '-'}</span>
             <span class="label">Charakter:</span><span class="val">${p.character || '-'}</span>
@@ -117,7 +117,7 @@
             <span class="label">Kabinen-Freund:</span><span class="val">${p.friendPlayerId ? (squad.find(x => x.id === p.friendPlayerId)?.name || '-') : 'Keiner'}</span>
             <span class="label">Elfmeter-Quote:</span><span class="val">${(p.penaltiesTaken || 0) > 0 ? `${p.penaltiesScored}/${p.penaltiesTaken} (${Math.round((p.penaltiesScored/p.penaltiesTaken)*100)}%)` : 'Noch keine Schüsse'}</span>
             <span class="label">Publikumsliebling:</span><span class="val">${p.isCrowdFavorite ? '❤️ Ja (aktuelle Saison)' : 'Nein'}</span>
-            <span class="label">Marktwert:</span><span class="val">${formatVal(p.marketValue || 0)}</span>
+            <span class="label">${typeof fw === 'function' ? fw('Marktwert') : 'Marktwert'}:</span><span class="val">${formatVal(p.marketValue || 0)}</span>
         `;
         // Eigene Notiz zu diesem Spieler für die laufende Saison (25.40), nur für den eigenen Kader.
         if (pool === 'squad') {
@@ -146,6 +146,7 @@
         // Spielerwert-Entwicklungskurve: eine kleine SVG-Sparkline zeigt, wie sich die
         // Stärke des Spielers über die Saisons entwickelt hat - bisher gab es nur den
         // aktuellen Momentanwert ohne jede historische Einordnung.
+        if (typeof renderPlayerForm === 'function') renderPlayerForm(p);
         if (typeof renderMarketValueCurve === 'function') renderMarketValueCurve(p);
         if (typeof renderDevelopmentForecast === 'function') renderDevelopmentForecast(p);
         let historyBox = document.getElementById('pd-strength-history');

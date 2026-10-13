@@ -1864,3 +1864,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .skip-link { position: fixed; top: 6px; left: 6px; z-index: 10001; width: auto; padding: 8px 14px; border-radius: 8px; font-size: var(--fs-small); font-weight: 800; background: var(--accent); color: var(--on-accent); border: 2px solid var(--text-main); transform: translateY(-200%); }
 .skip-link:focus { transform: translateY(0); }
 .app-content:focus { outline: none; }
+
+/* Fachwörter (js/insights.js): antippbar, öffnen den Lexikon-Eintrag */
+.fachwort { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
+.fachwort:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }

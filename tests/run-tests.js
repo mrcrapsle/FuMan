@@ -3264,6 +3264,90 @@ async function testVertragsWerkzeuge(browser) {
     await page.close();
 }
 
+async function testStatistikWerkzeuge(browser) {
+    console.log('\n[26.3] Statistik und Information: Serien, Formkurve, CSV, Spielbericht teilen, Fachwort-Hilfe');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        const out = {};
+        // Serien: Buchführung
+        game.serien = { aktuell: {}, rekord: {} };
+        recordOwnLeagueResult(2, 0, true); recordOwnLeagueResult(1, 0, false);
+        const a = { ...game.serien.aktuell };
+        out.serie1 = a.sieg === 2 && a.unbesiegt === 2 && a.zuNull === 2 && a.heimSieg === 1;
+        recordOwnLeagueResult(0, 0, true);
+        const b = { ...game.serien.aktuell };
+        out.serie2 = b.sieg === 0 && b.unbesiegt === 3 && b.ohneSieg === 1 && b.torlos === 1 && b.heimSieg === 0 && b.zuNull === 3;
+        recordOwnLeagueResult(0, 1, true);
+        const c = game.serien.aktuell;
+        out.serie3 = c.niederlage === 1 && c.unbesiegt === 0 && c.zuNull === 0 && c.torlos === 2 && game.serien.rekord.sieg.n === 2 && game.serien.rekord.unbesiegt.n === 3;
+        // Echter Ablauf: die Serien laufen mit den simulierten Ligaspielen
+        game.serien = { aktuell: {}, rekord: {} };
+        game.sackPending = false; simulateMatchdays(3);
+        const n = game.serien.aktuell;
+        out.echt = n.sieg + n.ohneSieg > 0 && (n.sieg > 0 || n.ohneSieg >= 1) && Object.keys(game.serien.rekord).length > 0;
+        showScreen('screen-squad'); setSquadTab('analyse');
+        out.serieAnzeige = document.getElementById('series-tracker-box').textContent.includes('Siegesserie') && document.getElementById('series-tracker-box').textContent.includes('Rekord');
+        // Formkurve
+        const stamm = squad.find(p => lineup.includes(p.id));
+        out.formNoten = Array.isArray(stamm.formNoten) && stamm.formNoten.length >= 1 && stamm.formNoten.length <= 5;
+        const t = squad[7]; t.formNoten = []; [3, 3, 3, 3, 3, 2, 2].forEach(x => recordPlayerFormGrade(t, x));
+        out.formMax5 = t.formNoten.length === 5 && t.formNoten[4] === 2;
+        out.trend = getFormTrend([4, 4, 3, 2, 2]) + '|' + getFormTrend([2, 2, 3, 4, 4]) + '|' + getFormTrend([3, 3, 3, 3, 3]) + '|' + getFormTrend([2, 3]);
+        t.formNoten = [4, 4, 3, 2, 2];
+        openPlayerDetail(t.id);
+        out.formAnzeige = document.getElementById('pd-form').textContent.includes('Formkurve') && document.querySelectorAll('#pd-form .ui-chip').length >= 6;
+        // Fachwort-Hilfe
+        const ziele = [...document.querySelectorAll('#pd-summary [data-fachwort], #pd-fields [data-fachwort]')];
+        out.fachworte = ziele.length >= 6 && ziele.every(el => !!findFachwort(el.dataset.fachwort));
+        document.querySelector('#pd-summary [data-fachwort="Moral"]').click();
+        const ov = document.getElementById('fachwort-overlay');
+        out.fachwortOffen = ov.classList.contains('show') && document.getElementById('fachwort-content').textContent.includes('Moral');
+        closeFachwort();
+        document.querySelectorAll('.generic-modal-overlay.show').forEach(o => o.classList.remove('show'));
+        // CSV
+        squad[0].name = 'Max; "Maxi" Test';
+        const csv = buildKaderCsv();
+        const zeilen = csv.replace(/^\ufeff/, '').trim().split('\r\n');
+        out.csvKopf = csv.charCodeAt(0) === 0xFEFF && zeilen[0].startsWith('Name;Position;Alter');
+        out.csvZeilen = zeilen.length === squad.length + 1;
+        out.csvEscape = csv.includes('"Max; ""Maxi"" Test"');
+        const tab = buildTabelleCsv().replace(/^\ufeff/, '').trim().split('\r\n');
+        out.csvTabelle = tab.length === leaguesData[game.leagueLevel].length + 1 && tab[1].startsWith('1;');
+        exportKaderCsv();
+        out.csvToast = document.getElementById('app-toast').innerText.includes('exportiert');
+        return out;
+    });
+    const teilen = await page.evaluate(() => {
+        const out = {};
+        game.sackPending = false;
+        startMatchdayFlow(); skipPressAndPlay(); stopLiveTickerAutoplay();
+        out.knopfVorher = document.getElementById('btn-share-match').style.display === 'none';
+        simulateRestOfMatch();
+        out.knopf = document.getElementById('btn-share-match').style.display !== 'none';
+        openShareReport();
+        const text = document.getElementById('share-report-text').value;
+        out.text = text.includes(game.clubName) && text.includes('Spieltag') && /\d+:\d+/.test(text) && text.includes('Anstoß Mobile Pro');
+        out.offen = document.getElementById('share-report-overlay').classList.contains('show');
+        copyShareReport();
+        closeShareReport();
+        return out;
+    });
+    assert(r.serie1 && r.serie2 && r.serie3, `Serien-Buchführung: Siege, Ungeschlagen, Heimsiege, zu Null, ohne Tor, Niederlagen (${JSON.stringify([r.serie1, r.serie2, r.serie3])})`);
+    assert(r.echt && r.serieAnzeige, 'Serien laufen mit den echten Ligaspielen und erscheinen im Reiter Analyse');
+    assert(r.formNoten && r.formMax5, 'Je Spieler werden die letzten fünf Noten gemerkt');
+    assert(r.trend === 'steigend|fallend|stabil|null', `Formtrend (${r.trend})`);
+    assert(r.formAnzeige, 'Das Spielerdetail zeigt die Formkurve mit Noten, Schnitt und Trend');
+    assert(r.fachworte && r.fachwortOffen, 'Fachwörter im Spielerdetail öffnen den Lexikon-Eintrag als Fenster');
+    assert(r.csvKopf && r.csvZeilen && r.csvEscape, `Kader-CSV: BOM, Kopfzeile, eine Zeile je Spieler, Semikolon und Anführungszeichen maskiert (${JSON.stringify([r.csvKopf, r.csvZeilen, r.csvEscape])})`);
+    assert(r.csvTabelle && r.csvToast, 'Tabellen-CSV und Export melden sich');
+    assert(teilen.knopfVorher && teilen.knopf, 'Der Teilen-Knopf erscheint erst nach Abpfiff');
+    assert(teilen.text && teilen.offen, 'Der Spielbericht enthält Vereine, Ergebnis, Spieltag und Signatur');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testBoardEarlyWarning(browser) {
     console.log('\n[25.24] Vorstand: Frühwarnung schon unter 50 Zufriedenheit, einmal pro Saison');
     const { page, consoleErrors } = await freshPage(browser);
@@ -10747,6 +10831,7 @@ async function main() {
         testFensterTastaturUndSpeicher,
         testSpielvorbereitung,
         testVertragsWerkzeuge,
+        testStatistikWerkzeuge,
         testEntlassungsGrund,
         testEnglishUi,
         testSwapDeals,

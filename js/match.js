@@ -444,6 +444,7 @@
 
         document.getElementById('btn-next-step').style.display = 'inline-block';
         document.getElementById('btn-finish-match').style.display = 'none';
+        const teilenKnopf = document.getElementById('btn-share-match'); if (teilenKnopf) teilenKnopf.style.display = 'none';
         document.getElementById('btn-finish-match').innerText = '✔ Spielbericht schließen';
         renderLiveSubs();
         renderLiveTacticsPanel();

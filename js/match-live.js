@@ -452,6 +452,7 @@
         }
         document.getElementById('btn-next-step').style.display = 'none';
         document.getElementById('btn-finish-match').style.display = 'inline-block';
+        const teilenKnopf = document.getElementById('btn-share-match'); if (teilenKnopf) teilenKnopf.style.display = 'inline-block';
         // Schiedsrichter-Kritik (js/referee-critique.js): nur nach strittigen Szenen ohne Sieg.
         if (typeof offerRefereeCritique === 'function') offerRefereeCritique();
         if (currentMatch.cupTie) { finishCupLiveMatch(); return; }
@@ -1468,6 +1469,7 @@
             let rec = game.headToHeadRecords[oppName];
             rec.goalsFor += ourGoals; rec.goalsAgainst += oppGoals;
             if (ourGoals > oppGoals) rec.wins++; else if (ourGoals < oppGoals) rec.losses++; else rec.draws++;
+            if (typeof recordOwnLeagueResult === 'function') recordOwnLeagueResult(ourGoals, oppGoals, h.name === game.clubName);
             rec.lastResults.unshift(`${ourGoals}:${oppGoals}`);
             if (rec.lastResults.length > 5) rec.lastResults.pop();
         }

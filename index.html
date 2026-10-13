@@ -162,6 +162,7 @@
         <div id="pd-avatar" class="modal-avatar-photo">👤</div>
         <div style="text-align:center; font-size:var(--fs-title); font-weight:900; color:var(--text-main);" id="pd-name">Spielername</div>
         <div id="pd-summary"></div>
+        <div id="pd-form"></div>
         <div class="modal-field-grid" id="pd-fields"></div>
         <div style="font-size:var(--fs-body); font-weight:800; color:var(--accent); margin-top:6px;">Fähigkeiten</div>
         <div class="modal-stat-grid" id="pd-stats"></div>
@@ -216,6 +217,23 @@
     <div class="generic-modal-box">
         <button onclick="closeRenewalAssistant()" class="generic-modal-close" aria-label="Schließen">✕</button>
         <div id="renewal-assistant-content"></div>
+    </div>
+</div>
+
+<!-- SPIELBERICHT TEILEN / FACHWORT-HILFE (js/insights.js) -->
+<div id="share-report-overlay" class="generic-modal-overlay">
+    <div class="generic-modal-box">
+        <button onclick="closeShareReport()" class="generic-modal-close" aria-label="Schließen">✕</button>
+        <div class="panel-header">📤 Spielbericht teilen</div>
+        <textarea id="share-report-text" rows="9" readonly aria-label="Spielbericht als Text" style="width:100%; box-sizing:border-box; font-size:var(--fs-body);"></textarea>
+        <button onclick="copyShareReport()" class="btn-action" style="margin-top:6px;">📋 Kopieren</button>
+        <button onclick="nativeShareReport()" id="share-report-native" class="btn-secondary" style="margin-top:6px;">📤 Teilen …</button>
+    </div>
+</div>
+<div id="fachwort-overlay" class="generic-modal-overlay">
+    <div class="generic-modal-box">
+        <button onclick="closeFachwort()" class="generic-modal-close" aria-label="Schließen">✕</button>
+        <div id="fachwort-content"></div>
     </div>
 </div>
 
@@ -1407,6 +1425,15 @@
                     </div>
                 </div>
                 <div id="squad-tab-analyse" style="display:none;">
+                    <div class="panel" id="series-tracker-box"></div>
+                    <div class="panel">
+                        <div class="panel-header" style="color:var(--blue);">📊 Daten exportieren (CSV)</div>
+                        <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Für Tabellenkalkulation oder zum Teilen. Semikolon-getrennt, öffnet direkt in Excel und Co.</div>
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:6px;">
+                            <button onclick="exportKaderCsv()" class="btn-secondary">👥 Kader und Saisonwerte</button>
+                            <button onclick="exportTabelleCsv()" class="btn-secondary">🏆 Ligatabelle</button>
+                        </div>
+                    </div>
                     <div class="panel">
                         <div class="panel-header" style="color:var(--gold);">📋 Saisonstatistik & Noten</div>
                         <div id="player-season-stats-box"></div>
@@ -2615,6 +2642,7 @@
                         <button onclick="simulateRestOfMatch()" class="btn-secondary">⚡ Spiel abpfeifen</button>
                     </div>
                     <div id="ref-critique-box"></div>
+                    <button onclick="openShareReport()" id="btn-share-match" style="display:none;" class="btn-secondary">📤 Spielbericht teilen</button>
                     <button onclick="finishMatch()" id="btn-finish-match" style="display:none;" class="btn-primary">✔ Spielbericht schließen</button>
                 </div>
             </div>
@@ -2689,6 +2717,7 @@
 <script src="js/bonusclauses.js?v=2.1"></script>
 <script src="js/contracts.js?v=2.1"></script>
 <script src="js/contract-tools.js?v=3.127"></script>
+<script src="js/insights.js?v=3.128"></script>
 <script src="js/private-life.js?v=2.1"></script>
 <script src="js/player-scandals.js?v=2.1"></script>
 <script src="js/underworld.js?v=2.1"></script>

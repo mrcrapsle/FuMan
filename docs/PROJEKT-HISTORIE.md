@@ -520,3 +520,11 @@ Die Basis-Datei nennt die Schwelle nicht im Inhalt, die Zuordnung folgt nur dem 
 - **Transferbilanz je Saison:** `archiveTransferBilanz()` hält am Saisonende Käufe (inkl. Handgeld), Verkäufe (inkl. Weiterverkaufsbeteiligung) und Saldo in `game.transferBilanzHistory` fest (höchstens 20 Saisons), weil das Kontojournal nur die letzten Buchungen behält. Anzeige als „Frühere Saisons“ unter der Bilanz der laufenden Saison.
 - **Entwicklungsprognose:** Spielerdetail zeigt die erwartete Stärke in 1, 2 und 3 Jahren als Spanne, fortgeschrieben mit `getDevelopmentRange()` (Training und Spielpraxis nicht eingerechnet, so steht es dabei).
 - Test: `testVertragsWerkzeuge`.
+
+### 26.3 Statistik und Information (`js/insights.js`)
+- **Serien-Tracker:** `recordOwnLeagueResult()` (aus `updateLeagueTable()`, jedes eigene Ligaspiel live wie simuliert) führt `game.serien` mit sieben laufenden Serien (Siege, Ungeschlagen, Heimsiege, ohne Gegentor, ohne Sieg, Niederlagen, ohne eigenes Tor) und je einem Rekord mit Saison; Anzeige im Reiter Analyse („🏆“ bei laufendem Rekord). Gezählt wird die Liga, über den Saisonwechsel hinweg.
+- **Formkurve:** `gradeOwnMatch()` merkt je Spieler die letzten fünf Noten (`p.formNoten`); Spielerdetail zeigt Noten, Schnitt und Trend (steigend/fallend/stabil, ab 4 Noten).
+- **CSV-Export:** Kader mit Saisonwerten und Ligatabelle (Semikolon, UTF-8-BOM für deutsche Tabellenkalkulationen, Zellen mit Semikolon oder Anführungszeichen maskiert), Download über Blob und `<a download>` wie der Spielstand-Export.
+- **Spielbericht teilen:** Knopf nach dem Abpfiff, Fenster mit Text (Ergebnis, Tore aus dem Ticker, bester Spieler, Tabellenplatz), „Kopieren“ (Zwischenablage mit Ersatzweg) und „Teilen …“ wenn das Gerät `navigator.share` kann.
+- **Fachwort-Hilfe:** `fw(label, begriff)` macht einen Begriff antippbar, `openFachwort()` zeigt den passenden Lexikon-Eintrag (Text, Tipps, Sprung ins Lexikon und zum Bildschirm). Eingebaut im Spielerdetail (Stärke, Moral, Fitness, Marktwert) und im Verlängerungs-Assistenten (Gehaltsbudget). Neue Begriffe müssen als Eintragstitel im Lexikon stehen; `testStatistikWerkzeuge` prüft, dass jedes Fachwort einen Eintrag findet.
+- Test: `testStatistikWerkzeuge`.
