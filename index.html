@@ -163,6 +163,7 @@
         <div style="text-align:center; font-size:var(--fs-title); font-weight:900; color:var(--text-main);" id="pd-name">Spielername</div>
         <div id="pd-summary"></div>
         <div id="pd-form"></div>
+        <div id="pd-tags"></div>
         <div class="modal-field-grid" id="pd-fields"></div>
         <div style="font-size:var(--fs-body); font-weight:800; color:var(--accent); margin-top:6px;">Fähigkeiten</div>
         <div class="modal-stat-grid" id="pd-stats"></div>
@@ -795,6 +796,7 @@
                     <div class="dashboard-hero-bowl-wrapper"></div>
                 </div>
                 <div id="member-assembly-box" class="panel" style="display:none; border-color:var(--gold); margin-bottom:10px;"></div>
+                <div id="manager-assistant-box" class="panel" style="margin-bottom:10px;"></div>
                 <div id="dash-offers-alert" class="panel box-offer" style="display:none; border-color:var(--blue); margin-bottom:10px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <span>📩 <strong>Transfer-Zentrale:</strong> Du hast <strong id="dash-offers-alert-count" style="color:var(--accent);">0</strong> offene Transferangebote für deine Spieler!</span>
@@ -1125,6 +1127,7 @@
                 </div>
                 <div class="stock-ticker-bar" id="fin-stock-ticker"></div>
                 <div id="subtab-fin-uebersicht" class="subtab-fin">
+                    <div class="panel" id="fin-liquidity-box"></div>
                     <div class="panel">
                         <div class="panel-header">📊 Finanz-Charts</div>
                         <div id="fin-trend-chart" style="margin-bottom:12px;"></div>
@@ -1384,6 +1387,7 @@
                             <button onclick="setSquadSort('moral')" id="ss-moral" class="btn-secondary" style="font-size:var(--fs-micro); padding:5px 2px;">Moral</button>
                             <button onclick="setSquadSort('name')" id="ss-name" class="btn-secondary" style="font-size:var(--fs-micro); padding:5px 2px;">A-Z</button>
                         </div>
+                        <div id="squad-tag-filter"></div>
                         <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:6px;">
                             <button onclick="setSquadFilter('alle')" id="sf-alle" class="btn-action" style="font-size:var(--fs-caption); padding:5px 2px;">Alle</button>
                             <button onclick="setSquadFilter('TW')" id="sf-TW" class="btn-secondary" style="font-size:var(--fs-caption); padding:5px 2px;">TW</button>
@@ -2718,6 +2722,7 @@
 <script src="js/contracts.js?v=2.1"></script>
 <script src="js/contract-tools.js?v=3.127"></script>
 <script src="js/insights.js?v=3.128"></script>
+<script src="js/manager-tools.js?v=3.129"></script>
 <script src="js/private-life.js?v=2.1"></script>
 <script src="js/player-scandals.js?v=2.1"></script>
 <script src="js/underworld.js?v=2.1"></script>

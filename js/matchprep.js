@@ -201,6 +201,7 @@ function getLineupProblems() {
             if (ist[pos] !== soll) probleme.push({ ton: 'warn', text: `${game.formation} sieht ${soll} ${name} vor, in der Elf stehen ${ist[pos]}.` });
         });
     }
+    elf.filter(p => Array.isArray(p.tags) && p.tags.includes('schonen')).forEach(p => probleme.push({ ton: 'warn', text: `${p.name} ist als „Schonen“ etikettiert und steht in der Startelf.` }));
     elf.filter(p => mpIstEinsatzbereit(p) && p.fitness < 50).forEach(p => probleme.push({ ton: 'warn', text: `${p.name} ist nur zu ${p.fitness} % fit.` }));
     return probleme;
 }

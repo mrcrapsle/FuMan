@@ -319,6 +319,8 @@
         let tabBadge = document.getElementById('tab-offers-badge');
         if (tabBadge) tabBadge.innerText = incomingOffers.length;
 
+        if (typeof renderManagerAssistant === 'function') renderManagerAssistant();
+
         let inboxUnread = (typeof inboxMessages !== 'undefined') ? inboxMessages.filter(m => !m.read).length : 0;
         let inboxBadge = document.getElementById('sidebar-inbox-badge');
         if (inboxBadge) {

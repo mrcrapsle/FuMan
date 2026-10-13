@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.128', date: '13.10.2026', features: 'Phase 26.3 (Statistik und Information): Serien-Tracker, Formkurve je Spieler, CSV-Export, Spielbericht teilen, Fachwort-Hilfe' };
+    const GAME_VERSION = { number: '3.129', date: '13.10.2026', features: 'Phase 26.4 (Manager-Werkzeuge): Liquiditäts-Vorschau, Konto-Alarm, Spieler-Etiketten, Manager-Assistent, Lizenz-Laufbahn mit Voraussetzungen' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -335,6 +335,9 @@
         moneyHistory: [],
         fixedDeposit: null,
         expenseWarningLimit: 0,
+        kontoAlarm: 0,
+        kontoAlarmGemeldet: false,
+        kontoAlarmVorwarnung: false,
         autoReserveActive: false,
         autoReservePercent: 10,
         reserveFund: 0,

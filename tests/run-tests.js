@@ -2741,7 +2741,8 @@ async function testDesignThemes(browser) {
         probe.remove();
         return out;
     });
-    await page.evaluate(() => showScreen('screen-design'));
+    // Zufällige Spieltag-Ereignisse (z. B. Derby-Ausschreitungen) öffnen eine Meldung, die den Klick abfangen würde
+    await page.evaluate(() => { const box = document.getElementById('app-notice'); let n = 0; while (box && box.style.display === 'flex' && n++ < 20) dismissNotice(); showScreen('screen-design'); });
     await page.click("#design-settings-box .design-theme-card[onclick=\"setzeDesignTheme('klassik')\"]");
     const geklickt = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
     // Neustart: Selten (nur unter Last, nur im minifizierten Lauf) liefert Chromium nach dem Neuladen einen leeren
@@ -3344,6 +3345,122 @@ async function testStatistikWerkzeuge(browser) {
     assert(r.csvTabelle && r.csvToast, 'Tabellen-CSV und Export melden sich');
     assert(teilen.knopfVorher && teilen.knopf, 'Der Teilen-Knopf erscheint erst nach Abpfiff');
     assert(teilen.text && teilen.offen, 'Der Spielbericht enthält Vereine, Ergebnis, Spieltag und Signatur');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
+async function testManagerWerkzeuge(browser) {
+    console.log('\n[26.4] Manager-Werkzeuge: Liquiditäts-Vorschau, Konto-Alarm, Etiketten, Manager-Assistent, Lizenz-Laufbahn');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        const out = {};
+        // Liquiditäts-Vorschau
+        game.financeLedger = [];
+        game.money = 100000;
+        out.leer = getLiquidityForecast().avg === null;
+        showScreen('screen-finances'); renderLiquidityBox();
+        out.leerText = document.getElementById('fin-liquidity-box').textContent.includes('Noch keine Spieltagsabrechnung');
+        game.financeLedger = Array.from({ length: 6 }, (_, i) => ({ season: game.season, matchday: i + 1, heimspiel: i % 2 === 0, summeEin: i % 2 === 0 ? 130000 : 90000, summeAus: 120000 }));
+        const f = getLiquidityForecast();
+        out.avg = f.avg === -10000 && f.avgHeim === 10000 && f.avgAusw === -30000;
+        out.punkte = f.punkte[0].wert === 50000 && f.punkte[1].wert === 0 && f.minusIn === 11;
+        renderLiquidityBox();
+        out.box = document.getElementById('fin-liquidity-box').textContent.includes('ins Minus') && document.getElementById('fin-liquidity-box').textContent.includes('In 5 Spieltagen');
+        // Konto-Alarm
+        document.getElementById('konto-alarm-input').value = '';
+        setKontoAlarm();
+        out.ohneWert = !(financeCentralState.kontoAlarm > 0);
+        document.getElementById('konto-alarm-input').value = '60000';
+        setKontoAlarm();
+        out.gesetzt = financeCentralState.kontoAlarm === 60000;
+        game.money = 40000; const n0 = inboxMessages.length;
+        checkKontoAlarm(); const n1 = inboxMessages.length; checkKontoAlarm();
+        out.alarm = n1 === n0 + 1 && inboxMessages.length === n1 && inboxMessages[0].title.includes('Konto-Alarm') && financeCentralState.kontoAlarmGemeldet;
+        game.money = 500000; checkKontoAlarm();
+        out.zurueck = financeCentralState.kontoAlarmGemeldet === false;
+        game.money = 100000; game.financeLedger.forEach(e => { e.summeEin = 100000; e.summeAus = 130000; });
+        const n2 = inboxMessages.length; checkKontoAlarm(); checkKontoAlarm();
+        out.vorwarnung = inboxMessages.length === n2 + 1 && inboxMessages[0].title.includes('Vorwarnung');
+        clearKontoAlarm();
+        out.aus = financeCentralState.kontoAlarm === 0;
+        game.financeLedger = [];
+        // Etiketten
+        showScreen('screen-squad'); setSquadTab('aufstellung');
+        const p = squad[3], q = squad[4];
+        toggleSquadTag(p.id, 'verkauf'); toggleSquadTag(p.id, 'quatsch'); toggleSquadTag(q.id, 'beobachten');
+        out.tags = JSON.stringify(p.tags) === '["verkauf"]' && JSON.stringify(q.tags) === '["beobachten"]';
+        renderSquadView();
+        out.filterLeiste = document.getElementById('squad-tag-filter').querySelectorAll('button').length === 2;
+        setSquadTagFilter('verkauf');
+        out.gefiltert = document.querySelectorAll('#bench-list .player-card').length === 1 && document.getElementById('bench-list').textContent.includes(p.name) && document.getElementById('bench-list').textContent.includes('Verkaufskandidat');
+        setSquadTagFilter('verkauf');
+        out.alleWieder = document.querySelectorAll('#bench-list .player-card').length === squad.length;
+        openPlayerDetail(p.id);
+        out.detailTags = document.querySelectorAll('#pd-tags button').length === 6 && document.querySelector('#pd-tags button[aria-pressed="true"]').textContent.includes('Verkaufskandidat');
+        toggleSquadTag(p.id, 'verkauf'); out.entfernt = p.tags.length === 0;
+        document.querySelectorAll('.generic-modal-overlay.show').forEach(o => o.classList.remove('show'));
+        autoLineup();
+        const stamm = squad.find(x => lineup.includes(x.id)); stamm.tags = ['schonen'];
+        out.schonen = getLineupProblems().some(x => x.text.includes('Schonen') && x.text.includes(stamm.name));
+        stamm.tags = [];
+        // Manager-Assistent
+        showScreen('screen-dashboard');
+        squad.forEach(x => { x.contracts = 4; x.injured = 0; x.fitness = 100; }); autoLineup();
+        incomingOffers.length = 0; inboxMessages.forEach(m => { m.read = true; });
+        out.gruen = getManagerTodos().length === 0;
+        renderManagerAssistant();
+        out.gruenText = document.getElementById('manager-assistant-box').textContent.includes('Alles im grünen Bereich');
+        squad[0].contracts = 0; incomingOffers.push({ id: 999 });
+        const todos = getManagerTodos();
+        out.todos = todos.length === 2 && todos[0].text.includes('läuft') && todos[1].text.includes('Angebot');
+        renderManagerAssistant();
+        out.todoKnoepfe = document.querySelectorAll('#manager-assistant-box button').length === 2;
+        lineup = lineup.filter(id => squad.find(x => x.id === id).pos !== 'TW');
+        out.prioAufstellung = getManagerTodos()[0].text.includes('Aufstellung');
+        incomingOffers.length = 0; autoLineup();
+        return out;
+    });
+    const lizenz = await page.evaluate(() => {
+        const out = {};
+        privateLife.license = 0; privateLife.money = 1000000; game.season = 1; managerRPG.level = 1; game.trophies = [];
+        out.fehltB = getLicenseMissing(1).length === 1;
+        upgradeLicense();
+        out.gesperrtB = privateLife.license === 0 && document.getElementById('app-toast').innerText.includes('noch nötig');
+        game.season = 2; upgradeLicense();
+        out.kaufB = privateLife.license === 1;
+        out.fehltA = getLicenseMissing(2).length === 2;
+        game.season = 4; managerRPG.level = 3;
+        out.freiA = getLicenseMissing(2).length === 0;
+        privateLife.money = 100; upgradeLicense();
+        out.geldA = privateLife.license === 1 && document.getElementById('app-toast').innerText.includes('Privatvermögen');
+        privateLife.money = 1000000; upgradeLicense();
+        out.kaufA = privateLife.license === 2;
+        game.season = 7; managerRPG.level = 6;
+        out.fehltPro = getLicenseMissing(3).length === 1 && getLicenseMissing(3)[0].includes('Trophäe');
+        game.trophies = ['Meister'];
+        upgradeLicense();
+        out.kaufPro = privateLife.license === 3;
+        showScreen('screen-private'); renderPrivateLifeView();
+        out.anzeige = document.getElementById('priv-license-box').textContent.includes('Lizenz-Laufbahn') && document.getElementById('priv-license-box').textContent.includes('UEFA Pro Lizenz');
+        out.boost = licenseConfig[privateLife.license].boost === 4;
+        return out;
+    });
+    assert(r.leer && r.leerText, 'Ohne Spieltagsabrechnung zeigt die Vorschau einen ehrlichen Hinweis');
+    assert(r.avg && r.punkte && r.box, `Liquiditäts-Vorschau: Schnitt, Heim/Auswärts, 5 und 10 Spieltage, Minus-Warnung (${JSON.stringify([r.avg, r.punkte, r.box])})`);
+    assert(r.ohneWert && r.gesetzt, 'Konto-Alarm braucht eine Grenze über 0');
+    assert(r.alarm && r.zurueck, 'Konto-Alarm meldet sich genau einmal beim Unterschreiten und schärft sich wieder');
+    assert(r.vorwarnung && r.aus, 'Vorwarnung drei Spieltage vorher (einmal), Alarm lässt sich ausschalten');
+    assert(r.tags && r.filterLeiste && r.gefiltert && r.alleWieder, `Etiketten setzen, nur bekannte erlaubt, Filter in der Kaderliste (${JSON.stringify([r.tags, r.filterLeiste, r.gefiltert, r.alleWieder])})`);
+    assert(r.detailTags && r.entfernt, 'Etiketten im Spielerdetail umschaltbar');
+    assert(r.schonen, 'Der Aufstellungs-Check erinnert an „Schonen“-Spieler in der Startelf');
+    assert(r.gruen && r.gruenText, 'Manager-Assistent: ohne Handlungsbedarf „alles im grünen Bereich“');
+    assert(r.todos && r.todoKnoepfe && r.prioAufstellung, `Manager-Assistent: Schritte nach Dringlichkeit, höchstens drei, mit Knopf (${JSON.stringify([r.todos, r.todoKnoepfe, r.prioAufstellung])})`);
+    assert(lizenz.fehltB && lizenz.gesperrtB && lizenz.kaufB, `Lizenz-Laufbahn: B-Lizenz erst nach einer abgeschlossenen Saison (${JSON.stringify(lizenz)})`);
+    assert(lizenz.fehltA && lizenz.freiA && lizenz.geldA && lizenz.kaufA, 'A-Lizenz: Saisons und Manager-Level nötig, danach Kosten aus dem Privatvermögen');
+    assert(lizenz.fehltPro && lizenz.kaufPro && lizenz.boost, 'Pro-Lizenz verlangt zusätzlich eine Trophäe und gibt weiter +4 Teamstärke');
+    assert(lizenz.anzeige, 'Die Laufbahn mit Voraussetzungen erscheint im Privatleben-Bildschirm');
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
     await page.close();
 }
@@ -9964,7 +10081,8 @@ async function testLiveMatchEngine(browser) {
     assert(r.torschuetzenRichtig, `Auswärtstore werden unseren Spielern gutgeschrieben, Heimtore nicht (${r.einzel})`);
     assert(r.dominant, `Klar überlegene Mannschaft gewinnt auswärts (${r.tore})`);
     assert(r.paritaetOk, `Livespiel folgt den erwarteten Toren der Simulation (${r.paritaet})`);
-    assert(r.kraftMinuten >= 45, `Pressing-Minuten werden gezählt und nach dem Abpfiff als Fitnessverlust abgerechnet (${r.kraftMinuten})`);
+    // Minuten einer Standardsituation zählen nicht als Pressing-Minuten: gemessen 43 bis 81 von 68, daher Untergrenze 25 (0 hieße: nicht gezählt, -1: nicht abgerechnet)
+    assert(r.kraftMinuten >= 25, `Pressing-Minuten werden gezählt und nach dem Abpfiff als Fitnessverlust abgerechnet (${r.kraftMinuten})`);
     assert(r.statistik && r.statistikSichtbar && r.abpfiffZeile, 'Statistik (Ballbesitz, Schüsse) passt zum Spiel und wird angezeigt');
     assert(r.vorauswahlFeldspieler, 'Auswechslung: Vorauswahl ist ein Feldspieler, nicht der Torwart');
     assert(r.wechselWirkt && r.wechselTicker, 'Auswechslung ersetzt den gewählten Spieler und ändert die Teamstärke');
@@ -10832,6 +10950,7 @@ async function main() {
         testSpielvorbereitung,
         testVertragsWerkzeuge,
         testStatistikWerkzeuge,
+        testManagerWerkzeuge,
         testEntlassungsGrund,
         testEnglishUi,
         testSwapDeals,

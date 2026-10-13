@@ -797,6 +797,7 @@
     function renderSquadView() {
         if (typeof renderMatchPrepPanels === 'function') renderMatchPrepPanels();
         if (typeof renderInsightsPanels === 'function') renderInsightsPanels();
+        if (typeof renderSquadTagFilter === 'function') renderSquadTagFilter();
         if (typeof renderNationalTeamPanel === 'function') renderNationalTeamPanel();
         renderSquadOverviewBox();
         renderSquadDepthChart();
@@ -825,6 +826,7 @@
         if (!container) return;
         container.innerHTML = '';
         let filtered = squadFilterPos === 'alle' ? squad : squad.filter(p => p.pos === squadFilterPos);
+        if (typeof squadTagFilter !== 'undefined' && squadTagFilter) filtered = filtered.filter(p => typeof getPlayerTags === 'function' && getPlayerTags(p).includes(squadTagFilter));
         // Sortierfunktion: nicht mehr nur nach Position filterbar, sondern auch echt sortierbar.
         filtered = [...filtered].sort((a, b) => {
             if (squadSortMode === 'staerke') return b.strength - a.strength;
@@ -863,7 +865,8 @@
                     isStarting ? uiChip('Startelf', 'gut') : '',
                     statusChip, moralChip,
                     (p.trait && p.trait !== 'Kein') ? uiChip(p.trait) : '',
-                    uiChip(`⚽ ${p.goalsSeason || 0} · 🎽 ${p.appearances || 0}`)
+                    uiChip(`⚽ ${p.goalsSeason || 0} · 🎽 ${p.appearances || 0}`),
+                    ...(typeof getPlayerTagChips === 'function' ? getPlayerTagChips(p) : [])
                 ],
                 kpi: { wert: p.strength, label: 'Stärke' },
                 body: renderUiStatRow([['Tempo', p.pace], ['Schuss', p.shooting], ['Pass', p.passing], ['Abwehr', p.defense], ['Kopf', p.KOP ?? '-'], ['Fitness', p.fitness]])

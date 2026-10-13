@@ -60,6 +60,7 @@
         // Ticketpreise (inkl. Dauerkarte) sind jetzt im Stadion-Screen zu finden, dort direkt
         // neben Kapazität, Rasenpflege und Nebeneinnahmen - siehe renderStadiumView().
         if (typeof renderMediaRightsView === 'function') renderMediaRightsView();
+        if (typeof renderLiquidityBox === 'function') renderLiquidityBox();
         let limitInput = document.getElementById('expense-limit-input');
         if (limitInput) limitInput.placeholder = financeCentralState.expenseWarningLimit > 0
             ? `Warnlimit aktiv: ${formatVal(financeCentralState.expenseWarningLimit)}/SpT (0 = aus)` : 'Ausgaben-Warnlimit/SpT (aus)';

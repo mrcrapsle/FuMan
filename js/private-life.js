@@ -13,9 +13,9 @@
         let box = document.getElementById('priv-license-box');
         if (privateLife.license < licenseConfig.length - 1) {
             let nextLic = licenseConfig[privateLife.license + 1];
-            box.innerHTML = `Nächste Lizenz: <strong>${nextLic.name}</strong><br><button onclick="upgradeLicense()" class="btn-action" style="margin-top:4px;">Lizenz erwerben [${formatVal(nextLic.cost)}]</button>`;
+            box.innerHTML = `Nächste Lizenz: <strong>${nextLic.name}</strong><br><button onclick="upgradeLicense()" class="btn-action" style="margin-top:4px;">Lizenz erwerben [${formatVal(nextLic.cost)}]</button>` + (typeof renderLicenseCareer === 'function' ? renderLicenseCareer() : '');
         } else {
-            box.innerHTML = `<span style="color:var(--primary);">★ Höchste Lizenz (UEFA Pro) aktiv!</span>`;
+            box.innerHTML = `<span style="color:var(--primary);">★ Höchste Lizenz (UEFA Pro) aktiv!</span>` + (typeof renderLicenseCareer === 'function' ? renderLicenseCareer() : '');
         }
 
         // Lifestyle-Assets
@@ -77,7 +77,11 @@
 
     function upgradeLicense() {
         let nextLic = licenseConfig[privateLife.license + 1];
-        if (privateLife.money < nextLic.cost) return;
+        if (!nextLic) { showToast('Du hast bereits die höchste Lizenz.', 'error'); return; }
+        // Lizenz-Laufbahn (js/manager-tools.js): die nächste Stufe setzt Erfahrung und Erfolge voraus
+        const fehlt = typeof getLicenseMissing === 'function' ? getLicenseMissing(privateLife.license + 1) : [];
+        if (fehlt.length) { showToast(`🎓 ${nextLic.name}: noch nötig - ${fehlt.join(', ')}.`, 'error', 5500); return; }
+        if (privateLife.money < nextLic.cost) { showToast(`Privatvermögen reicht nicht: ${formatVal(nextLic.cost)} nötig.`, 'error', 3500); return; }
         playSound('click');
         privateLife.money -= nextLic.cost;
         privateLife.license++;

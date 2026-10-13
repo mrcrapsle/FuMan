@@ -788,6 +788,7 @@
         // in finances.js) gibt es hier keine Ausnahmen, das Spieltagsgeschaeft ist immer
         // regulaeres Kerngeschaeft.
         if (typeof addToFfpSeasonNet === 'function') addToFfpSeasonNet(ledgerSummeEin - ledgerSummeAus);
+        if (typeof checkKontoAlarm === 'function') checkKontoAlarm();
         if (ghostGameActive) game.forcedGhostGame = false; // Geisterspiel-Auflage ist damit erfüllt
         if (derbyBoostActive) {
             if (genuinelySoldOut) {

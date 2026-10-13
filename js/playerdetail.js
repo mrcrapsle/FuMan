@@ -147,6 +147,7 @@
         // Stärke des Spielers über die Saisons entwickelt hat - bisher gab es nur den
         // aktuellen Momentanwert ohne jede historische Einordnung.
         if (typeof renderPlayerForm === 'function') renderPlayerForm(p);
+        if (typeof renderPlayerTags === 'function') renderPlayerTags(p);
         if (typeof renderMarketValueCurve === 'function') renderMarketValueCurve(p);
         if (typeof renderDevelopmentForecast === 'function') renderDevelopmentForecast(p);
         let historyBox = document.getElementById('pd-strength-history');
