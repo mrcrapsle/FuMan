@@ -550,7 +550,7 @@ function renderUiStatRow(werte) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.123', date: '12.10.2026', features: 'Phase 25.55 (Stabilität und Bedienung): Fenster per Escape schließbar und als Dialog gekennzeichnet, Darstellung doppelt gespeichert, Kartenmuster für Zweite Mannschaft und Europapokal, Personal-Beschreibungen vollständig, stabilere Tests' };
+    const GAME_VERSION = { number: '3.124', date: '13.10.2026', features: 'Phase 25.56-25.57 (Karten und Orientierung): Verträge als Karten mit aufklappbaren Klauseln, Spielerdetail mit Chips und Werteleiste, Reiter per Pfeiltasten, Meldungen über dem Weiter-Knopf, Sprunglink und benannte Navigationen, Karten für Training-Vorlagen und Hospitanz' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
