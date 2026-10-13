@@ -3101,6 +3101,95 @@ async function testFensterTastaturUndSpeicher(browser) {
     await page.close();
 }
 
+async function testSpielvorbereitung(browser) {
+    console.log('\n[26.1] Spielvorbereitung: Aufstellungs- und Taktikvorlagen, Spieltag-Check');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const r = await page.evaluate(() => {
+        closeTutorial();
+        const out = {};
+        showScreen('screen-squad'); renderSquadView();
+        out.slots = document.querySelectorAll('#lineup-presets-box .player-card').length;
+        autoLineup();
+        document.getElementById('lineup-preset-name').value = 'Heim <b>A</b>';
+        saveLineupPreset(0);
+        const v = game.lineupPresets[0];
+        out.gespeichert = !!v && v.ids.length === 11 && v.name === 'Heim <b>A</b>' && v.formation === game.formation;
+        out.nameEscaped = document.getElementById('lineup-presets-box').innerHTML.includes('Heim &lt;b&gt;A&lt;/b&gt;');
+        // Ausfall: ein Spieler der Vorlage ist verletzt -> Ersatz auf demselben Platz
+        const ausId = lineup[3]; const aus = squad.find(p => p.id === ausId); aus.injured = 3;
+        loadLineupPreset(0);
+        out.ersatz = lineup.length === 11 && !lineup.includes(ausId) && lineup.every(id => { const p = squad.find(x => x.id === id); return p && !p.injured && !p.suspended; });
+        out.ersatzPos = (() => { const neu = squad.find(p => p.id === lineup[3]); return neu && neu.pos === aus.pos; })();
+        aus.injured = 0;
+        deleteLineupPreset(0); out.geloescht = game.lineupPresets[0] === null;
+        // Taktikvorlagen
+        setTacticStyle('offensiv'); setTackleHardness('hart');
+        document.getElementById('tactic-preset-name').value = 'Alles nach vorn';
+        saveTacticPreset(0);
+        setTacticStyle('defensiv'); setTackleHardness('vorsichtig');
+        applyTacticPreset(0);
+        out.taktik = game.tacticStyle === 'offensiv' && game.tackleHardness === 'hart';
+        // Alte Spielstände ohne Vorlagen
+        delete game.lineupPresets; delete game.tacticPresets; ensureMatchPrepState();
+        out.altesFeld = game.lineupPresets.length === 5 && game.tacticPresets.length === 5;
+        setTacticStyle('offensiv'); setTackleHardness('hart'); saveTacticPreset(0);
+        return out;
+    });
+    const live = await page.evaluate(() => {
+        const out = {};
+        startMatchdayFlow();
+        out.checkBox = document.getElementById('prematch-check-box').textContent.includes('Spieltag-Check');
+        skipPressAndPlay(); stopLiveTickerAutoplay();
+        game.tacticStyle = 'defensiv'; game.tackleHardness = 'vorsichtig'; renderLiveTacticsPanel();
+        out.liveKnopf = document.querySelectorAll('#live-tactic-presets button').length;
+        applyTacticPreset(0);
+        out.liveTaktik = game.tacticStyle === 'offensiv' && game.tackleHardness === 'hart' && document.getElementById('ticker-log').textContent.includes('live');
+        return out;
+    });
+    const check = await page.evaluate(() => {
+        const out = {};
+        currentMatch = null; showScreen('screen-dashboard');
+        autoLineup();
+        const stamm = squad.find(p => p.id === lineup.find(id => squad.find(x => x.id === id).pos !== 'TW'));
+        stamm.fitness = 40;
+        let bank = squad.find(p => !lineup.includes(p.id) && p.pos === stamm.pos && !p.injured && !p.suspended);
+        if (!bank) { bank = squad.find(p => !lineup.includes(p.id) && !p.injured && !p.suspended); bank.pos = stamm.pos; }
+        bank.fitness = 100; bank.strength = stamm.strength;
+        const vor = getRotationSuggestions().find(x => x.raus.id === stamm.id);
+        out.rotation = !!vor && !!vor.rein;
+        if (vor) { applyRotationSwap(stamm.id, vor.rein.id); out.getauscht = lineup.includes(vor.rein.id) && !lineup.includes(stamm.id); }
+        // Fehlende: Verletzter und Gesperrter mit Rückkehr
+        const a = squad[2], b = squad[5]; a.injured = 4; b.suspended = 2;
+        const fehlt = getAbsentPlayers();
+        out.fehlt = fehlt.length >= 2 && fehlt.some(x => x.p.id === a.id && x.grund === 'verletzt' && x.tage === 4) && fehlt.some(x => x.p.id === b.id && x.grund === 'gesperrt' && x.tage === 2);
+        // Aufstellungs-Check: ohne Torwart und mit Verletztem in der Elf
+        lineup = lineup.filter(id => squad.find(p => p.id === id).pos !== 'TW');
+        lineup.push(a.id);
+        const probleme = getLineupProblems().map(x => x.text).join(' | ');
+        out.problemTw = probleme.includes('Kein Torwart');
+        out.problemVerletzt = probleme.includes(a.name);
+        out.problemAnzahl = probleme.includes('Startelf');
+        renderPrematchCheck();
+        out.box = document.getElementById('prematch-check-box').textContent.includes('Rotations-Assistent') && document.getElementById('prematch-check-box').textContent.includes('Wer fehlt?');
+        return out;
+    });
+    assert(r.slots === 5, `Fünf Slots für Aufstellungsvorlagen (${r.slots})`);
+    assert(r.gespeichert && r.nameEscaped, 'Vorlage speichert Elf, Formation und Namen (Name wird maskiert)');
+    assert(r.ersatz && r.ersatzPos, 'Beim Laden wird ein Ausfall auf demselben Platz durch einen Spieler derselben Position ersetzt');
+    assert(r.geloescht, 'Vorlage lässt sich löschen');
+    assert(r.taktik, 'Taktikvorlage stellt Stil und Zweikampfhärte wieder her');
+    assert(r.altesFeld, 'Alte Spielstände ohne Vorlagenfelder werden ergänzt');
+    assert(live.checkBox, 'Der Spieltag-Check erscheint vor dem Anpfiff');
+    assert(live.liveKnopf >= 1 && live.liveTaktik, `Im Livespiel lässt sich eine Taktikvorlage übernehmen (${JSON.stringify(live)})`);
+    assert(check.rotation && check.getauscht, `Rotations-Assistent schlägt den frischeren Spieler vor und tauscht ihn (${JSON.stringify(check)})`);
+    assert(check.fehlt, 'Wer fehlt? zeigt Verletzte und Gesperrte mit Rückkehr');
+    assert(check.problemTw && check.problemVerletzt && check.problemAnzahl, `Aufstellungs-Check findet fehlenden Torwart, Verletzten in der Elf und falsche Elfanzahl (${JSON.stringify(check)})`);
+    assert(check.box, 'Der Spieltag-Check zeigt alle drei Bereiche');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
 async function testBoardEarlyWarning(browser) {
     console.log('\n[25.24] Vorstand: Frühwarnung schon unter 50 Zufriedenheit, einmal pro Saison');
     const { page, consoleErrors } = await freshPage(browser);
@@ -10582,6 +10671,7 @@ async function main() {
         testAutoThemeUndBewegung,
         testKopfzeileHinweisUndPokerFenster,
         testFensterTastaturUndSpeicher,
+        testSpielvorbereitung,
         testEntlassungsGrund,
         testEnglishUi,
         testSwapDeals,

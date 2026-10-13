@@ -503,3 +503,12 @@ Die Basis-Datei nennt die Schwelle nicht im Inhalt, die Zuordnung folgt nur dem 
 - **Renderzeiten** (CPU 4x gedrosselt, minifiziert, 18 Spieler): Verträge-Liste 27 ms, mit Namensvergabe 71 ms, `verbessereZugaenglichkeit` über die ganze Seite 59 ms, Wechsel Verträge→Kader 148 ms inklusive beider Zeichnungen. Alles unter der Schwelle von 100 ms je Zeichnung, keine Optimierung nötig; der Beobachter arbeitet entprellt (120 ms) und blockiert nicht.
 
 - **3.125 (Korrektur zu 3.124):** Der CI-Lauf für 3.124 scheiterte in `testPersonalEinstellen`, weil die antippbare Meldung Klicks auf den Knopf darunter abfing; das Antippen ist entfernt (`pointer-events: none`), ein Test prüft es. Außerdem lag eine versehentlich committete Bot-Ausgabedatei `0` (367 KB, aus `SPEICHERN=0`) im Repository: entfernt und in `.gitignore`. Bot-Läufe künftig ohne `SPEICHERN=0` starten (der Wert wird als Dateiname gelesen).
+
+## Phase 26: 20 neue Funktionen (Runde 1 von 4)
+
+### 26.1 Aufstellung und Taktik (`js/matchprep.js`)
+- **Aufstellungsvorlagen:** 5 benannte Slots (Startelf + Formation) im Reiter Aufstellung; beim Laden ersetzt der Trainer Ausfälle (verletzt, gesperrt, verkauft) auf demselben Platz durch den besten freien Spieler derselben Position. Vorlagennamen werden maskiert. `game.lineupPresets`.
+- **Taktikvorlagen:** 5 Slots (Formation, Spielstil, Zweikampfhärte) im Reiter Taktik, im Livespiel als Schnellwahl im Live-Panel (`liveSet*`, die Kaderauswahl bleibt unberührt). `game.tacticPresets`. Alte Spielstände bekommen die Felder über `ensureMatchPrepState()`.
+- **Spieltag-Check vor dem Anpfiff** (`#prematch-check-box`): *Aufstellungs-Check* (Torwart, Elfanzahl, Formation gegen Positionen, Ausgefallene und unter 50 % fitte Spieler in der Elf), *Wer fehlt?* (Verletzte mit Rückkehr in Spieltagen, Gesperrte mit Spielen, Stammspieler markiert) und *Rotations-Assistent* (tauscht müde Stammspieler gegen deutlich frischere Spieler derselben Position, wenn die effektive Stärke nicht schlechter wird). Die Teamstärke bleibt unverändert, getauscht wird nur auf Tipp.
+- **Bewusst abweichend vom Vorschlag:** „Gelbgefährdete“ und gegnerische Ausfälle gibt es nicht, weil das Spiel keine Gelbsperren und keine Gegnerkader kennt; der Check zeigt nur echte Daten.
+- Test: `testSpielvorbereitung`.

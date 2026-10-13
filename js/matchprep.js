@@ -1,0 +1,275 @@
+// ============================================================================
+// SPIELVORBEREITUNG (Phase 26.1): Aufstellungs- und Taktikvorlagen sowie der Spieltag-Check
+// vor dem Anpfiff (Aufstellungs-Check, "Wer fehlt?", Rotations-Assistent).
+// Alles hier liest nur echte Spieldaten (squad, lineup, game) und ändert die Mannschaft nur
+// auf ausdrücklichen Tipp des Spielers. Kein Eingriff in Teamstärke oder Spielregeln.
+// ============================================================================
+
+const MP_SLOTS = 5;
+// Spieler je Reihe (Abwehr, Mittelfeld, Sturm) je Formation - dieselbe Aufteilung wie pickBestLineupIds()
+const MP_FORMATION_LINES = {
+    '4-4-2': [4, 4, 2], '4-3-3': [4, 3, 3], '3-5-2': [3, 5, 2], '5-3-2': [5, 3, 2],
+    '4-2-3-1': [4, 5, 1], '4-1-4-1': [4, 5, 1], '3-4-3': [3, 4, 3], '5-4-1': [5, 4, 1]
+};
+
+function mpEsc(text) {
+    return String(text == null ? '' : text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// Alte Spielstände kennen die Vorlagen nicht: Felder bei Bedarf anlegen
+function ensureMatchPrepState() {
+    if (!Array.isArray(game.lineupPresets)) game.lineupPresets = [];
+    if (!Array.isArray(game.tacticPresets)) game.tacticPresets = [];
+    while (game.lineupPresets.length < MP_SLOTS) game.lineupPresets.push(null);
+    while (game.tacticPresets.length < MP_SLOTS) game.tacticPresets.push(null);
+}
+
+function mpIstEinsatzbereit(p) {
+    return !!p && (p.injured || 0) === 0 && (p.suspended || 0) === 0;
+}
+
+function mpLiveAktiv() {
+    const s = document.getElementById('screen-matchday');
+    return typeof currentMatch !== 'undefined' && !!currentMatch && !!s && s.style.display === 'block';
+}
+
+// ---------- Aufstellungsvorlagen ----------
+
+function saveLineupPreset(slot) {
+    ensureMatchPrepState();
+    if (lineup.length !== 11) { showToast('Die Startelf braucht genau 11 Spieler, bevor du sie speichern kannst.', 'error', 3500); return; }
+    const eingabe = document.getElementById('lineup-preset-name');
+    const name = (eingabe && eingabe.value.trim()) || `Vorlage ${slot + 1}`;
+    game.lineupPresets[slot] = { name: name.slice(0, 24), ids: [...lineup], formation: game.formation };
+    if (eingabe) eingabe.value = '';
+    showToast(`💾 Aufstellung „${name.slice(0, 24)}“ in Slot ${slot + 1} gespeichert.`, 'success');
+    renderLineupPresets();
+}
+
+function deleteLineupPreset(slot) {
+    ensureMatchPrepState();
+    if (!game.lineupPresets[slot]) return;
+    game.lineupPresets[slot] = null;
+    renderLineupPresets();
+}
+
+// Lädt eine Vorlage. Ausgefallene Spieler (verletzt, gesperrt, verkauft) werden auf demselben Platz
+// durch den besten freien Spieler derselben Position ersetzt, ohne Ersatz durch den besten Verfügbaren.
+function loadLineupPreset(slot) {
+    ensureMatchPrepState();
+    const v = game.lineupPresets[slot];
+    if (!v) { showToast('Dieser Slot ist leer - speichere zuerst eine Aufstellung.', 'error'); return; }
+    const neu = [];
+    let ersetzt = 0;
+    v.ids.forEach(id => {
+        const p = squad.find(x => x.id === id);
+        neu.push(p && mpIstEinsatzbereit(p) ? id : null);
+    });
+    neu.forEach((id, i) => {
+        if (id) return;
+        const altId = v.ids[i];
+        const alt = squad.find(x => x.id === altId);
+        const pos = alt ? alt.pos : null;
+        const frei = squad.filter(p => mpIstEinsatzbereit(p) && !neu.includes(p.id));
+        const eff = p => p.strength * (p.fitness / 100);
+        const passend = (pos ? frei.filter(p => p.pos === pos) : []).sort((a, b) => eff(b) - eff(a));
+        const rest = frei.sort((a, b) => eff(b) - eff(a));
+        const wahl = passend[0] || rest[0];
+        if (wahl) { neu[i] = wahl.id; ersetzt++; }
+    });
+    if (neu.some(id => !id) || neu.length !== 11) { showToast('Zu wenig einsatzbereite Spieler für diese Aufstellung.', 'error', 3500); return; }
+    game.formation = v.formation || game.formation;
+    const formName = document.getElementById('squad-form-name');
+    if (formName) formName.innerText = game.formation;
+    lineup = neu;
+    renderSquadView();
+    if (typeof render3DPitch === 'function') render3DPitch();
+    showToast(ersetzt ? `📂 „${v.name}“ geladen, ${ersetzt} Ausfall${ersetzt === 1 ? '' : 'e'} ersetzt.` : `📂 „${v.name}“ geladen.`, 'success');
+}
+
+function renderLineupPresets() {
+    const box = document.getElementById('lineup-presets-box');
+    if (!box) return;
+    ensureMatchPrepState();
+    const zeilen = game.lineupPresets.map((v, i) => {
+        const ausfall = v ? v.ids.filter(id => !mpIstEinsatzbereit(squad.find(p => p.id === id))).length : 0;
+        return `<div class="panel player-card" style="margin:0 0 6px; padding:8px 10px;">${renderUiCard({
+            title: v ? mpEsc(v.name) : `Slot ${i + 1} (leer)`,
+            sub: v ? `${v.formation} · ${v.ids.length} Spieler` : 'Noch keine Aufstellung gespeichert',
+            meta: [v && ausfall ? uiChip(`⚠️ ${ausfall} Ausfall${ausfall === 1 ? '' : 'e'}`, 'warn') : '', v && !ausfall ? uiChip('✓ komplett', 'gut') : ''],
+            actions: `<button onclick="saveLineupPreset(${i})" class="btn-secondary">💾 Speichern</button>`
+                + (v ? `<button onclick="loadLineupPreset(${i})" class="btn-action">📂 Laden</button><button onclick="deleteLineupPreset(${i})" class="btn-secondary" style="color:var(--danger);" title="Vorlage ${i + 1} löschen">✕ Löschen</button>` : '')
+        })}</div>`;
+    }).join('');
+    box.innerHTML = `<div class="panel-header">📋 Aufstellungsvorlagen</div>
+        <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Speichert die aktuelle Startelf samt Formation, zum Beispiel für Heim, Auswärts oder Pokal. Ausgefallene Spieler ersetzt der Trainer beim Laden.</div>
+        <label class="ui-field" style="margin-bottom:8px;"><span class="ui-field-label">Name für neue Vorlage</span>
+            <input id="lineup-preset-name" class="input-inline" maxlength="24" placeholder="z. B. Heimspiel Offensive" style="width:100%;"></label>
+        ${zeilen}`;
+}
+
+// ---------- Taktikvorlagen ----------
+
+function saveTacticPreset(slot) {
+    ensureMatchPrepState();
+    const eingabe = document.getElementById('tactic-preset-name');
+    const name = (eingabe && eingabe.value.trim()) || `Taktik ${slot + 1}`;
+    game.tacticPresets[slot] = { name: name.slice(0, 24), formation: game.formation, style: game.tacticStyle, hardness: game.tackleHardness };
+    if (eingabe) eingabe.value = '';
+    showToast(`💾 Taktik „${name.slice(0, 24)}“ in Slot ${slot + 1} gespeichert.`, 'success');
+    renderTacticPresets();
+}
+
+function deleteTacticPreset(slot) {
+    ensureMatchPrepState();
+    if (!game.tacticPresets[slot]) return;
+    game.tacticPresets[slot] = null;
+    renderTacticPresets();
+}
+
+// Live ändert sich nur die Form (liveSet*), nie die Kaderauswahl; im Menü gelten die normalen Setter
+function applyTacticPreset(slot) {
+    ensureMatchPrepState();
+    const v = game.tacticPresets[slot];
+    if (!v) { showToast('Dieser Slot ist leer - speichere zuerst eine Taktik.', 'error'); return; }
+    if (mpLiveAktiv()) {
+        if (typeof liveSetFormation === 'function' && v.formation !== game.formation) liveSetFormation(v.formation);
+        if (typeof liveSetTacticStyle === 'function' && v.style !== game.tacticStyle) liveSetTacticStyle(v.style);
+        if (typeof liveSetTackleHardness === 'function' && v.hardness !== game.tackleHardness) liveSetTackleHardness(v.hardness);
+    } else {
+        if (v.formation !== game.formation) setFormation(v.formation);
+        setTacticStyle(v.style);
+        setTackleHardness(v.hardness);
+    }
+    showToast(`📂 Taktik „${v.name}“ übernommen.`, 'success');
+    renderTacticPresets();
+}
+
+function mpTaktikText(v) {
+    const cfg = typeof TACTIC_STYLE_CONFIG !== 'undefined' ? TACTIC_STYLE_CONFIG[v.style] : null;
+    return `${v.formation} · ${cfg ? cfg.label : v.style} · ${v.hardness}`;
+}
+
+function renderTacticPresets() {
+    ensureMatchPrepState();
+    const box = document.getElementById('tactic-presets-box');
+    if (box) {
+        const zeilen = game.tacticPresets.map((v, i) => `<div class="panel player-card" style="margin:0 0 6px; padding:8px 10px;">${renderUiCard({
+            title: v ? mpEsc(v.name) : `Slot ${i + 1} (leer)`,
+            sub: v ? mpTaktikText(v) : 'Noch keine Taktik gespeichert',
+            meta: [v && v.formation === game.formation && v.style === game.tacticStyle && v.hardness === game.tackleHardness ? uiChip('● aktiv', 'gut') : ''],
+            actions: `<button onclick="saveTacticPreset(${i})" class="btn-secondary">💾 Aktuelle speichern</button>`
+                + (v ? `<button onclick="applyTacticPreset(${i})" class="btn-action">📂 Übernehmen</button><button onclick="deleteTacticPreset(${i})" class="btn-secondary" style="color:var(--danger);" title="Taktik ${i + 1} löschen">✕ Löschen</button>` : '')
+        })}</div>`).join('');
+        box.innerHTML = `<div class="panel-header">📋 Taktikvorlagen</div>
+            <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Formation, Spielstil und Zweikampfhärte als Paket. Im Livespiel lassen sich die Vorlagen mit einem Tipp übernehmen.</div>
+            <label class="ui-field" style="margin-bottom:8px;"><span class="ui-field-label">Name für neue Taktik</span>
+                <input id="tactic-preset-name" class="input-inline" maxlength="24" placeholder="z. B. Führung verwalten" style="width:100%;"></label>
+            ${zeilen}`;
+    }
+    renderLiveTacticPresets();
+}
+
+// Kleine Schnellwahl im Live-Panel: nur gespeicherte Vorlagen
+function renderLiveTacticPresets() {
+    const box = document.getElementById('live-tactic-presets');
+    if (!box) return;
+    ensureMatchPrepState();
+    const knoepfe = game.tacticPresets.map((v, i) => v
+        ? `<button onclick="applyTacticPreset(${i})" class="btn-secondary" style="font-size:var(--fs-micro); padding:4px 6px;" title="${mpEsc(mpTaktikText(v))}">${mpEsc(v.name)}</button>` : '').join('');
+    box.innerHTML = knoepfe ? `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin:4px 0 2px;">Taktikvorlagen:</div><div style="display:flex; flex-wrap:wrap; gap:4px;">${knoepfe}</div>` : '';
+}
+
+function renderMatchPrepPanels() {
+    renderLineupPresets();
+    renderTacticPresets();
+}
+
+// ---------- Spieltag-Check vor dem Anpfiff ----------
+
+// Probleme der aktuellen Startelf: nur Dinge, die der Spieler wirklich ändern kann
+function getLineupProblems() {
+    const probleme = [];
+    const elf = lineup.map(id => squad.find(p => p.id === id)).filter(Boolean);
+    if (elf.length !== 11) probleme.push({ ton: 'schlecht', text: `Nur ${elf.length} Spieler in der Startelf (nötig: 11).` });
+    elf.filter(p => !mpIstEinsatzbereit(p)).forEach(p => probleme.push({ ton: 'schlecht', text: `${p.name} ist ${(p.injured || 0) > 0 ? 'verletzt' : 'gesperrt'} und steht trotzdem in der Elf.` }));
+    if (!elf.some(p => p.pos === 'TW')) probleme.push({ ton: 'schlecht', text: 'Kein Torwart in der Startelf.' });
+    const linien = MP_FORMATION_LINES[game.formation];
+    if (linien) {
+        const ist = { ABW: elf.filter(p => p.pos === 'ABW').length, MIT: elf.filter(p => p.pos === 'MIT').length, ST: elf.filter(p => p.pos === 'ST').length };
+        [['ABW', linien[0], 'Verteidiger'], ['MIT', linien[1], 'Mittelfeldspieler'], ['ST', linien[2], 'Stürmer']].forEach(([pos, soll, name]) => {
+            if (ist[pos] !== soll) probleme.push({ ton: 'warn', text: `${game.formation} sieht ${soll} ${name} vor, in der Elf stehen ${ist[pos]}.` });
+        });
+    }
+    elf.filter(p => mpIstEinsatzbereit(p) && p.fitness < 50).forEach(p => probleme.push({ ton: 'warn', text: `${p.name} ist nur zu ${p.fitness} % fit.` }));
+    return probleme;
+}
+
+// Wer fehlt, mit Rückkehr: Verletzte (Spieltage) und Gesperrte (Spiele)
+function getAbsentPlayers() {
+    const top = [...squad].sort((a, b) => b.strength - a.strength).slice(0, 11).map(p => p.id);
+    const liste = [];
+    squad.forEach(p => {
+        if ((p.injured || 0) > 0) liste.push({ p, grund: 'verletzt', tage: p.injured, stamm: top.includes(p.id) });
+        else if ((p.suspended || 0) > 0) liste.push({ p, grund: 'gesperrt', tage: p.suspended, stamm: top.includes(p.id) });
+    });
+    return liste.sort((a, b) => (b.stamm - a.stamm) || (b.p.strength - a.p.strength));
+}
+
+// Tauschvorschläge für müde Stammspieler: gleiche Position, deutlich frischer, nicht effektiv schwächer
+function getRotationSuggestions() {
+    const eff = p => p.strength * (p.fitness / 100);
+    const bank = squad.filter(p => !lineup.includes(p.id) && mpIstEinsatzbereit(p));
+    const belegt = new Set();
+    const vorschlaege = [];
+    lineup.map(id => squad.find(p => p.id === id)).filter(p => p && mpIstEinsatzbereit(p) && p.fitness < 80)
+        .sort((a, b) => a.fitness - b.fitness).forEach(starter => {
+            const kandidat = bank.filter(b => !belegt.has(b.id) && b.pos === starter.pos && b.fitness >= starter.fitness + 15 && eff(b) >= eff(starter) - 1)
+                .sort((a, b) => eff(b) - eff(a))[0];
+            if (kandidat) { belegt.add(kandidat.id); vorschlaege.push({ raus: starter, rein: kandidat, delta: Math.round((eff(kandidat) - eff(starter)) * 10) / 10 }); }
+            else if (starter.fitness < 60) vorschlaege.push({ raus: starter, rein: null, delta: 0 });
+        });
+    return vorschlaege;
+}
+
+function applyRotationSwap(rausId, reinId) {
+    const i = lineup.indexOf(rausId);
+    const rein = squad.find(p => p.id === reinId);
+    if (i === -1 || !mpIstEinsatzbereit(rein)) { showToast('Dieser Tausch geht nicht mehr - die Elf hat sich geändert.', 'error'); renderPrematchCheck(); return; }
+    lineup[i] = reinId;
+    showToast(`🔄 ${rein.name} ersetzt den müden Mitspieler.`, 'success');
+    if (typeof renderFatigueWarning === 'function') renderFatigueWarning();
+    renderPrematchCheck();
+}
+
+function renderPrematchCheck() {
+    const box = document.getElementById('prematch-check-box');
+    if (!box) return;
+    const probleme = getLineupProblems();
+    const fehlt = getAbsentPlayers();
+    const rotation = getRotationSuggestions();
+    const stammFehlt = fehlt.filter(x => x.stamm).length;
+    const chips = [
+        probleme.length ? uiChip(`⚠️ ${probleme.length} Hinweis${probleme.length === 1 ? '' : 'e'}`, probleme.some(x => x.ton === 'schlecht') ? 'schlecht' : 'warn') : uiChip('✓ Elf in Ordnung', 'gut'),
+        uiChip(`🩹 ${fehlt.length} fehlen${stammFehlt ? ` (${stammFehlt} Stammspieler)` : ''}`, stammFehlt ? 'warn' : ''),
+        rotation.length ? uiChip(`🔄 ${rotation.length} Rotationsidee${rotation.length === 1 ? '' : 'n'}`, 'warn') : ''
+    ];
+    const problemListe = probleme.length ? probleme.map(x => `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">${x.ton === 'schlecht' ? '🔴' : '🟡'} ${mpEsc(x.text)}</div>`).join('')
+        : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Torwart, Formation und Fitness passen.</div>';
+    const fehltListe = fehlt.length ? fehlt.map(x => `<div class="box" style="font-size:var(--fs-small); margin:4px 0; display:flex; justify-content:space-between; gap:8px;"><span>${mpEsc(x.p.name)} (${x.p.pos}, Str ${x.p.strength})${x.stamm ? ' ⭐' : ''}</span><span style="color:var(--text-muted);">${x.grund}, noch ${x.tage} ${x.grund === 'verletzt' ? 'Spieltag' + (x.tage === 1 ? '' : 'e') : 'Spiel' + (x.tage === 1 ? '' : 'e')}</span></div>`).join('')
+        : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Der komplette Kader ist einsatzbereit.</div>';
+    const rotListe = rotation.length ? rotation.map(r => r.rein
+        ? `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">${mpEsc(r.raus.name)} (${r.raus.pos}, ${r.raus.fitness} % fit) ↔ ${mpEsc(r.rein.name)} (${r.rein.fitness} % fit)
+            <span style="color:var(--text-muted);">· effektive Stärke ${r.delta >= 0 ? '+' : ''}${r.delta}</span>
+            <button onclick="applyRotationSwap('${r.raus.id}', '${r.rein.id}')" class="btn-secondary" style="margin-top:4px;">🔄 Tauschen</button></div>`
+        : `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">${mpEsc(r.raus.name)} ist nur zu ${r.raus.fitness} % fit, aber auf der Bank gibt es keinen gleichwertigen Ersatz.</div>`).join('')
+        : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Keine Rotation nötig: alle Stammspieler sind ausgeruht oder ohne frischen Ersatz.</div>';
+    box.innerHTML = `<div class="panel" style="margin-bottom:8px;">
+        <div class="panel-header">🧾 Spieltag-Check</div>
+        <div class="ui-card-meta" style="margin-bottom:6px;">${chips.join('')}</div>
+        <details class="ui-fold"${probleme.length ? ' open' : ''}><summary>Aufstellungs-Check</summary>${problemListe}</details>
+        <details class="ui-fold"${fehlt.length ? ' open' : ''}><summary>Wer fehlt?</summary>${fehltListe}</details>
+        <details class="ui-fold"${rotation.length ? ' open' : ''}><summary>Rotations-Assistent</summary>${rotListe}
+            <button onclick="showScreen('screen-squad')" class="btn-secondary" style="margin-top:4px;">⚽ Aufstellung im Detail ändern</button></details>
+    </div>`;
+}

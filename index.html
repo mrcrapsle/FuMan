@@ -1334,6 +1334,7 @@
                         <button onclick="openFormationModal()" class="btn-primary" style="margin-top:6px;">🎛️ Formation im Detail wählen (Grid + Vorschau)</button>
                         <button onclick="autoLineup()" class="btn-action" style="margin-top:6px;">🤖 Trainer stellt Top-Elf auf</button>
                     </div>
+                    <div class="panel" id="lineup-presets-box"></div>
                     <div class="panel" style="text-align:center;">
                         <div class="panel-header"><span>🏟️ 3D-Taktiktafel (<span id="squad-form-name">4-4-2</span>)</span></div>
                         <div id="tactics-board-stat-bar" style="margin-bottom:8px;"></div>
@@ -1366,6 +1367,7 @@
                     </div>
                 </div>
                 <div id="squad-tab-taktik" style="display:none;">
+                    <div class="panel" id="tactic-presets-box"></div>
                     <div class="panel">
                         <div class="panel-header">🧠 Spielstil</div>
                         <div id="tactic-style-cards-grid" style="display:grid; grid-template-columns: repeat(2, 1fr); gap:4px;"></div>
@@ -2517,6 +2519,7 @@
 
             <!-- 28. PRE-MATCH & LIVESPIEL -->
             <div id="screen-prematch-press" style="display:none;">
+                <div id="prematch-check-box"></div>
                 <div id="prematch-fatigue-box"></div>
                 <div id="prematch-analysis-box" style="margin-bottom:10px;"></div>
                 <div id="prematch-tactic-box" style="margin-bottom:10px;"></div>
@@ -2587,6 +2590,7 @@
                             <button onclick="liveSetTackleHardness('normal')" id="live-th-normal" class="btn-action" style="font-size:var(--fs-micro); padding:4px 2px;">⚖️ Normal</button>
                             <button onclick="liveSetTackleHardness('hart')" id="live-th-hart" class="btn-secondary" style="font-size:var(--fs-micro); padding:4px 2px;">🥊 Hart</button>
                         </div>
+                        <div id="live-tactic-presets"></div>
                     </div>
 
                     <div class="box" style="padding:4px 4px 4px 13px; margin:4px 0;">
@@ -2619,6 +2623,7 @@
 <script src="js/avatars.js?v=2.1"></script>
 <script src="js/playerdetail.js?v=2.1"></script>
 <script src="js/squad.js?v=2.1"></script>
+<script src="js/matchprep.js?v=3.126"></script>
 <script src="js/squad-radar.js?v=2.1"></script>
 <script src="js/medical-department.js?v=2.1"></script>
 <script src="js/player-development.js?v=2.6"></script>

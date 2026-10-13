@@ -328,6 +328,7 @@
         if (typeof renderOppTacticBox === 'function') renderOppTacticBox(oppObj);
         if (typeof renderPregameTalkBox === 'function') renderPregameTalkBox();
         renderFatigueWarning();
+        if (typeof renderPrematchCheck === 'function') renderPrematchCheck();
 
         renderPressConference({ oppName, oppStr, isHome, cup: false });
         showScreen('screen-prematch-press');
@@ -535,6 +536,7 @@
     }
 
     function renderLiveTacticsPanel() {
+        if (typeof renderLiveTacticPresets === 'function') renderLiveTacticPresets();
         let sel = document.getElementById('live-formation-select');
         if (sel) sel.value = game.formation;
         ['offensiv', 'ausgeglichen', 'defensiv'].forEach(s => {

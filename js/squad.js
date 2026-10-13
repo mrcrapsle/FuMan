@@ -480,6 +480,7 @@
         game.tacticStyle = style;
         game.lastTacticWasCoTrainerSuggestion = false;
         renderTacticStyleCards();
+        if (typeof renderTacticPresets === 'function') renderTacticPresets();
         let cfg = TACTIC_STYLE_CONFIG[style];
         let descEl = document.getElementById('tactic-style-desc');
         if (descEl) descEl.innerText = cfg ? cfg.desc : '';
@@ -490,6 +491,7 @@
     function setTackleHardness(level) {
         playSound('click');
         game.tackleHardness = level;
+        if (typeof renderTacticPresets === 'function') renderTacticPresets();
         ['vorsichtig', 'normal', 'hart'].forEach(l => {
             let btn = document.getElementById('th-' + l);
             if (btn) btn.className = (l === level) ? 'btn-action' : 'btn-secondary';
@@ -793,6 +795,7 @@
     }
 
     function renderSquadView() {
+        if (typeof renderMatchPrepPanels === 'function') renderMatchPrepPanels();
         if (typeof renderNationalTeamPanel === 'function') renderNationalTeamPanel();
         renderSquadOverviewBox();
         renderSquadDepthChart();
