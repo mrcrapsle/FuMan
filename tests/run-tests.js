@@ -3067,7 +3067,7 @@ async function testFensterTastaturUndSpeicher(browser) {
         document.querySelectorAll('.generic-modal-overlay.show').forEach(o => o.classList.remove('show'));
         return out;
     });
-    // Meldung: Statusbereich, Antippen schließt, sie verdeckt den Weiter-Knopf nicht
+    // Meldung: Statusbereich, fängt keine Tipps ab, sie verdeckt den Weiter-Knopf nicht
     const toast = await page.evaluate(async () => {
         showToast('Probe-Meldung', 'success', 8000);
         await new Promise(res => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(res, 320))));
@@ -3075,8 +3075,8 @@ async function testFensterTastaturUndSpeicher(browser) {
         const a = t.getBoundingClientRect(), f = fab && getComputedStyle(fab).display !== 'none' ? fab.getBoundingClientRect() : null;
         const out = { rolle: t.getAttribute('role'), live: t.getAttribute('aria-live'), sichtbar: t.classList.contains('show'),
             ueberdeckt: !!f && !(a.right <= f.left || a.left >= f.right || a.bottom <= f.top || a.top >= f.bottom), fab: !!f };
-        t.click();
-        out.zu = !t.classList.contains('show');
+        // Die Meldung darf keine Tipps abfangen: Knöpfe darunter müssen bedienbar bleiben
+        out.zu = getComputedStyle(t).pointerEvents === 'none';
         return out;
     });
     // Darstellung: fehlt der dauerhafte Wert nach dem Neuladen, kommt er aus dem Tab-Speicher zurück
@@ -3093,7 +3093,7 @@ async function testFensterTastaturUndSpeicher(browser) {
     assert(nachHome, 'Pos1 springt zum ersten Reiter');
     assert(toast.rolle === 'status' && toast.live === 'polite' && toast.sichtbar, `Meldung ist ein Statusbereich (${JSON.stringify(toast)})`);
     assert(toast.fab && !toast.ueberdeckt, `Meldung verdeckt den sichtbaren Weiter-Knopf nicht (${JSON.stringify(toast)})`);
-    assert(toast.zu, 'Antippen schließt die Meldung');
+    assert(toast.zu, 'Die Meldung fängt keine Tipps ab (pointer-events: none)');
     assert(orient.main === 1 && orient.header === 1 && orient.navs.length >= 2 && orient.navs.every(n => n.length > 2) && orient.fokus === 'main-content' && orient.skip, `Genau ein Hauptbereich, benannte Navigationen, Sprunglink fokussiert den Inhalt (${JSON.stringify(orient)})`);
     assert(detail.chips >= 4 && ['Stärke', 'Moral', 'Fitness', 'Marktwert'].every(w => detail.werte.includes(w)) && detail.alleAngaben && detail.liste, `Spielerdetail zeigt Chips und Werteleiste vor der vollständigen Liste (${JSON.stringify(detail)})`);
     assert(nach.theme === 'klassik' && nach.groesse === 'gross' && nach.zurueck, `Darstellung kommt nach leerem Speicher aus dem Tab-Speicher zurück (${JSON.stringify(nach)})`);

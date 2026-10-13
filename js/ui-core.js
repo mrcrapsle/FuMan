@@ -60,7 +60,6 @@
         let toast = document.getElementById('app-toast');
         if (!toast) return;
         toast.innerText = message;
-        toast.onclick = () => { toast.classList.remove('show'); }; // Antippen schließt die Meldung sofort
         toast.className = 'app-toast show' + (type === 'error' ? ' toast-error' : '');
         clearTimeout(toast._hideTimer);
         toast._hideTimer = setTimeout(() => { toast.classList.remove('show'); }, duration);

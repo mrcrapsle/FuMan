@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.124', date: '13.10.2026', features: 'Phase 25.56-25.57 (Karten und Orientierung): Verträge als Karten mit aufklappbaren Klauseln, Spielerdetail mit Chips und Werteleiste, Reiter per Pfeiltasten, Meldungen über dem Weiter-Knopf, Sprunglink und benannte Navigationen, Karten für Training-Vorlagen und Hospitanz' };
+    const GAME_VERSION = { number: '3.125', date: '13.10.2026', features: 'Phase 25.56-25.57 (Karten und Orientierung): Verträge als Karten mit aufklappbaren Klauseln, Spielerdetail mit Chips und Werteleiste, Reiter per Pfeiltasten, Meldungen über dem Weiter-Knopf ohne Tipps abzufangen, Sprunglink und benannte Navigationen, Karten für Training-Vorlagen und Hospitanz' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

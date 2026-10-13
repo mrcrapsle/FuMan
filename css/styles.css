@@ -917,7 +917,7 @@
             opacity: 0; pointer-events: none; transition: opacity 0.25s ease, transform 0.25s ease;
             z-index: 9999; max-width: 88vw; text-align: center; border-left: 4px solid var(--primary);
         }
-        .app-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; cursor: pointer; }
+        .app-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
         .app-toast.toast-error { border-left-color: var(--danger); }
 
         
