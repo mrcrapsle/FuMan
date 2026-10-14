@@ -2883,6 +2883,11 @@ async function testKontrastAlleThemes(browser) {
             scan('bericht', '#share-report-overlay *'); closeShareReport();
             openFachwort('Moral');
             scan('fachwort', '#fachwort-overlay *'); closeFachwort();
+            openPlayerDetail(squad[0].id, 'squad'); openPlayerCompare();
+            scan('vergleich', '#compare-overlay *'); closePlayerCompare();
+            squad[0].timesInjured = 2; logPlayerInjury(squad[0], 2, 'Spiel'); renderInjuryHistory(squad[0], 'squad');
+            document.querySelectorAll('#pd-injuries details').forEach(d => { d.open = true; });
+            scan('verletzungsverlauf', '#pd-injuries *'); closePlayerDetail();
             probe.remove();
             return [...out];
         }, theme);
@@ -3510,6 +3515,107 @@ async function testManagerWerkzeuge(browser) {
     assert(lizenz.fehltPro && lizenz.kaufPro && lizenz.boost, 'Pro-Lizenz verlangt zusätzlich eine Trophäe und gibt weiter +4 Teamstärke');
     assert(lizenz.anzeige, 'Die Laufbahn mit Voraussetzungen erscheint im Privatleben-Bildschirm');
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
+    await page.close();
+}
+
+async function testVergleichUndNotizen(browser) {
+    console.log('\n[26.6] Spieler-Vergleich, Verletzungs-Verlauf, Vorlage im Spieltag-Check, Gegner-Notizbuch');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const r = await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false; simulateMatchdays(3);
+        const out = {};
+        // --- Spieler-Vergleich ---
+        const a = squad[0];
+        openPlayerDetail(a.id, 'squad');
+        out.knopf = !!document.getElementById('pd-compare-btn');
+        openPlayerCompare();
+        const ov = document.getElementById('compare-overlay');
+        out.offen = ov.classList.contains('show');
+        const sel = document.getElementById('compare-b');
+        out.optionen = sel && sel.options.length === squad.length - 1;
+        out.standardGleichePos = (() => { const b = squad.find(p => String(p.id) === String(sel.value)); return b && b.pos === a.pos && b.id !== a.id; })();
+        const text = document.getElementById('compare-content').textContent;
+        out.tabelle = text.includes('Stärke') && text.includes('Tempo') && text.includes('✓');
+        const anderer = [...sel.options].find(o => o.value !== sel.value).value;
+        sel.value = anderer; sel.dispatchEvent(new Event('change'));
+        out.wechsel = String(compareState.bId) === String(anderer);
+        closePlayerCompare(); out.zu = !ov.classList.contains('show');
+        // Transfermarkt-Spieler gegen den eigenen Kader
+        const m = marketPlayers[0];
+        if (m) { openPlayerDetail(m.id, 'market'); openPlayerCompare(); out.extern = document.getElementById('compare-content').textContent.includes('extern'); closePlayerCompare(); }
+        else out.extern = true;
+        closePlayerDetail();
+        // --- Verletzungs-Verlauf ---
+        const p = squad[3]; p.injured = 0; p.timesInjured = 0; p.injuryLog = [];
+        renderInjuryHistory(p, 'squad');
+        out.nieVerletzt = document.getElementById('pd-injuries').textContent.includes('noch nie verletzt');
+        p.timesInjured = 2; logPlayerInjury(p, 3, 'Spiel'); logPlayerInjury(p, 1, 'Länderspiel');
+        renderInjuryHistory(p, 'squad');
+        const verlauf = document.getElementById('pd-injuries').textContent;
+        out.verlauf = verlauf.includes('Verletzungs-Verlauf (2 Verletzungen)') && verlauf.includes('Länderspiel') && verlauf.includes('4 verpasste');
+        for (let i = 0; i < 12; i++) logPlayerInjury(p, 1, 'x');
+        out.deckel = p.injuryLog.length === 8;
+        renderInjuryHistory(p, 'market'); out.nurKader = document.getElementById('pd-injuries').innerHTML === '';
+        const q = squad[4]; q.injured = 0; q.injuryLog = []; q.timesInjured = 0;
+        injurePlayerByEvent(q, 'Trainingsunfall');
+        out.ereignis = q.injuryLog.length === 1 && q.injuryLog[0].anlass === 'Trainingsunfall';
+        // Spiel nach dem Spiel: irgendwann verletzt sich jemand und wird protokolliert
+        squad.forEach(x => { x.injuryLog = []; x.timesInjured = 0; x.injured = 0; });
+        let gefunden = false;
+        for (let i = 0; i < 80 && !gefunden; i++) {
+            squad.forEach(x => { x.fitness = 30; x.injured = 0; });
+            lineup = pickBestLineupIds();
+            processPostMatchRoutine('draw', false, false, 0, true, { total: 2, bothScored: true });
+            gefunden = squad.some(x => (x.injuryLog || []).some(e => e.anlass === 'Spiel') && x.injuryLog.length === x.timesInjured);
+        }
+        out.nachSpiel = gefunden;
+        squad.forEach(x => { x.fitness = 100; x.injured = 0; x.suspended = 0; });
+        // --- Vorlage im Spieltag-Check ---
+        game.formation = '4-4-2'; autoLineup();
+        saveLineupPreset(0);
+        const presetIds = [...game.lineupPresets[0].ids];
+        pendingMatchInfo = { isHome: true, oppName: 'Test FC', oppStr: 60, ourFixture: null };
+        renderPrematchCheck();
+        const check = document.getElementById('prematch-check-box').textContent;
+        out.vorlageAbschnitt = check.includes('Aufstellung aus Vorlage') && check.includes('Aktuelle Elf') && check.includes('gegen den Gegner');
+        // Eine Elf mit schwächsten Spielern: Vorschau ändert nichts, Aufstellen holt die Vorlage zurück
+        const schwach = [...squad].sort((x, y) => x.strength - y.strength).slice(0, 11).map(x => x.id);
+        lineup = schwach; const formVorher = game.formation;
+        const vorschau = getLineupStrengthPreview(presetIds, '4-4-2', true);
+        out.vorschauNeutral = lineup === schwach && game.formation === formVorher;
+        applyPresetPrematch(0);
+        out.aufgestellt = presetIds.every(id => lineup.includes(id)) && lineup.length === 11;
+        out.vorschauStimmt = Math.abs(calcTeamStrength(true) - vorschau) < 0.01;
+        // --- Gegner-Notizbuch ---
+        out.notizFeld = !!document.getElementById('gegner-notiz-text');
+        document.getElementById('gegner-notiz-text').value = 'Schwach <b>links</b>';
+        saveGegnerNotiz('Test FC');
+        out.notizGespeichert = !!game.gegnerNotizen['Test FC'] && game.gegnerNotizen['Test FC'].text === 'Schwach <b>links</b>';
+        out.notizMaskiert = document.getElementById('prematch-check-box').innerHTML.includes('Schwach &lt;b&gt;links') && !document.getElementById('prematch-check-box').innerHTML.includes('<b>links');
+        out.notizChip = document.getElementById('prematch-check-box').textContent.includes('Notiz vorhanden');
+        showScreen('screen-squad'); setSquadTab('analyse'); renderSquadView();
+        out.notizListe = document.getElementById('opp-notes-box').textContent.includes('Test FC');
+        document.getElementById('gegner-notiz-text') && (document.getElementById('gegner-notiz-text').value = 'x'.repeat(500));
+        pendingMatchInfo = { isHome: true, oppName: 'Test FC', oppStr: 60, ourFixture: null }; renderPrematchCheck();
+        document.getElementById('gegner-notiz-text').value = 'x'.repeat(500); saveGegnerNotiz('Test FC');
+        out.notizDeckel = game.gegnerNotizen['Test FC'].text.length === 300;
+        document.getElementById('gegner-notiz-text').value = ''; saveGegnerNotiz('Test FC');
+        out.notizLeerLoescht = !game.gegnerNotizen['Test FC'];
+        game.gegnerNotizen['Anderer FC'] = { text: 'abc', season: 1, matchday: 2 };
+        deleteGegnerNotiz('Anderer FC'); out.notizLoeschen = !game.gegnerNotizen['Anderer FC'];
+        delete game.gegnerNotizen; out.altesFeld = getGegnerNotiz('Test FC') === null && typeof game.gegnerNotizen === 'object';
+        pendingMatchInfo = null;
+        return out;
+    });
+    assert(r.knopf && r.offen && r.optionen && r.standardGleichePos && r.tabelle, `Spieler-Vergleich öffnet mit Auswahl, Standard gleiche Position und Tabelle (${JSON.stringify([r.knopf, r.offen, r.optionen, r.standardGleichePos, r.tabelle])})`);
+    assert(r.wechsel && r.zu && r.extern, `Vergleich: anderer Spieler wählbar, schließt, funktioniert auch mit Transfermarkt-Spielern (${JSON.stringify([r.wechsel, r.zu, r.extern])})`);
+    assert(r.nieVerletzt && r.verlauf && r.deckel && r.nurKader, `Verletzungs-Verlauf: leer, mit Einträgen, höchstens acht, nur für den eigenen Kader (${JSON.stringify([r.nieVerletzt, r.verlauf, r.deckel, r.nurKader])})`);
+    assert(r.ereignis && r.nachSpiel, `Verletzungen aus Ereignis und aus dem Spiel werden protokolliert (${r.ereignis}/${r.nachSpiel})`);
+    assert(r.vorlageAbschnitt && r.vorschauNeutral && r.aufgestellt && r.vorschauStimmt, `Vorlage im Spieltag-Check: Vorschau gegen den Gegner ändert nichts, Aufstellen stimmt mit der Vorschau überein (${JSON.stringify([r.vorlageAbschnitt, r.vorschauNeutral, r.aufgestellt, r.vorschauStimmt])})`);
+    assert(r.notizFeld && r.notizGespeichert && r.notizMaskiert && r.notizChip && r.notizListe, `Gegner-Notizbuch: speichern, maskieren, Chip und Liste im Reiter Analyse (${JSON.stringify([r.notizFeld, r.notizGespeichert, r.notizMaskiert, r.notizChip, r.notizListe])})`);
+    assert(r.notizDeckel && r.notizLeerLoescht && r.notizLoeschen && r.altesFeld, `Notizen: höchstens 300 Zeichen, leer löscht, Löschen, alte Spielstände (${JSON.stringify([r.notizDeckel, r.notizLeerLoescht, r.notizLoeschen, r.altesFeld])})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
     await page.close();
 }
 
@@ -11001,6 +11107,7 @@ async function main() {
         testVertragsWerkzeuge,
         testStatistikWerkzeuge,
         testManagerWerkzeuge,
+        testVergleichUndNotizen,
         testEntlassungsGrund,
         testEnglishUi,
         testSwapDeals,

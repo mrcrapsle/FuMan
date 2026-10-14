@@ -125,7 +125,10 @@ function playSummerTournament() {
             p.marketValue = Math.round((p.marketValue || 0) * schub / 1000) * 1000;
             p.morale = Math.min(100, (p.morale || 50) + (stufe === 5 ? 15 : stufe >= 3 ? 6 : 0));
             p.fitness = Math.max(40, (p.fitness || 100) - 15);
-            if (Math.random() < 0.1) p.injured = Math.max(p.injured || 0, 1 + Math.floor(Math.random() * 3));
+            if (Math.random() < 0.1) {
+                p.injured = Math.max(p.injured || 0, 1 + Math.floor(Math.random() * 3));
+                if (typeof logPlayerInjury === 'function') logPlayerInjury(p, p.injured, 'Länderspiel');
+            }
             eintrag.players.push({ name: p.name, apps: einsaetze, goals: tore });
         });
         ergebnis.nations.push(eintrag);

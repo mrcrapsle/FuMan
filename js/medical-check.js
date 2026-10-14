@@ -81,6 +81,7 @@ function applyMedicalOnArrival(p) {
         p.timesInjured = Math.max(p.timesInjured || 0, m.injuries);
     } else if (m.issue === 'verletzt') {
         p.injured = Math.max(p.injured || 0, m.weeks);
+        if (typeof logPlayerInjury === 'function') logPlayerInjury(p, m.weeks, 'bei Verpflichtung entdeckt');
     }
     if (m.issue !== 'ok' && !m.checked) {
         addInboxMessage('verletzung', `🩺 Böse Überraschung: ${p.name}`, `Ohne Medizincheck verpflichtet - jetzt stellt die Vereinsärztin fest: ${describeMedical(m)}.`, 'screen-squad');

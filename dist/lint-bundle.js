@@ -550,7 +550,7 @@ function renderUiStatRow(werte) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.130', date: '14.10.2026', features: 'Phase 26.5 (Feinschliff): Sichtprüfung der neuen Fenster, doppelte Hinweise zusammengelegt (Erschöpfung im Spieltag-Check, Angebote im Manager-Assistenten), Etiketten greifen in Angebote und Verlängerungs-Assistent ein, Dashboard-Aktualisierung entprellt' };
+    const GAME_VERSION = { number: '3.131', date: '14.10.2026', features: 'Phase 26.6: Spieler-Vergleich nebeneinander, Verletzungs-Verlauf je Spieler, Aufstellungsvorlage per Tipp mit Stärke gegen den Gegner im Spieltag-Check, Notizbuch für Gegner' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -657,6 +657,7 @@ function renderUiStatRow(werte) {
         tacticAutomation: { offensivBeiRueckstand: false, defensivBeiFuehrung: false },
         transferBilanzHistory: [],
         serien: { aktuell: {}, rekord: {} },
+        gegnerNotizen: {},
         lineupPresets: [null, null, null, null, null],
         tacticPresets: [null, null, null, null, null],
         fanSupport: {},
@@ -2389,6 +2390,7 @@ function getOwnDerbyRivals() {
         // aktuellen Momentanwert ohne jede historische Einordnung.
         if (typeof renderPlayerForm === 'function') renderPlayerForm(p);
         if (typeof renderPlayerTags === 'function') renderPlayerTags(p);
+        if (typeof renderInjuryHistory === 'function') renderInjuryHistory(p, pool);
         if (typeof renderMarketValueCurve === 'function') renderMarketValueCurve(p);
         if (typeof renderDevelopmentForecast === 'function') renderDevelopmentForecast(p);
         let historyBox = document.getElementById('pd-strength-history');
@@ -3516,6 +3518,61 @@ function mpLiveAktiv() {
     return typeof currentMatch !== 'undefined' && !!currentMatch && !!s && s.style.display === 'block';
 }
 
+// ---------- Gegner-Notizbuch (Phase 26.6) ----------
+
+const GEGNER_NOTIZ_MAX = 300;
+
+function ensureGegnerNotizen() {
+    if (!game.gegnerNotizen || typeof game.gegnerNotizen !== 'object' || Array.isArray(game.gegnerNotizen)) game.gegnerNotizen = {};
+}
+
+function getGegnerNotiz(name) {
+    ensureGegnerNotizen();
+    return game.gegnerNotizen[name] || null;
+}
+
+function saveGegnerNotiz(name) {
+    ensureGegnerNotizen();
+    const feld = document.getElementById('gegner-notiz-text');
+    const text = feld ? feld.value.trim().slice(0, GEGNER_NOTIZ_MAX) : '';
+    if (!name) return;
+    if (!text) {
+        if (game.gegnerNotizen[name]) { delete game.gegnerNotizen[name]; showToast(`📓 Notiz zu ${name} gelöscht.`, 'info'); }
+        else showToast('Schreibe zuerst etwas in das Notizfeld.', 'error');
+    } else {
+        game.gegnerNotizen[name] = { text, season: game.season, matchday: game.matchday };
+        showToast(`📓 Notiz zu ${name} gespeichert.`, 'success');
+    }
+    if (typeof renderPrematchCheck === 'function') renderPrematchCheck();
+    renderGegnerNotizbuch();
+}
+
+function deleteGegnerNotiz(name) {
+    ensureGegnerNotizen();
+    if (!game.gegnerNotizen[name]) return;
+    delete game.gegnerNotizen[name];
+    renderGegnerNotizbuch();
+}
+
+function renderGegnerNotizSection(oppName) {
+    if (!oppName) return '';
+    const n = getGegnerNotiz(oppName);
+    return `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${n ? `Gespeichert in Saison ${n.season}, Spieltag ${n.matchday}.` : 'Noch keine Notiz zu diesem Gegner.'} Die Notiz bleibt über Saisons erhalten.</div>
+        <textarea id="gegner-notiz-text" class="input-inline" maxlength="${GEGNER_NOTIZ_MAX}" rows="3" placeholder="z. B. Schwache Abwehr über links, Konter nach Ecken" style="width:100%;" aria-label="Notiz zu ${mpEsc(oppName)}">${mpEsc(n ? n.text : '')}</textarea>
+        <button onclick="saveGegnerNotiz(this.dataset.club)" data-club="${mpEsc(oppName)}" class="btn-secondary" style="margin-top:4px;">📓 Notiz speichern</button>`;
+}
+
+// Alle Notizen im Reiter Analyse
+function renderGegnerNotizbuch() {
+    const box = document.getElementById('opp-notes-box');
+    if (!box) return;
+    ensureGegnerNotizen();
+    const namen = Object.keys(game.gegnerNotizen).sort((a, b) => a.localeCompare(b));
+    box.innerHTML = `<div class="panel-header" style="color:var(--purple);">📓 Notizbuch: Gegner</div>`
+        + (namen.length ? namen.map(n => `<div class="box" style="font-size:var(--fs-small); margin:4px 0;"><div style="display:flex; justify-content:space-between; gap:8px; align-items:center;"><strong>${mpEsc(n)}</strong><button onclick="deleteGegnerNotiz(this.dataset.club)" data-club="${mpEsc(n)}" class="btn-secondary" style="width:auto; color:var(--danger);" title="Notiz zu ${mpEsc(n)} löschen">🗑️</button></div>${mpEsc(game.gegnerNotizen[n].text)}<div style="color:var(--text-muted); font-size:var(--fs-caption);">Saison ${game.gegnerNotizen[n].season}, Spieltag ${game.gegnerNotizen[n].matchday}</div></div>`).join('')
+            : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Notizen. Vor dem Anpfiff gibt es im Spieltag-Check ein Notizfeld zum Gegner.</div>');
+}
+
 // ---------- Aufstellungsvorlagen ----------
 
 function saveLineupPreset(slot) {
@@ -3538,10 +3595,8 @@ function deleteLineupPreset(slot) {
 
 // Lädt eine Vorlage. Ausgefallene Spieler (verletzt, gesperrt, verkauft) werden auf demselben Platz
 // durch den besten freien Spieler derselben Position ersetzt, ohne Ersatz durch den besten Verfügbaren.
-function loadLineupPreset(slot) {
-    ensureMatchPrepState();
-    const v = game.lineupPresets[slot];
-    if (!v) { showToast('Dieser Slot ist leer - speichere zuerst eine Aufstellung.', 'error'); return; }
+// Ersetzt Ausfälle einer Vorlage (siehe oben); liefert { ids, ersetzt } oder null, wenn nicht genug Spieler bereitstehen
+function resolveLineupPreset(v) {
     const neu = [];
     let ersetzt = 0;
     v.ids.forEach(id => {
@@ -3560,14 +3615,65 @@ function loadLineupPreset(slot) {
         const wahl = passend[0] || rest[0];
         if (wahl) { neu[i] = wahl.id; ersetzt++; }
     });
-    if (neu.some(id => !id) || neu.length !== 11) { showToast('Zu wenig einsatzbereite Spieler für diese Aufstellung.', 'error', 3500); return; }
+    if (neu.some(id => !id) || neu.length !== 11) return null;
+    return { ids: neu, ersetzt };
+}
+
+function loadLineupPreset(slot) {
+    ensureMatchPrepState();
+    const v = game.lineupPresets[slot];
+    if (!v) { showToast('Dieser Slot ist leer - speichere zuerst eine Aufstellung.', 'error'); return; }
+    const r = resolveLineupPreset(v);
+    if (!r) { showToast('Zu wenig einsatzbereite Spieler für diese Aufstellung.', 'error', 3500); return; }
     game.formation = v.formation || game.formation;
     const formName = document.getElementById('squad-form-name');
     if (formName) formName.innerText = game.formation;
-    lineup = neu;
+    lineup = r.ids;
     renderSquadView();
     if (typeof render3DPitch === 'function') render3DPitch();
-    showToast(ersetzt ? `📂 „${v.name}“ geladen, ${ersetzt} Ausfall${ersetzt === 1 ? '' : 'e'} ersetzt.` : `📂 „${v.name}“ geladen.`, 'success');
+    showToast(r.ersetzt ? `📂 „${v.name}“ geladen, ${r.ersetzt} Ausfall${r.ersetzt === 1 ? '' : 'e'} ersetzt.` : `📂 „${v.name}“ geladen.`, 'success');
+}
+
+// Teamstärke einer Elf mit Formation, ohne die Aufstellung zu verändern (Elf und Formation werden kurz getauscht)
+function getLineupStrengthPreview(ids, formation, istHeim) {
+    const altElf = lineup, altForm = game.formation;
+    try {
+        lineup = ids;
+        if (formation) game.formation = formation;
+        return calcTeamStrength(istHeim);
+    } finally {
+        lineup = altElf;
+        game.formation = altForm;
+    }
+}
+
+// Spieltag-Check: Vorlage mit einem Tipp aufstellen, davor die Stärke gegen den Gegner sehen
+function applyPresetPrematch(slot) {
+    loadLineupPreset(slot);
+    renderPrematchCheck();
+}
+
+function renderPresetQuickPick() {
+    ensureMatchPrepState();
+    const info = typeof pendingMatchInfo !== 'undefined' ? pendingMatchInfo : null;
+    const istHeim = info ? !!info.isHome : true;
+    const gegner = info && typeof info.oppStr === 'number' ? info.oppStr : null;
+    const chipGegen = st => gegner === null ? '' : (d => uiChip(`${d >= 0 ? '+' : ''}${d.toFixed(1)} gegen den Gegner`, d >= 3 ? 'gut' : (d <= -3 ? 'schlecht' : 'warn')))(st - gegner);
+    const aktuell = lineup.length === 11 ? getLineupStrengthPreview(lineup, game.formation, istHeim) : null;
+    const kopf = aktuell === null ? '' : `<div class="box" style="font-size:var(--fs-small); margin:4px 0;"><strong>Aktuelle Elf</strong> (${game.formation}): Stärke ${aktuell.toFixed(1)}${gegner !== null ? ` · Gegner ${gegner.toFixed(1)}` : ''}<div class="ui-card-meta" style="margin-top:4px;">${chipGegen(aktuell)}</div></div>`;
+    const zeilen = game.lineupPresets.map((v, i) => {
+        if (!v) return '';
+        const r = resolveLineupPreset(v);
+        if (!r) return `<div class="box" style="font-size:var(--fs-small); margin:4px 0;"><strong>${mpEsc(v.name)}</strong> · zu wenig einsatzbereite Spieler</div>`;
+        const st = getLineupStrengthPreview(r.ids, v.formation, istHeim);
+        const delta = aktuell === null ? null : st - aktuell;
+        const gleich = r.ids.length === lineup.length && r.ids.every((id, k) => id === lineup[k]) && v.formation === game.formation;
+        return `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">
+            <strong>${mpEsc(v.name)}</strong> (${v.formation}): Stärke ${st.toFixed(1)}${delta === null ? '' : ` <span style="color:var(--text-muted);">(${delta >= 0 ? '+' : ''}${delta.toFixed(1)} zur aktuellen Elf)</span>`}
+            <div class="ui-card-meta" style="margin-top:4px;">${chipGegen(st)}${r.ersetzt ? uiChip(`🔁 ${r.ersetzt} Ausfall${r.ersetzt === 1 ? '' : 'e'} ersetzt`, 'warn') : uiChip('✓ komplett', 'gut')}${gleich ? uiChip('aktuell aufgestellt', 'gut') : ''}</div>
+            <button onclick="applyPresetPrematch(${i})" class="btn-action" style="margin-top:4px;"${gleich ? ' disabled' : ''}>📂 Aufstellen</button></div>`;
+    }).join('');
+    return kopf + (zeilen || '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Aufstellungsvorlage gespeichert (Kader → Aufstellung).</div>');
 }
 
 function renderLineupPresets() {
@@ -3666,6 +3772,7 @@ function renderLiveTacticPresets() {
 function renderMatchPrepPanels() {
     renderLineupPresets();
     renderTacticPresets();
+    renderGegnerNotizbuch();
 }
 
 // ---------- Spieltag-Check vor dem Anpfiff ----------
@@ -3734,11 +3841,14 @@ function renderPrematchCheck() {
     const ohneErsatz = alleRotation.filter(r => !r.rein).map(r => r.raus.name);
     const stammFehlt = fehlt.filter(x => x.stamm).length;
     const muede = squad.filter(p => lineup.includes(p.id) && mpIstEinsatzbereit(p) && p.fitness < 70);
+    const oppName = typeof pendingMatchInfo !== 'undefined' && pendingMatchInfo ? pendingMatchInfo.oppName : '';
+    const notiz = oppName ? getGegnerNotiz(oppName) : null;
     const chips = [
         probleme.length ? uiChip(`⚠️ ${probleme.length} Hinweis${probleme.length === 1 ? '' : 'e'}`, probleme.some(x => x.ton === 'schlecht') ? 'schlecht' : 'warn') : uiChip('✓ Elf in Ordnung', 'gut'),
         uiChip(`🩹 ${fehlt.length} fehlen${stammFehlt ? ` (${stammFehlt} Stammspieler)` : ''}`, stammFehlt ? 'warn' : ''),
         muede.length ? uiChip(`😮‍💨 ${muede.length} erschöpft`, muede.some(p => p.fitness < 50) ? 'schlecht' : 'warn') : '',
-        rotation.length ? uiChip(`🔄 ${rotation.length} Rotationsidee${rotation.length === 1 ? '' : 'n'}`, 'warn') : ''
+        rotation.length ? uiChip(`🔄 ${rotation.length} Rotationsidee${rotation.length === 1 ? '' : 'n'}`, 'warn') : '',
+        notiz ? uiChip('📓 Notiz vorhanden') : ''
     ];
     const problemListe = probleme.length ? probleme.map(x => `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">${x.ton === 'schlecht' ? '🔴' : '🟡'} ${mpEsc(x.text)}</div>`).join('')
         : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Torwart und Formation passen.</div>';
@@ -3757,6 +3867,8 @@ function renderPrematchCheck() {
         <details class="ui-fold"${fehlt.length ? ' open' : ''}><summary>Wer fehlt?</summary>${fehltListe}</details>
         <details class="ui-fold"${rotation.length || muede.length ? ' open' : ''}><summary>Rotations-Assistent</summary>${rotListe}
             <button onclick="showScreen('screen-squad')" class="btn-secondary" style="margin-top:4px;">⚽ Aufstellung im Detail ändern</button></details>
+        <details class="ui-fold"><summary>Aufstellung aus Vorlage</summary>${renderPresetQuickPick()}</details>
+        ${oppName ? `<details class="ui-fold"${notiz ? ' open' : ''}><summary>📓 Notizbuch: ${mpEsc(oppName)}</summary>${renderGegnerNotizSection(oppName)}</details>` : ''}
     </div>`;
 }
 
@@ -4032,8 +4144,37 @@ function injurePlayerByEvent(p, grund) {
     const reduction = Math.max(0.25, 1 - (campusBuildings.reha.lvl * 0.08) - (staffMembers.physio.hired ? 1 - getPhysioEffekt().ausfall : 0));
     p.injured = Math.max(1, Math.round(baseDuration * reduction));
     p.timesInjured = (p.timesInjured || 0) + 1;
+    logPlayerInjury(p, p.injured, grund || 'Ereignis');
     addInboxMessage('verletzung', `${p.name} verletzt`, `${grund ? grund + ': ' : ''}Fällt für ${p.injured} Spiel(e) aus.`, 'screen-squad');
     return true;
+}
+
+// Verletzungs-Verlauf je Spieler (Phase 26.6): die letzten acht Ausfälle mit Saison, Spieltag, Dauer und Anlass.
+// Reine Anzeige-Buchführung; die Ausfälle selbst entstehen weiter nur im Spiel nach dem Spiel und in injurePlayerByEvent().
+function logPlayerInjury(p, tage, anlass) {
+    if (!p) return;
+    if (!Array.isArray(p.injuryLog)) p.injuryLog = [];
+    p.injuryLog.push({ season: game.season, matchday: game.matchday, tage: tage || 1, anlass: anlass || 'Spiel' });
+    if (p.injuryLog.length > 8) p.injuryLog.shift();
+}
+
+function renderInjuryHistory(p, pool) {
+    const box = document.getElementById('pd-injuries');
+    if (!box) return;
+    if (pool !== 'squad' && pool !== 'secondTeam') { box.innerHTML = ''; return; }
+    const log = Array.isArray(p.injuryLog) ? p.injuryLog : [];
+    const gesamt = p.timesInjured || 0;
+    if (!gesamt && !log.length) {
+        box.innerHTML = `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin:8px 0; text-align:center;">🩹 Verletzungs-Verlauf: noch nie verletzt.</div>`;
+        return;
+    }
+    const tageSumme = log.reduce((s, e) => s + (e.tage || 0), 0);
+    const aelter = Math.max(0, gesamt - log.length);
+    const zeilen = [...log].reverse().map(e => `<div style="display:flex; justify-content:space-between; gap:8px;"><span>Saison ${e.season}, Spieltag ${e.matchday}</span><span style="color:var(--text-muted);">${e.tage} Spiel${e.tage === 1 ? '' : 'e'} · ${mpEsc(e.anlass)}</span></div>`).join('');
+    box.innerHTML = `<details class="ui-fold" style="margin:8px 0; text-align:left;"><summary>🩹 Verletzungs-Verlauf (${gesamt} Verletzung${gesamt === 1 ? '' : 'en'})</summary>
+        <div style="font-size:var(--fs-small); margin-top:4px;">${zeilen || '<span style="color:var(--text-muted);">Keine Einzelheiten gespeichert.</span>'}
+        ${aelter ? `<div style="color:var(--text-muted); margin-top:4px;">… dazu ${aelter} ältere, nicht einzeln gespeichert.</div>` : ''}
+        ${log.length ? `<div style="margin-top:4px;">Zusammen ${tageSumme} verpasste Spiele in den letzten ${log.length} Ausfällen.</div>` : ''}</div></details>`;
 }
 
 // Alte Spielstände: Buchführung der abgelösten Parallel-Systeme entfernen (hatte keine
@@ -22387,6 +22528,98 @@ function renderLicenseCareer() {
 }
 
 /* eslint-enable */
+// ============================================================================
+// SPIELER-VERGLEICH (Phase 26.6): zwei Spieler nebeneinander, aus dem Spielerdetail geöffnet.
+// Der zweite Spieler kommt aus dem eigenen Kader (Standard: bester andere Spieler derselben Position),
+// der erste darf auch vom Transfermarkt, aus dem Scouting oder der Jugend stammen. Reine Anzeige:
+// liest echte Spielerdaten und ändert nichts.
+// ============================================================================
+
+let compareState = { aId: null, aPool: 'squad', bId: null };
+
+// Zeilen des Vergleichs: wert(p) liefert eine Zahl oder null; besser = 'hoch' | 'tief' | null (kein Sieger)
+const VERGLEICH_ZEILEN = [
+    { label: 'Stärke', wert: p => p.strength, besser: 'hoch' },
+    { label: 'Alter', wert: p => p.age || null, besser: null },
+    { label: 'Fitness', wert: p => p.fitness ?? null, besser: 'hoch', suffix: ' %' },
+    { label: 'Moral', wert: p => p.morale ?? null, besser: 'hoch' },
+    { label: 'Tempo', wert: p => p.pace ?? null, besser: 'hoch' },
+    { label: 'Schuss', wert: p => p.shooting ?? null, besser: 'hoch' },
+    { label: 'Pass', wert: p => p.passing ?? null, besser: 'hoch' },
+    { label: 'Abwehr', wert: p => p.defense ?? null, besser: 'hoch' },
+    { label: 'Marktwert', wert: p => p.marketValue || 0, besser: null, format: v => formatVal(v) },
+    { label: 'Gehalt je Spieltag', wert: p => (typeof p.wage === 'number' ? p.wage : null), besser: 'tief', format: v => formatVal(v) },
+    { label: 'Vertrag (Jahre)', wert: p => (typeof p.contracts === 'number' ? p.contracts : null), besser: null },
+    { label: 'Tore (Saison)', wert: p => p.goalsSeason ?? null, besser: 'hoch' },
+    { label: 'Vorlagen (Saison)', wert: p => (p.statsSeason ? p.statsSeason.vorlagen : null), besser: 'hoch' },
+    { label: 'Ø Note (Saison)', wert: p => (p.statsSeason && p.statsSeason.spiele ? p.statsSeason.notenSumme / p.statsSeason.spiele : null), besser: 'tief', format: v => (typeof formatGrade === 'function' ? formatGrade(v) : v.toFixed(1)) },
+    { label: 'Verletzungen', wert: p => p.timesInjured ?? 0, besser: 'tief' }
+];
+
+function pcFindA() {
+    return typeof findPlayerInPool === 'function' ? findPlayerInPool(compareState.aId, compareState.aPool) : null;
+}
+function pcFindB() { return squad.find(p => String(p.id) === String(compareState.bId)) || null; }
+
+function pcKandidaten(a) {
+    return squad.filter(p => !a || String(p.id) !== String(a.id))
+        .sort((x, y) => ((y.pos === (a && a.pos)) - (x.pos === (a && a.pos))) || (y.strength - x.strength));
+}
+
+function openPlayerCompare() {
+    const aId = typeof currentDetailPlayerId !== 'undefined' ? currentDetailPlayerId : null;
+    const aPool = typeof currentDetailPlayerPool !== 'undefined' ? currentDetailPlayerPool : 'squad';
+    const a = aId !== null && typeof findPlayerInPool === 'function' ? findPlayerInPool(aId, aPool) : null;
+    if (!a) { showToast('Öffne zuerst die Karte eines Spielers, den du vergleichen willst.', 'error'); return; }
+    const kand = pcKandidaten(a);
+    if (!kand.length) { showToast('Es gibt keinen Kaderspieler zum Vergleichen.', 'error'); return; }
+    compareState = { aId, aPool, bId: kand[0].id };
+    renderPlayerCompare();
+    const ov = document.getElementById('compare-overlay');
+    if (ov) ov.classList.add('show');
+}
+
+function closePlayerCompare() {
+    const ov = document.getElementById('compare-overlay');
+    if (ov) ov.classList.remove('show');
+}
+
+function setCompareB(id) {
+    compareState.bId = id;
+    renderPlayerCompare();
+}
+
+function renderPlayerCompare() {
+    const box = document.getElementById('compare-content');
+    if (!box) return;
+    const a = pcFindA(), b = pcFindB();
+    if (!a || !b) { box.innerHTML = '<div class="box">Einer der Spieler ist nicht mehr verfügbar.</div>'; return; }
+    let nA = 0, nB = 0, gleich = 0;
+    const zeilen = VERGLEICH_ZEILEN.map(z => {
+        const va = z.wert(a), vb = z.wert(b);
+        if (va === null && vb === null) return '';
+        const fmt = v => v === null ? '–' : (z.format ? z.format(v) : (typeof v === 'number' ? (Number.isInteger(v) ? v : v.toFixed(1)) : v) + (z.suffix || ''));
+        let siegerA = false, siegerB = false;
+        if (z.besser && va !== null && vb !== null && Math.abs(va - vb) > 1e-9) {
+            const aVorn = z.besser === 'hoch' ? va > vb : va < vb;
+            siegerA = aVorn; siegerB = !aVorn;
+            if (aVorn) nA++; else nB++;
+        } else if (z.besser && va !== null && vb !== null) gleich++;
+        return `<tr><th scope="row" style="text-align:left; font-weight:400; color:var(--text-muted); padding:3px 4px;">${z.label}</th><td style="text-align:right; padding:3px 4px;${siegerA ? ' font-weight:800; color:var(--accent);' : ''}">${fmt(va)}${siegerA ? ' ✓' : ''}</td><td style="text-align:right; padding:3px 4px;${siegerB ? ' font-weight:800; color:var(--accent);' : ''}">${fmt(vb)}${siegerB ? ' ✓' : ''}</td></tr>`;
+    }).join('');
+    const optionen = pcKandidaten(a).map(p => `<option value="${mpEsc(p.id)}"${String(p.id) === String(b.id) ? ' selected' : ''}>${mpEsc(p.name)} (${p.pos}, ${p.strength})</option>`).join('');
+    const urteil = nA === nB ? 'Ausgeglichen' : (nA > nB ? `${a.name} liegt vorn` : `${b.name} liegt vorn`);
+    box.innerHTML = `<div class="panel-header">⚖️ Spieler-Vergleich</div>
+        <label class="ui-field" style="margin-bottom:8px;"><span class="ui-field-label">Vergleichen mit (eigener Kader)</span>
+            <select id="compare-b" onchange="setCompareB(this.value)" style="width:100%;">${optionen}</select></label>
+        <div class="ui-card-meta" style="margin-bottom:6px;">${uiChip(`${mpEsc(a.name)}: ${nA} vorn`, nA > nB ? 'gut' : '')}${uiChip(`${mpEsc(b.name)}: ${nB} vorn`, nB > nA ? 'gut' : '')}${gleich ? uiChip(`${gleich} gleich`) : ''}${uiChip(urteil, nA === nB ? 'warn' : 'gut')}</div>
+        <table style="width:100%; border-collapse:collapse; font-size:var(--fs-small);">
+            <thead><tr><th></th><th style="text-align:right; padding:3px 4px;">${mpEsc(a.name)}<div style="font-weight:400; color:var(--text-muted); font-size:var(--fs-caption);">${a.pos}${compareState.aPool !== 'squad' ? ' · extern' : ''}</div></th><th style="text-align:right; padding:3px 4px;">${mpEsc(b.name)}<div style="font-weight:400; color:var(--text-muted); font-size:var(--fs-caption);">${b.pos} · eigener Kader</div></th></tr></thead>
+            <tbody>${zeilen}</tbody></table>
+        <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:6px;">✓ = besserer Wert. Alter, Marktwert und Vertragslaufzeit haben keinen Sieger. Werte ohne Angabe (z. B. Gehalt externer Spieler) zählen nicht.</div>`;
+}
+
+/* eslint-enable */
 
     // ==========================================
     // Trainer-Privatleben: GEHALT, LIFESTYLE, HOBBYS, EINKOMMENSQUELLEN
@@ -25178,6 +25411,7 @@ function applyMedicalOnArrival(p) {
         p.timesInjured = Math.max(p.timesInjured || 0, m.injuries);
     } else if (m.issue === 'verletzt') {
         p.injured = Math.max(p.injured || 0, m.weeks);
+        if (typeof logPlayerInjury === 'function') logPlayerInjury(p, m.weeks, 'bei Verpflichtung entdeckt');
     }
     if (m.issue !== 'ok' && !m.checked) {
         addInboxMessage('verletzung', `🩺 Böse Überraschung: ${p.name}`, `Ohne Medizincheck verpflichtet - jetzt stellt die Vereinsärztin fest: ${describeMedical(m)}.`, 'screen-squad');
@@ -29657,6 +29891,7 @@ function cleanupLegacyScoutState() {
                 reduction = Math.max(0.25, reduction); // Reha/Physio können Ausfallzeit nie unter 25% drücken
                 p.injured = Math.max(1, Math.round(baseDuration * reduction));
                 p.timesInjured = (p.timesInjured || 0) + 1;
+                if (typeof logPlayerInjury === 'function') logPlayerInjury(p, p.injured, 'Spiel');
                 let fragileTag = p.timesInjured >= 3 ? ' ⚠️ Wird zunehmend verletzungsanfällig!' : '';
                 addInboxMessage('verletzung', `${p.name} verletzt`, `Fällt für ${p.injured} Spiel(e) aus. (${p.timesInjured}. Verletzung in dieser Karriere)${fragileTag}`, 'screen-squad');
             } else if (Math.random() < 0.015 * refereeCardMultThisMatch) {
@@ -32152,7 +32387,10 @@ function playSummerTournament() {
             p.marketValue = Math.round((p.marketValue || 0) * schub / 1000) * 1000;
             p.morale = Math.min(100, (p.morale || 50) + (stufe === 5 ? 15 : stufe >= 3 ? 6 : 0));
             p.fitness = Math.max(40, (p.fitness || 100) - 15);
-            if (Math.random() < 0.1) p.injured = Math.max(p.injured || 0, 1 + Math.floor(Math.random() * 3));
+            if (Math.random() < 0.1) {
+                p.injured = Math.max(p.injured || 0, 1 + Math.floor(Math.random() * 3));
+                if (typeof logPlayerInjury === 'function') logPlayerInjury(p, p.injured, 'Länderspiel');
+            }
             eintrag.players.push({ name: p.name, apps: einsaetze, goals: tore });
         });
         ergebnis.nations.push(eintrag);

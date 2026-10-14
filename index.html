@@ -164,6 +164,7 @@
         <div id="pd-summary"></div>
         <div id="pd-form"></div>
         <div id="pd-tags"></div>
+        <div id="pd-injuries"></div>
         <div class="modal-field-grid" id="pd-fields"></div>
         <div style="font-size:var(--fs-body); font-weight:800; color:var(--accent); margin-top:6px;">Fähigkeiten</div>
         <div class="modal-stat-grid" id="pd-stats"></div>
@@ -173,6 +174,7 @@
         <div id="pd-career-progression" style="display:none; margin-top:6px;"></div>
         <div id="pd-scouting-report" style="display:none; margin-top:6px;"></div>
         <button onclick="closePlayerDetail()" class="btn-primary" style="margin-top:10px;">Schließen</button>
+        <button onclick="openPlayerCompare()" id="pd-compare-btn" class="btn-secondary" style="margin-top:6px;">⚖️ Mit Kaderspieler vergleichen</button>
         <button onclick="talkToPlayerFromDetail()" id="pd-talk-btn" class="btn-primary" style="margin-top:6px;">💬 Mit Spieler sprechen</button>
         <button id="pd-agent-relationship-btn" class="btn-secondary" style="margin-top:6px; display:none;">🤝 Beziehung pflegen</button>
     </div>
@@ -218,6 +220,14 @@
     <div class="generic-modal-box">
         <button onclick="closeRenewalAssistant()" class="generic-modal-close" aria-label="Schließen">✕</button>
         <div id="renewal-assistant-content"></div>
+    </div>
+</div>
+
+<!-- SPIELER-VERGLEICH (js/player-compare.js) -->
+<div id="compare-overlay" class="generic-modal-overlay">
+    <div class="generic-modal-box">
+        <button onclick="closePlayerCompare()" class="generic-modal-close" aria-label="Schließen">✕</button>
+        <div id="compare-content"></div>
     </div>
 </div>
 
@@ -1423,6 +1433,7 @@
                 </div>
                 <div id="squad-tab-analyse" style="display:none;">
                     <div class="panel" id="series-tracker-box"></div>
+                    <div class="panel" id="opp-notes-box"></div>
                     <div class="panel">
                         <div class="panel-header" style="color:var(--blue);">📊 Daten exportieren (CSV)</div>
                         <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Für Tabellenkalkulation oder zum Teilen. Semikolon-getrennt, öffnet direkt in Excel und Co.</div>
@@ -2716,6 +2727,7 @@
 <script src="js/contract-tools.js?v=3.127"></script>
 <script src="js/insights.js?v=3.128"></script>
 <script src="js/manager-tools.js?v=3.129"></script>
+<script src="js/player-compare.js?v=3.131"></script>
 <script src="js/private-life.js?v=2.1"></script>
 <script src="js/player-scandals.js?v=2.1"></script>
 <script src="js/underworld.js?v=2.1"></script>

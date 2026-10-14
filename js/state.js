@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.130', date: '14.10.2026', features: 'Phase 26.5 (Feinschliff): Sichtprüfung der neuen Fenster, doppelte Hinweise zusammengelegt (Erschöpfung im Spieltag-Check, Angebote im Manager-Assistenten), Etiketten greifen in Angebote und Verlängerungs-Assistent ein, Dashboard-Aktualisierung entprellt' };
+    const GAME_VERSION = { number: '3.131', date: '14.10.2026', features: 'Phase 26.6: Spieler-Vergleich nebeneinander, Verletzungs-Verlauf je Spieler, Aufstellungsvorlage per Tipp mit Stärke gegen den Gegner im Spieltag-Check, Notizbuch für Gegner' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -111,6 +111,7 @@
         tacticAutomation: { offensivBeiRueckstand: false, defensivBeiFuehrung: false },
         transferBilanzHistory: [],
         serien: { aktuell: {}, rekord: {} },
+        gegnerNotizen: {},
         lineupPresets: [null, null, null, null, null],
         tacticPresets: [null, null, null, null, null],
         fanSupport: {},

@@ -38,8 +38,37 @@ function injurePlayerByEvent(p, grund) {
     const reduction = Math.max(0.25, 1 - (campusBuildings.reha.lvl * 0.08) - (staffMembers.physio.hired ? 1 - getPhysioEffekt().ausfall : 0));
     p.injured = Math.max(1, Math.round(baseDuration * reduction));
     p.timesInjured = (p.timesInjured || 0) + 1;
+    logPlayerInjury(p, p.injured, grund || 'Ereignis');
     addInboxMessage('verletzung', `${p.name} verletzt`, `${grund ? grund + ': ' : ''}Fällt für ${p.injured} Spiel(e) aus.`, 'screen-squad');
     return true;
+}
+
+// Verletzungs-Verlauf je Spieler (Phase 26.6): die letzten acht Ausfälle mit Saison, Spieltag, Dauer und Anlass.
+// Reine Anzeige-Buchführung; die Ausfälle selbst entstehen weiter nur im Spiel nach dem Spiel und in injurePlayerByEvent().
+function logPlayerInjury(p, tage, anlass) {
+    if (!p) return;
+    if (!Array.isArray(p.injuryLog)) p.injuryLog = [];
+    p.injuryLog.push({ season: game.season, matchday: game.matchday, tage: tage || 1, anlass: anlass || 'Spiel' });
+    if (p.injuryLog.length > 8) p.injuryLog.shift();
+}
+
+function renderInjuryHistory(p, pool) {
+    const box = document.getElementById('pd-injuries');
+    if (!box) return;
+    if (pool !== 'squad' && pool !== 'secondTeam') { box.innerHTML = ''; return; }
+    const log = Array.isArray(p.injuryLog) ? p.injuryLog : [];
+    const gesamt = p.timesInjured || 0;
+    if (!gesamt && !log.length) {
+        box.innerHTML = `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin:8px 0; text-align:center;">🩹 Verletzungs-Verlauf: noch nie verletzt.</div>`;
+        return;
+    }
+    const tageSumme = log.reduce((s, e) => s + (e.tage || 0), 0);
+    const aelter = Math.max(0, gesamt - log.length);
+    const zeilen = [...log].reverse().map(e => `<div style="display:flex; justify-content:space-between; gap:8px;"><span>Saison ${e.season}, Spieltag ${e.matchday}</span><span style="color:var(--text-muted);">${e.tage} Spiel${e.tage === 1 ? '' : 'e'} · ${mpEsc(e.anlass)}</span></div>`).join('');
+    box.innerHTML = `<details class="ui-fold" style="margin:8px 0; text-align:left;"><summary>🩹 Verletzungs-Verlauf (${gesamt} Verletzung${gesamt === 1 ? '' : 'en'})</summary>
+        <div style="font-size:var(--fs-small); margin-top:4px;">${zeilen || '<span style="color:var(--text-muted);">Keine Einzelheiten gespeichert.</span>'}
+        ${aelter ? `<div style="color:var(--text-muted); margin-top:4px;">… dazu ${aelter} ältere, nicht einzeln gespeichert.</div>` : ''}
+        ${log.length ? `<div style="margin-top:4px;">Zusammen ${tageSumme} verpasste Spiele in den letzten ${log.length} Ausfällen.</div>` : ''}</div></details>`;
 }
 
 // Alte Spielstände: Buchführung der abgelösten Parallel-Systeme entfernen (hatte keine

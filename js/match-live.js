@@ -1236,6 +1236,7 @@
                 reduction = Math.max(0.25, reduction); // Reha/Physio können Ausfallzeit nie unter 25% drücken
                 p.injured = Math.max(1, Math.round(baseDuration * reduction));
                 p.timesInjured = (p.timesInjured || 0) + 1;
+                if (typeof logPlayerInjury === 'function') logPlayerInjury(p, p.injured, 'Spiel');
                 let fragileTag = p.timesInjured >= 3 ? ' ⚠️ Wird zunehmend verletzungsanfällig!' : '';
                 addInboxMessage('verletzung', `${p.name} verletzt`, `Fällt für ${p.injured} Spiel(e) aus. (${p.timesInjured}. Verletzung in dieser Karriere)${fragileTag}`, 'screen-squad');
             } else if (Math.random() < 0.015 * refereeCardMultThisMatch) {

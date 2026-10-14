@@ -148,6 +148,7 @@
         // aktuellen Momentanwert ohne jede historische Einordnung.
         if (typeof renderPlayerForm === 'function') renderPlayerForm(p);
         if (typeof renderPlayerTags === 'function') renderPlayerTags(p);
+        if (typeof renderInjuryHistory === 'function') renderInjuryHistory(p, pool);
         if (typeof renderMarketValueCurve === 'function') renderMarketValueCurve(p);
         if (typeof renderDevelopmentForecast === 'function') renderDevelopmentForecast(p);
         let historyBox = document.getElementById('pd-strength-history');
