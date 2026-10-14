@@ -446,7 +446,7 @@ Alle lesen echte Spieldaten und ändern die Mannschaft nur auf Tipp:
 - **Verträge:** Gehalts-Ampel, Verlängerungs-Assistent, Marktwert-Kurve, Entwicklungsprognose,
   Transferbilanz-Historie (`js/contract-tools.js`).
 - **Statistik:** Serien, Formkurve, CSV-Export, Spielbericht teilen, Fachwort-Hilfe (`js/insights.js`).
-- **Manager:** Liquiditäts-Vorschau, Konto-Alarm, Spieler-Etiketten (Stammkraft, Aufbauspieler und Schonen wirken klein auf Moral und Verletzungsrisiko), Manager-Assistent
+- **Manager:** Liquiditäts-Vorschau, Konto-Alarm, Spieler-Etiketten (Stammkraft und Aufbauspieler wirken klein auf die Moral, Schonen auf das Verletzungsrisiko), Manager-Assistent
   (nächste Schritte nach Dringlichkeit, auch Fristen), Lizenz-Laufbahn (`js/manager-tools.js`).
 - **Vergleich:** zwei Spieler nebeneinander, auch Transfermarkt gegen eigenen Kader (`js/player-compare.js`).
 - **Verletzungen:** Verlauf je Spieler, Ausfall-Rangliste im Medizin-Panel, Ausfälle im Kaderplaner

@@ -550,7 +550,7 @@ function renderUiStatRow(werte) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.133', date: '14.10.2026', features: 'Testdatei aufgeteilt: Ablauf in run-tests.js, Hilfen in lib.js, 171 Suiten nach Themen in tests/suites (Spielverhalten unverändert)' };
+    const GAME_VERSION = { number: '3.132', date: '14.10.2026', features: 'Phase 26.7: Bilanz gegen den Gegner im Notizbuch, Vergleich direkt von Kader- und Transfermarkt-Karte, Ausfall-Rangliste im Medizin-Panel, Fokus in neu gezeichneten Fenstern, einheitliche Kalender-Knöpfe, Reiter ohne Wortbruch bei großer Schrift' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -658,6 +658,8 @@ function renderUiStatRow(werte) {
         transferBilanzHistory: [],
         serien: { aktuell: {}, rekord: {} },
         gegnerNotizen: {},
+        vorlageBilanz: {},
+        vorlageImEinsatz: null,
         lineupPresets: [null, null, null, null, null],
         tacticPresets: [null, null, null, null, null],
         fanSupport: {},
@@ -3599,6 +3601,7 @@ function saveLineupPreset(slot) {
     const eingabe = document.getElementById('lineup-preset-name');
     const name = (eingabe && eingabe.value.trim()) || `Vorlage ${slot + 1}`;
     game.lineupPresets[slot] = { name: name.slice(0, 24), ids: [...lineup], formation: game.formation };
+    ensureVorlageBilanz(); delete game.vorlageBilanz[slot]; // neue Vorlage, neue Bilanz
     if (eingabe) eingabe.value = '';
     showToast(`💾 Aufstellung „${name.slice(0, 24)}“ in Slot ${slot + 1} gespeichert.`, 'success');
     renderLineupPresets();
@@ -3608,6 +3611,7 @@ function deleteLineupPreset(slot) {
     ensureMatchPrepState();
     if (!game.lineupPresets[slot]) return;
     game.lineupPresets[slot] = null;
+    ensureVorlageBilanz(); delete game.vorlageBilanz[slot];
     renderLineupPresets();
 }
 
@@ -3652,6 +3656,58 @@ function loadLineupPreset(slot) {
     showToast(r.ersetzt ? `📂 „${v.name}“ geladen, ${r.ersetzt} Ausfall${r.ersetzt === 1 ? '' : 'e'} ersetzt.` : `📂 „${v.name}“ geladen.`, 'success');
 }
 
+// ---------- Bilanz je Vorlage (Nachbetrachtung) ----------
+// Vor jedem Ligaspiel merkt sich markPresetInUse(), ob die Startelf (samt Formation) einer gespeicherten Vorlage
+// entspricht und wie die Stärke zum Gegner stand. Nach dem Ergebnis trägt recordPresetResult() Sieg, Remis oder
+// Niederlage und Tore ein. Simulierte Spieltage ohne Anstoß-Ablauf zählen nicht (kein Merker).
+
+function ensureVorlageBilanz() {
+    if (!game.vorlageBilanz || typeof game.vorlageBilanz !== 'object' || Array.isArray(game.vorlageBilanz)) game.vorlageBilanz = {};
+}
+
+function findePassendeVorlage() {
+    ensureMatchPrepState();
+    const elf = [...lineup].sort().join('|');
+    for (let i = 0; i < game.lineupPresets.length; i++) {
+        const v = game.lineupPresets[i];
+        if (!v || v.formation !== game.formation) continue;
+        if ([...v.ids].sort().join('|') === elf) return i;
+        const r = resolveLineupPreset(v);
+        if (r && [...r.ids].sort().join('|') === elf) return i;
+    }
+    return -1;
+}
+
+function markPresetInUse() {
+    const info = typeof pendingMatchInfo !== 'undefined' ? pendingMatchInfo : null;
+    game.vorlageImEinsatz = null;
+    if (!info || lineup.length !== 11) return;
+    const slot = findePassendeVorlage();
+    if (slot === -1) return;
+    const diff = typeof info.oppStr === 'number' ? calcTeamStrength(!!info.isHome) - info.oppStr : 0;
+    game.vorlageImEinsatz = { slot, name: game.lineupPresets[slot].name, matchday: game.matchday, diff: Math.round(diff * 10) / 10 };
+}
+
+function recordPresetResult(ourGoals, oppGoals) {
+    const m = game.vorlageImEinsatz;
+    game.vorlageImEinsatz = null;
+    if (!m || m.matchday !== game.matchday) return;
+    ensureVorlageBilanz();
+    const b = game.vorlageBilanz[m.slot] || (game.vorlageBilanz[m.slot] = { name: m.name, spiele: 0, s: 0, u: 0, n: 0, tore: 0, gegentore: 0, diffSumme: 0 });
+    b.name = m.name;
+    b.spiele++; b.tore += ourGoals; b.gegentore += oppGoals; b.diffSumme += m.diff;
+    if (ourGoals > oppGoals) b.s++; else if (ourGoals < oppGoals) b.n++; else b.u++;
+}
+
+function getPresetBilanzText(slot) {
+    ensureVorlageBilanz();
+    const b = game.vorlageBilanz[slot];
+    if (!b || !b.spiele) return '';
+    const v = game.lineupPresets[slot];
+    if (v && v.name !== b.name) return ''; // Slot wurde seither neu belegt: die alte Bilanz gehört zu einer anderen Vorlage
+    return `${b.s}S ${b.u}U ${b.n}N · Tore ${b.tore}:${b.gegentore} · Ø ${b.diffSumme / b.spiele >= 0 ? '+' : ''}${(b.diffSumme / b.spiele).toFixed(1)} gegen den Gegner`;
+}
+
 // Teamstärke einer Elf mit Formation, ohne die Aufstellung zu verändern (Elf und Formation werden kurz getauscht)
 function getLineupStrengthPreview(ids, formation, istHeim) {
     const altElf = lineup, altForm = game.formation;
@@ -3688,7 +3744,7 @@ function renderPresetQuickPick() {
         const gleich = r.ids.length === lineup.length && r.ids.every((id, k) => id === lineup[k]) && v.formation === game.formation;
         return `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">
             <strong>${mpEsc(v.name)}</strong> (${v.formation}): Stärke ${st.toFixed(1)}${delta === null ? '' : ` <span style="color:var(--text-muted);">(${delta >= 0 ? '+' : ''}${delta.toFixed(1)} zur aktuellen Elf)</span>`}
-            <div class="ui-card-meta" style="margin-top:4px;">${chipGegen(st)}${r.ersetzt ? uiChip(`🔁 ${r.ersetzt} Ausfall${r.ersetzt === 1 ? '' : 'e'} ersetzt`, 'warn') : uiChip('✓ komplett', 'gut')}${gleich ? uiChip('aktuell aufgestellt', 'gut') : ''}</div>
+            <div class="ui-card-meta" style="margin-top:4px;">${getPresetBilanzText(i) ? uiChip(`📈 ${getPresetBilanzText(i)}`) : ''}${chipGegen(st)}${r.ersetzt ? uiChip(`🔁 ${r.ersetzt} Ausfall${r.ersetzt === 1 ? '' : 'e'} ersetzt`, 'warn') : uiChip('✓ komplett', 'gut')}${gleich ? uiChip('aktuell aufgestellt', 'gut') : ''}</div>
             <button onclick="applyPresetPrematch(${i})" class="btn-action" style="margin-top:4px;"${gleich ? ' disabled' : ''}>📂 Aufstellen</button></div>`;
     }).join('');
     return kopf + (zeilen || '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Aufstellungsvorlage gespeichert (Kader → Aufstellung).</div>');
@@ -3703,7 +3759,7 @@ function renderLineupPresets() {
         return `<div class="panel player-card" style="margin:0 0 6px; padding:8px 10px;">${renderUiCard({
             title: v ? mpEsc(v.name) : `Slot ${i + 1} (leer)`,
             sub: v ? `${v.formation} · ${v.ids.length} Spieler` : 'Noch keine Aufstellung gespeichert',
-            meta: [v && ausfall ? uiChip(`⚠️ ${ausfall} Ausfall${ausfall === 1 ? '' : 'e'}`, 'warn') : '', v && !ausfall ? uiChip('✓ komplett', 'gut') : ''],
+            meta: [v && ausfall ? uiChip(`⚠️ ${ausfall} Ausfall${ausfall === 1 ? '' : 'e'}`, 'warn') : '', v && !ausfall ? uiChip('✓ komplett', 'gut') : '', v && getPresetBilanzText(i) ? uiChip(`📈 ${getPresetBilanzText(i)}`) : ''],
             actions: `<button onclick="saveLineupPreset(${i})" class="btn-secondary">💾 Speichern</button>`
                 + (v ? `<button onclick="loadLineupPreset(${i})" class="btn-action">📂 Laden</button><button onclick="deleteLineupPreset(${i})" class="btn-secondary" style="color:var(--danger);" title="Vorlage ${i + 1} löschen">✕ Löschen</button>` : '')
         })}</div>`;
@@ -3943,8 +3999,10 @@ function renderPrematchCheck() {
         if (!stats) return;
 
         // SVG Radar Chart mit 6 Attributen
-        // offsetWidth ist 0, solange der Screen versteckt ist -> sonst entstünde ein -20x-20-SVG.
-        let size = container.offsetWidth > 40 ? Math.min(container.offsetWidth - 20, 200) : 200;
+        // Feste Größe mit viewBox: container.offsetWidth zu lesen erzwang mitten im Neuzeichnen der Kaderansicht ein
+        // komplettes Layout (gemessen 320 ms bei 6-facher CPU-Drosselung und 40 Spielern); bei wenig Platz schrumpft
+        // das SVG über max-width.
+        let size = 200;
         let center = size / 2;
         let maxValue = 100;
         let levels = 5;
@@ -4008,7 +4066,7 @@ function renderPrematchCheck() {
         }).join('');
 
         let svg = `
-            <svg width="${size}" height="${size}" style="display:block; margin:0 auto;">
+            <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="display:block; margin:0 auto; max-width:100%; height:auto;">
                 <defs>
                     <linearGradient id="radarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                         <stop offset="0%" style="stop-color:var(--primary);stop-opacity:0.3" />
@@ -4386,6 +4444,7 @@ function cleanupLegacyDevelopmentState() {
     // im ganzen Spiel dasselbe bedeutet.
     const SQUAD_PLANNING_MIN_HEALTHY = { TW: 2, ABW: 5, MIT: 5, ST: 3 };
     const SQUAD_PLANNING_AGING_THRESHOLD = 30; // ab diesem Alter zählt ein Spieler als "im Herbst der Karriere"
+    const SQUAD_PLANNING_FRAGILE_FROM = 3; // ab so vielen Verletzungen gilt ein Spieler als verletzungsanfällig (wie im Spielerdetail)
     const SQUAD_PLANNING_CONTRACT_URGENT = 1; // <= X Jahre Restlaufzeit = dringend (wie in renderSeasonPlanningBox)
 
     // Zentrale Analyse pro Positionsgruppe - wird von allen Kästen dieses Tools genutzt, damit
@@ -4414,7 +4473,15 @@ function cleanupLegacyDevelopmentState() {
             let riskLabel = riskScore >= 2 ? '🔴 Kritisch' : (riskScore === 1 ? '🟡 Beobachten' : '🟢 Solide');
             let riskColor = riskScore >= 2 ? 'var(--danger)' : (riskScore === 1 ? 'var(--accent)' : 'var(--primary)');
 
-            return { pos, label: SQUAD_PLANNING_POS_LABELS[pos], players, count, avgAge, aging, cliff, minHealthy, thin, agingRisk, cliffRisk, riskScore, riskLabel, riskColor };
+            // Ausfälle und Verletzungsanfälligkeit (aus p.injured, p.timesInjured): beeinflusst riskScore nicht,
+            // wird als eigener Hinweis gezeigt
+            let ausfall = players.filter(p => (p.injured || 0) > 0);
+            let fit = count - ausfall.length;
+            let fragil = players.filter(p => (p.timesInjured || 0) >= SQUAD_PLANNING_FRAGILE_FROM && !((p.injured || 0) > 0));
+            let ausfallRisiko = ausfall.length > 0 && fit < minHealthy;
+            let fragilRisiko = fragil.length > 0 && count <= minHealthy + 1;
+
+            return { pos, label: SQUAD_PLANNING_POS_LABELS[pos], players, count, avgAge, aging, cliff, minHealthy, thin, agingRisk, cliffRisk, riskScore, riskLabel, riskColor, ausfall, fit, fragil, ausfallRisiko, fragilRisiko };
         });
     }
 
@@ -4523,7 +4590,17 @@ function cleanupLegacyDevelopmentState() {
                 <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:2px;">${gruende.join(' · ')}</div>
             </div>`;
         }).join('');
-        box.innerHTML = getSquadSizeWarningHtml() + (warnings || '<div class="box" style="font-size:var(--fs-caption); color:var(--primary);">✓ Keine Position zeigt aktuell eine kombinierte Schwäche für die kommenden Saisons.</div>');
+        // Ausfälle und Verletzungsanfälligkeit je Position (eigener Hinweis, nicht Teil der Risikostufe)
+        let ausfallHinweise = analysis.filter(a => a.ausfallRisiko || a.fragilRisiko).map(a => {
+            let teile = [];
+            if (a.ausfallRisiko) teile.push(`aktuell nur ${a.fit} von mindestens ${a.minHealthy} einsatzbereit (fällt aus: ${a.ausfall.map(p => `${p.name} noch ${p.injured} Spiel${p.injured === 1 ? '' : 'e'}`).join(', ')})`);
+            if (a.fragilRisiko) teile.push(`verletzungsanfällig bei dünner Besetzung: ${a.fragil.map(p => `${p.name} (${p.timesInjured}×)`).join(', ')}`);
+            return `<div class="box" style="border-left-color:var(--danger); margin-bottom:4px;">
+                <div style="font-size:var(--fs-small); font-weight:800;">🩹 ${a.label}</div>
+                <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:2px;">${teile.join(' · ')}</div>
+            </div>`;
+        }).join('');
+        box.innerHTML = getSquadSizeWarningHtml() + ausfallHinweise + (warnings || '<div class="box" style="font-size:var(--fs-caption); color:var(--primary);">✓ Keine Position zeigt aktuell eine kombinierte Schwäche für die kommenden Saisons.</div>');
     }
 
     // Gehaltsplanung nächste Saison (25.17): seit das Gehaltsbudget der Liga folgt, scheitern
@@ -12801,7 +12878,7 @@ function initZugaenglichkeit() {
                     Bedarf: <strong>${m.reqQty} kg ${mat.name}</strong> pro Stück (Börsenwert: ~${(mat.currentPrice * m.reqQty).toFixed(2)} €)<br>
                     Produktionsstatus: ${f.owned ? `<strong style="color:var(--primary);">Fabrik einsatzbereit ✓ (Dauer: ${duration} SpT)</strong>` : '<span style="color:var(--danger);">Fabrik fehlt!</span>'}
                 </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 9em), 1fr)); gap:4px;">
                     <button onclick="startProduction('${mKey}', 250)" class="btn-industry" ${!f.owned?'disabled':''}>250 Stk. in Auftrag geben (${250*m.reqQty} kg)</button>
                     <button onclick="startProduction('${mKey}', 1000)" class="btn-industry" ${!f.owned?'disabled':''}>1.000 Stk. in Auftrag geben (${1000*m.reqQty} kg)</button>
                 </div>
@@ -22118,6 +22195,7 @@ function recordOwnLeagueResult(ourGoals, oppGoals, isHome) {
     s.zuNull = oppGoals === 0 ? s.zuNull + 1 : 0;
     s.torlos = ourGoals === 0 ? s.torlos + 1 : 0;
     if (isHome) s.heimSieg = sieg ? s.heimSieg + 1 : 0;
+    if (typeof recordPresetResult === 'function') recordPresetResult(ourGoals, oppGoals);
     SERIEN_ARTEN.forEach(a => {
         const r = game.serien.rekord[a.id];
         if (s[a.id] > 0 && (!r || s[a.id] > r.n)) game.serien.rekord[a.id] = { n: s[a.id], season: game.season, matchday: game.matchday };
@@ -22437,6 +22515,55 @@ const SPIELER_ETIKETTEN = [
 ];
 let squadTagFilter = '';
 
+// Etiketten mit Wirkung (Phase 26.10): drei der sechs Etiketten greifen nach jedem Spiel in Moral und Verletzungsrisiko ein.
+// Die anderen (Verkaufskandidat, Beobachten, Vertrag klären) sind reine Planungshilfen. Die Werte sind bewusst klein:
+//   Stammkraft    spielt: +1 Moral (bis 90); sitzt auf der Bank: -2 Moral, aber nie unter 45 durch dieses Etikett
+//   Aufbauspieler spielt: +1 Moral (bis 90); sitzt auf der Bank: keine Unzufriedenheit (er ist geduldig)
+//   Schonen       spielt trotzdem: Verletzungsrisiko x1,3 (der Physio hatte gewarnt); auf der Bank passiert nichts,
+//                 denn dort gibt es kein Verletzungsrisiko. Bewusst keine Mehrermüdung: sie verschiebt das Fitness-
+//                 Gleichgewicht von Dauerspielern dauerhaft nach unten (Messung: -9 Punkte je Saison schon bei 1 Punkt)
+const ETIKETT_WIRKUNG = {
+    stamm: { spielt: { moral: 1 }, bank: { moral: -2, untergrenze: 45 } },
+    aufbau: { spielt: { moral: 1 }, bank: {} },
+    schonen: { spielt: { verletzung: 1.3 }, bank: {} }
+};
+
+// Summe der Wirkungen aller Etiketten eines Spielers für dieses Spiel (spielt = stand in der Startelf)
+function getTagMatchEffects(p, spielt) {
+    const e = { moral: 0, untergrenze: 0, verletzung: 1, ermuedung: 0 };
+    getPlayerTags(p).forEach(t => {
+        const w = ETIKETT_WIRKUNG[t] && ETIKETT_WIRKUNG[t][spielt ? 'spielt' : 'bank'];
+        if (!w) return;
+        if (w.moral) e.moral += w.moral;
+        if (w.untergrenze) e.untergrenze = Math.max(e.untergrenze, w.untergrenze);
+        if (w.verletzung) e.verletzung *= w.verletzung;
+        if (w.ermuedung) e.ermuedung += w.ermuedung;
+    });
+    return e;
+}
+
+// Wendet Moral und Mehrermüdung an (aufgerufen nach jedem eigenen Spiel aus processPostMatchRoutine)
+function applyTagMatchEffects(p, spielt) {
+    if (!spielt && ((p.injured || 0) > 0 || (p.suspended || 0) > 0)) return; // Verletzte und Gesperrte sind nicht „unzufrieden auf der Bank“
+    const e = getTagMatchEffects(p, spielt);
+    if (e.moral > 0) { const aktuell = p.morale || 80; p.morale = aktuell >= 90 ? aktuell : Math.min(90, aktuell + e.moral); } // nur bis 90: kein dauerhafter Stärkebonus über die Moral
+    else if (e.moral < 0) {
+        const aktuell = p.morale || 80;
+        p.morale = aktuell > e.untergrenze ? Math.max(e.untergrenze, aktuell + e.moral) : aktuell;
+    }
+    if (e.ermuedung > 0 && spielt) p.fitness = Math.max(10, p.fitness - e.ermuedung);
+}
+
+// Texte für das Spielerdetail: was ein aktives Etikett bewirkt
+function getTagEffectTexts(p) {
+    const t = getPlayerTags(p);
+    const z = [];
+    if (t.includes('stamm')) z.push('Stammkraft: +1 Moral bei Einsatz (bis 90), −2 Moral auf der Bank (nicht unter 45).');
+    if (t.includes('aufbau')) z.push('Aufbauspieler: +1 Moral bei Einsatz (bis 90), bleibt auf der Bank gelassen.');
+    if (t.includes('schonen')) z.push('Schonen: spielt er trotzdem, steigt sein Verletzungsrisiko um 30 %.');
+    return z;
+}
+
 function getPlayerTags(p) { return Array.isArray(p.tags) ? p.tags.filter(t => SPIELER_ETIKETTEN.some(e => e.id === t)) : []; }
 
 function getPlayerTagChips(p) {
@@ -22457,8 +22584,10 @@ function renderPlayerTags(p) {
     if (!box) return;
     if (!squad.includes(p)) { box.innerHTML = ''; return; }
     const tags = getPlayerTags(p);
+    const wirkung = getTagEffectTexts(p);
     box.innerHTML = `<div class="ui-overline" style="font-size:var(--fs-caption); color:var(--text-muted); margin:10px 0 4px; text-align:left;">Eigene Etiketten</div>
-        <div style="display:flex; flex-wrap:wrap; gap:6px;">${SPIELER_ETIKETTEN.map(e => `<button onclick="toggleSquadTag('${p.id}', '${e.id}')" class="${tags.includes(e.id) ? 'btn-action' : 'btn-secondary'}" style="width:auto;" aria-pressed="${tags.includes(e.id)}">${e.label}</button>`).join('')}</div>`;
+        <div style="display:flex; flex-wrap:wrap; gap:6px;">${SPIELER_ETIKETTEN.map(e => `<button onclick="toggleSquadTag('${p.id}', '${e.id}')" class="${tags.includes(e.id) ? 'btn-action' : 'btn-secondary'}" style="width:auto;" aria-pressed="${tags.includes(e.id)}">${e.label}</button>`).join('')}</div>
+        ${wirkung.length ? `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:6px; text-align:left;">${wirkung.map(mpEsc).join('<br>')}</div>` : ''}`;
 }
 
 function setSquadTagFilter(tagId) {
@@ -22479,7 +22608,7 @@ function renderSquadTagFilter() {
 // ---------- Manager-Assistent ----------
 
 // Bis zu drei empfohlene nächste Schritte, aus echten Daten und nach Dringlichkeit geordnet
-function getManagerTodos() {
+function getManagerTodos(alle) {
     const t = [];
     const probleme = typeof getLineupProblems === 'function' ? getLineupProblems().filter(x => x.ton === 'schlecht') : [];
     if (probleme.length) t.push({ prio: 95, icon: '🔴', text: `Aufstellung prüfen: ${probleme[0].text}`, label: 'Zur Aufstellung', aktion: "showScreen('screen-squad')" });
@@ -22503,10 +22632,24 @@ function getManagerTodos() {
         return grund ? `${p.name} (${grund})` : null;
     }).filter(Boolean);
     if (beobachtet.length) t.push({ prio: 45, icon: '👀', text: `Beobachtet: ${beobachtet.slice(0, 2).join(', ')}${beobachtet.length > 2 ? ' …' : ''}.`, label: 'Zum Kader', aktion: "showScreen('screen-squad'); if (squadTagFilter !== 'beobachten') setSquadTagFilter('beobachten')" });
+    // Fristen: Transferfenster, Hauptsponsor, Kreditraten (nur Anzeige aus den vorhandenen Ständen der Module)
+    if (typeof isTransferWindowOpen === 'function' && isTransferWindowOpen()) {
+        const letzter = game.winterWindowActive ? game.winterWindowCloseMatchday : (typeof SUMMER_WINDOW_LAST_MATCHDAY !== 'undefined' ? SUMMER_WINDOW_LAST_MATCHDAY : null);
+        const rest = typeof letzter === 'number' ? letzter - game.matchday + 1 : null;
+        if (rest !== null && rest >= 1 && rest <= 2) t.push({ prio: 62, icon: '⏳', text: `Das ${game.winterWindowActive ? 'Winter-' : 'Sommer-'}Transferfenster schließt in ${rest === 1 ? 'diesem Spieltag' : 'zwei Spieltagen'}.`, label: 'Zum Transfermarkt', aktion: "showScreen('screen-transfer')" });
+    }
+    const sp = game.sponsor;
+    if (sp && sp.name && sp.name !== 'Kein Hauptsponsor' && typeof sp.duration === 'number' && sp.duration > 0 && sp.duration < 900) {
+        const angebot = typeof getSponsorRenewal === 'function' ? getSponsorRenewal() : null;
+        if (angebot) t.push({ prio: 75, icon: '🟠', text: `${sp.name} bietet eine Vertragsverlängerung an (Vertrag noch ${sp.duration} Spieltage).`, label: 'Zu den Sponsoren', aktion: "showScreen('screen-sponsors')" });
+        else if (sp.duration <= 6) t.push({ prio: 68, icon: '🟡', text: `Der Hauptsponsor ${sp.name} läuft in ${sp.duration} Spieltag${sp.duration === 1 ? '' : 'en'} aus.`, label: 'Zu den Sponsoren', aktion: "showScreen('screen-sponsors')" });
+    }
+    const raten = typeof activeLoans !== 'undefined' ? activeLoans.reduce((s, l) => s + (l.installment || 0), 0) : 0;
+    if (raten > 0 && game.money >= 0 && game.money < raten * 3) t.push({ prio: 78, icon: '🟠', text: `Die Kasse (${formatVal(game.money)}) deckt nur ${Math.floor(game.money / raten)} von 3 anstehenden Kreditraten (${formatVal(raten)} je Spieltag).`, label: 'Zu den Finanzen', aktion: "showScreen('screen-finances')" });
     const ungelesen = typeof inboxMessages !== 'undefined' ? inboxMessages.filter(m => !m.read).length : 0;
     if (ungelesen >= 8) t.push({ prio: 20, icon: '📬', text: `${ungelesen} ungelesene Nachrichten im Postfach.`, label: 'Zum Postfach', aktion: "showScreen('screen-inbox')" });
     t.sort((a, b) => b.prio - a.prio);
-    return t.slice(0, 3);
+    return alle ? t : t.slice(0, 3);
 }
 
 // updateUI() ruft den Assistenten bei jedem Aufruf; das DOM wird nur neu geschrieben, wenn sich der Inhalt ändert
@@ -28402,6 +28545,7 @@ function cleanupLegacyScoutState() {
         if (typeof renderOppTacticBox === 'function') renderOppTacticBox(oppObj);
         if (typeof renderPregameTalkBox === 'function') renderPregameTalkBox();
         renderFatigueWarning();
+        if (typeof markPresetInUse === 'function') markPresetInUse();
 
         renderPressConference({ oppName, oppStr, isHome, cup: false });
         showScreen('screen-prematch-press');
@@ -29852,6 +29996,8 @@ function cleanupLegacyScoutState() {
             else p.fitness = Math.min(100, p.fitness + benchRecovery);
 
             if (moraleShift !== 0) p.morale = Math.max(10, Math.min(100, (p.morale || 80) + moraleShift));
+            // Eigene Etiketten mit Wirkung (js/manager-tools.js): Stammkraft, Aufbauspieler, Schonen
+            if (typeof applyTagMatchEffects === 'function') applyTagMatchEffects(p, lineup.includes(p.id));
             if (managerRPG.perks.motivator) p.morale = Math.max(75, p.morale);
 
             // Individuelles Training verbessert jetzt gezielt die passende Fähigkeit,
@@ -29927,6 +30073,7 @@ function cleanupLegacyScoutState() {
             if ((p.timesInjured || 0) >= 2) individualInjuryChance *= 0.72;
             if (typeof getAgeInjuryFactor === 'function') individualInjuryChance *= getAgeInjuryFactor(p);
             if (typeof getChronicInjuryFactor === 'function') individualInjuryChance *= getChronicInjuryFactor(p);
+            if (typeof getTagMatchEffects === 'function') individualInjuryChance *= getTagMatchEffects(p, true).verletzung;
             if (Math.random() < individualInjuryChance) {
                 let baseDuration = Math.floor(Math.random() * 4) + 1; // 1-4 Spiele Ausfallzeit
                 let reduction = 1 - (campusBuildings.reha.lvl * 0.08) - (staffMembers.physio.hired ? 0.5 : 0);
