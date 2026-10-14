@@ -2669,13 +2669,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
                 </div>
                 <div id="member-assembly-box" class="panel" style="display:none; border-color:var(--gold); margin-bottom:10px;"></div>
                 <div id="manager-assistant-box" class="panel" style="margin-bottom:10px;"></div>
-                <div id="dash-offers-alert" class="panel box-offer" style="display:none; border-color:var(--blue); margin-bottom:10px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <span>📩 <strong>Transfer-Zentrale:</strong> Du hast <strong id="dash-offers-alert-count" style="color:var(--accent);">0</strong> offene Transferangebote für deine Spieler!</span>
-                        <button onclick="showScreen('screen-transfer'); setTransferTab('offers');" class="btn-action" style="width:auto; padding:4px 10px; font-size:var(--fs-small);">Zu den Angeboten ▶</button>
-                    </div>
-                </div>
-
                 <div class="panel">
                     <div class="panel-header">
                         <span>⚽ Nächste Begegnung (Spieltag <span id="dash-mday">1</span>)</span>
@@ -5084,7 +5077,7 @@ function renderUiStatRow(werte) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.129', date: '13.10.2026', features: 'Phase 26.4 (Manager-Werkzeuge): Liquiditäts-Vorschau, Konto-Alarm, Spieler-Etiketten, Manager-Assistent, Lizenz-Laufbahn mit Voraussetzungen' };
+    const GAME_VERSION = { number: '3.130', date: '14.10.2026', features: 'Phase 26.5 (Feinschliff): Sichtprüfung der neuen Fenster, doppelte Hinweise zusammengelegt (Erschöpfung im Spieltag-Check, Angebote im Manager-Assistenten), Etiketten greifen in Angebote und Verlängerungs-Assistent ein, Dashboard-Aktualisierung entprellt' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -8226,7 +8219,6 @@ function getLineupProblems() {
         });
     }
     elf.filter(p => Array.isArray(p.tags) && p.tags.includes('schonen')).forEach(p => probleme.push({ ton: 'warn', text: `${p.name} ist als „Schonen“ etikettiert und steht in der Startelf.` }));
-    elf.filter(p => mpIstEinsatzbereit(p) && p.fitness < 50).forEach(p => probleme.push({ ton: 'warn', text: `${p.name} ist nur zu ${p.fitness} % fit.` }));
     return probleme;
 }
 
@@ -8263,7 +8255,6 @@ function applyRotationSwap(rausId, reinId) {
     if (i === -1 || !mpIstEinsatzbereit(rein)) { showToast('Dieser Tausch geht nicht mehr - die Elf hat sich geändert.', 'error'); renderPrematchCheck(); return; }
     lineup[i] = reinId;
     showToast(`🔄 ${rein.name} ersetzt den müden Mitspieler.`, 'success');
-    if (typeof renderFatigueWarning === 'function') renderFatigueWarning();
     renderPrematchCheck();
 }
 
@@ -8272,29 +8263,33 @@ function renderPrematchCheck() {
     if (!box) return;
     const probleme = getLineupProblems();
     const fehlt = getAbsentPlayers();
-    const rotation = getRotationSuggestions();
+    const alleRotation = getRotationSuggestions();
+    const rotation = alleRotation.filter(r => r.rein);
+    const ohneErsatz = alleRotation.filter(r => !r.rein).map(r => r.raus.name);
     const stammFehlt = fehlt.filter(x => x.stamm).length;
+    const muede = squad.filter(p => lineup.includes(p.id) && mpIstEinsatzbereit(p) && p.fitness < 70);
     const chips = [
         probleme.length ? uiChip(`⚠️ ${probleme.length} Hinweis${probleme.length === 1 ? '' : 'e'}`, probleme.some(x => x.ton === 'schlecht') ? 'schlecht' : 'warn') : uiChip('✓ Elf in Ordnung', 'gut'),
         uiChip(`🩹 ${fehlt.length} fehlen${stammFehlt ? ` (${stammFehlt} Stammspieler)` : ''}`, stammFehlt ? 'warn' : ''),
+        muede.length ? uiChip(`😮‍💨 ${muede.length} erschöpft`, muede.some(p => p.fitness < 50) ? 'schlecht' : 'warn') : '',
         rotation.length ? uiChip(`🔄 ${rotation.length} Rotationsidee${rotation.length === 1 ? '' : 'n'}`, 'warn') : ''
     ];
     const problemListe = probleme.length ? probleme.map(x => `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">${x.ton === 'schlecht' ? '🔴' : '🟡'} ${mpEsc(x.text)}</div>`).join('')
-        : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Torwart, Formation und Fitness passen.</div>';
+        : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Torwart und Formation passen.</div>';
     const fehltListe = fehlt.length ? fehlt.map(x => `<div class="box" style="font-size:var(--fs-small); margin:4px 0; display:flex; justify-content:space-between; gap:8px;"><span>${mpEsc(x.p.name)} (${x.p.pos}, Str ${x.p.strength})${x.stamm ? ' ⭐' : ''}</span><span style="color:var(--text-muted);">${x.grund}, noch ${x.tage} ${x.grund === 'verletzt' ? 'Spieltag' + (x.tage === 1 ? '' : 'e') : 'Spiel' + (x.tage === 1 ? '' : 'e')}</span></div>`).join('')
         : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Der komplette Kader ist einsatzbereit.</div>';
-    const rotListe = rotation.length ? rotation.map(r => r.rein
-        ? `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">${mpEsc(r.raus.name)} (${r.raus.pos}, ${r.raus.fitness} % fit) ↔ ${mpEsc(r.rein.name)} (${r.rein.fitness} % fit)
+    const muedeZeile = muede.length ? `<div class="box" style="font-size:var(--fs-small); margin:4px 0; border-left-color:var(--danger);">😮‍💨 <strong>${muede.length} Stammspieler erschöpft:</strong> ${muede.map(p => `${mpEsc(p.name)} (${p.fitness} %)`).join(', ')}. Fitness zählt voll in die Teamstärke.${ohneErsatz.length ? ` Für ${ohneErsatz.map(mpEsc).join(', ')} gibt es auf der Bank keinen gleichwertigen Ersatz.` : ''}
+            <button onclick="rotateTiredPlayers()" class="btn-action" style="margin-top:6px;">🔄 Ausgeruhte Elf aufstellen</button></div>` : '';
+    const rotListe = muedeZeile + (rotation.length ? rotation.map(r => `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">${mpEsc(r.raus.name)} (${r.raus.pos}, ${r.raus.fitness} % fit) ↔ ${mpEsc(r.rein.name)} (${r.rein.fitness} % fit)
             <span style="color:var(--text-muted);">· effektive Stärke ${r.delta >= 0 ? '+' : ''}${r.delta}</span>
-            <button onclick="applyRotationSwap('${r.raus.id}', '${r.rein.id}')" class="btn-secondary" style="margin-top:4px;">🔄 Tauschen</button></div>`
-        : `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">${mpEsc(r.raus.name)} ist nur zu ${r.raus.fitness} % fit, aber auf der Bank gibt es keinen gleichwertigen Ersatz.</div>`).join('')
-        : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Keine Rotation nötig: alle Stammspieler sind ausgeruht oder ohne frischen Ersatz.</div>';
+            <button onclick="applyRotationSwap('${r.raus.id}', '${r.rein.id}')" class="btn-secondary" style="margin-top:4px;">🔄 Tauschen</button></div>`).join('')
+        : (muede.length ? '' : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Keine Rotation nötig: alle Stammspieler sind ausgeruht oder ohne frischen Ersatz.</div>'));
     box.innerHTML = `<div class="panel" style="margin-bottom:8px;">
         <div class="panel-header">🧾 Spieltag-Check</div>
         <div class="ui-card-meta" style="margin-bottom:6px;">${chips.join('')}</div>
         <details class="ui-fold"${probleme.length ? ' open' : ''}><summary>Aufstellungs-Check</summary>${problemListe}</details>
         <details class="ui-fold"${fehlt.length ? ' open' : ''}><summary>Wer fehlt?</summary>${fehltListe}</details>
-        <details class="ui-fold"${rotation.length ? ' open' : ''}><summary>Rotations-Assistent</summary>${rotListe}
+        <details class="ui-fold"${rotation.length || muede.length ? ' open' : ''}><summary>Rotations-Assistent</summary>${rotListe}
             <button onclick="showScreen('screen-squad')" class="btn-secondary" style="margin-top:4px;">⚽ Aufstellung im Detail ändern</button></details>
     </div>`;
 }
@@ -13174,7 +13169,10 @@ function renderTransferPokerBox() {
                         uiChip(`Stärke ${o.playerStr}`),
                         uiChip(`MW ${formatVal(o.marketValue)}`),
                         uiChip(`${diffText} vs MW`, diff >= 0 ? 'gut' : 'schlecht'),
-                        uiChip(`⏳ Gültig: ${o.expiresIn} SpT`, o.expiresIn <= 1 ? 'warn' : '')
+                        uiChip(`⏳ Gültig: ${o.expiresIn} SpT`, o.expiresIn <= 1 ? 'warn' : ''),
+                        // Eigene Etiketten (js/manager-tools.js): Verkaufskandidat gut sichtbar, Stammkraft/Aufbauspieler als Warnung
+                        p && typeof getPlayerTags === 'function' && getPlayerTags(p).includes('verkauf') ? uiChip('💰 Verkaufskandidat – passt zum Plan', 'gut') : '',
+                        p && typeof getPlayerTags === 'function' && getPlayerTags(p).some(t => t === 'stamm' || t === 'aufbau') ? uiChip(getPlayerTags(p).includes('stamm') ? '⭐ Stammkraft – nicht verkaufen?' : '🌱 Aufbauspieler – nicht verkaufen?', 'warn') : ''
                     ],
                     kpi: { wert: formatVal(o.currentBid), label: 'Gebot', farbe: diffColor },
                     aside: `<button onclick="openPlayerDetail('${o.playerId}','squad')" class="btn-secondary ui-card-info" title="Details" aria-label="Details zu ${o.playerName}">ℹ️</button>`,
@@ -17018,16 +17016,6 @@ function initZugaenglichkeit() {
             + (game.money < game.transferBudget ? ` (Kasse ${formatVal(Math.max(0, game.money))})` : '');
         document.getElementById('dash-wage-budget').innerText = formatVal(game.wageBudget) + " / SpT";
         document.getElementById('dash-holding-cap').innerText = formatVal(holdingCompany.money);
-
-        let alertBox = document.getElementById('dash-offers-alert');
-        if (alertBox) {
-            if (incomingOffers.length > 0) {
-                alertBox.style.display = 'block';
-                document.getElementById('dash-offers-alert-count').innerText = incomingOffers.length;
-            } else {
-                alertBox.style.display = 'none';
-            }
-        }
 
         let activeFactCount = Object.values(factories).filter(f => f.owned).length;
         document.getElementById('dash-active-factories').innerText = `${activeFactCount} / 4`;
@@ -26332,7 +26320,9 @@ function getWageRating(p) {
 
 // Kandidaten: auslaufende Verträge (bis 1 Jahr Rest), danach Stärkste zuerst
 function getRenewalCandidates(maxRest = 1) {
-    return squad.filter(p => p.contracts <= maxRest).sort((a, b) => (a.contracts - b.contracts) || (b.strength - a.strength));
+    // Spieler mit dem eigenen Etikett „Vertrag klären“ (js/manager-tools.js) stehen ganz oben
+    const geklaert = p => (typeof getPlayerTags === 'function' && getPlayerTags(p).includes('vertrag')) ? 0 : 1;
+    return squad.filter(p => p.contracts <= maxRest).sort((a, b) => (geklaert(a) - geklaert(b)) || (a.contracts - b.contracts) || (b.strength - a.strength));
 }
 
 // Warum eine Verlängerung gerade nicht geht (leer = möglich)
@@ -26396,6 +26386,7 @@ function renderRenewalAssistant() {
             title: p.name,
             sub: `${p.age ? p.age + ' J. · ' : ''}${p.contracts === 0 ? 'Vertrag läuft aus' : p.contracts + ' J. Rest'}`,
             meta: [
+                typeof getPlayerTags === 'function' && getPlayerTags(p).includes('vertrag') ? uiChip('📄 Vertrag klären', 'warn') : '',
                 v.star ? uiChip('⭐ Topspieler', 'warn') : (v.stammspieler ? uiChip('Stammspieler') : uiChip('Ersatz')),
                 uiChip(`Gehalt ${formatVal(v.alt)} → ${formatVal(v.gehalt)}/SpT`, v.aufschlag > 0 ? 'warn' : 'gut'),
                 uiChip(`${v.jahre} J. Laufzeit`),
@@ -26905,7 +26896,7 @@ function getManagerTodos() {
     if (game.money < 0) t.push({ prio: 92, icon: '🔴', text: `Die Kasse ist im Minus (${formatVal(game.money)}): Transfersperre und Financial Fairplay drohen.`, label: 'Zu den Finanzen', aktion: "showScreen('screen-finances')" });
     const ausl = squad.filter(p => p.contracts <= 0);
     if (ausl.length) t.push({ prio: 85, icon: '🟠', text: `${ausl.length} Vertrag${ausl.length === 1 ? ' läuft' : 'e laufen'} zum Saisonende aus (${ausl.slice(0, 2).map(p => p.name).join(', ')}${ausl.length > 2 ? ' …' : ''}).`, label: 'Verlängerungs-Assistent', aktion: "showScreen('screen-contracts'); openRenewalAssistant()" });
-    if (incomingOffers.length) t.push({ prio: 80, icon: '🟠', text: `${incomingOffers.length} Angebot${incomingOffers.length === 1 ? '' : 'e'} für deine Spieler warten auf eine Antwort.`, label: 'Zu den Angeboten', aktion: "showScreen('screen-transfer'); setTransferTab('offers')" });
+    if (incomingOffers.length) t.push({ prio: 88, icon: '🟠', text: `${incomingOffers.length} Angebot${incomingOffers.length === 1 ? '' : 'e'} für deine Spieler warten auf eine Antwort.`, label: 'Zu den Angeboten', aktion: "showScreen('screen-transfer'); setTransferTab('offers')" });
     const jugend = typeof youthTalents !== 'undefined' ? youthTalents.filter(p => p.proDecisionLeft) : [];
     if (jugend.length) t.push({ prio: 72, icon: '🟠', text: `${jugend.length} Jugendspieler warten auf eine Profivertrag-Entscheidung.`, label: 'Zur Jugend', aktion: "showScreen('screen-youth')" });
     const muede = squad.filter(p => lineup.includes(p.id) && (p.injured || 0) === 0 && p.fitness < 70);
@@ -26914,22 +26905,36 @@ function getManagerTodos() {
     if (bald.length && !ausl.length) t.push({ prio: 55, icon: '🟡', text: `${bald.length} Vertrag${bald.length === 1 ? ' hat' : 'e haben'} nur noch ein Jahr Laufzeit.`, label: 'Verlängerungs-Assistent', aktion: "showScreen('screen-contracts'); openRenewalAssistant()" });
     const stammAus = squad.filter(p => (p.injured || 0) > 0 && [...squad].sort((a, b) => b.strength - a.strength).slice(0, 11).includes(p));
     if (stammAus.length) t.push({ prio: 50, icon: '🟡', text: `${stammAus.length} Stammspieler verletzt: ${stammAus.slice(0, 2).map(p => p.name).join(', ')}.`, label: 'Zum Kader', aktion: "showScreen('screen-squad')" });
+    // Etikett „Beobachten“: nur wer gerade etwas Auffälliges zeigt, wird gemeldet (verletzt, Form fällt/steigt, Vertrag endet)
+    const beobachtet = squad.map(p => {
+        if (!getPlayerTags(p).includes('beobachten')) return null;
+        const trend = typeof getFormTrend === 'function' ? getFormTrend(p.formNoten) : null;
+        const grund = (p.injured || 0) > 0 ? `verletzt (${p.injured} SpT)` : (trend === 'fallend' ? 'Form fällt' : (trend === 'steigend' ? 'Form steigt' : (p.contracts <= 1 ? 'Vertrag endet bald' : '')));
+        return grund ? `${p.name} (${grund})` : null;
+    }).filter(Boolean);
+    if (beobachtet.length) t.push({ prio: 45, icon: '👀', text: `Beobachtet: ${beobachtet.slice(0, 2).join(', ')}${beobachtet.length > 2 ? ' …' : ''}.`, label: 'Zum Kader', aktion: "showScreen('screen-squad'); if (squadTagFilter !== 'beobachten') setSquadTagFilter('beobachten')" });
     const ungelesen = typeof inboxMessages !== 'undefined' ? inboxMessages.filter(m => !m.read).length : 0;
     if (ungelesen >= 8) t.push({ prio: 20, icon: '📬', text: `${ungelesen} ungelesene Nachrichten im Postfach.`, label: 'Zum Postfach', aktion: "showScreen('screen-inbox')" });
     t.sort((a, b) => b.prio - a.prio);
     return t.slice(0, 3);
 }
 
+// updateUI() ruft den Assistenten bei jedem Aufruf; das DOM wird nur neu geschrieben, wenn sich der Inhalt ändert
+let managerAssistantLetzterInhalt = '';
+
 function renderManagerAssistant() {
     const box = document.getElementById('manager-assistant-box');
     if (!box) return;
     const dash = document.getElementById('screen-dashboard');
     if (!dash || dash.style.display === 'none') return;
-    if (typeof squad === 'undefined' || !squad.length) { box.innerHTML = ''; return; }
+    if (typeof squad === 'undefined' || !squad.length) { box.innerHTML = ''; managerAssistantLetzterInhalt = ''; return; }
     const todos = getManagerTodos();
-    box.innerHTML = `<div class="panel-header">🧭 Manager-Assistent</div>` + (todos.length
+    const html = `<div class="panel-header">🧭 Manager-Assistent</div>` + (todos.length
         ? todos.map(x => `<div class="box" style="margin:4px 0; font-size:var(--fs-small); display:flex; justify-content:space-between; align-items:center; gap:8px;"><span>${x.icon} ${mpEsc(x.text)}</span><button onclick="${x.aktion}" class="btn-secondary" style="width:auto; flex:0 0 auto;">${x.label}</button></div>`).join('')
         : `<div class="box" style="font-size:var(--fs-small);">✅ Alles im grünen Bereich: Aufstellung steht, keine Verträge drängen, die Kasse passt. Zeit für den nächsten Spieltag.</div>`);
+    if (html === managerAssistantLetzterInhalt && box.firstChild) return;
+    managerAssistantLetzterInhalt = html;
+    box.innerHTML = html;
 }
 
 // ---------- Lizenz-Laufbahn (erweitert die Trainerlizenz aus js/private-life.js) ----------
@@ -32715,17 +32720,13 @@ function cleanupLegacyScoutState() {
             </div>`;
     }
 
-    // Vorbericht: müde Stammspieler (Fitness unter 70 %) kosten spürbar Stärke - Hinweis
-    // mit einem Knopf, der die beste ausgeruhte Elf aufstellt.
+    // Vorbericht: müde Stammspieler (Fitness unter 70 %) kosten spürbar Stärke. Der Hinweis und der Knopf
+    // „Ausgeruhte Elf aufstellen“ stehen im Rotations-Assistenten des Spieltag-Checks (js/matchprep.js);
+    // der frühere eigene Kasten entfällt, damit dieselbe Warnung nicht doppelt erscheint.
     function renderFatigueWarning() {
         let box = document.getElementById('prematch-fatigue-box');
-        if (!box) return;
-        let muede = squad.filter(p => lineup.includes(p.id) && p.fitness < 70);
-        if (!muede.length) { box.innerHTML = ''; return; }
-        box.innerHTML = `<div class="box" style="font-size:var(--fs-body); border-left-color:var(--danger); margin-bottom:8px;">
-            😮‍💨 <strong>${muede.length} Stammspieler erschöpft:</strong> ${muede.map(p => `${p.name} (${p.fitness}%)`).join(', ')}.
-            Fitness zählt voll in die Teamstärke.
-            <button onclick="rotateTiredPlayers()" class="btn-action" style="margin-top:6px;">🔄 Ausgeruhte Elf aufstellen</button></div>`;
+        if (box) box.innerHTML = '';
+        if (typeof renderPrematchCheck === 'function') renderPrematchCheck();
     }
     function rotateTiredPlayers() {
         let vorher = calcTeamStrength(false);
@@ -32754,7 +32755,6 @@ function cleanupLegacyScoutState() {
         if (typeof renderOppTacticBox === 'function') renderOppTacticBox(oppObj);
         if (typeof renderPregameTalkBox === 'function') renderPregameTalkBox();
         renderFatigueWarning();
-        if (typeof renderPrematchCheck === 'function') renderPrematchCheck();
 
         renderPressConference({ oppName, oppStr, isHome, cup: false });
         showScreen('screen-prematch-press');

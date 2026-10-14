@@ -156,7 +156,7 @@ function getManagerTodos() {
     if (game.money < 0) t.push({ prio: 92, icon: '🔴', text: `Die Kasse ist im Minus (${formatVal(game.money)}): Transfersperre und Financial Fairplay drohen.`, label: 'Zu den Finanzen', aktion: "showScreen('screen-finances')" });
     const ausl = squad.filter(p => p.contracts <= 0);
     if (ausl.length) t.push({ prio: 85, icon: '🟠', text: `${ausl.length} Vertrag${ausl.length === 1 ? ' läuft' : 'e laufen'} zum Saisonende aus (${ausl.slice(0, 2).map(p => p.name).join(', ')}${ausl.length > 2 ? ' …' : ''}).`, label: 'Verlängerungs-Assistent', aktion: "showScreen('screen-contracts'); openRenewalAssistant()" });
-    if (incomingOffers.length) t.push({ prio: 80, icon: '🟠', text: `${incomingOffers.length} Angebot${incomingOffers.length === 1 ? '' : 'e'} für deine Spieler warten auf eine Antwort.`, label: 'Zu den Angeboten', aktion: "showScreen('screen-transfer'); setTransferTab('offers')" });
+    if (incomingOffers.length) t.push({ prio: 88, icon: '🟠', text: `${incomingOffers.length} Angebot${incomingOffers.length === 1 ? '' : 'e'} für deine Spieler warten auf eine Antwort.`, label: 'Zu den Angeboten', aktion: "showScreen('screen-transfer'); setTransferTab('offers')" });
     const jugend = typeof youthTalents !== 'undefined' ? youthTalents.filter(p => p.proDecisionLeft) : [];
     if (jugend.length) t.push({ prio: 72, icon: '🟠', text: `${jugend.length} Jugendspieler warten auf eine Profivertrag-Entscheidung.`, label: 'Zur Jugend', aktion: "showScreen('screen-youth')" });
     const muede = squad.filter(p => lineup.includes(p.id) && (p.injured || 0) === 0 && p.fitness < 70);
@@ -165,22 +165,36 @@ function getManagerTodos() {
     if (bald.length && !ausl.length) t.push({ prio: 55, icon: '🟡', text: `${bald.length} Vertrag${bald.length === 1 ? ' hat' : 'e haben'} nur noch ein Jahr Laufzeit.`, label: 'Verlängerungs-Assistent', aktion: "showScreen('screen-contracts'); openRenewalAssistant()" });
     const stammAus = squad.filter(p => (p.injured || 0) > 0 && [...squad].sort((a, b) => b.strength - a.strength).slice(0, 11).includes(p));
     if (stammAus.length) t.push({ prio: 50, icon: '🟡', text: `${stammAus.length} Stammspieler verletzt: ${stammAus.slice(0, 2).map(p => p.name).join(', ')}.`, label: 'Zum Kader', aktion: "showScreen('screen-squad')" });
+    // Etikett „Beobachten“: nur wer gerade etwas Auffälliges zeigt, wird gemeldet (verletzt, Form fällt/steigt, Vertrag endet)
+    const beobachtet = squad.map(p => {
+        if (!getPlayerTags(p).includes('beobachten')) return null;
+        const trend = typeof getFormTrend === 'function' ? getFormTrend(p.formNoten) : null;
+        const grund = (p.injured || 0) > 0 ? `verletzt (${p.injured} SpT)` : (trend === 'fallend' ? 'Form fällt' : (trend === 'steigend' ? 'Form steigt' : (p.contracts <= 1 ? 'Vertrag endet bald' : '')));
+        return grund ? `${p.name} (${grund})` : null;
+    }).filter(Boolean);
+    if (beobachtet.length) t.push({ prio: 45, icon: '👀', text: `Beobachtet: ${beobachtet.slice(0, 2).join(', ')}${beobachtet.length > 2 ? ' …' : ''}.`, label: 'Zum Kader', aktion: "showScreen('screen-squad'); if (squadTagFilter !== 'beobachten') setSquadTagFilter('beobachten')" });
     const ungelesen = typeof inboxMessages !== 'undefined' ? inboxMessages.filter(m => !m.read).length : 0;
     if (ungelesen >= 8) t.push({ prio: 20, icon: '📬', text: `${ungelesen} ungelesene Nachrichten im Postfach.`, label: 'Zum Postfach', aktion: "showScreen('screen-inbox')" });
     t.sort((a, b) => b.prio - a.prio);
     return t.slice(0, 3);
 }
 
+// updateUI() ruft den Assistenten bei jedem Aufruf; das DOM wird nur neu geschrieben, wenn sich der Inhalt ändert
+let managerAssistantLetzterInhalt = '';
+
 function renderManagerAssistant() {
     const box = document.getElementById('manager-assistant-box');
     if (!box) return;
     const dash = document.getElementById('screen-dashboard');
     if (!dash || dash.style.display === 'none') return;
-    if (typeof squad === 'undefined' || !squad.length) { box.innerHTML = ''; return; }
+    if (typeof squad === 'undefined' || !squad.length) { box.innerHTML = ''; managerAssistantLetzterInhalt = ''; return; }
     const todos = getManagerTodos();
-    box.innerHTML = `<div class="panel-header">🧭 Manager-Assistent</div>` + (todos.length
+    const html = `<div class="panel-header">🧭 Manager-Assistent</div>` + (todos.length
         ? todos.map(x => `<div class="box" style="margin:4px 0; font-size:var(--fs-small); display:flex; justify-content:space-between; align-items:center; gap:8px;"><span>${x.icon} ${mpEsc(x.text)}</span><button onclick="${x.aktion}" class="btn-secondary" style="width:auto; flex:0 0 auto;">${x.label}</button></div>`).join('')
         : `<div class="box" style="font-size:var(--fs-small);">✅ Alles im grünen Bereich: Aufstellung steht, keine Verträge drängen, die Kasse passt. Zeit für den nächsten Spieltag.</div>`);
+    if (html === managerAssistantLetzterInhalt && box.firstChild) return;
+    managerAssistantLetzterInhalt = html;
+    box.innerHTML = html;
 }
 
 // ---------- Lizenz-Laufbahn (erweitert die Trainerlizenz aus js/private-life.js) ----------

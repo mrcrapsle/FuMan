@@ -581,7 +581,10 @@
                         uiChip(`Stärke ${o.playerStr}`),
                         uiChip(`MW ${formatVal(o.marketValue)}`),
                         uiChip(`${diffText} vs MW`, diff >= 0 ? 'gut' : 'schlecht'),
-                        uiChip(`⏳ Gültig: ${o.expiresIn} SpT`, o.expiresIn <= 1 ? 'warn' : '')
+                        uiChip(`⏳ Gültig: ${o.expiresIn} SpT`, o.expiresIn <= 1 ? 'warn' : ''),
+                        // Eigene Etiketten (js/manager-tools.js): Verkaufskandidat gut sichtbar, Stammkraft/Aufbauspieler als Warnung
+                        p && typeof getPlayerTags === 'function' && getPlayerTags(p).includes('verkauf') ? uiChip('💰 Verkaufskandidat – passt zum Plan', 'gut') : '',
+                        p && typeof getPlayerTags === 'function' && getPlayerTags(p).some(t => t === 'stamm' || t === 'aufbau') ? uiChip(getPlayerTags(p).includes('stamm') ? '⭐ Stammkraft – nicht verkaufen?' : '🌱 Aufbauspieler – nicht verkaufen?', 'warn') : ''
                     ],
                     kpi: { wert: formatVal(o.currentBid), label: 'Gebot', farbe: diffColor },
                     aside: `<button onclick="openPlayerDetail('${o.playerId}','squad')" class="btn-secondary ui-card-info" title="Details" aria-label="Details zu ${o.playerName}">ℹ️</button>`,

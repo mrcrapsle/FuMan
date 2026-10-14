@@ -24,7 +24,9 @@ function getWageRating(p) {
 
 // Kandidaten: auslaufende Verträge (bis 1 Jahr Rest), danach Stärkste zuerst
 function getRenewalCandidates(maxRest = 1) {
-    return squad.filter(p => p.contracts <= maxRest).sort((a, b) => (a.contracts - b.contracts) || (b.strength - a.strength));
+    // Spieler mit dem eigenen Etikett „Vertrag klären“ (js/manager-tools.js) stehen ganz oben
+    const geklaert = p => (typeof getPlayerTags === 'function' && getPlayerTags(p).includes('vertrag')) ? 0 : 1;
+    return squad.filter(p => p.contracts <= maxRest).sort((a, b) => (geklaert(a) - geklaert(b)) || (a.contracts - b.contracts) || (b.strength - a.strength));
 }
 
 // Warum eine Verlängerung gerade nicht geht (leer = möglich)
@@ -88,6 +90,7 @@ function renderRenewalAssistant() {
             title: p.name,
             sub: `${p.age ? p.age + ' J. · ' : ''}${p.contracts === 0 ? 'Vertrag läuft aus' : p.contracts + ' J. Rest'}`,
             meta: [
+                typeof getPlayerTags === 'function' && getPlayerTags(p).includes('vertrag') ? uiChip('📄 Vertrag klären', 'warn') : '',
                 v.star ? uiChip('⭐ Topspieler', 'warn') : (v.stammspieler ? uiChip('Stammspieler') : uiChip('Ersatz')),
                 uiChip(`Gehalt ${formatVal(v.alt)} → ${formatVal(v.gehalt)}/SpT`, v.aufschlag > 0 ? 'warn' : 'gut'),
                 uiChip(`${v.jahre} J. Laufzeit`),

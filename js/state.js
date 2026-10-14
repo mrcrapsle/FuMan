@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.129', date: '13.10.2026', features: 'Phase 26.4 (Manager-Werkzeuge): Liquiditäts-Vorschau, Konto-Alarm, Spieler-Etiketten, Manager-Assistent, Lizenz-Laufbahn mit Voraussetzungen' };
+    const GAME_VERSION = { number: '3.130', date: '14.10.2026', features: 'Phase 26.5 (Feinschliff): Sichtprüfung der neuen Fenster, doppelte Hinweise zusammengelegt (Erschöpfung im Spieltag-Check, Angebote im Manager-Assistenten), Etiketten greifen in Angebote und Verlängerungs-Assistent ein, Dashboard-Aktualisierung entprellt' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

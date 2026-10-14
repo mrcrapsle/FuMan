@@ -2853,10 +2853,8 @@ async function testKontrastAlleThemes(browser) {
             };
             const ids = [...document.querySelectorAll('[id^="screen-"]')].map(e => e.id).filter(id => !id.includes('prematch') && id !== 'screen-matchday' && id !== 'screen-office');
             const out = new Set();
-            for (const id of ids) {
-                showScreen(id);
-                await new Promise(res => setTimeout(res, 10));
-                document.querySelectorAll('.app-content *, .app-header *, .bottom-nav-bar *').forEach(el => {
+            const scan = (id, auswahl) => {
+                document.querySelectorAll(auswahl).forEach(el => {
                     if (!el.offsetParent && getComputedStyle(el).position !== 'fixed') return;
                     if (![...el.childNodes].some(n => n.nodeType === 3 && /[A-Za-z0-9ÄÖÜäöü€]/.test(n.textContent))) return;
                     if (el.closest('button[disabled], .office-viewport, svg, .club-logo')) return;
@@ -2868,7 +2866,23 @@ async function testKontrastAlleThemes(browser) {
                     const gross = parseFloat(cs.fontSize) >= 24 || (parseFloat(cs.fontSize) >= 18.6 && parseInt(cs.fontWeight) >= 700);
                     if (v < (gross ? 3 : 4.5)) out.add(`${id} "${el.textContent.trim().slice(0, 24)}" ${v.toFixed(2)}`);
                 });
+            };
+            for (const id of ids) {
+                showScreen(id);
+                await new Promise(res => setTimeout(res, 10));
+                scan(id, '.app-content *, .app-header *, .bottom-nav-bar *');
             }
+            // Phase 26: Spieltag-Check und die neuen Fenster (liegen außerhalb von .app-content)
+            showScreen('screen-prematch-press'); renderPrematchCheck();
+            document.querySelectorAll('#prematch-check-box details').forEach(d => { d.open = true; });
+            scan('spieltag-check', '#prematch-check-box *');
+            showScreen('screen-contracts'); openRenewalAssistant();
+            scan('verlaengerung', '#renewal-assistant-overlay *'); closeRenewalAssistant();
+            document.getElementById('share-report-text').value = 'Testbericht';
+            document.getElementById('share-report-overlay').classList.add('show');
+            scan('bericht', '#share-report-overlay *'); closeShareReport();
+            openFachwort('Moral');
+            scan('fachwort', '#fachwort-overlay *'); closeFachwort();
             probe.remove();
             return [...out];
         }, theme);
@@ -3414,12 +3428,42 @@ async function testManagerWerkzeuge(browser) {
         out.gruenText = document.getElementById('manager-assistant-box').textContent.includes('Alles im grünen Bereich');
         squad[0].contracts = 0; incomingOffers.push({ id: 999 });
         const todos = getManagerTodos();
-        out.todos = todos.length === 2 && todos[0].text.includes('läuft') && todos[1].text.includes('Angebot');
+        out.todos = todos.length === 2 && todos[0].text.includes('Angebot') && todos[1].text.includes('läuft');
+        out.keinDoppelKasten = !document.getElementById('dash-offers-alert');
         renderManagerAssistant();
         out.todoKnoepfe = document.querySelectorAll('#manager-assistant-box button').length === 2;
+        // Unveränderter Inhalt wird nicht neu ins DOM geschrieben (updateUI läuft oft)
+        const kasten = document.getElementById('manager-assistant-box'); const knoten = kasten.firstChild;
+        renderManagerAssistant(); renderManagerAssistant();
+        out.entprellt = kasten.firstChild === knoten;
+        squad[1].contracts = 0; renderManagerAssistant();
+        out.aktualisiert = kasten.firstChild !== knoten && kasten.textContent.includes('Vertrag');
+        squad[1].contracts = 4;
         lineup = lineup.filter(id => squad.find(x => x.id === id).pos !== 'TW');
         out.prioAufstellung = getManagerTodos()[0].text.includes('Aufstellung');
         incomingOffers.length = 0; autoLineup();
+        // Etiketten greifen in andere Bereiche ein: Angebote, Verlängerungs-Assistent, Manager-Assistent
+        const kand = squad[7]; kand.tags = ['verkauf'];
+        incomingOffers.push({ id: 'test-offer', playerId: kand.id, playerName: kand.name, playerPos: kand.pos, playerStr: kand.strength, clubName: 'FC Test', marketValue: 1000000, currentBid: 1100000, expiresIn: 3, statusText: '' });
+        renderTransferView();
+        const angebote = document.getElementById('incoming-offers-list').textContent;
+        out.verkaufChip = angebote.includes('Verkaufskandidat');
+        kand.tags = ['stamm']; renderTransferView();
+        out.stammWarnung = document.getElementById('incoming-offers-list').textContent.includes('nicht verkaufen');
+        incomingOffers.length = 0; kand.tags = [];
+        squad.forEach(x => { x.contracts = 4; });
+        const mitEtikett = squad[9], ohneEtikett = squad[3];
+        ohneEtikett.contracts = 0; mitEtikett.contracts = 1; mitEtikett.tags = ['vertrag'];
+        out.vertragOben = getRenewalCandidates(1)[0].id === mitEtikett.id && getRenewalCandidates(1)[1].id === ohneEtikett.id;
+        openRenewalAssistant();
+        out.vertragChip = document.getElementById('renewal-assistant-content').textContent.includes('Vertrag klären');
+        closeRenewalAssistant();
+        mitEtikett.tags = []; squad.forEach(x => { x.contracts = 4; });
+        const beob = squad[4]; beob.tags = ['beobachten'];
+        out.beobachtenRuhig = !getManagerTodos().some(x => x.text.includes('Beobachtet'));
+        beob.injured = 2;
+        out.beobachtenMeldung = getManagerTodos().some(x => x.text.includes('Beobachtet') && x.text.includes(beob.name));
+        beob.injured = 0; beob.tags = [];
         return out;
     });
     const lizenz = await page.evaluate(() => {
@@ -3456,7 +3500,11 @@ async function testManagerWerkzeuge(browser) {
     assert(r.detailTags && r.entfernt, 'Etiketten im Spielerdetail umschaltbar');
     assert(r.schonen, 'Der Aufstellungs-Check erinnert an „Schonen“-Spieler in der Startelf');
     assert(r.gruen && r.gruenText, 'Manager-Assistent: ohne Handlungsbedarf „alles im grünen Bereich“');
-    assert(r.todos && r.todoKnoepfe && r.prioAufstellung, `Manager-Assistent: Schritte nach Dringlichkeit, höchstens drei, mit Knopf (${JSON.stringify([r.todos, r.todoKnoepfe, r.prioAufstellung])})`);
+    assert(r.verkaufChip && r.stammWarnung, `Angebote zeigen das Etikett Verkaufskandidat und warnen bei Stammkraft (${r.verkaufChip}/${r.stammWarnung})`);
+    assert(r.vertragOben && r.vertragChip, `Verlängerungs-Assistent stellt „Vertrag klären“ nach oben (${r.vertragOben}/${r.vertragChip})`);
+    assert(r.beobachtenRuhig && r.beobachtenMeldung, `Manager-Assistent meldet beobachtete Spieler nur bei Auffälligkeit (${r.beobachtenRuhig}/${r.beobachtenMeldung})`);
+    assert(r.entprellt && r.aktualisiert, `Manager-Assistent schreibt das DOM nur bei Änderung neu (${r.entprellt}/${r.aktualisiert})`);
+    assert(r.todos && r.keinDoppelKasten && r.todoKnoepfe && r.prioAufstellung, `Manager-Assistent: Schritte nach Dringlichkeit, höchstens drei, mit Knopf (${JSON.stringify([r.todos, r.todoKnoepfe, r.prioAufstellung])})`);
     assert(lizenz.fehltB && lizenz.gesperrtB && lizenz.kaufB, `Lizenz-Laufbahn: B-Lizenz erst nach einer abgeschlossenen Saison (${JSON.stringify(lizenz)})`);
     assert(lizenz.fehltA && lizenz.freiA && lizenz.geldA && lizenz.kaufA, 'A-Lizenz: Saisons und Manager-Level nötig, danach Kosten aus dem Privatvermögen');
     assert(lizenz.fehltPro && lizenz.kaufPro && lizenz.boost, 'Pro-Lizenz verlangt zusätzlich eine Trophäe und gibt weiter +4 Teamstärke');
@@ -9945,7 +9993,7 @@ async function testCareerBalancing(browser) {
         // Vorbericht warnt vor müden Stammspielern, Knopf stellt ausgeruhte Elf auf
         squad.filter(p => lineup.includes(p.id)).slice(0, 3).forEach(p => { p.fitness = 50; });
         renderFatigueWarning();
-        out.warnung = document.getElementById('prematch-fatigue-box').innerHTML.includes('rotateTiredPlayers');
+        out.warnung = document.getElementById('prematch-check-box').innerHTML.includes('rotateTiredPlayers') && document.getElementById('prematch-fatigue-box').innerHTML === '';
         rotateTiredPlayers();
         out.rotiert = squad.filter(p => lineup.includes(p.id) && p.fitness < 70).length < 3;
         // Nur so viele Verteidiger wie die Formation braucht, alle erschöpft: ein ausgeruhter
@@ -10635,7 +10683,8 @@ async function testAeltereStaende(browser) {
                 const ok = loadGameFromSlot(2, true);
                 updateUI();
                 renderDashboardView();
-                return { ok: ok === true, money: game.money, kader: squad.length, verein: game.clubName };
+                const phase26 = typeof getPlayerTags === 'function' ? { vorlage: !!(game.lineupPresets && game.lineupPresets[0] && game.lineupPresets[0].ids.length === 11), tags: squad.filter(p => getPlayerTags(p).length).length, serien: !!(game.serien && game.serien.aktuell), assistent: (renderManagerAssistant(), true) } : null;
+                return { ok: ok === true, money: game.money, kader: squad.length, verein: game.clubName, phase26 };
             } catch (e) { return { crash: e.message + ' ' + e.stack }; }
         }, raw);
         assert(!r.crash, `Stand ${version} lädt ohne Absturz (${r.crash || 'ok'})`);
@@ -10643,6 +10692,7 @@ async function testAeltereStaende(browser) {
             assert(r.ok, `Stand ${version} wird angenommen, nicht als beschädigt abgewiesen`);
             assert(Math.round(r.money) === Math.round(erwartet.game.money), `Stand ${version}: Geld bleibt erhalten (${Math.round(r.money)} statt ${Math.round(erwartet.game.money)})`);
             assert(r.kader === erwartet.squad.length && r.verein === erwartet.game.clubName, `Stand ${version}: Verein und Kader bleiben erhalten`);
+            if (version === '3.129') assert(r.phase26 && r.phase26.vorlage && r.phase26.tags === 2 && r.phase26.serien && r.phase26.assistent, `Stand ${version}: Vorlagen, Etiketten und Serien aus Phase 26 bleiben erhalten (${JSON.stringify(r.phase26)})`);
         }
         // Derselbe Stand als Autosave, und danach läuft ein Spieltag normal weiter (25.26)
         const weiter = await page.evaluate((raw) => {

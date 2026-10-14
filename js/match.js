@@ -289,17 +289,13 @@
             </div>`;
     }
 
-    // Vorbericht: müde Stammspieler (Fitness unter 70 %) kosten spürbar Stärke - Hinweis
-    // mit einem Knopf, der die beste ausgeruhte Elf aufstellt.
+    // Vorbericht: müde Stammspieler (Fitness unter 70 %) kosten spürbar Stärke. Der Hinweis und der Knopf
+    // „Ausgeruhte Elf aufstellen“ stehen im Rotations-Assistenten des Spieltag-Checks (js/matchprep.js);
+    // der frühere eigene Kasten entfällt, damit dieselbe Warnung nicht doppelt erscheint.
     function renderFatigueWarning() {
         let box = document.getElementById('prematch-fatigue-box');
-        if (!box) return;
-        let muede = squad.filter(p => lineup.includes(p.id) && p.fitness < 70);
-        if (!muede.length) { box.innerHTML = ''; return; }
-        box.innerHTML = `<div class="box" style="font-size:var(--fs-body); border-left-color:var(--danger); margin-bottom:8px;">
-            😮‍💨 <strong>${muede.length} Stammspieler erschöpft:</strong> ${muede.map(p => `${p.name} (${p.fitness}%)`).join(', ')}.
-            Fitness zählt voll in die Teamstärke.
-            <button onclick="rotateTiredPlayers()" class="btn-action" style="margin-top:6px;">🔄 Ausgeruhte Elf aufstellen</button></div>`;
+        if (box) box.innerHTML = '';
+        if (typeof renderPrematchCheck === 'function') renderPrematchCheck();
     }
     function rotateTiredPlayers() {
         let vorher = calcTeamStrength(false);
@@ -328,7 +324,6 @@
         if (typeof renderOppTacticBox === 'function') renderOppTacticBox(oppObj);
         if (typeof renderPregameTalkBox === 'function') renderPregameTalkBox();
         renderFatigueWarning();
-        if (typeof renderPrematchCheck === 'function') renderPrematchCheck();
 
         renderPressConference({ oppName, oppStr, isHome, cup: false });
         showScreen('screen-prematch-press');

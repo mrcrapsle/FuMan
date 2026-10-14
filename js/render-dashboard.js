@@ -28,16 +28,6 @@
         document.getElementById('dash-wage-budget').innerText = formatVal(game.wageBudget) + " / SpT";
         document.getElementById('dash-holding-cap').innerText = formatVal(holdingCompany.money);
 
-        let alertBox = document.getElementById('dash-offers-alert');
-        if (alertBox) {
-            if (incomingOffers.length > 0) {
-                alertBox.style.display = 'block';
-                document.getElementById('dash-offers-alert-count').innerText = incomingOffers.length;
-            } else {
-                alertBox.style.display = 'none';
-            }
-        }
-
         let activeFactCount = Object.values(factories).filter(f => f.owned).length;
         document.getElementById('dash-active-factories').innerText = `${activeFactCount} / 4`;
         document.getElementById('dash-raw-total').innerText = (rawMaterials.totalStock || 0).toLocaleString() + " kg";

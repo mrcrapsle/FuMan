@@ -202,7 +202,6 @@ function getLineupProblems() {
         });
     }
     elf.filter(p => Array.isArray(p.tags) && p.tags.includes('schonen')).forEach(p => probleme.push({ ton: 'warn', text: `${p.name} ist als „Schonen“ etikettiert und steht in der Startelf.` }));
-    elf.filter(p => mpIstEinsatzbereit(p) && p.fitness < 50).forEach(p => probleme.push({ ton: 'warn', text: `${p.name} ist nur zu ${p.fitness} % fit.` }));
     return probleme;
 }
 
@@ -239,7 +238,6 @@ function applyRotationSwap(rausId, reinId) {
     if (i === -1 || !mpIstEinsatzbereit(rein)) { showToast('Dieser Tausch geht nicht mehr - die Elf hat sich geändert.', 'error'); renderPrematchCheck(); return; }
     lineup[i] = reinId;
     showToast(`🔄 ${rein.name} ersetzt den müden Mitspieler.`, 'success');
-    if (typeof renderFatigueWarning === 'function') renderFatigueWarning();
     renderPrematchCheck();
 }
 
@@ -248,29 +246,33 @@ function renderPrematchCheck() {
     if (!box) return;
     const probleme = getLineupProblems();
     const fehlt = getAbsentPlayers();
-    const rotation = getRotationSuggestions();
+    const alleRotation = getRotationSuggestions();
+    const rotation = alleRotation.filter(r => r.rein);
+    const ohneErsatz = alleRotation.filter(r => !r.rein).map(r => r.raus.name);
     const stammFehlt = fehlt.filter(x => x.stamm).length;
+    const muede = squad.filter(p => lineup.includes(p.id) && mpIstEinsatzbereit(p) && p.fitness < 70);
     const chips = [
         probleme.length ? uiChip(`⚠️ ${probleme.length} Hinweis${probleme.length === 1 ? '' : 'e'}`, probleme.some(x => x.ton === 'schlecht') ? 'schlecht' : 'warn') : uiChip('✓ Elf in Ordnung', 'gut'),
         uiChip(`🩹 ${fehlt.length} fehlen${stammFehlt ? ` (${stammFehlt} Stammspieler)` : ''}`, stammFehlt ? 'warn' : ''),
+        muede.length ? uiChip(`😮‍💨 ${muede.length} erschöpft`, muede.some(p => p.fitness < 50) ? 'schlecht' : 'warn') : '',
         rotation.length ? uiChip(`🔄 ${rotation.length} Rotationsidee${rotation.length === 1 ? '' : 'n'}`, 'warn') : ''
     ];
     const problemListe = probleme.length ? probleme.map(x => `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">${x.ton === 'schlecht' ? '🔴' : '🟡'} ${mpEsc(x.text)}</div>`).join('')
-        : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Torwart, Formation und Fitness passen.</div>';
+        : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Torwart und Formation passen.</div>';
     const fehltListe = fehlt.length ? fehlt.map(x => `<div class="box" style="font-size:var(--fs-small); margin:4px 0; display:flex; justify-content:space-between; gap:8px;"><span>${mpEsc(x.p.name)} (${x.p.pos}, Str ${x.p.strength})${x.stamm ? ' ⭐' : ''}</span><span style="color:var(--text-muted);">${x.grund}, noch ${x.tage} ${x.grund === 'verletzt' ? 'Spieltag' + (x.tage === 1 ? '' : 'e') : 'Spiel' + (x.tage === 1 ? '' : 'e')}</span></div>`).join('')
         : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Der komplette Kader ist einsatzbereit.</div>';
-    const rotListe = rotation.length ? rotation.map(r => r.rein
-        ? `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">${mpEsc(r.raus.name)} (${r.raus.pos}, ${r.raus.fitness} % fit) ↔ ${mpEsc(r.rein.name)} (${r.rein.fitness} % fit)
+    const muedeZeile = muede.length ? `<div class="box" style="font-size:var(--fs-small); margin:4px 0; border-left-color:var(--danger);">😮‍💨 <strong>${muede.length} Stammspieler erschöpft:</strong> ${muede.map(p => `${mpEsc(p.name)} (${p.fitness} %)`).join(', ')}. Fitness zählt voll in die Teamstärke.${ohneErsatz.length ? ` Für ${ohneErsatz.map(mpEsc).join(', ')} gibt es auf der Bank keinen gleichwertigen Ersatz.` : ''}
+            <button onclick="rotateTiredPlayers()" class="btn-action" style="margin-top:6px;">🔄 Ausgeruhte Elf aufstellen</button></div>` : '';
+    const rotListe = muedeZeile + (rotation.length ? rotation.map(r => `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">${mpEsc(r.raus.name)} (${r.raus.pos}, ${r.raus.fitness} % fit) ↔ ${mpEsc(r.rein.name)} (${r.rein.fitness} % fit)
             <span style="color:var(--text-muted);">· effektive Stärke ${r.delta >= 0 ? '+' : ''}${r.delta}</span>
-            <button onclick="applyRotationSwap('${r.raus.id}', '${r.rein.id}')" class="btn-secondary" style="margin-top:4px;">🔄 Tauschen</button></div>`
-        : `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">${mpEsc(r.raus.name)} ist nur zu ${r.raus.fitness} % fit, aber auf der Bank gibt es keinen gleichwertigen Ersatz.</div>`).join('')
-        : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Keine Rotation nötig: alle Stammspieler sind ausgeruht oder ohne frischen Ersatz.</div>';
+            <button onclick="applyRotationSwap('${r.raus.id}', '${r.rein.id}')" class="btn-secondary" style="margin-top:4px;">🔄 Tauschen</button></div>`).join('')
+        : (muede.length ? '' : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Keine Rotation nötig: alle Stammspieler sind ausgeruht oder ohne frischen Ersatz.</div>'));
     box.innerHTML = `<div class="panel" style="margin-bottom:8px;">
         <div class="panel-header">🧾 Spieltag-Check</div>
         <div class="ui-card-meta" style="margin-bottom:6px;">${chips.join('')}</div>
         <details class="ui-fold"${probleme.length ? ' open' : ''}><summary>Aufstellungs-Check</summary>${problemListe}</details>
         <details class="ui-fold"${fehlt.length ? ' open' : ''}><summary>Wer fehlt?</summary>${fehltListe}</details>
-        <details class="ui-fold"${rotation.length ? ' open' : ''}><summary>Rotations-Assistent</summary>${rotListe}
+        <details class="ui-fold"${rotation.length || muede.length ? ' open' : ''}><summary>Rotations-Assistent</summary>${rotListe}
             <button onclick="showScreen('screen-squad')" class="btn-secondary" style="margin-top:4px;">⚽ Aufstellung im Detail ändern</button></details>
     </div>`;
 }
