@@ -589,3 +589,8 @@ Vor dem Bauen gegen den Bestand geprüft: Die geplante **Zwischenbilanz nach Spi
     | Stammkraft + Schonen, ohne Mehrermüdung (endgültig) | 7,00 | 52,4 | 0 |
 
     Erkenntnis: Schon ein Punkt zusätzlicher Fitnessverlust je Spiel verschiebt bei Dauerspielern das Fitness-Gleichgewicht dauerhaft nach unten (die Fitness geht multiplikativ in die Stärke ein) und kostet mehrere Punkte je Saison; deshalb wirkt „Schonen“ nur noch über das Verletzungsrisiko. Die Moral-Boni (nur bis 90) liegen im Rauschen der Basislinie. Direktmessung mit festem Zufall (1500 Spiele): Verletzungsquote der drei Etikettierten 2,84 % → 3,31 %.
+
+## 3.133 und 3.134
+- **3.133** (alle Punkte der Phase 26.8 bis 26.10 und die aufgeteilte Testdatei) ging mit grünem lokalem `npm run check` auf `main`, die CI scheiterte aber in `testKnopfWorteHandy` (320 px, normale Schrift): In der CI-Umgebung ist die Schrift breiter, und „💾 Speichern“ in der Zeile „Eigene Vorlagen“ im Trainingsbildschirm (Eingabefeld und Knopf nebeneinander) wurde auf 60 px Innenbreite gedrückt, schmaler als das Wort. Der Deploy wurde dadurch übersprungen (die Veröffentlichung hängt an grünen Tests).
+- **3.134:** Knopf mit `flex:0 0 auto; white-space:nowrap`, Eingabefeld mit `min-width:0` (gibt nach). Lehre: Der neue Wortbruch-Test findet echte Engstellen, die von der Schriftbreite abhängen; lokal unauffällige Zeilen mit `width:auto` neben einem `flex:1`-Feld sind die typischen Kandidaten.
+

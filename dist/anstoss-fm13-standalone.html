@@ -3411,8 +3411,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
                     <div style="margin-top:10px; padding-top:8px; border-top:1px solid var(--border);">
                         <div style="font-size:var(--fs-small); font-weight:800; color:var(--text-muted); margin-bottom:4px;">Eigene Vorlagen</div>
                         <div style="display:flex; gap:4px; margin-bottom:6px;">
-                            <input type="text" id="custom-plan-name-input" class="input-inline" style="flex:1; width:auto;" placeholder="Name der Vorlage">
-                            <button onclick="saveCustomWeeklyPlanTemplate()" class="btn-secondary" style="width:auto; padding:5px 10px;">💾 Speichern</button>
+                            <input type="text" id="custom-plan-name-input" class="input-inline" style="flex:1; width:auto; min-width:0;" placeholder="Name der Vorlage">
+                            <button onclick="saveCustomWeeklyPlanTemplate()" class="btn-secondary" style="width:auto; flex:0 0 auto; white-space:nowrap; padding:5px 10px;">💾 Speichern</button>
                         </div>
                         <div id="custom-weekly-templates-list"></div>
                     </div>
@@ -5094,7 +5094,7 @@ function renderUiStatRow(werte) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.133', date: '15.10.2026', features: 'Phase 26.8-26.10: Fristen im Manager-Assistenten, Kaderplaner mit Ausfällen, Bilanz je Aufstellungsvorlage, Etiketten mit kleiner Spielwirkung, Bilanz im Gegner-Notizbuch, Vergleich von der Karte, Ausfall-Rangliste, Fokus in Fenstern, Knöpfe ohne Wortbruch auf engen Handys, schnellere Kaderansicht, Testdatei aufgeteilt' };
+    const GAME_VERSION = { number: '3.134', date: '15.10.2026', features: 'Phase 26.8-26.10: Fristen im Manager-Assistenten, Kaderplaner mit Ausfällen, Bilanz je Aufstellungsvorlage, Etiketten mit kleiner Spielwirkung, Bilanz im Gegner-Notizbuch, Vergleich von der Karte, Ausfall-Rangliste, Fokus in Fenstern, Knöpfe ohne Wortbruch auf engen Handys, schnellere Kaderansicht, Testdatei aufgeteilt' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
