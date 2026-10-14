@@ -671,6 +671,54 @@ async function testRunde27Funktionen(browser) {
         // alte Spielstände ohne Feld
         delete game.vorlageBilanz; out.altesFeld = getPresetBilanzText(0) === '' && (ensureVorlageBilanz(), typeof game.vorlageBilanz === 'object');
         pendingMatchInfo = null;
+        // --- Etiketten mit Wirkung ---
+        const spieler = squad.filter(x => (x.injured || 0) === 0).slice(0, 4);
+        const [s1, s2, s3, s4] = spieler;
+        squad.forEach(x => { x.tags = []; });
+        s1.tags = ['stamm']; s2.tags = ['aufbau']; s3.tags = ['schonen']; s4.tags = ['stamm', 'schonen'];
+        const e = (p, spielt) => getTagMatchEffects(p, spielt);
+        out.wirkStamm = e(s1, true).moral === 1 && e(s1, false).moral === -2 && e(s1, false).untergrenze === 45;
+        out.wirkAufbau = e(s2, true).moral === 1 && e(s2, false).moral === 0;
+        out.wirkSchonen = Math.abs(e(s3, true).verletzung - 1.3) < 1e-9 && e(s3, true).ermuedung === 1 && e(s3, false).verletzung === 1 && e(s3, false).ermuedung === 0;
+        out.wirkKombi = e(s4, true).moral === 1 && Math.abs(e(s4, true).verletzung - 1.3) < 1e-9 && e(s4, false).moral === -2;
+        out.keineEtikettWirkung = e(squad.find(x => !(x.tags || []).length), true).moral === 0 && e(squad.find(x => !(x.tags || []).length), true).verletzung === 1;
+        const probe = { tags: ['stamm'], morale: 80, fitness: 100, injured: 0, suspended: 0 };
+        applyTagMatchEffects(probe, false); out.bank78 = probe.morale === 78;
+        probe.morale = 46; applyTagMatchEffects(probe, false); out.bankUntergrenze = probe.morale === 45;
+        probe.morale = 40; applyTagMatchEffects(probe, false); out.bankUnterhalbBleibt = probe.morale === 40;
+        probe.morale = 89; applyTagMatchEffects(probe, true); out.elfBis90 = probe.morale === 90;
+        probe.morale = 95; applyTagMatchEffects(probe, true); out.elfUeber90Bleibt = probe.morale === 95;
+        probe.morale = 80; probe.injured = 2; applyTagMatchEffects(probe, false); out.verletztNichtUnzufrieden = probe.morale === 80;
+        const sch = { tags: ['schonen'], morale: 80, fitness: 90, injured: 0 };
+        applyTagMatchEffects(sch, true); out.schonenErmuedet = sch.fitness === 89;
+        applyTagMatchEffects(sch, false); out.schonenBankNichts = sch.fitness === 89;
+        // Echter Ablauf: zwei Bankspieler, einer mit „Stammkraft“ - nach einem Spiel genau 2 Moralpunkte Unterschied
+        squad.forEach(x => { x.tags = []; x.injured = 0; x.suspended = 0; x.morale = 80; });
+        lineup = pickBestLineupIds();
+        // Verdrahtung: nach jedem Spiel wird die Wirkung für jeden Kaderspieler genau einmal angewendet, mit richtigem „spielt“
+        // (der Moralunterschied selbst wird oben exakt geprüft; im echten Ablauf verschieben andere Zufallsereignisse einzelne Werte)
+        const aufrufe = [];
+        const echt = window.applyTagMatchEffects;
+        window.applyTagMatchEffects = (x, spielt) => { aufrufe.push([x.id, spielt]); return echt(x, spielt); };
+        processPostMatchRoutine('draw', false, false, 0, true, { total: 2, bothScored: true });
+        window.applyTagMatchEffects = echt;
+        out.ablaufMoral = aufrufe.length === squad.length && aufrufe.every(([id, spielt]) => spielt === lineup.includes(id)) && new Set(aufrufe.map(a => a[0])).size === squad.length;
+        out.ablaufDbg = [aufrufe.length, squad.length];
+        // Spielerdetail erklärt die Wirkung
+        const sd = squad.find(x => x.id === lineup[0]); sd.tags = ['schonen'];
+        showScreen('screen-squad'); openPlayerDetail(sd.id, 'squad');
+        out.detailText = document.getElementById('pd-tags').textContent.includes('Verletzungsrisiko um 30 %');
+        closePlayerDetail(); squad.forEach(x => { x.tags = []; });
+        // Radar: feste Größe mit viewBox (kein Layout-Lesen mehr beim Neuzeichnen der Kaderansicht)
+        showScreen('screen-squad'); renderSquadRadar();
+        const svg = document.querySelector('#squad-radar-container svg');
+        out.radar = !!svg && svg.getAttribute('viewBox') === '0 0 200 200' && svg.getAttribute('width') === '200' && /max-width:\s*100%/.test(svg.getAttribute('style'));
+        let leseZugriffe = 0;
+        const orig = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth');
+        Object.defineProperty(HTMLElement.prototype, 'offsetWidth', { configurable: true, get() { if (this.id === 'squad-radar-container') leseZugriffe++; return orig.get.call(this); } });
+        renderSquadRadar();
+        Object.defineProperty(HTMLElement.prototype, 'offsetWidth', orig);
+        out.radarOhneLayoutLesen = leseZugriffe === 0;
         // Echter Ablauf: Anstoß-Ablauf setzt den Merker, das Ligaergebnis zählt über recordOwnLeagueResult
         game.matchday = 4; game.formation = '4-4-2'; autoLineup(); saveLineupPreset(1);
         startMatchdayFlow();
@@ -679,6 +727,10 @@ async function testRunde27Funktionen(browser) {
         out.flussZaehlt = game.vorlageBilanz[1] && game.vorlageBilanz[1].spiele === 1 && game.vorlageBilanz[1].s === 1;
         return out;
     });
+    assert(r.wirkStamm && r.wirkAufbau && r.wirkSchonen && r.wirkKombi && r.keineEtikettWirkung, `Etiketten mit Wirkung: Stammkraft, Aufbauspieler, Schonen, Kombination, ohne Etikett nichts (${JSON.stringify([r.wirkStamm, r.wirkAufbau, r.wirkSchonen, r.wirkKombi, r.keineEtikettWirkung])})`);
+    assert(r.bank78 && r.bankUntergrenze && r.bankUnterhalbBleibt && r.elfBis90 && r.elfUeber90Bleibt && r.verletztNichtUnzufrieden, `Etiketten: Moral auf der Bank nicht unter 45, Gewinn nur bis 90, Verletzte nicht unzufrieden (${JSON.stringify([r.bank78, r.bankUntergrenze, r.bankUnterhalbBleibt, r.elfBis90, r.elfUeber90Bleibt, r.verletztNichtUnzufrieden])})`);
+    assert(r.schonenErmuedet && r.schonenBankNichts && r.ablaufMoral && r.detailText, `Etiketten: Schonen ermüdet nur bei Einsatz, Verdrahtung im Spielablauf und Erklärung im Spielerdetail (${JSON.stringify([r.schonenErmuedet, r.schonenBankNichts, r.ablaufMoral, r.detailText, r.ablaufDbg])})`);
+    assert(r.radar && r.radarOhneLayoutLesen, `Kader-Radar hat feste Größe mit viewBox und liest beim Zeichnen keine Breite (${r.radar}/${r.radarOhneLayoutLesen})`);
     assert(r.flussMerker && r.flussZaehlt, `Bilanz je Vorlage über den echten Ablauf (Anstoß setzt den Merker, Ligaergebnis zählt) (${r.flussMerker}/${r.flussZaehlt})`);
     assert(r.erkannt && r.gezaehlt && r.summen && r.text && r.karte, `Bilanz je Vorlage: erkannt, gezählt, Summen, Text und Anzeige auf der Karte (${JSON.stringify([r.erkannt, r.gezaehlt, r.summen, r.text, r.karte])})`);
     assert(r.fremdeElf && r.alterMerker && r.neuBelegt && r.andererName && r.geloescht && r.altesFeld, `Bilanz je Vorlage: fremde Elf, alter Merker, neu belegter Slot, Löschen, alte Spielstände (${JSON.stringify([r.fremdeElf, r.alterMerker, r.neuBelegt, r.andererName, r.geloescht, r.altesFeld])})`);

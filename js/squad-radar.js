@@ -50,8 +50,10 @@
         if (!stats) return;
 
         // SVG Radar Chart mit 6 Attributen
-        // offsetWidth ist 0, solange der Screen versteckt ist -> sonst entstünde ein -20x-20-SVG.
-        let size = container.offsetWidth > 40 ? Math.min(container.offsetWidth - 20, 200) : 200;
+        // Feste Größe mit viewBox: container.offsetWidth zu lesen erzwang mitten im Neuzeichnen der Kaderansicht ein
+        // komplettes Layout (gemessen 320 ms bei 6-facher CPU-Drosselung und 40 Spielern); bei wenig Platz schrumpft
+        // das SVG über max-width.
+        let size = 200;
         let center = size / 2;
         let maxValue = 100;
         let levels = 5;
@@ -115,7 +117,7 @@
         }).join('');
 
         let svg = `
-            <svg width="${size}" height="${size}" style="display:block; margin:0 auto;">
+            <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="display:block; margin:0 auto; max-width:100%; height:auto;">
                 <defs>
                     <linearGradient id="radarGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                         <stop offset="0%" style="stop-color:var(--primary);stop-opacity:0.3" />

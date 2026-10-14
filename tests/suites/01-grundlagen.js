@@ -443,7 +443,9 @@ async function testLoadingGuard(browser) {
     const ctx = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 430, height: 880 } });
     const page = await ctx.newPage();
     await page.goto(GAME_PATH);
-    await page.waitForFunction(() => !document.getElementById('app-loading'), null, { timeout: 20000 }).catch(() => null);
+    // Ohne JavaScript läuft nichts, worauf waitForFunction warten könnte (es hielt jeden Lauf volle 20 s auf):
+    // das Dokument ist fertig geladen, sobald das load-Ereignis kam.
+    await page.waitForLoadState('load');
     await page.waitForTimeout(100);  // Längeres Timeout um sicherzustellen, dass Ladeanzeige vollständig sichtbar ist
 
     const ladeEbene = await page.$('#app-loading');

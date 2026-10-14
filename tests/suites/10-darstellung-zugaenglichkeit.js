@@ -374,24 +374,36 @@ async function testKontrastAlleThemes(browser) {
             const verh = (a, b) => { const [h, d] = [lum(a), lum(b)].sort((x, y) => y - x); return (h + 0.05) / (d + 0.05); };
             const probe = document.createElement('div'); document.body.appendChild(probe);
             const aufloesen = c => { probe.style.color = ''; probe.style.color = c; return parse(getComputedStyle(probe).color); };
+            // Hintergrund eines Elements = eigene Schichten über dem Hintergrund des Elternelements (bis zur ersten
+            // deckenden Schicht). Je Element zwischengespeichert: die Elternkette wird so nur einmal berechnet.
+            const basis = aufloesen('var(--surface-app)') || [0, 0, 0, 1];
+            const bgCache = new Map();
             const hintergrund = el => {
-                const lagen = [];
-                for (let e = el; e && e !== document.documentElement; e = e.parentElement) {
-                    const cs = getComputedStyle(e);
+                if (bgCache.has(el)) return bgCache.get(el);
+                let res;
+                if (!el || el === document.documentElement) res = basis;
+                else {
+                    const cs = getComputedStyle(el);
+                    const eigene = [];
+                    let deckend = false;
                     if (/gradient/.test(cs.backgroundImage)) {
                         const f = cs.backgroundImage.match(/(rgba?|color)\([^()]*(\([^()]*\)[^()]*)*\)|#[0-9a-f]{3,6}/gi) || [];
                         const c = f.length ? aufloesen(f[0]) : null;
-                        if (c) { lagen.push(c); if (c[3] > 0.95) break; }
+                        if (c) { eigene.push(c); if (c[3] > 0.95) deckend = true; }
                     }
-                    const c = parse(cs.backgroundColor);
-                    if (c && c[3] > 0) { lagen.push(c); if (c[3] > 0.95) break; }
+                    if (!deckend) {
+                        const c = parse(cs.backgroundColor);
+                        if (c && c[3] > 0) { eigene.push(c); if (c[3] > 0.95) deckend = true; }
+                    }
+                    res = eigene.reverse().reduce((u, o) => ueber(o, u), deckend ? basis : hintergrund(el.parentElement));
                 }
-                const basis = aufloesen('var(--surface-app)') || [0, 0, 0, 1];
-                return lagen.reverse().reduce((u, o) => ueber(o, u), basis);
+                bgCache.set(el, res);
+                return res;
             };
             const ids = [...document.querySelectorAll('[id^="screen-"]')].map(e => e.id).filter(id => !id.includes('prematch') && id !== 'screen-matchday' && id !== 'screen-office');
             const out = new Set();
             const scan = (id, auswahl) => {
+                bgCache.clear(); // Klassen und Hintergründe ändern sich beim Wechsel des Bildschirms
                 document.querySelectorAll(auswahl).forEach(el => {
                     if (!el.offsetParent && getComputedStyle(el).position !== 'fixed') return;
                     if (![...el.childNodes].some(n => n.nodeType === 3 && /[A-Za-z0-9ÄÖÜäöü€]/.test(n.textContent))) return;

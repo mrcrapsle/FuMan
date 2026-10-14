@@ -1155,6 +1155,8 @@
             else p.fitness = Math.min(100, p.fitness + benchRecovery);
 
             if (moraleShift !== 0) p.morale = Math.max(10, Math.min(100, (p.morale || 80) + moraleShift));
+            // Eigene Etiketten mit Wirkung (js/manager-tools.js): Stammkraft, Aufbauspieler, Schonen
+            if (typeof applyTagMatchEffects === 'function') applyTagMatchEffects(p, lineup.includes(p.id));
             if (managerRPG.perks.motivator) p.morale = Math.max(75, p.morale);
 
             // Individuelles Training verbessert jetzt gezielt die passende Fähigkeit,
@@ -1230,6 +1232,7 @@
             if ((p.timesInjured || 0) >= 2) individualInjuryChance *= 0.72;
             if (typeof getAgeInjuryFactor === 'function') individualInjuryChance *= getAgeInjuryFactor(p);
             if (typeof getChronicInjuryFactor === 'function') individualInjuryChance *= getChronicInjuryFactor(p);
+            if (typeof getTagMatchEffects === 'function') individualInjuryChance *= getTagMatchEffects(p, true).verletzung;
             if (Math.random() < individualInjuryChance) {
                 let baseDuration = Math.floor(Math.random() * 4) + 1; // 1-4 Spiele Ausfallzeit
                 let reduction = 1 - (campusBuildings.reha.lvl * 0.08) - (staffMembers.physio.hired ? 0.5 : 0);

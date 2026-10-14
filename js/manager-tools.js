@@ -107,6 +107,54 @@ const SPIELER_ETIKETTEN = [
 ];
 let squadTagFilter = '';
 
+// Etiketten mit Wirkung (Phase 26.10): drei der sechs Etiketten greifen nach jedem Spiel in Moral und Verletzungsrisiko ein.
+// Die anderen (Verkaufskandidat, Beobachten, Vertrag klären) sind reine Planungshilfen. Die Werte sind bewusst klein:
+//   Stammkraft    spielt: +1 Moral (bis 90); sitzt auf der Bank: -2 Moral, aber nie unter 45 durch dieses Etikett
+//   Aufbauspieler spielt: +1 Moral (bis 90); sitzt auf der Bank: keine Unzufriedenheit (er ist geduldig)
+//   Schonen       spielt trotzdem: Verletzungsrisiko x1,3 und 1 Punkt Fitness mehr Verlust (der Physio hatte gewarnt);
+//                 auf der Bank passiert nichts, denn dort gibt es kein Verletzungsrisiko
+const ETIKETT_WIRKUNG = {
+    stamm: { spielt: { moral: 1 }, bank: { moral: -2, untergrenze: 45 } },
+    aufbau: { spielt: { moral: 1 }, bank: {} },
+    schonen: { spielt: { verletzung: 1.3, ermuedung: 1 }, bank: {} }
+};
+
+// Summe der Wirkungen aller Etiketten eines Spielers für dieses Spiel (spielt = stand in der Startelf)
+function getTagMatchEffects(p, spielt) {
+    const e = { moral: 0, untergrenze: 0, verletzung: 1, ermuedung: 0 };
+    getPlayerTags(p).forEach(t => {
+        const w = ETIKETT_WIRKUNG[t] && ETIKETT_WIRKUNG[t][spielt ? 'spielt' : 'bank'];
+        if (!w) return;
+        if (w.moral) e.moral += w.moral;
+        if (w.untergrenze) e.untergrenze = Math.max(e.untergrenze, w.untergrenze);
+        if (w.verletzung) e.verletzung *= w.verletzung;
+        if (w.ermuedung) e.ermuedung += w.ermuedung;
+    });
+    return e;
+}
+
+// Wendet Moral und Mehrermüdung an (aufgerufen nach jedem eigenen Spiel aus processPostMatchRoutine)
+function applyTagMatchEffects(p, spielt) {
+    if (!spielt && ((p.injured || 0) > 0 || (p.suspended || 0) > 0)) return; // Verletzte und Gesperrte sind nicht „unzufrieden auf der Bank“
+    const e = getTagMatchEffects(p, spielt);
+    if (e.moral > 0) { const aktuell = p.morale || 80; p.morale = aktuell >= 90 ? aktuell : Math.min(90, aktuell + e.moral); } // nur bis 90: kein dauerhafter Stärkebonus über die Moral
+    else if (e.moral < 0) {
+        const aktuell = p.morale || 80;
+        p.morale = aktuell > e.untergrenze ? Math.max(e.untergrenze, aktuell + e.moral) : aktuell;
+    }
+    if (e.ermuedung > 0 && spielt) p.fitness = Math.max(10, p.fitness - e.ermuedung);
+}
+
+// Texte für das Spielerdetail: was ein aktives Etikett bewirkt
+function getTagEffectTexts(p) {
+    const t = getPlayerTags(p);
+    const z = [];
+    if (t.includes('stamm')) z.push('Stammkraft: +1 Moral bei Einsatz (bis 90), −2 Moral auf der Bank (nicht unter 45).');
+    if (t.includes('aufbau')) z.push('Aufbauspieler: +1 Moral bei Einsatz (bis 90), bleibt auf der Bank gelassen.');
+    if (t.includes('schonen')) z.push('Schonen: spielt er trotzdem, steigt sein Verletzungsrisiko um 30 % und er verliert 1 Punkt Fitness mehr.');
+    return z;
+}
+
 function getPlayerTags(p) { return Array.isArray(p.tags) ? p.tags.filter(t => SPIELER_ETIKETTEN.some(e => e.id === t)) : []; }
 
 function getPlayerTagChips(p) {
@@ -127,8 +175,10 @@ function renderPlayerTags(p) {
     if (!box) return;
     if (!squad.includes(p)) { box.innerHTML = ''; return; }
     const tags = getPlayerTags(p);
+    const wirkung = getTagEffectTexts(p);
     box.innerHTML = `<div class="ui-overline" style="font-size:var(--fs-caption); color:var(--text-muted); margin:10px 0 4px; text-align:left;">Eigene Etiketten</div>
-        <div style="display:flex; flex-wrap:wrap; gap:6px;">${SPIELER_ETIKETTEN.map(e => `<button onclick="toggleSquadTag('${p.id}', '${e.id}')" class="${tags.includes(e.id) ? 'btn-action' : 'btn-secondary'}" style="width:auto;" aria-pressed="${tags.includes(e.id)}">${e.label}</button>`).join('')}</div>`;
+        <div style="display:flex; flex-wrap:wrap; gap:6px;">${SPIELER_ETIKETTEN.map(e => `<button onclick="toggleSquadTag('${p.id}', '${e.id}')" class="${tags.includes(e.id) ? 'btn-action' : 'btn-secondary'}" style="width:auto;" aria-pressed="${tags.includes(e.id)}">${e.label}</button>`).join('')}</div>
+        ${wirkung.length ? `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:6px; text-align:left;">${wirkung.map(mpEsc).join('<br>')}</div>` : ''}`;
 }
 
 function setSquadTagFilter(tagId) {

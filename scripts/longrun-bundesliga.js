@@ -48,6 +48,18 @@ async function karriere(browser, lauf) {
     }, LIGA_START);
     await page.reload();
     await page.waitForFunction(() => !document.getElementById('app-loading'));
+    // ETIKETTEN=stamm|schonen|beides: vor jedem Spieltag werden die elf Stärksten als „Stammkraft“ und/oder die drei
+    // Stärksten als „Schonen“ etikettiert (Etiketten mit Wirkung, Phase 26.10) - misst, ob sie die Balance verschieben.
+    if (process.env.ETIKETTEN) await page.evaluate((modus) => {
+        const orig = window.processPostMatchRoutine;
+        window.processPostMatchRoutine = function (...a) {
+            const rang = [...squad].sort((x, y) => y.strength - x.strength);
+            squad.forEach(p => { p.tags = (p.tags || []).filter(t => t !== 'stamm' && t !== 'schonen'); });
+            if (modus === 'stamm' || modus === 'beides') rang.slice(0, 11).forEach(p => p.tags.push('stamm'));
+            if (modus === 'schonen' || modus === 'beides') rang.slice(0, 3).forEach(p => p.tags.push('schonen'));
+            return orig.apply(this, a);
+        };
+    }, process.env.ETIKETTEN);
     // BOARDDIAG=1: jede Änderung der Vorstandszufriedenheit der aufrufenden Funktion zuordnen.
     if (process.env.BOARDDIAG) await page.evaluate(() => {
         let wert = game.boardSat;

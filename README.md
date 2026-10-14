@@ -45,6 +45,11 @@ npm test
 → prüft die gebaute dist/anstoss-fm13-standalone.html per Playwright gegen
 die Testsuite (`tests/run-tests.js` als Ablauf, die Suiten nach Themen in `tests/suites/`).
 
+Einzelne Suite: `cd tests && TEST_ONLY=Name node run-tests.js` (Teilstring des Suiten-Funktionsnamens).
+Alles vor einem Merge: `npm run check` (Bauen, Linten, Tests auf der lesbaren und auf der
+minifizierten Datei; `npm run check -- fast` lässt die minifizierte aus). Alte Spielstände
+zum Laden liegen in `tests/fixtures/saves/` und werden von `testAeltereStaende` automatisch geprüft.
+
 ## Linten
 npm install
 npm run lint
@@ -432,3 +437,31 @@ deutschen Text zurück statt auf einen leeren/kaputten String.
 Finanzen, Stadion, ...) folgt schrittweise in weiteren Ausbaustufen und
 bleibt bis dahin auch bei gewählter Sprache "Englisch" auf Deutsch (dank
 des Fallbacks kein Fehler, nur noch nicht übersetzter Text).
+
+## Werkzeuge im Spiel (Phase 26)
+Alle lesen echte Spieldaten und ändern die Mannschaft nur auf Tipp:
+- **Spieltag-Check** vor dem Anpfiff: Aufstellungs-Check, wer fehlt, Rotations-Assistent
+  (einschließlich „Ausgeruhte Elf aufstellen“), Aufstellungsvorlagen mit Stärke gegen den Gegner
+  und Bilanz je Vorlage, Gegner-Notizbuch mit Bilanz gegen den Verein (`js/matchprep.js`).
+- **Verträge:** Gehalts-Ampel, Verlängerungs-Assistent, Marktwert-Kurve, Entwicklungsprognose,
+  Transferbilanz-Historie (`js/contract-tools.js`).
+- **Statistik:** Serien, Formkurve, CSV-Export, Spielbericht teilen, Fachwort-Hilfe (`js/insights.js`).
+- **Manager:** Liquiditäts-Vorschau, Konto-Alarm, Spieler-Etiketten (Stammkraft, Aufbauspieler und Schonen wirken klein auf Moral und Verletzungsrisiko), Manager-Assistent
+  (nächste Schritte nach Dringlichkeit, auch Fristen), Lizenz-Laufbahn (`js/manager-tools.js`).
+- **Vergleich:** zwei Spieler nebeneinander, auch Transfermarkt gegen eigenen Kader (`js/player-compare.js`).
+- **Verletzungen:** Verlauf je Spieler, Ausfall-Rangliste im Medizin-Panel, Ausfälle im Kaderplaner
+  (`js/medical-department.js`, `js/squadplanning.js`).
+
+## Darstellung und Zugänglichkeit
+Themes (Flutlicht, Klassik, Rasen, Tageslicht, Kontrast, Farbsicher, Automatisch), Textgröße
+(bis „Sehr groß“) und Bewegung stellt man im Bildschirm „Darstellung“ ein (`js/design-settings.js`).
+Alles läuft über Tokens in `css/styles.css`; feste Farben und Pixelschriften sind per Test verboten.
+Neue Meldungs- und Auswahlbereiche öffnen als Fenster (Escape schließt, Tab bleibt im Fenster, der
+Fokus kehrt zurück). Die Tests prüfen WCAG-Kontrast in allen Themes, Knopfnamen für Screenreader
+und dass auf engen Handys (320 bis 390 px, bis „Sehr groß“) kein Wort breiter als sein Knopf ist.
+
+## Langzeitmessung mit dem Bot
+`node scripts/longrun-bundesliga.js [saisons] [aktiv|passiv] [läufe] [datei]` spielt eine Karriere
+durch (Startliga per `LIGA=0..5`, weitere Schalter siehe CLAUDE.md). Lange Läufe im Hintergrund mit
+`scripts/bot-hintergrund.sh <ausgabedatei> <bot-argumente>` starten, `python3 scripts/auswertung.py`
+fasst sie zusammen. Messergebnisse und Begründungen stehen in `docs/PROJEKT-HISTORIE.md`.
