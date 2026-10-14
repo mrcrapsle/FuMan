@@ -679,7 +679,7 @@ async function testRunde27Funktionen(browser) {
         const e = (p, spielt) => getTagMatchEffects(p, spielt);
         out.wirkStamm = e(s1, true).moral === 1 && e(s1, false).moral === -2 && e(s1, false).untergrenze === 45;
         out.wirkAufbau = e(s2, true).moral === 1 && e(s2, false).moral === 0;
-        out.wirkSchonen = Math.abs(e(s3, true).verletzung - 1.3) < 1e-9 && e(s3, true).ermuedung === 1 && e(s3, false).verletzung === 1 && e(s3, false).ermuedung === 0;
+        out.wirkSchonen = Math.abs(e(s3, true).verletzung - 1.3) < 1e-9 && e(s3, true).ermuedung === 0 && e(s3, false).verletzung === 1 && e(s3, false).ermuedung === 0;
         out.wirkKombi = e(s4, true).moral === 1 && Math.abs(e(s4, true).verletzung - 1.3) < 1e-9 && e(s4, false).moral === -2;
         out.keineEtikettWirkung = e(squad.find(x => !(x.tags || []).length), true).moral === 0 && e(squad.find(x => !(x.tags || []).length), true).verletzung === 1;
         const probe = { tags: ['stamm'], morale: 80, fitness: 100, injured: 0, suspended: 0 };
@@ -690,8 +690,8 @@ async function testRunde27Funktionen(browser) {
         probe.morale = 95; applyTagMatchEffects(probe, true); out.elfUeber90Bleibt = probe.morale === 95;
         probe.morale = 80; probe.injured = 2; applyTagMatchEffects(probe, false); out.verletztNichtUnzufrieden = probe.morale === 80;
         const sch = { tags: ['schonen'], morale: 80, fitness: 90, injured: 0 };
-        applyTagMatchEffects(sch, true); out.schonenErmuedet = sch.fitness === 89;
-        applyTagMatchEffects(sch, false); out.schonenBankNichts = sch.fitness === 89;
+        applyTagMatchEffects(sch, true); out.schonenErmuedet = sch.fitness === 90; // keine Mehrermüdung
+        applyTagMatchEffects(sch, false); out.schonenBankNichts = sch.fitness === 90 && sch.morale === 80;
         // Echter Ablauf: zwei Bankspieler, einer mit „Stammkraft“ - nach einem Spiel genau 2 Moralpunkte Unterschied
         squad.forEach(x => { x.tags = []; x.injured = 0; x.suspended = 0; x.morale = 80; });
         lineup = pickBestLineupIds();
@@ -729,7 +729,7 @@ async function testRunde27Funktionen(browser) {
     });
     assert(r.wirkStamm && r.wirkAufbau && r.wirkSchonen && r.wirkKombi && r.keineEtikettWirkung, `Etiketten mit Wirkung: Stammkraft, Aufbauspieler, Schonen, Kombination, ohne Etikett nichts (${JSON.stringify([r.wirkStamm, r.wirkAufbau, r.wirkSchonen, r.wirkKombi, r.keineEtikettWirkung])})`);
     assert(r.bank78 && r.bankUntergrenze && r.bankUnterhalbBleibt && r.elfBis90 && r.elfUeber90Bleibt && r.verletztNichtUnzufrieden, `Etiketten: Moral auf der Bank nicht unter 45, Gewinn nur bis 90, Verletzte nicht unzufrieden (${JSON.stringify([r.bank78, r.bankUntergrenze, r.bankUnterhalbBleibt, r.elfBis90, r.elfUeber90Bleibt, r.verletztNichtUnzufrieden])})`);
-    assert(r.schonenErmuedet && r.schonenBankNichts && r.ablaufMoral && r.detailText, `Etiketten: Schonen ermüdet nur bei Einsatz, Verdrahtung im Spielablauf und Erklärung im Spielerdetail (${JSON.stringify([r.schonenErmuedet, r.schonenBankNichts, r.ablaufMoral, r.detailText, r.ablaufDbg])})`);
+    assert(r.schonenErmuedet && r.schonenBankNichts && r.ablaufMoral && r.detailText, `Etiketten: Schonen ändert weder Fitness noch Moral, Verdrahtung im Spielablauf und Erklärung im Spielerdetail (${JSON.stringify([r.schonenErmuedet, r.schonenBankNichts, r.ablaufMoral, r.detailText, r.ablaufDbg])})`);
     assert(r.radar && r.radarOhneLayoutLesen, `Kader-Radar hat feste Größe mit viewBox und liest beim Zeichnen keine Breite (${r.radar}/${r.radarOhneLayoutLesen})`);
     assert(r.flussMerker && r.flussZaehlt, `Bilanz je Vorlage über den echten Ablauf (Anstoß setzt den Merker, Ligaergebnis zählt) (${r.flussMerker}/${r.flussZaehlt})`);
     assert(r.erkannt && r.gezaehlt && r.summen && r.text && r.karte, `Bilanz je Vorlage: erkannt, gezählt, Summen, Text und Anzeige auf der Karte (${JSON.stringify([r.erkannt, r.gezaehlt, r.summen, r.text, r.karte])})`);

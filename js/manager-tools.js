@@ -111,12 +111,13 @@ let squadTagFilter = '';
 // Die anderen (Verkaufskandidat, Beobachten, Vertrag klären) sind reine Planungshilfen. Die Werte sind bewusst klein:
 //   Stammkraft    spielt: +1 Moral (bis 90); sitzt auf der Bank: -2 Moral, aber nie unter 45 durch dieses Etikett
 //   Aufbauspieler spielt: +1 Moral (bis 90); sitzt auf der Bank: keine Unzufriedenheit (er ist geduldig)
-//   Schonen       spielt trotzdem: Verletzungsrisiko x1,3 und 1 Punkt Fitness mehr Verlust (der Physio hatte gewarnt);
-//                 auf der Bank passiert nichts, denn dort gibt es kein Verletzungsrisiko
+//   Schonen       spielt trotzdem: Verletzungsrisiko x1,3 (der Physio hatte gewarnt); auf der Bank passiert nichts,
+//                 denn dort gibt es kein Verletzungsrisiko. Bewusst keine Mehrermüdung: sie verschiebt das Fitness-
+//                 Gleichgewicht von Dauerspielern dauerhaft nach unten (Messung: -9 Punkte je Saison schon bei 1 Punkt)
 const ETIKETT_WIRKUNG = {
     stamm: { spielt: { moral: 1 }, bank: { moral: -2, untergrenze: 45 } },
     aufbau: { spielt: { moral: 1 }, bank: {} },
-    schonen: { spielt: { verletzung: 1.3, ermuedung: 1 }, bank: {} }
+    schonen: { spielt: { verletzung: 1.3 }, bank: {} }
 };
 
 // Summe der Wirkungen aller Etiketten eines Spielers für dieses Spiel (spielt = stand in der Startelf)
@@ -151,7 +152,7 @@ function getTagEffectTexts(p) {
     const z = [];
     if (t.includes('stamm')) z.push('Stammkraft: +1 Moral bei Einsatz (bis 90), −2 Moral auf der Bank (nicht unter 45).');
     if (t.includes('aufbau')) z.push('Aufbauspieler: +1 Moral bei Einsatz (bis 90), bleibt auf der Bank gelassen.');
-    if (t.includes('schonen')) z.push('Schonen: spielt er trotzdem, steigt sein Verletzungsrisiko um 30 % und er verliert 1 Punkt Fitness mehr.');
+    if (t.includes('schonen')) z.push('Schonen: spielt er trotzdem, steigt sein Verletzungsrisiko um 30 %.');
     return z;
 }
 
