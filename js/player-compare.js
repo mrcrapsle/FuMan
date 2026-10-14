@@ -36,9 +36,11 @@ function pcKandidaten(a) {
         .sort((x, y) => ((y.pos === (a && a.pos)) - (x.pos === (a && a.pos))) || (y.strength - x.strength));
 }
 
-function openPlayerCompare() {
-    const aId = typeof currentDetailPlayerId !== 'undefined' ? currentDetailPlayerId : null;
-    const aPool = typeof currentDetailPlayerPool !== 'undefined' ? currentDetailPlayerPool : 'squad';
+// Ohne Angaben: der gerade geöffnete Spieler aus dem Spielerdetail. Mit Angaben: direkt von einer Karte
+// (Transfermarkt, Kaderliste). Aus der Kaderliste lässt sich so ein Kaderspieler gegen einen anderen stellen.
+function openPlayerCompare(idVorgabe, poolVorgabe) {
+    const aId = idVorgabe !== undefined ? idVorgabe : (typeof currentDetailPlayerId !== 'undefined' ? currentDetailPlayerId : null);
+    const aPool = poolVorgabe || (idVorgabe === undefined && typeof currentDetailPlayerPool !== 'undefined' ? currentDetailPlayerPool : 'squad');
     const a = aId !== null && typeof findPlayerInPool === 'function' ? findPlayerInPool(aId, aPool) : null;
     if (!a) { showToast('Öffne zuerst die Karte eines Spielers, den du vergleichen willst.', 'error'); return; }
     const kand = pcKandidaten(a);
@@ -57,6 +59,7 @@ function closePlayerCompare() {
 function setCompareB(id) {
     compareState.bId = id;
     renderPlayerCompare();
+    if (typeof mpFokusHalten === 'function') mpFokusHalten('compare-overlay', '#compare-b');
 }
 
 function renderPlayerCompare() {

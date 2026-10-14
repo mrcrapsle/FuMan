@@ -876,6 +876,7 @@
                     </label>`,
                 actions: `<button onclick="toggleLineupPlayer('${p.id}')" class="${isStarting ? 'btn-danger' : 'btn-action'}">${isStarting ? 'Auf die Bank' : 'In die Startelf'}</button>
                     <button onclick="openPlayerDetail('${p.id}','squad')" class="btn-secondary" title="Details">ℹ️ Details</button>
+                    <button onclick="openPlayerCompare('${p.id}','squad')" class="btn-secondary" title="Mit anderem Kaderspieler vergleichen">⚖️ Vergleich</button>
                     <button onclick="selectForSwap('${p.id}')" class="btn-secondary${p.id === selectedSwapId ? ' ui-btn-aktiv' : ''}" title="Position tauschen">🔁 Tauschen</button>`
             });
             container.appendChild(row);

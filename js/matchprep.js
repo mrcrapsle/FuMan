@@ -24,6 +24,15 @@ function ensureMatchPrepState() {
     while (game.tacticPresets.length < MP_SLOTS) game.tacticPresets.push(null);
 }
 
+// Zeichnet ein offenes Fenster seinen Inhalt neu, verschwindet das fokussierte Element (innerHTML ersetzt es) und der Fokus
+// fällt auf die Seite zurück. Dann wandert er auf das gewünschte Element oder den Schließen-Knopf des Fensters.
+function mpFokusHalten(overlayId, selektor) {
+    const ov = document.getElementById(overlayId);
+    if (!ov || !ov.classList.contains('show') || ov.contains(document.activeElement)) return;
+    const ziel = (selektor && ov.querySelector(selektor)) || ov.querySelector('.generic-modal-close');
+    if (ziel && ziel.focus) ziel.focus({ preventScroll: true });
+}
+
 function mpIstEinsatzbereit(p) {
     return !!p && (p.injured || 0) === 0 && (p.suspended || 0) === 0;
 }
@@ -69,10 +78,18 @@ function deleteGegnerNotiz(name) {
     renderGegnerNotizbuch();
 }
 
+// Bilanz aus den vorhandenen Kopf-an-Kopf-Daten (game.headToHeadRecords, gepflegt in updateLeagueTable)
+function getGegnerBilanzText(oppName) {
+    const rec = game.headToHeadRecords && game.headToHeadRecords[oppName];
+    if (!rec || (rec.wins + rec.draws + rec.losses) === 0) return 'Noch keine Ligaduelle gegen diesen Verein.';
+    return `Bilanz: ${rec.wins}S ${rec.draws}U ${rec.losses}N · Tore ${rec.goalsFor}:${rec.goalsAgainst}${rec.lastResults && rec.lastResults.length ? ` · zuletzt ${rec.lastResults.slice(0, 3).join(', ')}` : ''}`;
+}
+
 function renderGegnerNotizSection(oppName) {
     if (!oppName) return '';
     const n = getGegnerNotiz(oppName);
-    return `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${n ? `Gespeichert in Saison ${n.season}, Spieltag ${n.matchday}.` : 'Noch keine Notiz zu diesem Gegner.'} Die Notiz bleibt über Saisons erhalten.</div>
+    return `<div class="box" style="font-size:var(--fs-small); margin:0 0 6px;">📊 ${mpEsc(getGegnerBilanzText(oppName))}</div>
+        <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${n ? `Gespeichert in Saison ${n.season}, Spieltag ${n.matchday}.` : 'Noch keine Notiz zu diesem Gegner.'} Die Notiz bleibt über Saisons erhalten.</div>
         <textarea id="gegner-notiz-text" class="input-inline" maxlength="${GEGNER_NOTIZ_MAX}" rows="3" placeholder="z. B. Schwache Abwehr über links, Konter nach Ecken" style="width:100%;" aria-label="Notiz zu ${mpEsc(oppName)}">${mpEsc(n ? n.text : '')}</textarea>
         <button onclick="saveGegnerNotiz(this.dataset.club)" data-club="${mpEsc(oppName)}" class="btn-secondary" style="margin-top:4px;">📓 Notiz speichern</button>`;
 }

@@ -77,6 +77,25 @@ function cleanupLegacyInjuryState() {
     ['playerInjuries', 'injuryManagement', 'matchInjuries', 'medicalStaff', 'injuryHistory'].forEach(k => { delete game[k]; });
 }
 
+// Rangliste der Ausfälle aus dem Verletzungs-Verlauf (p.injuryLog): wer hat die meisten Spiele verpasst, und was kostet
+// die laufende Saison insgesamt. Antippen öffnet das Spielerdetail mit dem vollständigen Verlauf.
+function getInjuryRanking() {
+    return squad.map(p => {
+        const log = Array.isArray(p.injuryLog) ? p.injuryLog : [];
+        return { p, ausfaelle: log.length, tage: log.reduce((sum, e) => sum + (e.tage || 0), 0), dieseSaison: log.filter(e => e.season === game.season).reduce((sum, e) => sum + (e.tage || 0), 0) };
+    }).filter(x => x.ausfaelle > 0).sort((a, b) => (b.tage - a.tage) || (b.ausfaelle - a.ausfaelle));
+}
+
+function renderInjuryRanking() {
+    const rang = getInjuryRanking();
+    const saison = rang.reduce((sum, x) => sum + x.dieseSaison, 0);
+    const kopf = `<details class="ui-fold" style="margin-top:6px;"><summary>🩹 Ausfall-Rangliste (${rang.length} Spieler mit Verlauf)</summary>`;
+    if (!rang.length) return kopf + '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch keine Ausfälle im Verlauf erfasst.</div></details>';
+    return kopf + `<div style="font-size:var(--fs-caption); margin:4px 0;">Diese Saison verpasst: <strong>${saison}</strong> Spiele (alle Spieler zusammen).</div>`
+        + rang.slice(0, 6).map(x => `<button onclick="openPlayerDetail('${x.p.id}','squad')" class="btn-secondary" style="display:flex; justify-content:space-between; gap:8px; width:100%; text-align:left; margin:2px 0;" title="Verlauf von ${mpEsc(x.p.name)} öffnen"><span>${x.p.pos} ${mpEsc(x.p.name)}</span><span>${x.ausfaelle} Ausfall${x.ausfaelle === 1 ? '' : 'e'} · ${x.tage} Spiele</span></button>`).join('')
+        + '</details>';
+}
+
 function renderMedicalDepartmentPanel() {
     const box = document.getElementById('medical-department-box');
     if (!box) return;
@@ -101,6 +120,7 @@ function renderMedicalDepartmentPanel() {
     html += '<div style="font-size:var(--fs-caption); font-weight:bold; margin:6px 0 3px;">⚠️ Höchstes Verletzungsrisiko</div>';
     html += risiko.map(({ p, r }) => `<div style="font-size:var(--fs-caption); display:flex; justify-content:space-between;"><span>${p.pos} ${p.name} (${p.age || '?'})</span>
         <span style="color:${farbe(r)};">${r >= 1.5 ? 'hoch' : r >= 1.15 ? 'erhöht' : 'normal'} (×${r.toFixed(2)})</span></div>`).join('');
+    html += renderInjuryRanking();
     html += '<div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:4px;">Risiko steigt mit Trainingshärte, Alter, früheren Verletzungen und niedriger Fitness. Physio und Reha verkürzen die Ausfallzeit.</div>';
     box.innerHTML = html;
 }

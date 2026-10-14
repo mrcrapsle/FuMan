@@ -1100,11 +1100,11 @@
                         <span>📅 Saison-Kalender & Termine</span>
                         <span>Aktueller Monat: <strong id="cal-month-name" style="color:var(--text-main);">August</strong></span>
                     </div>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin:6px 0;">
+                    <div class="cal-aktionen" style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin:6px 0;">
                         <button onclick="scheduleFriendlyMatch()" class="btn-action">⚽ Freundschaftsspiel vereinbaren (+Einnahmen)</button>
-                        <button onclick="scheduleForeignFriendly()" class="btn-primary" style="margin-top:6px;">✈️ Auslandsreise: Testspiel gegen Top-Klub</button>
-                        <button onclick="scheduleFullPreseasonTour()" class="btn-primary" style="margin-top:6px;">🧳 Komplette Vorsaison-Tour (3 Stationen)</button>
-                        <button onclick="scheduleDerbyFriendly()" class="btn-danger" style="margin-top:6px;">🔥 Testspiel gegen den Stadtrivalen</button>
+                        <button onclick="scheduleForeignFriendly()" class="btn-primary">✈️ Auslandsreise: Testspiel gegen Top-Klub</button>
+                        <button onclick="scheduleFullPreseasonTour()" class="btn-primary">🧳 Komplette Vorsaison-Tour (3 Stationen)</button>
+                        <button onclick="scheduleDerbyFriendly()" class="btn-danger">🔥 Testspiel gegen den Stadtrivalen</button>
                         <button onclick="bookTrainingCamp('algarve')" id="btn-camp-algarve" class="btn-secondary">🏖️ Trainingslager Algarve</button>
                         <button onclick="bookTrainingCamp('alps')" id="btn-camp-alps" class="btn-secondary">🏔️ Höhentrainingslager Alpen</button>
                         <button onclick="bookTrainingCamp('dubai')" id="btn-camp-dubai" class="btn-secondary">🌴 Luxus-Camp Dubai</button>
@@ -1159,7 +1159,7 @@
                                 <div style="display:flex; justify-content:space-between;"><span>Spielbetrieb & Verwaltung:</span><span id="fin-out-operations">0 €</span></div>
                                 <div style="display:flex; justify-content:space-between;"><span>Ordnerdienst:</span><span id="fin-out-stewards">0 €</span></div>
                                 <div style="display:flex; justify-content:space-between;"><span>Auswärtsfahrten (Ø/Monat):</span><span id="fin-out-travel">0 €</span></div>
-                                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px; margin:4px 0 6px 0;">
+                                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 7.5em), 1fr)); gap:4px; margin:4px 0 6px 0;">
                                     <button onclick="setTravelMode('flugzeug')" id="travel-mode-flugzeug" class="btn-action" style="font-size:var(--fs-caption);">✈️ Flugzeug</button>
                                     <button onclick="setTravelMode('bus')" id="travel-mode-bus" class="btn-secondary" style="font-size:var(--fs-caption);">🚌 Bus (günstiger)</button>
                                 </div>

@@ -397,7 +397,13 @@
         .panel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px; margin: 6px 0; }
 
         
-        button { font-family: inherit; touch-action: manipulation; }
+        button { font-family: inherit; touch-action: manipulation; hyphens: auto; }
+        /* Reiterleisten: bei großer Schrift auf dem Handy zwei Spalten, damit Wörter wie „Aufstellung“ nicht mitten im Wort brechen */
+        html[data-text-size="sehr-gross"] .hub-tab-bar { grid-template-columns: repeat(2, 1fr) !important; }
+        @media (max-width: 400px) { html[data-text-size="gross"] .hub-tab-bar { grid-template-columns: repeat(2, 1fr) !important; } }
+        @media (max-width: 340px) { .hub-tab-bar { grid-template-columns: repeat(2, 1fr) !important; } }
+        /* Kalender-Aktionen: einheitliche Form und Abstände (vorher Pillen und Rechtecke durcheinander) */
+        .cal-aktionen > button { margin: 0; border-radius: 16px; min-height: 44px; }
         .btn-primary {
             background: linear-gradient(135deg, var(--violet-fill), var(--violet-fill-lo)); color: var(--on-strong); font-weight: 800;
             border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent); padding: 10px 14px; border-radius: 999px; cursor: pointer;

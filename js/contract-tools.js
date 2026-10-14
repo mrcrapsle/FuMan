@@ -78,7 +78,7 @@ function renderRenewalAssistant() {
     const kopf = `<div class="panel-header">🤝 Verlängerungs-Assistent</div>
         <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:8px;">Alle Verträge mit höchstens einem Jahr Rest. Der Vorschlag entspricht der ersten Forderung des Spielers ohne Verhandeln. Wer weniger zahlen will, nutzt das normale Vertragsgespräch.</div>
         <div class="ui-card-meta" style="margin-bottom:8px;">${uiChip(`💶 Kasse ${formatVal(game.money)}`)}${uiChip(`📊 ${fw('Gehaltsbudget')} ${formatVal(game.wageBudget)}/SpT`)}</div>`;
-    if (!liste.length) { box.innerHTML = kopf + '<div class="box">Aktuell läuft kein Vertrag bald aus.</div>'; return; }
+    if (!liste.length) { box.innerHTML = kopf + '<div class="box">Aktuell läuft kein Vertrag bald aus.</div>'; if (typeof mpFokusHalten === 'function') mpFokusHalten('renewal-assistant-overlay'); return; }
     box.innerHTML = kopf + liste.map(p => {
         const v = getRenewalProposal(p);
         const grund = getRenewalBlocker(p);
@@ -103,6 +103,7 @@ function renderRenewalAssistant() {
                 + `<button onclick="closeRenewalAssistant(); showScreen('screen-contracts'); extendContract('${p.id}')" class="btn-secondary">💬 Verhandeln</button>`
         })}</div>`;
     }).join('');
+    if (typeof mpFokusHalten === 'function') mpFokusHalten('renewal-assistant-overlay', '.btn-action:not([disabled])');
 }
 
 // ---------- Marktwert-Kurve ----------

@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.131', date: '14.10.2026', features: 'Phase 26.6: Spieler-Vergleich nebeneinander, Verletzungs-Verlauf je Spieler, Aufstellungsvorlage per Tipp mit Stärke gegen den Gegner im Spieltag-Check, Notizbuch für Gegner' };
+    const GAME_VERSION = { number: '3.132', date: '14.10.2026', features: 'Phase 26.7: Bilanz gegen den Gegner im Notizbuch, Vergleich direkt von Kader- und Transfermarkt-Karte, Ausfall-Rangliste im Medizin-Panel, Fokus in neu gezeichneten Fenstern, einheitliche Kalender-Knöpfe, Reiter ohne Wortbruch bei großer Schrift' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

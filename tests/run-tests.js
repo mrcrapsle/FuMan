@@ -3619,6 +3619,100 @@ async function testVergleichUndNotizen(browser) {
     await page.close();
 }
 
+async function testFeinschliffNachPhase26(browser) {
+    console.log('\n[26.7] Feinschliff: Bilanz, Vergleich von der Karte, Ausfall-Rangliste, Fokus, Reiter und Kalender bei großer Schrift');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const r = await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false; simulateMatchdays(3);
+        const out = {};
+        // Bilanz im Notizbuch (aus game.headToHeadRecords)
+        pendingMatchInfo = { isHome: true, oppName: 'Test FC', oppStr: 60, ourFixture: null };
+        game.headToHeadRecords['Test FC'] = { wins: 3, draws: 1, losses: 2, goalsFor: 9, goalsAgainst: 6, lastResults: ['2:1', '0:0', '1:3'] };
+        renderPrematchCheck();
+        const t1 = document.getElementById('prematch-check-box').textContent;
+        out.bilanz = t1.includes('Bilanz: 3S 1U 2N') && t1.includes('Tore 9:6') && t1.includes('zuletzt 2:1, 0:0, 1:3');
+        delete game.headToHeadRecords['Test FC']; renderPrematchCheck();
+        out.keineBilanz = document.getElementById('prematch-check-box').textContent.includes('Noch keine Ligaduelle');
+        pendingMatchInfo = null;
+        // Vergleich direkt von der Karte
+        showScreen('screen-squad'); setSquadTab('aufstellung'); renderSquadView();
+        out.kaderKarte = [...document.querySelectorAll('#screen-squad button')].some(b => /Vergleich/.test(b.textContent));
+        openPlayerCompare(squad[2].id, 'squad');
+        out.direkt = document.getElementById('compare-overlay').classList.contains('show') && compareState.aId === squad[2].id && String(compareState.bId) !== String(squad[2].id);
+        closePlayerCompare();
+        showScreen('screen-transfer'); renderTransferView();
+        out.marktKarte = !!document.querySelector('#market-list button[onclick^="openPlayerCompare("]');
+        // Ausfall-Rangliste
+        squad.forEach(x => { x.injuryLog = []; });
+        squad[1].injuryLog = [{ season: game.season, matchday: 2, tage: 5, anlass: 'Spiel' }, { season: game.season, matchday: 3, tage: 2, anlass: 'Spiel' }];
+        squad[6].injuryLog = [{ season: game.season, matchday: 1, tage: 3, anlass: 'Länderspiel' }];
+        const rang = getInjuryRanking();
+        out.rangfolge = rang.length === 2 && rang[0].p.id === squad[1].id && rang[0].tage === 7 && rang[1].tage === 3;
+        renderMedicalDepartmentPanel();
+        const med = document.getElementById('medical-department-box').textContent;
+        out.rangliste = med.includes('Ausfall-Rangliste (2 Spieler') && med.includes('Diese Saison verpasst: 10');
+        out.rangKnopf = !!document.querySelector('#medical-department-box button[onclick^="openPlayerDetail("]');
+        squad.forEach(x => { x.injuryLog = []; });
+        renderMedicalDepartmentPanel();
+        out.rangLeer = document.getElementById('medical-department-box').textContent.includes('Noch keine Ausfälle');
+        // Kalender: einheitliche Form
+        showScreen('screen-calendar');
+        const knoepfe = [...document.querySelectorAll('.cal-aktionen > button')];
+        out.kalenderForm = knoepfe.length >= 7 && new Set(knoepfe.map(b => getComputedStyle(b).borderRadius)).size === 1 && knoepfe.every(b => parseFloat(getComputedStyle(b).marginTop) === 0);
+        return out;
+    });
+    assert(r.bilanz && r.keineBilanz, `Notizbuch zeigt die Bilanz gegen den Gegner aus den Kopf-an-Kopf-Daten (${r.bilanz}/${r.keineBilanz})`);
+    assert(r.kaderKarte && r.direkt && r.marktKarte, `Vergleich direkt von Kader- und Transfermarkt-Karte (${JSON.stringify([r.kaderKarte, r.direkt, r.marktKarte])})`);
+    assert(r.rangfolge && r.rangliste && r.rangKnopf && r.rangLeer, `Ausfall-Rangliste im Medizin-Panel: Reihenfolge, Summe der Saison, Knopf zum Spielerdetail, leerer Zustand (${JSON.stringify([r.rangfolge, r.rangliste, r.rangKnopf, r.rangLeer])})`);
+    assert(r.kalenderForm, 'Kalender-Aktionen haben eine einheitliche Form und gleiche Abstände');
+
+    // Fokus mit echter Tastatur: Vergleich öffnen, Auswahl ändern (Fokus bleibt), Escape (Fokus kehrt zurück)
+    await page.evaluate(() => { showScreen('screen-squad'); openPlayerDetail(squad[4].id, 'squad'); });
+    await page.focus('#pd-compare-btn');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => document.getElementById('compare-overlay').classList.contains('show') && document.getElementById('compare-overlay').contains(document.activeElement));
+    const vorher = await page.evaluate(() => document.getElementById('compare-b').value);
+    await page.focus('#compare-b');
+    await page.keyboard.press('ArrowDown');
+    await page.waitForFunction(v => document.getElementById('compare-b') && document.getElementById('compare-b').value !== v, vorher);
+    await page.waitForFunction(() => document.activeElement && document.activeElement.id === 'compare-b');
+    assert(true, 'Vergleich: nach dem Wechsel des Spielers bleibt der Fokus auf der Auswahl');
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !document.getElementById('compare-overlay').classList.contains('show') && document.activeElement && document.activeElement.id === 'pd-compare-btn');
+    assert(true, 'Vergleich: Escape schließt das Fenster, der Fokus kehrt zum Auslöser zurück');
+    await page.evaluate(() => closePlayerDetail());
+    // Verlängerungs-Assistent: nach dem Verlängern bleibt der Fokus im Fenster
+    await page.evaluate(() => { squad.forEach(x => { x.contracts = 4; }); squad[0].contracts = 0; squad[1].contracts = 1; game.money = 5000000; showScreen('screen-contracts'); openRenewalAssistant(); });
+    await page.waitForFunction(() => document.getElementById('renewal-assistant-overlay').contains(document.activeElement));
+    await page.focus('#renewal-assistant-content button.btn-action:not([disabled])');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => document.getElementById('renewal-assistant-overlay').contains(document.activeElement));
+    assert(true, 'Verlängerungs-Assistent: der Fokus bleibt nach dem Neuzeichnen im Fenster');
+    await page.evaluate(() => closeRenewalAssistant());
+
+    // Große Schrift auf dem Handy: Reiter im Kader brechen nicht mitten im Wort, Leiste hat zwei Spalten
+    const gross = await page.evaluate(() => {
+        setzeTextGroesse('sehr-gross');
+        showScreen('screen-squad'); setSquadTab('aufstellung');
+        const leiste = document.querySelector('#screen-squad .hub-tab-bar');
+        const spalten = getComputedStyle(leiste).gridTemplateColumns.split(' ').length;
+        const probe = document.createElement('span'); document.body.appendChild(probe);
+        const zuBreit = [...leiste.querySelectorAll('button')].filter(b => {
+            const cs = getComputedStyle(b);
+            probe.style.cssText = `position:absolute; visibility:hidden; white-space:nowrap; font:${cs.font}`;
+            const innen = b.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+            return b.innerText.trim().split(/\s+/).some(w => { probe.textContent = w; return probe.getBoundingClientRect().width > innen + 1; });
+        }).map(b => b.innerText.trim());
+        probe.remove();
+        setzeTextGroesse('normal');
+        return { spalten, zuBreit };
+    });
+    assert(gross.spalten === 2 && gross.zuBreit.length === 0, `Sehr große Schrift: Kader-Reiter in zwei Spalten, kein Wort zu breit (${JSON.stringify(gross)})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 async function testBoardEarlyWarning(browser) {
     console.log('\n[25.24] Vorstand: Frühwarnung schon unter 50 Zufriedenheit, einmal pro Saison');
     const { page, consoleErrors } = await freshPage(browser);
@@ -11108,6 +11202,7 @@ async function main() {
         testStatistikWerkzeuge,
         testManagerWerkzeuge,
         testVergleichUndNotizen,
+        testFeinschliffNachPhase26,
         testEntlassungsGrund,
         testEnglishUi,
         testSwapDeals,

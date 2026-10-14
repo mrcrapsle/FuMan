@@ -625,7 +625,7 @@
                     p.pokerBroken ? uiChip('Gespräche abgebrochen', 'schlecht') : ''
                 ],
                 kpi: { wert: p.strength, label: 'Stärke' },
-                aside: `<button onclick="openPlayerDetail('${p.id}','market')" class="btn-secondary ui-card-info" title="Details" aria-label="Details zu ${p.name}">ℹ️</button>`,
+                aside: `<button onclick="openPlayerDetail('${p.id}','market')" class="btn-secondary ui-card-info" title="Details" aria-label="Details zu ${p.name}">ℹ️</button><button onclick="openPlayerCompare('${p.id}','market')" class="btn-secondary ui-card-info" title="Mit Kaderspieler vergleichen" aria-label="${p.name} mit Kaderspieler vergleichen">⚖️</button>`,
                 body: renderUiStatRow([['Tempo', p.pace], ['Schuss', p.shooting], ['Pass', p.passing], ['Abwehr', p.defense]]),
                 actions: `<button onclick="openTransferPoker(${idx})" class="btn-action" ${p.pokerBroken ? 'disabled' : ''}>🃏 Verhandeln</button>
                     <button onclick="buyPlayer(${idx})" class="btn-secondary">Sofortkauf ${formatVal(p.askingPrice)}</button>`

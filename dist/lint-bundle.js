@@ -550,7 +550,7 @@ function renderUiStatRow(werte) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.131', date: '14.10.2026', features: 'Phase 26.6: Spieler-Vergleich nebeneinander, Verletzungs-Verlauf je Spieler, Aufstellungsvorlage per Tipp mit Stärke gegen den Gegner im Spieltag-Check, Notizbuch für Gegner' };
+    const GAME_VERSION = { number: '3.132', date: '14.10.2026', features: 'Phase 26.7: Bilanz gegen den Gegner im Notizbuch, Vergleich direkt von Kader- und Transfermarkt-Karte, Ausfall-Rangliste im Medizin-Panel, Fokus in neu gezeichneten Fenstern, einheitliche Kalender-Knöpfe, Reiter ohne Wortbruch bei großer Schrift' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -3369,6 +3369,7 @@ function getOwnDerbyRivals() {
                     </label>`,
                 actions: `<button onclick="toggleLineupPlayer('${p.id}')" class="${isStarting ? 'btn-danger' : 'btn-action'}">${isStarting ? 'Auf die Bank' : 'In die Startelf'}</button>
                     <button onclick="openPlayerDetail('${p.id}','squad')" class="btn-secondary" title="Details">ℹ️ Details</button>
+                    <button onclick="openPlayerCompare('${p.id}','squad')" class="btn-secondary" title="Mit anderem Kaderspieler vergleichen">⚖️ Vergleich</button>
                     <button onclick="selectForSwap('${p.id}')" class="btn-secondary${p.id === selectedSwapId ? ' ui-btn-aktiv' : ''}" title="Position tauschen">🔁 Tauschen</button>`
             });
             container.appendChild(row);
@@ -3509,6 +3510,15 @@ function ensureMatchPrepState() {
     while (game.tacticPresets.length < MP_SLOTS) game.tacticPresets.push(null);
 }
 
+// Zeichnet ein offenes Fenster seinen Inhalt neu, verschwindet das fokussierte Element (innerHTML ersetzt es) und der Fokus
+// fällt auf die Seite zurück. Dann wandert er auf das gewünschte Element oder den Schließen-Knopf des Fensters.
+function mpFokusHalten(overlayId, selektor) {
+    const ov = document.getElementById(overlayId);
+    if (!ov || !ov.classList.contains('show') || ov.contains(document.activeElement)) return;
+    const ziel = (selektor && ov.querySelector(selektor)) || ov.querySelector('.generic-modal-close');
+    if (ziel && ziel.focus) ziel.focus({ preventScroll: true });
+}
+
 function mpIstEinsatzbereit(p) {
     return !!p && (p.injured || 0) === 0 && (p.suspended || 0) === 0;
 }
@@ -3554,10 +3564,18 @@ function deleteGegnerNotiz(name) {
     renderGegnerNotizbuch();
 }
 
+// Bilanz aus den vorhandenen Kopf-an-Kopf-Daten (game.headToHeadRecords, gepflegt in updateLeagueTable)
+function getGegnerBilanzText(oppName) {
+    const rec = game.headToHeadRecords && game.headToHeadRecords[oppName];
+    if (!rec || (rec.wins + rec.draws + rec.losses) === 0) return 'Noch keine Ligaduelle gegen diesen Verein.';
+    return `Bilanz: ${rec.wins}S ${rec.draws}U ${rec.losses}N · Tore ${rec.goalsFor}:${rec.goalsAgainst}${rec.lastResults && rec.lastResults.length ? ` · zuletzt ${rec.lastResults.slice(0, 3).join(', ')}` : ''}`;
+}
+
 function renderGegnerNotizSection(oppName) {
     if (!oppName) return '';
     const n = getGegnerNotiz(oppName);
-    return `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${n ? `Gespeichert in Saison ${n.season}, Spieltag ${n.matchday}.` : 'Noch keine Notiz zu diesem Gegner.'} Die Notiz bleibt über Saisons erhalten.</div>
+    return `<div class="box" style="font-size:var(--fs-small); margin:0 0 6px;">📊 ${mpEsc(getGegnerBilanzText(oppName))}</div>
+        <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${n ? `Gespeichert in Saison ${n.season}, Spieltag ${n.matchday}.` : 'Noch keine Notiz zu diesem Gegner.'} Die Notiz bleibt über Saisons erhalten.</div>
         <textarea id="gegner-notiz-text" class="input-inline" maxlength="${GEGNER_NOTIZ_MAX}" rows="3" placeholder="z. B. Schwache Abwehr über links, Konter nach Ecken" style="width:100%;" aria-label="Notiz zu ${mpEsc(oppName)}">${mpEsc(n ? n.text : '')}</textarea>
         <button onclick="saveGegnerNotiz(this.dataset.club)" data-club="${mpEsc(oppName)}" class="btn-secondary" style="margin-top:4px;">📓 Notiz speichern</button>`;
 }
@@ -4183,6 +4201,25 @@ function cleanupLegacyInjuryState() {
     ['playerInjuries', 'injuryManagement', 'matchInjuries', 'medicalStaff', 'injuryHistory'].forEach(k => { delete game[k]; });
 }
 
+// Rangliste der Ausfälle aus dem Verletzungs-Verlauf (p.injuryLog): wer hat die meisten Spiele verpasst, und was kostet
+// die laufende Saison insgesamt. Antippen öffnet das Spielerdetail mit dem vollständigen Verlauf.
+function getInjuryRanking() {
+    return squad.map(p => {
+        const log = Array.isArray(p.injuryLog) ? p.injuryLog : [];
+        return { p, ausfaelle: log.length, tage: log.reduce((sum, e) => sum + (e.tage || 0), 0), dieseSaison: log.filter(e => e.season === game.season).reduce((sum, e) => sum + (e.tage || 0), 0) };
+    }).filter(x => x.ausfaelle > 0).sort((a, b) => (b.tage - a.tage) || (b.ausfaelle - a.ausfaelle));
+}
+
+function renderInjuryRanking() {
+    const rang = getInjuryRanking();
+    const saison = rang.reduce((sum, x) => sum + x.dieseSaison, 0);
+    const kopf = `<details class="ui-fold" style="margin-top:6px;"><summary>🩹 Ausfall-Rangliste (${rang.length} Spieler mit Verlauf)</summary>`;
+    if (!rang.length) return kopf + '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch keine Ausfälle im Verlauf erfasst.</div></details>';
+    return kopf + `<div style="font-size:var(--fs-caption); margin:4px 0;">Diese Saison verpasst: <strong>${saison}</strong> Spiele (alle Spieler zusammen).</div>`
+        + rang.slice(0, 6).map(x => `<button onclick="openPlayerDetail('${x.p.id}','squad')" class="btn-secondary" style="display:flex; justify-content:space-between; gap:8px; width:100%; text-align:left; margin:2px 0;" title="Verlauf von ${mpEsc(x.p.name)} öffnen"><span>${x.p.pos} ${mpEsc(x.p.name)}</span><span>${x.ausfaelle} Ausfall${x.ausfaelle === 1 ? '' : 'e'} · ${x.tage} Spiele</span></button>`).join('')
+        + '</details>';
+}
+
 function renderMedicalDepartmentPanel() {
     const box = document.getElementById('medical-department-box');
     if (!box) return;
@@ -4207,6 +4244,7 @@ function renderMedicalDepartmentPanel() {
     html += '<div style="font-size:var(--fs-caption); font-weight:bold; margin:6px 0 3px;">⚠️ Höchstes Verletzungsrisiko</div>';
     html += risiko.map(({ p, r }) => `<div style="font-size:var(--fs-caption); display:flex; justify-content:space-between;"><span>${p.pos} ${p.name} (${p.age || '?'})</span>
         <span style="color:${farbe(r)};">${r >= 1.5 ? 'hoch' : r >= 1.15 ? 'erhöht' : 'normal'} (×${r.toFixed(2)})</span></div>`).join('');
+    html += renderInjuryRanking();
     html += '<div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:4px;">Risiko steigt mit Trainingshärte, Alter, früheren Verletzungen und niedriger Fitness. Physio und Reha verkürzen die Ausfallzeit.</div>';
     box.innerHTML = html;
 }
@@ -8806,7 +8844,7 @@ function renderTransferPokerBox() {
                     p.pokerBroken ? uiChip('Gespräche abgebrochen', 'schlecht') : ''
                 ],
                 kpi: { wert: p.strength, label: 'Stärke' },
-                aside: `<button onclick="openPlayerDetail('${p.id}','market')" class="btn-secondary ui-card-info" title="Details" aria-label="Details zu ${p.name}">ℹ️</button>`,
+                aside: `<button onclick="openPlayerDetail('${p.id}','market')" class="btn-secondary ui-card-info" title="Details" aria-label="Details zu ${p.name}">ℹ️</button><button onclick="openPlayerCompare('${p.id}','market')" class="btn-secondary ui-card-info" title="Mit Kaderspieler vergleichen" aria-label="${p.name} mit Kaderspieler vergleichen">⚖️</button>`,
                 body: renderUiStatRow([['Tempo', p.pace], ['Schuss', p.shooting], ['Pass', p.passing], ['Abwehr', p.defense]]),
                 actions: `<button onclick="openTransferPoker(${idx})" class="btn-action" ${p.pokerBroken ? 'disabled' : ''}>🃏 Verhandeln</button>
                     <button onclick="buyPlayer(${idx})" class="btn-secondary">Sofortkauf ${formatVal(p.askingPrice)}</button>`
@@ -10187,7 +10225,7 @@ function renderBoardRoomPanel() {
                             <div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:3px;">✈️ Unterwegs - kehrt in ${mission.matchdaysLeft} SpT zurück</div>`;
                 } else {
                     body = `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">${s.name} · Skill ${s.skill} (Stufe ${s.level}) · Dauer: ${getMissionDuration(s)} SpT</div>
-                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
+                            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 8em), 1fr)); gap:4px;">
                                 <button onclick="startScoutingMission('${s.region}')" class="btn-action" style="font-size:var(--fs-small);">Entsenden [${formatVal(cfg.baseCost)}]</button>
                                 <button onclick="openScoutFilterModal('${s.region}')" class="btn-secondary" style="font-size:var(--fs-small);">🎛️ Fokus</button>
                             </div>
@@ -21927,7 +21965,7 @@ function renderRenewalAssistant() {
     const kopf = `<div class="panel-header">🤝 Verlängerungs-Assistent</div>
         <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:8px;">Alle Verträge mit höchstens einem Jahr Rest. Der Vorschlag entspricht der ersten Forderung des Spielers ohne Verhandeln. Wer weniger zahlen will, nutzt das normale Vertragsgespräch.</div>
         <div class="ui-card-meta" style="margin-bottom:8px;">${uiChip(`💶 Kasse ${formatVal(game.money)}`)}${uiChip(`📊 ${fw('Gehaltsbudget')} ${formatVal(game.wageBudget)}/SpT`)}</div>`;
-    if (!liste.length) { box.innerHTML = kopf + '<div class="box">Aktuell läuft kein Vertrag bald aus.</div>'; return; }
+    if (!liste.length) { box.innerHTML = kopf + '<div class="box">Aktuell läuft kein Vertrag bald aus.</div>'; if (typeof mpFokusHalten === 'function') mpFokusHalten('renewal-assistant-overlay'); return; }
     box.innerHTML = kopf + liste.map(p => {
         const v = getRenewalProposal(p);
         const grund = getRenewalBlocker(p);
@@ -21952,6 +21990,7 @@ function renderRenewalAssistant() {
                 + `<button onclick="closeRenewalAssistant(); showScreen('screen-contracts'); extendContract('${p.id}')" class="btn-secondary">💬 Verhandeln</button>`
         })}</div>`;
     }).join('');
+    if (typeof mpFokusHalten === 'function') mpFokusHalten('renewal-assistant-overlay', '.btn-action:not([disabled])');
 }
 
 // ---------- Marktwert-Kurve ----------
@@ -22566,9 +22605,11 @@ function pcKandidaten(a) {
         .sort((x, y) => ((y.pos === (a && a.pos)) - (x.pos === (a && a.pos))) || (y.strength - x.strength));
 }
 
-function openPlayerCompare() {
-    const aId = typeof currentDetailPlayerId !== 'undefined' ? currentDetailPlayerId : null;
-    const aPool = typeof currentDetailPlayerPool !== 'undefined' ? currentDetailPlayerPool : 'squad';
+// Ohne Angaben: der gerade geöffnete Spieler aus dem Spielerdetail. Mit Angaben: direkt von einer Karte
+// (Transfermarkt, Kaderliste). Aus der Kaderliste lässt sich so ein Kaderspieler gegen einen anderen stellen.
+function openPlayerCompare(idVorgabe, poolVorgabe) {
+    const aId = idVorgabe !== undefined ? idVorgabe : (typeof currentDetailPlayerId !== 'undefined' ? currentDetailPlayerId : null);
+    const aPool = poolVorgabe || (idVorgabe === undefined && typeof currentDetailPlayerPool !== 'undefined' ? currentDetailPlayerPool : 'squad');
     const a = aId !== null && typeof findPlayerInPool === 'function' ? findPlayerInPool(aId, aPool) : null;
     if (!a) { showToast('Öffne zuerst die Karte eines Spielers, den du vergleichen willst.', 'error'); return; }
     const kand = pcKandidaten(a);
@@ -22587,6 +22628,7 @@ function closePlayerCompare() {
 function setCompareB(id) {
     compareState.bId = id;
     renderPlayerCompare();
+    if (typeof mpFokusHalten === 'function') mpFokusHalten('compare-overlay', '#compare-b');
 }
 
 function renderPlayerCompare() {

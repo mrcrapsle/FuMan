@@ -231,7 +231,7 @@
                             <div style="font-size:var(--fs-micro); color:var(--text-muted); margin-top:3px;">✈️ Unterwegs - kehrt in ${mission.matchdaysLeft} SpT zurück</div>`;
                 } else {
                     body = `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">${s.name} · Skill ${s.skill} (Stufe ${s.level}) · Dauer: ${getMissionDuration(s)} SpT</div>
-                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
+                            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 8em), 1fr)); gap:4px;">
                                 <button onclick="startScoutingMission('${s.region}')" class="btn-action" style="font-size:var(--fs-small);">Entsenden [${formatVal(cfg.baseCost)}]</button>
                                 <button onclick="openScoutFilterModal('${s.region}')" class="btn-secondary" style="font-size:var(--fs-small);">🎛️ Fokus</button>
                             </div>
