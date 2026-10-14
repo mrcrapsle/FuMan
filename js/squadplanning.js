@@ -15,6 +15,7 @@
     // im ganzen Spiel dasselbe bedeutet.
     const SQUAD_PLANNING_MIN_HEALTHY = { TW: 2, ABW: 5, MIT: 5, ST: 3 };
     const SQUAD_PLANNING_AGING_THRESHOLD = 30; // ab diesem Alter zählt ein Spieler als "im Herbst der Karriere"
+    const SQUAD_PLANNING_FRAGILE_FROM = 3; // ab so vielen Verletzungen gilt ein Spieler als verletzungsanfällig (wie im Spielerdetail)
     const SQUAD_PLANNING_CONTRACT_URGENT = 1; // <= X Jahre Restlaufzeit = dringend (wie in renderSeasonPlanningBox)
 
     // Zentrale Analyse pro Positionsgruppe - wird von allen Kästen dieses Tools genutzt, damit
@@ -43,7 +44,15 @@
             let riskLabel = riskScore >= 2 ? '🔴 Kritisch' : (riskScore === 1 ? '🟡 Beobachten' : '🟢 Solide');
             let riskColor = riskScore >= 2 ? 'var(--danger)' : (riskScore === 1 ? 'var(--accent)' : 'var(--primary)');
 
-            return { pos, label: SQUAD_PLANNING_POS_LABELS[pos], players, count, avgAge, aging, cliff, minHealthy, thin, agingRisk, cliffRisk, riskScore, riskLabel, riskColor };
+            // Ausfälle und Verletzungsanfälligkeit (aus p.injured, p.timesInjured): beeinflusst riskScore nicht,
+            // wird als eigener Hinweis gezeigt
+            let ausfall = players.filter(p => (p.injured || 0) > 0);
+            let fit = count - ausfall.length;
+            let fragil = players.filter(p => (p.timesInjured || 0) >= SQUAD_PLANNING_FRAGILE_FROM && !((p.injured || 0) > 0));
+            let ausfallRisiko = ausfall.length > 0 && fit < minHealthy;
+            let fragilRisiko = fragil.length > 0 && count <= minHealthy + 1;
+
+            return { pos, label: SQUAD_PLANNING_POS_LABELS[pos], players, count, avgAge, aging, cliff, minHealthy, thin, agingRisk, cliffRisk, riskScore, riskLabel, riskColor, ausfall, fit, fragil, ausfallRisiko, fragilRisiko };
         });
     }
 
@@ -152,7 +161,17 @@
                 <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:2px;">${gruende.join(' · ')}</div>
             </div>`;
         }).join('');
-        box.innerHTML = getSquadSizeWarningHtml() + (warnings || '<div class="box" style="font-size:var(--fs-caption); color:var(--primary);">✓ Keine Position zeigt aktuell eine kombinierte Schwäche für die kommenden Saisons.</div>');
+        // Ausfälle und Verletzungsanfälligkeit je Position (eigener Hinweis, nicht Teil der Risikostufe)
+        let ausfallHinweise = analysis.filter(a => a.ausfallRisiko || a.fragilRisiko).map(a => {
+            let teile = [];
+            if (a.ausfallRisiko) teile.push(`aktuell nur ${a.fit} von mindestens ${a.minHealthy} einsatzbereit (fällt aus: ${a.ausfall.map(p => `${p.name} noch ${p.injured} Spiel${p.injured === 1 ? '' : 'e'}`).join(', ')})`);
+            if (a.fragilRisiko) teile.push(`verletzungsanfällig bei dünner Besetzung: ${a.fragil.map(p => `${p.name} (${p.timesInjured}×)`).join(', ')}`);
+            return `<div class="box" style="border-left-color:var(--danger); margin-bottom:4px;">
+                <div style="font-size:var(--fs-small); font-weight:800;">🩹 ${a.label}</div>
+                <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:2px;">${teile.join(' · ')}</div>
+            </div>`;
+        }).join('');
+        box.innerHTML = getSquadSizeWarningHtml() + ausfallHinweise + (warnings || '<div class="box" style="font-size:var(--fs-caption); color:var(--primary);">✓ Keine Position zeigt aktuell eine kombinierte Schwäche für die kommenden Saisons.</div>');
     }
 
     // Gehaltsplanung nächste Saison (25.17): seit das Gehaltsbudget der Liga folgt, scheitern

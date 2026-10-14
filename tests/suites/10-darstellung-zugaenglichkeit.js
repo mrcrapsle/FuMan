@@ -992,6 +992,48 @@ async function testEnglischDynamischeTexte(browser) {
     await page.close();
 }
 
+async function testKnopfWorteHandy(browser) {
+    console.log('\n[26.9] Handy: kein Wort in einem Knopf ist breiter als der Knopf (320 px normal, 360 px groß, 390 px sehr groß)');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false; simulateMatchdays(3);
+        const st = document.createElement('style'); st.textContent = '*,*::before,*::after{transition:none!important;animation:none!important}'; document.head.appendChild(st);
+    });
+    for (const [breite, groesse] of [[320, 'normal'], [360, 'gross'], [390, 'sehr-gross']]) {
+        await page.setViewportSize({ width: breite, height: 800 });
+        const zuBreit = await page.evaluate(async (groesse) => {
+            setzeTextGroesse(groesse);
+            const out = new Set();
+            const probe = document.createElement('span'); document.body.appendChild(probe);
+            const ids = [...document.querySelectorAll('[id^="screen-"]')].map(e => e.id).filter(id => !['screen-office', 'screen-matchday', 'screen-admin'].includes(id));
+            const pruefe = wo => {
+                document.querySelectorAll('.app-content button').forEach(el => {
+                    if (!el.offsetParent || el.closest('details:not([open]) > :not(summary)')) return;
+                    const txt = (el.innerText || '').trim(); if (!txt) return;
+                    const cs = getComputedStyle(el);
+                    const innen = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+                    if (innen <= 0) return;
+                    probe.style.cssText = `position:absolute; visibility:hidden; white-space:nowrap; font:${cs.font}; letter-spacing:${cs.letterSpacing}`;
+                    // Bindestrich-Wörter dürfen am Bindestrich umbrechen
+                    txt.split(/\s+/).flatMap(w => w.split(/(?<=-)/)).forEach(teil => { probe.textContent = teil; if (probe.getBoundingClientRect().width > innen + 1) out.add(`${wo}: "${teil}" in "${txt.slice(0, 28)}" (${Math.round(innen)} px)`); });
+                });
+            };
+            for (const id of ids) {
+                showScreen(id);
+                if (id === 'screen-squad') for (const t of ['aufstellung', 'taktik', 'analyse', 'team']) { setSquadTab(t); pruefe('squad-' + t); }
+                await new Promise(res => setTimeout(res, 15));
+                pruefe(id);
+            }
+            probe.remove();
+            setzeTextGroesse('normal');
+            return [...out];
+        }, groesse);
+        assert(zuBreit.length === 0, `${breite} px, Schrift ${groesse}: kein Wort breiter als sein Knopf (${zuBreit.length}: ${zuBreit.slice(0, 4).join(' | ')})`);
+    }
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 module.exports = {
     testOneHandControls,
     testEnglishUi,
@@ -1011,4 +1053,5 @@ module.exports = {
     testDashAutosaveZeile,
     testModalFokus,
     testEnglischDynamischeTexte,
+    testKnopfWorteHandy,
 };

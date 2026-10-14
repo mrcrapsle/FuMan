@@ -42,7 +42,7 @@
                     Bedarf: <strong>${m.reqQty} kg ${mat.name}</strong> pro Stück (Börsenwert: ~${(mat.currentPrice * m.reqQty).toFixed(2)} €)<br>
                     Produktionsstatus: ${f.owned ? `<strong style="color:var(--primary);">Fabrik einsatzbereit ✓ (Dauer: ${duration} SpT)</strong>` : '<span style="color:var(--danger);">Fabrik fehlt!</span>'}
                 </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px;">
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 9em), 1fr)); gap:4px;">
                     <button onclick="startProduction('${mKey}', 250)" class="btn-industry" ${!f.owned?'disabled':''}>250 Stk. in Auftrag geben (${250*m.reqQty} kg)</button>
                     <button onclick="startProduction('${mKey}', 1000)" class="btn-industry" ${!f.owned?'disabled':''}>1.000 Stk. in Auftrag geben (${1000*m.reqQty} kg)</button>
                 </div>

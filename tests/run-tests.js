@@ -106,6 +106,8 @@ async function main() {
         S.testManagerWerkzeuge,
         S.testVergleichUndNotizen,
         S.testFeinschliffNachPhase26,
+        S.testRunde27Funktionen,
+        S.testKnopfWorteHandy,
         S.testEntlassungsGrund,
         S.testEnglishUi,
         S.testSwapDeals,

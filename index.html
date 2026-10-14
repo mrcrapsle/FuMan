@@ -1042,7 +1042,7 @@
                     </div>
 
                     <div style="font-weight:bold; margin:6px 0;">Kapital-Transfer</div>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:6px; margin:6px 0;">
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10em), 1fr)); gap:6px; margin:6px 0;">
                         <button onclick="transferHoldingToClub(50000)" class="btn-primary">💵 50.000 € an Verein ausschütten</button>
                         <button onclick="transferHoldingToPrivate(25000)" class="btn-gold">🎩 25.000 € Manager-Dividende (Privatkonto)</button>
                         <button onclick="transferClubToHolding(50000)" class="btn-secondary">📥 50.000 € vom Verein in Holding investieren</button>
@@ -1746,7 +1746,7 @@
                         </div>
                         <div class="panel">
                             <div class="panel-header">Spezial-Installationen</div>
-                            <div id="special-installs-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;"></div>
+                            <div id="special-installs-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10em), 1fr)); gap:4px;"></div>
                         </div>
                     </div>
                 </div>
@@ -1961,7 +1961,7 @@
                     <div class="panel-header">
                         <span>🤝 Transfermarkt, Scouting & Verhandlungen</span>
                     </div>
-                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:6px;">
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 7.5em), 1fr)); gap:4px; margin-bottom:6px;">
                         <button onclick="setTransferTab('offers')" id="btn-tab-tr-offers" class="btn-action">📩 Angebote (<span id="tab-offers-badge">0</span>)</button>
                         <button onclick="setTransferTab('market')" id="btn-tab-tr-market" class="btn-secondary">Transfermarkt</button>
                         <button onclick="setTransferTab('free')" id="btn-tab-tr-free" class="btn-secondary">Vereinslose</button>

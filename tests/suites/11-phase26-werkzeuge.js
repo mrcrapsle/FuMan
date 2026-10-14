@@ -330,6 +330,25 @@ async function testManagerWerkzeuge(browser) {
         lineup = lineup.filter(id => squad.find(x => x.id === id).pos !== 'TW');
         out.prioAufstellung = getManagerTodos()[0].text.includes('Aufstellung');
         incomingOffers.length = 0; autoLineup();
+        // Fristen im Assistenten: Transferfenster, Hauptsponsor, Kreditraten
+        const alleTexte = () => getManagerTodos(true).map(x => x.text).join(' | ');
+        game.winterWindowActive = false; game.matchday = 3;
+        out.fensterSommer = /Sommer-Transferfenster schließt in diesem Spieltag/.test(alleTexte());
+        game.matchday = 1; out.fensterFern = !/Transferfenster/.test(alleTexte());
+        game.matchday = 11; game.winterWindowActive = true; game.winterWindowCloseMatchday = 12;
+        out.fensterWinter = /Winter-Transferfenster schließt in zwei Spieltagen/.test(alleTexte());
+        game.winterWindowCloseMatchday = 14; out.fensterWinterFern = !/Transferfenster/.test(alleTexte());
+        game.winterWindowActive = false; game.matchday = 4;
+        const spAlt = game.sponsor; game.sponsor = { ...spAlt, name: 'Test AG', duration: 5 }; game.sponsorRenewal = null;
+        out.sponsorEnde = /Hauptsponsor Test AG läuft in 5 Spieltagen aus/.test(alleTexte());
+        game.sponsor.duration = 20; out.sponsorFern = !/Hauptsponsor/.test(alleTexte());
+        game.sponsor = spAlt;
+        const kreditAlt = activeLoans.slice(); const geldAlt = game.money;
+        activeLoans.push({ tierName: 'Test', installment: 40000, matchdaysLeft: 12 }); game.money = 50000;
+        out.kreditWarnung = /deckt nur 1 von 3 anstehenden Kreditraten/.test(alleTexte());
+        game.money = 500000; out.kreditOk = !/Kreditraten/.test(alleTexte());
+        activeLoans.length = 0; kreditAlt.forEach(l => activeLoans.push(l)); game.money = geldAlt;
+        game.matchday = Math.max(game.matchday, 4);
         // Etiketten greifen in andere Bereiche ein: Angebote, Verlängerungs-Assistent, Manager-Assistent
         const kand = squad[7]; kand.tags = ['verkauf'];
         incomingOffers.push({ id: 'test-offer', playerId: kand.id, playerName: kand.name, playerPos: kand.pos, playerStr: kand.strength, clubName: 'FC Test', marketValue: 1000000, currentBid: 1100000, expiresIn: 3, statusText: '' });
@@ -391,6 +410,8 @@ async function testManagerWerkzeuge(browser) {
     assert(r.verkaufChip && r.stammWarnung, `Angebote zeigen das Etikett Verkaufskandidat und warnen bei Stammkraft (${r.verkaufChip}/${r.stammWarnung})`);
     assert(r.vertragOben && r.vertragChip, `Verlängerungs-Assistent stellt „Vertrag klären“ nach oben (${r.vertragOben}/${r.vertragChip})`);
     assert(r.beobachtenRuhig && r.beobachtenMeldung, `Manager-Assistent meldet beobachtete Spieler nur bei Auffälligkeit (${r.beobachtenRuhig}/${r.beobachtenMeldung})`);
+    assert(r.fensterSommer && r.fensterFern && r.fensterWinter && r.fensterWinterFern, `Manager-Assistent meldet das Schließen des Transferfensters nur kurz vorher (${JSON.stringify([r.fensterSommer, r.fensterFern, r.fensterWinter, r.fensterWinterFern])})`);
+    assert(r.sponsorEnde && r.sponsorFern && r.kreditWarnung && r.kreditOk, `Manager-Assistent meldet auslaufenden Hauptsponsor und zu knappe Kasse für Kreditraten (${JSON.stringify([r.sponsorEnde, r.sponsorFern, r.kreditWarnung, r.kreditOk])})`);
     assert(r.entprellt && r.aktualisiert, `Manager-Assistent schreibt das DOM nur bei Änderung neu (${r.entprellt}/${r.aktualisiert})`);
     assert(r.todos && r.keinDoppelKasten && r.todoKnoepfe && r.prioAufstellung, `Manager-Assistent: Schritte nach Dringlichkeit, höchstens drei, mit Knopf (${JSON.stringify([r.todos, r.todoKnoepfe, r.prioAufstellung])})`);
     assert(lizenz.fehltB && lizenz.gesperrtB && lizenz.kaufB, `Lizenz-Laufbahn: B-Lizenz erst nach einer abgeschlossenen Saison (${JSON.stringify(lizenz)})`);
@@ -596,6 +617,77 @@ async function testFeinschliffNachPhase26(browser) {
     await page.close();
 }
 
+async function testRunde27Funktionen(browser) {
+    console.log('\n[26.8] Kaderplaner mit Ausfällen, Nachbetrachtung der Vorlagen, Kaderliste, Etiketten mit Wirkung');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const r = await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false; simulateMatchdays(3);
+        const out = {};
+        // --- Kaderplaner: Ausfälle und Verletzungsanfälligkeit ---
+        squad.forEach(p => { p.injured = 0; p.timesInjured = 0; });
+        const torhueter = squad.filter(p => p.pos === 'TW');
+        const basis = getSquadPlanningAnalysis().find(a => a.pos === 'TW');
+        out.keinHinweis = !basis.ausfallRisiko && !basis.fragilRisiko;
+        torhueter.forEach(p => { p.injured = 2; });
+        const a1 = getSquadPlanningAnalysis().find(a => a.pos === 'TW');
+        out.ausfall = a1.ausfallRisiko && a1.fit === torhueter.length - torhueter.length && a1.riskScore === basis.riskScore;
+        renderSquadPlanningWarningsBox();
+        out.ausfallText = document.getElementById('squad-planning-warnings-box').textContent.includes('aktuell nur 0 von mindestens');
+        torhueter.forEach(p => { p.injured = 0; });
+        const kleinerAbwehrBestand = squad.filter(p => p.pos === 'ABW').slice(0, 2);
+        kleinerAbwehrBestand[0].timesInjured = 4;
+        const a2 = getSquadPlanningAnalysis().find(a => a.pos === 'ABW');
+        out.fragilKeinRisiko = a2.fragil.length >= 1 && (a2.count > a2.minHealthy + 1 ? !a2.fragilRisiko : a2.fragilRisiko);
+        squad.forEach(p => { p.injured = 0; p.timesInjured = 0; });
+        // --- Bilanz je Vorlage ---
+        game.formation = '4-4-2'; autoLineup(); saveLineupPreset(0);
+        game.vorlageBilanz = {};
+        pendingMatchInfo = { isHome: true, oppName: 'Bilanz FC', oppStr: 60, ourFixture: null };
+        markPresetInUse();
+        out.erkannt = !!game.vorlageImEinsatz && game.vorlageImEinsatz.slot === 0 && game.vorlageImEinsatz.matchday === game.matchday;
+        recordPresetResult(3, 1);
+        out.gezaehlt = game.vorlageBilanz[0] && game.vorlageBilanz[0].spiele === 1 && game.vorlageBilanz[0].s === 1 && game.vorlageBilanz[0].tore === 3 && game.vorlageImEinsatz === null;
+        markPresetInUse(); recordPresetResult(0, 0);
+        game.lineupPresets[0].name = game.lineupPresets[0].name; markPresetInUse(); recordPresetResult(1, 2);
+        const b = game.vorlageBilanz[0];
+        out.summen = b.spiele === 3 && b.s === 1 && b.u === 1 && b.n === 1 && b.tore === 4 && b.gegentore === 3;
+        out.text = /^1S 1U 1N · Tore 4:3 · Ø [+-]\d+,?\d* gegen den Gegner$/.test(getPresetBilanzText(0).replace('.', ','));
+        renderLineupPresets();
+        out.karte = document.getElementById('lineup-presets-box').textContent.includes('1S 1U 1N');
+        // andere Elf: keine Vorlage -> nichts wird gezählt
+        lineup = [...squad].sort((x, y) => x.strength - y.strength).slice(0, 11).map(x => x.id);
+        markPresetInUse(); recordPresetResult(5, 0);
+        out.fremdeElf = game.vorlageBilanz[0].spiele === 3;
+        lineup = [...game.lineupPresets[0].ids];
+        // Merker von einem anderen Spieltag zählt nicht (simulierte Spieltage)
+        markPresetInUse(); game.matchday += 1; recordPresetResult(2, 0); game.matchday -= 1;
+        out.alterMerker = game.vorlageBilanz[0].spiele === 3;
+        // Slot neu belegt: Bilanz beginnt von vorn; Löschen räumt auf
+        saveLineupPreset(0); out.neuBelegt = !game.vorlageBilanz[0];
+        game.vorlageBilanz[0] = { name: 'Alt', spiele: 2, s: 1, u: 0, n: 1, tore: 2, gegentore: 2, diffSumme: 1 };
+        out.andererName = getPresetBilanzText(0) === '';
+        deleteLineupPreset(0); out.geloescht = !game.vorlageBilanz[0];
+        // alte Spielstände ohne Feld
+        delete game.vorlageBilanz; out.altesFeld = getPresetBilanzText(0) === '' && (ensureVorlageBilanz(), typeof game.vorlageBilanz === 'object');
+        pendingMatchInfo = null;
+        // Echter Ablauf: Anstoß-Ablauf setzt den Merker, das Ligaergebnis zählt über recordOwnLeagueResult
+        game.matchday = 4; game.formation = '4-4-2'; autoLineup(); saveLineupPreset(1);
+        startMatchdayFlow();
+        out.flussMerker = !!game.vorlageImEinsatz && game.vorlageImEinsatz.slot === 1 && typeof game.vorlageImEinsatz.diff === 'number';
+        recordOwnLeagueResult(2, 0, true);
+        out.flussZaehlt = game.vorlageBilanz[1] && game.vorlageBilanz[1].spiele === 1 && game.vorlageBilanz[1].s === 1;
+        return out;
+    });
+    assert(r.flussMerker && r.flussZaehlt, `Bilanz je Vorlage über den echten Ablauf (Anstoß setzt den Merker, Ligaergebnis zählt) (${r.flussMerker}/${r.flussZaehlt})`);
+    assert(r.erkannt && r.gezaehlt && r.summen && r.text && r.karte, `Bilanz je Vorlage: erkannt, gezählt, Summen, Text und Anzeige auf der Karte (${JSON.stringify([r.erkannt, r.gezaehlt, r.summen, r.text, r.karte])})`);
+    assert(r.fremdeElf && r.alterMerker && r.neuBelegt && r.andererName && r.geloescht && r.altesFeld, `Bilanz je Vorlage: fremde Elf, alter Merker, neu belegter Slot, Löschen, alte Spielstände (${JSON.stringify([r.fremdeElf, r.alterMerker, r.neuBelegt, r.andererName, r.geloescht, r.altesFeld])})`);
+    assert(r.keinHinweis && r.ausfall && r.ausfallText, `Kaderplaner zeigt Ausfälle je Position, ohne die Risikostufe zu ändern (${JSON.stringify([r.keinHinweis, r.ausfall, r.ausfallText])})`);
+    assert(r.fragilKeinRisiko, 'Kaderplaner: Verletzungsanfällige zählen nur bei dünner Besetzung als Risiko');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 module.exports = {
     testSpielvorbereitung,
     testVertragsWerkzeuge,
@@ -603,4 +695,5 @@ module.exports = {
     testManagerWerkzeuge,
     testVergleichUndNotizen,
     testFeinschliffNachPhase26,
+    testRunde27Funktionen,
 };

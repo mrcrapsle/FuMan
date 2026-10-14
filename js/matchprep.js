@@ -113,6 +113,7 @@ function saveLineupPreset(slot) {
     const eingabe = document.getElementById('lineup-preset-name');
     const name = (eingabe && eingabe.value.trim()) || `Vorlage ${slot + 1}`;
     game.lineupPresets[slot] = { name: name.slice(0, 24), ids: [...lineup], formation: game.formation };
+    ensureVorlageBilanz(); delete game.vorlageBilanz[slot]; // neue Vorlage, neue Bilanz
     if (eingabe) eingabe.value = '';
     showToast(`💾 Aufstellung „${name.slice(0, 24)}“ in Slot ${slot + 1} gespeichert.`, 'success');
     renderLineupPresets();
@@ -122,6 +123,7 @@ function deleteLineupPreset(slot) {
     ensureMatchPrepState();
     if (!game.lineupPresets[slot]) return;
     game.lineupPresets[slot] = null;
+    ensureVorlageBilanz(); delete game.vorlageBilanz[slot];
     renderLineupPresets();
 }
 
@@ -166,6 +168,58 @@ function loadLineupPreset(slot) {
     showToast(r.ersetzt ? `📂 „${v.name}“ geladen, ${r.ersetzt} Ausfall${r.ersetzt === 1 ? '' : 'e'} ersetzt.` : `📂 „${v.name}“ geladen.`, 'success');
 }
 
+// ---------- Bilanz je Vorlage (Nachbetrachtung) ----------
+// Vor jedem Ligaspiel merkt sich markPresetInUse(), ob die Startelf (samt Formation) einer gespeicherten Vorlage
+// entspricht und wie die Stärke zum Gegner stand. Nach dem Ergebnis trägt recordPresetResult() Sieg, Remis oder
+// Niederlage und Tore ein. Simulierte Spieltage ohne Anstoß-Ablauf zählen nicht (kein Merker).
+
+function ensureVorlageBilanz() {
+    if (!game.vorlageBilanz || typeof game.vorlageBilanz !== 'object' || Array.isArray(game.vorlageBilanz)) game.vorlageBilanz = {};
+}
+
+function findePassendeVorlage() {
+    ensureMatchPrepState();
+    const elf = [...lineup].sort().join('|');
+    for (let i = 0; i < game.lineupPresets.length; i++) {
+        const v = game.lineupPresets[i];
+        if (!v || v.formation !== game.formation) continue;
+        if ([...v.ids].sort().join('|') === elf) return i;
+        const r = resolveLineupPreset(v);
+        if (r && [...r.ids].sort().join('|') === elf) return i;
+    }
+    return -1;
+}
+
+function markPresetInUse() {
+    const info = typeof pendingMatchInfo !== 'undefined' ? pendingMatchInfo : null;
+    game.vorlageImEinsatz = null;
+    if (!info || lineup.length !== 11) return;
+    const slot = findePassendeVorlage();
+    if (slot === -1) return;
+    const diff = typeof info.oppStr === 'number' ? calcTeamStrength(!!info.isHome) - info.oppStr : 0;
+    game.vorlageImEinsatz = { slot, name: game.lineupPresets[slot].name, matchday: game.matchday, diff: Math.round(diff * 10) / 10 };
+}
+
+function recordPresetResult(ourGoals, oppGoals) {
+    const m = game.vorlageImEinsatz;
+    game.vorlageImEinsatz = null;
+    if (!m || m.matchday !== game.matchday) return;
+    ensureVorlageBilanz();
+    const b = game.vorlageBilanz[m.slot] || (game.vorlageBilanz[m.slot] = { name: m.name, spiele: 0, s: 0, u: 0, n: 0, tore: 0, gegentore: 0, diffSumme: 0 });
+    b.name = m.name;
+    b.spiele++; b.tore += ourGoals; b.gegentore += oppGoals; b.diffSumme += m.diff;
+    if (ourGoals > oppGoals) b.s++; else if (ourGoals < oppGoals) b.n++; else b.u++;
+}
+
+function getPresetBilanzText(slot) {
+    ensureVorlageBilanz();
+    const b = game.vorlageBilanz[slot];
+    if (!b || !b.spiele) return '';
+    const v = game.lineupPresets[slot];
+    if (v && v.name !== b.name) return ''; // Slot wurde seither neu belegt: die alte Bilanz gehört zu einer anderen Vorlage
+    return `${b.s}S ${b.u}U ${b.n}N · Tore ${b.tore}:${b.gegentore} · Ø ${b.diffSumme / b.spiele >= 0 ? '+' : ''}${(b.diffSumme / b.spiele).toFixed(1)} gegen den Gegner`;
+}
+
 // Teamstärke einer Elf mit Formation, ohne die Aufstellung zu verändern (Elf und Formation werden kurz getauscht)
 function getLineupStrengthPreview(ids, formation, istHeim) {
     const altElf = lineup, altForm = game.formation;
@@ -202,7 +256,7 @@ function renderPresetQuickPick() {
         const gleich = r.ids.length === lineup.length && r.ids.every((id, k) => id === lineup[k]) && v.formation === game.formation;
         return `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">
             <strong>${mpEsc(v.name)}</strong> (${v.formation}): Stärke ${st.toFixed(1)}${delta === null ? '' : ` <span style="color:var(--text-muted);">(${delta >= 0 ? '+' : ''}${delta.toFixed(1)} zur aktuellen Elf)</span>`}
-            <div class="ui-card-meta" style="margin-top:4px;">${chipGegen(st)}${r.ersetzt ? uiChip(`🔁 ${r.ersetzt} Ausfall${r.ersetzt === 1 ? '' : 'e'} ersetzt`, 'warn') : uiChip('✓ komplett', 'gut')}${gleich ? uiChip('aktuell aufgestellt', 'gut') : ''}</div>
+            <div class="ui-card-meta" style="margin-top:4px;">${getPresetBilanzText(i) ? uiChip(`📈 ${getPresetBilanzText(i)}`) : ''}${chipGegen(st)}${r.ersetzt ? uiChip(`🔁 ${r.ersetzt} Ausfall${r.ersetzt === 1 ? '' : 'e'} ersetzt`, 'warn') : uiChip('✓ komplett', 'gut')}${gleich ? uiChip('aktuell aufgestellt', 'gut') : ''}</div>
             <button onclick="applyPresetPrematch(${i})" class="btn-action" style="margin-top:4px;"${gleich ? ' disabled' : ''}>📂 Aufstellen</button></div>`;
     }).join('');
     return kopf + (zeilen || '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Aufstellungsvorlage gespeichert (Kader → Aufstellung).</div>');
@@ -217,7 +271,7 @@ function renderLineupPresets() {
         return `<div class="panel player-card" style="margin:0 0 6px; padding:8px 10px;">${renderUiCard({
             title: v ? mpEsc(v.name) : `Slot ${i + 1} (leer)`,
             sub: v ? `${v.formation} · ${v.ids.length} Spieler` : 'Noch keine Aufstellung gespeichert',
-            meta: [v && ausfall ? uiChip(`⚠️ ${ausfall} Ausfall${ausfall === 1 ? '' : 'e'}`, 'warn') : '', v && !ausfall ? uiChip('✓ komplett', 'gut') : ''],
+            meta: [v && ausfall ? uiChip(`⚠️ ${ausfall} Ausfall${ausfall === 1 ? '' : 'e'}`, 'warn') : '', v && !ausfall ? uiChip('✓ komplett', 'gut') : '', v && getPresetBilanzText(i) ? uiChip(`📈 ${getPresetBilanzText(i)}`) : ''],
             actions: `<button onclick="saveLineupPreset(${i})" class="btn-secondary">💾 Speichern</button>`
                 + (v ? `<button onclick="loadLineupPreset(${i})" class="btn-action">📂 Laden</button><button onclick="deleteLineupPreset(${i})" class="btn-secondary" style="color:var(--danger);" title="Vorlage ${i + 1} löschen">✕ Löschen</button>` : '')
         })}</div>`;

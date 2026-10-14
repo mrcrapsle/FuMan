@@ -149,7 +149,7 @@ function renderSquadTagFilter() {
 // ---------- Manager-Assistent ----------
 
 // Bis zu drei empfohlene nächste Schritte, aus echten Daten und nach Dringlichkeit geordnet
-function getManagerTodos() {
+function getManagerTodos(alle) {
     const t = [];
     const probleme = typeof getLineupProblems === 'function' ? getLineupProblems().filter(x => x.ton === 'schlecht') : [];
     if (probleme.length) t.push({ prio: 95, icon: '🔴', text: `Aufstellung prüfen: ${probleme[0].text}`, label: 'Zur Aufstellung', aktion: "showScreen('screen-squad')" });
@@ -173,10 +173,24 @@ function getManagerTodos() {
         return grund ? `${p.name} (${grund})` : null;
     }).filter(Boolean);
     if (beobachtet.length) t.push({ prio: 45, icon: '👀', text: `Beobachtet: ${beobachtet.slice(0, 2).join(', ')}${beobachtet.length > 2 ? ' …' : ''}.`, label: 'Zum Kader', aktion: "showScreen('screen-squad'); if (squadTagFilter !== 'beobachten') setSquadTagFilter('beobachten')" });
+    // Fristen: Transferfenster, Hauptsponsor, Kreditraten (nur Anzeige aus den vorhandenen Ständen der Module)
+    if (typeof isTransferWindowOpen === 'function' && isTransferWindowOpen()) {
+        const letzter = game.winterWindowActive ? game.winterWindowCloseMatchday : (typeof SUMMER_WINDOW_LAST_MATCHDAY !== 'undefined' ? SUMMER_WINDOW_LAST_MATCHDAY : null);
+        const rest = typeof letzter === 'number' ? letzter - game.matchday + 1 : null;
+        if (rest !== null && rest >= 1 && rest <= 2) t.push({ prio: 62, icon: '⏳', text: `Das ${game.winterWindowActive ? 'Winter-' : 'Sommer-'}Transferfenster schließt in ${rest === 1 ? 'diesem Spieltag' : 'zwei Spieltagen'}.`, label: 'Zum Transfermarkt', aktion: "showScreen('screen-transfer')" });
+    }
+    const sp = game.sponsor;
+    if (sp && sp.name && sp.name !== 'Kein Hauptsponsor' && typeof sp.duration === 'number' && sp.duration > 0 && sp.duration < 900) {
+        const angebot = typeof getSponsorRenewal === 'function' ? getSponsorRenewal() : null;
+        if (angebot) t.push({ prio: 75, icon: '🟠', text: `${sp.name} bietet eine Vertragsverlängerung an (Vertrag noch ${sp.duration} Spieltage).`, label: 'Zu den Sponsoren', aktion: "showScreen('screen-sponsors')" });
+        else if (sp.duration <= 6) t.push({ prio: 68, icon: '🟡', text: `Der Hauptsponsor ${sp.name} läuft in ${sp.duration} Spieltag${sp.duration === 1 ? '' : 'en'} aus.`, label: 'Zu den Sponsoren', aktion: "showScreen('screen-sponsors')" });
+    }
+    const raten = typeof activeLoans !== 'undefined' ? activeLoans.reduce((s, l) => s + (l.installment || 0), 0) : 0;
+    if (raten > 0 && game.money >= 0 && game.money < raten * 3) t.push({ prio: 78, icon: '🟠', text: `Die Kasse (${formatVal(game.money)}) deckt nur ${Math.floor(game.money / raten)} von 3 anstehenden Kreditraten (${formatVal(raten)} je Spieltag).`, label: 'Zu den Finanzen', aktion: "showScreen('screen-finances')" });
     const ungelesen = typeof inboxMessages !== 'undefined' ? inboxMessages.filter(m => !m.read).length : 0;
     if (ungelesen >= 8) t.push({ prio: 20, icon: '📬', text: `${ungelesen} ungelesene Nachrichten im Postfach.`, label: 'Zum Postfach', aktion: "showScreen('screen-inbox')" });
     t.sort((a, b) => b.prio - a.prio);
-    return t.slice(0, 3);
+    return alle ? t : t.slice(0, 3);
 }
 
 // updateUI() ruft den Assistenten bei jedem Aufruf; das DOM wird nur neu geschrieben, wenn sich der Inhalt ändert

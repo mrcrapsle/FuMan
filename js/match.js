@@ -324,6 +324,7 @@
         if (typeof renderOppTacticBox === 'function') renderOppTacticBox(oppObj);
         if (typeof renderPregameTalkBox === 'function') renderPregameTalkBox();
         renderFatigueWarning();
+        if (typeof markPresetInUse === 'function') markPresetInUse();
 
         renderPressConference({ oppName, oppStr, isHome, cup: false });
         showScreen('screen-prematch-press');

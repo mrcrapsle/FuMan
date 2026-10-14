@@ -112,6 +112,8 @@
         transferBilanzHistory: [],
         serien: { aktuell: {}, rekord: {} },
         gegnerNotizen: {},
+        vorlageBilanz: {},
+        vorlageImEinsatz: null,
         lineupPresets: [null, null, null, null, null],
         tacticPresets: [null, null, null, null, null],
         fanSupport: {},
