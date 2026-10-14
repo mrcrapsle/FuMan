@@ -9,7 +9,7 @@ Anleitung für Claude Code in diesem Repository. Die vollständige Historie mit 
 ## Zusammenarbeit
 
 - Antworten immer auf Deutsch.
-- Vor jedem Merge auf `main`: `npm run check` muss grün sein. Erst auf ausdrücklichen Wunsch mergen.
+- Vor jedem Merge auf `main`: `npm run check` muss grün sein. **Nur auf ausdrücklichen Wunsch mergen**, nie automatisch nach einer Runde: Es sollen möglichst viele Funktionen in einen Patch passen. Bis dahin auf dem `claude/…`-Branch committen und pushen; Version erhöhen, ZIP und Deploy-Kontrolle erst beim Merge.
 - Die Version in `js/state.js` (`GAME_VERSION`) bei jedem Merge erhöhen. Sie erscheint in der Kopfzeile (`#header-version-tag`).
 - Nach jedem Merge eine ZIP `anstoss-fm13-vX.zip` schicken: minifizierter Build als `anstoss-fm13.html` plus Quellcode im Ordner `anstoss-fm13/` (`git archive origin/main -- . ':!dist'`). Mit beiden Links:
   - Spielen: https://mrcrapsle.github.io/FuMan/
@@ -79,7 +79,7 @@ python3 scripts/auswertung.py <datei>…         # Zusammenfassung je Bot-Lauf (
 
 ## Tests
 
-- `tests/run-tests.js` (Playwright) läuft gegen den gebauten Stand. Suiten laufen parallel (`TEST_JOBS`, Standard 3) in eigenen Browser-Kontexten. Zeitmessungen laufen allein am Ende.
+- `tests/run-tests.js` (Playwright) ist nur der Ablauf (Reihenfolge, Parallelität, Zusammenfassung); `tests/lib.js` hält `assert`, `freshPage` und die Zähler, die Suiten liegen nach Themen in `tests/suites/*.js` (jede Datei exportiert ihre `test…`-Funktionen, `run-tests.js` lädt alle Dateien dort und führt sie in der Liste `suites` aus). Neue Suite: Funktion in die passende Datei, im `module.exports` der Datei und in der Liste `suites` in `run-tests.js` eintragen. Die Suiten laufen gegen den gebauten Stand. Suiten laufen parallel (`TEST_JOBS`, Standard 3) in eigenen Browser-Kontexten. Zeitmessungen laufen allein am Ende.
 - Feste Wartezeiten möglichst durch Zustandsprüfungen ersetzen (`waitForFunction`). Der Zufall wird in Suiten, die Reihenfolgen oder Tabellen auswerten, mit festem Seed gesetzt.
 - Wichtige Querschnittstests: `testCodeIntegrity` (on*-Funktionen, `getElementById`-IDs), `testNoWriteOnlyGameFields`, `testRuntimeRoundTrip`, `testMobileLayout`, `testLexiconEnglish`.
 - Alte Spielstände liegen in `tests/fixtures/saves/`. Jede Datei wird automatisch geladen (`testAeltereStaende`, auch als Autosave). Neue Fixtures mit `node scripts/make-old-saves.js tests/fixtures/saves <version>=<html>` erzeugen.
@@ -97,7 +97,7 @@ Commits auf `main` lösen über `.github/workflows/build-test.yml` den Test und 
 - `index.html` – Seite, lädt alle Module, enthält die Bildschirm-Container.
 - `css/styles.css` – alle Styles, nach Bereichen gegliedert.
 - `js/` – Spiellogik (über 100 Module, Reihenfolge in `index.html`).
-- `tests/run-tests.js` – Testsuite.
+- `tests/` – `run-tests.js` (Ablauf), `lib.js` (Hilfen), `suites/` (Suiten nach Themen), `fixtures/saves/` (alte Spielstände).
 - `scripts/` – Bot, Messungen, Hilfsskripte.
 - `build.py` – Bundler und Lint-Vorlauf.
 - `docs/PROJEKT-HISTORIE.md` – Archiv der früheren Fassung dieser Datei mit allen Phasen und Messungen.

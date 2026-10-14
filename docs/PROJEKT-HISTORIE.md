@@ -564,3 +564,7 @@ Vor dem Bauen gegen den Bestand geprüft: Die geplante **Zwischenbilanz nach Spi
 - **Langzeit-Messung (Build 3.131, aktiv, je 1 Lauf):** Start Liga 4 nach 20 Saisons in der 2. Liga (2 Aufstiege, 20 Talentverkäufe); Start Liga 6 nach 20 Saisons in der 2. Liga (5 Aufstiege, 1 Abstieg); erzwungene Entlassung (Saison 3) greift. Keine Abstürze, keine Konsolenfehler.
 - Test: `testFeinschliffNachPhase26`.
 
+## Testdatei aufgeteilt (auf dem Feature-Branch, noch nicht gemergt; Version folgt beim nächsten Merge)
+- `tests/run-tests.js` (über 11.000 Zeilen, 171 Suiten) ist jetzt nur noch der Ablauf (rund 290 Zeilen: Browser starten, Suiten parallel laufen lassen, Zusammenfassung). `tests/lib.js` hält `assert`, `freshPage`, `GAME_PATH`, die Zähler (`stats`) und die Ausgabepuffer paralleler Suiten. Die Suiten liegen nach Themen in `tests/suites/` (01 Grundlagen, 02 Spielstand, 03 Transfers und Verträge, 04 Kader/Jugend/Training, 05 Wirtschaft und Finanzen, 06 Spiel und Live, 07 Liga und Wettbewerbe, 08 Vorstand und Karriere, 09 Personal, 10 Darstellung und Zugänglichkeit, 11 Phase-26-Werkzeuge, 12 ältere Aufräumphasen). Jede Datei exportiert ihre `test…`-Funktionen; `run-tests.js` lädt alle Dateien und führt sie in der Liste `suites` aus.
+- Mechanisch erzeugt (Skript), Inhalt der Suiten unverändert (nur `__dirname` → `TESTS_DIR`). Abgleich vor und nach dem Aufteilen am selben Build: 171 Suiten, 1603 bestanden, 0 fehlgeschlagen, `TEST_ONLY`, `GAME_FILE` (minifiziert) und `npm run check` unverändert.
+

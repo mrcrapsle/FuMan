@@ -43,7 +43,7 @@ cd tests
 npm install
 npm test
 → prüft die gebaute dist/anstoss-fm13-standalone.html per Playwright gegen
-die Testsuite in `tests/run-tests.js`.
+die Testsuite (`tests/run-tests.js` als Ablauf, die Suiten nach Themen in `tests/suites/`).
 
 ## Linten
 npm install
@@ -116,7 +116,7 @@ unsichtbar sind (das Bild bleibt korrekt, nur die Geometrie wandert weg):
    Compositing-Ebene. Animationen im Raum daher ohne `transform`
    (z.B. pulsendes `box-shadow`).
 
-`testManagerOffice` in `tests/run-tests.js` prüft, dass jeder Hotspot an
+`testManagerOffice` in `tests/suites/08-vorstand-karriere.js` prüft, dass jeder Hotspot an
 seinem Mittelpunkt korrekt aufgelöst wird, und klickt per Koordinate
 (`mouse.click`) statt per Selektor - `page.click(selektor)` prüft intern
 ebenfalls die native Trefferfläche.

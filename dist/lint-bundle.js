@@ -550,7 +550,7 @@ function renderUiStatRow(werte) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.132', date: '14.10.2026', features: 'Phase 26.7: Bilanz gegen den Gegner im Notizbuch, Vergleich direkt von Kader- und Transfermarkt-Karte, Ausfall-Rangliste im Medizin-Panel, Fokus in neu gezeichneten Fenstern, einheitliche Kalender-Knöpfe, Reiter ohne Wortbruch bei großer Schrift' };
+    const GAME_VERSION = { number: '3.133', date: '14.10.2026', features: 'Testdatei aufgeteilt: Ablauf in run-tests.js, Hilfen in lib.js, 171 Suiten nach Themen in tests/suites (Spielverhalten unverändert)' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
