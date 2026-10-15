@@ -197,6 +197,80 @@ function renderSquadTagFilter() {
     box.innerHTML = vorhanden.length ? `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:3px;">Nach Etikett filtern:</div><div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px;">${vorhanden.map(e => `<button onclick="setSquadTagFilter('${e.id}')" class="${squadTagFilter === e.id ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:var(--fs-caption);" aria-pressed="${squadTagFilter === e.id}">${e.label} (${zaehler[e.id]})</button>`).join('')}</div>` : '';
 }
 
+// ---------- Etiketten-Bilanz (Phase 26.13) ----------
+// Wie schneidet die Mannschaft ab, wenn ein Spieler mit einem Etikett in der Startelf steht, und wie ohne?
+// Gezählt werden Ligaspiele der laufenden Saison (game.etikettBilanz = { etikett: { mit: {...}, ohne: {...} } });
+// am Saisonende wandert sie nach game.etikettBilanzVorjahr. Nur Auswertung, nichts davon verändert das Spiel.
+
+const TAG_BILANZ_MIN = 5; // ab so vielen Spielen je Seite sagt der Vergleich etwas
+
+function ensureTagBilanz() {
+    if (!game.etikettBilanz || typeof game.etikettBilanz !== 'object' || Array.isArray(game.etikettBilanz)) game.etikettBilanz = {};
+}
+
+// Etiketten, die mindestens ein Spieler der Startelf trägt, und Etiketten, die im Kader überhaupt vergeben sind
+function getStartelfTagInfo() {
+    const ids = typeof lineup !== 'undefined' && Array.isArray(lineup) ? lineup : [];
+    const startelf = new Set(), vergeben = new Set();
+    squad.forEach(p => getPlayerTags(p).forEach(t => { vergeben.add(t); if (ids.includes(p.id)) startelf.add(t); }));
+    return { startelf: [...startelf], vergeben: [...vergeben] };
+}
+
+// Vor dem Ligaspiel (neben markPresetInUse): Startelf-Etiketten festhalten
+function markTagsInUse() {
+    game.etikettImEinsatz = Object.assign({ matchday: game.matchday }, getStartelfTagInfo());
+}
+
+// Nach dem Ligaspiel (aus recordOwnLeagueResult): ohne Merkzettel gilt die aktuelle Startelf
+function recordTagResult(ourGoals, oppGoals) {
+    let info = game.etikettImEinsatz;
+    game.etikettImEinsatz = null;
+    if (!info || info.matchday !== game.matchday) info = getStartelfTagInfo();
+    ensureTagBilanz();
+    const leer = () => ({ spiele: 0, s: 0, u: 0, n: 0, tore: 0, gegentore: 0 });
+    info.vergeben.forEach(t => {
+        const e = game.etikettBilanz[t] || (game.etikettBilanz[t] = { mit: leer(), ohne: leer() });
+        const z = info.startelf.includes(t) ? e.mit : e.ohne;
+        z.spiele++; z.tore += ourGoals; z.gegentore += oppGoals;
+        if (ourGoals > oppGoals) z.s++; else if (ourGoals < oppGoals) z.n++; else z.u++;
+    });
+}
+
+function tagPunkteProSpiel(z) { return z && z.spiele ? (3 * z.s + z.u) / z.spiele : 0; }
+
+// Saisonende: laufende Bilanz ins Vorjahr schieben
+function archiveTagBilanz() {
+    ensureTagBilanz();
+    if (!Object.keys(game.etikettBilanz).length) { return; }
+    game.etikettBilanzVorjahr = { season: game.season, daten: JSON.parse(JSON.stringify(game.etikettBilanz)) };
+    game.etikettBilanz = {};
+}
+
+function renderTagBilanzBox() {
+    const box = document.getElementById('tag-bilanz-box');
+    if (!box) return;
+    ensureTagBilanz();
+    const fmt = v => v.toFixed(2).replace('.', ',');
+    const seite = (name, z) => `${name}: ${z.spiele} Sp., ${z.s}S ${z.u}U ${z.n}N, ${fmt(tagPunkteProSpiel(z))} Pkt/Spiel`;
+    const block = (titel, daten) => {
+        const zeilen = SPIELER_ETIKETTEN.filter(e => daten[e.id] && (daten[e.id].mit.spiele + daten[e.id].ohne.spiele) > 0).map(e => {
+            const d = daten[e.id];
+            const genug = d.mit.spiele >= TAG_BILANZ_MIN && d.ohne.spiele >= TAG_BILANZ_MIN;
+            const diff = tagPunkteProSpiel(d.mit) - tagPunkteProSpiel(d.ohne);
+            const urteil = !genug ? `<span style="color:var(--text-muted);">noch zu wenige Spiele (je Seite mindestens ${TAG_BILANZ_MIN})</span>`
+                : `<strong>${diff >= 0.3 ? '👍 mit besser' : diff <= -0.3 ? '👎 ohne besser' : '≈ kein klarer Unterschied'} (${diff >= 0 ? '+' : ''}${fmt(diff)})</strong>`;
+            return `<div class="box" style="font-size:var(--fs-small); margin:3px 0;"><strong>${e.label}</strong><br>${seite('In der Startelf', d.mit)}<br>${seite('Nicht in der Startelf', d.ohne)}<br>${urteil}</div>`;
+        });
+        return zeilen.length ? `<div class="ui-overline" style="font-size:var(--fs-caption); color:var(--text-muted); margin:8px 0 2px;">${titel}</div>${zeilen.join('')}` : '';
+    };
+    const aktuell = block(`Saison ${game.season} (laufend)`, game.etikettBilanz);
+    const v = game.etikettBilanzVorjahr;
+    const alt = v && v.daten ? block(`Saison ${v.season}`, v.daten) : '';
+    box.innerHTML = '<div class="panel-header" style="color:var(--purple);">🏷️ Bilanz der Etiketten</div>'
+        + (aktuell || alt ? aktuell + alt + '<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:6px;">Verglichen werden Ligaspiele mit und ohne Spieler dieses Etiketts in der Startelf. Das ist keine Ursache: Stammkräfte spielen oft gegen die leichteren Gegner nicht, kleine Stichproben schwanken stark.</div>'
+            : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Daten. Vergib im Spielerdetail Etiketten und spiele Ligaspiele.</div>');
+}
+
 // ---------- Manager-Assistent ----------
 
 // Bis zu drei empfohlene nächste Schritte, aus echten Daten und nach Dringlichkeit geordnet

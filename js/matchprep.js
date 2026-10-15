@@ -55,9 +55,9 @@ function getGegnerNotiz(name) {
     return game.gegnerNotizen[name] || null;
 }
 
-function saveGegnerNotiz(name) {
+function saveGegnerNotiz(name, feldId) {
     ensureGegnerNotizen();
-    const feld = document.getElementById('gegner-notiz-text');
+    const feld = document.getElementById(feldId || 'gegner-notiz-text');
     const text = feld ? feld.value.trim().slice(0, GEGNER_NOTIZ_MAX) : '';
     if (!name) return;
     if (!text) {
@@ -69,6 +69,7 @@ function saveGegnerNotiz(name) {
     }
     if (typeof renderPrematchCheck === 'function') renderPrematchCheck();
     renderGegnerNotizbuch();
+    if (feldId === 'gegner-notiz-nach') closeNachspielNotiz();
 }
 
 function deleteGegnerNotiz(name) {
@@ -97,13 +98,51 @@ function renderHalftimeNotiz() {
     box.innerHTML = `<div class="box" style="font-size:var(--fs-small); text-align:left;"><strong>📓 ${mpEsc(opp)}</strong><br>📊 ${mpEsc(bilanz)}${n ? `<br>📝 ${mpEsc(n.text)}` : ''}</div>`;
 }
 
-function renderGegnerNotizSection(oppName) {
+function renderGegnerNotizSection(oppName, feldId, vorgabe) {
     if (!oppName) return '';
+    feldId = feldId || 'gegner-notiz-text';
     const n = getGegnerNotiz(oppName);
     return `<div class="box" style="font-size:var(--fs-small); margin:0 0 6px;">📊 ${mpEsc(getGegnerBilanzText(oppName))}</div>
         <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${n ? `Gespeichert in Saison ${n.season}, Spieltag ${n.matchday}.` : 'Noch keine Notiz zu diesem Gegner.'} Die Notiz bleibt über Saisons erhalten.</div>
-        <textarea id="gegner-notiz-text" class="input-inline" maxlength="${GEGNER_NOTIZ_MAX}" rows="3" placeholder="z. B. Schwache Abwehr über links, Konter nach Ecken" style="width:100%;" aria-label="Notiz zu ${mpEsc(oppName)}">${mpEsc(n ? n.text : '')}</textarea>
-        <button onclick="saveGegnerNotiz(this.dataset.club)" data-club="${mpEsc(oppName)}" class="btn-secondary" style="margin-top:4px;">📓 Notiz speichern</button>`;
+        <textarea id="${feldId}" class="input-inline" maxlength="${GEGNER_NOTIZ_MAX}" rows="3" placeholder="z. B. Schwache Abwehr über links, Konter nach Ecken" style="width:100%;" aria-label="Notiz zu ${mpEsc(oppName)}">${mpEsc(vorgabe != null ? vorgabe : (n ? n.text : ''))}</textarea>
+        <button onclick="saveGegnerNotiz(this.dataset.club, this.dataset.feld)" data-club="${mpEsc(oppName)}" data-feld="${feldId}" class="btn-secondary" style="margin-top:4px;">📓 Notiz speichern</button>`;
+}
+
+// Nach dem Abpfiff: Notiz zum Gegner mit einem Entwurf aus dem Ergebnis (Saison, Spieltag, Ergebnis); nur auf Tipp gespeichert
+function getNachspielNotizEntwurf(m) {
+    const eigene = m.isHome ? m.homeGoals : m.awayGoals, fremde = m.isHome ? m.awayGoals : m.homeGoals;
+    const wort = eigene > fremde ? 'Sieg' : eigene < fremde ? 'Niederlage' : 'Remis';
+    const alt = (getGegnerNotiz(m.isHome ? m.awayName : m.homeName) || {}).text || '';
+    const neu = `${m.isCup ? 'Pokal' : 'Sp. ' + game.matchday}: ${wort} ${eigene}:${fremde} (${m.isHome ? 'heim' : 'auswärts'}). `;
+    return (alt ? alt + ' ' : '') + neu;
+}
+
+function updateNachspielNotizKnopf() {
+    const knopf = document.getElementById('btn-gegner-notiz');
+    const m = typeof currentMatch !== 'undefined' ? currentMatch : null;
+    if (!knopf || !m) return;
+    const verloren = (m.isHome ? m.homeGoals < m.awayGoals : m.awayGoals < m.homeGoals);
+    knopf.textContent = verloren ? '📓 Niederlage notieren' : '📓 Notiz zum Gegner';
+    knopf.className = verloren ? 'btn-action' : 'btn-secondary';
+    knopf.style.display = 'inline-block';
+}
+
+function openNachspielNotiz() {
+    const m = typeof currentMatch !== 'undefined' ? currentMatch : null;
+    const body = document.getElementById('opp-note-body'), ov = document.getElementById('opp-note-overlay');
+    if (!m || !body || !ov) { showToast('Es gibt gerade kein Spiel, zu dem du eine Notiz schreiben kannst.', 'error'); return; }
+    const opp = m.isHome ? m.awayName : m.homeName;
+    // Entwurf von hinten kürzen, falls Notiz plus Ergebnis zu lang sind
+    const entwurf = getNachspielNotizEntwurf(m).slice(-GEGNER_NOTIZ_MAX);
+    body.innerHTML = `<div class="panel-header" style="color:var(--purple);">📓 ${mpEsc(opp)}</div>` + renderGegnerNotizSection(opp, 'gegner-notiz-nach', entwurf);
+    ov.classList.add('show');
+    const feld = document.getElementById('gegner-notiz-nach');
+    if (feld) { feld.focus(); feld.setSelectionRange(feld.value.length, feld.value.length); }
+}
+
+function closeNachspielNotiz() {
+    const ov = document.getElementById('opp-note-overlay');
+    if (ov) ov.classList.remove('show');
 }
 
 // Alle Notizen im Reiter Analyse
@@ -417,6 +456,7 @@ function renderMatchPrepPanels() {
     renderTacticPresets();
     renderGegnerNotizbuch();
     renderPresetBilanzBox();
+    if (typeof renderTagBilanzBox === 'function') renderTagBilanzBox();
 }
 
 // ---------- Spieltag-Check vor dem Anpfiff ----------
@@ -466,12 +506,30 @@ function getRotationSuggestions() {
     return vorschlaege;
 }
 
+// Verletzungsanfällige in der Startelf (ab drei Verletzungen wie im Spielerdetail, oder Etikett „Schonen“), mit dem
+// stärksten einsatzbereiten Ersatz auf derselben Position. Nur ein Hinweis; getauscht wird auf Tipp.
+const MP_FRAGIL_AB = 3;
+
+function getFragileStarters() {
+    const bank = squad.filter(p => !lineup.includes(p.id) && mpIstEinsatzbereit(p) && p.fitness >= 60);
+    const belegt = new Set();
+    return lineup.map(id => squad.find(p => p.id === id)).filter(p => p && mpIstEinsatzbereit(p)
+        && ((p.timesInjured || 0) >= MP_FRAGIL_AB || (typeof getPlayerTags === 'function' && getPlayerTags(p).includes('schonen'))))
+        .map(p => {
+            const rein = bank.filter(b => !belegt.has(b.id) && b.pos === p.pos).sort((a, b) => b.strength - a.strength)[0] || null;
+            if (rein) belegt.add(rein.id);
+            const gesamt = (Array.isArray(p.injuryLog) ? p.injuryLog : []).reduce((sum, e) => sum + (e.tage || 0), 0);
+            return { p, rein, delta: rein ? rein.strength - p.strength : 0, verpasst: gesamt, schonen: typeof getPlayerTags === 'function' && getPlayerTags(p).includes('schonen') };
+        });
+}
+
 function applyRotationSwap(rausId, reinId) {
     const i = lineup.indexOf(rausId);
     const rein = squad.find(p => p.id === reinId);
+    const raus = squad.find(p => p.id === rausId);
     if (i === -1 || !mpIstEinsatzbereit(rein)) { showToast('Dieser Tausch geht nicht mehr - die Elf hat sich geändert.', 'error'); renderPrematchCheck(); return; }
     lineup[i] = reinId;
-    showToast(`🔄 ${rein.name} ersetzt den müden Mitspieler.`, 'success');
+    showToast(`🔄 ${rein.name} ersetzt ${raus ? raus.name : 'den Mitspieler'}.`, 'success');
     renderPrematchCheck();
 }
 
@@ -487,11 +545,13 @@ function renderPrematchCheck() {
     const muede = squad.filter(p => lineup.includes(p.id) && mpIstEinsatzbereit(p) && p.fitness < 70);
     const oppName = typeof pendingMatchInfo !== 'undefined' && pendingMatchInfo ? pendingMatchInfo.oppName : '';
     const notiz = oppName ? getGegnerNotiz(oppName) : null;
+    const fragil = getFragileStarters();
     const chips = [
         probleme.length ? uiChip(`⚠️ ${probleme.length} Hinweis${probleme.length === 1 ? '' : 'e'}`, probleme.some(x => x.ton === 'schlecht') ? 'schlecht' : 'warn') : uiChip('✓ Elf in Ordnung', 'gut'),
         uiChip(`🩹 ${fehlt.length} fehlen${stammFehlt ? ` (${stammFehlt} Stammspieler)` : ''}`, stammFehlt ? 'warn' : ''),
         muede.length ? uiChip(`😮‍💨 ${muede.length} erschöpft`, muede.some(p => p.fitness < 50) ? 'schlecht' : 'warn') : '',
         rotation.length ? uiChip(`🔄 ${rotation.length} Rotationsidee${rotation.length === 1 ? '' : 'n'}`, 'warn') : '',
+        fragil.length ? uiChip(`🩹 ${fragil.length} verletzungsanfällig`, 'warn') : '',
         notiz ? uiChip('📓 Notiz vorhanden') : ''
     ];
     const problemListe = probleme.length ? probleme.map(x => `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">${x.ton === 'schlecht' ? '🔴' : '🟡'} ${mpEsc(x.text)}</div>`).join('')
@@ -504,6 +564,10 @@ function renderPrematchCheck() {
             <span style="color:var(--text-muted);">· effektive Stärke ${r.delta >= 0 ? '+' : ''}${r.delta}</span>
             <button onclick="applyRotationSwap('${r.raus.id}', '${r.rein.id}')" class="btn-secondary" style="margin-top:4px;">🔄 Tauschen</button></div>`).join('')
         : (muede.length ? '' : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Keine Rotation nötig: alle Stammspieler sind ausgeruht oder ohne frischen Ersatz.</div>'));
+    const fragilZeile = fragil.length ? `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin:2px 0 4px;">Wer oft ausfällt oder das Etikett „Schonen“ trägt, hat im Spiel ein höheres Verletzungsrisiko. Ob du ihn heute aufstellst, entscheidest du.</div>` + fragil.map(f => `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">${mpEsc(f.p.name)} (${f.p.pos}, Str ${f.p.strength}): ${f.schonen ? '🛌 Schonen' : ''}${f.schonen && (f.p.timesInjured || 0) >= MP_FRAGIL_AB ? ', ' : ''}${(f.p.timesInjured || 0) >= MP_FRAGIL_AB ? `${f.p.timesInjured} Verletzungen${f.verpasst ? `, zuletzt ${f.verpasst} Spiele verpasst` : ''}` : ''}
+            ${f.rein ? `<div style="margin-top:4px;">Ersatz: ${mpEsc(f.rein.name)} (Str ${f.rein.strength}, ${f.rein.fitness} % fit) <span style="color:var(--text-muted);">· ${f.delta >= 0 ? '+' : ''}${f.delta} Stärke</span></div>
+            <button onclick="applyRotationSwap('${f.p.id}', '${f.rein.id}')" class="btn-secondary" style="margin-top:4px;">🔄 Schonen und ${mpEsc(f.rein.name)} bringen</button>` : '<div style="color:var(--text-muted); margin-top:4px;">Kein einsatzbereiter Ersatz auf dieser Position.</div>'}</div>`).join('')
+        : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Niemand in der Startelf fällt auffällig oft aus.</div>';
     box.innerHTML = `<div class="panel" style="margin-bottom:8px;">
         <div class="panel-header">🧾 Spieltag-Check</div>
         <div class="ui-card-meta" style="margin-bottom:6px;">${chips.join('')}</div>
@@ -511,6 +575,7 @@ function renderPrematchCheck() {
         <details class="ui-fold"${fehlt.length ? ' open' : ''}><summary>Wer fehlt?</summary>${fehltListe}</details>
         <details class="ui-fold"${rotation.length || muede.length ? ' open' : ''}><summary>Rotations-Assistent</summary>${rotListe}
             <button onclick="showScreen('screen-squad')" class="btn-secondary" style="margin-top:4px;">⚽ Aufstellung im Detail ändern</button></details>
+        <details class="ui-fold"${fragil.length ? ' open' : ''}><summary>Verletzungsanfällige in der Startelf</summary>${fragilZeile}</details>
         <details class="ui-fold"><summary>Aufstellung aus Vorlage</summary>${renderPresetQuickPick()}</details>
         ${oppName ? `<details class="ui-fold"${notiz ? ' open' : ''}><summary>📓 Notizbuch: ${mpEsc(oppName)}</summary>${renderGegnerNotizSection(oppName)}</details>` : ''}
     </div>`;

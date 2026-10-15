@@ -454,6 +454,7 @@
         document.getElementById('btn-next-step').style.display = 'none';
         document.getElementById('btn-finish-match').style.display = 'inline-block';
         const teilenKnopf = document.getElementById('btn-share-match'); if (teilenKnopf) teilenKnopf.style.display = 'inline-block';
+        if (typeof updateNachspielNotizKnopf === 'function') updateNachspielNotizKnopf();
         // Schiedsrichter-Kritik (js/referee-critique.js): nur nach strittigen Szenen ohne Sieg.
         if (typeof offerRefereeCritique === 'function') offerRefereeCritique();
         if (currentMatch.cupTie) { finishCupLiveMatch(); return; }

@@ -36,6 +36,7 @@ function recordOwnLeagueResult(ourGoals, oppGoals, isHome) {
     s.torlos = ourGoals === 0 ? s.torlos + 1 : 0;
     if (isHome) s.heimSieg = sieg ? s.heimSieg + 1 : 0;
     if (typeof recordPresetResult === 'function') recordPresetResult(ourGoals, oppGoals);
+    if (typeof recordTagResult === 'function') recordTagResult(ourGoals, oppGoals);
     SERIEN_ARTEN.forEach(a => {
         const r = game.serien.rekord[a.id];
         if (s[a.id] > 0 && (!r || s[a.id] > r.n)) game.serien.rekord[a.id] = { n: s[a.id], season: game.season, matchday: game.matchday };

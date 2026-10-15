@@ -241,6 +241,12 @@
         <button onclick="nativeShareReport()" id="share-report-native" class="btn-secondary" style="margin-top:6px;">📤 Teilen …</button>
     </div>
 </div>
+<div id="opp-note-overlay" class="generic-modal-overlay">
+    <div class="generic-modal-box">
+        <button onclick="closeNachspielNotiz()" class="generic-modal-close" aria-label="Schließen">✕</button>
+        <div id="opp-note-body"></div>
+    </div>
+</div>
 <div id="fachwort-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
         <button onclick="closeFachwort()" class="generic-modal-close" aria-label="Schließen">✕</button>
@@ -1436,6 +1442,7 @@
                     <div class="panel" id="series-tracker-box"></div>
                     <div class="panel" id="opp-notes-box"></div>
                     <div class="panel" id="preset-bilanz-box"></div>
+                    <div class="panel" id="tag-bilanz-box"></div>
                     <div class="panel">
                         <div class="panel-header" style="color:var(--blue);">📊 Daten exportieren (CSV)</div>
                         <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Für Tabellenkalkulation oder zum Teilen. Semikolon-getrennt, öffnet direkt in Excel und Co.</div>
@@ -2653,6 +2660,7 @@
                     </div>
                     <div id="ref-critique-box"></div>
                     <button onclick="openShareReport()" id="btn-share-match" style="display:none;" class="btn-secondary">📤 Spielbericht teilen</button>
+                    <button onclick="openNachspielNotiz()" id="btn-gegner-notiz" style="display:none;" class="btn-secondary">📓 Notiz zum Gegner</button>
                     <button onclick="finishMatch()" id="btn-finish-match" style="display:none;" class="btn-primary">✔ Spielbericht schließen</button>
                 </div>
             </div>

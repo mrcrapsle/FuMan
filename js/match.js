@@ -325,6 +325,7 @@
         if (typeof renderPregameTalkBox === 'function') renderPregameTalkBox();
         renderFatigueWarning();
         if (typeof markPresetInUse === 'function') markPresetInUse();
+        if (typeof markTagsInUse === 'function') markTagsInUse();
 
         renderPressConference({ oppName, oppStr, isHome, cup: false });
         showScreen('screen-prematch-press');
@@ -441,6 +442,7 @@
         document.getElementById('btn-next-step').style.display = 'inline-block';
         document.getElementById('btn-finish-match').style.display = 'none';
         const teilenKnopf = document.getElementById('btn-share-match'); if (teilenKnopf) teilenKnopf.style.display = 'none';
+        const notizKnopf = document.getElementById('btn-gegner-notiz'); if (notizKnopf) notizKnopf.style.display = 'none';
         document.getElementById('btn-finish-match').innerText = '✔ Spielbericht schließen';
         renderLiveSubs();
         renderLiveTacticsPanel();
