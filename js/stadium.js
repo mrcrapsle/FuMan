@@ -698,7 +698,7 @@
             </div>
             <input type="range" min="0" max="100" value="${pitchMaintenanceIntensity}" oninput="setPitchMaintenanceIntensity(this.value)" style="width:100%;">
             <div style="font-size:var(--fs-small); margin:6px 0;">Erwarteter Gewinn: rund ${gain} Punkte auf ${Math.min(max, cond + gain)}. Geschätzte Kosten: ${formatVal(cost)}.</div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12em), 1fr)); gap:4px;">
                 <button onclick="maintainPitch(0)" class="btn-secondary" style="font-size:var(--fs-caption);">Nur mähen (leicht)</button>
                 <button onclick="maintainPitch(pitchMaintenanceIntensity)" class="btn-action" style="font-size:var(--fs-caption);">Pflegen [${formatVal(cost)}]</button>
                 <button onclick="maintainPitch(60)" class="btn-secondary" style="font-size:var(--fs-caption);">Gründlich</button>

@@ -928,7 +928,10 @@
             let traitIcon = (p.trait && p.trait !== 'Kein') ? ' ⭐' : '';
             let roleIcon = p.id === game.captainId ? ' Ⓒ' : '';
             let favoriteIcon = p.isCrowdFavorite ? ' ❤️' : '';
-            pin.innerHTML = `${p.name.split(' ').pop()} (${p.strength})${traitIcon}${roleIcon}${favoriteIcon}`;
+            // Breite nach dem Abstand zum Spielfeldrand begrenzen (sonst wird die Seite bei langen Namen auf Randpositionen
+            // breiter als der Bildschirm); gekürzt wird nur der Name, Stärke und Symbole bleiben sichtbar
+            pin.style.maxWidth = Math.max(18, 2 * Math.min(coords[idx].left, 100 - coords[idx].left)) + '%';
+            pin.innerHTML = `<span class="pin-name">${p.name.split(' ').pop()}</span><span class="pin-rest">(${p.strength})${traitIcon}${roleIcon}${favoriteIcon}</span>`;
             pin.title = (p.trait && p.trait !== 'Kein' ? p.trait : '') + (p.isCrowdFavorite ? ' · Publikumsliebling der Saison' : '');
             // Auf dem Kader-/Taktikschirm ist Antippen = Tauschmodus; auf dem Live-Spielschirm
             // rein informativ (kein Kaderwechsel während der laufenden Partie über die Pins).

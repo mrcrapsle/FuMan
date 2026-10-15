@@ -351,9 +351,9 @@ function renderSeasonObjectivesPanel() {
                             obj.difficulty === 'MEDIUM' ? 'var(--accent)' : 'var(--primary)';
 
             html += `<div style="background:var(--surface-1); padding:8px; margin-bottom:6px; border-radius:4px;">`;
-            html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">`;
-            html += `<strong style="font-size:var(--fs-small);">${obj.name}</strong>`;
-            html += `<span style="font-size:var(--fs-micro); color:${diffColor};">${obj.difficulty}</span>`;
+            html += `<div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:2px 8px; margin-bottom:4px;">`;
+            html += `<strong style="font-size:var(--fs-small); min-width:0; overflow-wrap:anywhere;">${obj.name}</strong>`;
+            html += `<span style="font-size:var(--fs-micro); color:${diffColor}; flex:0 0 auto;">${obj.difficulty}</span>`;
             html += `</div>`;
             html += `<p style="font-size:var(--fs-caption); color:var(--text-muted); margin:0 0 4px 0;">${obj.description}</p>`;
             html += `<div style="width:100%; height:8px; background:var(--surface-2); border-radius:2px; overflow:hidden; margin-bottom:4px;">`;

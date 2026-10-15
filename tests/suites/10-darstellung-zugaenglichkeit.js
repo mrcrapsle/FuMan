@@ -1036,20 +1036,35 @@ async function testEnglischDynamischeTexte(browser) {
 }
 
 async function testKnopfWorteHandy(browser) {
-    console.log('\n[26.9] Handy: kein Wort in einem Knopf ist breiter als der Knopf (320 px normal, 360 px groß, 390 px sehr groß)');
+    console.log('\n[26.9] Handy: kein Wort in einem Knopf ist breiter als der Knopf, kein Überlauf der Seite (320 px normal, 360 px groß, 390 px sehr groß, jeweils auch mit breiterer Schrift)');
     const { page, consoleErrors } = await freshPage(browser);
+    // Fester Zufall schon vor dem Start des Spiels (Kadernamen, Gerüchte, Saisonziele sind sonst bei jedem Lauf anders
+    // und der Test würde flackern): Seite mit Initialisierungsskript neu laden
+    await page.addInitScript(() => { let seed = 20260115; Math.random = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; }; });
+    await page.reload();
+    await page.waitForFunction(() => !document.getElementById('app-loading'), null, { timeout: 20000 });
     await page.evaluate(() => {
         closeTutorial(); game.sackPending = false; simulateMatchdays(3);
         const st = document.createElement('style'); st.textContent = '*,*::before,*::after{transition:none!important;animation:none!important}'; document.head.appendChild(st);
     });
-    for (const [breite, groesse] of [[320, 'normal'], [360, 'gross'], [390, 'sehr-gross']]) {
+    // Die CI hat breitere Schrift als die Entwicklungsmaschinen (3.133 scheiterte dort an „Speichern“): der Stressmodus
+    // verbreitert jede Schrift um rund 9 % (letter-spacing), damit Engstellen schon lokal auffallen.
+    for (const [breite, groesse, stress] of [[320, 'normal', false], [360, 'gross', false], [390, 'sehr-gross', false], [320, 'normal', true], [360, 'gross', true], [390, 'sehr-gross', true]]) {
         await page.setViewportSize({ width: breite, height: 800 });
-        const zuBreit = await page.evaluate(async (groesse) => {
+        const ergebnis = await page.evaluate(async ([groesse, stress]) => {
             setzeTextGroesse(groesse);
-            const out = new Set();
+            let st = document.getElementById('schrift-stress');
+            if (st) st.remove();
+            if (stress) { st = document.createElement('style'); st.id = 'schrift-stress'; st.textContent = '*,*::before,*::after{letter-spacing:0.05em!important}'; document.head.appendChild(st); }
+            const zuBreit = new Set(), seitenBreit = new Set();
             const probe = document.createElement('span'); document.body.appendChild(probe);
             const ids = [...document.querySelectorAll('[id^="screen-"]')].map(e => e.id).filter(id => !['screen-office', 'screen-matchday', 'screen-admin'].includes(id));
             const pruefe = wo => {
+                if (document.documentElement.scrollWidth > document.documentElement.clientWidth + 1) {
+                    const schuldige = [...document.querySelectorAll('.app-content *')].filter(el => (el.offsetParent || getComputedStyle(el).position === 'fixed') && el.getBoundingClientRect().right > document.documentElement.clientWidth + 1 && !el.closest('.kpi-strip, .kpi-row, [style*="overflow-x"]'))
+                        .slice(0, 3).map(el => `${el.tagName.toLowerCase()}#${el.id}.${String(el.className).slice(0, 24)} "${(el.textContent || "").trim().slice(0, 30)}" in ${el.parentElement ? el.parentElement.id || el.parentElement.className : ""}`);
+                    seitenBreit.add(`${wo} (${document.documentElement.scrollWidth} px; ${schuldige.join(', ') || 'unbekannt'})`);
+                }
                 document.querySelectorAll('.app-content button').forEach(el => {
                     if (!el.offsetParent || el.closest('details:not([open]) > :not(summary)')) return;
                     const txt = (el.innerText || '').trim(); if (!txt) return;
@@ -1058,7 +1073,7 @@ async function testKnopfWorteHandy(browser) {
                     if (innen <= 0) return;
                     probe.style.cssText = `position:absolute; visibility:hidden; white-space:nowrap; font:${cs.font}; letter-spacing:${cs.letterSpacing}`;
                     // Bindestrich-Wörter dürfen am Bindestrich umbrechen
-                    txt.split(/\s+/).flatMap(w => w.split(/(?<=-)/)).forEach(teil => { probe.textContent = teil; if (probe.getBoundingClientRect().width > innen + 1) out.add(`${wo}: "${teil}" in "${txt.slice(0, 28)}" (${Math.round(innen)} px)`); });
+                    txt.split(/\s+/).flatMap(w => w.split(/(?<=-)/)).forEach(teil => { probe.textContent = teil; if (probe.getBoundingClientRect().width > innen + 1) zuBreit.add(`${wo}: "${teil}" in "${txt.slice(0, 28)}" (${Math.round(innen)} px)`); });
                 });
             };
             for (const id of ids) {
@@ -1068,10 +1083,13 @@ async function testKnopfWorteHandy(browser) {
                 pruefe(id);
             }
             probe.remove();
+            if (st) st.remove();
             setzeTextGroesse('normal');
-            return [...out];
-        }, groesse);
-        assert(zuBreit.length === 0, `${breite} px, Schrift ${groesse}: kein Wort breiter als sein Knopf (${zuBreit.length}: ${zuBreit.slice(0, 4).join(' | ')})`);
+            return { zuBreit: [...zuBreit], seitenBreit: [...seitenBreit] };
+        }, [groesse, stress]);
+        const wie = `${breite} px, Schrift ${groesse}${stress ? ', breiter' : ''}`;
+        assert(ergebnis.zuBreit.length === 0, `${wie}: kein Wort breiter als sein Knopf (${ergebnis.zuBreit.length}: ${ergebnis.zuBreit.slice(0, 4).join(' | ')})`);
+        assert(ergebnis.seitenBreit.length === 0, `${wie}: die Seite wird nicht breiter als der Bildschirm (${ergebnis.seitenBreit.length}: ${ergebnis.seitenBreit.slice(0, 4).join(' | ')})`);
     }
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
     await page.close();

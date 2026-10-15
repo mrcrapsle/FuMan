@@ -412,6 +412,7 @@
         @media (max-width: 400px) { html[data-text-size="gross"] .hub-tab-bar { grid-template-columns: repeat(2, 1fr) !important; } }
         @media (max-width: 340px) { .hub-tab-bar { grid-template-columns: repeat(2, 1fr) !important; } }
         /* Kalender-Aktionen: einheitliche Form und Abstände (vorher Pillen und Rechtecke durcheinander) */
+        .cal-aktionen { grid-template-columns: repeat(auto-fit, minmax(min(100%, 12em), 1fr)) !important; }
         .cal-aktionen > button { margin: 0; border-radius: 16px; min-height: 44px; }
         .btn-primary {
             background: linear-gradient(135deg, var(--violet-fill), var(--violet-fill-lo)); color: var(--on-strong); font-weight: 800;
@@ -651,8 +652,10 @@
             background: linear-gradient(160deg, rgba(90, 108, 255, 0.92), rgba(30, 40, 90, 0.92));
             border: 1px solid rgba(240,230,210,0.35); color: #fff; padding: 3px 7px; border-radius: 5px;
             font-size: 11px; font-weight: 800; text-align: center; cursor: pointer; white-space: nowrap;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5); display: flex; gap: 3px; justify-content: center; box-sizing: border-box;
         }
+        .player-pin-3d .pin-name { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+        .player-pin-3d .pin-rest { flex: 0 0 auto; }
         
         #live-ball-indicator {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) translateZ(30px);
@@ -1008,6 +1011,9 @@
             border: 2px solid var(--teal); display: flex; align-items: center; justify-content: center;
             font-size: 34px;
         }
+        /* Lange Kartenlisten (Kader, Verträge, Transfermarkt): Karten außerhalb des Sichtbereichs werden nicht berechnet
+           (Messung bei 6-facher CPU-Drosselung und 40 Spielern: Kaderansicht mit Layout 517 ms, Vertragsliste 367 ms) */
+        #bench-list > *, #contracts-list > *, #market-list > *, #free-agents-list > * { content-visibility: auto; contain-intrinsic-size: auto 150px; }
         .modal-field-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px 14px; margin: 10px 0; font-size: var(--fs-body); }
         .modal-field-grid span.label { color: var(--text-muted); }
         .modal-field-grid span.val { color: var(--teal); font-weight: 700; overflow-wrap: anywhere; }
@@ -4207,7 +4213,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
                         Lizenz: <strong id="priv-license" style="color:var(--blue);">C-Lizenz</strong> | Stress: <strong id="priv-stress" style="color:var(--primary);">15%</strong> | Prestige: <strong id="priv-prestige" style="color:var(--accent);">10</strong>
                     </div>
                     <div class="box" id="priv-license-box"></div>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px;">
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 7.5em), 1fr)); gap:4px;">
                         <button onclick="doPrivateActivity('golf')" class="btn-secondary">⛳ Golf (-15% Stress) [500 €]</button>
                         <button onclick="doPrivateActivity('wellness')" class="btn-secondary">🧖 Wellness (-25% Stress) [1.800 €]</button>
                         <button onclick="doPrivateActivity('urlaub')" class="btn-secondary">🏖️ Luxusurlaub (-40% Stress) [4.500 €]</button>
@@ -7977,7 +7983,10 @@ function getOwnDerbyRivals() {
             let traitIcon = (p.trait && p.trait !== 'Kein') ? ' ⭐' : '';
             let roleIcon = p.id === game.captainId ? ' Ⓒ' : '';
             let favoriteIcon = p.isCrowdFavorite ? ' ❤️' : '';
-            pin.innerHTML = `${p.name.split(' ').pop()} (${p.strength})${traitIcon}${roleIcon}${favoriteIcon}`;
+            // Breite nach dem Abstand zum Spielfeldrand begrenzen (sonst wird die Seite bei langen Namen auf Randpositionen
+            // breiter als der Bildschirm); gekürzt wird nur der Name, Stärke und Symbole bleiben sichtbar
+            pin.style.maxWidth = Math.max(18, 2 * Math.min(coords[idx].left, 100 - coords[idx].left)) + '%';
+            pin.innerHTML = `<span class="pin-name">${p.name.split(' ').pop()}</span><span class="pin-rest">(${p.strength})${traitIcon}${roleIcon}${favoriteIcon}</span>`;
             pin.title = (p.trait && p.trait !== 'Kein' ? p.trait : '') + (p.isCrowdFavorite ? ' · Publikumsliebling der Saison' : '');
             // Auf dem Kader-/Taktikschirm ist Antippen = Tauschmodus; auf dem Live-Spielschirm
             // rein informativ (kein Kaderwechsel während der laufenden Partie über die Pins).
@@ -17651,7 +17660,7 @@ function initZugaenglichkeit() {
                     <span style="color:${deltaClass}; font-size:var(--fs-caption); font-weight:bold;">(${deltaIcon}${r.delta.toFixed(2)} €)</span>
                 </div>
                 <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Basispreis: ${r.basePrice.toFixed(2)} € | Spanne: ${r.minPrice.toFixed(2)} - ${r.maxPrice.toFixed(2)} €</div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9em), 1fr)); gap:4px;">
                     <button onclick="buyRawMaterial('${k}', 500)" class="btn-secondary">+500 kg [${formatVal(Math.round(r.currentPrice * 500))}]</button>
                     <button onclick="buyRawMaterial('${k}', 2000)" class="btn-secondary">+2.000 kg [${formatVal(Math.round(r.currentPrice * 2000))}]</button>
                 </div>
@@ -22946,7 +22955,7 @@ function finishGoalkeeperGame() {
             </div>
             <input type="range" min="0" max="100" value="${pitchMaintenanceIntensity}" oninput="setPitchMaintenanceIntensity(this.value)" style="width:100%;">
             <div style="font-size:var(--fs-small); margin:6px 0;">Erwarteter Gewinn: rund ${gain} Punkte auf ${Math.min(max, cond + gain)}. Geschätzte Kosten: ${formatVal(cost)}.</div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12em), 1fr)); gap:4px;">
                 <button onclick="maintainPitch(0)" class="btn-secondary" style="font-size:var(--fs-caption);">Nur mähen (leicht)</button>
                 <button onclick="maintainPitch(pitchMaintenanceIntensity)" class="btn-action" style="font-size:var(--fs-caption);">Pflegen [${formatVal(cost)}]</button>
                 <button onclick="maintainPitch(60)" class="btn-secondary" style="font-size:var(--fs-caption);">Gründlich</button>
@@ -28516,9 +28525,9 @@ function renderSeasonObjectivesPanel() {
                             obj.difficulty === 'MEDIUM' ? 'var(--accent)' : 'var(--primary)';
 
             html += `<div style="background:var(--surface-1); padding:8px; margin-bottom:6px; border-radius:4px;">`;
-            html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">`;
-            html += `<strong style="font-size:var(--fs-small);">${obj.name}</strong>`;
-            html += `<span style="font-size:var(--fs-micro); color:${diffColor};">${obj.difficulty}</span>`;
+            html += `<div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:2px 8px; margin-bottom:4px;">`;
+            html += `<strong style="font-size:var(--fs-small); min-width:0; overflow-wrap:anywhere;">${obj.name}</strong>`;
+            html += `<span style="font-size:var(--fs-micro); color:${diffColor}; flex:0 0 auto;">${obj.difficulty}</span>`;
             html += `</div>`;
             html += `<p style="font-size:var(--fs-caption); color:var(--text-muted); margin:0 0 4px 0;">${obj.description}</p>`;
             html += `<div style="width:100%; height:8px; background:var(--surface-2); border-radius:2px; overflow:hidden; margin-bottom:4px;">`;

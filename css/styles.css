@@ -403,6 +403,7 @@
         @media (max-width: 400px) { html[data-text-size="gross"] .hub-tab-bar { grid-template-columns: repeat(2, 1fr) !important; } }
         @media (max-width: 340px) { .hub-tab-bar { grid-template-columns: repeat(2, 1fr) !important; } }
         /* Kalender-Aktionen: einheitliche Form und Abstände (vorher Pillen und Rechtecke durcheinander) */
+        .cal-aktionen { grid-template-columns: repeat(auto-fit, minmax(min(100%, 12em), 1fr)) !important; }
         .cal-aktionen > button { margin: 0; border-radius: 16px; min-height: 44px; }
         .btn-primary {
             background: linear-gradient(135deg, var(--violet-fill), var(--violet-fill-lo)); color: var(--on-strong); font-weight: 800;
@@ -642,8 +643,10 @@
             background: linear-gradient(160deg, rgba(90, 108, 255, 0.92), rgba(30, 40, 90, 0.92));
             border: 1px solid rgba(240,230,210,0.35); color: #fff; padding: 3px 7px; border-radius: 5px;
             font-size: 11px; font-weight: 800; text-align: center; cursor: pointer; white-space: nowrap;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5); display: flex; gap: 3px; justify-content: center; box-sizing: border-box;
         }
+        .player-pin-3d .pin-name { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+        .player-pin-3d .pin-rest { flex: 0 0 auto; }
         
         #live-ball-indicator {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) translateZ(30px);
@@ -999,6 +1002,9 @@
             border: 2px solid var(--teal); display: flex; align-items: center; justify-content: center;
             font-size: 34px;
         }
+        /* Lange Kartenlisten (Kader, Verträge, Transfermarkt): Karten außerhalb des Sichtbereichs werden nicht berechnet
+           (Messung bei 6-facher CPU-Drosselung und 40 Spielern: Kaderansicht mit Layout 517 ms, Vertragsliste 367 ms) */
+        #bench-list > *, #contracts-list > *, #market-list > *, #free-agents-list > * { content-visibility: auto; contain-intrinsic-size: auto 150px; }
         .modal-field-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px 14px; margin: 10px 0; font-size: var(--fs-body); }
         .modal-field-grid span.label { color: var(--text-muted); }
         .modal-field-grid span.val { color: var(--teal); font-weight: 700; overflow-wrap: anywhere; }

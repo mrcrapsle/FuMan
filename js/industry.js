@@ -171,7 +171,7 @@
                     <span style="color:${deltaClass}; font-size:var(--fs-caption); font-weight:bold;">(${deltaIcon}${r.delta.toFixed(2)} €)</span>
                 </div>
                 <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Basispreis: ${r.basePrice.toFixed(2)} € | Spanne: ${r.minPrice.toFixed(2)} - ${r.maxPrice.toFixed(2)} €</div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9em), 1fr)); gap:4px;">
                     <button onclick="buyRawMaterial('${k}', 500)" class="btn-secondary">+500 kg [${formatVal(Math.round(r.currentPrice * 500))}]</button>
                     <button onclick="buyRawMaterial('${k}', 2000)" class="btn-secondary">+2.000 kg [${formatVal(Math.round(r.currentPrice * 2000))}]</button>
                 </div>

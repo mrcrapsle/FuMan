@@ -2329,7 +2329,7 @@
                         Lizenz: <strong id="priv-license" style="color:var(--blue);">C-Lizenz</strong> | Stress: <strong id="priv-stress" style="color:var(--primary);">15%</strong> | Prestige: <strong id="priv-prestige" style="color:var(--accent);">10</strong>
                     </div>
                     <div class="box" id="priv-license-box"></div>
-                    <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px;">
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 7.5em), 1fr)); gap:4px;">
                         <button onclick="doPrivateActivity('golf')" class="btn-secondary">⛳ Golf (-15% Stress) [500 €]</button>
                         <button onclick="doPrivateActivity('wellness')" class="btn-secondary">🧖 Wellness (-25% Stress) [1.800 €]</button>
                         <button onclick="doPrivateActivity('urlaub')" class="btn-secondary">🏖️ Luxusurlaub (-40% Stress) [4.500 €]</button>
