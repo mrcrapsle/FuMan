@@ -660,6 +660,8 @@ function renderUiStatRow(werte) {
         gegnerNotizen: {},
         vorlageBilanz: {},
         assistentZurueck: {},
+        assistentVorher: null,
+        assistentErledigt: null,
         vorlageBilanzArchiv: [],
         vorlageImEinsatz: null,
         etikettBilanz: {},
@@ -792,6 +794,7 @@ function renderUiStatRow(werte) {
         ],
         activeMissions: [],
         watchlist: [],
+        preisGrenzen: {},
         talentDatabase: []
     };
     let incomingOffers = [];
@@ -10339,6 +10342,45 @@ function renderBoardRoomPanel() {
         updateUI();
     }
 
+    // Ablöse eines Scouting-Fundes: Marktwert mit Scout- und Synergie-Rabatt
+    function getScoutDiscount() {
+        let discount = 1.0 - (staffMembers.scout.hired ? 0.15 : 0);
+        if (typeof getActiveStaffSynergies === 'function' && getActiveStaffSynergies().some(s => s.bonusKey === 'transferDiscount')) discount -= 0.05;
+        return discount;
+    }
+    function getScoutPrice(p) { return Math.round(p.marketValue * getScoutDiscount()); }
+
+    // Preis-Alarm (Phase 26.13): zu beobachteten Spielern lässt sich eine Preisgrenze setzen (scoutingNetwork.preisGrenzen).
+    // Der Manager-Assistent meldet sich, sobald der Preis darunter liegt und Kasse, Transferbudget und Kaderplatz reichen.
+    function ensureScoutPreisGrenzen() {
+        if (!scoutingNetwork.preisGrenzen || typeof scoutingNetwork.preisGrenzen !== 'object' || Array.isArray(scoutingNetwork.preisGrenzen)) scoutingNetwork.preisGrenzen = {};
+    }
+    function setScoutPriceAlarm(playerId) {
+        ensureScoutPreisGrenzen();
+        const feld = document.getElementById('scout-grenze-' + playerId);
+        const mio = feld ? parseFloat(String(feld.value).replace(',', '.')) : NaN;
+        if (!scoutingNetwork.watchlist.includes(playerId)) { showToast('Der Alarm gilt nur für beobachtete Spieler.', 'error'); return; }
+        if (!feld || !feld.value.trim()) {
+            if (scoutingNetwork.preisGrenzen[playerId]) { delete scoutingNetwork.preisGrenzen[playerId]; showToast('🔔 Preis-Alarm entfernt.', 'info'); }
+            else showToast('Gib eine Preisgrenze in Mio. € ein, zum Beispiel 2,5.', 'error');
+        } else if (!(mio > 0) || mio > 5000) {
+            showToast('Die Preisgrenze muss eine Zahl zwischen 0 und 5000 (Mio. €) sein.', 'error');
+            return;
+        } else {
+            scoutingNetwork.preisGrenzen[playerId] = Math.round(mio * 1000000);
+            showToast(`🔔 Preis-Alarm bei ${formatVal(scoutingNetwork.preisGrenzen[playerId])} gesetzt.`, 'success');
+        }
+        renderGlobalScoutingView();
+    }
+    // Beobachtete Spieler, die unter ihrer Preisgrenze liegen und jetzt bezahlbar sind
+    function getScoutPriceAlerts() {
+        ensureScoutPreisGrenzen();
+        if (typeof isTransferEmbargoActive === 'function' && isTransferEmbargoActive()) return [];
+        if (typeof squad !== 'undefined' && squad.length >= 22) return [];
+        return globalScoutResults.filter(p => scoutingNetwork.watchlist.includes(p.id) && scoutingNetwork.preisGrenzen[p.id]).map(p => ({ p, preis: getScoutPrice(p), grenze: scoutingNetwork.preisGrenzen[p.id] }))
+            .filter(x => x.preis <= x.grenze && game.money >= x.preis && game.transferBudget >= x.preis);
+    }
+
     // Beobachtungsliste: passive, kostenlose Vertrauenssteigerung über mehrere Spieltage.
     function addToWatchlist(playerId) {
         if (scoutingNetwork.watchlist.includes(playerId)) return;
@@ -10349,6 +10391,7 @@ function renderBoardRoomPanel() {
     }
     function removeFromWatchlist(playerId) {
         scoutingNetwork.watchlist = scoutingNetwork.watchlist.filter(id => id !== playerId);
+        ensureScoutPreisGrenzen(); delete scoutingNetwork.preisGrenzen[playerId];
         renderGlobalScoutingView();
     }
     function tickWatchlist() {
@@ -10451,8 +10494,7 @@ function renderBoardRoomPanel() {
                 list.innerHTML = '<div class="box">Noch keine Scouting-Missionen abgeschlossen. Entsende oben deine Scouts!</div>';
             } else {
                 globalScoutResults.forEach((p, idx) => {
-                    let discount = 1.0 - (staffMembers.scout.hired ? 0.15 : 0);
-                    if (typeof getActiveStaffSynergies === 'function' && getActiveStaffSynergies().some(s => s.bonusKey === 'transferDiscount')) discount -= 0.05;
+                    let discount = getScoutDiscount();
                     let displayPrice = Math.round(p.marketValue * discount);
                     let confidence = p.scoutConfidence ?? 100;
                     let paceF = getFogRange(p, p.pace, 'pace'), shootF = getFogRange(p, p.shooting, 'shoot'), passF = getFogRange(p, p.passing, 'pass'), physF = getFogRange(p, p.physique, 'phys');
@@ -10473,6 +10515,14 @@ function renderBoardRoomPanel() {
                             ${confidence < 95 ? `<button onclick="investigateScoutedPlayer('${p.id}')" class="btn-secondary" style="font-size:var(--fs-caption);">🔍 Genauer beobachten [1.500 €]</button>` : '<div></div>'}
                             <button onclick="${isWatched ? `removeFromWatchlist('${p.id}')` : `addToWatchlist('${p.id}')`}" class="btn-secondary" style="font-size:var(--fs-caption);">${isWatched ? '👁️ Von Liste entfernen' : '👁️ Beobachten (passiv)'}</button>
                         </div>
+                        ${isWatched ? (() => {
+                            const g = (scoutingNetwork.preisGrenzen || {})[p.id];
+                            const wert = g ? String(g / 1000000).replace('.', ',') : '';
+                            return `<div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:4px;">
+                                <label for="scout-grenze-${p.id}" style="font-size:var(--fs-caption); flex:1 1 9em;">🔔 Preis-Alarm bis (Mio. €)${g ? `<br><span style="color:${displayPrice <= g ? 'var(--primary)' : 'var(--text-muted)'};">${displayPrice <= g ? 'Preis liegt schon darunter' : 'Alarm bei ' + formatVal(g)}</span>` : ''}</label>
+                                <input id="scout-grenze-${p.id}" type="text" inputmode="decimal" value="${wert}" placeholder="z. B. 2,5" class="input-inline" style="width:6em; min-width:0;">
+                                <button onclick="setScoutPriceAlarm('${p.id}')" class="btn-secondary" style="width:auto; flex:0 0 auto;">${g ? 'Ändern' : 'Setzen'}</button></div>`;
+                        })() : ''}
                         <button onclick="signGlobalScoutPlayer(${idx})" class="btn-primary">Verpflichten [Ablöse: ~${formatVal(displayPrice)}${discount < 1 ? ' (Scout-Rabatt!)' : ''}]</button>
                     `;
                     list.appendChild(row);
@@ -10499,15 +10549,14 @@ function renderBoardRoomPanel() {
     function signGlobalScoutPlayer(idx) {
         let p = globalScoutResults[idx];
         if (isTransferEmbargoActive()) { showToast(`🚫 Transfersperre aktiv${game.ffpTransferEmbargo ? ' (Financial Fairplay)' : ' - erst die Zahlungsfähigkeit wiederherstellen (siehe Finanzen)'}.`, 'error', 5000); return; }
-        let discount = 1.0 - (staffMembers.scout.hired ? 0.15 : 0);
-        if (typeof getActiveStaffSynergies === 'function' && getActiveStaffSynergies().some(s => s.bonusKey === 'transferDiscount')) discount -= 0.05;
-        let price = Math.round(p.marketValue * discount);
+        let price = getScoutPrice(p);
         if (game.money < price) { showToast(`Vereinskonto reicht nicht: ${formatVal(price)} nötig, ${formatVal(game.money)} vorhanden.`, 'error', 4500); return; }
         playSound('goal');
         game.money -= price;
         squad.push(p);
         globalScoutResults.splice(idx, 1);
         scoutingNetwork.watchlist = scoutingNetwork.watchlist.filter(id => id !== p.id);
+        ensureScoutPreisGrenzen(); delete scoutingNetwork.preisGrenzen[p.id];
         let dbEntry = scoutingNetwork.talentDatabase.find(e => e.id === p.id);
         if (dbEntry) dbEntry.signed = true;
         renderGlobalScoutingView();
@@ -22536,8 +22585,83 @@ document.addEventListener('keydown', ev => {
     if (el) { ev.preventDefault(); openFachwort(el.dataset.fachwort); }
 });
 
+// ---------- Saisonrückblick (Phase 26.13) ----------
+// Ein Fenster pro abgeschlossener Saison: Tabelle, beste Aufstellungsvorlage, Etiketten-Bilanz, Transferbilanz, Ausfälle
+// und die Notizen zu Gegnern. Alle Daten gibt es schon (Karriere-Archiv, Bilanz-Archive, Verletzungs-Verlauf); das Fenster
+// sammelt sie nur und verändert nichts.
+
+function getReviewSeasons() {
+    const karriere = Array.isArray(game.managerCareer) ? game.managerCareer : [];
+    return karriere.filter(e => e.club === game.clubName && e.season < game.season).map(e => e.season).slice(-3).reverse();
+}
+
+function buildSeasonReviewHtml(saison) {
+    const fmt = v => v.toFixed(2).replace('.', ',');
+    const abschnitt = (titel, inhalt) => `<div class="box" style="font-size:var(--fs-small); margin:6px 0; text-align:left;"><strong>${titel}</strong><br>${inhalt}</div>`;
+    const leer = text => `<span style="color:var(--text-muted);">${text}</span>`;
+    const teile = [];
+    const k = (game.managerCareer || []).find(e => e.season === saison && e.club === game.clubName);
+    teile.push(abschnitt('🏆 Tabelle', k ? `Platz ${k.rank} in der ${mpEsc(k.league)}: ${k.won}S ${k.drawn}U ${k.lost}N, Tore ${k.goalsFor}:${k.goalsAgainst}, ${k.points} Punkte.` : leer('Keine Tabelle gespeichert.')));
+    const va = (game.vorlageBilanzArchiv || []).find(a => a.season === saison);
+    const beste = va && typeof findeBesteVorlage === 'function' ? findeBesteVorlage(va.eintraege) : null;
+    const vaGesamt = va ? Object.values(va.eintraege).filter(b => b.spiele > 0) : [];
+    teile.push(abschnitt('📈 Aufstellungsvorlagen', beste ? `🏅 „${mpEsc(beste.name)}“: ${beste.s}S ${beste.u}U ${beste.n}N, ${fmt(presetPunkteProSpiel(beste))} Punkte je Spiel (${vaGesamt.length} Vorlage${vaGesamt.length === 1 ? '' : 'n'} im Einsatz).`
+        : vaGesamt.length ? `${vaGesamt.length} Vorlage${vaGesamt.length === 1 ? '' : 'n'} im Einsatz, aber keine mit drei Einsätzen.` : leer('Keine Vorlage wurde in Ligaspielen genutzt.')));
+    const tv = game.etikettBilanzVorjahr;
+    let etiketten = '';
+    if (tv && tv.season === saison && tv.daten && typeof SPIELER_ETIKETTEN !== 'undefined') {
+        etiketten = SPIELER_ETIKETTEN.filter(e => tv.daten[e.id] && tv.daten[e.id].mit.spiele >= TAG_BILANZ_MIN && tv.daten[e.id].ohne.spiele >= TAG_BILANZ_MIN).map(e => {
+            const d = tv.daten[e.id], diff = tagPunkteProSpiel(d.mit) - tagPunkteProSpiel(d.ohne);
+            return `${e.label}: mit ${fmt(tagPunkteProSpiel(d.mit))}, ohne ${fmt(tagPunkteProSpiel(d.ohne))} Pkt/Spiel (${diff >= 0 ? '+' : ''}${fmt(diff)})`;
+        }).join('<br>');
+    }
+    teile.push(abschnitt('🏷️ Etiketten', etiketten || leer('Keine Etiketten mit genug Spielen (je Seite mindestens 5) in dieser Saison.')));
+    const tb = (game.transferBilanzHistory || []).find(x => x.season === saison);
+    teile.push(abschnitt('💰 Transfers', tb ? `Verkäufe +${formatVal(tb.verkauf)}, Käufe −${formatVal(tb.kauf)}, Saldo <strong style="color:${tb.netto >= 0 ? 'var(--primary)' : 'var(--danger)'};">${tb.netto >= 0 ? '+' : ''}${formatVal(tb.netto)}</strong>.` : leer('Keine Transfers in dieser Saison.')));
+    const ausfaelle = squad.map(p => {
+        const log = (Array.isArray(p.injuryLog) ? p.injuryLog : []).filter(e => e.season === saison);
+        return { p, n: log.length, tage: log.reduce((sum, e) => sum + (e.tage || 0), 0) };
+    }).filter(x => x.n > 0).sort((a, b) => b.tage - a.tage);
+    const summe = ausfaelle.reduce((sum, x) => sum + x.tage, 0);
+    teile.push(abschnitt('🩹 Ausfälle', ausfaelle.length ? `${summe} verpasste Spiele bei ${ausfaelle.length} aktuellen Spielern. Am längsten: ${ausfaelle.slice(0, 3).map(x => `${mpEsc(x.p.name)} (${x.tage})`).join(', ')}.` : leer('Bei den heutigen Spielern ist für diese Saison nichts im Verlauf.')));
+    const notizen = Object.keys(game.gegnerNotizen || {}).filter(n => game.gegnerNotizen[n].season === saison).sort((a, b) => a.localeCompare(b));
+    teile.push(abschnitt('📓 Notizen zu Gegnern', notizen.length ? notizen.map(n => `<strong>${mpEsc(n)}</strong>: ${mpEsc(game.gegnerNotizen[n].text)}`).join('<br>') : leer('In dieser Saison wurde keine Notiz geschrieben oder geändert.')));
+    return teile.join('');
+}
+
+function openSeasonReview(saison) {
+    const body = document.getElementById('season-review-body'), ov = document.getElementById('season-review-overlay');
+    if (!body || !ov) return;
+    saison = Number(saison) || getReviewSeasons()[0];
+    if (!saison) { showToast('Es gibt noch keine abgeschlossene Saison für einen Rückblick.', 'error'); return; }
+    body.innerHTML = `<div class="panel-header">📚 Saisonrückblick ${saison}</div>` + buildSeasonReviewHtml(saison);
+    ov.classList.add('show');
+}
+
+function closeSeasonReview() {
+    const ov = document.getElementById('season-review-overlay');
+    if (ov) ov.classList.remove('show');
+}
+
+function renderSeasonReviewBox() {
+    const box = document.getElementById('season-review-box');
+    if (!box) return;
+    const saisons = getReviewSeasons();
+    box.innerHTML = '<div class="panel-header" style="color:var(--blue);">📚 Saisonrückblick</div>'
+        + (saisons.length ? `<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 9em), 1fr)); gap:6px;">${saisons.map(s => `<button onclick="openSeasonReview(${s})" class="btn-secondary">Saison ${s}</button>`).join('')}</div>`
+            : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Nach dem ersten Saisonende findest du hier einen Rückblick auf Tabelle, Aufstellungsvorlagen, Etiketten, Transfers, Ausfälle und Notizen.</div>');
+}
+
+// Saisonende: Hinweis im Postfach (ein Fenster würde sich mit den Meldungen des Saisonwechsels stapeln)
+function announceSeasonReview() {
+    const saison = game.season - 1;
+    if (saison < 1 || typeof addInboxMessage !== 'function') return;
+    addInboxMessage('info', `📚 Saisonrückblick ${saison}`, 'Tabelle, beste Aufstellungsvorlage, Etiketten, Transfers, Ausfälle und Notizen der Saison auf einen Blick: Kader → Analyse → Saisonrückblick.', 'screen-squad');
+}
+
 function renderInsightsPanels() {
     renderSeriesTracker();
+    renderSeasonReviewBox();
 }
 
 /* eslint-enable */
@@ -22846,7 +22970,7 @@ function resetManagerSnooze() {
     renderManagerAssistant();
 }
 
-function getManagerTodos(alle) {
+function getManagerTodos(alle, roh) {
     const t = [];
     const probleme = typeof getLineupProblems === 'function' ? getLineupProblems().filter(x => x.ton === 'schlecht') : [];
     if (probleme.length) t.push({ id: 'aufstellung', prio: 95, icon: '🔴', text: `Aufstellung prüfen: ${probleme[0].text}`, label: 'Zur Aufstellung', aktion: "showScreen('screen-squad')" });
@@ -22884,8 +23008,11 @@ function getManagerTodos(alle) {
     }
     const raten = typeof activeLoans !== 'undefined' ? activeLoans.reduce((s, l) => s + (l.installment || 0), 0) : 0;
     if (raten > 0 && game.money >= 0 && game.money < raten * 3) t.push({ id: 'kredit', prio: 78, icon: '🟠', text: `Die Kasse (${formatVal(game.money)}) deckt nur ${Math.floor(game.money / raten)} von 3 anstehenden Kreditraten (${formatVal(raten)} je Spieltag).`, label: 'Zu den Finanzen', aktion: "showScreen('screen-finances')" });
+    const preisAlarm = typeof getScoutPriceAlerts === 'function' ? getScoutPriceAlerts() : [];
+    if (preisAlarm.length) t.push({ id: 'scout-alarm', prio: 70, icon: '🔔', text: `Preis-Alarm: ${preisAlarm.slice(0, 2).map(x => `${x.p.name} (${x.p.pos}, Str ${x.p.strength}) für ${formatVal(x.preis)}`).join(', ')}${preisAlarm.length > 2 ? ' …' : ''} liegt unter deiner Grenze und ist bezahlbar.`, label: 'Zum Scouting', aktion: "showScreen('screen-scouting-global')" });
     const ungelesen = typeof inboxMessages !== 'undefined' ? inboxMessages.filter(m => !m.read).length : 0;
     if (ungelesen >= 8) t.push({ id: 'postfach', prio: 20, icon: '📬', text: `${ungelesen} ungelesene Nachrichten im Postfach.`, label: 'Zum Postfach', aktion: "showScreen('screen-inbox')" });
+    if (roh) return t;
     const offen = t.filter(x => !istZurueckgestellt(x.id));
     offen.sort((a, b) => b.prio - a.prio);
     return alle ? offen : offen.slice(0, 3);
@@ -22910,6 +23037,34 @@ function getReturnLineHtml() {
     return `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:6px;">🩹 Zurück: ${sichtbar}${liste.length > 3 ? ` und ${liste.length - 3} weitere` : ''}</div>`;
 }
 
+// „Erledigt seit dem letzten Spieltag“: Verschwindet ein Schritt zwischen zwei Anzeigen im selben Spieltag aus der Liste,
+// hat der Manager ihn erledigt. Über einen Spieltagswechsel hinweg zählt das nicht (dann ändert die Simulation den Stand),
+// und auslaufende Fristen („fenster“) sind keine Erledigung. game.assistentErledigt = { season, matchday, liste: [{ id, text }] }
+const ASSISTENT_ERLEDIGT_NICHT = ['fenster'];
+
+function trackAssistentErledigt(roh) {
+    if (!game.assistentVorher || typeof game.assistentVorher !== 'object' || Array.isArray(game.assistentVorher)) game.assistentVorher = {};
+    let e = game.assistentErledigt;
+    if (!e || typeof e !== 'object' || !Array.isArray(e.liste) || e.season !== game.season || e.matchday !== game.matchday) e = game.assistentErledigt = { season: game.season, matchday: game.matchday, liste: [] };
+    const v = game.assistentVorher;
+    const jetzt = {};
+    roh.forEach(x => { jetzt[x.id] = x.text; });
+    if (v.season === game.season && v.matchday === game.matchday && v.items) {
+        Object.keys(v.items).forEach(id => {
+            if (!(id in jetzt) && !ASSISTENT_ERLEDIGT_NICHT.includes(id) && !e.liste.some(x => x.id === id)) e.liste.push({ id, text: v.items[id] });
+        });
+        // Taucht ein erledigter Schritt später wieder auf, zählt er nicht mehr als erledigt
+        e.liste = e.liste.filter(x => !(x.id in jetzt));
+    }
+    game.assistentVorher = { season: game.season, matchday: game.matchday, items: jetzt };
+}
+
+function getAssistentErledigtHtml() {
+    const e = game.assistentErledigt;
+    if (!e || e.season !== game.season || e.matchday !== game.matchday || !Array.isArray(e.liste) || !e.liste.length) return '';
+    return `<details class="ui-fold" style="margin-top:6px;"><summary>✅ Erledigt seit dem letzten Spieltag (${e.liste.length})</summary>${e.liste.map(x => `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin:2px 0;">✓ ${mpEsc(x.text)}</div>`).join('')}</details>`;
+}
+
 // updateUI() ruft den Assistenten bei jedem Aufruf; das DOM wird nur neu geschrieben, wenn sich der Inhalt ändert
 let managerAssistantLetzterInhalt = '';
 
@@ -22919,6 +23074,7 @@ function renderManagerAssistant() {
     const dash = document.getElementById('screen-dashboard');
     if (!dash || dash.style.display === 'none') return;
     if (typeof squad === 'undefined' || !squad.length) { box.innerHTML = ''; managerAssistantLetzterInhalt = ''; return; }
+    trackAssistentErledigt(getManagerTodos(true, true));
     const todos = getManagerTodos();
     ensureAssistentState();
     const zurueck = Object.keys(game.assistentZurueck).filter(istZurueckgestellt).length;
@@ -22926,6 +23082,7 @@ function renderManagerAssistant() {
         ? todos.map(x => `<div class="box" style="margin:4px 0; font-size:var(--fs-small); display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:6px 8px;"><span style="flex:1 1 11em; min-width:0;">${x.icon} ${mpEsc(x.text)}</span><span style="display:flex; gap:4px; flex:0 0 auto;"><button onclick="${x.aktion}" class="btn-secondary" style="width:auto; flex:0 0 auto;">${x.label}</button>${ASSISTENT_NICHT_ZURUECK.includes(x.id) ? '' : `<button onclick="snoozeManagerTodo('${x.id}')" class="btn-secondary" style="width:auto; flex:0 0 auto;" title="Diesen Schritt ${ASSISTENT_ZURUECK_SPIELTAGE} Spieltage ausblenden">⏸️ Später</button>`}</span></div>`).join('')
         : `<div class="box" style="font-size:var(--fs-small);">✅ Alles im grünen Bereich: Aufstellung steht, keine Verträge drängen, die Kasse passt. Zeit für den nächsten Spieltag.</div>`)
         + (zurueck ? `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:6px;">⏸️ ${zurueck} Schritt${zurueck === 1 ? '' : 'e'} zurückgestellt <button onclick="resetManagerSnooze()" class="btn-secondary" style="width:auto; margin:0 0 0 6px;">Alle wieder zeigen</button></div>` : '')
+        + getAssistentErledigtHtml()
         + getReturnLineHtml();
     if (html === managerAssistantLetzterInhalt && box.firstChild) return;
     managerAssistantLetzterInhalt = html;
@@ -31851,6 +32008,7 @@ function concludeSeasonAndAdvance() {
         incomingOffers = [];
         if (typeof evaluateFinancialFairplay === 'function') evaluateFinancialFairplay();
         game.season++;
+        if (typeof announceSeasonReview === 'function') announceSeasonReview();
         if (typeof startNewSeasonObjectives === 'function') startNewSeasonObjectives();
         if (typeof refreshB2BContracts === 'function') refreshB2BContracts();
         if (typeof openMemberAssembly === 'function') openMemberAssembly();

@@ -137,6 +137,45 @@
         updateUI();
     }
 
+    // Ablöse eines Scouting-Fundes: Marktwert mit Scout- und Synergie-Rabatt
+    function getScoutDiscount() {
+        let discount = 1.0 - (staffMembers.scout.hired ? 0.15 : 0);
+        if (typeof getActiveStaffSynergies === 'function' && getActiveStaffSynergies().some(s => s.bonusKey === 'transferDiscount')) discount -= 0.05;
+        return discount;
+    }
+    function getScoutPrice(p) { return Math.round(p.marketValue * getScoutDiscount()); }
+
+    // Preis-Alarm (Phase 26.13): zu beobachteten Spielern lässt sich eine Preisgrenze setzen (scoutingNetwork.preisGrenzen).
+    // Der Manager-Assistent meldet sich, sobald der Preis darunter liegt und Kasse, Transferbudget und Kaderplatz reichen.
+    function ensureScoutPreisGrenzen() {
+        if (!scoutingNetwork.preisGrenzen || typeof scoutingNetwork.preisGrenzen !== 'object' || Array.isArray(scoutingNetwork.preisGrenzen)) scoutingNetwork.preisGrenzen = {};
+    }
+    function setScoutPriceAlarm(playerId) {
+        ensureScoutPreisGrenzen();
+        const feld = document.getElementById('scout-grenze-' + playerId);
+        const mio = feld ? parseFloat(String(feld.value).replace(',', '.')) : NaN;
+        if (!scoutingNetwork.watchlist.includes(playerId)) { showToast('Der Alarm gilt nur für beobachtete Spieler.', 'error'); return; }
+        if (!feld || !feld.value.trim()) {
+            if (scoutingNetwork.preisGrenzen[playerId]) { delete scoutingNetwork.preisGrenzen[playerId]; showToast('🔔 Preis-Alarm entfernt.', 'info'); }
+            else showToast('Gib eine Preisgrenze in Mio. € ein, zum Beispiel 2,5.', 'error');
+        } else if (!(mio > 0) || mio > 5000) {
+            showToast('Die Preisgrenze muss eine Zahl zwischen 0 und 5000 (Mio. €) sein.', 'error');
+            return;
+        } else {
+            scoutingNetwork.preisGrenzen[playerId] = Math.round(mio * 1000000);
+            showToast(`🔔 Preis-Alarm bei ${formatVal(scoutingNetwork.preisGrenzen[playerId])} gesetzt.`, 'success');
+        }
+        renderGlobalScoutingView();
+    }
+    // Beobachtete Spieler, die unter ihrer Preisgrenze liegen und jetzt bezahlbar sind
+    function getScoutPriceAlerts() {
+        ensureScoutPreisGrenzen();
+        if (typeof isTransferEmbargoActive === 'function' && isTransferEmbargoActive()) return [];
+        if (typeof squad !== 'undefined' && squad.length >= 22) return [];
+        return globalScoutResults.filter(p => scoutingNetwork.watchlist.includes(p.id) && scoutingNetwork.preisGrenzen[p.id]).map(p => ({ p, preis: getScoutPrice(p), grenze: scoutingNetwork.preisGrenzen[p.id] }))
+            .filter(x => x.preis <= x.grenze && game.money >= x.preis && game.transferBudget >= x.preis);
+    }
+
     // Beobachtungsliste: passive, kostenlose Vertrauenssteigerung über mehrere Spieltage.
     function addToWatchlist(playerId) {
         if (scoutingNetwork.watchlist.includes(playerId)) return;
@@ -147,6 +186,7 @@
     }
     function removeFromWatchlist(playerId) {
         scoutingNetwork.watchlist = scoutingNetwork.watchlist.filter(id => id !== playerId);
+        ensureScoutPreisGrenzen(); delete scoutingNetwork.preisGrenzen[playerId];
         renderGlobalScoutingView();
     }
     function tickWatchlist() {
@@ -249,8 +289,7 @@
                 list.innerHTML = '<div class="box">Noch keine Scouting-Missionen abgeschlossen. Entsende oben deine Scouts!</div>';
             } else {
                 globalScoutResults.forEach((p, idx) => {
-                    let discount = 1.0 - (staffMembers.scout.hired ? 0.15 : 0);
-                    if (typeof getActiveStaffSynergies === 'function' && getActiveStaffSynergies().some(s => s.bonusKey === 'transferDiscount')) discount -= 0.05;
+                    let discount = getScoutDiscount();
                     let displayPrice = Math.round(p.marketValue * discount);
                     let confidence = p.scoutConfidence ?? 100;
                     let paceF = getFogRange(p, p.pace, 'pace'), shootF = getFogRange(p, p.shooting, 'shoot'), passF = getFogRange(p, p.passing, 'pass'), physF = getFogRange(p, p.physique, 'phys');
@@ -271,6 +310,14 @@
                             ${confidence < 95 ? `<button onclick="investigateScoutedPlayer('${p.id}')" class="btn-secondary" style="font-size:var(--fs-caption);">🔍 Genauer beobachten [1.500 €]</button>` : '<div></div>'}
                             <button onclick="${isWatched ? `removeFromWatchlist('${p.id}')` : `addToWatchlist('${p.id}')`}" class="btn-secondary" style="font-size:var(--fs-caption);">${isWatched ? '👁️ Von Liste entfernen' : '👁️ Beobachten (passiv)'}</button>
                         </div>
+                        ${isWatched ? (() => {
+                            const g = (scoutingNetwork.preisGrenzen || {})[p.id];
+                            const wert = g ? String(g / 1000000).replace('.', ',') : '';
+                            return `<div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:4px;">
+                                <label for="scout-grenze-${p.id}" style="font-size:var(--fs-caption); flex:1 1 9em;">🔔 Preis-Alarm bis (Mio. €)${g ? `<br><span style="color:${displayPrice <= g ? 'var(--primary)' : 'var(--text-muted)'};">${displayPrice <= g ? 'Preis liegt schon darunter' : 'Alarm bei ' + formatVal(g)}</span>` : ''}</label>
+                                <input id="scout-grenze-${p.id}" type="text" inputmode="decimal" value="${wert}" placeholder="z. B. 2,5" class="input-inline" style="width:6em; min-width:0;">
+                                <button onclick="setScoutPriceAlarm('${p.id}')" class="btn-secondary" style="width:auto; flex:0 0 auto;">${g ? 'Ändern' : 'Setzen'}</button></div>`;
+                        })() : ''}
                         <button onclick="signGlobalScoutPlayer(${idx})" class="btn-primary">Verpflichten [Ablöse: ~${formatVal(displayPrice)}${discount < 1 ? ' (Scout-Rabatt!)' : ''}]</button>
                     `;
                     list.appendChild(row);
@@ -297,15 +344,14 @@
     function signGlobalScoutPlayer(idx) {
         let p = globalScoutResults[idx];
         if (isTransferEmbargoActive()) { showToast(`🚫 Transfersperre aktiv${game.ffpTransferEmbargo ? ' (Financial Fairplay)' : ' - erst die Zahlungsfähigkeit wiederherstellen (siehe Finanzen)'}.`, 'error', 5000); return; }
-        let discount = 1.0 - (staffMembers.scout.hired ? 0.15 : 0);
-        if (typeof getActiveStaffSynergies === 'function' && getActiveStaffSynergies().some(s => s.bonusKey === 'transferDiscount')) discount -= 0.05;
-        let price = Math.round(p.marketValue * discount);
+        let price = getScoutPrice(p);
         if (game.money < price) { showToast(`Vereinskonto reicht nicht: ${formatVal(price)} nötig, ${formatVal(game.money)} vorhanden.`, 'error', 4500); return; }
         playSound('goal');
         game.money -= price;
         squad.push(p);
         globalScoutResults.splice(idx, 1);
         scoutingNetwork.watchlist = scoutingNetwork.watchlist.filter(id => id !== p.id);
+        ensureScoutPreisGrenzen(); delete scoutingNetwork.preisGrenzen[p.id];
         let dbEntry = scoutingNetwork.talentDatabase.find(e => e.id === p.id);
         if (dbEntry) dbEntry.signed = true;
         renderGlobalScoutingView();

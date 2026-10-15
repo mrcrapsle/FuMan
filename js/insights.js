@@ -245,6 +245,81 @@ document.addEventListener('keydown', ev => {
     if (el) { ev.preventDefault(); openFachwort(el.dataset.fachwort); }
 });
 
+// ---------- Saisonrückblick (Phase 26.13) ----------
+// Ein Fenster pro abgeschlossener Saison: Tabelle, beste Aufstellungsvorlage, Etiketten-Bilanz, Transferbilanz, Ausfälle
+// und die Notizen zu Gegnern. Alle Daten gibt es schon (Karriere-Archiv, Bilanz-Archive, Verletzungs-Verlauf); das Fenster
+// sammelt sie nur und verändert nichts.
+
+function getReviewSeasons() {
+    const karriere = Array.isArray(game.managerCareer) ? game.managerCareer : [];
+    return karriere.filter(e => e.club === game.clubName && e.season < game.season).map(e => e.season).slice(-3).reverse();
+}
+
+function buildSeasonReviewHtml(saison) {
+    const fmt = v => v.toFixed(2).replace('.', ',');
+    const abschnitt = (titel, inhalt) => `<div class="box" style="font-size:var(--fs-small); margin:6px 0; text-align:left;"><strong>${titel}</strong><br>${inhalt}</div>`;
+    const leer = text => `<span style="color:var(--text-muted);">${text}</span>`;
+    const teile = [];
+    const k = (game.managerCareer || []).find(e => e.season === saison && e.club === game.clubName);
+    teile.push(abschnitt('🏆 Tabelle', k ? `Platz ${k.rank} in der ${mpEsc(k.league)}: ${k.won}S ${k.drawn}U ${k.lost}N, Tore ${k.goalsFor}:${k.goalsAgainst}, ${k.points} Punkte.` : leer('Keine Tabelle gespeichert.')));
+    const va = (game.vorlageBilanzArchiv || []).find(a => a.season === saison);
+    const beste = va && typeof findeBesteVorlage === 'function' ? findeBesteVorlage(va.eintraege) : null;
+    const vaGesamt = va ? Object.values(va.eintraege).filter(b => b.spiele > 0) : [];
+    teile.push(abschnitt('📈 Aufstellungsvorlagen', beste ? `🏅 „${mpEsc(beste.name)}“: ${beste.s}S ${beste.u}U ${beste.n}N, ${fmt(presetPunkteProSpiel(beste))} Punkte je Spiel (${vaGesamt.length} Vorlage${vaGesamt.length === 1 ? '' : 'n'} im Einsatz).`
+        : vaGesamt.length ? `${vaGesamt.length} Vorlage${vaGesamt.length === 1 ? '' : 'n'} im Einsatz, aber keine mit drei Einsätzen.` : leer('Keine Vorlage wurde in Ligaspielen genutzt.')));
+    const tv = game.etikettBilanzVorjahr;
+    let etiketten = '';
+    if (tv && tv.season === saison && tv.daten && typeof SPIELER_ETIKETTEN !== 'undefined') {
+        etiketten = SPIELER_ETIKETTEN.filter(e => tv.daten[e.id] && tv.daten[e.id].mit.spiele >= TAG_BILANZ_MIN && tv.daten[e.id].ohne.spiele >= TAG_BILANZ_MIN).map(e => {
+            const d = tv.daten[e.id], diff = tagPunkteProSpiel(d.mit) - tagPunkteProSpiel(d.ohne);
+            return `${e.label}: mit ${fmt(tagPunkteProSpiel(d.mit))}, ohne ${fmt(tagPunkteProSpiel(d.ohne))} Pkt/Spiel (${diff >= 0 ? '+' : ''}${fmt(diff)})`;
+        }).join('<br>');
+    }
+    teile.push(abschnitt('🏷️ Etiketten', etiketten || leer('Keine Etiketten mit genug Spielen (je Seite mindestens 5) in dieser Saison.')));
+    const tb = (game.transferBilanzHistory || []).find(x => x.season === saison);
+    teile.push(abschnitt('💰 Transfers', tb ? `Verkäufe +${formatVal(tb.verkauf)}, Käufe −${formatVal(tb.kauf)}, Saldo <strong style="color:${tb.netto >= 0 ? 'var(--primary)' : 'var(--danger)'};">${tb.netto >= 0 ? '+' : ''}${formatVal(tb.netto)}</strong>.` : leer('Keine Transfers in dieser Saison.')));
+    const ausfaelle = squad.map(p => {
+        const log = (Array.isArray(p.injuryLog) ? p.injuryLog : []).filter(e => e.season === saison);
+        return { p, n: log.length, tage: log.reduce((sum, e) => sum + (e.tage || 0), 0) };
+    }).filter(x => x.n > 0).sort((a, b) => b.tage - a.tage);
+    const summe = ausfaelle.reduce((sum, x) => sum + x.tage, 0);
+    teile.push(abschnitt('🩹 Ausfälle', ausfaelle.length ? `${summe} verpasste Spiele bei ${ausfaelle.length} aktuellen Spielern. Am längsten: ${ausfaelle.slice(0, 3).map(x => `${mpEsc(x.p.name)} (${x.tage})`).join(', ')}.` : leer('Bei den heutigen Spielern ist für diese Saison nichts im Verlauf.')));
+    const notizen = Object.keys(game.gegnerNotizen || {}).filter(n => game.gegnerNotizen[n].season === saison).sort((a, b) => a.localeCompare(b));
+    teile.push(abschnitt('📓 Notizen zu Gegnern', notizen.length ? notizen.map(n => `<strong>${mpEsc(n)}</strong>: ${mpEsc(game.gegnerNotizen[n].text)}`).join('<br>') : leer('In dieser Saison wurde keine Notiz geschrieben oder geändert.')));
+    return teile.join('');
+}
+
+function openSeasonReview(saison) {
+    const body = document.getElementById('season-review-body'), ov = document.getElementById('season-review-overlay');
+    if (!body || !ov) return;
+    saison = Number(saison) || getReviewSeasons()[0];
+    if (!saison) { showToast('Es gibt noch keine abgeschlossene Saison für einen Rückblick.', 'error'); return; }
+    body.innerHTML = `<div class="panel-header">📚 Saisonrückblick ${saison}</div>` + buildSeasonReviewHtml(saison);
+    ov.classList.add('show');
+}
+
+function closeSeasonReview() {
+    const ov = document.getElementById('season-review-overlay');
+    if (ov) ov.classList.remove('show');
+}
+
+function renderSeasonReviewBox() {
+    const box = document.getElementById('season-review-box');
+    if (!box) return;
+    const saisons = getReviewSeasons();
+    box.innerHTML = '<div class="panel-header" style="color:var(--blue);">📚 Saisonrückblick</div>'
+        + (saisons.length ? `<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 9em), 1fr)); gap:6px;">${saisons.map(s => `<button onclick="openSeasonReview(${s})" class="btn-secondary">Saison ${s}</button>`).join('')}</div>`
+            : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Nach dem ersten Saisonende findest du hier einen Rückblick auf Tabelle, Aufstellungsvorlagen, Etiketten, Transfers, Ausfälle und Notizen.</div>');
+}
+
+// Saisonende: Hinweis im Postfach (ein Fenster würde sich mit den Meldungen des Saisonwechsels stapeln)
+function announceSeasonReview() {
+    const saison = game.season - 1;
+    if (saison < 1 || typeof addInboxMessage !== 'function') return;
+    addInboxMessage('info', `📚 Saisonrückblick ${saison}`, 'Tabelle, beste Aufstellungsvorlage, Etiketten, Transfers, Ausfälle und Notizen der Saison auf einen Blick: Kader → Analyse → Saisonrückblick.', 'screen-squad');
+}
+
 function renderInsightsPanels() {
     renderSeriesTracker();
+    renderSeasonReviewBox();
 }

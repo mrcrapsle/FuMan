@@ -467,6 +467,7 @@ function concludeSeasonAndAdvance() {
         incomingOffers = [];
         if (typeof evaluateFinancialFairplay === 'function') evaluateFinancialFairplay();
         game.season++;
+        if (typeof announceSeasonReview === 'function') announceSeasonReview();
         if (typeof startNewSeasonObjectives === 'function') startNewSeasonObjectives();
         if (typeof refreshB2BContracts === 'function') refreshB2BContracts();
         if (typeof openMemberAssembly === 'function') openMemberAssembly();

@@ -303,7 +303,7 @@ function resetManagerSnooze() {
     renderManagerAssistant();
 }
 
-function getManagerTodos(alle) {
+function getManagerTodos(alle, roh) {
     const t = [];
     const probleme = typeof getLineupProblems === 'function' ? getLineupProblems().filter(x => x.ton === 'schlecht') : [];
     if (probleme.length) t.push({ id: 'aufstellung', prio: 95, icon: '🔴', text: `Aufstellung prüfen: ${probleme[0].text}`, label: 'Zur Aufstellung', aktion: "showScreen('screen-squad')" });
@@ -341,8 +341,11 @@ function getManagerTodos(alle) {
     }
     const raten = typeof activeLoans !== 'undefined' ? activeLoans.reduce((s, l) => s + (l.installment || 0), 0) : 0;
     if (raten > 0 && game.money >= 0 && game.money < raten * 3) t.push({ id: 'kredit', prio: 78, icon: '🟠', text: `Die Kasse (${formatVal(game.money)}) deckt nur ${Math.floor(game.money / raten)} von 3 anstehenden Kreditraten (${formatVal(raten)} je Spieltag).`, label: 'Zu den Finanzen', aktion: "showScreen('screen-finances')" });
+    const preisAlarm = typeof getScoutPriceAlerts === 'function' ? getScoutPriceAlerts() : [];
+    if (preisAlarm.length) t.push({ id: 'scout-alarm', prio: 70, icon: '🔔', text: `Preis-Alarm: ${preisAlarm.slice(0, 2).map(x => `${x.p.name} (${x.p.pos}, Str ${x.p.strength}) für ${formatVal(x.preis)}`).join(', ')}${preisAlarm.length > 2 ? ' …' : ''} liegt unter deiner Grenze und ist bezahlbar.`, label: 'Zum Scouting', aktion: "showScreen('screen-scouting-global')" });
     const ungelesen = typeof inboxMessages !== 'undefined' ? inboxMessages.filter(m => !m.read).length : 0;
     if (ungelesen >= 8) t.push({ id: 'postfach', prio: 20, icon: '📬', text: `${ungelesen} ungelesene Nachrichten im Postfach.`, label: 'Zum Postfach', aktion: "showScreen('screen-inbox')" });
+    if (roh) return t;
     const offen = t.filter(x => !istZurueckgestellt(x.id));
     offen.sort((a, b) => b.prio - a.prio);
     return alle ? offen : offen.slice(0, 3);
@@ -367,6 +370,34 @@ function getReturnLineHtml() {
     return `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:6px;">🩹 Zurück: ${sichtbar}${liste.length > 3 ? ` und ${liste.length - 3} weitere` : ''}</div>`;
 }
 
+// „Erledigt seit dem letzten Spieltag“: Verschwindet ein Schritt zwischen zwei Anzeigen im selben Spieltag aus der Liste,
+// hat der Manager ihn erledigt. Über einen Spieltagswechsel hinweg zählt das nicht (dann ändert die Simulation den Stand),
+// und auslaufende Fristen („fenster“) sind keine Erledigung. game.assistentErledigt = { season, matchday, liste: [{ id, text }] }
+const ASSISTENT_ERLEDIGT_NICHT = ['fenster'];
+
+function trackAssistentErledigt(roh) {
+    if (!game.assistentVorher || typeof game.assistentVorher !== 'object' || Array.isArray(game.assistentVorher)) game.assistentVorher = {};
+    let e = game.assistentErledigt;
+    if (!e || typeof e !== 'object' || !Array.isArray(e.liste) || e.season !== game.season || e.matchday !== game.matchday) e = game.assistentErledigt = { season: game.season, matchday: game.matchday, liste: [] };
+    const v = game.assistentVorher;
+    const jetzt = {};
+    roh.forEach(x => { jetzt[x.id] = x.text; });
+    if (v.season === game.season && v.matchday === game.matchday && v.items) {
+        Object.keys(v.items).forEach(id => {
+            if (!(id in jetzt) && !ASSISTENT_ERLEDIGT_NICHT.includes(id) && !e.liste.some(x => x.id === id)) e.liste.push({ id, text: v.items[id] });
+        });
+        // Taucht ein erledigter Schritt später wieder auf, zählt er nicht mehr als erledigt
+        e.liste = e.liste.filter(x => !(x.id in jetzt));
+    }
+    game.assistentVorher = { season: game.season, matchday: game.matchday, items: jetzt };
+}
+
+function getAssistentErledigtHtml() {
+    const e = game.assistentErledigt;
+    if (!e || e.season !== game.season || e.matchday !== game.matchday || !Array.isArray(e.liste) || !e.liste.length) return '';
+    return `<details class="ui-fold" style="margin-top:6px;"><summary>✅ Erledigt seit dem letzten Spieltag (${e.liste.length})</summary>${e.liste.map(x => `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin:2px 0;">✓ ${mpEsc(x.text)}</div>`).join('')}</details>`;
+}
+
 // updateUI() ruft den Assistenten bei jedem Aufruf; das DOM wird nur neu geschrieben, wenn sich der Inhalt ändert
 let managerAssistantLetzterInhalt = '';
 
@@ -376,6 +407,7 @@ function renderManagerAssistant() {
     const dash = document.getElementById('screen-dashboard');
     if (!dash || dash.style.display === 'none') return;
     if (typeof squad === 'undefined' || !squad.length) { box.innerHTML = ''; managerAssistantLetzterInhalt = ''; return; }
+    trackAssistentErledigt(getManagerTodos(true, true));
     const todos = getManagerTodos();
     ensureAssistentState();
     const zurueck = Object.keys(game.assistentZurueck).filter(istZurueckgestellt).length;
@@ -383,6 +415,7 @@ function renderManagerAssistant() {
         ? todos.map(x => `<div class="box" style="margin:4px 0; font-size:var(--fs-small); display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:6px 8px;"><span style="flex:1 1 11em; min-width:0;">${x.icon} ${mpEsc(x.text)}</span><span style="display:flex; gap:4px; flex:0 0 auto;"><button onclick="${x.aktion}" class="btn-secondary" style="width:auto; flex:0 0 auto;">${x.label}</button>${ASSISTENT_NICHT_ZURUECK.includes(x.id) ? '' : `<button onclick="snoozeManagerTodo('${x.id}')" class="btn-secondary" style="width:auto; flex:0 0 auto;" title="Diesen Schritt ${ASSISTENT_ZURUECK_SPIELTAGE} Spieltage ausblenden">⏸️ Später</button>`}</span></div>`).join('')
         : `<div class="box" style="font-size:var(--fs-small);">✅ Alles im grünen Bereich: Aufstellung steht, keine Verträge drängen, die Kasse passt. Zeit für den nächsten Spieltag.</div>`)
         + (zurueck ? `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:6px;">⏸️ ${zurueck} Schritt${zurueck === 1 ? '' : 'e'} zurückgestellt <button onclick="resetManagerSnooze()" class="btn-secondary" style="width:auto; margin:0 0 0 6px;">Alle wieder zeigen</button></div>` : '')
+        + getAssistentErledigtHtml()
         + getReturnLineHtml();
     if (html === managerAssistantLetzterInhalt && box.firstChild) return;
     managerAssistantLetzterInhalt = html;

@@ -107,6 +107,7 @@ async function main() {
         S.testVergleichUndNotizen,
         S.testFeinschliffNachPhase26,
         S.testRunde27Funktionen,
+        S.testRunde28Funktionen,
         S.testKnopfWorteHandy,
         S.testEntlassungsGrund,
         S.testEnglishUi,

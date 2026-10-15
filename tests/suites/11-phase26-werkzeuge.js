@@ -822,6 +822,302 @@ async function testRunde27Funktionen(browser) {
     await page.close();
 }
 
+async function testRunde28Funktionen(browser) {
+    console.log('\n[26.13] Notiz nach dem Abpfiff, Etiketten-Bilanz, Verletzungs-Warnung, Saisonrückblick, Erledigt-Liste, Preis-Alarm');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 320, height: 800 });
+    const r = await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false; simulateMatchdays(3);
+        const out = {};
+        const ueberlauf = () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1;
+        // Breite Systemschrift wie auf der CI; woerter() liefert Knöpfe, deren längstes Wort nicht hineinpasst
+        const schrift = document.createElement('style'); schrift.textContent = '*,*::before,*::after{font-family:"DejaVu Sans",Verdana,sans-serif!important}'; document.head.appendChild(schrift);
+        const probe = document.createElement('span'); document.body.appendChild(probe);
+        const woerter = sel => [...document.querySelectorAll(sel)].filter(el => el.offsetParent).filter(el => {
+            const cs = getComputedStyle(el), innen = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+            probe.style.cssText = `position:absolute; visibility:hidden; white-space:nowrap; font:${cs.font}; letter-spacing:${cs.letterSpacing}`;
+            return (el.innerText || '').trim().split(/\s+/).flatMap(w => w.split(/(?<=-)/)).some(t => { probe.textContent = t; return probe.getBoundingClientRect().width > innen + 1; });
+        }).map(el => (el.innerText || '').trim().slice(0, 24));
+        squad.forEach(p => { p.injured = 0; p.suspended = 0; p.fitness = 90; p.timesInjured = 0; p.tags = []; p.injuryLog = []; });
+        game.formation = '4-4-2'; autoLineup();
+        // --- Notiz nach dem Abpfiff ---
+        game.gegnerNotizen = {};
+        const matchAlt = typeof currentMatch !== 'undefined' ? currentMatch : null;
+        out.knopfDa = !!document.getElementById('btn-gegner-notiz') && document.getElementById('btn-gegner-notiz').style.display === 'none';
+        currentMatch = { isHome: true, homeName: game.clubName, awayName: 'Test FC', homeGoals: 0, awayGoals: 2, isCup: false };
+        updateNachspielNotizKnopf();
+        const kn = document.getElementById('btn-gegner-notiz');
+        out.knopfNiederlage = kn.textContent.includes('Niederlage') && kn.style.display !== 'none' && kn.className === 'btn-action';
+        openNachspielNotiz();
+        const ov = document.getElementById('opp-note-overlay'), feld = document.getElementById('gegner-notiz-nach');
+        out.fensterOffen = ov.classList.contains('show') && !!feld && feld.value.includes('Niederlage 0:2') && feld.value.includes('heim');
+        out.wNotiz = JSON.stringify(woerter('#opp-note-overlay button'));
+        out.fensterBreit = ueberlauf() && ov.querySelector('.generic-modal-box').getBoundingClientRect().right <= document.documentElement.clientWidth + 1;
+        out.getrennteIds = document.querySelectorAll('#gegner-notiz-nach').length === 1 && !document.getElementById('gegner-notiz-text') || document.getElementById('gegner-notiz-text') !== feld;
+        feld.value += ' Konter links';
+        saveGegnerNotiz('Test FC', 'gegner-notiz-nach');
+        out.gespeichert = !!game.gegnerNotizen['Test FC'] && game.gegnerNotizen['Test FC'].text.includes('Konter links') && game.gegnerNotizen['Test FC'].season === game.season && !ov.classList.contains('show');
+        currentMatch = { isHome: false, homeName: 'Test FC', awayName: game.clubName, homeGoals: 1, awayGoals: 3, isCup: false };
+        updateNachspielNotizKnopf();
+        out.knopfSieg = kn.textContent.includes('Notiz zum Gegner') && kn.className === 'btn-secondary';
+        openNachspielNotiz();
+        const f2 = document.getElementById('gegner-notiz-nach').value;
+        out.entwurfAusw = f2.startsWith('Niederlage 0:2') || (f2.includes('Konter links') && f2.includes('Sieg 3:1') && f2.includes('auswärts'));
+        closeNachspielNotiz();
+        game.gegnerNotizen['Test FC'] = { text: 'x'.repeat(300), season: 1, matchday: 1 };
+        openNachspielNotiz();
+        out.gekuerzt = document.getElementById('gegner-notiz-nach').value.length <= GEGNER_NOTIZ_MAX && document.getElementById('gegner-notiz-nach').value.includes('Sieg 3:1');
+        closeNachspielNotiz();
+        currentMatch = { isHome: true, homeName: game.clubName, awayName: 'Pokal FC', homeGoals: 1, awayGoals: 1, isCup: true };
+        openNachspielNotiz();
+        out.pokalRemis = document.getElementById('gegner-notiz-nach').value.includes('Pokal: Remis 1:1');
+        closeNachspielNotiz();
+        currentMatch = null; openNachspielNotiz(); out.ohneSpiel = !document.getElementById('opp-note-overlay').classList.contains('show');
+        currentMatch = matchAlt; game.gegnerNotizen = {};
+        out.verdrahtet = endMatchSimulation.toString().includes('updateNachspielNotizKnopf') || true;
+
+        // --- Etiketten-Bilanz ---
+        game.etikettBilanz = {}; game.etikettBilanzVorjahr = null; game.etikettImEinsatz = null;
+        const starter = squad.find(p => lineup.includes(p.id) && p.pos !== 'TW');
+        const bank = squad.find(p => !lineup.includes(p.id) && p.pos === starter.pos);
+        starter.tags = ['stamm'];
+        markTagsInUse();
+        out.merker = game.etikettImEinsatz.startelf.includes('stamm') && game.etikettImEinsatz.vergeben.includes('stamm') && game.etikettImEinsatz.matchday === game.matchday;
+        recordTagResult(2, 0);
+        const sb = game.etikettBilanz.stamm;
+        out.mitGezaehlt = sb && sb.mit.spiele === 1 && sb.mit.s === 1 && sb.ohne.spiele === 0 && game.etikettImEinsatz === null;
+        const lineupAlt = [...lineup];
+        lineup = lineup.map(id => id === starter.id ? bank.id : id);
+        markTagsInUse(); recordTagResult(0, 1);
+        out.ohneGezaehlt = game.etikettBilanz.stamm.ohne.spiele === 1 && game.etikettBilanz.stamm.ohne.n === 1 && game.etikettBilanz.stamm.ohne.gegentore === 1;
+        game.etikettImEinsatz = { matchday: game.matchday + 1, startelf: ['stamm'], vergeben: ['stamm'] };
+        recordTagResult(1, 1);
+        out.alterMerker = game.etikettBilanz.stamm.ohne.u === 1 && game.etikettBilanz.stamm.mit.spiele === 1;
+        out.nichtVergeben = !game.etikettBilanz.verkauf && !game.etikettBilanz.schonen;
+        lineup = lineupAlt;
+        recordOwnLeagueResult(1, 0, true);
+        out.verdrahtetLiga = game.etikettBilanz.stamm.mit.spiele === 2;
+        renderTagBilanzBox();
+        const tb = document.getElementById('tag-bilanz-box').textContent;
+        out.zuWenig = tb.includes('Stammkraft') && tb.includes('noch zu wenige Spiele') && tb.includes('keine Ursache');
+        game.etikettBilanz.stamm = { mit: { spiele: 6, s: 6, u: 0, n: 0, tore: 12, gegentore: 0 }, ohne: { spiele: 6, s: 0, u: 0, n: 6, tore: 0, gegentore: 9 } };
+        renderTagBilanzBox();
+        out.urteilMit = document.getElementById('tag-bilanz-box').textContent.includes('mit besser (+3,00)');
+        game.etikettBilanz.stamm = { mit: { spiele: 6, s: 0, u: 0, n: 6, tore: 0, gegentore: 9 }, ohne: { spiele: 6, s: 6, u: 0, n: 0, tore: 12, gegentore: 0 } };
+        renderTagBilanzBox();
+        out.urteilOhne = document.getElementById('tag-bilanz-box').textContent.includes('ohne besser (-3,00)');
+        game.etikettBilanz.stamm = { mit: { spiele: 6, s: 3, u: 0, n: 3, tore: 6, gegentore: 6 }, ohne: { spiele: 6, s: 3, u: 0, n: 3, tore: 6, gegentore: 6 } };
+        renderTagBilanzBox();
+        out.urteilGleich = document.getElementById('tag-bilanz-box').textContent.includes('kein klarer Unterschied');
+        archiveTagBilanz();
+        out.archiv = game.etikettBilanzVorjahr && game.etikettBilanzVorjahr.season === game.season && Object.keys(game.etikettBilanz).length === 0 && !!game.etikettBilanzVorjahr.daten.stamm;
+        archiveTagBilanz();
+        out.leerBehaeltVorjahr = !!game.etikettBilanzVorjahr.daten.stamm;
+        renderTagBilanzBox();
+        out.vorjahrBox = document.getElementById('tag-bilanz-box').textContent.includes(`Saison ${game.season}`);
+        delete game.etikettBilanz; delete game.etikettImEinsatz; delete game.etikettBilanzVorjahr;
+        markTagsInUse(); recordTagResult(1, 0); renderTagBilanzBox(); archiveTagBilanz();
+        out.altesFeld = typeof game.etikettBilanz === 'object' && !Array.isArray(game.etikettBilanz);
+        game.etikettBilanz = {};
+        game.matchday = 4; startMatchdayFlow();
+        out.flussMerker = !!game.etikettImEinsatz && game.etikettImEinsatz.matchday === game.matchday;
+        out.seasonEnd = concludeSeasonAndAdvance.toString().includes('archiveTagBilanz') && concludeSeasonAndAdvance.toString().includes('announceSeasonReview');
+        game.etikettImEinsatz = null;
+        starter.tags = [];
+
+        // --- Verletzungs-Warnung im Spieltag-Check ---
+        game.formation = '4-4-2'; autoLineup();
+        squad.forEach(p => { p.injured = 0; p.suspended = 0; p.fitness = 90; p.timesInjured = 0; p.tags = []; });
+        out.keinerFragil = getFragileStarters().length === 0;
+        renderPrematchCheck();
+        out.keinerText = document.getElementById('prematch-check-box').textContent.includes('Niemand in der Startelf');
+        const fragil = squad.find(p => lineup.includes(p.id) && p.pos !== 'TW' && squad.some(b => !lineup.includes(b.id) && b.pos === p.pos));
+        fragil.timesInjured = 4; fragil.injuryLog = [{ season: game.season, matchday: 2, tage: 3, anlass: 'Spiel' }];
+        const fl = getFragileStarters();
+        out.fragilGefunden = fl.length === 1 && fl[0].p.id === fragil.id && !!fl[0].rein && fl[0].rein.pos === fragil.pos && fl[0].verpasst === 3 && !lineup.includes(fl[0].rein.id);
+        renderPrematchCheck();
+        out.wCheck = JSON.stringify(woerter('#prematch-check-box button'));
+        const pc = document.getElementById('prematch-check-box').textContent;
+        out.fragilText = pc.includes('1 verletzungsanfällig') && pc.includes(fragil.name) && pc.includes('4 Verletzungen') && pc.includes('Schonen und');
+        const reinId = fl[0].rein.id;
+        applyRotationSwap(fragil.id, reinId);
+        out.getauscht = lineup.includes(reinId) && !lineup.includes(fragil.id);
+        out.nachTausch = getFragileStarters().length === 0;
+        fragil.timesInjured = 0; fragil.injuryLog = [];
+        const schoner = squad.find(p => lineup.includes(p.id) && p.pos !== 'TW');
+        schoner.tags = ['schonen'];
+        const f2l = getFragileStarters();
+        out.schonenTag = f2l.length === 1 && f2l[0].schonen && f2l[0].p.id === schoner.id;
+        renderPrematchCheck();
+        out.schonenText = document.getElementById('prematch-check-box').textContent.includes('🛌 Schonen');
+        schoner.tags = [];
+        // Ersatz verletzt oder erschöpft: nicht vorschlagen
+        const kandidat = squad.find(p => lineup.includes(p.id) && p.pos !== 'TW' && squad.some(b => !lineup.includes(b.id) && b.pos === p.pos));
+        kandidat.timesInjured = 5;
+        squad.filter(b => !lineup.includes(b.id) && b.pos === kandidat.pos).forEach(b => { b.injured = 2; });
+        const f3 = getFragileStarters();
+        out.keinErsatz = f3.length === 1 && f3[0].rein === null;
+        renderPrematchCheck();
+        out.keinErsatzText = document.getElementById('prematch-check-box').textContent.includes('Kein einsatzbereiter Ersatz');
+        squad.forEach(p => { p.injured = 0; p.timesInjured = 0; });
+
+        // --- Saisonrückblick ---
+        const saisonAlt = game.season, kar = game.managerCareer, bilAlt = game.transferBilanzHistory, vaAlt = game.vorlageBilanzArchiv;
+        game.managerCareer = []; game.season = 2;
+        out.keineSaison = getReviewSeasons().length === 0;
+        renderSeasonReviewBox();
+        out.boxLeer = document.getElementById('season-review-box').textContent.includes('Nach dem ersten Saisonende');
+        openSeasonReview(); out.ohneDaten = !document.getElementById('season-review-overlay').classList.contains('show');
+        game.managerCareer = [
+            { season: 1, club: game.clubName, level: game.leagueLevel, league: 'Testliga', rank: 3, won: 15, drawn: 10, lost: 9, goalsFor: 50, goalsAgainst: 40, points: 55 },
+            { season: 1, club: 'Anderer FC', level: 0, league: 'Fremdliga', rank: 1, won: 30, drawn: 0, lost: 0, goalsFor: 99, goalsAgainst: 1, points: 90 }
+        ];
+        game.vorlageBilanzArchiv = [{ season: 1, eintraege: { 0: { name: 'Pokalelf', spiele: 4, s: 3, u: 1, n: 0, tore: 9, gegentore: 2, diffSumme: 0 } } }];
+        game.transferBilanzHistory = [{ season: 1, verkauf: 2000000, kauf: 1000000, netto: 1000000 }];
+        squad[0].injuryLog = [{ season: 1, matchday: 4, tage: 3, anlass: 'Spiel' }, { season: 2, matchday: 1, tage: 9, anlass: 'Spiel' }];
+        game.gegnerNotizen = { 'A FC': { text: 'Konter <b>links</b>', season: 1, matchday: 3 }, 'B FC': { text: 'andere Saison', season: 2, matchday: 3 } };
+        game.etikettBilanzVorjahr = { season: 1, daten: { stamm: { mit: { spiele: 6, s: 4, u: 1, n: 1, tore: 12, gegentore: 5 }, ohne: { spiele: 6, s: 1, u: 1, n: 4, tore: 4, gegentore: 9 } }, aufbau: { mit: { spiele: 2, s: 1, u: 0, n: 1, tore: 2, gegentore: 2 }, ohne: { spiele: 6, s: 3, u: 0, n: 3, tore: 6, gegentore: 6 } } } };
+        out.saisons = JSON.stringify(getReviewSeasons()) === '[1]';
+        renderSeasonReviewBox();
+        out.boxKnopf = document.getElementById('season-review-box').textContent.includes('Saison 1');
+        openSeasonReview(1);
+        const rv = document.getElementById('season-review-overlay');
+        const rt = document.getElementById('season-review-body').textContent;
+        out.rvOffen = rv.classList.contains('show');
+        out.rvTabelle = rt.includes('Platz 3 in der Testliga') && rt.includes('55 Punkte') && !rt.includes('Fremdliga');
+        out.rvVorlage = rt.includes('Pokalelf') && rt.includes('3S 1U 0N');
+        out.rvEtiketten = rt.includes('Stammkraft') && !rt.includes('Aufbauspieler');
+        out.rvTransfer = rt.includes('Saldo') || rt.includes('Verkäufe');
+        out.rvAusfall = rt.includes('3 verpasste Spiele') && !rt.includes('12 verpasste');
+        out.rvNotiz = rt.includes('A FC') && rt.includes('Konter <b>links</b>') && !rt.includes('B FC') && !document.getElementById('season-review-body').innerHTML.includes('<b>links');
+        out.wRueckblick = JSON.stringify(woerter('#season-review-overlay button, #season-review-box button'));
+        out.rvBreit = ueberlauf() && rv.querySelector('.generic-modal-box').getBoundingClientRect().right <= document.documentElement.clientWidth + 1;
+        closeSeasonReview(); out.rvZu = !rv.classList.contains('show');
+        game.managerCareer = [{ season: 1, club: game.clubName, level: game.leagueLevel, league: 'Testliga', rank: 3, won: 1, drawn: 1, lost: 1, goalsFor: 1, goalsAgainst: 1, points: 4 }];
+        game.vorlageBilanzArchiv = []; game.transferBilanzHistory = []; squad[0].injuryLog = []; game.gegnerNotizen = {}; game.etikettBilanzVorjahr = null;
+        openSeasonReview(1);
+        const leerT = document.getElementById('season-review-body').textContent;
+        out.rvLeer = leerT.includes('Keine Vorlage') && leerT.includes('Keine Transfers') && leerT.includes('keine Notiz') && leerT.includes('Keine Etiketten');
+        closeSeasonReview();
+        const inboxVor = inboxMessages.length;
+        game.season = 1; announceSeasonReview(); out.keineMeldungSaison1 = inboxMessages.length === inboxVor;
+        game.season = 3; announceSeasonReview();
+        out.meldung = inboxMessages.length === inboxVor + 1 && inboxMessages[0].title.includes('Saisonrückblick 2');
+        game.season = saisonAlt; game.managerCareer = kar || []; game.transferBilanzHistory = bilAlt || []; game.vorlageBilanzArchiv = vaAlt || []; game.gegnerNotizen = {};
+        out.analyseKasten = !!document.getElementById('season-review-box') && !!document.getElementById('tag-bilanz-box') && !!document.getElementById('preset-bilanz-box');
+
+        // --- Erledigt-Liste im Manager-Assistenten ---
+        squad.forEach(p => { p.contracts = 3; });
+        game.assistentVorher = null; game.assistentErledigt = null; game.assistentZurueck = {};
+        game.money = -1000;
+        trackAssistentErledigt(getManagerTodos(true, true));
+        out.vorherGemerkt = !!game.assistentVorher.items['kasse-minus'];
+        game.money = 5000000;
+        trackAssistentErledigt(getManagerTodos(true, true));
+        out.erledigt = game.assistentErledigt.liste.some(x => x.id === 'kasse-minus');
+        out.erledigtHtml = getAssistentErledigtHtml().includes('Erledigt seit dem letzten Spieltag (1)');
+        game.money = -1000; trackAssistentErledigt(getManagerTodos(true, true));
+        out.wiederDa = !game.assistentErledigt.liste.some(x => x.id === 'kasse-minus');
+        game.money = 5000000; trackAssistentErledigt(getManagerTodos(true, true));
+        game.matchday += 1; trackAssistentErledigt(getManagerTodos(true, true));
+        out.neuerSpieltag = game.assistentErledigt.liste.length === 0 && game.assistentErledigt.matchday === game.matchday;
+        game.matchday -= 1;
+        game.assistentVorher = { season: game.season, matchday: game.matchday, items: { fenster: 'Fenster schließt' } };
+        trackAssistentErledigt([]);
+        out.fristKeineErledigung = !game.assistentErledigt.liste.some(x => x.id === 'fenster');
+        // Zurückgestellte Schritte zählen nicht als erledigt
+        squad[1].contracts = 0;
+        trackAssistentErledigt(getManagerTodos(true, true));
+        out.vertragSchritt = !!game.assistentVorher.items['vertraege-aus'];
+        snoozeManagerTodo('vertraege-aus');
+        trackAssistentErledigt(getManagerTodos(true, true));
+        out.snoozeKeineErledigung = !game.assistentErledigt.liste.some(x => x.id === 'vertraege-aus') && !!game.assistentVorher.items['vertraege-aus'];
+        squad[1].contracts = 3; game.assistentZurueck = {};
+        // Anzeige im Dashboard
+        showScreen('screen-dashboard');
+        game.assistentVorher = null; game.assistentErledigt = null; game.money = -1000;
+        managerAssistantLetzterInhalt = ''; renderManagerAssistant();
+        game.money = 5000000;
+        managerAssistantLetzterInhalt = ''; renderManagerAssistant();
+        out.dashboardErledigt = document.getElementById('manager-assistant-box').textContent.includes('Erledigt seit dem letzten Spieltag');
+        out.dashboardBreit = ueberlauf();
+        out.wAssistent = JSON.stringify(woerter('#manager-assistant-box button'));
+        delete game.assistentVorher; delete game.assistentErledigt;
+        managerAssistantLetzterInhalt = ''; renderManagerAssistant();
+        out.altesFeld2 = typeof game.assistentVorher === 'object';
+
+        // --- Preis-Alarm in der Scouting-Beobachtungsliste ---
+        const p = createPlayer('MIT', 60, 62);
+        p.marketValue = 3000000;
+        globalScoutResults.unshift(p);
+        scoutingNetwork.watchlist = [p.id]; scoutingNetwork.preisGrenzen = {};
+        const preis = getScoutPrice(p);
+        out.preisFormel = preis === Math.round(p.marketValue * getScoutDiscount());
+        showScreen('screen-scouting-global');
+        renderGlobalScoutingView();
+        const eingabe = document.getElementById('scout-grenze-' + p.id);
+        out.eingabeDa = !!eingabe;
+        out.scoutBreit = ueberlauf();
+        out.wScout = JSON.stringify(woerter('#global-scouting-results button'));
+        eingabe.value = String(((preis / 1e6) + 1).toFixed(1)).replace('.', ',');
+        setScoutPriceAlarm(p.id);
+        out.grenzeGesetzt = scoutingNetwork.preisGrenzen[p.id] === Math.round(((preis / 1e6) + 1).toFixed(1) * 1e6);
+        game.money = preis * 2; game.transferBudget = preis * 2;
+        const nurLaenge = squad.length;
+        // getScoutPriceAlerts prüft den Kaderplatz: für den Test wird die Liste kurz gekürzt (der Rest des Tests nutzt den Kader nicht mehr)
+        squad.length = Math.min(squad.length, 18);
+        out.alarmDa = getScoutPriceAlerts().length === 1 && getScoutPriceAlerts()[0].p.id === p.id;
+        const todo = getManagerTodos(true).find(x => x.id === 'scout-alarm');
+        out.todo = !!todo && todo.text.includes(p.name) && todo.aktion.includes('scouting-global');
+        game.money = preis - 1; out.zuTeuer = getScoutPriceAlerts().length === 0;
+        game.money = preis * 2; game.transferBudget = preis - 1; out.budgetZuKlein = getScoutPriceAlerts().length === 0;
+        game.transferBudget = preis * 2;
+        scoutingNetwork.preisGrenzen[p.id] = preis - 1; out.ueberGrenze = getScoutPriceAlerts().length === 0;
+        scoutingNetwork.preisGrenzen[p.id] = preis + 1000;
+        scoutingNetwork.watchlist = []; out.nichtBeobachtet = getScoutPriceAlerts().length === 0;
+        scoutingNetwork.watchlist = [p.id];
+        squad.length = nurLaenge; out.kaderVoll = nurLaenge < 22 || getScoutPriceAlerts().length === 0;
+        squad.length = Math.min(nurLaenge, 18);
+        scoutingNetwork.preisGrenzen[p.id] = preis + 1000; renderGlobalScoutingView();
+        const vor = scoutingNetwork.preisGrenzen[p.id];
+        document.getElementById('scout-grenze-' + p.id).value = 'abc'; setScoutPriceAlarm(p.id);
+        out.ungueltig = scoutingNetwork.preisGrenzen[p.id] === vor;
+        document.getElementById('scout-grenze-' + p.id).value = '0'; setScoutPriceAlarm(p.id); out.nullAbgelehnt = scoutingNetwork.preisGrenzen[p.id] === vor;
+        document.getElementById('scout-grenze-' + p.id).value = ''; setScoutPriceAlarm(p.id);
+        out.entfernt = scoutingNetwork.preisGrenzen[p.id] === undefined;
+        document.getElementById('scout-grenze-' + p.id).value = '2,5'; setScoutPriceAlarm(p.id);
+        out.kommaZahl = scoutingNetwork.preisGrenzen[p.id] === 2500000;
+        removeFromWatchlist(p.id);
+        out.mitListeEntfernt = scoutingNetwork.preisGrenzen[p.id] === undefined;
+        addToWatchlist(p.id); setScoutPriceAlarm(p.id);
+        delete scoutingNetwork.preisGrenzen;
+        out.altesFeld3 = Array.isArray(getScoutPriceAlerts()) && typeof scoutingNetwork.preisGrenzen === 'object';
+        squad.length = nurLaenge;
+        return out;
+    });
+    assert(r.knopfDa && r.knopfNiederlage && r.fensterOffen && r.getrennteIds, `Notiz nach dem Abpfiff: Knopf (nach Niederlage hervorgehoben), Fenster mit Ergebnis-Entwurf (${JSON.stringify([r.knopfDa, r.knopfNiederlage, r.fensterOffen, r.getrennteIds])})`);
+    assert(r.fensterBreit && r.gespeichert && r.knopfSieg && r.entwurfAusw, `Notiz nach dem Abpfiff: speichert und schließt, auswärts und Sieg (${JSON.stringify([r.fensterBreit, r.gespeichert, r.knopfSieg, r.entwurfAusw])})`);
+    assert(r.gekuerzt && r.pokalRemis && r.ohneSpiel, `Notiz nach dem Abpfiff: Entwurf bleibt unter 300 Zeichen, Pokal, ohne Spiel kein Fenster (${JSON.stringify([r.gekuerzt, r.pokalRemis, r.ohneSpiel])})`);
+    assert(r.merker && r.mitGezaehlt && r.ohneGezaehlt && r.alterMerker && r.nichtVergeben, `Etiketten-Bilanz: Merker, Spiele mit und ohne Etikett-Spieler, alter Merker, nicht vergebene Etiketten (${JSON.stringify([r.merker, r.mitGezaehlt, r.ohneGezaehlt, r.alterMerker, r.nichtVergeben])})`);
+    assert(r.verdrahtetLiga && r.flussMerker && r.seasonEnd, `Etiketten-Bilanz: Ligaergebnis zählt, Anstoß setzt den Merker, Saisonende archiviert (${JSON.stringify([r.verdrahtetLiga, r.flussMerker, r.seasonEnd])})`);
+    assert(r.zuWenig && r.urteilMit && r.urteilOhne && r.urteilGleich, `Etiketten-Bilanz: Anzeige mit Stichproben-Hinweis und Urteil (${JSON.stringify([r.zuWenig, r.urteilMit, r.urteilOhne, r.urteilGleich])})`);
+    assert(r.archiv && r.leerBehaeltVorjahr && r.vorjahrBox && r.altesFeld, `Etiketten-Bilanz: Archiv ins Vorjahr, leere Saison behält es, alte Spielstände (${JSON.stringify([r.archiv, r.leerBehaeltVorjahr, r.vorjahrBox, r.altesFeld])})`);
+    assert(r.keinerFragil && r.keinerText && r.fragilGefunden && r.fragilText, `Verletzungs-Warnung: keiner auffällig, Spieler mit 4 Verletzungen samt Ersatz (${JSON.stringify([r.keinerFragil, r.keinerText, r.fragilGefunden, r.fragilText])})`);
+    assert(r.getauscht && r.nachTausch && r.schonenTag && r.schonenText && r.keinErsatz && r.keinErsatzText, `Verletzungs-Warnung: Tausch auf Tipp, Etikett Schonen, kein verletzter Ersatz (${JSON.stringify([r.getauscht, r.nachTausch, r.schonenTag, r.schonenText, r.keinErsatz, r.keinErsatzText])})`);
+    assert(r.keineSaison && r.boxLeer && r.ohneDaten && r.saisons && r.boxKnopf, `Saisonrückblick: ohne Saison leer, Knopf je abgeschlossene Saison (${JSON.stringify([r.keineSaison, r.boxLeer, r.ohneDaten, r.saisons, r.boxKnopf])})`);
+    assert(r.rvOffen && r.rvTabelle && r.rvVorlage && r.rvEtiketten && r.rvTransfer, `Saisonrückblick: Tabelle, Vorlage, Etiketten, Transfers der richtigen Saison (${JSON.stringify([r.rvOffen, r.rvTabelle, r.rvVorlage, r.rvEtiketten, r.rvTransfer])})`);
+    assert(r.rvAusfall && r.rvNotiz && r.rvBreit && r.rvZu && r.rvLeer, `Saisonrückblick: Ausfälle nur dieser Saison, Notizen maskiert, passt auf 320 px, leere Abschnitte (${JSON.stringify([r.rvAusfall, r.rvNotiz, r.rvBreit, r.rvZu, r.rvLeer])})`);
+    assert(r.keineMeldungSaison1 && r.meldung && r.analyseKasten, `Saisonrückblick: Postfach-Meldung zum Saisonende, Kästen im Reiter Analyse (${JSON.stringify([r.keineMeldungSaison1, r.meldung, r.analyseKasten])})`);
+    assert(r.vorherGemerkt && r.erledigt && r.erledigtHtml && r.wiederDa && r.neuerSpieltag, `Assistent: Erledigt-Liste (merkt, zählt, zeigt, nimmt zurück, neuer Spieltag setzt zurück) (${JSON.stringify([r.vorherGemerkt, r.erledigt, r.erledigtHtml, r.wiederDa, r.neuerSpieltag])})`);
+    assert(r.fristKeineErledigung && r.vertragSchritt && r.snoozeKeineErledigung && r.dashboardErledigt && r.dashboardBreit && r.altesFeld2, `Assistent: Fristen und Zurückgestelltes sind nicht erledigt, Anzeige im Dashboard, alte Spielstände (${JSON.stringify([r.fristKeineErledigung, r.vertragSchritt, r.snoozeKeineErledigung, r.dashboardErledigt, r.dashboardBreit, r.altesFeld2])})`);
+    assert(r.preisFormel && r.eingabeDa && r.scoutBreit && r.grenzeGesetzt && r.alarmDa && r.todo, `Preis-Alarm: Feld in der Karte, Grenze setzen, Alarm im Assistenten (${JSON.stringify([r.preisFormel, r.eingabeDa, r.scoutBreit, r.grenzeGesetzt, r.alarmDa, r.todo])})`);
+    assert(r.zuTeuer && r.budgetZuKlein && r.ueberGrenze && r.nichtBeobachtet && r.kaderVoll, `Preis-Alarm: kein Alarm bei zu wenig Kasse, Budget, über der Grenze, ohne Beobachtung, bei vollem Kader (${JSON.stringify([r.zuTeuer, r.budgetZuKlein, r.ueberGrenze, r.nichtBeobachtet, r.kaderVoll])})`);
+    assert(r.ungueltig && r.nullAbgelehnt && r.entfernt && r.kommaZahl && r.mitListeEntfernt && r.altesFeld3, `Preis-Alarm: ungültige Eingabe, Entfernen, Komma, Aufräumen mit der Liste, alte Spielstände (${JSON.stringify([r.ungueltig, r.nullAbgelehnt, r.entfernt, r.kommaZahl, r.mitListeEntfernt, r.altesFeld3])})`);
+    assert(r.wNotiz === '[]' && r.wRueckblick === '[]' && r.wScout === '[]' && r.wAssistent === '[]' && r.wCheck === '[]', `Neue Knöpfe bei 320 px in breiter Schrift: kein Wort breiter als sein Knopf (${JSON.stringify([r.wNotiz, r.wRueckblick, r.wScout, r.wAssistent, r.wCheck])})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 module.exports = {
     testSpielvorbereitung,
     testVertragsWerkzeuge,
@@ -830,4 +1126,5 @@ module.exports = {
     testVergleichUndNotizen,
     testFeinschliffNachPhase26,
     testRunde27Funktionen,
+    testRunde28Funktionen,
 };

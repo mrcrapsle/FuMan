@@ -114,6 +114,8 @@
         gegnerNotizen: {},
         vorlageBilanz: {},
         assistentZurueck: {},
+        assistentVorher: null,
+        assistentErledigt: null,
         vorlageBilanzArchiv: [],
         vorlageImEinsatz: null,
         etikettBilanz: {},
@@ -246,6 +248,7 @@
         ],
         activeMissions: [],
         watchlist: [],
+        preisGrenzen: {},
         talentDatabase: []
     };
     let incomingOffers = [];
