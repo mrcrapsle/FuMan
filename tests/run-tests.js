@@ -219,7 +219,7 @@ async function main() {
     // TEST_ONLY=Landes npm test -> nur Suiten, deren Name den Text enthält
     const only = process.env.TEST_ONLY;
     // Die langsamsten Suiten (rund 5 s) starten zuerst, dann füllen die kurzen Suiten die Lücken (25.25)
-    const vorne = new Set(['testAeltereStaende', 'testManagerOffice', 'testMobileLayout', 'testLoadingGuard']);
+    const vorne = new Set(['testKnopfWorteHandy', 'testKontrastAlleThemes', 'testAeltereStaende', 'testMobileLayout', 'testBedienelementeHabenNamen', 'testManagerOffice', 'testLoadingGuard']);
     const alle = (only ? suites.filter(s => s.name.includes(only)) : [...suites])
         .sort((a, b) => (vorne.has(b.name) ? 1 : 0) - (vorne.has(a.name) ? 1 : 0));
     // Zeitmessungen laufen allein nach den übrigen Suiten - parallele Last würde sie verfälschen (25.26)
