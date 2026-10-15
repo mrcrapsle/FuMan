@@ -107,11 +107,14 @@ function csvText(zeilen) {
 function csvZahl(n, stellen = 1) { return typeof n === 'number' ? n.toFixed(stellen).replace('.', ',') : ''; }
 
 function buildKaderCsv() {
-    const kopf = ['Name', 'Position', 'Alter', 'Stärke', 'Fitness %', 'Moral', 'Marktwert €', 'Gehalt € je Spieltag', 'Vertrag (Jahre Rest)', 'Spiele (Saison)', 'Tore (Saison)', 'Vorlagen (Saison)', 'Notenschnitt (Saison)'];
+    const kopf = ['Name', 'Position', 'Alter', 'Stärke', 'Fitness %', 'Moral', 'Marktwert €', 'Gehalt € je Spieltag', 'Vertrag (Jahre Rest)', 'Spiele (Saison)', 'Tore (Saison)', 'Vorlagen (Saison)', 'Notenschnitt (Saison)', 'Etiketten', 'Verletzungen (gesamt)', 'Verpasste Spiele (letzte Ausfälle)'];
     const zeilen = [...squad].sort((a, b) => b.strength - a.strength).map(p => {
         const st = p.statsSeason;
         return [p.name, p.pos, p.age || '', p.strength, p.fitness, p.morale ?? '', p.marketValue || 0, p.wage || 0, p.contracts,
-            st ? st.spiele : 0, st ? st.tore : 0, st ? st.vorlagen : 0, st && st.spiele ? csvZahl(st.notenSumme / st.spiele, 2) : ''];
+            st ? st.spiele : 0, st ? st.tore : 0, st ? st.vorlagen : 0, st && st.spiele ? csvZahl(st.notenSumme / st.spiele, 2) : '',
+            // Etiketten ohne Symbol (js/manager-tools.js), Verletzungen aus Zähler und Verlauf (js/medical-department.js)
+            typeof getPlayerTags === 'function' ? getPlayerTags(p).map(t => SPIELER_ETIKETTEN.find(e => e.id === t).label.replace(/^\S+\s+/, '')).join(', ') : '',
+            p.timesInjured || 0, (Array.isArray(p.injuryLog) ? p.injuryLog : []).reduce((sum, e) => sum + (e.tage || 0), 0)];
     });
     return csvText([kopf, ...zeilen]);
 }

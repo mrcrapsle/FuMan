@@ -211,13 +211,58 @@ function recordPresetResult(ourGoals, oppGoals) {
     if (ourGoals > oppGoals) b.s++; else if (ourGoals < oppGoals) b.n++; else b.u++;
 }
 
+// Punkte je Spiel einer Bilanz-Zeile (Sieg 3, Remis 1)
+function presetPunkteProSpiel(b) { return b && b.spiele ? (3 * b.s + b.u) / b.spiele : 0; }
+
+// Beste Vorlage einer Saison: höchste Punkte je Spiel bei mindestens drei Einsätzen
+function findeBesteVorlage(eintraege) {
+    const kand = Object.values(eintraege || {}).filter(b => b.spiele >= 3);
+    kand.sort((a, b) => (presetPunkteProSpiel(b) - presetPunkteProSpiel(a)) || (b.spiele - a.spiele));
+    return kand[0] || null;
+}
+
+// Saisonende: die Bilanz der Saison ins Archiv (die letzten fünf Saisons), danach beginnt sie von vorn
+function archiveVorlageBilanz() {
+    ensureVorlageBilanz();
+    if (!Array.isArray(game.vorlageBilanzArchiv)) game.vorlageBilanzArchiv = [];
+    const eintraege = game.vorlageBilanz;
+    if (!Object.values(eintraege).some(b => b.spiele > 0)) return;
+    game.vorlageBilanzArchiv.push({ season: game.season, eintraege: JSON.parse(JSON.stringify(eintraege)) });
+    while (game.vorlageBilanzArchiv.length > 5) game.vorlageBilanzArchiv.shift();
+    const beste = findeBesteVorlage(eintraege);
+    if (beste && typeof addInboxMessage === 'function') {
+        addInboxMessage('info', `📈 Vorlagen-Bilanz Saison ${game.season}`, `Beste Aufstellungsvorlage: „${beste.name}“ mit ${beste.s}S ${beste.u}U ${beste.n}N (${presetPunkteProSpiel(beste).toFixed(2).replace('.', ',')} Punkte je Spiel).`, 'screen-squad');
+    }
+    game.vorlageBilanz = {};
+}
+
+function renderPresetBilanzBox() {
+    const box = document.getElementById('preset-bilanz-box');
+    if (!box) return;
+    ensureVorlageBilanz();
+    const archiv = Array.isArray(game.vorlageBilanzArchiv) ? game.vorlageBilanzArchiv : [];
+    const zeile = b => `${mpEsc(b.name)}: ${b.s}S ${b.u}U ${b.n}N · Tore ${b.tore}:${b.gegentore} · ${presetPunkteProSpiel(b).toFixed(2).replace('.', ',')} Pkt/Spiel`;
+    const block = (titel, eintraege) => {
+        const liste = Object.values(eintraege).filter(b => b.spiele > 0).sort((a, b) => presetPunkteProSpiel(b) - presetPunkteProSpiel(a));
+        if (!liste.length) return '';
+        const beste = findeBesteVorlage(eintraege);
+        return `<div class="ui-overline" style="font-size:var(--fs-caption); color:var(--text-muted); margin:8px 0 2px;">${titel}</div>`
+            + liste.map(b => `<div class="box" style="font-size:var(--fs-small); margin:3px 0;">${beste && beste.name === b.name ? '🏅 ' : ''}${zeile(b)}</div>`).join('');
+    };
+    const aktuell = block(`Saison ${game.season} (laufend)`, game.vorlageBilanz);
+    const alt = [...archiv].reverse().map(a => block(`Saison ${a.season}`, a.eintraege)).join('');
+    box.innerHTML = `<div class="panel-header" style="color:var(--purple);">📈 Bilanz der Aufstellungsvorlagen</div>`
+        + (aktuell || alt ? aktuell + alt + '<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:6px;">🏅 = beste Vorlage der Saison (Punkte je Spiel, mindestens drei Einsätze). Gezählt werden Ligaspiele, bei denen die Startelf einer gespeicherten Vorlage entsprach.</div>'
+            : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Daten. Speichere im Reiter Aufstellung eine Vorlage und starte damit Ligaspiele.</div>');
+}
+
 function getPresetBilanzText(slot) {
     ensureVorlageBilanz();
     const b = game.vorlageBilanz[slot];
     if (!b || !b.spiele) return '';
     const v = game.lineupPresets[slot];
     if (v && v.name !== b.name) return ''; // Slot wurde seither neu belegt: die alte Bilanz gehört zu einer anderen Vorlage
-    return `${b.s}S ${b.u}U ${b.n}N · Tore ${b.tore}:${b.gegentore} · Ø ${b.diffSumme / b.spiele >= 0 ? '+' : ''}${(b.diffSumme / b.spiele).toFixed(1)} gegen den Gegner`;
+    return `diese Saison ${b.s}S ${b.u}U ${b.n}N · Tore ${b.tore}:${b.gegentore} · Ø ${b.diffSumme / b.spiele >= 0 ? '+' : ''}${(b.diffSumme / b.spiele).toFixed(1)} gegen den Gegner`;
 }
 
 // Teamstärke einer Elf mit Formation, ohne die Aufstellung zu verändern (Elf und Formation werden kurz getauscht)
@@ -359,6 +404,7 @@ function renderMatchPrepPanels() {
     renderLineupPresets();
     renderTacticPresets();
     renderGegnerNotizbuch();
+    renderPresetBilanzBox();
 }
 
 // ---------- Spieltag-Check vor dem Anpfiff ----------

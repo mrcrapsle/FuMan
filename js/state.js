@@ -113,6 +113,8 @@
         serien: { aktuell: {}, rekord: {} },
         gegnerNotizen: {},
         vorlageBilanz: {},
+        assistentZurueck: {},
+        vorlageBilanzArchiv: [],
         vorlageImEinsatz: null,
         lineupPresets: [null, null, null, null, null],
         tacticPresets: [null, null, null, null, null],

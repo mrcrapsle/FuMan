@@ -319,7 +319,7 @@ async function testManagerWerkzeuge(browser) {
         out.todos = todos.length === 2 && todos[0].text.includes('Angebot') && todos[1].text.includes('läuft');
         out.keinDoppelKasten = !document.getElementById('dash-offers-alert');
         renderManagerAssistant();
-        out.todoKnoepfe = document.querySelectorAll('#manager-assistant-box button').length === 2;
+        out.todoKnoepfe = document.querySelectorAll('#manager-assistant-box button').length === 4; // je Schritt Aktion und „Später“
         // Unveränderter Inhalt wird nicht neu ins DOM geschrieben (updateUI läuft oft)
         const kasten = document.getElementById('manager-assistant-box'); const knoten = kasten.firstChild;
         renderManagerAssistant(); renderManagerAssistant();
@@ -652,7 +652,7 @@ async function testRunde27Funktionen(browser) {
         game.lineupPresets[0].name = game.lineupPresets[0].name; markPresetInUse(); recordPresetResult(1, 2);
         const b = game.vorlageBilanz[0];
         out.summen = b.spiele === 3 && b.s === 1 && b.u === 1 && b.n === 1 && b.tore === 4 && b.gegentore === 3;
-        out.text = /^1S 1U 1N · Tore 4:3 · Ø [+-]\d+,?\d* gegen den Gegner$/.test(getPresetBilanzText(0).replace('.', ','));
+        out.text = /^diese Saison 1S 1U 1N · Tore 4:3 · Ø [+-]\d+,?\d* gegen den Gegner$/.test(getPresetBilanzText(0).replace('.', ','));
         renderLineupPresets();
         out.karte = document.getElementById('lineup-presets-box').textContent.includes('1S 1U 1N');
         // andere Elf: keine Vorlage -> nichts wird gezählt
@@ -671,6 +671,45 @@ async function testRunde27Funktionen(browser) {
         // alte Spielstände ohne Feld
         delete game.vorlageBilanz; out.altesFeld = getPresetBilanzText(0) === '' && (ensureVorlageBilanz(), typeof game.vorlageBilanz === 'object');
         pendingMatchInfo = null;
+        // --- CSV mit Etiketten und Verletzungen ---
+        const cs = squad[0]; cs.tags = ['stamm', 'beobachten']; cs.timesInjured = 2; cs.injuryLog = [{ season: 1, matchday: 2, tage: 3, anlass: 'Spiel' }, { season: 1, matchday: 5, tage: 2, anlass: 'Spiel' }];
+        const csvZeilen = buildKaderCsv().replace(/^\ufeff/, '').trim().split('\r\n');
+        const spalten = csvZeilen[0].split(';');
+        const eintrag = csvZeilen.slice(1).find(z => z.includes('Etiketten') === false && z.split(';')[0] === cs.name.replace(/"/g, '')) || csvZeilen.slice(1).find(z => z.startsWith(cs.name));
+        out.csvSpalten = spalten.slice(-3).join('|') === 'Etiketten|Verletzungen (gesamt)|Verpasste Spiele (letzte Ausfälle)';
+        out.csvInhalt = !!eintrag && /Stammkraft, Beobachten;2;5$/.test(eintrag);
+        cs.tags = []; cs.timesInjured = 0; cs.injuryLog = [];
+        // --- Rückkehr-Termine ---
+        squad.forEach(x => { x.injured = 0; x.suspended = 0; });
+        out.rueckkehrLeer = getReturnLineHtml() === '';
+        const sortiert = [...squad].sort((a, b) => b.strength - a.strength);
+        sortiert[0].injured = 1; sortiert[1].injured = 3; sortiert[15].suspended = 2; sortiert[16].injured = 5; sortiert[17].injured = 2;
+        const info = getReturnInfo();
+        out.rueckkehrReihenfolge = info.length === 5 && info[0].p.id === sortiert[0].id && info[1].p.id === sortiert[1].id && info.slice(0, 2).every(x => x.stamm) && info.slice(2).every(x => !x.stamm);
+        const zeile = getReturnLineHtml();
+        out.rueckkehrText = zeile.includes('in 1 Spiel,') && zeile.includes('in 3 Spielen') && zeile.includes('und 2 weitere') && zeile.includes('⭐');
+        showScreen('screen-dashboard'); renderManagerAssistant();
+        out.rueckkehrDashboard = document.getElementById('manager-assistant-box').textContent.includes('Zurück:');
+        squad.forEach(x => { x.injured = 0; x.suspended = 0; });
+        // --- Schritte zurückstellen ---
+        game.assistentZurueck = {};
+        squad.forEach(x => { x.contracts = 4; });
+        squad[2].contracts = 0;
+        out.schrittDa = getManagerTodos(true).some(x => x.id === 'vertraege-aus');
+        snoozeManagerTodo('vertraege-aus');
+        out.schrittWeg = !getManagerTodos(true).some(x => x.id === 'vertraege-aus');
+        out.hinweisAlleWieder = document.getElementById('manager-assistant-box').textContent.includes('1 Schritt zurückgestellt');
+        game.matchday += 2; out.nochWeg = !getManagerTodos(true).some(x => x.id === 'vertraege-aus');
+        game.matchday += 1; out.dreiSpieltageSpaeter = getManagerTodos(true).some(x => x.id === 'vertraege-aus');
+        game.matchday -= 3;
+        snoozeManagerTodo('vertraege-aus'); game.season += 1; out.neueSaisonLaeuftAb = getManagerTodos(true).some(x => x.id === 'vertraege-aus'); game.season -= 1;
+        resetManagerSnooze(); out.alleWieder = getManagerTodos(true).some(x => x.id === 'vertraege-aus');
+        // dringende Schritte lassen sich nicht zurückstellen
+        game.money = -5000; snoozeManagerTodo('kasse-minus');
+        out.dringendBleibt = getManagerTodos(true).some(x => x.id === 'kasse-minus') && !game.assistentZurueck['kasse-minus'];
+        game.money = 150000;
+        delete game.assistentZurueck; out.altesFeld2 = (istZurueckgestellt('x') === false) && typeof game.assistentZurueck === 'object';
+        squad.forEach(x => { x.contracts = 4; });
         // --- Etiketten mit Wirkung ---
         const spieler = squad.filter(x => (x.injured || 0) === 0).slice(0, 4);
         const [s1, s2, s3, s4] = spieler;
@@ -719,6 +758,28 @@ async function testRunde27Funktionen(browser) {
         renderSquadRadar();
         Object.defineProperty(HTMLElement.prototype, 'offsetWidth', orig);
         out.radarOhneLayoutLesen = leseZugriffe === 0;
+        // --- Vorlagen-Bilanz je Saison ---
+        game.vorlageBilanz = { 0: { name: 'Heim', spiele: 4, s: 3, u: 1, n: 0, tore: 9, gegentore: 2, diffSumme: 8 }, 1: { name: 'Pokal', spiele: 2, s: 2, u: 0, n: 0, tore: 5, gegentore: 0, diffSumme: 4 }, 2: { name: 'Auswärts', spiele: 5, s: 1, u: 2, n: 2, tore: 4, gegentore: 6, diffSumme: -3 } };
+        game.vorlageBilanzArchiv = [];
+        const beste = findeBesteVorlage(game.vorlageBilanz);
+        out.besteMind3 = beste && beste.name === 'Heim'; // „Pokal“ hat nur 2 Spiele
+        out.punkte = Math.abs(presetPunkteProSpiel(game.vorlageBilanz[0]) - 2.5) < 1e-9;
+        const postfach = inboxMessages.length; const saisonVorher = game.season;
+        archiveVorlageBilanz();
+        out.archiviert = game.vorlageBilanzArchiv.length === 1 && game.vorlageBilanzArchiv[0].season === saisonVorher && Object.keys(game.vorlageBilanz).length === 0 && game.vorlageBilanzArchiv[0].eintraege[0].name === 'Heim';
+        out.postfachBeste = inboxMessages.length === postfach + 1 && /„Heim“ mit 3S 1U 0N/.test(inboxMessages[0].body);
+        archiveVorlageBilanz(); out.leereSaisonKeinEintrag = game.vorlageBilanzArchiv.length === 1;
+        for (let i = 0; i < 7; i++) { game.vorlageBilanz = { 0: { name: 'X' + i, spiele: 3, s: 1, u: 1, n: 1, tore: 3, gegentore: 3, diffSumme: 0 } }; game.season += 1; archiveVorlageBilanz(); }
+        out.hoechstensFuenf = game.vorlageBilanzArchiv.length === 5 && game.vorlageBilanzArchiv[4].eintraege[0].name === 'X6';
+        game.season = saisonVorher;
+        game.vorlageBilanz = { 0: { name: 'Laufend', spiele: 3, s: 2, u: 0, n: 1, tore: 5, gegentore: 3, diffSumme: 1 } };
+        showScreen('screen-squad'); setSquadTab('analyse'); renderSquadView();
+        const pbox = document.getElementById('preset-bilanz-box').textContent;
+        out.bilanzBox = pbox.includes('laufend') && pbox.includes('Laufend: 2S 0U 1N') && pbox.includes('🏅');
+        out.fliesstInSeasonEnd = String(concludeSeasonAndAdvance).includes('archiveVorlageBilanz');
+        delete game.vorlageBilanzArchiv; delete game.vorlageBilanz; renderPresetBilanzBox(); archiveVorlageBilanz();
+        out.altesFeld3 = Array.isArray(game.vorlageBilanzArchiv) && typeof game.vorlageBilanz === 'object';
+        game.vorlageBilanz = {};
         // Echter Ablauf: Anstoß-Ablauf setzt den Merker, das Ligaergebnis zählt über recordOwnLeagueResult
         game.matchday = 4; game.formation = '4-4-2'; autoLineup(); saveLineupPreset(1);
         startMatchdayFlow();
@@ -727,10 +788,16 @@ async function testRunde27Funktionen(browser) {
         out.flussZaehlt = game.vorlageBilanz[1] && game.vorlageBilanz[1].spiele === 1 && game.vorlageBilanz[1].s === 1;
         return out;
     });
+    assert(r.csvSpalten && r.csvInhalt, `CSV-Export des Kaders enthält Etiketten, Verletzungen und verpasste Spiele (${r.csvSpalten}/${r.csvInhalt})`);
+    assert(r.rueckkehrLeer && r.rueckkehrReihenfolge && r.rueckkehrText && r.rueckkehrDashboard, `Dashboard zeigt Rückkehr-Termine (Stammspieler zuerst, Sperren, „und weitere“) (${JSON.stringify([r.rueckkehrLeer, r.rueckkehrReihenfolge, r.rueckkehrText, r.rueckkehrDashboard])})`);
+    assert(r.schrittDa && r.schrittWeg && r.hinweisAlleWieder && r.nochWeg && r.dreiSpieltageSpaeter && r.neueSaisonLaeuftAb && r.alleWieder, `Assistent: Schritt lässt sich 3 Spieltage zurückstellen, kommt wieder, Hinweis und „Alle wieder zeigen“ (${JSON.stringify([r.schrittDa, r.schrittWeg, r.hinweisAlleWieder, r.nochWeg, r.dreiSpieltageSpaeter, r.neueSaisonLaeuftAb, r.alleWieder])})`);
+    assert(r.dringendBleibt && r.altesFeld2, `Assistent: dringende Schritte nicht zurückstellbar, alte Spielstände ohne Feld (${r.dringendBleibt}/${r.altesFeld2})`);
     assert(r.wirkStamm && r.wirkAufbau && r.wirkSchonen && r.wirkKombi && r.keineEtikettWirkung, `Etiketten mit Wirkung: Stammkraft, Aufbauspieler, Schonen, Kombination, ohne Etikett nichts (${JSON.stringify([r.wirkStamm, r.wirkAufbau, r.wirkSchonen, r.wirkKombi, r.keineEtikettWirkung])})`);
     assert(r.bank78 && r.bankUntergrenze && r.bankUnterhalbBleibt && r.elfBis90 && r.elfUeber90Bleibt && r.verletztNichtUnzufrieden, `Etiketten: Moral auf der Bank nicht unter 45, Gewinn nur bis 90, Verletzte nicht unzufrieden (${JSON.stringify([r.bank78, r.bankUntergrenze, r.bankUnterhalbBleibt, r.elfBis90, r.elfUeber90Bleibt, r.verletztNichtUnzufrieden])})`);
     assert(r.schonenErmuedet && r.schonenBankNichts && r.ablaufMoral && r.detailText, `Etiketten: Schonen ändert weder Fitness noch Moral, Verdrahtung im Spielablauf und Erklärung im Spielerdetail (${JSON.stringify([r.schonenErmuedet, r.schonenBankNichts, r.ablaufMoral, r.detailText, r.ablaufDbg])})`);
     assert(r.radar && r.radarOhneLayoutLesen, `Kader-Radar hat feste Größe mit viewBox und liest beim Zeichnen keine Breite (${r.radar}/${r.radarOhneLayoutLesen})`);
+    assert(r.besteMind3 && r.punkte && r.archiviert && r.postfachBeste && r.leereSaisonKeinEintrag && r.hoechstensFuenf, `Vorlagen-Bilanz je Saison: beste Vorlage (mind. 3 Spiele), Archiv, Postfach, höchstens fünf Saisons (${JSON.stringify([r.besteMind3, r.punkte, r.archiviert, r.postfachBeste, r.leereSaisonKeinEintrag, r.hoechstensFuenf])})`);
+    assert(r.bilanzBox && r.fliesstInSeasonEnd && r.altesFeld3, `Vorlagen-Bilanz: Kasten im Reiter Analyse, Aufruf im Saisonende, alte Spielstände (${JSON.stringify([r.bilanzBox, r.fliesstInSeasonEnd, r.altesFeld3])})`);
     assert(r.flussMerker && r.flussZaehlt, `Bilanz je Vorlage über den echten Ablauf (Anstoß setzt den Merker, Ligaergebnis zählt) (${r.flussMerker}/${r.flussZaehlt})`);
     assert(r.erkannt && r.gezaehlt && r.summen && r.text && r.karte, `Bilanz je Vorlage: erkannt, gezählt, Summen, Text und Anzeige auf der Karte (${JSON.stringify([r.erkannt, r.gezaehlt, r.summen, r.text, r.karte])})`);
     assert(r.fremdeElf && r.alterMerker && r.neuBelegt && r.andererName && r.geloescht && r.altesFeld, `Bilanz je Vorlage: fremde Elf, alter Merker, neu belegter Slot, Löschen, alte Spielstände (${JSON.stringify([r.fremdeElf, r.alterMerker, r.neuBelegt, r.andererName, r.geloescht, r.altesFeld])})`);
