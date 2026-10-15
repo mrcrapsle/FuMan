@@ -108,6 +108,7 @@ async function main() {
         S.testFeinschliffNachPhase26,
         S.testRunde27Funktionen,
         S.testRunde28Funktionen,
+        S.testRunde29Funktionen,
         S.testKnopfWorteHandy,
         S.testEntlassungsGrund,
         S.testEnglishUi,

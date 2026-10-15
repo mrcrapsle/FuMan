@@ -165,6 +165,7 @@
         <div id="pd-form"></div>
         <div id="pd-tags"></div>
         <div id="pd-injuries"></div>
+        <div id="pd-startbilanz"></div>
         <div class="modal-field-grid" id="pd-fields"></div>
         <div style="font-size:var(--fs-body); font-weight:800; color:var(--accent); margin-top:6px;">Fähigkeiten</div>
         <div class="modal-stat-grid" id="pd-stats"></div>
@@ -235,7 +236,7 @@
 <div id="share-report-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
         <button onclick="closeShareReport()" class="generic-modal-close" aria-label="Schließen">✕</button>
-        <div class="panel-header">📤 Spielbericht teilen</div>
+        <div class="panel-header" id="share-report-title">📤 Spielbericht teilen</div>
         <textarea id="share-report-text" rows="9" readonly aria-label="Spielbericht als Text" style="width:100%; box-sizing:border-box; font-size:var(--fs-body);"></textarea>
         <button onclick="copyShareReport()" class="btn-action" style="margin-top:6px;">📋 Kopieren</button>
         <button onclick="nativeShareReport()" id="share-report-native" class="btn-secondary" style="margin-top:6px;">📤 Teilen …</button>
@@ -819,6 +820,7 @@
                     <div class="dashboard-hero-bowl-wrapper"></div>
                 </div>
                 <div id="member-assembly-box" class="panel" style="display:none; border-color:var(--gold); margin-bottom:10px;"></div>
+                <div id="season-review-hint"></div>
                 <div id="manager-assistant-box" class="panel" style="margin-bottom:10px;"></div>
                 <div class="panel">
                     <div class="panel-header">

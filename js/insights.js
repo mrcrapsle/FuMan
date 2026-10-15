@@ -180,6 +180,8 @@ function openShareReport() {
     const ov = document.getElementById('share-report-overlay');
     if (!feld || !ov) return;
     feld.value = text;
+    const titel = document.getElementById('share-report-title');
+    if (titel) titel.textContent = '📤 Spielbericht teilen';
     const teilen = document.getElementById('share-report-native');
     if (teilen) teilen.style.display = typeof navigator.share === 'function' ? '' : 'none';
     ov.classList.add('show');
@@ -261,7 +263,15 @@ function buildSeasonReviewHtml(saison) {
     const leer = text => `<span style="color:var(--text-muted);">${text}</span>`;
     const teile = [];
     const k = (game.managerCareer || []).find(e => e.season === saison && e.club === game.clubName);
-    teile.push(abschnitt('🏆 Tabelle', k ? `Platz ${k.rank} in der ${mpEsc(k.league)}: ${k.won}S ${k.drawn}U ${k.lost}N, Tore ${k.goalsFor}:${k.goalsAgainst}, ${k.points} Punkte.` : leer('Keine Tabelle gespeichert.')));
+    const vor = (game.managerCareer || []).find(e => e.season === saison - 1 && e.club === game.clubName);
+    const vz = n => (n > 0 ? '+' : n < 0 ? '−' : '±') + Math.abs(n);
+    let vergleich = '';
+    if (k && vor) {
+        vergleich = vor.level === k.level
+            ? `<br><span style="color:var(--text-muted);">Vorsaison: Platz ${vor.rank}, ${vor.points} Punkte → ${vz(k.points - vor.points)} Punkte, Platz ${vz(vor.rank - k.rank)}, Tordifferenz ${vz((k.goalsFor - k.goalsAgainst) - (vor.goalsFor - vor.goalsAgainst))}.</span>`
+            : `<br><span style="color:var(--text-muted);">Vorsaison in einer anderen Liga (${mpEsc(vor.league)}), Punkte sind nicht vergleichbar.</span>`;
+    }
+    teile.push(abschnitt('🏆 Tabelle', k ? `Platz ${k.rank} in der ${mpEsc(k.league)}: ${k.won}S ${k.drawn}U ${k.lost}N, Tore ${k.goalsFor}:${k.goalsAgainst}, ${k.points} Punkte.${vergleich}` : leer('Keine Tabelle gespeichert.')));
     const va = (game.vorlageBilanzArchiv || []).find(a => a.season === saison);
     const beste = va && typeof findeBesteVorlage === 'function' ? findeBesteVorlage(va.eintraege) : null;
     const vaGesamt = va ? Object.values(va.eintraege).filter(b => b.spiele > 0) : [];
@@ -277,7 +287,9 @@ function buildSeasonReviewHtml(saison) {
     }
     teile.push(abschnitt('🏷️ Etiketten', etiketten || leer('Keine Etiketten mit genug Spielen (je Seite mindestens 5) in dieser Saison.')));
     const tb = (game.transferBilanzHistory || []).find(x => x.season === saison);
-    teile.push(abschnitt('💰 Transfers', tb ? `Verkäufe +${formatVal(tb.verkauf)}, Käufe −${formatVal(tb.kauf)}, Saldo <strong style="color:${tb.netto >= 0 ? 'var(--primary)' : 'var(--danger)'};">${tb.netto >= 0 ? '+' : ''}${formatVal(tb.netto)}</strong>.` : leer('Keine Transfers in dieser Saison.')));
+    const tbVor = (game.transferBilanzHistory || []).find(x => x.season === saison - 1);
+    const tbVgl = tb && tbVor ? `<br><span style="color:var(--text-muted);">Vorsaison: Saldo ${tbVor.netto >= 0 ? '+' : ''}${formatVal(tbVor.netto)}, Unterschied ${tb.netto - tbVor.netto >= 0 ? '+' : ''}${formatVal(tb.netto - tbVor.netto)}.</span>` : '';
+    teile.push(abschnitt('💰 Transfers', tb ? `Verkäufe +${formatVal(tb.verkauf)}, Käufe −${formatVal(tb.kauf)}, Saldo <strong style="color:${tb.netto >= 0 ? 'var(--primary)' : 'var(--danger)'};">${tb.netto >= 0 ? '+' : ''}${formatVal(tb.netto)}</strong>.${tbVgl}` : leer('Keine Transfers in dieser Saison.')));
     const ausfaelle = squad.map(p => {
         const log = (Array.isArray(p.injuryLog) ? p.injuryLog : []).filter(e => e.season === saison);
         return { p, n: log.length, tage: log.reduce((sum, e) => sum + (e.tage || 0), 0) };
@@ -294,8 +306,41 @@ function openSeasonReview(saison) {
     if (!body || !ov) return;
     saison = Number(saison) || getReviewSeasons()[0];
     if (!saison) { showToast('Es gibt noch keine abgeschlossene Saison für einen Rückblick.', 'error'); return; }
-    body.innerHTML = `<div class="panel-header">📚 Saisonrückblick ${saison}</div>` + buildSeasonReviewHtml(saison);
+    body.innerHTML = `<div class="panel-header">📚 Saisonrückblick ${saison}</div>` + buildSeasonReviewHtml(saison)
+        + `<button onclick="shareSeasonReview(${saison})" class="btn-action" style="margin-top:6px;">📋 Als Text kopieren oder teilen</button>`;
     ov.classList.add('show');
+    if (saison === game.season - 1) game.rueckblickGesehen = saison;
+    renderSeasonReviewHint();
+}
+
+// Der Rückblick als reiner Text (Überschriften, eine Zeile je Abschnitt) im Fenster „Teilen“ des Spielberichts
+function buildSeasonReviewText(saison) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = buildSeasonReviewHtml(saison).replace(/<br>/g, '\n').replace(/<\/div>/g, '\n');
+    const zeilen = tmp.textContent.split('\n').map(z => z.trim()).filter(Boolean);
+    return [`📚 Saisonrückblick ${saison} · ${game.clubName}`, ...zeilen, '— Anstoß Mobile Pro FM13'].join('\n');
+}
+
+function shareSeasonReview(saison) {
+    const feld = document.getElementById('share-report-text'), ov = document.getElementById('share-report-overlay');
+    if (!feld || !ov) return;
+    feld.value = buildSeasonReviewText(Number(saison));
+    const titel = document.getElementById('share-report-title');
+    if (titel) titel.textContent = '📤 Saisonrückblick teilen';
+    const teilen = document.getElementById('share-report-native');
+    if (teilen) teilen.style.display = typeof navigator.share === 'function' ? '' : 'none';
+    closeSeasonReview();
+    ov.classList.add('show');
+}
+
+// Nach dem Saisonwechsel bis zum dritten Spieltag: Knopf im Dashboard (ein Fenster würde sich mit den Meldungen des Saisonwechsels stapeln)
+function renderSeasonReviewHint() {
+    const box = document.getElementById('season-review-hint');
+    if (!box) return;
+    const saison = game.season - 1;
+    const zeigen = saison >= 1 && game.matchday <= 3 && game.rueckblickGesehen !== saison && getReviewSeasons().includes(saison);
+    const html = zeigen ? `<button onclick="openSeasonReview(${saison})" class="btn-secondary" style="margin-bottom:10px;">📚 Saisonrückblick ${saison} öffnen</button>` : '';
+    if (box.innerHTML !== html) box.innerHTML = html;
 }
 
 function closeSeasonReview() {

@@ -46,6 +46,28 @@ function mpLiveAktiv() {
 
 const GEGNER_NOTIZ_MAX = 300;
 
+// Schlagwörter zu Gegner-Notizen (Phase 26.14): feste Liste, wählbar im Notizfeld, filterbar im Notizbuch
+const NOTIZ_SCHLAGWOERTER = [
+    { id: 'konter', label: '⚡ Konter' }, { id: 'standards', label: '🎯 Standards' }, { id: 'pressing', label: '🔥 Pressing' },
+    { id: 'abwehr-links', label: '🛡️ Abwehr links' }, { id: 'abwehr-rechts', label: '🛡️ Abwehr rechts' },
+    { id: 'fluegel', label: '🏃 Flügel' }, { id: 'langer-ball', label: '📏 Langer Ball' }, { id: 'heimstark', label: '🏟️ Heimstark' }
+];
+let notizFilter = { text: '', tag: '' };
+
+function getNotizTags(n) {
+    return n && Array.isArray(n.tags) ? n.tags.filter(t => NOTIZ_SCHLAGWOERTER.some(x => x.id === t)) : [];
+}
+
+function notizTagChips(n) {
+    return getNotizTags(n).map(t => uiChip(NOTIZ_SCHLAGWOERTER.find(x => x.id === t).label)).join('');
+}
+
+function toggleNotizTag(btn) {
+    const an = btn.getAttribute('aria-pressed') !== 'true';
+    btn.setAttribute('aria-pressed', String(an));
+    btn.className = (an ? 'btn-action' : 'btn-secondary') + ' notiz-tag';
+}
+
 function ensureGegnerNotizen() {
     if (!game.gegnerNotizen || typeof game.gegnerNotizen !== 'object' || Array.isArray(game.gegnerNotizen)) game.gegnerNotizen = {};
 }
@@ -60,11 +82,13 @@ function saveGegnerNotiz(name, feldId) {
     const feld = document.getElementById(feldId || 'gegner-notiz-text');
     const text = feld ? feld.value.trim().slice(0, GEGNER_NOTIZ_MAX) : '';
     if (!name) return;
+    const gewaehlt = [...document.querySelectorAll(`.notiz-tag[data-feld="${feldId || 'gegner-notiz-text'}"][aria-pressed="true"]`)].map(b => b.dataset.tag);
     if (!text) {
         if (game.gegnerNotizen[name]) { delete game.gegnerNotizen[name]; showToast(`📓 Notiz zu ${name} gelöscht.`, 'info'); }
         else showToast('Schreibe zuerst etwas in das Notizfeld.', 'error');
     } else {
         game.gegnerNotizen[name] = { text, season: game.season, matchday: game.matchday };
+        if (gewaehlt.length) game.gegnerNotizen[name].tags = gewaehlt;
         showToast(`📓 Notiz zu ${name} gespeichert.`, 'success');
     }
     if (typeof renderPrematchCheck === 'function') renderPrematchCheck();
@@ -95,7 +119,7 @@ function renderHalftimeNotiz() {
     const n = opp ? getGegnerNotiz(opp) : null;
     const bilanz = opp ? getGegnerBilanzText(opp) : '';
     if (!opp || (!n && /^Noch keine/.test(bilanz))) { box.innerHTML = ''; return; }
-    box.innerHTML = `<div class="box" style="font-size:var(--fs-small); text-align:left;"><strong>📓 ${mpEsc(opp)}</strong><br>📊 ${mpEsc(bilanz)}${n ? `<br>📝 ${mpEsc(n.text)}` : ''}</div>`;
+    box.innerHTML = `<div class="box" style="font-size:var(--fs-small); text-align:left;"><strong>📓 ${mpEsc(opp)}</strong><br>📊 ${mpEsc(bilanz)}${n ? `<br>📝 ${mpEsc(n.text)}${getNotizTags(n).length ? `<div class="ui-card-meta" style="margin-top:4px;">${notizTagChips(n)}</div>` : ''}` : ''}</div>`;
 }
 
 function renderGegnerNotizSection(oppName, feldId, vorgabe) {
@@ -105,6 +129,7 @@ function renderGegnerNotizSection(oppName, feldId, vorgabe) {
     return `<div class="box" style="font-size:var(--fs-small); margin:0 0 6px;">📊 ${mpEsc(getGegnerBilanzText(oppName))}</div>
         <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${n ? `Gespeichert in Saison ${n.season}, Spieltag ${n.matchday}.` : 'Noch keine Notiz zu diesem Gegner.'} Die Notiz bleibt über Saisons erhalten.</div>
         <textarea id="${feldId}" class="input-inline" maxlength="${GEGNER_NOTIZ_MAX}" rows="3" placeholder="z. B. Schwache Abwehr über links, Konter nach Ecken" style="width:100%;" aria-label="Notiz zu ${mpEsc(oppName)}">${mpEsc(vorgabe != null ? vorgabe : (n ? n.text : ''))}</textarea>
+        <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;">${NOTIZ_SCHLAGWOERTER.map(x => { const an = getNotizTags(n).includes(x.id); return `<button type="button" onclick="toggleNotizTag(this)" data-tag="${x.id}" data-feld="${feldId}" class="${an ? 'btn-action' : 'btn-secondary'} notiz-tag" style="width:auto; font-size:var(--fs-caption);" aria-pressed="${an}">${x.label}</button>`; }).join('')}</div>
         <button onclick="saveGegnerNotiz(this.dataset.club, this.dataset.feld)" data-club="${mpEsc(oppName)}" data-feld="${feldId}" class="btn-secondary" style="margin-top:4px;">📓 Notiz speichern</button>`;
 }
 
@@ -146,15 +171,48 @@ function closeNachspielNotiz() {
     if (ov) ov.classList.remove('show');
 }
 
-// Alle Notizen im Reiter Analyse
+// Alle Notizen im Reiter Analyse, mit Suche (Verein, Text, Schlagwort) und Filter nach Schlagwort
 function renderGegnerNotizbuch() {
     const box = document.getElementById('opp-notes-box');
     if (!box) return;
     ensureGegnerNotizen();
-    const namen = Object.keys(game.gegnerNotizen).sort((a, b) => a.localeCompare(b));
+    const alle = Object.keys(game.gegnerNotizen);
+    const genutzt = NOTIZ_SCHLAGWOERTER.filter(x => alle.some(n => getNotizTags(game.gegnerNotizen[n]).includes(x.id)));
+    if (notizFilter.tag && !genutzt.some(x => x.id === notizFilter.tag)) notizFilter.tag = '';
     box.innerHTML = `<div class="panel-header" style="color:var(--purple);">📓 Notizbuch: Gegner</div>`
-        + (namen.length ? namen.map(n => `<div class="box" style="font-size:var(--fs-small); margin:4px 0;"><div style="display:flex; justify-content:space-between; gap:8px; align-items:center;"><strong>${mpEsc(n)}</strong><button onclick="deleteGegnerNotiz(this.dataset.club)" data-club="${mpEsc(n)}" class="btn-secondary" style="width:auto; color:var(--danger);" title="Notiz zu ${mpEsc(n)} löschen">🗑️</button></div>${mpEsc(game.gegnerNotizen[n].text)}<div style="color:var(--text-muted); font-size:var(--fs-caption);">Saison ${game.gegnerNotizen[n].season}, Spieltag ${game.gegnerNotizen[n].matchday}</div></div>`).join('')
+        + (alle.length > 1 || notizFilter.text || notizFilter.tag ? `<input id="opp-notes-suche" type="search" class="input-inline" value="${mpEsc(notizFilter.text)}" placeholder="Suchen: Verein, Text oder Schlagwort" aria-label="Notizen durchsuchen" oninput="setNotizSuche(this.value)" style="width:100%; box-sizing:border-box; margin-bottom:4px;">`
+            + (genutzt.length ? `<div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:4px;">${genutzt.map(x => `<button onclick="setNotizFilterTag('${x.id}')" data-filter="${x.id}" class="${notizFilter.tag === x.id ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:var(--fs-caption);" aria-pressed="${notizFilter.tag === x.id}">${x.label}</button>`).join('')}</div>` : '') : '')
+        + '<div id="opp-notes-liste"></div>';
+    renderGegnerNotizListe();
+}
+
+function renderGegnerNotizListe() {
+    const liste = document.getElementById('opp-notes-liste');
+    if (!liste) return;
+    ensureGegnerNotizen();
+    const alle = Object.keys(game.gegnerNotizen).sort((a, b) => a.localeCompare(b));
+    const q = notizFilter.text.trim().toLowerCase();
+    const namen = alle.filter(n => {
+        const e = game.gegnerNotizen[n];
+        if (notizFilter.tag && !getNotizTags(e).includes(notizFilter.tag)) return false;
+        return !q || n.toLowerCase().includes(q) || String(e.text).toLowerCase().includes(q) || getNotizTags(e).some(t => NOTIZ_SCHLAGWOERTER.find(x => x.id === t).label.toLowerCase().includes(q));
+    });
+    liste.innerHTML = namen.length ? namen.map(n => `<div class="box" style="font-size:var(--fs-small); margin:4px 0;"><div style="display:flex; justify-content:space-between; gap:8px; align-items:center;"><strong>${mpEsc(n)}</strong><button onclick="deleteGegnerNotiz(this.dataset.club)" data-club="${mpEsc(n)}" class="btn-secondary" style="width:auto; color:var(--danger);" title="Notiz zu ${mpEsc(n)} löschen">🗑️</button></div>${mpEsc(game.gegnerNotizen[n].text)}${getNotizTags(game.gegnerNotizen[n]).length ? `<div class="ui-card-meta" style="margin-top:4px;">${notizTagChips(game.gegnerNotizen[n])}</div>` : ''}<div style="color:var(--text-muted); font-size:var(--fs-caption);">Saison ${game.gegnerNotizen[n].season}, Spieltag ${game.gegnerNotizen[n].matchday}</div></div>`).join('')
+        : (alle.length ? '<div style="font-size:var(--fs-small); color:var(--text-muted);">Keine Notiz passt zur Suche.</div>'
             : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Notizen. Vor dem Anpfiff gibt es im Spieltag-Check ein Notizfeld zum Gegner.</div>');
+}
+
+// Während des Tippens wird nur die Liste neu geschrieben, das Suchfeld behält den Fokus
+function setNotizSuche(text) {
+    notizFilter.text = String(text || '').slice(0, 60);
+    renderGegnerNotizListe();
+}
+
+function setNotizFilterTag(tag) {
+    notizFilter.tag = notizFilter.tag === tag ? '' : tag;
+    renderGegnerNotizbuch();
+    const knopf = document.querySelector(`#opp-notes-box [data-filter="${tag}"]`);
+    if (knopf) knopf.focus();
 }
 
 // ---------- Aufstellungsvorlagen ----------
@@ -553,7 +611,8 @@ function renderPrematchCheck() {
         muede.length ? uiChip(`😮‍💨 ${muede.length} erschöpft`, muede.some(p => p.fitness < 50) ? 'schlecht' : 'warn') : '',
         rotation.length ? uiChip(`🔄 ${rotation.length} Rotationsidee${rotation.length === 1 ? '' : 'n'}`, 'warn') : '',
         fragil.length ? uiChip(`🩹 ${fragil.length} verletzungsanfällig`, 'warn') : '',
-        notiz ? uiChip('📓 Notiz vorhanden') : ''
+        notiz ? uiChip('📓 Notiz vorhanden') : '',
+        notiz ? notizTagChips(notiz) : ''
     ];
     const problemListe = probleme.length ? probleme.map(x => `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">${x.ton === 'schlecht' ? '🔴' : '🟡'} ${mpEsc(x.text)}</div>`).join('')
         : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Torwart und Formation passen.</div>';

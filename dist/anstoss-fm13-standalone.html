@@ -2051,6 +2051,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
         <div id="pd-form"></div>
         <div id="pd-tags"></div>
         <div id="pd-injuries"></div>
+        <div id="pd-startbilanz"></div>
         <div class="modal-field-grid" id="pd-fields"></div>
         <div style="font-size:var(--fs-body); font-weight:800; color:var(--accent); margin-top:6px;">Fähigkeiten</div>
         <div class="modal-stat-grid" id="pd-stats"></div>
@@ -2121,7 +2122,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 <div id="share-report-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
         <button onclick="closeShareReport()" class="generic-modal-close" aria-label="Schließen">✕</button>
-        <div class="panel-header">📤 Spielbericht teilen</div>
+        <div class="panel-header" id="share-report-title">📤 Spielbericht teilen</div>
         <textarea id="share-report-text" rows="9" readonly aria-label="Spielbericht als Text" style="width:100%; box-sizing:border-box; font-size:var(--fs-body);"></textarea>
         <button onclick="copyShareReport()" class="btn-action" style="margin-top:6px;">📋 Kopieren</button>
         <button onclick="nativeShareReport()" id="share-report-native" class="btn-secondary" style="margin-top:6px;">📤 Teilen …</button>
@@ -2705,6 +2706,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
                     <div class="dashboard-hero-bowl-wrapper"></div>
                 </div>
                 <div id="member-assembly-box" class="panel" style="display:none; border-color:var(--gold); margin-bottom:10px;"></div>
+                <div id="season-review-hint"></div>
                 <div id="manager-assistant-box" class="panel" style="margin-bottom:10px;"></div>
                 <div class="panel">
                     <div class="panel-header">
@@ -5230,6 +5232,7 @@ function renderUiStatRow(werte) {
         vorlageBilanz: {},
         assistentZurueck: {},
         assistentVorher: null,
+        rueckblickGesehen: 0,
         assistentErledigt: null,
         vorlageBilanzArchiv: [],
         vorlageImEinsatz: null,
@@ -6975,6 +6978,7 @@ function getOwnDerbyRivals() {
         if (typeof renderPlayerForm === 'function') renderPlayerForm(p);
         if (typeof renderPlayerTags === 'function') renderPlayerTags(p);
         if (typeof renderInjuryHistory === 'function') renderInjuryHistory(p, pool);
+        if (typeof renderPlayerStartBilanz === 'function') renderPlayerStartBilanz(p, pool);
         if (typeof renderMarketValueCurve === 'function') renderMarketValueCurve(p);
         if (typeof renderDevelopmentForecast === 'function') renderDevelopmentForecast(p);
         let historyBox = document.getElementById('pd-strength-history');
@@ -8121,6 +8125,28 @@ function mpLiveAktiv() {
 
 const GEGNER_NOTIZ_MAX = 300;
 
+// Schlagwörter zu Gegner-Notizen (Phase 26.14): feste Liste, wählbar im Notizfeld, filterbar im Notizbuch
+const NOTIZ_SCHLAGWOERTER = [
+    { id: 'konter', label: '⚡ Konter' }, { id: 'standards', label: '🎯 Standards' }, { id: 'pressing', label: '🔥 Pressing' },
+    { id: 'abwehr-links', label: '🛡️ Abwehr links' }, { id: 'abwehr-rechts', label: '🛡️ Abwehr rechts' },
+    { id: 'fluegel', label: '🏃 Flügel' }, { id: 'langer-ball', label: '📏 Langer Ball' }, { id: 'heimstark', label: '🏟️ Heimstark' }
+];
+let notizFilter = { text: '', tag: '' };
+
+function getNotizTags(n) {
+    return n && Array.isArray(n.tags) ? n.tags.filter(t => NOTIZ_SCHLAGWOERTER.some(x => x.id === t)) : [];
+}
+
+function notizTagChips(n) {
+    return getNotizTags(n).map(t => uiChip(NOTIZ_SCHLAGWOERTER.find(x => x.id === t).label)).join('');
+}
+
+function toggleNotizTag(btn) {
+    const an = btn.getAttribute('aria-pressed') !== 'true';
+    btn.setAttribute('aria-pressed', String(an));
+    btn.className = (an ? 'btn-action' : 'btn-secondary') + ' notiz-tag';
+}
+
 function ensureGegnerNotizen() {
     if (!game.gegnerNotizen || typeof game.gegnerNotizen !== 'object' || Array.isArray(game.gegnerNotizen)) game.gegnerNotizen = {};
 }
@@ -8135,11 +8161,13 @@ function saveGegnerNotiz(name, feldId) {
     const feld = document.getElementById(feldId || 'gegner-notiz-text');
     const text = feld ? feld.value.trim().slice(0, GEGNER_NOTIZ_MAX) : '';
     if (!name) return;
+    const gewaehlt = [...document.querySelectorAll(`.notiz-tag[data-feld="${feldId || 'gegner-notiz-text'}"][aria-pressed="true"]`)].map(b => b.dataset.tag);
     if (!text) {
         if (game.gegnerNotizen[name]) { delete game.gegnerNotizen[name]; showToast(`📓 Notiz zu ${name} gelöscht.`, 'info'); }
         else showToast('Schreibe zuerst etwas in das Notizfeld.', 'error');
     } else {
         game.gegnerNotizen[name] = { text, season: game.season, matchday: game.matchday };
+        if (gewaehlt.length) game.gegnerNotizen[name].tags = gewaehlt;
         showToast(`📓 Notiz zu ${name} gespeichert.`, 'success');
     }
     if (typeof renderPrematchCheck === 'function') renderPrematchCheck();
@@ -8170,7 +8198,7 @@ function renderHalftimeNotiz() {
     const n = opp ? getGegnerNotiz(opp) : null;
     const bilanz = opp ? getGegnerBilanzText(opp) : '';
     if (!opp || (!n && /^Noch keine/.test(bilanz))) { box.innerHTML = ''; return; }
-    box.innerHTML = `<div class="box" style="font-size:var(--fs-small); text-align:left;"><strong>📓 ${mpEsc(opp)}</strong><br>📊 ${mpEsc(bilanz)}${n ? `<br>📝 ${mpEsc(n.text)}` : ''}</div>`;
+    box.innerHTML = `<div class="box" style="font-size:var(--fs-small); text-align:left;"><strong>📓 ${mpEsc(opp)}</strong><br>📊 ${mpEsc(bilanz)}${n ? `<br>📝 ${mpEsc(n.text)}${getNotizTags(n).length ? `<div class="ui-card-meta" style="margin-top:4px;">${notizTagChips(n)}</div>` : ''}` : ''}</div>`;
 }
 
 function renderGegnerNotizSection(oppName, feldId, vorgabe) {
@@ -8180,6 +8208,7 @@ function renderGegnerNotizSection(oppName, feldId, vorgabe) {
     return `<div class="box" style="font-size:var(--fs-small); margin:0 0 6px;">📊 ${mpEsc(getGegnerBilanzText(oppName))}</div>
         <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${n ? `Gespeichert in Saison ${n.season}, Spieltag ${n.matchday}.` : 'Noch keine Notiz zu diesem Gegner.'} Die Notiz bleibt über Saisons erhalten.</div>
         <textarea id="${feldId}" class="input-inline" maxlength="${GEGNER_NOTIZ_MAX}" rows="3" placeholder="z. B. Schwache Abwehr über links, Konter nach Ecken" style="width:100%;" aria-label="Notiz zu ${mpEsc(oppName)}">${mpEsc(vorgabe != null ? vorgabe : (n ? n.text : ''))}</textarea>
+        <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;">${NOTIZ_SCHLAGWOERTER.map(x => { const an = getNotizTags(n).includes(x.id); return `<button type="button" onclick="toggleNotizTag(this)" data-tag="${x.id}" data-feld="${feldId}" class="${an ? 'btn-action' : 'btn-secondary'} notiz-tag" style="width:auto; font-size:var(--fs-caption);" aria-pressed="${an}">${x.label}</button>`; }).join('')}</div>
         <button onclick="saveGegnerNotiz(this.dataset.club, this.dataset.feld)" data-club="${mpEsc(oppName)}" data-feld="${feldId}" class="btn-secondary" style="margin-top:4px;">📓 Notiz speichern</button>`;
 }
 
@@ -8221,15 +8250,48 @@ function closeNachspielNotiz() {
     if (ov) ov.classList.remove('show');
 }
 
-// Alle Notizen im Reiter Analyse
+// Alle Notizen im Reiter Analyse, mit Suche (Verein, Text, Schlagwort) und Filter nach Schlagwort
 function renderGegnerNotizbuch() {
     const box = document.getElementById('opp-notes-box');
     if (!box) return;
     ensureGegnerNotizen();
-    const namen = Object.keys(game.gegnerNotizen).sort((a, b) => a.localeCompare(b));
+    const alle = Object.keys(game.gegnerNotizen);
+    const genutzt = NOTIZ_SCHLAGWOERTER.filter(x => alle.some(n => getNotizTags(game.gegnerNotizen[n]).includes(x.id)));
+    if (notizFilter.tag && !genutzt.some(x => x.id === notizFilter.tag)) notizFilter.tag = '';
     box.innerHTML = `<div class="panel-header" style="color:var(--purple);">📓 Notizbuch: Gegner</div>`
-        + (namen.length ? namen.map(n => `<div class="box" style="font-size:var(--fs-small); margin:4px 0;"><div style="display:flex; justify-content:space-between; gap:8px; align-items:center;"><strong>${mpEsc(n)}</strong><button onclick="deleteGegnerNotiz(this.dataset.club)" data-club="${mpEsc(n)}" class="btn-secondary" style="width:auto; color:var(--danger);" title="Notiz zu ${mpEsc(n)} löschen">🗑️</button></div>${mpEsc(game.gegnerNotizen[n].text)}<div style="color:var(--text-muted); font-size:var(--fs-caption);">Saison ${game.gegnerNotizen[n].season}, Spieltag ${game.gegnerNotizen[n].matchday}</div></div>`).join('')
+        + (alle.length > 1 || notizFilter.text || notizFilter.tag ? `<input id="opp-notes-suche" type="search" class="input-inline" value="${mpEsc(notizFilter.text)}" placeholder="Suchen: Verein, Text oder Schlagwort" aria-label="Notizen durchsuchen" oninput="setNotizSuche(this.value)" style="width:100%; box-sizing:border-box; margin-bottom:4px;">`
+            + (genutzt.length ? `<div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:4px;">${genutzt.map(x => `<button onclick="setNotizFilterTag('${x.id}')" data-filter="${x.id}" class="${notizFilter.tag === x.id ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:var(--fs-caption);" aria-pressed="${notizFilter.tag === x.id}">${x.label}</button>`).join('')}</div>` : '') : '')
+        + '<div id="opp-notes-liste"></div>';
+    renderGegnerNotizListe();
+}
+
+function renderGegnerNotizListe() {
+    const liste = document.getElementById('opp-notes-liste');
+    if (!liste) return;
+    ensureGegnerNotizen();
+    const alle = Object.keys(game.gegnerNotizen).sort((a, b) => a.localeCompare(b));
+    const q = notizFilter.text.trim().toLowerCase();
+    const namen = alle.filter(n => {
+        const e = game.gegnerNotizen[n];
+        if (notizFilter.tag && !getNotizTags(e).includes(notizFilter.tag)) return false;
+        return !q || n.toLowerCase().includes(q) || String(e.text).toLowerCase().includes(q) || getNotizTags(e).some(t => NOTIZ_SCHLAGWOERTER.find(x => x.id === t).label.toLowerCase().includes(q));
+    });
+    liste.innerHTML = namen.length ? namen.map(n => `<div class="box" style="font-size:var(--fs-small); margin:4px 0;"><div style="display:flex; justify-content:space-between; gap:8px; align-items:center;"><strong>${mpEsc(n)}</strong><button onclick="deleteGegnerNotiz(this.dataset.club)" data-club="${mpEsc(n)}" class="btn-secondary" style="width:auto; color:var(--danger);" title="Notiz zu ${mpEsc(n)} löschen">🗑️</button></div>${mpEsc(game.gegnerNotizen[n].text)}${getNotizTags(game.gegnerNotizen[n]).length ? `<div class="ui-card-meta" style="margin-top:4px;">${notizTagChips(game.gegnerNotizen[n])}</div>` : ''}<div style="color:var(--text-muted); font-size:var(--fs-caption);">Saison ${game.gegnerNotizen[n].season}, Spieltag ${game.gegnerNotizen[n].matchday}</div></div>`).join('')
+        : (alle.length ? '<div style="font-size:var(--fs-small); color:var(--text-muted);">Keine Notiz passt zur Suche.</div>'
             : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Notizen. Vor dem Anpfiff gibt es im Spieltag-Check ein Notizfeld zum Gegner.</div>');
+}
+
+// Während des Tippens wird nur die Liste neu geschrieben, das Suchfeld behält den Fokus
+function setNotizSuche(text) {
+    notizFilter.text = String(text || '').slice(0, 60);
+    renderGegnerNotizListe();
+}
+
+function setNotizFilterTag(tag) {
+    notizFilter.tag = notizFilter.tag === tag ? '' : tag;
+    renderGegnerNotizbuch();
+    const knopf = document.querySelector(`#opp-notes-box [data-filter="${tag}"]`);
+    if (knopf) knopf.focus();
 }
 
 // ---------- Aufstellungsvorlagen ----------
@@ -8628,7 +8690,8 @@ function renderPrematchCheck() {
         muede.length ? uiChip(`😮‍💨 ${muede.length} erschöpft`, muede.some(p => p.fitness < 50) ? 'schlecht' : 'warn') : '',
         rotation.length ? uiChip(`🔄 ${rotation.length} Rotationsidee${rotation.length === 1 ? '' : 'n'}`, 'warn') : '',
         fragil.length ? uiChip(`🩹 ${fragil.length} verletzungsanfällig`, 'warn') : '',
-        notiz ? uiChip('📓 Notiz vorhanden') : ''
+        notiz ? uiChip('📓 Notiz vorhanden') : '',
+        notiz ? notizTagChips(notiz) : ''
     ];
     const problemListe = probleme.length ? probleme.map(x => `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">${x.ton === 'schlecht' ? '🔴' : '🟡'} ${mpEsc(x.text)}</div>`).join('')
         : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Torwart und Formation passen.</div>';
@@ -27152,6 +27215,8 @@ function openShareReport() {
     const ov = document.getElementById('share-report-overlay');
     if (!feld || !ov) return;
     feld.value = text;
+    const titel = document.getElementById('share-report-title');
+    if (titel) titel.textContent = '📤 Spielbericht teilen';
     const teilen = document.getElementById('share-report-native');
     if (teilen) teilen.style.display = typeof navigator.share === 'function' ? '' : 'none';
     ov.classList.add('show');
@@ -27233,7 +27298,15 @@ function buildSeasonReviewHtml(saison) {
     const leer = text => `<span style="color:var(--text-muted);">${text}</span>`;
     const teile = [];
     const k = (game.managerCareer || []).find(e => e.season === saison && e.club === game.clubName);
-    teile.push(abschnitt('🏆 Tabelle', k ? `Platz ${k.rank} in der ${mpEsc(k.league)}: ${k.won}S ${k.drawn}U ${k.lost}N, Tore ${k.goalsFor}:${k.goalsAgainst}, ${k.points} Punkte.` : leer('Keine Tabelle gespeichert.')));
+    const vor = (game.managerCareer || []).find(e => e.season === saison - 1 && e.club === game.clubName);
+    const vz = n => (n > 0 ? '+' : n < 0 ? '−' : '±') + Math.abs(n);
+    let vergleich = '';
+    if (k && vor) {
+        vergleich = vor.level === k.level
+            ? `<br><span style="color:var(--text-muted);">Vorsaison: Platz ${vor.rank}, ${vor.points} Punkte → ${vz(k.points - vor.points)} Punkte, Platz ${vz(vor.rank - k.rank)}, Tordifferenz ${vz((k.goalsFor - k.goalsAgainst) - (vor.goalsFor - vor.goalsAgainst))}.</span>`
+            : `<br><span style="color:var(--text-muted);">Vorsaison in einer anderen Liga (${mpEsc(vor.league)}), Punkte sind nicht vergleichbar.</span>`;
+    }
+    teile.push(abschnitt('🏆 Tabelle', k ? `Platz ${k.rank} in der ${mpEsc(k.league)}: ${k.won}S ${k.drawn}U ${k.lost}N, Tore ${k.goalsFor}:${k.goalsAgainst}, ${k.points} Punkte.${vergleich}` : leer('Keine Tabelle gespeichert.')));
     const va = (game.vorlageBilanzArchiv || []).find(a => a.season === saison);
     const beste = va && typeof findeBesteVorlage === 'function' ? findeBesteVorlage(va.eintraege) : null;
     const vaGesamt = va ? Object.values(va.eintraege).filter(b => b.spiele > 0) : [];
@@ -27249,7 +27322,9 @@ function buildSeasonReviewHtml(saison) {
     }
     teile.push(abschnitt('🏷️ Etiketten', etiketten || leer('Keine Etiketten mit genug Spielen (je Seite mindestens 5) in dieser Saison.')));
     const tb = (game.transferBilanzHistory || []).find(x => x.season === saison);
-    teile.push(abschnitt('💰 Transfers', tb ? `Verkäufe +${formatVal(tb.verkauf)}, Käufe −${formatVal(tb.kauf)}, Saldo <strong style="color:${tb.netto >= 0 ? 'var(--primary)' : 'var(--danger)'};">${tb.netto >= 0 ? '+' : ''}${formatVal(tb.netto)}</strong>.` : leer('Keine Transfers in dieser Saison.')));
+    const tbVor = (game.transferBilanzHistory || []).find(x => x.season === saison - 1);
+    const tbVgl = tb && tbVor ? `<br><span style="color:var(--text-muted);">Vorsaison: Saldo ${tbVor.netto >= 0 ? '+' : ''}${formatVal(tbVor.netto)}, Unterschied ${tb.netto - tbVor.netto >= 0 ? '+' : ''}${formatVal(tb.netto - tbVor.netto)}.</span>` : '';
+    teile.push(abschnitt('💰 Transfers', tb ? `Verkäufe +${formatVal(tb.verkauf)}, Käufe −${formatVal(tb.kauf)}, Saldo <strong style="color:${tb.netto >= 0 ? 'var(--primary)' : 'var(--danger)'};">${tb.netto >= 0 ? '+' : ''}${formatVal(tb.netto)}</strong>.${tbVgl}` : leer('Keine Transfers in dieser Saison.')));
     const ausfaelle = squad.map(p => {
         const log = (Array.isArray(p.injuryLog) ? p.injuryLog : []).filter(e => e.season === saison);
         return { p, n: log.length, tage: log.reduce((sum, e) => sum + (e.tage || 0), 0) };
@@ -27266,8 +27341,41 @@ function openSeasonReview(saison) {
     if (!body || !ov) return;
     saison = Number(saison) || getReviewSeasons()[0];
     if (!saison) { showToast('Es gibt noch keine abgeschlossene Saison für einen Rückblick.', 'error'); return; }
-    body.innerHTML = `<div class="panel-header">📚 Saisonrückblick ${saison}</div>` + buildSeasonReviewHtml(saison);
+    body.innerHTML = `<div class="panel-header">📚 Saisonrückblick ${saison}</div>` + buildSeasonReviewHtml(saison)
+        + `<button onclick="shareSeasonReview(${saison})" class="btn-action" style="margin-top:6px;">📋 Als Text kopieren oder teilen</button>`;
     ov.classList.add('show');
+    if (saison === game.season - 1) game.rueckblickGesehen = saison;
+    renderSeasonReviewHint();
+}
+
+// Der Rückblick als reiner Text (Überschriften, eine Zeile je Abschnitt) im Fenster „Teilen“ des Spielberichts
+function buildSeasonReviewText(saison) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = buildSeasonReviewHtml(saison).replace(/<br>/g, '\n').replace(/<\/div>/g, '\n');
+    const zeilen = tmp.textContent.split('\n').map(z => z.trim()).filter(Boolean);
+    return [`📚 Saisonrückblick ${saison} · ${game.clubName}`, ...zeilen, '— Anstoß Mobile Pro FM13'].join('\n');
+}
+
+function shareSeasonReview(saison) {
+    const feld = document.getElementById('share-report-text'), ov = document.getElementById('share-report-overlay');
+    if (!feld || !ov) return;
+    feld.value = buildSeasonReviewText(Number(saison));
+    const titel = document.getElementById('share-report-title');
+    if (titel) titel.textContent = '📤 Saisonrückblick teilen';
+    const teilen = document.getElementById('share-report-native');
+    if (teilen) teilen.style.display = typeof navigator.share === 'function' ? '' : 'none';
+    closeSeasonReview();
+    ov.classList.add('show');
+}
+
+// Nach dem Saisonwechsel bis zum dritten Spieltag: Knopf im Dashboard (ein Fenster würde sich mit den Meldungen des Saisonwechsels stapeln)
+function renderSeasonReviewHint() {
+    const box = document.getElementById('season-review-hint');
+    if (!box) return;
+    const saison = game.season - 1;
+    const zeigen = saison >= 1 && game.matchday <= 3 && game.rueckblickGesehen !== saison && getReviewSeasons().includes(saison);
+    const html = zeigen ? `<button onclick="openSeasonReview(${saison})" class="btn-secondary" style="margin-bottom:10px;">📚 Saisonrückblick ${saison} öffnen</button>` : '';
+    if (box.innerHTML !== html) box.innerHTML = html;
 }
 
 function closeSeasonReview() {
@@ -27518,14 +27626,15 @@ function getStartelfTagInfo() {
 
 // Vor dem Ligaspiel (neben markPresetInUse): Startelf-Etiketten festhalten
 function markTagsInUse() {
-    game.etikettImEinsatz = Object.assign({ matchday: game.matchday }, getStartelfTagInfo());
+    game.etikettImEinsatz = Object.assign({ matchday: game.matchday, ids: Array.isArray(lineup) ? [...lineup] : [] }, getStartelfTagInfo());
 }
 
 // Nach dem Ligaspiel (aus recordOwnLeagueResult): ohne Merkzettel gilt die aktuelle Startelf
 function recordTagResult(ourGoals, oppGoals) {
     let info = game.etikettImEinsatz;
     game.etikettImEinsatz = null;
-    if (!info || info.matchday !== game.matchday) info = getStartelfTagInfo();
+    if (!info || info.matchday !== game.matchday) info = Object.assign({ ids: Array.isArray(lineup) ? [...lineup] : [] }, getStartelfTagInfo());
+    recordPlayerStartResult(Array.isArray(info.ids) ? info.ids : (Array.isArray(lineup) ? lineup : []), ourGoals, oppGoals);
     ensureTagBilanz();
     const leer = () => ({ spiele: 0, s: 0, u: 0, n: 0, tore: 0, gegentore: 0 });
     info.vergeben.forEach(t => {
@@ -27540,6 +27649,7 @@ function tagPunkteProSpiel(z) { return z && z.spiele ? (3 * z.s + z.u) / z.spiel
 
 // Saisonende: laufende Bilanz ins Vorjahr schieben
 function archiveTagBilanz() {
+    resetPlayerStartBilanz();
     ensureTagBilanz();
     if (!Object.keys(game.etikettBilanz).length) { return; }
     game.etikettBilanzVorjahr = { season: game.season, daten: JSON.parse(JSON.stringify(game.etikettBilanz)) };
@@ -27569,6 +27679,68 @@ function renderTagBilanzBox() {
     box.innerHTML = '<div class="panel-header" style="color:var(--purple);">🏷️ Bilanz der Etiketten</div>'
         + (aktuell || alt ? aktuell + alt + '<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:6px;">Verglichen werden Ligaspiele mit und ohne Spieler dieses Etiketts in der Startelf. Das ist keine Ursache: Stammkräfte spielen oft gegen die leichteren Gegner nicht, kleine Stichproben schwanken stark.</div>'
             : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Daten. Vergib im Spielerdetail Etiketten und spiele Ligaspiele.</div>');
+}
+
+// ---------- Marktwert-Bewegung (Phase 26.14) ----------
+// Vergleich des aktuellen Marktwerts mit dem der Vorsaison (aus p.strengthHistory; der Verlauf ist je Saison, nicht je
+// Spieltag gespeichert). Der Manager-Assistent meldet große Sprünge nach oben (Verkaufszeitpunkt?) und nach unten.
+const MARKTWERT_SPRUNG_AUF = 1.25, MARKTWERT_SPRUNG_AB = 0.8, MARKTWERT_MIN_DIFF = 300000;
+
+// calculatePlayerMarketValue() würfelt ±8 % Streuung; für den Vergleich zählt der mittlere Wert, sonst flackert der Hinweis
+function getMarketValueBase(strength) {
+    const zufall = Math.random;
+    Math.random = () => 0.5;
+    try { return calculatePlayerMarketValue(strength); } finally { Math.random = zufall; }
+}
+
+function getMarketValueMove(p) {
+    if (!p || typeof calculatePlayerMarketValue !== 'function') return null;
+    const vorher = (p.strengthHistory || []).filter(h => typeof h.strength === 'number' && h.season < game.season).pop();
+    if (!vorher || !(p.marketValue > 0)) return null;
+    const vor = getMarketValueBase(vorher.strength);
+    if (!(vor > 0)) return null;
+    return { p, vor, jetzt: p.marketValue, diff: p.marketValue - vor, prozent: Math.round((p.marketValue / vor - 1) * 100) };
+}
+
+function getMarketValueMoves() {
+    const alle = squad.map(getMarketValueMove).filter(Boolean);
+    return {
+        auf: alle.filter(m => m.jetzt >= m.vor * MARKTWERT_SPRUNG_AUF && m.diff >= MARKTWERT_MIN_DIFF).sort((a, b) => b.diff - a.diff),
+        ab: alle.filter(m => m.jetzt <= m.vor * MARKTWERT_SPRUNG_AB && -m.diff >= MARKTWERT_MIN_DIFF).sort((a, b) => a.diff - b.diff)
+    };
+}
+
+// ---------- Bilanz je Spieler (Phase 26.14) ----------
+// p.startBilanz = { mit: { spiele, s, u, n }, ohne: { ... } } zählt die Ligaspiele der laufenden Saison danach, ob der Spieler
+// in der Startelf stand. Gezählt wird in recordTagResult(); am Saisonende beginnt jede Bilanz von vorn.
+
+function recordPlayerStartResult(ids, ourGoals, oppGoals) {
+    squad.forEach(p => {
+        if (!p.startBilanz || typeof p.startBilanz !== 'object') p.startBilanz = { mit: { spiele: 0, s: 0, u: 0, n: 0 }, ohne: { spiele: 0, s: 0, u: 0, n: 0 } };
+        const z = ids.includes(p.id) ? p.startBilanz.mit : p.startBilanz.ohne;
+        z.spiele++;
+        if (ourGoals > oppGoals) z.s++; else if (ourGoals < oppGoals) z.n++; else z.u++;
+    });
+}
+
+function resetPlayerStartBilanz() {
+    squad.forEach(p => { delete p.startBilanz; });
+}
+
+function renderPlayerStartBilanz(p, pool) {
+    const box = document.getElementById('pd-startbilanz');
+    if (!box) return;
+    const b = p && pool === 'squad' ? p.startBilanz : null;
+    if (!b || !b.mit || !b.ohne || (b.mit.spiele + b.ohne.spiele) === 0) { box.innerHTML = ''; return; }
+    const fmt = v => v.toFixed(2).replace('.', ',');
+    const pps = z => z.spiele ? (3 * z.s + z.u) / z.spiele : 0;
+    const genug = b.mit.spiele >= TAG_BILANZ_MIN && b.ohne.spiele >= TAG_BILANZ_MIN;
+    const diff = pps(b.mit) - pps(b.ohne);
+    const urteil = genug ? ` · ${diff >= 0.3 ? '👍 mit ihm besser' : diff <= -0.3 ? '👎 ohne ihn besser' : '≈ kein klarer Unterschied'} (${diff >= 0 ? '+' : ''}${fmt(diff)})` : ` · noch zu wenige Spiele (je Seite mindestens ${TAG_BILANZ_MIN})`;
+    box.innerHTML = `<details class="ui-fold" style="margin:8px 0; text-align:left;"><summary>📊 Mannschaft mit und ohne ihn (Saison ${game.season})</summary>
+        <div style="font-size:var(--fs-small); margin-top:4px;">In der Startelf: ${b.mit.spiele} Sp., ${b.mit.s}S ${b.mit.u}U ${b.mit.n}N, ${fmt(pps(b.mit))} Pkt/Spiel<br>
+        Nicht in der Startelf: ${b.ohne.spiele} Sp., ${b.ohne.s}S ${b.ohne.u}U ${b.ohne.n}N, ${fmt(pps(b.ohne))} Pkt/Spiel<br><strong>${urteil.slice(3)}</strong>
+        <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">Das ist keine Ursache: Stammkräfte fehlen oft gerade gegen schwere Gegner nicht, kleine Stichproben schwanken stark.</div></div></details>`;
 }
 
 // ---------- Manager-Assistent ----------
@@ -27641,6 +27813,11 @@ function getManagerTodos(alle, roh) {
     }
     const raten = typeof activeLoans !== 'undefined' ? activeLoans.reduce((s, l) => s + (l.installment || 0), 0) : 0;
     if (raten > 0 && game.money >= 0 && game.money < raten * 3) t.push({ id: 'kredit', prio: 78, icon: '🟠', text: `Die Kasse (${formatVal(game.money)}) deckt nur ${Math.floor(game.money / raten)} von 3 anstehenden Kreditraten (${formatVal(raten)} je Spieltag).`, label: 'Zu den Finanzen', aktion: "showScreen('screen-finances')" });
+    const mw = getMarketValueMoves();
+    if (mw.auf.length || mw.ab.length) {
+        const teil = (m, pfeil) => `${m.p.name} (${pfeil} ${Math.abs(m.prozent)} %, ${formatVal(m.jetzt)})`;
+        t.push({ id: 'marktwert', prio: 40, icon: '💶', text: `Marktwert seit der Vorsaison: ${[...mw.auf.slice(0, 2).map(m => teil(m, '↑')), ...mw.ab.slice(0, 1).map(m => teil(m, '↓'))].join(', ')}${mw.auf.length + mw.ab.length > 3 ? ' …' : ''}${mw.auf.length ? ' – Zeit für einen Verkauf?' : ''}`, label: 'Zum Kader', aktion: "showScreen('screen-squad')" });
+    }
     const preisAlarm = typeof getScoutPriceAlerts === 'function' ? getScoutPriceAlerts() : [];
     if (preisAlarm.length) t.push({ id: 'scout-alarm', prio: 70, icon: '🔔', text: `Preis-Alarm: ${preisAlarm.slice(0, 2).map(x => `${x.p.name} (${x.p.pos}, Str ${x.p.strength}) für ${formatVal(x.preis)}`).join(', ')}${preisAlarm.length > 2 ? ' …' : ''} liegt unter deiner Grenze und ist bezahlbar.`, label: 'Zum Scouting', aktion: "showScreen('screen-scouting-global')" });
     const ungelesen = typeof inboxMessages !== 'undefined' ? inboxMessages.filter(m => !m.read).length : 0;
@@ -27702,6 +27879,7 @@ function getAssistentErledigtHtml() {
 let managerAssistantLetzterInhalt = '';
 
 function renderManagerAssistant() {
+    if (typeof renderSeasonReviewHint === 'function') renderSeasonReviewHint();
     const box = document.getElementById('manager-assistant-box');
     if (!box) return;
     const dash = document.getElementById('screen-dashboard');

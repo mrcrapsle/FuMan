@@ -1118,6 +1118,209 @@ async function testRunde28Funktionen(browser) {
     await page.close();
 }
 
+async function testRunde29Funktionen(browser) {
+    console.log('\n[26.14] Rückblick mit Vorsaison-Vergleich und Text, Dashboard-Knopf, Marktwert-Hinweis, Bilanz je Spieler, Notizbuch mit Schlagwörtern');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 320, height: 800 });
+    const r = await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false; simulateMatchdays(3);
+        const out = {};
+        const schrift = document.createElement('style'); schrift.textContent = '*,*::before,*::after{font-family:"DejaVu Sans",Verdana,sans-serif!important}'; document.head.appendChild(schrift);
+        const probe = document.createElement('span'); document.body.appendChild(probe);
+        const woerter = sel => [...document.querySelectorAll(sel)].filter(el => el.offsetParent).filter(el => {
+            const cs = getComputedStyle(el), innen = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+            probe.style.cssText = `position:absolute; visibility:hidden; white-space:nowrap; font:${cs.font}; letter-spacing:${cs.letterSpacing}`;
+            return (el.innerText || '').trim().split(/\s+/).flatMap(w => w.split(/(?<=-)/)).some(t => { probe.textContent = t; return probe.getBoundingClientRect().width > innen + 1; });
+        }).map(el => (el.innerText || '').trim().slice(0, 24));
+        const ueberlauf = () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1;
+        squad.forEach(p => { p.injured = 0; p.suspended = 0; p.fitness = 90; p.timesInjured = 0; p.tags = []; p.injuryLog = []; });
+        game.formation = '4-4-2'; autoLineup();
+        const saisonAlt = game.season;
+
+        // --- Rückblick: Vergleich mit der Vorsaison, Text, Teilen ---
+        game.season = 3;
+        const eintrag = (season, level, rank, points, gf, ga) => ({ season, club: game.clubName, level, league: 'Testliga' + level, rank, won: 10, drawn: 5, lost: 5, goalsFor: gf, goalsAgainst: ga, points });
+        game.managerCareer = [eintrag(1, 2, 5, 49, 40, 40), eintrag(2, 2, 3, 55, 50, 40)];
+        game.transferBilanzHistory = [{ season: 1, verkauf: 1000000, kauf: 3000000, netto: -2000000 }, { season: 2, verkauf: 2000000, kauf: 1000000, netto: 1000000 }];
+        game.vorlageBilanzArchiv = []; game.gegnerNotizen = {}; game.etikettBilanzVorjahr = null;
+        const h2 = buildSeasonReviewHtml(2);
+        const t2 = (() => { const d = document.createElement('div'); d.innerHTML = h2; return d.textContent; })();
+        out.vglPunkte = t2.includes('Vorsaison: Platz 5, 49 Punkte') && t2.includes('+6 Punkte') && t2.includes('Platz +2') && t2.includes('Tordifferenz +10');
+        out.vglTransfer = t2.includes('Vorsaison: Saldo') && t2.includes('Unterschied +');
+        const t1 = (() => { const d = document.createElement('div'); d.innerHTML = buildSeasonReviewHtml(1); return d.textContent; })();
+        out.ersteSaisonKeinVgl = !t1.includes('Vorsaison:');
+        game.managerCareer[0].level = 3;
+        const tAnders = (() => { const d = document.createElement('div'); d.innerHTML = buildSeasonReviewHtml(2); return d.textContent; })();
+        out.andereLiga = tAnders.includes('Vorsaison in einer anderen Liga') && !tAnders.includes('+6 Punkte');
+        game.managerCareer[0].level = 2;
+        game.managerCareer[1].rank = 7;
+        out.platzSchlechter = (() => { const d = document.createElement('div'); d.innerHTML = buildSeasonReviewHtml(2); return d.textContent; })().includes('Platz −2');
+        game.managerCareer[1].rank = 3;
+        const text = buildSeasonReviewText(2);
+        out.text = text.startsWith(`📚 Saisonrückblick 2 · ${game.clubName}`) && text.includes('Platz 3') && !/[<>]/.test(text) && text.split('\n').length > 6 && text.endsWith('— Anstoß Mobile Pro FM13');
+        openSeasonReview(2);
+        out.knopfImFenster = !!document.querySelector('#season-review-body button[onclick^="shareSeasonReview"]');
+        out.wRueckblick = JSON.stringify(woerter('#season-review-body button'));
+        shareSeasonReview(2);
+        const so = document.getElementById('share-report-overlay');
+        out.teilenOffen = so.classList.contains('show') && !document.getElementById('season-review-overlay').classList.contains('show')
+            && document.getElementById('share-report-title').textContent.includes('Saisonrückblick') && document.getElementById('share-report-text').value.includes('Saisonrückblick 2');
+        closeShareReport();
+        const cmAlt = typeof currentMatch !== 'undefined' ? currentMatch : null;
+        currentMatch = { isHome: true, homeName: game.clubName, awayName: 'Test FC', homeGoals: 1, awayGoals: 0, isCup: false };
+        openShareReport();
+        out.titelZurueck = document.getElementById('share-report-title').textContent.includes('Spielbericht') && document.getElementById('share-report-text').value.includes('Test FC');
+        closeShareReport(); currentMatch = cmAlt;
+
+        // --- Dashboard-Knopf nach dem Saisonwechsel ---
+        game.rueckblickGesehen = 0; game.matchday = 1;
+        showScreen('screen-dashboard');
+        renderSeasonReviewHint();
+        const hint = document.getElementById('season-review-hint');
+        out.hintDa = hint.textContent.includes('Saisonrückblick 2 öffnen');
+        out.wHint = JSON.stringify(woerter('#season-review-hint button'));
+        out.hintBreit = ueberlauf();
+        openSeasonReview(2);
+        out.hintWeg = game.rueckblickGesehen === 2 && hint.innerHTML === '';
+        closeSeasonReview();
+        game.rueckblickGesehen = 0; game.matchday = 4; renderSeasonReviewHint();
+        out.hintSpaeter = hint.innerHTML === '';
+        game.matchday = 2; renderSeasonReviewHint(); out.hintSpieltag2 = hint.textContent.includes('öffnen');
+        managerAssistantLetzterInhalt = ''; hint.innerHTML = ''; renderManagerAssistant();
+        out.hintImDashboard = hint.textContent.includes('öffnen');
+        game.managerCareer = []; renderSeasonReviewHint(); out.hintOhneDaten = hint.innerHTML === '';
+        game.season = 1; game.managerCareer = []; renderSeasonReviewHint(); out.hintSaison1 = hint.innerHTML === '';
+        game.season = saisonAlt; game.matchday = 4; delete game.rueckblickGesehen; renderSeasonReviewHint();
+        out.altesFeld = hint.innerHTML === '';
+        game.managerCareer = []; game.transferBilanzHistory = [];
+
+        // --- Marktwert-Hinweis ---
+        game.season = 5;
+        const p1 = squad[0], p2 = squad[1], p3 = squad[2];
+        let st = 60; while (getMarketValueBase(st) < 1500000 && st < 95) st++;
+        const vor = getMarketValueBase(st);
+        out.stabil = getMarketValueBase(st) === vor && getMarketValueBase(st) === getMarketValueBase(st);
+        [p1, p2, p3].forEach(p => { p.strengthHistory = [{ season: 3, strength: 40 }, { season: 4, strength: st }]; p.marketValue = vor; });
+        p1.marketValue = Math.round(vor * 1.5);
+        p2.marketValue = Math.round(vor * 0.7);
+        p3.marketValue = Math.round(vor * 1.1);
+        const mv = getMarketValueMoves();
+        out.mvAuf = mv.auf.some(m => m.p.id === p1.id && m.prozent === 50) && !mv.auf.some(m => m.p.id === p3.id);
+        out.mvAb = mv.ab.some(m => m.p.id === p2.id && m.prozent === -30) && !mv.ab.some(m => m.p.id === p3.id);
+        const mt = getManagerTodos(true).find(x => x.id === 'marktwert');
+        out.mvTodo = !!mt && mt.text.includes(p1.name) && mt.text.includes('↑ 50 %') && mt.text.includes('↓ 30 %') && mt.text.includes('Verkauf');
+        p1.marketValue = vor;
+        const mt2 = getManagerTodos(true).find(x => x.id === 'marktwert');
+        out.mvNurFall = !!mt2 && mt2.text.includes('↓') && !mt2.text.includes('Verkauf');
+        p2.marketValue = vor;
+        out.mvNichts = !getManagerTodos(true).some(x => x.id === 'marktwert');
+        const klein = getMarketValueBase(30);
+        p1.strengthHistory = [{ season: 4, strength: 30 }]; p1.marketValue = klein * 2;
+        out.mvMindestdiff = klein >= MARKTWERT_MIN_DIFF || !getMarketValueMoves().auf.some(m => m.p.id === p1.id);
+        p1.strengthHistory = [{ season: 5, strength: 30 }]; p1.marketValue = klein * 3;
+        out.mvNurAlteSaison = getMarketValueMove(p1) === null;
+        delete p1.strengthHistory; out.mvOhneVerlauf = getMarketValueMove(p1) === null && Array.isArray(getMarketValueMoves().auf);
+        [p1, p2, p3].forEach(p => { p.marketValue = calculatePlayerMarketValue(p.strength); p.strengthHistory = [{ season: 1, strength: p.strength }]; });
+        game.season = saisonAlt;
+
+        // --- Bilanz je Spieler ---
+        squad.forEach(p => { delete p.startBilanz; });
+        game.etikettImEinsatz = null;
+        const starter = squad.find(p => lineup.includes(p.id) && p.pos !== 'TW');
+        const bank = squad.find(p => !lineup.includes(p.id));
+        markTagsInUse();
+        out.idsGemerkt = Array.isArray(game.etikettImEinsatz.ids) && game.etikettImEinsatz.ids.length === 11;
+        recordTagResult(2, 0);
+        out.spielerMit = starter.startBilanz && starter.startBilanz.mit.spiele === 1 && starter.startBilanz.mit.s === 1 && starter.startBilanz.ohne.spiele === 0;
+        out.spielerOhne = bank.startBilanz && bank.startBilanz.ohne.spiele === 1 && bank.startBilanz.ohne.s === 1 && bank.startBilanz.mit.spiele === 0;
+        game.etikettImEinsatz = { matchday: game.matchday + 1, ids: [], startelf: [], vergeben: [] };
+        recordTagResult(0, 1);
+        out.alterMerkerSpieler = starter.startBilanz.mit.spiele === 2 && starter.startBilanz.mit.n === 1;
+        renderPlayerStartBilanz(starter, 'squad');
+        const sb = document.getElementById('pd-startbilanz').textContent;
+        out.spielerText = sb.includes('In der Startelf: 2 Sp.') && sb.includes('noch zu wenige Spiele') && sb.includes('keine Ursache');
+        starter.startBilanz = { mit: { spiele: 6, s: 6, u: 0, n: 0 }, ohne: { spiele: 6, s: 0, u: 0, n: 6 } };
+        renderPlayerStartBilanz(starter, 'squad'); out.spielerBesser = document.getElementById('pd-startbilanz').textContent.includes('mit ihm besser (+3,00)');
+        starter.startBilanz = { mit: { spiele: 6, s: 0, u: 0, n: 6 }, ohne: { spiele: 6, s: 6, u: 0, n: 0 } };
+        renderPlayerStartBilanz(starter, 'squad'); out.spielerSchlechter = document.getElementById('pd-startbilanz').textContent.includes('ohne ihn besser (-3,00)');
+        renderPlayerStartBilanz(starter, 'secondTeam'); out.nurKader = document.getElementById('pd-startbilanz').innerHTML === '';
+        delete starter.startBilanz; renderPlayerStartBilanz(starter, 'squad'); out.ohneDaten = document.getElementById('pd-startbilanz').innerHTML === '';
+        recordPlayerStartResult([starter.id], 1, 1); out.altesFeldSpieler = starter.startBilanz.mit.u === 1;
+        openPlayerDetail(starter.id, 'squad');
+        out.imDetail = !!document.getElementById('pd-startbilanz') && document.getElementById('pd-startbilanz').textContent.includes('Mannschaft mit und ohne ihn');
+        closePlayerDetail && closePlayerDetail();
+        archiveTagBilanz();
+        out.saisonendeLeer = squad.every(p => p.startBilanz === undefined);
+
+        // --- Notizbuch mit Schlagwörtern und Suche ---
+        game.gegnerNotizen = {
+            'A FC': { text: 'Schwach bei Ecken', season: 1, matchday: 1, tags: ['standards', 'konter'] },
+            'B FC': { text: 'Presst früh', season: 1, matchday: 2, tags: ['pressing'] },
+            'C FC': { text: 'Alte Notiz ohne Schlagwörter', season: 1, matchday: 3 },
+            'D FC': { text: 'Unbekanntes Schlagwort', season: 1, matchday: 4, tags: ['gibtsnicht'] }
+        };
+        notizFilter = { text: '', tag: '' };
+        renderGegnerNotizbuch();
+        const nb = () => document.getElementById('opp-notes-liste').textContent;
+        out.nbAlle = ['A FC', 'B FC', 'C FC', 'D FC'].every(n => nb().includes(n)) && nb().includes('⚡ Konter') && nb().includes('🎯 Standards') && !nb().includes('gibtsnicht');
+        out.nbSuche = !!document.getElementById('opp-notes-suche');
+        setNotizSuche('ecken'); out.nbText = nb().includes('A FC') && !nb().includes('B FC') && !nb().includes('C FC');
+        out.nbFokus = document.getElementById('opp-notes-suche') !== null;
+        setNotizSuche('PRESSING'); out.nbTagText = nb().includes('B FC') && !nb().includes('A FC');
+        setNotizSuche('c fc'); out.nbVerein = nb().includes('C FC') && !nb().includes('A FC');
+        setNotizSuche('zzz'); out.nbKeine = nb().includes('Keine Notiz passt');
+        setNotizSuche(''); out.nbWieder = ['A FC', 'B FC', 'C FC', 'D FC'].every(n => nb().includes(n));
+        setNotizFilterTag('konter'); out.nbFilter = nb().includes('A FC') && !nb().includes('B FC') && document.querySelector('#opp-notes-box [data-filter="konter"]').getAttribute('aria-pressed') === 'true';
+        setNotizFilterTag('konter'); out.nbFilterAus = nb().includes('B FC');
+        notizFilter.tag = 'heimstark'; renderGegnerNotizbuch(); out.nbFilterUnbenutzt = notizFilter.tag === '' && nb().includes('B FC');
+        out.wNotizbuch = JSON.stringify(woerter('#opp-notes-box button'));
+        out.nbBreit = ueberlauf();
+        delete game.gegnerNotizen['B FC']; delete game.gegnerNotizen['C FC']; delete game.gegnerNotizen['D FC'];
+        renderGegnerNotizbuch(); out.nbEinzelne = !document.getElementById('opp-notes-suche');
+        // Schlagwörter im Notizfenster speichern
+        game.gegnerNotizen = {};
+        currentMatch = { isHome: true, homeName: game.clubName, awayName: 'Test FC', homeGoals: 0, awayGoals: 1, isCup: false };
+        openNachspielNotiz();
+        const tagKnopf = id => document.querySelector(`#opp-note-body .notiz-tag[data-tag="${id}"]`);
+        toggleNotizTag(tagKnopf('konter')); toggleNotizTag(tagKnopf('fluegel'));
+        out.knopfAn = tagKnopf('konter').getAttribute('aria-pressed') === 'true' && tagKnopf('konter').className.includes('btn-action');
+        out.wFenster = JSON.stringify(woerter('#opp-note-body button'));
+        saveGegnerNotiz('Test FC', 'gegner-notiz-nach');
+        out.tagsGespeichert = JSON.stringify(game.gegnerNotizen['Test FC'].tags) === JSON.stringify(['konter', 'fluegel']);
+        openNachspielNotiz();
+        out.tagsVorbelegt = tagKnopf('konter').getAttribute('aria-pressed') === 'true' && tagKnopf('standards').getAttribute('aria-pressed') === 'false';
+        toggleNotizTag(tagKnopf('konter')); toggleNotizTag(tagKnopf('fluegel'));
+        saveGegnerNotiz('Test FC', 'gegner-notiz-nach');
+        out.tagsEntfernt = game.gegnerNotizen['Test FC'].tags === undefined;
+        // Chips im Spieltag-Check und in der Halbzeit
+        game.gegnerNotizen['Test FC'].tags = ['standards', 'pressing'];
+        pendingMatchInfo = { isHome: true, oppName: 'Test FC', oppStr: 60, ourFixture: null };
+        renderPrematchCheck();
+        const pc = document.getElementById('prematch-check-box').textContent;
+        out.chipsCheck = pc.includes('🎯 Standards') && pc.includes('🔥 Pressing');
+        renderHalftimeNotiz();
+        out.chipsHalbzeit = document.getElementById('halftime-notiz-box').textContent.includes('Standards');
+        out.wCheck = JSON.stringify(woerter('#prematch-check-box button'));
+        currentMatch = cmAlt; game.gegnerNotizen = {};
+        return out;
+    });
+    assert(r.vglPunkte && r.vglTransfer && r.ersteSaisonKeinVgl && r.andereLiga && r.platzSchlechter, `Saisonrückblick: Vergleich mit der Vorsaison (Punkte, Platz, Tordifferenz, Transfersaldo, andere Liga) (${JSON.stringify([r.vglPunkte, r.vglTransfer, r.ersteSaisonKeinVgl, r.andereLiga, r.platzSchlechter])})`);
+    assert(r.text && r.knopfImFenster && r.teilenOffen && r.titelZurueck, `Saisonrückblick: Text ohne HTML, Knopf im Fenster, Teilen-Fenster mit eigenem Titel (${JSON.stringify([r.text, r.knopfImFenster, r.teilenOffen, r.titelZurueck])})`);
+    assert(r.hintDa && r.hintBreit && r.hintWeg && r.hintSpaeter && r.hintSpieltag2 && r.hintImDashboard, `Dashboard-Knopf zum Rückblick: erscheint nach dem Saisonwechsel, verschwindet nach dem Öffnen und nach Spieltag 3 (${JSON.stringify([r.hintDa, r.hintBreit, r.hintWeg, r.hintSpaeter, r.hintSpieltag2, r.hintImDashboard])})`);
+    assert(r.hintOhneDaten && r.hintSaison1 && r.altesFeld, `Dashboard-Knopf: nichts ohne abgeschlossene Saison, alte Spielstände (${JSON.stringify([r.hintOhneDaten, r.hintSaison1, r.altesFeld])})`);
+    assert(r.mvAuf && r.mvAb && r.mvTodo && r.mvNurFall && r.mvNichts, `Marktwert-Hinweis: Sprung nach oben und unten, Text mit Verkaufs-Frage nur bei Anstieg, kleine Bewegung bleibt still (${JSON.stringify([r.mvAuf, r.mvAb, r.mvTodo, r.mvNurFall, r.mvNichts])})`);
+    assert(r.stabil && r.mvMindestdiff && r.mvNurAlteSaison && r.mvOhneVerlauf, `Marktwert-Hinweis: stabiler Vergleichswert, Mindestdifferenz, nur frühere Saisons zählen, Spieler ohne Verlauf (${JSON.stringify([r.stabil, r.mvMindestdiff, r.mvNurAlteSaison, r.mvOhneVerlauf])})`);
+    assert(r.idsGemerkt && r.spielerMit && r.spielerOhne && r.alterMerkerSpieler, `Bilanz je Spieler: Startelf-Merker, Spiele mit und ohne ihn, alter Merker (${JSON.stringify([r.idsGemerkt, r.spielerMit, r.spielerOhne, r.alterMerkerSpieler])})`);
+    assert(r.spielerText && r.spielerBesser && r.spielerSchlechter && r.nurKader && r.ohneDaten && r.altesFeldSpieler, `Bilanz je Spieler: Anzeige mit Urteil erst ab fünf Spielen je Seite, nur Kaderspieler, alte Spielstände (${JSON.stringify([r.spielerText, r.spielerBesser, r.spielerSchlechter, r.nurKader, r.ohneDaten, r.altesFeldSpieler])})`);
+    assert(r.imDetail && r.saisonendeLeer, `Bilanz je Spieler: im Spielerdetail sichtbar, Saisonende setzt zurück (${JSON.stringify([r.imDetail, r.saisonendeLeer])})`);
+    assert(r.nbAlle && r.nbSuche && r.nbText && r.nbFokus && r.nbTagText && r.nbVerein && r.nbKeine && r.nbWieder, `Notizbuch: Schlagwörter als Chips, Suche nach Text, Schlagwort und Verein (${JSON.stringify([r.nbAlle, r.nbSuche, r.nbText, r.nbFokus, r.nbTagText, r.nbVerein, r.nbKeine, r.nbWieder])})`);
+    assert(r.nbFilter && r.nbFilterAus && r.nbFilterUnbenutzt && r.nbBreit && r.nbEinzelne, `Notizbuch: Filter nach Schlagwort, unbenutzter Filter fällt weg, kein Suchfeld bei einer Notiz (${JSON.stringify([r.nbFilter, r.nbFilterAus, r.nbFilterUnbenutzt, r.nbBreit, r.nbEinzelne])})`);
+    assert(r.knopfAn && r.tagsGespeichert && r.tagsVorbelegt && r.tagsEntfernt && r.chipsCheck && r.chipsHalbzeit, `Notiz-Schlagwörter: wählen, speichern, vorbelegen, entfernen, Chips im Spieltag-Check und in der Halbzeit (${JSON.stringify([r.knopfAn, r.tagsGespeichert, r.tagsVorbelegt, r.tagsEntfernt, r.chipsCheck, r.chipsHalbzeit])})`);
+    assert(r.wRueckblick === '[]' && r.wHint === '[]' && r.wNotizbuch === '[]' && r.wFenster === '[]' && r.wCheck === '[]', `Neue Knöpfe bei 320 px in breiter Schrift: kein Wort breiter als sein Knopf (${JSON.stringify([r.wRueckblick, r.wHint, r.wNotizbuch, r.wFenster, r.wCheck])})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 module.exports = {
     testSpielvorbereitung,
     testVertragsWerkzeuge,
@@ -1127,4 +1330,5 @@ module.exports = {
     testFeinschliffNachPhase26,
     testRunde27Funktionen,
     testRunde28Funktionen,
+    testRunde29Funktionen,
 };

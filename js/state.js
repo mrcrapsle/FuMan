@@ -115,6 +115,7 @@
         vorlageBilanz: {},
         assistentZurueck: {},
         assistentVorher: null,
+        rueckblickGesehen: 0,
         assistentErledigt: null,
         vorlageBilanzArchiv: [],
         vorlageImEinsatz: null,

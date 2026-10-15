@@ -218,14 +218,15 @@ function getStartelfTagInfo() {
 
 // Vor dem Ligaspiel (neben markPresetInUse): Startelf-Etiketten festhalten
 function markTagsInUse() {
-    game.etikettImEinsatz = Object.assign({ matchday: game.matchday }, getStartelfTagInfo());
+    game.etikettImEinsatz = Object.assign({ matchday: game.matchday, ids: Array.isArray(lineup) ? [...lineup] : [] }, getStartelfTagInfo());
 }
 
 // Nach dem Ligaspiel (aus recordOwnLeagueResult): ohne Merkzettel gilt die aktuelle Startelf
 function recordTagResult(ourGoals, oppGoals) {
     let info = game.etikettImEinsatz;
     game.etikettImEinsatz = null;
-    if (!info || info.matchday !== game.matchday) info = getStartelfTagInfo();
+    if (!info || info.matchday !== game.matchday) info = Object.assign({ ids: Array.isArray(lineup) ? [...lineup] : [] }, getStartelfTagInfo());
+    recordPlayerStartResult(Array.isArray(info.ids) ? info.ids : (Array.isArray(lineup) ? lineup : []), ourGoals, oppGoals);
     ensureTagBilanz();
     const leer = () => ({ spiele: 0, s: 0, u: 0, n: 0, tore: 0, gegentore: 0 });
     info.vergeben.forEach(t => {
@@ -240,6 +241,7 @@ function tagPunkteProSpiel(z) { return z && z.spiele ? (3 * z.s + z.u) / z.spiel
 
 // Saisonende: laufende Bilanz ins Vorjahr schieben
 function archiveTagBilanz() {
+    resetPlayerStartBilanz();
     ensureTagBilanz();
     if (!Object.keys(game.etikettBilanz).length) { return; }
     game.etikettBilanzVorjahr = { season: game.season, daten: JSON.parse(JSON.stringify(game.etikettBilanz)) };
@@ -269,6 +271,68 @@ function renderTagBilanzBox() {
     box.innerHTML = '<div class="panel-header" style="color:var(--purple);">🏷️ Bilanz der Etiketten</div>'
         + (aktuell || alt ? aktuell + alt + '<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:6px;">Verglichen werden Ligaspiele mit und ohne Spieler dieses Etiketts in der Startelf. Das ist keine Ursache: Stammkräfte spielen oft gegen die leichteren Gegner nicht, kleine Stichproben schwanken stark.</div>'
             : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Daten. Vergib im Spielerdetail Etiketten und spiele Ligaspiele.</div>');
+}
+
+// ---------- Marktwert-Bewegung (Phase 26.14) ----------
+// Vergleich des aktuellen Marktwerts mit dem der Vorsaison (aus p.strengthHistory; der Verlauf ist je Saison, nicht je
+// Spieltag gespeichert). Der Manager-Assistent meldet große Sprünge nach oben (Verkaufszeitpunkt?) und nach unten.
+const MARKTWERT_SPRUNG_AUF = 1.25, MARKTWERT_SPRUNG_AB = 0.8, MARKTWERT_MIN_DIFF = 300000;
+
+// calculatePlayerMarketValue() würfelt ±8 % Streuung; für den Vergleich zählt der mittlere Wert, sonst flackert der Hinweis
+function getMarketValueBase(strength) {
+    const zufall = Math.random;
+    Math.random = () => 0.5;
+    try { return calculatePlayerMarketValue(strength); } finally { Math.random = zufall; }
+}
+
+function getMarketValueMove(p) {
+    if (!p || typeof calculatePlayerMarketValue !== 'function') return null;
+    const vorher = (p.strengthHistory || []).filter(h => typeof h.strength === 'number' && h.season < game.season).pop();
+    if (!vorher || !(p.marketValue > 0)) return null;
+    const vor = getMarketValueBase(vorher.strength);
+    if (!(vor > 0)) return null;
+    return { p, vor, jetzt: p.marketValue, diff: p.marketValue - vor, prozent: Math.round((p.marketValue / vor - 1) * 100) };
+}
+
+function getMarketValueMoves() {
+    const alle = squad.map(getMarketValueMove).filter(Boolean);
+    return {
+        auf: alle.filter(m => m.jetzt >= m.vor * MARKTWERT_SPRUNG_AUF && m.diff >= MARKTWERT_MIN_DIFF).sort((a, b) => b.diff - a.diff),
+        ab: alle.filter(m => m.jetzt <= m.vor * MARKTWERT_SPRUNG_AB && -m.diff >= MARKTWERT_MIN_DIFF).sort((a, b) => a.diff - b.diff)
+    };
+}
+
+// ---------- Bilanz je Spieler (Phase 26.14) ----------
+// p.startBilanz = { mit: { spiele, s, u, n }, ohne: { ... } } zählt die Ligaspiele der laufenden Saison danach, ob der Spieler
+// in der Startelf stand. Gezählt wird in recordTagResult(); am Saisonende beginnt jede Bilanz von vorn.
+
+function recordPlayerStartResult(ids, ourGoals, oppGoals) {
+    squad.forEach(p => {
+        if (!p.startBilanz || typeof p.startBilanz !== 'object') p.startBilanz = { mit: { spiele: 0, s: 0, u: 0, n: 0 }, ohne: { spiele: 0, s: 0, u: 0, n: 0 } };
+        const z = ids.includes(p.id) ? p.startBilanz.mit : p.startBilanz.ohne;
+        z.spiele++;
+        if (ourGoals > oppGoals) z.s++; else if (ourGoals < oppGoals) z.n++; else z.u++;
+    });
+}
+
+function resetPlayerStartBilanz() {
+    squad.forEach(p => { delete p.startBilanz; });
+}
+
+function renderPlayerStartBilanz(p, pool) {
+    const box = document.getElementById('pd-startbilanz');
+    if (!box) return;
+    const b = p && pool === 'squad' ? p.startBilanz : null;
+    if (!b || !b.mit || !b.ohne || (b.mit.spiele + b.ohne.spiele) === 0) { box.innerHTML = ''; return; }
+    const fmt = v => v.toFixed(2).replace('.', ',');
+    const pps = z => z.spiele ? (3 * z.s + z.u) / z.spiele : 0;
+    const genug = b.mit.spiele >= TAG_BILANZ_MIN && b.ohne.spiele >= TAG_BILANZ_MIN;
+    const diff = pps(b.mit) - pps(b.ohne);
+    const urteil = genug ? ` · ${diff >= 0.3 ? '👍 mit ihm besser' : diff <= -0.3 ? '👎 ohne ihn besser' : '≈ kein klarer Unterschied'} (${diff >= 0 ? '+' : ''}${fmt(diff)})` : ` · noch zu wenige Spiele (je Seite mindestens ${TAG_BILANZ_MIN})`;
+    box.innerHTML = `<details class="ui-fold" style="margin:8px 0; text-align:left;"><summary>📊 Mannschaft mit und ohne ihn (Saison ${game.season})</summary>
+        <div style="font-size:var(--fs-small); margin-top:4px;">In der Startelf: ${b.mit.spiele} Sp., ${b.mit.s}S ${b.mit.u}U ${b.mit.n}N, ${fmt(pps(b.mit))} Pkt/Spiel<br>
+        Nicht in der Startelf: ${b.ohne.spiele} Sp., ${b.ohne.s}S ${b.ohne.u}U ${b.ohne.n}N, ${fmt(pps(b.ohne))} Pkt/Spiel<br><strong>${urteil.slice(3)}</strong>
+        <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">Das ist keine Ursache: Stammkräfte fehlen oft gerade gegen schwere Gegner nicht, kleine Stichproben schwanken stark.</div></div></details>`;
 }
 
 // ---------- Manager-Assistent ----------
@@ -341,6 +405,11 @@ function getManagerTodos(alle, roh) {
     }
     const raten = typeof activeLoans !== 'undefined' ? activeLoans.reduce((s, l) => s + (l.installment || 0), 0) : 0;
     if (raten > 0 && game.money >= 0 && game.money < raten * 3) t.push({ id: 'kredit', prio: 78, icon: '🟠', text: `Die Kasse (${formatVal(game.money)}) deckt nur ${Math.floor(game.money / raten)} von 3 anstehenden Kreditraten (${formatVal(raten)} je Spieltag).`, label: 'Zu den Finanzen', aktion: "showScreen('screen-finances')" });
+    const mw = getMarketValueMoves();
+    if (mw.auf.length || mw.ab.length) {
+        const teil = (m, pfeil) => `${m.p.name} (${pfeil} ${Math.abs(m.prozent)} %, ${formatVal(m.jetzt)})`;
+        t.push({ id: 'marktwert', prio: 40, icon: '💶', text: `Marktwert seit der Vorsaison: ${[...mw.auf.slice(0, 2).map(m => teil(m, '↑')), ...mw.ab.slice(0, 1).map(m => teil(m, '↓'))].join(', ')}${mw.auf.length + mw.ab.length > 3 ? ' …' : ''}${mw.auf.length ? ' – Zeit für einen Verkauf?' : ''}`, label: 'Zum Kader', aktion: "showScreen('screen-squad')" });
+    }
     const preisAlarm = typeof getScoutPriceAlerts === 'function' ? getScoutPriceAlerts() : [];
     if (preisAlarm.length) t.push({ id: 'scout-alarm', prio: 70, icon: '🔔', text: `Preis-Alarm: ${preisAlarm.slice(0, 2).map(x => `${x.p.name} (${x.p.pos}, Str ${x.p.strength}) für ${formatVal(x.preis)}`).join(', ')}${preisAlarm.length > 2 ? ' …' : ''} liegt unter deiner Grenze und ist bezahlbar.`, label: 'Zum Scouting', aktion: "showScreen('screen-scouting-global')" });
     const ungelesen = typeof inboxMessages !== 'undefined' ? inboxMessages.filter(m => !m.read).length : 0;
@@ -402,6 +471,7 @@ function getAssistentErledigtHtml() {
 let managerAssistantLetzterInhalt = '';
 
 function renderManagerAssistant() {
+    if (typeof renderSeasonReviewHint === 'function') renderSeasonReviewHint();
     const box = document.getElementById('manager-assistant-box');
     if (!box) return;
     const dash = document.getElementById('screen-dashboard');
