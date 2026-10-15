@@ -685,7 +685,7 @@
         
         .bottom-nav-bar {
             position: fixed; bottom: 0; left: 0; right: 0; z-index: 500;
-            display: grid; grid-template-columns: repeat(7, 1fr);
+            display: grid; grid-template-columns: repeat(7, minmax(min-content, 1fr));
             background: var(--surface-nav);  border-top: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
             box-shadow: 0 -6px 20px color-mix(in srgb, var(--shade) 50%, transparent);
             padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -698,7 +698,9 @@
         }
         .bottom-nav-item .bn-icon { font-size: 18px; line-height: 1; }
         
-        .bottom-nav-bar .bottom-nav-item { padding: 8px 2px 6px; font-size: 11px; letter-spacing: -0.1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .bottom-nav-bar .bottom-nav-item { padding: 8px 1px 6px; font-size: 11px; letter-spacing: -0.1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        /* Unter 300 px reicht die Breite für sieben volle Wörter nicht: gleich breite Spalten, lange Wörter mit Auslassungspunkten */
+        @media (max-width: 300px) { .bottom-nav-bar { grid-template-columns: repeat(7, minmax(0, 1fr)); } }
         .bottom-nav-item.active { color: var(--accent); transform: translateY(-2px); }
         .bottom-nav-item.active .bn-icon { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 60%, transparent)); }
         

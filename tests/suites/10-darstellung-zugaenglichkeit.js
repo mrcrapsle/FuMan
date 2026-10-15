@@ -1049,13 +1049,19 @@ async function testKnopfWorteHandy(browser) {
     });
     // Die CI hat breitere Schrift als die Entwicklungsmaschinen (3.133 scheiterte dort an „Speichern“): der Stressmodus
     // verbreitert jede Schrift um rund 9 % (letter-spacing), damit Engstellen schon lokal auffallen.
-    for (const [breite, groesse, stress] of [[320, 'normal', false], [360, 'gross', false], [390, 'sehr-gross', false], [320, 'normal', true], [360, 'gross', true], [390, 'sehr-gross', true]]) {
-        await page.setViewportSize({ width: breite, height: 800 });
+    // Dritter Modus „breit“: echte breite Systemschrift (DejaVu Sans, rund 12 % breiter als die Standardschrift) statt
+    // Buchstabenabstand; die Schrift ist auf der CI-Maschine ähnlich breit. Weitere Größen: 280 px (kleinste Handys)
+    // und Querformat (640 x 360, wenig Höhe).
+    const konfigs = [[320, 'normal', false, 800], [360, 'gross', false, 800], [390, 'sehr-gross', false, 800], [320, 'normal', true, 800], [360, 'gross', true, 800], [390, 'sehr-gross', true, 800],
+        [320, 'normal', 'breit', 800], [360, 'gross', 'breit', 800], [390, 'sehr-gross', 'breit', 800], [280, 'normal', false, 800], [640, 'normal', 'breit', 360]];
+    for (const [breite, groesse, stress, hoehe] of konfigs) {
+        await page.setViewportSize({ width: breite, height: hoehe });
         const ergebnis = await page.evaluate(async ([groesse, stress]) => {
             setzeTextGroesse(groesse);
             let st = document.getElementById('schrift-stress');
             if (st) st.remove();
-            if (stress) { st = document.createElement('style'); st.id = 'schrift-stress'; st.textContent = '*,*::before,*::after{letter-spacing:0.08em!important}'; document.head.appendChild(st); }
+            if (stress === 'breit') { st = document.createElement('style'); st.id = 'schrift-stress'; st.textContent = '*,*::before,*::after{font-family:"DejaVu Sans",Verdana,sans-serif!important}'; document.head.appendChild(st); }
+            else if (stress) { st = document.createElement('style'); st.id = 'schrift-stress'; st.textContent = '*,*::before,*::after{letter-spacing:0.08em!important}'; document.head.appendChild(st); }
             const zuBreit = new Set(), seitenBreit = new Set();
             const probe = document.createElement('span'); document.body.appendChild(probe);
             const ids = [...document.querySelectorAll('[id^="screen-"]')].map(e => e.id).filter(id => !['screen-office', 'screen-matchday', 'screen-admin'].includes(id));
@@ -1065,7 +1071,7 @@ async function testKnopfWorteHandy(browser) {
                         .slice(0, 3).map(el => `${el.tagName.toLowerCase()}#${el.id}.${String(el.className).slice(0, 24)} "${(el.textContent || "").trim().slice(0, 30)}" in ${el.parentElement ? el.parentElement.id || el.parentElement.className : ""}`);
                     seitenBreit.add(`${wo} (${document.documentElement.scrollWidth} px; ${schuldige.join(', ') || 'unbekannt'})`);
                 }
-                document.querySelectorAll('.app-content button').forEach(el => {
+                document.querySelectorAll(window.innerWidth < 300 ? '.app-content button' : '.app-content button, .bottom-nav-bar button').forEach(el => {
                     if (!el.offsetParent || el.closest('details:not([open]) > :not(summary)')) return;
                     const txt = (el.innerText || '').trim(); if (!txt) return;
                     const cs = getComputedStyle(el);
@@ -1087,7 +1093,7 @@ async function testKnopfWorteHandy(browser) {
             setzeTextGroesse('normal');
             return { zuBreit: [...zuBreit], seitenBreit: [...seitenBreit] };
         }, [groesse, stress]);
-        const wie = `${breite} px, Schrift ${groesse}${stress ? ', breiter' : ''}`;
+        const wie = `${breite} px${hoehe < 800 ? ' quer' : ''}, Schrift ${groesse}${stress === 'breit' ? ', breite Systemschrift' : stress ? ', breiter' : ''}`;
         assert(ergebnis.zuBreit.length === 0, `${wie}: kein Wort breiter als sein Knopf (${ergebnis.zuBreit.length}: ${ergebnis.zuBreit.slice(0, 4).join(' | ')})`);
         assert(ergebnis.seitenBreit.length === 0, `${wie}: die Seite wird nicht breiter als der Bildschirm (${ergebnis.seitenBreit.length}: ${ergebnis.seitenBreit.slice(0, 4).join(' | ')})`);
     }

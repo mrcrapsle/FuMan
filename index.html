@@ -985,7 +985,7 @@
 
             <!-- 5. FABRIKEN & PRODUKTION -->
             <div id="screen-hub-wirtschaft" style="display:none;">
-            <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:8px;">
+            <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.8em), 1fr)); gap:4px; margin-bottom:8px;">
                 <button onclick="showScreen('screen-industry')" id="hubtab-btn-screen-industry" class="btn-action hubtab-btn tab-industry" style="font-size:var(--fs-small); padding:6px 4px;">Fabriken</button>
                 <button onclick="showScreen('screen-raw-materials')" id="hubtab-btn-screen-raw-materials" class="btn-secondary hubtab-btn tab-industry" style="font-size:var(--fs-small); padding:6px 4px;">Rohstoffe</button>
                 <button onclick="showScreen('screen-holding')" id="hubtab-btn-screen-holding" class="btn-secondary hubtab-btn tab-industry" style="font-size:var(--fs-small); padding:6px 4px;">Holding & B2B</button>
@@ -1116,14 +1116,14 @@
 
             <!-- 10. FINANZEN & GuV -->
             <div id="screen-hub-finanzen" style="display:none;">
-            <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:8px;">
+            <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.8em), 1fr)); gap:4px; margin-bottom:8px;">
                 <button onclick="showScreen('screen-finances')" id="hubtab-btn-screen-finances" class="btn-action" style="font-size:var(--fs-small); padding:6px 4px;">GuV & Budget</button>
                 <button onclick="showScreen('screen-stocks')" id="hubtab-btn-screen-stocks" class="btn-secondary" style="font-size:var(--fs-small); padding:6px 4px;">Aktien</button>
                 <button onclick="showScreen('screen-sponsors')" id="hubtab-btn-screen-sponsors" class="btn-secondary" style="font-size:var(--fs-small); padding:6px 4px;">Sponsoren</button>
                 <button onclick="showScreen('screen-betting')" id="hubtab-btn-screen-betting" class="btn-secondary" style="font-size:var(--fs-small); padding:6px 4px;">Wetten</button>
             </div>
             <div id="screen-finances" style="display:none;">
-                <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:4px; margin-bottom:8px;">
+                <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.8em), 1fr)); gap:4px; margin-bottom:8px;">
                     <button onclick="setSubTab('fin', 'uebersicht')" id="btn-subtab-fin-uebersicht" class="btn-action" style="font-size:var(--fs-small); padding:6px 2px;">📊 Übersicht</button>
                     <button onclick="setSubTab('fin', 'journal')" id="btn-subtab-fin-journal" class="btn-secondary" style="font-size:var(--fs-small); padding:6px 2px;">📒 Journal</button>
                     <button onclick="setSubTab('fin', 'budget')" id="btn-subtab-fin-budget" class="btn-secondary" style="font-size:var(--fs-small); padding:6px 2px;">💼 Budget</button>
@@ -1346,7 +1346,7 @@
 
             <!-- 13. KADER & TAKTIK -->
             <div id="screen-squad" style="display:none;">
-                <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:4px; margin-bottom:8px;">
+                <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.8em), 1fr)); gap:4px; margin-bottom:8px;">
                     <button onclick="setSquadTab('aufstellung')" id="btn-tab-squad-aufstellung" class="btn-action" style="font-size:var(--fs-small); padding:6px 2px;">⚽ Aufstellung</button>
                     <button onclick="setSquadTab('taktik')" id="btn-tab-squad-taktik" class="btn-secondary" style="font-size:var(--fs-small); padding:6px 2px;">🧠 Taktik</button>
                     <button onclick="setSquadTab('analyse')" id="btn-tab-squad-analyse" class="btn-secondary" style="font-size:var(--fs-small); padding:6px 2px;">📊 Analyse</button>
@@ -1500,7 +1500,7 @@
 
             <!-- 14. TRAINING -->
             <div id="screen-training" style="display:none;">
-                <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:8px;">
+                <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.8em), 1fr)); gap:4px; margin-bottom:8px;">
                     <button onclick="setTrainingTab('plan')" id="btn-tab-tra-plan" class="btn-action">📅 Wochenplan</button>
                     <button onclick="setTrainingTab('minigames')" id="btn-tab-tra-minigames" class="btn-secondary">🎮 Minispiele</button>
                     <button onclick="setTrainingTab('individual')" id="btn-tab-tra-individual" class="btn-secondary">🎯 Individuell</button>
@@ -1522,7 +1522,7 @@
                 </div>
                 <div class="panel">
                     <div class="panel-header">📅 Wochenplan (7 Tage)</div>
-                    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:8px;">
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.5em), 1fr)); gap:4px; margin-bottom:8px;">
                         <button onclick="applyWeeklyTrainingPreset('ausgeglichen')" class="btn-secondary" style="font-size:var(--fs-caption); padding:5px 2px;">⚖️ Standard</button>
                         <button onclick="applyWeeklyTrainingPreset('kondition')" class="btn-secondary" style="font-size:var(--fs-caption); padding:5px 2px;">🏃 Kondition</button>
                         <button onclick="applyWeeklyTrainingPreset('technik')" class="btn-secondary" style="font-size:var(--fs-caption); padding:5px 2px;">⚽ Technik</button>
@@ -1639,7 +1639,7 @@
 
             <!-- 15. STADION -->
             <div id="screen-hub-ausbau" style="display:none;">
-            <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:8px;">
+            <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.8em), 1fr)); gap:4px; margin-bottom:8px;">
                 <button onclick="showScreen('screen-stadium')" id="hubtab-btn-screen-stadium" class="btn-action" style="font-size:var(--fs-small); padding:6px 4px;">Stadion</button>
                 <button onclick="showScreen('screen-campus')" id="hubtab-btn-screen-campus" class="btn-secondary" style="font-size:var(--fs-small); padding:6px 4px;">Campus</button>
                 <button onclick="showScreen('screen-staff')" id="hubtab-btn-screen-staff" class="btn-secondary" style="font-size:var(--fs-small); padding:6px 4px;">Personal</button>
@@ -1831,7 +1831,7 @@
                 </div>
             </div>
             <div id="screen-fans" style="display:none;">
-                <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:8px;">
+                <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.8em), 1fr)); gap:4px; margin-bottom:8px;">
                     <button onclick="setFansTab('sicherheit')" id="btn-tab-fan-sicherheit" class="btn-action">🛡️ Sicherheit</button>
                     <button onclick="setFansTab('gruppen')" id="btn-tab-fan-gruppen" class="btn-secondary">🎨 Fangruppen</button>
                     <button onclick="setFansTab('programme')" id="btn-tab-fan-programme" class="btn-secondary">📋 Programme</button>
@@ -1950,7 +1950,7 @@
 
             <!-- 19. TRANSFERMARKT MIT KI-ANGEBOTEN -->
             <div id="screen-hub-kaderplanung" style="display:none;">
-            <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:8px;">
+            <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.8em), 1fr)); gap:4px; margin-bottom:8px;">
                 <button onclick="showScreen('screen-transfer')" id="hubtab-btn-screen-transfer" class="btn-action" style="font-size:var(--fs-small); padding:6px 4px;">Transfermarkt</button>
                 <button onclick="showScreen('screen-scouting-global')" id="hubtab-btn-screen-scouting-global" class="btn-secondary" style="font-size:var(--fs-small); padding:6px 4px;">Scouting</button>
                 <button onclick="showScreen('screen-youth')" id="hubtab-btn-screen-youth" class="btn-secondary" style="font-size:var(--fs-small); padding:6px 4px;">Jugend</button>
@@ -1963,7 +1963,7 @@
                     <div class="panel-header">
                         <span>🤝 Transfermarkt, Scouting & Verhandlungen</span>
                     </div>
-                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 7.5em), 1fr)); gap:4px; margin-bottom:6px;">
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9em), 1fr)); gap:4px; margin-bottom:6px;">
                         <button onclick="setTransferTab('offers')" id="btn-tab-tr-offers" class="btn-action">📩 Angebote (<span id="tab-offers-badge">0</span>)</button>
                         <button onclick="setTransferTab('market')" id="btn-tab-tr-market" class="btn-secondary">Transfermarkt</button>
                         <button onclick="setTransferTab('free')" id="btn-tab-tr-free" class="btn-secondary">Vereinslose</button>
@@ -2017,7 +2017,7 @@
                 </div>
             </div>
             <div id="screen-youth" style="display:none;">
-                <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:8px;">
+                <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.8em), 1fr)); gap:4px; margin-bottom:8px;">
                     <button onclick="setSubTab('jug', 'talente')" id="btn-subtab-jug-talente" class="btn-action" style="font-size:var(--fs-small); padding:6px 2px;">🌱 Talente</button>
                     <button onclick="setSubTab('jug', 'entwicklung')" id="btn-subtab-jug-entwicklung" class="btn-secondary" style="font-size:var(--fs-small); padding:6px 2px;">📈 Entwicklung</button>
                     <button onclick="setSubTab('jug', 'liga')" id="btn-subtab-jug-liga" class="btn-secondary" style="font-size:var(--fs-small); padding:6px 2px;">🏆 Jugendliga</button>
@@ -2117,7 +2117,7 @@
 
             <!-- 20. LIGA TABELLEN -->
             <div id="screen-hub-wettbewerbe" style="display:none;">
-            <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:8px;">
+            <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.8em), 1fr)); gap:4px; margin-bottom:8px;">
                 <button onclick="showScreen('screen-league')" id="hubtab-btn-screen-league" class="btn-action" style="font-size:var(--fs-small); padding:6px 4px;">Liga</button>
                 <button onclick="showScreen('screen-europe')" id="hubtab-btn-screen-europe" class="btn-secondary hubtab-btn tab-europe" style="font-size:var(--fs-small); padding:6px 4px;">Europa</button>
                 <button onclick="showScreen('screen-history')" id="hubtab-btn-screen-history" class="btn-secondary" style="font-size:var(--fs-small); padding:6px 4px;">Trophäen</button>
@@ -2209,7 +2209,7 @@
                 </div>
             </div>
             <div id="screen-history" style="display:none;">
-                <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(4, 1fr); gap:4px; margin-bottom:8px;">
+                <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.8em), 1fr)); gap:4px; margin-bottom:8px;">
                     <button onclick="setSubTab('hist', 'titel')" id="btn-subtab-hist-titel" class="btn-action" style="font-size:var(--fs-small); padding:6px 2px;">🏆 Titel</button>
                     <button onclick="setSubTab('hist', 'legenden')" id="btn-subtab-hist-legenden" class="btn-secondary" style="font-size:var(--fs-small); padding:6px 2px;">⭐ Legenden</button>
                     <button onclick="setSubTab('hist', 'chronik')" id="btn-subtab-hist-chronik" class="btn-secondary" style="font-size:var(--fs-small); padding:6px 2px;">📊 Chronik</button>
@@ -2316,7 +2316,7 @@
 
             <!-- 24. PRIVATLEBEN -->
             <div id="screen-hub-spezial" style="display:none;">
-            <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px; margin-bottom:8px;">
+            <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.8em), 1fr)); gap:4px; margin-bottom:8px;">
                 <button onclick="showScreen('screen-private')" id="hubtab-btn-screen-private" class="btn-action hubtab-btn tab-gold" style="font-size:var(--fs-small); padding:6px 4px;">Privatleben</button>
                 <button onclick="showScreen('screen-underworld')" id="hubtab-btn-screen-underworld" class="btn-secondary hubtab-btn tab-red" style="font-size:var(--fs-small); padding:6px 4px;">Unterwelt</button>
                 <button onclick="showScreen('screen-premium')" id="hubtab-btn-screen-premium" class="btn-secondary hubtab-btn" style="font-size:var(--fs-small); padding:6px 4px;">💎 Premium</button>
