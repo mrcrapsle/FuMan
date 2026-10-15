@@ -8211,7 +8211,8 @@ function openNachspielNotiz() {
     const entwurf = getNachspielNotizEntwurf(m).slice(-GEGNER_NOTIZ_MAX);
     body.innerHTML = `<div class="panel-header" style="color:var(--purple);">📓 ${mpEsc(opp)}</div>` + renderGegnerNotizSection(opp, 'gegner-notiz-nach', entwurf);
     ov.classList.add('show');
-    const feld = document.getElementById('gegner-notiz-nach');
+    const feld = body.querySelector('textarea');
+    if (feld) feld.id = 'gegner-notiz-nach';
     if (feld) { feld.focus(); feld.setSelectionRange(feld.value.length, feld.value.length); }
 }
 
