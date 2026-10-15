@@ -5,7 +5,7 @@
 // aktuellen Build und prüft, dass sie ohne Absturz und mit erhaltenem Geld und Kader laden.
 const fs = require('fs');
 const path = require('path');
-const { chromium } = require('../tests/node_modules/playwright');
+const { chromium } = require('./playwright-laden');
 
 const [, , ausgabe, ...paare] = process.argv;
 if (!ausgabe || paare.length === 0) { console.error('Aufruf: node scripts/make-old-saves.js <Ausgabeordner> <version>=<pfad> ...'); process.exit(1); }

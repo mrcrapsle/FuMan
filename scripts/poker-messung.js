@@ -4,7 +4,7 @@
 // Strategien: start = Anteil der Forderung für das erste Angebot, schritt = Erhöhung je Runde (Prozentpunkte).
 const path = require('path');
 const root = path.resolve(__dirname, '..');
-const { chromium } = require(path.join(root, 'tests/node_modules/playwright'));
+const { chromium } = require('./playwright-laden');
 
 const STRATEGIEN = [
     { name: 'knapp (85 %, +5)', start: 0.85, schritt: 5 },

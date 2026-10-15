@@ -5,7 +5,7 @@
 const path = require('path');
 const fs = require('fs');
 const root = path.resolve(__dirname, '..');
-const { chromium } = require(path.join(root, 'tests/node_modules/playwright'));
+const { chromium } = require('./playwright-laden');
 const datei = path.resolve(root, process.argv[2] || 'dist/anstoss-fm13-standalone.min.html');
 const laeufe = parseInt(process.argv[3] || '3', 10);
 const profil = process.argv[4] === 'profil';

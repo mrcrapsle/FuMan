@@ -24,7 +24,7 @@
 const path = require('path');
 const fs = require('fs');
 const root = path.resolve(__dirname, '..');
-const { chromium } = require(path.join(root, 'tests/node_modules/playwright'));
+const { chromium } = require('./playwright-laden');
 const { messeLiveSpiele, zusammenfassung } = require('./cotrainer-live.js');
 const saisons = parseInt(process.argv[2] || '20', 10);
 const modus = process.argv[3] || 'aktiv';

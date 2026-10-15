@@ -5,7 +5,7 @@
 //   node scripts/cotrainer-live.js [spiele=200] [datei=dist/anstoss-fm13-standalone.html] [fitness=100]
 const path = require('path');
 const fs = require('fs');
-const { chromium } = require('../tests/node_modules/playwright');
+const { chromium } = require('./playwright-laden');
 
 
 const spiele = parseInt(process.argv[2] || '200', 10);

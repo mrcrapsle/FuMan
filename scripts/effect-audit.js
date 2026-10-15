@@ -5,7 +5,7 @@
 const path = require('path');
 const fs = require('fs');
 const root = path.resolve(__dirname, '..');
-const { chromium } = require(path.join(root, 'tests/node_modules/playwright'));
+const { chromium } = require('./playwright-laden');
 const saisons = parseInt(process.argv[2] || '2', 10);
 const datei = path.resolve(root, process.argv[3] || 'dist/anstoss-fm13-standalone.html');
 const filter = process.argv[4] || '';
