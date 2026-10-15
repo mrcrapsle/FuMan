@@ -37,6 +37,8 @@
             p.loanDurationMatchdays = 34;
             loanablePlayers.push(p);
         }
+        // Gemerkte Spieler: wer im neuen Markt fehlt, wird gemeldet (auch wenn der Transfermarkt gerade nicht offen ist)
+        if (typeof syncMarktMerkliste === 'function') syncMarktMerkliste();
     }
 
     // ==========================================
@@ -554,6 +556,65 @@
         }
     }
 
+    // ---------- Merkliste für den Transfermarkt (Phase 26.15) ----------
+    // „⭐ Merken“ auf einer Marktkarte. Der Markt wird bei jedem Neuaufbau komplett neu gewürfelt: Ist ein gemerkter Spieler nicht
+    // mehr da, meldet das der Manager-Assistent (Schritt „merkliste-weg“), statt dass er lautlos verschwindet.
+    // game.marktMerkliste = [{ id, name, pos, strength, status: 'markt' | 'weg', season, matchday }], höchstens 8
+    const MARKT_MERKLISTE_MAX = 8;
+
+    function ensureMarktMerkliste() {
+        if (!Array.isArray(game.marktMerkliste)) game.marktMerkliste = [];
+    }
+
+    function toggleMarktMerken(playerId) {
+        ensureMarktMerkliste();
+        const i = game.marktMerkliste.findIndex(e => e.id === playerId);
+        if (i !== -1) { game.marktMerkliste.splice(i, 1); showToast('⭐ Von der Merkliste entfernt.', 'info'); renderTransferView(); return; }
+        const p = marketPlayers.find(x => x.id === playerId);
+        if (!p) { showToast('Dieser Spieler ist nicht mehr auf dem Markt.', 'error'); renderTransferView(); return; }
+        if (game.marktMerkliste.length >= MARKT_MERKLISTE_MAX) { showToast(`Die Merkliste ist voll (höchstens ${MARKT_MERKLISTE_MAX} Spieler). Entferne zuerst einen.`, 'error'); return; }
+        game.marktMerkliste.push({ id: p.id, name: p.name, pos: p.pos, strength: p.strength, status: 'markt', season: game.season, matchday: game.matchday });
+        showToast(`⭐ ${p.name} gemerkt. Du erfährst es, wenn er vom Markt verschwindet.`, 'success');
+        renderTransferView();
+    }
+
+    function removeMarktMerkEintrag(playerId) {
+        ensureMarktMerkliste();
+        game.marktMerkliste = game.marktMerkliste.filter(e => e.id !== playerId);
+        renderTransferView();
+    }
+
+    function clearMarktMerklisteWeg() {
+        ensureMarktMerkliste();
+        game.marktMerkliste = game.marktMerkliste.filter(e => e.status !== 'weg');
+        renderTransferView();
+    }
+
+    // Beim Zeichnen des Marktes abgleichen: gekauft (im Kader) fällt still weg, verschwunden wird gemeldet (einmal)
+    function syncMarktMerkliste() {
+        ensureMarktMerkliste();
+        if (!game.marktMerkliste.length || !marketPlayers.length) return;
+        game.marktMerkliste = game.marktMerkliste.filter(e => !squad.some(p => p.id === e.id));
+        game.marktMerkliste.forEach(e => {
+            const da = marketPlayers.some(p => p.id === e.id);
+            if (e.status === 'markt' && !da) {
+                e.status = 'weg'; e.season = game.season; e.matchday = game.matchday;
+                if (typeof addInboxMessage === 'function') addInboxMessage('info', `⭐ ${e.name} ist vom Markt verschwunden`, `Der gemerkte Spieler (${e.pos}, Stärke ${e.strength}) steht nicht mehr auf dem Transfermarkt.`, 'screen-transfer');
+            } else if (e.status === 'weg' && da) e.status = 'markt';
+        });
+    }
+
+    function renderMarktMerkliste() {
+        const box = document.getElementById('market-merkliste-box');
+        if (!box) return;
+        ensureMarktMerkliste();
+        if (!game.marktMerkliste.length) { box.innerHTML = ''; return; }
+        const weg = game.marktMerkliste.filter(e => e.status === 'weg').length;
+        box.innerHTML = `<div class="panel" style="margin-bottom:8px;"><div class="panel-header">⭐ Merkliste (${game.marktMerkliste.length}/${MARKT_MERKLISTE_MAX})</div>`
+            + game.marktMerkliste.map(e => `<div class="box" style="margin:4px 0; font-size:var(--fs-small); display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:6px 8px;"><span style="flex:1 1 11em; min-width:0;">${e.status === 'weg' ? '❌' : '⭐'} ${e.name} (${e.pos}, Str ${e.strength})<span style="color:${e.status === 'weg' ? 'var(--danger)' : 'var(--text-muted)'};"> · ${e.status === 'weg' ? `nicht mehr auf dem Markt (seit Spieltag ${e.matchday})` : 'auf dem Markt'}</span></span><button onclick="removeMarktMerkEintrag('${e.id}')" class="btn-secondary" style="width:auto; flex:0 0 auto;" title="${e.name} von der Merkliste entfernen">✕ Entfernen</button></div>`).join('')
+            + (weg ? `<button onclick="clearMarktMerklisteWeg()" class="btn-secondary" style="margin-top:4px;">Verschwundene entfernen</button>` : '') + '</div>';
+    }
+
     function renderTransferView() {
         if (typeof renderAiTransferNews === 'function') renderAiTransferNews();
         renderLoanMarketView();
@@ -605,6 +666,8 @@
         if (typeof renderPreContractBox === 'function') renderPreContractBox();
         if (typeof renderBuybackBox === 'function') renderBuybackBox();
         if (typeof renderRumorBox === 'function') renderRumorBox();
+        syncMarktMerkliste();
+        renderMarktMerkliste();
         let mList = document.getElementById('market-list');
         mList.innerHTML = '';
         marketPlayers.forEach((p, idx) => {
@@ -628,7 +691,8 @@
                 aside: `<button onclick="openPlayerDetail('${p.id}','market')" class="btn-secondary ui-card-info" title="Details" aria-label="Details zu ${p.name}">ℹ️</button><button onclick="openPlayerCompare('${p.id}','market')" class="btn-secondary ui-card-info" title="Mit Kaderspieler vergleichen" aria-label="${p.name} mit Kaderspieler vergleichen">⚖️</button>`,
                 body: renderUiStatRow([['Tempo', p.pace], ['Schuss', p.shooting], ['Pass', p.passing], ['Abwehr', p.defense]]),
                 actions: `<button onclick="openTransferPoker(${idx})" class="btn-action" ${p.pokerBroken ? 'disabled' : ''}>🃏 Verhandeln</button>
-                    <button onclick="buyPlayer(${idx})" class="btn-secondary">Sofortkauf ${formatVal(p.askingPrice)}</button>`
+                    <button onclick="buyPlayer(${idx})" class="btn-secondary">Sofortkauf ${formatVal(p.askingPrice)}</button>
+                    <button onclick="toggleMarktMerken('${p.id}')" class="btn-secondary" aria-pressed="${(game.marktMerkliste || []).some(e => e.id === p.id)}">${(game.marktMerkliste || []).some(e => e.id === p.id) ? '★ Gemerkt' : '⭐ Merken'}</button>`
             });
             mList.appendChild(row);
         });

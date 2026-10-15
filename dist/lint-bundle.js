@@ -662,11 +662,14 @@ function renderUiStatRow(werte) {
         assistentZurueck: {},
         assistentVorher: null,
         rueckblickGesehen: 0,
+        marktMerkliste: [],
+        matchplaene: {},
         assistentErledigt: null,
         vorlageBilanzArchiv: [],
         vorlageImEinsatz: null,
         etikettBilanz: {},
         etikettBilanzVorjahr: null,
+        etikettBilanzArchiv: [],
         etikettImEinsatz: null,
         lineupPresets: [null, null, null, null, null],
         tacticPresets: [null, null, null, null, null],
@@ -3331,6 +3334,7 @@ function getOwnDerbyRivals() {
         if (!container) return;
         container.innerHTML = '';
         let filtered = squadFilterPos === 'alle' ? squad : squad.filter(p => p.pos === squadFilterPos);
+        if (typeof squadBelastungNurRot !== 'undefined' && squadBelastungNurRot) filtered = filtered.filter(p => getBelastungsAmpel(p).stufe === 'rot');
         if (typeof squadTagFilter !== 'undefined' && squadTagFilter) filtered = filtered.filter(p => typeof getPlayerTags === 'function' && getPlayerTags(p).includes(squadTagFilter));
         // Sortierfunktion: nicht mehr nur nach Position filterbar, sondern auch echt sortierbar.
         filtered = [...filtered].sort((a, b) => {
@@ -3371,10 +3375,11 @@ function getOwnDerbyRivals() {
                     statusChip, moralChip,
                     (p.trait && p.trait !== 'Kein') ? uiChip(p.trait) : '',
                     uiChip(`⚽ ${p.goalsSeason || 0} · 🎽 ${p.appearances || 0}`),
-                    ...(typeof getPlayerTagChips === 'function' ? getPlayerTagChips(p) : [])
+                    ...(typeof getPlayerTagChips === 'function' ? getPlayerTagChips(p) : []),
+                    ...(typeof getBelastungChips === 'function' ? getBelastungChips(p) : [])
                 ],
                 kpi: { wert: p.strength, label: 'Stärke' },
-                body: renderUiStatRow([['Tempo', p.pace], ['Schuss', p.shooting], ['Pass', p.passing], ['Abwehr', p.defense], ['Kopf', p.KOP ?? '-'], ['Fitness', p.fitness]])
+                body: (typeof getBelastungHinweis === 'function' ? getBelastungHinweis(p) : '') + renderUiStatRow([['Tempo', p.pace], ['Schuss', p.shooting], ['Pass', p.passing], ['Abwehr', p.defense], ['Kopf', p.KOP ?? '-'], ['Fitness', p.fitness]])
                     + `<label class="ui-field" style="margin-top:8px;">
                         <span class="ui-field-label">Rolle</span>
                         <select class="input-inline" style="${roleFits ? 'color:var(--primary);' : ''}" onchange="setPlayerRole('${p.id}', this.value)">${roleOptions}</select>
@@ -3623,6 +3628,33 @@ function renderHalftimeNotiz() {
     box.innerHTML = `<div class="box" style="font-size:var(--fs-small); text-align:left;"><strong>📓 ${mpEsc(opp)}</strong><br>📊 ${mpEsc(bilanz)}${n ? `<br>📝 ${mpEsc(n.text)}${getNotizTags(n).length ? `<div class="ui-card-meta" style="margin-top:4px;">${notizTagChips(n)}</div>` : ''}` : ''}</div>`;
 }
 
+// Vorschläge für die Notiz aus den öffentlichen Daten zum Gegner (Spielstil, Tabelle, Tore, letzte Duelle); nur Text zum Antippen
+function getNotizVorschlaege(oppName) {
+    const v = [];
+    const team = (leaguesData[game.leagueLevel] || []).find(t => t.name === oppName);
+    if (team) {
+        const stil = typeof getTeamPlaystyle === 'function' ? getTeamPlaystyle(team) : null;
+        if (stil) v.push(`Spielstil: ${stil.label}.`);
+        const tab = typeof sortedTable === 'function' ? sortedTable(game.leagueLevel) : [];
+        const platz = tab.findIndex(t => t.name === oppName) + 1;
+        if (platz) v.push(`Platz ${platz} von ${tab.length}, Stärke ${Math.round(team.strength)}.`);
+        if (team.played >= 3) v.push(`Ø ${(team.goalsFor / team.played).toFixed(1).replace('.', ',')} Tore, ${(team.goalsAgainst / team.played).toFixed(1).replace('.', ',')} Gegentore.`);
+    }
+    const rec = game.headToHeadRecords && game.headToHeadRecords[oppName];
+    if (rec && rec.lastResults && rec.lastResults.length) v.push(`Zuletzt ${rec.lastResults.slice(0, 3).join(', ')}.`);
+    return v;
+}
+
+function addNotizVorschlag(feldId, text) {
+    const feld = document.getElementById(feldId);
+    if (!feld) return;
+    if (feld.value.includes(text)) { showToast('Das steht schon in der Notiz.', 'info'); return; }
+    const neu = (feld.value.trim() ? feld.value.trim() + ' ' : '') + text;
+    if (neu.length > GEGNER_NOTIZ_MAX) { showToast(`Die Notiz ist voll (höchstens ${GEGNER_NOTIZ_MAX} Zeichen).`, 'error'); return; }
+    feld.value = neu;
+    feld.focus();
+}
+
 function renderGegnerNotizSection(oppName, feldId, vorgabe) {
     if (!oppName) return '';
     feldId = feldId || 'gegner-notiz-text';
@@ -3630,6 +3662,7 @@ function renderGegnerNotizSection(oppName, feldId, vorgabe) {
     return `<div class="box" style="font-size:var(--fs-small); margin:0 0 6px;">📊 ${mpEsc(getGegnerBilanzText(oppName))}</div>
         <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${n ? `Gespeichert in Saison ${n.season}, Spieltag ${n.matchday}.` : 'Noch keine Notiz zu diesem Gegner.'} Die Notiz bleibt über Saisons erhalten.</div>
         <textarea id="${feldId}" class="input-inline" maxlength="${GEGNER_NOTIZ_MAX}" rows="3" placeholder="z. B. Schwache Abwehr über links, Konter nach Ecken" style="width:100%; box-sizing:border-box; font-family:inherit; font-weight:normal; text-align:left;" aria-label="Notiz zu ${mpEsc(oppName)}">${mpEsc(vorgabe != null ? vorgabe : (n ? n.text : ''))}</textarea>
+        ${(() => { const vs = getNotizVorschlaege(oppName); return vs.length ? `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:6px;">Vorschläge zum Einfügen:</div><div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:2px;">${vs.map(t => `<button type="button" onclick="addNotizVorschlag(this.dataset.feld, this.dataset.text)" data-feld="${feldId}" data-text="${mpEsc(t)}" class="btn-secondary" style="width:auto; font-size:var(--fs-caption); text-align:left;">➕ ${mpEsc(t)}</button>`).join('')}</div>` : ''; })()}
         <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;">${NOTIZ_SCHLAGWOERTER.map(x => { const an = getNotizTags(n).includes(x.id); return `<button type="button" onclick="toggleNotizTag(this)" data-tag="${x.id}" data-feld="${feldId}" class="${an ? 'btn-action' : 'btn-secondary'} notiz-tag" style="width:auto; font-size:var(--fs-caption);" aria-pressed="${an}">${x.label}</button>`; }).join('')}</div>
         <button onclick="saveGegnerNotiz(this.dataset.club, this.dataset.feld)" data-club="${mpEsc(oppName)}" data-feld="${feldId}" class="btn-secondary" style="margin-top:4px;">📓 Notiz speichern</button>`;
 }
@@ -4093,6 +4126,63 @@ function applyRotationSwap(rausId, reinId) {
     renderPrematchCheck();
 }
 
+// ---------- Matchplan je Gegner (Phase 26.15) ----------
+// Zu einem Gegner merkt sich das Spiel eine Aufstellungs- und/oder Taktikvorlage (nur die Platznummern):
+// game.matchplaene = { verein: { aufstellung: Slot | null, taktik: Slot | null } }. Im Spieltag-Check wendet ein Tipp beides an.
+
+function ensureMatchplaene() {
+    if (!game.matchplaene || typeof game.matchplaene !== 'object' || Array.isArray(game.matchplaene)) game.matchplaene = {};
+}
+
+function getMatchplan(opp) {
+    ensureMatchplaene();
+    ensureMatchPrepState();
+    const m = game.matchplaene[opp];
+    if (!m) return null;
+    const a = Number.isInteger(m.aufstellung) && game.lineupPresets[m.aufstellung] ? m.aufstellung : null;
+    const t = Number.isInteger(m.taktik) && game.tacticPresets[m.taktik] ? m.taktik : null;
+    return { aufstellung: a, taktik: t, verwaist: (m.aufstellung != null && a === null) || (m.taktik != null && t === null) };
+}
+
+function saveMatchplan(opp) {
+    ensureMatchplaene();
+    const wert = id => { const el = document.getElementById(id); return el && el.value !== '' ? parseInt(el.value, 10) : null; };
+    const aufstellung = wert('matchplan-aufstellung'), taktik = wert('matchplan-taktik');
+    if (aufstellung === null && taktik === null) {
+        if (game.matchplaene[opp]) { delete game.matchplaene[opp]; showToast(`📋 Matchplan gegen ${opp} gelöscht.`, 'info'); }
+        else showToast('Wähle zuerst eine Aufstellungs- oder Taktikvorlage für den Matchplan.', 'error');
+    } else {
+        game.matchplaene[opp] = { aufstellung, taktik };
+        showToast(`📋 Matchplan gegen ${opp} gespeichert.`, 'success');
+    }
+    renderPrematchCheck();
+}
+
+function applyMatchplan(opp) {
+    const plan = getMatchplan(opp);
+    if (!plan || (plan.aufstellung === null && plan.taktik === null)) { showToast('Für diesen Gegner gibt es keinen gültigen Matchplan.', 'error'); return; }
+    if (plan.aufstellung !== null) loadLineupPreset(plan.aufstellung);
+    if (plan.taktik !== null) applyTacticPreset(plan.taktik);
+    showToast(`📋 Matchplan gegen ${opp} angewendet.`, 'success');
+    renderPrematchCheck();
+}
+
+function renderMatchplanSection(opp) {
+    ensureMatchPrepState();
+    const plan = getMatchplan(opp);
+    const raw = (game.matchplaene || {})[opp] || {};
+    const optionen = (liste, aktiv) => '<option value="">– keine –</option>' + liste.map((v, i) => v ? `<option value="${i}"${aktiv === i ? ' selected' : ''}>${mpEsc(v.name)}</option>` : '').join('');
+    const hatVorlagen = game.lineupPresets.some(Boolean) || game.tacticPresets.some(Boolean);
+    const stil = 'width:100%; box-sizing:border-box; text-align:left; font-weight:normal; font-family:inherit;';
+    const zeile = !plan ? '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch kein Matchplan gegen diesen Gegner.</div>'
+        : `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">Aufstellung: <strong>${plan.aufstellung !== null ? mpEsc(game.lineupPresets[plan.aufstellung].name) : '–'}</strong> · Taktik: <strong>${plan.taktik !== null ? mpEsc(game.tacticPresets[plan.taktik].name) : '–'}</strong>${plan.verwaist ? '<br><span style="color:var(--danger);">Eine verknüpfte Vorlage gibt es nicht mehr.</span>' : ''}
+            <button onclick="applyMatchplan(this.dataset.club)" data-club="${mpEsc(opp)}" class="btn-action" style="margin-top:4px;"${plan.aufstellung === null && plan.taktik === null ? ' disabled' : ''}>📋 Matchplan anwenden</button></div>`;
+    return zeile + (hatVorlagen ? `<label class="ui-field" style="margin-top:6px;"><span class="ui-field-label">Aufstellungsvorlage</span><select id="matchplan-aufstellung" class="input-inline" style="${stil}">${optionen(game.lineupPresets, raw.aufstellung)}</select></label>
+        <label class="ui-field" style="margin-top:6px;"><span class="ui-field-label">Taktikvorlage</span><select id="matchplan-taktik" class="input-inline" style="${stil}">${optionen(game.tacticPresets, raw.taktik)}</select></label>
+        <button onclick="saveMatchplan(this.dataset.club)" data-club="${mpEsc(opp)}" class="btn-secondary" style="margin-top:6px;">💾 Matchplan speichern</button>`
+        : '<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">Speichere zuerst Aufstellungs- oder Taktikvorlagen (Kader → Aufstellung), dann lassen sie sich hier einem Gegner zuordnen.</div>');
+}
+
 function renderPrematchCheck() {
     const box = document.getElementById('prematch-check-box');
     if (!box) return;
@@ -4113,6 +4203,7 @@ function renderPrematchCheck() {
         rotation.length ? uiChip(`🔄 ${rotation.length} Rotationsidee${rotation.length === 1 ? '' : 'n'}`, 'warn') : '',
         fragil.length ? uiChip(`🩹 ${fragil.length} verletzungsanfällig`, 'warn') : '',
         notiz ? uiChip('📓 Notiz vorhanden') : '',
+        oppName && getMatchplan(oppName) ? uiChip('📋 Matchplan vorhanden', 'gut') : '',
         notiz ? notizTagChips(notiz) : ''
     ];
     const problemListe = probleme.length ? probleme.map(x => `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">${x.ton === 'schlecht' ? '🔴' : '🟡'} ${mpEsc(x.text)}</div>`).join('')
@@ -4137,6 +4228,7 @@ function renderPrematchCheck() {
         <details class="ui-fold"${rotation.length || muede.length ? ' open' : ''}><summary>Rotations-Assistent</summary>${rotListe}
             <button onclick="showScreen('screen-squad')" class="btn-secondary" style="margin-top:4px;">⚽ Aufstellung im Detail ändern</button></details>
         <details class="ui-fold"${fragil.length ? ' open' : ''}><summary>Verletzungsanfällige in der Startelf</summary>${fragilZeile}</details>
+        ${oppName ? `<details class="ui-fold"${getMatchplan(oppName) ? ' open' : ''}><summary>📋 Matchplan: ${mpEsc(oppName)}</summary>${renderMatchplanSection(oppName)}</details>` : ''}
         <details class="ui-fold"><summary>Aufstellung aus Vorlage</summary>${renderPresetQuickPick()}</details>
         ${oppName ? `<details class="ui-fold"${notiz ? ' open' : ''}><summary>📓 Notizbuch: ${mpEsc(oppName)}</summary>${renderGegnerNotizSection(oppName)}</details>` : ''}
     </div>`;
@@ -8529,6 +8621,8 @@ function renderTransferPokerBox() {
             p.loanDurationMatchdays = 34;
             loanablePlayers.push(p);
         }
+        // Gemerkte Spieler: wer im neuen Markt fehlt, wird gemeldet (auch wenn der Transfermarkt gerade nicht offen ist)
+        if (typeof syncMarktMerkliste === 'function') syncMarktMerkliste();
     }
 
     // ==========================================
@@ -9046,6 +9140,65 @@ function renderTransferPokerBox() {
         }
     }
 
+    // ---------- Merkliste für den Transfermarkt (Phase 26.15) ----------
+    // „⭐ Merken“ auf einer Marktkarte. Der Markt wird bei jedem Neuaufbau komplett neu gewürfelt: Ist ein gemerkter Spieler nicht
+    // mehr da, meldet das der Manager-Assistent (Schritt „merkliste-weg“), statt dass er lautlos verschwindet.
+    // game.marktMerkliste = [{ id, name, pos, strength, status: 'markt' | 'weg', season, matchday }], höchstens 8
+    const MARKT_MERKLISTE_MAX = 8;
+
+    function ensureMarktMerkliste() {
+        if (!Array.isArray(game.marktMerkliste)) game.marktMerkliste = [];
+    }
+
+    function toggleMarktMerken(playerId) {
+        ensureMarktMerkliste();
+        const i = game.marktMerkliste.findIndex(e => e.id === playerId);
+        if (i !== -1) { game.marktMerkliste.splice(i, 1); showToast('⭐ Von der Merkliste entfernt.', 'info'); renderTransferView(); return; }
+        const p = marketPlayers.find(x => x.id === playerId);
+        if (!p) { showToast('Dieser Spieler ist nicht mehr auf dem Markt.', 'error'); renderTransferView(); return; }
+        if (game.marktMerkliste.length >= MARKT_MERKLISTE_MAX) { showToast(`Die Merkliste ist voll (höchstens ${MARKT_MERKLISTE_MAX} Spieler). Entferne zuerst einen.`, 'error'); return; }
+        game.marktMerkliste.push({ id: p.id, name: p.name, pos: p.pos, strength: p.strength, status: 'markt', season: game.season, matchday: game.matchday });
+        showToast(`⭐ ${p.name} gemerkt. Du erfährst es, wenn er vom Markt verschwindet.`, 'success');
+        renderTransferView();
+    }
+
+    function removeMarktMerkEintrag(playerId) {
+        ensureMarktMerkliste();
+        game.marktMerkliste = game.marktMerkliste.filter(e => e.id !== playerId);
+        renderTransferView();
+    }
+
+    function clearMarktMerklisteWeg() {
+        ensureMarktMerkliste();
+        game.marktMerkliste = game.marktMerkliste.filter(e => e.status !== 'weg');
+        renderTransferView();
+    }
+
+    // Beim Zeichnen des Marktes abgleichen: gekauft (im Kader) fällt still weg, verschwunden wird gemeldet (einmal)
+    function syncMarktMerkliste() {
+        ensureMarktMerkliste();
+        if (!game.marktMerkliste.length || !marketPlayers.length) return;
+        game.marktMerkliste = game.marktMerkliste.filter(e => !squad.some(p => p.id === e.id));
+        game.marktMerkliste.forEach(e => {
+            const da = marketPlayers.some(p => p.id === e.id);
+            if (e.status === 'markt' && !da) {
+                e.status = 'weg'; e.season = game.season; e.matchday = game.matchday;
+                if (typeof addInboxMessage === 'function') addInboxMessage('info', `⭐ ${e.name} ist vom Markt verschwunden`, `Der gemerkte Spieler (${e.pos}, Stärke ${e.strength}) steht nicht mehr auf dem Transfermarkt.`, 'screen-transfer');
+            } else if (e.status === 'weg' && da) e.status = 'markt';
+        });
+    }
+
+    function renderMarktMerkliste() {
+        const box = document.getElementById('market-merkliste-box');
+        if (!box) return;
+        ensureMarktMerkliste();
+        if (!game.marktMerkliste.length) { box.innerHTML = ''; return; }
+        const weg = game.marktMerkliste.filter(e => e.status === 'weg').length;
+        box.innerHTML = `<div class="panel" style="margin-bottom:8px;"><div class="panel-header">⭐ Merkliste (${game.marktMerkliste.length}/${MARKT_MERKLISTE_MAX})</div>`
+            + game.marktMerkliste.map(e => `<div class="box" style="margin:4px 0; font-size:var(--fs-small); display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:6px 8px;"><span style="flex:1 1 11em; min-width:0;">${e.status === 'weg' ? '❌' : '⭐'} ${e.name} (${e.pos}, Str ${e.strength})<span style="color:${e.status === 'weg' ? 'var(--danger)' : 'var(--text-muted)'};"> · ${e.status === 'weg' ? `nicht mehr auf dem Markt (seit Spieltag ${e.matchday})` : 'auf dem Markt'}</span></span><button onclick="removeMarktMerkEintrag('${e.id}')" class="btn-secondary" style="width:auto; flex:0 0 auto;" title="${e.name} von der Merkliste entfernen">✕ Entfernen</button></div>`).join('')
+            + (weg ? `<button onclick="clearMarktMerklisteWeg()" class="btn-secondary" style="margin-top:4px;">Verschwundene entfernen</button>` : '') + '</div>';
+    }
+
     function renderTransferView() {
         if (typeof renderAiTransferNews === 'function') renderAiTransferNews();
         renderLoanMarketView();
@@ -9097,6 +9250,8 @@ function renderTransferPokerBox() {
         if (typeof renderPreContractBox === 'function') renderPreContractBox();
         if (typeof renderBuybackBox === 'function') renderBuybackBox();
         if (typeof renderRumorBox === 'function') renderRumorBox();
+        syncMarktMerkliste();
+        renderMarktMerkliste();
         let mList = document.getElementById('market-list');
         mList.innerHTML = '';
         marketPlayers.forEach((p, idx) => {
@@ -9120,7 +9275,8 @@ function renderTransferPokerBox() {
                 aside: `<button onclick="openPlayerDetail('${p.id}','market')" class="btn-secondary ui-card-info" title="Details" aria-label="Details zu ${p.name}">ℹ️</button><button onclick="openPlayerCompare('${p.id}','market')" class="btn-secondary ui-card-info" title="Mit Kaderspieler vergleichen" aria-label="${p.name} mit Kaderspieler vergleichen">⚖️</button>`,
                 body: renderUiStatRow([['Tempo', p.pace], ['Schuss', p.shooting], ['Pass', p.passing], ['Abwehr', p.defense]]),
                 actions: `<button onclick="openTransferPoker(${idx})" class="btn-action" ${p.pokerBroken ? 'disabled' : ''}>🃏 Verhandeln</button>
-                    <button onclick="buyPlayer(${idx})" class="btn-secondary">Sofortkauf ${formatVal(p.askingPrice)}</button>`
+                    <button onclick="buyPlayer(${idx})" class="btn-secondary">Sofortkauf ${formatVal(p.askingPrice)}</button>
+                    <button onclick="toggleMarktMerken('${p.id}')" class="btn-secondary" aria-pressed="${(game.marktMerkliste || []).some(e => e.id === p.id)}">${(game.marktMerkliste || []).some(e => e.id === p.id) ? '★ Gemerkt' : '⭐ Merken'}</button>`
             });
             mList.appendChild(row);
         });
@@ -12567,6 +12723,91 @@ function initOneHand() {
 }
 
 /* eslint-enable */
+/* eslint-disable no-undef */
+// Wischen zwischen Reitern (Phase 26.15): Ein Wisch nach links oder rechts wechselt auf dem Handy zum nächsten oder
+// vorigen Reiter - in der Reiterleiste der Hubs (.hub-tab-bar) und im Kader (btn-tab-squad-…). Am ersten und letzten
+// Reiter passiert nichts (kein Umlauf). Ausgenommen sind Eingabefelder, offene Fenster, Meldungen, das Spielfeld, Diagramme
+// und alle Flächen, die selbst seitlich scrollen. Einstellung pro Gerät (anstoss_fm13_wischen, Menü Darstellung),
+// Standard: an. Kein Spielzustand.
+
+const SWIPE_KEY = 'anstoss_fm13_wischen';
+const SWIPE_MIN_DX = 70, SWIPE_MAX_DY = 45, SWIPE_MAX_MS = 700, SWIPE_EDGE = 24;
+const SWIPE_GESPERRT = 'input, textarea, select, [contenteditable="true"], .generic-modal-overlay.show, #app-notice, .soccer-pitch, canvas, svg, .bottom-nav-bar';
+let swipeStart = null;
+
+function getWischen() {
+    const v = typeof designLesen === 'function' ? designLesen(SWIPE_KEY) : null;
+    return v === 'aus' ? 'aus' : 'an';
+}
+
+function setzeWischen(id) {
+    if (id !== 'an' && id !== 'aus') { showToast('Unbekannte Wisch-Einstellung.', 'error'); return; }
+    designSchreiben(SWIPE_KEY, id);
+    if (typeof renderDesignSettings === 'function') renderDesignSettings();
+    showToast(id === 'an' ? '👆 Wischen zwischen Reitern: an' : '👆 Wischen zwischen Reitern: aus', 'success', 1800);
+}
+
+// Darf an diesem Ziel gewischt werden? Nein bei Eingaben, Fenstern, Spielfeld und seitlich scrollenden Flächen
+function swipeZielGesperrt(el) {
+    if (!el || !el.closest) return true;
+    if (el.closest(SWIPE_GESPERRT)) return true;
+    for (let n = el; n && n !== document.body; n = n.parentElement) {
+        const ox = getComputedStyle(n).overflowX;
+        if ((ox === 'auto' || ox === 'scroll') && n.scrollWidth > n.clientWidth + 1) return true;
+    }
+    return false;
+}
+
+// Die Reiter, zwischen denen gewischt wird: zuerst die Kader-Reiter, sonst die erste sichtbare Hub-Leiste
+function getSwipeReiter() {
+    const sichtbar = b => b.offsetParent !== null && !b.disabled;
+    let knoepfe = [...document.querySelectorAll('[id^="btn-tab-squad-"]')].filter(sichtbar);
+    if (knoepfe.length < 2) {
+        const leiste = [...document.querySelectorAll('.hub-tab-bar')].find(b => b.offsetParent !== null);
+        knoepfe = leiste ? [...leiste.querySelectorAll('button')].filter(sichtbar) : [];
+    }
+    const i = knoepfe.findIndex(b => b.classList.contains('btn-action'));
+    return knoepfe.length >= 2 && i !== -1 ? { knoepfe, i } : null;
+}
+
+// richtung +1: nächster Reiter, -1: voriger; liefert true, wenn gewechselt wurde
+function swipeWechseln(richtung) {
+    const r = getSwipeReiter();
+    const ziel = r ? r.knoepfe[r.i + richtung] : null;
+    if (!ziel) return false;
+    ziel.click();
+    return true;
+}
+
+// Ist es ein Wisch? Waagerecht, deutlich länger als hoch, schnell genug, nicht vom Bildschirmrand
+function erkenneWisch(start, ende, breite) {
+    if (!start || !ende) return 0;
+    const dx = ende.x - start.x, dy = ende.y - start.y, dt = ende.t - start.t;
+    if (start.x < SWIPE_EDGE || (breite && start.x > breite - SWIPE_EDGE)) return 0;
+    if (Math.abs(dx) < SWIPE_MIN_DX || Math.abs(dy) > SWIPE_MAX_DY || Math.abs(dx) < Math.abs(dy) * 2 || dt > SWIPE_MAX_MS) return 0;
+    return dx < 0 ? 1 : -1;
+}
+
+document.addEventListener('touchstart', ev => {
+    swipeStart = null;
+    if (ev.touches.length !== 1 || getWischen() !== 'an') return;
+    if (swipeZielGesperrt(ev.target)) return;
+    const t = ev.touches[0];
+    swipeStart = { x: t.clientX, y: t.clientY, t: Date.now() };
+}, { passive: true });
+
+document.addEventListener('touchend', ev => {
+    const start = swipeStart;
+    swipeStart = null;
+    if (!start || !ev.changedTouches.length) return;
+    const t = ev.changedTouches[0];
+    const richtung = erkenneWisch(start, { x: t.clientX, y: t.clientY, t: Date.now() }, window.innerWidth);
+    if (richtung) swipeWechseln(richtung);
+}, { passive: true });
+
+document.addEventListener('touchcancel', () => { swipeStart = null; }, { passive: true });
+
+/* eslint-enable */
 // ============================================================================
 // Darstellung (Phase 25.51/25.54): Farb-Theme, Textgröße und Bewegung, pro Gerät gespeichert.
 // Die Themes sind reine Token-Sätze in css/styles.css (html[data-theme=…]),
@@ -12720,6 +12961,7 @@ function renderDesignSettings() {
     const aktiv = getDesignTheme();
     const groesse = getTextGroesse();
     const bewegung = getBewegung();
+    const wischen = typeof getWischen === 'function' ? getWischen() : 'an';
     const themes = DESIGN_THEMES.map(t => `
         <button class="design-theme-card${t.id === aktiv ? ' active' : ''}" onclick="setzeDesignTheme('${t.id}')" aria-pressed="${t.id === aktiv}">
             <span class="design-swatches" aria-hidden="true">${t.farben.map(f => `<span style="background:${f};"></span>`).join('')}</span>
@@ -12755,6 +12997,9 @@ function renderDesignSettings() {
         <div class="design-size-row">${groessen}</div>
         <div class="ui-field-label" style="margin:14px 0 6px;">Bewegung (Animationen)</div>
         <div class="design-size-row">${bewegungen}</div>
+        <div class="ui-field-label" style="margin:14px 0 6px;">Wischen zwischen Reitern</div>
+        <div class="design-size-row">${['an', 'aus'].map(w => `<button class="design-size-btn${w === wischen ? ' active' : ''}" onclick="setzeWischen('${w}')" aria-pressed="${w === wischen}"><span>${w === 'an' ? 'An' : 'Aus'}</span></button>`).join('')}</div>
+        <div class="design-hinweis" style="margin-top:4px;">Nach links oder rechts wischen wechselt in den Hubs und im Kader zum Nachbar-Reiter. Eingabefelder, Spielfeld und seitlich scrollende Listen bleiben ausgenommen.</div>
         ${vorschau}
         <div class="design-hinweis">Gilt nur für dieses Gerät und bleibt beim Laden anderer Spielstände erhalten.</div>`;
 }
@@ -22510,14 +22755,18 @@ function csvText(zeilen) {
 function csvZahl(n, stellen = 1) { return typeof n === 'number' ? n.toFixed(stellen).replace('.', ',') : ''; }
 
 function buildKaderCsv() {
-    const kopf = ['Name', 'Position', 'Alter', 'Stärke', 'Fitness %', 'Moral', 'Marktwert €', 'Gehalt € je Spieltag', 'Vertrag (Jahre Rest)', 'Spiele (Saison)', 'Tore (Saison)', 'Vorlagen (Saison)', 'Notenschnitt (Saison)', 'Etiketten', 'Verletzungen (gesamt)', 'Verpasste Spiele (letzte Ausfälle)'];
+    const kopf = ['Name', 'Position', 'Alter', 'Stärke', 'Fitness %', 'Moral', 'Marktwert €', 'Gehalt € je Spieltag', 'Vertrag (Jahre Rest)', 'Spiele (Saison)', 'Tore (Saison)', 'Vorlagen (Saison)', 'Notenschnitt (Saison)', 'Etiketten', 'Verletzungen (gesamt)', 'Verpasste Spiele (letzte Ausfälle)', 'Startelf-Spiele (Saison)', 'Pkt/Spiel mit ihm in der Startelf', 'Pkt/Spiel ohne ihn'];
     const zeilen = [...squad].sort((a, b) => b.strength - a.strength).map(p => {
         const st = p.statsSeason;
         return [p.name, p.pos, p.age || '', p.strength, p.fitness, p.morale ?? '', p.marketValue || 0, p.wage || 0, p.contracts,
             st ? st.spiele : 0, st ? st.tore : 0, st ? st.vorlagen : 0, st && st.spiele ? csvZahl(st.notenSumme / st.spiele, 2) : '',
             // Etiketten ohne Symbol (js/manager-tools.js), Verletzungen aus Zähler und Verlauf (js/medical-department.js)
             typeof getPlayerTags === 'function' ? getPlayerTags(p).map(t => SPIELER_ETIKETTEN.find(e => e.id === t).label.replace(/^\S+\s+/, '')).join(', ') : '',
-            p.timesInjured || 0, (Array.isArray(p.injuryLog) ? p.injuryLog : []).reduce((sum, e) => sum + (e.tage || 0), 0)];
+            p.timesInjured || 0, (Array.isArray(p.injuryLog) ? p.injuryLog : []).reduce((sum, e) => sum + (e.tage || 0), 0),
+            // Bilanz je Spieler (js/manager-tools.js): Ligaspiele der Saison mit und ohne ihn in der Startelf
+            p.startBilanz && p.startBilanz.mit ? p.startBilanz.mit.spiele : 0,
+            p.startBilanz && p.startBilanz.mit && p.startBilanz.mit.spiele ? csvZahl((3 * p.startBilanz.mit.s + p.startBilanz.mit.u) / p.startBilanz.mit.spiele, 2) : '',
+            p.startBilanz && p.startBilanz.ohne && p.startBilanz.ohne.spiele ? csvZahl((3 * p.startBilanz.ohne.s + p.startBilanz.ohne.u) / p.startBilanz.ohne.spiele, 2) : ''];
     });
     return csvText([kopf, ...zeilen]);
 }
@@ -22679,7 +22928,7 @@ function buildSeasonReviewHtml(saison) {
     const vaGesamt = va ? Object.values(va.eintraege).filter(b => b.spiele > 0) : [];
     teile.push(abschnitt('📈 Aufstellungsvorlagen', beste ? `🏅 „${mpEsc(beste.name)}“: ${beste.s}S ${beste.u}U ${beste.n}N, ${fmt(presetPunkteProSpiel(beste))} Punkte je Spiel (${vaGesamt.length} Vorlage${vaGesamt.length === 1 ? '' : 'n'} im Einsatz).`
         : vaGesamt.length ? `${vaGesamt.length} Vorlage${vaGesamt.length === 1 ? '' : 'n'} im Einsatz, aber keine mit drei Einsätzen.` : leer('Keine Vorlage wurde in Ligaspielen genutzt.')));
-    const tv = game.etikettBilanzVorjahr;
+    const tv = (Array.isArray(game.etikettBilanzArchiv) ? game.etikettBilanzArchiv.find(a => a.season === saison) : null) || game.etikettBilanzVorjahr;
     let etiketten = '';
     if (tv && tv.season === saison && tv.daten && typeof SPIELER_ETIKETTEN !== 'undefined') {
         etiketten = SPIELER_ETIKETTEN.filter(e => tv.daten[e.id] && tv.daten[e.id].mit.spiele >= TAG_BILANZ_MIN && tv.daten[e.id].ohne.spiele >= TAG_BILANZ_MIN).map(e => {
@@ -22956,6 +23205,43 @@ function renderPlayerTags(p) {
         ${wirkung.length ? `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:6px; text-align:left;">${wirkung.map(mpEsc).join('<br>')}</div>` : ''}`;
 }
 
+// ---------- Belastungsampel (Phase 26.15) ----------
+// Reine Anzeige aus echten Daten: Fitness, Einsätze der letzten fünf Ligaspiele (p.startFolge, von recordPlayerStartResult()
+// gepflegt) und Verletzungsvorgeschichte. Rot ab 4 Punkten, Gelb ab 2. Ein Verletzter ist immer rot.
+let squadBelastungNurRot = false;
+
+function getBelastungsAmpel(p) {
+    if ((p.injured || 0) > 0) return { stufe: 'rot', punkte: 9, gruende: [`verletzt (noch ${p.injured} Sp.)`] };
+    const gruende = [];
+    let punkte = 0;
+    const f = p.fitness;
+    if (f < 50) { punkte += 3; gruende.push(`Fitness ${f} %`); }
+    else if (f < 65) { punkte += 2; gruende.push(`Fitness ${f} %`); }
+    else if (f < 80) { punkte += 1; gruende.push(`Fitness ${f} %`); }
+    const folge = Array.isArray(p.startFolge) ? p.startFolge : [];
+    const starts = folge.reduce((sum, v) => sum + v, 0);
+    if (folge.length >= 5 && starts === 5) { punkte += 1; gruende.push('5 von 5 Spielen in der Startelf'); }
+    const ti = p.timesInjured || 0;
+    if (ti >= 3) { punkte += 2; gruende.push(`${ti} Verletzungen`); }
+    else if (ti >= 2) { punkte += 1; gruende.push('2 Verletzungen'); }
+    return { stufe: punkte >= 4 ? 'rot' : punkte >= 2 ? 'gelb' : 'gruen', punkte, gruende };
+}
+
+function getBelastungChips(p) {
+    const a = getBelastungsAmpel(p);
+    return a.stufe === 'gruen' ? [] : [uiChip(`🚦 Belastung ${a.stufe}`, a.stufe === 'rot' ? 'schlecht' : 'warn')];
+}
+
+function getBelastungHinweis(p) {
+    const a = getBelastungsAmpel(p);
+    return a.stufe === 'gruen' ? '' : `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">🚦 ${mpEsc(a.gruende.join(', '))}</div>`;
+}
+
+function setSquadBelastungFilter() {
+    squadBelastungNurRot = !squadBelastungNurRot;
+    renderSquadView();
+}
+
 function setSquadTagFilter(tagId) {
     squadTagFilter = squadTagFilter === tagId ? '' : tagId;
     renderSquadView();
@@ -22968,7 +23254,10 @@ function renderSquadTagFilter() {
     squad.forEach(p => getPlayerTags(p).forEach(t => { zaehler[t] = (zaehler[t] || 0) + 1; }));
     const vorhanden = SPIELER_ETIKETTEN.filter(e => zaehler[e.id]);
     if (squadTagFilter && !zaehler[squadTagFilter]) squadTagFilter = '';
-    box.innerHTML = vorhanden.length ? `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:3px;">Nach Etikett filtern:</div><div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px;">${vorhanden.map(e => `<button onclick="setSquadTagFilter('${e.id}')" class="${squadTagFilter === e.id ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:var(--fs-caption);" aria-pressed="${squadTagFilter === e.id}">${e.label} (${zaehler[e.id]})</button>`).join('')}</div>` : '';
+    const rote = squad.filter(p => getBelastungsAmpel(p).stufe === 'rot').length;
+    if (squadBelastungNurRot && !rote) squadBelastungNurRot = false;
+    const ampel = `<button onclick="setSquadBelastungFilter()" class="${squadBelastungNurRot ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:var(--fs-caption);" aria-pressed="${squadBelastungNurRot}" title="Zeigt nur Spieler mit hoher Belastung: wenig Fitness, Dauereinsatz oder Verletzungsgeschichte">🚦 Belastung rot (${rote})</button>`;
+    box.innerHTML = `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:3px;">Filtern:</div><div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px;">${ampel}${vorhanden.map(e => `<button onclick="setSquadTagFilter('${e.id}')" class="${squadTagFilter === e.id ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:var(--fs-caption);" aria-pressed="${squadTagFilter === e.id}">${e.label} (${zaehler[e.id]})</button>`).join('')}</div>`;
 }
 
 // ---------- Etiketten-Bilanz (Phase 26.13) ----------
@@ -23019,6 +23308,11 @@ function archiveTagBilanz() {
     ensureTagBilanz();
     if (!Object.keys(game.etikettBilanz).length) { return; }
     game.etikettBilanzVorjahr = { season: game.season, daten: JSON.parse(JSON.stringify(game.etikettBilanz)) };
+    // Die letzten fünf Saisons bleiben für den Saisonrückblick erhalten
+    if (!Array.isArray(game.etikettBilanzArchiv)) game.etikettBilanzArchiv = [];
+    game.etikettBilanzArchiv = game.etikettBilanzArchiv.filter(a => a.season !== game.season);
+    game.etikettBilanzArchiv.push(game.etikettBilanzVorjahr);
+    game.etikettBilanzArchiv = game.etikettBilanzArchiv.slice(-5);
     game.etikettBilanz = {};
 }
 
@@ -23084,6 +23378,7 @@ function recordPlayerStartResult(ids, ourGoals, oppGoals) {
     squad.forEach(p => {
         if (!p.startBilanz || typeof p.startBilanz !== 'object') p.startBilanz = { mit: { spiele: 0, s: 0, u: 0, n: 0 }, ohne: { spiele: 0, s: 0, u: 0, n: 0 } };
         const z = ids.includes(p.id) ? p.startBilanz.mit : p.startBilanz.ohne;
+        p.startFolge = (Array.isArray(p.startFolge) ? p.startFolge : []).concat(ids.includes(p.id) ? 1 : 0).slice(-5);
         z.spiele++;
         if (ourGoals > oppGoals) z.s++; else if (ourGoals < oppGoals) z.n++; else z.u++;
     });
@@ -23135,6 +23430,14 @@ function snoozeManagerTodo(id) {
     renderManagerAssistant();
 }
 
+function unsnoozeManagerTodo(id) {
+    ensureAssistentState();
+    delete game.assistentZurueck[id];
+    renderManagerAssistant();
+}
+
+let assistentZurueckOffen = false;
+
 function resetManagerSnooze() {
     ensureAssistentState();
     game.assistentZurueck = {};
@@ -23184,6 +23487,8 @@ function getManagerTodos(alle, roh) {
         const teil = (m, pfeil) => `${m.p.name} (${pfeil} ${Math.abs(m.prozent)} %, ${formatVal(m.jetzt)})`;
         t.push({ id: 'marktwert', prio: 40, icon: '💶', text: `Marktwert seit der Vorsaison: ${[...mw.auf.slice(0, 2).map(m => teil(m, '↑')), ...mw.ab.slice(0, 1).map(m => teil(m, '↓'))].join(', ')}${mw.auf.length + mw.ab.length > 3 ? ' …' : ''}${mw.auf.length ? ' – Zeit für einen Verkauf?' : ''}`, label: 'Zum Kader', aktion: "showScreen('screen-squad')" });
     }
+    const merkWeg = Array.isArray(game.marktMerkliste) ? game.marktMerkliste.filter(e => e.status === 'weg') : [];
+    if (merkWeg.length) t.push({ id: 'merkliste-weg', prio: 52, icon: '⭐', text: `Gemerkt, aber vom Markt verschwunden: ${merkWeg.slice(0, 2).map(e => `${e.name} (${e.pos}, Str ${e.strength})`).join(', ')}${merkWeg.length > 2 ? ' …' : ''}.`, label: 'Zum Transfermarkt', aktion: "showScreen('screen-transfer'); setTransferTab('market')" });
     const preisAlarm = typeof getScoutPriceAlerts === 'function' ? getScoutPriceAlerts() : [];
     if (preisAlarm.length) t.push({ id: 'scout-alarm', prio: 70, icon: '🔔', text: `Preis-Alarm: ${preisAlarm.slice(0, 2).map(x => `${x.p.name} (${x.p.pos}, Str ${x.p.strength}) für ${formatVal(x.preis)}`).join(', ')}${preisAlarm.length > 2 ? ' …' : ''} liegt unter deiner Grenze und ist bezahlbar.`, label: 'Zum Scouting', aktion: "showScreen('screen-scouting-global')" });
     const ungelesen = typeof inboxMessages !== 'undefined' ? inboxMessages.filter(m => !m.read).length : 0;
@@ -23254,11 +23559,14 @@ function renderManagerAssistant() {
     trackAssistentErledigt(getManagerTodos(true, true));
     const todos = getManagerTodos();
     ensureAssistentState();
-    const zurueck = Object.keys(game.assistentZurueck).filter(istZurueckgestellt).length;
+    const zurueckListe = getManagerTodos(true, true).filter(x => istZurueckgestellt(x.id));
+    const zurueck = zurueckListe.length;
     const html = `<div class="panel-header">🧭 Manager-Assistent</div>` + (todos.length
         ? todos.map(x => `<div class="box" style="margin:4px 0; font-size:var(--fs-small); display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:6px 8px;"><span style="flex:1 1 11em; min-width:0;">${x.icon} ${mpEsc(x.text)}</span><span style="display:flex; gap:4px; flex:0 0 auto;"><button onclick="${x.aktion}" class="btn-secondary" style="width:auto; flex:0 0 auto;">${x.label}</button>${ASSISTENT_NICHT_ZURUECK.includes(x.id) ? '' : `<button onclick="snoozeManagerTodo('${x.id}')" class="btn-secondary" style="width:auto; flex:0 0 auto;" title="Diesen Schritt ${ASSISTENT_ZURUECK_SPIELTAGE} Spieltage ausblenden">⏸️ Später</button>`}</span></div>`).join('')
         : `<div class="box" style="font-size:var(--fs-small);">✅ Alles im grünen Bereich: Aufstellung steht, keine Verträge drängen, die Kasse passt. Zeit für den nächsten Spieltag.</div>`)
-        + (zurueck ? `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:6px;">⏸️ ${zurueck} Schritt${zurueck === 1 ? '' : 'e'} zurückgestellt <button onclick="resetManagerSnooze()" class="btn-secondary" style="width:auto; margin:0 0 0 6px;">Alle wieder zeigen</button></div>` : '')
+        + (zurueck ? `<details class="ui-fold" style="margin-top:6px;"${assistentZurueckOffen ? ' open' : ''} ontoggle="assistentZurueckOffen = this.open"><summary>⏸️ ${zurueck} Schritt${zurueck === 1 ? '' : 'e'} zurückgestellt</summary>`
+            + zurueckListe.map(x => `<div class="box" style="margin:4px 0; font-size:var(--fs-small); display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:6px 8px;"><span style="flex:1 1 11em; min-width:0;">${x.icon} ${mpEsc(x.text)} <span style="color:var(--text-muted);">· bis Spieltag ${game.assistentZurueck[x.id].bis}</span></span><button onclick="unsnoozeManagerTodo('${x.id}')" class="btn-secondary" style="width:auto; flex:0 0 auto;">Wieder zeigen</button></div>`).join('')
+            + `<button onclick="resetManagerSnooze()" class="btn-secondary" style="margin-top:4px;">Alle wieder zeigen</button></details>` : '')
         + getAssistentErledigtHtml()
         + getReturnLineHtml();
     if (html === managerAssistantLetzterInhalt && box.firstChild) return;

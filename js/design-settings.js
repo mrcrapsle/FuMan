@@ -151,6 +151,7 @@ function renderDesignSettings() {
     const aktiv = getDesignTheme();
     const groesse = getTextGroesse();
     const bewegung = getBewegung();
+    const wischen = typeof getWischen === 'function' ? getWischen() : 'an';
     const themes = DESIGN_THEMES.map(t => `
         <button class="design-theme-card${t.id === aktiv ? ' active' : ''}" onclick="setzeDesignTheme('${t.id}')" aria-pressed="${t.id === aktiv}">
             <span class="design-swatches" aria-hidden="true">${t.farben.map(f => `<span style="background:${f};"></span>`).join('')}</span>
@@ -186,6 +187,9 @@ function renderDesignSettings() {
         <div class="design-size-row">${groessen}</div>
         <div class="ui-field-label" style="margin:14px 0 6px;">Bewegung (Animationen)</div>
         <div class="design-size-row">${bewegungen}</div>
+        <div class="ui-field-label" style="margin:14px 0 6px;">Wischen zwischen Reitern</div>
+        <div class="design-size-row">${['an', 'aus'].map(w => `<button class="design-size-btn${w === wischen ? ' active' : ''}" onclick="setzeWischen('${w}')" aria-pressed="${w === wischen}"><span>${w === 'an' ? 'An' : 'Aus'}</span></button>`).join('')}</div>
+        <div class="design-hinweis" style="margin-top:4px;">Nach links oder rechts wischen wechselt in den Hubs und im Kader zum Nachbar-Reiter. Eingabefelder, Spielfeld und seitlich scrollende Listen bleiben ausgenommen.</div>
         ${vorschau}
         <div class="design-hinweis">Gilt nur für dieses Gerät und bleibt beim Laden anderer Spielstände erhalten.</div>`;
 }

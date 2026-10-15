@@ -826,6 +826,7 @@
         if (!container) return;
         container.innerHTML = '';
         let filtered = squadFilterPos === 'alle' ? squad : squad.filter(p => p.pos === squadFilterPos);
+        if (typeof squadBelastungNurRot !== 'undefined' && squadBelastungNurRot) filtered = filtered.filter(p => getBelastungsAmpel(p).stufe === 'rot');
         if (typeof squadTagFilter !== 'undefined' && squadTagFilter) filtered = filtered.filter(p => typeof getPlayerTags === 'function' && getPlayerTags(p).includes(squadTagFilter));
         // Sortierfunktion: nicht mehr nur nach Position filterbar, sondern auch echt sortierbar.
         filtered = [...filtered].sort((a, b) => {
@@ -866,10 +867,11 @@
                     statusChip, moralChip,
                     (p.trait && p.trait !== 'Kein') ? uiChip(p.trait) : '',
                     uiChip(`⚽ ${p.goalsSeason || 0} · 🎽 ${p.appearances || 0}`),
-                    ...(typeof getPlayerTagChips === 'function' ? getPlayerTagChips(p) : [])
+                    ...(typeof getPlayerTagChips === 'function' ? getPlayerTagChips(p) : []),
+                    ...(typeof getBelastungChips === 'function' ? getBelastungChips(p) : [])
                 ],
                 kpi: { wert: p.strength, label: 'Stärke' },
-                body: renderUiStatRow([['Tempo', p.pace], ['Schuss', p.shooting], ['Pass', p.passing], ['Abwehr', p.defense], ['Kopf', p.KOP ?? '-'], ['Fitness', p.fitness]])
+                body: (typeof getBelastungHinweis === 'function' ? getBelastungHinweis(p) : '') + renderUiStatRow([['Tempo', p.pace], ['Schuss', p.shooting], ['Pass', p.passing], ['Abwehr', p.defense], ['Kopf', p.KOP ?? '-'], ['Fitness', p.fitness]])
                     + `<label class="ui-field" style="margin-top:8px;">
                         <span class="ui-field-label">Rolle</span>
                         <select class="input-inline" style="${roleFits ? 'color:var(--primary);' : ''}" onchange="setPlayerRole('${p.id}', this.value)">${roleOptions}</select>

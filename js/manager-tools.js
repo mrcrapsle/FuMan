@@ -182,6 +182,43 @@ function renderPlayerTags(p) {
         ${wirkung.length ? `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:6px; text-align:left;">${wirkung.map(mpEsc).join('<br>')}</div>` : ''}`;
 }
 
+// ---------- Belastungsampel (Phase 26.15) ----------
+// Reine Anzeige aus echten Daten: Fitness, Einsätze der letzten fünf Ligaspiele (p.startFolge, von recordPlayerStartResult()
+// gepflegt) und Verletzungsvorgeschichte. Rot ab 4 Punkten, Gelb ab 2. Ein Verletzter ist immer rot.
+let squadBelastungNurRot = false;
+
+function getBelastungsAmpel(p) {
+    if ((p.injured || 0) > 0) return { stufe: 'rot', punkte: 9, gruende: [`verletzt (noch ${p.injured} Sp.)`] };
+    const gruende = [];
+    let punkte = 0;
+    const f = p.fitness;
+    if (f < 50) { punkte += 3; gruende.push(`Fitness ${f} %`); }
+    else if (f < 65) { punkte += 2; gruende.push(`Fitness ${f} %`); }
+    else if (f < 80) { punkte += 1; gruende.push(`Fitness ${f} %`); }
+    const folge = Array.isArray(p.startFolge) ? p.startFolge : [];
+    const starts = folge.reduce((sum, v) => sum + v, 0);
+    if (folge.length >= 5 && starts === 5) { punkte += 1; gruende.push('5 von 5 Spielen in der Startelf'); }
+    const ti = p.timesInjured || 0;
+    if (ti >= 3) { punkte += 2; gruende.push(`${ti} Verletzungen`); }
+    else if (ti >= 2) { punkte += 1; gruende.push('2 Verletzungen'); }
+    return { stufe: punkte >= 4 ? 'rot' : punkte >= 2 ? 'gelb' : 'gruen', punkte, gruende };
+}
+
+function getBelastungChips(p) {
+    const a = getBelastungsAmpel(p);
+    return a.stufe === 'gruen' ? [] : [uiChip(`🚦 Belastung ${a.stufe}`, a.stufe === 'rot' ? 'schlecht' : 'warn')];
+}
+
+function getBelastungHinweis(p) {
+    const a = getBelastungsAmpel(p);
+    return a.stufe === 'gruen' ? '' : `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">🚦 ${mpEsc(a.gruende.join(', '))}</div>`;
+}
+
+function setSquadBelastungFilter() {
+    squadBelastungNurRot = !squadBelastungNurRot;
+    renderSquadView();
+}
+
 function setSquadTagFilter(tagId) {
     squadTagFilter = squadTagFilter === tagId ? '' : tagId;
     renderSquadView();
@@ -194,7 +231,10 @@ function renderSquadTagFilter() {
     squad.forEach(p => getPlayerTags(p).forEach(t => { zaehler[t] = (zaehler[t] || 0) + 1; }));
     const vorhanden = SPIELER_ETIKETTEN.filter(e => zaehler[e.id]);
     if (squadTagFilter && !zaehler[squadTagFilter]) squadTagFilter = '';
-    box.innerHTML = vorhanden.length ? `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:3px;">Nach Etikett filtern:</div><div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px;">${vorhanden.map(e => `<button onclick="setSquadTagFilter('${e.id}')" class="${squadTagFilter === e.id ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:var(--fs-caption);" aria-pressed="${squadTagFilter === e.id}">${e.label} (${zaehler[e.id]})</button>`).join('')}</div>` : '';
+    const rote = squad.filter(p => getBelastungsAmpel(p).stufe === 'rot').length;
+    if (squadBelastungNurRot && !rote) squadBelastungNurRot = false;
+    const ampel = `<button onclick="setSquadBelastungFilter()" class="${squadBelastungNurRot ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:var(--fs-caption);" aria-pressed="${squadBelastungNurRot}" title="Zeigt nur Spieler mit hoher Belastung: wenig Fitness, Dauereinsatz oder Verletzungsgeschichte">🚦 Belastung rot (${rote})</button>`;
+    box.innerHTML = `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:3px;">Filtern:</div><div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px;">${ampel}${vorhanden.map(e => `<button onclick="setSquadTagFilter('${e.id}')" class="${squadTagFilter === e.id ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:var(--fs-caption);" aria-pressed="${squadTagFilter === e.id}">${e.label} (${zaehler[e.id]})</button>`).join('')}</div>`;
 }
 
 // ---------- Etiketten-Bilanz (Phase 26.13) ----------
@@ -245,6 +285,11 @@ function archiveTagBilanz() {
     ensureTagBilanz();
     if (!Object.keys(game.etikettBilanz).length) { return; }
     game.etikettBilanzVorjahr = { season: game.season, daten: JSON.parse(JSON.stringify(game.etikettBilanz)) };
+    // Die letzten fünf Saisons bleiben für den Saisonrückblick erhalten
+    if (!Array.isArray(game.etikettBilanzArchiv)) game.etikettBilanzArchiv = [];
+    game.etikettBilanzArchiv = game.etikettBilanzArchiv.filter(a => a.season !== game.season);
+    game.etikettBilanzArchiv.push(game.etikettBilanzVorjahr);
+    game.etikettBilanzArchiv = game.etikettBilanzArchiv.slice(-5);
     game.etikettBilanz = {};
 }
 
@@ -310,6 +355,7 @@ function recordPlayerStartResult(ids, ourGoals, oppGoals) {
     squad.forEach(p => {
         if (!p.startBilanz || typeof p.startBilanz !== 'object') p.startBilanz = { mit: { spiele: 0, s: 0, u: 0, n: 0 }, ohne: { spiele: 0, s: 0, u: 0, n: 0 } };
         const z = ids.includes(p.id) ? p.startBilanz.mit : p.startBilanz.ohne;
+        p.startFolge = (Array.isArray(p.startFolge) ? p.startFolge : []).concat(ids.includes(p.id) ? 1 : 0).slice(-5);
         z.spiele++;
         if (ourGoals > oppGoals) z.s++; else if (ourGoals < oppGoals) z.n++; else z.u++;
     });
@@ -361,6 +407,14 @@ function snoozeManagerTodo(id) {
     renderManagerAssistant();
 }
 
+function unsnoozeManagerTodo(id) {
+    ensureAssistentState();
+    delete game.assistentZurueck[id];
+    renderManagerAssistant();
+}
+
+let assistentZurueckOffen = false;
+
 function resetManagerSnooze() {
     ensureAssistentState();
     game.assistentZurueck = {};
@@ -410,6 +464,8 @@ function getManagerTodos(alle, roh) {
         const teil = (m, pfeil) => `${m.p.name} (${pfeil} ${Math.abs(m.prozent)} %, ${formatVal(m.jetzt)})`;
         t.push({ id: 'marktwert', prio: 40, icon: '💶', text: `Marktwert seit der Vorsaison: ${[...mw.auf.slice(0, 2).map(m => teil(m, '↑')), ...mw.ab.slice(0, 1).map(m => teil(m, '↓'))].join(', ')}${mw.auf.length + mw.ab.length > 3 ? ' …' : ''}${mw.auf.length ? ' – Zeit für einen Verkauf?' : ''}`, label: 'Zum Kader', aktion: "showScreen('screen-squad')" });
     }
+    const merkWeg = Array.isArray(game.marktMerkliste) ? game.marktMerkliste.filter(e => e.status === 'weg') : [];
+    if (merkWeg.length) t.push({ id: 'merkliste-weg', prio: 52, icon: '⭐', text: `Gemerkt, aber vom Markt verschwunden: ${merkWeg.slice(0, 2).map(e => `${e.name} (${e.pos}, Str ${e.strength})`).join(', ')}${merkWeg.length > 2 ? ' …' : ''}.`, label: 'Zum Transfermarkt', aktion: "showScreen('screen-transfer'); setTransferTab('market')" });
     const preisAlarm = typeof getScoutPriceAlerts === 'function' ? getScoutPriceAlerts() : [];
     if (preisAlarm.length) t.push({ id: 'scout-alarm', prio: 70, icon: '🔔', text: `Preis-Alarm: ${preisAlarm.slice(0, 2).map(x => `${x.p.name} (${x.p.pos}, Str ${x.p.strength}) für ${formatVal(x.preis)}`).join(', ')}${preisAlarm.length > 2 ? ' …' : ''} liegt unter deiner Grenze und ist bezahlbar.`, label: 'Zum Scouting', aktion: "showScreen('screen-scouting-global')" });
     const ungelesen = typeof inboxMessages !== 'undefined' ? inboxMessages.filter(m => !m.read).length : 0;
@@ -480,11 +536,14 @@ function renderManagerAssistant() {
     trackAssistentErledigt(getManagerTodos(true, true));
     const todos = getManagerTodos();
     ensureAssistentState();
-    const zurueck = Object.keys(game.assistentZurueck).filter(istZurueckgestellt).length;
+    const zurueckListe = getManagerTodos(true, true).filter(x => istZurueckgestellt(x.id));
+    const zurueck = zurueckListe.length;
     const html = `<div class="panel-header">🧭 Manager-Assistent</div>` + (todos.length
         ? todos.map(x => `<div class="box" style="margin:4px 0; font-size:var(--fs-small); display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:6px 8px;"><span style="flex:1 1 11em; min-width:0;">${x.icon} ${mpEsc(x.text)}</span><span style="display:flex; gap:4px; flex:0 0 auto;"><button onclick="${x.aktion}" class="btn-secondary" style="width:auto; flex:0 0 auto;">${x.label}</button>${ASSISTENT_NICHT_ZURUECK.includes(x.id) ? '' : `<button onclick="snoozeManagerTodo('${x.id}')" class="btn-secondary" style="width:auto; flex:0 0 auto;" title="Diesen Schritt ${ASSISTENT_ZURUECK_SPIELTAGE} Spieltage ausblenden">⏸️ Später</button>`}</span></div>`).join('')
         : `<div class="box" style="font-size:var(--fs-small);">✅ Alles im grünen Bereich: Aufstellung steht, keine Verträge drängen, die Kasse passt. Zeit für den nächsten Spieltag.</div>`)
-        + (zurueck ? `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:6px;">⏸️ ${zurueck} Schritt${zurueck === 1 ? '' : 'e'} zurückgestellt <button onclick="resetManagerSnooze()" class="btn-secondary" style="width:auto; margin:0 0 0 6px;">Alle wieder zeigen</button></div>` : '')
+        + (zurueck ? `<details class="ui-fold" style="margin-top:6px;"${assistentZurueckOffen ? ' open' : ''} ontoggle="assistentZurueckOffen = this.open"><summary>⏸️ ${zurueck} Schritt${zurueck === 1 ? '' : 'e'} zurückgestellt</summary>`
+            + zurueckListe.map(x => `<div class="box" style="margin:4px 0; font-size:var(--fs-small); display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:6px 8px;"><span style="flex:1 1 11em; min-width:0;">${x.icon} ${mpEsc(x.text)} <span style="color:var(--text-muted);">· bis Spieltag ${game.assistentZurueck[x.id].bis}</span></span><button onclick="unsnoozeManagerTodo('${x.id}')" class="btn-secondary" style="width:auto; flex:0 0 auto;">Wieder zeigen</button></div>`).join('')
+            + `<button onclick="resetManagerSnooze()" class="btn-secondary" style="margin-top:4px;">Alle wieder zeigen</button></details>` : '')
         + getAssistentErledigtHtml()
         + getReturnLineHtml();
     if (html === managerAssistantLetzterInhalt && box.firstChild) return;

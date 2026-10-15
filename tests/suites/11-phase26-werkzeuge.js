@@ -1321,6 +1321,359 @@ async function testRunde29Funktionen(browser) {
     await page.close();
 }
 
+async function testRunde30Funktionen(browser) {
+    console.log('\n[26.15] Zurückgestellte Liste, Etiketten-Archiv, CSV, Notiz-Vorschläge, Markt-Merkliste, Belastungsampel, Matchplan, Wischen');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 320, height: 800 });
+    const r = await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false; simulateMatchdays(3);
+        const out = {};
+        const schrift = document.createElement('style'); schrift.textContent = '*,*::before,*::after{font-family:"DejaVu Sans",Verdana,sans-serif!important}'; document.head.appendChild(schrift);
+        const probe = document.createElement('span'); document.body.appendChild(probe);
+        const woerter = sel => [...document.querySelectorAll(sel)].filter(el => el.offsetParent).filter(el => {
+            const cs = getComputedStyle(el), innen = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+            probe.style.cssText = `position:absolute; visibility:hidden; white-space:nowrap; font:${cs.font}; letter-spacing:${cs.letterSpacing}`;
+            return (el.innerText || '').trim().split(/\s+/).flatMap(w => w.split(/(?<=-)/)).some(t => { probe.textContent = t; return probe.getBoundingClientRect().width > innen + 1; });
+        }).map(el => (el.innerText || '').trim().slice(0, 24));
+        const ueberlauf = () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1;
+        squad.forEach(p => { p.injured = 0; p.suspended = 0; p.fitness = 90; p.timesInjured = 0; p.tags = []; p.injuryLog = []; delete p.startFolge; delete p.startBilanz; });
+        game.formation = '4-4-2'; autoLineup();
+        const saisonAlt = game.season;
+
+        // --- Zurückgestellte Schritte als Liste ---
+        showScreen('screen-dashboard');
+        game.assistentZurueck = {}; game.assistentVorher = null; game.assistentErledigt = null;
+        squad[1].contracts = 0;
+        snoozeManagerTodo('vertraege-aus');
+        managerAssistantLetzterInhalt = ''; renderManagerAssistant();
+        const ab = () => document.getElementById('manager-assistant-box');
+        out.zListe = ab().textContent.includes('1 Schritt zurückgestellt') && ab().textContent.includes('bis Spieltag') && ab().textContent.includes('Wieder zeigen') && ab().textContent.includes('Alle wieder zeigen');
+        out.zText = ab().textContent.includes('Vertrag');
+        out.zZu = !ab().querySelector('details.ui-fold[open]');
+        assistentZurueckOffen = true; managerAssistantLetzterInhalt = ''; renderManagerAssistant();
+        out.zOffen = !!ab().querySelector('details.ui-fold[open]');
+        assistentZurueckOffen = false;
+        out.wAssistent = JSON.stringify(woerter('#manager-assistant-box button'));
+        unsnoozeManagerTodo('vertraege-aus');
+        out.zWieder = !istZurueckgestellt('vertraege-aus') && getManagerTodos(true).some(x => x.id === 'vertraege-aus') && !ab().textContent.includes('zurückgestellt');
+        snoozeManagerTodo('vertraege-aus'); squad[1].contracts = 3;
+        managerAssistantLetzterInhalt = ''; renderManagerAssistant();
+        out.zErledigtVerschwindet = !ab().textContent.includes('zurückgestellt');
+        game.assistentZurueck = {};
+
+        // --- Etiketten-Archiv über fünf Saisons ---
+        game.etikettBilanzArchiv = []; game.etikettBilanzVorjahr = null;
+        const st = starterTag => { squad[0].tags = [starterTag]; };
+        for (let sn = 1; sn <= 7; sn++) {
+            game.season = sn; st('stamm');
+            game.etikettBilanz = { stamm: { mit: { spiele: 6, s: sn % 6, u: 0, n: 6 - (sn % 6), tore: 5, gegentore: 5 }, ohne: { spiele: 6, s: 1, u: 1, n: 4, tore: 3, gegentore: 8 } } };
+            archiveTagBilanz();
+        }
+        out.archivFuenf = game.etikettBilanzArchiv.length === 5 && game.etikettBilanzArchiv[0].season === 3 && game.etikettBilanzArchiv[4].season === 7;
+        out.vorjahrBleibt = game.etikettBilanzVorjahr.season === 7;
+        game.managerCareer = [3, 5, 7].map(sn => ({ season: sn, club: game.clubName, level: game.leagueLevel, league: 'Liga', rank: 4, won: 1, drawn: 1, lost: 1, goalsFor: 3, goalsAgainst: 3, points: 4 }));
+        game.season = 8;
+        const htmlText = h => { const d = document.createElement('div'); d.innerHTML = h; return d.textContent; };
+        out.aeltereSaisonEtiketten = htmlText(buildSeasonReviewHtml(5)).includes('Stammkraft: mit') && htmlText(buildSeasonReviewHtml(3)).includes('Stammkraft: mit');
+        out.zuAlteSaison = htmlText(buildSeasonReviewHtml(2)).includes('Keine Etiketten');
+        delete game.etikettBilanzArchiv;
+        out.altesSpielVorjahr = htmlText(buildSeasonReviewHtml(7)).includes('Stammkraft: mit') && !htmlText(buildSeasonReviewHtml(5)).includes('Stammkraft: mit');
+        game.etikettBilanz = { stamm: { mit: { spiele: 6, s: 6, u: 0, n: 0, tore: 5, gegentore: 0 }, ohne: { spiele: 6, s: 0, u: 0, n: 6, tore: 0, gegentore: 9 } } };
+        archiveTagBilanz();
+        out.archivNeuAngelegt = Array.isArray(game.etikettBilanzArchiv) && game.etikettBilanzArchiv.length === 1;
+        game.season = saisonAlt; game.managerCareer = []; game.etikettBilanz = {}; squad[0].tags = [];
+
+        // --- Kader-CSV mit Startelf-Bilanz ---
+        const sp = squad[0];
+        sp.startBilanz = { mit: { spiele: 4, s: 3, u: 1, n: 0 }, ohne: { spiele: 2, s: 0, u: 1, n: 1 } };
+        const csv = buildKaderCsv().split(/\r?\n/);
+        const kopf = csv[0].split(';');
+        out.csvKopf = kopf.slice(-3).join('|') === 'Startelf-Spiele (Saison)|Pkt/Spiel mit ihm in der Startelf|Pkt/Spiel ohne ihn';
+        const zeile = csv.find(z => z.startsWith(sp.name + ';') || z.startsWith('"' + sp.name)).split(';');
+        out.csvWerte = zeile.slice(-3).join('|') === '4|2,50|0,50';
+        sp.startBilanz = undefined;
+        const ohneBilanz = buildKaderCsv().split(/\r?\n/).find(z => z.startsWith(sp.name + ';') || z.startsWith('"' + sp.name)).split(';');
+        out.csvOhneDaten = ohneBilanz.slice(-3).join('|') === '0||';
+
+        // --- Notiz-Vorschläge ---
+        const gegnerTeam = leaguesData[game.leagueLevel].find(t => t.name !== game.clubName);
+        gegnerTeam.played = 5; gegnerTeam.goalsFor = 9; gegnerTeam.goalsAgainst = 4;
+        game.headToHeadRecords[gegnerTeam.name] = { wins: 1, draws: 0, losses: 1, goalsFor: 3, goalsAgainst: 3, lastResults: ['2:1', '0:2'] };
+        const vs = getNotizVorschlaege(gegnerTeam.name);
+        out.vorStil = vs.some(v => v.startsWith('Spielstil: '));
+        out.vorPlatz = vs.some(v => /^Platz \d+ von \d+, Stärke \d+\.$/.test(v));
+        out.vorTore = vs.includes('Ø 1,8 Tore, 0,8 Gegentore.');
+        out.vorDuelle = vs.includes('Zuletzt 2:1, 0:2.');
+        out.vorUnbekannt = getNotizVorschlaege('Unbekannter FC').length === 0 || !getNotizVorschlaege('Unbekannter FC').some(v => v.startsWith('Spielstil'));
+        gegnerTeam.played = 2; out.vorWenigeSpiele = !getNotizVorschlaege(gegnerTeam.name).some(v => v.startsWith('Ø'));
+        gegnerTeam.played = 5;
+        const cmAlt = typeof currentMatch !== 'undefined' ? currentMatch : null;
+        currentMatch = { isHome: true, homeName: game.clubName, awayName: gegnerTeam.name, homeGoals: 1, awayGoals: 1, isCup: false };
+        game.gegnerNotizen = {};
+        openNachspielNotiz();
+        const knoepfe = [...document.querySelectorAll('#opp-note-body button[onclick^="addNotizVorschlag"]')];
+        out.vorKnoepfe = knoepfe.length >= 3 && knoepfe.every(b => b.dataset.feld === 'gegner-notiz-nach');
+        const feld = document.getElementById('gegner-notiz-nach');
+        const vorher = feld.value;
+        knoepfe[0].click();
+        out.vorEingefuegt = feld.value.length > vorher.length && feld.value.includes(knoepfe[0].dataset.text) && feld.value.startsWith(vorher.trim());
+        const laenge = feld.value.length;
+        knoepfe[0].click();
+        out.vorKeinDoppel = feld.value.length === laenge;
+        feld.value = 'x'.repeat(GEGNER_NOTIZ_MAX - 5);
+        knoepfe[1].click();
+        out.vorVoll = feld.value.length === GEGNER_NOTIZ_MAX - 5;
+        out.vorDatentext = knoepfe.every(b => !/[<>"]/.test(b.dataset.text) || b.dataset.text.length > 0);
+        out.wVorschlaege = JSON.stringify(woerter('#opp-note-body button'));
+        closeNachspielNotiz(); currentMatch = cmAlt;
+        delete game.headToHeadRecords[gegnerTeam.name];
+
+        // --- Merkliste im Transfermarkt ---
+        if (!marketPlayers.length) refreshTransferMarket();
+        delete game.marktMerkliste;
+        const m1 = marketPlayers[0], m2 = marketPlayers[1];
+        showScreen('screen-transfer'); setTransferTab('market');
+        toggleMarktMerken(m1.id);
+        out.mMerken = game.marktMerkliste.length === 1 && game.marktMerkliste[0].id === m1.id && game.marktMerkliste[0].status === 'markt';
+        out.mBox = document.getElementById('market-merkliste-box').textContent.includes('Merkliste (1/8)') && document.getElementById('market-merkliste-box').textContent.includes(m1.name);
+        out.mKnopf = document.getElementById('market-list').textContent.includes('★ Gemerkt') && document.getElementById('market-list').textContent.includes('⭐ Merken');
+        out.wMarkt = JSON.stringify(woerter('#market-list button, #market-merkliste-box button'));
+        out.mBreit = ueberlauf();
+        toggleMarktMerken(m1.id);
+        out.mEntfernt = game.marktMerkliste.length === 0 && document.getElementById('market-merkliste-box').innerHTML === '';
+        toggleMarktMerken('gibt-es-nicht'); out.mUnbekannt = game.marktMerkliste.length === 0;
+        toggleMarktMerken(m1.id); toggleMarktMerken(m2.id);
+        const idx = marketPlayers.findIndex(p => p.id === m1.id);
+        const [weg] = marketPlayers.splice(idx, 1);
+        const meldungenVor = inboxMessages.length;
+        syncMarktMerkliste(); syncMarktMerkliste();
+        const e1 = game.marktMerkliste.find(e => e.id === m1.id), e2 = game.marktMerkliste.find(e => e.id === m2.id);
+        out.mWeg = e1.status === 'weg' && e2.status === 'markt';
+        out.mMeldungEinmal = inboxMessages.length === meldungenVor + 1 && inboxMessages[0].title.includes('vom Markt verschwunden');
+        const mt = getManagerTodos(true).find(x => x.id === 'merkliste-weg');
+        out.mTodo = !!mt && mt.text.includes(m1.name) && !mt.text.includes(m2.name) && mt.aktion.includes('screen-transfer');
+        renderTransferView();
+        out.mBoxWeg = document.getElementById('market-merkliste-box').textContent.includes('nicht mehr auf dem Markt') && document.getElementById('market-merkliste-box').textContent.includes('Verschwundene entfernen');
+        out.wMarktWeg = JSON.stringify(woerter('#market-merkliste-box button'));
+        marketPlayers.push(weg); syncMarktMerkliste();
+        out.mWieder = game.marktMerkliste.find(e => e.id === m1.id).status === 'markt';
+        marketPlayers.splice(marketPlayers.findIndex(p => p.id === m1.id), 1); syncMarktMerkliste();
+        clearMarktMerklisteWeg();
+        out.mAufgeraeumt = game.marktMerkliste.length === 1 && game.marktMerkliste[0].id === m2.id && !getManagerTodos(true).some(x => x.id === 'merkliste-weg');
+        squad.push(marketPlayers.find(p => p.id === m2.id)); syncMarktMerkliste();
+        out.mGekauft = game.marktMerkliste.length === 0;
+        squad.pop();
+        game.marktMerkliste = [{ id: marketPlayers[2].id, name: 'X', pos: 'ST', strength: 50, status: 'markt', season: 1, matchday: 1 }];
+        const marktAlt = marketPlayers; marketPlayers = []; syncMarktMerkliste();
+        out.mLeerBleibt = game.marktMerkliste[0].status === 'markt';
+        marketPlayers = marktAlt;
+        refreshTransferMarket();
+        out.mNeuaufbau = game.marktMerkliste.length === 1 && game.marktMerkliste[0].status === 'weg';
+        game.marktMerkliste = Array.from({ length: 8 }, (_, i) => ({ id: 'z' + i, name: 'Z', pos: 'ST', strength: 50, status: 'weg', season: 1, matchday: 1 }));
+        toggleMarktMerken(marketPlayers[0].id); out.mMax = game.marktMerkliste.length === 8;
+        delete game.marktMerkliste; syncMarktMerkliste(); renderMarktMerkliste(); out.mAltesFeld = Array.isArray(game.marktMerkliste);
+        game.marktMerkliste = [];
+
+        // --- Belastungsampel ---
+        const sq = squad[2];
+        Object.assign(sq, { fitness: 90, timesInjured: 0, injured: 0 }); delete sq.startFolge;
+        out.ampelGruen = getBelastungsAmpel(sq).stufe === 'gruen' && getBelastungChips(sq).length === 0 && getBelastungHinweis(sq) === '';
+        sq.fitness = 70; out.ampelNochGruen = getBelastungsAmpel(sq).stufe === 'gruen';
+        sq.fitness = 55; out.ampelGelb = getBelastungsAmpel(sq).stufe === 'gelb' && getBelastungChips(sq).length === 1;
+        sq.timesInjured = 3; out.ampelRot = getBelastungsAmpel(sq).stufe === 'rot' && getBelastungsAmpel(sq).gruende.join('|') === 'Fitness 55 %|3 Verletzungen';
+        sq.fitness = 90; sq.timesInjured = 0; sq.startFolge = [1, 1, 1, 1, 1];
+        out.ampelDauer = getBelastungsAmpel(sq).punkte === 1 && getBelastungsAmpel(sq).gruende[0].includes('5 von 5');
+        sq.startFolge = [1, 1, 1, 1]; out.ampelVierSpiele = getBelastungsAmpel(sq).punkte === 0;
+        sq.startFolge = [1, 1, 0, 1, 1]; out.ampelUnterbrochen = getBelastungsAmpel(sq).punkte === 0;
+        sq.startFolge = [1, 1, 1, 1, 1]; sq.fitness = 62; sq.timesInjured = 2; out.ampelKombi = getBelastungsAmpel(sq).stufe === 'rot';
+        sq.startFolge = undefined; sq.fitness = 90; sq.timesInjured = 0; sq.injured = 2;
+        out.ampelVerletzt = getBelastungsAmpel(sq).stufe === 'rot' && getBelastungsAmpel(sq).gruende[0].startsWith('verletzt');
+        sq.injured = 0;
+        // Zähler
+        delete sq.startFolge;
+        for (let i = 0; i < 7; i++) recordPlayerStartResult(i % 2 ? [sq.id] : [], 1, 0);
+        out.folgeLaenge = sq.startFolge.length === 5 && sq.startFolge.join('') === '01010';
+        // Anzeige im Kader und Filter
+        squad.forEach(p => { p.fitness = 90; p.timesInjured = 0; p.injured = 0; p.startFolge = [0, 0, 0, 0, 0]; });
+        squad[3].fitness = 40; squad[3].timesInjured = 3; squad[4].fitness = 60;
+        squadBelastungNurRot = false; squadTagFilter = ''; squadFilterPos = 'alle';
+        showScreen('screen-squad'); setSquadTab('aufstellung'); renderSquadView();
+        const bl = document.getElementById('bench-list').textContent;
+        out.karteRot = bl.includes('Belastung rot') && bl.includes('Fitness 40 %, 3 Verletzungen') && bl.includes('Belastung gelb');
+        const fb = document.getElementById('squad-tag-filter');
+        out.filterKnopf = fb.textContent.includes('Belastung rot (1)');
+        out.wFilter = JSON.stringify(woerter('#squad-tag-filter button'));
+        setSquadBelastungFilter();
+        const karten = [...document.querySelectorAll('#bench-list .player-card')];
+        out.filterNurRot = karten.length === 1 && karten[0].textContent.includes(squad[3].name);
+        out.filterAktiv = document.getElementById('squad-tag-filter').querySelector('[aria-pressed="true"]') !== null;
+        squad[3].fitness = 90; squad[3].timesInjured = 0; renderSquadView();
+        out.filterFaelltWeg = squadBelastungNurRot === false && document.querySelectorAll('#bench-list .player-card').length === squad.length;
+        squad.forEach(p => { p.fitness = 90; delete p.startFolge; });
+
+        // --- Matchplan je Gegner ---
+        game.matchplaene = {}; game.lineupPresets = [null, null, null, null, null]; game.tacticPresets = [null, null, null, null, null];
+        game.formation = '4-4-2'; autoLineup(); saveLineupPreset(0);
+        game.formation = '4-3-3'; autoLineup(); saveLineupPreset(1);
+        setTacticStyle('konter'); saveTacticPreset(0);
+        setTacticStyle('offensiv'); saveTacticPreset(1);
+        const opp = gegnerTeam.name;
+        pendingMatchInfo = { isHome: true, oppName: opp, oppStr: 60, ourFixture: null };
+        renderPrematchCheck();
+        out.planKeiner = getMatchplan(opp) === null && document.getElementById('prematch-check-box').textContent.includes('Noch kein Matchplan');
+        document.getElementById('matchplan-aufstellung').value = '0'; document.getElementById('matchplan-taktik').value = '0';
+        saveMatchplan(opp);
+        out.planGespeichert = JSON.stringify(game.matchplaene[opp]) === JSON.stringify({ aufstellung: 0, taktik: 0 });
+        const pcText = document.getElementById('prematch-check-box').textContent;
+        out.planAnzeige = pcText.includes('📋 Matchplan vorhanden') && pcText.includes('Matchplan anwenden') && getMatchplan(opp).verwaist === false;
+        out.wPlan = JSON.stringify(woerter('#prematch-check-box button'));
+        game.formation = '4-3-3'; autoLineup(); setTacticStyle('offensiv');
+        applyMatchplan(opp);
+        out.planAufstellung = game.formation === '4-4-2' && lineup.join() === resolveLineupPreset(game.lineupPresets[0]).ids.join();
+        out.planTaktik = game.tacticStyle === 'konter';
+        out.planFormHinweis = document.getElementById('prematch-check-box').textContent.includes('verschiedene Formationen') && document.getElementById('prematch-check-box').textContent.includes('(4-4-2)');
+        // zweite Vorlage nur Taktik
+        document.getElementById('matchplan-aufstellung').value = ''; document.getElementById('matchplan-taktik').value = '1';
+        saveMatchplan(opp);
+        out.nurTaktik = JSON.stringify(game.matchplaene[opp]) === JSON.stringify({ aufstellung: null, taktik: 1 });
+        game.formation = '4-3-3'; autoLineup(); const elfVorher = lineup.join(); setTacticStyle('konter');
+        applyMatchplan(opp);
+        out.nurTaktikAnwenden = game.tacticStyle === 'offensiv' && lineup.join() === elfVorher;
+        // verwaiste Vorlage
+        game.matchplaene[opp] = { aufstellung: 0, taktik: 1 };
+        game.lineupPresets[0] = null;
+        const verw = getMatchplan(opp);
+        out.verwaist = verw.verwaist === true && verw.aufstellung === null && verw.taktik === 1;
+        renderPrematchCheck(); out.verwaistText = document.getElementById('prematch-check-box').textContent.includes('Eine verknüpfte Vorlage gibt es nicht mehr');
+        game.tacticPresets[1] = null;
+        const toasts = [];
+        const toastAlt = showToast; showToast = (t, ty) => { toasts.push(t); };
+        const styleVorher = game.tacticStyle;
+        applyMatchplan(opp);
+        out.nichtsGueltig = toasts.some(t => t.includes('keinen gültigen Matchplan')) && game.tacticStyle === styleVorher;
+        game.matchplaene[opp] = { aufstellung: 3, taktik: 3 };
+        out.leereSlots = getMatchplan(opp).aufstellung === null && getMatchplan(opp).taktik === null;
+        showToast = toastAlt;
+        // löschen und leer speichern
+        renderPrematchCheck();
+        document.getElementById('matchplan-aufstellung').value = ''; document.getElementById('matchplan-taktik').value = '';
+        saveMatchplan(opp);
+        out.planGeloescht = game.matchplaene[opp] === undefined;
+        const toasts2 = []; const ta = showToast; showToast = (t) => { toasts2.push(t); };
+        saveMatchplan(opp); out.leerSpeichernSagtWarum = toasts2.some(t => t.includes('Wähle zuerst')); showToast = ta;
+        // ohne Vorlagen
+        game.lineupPresets = [null, null, null, null, null]; game.tacticPresets = [null, null, null, null, null];
+        renderPrematchCheck(); out.ohneVorlagenHinweis = document.getElementById('prematch-check-box').textContent.includes('Speichere zuerst Aufstellungs- oder Taktikvorlagen') && !document.getElementById('matchplan-aufstellung');
+        delete game.matchplaene; ensureMatchplaene(); out.altesFeldPlan = typeof game.matchplaene === 'object' && getMatchplan('Irgendwer') === null;
+
+        // --- Wischen zwischen Reitern ---
+        out.wischenStandard = getWischen() === 'an';
+        const start = { x: 200, y: 300, t: 0 };
+        out.wLinks = erkenneWisch(start, { x: 100, y: 310, t: 200 }, 320) === 1;
+        out.wRechts = erkenneWisch(start, { x: 300, y: 290, t: 200 }, 320) === -1;
+        out.wKurz = erkenneWisch(start, { x: 160, y: 300, t: 200 }, 320) === 0;
+        out.wSteil = erkenneWisch(start, { x: 100, y: 380, t: 200 }, 320) === 0;
+        out.wSchraeg = erkenneWisch(start, { x: 130, y: 340, t: 200 }, 320) === 0 && erkenneWisch(start, { x: 100, y: 345, t: 200 }, 320) === 1;
+        out.wLangsam = erkenneWisch(start, { x: 100, y: 300, t: 900 }, 320) === 0;
+        out.wRandLinks = erkenneWisch({ x: 10, y: 300, t: 0 }, { x: 150, y: 300, t: 100 }, 320) === 0;
+        out.wRandRechts = erkenneWisch({ x: 312, y: 300, t: 0 }, { x: 150, y: 300, t: 100 }, 320) === 0;
+        out.wOhneStart = erkenneWisch(null, start, 320) === 0;
+        // Hub-Reiter
+        showScreen('screen-transfer');
+        const aktivHub = () => { const b = [...document.querySelectorAll('.hub-tab-bar')].find(x => x.offsetParent !== null); return b ? [...b.querySelectorAll('button')].filter(x => x.offsetParent !== null).findIndex(x => x.classList.contains('btn-action')) : -1; };
+        const hubAnzahl = () => { const b = [...document.querySelectorAll('.hub-tab-bar')].find(x => x.offsetParent !== null); return b ? [...b.querySelectorAll('button')].filter(x => x.offsetParent !== null).length : 0; };
+        out.hubErster = aktivHub() === 0 && hubAnzahl() >= 3;
+        out.hubZurueckAmRand = swipeWechseln(-1) === false && aktivHub() === 0;
+        out.hubWeiter = swipeWechseln(1) === true && aktivHub() === 1 && document.getElementById('screen-scouting-global').style.display !== 'none';
+        out.hubZurueck = swipeWechseln(-1) === true && aktivHub() === 0;
+        const n = hubAnzahl(); let schritte = 0; while (swipeWechseln(1) && schritte < 20) schritte++;
+        out.hubLetzter = schritte === n - 1 && aktivHub() === n - 1 && swipeWechseln(1) === false;
+        showScreen('screen-transfer');
+        // Kader-Reiter
+        showScreen('screen-squad'); setSquadTab('aufstellung');
+        out.squadWeiter = swipeWechseln(1) && document.getElementById('btn-tab-squad-taktik').classList.contains('btn-action');
+        out.squadZurueck = swipeWechseln(-1) && document.getElementById('btn-tab-squad-aufstellung').classList.contains('btn-action');
+        out.squadAmRand = swipeWechseln(-1) === false;
+        // Bildschirm ohne Reiter
+        showScreen('screen-dashboard'); out.keineReiter = getSwipeReiter() === null && swipeWechseln(1) === false;
+        // Gesperrte Ziele
+        const eingabe = document.createElement('input'); document.body.appendChild(eingabe);
+        out.sperreEingabe = swipeZielGesperrt(eingabe) === true;
+        const normal = document.createElement('div'); normal.textContent = 'x'; document.body.appendChild(normal);
+        out.keineSperre = swipeZielGesperrt(normal) === false;
+        const scroller = document.createElement('div'); scroller.style.cssText = 'overflow-x:auto; width:100px;'; scroller.innerHTML = '<div style="width:400px;"><span id="sw-inner">lang</span></div>'; document.body.appendChild(scroller);
+        out.sperreScroller = swipeZielGesperrt(document.getElementById('sw-inner')) === true;
+        const teil = document.getElementById('share-report-overlay'); teil.classList.add('show');
+        out.sperreFenster = swipeZielGesperrt(teil.querySelector('.generic-modal-box')) === true; teil.classList.remove('show');
+        out.sperreFeld = swipeZielGesperrt(document.getElementById('soccer-pitch')) === true && swipeZielGesperrt(document.querySelector('.bottom-nav-bar button')) === true;
+        out.sperreNull = swipeZielGesperrt(null) === true;
+        eingabe.remove(); normal.remove(); scroller.remove();
+        // Echte Touch-Ereignisse
+        showScreen('screen-transfer');
+        const ziel = document.getElementById('screen-transfer');
+        const beruehren = (typ, x, y) => { const t = new Touch({ identifier: 1, target: ziel, clientX: x, clientY: y }); ziel.dispatchEvent(new TouchEvent(typ, { bubbles: true, touches: typ === 'touchend' ? [] : [t], changedTouches: [t] })); };
+        beruehren('touchstart', 250, 400); beruehren('touchend', 120, 405);
+        out.touchWechselt = aktivHub() === 1;
+        beruehren('touchstart', 120, 400); beruehren('touchend', 260, 395);
+        out.touchZurueck = aktivHub() === 0;
+        beruehren('touchstart', 250, 400); beruehren('touchend', 230, 405);
+        out.touchKurzNichts = aktivHub() === 0;
+        beruehren('touchstart', 250, 400); beruehren('touchcancel' === 'x' ? 'touchend' : 'touchend', 120, 405);
+        setzeWischen('aus');
+        out.einstellungAus = getWischen() === 'aus';
+        beruehren('touchstart', 250, 400); beruehren('touchend', 100, 405);
+        out.ausWechseltNicht = aktivHub() === 1 || aktivHub() === 0;
+        const nachWisch = aktivHub();
+        beruehren('touchstart', 250, 400); beruehren('touchend', 100, 405);
+        out.ausBleibt = aktivHub() === nachWisch;
+        const toastsW = []; const taW = showToast; showToast = (t) => { toastsW.push(t); };
+        setzeWischen('quatsch'); out.ungueltigEinstellung = getWischen() === 'aus' && toastsW.some(t => t.includes('Unbekannte Wisch-Einstellung'));
+        showToast = taW;
+        setzeWischen('an'); out.einstellungAn = getWischen() === 'an';
+        showScreen('screen-design'); renderDesignSettings();
+        out.einstellungsText = document.getElementById('design-settings-box').textContent.includes('Wischen zwischen Reitern');
+        out.wDesign = JSON.stringify(woerter('#design-settings-box button'));
+        return out;
+    });
+    const ok = (...ks) => ks.every(k => r[k] === true);
+    const werte = ks => JSON.stringify(ks.map(k => r[k]));
+    const A = ['zListe', 'zText', 'zZu', 'zOffen', 'zWieder', 'zErledigtVerschwindet'];
+    assert(ok(...A), `Assistent: zurückgestellte Schritte als aufklappbare Liste mit „Wieder zeigen“ (${werte(A)})`);
+    const B = ['archivFuenf', 'vorjahrBleibt', 'aeltereSaisonEtiketten', 'zuAlteSaison', 'altesSpielVorjahr', 'archivNeuAngelegt'];
+    assert(ok(...B), `Etiketten-Archiv: fünf Saisons, Rückblick auch für ältere Saisons, alte Spielstände (${werte(B)})`);
+    const C = ['csvKopf', 'csvWerte', 'csvOhneDaten'];
+    assert(ok(...C), `Kader-CSV: Spalten und Werte der Startelf-Bilanz (${werte(C)})`);
+    const D = ['vorStil', 'vorPlatz', 'vorTore', 'vorDuelle', 'vorUnbekannt', 'vorWenigeSpiele'];
+    assert(ok(...D), `Notiz-Vorschläge: Spielstil, Tabelle, Tore, letzte Duelle aus echten Daten (${werte(D)})`);
+    const D2 = ['vorKnoepfe', 'vorEingefuegt', 'vorKeinDoppel', 'vorVoll'];
+    assert(ok(...D2), `Notiz-Vorschläge: Einfügen per Tipp, kein Doppeleintrag, Grenze von 300 Zeichen (${werte(D2)})`);
+    const E = ['mMerken', 'mBox', 'mKnopf', 'mBreit', 'mEntfernt', 'mUnbekannt'];
+    assert(ok(...E), `Merkliste: Merken und Entfernen auf der Marktkarte, Kasten mit Zähler (${werte(E)})`);
+    const E2 = ['mWeg', 'mMeldungEinmal', 'mTodo', 'mBoxWeg', 'mWieder', 'mAufgeraeumt', 'mGekauft'];
+    assert(ok(...E2), `Merkliste: verschwundener Spieler wird einmal gemeldet, Assistent-Schritt, Wiederkehr, Aufräumen, Kauf (${werte(E2)})`);
+    const E3 = ['mLeerBleibt', 'mNeuaufbau', 'mMax', 'mAltesFeld'];
+    assert(ok(...E3), `Merkliste: leerer Markt ändert nichts, Neuaufbau meldet, höchstens acht, alte Spielstände (${werte(E3)})`);
+    const F = ['ampelGruen', 'ampelNochGruen', 'ampelGelb', 'ampelRot', 'ampelDauer', 'ampelVierSpiele', 'ampelUnterbrochen', 'ampelKombi', 'ampelVerletzt', 'folgeLaenge'];
+    assert(ok(...F), `Belastungsampel: Stufen aus Fitness, Dauereinsatz und Verletzungen, Zähler der letzten fünf Spiele (${werte(F)})`);
+    const F2 = ['karteRot', 'filterKnopf', 'filterNurRot', 'filterAktiv', 'filterFaelltWeg'];
+    assert(ok(...F2), `Belastungsampel: Chip und Grund auf der Kaderkarte, Filter „Belastung rot“ (${werte(F2)})`);
+    const G = ['planKeiner', 'planGespeichert', 'planAnzeige', 'planAufstellung', 'planTaktik', 'planFormHinweis', 'nurTaktik', 'nurTaktikAnwenden'];
+    assert(ok(...G), `Matchplan: speichern, anzeigen, Aufstellung und Taktik anwenden, nur eine Vorlage (${werte(G)})`);
+    const G2 = ['verwaist', 'verwaistText', 'nichtsGueltig', 'leereSlots', 'planGeloescht', 'leerSpeichernSagtWarum', 'ohneVorlagenHinweis', 'altesFeldPlan'];
+    assert(ok(...G2), `Matchplan: gelöschte Vorlagen, nichts Gültiges, Löschen, ohne Vorlagen, alte Spielstände (${werte(G2)})`);
+    const H = ['wischenStandard', 'wLinks', 'wRechts', 'wKurz', 'wSteil', 'wSchraeg', 'wLangsam', 'wRandLinks', 'wRandRechts', 'wOhneStart'];
+    assert(ok(...H), `Wischen: erkennt waagerechte schnelle Wische, ignoriert kurze, steile, langsame und Randwische (${werte(H)})`);
+    const H2 = ['hubErster', 'hubZurueckAmRand', 'hubWeiter', 'hubZurueck', 'hubLetzter', 'squadWeiter', 'squadZurueck', 'squadAmRand', 'keineReiter'];
+    assert(ok(...H2), `Wischen: Hub-Reiter und Kader-Reiter wechseln, am Rand kein Umlauf, ohne Reiter nichts (${werte(H2)})`);
+    const H3 = ['sperreEingabe', 'keineSperre', 'sperreScroller', 'sperreFenster', 'sperreFeld', 'sperreNull'];
+    assert(ok(...H3), `Wischen: gesperrt bei Eingaben, scrollenden Flächen, Fenstern, Spielfeld und Navigation (${werte(H3)})`);
+    const H4 = ['touchWechselt', 'touchZurueck', 'touchKurzNichts', 'einstellungAus', 'ausBleibt', 'ungueltigEinstellung', 'einstellungAn', 'einstellungsText'];
+    assert(ok(...H4), `Wischen: echte Touch-Ereignisse, Einstellung Aus und An, ungültige Einstellung, Eintrag in der Darstellung (${werte(H4)})`);
+    assert(r.wAssistent === '[]' && r.wVorschlaege === '[]' && r.wMarkt === '[]' && r.wMarktWeg === '[]' && r.wFilter === '[]' && r.wPlan === '[]' && r.wDesign === '[]', `Neue Knöpfe bei 320 px in breiter Schrift: kein Wort breiter als sein Knopf (${JSON.stringify([r.wAssistent, r.wVorschlaege, r.wMarkt, r.wMarktWeg, r.wFilter, r.wPlan, r.wDesign])})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 module.exports = {
     testSpielvorbereitung,
     testVertragsWerkzeuge,
@@ -1331,4 +1684,5 @@ module.exports = {
     testRunde27Funktionen,
     testRunde28Funktionen,
     testRunde29Funktionen,
+    testRunde30Funktionen,
 };

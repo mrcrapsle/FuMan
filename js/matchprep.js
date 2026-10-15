@@ -122,6 +122,33 @@ function renderHalftimeNotiz() {
     box.innerHTML = `<div class="box" style="font-size:var(--fs-small); text-align:left;"><strong>📓 ${mpEsc(opp)}</strong><br>📊 ${mpEsc(bilanz)}${n ? `<br>📝 ${mpEsc(n.text)}${getNotizTags(n).length ? `<div class="ui-card-meta" style="margin-top:4px;">${notizTagChips(n)}</div>` : ''}` : ''}</div>`;
 }
 
+// Vorschläge für die Notiz aus den öffentlichen Daten zum Gegner (Spielstil, Tabelle, Tore, letzte Duelle); nur Text zum Antippen
+function getNotizVorschlaege(oppName) {
+    const v = [];
+    const team = (leaguesData[game.leagueLevel] || []).find(t => t.name === oppName);
+    if (team) {
+        const stil = typeof getTeamPlaystyle === 'function' ? getTeamPlaystyle(team) : null;
+        if (stil) v.push(`Spielstil: ${stil.label}.`);
+        const tab = typeof sortedTable === 'function' ? sortedTable(game.leagueLevel) : [];
+        const platz = tab.findIndex(t => t.name === oppName) + 1;
+        if (platz) v.push(`Platz ${platz} von ${tab.length}, Stärke ${Math.round(team.strength)}.`);
+        if (team.played >= 3) v.push(`Ø ${(team.goalsFor / team.played).toFixed(1).replace('.', ',')} Tore, ${(team.goalsAgainst / team.played).toFixed(1).replace('.', ',')} Gegentore.`);
+    }
+    const rec = game.headToHeadRecords && game.headToHeadRecords[oppName];
+    if (rec && rec.lastResults && rec.lastResults.length) v.push(`Zuletzt ${rec.lastResults.slice(0, 3).join(', ')}.`);
+    return v;
+}
+
+function addNotizVorschlag(feldId, text) {
+    const feld = document.getElementById(feldId);
+    if (!feld) return;
+    if (feld.value.includes(text)) { showToast('Das steht schon in der Notiz.', 'info'); return; }
+    const neu = (feld.value.trim() ? feld.value.trim() + ' ' : '') + text;
+    if (neu.length > GEGNER_NOTIZ_MAX) { showToast(`Die Notiz ist voll (höchstens ${GEGNER_NOTIZ_MAX} Zeichen).`, 'error'); return; }
+    feld.value = neu;
+    feld.focus();
+}
+
 function renderGegnerNotizSection(oppName, feldId, vorgabe) {
     if (!oppName) return '';
     feldId = feldId || 'gegner-notiz-text';
@@ -129,6 +156,7 @@ function renderGegnerNotizSection(oppName, feldId, vorgabe) {
     return `<div class="box" style="font-size:var(--fs-small); margin:0 0 6px;">📊 ${mpEsc(getGegnerBilanzText(oppName))}</div>
         <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${n ? `Gespeichert in Saison ${n.season}, Spieltag ${n.matchday}.` : 'Noch keine Notiz zu diesem Gegner.'} Die Notiz bleibt über Saisons erhalten.</div>
         <textarea id="${feldId}" class="input-inline" maxlength="${GEGNER_NOTIZ_MAX}" rows="3" placeholder="z. B. Schwache Abwehr über links, Konter nach Ecken" style="width:100%; box-sizing:border-box; font-family:inherit; font-weight:normal; text-align:left;" aria-label="Notiz zu ${mpEsc(oppName)}">${mpEsc(vorgabe != null ? vorgabe : (n ? n.text : ''))}</textarea>
+        ${(() => { const vs = getNotizVorschlaege(oppName); return vs.length ? `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:6px;">Vorschläge zum Einfügen:</div><div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:2px;">${vs.map(t => `<button type="button" onclick="addNotizVorschlag(this.dataset.feld, this.dataset.text)" data-feld="${feldId}" data-text="${mpEsc(t)}" class="btn-secondary" style="width:auto; font-size:var(--fs-caption); text-align:left;">➕ ${mpEsc(t)}</button>`).join('')}</div>` : ''; })()}
         <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;">${NOTIZ_SCHLAGWOERTER.map(x => { const an = getNotizTags(n).includes(x.id); return `<button type="button" onclick="toggleNotizTag(this)" data-tag="${x.id}" data-feld="${feldId}" class="${an ? 'btn-action' : 'btn-secondary'} notiz-tag" style="width:auto; font-size:var(--fs-caption);" aria-pressed="${an}">${x.label}</button>`; }).join('')}</div>
         <button onclick="saveGegnerNotiz(this.dataset.club, this.dataset.feld)" data-club="${mpEsc(oppName)}" data-feld="${feldId}" class="btn-secondary" style="margin-top:4px;">📓 Notiz speichern</button>`;
 }
@@ -592,6 +620,67 @@ function applyRotationSwap(rausId, reinId) {
     renderPrematchCheck();
 }
 
+// ---------- Matchplan je Gegner (Phase 26.15) ----------
+// Zu einem Gegner merkt sich das Spiel eine Aufstellungs- und/oder Taktikvorlage (nur die Platznummern):
+// game.matchplaene = { verein: { aufstellung: Slot | null, taktik: Slot | null } }. Im Spieltag-Check wendet ein Tipp beides an.
+
+function ensureMatchplaene() {
+    if (!game.matchplaene || typeof game.matchplaene !== 'object' || Array.isArray(game.matchplaene)) game.matchplaene = {};
+}
+
+function getMatchplan(opp) {
+    ensureMatchplaene();
+    ensureMatchPrepState();
+    const m = game.matchplaene[opp];
+    if (!m) return null;
+    const a = Number.isInteger(m.aufstellung) && game.lineupPresets[m.aufstellung] ? m.aufstellung : null;
+    const t = Number.isInteger(m.taktik) && game.tacticPresets[m.taktik] ? m.taktik : null;
+    return { aufstellung: a, taktik: t, verwaist: (m.aufstellung != null && a === null) || (m.taktik != null && t === null) };
+}
+
+function saveMatchplan(opp) {
+    ensureMatchplaene();
+    const wert = id => { const el = document.getElementById(id); return el && el.value !== '' ? parseInt(el.value, 10) : null; };
+    const aufstellung = wert('matchplan-aufstellung'), taktik = wert('matchplan-taktik');
+    if (aufstellung === null && taktik === null) {
+        if (game.matchplaene[opp]) { delete game.matchplaene[opp]; showToast(`📋 Matchplan gegen ${opp} gelöscht.`, 'info'); }
+        else showToast('Wähle zuerst eine Aufstellungs- oder Taktikvorlage für den Matchplan.', 'error');
+    } else {
+        game.matchplaene[opp] = { aufstellung, taktik };
+        showToast(`📋 Matchplan gegen ${opp} gespeichert.`, 'success');
+    }
+    renderPrematchCheck();
+}
+
+function applyMatchplan(opp) {
+    const plan = getMatchplan(opp);
+    if (!plan || (plan.aufstellung === null && plan.taktik === null)) { showToast('Für diesen Gegner gibt es keinen gültigen Matchplan.', 'error'); return; }
+    // Erst die Taktik, dann die Aufstellung: Die Formation der Aufstellungsvorlage gehört zu genau diesen elf Spielern und gilt
+    // deshalb, falls die Taktikvorlage eine andere Formation gespeichert hat (Spielstil und Härte der Taktik bleiben).
+    if (plan.taktik !== null) applyTacticPreset(plan.taktik);
+    if (plan.aufstellung !== null) loadLineupPreset(plan.aufstellung);
+    showToast(`📋 Matchplan gegen ${opp} angewendet.`, 'success');
+    renderPrematchCheck();
+}
+
+function renderMatchplanSection(opp) {
+    ensureMatchPrepState();
+    const plan = getMatchplan(opp);
+    const raw = (game.matchplaene || {})[opp] || {};
+    const optionen = (liste, aktiv) => '<option value="">– keine –</option>' + liste.map((v, i) => v ? `<option value="${i}"${aktiv === i ? ' selected' : ''}>${mpEsc(v.name)}</option>` : '').join('');
+    const hatVorlagen = game.lineupPresets.some(Boolean) || game.tacticPresets.some(Boolean);
+    const stil = 'width:100%; box-sizing:border-box; text-align:left; font-weight:normal; font-family:inherit;';
+    const zeile = !plan ? '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch kein Matchplan gegen diesen Gegner.</div>'
+        : `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">Aufstellung: <strong>${plan.aufstellung !== null ? mpEsc(game.lineupPresets[plan.aufstellung].name) : '–'}</strong> · Taktik: <strong>${plan.taktik !== null ? mpEsc(game.tacticPresets[plan.taktik].name) : '–'}</strong>${plan.verwaist ? '<br><span style="color:var(--danger);">Eine verknüpfte Vorlage gibt es nicht mehr.</span>' : ''}
+            <button onclick="applyMatchplan(this.dataset.club)" data-club="${mpEsc(opp)}" class="btn-action" style="margin-top:4px;"${plan.aufstellung === null && plan.taktik === null ? ' disabled' : ''}>📋 Matchplan anwenden</button></div>`;
+    const formVerschieden = plan && plan.aufstellung !== null && plan.taktik !== null && game.lineupPresets[plan.aufstellung].formation !== game.tacticPresets[plan.taktik].formation;
+    const formHinweis = formVerschieden ? `<div style="font-size:var(--fs-caption); color:var(--text-muted);">Die beiden Vorlagen haben verschiedene Formationen: es gilt die der Aufstellung (${mpEsc(game.lineupPresets[plan.aufstellung].formation)}), von der Taktik kommen Spielstil und Härte.</div>` : '';
+    return zeile + formHinweis + (hatVorlagen ? `<label class="ui-field" style="margin-top:6px;"><span class="ui-field-label">Aufstellungsvorlage</span><select id="matchplan-aufstellung" class="input-inline" style="${stil}">${optionen(game.lineupPresets, raw.aufstellung)}</select></label>
+        <label class="ui-field" style="margin-top:6px;"><span class="ui-field-label">Taktikvorlage</span><select id="matchplan-taktik" class="input-inline" style="${stil}">${optionen(game.tacticPresets, raw.taktik)}</select></label>
+        <button onclick="saveMatchplan(this.dataset.club)" data-club="${mpEsc(opp)}" class="btn-secondary" style="margin-top:6px;">💾 Matchplan speichern</button>`
+        : '<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">Speichere zuerst Aufstellungs- oder Taktikvorlagen (Kader → Aufstellung), dann lassen sie sich hier einem Gegner zuordnen.</div>');
+}
+
 function renderPrematchCheck() {
     const box = document.getElementById('prematch-check-box');
     if (!box) return;
@@ -612,6 +701,7 @@ function renderPrematchCheck() {
         rotation.length ? uiChip(`🔄 ${rotation.length} Rotationsidee${rotation.length === 1 ? '' : 'n'}`, 'warn') : '',
         fragil.length ? uiChip(`🩹 ${fragil.length} verletzungsanfällig`, 'warn') : '',
         notiz ? uiChip('📓 Notiz vorhanden') : '',
+        oppName && getMatchplan(oppName) ? uiChip('📋 Matchplan vorhanden', 'gut') : '',
         notiz ? notizTagChips(notiz) : ''
     ];
     const problemListe = probleme.length ? probleme.map(x => `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">${x.ton === 'schlecht' ? '🔴' : '🟡'} ${mpEsc(x.text)}</div>`).join('')
@@ -636,6 +726,7 @@ function renderPrematchCheck() {
         <details class="ui-fold"${rotation.length || muede.length ? ' open' : ''}><summary>Rotations-Assistent</summary>${rotListe}
             <button onclick="showScreen('screen-squad')" class="btn-secondary" style="margin-top:4px;">⚽ Aufstellung im Detail ändern</button></details>
         <details class="ui-fold"${fragil.length ? ' open' : ''}><summary>Verletzungsanfällige in der Startelf</summary>${fragilZeile}</details>
+        ${oppName ? `<details class="ui-fold"${getMatchplan(oppName) ? ' open' : ''}><summary>📋 Matchplan: ${mpEsc(oppName)}</summary>${renderMatchplanSection(oppName)}</details>` : ''}
         <details class="ui-fold"><summary>Aufstellung aus Vorlage</summary>${renderPresetQuickPick()}</details>
         ${oppName ? `<details class="ui-fold"${notiz ? ' open' : ''}><summary>📓 Notizbuch: ${mpEsc(oppName)}</summary>${renderGegnerNotizSection(oppName)}</details>` : ''}
     </div>`;

@@ -108,14 +108,18 @@ function csvText(zeilen) {
 function csvZahl(n, stellen = 1) { return typeof n === 'number' ? n.toFixed(stellen).replace('.', ',') : ''; }
 
 function buildKaderCsv() {
-    const kopf = ['Name', 'Position', 'Alter', 'Stärke', 'Fitness %', 'Moral', 'Marktwert €', 'Gehalt € je Spieltag', 'Vertrag (Jahre Rest)', 'Spiele (Saison)', 'Tore (Saison)', 'Vorlagen (Saison)', 'Notenschnitt (Saison)', 'Etiketten', 'Verletzungen (gesamt)', 'Verpasste Spiele (letzte Ausfälle)'];
+    const kopf = ['Name', 'Position', 'Alter', 'Stärke', 'Fitness %', 'Moral', 'Marktwert €', 'Gehalt € je Spieltag', 'Vertrag (Jahre Rest)', 'Spiele (Saison)', 'Tore (Saison)', 'Vorlagen (Saison)', 'Notenschnitt (Saison)', 'Etiketten', 'Verletzungen (gesamt)', 'Verpasste Spiele (letzte Ausfälle)', 'Startelf-Spiele (Saison)', 'Pkt/Spiel mit ihm in der Startelf', 'Pkt/Spiel ohne ihn'];
     const zeilen = [...squad].sort((a, b) => b.strength - a.strength).map(p => {
         const st = p.statsSeason;
         return [p.name, p.pos, p.age || '', p.strength, p.fitness, p.morale ?? '', p.marketValue || 0, p.wage || 0, p.contracts,
             st ? st.spiele : 0, st ? st.tore : 0, st ? st.vorlagen : 0, st && st.spiele ? csvZahl(st.notenSumme / st.spiele, 2) : '',
             // Etiketten ohne Symbol (js/manager-tools.js), Verletzungen aus Zähler und Verlauf (js/medical-department.js)
             typeof getPlayerTags === 'function' ? getPlayerTags(p).map(t => SPIELER_ETIKETTEN.find(e => e.id === t).label.replace(/^\S+\s+/, '')).join(', ') : '',
-            p.timesInjured || 0, (Array.isArray(p.injuryLog) ? p.injuryLog : []).reduce((sum, e) => sum + (e.tage || 0), 0)];
+            p.timesInjured || 0, (Array.isArray(p.injuryLog) ? p.injuryLog : []).reduce((sum, e) => sum + (e.tage || 0), 0),
+            // Bilanz je Spieler (js/manager-tools.js): Ligaspiele der Saison mit und ohne ihn in der Startelf
+            p.startBilanz && p.startBilanz.mit ? p.startBilanz.mit.spiele : 0,
+            p.startBilanz && p.startBilanz.mit && p.startBilanz.mit.spiele ? csvZahl((3 * p.startBilanz.mit.s + p.startBilanz.mit.u) / p.startBilanz.mit.spiele, 2) : '',
+            p.startBilanz && p.startBilanz.ohne && p.startBilanz.ohne.spiele ? csvZahl((3 * p.startBilanz.ohne.s + p.startBilanz.ohne.u) / p.startBilanz.ohne.spiele, 2) : ''];
     });
     return csvText([kopf, ...zeilen]);
 }
@@ -277,7 +281,7 @@ function buildSeasonReviewHtml(saison) {
     const vaGesamt = va ? Object.values(va.eintraege).filter(b => b.spiele > 0) : [];
     teile.push(abschnitt('📈 Aufstellungsvorlagen', beste ? `🏅 „${mpEsc(beste.name)}“: ${beste.s}S ${beste.u}U ${beste.n}N, ${fmt(presetPunkteProSpiel(beste))} Punkte je Spiel (${vaGesamt.length} Vorlage${vaGesamt.length === 1 ? '' : 'n'} im Einsatz).`
         : vaGesamt.length ? `${vaGesamt.length} Vorlage${vaGesamt.length === 1 ? '' : 'n'} im Einsatz, aber keine mit drei Einsätzen.` : leer('Keine Vorlage wurde in Ligaspielen genutzt.')));
-    const tv = game.etikettBilanzVorjahr;
+    const tv = (Array.isArray(game.etikettBilanzArchiv) ? game.etikettBilanzArchiv.find(a => a.season === saison) : null) || game.etikettBilanzVorjahr;
     let etiketten = '';
     if (tv && tv.season === saison && tv.daten && typeof SPIELER_ETIKETTEN !== 'undefined') {
         etiketten = SPIELER_ETIKETTEN.filter(e => tv.daten[e.id] && tv.daten[e.id].mit.spiele >= TAG_BILANZ_MIN && tv.daten[e.id].ohne.spiele >= TAG_BILANZ_MIN).map(e => {
