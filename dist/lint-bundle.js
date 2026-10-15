@@ -3629,7 +3629,7 @@ function renderGegnerNotizSection(oppName, feldId, vorgabe) {
     const n = getGegnerNotiz(oppName);
     return `<div class="box" style="font-size:var(--fs-small); margin:0 0 6px;">📊 ${mpEsc(getGegnerBilanzText(oppName))}</div>
         <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${n ? `Gespeichert in Saison ${n.season}, Spieltag ${n.matchday}.` : 'Noch keine Notiz zu diesem Gegner.'} Die Notiz bleibt über Saisons erhalten.</div>
-        <textarea id="${feldId}" class="input-inline" maxlength="${GEGNER_NOTIZ_MAX}" rows="3" placeholder="z. B. Schwache Abwehr über links, Konter nach Ecken" style="width:100%;" aria-label="Notiz zu ${mpEsc(oppName)}">${mpEsc(vorgabe != null ? vorgabe : (n ? n.text : ''))}</textarea>
+        <textarea id="${feldId}" class="input-inline" maxlength="${GEGNER_NOTIZ_MAX}" rows="3" placeholder="z. B. Schwache Abwehr über links, Konter nach Ecken" style="width:100%; box-sizing:border-box; font-family:inherit; font-weight:normal; text-align:left;" aria-label="Notiz zu ${mpEsc(oppName)}">${mpEsc(vorgabe != null ? vorgabe : (n ? n.text : ''))}</textarea>
         <div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;">${NOTIZ_SCHLAGWOERTER.map(x => { const an = getNotizTags(n).includes(x.id); return `<button type="button" onclick="toggleNotizTag(this)" data-tag="${x.id}" data-feld="${feldId}" class="${an ? 'btn-action' : 'btn-secondary'} notiz-tag" style="width:auto; font-size:var(--fs-caption);" aria-pressed="${an}">${x.label}</button>`; }).join('')}</div>
         <button onclick="saveGegnerNotiz(this.dataset.club, this.dataset.feld)" data-club="${mpEsc(oppName)}" data-feld="${feldId}" class="btn-secondary" style="margin-top:4px;">📓 Notiz speichern</button>`;
 }
@@ -3681,7 +3681,7 @@ function renderGegnerNotizbuch() {
     const genutzt = NOTIZ_SCHLAGWOERTER.filter(x => alle.some(n => getNotizTags(game.gegnerNotizen[n]).includes(x.id)));
     if (notizFilter.tag && !genutzt.some(x => x.id === notizFilter.tag)) notizFilter.tag = '';
     box.innerHTML = `<div class="panel-header" style="color:var(--purple);">📓 Notizbuch: Gegner</div>`
-        + (alle.length > 1 || notizFilter.text || notizFilter.tag ? `<input id="opp-notes-suche" type="search" class="input-inline" value="${mpEsc(notizFilter.text)}" placeholder="Suchen: Verein, Text oder Schlagwort" aria-label="Notizen durchsuchen" oninput="setNotizSuche(this.value)" style="width:100%; box-sizing:border-box; margin-bottom:4px;">`
+        + (alle.length > 1 || notizFilter.text || notizFilter.tag ? `<input id="opp-notes-suche" type="search" class="input-inline" value="${mpEsc(notizFilter.text)}" placeholder="Notizen suchen" aria-label="Notizen durchsuchen" oninput="setNotizSuche(this.value)" style="width:100%; box-sizing:border-box; margin-bottom:4px; text-align:left; font-weight:normal;">`
             + (genutzt.length ? `<div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:4px;">${genutzt.map(x => `<button onclick="setNotizFilterTag('${x.id}')" data-filter="${x.id}" class="${notizFilter.tag === x.id ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:var(--fs-caption);" aria-pressed="${notizFilter.tag === x.id}">${x.label}</button>`).join('')}</div>` : '') : '')
         + '<div id="opp-notes-liste"></div>';
     renderGegnerNotizListe();
@@ -23052,11 +23052,18 @@ function renderTagBilanzBox() {
 // Spieltag gespeichert). Der Manager-Assistent meldet große Sprünge nach oben (Verkaufszeitpunkt?) und nach unten.
 const MARKTWERT_SPRUNG_AUF = 1.25, MARKTWERT_SPRUNG_AB = 0.8, MARKTWERT_MIN_DIFF = 300000;
 
+// calculatePlayerMarketValue() würfelt ±8 % Streuung; für den Vergleich zählt der mittlere Wert, sonst flackert der Hinweis
+function getMarketValueBase(strength) {
+    const zufall = Math.random;
+    Math.random = () => 0.5;
+    try { return calculatePlayerMarketValue(strength); } finally { Math.random = zufall; }
+}
+
 function getMarketValueMove(p) {
     if (!p || typeof calculatePlayerMarketValue !== 'function') return null;
     const vorher = (p.strengthHistory || []).filter(h => typeof h.strength === 'number' && h.season < game.season).pop();
     if (!vorher || !(p.marketValue > 0)) return null;
-    const vor = calculatePlayerMarketValue(vorher.strength);
+    const vor = getMarketValueBase(vorher.strength);
     if (!(vor > 0)) return null;
     return { p, vor, jetzt: p.marketValue, diff: p.marketValue - vor, prozent: Math.round((p.marketValue / vor - 1) * 100) };
 }
