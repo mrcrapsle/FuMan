@@ -1055,7 +1055,7 @@ async function testKnopfWorteHandy(browser) {
             setzeTextGroesse(groesse);
             let st = document.getElementById('schrift-stress');
             if (st) st.remove();
-            if (stress) { st = document.createElement('style'); st.id = 'schrift-stress'; st.textContent = '*,*::before,*::after{letter-spacing:0.05em!important}'; document.head.appendChild(st); }
+            if (stress) { st = document.createElement('style'); st.id = 'schrift-stress'; st.textContent = '*,*::before,*::after{letter-spacing:0.08em!important}'; document.head.appendChild(st); }
             const zuBreit = new Set(), seitenBreit = new Set();
             const probe = document.createElement('span'); document.body.appendChild(probe);
             const ids = [...document.querySelectorAll('[id^="screen-"]')].map(e => e.id).filter(id => !['screen-office', 'screen-matchday', 'screen-admin'].includes(id));

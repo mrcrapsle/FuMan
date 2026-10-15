@@ -59,9 +59,9 @@ function onScreenShown(screenId) {
         screen.insertBefore(hint, screen.firstChild);
     }
     hint.innerHTML = `💡 ${text}
-        <div style="display:flex; gap:6px; margin-top:6px;">
-            <button onclick="hideScreenHint('${screenId}')" class="btn-secondary" style="width:auto;">Verstanden</button>
-            <button onclick="hideScreenHint('alle')" class="btn-secondary" style="width:auto;">Alle Tipps aus</button>
+        <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;">
+            <button onclick="hideScreenHint('${screenId}')" class="btn-secondary" style="width:auto; flex:0 0 auto; white-space:nowrap;">Verstanden</button>
+            <button onclick="hideScreenHint('alle')" class="btn-secondary" style="width:auto; flex:0 0 auto;">Alle Tipps aus</button>
             ${typeof hasLexiconEntriesFor === 'function' && hasLexiconEntriesFor(screenId) ? `<button onclick="openLexiconForScreen('${screenId}')" class="btn-secondary" style="width:auto;">📖 Lexikon</button>` : ''}
         </div>`;
 }
