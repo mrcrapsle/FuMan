@@ -550,7 +550,7 @@ function renderUiStatRow(werte) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.135', date: '15.10.2026', features: 'Phase 26.11-26.12: CSV mit Etiketten und Verletzungen, Rückkehr-Termine und Schritte zurückstellen im Manager-Assistenten, Kaderplaner mit Ausfall-Risiko, Vorlagen-Bilanz je Saison, Etiketten mit kleiner Spielwirkung, Notiz in der Halbzeit-Ansicht, Stresstest mit breiterer Schrift, Layout-Korrekturen (Spielfeld-Schilder, enge Raster), Kader-Radar-Fix, content-visibility für lange Listen' };
+    const GAME_VERSION = { number: '3.136', date: '15.10.2026', features: 'Phase 26.13-26.15: Matchplan je Gegner, Belastungsampel im Kader, Spieler im Transfermarkt merken, Notiz-Vorschläge und Schlagwörter im Gegner-Notizbuch, Wischen zwischen Reitern, Saisonrückblick mit Vorsaison-Vergleich und Teilen, Etiketten-Bilanz und Bilanz je Spieler, Verletzungs-Warnung im Spieltag-Check, Preis-Alarm für beobachtete Funde, Marktwert-Hinweis, Erledigt-Liste und zurückgestellte Schritte im Assistenten, Notiz nach dem Abpfiff, Layout-Tests mit breiter Schrift' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -4161,8 +4161,10 @@ function saveMatchplan(opp) {
 function applyMatchplan(opp) {
     const plan = getMatchplan(opp);
     if (!plan || (plan.aufstellung === null && plan.taktik === null)) { showToast('Für diesen Gegner gibt es keinen gültigen Matchplan.', 'error'); return; }
-    if (plan.aufstellung !== null) loadLineupPreset(plan.aufstellung);
+    // Erst die Taktik, dann die Aufstellung: Die Formation der Aufstellungsvorlage gehört zu genau diesen elf Spielern und gilt
+    // deshalb, falls die Taktikvorlage eine andere Formation gespeichert hat (Spielstil und Härte der Taktik bleiben).
     if (plan.taktik !== null) applyTacticPreset(plan.taktik);
+    if (plan.aufstellung !== null) loadLineupPreset(plan.aufstellung);
     showToast(`📋 Matchplan gegen ${opp} angewendet.`, 'success');
     renderPrematchCheck();
 }
@@ -4177,7 +4179,9 @@ function renderMatchplanSection(opp) {
     const zeile = !plan ? '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch kein Matchplan gegen diesen Gegner.</div>'
         : `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">Aufstellung: <strong>${plan.aufstellung !== null ? mpEsc(game.lineupPresets[plan.aufstellung].name) : '–'}</strong> · Taktik: <strong>${plan.taktik !== null ? mpEsc(game.tacticPresets[plan.taktik].name) : '–'}</strong>${plan.verwaist ? '<br><span style="color:var(--danger);">Eine verknüpfte Vorlage gibt es nicht mehr.</span>' : ''}
             <button onclick="applyMatchplan(this.dataset.club)" data-club="${mpEsc(opp)}" class="btn-action" style="margin-top:4px;"${plan.aufstellung === null && plan.taktik === null ? ' disabled' : ''}>📋 Matchplan anwenden</button></div>`;
-    return zeile + (hatVorlagen ? `<label class="ui-field" style="margin-top:6px;"><span class="ui-field-label">Aufstellungsvorlage</span><select id="matchplan-aufstellung" class="input-inline" style="${stil}">${optionen(game.lineupPresets, raw.aufstellung)}</select></label>
+    const formVerschieden = plan && plan.aufstellung !== null && plan.taktik !== null && game.lineupPresets[plan.aufstellung].formation !== game.tacticPresets[plan.taktik].formation;
+    const formHinweis = formVerschieden ? `<div style="font-size:var(--fs-caption); color:var(--text-muted);">Die beiden Vorlagen haben verschiedene Formationen: es gilt die der Aufstellung (${mpEsc(game.lineupPresets[plan.aufstellung].formation)}), von der Taktik kommen Spielstil und Härte.</div>` : '';
+    return zeile + formHinweis + (hatVorlagen ? `<label class="ui-field" style="margin-top:6px;"><span class="ui-field-label">Aufstellungsvorlage</span><select id="matchplan-aufstellung" class="input-inline" style="${stil}">${optionen(game.lineupPresets, raw.aufstellung)}</select></label>
         <label class="ui-field" style="margin-top:6px;"><span class="ui-field-label">Taktikvorlage</span><select id="matchplan-taktik" class="input-inline" style="${stil}">${optionen(game.tacticPresets, raw.taktik)}</select></label>
         <button onclick="saveMatchplan(this.dataset.club)" data-club="${mpEsc(opp)}" class="btn-secondary" style="margin-top:6px;">💾 Matchplan speichern</button>`
         : '<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">Speichere zuerst Aufstellungs- oder Taktikvorlagen (Kader → Aufstellung), dann lassen sie sich hier einem Gegner zuordnen.</div>');

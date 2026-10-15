@@ -294,7 +294,7 @@ async function testManagerWerkzeuge(browser) {
         toggleSquadTag(p.id, 'verkauf'); toggleSquadTag(p.id, 'quatsch'); toggleSquadTag(q.id, 'beobachten');
         out.tags = JSON.stringify(p.tags) === '["verkauf"]' && JSON.stringify(q.tags) === '["beobachten"]';
         renderSquadView();
-        out.filterLeiste = document.getElementById('squad-tag-filter').querySelectorAll('button').length === 2;
+        out.filterLeiste = document.getElementById('squad-tag-filter').querySelectorAll('button').length === 3; // Belastung rot + zwei Etiketten
         setSquadTagFilter('verkauf');
         out.gefiltert = document.querySelectorAll('#bench-list .player-card').length === 1 && document.getElementById('bench-list').textContent.includes(p.name) && document.getElementById('bench-list').textContent.includes('Verkaufskandidat');
         setSquadTagFilter('verkauf');
@@ -676,8 +676,8 @@ async function testRunde27Funktionen(browser) {
         const csvZeilen = buildKaderCsv().replace(/^\ufeff/, '').trim().split('\r\n');
         const spalten = csvZeilen[0].split(';');
         const eintrag = csvZeilen.slice(1).find(z => z.includes('Etiketten') === false && z.split(';')[0] === cs.name.replace(/"/g, '')) || csvZeilen.slice(1).find(z => z.startsWith(cs.name));
-        out.csvSpalten = spalten.slice(-3).join('|') === 'Etiketten|Verletzungen (gesamt)|Verpasste Spiele (letzte Ausfälle)';
-        out.csvInhalt = !!eintrag && /Stammkraft, Beobachten;2;5$/.test(eintrag);
+        out.csvSpalten = spalten.slice(-6, -3).join('|') === 'Etiketten|Verletzungen (gesamt)|Verpasste Spiele (letzte Ausfälle)';
+        out.csvInhalt = !!eintrag && /Stammkraft, Beobachten;2;5;/.test(eintrag);
         cs.tags = []; cs.timesInjured = 0; cs.injuryLog = [];
         // --- Rückkehr-Termine ---
         squad.forEach(x => { x.injured = 0; x.suspended = 0; });
@@ -976,6 +976,7 @@ async function testRunde28Funktionen(browser) {
         game.transferBilanzHistory = [{ season: 1, verkauf: 2000000, kauf: 1000000, netto: 1000000 }];
         squad[0].injuryLog = [{ season: 1, matchday: 4, tage: 3, anlass: 'Spiel' }, { season: 2, matchday: 1, tage: 9, anlass: 'Spiel' }];
         game.gegnerNotizen = { 'A FC': { text: 'Konter <b>links</b>', season: 1, matchday: 3 }, 'B FC': { text: 'andere Saison', season: 2, matchday: 3 } };
+        game.etikettBilanzArchiv = []; // wie in einem alten Spielstand: nur das Vorjahr ist bekannt
         game.etikettBilanzVorjahr = { season: 1, daten: { stamm: { mit: { spiele: 6, s: 4, u: 1, n: 1, tore: 12, gegentore: 5 }, ohne: { spiele: 6, s: 1, u: 1, n: 4, tore: 4, gegentore: 9 } }, aufbau: { mit: { spiele: 2, s: 1, u: 0, n: 1, tore: 2, gegentore: 2 }, ohne: { spiele: 6, s: 3, u: 0, n: 3, tore: 6, gegentore: 6 } } } };
         out.saisons = JSON.stringify(getReviewSeasons()) === '[1]';
         renderSeasonReviewBox();

@@ -332,7 +332,7 @@ async function testDesignThemes(browser) {
     assert(r.ungueltigIgnoriert, 'Ein unbekanntes Theme ändert nichts');
     assert(r.groesser > 1.2, `Textgröße "sehr groß" vergrößert die Schrift (Faktor ${r.groesser.toFixed(2)})`);
     assert(r.ueberlauf.length === 0, `Sehr große Schrift läuft auf dem Handy auf keinem Bildschirm über (${r.ueberlauf.join(', ')})`);
-    assert(r.karten === 7 && r.groessen === 6, `Darstellung zeigt 7 Themes (inkl. Automatisch) sowie 3 Textgrößen und 3 Bewegungs-Stufen (${r.karten}/${r.groessen})`);
+    assert(r.karten === 7 && r.groessen === 8, `Darstellung zeigt 7 Themes (inkl. Automatisch) sowie 3 Textgrößen, 3 Bewegungs-Stufen und An/Aus für das Wischen (${r.karten}/${r.groessen})`);
     assert(r.vorschau, 'Die Vorschau zeigt den stärksten eigenen Spieler');
     assert(r.navKnopf, 'Menüpunkt "Darstellung" ist vorhanden');
     assert(r.marktKarte, 'Transfermarkt-Karte: Name als Titel, Stärke als Kennzahl, Chips mit Zusatzangaben');
