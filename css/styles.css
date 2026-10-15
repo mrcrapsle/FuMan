@@ -999,9 +999,9 @@
             border: 2px solid var(--teal); display: flex; align-items: center; justify-content: center;
             font-size: 34px;
         }
-        .modal-field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; margin: 10px 0; font-size: var(--fs-body); }
+        .modal-field-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px 14px; margin: 10px 0; font-size: var(--fs-body); }
         .modal-field-grid span.label { color: var(--text-muted); }
-        .modal-field-grid span.val { color: var(--teal); font-weight: 700; }
+        .modal-field-grid span.val { color: var(--teal); font-weight: 700; overflow-wrap: anywhere; }
         .modal-stat-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin: 8px 0; }
         .modal-stat-chip {
             background: color-mix(in srgb, var(--accent) 5%, transparent); border: 1px solid var(--border); border-radius: 6px;

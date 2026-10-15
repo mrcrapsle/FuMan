@@ -438,6 +438,37 @@ async function testKontrastAlleThemes(browser) {
             squad[0].timesInjured = 2; logPlayerInjury(squad[0], 2, 'Spiel'); renderInjuryHistory(squad[0], 'squad');
             document.querySelectorAll('#pd-injuries details').forEach(d => { d.open = true; });
             scan('verletzungsverlauf', '#pd-injuries *'); closePlayerDetail();
+            // Runde 26.8 bis 26.10: Assistent mit Fristen und „Später“, Rückkehr-Zeile, Kaderplaner-Ausfälle, Vorlagen-Bilanz,
+            // Ausfall-Rangliste, Etiketten-Erklärung und die Notiz in der Halbzeit-Ansicht
+            const merk = { vertr: squad.map(x => x.contracts), inj: squad.map(x => x.injured), supp: squad.map(x => x.suspended), tags: squad.map(x => x.tags), spons: game.sponsor, bil: game.vorlageBilanz, arch: game.vorlageBilanzArchiv, notizen: game.gegnerNotizen, h2h: game.headToHeadRecords['FC Beispiel'], cm: currentMatch };
+            game.assistentZurueck = {};
+            squad.forEach(x => { x.contracts = 4; x.injured = 0; x.suspended = 0; });
+            squad[0].contracts = 0; squad[3].injured = 2; squad[4].injured = 4; squad[5].suspended = 1; squad[6].injured = 6;
+            game.sponsor = { ...game.sponsor, duration: 4 };
+            showScreen('screen-dashboard'); renderManagerAssistant();
+            scan('assistent', '#manager-assistant-box *');
+            snoozeManagerTodo('vertraege-aus'); scan('assistent-zurueckgestellt', '#manager-assistant-box *'); resetManagerSnooze();
+            squad.filter(x => x.pos === 'TW').forEach(x => { x.injured = 3; });
+            showScreen('screen-squad-planning'); renderSquadPlanningView();
+            scan('kaderplaner-ausfaelle', '#squad-planning-warnings-box *');
+            game.vorlageBilanz = { 0: { name: 'Heim offensiv', spiele: 5, s: 3, u: 1, n: 1, tore: 9, gegentore: 4, diffSumme: 6 } };
+            game.vorlageBilanzArchiv = [{ season: 1, eintraege: { 0: { name: 'Heim offensiv', spiele: 12, s: 8, u: 2, n: 2, tore: 25, gegentore: 10, diffSumme: 14 } } }];
+            showScreen('screen-squad'); setSquadTab('analyse'); renderSquadView();
+            scan('vorlagen-bilanz', '#preset-bilanz-box *'); scan('gegner-notizbuch', '#opp-notes-box *');
+            squad[2].injuryLog = [{ season: 1, matchday: 2, tage: 5, anlass: 'Spiel' }]; squad[2].timesInjured = 1;
+            showScreen('screen-training'); renderMedicalDepartmentPanel();
+            document.querySelectorAll('#medical-department-box details').forEach(d => { d.open = true; });
+            scan('ausfall-rangliste', '#medical-department-box *');
+            squad[5].tags = ['stamm', 'schonen']; showScreen('screen-squad'); openPlayerDetail(squad[5].id, 'squad');
+            scan('etiketten-wirkung', '#pd-tags *'); closePlayerDetail();
+            game.gegnerNotizen = { 'FC Beispiel': { text: 'Gefährlich bei Standards', season: 1, matchday: 3 } };
+            game.headToHeadRecords['FC Beispiel'] = { wins: 3, draws: 1, losses: 2, goalsFor: 9, goalsAgainst: 7, lastResults: ['2:1', '0:0'] };
+            currentMatch = { isHome: true, homeName: game.clubName, awayName: 'FC Beispiel', homeGoals: 1, awayGoals: 0 };
+            renderHalftimeNotiz(); document.getElementById('halftime-talk-overlay').classList.add('show');
+            scan('halbzeit-notiz', '#halftime-talk-overlay *'); document.getElementById('halftime-talk-overlay').classList.remove('show');
+            squad.forEach((x, i) => { x.contracts = merk.vertr[i]; x.injured = merk.inj[i]; x.suspended = merk.supp[i]; x.tags = merk.tags[i]; });
+            game.sponsor = merk.spons; game.vorlageBilanz = merk.bil; game.vorlageBilanzArchiv = merk.arch; game.gegnerNotizen = merk.notizen; currentMatch = merk.cm;
+            if (merk.h2h) game.headToHeadRecords['FC Beispiel'] = merk.h2h; else delete game.headToHeadRecords['FC Beispiel'];
             probe.remove();
             return [...out];
         }, theme);

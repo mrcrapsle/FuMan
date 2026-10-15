@@ -85,6 +85,18 @@ function getGegnerBilanzText(oppName) {
     return `Bilanz: ${rec.wins}S ${rec.draws}U ${rec.losses}N · Tore ${rec.goalsFor}:${rec.goalsAgainst}${rec.lastResults && rec.lastResults.length ? ` · zuletzt ${rec.lastResults.slice(0, 3).join(', ')}` : ''}`;
 }
 
+// Halbzeit-Ansicht im Livespiel: die Notiz und die Bilanz zum Gegner (nur Anzeige, geändert wird im Spieltag-Check)
+function renderHalftimeNotiz() {
+    const box = document.getElementById('halftime-notiz-box');
+    if (!box) return;
+    const m = typeof currentMatch !== 'undefined' ? currentMatch : null;
+    const opp = m ? (m.isHome ? m.awayName : m.homeName) : '';
+    const n = opp ? getGegnerNotiz(opp) : null;
+    const bilanz = opp ? getGegnerBilanzText(opp) : '';
+    if (!opp || (!n && /^Noch keine/.test(bilanz))) { box.innerHTML = ''; return; }
+    box.innerHTML = `<div class="box" style="font-size:var(--fs-small); text-align:left;"><strong>📓 ${mpEsc(opp)}</strong><br>📊 ${mpEsc(bilanz)}${n ? `<br>📝 ${mpEsc(n.text)}` : ''}</div>`;
+}
+
 function renderGegnerNotizSection(oppName) {
     if (!oppName) return '';
     const n = getGegnerNotiz(oppName);

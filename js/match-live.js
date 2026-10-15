@@ -374,6 +374,7 @@
         let scoreline = ourGoals > oppGoals ? 'Ihr führt' : (ourGoals < oppGoals ? 'Ihr liegt zurück' : 'Unentschieden');
         document.getElementById('halftime-score-summary').innerText = `${scoreline} (${currentMatch.homeGoals}:${currentMatch.awayGoals}) - was sagst du der Mannschaft in der Kabine?`;
         renderHalftimeSubSuggestion();
+        if (typeof renderHalftimeNotiz === 'function') renderHalftimeNotiz();
         document.getElementById('halftime-talk-overlay').classList.add('show');
     }
     // KI-Vorschlag für Einwechslungen zur Halbzeit: identifiziert den müdesten

@@ -780,6 +780,20 @@ async function testRunde27Funktionen(browser) {
         delete game.vorlageBilanzArchiv; delete game.vorlageBilanz; renderPresetBilanzBox(); archiveVorlageBilanz();
         out.altesFeld3 = Array.isArray(game.vorlageBilanzArchiv) && typeof game.vorlageBilanz === 'object';
         game.vorlageBilanz = {};
+        // --- Notiz in der Halbzeit ---
+        game.gegnerNotizen = { 'Test FC': { text: 'Konter <b>links</b>', season: 1, matchday: 2 } };
+        game.headToHeadRecords['Test FC'] = { wins: 2, draws: 0, losses: 1, goalsFor: 5, goalsAgainst: 3, lastResults: ['1:0'] };
+        const matchAlt = typeof currentMatch !== 'undefined' ? currentMatch : null;
+        currentMatch = { isHome: true, homeName: game.clubName, awayName: 'Test FC', homeGoals: 1, awayGoals: 0 };
+        renderHalftimeNotiz();
+        const ht = document.getElementById('halftime-notiz-box');
+        out.halbzeitNotiz = ht.textContent.includes('Test FC') && ht.textContent.includes('2S 0U 1N') && ht.textContent.includes('Konter <b>links</b>') && !ht.innerHTML.includes('<b>links');
+        currentMatch = { isHome: false, homeName: 'Test FC', awayName: game.clubName };
+        renderHalftimeNotiz(); out.halbzeitAuswaerts = document.getElementById('halftime-notiz-box').textContent.includes('Test FC');
+        currentMatch = { isHome: true, homeName: game.clubName, awayName: 'Unbekannter FC' };
+        renderHalftimeNotiz(); out.halbzeitLeer = document.getElementById('halftime-notiz-box').innerHTML === '';
+        currentMatch = matchAlt;
+        delete game.headToHeadRecords['Test FC']; game.gegnerNotizen = {};
         // Echter Ablauf: Anstoß-Ablauf setzt den Merker, das Ligaergebnis zählt über recordOwnLeagueResult
         game.matchday = 4; game.formation = '4-4-2'; autoLineup(); saveLineupPreset(1);
         startMatchdayFlow();
@@ -798,6 +812,7 @@ async function testRunde27Funktionen(browser) {
     assert(r.radar && r.radarOhneLayoutLesen, `Kader-Radar hat feste Größe mit viewBox und liest beim Zeichnen keine Breite (${r.radar}/${r.radarOhneLayoutLesen})`);
     assert(r.besteMind3 && r.punkte && r.archiviert && r.postfachBeste && r.leereSaisonKeinEintrag && r.hoechstensFuenf, `Vorlagen-Bilanz je Saison: beste Vorlage (mind. 3 Spiele), Archiv, Postfach, höchstens fünf Saisons (${JSON.stringify([r.besteMind3, r.punkte, r.archiviert, r.postfachBeste, r.leereSaisonKeinEintrag, r.hoechstensFuenf])})`);
     assert(r.bilanzBox && r.fliesstInSeasonEnd && r.altesFeld3, `Vorlagen-Bilanz: Kasten im Reiter Analyse, Aufruf im Saisonende, alte Spielstände (${JSON.stringify([r.bilanzBox, r.fliesstInSeasonEnd, r.altesFeld3])})`);
+    assert(r.halbzeitNotiz && r.halbzeitAuswaerts && r.halbzeitLeer, `Halbzeit-Ansicht zeigt Notiz und Bilanz zum Gegner (maskiert, auch auswärts, leer ohne Daten) (${JSON.stringify([r.halbzeitNotiz, r.halbzeitAuswaerts, r.halbzeitLeer])})`);
     assert(r.flussMerker && r.flussZaehlt, `Bilanz je Vorlage über den echten Ablauf (Anstoß setzt den Merker, Ligaergebnis zählt) (${r.flussMerker}/${r.flussZaehlt})`);
     assert(r.erkannt && r.gezaehlt && r.summen && r.text && r.karte, `Bilanz je Vorlage: erkannt, gezählt, Summen, Text und Anzeige auf der Karte (${JSON.stringify([r.erkannt, r.gezaehlt, r.summen, r.text, r.karte])})`);
     assert(r.fremdeElf && r.alterMerker && r.neuBelegt && r.andererName && r.geloescht && r.altesFeld, `Bilanz je Vorlage: fremde Elf, alter Merker, neu belegter Slot, Löschen, alte Spielstände (${JSON.stringify([r.fremdeElf, r.alterMerker, r.neuBelegt, r.andererName, r.geloescht, r.altesFeld])})`);

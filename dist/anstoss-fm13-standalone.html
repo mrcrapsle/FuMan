@@ -1008,9 +1008,9 @@
             border: 2px solid var(--teal); display: flex; align-items: center; justify-content: center;
             font-size: 34px;
         }
-        .modal-field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px; margin: 10px 0; font-size: var(--fs-body); }
+        .modal-field-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px 14px; margin: 10px 0; font-size: var(--fs-body); }
         .modal-field-grid span.label { color: var(--text-muted); }
-        .modal-field-grid span.val { color: var(--teal); font-weight: 700; }
+        .modal-field-grid span.val { color: var(--teal); font-weight: 700; overflow-wrap: anywhere; }
         .modal-stat-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; margin: 8px 0; }
         .modal-stat-chip {
             background: color-mix(in srgb, var(--accent) 5%, transparent); border: 1px solid var(--border); border-radius: 6px;
@@ -2225,6 +2225,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
     <div class="generic-modal-box">
         <div style="font-size:var(--fs-title); font-weight:900; color:var(--text-main); margin-bottom:6px;">🎤 Kabinenansprache</div>
         <div style="font-size:var(--fs-body-lg); color:var(--text-muted); margin-bottom:12px;" id="halftime-score-summary">Halbzeit - was sagst du der Mannschaft?</div>
+        <div id="halftime-notiz-box" style="margin-bottom:10px;"></div>
         <div id="halftime-sub-suggestion-box" style="margin-bottom:10px;"></div>
         <button onclick="chooseHalftimeTalk('anfeuern')" class="btn-action" style="margin-bottom:6px;">🔥 Anfeuern</button>
         <button onclick="chooseHalftimeTalk('kritisieren')" class="btn-danger" style="margin-bottom:6px;">😠 Kritisieren (riskant)</button>
@@ -8125,6 +8126,18 @@ function getGegnerBilanzText(oppName) {
     const rec = game.headToHeadRecords && game.headToHeadRecords[oppName];
     if (!rec || (rec.wins + rec.draws + rec.losses) === 0) return 'Noch keine Ligaduelle gegen diesen Verein.';
     return `Bilanz: ${rec.wins}S ${rec.draws}U ${rec.losses}N · Tore ${rec.goalsFor}:${rec.goalsAgainst}${rec.lastResults && rec.lastResults.length ? ` · zuletzt ${rec.lastResults.slice(0, 3).join(', ')}` : ''}`;
+}
+
+// Halbzeit-Ansicht im Livespiel: die Notiz und die Bilanz zum Gegner (nur Anzeige, geändert wird im Spieltag-Check)
+function renderHalftimeNotiz() {
+    const box = document.getElementById('halftime-notiz-box');
+    if (!box) return;
+    const m = typeof currentMatch !== 'undefined' ? currentMatch : null;
+    const opp = m ? (m.isHome ? m.awayName : m.homeName) : '';
+    const n = opp ? getGegnerNotiz(opp) : null;
+    const bilanz = opp ? getGegnerBilanzText(opp) : '';
+    if (!opp || (!n && /^Noch keine/.test(bilanz))) { box.innerHTML = ''; return; }
+    box.innerHTML = `<div class="box" style="font-size:var(--fs-small); text-align:left;"><strong>📓 ${mpEsc(opp)}</strong><br>📊 ${mpEsc(bilanz)}${n ? `<br>📝 ${mpEsc(n.text)}` : ''}</div>`;
 }
 
 function renderGegnerNotizSection(oppName) {
@@ -27373,7 +27386,7 @@ function renderManagerAssistant() {
     ensureAssistentState();
     const zurueck = Object.keys(game.assistentZurueck).filter(istZurueckgestellt).length;
     const html = `<div class="panel-header">🧭 Manager-Assistent</div>` + (todos.length
-        ? todos.map(x => `<div class="box" style="margin:4px 0; font-size:var(--fs-small); display:flex; justify-content:space-between; align-items:center; gap:8px;"><span>${x.icon} ${mpEsc(x.text)}</span><span style="display:flex; gap:4px; flex:0 0 auto;"><button onclick="${x.aktion}" class="btn-secondary" style="width:auto; flex:0 0 auto;">${x.label}</button>${ASSISTENT_NICHT_ZURUECK.includes(x.id) ? '' : `<button onclick="snoozeManagerTodo('${x.id}')" class="btn-secondary" style="width:auto; flex:0 0 auto;" title="Diesen Schritt ${ASSISTENT_ZURUECK_SPIELTAGE} Spieltage ausblenden">⏸️ Später</button>`}</span></div>`).join('')
+        ? todos.map(x => `<div class="box" style="margin:4px 0; font-size:var(--fs-small); display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:6px 8px;"><span style="flex:1 1 11em; min-width:0;">${x.icon} ${mpEsc(x.text)}</span><span style="display:flex; gap:4px; flex:0 0 auto;"><button onclick="${x.aktion}" class="btn-secondary" style="width:auto; flex:0 0 auto;">${x.label}</button>${ASSISTENT_NICHT_ZURUECK.includes(x.id) ? '' : `<button onclick="snoozeManagerTodo('${x.id}')" class="btn-secondary" style="width:auto; flex:0 0 auto;" title="Diesen Schritt ${ASSISTENT_ZURUECK_SPIELTAGE} Spieltage ausblenden">⏸️ Später</button>`}</span></div>`).join('')
         : `<div class="box" style="font-size:var(--fs-small);">✅ Alles im grünen Bereich: Aufstellung steht, keine Verträge drängen, die Kasse passt. Zeit für den nächsten Spieltag.</div>`)
         + (zurueck ? `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:6px;">⏸️ ${zurueck} Schritt${zurueck === 1 ? '' : 'e'} zurückgestellt <button onclick="resetManagerSnooze()" class="btn-secondary" style="width:auto; margin:0 0 0 6px;">Alle wieder zeigen</button></div>` : '')
         + getReturnLineHtml();
@@ -33968,6 +33981,7 @@ function cleanupLegacyScoutState() {
         let scoreline = ourGoals > oppGoals ? 'Ihr führt' : (ourGoals < oppGoals ? 'Ihr liegt zurück' : 'Unentschieden');
         document.getElementById('halftime-score-summary').innerText = `${scoreline} (${currentMatch.homeGoals}:${currentMatch.awayGoals}) - was sagst du der Mannschaft in der Kabine?`;
         renderHalftimeSubSuggestion();
+        if (typeof renderHalftimeNotiz === 'function') renderHalftimeNotiz();
         document.getElementById('halftime-talk-overlay').classList.add('show');
     }
     // KI-Vorschlag für Einwechslungen zur Halbzeit: identifiziert den müdesten
