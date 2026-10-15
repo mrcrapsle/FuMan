@@ -550,7 +550,7 @@ function renderUiStatRow(werte) {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.134', date: '15.10.2026', features: 'Phase 26.8-26.10: Fristen im Manager-Assistenten, Kaderplaner mit Ausfällen, Bilanz je Aufstellungsvorlage, Etiketten mit kleiner Spielwirkung, Bilanz im Gegner-Notizbuch, Vergleich von der Karte, Ausfall-Rangliste, Fokus in Fenstern, Knöpfe ohne Wortbruch auf engen Handys, schnellere Kaderansicht, Testdatei aufgeteilt' };
+    const GAME_VERSION = { number: '3.135', date: '15.10.2026', features: 'Phase 26.11-26.12: CSV mit Etiketten und Verletzungen, Rückkehr-Termine und Schritte zurückstellen im Manager-Assistenten, Kaderplaner mit Ausfall-Risiko, Vorlagen-Bilanz je Saison, Etiketten mit kleiner Spielwirkung, Notiz in der Halbzeit-Ansicht, Stresstest mit breiterer Schrift, Layout-Korrekturen (Spielfeld-Schilder, enge Raster), Kader-Radar-Fix, content-visibility für lange Listen' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
@@ -659,6 +659,8 @@ function renderUiStatRow(werte) {
         serien: { aktuell: {}, rekord: {} },
         gegnerNotizen: {},
         vorlageBilanz: {},
+        assistentZurueck: {},
+        vorlageBilanzArchiv: [],
         vorlageImEinsatz: null,
         lineupPresets: [null, null, null, null, null],
         tacticPresets: [null, null, null, null, null],
@@ -3423,7 +3425,10 @@ function getOwnDerbyRivals() {
             let traitIcon = (p.trait && p.trait !== 'Kein') ? ' ⭐' : '';
             let roleIcon = p.id === game.captainId ? ' Ⓒ' : '';
             let favoriteIcon = p.isCrowdFavorite ? ' ❤️' : '';
-            pin.innerHTML = `${p.name.split(' ').pop()} (${p.strength})${traitIcon}${roleIcon}${favoriteIcon}`;
+            // Breite nach dem Abstand zum Spielfeldrand begrenzen (sonst wird die Seite bei langen Namen auf Randpositionen
+            // breiter als der Bildschirm); gekürzt wird nur der Name, Stärke und Symbole bleiben sichtbar
+            pin.style.maxWidth = Math.max(18, 2 * Math.min(coords[idx].left, 100 - coords[idx].left)) + '%';
+            pin.innerHTML = `<span class="pin-name">${p.name.split(' ').pop()}</span><span class="pin-rest">(${p.strength})${traitIcon}${roleIcon}${favoriteIcon}</span>`;
             pin.title = (p.trait && p.trait !== 'Kein' ? p.trait : '') + (p.isCrowdFavorite ? ' · Publikumsliebling der Saison' : '');
             // Auf dem Kader-/Taktikschirm ist Antippen = Tauschmodus; auf dem Live-Spielschirm
             // rein informativ (kein Kaderwechsel während der laufenden Partie über die Pins).
@@ -3573,6 +3578,18 @@ function getGegnerBilanzText(oppName) {
     return `Bilanz: ${rec.wins}S ${rec.draws}U ${rec.losses}N · Tore ${rec.goalsFor}:${rec.goalsAgainst}${rec.lastResults && rec.lastResults.length ? ` · zuletzt ${rec.lastResults.slice(0, 3).join(', ')}` : ''}`;
 }
 
+// Halbzeit-Ansicht im Livespiel: die Notiz und die Bilanz zum Gegner (nur Anzeige, geändert wird im Spieltag-Check)
+function renderHalftimeNotiz() {
+    const box = document.getElementById('halftime-notiz-box');
+    if (!box) return;
+    const m = typeof currentMatch !== 'undefined' ? currentMatch : null;
+    const opp = m ? (m.isHome ? m.awayName : m.homeName) : '';
+    const n = opp ? getGegnerNotiz(opp) : null;
+    const bilanz = opp ? getGegnerBilanzText(opp) : '';
+    if (!opp || (!n && /^Noch keine/.test(bilanz))) { box.innerHTML = ''; return; }
+    box.innerHTML = `<div class="box" style="font-size:var(--fs-small); text-align:left;"><strong>📓 ${mpEsc(opp)}</strong><br>📊 ${mpEsc(bilanz)}${n ? `<br>📝 ${mpEsc(n.text)}` : ''}</div>`;
+}
+
 function renderGegnerNotizSection(oppName) {
     if (!oppName) return '';
     const n = getGegnerNotiz(oppName);
@@ -3699,13 +3716,58 @@ function recordPresetResult(ourGoals, oppGoals) {
     if (ourGoals > oppGoals) b.s++; else if (ourGoals < oppGoals) b.n++; else b.u++;
 }
 
+// Punkte je Spiel einer Bilanz-Zeile (Sieg 3, Remis 1)
+function presetPunkteProSpiel(b) { return b && b.spiele ? (3 * b.s + b.u) / b.spiele : 0; }
+
+// Beste Vorlage einer Saison: höchste Punkte je Spiel bei mindestens drei Einsätzen
+function findeBesteVorlage(eintraege) {
+    const kand = Object.values(eintraege || {}).filter(b => b.spiele >= 3);
+    kand.sort((a, b) => (presetPunkteProSpiel(b) - presetPunkteProSpiel(a)) || (b.spiele - a.spiele));
+    return kand[0] || null;
+}
+
+// Saisonende: die Bilanz der Saison ins Archiv (die letzten fünf Saisons), danach beginnt sie von vorn
+function archiveVorlageBilanz() {
+    ensureVorlageBilanz();
+    if (!Array.isArray(game.vorlageBilanzArchiv)) game.vorlageBilanzArchiv = [];
+    const eintraege = game.vorlageBilanz;
+    if (!Object.values(eintraege).some(b => b.spiele > 0)) return;
+    game.vorlageBilanzArchiv.push({ season: game.season, eintraege: JSON.parse(JSON.stringify(eintraege)) });
+    while (game.vorlageBilanzArchiv.length > 5) game.vorlageBilanzArchiv.shift();
+    const beste = findeBesteVorlage(eintraege);
+    if (beste && typeof addInboxMessage === 'function') {
+        addInboxMessage('info', `📈 Vorlagen-Bilanz Saison ${game.season}`, `Beste Aufstellungsvorlage: „${beste.name}“ mit ${beste.s}S ${beste.u}U ${beste.n}N (${presetPunkteProSpiel(beste).toFixed(2).replace('.', ',')} Punkte je Spiel).`, 'screen-squad');
+    }
+    game.vorlageBilanz = {};
+}
+
+function renderPresetBilanzBox() {
+    const box = document.getElementById('preset-bilanz-box');
+    if (!box) return;
+    ensureVorlageBilanz();
+    const archiv = Array.isArray(game.vorlageBilanzArchiv) ? game.vorlageBilanzArchiv : [];
+    const zeile = b => `${mpEsc(b.name)}: ${b.s}S ${b.u}U ${b.n}N · Tore ${b.tore}:${b.gegentore} · ${presetPunkteProSpiel(b).toFixed(2).replace('.', ',')} Pkt/Spiel`;
+    const block = (titel, eintraege) => {
+        const liste = Object.values(eintraege).filter(b => b.spiele > 0).sort((a, b) => presetPunkteProSpiel(b) - presetPunkteProSpiel(a));
+        if (!liste.length) return '';
+        const beste = findeBesteVorlage(eintraege);
+        return `<div class="ui-overline" style="font-size:var(--fs-caption); color:var(--text-muted); margin:8px 0 2px;">${titel}</div>`
+            + liste.map(b => `<div class="box" style="font-size:var(--fs-small); margin:3px 0;">${beste && beste.name === b.name ? '🏅 ' : ''}${zeile(b)}</div>`).join('');
+    };
+    const aktuell = block(`Saison ${game.season} (laufend)`, game.vorlageBilanz);
+    const alt = [...archiv].reverse().map(a => block(`Saison ${a.season}`, a.eintraege)).join('');
+    box.innerHTML = `<div class="panel-header" style="color:var(--purple);">📈 Bilanz der Aufstellungsvorlagen</div>`
+        + (aktuell || alt ? aktuell + alt + '<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:6px;">🏅 = beste Vorlage der Saison (Punkte je Spiel, mindestens drei Einsätze). Gezählt werden Ligaspiele, bei denen die Startelf einer gespeicherten Vorlage entsprach.</div>'
+            : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Daten. Speichere im Reiter Aufstellung eine Vorlage und starte damit Ligaspiele.</div>');
+}
+
 function getPresetBilanzText(slot) {
     ensureVorlageBilanz();
     const b = game.vorlageBilanz[slot];
     if (!b || !b.spiele) return '';
     const v = game.lineupPresets[slot];
     if (v && v.name !== b.name) return ''; // Slot wurde seither neu belegt: die alte Bilanz gehört zu einer anderen Vorlage
-    return `${b.s}S ${b.u}U ${b.n}N · Tore ${b.tore}:${b.gegentore} · Ø ${b.diffSumme / b.spiele >= 0 ? '+' : ''}${(b.diffSumme / b.spiele).toFixed(1)} gegen den Gegner`;
+    return `diese Saison ${b.s}S ${b.u}U ${b.n}N · Tore ${b.tore}:${b.gegentore} · Ø ${b.diffSumme / b.spiele >= 0 ? '+' : ''}${(b.diffSumme / b.spiele).toFixed(1)} gegen den Gegner`;
 }
 
 // Teamstärke einer Elf mit Formation, ohne die Aufstellung zu verändern (Elf und Formation werden kurz getauscht)
@@ -3847,6 +3909,7 @@ function renderMatchPrepPanels() {
     renderLineupPresets();
     renderTacticPresets();
     renderGegnerNotizbuch();
+    renderPresetBilanzBox();
 }
 
 // ---------- Spieltag-Check vor dem Anpfiff ----------
@@ -13007,7 +13070,7 @@ function initZugaenglichkeit() {
                     <span style="color:${deltaClass}; font-size:var(--fs-caption); font-weight:bold;">(${deltaIcon}${r.delta.toFixed(2)} €)</span>
                 </div>
                 <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Basispreis: ${r.basePrice.toFixed(2)} € | Spanne: ${r.minPrice.toFixed(2)} - ${r.maxPrice.toFixed(2)} €</div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
+                <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9em), 1fr)); gap:4px;">
                     <button onclick="buyRawMaterial('${k}', 500)" class="btn-secondary">+500 kg [${formatVal(Math.round(r.currentPrice * 500))}]</button>
                     <button onclick="buyRawMaterial('${k}', 2000)" class="btn-secondary">+2.000 kg [${formatVal(Math.round(r.currentPrice * 2000))}]</button>
                 </div>
@@ -18290,7 +18353,7 @@ function finishGoalkeeperGame() {
             </div>
             <input type="range" min="0" max="100" value="${pitchMaintenanceIntensity}" oninput="setPitchMaintenanceIntensity(this.value)" style="width:100%;">
             <div style="font-size:var(--fs-small); margin:6px 0;">Erwarteter Gewinn: rund ${gain} Punkte auf ${Math.min(max, cond + gain)}. Geschätzte Kosten: ${formatVal(cost)}.</div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12em), 1fr)); gap:4px;">
                 <button onclick="maintainPitch(0)" class="btn-secondary" style="font-size:var(--fs-caption);">Nur mähen (leicht)</button>
                 <button onclick="maintainPitch(pitchMaintenanceIntensity)" class="btn-action" style="font-size:var(--fs-caption);">Pflegen [${formatVal(cost)}]</button>
                 <button onclick="maintainPitch(60)" class="btn-secondary" style="font-size:var(--fs-caption);">Gründlich</button>
@@ -22267,11 +22330,14 @@ function csvText(zeilen) {
 function csvZahl(n, stellen = 1) { return typeof n === 'number' ? n.toFixed(stellen).replace('.', ',') : ''; }
 
 function buildKaderCsv() {
-    const kopf = ['Name', 'Position', 'Alter', 'Stärke', 'Fitness %', 'Moral', 'Marktwert €', 'Gehalt € je Spieltag', 'Vertrag (Jahre Rest)', 'Spiele (Saison)', 'Tore (Saison)', 'Vorlagen (Saison)', 'Notenschnitt (Saison)'];
+    const kopf = ['Name', 'Position', 'Alter', 'Stärke', 'Fitness %', 'Moral', 'Marktwert €', 'Gehalt € je Spieltag', 'Vertrag (Jahre Rest)', 'Spiele (Saison)', 'Tore (Saison)', 'Vorlagen (Saison)', 'Notenschnitt (Saison)', 'Etiketten', 'Verletzungen (gesamt)', 'Verpasste Spiele (letzte Ausfälle)'];
     const zeilen = [...squad].sort((a, b) => b.strength - a.strength).map(p => {
         const st = p.statsSeason;
         return [p.name, p.pos, p.age || '', p.strength, p.fitness, p.morale ?? '', p.marketValue || 0, p.wage || 0, p.contracts,
-            st ? st.spiele : 0, st ? st.tore : 0, st ? st.vorlagen : 0, st && st.spiele ? csvZahl(st.notenSumme / st.spiele, 2) : ''];
+            st ? st.spiele : 0, st ? st.tore : 0, st ? st.vorlagen : 0, st && st.spiele ? csvZahl(st.notenSumme / st.spiele, 2) : '',
+            // Etiketten ohne Symbol (js/manager-tools.js), Verletzungen aus Zähler und Verlauf (js/medical-department.js)
+            typeof getPlayerTags === 'function' ? getPlayerTags(p).map(t => SPIELER_ETIKETTEN.find(e => e.id === t).label.replace(/^\S+\s+/, '')).join(', ') : '',
+            p.timesInjured || 0, (Array.isArray(p.injuryLog) ? p.injuryLog : []).reduce((sum, e) => sum + (e.tage || 0), 0)];
     });
     return csvText([kopf, ...zeilen]);
 }
@@ -22608,22 +22674,51 @@ function renderSquadTagFilter() {
 // ---------- Manager-Assistent ----------
 
 // Bis zu drei empfohlene nächste Schritte, aus echten Daten und nach Dringlichkeit geordnet
+// Schritte zurückstellen: „Später“ blendet einen Schritt 3 Spieltage aus (game.assistentZurueck = { id: { season, bis } }).
+// Aufstellungsfehler und Minus-Kasse sind nicht zurückstellbar.
+const ASSISTENT_NICHT_ZURUECK = ['aufstellung', 'kasse-minus'];
+const ASSISTENT_ZURUECK_SPIELTAGE = 3;
+
+function ensureAssistentState() {
+    if (!game.assistentZurueck || typeof game.assistentZurueck !== 'object' || Array.isArray(game.assistentZurueck)) game.assistentZurueck = {};
+}
+
+function istZurueckgestellt(id) {
+    ensureAssistentState();
+    const z = game.assistentZurueck[id];
+    return !!z && z.season === game.season && game.matchday < z.bis && !ASSISTENT_NICHT_ZURUECK.includes(id);
+}
+
+function snoozeManagerTodo(id) {
+    ensureAssistentState();
+    if (ASSISTENT_NICHT_ZURUECK.includes(id)) { showToast('Dieser Schritt ist dringend und lässt sich nicht zurückstellen.', 'error'); return; }
+    game.assistentZurueck[id] = { season: game.season, bis: game.matchday + ASSISTENT_ZURUECK_SPIELTAGE };
+    showToast(`⏸️ Zurückgestellt bis Spieltag ${game.matchday + ASSISTENT_ZURUECK_SPIELTAGE}.`, 'info');
+    renderManagerAssistant();
+}
+
+function resetManagerSnooze() {
+    ensureAssistentState();
+    game.assistentZurueck = {};
+    renderManagerAssistant();
+}
+
 function getManagerTodos(alle) {
     const t = [];
     const probleme = typeof getLineupProblems === 'function' ? getLineupProblems().filter(x => x.ton === 'schlecht') : [];
-    if (probleme.length) t.push({ prio: 95, icon: '🔴', text: `Aufstellung prüfen: ${probleme[0].text}`, label: 'Zur Aufstellung', aktion: "showScreen('screen-squad')" });
-    if (game.money < 0) t.push({ prio: 92, icon: '🔴', text: `Die Kasse ist im Minus (${formatVal(game.money)}): Transfersperre und Financial Fairplay drohen.`, label: 'Zu den Finanzen', aktion: "showScreen('screen-finances')" });
+    if (probleme.length) t.push({ id: 'aufstellung', prio: 95, icon: '🔴', text: `Aufstellung prüfen: ${probleme[0].text}`, label: 'Zur Aufstellung', aktion: "showScreen('screen-squad')" });
+    if (game.money < 0) t.push({ id: 'kasse-minus', prio: 92, icon: '🔴', text: `Die Kasse ist im Minus (${formatVal(game.money)}): Transfersperre und Financial Fairplay drohen.`, label: 'Zu den Finanzen', aktion: "showScreen('screen-finances')" });
     const ausl = squad.filter(p => p.contracts <= 0);
-    if (ausl.length) t.push({ prio: 85, icon: '🟠', text: `${ausl.length} Vertrag${ausl.length === 1 ? ' läuft' : 'e laufen'} zum Saisonende aus (${ausl.slice(0, 2).map(p => p.name).join(', ')}${ausl.length > 2 ? ' …' : ''}).`, label: 'Verlängerungs-Assistent', aktion: "showScreen('screen-contracts'); openRenewalAssistant()" });
-    if (incomingOffers.length) t.push({ prio: 88, icon: '🟠', text: `${incomingOffers.length} Angebot${incomingOffers.length === 1 ? '' : 'e'} für deine Spieler warten auf eine Antwort.`, label: 'Zu den Angeboten', aktion: "showScreen('screen-transfer'); setTransferTab('offers')" });
+    if (ausl.length) t.push({ id: 'vertraege-aus', prio: 85, icon: '🟠', text: `${ausl.length} Vertrag${ausl.length === 1 ? ' läuft' : 'e laufen'} zum Saisonende aus (${ausl.slice(0, 2).map(p => p.name).join(', ')}${ausl.length > 2 ? ' …' : ''}).`, label: 'Verlängerungs-Assistent', aktion: "showScreen('screen-contracts'); openRenewalAssistant()" });
+    if (incomingOffers.length) t.push({ id: 'angebote', prio: 88, icon: '🟠', text: `${incomingOffers.length} Angebot${incomingOffers.length === 1 ? '' : 'e'} für deine Spieler warten auf eine Antwort.`, label: 'Zu den Angeboten', aktion: "showScreen('screen-transfer'); setTransferTab('offers')" });
     const jugend = typeof youthTalents !== 'undefined' ? youthTalents.filter(p => p.proDecisionLeft) : [];
-    if (jugend.length) t.push({ prio: 72, icon: '🟠', text: `${jugend.length} Jugendspieler warten auf eine Profivertrag-Entscheidung.`, label: 'Zur Jugend', aktion: "showScreen('screen-youth')" });
+    if (jugend.length) t.push({ id: 'jugend', prio: 72, icon: '🟠', text: `${jugend.length} Jugendspieler warten auf eine Profivertrag-Entscheidung.`, label: 'Zur Jugend', aktion: "showScreen('screen-youth')" });
     const muede = squad.filter(p => lineup.includes(p.id) && (p.injured || 0) === 0 && p.fitness < 70);
-    if (muede.length) t.push({ prio: 65, icon: '🟡', text: `${muede.length} Stammspieler sind erschöpft (${muede.slice(0, 2).map(p => `${p.name} ${p.fitness} %`).join(', ')}).`, label: 'Zur Aufstellung', aktion: "showScreen('screen-squad')" });
+    if (muede.length) t.push({ id: 'muede', prio: 65, icon: '🟡', text: `${muede.length} Stammspieler sind erschöpft (${muede.slice(0, 2).map(p => `${p.name} ${p.fitness} %`).join(', ')}).`, label: 'Zur Aufstellung', aktion: "showScreen('screen-squad')" });
     const bald = squad.filter(p => p.contracts === 1);
-    if (bald.length && !ausl.length) t.push({ prio: 55, icon: '🟡', text: `${bald.length} Vertrag${bald.length === 1 ? ' hat' : 'e haben'} nur noch ein Jahr Laufzeit.`, label: 'Verlängerungs-Assistent', aktion: "showScreen('screen-contracts'); openRenewalAssistant()" });
+    if (bald.length && !ausl.length) t.push({ id: 'vertraege-bald', prio: 55, icon: '🟡', text: `${bald.length} Vertrag${bald.length === 1 ? ' hat' : 'e haben'} nur noch ein Jahr Laufzeit.`, label: 'Verlängerungs-Assistent', aktion: "showScreen('screen-contracts'); openRenewalAssistant()" });
     const stammAus = squad.filter(p => (p.injured || 0) > 0 && [...squad].sort((a, b) => b.strength - a.strength).slice(0, 11).includes(p));
-    if (stammAus.length) t.push({ prio: 50, icon: '🟡', text: `${stammAus.length} Stammspieler verletzt: ${stammAus.slice(0, 2).map(p => p.name).join(', ')}.`, label: 'Zum Kader', aktion: "showScreen('screen-squad')" });
+    if (stammAus.length) t.push({ id: 'verletzt', prio: 50, icon: '🟡', text: `${stammAus.length} Stammspieler verletzt: ${stammAus.slice(0, 2).map(p => p.name).join(', ')}.`, label: 'Zum Kader', aktion: "showScreen('screen-squad')" });
     // Etikett „Beobachten“: nur wer gerade etwas Auffälliges zeigt, wird gemeldet (verletzt, Form fällt/steigt, Vertrag endet)
     const beobachtet = squad.map(p => {
         if (!getPlayerTags(p).includes('beobachten')) return null;
@@ -22631,25 +22726,45 @@ function getManagerTodos(alle) {
         const grund = (p.injured || 0) > 0 ? `verletzt (${p.injured} SpT)` : (trend === 'fallend' ? 'Form fällt' : (trend === 'steigend' ? 'Form steigt' : (p.contracts <= 1 ? 'Vertrag endet bald' : '')));
         return grund ? `${p.name} (${grund})` : null;
     }).filter(Boolean);
-    if (beobachtet.length) t.push({ prio: 45, icon: '👀', text: `Beobachtet: ${beobachtet.slice(0, 2).join(', ')}${beobachtet.length > 2 ? ' …' : ''}.`, label: 'Zum Kader', aktion: "showScreen('screen-squad'); if (squadTagFilter !== 'beobachten') setSquadTagFilter('beobachten')" });
+    if (beobachtet.length) t.push({ id: 'beobachtet', prio: 45, icon: '👀', text: `Beobachtet: ${beobachtet.slice(0, 2).join(', ')}${beobachtet.length > 2 ? ' …' : ''}.`, label: 'Zum Kader', aktion: "showScreen('screen-squad'); if (squadTagFilter !== 'beobachten') setSquadTagFilter('beobachten')" });
     // Fristen: Transferfenster, Hauptsponsor, Kreditraten (nur Anzeige aus den vorhandenen Ständen der Module)
     if (typeof isTransferWindowOpen === 'function' && isTransferWindowOpen()) {
         const letzter = game.winterWindowActive ? game.winterWindowCloseMatchday : (typeof SUMMER_WINDOW_LAST_MATCHDAY !== 'undefined' ? SUMMER_WINDOW_LAST_MATCHDAY : null);
         const rest = typeof letzter === 'number' ? letzter - game.matchday + 1 : null;
-        if (rest !== null && rest >= 1 && rest <= 2) t.push({ prio: 62, icon: '⏳', text: `Das ${game.winterWindowActive ? 'Winter-' : 'Sommer-'}Transferfenster schließt in ${rest === 1 ? 'diesem Spieltag' : 'zwei Spieltagen'}.`, label: 'Zum Transfermarkt', aktion: "showScreen('screen-transfer')" });
+        if (rest !== null && rest >= 1 && rest <= 2) t.push({ id: 'fenster', prio: 62, icon: '⏳', text: `Das ${game.winterWindowActive ? 'Winter-' : 'Sommer-'}Transferfenster schließt in ${rest === 1 ? 'diesem Spieltag' : 'zwei Spieltagen'}.`, label: 'Zum Transfermarkt', aktion: "showScreen('screen-transfer')" });
     }
     const sp = game.sponsor;
     if (sp && sp.name && sp.name !== 'Kein Hauptsponsor' && typeof sp.duration === 'number' && sp.duration > 0 && sp.duration < 900) {
         const angebot = typeof getSponsorRenewal === 'function' ? getSponsorRenewal() : null;
-        if (angebot) t.push({ prio: 75, icon: '🟠', text: `${sp.name} bietet eine Vertragsverlängerung an (Vertrag noch ${sp.duration} Spieltage).`, label: 'Zu den Sponsoren', aktion: "showScreen('screen-sponsors')" });
-        else if (sp.duration <= 6) t.push({ prio: 68, icon: '🟡', text: `Der Hauptsponsor ${sp.name} läuft in ${sp.duration} Spieltag${sp.duration === 1 ? '' : 'en'} aus.`, label: 'Zu den Sponsoren', aktion: "showScreen('screen-sponsors')" });
+        if (angebot) t.push({ id: 'sponsor-angebot', prio: 75, icon: '🟠', text: `${sp.name} bietet eine Vertragsverlängerung an (Vertrag noch ${sp.duration} Spieltage).`, label: 'Zu den Sponsoren', aktion: "showScreen('screen-sponsors')" });
+        else if (sp.duration <= 6) t.push({ id: 'sponsor-ende', prio: 68, icon: '🟡', text: `Der Hauptsponsor ${sp.name} läuft in ${sp.duration} Spieltag${sp.duration === 1 ? '' : 'en'} aus.`, label: 'Zu den Sponsoren', aktion: "showScreen('screen-sponsors')" });
     }
     const raten = typeof activeLoans !== 'undefined' ? activeLoans.reduce((s, l) => s + (l.installment || 0), 0) : 0;
-    if (raten > 0 && game.money >= 0 && game.money < raten * 3) t.push({ prio: 78, icon: '🟠', text: `Die Kasse (${formatVal(game.money)}) deckt nur ${Math.floor(game.money / raten)} von 3 anstehenden Kreditraten (${formatVal(raten)} je Spieltag).`, label: 'Zu den Finanzen', aktion: "showScreen('screen-finances')" });
+    if (raten > 0 && game.money >= 0 && game.money < raten * 3) t.push({ id: 'kredit', prio: 78, icon: '🟠', text: `Die Kasse (${formatVal(game.money)}) deckt nur ${Math.floor(game.money / raten)} von 3 anstehenden Kreditraten (${formatVal(raten)} je Spieltag).`, label: 'Zu den Finanzen', aktion: "showScreen('screen-finances')" });
     const ungelesen = typeof inboxMessages !== 'undefined' ? inboxMessages.filter(m => !m.read).length : 0;
-    if (ungelesen >= 8) t.push({ prio: 20, icon: '📬', text: `${ungelesen} ungelesene Nachrichten im Postfach.`, label: 'Zum Postfach', aktion: "showScreen('screen-inbox')" });
-    t.sort((a, b) => b.prio - a.prio);
-    return alle ? t : t.slice(0, 3);
+    if (ungelesen >= 8) t.push({ id: 'postfach', prio: 20, icon: '📬', text: `${ungelesen} ungelesene Nachrichten im Postfach.`, label: 'Zum Postfach', aktion: "showScreen('screen-inbox')" });
+    const offen = t.filter(x => !istZurueckgestellt(x.id));
+    offen.sort((a, b) => b.prio - a.prio);
+    return alle ? offen : offen.slice(0, 3);
+}
+
+// Rückkehr-Termine der Ausgefallenen (aus p.injured und p.suspended), Stammspieler (die elf Stärksten) mit Stern
+function getReturnInfo() {
+    const top = [...squad].sort((a, b) => b.strength - a.strength).slice(0, 11).map(p => p.id);
+    const liste = squad.filter(p => (p.injured || 0) > 0 || (p.suspended || 0) > 0).map(p => {
+        const verletzt = (p.injured || 0) > 0;
+        const n = verletzt ? p.injured : p.suspended;
+        return { p, grund: verletzt ? 'verletzt' : 'gesperrt', n, stamm: top.includes(p.id) };
+    }).sort((a, b) => (b.stamm - a.stamm) || (a.n - b.n) || (b.p.strength - a.p.strength));
+    return liste;
+}
+
+function getReturnLineHtml() {
+    const liste = getReturnInfo();
+    if (!liste.length) return '';
+    const teil = x => `${x.stamm ? '⭐ ' : ''}${mpEsc(x.p.name)} ${x.n === 1 ? 'in 1 Spiel' : `in ${x.n} Spielen`}${x.grund === 'gesperrt' ? ' (gesperrt)' : ''}`;
+    const sichtbar = liste.slice(0, 3).map(teil).join(', ');
+    return `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:6px;">🩹 Zurück: ${sichtbar}${liste.length > 3 ? ` und ${liste.length - 3} weitere` : ''}</div>`;
 }
 
 // updateUI() ruft den Assistenten bei jedem Aufruf; das DOM wird nur neu geschrieben, wenn sich der Inhalt ändert
@@ -22662,9 +22777,13 @@ function renderManagerAssistant() {
     if (!dash || dash.style.display === 'none') return;
     if (typeof squad === 'undefined' || !squad.length) { box.innerHTML = ''; managerAssistantLetzterInhalt = ''; return; }
     const todos = getManagerTodos();
+    ensureAssistentState();
+    const zurueck = Object.keys(game.assistentZurueck).filter(istZurueckgestellt).length;
     const html = `<div class="panel-header">🧭 Manager-Assistent</div>` + (todos.length
-        ? todos.map(x => `<div class="box" style="margin:4px 0; font-size:var(--fs-small); display:flex; justify-content:space-between; align-items:center; gap:8px;"><span>${x.icon} ${mpEsc(x.text)}</span><button onclick="${x.aktion}" class="btn-secondary" style="width:auto; flex:0 0 auto;">${x.label}</button></div>`).join('')
-        : `<div class="box" style="font-size:var(--fs-small);">✅ Alles im grünen Bereich: Aufstellung steht, keine Verträge drängen, die Kasse passt. Zeit für den nächsten Spieltag.</div>`);
+        ? todos.map(x => `<div class="box" style="margin:4px 0; font-size:var(--fs-small); display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:6px 8px;"><span style="flex:1 1 11em; min-width:0;">${x.icon} ${mpEsc(x.text)}</span><span style="display:flex; gap:4px; flex:0 0 auto;"><button onclick="${x.aktion}" class="btn-secondary" style="width:auto; flex:0 0 auto;">${x.label}</button>${ASSISTENT_NICHT_ZURUECK.includes(x.id) ? '' : `<button onclick="snoozeManagerTodo('${x.id}')" class="btn-secondary" style="width:auto; flex:0 0 auto;" title="Diesen Schritt ${ASSISTENT_ZURUECK_SPIELTAGE} Spieltage ausblenden">⏸️ Später</button>`}</span></div>`).join('')
+        : `<div class="box" style="font-size:var(--fs-small);">✅ Alles im grünen Bereich: Aufstellung steht, keine Verträge drängen, die Kasse passt. Zeit für den nächsten Spieltag.</div>`)
+        + (zurueck ? `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:6px;">⏸️ ${zurueck} Schritt${zurueck === 1 ? '' : 'e'} zurückgestellt <button onclick="resetManagerSnooze()" class="btn-secondary" style="width:auto; margin:0 0 0 6px;">Alle wieder zeigen</button></div>` : '')
+        + getReturnLineHtml();
     if (html === managerAssistantLetzterInhalt && box.firstChild) return;
     managerAssistantLetzterInhalt = html;
     box.innerHTML = html;
@@ -23785,9 +23904,9 @@ function renderSeasonObjectivesPanel() {
                             obj.difficulty === 'MEDIUM' ? 'var(--accent)' : 'var(--primary)';
 
             html += `<div style="background:var(--surface-1); padding:8px; margin-bottom:6px; border-radius:4px;">`;
-            html += `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">`;
-            html += `<strong style="font-size:var(--fs-small);">${obj.name}</strong>`;
-            html += `<span style="font-size:var(--fs-micro); color:${diffColor};">${obj.difficulty}</span>`;
+            html += `<div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:2px 8px; margin-bottom:4px;">`;
+            html += `<strong style="font-size:var(--fs-small); min-width:0; overflow-wrap:anywhere;">${obj.name}</strong>`;
+            html += `<span style="font-size:var(--fs-micro); color:${diffColor}; flex:0 0 auto;">${obj.difficulty}</span>`;
             html += `</div>`;
             html += `<p style="font-size:var(--fs-caption); color:var(--text-muted); margin:0 0 4px 0;">${obj.description}</p>`;
             html += `<div style="width:100%; height:8px; background:var(--surface-2); border-radius:2px; overflow:hidden; margin-bottom:4px;">`;
@@ -29215,6 +29334,7 @@ function cleanupLegacyScoutState() {
         let scoreline = ourGoals > oppGoals ? 'Ihr führt' : (ourGoals < oppGoals ? 'Ihr liegt zurück' : 'Unentschieden');
         document.getElementById('halftime-score-summary').innerText = `${scoreline} (${currentMatch.homeGoals}:${currentMatch.awayGoals}) - was sagst du der Mannschaft in der Kabine?`;
         renderHalftimeSubSuggestion();
+        if (typeof renderHalftimeNotiz === 'function') renderHalftimeNotiz();
         document.getElementById('halftime-talk-overlay').classList.add('show');
     }
     // KI-Vorschlag für Einwechslungen zur Halbzeit: identifiziert den müdesten
@@ -31352,6 +31472,7 @@ const EMERGENCY_WAGE_FLOOR = [50000, 15000, 3000, 1000, 400, 150];
 
 function concludeSeasonAndAdvance() {
         if (typeof archiveTransferBilanz === 'function') archiveTransferBilanz();
+        if (typeof archiveVorlageBilanz === 'function') archiveVorlageBilanz();
         // Erfolgsbasierte Vertragsboni (js/bonusclauses.js): das Aufstiegsbonus-Flag wird
         // bewusst HIER, ganz am Anfang, zurückgesetzt - nicht in der allgemeinen
         // Saisonstatistik-Reset-Schleife weiter unten. Der Aufstieg dieser (gerade endenden)
