@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.134', date: '15.10.2026', features: 'Phase 26.8-26.10: Fristen im Manager-Assistenten, Kaderplaner mit Ausfällen, Bilanz je Aufstellungsvorlage, Etiketten mit kleiner Spielwirkung, Bilanz im Gegner-Notizbuch, Vergleich von der Karte, Ausfall-Rangliste, Fokus in Fenstern, Knöpfe ohne Wortbruch auf engen Handys, schnellere Kaderansicht, Testdatei aufgeteilt' };
+    const GAME_VERSION = { number: '3.135', date: '15.10.2026', features: 'Phase 26.11-26.12: CSV mit Etiketten und Verletzungen, Rückkehr-Termine und Schritte zurückstellen im Manager-Assistenten, Kaderplaner mit Ausfall-Risiko, Vorlagen-Bilanz je Saison, Etiketten mit kleiner Spielwirkung, Notiz in der Halbzeit-Ansicht, Stresstest mit breiterer Schrift, Layout-Korrekturen (Spielfeld-Schilder, enge Raster), Kader-Radar-Fix, content-visibility für lange Listen' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
