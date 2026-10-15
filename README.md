@@ -443,12 +443,12 @@ Alle lesen echte Spieldaten und ändern die Mannschaft nur auf Tipp:
 - **Spieltag-Check** vor dem Anpfiff: Aufstellungs-Check, wer fehlt, Rotations-Assistent
   (einschließlich „Ausgeruhte Elf aufstellen“), Aufstellungsvorlagen mit Stärke gegen den Gegner
   und Bilanz je Vorlage, Gegner-Notizbuch mit Bilanz gegen den Verein (auch nach dem Abpfiff mit Ergebnis-Entwurf),
-  Hinweis auf verletzungsanfällige Spieler in der Startelf (`js/matchprep.js`).
+  Hinweis auf verletzungsanfällige Spieler in der Startelf, Notizbuch mit Schlagwörtern und Suche (`js/matchprep.js`).
 - **Verträge:** Gehalts-Ampel, Verlängerungs-Assistent, Marktwert-Kurve, Entwicklungsprognose,
   Transferbilanz-Historie (`js/contract-tools.js`).
-- **Statistik:** Serien, Formkurve, CSV-Export, Spielbericht teilen, Fachwort-Hilfe, Saisonrückblick je Saison (`js/insights.js`).
+- **Statistik:** Serien, Formkurve, CSV-Export, Spielbericht teilen, Fachwort-Hilfe, Saisonrückblick je Saison mit Vorsaison-Vergleich und Text zum Teilen (`js/insights.js`).
 - **Manager:** Liquiditäts-Vorschau, Konto-Alarm, Spieler-Etiketten (Stammkraft und Aufbauspieler wirken klein auf die Moral, Schonen auf das Verletzungsrisiko), Manager-Assistent
-  (nächste Schritte nach Dringlichkeit, auch Fristen, „Erledigt seit dem letzten Spieltag“, Preis-Alarm für beobachtete Scouting-Funde), Etiketten-Bilanz, Lizenz-Laufbahn (`js/manager-tools.js`).
+  (nächste Schritte nach Dringlichkeit, auch Fristen, „Erledigt seit dem letzten Spieltag“, Preis-Alarm für beobachtete Scouting-Funde), Etiketten-Bilanz und Bilanz je Spieler, Marktwert-Hinweis, Lizenz-Laufbahn (`js/manager-tools.js`).
 - **Vergleich:** zwei Spieler nebeneinander, auch Transfermarkt gegen eigenen Kader (`js/player-compare.js`).
 - **Verletzungen:** Verlauf je Spieler, Ausfall-Rangliste im Medizin-Panel, Ausfälle im Kaderplaner
   (`js/medical-department.js`, `js/squadplanning.js`).
