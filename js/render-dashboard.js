@@ -1,5 +1,6 @@
 
     function renderDashboardView() {
+        if (typeof renderSaisonZiele === 'function') renderSaisonZiele();
         document.getElementById('dash-mday').innerText = Math.min(34, game.matchday);
         document.getElementById('dash-league-name').innerText = leagueNames[game.leagueLevel];
         // Vorstands-Warnung dieser Saison mit Ausweg (25.26); verschwindet, sobald das Vertrauen wieder über 60 liegt.

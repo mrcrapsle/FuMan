@@ -254,6 +254,12 @@
         <div id="season-review-body"></div>
     </div>
 </div>
+<div id="reminder-overlay" class="generic-modal-overlay">
+    <div class="generic-modal-box">
+        <button onclick="closeErinnerungen()" class="generic-modal-close" aria-label="Schließen">✕</button>
+        <div id="reminder-body"></div>
+    </div>
+</div>
 <div id="fachwort-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
         <button onclick="closeFachwort()" class="generic-modal-close" aria-label="Schließen">✕</button>
@@ -581,6 +587,7 @@
         <div class="menu-backdrop" id="menu-backdrop" onclick="closeMenuDrawer()"></div>
         <!-- SIDEBAR -->
         <nav class="app-sidebar" id="app-sidebar" aria-label="Hauptmenü">
+            <div id="recent-screens-box"></div>
             <div class="nav-category" data-i18n="nav_category_main">Hauptzentrale</div>
             <button class="nav-btn active" onclick="showScreen('screen-office')" data-i18n="nav_office">🏢 Managerbüro</button>
             <button class="nav-btn" onclick="showScreen('screen-dashboard')" data-i18n="nav_dashboard">📊 FM13 Dashboard</button>
@@ -822,6 +829,7 @@
                 <div id="member-assembly-box" class="panel" style="display:none; border-color:var(--gold); margin-bottom:10px;"></div>
                 <div id="season-review-hint"></div>
                 <div id="manager-assistant-box" class="panel" style="margin-bottom:10px;"></div>
+                <div id="season-goal-box" class="panel" style="margin-bottom:10px;"></div>
                 <div class="panel">
                     <div class="panel-header">
                         <span>⚽ Nächste Begegnung (Spieltag <span id="dash-mday">1</span>)</span>
@@ -1394,6 +1402,7 @@
                                 <div class="pitch-center-circle"></div>
                             </div>
                         </div>
+                        <button onclick="shareLineup()" class="btn-secondary" style="margin-top:6px;">📋 Aufstellung teilen</button>
                     </div>
                     <div class="panel">
                         <div class="panel-header">Kaderliste & Attribute</div>
@@ -1449,6 +1458,7 @@
                 <div id="squad-tab-analyse" style="display:none;">
                     <div class="panel" id="series-tracker-box"></div>
                     <div class="panel" id="season-review-box"></div>
+                    <div class="panel" id="match-reports-box"></div>
                     <div class="panel" id="opp-notes-box"></div>
                     <div class="panel" id="preset-bilanz-box"></div>
                     <div class="panel" id="tag-bilanz-box"></div>
@@ -2093,6 +2103,10 @@
                 <div class="panel">
                     <div class="panel-header" style="color:var(--gold);">📅 Saisonplanung</div>
                     <div id="season-planning-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header" style="color:var(--blue);">🗓️ Vertragsplan</div>
+                    <div id="contract-plan-box"></div>
                 </div>
                 <div class="panel">
                     <div class="panel-header">📝 Vertragsverwaltung</div>

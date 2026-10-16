@@ -42,6 +42,7 @@
 
     function renderContractsView() {
         renderSeasonPlanningBox();
+        if (typeof renderVertragsplan === 'function') renderVertragsplan();
         let list = document.getElementById('contracts-list');
         list.innerHTML = '';
         squad.forEach(p => {

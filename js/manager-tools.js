@@ -381,6 +381,68 @@ function renderPlayerStartBilanz(p, pool) {
         <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">Das ist keine Ursache: Stammkräfte fehlen oft gerade gegen schwere Gegner nicht, kleine Stichproben schwanken stark.</div></div></details>`;
 }
 
+// ---------- Eigene Erinnerungen (Phase 26.16) ----------
+// Der Manager notiert einen Text mit Spieltag; ab diesem Spieltag erscheint er als Schritt im Manager-Assistenten, bis er
+// abgehakt wird. game.erinnerungen = [{ id, text, season, bis }], höchstens 10; game.erinnerungNr zählt die Kennungen.
+const ERINNERUNG_MAX = 10, ERINNERUNG_TEXT_MAX = 80;
+
+function ensureErinnerungen() {
+    if (!Array.isArray(game.erinnerungen)) game.erinnerungen = [];
+    if (typeof game.erinnerungNr !== 'number') game.erinnerungNr = game.erinnerungen.length;
+}
+
+function istErinnerungFaellig(e) {
+    return game.season > e.season || game.matchday >= e.bis;
+}
+
+function openErinnerungen() {
+    const ov = document.getElementById('reminder-overlay');
+    if (!ov) return;
+    renderErinnerungen();
+    ov.classList.add('show');
+}
+
+function closeErinnerungen() {
+    const ov = document.getElementById('reminder-overlay');
+    if (ov) ov.classList.remove('show');
+}
+
+function addErinnerung() {
+    ensureErinnerungen();
+    const feld = document.getElementById('reminder-text'), tag = document.getElementById('reminder-matchday');
+    const text = feld ? feld.value.trim().replace(/\s+/g, ' ').slice(0, ERINNERUNG_TEXT_MAX) : '';
+    const bis = tag ? parseInt(tag.value, 10) : NaN;
+    if (!text) { showToast('Schreibe zuerst, woran du erinnert werden willst.', 'error'); return; }
+    if (!(bis >= 1 && bis <= 34)) { showToast('Der Spieltag muss zwischen 1 und 34 liegen.', 'error'); return; }
+    if (game.erinnerungen.length >= ERINNERUNG_MAX) { showToast(`Es sind höchstens ${ERINNERUNG_MAX} Erinnerungen möglich. Hake zuerst eine ab.`, 'error'); return; }
+    game.erinnerungNr++;
+    game.erinnerungen.push({ id: 'r' + game.erinnerungNr, text, season: game.season, bis });
+    showToast(`📝 Erinnerung zu Spieltag ${bis} gespeichert.`, 'success');
+    if (feld) feld.value = '';
+    renderErinnerungen();
+    if (typeof renderManagerAssistant === 'function') { managerAssistantLetzterInhalt = ''; renderManagerAssistant(); }
+}
+
+function deleteErinnerung(id) {
+    ensureErinnerungen();
+    game.erinnerungen = game.erinnerungen.filter(e => e.id !== id);
+    renderErinnerungen();
+    if (typeof renderManagerAssistant === 'function') { managerAssistantLetzterInhalt = ''; renderManagerAssistant(); }
+}
+
+function renderErinnerungen() {
+    const box = document.getElementById('reminder-body');
+    if (!box) return;
+    ensureErinnerungen();
+    const liste = [...game.erinnerungen].sort((a, b) => (a.season - b.season) || (a.bis - b.bis));
+    box.innerHTML = `<div class="panel-header">📝 Erinnerungen (${liste.length}/${ERINNERUNG_MAX})</div>`
+        + (liste.length ? liste.map(e => `<div class="box" style="margin:4px 0; font-size:var(--fs-small); display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:6px 8px;"><span style="flex:1 1 11em; min-width:0;">${istErinnerungFaellig(e) ? '🔔' : '⏳'} ${mpEsc(e.text)} <span style="color:var(--text-muted);">· ${e.season > game.season ? 'Saison ' + e.season + ', ' : ''}Spieltag ${e.bis}</span></span><button onclick="deleteErinnerung('${e.id}')" class="btn-secondary" style="width:auto; flex:0 0 auto;" title="Erinnerung löschen">🗑️ Löschen</button></div>`).join('')
+            : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Erinnerungen. Zum gewählten Spieltag erscheint der Text als Schritt im Manager-Assistenten.</div>')
+        + `<label class="ui-field" style="margin-top:8px;"><span class="ui-field-label">Woran willst du erinnert werden?</span><input id="reminder-text" type="text" maxlength="${ERINNERUNG_TEXT_MAX}" class="input-inline" placeholder="z. B. Vertrag verlängern" style="width:100%; box-sizing:border-box; text-align:left; font-weight:normal; font-family:inherit;"></label>`
+        + `<label class="ui-field" style="margin-top:6px;"><span class="ui-field-label">Am Spieltag</span><input id="reminder-matchday" type="number" min="1" max="34" value="${Math.min(34, game.matchday + 3)}" class="input-inline" style="width:6em;"></label>`
+        + `<button onclick="addErinnerung()" class="btn-action" style="margin-top:8px;">➕ Erinnerung speichern</button>`;
+}
+
 // ---------- Manager-Assistent ----------
 
 // Bis zu drei empfohlene nächste Schritte, aus echten Daten und nach Dringlichkeit geordnet
@@ -466,6 +528,7 @@ function getManagerTodos(alle, roh) {
     }
     const merkWeg = Array.isArray(game.marktMerkliste) ? game.marktMerkliste.filter(e => e.status === 'weg') : [];
     if (merkWeg.length) t.push({ id: 'merkliste-weg', prio: 52, icon: '⭐', text: `Gemerkt, aber vom Markt verschwunden: ${merkWeg.slice(0, 2).map(e => `${e.name} (${e.pos}, Str ${e.strength})`).join(', ')}${merkWeg.length > 2 ? ' …' : ''}.`, label: 'Zum Transfermarkt', aktion: "showScreen('screen-transfer'); setTransferTab('market')" });
+    (Array.isArray(game.erinnerungen) ? game.erinnerungen : []).filter(istErinnerungFaellig).forEach(e => t.push({ id: 'erinnerung-' + e.id, prio: 60, icon: '📝', text: `Erinnerung: ${e.text}`, label: 'Abhaken', aktion: `deleteErinnerung('${e.id}')` }));
     const preisAlarm = typeof getScoutPriceAlerts === 'function' ? getScoutPriceAlerts() : [];
     if (preisAlarm.length) t.push({ id: 'scout-alarm', prio: 70, icon: '🔔', text: `Preis-Alarm: ${preisAlarm.slice(0, 2).map(x => `${x.p.name} (${x.p.pos}, Str ${x.p.strength}) für ${formatVal(x.preis)}`).join(', ')}${preisAlarm.length > 2 ? ' …' : ''} liegt unter deiner Grenze und ist bezahlbar.`, label: 'Zum Scouting', aktion: "showScreen('screen-scouting-global')" });
     const ungelesen = typeof inboxMessages !== 'undefined' ? inboxMessages.filter(m => !m.read).length : 0;
@@ -545,6 +608,7 @@ function renderManagerAssistant() {
             + zurueckListe.map(x => `<div class="box" style="margin:4px 0; font-size:var(--fs-small); display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:6px 8px;"><span style="flex:1 1 11em; min-width:0;">${x.icon} ${mpEsc(x.text)} <span style="color:var(--text-muted);">· bis Spieltag ${game.assistentZurueck[x.id].bis}</span></span><button onclick="unsnoozeManagerTodo('${x.id}')" class="btn-secondary" style="width:auto; flex:0 0 auto;">Wieder zeigen</button></div>`).join('')
             + `<button onclick="resetManagerSnooze()" class="btn-secondary" style="margin-top:4px;">Alle wieder zeigen</button></details>` : '')
         + getAssistentErledigtHtml()
+        + `<div style="margin-top:6px;"><button onclick="openErinnerungen()" class="btn-secondary" style="width:auto;">📝 Erinnerungen (${Array.isArray(game.erinnerungen) ? game.erinnerungen.length : 0})</button></div>`
         + getReturnLineHtml();
     if (html === managerAssistantLetzterInhalt && box.firstChild) return;
     managerAssistantLetzterInhalt = html;

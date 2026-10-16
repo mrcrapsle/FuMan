@@ -60,6 +60,47 @@ function recordScreenVisit(vorher, neu) {
     if (oneHandScreenStack.length > ONE_HAND_STACK_MAX) oneHandScreenStack.shift();
 }
 
+// Jeder neu gezeigte Bildschirm kommt in die Liste „Zuletzt geöffnet“ (auch beim Zurückgehen), die Anzeige folgt gleich danach
+function aktualisiereZuletzt(neu) {
+    merkeZuletzt(neu);
+    renderZuletzt();
+}
+
+// ---------- Zuletzt geöffnet (Phase 26.16) ----------
+// Die letzten fünf besuchten Bildschirme stehen oben im Menü zum direkten Antippen. Eine Einstellung dieses Geräts
+// (localStorage), kein Spielstand. Nur Bildschirme mit Menüeintrag erscheinen; der aktuelle fehlt in der Liste.
+const ZULETZT_KEY = 'anstoss_fm13_zuletzt';
+const ZULETZT_MAX = 5;
+
+function getZuletzt() {
+    try {
+        const l = JSON.parse(safeLocalGet(ZULETZT_KEY) || '[]');
+        return Array.isArray(l) ? l.filter(x => typeof x === 'string').slice(0, ZULETZT_MAX + 3) : [];
+    } catch (e) { return []; }
+}
+
+function merkeZuletzt(screenId) {
+    if (!screenId || ONE_HAND_NO_HISTORY.includes(screenId)) return;
+    const l = [screenId, ...getZuletzt().filter(x => x !== screenId)].slice(0, ZULETZT_MAX + 3);
+    safeLocalSet(ZULETZT_KEY, JSON.stringify(l));
+}
+
+// Beschriftung aus dem Menüeintrag des Bildschirms (so stimmt auch die Sprache)
+function getZuletztLabel(screenId) {
+    const knopf = [...document.querySelectorAll('#app-sidebar .nav-btn')].find(b => (b.getAttribute('onclick') || '').includes(`showScreen('${screenId}')`));
+    if (!knopf) return '';
+    const t = knopf.querySelector('[data-i18n]');
+    return (t || knopf).textContent.replace(/\s+/g, ' ').trim();
+}
+
+function renderZuletzt() {
+    const box = document.getElementById('recent-screens-box');
+    if (!box) return;
+    const eintraege = getZuletzt().filter(id => id !== aktiverScreen).map(id => ({ id, label: getZuletztLabel(id) })).filter(e => e.label).slice(0, ZULETZT_MAX);
+    const html = eintraege.length ? `<div class="nav-category">Zuletzt geöffnet</div>` + eintraege.map(e => `<button class="nav-btn" data-s="${e.id}" onclick="showScreen(this.dataset.s)">${e.label}</button>`).join('') : '';
+    if (box.innerHTML !== html) box.innerHTML = html;
+}
+
 function findOpenOverlay() {
     const offen = [...document.querySelectorAll('.generic-modal-overlay.show, .tutorial-overlay.show')];
     return offen.length ? offen.sort((a, b) => (parseInt(getComputedStyle(b).zIndex) || 0) - (parseInt(getComputedStyle(a).zIndex) || 0))[0] : null;

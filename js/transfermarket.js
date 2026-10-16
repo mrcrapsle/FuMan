@@ -615,6 +615,25 @@
             + (weg ? `<button onclick="clearMarktMerklisteWeg()" class="btn-secondary" style="margin-top:4px;">Verschwundene entfernen</button>` : '') + '</div>';
     }
 
+    // Was hindert dich gerade am Sofortkauf? Dieselben Prüfungen wie finalizePlayerPurchase(), aber ohne etwas zu ändern.
+    // Liefert die Gründe als Liste; leer heißt: bezahlbar.
+    function getKaufHindernisse(p) {
+        const gruende = [];
+        if (isTransferEmbargoActive()) gruende.push('Transfersperre');
+        const ablose = getTransferAsking(p);
+        const gesamt = ablose + getAgentFee(p, ablose);
+        if (game.money < gesamt) gruende.push('Kasse reicht nicht');
+        if (game.transferBudget < ablose) gruende.push('Transferbudget zu klein');
+        const lohnsumme = squad.reduce((s, pl) => s + pl.wage, 0) + (game.secondTeam && game.secondTeam.isActive ? secondTeamSquad.reduce((s, pl) => s + pl.wage, 0) : 0);
+        if (lohnsumme + p.wage > game.wageBudget) gruende.push('Gehaltsbudget gesprengt');
+        return gruende;
+    }
+
+    function getKaufChip(p) {
+        const g = getKaufHindernisse(p);
+        return g.length ? uiChip(`⛔ ${g.join(', ')}`, 'schlecht') : uiChip('✓ leistbar', 'gut');
+    }
+
     function renderTransferView() {
         if (typeof renderAiTransferNews === 'function') renderAiTransferNews();
         renderLoanMarketView();
@@ -682,6 +701,7 @@
                 sub: `${p.age ? p.age + ' J. · ' : ''}🏟️ ${ensureTransferTerms(p).sellerClub}`,
                 meta: [
                     uiChip(`💶 ${formatVal(p.marketValue)}`),
+                    getKaufChip(p),
                     p.deadlineBargain ? uiChip('⏰ Schnäppchen -30 %', 'schlecht') : '',
                     (p.trait && p.trait !== 'Kein') ? uiChip(p.trait) : '',
                     typeof getMedicalTag === 'function' ? uiChip(getMedicalTag(p)) : '',

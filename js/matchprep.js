@@ -590,6 +590,20 @@ function getRotationSuggestions() {
             if (kandidat) { belegt.add(kandidat.id); vorschlaege.push({ raus: starter, rein: kandidat, delta: Math.round((eff(kandidat) - eff(starter)) * 10) / 10 }); }
             else if (starter.fitness < 60) vorschlaege.push({ raus: starter, rein: null, delta: 0 });
         });
+    // Belastungsampel (Phase 26.16): auch wer rot ist oder bei Gelb im Dauereinsatz steht, bekommt eine Pause vorgeschlagen,
+    // selbst wenn die Fitness allein noch keine Rotation auslöst (lockerere Grenzen, der Ersatz darf nicht selbst rot sein)
+    const mitTausch = new Set(vorschlaege.filter(v => v.rein).map(v => v.raus.id));
+    lineup.map(id => squad.find(p => p.id === id)).filter(p => p && mpIstEinsatzbereit(p) && !mitTausch.has(p.id)).forEach(starter => {
+        const a = typeof getBelastungsAmpel === 'function' ? getBelastungsAmpel(starter) : null;
+        if (!a || !(a.stufe === 'rot' || (a.stufe === 'gelb' && a.gruende.some(g => g.startsWith('5 von 5'))))) return;
+        const kandidat = bank.filter(b => !belegt.has(b.id) && b.pos === starter.pos && b.fitness >= 70 && getBelastungsAmpel(b).stufe !== 'rot' && eff(b) >= eff(starter) - 3)
+            .sort((x, y) => eff(y) - eff(x))[0];
+        if (!kandidat) return;
+        const alt = vorschlaege.findIndex(v => v.raus.id === starter.id);
+        if (alt !== -1) vorschlaege.splice(alt, 1);
+        belegt.add(kandidat.id);
+        vorschlaege.push({ raus: starter, rein: kandidat, delta: Math.round((eff(kandidat) - eff(starter)) * 10) / 10, grund: 'belastung', gruende: a.gruende });
+    });
     return vorschlaege;
 }
 
@@ -711,7 +725,7 @@ function renderPrematchCheck() {
     const muedeZeile = muede.length ? `<div class="box" style="font-size:var(--fs-small); margin:4px 0; border-left-color:var(--danger);">😮‍💨 <strong>${muede.length} Stammspieler erschöpft:</strong> ${muede.map(p => `${mpEsc(p.name)} (${p.fitness} %)`).join(', ')}. Fitness zählt voll in die Teamstärke.${ohneErsatz.length ? ` Für ${ohneErsatz.map(mpEsc).join(', ')} gibt es auf der Bank keinen gleichwertigen Ersatz.` : ''}
             <button onclick="rotateTiredPlayers()" class="btn-action" style="margin-top:6px;">🔄 Ausgeruhte Elf aufstellen</button></div>` : '';
     const rotListe = muedeZeile + (rotation.length ? rotation.map(r => `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">${mpEsc(r.raus.name)} (${r.raus.pos}, ${r.raus.fitness} % fit) ↔ ${mpEsc(r.rein.name)} (${r.rein.fitness} % fit)
-            <span style="color:var(--text-muted);">· effektive Stärke ${r.delta >= 0 ? '+' : ''}${r.delta}</span>
+            <span style="color:var(--text-muted);">· effektive Stärke ${r.delta >= 0 ? '+' : ''}${r.delta}</span>${r.grund === 'belastung' ? `<br><span style="color:var(--text-muted);">🚦 Belastung: ${mpEsc(r.gruende.join(', '))}</span>` : ''}
             <button onclick="applyRotationSwap('${r.raus.id}', '${r.rein.id}')" class="btn-secondary" style="margin-top:4px;">🔄 Tauschen</button></div>`).join('')
         : (muede.length ? '' : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Keine Rotation nötig: alle Stammspieler sind ausgeruht oder ohne frischen Ersatz.</div>'));
     const fragilZeile = fragil.length ? `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin:2px 0 4px;">Wer oft ausfällt oder das Etikett „Schonen“ trägt, hat im Spiel ein höheres Verletzungsrisiko. Ob du ihn heute aufstellst, entscheidest du.</div>` + fragil.map(f => `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">${mpEsc(f.p.name)} (${f.p.pos}, Str ${f.p.strength}): ${f.schonen ? '🛌 Schonen' : ''}${f.schonen && (f.p.timesInjured || 0) >= MP_FRAGIL_AB ? ', ' : ''}${(f.p.timesInjured || 0) >= MP_FRAGIL_AB ? `${f.p.timesInjured} Verletzungen${f.verpasst ? `, zuletzt ${f.verpasst} Spiele verpasst` : ''}` : ''}

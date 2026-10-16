@@ -325,16 +325,128 @@ function buildSeasonReviewText(saison) {
     return [`📚 Saisonrückblick ${saison} · ${game.clubName}`, ...zeilen, '— Anstoß Mobile Pro FM13'].join('\n');
 }
 
-function shareSeasonReview(saison) {
+// ---------- Saisonziel-Rechner (Phase 26.16) ----------
+// Wie weit bist du von Aufstieg, Europa und Klassenerhalt entfernt? Reine Tabellenwerte (Punkte, Spiele), keine Prognose:
+// „gesichert“ heißt, der Verfolger kann dich auch mit allen restlichen Siegen nicht mehr einholen; „nicht mehr erreichbar“, dass du den
+// Zielplatz auch mit allen restlichen Siegen nicht mehr erreichst, selbst wenn der Konkurrent nichts mehr holt (Torverhältnis zählt nicht).
+const SAISON_SPIELE = 34;
+
+function getSaisonZiele() {
+    const tab = typeof sortedTable === 'function' ? sortedTable(game.leagueLevel) : [];
+    const ich = tab.findIndex(t => t.name === game.clubName);
+    if (ich === -1 || !tab[ich].played) return [];
+    const me = tab[ich], rang = ich + 1;
+    const rest = Math.max(0, SAISON_SPIELE - me.played);
+    const ziele = [];
+    const unterste = game.leagueLevel >= NUM_LEAGUES - 1;
+    if (game.leagueLevel === 0) ziele.push({ id: 'europa', label: '🌍 Europa-Platz', platz: 4 });
+    else ziele.push({ id: 'aufstieg', label: '⬆️ Direkter Aufstieg', platz: 2 });
+    if (!unterste) ziele.push({ id: 'klasse', label: '🛡️ Klassenerhalt ohne Relegation', platz: 15 });
+    return ziele.map(z => {
+        const R = z.platz;
+        if (tab.length <= R) return null;
+        if (rang <= R) {
+            // innen: Vorsprung auf den ersten Platz außerhalb
+            const verfolger = tab[R];
+            const restV = Math.max(0, SAISON_SPIELE - verfolger.played);
+            const vorsprung = me.points - verfolger.points;
+            const sicher = me.points > verfolger.points + 3 * restV;
+            return { ...z, innen: true, rest, punkte: vorsprung, gegner: verfolger.name, sicher, erreichbar: true };
+        }
+        const ziel = tab[R - 1];
+        const rueckstand = ziel.points - me.points;
+        return { ...z, innen: false, rest, punkte: rueckstand, gegner: ziel.name, sicher: false, erreichbar: me.points + 3 * rest >= ziel.points };
+    }).filter(Boolean);
+}
+
+function renderSaisonZiele() {
+    const box = document.getElementById('season-goal-box');
+    if (!box) return;
+    const ziele = game.matchday > SAISON_SPIELE ? [] : getSaisonZiele();
+    if (!ziele.length) { box.innerHTML = ''; return; }
+    const rest = ziele[0].rest;
+    box.innerHTML = '<div class="panel-header" style="color:var(--blue);">🎯 Saisonziele</div>'
+        + ziele.map(z => {
+            const ton = z.innen ? (z.sicher ? 'gut' : 'warn') : (z.erreichbar ? 'warn' : 'schlecht');
+            const status = z.innen ? (z.sicher ? 'gesichert' : `Vorsprung ${z.punkte} Punkt${z.punkte === 1 ? '' : 'e'} auf ${mpEsc(z.gegner)}`)
+                : (z.erreichbar ? `Rückstand ${z.punkte} Punkt${z.punkte === 1 ? '' : 'e'} auf ${mpEsc(z.gegner)}` : 'nicht mehr erreichbar');
+            return `<div class="box" style="margin:4px 0; font-size:var(--fs-small); display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 8px;"><span>${z.label} (Platz ${z.platz})</span><span>${uiChip(status, ton)}</span></div>`;
+        }).join('')
+        + `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">Noch ${rest} Spiel${rest === 1 ? '' : 'e'} (höchstens ${3 * rest} Punkte). Reine Tabellenwerte, das Torverhältnis zählt nicht.</div>`;
+}
+
+// ---------- Spielbericht-Archiv (Phase 26.16) ----------
+// Nach dem Abpfiff eines Livespiels (und Pokal-Livespiels) wird der Spielbericht als Text gespeichert; die letzten zehn bleiben
+// im Reiter Analyse zum erneuten Öffnen und Teilen. game.spielberichte = [{ season, matchday, cup, titel, text }], neueste zuerst.
+const SPIELBERICHT_MAX = 10;
+
+function archiveMatchReport() {
+    const text = buildMatchReportText();
+    if (!text) return false;
+    if (!Array.isArray(game.spielberichte)) game.spielberichte = [];
+    const m = currentMatch;
+    const cup = !!m.isCup;
+    const titel = `${m.homeName} ${m.homeGoals}:${m.awayGoals} ${m.awayName}`;
+    game.spielberichte = game.spielberichte.filter(b => !(b.season === game.season && b.matchday === game.matchday && b.cup === cup));
+    game.spielberichte.unshift({ season: game.season, matchday: game.matchday, cup, titel, text });
+    game.spielberichte = game.spielberichte.slice(0, SPIELBERICHT_MAX);
+    return true;
+}
+
+function openArchivedReport(i) {
+    const b = Array.isArray(game.spielberichte) ? game.spielberichte[i] : null;
+    if (!b) { showToast('Diesen Spielbericht gibt es nicht mehr.', 'error'); return; }
+    openShareText(`📤 Spielbericht: ${b.titel}`, b.text);
+}
+
+function renderMatchReportsBox() {
+    const box = document.getElementById('match-reports-box');
+    if (!box) return;
+    const liste = Array.isArray(game.spielberichte) ? game.spielberichte : [];
+    box.innerHTML = `<div class="panel-header" style="color:var(--blue);">🗂️ Spielbericht-Archiv (${liste.length}/${SPIELBERICHT_MAX})</div>`
+        + (liste.length ? liste.map((b, i) => `<button onclick="openArchivedReport(${i})" class="btn-secondary" style="display:flex; justify-content:space-between; gap:8px; width:100%; text-align:left; margin:2px 0;" title="Bericht öffnen, kopieren oder teilen"><span>${b.cup ? '🏆 ' : ''}${mpEsc(b.titel)}</span><span style="color:var(--text-muted); flex:0 0 auto;">S${b.season} · ${b.matchday}</span></button>`).join('')
+            : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Nach jedem Livespiel landet der Spielbericht hier. Simulierte Spieltage haben keinen Bericht.</div>');
+}
+
+// Das Teilen-Fenster des Spielberichts für beliebigen Text: Titel setzen, Text einfügen, Fenster öffnen
+function openShareText(titel, text) {
     const feld = document.getElementById('share-report-text'), ov = document.getElementById('share-report-overlay');
-    if (!feld || !ov) return;
-    feld.value = buildSeasonReviewText(Number(saison));
-    const titel = document.getElementById('share-report-title');
-    if (titel) titel.textContent = '📤 Saisonrückblick teilen';
+    if (!feld || !ov) return false;
+    feld.value = text;
+    const t = document.getElementById('share-report-title');
+    if (t) t.textContent = titel;
     const teilen = document.getElementById('share-report-native');
     if (teilen) teilen.style.display = typeof navigator.share === 'function' ? '' : 'none';
-    closeSeasonReview();
     ov.classList.add('show');
+    return true;
+}
+
+function shareSeasonReview(saison) {
+    closeSeasonReview();
+    openShareText('📤 Saisonrückblick teilen', buildSeasonReviewText(Number(saison)));
+}
+
+// Die Startelf als Text: Formation, Spielstil, Härte, Spieler nach Positionen, die stärksten Ersatzspieler
+function buildLineupText() {
+    const elf = lineup.map(id => squad.find(p => p.id === id)).filter(Boolean);
+    if (!elf.length) return '';
+    const name = p => `${p.name}${p.id === game.captainId ? ' (C)' : ''} ${p.strength}`;
+    const zeilen = [`📋 Aufstellung · ${game.clubName}`, `Formation ${game.formation} · Spielstil ${game.tacticStyle} · Härte ${game.tackleHardness}`];
+    ['TW', 'ABW', 'MIT', 'ST'].forEach(pos => {
+        const gruppe = elf.filter(p => p.pos === pos);
+        if (gruppe.length) zeilen.push(`${pos}: ${gruppe.map(name).join(', ')}`);
+    });
+    const bank = squad.filter(p => !lineup.includes(p.id)).sort((a, b) => b.strength - a.strength).slice(0, 7);
+    if (bank.length) zeilen.push(`Bank: ${bank.map(p => `${p.name} ${p.strength}${(p.injured || 0) > 0 ? ' (verletzt)' : ''}`).join(', ')}`);
+    if (elf.length !== 11) zeilen.push(`Achtung: nur ${elf.length} von 11 Spielern aufgestellt.`);
+    zeilen.push('— Anstoß Mobile Pro FM13');
+    return zeilen.join('\n');
+}
+
+function shareLineup() {
+    const text = buildLineupText();
+    if (!text) { showToast('Es ist noch niemand aufgestellt.', 'error'); return; }
+    openShareText('📤 Aufstellung teilen', text);
 }
 
 // Nach dem Saisonwechsel bis zum dritten Spieltag: Knopf im Dashboard (ein Fenster würde sich mit den Meldungen des Saisonwechsels stapeln)
@@ -371,4 +483,5 @@ function announceSeasonReview() {
 function renderInsightsPanels() {
     renderSeriesTracker();
     renderSeasonReviewBox();
+    renderMatchReportsBox();
 }

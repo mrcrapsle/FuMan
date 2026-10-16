@@ -664,6 +664,9 @@ function renderUiStatRow(werte) {
         rueckblickGesehen: 0,
         marktMerkliste: [],
         matchplaene: {},
+        erinnerungen: [],
+        erinnerungNr: 0,
+        spielberichte: [],
         assistentErledigt: null,
         vorlageBilanzArchiv: [],
         vorlageImEinsatz: null,
@@ -4096,6 +4099,20 @@ function getRotationSuggestions() {
             if (kandidat) { belegt.add(kandidat.id); vorschlaege.push({ raus: starter, rein: kandidat, delta: Math.round((eff(kandidat) - eff(starter)) * 10) / 10 }); }
             else if (starter.fitness < 60) vorschlaege.push({ raus: starter, rein: null, delta: 0 });
         });
+    // Belastungsampel (Phase 26.16): auch wer rot ist oder bei Gelb im Dauereinsatz steht, bekommt eine Pause vorgeschlagen,
+    // selbst wenn die Fitness allein noch keine Rotation auslöst (lockerere Grenzen, der Ersatz darf nicht selbst rot sein)
+    const mitTausch = new Set(vorschlaege.filter(v => v.rein).map(v => v.raus.id));
+    lineup.map(id => squad.find(p => p.id === id)).filter(p => p && mpIstEinsatzbereit(p) && !mitTausch.has(p.id)).forEach(starter => {
+        const a = typeof getBelastungsAmpel === 'function' ? getBelastungsAmpel(starter) : null;
+        if (!a || !(a.stufe === 'rot' || (a.stufe === 'gelb' && a.gruende.some(g => g.startsWith('5 von 5'))))) return;
+        const kandidat = bank.filter(b => !belegt.has(b.id) && b.pos === starter.pos && b.fitness >= 70 && getBelastungsAmpel(b).stufe !== 'rot' && eff(b) >= eff(starter) - 3)
+            .sort((x, y) => eff(y) - eff(x))[0];
+        if (!kandidat) return;
+        const alt = vorschlaege.findIndex(v => v.raus.id === starter.id);
+        if (alt !== -1) vorschlaege.splice(alt, 1);
+        belegt.add(kandidat.id);
+        vorschlaege.push({ raus: starter, rein: kandidat, delta: Math.round((eff(kandidat) - eff(starter)) * 10) / 10, grund: 'belastung', gruende: a.gruende });
+    });
     return vorschlaege;
 }
 
@@ -4217,7 +4234,7 @@ function renderPrematchCheck() {
     const muedeZeile = muede.length ? `<div class="box" style="font-size:var(--fs-small); margin:4px 0; border-left-color:var(--danger);">😮‍💨 <strong>${muede.length} Stammspieler erschöpft:</strong> ${muede.map(p => `${mpEsc(p.name)} (${p.fitness} %)`).join(', ')}. Fitness zählt voll in die Teamstärke.${ohneErsatz.length ? ` Für ${ohneErsatz.map(mpEsc).join(', ')} gibt es auf der Bank keinen gleichwertigen Ersatz.` : ''}
             <button onclick="rotateTiredPlayers()" class="btn-action" style="margin-top:6px;">🔄 Ausgeruhte Elf aufstellen</button></div>` : '';
     const rotListe = muedeZeile + (rotation.length ? rotation.map(r => `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">${mpEsc(r.raus.name)} (${r.raus.pos}, ${r.raus.fitness} % fit) ↔ ${mpEsc(r.rein.name)} (${r.rein.fitness} % fit)
-            <span style="color:var(--text-muted);">· effektive Stärke ${r.delta >= 0 ? '+' : ''}${r.delta}</span>
+            <span style="color:var(--text-muted);">· effektive Stärke ${r.delta >= 0 ? '+' : ''}${r.delta}</span>${r.grund === 'belastung' ? `<br><span style="color:var(--text-muted);">🚦 Belastung: ${mpEsc(r.gruende.join(', '))}</span>` : ''}
             <button onclick="applyRotationSwap('${r.raus.id}', '${r.rein.id}')" class="btn-secondary" style="margin-top:4px;">🔄 Tauschen</button></div>`).join('')
         : (muede.length ? '' : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Keine Rotation nötig: alle Stammspieler sind ausgeruht oder ohne frischen Ersatz.</div>'));
     const fragilZeile = fragil.length ? `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin:2px 0 4px;">Wer oft ausfällt oder das Etikett „Schonen“ trägt, hat im Spiel ein höheres Verletzungsrisiko. Ob du ihn heute aufstellst, entscheidest du.</div>` + fragil.map(f => `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">${mpEsc(f.p.name)} (${f.p.pos}, Str ${f.p.strength}): ${f.schonen ? '🛌 Schonen' : ''}${f.schonen && (f.p.timesInjured || 0) >= MP_FRAGIL_AB ? ', ' : ''}${(f.p.timesInjured || 0) >= MP_FRAGIL_AB ? `${f.p.timesInjured} Verletzungen${f.verpasst ? `, zuletzt ${f.verpasst} Spiele verpasst` : ''}` : ''}
@@ -9203,6 +9220,25 @@ function renderTransferPokerBox() {
             + (weg ? `<button onclick="clearMarktMerklisteWeg()" class="btn-secondary" style="margin-top:4px;">Verschwundene entfernen</button>` : '') + '</div>';
     }
 
+    // Was hindert dich gerade am Sofortkauf? Dieselben Prüfungen wie finalizePlayerPurchase(), aber ohne etwas zu ändern.
+    // Liefert die Gründe als Liste; leer heißt: bezahlbar.
+    function getKaufHindernisse(p) {
+        const gruende = [];
+        if (isTransferEmbargoActive()) gruende.push('Transfersperre');
+        const ablose = getTransferAsking(p);
+        const gesamt = ablose + getAgentFee(p, ablose);
+        if (game.money < gesamt) gruende.push('Kasse reicht nicht');
+        if (game.transferBudget < ablose) gruende.push('Transferbudget zu klein');
+        const lohnsumme = squad.reduce((s, pl) => s + pl.wage, 0) + (game.secondTeam && game.secondTeam.isActive ? secondTeamSquad.reduce((s, pl) => s + pl.wage, 0) : 0);
+        if (lohnsumme + p.wage > game.wageBudget) gruende.push('Gehaltsbudget gesprengt');
+        return gruende;
+    }
+
+    function getKaufChip(p) {
+        const g = getKaufHindernisse(p);
+        return g.length ? uiChip(`⛔ ${g.join(', ')}`, 'schlecht') : uiChip('✓ leistbar', 'gut');
+    }
+
     function renderTransferView() {
         if (typeof renderAiTransferNews === 'function') renderAiTransferNews();
         renderLoanMarketView();
@@ -9270,6 +9306,7 @@ function renderTransferPokerBox() {
                 sub: `${p.age ? p.age + ' J. · ' : ''}🏟️ ${ensureTransferTerms(p).sellerClub}`,
                 meta: [
                     uiChip(`💶 ${formatVal(p.marketValue)}`),
+                    getKaufChip(p),
                     p.deadlineBargain ? uiChip('⏰ Schnäppchen -30 %', 'schlecht') : '',
                     (p.trait && p.trait !== 'Kein') ? uiChip(p.trait) : '',
                     typeof getMedicalTag === 'function' ? uiChip(getMedicalTag(p)) : '',
@@ -12372,6 +12409,7 @@ function renderBoardRoomPanel() {
         // Für die Zurück-Taste (js/one-hand.js): woher kam man?
         if (typeof recordScreenVisit === 'function') recordScreenVisit(aktiverScreen, screenId);
         aktiverScreen = screenId;
+        if (typeof aktualisiereZuletzt === 'function') aktualisiereZuletzt(screenId);
         if (typeof onScreenShown === 'function') onScreenShown(screenId);
         if (typeof loescheBuchungskontext === 'function') loescheBuchungskontext();
         const screens = [
@@ -12605,6 +12643,47 @@ function recordScreenVisit(vorher, neu) {
     if (ONE_HAND_NO_HISTORY.includes(vorher)) return;
     oneHandScreenStack.push(vorher);
     if (oneHandScreenStack.length > ONE_HAND_STACK_MAX) oneHandScreenStack.shift();
+}
+
+// Jeder neu gezeigte Bildschirm kommt in die Liste „Zuletzt geöffnet“ (auch beim Zurückgehen), die Anzeige folgt gleich danach
+function aktualisiereZuletzt(neu) {
+    merkeZuletzt(neu);
+    renderZuletzt();
+}
+
+// ---------- Zuletzt geöffnet (Phase 26.16) ----------
+// Die letzten fünf besuchten Bildschirme stehen oben im Menü zum direkten Antippen. Eine Einstellung dieses Geräts
+// (localStorage), kein Spielstand. Nur Bildschirme mit Menüeintrag erscheinen; der aktuelle fehlt in der Liste.
+const ZULETZT_KEY = 'anstoss_fm13_zuletzt';
+const ZULETZT_MAX = 5;
+
+function getZuletzt() {
+    try {
+        const l = JSON.parse(safeLocalGet(ZULETZT_KEY) || '[]');
+        return Array.isArray(l) ? l.filter(x => typeof x === 'string').slice(0, ZULETZT_MAX + 3) : [];
+    } catch (e) { return []; }
+}
+
+function merkeZuletzt(screenId) {
+    if (!screenId || ONE_HAND_NO_HISTORY.includes(screenId)) return;
+    const l = [screenId, ...getZuletzt().filter(x => x !== screenId)].slice(0, ZULETZT_MAX + 3);
+    safeLocalSet(ZULETZT_KEY, JSON.stringify(l));
+}
+
+// Beschriftung aus dem Menüeintrag des Bildschirms (so stimmt auch die Sprache)
+function getZuletztLabel(screenId) {
+    const knopf = [...document.querySelectorAll('#app-sidebar .nav-btn')].find(b => (b.getAttribute('onclick') || '').includes(`showScreen('${screenId}')`));
+    if (!knopf) return '';
+    const t = knopf.querySelector('[data-i18n]');
+    return (t || knopf).textContent.replace(/\s+/g, ' ').trim();
+}
+
+function renderZuletzt() {
+    const box = document.getElementById('recent-screens-box');
+    if (!box) return;
+    const eintraege = getZuletzt().filter(id => id !== aktiverScreen).map(id => ({ id, label: getZuletztLabel(id) })).filter(e => e.label).slice(0, ZULETZT_MAX);
+    const html = eintraege.length ? `<div class="nav-category">Zuletzt geöffnet</div>` + eintraege.map(e => `<button class="nav-btn" data-s="${e.id}" onclick="showScreen(this.dataset.s)">${e.label}</button>`).join('') : '';
+    if (box.innerHTML !== html) box.innerHTML = html;
 }
 
 function findOpenOverlay() {
@@ -13172,6 +13251,7 @@ function initZugaenglichkeit() {
 /* eslint-enable */
 
     function renderDashboardView() {
+        if (typeof renderSaisonZiele === 'function') renderSaisonZiele();
         document.getElementById('dash-mday').innerText = Math.min(34, game.matchday);
         document.getElementById('dash-league-name').innerText = leagueNames[game.leagueLevel];
         // Vorstands-Warnung dieser Saison mit Ausweg (25.26); verschwindet, sobald das Vertrauen wieder über 60 liegt.
@@ -22202,6 +22282,7 @@ function renderYouthPathwayBoxes() {
 
     function renderContractsView() {
         renderSeasonPlanningBox();
+        if (typeof renderVertragsplan === 'function') renderVertragsplan();
         let list = document.getElementById('contracts-list');
         list.innerHTML = '';
         squad.forEach(p => {
@@ -22559,6 +22640,33 @@ function renderRenewalAssistant() {
         })}</div>`;
     }).join('');
     if (typeof mpFokusHalten === 'function') mpFokusHalten('renewal-assistant-overlay', '.btn-action:not([disabled])');
+}
+
+// ---------- Vertragsplan (Phase 26.16) ----------
+// Wann laufen welche Verträge aus, und wie viel Gehalt wird dadurch frei? Am Saisonende zählt `contracts` um eins herunter und
+// wer dann bei 0 steht, geht: Restlaufzeit 1 (oder weniger) = Ende dieser Saison, 2 = Ende der nächsten, 3 = Ende der übernächsten.
+// Reine Anzeige aus Kader, Gehältern und Gehaltsbudget (Gehälter und Budget gelten je Spieltag).
+
+function getVertragsplan() {
+    const lohn = squad.reduce((s, p) => s + (p.wage || 0), 0);
+    let frei = 0;
+    return [0, 1, 2].map(k => {
+        const spieler = squad.filter(p => k === 0 ? p.contracts <= 1 : p.contracts === k + 1).sort((a, b) => b.strength - a.strength);
+        const gehalt = spieler.reduce((s, p) => s + (p.wage || 0), 0);
+        frei += gehalt;
+        return { saison: game.season + k, spieler, gehalt, lohnDanach: lohn - frei, spielraum: game.wageBudget - (lohn - frei) };
+    });
+}
+
+function renderVertragsplan() {
+    const box = document.getElementById('contract-plan-box');
+    if (!box) return;
+    if (!squad.length) { box.innerHTML = ''; return; }
+    const plan = getVertragsplan();
+    const lohn = squad.reduce((s, p) => s + (p.wage || 0), 0);
+    box.innerHTML = `<div style="font-size:var(--fs-small); margin-bottom:6px;">Gehälter heute: <strong>${formatVal(lohn)}</strong> von ${formatVal(game.wageBudget)} Gehaltsbudget je Spieltag (${formatVal(game.wageBudget - lohn)} Spielraum).</div>`
+        + plan.map((z, k) => `<div class="box" style="margin:4px 0; font-size:var(--fs-small);"><strong>${k === 0 ? 'Saisonende ' + z.saison + ' (diese Saison)' : 'Saisonende ' + z.saison}</strong>: ${z.spieler.length ? `${z.spieler.length} Vertrag${z.spieler.length === 1 ? '' : 'e'} laufen aus (${z.spieler.slice(0, 3).map(p => `${mpEsc(p.name)} ${p.strength}`).join(', ')}${z.spieler.length > 3 ? ' …' : ''}), frei werden ${formatVal(z.gehalt)} je Spieltag` : 'keine Verträge laufen aus'}
+            <div style="color:var(--text-muted); font-size:var(--fs-caption);">Danach ${formatVal(z.lohnDanach)} Gehälter, ${formatVal(z.spielraum)} Spielraum im heutigen Budget (ohne Ersatz und Verlängerungen).</div></div>`).join('');
 }
 
 // ---------- Marktwert-Kurve ----------
@@ -22976,16 +23084,128 @@ function buildSeasonReviewText(saison) {
     return [`📚 Saisonrückblick ${saison} · ${game.clubName}`, ...zeilen, '— Anstoß Mobile Pro FM13'].join('\n');
 }
 
-function shareSeasonReview(saison) {
+// ---------- Saisonziel-Rechner (Phase 26.16) ----------
+// Wie weit bist du von Aufstieg, Europa und Klassenerhalt entfernt? Reine Tabellenwerte (Punkte, Spiele), keine Prognose:
+// „gesichert“ heißt, der Verfolger kann dich auch mit allen restlichen Siegen nicht mehr einholen; „nicht mehr erreichbar“, dass du den
+// Zielplatz auch mit allen restlichen Siegen nicht mehr erreichst, selbst wenn der Konkurrent nichts mehr holt (Torverhältnis zählt nicht).
+const SAISON_SPIELE = 34;
+
+function getSaisonZiele() {
+    const tab = typeof sortedTable === 'function' ? sortedTable(game.leagueLevel) : [];
+    const ich = tab.findIndex(t => t.name === game.clubName);
+    if (ich === -1 || !tab[ich].played) return [];
+    const me = tab[ich], rang = ich + 1;
+    const rest = Math.max(0, SAISON_SPIELE - me.played);
+    const ziele = [];
+    const unterste = game.leagueLevel >= NUM_LEAGUES - 1;
+    if (game.leagueLevel === 0) ziele.push({ id: 'europa', label: '🌍 Europa-Platz', platz: 4 });
+    else ziele.push({ id: 'aufstieg', label: '⬆️ Direkter Aufstieg', platz: 2 });
+    if (!unterste) ziele.push({ id: 'klasse', label: '🛡️ Klassenerhalt ohne Relegation', platz: 15 });
+    return ziele.map(z => {
+        const R = z.platz;
+        if (tab.length <= R) return null;
+        if (rang <= R) {
+            // innen: Vorsprung auf den ersten Platz außerhalb
+            const verfolger = tab[R];
+            const restV = Math.max(0, SAISON_SPIELE - verfolger.played);
+            const vorsprung = me.points - verfolger.points;
+            const sicher = me.points > verfolger.points + 3 * restV;
+            return { ...z, innen: true, rest, punkte: vorsprung, gegner: verfolger.name, sicher, erreichbar: true };
+        }
+        const ziel = tab[R - 1];
+        const rueckstand = ziel.points - me.points;
+        return { ...z, innen: false, rest, punkte: rueckstand, gegner: ziel.name, sicher: false, erreichbar: me.points + 3 * rest >= ziel.points };
+    }).filter(Boolean);
+}
+
+function renderSaisonZiele() {
+    const box = document.getElementById('season-goal-box');
+    if (!box) return;
+    const ziele = game.matchday > SAISON_SPIELE ? [] : getSaisonZiele();
+    if (!ziele.length) { box.innerHTML = ''; return; }
+    const rest = ziele[0].rest;
+    box.innerHTML = '<div class="panel-header" style="color:var(--blue);">🎯 Saisonziele</div>'
+        + ziele.map(z => {
+            const ton = z.innen ? (z.sicher ? 'gut' : 'warn') : (z.erreichbar ? 'warn' : 'schlecht');
+            const status = z.innen ? (z.sicher ? 'gesichert' : `Vorsprung ${z.punkte} Punkt${z.punkte === 1 ? '' : 'e'} auf ${mpEsc(z.gegner)}`)
+                : (z.erreichbar ? `Rückstand ${z.punkte} Punkt${z.punkte === 1 ? '' : 'e'} auf ${mpEsc(z.gegner)}` : 'nicht mehr erreichbar');
+            return `<div class="box" style="margin:4px 0; font-size:var(--fs-small); display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 8px;"><span>${z.label} (Platz ${z.platz})</span><span>${uiChip(status, ton)}</span></div>`;
+        }).join('')
+        + `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">Noch ${rest} Spiel${rest === 1 ? '' : 'e'} (höchstens ${3 * rest} Punkte). Reine Tabellenwerte, das Torverhältnis zählt nicht.</div>`;
+}
+
+// ---------- Spielbericht-Archiv (Phase 26.16) ----------
+// Nach dem Abpfiff eines Livespiels (und Pokal-Livespiels) wird der Spielbericht als Text gespeichert; die letzten zehn bleiben
+// im Reiter Analyse zum erneuten Öffnen und Teilen. game.spielberichte = [{ season, matchday, cup, titel, text }], neueste zuerst.
+const SPIELBERICHT_MAX = 10;
+
+function archiveMatchReport() {
+    const text = buildMatchReportText();
+    if (!text) return false;
+    if (!Array.isArray(game.spielberichte)) game.spielberichte = [];
+    const m = currentMatch;
+    const cup = !!m.isCup;
+    const titel = `${m.homeName} ${m.homeGoals}:${m.awayGoals} ${m.awayName}`;
+    game.spielberichte = game.spielberichte.filter(b => !(b.season === game.season && b.matchday === game.matchday && b.cup === cup));
+    game.spielberichte.unshift({ season: game.season, matchday: game.matchday, cup, titel, text });
+    game.spielberichte = game.spielberichte.slice(0, SPIELBERICHT_MAX);
+    return true;
+}
+
+function openArchivedReport(i) {
+    const b = Array.isArray(game.spielberichte) ? game.spielberichte[i] : null;
+    if (!b) { showToast('Diesen Spielbericht gibt es nicht mehr.', 'error'); return; }
+    openShareText(`📤 Spielbericht: ${b.titel}`, b.text);
+}
+
+function renderMatchReportsBox() {
+    const box = document.getElementById('match-reports-box');
+    if (!box) return;
+    const liste = Array.isArray(game.spielberichte) ? game.spielberichte : [];
+    box.innerHTML = `<div class="panel-header" style="color:var(--blue);">🗂️ Spielbericht-Archiv (${liste.length}/${SPIELBERICHT_MAX})</div>`
+        + (liste.length ? liste.map((b, i) => `<button onclick="openArchivedReport(${i})" class="btn-secondary" style="display:flex; justify-content:space-between; gap:8px; width:100%; text-align:left; margin:2px 0;" title="Bericht öffnen, kopieren oder teilen"><span>${b.cup ? '🏆 ' : ''}${mpEsc(b.titel)}</span><span style="color:var(--text-muted); flex:0 0 auto;">S${b.season} · ${b.matchday}</span></button>`).join('')
+            : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Nach jedem Livespiel landet der Spielbericht hier. Simulierte Spieltage haben keinen Bericht.</div>');
+}
+
+// Das Teilen-Fenster des Spielberichts für beliebigen Text: Titel setzen, Text einfügen, Fenster öffnen
+function openShareText(titel, text) {
     const feld = document.getElementById('share-report-text'), ov = document.getElementById('share-report-overlay');
-    if (!feld || !ov) return;
-    feld.value = buildSeasonReviewText(Number(saison));
-    const titel = document.getElementById('share-report-title');
-    if (titel) titel.textContent = '📤 Saisonrückblick teilen';
+    if (!feld || !ov) return false;
+    feld.value = text;
+    const t = document.getElementById('share-report-title');
+    if (t) t.textContent = titel;
     const teilen = document.getElementById('share-report-native');
     if (teilen) teilen.style.display = typeof navigator.share === 'function' ? '' : 'none';
-    closeSeasonReview();
     ov.classList.add('show');
+    return true;
+}
+
+function shareSeasonReview(saison) {
+    closeSeasonReview();
+    openShareText('📤 Saisonrückblick teilen', buildSeasonReviewText(Number(saison)));
+}
+
+// Die Startelf als Text: Formation, Spielstil, Härte, Spieler nach Positionen, die stärksten Ersatzspieler
+function buildLineupText() {
+    const elf = lineup.map(id => squad.find(p => p.id === id)).filter(Boolean);
+    if (!elf.length) return '';
+    const name = p => `${p.name}${p.id === game.captainId ? ' (C)' : ''} ${p.strength}`;
+    const zeilen = [`📋 Aufstellung · ${game.clubName}`, `Formation ${game.formation} · Spielstil ${game.tacticStyle} · Härte ${game.tackleHardness}`];
+    ['TW', 'ABW', 'MIT', 'ST'].forEach(pos => {
+        const gruppe = elf.filter(p => p.pos === pos);
+        if (gruppe.length) zeilen.push(`${pos}: ${gruppe.map(name).join(', ')}`);
+    });
+    const bank = squad.filter(p => !lineup.includes(p.id)).sort((a, b) => b.strength - a.strength).slice(0, 7);
+    if (bank.length) zeilen.push(`Bank: ${bank.map(p => `${p.name} ${p.strength}${(p.injured || 0) > 0 ? ' (verletzt)' : ''}`).join(', ')}`);
+    if (elf.length !== 11) zeilen.push(`Achtung: nur ${elf.length} von 11 Spielern aufgestellt.`);
+    zeilen.push('— Anstoß Mobile Pro FM13');
+    return zeilen.join('\n');
+}
+
+function shareLineup() {
+    const text = buildLineupText();
+    if (!text) { showToast('Es ist noch niemand aufgestellt.', 'error'); return; }
+    openShareText('📤 Aufstellung teilen', text);
 }
 
 // Nach dem Saisonwechsel bis zum dritten Spieltag: Knopf im Dashboard (ein Fenster würde sich mit den Meldungen des Saisonwechsels stapeln)
@@ -23022,6 +23242,7 @@ function announceSeasonReview() {
 function renderInsightsPanels() {
     renderSeriesTracker();
     renderSeasonReviewBox();
+    renderMatchReportsBox();
 }
 
 /* eslint-enable */
@@ -23408,6 +23629,68 @@ function renderPlayerStartBilanz(p, pool) {
         <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">Das ist keine Ursache: Stammkräfte fehlen oft gerade gegen schwere Gegner nicht, kleine Stichproben schwanken stark.</div></div></details>`;
 }
 
+// ---------- Eigene Erinnerungen (Phase 26.16) ----------
+// Der Manager notiert einen Text mit Spieltag; ab diesem Spieltag erscheint er als Schritt im Manager-Assistenten, bis er
+// abgehakt wird. game.erinnerungen = [{ id, text, season, bis }], höchstens 10; game.erinnerungNr zählt die Kennungen.
+const ERINNERUNG_MAX = 10, ERINNERUNG_TEXT_MAX = 80;
+
+function ensureErinnerungen() {
+    if (!Array.isArray(game.erinnerungen)) game.erinnerungen = [];
+    if (typeof game.erinnerungNr !== 'number') game.erinnerungNr = game.erinnerungen.length;
+}
+
+function istErinnerungFaellig(e) {
+    return game.season > e.season || game.matchday >= e.bis;
+}
+
+function openErinnerungen() {
+    const ov = document.getElementById('reminder-overlay');
+    if (!ov) return;
+    renderErinnerungen();
+    ov.classList.add('show');
+}
+
+function closeErinnerungen() {
+    const ov = document.getElementById('reminder-overlay');
+    if (ov) ov.classList.remove('show');
+}
+
+function addErinnerung() {
+    ensureErinnerungen();
+    const feld = document.getElementById('reminder-text'), tag = document.getElementById('reminder-matchday');
+    const text = feld ? feld.value.trim().replace(/\s+/g, ' ').slice(0, ERINNERUNG_TEXT_MAX) : '';
+    const bis = tag ? parseInt(tag.value, 10) : NaN;
+    if (!text) { showToast('Schreibe zuerst, woran du erinnert werden willst.', 'error'); return; }
+    if (!(bis >= 1 && bis <= 34)) { showToast('Der Spieltag muss zwischen 1 und 34 liegen.', 'error'); return; }
+    if (game.erinnerungen.length >= ERINNERUNG_MAX) { showToast(`Es sind höchstens ${ERINNERUNG_MAX} Erinnerungen möglich. Hake zuerst eine ab.`, 'error'); return; }
+    game.erinnerungNr++;
+    game.erinnerungen.push({ id: 'r' + game.erinnerungNr, text, season: game.season, bis });
+    showToast(`📝 Erinnerung zu Spieltag ${bis} gespeichert.`, 'success');
+    if (feld) feld.value = '';
+    renderErinnerungen();
+    if (typeof renderManagerAssistant === 'function') { managerAssistantLetzterInhalt = ''; renderManagerAssistant(); }
+}
+
+function deleteErinnerung(id) {
+    ensureErinnerungen();
+    game.erinnerungen = game.erinnerungen.filter(e => e.id !== id);
+    renderErinnerungen();
+    if (typeof renderManagerAssistant === 'function') { managerAssistantLetzterInhalt = ''; renderManagerAssistant(); }
+}
+
+function renderErinnerungen() {
+    const box = document.getElementById('reminder-body');
+    if (!box) return;
+    ensureErinnerungen();
+    const liste = [...game.erinnerungen].sort((a, b) => (a.season - b.season) || (a.bis - b.bis));
+    box.innerHTML = `<div class="panel-header">📝 Erinnerungen (${liste.length}/${ERINNERUNG_MAX})</div>`
+        + (liste.length ? liste.map(e => `<div class="box" style="margin:4px 0; font-size:var(--fs-small); display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:6px 8px;"><span style="flex:1 1 11em; min-width:0;">${istErinnerungFaellig(e) ? '🔔' : '⏳'} ${mpEsc(e.text)} <span style="color:var(--text-muted);">· ${e.season > game.season ? 'Saison ' + e.season + ', ' : ''}Spieltag ${e.bis}</span></span><button onclick="deleteErinnerung('${e.id}')" class="btn-secondary" style="width:auto; flex:0 0 auto;" title="Erinnerung löschen">🗑️ Löschen</button></div>`).join('')
+            : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Erinnerungen. Zum gewählten Spieltag erscheint der Text als Schritt im Manager-Assistenten.</div>')
+        + `<label class="ui-field" style="margin-top:8px;"><span class="ui-field-label">Woran willst du erinnert werden?</span><input id="reminder-text" type="text" maxlength="${ERINNERUNG_TEXT_MAX}" class="input-inline" placeholder="z. B. Vertrag verlängern" style="width:100%; box-sizing:border-box; text-align:left; font-weight:normal; font-family:inherit;"></label>`
+        + `<label class="ui-field" style="margin-top:6px;"><span class="ui-field-label">Am Spieltag</span><input id="reminder-matchday" type="number" min="1" max="34" value="${Math.min(34, game.matchday + 3)}" class="input-inline" style="width:6em;"></label>`
+        + `<button onclick="addErinnerung()" class="btn-action" style="margin-top:8px;">➕ Erinnerung speichern</button>`;
+}
+
 // ---------- Manager-Assistent ----------
 
 // Bis zu drei empfohlene nächste Schritte, aus echten Daten und nach Dringlichkeit geordnet
@@ -23493,6 +23776,7 @@ function getManagerTodos(alle, roh) {
     }
     const merkWeg = Array.isArray(game.marktMerkliste) ? game.marktMerkliste.filter(e => e.status === 'weg') : [];
     if (merkWeg.length) t.push({ id: 'merkliste-weg', prio: 52, icon: '⭐', text: `Gemerkt, aber vom Markt verschwunden: ${merkWeg.slice(0, 2).map(e => `${e.name} (${e.pos}, Str ${e.strength})`).join(', ')}${merkWeg.length > 2 ? ' …' : ''}.`, label: 'Zum Transfermarkt', aktion: "showScreen('screen-transfer'); setTransferTab('market')" });
+    (Array.isArray(game.erinnerungen) ? game.erinnerungen : []).filter(istErinnerungFaellig).forEach(e => t.push({ id: 'erinnerung-' + e.id, prio: 60, icon: '📝', text: `Erinnerung: ${e.text}`, label: 'Abhaken', aktion: `deleteErinnerung('${e.id}')` }));
     const preisAlarm = typeof getScoutPriceAlerts === 'function' ? getScoutPriceAlerts() : [];
     if (preisAlarm.length) t.push({ id: 'scout-alarm', prio: 70, icon: '🔔', text: `Preis-Alarm: ${preisAlarm.slice(0, 2).map(x => `${x.p.name} (${x.p.pos}, Str ${x.p.strength}) für ${formatVal(x.preis)}`).join(', ')}${preisAlarm.length > 2 ? ' …' : ''} liegt unter deiner Grenze und ist bezahlbar.`, label: 'Zum Scouting', aktion: "showScreen('screen-scouting-global')" });
     const ungelesen = typeof inboxMessages !== 'undefined' ? inboxMessages.filter(m => !m.read).length : 0;
@@ -23572,6 +23856,7 @@ function renderManagerAssistant() {
             + zurueckListe.map(x => `<div class="box" style="margin:4px 0; font-size:var(--fs-small); display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:6px 8px;"><span style="flex:1 1 11em; min-width:0;">${x.icon} ${mpEsc(x.text)} <span style="color:var(--text-muted);">· bis Spieltag ${game.assistentZurueck[x.id].bis}</span></span><button onclick="unsnoozeManagerTodo('${x.id}')" class="btn-secondary" style="width:auto; flex:0 0 auto;">Wieder zeigen</button></div>`).join('')
             + `<button onclick="resetManagerSnooze()" class="btn-secondary" style="margin-top:4px;">Alle wieder zeigen</button></details>` : '')
         + getAssistentErledigtHtml()
+        + `<div style="margin-top:6px;"><button onclick="openErinnerungen()" class="btn-secondary" style="width:auto;">📝 Erinnerungen (${Array.isArray(game.erinnerungen) ? game.erinnerungen.length : 0})</button></div>`
         + getReturnLineHtml();
     if (html === managerAssistantLetzterInhalt && box.firstChild) return;
     managerAssistantLetzterInhalt = html;
@@ -30206,6 +30491,7 @@ function cleanupLegacyScoutState() {
         document.getElementById('btn-finish-match').style.display = 'inline-block';
         const teilenKnopf = document.getElementById('btn-share-match'); if (teilenKnopf) teilenKnopf.style.display = 'inline-block';
         if (typeof updateNachspielNotizKnopf === 'function') updateNachspielNotizKnopf();
+        if (typeof archiveMatchReport === 'function') archiveMatchReport();
         // Schiedsrichter-Kritik (js/referee-critique.js): nur nach strittigen Szenen ohne Sieg.
         if (typeof offerRefereeCritique === 'function') offerRefereeCritique();
         if (currentMatch.cupTie) { finishCupLiveMatch(); return; }

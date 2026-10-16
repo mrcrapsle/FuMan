@@ -218,6 +218,7 @@
         // Für die Zurück-Taste (js/one-hand.js): woher kam man?
         if (typeof recordScreenVisit === 'function') recordScreenVisit(aktiverScreen, screenId);
         aktiverScreen = screenId;
+        if (typeof aktualisiereZuletzt === 'function') aktualisiereZuletzt(screenId);
         if (typeof onScreenShown === 'function') onScreenShown(screenId);
         if (typeof loescheBuchungskontext === 'function') loescheBuchungskontext();
         const screens = [

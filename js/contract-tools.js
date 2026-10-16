@@ -106,6 +106,33 @@ function renderRenewalAssistant() {
     if (typeof mpFokusHalten === 'function') mpFokusHalten('renewal-assistant-overlay', '.btn-action:not([disabled])');
 }
 
+// ---------- Vertragsplan (Phase 26.16) ----------
+// Wann laufen welche Verträge aus, und wie viel Gehalt wird dadurch frei? Am Saisonende zählt `contracts` um eins herunter und
+// wer dann bei 0 steht, geht: Restlaufzeit 1 (oder weniger) = Ende dieser Saison, 2 = Ende der nächsten, 3 = Ende der übernächsten.
+// Reine Anzeige aus Kader, Gehältern und Gehaltsbudget (Gehälter und Budget gelten je Spieltag).
+
+function getVertragsplan() {
+    const lohn = squad.reduce((s, p) => s + (p.wage || 0), 0);
+    let frei = 0;
+    return [0, 1, 2].map(k => {
+        const spieler = squad.filter(p => k === 0 ? p.contracts <= 1 : p.contracts === k + 1).sort((a, b) => b.strength - a.strength);
+        const gehalt = spieler.reduce((s, p) => s + (p.wage || 0), 0);
+        frei += gehalt;
+        return { saison: game.season + k, spieler, gehalt, lohnDanach: lohn - frei, spielraum: game.wageBudget - (lohn - frei) };
+    });
+}
+
+function renderVertragsplan() {
+    const box = document.getElementById('contract-plan-box');
+    if (!box) return;
+    if (!squad.length) { box.innerHTML = ''; return; }
+    const plan = getVertragsplan();
+    const lohn = squad.reduce((s, p) => s + (p.wage || 0), 0);
+    box.innerHTML = `<div style="font-size:var(--fs-small); margin-bottom:6px;">Gehälter heute: <strong>${formatVal(lohn)}</strong> von ${formatVal(game.wageBudget)} Gehaltsbudget je Spieltag (${formatVal(game.wageBudget - lohn)} Spielraum).</div>`
+        + plan.map((z, k) => `<div class="box" style="margin:4px 0; font-size:var(--fs-small);"><strong>${k === 0 ? 'Saisonende ' + z.saison + ' (diese Saison)' : 'Saisonende ' + z.saison}</strong>: ${z.spieler.length ? `${z.spieler.length} Vertrag${z.spieler.length === 1 ? '' : 'e'} laufen aus (${z.spieler.slice(0, 3).map(p => `${mpEsc(p.name)} ${p.strength}`).join(', ')}${z.spieler.length > 3 ? ' …' : ''}), frei werden ${formatVal(z.gehalt)} je Spieltag` : 'keine Verträge laufen aus'}
+            <div style="color:var(--text-muted); font-size:var(--fs-caption);">Danach ${formatVal(z.lohnDanach)} Gehälter, ${formatVal(z.spielraum)} Spielraum im heutigen Budget (ohne Ersatz und Verlängerungen).</div></div>`).join('');
+}
+
 // ---------- Marktwert-Kurve ----------
 
 // Marktwert je Saison, abgeleitet aus dem gespeicherten Stärkeverlauf (der Marktwert hängt an der Stärke);
