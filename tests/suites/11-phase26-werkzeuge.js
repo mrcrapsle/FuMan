@@ -2913,6 +2913,106 @@ async function testPrivatlebenPlus(browser) {
     await page.close();
 }
 
+// Phase 26.20: Die öffentliche Fassung (GitHub Pages, Download-Link) hat kein Admin-Menü. Im normalen Lauf wird
+// dist/anstoss-fm13-oeffentlich.html geprüft, im minifizierten Lauf der Download-Link dist/anstoss-fm13-standalone.min.html.
+async function testOeffentlicheFassung(browser) {
+    const datei = (process.env.GAME_FILE || '').includes('.min.') ? 'anstoss-fm13-standalone.min.html' : 'anstoss-fm13-oeffentlich.html';
+    console.log(`\n[26.20] Öffentliche Fassung ohne Admin-Menü (${datei})`);
+    const page = await browser.newPage();
+    const consoleErrors = [];
+    page.on('pageerror', e => consoleErrors.push(e.message));
+    // Ein Gerät, das vorher die Entwickler-Seite benutzt hat (gleiche Domain, gleicher Speicher)
+    await page.addInitScript(() => { try {
+        localStorage.removeItem('anstoss_fm13_last_save');
+        localStorage.setItem('anstoss_fm13_favoriten', JSON.stringify(['screen-admin', 'screen-squad']));
+        localStorage.setItem('anstoss_fm13_zuletzt', JSON.stringify(['screen-admin', 'screen-finances']));
+    } catch (e) { /* egal */ } });
+    await page.goto('file://' + path.resolve(__dirname, '../../dist/' + datei));
+    await page.waitForFunction(() => !document.getElementById('app-loading'), null, { timeout: 20000 }).catch(() => null);
+    const r = await page.evaluate(() => {
+        const out = {};
+        out.keinBildschirm = !document.getElementById('screen-admin') && !document.getElementById('admin-pin-overlay') && !document.getElementById('admin-tools-box');
+        out.keinKnopf = !document.querySelector('[onclick*="screen-admin"]') && !document.querySelector('[onclick^="admin"]');
+        out.keineFunktionen = ['adminAddClubMoney', 'adminGrantPremiumPoints', 'renderAdminTools', 'adminZugangFrei', 'adminSpielerUebernehmen', 'adminTeleportLeague'].every(f => typeof window[f] === 'undefined');
+        out.keineMarker = !document.documentElement.outerHTML.includes('NUR-ENTWICKLER') && !document.querySelector('meta[name="robots"]');
+        closeTutorial(); game.sackPending = false;
+        const toasts = []; const toastAlt = showToast; showToast = (t) => { toasts.push(t); };
+        simulateMatchdays(3);
+        out.spielLaeuft = game.matchday === 4;
+        showScreen('screen-squad');
+        out.kader = document.getElementById('screen-squad').style.display === 'block';
+        showScreen('screen-admin');
+        out.adminAbgefangen = document.getElementById('screen-squad').style.display === 'block' && toasts.pop().includes('gibt es in dieser Fassung nicht');
+        if (typeof renderFavoritenLeiste === 'function') renderFavoritenLeiste();
+        if (typeof renderZuletzt === 'function') renderZuletzt();
+        const kaesten = ['favoriten-box', 'recent-screens-box'].map(id => document.getElementById(id)).filter(Boolean);
+        out.keineAltlasten = kaesten.length === 2 && kaesten.every(el => !el.innerHTML.includes('screen-admin')) && document.getElementById('recent-screens-box').innerHTML.includes('screen-finances');
+        showScreen('screen-premium'); showScreen('screen-private'); showScreen('screen-finances');
+        out.weitereBildschirme = document.getElementById('screen-finances').offsetParent !== null || document.getElementById('screen-finances').style.display !== 'none';
+        showToast = toastAlt;
+        return out;
+    });
+    const ok = (...ks) => ks.every(k => r[k] === true);
+    const werte = ks => JSON.stringify(ks.map(k => r[k]));
+    const A = ['keinBildschirm', 'keinKnopf', 'keineFunktionen', 'keineMarker'];
+    assert(ok(...A), `Öffentliche Fassung: kein Admin-Bildschirm, kein Menüknopf, keine Admin-Funktionen, keine Entwickler-Marker (${werte(A)})`);
+    const B = ['spielLaeuft', 'kader', 'adminAbgefangen', 'keineAltlasten', 'weitereBildschirme'];
+    assert(ok(...B), `Öffentliche Fassung: Spiel läuft, alte Admin-Ziele aus Favoriten und Verlauf führen nicht auf eine leere Seite (${werte(B)})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
+async function testAdminPin(browser) {
+    console.log('\n[26.20] PIN für das Admin-Menü der Entwickler-Seite');
+    const { execFileSync } = require('child_process');
+    const crypto = require('crypto');
+    const hash = crypto.createHash('sha256').update('anstoss-fm13:4711').digest('hex');
+    // build.py setzt den PIN-Wert aus DEV_PIN in die Entwickler-Fassung ein
+    const ziel = path.join(require('os').tmpdir(), `fm13-dev-${process.pid}.html`);
+    let gebaut = '';
+    try {
+        execFileSync('python3', ['build.py', '--nur-dev'], { cwd: path.resolve(__dirname, '../..'), env: Object.assign({}, process.env, { DEV_PIN: '4711', DEV_AUSGABE: ziel }), stdio: 'pipe' });
+        gebaut = fs.readFileSync(ziel, 'utf-8');
+        fs.unlinkSync(ziel);
+    } catch (e) { gebaut = 'Fehler: ' + e.message; }
+    assert(gebaut.includes(`let adminPinHash = '${hash}';`) && gebaut.includes('name="robots" content="noindex') && gebaut.includes('id="screen-admin"'), 'build.py --nur-dev mit DEV_PIN: PIN-Wert eingesetzt, Seite nicht für Suchmaschinen');
+
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 320, height: 800 });
+    const r = await page.evaluate((hash) => {
+        closeTutorial(); game.sackPending = false;
+        const out = {};
+        const toasts = []; const toastAlt = showToast; showToast = (t) => { toasts.push(t); };
+        out.sha = adminSha256('abc') === 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad' && adminSha256('') === 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855' && adminSha256('anstoss-fm13:4711') === hash && adminSha256('ä€😀'.repeat(30)).length === 64;
+        const sichtbar = id => document.getElementById(id).style.display === 'block';
+        out.ohnePinFrei = adminPinHash === '' && adminZugangFrei() && (showScreen('screen-admin'), sichtbar('screen-admin'));
+        adminSperren(); out.ohnePinKeinSperren = toasts.pop().includes('keine PIN');
+        adminPinHash = hash; safeLocalRemove('anstoss_fm13_admin_frei');
+        showScreen('screen-dashboard'); showScreen('screen-admin');
+        const ov = document.getElementById('admin-pin-overlay');
+        out.gesperrt = !adminZugangFrei() && !sichtbar('screen-admin') && ov.classList.contains('show');
+        document.getElementById('admin-pin-input').value = '1234';
+        out.falsch = adminPinPruefen() === false && !adminZugangFrei() && toasts.pop().includes('Falsche PIN') && document.getElementById('admin-pin-input').value === '' && !sichtbar('screen-admin');
+        document.getElementById('admin-pin-input').value = '';
+        out.leer = adminPinPruefen() === false && toasts.pop().includes('Bitte die PIN');
+        document.getElementById('admin-pin-input').value = '4711';
+        out.richtig = adminPinPruefen() === true && sichtbar('screen-admin') && !ov.classList.contains('show') && safeLocalGet('anstoss_fm13_admin_frei') === hash;
+        showScreen('screen-dashboard'); showScreen('screen-admin'); out.bleibtFrei = sichtbar('screen-admin');
+        adminSperren(); out.sperren = !adminZugangFrei() && sichtbar('screen-dashboard');
+        safeLocalSet('anstoss_fm13_admin_frei', hash); adminPinHash = adminSha256('anstoss-fm13:neu');
+        out.neuePinSperrt = !adminZugangFrei();
+        adminPinHash = ''; closeAdminPin();
+        showToast = toastAlt;
+        return out;
+    }, hash);
+    const ok = (...ks) => ks.every(k => r[k] === true);
+    const werte = ks => JSON.stringify(ks.map(k => r[k]));
+    const A = ['sha', 'ohnePinFrei', 'ohnePinKeinSperren', 'gesperrt', 'falsch', 'leer', 'richtig', 'bleibtFrei', 'sperren', 'neuePinSperrt'];
+    assert(ok(...A), `PIN: SHA-256 korrekt, ohne PIN frei, mit PIN gesperrt bis zur richtigen Eingabe, je Gerät gemerkt, wieder sperrbar, neue PIN sperrt (${werte(A)})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 module.exports = {
     testSpielvorbereitung,
     testVertragsWerkzeuge,
@@ -2932,4 +3032,6 @@ module.exports = {
     testRunde33Funktionen,
     testAdminWerkzeuge,
     testPrivatlebenPlus,
+    testOeffentlicheFassung,
+    testAdminPin,
 };

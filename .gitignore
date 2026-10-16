@@ -3,3 +3,7 @@ __pycache__/
 dist/check-logs/
 anstoss-fm13-v*.zip
 /0
+# Phase 26.20: nur die öffentliche Fassung (dist/anstoss-fm13-standalone.min.html) liegt im Repository
+dist/anstoss-fm13-standalone.html
+dist/anstoss-fm13-oeffentlich.html
+dist/anstoss-fm13-dev.min.html

@@ -69,15 +69,6 @@
         updateUI();
     }
 
-    // Admin-Zugriff (wie gewünscht): kostenloser Premium-Punkte-Bonus ohne jede
-    // Bezahlung - passend zum bestehenden Admin/Cheats-Bereich.
-    function adminGrantPremiumPoints() {
-        playSound('goal');
-        game.premiumPoints = (game.premiumPoints || 0) + 5000;
-        showToast('👑 Admin: +5.000 Premium-Punkte kostenlos gutgeschrieben!', 'success');
-        renderPremiumShopView();
-        updateUI();
-    }
 
     function applyPremiumBoosterEffect(boosterId) {
         switch (boosterId) {

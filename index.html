@@ -269,6 +269,17 @@
         <div id="sim-summary-body"></div>
     </div>
 </div>
+<!-- NUR-ENTWICKLER-START -->
+<div id="admin-pin-overlay" class="generic-modal-overlay">
+    <div class="generic-modal-box">
+        <button onclick="closeAdminPin()" class="generic-modal-close" aria-label="Schließen">✕</button>
+        <div class="panel-header">🔒 Admin-Menü freischalten</div>
+        <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:6px;">Die Freischaltung gilt auf diesem Gerät, bis du das Admin-Menü wieder sperrst.</div>
+        <label class="ui-field"><span class="ui-field-label">PIN</span><input id="admin-pin-input" type="password" autocomplete="off" class="input-inline" style="width:100%;" onkeydown="if (event.key === 'Enter') adminPinPruefen()"></label>
+        <button onclick="adminPinPruefen()" class="btn-action" style="margin-top:6px;">🔓 Freischalten</button>
+    </div>
+</div>
+<!-- NUR-ENTWICKLER-ENDE -->
 <div id="diary-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
         <button onclick="closeTagebuch()" class="generic-modal-close" aria-label="Schließen">✕</button>
@@ -645,7 +656,9 @@
             <div class="nav-category">System & Hilfe</div>
             <button class="nav-btn" onclick="showScreen('screen-lexicon')" data-i18n="nav_lexicon">📖 Spiel-Lexikon</button>
             <button class="nav-btn" onclick="showScreen('screen-design')">🎨 Darstellung</button>
+            <!-- NUR-ENTWICKLER-START -->
             <button class="nav-btn special-gold" onclick="showScreen('screen-admin')" data-i18n="nav_admin">🛠️ Admin & Cheats PRO</button>
+            <!-- NUR-ENTWICKLER-ENDE -->
 
             <div class="one-hand-settings">
                 <div class="nav-category">Einstellungen</div>
@@ -2516,6 +2529,7 @@
                 </div>
             </div>
 
+            <!-- NUR-ENTWICKLER-START: build.py lässt diesen Block in der öffentlichen Fassung weg -->
             <!-- 27. ADMIN & CHEATS PRO -->
             <div id="screen-admin" style="display:none;">
                 <div class="panel box-admin">
@@ -2523,6 +2537,7 @@
                         <span>🛠️ Admin-Diagnose & Live-Inspector</span>
                         <span style="font-size:var(--fs-small); color:var(--text-main);">Entwickler-Konsole Aktiv</span>
                     </div>
+                    <button onclick="adminSperren()" class="btn-secondary" style="margin-bottom:6px;" id="btn-admin-sperren">🔒 Admin-Menü auf diesem Gerät sperren</button>
                     <div style="text-align:center; font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;" id="admin-version-tag">Version wird geladen...</div>
                     <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:6px; font-size:var(--fs-small);" id="admin-inspector-grid">
                         <div class="kpi-chip"><span>Liga-Level</span><strong id="adm-ins-league">4. Liga</strong></div>
@@ -2635,6 +2650,7 @@
                 </div>
 
             </div>
+            <!-- NUR-ENTWICKLER-ENDE -->
 
             <!-- 28. PRE-MATCH & LIVESPIEL -->
             <div id="screen-prematch-press" style="display:none;">

@@ -214,6 +214,13 @@
     // daraus ab, welchem Bereich eine Kontobewegung zuzuordnen ist.
     let aktiverScreen = 'screen-dashboard';
     function showScreen(screenId) {
+        // Öffentliche Fassung ohne Admin-Menü (build.py): ein Ziel aus Favoriten oder „Zuletzt geöffnet“ eines
+        // Entwickler-Geräts gibt es dort nicht - dann bleibt der aktuelle Bildschirm stehen statt einer leeren Seite.
+        if (!document.getElementById((typeof SUB_SCREEN_TO_HUB !== 'undefined' && SUB_SCREEN_TO_HUB[screenId]) || screenId)) {
+            showToast('Diesen Bereich gibt es in dieser Fassung nicht.', 'error');
+            return;
+        }
+        if (screenId === 'screen-admin' && typeof adminZugangFrei === 'function' && !adminZugangFrei()) { openAdminPin(); return; }
         playSound('click');
         // Für die Zurück-Taste (js/one-hand.js): woher kam man?
         if (typeof recordScreenVisit === 'function') recordScreenVisit(aktiverScreen, screenId);

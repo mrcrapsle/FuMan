@@ -118,6 +118,8 @@ async function main() {
         S.testRunde33Funktionen,
         S.testAdminWerkzeuge,
         S.testPrivatlebenPlus,
+        S.testOeffentlicheFassung,
+        S.testAdminPin,
         S.testKnopfWorteHandy,
         S.testEntlassungsGrund,
         S.testEnglishUi,

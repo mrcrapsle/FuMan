@@ -11,7 +11,7 @@ Anleitung für Claude Code in diesem Repository. Die vollständige Historie mit 
 - Antworten immer auf Deutsch.
 - Vor jedem Merge auf `main`: `npm run check` muss grün sein. **Nur auf ausdrücklichen Wunsch mergen**, nie automatisch nach einer Runde: Es sollen möglichst viele Funktionen in einen Patch passen. Bis dahin auf dem `claude/…`-Branch committen und pushen; Version erhöhen, ZIP und Deploy-Kontrolle erst beim Merge.
 - Die Version in `js/state.js` (`GAME_VERSION`) bei jedem Merge erhöhen. Sie erscheint in der Kopfzeile (`#header-version-tag`).
-- Nach jedem Merge eine ZIP `anstoss-fm13-vX.zip` schicken: minifizierter Build als `anstoss-fm13.html` plus Quellcode im Ordner `anstoss-fm13/` (`git archive origin/main -- . ':!dist'`). Mit beiden Links:
+- Nach jedem Merge eine ZIP `anstoss-fm13-vX.zip` schicken: öffentlicher minifizierter Build als `anstoss-fm13.html`, die minifizierte Entwickler-Fassung mit Admin-Menü als `anstoss-fm13-dev.html` (lokal aus `origin/main` mit `python3 build.py && node minify.js`, `dist/anstoss-fm13-dev.min.html`) plus Quellcode im Ordner `anstoss-fm13/` (`git archive origin/main -- . ':!dist'`). Mit beiden Links:
   - Spielen: https://mrcrapsle.github.io/FuMan/
   - Download: https://github.com/mrcrapsle/FuMan/raw/main/dist/anstoss-fm13-standalone.min.html
 - Eine Runde bündeln: alle Änderungen sammeln, einmal `npm run check`, Fehler gesammelt beheben, gezielte Wiederholung mit `TEST_ONLY=<Name>`.
@@ -21,9 +21,9 @@ Anleitung für Claude Code in diesem Repository. Die vollständige Historie mit 
 ```bash
 npm run check            # Build, Lint, Tests standalone und minifiziert (Logs: dist/check-logs/)
 npm run check -- fast    # ohne die minifizierte Variante
-python3 build.py         # baut dist/anstoss-fm13-standalone.html
+python3 build.py         # baut dist/anstoss-fm13-standalone.html (Entwickler, mit Admin) und dist/anstoss-fm13-oeffentlich.html (ohne Admin)
 npm run lint             # Lint über alle JS-Dateien inkl. Inline-Skripte in index.html
-npm run minify           # dist/anstoss-fm13-standalone.min.html
+npm run minify           # dist/anstoss-fm13-standalone.min.html (öffentlich, Download-Link) und dist/anstoss-fm13-dev.min.html (Tests)
 npm run serve            # Entwicklungsserver mit Neubau auf http://localhost:8000 (/ = modular, /spiel = gebaut)
 cd tests && npm test     # Testsuite gegen den gebauten Stand
 cd tests && TEST_ONLY=Name node run-tests.js   # einzelne Suite (Teilstring des Funktionsnamens)
@@ -53,6 +53,7 @@ python3 scripts/auswertung.py <datei>…         # Zusammenfassung je Bot-Lauf (
 - Geografie und Derbys: `js/club-geo.js` (`isDerbyMatch` ist die einzige Derby-Regel), `js/derby-week.js`.
 - Büro: `js/office.js` (eigene Trefferprüfung über `officeHotspotAtPoint()`), `js/one-hand.js` (Bedienung mit einer Hand, Handy bis 650 px).
 - Werkzeuge (Phase 26): `js/matchprep.js` (Aufstellungs-/Taktikvorlagen, Spieltag-Check inkl. Rotations-Assistent und Erschöpfungs-Hinweis), `js/contract-tools.js` (Gehalts-Ampel, Verlängerungs-Assistent, Marktwert-Kurve, Transferbilanz-Historie, Entwicklungsprognose), `js/insights.js` (Serien, Formkurve, CSV, Spielbericht teilen, Fachwort-Hilfe `fw()`), `js/player-compare.js` (Spieler-Vergleich im Spielerdetail), `js/swipe-tabs.js` (Wischen zwischen Reitern), `js/manager-tools.js` (Liquiditäts-Vorschau, Konto-Alarm, Spieler-Etiketten mit kleiner Spielwirkung (`ETIKETT_WIRKUNG`), Manager-Assistent, Lizenz-Laufbahn). Sie lesen echte Daten und verändern die Mannschaft nur auf Tipp; neue Felder (`game.lineupPresets`, `tacticPresets`, `serien`, `transferBilanzHistory`, `p.tags`, `p.formNoten`, `p.injuryLog`, `game.gegnerNotizen`, `game.vorlageBilanz`, `game.vorlageBilanzArchiv`, `game.vorlageImEinsatz`, `game.assistentZurueck`, `game.assistentVorher`, `game.assistentErledigt`, `game.etikettBilanz`, `game.etikettBilanzVorjahr`, `game.etikettImEinsatz`, `game.rueckblickGesehen`, `p.startBilanz`, `p.startFolge`, `game.marktMerkliste`, `game.matchplaene`, `game.etikettBilanzArchiv`, `game.erinnerungen`, `game.erinnerungNr`, `game.spielberichte`, `game.tagebuch`, `game.kaderwertVerlauf`, `game.platzVerlaufVorjahr` (mit `punkte`), `p.meilenstein`, `game.startelfGedaechtnis`, `game.monatsStand`, `game.adminWetter`, Privatleben-Erweiterung `privateLife.sparkonto|kurseZuletzt|haustier|verlauf|mentalBis|mentalZuletzt|gehaltVerhandeltSaison` (beim Laden über `getPrivatExtrasStandard()` zurückgesetzt), `scoutingNetwork.preisGrenzen`, Schlagwörter `tags` in `game.gegnerNotizen`) brauchen in alten Spielständen eine Absicherung (`ensure…State()` oder `|| []`).
+- Zwei Fassungen (Phase 26.20): `build.py` lässt für die öffentliche Fassung `js/admin.js`, `js/admin-tools.js` und alles zwischen `<!-- NUR-ENTWICKLER-START -->` und `<!-- NUR-ENTWICKLER-ENDE -->` in `index.html` weg und bricht ab, wenn Admin-Teile übrig bleiben. Neue Cheats und Admin-Knöpfe nur dort hinein. Die Entwickler-Seite fragt nach der PIN (`adminZugangFrei()`, Wert aus `DEV_PIN`); Tests laufen gegen die Entwickler-Fassung, `testOeffentlicheFassung` prüft die öffentliche.
 - Admin und Privatleben: `js/admin.js` mit `js/admin-tools.js` (Test- und Diagnosewerkzeuge, `#admin-tools-box`), `js/private-life.js` mit `js/private-life-extra.js` (Sparkonto, Fortbildung, Mentaltraining, Gehaltsverhandlung, Haustier, Vermögen, Ziele).
 - Sprache: `js/i18n.js` (`t()`), `js/i18n-ui.js` (`I18N_UI_EN`), `js/lexicon.js` und `js/lexicon-en.js` (Lexikon, Englisch muss dieselbe Tippzahl und dieselben Ziffern haben).
 
@@ -91,7 +92,7 @@ python3 scripts/auswertung.py <datei>…         # Zusammenfassung je Bot-Lauf (
 
 ## Deployment
 
-Commits auf `main` lösen über `.github/workflows/build-test.yml` den Test und das Veröffentlichen auf GitHub Pages aus. Nur auf `main` pushen, wenn `npm run check` grün ist. Feature-Arbeit auf `claude/…`-Branches.
+Commits auf `main` lösen über `.github/workflows/build-test.yml` den Test und das Veröffentlichen auf GitHub Pages aus: Startseite ist die öffentliche Fassung, die Entwickler-Fassung kommt nur unter den Pfad aus dem Secret `DEV_PFAD` (mit PIN aus `DEV_PIN`). Die Entwickler-Fassung liegt nicht im Repository. Nur auf `main` pushen, wenn `npm run check` grün ist. Feature-Arbeit auf `claude/…`-Branches.
 
 ## Repository
 

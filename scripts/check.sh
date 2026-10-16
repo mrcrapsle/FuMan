@@ -46,7 +46,7 @@ run_tests "Standalone" "anstoss-fm13-standalone.html"
 if [ "${1:-}" != "fast" ]; then
     npm run --silent minify > "$LOGDIR/minify.log" 2>&1 || fail "Minify" "$LOGDIR/minify.log"
     ok "Minify"
-    run_tests "minifiziert" "anstoss-fm13-standalone.min.html"
+    run_tests "minifiziert" "anstoss-fm13-dev.min.html" # Entwickler-Fassung; die öffentliche prüft testOeffentlicheFassung
 fi
 
 echo

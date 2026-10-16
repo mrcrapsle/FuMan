@@ -9,13 +9,20 @@ automatisch neu gebaut und veröffentlicht (siehe `deploy`-Job in
 `.github/workflows/build-test.yml`), aber nur wenn die Testsuite auf demselben
 Commit grün war. Läuft auf jedem Gerät, Spielstände werden im Browser gespeichert.
 
-**Offline:** `dist/anstoss-fm13-standalone.html` ist das komplette Spiel in einer
+**Zwei Fassungen:** Die öffentliche Seite und der Download-Link
+(`dist/anstoss-fm13-standalone.min.html`) haben kein Admin-Menü. Die Entwickler-Fassung mit
+Admin-Menü entsteht lokal mit `python3 build.py` (`dist/anstoss-fm13-standalone.html`) und
+liegt online nur unter einem geheimen Pfad (Repository-Secrets `DEV_PFAD` und `DEV_PIN`, siehe
+`deploy`-Job), dort zusätzlich mit PIN.
+
+**Offline:** `dist/anstoss-fm13-standalone.min.html` ist das komplette Spiel in einer
 Datei. Auf Android in einem echten Browser öffnen (Chrome), nicht in der
 Dateivorschau des Dateimanagers - die blockiert den lokalen Speicher.
 
 ## Bauen
 python3 build.py
-→ erzeugt dist/anstoss-fm13-standalone.html
+→ erzeugt dist/anstoss-fm13-standalone.html (Entwickler-Fassung mit Admin-Menü) und
+  dist/anstoss-fm13-oeffentlich.html (öffentliche Fassung ohne Admin-Menü)
 
 ## Lokal spielen/entwickeln (empfohlen)
 npm run serve            # oder: python3 server.py
