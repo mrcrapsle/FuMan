@@ -654,3 +654,39 @@ Acht weitere neue Funktionen (`testRunde31Funktionen`, 12 Prüfungen):
 - **Saisonziel-Rechner** (`getSaisonZiele()`, `renderSaisonZiele()`, `#season-goal-box` im Dashboard): Bundesliga: Europa (Platz 4) und Klassenerhalt ohne Relegation (Platz 15); tiefere Ligen: direkter Aufstieg (Platz 2) und Klassenerhalt; unterste Liga nur Aufstieg. Außerhalb des Zielplatzes der Rückstand auf dessen Inhaber („nicht mehr erreichbar“, wenn auch alle restlichen Siege nicht reichen), innerhalb der Vorsprung auf den ersten Platz dahinter („gesichert“, wenn der Verfolger dich auch mit allen restlichen Siegen nicht mehr einholt). Reine Tabellenwerte, Torverhältnis zählt nicht.
 - **Von den Tests gefunden und behoben:** „2 Vertrage“ statt „2 Verträge“ und „1 Vertrag laufen aus“ im Vertragsplan; der Status im Saisonziel-Rechner stand zuerst in einem nicht umbrechenden Chip und sprengte bei langen Vereinsnamen die Seitenbreite auf dem Handy (jetzt umbrechender Text); frei eingegebene Texte (Erinnerungen, Notizen, Rückblick) haben `overflow-wrap:anywhere`, damit ein langes Wort ohne Leerzeichen die Seite nicht verbreitert.
 - Neue Spielstand-Felder (alle mit Absicherung für alte Stände): `game.erinnerungen`, `game.erinnerungNr`, `game.spielberichte`.
+
+## Phase 26.17: 24 neue Funktionen (Feature-Branch, noch nicht gemergt)
+Drei Vorschlagslisten (1 bis 24) auf einmal umgesetzt, in vier Paketen mit je einer Testsuite (`testRunde32Markt`, `testRunde32Spieltag`, `testRunde32Uebersicht`, `testRunde32Statistik`). Keine Regeländerung.
+
+**Paket A, Markt und Kader**
+- **Marktfilter** (`marktFilter`, `getMarktAnsicht()`, `#market-filter-box`): Position, „✓ Nur leistbar“ (nutzt `getKaufHindernisse()`), Sortierung nach Stärke, Preis oder Alter; gilt nur für die Sitzung. Die Karten behalten ihren Index in `marketPlayers`, ein Test prüft, dass der Sofortkauf nach Filter und Sortierung den Spieler der Karte kauft.
+- **Kaderlücke** (`openMarktFuerPosition()`): Positionen im Kaderplaner mit dünner Besetzung, Ausfall-, Alters- oder Vertragsrisiko bekommen „🔎 Passende Spieler auf dem Markt“.
+- **Kaderfolgen bei Angeboten** (`getVerkaufsFolgen()`): Restbesetzung der Position gegen die Mindestbesetzung des Kaderplaners (`SQUAD_PLANNING_MIN_HEALTHY`), Startelf, bester Spieler und Nachfolger, auf jeder Angebotskarte.
+- **Ersatz finden** (`getErsatzKandidaten()`, `#pd-ersatz`): bis zu drei Marktspieler gleicher Position, höchstens 3 Stärke schwächer, mit Preis, Leistbar-Chip und Vergleich.
+- **Kompakte Kaderliste** (`renderKaderZeile()`, Gerät: `anstoss_fm13_kaderansicht`): eine Zeile je Spieler mit Stärke, Fitness, Moral, Vertrag, Ampel und Startelf-Knopf. Die Liste wird über `getSquadListeSortiert()` gebildet (aus `renderSquadView()` herausgelöst), damit Karten, Zeilen und Blättern dieselbe Reihenfolge haben.
+- **Blättern im Spielerdetail** (`blaetterSpielerDetail()`, `#pd-nav`): ‹ ›, Position „3 / 22“, Reihenfolge der Herkunftsliste (Kader wie gefiltert, Markt wie gefiltert, sonst der Bereich); ein Wisch im offenen Detail blättert ebenfalls (`swipeImSpielerdetail()` in `js/swipe-tabs.js`).
+- **Spielersuche** (`sucheSpieler()`, Feld oben im Menü): ab zwei Zeichen, ohne Groß-/Kleinschreibung und Akzente, in Kader, Zweiter Mannschaft, Jugend, Markt, Vereinslosen und Scouting; höchstens acht Treffer.
+
+**Paket B, Spieltag**
+- **Tabellen-Vorschau** (`getTabellenVorschau()`): Platz nach 1:0, 0:0 und 0:1 bei sonst unveränderter Tabelle, auf Kopien gerechnet.
+- **Lieblings- und Angstgegner** (`getGegnerBilanzListen()`, `#gegner-bilanz-box` im Reiter Analyse): aus `game.headToHeadRecords`, ab zwei Duellen, Lieblingsgegner ab 2,0 Punkten je Spiel, Angstgegner bis 0,75; Chip im Spieltag-Check.
+- **Spielstil-Empfehlung** (`getStilEmpfehlung()`): nach der vorhandenen Regel des Taktik-Duells; ohne Chef-Analyst der öffentlich bekannte Grundstil, mit Analyst dessen Plan. „Übernehmen“ setzt den Stil; der Hinweis nennt, dass andere Wirkungen des Stils bleiben.
+- **Rekord-Hinweise** (`getRekordHinweise()`): aus `game.serien`, z. B. „Mit einem Sieg: neuer Vereinsrekord, 6 Siege in Folge“, endende Serien, Negativrekorde; die Heimserie nur bei Heimspielen.
+- **Empfohlene Vorbereitung** (`getEmpfohleneVorbereitung()`, `applyEmpfohleneVorbereitung()`): Matchplan, sonst Rotationstausche, dazu die Stil-Empfehlung, falls kein Matchplan eine Taktik setzt; Liste der Änderungen und ein Knopf, eine Sammelmeldung statt vieler Einzelmeldungen.
+- **Ampel im Livespiel**: Raus-Liste und Wechselbank zeigen Fitness und Belastungsampel.
+
+**Paket C, Übersicht**
+- **Restprogramm** (`getRestprogramm()`, `#rest-programm-box` im Dashboard): nächste fünf Gegner aus `fixturesData` mit Heim/Auswärts, Platz, Stärke und Symbolen für Notiz, Matchplan, Lieblings-/Angstgegner; Ø-Stärke und schwerste Phase (drei Spiele).
+- **Zusammenfassung nach „5 Spieltage simulieren“** (`simulateMatchdays(anzahl, zusammenfassung)`, Fenster `#sim-summary-overlay`): eigene Ergebnisse, Bilanz, Tabellenplatz vorher → nachher, Kasse, neue Verletzte und Angebote. Nur der Dashboard-Knopf übergibt `true`; Bot, Tests und `simulateFullSeason()` bleiben ohne Fenster.
+- **Kalender** (`getKalenderExtras()`): je Spieltag Gegner mit Ergebnis, eigene Erinnerungen, Tagebuch, Ende des Transferfensters und am 34. Spieltag die auslaufenden Verträge.
+- **Managertagebuch** (`game.tagebuch`, Fenster `#diary-overlay`, Knopf im Kalender): eine Notiz je Spieltag (200 Zeichen), erscheint im Kalender und im Saisonrückblick.
+- **Erinnern-Knöpfe** (`erinnerungVorbelegen()`): im Spielerdetail („Vertrag von X klären“ bei Restlaufzeit bis 2) und je Saison im Vertragsplan.
+- **Tag/Nacht-Schnellschalter** (`wechsleTagNacht()`, `#theme-quick-btn` oben im Menü): Tageslicht ↔ Flutlicht über `setzeDesignTheme()`.
+- **Favoriten-Leiste** (Gerät: `anstoss_fm13_favoriten`, `#favoriten-box` im Dashboard, Auswahlfenster `#favoriten-overlay`): bis zu vier Bildschirme aus dem Menü.
+
+**Paket D, Statistik**
+- **Tor-Meilensteine** (`pruefeTorMeilenstein()`, aus `creditOwnGoal()` und dem Relegations-Ticker): 10., 25., 50., 100., 150., 200. Tor mit Postfach-Nachricht. Das Pflichtspiel-Jubiläum gab es schon (Nachspiel-Ablauf, mit Moral und Fans); es setzt jetzt zusätzlich `p.meilenstein`. Beide zeigen drei Spieltage lang einen Chip auf der Kaderkarte.
+- **Saisonverlauf** (Reiter im Liga-Bildschirm, `getSaisonverlauf()`): alle 34 Spieltage mit Ergebnis und Platz danach (aus `t.rankHist`), offene Spiele mit Platz und Stärke des Gegners; ein Tipp öffnet den archivierten Spielbericht, falls es einen gibt. Die Reiterleiste ist jetzt `auto-fit`.
+- **Vorsaison im Tabellenverlauf** (`archivePlatzVerlauf()`, `game.platzVerlaufVorjahr`): Statt einer zweiten Platzierungskurve (der Tabellenverlauf in der Liga-Statistik existierte schon, „ein System pro Bereich“) zeichnet der vorhandene Verlauf in der eigenen Liga die Vorsaison gestrichelt mit Endplatz in der Legende.
+- **Kaderwert-Kurve** (`archiveKaderwert()`, `game.kaderwertVerlauf`, höchstens 20 Saisons, `#kaderwert-box` im Reiter Analyse): Gesamtmarktwert am Saisonende plus heutiger Wert.
+- Neue Spielstand-Felder (mit Absicherung): `game.tagebuch`, `game.kaderwertVerlauf`, `game.platzVerlaufVorjahr`, `p.meilenstein`. Neue Geräte-Einstellungen: Kaderansicht, Favoriten.
