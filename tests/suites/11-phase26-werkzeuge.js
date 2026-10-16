@@ -1765,6 +1765,8 @@ async function testRunde31Funktionen(browser) {
         const S = squad.find(p => lineup.includes(p.id) && p.pos !== 'TW' && squad.some(b => !lineup.includes(b.id) && b.pos === p.pos));
         const B = squad.find(p => !lineup.includes(p.id) && p.pos === S.pos);
         B.strength = S.strength;
+        // B soll der einzige mögliche Ersatz sein: bei manchen Zufallskadern gab es einen zweiten Bankspieler der Position
+        squad.filter(p => !lineup.includes(p.id) && p.pos === S.pos && p !== B).forEach(p => { p.strength = Math.max(1, S.strength - 10); });
         out.rKeine = getRotationSuggestions().length === 0;
         S.timesInjured = 3; out.rGelbOhneDauer = getBelastungsAmpel(S).stufe === 'gelb' && getRotationSuggestions().length === 0;
         S.startFolge = [1, 1, 1, 1, 1];
