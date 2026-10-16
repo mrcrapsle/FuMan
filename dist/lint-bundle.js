@@ -12835,6 +12835,13 @@ function renderBoardRoomPanel() {
     // daraus ab, welchem Bereich eine Kontobewegung zuzuordnen ist.
     let aktiverScreen = 'screen-dashboard';
     function showScreen(screenId) {
+        // Öffentliche Fassung ohne Admin-Menü (build.py): ein Ziel aus Favoriten oder „Zuletzt geöffnet“ eines
+        // Entwickler-Geräts gibt es dort nicht - dann bleibt der aktuelle Bildschirm stehen statt einer leeren Seite.
+        if (!document.getElementById((typeof SUB_SCREEN_TO_HUB !== 'undefined' && SUB_SCREEN_TO_HUB[screenId]) || screenId)) {
+            showToast('Diesen Bereich gibt es in dieser Fassung nicht.', 'error');
+            return;
+        }
+        if (screenId === 'screen-admin' && typeof adminZugangFrei === 'function' && !adminZugangFrei()) { openAdminPin(); return; }
         playSound('click');
         // Für die Zurück-Taste (js/one-hand.js): woher kam man?
         if (typeof recordScreenVisit === 'function') recordScreenVisit(aktiverScreen, screenId);
@@ -35858,6 +35865,101 @@ function renderSeasonForecastHistory() {
 }
 
 /* eslint-enable */
+    // ==========================================
+    // Zugang zum Admin-Menü (Phase 26.20): Die öffentliche Fassung enthält dieses Modul nicht (build.py lässt
+    // js/admin.js, js/admin-tools.js und die NUR-ENTWICKLER-Blöcke in index.html weg). Auf der geheimen
+    // Entwickler-Seite setzt der Deploy über DEV_PIN den SHA-256-Wert von "anstoss-fm13:" + PIN ein; dann fragt
+    // showScreen('screen-admin') einmal je Gerät nach der PIN. Ohne Wert (lokal, Tests) ist das Menü frei.
+    // ==========================================
+    let adminPinHash = '';
+    const ADMIN_FREI_KEY = 'anstoss_fm13_admin_frei';
+    const ADMIN_PIN_PREFIX = 'anstoss-fm13:';
+
+    // SHA-256 als Hex-Text (synchron, auch auf file:// ohne crypto.subtle)
+    function adminSha256(text) {
+        const k = [], h = [];
+        let n = 2, c = 0;
+        const frac = x => ((x - Math.floor(x)) * 4294967296) | 0;
+        while (c < 64) {
+            let prim = true;
+            for (let d = 2; d * d <= n; d++) if (n % d === 0) { prim = false; break; }
+            if (prim) { if (c < 8) h[c] = frac(Math.pow(n, 1 / 2)); k[c++] = frac(Math.pow(n, 1 / 3)); }
+            n++;
+        }
+        const bytes = Array.from(new TextEncoder().encode(text));
+        const bitLen = bytes.length * 8;
+        bytes.push(0x80);
+        while (bytes.length % 64 !== 56) bytes.push(0);
+        for (let i = 7; i >= 0; i--) bytes.push(i > 3 ? 0 : (bitLen >>> (i * 8)) & 0xff);
+        const rotr = (x, r) => (x >>> r) | (x << (32 - r));
+        for (let off = 0; off < bytes.length; off += 64) {
+            const w = [];
+            for (let i = 0; i < 16; i++) w[i] = (bytes[off + 4 * i] << 24) | (bytes[off + 4 * i + 1] << 16) | (bytes[off + 4 * i + 2] << 8) | bytes[off + 4 * i + 3];
+            for (let i = 16; i < 64; i++) {
+                const s0 = rotr(w[i - 15], 7) ^ rotr(w[i - 15], 18) ^ (w[i - 15] >>> 3), s1 = rotr(w[i - 2], 17) ^ rotr(w[i - 2], 19) ^ (w[i - 2] >>> 10);
+                w[i] = (w[i - 16] + s0 + w[i - 7] + s1) | 0;
+            }
+            let [a, b, cc, d, e, f, g, hh] = h;
+            for (let i = 0; i < 64; i++) {
+                const t1 = (hh + (rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25)) + ((e & f) ^ (~e & g)) + k[i] + w[i]) | 0;
+                const t2 = ((rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22)) + ((a & b) ^ (a & cc) ^ (b & cc))) | 0;
+                hh = g; g = f; f = e; e = (d + t1) | 0; d = cc; cc = b; b = a; a = (t1 + t2) | 0;
+            }
+            [a, b, cc, d, e, f, g, hh].forEach((v, i) => { h[i] = (h[i] + v) | 0; });
+        }
+        return h.map(v => (v >>> 0).toString(16).padStart(8, '0')).join('');
+    }
+
+    function adminZugangFrei() {
+        return !adminPinHash || safeLocalGet(ADMIN_FREI_KEY) === adminPinHash;
+    }
+
+    function openAdminPin() {
+        const ov = document.getElementById('admin-pin-overlay');
+        if (!ov) return;
+        const feld = document.getElementById('admin-pin-input');
+        if (feld) feld.value = '';
+        ov.classList.add('show');
+        if (feld) feld.focus();
+    }
+
+    function closeAdminPin() {
+        const ov = document.getElementById('admin-pin-overlay');
+        if (ov) ov.classList.remove('show');
+    }
+
+    function adminPinPruefen() {
+        const feld = document.getElementById('admin-pin-input');
+        const eingabe = feld ? feld.value : '';
+        if (!eingabe) { showToast('Bitte die PIN eingeben.', 'error'); return false; }
+        if (adminSha256(ADMIN_PIN_PREFIX + eingabe) !== adminPinHash) {
+            if (feld) feld.value = '';
+            showToast('🔒 Falsche PIN.', 'error');
+            return false;
+        }
+        safeLocalSet(ADMIN_FREI_KEY, adminPinHash);
+        closeAdminPin();
+        showToast('🔓 Admin-Menü auf diesem Gerät freigeschaltet.', 'success');
+        showScreen('screen-admin');
+        return true;
+    }
+
+    function adminSperren() {
+        if (!adminPinHash) { showToast('Auf dieser Fassung ist keine PIN gesetzt - das Admin-Menü ist immer frei.', 'error', 4000); return; }
+        safeLocalRemove(ADMIN_FREI_KEY);
+        showToast('🔒 Admin-Menü auf diesem Gerät gesperrt.', 'success');
+        showScreen('screen-dashboard');
+    }
+
+    // Kostenloser Premium-Punkte-Bonus (lag früher in js/premium.js, gehört aber zu den Cheats)
+    function adminGrantPremiumPoints() {
+        playSound('goal');
+        game.premiumPoints = (game.premiumPoints || 0) + 5000;
+        showToast('👑 Admin: +5.000 Premium-Punkte kostenlos gutgeschrieben!', 'success');
+        renderPremiumShopView();
+        updateUI();
+    }
+
 
     // Selbsttest-Ergebnis-Archiv: zeigt die letzten Läufe mit Zeitstempel im Admin-Bereich.
     function renderSelfTestArchive() {
@@ -36719,15 +36821,6 @@ function renderAdminTools() {
         updateUI();
     }
 
-    // Admin-Zugriff (wie gewünscht): kostenloser Premium-Punkte-Bonus ohne jede
-    // Bezahlung - passend zum bestehenden Admin/Cheats-Bereich.
-    function adminGrantPremiumPoints() {
-        playSound('goal');
-        game.premiumPoints = (game.premiumPoints || 0) + 5000;
-        showToast('👑 Admin: +5.000 Premium-Punkte kostenlos gutgeschrieben!', 'success');
-        renderPremiumShopView();
-        updateUI();
-    }
 
     function applyPremiumBoosterEffect(boosterId) {
         switch (boosterId) {
