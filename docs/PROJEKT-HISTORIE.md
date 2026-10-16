@@ -642,7 +642,7 @@ Auf ausdrücklichen Wunsch („neue Funktionen, keine Test- und Messpunkte“) a
 - **Kader-CSV** mit Spalten „Startelf-Spiele (Saison)“, „Pkt/Spiel mit ihm in der Startelf“ und „Pkt/Spiel ohne ihn“.
 - Neue Spielstand-Felder (alle mit Absicherung für alte Stände): `game.matchplaene`, `game.marktMerkliste`, `game.etikettBilanzArchiv`, `p.startFolge`.
 
-## Phase 26.16: Feinschliff 8 (Feature-Branch, noch nicht gemergt)
+## Phase 26.16: Feinschliff 8 (Version 3.137)
 Acht weitere neue Funktionen (`testRunde31Funktionen`, 12 Prüfungen):
 - **Aufstellung als Text teilen** (`buildLineupText()`, `shareLineup()`, Knopf unter der 3D-Taktiktafel): Formation, Spielstil, Härte, Spieler nach Positionen mit Stärke und (C) für den Kapitän, die sieben stärksten Ersatzspieler (verletzte markiert), Hinweis bei weniger als elf. Das Teilen-Fenster des Spielberichts wurde zu `openShareText(titel, text)` verallgemeinert; Saisonrückblick, Aufstellung und Archiv nutzen es.
 - **Zuletzt geöffnet** (`js/one-hand.js`: `getZuletzt()`, `merkeZuletzt()`, `renderZuletzt()`, `#recent-screens-box` oben im Menü): die letzten fünf besuchten Bildschirme mit Menüeintrag, ohne den aktuellen und ohne Vorbericht/Livespiel; Beschriftung aus dem Menüeintrag (stimmt in jeder Sprache). Einstellung dieses Geräts (`anstoss_fm13_zuletzt` in localStorage), kein Spielstand. Die Knöpfe nutzen `data-s` statt Bildschirmnamen im `onclick`, damit die Menü-Hervorhebung (die `onclick` nach Namen durchsucht) sie nicht fälschlich markiert.
@@ -655,7 +655,7 @@ Acht weitere neue Funktionen (`testRunde31Funktionen`, 12 Prüfungen):
 - **Von den Tests gefunden und behoben:** „2 Vertrage“ statt „2 Verträge“ und „1 Vertrag laufen aus“ im Vertragsplan; der Status im Saisonziel-Rechner stand zuerst in einem nicht umbrechenden Chip und sprengte bei langen Vereinsnamen die Seitenbreite auf dem Handy (jetzt umbrechender Text); frei eingegebene Texte (Erinnerungen, Notizen, Rückblick) haben `overflow-wrap:anywhere`, damit ein langes Wort ohne Leerzeichen die Seite nicht verbreitert.
 - Neue Spielstand-Felder (alle mit Absicherung für alte Stände): `game.erinnerungen`, `game.erinnerungNr`, `game.spielberichte`.
 
-## Phase 26.17: 24 neue Funktionen (Feature-Branch, noch nicht gemergt)
+## Phase 26.17: 24 neue Funktionen (Version 3.137)
 Drei Vorschlagslisten (1 bis 24) auf einmal umgesetzt, in vier Paketen mit je einer Testsuite (`testRunde32Markt`, `testRunde32Spieltag`, `testRunde32Uebersicht`, `testRunde32Statistik`). Keine Regeländerung.
 
 **Paket A, Markt und Kader**
