@@ -294,7 +294,7 @@ async function testManagerWerkzeuge(browser) {
         toggleSquadTag(p.id, 'verkauf'); toggleSquadTag(p.id, 'quatsch'); toggleSquadTag(q.id, 'beobachten');
         out.tags = JSON.stringify(p.tags) === '["verkauf"]' && JSON.stringify(q.tags) === '["beobachten"]';
         renderSquadView();
-        out.filterLeiste = document.getElementById('squad-tag-filter').querySelectorAll('button').length === 3; // Belastung rot + zwei Etiketten
+        out.filterLeiste = document.getElementById('squad-tag-filter').querySelectorAll('button').length === 4; // Ansicht, Belastung rot, zwei Etiketten
         setSquadTagFilter('verkauf');
         out.gefiltert = document.querySelectorAll('#bench-list .player-card').length === 1 && document.getElementById('bench-list').textContent.includes(p.name) && document.getElementById('bench-list').textContent.includes('Verkaufskandidat');
         setSquadTagFilter('verkauf');

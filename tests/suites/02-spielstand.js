@@ -299,7 +299,7 @@ async function testAutoSaveAndPartialSimulation(browser) {
 
         showScreen('screen-dashboard');
         out.speicherKnopf = !!document.querySelector('.bottom-nav-item[onclick="quickSave()"]');
-        out.fuenfKnopf = !!document.querySelector('[onclick="simulateMatchdays(5)"]');
+        out.fuenfKnopf = !!document.querySelector('[onclick="simulateMatchdays(5, true)"]'); // mit Zusammenfassung (Phase 26.17)
         return out;
     });
 
