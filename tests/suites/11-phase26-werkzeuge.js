@@ -2169,6 +2169,152 @@ async function testRunde32Markt(browser) {
     await page.close();
 }
 
+async function testRunde32Spieltag(browser) {
+    console.log('\n[26.17] Tabellen-Vorschau, Lieblings-/Angstgegner, Spielstil-Empfehlung, Rekord-Hinweise, empfohlene Vorbereitung, Ampel im Livespiel');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.evaluate(R32_HILFEN);
+    const r = await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false; simulateMatchdays(3);
+        const out = {};
+        const toasts = []; const toastAlt = showToast; showToast = (t) => { toasts.push(t); };
+        squad.forEach(p => { p.injured = 0; p.suspended = 0; p.fitness = 95; p.timesInjured = 0; p.tags = []; delete p.startFolge; });
+        game.formation = '4-4-2'; autoLineup();
+        const liga = leaguesData[game.leagueLevel];
+        const ich = liga.find(t => t.name === game.clubName);
+        const andere = liga.filter(t => t !== ich);
+        const punkte = [40, 35, 33, 31, 29, 28, 27, 26, 25, 24, 23, 22, 21, 20, 19, 18, 17];
+        andere.forEach((t, i) => { t.points = punkte[i] !== undefined ? punkte[i] : 10 - i; t.goalsFor = 0; t.goalsAgainst = 0; t.played = 10; });
+        ich.points = 30; ich.goalsFor = 0; ich.goalsAgainst = 0; ich.played = 10;
+        const opp = andere[3]; // 31 Punkte
+        game.matchday = 11;
+
+        // --- Tabellen-Vorschau ---
+        const v = getTabellenVorschau(opp.name);
+        out.tvJetzt = v.jetzt === 5;
+        out.tvWerte = v.sieg === 3 && v.remis === 5 && v.niederlage === 5;
+        out.tvUnveraendert = ich.points === 30 && opp.points === 31 && ich.played === 10;
+        out.tvOhneMich = (() => { const alt = liga.indexOf(ich); liga.splice(alt, 1); const x = getTabellenVorschau(opp.name); liga.splice(alt, 0, ich); return x === null; })();
+
+        // --- Lieblings- und Angstgegner ---
+        game.headToHeadRecords = {
+            [opp.name]: { wins: 3, draws: 0, losses: 0, goalsFor: 6, goalsAgainst: 1, lastResults: [] },
+            'Angst FC': { wins: 0, draws: 1, losses: 3, goalsFor: 1, goalsAgainst: 8, lastResults: [] },
+            'Einmal FC': { wins: 1, draws: 0, losses: 0, goalsFor: 2, goalsAgainst: 0, lastResults: [] },
+            'Mittel FC': { wins: 1, draws: 1, losses: 1, goalsFor: 3, goalsAgainst: 3, lastResults: [] }
+        };
+        const l = getGegnerBilanzListen();
+        out.gListen = l.liebling.length === 1 && l.liebling[0].name === opp.name && l.angst.length === 1 && l.angst[0].name === 'Angst FC';
+        out.gTyp = getGegnerTyp(opp.name).typ === 'liebling' && getGegnerTyp('Angst FC').typ === 'angst' && getGegnerTyp('Mittel FC') === null && getGegnerTyp('Einmal FC') === null;
+        showScreen('screen-squad'); setSquadTab('analyse'); renderGegnerBilanzBox();
+        const gb = document.getElementById('gegner-bilanz-box').textContent;
+        out.gBox = gb.includes(opp.name) && gb.includes('Angst FC') && !gb.includes('Einmal FC') && !gb.includes('Mittel FC') && gb.includes('3S 0U 0N');
+        game.headToHeadRecords = {}; renderGegnerBilanzBox();
+        out.gLeer = document.getElementById('gegner-bilanz-box').textContent.includes('Noch zu wenige Duelle');
+        game.headToHeadRecords = { [opp.name]: { wins: 3, draws: 0, losses: 0, goalsFor: 6, goalsAgainst: 1, lastResults: [] } };
+
+        // --- Spielstil-Empfehlung ---
+        staffMembers.analyst.hired = false; if (typeof underworld !== 'undefined') underworld.spyIntelActive = false;
+        game.recentTacticStyles = []; game.oppTacticPlan = null;
+        opp.playstyle = 'defensiv'; game.tacticStyle = 'pressing';
+        let st = getStilEmpfehlung(opp.name);
+        out.sPresse = !!st && st.gegner === 'K' && st.stil === 'ballbesitz' && st.quelle === 'laut Presse' && st.passt === false;
+        game.oppTacticPlan = null; opp.playstyle = 'offensiv'; st = getStilEmpfehlung(opp.name);
+        out.sOffensiv = st.gegner === 'P' && st.stil === 'konter';
+        game.oppTacticPlan = null; opp.playstyle = 'ausgeglichen'; st = getStilEmpfehlung(opp.name);
+        out.sAusgeglichen = st.gegner === 'B' && st.stil === 'pressing' && st.passt === true;
+        staffMembers.analyst.hired = true; game.oppTacticPlan.arch = 'K';
+        st = getStilEmpfehlung(opp.name);
+        out.sAnalyst = st.quelle === 'laut Analyst' && st.gegner === 'K' && st.stil === 'ballbesitz';
+        staffMembers.analyst.hired = false;
+        game.oppTacticPlan = null; opp.playstyle = 'defensiv'; game.tacticStyle = 'pressing';
+        out.sUnbekannt = getStilEmpfehlung('Gibt es nicht') === null;
+        pendingMatchInfo = { isHome: true, oppName: opp.name, oppStr: 60, ourFixture: null };
+        showScreen('screen-prematch-press'); renderPrematchCheck();
+        const pc = () => document.getElementById('prematch-check-box').textContent;
+        out.sAnzeige = pc().includes('laut Presse meist Konter') && pc().includes('Dagegen hilft Ballbesitz') && pc().includes('Ballbesitz übernehmen');
+        out.tvAnzeige = pc().includes('Sieg Platz 3') && pc().includes('Remis Platz 5') && pc().includes('Niederlage Platz 5');
+        out.gChip = pc().includes('😊 Lieblingsgegner (3S 0U 0N)');
+        out.wCheck = JSON.stringify(woerter('#prematch-check-box button'));
+        out.cBreit = ueberlauf();
+        [...document.querySelectorAll('#prematch-check-box button')].find(b => b.textContent.includes('Ballbesitz übernehmen')).click();
+        out.sUebernommen = game.tacticStyle === 'ballbesitz' && pc().includes('Dein Spielstil passt');
+        toasts.length = 0; applyStilEmpfehlung('quatsch'); out.sUngueltig = toasts.some(t => t.includes('Unbekannter Spielstil')) && game.tacticStyle === 'ballbesitz';
+
+        // --- Rekord-Hinweise ---
+        game.serien = { aktuell: { sieg: 3, unbesiegt: 6, heimSieg: 2, zuNull: 0, ohneSieg: 0, niederlage: 0, torlos: 0 }, rekord: { sieg: { n: 3 }, unbesiegt: { n: 10 }, heimSieg: { n: 2 } } };
+        let rh = getRekordHinweise(true).map(x => x.text);
+        out.rSieg = rh.some(t => t.includes('neuer Vereinsrekord, 4 Siege in Folge'));
+        out.rEndet = rh.some(t => t.includes('endet die Serie von 6 ungeschlagenen'));
+        out.rHeim = rh.some(t => t.includes('5') === false && t.includes('3 Heimsiege in Folge')) && !getRekordHinweise(false).some(x => x.text.includes('Heimsieg'));
+        game.serien = { aktuell: { ohneSieg: 4, niederlage: 2 }, rekord: { ohneSieg: { n: 4 }, niederlage: { n: 2 } } };
+        rh = getRekordHinweise(true).map(x => x.text);
+        out.rNegativ = rh.some(t => t.includes('Seit 4 Spielen ohne Sieg') && t.includes('Negativrekord')) && rh.some(t => t.includes('Negativrekord, 3 Niederlagen'));
+        game.serien = { aktuell: {}, rekord: {} }; out.rNichts = getRekordHinweise(true).length === 0;
+        delete game.serien; out.rAltesFeld = Array.isArray(getRekordHinweise(true));
+        game.serien = { aktuell: { sieg: 5 }, rekord: { sieg: { n: 5 } } }; renderPrematchCheck();
+        out.rAnzeige = pc().includes('🏅 Mit einem Sieg: neuer Vereinsrekord, 6 Siege in Folge.');
+
+        // --- Empfohlene Vorbereitung ---
+        game.matchplaene = {}; game.lineupPresets = [null, null, null, null, null]; game.tacticPresets = [null, null, null, null, null];
+        game.tacticStyle = 'pressing'; game.oppTacticPlan = null;
+        const muede = squad.find(p => lineup.includes(p.id) && p.pos !== 'TW' && squad.some(b => !lineup.includes(b.id) && b.pos === p.pos));
+        muede.fitness = 40;
+        let emp = getEmpfohleneVorbereitung(opp.name);
+        out.eSchritte = emp.some(x => x.art === 'tausch' && x.raus === muede.id) && emp.some(x => x.art === 'stil' && x.stil === 'ballbesitz') && !emp.some(x => x.art === 'matchplan');
+        renderPrematchCheck();
+        out.eAnzeige = pc().includes('Empfohlene Vorbereitung') && pc().includes(`Alles übernehmen (${emp.length})`) && pc().includes(muede.name + ' ↔');
+        toasts.length = 0;
+        [...document.querySelectorAll('#prematch-check-box button')].find(b => b.textContent.startsWith('Alles übernehmen')).click();
+        out.eUebernommen = !lineup.includes(muede.id) && game.tacticStyle === 'ballbesitz' && toasts.filter(t => t.startsWith('✅ Übernommen')).length === 1 && toasts.length === 1;
+        out.eNachher = getEmpfohleneVorbereitung(opp.name).length === 0 && !pc().includes('Empfohlene Vorbereitung');
+        toasts.length = 0; applyEmpfohleneVorbereitung(); out.eNichts = toasts.some(t => t.includes('nichts zu übernehmen'));
+        // mit Matchplan: Matchplan statt Tausch, kein Stil-Schritt, wenn er eine Taktik setzt
+        muede.fitness = 95; autoLineup();
+        game.formation = '4-4-2'; saveLineupPreset(0); game.tacticStyle = 'offensiv'; saveTacticPreset(0); game.tacticStyle = 'pressing';
+        game.matchplaene = { [opp.name]: { aufstellung: 0, taktik: 0 } };
+        emp = getEmpfohleneVorbereitung(opp.name);
+        out.eMatchplan = emp.length === 1 && emp[0].art === 'matchplan' && emp[0].text.includes('Vorlage 1') && emp[0].text.includes('Taktik 1');
+        applyEmpfohleneVorbereitung();
+        out.eMatchplanAngewendet = game.tacticStyle === 'offensiv';
+        game.matchplaene = { [opp.name]: { aufstellung: 0, taktik: null } }; game.tacticStyle = 'pressing';
+        emp = getEmpfohleneVorbereitung(opp.name);
+        out.eMatchplanOhneTaktik = emp.length === 2 && emp[0].art === 'matchplan' && emp[1].art === 'stil';
+        game.matchplaene = {};
+
+        // --- Ampel im Livespiel ---
+        const roter = squad.find(p => lineup.includes(p.id) && p.pos !== 'TW');
+        roter.fitness = 45; roter.timesInjured = 3;
+        const cmAlt = typeof currentMatch !== 'undefined' ? currentMatch : null;
+        currentMatch = { sentOff: [] };
+        renderLiveSubs();
+        const optRot = [...document.querySelectorAll('#live-sub-out option')].find(o => o.value === String(roter.id));
+        out.lOption = !!optRot && optRot.textContent.includes('🚦 rot');
+        out.lGruenOhne = [...document.querySelectorAll('#live-sub-out option')].filter(o => o.value !== String(roter.id)).every(o => !o.textContent.includes('🚦') || squad.find(p => String(p.id) === o.value).fitness < 80);
+        out.lBank = [...document.querySelectorAll('#live-subs-list button')].every(b => /\d+ %/.test(b.textContent));
+        currentMatch = cmAlt;
+        showToast = toastAlt;
+        return out;
+    });
+    const ok = (...ks) => ks.every(k => r[k] === true);
+    const werte = ks => JSON.stringify(ks.map(k => r[k]));
+    const A = ['tvJetzt', 'tvWerte', 'tvUnveraendert', 'tvOhneMich', 'tvAnzeige'];
+    assert(ok(...A), `Tabellen-Vorschau: Platz nach Sieg, Remis, Niederlage ohne die echte Tabelle zu ändern (${werte(A)})`);
+    const B = ['gListen', 'gTyp', 'gBox', 'gLeer', 'gChip'];
+    assert(ok(...B), `Lieblings- und Angstgegner: ab zwei Duellen, Schwellen, Kasten und Chip im Spieltag-Check (${werte(B)})`);
+    const C = ['sPresse', 'sOffensiv', 'sAusgeglichen', 'sAnalyst', 'sUnbekannt', 'sAnzeige', 'sUebernommen', 'sUngueltig'];
+    assert(ok(...C), `Spielstil-Empfehlung: nach Presse oder Analyst, passender Stil, Übernehmen, ungültige Eingabe (${werte(C)})`);
+    const D = ['rSieg', 'rEndet', 'rHeim', 'rNegativ', 'rNichts', 'rAltesFeld', 'rAnzeige'];
+    assert(ok(...D), `Rekord-Hinweise: neuer Rekord, endende Serie, Heimserie nur zu Hause, Negativrekorde, Anzeige (${werte(D)})`);
+    const E = ['eSchritte', 'eAnzeige', 'eUebernommen', 'eNachher', 'eNichts', 'eMatchplan', 'eMatchplanAngewendet', 'eMatchplanOhneTaktik'];
+    assert(ok(...E), `Empfohlene Vorbereitung: Tausch und Stil, eine Sammelmeldung, Matchplan hat Vorrang (${werte(E)})`);
+    const F = ['lOption', 'lGruenOhne', 'lBank'];
+    assert(ok(...F), `Ampel im Livespiel: Raus-Liste mit Ampel, Bank mit Fitness (${werte(F)})`);
+    assert(r.wCheck === '[]' && r.cBreit === true, `Spieltag-Check bei 320 px in breiter Schrift: Wörter passen, kein Überlauf (${r.wCheck}/${r.cBreit})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 module.exports = {
     testSpielvorbereitung,
     testVertragsWerkzeuge,
@@ -2182,4 +2328,5 @@ module.exports = {
     testRunde30Funktionen,
     testRunde31Funktionen,
     testRunde32Markt,
+    testRunde32Spieltag,
 };

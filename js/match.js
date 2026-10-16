@@ -468,7 +468,8 @@
         onPitch.forEach(p => {
             let opt = document.createElement('option');
             opt.value = String(p.id);
-            opt.textContent = `Raus: ${p.name} (${p.pos}, Stärke ${p.strength}, ${p.fitness}% fit)`;
+            const ampel = typeof getBelastungsAmpel === 'function' ? getBelastungsAmpel(p).stufe : 'gruen';
+            opt.textContent = `Raus: ${p.name} (${p.pos}, Stärke ${p.strength}, ${p.fitness}% fit)${ampel !== 'gruen' ? ` · 🚦 ${ampel}` : ''}`;
             sel.appendChild(opt);
         });
         container.appendChild(sel);
@@ -476,7 +477,8 @@
             let btn = document.createElement('button');
             btn.className = 'btn-secondary';
             btn.style.fontSize = 'var(--fs-small)'; btn.style.padding = '4px 6px'; btn.style.width = 'auto';
-            btn.innerText = `+ ${p.name} (${p.pos}, ${p.strength})`;
+            const ampelBank = typeof getBelastungsAmpel === 'function' ? getBelastungsAmpel(p).stufe : 'gruen';
+            btn.innerText = `+ ${p.name} (${p.pos}, ${p.strength}, ${p.fitness} %)${ampelBank !== 'gruen' ? ` 🚦 ${ampelBank}` : ''}`;
             btn.onclick = () => makeLiveSubstitution(p.id);
             container.appendChild(btn);
         });
