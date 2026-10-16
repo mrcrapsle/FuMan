@@ -315,12 +315,13 @@
     }
 
     function setLeagueTab(tab) {
-        ['table', 'fixtures', 'stats'].forEach(t => {
+        ['table', 'fixtures', 'stats', 'verlauf'].forEach(t => {
             document.getElementById('league-tab-' + t).style.display = (t === tab) ? 'block' : 'none';
             let btn = document.getElementById('btn-tab-' + t);
             if (btn) btn.className = (t === tab) ? 'btn-action' : 'btn-secondary';
         });
         if (tab === 'stats' && typeof renderLeagueStats === 'function') renderLeagueStats();
+        if (tab === 'verlauf' && typeof renderSaisonverlauf === 'function') renderSaisonverlauf();
     }
 
     function changeLeagueMatchday(dir) {

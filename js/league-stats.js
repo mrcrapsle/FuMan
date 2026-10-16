@@ -118,16 +118,21 @@ function renderLeagueRankChart(level) {
     const hinten = teams.filter(t => t !== fokus && t !== rivale).map(t => `<polyline points="${linie(t)}" fill="none" stroke="color-mix(in srgb, var(--ink) 35%, transparent)" stroke-width="1" />`).join('');
     const vorn = (rivale ? `<polyline points="${linie(rivale)}" fill="none" stroke="var(--danger)" stroke-width="1.5" />` : '')
         + `<polyline points="${linie(fokus)}" fill="none" stroke="var(--primary)" stroke-width="2.5" />`;
+    // Vorsaison des eigenen Vereins (Phase 26.17), gestrichelt, auf die heutige Ligagröße begrenzt
+    const vj = game.platzVerlaufVorjahr;
+    const mitVorjahr = eigen && level === game.leagueLevel && vj && Array.isArray(vj.hist) && vj.hist.filter(Boolean).length >= 2;
+    const xVj = i => pad + i * (w - pad * 2) / Math.max(1, Math.max(spieltage, vj && vj.hist ? vj.hist.length : 0) - 1);
+    const vorjahrLinie = mitVorjahr ? `<polyline points="${vj.hist.map((p, i) => p ? `${xVj(i).toFixed(1)},${y(Math.min(n, p)).toFixed(1)}` : null).filter(Boolean).join(' ')}" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4 3" />` : '';
     const hist = (fokus.rankHist || []).filter(Boolean);
     const bester = hist.length ? Math.min(...hist) : '-', schlechtester = hist.length ? Math.max(...hist) : '-';
     box.innerHTML = `<svg viewBox="0 0 ${w} ${h}" style="width:100%; height:130px; display:block;" preserveAspectRatio="none">
             <line x1="0" x2="${w}" y1="${((y(2) + y(3)) / 2).toFixed(1)}" y2="${((y(2) + y(3)) / 2).toFixed(1)}" stroke="var(--primary)" stroke-dasharray="3 3" stroke-width="0.6" />
             <line x1="0" x2="${w}" y1="${((y(n - 2) + y(n - 1)) / 2).toFixed(1)}" y2="${((y(n - 2) + y(n - 1)) / 2).toFixed(1)}" stroke="var(--danger)" stroke-dasharray="3 3" stroke-width="0.6" />
-            ${hinten}${vorn}
+            ${hinten}${vorjahrLinie}${vorn}
         </svg>
         <div style="font-size:var(--fs-caption); color:var(--text-muted); text-align:center;">
             <span style="color:var(--primary);">━</span> ${fokus.name}: aktuell Platz ${teams.indexOf(fokus) + 1}, ${fokus.points} Punkte (bester ${bester}., schlechtester ${schlechtester}.)
-            ${rivale ? `· <span style="color:var(--danger);">━</span> ${rivale.name}` : ''} · gestrichelt: Aufstiegs- und Abstiegsplätze
+            ${rivale ? `· <span style="color:var(--danger);">━</span> ${rivale.name}` : ''}${mitVorjahr ? ` · <span style="color:var(--accent);">┅</span> Vorsaison ${vj.season}${vj.level !== game.leagueLevel ? ' (' + leagueNames[vj.level] + ')' : ''}: Endplatz ${vj.hist.filter(Boolean).slice(-1)[0]}` : ''} · gestrichelt: Aufstiegs- und Abstiegsplätze
         </div>`;
 }
 

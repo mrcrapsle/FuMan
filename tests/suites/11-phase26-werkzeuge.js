@@ -2475,6 +2475,105 @@ async function testRunde32Uebersicht(browser) {
     await page.close();
 }
 
+async function testRunde32Statistik(browser) {
+    console.log('\n[26.17] Meilensteine, Saisonverlauf, Vorsaison im Tabellenverlauf, Kaderwert-Kurve');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.evaluate(R32_HILFEN);
+    const r = await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false; simulateMatchdays(3);
+        const out = {};
+        squad.forEach(p => { delete p.meilenstein; p.injured = 0; p.suspended = 0; });
+
+        // --- Meilensteine ---
+        const p = squad[0];
+        p.goalsCareer = 10;
+        const vor = inboxMessages.length;
+        out.mTor = pruefeTorMeilenstein(p) === true && p.meilenstein.text === '10. Tor für den Verein' && p.meilenstein.season === game.season && inboxMessages.length === vor + 1 && inboxMessages[0].title.includes('Meilenstein');
+        p.goalsCareer = 11; out.mKeiner = pruefeTorMeilenstein(p) === false && inboxMessages.length === vor + 1;
+        out.mNurKader = pruefeTorMeilenstein({ name: 'Fremd', goalsCareer: 25 }) === false;
+        out.mVerdrahtet = creditOwnGoal.toString().includes('pruefeTorMeilenstein') && processPostMatchRoutine.toString().includes('p.meilenstein');
+        showScreen('screen-squad'); setSquadTab('aufstellung'); squadFilterPos = 'alle'; squadTagFilter = ''; squadBelastungNurRot = false;
+        if (typeof getKaderAnsicht === 'function' && getKaderAnsicht() === 'kompakt') toggleKaderAnsicht();
+        renderSquadView();
+        out.mChip = document.getElementById('bench-list').textContent.includes('🎉 10. Tor für den Verein');
+        game.matchday += MEILENSTEIN_SPIELTAGE + 1; out.mChipWeg = getMeilensteinChip(p) === ''; game.matchday -= MEILENSTEIN_SPIELTAGE + 1;
+        p.meilenstein.season = game.season - 1; out.mAlteSaison = getMeilensteinChip(p) === '';
+        out.mOhne = getMeilensteinChip(squad[1]) === '' && getMeilensteinChip(null) === '';
+
+        // --- Saisonverlauf ---
+        const sv = getSaisonverlauf();
+        out.vAlle = sv.length === 34 && sv.every((x, i) => x.md === i + 1);
+        out.vGespielt = sv.filter(x => x.gespielt).length === game.matchday - 1 && sv.filter(x => x.gespielt).every(x => typeof x.tore === 'number' && x.platzDanach >= 1);
+        out.vOffen = sv.filter(x => !x.gespielt).every(x => x.platz >= 1 && x.staerke > 0);
+        const liga = leaguesData[game.leagueLevel];
+        const f1 = fixturesData[game.leagueLevel][0].find(f => liga[f.home].name === game.clubName || liga[f.away].name === game.clubName);
+        const heim1 = liga[f1.home].name === game.clubName;
+        out.vErgebnis = sv[0].heim === heim1 && sv[0].tore === (heim1 ? f1.homeGoals : f1.awayGoals) && sv[0].name === (heim1 ? liga[f1.away].name : liga[f1.home].name);
+        game.spielberichte = [{ season: game.season, matchday: 1, cup: false, titel: 'Testbericht', text: 'Bericht Spieltag 1' }, { season: game.season, matchday: 2, cup: true, titel: 'Pokal', text: 'Pokal' }];
+        showScreen('screen-league'); setLeagueTab('verlauf');
+        out.vReiter = document.getElementById('league-tab-verlauf').style.display === 'block' && document.getElementById('btn-tab-verlauf').className === 'btn-action' && document.getElementById('league-tab-table').style.display === 'none';
+        const vb = document.getElementById('season-course-box');
+        out.vBox = vb.textContent.includes('🏠') && (vb.textContent.match(/Platz \d+ · Str \d+/g) || []).length === 34 - (game.matchday - 1);
+        const berichtKnopf = vb.querySelector('button[onclick="openArchivedReport(0)"]');
+        out.vBerichtKnopf = !!berichtKnopf && !vb.querySelector('button[onclick="openArchivedReport(1)"]');
+        out.wVerlauf = JSON.stringify(woerter('#season-course-box button, #screen-league button[id^="btn-tab-"]'));
+        out.vBreit = ueberlauf();
+        berichtKnopf.click();
+        out.vBerichtOffen = document.getElementById('share-report-overlay').classList.contains('show') && document.getElementById('share-report-text').value === 'Bericht Spieltag 1';
+        closeShareReport();
+        setLeagueTab('table'); out.vZurueck = document.getElementById('league-tab-verlauf').style.display === 'none';
+
+        // --- Vorsaison im Tabellenverlauf ---
+        const ich = liga.find(t => t.name === game.clubName);
+        const histAlt = ich.rankHist.slice();
+        game.platzVerlaufVorjahr = null;
+        ich.rankHist = [9, 8, 6, 5, 4];
+        archivePlatzVerlauf();
+        out.pArchiv = game.platzVerlaufVorjahr && game.platzVerlaufVorjahr.season === game.season && game.platzVerlaufVorjahr.hist.join() === '9,8,6,5,4' && game.platzVerlaufVorjahr.level === game.leagueLevel;
+        ich.rankHist = histAlt;
+        setLeagueTab('stats'); renderLeagueRankChart(game.leagueLevel);
+        const rc = document.getElementById('league-rank-chart-box');
+        out.pLinie = !!rc.querySelector('polyline[stroke="var(--accent)"][stroke-dasharray]') && rc.textContent.includes(`Vorsaison ${game.season}`) && rc.textContent.includes('Endplatz 4');
+        const anderes = game.leagueLevel === 0 ? 1 : game.leagueLevel - 1;
+        renderLeagueRankChart(anderes); out.pNurEigeneLiga = !document.getElementById('league-rank-chart-box').textContent.includes('Vorsaison');
+        game.platzVerlaufVorjahr = null; renderLeagueRankChart(game.leagueLevel); out.pOhne = !document.getElementById('league-rank-chart-box').textContent.includes('Vorsaison');
+        const ichAlt = ich.rankHist; ich.rankHist = []; archivePlatzVerlauf(); out.pLeerKeinArchiv = game.platzVerlaufVorjahr === null; ich.rankHist = ichAlt;
+
+        // --- Kaderwert-Kurve ---
+        const summe = squad.reduce((sum, x) => sum + (x.marketValue || 0), 0);
+        out.kwWert = getKaderwert() === summe;
+        game.kaderwertVerlauf = [];
+        showScreen('screen-squad'); setSquadTab('analyse'); renderKaderwertKurve();
+        out.kwLeer = document.getElementById('kaderwert-box').textContent.includes('Nach dem ersten Saisonende') && !document.querySelector('#kaderwert-box svg');
+        archiveKaderwert(); archiveKaderwert();
+        out.kwArchiv = game.kaderwertVerlauf.length === 1 && game.kaderwertVerlauf[0].wert === summe && game.kaderwertVerlauf[0].season === game.season;
+        game.kaderwertVerlauf = [{ season: game.season - 2, wert: summe - 2000000 }, { season: game.season - 1, wert: summe + 1000000 }];
+        renderKaderwertKurve();
+        const kb = document.getElementById('kaderwert-box');
+        out.kwKurve = kb.querySelectorAll('circle').length === 3 && kb.textContent.includes('jetzt: ') && kb.textContent.includes(`Seit Saisonende ${game.season - 2}`) && kb.textContent.includes('+');
+        out.kwBreit = ueberlauf();
+        const sicherung = game.season; for (let sn = 1; sn <= 25; sn++) { game.season = sn; archiveKaderwert(); } game.season = sicherung;
+        out.kwHoechstens20 = game.kaderwertVerlauf.length === 20 && game.kaderwertVerlauf[19].season === 25;
+        delete game.kaderwertVerlauf; renderKaderwertKurve(); archiveKaderwert(); out.kwAltesFeld = Array.isArray(game.kaderwertVerlauf) && game.kaderwertVerlauf.length === 1;
+        out.seasonEnd = concludeSeasonAndAdvance.toString().includes('archiveKaderwert') && concludeSeasonAndAdvance.toString().includes('archivePlatzVerlauf');
+        return out;
+    });
+    const ok = (...ks) => ks.every(k => r[k] === true);
+    const werte = ks => JSON.stringify(ks.map(k => r[k]));
+    const A = ['mTor', 'mKeiner', 'mNurKader', 'mVerdrahtet', 'mChip', 'mChipWeg', 'mAlteSaison', 'mOhne'];
+    assert(ok(...A), `Meilensteine: Torjubiläum mit Nachricht, Chip drei Spieltage, nur eigener Kader, Pflichtspiel-Jubiläum verdrahtet (${werte(A)})`);
+    const B = ['vAlle', 'vGespielt', 'vOffen', 'vErgebnis', 'vReiter', 'vBox', 'vBerichtKnopf', 'vBreit', 'vBerichtOffen', 'vZurueck'];
+    assert(ok(...B), `Saisonverlauf: alle 34 Spieltage, Ergebnisse mit Platz danach, offene Spiele, Spielbericht per Tipp, eigener Reiter (${werte(B)})`);
+    const C = ['pArchiv', 'pLinie', 'pNurEigeneLiga', 'pOhne', 'pLeerKeinArchiv'];
+    assert(ok(...C), `Tabellenverlauf mit Vorsaison: Archiv am Saisonende, gestrichelte Linie nur in der eigenen Liga (${werte(C)})`);
+    const D = ['kwWert', 'kwLeer', 'kwArchiv', 'kwKurve', 'kwBreit', 'kwHoechstens20', 'kwAltesFeld', 'seasonEnd'];
+    assert(ok(...D), `Kaderwert-Kurve: Summe, Archiv je Saison, Kurve mit heutigem Wert, höchstens 20, alte Spielstände, Saisonende (${werte(D)})`);
+    assert(r.wVerlauf === '[]', `Neue Knöpfe bei 320 px in breiter Schrift: kein Wort breiter als sein Knopf (${r.wVerlauf})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 module.exports = {
     testSpielvorbereitung,
     testVertragsWerkzeuge,
@@ -2490,4 +2589,5 @@ module.exports = {
     testRunde32Markt,
     testRunde32Spieltag,
     testRunde32Uebersicht,
+    testRunde32Statistik,
 };

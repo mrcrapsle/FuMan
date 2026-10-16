@@ -378,6 +378,102 @@ function renderSaisonZiele() {
         + `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">Noch ${rest} Spiel${rest === 1 ? '' : 'e'} (höchstens ${3 * rest} Punkte). Reine Tabellenwerte, das Torverhältnis zählt nicht.</div>`;
 }
 
+// ---------- Meilensteine (Phase 26.17) ----------
+// Tore für den Verein (goalsCareer): beim 10., 25., 50., 100., 150. und 200. Tor eine Nachricht. Das Pflichtspiel-Jubiläum
+// (50., 100. … Spiel) gibt es schon im Nachspiel-Ablauf (js/match-live.js); beide setzen p.meilenstein, das als Chip drei
+// Spieltage lang auf der Kaderkarte steht. Reine Anzeige.
+const TOR_MEILENSTEINE = [10, 25, 50, 100, 150, 200];
+const MEILENSTEIN_SPIELTAGE = 3;
+
+function pruefeTorMeilenstein(p) {
+    if (!p || !TOR_MEILENSTEINE.includes(p.goalsCareer) || !squad.includes(p)) return false;
+    p.meilenstein = { text: `${p.goalsCareer}. Tor für den Verein`, season: game.season, matchday: game.matchday };
+    if (typeof addInboxMessage === 'function') addInboxMessage('info', `⚽ Meilenstein: ${p.name}`, `${p.name} erzielt sein ${p.goalsCareer}. Tor für den Verein.`, 'screen-squad');
+    return true;
+}
+
+function getMeilensteinChip(p) {
+    const m = p && p.meilenstein;
+    if (!m || m.season !== game.season || game.matchday - m.matchday > MEILENSTEIN_SPIELTAGE) return '';
+    return uiChip(`🎉 ${m.text}`, 'gut');
+}
+
+// ---------- Kaderwert-Kurve (Phase 26.17) ----------
+// Gesamtmarktwert des Kaders am Ende jeder Saison (game.kaderwertVerlauf = [{ season, wert }], höchstens 20) plus der heutige Wert.
+function getKaderwert() { return squad.reduce((sum, p) => sum + (p.marketValue || 0), 0); }
+
+function archiveKaderwert() {
+    if (!Array.isArray(game.kaderwertVerlauf)) game.kaderwertVerlauf = [];
+    game.kaderwertVerlauf = game.kaderwertVerlauf.filter(x => x.season !== game.season);
+    game.kaderwertVerlauf.push({ season: game.season, wert: getKaderwert() });
+    game.kaderwertVerlauf = game.kaderwertVerlauf.slice(-20);
+}
+
+function renderKaderwertKurve() {
+    const box = document.getElementById('kaderwert-box');
+    if (!box) return;
+    const punkte = [...(Array.isArray(game.kaderwertVerlauf) ? game.kaderwertVerlauf : []).map(x => ({ label: `Saisonende ${x.season}`, kurz: String(x.season), wert: x.wert })), { label: 'heute', kurz: 'jetzt', wert: getKaderwert() }];
+    const kopf = '<div class="panel-header" style="color:var(--blue);">💎 Kaderwert</div>';
+    if (punkte.length < 2) { box.innerHTML = kopf + `<div style="font-size:var(--fs-small);">Heute ${formatVal(punkte[0].wert)}. Nach dem ersten Saisonende entsteht hier die Kurve.</div>`; return; }
+    const w = 300, h = 90, pad = 8;
+    const maxW = Math.max(...punkte.map(x => x.wert)), minW = Math.min(...punkte.map(x => x.wert));
+    const spanne = Math.max(1, maxW - minW);
+    const xy = (x, i) => [pad + i * (w - pad * 2) / (punkte.length - 1), h - pad - (x.wert - minW) / spanne * (h - pad * 2)];
+    const linie = punkte.map((x, i) => xy(x, i).map(v => v.toFixed(1)).join(',')).join(' ');
+    const diff = punkte[punkte.length - 1].wert - punkte[0].wert;
+    box.innerHTML = kopf + `<svg viewBox="0 0 ${w} ${h}" style="width:100%; height:${h}px; display:block;" role="img" aria-label="Kaderwert von ${formatVal(punkte[0].wert)} auf ${formatVal(punkte[punkte.length - 1].wert)}">
+            <polyline points="${linie}" fill="none" stroke="var(--primary)" stroke-width="2" />
+            ${punkte.map((x, i) => { const [cx, cy] = xy(x, i); return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="3" fill="var(--primary)" />`; }).join('')}
+        </svg>
+        <div style="font-size:var(--fs-caption); color:var(--text-muted);">${punkte.map(x => `${x.kurz}: ${formatVal(x.wert)}`).join(' · ')}<br>Seit Saisonende ${punkte[0].kurz}: <strong style="color:${diff >= 0 ? 'var(--primary)' : 'var(--danger)'};">${diff >= 0 ? '+' : ''}${formatVal(diff)}</strong></div>`;
+}
+
+// ---------- Platzverlauf der Vorsaison (Phase 26.17) ----------
+// Erweitert den vorhandenen Tabellenverlauf (js/league-stats.js): am Saisonende wird der eigene Verlauf festgehalten
+// (game.platzVerlaufVorjahr = { season, level, teams, hist }) und in der eigenen Liga gestrichelt mitgezeichnet.
+function archivePlatzVerlauf() {
+    const liga = leaguesData[game.leagueLevel] || [];
+    const ich = liga.find(t => t.name === game.clubName);
+    if (!ich || !Array.isArray(ich.rankHist) || !ich.rankHist.some(Boolean)) return;
+    game.platzVerlaufVorjahr = { season: game.season, level: game.leagueLevel, teams: liga.length, hist: ich.rankHist.slice(0, SAISON_SPIELE) };
+}
+
+// ---------- Saisonverlauf aller eigenen Spiele (Phase 26.17) ----------
+function getSaisonverlauf() {
+    const lvl = game.leagueLevel, liga = leaguesData[lvl] || [], plan = (typeof fixturesData !== 'undefined' && fixturesData[lvl]) || [];
+    const ich = liga.find(t => t.name === game.clubName);
+    const tab = typeof sortedTable === 'function' ? sortedTable(lvl) : [];
+    const spiele = [];
+    for (let md = 1; md <= SAISON_SPIELE; md++) {
+        const f = (plan[md - 1] || []).find(x => liga[x.home] && liga[x.away] && (liga[x.home].name === game.clubName || liga[x.away].name === game.clubName));
+        if (!f) continue;
+        const heim = liga[f.home].name === game.clubName, gegner = heim ? liga[f.away] : liga[f.home];
+        const e = { md, heim, name: gegner.name, gespielt: !!f.played };
+        if (f.played) { e.tore = heim ? f.homeGoals : f.awayGoals; e.gegentore = heim ? f.awayGoals : f.homeGoals; e.platzDanach = ich && Array.isArray(ich.rankHist) ? ich.rankHist[md - 1] || null : null; }
+        else { e.platz = tab.indexOf(gegner) + 1; e.staerke = Math.round(gegner.strength); }
+        e.bericht = (Array.isArray(game.spielberichte) ? game.spielberichte : []).findIndex(b => b.season === game.season && b.matchday === md && !b.cup);
+        spiele.push(e);
+    }
+    return spiele;
+}
+
+function renderSaisonverlauf() {
+    const box = document.getElementById('season-course-box');
+    if (!box) return;
+    const spiele = getSaisonverlauf();
+    if (!spiele.length) { box.innerHTML = '<div style="font-size:var(--fs-small); color:var(--text-muted);">Kein Spielplan vorhanden.</div>'; return; }
+    const s = spiele.filter(x => x.gespielt && x.tore > x.gegentore).length, u = spiele.filter(x => x.gespielt && x.tore === x.gegentore).length, n = spiele.filter(x => x.gespielt && x.tore < x.gegentore).length;
+    box.innerHTML = `<div style="font-size:var(--fs-small); margin-bottom:6px;">${game.season}. Saison in der ${mpEsc(leagueNames[game.leagueLevel])}: ${s}S ${u}U ${n}N · 🏠 Heim · ✈️ Auswärts</div>`
+        + spiele.map(x => {
+            const farbe = !x.gespielt ? 'var(--border)' : x.tore > x.gegentore ? 'var(--primary)' : x.tore < x.gegentore ? 'var(--danger)' : 'var(--accent)';
+            const rechts = x.gespielt ? `<strong>${x.tore}:${x.gegentore}</strong>${x.platzDanach ? ` <span style="color:var(--text-muted);">· Platz ${x.platzDanach}</span>` : ''}` : `<span style="color:var(--text-muted);">Platz ${x.platz} · Str ${x.staerke}</span>`;
+            const inhalt = `<span style="overflow-wrap:anywhere; text-align:left;">${x.md}. ${x.heim ? '🏠' : '✈️'} ${mpEsc(x.name)}</span><span style="flex:0 0 auto;">${rechts}</span>`;
+            return x.bericht !== -1
+                ? `<button onclick="openArchivedReport(${x.bericht})" class="btn-secondary" style="display:flex; justify-content:space-between; gap:8px; width:100%; margin:2px 0; border-left:3px solid ${farbe};" title="Spielbericht öffnen">${inhalt}</button>`
+                : `<div class="box" style="display:flex; justify-content:space-between; gap:8px; font-size:var(--fs-small); margin:2px 0; border-left-color:${farbe};">${inhalt}</div>`;
+        }).join('');
+}
+
 // ---------- Restprogramm (Phase 26.17) ----------
 // Die eigenen Ligaspiele der restlichen Saison aus dem echten Spielplan (fixturesData): die nächsten fünf Gegner mit
 // Heim/Auswärts, Tabellenplatz und Stärke, die Ø-Stärke aller Restgegner und die schwerste Phase (drei Spiele in Folge).
@@ -593,6 +689,7 @@ function announceSeasonReview() {
 
 function renderInsightsPanels() {
     renderSeriesTracker();
+    renderKaderwertKurve();
     renderSeasonReviewBox();
     renderMatchReportsBox();
 }

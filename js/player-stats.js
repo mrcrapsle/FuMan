@@ -24,6 +24,7 @@ function creditOwnGoal(players, fixedScorer = null, fixedAssist) {
     if (!scorer) return { scorer: null, assist: null };
     scorer.goalsSeason = (scorer.goalsSeason || 0) + 1;
     scorer.goalsCareer = (scorer.goalsCareer || 0) + 1;
+    if (typeof pruefeTorMeilenstein === 'function') pruefeTorMeilenstein(scorer);
     matchEvents.tore[scorer.id] = (matchEvents.tore[scorer.id] || 0) + 1;
     let assist = null;
     const mitspieler = players.filter(p => p.id !== scorer.id);

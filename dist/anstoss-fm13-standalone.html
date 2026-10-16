@@ -3383,6 +3383,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
                     <div class="panel" id="series-tracker-box"></div>
                     <div class="panel" id="season-review-box"></div>
                     <div class="panel" id="match-reports-box"></div>
+                    <div class="panel" id="kaderwert-box"></div>
                     <div class="panel" id="opp-notes-box"></div>
                     <div class="panel" id="gegner-bilanz-box"></div>
                     <div class="panel" id="preset-bilanz-box"></div>
@@ -4088,10 +4089,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
                         <button onclick="setLeagueLevel(4)" id="btn-lvl-4" class="btn-secondary">5. Liga</button>
                         <button onclick="setLeagueLevel(5)" id="btn-lvl-5" class="btn-action">6. Liga</button>
                     </div>
-                    <div style="display:flex; gap:4px; margin-bottom:6px;">
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 7.5em), 1fr)); gap:4px; margin-bottom:6px;">
                         <button onclick="setLeagueTab('table')" id="btn-tab-table" class="btn-action">Tabelle</button>
                         <button onclick="setLeagueTab('fixtures')" id="btn-tab-fixtures" class="btn-secondary">Paarungen</button>
                         <button onclick="setLeagueTab('stats')" id="btn-tab-stats" class="btn-secondary">Statistik</button>
+                        <button onclick="setLeagueTab('verlauf')" id="btn-tab-verlauf" class="btn-secondary">Saisonverlauf</button>
                     </div>
                     <div id="league-tab-table"><table><thead><tr><th>Pl</th><th>Team</th><th>Sp</th><th>Tore</th><th>Diff</th><th>Pkt</th><th>Form</th></tr></thead><tbody id="league-table-body"></tbody></table>
                         <div id="head-to-head-box" style="margin-top:8px;"></div>
@@ -4104,6 +4106,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
                         </div>
                         <div id="matchday-fixtures-list"></div>
                     </div>
+                    <div id="league-tab-verlauf" style="display:none;"><div id="season-course-box"></div></div>
                     <div id="league-tab-stats" style="display:none;">
                         <div class="panel" style="margin-bottom:8px;">
                             <div class="panel-header" style="color:var(--gold);">👑 Torjägerliste</div>
@@ -5292,6 +5295,8 @@ function renderUiStatRow(werte) {
         erinnerungNr: 0,
         spielberichte: [],
         tagebuch: [],
+        kaderwertVerlauf: [],
+        platzVerlaufVorjahr: null,
         assistentErledigt: null,
         vorlageBilanzArchiv: [],
         vorlageImEinsatz: null,
@@ -8093,7 +8098,8 @@ function getOwnDerbyRivals() {
                     (p.trait && p.trait !== 'Kein') ? uiChip(p.trait) : '',
                     uiChip(`⚽ ${p.goalsSeason || 0} · 🎽 ${p.appearances || 0}`),
                     ...(typeof getPlayerTagChips === 'function' ? getPlayerTagChips(p) : []),
-                    ...(typeof getBelastungChips === 'function' ? getBelastungChips(p) : [])
+                    ...(typeof getBelastungChips === 'function' ? getBelastungChips(p) : []),
+                    typeof getMeilensteinChip === 'function' ? getMeilensteinChip(p) : ''
                 ],
                 kpi: { wert: p.strength, label: 'Stärke' },
                 body: (typeof getBelastungHinweis === 'function' ? getBelastungHinweis(p) : '') + renderUiStatRow([['Tempo', p.pace], ['Schuss', p.shooting], ['Pass', p.passing], ['Abwehr', p.defense], ['Kopf', p.KOP ?? '-'], ['Fitness', p.fitness]])
@@ -11915,12 +11921,13 @@ function selectNewGameScenario(id) {
     }
 
     function setLeagueTab(tab) {
-        ['table', 'fixtures', 'stats'].forEach(t => {
+        ['table', 'fixtures', 'stats', 'verlauf'].forEach(t => {
             document.getElementById('league-tab-' + t).style.display = (t === tab) ? 'block' : 'none';
             let btn = document.getElementById('btn-tab-' + t);
             if (btn) btn.className = (t === tab) ? 'btn-action' : 'btn-secondary';
         });
         if (tab === 'stats' && typeof renderLeagueStats === 'function') renderLeagueStats();
+        if (tab === 'verlauf' && typeof renderSaisonverlauf === 'function') renderSaisonverlauf();
     }
 
     function changeLeagueMatchday(dir) {
@@ -14607,6 +14614,7 @@ function creditOwnGoal(players, fixedScorer = null, fixedAssist) {
     if (!scorer) return { scorer: null, assist: null };
     scorer.goalsSeason = (scorer.goalsSeason || 0) + 1;
     scorer.goalsCareer = (scorer.goalsCareer || 0) + 1;
+    if (typeof pruefeTorMeilenstein === 'function') pruefeTorMeilenstein(scorer);
     matchEvents.tore[scorer.id] = (matchEvents.tore[scorer.id] || 0) + 1;
     let assist = null;
     const mitspieler = players.filter(p => p.id !== scorer.id);
@@ -28271,6 +28279,102 @@ function renderSaisonZiele() {
         + `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">Noch ${rest} Spiel${rest === 1 ? '' : 'e'} (höchstens ${3 * rest} Punkte). Reine Tabellenwerte, das Torverhältnis zählt nicht.</div>`;
 }
 
+// ---------- Meilensteine (Phase 26.17) ----------
+// Tore für den Verein (goalsCareer): beim 10., 25., 50., 100., 150. und 200. Tor eine Nachricht. Das Pflichtspiel-Jubiläum
+// (50., 100. … Spiel) gibt es schon im Nachspiel-Ablauf (js/match-live.js); beide setzen p.meilenstein, das als Chip drei
+// Spieltage lang auf der Kaderkarte steht. Reine Anzeige.
+const TOR_MEILENSTEINE = [10, 25, 50, 100, 150, 200];
+const MEILENSTEIN_SPIELTAGE = 3;
+
+function pruefeTorMeilenstein(p) {
+    if (!p || !TOR_MEILENSTEINE.includes(p.goalsCareer) || !squad.includes(p)) return false;
+    p.meilenstein = { text: `${p.goalsCareer}. Tor für den Verein`, season: game.season, matchday: game.matchday };
+    if (typeof addInboxMessage === 'function') addInboxMessage('info', `⚽ Meilenstein: ${p.name}`, `${p.name} erzielt sein ${p.goalsCareer}. Tor für den Verein.`, 'screen-squad');
+    return true;
+}
+
+function getMeilensteinChip(p) {
+    const m = p && p.meilenstein;
+    if (!m || m.season !== game.season || game.matchday - m.matchday > MEILENSTEIN_SPIELTAGE) return '';
+    return uiChip(`🎉 ${m.text}`, 'gut');
+}
+
+// ---------- Kaderwert-Kurve (Phase 26.17) ----------
+// Gesamtmarktwert des Kaders am Ende jeder Saison (game.kaderwertVerlauf = [{ season, wert }], höchstens 20) plus der heutige Wert.
+function getKaderwert() { return squad.reduce((sum, p) => sum + (p.marketValue || 0), 0); }
+
+function archiveKaderwert() {
+    if (!Array.isArray(game.kaderwertVerlauf)) game.kaderwertVerlauf = [];
+    game.kaderwertVerlauf = game.kaderwertVerlauf.filter(x => x.season !== game.season);
+    game.kaderwertVerlauf.push({ season: game.season, wert: getKaderwert() });
+    game.kaderwertVerlauf = game.kaderwertVerlauf.slice(-20);
+}
+
+function renderKaderwertKurve() {
+    const box = document.getElementById('kaderwert-box');
+    if (!box) return;
+    const punkte = [...(Array.isArray(game.kaderwertVerlauf) ? game.kaderwertVerlauf : []).map(x => ({ label: `Saisonende ${x.season}`, kurz: String(x.season), wert: x.wert })), { label: 'heute', kurz: 'jetzt', wert: getKaderwert() }];
+    const kopf = '<div class="panel-header" style="color:var(--blue);">💎 Kaderwert</div>';
+    if (punkte.length < 2) { box.innerHTML = kopf + `<div style="font-size:var(--fs-small);">Heute ${formatVal(punkte[0].wert)}. Nach dem ersten Saisonende entsteht hier die Kurve.</div>`; return; }
+    const w = 300, h = 90, pad = 8;
+    const maxW = Math.max(...punkte.map(x => x.wert)), minW = Math.min(...punkte.map(x => x.wert));
+    const spanne = Math.max(1, maxW - minW);
+    const xy = (x, i) => [pad + i * (w - pad * 2) / (punkte.length - 1), h - pad - (x.wert - minW) / spanne * (h - pad * 2)];
+    const linie = punkte.map((x, i) => xy(x, i).map(v => v.toFixed(1)).join(',')).join(' ');
+    const diff = punkte[punkte.length - 1].wert - punkte[0].wert;
+    box.innerHTML = kopf + `<svg viewBox="0 0 ${w} ${h}" style="width:100%; height:${h}px; display:block;" role="img" aria-label="Kaderwert von ${formatVal(punkte[0].wert)} auf ${formatVal(punkte[punkte.length - 1].wert)}">
+            <polyline points="${linie}" fill="none" stroke="var(--primary)" stroke-width="2" />
+            ${punkte.map((x, i) => { const [cx, cy] = xy(x, i); return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="3" fill="var(--primary)" />`; }).join('')}
+        </svg>
+        <div style="font-size:var(--fs-caption); color:var(--text-muted);">${punkte.map(x => `${x.kurz}: ${formatVal(x.wert)}`).join(' · ')}<br>Seit Saisonende ${punkte[0].kurz}: <strong style="color:${diff >= 0 ? 'var(--primary)' : 'var(--danger)'};">${diff >= 0 ? '+' : ''}${formatVal(diff)}</strong></div>`;
+}
+
+// ---------- Platzverlauf der Vorsaison (Phase 26.17) ----------
+// Erweitert den vorhandenen Tabellenverlauf (js/league-stats.js): am Saisonende wird der eigene Verlauf festgehalten
+// (game.platzVerlaufVorjahr = { season, level, teams, hist }) und in der eigenen Liga gestrichelt mitgezeichnet.
+function archivePlatzVerlauf() {
+    const liga = leaguesData[game.leagueLevel] || [];
+    const ich = liga.find(t => t.name === game.clubName);
+    if (!ich || !Array.isArray(ich.rankHist) || !ich.rankHist.some(Boolean)) return;
+    game.platzVerlaufVorjahr = { season: game.season, level: game.leagueLevel, teams: liga.length, hist: ich.rankHist.slice(0, SAISON_SPIELE) };
+}
+
+// ---------- Saisonverlauf aller eigenen Spiele (Phase 26.17) ----------
+function getSaisonverlauf() {
+    const lvl = game.leagueLevel, liga = leaguesData[lvl] || [], plan = (typeof fixturesData !== 'undefined' && fixturesData[lvl]) || [];
+    const ich = liga.find(t => t.name === game.clubName);
+    const tab = typeof sortedTable === 'function' ? sortedTable(lvl) : [];
+    const spiele = [];
+    for (let md = 1; md <= SAISON_SPIELE; md++) {
+        const f = (plan[md - 1] || []).find(x => liga[x.home] && liga[x.away] && (liga[x.home].name === game.clubName || liga[x.away].name === game.clubName));
+        if (!f) continue;
+        const heim = liga[f.home].name === game.clubName, gegner = heim ? liga[f.away] : liga[f.home];
+        const e = { md, heim, name: gegner.name, gespielt: !!f.played };
+        if (f.played) { e.tore = heim ? f.homeGoals : f.awayGoals; e.gegentore = heim ? f.awayGoals : f.homeGoals; e.platzDanach = ich && Array.isArray(ich.rankHist) ? ich.rankHist[md - 1] || null : null; }
+        else { e.platz = tab.indexOf(gegner) + 1; e.staerke = Math.round(gegner.strength); }
+        e.bericht = (Array.isArray(game.spielberichte) ? game.spielberichte : []).findIndex(b => b.season === game.season && b.matchday === md && !b.cup);
+        spiele.push(e);
+    }
+    return spiele;
+}
+
+function renderSaisonverlauf() {
+    const box = document.getElementById('season-course-box');
+    if (!box) return;
+    const spiele = getSaisonverlauf();
+    if (!spiele.length) { box.innerHTML = '<div style="font-size:var(--fs-small); color:var(--text-muted);">Kein Spielplan vorhanden.</div>'; return; }
+    const s = spiele.filter(x => x.gespielt && x.tore > x.gegentore).length, u = spiele.filter(x => x.gespielt && x.tore === x.gegentore).length, n = spiele.filter(x => x.gespielt && x.tore < x.gegentore).length;
+    box.innerHTML = `<div style="font-size:var(--fs-small); margin-bottom:6px;">${game.season}. Saison in der ${mpEsc(leagueNames[game.leagueLevel])}: ${s}S ${u}U ${n}N · 🏠 Heim · ✈️ Auswärts</div>`
+        + spiele.map(x => {
+            const farbe = !x.gespielt ? 'var(--border)' : x.tore > x.gegentore ? 'var(--primary)' : x.tore < x.gegentore ? 'var(--danger)' : 'var(--accent)';
+            const rechts = x.gespielt ? `<strong>${x.tore}:${x.gegentore}</strong>${x.platzDanach ? ` <span style="color:var(--text-muted);">· Platz ${x.platzDanach}</span>` : ''}` : `<span style="color:var(--text-muted);">Platz ${x.platz} · Str ${x.staerke}</span>`;
+            const inhalt = `<span style="overflow-wrap:anywhere; text-align:left;">${x.md}. ${x.heim ? '🏠' : '✈️'} ${mpEsc(x.name)}</span><span style="flex:0 0 auto;">${rechts}</span>`;
+            return x.bericht !== -1
+                ? `<button onclick="openArchivedReport(${x.bericht})" class="btn-secondary" style="display:flex; justify-content:space-between; gap:8px; width:100%; margin:2px 0; border-left:3px solid ${farbe};" title="Spielbericht öffnen">${inhalt}</button>`
+                : `<div class="box" style="display:flex; justify-content:space-between; gap:8px; font-size:var(--fs-small); margin:2px 0; border-left-color:${farbe};">${inhalt}</div>`;
+        }).join('');
+}
+
 // ---------- Restprogramm (Phase 26.17) ----------
 // Die eigenen Ligaspiele der restlichen Saison aus dem echten Spielplan (fixturesData): die nächsten fünf Gegner mit
 // Heim/Auswärts, Tabellenplatz und Stärke, die Ø-Stärke aller Restgegner und die schwerste Phase (drei Spiele in Folge).
@@ -28486,6 +28590,7 @@ function announceSeasonReview() {
 
 function renderInsightsPanels() {
     renderSeriesTracker();
+    renderKaderwertKurve();
     renderSeasonReviewBox();
     renderMatchReportsBox();
 }
@@ -36561,6 +36666,7 @@ function cleanupLegacyScoutState() {
             // (gesponserter Bus mit besserer Ausstattung mildert das etwas ab).
             if (!isHomeMatchParam && game.travelMode === 'bus') p.morale = Math.max(10, p.morale - (game.busSponsorActive ? (game.busSponsorViaBanden ? 1.5 : 1) : 2));
             if ([50, 100, 150, 200, 250, 300].includes(p.appearances)) {
+                p.meilenstein = { text: `${p.appearances}. Pflichtspiel`, season: game.season, matchday: game.matchday };
                 p.morale = Math.min(100, p.morale + 8);
                 game.fans = Math.min(100, game.fans + 2);
                 addInboxMessage('vertrag', `🎉 Vereinsjubiläum: ${p.appearances}. Pflichtspiel!`, `${p.name} feiert sein ${p.appearances}. Pflichtspiel für den Verein - kleine Zeremonie vor dem Spiel, Moral- und Stimmungsschub für die ganze Mannschaft!`, 'screen-squad');
@@ -37868,6 +37974,8 @@ function concludeSeasonAndAdvance() {
         if (typeof archiveTransferBilanz === 'function') archiveTransferBilanz();
         if (typeof archiveVorlageBilanz === 'function') archiveVorlageBilanz();
         if (typeof archiveTagBilanz === 'function') archiveTagBilanz();
+        if (typeof archiveKaderwert === 'function') archiveKaderwert();
+        if (typeof archivePlatzVerlauf === 'function') archivePlatzVerlauf();
         // Erfolgsbasierte Vertragsboni (js/bonusclauses.js): das Aufstiegsbonus-Flag wird
         // bewusst HIER, ganz am Anfang, zurückgesetzt - nicht in der allgemeinen
         // Saisonstatistik-Reset-Schleife weiter unten. Der Aufstieg dieser (gerade endenden)
@@ -38267,7 +38375,7 @@ function buildRelegationTicker(ourGoals, oppGoals, oppName) {
     const events = [];
     for (let i = 0; i < ourGoals; i++) {
         const p = gewichtet[Math.floor(Math.random() * gewichtet.length)] || squad[0];
-        if (p) p.goalsCareer = (p.goalsCareer || 0) + 1;
+        if (p) { p.goalsCareer = (p.goalsCareer || 0) + 1; if (typeof pruefeTorMeilenstein === 'function') pruefeTorMeilenstein(p); }
         events.push({ min: 1 + Math.floor(Math.random() * 90), own: true, name: p ? p.name : game.clubName });
     }
     for (let i = 0; i < oppGoals; i++) events.push({ min: 1 + Math.floor(Math.random() * 90), own: false, name: getRandomName() + ` (${oppName})` });
@@ -38948,16 +39056,21 @@ function renderLeagueRankChart(level) {
     const hinten = teams.filter(t => t !== fokus && t !== rivale).map(t => `<polyline points="${linie(t)}" fill="none" stroke="color-mix(in srgb, var(--ink) 35%, transparent)" stroke-width="1" />`).join('');
     const vorn = (rivale ? `<polyline points="${linie(rivale)}" fill="none" stroke="var(--danger)" stroke-width="1.5" />` : '')
         + `<polyline points="${linie(fokus)}" fill="none" stroke="var(--primary)" stroke-width="2.5" />`;
+    // Vorsaison des eigenen Vereins (Phase 26.17), gestrichelt, auf die heutige Ligagröße begrenzt
+    const vj = game.platzVerlaufVorjahr;
+    const mitVorjahr = eigen && level === game.leagueLevel && vj && Array.isArray(vj.hist) && vj.hist.filter(Boolean).length >= 2;
+    const xVj = i => pad + i * (w - pad * 2) / Math.max(1, Math.max(spieltage, vj && vj.hist ? vj.hist.length : 0) - 1);
+    const vorjahrLinie = mitVorjahr ? `<polyline points="${vj.hist.map((p, i) => p ? `${xVj(i).toFixed(1)},${y(Math.min(n, p)).toFixed(1)}` : null).filter(Boolean).join(' ')}" fill="none" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="4 3" />` : '';
     const hist = (fokus.rankHist || []).filter(Boolean);
     const bester = hist.length ? Math.min(...hist) : '-', schlechtester = hist.length ? Math.max(...hist) : '-';
     box.innerHTML = `<svg viewBox="0 0 ${w} ${h}" style="width:100%; height:130px; display:block;" preserveAspectRatio="none">
             <line x1="0" x2="${w}" y1="${((y(2) + y(3)) / 2).toFixed(1)}" y2="${((y(2) + y(3)) / 2).toFixed(1)}" stroke="var(--primary)" stroke-dasharray="3 3" stroke-width="0.6" />
             <line x1="0" x2="${w}" y1="${((y(n - 2) + y(n - 1)) / 2).toFixed(1)}" y2="${((y(n - 2) + y(n - 1)) / 2).toFixed(1)}" stroke="var(--danger)" stroke-dasharray="3 3" stroke-width="0.6" />
-            ${hinten}${vorn}
+            ${hinten}${vorjahrLinie}${vorn}
         </svg>
         <div style="font-size:var(--fs-caption); color:var(--text-muted); text-align:center;">
             <span style="color:var(--primary);">━</span> ${fokus.name}: aktuell Platz ${teams.indexOf(fokus) + 1}, ${fokus.points} Punkte (bester ${bester}., schlechtester ${schlechtester}.)
-            ${rivale ? `· <span style="color:var(--danger);">━</span> ${rivale.name}` : ''} · gestrichelt: Aufstiegs- und Abstiegsplätze
+            ${rivale ? `· <span style="color:var(--danger);">━</span> ${rivale.name}` : ''}${mitVorjahr ? ` · <span style="color:var(--accent);">┅</span> Vorsaison ${vj.season}${vj.level !== game.leagueLevel ? ' (' + leagueNames[vj.level] + ')' : ''}: Endplatz ${vj.hist.filter(Boolean).slice(-1)[0]}` : ''} · gestrichelt: Aufstiegs- und Abstiegsplätze
         </div>`;
 }
 

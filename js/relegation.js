@@ -38,7 +38,7 @@ function buildRelegationTicker(ourGoals, oppGoals, oppName) {
     const events = [];
     for (let i = 0; i < ourGoals; i++) {
         const p = gewichtet[Math.floor(Math.random() * gewichtet.length)] || squad[0];
-        if (p) p.goalsCareer = (p.goalsCareer || 0) + 1;
+        if (p) { p.goalsCareer = (p.goalsCareer || 0) + 1; if (typeof pruefeTorMeilenstein === 'function') pruefeTorMeilenstein(p); }
         events.push({ min: 1 + Math.floor(Math.random() * 90), own: true, name: p ? p.name : game.clubName });
     }
     for (let i = 0; i < oppGoals; i++) events.push({ min: 1 + Math.floor(Math.random() * 90), own: false, name: getRandomName() + ` (${oppName})` });

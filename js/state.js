@@ -122,6 +122,8 @@
         erinnerungNr: 0,
         spielberichte: [],
         tagebuch: [],
+        kaderwertVerlauf: [],
+        platzVerlaufVorjahr: null,
         assistentErledigt: null,
         vorlageBilanzArchiv: [],
         vorlageImEinsatz: null,

@@ -236,6 +236,8 @@ function concludeSeasonAndAdvance() {
         if (typeof archiveTransferBilanz === 'function') archiveTransferBilanz();
         if (typeof archiveVorlageBilanz === 'function') archiveVorlageBilanz();
         if (typeof archiveTagBilanz === 'function') archiveTagBilanz();
+        if (typeof archiveKaderwert === 'function') archiveKaderwert();
+        if (typeof archivePlatzVerlauf === 'function') archivePlatzVerlauf();
         // Erfolgsbasierte Vertragsboni (js/bonusclauses.js): das Aufstiegsbonus-Flag wird
         // bewusst HIER, ganz am Anfang, zurückgesetzt - nicht in der allgemeinen
         // Saisonstatistik-Reset-Schleife weiter unten. Der Aufstieg dieser (gerade endenden)

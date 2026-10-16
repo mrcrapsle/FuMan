@@ -1217,6 +1217,7 @@
             // (gesponserter Bus mit besserer Ausstattung mildert das etwas ab).
             if (!isHomeMatchParam && game.travelMode === 'bus') p.morale = Math.max(10, p.morale - (game.busSponsorActive ? (game.busSponsorViaBanden ? 1.5 : 1) : 2));
             if ([50, 100, 150, 200, 250, 300].includes(p.appearances)) {
+                p.meilenstein = { text: `${p.appearances}. Pflichtspiel`, season: game.season, matchday: game.matchday };
                 p.morale = Math.min(100, p.morale + 8);
                 game.fans = Math.min(100, game.fans + 2);
                 addInboxMessage('vertrag', `🎉 Vereinsjubiläum: ${p.appearances}. Pflichtspiel!`, `${p.name} feiert sein ${p.appearances}. Pflichtspiel für den Verein - kleine Zeremonie vor dem Spiel, Moral- und Stimmungsschub für die ganze Mannschaft!`, 'screen-squad');

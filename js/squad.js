@@ -893,7 +893,8 @@
                     (p.trait && p.trait !== 'Kein') ? uiChip(p.trait) : '',
                     uiChip(`⚽ ${p.goalsSeason || 0} · 🎽 ${p.appearances || 0}`),
                     ...(typeof getPlayerTagChips === 'function' ? getPlayerTagChips(p) : []),
-                    ...(typeof getBelastungChips === 'function' ? getBelastungChips(p) : [])
+                    ...(typeof getBelastungChips === 'function' ? getBelastungChips(p) : []),
+                    typeof getMeilensteinChip === 'function' ? getMeilensteinChip(p) : ''
                 ],
                 kpi: { wert: p.strength, label: 'Stärke' },
                 body: (typeof getBelastungHinweis === 'function' ? getBelastungHinweis(p) : '') + renderUiStatRow([['Tempo', p.pace], ['Schuss', p.shooting], ['Pass', p.passing], ['Abwehr', p.defense], ['Kopf', p.KOP ?? '-'], ['Fitness', p.fitness]])

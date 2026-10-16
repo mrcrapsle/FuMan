@@ -1485,6 +1485,7 @@
                     <div class="panel" id="series-tracker-box"></div>
                     <div class="panel" id="season-review-box"></div>
                     <div class="panel" id="match-reports-box"></div>
+                    <div class="panel" id="kaderwert-box"></div>
                     <div class="panel" id="opp-notes-box"></div>
                     <div class="panel" id="gegner-bilanz-box"></div>
                     <div class="panel" id="preset-bilanz-box"></div>
@@ -2190,10 +2191,11 @@
                         <button onclick="setLeagueLevel(4)" id="btn-lvl-4" class="btn-secondary">5. Liga</button>
                         <button onclick="setLeagueLevel(5)" id="btn-lvl-5" class="btn-action">6. Liga</button>
                     </div>
-                    <div style="display:flex; gap:4px; margin-bottom:6px;">
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 7.5em), 1fr)); gap:4px; margin-bottom:6px;">
                         <button onclick="setLeagueTab('table')" id="btn-tab-table" class="btn-action">Tabelle</button>
                         <button onclick="setLeagueTab('fixtures')" id="btn-tab-fixtures" class="btn-secondary">Paarungen</button>
                         <button onclick="setLeagueTab('stats')" id="btn-tab-stats" class="btn-secondary">Statistik</button>
+                        <button onclick="setLeagueTab('verlauf')" id="btn-tab-verlauf" class="btn-secondary">Saisonverlauf</button>
                     </div>
                     <div id="league-tab-table"><table><thead><tr><th>Pl</th><th>Team</th><th>Sp</th><th>Tore</th><th>Diff</th><th>Pkt</th><th>Form</th></tr></thead><tbody id="league-table-body"></tbody></table>
                         <div id="head-to-head-box" style="margin-top:8px;"></div>
@@ -2206,6 +2208,7 @@
                         </div>
                         <div id="matchday-fixtures-list"></div>
                     </div>
+                    <div id="league-tab-verlauf" style="display:none;"><div id="season-course-box"></div></div>
                     <div id="league-tab-stats" style="display:none;">
                         <div class="panel" style="margin-bottom:8px;">
                             <div class="panel-header" style="color:var(--gold);">👑 Torjägerliste</div>
