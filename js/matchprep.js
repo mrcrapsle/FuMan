@@ -422,6 +422,59 @@ function applyPresetPrematch(slot) {
     renderPrematchCheck();
 }
 
+// ---------- Aufstellungs-Gedächtnis (Phase 26.18) ----------
+// Nach jedem eigenen Ligaspiel (live und simuliert, aus recordOwnLeagueResult) die Startelf vom Anpfiff samt Formation
+// und Ergebnis merken; die letzten fünf lassen sich wieder aufstellen. Ausfälle ersetzt resolveLineupPreset() wie bei Vorlagen.
+const GEDAECHTNIS_MAX = 5;
+
+function getStartelfGedaechtnis() {
+    return Array.isArray(game.startelfGedaechtnis) ? game.startelfGedaechtnis : [];
+}
+
+function merkeStartelf(ourGoals, oppGoals, isHome, oppName) {
+    const info = game.etikettImEinsatz && game.etikettImEinsatz.matchday === game.matchday ? game.etikettImEinsatz : null;
+    const ids = info && Array.isArray(info.ids) && info.ids.length === 11 ? info.ids : (Array.isArray(lineup) ? lineup : []);
+    if (ids.length !== 11) return;
+    game.startelfGedaechtnis = [{ season: game.season, matchday: game.matchday, gegner: oppName || '', heim: !!isHome, tore: ourGoals, gegentore: oppGoals, formation: (info && info.formation) || game.formation, ids: [...ids] }]
+        .concat(getStartelfGedaechtnis()).slice(0, GEDAECHTNIS_MAX);
+}
+
+function applyStartelfAusGedaechtnis(i) {
+    const e = getStartelfGedaechtnis()[i];
+    if (!e) { showToast('Diese Startelf ist nicht mehr gespeichert.', 'error'); return; }
+    const r = resolveLineupPreset({ ids: e.ids, formation: e.formation });
+    if (!r) { showToast('Zu wenig einsatzbereite Spieler für diese Startelf.', 'error', 3500); return; }
+    const fehlen = e.ids.filter(id => !r.ids.includes(id)).map(id => { const p = squad.find(x => x.id === id); return p ? p.name : 'abgegebener Spieler'; });
+    game.formation = e.formation || game.formation;
+    const formName = document.getElementById('squad-form-name');
+    if (formName) formName.innerText = game.formation;
+    lineup = r.ids;
+    renderSquadView();
+    if (typeof render3DPitch === 'function') render3DPitch();
+    renderLineupPresets();
+    renderPrematchCheck();
+    showToast(fehlen.length ? `📂 Elf vom ${e.matchday}. Spieltag aufgestellt. Ersetzt: ${fehlen.join(', ')}.` : `📂 Elf vom ${e.matchday}. Spieltag aufgestellt.`, 'success', 4000);
+}
+
+function renderStartelfGedaechtnis() {
+    const liste = getStartelfGedaechtnis();
+    if (!liste.length) return '<div style="font-size:var(--fs-small); color:var(--text-muted);">Nach dem nächsten Ligaspiel steht hier die Startelf mit Ergebnis.</div>';
+    const info = typeof pendingMatchInfo !== 'undefined' ? pendingMatchInfo : null;
+    const istHeim = info ? !!info.isHome : true;
+    const aktuell = lineup.length === 11 ? getLineupStrengthPreview(lineup, game.formation, istHeim) : null;
+    return liste.map((e, i) => {
+        const r = resolveLineupPreset({ ids: e.ids, formation: e.formation });
+        const farbe = e.tore > e.gegentore ? 'var(--primary)' : e.tore < e.gegentore ? 'var(--danger)' : 'var(--accent)';
+        const kopf = `<div style="overflow-wrap:anywhere;"><strong style="color:${farbe};">${e.tore}:${e.gegentore}</strong> ${e.heim ? '🏠' : '✈️'} ${mpEsc(e.gegner)} <span style="color:var(--text-muted);">· ${e.matchday}. Spieltag${e.season !== game.season ? ` (Saison ${e.season})` : ''} · ${e.formation}</span></div>`;
+        if (!r) return `<div class="box" style="font-size:var(--fs-small); margin:4px 0; border-left-color:${farbe};">${kopf}<div style="color:var(--text-muted);">Zu wenig einsatzbereite Spieler.</div></div>`;
+        const st = getLineupStrengthPreview(r.ids, e.formation, istHeim);
+        const gleich = r.ids.length === lineup.length && r.ids.every(id => lineup.includes(id)) && e.formation === game.formation;
+        return `<div class="box" style="font-size:var(--fs-small); margin:4px 0; border-left-color:${farbe};">${kopf}
+            <div class="ui-card-meta" style="margin:4px 0;">${uiChip(`Stärke heute ${st.toFixed(1)}${aktuell === null ? '' : ` (${st - aktuell >= 0 ? '+' : ''}${(st - aktuell).toFixed(1)})`}`)}${r.ersetzt ? uiChip(`🔁 ${r.ersetzt} Ausfall${r.ersetzt === 1 ? '' : 'e'} ersetzt`, 'warn') : uiChip('✓ komplett', 'gut')}${gleich ? uiChip('aktuell aufgestellt', 'gut') : ''}</div>
+            <button onclick="applyStartelfAusGedaechtnis(${i})" class="btn-secondary"${gleich ? ' disabled' : ''}>📂 Diese Elf aufstellen</button></div>`;
+    }).join('');
+}
+
 function renderPresetQuickPick() {
     ensureMatchPrepState();
     const info = typeof pendingMatchInfo !== 'undefined' ? pendingMatchInfo : null;
@@ -463,7 +516,8 @@ function renderLineupPresets() {
         <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Speichert die aktuelle Startelf samt Formation, zum Beispiel für Heim, Auswärts oder Pokal. Ausgefallene Spieler ersetzt der Trainer beim Laden.</div>
         <label class="ui-field" style="margin-bottom:8px;"><span class="ui-field-label">Name für neue Vorlage</span>
             <input id="lineup-preset-name" class="input-inline" maxlength="24" placeholder="z. B. Heimspiel Offensive" style="width:100%;"></label>
-        ${zeilen}`;
+        ${zeilen}
+        <details class="ui-fold"><summary>Startelf der letzten Spiele</summary>${renderStartelfGedaechtnis()}</details>`;
 }
 
 // ---------- Taktikvorlagen ----------
@@ -852,7 +906,7 @@ function renderPrematchCheck() {
     ];
     const problemListe = probleme.length ? probleme.map(x => `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">${x.ton === 'schlecht' ? '🔴' : '🟡'} ${mpEsc(x.text)}</div>`).join('')
         : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Torwart und Formation passen.</div>';
-    const fehltListe = fehlt.length ? fehlt.map(x => `<div class="box" style="font-size:var(--fs-small); margin:4px 0; display:flex; justify-content:space-between; gap:8px;"><span>${mpEsc(x.p.name)} (${x.p.pos}, Str ${x.p.strength})${x.stamm ? ' ⭐' : ''}</span><span style="color:var(--text-muted);">${x.grund}, noch ${x.tage} ${x.grund === 'verletzt' ? 'Spieltag' + (x.tage === 1 ? '' : 'e') : 'Spiel' + (x.tage === 1 ? '' : 'e')}</span></div>`).join('')
+    const fehltListe = fehlt.length ? fehlt.map(x => `<div class="box" style="font-size:var(--fs-small); margin:4px 0; display:flex; justify-content:space-between; gap:8px;"><span>${mpEsc(x.p.name)} (${x.p.pos}, Str ${x.p.strength})${x.stamm ? ' ⭐' : ''}</span><span style="color:var(--text-muted);">${x.grund}, noch ${x.tage} ${x.grund === 'verletzt' ? 'Spieltag' + (x.tage === 1 ? '' : 'e') : 'Spiel' + (x.tage === 1 ? '' : 'e')}${game.matchday + x.tage <= SAISON_SPIELE ? ` · zurück ab SpT ${game.matchday + x.tage}` : ' · über das Saisonende hinaus'}</span></div>`).join('')
         : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Der komplette Kader ist einsatzbereit.</div>';
     const muedeZeile = muede.length ? `<div class="box" style="font-size:var(--fs-small); margin:4px 0; border-left-color:var(--danger);">😮‍💨 <strong>${muede.length} Stammspieler erschöpft:</strong> ${muede.map(p => `${mpEsc(p.name)} (${p.fitness} %)`).join(', ')}. Fitness zählt voll in die Teamstärke.${ohneErsatz.length ? ` Für ${ohneErsatz.map(mpEsc).join(', ')} gibt es auf der Bank keinen gleichwertigen Ersatz.` : ''}
             <button onclick="rotateTiredPlayers()" class="btn-action" style="margin-top:6px;">🔄 Ausgeruhte Elf aufstellen</button></div>` : '';
@@ -880,6 +934,7 @@ function renderPrematchCheck() {
         <details class="ui-fold"${fragil.length ? ' open' : ''}><summary>Verletzungsanfällige in der Startelf</summary>${fragilZeile}</details>
         ${oppName ? `<details class="ui-fold"${getMatchplan(oppName) ? ' open' : ''}><summary>📋 Matchplan: ${mpEsc(oppName)}</summary>${renderMatchplanSection(oppName)}</details>` : ''}
         <details class="ui-fold"><summary>Aufstellung aus Vorlage</summary>${renderPresetQuickPick()}</details>
+        <details class="ui-fold"><summary>Startelf der letzten Spiele</summary>${renderStartelfGedaechtnis()}</details>
         ${oppName ? `<details class="ui-fold"${notiz ? ' open' : ''}><summary>📓 Notizbuch: ${mpEsc(oppName)}</summary>${renderGegnerNotizSection(oppName)}</details>` : ''}
     </div>`;
 }

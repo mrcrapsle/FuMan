@@ -115,6 +115,7 @@ async function main() {
         S.testRunde32Spieltag,
         S.testRunde32Uebersicht,
         S.testRunde32Statistik,
+        S.testRunde33Funktionen,
         S.testKnopfWorteHandy,
         S.testEntlassungsGrund,
         S.testEnglishUi,

@@ -2053,7 +2053,7 @@ async function testRunde32Markt(browser) {
         document.getElementById('compare-overlay').classList.remove('show');
         eig.strength = 99; renderErsatzSuche(eig, 'squad');
         out.eKeiner = document.getElementById('pd-ersatz').textContent.includes('Gerade kein');
-        renderErsatzSuche(marketPlayers[0], 'market'); out.eNurKader = document.getElementById('pd-ersatz').innerHTML === '';
+        renderErsatzSuche(marketPlayers[0], 'market'); out.eNurKader = !document.getElementById('pd-ersatz').textContent.includes('Ersatz auf dem Markt'); // Marktspieler zeigen seit 26.18 die Kauf-Vorschau
         eig.strength = 60; closePlayerDetail();
 
         // --- Kompakte Kaderliste ---
@@ -2574,6 +2574,147 @@ async function testRunde32Statistik(browser) {
     await page.close();
 }
 
+async function testRunde33Funktionen(browser) {
+    console.log('\n[26.18] Kauf-Vorschau, Punkte-Vergleich, Monatsbericht, Rückkehrer im Kalender, Aufstellungs-Gedächtnis');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.evaluate(R32_HILFEN);
+    const r = await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false;
+        const out = {};
+        const liga = () => leaguesData[game.leagueLevel];
+        const eigenesSpiel = md => { const l = liga(); const f = fixturesData[game.leagueLevel][md - 1].find(x => l[x.home].name === game.clubName || l[x.away].name === game.clubName); const h = l[f.home].name === game.clubName; return { tore: h ? f.homeGoals : f.awayGoals, gegen: h ? f.awayGoals : f.homeGoals, gegner: h ? l[f.away].name : l[f.home].name, heim: h }; };
+        simulateMatchdays(4);
+
+        // --- Monatsbericht (Tick am 4. Spieltag) ---
+        const bericht = () => inboxMessages.filter(m => m.title.startsWith('🗓️ Monatsbericht'));
+        out.mErster = bericht().length === 1 && bericht()[0].title === '🗓️ Monatsbericht: Spieltag 1 bis 4' && bericht()[0].category === 'analyse' && game.monatsStand && game.monatsStand.matchday === 4 && game.monatsStand.season === game.season;
+        const b1 = bericht()[0].body;
+        const sp = [1, 2, 3, 4].map(eigenesSpiel), s = sp.filter(x => x.tore > x.gegen).length, u = sp.filter(x => x.tore === x.gegen).length;
+        out.mInhalt = b1.includes(`${s}S ${u}U ${4 - s - u}N`) && b1.includes(`${3 * s + u} Punkte`) && b1.includes('Tabellenplatz') && b1.includes('Kasse') && b1.includes('🩹') && !b1.includes('seit dem letzten Bericht');
+        simulateMatchdays(4);
+        const b2 = bericht()[0];
+        out.mZweiter = bericht().length === 2 && b2.title === '🗓️ Monatsbericht: Spieltag 5 bis 8' && b2.body.includes('→') && b2.body.includes('seit dem letzten Bericht') && game.monatsStand.matchday === 8;
+        out.mVerdrahtet = runMonthlyClubTicks.toString().includes('schreibeMonatsbericht');
+        game.monatsStand = { season: game.season - 1, matchday: 30, platz: 3, money: 0 };
+        const md = game.matchday;
+        out.mNeueSaison = schreibeMonatsbericht() === `🗓️ Monatsbericht: Spieltag 1 bis ${md}` ;
+        delete game.monatsStand; out.mAltesFeld = schreibeMonatsbericht() === `🗓️ Monatsbericht: Spieltag 1 bis ${md}`;
+        inboxMessages = inboxMessages.filter(m => !m.title.startsWith('🗓️ Monatsbericht'));
+
+        // --- Aufstellungs-Gedächtnis (live und simuliert über recordOwnLeagueResult) ---
+        const gd = getStartelfGedaechtnis();
+        out.gFuenf = gd.length === 5 && gd.map(e => e.matchday).join() === '8,7,6,5,4' && gd.every(e => e.ids.length === 11 && e.season === game.season && e.formation);
+        const e8 = eigenesSpiel(8);
+        out.gErgebnis = gd[0].tore === e8.tore && gd[0].gegentore === e8.gegen && gd[0].gegner === e8.gegner && gd[0].heim === e8.heim;
+        squad.forEach(p => { p.injured = 0; p.suspended = 0; p.fitness = 95; });
+        const ziel = gd[2];
+        game.formation = '4-3-3'; autoLineup();
+        const toasts = []; const toastAlt = showToast; showToast = (t) => { toasts.push(t); };
+        applyStartelfAusGedaechtnis(2);
+        out.gUebernehmen = lineup.length === 11 && ziel.ids.every(id => lineup.includes(id)) && game.formation === ziel.formation && toasts.pop().includes(`Elf vom ${ziel.matchday}. Spieltag`);
+        const weg = squad.find(p => p.id === ziel.ids[3]); weg.injured = 2;
+        game.formation = '4-3-3'; autoLineup();
+        applyStartelfAusGedaechtnis(2);
+        out.gErsatz = lineup.length === 11 && !lineup.includes(weg.id) && toasts.pop().includes(`Ersetzt: ${weg.name}`);
+        const vorher = lineup.join();
+        applyStartelfAusGedaechtnis(9);
+        out.gUngueltig = lineup.join() === vorher && toasts.pop().includes('nicht mehr gespeichert');
+        showToast = toastAlt;
+        pendingMatchInfo = null; renderPrematchCheck();
+        const pc = document.getElementById('prematch-check-box');
+        out.gImCheck = pc.textContent.includes('Startelf der letzten Spiele') && pc.querySelectorAll('button[onclick^="applyStartelfAusGedaechtnis("]').length === 5 && pc.textContent.includes('Stärke heute');
+        renderLineupPresets();
+        out.gBeiVorlagen = document.getElementById('lineup-presets-box').querySelectorAll('button[onclick^="applyStartelfAusGedaechtnis("]').length === 5;
+        out.gAktuell = renderStartelfGedaechtnis().includes('aktuell aufgestellt') && renderStartelfGedaechtnis().includes('1 Ausfall ersetzt');
+        delete game.startelfGedaechtnis;
+        out.gAltesFeld = renderStartelfGedaechtnis().includes('Nach dem nächsten Ligaspiel');
+        merkeStartelf(2, 1, true, 'Testgegner');
+        out.gNeu = getStartelfGedaechtnis().length === 1 && getStartelfGedaechtnis()[0].gegner === 'Testgegner' && getStartelfGedaechtnis()[0].ids.join() === lineup.join();
+        weg.injured = 0;
+
+        // --- Rückkehrer ---
+        const a = squad[0], b = squad[1];
+        a.injured = 2; b.suspended = 1;
+        const jetzt = game.matchday;
+        out.rSpieltag = getRueckkehrSpieltag(a) === jetzt + 2 && getRueckkehrSpieltag(b) === jetzt + 1 && getRueckkehrSpieltag(squad[2]) === 0;
+        const kal = n => getKalenderExtras(n).join(' | ');
+        out.rKalender = kal(jetzt + 2).includes(`🔙 Wieder dabei: ${a.name}`) && kal(jetzt + 1).includes(`🔙 Wieder dabei: ${b.name}`) && !kal(jetzt + 1).includes(a.name) && !kal(jetzt).includes('🔙');
+        renderPrematchCheck();
+        out.rCheck = pc.textContent.includes(`zurück ab SpT ${jetzt + 2}`) && pc.textContent.includes(`zurück ab SpT ${jetzt + 1}`);
+        a.injured = 40; renderPrematchCheck(); out.rSaisonende = pc.textContent.includes('über das Saisonende hinaus') && !kal(34).includes(a.name);
+        a.injured = 0; b.suspended = 0;
+
+        // --- Punkte-Vergleich ---
+        const reihe = getPunkteVerlauf();
+        const ich = liga().find(t => t.name === game.clubName);
+        out.pReihe = reihe.length === game.matchday - 1 && reihe[reihe.length - 1] === ich.points && reihe.every((x, i) => i === 0 || x >= reihe[i - 1]);
+        game.platzVerlaufVorjahr = null;
+        out.pOhne = getPunkteVergleich() === null;
+        const alt = ich.rankHist; if (!alt.some(Boolean)) ich.rankHist = [5];
+        archivePlatzVerlauf(); out.pArchiv = Array.isArray(game.platzVerlaufVorjahr.punkte) && game.platzVerlaufVorjahr.punkte.join() === reihe.join();
+        ich.rankHist = alt;
+        const vorjahr = Array.from({ length: 34 }, (_, i) => i + 1);
+        game.platzVerlaufVorjahr = { season: game.season - 1, level: game.leagueLevel, teams: 18, hist: [], punkte: vorjahr };
+        const pv = getPunkteVergleich();
+        out.pVergleich = pv.n === reihe.length && pv.jetzt === ich.points && pv.vorher === reihe.length && pv.diff === ich.points - reihe.length && !pv.andereLiga;
+        showScreen('screen-dashboard'); renderSaisonZiele();
+        const zb = document.getElementById('season-goal-box').textContent;
+        out.pDashboard = zb.includes(`Nach ${reihe.length} Spieltagen: ${ich.points} Punkte, Vorsaison ${reihe.length}`);
+        showScreen('screen-league'); setLeagueTab('verlauf');
+        const vb = document.getElementById('season-course-box');
+        out.pKurve = vb.querySelectorAll('svg polyline').length === 2 && !!vb.querySelector('polyline[stroke-dasharray]') && vb.textContent.includes('Endstand 34 Punkte');
+        out.pBreit = ueberlauf();
+        game.platzVerlaufVorjahr.level = game.leagueLevel === 0 ? 1 : 0; out.pAndereLiga = getPunkteVergleich().andereLiga === true;
+        delete game.platzVerlaufVorjahr.punkte; out.pAltesArchiv = getPunkteVergleich() === null;
+        game.platzVerlaufVorjahr.punkte = [1, 2]; out.pZuKurz = getPunkteVergleich() === null;
+        setLeagueTab('table');
+
+        // --- Kauf-Vorschau ---
+        game.money = 1e9; game.transferBudget = 1e9; game.wageBudget = 1e9; game.transferEmbargo = false; game.ffpTransferEmbargo = false;
+        game.formation = '4-4-2'; autoLineup();
+        if (!marketPlayers.length) refreshTransferMarket();
+        const m = marketPlayers[0];
+        const startPos = squad.filter(p => lineup.includes(p.id) && p.pos === m.pos).sort((x, y) => x.strength - y.strength);
+        m.strength = 99;
+        const kaderVor = squad.length, elfVor = lineup.join();
+        const kv = getKaufVorschau(m);
+        out.kErsetzt = startPos.length ? (kv.ersetzt && kv.ersetzt.id === startPos[0].id && kv.nachher > kv.vorher) : kv.ersetzt === null;
+        out.kUnveraendert = squad.length === kaderVor && lineup.join() === elfVor && !squad.some(p => String(p.id).startsWith('kaufvorschau-'));
+        out.kGeld = kv.kasse === game.money - kv.gesamt && kv.budget === game.transferBudget - getTransferAsking(m) && kv.posAnzahl === squad.filter(p => p.pos === m.pos).length;
+        out.kStaerkeGleich = Math.abs(calcTeamStrength(false) - kv.vorher) < 1e-9;
+        showScreen('screen-transfer'); setTransferTab('market'); resetMarktFilter();
+        out.kChip = startPos.length ? document.getElementById('market-list').textContent.includes(`⚽ Startelf statt ${startPos[0].name}`) : true;
+        openPlayerDetail(m.id, 'market');
+        const pd = document.getElementById('pd-ersatz');
+        out.kDetail = pd.textContent.includes('Kauf-Vorschau') && pd.textContent.includes('Kasse danach') && (startPos.length ? pd.textContent.includes(`ersetzen`) && pd.textContent.includes('Teamstärke') : true);
+        out.kBreit = ueberlauf();
+        closePlayerDetail();
+        m.strength = 1;
+        const kv2 = getKaufVorschau(m);
+        out.kSchwach = kv2.ersetzt === null && kv2.nachher === null && getStartelfChip(m) === '';
+        openPlayerDetail(m.id, 'market'); out.kSchwachText = startPos.length ? pd.textContent.includes('Kein Stammplatz') : pd.textContent.includes('niemand in deiner Startelf');
+        closePlayerDetail();
+        openPlayerDetail(squad[0].id, 'squad'); out.kKaderErsatz = pd.textContent.includes('Ersatz auf dem Markt') && !pd.textContent.includes('Kauf-Vorschau');
+        closePlayerDetail();
+        return out;
+    });
+    const ok = (...ks) => ks.every(k => r[k] === true);
+    const werte = ks => JSON.stringify(ks.map(k => r[k]));
+    const A = ['mErster', 'mInhalt', 'mZweiter', 'mVerdrahtet', 'mNeueSaison', 'mAltesFeld'];
+    assert(ok(...A), `Monatsbericht: alle vier Spieltage im Postfach mit Bilanz, Platz, Kasse, Verletzten; Vergleich zum letzten Bericht; neue Saison ab Spieltag 1 (${werte(A)})`);
+    const B = ['gFuenf', 'gErgebnis', 'gUebernehmen', 'gErsatz', 'gUngueltig', 'gImCheck', 'gBeiVorlagen', 'gAktuell', 'gAltesFeld', 'gNeu'];
+    assert(ok(...B), `Aufstellungs-Gedächtnis: letzte fünf Startelfen mit Ergebnis, übernehmen mit Ersatz für Ausfälle, im Spieltag-Check und bei den Vorlagen (${werte(B)})`);
+    const C = ['rSpieltag', 'rKalender', 'rCheck', 'rSaisonende'];
+    assert(ok(...C), `Rückkehrer: Spieltag der Rückkehr im Kalender und unter „Wer fehlt?“ (${werte(C)})`);
+    const D = ['pReihe', 'pOhne', 'pArchiv', 'pVergleich', 'pDashboard', 'pKurve', 'pBreit', 'pAndereLiga', 'pAltesArchiv', 'pZuKurz'];
+    assert(ok(...D), `Punkte-Vergleich: Punkte je Spieltag, Archiv am Saisonende, Zeile im Dashboard, Kurve im Saisonverlauf, alte Archive (${werte(D)})`);
+    const E = ['kErsetzt', 'kUnveraendert', 'kGeld', 'kStaerkeGleich', 'kChip', 'kDetail', 'kBreit', 'kSchwach', 'kSchwachText', 'kKaderErsatz'];
+    assert(ok(...E), `Kauf-Vorschau: Startelf-Platz und Teamstärke vorher/nachher ohne Spuren im Kader, Kasse und Budgets danach, Chip und Spielerdetail (${werte(E)})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 module.exports = {
     testSpielvorbereitung,
     testVertragsWerkzeuge,
@@ -2590,4 +2731,5 @@ module.exports = {
     testRunde32Spieltag,
     testRunde32Uebersicht,
     testRunde32Statistik,
+    testRunde33Funktionen,
 };

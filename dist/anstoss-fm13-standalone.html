@@ -5297,6 +5297,8 @@ function renderUiStatRow(werte) {
         tagebuch: [],
         kaderwertVerlauf: [],
         platzVerlaufVorjahr: null,
+        startelfGedaechtnis: [],
+        monatsStand: null,
         assistentErledigt: null,
         vorlageBilanzArchiv: [],
         vorlageImEinsatz: null,
@@ -5910,7 +5912,7 @@ function renderUiStatRow(werte) {
         verletzung: { icon: '🩹', color: 'var(--danger)', label: 'Verletzung' },
         finanzen: { icon: '💰', color: 'var(--accent)', label: 'Finanzen' },
         scouting: { icon: '🔭', color: 'var(--teal)', label: 'Scouting' },
-        analyse: { icon: '📋', color: 'var(--violet)', label: 'Analyse' },
+        analyse: { icon: '📋', color: 'var(--blue)', label: 'Analyse' }, // --violet ist im Kontrast-Theme eine dunkle Fläche, keine Schriftfarbe
         vertrag: { icon: '📄', color: 'var(--purple)', label: 'Vertrag' }
     };
 
@@ -7170,6 +7172,7 @@ function getOwnDerbyRivals() {
     function renderErsatzSuche(p, pool) {
         const box = document.getElementById('pd-ersatz');
         if (!box) return;
+        if (pool === 'market' && marketPlayers.includes(p) && typeof renderKaufVorschau === 'function') { box.innerHTML = renderKaufVorschau(p); return; }
         if (pool !== 'squad') { box.innerHTML = ''; return; }
         const kand = getErsatzKandidaten(p);
         box.innerHTML = `<details class="ui-fold" style="margin:8px 0; text-align:left;"><summary>🔎 Ersatz auf dem Markt (${kand.length})</summary>`
@@ -8652,6 +8655,59 @@ function applyPresetPrematch(slot) {
     renderPrematchCheck();
 }
 
+// ---------- Aufstellungs-Gedächtnis (Phase 26.18) ----------
+// Nach jedem eigenen Ligaspiel (live und simuliert, aus recordOwnLeagueResult) die Startelf vom Anpfiff samt Formation
+// und Ergebnis merken; die letzten fünf lassen sich wieder aufstellen. Ausfälle ersetzt resolveLineupPreset() wie bei Vorlagen.
+const GEDAECHTNIS_MAX = 5;
+
+function getStartelfGedaechtnis() {
+    return Array.isArray(game.startelfGedaechtnis) ? game.startelfGedaechtnis : [];
+}
+
+function merkeStartelf(ourGoals, oppGoals, isHome, oppName) {
+    const info = game.etikettImEinsatz && game.etikettImEinsatz.matchday === game.matchday ? game.etikettImEinsatz : null;
+    const ids = info && Array.isArray(info.ids) && info.ids.length === 11 ? info.ids : (Array.isArray(lineup) ? lineup : []);
+    if (ids.length !== 11) return;
+    game.startelfGedaechtnis = [{ season: game.season, matchday: game.matchday, gegner: oppName || '', heim: !!isHome, tore: ourGoals, gegentore: oppGoals, formation: (info && info.formation) || game.formation, ids: [...ids] }]
+        .concat(getStartelfGedaechtnis()).slice(0, GEDAECHTNIS_MAX);
+}
+
+function applyStartelfAusGedaechtnis(i) {
+    const e = getStartelfGedaechtnis()[i];
+    if (!e) { showToast('Diese Startelf ist nicht mehr gespeichert.', 'error'); return; }
+    const r = resolveLineupPreset({ ids: e.ids, formation: e.formation });
+    if (!r) { showToast('Zu wenig einsatzbereite Spieler für diese Startelf.', 'error', 3500); return; }
+    const fehlen = e.ids.filter(id => !r.ids.includes(id)).map(id => { const p = squad.find(x => x.id === id); return p ? p.name : 'abgegebener Spieler'; });
+    game.formation = e.formation || game.formation;
+    const formName = document.getElementById('squad-form-name');
+    if (formName) formName.innerText = game.formation;
+    lineup = r.ids;
+    renderSquadView();
+    if (typeof render3DPitch === 'function') render3DPitch();
+    renderLineupPresets();
+    renderPrematchCheck();
+    showToast(fehlen.length ? `📂 Elf vom ${e.matchday}. Spieltag aufgestellt. Ersetzt: ${fehlen.join(', ')}.` : `📂 Elf vom ${e.matchday}. Spieltag aufgestellt.`, 'success', 4000);
+}
+
+function renderStartelfGedaechtnis() {
+    const liste = getStartelfGedaechtnis();
+    if (!liste.length) return '<div style="font-size:var(--fs-small); color:var(--text-muted);">Nach dem nächsten Ligaspiel steht hier die Startelf mit Ergebnis.</div>';
+    const info = typeof pendingMatchInfo !== 'undefined' ? pendingMatchInfo : null;
+    const istHeim = info ? !!info.isHome : true;
+    const aktuell = lineup.length === 11 ? getLineupStrengthPreview(lineup, game.formation, istHeim) : null;
+    return liste.map((e, i) => {
+        const r = resolveLineupPreset({ ids: e.ids, formation: e.formation });
+        const farbe = e.tore > e.gegentore ? 'var(--primary)' : e.tore < e.gegentore ? 'var(--danger)' : 'var(--accent)';
+        const kopf = `<div style="overflow-wrap:anywhere;"><strong style="color:${farbe};">${e.tore}:${e.gegentore}</strong> ${e.heim ? '🏠' : '✈️'} ${mpEsc(e.gegner)} <span style="color:var(--text-muted);">· ${e.matchday}. Spieltag${e.season !== game.season ? ` (Saison ${e.season})` : ''} · ${e.formation}</span></div>`;
+        if (!r) return `<div class="box" style="font-size:var(--fs-small); margin:4px 0; border-left-color:${farbe};">${kopf}<div style="color:var(--text-muted);">Zu wenig einsatzbereite Spieler.</div></div>`;
+        const st = getLineupStrengthPreview(r.ids, e.formation, istHeim);
+        const gleich = r.ids.length === lineup.length && r.ids.every(id => lineup.includes(id)) && e.formation === game.formation;
+        return `<div class="box" style="font-size:var(--fs-small); margin:4px 0; border-left-color:${farbe};">${kopf}
+            <div class="ui-card-meta" style="margin:4px 0;">${uiChip(`Stärke heute ${st.toFixed(1)}${aktuell === null ? '' : ` (${st - aktuell >= 0 ? '+' : ''}${(st - aktuell).toFixed(1)})`}`)}${r.ersetzt ? uiChip(`🔁 ${r.ersetzt} Ausfall${r.ersetzt === 1 ? '' : 'e'} ersetzt`, 'warn') : uiChip('✓ komplett', 'gut')}${gleich ? uiChip('aktuell aufgestellt', 'gut') : ''}</div>
+            <button onclick="applyStartelfAusGedaechtnis(${i})" class="btn-secondary"${gleich ? ' disabled' : ''}>📂 Diese Elf aufstellen</button></div>`;
+    }).join('');
+}
+
 function renderPresetQuickPick() {
     ensureMatchPrepState();
     const info = typeof pendingMatchInfo !== 'undefined' ? pendingMatchInfo : null;
@@ -8693,7 +8749,8 @@ function renderLineupPresets() {
         <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Speichert die aktuelle Startelf samt Formation, zum Beispiel für Heim, Auswärts oder Pokal. Ausgefallene Spieler ersetzt der Trainer beim Laden.</div>
         <label class="ui-field" style="margin-bottom:8px;"><span class="ui-field-label">Name für neue Vorlage</span>
             <input id="lineup-preset-name" class="input-inline" maxlength="24" placeholder="z. B. Heimspiel Offensive" style="width:100%;"></label>
-        ${zeilen}`;
+        ${zeilen}
+        <details class="ui-fold"><summary>Startelf der letzten Spiele</summary>${renderStartelfGedaechtnis()}</details>`;
 }
 
 // ---------- Taktikvorlagen ----------
@@ -9082,7 +9139,7 @@ function renderPrematchCheck() {
     ];
     const problemListe = probleme.length ? probleme.map(x => `<div class="box" style="font-size:var(--fs-small); margin:4px 0;">${x.ton === 'schlecht' ? '🔴' : '🟡'} ${mpEsc(x.text)}</div>`).join('')
         : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Torwart und Formation passen.</div>';
-    const fehltListe = fehlt.length ? fehlt.map(x => `<div class="box" style="font-size:var(--fs-small); margin:4px 0; display:flex; justify-content:space-between; gap:8px;"><span>${mpEsc(x.p.name)} (${x.p.pos}, Str ${x.p.strength})${x.stamm ? ' ⭐' : ''}</span><span style="color:var(--text-muted);">${x.grund}, noch ${x.tage} ${x.grund === 'verletzt' ? 'Spieltag' + (x.tage === 1 ? '' : 'e') : 'Spiel' + (x.tage === 1 ? '' : 'e')}</span></div>`).join('')
+    const fehltListe = fehlt.length ? fehlt.map(x => `<div class="box" style="font-size:var(--fs-small); margin:4px 0; display:flex; justify-content:space-between; gap:8px;"><span>${mpEsc(x.p.name)} (${x.p.pos}, Str ${x.p.strength})${x.stamm ? ' ⭐' : ''}</span><span style="color:var(--text-muted);">${x.grund}, noch ${x.tage} ${x.grund === 'verletzt' ? 'Spieltag' + (x.tage === 1 ? '' : 'e') : 'Spiel' + (x.tage === 1 ? '' : 'e')}${game.matchday + x.tage <= SAISON_SPIELE ? ` · zurück ab SpT ${game.matchday + x.tage}` : ' · über das Saisonende hinaus'}</span></div>`).join('')
         : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Der komplette Kader ist einsatzbereit.</div>';
     const muedeZeile = muede.length ? `<div class="box" style="font-size:var(--fs-small); margin:4px 0; border-left-color:var(--danger);">😮‍💨 <strong>${muede.length} Stammspieler erschöpft:</strong> ${muede.map(p => `${mpEsc(p.name)} (${p.fitness} %)`).join(', ')}. Fitness zählt voll in die Teamstärke.${ohneErsatz.length ? ` Für ${ohneErsatz.map(mpEsc).join(', ')} gibt es auf der Bank keinen gleichwertigen Ersatz.` : ''}
             <button onclick="rotateTiredPlayers()" class="btn-action" style="margin-top:6px;">🔄 Ausgeruhte Elf aufstellen</button></div>` : '';
@@ -9110,6 +9167,7 @@ function renderPrematchCheck() {
         <details class="ui-fold"${fragil.length ? ' open' : ''}><summary>Verletzungsanfällige in der Startelf</summary>${fragilZeile}</details>
         ${oppName ? `<details class="ui-fold"${getMatchplan(oppName) ? ' open' : ''}><summary>📋 Matchplan: ${mpEsc(oppName)}</summary>${renderMatchplanSection(oppName)}</details>` : ''}
         <details class="ui-fold"><summary>Aufstellung aus Vorlage</summary>${renderPresetQuickPick()}</details>
+        <details class="ui-fold"><summary>Startelf der letzten Spiele</summary>${renderStartelfGedaechtnis()}</details>
         ${oppName ? `<details class="ui-fold"${notiz ? ' open' : ''}><summary>📓 Notizbuch: ${mpEsc(oppName)}</summary>${renderGegnerNotizSection(oppName)}</details>` : ''}
     </div>`;
 }
@@ -14185,6 +14243,53 @@ function renderTransferPokerBox() {
         return gruende;
     }
 
+    // Kauf-Vorschau (Phase 26.18), Gegenstück zu getVerkaufsFolgen(): wen der Spieler in der Startelf ersetzen würde (der
+    // schwächste Starter derselben Position, wenn er stärker ist), die Teamstärke vorher und nachher über calcTeamStrength()
+    // mit einer Kopie des Spielers (ohne Eingespieltheit, wie nach einem echten Kauf) und Kasse und Budgets danach.
+    function getStartelfKandidat(p) {
+        const starter = squad.filter(s => lineup.includes(s.id) && s.pos === p.pos && s.id !== p.id).sort((a, b) => a.strength - b.strength);
+        return { starter, ersetzt: starter.length && starter[0].strength < p.strength ? starter[0] : null };
+    }
+
+    function getKaufVorschau(p) {
+        const { starter, ersetzt } = getStartelfKandidat(p);
+        let vorher = null, nachher = null;
+        if (ersetzt && lineup.length === 11) {
+            const altElf = lineup, kopie = Object.assign({}, p, { id: 'kaufvorschau-' + p.id, fitness: p.fitness ?? 100 });
+            vorher = calcTeamStrength(false);
+            try {
+                squad.push(kopie);
+                lineup = altElf.map(id => id === ersetzt.id ? kopie.id : id);
+                nachher = calcTeamStrength(false);
+            } finally {
+                lineup = altElf;
+                const i = squad.indexOf(kopie);
+                if (i !== -1) squad.splice(i, 1);
+            }
+        }
+        const ablose = getTransferAsking(p), gesamt = ablose + getAgentFee(p, ablose);
+        const lohnsumme = squad.reduce((t, pl) => t + pl.wage, 0) + (game.secondTeam && game.secondTeam.isActive ? secondTeamSquad.reduce((t, pl) => t + pl.wage, 0) : 0);
+        return { starter, ersetzt, vorher, nachher, posAnzahl: squad.filter(x => x.pos === p.pos).length, gesamt,
+            kasse: game.money - gesamt, budget: game.transferBudget - ablose, gehaltFrei: game.wageBudget - lohnsumme - p.wage };
+    }
+
+    function getStartelfChip(p) {
+        const k = getStartelfKandidat(p);
+        return k.ersetzt ? uiChip(`⚽ Startelf statt ${k.ersetzt.name}`, 'gut') : '';
+    }
+
+    function renderKaufVorschau(p) {
+        const v = getKaufVorschau(p);
+        const elf = v.ersetzt
+            ? `⚽ Würde <strong>${v.ersetzt.name}</strong> (Str ${v.ersetzt.strength}) in der Startelf ersetzen.${v.nachher !== null ? ` Teamstärke ${v.vorher.toFixed(1)} → ${v.nachher.toFixed(1)} (${v.nachher - v.vorher >= 0 ? '+' : ''}${(v.nachher - v.vorher).toFixed(1)}, ohne Eingespieltheit).` : ''}`
+            : v.starter.length ? `🪑 Kein Stammplatz: dein schwächster ${p.pos} in der Startelf hat Stärke ${v.starter[0].strength}.` : `Auf seiner Position (${p.pos}) steht gerade niemand in deiner Startelf.`;
+        const geld = x => `<strong style="color:${x < 0 ? 'var(--danger)' : 'var(--text-main)'};">${formatVal(x)}</strong>`;
+        return `<details class="ui-fold" open style="margin:8px 0; text-align:left;"><summary>🛒 Kauf-Vorschau</summary>
+            <div class="box" style="font-size:var(--fs-small); margin:4px 0; overflow-wrap:anywhere;">${elf}</div>
+            <div class="box" style="font-size:var(--fs-small); margin:4px 0;">👥 ${p.pos} im Kader: ${v.posAnzahl} → ${v.posAnzahl + 1}<br>💰 Kosten mit Beraterprovision ${formatVal(v.gesamt)} · Kasse danach ${geld(v.kasse)} · Transferbudget danach ${geld(v.budget)} · Gehaltsbudget danach frei ${geld(v.gehaltFrei)}</div>
+            <div class="ui-card-meta">${getKaufChip(p)}</div></details>`;
+    }
+
     function getKaufChip(p) {
         const g = getKaufHindernisse(p);
         return g.length ? uiChip(`⛔ ${g.join(', ')}`, 'schlecht') : uiChip('✓ leistbar', 'gut');
@@ -14261,6 +14366,7 @@ function renderTransferPokerBox() {
                 meta: [
                     uiChip(`💶 ${formatVal(p.marketValue)}`),
                     getKaufChip(p),
+                    getStartelfChip(p),
                     p.deadlineBargain ? uiChip('⏰ Schnäppchen -30 %', 'schlecht') : '',
                     (p.trait && p.trait !== 'Kein') ? uiChip(p.trait) : '',
                     typeof getMedicalTag === 'function' ? uiChip(getMedicalTag(p)) : '',
@@ -18981,6 +19087,12 @@ function initZugaenglichkeit() {
         }
     }
 
+    // Erster Spieltag, an dem ein verletzter oder gesperrter Spieler wieder spielen darf (0 = einsatzbereit)
+    function getRueckkehrSpieltag(p) {
+        const n = Math.max(p.injured || 0, p.suspended || 0);
+        return n > 0 ? game.matchday + n : 0;
+    }
+
     function getKalenderExtras(md) {
         const x = [];
         const liga = leaguesData[game.leagueLevel] || [];
@@ -18994,6 +19106,9 @@ function initZugaenglichkeit() {
         if (tb) x.push(`📔 ${mpEsc(tb.text)}`);
         if (typeof SUMMER_WINDOW_LAST_MATCHDAY !== 'undefined' && md === SUMMER_WINDOW_LAST_MATCHDAY) x.push('⏳ Letzter Tag des Sommer-Transferfensters');
         if (game.winterWindowActive && game.winterWindowCloseMatchday === md) x.push('⏳ Letzter Tag des Winter-Transferfensters');
+        // Rückkehrer (Phase 26.18): Verletzung und Sperre zählen je Spieltag herunter (js/match-live.js)
+        const zurueck = md > game.matchday ? squad.filter(p => getRueckkehrSpieltag(p) === md) : [];
+        if (zurueck.length) x.push(`🔙 Wieder dabei: ${zurueck.slice(0, 4).map(p => mpEsc(p.name)).join(', ')}${zurueck.length > 4 ? ' …' : ''}`);
         if (md === 34) {
             const aus = squad.filter(p => p.contracts <= 1);
             if (aus.length) x.push(`📄 Zum Saisonende laufen ${aus.length === 1 ? '1 Vertrag' : aus.length + ' Verträge'} aus: ${aus.slice(0, 4).map(p => mpEsc(p.name)).join(', ')}${aus.length > 4 ? ' …' : ''}`);
@@ -27925,7 +28040,7 @@ function ensureSerienState() {
 }
 
 // Aus updateLeagueTable() nach jedem eigenen Ligaspiel (live und simuliert)
-function recordOwnLeagueResult(ourGoals, oppGoals, isHome) {
+function recordOwnLeagueResult(ourGoals, oppGoals, isHome, oppName) {
     ensureSerienState();
     const s = game.serien.aktuell;
     const sieg = ourGoals > oppGoals, niederlage = ourGoals < oppGoals;
@@ -27937,6 +28052,7 @@ function recordOwnLeagueResult(ourGoals, oppGoals, isHome) {
     s.torlos = ourGoals === 0 ? s.torlos + 1 : 0;
     if (isHome) s.heimSieg = sieg ? s.heimSieg + 1 : 0;
     if (typeof recordPresetResult === 'function') recordPresetResult(ourGoals, oppGoals);
+    if (typeof merkeStartelf === 'function') merkeStartelf(ourGoals, oppGoals, isHome, oppName); // vor recordTagResult, das den Merkzettel leert
     if (typeof recordTagResult === 'function') recordTagResult(ourGoals, oppGoals);
     SERIEN_ARTEN.forEach(a => {
         const r = game.serien.rekord[a.id];
@@ -28276,6 +28392,7 @@ function renderSaisonZiele() {
             const farbe = ton === 'gut' ? 'var(--primary)' : ton === 'schlecht' ? 'var(--danger)' : 'var(--accent)';
             return `<div class="box" style="margin:4px 0; font-size:var(--fs-small);"><div>${z.label} (Platz ${z.platz})</div><div style="font-weight:700; color:${farbe}; overflow-wrap:anywhere;">${z.innen ? '✓ ' : ''}${status}</div></div>`;
         }).join('')
+        + (getPunkteVergleich() ? `<div class="box" style="margin:4px 0; font-size:var(--fs-small); overflow-wrap:anywhere;">📈 ${getPunkteVergleichText(getPunkteVergleich())}</div>` : '')
         + `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">Noch ${rest} Spiel${rest === 1 ? '' : 'e'} (höchstens ${3 * rest} Punkte). Reine Tabellenwerte, das Torverhältnis zählt nicht.</div>`;
 }
 
@@ -28336,7 +28453,85 @@ function archivePlatzVerlauf() {
     const liga = leaguesData[game.leagueLevel] || [];
     const ich = liga.find(t => t.name === game.clubName);
     if (!ich || !Array.isArray(ich.rankHist) || !ich.rankHist.some(Boolean)) return;
-    game.platzVerlaufVorjahr = { season: game.season, level: game.leagueLevel, teams: liga.length, hist: ich.rankHist.slice(0, SAISON_SPIELE) };
+    game.platzVerlaufVorjahr = { season: game.season, level: game.leagueLevel, teams: liga.length, hist: ich.rankHist.slice(0, SAISON_SPIELE), punkte: getPunkteVerlauf() };
+}
+
+// ---------- Punkte-Vergleich mit der Vorsaison (Phase 26.18) ----------
+// Punkte nach jedem gespielten eigenen Ligaspiel der laufenden Saison aus dem Spielplan; am Saisonende landet die Reihe in
+// game.platzVerlaufVorjahr.punkte (ältere Stände haben sie erst nach dem nächsten Saisonende).
+function getPunkteVerlauf() {
+    const lvl = game.leagueLevel, liga = leaguesData[lvl] || [], plan = (typeof fixturesData !== 'undefined' && fixturesData[lvl]) || [];
+    const reihe = [];
+    let pkt = 0;
+    for (let md = 1; md <= SAISON_SPIELE; md++) {
+        const f = (plan[md - 1] || []).find(x => liga[x.home] && liga[x.away] && (liga[x.home].name === game.clubName || liga[x.away].name === game.clubName));
+        if (!f || !f.played) break;
+        const heim = liga[f.home].name === game.clubName, a = heim ? f.homeGoals : f.awayGoals, b = heim ? f.awayGoals : f.homeGoals;
+        pkt += a > b ? 3 : (a === b ? 1 : 0);
+        reihe.push(pkt);
+    }
+    return reihe;
+}
+
+function getPunkteVergleich() {
+    const v = game.platzVerlaufVorjahr;
+    const jetzt = getPunkteVerlauf(), n = jetzt.length;
+    if (!n || !v || !Array.isArray(v.punkte) || v.punkte.length < n) return null;
+    return { n, jetzt: jetzt[n - 1], vorher: v.punkte[n - 1], diff: jetzt[n - 1] - v.punkte[n - 1], andereLiga: v.level !== game.leagueLevel, reihe: jetzt, vorjahr: v.punkte, season: v.season };
+}
+
+function getPunkteVergleichText(pv) {
+    return `Nach ${pv.n} Spieltag${pv.n === 1 ? '' : 'en'}: <strong>${pv.jetzt} Punkte</strong>, Vorsaison ${pv.vorher}${pv.andereLiga ? ' (andere Liga)' : ''} <strong style="color:${pv.diff > 0 ? 'var(--primary)' : pv.diff < 0 ? 'var(--danger)' : 'var(--text-muted)'};">(${pv.diff > 0 ? '+' : ''}${pv.diff})</strong>`;
+}
+
+function renderPunkteKurve(pv) {
+    const w = 300, h = 90, pad = 8, max = Math.max(3, pv.vorjahr[pv.vorjahr.length - 1] || 0, pv.jetzt);
+    const linie = r => r.map((y, i) => `${(pad + i * (w - pad * 2) / (SAISON_SPIELE - 1)).toFixed(1)},${(h - pad - y / max * (h - pad * 2)).toFixed(1)}`).join(' ');
+    return `<svg viewBox="0 0 ${w} ${h}" style="width:100%; height:${h}px; display:block;" role="img" aria-label="Punkte nach ${pv.n} Spieltagen: ${pv.jetzt}, Vorsaison ${pv.vorher}">
+            <polyline points="${linie(pv.vorjahr)}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="4 3" />
+            <polyline points="${linie(pv.reihe)}" fill="none" stroke="var(--primary)" stroke-width="2" />
+        </svg>
+        <div style="font-size:var(--fs-caption); color:var(--text-muted);"><span style="color:var(--primary);">━</span> ${game.season}. Saison · <span style="color:var(--accent);">┅</span> Vorsaison (${pv.season}., Endstand ${pv.vorjahr[pv.vorjahr.length - 1]} Punkte)</div>`;
+}
+
+// ---------- Monatsbericht (Phase 26.18) ----------
+// Aus runMonthlyClubTicks() (alle vier Spieltage, vor game.matchday++): eine Postfach-Nachricht über die Ligaspiele seit dem
+// letzten Bericht mit Bilanz, Tabellenplatz, Spieltags-Finanzen (game.financeLedger), Verletzten und dem Spieler des Monats.
+// game.monatsStand merkt sich Spieltag, Platz und Kasse für den nächsten Vergleich; in einer neuen Saison beginnt er bei 1.
+function schreibeMonatsbericht() {
+    const alt = game.monatsStand && game.monatsStand.season === game.season ? game.monatsStand : null;
+    const von = alt ? alt.matchday + 1 : 1, bis = Math.min(game.matchday, SAISON_SPIELE);
+    const lvl = game.leagueLevel, liga = leaguesData[lvl] || [], plan = (typeof fixturesData !== 'undefined' && fixturesData[lvl]) || [];
+    const tab = typeof sortedTable === 'function' ? sortedTable(lvl) : [];
+    const platz = tab.findIndex(t => t.name === game.clubName) + 1;
+    const spiele = [];
+    for (let md = von; md <= bis; md++) {
+        const f = (plan[md - 1] || []).find(x => liga[x.home] && liga[x.away] && (liga[x.home].name === game.clubName || liga[x.away].name === game.clubName));
+        if (!f || !f.played) continue;
+        const heim = liga[f.home].name === game.clubName;
+        spiele.push({ heim, gegner: heim ? liga[f.away].name : liga[f.home].name, a: heim ? f.homeGoals : f.awayGoals, b: heim ? f.awayGoals : f.homeGoals });
+    }
+    const stand = { season: game.season, matchday: bis, platz, money: game.money };
+    if (!spiele.length) { game.monatsStand = stand; return null; }
+    const s = spiele.filter(x => x.a > x.b).length, u = spiele.filter(x => x.a === x.b).length, n = spiele.length - s - u;
+    const zeilen = [`<strong>${s}S ${u}U ${n}N</strong> · ${3 * s + u} Punkte · Tore ${spiele.reduce((t, x) => t + x.a, 0)}:${spiele.reduce((t, x) => t + x.b, 0)}`,
+        spiele.map(x => `${x.heim ? '🏠' : '✈️'} ${x.a}:${x.b} ${mpEsc(x.gegner)}`).join(' · '),
+        platz ? `📊 Tabellenplatz ${alt && alt.platz ? `${alt.platz} → ${platz}` : platz}` : ''];
+    const buchungen = (Array.isArray(game.financeLedger) ? game.financeLedger : []).filter(e => e.season === game.season && e.matchday >= von && e.matchday <= bis);
+    if (buchungen.length) {
+        const top = art => { const sum = {}; buchungen.forEach(e => (e[art] || []).forEach(x => { sum[x.label] = (sum[x.label] || 0) + x.amount; })); const k = Object.keys(sum).sort((a, b) => sum[b] - sum[a])[0]; return k ? `${k} ${formatVal(sum[k])}` : ''; };
+        const ein = buchungen.reduce((t, e) => t + (e.summeEin || 0), 0), aus = buchungen.reduce((t, e) => t + (e.summeAus || 0), 0);
+        zeilen.push(`💰 Spieltage: Einnahmen ${formatVal(ein)}${top('einnahmen') ? ` (größter Posten ${top('einnahmen')})` : ''}, Ausgaben ${formatVal(aus)}${top('ausgaben') ? ` (größter Posten ${top('ausgaben')})` : ''}`);
+    }
+    zeilen.push(alt && typeof alt.money === 'number' ? `🏦 Kasse ${formatVal(game.money)} (${game.money - alt.money >= 0 ? '+' : ''}${formatVal(game.money - alt.money)} seit dem letzten Bericht)` : `🏦 Kasse ${formatVal(game.money)}`);
+    const verletzt = squad.filter(p => (p.injured || 0) > 0);
+    zeilen.push(verletzt.length ? `🩹 Verletzt: ${verletzt.map(p => `${mpEsc(p.name)} (noch ${p.injured})`).join(', ')}` : '🩹 Keine Verletzten');
+    const pom = Array.isArray(game.playerOfMonthHistory) ? game.playerOfMonthHistory[0] : null;
+    if (pom && pom.season === game.season && pom.matchday === game.matchday) zeilen.push(`🌟 Spieler des Monats: ${mpEsc(pom.playerName)} (${pom.goals} Tore)`);
+    const titel = `🗓️ Monatsbericht: Spieltag ${von} bis ${bis}`;
+    addInboxMessage('analyse', titel, zeilen.filter(Boolean).join('<br>'), 'screen-league');
+    game.monatsStand = stand;
+    return titel;
 }
 
 // ---------- Saisonverlauf aller eigenen Spiele (Phase 26.17) ----------
@@ -28364,7 +28559,9 @@ function renderSaisonverlauf() {
     const spiele = getSaisonverlauf();
     if (!spiele.length) { box.innerHTML = '<div style="font-size:var(--fs-small); color:var(--text-muted);">Kein Spielplan vorhanden.</div>'; return; }
     const s = spiele.filter(x => x.gespielt && x.tore > x.gegentore).length, u = spiele.filter(x => x.gespielt && x.tore === x.gegentore).length, n = spiele.filter(x => x.gespielt && x.tore < x.gegentore).length;
+    const pv = getPunkteVergleich();
     box.innerHTML = `<div style="font-size:var(--fs-small); margin-bottom:6px;">${game.season}. Saison in der ${mpEsc(leagueNames[game.leagueLevel])}: ${s}S ${u}U ${n}N · 🏠 Heim · ✈️ Auswärts</div>`
+        + (pv ? `<div class="box" style="font-size:var(--fs-small); margin:4px 0 8px;">📈 ${getPunkteVergleichText(pv)}${renderPunkteKurve(pv)}</div>` : '')
         + spiele.map(x => {
             const farbe = !x.gespielt ? 'var(--border)' : x.tore > x.gegentore ? 'var(--primary)' : x.tore < x.gegentore ? 'var(--danger)' : 'var(--accent)';
             const rechts = x.gespielt ? `<strong>${x.tore}:${x.gegentore}</strong>${x.platzDanach ? ` <span style="color:var(--text-muted);">· Platz ${x.platzDanach}</span>` : ''}` : `<span style="color:var(--text-muted);">Platz ${x.platz} · Str ${x.staerke}</span>`;
@@ -28869,7 +29066,7 @@ function getStartelfTagInfo() {
 
 // Vor dem Ligaspiel (neben markPresetInUse): Startelf-Etiketten festhalten
 function markTagsInUse() {
-    game.etikettImEinsatz = Object.assign({ matchday: game.matchday, ids: Array.isArray(lineup) ? [...lineup] : [] }, getStartelfTagInfo());
+    game.etikettImEinsatz = Object.assign({ matchday: game.matchday, ids: Array.isArray(lineup) ? [...lineup] : [], formation: game.formation }, getStartelfTagInfo());
 }
 
 // Nach dem Ligaspiel (aus recordOwnLeagueResult): ohne Merkzettel gilt die aktuelle Startelf
@@ -36887,6 +37084,7 @@ function cleanupLegacyScoutState() {
             return st ? sum + (st.owned * st.price * (st.dividendRate + diversificationBonus) / 8.5) : sum;
         }, 0));
         loescheBuchungskontext();
+        if (typeof schreibeMonatsbericht === 'function') schreibeMonatsbericht();
     }
 
     function applyFormWalk(team) {
@@ -36927,7 +37125,7 @@ function cleanupLegacyScoutState() {
             let rec = game.headToHeadRecords[oppName];
             rec.goalsFor += ourGoals; rec.goalsAgainst += oppGoals;
             if (ourGoals > oppGoals) rec.wins++; else if (ourGoals < oppGoals) rec.losses++; else rec.draws++;
-            if (typeof recordOwnLeagueResult === 'function') recordOwnLeagueResult(ourGoals, oppGoals, h.name === game.clubName);
+            if (typeof recordOwnLeagueResult === 'function') recordOwnLeagueResult(ourGoals, oppGoals, h.name === game.clubName, oppName);
             rec.lastResults.unshift(`${ourGoals}:${oppGoals}`);
             if (rec.lastResults.length > 5) rec.lastResults.pop();
         }

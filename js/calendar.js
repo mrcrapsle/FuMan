@@ -56,6 +56,12 @@
         }
     }
 
+    // Erster Spieltag, an dem ein verletzter oder gesperrter Spieler wieder spielen darf (0 = einsatzbereit)
+    function getRueckkehrSpieltag(p) {
+        const n = Math.max(p.injured || 0, p.suspended || 0);
+        return n > 0 ? game.matchday + n : 0;
+    }
+
     function getKalenderExtras(md) {
         const x = [];
         const liga = leaguesData[game.leagueLevel] || [];
@@ -69,6 +75,9 @@
         if (tb) x.push(`📔 ${mpEsc(tb.text)}`);
         if (typeof SUMMER_WINDOW_LAST_MATCHDAY !== 'undefined' && md === SUMMER_WINDOW_LAST_MATCHDAY) x.push('⏳ Letzter Tag des Sommer-Transferfensters');
         if (game.winterWindowActive && game.winterWindowCloseMatchday === md) x.push('⏳ Letzter Tag des Winter-Transferfensters');
+        // Rückkehrer (Phase 26.18): Verletzung und Sperre zählen je Spieltag herunter (js/match-live.js)
+        const zurueck = md > game.matchday ? squad.filter(p => getRueckkehrSpieltag(p) === md) : [];
+        if (zurueck.length) x.push(`🔙 Wieder dabei: ${zurueck.slice(0, 4).map(p => mpEsc(p.name)).join(', ')}${zurueck.length > 4 ? ' …' : ''}`);
         if (md === 34) {
             const aus = squad.filter(p => p.contracts <= 1);
             if (aus.length) x.push(`📄 Zum Saisonende laufen ${aus.length === 1 ? '1 Vertrag' : aus.length + ' Verträge'} aus: ${aus.slice(0, 4).map(p => mpEsc(p.name)).join(', ')}${aus.length > 4 ? ' …' : ''}`);

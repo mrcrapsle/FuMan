@@ -276,6 +276,7 @@
     function renderErsatzSuche(p, pool) {
         const box = document.getElementById('pd-ersatz');
         if (!box) return;
+        if (pool === 'market' && marketPlayers.includes(p) && typeof renderKaufVorschau === 'function') { box.innerHTML = renderKaufVorschau(p); return; }
         if (pool !== 'squad') { box.innerHTML = ''; return; }
         const kand = getErsatzKandidaten(p);
         box.innerHTML = `<details class="ui-fold" style="margin:8px 0; text-align:left;"><summary>🔎 Ersatz auf dem Markt (${kand.length})</summary>`

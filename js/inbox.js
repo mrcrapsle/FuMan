@@ -87,7 +87,7 @@
         verletzung: { icon: '🩹', color: 'var(--danger)', label: 'Verletzung' },
         finanzen: { icon: '💰', color: 'var(--accent)', label: 'Finanzen' },
         scouting: { icon: '🔭', color: 'var(--teal)', label: 'Scouting' },
-        analyse: { icon: '📋', color: 'var(--violet)', label: 'Analyse' },
+        analyse: { icon: '📋', color: 'var(--blue)', label: 'Analyse' }, // --violet ist im Kontrast-Theme eine dunkle Fläche, keine Schriftfarbe
         vertrag: { icon: '📄', color: 'var(--purple)', label: 'Vertrag' }
     };
 

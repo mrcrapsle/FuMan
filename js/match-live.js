@@ -1438,6 +1438,7 @@
             return st ? sum + (st.owned * st.price * (st.dividendRate + diversificationBonus) / 8.5) : sum;
         }, 0));
         loescheBuchungskontext();
+        if (typeof schreibeMonatsbericht === 'function') schreibeMonatsbericht();
     }
 
     function applyFormWalk(team) {
@@ -1478,7 +1479,7 @@
             let rec = game.headToHeadRecords[oppName];
             rec.goalsFor += ourGoals; rec.goalsAgainst += oppGoals;
             if (ourGoals > oppGoals) rec.wins++; else if (ourGoals < oppGoals) rec.losses++; else rec.draws++;
-            if (typeof recordOwnLeagueResult === 'function') recordOwnLeagueResult(ourGoals, oppGoals, h.name === game.clubName);
+            if (typeof recordOwnLeagueResult === 'function') recordOwnLeagueResult(ourGoals, oppGoals, h.name === game.clubName, oppName);
             rec.lastResults.unshift(`${ourGoals}:${oppGoals}`);
             if (rec.lastResults.length > 5) rec.lastResults.pop();
         }

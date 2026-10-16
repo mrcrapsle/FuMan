@@ -24,7 +24,7 @@ function ensureSerienState() {
 }
 
 // Aus updateLeagueTable() nach jedem eigenen Ligaspiel (live und simuliert)
-function recordOwnLeagueResult(ourGoals, oppGoals, isHome) {
+function recordOwnLeagueResult(ourGoals, oppGoals, isHome, oppName) {
     ensureSerienState();
     const s = game.serien.aktuell;
     const sieg = ourGoals > oppGoals, niederlage = ourGoals < oppGoals;
@@ -36,6 +36,7 @@ function recordOwnLeagueResult(ourGoals, oppGoals, isHome) {
     s.torlos = ourGoals === 0 ? s.torlos + 1 : 0;
     if (isHome) s.heimSieg = sieg ? s.heimSieg + 1 : 0;
     if (typeof recordPresetResult === 'function') recordPresetResult(ourGoals, oppGoals);
+    if (typeof merkeStartelf === 'function') merkeStartelf(ourGoals, oppGoals, isHome, oppName); // vor recordTagResult, das den Merkzettel leert
     if (typeof recordTagResult === 'function') recordTagResult(ourGoals, oppGoals);
     SERIEN_ARTEN.forEach(a => {
         const r = game.serien.rekord[a.id];
@@ -375,6 +376,7 @@ function renderSaisonZiele() {
             const farbe = ton === 'gut' ? 'var(--primary)' : ton === 'schlecht' ? 'var(--danger)' : 'var(--accent)';
             return `<div class="box" style="margin:4px 0; font-size:var(--fs-small);"><div>${z.label} (Platz ${z.platz})</div><div style="font-weight:700; color:${farbe}; overflow-wrap:anywhere;">${z.innen ? '✓ ' : ''}${status}</div></div>`;
         }).join('')
+        + (getPunkteVergleich() ? `<div class="box" style="margin:4px 0; font-size:var(--fs-small); overflow-wrap:anywhere;">📈 ${getPunkteVergleichText(getPunkteVergleich())}</div>` : '')
         + `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">Noch ${rest} Spiel${rest === 1 ? '' : 'e'} (höchstens ${3 * rest} Punkte). Reine Tabellenwerte, das Torverhältnis zählt nicht.</div>`;
 }
 
@@ -435,7 +437,85 @@ function archivePlatzVerlauf() {
     const liga = leaguesData[game.leagueLevel] || [];
     const ich = liga.find(t => t.name === game.clubName);
     if (!ich || !Array.isArray(ich.rankHist) || !ich.rankHist.some(Boolean)) return;
-    game.platzVerlaufVorjahr = { season: game.season, level: game.leagueLevel, teams: liga.length, hist: ich.rankHist.slice(0, SAISON_SPIELE) };
+    game.platzVerlaufVorjahr = { season: game.season, level: game.leagueLevel, teams: liga.length, hist: ich.rankHist.slice(0, SAISON_SPIELE), punkte: getPunkteVerlauf() };
+}
+
+// ---------- Punkte-Vergleich mit der Vorsaison (Phase 26.18) ----------
+// Punkte nach jedem gespielten eigenen Ligaspiel der laufenden Saison aus dem Spielplan; am Saisonende landet die Reihe in
+// game.platzVerlaufVorjahr.punkte (ältere Stände haben sie erst nach dem nächsten Saisonende).
+function getPunkteVerlauf() {
+    const lvl = game.leagueLevel, liga = leaguesData[lvl] || [], plan = (typeof fixturesData !== 'undefined' && fixturesData[lvl]) || [];
+    const reihe = [];
+    let pkt = 0;
+    for (let md = 1; md <= SAISON_SPIELE; md++) {
+        const f = (plan[md - 1] || []).find(x => liga[x.home] && liga[x.away] && (liga[x.home].name === game.clubName || liga[x.away].name === game.clubName));
+        if (!f || !f.played) break;
+        const heim = liga[f.home].name === game.clubName, a = heim ? f.homeGoals : f.awayGoals, b = heim ? f.awayGoals : f.homeGoals;
+        pkt += a > b ? 3 : (a === b ? 1 : 0);
+        reihe.push(pkt);
+    }
+    return reihe;
+}
+
+function getPunkteVergleich() {
+    const v = game.platzVerlaufVorjahr;
+    const jetzt = getPunkteVerlauf(), n = jetzt.length;
+    if (!n || !v || !Array.isArray(v.punkte) || v.punkte.length < n) return null;
+    return { n, jetzt: jetzt[n - 1], vorher: v.punkte[n - 1], diff: jetzt[n - 1] - v.punkte[n - 1], andereLiga: v.level !== game.leagueLevel, reihe: jetzt, vorjahr: v.punkte, season: v.season };
+}
+
+function getPunkteVergleichText(pv) {
+    return `Nach ${pv.n} Spieltag${pv.n === 1 ? '' : 'en'}: <strong>${pv.jetzt} Punkte</strong>, Vorsaison ${pv.vorher}${pv.andereLiga ? ' (andere Liga)' : ''} <strong style="color:${pv.diff > 0 ? 'var(--primary)' : pv.diff < 0 ? 'var(--danger)' : 'var(--text-muted)'};">(${pv.diff > 0 ? '+' : ''}${pv.diff})</strong>`;
+}
+
+function renderPunkteKurve(pv) {
+    const w = 300, h = 90, pad = 8, max = Math.max(3, pv.vorjahr[pv.vorjahr.length - 1] || 0, pv.jetzt);
+    const linie = r => r.map((y, i) => `${(pad + i * (w - pad * 2) / (SAISON_SPIELE - 1)).toFixed(1)},${(h - pad - y / max * (h - pad * 2)).toFixed(1)}`).join(' ');
+    return `<svg viewBox="0 0 ${w} ${h}" style="width:100%; height:${h}px; display:block;" role="img" aria-label="Punkte nach ${pv.n} Spieltagen: ${pv.jetzt}, Vorsaison ${pv.vorher}">
+            <polyline points="${linie(pv.vorjahr)}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-dasharray="4 3" />
+            <polyline points="${linie(pv.reihe)}" fill="none" stroke="var(--primary)" stroke-width="2" />
+        </svg>
+        <div style="font-size:var(--fs-caption); color:var(--text-muted);"><span style="color:var(--primary);">━</span> ${game.season}. Saison · <span style="color:var(--accent);">┅</span> Vorsaison (${pv.season}., Endstand ${pv.vorjahr[pv.vorjahr.length - 1]} Punkte)</div>`;
+}
+
+// ---------- Monatsbericht (Phase 26.18) ----------
+// Aus runMonthlyClubTicks() (alle vier Spieltage, vor game.matchday++): eine Postfach-Nachricht über die Ligaspiele seit dem
+// letzten Bericht mit Bilanz, Tabellenplatz, Spieltags-Finanzen (game.financeLedger), Verletzten und dem Spieler des Monats.
+// game.monatsStand merkt sich Spieltag, Platz und Kasse für den nächsten Vergleich; in einer neuen Saison beginnt er bei 1.
+function schreibeMonatsbericht() {
+    const alt = game.monatsStand && game.monatsStand.season === game.season ? game.monatsStand : null;
+    const von = alt ? alt.matchday + 1 : 1, bis = Math.min(game.matchday, SAISON_SPIELE);
+    const lvl = game.leagueLevel, liga = leaguesData[lvl] || [], plan = (typeof fixturesData !== 'undefined' && fixturesData[lvl]) || [];
+    const tab = typeof sortedTable === 'function' ? sortedTable(lvl) : [];
+    const platz = tab.findIndex(t => t.name === game.clubName) + 1;
+    const spiele = [];
+    for (let md = von; md <= bis; md++) {
+        const f = (plan[md - 1] || []).find(x => liga[x.home] && liga[x.away] && (liga[x.home].name === game.clubName || liga[x.away].name === game.clubName));
+        if (!f || !f.played) continue;
+        const heim = liga[f.home].name === game.clubName;
+        spiele.push({ heim, gegner: heim ? liga[f.away].name : liga[f.home].name, a: heim ? f.homeGoals : f.awayGoals, b: heim ? f.awayGoals : f.homeGoals });
+    }
+    const stand = { season: game.season, matchday: bis, platz, money: game.money };
+    if (!spiele.length) { game.monatsStand = stand; return null; }
+    const s = spiele.filter(x => x.a > x.b).length, u = spiele.filter(x => x.a === x.b).length, n = spiele.length - s - u;
+    const zeilen = [`<strong>${s}S ${u}U ${n}N</strong> · ${3 * s + u} Punkte · Tore ${spiele.reduce((t, x) => t + x.a, 0)}:${spiele.reduce((t, x) => t + x.b, 0)}`,
+        spiele.map(x => `${x.heim ? '🏠' : '✈️'} ${x.a}:${x.b} ${mpEsc(x.gegner)}`).join(' · '),
+        platz ? `📊 Tabellenplatz ${alt && alt.platz ? `${alt.platz} → ${platz}` : platz}` : ''];
+    const buchungen = (Array.isArray(game.financeLedger) ? game.financeLedger : []).filter(e => e.season === game.season && e.matchday >= von && e.matchday <= bis);
+    if (buchungen.length) {
+        const top = art => { const sum = {}; buchungen.forEach(e => (e[art] || []).forEach(x => { sum[x.label] = (sum[x.label] || 0) + x.amount; })); const k = Object.keys(sum).sort((a, b) => sum[b] - sum[a])[0]; return k ? `${k} ${formatVal(sum[k])}` : ''; };
+        const ein = buchungen.reduce((t, e) => t + (e.summeEin || 0), 0), aus = buchungen.reduce((t, e) => t + (e.summeAus || 0), 0);
+        zeilen.push(`💰 Spieltage: Einnahmen ${formatVal(ein)}${top('einnahmen') ? ` (größter Posten ${top('einnahmen')})` : ''}, Ausgaben ${formatVal(aus)}${top('ausgaben') ? ` (größter Posten ${top('ausgaben')})` : ''}`);
+    }
+    zeilen.push(alt && typeof alt.money === 'number' ? `🏦 Kasse ${formatVal(game.money)} (${game.money - alt.money >= 0 ? '+' : ''}${formatVal(game.money - alt.money)} seit dem letzten Bericht)` : `🏦 Kasse ${formatVal(game.money)}`);
+    const verletzt = squad.filter(p => (p.injured || 0) > 0);
+    zeilen.push(verletzt.length ? `🩹 Verletzt: ${verletzt.map(p => `${mpEsc(p.name)} (noch ${p.injured})`).join(', ')}` : '🩹 Keine Verletzten');
+    const pom = Array.isArray(game.playerOfMonthHistory) ? game.playerOfMonthHistory[0] : null;
+    if (pom && pom.season === game.season && pom.matchday === game.matchday) zeilen.push(`🌟 Spieler des Monats: ${mpEsc(pom.playerName)} (${pom.goals} Tore)`);
+    const titel = `🗓️ Monatsbericht: Spieltag ${von} bis ${bis}`;
+    addInboxMessage('analyse', titel, zeilen.filter(Boolean).join('<br>'), 'screen-league');
+    game.monatsStand = stand;
+    return titel;
 }
 
 // ---------- Saisonverlauf aller eigenen Spiele (Phase 26.17) ----------
@@ -463,7 +543,9 @@ function renderSaisonverlauf() {
     const spiele = getSaisonverlauf();
     if (!spiele.length) { box.innerHTML = '<div style="font-size:var(--fs-small); color:var(--text-muted);">Kein Spielplan vorhanden.</div>'; return; }
     const s = spiele.filter(x => x.gespielt && x.tore > x.gegentore).length, u = spiele.filter(x => x.gespielt && x.tore === x.gegentore).length, n = spiele.filter(x => x.gespielt && x.tore < x.gegentore).length;
+    const pv = getPunkteVergleich();
     box.innerHTML = `<div style="font-size:var(--fs-small); margin-bottom:6px;">${game.season}. Saison in der ${mpEsc(leagueNames[game.leagueLevel])}: ${s}S ${u}U ${n}N · 🏠 Heim · ✈️ Auswärts</div>`
+        + (pv ? `<div class="box" style="font-size:var(--fs-small); margin:4px 0 8px;">📈 ${getPunkteVergleichText(pv)}${renderPunkteKurve(pv)}</div>` : '')
         + spiele.map(x => {
             const farbe = !x.gespielt ? 'var(--border)' : x.tore > x.gegentore ? 'var(--primary)' : x.tore < x.gegentore ? 'var(--danger)' : 'var(--accent)';
             const rechts = x.gespielt ? `<strong>${x.tore}:${x.gegentore}</strong>${x.platzDanach ? ` <span style="color:var(--text-muted);">· Platz ${x.platzDanach}</span>` : ''}` : `<span style="color:var(--text-muted);">Platz ${x.platz} · Str ${x.staerke}</span>`;

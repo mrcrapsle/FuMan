@@ -270,7 +270,7 @@ function getStartelfTagInfo() {
 
 // Vor dem Ligaspiel (neben markPresetInUse): Startelf-Etiketten festhalten
 function markTagsInUse() {
-    game.etikettImEinsatz = Object.assign({ matchday: game.matchday, ids: Array.isArray(lineup) ? [...lineup] : [] }, getStartelfTagInfo());
+    game.etikettImEinsatz = Object.assign({ matchday: game.matchday, ids: Array.isArray(lineup) ? [...lineup] : [], formation: game.formation }, getStartelfTagInfo());
 }
 
 // Nach dem Ligaspiel (aus recordOwnLeagueResult): ohne Merkzettel gilt die aktuelle Startelf

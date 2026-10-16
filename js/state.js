@@ -124,6 +124,8 @@
         tagebuch: [],
         kaderwertVerlauf: [],
         platzVerlaufVorjahr: null,
+        startelfGedaechtnis: [],
+        monatsStand: null,
         assistentErledigt: null,
         vorlageBilanzArchiv: [],
         vorlageImEinsatz: null,

@@ -705,6 +705,53 @@
         return gruende;
     }
 
+    // Kauf-Vorschau (Phase 26.18), Gegenstück zu getVerkaufsFolgen(): wen der Spieler in der Startelf ersetzen würde (der
+    // schwächste Starter derselben Position, wenn er stärker ist), die Teamstärke vorher und nachher über calcTeamStrength()
+    // mit einer Kopie des Spielers (ohne Eingespieltheit, wie nach einem echten Kauf) und Kasse und Budgets danach.
+    function getStartelfKandidat(p) {
+        const starter = squad.filter(s => lineup.includes(s.id) && s.pos === p.pos && s.id !== p.id).sort((a, b) => a.strength - b.strength);
+        return { starter, ersetzt: starter.length && starter[0].strength < p.strength ? starter[0] : null };
+    }
+
+    function getKaufVorschau(p) {
+        const { starter, ersetzt } = getStartelfKandidat(p);
+        let vorher = null, nachher = null;
+        if (ersetzt && lineup.length === 11) {
+            const altElf = lineup, kopie = Object.assign({}, p, { id: 'kaufvorschau-' + p.id, fitness: p.fitness ?? 100 });
+            vorher = calcTeamStrength(false);
+            try {
+                squad.push(kopie);
+                lineup = altElf.map(id => id === ersetzt.id ? kopie.id : id);
+                nachher = calcTeamStrength(false);
+            } finally {
+                lineup = altElf;
+                const i = squad.indexOf(kopie);
+                if (i !== -1) squad.splice(i, 1);
+            }
+        }
+        const ablose = getTransferAsking(p), gesamt = ablose + getAgentFee(p, ablose);
+        const lohnsumme = squad.reduce((t, pl) => t + pl.wage, 0) + (game.secondTeam && game.secondTeam.isActive ? secondTeamSquad.reduce((t, pl) => t + pl.wage, 0) : 0);
+        return { starter, ersetzt, vorher, nachher, posAnzahl: squad.filter(x => x.pos === p.pos).length, gesamt,
+            kasse: game.money - gesamt, budget: game.transferBudget - ablose, gehaltFrei: game.wageBudget - lohnsumme - p.wage };
+    }
+
+    function getStartelfChip(p) {
+        const k = getStartelfKandidat(p);
+        return k.ersetzt ? uiChip(`⚽ Startelf statt ${k.ersetzt.name}`, 'gut') : '';
+    }
+
+    function renderKaufVorschau(p) {
+        const v = getKaufVorschau(p);
+        const elf = v.ersetzt
+            ? `⚽ Würde <strong>${v.ersetzt.name}</strong> (Str ${v.ersetzt.strength}) in der Startelf ersetzen.${v.nachher !== null ? ` Teamstärke ${v.vorher.toFixed(1)} → ${v.nachher.toFixed(1)} (${v.nachher - v.vorher >= 0 ? '+' : ''}${(v.nachher - v.vorher).toFixed(1)}, ohne Eingespieltheit).` : ''}`
+            : v.starter.length ? `🪑 Kein Stammplatz: dein schwächster ${p.pos} in der Startelf hat Stärke ${v.starter[0].strength}.` : `Auf seiner Position (${p.pos}) steht gerade niemand in deiner Startelf.`;
+        const geld = x => `<strong style="color:${x < 0 ? 'var(--danger)' : 'var(--text-main)'};">${formatVal(x)}</strong>`;
+        return `<details class="ui-fold" open style="margin:8px 0; text-align:left;"><summary>🛒 Kauf-Vorschau</summary>
+            <div class="box" style="font-size:var(--fs-small); margin:4px 0; overflow-wrap:anywhere;">${elf}</div>
+            <div class="box" style="font-size:var(--fs-small); margin:4px 0;">👥 ${p.pos} im Kader: ${v.posAnzahl} → ${v.posAnzahl + 1}<br>💰 Kosten mit Beraterprovision ${formatVal(v.gesamt)} · Kasse danach ${geld(v.kasse)} · Transferbudget danach ${geld(v.budget)} · Gehaltsbudget danach frei ${geld(v.gehaltFrei)}</div>
+            <div class="ui-card-meta">${getKaufChip(p)}</div></details>`;
+    }
+
     function getKaufChip(p) {
         const g = getKaufHindernisse(p);
         return g.length ? uiChip(`⛔ ${g.join(', ')}`, 'schlecht') : uiChip('✓ leistbar', 'gut');
@@ -781,6 +828,7 @@
                 meta: [
                     uiChip(`💶 ${formatVal(p.marketValue)}`),
                     getKaufChip(p),
+                    getStartelfChip(p),
                     p.deadlineBargain ? uiChip('⏰ Schnäppchen -30 %', 'schlecht') : '',
                     (p.trait && p.trait !== 'Kein') ? uiChip(p.trait) : '',
                     typeof getMedicalTag === 'function' ? uiChip(getMedicalTag(p)) : '',
