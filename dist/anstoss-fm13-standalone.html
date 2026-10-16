@@ -4315,6 +4315,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
                         Beziehung: <select id="priv-relationship-select" class="input-inline" style="width:180px;" onchange="setRelationshipStatus(this.value)"></select>
                         <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:2px;" id="priv-relationship-desc"></div>
                     </div>
+                    <div style="margin-top:6px;">
+                        Haustier: <select id="priv-haustier-select" class="input-inline" style="max-width:100%;" onchange="setHaustier(this.value)"></select>
+                        <div style="font-size:var(--fs-caption); color:var(--text-muted);" id="priv-haustier-desc"></div>
+                    </div>
                 </div>
 
                 <div class="panel">
@@ -4324,6 +4328,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
                     <input type="number" id="priv-deposit-input" placeholder="Betrag in €" class="input-inline" style="width:100%; margin-bottom:6px;">
                     <button onclick="depositToClub(parseInt(document.getElementById('priv-deposit-input').value)||0)" class="btn-secondary">🏦 Ins Vereinskonto einzahlen (Notkapital)</button>
                 </div>
+                <div class="panel" id="priv-finanz-box"></div>
+                <div class="panel" id="priv-kurse-box"></div>
+                <div class="panel" id="priv-ziele-box"></div>
                 <div class="panel">
                     <div class="panel-header">🌟 Öffentliches Leben</div>
                     <button onclick="writeAutobiography()" id="btn-priv-autobio" class="btn-action" style="margin-bottom:6px;">📖 Autobiografie schreiben (ab 40 Prestige, einmalig)</button>
@@ -4498,6 +4505,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
                     </div>
                 </div>
 
+                <div class="panel">
+                    <div class="panel-header">🧰 Test- und Diagnosewerkzeuge</div>
+                    <div id="admin-tools-box"></div>
+                </div>
                 <div class="panel">
                     <div class="panel-header">💾 Savegame-Export & JSON-Import</div>
                     <textarea id="adm-save-json" style="width:100%; height:65px; background:var(--surface-0); color:var(--primary); font-family:monospace; font-size:var(--fs-caption); border:1px solid color-mix(in srgb, var(--europe) 30%, var(--surface-1)); border-radius:4px; padding:4px;" placeholder="Hier Savegame-JSON einfügen oder exportieren..."></textarea>
@@ -5680,7 +5691,9 @@ function renderUiStatRow(werte) {
     let privateLife = {
         money: 15000, wage: 1200, license: 0, prestige: 10, stress: 15, items: [],
         assets: [], hobby: 'none', relationship: 'single', lastActivity: {},
-        socialMediaActive: false, assistantHired: false, autobiographyWritten: false
+        socialMediaActive: false, assistantHired: false, autobiographyWritten: false,
+        // Phase 26.19 (js/private-life-extra.js)
+        sparkonto: 0, kurseZuletzt: {}, haustier: 'none', verlauf: [], mentalBis: 0, mentalZuletzt: -999, gehaltVerhandeltSaison: 0
     };
 
     const LIFESTYLE_ASSETS = [
@@ -5691,14 +5704,24 @@ function renderUiStatRow(werte) {
         { id: 'car_classic', name: 'Oldtimer-Sammlung', cost: 120000, prestige: 10, stressRelief: 6, category: 'Fahrzeug', desc: 'Ein Faible für automobile Geschichte.' },
         { id: 'yacht', name: 'Yacht "Confidence"', cost: 400000, prestige: 20, stressRelief: 15, category: 'Luxus', desc: 'Das ultimative Statussymbol am Hafen.' },
         { id: 'art', name: 'Kunstsammlung', cost: 90000, prestige: 9, stressRelief: 4, category: 'Luxus', desc: 'Investition mit nachweislich gutem Geschmack.' },
-        { id: 'watch', name: 'Luxusuhren-Kollektion', cost: 45000, prestige: 6, stressRelief: 2, category: 'Luxus', desc: 'Ein Statement am Handgelenk bei jeder PK.' }
+        { id: 'watch', name: 'Luxusuhren-Kollektion', cost: 45000, prestige: 6, stressRelief: 2, category: 'Luxus', desc: 'Ein Statement am Handgelenk bei jeder PK.' },
+        // Phase 26.19: income = Ertrag je Spieltag (processPrivatExtrasSpieltag)
+        { id: 'ferienhaus', name: 'Ferienhaus an der Ostsee', cost: 180000, prestige: 8, stressRelief: 14, income: 300, category: 'Wohnen', desc: 'Wird vermietet, wenn du nicht dort bist.' },
+        { id: 'penthouse', name: 'Penthouse über der Stadt', cost: 500000, prestige: 16, stressRelief: 12, category: 'Wohnen', desc: 'Dachterrasse mit Blick aufs Stadion.' },
+        { id: 'weingut', name: 'Weingut', cost: 900000, prestige: 18, stressRelief: 8, income: 2500, category: 'Luxus', desc: 'Eigener Wein mit Vereinswappen auf dem Etikett.' },
+        { id: 'jet', name: 'Privatjet', cost: 2500000, prestige: 35, stressRelief: 10, category: 'Fahrzeug', desc: 'Auswärtsfahrten ohne Wartezeit am Flughafen.' }
     ];
 
     const PRESTIGE_INCOME_ACTIVITIES = [
         { id: 'interview', name: 'Exklusiv-Interview geben', minPrestige: 5, income: 2000, stressCost: 5, cooldown: 3, desc: 'Ein Magazin zahlt gut für deine Geschichte.' },
         { id: 'sponsoring', name: 'Persönlichen Werbedeal abschließen', minPrestige: 15, income: 8000, stressCost: 8, cooldown: 6, desc: 'Eine Marke will dein Gesicht für ihre Kampagne.' },
         { id: 'speech', name: 'Vortragsreise antreten', minPrestige: 25, income: 15000, stressCost: 12, cooldown: 10, desc: 'Unternehmen zahlen gut für deine Erfolgsgeschichte.' },
-        { id: 'book', name: 'Biografie veröffentlichen', minPrestige: 40, income: 35000, stressCost: 15, cooldown: 20, desc: 'Dein Leben als Bestseller im Buchhandel.' }
+        { id: 'book', name: 'Biografie veröffentlichen', minPrestige: 40, income: 35000, stressCost: 15, cooldown: 20, desc: 'Dein Leben als Bestseller im Buchhandel.' },
+        // Phase 26.19
+        { id: 'podcast', name: 'Eigenen Podcast aufnehmen', minPrestige: 10, income: 4000, stressCost: 4, cooldown: 4, desc: 'Eine Folge über Taktik und Kabinengeschichten.' },
+        { id: 'camp', name: 'Fußballcamp für Kinder leiten', minPrestige: 20, income: 6000, stressCost: 6, cooldown: 8, desc: 'Eine Ferienwoche mit dem Nachwuchs der Region.' },
+        { id: 'tv', name: 'TV-Experte bei einem Länderspiel', minPrestige: 30, income: 20000, stressCost: 10, cooldown: 8, desc: 'Analyse im Studio zur besten Sendezeit.' },
+        { id: 'workshop', name: 'Trainer-Workshop leiten', minPrestige: 35, income: 12000, stressCost: 8, cooldown: 6, desc: 'Andere Trainer zahlen für deine Erfahrung.' }
     ];
 
     const HOBBIES = [
@@ -5706,7 +5729,12 @@ function renderUiStatRow(werte) {
         { id: 'reading', name: 'Vielleser', stressDecay: 1, wageCost: 0, desc: 'Kostenlos entspannend, kleiner aber stetiger Effekt.' },
         { id: 'fishing', name: 'Angeln am Wochenende', stressDecay: 3, wageCost: 100, desc: 'Ruhe am Wasser, spürbar entspannend.' },
         { id: 'golf_membership', name: 'Golf-Mitgliedschaft', stressDecay: 2, wageCost: 200, desc: 'Dauerhafter Club-Zugang statt Einzelrunden.' },
-        { id: 'fitness', name: 'Eigenes Fitnessstudio', stressDecay: 4, wageCost: 300, desc: 'Der stärkste passive Stressabbau, aber nicht billig.' }
+        { id: 'fitness', name: 'Eigenes Fitnessstudio', stressDecay: 4, wageCost: 300, desc: 'Der stärkste passive Stressabbau, aber nicht billig.' },
+        // Phase 26.19
+        { id: 'yoga', name: 'Yoga', stressDecay: 2, wageCost: 50, desc: 'Ruhe und Atmung vor dem Anpfiff.' },
+        { id: 'kochen', name: 'Kochkurs', stressDecay: 2, wageCost: 120, desc: 'Abschalten am Herd, einmal die Woche.' },
+        { id: 'band', name: 'Musik in einer Band', stressDecay: 3, wageCost: 150, desc: 'Laut, aber befreiend.' },
+        { id: 'tennis', name: 'Tennis-Club', stressDecay: 3, wageCost: 250, desc: 'Ein Match am Montag gegen den Frust vom Wochenende.' }
     ];
 
     const RELATIONSHIP_STATUSES = [
@@ -29593,8 +29621,8 @@ function renderPlayerCompare() {
             assetsList.innerHTML = LIFESTYLE_ASSETS.map(a => {
                 let owned = privateLife.assets.includes(a.id);
                 return `<div class="player-row">
-                    <span><strong>${a.name}</strong> <span style="color:var(--text-muted); font-size:var(--fs-caption);">(${a.category})</span><br><span style="font-size:var(--fs-caption); color:var(--text-muted);">${a.desc} · +${a.prestige} Prestige, -${a.stressRelief}% Stress</span></span>
-                    <button onclick="buyLifestyleAsset('${a.id}')" class="${owned ? 'btn-secondary' : 'btn-action'}" style="width:auto;" ${owned ? 'disabled' : ''}>${owned ? 'Besessen ✓' : `Kaufen [${formatVal(a.cost)}]`}</button>
+                    <span><strong>${a.name}</strong> <span style="color:var(--text-muted); font-size:var(--fs-caption);">(${a.category})</span><br><span style="font-size:var(--fs-caption); color:var(--text-muted);">${a.desc} · +${a.prestige} Prestige, -${a.stressRelief}% Stress${a.income ? `, +${formatVal(a.income)} je Spieltag` : ''}</span></span>
+                    ${owned ? `<button onclick="sellLifestyleAsset('${a.id}')" class="btn-secondary" style="width:auto;">Verkaufen [+${formatVal(Math.round(a.cost * PRIVAT_VERKAUF_ANTEIL))}]</button>` : `<button onclick="buyLifestyleAsset('${a.id}')" class="btn-action" style="width:auto;">Kaufen [${formatVal(a.cost)}]</button>`}
                 </div>`;
             }).join('');
         }
@@ -29631,6 +29659,8 @@ function renderPlayerCompare() {
             let relDescEl = document.getElementById('priv-relationship-desc');
             if (relDescEl && currentRel) relDescEl.innerText = currentRel.desc + (currentRel.wageCost > 0 ? ` (Unterhalt: ${formatVal(currentRel.wageCost)}/SpT)` : '');
         }
+
+        if (typeof renderPrivateLifeExtras === 'function') renderPrivateLifeExtras();
 
         // Neue Funktionen: Button-Zustände
         let autobioBtn = document.getElementById('btn-priv-autobio');
@@ -29775,6 +29805,7 @@ function renderPlayerCompare() {
     // Bisher wurde privateLife.wage nur angezeigt, aber nie tatsächlich ausgezahlt - Kernbug.
     function processPrivateLifeMatchday() {
         privateLife.money += privateLife.wage;
+        if (typeof processPrivatExtrasSpieltag === 'function') processPrivatExtrasSpieltag();
 
         let hobby = HOBBIES.find(h => h.id === privateLife.hobby);
         if (hobby) {
@@ -29798,6 +29829,295 @@ function renderPlayerCompare() {
         }
     }
 
+
+</script>
+<script>
+// ============================================================================
+// PRIVATLEBEN, ERWEITERUNG (Phase 26.19): Sparkonto, Fortbildungen, Mentaltraining, Gehaltsverhandlung, Haustier,
+// Besitz verkaufen, Finanzübersicht, Vermögensverlauf und private Ziele. Ergänzt js/private-life.js; der Zustand
+// liegt in privateLife (Standardwerte in js/state.js, alte Stände bekommen sie über Object.assign beim Laden).
+// Spielwirkung nur über den vorhandenen Weg: Stress senkt die Teamstärke (calcTeamStrength), XP über addManagerXP().
+// ============================================================================
+
+const PRIVAT_ZINS_JAHR = 0.03;
+const PRIVAT_VERKAUF_ANTEIL = 0.7;
+const MENTALTRAINING = { kosten: 8000, spieltage: 6, abklingzeit: 17 };
+
+const PRIVAT_KURSE = [
+    { id: 'sprache', name: 'Sprachkurs Englisch', kosten: 3000, xp: 120, stress: 3, prestige: 1, abklingzeit: 10, desc: 'Für Interviews mit internationalen Medien und neuen Spielern.' },
+    { id: 'psychologie', name: 'Seminar Sportpsychologie', kosten: 6000, xp: 200, stress: -6, prestige: 1, abklingzeit: 12, desc: 'Lernen, mit Druck umzugehen - der Stress sinkt.' },
+    { id: 'medien', name: 'Medientraining', kosten: 4000, xp: 100, stress: 2, prestige: 3, abklingzeit: 10, desc: 'Souverän vor der Kamera, das Ansehen steigt.' },
+    { id: 'hospitation', name: 'Hospitation bei einem Spitzenklub', kosten: 12000, xp: 400, stress: 5, prestige: 2, abklingzeit: 17, desc: 'Eine Woche beim Training eines Spitzenvereins zuschauen.' }
+];
+
+const PRIVAT_HAUSTIERE = [
+    { id: 'none', name: 'Kein Haustier', kosten: 0, unterhalt: 0, stress: 0, prestige: 0 },
+    { id: 'katze', name: 'Katze', kosten: 800, unterhalt: 40, stress: 1, prestige: 0 },
+    { id: 'hund', name: 'Hund', kosten: 1500, unterhalt: 80, stress: 2, prestige: 1 },
+    { id: 'pferd', name: 'Reitpferd', kosten: 25000, unterhalt: 600, stress: 3, prestige: 3 }
+];
+
+function getPrivatExtrasStandard() {
+    return { sparkonto: 0, kurseZuletzt: {}, haustier: 'none', verlauf: [], mentalBis: 0, mentalZuletzt: -999, gehaltVerhandeltSaison: 0 };
+}
+
+// Absoluter Spieltag über Saisons hinweg, für Abklingzeiten
+function privatSpieltagAbs() { return game.season * 34 + game.matchday; }
+
+function ensurePrivatExtras() {
+    if (typeof privateLife.sparkonto !== 'number' || !Number.isFinite(privateLife.sparkonto)) privateLife.sparkonto = 0;
+    if (!privateLife.kurseZuletzt || typeof privateLife.kurseZuletzt !== 'object') privateLife.kurseZuletzt = {};
+    if (!PRIVAT_HAUSTIERE.some(h => h.id === privateLife.haustier)) privateLife.haustier = 'none';
+    if (!Array.isArray(privateLife.verlauf)) privateLife.verlauf = [];
+    if (typeof privateLife.mentalBis !== 'number') privateLife.mentalBis = 0;
+    if (typeof privateLife.mentalZuletzt !== 'number') privateLife.mentalZuletzt = -999;
+    if (typeof privateLife.gehaltVerhandeltSaison !== 'number') privateLife.gehaltVerhandeltSaison = 0;
+}
+
+// ---------- Besitz verkaufen ----------
+function sellLifestyleAsset(assetId) {
+    const a = LIFESTYLE_ASSETS.find(x => x.id === assetId);
+    if (!a || !privateLife.assets.includes(assetId)) { showToast('Diesen Besitz hast du nicht.', 'error'); return false; }
+    const erloes = Math.round(a.cost * PRIVAT_VERKAUF_ANTEIL);
+    privateLife.assets = privateLife.assets.filter(x => x !== assetId);
+    privateLife.money += erloes;
+    privateLife.prestige = Math.max(0, privateLife.prestige - a.prestige);
+    renderPrivateLifeView();
+    showToast(`🏷️ ${a.name} verkauft: +${formatVal(erloes)} (-${a.prestige} Prestige).`, 'success');
+    return true;
+}
+
+// ---------- Sparkonto ----------
+function privatSparen(betrag) {
+    ensurePrivatExtras();
+    if (!betrag || betrag <= 0 || privateLife.money < betrag) { showToast('Ungültiger Betrag oder nicht genug Privatvermögen.', 'error'); return false; }
+    privateLife.money -= betrag;
+    privateLife.sparkonto += betrag;
+    renderPrivateLifeView();
+    showToast(`🐷 ${formatVal(betrag)} aufs Sparkonto gelegt.`, 'success');
+    return true;
+}
+
+function privatAbheben(betrag) {
+    ensurePrivatExtras();
+    if (!betrag || betrag <= 0 || privateLife.sparkonto < betrag) { showToast('Ungültiger Betrag oder zu wenig auf dem Sparkonto.', 'error'); return false; }
+    privateLife.sparkonto -= betrag;
+    privateLife.money += betrag;
+    renderPrivateLifeView();
+    showToast(`🐷 ${formatVal(betrag)} vom Sparkonto abgehoben.`, 'success');
+    return true;
+}
+
+function getPrivatZinsenProSpieltag() {
+    ensurePrivatExtras();
+    return Math.round(privateLife.sparkonto * PRIVAT_ZINS_JAHR / 34);
+}
+
+// ---------- Fortbildungen ----------
+function getKursRest(k) {
+    ensurePrivatExtras();
+    const zuletzt = privateLife.kurseZuletzt[k.id];
+    return typeof zuletzt === 'number' ? Math.max(0, zuletzt + k.abklingzeit - privatSpieltagAbs()) : 0;
+}
+
+function besucheKurs(kursId) {
+    const k = PRIVAT_KURSE.find(x => x.id === kursId);
+    if (!k) return false;
+    const rest = getKursRest(k);
+    if (rest > 0) { showToast(`${k.name}: wieder in ${rest} Spieltag${rest === 1 ? '' : 'en'} möglich.`, 'error'); return false; }
+    if (privateLife.money < k.kosten) { showToast(`Privatvermögen reicht nicht: ${formatVal(k.kosten)} nötig.`, 'error'); return false; }
+    privateLife.money -= k.kosten;
+    privateLife.stress = Math.max(0, Math.min(100, privateLife.stress + k.stress));
+    privateLife.prestige += k.prestige;
+    privateLife.kurseZuletzt[k.id] = privatSpieltagAbs();
+    if (typeof addManagerXP === 'function') addManagerXP(k.xp);
+    renderPrivateLifeView();
+    updateUI();
+    showToast(`🎓 ${k.name}: +${k.xp} Erfahrung, Stress ${k.stress > 0 ? '+' : ''}${k.stress} %, +${k.prestige} Prestige.`, 'success', 4000);
+    return true;
+}
+
+// ---------- Mentaltraining ----------
+// Halbiert sechs Spieltage lang den Stresszuwachs nach Niederlagen und Remis (match-live.js, wie „Eiserne Nerven“)
+function istMentaltrainingAktiv() {
+    ensurePrivatExtras();
+    return privateLife.mentalBis > privatSpieltagAbs();
+}
+
+function bucheMentaltraining() {
+    ensurePrivatExtras();
+    if (istMentaltrainingAktiv()) { showToast('Das Mentaltraining läuft noch.', 'error'); return false; }
+    const rest = Math.max(0, privateLife.mentalZuletzt + MENTALTRAINING.abklingzeit - privatSpieltagAbs());
+    if (rest > 0) { showToast(`Mentaltraining wieder in ${rest} Spieltag${rest === 1 ? '' : 'en'} möglich.`, 'error'); return false; }
+    if (privateLife.money < MENTALTRAINING.kosten) { showToast(`Privatvermögen reicht nicht: ${formatVal(MENTALTRAINING.kosten)} nötig.`, 'error'); return false; }
+    privateLife.money -= MENTALTRAINING.kosten;
+    privateLife.mentalZuletzt = privatSpieltagAbs();
+    privateLife.mentalBis = privatSpieltagAbs() + MENTALTRAINING.spieltage;
+    renderPrivateLifeView();
+    showToast(`🧘 Mentaltraining gebucht: ${MENTALTRAINING.spieltage} Spieltage halber Stress nach Rückschlägen.`, 'success', 4000);
+    return true;
+}
+
+// ---------- Gehaltsverhandlung (einmal je Saison) ----------
+function getGehaltsChance() {
+    const tab = typeof sortedTable === 'function' ? sortedTable(game.leagueLevel) : [];
+    const platz = tab.findIndex(t => t.name === game.clubName) + 1;
+    const obereHaelfte = platz > 0 && platz <= Math.ceil(tab.length / 2);
+    return Math.max(0.05, Math.min(0.9, (game.boardSat || 0) / 100 * 0.7 + (obereHaelfte ? 0.2 : 0)));
+}
+
+function verhandleGehalt() {
+    ensurePrivatExtras();
+    if (privateLife.gehaltVerhandeltSaison === game.season) { showToast('Diese Saison hast du schon verhandelt.', 'error'); return null; }
+    privateLife.gehaltVerhandeltSaison = game.season;
+    const erfolg = Math.random() < getGehaltsChance();
+    if (erfolg) {
+        const alt = privateLife.wage;
+        privateLife.wage = Math.round(alt * 1.15);
+        showToast(`🤝 Der Vorstand erhöht dein Gehalt: ${formatVal(alt)} → ${formatVal(privateLife.wage)} je Spieltag.`, 'success', 4500);
+    } else {
+        game.boardSat = Math.max(0, (game.boardSat || 0) - 3);
+        showToast('🤝 Der Vorstand lehnt ab und ist etwas verstimmt (Vorstand -3).', 'error', 4500);
+    }
+    renderPrivateLifeView();
+    updateUI();
+    return erfolg;
+}
+
+// ---------- Haustier ----------
+function setHaustier(id) {
+    ensurePrivatExtras();
+    const h = PRIVAT_HAUSTIERE.find(x => x.id === id);
+    if (!h || h.id === privateLife.haustier) { renderPrivateLifeView(); return false; }
+    if (privateLife.money < h.kosten) { showToast(`Privatvermögen reicht nicht: ${formatVal(h.kosten)} nötig.`, 'error'); renderPrivateLifeView(); return false; }
+    const alt = PRIVAT_HAUSTIERE.find(x => x.id === privateLife.haustier);
+    privateLife.money -= h.kosten;
+    privateLife.prestige = Math.max(0, privateLife.prestige - (alt ? alt.prestige : 0) + h.prestige);
+    privateLife.haustier = h.id;
+    renderPrivateLifeView();
+    showToast(h.id === 'none' ? '🐾 Dein Haustier lebt jetzt bei Freunden.' : `🐾 Willkommen, ${h.name}!`, 'success');
+    return true;
+}
+
+// ---------- Spieltag: Zinsen, Erträge, Haustier ----------
+// Aus processPrivateLifeMatchday()
+function processPrivatExtrasSpieltag() {
+    ensurePrivatExtras();
+    privateLife.sparkonto += getPrivatZinsenProSpieltag();
+    privateLife.money += getBesitzErtraege();
+    const h = PRIVAT_HAUSTIERE.find(x => x.id === privateLife.haustier);
+    if (h && h.id !== 'none') {
+        privateLife.money -= h.unterhalt;
+        privateLife.stress = Math.max(0, privateLife.stress - h.stress);
+    }
+}
+
+function getBesitzErtraege() {
+    return LIFESTYLE_ASSETS.filter(a => a.income && privateLife.assets.includes(a.id)).reduce((t, a) => t + a.income, 0);
+}
+
+// ---------- Finanzübersicht je Spieltag ----------
+function getPrivatFinanzen() {
+    ensurePrivatExtras();
+    const hobby = HOBBIES.find(h => h.id === privateLife.hobby), rel = RELATIONSHIP_STATUSES.find(r => r.id === privateLife.relationship);
+    const tier = PRIVAT_HAUSTIERE.find(x => x.id === privateLife.haustier);
+    const posten = [
+        ['Gehalt', privateLife.wage],
+        ['Erträge aus Besitz', getBesitzErtraege()],
+        ['Zinsen Sparkonto', getPrivatZinsenProSpieltag()],
+        ['Hobby', -(hobby ? hobby.wageCost : 0)],
+        ['Beziehung', -(rel ? rel.wageCost : 0)],
+        ['Haustier', -(tier ? tier.unterhalt : 0)],
+        ['Assistent', privateLife.assistantHired ? -400 : 0]
+    ].filter(x => x[1] !== 0);
+    return { posten, saldo: posten.reduce((t, x) => t + x[1], 0), stressMalus: (privateLife.stress || 0) * 0.03 };
+}
+
+// ---------- Vermögen und Verlauf ----------
+function getPrivatVermoegen() {
+    ensurePrivatExtras();
+    const besitz = LIFESTYLE_ASSETS.filter(a => privateLife.assets.includes(a.id)).reduce((t, a) => t + Math.round(a.cost * PRIVAT_VERKAUF_ANTEIL), 0);
+    return privateLife.money + privateLife.sparkonto + besitz;
+}
+
+// Saisonende (concludeSeasonAndAdvance): Vermögen festhalten, höchstens 20 Saisons
+function archivePrivatVermoegen() {
+    ensurePrivatExtras();
+    privateLife.verlauf = privateLife.verlauf.filter(x => x.season !== game.season).concat({ season: game.season, wert: getPrivatVermoegen() }).slice(-20);
+}
+
+// ---------- Private Ziele ----------
+function getPrivatZiele() {
+    const vermoegen = getPrivatVermoegen();
+    const wohnen = LIFESTYLE_ASSETS.filter(a => a.category === 'Wohnen');
+    const anteil = (ist, soll) => Math.max(0, Math.min(1, ist / soll));
+    return [
+        { text: 'Vermögen 100.000 €', anteil: anteil(vermoegen, 100000) },
+        { text: 'Vermögen 1 Mio. €', anteil: anteil(vermoegen, 1000000) },
+        { text: 'Vermögen 10 Mio. €', anteil: anteil(vermoegen, 10000000) },
+        { text: '50 Prestige', anteil: anteil(privateLife.prestige, 50) },
+        { text: '100 Prestige', anteil: anteil(privateLife.prestige, 100) },
+        { text: 'UEFA-Pro-Lizenz', anteil: anteil(privateLife.license, licenseConfig.length - 1) },
+        { text: 'Alle Wohnobjekte', anteil: anteil(wohnen.filter(a => privateLife.assets.includes(a.id)).length, wohnen.length) },
+        { text: 'Autobiografie veröffentlicht', anteil: privateLife.autobiographyWritten ? 1 : 0 },
+        { text: 'Alle Fortbildungen besucht', anteil: anteil(PRIVAT_KURSE.filter(k => typeof privateLife.kurseZuletzt[k.id] === 'number').length, PRIVAT_KURSE.length) }
+    ];
+}
+
+// ---------- Darstellung ----------
+function renderPrivateLifeExtras() {
+    ensurePrivatExtras();
+    const geld = x => `<strong style="color:${x < 0 ? 'var(--danger)' : 'var(--text-main)'};">${x > 0 ? '+' : ''}${formatVal(x)}</strong>`;
+    const zeile = (l, r) => `<div class="box" style="display:flex; justify-content:space-between; gap:8px; font-size:var(--fs-small); margin:2px 0;"><span style="overflow-wrap:anywhere;">${l}</span><span style="flex:0 0 auto;">${r}</span></div>`;
+    const raster = 'display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 9em), 1fr)); gap:6px; margin:6px 0;';
+    const fin = getPrivatFinanzen();
+    const finanzBox = document.getElementById('priv-finanz-box');
+    if (finanzBox) {
+        const chance = Math.round(getGehaltsChance() * 100), verhandelt = privateLife.gehaltVerhandeltSaison === game.season;
+        finanzBox.innerHTML = `<div class="panel-header">🐷 Sparkonto und Finanzen</div>
+            ${zeile('Sparkonto', `<strong>${formatVal(privateLife.sparkonto)}</strong> · ${Math.round(PRIVAT_ZINS_JAHR * 100)} % Zinsen im Jahr`)}
+            <label class="ui-field"><span class="ui-field-label">Betrag</span><input type="number" id="priv-spar-input" class="input-inline" placeholder="Betrag in €" style="width:100%;"></label>
+            <div style="${raster}"><button onclick="privatSparen(parseInt(document.getElementById('priv-spar-input').value) || 0)" class="btn-action">🐷 Einzahlen</button>
+                <button onclick="privatAbheben(parseInt(document.getElementById('priv-spar-input').value) || 0)" class="btn-secondary">💶 Abheben</button></div>
+            <div class="ui-overline" style="margin-top:6px;">Je Spieltag</div>
+            ${fin.posten.map(([n, v]) => zeile(n, geld(v))).join('')}${zeile('<strong>Saldo</strong>', geld(fin.saldo))}
+            <div style="font-size:var(--fs-caption); color:var(--text-muted); margin:4px 0;">Dein Stress kostet die Mannschaft zurzeit ${fin.stressMalus.toFixed(1)} Punkte Teamstärke.</div>
+            <div class="ui-overline" style="margin-top:6px;">Gehaltsverhandlung</div>
+            <div style="font-size:var(--fs-small); margin:4px 0;">Einmal je Saison: +15 % Gehalt, bei Ablehnung Vorstand -3. Chance jetzt ${chance} % (Vorstandszufriedenheit und Tabellenplatz).</div>
+            <button onclick="verhandleGehalt()" class="btn-secondary"${verhandelt ? ' disabled' : ''}>🤝 ${verhandelt ? 'Diese Saison schon verhandelt' : 'Mehr Gehalt fordern'}</button>`;
+    }
+    const kursBox = document.getElementById('priv-kurse-box');
+    if (kursBox) {
+        const mentalAktiv = istMentaltrainingAktiv();
+        const mentalRest = Math.max(0, privateLife.mentalZuletzt + MENTALTRAINING.abklingzeit - privatSpieltagAbs());
+        kursBox.innerHTML = `<div class="panel-header">🎓 Fortbildung und Mentaltraining</div>
+            ${PRIVAT_KURSE.map(k => { const rest = getKursRest(k); return `<div class="player-row"><span><strong>${k.name}</strong><br><span style="font-size:var(--fs-caption); color:var(--text-muted);">${k.desc} +${k.xp} Erfahrung, Stress ${k.stress > 0 ? '+' : ''}${k.stress} %, +${k.prestige} Prestige.</span></span>
+                <button onclick="besucheKurs('${k.id}')" class="btn-action" style="width:auto; font-size:var(--fs-caption);"${rest > 0 ? ' disabled' : ''}>${rest > 0 ? `Noch ${rest} SpT` : formatVal(k.kosten)}</button></div>`; }).join('')}
+            <div class="player-row"><span><strong>🧘 Mentaltraining</strong><br><span style="font-size:var(--fs-caption); color:var(--text-muted);">${MENTALTRAINING.spieltage} Spieltage lang steigt dein Stress nach Niederlagen und Remis nur halb so stark.${mentalAktiv ? ` Aktiv bis Spieltag ${privateLife.mentalBis - game.season * 34}.` : ''}</span></span>
+                <button onclick="bucheMentaltraining()" class="btn-action" style="width:auto; font-size:var(--fs-caption);"${mentalAktiv || mentalRest > 0 ? ' disabled' : ''}>${mentalAktiv ? 'Aktiv' : mentalRest > 0 ? `Noch ${mentalRest} SpT` : formatVal(MENTALTRAINING.kosten)}</button></div>`;
+    }
+    const tierSel = document.getElementById('priv-haustier-select');
+    if (tierSel) {
+        tierSel.innerHTML = PRIVAT_HAUSTIERE.map(h => `<option value="${h.id}"${privateLife.haustier === h.id ? ' selected' : ''}>${h.name}${h.kosten ? ` (${formatVal(h.kosten)})` : ''}</option>`).join('');
+        const h = PRIVAT_HAUSTIERE.find(x => x.id === privateLife.haustier);
+        const desc = document.getElementById('priv-haustier-desc');
+        if (desc) desc.innerText = h && h.id !== 'none' ? `-${h.stress} % Stress je Spieltag, Unterhalt ${formatVal(h.unterhalt)} je Spieltag${h.prestige ? `, +${h.prestige} Prestige` : ''}.` : 'Ein Haustier senkt den Stress jeden Spieltag ein wenig.';
+    }
+    const zielBox = document.getElementById('priv-ziele-box');
+    if (zielBox) {
+        const punkte = [...privateLife.verlauf.map(x => ({ kurz: String(x.season), wert: x.wert })), { kurz: 'jetzt', wert: getPrivatVermoegen() }];
+        let kurve = `<div style="font-size:var(--fs-small);">Vermögen heute ${formatVal(punkte[punkte.length - 1].wert)} (Bargeld, Sparkonto und Besitz zum Verkaufswert). Nach dem ersten Saisonende entsteht hier die Kurve.</div>`;
+        if (punkte.length >= 2) {
+            const w = 300, h = 80, pad = 8, max = Math.max(...punkte.map(x => x.wert)), min = Math.min(...punkte.map(x => x.wert)), sp = Math.max(1, max - min);
+            const xy = (x, i) => `${(pad + i * (w - pad * 2) / (punkte.length - 1)).toFixed(1)},${(h - pad - (x.wert - min) / sp * (h - pad * 2)).toFixed(1)}`;
+            kurve = `<svg viewBox="0 0 ${w} ${h}" style="width:100%; height:${h}px; display:block;" role="img" aria-label="Vermögensverlauf"><polyline points="${punkte.map(xy).join(' ')}" fill="none" stroke="var(--primary)" stroke-width="2" /></svg>
+                <div style="font-size:var(--fs-caption); color:var(--text-muted);">${punkte.map(x => `${x.kurz}: ${formatVal(x.wert)}`).join(' · ')}</div>`;
+        }
+        zielBox.innerHTML = `<div class="panel-header">📈 Vermögen und Ziele</div>${kurve}
+            <div class="ui-overline" style="margin-top:6px;">Private Ziele</div>
+            ${getPrivatZiele().map(z => zeile(`${z.anteil >= 1 ? '✅' : '⬜'} ${z.text}`, z.anteil >= 1 ? '<strong style="color:var(--primary);">erreicht</strong>' : `${Math.floor(z.anteil * 100)} %`)).join('')}`;
+    }
+}
 
 </script>
 <script>
@@ -34726,6 +35046,12 @@ function tickPlayerRetirement() {
     let currentWeather = WEATHER_TYPES[0];
 
     function rollWeather() {
+        // Admin-Werkzeug (js/admin-tools.js): festgelegtes Wetter für genau einen Spieltag
+        if (typeof game.adminWetter === 'number' && WEATHER_TYPES[game.adminWetter]) {
+            currentWeather = WEATHER_TYPES[game.adminWetter];
+            game.adminWetter = null;
+            return currentWeather;
+        }
         // Wettergarantie (Premium-Booster, NEU): erzwingt sonniges Wetter (erster, neutraler
         // Eintrag in WEATHER_TYPES) statt der normalen Zufallsauswahl.
         if (game.weatherGuaranteeNextMatch) {
@@ -36689,6 +37015,7 @@ function cleanupLegacyScoutState() {
         // Eiserne Nerven (Krisenmanager-Perk, NEU): der Manager selbst bleibt auch unter
         // Druck spürbar gelassener.
         if (managerRPG.perks.ironNerves && stressShift > 0) stressShift = Math.round(stressShift * 0.5);
+        if (stressShift > 0 && typeof istMentaltrainingAktiv === 'function' && istMentaltrainingAktiv()) stressShift = Math.round(stressShift * 0.5); // Mentaltraining (Privatleben)
         if (game.teamTraining === 'matchprep') stressShift = Math.max(-1, stressShift - 1); // bessere Vorbereitung dämpft den Druck
         if (stressShift !== 0) privateLife.stress = Math.max(0, Math.min(100, (privateLife.stress || 0) + stressShift));
 
@@ -38329,6 +38656,7 @@ function concludeSeasonAndAdvance() {
         // Niederlage um 3 und fiel nur mit bezahlter Freizeit - nach drei Saisons stand
         // fast jeder auf 100 = -3 Stärke), am Boden liegende Moral fängt sich zur Hälfte.
         privateLife.stress = Math.round((privateLife.stress || 0) / 2);
+        if (typeof archivePrivatVermoegen === 'function') archivePrivatVermoegen();
         squad.forEach(p => {
             p.contracts--;
             p.fitness = 100;
@@ -40372,6 +40700,7 @@ function renderSeasonForecastHistory() {
 
         let rawEl = document.getElementById('adm-ins-raw');
         if (rawEl) rawEl.innerText = (rawMaterials.totalStock || 0).toLocaleString() + " kg";
+        if (typeof renderAdminTools === 'function') renderAdminTools();
 
     }
 
@@ -40761,6 +41090,321 @@ function renderSeasonForecastHistory() {
     // abgelöste Legacy-Key gelöscht, wodurch der eigentlich aktive Speicherslot 1
     // unangetastet blieb und "Reset" wirkungslos schien).
 
+
+</script>
+<script>
+// ============================================================================
+// ADMIN-WERKZEUGE (Phase 26.19): Test- und Diagnosewerkzeuge im Admin-Modus, ergänzend zu js/admin.js.
+// Diagnosen lesen nur; alles andere ändert den Spielstand erst auf Tipp. Container: #admin-tools-box.
+// ============================================================================
+
+const ADMIN_POSITIONEN = ['TW', 'ABW', 'MIT', 'ST'];
+const ADMIN_BEDIEN_SCHLUESSEL = ['anstoss_fm13_favoriten', 'anstoss_fm13_zuletzt', 'anstoss_fm13_kaderansicht'];
+let adminSpielerId = null;
+let adminZufallAlt = null;
+
+function adminZahl(id, min, max) {
+    const el = document.getElementById(id);
+    const v = el && String(el.value).trim() !== '' ? Number(el.value) : NaN;
+    return Number.isFinite(v) ? Math.max(min, Math.min(max, Math.round(v))) : null;
+}
+
+function adminSpielerOptionen(gewaehlt) {
+    return squad.map(p => `<option value="${p.id}"${p.id === gewaehlt ? ' selected' : ''}>${mpEsc(p.name)} (${p.pos}, ${p.strength})</option>`).join('');
+}
+
+// ---------- 1. Spieler-Editor ----------
+function adminSpielerWaehlen(id) {
+    adminSpielerId = id;
+    renderAdminTools();
+}
+
+function adminSpielerUebernehmen() {
+    const p = squad.find(x => x.id === adminSpielerId);
+    if (!p) { showToast('Bitte zuerst einen Spieler aus dem Kader wählen.', 'error'); return false; }
+    const werte = { strength: adminZahl('adm-sp-staerke', 1, 99), age: adminZahl('adm-sp-alter', 15, 45), contracts: adminZahl('adm-sp-vertrag', 1, 10),
+        fitness: adminZahl('adm-sp-fitness', 0, 100), morale: adminZahl('adm-sp-moral', 0, 100) };
+    if (Object.values(werte).some(v => v === null)) { showToast('Bitte in jedes Feld eine Zahl eintragen.', 'error'); return false; }
+    Object.assign(p, werte);
+    const pos = document.getElementById('adm-sp-pos');
+    if (pos && ADMIN_POSITIONEN.includes(pos.value)) p.pos = pos.value;
+    if (typeof calculatePlayerMarketValue === 'function') p.marketValue = calculatePlayerMarketValue(p.strength);
+    updateUI();
+    renderAdminView();
+    showToast(`🛠️ ${p.name}: Stärke ${p.strength}, ${p.age} J., Vertrag ${p.contracts}, Fitness ${p.fitness} %, Moral ${p.morale}, ${p.pos}.`, 'success', 4000);
+    return true;
+}
+
+// ---------- 2. Bis Saisonende vorspulen ----------
+function adminBisSaisonende() {
+    if (game.matchday > 34) { showToast('Alle 34 Spieltage sind gespielt - jetzt die Saison abschließen.', 'error'); return; }
+    adminAdvanceMatchdays(35 - game.matchday);
+}
+
+// ---------- 3. Wetter für den nächsten Spieltag ----------
+function adminWetterSetzen() {
+    const sel = document.getElementById('adm-wetter');
+    const i = sel ? Number(sel.value) : -1;
+    if (!WEATHER_TYPES[i]) { showToast('Bitte ein Wetter wählen.', 'error'); return; }
+    game.adminWetter = i;
+    renderAdminTools();
+    showToast(`${WEATHER_TYPES[i].icon} Nächster Spieltag: ${WEATHER_TYPES[i].name}.`, 'success');
+}
+
+// ---------- 4. Stärke des nächsten Ligagegners ----------
+function adminGegnerStaerkeSetzen() {
+    const m = typeof getNextLeagueMatch === 'function' ? getNextLeagueMatch() : null;
+    if (!m) { showToast('Kein nächstes Ligaspiel gefunden.', 'error'); return; }
+    const v = adminZahl('adm-gegner-staerke', 1, 99);
+    if (v === null) { showToast('Bitte eine Stärke zwischen 1 und 99 eintragen.', 'error'); return; }
+    m.opp.strength = v;
+    m.opp.baseStrength = v;
+    renderAdminTools();
+    showToast(`🎯 ${m.opp.name}: Stärke ${v}.`, 'success');
+}
+
+// ---------- 5. Transfermarkt neu erzeugen ----------
+function adminMarktNeu() {
+    refreshTransferMarket();
+    showToast(`🔄 Transfermarkt neu erzeugt: ${marketPlayers.length} Spieler.`, 'success');
+}
+
+// ---------- 6. Transferangebot erzwingen ----------
+function adminAngebotErzwingen() {
+    const sel = document.getElementById('adm-angebot-spieler');
+    const p = sel ? squad.find(x => x.id === sel.value) : null;
+    if (!p) { showToast('Bitte einen Spieler wählen.', 'error'); return false; }
+    if (incomingOffers.some(o => o.playerId === p.id)) { showToast(`Für ${p.name} liegt schon ein Angebot vor.`, 'error'); return false; }
+    const vorher = incomingOffers.length;
+    triggerNewAITransferOffer(p);
+    if (incomingOffers.length === vorher) { showToast(`Kein Verein hat für ${p.name} geboten.`, 'error'); return false; }
+    updateUI();
+    showToast(`📨 Angebot für ${p.name}: ${formatVal(incomingOffers[0].currentBid)} von ${incomingOffers[0].clubName || 'einem Verein'}.`, 'success', 4000);
+    return true;
+}
+
+// ---------- 7. Jugendtalent ohne Kosten ----------
+function adminJugendtalent() {
+    if (youthTalents.length >= getYouthAcademyCapacity()) { showToast('Jugendkader-Kapazität erreicht.', 'error'); return; }
+    bucheMitLabel('🛠️ Admin', getYouthScoutCost()); // gleicht die Scouting-Kosten im Kontoauszug aus
+    scoutYouthTalent();
+}
+
+// ---------- 8. Teamstärke-Diagnose ----------
+// Dieselbe Basis wie calcTeamStrength() (match.js); die benannten Posten sind einzeln gerechnet, der Rest fasst Stab,
+// Campus, Fans, Merkmale, Rollen und Kapitän zusammen.
+function getAdminStaerkeDiagnose() {
+    const starting = squad.filter(p => lineup.includes(p.id));
+    if (!starting.length) return null;
+    const basis = starting.reduce((acc, p) => acc + p.strength * (p.fitness / 100) * (0.9 + (p.dailyForm ?? 50) / 500), 0) / Math.max(11, starting.length);
+    const moral = (starting.reduce((acc, p) => acc + (p.morale || 80), 0) / starting.length - 80) * 0.06;
+    const posten = [
+        ['Startelf (Stärke, Fitness, Tagesform)', basis],
+        ['Trainerlizenz', licenseConfig[privateLife.license].boost],
+        ['Stress des Managers', -(privateLife.stress || 0) * 0.03],
+        ['Moral', moral],
+        ['Eingespieltheit', getLineupChemistryStats().bonus],
+        ['Spielstil', getTacticStyleBonus(game.tacticStyle)],
+        ['Formation', getFormationOffBonus()],
+        ['Zweikampfhärte', getTackleHardnessBonus(game.tackleHardness)]
+    ];
+    const auswaerts = calcTeamStrength(false), heim = calcTeamStrength(true);
+    const summe = posten.reduce((t, x) => t + x[1], 0);
+    posten.push(['Übrige Boni (Stab, Campus, Fans, Merkmale …), gerundet', auswaerts - summe]);
+    return { posten, heim, auswaerts, spieler: starting.length };
+}
+
+// ---------- 9. Speicher-Diagnose ----------
+function getAdminSpeicherDiagnose() {
+    const state = buildSaveState();
+    const teile = Object.keys(state).map(k => ({ k, n: JSON.stringify(state[k] === undefined ? null : state[k]).length })).sort((a, b) => b.n - a.n);
+    const spiel = Object.keys(game).map(k => ({ k: 'game.' + k, n: JSON.stringify(game[k] === undefined ? null : game[k]).length })).sort((a, b) => b.n - a.n);
+    const geraet = [];
+    try {
+        for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.startsWith('anstoss_fm13_')) geraet.push({ k, n: (safeLocalGet(k) || '').length }); }
+    } catch (e) { /* Android WebView auf file:// blockiert localStorage */ }
+    return { gesamt: JSON.stringify(state).length, teile: teile.slice(0, 6), spiel: spiel.slice(0, 6), geraet: geraet.sort((a, b) => b.n - a.n) };
+}
+
+function adminBedienEinstellungenZuruecksetzen() {
+    ADMIN_BEDIEN_SCHLUESSEL.forEach(k => safeLocalRemove(k));
+    if (typeof renderFavoritenLeiste === 'function') renderFavoritenLeiste();
+    if (typeof renderZuletzt === 'function') renderZuletzt();
+    renderAdminTools();
+    showToast('🧹 Favoriten, „Zuletzt geöffnet“ und Kaderansicht zurückgesetzt.', 'success');
+}
+
+// ---------- 10. Datenprüfung und Reparatur ----------
+const ADMIN_ZAHLFELDER = { strength: 50, fitness: 100, morale: 80, wage: 1000, marketValue: 100000, age: 25, contracts: 1 };
+
+function getAdminDatenpruefung() {
+    const befunde = [];
+    const ids = new Set();
+    squad.forEach(p => {
+        if (ids.has(p.id)) befunde.push(`Doppelte Spieler-ID ${p.id} (${p.name})`);
+        ids.add(p.id);
+        Object.keys(ADMIN_ZAHLFELDER).forEach(f => { if (typeof p[f] !== 'number' || !Number.isFinite(p[f])) befunde.push(`${p.name}: ${f} ist keine Zahl`); });
+        if ((p.contracts || 0) < 1) befunde.push(`${p.name}: Vertrag ${p.contracts}`);
+    });
+    lineup.forEach(id => { if (!squad.some(p => p.id === id)) befunde.push(`Aufstellung enthält unbekannte ID ${id}`); });
+    if (new Set(lineup).size !== lineup.length) befunde.push('Aufstellung enthält einen Spieler doppelt');
+    ['money', 'transferBudget', 'wageBudget', 'fans', 'boardSat'].forEach(f => { if (typeof game[f] !== 'number' || !Number.isFinite(game[f])) befunde.push(`game.${f} ist keine Zahl`); });
+    return befunde;
+}
+
+function adminDatenReparieren() {
+    const vorher = getAdminDatenpruefung().length;
+    if (!vorher) { showToast('✓ Keine Auffälligkeiten - nichts zu reparieren.', 'success'); return 0; }
+    const ids = new Set();
+    squad = squad.filter(p => { if (ids.has(p.id)) return false; ids.add(p.id); return true; });
+    squad.forEach(p => {
+        Object.keys(ADMIN_ZAHLFELDER).forEach(f => { if (typeof p[f] !== 'number' || !Number.isFinite(p[f])) p[f] = ADMIN_ZAHLFELDER[f]; });
+        if (p.contracts < 1) p.contracts = 1;
+    });
+    lineup = [...new Set(lineup.filter(id => squad.some(p => p.id === id)))];
+    if (lineup.length < 11) autoLineup();
+    ['money', 'transferBudget', 'wageBudget'].forEach(f => { if (typeof game[f] !== 'number' || !Number.isFinite(game[f])) game[f] = 0; });
+    ['fans', 'boardSat'].forEach(f => { if (typeof game[f] !== 'number' || !Number.isFinite(game[f])) game[f] = 50; });
+    const nachher = getAdminDatenpruefung().length;
+    updateUI();
+    renderAdminView();
+    showToast(`🔧 ${vorher - nachher} von ${vorher} Auffälligkeiten repariert.`, nachher ? 'error' : 'success', 4000);
+    return vorher - nachher;
+}
+
+// ---------- 11. Sicherungspunkt (nur in dieser Sitzung) ----------
+let adminSicherung = null;
+
+function adminSicherungSetzen() {
+    adminSicherung = { json: JSON.stringify(buildSaveState()), season: game.season, matchday: game.matchday };
+    renderAdminTools();
+    showToast(`📌 Sicherungspunkt gesetzt (Saison ${game.season}, Spieltag ${game.matchday}).`, 'success');
+}
+
+function adminSicherungLaden() {
+    if (!adminSicherung) { showToast('Es gibt noch keinen Sicherungspunkt.', 'error'); return false; }
+    if (!loadSaveSafely(adminSicherung.json, { label: 'Admin-Sicherungspunkt' })) return false;
+    updateUI();
+    renderAdminView();
+    showToast(`⏪ Zurück zu Saison ${adminSicherung.season}, Spieltag ${adminSicherung.matchday}.`, 'success');
+    return true;
+}
+
+// ---------- 12. Bildschirm direkt öffnen ----------
+function adminBildschirmOeffnen() {
+    const sel = document.getElementById('adm-bildschirm');
+    if (!sel || !document.getElementById(sel.value)) { showToast('Bitte einen Bildschirm wählen.', 'error'); return; }
+    showScreen(sel.value);
+}
+
+// ---------- 13. Zufall festlegen (bis zum Neuladen) ----------
+function adminZufallFestlegen() {
+    const seed = adminZahl('adm-seed', 1, 2147483647);
+    if (seed === null) { showToast('Bitte eine ganze Zahl als Startwert eintragen.', 'error'); return; }
+    if (!adminZufallAlt) adminZufallAlt = Math.random;
+    let a = seed >>> 0;
+    Math.random = () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    renderAdminTools();
+    showToast(`🎲 Zufall festgelegt (Startwert ${seed}) - gleiche Abläufe ergeben gleiche Ergebnisse.`, 'success', 4000);
+}
+
+function adminZufallZuruecksetzen() {
+    if (!adminZufallAlt) { showToast('Der Zufall ist nicht festgelegt.', 'error'); return; }
+    Math.random = adminZufallAlt;
+    adminZufallAlt = null;
+    renderAdminTools();
+    showToast('🎲 Zufall wieder frei.', 'success');
+}
+
+// ---------- 14. Zeichenzeiten messen ----------
+const ADMIN_MESS_ANSICHTEN = [['Dashboard', 'renderDashboardView'], ['Kader', 'renderSquadView'], ['Transfermarkt', 'renderTransferView'], ['Liga-Tabelle', 'renderLeagueView'], ['Finanzen', 'renderFinancesView'], ['Postfach', 'renderInboxView']];
+let adminMessung = null;
+
+function adminZeitenMessen() {
+    adminMessung = ADMIN_MESS_ANSICHTEN.filter(([, fn]) => typeof window[fn] === 'function').map(([name, fn]) => {
+        const t0 = performance.now();
+        for (let i = 0; i < 3; i++) window[fn]();
+        return { name, ms: (performance.now() - t0) / 3 };
+    });
+    renderAdminTools();
+    showToast('⏱️ Zeichenzeiten gemessen.', 'success');
+}
+
+// ---------- 15. Alle Erfolge freischalten ----------
+function adminAlleErfolge() {
+    if (!game.achievements) game.achievements = [];
+    let neu = 0;
+    ACHIEVEMENT_DEFINITIONS.forEach(def => {
+        if (game.achievements.some(a => a.id === def.id)) return;
+        game.achievements.push({ id: def.id, season: game.season, matchday: game.matchday });
+        neu++;
+    });
+    renderAdminTools();
+    showToast(neu ? `🎖️ ${neu} Erfolg${neu === 1 ? '' : 'e'} freigeschaltet.` : 'Alle Erfolge sind schon freigeschaltet.', neu ? 'success' : 'error');
+    return neu;
+}
+
+// ---------- Darstellung ----------
+function renderAdminTools() {
+    const box = document.getElementById('admin-tools-box');
+    if (!box) return;
+    const p = squad.find(x => x.id === adminSpielerId) || squad[0];
+    if (p) adminSpielerId = p.id;
+    const feld = (id, label, wert, min, max) => `<label class="ui-field"><span class="ui-field-label">${label}</span><input id="${id}" type="number" class="input-inline" min="${min}" max="${max}" value="${wert}" style="width:100%;"></label>`;
+    const raster = 'display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 8em), 1fr)); gap:6px; margin:6px 0;';
+    const m = typeof getNextLeagueMatch === 'function' ? getNextLeagueMatch() : null;
+    const diag = getAdminStaerkeDiagnose();
+    const speicher = getAdminSpeicherDiagnose();
+    const befunde = getAdminDatenpruefung();
+    const kb = n => `${(n / 1024).toFixed(1)} KB`;
+    // Hauptbildschirme und die Unterbildschirme der Hubs (SUB_SCREEN_TO_HUB in js/ui-core.js), so wie showScreen() sie kennt
+    const bildschirme = [...document.querySelectorAll('[id^="screen-"]')].filter(el => (typeof SUB_SCREEN_TO_HUB !== 'undefined' && SUB_SCREEN_TO_HUB[el.id]) || (el.parentElement && el.parentElement.closest('[id^="screen-"]') === null)).map(el => el.id).sort();
+    const erfolge = (game.achievements || []).length;
+    box.innerHTML = `
+        <details class="ui-fold"><summary>✏️ Spieler-Editor</summary>
+            ${p ? `<label class="ui-field"><span class="ui-field-label">Spieler</span><select id="adm-sp-wahl" class="input-inline" style="width:100%;" onchange="adminSpielerWaehlen(this.value)">${adminSpielerOptionen(p.id)}</select></label>
+            <div style="${raster}">${feld('adm-sp-staerke', 'Stärke', p.strength, 1, 99)}${feld('adm-sp-alter', 'Alter', p.age || 25, 15, 45)}${feld('adm-sp-vertrag', 'Vertrag (Jahre)', p.contracts || 1, 1, 10)}${feld('adm-sp-fitness', 'Fitness', p.fitness, 0, 100)}${feld('adm-sp-moral', 'Moral', p.morale || 80, 0, 100)}
+                <label class="ui-field"><span class="ui-field-label">Position</span><select id="adm-sp-pos" class="input-inline" style="width:100%;">${ADMIN_POSITIONEN.map(x => `<option${x === p.pos ? ' selected' : ''}>${x}</option>`).join('')}</select></label></div>
+            <button onclick="adminSpielerUebernehmen()" class="btn-action">✏️ Werte übernehmen</button>` : 'Kein Spieler im Kader.'}
+        </details>
+        <details class="ui-fold"><summary>⏩ Spieltag, Wetter und Gegner</summary>
+            <button onclick="adminBisSaisonende()" class="btn-secondary" style="margin:4px 0;">⏩ Bis zum Saisonende vorspulen (noch ${Math.max(0, 35 - game.matchday)} Spieltage)</button>
+            <div style="${raster}"><label class="ui-field"><span class="ui-field-label">Wetter am nächsten Spieltag</span><select id="adm-wetter" class="input-inline" style="width:100%;">${WEATHER_TYPES.map((w, i) => `<option value="${i}"${game.adminWetter === i ? ' selected' : ''}>${w.icon} ${w.name}</option>`).join('')}</select></label>
+                <button onclick="adminWetterSetzen()" class="btn-secondary">🌦️ Wetter festlegen</button></div>
+            ${typeof game.adminWetter === 'number' && WEATHER_TYPES[game.adminWetter] ? `<div style="font-size:var(--fs-caption); color:var(--text-muted);">Festgelegt: ${WEATHER_TYPES[game.adminWetter].icon} ${WEATHER_TYPES[game.adminWetter].name}</div>` : ''}
+            ${m ? `<div style="${raster}">${feld('adm-gegner-staerke', `Stärke ${mpEsc(m.opp.name)} (jetzt ${Math.round(m.opp.strength)})`, Math.round(m.opp.strength), 1, 99)}<button onclick="adminGegnerStaerkeSetzen()" class="btn-secondary">🎯 Gegnerstärke setzen</button></div>` : ''}
+        </details>
+        <details class="ui-fold"><summary>🔁 Markt, Angebote und Jugend</summary>
+            <button onclick="adminMarktNeu()" class="btn-secondary" style="margin:4px 0;">🔄 Transfermarkt neu erzeugen</button>
+            ${squad.length ? `<div style="${raster}"><label class="ui-field"><span class="ui-field-label">Angebot für</span><select id="adm-angebot-spieler" class="input-inline" style="width:100%;">${adminSpielerOptionen(null)}</select></label>
+                <button onclick="adminAngebotErzwingen()" class="btn-secondary">📨 Angebot erzwingen</button></div>` : ''}
+            <button onclick="adminJugendtalent()" class="btn-secondary" style="margin:4px 0;">🎓 Jugendtalent ohne Kosten (${youthTalents.length} / ${getYouthAcademyCapacity()})</button>
+            <button onclick="adminAlleErfolge()" class="btn-secondary" style="margin:4px 0;">🎖️ Alle Erfolge freischalten (${erfolge} / ${ACHIEVEMENT_DEFINITIONS.length})</button>
+        </details>
+        <details class="ui-fold"><summary>📊 Teamstärke-Diagnose</summary>
+            ${diag ? `<div style="font-size:var(--fs-small); margin:4px 0;">Heim <strong>${diag.heim}</strong> · Auswärts <strong>${diag.auswaerts}</strong> · ${diag.spieler} Spieler in der Startelf</div>
+            ${diag.posten.map(([n, v]) => `<div class="box" style="display:flex; justify-content:space-between; gap:8px; font-size:var(--fs-small); margin:2px 0;"><span style="overflow-wrap:anywhere;">${n}</span><strong style="flex:0 0 auto;">${v >= 0 ? '+' : ''}${v.toFixed(1)}</strong></div>`).join('')}` : 'Keine Startelf aufgestellt.'}
+        </details>
+        <details class="ui-fold"><summary>💾 Speicher und Datenprüfung</summary>
+            <div style="font-size:var(--fs-small); margin:4px 0;">Spielstand ${kb(speicher.gesamt)}. Größte Teile: ${speicher.teile.map(x => `${mpEsc(x.k)} ${kb(x.n)}`).join(', ')}.<br>Größte Felder in game: ${speicher.spiel.map(x => `${mpEsc(x.k)} ${kb(x.n)}`).join(', ')}.<br>Gerät: ${speicher.geraet.length ? speicher.geraet.map(x => `${mpEsc(x.k.replace('anstoss_fm13_', ''))} ${kb(x.n)}`).join(', ') : 'kein Zugriff auf den Gerätespeicher'}.</div>
+            <button onclick="adminBedienEinstellungenZuruecksetzen()" class="btn-secondary" style="margin:4px 0;">🧹 Favoriten, Zuletzt geöffnet und Kaderansicht zurücksetzen</button>
+            <div class="box" style="font-size:var(--fs-small); margin:4px 0; border-left-color:${befunde.length ? 'var(--danger)' : 'var(--primary)'};">${befunde.length ? `⚠️ ${befunde.length} Auffälligkeit${befunde.length === 1 ? '' : 'en'}: ${befunde.slice(0, 6).map(mpEsc).join('; ')}${befunde.length > 6 ? ' …' : ''}` : '✓ Kader, Aufstellung und Kassenwerte ohne Auffälligkeiten.'}</div>
+            <button onclick="adminDatenReparieren()" class="btn-secondary">🔧 Daten reparieren</button>
+        </details>
+        <details class="ui-fold"><summary>📌 Sicherungspunkt und Zufall</summary>
+            <div style="font-size:var(--fs-caption); color:var(--text-muted); margin:4px 0;">Der Sicherungspunkt gilt nur bis zum Neuladen der Seite. Der festgelegte Zufall macht Testläufe wiederholbar.</div>
+            <div style="${raster}"><button onclick="adminSicherungSetzen()" class="btn-secondary">📌 Sicherungspunkt setzen</button>
+                <button onclick="adminSicherungLaden()" class="btn-secondary"${adminSicherung ? '' : ' disabled'}>⏪ ${adminSicherung ? `Zurück zu Saison ${adminSicherung.season}, SpT ${adminSicherung.matchday}` : 'Kein Sicherungspunkt'}</button></div>
+            <div style="${raster}">${feld('adm-seed', 'Startwert für den Zufall', 12345, 1, 2147483647)}<button onclick="adminZufallFestlegen()" class="btn-secondary">🎲 Zufall festlegen</button>
+                <button onclick="adminZufallZuruecksetzen()" class="btn-secondary"${adminZufallAlt ? '' : ' disabled'}>🎲 Zufall freigeben</button></div>
+        </details>
+        <details class="ui-fold"><summary>🧭 Bildschirme und Zeichenzeiten</summary>
+            <div style="${raster}"><label class="ui-field"><span class="ui-field-label">Bildschirm</span><select id="adm-bildschirm" class="input-inline" style="width:100%;">${bildschirme.map(id => `<option value="${id}">${id.replace('screen-', '')}</option>`).join('')}</select></label>
+                <button onclick="adminBildschirmOeffnen()" class="btn-secondary">🧭 Öffnen</button></div>
+            <button onclick="adminZeitenMessen()" class="btn-secondary" style="margin:4px 0;">⏱️ Zeichenzeiten messen</button>
+            ${adminMessung ? adminMessung.map(x => `<div class="box" style="display:flex; justify-content:space-between; gap:8px; font-size:var(--fs-small); margin:2px 0;"><span>${x.name}</span><strong style="color:${x.ms > 50 ? 'var(--danger)' : 'var(--text-main)'};">${x.ms.toFixed(1)} ms</strong></div>`).join('') : ''}
+        </details>`;
+}
 
 </script>
 <script>
@@ -41189,7 +41833,8 @@ function renderSeasonForecastHistory() {
         }
         if (p.activeBet !== undefined) activeBet = p.activeBet;
         if (p.betHistory) betHistory = p.betHistory;
-        if (p.privateLife) Object.assign(privateLife, p.privateLife);
+        // Felder der Privatleben-Erweiterung erst auf Standard setzen, sonst blieben beim Laden eines älteren Stands die Werte des laufenden Spiels stehen
+        if (p.privateLife) Object.assign(privateLife, typeof getPrivatExtrasStandard === 'function' ? getPrivatExtrasStandard() : {}, p.privateLife);
         if (p.bandenSponsors) bandenSponsors = p.bandenSponsors;
         if (p.squad) squad = p.squad;
         if (p.lineup) lineup = p.lineup;
