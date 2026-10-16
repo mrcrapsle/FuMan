@@ -794,6 +794,39 @@
         renderSquadView();
     }
 
+
+    // Die Kaderliste so, wie sie angezeigt wird (Position, Belastung, Etikett, Sortierung) - auch fürs Blättern im Spielerdetail
+    function getSquadListeSortiert() {
+        let filtered = squadFilterPos === 'alle' ? squad : squad.filter(p => p.pos === squadFilterPos);
+        if (typeof squadBelastungNurRot !== 'undefined' && squadBelastungNurRot) filtered = filtered.filter(p => getBelastungsAmpel(p).stufe === 'rot');
+        if (typeof squadTagFilter !== 'undefined' && squadTagFilter) filtered = filtered.filter(p => typeof getPlayerTags === 'function' && getPlayerTags(p).includes(squadTagFilter));
+        // Sortierfunktion: nicht mehr nur nach Position filterbar, sondern auch echt sortierbar.
+        return [...filtered].sort((a, b) => {
+            if (squadSortMode === 'staerke') return b.strength - a.strength;
+            if (squadSortMode === 'alter') return a.age - b.age;
+            if (squadSortMode === 'marktwert') return (b.marketValue||0) - (a.marketValue||0);
+            if (squadSortMode === 'moral') return b.morale - a.morale;
+            if (squadSortMode === 'name') return a.name.localeCompare(b.name);
+            return 0;
+        });
+    }
+
+    // Kompakte Kaderliste (Phase 26.17): eine Zeile je Spieler, Antippen öffnet das Detail, der kleine Knopf stellt auf oder ab
+    function renderKaderZeile(p) {
+        const row = document.createElement('div');
+        const elf = lineup.includes(p.id);
+        const verletzt = (p.injured || 0) > 0, gesperrt = (p.suspended || 0) > 0;
+        const ampel = typeof getBelastungsAmpel === 'function' ? getBelastungsAmpel(p).stufe : 'gruen';
+        row.className = 'kader-zeile' + (elf ? ' kader-zeile-elf' : '');
+        row.innerHTML = `<button onclick="openPlayerDetail('${p.id}','squad')" class="kader-zeile-haupt" title="Details zu ${p.name}">
+                <span class="badge badge-${(p.pos || 'mit').toLowerCase()}">${p.pos}</span>
+                <span class="kader-zeile-name">${p.name}${p.id === game.captainId ? ' Ⓒ' : ''}</span>
+                <span class="kader-zeile-werte">Str <strong>${p.strength}</strong> · Fit ${verletzt ? '🩹' : gesperrt ? '🟥' : p.fitness + ' %'} · Moral ${p.morale} · ${p.contracts} J.${ampel !== 'gruen' ? ` · 🚦 ${ampel}` : ''}</span>
+            </button>
+            <button onclick="toggleLineupPlayer('${p.id}')" class="${elf ? 'btn-danger' : 'btn-action'} kader-zeile-elfknopf" title="${elf ? 'Auf die Bank' : 'In die Startelf'}">${elf ? 'Bank' : 'Elf'}</button>`;
+        return row;
+    }
+
     function renderSquadView() {
         if (typeof renderMatchPrepPanels === 'function') renderMatchPrepPanels();
         if (typeof renderInsightsPanels === 'function') renderInsightsPanels();
@@ -825,19 +858,11 @@
         let container = document.getElementById('bench-list');
         if (!container) return;
         container.innerHTML = '';
-        let filtered = squadFilterPos === 'alle' ? squad : squad.filter(p => p.pos === squadFilterPos);
-        if (typeof squadBelastungNurRot !== 'undefined' && squadBelastungNurRot) filtered = filtered.filter(p => getBelastungsAmpel(p).stufe === 'rot');
-        if (typeof squadTagFilter !== 'undefined' && squadTagFilter) filtered = filtered.filter(p => typeof getPlayerTags === 'function' && getPlayerTags(p).includes(squadTagFilter));
-        // Sortierfunktion: nicht mehr nur nach Position filterbar, sondern auch echt sortierbar.
-        filtered = [...filtered].sort((a, b) => {
-            if (squadSortMode === 'staerke') return b.strength - a.strength;
-            if (squadSortMode === 'alter') return a.age - b.age;
-            if (squadSortMode === 'marktwert') return (b.marketValue||0) - (a.marketValue||0);
-            if (squadSortMode === 'moral') return b.morale - a.morale;
-            if (squadSortMode === 'name') return a.name.localeCompare(b.name);
-            return 0;
-        });
+        let filtered = getSquadListeSortiert();
+        const kompakt = typeof getKaderAnsicht === 'function' && getKaderAnsicht() === 'kompakt';
+        container.classList.toggle('kader-kompakt', kompakt);
         filtered.forEach(p => {
+            if (kompakt) { container.appendChild(renderKaderZeile(p)); return; }
             let isStarting = lineup.includes(p.id);
             let row = document.createElement('div');
             row.className = 'panel player-card';

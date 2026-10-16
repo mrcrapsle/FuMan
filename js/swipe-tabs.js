@@ -63,12 +63,24 @@ function erkenneWisch(start, ende, breite) {
     return dx < 0 ? 1 : -1;
 }
 
+// Im offenen Spielerdetail blättert ein Wisch zum vorigen oder nächsten Spieler (Phase 26.17)
+function swipeImSpielerdetail(el) {
+    if (!el || !el.closest || !el.closest('#player-detail-overlay.show')) return false;
+    if (el.closest('input, textarea, select, svg, canvas')) return false;
+    for (let n = el; n && n.id !== 'player-detail-overlay'; n = n.parentElement) {
+        const ox = getComputedStyle(n).overflowX;
+        if ((ox === 'auto' || ox === 'scroll') && n.scrollWidth > n.clientWidth + 1) return false;
+    }
+    return true;
+}
+
 document.addEventListener('touchstart', ev => {
     swipeStart = null;
     if (ev.touches.length !== 1 || getWischen() !== 'an') return;
-    if (swipeZielGesperrt(ev.target)) return;
+    const detail = swipeImSpielerdetail(ev.target);
+    if (!detail && swipeZielGesperrt(ev.target)) return;
     const t = ev.touches[0];
-    swipeStart = { x: t.clientX, y: t.clientY, t: Date.now() };
+    swipeStart = { x: t.clientX, y: t.clientY, t: Date.now(), detail };
 }, { passive: true });
 
 document.addEventListener('touchend', ev => {
@@ -77,7 +89,9 @@ document.addEventListener('touchend', ev => {
     if (!start || !ev.changedTouches.length) return;
     const t = ev.changedTouches[0];
     const richtung = erkenneWisch(start, { x: t.clientX, y: t.clientY, t: Date.now() }, window.innerWidth);
-    if (richtung) swipeWechseln(richtung);
+    if (!richtung) return;
+    if (start.detail) { if (typeof blaetterSpielerDetail === 'function') blaetterSpielerDetail(richtung); }
+    else swipeWechseln(richtung);
 }, { passive: true });
 
 document.addEventListener('touchcancel', () => { swipeStart = null; }, { passive: true });

@@ -615,6 +615,82 @@
             + (weg ? `<button onclick="clearMarktMerklisteWeg()" class="btn-secondary" style="margin-top:4px;">Verschwundene entfernen</button>` : '') + '</div>';
     }
 
+    // ---------- Marktfilter (Phase 26.17) ----------
+    // Position, „nur leistbar“ und Sortierung für die Marktliste; gilt nur für die laufende Sitzung (kein Spielstand).
+    // Die Karten behalten ihren Index in marketPlayers, damit Verhandeln und Sofortkauf den richtigen Spieler treffen.
+    let marktFilter = { pos: '', nurLeistbar: false, sortierung: 'standard' };
+    const MARKT_SORTIERUNGEN = { standard: 'Standard', staerke: 'Stärke', preis: 'Preis', alter: 'Alter' };
+
+    function setMarktFilterPos(pos) {
+        marktFilter.pos = marktFilter.pos === pos ? '' : pos;
+        renderTransferView();
+    }
+    function toggleMarktFilterLeistbar() {
+        marktFilter.nurLeistbar = !marktFilter.nurLeistbar;
+        renderTransferView();
+    }
+    function setMarktSortierung(wert) {
+        if (!MARKT_SORTIERUNGEN[wert]) { showToast('Unbekannte Sortierung.', 'error'); return; }
+        marktFilter.sortierung = wert;
+        renderTransferView();
+    }
+    function resetMarktFilter() {
+        marktFilter = { pos: '', nurLeistbar: false, sortierung: 'standard' };
+        renderTransferView();
+    }
+
+    function getMarktAnsicht() {
+        let liste = marketPlayers.map((p, idx) => ({ p, idx }));
+        if (marktFilter.pos) liste = liste.filter(x => x.p.pos === marktFilter.pos);
+        if (marktFilter.nurLeistbar) liste = liste.filter(x => getKaufHindernisse(x.p).length === 0);
+        const s = marktFilter.sortierung;
+        if (s === 'staerke') liste.sort((a, b) => b.p.strength - a.p.strength);
+        else if (s === 'preis') liste.sort((a, b) => getTransferAsking(a.p) - getTransferAsking(b.p));
+        else if (s === 'alter') liste.sort((a, b) => (a.p.age || 0) - (b.p.age || 0));
+        return liste;
+    }
+
+    function renderMarktFilter(anzahl) {
+        const box = document.getElementById('market-filter-box');
+        if (!box) return;
+        const posKnopf = pos => `<button onclick="setMarktFilterPos('${pos}')" class="${marktFilter.pos === pos ? 'btn-action' : 'btn-secondary'}" style="width:auto; flex:0 0 auto;" aria-pressed="${marktFilter.pos === pos}">${pos}</button>`;
+        const aktiv = marktFilter.pos || marktFilter.nurLeistbar || marktFilter.sortierung !== 'standard';
+        box.innerHTML = `<div class="panel" style="margin-bottom:8px; padding:8px;">
+            <div style="display:flex; flex-wrap:wrap; gap:4px; align-items:center;">${['TW', 'ABW', 'MIT', 'ST'].map(posKnopf).join('')}
+                <button onclick="toggleMarktFilterLeistbar()" class="${marktFilter.nurLeistbar ? 'btn-action' : 'btn-secondary'}" style="width:auto; flex:0 0 auto;" aria-pressed="${marktFilter.nurLeistbar}">✓ Nur leistbar</button></div>
+            <label class="ui-field" style="margin-top:6px;"><span class="ui-field-label">Sortieren nach</span><select class="input-inline" onchange="setMarktSortierung(this.value)" style="width:100%; box-sizing:border-box; text-align:left; font-weight:normal; font-family:inherit;">${Object.entries(MARKT_SORTIERUNGEN).map(([k, v]) => `<option value="${k}"${marktFilter.sortierung === k ? ' selected' : ''}>${v}</option>`).join('')}</select></label>
+            <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">${anzahl} von ${marketPlayers.length} Spielern${aktiv ? ` <button onclick="resetMarktFilter()" class="btn-secondary" style="width:auto; margin-left:6px;">Filter zurücksetzen</button>` : ''}</div></div>`;
+    }
+
+    // Aus dem Kaderplaner: Markt mit der dünn besetzten Position öffnen
+    function openMarktFuerPosition(pos) {
+        if (!['TW', 'ABW', 'MIT', 'ST'].includes(pos)) { showToast('Unbekannte Position.', 'error'); return; }
+        marktFilter = { pos, nurLeistbar: false, sortierung: 'staerke' };
+        showScreen('screen-transfer');
+        setTransferTab('market');
+        renderTransferView();
+    }
+
+    // ---------- Kaderfolgen eines Verkaufs (Phase 26.17) ----------
+    // Was bleibt auf der Position, wenn der Spieler geht? Mindestbesetzung wie im Kaderplaner (SQUAD_PLANNING_MIN_HEALTHY).
+    function getVerkaufsFolgen(p) {
+        if (!p) return null;
+        const rest = squad.filter(x => x.id !== p.id && x.pos === p.pos);
+        const minimum = typeof SQUAD_PLANNING_MIN_HEALTHY !== 'undefined' ? SQUAD_PLANNING_MIN_HEALTHY[p.pos] || 0 : 0;
+        const nachfolger = [...rest].sort((a, b) => b.strength - a.strength)[0] || null;
+        const bester = !rest.some(x => x.strength > p.strength);
+        return { rest: rest.length, minimum, zuWenig: rest.length < minimum, startelf: lineup.includes(p.id), bester, nachfolger };
+    }
+
+    function getVerkaufsFolgenHtml(p) {
+        const f = getVerkaufsFolgen(p);
+        if (!f) return '';
+        const teile = [`danach ${f.rest} ${p.pos} (Kaderplaner: mindestens ${f.minimum})`];
+        if (f.startelf) teile.push('steht in der Startelf');
+        if (f.bester) teile.push(f.nachfolger ? `bester ${p.pos}, Nachfolger wäre ${f.nachfolger.name} (Str ${f.nachfolger.strength})` : `einziger ${p.pos}`);
+        return `<div style="font-size:var(--fs-caption); color:${f.zuWenig ? 'var(--danger)' : 'var(--text-muted)'}; margin-top:4px; overflow-wrap:anywhere;">${f.zuWenig ? '⚠️' : '📋'} Nach dem Verkauf: ${teile.join(' · ')}</div>`;
+    }
+
     // Was hindert dich gerade am Sofortkauf? Dieselben Prüfungen wie finalizePlayerPurchase(), aber ohne etwas zu ändern.
     // Liefert die Gründe als Liste; leer heißt: bezahlbar.
     function getKaufHindernisse(p) {
@@ -668,7 +744,7 @@
                     ],
                     kpi: { wert: formatVal(o.currentBid), label: 'Gebot', farbe: diffColor },
                     aside: `<button onclick="openPlayerDetail('${o.playerId}','squad')" class="btn-secondary ui-card-info" title="Details" aria-label="Details zu ${o.playerName}">ℹ️</button>`,
-                    body: o.statusText ? `<span style="color:var(--text-box);">${o.statusText}</span>` : '',
+                    body: (o.statusText ? `<span style="color:var(--text-box);">${o.statusText}</span>` : '') + (p ? getVerkaufsFolgenHtml(p) : ''),
                     actions: `<button onclick="acceptTransferOffer('${o.id}')" class="btn-primary">✔ Annehmen (${formatVal(o.currentBid)})</button>
                         <button onclick="rejectTransferOffer('${o.id}')" class="btn-danger">✖ Ablehnen</button>`
                 }) + `
@@ -689,7 +765,10 @@
         renderMarktMerkliste();
         let mList = document.getElementById('market-list');
         mList.innerHTML = '';
-        marketPlayers.forEach((p, idx) => {
+        const marktAnsicht = getMarktAnsicht();
+        renderMarktFilter(marktAnsicht.length);
+        if (!marktAnsicht.length && marketPlayers.length) mList.innerHTML = '<div class="box" style="text-align:center; color:var(--text-muted);">Kein Spieler passt zum Filter.</div>';
+        marktAnsicht.forEach(({ p, idx }) => {
             let row = document.createElement('div');
             row.className = 'panel player-card';
             row.style.cssText = 'margin-bottom:6px; padding:8px;';

@@ -219,6 +219,17 @@ function setSquadBelastungFilter() {
     renderSquadView();
 }
 
+// Kaderansicht (Phase 26.17): Karten oder kompakte Liste; Einstellung dieses Geräts
+const KADER_ANSICHT_KEY = 'anstoss_fm13_kaderansicht';
+function getKaderAnsicht() {
+    return (typeof safeLocalGet === 'function' ? safeLocalGet(KADER_ANSICHT_KEY) : null) === 'kompakt' ? 'kompakt' : 'karten';
+}
+function toggleKaderAnsicht() {
+    const neu = getKaderAnsicht() === 'kompakt' ? 'karten' : 'kompakt';
+    if (typeof safeLocalSet === 'function') safeLocalSet(KADER_ANSICHT_KEY, neu);
+    renderSquadView();
+}
+
 function setSquadTagFilter(tagId) {
     squadTagFilter = squadTagFilter === tagId ? '' : tagId;
     renderSquadView();
@@ -234,7 +245,8 @@ function renderSquadTagFilter() {
     const rote = squad.filter(p => getBelastungsAmpel(p).stufe === 'rot').length;
     if (squadBelastungNurRot && !rote) squadBelastungNurRot = false;
     const ampel = `<button onclick="setSquadBelastungFilter()" class="${squadBelastungNurRot ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:var(--fs-caption);" aria-pressed="${squadBelastungNurRot}" title="Zeigt nur Spieler mit hoher Belastung: wenig Fitness, Dauereinsatz oder Verletzungsgeschichte">🚦 Belastung rot (${rote})</button>`;
-    box.innerHTML = `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:3px;">Filtern:</div><div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px;">${ampel}${vorhanden.map(e => `<button onclick="setSquadTagFilter('${e.id}')" class="${squadTagFilter === e.id ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:var(--fs-caption);" aria-pressed="${squadTagFilter === e.id}">${e.label} (${zaehler[e.id]})</button>`).join('')}</div>`;
+    const ansicht = `<button onclick="toggleKaderAnsicht()" class="btn-secondary" style="width:auto; font-size:var(--fs-caption);" aria-pressed="${getKaderAnsicht() === 'kompakt'}" title="Zwischen Karten und kompakter Liste wechseln">${getKaderAnsicht() === 'kompakt' ? '🃏 Karten' : '☰ Kompakt'}</button>`;
+    box.innerHTML = `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:3px;">Filtern:</div><div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px;">${ansicht}${ampel}${vorhanden.map(e => `<button onclick="setSquadTagFilter('${e.id}')" class="${squadTagFilter === e.id ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:var(--fs-caption);" aria-pressed="${squadTagFilter === e.id}">${e.label} (${zaehler[e.id]})</button>`).join('')}</div>`;
 }
 
 // ---------- Etiketten-Bilanz (Phase 26.13) ----------

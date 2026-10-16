@@ -101,6 +101,44 @@ function renderZuletzt() {
     if (box.innerHTML !== html) box.innerHTML = html;
 }
 
+// ---------- Spielersuche (Phase 26.17) ----------
+// Sucht ab zwei Buchstaben in allen Bereichen mit Spielerdetail; Groß-/Kleinschreibung und Akzente zählen nicht.
+const SPIELER_SUCHE_MAX = 8;
+function sucheNormal(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+
+function sucheSpieler(text) {
+    const q = sucheNormal(text).trim();
+    if (q.length < 2) return [];
+    const bereiche = [
+        ['squad', 'Kader', typeof squad !== 'undefined' ? squad : []],
+        ['secondTeam', 'Zweite Mannschaft', typeof secondTeamSquad !== 'undefined' ? secondTeamSquad : []],
+        ['youth', 'Jugend', typeof youthTalents !== 'undefined' ? youthTalents : []],
+        ['market', 'Transfermarkt', typeof marketPlayers !== 'undefined' ? marketPlayers : []],
+        ['market', 'Vereinslos', typeof freeAgentPlayers !== 'undefined' ? freeAgentPlayers : []],
+        ['scout', 'Scouting', typeof globalScoutResults !== 'undefined' ? globalScoutResults : []]
+    ];
+    const treffer = [];
+    bereiche.forEach(([pool, label, liste]) => liste.forEach(p => { if (p && p.name && sucheNormal(p.name).includes(q)) treffer.push({ p, pool, label }); }));
+    return treffer;
+}
+
+function renderSpielerSuche(text) {
+    const box = document.getElementById('player-search-results');
+    if (!box) return;
+    const q = String(text || '').trim();
+    if (q.length < 2) { box.innerHTML = ''; return; }
+    const treffer = sucheSpieler(q);
+    box.innerHTML = treffer.length
+        ? treffer.slice(0, SPIELER_SUCHE_MAX).map(t => `<button onclick="oeffneSuchtreffer(this.dataset.id, this.dataset.pool)" data-id="${t.p.id}" data-pool="${t.pool}" class="btn-secondary">${mpEsc(t.p.name)} <span style="color:var(--text-muted);">· ${t.p.pos || ''} · Str ${t.p.strength} · ${t.label}</span></button>`).join('')
+            + (treffer.length > SPIELER_SUCHE_MAX ? `<div style="font-size:var(--fs-caption); color:var(--text-muted);">und ${treffer.length - SPIELER_SUCHE_MAX} weitere – genauer suchen</div>` : '')
+        : '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Kein Spieler gefunden.</div>';
+}
+
+function oeffneSuchtreffer(id, pool) {
+    if (typeof closeMenuDrawer === 'function') closeMenuDrawer();
+    openPlayerDetail(id, pool);
+}
+
 function findOpenOverlay() {
     const offen = [...document.querySelectorAll('.generic-modal-overlay.show, .tutorial-overlay.show')];
     return offen.length ? offen.sort((a, b) => (parseInt(getComputedStyle(b).zIndex) || 0) - (parseInt(getComputedStyle(a).zIndex) || 0))[0] : null;

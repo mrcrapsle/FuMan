@@ -72,6 +72,7 @@
                     <div>Ø Alter: <strong style="color:${a.agingRisk ? 'var(--danger)' : 'var(--text-main)'};">${a.avgAge.toFixed(1)} J.</strong></div>
                     <div>Vertrag ≤${SQUAD_PLANNING_CONTRACT_URGENT} J.: <strong style="color:${a.cliffRisk ? 'var(--danger)' : 'var(--text-main)'};">${a.cliff.length} Spieler</strong></div>
                 </div>
+                ${a.thin || a.ausfallRisiko || a.agingRisk || a.cliffRisk ? `<button onclick="openMarktFuerPosition('${a.pos}')" class="btn-secondary" style="margin-top:6px;">🔎 Passende Spieler auf dem Markt</button>` : ''}
             </div>`).join('');
     }
 

@@ -150,6 +150,8 @@
         if (typeof renderPlayerTags === 'function') renderPlayerTags(p);
         if (typeof renderInjuryHistory === 'function') renderInjuryHistory(p, pool);
         if (typeof renderPlayerStartBilanz === 'function') renderPlayerStartBilanz(p, pool);
+        renderErsatzSuche(p, pool);
+        renderDetailNav();
         if (typeof renderMarketValueCurve === 'function') renderMarketValueCurve(p);
         if (typeof renderDevelopmentForecast === 'function') renderDevelopmentForecast(p);
         let historyBox = document.getElementById('pd-strength-history');
@@ -226,6 +228,60 @@
             }
         }
         document.getElementById('player-detail-overlay').classList.add('show');
+    }
+
+    // ---------- Blättern im Spielerdetail (Phase 26.17) ----------
+    // Reihenfolge wie in der Liste, aus der man kam: Kader wie angezeigt (Filter, Sortierung), Markt wie gefiltert,
+    // sonst die Reihenfolge des jeweiligen Bereichs.
+    function getDetailListe(pool) {
+        if (pool === 'squad') return (typeof getSquadListeSortiert === 'function' ? getSquadListeSortiert() : squad).map(p => p.id);
+        if (pool === 'secondTeam') return secondTeamSquad.map(p => p.id);
+        if (pool === 'market') {
+            if (marketPlayers.some(p => p.id === currentDetailPlayerId)) return (typeof getMarktAnsicht === 'function' ? getMarktAnsicht().map(x => x.p) : marketPlayers).map(p => p.id);
+            if (freeAgentPlayers.some(p => p.id === currentDetailPlayerId)) return freeAgentPlayers.map(p => p.id);
+            return [];
+        }
+        if (pool === 'scout') return typeof globalScoutResults !== 'undefined' ? globalScoutResults.map(p => p.id) : [];
+        if (pool === 'youth') return typeof youthTalents !== 'undefined' ? youthTalents.map(p => p.id) : [];
+        return [];
+    }
+
+    function renderDetailNav() {
+        const box = document.getElementById('pd-nav');
+        if (!box) return;
+        const liste = getDetailListe(currentDetailPlayerPool);
+        const i = liste.indexOf(currentDetailPlayerId);
+        if (i === -1 || liste.length < 2) { box.innerHTML = ''; return; }
+        box.innerHTML = `<button onclick="blaetterSpielerDetail(-1)" class="btn-secondary" title="Voriger Spieler"${i === 0 ? ' disabled' : ''}>‹</button><span>${i + 1} / ${liste.length}</span><button onclick="blaetterSpielerDetail(1)" class="btn-secondary" title="Nächster Spieler"${i === liste.length - 1 ? ' disabled' : ''}>›</button>`;
+    }
+
+    function blaetterSpielerDetail(richtung) {
+        const liste = getDetailListe(currentDetailPlayerPool);
+        const i = liste.indexOf(currentDetailPlayerId);
+        const ziel = i === -1 ? null : liste[i + richtung];
+        if (!ziel) { showToast(richtung > 0 ? 'Das ist der letzte Spieler der Liste.' : 'Das ist der erste Spieler der Liste.', 'info', 1800); return false; }
+        openPlayerDetail(ziel, currentDetailPlayerPool);
+        return true;
+    }
+
+    // ---------- Ersatz finden (Phase 26.17) ----------
+    // Für eigene Spieler: Marktspieler auf derselben Position, höchstens 3 Stärke schwächer, mit Preis und Leistbar-Chip
+    function getErsatzKandidaten(p) {
+        if (!p || typeof marketPlayers === 'undefined') return [];
+        return marketPlayers.filter(m => m.pos === p.pos && m.strength >= p.strength - 3).sort((a, b) => b.strength - a.strength || getTransferAsking(a) - getTransferAsking(b)).slice(0, 3);
+    }
+
+    function renderErsatzSuche(p, pool) {
+        const box = document.getElementById('pd-ersatz');
+        if (!box) return;
+        if (pool !== 'squad') { box.innerHTML = ''; return; }
+        const kand = getErsatzKandidaten(p);
+        box.innerHTML = `<details class="ui-fold" style="margin:8px 0; text-align:left;"><summary>🔎 Ersatz auf dem Markt (${kand.length})</summary>`
+            + (kand.length ? kand.map(m => `<div class="box" style="margin:4px 0; font-size:var(--fs-small);"><div style="overflow-wrap:anywhere;"><strong>${m.name}</strong> (${m.pos}, Str ${m.strength}${m.age ? ', ' + m.age + ' J.' : ''}) · ${formatVal(getTransferAsking(m))}</div>
+                <div class="ui-card-meta" style="margin:4px 0;">${typeof getKaufChip === 'function' ? getKaufChip(m) : ''}</div>
+                <button onclick="openPlayerCompare('${m.id}','market'); setCompareB('${p.id}')" class="btn-secondary">⚖️ Mit ${p.name} vergleichen</button></div>`).join('')
+                : `<div style="font-size:var(--fs-small); color:var(--text-muted);">Gerade kein ${p.pos} mit Stärke ${p.strength - 3} oder mehr auf dem Markt.</div>`)
+            + `<button onclick="closePlayerDetail(); openMarktFuerPosition('${p.pos}')" class="btn-secondary" style="margin-top:4px;">Alle ${p.pos} auf dem Markt</button></details>`;
     }
 
     function closePlayerDetail() {

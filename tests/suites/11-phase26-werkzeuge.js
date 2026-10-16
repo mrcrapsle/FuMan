@@ -1950,6 +1950,225 @@ async function testRunde31Funktionen(browser) {
     await page.close();
 }
 
+// Gemeinsame Hilfen der Runde-32-Suiten (im Browser ausgeführt): breite Schrift und Prüfung, ob ein Wort nicht in seinen Knopf passt
+const R32_HILFEN = `
+    const schrift = document.createElement('style'); schrift.textContent = '*,*::before,*::after{font-family:"DejaVu Sans",Verdana,sans-serif!important}'; document.head.appendChild(schrift);
+    const probe = document.createElement('span'); document.body.appendChild(probe);
+    window.woerter = sel => [...document.querySelectorAll(sel)].filter(el => el.offsetParent).filter(el => {
+        const cs = getComputedStyle(el), innen = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+        probe.style.cssText = 'position:absolute; visibility:hidden; white-space:nowrap; font:' + cs.font + '; letter-spacing:' + cs.letterSpacing;
+        return (el.innerText || '').trim().split(/\\s+/).flatMap(w => w.split(/(?<=-)/)).some(t => { probe.textContent = t; return probe.getBoundingClientRect().width > innen + 1; });
+    }).map(el => (el.innerText || '').trim().slice(0, 24));
+    window.ueberlauf = () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1;
+`;
+
+async function testRunde32Markt(browser) {
+    console.log('\n[26.17] Marktfilter, Kaderlücke, Kaderfolgen, Ersatz, kompakte Kaderliste, Blättern im Detail, Spielersuche');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.evaluate(R32_HILFEN);
+    const r = await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false; simulateMatchdays(3);
+        const out = {};
+        const toasts = []; const toastAlt = showToast; showToast = (t) => { toasts.push(t); };
+        squad.forEach(p => { p.injured = 0; p.suspended = 0; p.fitness = 90; p.timesInjured = 0; p.tags = []; delete p.startFolge; });
+        game.formation = '4-4-2'; autoLineup();
+        if (!marketPlayers.length) refreshTransferMarket();
+        game.money = 1e9; game.transferBudget = 1e9; game.wageBudget = 1e9; game.transferEmbargo = false; game.ffpTransferEmbargo = false;
+
+        // --- Marktfilter ---
+        showScreen('screen-transfer'); setTransferTab('market'); resetMarktFilter();
+        const karten = () => [...document.querySelectorAll('#market-list .player-card')];
+        out.fAlle = karten().length === marketPlayers.length && document.getElementById('market-filter-box').textContent.includes(`${marketPlayers.length} von ${marketPlayers.length} Spielern`);
+        const pos = marketPlayers[0].pos;
+        setMarktFilterPos(pos);
+        const anzahlPos = marketPlayers.filter(p => p.pos === pos).length;
+        out.fPos = karten().length === anzahlPos && getMarktAnsicht().every(x => x.p.pos === pos) && document.querySelector(`#market-filter-box button[aria-pressed="true"]`).textContent === pos;
+        setMarktFilterPos(pos); out.fPosAus = karten().length === marketPlayers.length;
+        setMarktSortierung('staerke'); const st = getMarktAnsicht().map(x => x.p.strength); out.fSortStaerke = st.every((v, i) => i === 0 || st[i - 1] >= v);
+        setMarktSortierung('preis'); const pr = getMarktAnsicht().map(x => getTransferAsking(x.p)); out.fSortPreis = pr.every((v, i) => i === 0 || pr[i - 1] <= v);
+        setMarktSortierung('alter'); const al = getMarktAnsicht().map(x => x.p.age || 0); out.fSortAlter = al.every((v, i) => i === 0 || al[i - 1] <= v);
+        toasts.length = 0; setMarktSortierung('quatsch'); out.fSortUngueltig = toasts.some(t => t.includes('Unbekannte Sortierung')) && marktFilter.sortierung === 'alter';
+        const teuer = getMarktAnsicht().map(x => x.p).sort((a, b) => getTransferAsking(b) - getTransferAsking(a))[0];
+        game.money = getTransferAsking(teuer) - 1;
+        toggleMarktFilterLeistbar();
+        out.fLeistbar = getMarktAnsicht().every(x => getKaufHindernisse(x.p).length === 0) && !getMarktAnsicht().some(x => x.p.id === teuer.id);
+        game.money = 0; renderTransferView();
+        out.fLeer = karten().length === 0 && document.getElementById('market-list').textContent.includes('Kein Spieler passt zum Filter') && document.getElementById('market-filter-box').textContent.includes('Filter zurücksetzen');
+        game.money = 1e9; resetMarktFilter();
+        out.fReset = marktFilter.pos === '' && !marktFilter.nurLeistbar && marktFilter.sortierung === 'standard' && !document.getElementById('market-filter-box').textContent.includes('Filter zurücksetzen');
+        // Index bleibt richtig: nach Filter + Sortierung kauft der Knopf genau den Spieler der Karte
+        setMarktSortierung('preis');
+        const ersteKarte = karten()[0];
+        const zielName = ersteKarte.querySelector('.ui-card-title') ? ersteKarte.querySelector('.ui-card-title').textContent.trim() : '';
+        const zielSpieler = getMarktAnsicht()[0].p;
+        const vorKauf = squad.length;
+        [...ersteKarte.querySelectorAll('button')].find(b => b.textContent.includes('Sofortkauf')).click();
+        out.fIndexRichtig = squad.length === vorKauf + 1 && squad[squad.length - 1].id === zielSpieler.id && (!zielName || zielName.includes(zielSpieler.name));
+        squad.pop(); resetMarktFilter();
+        out.wFilter = JSON.stringify(woerter('#market-filter-box button'));
+        out.fBreit = ueberlauf();
+
+        // --- Kaderlücke -> Markt ---
+        const abw = squad.filter(p => p.pos === 'ABW');
+        const geparkt = abw.slice(2); squad = squad.filter(p => !geparkt.includes(p));
+        showScreen('screen-squad-planning'); renderSquadPlanningPositionBox();
+        const lueckeKnopf = [...document.querySelectorAll('#squad-planning-position-box button')].find(b => b.getAttribute('onclick') === "openMarktFuerPosition('ABW')");
+        out.lKnopf = !!lueckeKnopf;
+        lueckeKnopf.click();
+        out.lMarkt = marktFilter.pos === 'ABW' && marktFilter.sortierung === 'staerke' && document.getElementById('transfer-tab-market').style.display === 'block' && getMarktAnsicht().every(x => x.p.pos === 'ABW');
+        toasts.length = 0; openMarktFuerPosition('XYZ'); out.lUngueltig = toasts.some(t => t.includes('Unbekannte Position')) && marktFilter.pos === 'ABW';
+        out.wPlaner = (showScreen('screen-squad-planning'), JSON.stringify(woerter('#squad-planning-position-box button')));
+        squad = squad.concat(geparkt); resetMarktFilter();
+
+        // --- Kaderfolgen bei Angeboten ---
+        const abwNeu = squad.filter(p => p.pos === 'ABW').sort((a, b) => b.strength - a.strength);
+        const bester = abwNeu[0];
+        const f = getVerkaufsFolgen(bester);
+        out.kFolgen = f.rest === abwNeu.length - 1 && f.minimum === SQUAD_PLANNING_MIN_HEALTHY.ABW && f.bester === true && f.nachfolger.id === abwNeu[1].id && f.startelf === lineup.includes(bester.id);
+        out.kZuWenig = f.zuWenig === (abwNeu.length - 1 < SQUAD_PLANNING_MIN_HEALTHY.ABW);
+        const schwach = abwNeu[abwNeu.length - 1];
+        out.kNichtBester = getVerkaufsFolgen(schwach).bester === false && !getVerkaufsFolgenHtml(schwach).includes('Nachfolger');
+        const html = getVerkaufsFolgenHtml(bester);
+        out.kText = html.includes('Nach dem Verkauf: danach ' + (abwNeu.length - 1) + ' ABW') && html.includes(`Nachfolger wäre ${abwNeu[1].name}`);
+        incomingOffers.length = 0;
+        incomingOffers.push({ id: 'o1', playerId: bester.id, playerName: bester.name, playerPos: bester.pos, playerStr: bester.strength, marketValue: bester.marketValue, currentBid: bester.marketValue, clubName: 'Test FC', expiresIn: 3 });
+        showScreen('screen-transfer'); setTransferTab('offers'); renderTransferView();
+        out.kKarte = document.getElementById('incoming-offers-list').textContent.includes('Nach dem Verkauf');
+        incomingOffers.length = 0;
+        out.kNull = getVerkaufsFolgen(null) === null && getVerkaufsFolgenHtml(null) === '';
+
+        // --- Ersatz finden ---
+        const eig = squad.find(p => p.pos === marketPlayers[0].pos);
+        const kand = getErsatzKandidaten(eig);
+        out.eKandidaten = kand.length <= 3 && kand.every(m => m.pos === eig.pos && m.strength >= eig.strength - 3) && kand.every((m, i) => i === 0 || kand[i - 1].strength >= m.strength);
+        eig.strength = 20;
+        openPlayerDetail(eig.id, 'squad');
+        const eb = document.getElementById('pd-ersatz');
+        out.eBox = eb.textContent.includes('Ersatz auf dem Markt') && eb.querySelectorAll('button[onclick^="openPlayerCompare"]').length === getErsatzKandidaten(eig).length && getErsatzKandidaten(eig).length > 0;
+        eb.querySelector('details').open = true;
+        out.wErsatz = JSON.stringify(woerter('#pd-ersatz button'));
+        eb.querySelector('button[onclick^="openPlayerCompare"]').click();
+        out.eVergleich = document.getElementById('compare-overlay').classList.contains('show') && compareState.bId === eig.id && compareState.aPool === 'market';
+        document.getElementById('compare-overlay').classList.remove('show');
+        eig.strength = 99; renderErsatzSuche(eig, 'squad');
+        out.eKeiner = document.getElementById('pd-ersatz').textContent.includes('Gerade kein');
+        renderErsatzSuche(marketPlayers[0], 'market'); out.eNurKader = document.getElementById('pd-ersatz').innerHTML === '';
+        eig.strength = 60; closePlayerDetail();
+
+        // --- Kompakte Kaderliste ---
+        safeLocalSet(KADER_ANSICHT_KEY, 'karten');
+        showScreen('screen-squad'); setSquadTab('aufstellung'); squadFilterPos = 'alle'; squadTagFilter = ''; squadBelastungNurRot = false; renderSquadView();
+        out.kaKarten = document.querySelectorAll('#bench-list .player-card').length === squad.length && document.querySelectorAll('#bench-list .kader-zeile').length === 0;
+        toggleKaderAnsicht();
+        const zeilen = [...document.querySelectorAll('#bench-list .kader-zeile')];
+        out.kaZeilen = getKaderAnsicht() === 'kompakt' && zeilen.length === squad.length && document.querySelectorAll('#bench-list .player-card').length === 0;
+        out.kaInhalt = zeilen.every(z => /Str \d+/.test(z.textContent) && z.textContent.includes('Moral'));
+        out.kaReihenfolge = zeilen.map(z => z.querySelector('.kader-zeile-name').textContent.replace(' Ⓒ', '')).join('|') === getSquadListeSortiert().map(p => p.name).join('|');
+        const imElf = squad.find(p => lineup.includes(p.id));
+        const zeileElf = zeilen.find(z => z.querySelector('.kader-zeile-name').textContent.replace(' Ⓒ', '') === imElf.name);
+        out.kaElfMarke = zeileElf.classList.contains('kader-zeile-elf') && zeileElf.querySelector('.kader-zeile-elfknopf').textContent === 'Bank';
+        toasts.length = 0; zeileElf.querySelector('.kader-zeile-elfknopf').click();
+        const sagtWarum = lineup.includes(imElf.id) && toasts.some(t => t.includes('mindestens 11'));
+        lineup = lineup.filter(id => id !== imElf.id); renderSquadView();
+        const bankZeile = [...document.querySelectorAll('#bench-list .kader-zeile')].find(z => z.querySelector('.kader-zeile-name').textContent.replace(' Ⓒ', '') === imElf.name);
+        bankZeile.querySelector('.kader-zeile-elfknopf').click();
+        out.kaUmstellen = sagtWarum && lineup.includes(imElf.id) && lineup.length === 11;
+        document.querySelector('#bench-list .kader-zeile .kader-zeile-haupt').click();
+        out.kaDetail = document.getElementById('player-detail-overlay').classList.contains('show');
+        closePlayerDetail();
+        squadFilterPos = 'TW'; renderSquadView(); out.kaFilter = document.querySelectorAll('#bench-list .kader-zeile').length === squad.filter(p => p.pos === 'TW').length;
+        squadFilterPos = 'alle'; renderSquadView();
+        out.wKompakt = JSON.stringify(woerter('#bench-list button, #squad-tag-filter button'));
+        out.kaBreit = ueberlauf();
+        toggleKaderAnsicht(); out.kaZurueck = getKaderAnsicht() === 'karten';
+
+        // --- Blättern im Spielerdetail ---
+        squadSortMode = 'staerke';
+        const reihe = getSquadListeSortiert();
+        openPlayerDetail(reihe[0].id, 'squad');
+        out.bNav = document.getElementById('pd-nav').textContent.includes(`1 / ${reihe.length}`) && document.querySelector('#pd-nav button').disabled;
+        out.wNav = JSON.stringify(woerter('#pd-nav button'));
+        blaetterSpielerDetail(1);
+        out.bWeiter = currentDetailPlayerId === reihe[1].id && document.getElementById('pd-name').textContent.includes(reihe[1].name) && document.getElementById('pd-nav').textContent.includes(`2 / ${reihe.length}`);
+        blaetterSpielerDetail(-1); out.bZurueck = currentDetailPlayerId === reihe[0].id;
+        toasts.length = 0; out.bErster = blaetterSpielerDetail(-1) === false && toasts.some(t => t.includes('erste Spieler'));
+        openPlayerDetail(reihe[reihe.length - 1].id, 'squad'); toasts.length = 0;
+        out.bLetzter = blaetterSpielerDetail(1) === false && toasts.some(t => t.includes('letzte Spieler'));
+        squadFilterPos = 'TW'; const tws = getSquadListeSortiert();
+        openPlayerDetail(tws[0].id, 'squad'); out.bFilter = document.getElementById('pd-nav').textContent.includes(`1 / ${tws.length}`) || tws.length < 2;
+        squadFilterPos = 'alle';
+        // Markt mit Filter
+        setMarktFilterPos(marketPlayers[0].pos);
+        const mreihe = getMarktAnsicht().map(x => x.p);
+        openPlayerDetail(mreihe[0].id, 'market');
+        out.bMarkt = mreihe.length < 2 ? document.getElementById('pd-nav').innerHTML === '' : document.getElementById('pd-nav').textContent.includes(`1 / ${mreihe.length}`);
+        resetMarktFilter();
+        // Wischen im Detail
+        setzeWischen('an');
+        openPlayerDetail(reihe[0].id, 'squad');
+        const ziel = document.getElementById('pd-name');
+        const beruehren = (typ, x, y) => { const t = new Touch({ identifier: 1, target: ziel, clientX: x, clientY: y }); ziel.dispatchEvent(new TouchEvent(typ, { bubbles: true, touches: typ === 'touchend' ? [] : [t], changedTouches: [t] })); };
+        beruehren('touchstart', 250, 300); beruehren('touchend', 120, 305);
+        out.bWisch = currentDetailPlayerId === reihe[1].id;
+        beruehren('touchstart', 120, 300); beruehren('touchend', 260, 302);
+        out.bWischZurueck = currentDetailPlayerId === reihe[0].id;
+        closePlayerDetail();
+        openPlayerDetail(youthTalents.length ? youthTalents[0].id : reihe[0].id, youthTalents.length ? 'youth' : 'squad');
+        out.bAndererBereich = youthTalents.length < 2 || document.getElementById('pd-nav').textContent.includes(`/ ${youthTalents.length}`);
+        closePlayerDetail();
+
+        // --- Spielersuche ---
+        const name = squad[3].name;
+        const teil = name.slice(1, 4).toUpperCase();
+        const tr = sucheSpieler(teil);
+        out.sFindet = tr.some(t => t.p.id === squad[3].id && t.pool === 'squad' && t.label === 'Kader');
+        out.sKurz = sucheSpieler('a').length === 0 && sucheSpieler('').length === 0;
+        squad[4].name = 'Jérôme Müller';
+        out.sAkzente = sucheSpieler('jerome').some(t => t.p.id === squad[4].id) && sucheSpieler('MÜLL').some(t => t.p.id === squad[4].id);
+        const mname = marketPlayers[1].name.slice(0, 5);
+        out.sMarkt = sucheSpieler(mname).some(t => t.pool === 'market' && t.label === 'Transfermarkt');
+        if (freeAgentPlayers.length) out.sVereinslos = sucheSpieler(freeAgentPlayers[0].name).some(t => t.label === 'Vereinslos'); else out.sVereinslos = true;
+        toggleMenuDrawer();
+        const feld = document.getElementById('player-search-input');
+        feld.value = 'jérôme'; renderSpielerSuche(feld.value);
+        const treffer = [...document.querySelectorAll('#player-search-results button')];
+        const meiner = treffer.find(b => b.textContent.includes('Jérôme Müller'));
+        out.sListe = !!meiner && meiner.textContent.includes('Kader');
+        out.wSuche = JSON.stringify(woerter('#player-search-results button'));
+        meiner.click();
+        out.sOeffnet = document.getElementById('player-detail-overlay').classList.contains('show') && currentDetailPlayerId === squad[4].id && !document.getElementById('app-sidebar').classList.contains('menu-open');
+        closePlayerDetail();
+        renderSpielerSuche('zzqq'); out.sNichts = document.getElementById('player-search-results').textContent.includes('Kein Spieler gefunden');
+        renderSpielerSuche('e'); out.sLeer = document.getElementById('player-search-results').innerHTML === '';
+        const viele = sucheSpieler('e').length; renderSpielerSuche('ee');
+        out.sBegrenzt = document.querySelectorAll('#player-search-results button').length <= SPIELER_SUCHE_MAX;
+        squad[5].name = '<b>X</b> Test'; renderSpielerSuche('test');
+        out.sMaskiert = !document.getElementById('player-search-results').innerHTML.includes('<b>X</b>') || viele < 0;
+        showToast = toastAlt;
+        return out;
+    });
+    const ok = (...ks) => ks.every(k => r[k] === true);
+    const werte = ks => JSON.stringify(ks.map(k => r[k]));
+    const A = ['fAlle', 'fPos', 'fPosAus', 'fSortStaerke', 'fSortPreis', 'fSortAlter', 'fSortUngueltig', 'fLeistbar', 'fLeer', 'fReset', 'fIndexRichtig', 'fBreit'];
+    assert(ok(...A), `Marktfilter: Position, nur leistbar, Sortierungen, leerer Filter, Zurücksetzen, Sofortkauf trifft den richtigen Spieler (${werte(A)})`);
+    const B = ['lKnopf', 'lMarkt', 'lUngueltig'];
+    assert(ok(...B), `Kaderlücke: Knopf im Kaderplaner öffnet den Markt mit der Position (${werte(B)})`);
+    const C = ['kFolgen', 'kZuWenig', 'kNichtBester', 'kText', 'kKarte', 'kNull'];
+    assert(ok(...C), `Kaderfolgen: Restbesetzung, Minimum, bester Spieler mit Nachfolger, Anzeige auf der Angebotskarte (${werte(C)})`);
+    const D = ['eKandidaten', 'eBox', 'eVergleich', 'eKeiner', 'eNurKader'];
+    assert(ok(...D), `Ersatz finden: Kandidaten gleicher Position, Vergleich, Hinweis ohne Treffer, nur für Kaderspieler (${werte(D)})`);
+    const E = ['kaKarten', 'kaZeilen', 'kaInhalt', 'kaReihenfolge', 'kaElfMarke', 'kaUmstellen', 'kaDetail', 'kaFilter', 'kaBreit', 'kaZurueck'];
+    assert(ok(...E), `Kompakte Kaderliste: Umschalten, Zeilen in Listenreihenfolge, Startelf-Knopf, Detail, Filter, Einstellung (${werte(E)})`);
+    const F = ['bNav', 'bWeiter', 'bZurueck', 'bErster', 'bLetzter', 'bFilter', 'bMarkt', 'bWisch', 'bWischZurueck', 'bAndererBereich'];
+    assert(ok(...F), `Blättern im Spielerdetail: Knöpfe, Rand, gefilterte Listen, Markt, Wischen (${werte(F)})`);
+    const G = ['sFindet', 'sKurz', 'sAkzente', 'sMarkt', 'sVereinslos', 'sListe', 'sOeffnet', 'sNichts', 'sLeer', 'sBegrenzt', 'sMaskiert'];
+    assert(ok(...G), `Spielersuche: Teilnamen, Akzente, alle Bereiche, Treffer öffnet das Detail, Grenzen, maskiert (${werte(G)})`);
+    assert([r.wFilter, r.wPlaner, r.wErsatz, r.wKompakt, r.wNav, r.wSuche].every(w => w === '[]'), `Neue Knöpfe bei 320 px in breiter Schrift: kein Wort breiter als sein Knopf (${JSON.stringify([r.wFilter, r.wPlaner, r.wErsatz, r.wKompakt, r.wNav, r.wSuche])})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 module.exports = {
     testSpielvorbereitung,
     testVertragsWerkzeuge,
@@ -1962,4 +2181,5 @@ module.exports = {
     testRunde29Funktionen,
     testRunde30Funktionen,
     testRunde31Funktionen,
+    testRunde32Markt,
 };

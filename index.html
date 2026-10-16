@@ -159,6 +159,7 @@
 <div id="player-detail-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
         <button onclick="closePlayerDetail()" class="generic-modal-close">✕</button>
+        <div id="pd-nav" class="pd-nav"></div>
         <div id="pd-avatar" class="modal-avatar-photo">👤</div>
         <div style="text-align:center; font-size:var(--fs-title); font-weight:900; color:var(--text-main);" id="pd-name">Spielername</div>
         <div id="pd-summary"></div>
@@ -166,6 +167,7 @@
         <div id="pd-tags"></div>
         <div id="pd-injuries"></div>
         <div id="pd-startbilanz"></div>
+        <div id="pd-ersatz"></div>
         <div class="modal-field-grid" id="pd-fields"></div>
         <div style="font-size:var(--fs-body); font-weight:800; color:var(--accent); margin-top:6px;">Fähigkeiten</div>
         <div class="modal-stat-grid" id="pd-stats"></div>
@@ -587,6 +589,7 @@
         <div class="menu-backdrop" id="menu-backdrop" onclick="closeMenuDrawer()"></div>
         <!-- SIDEBAR -->
         <nav class="app-sidebar" id="app-sidebar" aria-label="Hauptmenü">
+            <div class="spieler-suche"><input id="player-search-input" type="search" class="input-inline" placeholder="🔍 Spieler suchen" aria-label="Spieler suchen" oninput="renderSpielerSuche(this.value)" style="width:100%; box-sizing:border-box; text-align:left; font-weight:normal; font-family:inherit; margin:4px 0;"><div id="player-search-results" class="spieler-suche-treffer"></div></div>
             <div id="recent-screens-box"></div>
             <div class="nav-category" data-i18n="nav_category_main">Hauptzentrale</div>
             <button class="nav-btn active" onclick="showScreen('screen-office')" data-i18n="nav_office">🏢 Managerbüro</button>
@@ -2005,7 +2008,7 @@
                         <div id="incoming-offers-list"></div>
                     </div>
 
-                    <div id="transfer-tab-market" style="display:none;"><div id="market-merkliste-box"></div><div id="market-list"></div>
+                    <div id="transfer-tab-market" style="display:none;"><div id="market-merkliste-box"></div><div id="market-filter-box"></div><div id="market-list"></div>
                         <div class="panel" style="margin-top:8px;"><div class="panel-header">📰 Transfer-Ticker der anderen Vereine</div><div id="ai-transfer-news-box"></div></div>
                     </div>
                     <div id="transfer-tab-free" style="display:none;"><div id="precontract-box"></div><div id="free-agents-list"></div></div>

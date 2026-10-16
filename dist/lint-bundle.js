@@ -2409,6 +2409,8 @@ function getOwnDerbyRivals() {
         if (typeof renderPlayerTags === 'function') renderPlayerTags(p);
         if (typeof renderInjuryHistory === 'function') renderInjuryHistory(p, pool);
         if (typeof renderPlayerStartBilanz === 'function') renderPlayerStartBilanz(p, pool);
+        renderErsatzSuche(p, pool);
+        renderDetailNav();
         if (typeof renderMarketValueCurve === 'function') renderMarketValueCurve(p);
         if (typeof renderDevelopmentForecast === 'function') renderDevelopmentForecast(p);
         let historyBox = document.getElementById('pd-strength-history');
@@ -2485,6 +2487,60 @@ function getOwnDerbyRivals() {
             }
         }
         document.getElementById('player-detail-overlay').classList.add('show');
+    }
+
+    // ---------- Blättern im Spielerdetail (Phase 26.17) ----------
+    // Reihenfolge wie in der Liste, aus der man kam: Kader wie angezeigt (Filter, Sortierung), Markt wie gefiltert,
+    // sonst die Reihenfolge des jeweiligen Bereichs.
+    function getDetailListe(pool) {
+        if (pool === 'squad') return (typeof getSquadListeSortiert === 'function' ? getSquadListeSortiert() : squad).map(p => p.id);
+        if (pool === 'secondTeam') return secondTeamSquad.map(p => p.id);
+        if (pool === 'market') {
+            if (marketPlayers.some(p => p.id === currentDetailPlayerId)) return (typeof getMarktAnsicht === 'function' ? getMarktAnsicht().map(x => x.p) : marketPlayers).map(p => p.id);
+            if (freeAgentPlayers.some(p => p.id === currentDetailPlayerId)) return freeAgentPlayers.map(p => p.id);
+            return [];
+        }
+        if (pool === 'scout') return typeof globalScoutResults !== 'undefined' ? globalScoutResults.map(p => p.id) : [];
+        if (pool === 'youth') return typeof youthTalents !== 'undefined' ? youthTalents.map(p => p.id) : [];
+        return [];
+    }
+
+    function renderDetailNav() {
+        const box = document.getElementById('pd-nav');
+        if (!box) return;
+        const liste = getDetailListe(currentDetailPlayerPool);
+        const i = liste.indexOf(currentDetailPlayerId);
+        if (i === -1 || liste.length < 2) { box.innerHTML = ''; return; }
+        box.innerHTML = `<button onclick="blaetterSpielerDetail(-1)" class="btn-secondary" title="Voriger Spieler"${i === 0 ? ' disabled' : ''}>‹</button><span>${i + 1} / ${liste.length}</span><button onclick="blaetterSpielerDetail(1)" class="btn-secondary" title="Nächster Spieler"${i === liste.length - 1 ? ' disabled' : ''}>›</button>`;
+    }
+
+    function blaetterSpielerDetail(richtung) {
+        const liste = getDetailListe(currentDetailPlayerPool);
+        const i = liste.indexOf(currentDetailPlayerId);
+        const ziel = i === -1 ? null : liste[i + richtung];
+        if (!ziel) { showToast(richtung > 0 ? 'Das ist der letzte Spieler der Liste.' : 'Das ist der erste Spieler der Liste.', 'info', 1800); return false; }
+        openPlayerDetail(ziel, currentDetailPlayerPool);
+        return true;
+    }
+
+    // ---------- Ersatz finden (Phase 26.17) ----------
+    // Für eigene Spieler: Marktspieler auf derselben Position, höchstens 3 Stärke schwächer, mit Preis und Leistbar-Chip
+    function getErsatzKandidaten(p) {
+        if (!p || typeof marketPlayers === 'undefined') return [];
+        return marketPlayers.filter(m => m.pos === p.pos && m.strength >= p.strength - 3).sort((a, b) => b.strength - a.strength || getTransferAsking(a) - getTransferAsking(b)).slice(0, 3);
+    }
+
+    function renderErsatzSuche(p, pool) {
+        const box = document.getElementById('pd-ersatz');
+        if (!box) return;
+        if (pool !== 'squad') { box.innerHTML = ''; return; }
+        const kand = getErsatzKandidaten(p);
+        box.innerHTML = `<details class="ui-fold" style="margin:8px 0; text-align:left;"><summary>🔎 Ersatz auf dem Markt (${kand.length})</summary>`
+            + (kand.length ? kand.map(m => `<div class="box" style="margin:4px 0; font-size:var(--fs-small);"><div style="overflow-wrap:anywhere;"><strong>${m.name}</strong> (${m.pos}, Str ${m.strength}${m.age ? ', ' + m.age + ' J.' : ''}) · ${formatVal(getTransferAsking(m))}</div>
+                <div class="ui-card-meta" style="margin:4px 0;">${typeof getKaufChip === 'function' ? getKaufChip(m) : ''}</div>
+                <button onclick="openPlayerCompare('${m.id}','market'); setCompareB('${p.id}')" class="btn-secondary">⚖️ Mit ${p.name} vergleichen</button></div>`).join('')
+                : `<div style="font-size:var(--fs-small); color:var(--text-muted);">Gerade kein ${p.pos} mit Stärke ${p.strength - 3} oder mehr auf dem Markt.</div>`)
+            + `<button onclick="closePlayerDetail(); openMarktFuerPosition('${p.pos}')" class="btn-secondary" style="margin-top:4px;">Alle ${p.pos} auf dem Markt</button></details>`;
     }
 
     function closePlayerDetail() {
@@ -3305,6 +3361,39 @@ function getOwnDerbyRivals() {
         renderSquadView();
     }
 
+
+    // Die Kaderliste so, wie sie angezeigt wird (Position, Belastung, Etikett, Sortierung) - auch fürs Blättern im Spielerdetail
+    function getSquadListeSortiert() {
+        let filtered = squadFilterPos === 'alle' ? squad : squad.filter(p => p.pos === squadFilterPos);
+        if (typeof squadBelastungNurRot !== 'undefined' && squadBelastungNurRot) filtered = filtered.filter(p => getBelastungsAmpel(p).stufe === 'rot');
+        if (typeof squadTagFilter !== 'undefined' && squadTagFilter) filtered = filtered.filter(p => typeof getPlayerTags === 'function' && getPlayerTags(p).includes(squadTagFilter));
+        // Sortierfunktion: nicht mehr nur nach Position filterbar, sondern auch echt sortierbar.
+        return [...filtered].sort((a, b) => {
+            if (squadSortMode === 'staerke') return b.strength - a.strength;
+            if (squadSortMode === 'alter') return a.age - b.age;
+            if (squadSortMode === 'marktwert') return (b.marketValue||0) - (a.marketValue||0);
+            if (squadSortMode === 'moral') return b.morale - a.morale;
+            if (squadSortMode === 'name') return a.name.localeCompare(b.name);
+            return 0;
+        });
+    }
+
+    // Kompakte Kaderliste (Phase 26.17): eine Zeile je Spieler, Antippen öffnet das Detail, der kleine Knopf stellt auf oder ab
+    function renderKaderZeile(p) {
+        const row = document.createElement('div');
+        const elf = lineup.includes(p.id);
+        const verletzt = (p.injured || 0) > 0, gesperrt = (p.suspended || 0) > 0;
+        const ampel = typeof getBelastungsAmpel === 'function' ? getBelastungsAmpel(p).stufe : 'gruen';
+        row.className = 'kader-zeile' + (elf ? ' kader-zeile-elf' : '');
+        row.innerHTML = `<button onclick="openPlayerDetail('${p.id}','squad')" class="kader-zeile-haupt" title="Details zu ${p.name}">
+                <span class="badge badge-${(p.pos || 'mit').toLowerCase()}">${p.pos}</span>
+                <span class="kader-zeile-name">${p.name}${p.id === game.captainId ? ' Ⓒ' : ''}</span>
+                <span class="kader-zeile-werte">Str <strong>${p.strength}</strong> · Fit ${verletzt ? '🩹' : gesperrt ? '🟥' : p.fitness + ' %'} · Moral ${p.morale} · ${p.contracts} J.${ampel !== 'gruen' ? ` · 🚦 ${ampel}` : ''}</span>
+            </button>
+            <button onclick="toggleLineupPlayer('${p.id}')" class="${elf ? 'btn-danger' : 'btn-action'} kader-zeile-elfknopf" title="${elf ? 'Auf die Bank' : 'In die Startelf'}">${elf ? 'Bank' : 'Elf'}</button>`;
+        return row;
+    }
+
     function renderSquadView() {
         if (typeof renderMatchPrepPanels === 'function') renderMatchPrepPanels();
         if (typeof renderInsightsPanels === 'function') renderInsightsPanels();
@@ -3336,19 +3425,11 @@ function getOwnDerbyRivals() {
         let container = document.getElementById('bench-list');
         if (!container) return;
         container.innerHTML = '';
-        let filtered = squadFilterPos === 'alle' ? squad : squad.filter(p => p.pos === squadFilterPos);
-        if (typeof squadBelastungNurRot !== 'undefined' && squadBelastungNurRot) filtered = filtered.filter(p => getBelastungsAmpel(p).stufe === 'rot');
-        if (typeof squadTagFilter !== 'undefined' && squadTagFilter) filtered = filtered.filter(p => typeof getPlayerTags === 'function' && getPlayerTags(p).includes(squadTagFilter));
-        // Sortierfunktion: nicht mehr nur nach Position filterbar, sondern auch echt sortierbar.
-        filtered = [...filtered].sort((a, b) => {
-            if (squadSortMode === 'staerke') return b.strength - a.strength;
-            if (squadSortMode === 'alter') return a.age - b.age;
-            if (squadSortMode === 'marktwert') return (b.marketValue||0) - (a.marketValue||0);
-            if (squadSortMode === 'moral') return b.morale - a.morale;
-            if (squadSortMode === 'name') return a.name.localeCompare(b.name);
-            return 0;
-        });
+        let filtered = getSquadListeSortiert();
+        const kompakt = typeof getKaderAnsicht === 'function' && getKaderAnsicht() === 'kompakt';
+        container.classList.toggle('kader-kompakt', kompakt);
         filtered.forEach(p => {
+            if (kompakt) { container.appendChild(renderKaderZeile(p)); return; }
             let isStarting = lineup.includes(p.id);
             let row = document.createElement('div');
             row.className = 'panel player-card';
@@ -4810,6 +4891,7 @@ function cleanupLegacyDevelopmentState() {
                     <div>Ø Alter: <strong style="color:${a.agingRisk ? 'var(--danger)' : 'var(--text-main)'};">${a.avgAge.toFixed(1)} J.</strong></div>
                     <div>Vertrag ≤${SQUAD_PLANNING_CONTRACT_URGENT} J.: <strong style="color:${a.cliffRisk ? 'var(--danger)' : 'var(--text-main)'};">${a.cliff.length} Spieler</strong></div>
                 </div>
+                ${a.thin || a.ausfallRisiko || a.agingRisk || a.cliffRisk ? `<button onclick="openMarktFuerPosition('${a.pos}')" class="btn-secondary" style="margin-top:6px;">🔎 Passende Spieler auf dem Markt</button>` : ''}
             </div>`).join('');
     }
 
@@ -9220,6 +9302,82 @@ function renderTransferPokerBox() {
             + (weg ? `<button onclick="clearMarktMerklisteWeg()" class="btn-secondary" style="margin-top:4px;">Verschwundene entfernen</button>` : '') + '</div>';
     }
 
+    // ---------- Marktfilter (Phase 26.17) ----------
+    // Position, „nur leistbar“ und Sortierung für die Marktliste; gilt nur für die laufende Sitzung (kein Spielstand).
+    // Die Karten behalten ihren Index in marketPlayers, damit Verhandeln und Sofortkauf den richtigen Spieler treffen.
+    let marktFilter = { pos: '', nurLeistbar: false, sortierung: 'standard' };
+    const MARKT_SORTIERUNGEN = { standard: 'Standard', staerke: 'Stärke', preis: 'Preis', alter: 'Alter' };
+
+    function setMarktFilterPos(pos) {
+        marktFilter.pos = marktFilter.pos === pos ? '' : pos;
+        renderTransferView();
+    }
+    function toggleMarktFilterLeistbar() {
+        marktFilter.nurLeistbar = !marktFilter.nurLeistbar;
+        renderTransferView();
+    }
+    function setMarktSortierung(wert) {
+        if (!MARKT_SORTIERUNGEN[wert]) { showToast('Unbekannte Sortierung.', 'error'); return; }
+        marktFilter.sortierung = wert;
+        renderTransferView();
+    }
+    function resetMarktFilter() {
+        marktFilter = { pos: '', nurLeistbar: false, sortierung: 'standard' };
+        renderTransferView();
+    }
+
+    function getMarktAnsicht() {
+        let liste = marketPlayers.map((p, idx) => ({ p, idx }));
+        if (marktFilter.pos) liste = liste.filter(x => x.p.pos === marktFilter.pos);
+        if (marktFilter.nurLeistbar) liste = liste.filter(x => getKaufHindernisse(x.p).length === 0);
+        const s = marktFilter.sortierung;
+        if (s === 'staerke') liste.sort((a, b) => b.p.strength - a.p.strength);
+        else if (s === 'preis') liste.sort((a, b) => getTransferAsking(a.p) - getTransferAsking(b.p));
+        else if (s === 'alter') liste.sort((a, b) => (a.p.age || 0) - (b.p.age || 0));
+        return liste;
+    }
+
+    function renderMarktFilter(anzahl) {
+        const box = document.getElementById('market-filter-box');
+        if (!box) return;
+        const posKnopf = pos => `<button onclick="setMarktFilterPos('${pos}')" class="${marktFilter.pos === pos ? 'btn-action' : 'btn-secondary'}" style="width:auto; flex:0 0 auto;" aria-pressed="${marktFilter.pos === pos}">${pos}</button>`;
+        const aktiv = marktFilter.pos || marktFilter.nurLeistbar || marktFilter.sortierung !== 'standard';
+        box.innerHTML = `<div class="panel" style="margin-bottom:8px; padding:8px;">
+            <div style="display:flex; flex-wrap:wrap; gap:4px; align-items:center;">${['TW', 'ABW', 'MIT', 'ST'].map(posKnopf).join('')}
+                <button onclick="toggleMarktFilterLeistbar()" class="${marktFilter.nurLeistbar ? 'btn-action' : 'btn-secondary'}" style="width:auto; flex:0 0 auto;" aria-pressed="${marktFilter.nurLeistbar}">✓ Nur leistbar</button></div>
+            <label class="ui-field" style="margin-top:6px;"><span class="ui-field-label">Sortieren nach</span><select class="input-inline" onchange="setMarktSortierung(this.value)" style="width:100%; box-sizing:border-box; text-align:left; font-weight:normal; font-family:inherit;">${Object.entries(MARKT_SORTIERUNGEN).map(([k, v]) => `<option value="${k}"${marktFilter.sortierung === k ? ' selected' : ''}>${v}</option>`).join('')}</select></label>
+            <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">${anzahl} von ${marketPlayers.length} Spielern${aktiv ? ` <button onclick="resetMarktFilter()" class="btn-secondary" style="width:auto; margin-left:6px;">Filter zurücksetzen</button>` : ''}</div></div>`;
+    }
+
+    // Aus dem Kaderplaner: Markt mit der dünn besetzten Position öffnen
+    function openMarktFuerPosition(pos) {
+        if (!['TW', 'ABW', 'MIT', 'ST'].includes(pos)) { showToast('Unbekannte Position.', 'error'); return; }
+        marktFilter = { pos, nurLeistbar: false, sortierung: 'staerke' };
+        showScreen('screen-transfer');
+        setTransferTab('market');
+        renderTransferView();
+    }
+
+    // ---------- Kaderfolgen eines Verkaufs (Phase 26.17) ----------
+    // Was bleibt auf der Position, wenn der Spieler geht? Mindestbesetzung wie im Kaderplaner (SQUAD_PLANNING_MIN_HEALTHY).
+    function getVerkaufsFolgen(p) {
+        if (!p) return null;
+        const rest = squad.filter(x => x.id !== p.id && x.pos === p.pos);
+        const minimum = typeof SQUAD_PLANNING_MIN_HEALTHY !== 'undefined' ? SQUAD_PLANNING_MIN_HEALTHY[p.pos] || 0 : 0;
+        const nachfolger = [...rest].sort((a, b) => b.strength - a.strength)[0] || null;
+        const bester = !rest.some(x => x.strength > p.strength);
+        return { rest: rest.length, minimum, zuWenig: rest.length < minimum, startelf: lineup.includes(p.id), bester, nachfolger };
+    }
+
+    function getVerkaufsFolgenHtml(p) {
+        const f = getVerkaufsFolgen(p);
+        if (!f) return '';
+        const teile = [`danach ${f.rest} ${p.pos} (Kaderplaner: mindestens ${f.minimum})`];
+        if (f.startelf) teile.push('steht in der Startelf');
+        if (f.bester) teile.push(f.nachfolger ? `bester ${p.pos}, Nachfolger wäre ${f.nachfolger.name} (Str ${f.nachfolger.strength})` : `einziger ${p.pos}`);
+        return `<div style="font-size:var(--fs-caption); color:${f.zuWenig ? 'var(--danger)' : 'var(--text-muted)'}; margin-top:4px; overflow-wrap:anywhere;">${f.zuWenig ? '⚠️' : '📋'} Nach dem Verkauf: ${teile.join(' · ')}</div>`;
+    }
+
     // Was hindert dich gerade am Sofortkauf? Dieselben Prüfungen wie finalizePlayerPurchase(), aber ohne etwas zu ändern.
     // Liefert die Gründe als Liste; leer heißt: bezahlbar.
     function getKaufHindernisse(p) {
@@ -9273,7 +9431,7 @@ function renderTransferPokerBox() {
                     ],
                     kpi: { wert: formatVal(o.currentBid), label: 'Gebot', farbe: diffColor },
                     aside: `<button onclick="openPlayerDetail('${o.playerId}','squad')" class="btn-secondary ui-card-info" title="Details" aria-label="Details zu ${o.playerName}">ℹ️</button>`,
-                    body: o.statusText ? `<span style="color:var(--text-box);">${o.statusText}</span>` : '',
+                    body: (o.statusText ? `<span style="color:var(--text-box);">${o.statusText}</span>` : '') + (p ? getVerkaufsFolgenHtml(p) : ''),
                     actions: `<button onclick="acceptTransferOffer('${o.id}')" class="btn-primary">✔ Annehmen (${formatVal(o.currentBid)})</button>
                         <button onclick="rejectTransferOffer('${o.id}')" class="btn-danger">✖ Ablehnen</button>`
                 }) + `
@@ -9294,7 +9452,10 @@ function renderTransferPokerBox() {
         renderMarktMerkliste();
         let mList = document.getElementById('market-list');
         mList.innerHTML = '';
-        marketPlayers.forEach((p, idx) => {
+        const marktAnsicht = getMarktAnsicht();
+        renderMarktFilter(marktAnsicht.length);
+        if (!marktAnsicht.length && marketPlayers.length) mList.innerHTML = '<div class="box" style="text-align:center; color:var(--text-muted);">Kein Spieler passt zum Filter.</div>';
+        marktAnsicht.forEach(({ p, idx }) => {
             let row = document.createElement('div');
             row.className = 'panel player-card';
             row.style.cssText = 'margin-bottom:6px; padding:8px;';
@@ -12686,6 +12847,44 @@ function renderZuletzt() {
     if (box.innerHTML !== html) box.innerHTML = html;
 }
 
+// ---------- Spielersuche (Phase 26.17) ----------
+// Sucht ab zwei Buchstaben in allen Bereichen mit Spielerdetail; Groß-/Kleinschreibung und Akzente zählen nicht.
+const SPIELER_SUCHE_MAX = 8;
+function sucheNormal(t) { return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+
+function sucheSpieler(text) {
+    const q = sucheNormal(text).trim();
+    if (q.length < 2) return [];
+    const bereiche = [
+        ['squad', 'Kader', typeof squad !== 'undefined' ? squad : []],
+        ['secondTeam', 'Zweite Mannschaft', typeof secondTeamSquad !== 'undefined' ? secondTeamSquad : []],
+        ['youth', 'Jugend', typeof youthTalents !== 'undefined' ? youthTalents : []],
+        ['market', 'Transfermarkt', typeof marketPlayers !== 'undefined' ? marketPlayers : []],
+        ['market', 'Vereinslos', typeof freeAgentPlayers !== 'undefined' ? freeAgentPlayers : []],
+        ['scout', 'Scouting', typeof globalScoutResults !== 'undefined' ? globalScoutResults : []]
+    ];
+    const treffer = [];
+    bereiche.forEach(([pool, label, liste]) => liste.forEach(p => { if (p && p.name && sucheNormal(p.name).includes(q)) treffer.push({ p, pool, label }); }));
+    return treffer;
+}
+
+function renderSpielerSuche(text) {
+    const box = document.getElementById('player-search-results');
+    if (!box) return;
+    const q = String(text || '').trim();
+    if (q.length < 2) { box.innerHTML = ''; return; }
+    const treffer = sucheSpieler(q);
+    box.innerHTML = treffer.length
+        ? treffer.slice(0, SPIELER_SUCHE_MAX).map(t => `<button onclick="oeffneSuchtreffer(this.dataset.id, this.dataset.pool)" data-id="${t.p.id}" data-pool="${t.pool}" class="btn-secondary">${mpEsc(t.p.name)} <span style="color:var(--text-muted);">· ${t.p.pos || ''} · Str ${t.p.strength} · ${t.label}</span></button>`).join('')
+            + (treffer.length > SPIELER_SUCHE_MAX ? `<div style="font-size:var(--fs-caption); color:var(--text-muted);">und ${treffer.length - SPIELER_SUCHE_MAX} weitere – genauer suchen</div>` : '')
+        : '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Kein Spieler gefunden.</div>';
+}
+
+function oeffneSuchtreffer(id, pool) {
+    if (typeof closeMenuDrawer === 'function') closeMenuDrawer();
+    openPlayerDetail(id, pool);
+}
+
 function findOpenOverlay() {
     const offen = [...document.querySelectorAll('.generic-modal-overlay.show, .tutorial-overlay.show')];
     return offen.length ? offen.sort((a, b) => (parseInt(getComputedStyle(b).zIndex) || 0) - (parseInt(getComputedStyle(a).zIndex) || 0))[0] : null;
@@ -12871,12 +13070,24 @@ function erkenneWisch(start, ende, breite) {
     return dx < 0 ? 1 : -1;
 }
 
+// Im offenen Spielerdetail blättert ein Wisch zum vorigen oder nächsten Spieler (Phase 26.17)
+function swipeImSpielerdetail(el) {
+    if (!el || !el.closest || !el.closest('#player-detail-overlay.show')) return false;
+    if (el.closest('input, textarea, select, svg, canvas')) return false;
+    for (let n = el; n && n.id !== 'player-detail-overlay'; n = n.parentElement) {
+        const ox = getComputedStyle(n).overflowX;
+        if ((ox === 'auto' || ox === 'scroll') && n.scrollWidth > n.clientWidth + 1) return false;
+    }
+    return true;
+}
+
 document.addEventListener('touchstart', ev => {
     swipeStart = null;
     if (ev.touches.length !== 1 || getWischen() !== 'an') return;
-    if (swipeZielGesperrt(ev.target)) return;
+    const detail = swipeImSpielerdetail(ev.target);
+    if (!detail && swipeZielGesperrt(ev.target)) return;
     const t = ev.touches[0];
-    swipeStart = { x: t.clientX, y: t.clientY, t: Date.now() };
+    swipeStart = { x: t.clientX, y: t.clientY, t: Date.now(), detail };
 }, { passive: true });
 
 document.addEventListener('touchend', ev => {
@@ -12885,7 +13096,9 @@ document.addEventListener('touchend', ev => {
     if (!start || !ev.changedTouches.length) return;
     const t = ev.changedTouches[0];
     const richtung = erkenneWisch(start, { x: t.clientX, y: t.clientY, t: Date.now() }, window.innerWidth);
-    if (richtung) swipeWechseln(richtung);
+    if (!richtung) return;
+    if (start.detail) { if (typeof blaetterSpielerDetail === 'function') blaetterSpielerDetail(richtung); }
+    else swipeWechseln(richtung);
 }, { passive: true });
 
 document.addEventListener('touchcancel', () => { swipeStart = null; }, { passive: true });
@@ -23468,6 +23681,17 @@ function setSquadBelastungFilter() {
     renderSquadView();
 }
 
+// Kaderansicht (Phase 26.17): Karten oder kompakte Liste; Einstellung dieses Geräts
+const KADER_ANSICHT_KEY = 'anstoss_fm13_kaderansicht';
+function getKaderAnsicht() {
+    return (typeof safeLocalGet === 'function' ? safeLocalGet(KADER_ANSICHT_KEY) : null) === 'kompakt' ? 'kompakt' : 'karten';
+}
+function toggleKaderAnsicht() {
+    const neu = getKaderAnsicht() === 'kompakt' ? 'karten' : 'kompakt';
+    if (typeof safeLocalSet === 'function') safeLocalSet(KADER_ANSICHT_KEY, neu);
+    renderSquadView();
+}
+
 function setSquadTagFilter(tagId) {
     squadTagFilter = squadTagFilter === tagId ? '' : tagId;
     renderSquadView();
@@ -23483,7 +23707,8 @@ function renderSquadTagFilter() {
     const rote = squad.filter(p => getBelastungsAmpel(p).stufe === 'rot').length;
     if (squadBelastungNurRot && !rote) squadBelastungNurRot = false;
     const ampel = `<button onclick="setSquadBelastungFilter()" class="${squadBelastungNurRot ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:var(--fs-caption);" aria-pressed="${squadBelastungNurRot}" title="Zeigt nur Spieler mit hoher Belastung: wenig Fitness, Dauereinsatz oder Verletzungsgeschichte">🚦 Belastung rot (${rote})</button>`;
-    box.innerHTML = `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:3px;">Filtern:</div><div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px;">${ampel}${vorhanden.map(e => `<button onclick="setSquadTagFilter('${e.id}')" class="${squadTagFilter === e.id ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:var(--fs-caption);" aria-pressed="${squadTagFilter === e.id}">${e.label} (${zaehler[e.id]})</button>`).join('')}</div>`;
+    const ansicht = `<button onclick="toggleKaderAnsicht()" class="btn-secondary" style="width:auto; font-size:var(--fs-caption);" aria-pressed="${getKaderAnsicht() === 'kompakt'}" title="Zwischen Karten und kompakter Liste wechseln">${getKaderAnsicht() === 'kompakt' ? '🃏 Karten' : '☰ Kompakt'}</button>`;
+    box.innerHTML = `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:3px;">Filtern:</div><div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px;">${ansicht}${ampel}${vorhanden.map(e => `<button onclick="setSquadTagFilter('${e.id}')" class="${squadTagFilter === e.id ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:var(--fs-caption);" aria-pressed="${squadTagFilter === e.id}">${e.label} (${zaehler[e.id]})</button>`).join('')}</div>`;
 }
 
 // ---------- Etiketten-Bilanz (Phase 26.13) ----------
