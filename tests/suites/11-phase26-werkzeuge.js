@@ -2492,7 +2492,7 @@ async function testRunde32Statistik(browser) {
         out.mTor = pruefeTorMeilenstein(p) === true && p.meilenstein.text === '10. Tor für den Verein' && p.meilenstein.season === game.season && inboxMessages.length === vor + 1 && inboxMessages[0].title.includes('Meilenstein');
         p.goalsCareer = 11; out.mKeiner = pruefeTorMeilenstein(p) === false && inboxMessages.length === vor + 1;
         out.mNurKader = pruefeTorMeilenstein({ name: 'Fremd', goalsCareer: 25 }) === false;
-        out.mVerdrahtet = creditOwnGoal.toString().includes('pruefeTorMeilenstein') && processPostMatchRoutine.toString().includes('p.meilenstein');
+        out.mVerdrahtet = creditOwnGoal.toString().includes('pruefeTorMeilenstein') && processPostMatchRoutine.toString().includes('.meilenstein'); // im minifizierten Build heißt p anders
         showScreen('screen-squad'); setSquadTab('aufstellung'); squadFilterPos = 'alle'; squadTagFilter = ''; squadBelastungNurRot = false;
         if (typeof getKaderAnsicht === 'function' && getKaderAnsicht() === 'kompakt') toggleKaderAnsicht();
         renderSquadView();
