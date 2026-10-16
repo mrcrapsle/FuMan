@@ -1043,6 +1043,7 @@
         // Eiserne Nerven (Krisenmanager-Perk, NEU): der Manager selbst bleibt auch unter
         // Druck spürbar gelassener.
         if (managerRPG.perks.ironNerves && stressShift > 0) stressShift = Math.round(stressShift * 0.5);
+        if (stressShift > 0 && typeof istMentaltrainingAktiv === 'function' && istMentaltrainingAktiv()) stressShift = Math.round(stressShift * 0.5); // Mentaltraining (Privatleben)
         if (game.teamTraining === 'matchprep') stressShift = Math.max(-1, stressShift - 1); // bessere Vorbereitung dämpft den Druck
         if (stressShift !== 0) privateLife.stress = Math.max(0, Math.min(100, (privateLife.stress || 0) + stressShift));
 

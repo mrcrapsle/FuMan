@@ -700,3 +700,35 @@ Aus acht Vorschlägen; drei gab es schon und wurden nicht gebaut: Postfach anhef
 - **Aufstellungs-Gedächtnis** (`merkeStartelf()` aus `recordOwnLeagueResult()`, live und simuliert; `game.startelfGedaechtnis`, höchstens fünf): Startelf vom Anpfiff (Merkzettel `game.etikettImEinsatz`, jetzt mit Formation) mit Gegner und Ergebnis. Im Spieltag-Check und unter den Aufstellungsvorlagen mit heutiger Stärke; „Diese Elf aufstellen“ ersetzt Ausfälle wie bei Vorlagen (`resolveLineupPreset()`) und nennt sie.
 - **Von den Tests gefunden:** Die Postfach-Kategorie „Analyse“ färbte den Titel mit `--violet`, das im Kontrast-Theme eine dunkle Fläche ist (Kontrast 1,66); die Kategorie war bis zum Monatsbericht unbenutzt. Jetzt `--blue`.
 - Neue Spielstand-Felder (mit Absicherung): `game.startelfGedaechtnis`, `game.monatsStand`, `game.platzVerlaufVorjahr.punkte`.
+
+## Phase 26.19: Admin-Modus und Privatleben erweitert (Feature-Branch, noch nicht gemergt)
+Vor dem Bau gegen die vorhandenen Knöpfe in `js/admin.js` und `js/private-life.js` geprüft. Testsuiten `testAdminWerkzeuge` und `testPrivatlebenPlus`.
+
+**Admin-Modus** (`js/admin-tools.js`, Kasten „🧰 Test- und Diagnosewerkzeuge“, `renderAdminTools()` aus `renderAdminView()`), 16 Werkzeuge:
+- Spieler-Editor (Stärke 1 bis 99, Alter, Vertrag, Fitness, Moral, Position; Marktwert neu berechnet; leere Felder werden abgelehnt).
+- Bis zum Saisonende vorspulen (über `adminAdvanceMatchdays()`).
+- Wetter für genau einen Spieltag festlegen (`game.adminWetter`, ausgewertet in `rollWeather()`).
+- Stärke des nächsten Ligagegners setzen.
+- Transfermarkt neu erzeugen; Transferangebot für einen gewählten Spieler erzwingen (`triggerNewAITransferOffer()`).
+- Jugendtalent ohne Kosten (die Scouting-Kosten werden mit Etikett „🛠️ Admin“ ausgeglichen); alle Erfolge freischalten.
+- Teamstärke-Diagnose: Startelf-Basis und benannte Posten wie in `calcTeamStrength()`, der Rest als „übrige Boni“.
+- Speicher-Diagnose: Größe des Spielstands, größte Teile und Felder, Belegung des Gerätespeichers; Favoriten, „Zuletzt geöffnet“ und Kaderansicht zurücksetzen.
+- Datenprüfung und Reparatur: doppelte Spieler-IDs, Werte, die keine Zahl sind, Verträge unter 1, unbekannte oder doppelte IDs in der Aufstellung, Kassenwerte.
+- Sicherungspunkt setzen und laden (nur bis zum Neuladen, Laden über `loadSaveSafely()`).
+- Bildschirm direkt öffnen (Haupt- und Hub-Unterbildschirme).
+- Zufall mit Startwert festlegen und wieder freigeben (wiederholbare Testläufe).
+- Zeichenzeiten der wichtigsten Bildschirme messen.
+
+**Privatleben** (`js/private-life-extra.js`, neue Kästen `#priv-finanz-box`, `#priv-kurse-box`, `#priv-ziele-box`, Haustier im Hobby-Kasten), 12 Funktionen:
+- Besitz verkaufen (70 % des Kaufpreises, Prestige geht zurück).
+- Sparkonto mit 3 % Zinsen im Jahr, je Spieltag gutgeschrieben.
+- Fortbildungen mit Abklingzeit (Sprachkurs, Sportpsychologie, Medientraining, Hospitation): Kosten, Erfahrung über `addManagerXP()`, Stress und Prestige.
+- Mentaltraining: sechs Spieltage halber Stresszuwachs nach Niederlagen und Remis (in `processPostMatchRoutine()` neben „Eiserne Nerven“), Abklingzeit 17 Spieltage.
+- Gehaltsverhandlung einmal je Saison: +15 % Gehalt, sonst Vorstand -3; Chance aus Vorstandszufriedenheit und Tabellenhälfte, angezeigt.
+- Haustier (Katze, Hund, Reitpferd): Anschaffung, Unterhalt und Stressabbau je Spieltag.
+- Finanzübersicht je Spieltag mit Saldo und dem aktuellen Teamstärke-Abzug durch Stress.
+- Vermögensverlauf je Saison (`archivePrivatVermoegen()` am Saisonende, höchstens 20) und private Ziele mit Fortschritt (reine Anzeige).
+- Mehr Inhalte: vier Besitztümer (Ferienhaus und Weingut mit Ertrag je Spieltag, Penthouse, Privatjet), vier Hobbys, vier Nebenjobs.
+- Spielwirkung nur über vorhandene Wege: Stress (Teamstärke), Manager-Erfahrung, Vorstand bei abgelehnter Gehaltsforderung.
+- **Von den Tests gefunden:** Der Spieler-Editor übergab den Spieler statt seiner Stärke an `calculatePlayerMarketValue()` (Marktwert wurde keine Zahl); die Bildschirmliste ließ die Unterbildschirme der Hubs aus; beim Laden eines älteren Stands wären die neuen Privatleben-Felder des laufenden Spiels stehen geblieben (jetzt `getPrivatExtrasStandard()` vor `Object.assign` in `js/save.js`).
+

@@ -82,6 +82,7 @@
 
         let rawEl = document.getElementById('adm-ins-raw');
         if (rawEl) rawEl.innerText = (rawMaterials.totalStock || 0).toLocaleString() + " kg";
+        if (typeof renderAdminTools === 'function') renderAdminTools();
 
     }
 

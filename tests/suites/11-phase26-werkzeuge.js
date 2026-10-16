@@ -2715,6 +2715,202 @@ async function testRunde33Funktionen(browser) {
     await page.close();
 }
 
+async function testAdminWerkzeuge(browser) {
+    console.log('\n[26.19] Admin-Modus: Spieler-Editor, Wetter, Gegner, Markt, Angebot, Jugend, Diagnosen, Reparatur, Sicherungspunkt, Zufall, Zeiten, Erfolge');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.evaluate(R32_HILFEN);
+    const r = await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false; simulateMatchdays(2);
+        const out = {};
+        const toasts = []; const toastAlt = showToast; showToast = (t) => { toasts.push(t); };
+        showScreen('screen-admin'); renderAdminView();
+        const box = document.getElementById('admin-tools-box');
+        out.box = box.querySelectorAll('details.ui-fold').length === 7;
+        out.verdrahtet = renderAdminView.toString().includes('renderAdminTools') && rollWeather.toString().includes('adminWetter');
+        box.querySelectorAll('details').forEach(d => { d.open = true; });
+        out.wAdmin = JSON.stringify(woerter('#admin-tools-box button'));
+        out.breit = ueberlauf();
+
+        // Spieler-Editor
+        const sp = squad[1];
+        adminSpielerWaehlen(sp.id);
+        const setze = (id, v) => { document.getElementById(id).value = v; };
+        setze('adm-sp-staerke', 150); setze('adm-sp-alter', 19); setze('adm-sp-vertrag', 4); setze('adm-sp-fitness', 77); setze('adm-sp-moral', 66); setze('adm-sp-pos', 'ST');
+        out.editor = adminSpielerUebernehmen() === true && sp.strength === 99 && sp.age === 19 && sp.contracts === 4 && sp.fitness === 77 && sp.morale === 66 && sp.pos === 'ST';
+        setze('adm-sp-alter', '');
+        out.editorLeer = adminSpielerUebernehmen() === false && toasts.pop().includes('jedes Feld');
+
+        // Wetter
+        setze('adm-wetter', 3); adminWetterSetzen();
+        out.wetter = game.adminWetter === 3 && rollWeather() === WEATHER_TYPES[3] && game.adminWetter === null;
+
+        // Gegnerstärke
+        const m = getNextLeagueMatch();
+        renderAdminTools(); setze('adm-gegner-staerke', 42); adminGegnerStaerkeSetzen();
+        out.gegner = m.opp.strength === 42 && m.opp.baseStrength === 42;
+
+        // Markt, Angebot, Jugend, Erfolge
+        const altMarkt = marketPlayers.map(p => p.id).join();
+        adminMarktNeu(); out.markt = marketPlayers.length > 0 && marketPlayers.map(p => p.id).join() !== altMarkt;
+        incomingOffers = [];
+        renderAdminTools(); setze('adm-angebot-spieler', squad[0].id);
+        out.angebot = adminAngebotErzwingen() === true && incomingOffers[0].playerId === squad[0].id && adminAngebotErzwingen() === false;
+        youthTalents = []; const geld = game.money;
+        adminJugendtalent(); out.jugend = youthTalents.length === 1 && Math.abs(game.money - geld) < 1;
+        out.erfolge = adminAlleErfolge() === ACHIEVEMENT_DEFINITIONS.length && game.achievements.length === ACHIEVEMENT_DEFINITIONS.length && adminAlleErfolge() === 0;
+
+        // Diagnosen
+        const d = getAdminStaerkeDiagnose();
+        out.diagnose = d.posten.length === 9 && d.auswaerts === calcTeamStrength(false) && Math.abs(d.posten.reduce((t, x) => t + x[1], 0) - d.auswaerts) < 1e-9 && d.heim === calcTeamStrength(true);
+        const sd = getAdminSpeicherDiagnose();
+        out.speicher = sd.gesamt === JSON.stringify(buildSaveState()).length && sd.teile.length > 0 && sd.spiel.length > 0;
+        safeLocalSet('anstoss_fm13_favoriten', '["screen-squad"]');
+        adminBedienEinstellungenZuruecksetzen(); out.bedienReset = safeLocalGet('anstoss_fm13_favoriten') === null;
+
+        // Datenprüfung und Reparatur
+        out.sauber = getAdminDatenpruefung().length === 0;
+        squad[2].fitness = NaN; lineup.push('gibt-es-nicht'); squad.push(Object.assign({}, squad[3]));
+        const befunde = getAdminDatenpruefung();
+        out.befunde = befunde.length === 3 && befunde.some(b => b.includes('Doppelte')) && befunde.some(b => b.includes('fitness')) && befunde.some(b => b.includes('unbekannte ID'));
+        out.repariert = adminDatenReparieren() === 3 && getAdminDatenpruefung().length === 0 && squad[2].fitness === 100 && lineup.length === 11;
+        out.nichtsZuTun = adminDatenReparieren() === 0;
+
+        // Sicherungspunkt
+        adminSicherungSetzen(); const md = game.matchday, kasse = game.money;
+        game.money += 12345; game.matchday += 1;
+        out.sicherung = adminSicherungLaden() === true && game.money === kasse && game.matchday === md;
+
+        // Bildschirm, Zufall, Zeiten
+        renderAdminTools(); setze('adm-bildschirm', 'screen-finances'); adminBildschirmOeffnen();
+        out.bildschirm = document.getElementById('screen-finances').style.display !== 'none' && [...document.getElementById('adm-bildschirm').options].some(o => o.value === 'screen-squad');
+        showScreen('screen-admin');
+        const original = Math.random;
+        setze('adm-seed', 7); adminZufallFestlegen(); const a = [Math.random(), Math.random(), Math.random()];
+        setze('adm-seed', 7); adminZufallFestlegen(); const b = [Math.random(), Math.random(), Math.random()];
+        adminZufallZuruecksetzen();
+        out.zufall = a.join() === b.join() && a.every(x => x >= 0 && x < 1) && Math.random === original;
+        adminZeitenMessen();
+        out.zeiten = adminMessung.length >= 5 && adminMessung.every(x => x.ms >= 0) && document.getElementById('admin-tools-box').textContent.includes(' ms');
+
+        // Bis Saisonende
+        adminBisSaisonende();
+        out.saisonende = game.matchday === 35;
+        adminBisSaisonende(); out.saisonendeSchon = toasts.pop().includes('Saison abschließen');
+        showToast = toastAlt;
+        return out;
+    });
+    const ok = (...ks) => ks.every(k => r[k] === true);
+    const werte = ks => JSON.stringify(ks.map(k => r[k]));
+    const A = ['box', 'verdrahtet', 'breit', 'editor', 'editorLeer', 'wetter', 'gegner'];
+    assert(ok(...A), `Admin: Werkzeugkasten, Spieler-Editor mit Grenzen, Wetter für einen Spieltag, Gegnerstärke (${werte(A)})`);
+    const B = ['markt', 'angebot', 'jugend', 'erfolge'];
+    assert(ok(...B), `Admin: Markt neu, Angebot erzwingen, Jugendtalent ohne Kosten, alle Erfolge (${werte(B)})`);
+    const C = ['diagnose', 'speicher', 'bedienReset', 'sauber', 'befunde', 'repariert', 'nichtsZuTun'];
+    assert(ok(...C), `Admin: Teamstärke- und Speicher-Diagnose, Datenprüfung mit Reparatur (${werte(C)})`);
+    const D = ['sicherung', 'bildschirm', 'zufall', 'zeiten', 'saisonende', 'saisonendeSchon'];
+    assert(ok(...D), `Admin: Sicherungspunkt, Bildschirm öffnen, wiederholbarer Zufall, Zeichenzeiten, bis Saisonende (${werte(D)})`);
+    assert(r.wAdmin === '[]', `Admin-Knöpfe bei 320 px in breiter Schrift: kein Wort breiter als sein Knopf (${r.wAdmin})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
+async function testPrivatlebenPlus(browser) {
+    console.log('\n[26.19] Privatleben: Sparkonto, Besitz verkaufen, Fortbildung, Mentaltraining, Gehalt, Haustier, Finanzen, Vermögen, Ziele');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.evaluate(R32_HILFEN);
+    const r = await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false;
+        const out = {};
+        const toasts = []; const toastAlt = showToast; showToast = (t) => { toasts.push(t); };
+        privateLife.money = 5000000; privateLife.stress = 40; privateLife.prestige = 10;
+        showScreen('screen-private'); renderPrivateLifeView();
+        out.boxen = ['priv-finanz-box', 'priv-kurse-box', 'priv-ziele-box'].every(id => document.getElementById(id).textContent.length > 20) && document.getElementById('priv-haustier-select').options.length === 4;
+        out.inhalte = LIFESTYLE_ASSETS.length === 12 && HOBBIES.length === 9 && PRESTIGE_INCOME_ACTIVITIES.length === 8 && document.getElementById('priv-hobby-select').options.length === 9;
+
+        // Sparkonto
+        out.sparen = privatSparen(100000) === true && privateLife.sparkonto === 100000 && privateLife.money === 4900000 && privatAbheben(200000) === false && privatSparen(-5) === false;
+        const zins = getPrivatZinsenProSpieltag();
+        out.zins = zins === Math.round(100000 * 0.03 / 34);
+        const spAlt = privateLife.sparkonto; processPrivateLifeMatchday(); out.zinsGebucht = privateLife.sparkonto === spAlt + zins;
+        out.abheben = privatAbheben(50000) === true && privateLife.sparkonto === spAlt + zins - 50000;
+
+        // Besitz mit Ertrag kaufen und verkaufen
+        const g = LIFESTYLE_ASSETS.find(a => a.id === 'weingut');
+        buyLifestyleAsset('weingut');
+        out.ertrag = getBesitzErtraege() === g.income && document.getElementById('priv-assets-list').innerHTML.includes("sellLifestyleAsset('weingut')");
+        const geld = privateLife.money, pr = privateLife.prestige;
+        out.verkauf = sellLifestyleAsset('weingut') === true && privateLife.money === geld + Math.round(g.cost * 0.7) && privateLife.prestige === pr - g.prestige && !privateLife.assets.includes('weingut') && sellLifestyleAsset('weingut') === false;
+
+        // Fortbildung
+        const xp = managerRPG.xp + managerRPG.level * 100000, gk = privateLife.money;
+        out.kurs = besucheKurs('sprache') === true && privateLife.money === gk - 3000 && managerRPG.xp + managerRPG.level * 100000 > xp && besucheKurs('sprache') === false && getKursRest(PRIVAT_KURSE[0]) === 10;
+        game.matchday += 10; out.kursWieder = getKursRest(PRIVAT_KURSE[0]) === 0; game.matchday -= 10;
+
+        // Mentaltraining
+        out.mental = bucheMentaltraining() === true && istMentaltrainingAktiv() && bucheMentaltraining() === false && processPostMatchRoutine.toString().includes('istMentaltrainingAktiv');
+        game.matchday += 6; out.mentalVorbei = !istMentaltrainingAktiv(); game.matchday -= 6;
+
+        // Gehaltsverhandlung
+        const zufall = Math.random;
+        const lohn = privateLife.wage;
+        Math.random = () => 0; out.gehaltJa = verhandleGehalt() === true && privateLife.wage === Math.round(lohn * 1.15) && verhandleGehalt() === null;
+        privateLife.gehaltVerhandeltSaison = 0; const vorstand = game.boardSat;
+        Math.random = () => 0.999; out.gehaltNein = verhandleGehalt() === false && game.boardSat === Math.max(0, vorstand - 3);
+        Math.random = zufall;
+        out.chance = getGehaltsChance() > 0 && getGehaltsChance() <= 0.9;
+
+        // Haustier
+        const gh = privateLife.money;
+        out.tier = setHaustier('hund') === true && privateLife.haustier === 'hund' && privateLife.money === gh - 1500;
+        privateLife.stress = 30; const gt = privateLife.money; processPrivatExtrasSpieltag();
+        out.tierSpieltag = privateLife.stress === 28 && privateLife.money === gt - 80 + getPrivatZinsenProSpieltag() * 0 + getBesitzErtraege();
+        out.tierZuViel = (() => { privateLife.money = 10; return setHaustier('pferd') === false && privateLife.haustier === 'hund'; })();
+        privateLife.money = 5000000;
+
+        // Finanzen, Vermögen, Ziele
+        const fin = getPrivatFinanzen();
+        out.finanzen = fin.saldo === fin.posten.reduce((t, x) => t + x[1], 0) && fin.posten.some(x => x[0] === 'Haustier' && x[1] === -80) && Math.abs(fin.stressMalus - privateLife.stress * 0.03) < 1e-9;
+        renderPrivateLifeView();
+        out.finanzBox = document.getElementById('priv-finanz-box').textContent.includes('Saldo') && document.getElementById('priv-finanz-box').textContent.includes('Teamstärke');
+        archivePrivatVermoegen(); archivePrivatVermoegen();
+        out.verlauf = privateLife.verlauf.length === 1 && privateLife.verlauf[0].wert === getPrivatVermoegen();
+        renderPrivateLifeView(); out.kurve = !!document.querySelector('#priv-ziele-box svg polyline');
+        out.saisonende = concludeSeasonAndAdvance.toString().includes('archivePrivatVermoegen');
+        privateLife.autobiographyWritten = true;
+        const ziele = getPrivatZiele();
+        out.ziele = ziele.length === 9 && ziele.find(z => z.text === 'Autobiografie veröffentlicht').anteil === 1 && ziele.find(z => z.text === 'Vermögen 1 Mio. €').anteil === 1;
+        renderPrivateLifeView(); out.zieleBox = document.getElementById('priv-ziele-box').textContent.includes('erreicht');
+
+        // Alte Stände: fehlende Felder und kein Übertrag beim Laden
+        ['sparkonto', 'kurseZuletzt', 'haustier', 'verlauf', 'mentalBis', 'mentalZuletzt', 'gehaltVerhandeltSaison'].forEach(k => delete privateLife[k]);
+        renderPrivateLifeView();
+        out.altesFeld = privateLife.sparkonto === 0 && privateLife.haustier === 'none' && Array.isArray(privateLife.verlauf);
+        const st = JSON.parse(JSON.stringify(buildSaveState()));
+        delete st.privateLife.sparkonto; delete st.privateLife.haustier;
+        privateLife.sparkonto = 999; privateLife.haustier = 'katze';
+        out.ladenOhneUebertrag = loadSaveSafely(st, { label: 'Test', backup: false, silent: true }) !== false && privateLife.sparkonto === 0 && privateLife.haustier === 'none';
+
+        showScreen('screen-private'); renderPrivateLifeView();
+        out.wPrivat = JSON.stringify(woerter('#screen-private button'));
+        out.breit = ueberlauf();
+        showToast = toastAlt;
+        return out;
+    });
+    const ok = (...ks) => ks.every(k => r[k] === true);
+    const werte = ks => JSON.stringify(ks.map(k => r[k]));
+    const A = ['boxen', 'inhalte', 'sparen', 'zins', 'zinsGebucht', 'abheben', 'ertrag', 'verkauf'];
+    assert(ok(...A), `Privatleben: neue Bereiche, mehr Besitz/Hobbys/Nebenjobs, Sparkonto mit Zinsen, Besitz mit Ertrag verkaufen (${werte(A)})`);
+    const B = ['kurs', 'kursWieder', 'mental', 'mentalVorbei', 'gehaltJa', 'gehaltNein', 'chance', 'tier', 'tierSpieltag', 'tierZuViel'];
+    assert(ok(...B), `Privatleben: Fortbildung mit Abklingzeit, Mentaltraining, Gehaltsverhandlung einmal je Saison, Haustier (${werte(B)})`);
+    const C = ['finanzen', 'finanzBox', 'verlauf', 'kurve', 'saisonende', 'ziele', 'zieleBox', 'altesFeld', 'ladenOhneUebertrag', 'breit'];
+    assert(ok(...C), `Privatleben: Finanzübersicht, Vermögensverlauf, Ziele, alte Spielstände (${werte(C)})`);
+    assert(r.wPrivat === '[]', `Privatleben-Knöpfe bei 320 px in breiter Schrift: kein Wort breiter als sein Knopf (${r.wPrivat})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 module.exports = {
     testSpielvorbereitung,
     testVertragsWerkzeuge,
@@ -2732,4 +2928,6 @@ module.exports = {
     testRunde32Uebersicht,
     testRunde32Statistik,
     testRunde33Funktionen,
+    testAdminWerkzeuge,
+    testPrivatlebenPlus,
 };

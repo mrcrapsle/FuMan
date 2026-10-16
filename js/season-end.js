@@ -393,6 +393,7 @@ function concludeSeasonAndAdvance() {
         // Niederlage um 3 und fiel nur mit bezahlter Freizeit - nach drei Saisons stand
         // fast jeder auf 100 = -3 Stärke), am Boden liegende Moral fängt sich zur Hälfte.
         privateLife.stress = Math.round((privateLife.stress || 0) / 2);
+        if (typeof archivePrivatVermoegen === 'function') archivePrivatVermoegen();
         squad.forEach(p => {
             p.contracts--;
             p.fitness = 100;

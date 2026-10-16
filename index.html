@@ -2417,6 +2417,10 @@
                         Beziehung: <select id="priv-relationship-select" class="input-inline" style="width:180px;" onchange="setRelationshipStatus(this.value)"></select>
                         <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:2px;" id="priv-relationship-desc"></div>
                     </div>
+                    <div style="margin-top:6px;">
+                        Haustier: <select id="priv-haustier-select" class="input-inline" style="max-width:100%;" onchange="setHaustier(this.value)"></select>
+                        <div style="font-size:var(--fs-caption); color:var(--text-muted);" id="priv-haustier-desc"></div>
+                    </div>
                 </div>
 
                 <div class="panel">
@@ -2426,6 +2430,9 @@
                     <input type="number" id="priv-deposit-input" placeholder="Betrag in €" class="input-inline" style="width:100%; margin-bottom:6px;">
                     <button onclick="depositToClub(parseInt(document.getElementById('priv-deposit-input').value)||0)" class="btn-secondary">🏦 Ins Vereinskonto einzahlen (Notkapital)</button>
                 </div>
+                <div class="panel" id="priv-finanz-box"></div>
+                <div class="panel" id="priv-kurse-box"></div>
+                <div class="panel" id="priv-ziele-box"></div>
                 <div class="panel">
                     <div class="panel-header">🌟 Öffentliches Leben</div>
                     <button onclick="writeAutobiography()" id="btn-priv-autobio" class="btn-action" style="margin-bottom:6px;">📖 Autobiografie schreiben (ab 40 Prestige, einmalig)</button>
@@ -2600,6 +2607,10 @@
                     </div>
                 </div>
 
+                <div class="panel">
+                    <div class="panel-header">🧰 Test- und Diagnosewerkzeuge</div>
+                    <div id="admin-tools-box"></div>
+                </div>
                 <div class="panel">
                     <div class="panel-header">💾 Savegame-Export & JSON-Import</div>
                     <textarea id="adm-save-json" style="width:100%; height:65px; background:var(--surface-0); color:var(--primary); font-family:monospace; font-size:var(--fs-caption); border:1px solid color-mix(in srgb, var(--europe) 30%, var(--surface-1)); border-radius:4px; padding:4px;" placeholder="Hier Savegame-JSON einfügen oder exportieren..."></textarea>
@@ -2793,6 +2804,7 @@
 <script src="js/manager-tools.js?v=3.129"></script>
 <script src="js/player-compare.js?v=3.131"></script>
 <script src="js/private-life.js?v=2.1"></script>
+<script src="js/private-life-extra.js?v=2.1"></script>
 <script src="js/player-scandals.js?v=2.1"></script>
 <script src="js/underworld.js?v=2.1"></script>
 <script src="js/tactic-system.js?v=2.1"></script>
@@ -2846,6 +2858,7 @@
 <script src="js/lexicon-en.js?v=3.93"></script>
 <script src="js/season-preview.js?v=3.22"></script>
 <script src="js/admin.js?v=2.1"></script>
+<script src="js/admin-tools.js?v=2.1"></script>
 <script src="js/premium.js?v=2.1"></script>
 <script src="js/save.js?v=2.1"></script>
 <script src="js/save-safety.js?v=3.28"></script>

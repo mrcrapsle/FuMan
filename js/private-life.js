@@ -24,8 +24,8 @@
             assetsList.innerHTML = LIFESTYLE_ASSETS.map(a => {
                 let owned = privateLife.assets.includes(a.id);
                 return `<div class="player-row">
-                    <span><strong>${a.name}</strong> <span style="color:var(--text-muted); font-size:var(--fs-caption);">(${a.category})</span><br><span style="font-size:var(--fs-caption); color:var(--text-muted);">${a.desc} · +${a.prestige} Prestige, -${a.stressRelief}% Stress</span></span>
-                    <button onclick="buyLifestyleAsset('${a.id}')" class="${owned ? 'btn-secondary' : 'btn-action'}" style="width:auto;" ${owned ? 'disabled' : ''}>${owned ? 'Besessen ✓' : `Kaufen [${formatVal(a.cost)}]`}</button>
+                    <span><strong>${a.name}</strong> <span style="color:var(--text-muted); font-size:var(--fs-caption);">(${a.category})</span><br><span style="font-size:var(--fs-caption); color:var(--text-muted);">${a.desc} · +${a.prestige} Prestige, -${a.stressRelief}% Stress${a.income ? `, +${formatVal(a.income)} je Spieltag` : ''}</span></span>
+                    ${owned ? `<button onclick="sellLifestyleAsset('${a.id}')" class="btn-secondary" style="width:auto;">Verkaufen [+${formatVal(Math.round(a.cost * PRIVAT_VERKAUF_ANTEIL))}]</button>` : `<button onclick="buyLifestyleAsset('${a.id}')" class="btn-action" style="width:auto;">Kaufen [${formatVal(a.cost)}]</button>`}
                 </div>`;
             }).join('');
         }
@@ -62,6 +62,8 @@
             let relDescEl = document.getElementById('priv-relationship-desc');
             if (relDescEl && currentRel) relDescEl.innerText = currentRel.desc + (currentRel.wageCost > 0 ? ` (Unterhalt: ${formatVal(currentRel.wageCost)}/SpT)` : '');
         }
+
+        if (typeof renderPrivateLifeExtras === 'function') renderPrivateLifeExtras();
 
         // Neue Funktionen: Button-Zustände
         let autobioBtn = document.getElementById('btn-priv-autobio');
@@ -206,6 +208,7 @@
     // Bisher wurde privateLife.wage nur angezeigt, aber nie tatsächlich ausgezahlt - Kernbug.
     function processPrivateLifeMatchday() {
         privateLife.money += privateLife.wage;
+        if (typeof processPrivatExtrasSpieltag === 'function') processPrivatExtrasSpieltag();
 
         let hobby = HOBBIES.find(h => h.id === privateLife.hobby);
         if (hobby) {

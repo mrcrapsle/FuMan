@@ -507,7 +507,9 @@
     let privateLife = {
         money: 15000, wage: 1200, license: 0, prestige: 10, stress: 15, items: [],
         assets: [], hobby: 'none', relationship: 'single', lastActivity: {},
-        socialMediaActive: false, assistantHired: false, autobiographyWritten: false
+        socialMediaActive: false, assistantHired: false, autobiographyWritten: false,
+        // Phase 26.19 (js/private-life-extra.js)
+        sparkonto: 0, kurseZuletzt: {}, haustier: 'none', verlauf: [], mentalBis: 0, mentalZuletzt: -999, gehaltVerhandeltSaison: 0
     };
 
     const LIFESTYLE_ASSETS = [
@@ -518,14 +520,24 @@
         { id: 'car_classic', name: 'Oldtimer-Sammlung', cost: 120000, prestige: 10, stressRelief: 6, category: 'Fahrzeug', desc: 'Ein Faible für automobile Geschichte.' },
         { id: 'yacht', name: 'Yacht "Confidence"', cost: 400000, prestige: 20, stressRelief: 15, category: 'Luxus', desc: 'Das ultimative Statussymbol am Hafen.' },
         { id: 'art', name: 'Kunstsammlung', cost: 90000, prestige: 9, stressRelief: 4, category: 'Luxus', desc: 'Investition mit nachweislich gutem Geschmack.' },
-        { id: 'watch', name: 'Luxusuhren-Kollektion', cost: 45000, prestige: 6, stressRelief: 2, category: 'Luxus', desc: 'Ein Statement am Handgelenk bei jeder PK.' }
+        { id: 'watch', name: 'Luxusuhren-Kollektion', cost: 45000, prestige: 6, stressRelief: 2, category: 'Luxus', desc: 'Ein Statement am Handgelenk bei jeder PK.' },
+        // Phase 26.19: income = Ertrag je Spieltag (processPrivatExtrasSpieltag)
+        { id: 'ferienhaus', name: 'Ferienhaus an der Ostsee', cost: 180000, prestige: 8, stressRelief: 14, income: 300, category: 'Wohnen', desc: 'Wird vermietet, wenn du nicht dort bist.' },
+        { id: 'penthouse', name: 'Penthouse über der Stadt', cost: 500000, prestige: 16, stressRelief: 12, category: 'Wohnen', desc: 'Dachterrasse mit Blick aufs Stadion.' },
+        { id: 'weingut', name: 'Weingut', cost: 900000, prestige: 18, stressRelief: 8, income: 2500, category: 'Luxus', desc: 'Eigener Wein mit Vereinswappen auf dem Etikett.' },
+        { id: 'jet', name: 'Privatjet', cost: 2500000, prestige: 35, stressRelief: 10, category: 'Fahrzeug', desc: 'Auswärtsfahrten ohne Wartezeit am Flughafen.' }
     ];
 
     const PRESTIGE_INCOME_ACTIVITIES = [
         { id: 'interview', name: 'Exklusiv-Interview geben', minPrestige: 5, income: 2000, stressCost: 5, cooldown: 3, desc: 'Ein Magazin zahlt gut für deine Geschichte.' },
         { id: 'sponsoring', name: 'Persönlichen Werbedeal abschließen', minPrestige: 15, income: 8000, stressCost: 8, cooldown: 6, desc: 'Eine Marke will dein Gesicht für ihre Kampagne.' },
         { id: 'speech', name: 'Vortragsreise antreten', minPrestige: 25, income: 15000, stressCost: 12, cooldown: 10, desc: 'Unternehmen zahlen gut für deine Erfolgsgeschichte.' },
-        { id: 'book', name: 'Biografie veröffentlichen', minPrestige: 40, income: 35000, stressCost: 15, cooldown: 20, desc: 'Dein Leben als Bestseller im Buchhandel.' }
+        { id: 'book', name: 'Biografie veröffentlichen', minPrestige: 40, income: 35000, stressCost: 15, cooldown: 20, desc: 'Dein Leben als Bestseller im Buchhandel.' },
+        // Phase 26.19
+        { id: 'podcast', name: 'Eigenen Podcast aufnehmen', minPrestige: 10, income: 4000, stressCost: 4, cooldown: 4, desc: 'Eine Folge über Taktik und Kabinengeschichten.' },
+        { id: 'camp', name: 'Fußballcamp für Kinder leiten', minPrestige: 20, income: 6000, stressCost: 6, cooldown: 8, desc: 'Eine Ferienwoche mit dem Nachwuchs der Region.' },
+        { id: 'tv', name: 'TV-Experte bei einem Länderspiel', minPrestige: 30, income: 20000, stressCost: 10, cooldown: 8, desc: 'Analyse im Studio zur besten Sendezeit.' },
+        { id: 'workshop', name: 'Trainer-Workshop leiten', minPrestige: 35, income: 12000, stressCost: 8, cooldown: 6, desc: 'Andere Trainer zahlen für deine Erfahrung.' }
     ];
 
     const HOBBIES = [
@@ -533,7 +545,12 @@
         { id: 'reading', name: 'Vielleser', stressDecay: 1, wageCost: 0, desc: 'Kostenlos entspannend, kleiner aber stetiger Effekt.' },
         { id: 'fishing', name: 'Angeln am Wochenende', stressDecay: 3, wageCost: 100, desc: 'Ruhe am Wasser, spürbar entspannend.' },
         { id: 'golf_membership', name: 'Golf-Mitgliedschaft', stressDecay: 2, wageCost: 200, desc: 'Dauerhafter Club-Zugang statt Einzelrunden.' },
-        { id: 'fitness', name: 'Eigenes Fitnessstudio', stressDecay: 4, wageCost: 300, desc: 'Der stärkste passive Stressabbau, aber nicht billig.' }
+        { id: 'fitness', name: 'Eigenes Fitnessstudio', stressDecay: 4, wageCost: 300, desc: 'Der stärkste passive Stressabbau, aber nicht billig.' },
+        // Phase 26.19
+        { id: 'yoga', name: 'Yoga', stressDecay: 2, wageCost: 50, desc: 'Ruhe und Atmung vor dem Anpfiff.' },
+        { id: 'kochen', name: 'Kochkurs', stressDecay: 2, wageCost: 120, desc: 'Abschalten am Herd, einmal die Woche.' },
+        { id: 'band', name: 'Musik in einer Band', stressDecay: 3, wageCost: 150, desc: 'Laut, aber befreiend.' },
+        { id: 'tennis', name: 'Tennis-Club', stressDecay: 3, wageCost: 250, desc: 'Ein Match am Montag gegen den Frust vom Wochenende.' }
     ];
 
     const RELATIONSHIP_STATUSES = [

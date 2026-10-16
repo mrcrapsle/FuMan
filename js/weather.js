@@ -18,6 +18,12 @@
     let currentWeather = WEATHER_TYPES[0];
 
     function rollWeather() {
+        // Admin-Werkzeug (js/admin-tools.js): festgelegtes Wetter für genau einen Spieltag
+        if (typeof game.adminWetter === 'number' && WEATHER_TYPES[game.adminWetter]) {
+            currentWeather = WEATHER_TYPES[game.adminWetter];
+            game.adminWetter = null;
+            return currentWeather;
+        }
         // Wettergarantie (Premium-Booster, NEU): erzwingt sonniges Wetter (erster, neutraler
         // Eintrag in WEATHER_TYPES) statt der normalen Zufallsauswahl.
         if (game.weatherGuaranteeNextMatch) {

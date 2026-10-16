@@ -116,6 +116,8 @@ async function main() {
         S.testRunde32Uebersicht,
         S.testRunde32Statistik,
         S.testRunde33Funktionen,
+        S.testAdminWerkzeuge,
+        S.testPrivatlebenPlus,
         S.testKnopfWorteHandy,
         S.testEntlassungsGrund,
         S.testEnglishUi,

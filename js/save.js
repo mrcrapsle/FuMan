@@ -160,7 +160,8 @@
         }
         if (p.activeBet !== undefined) activeBet = p.activeBet;
         if (p.betHistory) betHistory = p.betHistory;
-        if (p.privateLife) Object.assign(privateLife, p.privateLife);
+        // Felder der Privatleben-Erweiterung erst auf Standard setzen, sonst blieben beim Laden eines älteren Stands die Werte des laufenden Spiels stehen
+        if (p.privateLife) Object.assign(privateLife, typeof getPrivatExtrasStandard === 'function' ? getPrivatExtrasStandard() : {}, p.privateLife);
         if (p.bandenSponsors) bandenSponsors = p.bandenSponsors;
         if (p.squad) squad = p.squad;
         if (p.lineup) lineup = p.lineup;
