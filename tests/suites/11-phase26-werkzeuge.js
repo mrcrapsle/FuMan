@@ -319,7 +319,7 @@ async function testManagerWerkzeuge(browser) {
         out.todos = todos.length === 2 && todos[0].text.includes('Angebot') && todos[1].text.includes('läuft');
         out.keinDoppelKasten = !document.getElementById('dash-offers-alert');
         renderManagerAssistant();
-        out.todoKnoepfe = document.querySelectorAll('#manager-assistant-box button').length === 4; // je Schritt Aktion und „Später“
+        out.todoKnoepfe = document.querySelectorAll('#manager-assistant-box button').length === 5; // je Schritt Aktion und „Später“, dazu „Erinnerungen“
         // Unveränderter Inhalt wird nicht neu ins DOM geschrieben (updateUI läuft oft)
         const kasten = document.getElementById('manager-assistant-box'); const knoten = kasten.firstChild;
         renderManagerAssistant(); renderManagerAssistant();

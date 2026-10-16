@@ -3628,7 +3628,7 @@ function renderHalftimeNotiz() {
     const n = opp ? getGegnerNotiz(opp) : null;
     const bilanz = opp ? getGegnerBilanzText(opp) : '';
     if (!opp || (!n && /^Noch keine/.test(bilanz))) { box.innerHTML = ''; return; }
-    box.innerHTML = `<div class="box" style="font-size:var(--fs-small); text-align:left;"><strong>📓 ${mpEsc(opp)}</strong><br>📊 ${mpEsc(bilanz)}${n ? `<br>📝 ${mpEsc(n.text)}${getNotizTags(n).length ? `<div class="ui-card-meta" style="margin-top:4px;">${notizTagChips(n)}</div>` : ''}` : ''}</div>`;
+    box.innerHTML = `<div class="box" style="font-size:var(--fs-small); text-align:left; overflow-wrap:anywhere;"><strong>📓 ${mpEsc(opp)}</strong><br>📊 ${mpEsc(bilanz)}${n ? `<br>📝 ${mpEsc(n.text)}${getNotizTags(n).length ? `<div class="ui-card-meta" style="margin-top:4px;">${notizTagChips(n)}</div>` : ''}` : ''}</div>`;
 }
 
 // Vorschläge für die Notiz aus den öffentlichen Daten zum Gegner (Spielstil, Tabelle, Tore, letzte Duelle); nur Text zum Antippen
@@ -3734,7 +3734,7 @@ function renderGegnerNotizListe() {
         if (notizFilter.tag && !getNotizTags(e).includes(notizFilter.tag)) return false;
         return !q || n.toLowerCase().includes(q) || String(e.text).toLowerCase().includes(q) || getNotizTags(e).some(t => NOTIZ_SCHLAGWOERTER.find(x => x.id === t).label.toLowerCase().includes(q));
     });
-    liste.innerHTML = namen.length ? namen.map(n => `<div class="box" style="font-size:var(--fs-small); margin:4px 0;"><div style="display:flex; justify-content:space-between; gap:8px; align-items:center;"><strong>${mpEsc(n)}</strong><button onclick="deleteGegnerNotiz(this.dataset.club)" data-club="${mpEsc(n)}" class="btn-secondary" style="width:auto; color:var(--danger);" title="Notiz zu ${mpEsc(n)} löschen">🗑️</button></div>${mpEsc(game.gegnerNotizen[n].text)}${getNotizTags(game.gegnerNotizen[n]).length ? `<div class="ui-card-meta" style="margin-top:4px;">${notizTagChips(game.gegnerNotizen[n])}</div>` : ''}<div style="color:var(--text-muted); font-size:var(--fs-caption);">Saison ${game.gegnerNotizen[n].season}, Spieltag ${game.gegnerNotizen[n].matchday}</div></div>`).join('')
+    liste.innerHTML = namen.length ? namen.map(n => `<div class="box" style="font-size:var(--fs-small); margin:4px 0; overflow-wrap:anywhere;"><div style="display:flex; justify-content:space-between; gap:8px; align-items:center;"><strong>${mpEsc(n)}</strong><button onclick="deleteGegnerNotiz(this.dataset.club)" data-club="${mpEsc(n)}" class="btn-secondary" style="width:auto; color:var(--danger);" title="Notiz zu ${mpEsc(n)} löschen">🗑️</button></div>${mpEsc(game.gegnerNotizen[n].text)}${getNotizTags(game.gegnerNotizen[n]).length ? `<div class="ui-card-meta" style="margin-top:4px;">${notizTagChips(game.gegnerNotizen[n])}</div>` : ''}<div style="color:var(--text-muted); font-size:var(--fs-caption);">Saison ${game.gegnerNotizen[n].season}, Spieltag ${game.gegnerNotizen[n].matchday}</div></div>`).join('')
         : (alle.length ? '<div style="font-size:var(--fs-small); color:var(--text-muted);">Keine Notiz passt zur Suche.</div>'
             : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Notizen. Vor dem Anpfiff gibt es im Spieltag-Check ein Notizfeld zum Gegner.</div>');
 }
@@ -22665,7 +22665,7 @@ function renderVertragsplan() {
     const plan = getVertragsplan();
     const lohn = squad.reduce((s, p) => s + (p.wage || 0), 0);
     box.innerHTML = `<div style="font-size:var(--fs-small); margin-bottom:6px;">Gehälter heute: <strong>${formatVal(lohn)}</strong> von ${formatVal(game.wageBudget)} Gehaltsbudget je Spieltag (${formatVal(game.wageBudget - lohn)} Spielraum).</div>`
-        + plan.map((z, k) => `<div class="box" style="margin:4px 0; font-size:var(--fs-small);"><strong>${k === 0 ? 'Saisonende ' + z.saison + ' (diese Saison)' : 'Saisonende ' + z.saison}</strong>: ${z.spieler.length ? `${z.spieler.length} Vertrag${z.spieler.length === 1 ? '' : 'e'} laufen aus (${z.spieler.slice(0, 3).map(p => `${mpEsc(p.name)} ${p.strength}`).join(', ')}${z.spieler.length > 3 ? ' …' : ''}), frei werden ${formatVal(z.gehalt)} je Spieltag` : 'keine Verträge laufen aus'}
+        + plan.map((z, k) => `<div class="box" style="margin:4px 0; font-size:var(--fs-small);"><strong>${k === 0 ? 'Saisonende ' + z.saison + ' (diese Saison)' : 'Saisonende ' + z.saison}</strong>: ${z.spieler.length ? `${z.spieler.length === 1 ? '1 Vertrag läuft' : z.spieler.length + ' Verträge laufen'} aus (${z.spieler.slice(0, 3).map(p => `${mpEsc(p.name)} ${p.strength}`).join(', ')}${z.spieler.length > 3 ? ' …' : ''}), frei werden ${formatVal(z.gehalt)} je Spieltag` : 'keine Verträge laufen aus'}
             <div style="color:var(--text-muted); font-size:var(--fs-caption);">Danach ${formatVal(z.lohnDanach)} Gehälter, ${formatVal(z.spielraum)} Spielraum im heutigen Budget (ohne Ersatz und Verlängerungen).</div></div>`).join('');
 }
 
@@ -23022,7 +23022,7 @@ function getReviewSeasons() {
 
 function buildSeasonReviewHtml(saison) {
     const fmt = v => v.toFixed(2).replace('.', ',');
-    const abschnitt = (titel, inhalt) => `<div class="box" style="font-size:var(--fs-small); margin:6px 0; text-align:left;"><strong>${titel}</strong><br>${inhalt}</div>`;
+    const abschnitt = (titel, inhalt) => `<div class="box" style="font-size:var(--fs-small); margin:6px 0; text-align:left; overflow-wrap:anywhere;"><strong>${titel}</strong><br>${inhalt}</div>`;
     const leer = text => `<span style="color:var(--text-muted);">${text}</span>`;
     const teile = [];
     const k = (game.managerCareer || []).find(e => e.season === saison && e.club === game.clubName);
@@ -23129,7 +23129,8 @@ function renderSaisonZiele() {
             const ton = z.innen ? (z.sicher ? 'gut' : 'warn') : (z.erreichbar ? 'warn' : 'schlecht');
             const status = z.innen ? (z.sicher ? 'gesichert' : `Vorsprung ${z.punkte} Punkt${z.punkte === 1 ? '' : 'e'} auf ${mpEsc(z.gegner)}`)
                 : (z.erreichbar ? `Rückstand ${z.punkte} Punkt${z.punkte === 1 ? '' : 'e'} auf ${mpEsc(z.gegner)}` : 'nicht mehr erreichbar');
-            return `<div class="box" style="margin:4px 0; font-size:var(--fs-small); display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 8px;"><span>${z.label} (Platz ${z.platz})</span><span>${uiChip(status, ton)}</span></div>`;
+            const farbe = ton === 'gut' ? 'var(--primary)' : ton === 'schlecht' ? 'var(--danger)' : 'var(--accent)';
+            return `<div class="box" style="margin:4px 0; font-size:var(--fs-small);"><div>${z.label} (Platz ${z.platz})</div><div style="font-weight:700; color:${farbe}; overflow-wrap:anywhere;">${z.innen ? '✓ ' : ''}${status}</div></div>`;
         }).join('')
         + `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">Noch ${rest} Spiel${rest === 1 ? '' : 'e'} (höchstens ${3 * rest} Punkte). Reine Tabellenwerte, das Torverhältnis zählt nicht.</div>`;
 }
@@ -23684,7 +23685,7 @@ function renderErinnerungen() {
     ensureErinnerungen();
     const liste = [...game.erinnerungen].sort((a, b) => (a.season - b.season) || (a.bis - b.bis));
     box.innerHTML = `<div class="panel-header">📝 Erinnerungen (${liste.length}/${ERINNERUNG_MAX})</div>`
-        + (liste.length ? liste.map(e => `<div class="box" style="margin:4px 0; font-size:var(--fs-small); display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:6px 8px;"><span style="flex:1 1 11em; min-width:0;">${istErinnerungFaellig(e) ? '🔔' : '⏳'} ${mpEsc(e.text)} <span style="color:var(--text-muted);">· ${e.season > game.season ? 'Saison ' + e.season + ', ' : ''}Spieltag ${e.bis}</span></span><button onclick="deleteErinnerung('${e.id}')" class="btn-secondary" style="width:auto; flex:0 0 auto;" title="Erinnerung löschen">🗑️ Löschen</button></div>`).join('')
+        + (liste.length ? liste.map(e => `<div class="box" style="margin:4px 0; font-size:var(--fs-small); display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:6px 8px;"><span style="flex:1 1 11em; min-width:0; overflow-wrap:anywhere;">${istErinnerungFaellig(e) ? '🔔' : '⏳'} ${mpEsc(e.text)} <span style="color:var(--text-muted);">· ${e.season > game.season ? 'Saison ' + e.season + ', ' : ''}Spieltag ${e.bis}</span></span><button onclick="deleteErinnerung('${e.id}')" class="btn-secondary" style="width:auto; flex:0 0 auto;" title="Erinnerung löschen">🗑️ Löschen</button></div>`).join('')
             : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Erinnerungen. Zum gewählten Spieltag erscheint der Text als Schritt im Manager-Assistenten.</div>')
         + `<label class="ui-field" style="margin-top:8px;"><span class="ui-field-label">Woran willst du erinnert werden?</span><input id="reminder-text" type="text" maxlength="${ERINNERUNG_TEXT_MAX}" class="input-inline" placeholder="z. B. Vertrag verlängern" style="width:100%; box-sizing:border-box; text-align:left; font-weight:normal; font-family:inherit;"></label>`
         + `<label class="ui-field" style="margin-top:6px;"><span class="ui-field-label">Am Spieltag</span><input id="reminder-matchday" type="number" min="1" max="34" value="${Math.min(34, game.matchday + 3)}" class="input-inline" style="width:6em;"></label>`
@@ -23850,10 +23851,10 @@ function renderManagerAssistant() {
     const zurueckListe = getManagerTodos(true, true).filter(x => istZurueckgestellt(x.id));
     const zurueck = zurueckListe.length;
     const html = `<div class="panel-header">🧭 Manager-Assistent</div>` + (todos.length
-        ? todos.map(x => `<div class="box" style="margin:4px 0; font-size:var(--fs-small); display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:6px 8px;"><span style="flex:1 1 11em; min-width:0;">${x.icon} ${mpEsc(x.text)}</span><span style="display:flex; gap:4px; flex:0 0 auto;"><button onclick="${x.aktion}" class="btn-secondary" style="width:auto; flex:0 0 auto;">${x.label}</button>${ASSISTENT_NICHT_ZURUECK.includes(x.id) ? '' : `<button onclick="snoozeManagerTodo('${x.id}')" class="btn-secondary" style="width:auto; flex:0 0 auto;" title="Diesen Schritt ${ASSISTENT_ZURUECK_SPIELTAGE} Spieltage ausblenden">⏸️ Später</button>`}</span></div>`).join('')
+        ? todos.map(x => `<div class="box" style="margin:4px 0; font-size:var(--fs-small); display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:6px 8px;"><span style="flex:1 1 11em; min-width:0; overflow-wrap:anywhere;">${x.icon} ${mpEsc(x.text)}</span><span style="display:flex; gap:4px; flex:0 0 auto;"><button onclick="${x.aktion}" class="btn-secondary" style="width:auto; flex:0 0 auto;">${x.label}</button>${ASSISTENT_NICHT_ZURUECK.includes(x.id) ? '' : `<button onclick="snoozeManagerTodo('${x.id}')" class="btn-secondary" style="width:auto; flex:0 0 auto;" title="Diesen Schritt ${ASSISTENT_ZURUECK_SPIELTAGE} Spieltage ausblenden">⏸️ Später</button>`}</span></div>`).join('')
         : `<div class="box" style="font-size:var(--fs-small);">✅ Alles im grünen Bereich: Aufstellung steht, keine Verträge drängen, die Kasse passt. Zeit für den nächsten Spieltag.</div>`)
         + (zurueck ? `<details class="ui-fold" style="margin-top:6px;"${assistentZurueckOffen ? ' open' : ''} ontoggle="assistentZurueckOffen = this.open"><summary>⏸️ ${zurueck} Schritt${zurueck === 1 ? '' : 'e'} zurückgestellt</summary>`
-            + zurueckListe.map(x => `<div class="box" style="margin:4px 0; font-size:var(--fs-small); display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:6px 8px;"><span style="flex:1 1 11em; min-width:0;">${x.icon} ${mpEsc(x.text)} <span style="color:var(--text-muted);">· bis Spieltag ${game.assistentZurueck[x.id].bis}</span></span><button onclick="unsnoozeManagerTodo('${x.id}')" class="btn-secondary" style="width:auto; flex:0 0 auto;">Wieder zeigen</button></div>`).join('')
+            + zurueckListe.map(x => `<div class="box" style="margin:4px 0; font-size:var(--fs-small); display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:6px 8px;"><span style="flex:1 1 11em; min-width:0; overflow-wrap:anywhere;">${x.icon} ${mpEsc(x.text)} <span style="color:var(--text-muted);">· bis Spieltag ${game.assistentZurueck[x.id].bis}</span></span><button onclick="unsnoozeManagerTodo('${x.id}')" class="btn-secondary" style="width:auto; flex:0 0 auto;">Wieder zeigen</button></div>`).join('')
             + `<button onclick="resetManagerSnooze()" class="btn-secondary" style="margin-top:4px;">Alle wieder zeigen</button></details>` : '')
         + getAssistentErledigtHtml()
         + `<div style="margin-top:6px;"><button onclick="openErinnerungen()" class="btn-secondary" style="width:auto;">📝 Erinnerungen (${Array.isArray(game.erinnerungen) ? game.erinnerungen.length : 0})</button></div>`
