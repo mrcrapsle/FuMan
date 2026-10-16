@@ -2315,6 +2315,166 @@ async function testRunde32Spieltag(browser) {
     await page.close();
 }
 
+async function testRunde32Uebersicht(browser) {
+    console.log('\n[26.17] Restprogramm, Zusammenfassung nach dem Simulieren, Kalender, Tagebuch, Erinnern-Knöpfe, Tag/Nacht, Favoriten');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.evaluate(R32_HILFEN);
+    const r = await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false; simulateMatchdays(3);
+        const out = {};
+        const toasts = []; const toastAlt = showToast; showToast = (t) => { toasts.push(t); };
+        const liga = leaguesData[game.leagueLevel];
+        const eigeneSpiele = md => (fixturesData[game.leagueLevel][md - 1] || []).find(f => liga[f.home].name === game.clubName || liga[f.away].name === game.clubName);
+
+        // --- Restprogramm ---
+        const rp = getRestprogramm();
+        const erwartet = []; for (let md = game.matchday; md <= 34; md++) { const f = eigeneSpiele(md); if (f && !f.played) erwartet.push(md); }
+        out.rpSpiele = rp.spiele.map(x => x.md).join() === erwartet.join() && rp.spiele.length > 20;
+        const f0 = eigeneSpiele(rp.spiele[0].md);
+        out.rpHeim = rp.spiele[0].heim === (liga[f0.home].name === game.clubName) && rp.spiele[0].name === (rp.spiele[0].heim ? liga[f0.away].name : liga[f0.home].name);
+        out.rpPlatz = rp.spiele.every(x => x.platz >= 1 && x.platz <= liga.length);
+        let besteSchnitt = 0; for (let i = 0; i + 2 < rp.spiele.length; i++) besteSchnitt = Math.max(besteSchnitt, (rp.spiele[i].staerke + rp.spiele[i + 1].staerke + rp.spiele[i + 2].staerke) / 3);
+        out.rpSchwer = Math.abs(rp.schwer.schnitt - besteSchnitt) < 1e-9 && rp.schwer.bis - rp.schwer.von >= 2;
+        game.gegnerNotizen = { [rp.spiele[0].name]: { text: 'x', season: 1, matchday: 1 } };
+        game.matchplaene = { [rp.spiele[1].name]: { aufstellung: null, taktik: null } };
+        showScreen('screen-dashboard'); renderRestprogramm();
+        const rb = document.getElementById('rest-programm-box').textContent;
+        out.rpBox = rb.includes('Restprogramm') && rb.includes(rp.spiele[0].name) && rb.includes('📓') && rb.includes('📋') && rb.includes(`Noch ${rp.spiele.length} Ligaspiele`) && rb.includes('schwerste Phase');
+        out.rpFuenf = (rb.match(/Platz \d+ · Str/g) || []).length === 5;
+        game.gegnerNotizen = {}; game.matchplaene = {};
+
+        // --- Zusammenfassung nach dem Simulieren ---
+        const tabVor = sortedTable(game.leagueLevel); const rangVor = tabVor.findIndex(t => t.name === game.clubName) + 1; const mdVor = game.matchday;
+        simulateMatchdays(3, true);
+        const ov = document.getElementById('sim-summary-overlay'), sb = document.getElementById('sim-summary-body').textContent;
+        const rangNach = sortedTable(game.leagueLevel).findIndex(t => t.name === game.clubName) + 1;
+        out.szOffen = ov.classList.contains('show') && sb.includes(`Spieltag ${mdVor} bis ${mdVor + 2}`);
+        out.szSpiele = document.querySelectorAll('#sim-summary-body .box').length === 4 && sb.includes(`Tabellenplatz ${rangVor} → ${rangNach}`);
+        out.szBilanz = /Bilanz \dS \dU \dN, [+-]?\d+ Punkte/.test(sb) && sb.includes('Kasse') && (sb.includes('Neu verletzt') || sb.includes('Keine neuen Verletzungen'));
+        out.wSim = JSON.stringify(woerter('#sim-summary-body button'));
+        out.szBreit = ueberlauf();
+        closeSimZusammenfassung(); out.szZu = !ov.classList.contains('show');
+        simulateMatchdays(1); out.szOhneFlag = !ov.classList.contains('show');
+        out.szKnopf = document.querySelector('button[onclick="simulateMatchdays(5, true)"]') !== null;
+
+        // --- Kalender, Erinnerungen, Tagebuch ---
+        game.erinnerungen = [{ id: 'r1', text: 'Erinnerung <b>A</b>', season: game.season, bis: 20 }];
+        game.tagebuch = [{ season: game.season, matchday: 21, text: 'Tagebuch <i>B</i>' }];
+        squad[0].contracts = 1;
+        showScreen('screen-calendar'); renderCalendarView();
+        const zeilen = [...document.querySelectorAll('#cal-schedule-list .player-row')];
+        out.kAnzahl = zeilen.length === 34;
+        const gespielt = eigeneSpiele(1), heim1 = liga[gespielt.home].name === game.clubName;
+        out.kGegner = zeilen[0].textContent.includes((heim1 ? '🏠 ' : '✈️ ') + (heim1 ? liga[gespielt.away].name : liga[gespielt.home].name)) && zeilen[0].textContent.includes(`${heim1 ? gespielt.homeGoals : gespielt.awayGoals}:${heim1 ? gespielt.awayGoals : gespielt.homeGoals}`);
+        out.kErinnerung = zeilen[19].textContent.includes('📝 Erinnerung <b>A</b>') && !zeilen[19].innerHTML.includes('<b>A</b>');
+        out.kTagebuch = zeilen[20].textContent.includes('📔 Tagebuch <i>B</i>');
+        out.kFenster = zeilen[2].textContent.includes('Sommer-Transferfensters');
+        out.kVertraege = zeilen[33].textContent.includes('Zum Saisonende laufen') && zeilen[33].textContent.includes(squad[0].name);
+        out.kBreit = ueberlauf();
+        // Tagebuch-Fenster
+        openTagebuch(7);
+        out.tOffen = document.getElementById('diary-overlay').classList.contains('show') && document.getElementById('diary-matchday').value === '7';
+        document.getElementById('diary-text').value = '  Taktik   umgestellt ' + 'x'.repeat(300);
+        saveTagebuch();
+        const e7 = getTagebuchEintrag(game.season, 7);
+        out.tGespeichert = !!e7 && e7.text.startsWith('Taktik umgestellt ') && e7.text.length === TAGEBUCH_MAX_TEXT;
+        out.tListe = document.getElementById('diary-body').textContent.includes('Spieltag 7:');
+        out.wTagebuch = JSON.stringify(woerter('#diary-body button'));
+        document.getElementById('diary-matchday').value = '7'; document.getElementById('diary-text').value = 'Neu'; saveTagebuch();
+        out.tUeberschrieben = getTagebuchEintrag(game.season, 7).text === 'Neu' && game.tagebuch.filter(x => x.season === game.season && x.matchday === 7).length === 1;
+        document.getElementById('diary-text').value = ''; saveTagebuch();
+        out.tGeloescht = getTagebuchEintrag(game.season, 7) === null;
+        const opt = document.createElement('option'); opt.value = '99'; document.getElementById('diary-matchday').appendChild(opt); document.getElementById('diary-matchday').value = '99';
+        toasts.length = 0; saveTagebuch(); out.tUngueltig = toasts.some(t => t.includes('zwischen 1 und 34'));
+        closeTagebuch(); out.tZu = !document.getElementById('diary-overlay').classList.contains('show');
+        // im Rückblick
+        game.managerCareer = [{ season: game.season, club: game.clubName, level: game.leagueLevel, league: 'Liga', rank: 3, won: 1, drawn: 1, lost: 1, goalsFor: 1, goalsAgainst: 1, points: 4 }];
+        const rt = (() => { const d = document.createElement('div'); d.innerHTML = buildSeasonReviewHtml(game.season); return d.textContent; })();
+        out.tRueckblick = rt.includes('📔 Tagebuch') && rt.includes('21. Tagebuch <i>B</i>');
+        game.managerCareer = [];
+        delete game.tagebuch; out.tAltesFeld = getTagebuchEintrag(1, 1) === null && Array.isArray(game.tagebuch);
+
+        // --- Erinnern-Knöpfe ---
+        game.erinnerungen = [];
+        squad[0].contracts = 2;
+        openPlayerDetail(squad[0].id, 'squad');
+        const ek = document.querySelector('#pd-erinnern button');
+        out.eKnopf = !!ek;
+        out.wErinnern = JSON.stringify(woerter('#pd-erinnern button'));
+        ek.click();
+        out.eVorbelegt = document.getElementById('reminder-overlay').classList.contains('show') && document.getElementById('reminder-text').value === `Vertrag von ${squad[0].name} klären` && !document.getElementById('player-detail-overlay').classList.contains('show');
+        addErinnerung(); out.eGespeichert = game.erinnerungen.length === 1 && game.erinnerungen[0].text === `Vertrag von ${squad[0].name} klären`;
+        closeErinnerungen();
+        squad[0].contracts = 4; openPlayerDetail(squad[0].id, 'squad'); document.querySelector('#pd-erinnern button').click();
+        out.eOhneVertrag = document.getElementById('reminder-text').value === `${squad[0].name}: `;
+        closeErinnerungen();
+        openPlayerDetail(marketPlayers[0] ? marketPlayers[0].id : squad[0].id, marketPlayers[0] ? 'market' : 'squad');
+        out.eNurKader = !marketPlayers[0] || document.getElementById('pd-erinnern').innerHTML === '';
+        closePlayerDetail();
+        squad[0].contracts = 1; showScreen('screen-contracts'); renderContractsView();
+        const vk = document.querySelector('#contract-plan-box button');
+        out.vKnopf = !!vk;
+        out.wPlan = JSON.stringify(woerter('#contract-plan-box button'));
+        vk.click(); out.vVorbelegt = document.getElementById('reminder-text').value.startsWith('Verträge klären: ') && document.getElementById('reminder-text').value.includes(squad.filter(p => p.contracts <= 1).sort((a, b) => b.strength - a.strength)[0].name);
+        closeErinnerungen();
+
+        // --- Tag/Nacht ---
+        setzeDesignTheme('flutlicht');
+        const tk = document.getElementById('theme-quick-btn');
+        out.tnStart = tk.textContent === '☀️ Tagmodus';
+        wechsleTagNacht();
+        out.tnTag = getDesignTheme() === 'tageslicht' && document.documentElement.getAttribute('data-theme') === 'tageslicht' && tk.textContent === '🌙 Nachtmodus';
+        wechsleTagNacht(); out.tnNacht = getDesignTheme() === 'flutlicht' && !document.documentElement.hasAttribute('data-theme') && tk.textContent === '☀️ Tagmodus';
+        setzeDesignTheme('kontrast'); wechsleTagNacht(); out.tnKontrast = getDesignTheme() === 'tageslicht';
+        setzeDesignTheme('flutlicht');
+
+        // --- Favoriten ---
+        safeLocalSet(FAVORITEN_KEY, '[]');
+        showScreen('screen-dashboard'); renderFavoritenLeiste();
+        out.fLeer = document.getElementById('favoriten-box').textContent.includes('Favoriten festlegen');
+        openFavoritenAuswahl();
+        const menue = getMenueBildschirme();
+        out.fAuswahl = menue.length > 10 && document.querySelectorAll('#favoriten-body button').length === menue.length && menue.includes('screen-squad');
+        ['screen-squad', 'screen-transfer', 'screen-finances', 'screen-league'].forEach(id => toggleFavorit(id));
+        toasts.length = 0; toggleFavorit('screen-inbox');
+        out.fMax = getFavoriten().length === 4 && !getFavoriten().includes('screen-inbox') && toasts.some(t => t.includes('Höchstens 4'));
+        out.fAuswahlMarke = document.querySelector('#favoriten-body button[data-s="screen-squad"]').getAttribute('aria-pressed') === 'true';
+        out.wFavAuswahl = JSON.stringify(woerter('#favoriten-body button'));
+        closeFavoritenAuswahl();
+        renderFavoritenLeiste();
+        const fb = [...document.querySelectorAll('#favoriten-box button')];
+        out.fLeiste = fb.length === 5 && fb[4].textContent.includes('Bearbeiten') && fb.every(b => b.textContent.trim().length > 2);
+        out.wFavLeiste = JSON.stringify(woerter('#favoriten-box button'));
+        fb[0].click(); out.fKlick = aktiverScreen === 'screen-squad';
+        toggleFavorit('screen-squad'); out.fEntfernt = !getFavoriten().includes('screen-squad') && getFavoriten().length === 3;
+        toasts.length = 0; toggleFavorit('screen-gibtsnicht'); out.fUngueltig = toasts.some(t => t.includes('gibt es nicht im Menü')) && getFavoriten().length === 3;
+        safeLocalSet(FAVORITEN_KEY, '{kaputt'); out.fKaputt = getFavoriten().length === 0;
+        toggleMenuDrawer(); out.wTagNacht = JSON.stringify(woerter('#theme-quick-btn')); toggleMenuDrawer();
+        showToast = toastAlt;
+        return out;
+    });
+    const ok = (...ks) => ks.every(k => r[k] === true);
+    const werte = ks => JSON.stringify(ks.map(k => r[k]));
+    const A = ['rpSpiele', 'rpHeim', 'rpPlatz', 'rpSchwer', 'rpBox', 'rpFuenf'];
+    assert(ok(...A), `Restprogramm: echte Restspiele, Heim/Auswärts, schwerste Phase, Anzeige mit Notiz- und Matchplan-Symbol (${werte(A)})`);
+    const B = ['szOffen', 'szSpiele', 'szBilanz', 'szBreit', 'szZu', 'szOhneFlag', 'szKnopf'];
+    assert(ok(...B), `Zusammenfassung nach dem Simulieren: Ergebnisse, Tabellenplatz vorher und nachher, nur über den Knopf (${werte(B)})`);
+    const C = ['kAnzahl', 'kGegner', 'kErinnerung', 'kTagebuch', 'kFenster', 'kVertraege', 'kBreit'];
+    assert(ok(...C), `Kalender: Gegner mit Ergebnis, Erinnerungen, Tagebuch, Transferfrist, auslaufende Verträge (${werte(C)})`);
+    const D = ['tOffen', 'tGespeichert', 'tListe', 'tUeberschrieben', 'tGeloescht', 'tUngueltig', 'tZu', 'tRueckblick', 'tAltesFeld'];
+    assert(ok(...D), `Managertagebuch: Speichern gekürzt, Überschreiben, Löschen, ungültiger Spieltag, Saisonrückblick, alte Spielstände (${werte(D)})`);
+    const E = ['eKnopf', 'eVorbelegt', 'eGespeichert', 'eOhneVertrag', 'eNurKader', 'vKnopf', 'vVorbelegt'];
+    assert(ok(...E), `Erinnern-Knöpfe: Spielerdetail und Vertragsplan füllen das Erinnerungsfenster vor (${werte(E)})`);
+    const F = ['tnStart', 'tnTag', 'tnNacht', 'tnKontrast'];
+    assert(ok(...F), `Tag/Nacht-Schnellschalter wechselt zwischen Tageslicht und Flutlicht (${werte(F)})`);
+    const G = ['fLeer', 'fAuswahl', 'fMax', 'fAuswahlMarke', 'fLeiste', 'fKlick', 'fEntfernt', 'fUngueltig', 'fKaputt'];
+    assert(ok(...G), `Favoriten-Leiste: Auswahl aus dem Menü, höchstens vier, Schnellknöpfe im Dashboard (${werte(G)})`);
+    assert([r.wSim, r.wTagebuch, r.wErinnern, r.wPlan, r.wFavAuswahl, r.wFavLeiste, r.wTagNacht].every(w => w === '[]'), `Neue Knöpfe bei 320 px in breiter Schrift: kein Wort breiter als sein Knopf (${JSON.stringify([r.wSim, r.wTagebuch, r.wErinnern, r.wPlan, r.wFavAuswahl, r.wFavLeiste, r.wTagNacht])})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 module.exports = {
     testSpielvorbereitung,
     testVertragsWerkzeuge,
@@ -2329,4 +2489,5 @@ module.exports = {
     testRunde31Funktionen,
     testRunde32Markt,
     testRunde32Spieltag,
+    testRunde32Uebersicht,
 };
