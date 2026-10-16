@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.138', date: '16.10.2026', features: 'Phase 26.18-26.19: Kauf-Vorschau, Punkte-Vergleich mit der Vorsaison, Monatsbericht, Rückkehrer im Kalender, Aufstellungs-Gedächtnis, 16 Test- und Diagnosewerkzeuge im Admin-Modus, Privatleben mit Sparkonto, Fortbildung, Mentaltraining, Gehaltsverhandlung, Haustier, Besitz verkaufen, Vermögensverlauf und Zielen' };
+    const GAME_VERSION = { number: '3.139', date: '16.10.2026', features: 'Phase 26.20: öffentliche Fassung ohne Admin-Menü, geheime Entwickler-Seite mit PIN' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
