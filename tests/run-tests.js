@@ -110,6 +110,7 @@ async function main() {
         S.testRunde28Funktionen,
         S.testRunde29Funktionen,
         S.testRunde30Funktionen,
+        S.testRunde31Funktionen,
         S.testKnopfWorteHandy,
         S.testEntlassungsGrund,
         S.testEnglishUi,

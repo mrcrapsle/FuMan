@@ -1675,6 +1675,281 @@ async function testRunde30Funktionen(browser) {
     await page.close();
 }
 
+async function testRunde31Funktionen(browser) {
+    console.log('\n[26.16] Aufstellung teilen, Zuletzt geöffnet, Leistbar-Chips, Rotation mit Ampel, Erinnerungen, Spielbericht-Archiv, Vertragsplan, Saisonziele');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 320, height: 800 });
+    const r = await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false; simulateMatchdays(3);
+        const out = {};
+        const schrift = document.createElement('style'); schrift.textContent = '*,*::before,*::after{font-family:"DejaVu Sans",Verdana,sans-serif!important}'; document.head.appendChild(schrift);
+        const probe = document.createElement('span'); document.body.appendChild(probe);
+        const woerter = sel => [...document.querySelectorAll(sel)].filter(el => el.offsetParent).filter(el => {
+            const cs = getComputedStyle(el), innen = el.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+            probe.style.cssText = `position:absolute; visibility:hidden; white-space:nowrap; font:${cs.font}; letter-spacing:${cs.letterSpacing}`;
+            return (el.innerText || '').trim().split(/\s+/).flatMap(w => w.split(/(?<=-)/)).some(t => { probe.textContent = t; return probe.getBoundingClientRect().width > innen + 1; });
+        }).map(el => (el.innerText || '').trim().slice(0, 24));
+        const ueberlauf = () => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1;
+        const toasts = []; const toastAlt = showToast; showToast = (t) => { toasts.push(t); };
+        squad.forEach(p => { p.injured = 0; p.suspended = 0; p.fitness = 90; p.timesInjured = 0; p.tags = []; p.injuryLog = []; delete p.startFolge; delete p.startBilanz; });
+        game.formation = '4-4-2'; autoLineup();
+
+        // --- Aufstellung als Text teilen ---
+        game.captainId = lineup[0];
+        const txt = buildLineupText();
+        const zeilen = txt.split('\n');
+        out.lText = zeilen[0] === `📋 Aufstellung · ${game.clubName}` && zeilen[1].startsWith('Formation 4-4-2 · Spielstil ') && zeilen.some(z => z.startsWith('TW: ')) && zeilen.some(z => z.startsWith('ABW: ')) && zeilen.some(z => z.startsWith('Bank: ')) && txt.endsWith('— Anstoß Mobile Pro FM13');
+        out.lKapitaen = txt.includes('(C)');
+        const spielerInText = lineup.map(id => squad.find(p => p.id === id)).every(p => txt.includes(p.name));
+        out.lAlle = spielerInText && !txt.includes('Achtung');
+        shareLineup();
+        out.lFenster = document.getElementById('share-report-overlay').classList.contains('show') && document.getElementById('share-report-title').textContent.includes('Aufstellung') && document.getElementById('share-report-text').value === txt;
+        closeShareReport();
+        const elfAlt = lineup; lineup = lineup.slice(0, 9);
+        out.lWenige = buildLineupText().includes('Achtung: nur 9 von 11');
+        lineup = []; toasts.length = 0; shareLineup();
+        out.lLeer = buildLineupText() === '' && toasts.some(t => t.includes('noch niemand aufgestellt')) && !document.getElementById('share-report-overlay').classList.contains('show');
+        lineup = elfAlt;
+        const bankSpieler = squad.find(p => !lineup.includes(p.id)); bankSpieler.injured = 2;
+        out.lVerletzteBank = buildLineupText().includes('(verletzt)'); bankSpieler.injured = 0;
+
+        // --- Zuletzt geöffnet ---
+        safeLocalSet(ZULETZT_KEY, '[]');
+        ['screen-dashboard', 'screen-squad', 'screen-transfer', 'screen-finances', 'screen-inbox', 'screen-calendar'].forEach(id => showScreen(id));
+        const z = getZuletzt();
+        out.zReihenfolge = z.slice(0, 6).join() === 'screen-calendar,screen-inbox,screen-finances,screen-transfer,screen-squad,screen-dashboard';
+        renderZuletzt();
+        const zb = document.getElementById('recent-screens-box');
+        out.zBox = zb.textContent.includes('Zuletzt geöffnet') && zb.querySelectorAll('button').length === 5 && !zb.querySelector('[data-s="screen-calendar"]');
+        out.zBeschriftung = [...zb.querySelectorAll('button')].every(b => b.textContent.trim().length > 2);
+        zb.querySelector('[data-s="screen-squad"]').click();
+        out.zKlick = aktiverScreen === 'screen-squad' && getZuletzt()[0] === 'screen-squad' && !document.getElementById('recent-screens-box').querySelector('[data-s="screen-squad"]');
+        out.zNachVorn = getZuletzt().filter(x => x === 'screen-squad').length === 1;
+        showScreen('screen-prematch-press'); showScreen('screen-matchday');
+        out.zOhneSpielflow = !getZuletzt().includes('screen-prematch-press') && !getZuletzt().includes('screen-matchday');
+        showScreen('screen-dashboard');
+        safeLocalSet(ZULETZT_KEY, '{kaputt'); out.zKaputt = Array.isArray(getZuletzt()) && getZuletzt().length === 0;
+        safeLocalSet(ZULETZT_KEY, JSON.stringify(['screen-gibtsnicht', 'screen-finances', 42])); renderZuletzt();
+        out.zUnbekannt = document.getElementById('recent-screens-box').querySelectorAll('button').length === 1;
+        merkeZuletzt(null); merkeZuletzt('screen-dashboard');
+        out.zBegrenzt = getZuletzt().length <= ZULETZT_MAX + 3;
+        out.wZuletzt = JSON.stringify(woerter('#recent-screens-box button'));
+
+        // --- Leistbar-Chips auf Marktkarten ---
+        if (!marketPlayers.length) refreshTransferMarket();
+        showScreen('screen-transfer'); setTransferTab('market');
+        const mp = marketPlayers[0];
+        game.money = 1e9; game.transferBudget = 1e9; game.wageBudget = 1e9; game.transferEmbargo = false; game.ffpTransferEmbargo = false;
+        out.kOk = getKaufHindernisse(mp).length === 0 && getKaufChip(mp).includes('leistbar');
+        game.money = 0; out.kKasse = getKaufHindernisse(mp).join() === 'Kasse reicht nicht';
+        game.money = 1e9; game.transferBudget = 0; out.kBudget = getKaufHindernisse(mp).join() === 'Transferbudget zu klein';
+        game.transferBudget = 1e9; game.wageBudget = 1; out.kGehalt = getKaufHindernisse(mp).join() === 'Gehaltsbudget gesprengt';
+        game.wageBudget = 1e9; game.transferEmbargo = true; out.kSperre = getKaufHindernisse(mp).join() === 'Transfersperre'; game.transferEmbargo = false;
+        game.money = 0; game.transferBudget = 0; out.kMehrere = getKaufHindernisse(mp).length === 2 && getKaufChip(mp).includes('⛔') && getKaufChip(mp).includes(', ');
+        renderTransferView();
+        out.kKarte = document.getElementById('market-list').textContent.includes('⛔') && !document.getElementById('market-list').textContent.includes('✓ leistbar');
+        out.wKarten = JSON.stringify(woerter('#market-list button'));
+        game.money = 1e9; game.transferBudget = 1e9; renderTransferView();
+        out.kKarteOk = document.getElementById('market-list').textContent.includes('✓ leistbar');
+        // Der Chip sagt dasselbe wie der Kauf selbst
+        const vorher = squad.length; const idxMp = marketPlayers.indexOf(mp);
+        out.kStimmt = getKaufHindernisse(mp).length === 0 && (buyPlayer(idxMp), squad.length === vorher + 1);
+        const mp2 = marketPlayers[0]; game.money = 0;
+        const vorher2 = squad.length; buyPlayer(0);
+        out.kStimmtNicht = getKaufHindernisse(mp2).length > 0 && squad.length === vorher2;
+        game.money = 5e6; game.transferBudget = 5e6; game.wageBudget = 1e8;
+
+        // --- Rotations-Assistent mit Belastungsampel ---
+        squad.forEach(p => { p.fitness = 90; p.timesInjured = 0; p.injured = 0; delete p.startFolge; p.tags = []; });
+        game.formation = '4-4-2'; autoLineup();
+        const S = squad.find(p => lineup.includes(p.id) && p.pos !== 'TW' && squad.some(b => !lineup.includes(b.id) && b.pos === p.pos));
+        const B = squad.find(p => !lineup.includes(p.id) && p.pos === S.pos);
+        B.strength = S.strength;
+        out.rKeine = getRotationSuggestions().length === 0;
+        S.timesInjured = 3; out.rGelbOhneDauer = getBelastungsAmpel(S).stufe === 'gelb' && getRotationSuggestions().length === 0;
+        S.startFolge = [1, 1, 1, 1, 1];
+        const rs = getRotationSuggestions().filter(x => x.raus.id === S.id);
+        out.rDauer = rs.length === 1 && rs[0].rein && rs[0].rein.pos === S.pos && rs[0].grund === 'belastung' && rs[0].gruende.join('|') === '5 von 5 Spielen in der Startelf|3 Verletzungen';
+        game.matchday = 4; pendingMatchInfo = { isHome: true, oppName: 'Test FC', oppStr: 60, ourFixture: null };
+        renderPrematchCheck();
+        out.rText = document.getElementById('prematch-check-box').textContent.includes('🚦 Belastung: 5 von 5 Spielen in der Startelf, 3 Verletzungen');
+        out.wRotation = JSON.stringify(woerter('#prematch-check-box button'));
+        B.timesInjured = 3; B.startFolge = [1, 1, 1, 1, 1]; B.fitness = 55;
+        out.rErsatzRot = getRotationSuggestions().filter(x => x.raus.id === S.id && x.rein).length === 0;
+        B.timesInjured = 0; delete B.startFolge; B.fitness = 60;
+        out.rErsatzMuede = getRotationSuggestions().filter(x => x.raus.id === S.id && x.rein).length === 0;
+        B.fitness = 90; B.strength = S.strength - 10;
+        out.rErsatzSchwach = getRotationSuggestions().filter(x => x.raus.id === S.id && x.rein).length === 0;
+        B.strength = S.strength;
+        const sw = getRotationSuggestions().find(x => x.raus.id === S.id);
+        applyRotationSwap(S.id, sw.rein.id);
+        out.rTausch = lineup.includes(sw.rein.id) && !lineup.includes(S.id);
+        // Rote Starter mit schwacher Fitness: der bisherige Weg bleibt erhalten
+        const T = squad.find(p => lineup.includes(p.id) && p.pos !== 'TW' && squad.some(b => !lineup.includes(b.id) && b.pos === p.pos));
+        T.fitness = 40; const alt = getRotationSuggestions().filter(x => x.raus.id === T.id);
+        out.rMuedeBleibt = alt.length === 1 && alt[0].grund === undefined;
+        squad.forEach(p => { p.fitness = 90; p.timesInjured = 0; delete p.startFolge; });
+
+        // --- Eigene Erinnerungen ---
+        delete game.erinnerungen; delete game.erinnerungNr;
+        showScreen('screen-dashboard'); game.matchday = 5;
+        managerAssistantLetzterInhalt = ''; renderManagerAssistant();
+        out.eKnopf = document.getElementById('manager-assistant-box').textContent.includes('📝 Erinnerungen (0)');
+        openErinnerungen();
+        out.eFenster = document.getElementById('reminder-overlay').classList.contains('show') && document.getElementById('reminder-body').textContent.includes('Noch keine Erinnerungen') && document.getElementById('reminder-matchday').value === '8';
+        toasts.length = 0; addErinnerung(); out.eLeerFehler = toasts.some(t => t.includes('Schreibe zuerst')) && game.erinnerungen.length === 0;
+        document.getElementById('reminder-text').value = 'x'; document.getElementById('reminder-matchday').value = '0'; toasts.length = 0; addErinnerung();
+        out.eTagNull = toasts.some(t => t.includes('zwischen 1 und 34')) && game.erinnerungen.length === 0;
+        document.getElementById('reminder-matchday').value = '35'; addErinnerung(); document.getElementById('reminder-matchday').value = ''; addErinnerung();
+        out.eTagUngueltig = game.erinnerungen.length === 0;
+        document.getElementById('reminder-text').value = '  Vertrag   <b>von</b>   Müller verlängern ' + 'x'.repeat(100); document.getElementById('reminder-matchday').value = '8'; addErinnerung();
+        const e1 = game.erinnerungen[0];
+        out.eGespeichert = game.erinnerungen.length === 1 && e1.id === 'r1' && e1.bis === 8 && e1.season === game.season && e1.text.length === ERINNERUNG_TEXT_MAX && e1.text.startsWith('Vertrag <b>von</b> Müller verlängern ') && document.getElementById('reminder-text').value === '';
+        out.eMaskiert = document.getElementById('reminder-body').innerHTML.includes('&lt;b&gt;von&lt;/b&gt;') && !document.getElementById('reminder-body').innerHTML.includes('<b>von</b>');
+        out.eNochNichtFaellig = !getManagerTodos(true).some(x => x.id === 'erinnerung-r1');
+        out.eListeZaehler = document.getElementById('manager-assistant-box').textContent.includes('📝 Erinnerungen (1)') && document.getElementById('reminder-body').textContent.includes('⏳');
+        game.matchday = 8;
+        const td = getManagerTodos(true).find(x => x.id === 'erinnerung-r1');
+        out.eFaellig = !!td && td.text.startsWith('Erinnerung: Vertrag') && td.label === 'Abhaken' && td.aktion === "deleteErinnerung('r1')";
+        managerAssistantLetzterInhalt = ''; renderManagerAssistant();
+        out.eImAssistent = document.getElementById('manager-assistant-box').textContent.includes('Erinnerung: Vertrag') && document.getElementById('manager-assistant-box').textContent.includes('Abhaken');
+        out.wErinnerung = JSON.stringify(woerter('#reminder-body button, #manager-assistant-box button'));
+        out.eBreit = ueberlauf();
+        game.matchday = 5; game.erinnerungen.push({ id: 'r2', text: 'Alte Saison', season: game.season - 1, bis: 30 });
+        out.eAlteSaisonFaellig = getManagerTodos(true).some(x => x.id === 'erinnerung-r2') && !getManagerTodos(true).some(x => x.id === 'erinnerung-r1');
+        game.erinnerungen.pop();
+        game.matchday = 8; eval(td.aktion);
+        out.eAbgehakt = game.erinnerungen.length === 0 && !getManagerTodos(true).some(x => x.id === 'erinnerung-r1');
+        for (let i = 0; i < ERINNERUNG_MAX; i++) { document.getElementById('reminder-text').value = 'E' + i; document.getElementById('reminder-matchday').value = '20'; addErinnerung(); }
+        toasts.length = 0; document.getElementById('reminder-text').value = 'zu viel'; addErinnerung();
+        out.eMax = game.erinnerungen.length === ERINNERUNG_MAX && toasts.some(t => t.includes('höchstens 10'));
+        deleteErinnerung(game.erinnerungen[0].id); out.eLoeschen = game.erinnerungen.length === ERINNERUNG_MAX - 1;
+        out.eEindeutig = new Set(game.erinnerungen.map(e => e.id)).size === game.erinnerungen.length;
+        closeErinnerungen(); out.eZu = !document.getElementById('reminder-overlay').classList.contains('show');
+        game.erinnerungen = []; delete game.erinnerungen; renderErinnerungen(); out.eAltesFeld = Array.isArray(game.erinnerungen) && typeof game.erinnerungNr === 'number';
+
+        // --- Spielbericht-Archiv ---
+        delete game.spielberichte;
+        const cmAlt = typeof currentMatch !== 'undefined' ? currentMatch : null;
+        currentMatch = null; out.sOhneSpiel = archiveMatchReport() === false && !Array.isArray(game.spielberichte);
+        renderMatchReportsBox(); out.sLeer = document.getElementById('match-reports-box').textContent.includes('Nach jedem Livespiel');
+        currentMatch = { isHome: true, homeName: game.clubName, awayName: 'Test FC', homeGoals: 2, awayGoals: 1, isCup: false };
+        game.matchday = 6;
+        out.sArchiviert = archiveMatchReport() === true && game.spielberichte.length === 1 && game.spielberichte[0].titel === `${game.clubName} 2:1 Test FC` && game.spielberichte[0].text.includes('Spieltag 6') && game.spielberichte[0].matchday === 6;
+        archiveMatchReport(); out.sKeinDoppel = game.spielberichte.length === 1;
+        game.matchday = 7; currentMatch = { isHome: false, homeName: 'Cup FC', awayName: game.clubName, homeGoals: 0, awayGoals: 0, isCup: true };
+        archiveMatchReport();
+        out.sNeuesteVorn = game.spielberichte.length === 2 && game.spielberichte[0].cup === true && game.spielberichte[1].cup === false;
+        renderMatchReportsBox();
+        const sb = document.getElementById('match-reports-box').textContent;
+        out.sBox = sb.includes('Spielbericht-Archiv (2/10)') && sb.includes('🏆') && sb.includes('Cup FC 0:0') && sb.includes('S' + game.season);
+        out.wArchiv = JSON.stringify(woerter('#match-reports-box button'));
+        document.querySelector('#match-reports-box button').click();
+        out.sOeffnen = document.getElementById('share-report-overlay').classList.contains('show') && document.getElementById('share-report-title').textContent.includes('Cup FC 0:0') && document.getElementById('share-report-text').value === game.spielberichte[0].text;
+        closeShareReport();
+        toasts.length = 0; openArchivedReport(9); out.sUngueltig = toasts.some(t => t.includes('nicht mehr')) && !document.getElementById('share-report-overlay').classList.contains('show');
+        for (let i = 0; i < 12; i++) { game.matchday = 10 + i; currentMatch = { isHome: true, homeName: game.clubName, awayName: 'F' + i, homeGoals: i % 4, awayGoals: 0, isCup: false }; archiveMatchReport(); }
+        out.sMax = game.spielberichte.length === SPIELBERICHT_MAX && game.spielberichte[0].titel.includes('F11') && !game.spielberichte.some(b => b.titel.includes('Test FC'));
+        out.sVerdrahtet = endMatchSimulation.toString().includes('archiveMatchReport');
+        currentMatch = cmAlt; delete game.spielberichte; renderMatchReportsBox(); out.sAltesFeld = document.getElementById('match-reports-box').textContent.includes('0/10');
+
+        // --- Vertragsplan ---
+        squad.forEach((p, i) => { p.contracts = 4; p.wage = 1000; });
+        squad[0].contracts = 1; squad[1].contracts = 0; squad[2].contracts = 2; squad[3].contracts = 3; squad[4].contracts = 3;
+        squad[0].wage = 5000; squad[2].wage = 7000; squad[3].wage = 2000; squad[4].wage = 3000;
+        game.wageBudget = squad.reduce((sum, p) => sum + p.wage, 0) + 10000;
+        const plan = getVertragsplan();
+        const lohnHeute = squad.reduce((sum, p) => sum + p.wage, 0);
+        out.vPlanSaisons = plan.map(x => x.saison).join() === `${game.season},${game.season + 1},${game.season + 2}`;
+        out.vAnzahl = plan[0].spieler.length === 2 && plan[1].spieler.length === 1 && plan[2].spieler.length === 2;
+        out.vGehalt = plan[0].gehalt === 6000 && plan[1].gehalt === 7000 && plan[2].gehalt === 5000;
+        out.vKumuliert = plan[0].lohnDanach === lohnHeute - 6000 && plan[1].lohnDanach === lohnHeute - 13000 && plan[2].lohnDanach === lohnHeute - 18000;
+        out.vSpielraum = plan[0].spielraum === 16000 && plan[2].spielraum === 28000;
+        out.vSortiert = plan[0].spieler[0].strength >= plan[0].spieler[1].strength;
+        showScreen('screen-contracts'); renderContractsView();
+        const vb = document.getElementById('contract-plan-box').textContent;
+        out.vBox = vb.includes('Gehälter heute') && vb.includes(`Saisonende ${game.season} (diese Saison)`) && vb.includes(`Saisonende ${game.season + 2}`) && vb.includes('2 Verträge laufen aus');
+        squad.forEach(p => { p.contracts = 4; });
+        const leer = getVertragsplan(); out.vLeer = leer.every(x => x.spieler.length === 0 && x.gehalt === 0);
+        renderVertragsplan(); out.vLeerText = document.getElementById('contract-plan-box').textContent.includes('keine Verträge laufen aus');
+        out.vBreit = ueberlauf();
+        squad.forEach(p => { p.wage = calculatePlayerWage(p.marketValue, p.strength); p.contracts = 3; });
+        game.wageBudget = 1e8;
+
+        // --- Saisonziel-Rechner ---
+        const lvl = game.leagueLevel, liga = leaguesData[lvl];
+        const ich = liga.find(t => t.name === game.clubName);
+        const setze = (meinePunkte, meineSpiele, andere) => {
+            ich.points = meinePunkte; ich.played = meineSpiele;
+            const rest = liga.filter(t => t !== ich);
+            rest.forEach((t, i) => { t.points = andere[Math.min(i, andere.length - 1)] - (i >= andere.length ? i - andere.length + 1 : 0); t.played = meineSpiele; t.goalsFor = 0; t.goalsAgainst = 0; });
+        };
+        game.matchday = 21;
+        const andere = [60, 55, 50, 45, 42, 40];
+        setze(30, 20, andere);
+        let ziele = getSaisonZiele();
+        const aufst = ziele.find(x => x.id === 'aufstieg');
+        out.zAufstieg = !!aufst && aufst.innen === false && aufst.punkte === 55 - 30 && aufst.rest === 14 && aufst.erreichbar === true && aufst.platz === 2;
+        setze(30, 20, [60, 40, 36, 33, 31]);
+        ziele = getSaisonZiele();
+        out.zErreichbar = ziele[0].erreichbar === true && ziele[0].punkte === 10;
+        setze(80, 20, [60, 40, 36, 33, 31]);
+        ziele = getSaisonZiele();
+        out.zInnen = ziele[0].innen === true && ziele[0].punkte === 80 - 40 && ziele[0].sicher === false;
+        setze(90, 20, [50, 40, 36, 33, 31]);
+        ziele = getSaisonZiele();
+        out.zGesichert = ziele[0].innen === true && ziele[0].sicher === true;
+        renderSaisonZiele();
+        const zt = document.getElementById('season-goal-box').textContent;
+        out.zText = zt.includes('Direkter Aufstieg') && zt.includes('gesichert') && zt.includes('Noch 14 Spiele (höchstens 42 Punkte)');
+        out.zUntersteLiga = !ziele.some(x => x.id === 'klasse') === (lvl >= NUM_LEAGUES - 1);
+        setze(30, 30, andere); renderSaisonZiele();
+        out.zNichtMehr = document.getElementById('season-goal-box').textContent.includes('nicht mehr erreichbar') && getSaisonZiele()[0].erreichbar === false && getSaisonZiele()[0].rest === 4;
+        setze(30, 33, [60, 55, 50]);
+        out.zRestEinSpiel = getSaisonZiele()[0].rest === 1 && getSaisonZiele()[0].erreichbar === false;
+        setze(30, 0, andere); out.zOhneSpiele = getSaisonZiele().length === 0;
+        setze(30, 20, andere); game.matchday = 35; renderSaisonZiele(); out.zNachSaison = document.getElementById('season-goal-box').innerHTML === '';
+        game.matchday = 21;
+        // Bundesliga-Ziele (Europa, Klassenerhalt): dieselbe Tabelle als Liga 0 ausgeben
+        const levelAlt = game.leagueLevel, ligaAlt = leaguesData[0];
+        game.leagueLevel = 0; leaguesData[0] = liga;
+        setze(37, 20, [60, 55, 50, 45, 44, 43, 42, 41, 40, 39, 38, 36, 35, 34, 33, 32, 31]);
+        ziele = getSaisonZiele();
+        const eu = ziele.find(x => x.id === 'europa'), kl = ziele.find(x => x.id === 'klasse');
+        out.zEuropa = !!eu && eu.platz === 4 && eu.innen === false && eu.punkte === 45 - 37 && eu.gegner !== game.clubName;
+        out.zKlasse = !!kl && kl.platz === 15 && kl.innen === true && kl.gegner !== game.clubName;
+        game.leagueLevel = levelAlt; leaguesData[0] = ligaAlt;
+        out.zAltStand = typeof renderSaisonZiele === 'function';
+        showToast = toastAlt;
+        return out;
+    });
+    const ok = (...ks) => ks.every(k => r[k] === true);
+    const werte = ks => JSON.stringify(ks.map(k => r[k]));
+    const A = ['lText', 'lKapitaen', 'lAlle', 'lFenster', 'lWenige', 'lLeer', 'lVerletzteBank'];
+    assert(ok(...A), `Aufstellung teilen: Text mit Formation, Positionen, Kapitän, Bank; Fenster; zu wenige und keine Spieler (${werte(A)})`);
+    const B = ['zReihenfolge', 'zBox', 'zBeschriftung', 'zKlick', 'zNachVorn', 'zOhneSpielflow', 'zKaputt', 'zUnbekannt', 'zBegrenzt'];
+    assert(ok(...B), `Zuletzt geöffnet: Reihenfolge, Menü-Box ohne den aktuellen Bildschirm, Antippen, Spielablauf ausgenommen, kaputter Speicher (${werte(B)})`);
+    const C = ['kOk', 'kKasse', 'kBudget', 'kGehalt', 'kSperre', 'kMehrere', 'kKarte', 'kKarteOk'];
+    assert(ok(...C), `Leistbar-Chips: Gründe Kasse, Transferbudget, Gehaltsbudget, Sperre und Karten im Markt (${werte(C)})`);
+    const C2 = ['kStimmt', 'kStimmtNicht'];
+    assert(ok(...C2), `Leistbar-Chips: der Chip sagt dasselbe wie der Sofortkauf (${werte(C2)})`);
+    const D = ['rKeine', 'rGelbOhneDauer', 'rDauer', 'rText', 'rErsatzRot', 'rErsatzMuede', 'rErsatzSchwach', 'rTausch', 'rMuedeBleibt'];
+    assert(ok(...D), `Rotations-Assistent: Pause bei Dauereinsatz mit Vorgeschichte, kein roter oder müder Ersatz, bisheriger Weg bleibt (${werte(D)})`);
+    const E = ['eKnopf', 'eFenster', 'eLeerFehler', 'eTagNull', 'eTagUngueltig', 'eGespeichert', 'eMaskiert', 'eNochNichtFaellig', 'eListeZaehler'];
+    assert(ok(...E), `Erinnerungen: Fenster, Eingabeprüfung, Speichern gekürzt und maskiert, noch nicht fällig (${werte(E)})`);
+    const E2 = ['eFaellig', 'eImAssistent', 'eBreit', 'eAlteSaisonFaellig', 'eAbgehakt', 'eMax', 'eLoeschen', 'eEindeutig', 'eZu', 'eAltesFeld'];
+    assert(ok(...E2), `Erinnerungen: fällig als Assistent-Schritt, Abhaken, alte Saison, höchstens 10, eindeutige Kennungen, alte Spielstände (${werte(E2)})`);
+    const F = ['sOhneSpiel', 'sLeer', 'sArchiviert', 'sKeinDoppel', 'sNeuesteVorn', 'sBox', 'sOeffnen', 'sUngueltig', 'sMax', 'sVerdrahtet', 'sAltesFeld'];
+    assert(ok(...F), `Spielbericht-Archiv: speichern, kein Doppeleintrag, neueste zuerst, öffnen, höchstens zehn, im Spielablauf verdrahtet (${werte(F)})`);
+    const G = ['vPlanSaisons', 'vAnzahl', 'vGehalt', 'vKumuliert', 'vSpielraum', 'vSortiert', 'vBox', 'vLeer', 'vLeerText', 'vBreit'];
+    assert(ok(...G), `Vertragsplan: auslaufende Verträge und Gehälter je Saison, kumulierter Spielraum im Verträge-Bildschirm (${werte(G)})`);
+    const H = ['zAufstieg', 'zErreichbar', 'zInnen', 'zGesichert', 'zText', 'zUntersteLiga', 'zNichtMehr', 'zRestEinSpiel', 'zOhneSpiele', 'zNachSaison', 'zEuropa', 'zKlasse'];
+    assert(ok(...H), `Saisonziel-Rechner: Rückstand, Vorsprung, gesichert, nicht mehr erreichbar, Europa und Klassenerhalt (${werte(H)})`);
+    assert(r.wZuletzt === '[]' && r.wKarten === '[]' && r.wRotation === '[]' && r.wErinnerung === '[]' && r.wArchiv === '[]', `Neue Knöpfe bei 320 px in breiter Schrift: kein Wort breiter als sein Knopf (${JSON.stringify([r.wZuletzt, r.wKarten, r.wRotation, r.wErinnerung, r.wArchiv])})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 module.exports = {
     testSpielvorbereitung,
     testVertragsWerkzeuge,
@@ -1686,4 +1961,5 @@ module.exports = {
     testRunde28Funktionen,
     testRunde29Funktionen,
     testRunde30Funktionen,
+    testRunde31Funktionen,
 };

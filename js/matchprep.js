@@ -119,7 +119,7 @@ function renderHalftimeNotiz() {
     const n = opp ? getGegnerNotiz(opp) : null;
     const bilanz = opp ? getGegnerBilanzText(opp) : '';
     if (!opp || (!n && /^Noch keine/.test(bilanz))) { box.innerHTML = ''; return; }
-    box.innerHTML = `<div class="box" style="font-size:var(--fs-small); text-align:left;"><strong>📓 ${mpEsc(opp)}</strong><br>📊 ${mpEsc(bilanz)}${n ? `<br>📝 ${mpEsc(n.text)}${getNotizTags(n).length ? `<div class="ui-card-meta" style="margin-top:4px;">${notizTagChips(n)}</div>` : ''}` : ''}</div>`;
+    box.innerHTML = `<div class="box" style="font-size:var(--fs-small); text-align:left; overflow-wrap:anywhere;"><strong>📓 ${mpEsc(opp)}</strong><br>📊 ${mpEsc(bilanz)}${n ? `<br>📝 ${mpEsc(n.text)}${getNotizTags(n).length ? `<div class="ui-card-meta" style="margin-top:4px;">${notizTagChips(n)}</div>` : ''}` : ''}</div>`;
 }
 
 // Vorschläge für die Notiz aus den öffentlichen Daten zum Gegner (Spielstil, Tabelle, Tore, letzte Duelle); nur Text zum Antippen
@@ -225,7 +225,7 @@ function renderGegnerNotizListe() {
         if (notizFilter.tag && !getNotizTags(e).includes(notizFilter.tag)) return false;
         return !q || n.toLowerCase().includes(q) || String(e.text).toLowerCase().includes(q) || getNotizTags(e).some(t => NOTIZ_SCHLAGWOERTER.find(x => x.id === t).label.toLowerCase().includes(q));
     });
-    liste.innerHTML = namen.length ? namen.map(n => `<div class="box" style="font-size:var(--fs-small); margin:4px 0;"><div style="display:flex; justify-content:space-between; gap:8px; align-items:center;"><strong>${mpEsc(n)}</strong><button onclick="deleteGegnerNotiz(this.dataset.club)" data-club="${mpEsc(n)}" class="btn-secondary" style="width:auto; color:var(--danger);" title="Notiz zu ${mpEsc(n)} löschen">🗑️</button></div>${mpEsc(game.gegnerNotizen[n].text)}${getNotizTags(game.gegnerNotizen[n]).length ? `<div class="ui-card-meta" style="margin-top:4px;">${notizTagChips(game.gegnerNotizen[n])}</div>` : ''}<div style="color:var(--text-muted); font-size:var(--fs-caption);">Saison ${game.gegnerNotizen[n].season}, Spieltag ${game.gegnerNotizen[n].matchday}</div></div>`).join('')
+    liste.innerHTML = namen.length ? namen.map(n => `<div class="box" style="font-size:var(--fs-small); margin:4px 0; overflow-wrap:anywhere;"><div style="display:flex; justify-content:space-between; gap:8px; align-items:center;"><strong>${mpEsc(n)}</strong><button onclick="deleteGegnerNotiz(this.dataset.club)" data-club="${mpEsc(n)}" class="btn-secondary" style="width:auto; color:var(--danger);" title="Notiz zu ${mpEsc(n)} löschen">🗑️</button></div>${mpEsc(game.gegnerNotizen[n].text)}${getNotizTags(game.gegnerNotizen[n]).length ? `<div class="ui-card-meta" style="margin-top:4px;">${notizTagChips(game.gegnerNotizen[n])}</div>` : ''}<div style="color:var(--text-muted); font-size:var(--fs-caption);">Saison ${game.gegnerNotizen[n].season}, Spieltag ${game.gegnerNotizen[n].matchday}</div></div>`).join('')
         : (alle.length ? '<div style="font-size:var(--fs-small); color:var(--text-muted);">Keine Notiz passt zur Suche.</div>'
             : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Notizen. Vor dem Anpfiff gibt es im Spieltag-Check ein Notizfeld zum Gegner.</div>');
 }

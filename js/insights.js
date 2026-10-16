@@ -263,7 +263,7 @@ function getReviewSeasons() {
 
 function buildSeasonReviewHtml(saison) {
     const fmt = v => v.toFixed(2).replace('.', ',');
-    const abschnitt = (titel, inhalt) => `<div class="box" style="font-size:var(--fs-small); margin:6px 0; text-align:left;"><strong>${titel}</strong><br>${inhalt}</div>`;
+    const abschnitt = (titel, inhalt) => `<div class="box" style="font-size:var(--fs-small); margin:6px 0; text-align:left; overflow-wrap:anywhere;"><strong>${titel}</strong><br>${inhalt}</div>`;
     const leer = text => `<span style="color:var(--text-muted);">${text}</span>`;
     const teile = [];
     const k = (game.managerCareer || []).find(e => e.season === saison && e.club === game.clubName);
@@ -370,7 +370,8 @@ function renderSaisonZiele() {
             const ton = z.innen ? (z.sicher ? 'gut' : 'warn') : (z.erreichbar ? 'warn' : 'schlecht');
             const status = z.innen ? (z.sicher ? 'gesichert' : `Vorsprung ${z.punkte} Punkt${z.punkte === 1 ? '' : 'e'} auf ${mpEsc(z.gegner)}`)
                 : (z.erreichbar ? `Rückstand ${z.punkte} Punkt${z.punkte === 1 ? '' : 'e'} auf ${mpEsc(z.gegner)}` : 'nicht mehr erreichbar');
-            return `<div class="box" style="margin:4px 0; font-size:var(--fs-small); display:flex; flex-wrap:wrap; justify-content:space-between; gap:4px 8px;"><span>${z.label} (Platz ${z.platz})</span><span>${uiChip(status, ton)}</span></div>`;
+            const farbe = ton === 'gut' ? 'var(--primary)' : ton === 'schlecht' ? 'var(--danger)' : 'var(--accent)';
+            return `<div class="box" style="margin:4px 0; font-size:var(--fs-small);"><div>${z.label} (Platz ${z.platz})</div><div style="font-weight:700; color:${farbe}; overflow-wrap:anywhere;">${z.innen ? '✓ ' : ''}${status}</div></div>`;
         }).join('')
         + `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">Noch ${rest} Spiel${rest === 1 ? '' : 'e'} (höchstens ${3 * rest} Punkte). Reine Tabellenwerte, das Torverhältnis zählt nicht.</div>`;
 }
