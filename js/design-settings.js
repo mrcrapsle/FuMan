@@ -102,6 +102,7 @@ function applyDesignSettings() {
     const meta = document.querySelector('meta[name="theme-color"]');
     const t = DESIGN_THEMES.find(x => x.id === theme);
     if (meta && t) meta.setAttribute('content', t.farben[0]);
+    renderTagNachtKnopf();
 }
 
 // Bei "Automatisch" mitwandern, wenn das Handy zwischen hell und dunkel wechselt (z. B. abends)
@@ -116,6 +117,14 @@ function beobachteSystemTheme(aktiv) {
         else if (!aktiv && mq.removeEventListener && mq.__designFn) mq.removeEventListener('change', mq.__designFn);
         mq.__designFn = aktiv ? fn : null;
     });
+}
+
+// Tag/Nacht-Schnellschalter (Phase 26.17): wechselt zwischen Tageslicht und dem dunklen Standard (Flutlicht)
+function istHellesTheme() { return loeseThemeAuf(getDesignTheme()) === 'tageslicht'; }
+function wechsleTagNacht() { setzeDesignTheme(istHellesTheme() ? 'flutlicht' : 'tageslicht'); }
+function renderTagNachtKnopf() {
+    const b = document.getElementById('theme-quick-btn');
+    if (b) b.textContent = istHellesTheme() ? '🌙 Nachtmodus' : '☀️ Tagmodus';
 }
 
 function setzeDesignTheme(id) {

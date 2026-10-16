@@ -43,13 +43,37 @@
             let hasCup = dfb || lande;
             let eventColor = hasCup ? 'var(--accent)' : (euro ? 'var(--europe)' : 'var(--text-muted)');
 
+            // Phase 26.17: Gegner, eigene Erinnerungen, Tagebuch, Fristen und Vertragsenden am passenden Spieltag
+            const extras = typeof getKalenderExtras === 'function' ? getKalenderExtras(i) : [];
+            if (extras.length) item.style.flexWrap = 'wrap';
             item.innerHTML = `
                 <span><strong>${L('Spieltag', 'Matchday')} ${i}</strong> ${isCurrent ? `<span style="color:var(--primary); font-weight:900;">(${L('HEUTE', 'TODAY')})</span>` : ''}</span>
                 <span style="color:${eventColor}; font-weight:bold;">${eventText}</span>
+                ${extras.length ? `<div class="cal-extras" style="flex-basis:100%; font-size:var(--fs-caption); color:var(--text-muted); overflow-wrap:anywhere;">${extras.join('<br>')}</div>` : ''}
             `;
             if (isCurrent) item.style.borderColor = "var(--primary)";
             list.appendChild(item);
         }
+    }
+
+    function getKalenderExtras(md) {
+        const x = [];
+        const liga = leaguesData[game.leagueLevel] || [];
+        const f = typeof fixturesData !== 'undefined' && fixturesData[game.leagueLevel] ? (fixturesData[game.leagueLevel][md - 1] || []).find(y => liga[y.home] && liga[y.away] && (liga[y.home].name === game.clubName || liga[y.away].name === game.clubName)) : null;
+        if (f) {
+            const heim = liga[f.home].name === game.clubName, gegner = heim ? liga[f.away].name : liga[f.home].name;
+            x.push(`${heim ? '🏠' : '✈️'} ${mpEsc(gegner)}${f.played ? ` · ${heim ? f.homeGoals : f.awayGoals}:${heim ? f.awayGoals : f.homeGoals}` : ''}`);
+        }
+        (Array.isArray(game.erinnerungen) ? game.erinnerungen : []).filter(e => e.season === game.season && e.bis === md).forEach(e => x.push(`📝 ${mpEsc(e.text)}`));
+        const tb = typeof getTagebuchEintrag === 'function' ? getTagebuchEintrag(game.season, md) : null;
+        if (tb) x.push(`📔 ${mpEsc(tb.text)}`);
+        if (typeof SUMMER_WINDOW_LAST_MATCHDAY !== 'undefined' && md === SUMMER_WINDOW_LAST_MATCHDAY) x.push('⏳ Letzter Tag des Sommer-Transferfensters');
+        if (game.winterWindowActive && game.winterWindowCloseMatchday === md) x.push('⏳ Letzter Tag des Winter-Transferfensters');
+        if (md === 34) {
+            const aus = squad.filter(p => p.contracts <= 1);
+            if (aus.length) x.push(`📄 Zum Saisonende laufen ${aus.length === 1 ? '1 Vertrag' : aus.length + ' Verträge'} aus: ${aus.slice(0, 4).map(p => mpEsc(p.name)).join(', ')}${aus.length > 4 ? ' …' : ''}`);
+        }
+        return x;
     }
 
     function scheduleFriendlyMatch() {

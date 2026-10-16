@@ -121,6 +121,7 @@
         erinnerungen: [],
         erinnerungNr: 0,
         spielberichte: [],
+        tagebuch: [],
         assistentErledigt: null,
         vorlageBilanzArchiv: [],
         vorlageImEinsatz: null,

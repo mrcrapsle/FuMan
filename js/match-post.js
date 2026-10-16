@@ -482,9 +482,12 @@
     // Simuliert bis zu "anzahl" Spieltage am Stück. Die ganze Saison ist damit nur noch der
     // Sonderfall "so viele, wie überhaupt übrig sind" - es gibt keine zweite Schleife, die
     // beim Ändern der Spieltagslogik vergessen werden könnte.
-    function simulateMatchdays(anzahl) {
+    function simulateMatchdays(anzahl, zusammenfassung) {
         if (game.matchday > 34) { showToast('Die Saison ist bereits beendet.', 'error'); return; }
         let simuliert = 0;
+        // Zusammenfassung (Phase 26.17) nur auf Wunsch des Knopfs, nicht für Bot, Tests und die Saison-Simulation
+        const simVorher = zusammenfassung && typeof erfasseSimStand === 'function' ? erfasseSimStand() : null;
+        const simSpiele = [];
         // Nach einer Entlassung wird nicht weitergespielt. Frueher stoppte das alert() in
         // getSacked() die Schleife und der direkt folgende Reload beendete alles - mit dem
         // nicht blockierenden Meldungsfenster lief die Simulation dagegen munter weiter,
@@ -550,6 +553,7 @@
             }
 
             if (opponentNameThisMatch) recordRivalryResult(opponentNameThisMatch, ourGoalsThisMatch, oppGoalsThisMatch);
+            if (simVorher && playedOurMatch) simSpiele.push({ md, gegner: opponentNameThisMatch, heim: isHome, tore: ourGoalsThisMatch, gegentore: oppGoalsThisMatch });
             if (playedOurMatch) attributeGoalsToScorers(ourGoalsThisMatch);
             applyMatchdayFinances(isHome, won, playedOurMatch && oppGoalsThisMatch === 0, isHomeDerby, opponentNameThisMatch, opponentNameThisMatch ? `${ourGoalsThisMatch}:${oppGoalsThisMatch}` : null);
             processPostMatchRoutine(playedOurMatch ? (won ? 'win' : (drawn ? 'draw' : 'loss')) : null, isHomeDerby, false, ourGoalsThisMatch - oppGoalsThisMatch, isHome, playedOurMatch ? { total: ourGoalsThisMatch + oppGoalsThisMatch, bothScored: ourGoalsThisMatch > 0 && oppGoalsThisMatch > 0 } : null);
@@ -557,5 +561,6 @@
         updateUI();
         showScreen('screen-dashboard');
         showToast(`⚡ ${simuliert} Spieltag${simuliert === 1 ? '' : 'e'} simuliert - jetzt Spieltag ${Math.min(34, game.matchday)}/34.`, 'success', 3500);
+        if (simVorher && typeof zeigeSimZusammenfassung === 'function') zeigeSimZusammenfassung(simVorher, simSpiele);
     }
 

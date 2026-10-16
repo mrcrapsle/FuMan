@@ -130,7 +130,8 @@ function renderVertragsplan() {
     const lohn = squad.reduce((s, p) => s + (p.wage || 0), 0);
     box.innerHTML = `<div style="font-size:var(--fs-small); margin-bottom:6px;">Gehälter heute: <strong>${formatVal(lohn)}</strong> von ${formatVal(game.wageBudget)} Gehaltsbudget je Spieltag (${formatVal(game.wageBudget - lohn)} Spielraum).</div>`
         + plan.map((z, k) => `<div class="box" style="margin:4px 0; font-size:var(--fs-small);"><strong>${k === 0 ? 'Saisonende ' + z.saison + ' (diese Saison)' : 'Saisonende ' + z.saison}</strong>: ${z.spieler.length ? `${z.spieler.length === 1 ? '1 Vertrag läuft' : z.spieler.length + ' Verträge laufen'} aus (${z.spieler.slice(0, 3).map(p => `${mpEsc(p.name)} ${p.strength}`).join(', ')}${z.spieler.length > 3 ? ' …' : ''}), frei werden ${formatVal(z.gehalt)} je Spieltag` : 'keine Verträge laufen aus'}
-            <div style="color:var(--text-muted); font-size:var(--fs-caption);">Danach ${formatVal(z.lohnDanach)} Gehälter, ${formatVal(z.spielraum)} Spielraum im heutigen Budget (ohne Ersatz und Verlängerungen).</div></div>`).join('');
+            <div style="color:var(--text-muted); font-size:var(--fs-caption);">Danach ${formatVal(z.lohnDanach)} Gehälter, ${formatVal(z.spielraum)} Spielraum im heutigen Budget (ohne Ersatz und Verlängerungen).</div>
+            ${z.spieler.length ? `<button onclick="erinnerungVorbelegen(this.dataset.text)" data-text="${mpEsc('Verträge klären: ' + z.spieler.slice(0, 3).map(p => p.name).join(', '))}" class="btn-secondary" style="margin-top:4px;">📝 Erinnern</button>` : ''}</div>`).join('');
 }
 
 // ---------- Marktwert-Kurve ----------

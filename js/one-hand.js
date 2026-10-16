@@ -101,6 +101,63 @@ function renderZuletzt() {
     if (box.innerHTML !== html) box.innerHTML = html;
 }
 
+// ---------- Favoriten-Leiste (Phase 26.17) ----------
+// Bis zu vier Bildschirme als Schnellknöpfe im Dashboard; Einstellung dieses Geräts (localStorage), kein Spielstand.
+const FAVORITEN_KEY = 'anstoss_fm13_favoriten';
+const FAVORITEN_MAX = 4;
+
+function getFavoriten() {
+    try {
+        const l = JSON.parse(safeLocalGet(FAVORITEN_KEY) || '[]');
+        return Array.isArray(l) ? l.filter(x => typeof x === 'string').slice(0, FAVORITEN_MAX) : [];
+    } catch (e) { return []; }
+}
+
+// Alle Bildschirme mit Menüeintrag (eindeutig, in Menü-Reihenfolge)
+function getMenueBildschirme() {
+    const ids = [];
+    document.querySelectorAll('#app-sidebar .nav-btn').forEach(b => {
+        const m = (b.getAttribute('onclick') || '').match(/^showScreen\('([\w-]+)'\)$/);
+        if (m && !ids.includes(m[1])) ids.push(m[1]);
+    });
+    return ids;
+}
+
+function toggleFavorit(id) {
+    const l = getFavoriten();
+    if (l.includes(id)) safeLocalSet(FAVORITEN_KEY, JSON.stringify(l.filter(x => x !== id)));
+    else if (l.length >= FAVORITEN_MAX) { showToast(`Höchstens ${FAVORITEN_MAX} Favoriten. Entferne zuerst einen.`, 'error'); return; }
+    else if (!getMenueBildschirme().includes(id)) { showToast('Diesen Bildschirm gibt es nicht im Menü.', 'error'); return; }
+    else safeLocalSet(FAVORITEN_KEY, JSON.stringify([...l, id]));
+    renderFavoritenAuswahl();
+    renderFavoritenLeiste();
+}
+
+function openFavoritenAuswahl() {
+    const ov = document.getElementById('favoriten-overlay');
+    if (!ov) return;
+    renderFavoritenAuswahl();
+    ov.classList.add('show');
+}
+function closeFavoritenAuswahl() { const ov = document.getElementById('favoriten-overlay'); if (ov) ov.classList.remove('show'); }
+
+function renderFavoritenAuswahl() {
+    const body = document.getElementById('favoriten-body');
+    if (!body) return;
+    const fav = getFavoriten();
+    body.innerHTML = `<div class="panel-header">⭐ Favoriten (${fav.length}/${FAVORITEN_MAX})</div>
+        <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Ausgewählte Bildschirme erscheinen als Schnellknöpfe im Dashboard.</div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 12em), 1fr)); gap:4px;">${getMenueBildschirme().map(id => `<button onclick="toggleFavorit(this.dataset.s)" data-s="${id}" class="${fav.includes(id) ? 'btn-action' : 'btn-secondary'}" aria-pressed="${fav.includes(id)}" style="text-align:left;">${fav.includes(id) ? '★' : '☆'} ${getZuletztLabel(id)}</button>`).join('')}</div>`;
+}
+
+function renderFavoritenLeiste() {
+    const box = document.getElementById('favoriten-box');
+    if (!box) return;
+    const fav = getFavoriten().map(id => ({ id, label: getZuletztLabel(id) })).filter(f => f.label);
+    const html = `<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 9em), 1fr)); gap:6px; margin-bottom:10px;">${fav.map(f => `<button onclick="showScreen(this.dataset.s)" data-s="${f.id}" class="btn-secondary">${f.label}</button>`).join('')}<button onclick="openFavoritenAuswahl()" class="btn-secondary" title="Favoriten auswählen">${fav.length ? '⭐ Bearbeiten' : '⭐ Favoriten festlegen'}</button></div>`;
+    if (box.innerHTML !== html) box.innerHTML = html;
+}
+
 // ---------- Spielersuche (Phase 26.17) ----------
 // Sucht ab zwei Buchstaben in allen Bereichen mit Spielerdetail; Groß-/Kleinschreibung und Akzente zählen nicht.
 const SPIELER_SUCHE_MAX = 8;

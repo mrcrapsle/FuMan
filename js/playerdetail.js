@@ -152,6 +152,8 @@
         if (typeof renderPlayerStartBilanz === 'function') renderPlayerStartBilanz(p, pool);
         renderErsatzSuche(p, pool);
         renderDetailNav();
+        const erinnernBox = document.getElementById('pd-erinnern');
+        if (erinnernBox) erinnernBox.innerHTML = pool === 'squad' ? `<button onclick="closePlayerDetail(); erinnerungVorbelegen(this.dataset.text)" data-text="${(p.contracts <= 2 ? 'Vertrag von ' + p.name + ' klären' : p.name + ': ').replace(/"/g, '&quot;')}" class="btn-secondary" style="margin-top:6px;">📝 Erinnern</button>` : '';
         if (typeof renderMarketValueCurve === 'function') renderMarketValueCurve(p);
         if (typeof renderDevelopmentForecast === 'function') renderDevelopmentForecast(p);
         let historyBox = document.getElementById('pd-strength-history');

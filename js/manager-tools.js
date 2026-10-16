@@ -419,6 +419,13 @@ function closeErinnerungen() {
     if (ov) ov.classList.remove('show');
 }
 
+// Erinnerung mit vorbefülltem Text (aus Spielerdetail und Vertragsplan); gespeichert wird erst im Fenster
+function erinnerungVorbelegen(text) {
+    openErinnerungen();
+    const feld = document.getElementById('reminder-text');
+    if (feld) { feld.value = String(text || '').slice(0, ERINNERUNG_TEXT_MAX); feld.focus(); }
+}
+
 function addErinnerung() {
     ensureErinnerungen();
     const feld = document.getElementById('reminder-text'), tag = document.getElementById('reminder-matchday');

@@ -667,6 +667,7 @@ function renderUiStatRow(werte) {
         erinnerungen: [],
         erinnerungNr: 0,
         spielberichte: [],
+        tagebuch: [],
         assistentErledigt: null,
         vorlageBilanzArchiv: [],
         vorlageImEinsatz: null,
@@ -2411,6 +2412,8 @@ function getOwnDerbyRivals() {
         if (typeof renderPlayerStartBilanz === 'function') renderPlayerStartBilanz(p, pool);
         renderErsatzSuche(p, pool);
         renderDetailNav();
+        const erinnernBox = document.getElementById('pd-erinnern');
+        if (erinnernBox) erinnernBox.innerHTML = pool === 'squad' ? `<button onclick="closePlayerDetail(); erinnerungVorbelegen(this.dataset.text)" data-text="${(p.contracts <= 2 ? 'Vertrag von ' + p.name + ' klären' : p.name + ': ').replace(/"/g, '&quot;')}" class="btn-secondary" style="margin-top:6px;">📝 Erinnern</button>` : '';
         if (typeof renderMarketValueCurve === 'function') renderMarketValueCurve(p);
         if (typeof renderDevelopmentForecast === 'function') renderDevelopmentForecast(p);
         let historyBox = document.getElementById('pd-strength-history');
@@ -4297,7 +4300,7 @@ function getStilEmpfehlung(oppName) {
 }
 
 function applyStilEmpfehlung(stil) {
-    if (!STIL_FUER_ARCHETYP.P || !Object.values(STIL_FUER_ARCHETYP).includes(stil)) { showToast('Unbekannter Spielstil.', 'error'); return; }
+    if (!Object.values(STIL_FUER_ARCHETYP).includes(stil)) { showToast('Unbekannter Spielstil.', 'error'); return; }
     setTacticStyle(stil);
     showToast(`🧠 Spielstil: ${TACTIC_STYLE_CONFIG[stil].label}.`, 'success');
     renderPrematchCheck();
@@ -12985,6 +12988,63 @@ function renderZuletzt() {
     if (box.innerHTML !== html) box.innerHTML = html;
 }
 
+// ---------- Favoriten-Leiste (Phase 26.17) ----------
+// Bis zu vier Bildschirme als Schnellknöpfe im Dashboard; Einstellung dieses Geräts (localStorage), kein Spielstand.
+const FAVORITEN_KEY = 'anstoss_fm13_favoriten';
+const FAVORITEN_MAX = 4;
+
+function getFavoriten() {
+    try {
+        const l = JSON.parse(safeLocalGet(FAVORITEN_KEY) || '[]');
+        return Array.isArray(l) ? l.filter(x => typeof x === 'string').slice(0, FAVORITEN_MAX) : [];
+    } catch (e) { return []; }
+}
+
+// Alle Bildschirme mit Menüeintrag (eindeutig, in Menü-Reihenfolge)
+function getMenueBildschirme() {
+    const ids = [];
+    document.querySelectorAll('#app-sidebar .nav-btn').forEach(b => {
+        const m = (b.getAttribute('onclick') || '').match(/^showScreen\('([\w-]+)'\)$/);
+        if (m && !ids.includes(m[1])) ids.push(m[1]);
+    });
+    return ids;
+}
+
+function toggleFavorit(id) {
+    const l = getFavoriten();
+    if (l.includes(id)) safeLocalSet(FAVORITEN_KEY, JSON.stringify(l.filter(x => x !== id)));
+    else if (l.length >= FAVORITEN_MAX) { showToast(`Höchstens ${FAVORITEN_MAX} Favoriten. Entferne zuerst einen.`, 'error'); return; }
+    else if (!getMenueBildschirme().includes(id)) { showToast('Diesen Bildschirm gibt es nicht im Menü.', 'error'); return; }
+    else safeLocalSet(FAVORITEN_KEY, JSON.stringify([...l, id]));
+    renderFavoritenAuswahl();
+    renderFavoritenLeiste();
+}
+
+function openFavoritenAuswahl() {
+    const ov = document.getElementById('favoriten-overlay');
+    if (!ov) return;
+    renderFavoritenAuswahl();
+    ov.classList.add('show');
+}
+function closeFavoritenAuswahl() { const ov = document.getElementById('favoriten-overlay'); if (ov) ov.classList.remove('show'); }
+
+function renderFavoritenAuswahl() {
+    const body = document.getElementById('favoriten-body');
+    if (!body) return;
+    const fav = getFavoriten();
+    body.innerHTML = `<div class="panel-header">⭐ Favoriten (${fav.length}/${FAVORITEN_MAX})</div>
+        <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Ausgewählte Bildschirme erscheinen als Schnellknöpfe im Dashboard.</div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 12em), 1fr)); gap:4px;">${getMenueBildschirme().map(id => `<button onclick="toggleFavorit(this.dataset.s)" data-s="${id}" class="${fav.includes(id) ? 'btn-action' : 'btn-secondary'}" aria-pressed="${fav.includes(id)}" style="text-align:left;">${fav.includes(id) ? '★' : '☆'} ${getZuletztLabel(id)}</button>`).join('')}</div>`;
+}
+
+function renderFavoritenLeiste() {
+    const box = document.getElementById('favoriten-box');
+    if (!box) return;
+    const fav = getFavoriten().map(id => ({ id, label: getZuletztLabel(id) })).filter(f => f.label);
+    const html = `<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 9em), 1fr)); gap:6px; margin-bottom:10px;">${fav.map(f => `<button onclick="showScreen(this.dataset.s)" data-s="${f.id}" class="btn-secondary">${f.label}</button>`).join('')}<button onclick="openFavoritenAuswahl()" class="btn-secondary" title="Favoriten auswählen">${fav.length ? '⭐ Bearbeiten' : '⭐ Favoriten festlegen'}</button></div>`;
+    if (box.innerHTML !== html) box.innerHTML = html;
+}
+
 // ---------- Spielersuche (Phase 26.17) ----------
 // Sucht ab zwei Buchstaben in allen Bereichen mit Spielerdetail; Groß-/Kleinschreibung und Akzente zählen nicht.
 const SPIELER_SUCHE_MAX = 8;
@@ -13346,6 +13406,7 @@ function applyDesignSettings() {
     const meta = document.querySelector('meta[name="theme-color"]');
     const t = DESIGN_THEMES.find(x => x.id === theme);
     if (meta && t) meta.setAttribute('content', t.farben[0]);
+    renderTagNachtKnopf();
 }
 
 // Bei "Automatisch" mitwandern, wenn das Handy zwischen hell und dunkel wechselt (z. B. abends)
@@ -13360,6 +13421,14 @@ function beobachteSystemTheme(aktiv) {
         else if (!aktiv && mq.removeEventListener && mq.__designFn) mq.removeEventListener('change', mq.__designFn);
         mq.__designFn = aktiv ? fn : null;
     });
+}
+
+// Tag/Nacht-Schnellschalter (Phase 26.17): wechselt zwischen Tageslicht und dem dunklen Standard (Flutlicht)
+function istHellesTheme() { return loeseThemeAuf(getDesignTheme()) === 'tageslicht'; }
+function wechsleTagNacht() { setzeDesignTheme(istHellesTheme() ? 'flutlicht' : 'tageslicht'); }
+function renderTagNachtKnopf() {
+    const b = document.getElementById('theme-quick-btn');
+    if (b) b.textContent = istHellesTheme() ? '🌙 Nachtmodus' : '☀️ Tagmodus';
 }
 
 function setzeDesignTheme(id) {
@@ -13603,6 +13672,8 @@ function initZugaenglichkeit() {
 
     function renderDashboardView() {
         if (typeof renderSaisonZiele === 'function') renderSaisonZiele();
+        if (typeof renderRestprogramm === 'function') renderRestprogramm();
+        if (typeof renderFavoritenLeiste === 'function') renderFavoritenLeiste();
         document.getElementById('dash-mday').innerText = Math.min(34, game.matchday);
         document.getElementById('dash-league-name').innerText = leagueNames[game.leagueLevel];
         // Vorstands-Warnung dieser Saison mit Ausweg (25.26); verschwindet, sobald das Vertrauen wieder über 60 liegt.
@@ -14224,13 +14295,37 @@ function initZugaenglichkeit() {
             let hasCup = dfb || lande;
             let eventColor = hasCup ? 'var(--accent)' : (euro ? 'var(--europe)' : 'var(--text-muted)');
 
+            // Phase 26.17: Gegner, eigene Erinnerungen, Tagebuch, Fristen und Vertragsenden am passenden Spieltag
+            const extras = typeof getKalenderExtras === 'function' ? getKalenderExtras(i) : [];
+            if (extras.length) item.style.flexWrap = 'wrap';
             item.innerHTML = `
                 <span><strong>${L('Spieltag', 'Matchday')} ${i}</strong> ${isCurrent ? `<span style="color:var(--primary); font-weight:900;">(${L('HEUTE', 'TODAY')})</span>` : ''}</span>
                 <span style="color:${eventColor}; font-weight:bold;">${eventText}</span>
+                ${extras.length ? `<div class="cal-extras" style="flex-basis:100%; font-size:var(--fs-caption); color:var(--text-muted); overflow-wrap:anywhere;">${extras.join('<br>')}</div>` : ''}
             `;
             if (isCurrent) item.style.borderColor = "var(--primary)";
             list.appendChild(item);
         }
+    }
+
+    function getKalenderExtras(md) {
+        const x = [];
+        const liga = leaguesData[game.leagueLevel] || [];
+        const f = typeof fixturesData !== 'undefined' && fixturesData[game.leagueLevel] ? (fixturesData[game.leagueLevel][md - 1] || []).find(y => liga[y.home] && liga[y.away] && (liga[y.home].name === game.clubName || liga[y.away].name === game.clubName)) : null;
+        if (f) {
+            const heim = liga[f.home].name === game.clubName, gegner = heim ? liga[f.away].name : liga[f.home].name;
+            x.push(`${heim ? '🏠' : '✈️'} ${mpEsc(gegner)}${f.played ? ` · ${heim ? f.homeGoals : f.awayGoals}:${heim ? f.awayGoals : f.homeGoals}` : ''}`);
+        }
+        (Array.isArray(game.erinnerungen) ? game.erinnerungen : []).filter(e => e.season === game.season && e.bis === md).forEach(e => x.push(`📝 ${mpEsc(e.text)}`));
+        const tb = typeof getTagebuchEintrag === 'function' ? getTagebuchEintrag(game.season, md) : null;
+        if (tb) x.push(`📔 ${mpEsc(tb.text)}`);
+        if (typeof SUMMER_WINDOW_LAST_MATCHDAY !== 'undefined' && md === SUMMER_WINDOW_LAST_MATCHDAY) x.push('⏳ Letzter Tag des Sommer-Transferfensters');
+        if (game.winterWindowActive && game.winterWindowCloseMatchday === md) x.push('⏳ Letzter Tag des Winter-Transferfensters');
+        if (md === 34) {
+            const aus = squad.filter(p => p.contracts <= 1);
+            if (aus.length) x.push(`📄 Zum Saisonende laufen ${aus.length === 1 ? '1 Vertrag' : aus.length + ' Verträge'} aus: ${aus.slice(0, 4).map(p => mpEsc(p.name)).join(', ')}${aus.length > 4 ? ' …' : ''}`);
+        }
+        return x;
     }
 
     function scheduleFriendlyMatch() {
@@ -23017,7 +23112,8 @@ function renderVertragsplan() {
     const lohn = squad.reduce((s, p) => s + (p.wage || 0), 0);
     box.innerHTML = `<div style="font-size:var(--fs-small); margin-bottom:6px;">Gehälter heute: <strong>${formatVal(lohn)}</strong> von ${formatVal(game.wageBudget)} Gehaltsbudget je Spieltag (${formatVal(game.wageBudget - lohn)} Spielraum).</div>`
         + plan.map((z, k) => `<div class="box" style="margin:4px 0; font-size:var(--fs-small);"><strong>${k === 0 ? 'Saisonende ' + z.saison + ' (diese Saison)' : 'Saisonende ' + z.saison}</strong>: ${z.spieler.length ? `${z.spieler.length === 1 ? '1 Vertrag läuft' : z.spieler.length + ' Verträge laufen'} aus (${z.spieler.slice(0, 3).map(p => `${mpEsc(p.name)} ${p.strength}`).join(', ')}${z.spieler.length > 3 ? ' …' : ''}), frei werden ${formatVal(z.gehalt)} je Spieltag` : 'keine Verträge laufen aus'}
-            <div style="color:var(--text-muted); font-size:var(--fs-caption);">Danach ${formatVal(z.lohnDanach)} Gehälter, ${formatVal(z.spielraum)} Spielraum im heutigen Budget (ohne Ersatz und Verlängerungen).</div></div>`).join('');
+            <div style="color:var(--text-muted); font-size:var(--fs-caption);">Danach ${formatVal(z.lohnDanach)} Gehälter, ${formatVal(z.spielraum)} Spielraum im heutigen Budget (ohne Ersatz und Verlängerungen).</div>
+            ${z.spieler.length ? `<button onclick="erinnerungVorbelegen(this.dataset.text)" data-text="${mpEsc('Verträge klären: ' + z.spieler.slice(0, 3).map(p => p.name).join(', '))}" class="btn-secondary" style="margin-top:4px;">📝 Erinnern</button>` : ''}</div>`).join('');
 }
 
 // ---------- Marktwert-Kurve ----------
@@ -23410,6 +23506,8 @@ function buildSeasonReviewHtml(saison) {
     }).filter(x => x.n > 0).sort((a, b) => b.tage - a.tage);
     const summe = ausfaelle.reduce((sum, x) => sum + x.tage, 0);
     teile.push(abschnitt('🩹 Ausfälle', ausfaelle.length ? `${summe} verpasste Spiele bei ${ausfaelle.length} aktuellen Spielern. Am längsten: ${ausfaelle.slice(0, 3).map(x => `${mpEsc(x.p.name)} (${x.tage})`).join(', ')}.` : leer('Bei den heutigen Spielern ist für diese Saison nichts im Verlauf.')));
+    const tagebuchEintraege = (Array.isArray(game.tagebuch) ? game.tagebuch : []).filter(x => x.season === saison).sort((a, b) => a.matchday - b.matchday);
+    if (tagebuchEintraege.length) teile.push(abschnitt('📔 Tagebuch', tagebuchEintraege.map(x => `<strong>${x.matchday}.</strong> ${mpEsc(x.text)}`).join('<br>')));
     const notizen = Object.keys(game.gegnerNotizen || {}).filter(n => game.gegnerNotizen[n].season === saison).sort((a, b) => a.localeCompare(b));
     teile.push(abschnitt('📓 Notizen zu Gegnern', notizen.length ? notizen.map(n => `<strong>${mpEsc(n)}</strong>: ${mpEsc(game.gegnerNotizen[n].text)}`).join('<br>') : leer('In dieser Saison wurde keine Notiz geschrieben oder geändert.')));
     return teile.join('');
@@ -23484,6 +23582,114 @@ function renderSaisonZiele() {
             return `<div class="box" style="margin:4px 0; font-size:var(--fs-small);"><div>${z.label} (Platz ${z.platz})</div><div style="font-weight:700; color:${farbe}; overflow-wrap:anywhere;">${z.innen ? '✓ ' : ''}${status}</div></div>`;
         }).join('')
         + `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">Noch ${rest} Spiel${rest === 1 ? '' : 'e'} (höchstens ${3 * rest} Punkte). Reine Tabellenwerte, das Torverhältnis zählt nicht.</div>`;
+}
+
+// ---------- Restprogramm (Phase 26.17) ----------
+// Die eigenen Ligaspiele der restlichen Saison aus dem echten Spielplan (fixturesData): die nächsten fünf Gegner mit
+// Heim/Auswärts, Tabellenplatz und Stärke, die Ø-Stärke aller Restgegner und die schwerste Phase (drei Spiele in Folge).
+function getRestprogramm() {
+    const lvl = game.leagueLevel, liga = leaguesData[lvl] || [], plan = (typeof fixturesData !== 'undefined' && fixturesData[lvl]) || [];
+    const tab = typeof sortedTable === 'function' ? sortedTable(lvl) : [];
+    const spiele = [];
+    for (let md = Math.max(1, game.matchday); md <= SAISON_SPIELE; md++) {
+        const f = (plan[md - 1] || []).find(x => liga[x.home] && liga[x.away] && (liga[x.home].name === game.clubName || liga[x.away].name === game.clubName));
+        if (!f || f.played) continue;
+        const heim = liga[f.home].name === game.clubName;
+        const gegner = heim ? liga[f.away] : liga[f.home];
+        spiele.push({ md, heim, name: gegner.name, staerke: Math.round(gegner.strength), platz: tab.indexOf(gegner) + 1 });
+    }
+    let schwer = null;
+    for (let i = 0; i + 2 < spiele.length; i++) {
+        const schnitt = (spiele[i].staerke + spiele[i + 1].staerke + spiele[i + 2].staerke) / 3;
+        if (!schwer || schnitt > schwer.schnitt) schwer = { von: spiele[i].md, bis: spiele[i + 2].md, schnitt };
+    }
+    const schnitt = spiele.length ? spiele.reduce((sum, x) => sum + x.staerke, 0) / spiele.length : 0;
+    return { spiele, schnitt, schwer };
+}
+
+function renderRestprogramm() {
+    const box = document.getElementById('rest-programm-box');
+    if (!box) return;
+    const r = getRestprogramm();
+    if (!r.spiele.length) { box.innerHTML = ''; return; }
+    const symbole = name => `${game.gegnerNotizen && game.gegnerNotizen[name] ? ' 📓' : ''}${game.matchplaene && game.matchplaene[name] ? ' 📋' : ''}${typeof getGegnerTyp === 'function' && getGegnerTyp(name) ? (getGegnerTyp(name).typ === 'liebling' ? ' 😊' : ' 😬') : ''}`;
+    box.innerHTML = '<div class="panel-header" style="color:var(--blue);">🗓️ Restprogramm</div>'
+        + r.spiele.slice(0, 5).map(x => `<div style="display:flex; justify-content:space-between; gap:8px; font-size:var(--fs-small); margin:3px 0;"><span style="overflow-wrap:anywhere;">${x.md}. ${x.heim ? '🏠' : '✈️'} ${mpEsc(x.name)}${symbole(x.name)}</span><span style="color:var(--text-muted); flex:0 0 auto;">Platz ${x.platz} · Str ${x.staerke}</span></div>`).join('')
+        + `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:6px;">Noch ${r.spiele.length} Ligaspiel${r.spiele.length === 1 ? '' : 'e'}, Ø-Stärke der Gegner ${r.schnitt.toFixed(1).replace('.', ',')}${r.schwer ? ` · schwerste Phase: Spieltag ${r.schwer.von} bis ${r.schwer.bis} (Ø ${r.schwer.schnitt.toFixed(1).replace('.', ',')})` : ''}. 🏠 Heim · ✈️ Auswärts · 📓 Notiz · 📋 Matchplan</div>`;
+}
+
+// ---------- Zusammenfassung nach „5 Spieltage simulieren“ (Phase 26.17) ----------
+function erfasseSimStand() {
+    const tab = typeof sortedTable === 'function' ? sortedTable(game.leagueLevel) : [];
+    const ich = tab.find(t => t.name === game.clubName);
+    return { rang: tab.indexOf(ich) + 1, punkte: ich ? ich.points : 0, verletzt: squad.filter(p => (p.injured || 0) > 0).map(p => p.id), angebote: incomingOffers.map(o => o.id), geld: game.money, spieltag: game.matchday };
+}
+
+function zeigeSimZusammenfassung(vorher, spiele) {
+    const body = document.getElementById('sim-summary-body'), ov = document.getElementById('sim-summary-overlay');
+    if (!body || !ov) return;
+    const nachher = erfasseSimStand();
+    const neuVerletzt = squad.filter(p => (p.injured || 0) > 0 && !vorher.verletzt.includes(p.id));
+    const neueAngebote = incomingOffers.filter(o => !vorher.angebote.includes(o.id));
+    const s = spiele.filter(x => x.tore > x.gegentore).length, u = spiele.filter(x => x.tore === x.gegentore).length, n = spiele.length - s - u;
+    const geld = nachher.geld - vorher.geld;
+    body.innerHTML = `<div class="panel-header">⏩ Spieltag ${vorher.spieltag} bis ${Math.min(SAISON_SPIELE, nachher.spieltag - 1)}</div>`
+        + (spiele.length ? spiele.map(x => `<div class="box" style="font-size:var(--fs-small); margin:3px 0; display:flex; justify-content:space-between; gap:8px; border-left-color:${x.tore > x.gegentore ? 'var(--primary)' : x.tore < x.gegentore ? 'var(--danger)' : 'var(--accent)'};"><span style="overflow-wrap:anywhere;">${x.md}. ${x.heim ? '🏠' : '✈️'} ${mpEsc(x.gegner)}</span><strong style="flex:0 0 auto;">${x.tore}:${x.gegentore}</strong></div>`).join('') : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Kein eigenes Ligaspiel.</div>')
+        + `<div class="box" style="font-size:var(--fs-small); margin:6px 0;">📊 Bilanz ${s}S ${u}U ${n}N, ${nachher.punkte - vorher.punkte >= 0 ? '+' : ''}${nachher.punkte - vorher.punkte} Punkte · Tabellenplatz ${vorher.rang} → <strong>${nachher.rang}</strong><br>
+            💰 Kasse ${geld >= 0 ? '+' : ''}${formatVal(geld)}<br>
+            🩹 ${neuVerletzt.length ? 'Neu verletzt: ' + neuVerletzt.map(p => `${mpEsc(p.name)} (${p.injured} Sp.)`).join(', ') : 'Keine neuen Verletzungen'}<br>
+            📩 ${neueAngebote.length ? `${neueAngebote.length} neue${neueAngebote.length === 1 ? 's' : ''} Angebot${neueAngebote.length === 1 ? '' : 'e'} für deine Spieler` : 'Keine neuen Angebote'}</div>`
+        + (neueAngebote.length ? `<button onclick="closeSimZusammenfassung(); showScreen('screen-transfer'); setTransferTab('offers');" class="btn-secondary">📩 Zu den Angeboten</button>` : '');
+    ov.classList.add('show');
+}
+
+function closeSimZusammenfassung() {
+    const ov = document.getElementById('sim-summary-overlay');
+    if (ov) ov.classList.remove('show');
+}
+
+// ---------- Managertagebuch (Phase 26.17) ----------
+// Eine kurze Notiz je Spieltag (höchstens 200 Zeichen): game.tagebuch = [{ season, matchday, text }], höchstens 200 Einträge.
+const TAGEBUCH_MAX_TEXT = 200, TAGEBUCH_MAX = 200;
+function ensureTagebuch() { if (!Array.isArray(game.tagebuch)) game.tagebuch = []; }
+function getTagebuchEintrag(season, matchday) { ensureTagebuch(); return game.tagebuch.find(e => e.season === season && e.matchday === matchday) || null; }
+
+function openTagebuch(matchday) {
+    const ov = document.getElementById('diary-overlay');
+    if (!ov) return;
+    renderTagebuch(Number(matchday) || Math.min(SAISON_SPIELE, game.matchday));
+    ov.classList.add('show');
+}
+function closeTagebuch() { const ov = document.getElementById('diary-overlay'); if (ov) ov.classList.remove('show'); }
+
+function renderTagebuch(tag) {
+    const body = document.getElementById('diary-body');
+    if (!body) return;
+    ensureTagebuch();
+    const e = getTagebuchEintrag(game.season, tag);
+    const liste = game.tagebuch.filter(x => x.season === game.season).sort((a, b) => a.matchday - b.matchday);
+    body.innerHTML = `<div class="panel-header">📔 Managertagebuch · Saison ${game.season}</div>
+        <label class="ui-field"><span class="ui-field-label">Spieltag</span><select id="diary-matchday" class="input-inline" onchange="renderTagebuch(Number(this.value))" style="width:6em;">${Array.from({ length: SAISON_SPIELE }, (_, i) => `<option value="${i + 1}"${i + 1 === tag ? ' selected' : ''}>${i + 1}</option>`).join('')}</select></label>
+        <textarea id="diary-text" class="input-inline" maxlength="${TAGEBUCH_MAX_TEXT}" rows="3" placeholder="z. B. Taktik umgestellt, Fans unruhig" aria-label="Tagebuch für Spieltag ${tag}" style="width:100%; box-sizing:border-box; text-align:left; font-weight:normal; font-family:inherit; margin-top:6px;">${mpEsc(e ? e.text : '')}</textarea>
+        <button onclick="saveTagebuch()" class="btn-action" style="margin-top:6px;">📔 Speichern</button>
+        <div class="ui-overline" style="font-size:var(--fs-caption); color:var(--text-muted); margin:10px 0 2px;">Diese Saison</div>
+        ${liste.length ? liste.map(x => `<div class="box" style="font-size:var(--fs-small); margin:3px 0; overflow-wrap:anywhere;"><strong>Spieltag ${x.matchday}:</strong> ${mpEsc(x.text)}</div>`).join('') : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Einträge.</div>'}`;
+}
+
+function saveTagebuch() {
+    ensureTagebuch();
+    const tagFeld = document.getElementById('diary-matchday'), feld = document.getElementById('diary-text');
+    const tag = tagFeld ? Number(tagFeld.value) : NaN;
+    if (!(tag >= 1 && tag <= SAISON_SPIELE)) { showToast('Wähle einen Spieltag zwischen 1 und 34.', 'error'); return; }
+    const text = feld ? feld.value.trim().replace(/\s+/g, ' ').slice(0, TAGEBUCH_MAX_TEXT) : '';
+    game.tagebuch = game.tagebuch.filter(x => !(x.season === game.season && x.matchday === tag));
+    if (text) {
+        game.tagebuch.push({ season: game.season, matchday: tag, text });
+        if (game.tagebuch.length > TAGEBUCH_MAX) game.tagebuch = game.tagebuch.slice(-TAGEBUCH_MAX);
+        showToast(`📔 Tagebuch für Spieltag ${tag} gespeichert.`, 'success');
+    } else showToast(`📔 Eintrag für Spieltag ${tag} gelöscht.`, 'info');
+    renderTagebuch(tag);
+    if (typeof renderCalendarView === 'function' && document.getElementById('cal-schedule-list')) renderCalendarView();
 }
 
 // ---------- Spielbericht-Archiv (Phase 26.16) ----------
@@ -24017,6 +24223,13 @@ function openErinnerungen() {
 function closeErinnerungen() {
     const ov = document.getElementById('reminder-overlay');
     if (ov) ov.classList.remove('show');
+}
+
+// Erinnerung mit vorbefülltem Text (aus Spielerdetail und Vertragsplan); gespeichert wird erst im Fenster
+function erinnerungVorbelegen(text) {
+    openErinnerungen();
+    const feld = document.getElementById('reminder-text');
+    if (feld) { feld.value = String(text || '').slice(0, ERINNERUNG_TEXT_MAX); feld.focus(); }
 }
 
 function addErinnerung() {
@@ -32377,9 +32590,12 @@ function cleanupLegacyScoutState() {
     // Simuliert bis zu "anzahl" Spieltage am Stück. Die ganze Saison ist damit nur noch der
     // Sonderfall "so viele, wie überhaupt übrig sind" - es gibt keine zweite Schleife, die
     // beim Ändern der Spieltagslogik vergessen werden könnte.
-    function simulateMatchdays(anzahl) {
+    function simulateMatchdays(anzahl, zusammenfassung) {
         if (game.matchday > 34) { showToast('Die Saison ist bereits beendet.', 'error'); return; }
         let simuliert = 0;
+        // Zusammenfassung (Phase 26.17) nur auf Wunsch des Knopfs, nicht für Bot, Tests und die Saison-Simulation
+        const simVorher = zusammenfassung && typeof erfasseSimStand === 'function' ? erfasseSimStand() : null;
+        const simSpiele = [];
         // Nach einer Entlassung wird nicht weitergespielt. Frueher stoppte das alert() in
         // getSacked() die Schleife und der direkt folgende Reload beendete alles - mit dem
         // nicht blockierenden Meldungsfenster lief die Simulation dagegen munter weiter,
@@ -32445,6 +32661,7 @@ function cleanupLegacyScoutState() {
             }
 
             if (opponentNameThisMatch) recordRivalryResult(opponentNameThisMatch, ourGoalsThisMatch, oppGoalsThisMatch);
+            if (simVorher && playedOurMatch) simSpiele.push({ md, gegner: opponentNameThisMatch, heim: isHome, tore: ourGoalsThisMatch, gegentore: oppGoalsThisMatch });
             if (playedOurMatch) attributeGoalsToScorers(ourGoalsThisMatch);
             applyMatchdayFinances(isHome, won, playedOurMatch && oppGoalsThisMatch === 0, isHomeDerby, opponentNameThisMatch, opponentNameThisMatch ? `${ourGoalsThisMatch}:${oppGoalsThisMatch}` : null);
             processPostMatchRoutine(playedOurMatch ? (won ? 'win' : (drawn ? 'draw' : 'loss')) : null, isHomeDerby, false, ourGoalsThisMatch - oppGoalsThisMatch, isHome, playedOurMatch ? { total: ourGoalsThisMatch + oppGoalsThisMatch, bothScored: ourGoalsThisMatch > 0 && oppGoalsThisMatch > 0 } : null);
@@ -32452,6 +32669,7 @@ function cleanupLegacyScoutState() {
         updateUI();
         showScreen('screen-dashboard');
         showToast(`⚡ ${simuliert} Spieltag${simuliert === 1 ? '' : 'e'} simuliert - jetzt Spieltag ${Math.min(34, game.matchday)}/34.`, 'success', 3500);
+        if (simVorher && typeof zeigeSimZusammenfassung === 'function') zeigeSimZusammenfassung(simVorher, simSpiele);
     }
 
 
