@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.137', date: '16.10.2026', features: 'Phase 26.16-26.17: Marktfilter, Kaderlücke und Kaderfolgen bei Angeboten, Ersatz finden, Spielersuche, kompakte Kaderliste, Blättern im Spielerdetail, Tabellen-Vorschau, Lieblings- und Angstgegner, Spielstil-Empfehlung, Rekord-Hinweise, empfohlene Vorbereitung, Ampel im Livespiel, Restprogramm, Zusammenfassung nach der Simulation, Kalender mit Gegnern und Erinnerungen, Managertagebuch, Tag/Nacht-Schalter, Favoriten, Tor-Meilensteine, Saisonverlauf, Vorsaison im Tabellenverlauf, Kaderwert-Kurve, Aufstellung teilen, Zuletzt geöffnet, Leistbar-Chips, eigene Erinnerungen, Spielbericht-Archiv, Vertragsplan, Saisonziel-Rechner' };
+    const GAME_VERSION = { number: '3.138', date: '16.10.2026', features: 'Phase 26.18-26.19: Kauf-Vorschau, Punkte-Vergleich mit der Vorsaison, Monatsbericht, Rückkehrer im Kalender, Aufstellungs-Gedächtnis, 16 Test- und Diagnosewerkzeuge im Admin-Modus, Privatleben mit Sparkonto, Fortbildung, Mentaltraining, Gehaltsverhandlung, Haustier, Besitz verkaufen, Vermögensverlauf und Zielen' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

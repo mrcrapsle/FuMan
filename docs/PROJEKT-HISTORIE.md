@@ -691,7 +691,7 @@ Drei Vorschlagslisten (1 bis 24) auf einmal umgesetzt, in vier Paketen mit je ei
 - **Kaderwert-Kurve** (`archiveKaderwert()`, `game.kaderwertVerlauf`, höchstens 20 Saisons, `#kaderwert-box` im Reiter Analyse): Gesamtmarktwert am Saisonende plus heutiger Wert.
 - Neue Spielstand-Felder (mit Absicherung): `game.tagebuch`, `game.kaderwertVerlauf`, `game.platzVerlaufVorjahr`, `p.meilenstein`. Neue Geräte-Einstellungen: Kaderansicht, Favoriten.
 
-## Phase 26.18: Fünf neue Funktionen (Feature-Branch, noch nicht gemergt)
+## Phase 26.18: Fünf neue Funktionen (Version 3.138)
 Aus acht Vorschlägen; drei gab es schon und wurden nicht gebaut: Postfach anheften (★ Wichtig sortiert nach oben und schützt vor dem Löschen), Bilanz je Formation und Spielstil (Taktik-Bilanz, `game.tacticRecords` in `js/tactic-system.js`), Kader nächste Saison (Kaderplaner: Besetzung, Alter, auslaufende Verträge je Position, Restkader nach Vertragsende). Testsuite `testRunde33Funktionen`. Keine Regeländerung.
 - **Kauf-Vorschau** (`getKaufVorschau()`, `renderKaufVorschau()` in `js/transfermarket.js`, im Spielerdetail von Marktspielern in `#pd-ersatz`; Chip „⚽ Startelf statt X“ auf der Marktkarte): ersetzt den schwächsten Starter derselben Position, wenn der Marktspieler stärker ist; Teamstärke vorher und nachher über `calcTeamStrength()` mit einer Kopie des Spielers (ohne Eingespieltheit, wie nach einem echten Kauf), Kader und Elf werden in `finally` wiederhergestellt. Dazu Kasse, Transferbudget und freies Gehaltsbudget nach dem Kauf.
 - **Punkte-Vergleich mit der Vorsaison** (`getPunkteVerlauf()`, `getPunkteVergleich()`): Punkte nach jedem eigenen Ligaspiel aus dem Spielplan; `archivePlatzVerlauf()` speichert die Reihe als `game.platzVerlaufVorjahr.punkte`. Zeile im Saisonziel-Kasten des Dashboards und Kurve (Vorsaison gestrichelt) im Saisonverlauf. Ältere Archive ohne `punkte` zeigen nichts bis zum nächsten Saisonende.
@@ -701,7 +701,7 @@ Aus acht Vorschlägen; drei gab es schon und wurden nicht gebaut: Postfach anhef
 - **Von den Tests gefunden:** Die Postfach-Kategorie „Analyse“ färbte den Titel mit `--violet`, das im Kontrast-Theme eine dunkle Fläche ist (Kontrast 1,66); die Kategorie war bis zum Monatsbericht unbenutzt. Jetzt `--blue`.
 - Neue Spielstand-Felder (mit Absicherung): `game.startelfGedaechtnis`, `game.monatsStand`, `game.platzVerlaufVorjahr.punkte`.
 
-## Phase 26.19: Admin-Modus und Privatleben erweitert (Feature-Branch, noch nicht gemergt)
+## Phase 26.19: Admin-Modus und Privatleben erweitert (Version 3.138)
 Vor dem Bau gegen die vorhandenen Knöpfe in `js/admin.js` und `js/private-life.js` geprüft. Testsuiten `testAdminWerkzeuge` und `testPrivatlebenPlus`.
 
 **Admin-Modus** (`js/admin-tools.js`, Kasten „🧰 Test- und Diagnosewerkzeuge“, `renderAdminTools()` aus `renderAdminView()`), 16 Werkzeuge:
