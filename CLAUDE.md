@@ -14,6 +14,7 @@ Anleitung für Claude Code in diesem Repository. Die vollständige Historie mit 
 - Nach jedem Merge eine ZIP `anstoss-fm13-vX.zip` schicken: öffentlicher minifizierter Build als `anstoss-fm13.html`, die minifizierte Entwickler-Fassung mit Admin-Menü als `anstoss-fm13-dev.html` (lokal aus `origin/main` mit `python3 build.py && node minify.js`, `dist/anstoss-fm13-dev.min.html`) plus Quellcode im Ordner `anstoss-fm13/` (`git archive origin/main -- . ':!dist'`). Mit beiden Links:
   - Spielen: https://mrcrapsle.github.io/FuMan/
   - Download: https://github.com/mrcrapsle/FuMan/raw/main/dist/anstoss-fm13-standalone.min.html
+  - Projekt-Dashboard: https://claude.ai/artifact/Aup4ctqrpZbwDWgXErg75R (Kennzahlen, Versionsverlauf, Funktionen, Prüfläufe; die Daten sind eine Momentaufnahme und werden nur auf Wunsch aktualisiert)
 - Eine Runde bündeln: alle Änderungen sammeln, einmal `npm run check`, Fehler gesammelt beheben, gezielte Wiederholung mit `TEST_ONLY=<Name>`.
 
 ## Befehle
