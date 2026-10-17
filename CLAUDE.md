@@ -16,6 +16,17 @@ Anleitung für Claude Code in diesem Repository. Die vollständige Historie mit 
   - Download: https://github.com/mrcrapsle/FuMan/raw/main/dist/anstoss-fm13-standalone.min.html
 - Eine Runde bündeln: alle Änderungen sammeln, einmal `npm run check`, Fehler gesammelt beheben, gezielte Wiederholung mit `TEST_ONLY=<Name>`.
 
+## Ideen-Board (Kanban)
+
+Ideen, Bugs, Features und Balancing-Punkte landen auf dem Board, nicht im Gespräch. Link: https://claude.ai/artifact/C9LcpB6vpXQed3G68ygyc9 (Daten in der Artifact-Datenbank: `tasks/<id>` je Karte, `meta/log` für das Protokoll). Die Karten liest und ändert Claude per ArtifactData mit dieser URL, ohne die Seite neu zu veröffentlichen.
+
+- **Session-Start:** Karten mit „Für Claude“ und die Spalte „Eingang“ lesen. Kurz nennen, was ansteht, und fragen, woran gearbeitet wird.
+- **Eine Session = eine Karte** (oder ein paar eng verwandte). Neue Einfälle während der Session werden eine Karte im Eingang, nicht sofort gebaut. Ausnahme: der Nutzer sagt ausdrücklich „mach das jetzt“.
+- **Fertige Karte:** Auf „Erledigt“ setzen (mit Datum), einen Log-Eintrag schreiben und vorschlagen, die Session zu beenden und für die nächste Karte eine neue zu starten.
+- **Auf Zuruf** („Sortier den Eingang“): Eingang gemeinsam durchgehen, Typ, Bereich und Priorität vorschlagen, Karten nach „Als Nächstes“ oder „Wartet“ verschieben, Doppelte zusammenführen.
+- Spalten: Eingang, Als Nächstes, In Arbeit, Wartet, Erledigt. Typen: Bug, Feature, Idee, Balancing. Bereiche: Spieltag, Taktik, Transfers, Training, Finanzen, Verträge, Jugend, Vorstand, Oberfläche, Spielstand, Sprache, Tests und Build, Sonstiges.
+- Antworten dazu kurz halten; der Nutzer liest auf dem Handy.
+
 ## Befehle
 
 ```bash
