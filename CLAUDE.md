@@ -9,6 +9,7 @@ Anleitung für Claude Code in diesem Repository. Die vollständige Historie mit 
 ## Zusammenarbeit
 
 - Antworten immer auf Deutsch.
+- Bei jedem neuen Auftrag zuerst mit `AskUserQuestion` (Optionen „Ja“ und „Nein“) fragen, ob nach Abschluss eine Benachrichtigung kommen soll. Kommt die Frage ohne Antwort zurück, erneut fragen, bis Ja oder Nein gewählt ist. Bei Ja am Ende eine kurze Benachrichtigung mit `PushNotification` senden (unter 200 Zeichen, das Ergebnis zuerst).
 - Vor jedem Merge auf `main`: `npm run check` muss grün sein. **Nur auf ausdrücklichen Wunsch mergen**, nie automatisch nach einer Runde: Es sollen möglichst viele Funktionen in einen Patch passen. Bis dahin auf dem `claude/…`-Branch committen und pushen; Version erhöhen, ZIP und Deploy-Kontrolle erst beim Merge.
 - Die Version in `js/state.js` (`GAME_VERSION`) bei jedem Merge erhöhen. Sie erscheint in der Kopfzeile (`#header-version-tag`).
 - Nach jedem Merge eine ZIP `anstoss-fm13-vX.zip` schicken: öffentlicher minifizierter Build als `anstoss-fm13.html`, die minifizierte Entwickler-Fassung mit Admin-Menü als `anstoss-fm13-dev.html` (lokal aus `origin/main` mit `python3 build.py && node minify.js`, `dist/anstoss-fm13-dev.min.html`) plus Quellcode im Ordner `anstoss-fm13/` (`git archive origin/main -- . ':!dist'`). Mit beiden Links:
