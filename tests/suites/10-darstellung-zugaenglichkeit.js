@@ -1091,11 +1091,14 @@ async function testKnopfWorteHandy(browser) {
             probe.remove();
             if (st) st.remove();
             setzeTextGroesse('normal');
-            return { zuBreit: [...zuBreit], seitenBreit: [...seitenBreit] };
+            // Automatische Silbentrennung trennt auf Handys mit Trennwörterbuch auch Wörter, die passen (Board-Karte t3)
+            const silben = [...document.querySelectorAll('button')].filter(b => getComputedStyle(b).hyphens === 'auto').map(b => (b.innerText || b.id || '').trim().slice(0, 28));
+            return { zuBreit: [...zuBreit], seitenBreit: [...seitenBreit], silben };
         }, [groesse, stress]);
         const wie = `${breite} px${hoehe < 800 ? ' quer' : ''}, Schrift ${groesse}${stress === 'breit' ? ', breite Systemschrift' : stress ? ', breiter' : ''}`;
         assert(ergebnis.zuBreit.length === 0, `${wie}: kein Wort breiter als sein Knopf (${ergebnis.zuBreit.length}: ${ergebnis.zuBreit.slice(0, 4).join(' | ')})`);
         assert(ergebnis.seitenBreit.length === 0, `${wie}: die Seite wird nicht breiter als der Bildschirm (${ergebnis.seitenBreit.length}: ${ergebnis.seitenBreit.slice(0, 4).join(' | ')})`);
+        assert(ergebnis.silben.length === 0, `${wie}: kein Knopf mit automatischer Silbentrennung (${ergebnis.silben.length}: ${ergebnis.silben.slice(0, 4).join(' | ')})`);
     }
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
     await page.close();

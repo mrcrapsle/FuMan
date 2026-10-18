@@ -740,3 +740,7 @@ Vor dem Bau gegen die vorhandenen Knöpfe in `js/admin.js` und `js/private-life.
 - `showScreen()` fängt Ziele ab, die es in der Fassung nicht gibt (zum Beispiel Admin aus Favoriten oder „Zuletzt geöffnet“ eines Entwickler-Geräts), statt alle Bildschirme auszublenden. `adminGrantPremiumPoints()` zog von `js/premium.js` nach `js/admin.js`.
 - Tests: `testOeffentlicheFassung` (öffentliche Datei bzw. Download-Link: kein Admin-Bildschirm, keine Admin-Funktionen, Spiel läuft, alte Admin-Ziele führen nicht auf eine leere Seite) und `testAdminPin` (SHA-256-Testwerte, PIN-Ablauf, `build.py --nur-dev` mit `DEV_PIN`). Der minifizierte Testlauf nutzt jetzt `anstoss-fm13-dev.min.html`.
 
+## Board-Karte t3: Knöpfe in Industrie und Holding (Feature-Branch, noch nicht gemergt)
+- **Ursache:** `button { hyphens: auto }` (aus Phase 25.x gegen „Aufstellun-g“) bei `lang="de"`. Browser mit deutschem Trennwörterbuch, etwa Chrome auf Android, trennen damit am Zeilenende auch Wörter, die in die nächste Zeile gepasst hätten („in Auf-trag geben“, „Manager-Divi-dende“). Die Linux-Testumgebung hat kein Trennwörterbuch, deshalb fiel es in keinem Test auf; gemessen ist bei 320 px kein Wort breiter als sein Knopf.
+- **Änderung:** Knöpfe mit `hyphens: manual` und `overflow-wrap: break-word` (bricht nur ein Wort, das allein breiter ist als der Knopf). `testKnopfWorteHandy` prüft zusätzlich, dass kein Knopf automatische Silbentrennung hat (gegen den alten Stand rot: 1288 Knöpfe).
+

@@ -397,7 +397,10 @@
         .panel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 6px; margin: 6px 0; }
 
         
-        button { font-family: inherit; touch-action: manipulation; hyphens: auto; }
+        /* Keine automatische Silbentrennung auf Knöpfen: Browser mit deutschem Trennwörterbuch (Chrome auf Android) trennten
+           am Zeilenende auch Wörter, die in die nächste Zeile gepasst hätten („in Auf-trag geben“). Dass jedes Wort in seinen Knopf
+           passt, sichert testKnopfWorteHandy; break-word bricht nur ein Wort, das allein breiter ist als der Knopf. */
+        button { font-family: inherit; touch-action: manipulation; hyphens: manual; overflow-wrap: break-word; }
         /* Reiterleisten: bei großer Schrift auf dem Handy zwei Spalten, damit Wörter wie „Aufstellung“ nicht mitten im Wort brechen */
         html[data-text-size="sehr-gross"] .hub-tab-bar { grid-template-columns: repeat(2, 1fr) !important; }
         @media (max-width: 400px) { html[data-text-size="gross"] .hub-tab-bar { grid-template-columns: repeat(2, 1fr) !important; } }
