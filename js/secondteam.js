@@ -10,7 +10,6 @@
     // vom Nutzer verwalteten secondTeamSquad berechnet wird.
     // ==========================================
     const SECOND_TEAM_FOUND_COST = 350000;
-    const SECOND_TEAM_MIN_MANAGER_LEVEL = 3;
 
     function calcSecondTeamStrength() {
         if (secondTeamSquad.length === 0) return 30;
@@ -36,6 +35,7 @@
 
     // 1. Eigene Trainingssteuerung: unabhängig vom Profikader wählbar.
     function setSecondTeamTrainingFocus(focus) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('zweite')) return;
         game.secondTeam.trainingFocus = focus;
         playSound('click');
         renderSecondTeamView();
@@ -129,8 +129,8 @@
     }
 
     function foundSecondTeam() {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('zweite')) return;
         if (game.secondTeam.isActive) return;
-        if (managerRPG.level < SECOND_TEAM_MIN_MANAGER_LEVEL) { showToast(`Dafür brauchst du mindestens Manager-Level ${SECOND_TEAM_MIN_MANAGER_LEVEL}!`, 'error'); return; }
         if (game.money < SECOND_TEAM_FOUND_COST) { showToast('Nicht genug Vereinskapital!', 'error'); return; }
         playSound('whistle');
         game.money -= SECOND_TEAM_FOUND_COST;
@@ -155,6 +155,7 @@
     }
 
     function setSecondTeamFormation(form) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('zweite')) return;
         playSound('click');
         game.secondTeam.formation = form;
         ['4-4-2', '4-3-3', '3-5-2', '5-3-2'].forEach(f => {
@@ -167,6 +168,7 @@
     }
 
     function setSecondTeamTacticStyle(style) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('zweite')) return;
         playSound('click');
         game.secondTeam.tacticStyle = style;
         ['offensiv', 'ausgeglichen', 'defensiv'].forEach(s => {
@@ -177,6 +179,7 @@
     }
 
     function releaseSecondTeamPlayer(id, btn) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('zweite')) return;
         if (!requireConfirm(btn, 'Wirklich entlassen?')) return;
         if (secondTeamSquad.length <= 11) { showToast('Mindestens 11 Spieler benötigt!', 'error'); return; }
         secondTeamSquad = secondTeamSquad.filter(p => p.id !== id);
@@ -327,6 +330,7 @@
     // Bewusst OHNE Ablöse/Verhandlung - beides sind "eigene" Vereine desselben Managers,
     // ein interner Kaderwechsel ist daher kostenlos (wie ein Vereinsinterner Leihtransfer).
     function promoteToFirstTeam(id) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('zweite')) return;
         if (!game.secondTeam.isActive) return;
         let idx = secondTeamSquad.findIndex(p => p.id === id);
         if (idx === -1) return;
@@ -346,6 +350,7 @@
     }
 
     function demoteToSecondTeam(id) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('zweite')) return;
         if (!game.secondTeam.isActive) { showToast('Gründe zuerst eine zweite Mannschaft!', 'error'); return; }
         let idx = squad.findIndex(p => p.id === id);
         if (idx === -1) return;
@@ -388,6 +393,7 @@
     }
 
     function buySecondTeamMarketPlayer(idx) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('zweite')) return;
         let p = secondTeamMarketPlayers[idx];
         if (!p) return;
         if (secondTeamSquad.length >= 22) { showToast('Kader bereits voll (22 Spieler)!', 'error'); return; }
@@ -404,6 +410,7 @@
     }
 
     function sellSecondTeamPlayer(id) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('zweite')) return;
         if (secondTeamSquad.length <= 11) { showToast('Mindestens 11 Spieler benötigt!', 'error'); return; }
         let idx = secondTeamSquad.findIndex(p => p.id === id);
         if (idx === -1) return;
@@ -441,7 +448,6 @@
             foundedBox.style.display = 'block';
             activeBox.style.display = 'none';
             document.getElementById('st-found-cost').innerText = formatVal(SECOND_TEAM_FOUND_COST);
-            document.getElementById('st-found-req').innerText = SECOND_TEAM_MIN_MANAGER_LEVEL;
             return;
         }
         foundedBox.style.display = 'none';
@@ -615,6 +621,7 @@
     }
 
     function hireSecondTeamStaff(key) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('zweite')) return;
         let st = secondTeamStaff[key];
         if (!st || st.hired) return;
         if (!game.secondTeam.isActive) { showToast('Erst die zweite Mannschaft gründen!', 'error'); return; }
@@ -632,6 +639,7 @@
     }
 
     function fireSecondTeamStaff(key, btn) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('zweite')) return;
         let st = secondTeamStaff[key];
         if (!st || !st.hired) return;
         // Entlassen ist folgenreich (Ablöse ist weg) - deshalb Zwei-Klick-Bestätigung.
@@ -675,6 +683,7 @@
     // processPostMatchRoutine()). Ohne Stab passiert fast nichts - jede Wirkung hier hängt
     // an einem bezahlten Mitarbeiter.
     function tickSecondTeamRoutine() {
+        if (typeof istFreigeschaltet === 'function' && !istFreigeschaltet('zweite')) return;   // gesperrt: Betrieb ruht
         if (!game.secondTeam.isActive || secondTeamSquad.length === 0) return;
         // Grundbelastung: die Reserve spielt ebenfalls jeden Spieltag.
         // Ohne Betreuung zehrt der Spielbetrieb langsam an der Mannschaft (Boden bei 60%,
@@ -790,6 +799,7 @@
     }
 
     function scheduleReserveFriendly() {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('zweite')) return;
         if (!game.secondTeam.isActive) { showToast('Dafür muss erst eine zweite Mannschaft gegründet sein.', 'error', 4000); return; }
         let rest = getReserveFriendlyCooldownLeft();
         if (rest > 0) { showToast(`Die Mannschaft braucht Erholung - nächstes Freundschaftsspiel in ${rest} Spieltagen möglich.`, 'error', 4500); return; }
@@ -837,6 +847,7 @@
     // Reservisten gegen echtes Profi-Niveau empfehlen können - wer gegen die Erste besteht,
     // entwickelt sich spürbar. Dafür kostet es beide Mannschaften Kraft.
     function scheduleInternalTestMatch() {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('zweite')) return;
         if (!game.secondTeam.isActive) { showToast('Dafür muss erst eine zweite Mannschaft gegründet sein.', 'error', 4000); return; }
         let rest = getInternalTestCooldownLeft();
         if (rest > 0) { showToast(`Der Profikader ist noch im Spielrhythmus - nächstes internes Testspiel in ${rest} Spieltagen.`, 'error', 4500); return; }

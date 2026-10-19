@@ -673,6 +673,7 @@ function renderUiStatRow(werte) {
         startelfGedaechtnis: [],
         monatsStand: null,
         bauChronik: [],
+        freischaltungen: {},
         topspielZuschlag: 0,
         assistentErledigt: null,
         vorlageBilanzArchiv: [],
@@ -5435,7 +5436,6 @@ function cleanupLegacyDevelopmentState() {
     // vom Nutzer verwalteten secondTeamSquad berechnet wird.
     // ==========================================
     const SECOND_TEAM_FOUND_COST = 350000;
-    const SECOND_TEAM_MIN_MANAGER_LEVEL = 3;
 
     function calcSecondTeamStrength() {
         if (secondTeamSquad.length === 0) return 30;
@@ -5461,6 +5461,7 @@ function cleanupLegacyDevelopmentState() {
 
     // 1. Eigene Trainingssteuerung: unabhängig vom Profikader wählbar.
     function setSecondTeamTrainingFocus(focus) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('zweite')) return;
         game.secondTeam.trainingFocus = focus;
         playSound('click');
         renderSecondTeamView();
@@ -5554,8 +5555,8 @@ function cleanupLegacyDevelopmentState() {
     }
 
     function foundSecondTeam() {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('zweite')) return;
         if (game.secondTeam.isActive) return;
-        if (managerRPG.level < SECOND_TEAM_MIN_MANAGER_LEVEL) { showToast(`Dafür brauchst du mindestens Manager-Level ${SECOND_TEAM_MIN_MANAGER_LEVEL}!`, 'error'); return; }
         if (game.money < SECOND_TEAM_FOUND_COST) { showToast('Nicht genug Vereinskapital!', 'error'); return; }
         playSound('whistle');
         game.money -= SECOND_TEAM_FOUND_COST;
@@ -5580,6 +5581,7 @@ function cleanupLegacyDevelopmentState() {
     }
 
     function setSecondTeamFormation(form) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('zweite')) return;
         playSound('click');
         game.secondTeam.formation = form;
         ['4-4-2', '4-3-3', '3-5-2', '5-3-2'].forEach(f => {
@@ -5592,6 +5594,7 @@ function cleanupLegacyDevelopmentState() {
     }
 
     function setSecondTeamTacticStyle(style) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('zweite')) return;
         playSound('click');
         game.secondTeam.tacticStyle = style;
         ['offensiv', 'ausgeglichen', 'defensiv'].forEach(s => {
@@ -5602,6 +5605,7 @@ function cleanupLegacyDevelopmentState() {
     }
 
     function releaseSecondTeamPlayer(id, btn) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('zweite')) return;
         if (!requireConfirm(btn, 'Wirklich entlassen?')) return;
         if (secondTeamSquad.length <= 11) { showToast('Mindestens 11 Spieler benötigt!', 'error'); return; }
         secondTeamSquad = secondTeamSquad.filter(p => p.id !== id);
@@ -5752,6 +5756,7 @@ function cleanupLegacyDevelopmentState() {
     // Bewusst OHNE Ablöse/Verhandlung - beides sind "eigene" Vereine desselben Managers,
     // ein interner Kaderwechsel ist daher kostenlos (wie ein Vereinsinterner Leihtransfer).
     function promoteToFirstTeam(id) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('zweite')) return;
         if (!game.secondTeam.isActive) return;
         let idx = secondTeamSquad.findIndex(p => p.id === id);
         if (idx === -1) return;
@@ -5771,6 +5776,7 @@ function cleanupLegacyDevelopmentState() {
     }
 
     function demoteToSecondTeam(id) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('zweite')) return;
         if (!game.secondTeam.isActive) { showToast('Gründe zuerst eine zweite Mannschaft!', 'error'); return; }
         let idx = squad.findIndex(p => p.id === id);
         if (idx === -1) return;
@@ -5813,6 +5819,7 @@ function cleanupLegacyDevelopmentState() {
     }
 
     function buySecondTeamMarketPlayer(idx) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('zweite')) return;
         let p = secondTeamMarketPlayers[idx];
         if (!p) return;
         if (secondTeamSquad.length >= 22) { showToast('Kader bereits voll (22 Spieler)!', 'error'); return; }
@@ -5829,6 +5836,7 @@ function cleanupLegacyDevelopmentState() {
     }
 
     function sellSecondTeamPlayer(id) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('zweite')) return;
         if (secondTeamSquad.length <= 11) { showToast('Mindestens 11 Spieler benötigt!', 'error'); return; }
         let idx = secondTeamSquad.findIndex(p => p.id === id);
         if (idx === -1) return;
@@ -5866,7 +5874,6 @@ function cleanupLegacyDevelopmentState() {
             foundedBox.style.display = 'block';
             activeBox.style.display = 'none';
             document.getElementById('st-found-cost').innerText = formatVal(SECOND_TEAM_FOUND_COST);
-            document.getElementById('st-found-req').innerText = SECOND_TEAM_MIN_MANAGER_LEVEL;
             return;
         }
         foundedBox.style.display = 'none';
@@ -6040,6 +6047,7 @@ function cleanupLegacyDevelopmentState() {
     }
 
     function hireSecondTeamStaff(key) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('zweite')) return;
         let st = secondTeamStaff[key];
         if (!st || st.hired) return;
         if (!game.secondTeam.isActive) { showToast('Erst die zweite Mannschaft gründen!', 'error'); return; }
@@ -6057,6 +6065,7 @@ function cleanupLegacyDevelopmentState() {
     }
 
     function fireSecondTeamStaff(key, btn) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('zweite')) return;
         let st = secondTeamStaff[key];
         if (!st || !st.hired) return;
         // Entlassen ist folgenreich (Ablöse ist weg) - deshalb Zwei-Klick-Bestätigung.
@@ -6100,6 +6109,7 @@ function cleanupLegacyDevelopmentState() {
     // processPostMatchRoutine()). Ohne Stab passiert fast nichts - jede Wirkung hier hängt
     // an einem bezahlten Mitarbeiter.
     function tickSecondTeamRoutine() {
+        if (typeof istFreigeschaltet === 'function' && !istFreigeschaltet('zweite')) return;   // gesperrt: Betrieb ruht
         if (!game.secondTeam.isActive || secondTeamSquad.length === 0) return;
         // Grundbelastung: die Reserve spielt ebenfalls jeden Spieltag.
         // Ohne Betreuung zehrt der Spielbetrieb langsam an der Mannschaft (Boden bei 60%,
@@ -6215,6 +6225,7 @@ function cleanupLegacyDevelopmentState() {
     }
 
     function scheduleReserveFriendly() {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('zweite')) return;
         if (!game.secondTeam.isActive) { showToast('Dafür muss erst eine zweite Mannschaft gegründet sein.', 'error', 4000); return; }
         let rest = getReserveFriendlyCooldownLeft();
         if (rest > 0) { showToast(`Die Mannschaft braucht Erholung - nächstes Freundschaftsspiel in ${rest} Spieltagen möglich.`, 'error', 4500); return; }
@@ -6262,6 +6273,7 @@ function cleanupLegacyDevelopmentState() {
     // Reservisten gegen echtes Profi-Niveau empfehlen können - wer gegen die Erste besteht,
     // entwickelt sich spürbar. Dafür kostet es beide Mannschaften Kraft.
     function scheduleInternalTestMatch() {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('zweite')) return;
         if (!game.secondTeam.isActive) { showToast('Dafür muss erst eine zweite Mannschaft gegründet sein.', 'error', 4000); return; }
         let rest = getInternalTestCooldownLeft();
         if (rest > 0) { showToast(`Der Profikader ist noch im Spielrhythmus - nächstes internes Testspiel in ${rest} Spieltagen.`, 'error', 4500); return; }
@@ -13043,6 +13055,9 @@ function renderBoardRoomPanel() {
         if (screenId === 'screen-admin' && typeof renderAdminView === 'function') renderAdminView();
         if (screenId === 'screen-lexicon' && typeof showLexiconView === 'function') showLexiconView();
         if (screenId === 'screen-design' && typeof renderDesignSettings === 'function') renderDesignSettings();
+        if (screenId === 'screen-manager-tree' && typeof renderFreischaltUebersicht === 'function') renderFreischaltUebersicht();
+        // Gesperrte Bereiche (js/freischaltungen.js) zeigen nach dem Zeichnen nur ihre Bedingungen.
+        if (typeof aktualisiereFreischaltSperren === 'function') aktualisiereFreischaltSperren();
         updateUI();
     }
 
@@ -14139,6 +14154,7 @@ function initZugaenglichkeit() {
     }
 
     function buyFactory(key) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('industrie')) return;
         let f = factories[key];
         if (holdingCompany.money < f.cost) { showToast(`Holding-Konto reicht nicht: ${formatVal(holdingCompany.money)} von ${formatVal(f.cost)}. Überweise Geld vom Vereinskonto in die Holding.`, 'error', 5000); return; }
         playSound('goal');
@@ -14149,6 +14165,7 @@ function initZugaenglichkeit() {
     }
 
     function upgradeFactory(key) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('industrie')) return;
         let f = factories[key];
         let cost = f.cost * (f.lvl + 1);
         if (holdingCompany.money < cost || f.lvl >= f.max) return;
@@ -14169,6 +14186,7 @@ function initZugaenglichkeit() {
         return Math.max(1, 4 - Math.floor((f.lvl - 1) * 0.7)); // Stufe 1: 4 SpT, Stufe 5: 1 SpT
     }
     function startProduction(merchKey, amount) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('industrie')) return;
         let m = merchandise[merchKey];
         let f = factories[m.factory];
         let mat = rawMaterials[m.reqMat];
@@ -14188,6 +14206,7 @@ function initZugaenglichkeit() {
     // Wird jeden Spieltag aufgerufen: zählt alle laufenden Produktionsaufträge herunter und
     // schließt fertige Chargen ab.
     function tickProductionQueue() {
+        if (typeof istFreigeschaltet === 'function' && !istFreigeschaltet('industrie')) return;   // gesperrt: Betrieb ruht
         if (!productionQueue || productionQueue.length === 0) return;
         let stillRunning = [];
         productionQueue.forEach(order => {
@@ -14287,6 +14306,7 @@ function initZugaenglichkeit() {
     }
 
     function buyRawMaterial(matKey, amount) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('industrie')) return;
         let r = rawMaterials[matKey];
         let cost = Math.round(r.currentPrice * amount);
 
@@ -14307,6 +14327,7 @@ function initZugaenglichkeit() {
     }
 
     function upgradeWarehouse() {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('industrie')) return;
         if (rawMaterials.warehouseLevel >= 5) { showToast('Zentrallager ist bereits voll ausgebaut.', 'error'); return; }
         if (holdingCompany.money < 30000) { showToast(`Holding-Konto reicht nicht: ${formatVal(holdingCompany.money)} von 30.000 € nötig.`, 'error', 4500); return; }
 
@@ -14349,6 +14370,7 @@ function initZugaenglichkeit() {
     // 2. Konkurrenzfirmen: eigenständige Marktteilnehmer, die gelegentlich handeln und
     // gelegentlich sogar ein Übernahmeangebot für die eigene Holding unterbreiten können.
     function tickCompetitorFirms() {
+        if (typeof istFreigeschaltet === 'function' && !istFreigeschaltet('industrie')) return;   // gesperrt: Betrieb ruht
         rawMaterials.competitorFirms.forEach(firm => {
             firm.strength = Math.max(30, Math.min(95, firm.strength + Math.floor(Math.random() * 7 - 3)));
             if (Math.random() < 0.08) {
@@ -14366,6 +14388,7 @@ function initZugaenglichkeit() {
         }
     }
     function resolveAcquisitionOffer(accept) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('industrie')) return;
         let offer = rawMaterials.acquisitionOffers[0];
         if (!offer) return;
         if (accept) {
@@ -14387,6 +14410,7 @@ function initZugaenglichkeit() {
     // 3. Fusion: eigene Fabrik mit einem schwachen Konkurrenten fusionieren - kostet Geld,
     // gibt aber einen dauerhaften Produktionsbonus (repräsentiert übernommenes Know-how).
     function mergeFactoryWithCompetitor(factoryKey) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('industrie')) return;
         let f = factories[factoryKey];
         if (!f.owned) { showToast('Diese Fabrik gehört dir noch nicht!', 'error'); return; }
         let weakFirm = rawMaterials.competitorFirms.find(c => c.strength < 50);
@@ -14441,6 +14465,7 @@ function initZugaenglichkeit() {
     }
 
     function transferHoldingToClub(amount) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('holding')) return;
         if (holdingCompany.money < amount) { showToast(`Holding-Konto reicht nicht: ${formatVal(holdingCompany.money)} von ${formatVal(amount)}.`, 'error', 4500); return; }
         playSound('goal');
         holdingCompany.money -= amount;
@@ -14450,6 +14475,7 @@ function initZugaenglichkeit() {
     }
 
     function transferHoldingToPrivate(amount) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('holding')) return;
         if (holdingCompany.money < amount) { showToast(`Holding-Konto reicht nicht: ${formatVal(holdingCompany.money)} von ${formatVal(amount)}.`, 'error', 4500); return; }
         playSound('goal');
         holdingCompany.money -= amount;
@@ -14459,6 +14485,7 @@ function initZugaenglichkeit() {
     }
 
     function transferClubToHolding(amount) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('holding')) return;
         if (game.money < amount) { showToast(`Vereinskonto reicht nicht: ${formatVal(game.money)} von ${formatVal(amount)}.`, 'error', 4500); return; }
         playSound('click');
         game.money -= amount;
@@ -14472,6 +14499,7 @@ function initZugaenglichkeit() {
     // Produkt; Honorar = dreifache Materialkosten, je Ausbaustufe +10 %.
     const B2B_FACTORY_MATERIAL = { textile: 'cotton', knitting: 'wool', leatherShop: 'leather', plastics: 'plastic' };
     function refreshB2BContracts() {
+        if (typeof istFreigeschaltet === 'function' && !istFreigeschaltet('holding')) return;   // gesperrt: Betrieb ruht
         holdingCompany.b2bContracts = (holdingCompany.b2bContracts || []).filter(c => !c.done);
         Object.keys(factories).forEach(k => {
             const f = factories[k], matKey = B2B_FACTORY_MATERIAL[k], mat = rawMaterials[matKey];
@@ -14487,6 +14515,7 @@ function initZugaenglichkeit() {
     }
 
     function completeB2BContract(contractId) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('holding')) return;
         let c = holdingCompany.b2bContracts.find(x => x.id === contractId);
         if (!c || c.done) return;
         let mat = rawMaterials[c.reqMat];
@@ -17402,6 +17431,7 @@ function finishGoalkeeperGame() {
     }
 
     function buyStockShares(key, amount) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('aktien')) return;
         let s = stockMarket[key];
         if (!s || amount <= 0) return;
         let cost = s.price * amount;
@@ -17417,6 +17447,7 @@ function finishGoalkeeperGame() {
     // einer 30€-Aktie genauso sinnvoll nutzbar wie bei einer 200€-Aktie (skaliert mit dem
     // Kurs), statt dass teure Aktien durch feste Stückzahl-Buttons kaum kaufbar sind.
     function buyStockByAmount(key, eurAmount) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('aktien')) return;
         let s = stockMarket[key];
         if (!s || eurAmount <= 0) return;
         let affordableAmount = Math.min(eurAmount, game.money);
@@ -17426,6 +17457,7 @@ function finishGoalkeeperGame() {
     }
 
     function sellStockSharesPct(key, pct) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('aktien')) return;
         let s = stockMarket[key];
         if (!s || s.owned <= 0) return;
         let amount = Math.max(1, Math.floor(s.owned * pct));
@@ -17433,6 +17465,7 @@ function finishGoalkeeperGame() {
     }
 
     function buyMaxStockShares(key) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('aktien')) return;
         let s = stockMarket[key];
         if (!s) return;
         let maxAffordable = Math.floor(game.money / s.price);
@@ -17441,6 +17474,7 @@ function finishGoalkeeperGame() {
     }
 
     function sellStockShares(key, amount) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('aktien')) return;
         let s = stockMarket[key];
         if (!s || amount <= 0 || s.owned < amount) return;
         playSound('click');
@@ -17457,6 +17491,7 @@ function finishGoalkeeperGame() {
     // 10. Hebelprodukt/Optionsschein: Wette auf steigenden ODER fallenden Kurs mit
     // verdoppeltem Ausschlag - deutlich riskanter als der normale Aktienkauf.
     function buyLeveragedOption(key, direction, stake) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('aktien')) return;
         let s = stockMarket[key];
         if (!s || !stake || stake <= 0 || game.money < stake) { showToast('Ungültiger Einsatz oder nicht genug Geld!', 'error'); return; }
         playSound('click');
@@ -17498,6 +17533,7 @@ function finishGoalkeeperGame() {
 
     // 12. Limit-Orders: automatischer Kauf/Verkauf, sobald ein Zielkurs erreicht wird.
     function createLimitOrder(key, type, targetPrice, amount) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('aktien')) return;
         if (!targetPrice || targetPrice <= 0 || !amount || amount <= 0) { showToast('Ungültige Order-Parameter!', 'error'); return; }
         financeCentralState.limitOrders.push({ id: Date.now(), key, type, targetPrice, amount });
         showToast(`📋 Limit-Order angelegt: ${type === 'buy' ? 'Kauf' : 'Verkauf'} von ${amount} ${stockMarket[key]?.name || key} bei ${formatVal(targetPrice)}.`, 'success');
@@ -17508,6 +17544,7 @@ function finishGoalkeeperGame() {
         renderStocksView();
     }
     function checkLimitOrders() {
+        if (typeof istFreigeschaltet === 'function' && !istFreigeschaltet('aktien')) return;   // gesperrt: Betrieb ruht
         if (!financeCentralState.limitOrders || financeCentralState.limitOrders.length === 0) return;
         let remaining = [];
         financeCentralState.limitOrders.forEach(order => {
@@ -17542,12 +17579,14 @@ function finishGoalkeeperGame() {
     // 14. Aktien-Sparplan: automatischer, wiederkehrender Kauf einer festen Summe einer
     // gewählten Aktie an jedem Heimspieltag.
     function setSavingsPlan(key, amountPerMatchday) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('aktien')) return;
         if (!amountPerMatchday || amountPerMatchday <= 0) { financeCentralState.savingsPlan = null; showToast('Aktien-Sparplan deaktiviert.', 'success'); renderStocksView(); return; }
         financeCentralState.savingsPlan = { key, amountPerMatchday };
         showToast(`📅 Aktien-Sparplan eingerichtet: ${formatVal(amountPerMatchday)}/Spieltag in ${stockMarket[key]?.name || key}.`, 'success');
         renderStocksView();
     }
     function tickSavingsPlan() {
+        if (typeof istFreigeschaltet === 'function' && !istFreigeschaltet('aktien')) return;   // gesperrt: Betrieb ruht
         let plan = financeCentralState.savingsPlan;
         if (!plan) return;
         let s = stockMarket[plan.key];
@@ -18721,6 +18760,7 @@ function finishGoalkeeperGame() {
     }
 
     function placeBet(outcome, stake) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('wetten')) return;
         if (outcome !== 'win' && outcome !== 'draw') { showToast('🚫 Wettverbot: Auf eine Niederlage der eigenen Mannschaft darf ein Verein nicht wetten.', 'error', 5000); return; }
         if (activeBet) { showToast('Es läuft bereits eine Wette für den nächsten Spieltag!', 'error'); return; }
         let odds = calcNextMatchOdds();
@@ -18739,6 +18779,7 @@ function finishGoalkeeperGame() {
 
     // NEU: Sonderwetten (Über/Unter 2.5 Tore, Beide Teams treffen).
     function placeSpecialBet(specialType, stake) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('wetten')) return;
         if (activeBet) { showToast('Es läuft bereits eine Wette für den nächsten Spieltag!', 'error'); return; }
         let odds = calcNextMatchOdds();
         if (!odds) { showToast('Kein anstehendes Ligaspiel zum Wetten gefunden!', 'error'); return; }
@@ -18758,6 +18799,7 @@ function finishGoalkeeperGame() {
     // Gesamtquote ist das Produkt beider Einzelquoten (klassisches Kombiwetten-Prinzip),
     // mit einem kleinen Kombi-Aufschlag der Marge als zusätzliches Buchmacher-Risiko.
     function placeComboBet(outcome, specialType, stake) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('wetten')) return;
         if (outcome !== 'win' || specialType !== 'over') { showToast('Kombiwette nur als Sieg + Über 2.5 möglich.', 'error'); return; }
         if (activeBet) { showToast('Es läuft bereits eine Wette für den nächsten Spieltag!', 'error'); return; }
         let odds = calcNextMatchOdds();
@@ -18988,7 +19030,7 @@ function finishGoalkeeperGame() {
             + getMothballedCapacity() * STADIUM_MAINTENANCE_PER_SEAT * MOTHBALLED_MAINTENANCE_RATE;
         // Solaranlage: senkt die Stromkosten-Komponente der Betriebskosten spürbar,
         // statt nur eine reine Sponsoren-Einnahmen-Erhöhung zu sein - echte Stromersparnis.
-        if (stadium.upgrades?.solaranlage) kosten *= 0.8;
+        if (stadium.upgrades?.solaranlage && stadionAnlagenInBetrieb()) kosten *= 0.8;
         return kosten;
     }
 
@@ -19249,7 +19291,7 @@ function finishGoalkeeperGame() {
     }
     function findNextStadiumSuggestion() {
         // Günstigste noch nicht gebaute Erweiterung vorschlagen, sonst nächster Block-Ausbau.
-        if (stadium.upgrades) {
+        if (stadium.upgrades && stadionAnlagenInBetrieb()) {
             let candidates = Object.keys(STADIUM_UPGRADES).filter(k => !stadium.upgrades[k]).map(k => ({ key: k, cost: getStadiumUpgradeCost(k), name: STADIUM_UPGRADES[k].name }));
             if (candidates.length > 0) {
                 candidates.sort((a, b) => a.cost - b.cost);
@@ -19283,7 +19325,7 @@ function finishGoalkeeperGame() {
                     <div class="ui-overline" style="font-size:var(--fs-caption); color:var(--text-muted);">Nächste Ausbaustufe</div>
                     <div style="font-size:var(--fs-body); margin-bottom:6px;">${suggestion.label} (${formatVal(suggestion.cost)})</div>
                     <button onclick="${suggestion.action}" class="btn-action">Ausbau Planen</button>
-                ` : '<div style="font-size:var(--fs-small); color:var(--primary);">Alle Erweiterungen bereits gebaut! ✓</div>'}
+                ` : (stadionAnlagenInBetrieb() ? '<div style="font-size:var(--fs-small); color:var(--primary);">Alle Erweiterungen bereits gebaut! ✓</div>' : '<div style="font-size:var(--fs-small); color:var(--text-muted);">🔒 Stadion-Anlagen noch gesperrt, siehe Freischaltungen im Talentbaum.</div>')}
             `;
         }
         let nameOverlay = document.getElementById('stadium-hero-name-overlay');
@@ -19341,6 +19383,7 @@ function finishGoalkeeperGame() {
         return Math.round(STADIUM_UPGRADES[key].cost * scale);
     }
     function buyStadiumUpgrade(key) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('stadionanlagen')) return;
         if (!stadium.upgrades) stadium.upgrades = {};
         if (stadium.upgrades[key]) return;
         let cost = getStadiumUpgradeCost(key);
@@ -19349,15 +19392,19 @@ function finishGoalkeeperGame() {
     }
     // Kategorie-Summen: wie viele der gekauften Erweiterungen zu einer Kategorie gehören -
     // mehrere Erweiterungen derselben Kategorie addieren sich (mit sinnvoller Obergrenze).
+    // Gesperrte Stadion-Anlagen (js/freischaltungen.js) ruhen: gebaut, aber ohne Wirkung.
+    function stadionAnlagenInBetrieb() {
+        return typeof istFreigeschaltet !== 'function' || istFreigeschaltet('stadionanlagen');
+    }
     function countOwnedUpgradesInCategory(category) {
-        if (!stadium.upgrades) return 0;
+        if (!stadium.upgrades || !stadionAnlagenInBetrieb()) return 0;
         return Object.keys(STADIUM_UPGRADES).filter(k => stadium.upgrades[k] && STADIUM_UPGRADES[k].category === category).length;
     }
     function getStadiumSecurityBonus() { return Math.min(0.4, countOwnedUpgradesInCategory('security') * 0.15); }
     function getStadiumInjuryReduction() { return Math.min(0.3, countOwnedUpgradesInCategory('injury') * 0.12); }
     function getStadiumComfortBonus() { return Math.min(0.15, countOwnedUpgradesInCategory('comfort') * 0.03); }
     function getStadiumMerchBonus() {
-        if (!stadium.upgrades) return 0;
+        if (!stadium.upgrades || !stadionAnlagenInBetrieb()) return 0;
         let bonus = 0;
         if (stadium.upgrades.flagship_store) bonus += 0.15;
         if (stadium.upgrades.stadion_app) bonus += 0.10;
@@ -19372,7 +19419,7 @@ function finishGoalkeeperGame() {
     function getStadiumSponsorBonus() { return Math.min(0.24, countOwnedUpgradesInCategory('sponsor') * 0.08); }
     function getStadiumMediaImageMatchdayBonus() { return countOwnedUpgradesInCategory('media') * 0.4; }
     function getStadiumMatchdayIncome() {
-        if (!stadium.upgrades) return 0;
+        if (!stadium.upgrades || !stadionAnlagenInBetrieb()) return 0;
         let scale = getStadiumCostScale();
         return Object.keys(STADIUM_UPGRADES).filter(k => stadium.upgrades[k] && STADIUM_UPGRADES[k].category === 'income')
             .reduce((sum, k) => sum + Math.round(STADIUM_UPGRADES[k].incomeBase * scale), 0);
@@ -19419,6 +19466,7 @@ function finishGoalkeeperGame() {
         let grid = document.getElementById('stadium-upgrades-grid');
         if (!grid) return;
         if (!stadium.upgrades) stadium.upgrades = {};
+        if (!stadionAnlagenInBetrieb()) { grid.innerHTML = `<div style="grid-column:1 / -1;">${renderFreischaltKarte('stadionanlagen')}</div>`; return; }
         grid.innerHTML = Object.keys(STADIUM_UPGRADES).map(key => {
             let u = STADIUM_UPGRADES[key];
             let cost = getStadiumUpgradeCost(key);
@@ -19636,6 +19684,7 @@ function finishGoalkeeperGame() {
         }
     };
     function buyCapacityProject(key) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('grossprojekte')) return;
         let proj = STADIUM_CAPACITY_PROJECTS[key];
         if (!proj) return;
         if (!proj.gate()) { showToast(`🚫 ${proj.gateText}`, 'error', 5000); return; }
@@ -19645,6 +19694,7 @@ function finishGoalkeeperGame() {
     function renderCapacityProjectsGrid() {
         let grid = document.getElementById('capacity-projects-grid');
         if (!grid) return;
+        if (typeof istFreigeschaltet === 'function' && !istFreigeschaltet('grossprojekte')) { grid.innerHTML = renderFreischaltKarte('grossprojekte'); return; }
         let scale = getStadiumCostScale();
         grid.innerHTML = Object.keys(STADIUM_CAPACITY_PROJECTS).map(key => {
             let p = STADIUM_CAPACITY_PROJECTS[key];
@@ -20512,6 +20562,228 @@ function renderTopspielBox() {
 }
 
 /* eslint-enable */
+// Freischaltungen (Board-Karte „Freischaltungssystem“): Bereiche, die erst mit einem gewachsenen
+// Verein Sinn ergeben, öffnen sich über echte Erfolge der Manager-Laufbahn: höchste erreichte Liga,
+// Meistertitel, Ligasiege und -tore, Pokale, Champions Cup und Manager-Level. Die Zahlen kommen aus
+// game.managerCareer (abgeschlossene Saisons, js/manager-analytics.js) plus der laufenden Saison.
+// Gesperrt heißt: der Bildschirm zeigt die Bedingungen, Aktionen sagen per Toast warum nicht, und
+// laufender Betrieb ruht (Fabriken, Mieten, Stadion-Anlagen, Sparpläne, Training der Zweiten).
+// Einmal offen, bleibt ein Bereich offen (game.freischaltungen, auch nach Abstieg oder Vereinswechsel).
+
+// Reihenfolge zählt: ein Bereich, der einen anderen voraussetzt ('bereich'), steht dahinter.
+const FREISCHALT_BEREICHE = [
+    { key: 'wetten', name: 'Sportwetten', icon: '🎲', screens: ['screen-betting'], ziel: 'screen-betting',
+        text: 'Wetten auf eigene Spiele.', bedingungen: [{ art: 'spiele', wert: 68 }, { art: 'level', wert: 3 }] },
+    { key: 'zweite', name: 'Zweite Mannschaft', icon: '🥈', screens: ['screen-second-team'], ziel: 'screen-second-team',
+        text: 'Gründung und Führung einer zweiten Mannschaft.', bedingungen: [{ art: 'liga', wert: 3 }, { art: 'meister', wert: 1 }, { art: 'siege', wert: 50 }] },
+    { key: 'frauen', name: 'Frauenmannschaft', icon: '👩', screens: ['screen-women'], ziel: 'screen-women',
+        text: 'Gründung und Führung einer Frauenmannschaft.', bedingungen: [{ art: 'liga', wert: 3 }, { art: 'meister', wert: 2 }, { art: 'tore', wert: 150 }] },
+    { key: 'immobilien', name: 'Immobilien', icon: '🏘️', screens: ['screen-real-estate'], ziel: 'screen-real-estate',
+        text: 'Immobilien kaufen, ausbauen und vermieten.', bedingungen: [{ art: 'liga', wert: 2 }, { art: 'pokal', wert: 1 }, { art: 'level', wert: 4 }] },
+    { key: 'stadionanlagen', name: 'Stadion-Anlagen', icon: '🏗️', screens: [], ziel: 'screen-stadium',
+        text: 'Die 20 Stadion-Erweiterungen (Sicherheit, Komfort, Einnahmen, Heimvorteil).', bedingungen: [{ art: 'liga', wert: 2 }, { art: 'meister', wert: 3 }, { art: 'siege', wert: 100 }] },
+    { key: 'aktien', name: 'Aktien & Kapitalmarkt', icon: '📈', screens: ['screen-stocks'], ziel: 'screen-stocks',
+        text: 'Aktien, Optionen, Limits und Sparpläne.', bedingungen: [{ art: 'liga', wert: 1 }, { art: 'siege', wert: 150 }, { art: 'level', wert: 5 }] },
+    { key: 'grossprojekte', name: 'Große Ausbauprojekte', icon: '🏟️', screens: [], ziel: 'screen-stadium',
+        text: 'Zusatztribüne, Ränge, Großausbau, zweiter Rang, Umbauten, Hybridrasen.', bedingungen: [{ art: 'liga', wert: 1 }, { art: 'meister', wert: 4 }, { art: 'tore', wert: 500 }] },
+    { key: 'holding', name: 'Holding & B2B', icon: '🏢', screens: ['screen-holding'], ziel: 'screen-holding',
+        text: 'Holding-Konto, Überweisungen und B2B-Aufträge.', bedingungen: [{ art: 'liga', wert: 0 }, { art: 'spiele', wert: 300 }, { art: 'level', wert: 6 }] },
+    { key: 'industrie', name: 'Industrie & Rohstoffe', icon: '🏭', screens: ['screen-industry', 'screen-raw-materials'], ziel: 'screen-industry',
+        text: 'Fabriken, Produktion, Rohstoffhandel und Übernahmen.', bedingungen: [{ art: 'bereich', wert: 'holding' }, { art: 'dmeister', wert: 1 }, { art: 'europa', wert: 1 }] }
+];
+
+function getFreischaltBereich(key) {
+    return FREISCHALT_BEREICHE.find(b => b.key === key) || null;
+}
+
+// Laufbahn-Zahlen: abgeschlossene Saisons plus die laufende, solange sie noch nicht archiviert ist.
+function getFreischaltStand() {
+    const liste = Array.isArray(game.managerCareer) ? game.managerCareer : [];
+    const s = { spiele: 0, siege: 0, tore: 0, meister: 0, dmeister: 0, liga: game.leagueLevel };
+    liste.forEach(e => {
+        s.spiele += (e.won || 0) + (e.drawn || 0) + (e.lost || 0);
+        s.siege += e.won || 0;
+        s.tore += e.goalsFor || 0;
+        if (e.rank === 1) { s.meister++; if (e.level === 0) s.dmeister++; }
+        if (typeof e.level === 'number') s.liga = Math.min(s.liga, e.level);
+    });
+    if (!liste.some(e => e.season === game.season && e.club === game.clubName)) {
+        const tab = (leaguesData[game.leagueLevel] || []).find(t => t.name === game.clubName) || {};
+        s.spiele += (tab.won || 0) + (tab.drawn || 0) + (tab.lost || 0);
+        s.siege += tab.won || 0;
+        s.tore += tab.goalsFor || 0;
+    }
+    const trophaeen = Array.isArray(game.trophies) ? game.trophies : [];
+    s.pokal = trophaeen.filter(t => /pokalsieger/i.test(t)).length;
+    s.europa = trophaeen.filter(t => /Champions Cup Sieger/.test(t)).length;
+    s.level = managerRPG.level;
+    return s;
+}
+
+function bedingungErfuellt(c, s) {
+    if (c.art === 'liga') return s.liga <= c.wert;
+    if (c.art === 'bereich') return !!(game.freischaltungen && game.freischaltungen[c.wert]);
+    return (s[c.art] || 0) >= c.wert;
+}
+
+function bedingungText(c) {
+    const n = c.wert;
+    switch (c.art) {
+        case 'liga': return `${leagueNames[n]} erreicht`;
+        case 'meister': return n === 1 ? '1 Meistertitel' : `${n} Meistertitel`;
+        case 'dmeister': return 'Deutscher Meister';
+        case 'siege': return `${n} Ligasiege`;
+        case 'tore': return `${n} Ligatore`;
+        case 'spiele': return `${n} Ligaspiele`;
+        case 'pokal': return n === 1 ? '1 Pokalsieg' : `${n} Pokalsiege`;
+        case 'europa': return 'Champions Cup gewonnen';
+        case 'level': return `Manager-Level ${n}`;
+        case 'bereich': return `${(getFreischaltBereich(n) || {}).name || n} freigeschaltet`;
+        default: return '';
+    }
+}
+
+// Stand und Anteil (0 bis 1) für den Fortschrittsbalken.
+function bedingungStand(c, s) {
+    if (c.art === 'liga') {
+        const unten = NUM_LEAGUES - 1;
+        return { text: `bisher ${leagueNames[s.liga]}`, anteil: c.wert >= unten ? 1 : Math.max(0, Math.min(1, (unten - s.liga) / (unten - c.wert))) };
+    }
+    if (c.art === 'bereich') {
+        const offen = bedingungErfuellt(c, s);
+        return { text: offen ? 'offen' : 'noch gesperrt', anteil: offen ? 1 : 0 };
+    }
+    const ist = s[c.art] || 0;
+    return { text: `${ist.toLocaleString('de-DE')} / ${c.wert.toLocaleString('de-DE')}`, anteil: Math.max(0, Math.min(1, ist / c.wert)) };
+}
+
+function istFreigeschaltet(key) {
+    if (typeof adminAlleFreigeschaltet === 'function' && adminAlleFreigeschaltet()) return true;
+    return !!(game.freischaltungen && game.freischaltungen[key]);
+}
+
+// Für Aktionen: sagt per Toast, was noch fehlt (keine stillen Knöpfe).
+function bereichGesperrt(key) {
+    if (istFreigeschaltet(key)) return false;
+    const b = getFreischaltBereich(key);
+    if (!b) return false;
+    const s = getFreischaltStand();
+    const offen = b.bedingungen.filter(c => !bedingungErfuellt(c, s)).map(bedingungText);
+    showToast(`🔒 ${b.name} ist noch gesperrt. Es fehlt: ${offen.join(', ')}.`, 'error', 5000);
+    return true;
+}
+
+// Nach jedem Spieltag, am Saisonende und beim Laden. still: ohne Meldungen (alte Spielstände).
+function pruefeFreischaltungen(still = false) {
+    if (!game.freischaltungen || typeof game.freischaltungen !== 'object') game.freischaltungen = {};
+    const s = getFreischaltStand();
+    const neu = [];
+    FREISCHALT_BEREICHE.forEach(b => {
+        if (game.freischaltungen[b.key]) return;
+        if (b.bedingungen.every(c => bedingungErfuellt(c, s))) {
+            game.freischaltungen[b.key] = { season: game.season, matchday: Math.min(34, game.matchday) };
+            neu.push(b);
+        }
+    });
+    if (neu.length && !still) {
+        neu.forEach(b => {
+            addInboxMessage('analyse', `🔓 Freigeschaltet: ${b.name}`, `${b.text} Geschafft mit: ${b.bedingungen.map(bedingungText).join(', ')}. Dazu gibt es 250 Manager-XP.`, b.ziel);
+        });
+        showNotice('🔓 Neuer Bereich freigeschaltet', neu.map(b => `${b.icon} ${b.name}: ${b.text}`).join('\n'));
+        neu.forEach(() => addManagerXP(250));
+    }
+    if (neu.length) aktualisiereFreischaltSperren();
+    return neu;
+}
+
+function renderFreischaltBedingungen(b, s) {
+    return b.bedingungen.map(c => {
+        const ok = bedingungErfuellt(c, s);
+        const st = bedingungStand(c, s);
+        return `<div class="freischalt-zeile">
+            <div style="display:flex; justify-content:space-between; gap:8px; font-size:var(--fs-caption);">
+                <span>${ok ? '✅' : '⬜'} ${bedingungText(c)}</span>
+                <span style="color:var(--text-muted); white-space:nowrap;">${st.text}</span>
+            </div>
+            <div class="freischalt-balken"><span style="width:${Math.round(st.anteil * 100)}%;"></span></div>
+        </div>`;
+    }).join('');
+}
+
+function renderFreischaltKarte(key) {
+    const b = getFreischaltBereich(key);
+    if (!b) return '';
+    const s = getFreischaltStand();
+    return `<div class="freischalt-karte box">
+        <div class="ui-overline" style="color:var(--text-muted);">🔒 Noch gesperrt</div>
+        <div style="font-size:var(--fs-title-sm); font-weight:900; margin:2px 0;">${b.icon} ${b.name}</div>
+        <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">${b.text} Dieser Bereich öffnet sich, sobald alle Bedingungen erfüllt sind.</div>
+        ${renderFreischaltBedingungen(b, s)}
+        <button onclick="showScreen('screen-manager-tree')" class="btn-secondary" style="margin-top:6px;">🔓 Alle Freischaltungen ansehen</button>
+    </div>`;
+}
+
+// Gesperrte Bildschirme zeigen nur die Karte; Menü- und Reiterknöpfe tragen ein Schloss.
+function aktualisiereFreischaltSperren() {
+    FREISCHALT_BEREICHE.forEach(b => {
+        const zu = !istFreigeschaltet(b.key);
+        b.screens.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                let karte = el.querySelector(':scope > .freischalt-karte');
+                if (zu) {
+                    if (!karte) { karte = document.createElement('div'); el.insertBefore(karte, el.firstChild); }
+                    karte.outerHTML = renderFreischaltKarte(b.key);
+                    el.classList.add('freischalt-gesperrt');
+                } else {
+                    if (karte) karte.remove();
+                    el.classList.remove('freischalt-gesperrt');
+                }
+            }
+            // In einem Hub nur der Reiter: der Menüpunkt öffnet auch offene Nachbarn (z. B. den Fanshop).
+            const imHub = typeof SUB_SCREEN_TO_HUB !== 'undefined' && SUB_SCREEN_TO_HUB[id];
+            const knoepfe = imHub ? [document.getElementById('hubtab-btn-' + id)] : document.querySelectorAll(`button[onclick*="showScreen('${id}')"]`);
+            knoepfe.forEach(btn => { if (btn) btn.classList.toggle('freischalt-zu', zu); });
+        });
+    });
+}
+
+// Einmal beim ersten Laden eines Stands von vor dem System: was offen ist und was ruht.
+function meldeFreischaltungenEingefuehrt(offen) {
+    const zu = FREISCHALT_BEREICHE.filter(b => !game.freischaltungen[b.key]);
+    if (!zu.length) return;
+    addInboxMessage('analyse', '🔓 Neu: Freischaltungen', `Einige Bereiche öffnen sich jetzt erst über Erfolge deiner Laufbahn. Nach deiner bisherigen Bilanz ${offen.length ? `offen: ${offen.map(b => b.name).join(', ')}` : 'ist noch keiner offen'}. Gesperrt, bis die Bedingungen erfüllt sind: ${zu.map(b => b.name).join(', ')}. Was dort schon läuft, ruht so lange. Alle Bedingungen stehen im Manager-Talentbaum.`, 'screen-manager-tree');
+}
+
+// Übersicht im Manager-Talentbaum: alle Bereiche mit Stand.
+function renderFreischaltUebersicht() {
+    const box = document.getElementById('freischaltungen-box');
+    if (!box) return;
+    const s = getFreischaltStand();
+    const offen = FREISCHALT_BEREICHE.filter(b => istFreigeschaltet(b.key)).length;
+    box.innerHTML = `
+        <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Manche Bereiche ergeben erst mit einem gewachsenen Verein Sinn. Sie öffnen sich über Erfolge deiner Laufbahn: Liga, Titel, Siege, Tore, Pokale und Manager-Level. Offen bleibt offen, auch nach einem Abstieg.</div>
+        <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:8px;">
+            ${uiChip(`${offen} von ${FREISCHALT_BEREICHE.length} offen`, offen === FREISCHALT_BEREICHE.length ? 'gut' : '')}
+            ${uiChip(`${s.spiele.toLocaleString('de-DE')} Ligaspiele`)}${uiChip(`${s.siege.toLocaleString('de-DE')} Siege`)}${uiChip(`${s.tore.toLocaleString('de-DE')} Tore`)}
+            ${uiChip(`${s.meister} Meistertitel`)}${uiChip(`${s.pokal} Pokalsiege`)}${uiChip(`Level ${s.level}`)}
+        </div>
+        ${FREISCHALT_BEREICHE.map(b => {
+            const info = game.freischaltungen && game.freischaltungen[b.key];
+            if (istFreigeschaltet(b.key)) {
+                return `<div class="box freischalt-eintrag" style="display:flex; justify-content:space-between; gap:8px; align-items:center; margin-bottom:4px;">
+                    <span><strong>${b.icon} ${b.name}</strong><br><span style="font-size:var(--fs-caption); color:var(--text-muted);">${info ? `Offen seit Saison ${info.season}, Spieltag ${info.matchday}` : 'Offen (Entwickler-Schalter)'}</span></span>
+                    <button onclick="showScreen('${b.ziel}')" class="btn-secondary" style="flex:0 0 auto; width:auto; font-size:var(--fs-caption);">Öffnen</button>
+                </div>`;
+            }
+            return `<div class="box freischalt-eintrag" style="margin-bottom:4px;">
+                <div style="margin-bottom:4px;"><strong>🔒 ${b.icon} ${b.name}</strong> <span style="font-size:var(--fs-caption); color:var(--text-muted);">${b.text}</span></div>
+                ${renderFreischaltBedingungen(b, s)}
+            </div>`;
+        }).join('')}`;
+}
+
+/* eslint-enable */
 
     // ==========================================
     // Immobilien-Portfolio
@@ -20551,6 +20823,7 @@ function renderTopspielBox() {
     }
 
     function buyOrUpgradeRealEstate(key) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('immobilien')) return;
         let p = realEstatePortfolio[key];
         if (p.lvl >= p.max) { showToast('Objekt bereits voll ausgebaut!', 'error'); return; }
         let cost = getRealEstateCost(key);
@@ -20570,6 +20843,7 @@ function renderTopspielBox() {
     }
 
     function sellRealEstate(key, btn) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('immobilien')) return;
         let p = realEstatePortfolio[key];
         if (!p.owned) return;
         // Verkauf zu 55% des ursprünglichen Investitionswerts (Marktabschlag), wie bei
@@ -20593,6 +20867,7 @@ function renderTopspielBox() {
     // Portfolio aus (unabhängig von Heim-/Auswärtsspiel - Mieteinnahmen sind kein
     // Spieltagsgeschäft, sondern laufen kontinuierlich).
     function tickRealEstateIncome() {
+        if (typeof istFreigeschaltet === 'function' && !istFreigeschaltet('immobilien')) return 0;   // gesperrt: Betrieb ruht
         let total = 0;
         Object.keys(realEstatePortfolio).forEach(key => { total += getRealEstateIncome(key); });
         if (total > 0) game.money += total;
@@ -22360,6 +22635,7 @@ function renderTopspielBox() {
     // wo der Spieler echte Spielpraxis bekommt und sich (mit Nachwuchs-Koordinator) weiter
     // entwickelt, ohne einen Profi-Kaderplatz zu belegen.
     function promoteYouthToSecondTeam(idx, btn) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('zweite')) return;
         if (!game.secondTeam.isActive) { showToast('Dafür muss erst eine zweite Mannschaft gegründet sein.', 'error', 4000); return; }
         if (!requireConfirm(btn, 'Wirklich in die Reserve?')) return;
         playSound('click');
@@ -29991,6 +30267,7 @@ function refreshWomenMarket() {
 }
 
 function signWomenPlayer(id) {
+    if (typeof bereichGesperrt === 'function' && bereichGesperrt('frauen')) return;
     const w = game.womenTeam;
     if (!w || !w.founded) return;
     const idx = w.market.findIndex(p => p.id === id);
@@ -30019,6 +30296,7 @@ function generateWomenSponsorOffers() {
 }
 
 function signWomenSponsor(i) {
+    if (typeof bereichGesperrt === 'function' && bereichGesperrt('frauen')) return;
     const w = game.womenTeam;
     if (!w || !w.founded) return;
     if (w.sponsor && w.sponsor.season === game.season) { showToast('Für diese Saison gibt es schon einen Sponsor.', 'error'); return; }
@@ -30062,6 +30340,7 @@ function buildWomenLeague(level, keepNames) {
 }
 
 function foundWomenTeam() {
+    if (typeof bereichGesperrt === 'function' && bereichGesperrt('frauen')) return;
     if (game.womenTeam && game.womenTeam.founded) return;
     if (game.money < WOMEN_FOUNDING_COST) { showToast(`Für die Gründung fehlen ${formatVal(WOMEN_FOUNDING_COST - game.money)}.`, 'error'); return; }
     setzeBuchungskontext('👩 Frauenmannschaft');
@@ -30080,6 +30359,7 @@ function foundWomenTeam() {
 }
 
 function upgradeWomenFoerderung() {
+    if (typeof bereichGesperrt === 'function' && bereichGesperrt('frauen')) return;
     const w = game.womenTeam;
     if (!w || !w.founded) return;
     const next = WOMEN_FOERDERUNG[w.foerderung + 1];
@@ -30744,7 +31024,7 @@ function tickPlayerRetirement() {
                     addInboxMessage('vertrag', `${w.icon} ${w.name}, aber das Dach hält dicht!`, `Dank der Komplett-Überdachung bleibt das Stadion von den Auswirkungen des ${w.name.toLowerCase()}s komplett verschont.`, 'screen-calendar');
                 }
                 // Klimaanlage (Stadion-Erweiterung): neutralisiert Hitze-Wetter komplett.
-                if (w.name === 'Hitze' && typeof stadium !== 'undefined' && stadium.upgrades?.klimaanlage) {
+                if (w.name === 'Hitze' && typeof stadium !== 'undefined' && stadium.upgrades?.klimaanlage && (typeof stadionAnlagenInBetrieb !== 'function' || stadionAnlagenInBetrieb())) {
                     currentWeather = { ...w, fitLossMult: 1.0, injuryMult: 1.0, cardMult: 1.0, goalMult: 1.0, attendanceMult: 1.0, neutralizedByAC: true };
                     addInboxMessage('vertrag', `${w.icon} Hitze, aber die Klimaanlage hält kühl!`, 'Dank der Klimaanlage sind alle negativen Auswirkungen der Hitzewelle neutralisiert.', 'screen-calendar');
                 }
@@ -32759,6 +33039,8 @@ function cleanupLegacyScoutState() {
         }
         // Produktionsketten-Countdown jeden Spieltag herunterzählen.
         if (typeof tickProductionQueue === 'function') tickProductionQueue();
+        // Freischaltungen (js/freischaltungen.js): neue Erfolge können Bereiche öffnen.
+        if (typeof pruefeFreischaltungen === 'function') pruefeFreischaltungen();
         // Merchandising: limitierte Edition und saisonale Kollektion jeden Spieltag prüfen.
         if (typeof tickLimitedEditionSales === 'function') {
             tickLimitedEditionSales();
@@ -34462,6 +34744,8 @@ function concludeSeasonAndAdvance() {
         if (typeof applyPendingFfpPointDeduction === 'function') applyPendingFfpPointDeduction();
         refreshTransferMarket();
         autoLineup();
+        // Titel und Aufstieg zählen erst jetzt (Karriere-Archiv und neue Liga).
+        if (typeof pruefeFreischaltungen === 'function') pruefeFreischaltungen();
         updateUI();
         showScreen('screen-dashboard');
         showSeasonReviewSummary(myRank, myTeamSnapshot);
@@ -37106,6 +37390,22 @@ function adminAlleErfolge() {
 }
 
 // ---------- Darstellung ----------
+// ---------- 17. Freischaltungen (js/freischaltungen.js) ----------
+// Je Gerät: alle gesperrten Bereiche zum Testen öffnen. Die Testsuite setzt stattdessen ein Kennzeichen
+// im Fenster (tests/run-tests.js): Schreiben in den Gerätespeicher vor dem Seitenstart verlor dort andere Werte.
+const ADMIN_ALLES_FREI_KEY = 'anstoss_fm13_alles_frei';
+function adminAlleFreigeschaltet() {
+    if (window.anstossTestAllesFrei === true) return true;
+    return typeof safeLocalGet === 'function' && safeLocalGet(ADMIN_ALLES_FREI_KEY) === '1';
+}
+function adminFreischaltungenUmschalten() {
+    if (adminAlleFreigeschaltet()) safeLocalRemove(ADMIN_ALLES_FREI_KEY);
+    else safeLocalSet(ADMIN_ALLES_FREI_KEY, '1');
+    showToast(adminAlleFreigeschaltet() ? '🔓 Alle Bereiche offen (nur dieses Gerät).' : '🔒 Freischaltungen gelten wieder.', 'success');
+    if (typeof aktualisiereFreischaltSperren === 'function') aktualisiereFreischaltSperren();
+    renderAdminTools();
+}
+
 function renderAdminTools() {
     const box = document.getElementById('admin-tools-box');
     if (!box) return;
@@ -37141,6 +37441,7 @@ function renderAdminTools() {
                 <button onclick="adminAngebotErzwingen()" class="btn-secondary">📨 Angebot erzwingen</button></div>` : ''}
             <button onclick="adminJugendtalent()" class="btn-secondary" style="margin:4px 0;">🎓 Jugendtalent ohne Kosten (${youthTalents.length} / ${getYouthAcademyCapacity()})</button>
             <button onclick="adminAlleErfolge()" class="btn-secondary" style="margin:4px 0;">🎖️ Alle Erfolge freischalten (${erfolge} / ${ACHIEVEMENT_DEFINITIONS.length})</button>
+            <button onclick="adminFreischaltungenUmschalten()" class="btn-secondary" style="margin:4px 0;">${adminAlleFreigeschaltet() ? '🔒 Freischaltungen wieder anwenden' : '🔓 Alle gesperrten Bereiche öffnen (nur dieses Gerät)'}</button>
         </details>
         <details class="ui-fold"><summary>📊 Teamstärke-Diagnose</summary>
             ${diag ? `<div style="font-size:var(--fs-small); margin:4px 0;">Heim <strong>${diag.heim}</strong> · Auswärts <strong>${diag.auswaerts}</strong> · ${diag.spieler} Spieler in der Startelf</div>
@@ -37637,6 +37938,15 @@ function renderAdminTools() {
         // zuvor laufenden Spiels nicht erben.
         if (p.game && !p.game.homeCity) delete game.homeCity;
         if (typeof ensureHomeCity === 'function') { ensureHomeCity(); applyHomeRegion(); }
+        // Freischaltungen: ein Stand ohne sie bekommt sie nach den neuen Regeln (aus seiner Laufbahn),
+        // ohne Übertrag aus dem vorher laufenden Spiel.
+        if (typeof pruefeFreischaltungen === 'function') {
+            const neuEingefuehrt = !(p.game && p.game.freischaltungen);
+            if (neuEingefuehrt) game.freischaltungen = {};
+            const offen = pruefeFreischaltungen(true);
+            if (neuEingefuehrt) meldeFreischaltungenEingefuehrt(offen);
+            aktualisiereFreischaltSperren();
+        }
         restoreGetters();
     }
 

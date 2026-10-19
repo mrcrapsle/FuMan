@@ -532,6 +532,12 @@
             color: var(--text-muted); font-size: var(--fs-body-lg); cursor: pointer; line-height: 1;
         }
         .ui-icon-btn:hover { background: var(--chip-bg); }
+        /* Freischaltungen (js/freischaltungen.js): gesperrter Bereich zeigt nur die Karte mit den Bedingungen */
+        .freischalt-gesperrt > :not(.freischalt-karte) { display: none !important; }
+        .freischalt-zu::after { content: ' 🔒'; }
+        .freischalt-zeile { margin: 4px 0; }
+        .freischalt-balken { height: 6px; margin-top: 2px; border-radius: 999px; background: var(--chip-bg); overflow: hidden; }
+        .freischalt-balken > span { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
         /* Postfach: gelesene Nachrichten treten zurück, bleiben aber voll lesbar */
         .ui-mail { padding: 10px 10px 10px 15px; }
         .ui-mail .ui-card-title { font-weight: var(--fw-title); }

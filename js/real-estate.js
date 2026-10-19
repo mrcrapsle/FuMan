@@ -37,6 +37,7 @@
     }
 
     function buyOrUpgradeRealEstate(key) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('immobilien')) return;
         let p = realEstatePortfolio[key];
         if (p.lvl >= p.max) { showToast('Objekt bereits voll ausgebaut!', 'error'); return; }
         let cost = getRealEstateCost(key);
@@ -56,6 +57,7 @@
     }
 
     function sellRealEstate(key, btn) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('immobilien')) return;
         let p = realEstatePortfolio[key];
         if (!p.owned) return;
         // Verkauf zu 55% des ursprünglichen Investitionswerts (Marktabschlag), wie bei
@@ -79,6 +81,7 @@
     // Portfolio aus (unabhängig von Heim-/Auswärtsspiel - Mieteinnahmen sind kein
     // Spieltagsgeschäft, sondern laufen kontinuierlich).
     function tickRealEstateIncome() {
+        if (typeof istFreigeschaltet === 'function' && !istFreigeschaltet('immobilien')) return 0;   // gesperrt: Betrieb ruht
         let total = 0;
         Object.keys(realEstatePortfolio).forEach(key => { total += getRealEstateIncome(key); });
         if (total > 0) game.money += total;

@@ -2949,6 +2949,8 @@ async function testOeffentlicheFassung(browser) {
         out.keineAltlasten = kaesten.length === 2 && kaesten.every(el => !el.innerHTML.includes('screen-admin')) && document.getElementById('recent-screens-box').innerHTML.includes('screen-finances');
         showScreen('screen-premium'); showScreen('screen-private'); showScreen('screen-finances');
         out.weitereBildschirme = document.getElementById('screen-finances').offsetParent !== null || document.getElementById('screen-finances').style.display !== 'none';
+        // Der Entwickler-Schlüssel der Testsuite öffnet in der öffentlichen Fassung nichts
+        out.sperrenGelten = window.anstossTestAllesFrei === true && typeof window.adminAlleFreigeschaltet === 'undefined' && !istFreigeschaltet('wetten');
         showToast = toastAlt;
         return out;
     });
@@ -2956,7 +2958,7 @@ async function testOeffentlicheFassung(browser) {
     const werte = ks => JSON.stringify(ks.map(k => r[k]));
     const A = ['keinBildschirm', 'keinKnopf', 'keineFunktionen', 'keineMarker'];
     assert(ok(...A), `Öffentliche Fassung: kein Admin-Bildschirm, kein Menüknopf, keine Admin-Funktionen, keine Entwickler-Marker (${werte(A)})`);
-    const B = ['spielLaeuft', 'kader', 'adminAbgefangen', 'keineAltlasten', 'weitereBildschirme'];
+    const B = ['spielLaeuft', 'kader', 'adminAbgefangen', 'keineAltlasten', 'weitereBildschirme', 'sperrenGelten'];
     assert(ok(...B), `Öffentliche Fassung: Spiel läuft, alte Admin-Ziele aus Favoriten und Verlauf führen nicht auf eine leere Seite (${werte(B)})`);
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
     await page.close();
@@ -3312,6 +3314,127 @@ async function testPostfachLoeschen(browser) {
     await page.close();
 }
 
+async function testFreischaltungen(browser) {
+    console.log('\n[Board] Freischaltungen: gesperrte Bereiche, Bedingungen aus der Laufbahn, ruhender Betrieb, alte Stände');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.evaluate(R32_HILFEN);
+    const r = await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false;
+        window.anstossTestAllesFrei = false;   // die Testsuite öffnet sonst alles (tests/run-tests.js)
+        const out = {};
+        const toasts = []; const toastAlt = showToast; showToast = (t) => { toasts.push(t); };
+        const alleZu = () => FREISCHALT_BEREICHE.every(b => !istFreigeschaltet(b.key));
+        out.start = alleZu() && JSON.stringify(game.freischaltungen) === '{}' && FREISCHALT_BEREICHE.length === 9;
+
+        // --- Gesperrte Bildschirme und Schlösser ---
+        showScreen('screen-second-team');
+        const zweite = document.getElementById('screen-second-team');
+        const karte = zweite.querySelector(':scope > .freischalt-karte');
+        out.bKarte = zweite.classList.contains('freischalt-gesperrt') && !!karte && karte.textContent.includes('Zweite Mannschaft') && karte.textContent.includes('50 Ligasiege')
+            && getComputedStyle(document.getElementById('st-not-founded-box')).display === 'none';
+        showScreen('screen-stocks');
+        out.bHub = document.getElementById('screen-stocks').classList.contains('freischalt-gesperrt') && document.getElementById('hubtab-btn-screen-stocks').classList.contains('freischalt-zu')
+            && !document.getElementById('hubtab-btn-screen-sponsors').classList.contains('freischalt-zu');
+        const menuIndustrie = [...document.querySelectorAll('.nav-btn')].find(b => (b.getAttribute('onclick') || '').includes("showScreen('screen-industry')"));
+        const menuZweite = [...document.querySelectorAll('.nav-btn')].find(b => (b.getAttribute('onclick') || '').includes("showScreen('screen-second-team')"));
+        out.bMenue = !!menuIndustrie && !menuIndustrie.classList.contains('freischalt-zu') && menuZweite.classList.contains('freischalt-zu');
+        showScreen('screen-stadium');
+        out.bRaster = !!document.querySelector('#stadium-upgrades-grid .freischalt-karte') && !!document.querySelector('#capacity-projects-grid .freischalt-karte');
+
+        // --- Aktionen sagen, was fehlt, und tun nichts ---
+        game.money = 1e9; holdingCompany.money = 1e9;
+        const q = game.stadiumConstructionQueue.length, holding = holdingCompany.money;
+        foundSecondTeam(); placeBet('win', 1000); buyStadiumUpgrade('wlan'); buyCapacityProject('zusatztribuene');
+        transferClubToHolding(1000); buyOrUpgradeRealEstate('parkplatz'); foundWomenTeam();
+        out.aNichts = !game.secondTeam.isActive && !activeBet && game.stadiumConstructionQueue.length === q && holdingCompany.money === holding
+            && !realEstatePortfolio.parkplatz.owned && !(game.womenTeam && game.womenTeam.founded);
+        out.aToasts = toasts.filter(t => t.startsWith('🔒') && t.includes('Es fehlt')).length === 7 && toasts.some(t => t.includes('Sportwetten ist noch gesperrt. Es fehlt: 68 Ligaspiele, Manager-Level 3'));
+
+        // --- Laufender Betrieb ruht ---
+        stadium.upgrades.vip_lounges = true; stadium.upgrades.sicherheitstechnik = true;
+        out.rStadion = getStadiumMatchdayIncome() === 0 && getStadiumSecurityBonus() === 0;
+        realEstatePortfolio.parkplatz.owned = true; realEstatePortfolio.parkplatz.lvl = 1;
+        const geld = game.money;
+        out.rMiete = tickRealEstateIncome() === 0 && game.money === geld;
+        productionQueue.push({ merchKey: Object.keys(merchandise)[0], amount: 5, matchdaysLeft: 2, totalMatchdays: 2, materialUsed: 0, materialName: 'Test' });
+        tickProductionQueue();
+        out.rFabrik = productionQueue[productionQueue.length - 1].matchdaysLeft === 2;
+
+        // --- Freischalten über die Laufbahn ---
+        game.managerCareer = [
+            { season: 0, club: game.clubName, level: 4, rank: 1, won: 26, drawn: 4, lost: 4, goalsFor: 80 },
+            { season: 0, club: game.clubName, level: 3, rank: 1, won: 28, drawn: 3, lost: 3, goalsFor: 90 }];
+        managerRPG.level = 3;
+        const xpVorher = managerRPG.xp + managerRPG.level * 1e6;
+        const neu = pruefeFreischaltungen();
+        out.fNeu = neu.map(b => b.key).join(',') === 'wetten,zweite,frauen' && istFreigeschaltet('zweite') && !istFreigeschaltet('immobilien')
+            && game.freischaltungen.zweite.season === game.season && inboxMessages.filter(m => m.title.startsWith('🔓 Freigeschaltet')).length === 3
+            && managerRPG.xp + managerRPG.level * 1e6 > xpVorher;
+        showScreen('screen-second-team');
+        out.fOffen = !zweite.classList.contains('freischalt-gesperrt') && !zweite.querySelector(':scope > .freischalt-karte') && !menuZweite.classList.contains('freischalt-zu');
+        out.fBleibt = (game.managerCareer = [], pruefeFreischaltungen().length === 0 && istFreigeschaltet('zweite'));
+        // Abhängigkeit: Industrie braucht die Holding, beides im selben Durchgang
+        game.managerCareer = [3, 2, 1, 0].map(level => ({ season: 0, club: game.clubName, level, rank: 1, won: 80, drawn: 0, lost: 0, goalsFor: 250 }));
+        managerRPG.level = 6; game.trophies = ['Champions Cup Sieger (Saison 1)', 'DFB-Pokalsieger (Saison 1)'];
+        const neu2 = pruefeFreischaltungen().map(b => b.key);
+        out.fKette = neu2.includes('holding') && neu2.includes('industrie') && neu2.indexOf('holding') < neu2.indexOf('industrie') && FREISCHALT_BEREICHE.every(b => istFreigeschaltet(b.key));
+        out.rWieder = getStadiumMatchdayIncome() > 0 && getStadiumSecurityBonus() > 0;
+
+        // --- Prüfung nach dem Spieltag ---
+        game.freischaltungen = {}; game.managerCareer = [{ season: 0, club: game.clubName, level: 5, rank: 5, won: 30, drawn: 10, lost: 28, goalsFor: 90 }];
+        managerRPG.level = 3; game.trophies = [];
+        simulateMatchdays(1);
+        out.fSpieltag = istFreigeschaltet('wetten') && !istFreigeschaltet('zweite');
+
+        // --- Alte Spielstände: neu nach den Regeln, ohne Übertrag ---
+        game.freischaltungen = { holding: { season: 1, matchday: 1 } };
+        const alt = JSON.parse(JSON.stringify(buildSaveState()));
+        delete alt.game.freischaltungen;
+        const vorherNeu = inboxMessages.length;
+        out.lAlt = loadSaveSafely(alt, { label: 'Test', backup: false, silent: true }) !== false && istFreigeschaltet('wetten') && !istFreigeschaltet('holding')
+            && inboxMessages.some(m => m.title === '🔓 Neu: Freischaltungen') && inboxMessages.length > vorherNeu;
+        const mitFeld = JSON.parse(JSON.stringify(buildSaveState()));
+        mitFeld.game.freischaltungen = { aktien: { season: 3, matchday: 7 } };
+        out.lNeu = loadSaveSafely(mitFeld, { label: 'Test', backup: false, silent: true }) !== false && istFreigeschaltet('aktien') && game.freischaltungen.aktien.matchday === 7;
+        showScreen('screen-stocks');
+        out.lAnzeige = !document.getElementById('screen-stocks').classList.contains('freischalt-gesperrt');
+
+        // --- Übersicht im Talentbaum ---
+        showScreen('screen-manager-tree');
+        const box = document.getElementById('freischaltungen-box').textContent;
+        const offenZahl = FREISCHALT_BEREICHE.filter(b => istFreigeschaltet(b.key)).length;
+        out.uebersicht = box.includes(`${offenZahl} von 9 offen`) && box.includes('Offen seit Saison 3, Spieltag 7') && box.includes('Deutscher Meister') && box.includes('Champions Cup gewonnen');
+
+        // --- Entwickler-Schalter ---
+        adminFreischaltungenUmschalten();
+        out.adminAn = FREISCHALT_BEREICHE.every(b => istFreigeschaltet(b.key)) && safeLocalGet('anstoss_fm13_alles_frei') === '1';
+        adminFreischaltungenUmschalten();
+        out.adminAus = !istFreigeschaltet('holding') && safeLocalGet('anstoss_fm13_alles_frei') === null;
+
+        // --- Handy 320 px ---
+        showScreen('screen-manager-tree');
+        out.handyUebersicht = ueberlauf() && woerter('#freischaltungen-box .freischalt-zeile, #freischaltungen-box button').length === 0;
+        showScreen('screen-holding');
+        out.handyKarte = ueberlauf() && woerter('#screen-holding .freischalt-karte .freischalt-zeile, #screen-holding .freischalt-karte button').length === 0;
+        showToast = toastAlt;
+        return out;
+    });
+    const ok = (...ks) => ks.every(k => r[k] === true);
+    const werte = ks => JSON.stringify(ks.map(k => r[k]));
+    const B = ['start', 'bKarte', 'bHub', 'bMenue', 'bRaster'];
+    assert(ok(...B), `Start: alle 9 Bereiche gesperrt, Bildschirme zeigen die Bedingungen, Schlösser an Reitern und Menü (${werte(B)})`);
+    const A = ['aNichts', 'aToasts', 'rStadion', 'rMiete', 'rFabrik'];
+    assert(ok(...A), `Gesperrt: Aktionen sagen, was fehlt; Stadion-Anlagen, Mieten und Fabriken ruhen (${werte(A)})`);
+    const F = ['fNeu', 'fOffen', 'fBleibt', 'fKette', 'rWieder', 'fSpieltag'];
+    assert(ok(...F), `Freischalten über die Laufbahn mit Meldung und XP, bleibt offen, Holding vor Industrie, Prüfung nach dem Spieltag (${werte(F)})`);
+    const L = ['lAlt', 'lNeu', 'lAnzeige', 'uebersicht', 'adminAn', 'adminAus'];
+    assert(ok(...L), `Alte Stände nach neuen Regeln ohne Übertrag, Übersicht im Talentbaum, Entwickler-Schalter (${werte(L)})`);
+    assert(ok('handyUebersicht', 'handyKarte'), `Kein Überlauf auf 320 px (${werte(['handyUebersicht', 'handyKarte'])})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 module.exports = {
     testSpielvorbereitung,
     testVertragsWerkzeuge,
@@ -3331,6 +3454,7 @@ module.exports = {
     testRunde33Funktionen,
     testStadionWerkzeuge,
     testPostfachLoeschen,
+    testFreischaltungen,
     testAdminWerkzeuge,
     testPrivatlebenPlus,
     testOeffentlicheFassung,

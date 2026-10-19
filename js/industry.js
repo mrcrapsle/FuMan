@@ -52,6 +52,7 @@
     }
 
     function buyFactory(key) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('industrie')) return;
         let f = factories[key];
         if (holdingCompany.money < f.cost) { showToast(`Holding-Konto reicht nicht: ${formatVal(holdingCompany.money)} von ${formatVal(f.cost)}. Überweise Geld vom Vereinskonto in die Holding.`, 'error', 5000); return; }
         playSound('goal');
@@ -62,6 +63,7 @@
     }
 
     function upgradeFactory(key) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('industrie')) return;
         let f = factories[key];
         let cost = f.cost * (f.lvl + 1);
         if (holdingCompany.money < cost || f.lvl >= f.max) return;
@@ -82,6 +84,7 @@
         return Math.max(1, 4 - Math.floor((f.lvl - 1) * 0.7)); // Stufe 1: 4 SpT, Stufe 5: 1 SpT
     }
     function startProduction(merchKey, amount) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('industrie')) return;
         let m = merchandise[merchKey];
         let f = factories[m.factory];
         let mat = rawMaterials[m.reqMat];
@@ -101,6 +104,7 @@
     // Wird jeden Spieltag aufgerufen: zählt alle laufenden Produktionsaufträge herunter und
     // schließt fertige Chargen ab.
     function tickProductionQueue() {
+        if (typeof istFreigeschaltet === 'function' && !istFreigeschaltet('industrie')) return;   // gesperrt: Betrieb ruht
         if (!productionQueue || productionQueue.length === 0) return;
         let stillRunning = [];
         productionQueue.forEach(order => {
@@ -200,6 +204,7 @@
     }
 
     function buyRawMaterial(matKey, amount) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('industrie')) return;
         let r = rawMaterials[matKey];
         let cost = Math.round(r.currentPrice * amount);
 
@@ -220,6 +225,7 @@
     }
 
     function upgradeWarehouse() {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('industrie')) return;
         if (rawMaterials.warehouseLevel >= 5) { showToast('Zentrallager ist bereits voll ausgebaut.', 'error'); return; }
         if (holdingCompany.money < 30000) { showToast(`Holding-Konto reicht nicht: ${formatVal(holdingCompany.money)} von 30.000 € nötig.`, 'error', 4500); return; }
 
@@ -262,6 +268,7 @@
     // 2. Konkurrenzfirmen: eigenständige Marktteilnehmer, die gelegentlich handeln und
     // gelegentlich sogar ein Übernahmeangebot für die eigene Holding unterbreiten können.
     function tickCompetitorFirms() {
+        if (typeof istFreigeschaltet === 'function' && !istFreigeschaltet('industrie')) return;   // gesperrt: Betrieb ruht
         rawMaterials.competitorFirms.forEach(firm => {
             firm.strength = Math.max(30, Math.min(95, firm.strength + Math.floor(Math.random() * 7 - 3)));
             if (Math.random() < 0.08) {
@@ -279,6 +286,7 @@
         }
     }
     function resolveAcquisitionOffer(accept) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('industrie')) return;
         let offer = rawMaterials.acquisitionOffers[0];
         if (!offer) return;
         if (accept) {
@@ -300,6 +308,7 @@
     // 3. Fusion: eigene Fabrik mit einem schwachen Konkurrenten fusionieren - kostet Geld,
     // gibt aber einen dauerhaften Produktionsbonus (repräsentiert übernommenes Know-how).
     function mergeFactoryWithCompetitor(factoryKey) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('industrie')) return;
         let f = factories[factoryKey];
         if (!f.owned) { showToast('Diese Fabrik gehört dir noch nicht!', 'error'); return; }
         let weakFirm = rawMaterials.competitorFirms.find(c => c.strength < 50);

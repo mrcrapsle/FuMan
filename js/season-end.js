@@ -521,6 +521,8 @@ function concludeSeasonAndAdvance() {
         if (typeof applyPendingFfpPointDeduction === 'function') applyPendingFfpPointDeduction();
         refreshTransferMarket();
         autoLineup();
+        // Titel und Aufstieg zählen erst jetzt (Karriere-Archiv und neue Liga).
+        if (typeof pruefeFreischaltungen === 'function') pruefeFreischaltungen();
         updateUI();
         showScreen('screen-dashboard');
         showSeasonReviewSummary(myRank, myTeamSnapshot);

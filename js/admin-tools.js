@@ -250,6 +250,22 @@ function adminAlleErfolge() {
 }
 
 // ---------- Darstellung ----------
+// ---------- 17. Freischaltungen (js/freischaltungen.js) ----------
+// Je Gerät: alle gesperrten Bereiche zum Testen öffnen. Die Testsuite setzt stattdessen ein Kennzeichen
+// im Fenster (tests/run-tests.js): Schreiben in den Gerätespeicher vor dem Seitenstart verlor dort andere Werte.
+const ADMIN_ALLES_FREI_KEY = 'anstoss_fm13_alles_frei';
+function adminAlleFreigeschaltet() {
+    if (window.anstossTestAllesFrei === true) return true;
+    return typeof safeLocalGet === 'function' && safeLocalGet(ADMIN_ALLES_FREI_KEY) === '1';
+}
+function adminFreischaltungenUmschalten() {
+    if (adminAlleFreigeschaltet()) safeLocalRemove(ADMIN_ALLES_FREI_KEY);
+    else safeLocalSet(ADMIN_ALLES_FREI_KEY, '1');
+    showToast(adminAlleFreigeschaltet() ? '🔓 Alle Bereiche offen (nur dieses Gerät).' : '🔒 Freischaltungen gelten wieder.', 'success');
+    if (typeof aktualisiereFreischaltSperren === 'function') aktualisiereFreischaltSperren();
+    renderAdminTools();
+}
+
 function renderAdminTools() {
     const box = document.getElementById('admin-tools-box');
     if (!box) return;
@@ -285,6 +301,7 @@ function renderAdminTools() {
                 <button onclick="adminAngebotErzwingen()" class="btn-secondary">📨 Angebot erzwingen</button></div>` : ''}
             <button onclick="adminJugendtalent()" class="btn-secondary" style="margin:4px 0;">🎓 Jugendtalent ohne Kosten (${youthTalents.length} / ${getYouthAcademyCapacity()})</button>
             <button onclick="adminAlleErfolge()" class="btn-secondary" style="margin:4px 0;">🎖️ Alle Erfolge freischalten (${erfolge} / ${ACHIEVEMENT_DEFINITIONS.length})</button>
+            <button onclick="adminFreischaltungenUmschalten()" class="btn-secondary" style="margin:4px 0;">${adminAlleFreigeschaltet() ? '🔒 Freischaltungen wieder anwenden' : '🔓 Alle gesperrten Bereiche öffnen (nur dieses Gerät)'}</button>
         </details>
         <details class="ui-fold"><summary>📊 Teamstärke-Diagnose</summary>
             ${diag ? `<div style="font-size:var(--fs-small); margin:4px 0;">Heim <strong>${diag.heim}</strong> · Auswärts <strong>${diag.auswaerts}</strong> · ${diag.spieler} Spieler in der Startelf</div>

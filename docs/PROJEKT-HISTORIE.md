@@ -776,3 +776,29 @@ Vor dem Bau gegen die vorhandenen Knöpfe in `js/admin.js` und `js/private-life.
   - „☑ Auswählen“: Mails antippen (Karte als Checkbox, kompakt ohne Text), „Alle/Keine auswählen“, „Ausgewählte löschen (N)“ mit Rückfrage, „Fertig“. Ein Filterwechsel leert die Auswahl.
   - „↩ Rückgängig“ für den letzten Löschvorgang setzt die Mails an ihre alte Stelle im Postfach oder Archiv zurück. Nur im Speicher; das Laden eines Spielstands verwirft Rückgängig und Auswahl (`applyLoadedStateInner()`).
 - Test: `testPostfachLoeschen`.
+
+## Board-Karte „Freischaltungssystem“ (Spielregel, freigegeben; Feature-Branch, noch nicht gemergt)
+- **Wunsch:** Bereiche, die erst mit einem gewachsenen Verein Sinn ergeben, sollen anspruchsvoll über Erfolge freigeschaltet werden (Titel, Champions Cup, Spiele, Siege, Tore, Level). Entscheidungen des Nutzers: Bedingungen nach eigenem Vorschlag („überrasch mich“), laufende Spielstände nach den neuen Regeln sperren, alle vier vorgeschlagenen Gruppen.
+- **Bereiche und Bedingungen** (`FREISCHALT_BEREICHE` in `js/freischaltungen.js`, alle Bedingungen eines Bereichs nötig):
+
+| Bereich | Bedingungen |
+|---|---|
+| 🎲 Sportwetten | 68 Ligaspiele, Manager-Level 3 |
+| 🥈 Zweite Mannschaft | Regionalliga erreicht, 1 Meistertitel, 50 Ligasiege |
+| 👩 Frauenmannschaft | Regionalliga erreicht, 2 Meistertitel, 150 Ligatore |
+| 🏘️ Immobilien | 3. Liga erreicht, 1 Pokalsieg, Manager-Level 4 |
+| 🏗️ Stadion-Anlagen (20 Erweiterungen) | 3. Liga erreicht, 3 Meistertitel, 100 Ligasiege |
+| 📈 Aktien & Kapitalmarkt | 2. Liga erreicht, 150 Ligasiege, Manager-Level 5 |
+| 🏟️ Große Ausbauprojekte | 2. Liga erreicht, 4 Meistertitel, 500 Ligatore |
+| 🏢 Holding & B2B | Bundesliga erreicht, 300 Ligaspiele, Manager-Level 6 |
+| 🏭 Industrie & Rohstoffe | Holding offen, Deutscher Meister, Champions Cup gewonnen |
+
+- **Zahlen:** aus `game.managerCareer` (abgeschlossene Saisons mit Liga, Platz, Siegen, Toren; `js/manager-analytics.js`) plus der laufenden Saison; Pokalsiege und Champions Cup aus `game.trophies`; Level aus `managerRPG`. Damit bringen laufende Spielstände ihre Laufbahn mit. Aufstiege zählen bewusst nicht: wer in der Bundesliga beginnt, könnte sie nie sammeln. Was Lizenzauflagen braucht (Plätze über Block-Erweiterungen, Flutlicht, Internat), bleibt immer offen.
+- **Kalibrierung:** Probelauf aus der 6. Liga mit gestärktem Kader, nur simuliert: nach 6 Saisons 204 Ligaspiele, 127 Siege, 454 Tore, 4 Meistertitel, Manager-Level 4 (live gespielt steigt das Level deutlich schneller, +150 XP je Sieg). Die Level-Schwellen liegen deshalb bei 3 bis 6.
+- **Gesperrt:** Der Bildschirm (zweite Mannschaft, Frauen, Wetten, Aktien, Immobilien, Holding, Fabriken, Rohstoffe) zeigt nur eine Karte mit den Bedingungen und Fortschrittsbalken; Reiter und Menüpunkte tragen ein Schloss (im Hub nur der Reiter, damit „Industrie & Merchandising“ für den Fanshop offen aussieht). Die Raster der Stadion-Anlagen und Ausbauprojekte zeigen dieselbe Karte. Alle Aktionen beginnen mit `bereichGesperrt()`, das per Toast sagt, was fehlt.
+- **Laufender Betrieb ruht** (Wunsch „alles neu sperren“): gebaute Stadion-Anlagen ohne Wirkung (Boni, Erlöse, Solar, Klimaanlage), keine Mieten, Fabriken produzieren nicht, keine Konkurrenz-Übernahmeangebote, keine B2B-Aufträge, Limits und Sparpläne pausieren, Training der zweiten Mannschaft pausiert. Die Ligaspiele der zweiten Mannschaft und der Frauen laufen weiter, weil ihre Tabellen sie brauchen; Gehälter laufen weiter. Gebaute Plätze aus Ausbauprojekten bleiben.
+- **Freischalten:** `pruefeFreischaltungen()` nach jedem Spieltag (`processPostMatchRoutine()`), am Saisonende (nach Titel und Aufstieg) und beim Laden. Neue Bereiche: Postfach-Nachricht, ein Fenster, je 250 Manager-XP. Offen bleibt offen (`game.freischaltungen` mit Saison und Spieltag), auch nach Abstieg oder Vereinswechsel.
+- **Alte Stände:** Ohne `game.freischaltungen` wird beim Laden nach der Laufbahn still freigeschaltet, dazu eine Nachricht „🔓 Neu: Freischaltungen“ mit offenen und gesperrten Bereichen. Kein Übertrag aus dem vorher laufenden Spiel.
+- **Übersicht:** Kasten „🔓 Freischaltungen“ oben im Manager-Talentbaum mit Laufbahn-Zahlen und Stand je Bereich.
+- Die alte Voraussetzung „Manager-Level 3“ für die zweite Mannschaft ist im neuen System aufgegangen (`SECOND_TEAM_MIN_MANAGER_LEVEL` entfernt).
+- **Tests:** `tests/run-tests.js` setzt für alle Suiten das Fenster-Kennzeichen `window.anstossTestAllesFrei` (im Spiel gibt es den Admin-Schalter mit dem Schlüssel `anstoss_fm13_alles_frei`), damit die Suiten die Bereiche selbst testen können; es wirkt nur in der Entwickler-Fassung. Der erste Versuch schrieb den Schlüssel per Init-Skript in den localStorage: Beim Neuladen gingen dadurch frisch geschriebene Werte verloren (Autosave und Sprachwahl rot) (`testOeffentlicheFassung` prüft, dass die öffentliche Fassung sperrt). `testFreischaltungen` nimmt ihn weg und prüft Sperren, ruhenden Betrieb, Freischalten, Reihenfolge, alte Stände, Übersicht, Schalter und 320 px. Bots laufen gegen die Entwickler-Fassung ohne Schlüssel, nutzen die gesperrten Bereiche aber nicht.

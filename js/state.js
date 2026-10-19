@@ -127,6 +127,7 @@
         startelfGedaechtnis: [],
         monatsStand: null,
         bauChronik: [],
+        freischaltungen: {},
         topspielZuschlag: 0,
         assistentErledigt: null,
         vorlageBilanzArchiv: [],

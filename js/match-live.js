@@ -1124,6 +1124,8 @@
         }
         // Produktionsketten-Countdown jeden Spieltag herunterzählen.
         if (typeof tickProductionQueue === 'function') tickProductionQueue();
+        // Freischaltungen (js/freischaltungen.js): neue Erfolge können Bereiche öffnen.
+        if (typeof pruefeFreischaltungen === 'function') pruefeFreischaltungen();
         // Merchandising: limitierte Edition und saisonale Kollektion jeden Spieltag prüfen.
         if (typeof tickLimitedEditionSales === 'function') {
             tickLimitedEditionSales();

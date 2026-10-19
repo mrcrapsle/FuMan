@@ -112,6 +112,7 @@
     }
 
     function buyStockShares(key, amount) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('aktien')) return;
         let s = stockMarket[key];
         if (!s || amount <= 0) return;
         let cost = s.price * amount;
@@ -127,6 +128,7 @@
     // einer 30€-Aktie genauso sinnvoll nutzbar wie bei einer 200€-Aktie (skaliert mit dem
     // Kurs), statt dass teure Aktien durch feste Stückzahl-Buttons kaum kaufbar sind.
     function buyStockByAmount(key, eurAmount) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('aktien')) return;
         let s = stockMarket[key];
         if (!s || eurAmount <= 0) return;
         let affordableAmount = Math.min(eurAmount, game.money);
@@ -136,6 +138,7 @@
     }
 
     function sellStockSharesPct(key, pct) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('aktien')) return;
         let s = stockMarket[key];
         if (!s || s.owned <= 0) return;
         let amount = Math.max(1, Math.floor(s.owned * pct));
@@ -143,6 +146,7 @@
     }
 
     function buyMaxStockShares(key) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('aktien')) return;
         let s = stockMarket[key];
         if (!s) return;
         let maxAffordable = Math.floor(game.money / s.price);
@@ -151,6 +155,7 @@
     }
 
     function sellStockShares(key, amount) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('aktien')) return;
         let s = stockMarket[key];
         if (!s || amount <= 0 || s.owned < amount) return;
         playSound('click');
@@ -167,6 +172,7 @@
     // 10. Hebelprodukt/Optionsschein: Wette auf steigenden ODER fallenden Kurs mit
     // verdoppeltem Ausschlag - deutlich riskanter als der normale Aktienkauf.
     function buyLeveragedOption(key, direction, stake) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('aktien')) return;
         let s = stockMarket[key];
         if (!s || !stake || stake <= 0 || game.money < stake) { showToast('Ungültiger Einsatz oder nicht genug Geld!', 'error'); return; }
         playSound('click');
@@ -208,6 +214,7 @@
 
     // 12. Limit-Orders: automatischer Kauf/Verkauf, sobald ein Zielkurs erreicht wird.
     function createLimitOrder(key, type, targetPrice, amount) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('aktien')) return;
         if (!targetPrice || targetPrice <= 0 || !amount || amount <= 0) { showToast('Ungültige Order-Parameter!', 'error'); return; }
         financeCentralState.limitOrders.push({ id: Date.now(), key, type, targetPrice, amount });
         showToast(`📋 Limit-Order angelegt: ${type === 'buy' ? 'Kauf' : 'Verkauf'} von ${amount} ${stockMarket[key]?.name || key} bei ${formatVal(targetPrice)}.`, 'success');
@@ -218,6 +225,7 @@
         renderStocksView();
     }
     function checkLimitOrders() {
+        if (typeof istFreigeschaltet === 'function' && !istFreigeschaltet('aktien')) return;   // gesperrt: Betrieb ruht
         if (!financeCentralState.limitOrders || financeCentralState.limitOrders.length === 0) return;
         let remaining = [];
         financeCentralState.limitOrders.forEach(order => {
@@ -252,12 +260,14 @@
     // 14. Aktien-Sparplan: automatischer, wiederkehrender Kauf einer festen Summe einer
     // gewählten Aktie an jedem Heimspieltag.
     function setSavingsPlan(key, amountPerMatchday) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('aktien')) return;
         if (!amountPerMatchday || amountPerMatchday <= 0) { financeCentralState.savingsPlan = null; showToast('Aktien-Sparplan deaktiviert.', 'success'); renderStocksView(); return; }
         financeCentralState.savingsPlan = { key, amountPerMatchday };
         showToast(`📅 Aktien-Sparplan eingerichtet: ${formatVal(amountPerMatchday)}/Spieltag in ${stockMarket[key]?.name || key}.`, 'success');
         renderStocksView();
     }
     function tickSavingsPlan() {
+        if (typeof istFreigeschaltet === 'function' && !istFreigeschaltet('aktien')) return;   // gesperrt: Betrieb ruht
         let plan = financeCentralState.savingsPlan;
         if (!plan) return;
         let s = stockMarket[plan.key];

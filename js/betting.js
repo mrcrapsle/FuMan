@@ -67,6 +67,7 @@
     }
 
     function placeBet(outcome, stake) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('wetten')) return;
         if (outcome !== 'win' && outcome !== 'draw') { showToast('🚫 Wettverbot: Auf eine Niederlage der eigenen Mannschaft darf ein Verein nicht wetten.', 'error', 5000); return; }
         if (activeBet) { showToast('Es läuft bereits eine Wette für den nächsten Spieltag!', 'error'); return; }
         let odds = calcNextMatchOdds();
@@ -85,6 +86,7 @@
 
     // NEU: Sonderwetten (Über/Unter 2.5 Tore, Beide Teams treffen).
     function placeSpecialBet(specialType, stake) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('wetten')) return;
         if (activeBet) { showToast('Es läuft bereits eine Wette für den nächsten Spieltag!', 'error'); return; }
         let odds = calcNextMatchOdds();
         if (!odds) { showToast('Kein anstehendes Ligaspiel zum Wetten gefunden!', 'error'); return; }
@@ -104,6 +106,7 @@
     // Gesamtquote ist das Produkt beider Einzelquoten (klassisches Kombiwetten-Prinzip),
     // mit einem kleinen Kombi-Aufschlag der Marge als zusätzliches Buchmacher-Risiko.
     function placeComboBet(outcome, specialType, stake) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('wetten')) return;
         if (outcome !== 'win' || specialType !== 'over') { showToast('Kombiwette nur als Sieg + Über 2.5 möglich.', 'error'); return; }
         if (activeBet) { showToast('Es läuft bereits eine Wette für den nächsten Spieltag!', 'error'); return; }
         let odds = calcNextMatchOdds();

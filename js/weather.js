@@ -52,7 +52,7 @@
                     addInboxMessage('vertrag', `${w.icon} ${w.name}, aber das Dach hält dicht!`, `Dank der Komplett-Überdachung bleibt das Stadion von den Auswirkungen des ${w.name.toLowerCase()}s komplett verschont.`, 'screen-calendar');
                 }
                 // Klimaanlage (Stadion-Erweiterung): neutralisiert Hitze-Wetter komplett.
-                if (w.name === 'Hitze' && typeof stadium !== 'undefined' && stadium.upgrades?.klimaanlage) {
+                if (w.name === 'Hitze' && typeof stadium !== 'undefined' && stadium.upgrades?.klimaanlage && (typeof stadionAnlagenInBetrieb !== 'function' || stadionAnlagenInBetrieb())) {
                     currentWeather = { ...w, fitLossMult: 1.0, injuryMult: 1.0, cardMult: 1.0, goalMult: 1.0, attendanceMult: 1.0, neutralizedByAC: true };
                     addInboxMessage('vertrag', `${w.icon} Hitze, aber die Klimaanlage hält kühl!`, 'Dank der Klimaanlage sind alle negativen Auswirkungen der Hitzewelle neutralisiert.', 'screen-calendar');
                 }

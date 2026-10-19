@@ -118,6 +118,7 @@ async function main() {
         S.testRunde33Funktionen,
         S.testStadionWerkzeuge,
         S.testPostfachLoeschen,
+        S.testFreischaltungen,
         S.testAdminWerkzeuge,
         S.testPrivatlebenPlus,
         S.testOeffentlicheFassung,
@@ -250,19 +251,23 @@ async function main() {
             const suite = liste[naechste++];
             const ausgabe = [];
             const start = Date.now();
-            const ctx = await browser.newContext();
+            // Freischaltungen (js/freischaltungen.js): die Suiten testen die Bereiche selbst, also alles offen;
+            // testFreischaltungen nimmt das Kennzeichen wieder weg. Wirkt nur in der Entwickler-Fassung. Bewusst
+            // nicht im localStorage: ein Schreiben vor dem Seitenstart verlor beim Neuladen andere frische Werte.
+            const allesFrei = async c => { await c.addInitScript(() => { window.anstossTestAllesFrei = true; }); return c; };
+            const ctx = await allesFrei(await browser.newContext());
             // Eigene Kontexte (z.B. mit Viewport) gehören zur Suite und werden mit ihr geschlossen,
             // denn BrowserContext.newPage() nimmt keine Optionen.
             const eigene = [];
             const browserShim = {
                 newPage: async opts => {
                     if (!opts) return ctx.newPage();
-                    const neu = await browser.newContext(opts);
+                    const neu = await allesFrei(await browser.newContext(opts));
                     eigene.push(neu);
                     return neu.newPage();
                 },
                 newContext: async opts => {
-                    const neu = await browser.newContext(opts);
+                    const neu = await allesFrei(await browser.newContext(opts));
                     eigene.push(neu);
                     return neu;
                 },

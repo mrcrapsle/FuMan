@@ -87,6 +87,7 @@ function refreshWomenMarket() {
 }
 
 function signWomenPlayer(id) {
+    if (typeof bereichGesperrt === 'function' && bereichGesperrt('frauen')) return;
     const w = game.womenTeam;
     if (!w || !w.founded) return;
     const idx = w.market.findIndex(p => p.id === id);
@@ -115,6 +116,7 @@ function generateWomenSponsorOffers() {
 }
 
 function signWomenSponsor(i) {
+    if (typeof bereichGesperrt === 'function' && bereichGesperrt('frauen')) return;
     const w = game.womenTeam;
     if (!w || !w.founded) return;
     if (w.sponsor && w.sponsor.season === game.season) { showToast('Für diese Saison gibt es schon einen Sponsor.', 'error'); return; }
@@ -158,6 +160,7 @@ function buildWomenLeague(level, keepNames) {
 }
 
 function foundWomenTeam() {
+    if (typeof bereichGesperrt === 'function' && bereichGesperrt('frauen')) return;
     if (game.womenTeam && game.womenTeam.founded) return;
     if (game.money < WOMEN_FOUNDING_COST) { showToast(`Für die Gründung fehlen ${formatVal(WOMEN_FOUNDING_COST - game.money)}.`, 'error'); return; }
     setzeBuchungskontext('👩 Frauenmannschaft');
@@ -176,6 +179,7 @@ function foundWomenTeam() {
 }
 
 function upgradeWomenFoerderung() {
+    if (typeof bereichGesperrt === 'function' && bereichGesperrt('frauen')) return;
     const w = game.womenTeam;
     if (!w || !w.founded) return;
     const next = WOMEN_FOERDERUNG[w.foerderung + 1];

@@ -214,6 +214,15 @@
         // zuvor laufenden Spiels nicht erben.
         if (p.game && !p.game.homeCity) delete game.homeCity;
         if (typeof ensureHomeCity === 'function') { ensureHomeCity(); applyHomeRegion(); }
+        // Freischaltungen: ein Stand ohne sie bekommt sie nach den neuen Regeln (aus seiner Laufbahn),
+        // ohne Übertrag aus dem vorher laufenden Spiel.
+        if (typeof pruefeFreischaltungen === 'function') {
+            const neuEingefuehrt = !(p.game && p.game.freischaltungen);
+            if (neuEingefuehrt) game.freischaltungen = {};
+            const offen = pruefeFreischaltungen(true);
+            if (neuEingefuehrt) meldeFreischaltungenEingefuehrt(offen);
+            aktualisiereFreischaltSperren();
+        }
         restoreGetters();
     }
 

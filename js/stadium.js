@@ -108,7 +108,7 @@
             + getMothballedCapacity() * STADIUM_MAINTENANCE_PER_SEAT * MOTHBALLED_MAINTENANCE_RATE;
         // Solaranlage: senkt die Stromkosten-Komponente der Betriebskosten spürbar,
         // statt nur eine reine Sponsoren-Einnahmen-Erhöhung zu sein - echte Stromersparnis.
-        if (stadium.upgrades?.solaranlage) kosten *= 0.8;
+        if (stadium.upgrades?.solaranlage && stadionAnlagenInBetrieb()) kosten *= 0.8;
         return kosten;
     }
 
@@ -369,7 +369,7 @@
     }
     function findNextStadiumSuggestion() {
         // Günstigste noch nicht gebaute Erweiterung vorschlagen, sonst nächster Block-Ausbau.
-        if (stadium.upgrades) {
+        if (stadium.upgrades && stadionAnlagenInBetrieb()) {
             let candidates = Object.keys(STADIUM_UPGRADES).filter(k => !stadium.upgrades[k]).map(k => ({ key: k, cost: getStadiumUpgradeCost(k), name: STADIUM_UPGRADES[k].name }));
             if (candidates.length > 0) {
                 candidates.sort((a, b) => a.cost - b.cost);
@@ -403,7 +403,7 @@
                     <div class="ui-overline" style="font-size:var(--fs-caption); color:var(--text-muted);">Nächste Ausbaustufe</div>
                     <div style="font-size:var(--fs-body); margin-bottom:6px;">${suggestion.label} (${formatVal(suggestion.cost)})</div>
                     <button onclick="${suggestion.action}" class="btn-action">Ausbau Planen</button>
-                ` : '<div style="font-size:var(--fs-small); color:var(--primary);">Alle Erweiterungen bereits gebaut! ✓</div>'}
+                ` : (stadionAnlagenInBetrieb() ? '<div style="font-size:var(--fs-small); color:var(--primary);">Alle Erweiterungen bereits gebaut! ✓</div>' : '<div style="font-size:var(--fs-small); color:var(--text-muted);">🔒 Stadion-Anlagen noch gesperrt, siehe Freischaltungen im Talentbaum.</div>')}
             `;
         }
         let nameOverlay = document.getElementById('stadium-hero-name-overlay');
@@ -461,6 +461,7 @@
         return Math.round(STADIUM_UPGRADES[key].cost * scale);
     }
     function buyStadiumUpgrade(key) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('stadionanlagen')) return;
         if (!stadium.upgrades) stadium.upgrades = {};
         if (stadium.upgrades[key]) return;
         let cost = getStadiumUpgradeCost(key);
@@ -469,15 +470,19 @@
     }
     // Kategorie-Summen: wie viele der gekauften Erweiterungen zu einer Kategorie gehören -
     // mehrere Erweiterungen derselben Kategorie addieren sich (mit sinnvoller Obergrenze).
+    // Gesperrte Stadion-Anlagen (js/freischaltungen.js) ruhen: gebaut, aber ohne Wirkung.
+    function stadionAnlagenInBetrieb() {
+        return typeof istFreigeschaltet !== 'function' || istFreigeschaltet('stadionanlagen');
+    }
     function countOwnedUpgradesInCategory(category) {
-        if (!stadium.upgrades) return 0;
+        if (!stadium.upgrades || !stadionAnlagenInBetrieb()) return 0;
         return Object.keys(STADIUM_UPGRADES).filter(k => stadium.upgrades[k] && STADIUM_UPGRADES[k].category === category).length;
     }
     function getStadiumSecurityBonus() { return Math.min(0.4, countOwnedUpgradesInCategory('security') * 0.15); }
     function getStadiumInjuryReduction() { return Math.min(0.3, countOwnedUpgradesInCategory('injury') * 0.12); }
     function getStadiumComfortBonus() { return Math.min(0.15, countOwnedUpgradesInCategory('comfort') * 0.03); }
     function getStadiumMerchBonus() {
-        if (!stadium.upgrades) return 0;
+        if (!stadium.upgrades || !stadionAnlagenInBetrieb()) return 0;
         let bonus = 0;
         if (stadium.upgrades.flagship_store) bonus += 0.15;
         if (stadium.upgrades.stadion_app) bonus += 0.10;
@@ -492,7 +497,7 @@
     function getStadiumSponsorBonus() { return Math.min(0.24, countOwnedUpgradesInCategory('sponsor') * 0.08); }
     function getStadiumMediaImageMatchdayBonus() { return countOwnedUpgradesInCategory('media') * 0.4; }
     function getStadiumMatchdayIncome() {
-        if (!stadium.upgrades) return 0;
+        if (!stadium.upgrades || !stadionAnlagenInBetrieb()) return 0;
         let scale = getStadiumCostScale();
         return Object.keys(STADIUM_UPGRADES).filter(k => stadium.upgrades[k] && STADIUM_UPGRADES[k].category === 'income')
             .reduce((sum, k) => sum + Math.round(STADIUM_UPGRADES[k].incomeBase * scale), 0);
@@ -539,6 +544,7 @@
         let grid = document.getElementById('stadium-upgrades-grid');
         if (!grid) return;
         if (!stadium.upgrades) stadium.upgrades = {};
+        if (!stadionAnlagenInBetrieb()) { grid.innerHTML = `<div style="grid-column:1 / -1;">${renderFreischaltKarte('stadionanlagen')}</div>`; return; }
         grid.innerHTML = Object.keys(STADIUM_UPGRADES).map(key => {
             let u = STADIUM_UPGRADES[key];
             let cost = getStadiumUpgradeCost(key);
@@ -756,6 +762,7 @@
         }
     };
     function buyCapacityProject(key) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('grossprojekte')) return;
         let proj = STADIUM_CAPACITY_PROJECTS[key];
         if (!proj) return;
         if (!proj.gate()) { showToast(`🚫 ${proj.gateText}`, 'error', 5000); return; }
@@ -765,6 +772,7 @@
     function renderCapacityProjectsGrid() {
         let grid = document.getElementById('capacity-projects-grid');
         if (!grid) return;
+        if (typeof istFreigeschaltet === 'function' && !istFreigeschaltet('grossprojekte')) { grid.innerHTML = renderFreischaltKarte('grossprojekte'); return; }
         let scale = getStadiumCostScale();
         grid.innerHTML = Object.keys(STADIUM_CAPACITY_PROJECTS).map(key => {
             let p = STADIUM_CAPACITY_PROJECTS[key];

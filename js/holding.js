@@ -31,6 +31,7 @@
     }
 
     function transferHoldingToClub(amount) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('holding')) return;
         if (holdingCompany.money < amount) { showToast(`Holding-Konto reicht nicht: ${formatVal(holdingCompany.money)} von ${formatVal(amount)}.`, 'error', 4500); return; }
         playSound('goal');
         holdingCompany.money -= amount;
@@ -40,6 +41,7 @@
     }
 
     function transferHoldingToPrivate(amount) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('holding')) return;
         if (holdingCompany.money < amount) { showToast(`Holding-Konto reicht nicht: ${formatVal(holdingCompany.money)} von ${formatVal(amount)}.`, 'error', 4500); return; }
         playSound('goal');
         holdingCompany.money -= amount;
@@ -49,6 +51,7 @@
     }
 
     function transferClubToHolding(amount) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('holding')) return;
         if (game.money < amount) { showToast(`Vereinskonto reicht nicht: ${formatVal(game.money)} von ${formatVal(amount)}.`, 'error', 4500); return; }
         playSound('click');
         game.money -= amount;
@@ -62,6 +65,7 @@
     // Produkt; Honorar = dreifache Materialkosten, je Ausbaustufe +10 %.
     const B2B_FACTORY_MATERIAL = { textile: 'cotton', knitting: 'wool', leatherShop: 'leather', plastics: 'plastic' };
     function refreshB2BContracts() {
+        if (typeof istFreigeschaltet === 'function' && !istFreigeschaltet('holding')) return;   // gesperrt: Betrieb ruht
         holdingCompany.b2bContracts = (holdingCompany.b2bContracts || []).filter(c => !c.done);
         Object.keys(factories).forEach(k => {
             const f = factories[k], matKey = B2B_FACTORY_MATERIAL[k], mat = rawMaterials[matKey];
@@ -77,6 +81,7 @@
     }
 
     function completeB2BContract(contractId) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('holding')) return;
         let c = holdingCompany.b2bContracts.find(x => x.id === contractId);
         if (!c || c.done) return;
         let mat = rawMaterials[c.reqMat];

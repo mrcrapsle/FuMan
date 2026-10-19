@@ -299,6 +299,9 @@
         if (screenId === 'screen-admin' && typeof renderAdminView === 'function') renderAdminView();
         if (screenId === 'screen-lexicon' && typeof showLexiconView === 'function') showLexiconView();
         if (screenId === 'screen-design' && typeof renderDesignSettings === 'function') renderDesignSettings();
+        if (screenId === 'screen-manager-tree' && typeof renderFreischaltUebersicht === 'function') renderFreischaltUebersicht();
+        // Gesperrte Bereiche (js/freischaltungen.js) zeigen nach dem Zeichnen nur ihre Bedingungen.
+        if (typeof aktualisiereFreischaltSperren === 'function') aktualisiereFreischaltSperren();
         updateUI();
     }
 

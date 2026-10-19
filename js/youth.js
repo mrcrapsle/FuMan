@@ -426,6 +426,7 @@
     // wo der Spieler echte Spielpraxis bekommt und sich (mit Nachwuchs-Koordinator) weiter
     // entwickelt, ohne einen Profi-Kaderplatz zu belegen.
     function promoteYouthToSecondTeam(idx, btn) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('zweite')) return;
         if (!game.secondTeam.isActive) { showToast('Dafür muss erst eine zweite Mannschaft gegründet sein.', 'error', 4000); return; }
         if (!requireConfirm(btn, 'Wirklich in die Reserve?')) return;
         playSound('click');
