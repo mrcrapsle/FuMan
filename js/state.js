@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.141', date: '19.10.2026', features: 'Phase 26.22/26.23: Stadion bei Andrang voll, Stadion- und Campus-Anlagen mit Erlös bezahlen sich in rund 10 Saisons' };
+    const GAME_VERSION = { number: '3.142', date: '19.10.2026', features: 'Freischaltungssystem: neun Bereiche öffnen sich über Erfolge der Laufbahn; Postfach: Mails löschen mit Auswahl und Rückgängig' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

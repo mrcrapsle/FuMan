@@ -768,7 +768,7 @@ Vor dem Bau gegen die vorhandenen Knöpfe in `js/admin.js` und `js/private-life.
 - `getCampusUpgradeCost()` nutzt jetzt `getCampusStufenKosten()`. Die Abrechnung (`applyMatchdayFinances()`) und die Nebeneinnahmen-Übersicht im Stadion lesen dieselbe Funktion; die Campus-Karten zeigen den aktuellen Erlös und den der nächsten Stufe, die festen Beträge in den Beschreibungen sind entfallen.
 - Tests: `testStadionWerkzeuge` prüft jede Stufe in Liga 0, 2 und 5 (9,5 bis 10,5 Saisons), die Summe, den Journal-Posten und die Anzeige; `testStadiumAusbau2` rechnet die Nebeneinnahmen mit der neuen Funktion.
 
-## Board-Karte „Postfach sollte auch löschen von Mails möglich sein“ (Feature-Branch, noch nicht gemergt)
+## Board-Karte „Postfach sollte auch löschen von Mails möglich sein“ (Version 3.142)
 - **Vorher:** Löschen ging nur einzeln über ein kleines ✕, das wie die anderen Symbole aussah, ohne Rückweg. Nach wenigen Spieltagen liegen 20 bis 30 Mails im Postfach.
 - **Jetzt** (`js/inbox.js`, neuer Bereich `#inbox-aktionen` unter „Alle als gelesen markieren“):
   - Einzeln über 🗑️ („Löschen“) an jeder Mail.
@@ -777,7 +777,7 @@ Vor dem Bau gegen die vorhandenen Knöpfe in `js/admin.js` und `js/private-life.
   - „↩ Rückgängig“ für den letzten Löschvorgang setzt die Mails an ihre alte Stelle im Postfach oder Archiv zurück. Nur im Speicher; das Laden eines Spielstands verwirft Rückgängig und Auswahl (`applyLoadedStateInner()`).
 - Test: `testPostfachLoeschen`.
 
-## Board-Karte „Freischaltungssystem“ (Spielregel, freigegeben; Feature-Branch, noch nicht gemergt)
+## Board-Karte „Freischaltungssystem“ (Spielregel, freigegeben; Version 3.142)
 - **Wunsch:** Bereiche, die erst mit einem gewachsenen Verein Sinn ergeben, sollen anspruchsvoll über Erfolge freigeschaltet werden (Titel, Champions Cup, Spiele, Siege, Tore, Level). Entscheidungen des Nutzers: Bedingungen nach eigenem Vorschlag („überrasch mich“), laufende Spielstände nach den neuen Regeln sperren, alle vier vorgeschlagenen Gruppen.
 - **Bereiche und Bedingungen** (`FREISCHALT_BEREICHE` in `js/freischaltungen.js`, alle Bedingungen eines Bereichs nötig):
 
