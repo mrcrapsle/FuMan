@@ -584,7 +584,7 @@ function pruefeNeuePakete() {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.142', date: '19.10.2026', features: 'Freischaltungssystem: neun Bereiche öffnen sich über Erfolge der Laufbahn; Postfach: Mails löschen mit Auswahl und Rückgängig' };
+    const GAME_VERSION = { number: '3.143', date: '19.10.2026', features: 'Freischaltungen 2: graue Vorschau, Namensrechte, Medienrechte, Luxus, NEU, Tempo, Erfolge; Grundfassung mit drei Update-Paketen' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
