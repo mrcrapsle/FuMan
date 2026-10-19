@@ -526,7 +526,13 @@
         // gewöhnliche Ligaspiele - besondere Atmosphäre, seltenere Gelegenheit.
         let isCupOrEuropeMatch = isHomeMatch && !ghostGameActive && typeof currentMatch !== 'undefined' && currentMatch && (currentMatch.isCup || currentMatch.isEurope);
         let cupBoostActive = isCupOrEuropeMatch && !derbyBoostActive;
-        let attFactor = getAttendanceFactor();
+        // Live gespielt: Zuschauerzahl, Nachfrage und Topspiel-Zuschlag stehen seit dem Anpfiff fest.
+        let liveZuschauer = isHomeMatch && !ghostGameActive && typeof currentMatch !== 'undefined' && currentMatch && currentMatch.finalAttendance !== undefined && currentMatch.finalAttendanceMatchday === game.matchday;
+        let preisMult = 1;
+        if (isHomeMatch && !ghostGameActive) {
+            preisMult = liveZuschauer ? (currentMatch.finalPreisMult || 1) : (typeof getTopspielPreisMult === 'function' ? getTopspielPreisMult(opponentNameForRecord) : 1);
+        }
+        let attFactor = getAttendanceFactor(preisMult);
         // War die Auslastung schon VOR der Deckelung bei "ausverkauft" (Faktor >= 1.0), ist
         // das Stadion wirklich bis an seine (liga-abhängige) Kapazitätsgrenze gefüllt. Bei
         // niedriger Fan-Zufriedenheit früh in der Karriere greift der Derby-Bonus zwar auch,
@@ -550,15 +556,20 @@
         // Zufallswert zu erzeugen. Nur bei Batch-Simulation (kein Live-Kontext) wird hier
         // frisch gewürfelt.
         let att;
+        let nachfrage = 0;
         if (isHomeMatch && !ghostGameActive) {
-            if (typeof currentMatch !== 'undefined' && currentMatch && currentMatch.finalAttendance !== undefined && currentMatch.finalAttendanceMatchday === game.matchday) {
+            if (liveZuschauer) {
                 att = currentMatch.finalAttendance;
+                nachfrage = currentMatch.finalNachfrage || att;
             } else {
-                att = calculateMatchAttendance(derbyBoostActive ? 2.2 : (cupBoostActive ? 1.4 : 1), attendanceNoise);
+                let details = calculateMatchAttendanceDetails(derbyBoostActive ? 2.2 : (cupBoostActive ? 1.4 : 1), attendanceNoise, preisMult);
+                att = details.zuschauer;
+                nachfrage = details.nachfrage;
             }
         } else {
             att = 0;
         }
+        let heimEintrag = null;
         // Zuschauerzahl des letzten Heimspiels - bisher nirgendwo dauerhaft sichtbar, nur in
         // Sonderfällen (Rekord/Meilenstein) erwähnt. Jetzt fest im Finanzen- und Live-Match-
         // Screen angezeigt.
@@ -568,7 +579,11 @@
         // war - nicht nur beim allerletzten Spiel.
         if (isHomeMatch && !ghostGameActive) {
             if (!game.attendanceHistory) game.attendanceHistory = [];
-            game.attendanceHistory.push({ season: game.season, matchday: game.matchday, opponent: opponentNameForRecord || '-', attendance: att, capacity: stadium.total || 16000 });
+            let kapazitaetHeute = stadium.total || 16000;
+            // Fans ohne Karte (Phase 26.21): nur wenn das Stadion wirklich voll war.
+            heimEintrag = { season: game.season, matchday: game.matchday, opponent: opponentNameForRecord || '-', attendance: att, capacity: kapazitaetHeute, nachfrage, ohneKarte: att >= kapazitaetHeute ? Math.max(0, nachfrage - kapazitaetHeute) : 0 };
+            if (preisMult > 1) heimEintrag.zuschlag = Math.round((preisMult - 1) * 100);
+            game.attendanceHistory.push(heimEintrag);
             if (game.attendanceHistory.length > 200) game.attendanceHistory.shift();
             // (Zuschauerrekord wird bereits an anderer Stelle über game.recordAttendance
             // gepflegt, siehe applyMatchdayFinances weiter unten - keine doppelte Erfassung.)
@@ -613,7 +628,9 @@
         let dauerkartenAnwesend = (typeof getSeasonTicketAttendanceFloor === 'function') ? Math.min(att, getSeasonTicketAttendanceFloor()) : 0;
         let zahlendeAtt = Math.max(0, att - dauerkartenAnwesend);
         let vipSold = Math.min(stadium.vipTotal || 50, Math.round(zahlendeAtt * (stadium.vipShare ?? 0.05)));
-        let ticketIncome = (isHomeMatch && !ghostGameActive) ? Math.round(zahlendeAtt * (stadium.stehShare ?? 0.5) * game.ticketPrices.steh + zahlendeAtt * (stadium.sitzShare ?? 0.45) * game.ticketPrices.sitz + vipSold * game.ticketPrices.vip) : 0;
+        let ticketIncome = (isHomeMatch && !ghostGameActive) ? Math.round((zahlendeAtt * (stadium.stehShare ?? 0.5) * game.ticketPrices.steh + zahlendeAtt * (stadium.sitzShare ?? 0.45) * game.ticketPrices.sitz + vipSold * game.ticketPrices.vip) * preisMult) : 0;
+        // Topspiel-Zuschlag: der Aufschlag auf die verkauften Karten, für die Saisonbilanz im Stadion.
+        if (heimEintrag && preisMult > 1) heimEintrag.zuschlagErloes = Math.round(ticketIncome - ticketIncome / preisMult);
         // Doppelte Ticketeinnahmen (Premium-Booster, NEU).
         if (isHomeMatch && game.ticketIncomeBoostNextMatch) { ticketIncome *= 2; game.ticketIncomeBoostNextMatch = false; }
         // Medienrechte: eigener Medienpartner zahlt bei jedem Heimspiel, mit Bonus bei

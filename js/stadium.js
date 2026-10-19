@@ -338,6 +338,7 @@
                 <div class="box"><div class="ui-overline">Auslastung</div><div style="font-size:var(--fs-title); font-weight:900; color:${utilization>=70?'var(--primary)':(utilization>=40?'var(--accent)':'var(--danger)')};">${utilization}%</div></div>
                 <div class="box"><div class="ui-overline">Stadionwert</div><div style="font-size:var(--fs-title); font-weight:900; color:var(--gold);">${(getStadiumMarketValue()/1000000).toFixed(2)} Mio €</div></div>
             </div>
+            ${typeof renderFansOhneKarte === 'function' ? renderFansOhneKarte() : ''}
             <div class="box" style="margin-top:4px;"><div class="ui-overline" style="font-size:var(--fs-micro); color:var(--text-muted);">Bauwert (investierte Summe)</div><div style="font-size:var(--fs-title); font-weight:900; color:var(--industry);">${((stadium.totalInvested||0)/1000000).toFixed(2)} Mio €</div></div>
             <div class="box" style="margin-top:4px;">
                 <div class="ui-overline" style="font-size:var(--fs-micro); color:var(--text-muted);">Betriebskosten pro Spieltag</div>
@@ -549,6 +550,7 @@
             return `<div class="panel">
                 <div class="panel-header" style="font-size:var(--fs-small);">${u.name}</div>
                 <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${u.desc}</div>
+                ${!owned && typeof renderUpgradeRendite === 'function' ? renderUpgradeRendite(key) : ''}
                 ${buttonHtml}
             </div>`;
         }).join('');
@@ -773,6 +775,7 @@
                 <div class="panel-header" style="font-size:var(--fs-small);">${p.name}</div>
                 <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${p.desc}</div>
                 ${seatsLabel ? `<div style="font-size:var(--fs-caption); margin-bottom:2px;">${seatsLabel}</div>` : ''}
+                ${p.seats > 0 && gateOk && typeof renderPlatzRendite === 'function' ? renderPlatzRendite(p.seats, cost) : ''}
                 ${!gateOk ? `<div style="font-size:var(--fs-caption); color:var(--danger); margin-bottom:4px;">${p.gateText}</div>` : ''}
                 <button onclick="buyCapacityProject('${key}')" class="btn-secondary" ${disabled ? 'disabled' : ''}>${queued ? '🏗️ Im Bau...' : `Beauftragen [${formatVal(cost)}]`}</button>
             </div>`;
@@ -831,6 +834,8 @@
         renderStadiumConstructionBox();
         renderStadiumKeyFigures();
         if (typeof renderTicketPriceSliders === 'function') renderTicketPriceSliders();
+        if (typeof renderTopspielBox === 'function') renderTopspielBox();
+        if (typeof renderBauChronik === 'function') renderBauChronik();
         renderPitchMaintenanceBox();
         renderCapacityProjectsGrid();
         renderStadiumAncillaryIncomeBox();
@@ -914,6 +919,7 @@
                 <button onclick="upgradeBlockInfra('${blockKey}', 'merchLvl', ${merchCost})" class="btn-secondary" style="font-size:var(--fs-caption);" ${b.merchLvl>=3?'disabled':''}>👕 Merch-Stand [${b.merchLvl}/3]<br>${b.merchLvl>=3?'Max. ✓':formatVal(merchCost)}<br><span style="font-size:var(--fs-micro); color:var(--text-muted);">+5% Fanartikel-Absatz</span></button>
                 <button onclick="upgradeBlockInfra('${blockKey}', 'toiletLvl', ${toiletCost})" class="btn-secondary" style="font-size:var(--fs-caption);" ${b.toiletLvl>=3?'disabled':''}>🚻 Toiletten [${b.toiletLvl}/3]<br>${b.toiletLvl>=3?'Max. ✓':formatVal(toiletCost)}<br><span style="font-size:var(--fs-micro); color:var(--text-muted);">+Komfort → mehr Zuschauer</span></button>
             </div>
+            ${b.expansions < maxExpansions && typeof renderPlatzRendite === 'function' ? renderPlatzRendite(b.addSeats, nextCost) : ''}
             <button onclick="expandBlock('${blockKey}', ${b.addSeats}, ${nextCost})" class="btn-action" style="margin-top:2px;" ${b.expansions >= maxExpansions ? 'disabled' : ''}>
                 ${b.expansions >= maxExpansions ? `Maximaler Ausbau erreicht (${maxExpansions}/${maxExpansions}) ✓` : `+${b.addSeats.toLocaleString()} Plätze ausbauen (${b.expansions}/${maxExpansions}) [${formatVal(nextCost)}]`}
             </button>
@@ -1069,6 +1075,7 @@
                 }
             }
             game.boardSat = Math.min(100, game.boardSat + 2);
+            if (typeof merkeBauChronik === 'function') merkeBauChronik(proj);
             addInboxMessage('vertrag', `🏗️ Bauprojekt fertiggestellt: ${proj.label}!`,
                 (proj.remainingPayment > 0
                     ? `Die Bauarbeiten sind abgeschlossen, die offene Restzahlung von ${formatVal(proj.remainingPayment)} wurde beglichen.`
@@ -1137,9 +1144,16 @@
     // Einzige Stelle, an der die Zuschauerzahl eines Heimspiels entsteht. Vorher stand die
     // Rechnung doppelt im Code (Anpfiff im Live-Spiel und Spieltagsabrechnung) und musste
     // von Hand synchron gehalten werden.
-    function calculateMatchAttendance(boostMult = 1, noise = 1) {
+    function calculateMatchAttendance(boostMult = 1, noise = 1, preisMult = 1) {
+        return calculateMatchAttendanceDetails(boostMult, noise, preisMult).zuschauer;
+    }
+    // Dieselbe Rechnung, dazu die Nachfrage: wie viele Menschen bei freier Kapazität gekommen
+    // wären. Nur bei vollem Stadion bleiben Fans ohne Karte (Phase 26.21); preisMult ist der
+    // Topspiel-Zuschlag auf die Ticketpreise.
+    function calculateMatchAttendanceDetails(boostMult = 1, noise = 1, preisMult = 1) {
         let kapazitaet = stadium.total || 16000;
-        let ausKapazitaet = Math.round(kapazitaet * Math.min(1.0, getAttendanceFactor() * boostMult) * noise);
+        let faktor = getAttendanceFactor(preisMult) * boostMult;
+        let ausKapazitaet = Math.round(kapazitaet * Math.min(1.0, faktor) * noise);
         // Bewusst KEIN Dauerkarten-Sockel an dieser Stelle: das würde die sorgfältig
         // kalibrierten Effekte von Fan-Zufriedenheit, Ligadeckel und Derby-Bonus verzerren
         // bzw. teilweise wirkungslos machen, sobald der Sockel sie überschreitet. Dauerkarten
@@ -1151,9 +1165,12 @@
         // Mal exakt dieselbe Zahl (6. Liga: immer 1.000, vom Nutzer gemeldet). Wetter, Form,
         // Publikumsliebling, Ticketpreis und die Tagesform des Spieltags wirken jetzt auch hier.
         let stimmung = getMatchdayAttendanceMood();
-        let schwankung = stimmung.weather * (1 + stimmung.form + stimmung.favorite) * getTicketPriceElasticityFactor() * noise;
+        let schwankung = stimmung.weather * (1 + stimmung.form + stimmung.favorite) * getTicketPriceElasticityFactor(preisMult) * noise;
         let interesse = Math.round(getLeagueAttendanceCap(boostMult) * Math.min(1.12, schwankung));
-        return Math.max(0, Math.min(kapazitaet, ausKapazitaet, interesse));
+        let zuschauer = Math.max(0, Math.min(kapazitaet, ausKapazitaet, interesse));
+        let nachfrage = Math.max(zuschauer, Math.min(Math.round(kapazitaet * faktor * noise), interesse));
+        let ohneKarte = zuschauer >= kapazitaet ? Math.max(0, nachfrage - kapazitaet) : 0;
+        return { zuschauer, nachfrage, ohneKarte, kapazitaet };
     }
 
     // Preis-Nachfrage-Zusammenhang für Tickets: bisher hatte der Ticketpreis KEINERLEI
@@ -1165,10 +1182,10 @@
         let base = { steh: 12, sitz: 24, vip: 80 }[category] || 12;
         return Math.round(base * leagueMult);
     }
-    function getTicketPriceElasticityFactor() {
-        let stehEl = calculateElasticity(game.ticketPrices.steh, getMarketTicketPrice('steh'));
-        let sitzEl = calculateElasticity(game.ticketPrices.sitz, getMarketTicketPrice('sitz'));
-        let vipEl = calculateElasticity(game.ticketPrices.vip, getMarketTicketPrice('vip'));
+    function getTicketPriceElasticityFactor(preisMult = 1) {
+        let stehEl = calculateElasticity(game.ticketPrices.steh * preisMult, getMarketTicketPrice('steh'));
+        let sitzEl = calculateElasticity(game.ticketPrices.sitz * preisMult, getMarketTicketPrice('sitz'));
+        let vipEl = calculateElasticity(game.ticketPrices.vip * preisMult, getMarketTicketPrice('vip'));
         // Gedämpft (0.4-Gewichtung), damit ein Ausreißer die Zuschauerzahl nicht komplett
         // verzerrt - der Ticketpreis ist nur einer von mehreren Einflussfaktoren.
         // Gewichtung folgt jetzt der ECHTEN Sitzplatz-Zusammensetzung (siehe
@@ -1199,7 +1216,7 @@
         return { weather, form, favorite };
     }
 
-    function getAttendanceFactor() {
+    function getAttendanceFactor(preisMult = 1) {
         let totalComfort = 0;
         Object.values(stadium.blocks || {}).forEach(b => { totalComfort += (b.foodLvl + b.merchLvl + b.toiletLvl) / 9; });
         let avgComfortBonus = 0.9 + (totalComfort / 8) * 0.2;
@@ -1217,7 +1234,7 @@
         // rawFactor bleibt die reine Fan-Stimmungs-/Komfort-Kennzahl (0.3-1.2, "1.0" = Standard
         // bei 100% Fans ohne Komfort-Bonus). Die Liga-Obergrenze skaliert diese Kennzahl dann
         // auf einen realistischen Auslastungsanteil der Stadionkapazität herunter.
-        let rawFactor = Math.max(0.3, Math.min(1.2, (game.fans / 100) * avgComfortBonus * getTicketPriceElasticityFactor()));
+        let rawFactor = Math.max(0.3, Math.min(1.2, (game.fans / 100) * avgComfortBonus * getTicketPriceElasticityFactor(preisMult)));
         let ceiling = LEAGUE_ATTENDANCE_CEILING[game.leagueLevel] ?? LEAGUE_ATTENDANCE_CEILING[LEAGUE_ATTENDANCE_CEILING.length - 1];
         return ceiling * (rawFactor / 0.75);
     }

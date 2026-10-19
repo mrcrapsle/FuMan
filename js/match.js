@@ -401,7 +401,8 @@
             if (isHome) {
                 let opponentNameForDerby = isHome ? awayName : homeName;
                 let isDerbyKickoff = isDerbyOpponent(opponentNameForDerby);
-                let attFactor = getAttendanceFactor();
+                let livePreisMult = (!game.forcedGhostGame && typeof getTopspielPreisMult === 'function') ? getTopspielPreisMult(opponentNameForDerby) : 1;
+                let attFactor = getAttendanceFactor(livePreisMult);
                 if (isDerbyKickoff && !game.forcedGhostGame) attFactor = Math.min(1.0, attFactor * 2.2);
                 else if (!game.forcedGhostGame && currentMatch && (currentMatch.isCup || currentMatch.isEurope)) attFactor = Math.min(1.0, attFactor * 1.4);
                 // Bugfix (Konsistenz): dieselbe Zufallsstreuung wie in applyMatchdayFinances()
@@ -416,9 +417,12 @@
                 // in einer unteren Liga voellig unrealistische Zuschauerzahlen erzeugt.
                 let liveBoost = isDerbyKickoff && !game.forcedGhostGame ? 2.2
                     : ((!game.forcedGhostGame && currentMatch && (currentMatch.isCup || currentMatch.isEurope)) ? 1.4 : 1);
-                let liveAtt = game.forcedGhostGame ? 0 : calculateMatchAttendance(liveBoost, kickoffNoise);
+                let liveDetails = game.forcedGhostGame ? null : calculateMatchAttendanceDetails(liveBoost, kickoffNoise, livePreisMult);
+                let liveAtt = liveDetails ? liveDetails.zuschauer : 0;
                 currentMatch.finalAttendance = liveAtt;
                 currentMatch.finalAttendanceMatchday = game.matchday;
+                currentMatch.finalNachfrage = liveDetails ? liveDetails.nachfrage : 0;
+                currentMatch.finalPreisMult = livePreisMult;
                 attEl.innerText = game.forcedGhostGame ? '👻 Geisterspiel' : `👥 ${liveAtt.toLocaleString('de-DE')} Zuschauer`;
             } else {
                 attEl.innerText = '✈️ Auswärtsspiel';

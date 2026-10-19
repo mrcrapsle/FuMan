@@ -672,6 +672,8 @@ function renderUiStatRow(werte) {
         platzVerlaufVorjahr: null,
         startelfGedaechtnis: [],
         monatsStand: null,
+        bauChronik: [],
+        topspielZuschlag: 0,
         assistentErledigt: null,
         vorlageBilanzArchiv: [],
         vorlageImEinsatz: null,
@@ -14465,6 +14467,10 @@ function initZugaenglichkeit() {
         // Rückkehrer (Phase 26.18): Verletzung und Sperre zählen je Spieltag herunter (js/match-live.js)
         const zurueck = md > game.matchday ? squad.filter(p => getRueckkehrSpieltag(p) === md) : [];
         if (zurueck.length) x.push(`🔙 Wieder dabei: ${zurueck.slice(0, 4).map(p => mpEsc(p.name)).join(', ')}${zurueck.length > 4 ? ' …' : ''}`);
+        // Stadion (Phase 26.21): Bauende (Zählung nach jedem Spieltag) und geplante Stadion-Events
+        (game.stadiumConstructionQueue || []).filter(p => game.matchday + p.daysLeft - 1 === md).forEach(p => x.push(`🏗️ Fertig: ${mpEsc(p.label)}`));
+        const ev = typeof getPendingStadiumEvent === 'function' ? getPendingStadiumEvent() : null;
+        if (ev && ev.season === game.season && Math.max(ev.scheduledMatchday, game.matchday) === md) x.push(`📅 Stadion-Event bereit: ${mpEsc(ev.name)}`);
         if (md === 34) {
             const aus = squad.filter(p => p.contracts <= 1);
             if (aus.length) x.push(`📄 Zum Saisonende laufen ${aus.length === 1 ? '1 Vertrag' : aus.length + ' Verträge'} aus: ${aus.slice(0, 4).map(p => mpEsc(p.name)).join(', ')}${aus.length > 4 ? ' …' : ''}`);
@@ -19091,6 +19097,7 @@ function finishGoalkeeperGame() {
                 <div class="box"><div class="ui-overline">Auslastung</div><div style="font-size:var(--fs-title); font-weight:900; color:${utilization>=70?'var(--primary)':(utilization>=40?'var(--accent)':'var(--danger)')};">${utilization}%</div></div>
                 <div class="box"><div class="ui-overline">Stadionwert</div><div style="font-size:var(--fs-title); font-weight:900; color:var(--gold);">${(getStadiumMarketValue()/1000000).toFixed(2)} Mio €</div></div>
             </div>
+            ${typeof renderFansOhneKarte === 'function' ? renderFansOhneKarte() : ''}
             <div class="box" style="margin-top:4px;"><div class="ui-overline" style="font-size:var(--fs-micro); color:var(--text-muted);">Bauwert (investierte Summe)</div><div style="font-size:var(--fs-title); font-weight:900; color:var(--industry);">${((stadium.totalInvested||0)/1000000).toFixed(2)} Mio €</div></div>
             <div class="box" style="margin-top:4px;">
                 <div class="ui-overline" style="font-size:var(--fs-micro); color:var(--text-muted);">Betriebskosten pro Spieltag</div>
@@ -19302,6 +19309,7 @@ function finishGoalkeeperGame() {
             return `<div class="panel">
                 <div class="panel-header" style="font-size:var(--fs-small);">${u.name}</div>
                 <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${u.desc}</div>
+                ${!owned && typeof renderUpgradeRendite === 'function' ? renderUpgradeRendite(key) : ''}
                 ${buttonHtml}
             </div>`;
         }).join('');
@@ -19526,6 +19534,7 @@ function finishGoalkeeperGame() {
                 <div class="panel-header" style="font-size:var(--fs-small);">${p.name}</div>
                 <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${p.desc}</div>
                 ${seatsLabel ? `<div style="font-size:var(--fs-caption); margin-bottom:2px;">${seatsLabel}</div>` : ''}
+                ${p.seats > 0 && gateOk && typeof renderPlatzRendite === 'function' ? renderPlatzRendite(p.seats, cost) : ''}
                 ${!gateOk ? `<div style="font-size:var(--fs-caption); color:var(--danger); margin-bottom:4px;">${p.gateText}</div>` : ''}
                 <button onclick="buyCapacityProject('${key}')" class="btn-secondary" ${disabled ? 'disabled' : ''}>${queued ? '🏗️ Im Bau...' : `Beauftragen [${formatVal(cost)}]`}</button>
             </div>`;
@@ -19584,6 +19593,8 @@ function finishGoalkeeperGame() {
         renderStadiumConstructionBox();
         renderStadiumKeyFigures();
         if (typeof renderTicketPriceSliders === 'function') renderTicketPriceSliders();
+        if (typeof renderTopspielBox === 'function') renderTopspielBox();
+        if (typeof renderBauChronik === 'function') renderBauChronik();
         renderPitchMaintenanceBox();
         renderCapacityProjectsGrid();
         renderStadiumAncillaryIncomeBox();
@@ -19667,6 +19678,7 @@ function finishGoalkeeperGame() {
                 <button onclick="upgradeBlockInfra('${blockKey}', 'merchLvl', ${merchCost})" class="btn-secondary" style="font-size:var(--fs-caption);" ${b.merchLvl>=3?'disabled':''}>👕 Merch-Stand [${b.merchLvl}/3]<br>${b.merchLvl>=3?'Max. ✓':formatVal(merchCost)}<br><span style="font-size:var(--fs-micro); color:var(--text-muted);">+5% Fanartikel-Absatz</span></button>
                 <button onclick="upgradeBlockInfra('${blockKey}', 'toiletLvl', ${toiletCost})" class="btn-secondary" style="font-size:var(--fs-caption);" ${b.toiletLvl>=3?'disabled':''}>🚻 Toiletten [${b.toiletLvl}/3]<br>${b.toiletLvl>=3?'Max. ✓':formatVal(toiletCost)}<br><span style="font-size:var(--fs-micro); color:var(--text-muted);">+Komfort → mehr Zuschauer</span></button>
             </div>
+            ${b.expansions < maxExpansions && typeof renderPlatzRendite === 'function' ? renderPlatzRendite(b.addSeats, nextCost) : ''}
             <button onclick="expandBlock('${blockKey}', ${b.addSeats}, ${nextCost})" class="btn-action" style="margin-top:2px;" ${b.expansions >= maxExpansions ? 'disabled' : ''}>
                 ${b.expansions >= maxExpansions ? `Maximaler Ausbau erreicht (${maxExpansions}/${maxExpansions}) ✓` : `+${b.addSeats.toLocaleString()} Plätze ausbauen (${b.expansions}/${maxExpansions}) [${formatVal(nextCost)}]`}
             </button>
@@ -19822,6 +19834,7 @@ function finishGoalkeeperGame() {
                 }
             }
             game.boardSat = Math.min(100, game.boardSat + 2);
+            if (typeof merkeBauChronik === 'function') merkeBauChronik(proj);
             addInboxMessage('vertrag', `🏗️ Bauprojekt fertiggestellt: ${proj.label}!`,
                 (proj.remainingPayment > 0
                     ? `Die Bauarbeiten sind abgeschlossen, die offene Restzahlung von ${formatVal(proj.remainingPayment)} wurde beglichen.`
@@ -19890,9 +19903,16 @@ function finishGoalkeeperGame() {
     // Einzige Stelle, an der die Zuschauerzahl eines Heimspiels entsteht. Vorher stand die
     // Rechnung doppelt im Code (Anpfiff im Live-Spiel und Spieltagsabrechnung) und musste
     // von Hand synchron gehalten werden.
-    function calculateMatchAttendance(boostMult = 1, noise = 1) {
+    function calculateMatchAttendance(boostMult = 1, noise = 1, preisMult = 1) {
+        return calculateMatchAttendanceDetails(boostMult, noise, preisMult).zuschauer;
+    }
+    // Dieselbe Rechnung, dazu die Nachfrage: wie viele Menschen bei freier Kapazität gekommen
+    // wären. Nur bei vollem Stadion bleiben Fans ohne Karte (Phase 26.21); preisMult ist der
+    // Topspiel-Zuschlag auf die Ticketpreise.
+    function calculateMatchAttendanceDetails(boostMult = 1, noise = 1, preisMult = 1) {
         let kapazitaet = stadium.total || 16000;
-        let ausKapazitaet = Math.round(kapazitaet * Math.min(1.0, getAttendanceFactor() * boostMult) * noise);
+        let faktor = getAttendanceFactor(preisMult) * boostMult;
+        let ausKapazitaet = Math.round(kapazitaet * Math.min(1.0, faktor) * noise);
         // Bewusst KEIN Dauerkarten-Sockel an dieser Stelle: das würde die sorgfältig
         // kalibrierten Effekte von Fan-Zufriedenheit, Ligadeckel und Derby-Bonus verzerren
         // bzw. teilweise wirkungslos machen, sobald der Sockel sie überschreitet. Dauerkarten
@@ -19904,9 +19924,12 @@ function finishGoalkeeperGame() {
         // Mal exakt dieselbe Zahl (6. Liga: immer 1.000, vom Nutzer gemeldet). Wetter, Form,
         // Publikumsliebling, Ticketpreis und die Tagesform des Spieltags wirken jetzt auch hier.
         let stimmung = getMatchdayAttendanceMood();
-        let schwankung = stimmung.weather * (1 + stimmung.form + stimmung.favorite) * getTicketPriceElasticityFactor() * noise;
+        let schwankung = stimmung.weather * (1 + stimmung.form + stimmung.favorite) * getTicketPriceElasticityFactor(preisMult) * noise;
         let interesse = Math.round(getLeagueAttendanceCap(boostMult) * Math.min(1.12, schwankung));
-        return Math.max(0, Math.min(kapazitaet, ausKapazitaet, interesse));
+        let zuschauer = Math.max(0, Math.min(kapazitaet, ausKapazitaet, interesse));
+        let nachfrage = Math.max(zuschauer, Math.min(Math.round(kapazitaet * faktor * noise), interesse));
+        let ohneKarte = zuschauer >= kapazitaet ? Math.max(0, nachfrage - kapazitaet) : 0;
+        return { zuschauer, nachfrage, ohneKarte, kapazitaet };
     }
 
     // Preis-Nachfrage-Zusammenhang für Tickets: bisher hatte der Ticketpreis KEINERLEI
@@ -19918,10 +19941,10 @@ function finishGoalkeeperGame() {
         let base = { steh: 12, sitz: 24, vip: 80 }[category] || 12;
         return Math.round(base * leagueMult);
     }
-    function getTicketPriceElasticityFactor() {
-        let stehEl = calculateElasticity(game.ticketPrices.steh, getMarketTicketPrice('steh'));
-        let sitzEl = calculateElasticity(game.ticketPrices.sitz, getMarketTicketPrice('sitz'));
-        let vipEl = calculateElasticity(game.ticketPrices.vip, getMarketTicketPrice('vip'));
+    function getTicketPriceElasticityFactor(preisMult = 1) {
+        let stehEl = calculateElasticity(game.ticketPrices.steh * preisMult, getMarketTicketPrice('steh'));
+        let sitzEl = calculateElasticity(game.ticketPrices.sitz * preisMult, getMarketTicketPrice('sitz'));
+        let vipEl = calculateElasticity(game.ticketPrices.vip * preisMult, getMarketTicketPrice('vip'));
         // Gedämpft (0.4-Gewichtung), damit ein Ausreißer die Zuschauerzahl nicht komplett
         // verzerrt - der Ticketpreis ist nur einer von mehreren Einflussfaktoren.
         // Gewichtung folgt jetzt der ECHTEN Sitzplatz-Zusammensetzung (siehe
@@ -19952,7 +19975,7 @@ function finishGoalkeeperGame() {
         return { weather, form, favorite };
     }
 
-    function getAttendanceFactor() {
+    function getAttendanceFactor(preisMult = 1) {
         let totalComfort = 0;
         Object.values(stadium.blocks || {}).forEach(b => { totalComfort += (b.foodLvl + b.merchLvl + b.toiletLvl) / 9; });
         let avgComfortBonus = 0.9 + (totalComfort / 8) * 0.2;
@@ -19970,7 +19993,7 @@ function finishGoalkeeperGame() {
         // rawFactor bleibt die reine Fan-Stimmungs-/Komfort-Kennzahl (0.3-1.2, "1.0" = Standard
         // bei 100% Fans ohne Komfort-Bonus). Die Liga-Obergrenze skaliert diese Kennzahl dann
         // auf einen realistischen Auslastungsanteil der Stadionkapazität herunter.
-        let rawFactor = Math.max(0.3, Math.min(1.2, (game.fans / 100) * avgComfortBonus * getTicketPriceElasticityFactor()));
+        let rawFactor = Math.max(0.3, Math.min(1.2, (game.fans / 100) * avgComfortBonus * getTicketPriceElasticityFactor(preisMult)));
         let ceiling = LEAGUE_ATTENDANCE_CEILING[game.leagueLevel] ?? LEAGUE_ATTENDANCE_CEILING[LEAGUE_ATTENDANCE_CEILING.length - 1];
         return ceiling * (rawFactor / 0.75);
     }
@@ -20137,6 +20160,228 @@ function renderStadiumEventsPanel() {
         });
     }
     box.innerHTML = html;
+}
+
+/* eslint-enable */
+// Stadion-Werkzeuge (Phase 26.21): Fans ohne Karte, Rendite je Ausbau, Bau-Chronik und
+// Topspiel-Zuschlag. Alles liest die echten Heimspiel-Daten aus game.attendanceHistory
+// (Nachfrage und Fans ohne Karte schreibt applyMatchdayFinances() in js/match-live.js).
+
+const TOPSPIEL_STUFEN = [0, 10, 20, 30];
+const BAU_CHRONIK_MAX = 60;
+
+function getHeimspieleJeSaison() {
+    const teams = (leaguesData[game.leagueLevel] || []).length || 18;
+    return Math.max(1, teams - 1);
+}
+
+function stadionZahl(n) { return Math.round(n || 0).toLocaleString('de-DE'); }
+
+function stadionSaisons(j) {
+    if (j === null || !isFinite(j)) return '–';
+    if (j < 1) return 'unter 1 Saison';
+    const r = Math.round(j * 10) / 10;
+    return `${r.toLocaleString('de-DE')} ${r === 1 ? 'Saison' : 'Saisons'}`;
+}
+
+// ---------- Fans ohne Karte ----------
+function getFansOhneKarte() {
+    const alle = Array.isArray(game.attendanceHistory) ? game.attendanceHistory : [];
+    const letzte = alle.length ? alle[alle.length - 1] : null;
+    const saison = alle.filter(e => e && e.season === game.season && e.nachfrage !== undefined);
+    let serie = 0;
+    for (let i = alle.length - 1; i >= 0; i--) {
+        const e = alle[i];
+        if (e && e.capacity > 0 && e.attendance >= e.capacity) serie++;
+        else break;
+    }
+    return {
+        erfasst: !!(letzte && letzte.nachfrage !== undefined),
+        letztes: letzte ? (letzte.ohneKarte || 0) : 0,
+        gegner: letzte ? letzte.opponent : '',
+        saison: saison.reduce((s, e) => s + (e.ohneKarte || 0), 0),
+        saisonSpiele: saison.length,
+        ausverkauft: saison.filter(e => e.capacity > 0 && e.attendance >= e.capacity).length,
+        serie
+    };
+}
+
+function renderFansOhneKarte() {
+    const f = getFansOhneKarte();
+    if (!f.erfasst) {
+        return `<div class="box" style="margin-top:4px;"><div class="ui-overline">Fans ohne Karte</div>
+            <div style="font-size:var(--fs-caption); color:var(--text-muted);">Wird ab dem nächsten Heimspiel erfasst: wie viele Fans wegen eines vollen Stadions draußen bleiben.</div></div>`;
+    }
+    return `<div class="box" id="stadium-fans-ohne-karte" style="margin-top:4px;">
+        <div class="ui-overline">Fans ohne Karte</div>
+        <div style="font-size:var(--fs-title); font-weight:900; color:${f.letztes > 0 ? 'var(--danger)' : 'var(--text-main)'};">${stadionZahl(f.letztes)}</div>
+        <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:2px;">
+            Letztes Heimspiel${f.gegner ? ` gegen ${mpEsc(f.gegner)}` : ''}. Diese Saison: ${stadionZahl(f.saison)} in ${f.saisonSpiele} ${f.saisonSpiele === 1 ? 'Heimspiel' : 'Heimspielen'}, ${f.ausverkauft}× ausverkauft.
+            ${f.serie > 1 ? `Ausverkauft in Folge: ${f.serie} Heimspiele.` : ''}
+            ${f.saison > 0 ? 'Mehr Plätze würden sich hier füllen, siehe Rendite beim Ausbau.' : 'Bisher hat jeder Interessent eine Karte bekommen.'}
+        </div>
+    </div>`;
+}
+
+// ---------- Rendite je Ausbau ----------
+// Grundlage sind die Heimspiele dieser Saison (ab drei Spielen), sonst die letzten einer Saison.
+function getNachfrageBasis() {
+    const liste = (Array.isArray(game.attendanceHistory) ? game.attendanceHistory : []).filter(e => e && e.nachfrage !== undefined);
+    const saison = liste.filter(e => e.season === game.season);
+    return saison.length >= 3 ? saison : liste.slice(-getHeimspieleJeSaison());
+}
+
+function getTicketErloesJeZuschauer() {
+    return (stadium.stehShare ?? 0.5) * game.ticketPrices.steh + (stadium.sitzShare ?? 0.45) * game.ticketPrices.sitz;
+}
+
+// Zusätzliche Plätze füllen sich nur mit Fans, die bisher keine Karte bekamen. Gerechnet wird
+// der Ticketerlös gegen den Unterhalt der neuen Plätze (wie getStadiumBaseMaintenance()).
+function getPlatzRendite(plaetze, kosten) {
+    const basis = getNachfrageBasis();
+    if (!basis.length || plaetze <= 0) return { basis: basis.length, zusatz: 0, mehr: 0, unterhalt: 0, netto: 0, jahre: null };
+    const zusatz = basis.reduce((s, e) => s + Math.min(plaetze, e.ohneKarte || 0), 0) / basis.length;
+    const heim = getHeimspieleJeSaison();
+    const mehr = Math.round(zusatz * getTicketErloesJeZuschauer() * heim);
+    const genutzt = Math.min(plaetze, zusatz * 1.15);
+    let unterhalt = (genutzt + (plaetze - genutzt) * MOTHBALLED_MAINTENANCE_RATE) * STADIUM_MAINTENANCE_PER_SEAT * heim * 2;
+    if (stadium.upgrades && stadium.upgrades.solaranlage) unterhalt *= 0.8;
+    unterhalt = Math.round(unterhalt);
+    const netto = mehr - unterhalt;
+    return { basis: basis.length, zusatz: Math.round(zusatz), mehr, unterhalt, netto, jahre: netto > 0 ? kosten / netto : null };
+}
+
+function renderPlatzRendite(plaetze, kosten) {
+    const r = getPlatzRendite(plaetze, kosten);
+    let text;
+    if (!r.basis) text = '📊 Rendite: noch keine erfassten Heimspiele.';
+    else if (r.zusatz <= 0) text = `📉 Keine Fans ohne Karte in den letzten ${r.basis} Heimspielen: mehr Plätze bringen derzeit keine Mehreinnahmen.`;
+    else if (r.netto <= 0) text = `📉 Rund +${stadionZahl(r.zusatz)} Zuschauer je Heimspiel, aber der Unterhalt (${formatVal(r.unterhalt)}) frisst den Ticketerlös (${formatVal(r.mehr)}) je Saison.`;
+    else text = `📈 Rund +${stadionZahl(r.zusatz)} Zuschauer je Heimspiel, +${formatVal(r.netto)} je Saison nach Unterhalt. Amortisiert in ${stadionSaisons(r.jahre)}.`;
+    return `<div class="stadium-rendite" style="font-size:var(--fs-caption); color:var(--text-muted); margin:2px 0 4px;">${text}</div>`;
+}
+
+function getUpgradeRendite(key) {
+    const u = typeof STADIUM_UPGRADES !== 'undefined' ? STADIUM_UPGRADES[key] : null;
+    if (!u || u.category !== 'income') return null;
+    const jeSpiel = Math.round(u.incomeBase * getStadiumCostScale());
+    const jeSaison = jeSpiel * getHeimspieleJeSaison();
+    const kosten = getStadiumUpgradeCost(key);
+    return { jeSpiel, jeSaison, jahre: jeSaison > 0 ? kosten / jeSaison : null };
+}
+
+function renderUpgradeRendite(key) {
+    const r = getUpgradeRendite(key);
+    if (!r) return '';
+    return `<div class="stadium-rendite" style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">📈 +${formatVal(r.jeSpiel)} je Heimspiel, ${formatVal(r.jeSaison)} je Saison. Amortisiert in ${stadionSaisons(r.jahre)}.</div>`;
+}
+
+// ---------- Bau-Chronik ----------
+// Aus tickStadiumConstruction(): jedes fertige Bauprojekt außer Weiterbildungen.
+function merkeBauChronik(proj) {
+    if (!proj || proj.type === 'staffTraining') return;
+    if (!Array.isArray(game.bauChronik)) game.bauChronik = [];
+    game.bauChronik.push({ season: game.season, matchday: game.matchday, label: proj.label || 'Bauprojekt', cost: proj.totalCost || 0, type: proj.type });
+    if (game.bauChronik.length > BAU_CHRONIK_MAX) game.bauChronik.shift();
+}
+
+function renderBauChronik() {
+    const box = document.getElementById('stadium-chronik-box');
+    if (!box) return;
+    const liste = Array.isArray(game.bauChronik) ? game.bauChronik : [];
+    if (!liste.length) {
+        box.innerHTML = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Noch kein Bauprojekt abgeschlossen. Fertige Ausbauten erscheinen hier mit Saison, Spieltag und Kosten.</div>';
+        return;
+    }
+    const summe = liste.reduce((s, e) => s + (e.cost || 0), 0);
+    const saisons = new Set(liste.map(e => e.season)).size;
+    box.innerHTML = `
+        <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px;">
+            ${uiChip(`${liste.length} ${liste.length === 1 ? 'Projekt' : 'Projekte'}`)}
+            ${uiChip(`${formatVal(summe)} verbaut`)}
+            ${uiChip(`${saisons} ${saisons === 1 ? 'Saison' : 'Saisons'}`)}
+        </div>
+        ${liste.slice().reverse().map(e => `
+            <div class="box" style="display:flex; justify-content:space-between; align-items:baseline; gap:8px; margin-bottom:3px; font-size:var(--fs-caption);">
+                <span><span style="color:var(--text-muted);">S${e.season} · SpT ${e.matchday}</span> ${mpEsc(e.label)}</span>
+                <strong style="color:var(--gold); white-space:nowrap;">${formatVal(e.cost || 0)}</strong>
+            </div>`).join('')}`;
+}
+
+// ---------- Topspiel-Zuschlag ----------
+// Derby oder Gegner auf Platz 1 bis 3 (ab dem 4. Spieltag, vorher sagt die Tabelle nichts).
+function getTopspielGrund(gegner) {
+    if (!gegner || gegner === game.clubName) return '';
+    if (typeof isDerbyOpponent === 'function' && isDerbyOpponent(gegner)) return 'Derby';
+    if (game.matchday > 3 && typeof sortedTable === 'function') {
+        const platz = sortedTable(game.leagueLevel).findIndex(t => t.name === gegner) + 1;
+        if (platz >= 1 && platz <= 3) return `Platz ${platz}`;
+    }
+    return '';
+}
+
+function getTopspielStufe() {
+    return TOPSPIEL_STUFEN.includes(game.topspielZuschlag) ? game.topspielZuschlag : 0;
+}
+
+function getTopspielPreisMult(gegner) {
+    const pct = getTopspielStufe();
+    if (!pct || !getTopspielGrund(gegner)) return 1;
+    return 1 + pct / 100;
+}
+
+function setTopspielZuschlag(pct) {
+    if (!TOPSPIEL_STUFEN.includes(pct)) { showToast('Diese Stufe gibt es nicht.', 'error'); return; }
+    game.topspielZuschlag = pct;
+    showToast(pct ? `🔥 Topspiel-Zuschlag: +${pct} % bei Derbys und Heimspielen gegen die Top 3.` : 'Topspiel-Zuschlag ausgeschaltet: überall normale Preise.', 'success');
+    renderTopspielBox();
+}
+
+function getNaechstesTopspiel() {
+    const liga = leaguesData[game.leagueLevel] || [];
+    const plan = (typeof fixturesData !== 'undefined' && fixturesData[game.leagueLevel]) || [];
+    for (let md = Math.max(1, game.matchday); md <= plan.length; md++) {
+        const f = (plan[md - 1] || []).find(x => liga[x.home] && liga[x.home].name === game.clubName);
+        if (!f || f.played || !liga[f.away]) continue;
+        const grund = getTopspielGrund(liga[f.away].name);
+        if (grund) return { md, gegner: liga[f.away].name, grund };
+    }
+    return null;
+}
+
+// Dieselbe Erlösformel wie in applyMatchdayFinances(), ohne Zufall und Sonderbuchungen.
+function schaetzeTicketErloes(zuschauer, preisMult) {
+    const dauerkarten = typeof getSeasonTicketAttendanceFloor === 'function' ? Math.min(zuschauer, getSeasonTicketAttendanceFloor()) : 0;
+    const zahlende = Math.max(0, zuschauer - dauerkarten);
+    const vip = Math.min(stadium.vipTotal || 50, Math.round(zahlende * (stadium.vipShare ?? 0.05)));
+    return Math.round((zahlende * getTicketErloesJeZuschauer() + vip * game.ticketPrices.vip) * preisMult);
+}
+
+function renderTopspielBox() {
+    const box = document.getElementById('stadium-topspiel-box');
+    if (!box) return;
+    const stufe = getTopspielStufe();
+    const knoepfe = TOPSPIEL_STUFEN.map(p => `<button onclick="setTopspielZuschlag(${p})" class="${p === stufe ? 'btn-action' : 'btn-secondary'}" aria-pressed="${p === stufe}" style="font-size:var(--fs-caption);">${p ? `+${p} %` : 'Aus'}</button>`).join('');
+    const naechstes = getNaechstesTopspiel();
+    let vorschau = '<div style="font-size:var(--fs-caption); color:var(--text-muted);">Nach heutigem Tabellenstand steht kein Topspiel mehr im Heimplan dieser Saison.</div>';
+    if (naechstes) {
+        const boost = naechstes.grund === 'Derby' ? 2.2 : 1;
+        const mult = stufe ? 1 + stufe / 100 : 1;
+        const ohne = calculateMatchAttendanceDetails(boost, 1, 1);
+        const mit = calculateMatchAttendanceDetails(boost, 1, mult);
+        vorschau = `<div class="box" style="font-size:var(--fs-caption);">
+            <div><strong>Nächstes Topspiel:</strong> SpT ${naechstes.md} gegen ${mpEsc(naechstes.gegner)} (${naechstes.grund})</div>
+            <div style="color:var(--text-muted); margin-top:2px;">Normalpreis: ~${stadionZahl(ohne.zuschauer)} Zuschauer, ~${formatVal(schaetzeTicketErloes(ohne.zuschauer, 1))} Ticketerlös${ohne.ohneKarte > 0 ? `, ${stadionZahl(ohne.ohneKarte)} ohne Karte` : ''}.</div>
+            ${stufe ? `<div style="color:var(--text-muted);">Mit +${stufe} %: ~${stadionZahl(mit.zuschauer)} Zuschauer, ~${formatVal(schaetzeTicketErloes(mit.zuschauer, mult))} Ticketerlös.</div>` : ''}
+        </div>`;
+    }
+    const saison = (Array.isArray(game.attendanceHistory) ? game.attendanceHistory : []).filter(e => e && e.season === game.season && e.zuschlag);
+    const mehr = saison.reduce((s, e) => s + (e.zuschlagErloes || 0), 0);
+    box.innerHTML = `
+        <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Bei Derbys und Heimspielen gegen die Top 3 der Tabelle (ab dem 4. Spieltag) steigen alle Ticketpreise um den Aufschlag. Zu teure Karten schrecken Zuschauer ab, wie bei den normalen Preisen. Am meisten bringt der Zuschlag, wenn das Stadion ohnehin ausverkauft ist.</div>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 5em), 1fr)); gap:4px; margin-bottom:6px;">${knoepfe}</div>
+        ${vorschau}
+        ${saison.length ? `<div style="font-size:var(--fs-caption); margin-top:4px;">Diese Saison: ${saison.length} ${saison.length === 1 ? 'Topspiel' : 'Topspiele'} mit Zuschlag, Aufschlag auf verkaufte Karten ${formatVal(mehr)}.</div>` : ''}`;
 }
 
 /* eslint-enable */
@@ -31012,7 +31257,8 @@ function cleanupLegacyScoutState() {
             if (isHome) {
                 let opponentNameForDerby = isHome ? awayName : homeName;
                 let isDerbyKickoff = isDerbyOpponent(opponentNameForDerby);
-                let attFactor = getAttendanceFactor();
+                let livePreisMult = (!game.forcedGhostGame && typeof getTopspielPreisMult === 'function') ? getTopspielPreisMult(opponentNameForDerby) : 1;
+                let attFactor = getAttendanceFactor(livePreisMult);
                 if (isDerbyKickoff && !game.forcedGhostGame) attFactor = Math.min(1.0, attFactor * 2.2);
                 else if (!game.forcedGhostGame && currentMatch && (currentMatch.isCup || currentMatch.isEurope)) attFactor = Math.min(1.0, attFactor * 1.4);
                 // Bugfix (Konsistenz): dieselbe Zufallsstreuung wie in applyMatchdayFinances()
@@ -31027,9 +31273,12 @@ function cleanupLegacyScoutState() {
                 // in einer unteren Liga voellig unrealistische Zuschauerzahlen erzeugt.
                 let liveBoost = isDerbyKickoff && !game.forcedGhostGame ? 2.2
                     : ((!game.forcedGhostGame && currentMatch && (currentMatch.isCup || currentMatch.isEurope)) ? 1.4 : 1);
-                let liveAtt = game.forcedGhostGame ? 0 : calculateMatchAttendance(liveBoost, kickoffNoise);
+                let liveDetails = game.forcedGhostGame ? null : calculateMatchAttendanceDetails(liveBoost, kickoffNoise, livePreisMult);
+                let liveAtt = liveDetails ? liveDetails.zuschauer : 0;
                 currentMatch.finalAttendance = liveAtt;
                 currentMatch.finalAttendanceMatchday = game.matchday;
+                currentMatch.finalNachfrage = liveDetails ? liveDetails.nachfrage : 0;
+                currentMatch.finalPreisMult = livePreisMult;
                 attEl.innerText = game.forcedGhostGame ? '👻 Geisterspiel' : `👥 ${liveAtt.toLocaleString('de-DE')} Zuschauer`;
             } else {
                 attEl.innerText = '✈️ Auswärtsspiel';
@@ -31761,7 +32010,13 @@ function cleanupLegacyScoutState() {
         // gewöhnliche Ligaspiele - besondere Atmosphäre, seltenere Gelegenheit.
         let isCupOrEuropeMatch = isHomeMatch && !ghostGameActive && typeof currentMatch !== 'undefined' && currentMatch && (currentMatch.isCup || currentMatch.isEurope);
         let cupBoostActive = isCupOrEuropeMatch && !derbyBoostActive;
-        let attFactor = getAttendanceFactor();
+        // Live gespielt: Zuschauerzahl, Nachfrage und Topspiel-Zuschlag stehen seit dem Anpfiff fest.
+        let liveZuschauer = isHomeMatch && !ghostGameActive && typeof currentMatch !== 'undefined' && currentMatch && currentMatch.finalAttendance !== undefined && currentMatch.finalAttendanceMatchday === game.matchday;
+        let preisMult = 1;
+        if (isHomeMatch && !ghostGameActive) {
+            preisMult = liveZuschauer ? (currentMatch.finalPreisMult || 1) : (typeof getTopspielPreisMult === 'function' ? getTopspielPreisMult(opponentNameForRecord) : 1);
+        }
+        let attFactor = getAttendanceFactor(preisMult);
         // War die Auslastung schon VOR der Deckelung bei "ausverkauft" (Faktor >= 1.0), ist
         // das Stadion wirklich bis an seine (liga-abhängige) Kapazitätsgrenze gefüllt. Bei
         // niedriger Fan-Zufriedenheit früh in der Karriere greift der Derby-Bonus zwar auch,
@@ -31785,15 +32040,20 @@ function cleanupLegacyScoutState() {
         // Zufallswert zu erzeugen. Nur bei Batch-Simulation (kein Live-Kontext) wird hier
         // frisch gewürfelt.
         let att;
+        let nachfrage = 0;
         if (isHomeMatch && !ghostGameActive) {
-            if (typeof currentMatch !== 'undefined' && currentMatch && currentMatch.finalAttendance !== undefined && currentMatch.finalAttendanceMatchday === game.matchday) {
+            if (liveZuschauer) {
                 att = currentMatch.finalAttendance;
+                nachfrage = currentMatch.finalNachfrage || att;
             } else {
-                att = calculateMatchAttendance(derbyBoostActive ? 2.2 : (cupBoostActive ? 1.4 : 1), attendanceNoise);
+                let details = calculateMatchAttendanceDetails(derbyBoostActive ? 2.2 : (cupBoostActive ? 1.4 : 1), attendanceNoise, preisMult);
+                att = details.zuschauer;
+                nachfrage = details.nachfrage;
             }
         } else {
             att = 0;
         }
+        let heimEintrag = null;
         // Zuschauerzahl des letzten Heimspiels - bisher nirgendwo dauerhaft sichtbar, nur in
         // Sonderfällen (Rekord/Meilenstein) erwähnt. Jetzt fest im Finanzen- und Live-Match-
         // Screen angezeigt.
@@ -31803,7 +32063,11 @@ function cleanupLegacyScoutState() {
         // war - nicht nur beim allerletzten Spiel.
         if (isHomeMatch && !ghostGameActive) {
             if (!game.attendanceHistory) game.attendanceHistory = [];
-            game.attendanceHistory.push({ season: game.season, matchday: game.matchday, opponent: opponentNameForRecord || '-', attendance: att, capacity: stadium.total || 16000 });
+            let kapazitaetHeute = stadium.total || 16000;
+            // Fans ohne Karte (Phase 26.21): nur wenn das Stadion wirklich voll war.
+            heimEintrag = { season: game.season, matchday: game.matchday, opponent: opponentNameForRecord || '-', attendance: att, capacity: kapazitaetHeute, nachfrage, ohneKarte: att >= kapazitaetHeute ? Math.max(0, nachfrage - kapazitaetHeute) : 0 };
+            if (preisMult > 1) heimEintrag.zuschlag = Math.round((preisMult - 1) * 100);
+            game.attendanceHistory.push(heimEintrag);
             if (game.attendanceHistory.length > 200) game.attendanceHistory.shift();
             // (Zuschauerrekord wird bereits an anderer Stelle über game.recordAttendance
             // gepflegt, siehe applyMatchdayFinances weiter unten - keine doppelte Erfassung.)
@@ -31848,7 +32112,9 @@ function cleanupLegacyScoutState() {
         let dauerkartenAnwesend = (typeof getSeasonTicketAttendanceFloor === 'function') ? Math.min(att, getSeasonTicketAttendanceFloor()) : 0;
         let zahlendeAtt = Math.max(0, att - dauerkartenAnwesend);
         let vipSold = Math.min(stadium.vipTotal || 50, Math.round(zahlendeAtt * (stadium.vipShare ?? 0.05)));
-        let ticketIncome = (isHomeMatch && !ghostGameActive) ? Math.round(zahlendeAtt * (stadium.stehShare ?? 0.5) * game.ticketPrices.steh + zahlendeAtt * (stadium.sitzShare ?? 0.45) * game.ticketPrices.sitz + vipSold * game.ticketPrices.vip) : 0;
+        let ticketIncome = (isHomeMatch && !ghostGameActive) ? Math.round((zahlendeAtt * (stadium.stehShare ?? 0.5) * game.ticketPrices.steh + zahlendeAtt * (stadium.sitzShare ?? 0.45) * game.ticketPrices.sitz + vipSold * game.ticketPrices.vip) * preisMult) : 0;
+        // Topspiel-Zuschlag: der Aufschlag auf die verkauften Karten, für die Saisonbilanz im Stadion.
+        if (heimEintrag && preisMult > 1) heimEintrag.zuschlagErloes = Math.round(ticketIncome - ticketIncome / preisMult);
         // Doppelte Ticketeinnahmen (Premium-Booster, NEU).
         if (isHomeMatch && game.ticketIncomeBoostNextMatch) { ticketIncome *= 2; game.ticketIncomeBoostNextMatch = false; }
         // Medienrechte: eigener Medienpartner zahlt bei jedem Heimspiel, mit Bonus bei

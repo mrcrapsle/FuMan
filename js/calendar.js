@@ -78,6 +78,10 @@
         // Rückkehrer (Phase 26.18): Verletzung und Sperre zählen je Spieltag herunter (js/match-live.js)
         const zurueck = md > game.matchday ? squad.filter(p => getRueckkehrSpieltag(p) === md) : [];
         if (zurueck.length) x.push(`🔙 Wieder dabei: ${zurueck.slice(0, 4).map(p => mpEsc(p.name)).join(', ')}${zurueck.length > 4 ? ' …' : ''}`);
+        // Stadion (Phase 26.21): Bauende (Zählung nach jedem Spieltag) und geplante Stadion-Events
+        (game.stadiumConstructionQueue || []).filter(p => game.matchday + p.daysLeft - 1 === md).forEach(p => x.push(`🏗️ Fertig: ${mpEsc(p.label)}`));
+        const ev = typeof getPendingStadiumEvent === 'function' ? getPendingStadiumEvent() : null;
+        if (ev && ev.season === game.season && Math.max(ev.scheduledMatchday, game.matchday) === md) x.push(`📅 Stadion-Event bereit: ${mpEsc(ev.name)}`);
         if (md === 34) {
             const aus = squad.filter(p => p.contracts <= 1);
             if (aus.length) x.push(`📄 Zum Saisonende laufen ${aus.length === 1 ? '1 Vertrag' : aus.length + ' Verträge'} aus: ${aus.slice(0, 4).map(p => mpEsc(p.name)).join(', ')}${aus.length > 4 ? ' …' : ''}`);

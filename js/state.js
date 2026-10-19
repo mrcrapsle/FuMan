@@ -126,6 +126,8 @@
         platzVerlaufVorjahr: null,
         startelfGedaechtnis: [],
         monatsStand: null,
+        bauChronik: [],
+        topspielZuschlag: 0,
         assistentErledigt: null,
         vorlageBilanzArchiv: [],
         vorlageImEinsatz: null,

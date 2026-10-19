@@ -3013,6 +3013,163 @@ async function testAdminPin(browser) {
     await page.close();
 }
 
+async function testStadionWerkzeuge(browser) {
+    console.log('\n[26.21] Stadion: Fans ohne Karte, Rendite je Ausbau, Bau-Chronik, Kalender, Topspiel-Zuschlag');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.evaluate(R32_HILFEN);
+    const r = await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false;
+        const out = {};
+        const toasts = []; const toastAlt = showToast; showToast = (t) => { toasts.push(t); };
+        simulateMatchdays(4);
+        game.fans = 100; game.money = 1e9; game.seasonTicketHolders = 0;
+        game.ticketPrices.steh = getMarketTicketPrice('steh'); game.ticketPrices.sitz = getMarketTicketPrice('sitz'); game.ticketPrices.vip = getMarketTicketPrice('vip');
+
+        // --- Nachfrage: gleiche Zuschauerzahl wie bisher, dazu die Fans ohne Karte ---
+        const normal = calculateMatchAttendanceDetails(1, 1, 1);
+        out.nNormal = normal.zuschauer === calculateMatchAttendance(1, 1) && normal.nachfrage === normal.zuschauer && normal.ohneKarte === 0 && normal.kapazitaet === stadium.total;
+        const voll = calculateMatchAttendanceDetails(40, 1, 1);
+        out.nVoll = voll.zuschauer === stadium.total && voll.nachfrage > stadium.total && voll.ohneKarte === voll.nachfrage - stadium.total;
+
+        // --- Erfassung je Heimspiel (Abrechnung mit Zahl vom Anpfiff) ---
+        const kap = stadium.total;
+        game.attendanceHistory = [];
+        currentMatch = { finalAttendance: kap, finalAttendanceMatchday: game.matchday, finalNachfrage: kap + 1234, finalPreisMult: 1, isHome: true };
+        applyMatchdayFinances(true, true, false, false, 'Testgegner A', '1:0');
+        const e1 = game.attendanceHistory[game.attendanceHistory.length - 1];
+        out.eLive = e1.attendance === kap && e1.nachfrage === kap + 1234 && e1.ohneKarte === 1234 && e1.zuschlag === undefined;
+        currentMatch = { finalAttendance: kap, finalAttendanceMatchday: game.matchday, finalNachfrage: kap + 766, finalPreisMult: 1, isHome: true };
+        applyMatchdayFinances(true, true, false, false, 'Testgegner B', '1:0');
+        currentMatch = null;
+        applyMatchdayFinances(true, true, false, false, 'Testgegner C', '1:0');
+        const e3 = game.attendanceHistory[game.attendanceHistory.length - 1];
+        out.eSim = e3.nachfrage >= e3.attendance && e3.attendance < kap && e3.ohneKarte === 0;
+        applyMatchdayFinances(false, true, false, false, 'Auswärts', '1:0');
+        out.eAuswaerts = game.attendanceHistory.length === 3;
+        let f = getFansOhneKarte();
+        out.fZahlen = f.erfasst && f.letztes === 0 && f.saison === 2000 && f.saisonSpiele === 3 && f.ausverkauft === 2 && f.serie === 0;
+        game.attendanceHistory.pop();
+        f = getFansOhneKarte();
+        out.fSerie = f.letztes === 766 && f.serie === 2 && f.gegner === 'Testgegner B';
+        showScreen('screen-stadium');
+        const kf = document.getElementById('stadium-fans-ohne-karte');
+        out.fAnzeige = !!kf && kf.textContent.includes('766') && kf.textContent.includes('Ausverkauft in Folge: 2') && kf.textContent.includes('2.000');
+
+        // --- Rendite je Ausbau ---
+        const heim = getHeimspieleJeSaison();
+        game.attendanceHistory = [1, 2, 3].map(md => ({ season: game.season, matchday: md, opponent: 'X', attendance: kap, capacity: kap, nachfrage: kap + 500, ohneKarte: 500 }));
+        const rd = getPlatzRendite(300, 1e6);
+        const ticket = getTicketErloesJeZuschauer();
+        out.rRechnung = rd.basis === 3 && rd.zusatz === 300 && rd.mehr === Math.round(300 * ticket * heim) && rd.unterhalt > 0 && rd.netto === rd.mehr - rd.unterhalt && Math.abs(rd.jahre - 1e6 / rd.netto) < 1e-9;
+        out.rGedeckelt = getPlatzRendite(2000, 1e6).zusatz === 500;
+        out.rText = renderPlatzRendite(300, 1e6).includes('Amortisiert in');
+        game.attendanceHistory.forEach(e => { e.ohneKarte = 0; e.nachfrage = kap; });
+        out.rKeine = getPlatzRendite(300, 1e6).zusatz === 0 && renderPlatzRendite(300, 1e6).includes('Keine Fans ohne Karte');
+        game.attendanceHistory = [];
+        out.rLeer = renderPlatzRendite(300, 1e6).includes('noch keine erfassten Heimspiele');
+        const ur = getUpgradeRendite('vip_lounges');
+        out.rUpgrade = ur.jeSpiel === Math.round(STADIUM_UPGRADES.vip_lounges.incomeBase * getStadiumCostScale()) && ur.jeSaison === ur.jeSpiel * heim && getUpgradeRendite('wlan') === null;
+        renderStadiumView();
+        out.rAnzeigen = document.querySelectorAll('#stadium-upgrades-grid .stadium-rendite').length === 3 && document.querySelectorAll('#capacity-projects-grid .stadium-rendite').length >= 3;
+        selectStadiumBlock('kurve');
+        out.rBlock = !!document.querySelector('#stadium-action-box .stadium-rendite');
+
+        // --- Bau-Chronik ---
+        game.bauChronik = [];
+        buyStadiumUpgrade('wlan');
+        const bau = game.stadiumConstructionQueue.find(q => q.type === 'stadiumUpgrade' && q.params.key === 'wlan');
+        // --- Kalender: Bauende am richtigen Spieltag ---
+        const fertigAm = game.matchday + bau.daysLeft - 1;
+        out.kBau = getKalenderExtras(fertigAm).some(t => t.includes('🏗️ Fertig: ' + bau.label)) && !getKalenderExtras(fertigAm + 1).some(t => t.includes('Fertig: ' + bau.label));
+        const kosten = bau.totalCost;
+        while (game.stadiumConstructionQueue.includes(bau)) tickStadiumConstruction();
+        const c = game.bauChronik[game.bauChronik.length - 1];
+        out.cEintrag = game.bauChronik.length === 1 && c.label === bau.label && c.cost === kosten && c.season === game.season && c.matchday === game.matchday && c.type === 'stadiumUpgrade';
+        merkeBauChronik({ type: 'staffTraining', label: 'Kurs', totalCost: 5 });
+        out.cOhneKurse = game.bauChronik.length === 1;
+        const ersterBau = game.bauChronik[0];
+        for (let i = 0; i < 70; i++) merkeBauChronik({ type: 'blockInfra', label: 'Test ' + i, totalCost: 1000 });
+        out.cMax = game.bauChronik.length === 60 && game.bauChronik[59].label === 'Test 69';
+        game.bauChronik = [ersterBau];
+        renderBauChronik();
+        const cb = document.getElementById('stadium-chronik-box').textContent;
+        out.cAnzeige = cb.includes(bau.label) && cb.includes('1 Projekt') && cb.includes('SpT ' + game.matchday);
+
+        // --- Kalender: geplantes Stadion-Event ---
+        stadium.events = [];
+        scheduleStadiumEvent('stadiontag');
+        const ev = getPendingStadiumEvent();
+        out.kEvent = !!ev && getKalenderExtras(ev.scheduledMatchday).some(t => t.includes('Stadion-Event bereit: ' + ev.name)) && !getKalenderExtras(ev.scheduledMatchday - 1).some(t => t.includes('Stadion-Event'));
+
+        // --- Topspiel-Zuschlag ---
+        const tab = sortedTable(game.leagueLevel).filter(t => t.name !== game.clubName);
+        const spitze = tab[0].name;
+        const unten = tab.slice().reverse().find(t => !isDerbyOpponent(t.name)).name;
+        game.topspielZuschlag = 0;
+        out.tAus = getTopspielPreisMult(spitze) === 1 && getTopspielGrund(spitze).startsWith('Platz ');
+        setTopspielZuschlag(20);
+        out.tAn = game.topspielZuschlag === 20 && getTopspielPreisMult(spitze) === 1.2 && getTopspielPreisMult(unten) === 1 && toasts.some(t => t.includes('+20 %'));
+        setTopspielZuschlag(15);
+        out.tUngueltig = game.topspielZuschlag === 20 && toasts.some(t => t.includes('Stufe gibt es nicht'));
+        const mdAlt = game.matchday; game.matchday = 3;
+        out.tFrueh = getTopspielGrund(spitze) === '' || isDerbyOpponent(spitze);
+        game.matchday = mdAlt;
+        out.tElastisch = calculateMatchAttendanceDetails(1, 1, 1.3).zuschauer < calculateMatchAttendanceDetails(1, 1, 1).zuschauer;
+        const tickets = (mult) => {
+            game.attendanceHistory = [];
+            currentMatch = { finalAttendance: 5000, finalAttendanceMatchday: game.matchday, finalNachfrage: 5000, finalPreisMult: mult, isHome: true };
+            applyMatchdayFinances(true, true, false, false, spitze, '1:0');
+            return { betrag: game.financeLedger[game.financeLedger.length - 1].einnahmen.find(e => e.label.includes('Ticketverkauf')).amount, eintrag: game.attendanceHistory[0] };
+        };
+        const ohne = tickets(1), mit = tickets(1.2);
+        out.tErloes = Math.abs(mit.betrag / ohne.betrag - 1.2) < 0.01 && mit.eintrag.zuschlag === 20 && mit.eintrag.zuschlagErloes > 0 && ohne.eintrag.zuschlag === undefined;
+        // Ohne Anpfiff-Zahl rechnet die Abrechnung den Zuschlag selbst
+        game.attendanceHistory = []; currentMatch = null;
+        applyMatchdayFinances(true, true, false, false, spitze, '1:0');
+        out.tSim = game.attendanceHistory[0].zuschlag === 20;
+        out.tAnpfiff = setupMatch.toString().includes('getTopspielPreisMult') && setupMatch.toString().includes('finalPreisMult');
+        renderTopspielBox();
+        const tb = document.getElementById('stadium-topspiel-box');
+        const aktiv = [...tb.querySelectorAll('button')].filter(b => b.classList.contains('btn-action'));
+        out.tBox = tb.querySelectorAll('button').length === 4 && aktiv.length === 1 && aktiv[0].textContent.includes('+20 %') && aktiv[0].getAttribute('aria-pressed') === 'true'
+            && (tb.textContent.includes('Nächstes Topspiel') || tb.textContent.includes('kein Topspiel')) && tb.textContent.includes('Diese Saison: 1 Topspiel');
+        tb.querySelectorAll('button')[0].click();
+        out.tKlick = game.topspielZuschlag === 0;
+
+        // --- Alte Spielstände ---
+        delete game.bauChronik; delete game.topspielZuschlag;
+        game.attendanceHistory = [{ season: game.season, matchday: 1, opponent: 'Alt', attendance: 900, capacity: 15000 }];
+        renderStadiumView();
+        out.altStand = getTopspielStufe() === 0 && getTopspielPreisMult(spitze) === 1 && !getFansOhneKarte().erfasst
+            && document.getElementById('stadium-key-figures-box').textContent.includes('Wird ab dem nächsten Heimspiel erfasst')
+            && document.getElementById('stadium-chronik-box').textContent.includes('Noch kein Bauprojekt');
+        game.bauChronik = []; game.topspielZuschlag = 0;
+
+        // --- Handy 320 px ---
+        renderStadiumView();
+        document.querySelectorAll('#screen-stadium .accordion-content').forEach(el => el.classList.add('active'));
+        out.handy = ueberlauf() && woerter('#stadium-topspiel-box button, #stadium-fans-ohne-karte, #stadium-chronik-box .box').length === 0;
+        showToast = toastAlt;
+        return out;
+    });
+    const ok = (...ks) => ks.every(k => r[k] === true);
+    const werte = ks => JSON.stringify(ks.map(k => r[k]));
+    const F = ['nNormal', 'nVoll', 'eLive', 'eSim', 'eAuswaerts', 'fZahlen', 'fSerie', 'fAnzeige'];
+    assert(ok(...F), `Fans ohne Karte: Nachfrage neben der Zuschauerzahl, je Heimspiel erfasst, Saison und Serie in den Kennzahlen (${werte(F)})`);
+    const R = ['rRechnung', 'rGedeckelt', 'rText', 'rKeine', 'rLeer', 'rUpgrade', 'rAnzeigen', 'rBlock'];
+    assert(ok(...R), `Rendite je Ausbau: nur echte Fans ohne Karte, Unterhalt abgezogen, bei Projekten, Erweiterungen und Blöcken (${werte(R)})`);
+    const C = ['cEintrag', 'cOhneKurse', 'cMax', 'cAnzeige'];
+    assert(ok(...C), `Bau-Chronik: fertige Projekte mit Saison, Spieltag und Kosten, ohne Weiterbildungen, höchstens 60 (${werte(C)})`);
+    const K = ['kBau', 'kEvent'];
+    assert(ok(...K), `Kalender: Bauende und Stadion-Event am richtigen Spieltag (${werte(K)})`);
+    const T = ['tAus', 'tAn', 'tUngueltig', 'tFrueh', 'tElastisch', 'tErloes', 'tSim', 'tAnpfiff', 'tBox', 'tKlick'];
+    assert(ok(...T), `Topspiel-Zuschlag: nur Derby/Top 3, Preis-Nachfrage wirkt, Erlös und Saisonbilanz, Auswahl im Stadion (${werte(T)})`);
+    assert(ok('altStand', 'handy'), `Alte Spielstände ohne neue Felder, kein Überlauf auf 320 px (${werte(['altStand', 'handy'])})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 module.exports = {
     testSpielvorbereitung,
     testVertragsWerkzeuge,
@@ -3030,6 +3187,7 @@ module.exports = {
     testRunde32Uebersicht,
     testRunde32Statistik,
     testRunde33Funktionen,
+    testStadionWerkzeuge,
     testAdminWerkzeuge,
     testPrivatlebenPlus,
     testOeffentlicheFassung,
