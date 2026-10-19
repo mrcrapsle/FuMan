@@ -767,3 +767,12 @@ Vor dem Bau gegen die vorhandenen Knöpfe in `js/admin.js` und `js/private-life.
 - **Jetzt** (`js/campus-staff.js`): `getCampusStufenErloes(key, stufe)` = Baukosten der Stufe in der aktuellen Liga / 170 + 1.300 € Unterhalt je Heimspiel, auf 100 € gerundet; `getCampusHeimspielErloes(key)` summiert die gebauten Stufen. Jede Stufe bezahlt sich damit nach Unterhalt in rund 10 Saisons, in jeder Liga. Wie bei den Stadion-Anlagen wächst der Erlös mit der Liga (Auf- und Abstieg ändern ihn). Stufe 1 je Heimspiel: Bundesliga Fan-Kneipe 10.100 €, Catering 9.500 €, Parkhaus 39.500 €, Hotel 133.700 €; 3. Liga 3.800 / 3.600 / 12.000 / 38.400 €; 6. Liga 2.800 € (Mindestbaukosten), Hotel 5.900 €. Die übrigen Wirkungen (Ultra-Stimmung, Parkhaus-Auslastung) bleiben.
 - `getCampusUpgradeCost()` nutzt jetzt `getCampusStufenKosten()`. Die Abrechnung (`applyMatchdayFinances()`) und die Nebeneinnahmen-Übersicht im Stadion lesen dieselbe Funktion; die Campus-Karten zeigen den aktuellen Erlös und den der nächsten Stufe, die festen Beträge in den Beschreibungen sind entfallen.
 - Tests: `testStadionWerkzeuge` prüft jede Stufe in Liga 0, 2 und 5 (9,5 bis 10,5 Saisons), die Summe, den Journal-Posten und die Anzeige; `testStadiumAusbau2` rechnet die Nebeneinnahmen mit der neuen Funktion.
+
+## Board-Karte „Postfach sollte auch löschen von Mails möglich sein“ (Feature-Branch, noch nicht gemergt)
+- **Vorher:** Löschen ging nur einzeln über ein kleines ✕, das wie die anderen Symbole aussah, ohne Rückweg. Nach wenigen Spieltagen liegen 20 bis 30 Mails im Postfach.
+- **Jetzt** (`js/inbox.js`, neuer Bereich `#inbox-aktionen` unter „Alle als gelesen markieren“):
+  - Einzeln über 🗑️ („Löschen“) an jeder Mail.
+  - „🗑️ Gelesene löschen (N)“ löscht die gelesenen Mails der gerade gewählten Ansicht, ★ Wichtig bleibt; im Archiv heißt der Knopf „Archiv leeren (N)“. Beide fragen über `requireConfirm()` nach.
+  - „☑ Auswählen“: Mails antippen (Karte als Checkbox, kompakt ohne Text), „Alle/Keine auswählen“, „Ausgewählte löschen (N)“ mit Rückfrage, „Fertig“. Ein Filterwechsel leert die Auswahl.
+  - „↩ Rückgängig“ für den letzten Löschvorgang setzt die Mails an ihre alte Stelle im Postfach oder Archiv zurück. Nur im Speicher; das Laden eines Spielstands verwirft Rückgängig und Auswahl (`applyLoadedStateInner()`).
+- Test: `testPostfachLoeschen`.

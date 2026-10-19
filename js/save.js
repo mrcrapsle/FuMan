@@ -179,6 +179,8 @@
         if (p.secondTeamLineup) secondTeamLineup = p.secondTeamLineup;
         if (p.inboxMessages) inboxMessages = p.inboxMessages;
         if (p.inboxArchive) inboxArchive = p.inboxArchive;
+        // „Rückgängig“ und Auswahl im Postfach gehören zum vorherigen Stand
+        if (typeof inboxLetztesLoeschen !== 'undefined') { inboxLetztesLoeschen = null; inboxAuswahlModus = false; inboxAuswahl.clear(); }
         if (p.rivalryRecord) rivalryRecord = p.rivalryRecord;
         if (p.crestHistory) crestHistory = p.crestHistory;
         if (p.loanedPlayers) loanedPlayers = p.loanedPlayers;

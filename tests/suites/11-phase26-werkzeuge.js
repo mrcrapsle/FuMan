@@ -3203,6 +3203,115 @@ async function testStadionWerkzeuge(browser) {
     await page.close();
 }
 
+async function testPostfachLoeschen(browser) {
+    console.log('\n[Board] Postfach: einzeln, gelesene, Archiv und Auswahl löschen, Rückgängig');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.evaluate(R32_HILFEN);
+    const r = await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false;
+        const out = {};
+        const toasts = []; const toastAlt = showToast; showToast = (t) => { toasts.push(t); };
+        inboxMessages = []; inboxArchive = [];
+        ['transfer', 'transfer', 'finanzen', 'finanzen', 'scouting', 'transfer', 'vertrag', 'finanzen'].forEach((k, i) => addInboxMessage(k, 'Test ' + i, 'Text ' + i, null));
+        inboxMessages.forEach((m, i) => { m.read = i % 2 === 0; });
+        const wichtig = inboxMessages.find(m => m.read); wichtig.important = true;
+        showScreen('screen-inbox'); setInboxFilter('alle');
+        const aktionen = () => [...document.querySelectorAll('#inbox-aktionen button')];
+        const knopf = t => aktionen().find(b => b.textContent.includes(t));
+        const ids = () => inboxMessages.map(m => m.id).join(',');
+
+        // --- Einzeln löschen und rückgängig ---
+        const vorher = ids();
+        const dritte = inboxMessages[2];
+        deleteInboxMessage(dritte.id);
+        out.eWeg = !inboxMessages.includes(dritte) && inboxMessages.length === 7 && document.getElementById('inbox-rueckgaengig').textContent.includes('1 Mail gelöscht');
+        out.eKnopf = !!document.querySelector('#inbox-messages-list button[title="Löschen"]') && !document.querySelector('#inbox-messages-list button[title="Endgültig löschen"]');
+        knopf('Rückgängig').click();
+        out.eZurueck = ids() === vorher && !document.getElementById('inbox-rueckgaengig') && toasts.some(t => t.includes('Mail wiederhergestellt'));
+        inboxLoeschenRueckgaengig();
+        out.eNichts = toasts.some(t => t.includes('nichts wiederherzustellen'));
+
+        // --- Gelesene löschen (ohne ★, nur die Ansicht) ---
+        setInboxFilter('transfer');
+        const gelTransfer = inboxMessages.filter(m => m.category === 'transfer' && m.read && !m.important);
+        let k = knopf('Gelesene löschen');
+        out.gZahl = k.textContent.includes(`(${gelTransfer.length})`);
+        k.click();
+        out.gRueckfrage = inboxMessages.length === 8 && k.textContent.includes('löschen?');
+        k.click();
+        out.gWeg = gelTransfer.every(m => !inboxMessages.includes(m)) && inboxMessages.length === 8 - gelTransfer.length && inboxMessages.some(m => m.category === 'finanzen' && m.read);
+        setInboxFilter('alle');
+        const rest = inboxMessages.filter(m => m.read && !m.important).length;
+        k = knopf('Gelesene löschen'); k.click(); k.click();
+        out.gWichtigBleibt = inboxMessages.includes(wichtig) && inboxMessages.every(m => !m.read || m.important) && rest > 0;
+        knopf('Gelesene löschen').click();
+        out.gLeer = toasts.some(t => t.includes('Keine gelesenen Mails'));
+
+        // --- Archiv leeren ---
+        const a1 = inboxMessages.find(m => !m.important), a2 = inboxMessages.filter(m => !m.important)[1];
+        archiveInboxMessage(a1.id); archiveInboxMessage(a2.id);
+        setInboxFilter('archiv');
+        k = knopf('Archiv leeren');
+        out.aZahl = !!k && k.textContent.includes('(2)');
+        k.click(); k.click();
+        out.aLeer = inboxArchive.length === 0 && document.getElementById('inbox-messages-list').textContent.includes('Archiv ist leer');
+        knopf('Rückgängig').click();
+        out.aZurueck = inboxArchive.length === 2 && inboxArchive.includes(a1) && inboxArchive.includes(a2);
+
+        // --- Auswahl ---
+        setInboxFilter('alle');
+        knopf('Auswählen').click();
+        knopf('Ausgewählte löschen').click();
+        out.sLeer = toasts.some(t => t.includes('Tippe zuerst'));
+        const karten = () => [...document.querySelectorAll('#inbox-messages-list [role="checkbox"]')];
+        const ziel = [inboxMessages[0], inboxMessages[1]];
+        karten()[0].click(); karten()[1].click();
+        out.sGewaehlt = karten()[0].getAttribute('aria-checked') === 'true' && karten()[1].getAttribute('aria-checked') === 'true' && karten()[2].getAttribute('aria-checked') === 'false'
+            && knopf('Ausgewählte löschen').textContent.includes('(2)');
+        out.sNichtGelesen = inboxMessages.filter(m => !m.read).length >= 1 && ziel.every(m => inboxMessages.includes(m));
+        knopf('Alle auswählen').click();
+        out.sAlle = karten().every(c => c.getAttribute('aria-checked') === 'true') && !!knopf('Keine auswählen');
+        knopf('Keine auswählen').click();
+        out.sKeine = karten().every(c => c.getAttribute('aria-checked') === 'false');
+        karten()[0].click(); karten()[1].click();
+        setInboxFilter('finanzen');
+        out.sFilterLeert = knopf('Ausgewählte löschen').textContent.includes('(0)');
+        setInboxFilter('alle');
+        karten()[0].click(); karten()[1].click();
+        const n = inboxMessages.length;
+        k = knopf('Ausgewählte löschen'); k.click(); k.click();
+        out.sWeg = inboxMessages.length === n - 2 && ziel.every(m => !inboxMessages.includes(m)) && !document.querySelector('#inbox-messages-list [role="checkbox"]') && !!knopf('Auswählen');
+        out.sZurueck = (knopf('Rückgängig').click(), inboxMessages.length === n && inboxMessages[0] === ziel[0] && inboxMessages[1] === ziel[1]);
+
+        // --- Laden verwirft Rückgängig und Auswahl ---
+        const stand = JSON.parse(JSON.stringify(buildSaveState()));
+        deleteInboxMessage(inboxMessages[0].id);
+        setInboxAuswahlModus(true); toggleInboxAuswahl(inboxMessages[0].id);
+        out.laden = loadSaveSafely(stand, { label: 'Test', backup: false, silent: true }) !== false && inboxLetztesLoeschen === null && !inboxAuswahlModus && inboxAuswahl.size === 0 && inboxMessages.length === n;
+        showScreen('screen-inbox');
+
+        // --- Handy 320 px ---
+        knopf('Auswählen').click();
+        out.handy = ueberlauf() && woerter('#inbox-aktionen button, #inbox-rueckgaengig').length === 0;
+        setInboxAuswahlModus(false);
+        out.handy = out.handy && ueberlauf();
+        showToast = toastAlt;
+        return out;
+    });
+    const ok = (...ks) => ks.every(k => r[k] === true);
+    const werte = ks => JSON.stringify(ks.map(k => r[k]));
+    const E = ['eWeg', 'eKnopf', 'eZurueck', 'eNichts'];
+    assert(ok(...E), `Einzeln löschen mit 🗑️ und Rückgängig an alter Stelle (${werte(E)})`);
+    const G = ['gZahl', 'gRueckfrage', 'gWeg', 'gWichtigBleibt', 'gLeer', 'aZahl', 'aLeer', 'aZurueck'];
+    assert(ok(...G), `Gelesene löschen (nur Ansicht, ★ bleibt, mit Rückfrage) und Archiv leeren mit Rückgängig (${werte(G)})`);
+    const A = ['sLeer', 'sGewaehlt', 'sNichtGelesen', 'sAlle', 'sKeine', 'sFilterLeert', 'sWeg', 'sZurueck'];
+    assert(ok(...A), `Auswahl: antippen, alle/keine, Filterwechsel leert, Ausgewählte löschen, Rückgängig (${werte(A)})`);
+    assert(ok('laden', 'handy'), `Laden verwirft Rückgängig, kein Überlauf auf 320 px (${werte(['laden', 'handy'])})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 module.exports = {
     testSpielvorbereitung,
     testVertragsWerkzeuge,
@@ -3221,6 +3330,7 @@ module.exports = {
     testRunde32Statistik,
     testRunde33Funktionen,
     testStadionWerkzeuge,
+    testPostfachLoeschen,
     testAdminWerkzeuge,
     testPrivatlebenPlus,
     testOeffentlicheFassung,
