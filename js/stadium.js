@@ -431,15 +431,17 @@
     // Medienimage, Sponsoreneinnahmen, Heimvorteil, oder eine feste Einnahme pro Heimspiel) -
     // dadurch hat jede einzelne, frei kaufbare Anlage eine echte, spürbare Auswirkung statt
     // nur eine Zahl im Stadionwert zu sein.
+    // Einnahme-Anlagen (category 'income'): incomeBase so gewählt, dass sich die Anlage in rund
+    // 10 Saisons bezahlt macht (Kosten / 170). Vorher waren es 75 bis 100 Saisons (Phase 26.22).
     const STADIUM_UPGRADES = {
         sicherheitstechnik: { name: '📹 Kameras & Zutrittskontrolle', cost: 5400000, category: 'security', desc: 'Senkt das Ausschreitungsrisiko dauerhaft um 15%.' },
         evakuierung: { name: '🚨 Notfall-Evakuierungssystem', cost: 6600000, category: 'security', desc: 'Senkt das Ausschreitungsrisiko dauerhaft um 15% und verbessert die Sicherheitsbilanz.' },
         medizinzentrum: { name: '🏥 Medizinisches Behandlungszentrum', cost: 9600000, category: 'injury', desc: 'Senkt das Verletzungsrisiko bei Heimspielen um 12%.' },
         rasenpflege_hightech: { name: '🌱 High-Tech-Rasenpflegesystem', cost: 7800000, category: 'injury', desc: 'Senkt das Verletzungsrisiko bei Heimspielen um 12%.' },
         klimaanlage: { name: '❄️ Klimaanlage & Belüftung', cost: 11400000, category: 'weather', desc: 'Neutralisiert die negativen Effekte von Hitze-Wetter komplett.' },
-        vip_lounges: { name: '🥂 VIP-Business-Lounges', cost: 13500000, category: 'income', incomeBase: 8000, desc: 'Feste Zusatzeinnahmen pro Heimspiel.' },
-        public_viewing: { name: '📽️ Public-Viewing-Zone', cost: 4500000, category: 'income', incomeBase: 3500, desc: 'Feste Zusatzeinnahmen pro Heimspiel.' },
-        ladestationen: { name: '🔌 E-Auto-Ladestationen', cost: 2700000, category: 'income', incomeBase: 1800, desc: 'Feste Zusatzeinnahmen pro Heimspiel.' },
+        vip_lounges: { name: '🥂 VIP-Business-Lounges', cost: 13500000, category: 'income', incomeBase: 79000, desc: 'Feste Zusatzeinnahmen pro Heimspiel.' },
+        public_viewing: { name: '📽️ Public-Viewing-Zone', cost: 4500000, category: 'income', incomeBase: 26500, desc: 'Feste Zusatzeinnahmen pro Heimspiel.' },
+        ladestationen: { name: '🔌 E-Auto-Ladestationen', cost: 2700000, category: 'income', incomeBase: 16000, desc: 'Feste Zusatzeinnahmen pro Heimspiel.' },
         flagship_store: { name: '🛍️ Merchandising-Flagship-Store', cost: 10800000, category: 'merch', desc: 'Erhöht den Fanartikel-Absatz im Stadion dauerhaft um 15%.' },
         stadion_app: { name: '📱 Digitale Stadion-App', cost: 4800000, category: 'merch', desc: 'Erhöht den Fanartikel-Absatz im Stadion dauerhaft um 10%.' },
         wlan: { name: '📶 Öffentliches WLAN', cost: 3300000, category: 'comfort', desc: 'Erhöht den Zuschauerkomfort dauerhaft.' },
@@ -528,7 +530,7 @@
             ${bar('📈 Sponsoreneinnahmen-Bonus', getStadiumSponsorBonus(), 0.24)}
             ${bar('⚡ Heimvorteil (Teamstärke-Punkte)', getStadiumHomeAdvantageBonus(), 1.2, 'pt')}
             ${bar('🎤 Medienimage pro Heimspiel', getStadiumMediaImageMatchdayBonus(), 0.8, 'pt')}
-            <div class="box" style="font-size:var(--fs-small); margin-top:4px;">💰 Feste Zusatzeinnahmen pro Heimspiel: <strong style="color:var(--gold);">${formatVal(getStadiumMatchdayIncome())}</strong> (max. ${formatVal(Math.round((8000+3500+1800)*scale))})</div>
+            <div class="box" style="font-size:var(--fs-small); margin-top:4px;">💰 Feste Zusatzeinnahmen pro Heimspiel: <strong style="color:var(--gold);">${formatVal(getStadiumMatchdayIncome())}</strong> (max. ${formatVal(Object.values(STADIUM_UPGRADES).filter(u => u.category === 'income').reduce((sum, u) => sum + Math.round(u.incomeBase * scale), 0))})</div>
             <div class="box" style="font-size:var(--fs-small);">☀️/❄️ Wetterschutz: <strong>${stadium.upgrades?.klimaanlage ? 'Hitze neutralisiert ✓' : 'Klimaanlage fehlt noch'}</strong></div>
         `;
     }
@@ -1153,7 +1155,10 @@
     function calculateMatchAttendanceDetails(boostMult = 1, noise = 1, preisMult = 1) {
         let kapazitaet = stadium.total || 16000;
         let faktor = getAttendanceFactor(preisMult) * boostMult;
-        let ausKapazitaet = Math.round(kapazitaet * Math.min(1.0, faktor) * noise);
+        // Die Tagesstreuung wirkt auf die Nachfrage, erst danach greift die Kapazität (Phase 26.22):
+        // vorher blieben bei Andrang weit über der Kapazität an einem "schwachen" Tag bis zu 8 %
+        // der Plätze leer.
+        let ausKapazitaet = Math.round(kapazitaet * Math.min(1.0, faktor * noise));
         // Bewusst KEIN Dauerkarten-Sockel an dieser Stelle: das würde die sorgfältig
         // kalibrierten Effekte von Fan-Zufriedenheit, Ligadeckel und Derby-Bonus verzerren
         // bzw. teilweise wirkungslos machen, sobald der Sockel sie überschreitet. Dauerkarten

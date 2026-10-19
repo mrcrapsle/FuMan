@@ -3026,6 +3026,8 @@ async function testStadionWerkzeuge(browser) {
         game.fans = 100; game.money = 1e9; game.seasonTicketHolders = 0;
         game.ticketPrices.steh = getMarketTicketPrice('steh'); game.ticketPrices.sitz = getMarketTicketPrice('sitz'); game.ticketPrices.vip = getMarketTicketPrice('vip');
 
+        // Wetter neutral: Sturm oder Hitze senken die Nachfrage, das Stadion wäre dann nicht voll
+        currentWeather = { ...currentWeather, attendanceMult: 1 };
         // --- Nachfrage: gleiche Zuschauerzahl wie bisher, dazu die Fans ohne Karte ---
         const normal = calculateMatchAttendanceDetails(1, 1, 1);
         out.nNormal = normal.zuschauer === calculateMatchAttendance(1, 1) && normal.nachfrage === normal.zuschauer && normal.ohneKarte === 0 && normal.kapazitaet === stadium.total;
@@ -3104,10 +3106,11 @@ async function testStadionWerkzeuge(browser) {
 
         // --- Topspiel-Zuschlag ---
         const tab = sortedTable(game.leagueLevel).filter(t => t.name !== game.clubName);
-        const spitze = tab[0].name;
+        // Spitzenteam ohne Derby, damit der Grund "Platz …" lautet (die Tabelle ist zufällig)
+        const spitze = (tab.slice(0, 3).find(t => !isDerbyOpponent(t.name)) || tab[0]).name;
         const unten = tab.slice().reverse().find(t => !isDerbyOpponent(t.name)).name;
         game.topspielZuschlag = 0;
-        out.tAus = getTopspielPreisMult(spitze) === 1 && getTopspielGrund(spitze).startsWith('Platz ');
+        out.tAus = getTopspielPreisMult(spitze) === 1 && (getTopspielGrund(spitze).startsWith('Platz ') || isDerbyOpponent(spitze));
         setTopspielZuschlag(20);
         out.tAn = game.topspielZuschlag === 20 && getTopspielPreisMult(spitze) === 1.2 && getTopspielPreisMult(unten) === 1 && toasts.some(t => t.includes('+20 %'));
         setTopspielZuschlag(15);
@@ -3137,6 +3140,21 @@ async function testStadionWerkzeuge(browser) {
         tb.querySelectorAll('button')[0].click();
         out.tKlick = game.topspielZuschlag === 0;
 
+        // --- Regeln Phase 26.22: Streuung vor der Kapazität, Einnahme-Anlagen in rund 10 Saisons ---
+        const ligaAlt = game.leagueLevel;
+        game.leagueLevel = 0; game.fans = 100;
+        out.gVoll = calculateMatchAttendance(1.5, 0.92) === stadium.total && calculateMatchAttendance(1.5, 1.08) === stadium.total;
+        game.fans = 60;
+        out.gStreuung = calculateMatchAttendance(1, 0.92) < calculateMatchAttendance(1, 1.08) && calculateMatchAttendance(1, 1.08) < stadium.total;
+        game.leagueLevel = ligaAlt; game.fans = 100;
+        out.gRendite = ['vip_lounges', 'public_viewing', 'ladestationen'].every(k => { const j = getUpgradeRendite(k).jahre; return j > 9.5 && j < 10.5; });
+        stadium.upgrades.public_viewing = true;
+        currentMatch = null;
+        applyMatchdayFinances(true, true, false, false, 'Testgegner', '1:0');
+        const anlagen = game.financeLedger[game.financeLedger.length - 1].einnahmen.find(e => e.label === '🏟️ Stadion-Anlagen');
+        out.gJournal = !!anlagen && anlagen.amount === getStadiumMatchdayIncome() && anlagen.amount === Math.round(26500 * getStadiumCostScale());
+        delete stadium.upgrades.public_viewing;
+
         // --- Alte Spielstände ---
         delete game.bauChronik; delete game.topspielZuschlag;
         game.attendanceHistory = [{ season: game.season, matchday: 1, opponent: 'Alt', attendance: 900, capacity: 15000 }];
@@ -3165,6 +3183,8 @@ async function testStadionWerkzeuge(browser) {
     assert(ok(...K), `Kalender: Bauende und Stadion-Event am richtigen Spieltag (${werte(K)})`);
     const T = ['tAus', 'tAn', 'tUngueltig', 'tFrueh', 'tElastisch', 'tErloes', 'tSim', 'tAnpfiff', 'tBox', 'tKlick'];
     assert(ok(...T), `Topspiel-Zuschlag: nur Derby/Top 3, Preis-Nachfrage wirkt, Erlös und Saisonbilanz, Auswahl im Stadion (${werte(T)})`);
+    const G = ['gVoll', 'gStreuung', 'gRendite', 'gJournal'];
+    assert(ok(...G), `Regeln 26.22: volles Stadion trotz schwachem Tag, Streuung bei geringer Nachfrage, Einnahme-Anlagen in rund 10 Saisons, Stadion-Anlagen im Buchungsjournal (${werte(G)})`);
     assert(ok('altStand', 'handy'), `Alte Spielstände ohne neue Felder, kein Überlauf auf 320 px (${werte(['altStand', 'handy'])})`);
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
     await page.close();

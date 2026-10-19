@@ -638,8 +638,10 @@
         // Stadion-Erweiterungen: feste Zusatzeinnahmen der "income"-Kategorie
         // (VIP-Lounges, Public-Viewing, Ladestationen) sowie ein leichter Medienimage-Schub
         // durch Lichtshow/Pressezentrum bei jedem Heimspiel.
+        let stadionAnlagenIncome = 0;
         if (isHomeMatch && typeof getStadiumMatchdayIncome === 'function') {
-            game.money += getStadiumMatchdayIncome();
+            stadionAnlagenIncome = getStadiumMatchdayIncome();
+            game.money += stadionAnlagenIncome;
             game.managerMediaImage = Math.min(100, (game.managerMediaImage ?? 50) + getStadiumMediaImageMatchdayBonus());
         }
         if (isHomeMatch && typeof tickMediaRightsPayment === 'function') {
@@ -772,7 +774,8 @@
             { label: '🏟️ Namensrechte', amount: isHomeMatch ? (stadium.namingRightsIncome || 0) : 0 },
             { label: '👔 Ärmelsponsor', amount: game.sleeveSponsor?.income || 0 },
             { label: '🎫 Mitgliedsbeiträge', amount: membershipIncome },
-            { label: '🏘️ Campus-Anlagen', amount: campusFacilityIncome }
+            { label: '🏘️ Campus-Anlagen', amount: campusFacilityIncome },
+            { label: '🏟️ Stadion-Anlagen', amount: stadionAnlagenIncome }
         ].filter(e => e.amount > 0);
         let ausgaben = [
             { label: '⚽ Spielergehälter', amount: wages },
