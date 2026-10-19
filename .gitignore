@@ -7,3 +7,7 @@ anstoss-fm13-v*.zip
 dist/anstoss-fm13-standalone.html
 dist/anstoss-fm13-oeffentlich.html
 dist/anstoss-fm13-dev.min.html
+
+# Grundfassung mit Updates: Test- und Ansichtsfassungen der Ausbaustufen
+dist/anstoss-fm13-grundspiel.html
+dist/anstoss-fm13-stufe-*.html

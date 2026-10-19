@@ -149,6 +149,7 @@
         });
     }
     function acceptMediaRightsOffer(offerId) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('medienrechte')) return;
         let offer = mediaRights.dealOffers.find(o => o.id === offerId);
         if (!offer) return;
         if (mediaRights.currentDeal) { showToast('Es läuft bereits ein Medienvertrag - erst kündigen oder auslaufen lassen!', 'error'); return; }
@@ -168,6 +169,7 @@
         updateUI();
     }
     function cancelMediaRightsDeal() {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('medienrechte')) return;
         if (!mediaRights.currentDeal) return;
         playSound('click');
         mediaRights.currentDeal = null;
@@ -180,6 +182,7 @@
     // Sender bekanntlich höher vergüten.
     function tickMediaRightsPayment(isDerbyMatch, isCupMatch) {
         if (!mediaRights.currentDeal) return 0;
+        if (typeof istFreigeschaltet === 'function' && !istFreigeschaltet('medienrechte')) return 0;   // gesperrt: der Vertrag ruht
         let payout = mediaRights.currentDeal.base;
         let bigMatchBonus = 0;
         if (isDerbyMatch || isCupMatch) {
@@ -229,6 +232,7 @@
                     </div>
                 `).join('');
         }
+        if (typeof freischaltVorschau === 'function') box.innerHTML = freischaltVorschau('medienrechte', box.innerHTML);
         let tvHistBox = document.getElementById('tv-income-history-box');
         if (tvHistBox) {
             tvHistBox.innerHTML = `

@@ -20,7 +20,7 @@ fail() {
 echo "== Prüfung vor dem Merge =="
 
 python3 build.py > "$LOGDIR/build.log" 2>&1 || fail "Build" "$LOGDIR/build.log"
-ok "Build ($(grep -o '[0-9]* Zeichen' "$LOGDIR/build.log" | paste -sd ' ' - | sed 's/ Zeichen / und /'))"
+ok "Build ($(grep -o '[0-9]* Zeichen' "$LOGDIR/build.log" | sed 's/ Zeichen//' | paste -sd '/' -) Zeichen: Entwickler/öffentlich/Grundspiel)"
 
 [ -d node_modules ] || npm install --silent > "$LOGDIR/npm.log" 2>&1 || fail "npm install" "$LOGDIR/npm.log"
 npm run --silent lint > "$LOGDIR/lint.log" 2>&1 || { grep -E ' error |✖' "$LOGDIR/lint.log" > "$LOGDIR/lint-errors.log"; fail "Lint" "$LOGDIR/lint-errors.log"; }

@@ -3325,14 +3325,14 @@ async function testFreischaltungen(browser) {
         const out = {};
         const toasts = []; const toastAlt = showToast; showToast = (t) => { toasts.push(t); };
         const alleZu = () => FREISCHALT_BEREICHE.every(b => !istFreigeschaltet(b.key));
-        out.start = alleZu() && JSON.stringify(game.freischaltungen) === '{}' && FREISCHALT_BEREICHE.length === 9;
+        out.start = alleZu() && JSON.stringify(game.freischaltungen) === '{}' && FREISCHALT_BEREICHE.length === 12;
 
         // --- Gesperrte Bildschirme und Schlösser ---
         showScreen('screen-second-team');
         const zweite = document.getElementById('screen-second-team');
         const karte = zweite.querySelector(':scope > .freischalt-karte');
         out.bKarte = zweite.classList.contains('freischalt-gesperrt') && !!karte && karte.textContent.includes('Zweite Mannschaft') && karte.textContent.includes('50 Ligasiege')
-            && getComputedStyle(document.getElementById('st-not-founded-box')).display === 'none';
+            && !!document.getElementById('st-not-founded-box').closest('.freischalt-vorschau[inert]');
         showScreen('screen-stocks');
         out.bHub = document.getElementById('screen-stocks').classList.contains('freischalt-gesperrt') && document.getElementById('hubtab-btn-screen-stocks').classList.contains('freischalt-zu')
             && !document.getElementById('hubtab-btn-screen-sponsors').classList.contains('freischalt-zu');
@@ -3368,11 +3368,12 @@ async function testFreischaltungen(browser) {
         managerRPG.level = 3;
         const xpVorher = managerRPG.xp + managerRPG.level * 1e6;
         const neu = pruefeFreischaltungen();
-        out.fNeu = neu.map(b => b.key).join(',') === 'wetten,zweite,frauen' && istFreigeschaltet('zweite') && !istFreigeschaltet('immobilien')
-            && game.freischaltungen.zweite.season === game.season && inboxMessages.filter(m => m.title.startsWith('🔓 Freigeschaltet')).length === 3
+        out.fNeu = neu.map(b => b.key).join(',') === 'wetten,namensrechte,zweite,frauen' && istFreigeschaltet('zweite') && !istFreigeschaltet('immobilien')
+            && game.freischaltungen.zweite.season === game.season && inboxMessages.filter(m => m.title.startsWith('🔓 Freigeschaltet')).length === 4
             && managerRPG.xp + managerRPG.level * 1e6 > xpVorher;
         showScreen('screen-second-team');
-        out.fOffen = !zweite.classList.contains('freischalt-gesperrt') && !zweite.querySelector(':scope > .freischalt-karte') && !menuZweite.classList.contains('freischalt-zu');
+        out.fOffen = !zweite.classList.contains('freischalt-gesperrt') && !zweite.querySelector(':scope > .freischalt-karte') && !menuZweite.classList.contains('freischalt-zu')
+            && !zweite.querySelector(':scope > .freischalt-vorschau') && document.getElementById('st-not-founded-box').parentElement === zweite;
         out.fBleibt = (game.managerCareer = [], pruefeFreischaltungen().length === 0 && istFreigeschaltet('zweite'));
         // Abhängigkeit: Industrie braucht die Holding, beides im selben Durchgang
         game.managerCareer = [3, 2, 1, 0].map(level => ({ season: 0, club: game.clubName, level, rank: 1, won: 80, drawn: 0, lost: 0, goalsFor: 250 }));
@@ -3404,7 +3405,7 @@ async function testFreischaltungen(browser) {
         showScreen('screen-manager-tree');
         const box = document.getElementById('freischaltungen-box').textContent;
         const offenZahl = FREISCHALT_BEREICHE.filter(b => istFreigeschaltet(b.key)).length;
-        out.uebersicht = box.includes(`${offenZahl} von 9 offen`) && box.includes('Offen seit Saison 3, Spieltag 7') && box.includes('Deutscher Meister') && box.includes('Champions Cup gewonnen');
+        out.uebersicht = box.includes(`${offenZahl} von 12 offen`) && box.includes('Offen seit Saison 3, Spieltag 7') && box.includes('Deutscher Meister') && box.includes('Champions Cup gewonnen');
 
         // --- Entwickler-Schalter ---
         adminFreischaltungenUmschalten();
@@ -3423,7 +3424,7 @@ async function testFreischaltungen(browser) {
     const ok = (...ks) => ks.every(k => r[k] === true);
     const werte = ks => JSON.stringify(ks.map(k => r[k]));
     const B = ['start', 'bKarte', 'bHub', 'bMenue', 'bRaster'];
-    assert(ok(...B), `Start: alle 9 Bereiche gesperrt, Bildschirme zeigen die Bedingungen, Schlösser an Reitern und Menü (${werte(B)})`);
+    assert(ok(...B), `Start: alle 12 Bereiche gesperrt, graue Vorschau mit Bedingungen, Schlösser an Reitern und Menü (${werte(B)})`);
     const A = ['aNichts', 'aToasts', 'rStadion', 'rMiete', 'rFabrik'];
     assert(ok(...A), `Gesperrt: Aktionen sagen, was fehlt; Stadion-Anlagen, Mieten und Fabriken ruhen (${werte(A)})`);
     const F = ['fNeu', 'fOffen', 'fBleibt', 'fKette', 'rWieder', 'fSpieltag'];
@@ -3433,6 +3434,168 @@ async function testFreischaltungen(browser) {
     assert(ok('handyUebersicht', 'handyKarte'), `Kein Überlauf auf 320 px (${werte(['handyUebersicht', 'handyKarte'])})`);
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
     await page.close();
+}
+
+async function testFreischaltungenPlus(browser) {
+    console.log('\n[Board] Freischaltungen 2: Namensrechte, Medienrechte, Luxus, NEU, nächste Freischaltung, Tempo, Erfolge');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.evaluate(R32_HILFEN);
+    const r = await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false;
+        window.anstossTestAllesFrei = false;
+        const out = {};
+        const toasts = []; const toastAlt = showToast; showToast = (t) => { toasts.push(t); };
+        game.money = 1e9;
+
+        // --- Namensrechte: gesperrt, Zahlung ruht, graue Vorschau ---
+        sellNamingRights();
+        stadium.namingRightsSponsor = 'Testbank'; stadium.namingRightsIncome = 1000;
+        showScreen('screen-stadium');
+        out.nGesperrt = toasts.some(t => t.includes('Stadion-Namensrechte ist noch gesperrt')) && getNamingRightsMatchIncome() === 0
+            && !!document.querySelector('#stadium-naming-box .freischalt-vorschau[inert]') && !!document.querySelector('#stadium-naming-box .freischalt-karte');
+        // --- Medienrechte: Vertrag ruht ---
+        mediaRights.currentDeal = { name: 'Test-TV', tierKey: 'regional', label: 'Regional-TV', base: 5000, remainingMatchdays: 5, prestige: 1 };
+        out.mRuht = tickMediaRightsPayment(false, false) === 0 && mediaRights.currentDeal.remainingMatchdays === 5;
+        renderMediaRightsView();
+        out.mVorschau = !!document.querySelector('#media-rights-box .freischalt-vorschau[inert]');
+        cancelMediaRightsDeal();
+        out.mKuendigen = !!mediaRights.currentDeal && toasts.some(t => t.includes('Medienrechte-Partner ist noch gesperrt'));
+        // --- Luxus: teure Käufe, große Nebenjobs, Reitpferd ---
+        privateLife.money = 1e7; privateLife.prestige = 100; privateLife.assets = ['weingut', 'ferienhaus']; privateLife.haustier = 'none';
+        buyLifestyleAsset('villa'); buyLifestyleAsset('apartment');
+        const privatGeld = privateLife.money;
+        doPrestigeActivity('tv'); setHaustier('pferd');
+        out.lSperre = !privateLife.assets.includes('villa') && privateLife.assets.includes('apartment') && privateLife.money === privatGeld && privateLife.haustier !== 'pferd';
+        out.lErtrag = getBesitzErtraege() === 300;
+        showScreen('screen-private');
+        // ab 250.000 €: Villa, Yacht, Penthouse, Jet (das Weingut gehört schon); Nebenjobs ab 30 Prestige: TV, Workshop, Biografie
+        out.lAnzeige = document.querySelectorAll('#priv-assets-list .freischalt-knopf-zu').length === 4 && document.querySelectorAll('#priv-income-activities .freischalt-knopf-zu').length === 3;
+
+        // --- Nächste Freischaltung auf dem Dashboard ---
+        showScreen('screen-dashboard');
+        const dash = document.getElementById('dashboard-freischaltung-box');
+        out.dZeigt = dash.style.display === 'block' && dash.textContent.includes('Nächste Freischaltung') && dash.textContent.includes('Es fehlt');
+
+        // --- Tempo ---
+        game.freischaltTempo = 'schnell';
+        const w = getFreischaltBedingungen(getFreischaltBereich('wetten')), z = getFreischaltBedingungen(getFreischaltBereich('zweite')), ind = getFreischaltBedingungen(getFreischaltBereich('industrie'));
+        out.tSchnell = w[0].wert === 34 && w[1].wert === 2 && z[0].wert === 4 && ind[1].art === 'dmeister' && ind[2].art === 'europa' && ind[1].wert === 1;
+        game.freischaltTempo = 'offen';
+        out.tOffen = FREISCHALT_BEREICHE.every(b => istFreigeschaltet(b.key)) && pruefeFreischaltungen().length === 0 && JSON.stringify(game.freischaltungen) === '{}';
+        game.freischaltTempo = 'normal';
+
+        // --- Freischalten: NEU, Erfolge, Saisonrückblick, Wirkung ---
+        game.managerCareer = [3, 2, 1, 0].map(level => ({ season: 0, club: game.clubName, level, rank: 1, won: 80, drawn: 0, lost: 0, goalsFor: 250 }));
+        managerRPG.level = 6; game.trophies = ['Champions Cup Sieger (Saison 1)', 'DFB-Pokalsieger (Saison 1)'];
+        pruefeFreischaltungen();
+        showScreen('screen-dashboard');
+        const menuZweite = [...document.querySelectorAll('.nav-btn')].find(b => (b.getAttribute('onclick') || '').includes("showScreen('screen-second-team')"));
+        const menuFinanzen = [...document.querySelectorAll('.nav-btn')].find(b => (b.getAttribute('onclick') || '').includes("showScreen('screen-finances')"));
+        out.neuDa = game.freischaltNeu.zweite === true && menuZweite.classList.contains('freischalt-neu') && menuFinanzen.classList.contains('freischalt-neu')
+            && document.getElementById('hubtab-btn-screen-stocks').classList.contains('freischalt-neu');
+        showScreen('screen-second-team');
+        out.neuWeg = !game.freischaltNeu.zweite && !menuZweite.classList.contains('freischalt-neu');
+        showScreen('screen-dashboard');
+        out.dWeg = document.getElementById('dashboard-freischaltung-box').style.display === 'none';
+        checkAchievements();
+        out.erfolge = ACHIEVEMENT_DEFINITIONS.filter(a => a.id.startsWith('frei-')).length === 12 && game.achievements.some(a => a.id === 'frei-zweite') && game.achievements.some(a => a.id === 'frei-industrie');
+        out.saison = getFreischaltungenDerSaison(game.season).length === 12 && /pruefeFreischaltungen[\s\S]*game\.season\+\+/.test(concludeSeasonAndAdvance.toString());
+        out.wirkung = getNamingRightsMatchIncome() === 1000 && getBesitzErtraege() === 2800 && typeof tickMediaRightsPayment(false, false) === 'object';
+        buyLifestyleAsset('villa');
+        out.luxusOffen = privateLife.assets.includes('villa');
+
+        // --- Spielstart: Tempo wählen ---
+        startNewGame();
+        out.startKnoepfe = document.querySelectorAll('#new-game-tempo-btns button').length === 3;
+        selectedNewGameTempo = 'schnell';
+        showToast = toastAlt;
+        return out;
+    });
+    // Neues Spiel mit Tempo „Schnell“ (lädt die Seite neu)
+    await page.evaluate(() => { const btn = document.getElementById('btn-confirm-new-game'); confirmNewGameWithSettings(btn); confirmNewGameWithSettings(btn); });
+    await page.waitForFunction(() => typeof game !== 'undefined' && !document.getElementById('app-loading') && game.matchday === 1, null, { timeout: 20000 }).catch(() => null);
+    r.startTempo = await page.evaluate(() => game.freischaltTempo === 'schnell').catch(() => false);
+    const ok = (...ks) => ks.every(k => r[k] === true);
+    const werte = ks => JSON.stringify(ks.map(k => r[k]));
+    const N = ['nGesperrt', 'mRuht', 'mVorschau', 'mKuendigen', 'lSperre', 'lErtrag', 'lAnzeige'];
+    assert(ok(...N), `Namensrechte, Medienrechte und Luxus: gesperrt mit Vorschau, Zahlungen und Erträge ruhen (${werte(N)})`);
+    const D = ['dZeigt', 'tSchnell', 'tOffen', 'neuDa', 'neuWeg', 'dWeg', 'erfolge', 'saison', 'wirkung', 'luxusOffen', 'startKnoepfe', 'startTempo'];
+    assert(ok(...D), `Dashboard-Hinweis, Tempo, NEU bis zum Besuch, Erfolge, Saisonrückblick, Wirkung nach dem Freischalten, Tempo beim Spielstart (${werte(D)})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
+async function testGrundfassung(browser) {
+    console.log('\n[Board] Grundfassung mit großen Updates: Stufe 0 ohne Pakete, Fenster „Neu in diesem Update“');
+    const page = await browser.newPage();
+    const consoleErrors = [];
+    page.on('pageerror', e => consoleErrors.push(e.message));
+    page.on('dialog', d => d.accept());
+    const fixtures = fs.readdirSync(path.resolve(__dirname, '../fixtures/saves')).filter(f => f.endsWith('.json')).sort();
+    const altStand = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../fixtures/saves', fixtures[fixtures.length - 1]), 'utf8'));
+    await page.goto('file://' + path.resolve(__dirname, '../../dist/anstoss-fm13-grundspiel.html'));
+    await page.waitForFunction(() => !document.getElementById('app-loading'), null, { timeout: 20000 }).catch(() => null);
+    const r = await page.evaluate((alt) => {
+        closeTutorial(); game.sackPending = false;
+        const out = {};
+        const toasts = []; const toastAlt = showToast; showToast = (t) => { toasts.push(t); };
+        const paketBildschirme = ['screen-second-team', 'screen-women', 'screen-stocks', 'screen-betting', 'screen-real-estate', 'screen-holding', 'screen-industry', 'screen-raw-materials'];
+        out.ohnePakete = SPIEL_PAKETE.length === 0 && paketBildschirme.every(id => !document.getElementById(id) && !document.getElementById('hubtab-btn-' + id))
+            && !document.getElementById('top-holding-money') && !document.getElementById('stadium-upgrades-grid') && !document.getElementById('capacity-projects-grid')
+            && ['placeBet', 'buyStockShares', 'buyOrUpgradeRealEstate', 'buyFactory', 'transferClubToHolding', 'foundWomenTeam'].every(f => typeof window[f] === 'undefined');
+        out.menue = !document.querySelector(".nav-btn[onclick*=\"showScreen('screen-industry')\"]") && !!document.querySelector(".nav-btn[onclick*=\"showScreen('screen-merch')\"]")
+            && !document.querySelector(".nav-btn[onclick*=\"showScreen('screen-second-team')\"]");
+        showScreen('screen-dashboard');
+        showScreen('screen-stocks');
+        out.hinweis = toasts.some(t => t.includes('kommt mit dem Update „Finanzwelt“')) && document.getElementById('screen-dashboard').style.display === 'block';
+        out.selbsttest = runStructuralSelfTest(true).length === 0;
+        const fehlt = new Set();
+        document.querySelectorAll('[onclick]').forEach(el => { const m = el.getAttribute('onclick').match(/^\s*(?:event\.stopPropagation\(\);\s*)?([A-Za-z_$][\w$]*)\s*\(/); if (m && typeof window[m[1]] !== 'function') fehlt.add(m[1]); });
+        out.onclick = fehlt.size === 0 || [...fehlt].join(',');
+        try { simulateMatchdays(34 - game.matchday + 1); game.sackPending = false; concludeSeasonAndAdvance(); out.saison = game.season === 2; } catch (e) { out.saison = e.message; }
+        const ziele = [...new Set([...document.querySelectorAll('[onclick*="showScreen("]')].map(el => (el.getAttribute('onclick').match(/showScreen\('([^']+)'\)/) || [])[1]).filter(Boolean))];
+        const kaputt = [];
+        ziele.forEach(id => { try { showScreen(id); } catch (e) { kaputt.push(id); } });
+        out.bildschirme = ziele.length > 20 && (kaputt.length === 0 || kaputt.join(','));
+        showScreen('screen-manager-tree');
+        out.freischaltungen = document.getElementById('freischaltungen-box').textContent.includes('von 3 offen') && getAusgelieferteBereiche().map(b => b.key).join(',') === 'namensrechte,medienrechte,luxus';
+        try { out.alterStand = loadSaveSafely(alt, { label: 'Test', backup: false, silent: true }) !== false; simulateMatchdays(2); } catch (e) { out.alterStand = e.message; }
+        showToast = toastAlt;
+        return out;
+    }, altStand);
+    // Volle Fassung: ein Stand aus der Grundfassung bekommt das Fenster „Neu in diesem Update“
+    const dev = await browser.newPage();
+    dev.on('pageerror', e => consoleErrors.push(e.message));
+    // ohne den Autosave der Grundfassung von eben (der brächte das Fenster schon beim Start)
+    await dev.addInitScript(() => { try { localStorage.removeItem('anstoss_fm13_last_save'); } catch (e) { /* egal */ } });
+    await dev.goto(GAME_PATH);
+    await dev.waitForFunction(() => !document.getElementById('app-loading'), null, { timeout: 20000 }).catch(() => null);
+    const u = await dev.evaluate(() => {
+        closeTutorial(); game.sackPending = false;
+        const out = {};
+        const stand = JSON.parse(JSON.stringify(buildSaveState()));
+        stand.game.bekanntePakete = [];
+        loadSaveSafely(stand, { label: 'Test', backup: false, silent: true });
+        const msg = inboxMessages.filter(m => m.title === '🎁 Neu in diesem Update');
+        out.update = msg.length === 1 && ['Vereinswachstum', 'Finanzwelt', 'Konzern'].every(n => msg[0].body.includes(n)) && game.bekanntePakete.length === 3;
+        const nochmal = JSON.parse(JSON.stringify(buildSaveState()));
+        loadSaveSafely(nochmal, { label: 'Test', backup: false, silent: true });
+        const ohneFeld = JSON.parse(JSON.stringify(buildSaveState()));
+        delete ohneFeld.game.bekanntePakete;
+        loadSaveSafely(ohneFeld, { label: 'Test', backup: false, silent: true });
+        out.einmal = inboxMessages.filter(m => m.title === '🎁 Neu in diesem Update').length === 1 && game.bekanntePakete.length === 3;
+        return out;
+    });
+    const ok = (o, ...ks) => ks.every(k => o[k] === true);
+    const werte = (o, ks) => JSON.stringify(ks.map(k => o[k]));
+    const G = ['ohnePakete', 'menue', 'hinweis', 'selbsttest', 'onclick'];
+    assert(ok(r, ...G), `Grundspiel: Pakete fehlen ganz (Bildschirme, Reiter, Menü, Funktionen), Hinweis auf das Update, Selbsttest und onclick sauber (${werte(r, G)})`);
+    const S = ['saison', 'bildschirme', 'freischaltungen', 'alterStand'];
+    assert(ok(r, ...S), `Grundspiel: Saison mit Abschluss, alle Bildschirme, Freischaltungen nur der Grundbereiche, alter Spielstand (${werte(r, S)})`);
+    assert(ok(u, 'update', 'einmal'), `Update: Fenster „Neu in diesem Update“ genau einmal, alte Stände ohne Liste still (${werte(u, ['update', 'einmal'])})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close(); await dev.close();
 }
 
 module.exports = {
@@ -3455,6 +3618,8 @@ module.exports = {
     testStadionWerkzeuge,
     testPostfachLoeschen,
     testFreischaltungen,
+    testFreischaltungenPlus,
+    testGrundfassung,
     testAdminWerkzeuge,
     testPrivatlebenPlus,
     testOeffentlicheFassung,

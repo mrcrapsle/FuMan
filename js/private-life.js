@@ -23,6 +23,11 @@
         if (assetsList) {
             assetsList.innerHTML = LIFESTYLE_ASSETS.map(a => {
                 let owned = privateLife.assets.includes(a.id);
+                let zu = !owned && typeof istLuxusBesitz === 'function' && istLuxusBesitz(a) && !istFreigeschaltet('luxus');
+                if (zu) return `<div class="player-row freischalt-zeile-zu">
+                    <span><strong>${a.name}</strong> <span style="color:var(--text-muted); font-size:var(--fs-caption);">(${a.category})</span><br><span style="font-size:var(--fs-caption); color:var(--text-muted);">${a.desc} · ${formatVal(a.cost)}</span></span>
+                    <button onclick="buyLifestyleAsset('${a.id}')" class="btn-secondary freischalt-knopf-zu" style="width:auto;">🔒 Luxus gesperrt</button>
+                </div>`;
                 return `<div class="player-row">
                     <span><strong>${a.name}</strong> <span style="color:var(--text-muted); font-size:var(--fs-caption);">(${a.category})</span><br><span style="font-size:var(--fs-caption); color:var(--text-muted);">${a.desc} · +${a.prestige} Prestige, -${a.stressRelief}% Stress${a.income ? `, +${formatVal(a.income)} je Spieltag` : ''}</span></span>
                     ${owned ? `<button onclick="sellLifestyleAsset('${a.id}')" class="btn-secondary" style="width:auto;">Verkaufen [+${formatVal(Math.round(a.cost * PRIVAT_VERKAUF_ANTEIL))}]</button>` : `<button onclick="buyLifestyleAsset('${a.id}')" class="btn-action" style="width:auto;">Kaufen [${formatVal(a.cost)}]</button>`}
@@ -36,11 +41,12 @@
             incomeList.innerHTML = PRESTIGE_INCOME_ACTIVITIES.map(a => {
                 let cdLeft = Math.max(0, (privateLife.lastActivity[a.id] || -999) + a.cooldown - game.matchday);
                 let locked = privateLife.prestige < a.minPrestige;
-                let disabled = locked || cdLeft > 0;
-                let label = locked ? `Benötigt ${a.minPrestige} Prestige` : (cdLeft > 0 ? `Noch ${cdLeft} SpT gesperrt` : `+${formatVal(a.income)} (-${a.stressCost}% Stress)`);
-                return `<div class="player-row">
+                let luxusZu = typeof istLuxusNebenjob === 'function' && istLuxusNebenjob(a) && !istFreigeschaltet('luxus');
+                let disabled = !luxusZu && (locked || cdLeft > 0);
+                let label = luxusZu ? '🔒 Luxus gesperrt' : (locked ? `Benötigt ${a.minPrestige} Prestige` : (cdLeft > 0 ? `Noch ${cdLeft} SpT gesperrt` : `+${formatVal(a.income)} (-${a.stressCost}% Stress)`));
+                return `<div class="player-row${luxusZu ? ' freischalt-zeile-zu' : ''}">
                     <span><strong>${a.name}</strong><br><span style="font-size:var(--fs-caption); color:var(--text-muted);">${a.desc}</span></span>
-                    <button onclick="doPrestigeActivity('${a.id}')" class="btn-action" style="width:auto; font-size:var(--fs-caption);" ${disabled ? 'disabled' : ''}>${label}</button>
+                    <button onclick="doPrestigeActivity('${a.id}')" class="${luxusZu ? 'btn-secondary freischalt-knopf-zu' : 'btn-action'}" style="width:auto; font-size:var(--fs-caption);" ${disabled ? 'disabled' : ''}>${label}</button>
                 </div>`;
             }).join('');
         }
@@ -103,6 +109,7 @@
     function buyLifestyleAsset(assetId) {
         let asset = LIFESTYLE_ASSETS.find(a => a.id === assetId);
         if (!asset || privateLife.assets.includes(assetId)) return;
+        if (typeof istLuxusBesitz === 'function' && istLuxusBesitz(asset) && bereichGesperrt('luxus')) return;
         if (privateLife.money < asset.cost) { showToast('Nicht genug Privatvermögen!', 'error'); return; }
         playSound('whistle');
         privateLife.money -= asset.cost;
@@ -117,6 +124,7 @@
     function doPrestigeActivity(activityId) {
         let activity = PRESTIGE_INCOME_ACTIVITIES.find(a => a.id === activityId);
         if (!activity) return;
+        if (typeof istLuxusNebenjob === 'function' && istLuxusNebenjob(activity) && bereichGesperrt('luxus')) return;
         if (privateLife.prestige < activity.minPrestige) { showToast(`Benötigt mindestens ${activity.minPrestige} Prestige!`, 'error'); return; }
         let cdLeft = Math.max(0, (privateLife.lastActivity[activityId] || -999) + activity.cooldown - game.matchday);
         if (cdLeft > 0) { showToast(`Noch ${cdLeft} Spieltage gesperrt!`, 'error'); return; }

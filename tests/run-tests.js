@@ -119,6 +119,8 @@ async function main() {
         S.testStadionWerkzeuge,
         S.testPostfachLoeschen,
         S.testFreischaltungen,
+        S.testFreischaltungenPlus,
+        S.testGrundfassung,
         S.testAdminWerkzeuge,
         S.testPrivatlebenPlus,
         S.testOeffentlicheFassung,

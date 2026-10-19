@@ -219,9 +219,16 @@
         if (typeof pruefeFreischaltungen === 'function') {
             const neuEingefuehrt = !(p.game && p.game.freischaltungen);
             if (neuEingefuehrt) game.freischaltungen = {};
+            if (!(p.game && p.game.freischaltNeu)) game.freischaltNeu = {};
+            if (!(p.game && p.game.freischaltTempo)) game.freischaltTempo = 'normal';
             const offen = pruefeFreischaltungen(true);
             if (neuEingefuehrt) meldeFreischaltungenEingefuehrt(offen);
             aktualisiereFreischaltSperren();
+        }
+        // Grundfassung mit Updates (js/pakete.js): Fenster für neu dazugekommene Bereiche
+        if (typeof pruefeNeuePakete === 'function') {
+            if (!(p.game && Array.isArray(p.game.bekanntePakete))) game.bekanntePakete = null;
+            pruefeNeuePakete();
         }
         restoreGetters();
     }
@@ -573,6 +580,7 @@
     }
     function renderNewGameSetupOptions() {
         if (typeof renderNewGameScenarioOptions === 'function') renderNewGameScenarioOptions();
+        if (typeof renderNewGameTempoOptions === 'function') renderNewGameTempoOptions();
         let cityBox = document.getElementById('new-game-city-box');
         if (cityBox && typeof getHomeCityOptions === 'function') {
             let info = HOME_CITIES[selectedNewGameCity];
@@ -612,6 +620,7 @@
         safeSessionSet('anstoss_fm13_newgame_money', String(szenario ? 150000 : selectedNewGameMoney));
         if (szenario) safeSessionSet('anstoss_fm13_newgame_scenario', szenario);
         safeSessionSet('anstoss_fm13_newgame_city', selectedNewGameCity);
+        if (typeof selectedNewGameTempo !== 'undefined') safeSessionSet('anstoss_fm13_newgame_freischaltung', selectedNewGameTempo);
         location.reload();
     }
 

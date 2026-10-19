@@ -1,6 +1,7 @@
 
     function renderDashboardView() {
         if (typeof renderSaisonZiele === 'function') renderSaisonZiele();
+        if (typeof renderNaechsteFreischaltung === 'function') renderNaechsteFreischaltung();
         if (typeof renderRestprogramm === 'function') renderRestprogramm();
         if (typeof renderFavoritenLeiste === 'function') renderFavoritenLeiste();
         document.getElementById('dash-mday').innerText = Math.min(34, game.matchday);

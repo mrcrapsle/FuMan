@@ -100,6 +100,8 @@
         selbsttestLaeuft = true; // Bildschirm-Besuche des Selbsttests zählen nicht als Nutzer-Besuche
         allTestIds.forEach(id => {
             let el = document.getElementById(id);
+            if (!el && typeof getPaketVonBildschirm === 'function' && getPaketVonBildschirm(id) && !paketVorhanden(getPaketVonBildschirm(id))) return;
+            if (!el && id === 'screen-admin' && typeof renderAdminView !== 'function') return;   // öffentliche Fassung ohne Admin
             if (!el) { problems.push(`${id}: Element existiert nicht im DOM!`); return; }
             try { showScreen(id); } catch (e) { problems.push(`${id}: showScreen() wirft einen Fehler: ${e.message}`); return; }
             let computedDisplay = getComputedStyle(el).display;
@@ -216,8 +218,10 @@
     function showScreen(screenId) {
         // Öffentliche Fassung ohne Admin-Menü (build.py): ein Ziel aus Favoriten oder „Zuletzt geöffnet“ eines
         // Entwickler-Geräts gibt es dort nicht - dann bleibt der aktuelle Bildschirm stehen statt einer leeren Seite.
-        if (!document.getElementById((typeof SUB_SCREEN_TO_HUB !== 'undefined' && SUB_SCREEN_TO_HUB[screenId]) || screenId)) {
-            showToast('Diesen Bereich gibt es in dieser Fassung nicht.', 'error');
+        if (!document.getElementById((typeof SUB_SCREEN_TO_HUB !== 'undefined' && SUB_SCREEN_TO_HUB[screenId]) || screenId) || !document.getElementById(screenId)) {
+            // Bereich aus einem Update, das diese Fassung noch nicht enthält (js/pakete.js)
+            const paket = typeof getPaketVonBildschirm === 'function' ? getPaketVonBildschirm(screenId) : null;
+            showToast(paket && !paketVorhanden(paket) ? `Dieser Bereich kommt mit dem Update „${SPIEL_PAKET_INFO[paket].name}“.` : 'Diesen Bereich gibt es in dieser Fassung nicht.', 'error');
             return;
         }
         if (screenId === 'screen-admin' && typeof adminZugangFrei === 'function' && !adminZugangFrei()) { openAdminPin(); return; }
@@ -264,7 +268,7 @@
         if (screenId === 'screen-calendar') renderCalendarView();
         if (screenId === 'screen-inbox') renderInboxView();
         if (screenId === 'screen-squad') { renderSquadView(); render3DPitch(); }
-        if (screenId === 'screen-second-team') renderSecondTeamView();
+        if (screenId === 'screen-second-team' && document.getElementById('screen-second-team')) renderSecondTeamView();
         if (screenId === 'screen-women' && typeof renderWomenTeamView === 'function') renderWomenTeamView();
         if (screenId === 'screen-manager-tree') { renderCareerSummary(); renderCrestEditor(); applyClubCrest(); }
         if (screenId === 'screen-campus') renderCrestMuseumGallery();
@@ -272,14 +276,14 @@
         if (screenId === 'screen-europe') renderEuropeView();
         if (screenId === 'screen-manager-tree') renderManagerRPGView();
         if (screenId === 'screen-scouting-global') renderGlobalScoutingView();
-        if (screenId === 'screen-industry') renderIndustryView();
-        if (screenId === 'screen-raw-materials') renderRawMaterialsView();
-        if (screenId === 'screen-holding') renderHoldingView();
+        if (screenId === 'screen-industry' && typeof renderIndustryView === 'function') renderIndustryView();
+        if (screenId === 'screen-raw-materials' && typeof renderRawMaterialsView === 'function') renderRawMaterialsView();
+        if (screenId === 'screen-holding' && typeof renderHoldingView === 'function') renderHoldingView();
         if (screenId === 'screen-merch') renderMerchView();
         if (screenId === 'screen-finances') renderFinancesView();
-        if (screenId === 'screen-stocks') renderStocksView();
+        if (screenId === 'screen-stocks' && typeof renderStocksView === 'function') renderStocksView();
         if (screenId === 'screen-sponsors') renderSponsorsView();
-        if (screenId === 'screen-betting') renderBettingView();
+        if (screenId === 'screen-betting' && typeof renderBettingView === 'function') renderBettingView();
         if (screenId === 'screen-finances') renderFinancesView();
         if (screenId === 'screen-stadium') renderStadiumView();
         if (screenId === 'screen-campus') renderCampusView();
@@ -301,14 +305,15 @@
         if (screenId === 'screen-design' && typeof renderDesignSettings === 'function') renderDesignSettings();
         if (screenId === 'screen-manager-tree' && typeof renderFreischaltUebersicht === 'function') renderFreischaltUebersicht();
         // Gesperrte Bereiche (js/freischaltungen.js) zeigen nach dem Zeichnen nur ihre Bedingungen.
-        if (typeof aktualisiereFreischaltSperren === 'function') aktualisiereFreischaltSperren();
+        if (typeof aktualisiereFreischaltSperren === 'function') aktualisiereFreischaltSperren(screenId);
         updateUI();
     }
 
     function updateUI() {
         if (typeof updateOneHandFab === 'function') updateOneHandFab();
         document.getElementById('top-money').innerText = formatVal(game.money);
-        document.getElementById('top-holding-money').innerText = formatVal(holdingCompany.money);
+        let holdingAnzeige = document.getElementById('top-holding-money');   // fehlt in Fassungen ohne das Paket Konzern (js/pakete.js)
+        if (holdingAnzeige) holdingAnzeige.innerText = formatVal(holdingCompany.money);
         document.getElementById('top-fans').innerText = game.fans + '%';
         document.getElementById('top-board').innerText = game.boardSat + '%';
         document.getElementById('top-matchday').innerText = Math.min(34, game.matchday) + ' / 34';

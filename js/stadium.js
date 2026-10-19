@@ -115,7 +115,12 @@
     // Ein Sponsor kann das Stadion umbenennen: einmalige große Ablöse plus laufende
     // Einnahmen pro Heimspiel (siehe applyMatchdayFinances() in match.js für die Auszahlung).
     const NAMING_RIGHTS_SPONSORS = ["Energie Nord AG", "MediaPark Digital", "Volksbank Arena-Partner", "TechFlow Systems", "Landmarkt-Gruppe"];
+    // Gesperrte Namensrechte (js/freischaltungen.js): die Zahlung je Heimspiel ruht.
+    function getNamingRightsMatchIncome() {
+        return (typeof istFreigeschaltet !== 'function' || istFreigeschaltet('namensrechte')) ? (stadium.namingRightsIncome || 0) : 0;
+    }
     function sellNamingRights() {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('namensrechte')) return;
         if (stadium.namingRightsSponsor) { showToast('Namensrechte sind bereits vergeben - erst auflösen, um neu zu verkaufen.', 'error'); return; }
         playSound('goal');
         let sponsor = NAMING_RIGHTS_SPONSORS[Math.floor(Math.random() * NAMING_RIGHTS_SPONSORS.length)];
@@ -133,6 +138,7 @@
         updateUI();
     }
     function resolveNamingCeremony(style) {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('namensrechte')) return;
         let ev = game.pendingNamingCeremony;
         if (!ev) return;
         if (style === 'traditional') {
@@ -152,6 +158,7 @@
         updateUI();
     }
     function cancelNamingRights() {
+        if (typeof bereichGesperrt === 'function' && bereichGesperrt('namensrechte')) return;
         stadium.name = null;
         stadium.namingRightsSponsor = null;
         stadium.namingRightsIncome = 0;
@@ -544,7 +551,6 @@
         let grid = document.getElementById('stadium-upgrades-grid');
         if (!grid) return;
         if (!stadium.upgrades) stadium.upgrades = {};
-        if (!stadionAnlagenInBetrieb()) { grid.innerHTML = `<div style="grid-column:1 / -1;">${renderFreischaltKarte('stadionanlagen')}</div>`; return; }
         grid.innerHTML = Object.keys(STADIUM_UPGRADES).map(key => {
             let u = STADIUM_UPGRADES[key];
             let cost = getStadiumUpgradeCost(key);
@@ -562,6 +568,7 @@
                 ${buttonHtml}
             </div>`;
         }).join('');
+        if (typeof freischaltVorschau === 'function') grid.innerHTML = freischaltVorschau('stadionanlagen', grid.innerHTML, 'display:grid; grid-template-columns:1fr 1fr; gap:4px;');
     }
 
     function renderSpecialInstallsGrid() {
@@ -772,7 +779,6 @@
     function renderCapacityProjectsGrid() {
         let grid = document.getElementById('capacity-projects-grid');
         if (!grid) return;
-        if (typeof istFreigeschaltet === 'function' && !istFreigeschaltet('grossprojekte')) { grid.innerHTML = renderFreischaltKarte('grossprojekte'); return; }
         let scale = getStadiumCostScale();
         grid.innerHTML = Object.keys(STADIUM_CAPACITY_PROJECTS).map(key => {
             let p = STADIUM_CAPACITY_PROJECTS[key];
@@ -790,6 +796,7 @@
                 <button onclick="buyCapacityProject('${key}')" class="btn-secondary" ${disabled ? 'disabled' : ''}>${queued ? '🏗️ Im Bau...' : `Beauftragen [${formatVal(cost)}]`}</button>
             </div>`;
         }).join('');
+        if (typeof freischaltVorschau === 'function') grid.innerHTML = freischaltVorschau('grossprojekte', grid.innerHTML);
     }
 
     // ==========================================
@@ -886,9 +893,10 @@
         }
         let nameBox = document.getElementById('stadium-naming-box');
         if (nameBox) {
-            nameBox.innerHTML = stadium.namingRightsSponsor
+            let nameHtml = stadium.namingRightsSponsor
                 ? `<div class="box">Aktueller Name: <strong style="color:var(--accent);">${stadium.name}</strong> (Sponsor: ${stadium.namingRightsSponsor})<br>Laufende Einnahmen: +${formatVal(stadium.namingRightsIncome)}/Heimspiel</div><button onclick="cancelNamingRights()" class="btn-secondary" style="margin-top:4px;">Namensrechte auflösen</button>`
                 : `<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Kein Namensgeber - verkaufe die Namensrechte für eine große Einmalzahlung plus laufende Einnahmen.</div><button onclick="sellNamingRights()" class="btn-primary" style="margin-top:4px;">🏟️ Namensrechte verkaufen</button>`;
+            nameBox.innerHTML = typeof freischaltVorschau === 'function' ? freischaltVorschau('namensrechte', nameHtml) : nameHtml;
         }
         for (let key in stadium.blocks) {
             let el = document.getElementById('cap-' + key);

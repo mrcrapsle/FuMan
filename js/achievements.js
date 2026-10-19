@@ -20,7 +20,12 @@
         { id: 'legend', icon: '👑', label: 'Vereinslegende', desc: 'Legenden-Status durch Vereinstreue erreicht', condition: () => game.legendStatus === true },
         { id: 'second-team', icon: '🥈', label: 'Doppelt aufgestellt', desc: 'Zweite Mannschaft gegründet', condition: () => game.secondTeam?.isActive === true },
         { id: 'youth-academy', icon: '🎓', label: 'Talentschmiede', desc: 'Jugendakademie auf Stufe 3 ausgebaut', condition: () => (game.youthAcademyLvl || 0) >= 3 },
-        { id: 'survived-sacking', icon: '🚪', label: 'Comeback-Manager', desc: 'Die erste Entlassung überstanden und weitergemacht', condition: () => (game.timesSacked || 0) >= 1 }
+        { id: 'survived-sacking', icon: '🚪', label: 'Comeback-Manager', desc: 'Die erste Entlassung überstanden und weitergemacht', condition: () => (game.timesSacked || 0) >= 1 },
+        // Je freigespielter Bereich ein Erfolg (js/freischaltungen.js); das Tempo „Alles offen“ zählt nicht.
+        ...(typeof getAusgelieferteBereiche === 'function' ? getAusgelieferteBereiche() : []).map(b => ({
+            id: 'frei-' + b.key, icon: b.icon, label: `${b.name} freigespielt`, desc: `Bereich „${b.name}“ über die Laufbahn freigeschaltet`,
+            condition: () => !!(game.freischaltungen && game.freischaltungen[b.key])
+        }))
     ];
     function checkAchievements() {
         if (!game.achievements) game.achievements = [];

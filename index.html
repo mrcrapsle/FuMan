@@ -594,10 +594,12 @@
                 <span data-i18n="header_konto">Vereins-Konto</span>
                 <strong id="top-money">150.000 €</strong>
             </div>
+            <!-- PAKET-START:konzern -->
             <div class="kpi-chip">
                 <span data-i18n="header_holding">Holding-Konto</span>
                 <strong id="top-holding-money" style="color:var(--industry);">50.000 €</strong>
             </div>
+            <!-- PAKET-ENDE:konzern -->
             <div class="kpi-chip">
                 <span data-i18n="header_mgr_level">Manager-Level</span>
                 <strong id="top-mgr-lvl" style="color:var(--gold);">Lvl 1 (0 XP)</strong>
@@ -633,8 +635,10 @@
 
             <div class="nav-category" data-i18n="nav_category_team">Team & Kader</div>
             <button class="nav-btn" onclick="showScreen('screen-squad')" data-i18n="nav_squad">⚽ Kader & 3D Taktik</button>
+            <!-- PAKET-START:vereinswachstum -->
             <button class="nav-btn" onclick="showScreen('screen-second-team')" data-i18n="nav_second_team">🥈 Zweite Mannschaft</button>
             <button class="nav-btn" onclick="showScreen('screen-women')" data-i18n="nav_women">👩 Frauenmannschaft</button>
+            <!-- PAKET-ENDE:vereinswachstum -->
             <button class="nav-btn" onclick="showScreen('screen-training')" data-i18n="nav_training">🏋️ Training & Förderung</button>
             <button class="nav-btn" onclick="showScreen('screen-transfer')" id="nav-btn-transfer"><span data-i18n="nav_transfer">🤝 Kaderplanung & Transfers</span> <span id="sidebar-offers-badge" class="badge-count" style="display:none; margin-left:auto;">0</span></button>
 
@@ -644,7 +648,12 @@
 
             <div class="nav-category" data-i18n="nav_category_finance">Finanzen & Wirtschaft</div>
             <button class="nav-btn" onclick="showScreen('screen-finances')" data-i18n="nav_finances">🏦 Finanzen & Kapitalmarkt</button>
+            <!-- PAKET-START:konzern -->
             <button class="nav-btn special-industry" onclick="showScreen('screen-industry')" data-i18n="nav_industry">🏭 Industrie & Merchandising</button>
+            <!-- PAKET-ENDE:konzern -->
+            <!-- OHNE-PAKET-START:konzern -->
+            <button class="nav-btn special-industry" onclick="showScreen('screen-merch')">🛍️ Fanshop & Merchandising</button>
+            <!-- OHNE-PAKET-ENDE:konzern -->
 
             <div class="nav-category" data-i18n="nav_category_competitions">Wettbewerbe</div>
             <button class="nav-btn special-europe" onclick="showScreen('screen-league')" data-i18n="nav_league">🏆 Wettbewerbe & Trophäen</button>
@@ -717,10 +726,13 @@
             </div>
 
             <!-- ZWEITE MANNSCHAFT -->
+            <!-- PAKET-START:vereinswachstum -->
             <div id="screen-women" style="display:none;">
                 <div id="women-team-box"></div>
             </div>
+            <!-- PAKET-ENDE:vereinswachstum -->
 
+            <!-- PAKET-START:vereinswachstum -->
             <div id="screen-second-team" style="display:none;">
                 <div id="st-not-founded-box" class="panel">
                     <div class="panel-header">🥈 Zweite Mannschaft gründen</div>
@@ -815,6 +827,7 @@
                     </div>
                 </div>
             </div>
+            <!-- PAKET-ENDE:vereinswachstum -->
 
             <!-- Vorstand: Hub mit zwei Reitern (25.49). Alles, was zum Vorstand gehört, liegt hier. -->
             <div id="screen-hub-vorstand" style="display:none;">
@@ -863,6 +876,7 @@
                     <div class="dashboard-hero-bowl-wrapper"></div>
                 </div>
                 <div id="member-assembly-box" class="panel" style="display:none; border-color:var(--gold); margin-bottom:10px;"></div>
+                <div id="dashboard-freischaltung-box" style="display:none;"></div>
                 <div id="favoriten-box"></div>
                 <div id="season-review-hint"></div>
                 <div id="manager-assistant-box" class="panel" style="margin-bottom:10px;"></div>
@@ -951,6 +965,8 @@
                         <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px; margin-bottom:8px;" id="new-game-level-btns"></div>
                         <div style="font-size:var(--fs-small); font-weight:800; margin-bottom:4px;">Startkapital wählen:</div>
                         <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; margin-bottom:8px;" id="new-game-money-btns"></div>
+                        <div style="font-size:var(--fs-small); font-weight:800; margin-bottom:4px;">Freischaltungen:</div>
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 7em), 1fr)); gap:4px; margin-bottom:8px;" id="new-game-tempo-btns"></div>
                         <button onclick="confirmNewGameWithSettings(this)" id="btn-confirm-new-game" data-confirming="false" class="btn-danger" style="width:100%;">✅ Neues Spiel mit diesen Einstellungen starten</button>
                     </div>
                     <div id="save-slot-1" class="box" style="margin-bottom:6px;"></div>
@@ -1050,11 +1066,14 @@
             <!-- 5. FABRIKEN & PRODUKTION -->
             <div id="screen-hub-wirtschaft" style="display:none;">
             <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.8em), 1fr)); gap:4px; margin-bottom:8px;">
+                <!-- PAKET-START:konzern -->
                 <button onclick="showScreen('screen-industry')" id="hubtab-btn-screen-industry" class="btn-action hubtab-btn tab-industry" style="font-size:var(--fs-small); padding:6px 4px;">Fabriken</button>
                 <button onclick="showScreen('screen-raw-materials')" id="hubtab-btn-screen-raw-materials" class="btn-secondary hubtab-btn tab-industry" style="font-size:var(--fs-small); padding:6px 4px;">Rohstoffe</button>
                 <button onclick="showScreen('screen-holding')" id="hubtab-btn-screen-holding" class="btn-secondary hubtab-btn tab-industry" style="font-size:var(--fs-small); padding:6px 4px;">Holding & B2B</button>
+                <!-- PAKET-ENDE:konzern -->
                 <button onclick="showScreen('screen-merch')" id="hubtab-btn-screen-merch" class="btn-secondary" style="font-size:var(--fs-small); padding:6px 4px;">Fanshop</button>
             </div>
+            <!-- PAKET-START:konzern -->
             <div id="screen-industry" style="display:none;">
                 <div class="panel">
                     <div class="panel-header" style="color:var(--industry);">
@@ -1077,6 +1096,8 @@
                     <div id="production-recipes-list" style="display:grid; grid-template-columns: 1fr 1fr; gap:6px;"></div>
                 </div>
             </div>
+            <!-- PAKET-ENDE:konzern -->
+            <!-- PAKET-START:konzern -->
             <div id="screen-raw-materials" style="display:none;">
                 <div class="panel">
                     <div class="panel-header" style="color:var(--industry);">
@@ -1095,6 +1116,8 @@
                     <div id="competitor-firms-box"></div>
                 </div>
             </div>
+            <!-- PAKET-ENDE:konzern -->
+            <!-- PAKET-START:konzern -->
             <div id="screen-holding" style="display:none;">
                 <div class="panel">
                     <div class="panel-header" style="color:var(--industry);">
@@ -1118,6 +1141,7 @@
                     <div id="b2b-contracts-list"></div>
                 </div>
             </div>
+            <!-- PAKET-ENDE:konzern -->
             <div id="screen-merch" style="display:none;">
                 <div class="panel">
                     <div class="panel-header">
@@ -1183,9 +1207,13 @@
             <div id="screen-hub-finanzen" style="display:none;">
             <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.8em), 1fr)); gap:4px; margin-bottom:8px;">
                 <button onclick="showScreen('screen-finances')" id="hubtab-btn-screen-finances" class="btn-action" style="font-size:var(--fs-small); padding:6px 4px;">GuV & Budget</button>
+                <!-- PAKET-START:finanzwelt -->
                 <button onclick="showScreen('screen-stocks')" id="hubtab-btn-screen-stocks" class="btn-secondary" style="font-size:var(--fs-small); padding:6px 4px;">Aktien</button>
+                <!-- PAKET-ENDE:finanzwelt -->
                 <button onclick="showScreen('screen-sponsors')" id="hubtab-btn-screen-sponsors" class="btn-secondary" style="font-size:var(--fs-small); padding:6px 4px;">Sponsoren</button>
+                <!-- PAKET-START:finanzwelt -->
                 <button onclick="showScreen('screen-betting')" id="hubtab-btn-screen-betting" class="btn-secondary" style="font-size:var(--fs-small); padding:6px 4px;">Wetten</button>
+                <!-- PAKET-ENDE:finanzwelt -->
             </div>
             <div id="screen-finances" style="display:none;">
                 <div class="hub-tab-bar" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8.8em), 1fr)); gap:4px; margin-bottom:8px;">
@@ -1314,6 +1342,7 @@
                     </div>
                 </div>
             </div>
+            <!-- PAKET-START:finanzwelt -->
             <div id="screen-betting" style="display:none;">
                 <div class="panel">
                     <div class="panel-header">🎰 Wettbüro (Quotenfuchs)</div>
@@ -1325,6 +1354,8 @@
                     <div id="bet-history-box"></div>
                 </div>
             </div>
+            <!-- PAKET-ENDE:finanzwelt -->
+            <!-- PAKET-START:finanzwelt -->
             <div id="screen-stocks" style="display:none;">
                 <div class="panel">
                     <div class="panel-header">
@@ -1365,6 +1396,7 @@
                     <div id="diversification-bonus-box" class="box" style="font-size:var(--fs-caption);"></div>
                 </div>
             </div>
+            <!-- PAKET-ENDE:finanzwelt -->
             <div id="screen-sponsors" style="display:none;">
                 <div class="panel">
                     <div class="panel-header">🤝 Hauptsponsor</div>
@@ -1715,7 +1747,9 @@
                 <button onclick="showScreen('screen-campus')" id="hubtab-btn-screen-campus" class="btn-secondary" style="font-size:var(--fs-small); padding:6px 4px;">Campus</button>
                 <button onclick="showScreen('screen-staff')" id="hubtab-btn-screen-staff" class="btn-secondary" style="font-size:var(--fs-small); padding:6px 4px;">Personal</button>
                 <button onclick="showScreen('screen-fans')" id="hubtab-btn-screen-fans" class="btn-secondary" style="font-size:var(--fs-small); padding:6px 4px;">Fans</button>
+                <!-- PAKET-START:finanzwelt -->
                 <button onclick="showScreen('screen-real-estate')" id="hubtab-btn-screen-real-estate" class="btn-secondary" style="font-size:var(--fs-small); padding:6px 4px;">Immobilien</button>
+                <!-- PAKET-ENDE:finanzwelt -->
             </div>
             <div id="screen-stadium" style="display:none;">
                 <div class="stadium-hero-metrics-row" id="stadium-hero-metrics-row"></div>
@@ -1834,11 +1868,13 @@
                         🏗️ Bauprojekte <span class="accordion-toggle">▼</span>
                     </div>
                     <div class="accordion-content">
+                        <!-- PAKET-START:vereinswachstum -->
                         <div class="panel">
                             <div class="panel-header" style="color:var(--gold);">🏗️ Namentliche Ausbauprojekte</div>
                             <div class="box" style="font-size:var(--fs-caption); margin-bottom:6px;">Zusätzlich zum block-für-block-Ausbau unten: konkrete Großprojekte mit eigenem Effekt auf Kapazität und Sitzplatz-Zusammensetzung.</div>
                             <div id="capacity-projects-grid"></div>
                         </div>
+                        <!-- PAKET-ENDE:vereinswachstum -->
                         <div class="panel">
                             <div class="panel-header" style="color:var(--gold);">🏗️ Laufende Bauprojekte</div>
                             <div id="stadium-construction-box"></div>
@@ -1847,11 +1883,13 @@
                             <div class="panel-header" style="color:var(--gold);">📜 Bau-Chronik</div>
                             <div id="stadium-chronik-box"></div>
                         </div>
+                        <!-- PAKET-START:vereinswachstum -->
                         <div class="panel">
                             <div class="panel-header" style="color:var(--gold);">🏗️ Stadion-Erweiterungen (20 neu)</div>
                             <div class="box" style="font-size:var(--fs-caption); margin-bottom:6px;">Zusätzliche Anlagen für Sicherheit, Komfort, Einnahmen und mehr - jede mit einer echten, spürbaren Wirkung.</div>
                             <div id="stadium-upgrades-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:4px;"></div>
                         </div>
+                        <!-- PAKET-ENDE:vereinswachstum -->
                     </div>
                 </div>
 
@@ -1873,10 +1911,12 @@
                             <div id="block-culture-box"></div>
                         </div>
                         <div id="crowd-favorite-monument-box" style="display:none;"></div>
+                        <!-- PAKET-START:vereinswachstum -->
                         <div class="panel">
                             <div class="panel-header" style="color:var(--gold);">📊 Gesamtübersicht der Stadion-Boni</div>
                             <div id="stadium-upgrades-summary"></div>
                         </div>
+                        <!-- PAKET-ENDE:vereinswachstum -->
                     </div>
                 </div>
             </div>
@@ -2006,6 +2046,7 @@
             </div>
 
             <!-- 15b. IMMOBILIEN -->
+            <!-- PAKET-START:finanzwelt -->
             <div id="screen-real-estate" style="display:none;">
                 <div class="panel">
                     <div class="panel-header" style="color:var(--gold);">🏢 Immobilien-Portfolio</div>
@@ -2016,6 +2057,7 @@
                 </div>
                 <div id="real-estate-list"></div>
             </div>
+            <!-- PAKET-ENDE:finanzwelt -->
             </div>
 
             <!-- 16. CAMPUS -->
@@ -2765,6 +2807,7 @@
 <script src="js/utils.js?v=2.1"></script>
 <script src="js/ui-cards.js?v=2.1"></script>
 <script src="js/i18n.js?v=2.1"></script>
+<script src="js/pakete.js?v=3.143"></script>
 <script src="js/state.js?v=2.1"></script>
 <script src="js/inbox.js?v=2.1"></script>
 <script src="js/entities.js?v=2.1"></script>
@@ -2981,6 +3024,10 @@
                 safeStorageRemove(sessionStorage, 'anstoss_fm13_newgame_leaguelevel');
                 safeStorageRemove(sessionStorage, 'anstoss_fm13_newgame_money');
                 if (chosenLevel !== null) game.leagueLevel = parseInt(chosenLevel);
+                // Freischalt-Tempo (js/freischaltungen.js)
+                let chosenTempo = safeStorageGet(sessionStorage, 'anstoss_fm13_newgame_freischaltung');
+                safeStorageRemove(sessionStorage, 'anstoss_fm13_newgame_freischaltung');
+                if (chosenTempo) game.freischaltTempo = chosenTempo;
                 // Startkapital und Stadiongroesse skalieren mit der gewaehlten Startliga
                 // (siehe getNewGameStartMoney()/scaleStadiumForLeague() in save.js).
                 // Eigene Buchungsbezeichnung: sonst stand das Startkapital als "Vereinsbüro"-

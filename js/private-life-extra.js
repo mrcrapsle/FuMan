@@ -155,6 +155,7 @@ function setHaustier(id) {
     ensurePrivatExtras();
     const h = PRIVAT_HAUSTIERE.find(x => x.id === id);
     if (!h || h.id === privateLife.haustier) { renderPrivateLifeView(); return false; }
+    if (h.id === 'pferd' && typeof bereichGesperrt === 'function' && bereichGesperrt('luxus')) { renderPrivateLifeView(); return false; }
     if (privateLife.money < h.kosten) { showToast(`Privatvermögen reicht nicht: ${formatVal(h.kosten)} nötig.`, 'error'); renderPrivateLifeView(); return false; }
     const alt = PRIVAT_HAUSTIERE.find(x => x.id === privateLife.haustier);
     privateLife.money -= h.kosten;
@@ -174,12 +175,14 @@ function processPrivatExtrasSpieltag() {
     const h = PRIVAT_HAUSTIERE.find(x => x.id === privateLife.haustier);
     if (h && h.id !== 'none') {
         privateLife.money -= h.unterhalt;
-        privateLife.stress = Math.max(0, privateLife.stress - h.stress);
+        // Gesperrter Luxus (js/freischaltungen.js): das Reitpferd kostet weiter, entspannt aber nicht.
+        if (h.id !== 'pferd' || typeof istFreigeschaltet !== 'function' || istFreigeschaltet('luxus')) privateLife.stress = Math.max(0, privateLife.stress - h.stress);
     }
 }
 
 function getBesitzErtraege() {
-    return LIFESTYLE_ASSETS.filter(a => a.income && privateLife.assets.includes(a.id)).reduce((t, a) => t + a.income, 0);
+    const luxusZu = typeof istFreigeschaltet === 'function' && !istFreigeschaltet('luxus');
+    return LIFESTYLE_ASSETS.filter(a => a.income && privateLife.assets.includes(a.id) && !(luxusZu && istLuxusBesitz(a))).reduce((t, a) => t + a.income, 0);
 }
 
 // ---------- Finanzübersicht je Spieltag ----------
@@ -264,7 +267,7 @@ function renderPrivateLifeExtras() {
     }
     const tierSel = document.getElementById('priv-haustier-select');
     if (tierSel) {
-        tierSel.innerHTML = PRIVAT_HAUSTIERE.map(h => `<option value="${h.id}"${privateLife.haustier === h.id ? ' selected' : ''}>${h.name}${h.kosten ? ` (${formatVal(h.kosten)})` : ''}</option>`).join('');
+        tierSel.innerHTML = PRIVAT_HAUSTIERE.map(h => `<option value="${h.id}"${privateLife.haustier === h.id ? ' selected' : ''}>${h.name}${h.kosten ? ` (${formatVal(h.kosten)})` : ''}${h.id === 'pferd' && typeof istFreigeschaltet === 'function' && !istFreigeschaltet('luxus') ? ' 🔒' : ''}</option>`).join('');
         const h = PRIVAT_HAUSTIERE.find(x => x.id === privateLife.haustier);
         const desc = document.getElementById('priv-haustier-desc');
         if (desc) desc.innerText = h && h.id !== 'none' ? `-${h.stress} % Stress je Spieltag, Unterhalt ${formatVal(h.unterhalt)} je Spieltag${h.prestige ? `, +${h.prestige} Prestige` : ''}.` : 'Ein Haustier senkt den Stress jeden Spieltag ein wenig.';

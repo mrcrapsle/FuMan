@@ -4,7 +4,6 @@
     // ==========================================
     const STOCK_MAX_HISTORY = 20;
 
-    const STOCK_KEYS = ['techCorp', 'realEstate', 'greenEnergy', 'cryptoFund', 'staatsanleihe', 'biotech'];
 
     function updateStockMarket() {
         // Marktweites Boom/Crash-Event (selten, betrifft alle Aktien gemeinsam)

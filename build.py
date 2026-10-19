@@ -13,6 +13,21 @@ HTML_FILE = "index.html"
 CSS_FILE = "css/styles.css"
 OUTPUT_FILE = "dist/anstoss-fm13-standalone.html"          # Entwickler-Fassung (mit Admin-Menü): Tests, Bots, lokal
 OEFFENTLICH_FILE = "dist/anstoss-fm13-oeffentlich.html"    # öffentliche Fassung (ohne Admin-Menü): GitHub Pages
+GRUNDSPIEL_FILE = "dist/anstoss-fm13-grundspiel.html"      # Ausbaustufe 0 ohne Admin: Test der Grundfassung (testGrundfassung)
+
+# Grundfassung mit großen Updates: Stufe n enthält die ersten n Pakete. Ein Paket bringt eigene Module und
+# alles zwischen <!-- PAKET-START:name --> und <!-- PAKET-ENDE:name --> in index.html; Blöcke zwischen
+# <!-- OHNE-PAKET-START:name --> und <!-- OHNE-PAKET-ENDE:name --> stehen nur in Fassungen ohne das Paket.
+# Die zweite Mannschaft bleibt als Code (js/secondteam.js enthält auch die Leihen), dort fallen nur Menü
+# und Bildschirm weg. Ein Update = OEFFENTLICHE_STUFE erhöhen und mergen.
+PAKETE = [
+    ("vereinswachstum", {"js/women-team.js"}, ['id="screen-second-team"', 'id="screen-women"', 'id="stadium-upgrades-grid"', 'id="capacity-projects-grid"', "function foundWomenTeam"]),
+    ("finanzwelt", {"js/stocks.js", "js/betting.js", "js/real-estate.js"}, ['id="screen-stocks"', 'id="screen-betting"', 'id="screen-real-estate"', "function placeBet", "function buyStockShares", "function buyOrUpgradeRealEstate"]),
+    ("konzern", {"js/holding.js", "js/industry.js"}, ['id="screen-holding"', 'id="screen-industry"', 'id="top-holding-money"', "function buyFactory", "function transferClubToHolding"]),
+]
+VOLLE_STUFE = len(PAKETE)
+OEFFENTLICHE_STUFE = VOLLE_STUFE   # öffentliche Seite und Download: heute alle Updates
+PAKETE_PLATZHALTER = "let SPIEL_PAKETE = ['vereinswachstum', 'finanzwelt', 'konzern'];"
 
 # Öffentliche Fassung (Phase 26.20): ohne diese Module und ohne die Blöcke zwischen den NUR-ENTWICKLER-Markern in index.html
 ENTWICKLER_MODULE = {"js/admin.js", "js/admin-tools.js"}
@@ -68,10 +83,26 @@ def build_lint_bundle():
     print(f"Fertig: dist/lint-bundle.js ({len(content)} Zeichen)")
 
 
-def build_html(oeffentlich):
+def paket_bloecke(html, stufe):
+    """Entfernt die Seitenteile fehlender Pakete und die Ersatzteile vorhandener."""
+    for i, (name, _, _) in enumerate(PAKETE):
+        for art in ("PAKET", "OHNE-PAKET"):
+            if html.count(f"<!-- {art}-START:{name} -->") != html.count(f"<!-- {art}-ENDE:{name} -->"):
+                sys.exit(f"FEHLER: {art}-START und -ENDE für {name} in index.html passen nicht zusammen")
+        weg = "PAKET" if i >= stufe else "OHNE-PAKET"
+        html = re.sub(rf"[ \t]*<!-- {weg}-START:{name} -->.*?<!-- {weg}-ENDE:{name} -->[ \t]*\n?", "", html, flags=re.DOTALL)
+    # Markierungen der behaltenen Blöcke
+    return re.sub(r"[ \t]*<!-- (?:OHNE-)?PAKET-(?:START|ENDE):[a-z]+ -->[ \t]*\n?", "", html)
+
+
+def build_html(oeffentlich, stufe=VOLLE_STUFE):
     html = read(HTML_FILE)
     if html.count("<!-- NUR-ENTWICKLER-START") != html.count("<!-- NUR-ENTWICKLER-ENDE -->"):
         sys.exit("FEHLER: NUR-ENTWICKLER-START und -ENDE in index.html passen nicht zusammen")
+    html = paket_bloecke(html, stufe)
+    paket_module = set().union(*(m for _, m, _ in PAKETE[stufe:])) if stufe < VOLLE_STUFE else set()
+    for modul in paket_module:
+        html = re.sub(rf'<script src="{re.escape(modul)}(\?[^"]*)?"></script>\n?', "", html)
     if oeffentlich:
         html = NUR_ENTWICKLER_RE.sub("", html)
         for modul in ENTWICKLER_MODULE:
@@ -90,9 +121,14 @@ def build_html(oeffentlich):
     # 2. Jedes <script src="js/XYZ.js"></script> durch den echten Inhalt ersetzen
     # (unterstützt auch Cache-Busting wie ?v=2.1)
     for js_path in js_order():
-        if oeffentlich and js_path in ENTWICKLER_MODULE:
+        if (oeffentlich and js_path in ENTWICKLER_MODULE) or js_path in paket_module:
             continue
         js_content = read(js_path)
+        if js_path == "js/pakete.js":
+            if PAKETE_PLATZHALTER not in js_content:
+                sys.exit(f"FEHLER: {PAKETE_PLATZHALTER} fehlt in js/pakete.js")
+            enthalten = ", ".join(f"'{name}'" for name, _, _ in PAKETE[:stufe])
+            js_content = js_content.replace(PAKETE_PLATZHALTER, f"let SPIEL_PAKETE = [{enthalten}];", 1)
         if js_path == "js/admin.js" and os.environ.get("DEV_PIN"):
             if PIN_PLATZHALTER not in js_content:
                 sys.exit(f"FEHLER: {PIN_PLATZHALTER} fehlt in js/admin.js")
@@ -108,6 +144,11 @@ def build_html(oeffentlich):
         rest = [k for k in ADMIN_KENNZEICHEN if k in html]
         if rest:
             sys.exit(f"FEHLER: öffentliche Fassung enthält noch Admin-Teile: {rest}")
+    rest = [k for _, _, kennzeichen in PAKETE[stufe:] for k in kennzeichen if k in html]
+    if rest:
+        sys.exit(f"FEHLER: Fassung der Stufe {stufe} enthält noch Teile fehlender Pakete: {rest}")
+    if "PAKET-START" in html or "PAKET-ENDE" in html:
+        sys.exit("FEHLER: Paket-Markierungen im Build übrig")
     return html
 
 
@@ -123,8 +164,14 @@ def build():
     if "--nur-dev" in sys.argv:
         schreibe(os.environ.get("DEV_AUSGABE") or OUTPUT_FILE, build_html(False))
         return
+    # --stufe N: zusätzlich eine öffentliche Fassung der Ausbaustufe N zur Ansicht (dist/anstoss-fm13-stufe-N.html)
+    if "--stufe" in sys.argv:
+        stufe = int(sys.argv[sys.argv.index("--stufe") + 1])
+        schreibe(f"dist/anstoss-fm13-stufe-{stufe}.html", build_html(True, stufe))
+        return
     schreibe(OUTPUT_FILE, build_html(False))
-    schreibe(OEFFENTLICH_FILE, build_html(True))
+    schreibe(OEFFENTLICH_FILE, build_html(True, OEFFENTLICHE_STUFE))
+    schreibe(GRUNDSPIEL_FILE, build_html(True, 0))
 
 
 if __name__ == "__main__":

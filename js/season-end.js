@@ -469,6 +469,8 @@ function concludeSeasonAndAdvance() {
 
         incomingOffers = [];
         if (typeof evaluateFinancialFairplay === 'function') evaluateFinancialFairplay();
+        // Freischaltungen: Titel (Karriere-Archiv) und Aufstieg zählen jetzt, noch in der alten Saison.
+        if (typeof pruefeFreischaltungen === 'function') pruefeFreischaltungen();
         game.season++;
         if (typeof announceSeasonReview === 'function') announceSeasonReview();
         if (typeof startNewSeasonObjectives === 'function') startNewSeasonObjectives();
@@ -521,8 +523,6 @@ function concludeSeasonAndAdvance() {
         if (typeof applyPendingFfpPointDeduction === 'function') applyPendingFfpPointDeduction();
         refreshTransferMarket();
         autoLineup();
-        // Titel und Aufstieg zählen erst jetzt (Karriere-Archiv und neue Liga).
-        if (typeof pruefeFreischaltungen === 'function') pruefeFreischaltungen();
         updateUI();
         showScreen('screen-dashboard');
         showSeasonReviewSummary(myRank, myTeamSnapshot);
@@ -570,6 +570,7 @@ function concludeSeasonAndAdvance() {
                 <span class="label">DFB-Lizenzstatus:</span><span class="val">${dfbText}</span>
                 <span class="label">Trophäen gesamt:</span><span class="val">${(game.trophies || []).length}</span>
             </div>
+            ${typeof getFreischaltungenDerSaison === 'function' && getFreischaltungenDerSaison(game.season - 1).length ? `<div class="box" id="season-review-freischaltungen" style="font-size:var(--fs-small); margin-top:8px;">🔓 In dieser Saison freigeschaltet: <strong>${getFreischaltungenDerSaison(game.season - 1).map(b => `${b.icon} ${b.name}`).join(', ')}</strong></div>` : ''}
             ${expertCheck ? `<div style="font-size:var(--fs-small); font-weight:800; color:var(--text-muted); margin:10px 0 4px 0;">🔮 Experten-Check</div><div style="font-size:var(--fs-small);">${describeExpertCheck(expertCheck)}</div>` : ''}
             ${game.seasonReviewArchive.length > 1 ? `
             <div style="font-size:var(--fs-small); font-weight:800; color:var(--text-muted); margin:10px 0 4px 0;">Frühere Saisons im Vergleich</div>

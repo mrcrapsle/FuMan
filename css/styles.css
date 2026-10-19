@@ -533,8 +533,14 @@
         }
         .ui-icon-btn:hover { background: var(--chip-bg); }
         /* Freischaltungen (js/freischaltungen.js): gesperrter Bereich zeigt nur die Karte mit den Bedingungen */
-        .freischalt-gesperrt > :not(.freischalt-karte) { display: none !important; }
+        /* Graue Vorschau: der gesperrte Bereich bleibt sichtbar, ist aber nicht bedienbar (inert) */
+        .freischalt-vorschau { position: relative; pointer-events: none; user-select: none; margin-top: 6px; }
+        .freischalt-vorschau::after { content: ''; position: absolute; inset: 0; border-radius: 14px; background: color-mix(in srgb, var(--surface-0) 62%, transparent); }
+        .freischalt-zu { background: var(--surface-0) !important; color: var(--text-muted) !important; border-style: dashed !important; box-shadow: none !important; }
         .freischalt-zu::after { content: ' 🔒'; }
+        .freischalt-neu::after { content: 'NEU'; margin-left: 6px; padding: 1px 6px; border-radius: 999px; background: var(--accent); color: var(--on-accent); font-size: var(--fs-micro); font-weight: 900; vertical-align: middle; }
+        .freischalt-zeile-zu, .freischalt-eintrag-zu { background: var(--surface-0); color: var(--text-muted); }
+        .freischalt-knopf-zu { background: var(--surface-0) !important; color: var(--text-muted) !important; border-style: dashed !important; box-shadow: none !important; }
         .freischalt-zeile { margin: 4px 0; }
         .freischalt-balken { height: 6px; margin-top: 2px; border-radius: 999px; background: var(--chip-bg); overflow: hidden; }
         .freischalt-balken > span { display: block; height: 100%; background: var(--accent); border-radius: 999px; }

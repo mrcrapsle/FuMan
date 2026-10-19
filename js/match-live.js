@@ -712,7 +712,7 @@
         // Stadion-Erweiterungen: Solaranlage/Business-Center erhöhen die laufenden
         // Sponsoreneinnahmen dauerhaft.
         if (typeof getStadiumSponsorBonus === 'function') mainSponsorInc = Math.round(mainSponsorInc * (1 + getStadiumSponsorBonus()));
-        let sponsorInc = mainSponsorInc + (isHomeMatch ? getBandenIncome() + game.kitSupplier.income + (stadium.namingRightsIncome || 0) : 0) + (game.sleeveSponsor?.income || 0);
+        let sponsorInc = mainSponsorInc + (isHomeMatch ? getBandenIncome() + game.kitSupplier.income + getNamingRightsMatchIncome() : 0) + (game.sleeveSponsor?.income || 0);
         // Sponsoren-Ranking: trackt über die gesamte Karriere hinweg, welcher Sponsor (nach
         // Name) am meisten eingebracht hat - sichtbar als kleines Leaderboard im Finanzen-Screen.
         if (!game.sponsorEarningsHistory) game.sponsorEarningsHistory = {};
@@ -726,7 +726,7 @@
         trackSponsorEarning(game.sponsor.name, mainSponsorInc, game.sponsor.category);
         if (isHomeMatch) {
             trackSponsorEarning(game.kitSupplier.name, game.kitSupplier.income, game.kitSupplier.category);
-            trackSponsorEarning(stadium.namingRightsSponsor, stadium.namingRightsIncome || 0, 'Namensrechte');
+            trackSponsorEarning(stadium.namingRightsSponsor, getNamingRightsMatchIncome(), 'Namensrechte');
             bandenSponsors.filter(b => b.active).forEach(b => trackSponsorEarning(b.name, b.income, b.category));
         }
         trackSponsorEarning(game.sleeveSponsor?.name, game.sleeveSponsor?.income || 0, game.sleeveSponsor?.category);
@@ -769,7 +769,7 @@
             { label: '🤝 Hauptsponsor', amount: mainSponsorInc },
             { label: '📢 Bandenwerbung', amount: isHomeMatch ? getBandenIncome() : 0 },
             { label: '🧥 Ausrüster', amount: isHomeMatch ? game.kitSupplier.income : 0 },
-            { label: '🏟️ Namensrechte', amount: isHomeMatch ? (stadium.namingRightsIncome || 0) : 0 },
+            { label: '🏟️ Namensrechte', amount: isHomeMatch ? getNamingRightsMatchIncome() : 0 },
             { label: '👔 Ärmelsponsor', amount: game.sleeveSponsor?.income || 0 },
             { label: '🎫 Mitgliedsbeiträge', amount: membershipIncome },
             { label: '🏘️ Campus-Anlagen', amount: campusFacilityIncome },
@@ -1353,7 +1353,7 @@
         // Kreditraten, Insolvenzrisiko und Wettabrechnung laufen jeden Spieltag automatisch
         processLoanInstallments();
         checkInsolvencyRisk();
-        resolveBetIfPending(matchResult, totalGoalsForBets);
+        if (typeof resolveBetIfPending === 'function') resolveBetIfPending(matchResult, totalGoalsForBets);
         processPrivateLifeMatchday();
 
         // Dopingtest: nur relevant, wenn im letzten Spiel gedopt wurde
@@ -1373,7 +1373,7 @@
         underworld.activeSabotages = { pyroHotel: false, stealBanner: false, weedKiller: false, refBribe: false, bribeOpponent: false, doping: false };
 
         updateCommodityMarket();
-        updateStockMarket();
+        if (typeof updateStockMarket === 'function') updateStockMarket();
         // Kapitalmarkt-Zusatzfunktionen: Limit-Orders, Sparplan, Optionsscheine, Insider-Tipp
         // und Portfolio-Meilensteine jeden Spieltag prüfen.
         if (typeof checkLimitOrders === 'function') {

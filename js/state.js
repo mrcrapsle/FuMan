@@ -128,6 +128,9 @@
         monatsStand: null,
         bauChronik: [],
         freischaltungen: {},
+        freischaltNeu: {},
+        freischaltTempo: 'normal',
+        bekanntePakete: SPIEL_PAKETE.slice(),   // js/pakete.js, für das Fenster „Neu in diesem Update“
         topspielZuschlag: 0,
         assistentErledigt: null,
         vorlageBilanzArchiv: [],
@@ -306,6 +309,16 @@
     // 40.000-75.000 € entsprachen dem Preis eines mittelmäßigen Spielers. Die Beträge sind
     // jetzt so gesetzt, dass der Einstieg über das Holding-Konto finanziert werden muss
     // (B2B-Aufträge, Überweisung vom Verein) statt nebenbei aus der Portokasse zu fallen.
+    // Immobilien (js/real-estate.js): Grunddaten hier, damit Fassungen ohne das Paket sie mit speichern.
+    let realEstatePortfolio = {
+        parkplatz: { name: "Parkplatz-Gelände", owned: false, lvl: 0, max: 3, baseCost: 3200000, baseIncome: 12600, desc: "Vermietete Parkflächen rund ums Stadion - Einnahmen aus Parkgebühren an Spiel- und Nicht-Spieltagen." },
+        buerokomplex: { name: "Bürokomplex 'Vereins-Tower'", owned: false, lvl: 0, max: 3, baseCost: 8500000, baseIncome: 27900, desc: "Vermietete Büroflächen an lokale Unternehmen - stabile, planbare Mieteinnahmen." },
+        wohnanlage: { name: "Wohnanlage am Stadion", owned: false, lvl: 0, max: 3, baseCost: 12000000, baseIncome: 33800, desc: "Mietwohnungen in Stadionnähe - beliebt bei Fans, die nah am Verein wohnen wollen." },
+        einkaufszentrum: { name: "Einkaufszentrum 'Fan-Meile'", owned: false, lvl: 0, max: 3, baseCost: 18000000, baseIncome: 44100, desc: "Ladenflächen für Einzelhandel und Gastronomie - höhere Miete, aber auch höheres Risiko bei schlechter Konjunktur." },
+        hotelbeteiligung: { name: "Hotel-Beteiligung", owned: false, lvl: 0, max: 3, baseCost: 22000000, baseIncome: 51800, desc: "Anteile an einem Hotel für Gästefans und Geschäftsreisende - Einnahmen steigen zusätzlich mit der Attraktivität des Vereins." },
+        gewerbepark: { name: "Gewerbepark", owned: false, lvl: 0, max: 3, baseCost: 15000000, baseIncome: 36900, desc: "Gemischt genutzter Gewerbepark mit mehreren kleinen Mietern - breit gestreutes, robustes Einkommen." }
+    };
+
     let factories = {
         textile: { name: "Textilfabrik 'Stoff & Naht'", owned: false, lvl: 1, max: 5, cost: 600000, product: "Trikots", desc: "Produziert Trikots für Baumwoll-Rohstoffkosten" },
         knitting: { name: "Strickerei 'Maschenwerk'", owned: false, lvl: 1, max: 5, cost: 320000, product: "Schals", desc: "Fertigt Schals für Wolle-Rohstoffkosten" },
@@ -349,6 +362,8 @@
         jerseySalesByPlayer: {}
     };
 
+    // Aktien-Schlüssel (js/stocks.js): bei den Grunddaten, die Dividendenrechnung braucht sie auch ohne das Paket.
+    const STOCK_KEYS = ['techCorp', 'realEstate', 'greenEnergy', 'cryptoFund', 'staatsanleihe', 'biotech'];
     let stockMarket = {
         techCorp: { name: "Global TechCorp AG", price: 120, dividendRate: 0.04, owned: 0, volatility: 0.06, history: [120] },
         realEstate: { name: "Bundesliga Real Estate Fonds", price: 85, dividendRate: 0.06, owned: 0, volatility: 0.03, history: [85] },
