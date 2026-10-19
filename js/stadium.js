@@ -794,9 +794,10 @@
     // in match.js), sondern zeigt dieselben Formeln nur zusammengefasst an. Die eigentlichen
     // Ausbaustufen bleiben im Campus-Screen, dorthin verlinkt der Knopf am Ende.
     function computeAncillaryIncomeEstimate() {
-        let gastronomie = (campusBuildings.fankneipe?.lvl || 0) * 1800 + (campusBuildings.foodtrucks?.lvl || 0) * 2400;
-        let parken = (campusBuildings.parkhaus?.lvl || 0) * 1500;
-        let vipBewirtung = (campusBuildings.hotel?.lvl || 0) * 5000;
+        let erloes = key => (typeof getCampusHeimspielErloes === 'function' ? getCampusHeimspielErloes(key) : 0);
+        let gastronomie = erloes('fankneipe') + erloes('foodtrucks');
+        let parken = erloes('parkhaus');
+        let vipBewirtung = erloes('hotel');
         let att = game.lastHomeAttendance || Math.round((stadium.total || 16000) * getAttendanceFactor());
         // Grobe Näherung an den stadionbezogenen Anteil des Fanartikelabsatzes (siehe
         // MERCH_SPEND_PER_VISITOR/simulateMerchSales in merchandise.js für die tatsächliche,

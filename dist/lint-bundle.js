@@ -970,17 +970,17 @@ function renderUiStatRow(werte) {
     };
 
     let campusBuildings = {
-        fankneipe: { name: "Fan-Kneipe 'Zur Nachspielzeit'", lvl: 0, max: 5, baseCost: 1500000, desc: "+1.800 € Umsatz pro Heimspiel & steigert Ultra-Zufriedenheit" },
+        fankneipe: { name: "Fan-Kneipe 'Zur Nachspielzeit'", lvl: 0, max: 5, baseCost: 1500000, desc: "Umsatz an jedem Heimspiel & steigert Ultra-Zufriedenheit" },
         megastore: { name: "Fanshop Megastore", lvl: 0, max: 5, baseCost: 7200000, desc: "+35 Basis-Kunden pro Woche für alle Fanartikel pro Stufe" },
-        parkhaus: { name: "Parkhaus & Shuttle-Bahnhof", lvl: 0, max: 5, baseCost: 6500000, desc: "+1.500 € Parkgebühren & verbessert Stadionauslastung" },
+        parkhaus: { name: "Parkhaus & Shuttle-Bahnhof", lvl: 0, max: 5, baseCost: 6500000, desc: "Parkgebühren an jedem Heimspiel & verbessert Stadionauslastung" },
         reha: { name: "Reha-Klinik & Physio-Zentrum", lvl: 0, max: 5, baseCost: 12000000, desc: "Verringert Verletzungszeiten und beschleunigt Regeneration" },
         // 9 statt 14,5 Mio.: Stufe 1 ist Lizenzauflage für die 2. Liga und kostete in der 3. Liga
         // rund 4 Mio. - mehr als zwei Saisons Gehälter; Meister blieben deshalb jahrelang unten.
         internat: { name: "Jugendinternat & Schule", lvl: 0, max: 5, baseCost: 9000000, desc: "Erhöht Stärke und Potenzial neuer Nachwuchsspieler" },
         museum: { name: "Vereinsmuseum & Traditions-Pavillon", lvl: 0, max: 5, baseCost: 4500000, desc: "+2% Vorstands- und Fanvertrauen dauerhaft pro Stufe" },
         trainingground: { name: "Trainingsgelände mit Flutlicht", lvl: 0, max: 5, baseCost: 8500000, desc: "+1 permanenter Stärkebonus für die gesamte Mannschaft" },
-        hotel: { name: "VIP-Tagungshotel", lvl: 0, max: 5, baseCost: 22500000, desc: "+5.000 € feste Einnahmen pro Heimspiel" },
-        foodtrucks: { name: "Catering-Meile & Foodtruck-Garten", lvl: 0, max: 5, baseCost: 1400000, desc: "+2.400 € Catering-Erlöse pro Heimspiel" },
+        hotel: { name: "VIP-Tagungshotel", lvl: 0, max: 5, baseCost: 22500000, desc: "Feste Einnahmen an jedem Heimspiel" },
+        foodtrucks: { name: "Catering-Meile & Foodtruck-Garten", lvl: 0, max: 5, baseCost: 1400000, desc: "Catering-Erlöse an jedem Heimspiel" },
         turnstiles: { name: "Modernes Einlass-System", lvl: 0, max: 5, baseCost: 2400000, desc: "Senkt Betriebskosten & verhindert Schwarzmarkt-Verluste" },
         securityAcademy: { name: "Sicherheitsakademie", lvl: 0, max: 5, baseCost: 2200000, desc: "Bildet eigene Ordner & Sicherheitskräfte aus - schaltet höhere Schulungsstufen und mehr Festanstellungs-Plätze frei" }
     };
@@ -19553,9 +19553,10 @@ function finishGoalkeeperGame() {
     // in match.js), sondern zeigt dieselben Formeln nur zusammengefasst an. Die eigentlichen
     // Ausbaustufen bleiben im Campus-Screen, dorthin verlinkt der Knopf am Ende.
     function computeAncillaryIncomeEstimate() {
-        let gastronomie = (campusBuildings.fankneipe?.lvl || 0) * 1800 + (campusBuildings.foodtrucks?.lvl || 0) * 2400;
-        let parken = (campusBuildings.parkhaus?.lvl || 0) * 1500;
-        let vipBewirtung = (campusBuildings.hotel?.lvl || 0) * 5000;
+        let erloes = key => (typeof getCampusHeimspielErloes === 'function' ? getCampusHeimspielErloes(key) : 0);
+        let gastronomie = erloes('fankneipe') + erloes('foodtrucks');
+        let parken = erloes('parkhaus');
+        let vipBewirtung = erloes('hotel');
         let att = game.lastHomeAttendance || Math.round((stadium.total || 16000) * getAttendanceFactor());
         // Grobe Näherung an den stadionbezogenen Anteil des Fanartikelabsatzes (siehe
         // MERCH_SPEND_PER_VISITOR/simulateMerchSales in merchandise.js für die tatsächliche,
@@ -20527,9 +20528,15 @@ function renderTopspielBox() {
                 : queued
                     ? `<button class="btn-secondary" disabled>🏗️ Im Bau... (noch ${queued.daysLeft} SpT)</button>`
                     : `<button onclick="upgradeCampusBuilding('${key}')" class="btn-action">Ausbauen auf Stufe ${b.lvl+1} [${formatVal(cost)}] · Bauzeit ${getConstructionDays(cost)} SpT</button>`;
+            let erloesHtml = '';
+            if (CAMPUS_ERLOES_GEBAEUDE.includes(key)) {
+                let jetzt = getCampusHeimspielErloes(key);
+                erloesHtml = `<div class="campus-erloes" style="font-size:var(--fs-caption); margin-bottom:4px;">💶 ${jetzt > 0 ? `${formatVal(jetzt)} je Heimspiel` : 'Noch kein Erlös'}${b.lvl < b.max ? `. Stufe ${b.lvl + 1}: +${formatVal(getCampusStufenErloes(key, b.lvl + 1))} je Heimspiel, bezahlt sich nach Unterhalt in rund 10 Saisons.` : '.'}</div>`;
+            }
             row.innerHTML = `
                 <div class="panel-header"><span>${b.name}</span><span style="color:var(--accent);">Stufe ${b.lvl}/${b.max}</span></div>
                 <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${b.desc}</div>
+                ${erloesHtml}
                 ${buttonHtml}
             `;
             container.appendChild(row);
@@ -20537,6 +20544,9 @@ function renderTopspielBox() {
     }
 
     function getCampusUpgradeCost(key) {
+        return getCampusStufenKosten(key, campusBuildings[key].lvl + 1);
+    }
+    function getCampusStufenKosten(key, stufe) {
         let b = campusBuildings[key];
         // Liga-Skalierung: dieselbe steile Kurve wie bei Stadion-Ausbauten - realistische
         // Millionenbeträge im Spitzenfußball, erschwinglich in unteren Ligen. Trotzdem nie
@@ -20544,7 +20554,22 @@ function renderTopspielBox() {
         // Deutschland, siehe Baukosten-Recherche: selbst ein kleiner Umbau/Neubau kostet
         // real mindestens einen mittleren sechsstelligen Betrag).
         let scale = typeof getStadiumCostScale === 'function' ? getStadiumCostScale() : 1;
-        return Math.max(250000, Math.round(b.baseCost * (b.lvl + 1) * scale));
+        return Math.max(250000, Math.round(b.baseCost * stufe * scale));
+    }
+    // Campus-Gebäude mit festem Erlös je Heimspiel (Phase 26.23): jede Stufe zahlt so viel, dass
+    // sie sich nach ihrem Unterhalt (650 € je Spieltag, also 1.300 € je Heimspiel) in rund
+    // 10 Saisons bezahlt macht, also Baukosten der Stufe / 170 plus Unterhalt. Vorher fest 1.500
+    // bis 5.000 € je Stufe in jeder Liga, in der Bundesliga waren das weit über 100 Saisons.
+    const CAMPUS_ERLOES_GEBAEUDE = ['fankneipe', 'foodtrucks', 'parkhaus', 'hotel'];
+    const CAMPUS_UNTERHALT_JE_HEIMSPIEL = 1300;
+    function getCampusStufenErloes(key, stufe) {
+        if (!CAMPUS_ERLOES_GEBAEUDE.includes(key) || !campusBuildings[key]) return 0;
+        return Math.round((getCampusStufenKosten(key, stufe) / 170 + CAMPUS_UNTERHALT_JE_HEIMSPIEL) / 100) * 100;
+    }
+    function getCampusHeimspielErloes(key) {
+        let lvl = campusBuildings[key]?.lvl || 0, summe = 0;
+        for (let k = 1; k <= lvl; k++) summe += getCampusStufenErloes(key, k);
+        return summe;
     }
     function upgradeCampusBuilding(key) {
         let b = campusBuildings[key];
@@ -32165,10 +32190,8 @@ function cleanupLegacyScoutState() {
         // beschrieben tatsächlich ein.
         let campusFacilityIncome = 0;
         if (isHomeMatch && !ghostGameActive) {
-            campusFacilityIncome += (campusBuildings.fankneipe?.lvl || 0) * 1800;
-            campusFacilityIncome += (campusBuildings.parkhaus?.lvl || 0) * 1500;
-            campusFacilityIncome += (campusBuildings.hotel?.lvl || 0) * 5000;
-            campusFacilityIncome += (campusBuildings.foodtrucks?.lvl || 0) * 2400;
+            // Erlös je Stufe an ihre Baukosten gekoppelt (getCampusStufenErloes, js/campus-staff.js)
+            if (typeof getCampusHeimspielErloes === 'function') CAMPUS_ERLOES_GEBAEUDE.forEach(k => { campusFacilityIncome += getCampusHeimspielErloes(k); });
             if (campusFacilityIncome > 0) game.money += campusFacilityIncome;
             // Fan-Kneipe steigert außerdem die Ultra-Zufriedenheit, wie beschrieben.
             if (campusBuildings.fankneipe?.lvl > 0 && typeof fanGroups !== 'undefined') {

@@ -676,10 +676,8 @@
         // beschrieben tatsächlich ein.
         let campusFacilityIncome = 0;
         if (isHomeMatch && !ghostGameActive) {
-            campusFacilityIncome += (campusBuildings.fankneipe?.lvl || 0) * 1800;
-            campusFacilityIncome += (campusBuildings.parkhaus?.lvl || 0) * 1500;
-            campusFacilityIncome += (campusBuildings.hotel?.lvl || 0) * 5000;
-            campusFacilityIncome += (campusBuildings.foodtrucks?.lvl || 0) * 2400;
+            // Erlös je Stufe an ihre Baukosten gekoppelt (getCampusStufenErloes, js/campus-staff.js)
+            if (typeof getCampusHeimspielErloes === 'function') CAMPUS_ERLOES_GEBAEUDE.forEach(k => { campusFacilityIncome += getCampusHeimspielErloes(k); });
             if (campusFacilityIncome > 0) game.money += campusFacilityIncome;
             // Fan-Kneipe steigert außerdem die Ultra-Zufriedenheit, wie beschrieben.
             if (campusBuildings.fankneipe?.lvl > 0 && typeof fanGroups !== 'undefined') {

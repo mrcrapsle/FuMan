@@ -1221,7 +1221,8 @@ async function testStadiumAusbau2(browser) {
         campusBuildings.fankneipe.lvl = 2;
         campusBuildings.parkhaus.lvl = 1;
         let est = computeAncillaryIncomeEstimate();
-        out.nebeneinnahmenKorrekt = est.gastronomie >= 2 * 1800 && est.parken === 1500 && est.summe === est.gastronomie + est.parken + est.vipBewirtung + est.fanshop;
+        out.nebeneinnahmenKorrekt = est.gastronomie === getCampusHeimspielErloes('fankneipe') + getCampusHeimspielErloes('foodtrucks') && est.gastronomie > 2 * 1800
+            && est.parken === getCampusHeimspielErloes('parkhaus') && est.parken > 1500 && est.summe === est.gastronomie + est.parken + est.vipBewirtung + est.fanshop;
 
         // 8. Speichern/Laden erhält alle neuen Felder.
         stadium.pitchCondition = 71;

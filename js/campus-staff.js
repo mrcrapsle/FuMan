@@ -14,9 +14,15 @@
                 : queued
                     ? `<button class="btn-secondary" disabled>🏗️ Im Bau... (noch ${queued.daysLeft} SpT)</button>`
                     : `<button onclick="upgradeCampusBuilding('${key}')" class="btn-action">Ausbauen auf Stufe ${b.lvl+1} [${formatVal(cost)}] · Bauzeit ${getConstructionDays(cost)} SpT</button>`;
+            let erloesHtml = '';
+            if (CAMPUS_ERLOES_GEBAEUDE.includes(key)) {
+                let jetzt = getCampusHeimspielErloes(key);
+                erloesHtml = `<div class="campus-erloes" style="font-size:var(--fs-caption); margin-bottom:4px;">💶 ${jetzt > 0 ? `${formatVal(jetzt)} je Heimspiel` : 'Noch kein Erlös'}${b.lvl < b.max ? `. Stufe ${b.lvl + 1}: +${formatVal(getCampusStufenErloes(key, b.lvl + 1))} je Heimspiel, bezahlt sich nach Unterhalt in rund 10 Saisons.` : '.'}</div>`;
+            }
             row.innerHTML = `
                 <div class="panel-header"><span>${b.name}</span><span style="color:var(--accent);">Stufe ${b.lvl}/${b.max}</span></div>
                 <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:4px;">${b.desc}</div>
+                ${erloesHtml}
                 ${buttonHtml}
             `;
             container.appendChild(row);
@@ -24,6 +30,9 @@
     }
 
     function getCampusUpgradeCost(key) {
+        return getCampusStufenKosten(key, campusBuildings[key].lvl + 1);
+    }
+    function getCampusStufenKosten(key, stufe) {
         let b = campusBuildings[key];
         // Liga-Skalierung: dieselbe steile Kurve wie bei Stadion-Ausbauten - realistische
         // Millionenbeträge im Spitzenfußball, erschwinglich in unteren Ligen. Trotzdem nie
@@ -31,7 +40,22 @@
         // Deutschland, siehe Baukosten-Recherche: selbst ein kleiner Umbau/Neubau kostet
         // real mindestens einen mittleren sechsstelligen Betrag).
         let scale = typeof getStadiumCostScale === 'function' ? getStadiumCostScale() : 1;
-        return Math.max(250000, Math.round(b.baseCost * (b.lvl + 1) * scale));
+        return Math.max(250000, Math.round(b.baseCost * stufe * scale));
+    }
+    // Campus-Gebäude mit festem Erlös je Heimspiel (Phase 26.23): jede Stufe zahlt so viel, dass
+    // sie sich nach ihrem Unterhalt (650 € je Spieltag, also 1.300 € je Heimspiel) in rund
+    // 10 Saisons bezahlt macht, also Baukosten der Stufe / 170 plus Unterhalt. Vorher fest 1.500
+    // bis 5.000 € je Stufe in jeder Liga, in der Bundesliga waren das weit über 100 Saisons.
+    const CAMPUS_ERLOES_GEBAEUDE = ['fankneipe', 'foodtrucks', 'parkhaus', 'hotel'];
+    const CAMPUS_UNTERHALT_JE_HEIMSPIEL = 1300;
+    function getCampusStufenErloes(key, stufe) {
+        if (!CAMPUS_ERLOES_GEBAEUDE.includes(key) || !campusBuildings[key]) return 0;
+        return Math.round((getCampusStufenKosten(key, stufe) / 170 + CAMPUS_UNTERHALT_JE_HEIMSPIEL) / 100) * 100;
+    }
+    function getCampusHeimspielErloes(key) {
+        let lvl = campusBuildings[key]?.lvl || 0, summe = 0;
+        for (let k = 1; k <= lvl; k++) summe += getCampusStufenErloes(key, k);
+        return summe;
     }
     function upgradeCampusBuilding(key) {
         let b = campusBuildings[key];

@@ -3154,6 +3154,19 @@ async function testStadionWerkzeuge(browser) {
         const anlagen = game.financeLedger[game.financeLedger.length - 1].einnahmen.find(e => e.label === '🏟️ Stadion-Anlagen');
         out.gJournal = !!anlagen && anlagen.amount === getStadiumMatchdayIncome() && anlagen.amount === Math.round(26500 * getStadiumCostScale());
         delete stadium.upgrades.public_viewing;
+        // Campus-Gebäude mit Erlös (Phase 26.23): jede Stufe in jeder Liga in rund 10 Saisons nach Unterhalt
+        const ligaCampus = game.leagueLevel;
+        out.gCampus = [0, 2, 5].every(l => { game.leagueLevel = l; return CAMPUS_ERLOES_GEBAEUDE.every(k => [1, 2, 3, 4, 5].every(st => {
+            const j = getCampusStufenKosten(k, st) / ((getCampusStufenErloes(k, st) - 1300) * 17); return j > 9.5 && j < 10.5; })); });
+        game.leagueLevel = ligaCampus;
+        campusBuildings.hotel.lvl = 2;
+        out.gCampusSumme = getCampusHeimspielErloes('hotel') === getCampusStufenErloes('hotel', 1) + getCampusStufenErloes('hotel', 2) && getCampusStufenErloes('museum', 1) === 0;
+        applyMatchdayFinances(true, true, false, false, 'Testgegner', '1:0');
+        const campusPosten = game.financeLedger[game.financeLedger.length - 1].einnahmen.find(e => e.label === '🏘️ Campus-Anlagen');
+        out.gCampusJournal = !!campusPosten && campusPosten.amount === CAMPUS_ERLOES_GEBAEUDE.reduce((s, k) => s + getCampusHeimspielErloes(k), 0);
+        showScreen('screen-campus');
+        out.gCampusAnzeige = [...document.querySelectorAll('#campus-buildings-list .campus-erloes')].length === 4 && document.getElementById('campus-buildings-list').textContent.includes(formatVal(getCampusHeimspielErloes('hotel')) + ' je Heimspiel');
+        campusBuildings.hotel.lvl = 0;
 
         // --- Alte Spielstände ---
         delete game.bauChronik; delete game.topspielZuschlag;
@@ -3183,8 +3196,8 @@ async function testStadionWerkzeuge(browser) {
     assert(ok(...K), `Kalender: Bauende und Stadion-Event am richtigen Spieltag (${werte(K)})`);
     const T = ['tAus', 'tAn', 'tUngueltig', 'tFrueh', 'tElastisch', 'tErloes', 'tSim', 'tAnpfiff', 'tBox', 'tKlick'];
     assert(ok(...T), `Topspiel-Zuschlag: nur Derby/Top 3, Preis-Nachfrage wirkt, Erlös und Saisonbilanz, Auswahl im Stadion (${werte(T)})`);
-    const G = ['gVoll', 'gStreuung', 'gRendite', 'gJournal'];
-    assert(ok(...G), `Regeln 26.22: volles Stadion trotz schwachem Tag, Streuung bei geringer Nachfrage, Einnahme-Anlagen in rund 10 Saisons, Stadion-Anlagen im Buchungsjournal (${werte(G)})`);
+    const G = ['gVoll', 'gStreuung', 'gRendite', 'gJournal', 'gCampus', 'gCampusSumme', 'gCampusJournal', 'gCampusAnzeige'];
+    assert(ok(...G), `Regeln 26.22/26.23: volles Stadion trotz schwachem Tag, Streuung bei geringer Nachfrage, Stadion- und Campus-Anlagen in rund 10 Saisons, beide im Buchungsjournal (${werte(G)})`);
     assert(ok('altStand', 'handy'), `Alte Spielstände ohne neue Felder, kein Überlauf auf 320 px (${werte(['altStand', 'handy'])})`);
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
     await page.close();
