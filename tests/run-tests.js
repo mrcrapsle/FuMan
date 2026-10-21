@@ -121,6 +121,7 @@ async function main() {
         S.testFreischaltungen,
         S.testFreischaltungenPlus,
         S.testGrundfassung,
+        S.testKopfzeilenFenster,
         S.testAdminWerkzeuge,
         S.testPrivatlebenPlus,
         S.testOeffentlicheFassung,

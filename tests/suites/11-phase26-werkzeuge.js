@@ -3598,6 +3598,100 @@ async function testGrundfassung(browser) {
     await page.close(); await dev.close();
 }
 
+async function testKopfzeilenFenster(browser) {
+    console.log('\n[26.24] Kopfzeilen-Fenster: Konto, Holding, Level, Fans/Vorstand und Spieltag per Tipp');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.evaluate(R32_HILFEN);
+    await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false; simulateMatchdays(2);
+        squad.forEach(p => { p.injured = 0; p.suspended = 0; p.fitness = 90; });
+        game.formation = '4-4-2'; autoLineup(); updateUI();
+    });
+    // Echter Tipp auf das Konto-Feld in der Kopfzeile (auf dem Handy seitlich scrollbar)
+    await page.click('.kpi-chip[data-kopf="konto"]');
+    await page.waitForFunction(() => document.getElementById('kopf-fenster-overlay').classList.contains('show'));
+    const r = await page.evaluate(() => {
+        const out = {};
+        const toasts = []; const toastAlt = showToast; showToast = (t) => { toasts.push(t); };
+        const ov = document.getElementById('kopf-fenster-overlay');
+        const text = () => document.getElementById('kopf-fenster-inhalt').textContent;
+        out.chips = ['konto', 'holding', 'level', 'stimmung', 'spieltag'].every(a => { const c = document.querySelector(`.kpi-chip[data-kopf="${a}"]`); return c && c.getAttribute('role') === 'button' && c.tabIndex === 0; });
+        out.konto = text().includes('Vereinskonto') && text().includes('Transferbudget') && text().includes('Ticketpreise') && text().includes(formatVal(game.money))
+            && ov.getAttribute('role') === 'dialog' && ov.getAttribute('aria-label') === 'Vereinskonto';
+        out.kontoLayout = woerter('#kopf-fenster-inhalt button').length === 0 && ueberlauf();
+
+        // Nur ansehen ändert nichts: alle fünf Fenster ohne Folgen für Kasse und Spielstand
+        const vorher = JSON.stringify([game.money, holdingCompany.money, game.ticketPrices, lineup, game.seasonExpectation]);
+        ['konto', 'holding', 'level', 'stimmung', 'spieltag'].forEach(a => oeffneKopfFenster(a));
+        out.ohneFolgen = JSON.stringify([game.money, holdingCompany.money, game.ticketPrices, lineup, game.seasonExpectation]) === vorher;
+
+        // Ticketpreise per Schnellwahl
+        oeffneKopfFenster('konto');
+        const geld = game.money;
+        kopfSetzeTicketStufe('guenstig');
+        out.tickets = game.ticketPrices.steh === Math.max(1, Math.round(getMarketTicketPrice('steh') * 0.8)) && game.ticketPrices.vip === Math.max(1, Math.round(getMarketTicketPrice('vip') * 0.8))
+            && game.money === geld && !!document.querySelector('#kopf-fenster-inhalt button.btn-action[onclick*="guenstig"]');
+        const n = toasts.length; kopfSetzeTicketStufe('guenstig');
+        out.ticketsGleich = toasts.length === n + 1 && toasts[n].includes('schon');
+
+        // Holding: Überweisung, gesperrt sagt, was fehlt
+        oeffneKopfFenster('holding');
+        const vk = game.money, hk = holdingCompany.money;
+        kopfUeberweiseHolding(10000);
+        out.holding = game.money === vk - 10000 && holdingCompany.money === hk + 10000 && text().includes('Holding-Konto') && text().includes('B2B');
+        window.anstossTestAllesFrei = false; const freiAlt = game.freischaltungen; game.freischaltungen = {};
+        oeffneKopfFenster('holding');
+        out.holdingZu = text().includes('gesperrt') && text().includes('Es fehlt') && !document.querySelector('#kopf-fenster-inhalt [onclick*="kopfUeberweiseHolding"]');
+        game.freischaltungen = freiAlt; window.anstossTestAllesFrei = true;
+
+        // Level
+        oeffneKopfFenster('level');
+        out.level = text().includes(`${managerRPG.xp} / ${managerRPG.maxXp} XP`) && text().includes(`Level ${managerRPG.level}`) && !!document.querySelector('#kopf-fenster-inhalt .freischalt-balken');
+
+        // Fans und Vorstand
+        const satAlt = game.boardSat; game.boardSat = 20;
+        oeffneKopfFenster('stimmung');
+        out.stimmung = text().includes('Vorstand 20%') && text().includes('Entlassung') && text().includes('Tabellenplatz')
+            && !!document.querySelector('#kopf-fenster-inhalt [onclick*="screen-vorstand-raum"]') && !!document.querySelector('#kopf-fenster-inhalt [onclick*="screen-fans"]');
+        game.boardSat = satAlt;
+
+        // Spieltag: nächster Gegner, Vorlage laden
+        const gegner = getNextLeagueOpponentTeam();
+        ensureMatchPrepState();
+        game.lineupPresets[0] = { name: 'Kopftest', ids: [...lineup], formation: '4-4-2' };
+        const elf = [...lineup]; lineup = lineup.slice(0, 10);
+        oeffneKopfFenster('spieltag');
+        out.spieltag = !!gegner && text().includes(gegner.name) && text().includes(`Spieltag ${game.matchday} / 34`) && text().includes('Nur 10 Spieler') && text().includes('Kopftest');
+        kopfLadeVorlage(0);
+        out.vorlage = lineup.length === 11 && elf.every(id => lineup.includes(id)) && text().includes('spielbereit');
+        out.spieltagLayout = woerter('#kopf-fenster-inhalt button').length === 0 && ueberlauf();
+
+        // Zur vollen Seite
+        kopfFensterZurSeite('screen-finances');
+        out.seite = !ov.classList.contains('show') && document.getElementById('screen-finances').offsetParent !== null;
+        showToast = toastAlt;
+        return out;
+    });
+    // Tastatur: Enter auf dem Feld öffnet, Escape schließt und gibt den Fokus zurück
+    await page.focus('.kpi-chip[data-kopf="level"]');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => document.getElementById('kopf-fenster-overlay').classList.contains('show'));
+    const tasteAuf = await page.evaluate(() => document.getElementById('kopf-fenster-inhalt').textContent.includes('Manager-Level'));
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !document.getElementById('kopf-fenster-overlay').classList.contains('show'));
+    const fokus = await page.evaluate(() => document.activeElement && document.activeElement.dataset.kopf);
+    const ok = (o, ...ks) => ks.every(k => o[k] === true);
+    const werte = (o, ks) => JSON.stringify(ks.map(k => o[k]));
+    const A = ['chips', 'konto', 'kontoLayout', 'ohneFolgen', 'tickets', 'ticketsGleich'];
+    assert(ok(r, ...A), `Kopfzeile: Felder als Knopf, Konto-Fenster mit Budget und Ticketpreisen, Ansehen ohne Folgen, Schnellwahl der Preise (${werte(r, A)})`);
+    const B = ['holding', 'holdingZu', 'level', 'stimmung', 'spieltag', 'vorlage', 'spieltagLayout', 'seite'];
+    assert(ok(r, ...B), `Kopfzeile: Holding mit Überweisung und Sperre, Level, Stimmung mit Warnung, Spieltag mit Gegner und Vorlage, Weg zur Seite (${werte(r, B)})`);
+    assert(tasteAuf && fokus === 'level', `Kopfzeile: Enter öffnet, Escape schließt und gibt den Fokus zurück (${tasteAuf}, ${fokus})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 module.exports = {
     testSpielvorbereitung,
     testVertragsWerkzeuge,
@@ -3620,6 +3714,7 @@ module.exports = {
     testFreischaltungen,
     testFreischaltungenPlus,
     testGrundfassung,
+    testKopfzeilenFenster,
     testAdminWerkzeuge,
     testPrivatlebenPlus,
     testOeffentlicheFassung,

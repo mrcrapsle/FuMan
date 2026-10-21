@@ -317,6 +317,20 @@
         .kpi-chip strong { font-size: var(--fs-body); color: var(--text-main); }
         
         .kpi-chip strong span { display: inline; font-size: inherit; color: inherit; letter-spacing: normal; }
+        /* Kopfzeilen-Fenster (js/kopfzeile-fenster.js): Kennzahlen öffnen per Tipp ein kleines Fenster */
+        .kpi-chip-tipp { cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+        .kpi-chip-tipp:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+        .kpi-chip-tipp:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+        .kpi-chip-tipp > span::after { content: " ›"; color: var(--accent); }
+        .kopf-fenster-box { max-width: 440px; }
+        .kopf-zeile { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: var(--fs-small); padding: 5px 0; border-bottom: 1px solid var(--border); }
+        .kopf-zeile strong { text-align: right; }
+        .kopf-hinweis { font-size: var(--fs-caption); color: var(--text-muted); margin: 4px 0; }
+        .kopf-warnung { font-size: var(--fs-small); border-left-color: var(--danger); margin: 6px 0; }
+        .kopf-abschnitt { color: var(--text-muted); margin-top: 10px; }
+        .kopf-liste { font-size: var(--fs-small); margin: 4px 0; padding-left: 18px; }
+        .kopf-knoepfe { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8em), 1fr)); gap: 6px; margin-top: 8px; }
+        .kopf-knoepfe-eng { grid-template-columns: repeat(auto-fit, minmax(min(100%, 7em), 1fr)); }
         .sound-btn {
             background: color-mix(in srgb, var(--violet) 15%, transparent); border: 1px solid color-mix(in srgb, var(--violet) 50%, transparent); color: var(--text-main);
             font-size: var(--fs-small); font-weight: 800; padding: 6px 10px; border-radius: 999px; cursor: pointer;

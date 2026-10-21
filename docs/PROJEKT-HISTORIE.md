@@ -821,3 +821,15 @@ Auf „Alle“ zu neun Vorschlägen:
    - **Öffentliche Fassung:** `OEFFENTLICHE_STUFE` steht auf allen drei Paketen, an der Seite ändert sich also nichts. Ein großes Update heißt künftig: Stufe erhöhen, mergen.
    - **Probelauf:** Grundspiel, Stufe 1 und Stufe 2 jeweils eine Saison mit Abschluss, alle Bildschirme, alter Spielstand: keine Fehler, alle onclick-Funktionen vorhanden.
 - Tests: `testFreischaltungen` (12 Bereiche, Vorschau statt Ausblenden), `testFreischaltungenPlus` (2 bis 8, inklusive Spielstart mit Tempo „Schnell“ über einen echten Neustart), `testGrundfassung` (Stufe 0 und Update-Fenster in der vollen Fassung).
+
+## Phase 26.24: Kopfzeilen-Fenster (ungemergt)
+
+Wunsch aus dem Ausprobieren: Ein Tipp auf die Kennzahlen oben sollte nicht ins Leere gehen, sondern einen leichten Einstieg bieten. `js/kopfzeile-fenster.js` öffnet je Feld ein kleines Fenster (`#kopf-fenster-overlay`, ein Overlay für alle fünf) mit den wichtigsten Zahlen, einer schnellen Einstellung und dem Weg zur vollen Seite:
+
+- **Vereinskonto:** Kasse, Ergebnis des letzten Spieltags (`game.financeLedger`), Ø je Spieltag und Vorschau aus `getLiquidityForecast()`, Transferbudget, Kadergehälter gegen das Gehaltsbudget; Ticketpreise per Schnellwahl Günstig (80 % des Marktpreises), Marktpreis, Premium (125 %). → Finanzen.
+- **Holding-Konto:** Konto, Unternehmenswert, offene B2B-Aufträge; Überweisung 10.000/50.000/100.000 € über `transferClubToHolding()`. Gesperrt: was laut Freischaltung noch fehlt. Das Feld fehlt in Fassungen ohne Paket Konzern ganz. → Holding.
+- **Manager-Level:** XP-Balken, XP bis zum nächsten Level, freie Skill-Punkte, nächste Freischaltung. → Talentbaum.
+- **Fans und Vorstand:** beide Werte mit Ampel, Vorstandsverlauf, Tabellenplatz gegen die Erwartung (nur gelesen, `game.seasonExpectation`), Warnungen. → Vorstandsraum, Fans.
+- **Spieltag:** nächster Gegner mit Heim/Auswärts, Tabellenplatz und Derby, die drei Spiele danach, Probleme aus `getLineupProblems()`, gespeicherte Aufstellungsvorlagen zum Laden. → Aufstellung, Kalender.
+
+Die Felder sind `role="button"` mit `tabindex="0"` und einem kleinen „›“; Enter/Leertaste öffnen, Escape schließt und gibt den Fokus an das Feld zurück. Ansehen ändert nichts am Spielstand. Test: `testKopfzeilenFenster`.

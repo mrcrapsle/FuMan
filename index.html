@@ -219,6 +219,14 @@
     </div>
 </div>
 
+<!-- KOPFZEILEN-FENSTER (js/kopfzeile-fenster.js) -->
+<div id="kopf-fenster-overlay" class="generic-modal-overlay">
+    <div class="generic-modal-box kopf-fenster-box">
+        <button onclick="schliesseKopfFenster()" class="generic-modal-close" aria-label="Schließen">✕</button>
+        <div id="kopf-fenster-inhalt"></div>
+    </div>
+</div>
+
 <!-- VERLÄNGERUNGS-ASSISTENT (js/contract-tools.js) -->
 <div id="renewal-assistant-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
@@ -590,25 +598,25 @@
         </div>
 
         <div class="header-kpis">
-            <div class="kpi-chip">
+            <div class="kpi-chip kpi-chip-tipp" data-kopf="konto" role="button" tabindex="0" title="Konto im Überblick" onclick="oeffneKopfFenster('konto')">
                 <span data-i18n="header_konto">Vereins-Konto</span>
                 <strong id="top-money">150.000 €</strong>
             </div>
             <!-- PAKET-START:konzern -->
-            <div class="kpi-chip">
+            <div class="kpi-chip kpi-chip-tipp" data-kopf="holding" role="button" tabindex="0" title="Holding im Überblick" onclick="oeffneKopfFenster('holding')">
                 <span data-i18n="header_holding">Holding-Konto</span>
                 <strong id="top-holding-money" style="color:var(--industry);">50.000 €</strong>
             </div>
             <!-- PAKET-ENDE:konzern -->
-            <div class="kpi-chip">
+            <div class="kpi-chip kpi-chip-tipp" data-kopf="level" role="button" tabindex="0" title="Manager-Level im Überblick" onclick="oeffneKopfFenster('level')">
                 <span data-i18n="header_mgr_level">Manager-Level</span>
                 <strong id="top-mgr-lvl" style="color:var(--gold);">Lvl 1 (0 XP)</strong>
             </div>
-            <div class="kpi-chip">
+            <div class="kpi-chip kpi-chip-tipp" data-kopf="stimmung" role="button" tabindex="0" title="Fans und Vorstand im Überblick" onclick="oeffneKopfFenster('stimmung')">
                 <span data-i18n="header_fans_board">Fans / Vorstand</span>
                 <strong><span id="top-fans">75%</span> | <span id="top-board">80%</span></strong>
             </div>
-            <div class="kpi-chip">
+            <div class="kpi-chip kpi-chip-tipp" data-kopf="spieltag" role="button" tabindex="0" title="Spieltag im Überblick" onclick="oeffneKopfFenster('spieltag')">
                 <span data-i18n="header_matchday">Spieltag</span>
                 <strong id="top-matchday">1 / 34</strong>
             </div>
@@ -2875,6 +2883,7 @@
 <script src="js/contract-tools.js?v=3.127"></script>
 <script src="js/insights.js?v=3.128"></script>
 <script src="js/manager-tools.js?v=3.129"></script>
+<script src="js/kopfzeile-fenster.js?v=3.144"></script>
 <script src="js/player-compare.js?v=3.131"></script>
 <script src="js/private-life.js?v=2.1"></script>
 <script src="js/private-life-extra.js?v=2.1"></script>
