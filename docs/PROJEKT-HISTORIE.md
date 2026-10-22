@@ -852,7 +852,7 @@ Die Felder sind `role="button"` mit `tabindex="0"` und einem kleinen „›“; 
 - Testangebot im Diamanten-Shop: 1.000 Diamanten gegen 2 Mio. € (`TESTANGEBOT_DIAMANTEN_GELD`).
 - Test `testStartmenue` ([26.26]); die übrigen Suiten starten ohne Menü (`window.anstossOhneStartmenue`).
 
-## Phase 26.27: Einsteiger-Hilfen nach der Neulings-Analyse (ungemergt)
+## Phase 26.27: Einsteiger-Hilfen nach der Neulings-Analyse (Version 3.146)
 
 Analyse als Neuling (390 px, öffentliche Fassung): Start im Büro ohne Leiste, Kopfzeile mit gesperrter Holding, Übersicht 4,5 Handyhöhen mit doppeltem „Saison-Ziele“, Menü mit 20 Einträgen, Kader beginnt mit Schützen und zehn Formationen, vor Spiel 1 Notizbuch, Taktik-Duell, Ansprache und Presse.
 
@@ -869,7 +869,7 @@ Analyse als Neuling (390 px, öffentliche Fassung): Start im Büro ohne Leiste, 
 
 Test `testEinsteiger` ([26.27]), `testStartmenue` prüft Einsteiger-Modus und Start auf der Übersicht.
 
-## Phase 26.28: Einsteiger-Hilfen, zweite Runde (ungemergt)
+## Phase 26.28: Einsteiger-Hilfen, zweite Runde (Version 3.146)
 
 1. „Neuer Klub gestartet!“ nur noch 1,5 s.
 2. Saisoneröffnung im Einsteiger-Modus erst nach drei erledigten Ersten Schritten, dafür in der ersten Saison bis Spieltag 2 wählbar (`isSeasonOpeningOpen()`).
@@ -882,14 +882,14 @@ Test `testEinsteiger` ([26.27]), `testStartmenue` prüft Einsteiger-Modus und St
 
 `testEinsteiger` prüft alle acht Punkte.
 
-## Lexikon auf Vordermann (ungemergt, Board-Karte tmvjzpzsss8cu)
+## Lexikon auf Vordermann (Version 3.146, Board-Karte tmvjzpzsss8cu)
 
 - 9 neue Einträge (Deutsch und Englisch, je mit Zahlen aus dem Code): Ausschreitungen & Sicherheit, Freischaltungen, Startmenü & Karriere-Arten, Einsteiger-Modus, Kopfzeile & Schnellfenster, Fans ohne Karte & Topspiel-Zuschlag, Spieler-Etiketten, Aufstellungs- und Taktikvorlagen, Liquiditäts-Vorschau & Konto-Alarm. Jetzt 72 statt 63 Einträge.
 - Veraltetes korrigiert: Heimatstadt und Karriere-Szenarien verweisen aufs Startmenü (Trainer gesucht), Speichern nennt „Weiterspielen“, Fanstimmung den Einfluss verärgerter Ultras auf Ausschreitungen.
 - Ansicht: Anzahl je Kategorie, Filter „🆕 Neu“ (Feld `neu`), „Neu“-Chip am Eintrag, Sprungknopf mit Ziel („➜ Zum Kader“ statt „Zum Bildschirm“).
 - `testLexicon` prüft neue Einträge, Neu-Filter, Anzahl und Sprungziel; `testLexiconEnglish` die Übersetzungen.
 
-## Phase 26.29: 3D-Livespiel (ungemergt, Board-Karte tmvjy5q6ljhwr)
+## Phase 26.29: 3D-Livespiel (Version 3.146, Board-Karte tmvjy5q6ljhwr)
 
 - Neues Modul `js/live-3d.js`: Canvas-Ansicht mit echter Perspektive (Kamera 45 m hinter der nahen Seitenlinie, an der nahen Linie 58 m im Bild), Tribüne mit Zuschauern, Rasen mit Mähstreifen, Linien, Strafräume, Tore mit Netz.
 - 22 Figuren mit Schatten, Laufanimation, Trikot in Vereinsfarbe (auswärts Auswärtsfarbe, Gegner mit gut unterscheidbarer Farbe), Torhüter in eigener Farbe. Grundordnung je Team, zur Ballseite verschoben, das Team im Ballbesitz rückt auf, der nächste Gegenspieler presst. Ruhiges Passspiel mit Ballverlusten zwischen den Szenen.

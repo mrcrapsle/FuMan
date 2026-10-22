@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.145', date: '22.10.2026', features: 'Startmenü mit Karriere-Wahl (Verein gründen, Verein übernehmen, Trainer gesucht), Weiterspielen und Laden; Testangebot im Diamanten-Shop' };
+    const GAME_VERSION = { number: '3.146', date: '22.10.2026', features: 'Einsteiger-Modus und Einsteiger-Hilfen (kompakter Spieltag, Was jetzt?, Menü Wichtig/Mehr, Erste Schritte oben), 3D-Livespiel mit animierten Figuren, Lexikon mit 9 neuen Einträgen' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
