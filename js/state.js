@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.144', date: '22.10.2026', features: 'Kopfzeilen-Fenster per Tipp (Konto, Holding, Level, Stimmung, Spieltag); Ausschreitungen ausgebaut: Auswärts-Derbys, Brisanzspiele, drei Stufen, Fan-Dialog, Bewährung, Chronik' };
+    const GAME_VERSION = { number: '3.145', date: '22.10.2026', features: 'Startmenü mit Karriere-Wahl (Verein gründen, Verein übernehmen, Trainer gesucht), Weiterspielen und Laden; Testangebot im Diamanten-Shop' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

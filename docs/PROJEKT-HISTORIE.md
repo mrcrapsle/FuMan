@@ -843,7 +843,7 @@ Die Felder sind `role="button"` mit `tabindex="0"` und einem kleinen „›“; 
 - Fan-Dialog (3.000 €) vor einem Risikospiel ×0,6. Panel „Ausschreitungen“ in der Fan-Zentrale (Reiter Sicherheit): Risiko des nächsten Spiels mit allen Faktoren, Bewährung, Pyro-Status, Chronik.
 - Test `testAusschreitungen` ([26.25]).
 
-## Phase 26.26: Startmenü und Testangebot im Diamanten-Shop (ungemergt)
+## Phase 26.26: Startmenü und Testangebot im Diamanten-Shop (Version 3.145)
 
 - Titelbildschirm bei jedem Start (`js/startmenue.js`): Weiterspielen (mit Verein, Liga, Saison, Spieltag), Neue Karriere, Spielstand laden (Slots, Autosave, Datei). Beim ersten Start ohne Spielstand kein Weiterspielen; das Tutorial kommt erst nach der Wahl.
 - Neue Karriere: Heimatstadt plus drei Arten. Verein gründen nutzt den bisherigen Neues-Spiel-Kasten und neu einen eigenen Vereinsnamen (statt immer „1.FC Moritz …“), beim ersten Start ohne Rückfrage. Verein übernehmen: Neustart mit frischen Ligen der Stadt, dann freie Wahl aus allen sechs Ligen (Favorit/Mittelfeld/Abstiegskandidat, Stärkebalken). Trainer gesucht: je Karriere-Szenario ein passender Verein der Szenario-Liga (Absteiger/Pleite: schwache Vereine, Meister: Favoriten) mit Ziel und Frist.
