@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.146', date: '22.10.2026', features: 'Einsteiger-Modus und Einsteiger-Hilfen (kompakter Spieltag, Was jetzt?, Menü Wichtig/Mehr, Erste Schritte oben), 3D-Livespiel mit animierten Figuren, Lexikon mit 9 neuen Einträgen' };
+    const GAME_VERSION = { number: '3.147', date: '23.10.2026', features: 'Ausschreitungen als Bild (Szene im Fanblock, Effekt im 3D-Livespiel, Stadionkarte), Fan-Feindschaften als Risikospiele in allen Ligen' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

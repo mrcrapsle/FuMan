@@ -898,7 +898,7 @@ Test `testEinsteiger` ([26.27]), `testStartmenue` prüft Einsteiger-Modus und St
 - Umschalter „Taktiktafel zeigen / 3D-Ansicht zeigen“, gemerkt in `anstoss_fm13_live3d`.
 - Test `testLive3D` ([26.29]).
 
-## Phase 26.30: Ausschreitungen als Bild (ungemergt)
+## Phase 26.30: Ausschreitungen als Bild (Version 3.147)
 
 - `js/ausschreitungen-szene.js`: Fenster nach dem Vorfall mit 8-Sekunden-Canvas-Szene aus dem Fanblock. Pyro: Bengalos und aufsteigender Rauch, hüpfende Fans. Krawall: Gästegruppe drückt in den Block, Ordnerkette in Warnwesten, fliegende Becher. Schwer: Blaulicht, Polizeikette, Fans klettern über den Zaun aufs Feld. Danach bleibt das letzte Bild stehen; Text, Strafe und Folgen wie bisher.
 - Im noch offenen 3D-Livespiel nach dem Abpfiff: Bengalos und Rauch auf der Tribüne hinter der betroffenen Kurve, bei schweren Ausschreitungen laufen Fans aufs Feld, die Kamera schwenkt hin.
@@ -906,7 +906,7 @@ Test `testEinsteiger` ([26.27]), `testStartmenue` prüft Einsteiger-Modus und St
 - Keine Regeländerung: der Wurf bleibt nach dem Abpfiff in `processPostMatchRoutine()`.
 - Test `testAusschreitungSzene` ([26.30]); `testAusschreitungen` fängt das neue Fenster wie die alte Meldung ab.
 
-## Fan-Feindschaften als Risikospiele (ungemergt, Regeländerung auf Wunsch)
+## Fan-Feindschaften als Risikospiele (Version 3.147, Regeländerung auf Wunsch)
 
 - `FAN_FEINDSCHAFTEN` in `js/ausschreitungen.js`: 36 Paarungen verfeindeter Fanszenen, die keine Derbys sind (z. B. BFC gegen Lok Leipzig, Lok gegen Jena und Halle, Cottbus gegen Babelsberg, Offenbach gegen Waldhof, 1860 gegen Augsburg). Grundrisiko 8 % daheim und 4 % auswärts, zwischen Derby (12/6) und Brisanzspiel (4/2,5); alle Faktoren (Ordner, Fanprojekt, Dialog …) gelten wie gehabt. Die Fan-Zentrale nennt die Feindschaft als Faktor.
 - Lexikon (DE/EN) ergänzt, `testAusschreitungen` prüft die Feindschaft.
