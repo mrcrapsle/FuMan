@@ -897,3 +897,11 @@ Test `testEinsteiger` ([26.27]), `testStartmenue` prüft Einsteiger-Modus und St
 - Leistung: rund 1-2 ms je Bild; der Lauf endet beim Verlassen des Livespiels und bei verstecktem Tab. Reduzierte Bewegung: nur Einzelbilder bei Ereignissen.
 - Umschalter „Taktiktafel zeigen / 3D-Ansicht zeigen“, gemerkt in `anstoss_fm13_live3d`.
 - Test `testLive3D` ([26.29]).
+
+## Phase 26.30: Ausschreitungen als Bild (ungemergt)
+
+- `js/ausschreitungen-szene.js`: Fenster nach dem Vorfall mit 8-Sekunden-Canvas-Szene aus dem Fanblock. Pyro: Bengalos und aufsteigender Rauch, hüpfende Fans. Krawall: Gästegruppe drückt in den Block, Ordnerkette in Warnwesten, fliegende Becher. Schwer: Blaulicht, Polizeikette, Fans klettern über den Zaun aufs Feld. Danach bleibt das letzte Bild stehen; Text, Strafe und Folgen wie bisher.
+- Im noch offenen 3D-Livespiel nach dem Abpfiff: Bengalos und Rauch auf der Tribüne hinter der betroffenen Kurve, bei schweren Ausschreitungen laufen Fans aufs Feld, die Kamera schwenkt hin.
+- Fan-Zentrale (Sicherheit): Stadionkarte mit Heimkurve, Gästeblock, Haupttribüne und Gegengerade, gefärbt nach dem Risiko des nächsten Spiels, mit Symbolen für die Vorfälle dieser Saison.
+- Keine Regeländerung: der Wurf bleibt nach dem Abpfiff in `processPostMatchRoutine()`.
+- Test `testAusschreitungSzene` ([26.30]); `testAusschreitungen` fängt das neue Fenster wie die alte Meldung ab.

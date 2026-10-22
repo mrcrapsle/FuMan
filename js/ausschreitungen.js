@@ -113,7 +113,10 @@ function pruefeAusschreitungen(ctx) {
         schwer: `Rivalisierende Fangruppen liefern sich Straßenschlachten ${ort}.\n\nStrafe: ${formatVal(strafe)}. Fans -${fansMinus}, Vorstand -${vorstandMinus}.` + (geisterspiel ? ' Der Verband verhängt ein Geisterspiel für die nächste Heimpartie.' : '')
     };
     const warnung = bewaehrung + (stufe !== 'pyro' ? 1 : 0) >= 2 ? '\n\n⚠️ Der Verband hat euch auf Bewährung gesetzt: weitere Vorfälle werden wahrscheinlicher schwer.' : '';
-    showNotice(AUSSCHREITUNG_STUFEN[stufe].name, texte[stufe] + warnung, { typ: 'warn' });
+    // Bild statt reiner Meldung (js/ausschreitungen-szene.js): Szene im Fanblock, im offenen Livespiel auch auf der Tribüne
+    if (typeof zeigeAusschreitungSzene === 'function') zeigeAusschreitungSzene(eintrag, AUSSCHREITUNG_STUFEN[stufe].name, texte[stufe] + warnung);
+    else showNotice(AUSSCHREITUNG_STUFEN[stufe].name, texte[stufe] + warnung, { typ: 'warn' });
+    if (typeof live3dAusschreitung === 'function') live3dAusschreitung(eintrag);
     return eintrag;
 }
 
@@ -169,5 +172,7 @@ function renderAusschreitungenBox() {
     html += liste.length
         ? `<div style="font-size:var(--fs-small);">${liste.map(v => `<div class="box" style="display:flex; justify-content:space-between; gap:6px; flex-wrap:wrap;"><span>S${v.season}/${v.matchday}. ${AUSSCHREITUNG_STUFEN[v.stufe]?.name || v.stufe} · ${mpEsc(v.gegner)} (${v.heim ? 'H' : 'A'})</span><span style="color:var(--danger);">-${formatVal(v.strafe)}${v.geisterspiel ? ' · 👻' : ''}</span></div>`).join('')}</div>`
         : '<div style="color:var(--text-muted); font-size:var(--fs-caption);">Bisher keine Vorfälle.</div>';
+    html += '<canvas id="ausschreitung-karte" class="ausschreitung-karte" role="img" aria-label="Stadionkarte: Risiko je Block und Vorfälle dieser Saison"></canvas><div class="startmenue-hinweis">Farbe je Block nach dem Risiko des nächsten Spiels (grün ruhig, rot hoch), Symbole für Vorfälle dieser Saison.</div>';
     box.innerHTML = html;
+    if (typeof zeichneAusschreitungKarte === 'function') zeichneAusschreitungKarte(lage, spiel);
 }

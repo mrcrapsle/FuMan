@@ -268,7 +268,8 @@ function live3dSchritt(dt) {
     });
 
     // Kamera folgt dem Ball
-    const kz = Math.max(24, Math.min(81, bx));
+    // Bei Ausschreitungen nach dem Abpfiff schwenkt die Kamera zur betroffenen Kurve
+    const kz = Math.max(24, Math.min(81, d.krawall ? d.krawall.x : bx));
     d.kameraX += (kz - d.kameraX) * Math.min(1, dt * 2.2);
 }
 
@@ -329,6 +330,8 @@ function live3dZeichnen(ctx, P) {
     [0, 105].forEach(x => { dinge.push({ y: 30.3, mal: () => live3dTor(ctx, P, x, 'hinten') }); dinge.push({ y: 37.7, mal: () => live3dTor(ctx, P, x, 'vorn') }); });
     dinge.push({ y: live3d.ball.y + 0.01, mal: () => live3dBall(ctx, P) });
     dinge.sort((a, b) => a.y - b.y).forEach(x => x.mal());
+    // Ausschreitungen nach dem Abpfiff (js/ausschreitungen-szene.js)
+    if (live3d.krawall && typeof live3dZeichneKrawall === 'function') live3dZeichneKrawall(ctx, P);
     // Einblendung
     if (live3d.text && live3d.zeit < live3d.textBis) {
         const gross = live3d.text === 'TOR!' || live3d.text === 'Gegentor';

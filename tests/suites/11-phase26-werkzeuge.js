@@ -3702,7 +3702,7 @@ async function testAusschreitungen(browser) {
     const r = await page.evaluate(() => {
         closeTutorial(); game.sackPending = false; simulateMatchdays(2);
         const out = {};
-        const notices = []; showNotice = (t) => { notices.push(t); };
+        const notices = []; showNotice = (t) => { notices.push(t); }; zeigeAusschreitungSzene = (e, t) => { notices.push(t); };
         const zufallAlt = Math.random;
         const spiel = ausschreitungNaechstesSpiel();
         const gegner = spiel.gegner;
@@ -4032,6 +4032,66 @@ async function testLive3D(browser) {
     await page.close();
 }
 
+async function testAusschreitungSzene(browser) {
+    console.log('\n[26.30] Ausschreitungen als Bild: Szene im Fanblock, Effekt im 3D-Livespiel, Stadionkarte');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => { closeTutorial(); game.sackPending = false; document.documentElement.setAttribute('data-motion', 'normal'); });
+    const r = {};
+    // Echter Vorfall nach dem Spiel öffnet das Fenster mit Szene statt der reinen Meldung
+    Object.assign(r, await page.evaluate(() => {
+        const out = {};
+        isDerbyOpponent = () => true;
+        const spiel = ausschreitungNaechstesSpiel();
+        const alt = Math.random; const folge = [0, 0.99]; Math.random = () => folge.length ? folge.shift() : 0.5;
+        const v = pruefeAusschreitungen({ gegner: spiel.gegner, heim: true, tordiff: 0 });
+        Math.random = alt;
+        const ov = document.getElementById('ausschreitung-szene-overlay');
+        out.fenster = !!v && ov.classList.contains('show') && document.getElementById('ausschreitung-szene-titel').textContent === AUSSCHREITUNG_STUFEN.schwer.name
+            && document.getElementById('ausschreitung-szene-text').textContent.includes('Strafe') && ov.getAttribute('role') === 'dialog';
+        return out;
+    }));
+    await page.waitForFunction(() => ausschreitungSzene && ausschreitungSzene.bilder > 5, null, { timeout: 5000 }).catch(() => null);
+    Object.assign(r, await page.evaluate(() => {
+        const out = { animiert: !!ausschreitungSzene && ausschreitungSzene.bilder > 5 && ausschreitungSzene.laeufer.length > 0 };
+        const c = document.getElementById('ausschreitung-szene-canvas');
+        out.canvas = c.width > 0 && c.height > 0;
+        schliesseAusschreitungSzene();
+        out.zu = !document.getElementById('ausschreitung-szene-overlay').classList.contains('show') && ausschreitungSzene === null;
+        // Reduzierte Bewegung: ein Standbild, keine Animation
+        document.documentElement.setAttribute('data-motion', 'reduziert');
+        zeigeAusschreitungSzene({ season: 1, matchday: 2, gegner: 'X', heim: false, stufe: 'pyro', strafe: 3000 }, 'Pyro', 'Text');
+        out.standbild = ausschreitungSzene.bilder === 1 && !ausschreitungSzene.raf;
+        schliesseAusschreitungSzene();
+        document.documentElement.setAttribute('data-motion', 'normal');
+        return out;
+    }));
+    // Im offenen Livespiel: Effekt auf der Tribüne, Kamera schwenkt zur Kurve
+    await page.evaluate(() => { startMatchdayFlow(); skipPressAndPlay(); stopLiveTickerAutoplay(); });
+    await page.waitForFunction(() => live3d && live3d.frames > 3, null, { timeout: 8000 }).catch(() => null);
+    Object.assign(r, await page.evaluate(() => {
+        const out = {};
+        live3dAusschreitung({ season: 1, matchday: 1, gegner: 'X', heim: true, stufe: 'schwer', strafe: 1 });
+        out.live = !!live3d.krawall && live3d.krawall.laeufer.length === 10 && live3d.text === AUSSCHREITUNG_STUFEN.schwer.name;
+        for (let i = 0; i < 60; i++) live3dSchritt(0.05);
+        out.kamera = Math.abs(live3d.kameraX - 24) < 3;
+        const ctx = document.getElementById('live-3d-canvas').getContext('2d');
+        live3dZeichnen(ctx, live3dProjektion(390, 234));
+        out.zeichnet = true;
+        return out;
+    }));
+    // Stadionkarte in der Fan-Zentrale
+    Object.assign(r, await page.evaluate(() => {
+        showScreen('screen-fans'); setFansTab('sicherheit'); renderAusschreitungenBox();
+        const k = document.getElementById('ausschreitung-karte');
+        return { karte: !!k && k.width > 0 && k.getAttribute('role') === 'img', karteLayout: (k.offsetWidth || 0) <= 300 };
+    }));
+    const K = ['fenster', 'animiert', 'canvas', 'zu', 'standbild', 'live', 'kamera', 'zeichnet', 'karte', 'karteLayout'];
+    assert(K.every(k => r[k] === true), `Ausschreitungen als Bild: Fenster mit Szene, Standbild, Livespiel-Effekt, Stadionkarte (${JSON.stringify(K.map(k => r[k]))})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 module.exports = {
     testSpielvorbereitung,
     testVertragsWerkzeuge,
@@ -4059,6 +4119,7 @@ module.exports = {
     testStartmenue,
     testEinsteiger,
     testLive3D,
+    testAusschreitungSzene,
     testAdminWerkzeuge,
     testPrivatlebenPlus,
     testOeffentlicheFassung,

@@ -95,6 +95,15 @@
     <span id="version-display"></span>
 </div>
 <div id="app-toast" class="app-toast" role="status" aria-live="polite" aria-atomic="true"></div>
+<div id="ausschreitung-szene-overlay" class="generic-modal-overlay">
+    <div class="generic-modal-box">
+        <button class="generic-modal-close" onclick="schliesseAusschreitungSzene()" title="Schließen">×</button>
+        <div class="panel-header" id="ausschreitung-szene-titel">Ausschreitungen</div>
+        <canvas id="ausschreitung-szene-canvas" class="live-3d-canvas" role="img" aria-label="Szene im Fanblock"></canvas>
+        <div id="ausschreitung-szene-text" style="font-size:var(--fs-body); margin:8px 0;"></div>
+        <button onclick="schliesseAusschreitungSzene()" class="btn-action">Verstanden</button>
+    </div>
+</div>
 <div id="einsteiger-abschluss-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
         <button class="generic-modal-close" onclick="schliesseEinsteigerAbschluss()" title="Schließen">×</button>
@@ -2908,6 +2917,7 @@
 <script src="js/startmenue.js?v=3.145"></script>
 <script src="js/einsteiger.js?v=3.146"></script>
 <script src="js/live-3d.js?v=3.146"></script>
+<script src="js/ausschreitungen-szene.js?v=3.147"></script>
 <script src="js/youth.js?v=2.1"></script>
 <script src="js/youth-academy-extended.js?v=2.1"></script>
 <script src="js/youth-pathway.js?v=3.11"></script>

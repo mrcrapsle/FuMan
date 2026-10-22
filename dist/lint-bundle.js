@@ -22539,7 +22539,10 @@ function pruefeAusschreitungen(ctx) {
         schwer: `Rivalisierende Fangruppen liefern sich Straßenschlachten ${ort}.\n\nStrafe: ${formatVal(strafe)}. Fans -${fansMinus}, Vorstand -${vorstandMinus}.` + (geisterspiel ? ' Der Verband verhängt ein Geisterspiel für die nächste Heimpartie.' : '')
     };
     const warnung = bewaehrung + (stufe !== 'pyro' ? 1 : 0) >= 2 ? '\n\n⚠️ Der Verband hat euch auf Bewährung gesetzt: weitere Vorfälle werden wahrscheinlicher schwer.' : '';
-    showNotice(AUSSCHREITUNG_STUFEN[stufe].name, texte[stufe] + warnung, { typ: 'warn' });
+    // Bild statt reiner Meldung (js/ausschreitungen-szene.js): Szene im Fanblock, im offenen Livespiel auch auf der Tribüne
+    if (typeof zeigeAusschreitungSzene === 'function') zeigeAusschreitungSzene(eintrag, AUSSCHREITUNG_STUFEN[stufe].name, texte[stufe] + warnung);
+    else showNotice(AUSSCHREITUNG_STUFEN[stufe].name, texte[stufe] + warnung, { typ: 'warn' });
+    if (typeof live3dAusschreitung === 'function') live3dAusschreitung(eintrag);
     return eintrag;
 }
 
@@ -22595,7 +22598,9 @@ function renderAusschreitungenBox() {
     html += liste.length
         ? `<div style="font-size:var(--fs-small);">${liste.map(v => `<div class="box" style="display:flex; justify-content:space-between; gap:6px; flex-wrap:wrap;"><span>S${v.season}/${v.matchday}. ${AUSSCHREITUNG_STUFEN[v.stufe]?.name || v.stufe} · ${mpEsc(v.gegner)} (${v.heim ? 'H' : 'A'})</span><span style="color:var(--danger);">-${formatVal(v.strafe)}${v.geisterspiel ? ' · 👻' : ''}</span></div>`).join('')}</div>`
         : '<div style="color:var(--text-muted); font-size:var(--fs-caption);">Bisher keine Vorfälle.</div>';
+    html += '<canvas id="ausschreitung-karte" class="ausschreitung-karte" role="img" aria-label="Stadionkarte: Risiko je Block und Vorfälle dieser Saison"></canvas><div class="startmenue-hinweis">Farbe je Block nach dem Risiko des nächsten Spiels (grün ruhig, rot hoch), Symbole für Vorfälle dieser Saison.</div>';
     box.innerHTML = html;
+    if (typeof zeichneAusschreitungKarte === 'function') zeichneAusschreitungKarte(lage, spiel);
 }
 
 /* eslint-enable */
@@ -23335,7 +23340,8 @@ function live3dSchritt(dt) {
     });
 
     // Kamera folgt dem Ball
-    const kz = Math.max(24, Math.min(81, bx));
+    // Bei Ausschreitungen nach dem Abpfiff schwenkt die Kamera zur betroffenen Kurve
+    const kz = Math.max(24, Math.min(81, d.krawall ? d.krawall.x : bx));
     d.kameraX += (kz - d.kameraX) * Math.min(1, dt * 2.2);
 }
 
@@ -23396,6 +23402,8 @@ function live3dZeichnen(ctx, P) {
     [0, 105].forEach(x => { dinge.push({ y: 30.3, mal: () => live3dTor(ctx, P, x, 'hinten') }); dinge.push({ y: 37.7, mal: () => live3dTor(ctx, P, x, 'vorn') }); });
     dinge.push({ y: live3d.ball.y + 0.01, mal: () => live3dBall(ctx, P) });
     dinge.sort((a, b) => a.y - b.y).forEach(x => x.mal());
+    // Ausschreitungen nach dem Abpfiff (js/ausschreitungen-szene.js)
+    if (live3d.krawall && typeof live3dZeichneKrawall === 'function') live3dZeichneKrawall(ctx, P);
     // Einblendung
     if (live3d.text && live3d.zeit < live3d.textBis) {
         const gross = live3d.text === 'TOR!' || live3d.text === 'Gegentor';
@@ -23577,6 +23585,268 @@ function live3dUmschalten() {
 
 window.addEventListener('resize', () => { if (live3d && live3dSichtbar()) { live3d.groesse = live3dGroesse(); if (!live3d.laeuft) live3dZeichneEinmal(); } });
 document.addEventListener('visibilitychange', () => { if (!document.hidden && live3d && live3dSichtbar()) live3dAnzeigen(); });
+
+/* eslint-enable */
+// Ausschreitungen als Bild (Canvas): Szene im Fanblock nach dem Abpfiff (Fenster), Effekt im 3D-Livespiel
+// (js/live-3d.js) und Stadionkarte mit Risiko je Block in der Fan-Zentrale. Nur Ansicht: ob und wie schwer
+// es kracht, entscheidet pruefeAusschreitungen() (js/ausschreitungen.js) wie bisher nach dem Spiel.
+// Bei reduzierter Bewegung zeigen Fenster und Livespiel ein ruhiges Standbild.
+
+const SZENE_DAUER = 8;   // Sekunden, danach bleibt das letzte Bild stehen
+let ausschreitungSzene = null;
+
+function szeneReduziert() { return typeof live3dReduziert === 'function' ? live3dReduziert() : false; }
+function szeneZufall(seed) { let s = seed >>> 0 || 1; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+
+function szeneFarben(eintrag) {
+    const eigene = game.clubCrestColor || '#8b5cf6';
+    const gegner = typeof LIVE3D_GEGNER_FARBEN !== 'undefined' ? LIVE3D_GEGNER_FARBEN[(typeof live3dHash === 'function' ? live3dHash(eintrag.gegner) : 0) % LIVE3D_GEGNER_FARBEN.length] : '#e53935';
+    return { eigene, gegner: gegner === eigene ? '#f5f5f5' : gegner };
+}
+
+// ---------- Fenster nach dem Spiel ----------
+// Aus pruefeAusschreitungen(): ersetzt die bisherige Meldung, Text und Folgen bleiben gleich.
+function zeigeAusschreitungSzene(eintrag, titel, text) {
+    const ov = document.getElementById('ausschreitung-szene-overlay');
+    if (!ov) { showNotice(titel, text, { typ: 'warn' }); return; }
+    document.getElementById('ausschreitung-szene-titel').textContent = titel;
+    document.getElementById('ausschreitung-szene-text').innerHTML = mpEsc(text).replace(/\n/g, '<br>');
+    ov.classList.add('show');
+    const rnd = szeneZufall(eintrag.season * 1000 + eintrag.matchday * 7 + (eintrag.strafe || 0));
+    const farben = szeneFarben(eintrag);
+    const fans = Array.from({ length: 90 }, (_, i) => ({ reihe: i % 6, x: rnd(), phase: rnd() * 6, gegner: eintrag.stufe !== 'pyro' && rnd() < 0.4, tempo: 0.6 + rnd() }));
+    const fackeln = Array.from({ length: eintrag.stufe === 'pyro' ? 7 : 4 }, () => ({ x: 0.15 + rnd() * 0.7, reihe: Math.floor(rnd() * 4) }));
+    const laeufer = eintrag.stufe === 'schwer' ? Array.from({ length: 14 }, () => ({ x: 0.1 + rnd() * 0.8, start: rnd() * 3, tempo: 0.18 + rnd() * 0.2, seite: rnd() < 0.5 ? -1 : 1 })) : [];
+    if (ausschreitungSzene && ausschreitungSzene.raf) cancelAnimationFrame(ausschreitungSzene.raf);
+    ausschreitungSzene = { eintrag, farben, fans, fackeln, laeufer, rauch: [], t0: 0, zeit: 0, raf: 0, rnd, bilder: 0 };
+    const c = document.getElementById('ausschreitung-szene-canvas');
+    const breite = (c.parentElement && c.parentElement.offsetWidth) || 320;
+    const hoehe = Math.round(Math.min(260, Math.max(170, breite * 0.55)));
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    c.width = Math.round(breite * dpr); c.height = Math.round(hoehe * dpr); c.style.height = hoehe + 'px';
+    ausschreitungSzene.W = breite; ausschreitungSzene.H = hoehe; ausschreitungSzene.dpr = dpr;
+    if (szeneReduziert()) { ausschreitungSzene.zeit = SZENE_DAUER * 0.6; szeneZeichnen(); return; }
+    const schritt = t => {
+        const sz = ausschreitungSzene;
+        if (!sz || !ov.classList.contains('show')) return;
+        if (!sz.t0) sz.t0 = t;
+        sz.zeit = (t - sz.t0) / 1000;
+        szeneZeichnen();
+        if (sz.zeit < SZENE_DAUER) sz.raf = requestAnimationFrame(schritt);
+    };
+    ausschreitungSzene.raf = requestAnimationFrame(schritt);
+}
+
+function schliesseAusschreitungSzene() {
+    const ov = document.getElementById('ausschreitung-szene-overlay');
+    if (ov) ov.classList.remove('show');
+    if (ausschreitungSzene && ausschreitungSzene.raf) cancelAnimationFrame(ausschreitungSzene.raf);
+    ausschreitungSzene = null;
+}
+
+function szeneZeichnen() {
+    const sz = ausschreitungSzene;
+    const c = document.getElementById('ausschreitung-szene-canvas');
+    if (!sz || !c) return;
+    const ctx = c.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(sz.dpr, 0, 0, sz.dpr, 0, 0);
+    const { W, H, zeit } = sz;
+    const st = sz.eintrag.stufe;
+    // Nachthimmel, Flutlicht
+    const himmel = ctx.createLinearGradient(0, 0, 0, H);
+    himmel.addColorStop(0, '#070b16'); himmel.addColorStop(1, '#16223a');
+    ctx.fillStyle = himmel; ctx.fillRect(0, 0, W, H);
+    // Blaulicht bei schweren Ausschreitungen
+    if (st === 'schwer' && Math.floor(zeit * 3) % 2 === 0) { ctx.fillStyle = 'rgba(40,90,255,0.14)'; ctx.fillRect(0, 0, W, H); }
+    // Tribüne (Stufen) und Zaun
+    const blockOben = H * 0.12, blockUnten = H * 0.68;
+    for (let r = 0; r < 6; r++) {
+        const y = blockOben + r * (blockUnten - blockOben) / 6;
+        ctx.fillStyle = r % 2 ? '#2a3550' : '#323f5e';
+        ctx.fillRect(0, y, W, (blockUnten - blockOben) / 6);
+    }
+    // Rasen unten
+    ctx.fillStyle = '#2e7d32'; ctx.fillRect(0, blockUnten + H * 0.06, W, H);
+    ctx.fillStyle = '#388e3c'; for (let i = 0; i < 6; i++) ctx.fillRect(i * W / 3, blockUnten + H * 0.06, W / 6, H);
+    // Fans
+    const aufstand = st === 'pyro' ? 0.6 : 1;
+    sz.fans.forEach(f => {
+        const reiheH = (blockUnten - blockOben) / 6;
+        let x = f.x * W;
+        // Krawall: die Gästegruppe drückt in die Mitte
+        if (st !== 'pyro' && f.gegner) x += Math.sin(zeit * f.tempo * 2 + f.phase) * 6 - 10 * Math.min(1, zeit / 3);
+        const y = blockOben + (f.reihe + 1) * reiheH;
+        const huepf = Math.abs(Math.sin(zeit * 5 * f.tempo + f.phase)) * 3 * aufstand;
+        const g = reiheH * 0.9;
+        ctx.fillStyle = f.gegner ? sz.farben.gegner : sz.farben.eigene;
+        ctx.fillRect(x - g * 0.22, y - g * 0.75 - huepf, g * 0.44, g * 0.55);
+        ctx.fillStyle = '#e0ac69';
+        ctx.beginPath(); ctx.arc(x, y - g * 0.88 - huepf, g * 0.16, 0, Math.PI * 2); ctx.fill();
+        // Arme hoch
+        ctx.strokeStyle = '#e0ac69'; ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(x - g * 0.2, y - g * 0.7 - huepf); ctx.lineTo(x - g * 0.32, y - g * 1.05 - huepf + Math.sin(zeit * 6 + f.phase) * 2);
+        ctx.moveTo(x + g * 0.2, y - g * 0.7 - huepf); ctx.lineTo(x + g * 0.32, y - g * 1.05 - huepf - Math.sin(zeit * 6 + f.phase) * 2); ctx.stroke();
+    });
+    // Zaun
+    ctx.strokeStyle = 'rgba(200,210,230,0.55)'; ctx.lineWidth = 1;
+    for (let x = 0; x < W; x += 6) { ctx.beginPath(); ctx.moveTo(x, blockUnten); ctx.lineTo(x, blockUnten + H * 0.06); ctx.stroke(); }
+    ctx.beginPath(); ctx.moveTo(0, blockUnten); ctx.lineTo(W, blockUnten); ctx.stroke();
+    // Bengalos und Rauch
+    sz.fackeln.forEach((f, i) => {
+        if (zeit < i * 0.35) return;
+        const reiheH = (blockUnten - blockOben) / 6;
+        const x = f.x * W, y = blockOben + (f.reihe + 0.6) * reiheH;
+        const flackern = 0.7 + 0.3 * Math.sin(zeit * 30 + i);
+        const glut = ctx.createRadialGradient(x, y, 0, x, y, 26 * flackern);
+        glut.addColorStop(0, 'rgba(255,240,200,0.95)'); glut.addColorStop(0.25, 'rgba(255,80,40,0.8)'); glut.addColorStop(1, 'rgba(255,40,20,0)');
+        ctx.fillStyle = glut; ctx.beginPath(); ctx.arc(x, y, 26 * flackern, 0, Math.PI * 2); ctx.fill();
+    });
+    // Rauchwolken steigen auf und ziehen nach rechts
+    const wolken = Math.min(40, Math.floor(zeit * 6));
+    for (let i = 0; i < wolken; i++) {
+        const f = sz.fackeln[i % sz.fackeln.length];
+        const alter = zeit - i / 6;
+        const x = f.x * W + alter * 14 + Math.sin(i) * 8, y = blockOben + f.reihe * 10 - alter * 16;
+        const r = 10 + alter * 7;
+        ctx.fillStyle = `rgba(${st === 'pyro' ? '230,120,120' : '170,170,180'},${Math.max(0, 0.32 - alter * 0.04)})`;
+        ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    }
+    // Krawall: Ordnerkette in Warnwesten vor dem Zaun
+    if (st !== 'pyro') {
+        const n = 8;
+        for (let i = 0; i < n; i++) {
+            const x = (i + 0.5) * W / n + Math.sin(zeit * 2 + i) * 2;
+            const y = blockUnten + H * 0.17;
+            ctx.fillStyle = st === 'schwer' ? '#1a237e' : '#fdd835';
+            ctx.fillRect(x - 5, y - 16, 10, 12);
+            ctx.fillStyle = st === 'schwer' ? '#263238' : '#e0ac69';
+            ctx.beginPath(); ctx.arc(x, y - 19, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.strokeStyle = '#111111'; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(x - 3, y - 4); ctx.lineTo(x - 3, y + 4); ctx.moveTo(x + 3, y - 4); ctx.lineTo(x + 3, y + 4); ctx.stroke();
+        }
+        // Becher und Feuerzeuge fliegen
+        for (let i = 0; i < 6; i++) {
+            const t = ((zeit * 0.8 + i * 0.37) % 1.4) / 1.4;
+            const x0 = (0.2 + i * 0.12) * W, x1 = x0 + 30, yb = blockUnten - 10;
+            ctx.fillStyle = '#eeeeee';
+            ctx.fillRect(x0 + (x1 - x0) * t, yb - Math.sin(Math.PI * t) * 40 + t * 50, 3, 4);
+        }
+    }
+    // Schwer: Platzsturm über den Zaun
+    sz.laeufer.forEach(l => {
+        const t = zeit - l.start;
+        if (t < 0) return;
+        const y = blockUnten - 6 + Math.min(1, t * 1.4) * H * 0.25;
+        const x = l.x * W + l.seite * t * 20;
+        const g = 14;
+        ctx.fillStyle = sz.farben.eigene;
+        ctx.fillRect(x - 3, y - g * 0.75, 6, g * 0.5);
+        ctx.fillStyle = '#e0ac69'; ctx.beginPath(); ctx.arc(x, y - g * 0.9, 3, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#111111'; ctx.lineWidth = 1.5;
+        const s = Math.sin(t * 14) * 3;
+        ctx.beginPath(); ctx.moveTo(x, y - g * 0.25); ctx.lineTo(x - 2 + s, y); ctx.moveTo(x, y - g * 0.25); ctx.lineTo(x + 2 - s, y); ctx.stroke();
+    });
+    // Einblendung
+    const name = (AUSSCHREITUNG_STUFEN[st] || {}).name || '';
+    ctx.font = `800 ${Math.round(H * 0.08)}px system-ui, sans-serif`;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(8, 8, ctx.measureText(name).width + 16, H * 0.08 + 10);
+    ctx.fillStyle = '#ffffff'; ctx.fillText(name, 16, 13);
+    sz.bilder++;
+}
+
+// ---------- Effekt im 3D-Livespiel ----------
+// Aus pruefeAusschreitungen() nach dem Abpfiff: läuft im noch offenen Livespiel weiter.
+function live3dAusschreitung(eintrag) {
+    if (typeof live3d === 'undefined' || !live3d || typeof currentMatch === 'undefined' || live3d.match !== currentMatch) return;
+    const rnd = szeneZufall(eintrag.matchday * 13 + eintrag.season);
+    // Heimkurve hinter dem einen Tor, Gästeblock hinter dem anderen
+    const x = eintrag.heim ? 8 : 97;
+    live3d.krawall = {
+        stufe: eintrag.stufe, start: live3d.zeit, x,
+        fackeln: Array.from({ length: 5 }, () => ({ x: x + (rnd() - 0.5) * 18, h: 1 + rnd() * 4 })),
+        laeufer: eintrag.stufe === 'schwer' ? Array.from({ length: 10 }, () => ({ x: x + (rnd() - 0.5) * 20, ziel: { x: 30 + rnd() * 45, y: 10 + rnd() * 48 }, start: rnd() * 2 })) : []
+    };
+    live3dText((AUSSCHREITUNG_STUFEN[eintrag.stufe] || {}).name || '', 4);
+    if (szeneReduziert() && typeof live3dZeichneEinmal === 'function') live3dZeichneEinmal();
+}
+
+// Aus live3dZeichnen(): Bengalos und Rauch auf der Tribüne, bei schweren Ausschreitungen Fans auf dem Rasen.
+function live3dZeichneKrawall(ctx, P) {
+    const k = live3d.krawall;
+    if (!k) return;
+    const t = szeneReduziert() ? 3 : live3d.zeit - k.start;
+    k.fackeln.forEach((f, i) => {
+        const p = live3dPunkt(P, f.x, -3 - (i % 3) * 1.5, f.h);
+        const fl = 0.7 + 0.3 * Math.sin(live3d.zeit * 25 + i);
+        const r = Math.max(4, p.s * 3 * fl);
+        const glut = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+        glut.addColorStop(0, 'rgba(255,240,200,0.95)'); glut.addColorStop(0.3, 'rgba(255,70,30,0.75)'); glut.addColorStop(1, 'rgba(255,40,20,0)');
+        ctx.fillStyle = glut; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill();
+        // Rauch zieht übers Feld
+        for (let j = 0; j < 4; j++) {
+            const alter = Math.max(0, t - j * 0.8);
+            const q = live3dPunkt(P, f.x + alter * 2.5, -2 + alter * 2.2, f.h + alter * 1.5);
+            ctx.fillStyle = `rgba(220,130,130,${Math.max(0, 0.25 - alter * 0.025)})`;
+            ctx.beginPath(); ctx.arc(q.x, q.y, Math.max(4, q.s * (2 + alter * 1.2)), 0, Math.PI * 2); ctx.fill();
+        }
+    });
+    k.laeufer.forEach(l => {
+        const z = Math.max(0, Math.min(1, (t - l.start) / 4));
+        if (t < l.start) return;
+        const x = l.x + (l.ziel.x - l.x) * z, y = -1 + (l.ziel.y + 1) * z;
+        const p = live3dPunkt(P, x, y, 0);
+        const g = 2.7 * p.s;
+        ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(p.x, p.y, 0.4 * g, 0.13 * g, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#263238'; ctx.fillRect(p.x - 0.22 * g, p.y - 1.5 * g, 0.44 * g, 0.65 * g);
+        ctx.strokeStyle = '#1b1b1b'; ctx.lineWidth = Math.max(1, 0.15 * g);
+        const s = Math.sin(live3d.zeit * 12 + l.x) * 0.25 * g;
+        ctx.beginPath(); ctx.moveTo(p.x, p.y - 0.85 * g); ctx.lineTo(p.x - s, p.y); ctx.moveTo(p.x, p.y - 0.85 * g); ctx.lineTo(p.x + s, p.y); ctx.stroke();
+        ctx.fillStyle = '#e0ac69'; ctx.beginPath(); ctx.arc(p.x, p.y - 1.68 * g, 0.17 * g, 0, Math.PI * 2); ctx.fill();
+    });
+}
+
+// ---------- Stadionkarte in der Fan-Zentrale ----------
+// Draufsicht mit vier Blöcken: Farbe nach dem Risiko des nächsten Spiels, Marker für Vorfälle dieser Saison.
+function zeichneAusschreitungKarte(lage, spiel) {
+    const c = document.getElementById('ausschreitung-karte');
+    if (!c) return;
+    const breite = 300, hoehe = 170;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    c.width = breite * dpr; c.height = hoehe * dpr;
+    const ctx = c.getContext('2d');
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, breite, hoehe);
+    const risiko = lage ? lage.chance : 0;
+    const ton = r => r <= 0 ? '#4caf50' : (r < 0.03 ? '#9ccc65' : (r < 0.08 ? '#ffb300' : '#e53935'));
+    const heimKurve = spiel && spiel.heim ? risiko : 0;
+    const gaeste = spiel && !spiel.heim ? risiko : (spiel && lage && lage.derby ? risiko * 0.8 : risiko * 0.4);
+    const bloecke = [
+        { name: 'Heimkurve', x: 8, y: 30, w: 34, h: 110, r: heimKurve },
+        { name: 'Gästeblock', x: 258, y: 30, w: 34, h: 110, r: gaeste },
+        { name: 'Haupttribüne', x: 50, y: 142, w: 200, h: 22, r: risiko * 0.2 },
+        { name: 'Gegengerade', x: 50, y: 6, w: 200, h: 22, r: risiko * 0.3 }
+    ];
+    bloecke.forEach(b => {
+        ctx.fillStyle = ton(b.r); ctx.globalAlpha = 0.85; ctx.fillRect(b.x, b.y, b.w, b.h); ctx.globalAlpha = 1;
+        ctx.fillStyle = '#ffffff'; ctx.font = '700 10px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        if (b.h > b.w) { ctx.save(); ctx.translate(b.x + b.w / 2, b.y + b.h / 2); ctx.rotate(-Math.PI / 2); ctx.fillText(b.name, 0, 0); ctx.restore(); }
+        else ctx.fillText(b.name, b.x + b.w / 2, b.y + b.h / 2);
+    });
+    // Spielfeld
+    ctx.fillStyle = '#2e7d32'; ctx.fillRect(50, 32, 200, 106);
+    ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 1;
+    ctx.strokeRect(54, 36, 192, 98); ctx.beginPath(); ctx.moveTo(150, 36); ctx.lineTo(150, 134); ctx.stroke();
+    ctx.beginPath(); ctx.arc(150, 85, 14, 0, Math.PI * 2); ctx.stroke();
+    // Vorfälle dieser Saison
+    (game.ausschreitungen || []).filter(v => v.season === game.season).slice(0, 8).forEach((v, i) => {
+        const x = v.heim ? 64 : 236, y = 46 + (i % 6) * 15;   // am Rand des Spielfelds vor dem Block
+        ctx.font = '12px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(v.stufe === 'pyro' ? '🧨' : (v.stufe === 'krawall' ? '👊' : '🔥'), x, y);
+    });
+}
 
 /* eslint-enable */
 
@@ -31457,7 +31727,7 @@ const I18N_UI_EN = {
     // Premium & Admin & Verschiedenes
     '💎 Premium-Shop': '💎 Premium shop', 'Dies ist eine reine Offline-App ohne echte Zahlungsanbindung. "Käufe" hier sind simuliert und buchen kein echtes Geld ab - die Premium-Punkte werden direkt gutgeschrieben.': 'This is an offline-only app with no real payments. "Purchases" here are simulated and charge no real money - premium points are credited directly.', 'Premium-Punkte "kaufen" (simuliert)': 'Premium points "buy" (simulated)', 'Booster einlösen': 'Redeem booster', '💎 Premium: Fan-Boost': '💎 Premium: fan boost', 'Sofortiger Fan-Zufriedenheits-Schub für Diamanten.': 'Instant fan satisfaction boost for diamonds.', '💎 Fan-Zufriedenheit +20 kaufen (90)': '💎 Buy fan satisfaction +20 (90)', '💎 Mit Diamanten sofort abschließen (150)': '💎 Finish now with diamonds (150)', '⭐ Zusätzliche Features': '⭐ Extra features', '💾 Speicherstände': '💾 Save games', '💾 Savegame-Export & JSON-Import': '💾 Save export & JSON import', '💾 Als Datei herunterladen': '💾 Download as file', '📤 Als Datei exportieren': '📤 Export as file', '📥 Aus Datei importieren': '📥 Import from file', '📤 Exportieren': '📤 Export', '📤 JSON Exportieren': '📤 Export JSON', '📥 JSON Importieren': '📥 Import JSON', '📸 Als Bild herunterladen': '📸 Download as image', '📋 Verlauf exportieren': '📋 Export history', '🆕 Neues Spiel starten (frischer Klub)': '🆕 Start a new game (fresh club)', '✅ Neues Spiel mit diesen Einstellungen starten': '✅ Start a new game with these settings', 'Startliga wählen:': 'Choose the starting league:', 'Startkapital wählen:': 'Choose the starting capital:', 'Heimatstadt (bestimmt Regionalliga, Oberliga und Landespokal):': 'Home city (determines the regional leagues and the state cup):', 'Aktueller Vereinsname:': 'Current club name:', '🧪 Szenario-Presets': '🧪 Scenario presets', 'Ausgewogenes Einsteigen ohne besondere Vor-/Nachteile.': 'A balanced start without special pros or cons.', 'Ausgewogener Ansatz ohne besondere Vor-/Nachteile.': 'A balanced approach without special pros or cons.', '🏷️ Vereinsidentität': '🏷️ Club identity', '🛡️ Vereins-Wappen': '🛡️ Club crest', '🖼️ Vereinsmuseum: Wappen-Historie': '🖼️ Club museum: crest history', 'Zweite Ebene: Muster-Badge': 'Second layer: pattern badge', 'Dritte Ebene: Tier-/Maskottchen-Symbol': 'Third layer: animal/mascot symbol', 'Symbol': 'Symbol', 'Farbe': 'Colour', 'Auswärtstrikot-Farbe': 'Away kit colour', '✏️ Umbenennen': '✏️ Rename', '🔄 Verein wechseln': '🔄 Change club', 'Eigene Vorlagen': 'Own templates', '✓ Alle als gelesen markieren': '✓ Mark all as read', '★ Wichtig': '★ Important', 'Was bedeutet ein Wert, wie wirkt er, wie beeinflusst man ihn? Suchen oder nach Bereich filtern.': 'What does a value mean, what does it do, how do you influence it? Search or filter by area.', '🛠️ Admin-Diagnose & Live-Inspector': '🛠️ Admin diagnostics & live inspector', 'Entwickler-Konsole Aktiv': 'Developer console active', '🔍 Struktur-Selbsttest': '🔍 Structure self-test', '🔍 Jetzt alle Screens testen': '🔍 Test all screens now', 'Prüft, ob jeder Screen nach dem Öffnen wirklich sichtbaren Inhalt zeigt - deckt versteckte HTML-Verschachtelungsfehler auf, bevor sie als "das Spiel geht nicht" auffallen.': 'Checks that every screen shows visible content when opened - finds hidden HTML nesting errors before they show up as "the game is broken".', 'Insolvenz-Test': 'Insolvency test', '💣 Komplett-Reset': '💣 Full reset', '⚠️ Technischer Fehler (bitte melden):': '⚠️ Technical error (please report):', 'Verlauf (letzte Läufe):': 'History (last runs):', 'Stimmung:': 'Mood:', 'Rangordnung': 'Hierarchy',
     // Teil 2 (25.21): Texte, die erst die Module rendern (Scan aller Bildschirme auf Englisch)
-    'Einlösen': 'Redeem', 'Spieler': 'Player', '🌟 Champions Cup Spieltag': '🌟 Champions Cup matchday', 'Kaufen für einen festen Geldbetrag (skaliert automatisch mit dem Kurs, egal wie teuer/günstig die Aktie ist):': 'Buy for a fixed amount (scales with the price automatically, however expensive or cheap the share is):', 'Aktueller Börsenkurs:': 'Current share price:', 'Noch nicht aufgestellt': 'Not in the line-up yet', 'Freistoß-Gott': 'Free-kick god', 'Noch kein Scout für diese Region.': 'No scout for this region yet.', 'Wintermütze': 'Winter hat', 'Auswärts-Schal': 'Away scarf', 'Leder-Geldbörse': 'Leather wallet', 'Schlüsselanhänger': 'Key ring', 'Mini-Ball für Kinder': 'Mini ball for kids', 'Handyhülle mit Wappen': 'Phone case with crest', 'Kapuzenpulli mit Wappen': 'Hoodie with crest', 'keine': 'none', 'Saison:': 'Season:', 'Eisenfuß': 'Iron foot', 'Präsident': 'President', 'Kapazität': 'Capacity', 'KAPAZITÄT': 'CAPACITY', 'nur mähen': 'mow only', 'Gründlich': 'Thorough', 'Millionär': 'Millionaire', '→ Höhepunkt': '→ Highlight', 'Vorverträge': 'Pre-contracts', '· Gästeblock': '· away block', 'Gesamtstärke': 'Overall strength', 'pro Spieltag': 'per matchday', '🌴 Südamerika': '🌴 South America', 'Gerüchteküche': 'Rumour mill', 'Presse-Tribüne': 'Press stand', '↺ Zurücksetzen': '↺ Reset', 'Höchster Sieg:': 'Biggest win:', 'Multimillionär': 'Multimillionaire', 'Rückkaufoption': 'Buy-back option', 'Saisoneröffnung': 'Season opening', 'Nicht gegründet': 'Not founded', 'Auswärtsbilanz:': 'Away record:', 'Nächstes Spiel:': 'Next match:', 'Nächste Lizenz:': 'Next licence:', 'Trophäen gesamt:': 'Total trophies:', '🍀 Glücksbringer': '🍀 Lucky charm', 'Vertragsgespräch': 'Contract talk', 'Auf- und Abstieg': 'Promotion and relegation', 'nur dieser Verein': 'this club only', '🎫 Ticketverkäufe': '🎫 Ticket sales', 'West-Haupttribüne': 'West main stand', 'Ernährungsberater': 'Nutritionist', 'Parkplatz-Gelände': 'Car park site', 'Nur mähen (leicht)': 'Mow only (light)', '💼 Gesamtgehälter:': '💼 Total wages:', 'Villa mit Seeblick': 'Villa with lake view', 'Abstellungsprämien': 'Release fees', 'Höchster Derbysieg:': 'Biggest derby win:', 'Auswärts-Spitzname:': 'Away nickname:', '🔝 Freistoßflanke ·': '🔝 Free-kick cross ·', 'Sanierungsbedürftig': 'Needs renovation', 'Nächste Ausbaustufe': 'Next upgrade', '✅ Preise übernehmen': '✅ Apply prices', 'Zustand des Geläufs': 'Pitch condition', 'Höchste Niederlage:': 'Heaviest defeat:', '💛 Loyalitäts-Bonus': '💛 Loyalty bonus', '🎤 Spieler-Interview': '🎤 Player interview', '↪️ Kurz ausgeführt ·': '↪️ Taken short ·', 'Präventionsprogramm:': 'Prevention programme:', '🧩 Taktiktafel zeigen': '🧩 Show tactics board', '🎥 3D-Ansicht zeigen': '🎥 Show 3D view', '🆕 Neu': '🆕 New', 'Neu': 'New', 'Zum Kader': 'To the squad', 'Zum Training': 'To training', 'Zu den Transfers': 'To transfers', 'Zu den Finanzen': 'To finances', 'Zum Stadion': 'To the stadium', 'Zur Fan-Zentrale': 'To the fan centre', 'Zur Übersicht': 'To the overview', 'Zur Tabelle': 'To the table', 'Zum Pokal': 'To the cup', 'Zur Historie': 'To the history', 'Zur Jugend': 'To the youth', 'Zu den Sponsoren': 'To the sponsors', 'Zum Postfach': 'To the inbox', 'Zur Darstellung': 'To display settings', 'Zum Kalender': 'To the calendar', 'Zu den Verträgen': 'To contracts', 'Zum Champions Cup': 'To the Champions Cup', 'Zur Holding': 'To the holding', 'Zur Kaderplanung': 'To squad planning', 'Anstoß Mobile Pro': 'Anstoß Mobile Pro', '▶ Weiterspielen': '▶ Continue', '🆕 Neue Karriere': '🆕 New career', 'Verein gründen, übernehmen oder einen Trainerjob annehmen': 'Found a club, take one over or accept a coaching job', '📂 Spielstand laden': '📂 Load game', 'Gespeicherte Stände oder eine Datei': 'Saved games or a file', 'Heimatstadt (bestimmt die Ligen deiner Region)': 'Home town (sets the leagues of your region)', 'Erfahrung': 'Experience', '🏗️ Verein gründen': '🏗️ Found a club', 'Eigener Verein mit eigenem Namen in deiner Heimatstadt. Du wählst Startliga, Startkapital und Freischalt-Tempo.': 'Your own club with your own name in your home town. You choose the starting league, starting capital and unlock pace.', '🤝 Verein übernehmen': '🤝 Take over a club', 'Werde Trainer eines bestehenden Vereins aus der Liga-Pyramide deiner Region, von der Kreisliga bis zur Bundesliga.': 'Become coach of an existing club in your region\'s league pyramid, from the lowest tier to the Bundesliga.', '📋 Trainer gesucht': '📋 Coach wanted', 'Vereine suchen gerade einen Trainer, jeder mit einem klaren Auftrag des Vorstands und einer Frist.': 'Clubs are looking for a coach right now, each with a clear brief from the board and a deadline.', 'Wähle eine Liga und einen Verein. Stärkere Vereine haben höhere Erwartungen, schwächere mehr Zeit.': 'Choose a league and a club. Stronger clubs expect more, weaker ones give you more time.', 'Übernehmen': 'Take over', 'Favorit': 'Favourite', 'Abstiegskandidat': 'Relegation candidate', 'Diese Vereine suchen gerade einen Trainer. Schaffst du das Ziel in der Frist, gibt es bis zu drei Sterne; danach geht die Karriere frei weiter.': 'These clubs are looking for a coach. Reach the goal in time for up to three stars; after that your career continues freely.', 'Job annehmen': 'Accept job', 'Automatischer Spielstand': 'Automatic save', 'Vereinsname:': 'Club name:', '🎓 Einsteiger': '🎓 Beginner', 'Kompakter Spieltag, weniger auf einmal': 'Compact matchday, less at once', '🧠 Erfahren': '🧠 Experienced', 'Alles von Anfang an': 'Everything from the start', 'So läuft ein Spieltag:': 'How a matchday works:', 'Anpfiff': 'Kick-off', 'Nur Ergebnis': 'Result only', '▶ Ohne Vorbereitung anpfeifen': '▶ Kick off without preparation', '⚡ Nur Ergebnis': '⚡ Result only', '🎙️ Vorbereitung zeigen (Gegner, Ansprache, Presse)': '🎙️ Show preparation (opponent, team talk, press)', '▴ Vorbereitung einklappen': '▴ Hide preparation', 'Danach geht es zurück zur Übersicht und zum nächsten Spieltag.': 'Then you return to the overview and the next matchday.', 'Ansprache, Pressekonferenz und Gegneranalyse sind freiwillig, sie bringen kleine Vorteile.': 'Team talk, press conference and opponent analysis are optional; they give small advantages.', 'Alles jetzt zeigen': 'Show everything now', 'Wichtig': 'Important', '▾ Mehr Bereiche': '▾ More areas', '▴ Weniger anzeigen': '▴ Show less', '🎓 Einsteiger-Modus: AN': '🎓 Beginner mode: ON', '🎓 Einsteiger-Modus: AUS': '🎓 Beginner mode: OFF', 'Was jetzt?': 'What now?', '🎓 Hinrunde geschafft!': '🎓 First half of the season done!', '🧠 Einsteiger-Modus aus': '🧠 Beginner mode off', '🎓 Noch anlassen': '🎓 Keep it on', 'Mit „Spielbericht schließen“ geht es zurück zur Übersicht.': '“Close match report” takes you back to the overview.', 'Sponsoren-Angebote ansehen (Finanzen)': 'View sponsor offers (finances)', 'Kein Risikospiel': 'No high-risk match', '🏅 Saison-Aufgaben': '🏅 Season tasks', 'Erfahrung:': 'Experience:', '⚙️ Formation und Standard-Schützen': '⚙️ Formation and set-piece takers', '🚨 Ausschreitungen': '🚨 Riots', 'Bisher keine Vorfälle.': 'No incidents so far.', 'Kein Ligaspiel offen.': 'No league match pending.', 'Trainingsintensität:': 'Training intensity:', 'Einnahmen (Spieltag)': 'Income (matchday)', 'Bedarf nächste Saison': 'Needed next season', 'Noch keine Teilnahme.': 'No participation yet.', 'Finanzielle Stabilität': 'Financial stability', '⚽ Öffentliches Training': '⚽ Open training', 'Noch nicht genug Daten.': 'Not enough data yet.', '· nächste Auslosung aus': '· next draw from', 'Öffentliches Medienimage': 'Public media image', '✔ 🎯 Direkter Freistoß ·': '✔ 🎯 Direct free kick ·', '💡 Empfehlung übernehmen': '💡 Apply recommendation', '🅿️ Parkplätze & Zufahrt': '🅿️ Parking & access', 'Bedienung mit einer Hand': 'One-handed use', 'Gewinne die Meisterschaft': 'Win the championship', 'Spritzguss- & Zubehörwerk': 'Injection moulding & accessories plant', 'Einfamilienhaus im Grünen': 'Detached house in the countryside', 'Biografie veröffentlichen': 'Publish a biography', 'Kaderplanung & Kadergröße': 'Squad planning & squad size', 'Kabine, Cliquen & Kapitän': 'Dressing room, cliques & captain', '🔄 Alle Perks zurücksetzen': '🔄 Reset all perks', 'Verträge laufen bald aus ·': 'Contracts expiring soon ·', '👩 Frauenmannschaft gründen': '👩 FOUND A WOMEN\'S TEAM', 'Noch kein gemeinsames Spiel': 'No match together yet', 'Noch keine Heimspiel-Daten.': 'No home match data yet.', 'Bürokomplex \'Vereins-Tower\'': 'Office complex \'Club Tower\'', 'Noch keine Tendenz erkennbar': 'No trend yet', 'Noch kein Heimspiel gespielt': 'No home match played yet', '· Zahlungskräftiges Publikum': '· wealthy crowd', 'Länderspielpausen & Turniere': 'International breaks & tournaments', 'Kader und Aufstellung ansehen': 'View squad and line-up', 'Finanzen und Sponsoren prüfen': 'Check finances and sponsors', '⚠️ Höchstes Verletzungsrisiko': '⚠️ Highest injury risk', 'Gehälter jetzt (pro Spieltag)': 'Wages now (per matchday)', 'Bester Torschütze (Karriere):': 'Top scorer (career):', '💪 Fähigkeitstraining-Express': '💪 Skill training express', 'Noch keine Interviews gegeben.': 'No interviews given yet.', 'Trainingsgelände mit Flutlicht': 'Training ground with floodlights', '🤝 Jährliches Personal-Meeting': '🤝 Annual staff meeting', 'Verträge langfristig gesichert': 'Contracts secured long-term', 'Längste Serie ohne Niederlage:': 'Longest unbeaten run:', 'Sofortkauf zahlt die Forderung': 'Instant buy pays the asking price', 'Noch kein Selbsttest gelaufen.': 'No self-test run yet.', 'Wartet die ersten Spieltage ab.': 'Waiting for the first matchdays.', 'Noch kein Pokalfinale erreicht.': 'No cup final reached yet.', '👕 Doppelte Fanartikel-Verkäufe': '👕 Double merchandise sales', 'Wintergespräch mit dem Vorstand': 'Winter talk with the board', '- wie startet ihr in die Saison?': '- how do you start the season?', 'Leihspieler kehren ggf. zurück ·': 'Loan players may return ·', 'Noch keine abgeschlossenen Wetten.': 'No settled bets yet.', 'Noch keine Überraschung geschafft.': 'No upset achieved yet.', 'Persönlichen Werbedeal abschließen': 'Sign a personal endorsement deal', '📱 Soziale-Medien-Präsenz: INAKTIV': '📱 Social media presence: INACTIVE', '📋 Kostenlose Vertragsverlängerung': '📋 Free contract extension', 'Kostenlos: etwas Fannähe und Moral.': 'Free: a little fan closeness and morale.', 'Stabile Weltmärkte zu Saisonbeginn.': 'Stable world markets at the start of the season.', 'Noch keine aktiven Bandensponsoren.': 'No active board sponsors yet.', '(Hektisch) · 🟥 zückt schnell Karten': '(Hectic) · 🟥 quick with cards', 'Zufrieden mit der Gesamtentwicklung.': 'Happy with the overall development.', 'Keine laufenden Produktionsaufträge.': 'No running production orders.', 'Noch keine Pokale im Trophäenschrank.': 'No trophies in the cabinet yet.', 'gegen Vereine aus der eigenen Region.': 'against clubs from your own region.', 'Kostet Geld, bringt Fans und Stimmung.': 'Costs money, brings fans and atmosphere.', 'Fertigt Schals für Wolle-Rohstoffkosten': 'Makes scarves for the cost of wool', 'Halbiert die Ausfallzeit von Verletzten': 'Halves the time injured players are out', 'Näht Spielbälle für Leder-Rohstoffkosten': 'Sews match balls for the cost of leather', 'Noch keine eigenen Vorlagen gespeichert.': 'No own templates saved yet.', 'Ein Magazin zahlt gut für deine Geschichte.': 'A magazine pays well for your story.', 'Vereinsstadion (keine Namensrechte vergeben)': 'Club stadium (no naming rights sold)', 'Noch keine Einträge in der Talent-Datenbank.': 'No entries in the talent database yet.', 'Produziert Trikots für Baumwoll-Rohstoffkosten': 'Produces shirts for the cost of cotton', 'Eine Marke will dein Gesicht für ihre Kampagne.': 'A brand wants your face for its campaign.', 'Presst Caps & Wimpel für Kunststoff-Rohstoffkosten': 'Presses caps & pennants for the cost of plastic', 'Unternehmen zahlen gut für deine Erfolgsgeschichte.': 'Companies pay well for your success story.', 'Noch keine spielerspezifischen Trikot-Verkaufsdaten.': 'No shirt sales data per player yet.', 'Noch nichts nebenbei - vielleicht Zeit für ein Hobby?': 'Nothing on the side yet - maybe time for a hobby?', 'Aktuell wirken keine zusätzlichen Boni auf den Absatz.': 'No extra boosts on sales right now.', 'Diese Saison noch keine Trainerwechsel in deiner Liga.': 'No coaching changes in your league this season yet.', 'Derzeit liegen keine offiziellen Transferanfragen für deine Spieler vor.': 'There are no official transfer requests for your players at the moment.', 'Noch keine Scouting-Missionen abgeschlossen. Entsende oben deine Scouts!': 'No scouting missions completed yet. Send out your scouts above!', 'Tippe auf einen Vereinsnamen in der Tabelle für die Kopf-an-Kopf-Bilanz.': 'Tap a club name in the table for the head-to-head record.', 'Noch keine Verkäufe erfasst - nach dem ersten Spieltag erscheint hier der Verlauf.': 'No sales recorded yet - the history appears here after the first matchday.', '✓ Keine Position hat eine gefährliche Häufung auslaufender Verträge.': '✓ No position has a dangerous cluster of expiring contracts.', 'Trainingsplus:': 'Training gain:', 'Verdoppelt die Ticketeinnahmen beim nächsten Heimspiel.': 'Doubles ticket income at the next home match.', 'Verdoppelt den Fanartikel-Absatz im Stadion beim nächsten Heimspiel.': 'Doubles merchandise sales in the stadium at the next home match.', 'Senkt Verletzungs- und Kartenrisiko im nächsten Spiel spürbar.': 'Noticeably lowers injury and card risk in the next match.', 'Senkt das Ausschreitungsrisiko beim nächsten Heimspiel stark ab.': 'Strongly lowers the risk of riots at the next home match.', 'Schließt alle aktuell laufenden Scouting-Missionen sofort ab.': 'Completes all running scouting missions immediately.', 'Heilt alle Verletzungen und beendet alle Sperren des gesamten Kaders sofort.': 'Heals all injuries and ends all suspensions of the whole squad immediately.', 'Gewährt sofort eine zusätzliche Trainingseinheit, unabhängig vom Tageslimit.': 'Grants an extra training session immediately, regardless of the daily limit.', 'Deckt das Potenzial aller aktuellen Jugendspieler sofort und kostenlos auf.': 'Reveals the potential of all current youth players immediately and for free.', 'Garantiert sonniges Wetter beim nächsten Spiel - keine negativen Wettereffekte.': 'Guarantees sunny weather at the next match - no negative weather effects.', 'Setzt die Eingespieltheit aller aktuellen Startelf-Paarungen sofort auf Maximum.': 'Sets the understanding of all current starting pairings to maximum immediately.', 'Setzt deinen Stamm-Torwart sofort auf Top-Fitness und Top-Tagesform.': 'Puts your first-choice goalkeeper at top fitness and top form immediately.', 'Einmal pro Saison ein aktives Vertrags-Ultimatum kostenlos besänftigen.': 'Calm one active contract ultimatum for free once per season.', 'Sofortiger Bonus aufs Transferbudget, passend zu deiner aktuellen Liga-Stärke.': 'Instant bonus to the transfer budget, matched to your current league.', 'Der nächste abgeschlossene Scouting-Fund ist garantiert ein Spieler mit hoher Stärke.': 'The next completed scouting find is guaranteed to be a strong player.', 'Zusätzlicher Fitness-Erholungsbonus nach Spielen (stapelt mit Konditionstrainer)': 'Extra fitness recovery after matches (stacks with the fitness coach)', 'Vermietete Büroflächen an lokale Unternehmen - stabile, planbare Mieteinnahmen.': 'Office space let to local companies - stable, predictable rent.', 'Mietwohnungen in Stadionnähe - beliebt bei Fans, die nah am Verein wohnen wollen.': 'Rented flats near the stadium - popular with fans who want to live close to the club.', 'Mildert Zwangsverkäufe und Punktabzüge bei Zahlungsunfähigkeit spürbar ab.': 'Noticeably softens forced sales and point deductions when insolvent.', 'Dämpft negative Medienwirkung bei schlechten Ergebnissen & Skandalen': 'Softens negative media impact of bad results & scandals', 'Verbessert Elfmeter-, Freistoß- und Eckballqualität der Mannschaft': 'Improves the team\'s penalties, free kicks and corners', 'Verringert Verletzungszeiten und beschleunigt Regeneration': 'Shortens injury lay-offs and speeds up recovery', 'Erhöht Stärke und Potenzial neuer Nachwuchsspieler': 'Raises strength and potential of new youth players', 'Übernimmt automatisch eine wählbare Aufgabe im Fanshop': 'Automatically takes over a chosen task in the fan shop', 'Halbiert die Wahrscheinlichkeit für Vertrags-Ultimaten unzufriedener Stars - frühzeitige,': 'Halves the chance of contract ultimatums from unhappy stars - early,',
+    'Einlösen': 'Redeem', 'Spieler': 'Player', '🌟 Champions Cup Spieltag': '🌟 Champions Cup matchday', 'Kaufen für einen festen Geldbetrag (skaliert automatisch mit dem Kurs, egal wie teuer/günstig die Aktie ist):': 'Buy for a fixed amount (scales with the price automatically, however expensive or cheap the share is):', 'Aktueller Börsenkurs:': 'Current share price:', 'Noch nicht aufgestellt': 'Not in the line-up yet', 'Freistoß-Gott': 'Free-kick god', 'Noch kein Scout für diese Region.': 'No scout for this region yet.', 'Wintermütze': 'Winter hat', 'Auswärts-Schal': 'Away scarf', 'Leder-Geldbörse': 'Leather wallet', 'Schlüsselanhänger': 'Key ring', 'Mini-Ball für Kinder': 'Mini ball for kids', 'Handyhülle mit Wappen': 'Phone case with crest', 'Kapuzenpulli mit Wappen': 'Hoodie with crest', 'keine': 'none', 'Saison:': 'Season:', 'Eisenfuß': 'Iron foot', 'Präsident': 'President', 'Kapazität': 'Capacity', 'KAPAZITÄT': 'CAPACITY', 'nur mähen': 'mow only', 'Gründlich': 'Thorough', 'Millionär': 'Millionaire', '→ Höhepunkt': '→ Highlight', 'Vorverträge': 'Pre-contracts', '· Gästeblock': '· away block', 'Gesamtstärke': 'Overall strength', 'pro Spieltag': 'per matchday', '🌴 Südamerika': '🌴 South America', 'Gerüchteküche': 'Rumour mill', 'Presse-Tribüne': 'Press stand', '↺ Zurücksetzen': '↺ Reset', 'Höchster Sieg:': 'Biggest win:', 'Multimillionär': 'Multimillionaire', 'Rückkaufoption': 'Buy-back option', 'Saisoneröffnung': 'Season opening', 'Nicht gegründet': 'Not founded', 'Auswärtsbilanz:': 'Away record:', 'Nächstes Spiel:': 'Next match:', 'Nächste Lizenz:': 'Next licence:', 'Trophäen gesamt:': 'Total trophies:', '🍀 Glücksbringer': '🍀 Lucky charm', 'Vertragsgespräch': 'Contract talk', 'Auf- und Abstieg': 'Promotion and relegation', 'nur dieser Verein': 'this club only', '🎫 Ticketverkäufe': '🎫 Ticket sales', 'West-Haupttribüne': 'West main stand', 'Ernährungsberater': 'Nutritionist', 'Parkplatz-Gelände': 'Car park site', 'Nur mähen (leicht)': 'Mow only (light)', '💼 Gesamtgehälter:': '💼 Total wages:', 'Villa mit Seeblick': 'Villa with lake view', 'Abstellungsprämien': 'Release fees', 'Höchster Derbysieg:': 'Biggest derby win:', 'Auswärts-Spitzname:': 'Away nickname:', '🔝 Freistoßflanke ·': '🔝 Free-kick cross ·', 'Sanierungsbedürftig': 'Needs renovation', 'Nächste Ausbaustufe': 'Next upgrade', '✅ Preise übernehmen': '✅ Apply prices', 'Zustand des Geläufs': 'Pitch condition', 'Höchste Niederlage:': 'Heaviest defeat:', '💛 Loyalitäts-Bonus': '💛 Loyalty bonus', '🎤 Spieler-Interview': '🎤 Player interview', '↪️ Kurz ausgeführt ·': '↪️ Taken short ·', 'Präventionsprogramm:': 'Prevention programme:', 'Farbe je Block nach dem Risiko des nächsten Spiels (grün ruhig, rot hoch), Symbole für Vorfälle dieser Saison.': 'Colour per stand by the risk of the next match (green calm, red high), symbols for incidents this season.', '🧩 Taktiktafel zeigen': '🧩 Show tactics board', '🎥 3D-Ansicht zeigen': '🎥 Show 3D view', '🆕 Neu': '🆕 New', 'Neu': 'New', 'Zum Kader': 'To the squad', 'Zum Training': 'To training', 'Zu den Transfers': 'To transfers', 'Zu den Finanzen': 'To finances', 'Zum Stadion': 'To the stadium', 'Zur Fan-Zentrale': 'To the fan centre', 'Zur Übersicht': 'To the overview', 'Zur Tabelle': 'To the table', 'Zum Pokal': 'To the cup', 'Zur Historie': 'To the history', 'Zur Jugend': 'To the youth', 'Zu den Sponsoren': 'To the sponsors', 'Zum Postfach': 'To the inbox', 'Zur Darstellung': 'To display settings', 'Zum Kalender': 'To the calendar', 'Zu den Verträgen': 'To contracts', 'Zum Champions Cup': 'To the Champions Cup', 'Zur Holding': 'To the holding', 'Zur Kaderplanung': 'To squad planning', 'Anstoß Mobile Pro': 'Anstoß Mobile Pro', '▶ Weiterspielen': '▶ Continue', '🆕 Neue Karriere': '🆕 New career', 'Verein gründen, übernehmen oder einen Trainerjob annehmen': 'Found a club, take one over or accept a coaching job', '📂 Spielstand laden': '📂 Load game', 'Gespeicherte Stände oder eine Datei': 'Saved games or a file', 'Heimatstadt (bestimmt die Ligen deiner Region)': 'Home town (sets the leagues of your region)', 'Erfahrung': 'Experience', '🏗️ Verein gründen': '🏗️ Found a club', 'Eigener Verein mit eigenem Namen in deiner Heimatstadt. Du wählst Startliga, Startkapital und Freischalt-Tempo.': 'Your own club with your own name in your home town. You choose the starting league, starting capital and unlock pace.', '🤝 Verein übernehmen': '🤝 Take over a club', 'Werde Trainer eines bestehenden Vereins aus der Liga-Pyramide deiner Region, von der Kreisliga bis zur Bundesliga.': 'Become coach of an existing club in your region\'s league pyramid, from the lowest tier to the Bundesliga.', '📋 Trainer gesucht': '📋 Coach wanted', 'Vereine suchen gerade einen Trainer, jeder mit einem klaren Auftrag des Vorstands und einer Frist.': 'Clubs are looking for a coach right now, each with a clear brief from the board and a deadline.', 'Wähle eine Liga und einen Verein. Stärkere Vereine haben höhere Erwartungen, schwächere mehr Zeit.': 'Choose a league and a club. Stronger clubs expect more, weaker ones give you more time.', 'Übernehmen': 'Take over', 'Favorit': 'Favourite', 'Abstiegskandidat': 'Relegation candidate', 'Diese Vereine suchen gerade einen Trainer. Schaffst du das Ziel in der Frist, gibt es bis zu drei Sterne; danach geht die Karriere frei weiter.': 'These clubs are looking for a coach. Reach the goal in time for up to three stars; after that your career continues freely.', 'Job annehmen': 'Accept job', 'Automatischer Spielstand': 'Automatic save', 'Vereinsname:': 'Club name:', '🎓 Einsteiger': '🎓 Beginner', 'Kompakter Spieltag, weniger auf einmal': 'Compact matchday, less at once', '🧠 Erfahren': '🧠 Experienced', 'Alles von Anfang an': 'Everything from the start', 'So läuft ein Spieltag:': 'How a matchday works:', 'Anpfiff': 'Kick-off', 'Nur Ergebnis': 'Result only', '▶ Ohne Vorbereitung anpfeifen': '▶ Kick off without preparation', '⚡ Nur Ergebnis': '⚡ Result only', '🎙️ Vorbereitung zeigen (Gegner, Ansprache, Presse)': '🎙️ Show preparation (opponent, team talk, press)', '▴ Vorbereitung einklappen': '▴ Hide preparation', 'Danach geht es zurück zur Übersicht und zum nächsten Spieltag.': 'Then you return to the overview and the next matchday.', 'Ansprache, Pressekonferenz und Gegneranalyse sind freiwillig, sie bringen kleine Vorteile.': 'Team talk, press conference and opponent analysis are optional; they give small advantages.', 'Alles jetzt zeigen': 'Show everything now', 'Wichtig': 'Important', '▾ Mehr Bereiche': '▾ More areas', '▴ Weniger anzeigen': '▴ Show less', '🎓 Einsteiger-Modus: AN': '🎓 Beginner mode: ON', '🎓 Einsteiger-Modus: AUS': '🎓 Beginner mode: OFF', 'Was jetzt?': 'What now?', '🎓 Hinrunde geschafft!': '🎓 First half of the season done!', '🧠 Einsteiger-Modus aus': '🧠 Beginner mode off', '🎓 Noch anlassen': '🎓 Keep it on', 'Mit „Spielbericht schließen“ geht es zurück zur Übersicht.': '“Close match report” takes you back to the overview.', 'Sponsoren-Angebote ansehen (Finanzen)': 'View sponsor offers (finances)', 'Kein Risikospiel': 'No high-risk match', '🏅 Saison-Aufgaben': '🏅 Season tasks', 'Erfahrung:': 'Experience:', '⚙️ Formation und Standard-Schützen': '⚙️ Formation and set-piece takers', '🚨 Ausschreitungen': '🚨 Riots', 'Bisher keine Vorfälle.': 'No incidents so far.', 'Kein Ligaspiel offen.': 'No league match pending.', 'Trainingsintensität:': 'Training intensity:', 'Einnahmen (Spieltag)': 'Income (matchday)', 'Bedarf nächste Saison': 'Needed next season', 'Noch keine Teilnahme.': 'No participation yet.', 'Finanzielle Stabilität': 'Financial stability', '⚽ Öffentliches Training': '⚽ Open training', 'Noch nicht genug Daten.': 'Not enough data yet.', '· nächste Auslosung aus': '· next draw from', 'Öffentliches Medienimage': 'Public media image', '✔ 🎯 Direkter Freistoß ·': '✔ 🎯 Direct free kick ·', '💡 Empfehlung übernehmen': '💡 Apply recommendation', '🅿️ Parkplätze & Zufahrt': '🅿️ Parking & access', 'Bedienung mit einer Hand': 'One-handed use', 'Gewinne die Meisterschaft': 'Win the championship', 'Spritzguss- & Zubehörwerk': 'Injection moulding & accessories plant', 'Einfamilienhaus im Grünen': 'Detached house in the countryside', 'Biografie veröffentlichen': 'Publish a biography', 'Kaderplanung & Kadergröße': 'Squad planning & squad size', 'Kabine, Cliquen & Kapitän': 'Dressing room, cliques & captain', '🔄 Alle Perks zurücksetzen': '🔄 Reset all perks', 'Verträge laufen bald aus ·': 'Contracts expiring soon ·', '👩 Frauenmannschaft gründen': '👩 FOUND A WOMEN\'S TEAM', 'Noch kein gemeinsames Spiel': 'No match together yet', 'Noch keine Heimspiel-Daten.': 'No home match data yet.', 'Bürokomplex \'Vereins-Tower\'': 'Office complex \'Club Tower\'', 'Noch keine Tendenz erkennbar': 'No trend yet', 'Noch kein Heimspiel gespielt': 'No home match played yet', '· Zahlungskräftiges Publikum': '· wealthy crowd', 'Länderspielpausen & Turniere': 'International breaks & tournaments', 'Kader und Aufstellung ansehen': 'View squad and line-up', 'Finanzen und Sponsoren prüfen': 'Check finances and sponsors', '⚠️ Höchstes Verletzungsrisiko': '⚠️ Highest injury risk', 'Gehälter jetzt (pro Spieltag)': 'Wages now (per matchday)', 'Bester Torschütze (Karriere):': 'Top scorer (career):', '💪 Fähigkeitstraining-Express': '💪 Skill training express', 'Noch keine Interviews gegeben.': 'No interviews given yet.', 'Trainingsgelände mit Flutlicht': 'Training ground with floodlights', '🤝 Jährliches Personal-Meeting': '🤝 Annual staff meeting', 'Verträge langfristig gesichert': 'Contracts secured long-term', 'Längste Serie ohne Niederlage:': 'Longest unbeaten run:', 'Sofortkauf zahlt die Forderung': 'Instant buy pays the asking price', 'Noch kein Selbsttest gelaufen.': 'No self-test run yet.', 'Wartet die ersten Spieltage ab.': 'Waiting for the first matchdays.', 'Noch kein Pokalfinale erreicht.': 'No cup final reached yet.', '👕 Doppelte Fanartikel-Verkäufe': '👕 Double merchandise sales', 'Wintergespräch mit dem Vorstand': 'Winter talk with the board', '- wie startet ihr in die Saison?': '- how do you start the season?', 'Leihspieler kehren ggf. zurück ·': 'Loan players may return ·', 'Noch keine abgeschlossenen Wetten.': 'No settled bets yet.', 'Noch keine Überraschung geschafft.': 'No upset achieved yet.', 'Persönlichen Werbedeal abschließen': 'Sign a personal endorsement deal', '📱 Soziale-Medien-Präsenz: INAKTIV': '📱 Social media presence: INACTIVE', '📋 Kostenlose Vertragsverlängerung': '📋 Free contract extension', 'Kostenlos: etwas Fannähe und Moral.': 'Free: a little fan closeness and morale.', 'Stabile Weltmärkte zu Saisonbeginn.': 'Stable world markets at the start of the season.', 'Noch keine aktiven Bandensponsoren.': 'No active board sponsors yet.', '(Hektisch) · 🟥 zückt schnell Karten': '(Hectic) · 🟥 quick with cards', 'Zufrieden mit der Gesamtentwicklung.': 'Happy with the overall development.', 'Keine laufenden Produktionsaufträge.': 'No running production orders.', 'Noch keine Pokale im Trophäenschrank.': 'No trophies in the cabinet yet.', 'gegen Vereine aus der eigenen Region.': 'against clubs from your own region.', 'Kostet Geld, bringt Fans und Stimmung.': 'Costs money, brings fans and atmosphere.', 'Fertigt Schals für Wolle-Rohstoffkosten': 'Makes scarves for the cost of wool', 'Halbiert die Ausfallzeit von Verletzten': 'Halves the time injured players are out', 'Näht Spielbälle für Leder-Rohstoffkosten': 'Sews match balls for the cost of leather', 'Noch keine eigenen Vorlagen gespeichert.': 'No own templates saved yet.', 'Ein Magazin zahlt gut für deine Geschichte.': 'A magazine pays well for your story.', 'Vereinsstadion (keine Namensrechte vergeben)': 'Club stadium (no naming rights sold)', 'Noch keine Einträge in der Talent-Datenbank.': 'No entries in the talent database yet.', 'Produziert Trikots für Baumwoll-Rohstoffkosten': 'Produces shirts for the cost of cotton', 'Eine Marke will dein Gesicht für ihre Kampagne.': 'A brand wants your face for its campaign.', 'Presst Caps & Wimpel für Kunststoff-Rohstoffkosten': 'Presses caps & pennants for the cost of plastic', 'Unternehmen zahlen gut für deine Erfolgsgeschichte.': 'Companies pay well for your success story.', 'Noch keine spielerspezifischen Trikot-Verkaufsdaten.': 'No shirt sales data per player yet.', 'Noch nichts nebenbei - vielleicht Zeit für ein Hobby?': 'Nothing on the side yet - maybe time for a hobby?', 'Aktuell wirken keine zusätzlichen Boni auf den Absatz.': 'No extra boosts on sales right now.', 'Diese Saison noch keine Trainerwechsel in deiner Liga.': 'No coaching changes in your league this season yet.', 'Derzeit liegen keine offiziellen Transferanfragen für deine Spieler vor.': 'There are no official transfer requests for your players at the moment.', 'Noch keine Scouting-Missionen abgeschlossen. Entsende oben deine Scouts!': 'No scouting missions completed yet. Send out your scouts above!', 'Tippe auf einen Vereinsnamen in der Tabelle für die Kopf-an-Kopf-Bilanz.': 'Tap a club name in the table for the head-to-head record.', 'Noch keine Verkäufe erfasst - nach dem ersten Spieltag erscheint hier der Verlauf.': 'No sales recorded yet - the history appears here after the first matchday.', '✓ Keine Position hat eine gefährliche Häufung auslaufender Verträge.': '✓ No position has a dangerous cluster of expiring contracts.', 'Trainingsplus:': 'Training gain:', 'Verdoppelt die Ticketeinnahmen beim nächsten Heimspiel.': 'Doubles ticket income at the next home match.', 'Verdoppelt den Fanartikel-Absatz im Stadion beim nächsten Heimspiel.': 'Doubles merchandise sales in the stadium at the next home match.', 'Senkt Verletzungs- und Kartenrisiko im nächsten Spiel spürbar.': 'Noticeably lowers injury and card risk in the next match.', 'Senkt das Ausschreitungsrisiko beim nächsten Heimspiel stark ab.': 'Strongly lowers the risk of riots at the next home match.', 'Schließt alle aktuell laufenden Scouting-Missionen sofort ab.': 'Completes all running scouting missions immediately.', 'Heilt alle Verletzungen und beendet alle Sperren des gesamten Kaders sofort.': 'Heals all injuries and ends all suspensions of the whole squad immediately.', 'Gewährt sofort eine zusätzliche Trainingseinheit, unabhängig vom Tageslimit.': 'Grants an extra training session immediately, regardless of the daily limit.', 'Deckt das Potenzial aller aktuellen Jugendspieler sofort und kostenlos auf.': 'Reveals the potential of all current youth players immediately and for free.', 'Garantiert sonniges Wetter beim nächsten Spiel - keine negativen Wettereffekte.': 'Guarantees sunny weather at the next match - no negative weather effects.', 'Setzt die Eingespieltheit aller aktuellen Startelf-Paarungen sofort auf Maximum.': 'Sets the understanding of all current starting pairings to maximum immediately.', 'Setzt deinen Stamm-Torwart sofort auf Top-Fitness und Top-Tagesform.': 'Puts your first-choice goalkeeper at top fitness and top form immediately.', 'Einmal pro Saison ein aktives Vertrags-Ultimatum kostenlos besänftigen.': 'Calm one active contract ultimatum for free once per season.', 'Sofortiger Bonus aufs Transferbudget, passend zu deiner aktuellen Liga-Stärke.': 'Instant bonus to the transfer budget, matched to your current league.', 'Der nächste abgeschlossene Scouting-Fund ist garantiert ein Spieler mit hoher Stärke.': 'The next completed scouting find is guaranteed to be a strong player.', 'Zusätzlicher Fitness-Erholungsbonus nach Spielen (stapelt mit Konditionstrainer)': 'Extra fitness recovery after matches (stacks with the fitness coach)', 'Vermietete Büroflächen an lokale Unternehmen - stabile, planbare Mieteinnahmen.': 'Office space let to local companies - stable, predictable rent.', 'Mietwohnungen in Stadionnähe - beliebt bei Fans, die nah am Verein wohnen wollen.': 'Rented flats near the stadium - popular with fans who want to live close to the club.', 'Mildert Zwangsverkäufe und Punktabzüge bei Zahlungsunfähigkeit spürbar ab.': 'Noticeably softens forced sales and point deductions when insolvent.', 'Dämpft negative Medienwirkung bei schlechten Ergebnissen & Skandalen': 'Softens negative media impact of bad results & scandals', 'Verbessert Elfmeter-, Freistoß- und Eckballqualität der Mannschaft': 'Improves the team\'s penalties, free kicks and corners', 'Verringert Verletzungszeiten und beschleunigt Regeneration': 'Shortens injury lay-offs and speeds up recovery', 'Erhöht Stärke und Potenzial neuer Nachwuchsspieler': 'Raises strength and potential of new youth players', 'Übernimmt automatisch eine wählbare Aufgabe im Fanshop': 'Automatically takes over a chosen task in the fan shop', 'Halbiert die Wahrscheinlichkeit für Vertrags-Ultimaten unzufriedener Stars - frühzeitige,': 'Halves the chance of contract ultimatums from unhappy stars - early,',
     // Teil 3 (25.22): Lexikon und Spieler-Popup
     '➜ Zum Bildschirm': '➜ Go to screen', 'Kein Eintrag gefunden. Anderen Begriff versuchen oder Kategorie „Alle“ wählen.': 'No entry found. Try another term or choose the category "All".', 'Nur Einträge zum Bildschirm, von dem du kommst.': 'Only entries for the screen you came from.', 'Alle zeigen': 'Show all', 'Potenzial:': 'Potential:',
 };

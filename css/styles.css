@@ -1080,6 +1080,7 @@
         .live-3d-canvas { display: block; width: 100%; border-radius: 12px; margin-bottom: 6px; box-shadow: 0 4px 14px color-mix(in srgb, var(--shade) 60%, transparent); }
         .live-3d-canvas[hidden] { display: none; }
         .live-3d-umschalter { width: auto; font-size: var(--fs-caption); padding: 4px 10px; margin-bottom: 6px; }
+        .ausschreitung-karte { display: block; width: 100%; max-width: 300px; aspect-ratio: 300 / 170; margin: 6px auto 2px; border-radius: 8px; background: var(--surface-0); }
         .kader-feinheiten > summary { cursor: pointer; list-style: revert; }
         .office-quicknav-btn small { display: block; font-size: var(--fs-micro); font-weight: 400; opacity: 0.85; }
         .modal-avatar-photo {
