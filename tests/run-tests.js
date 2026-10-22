@@ -120,6 +120,7 @@ async function main() {
         S.testPostfachLoeschen,
         S.testFreischaltungen,
         S.testFreischaltungenPlus,
+        S.testUltras,
         S.testGrundfassung,
         S.testKopfzeilenFenster,
         S.testAusschreitungen,

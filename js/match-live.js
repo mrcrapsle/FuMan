@@ -1302,6 +1302,10 @@
         if (matchResult !== null && typeof pruefeAusschreitungen === 'function') {
             pruefeAusschreitungen({ gegner: opponentName, heim: isHomeMatchParam, tordiff: matchMargin });
         }
+        // Fanszene (js/ultras.js): Gästeblock, Pyro, Stimmung und Vorfälle des Spieltags.
+        if (matchResult !== null && typeof ultrasSpieltagTick === 'function') {
+            ultrasSpieltagTick({ gegner: opponentName, heim: isHomeMatchParam });
+        }
         // Ordner-Kosten (echte Abbuchung): bisher wurde nur im Finanz-Ausblick ein
         // Betrag angezeigt, aber nie wirklich abgebucht - ein weiterer "Phantom-Posten".
         if (typeof tickStewardCosts === 'function') tickStewardCosts(isHomeMatchParam);
@@ -1420,6 +1424,7 @@
         if (typeof tickYouthBreakthroughs === 'function') tickYouthBreakthroughs();
         if (typeof tickYouthOffers === 'function') tickYouthOffers();
         if (typeof tickMediaDepartment === 'function') tickMediaDepartment();
+        if (typeof ultrasMonatsTick === 'function') ultrasMonatsTick();
         if (typeof cleanupRemovedModuleState === 'function') cleanupRemovedModuleState();
         if (typeof tickSeasonObjectives === 'function') tickSeasonObjectives();
         if (typeof tickTeamCouncil === 'function') tickTeamCouncil();

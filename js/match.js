@@ -179,6 +179,8 @@
         if (isHomeMatch && typeof getStadiumHomeAdvantageBonus === 'function') bonus += getStadiumHomeAdvantageBonus();
         // Fan-Aktionen (Choreo heim, Sonderzug auswärts), siehe runFanAction() in fans.js.
         if (typeof getFanSupportBonus === 'function') bonus += getFanSupportBonus(isHomeMatch);
+        // Stimmung im Block der eigenen Fanszene (js/ultras.js): nur daheim.
+        if (typeof getUltrasStaerkeBonus === 'function') bonus += getUltrasStaerkeBonus(isHomeMatch);
         // Kapitän: war bisher rein kosmetisch (nur ein Ⓒ-Icon) - steht der ernannte
         // Kapitän tatsächlich auf dem Feld, gibt seine Führungsqualität einen kleinen, aber
         // echten Team-Stärke-Bonus. Ein erfahrener Kapitän (30+) wirkt sich stärker aus.

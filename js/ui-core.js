@@ -238,7 +238,7 @@
             'screen-manager-tree', 'screen-admin', 'screen-cup', 'screen-lexicon', 'screen-design',
             'screen-hub-wirtschaft', 'screen-hub-finanzen', 'screen-hub-ausbau',
             'screen-hub-kaderplanung', 'screen-hub-wettbewerbe', 'screen-hub-spezial',
-            'screen-prematch-press', 'screen-matchday', 'screen-hub-vorstand'
+            'screen-prematch-press', 'screen-matchday', 'screen-hub-vorstand', 'screen-ultras'
         ];
         // Wenn screenId ein Hub-Mitglied ist (z.B. "screen-stocks"), muss der ÜBERGEORDNETE
         // Hub-Container ("screen-hub-finanzen") sichtbar geschaltet werden, nicht das Mitglied direkt.

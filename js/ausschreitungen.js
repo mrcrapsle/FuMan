@@ -72,6 +72,8 @@ function getAusschreitungsLage(ctx) {
     if (fanCentralState.pyroLockerungSpiele > 0) mal(1.4, 'Pyro-Verbot gelockert');
     const ultras = (typeof fanGroups !== 'undefined' ? fanGroups : []).find(g => g.id === 'ultras');
     if (ultras && ultras.mood < 35) mal(1.25, 'Ultras verärgert');
+    // Die eigene Szene (js/ultras.js): Pyro im Lager, Polizeidruck, Organisation.
+    if (typeof getUltrasRisikoFaktor === 'function') { const uf = getUltrasRisikoFaktor(ctx.heim); if (uf !== 1) mal(uf, 'Szene'); }
     if (getAusschreitungBewaehrung() >= 2) mal(1.2, 'Bewährung');
     if (typeof ctx.tordiff === 'number' && ctx.tordiff <= -3) mal(1.3, 'Klatsche');
     return { chance: Math.min(0.5, chance), faktoren, derby, brisanz };

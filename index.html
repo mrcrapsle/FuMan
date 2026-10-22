@@ -662,6 +662,7 @@
             <div class="nav-category" data-i18n="nav_category_infra">Ausbau & Infrastruktur</div>
             <button class="nav-btn" onclick="showScreen('screen-stadium')" data-i18n="nav_stadium">🏟️ Ausbau & Infrastruktur</button>
             <button class="nav-btn" onclick="showScreen('screen-staff')">👔 Personal</button>
+            <button class="nav-btn" onclick="showScreen('screen-ultras')">📣 Fanszene (Ultras)</button>
 
             <div class="nav-category" data-i18n="nav_category_finance">Finanzen & Wirtschaft</div>
             <button class="nav-btn" onclick="showScreen('screen-finances')" data-i18n="nav_finances">🏦 Finanzen & Kapitalmarkt</button>
@@ -749,6 +750,34 @@
                 <div id="women-team-box"></div>
             </div>
             <!-- PAKET-ENDE:vereinswachstum -->
+
+            <div id="screen-ultras" style="display:none;">
+                <div class="panel">
+                    <div class="panel-header">📣 Fanszene (Ultras)</div>
+                    <div id="ultras-status-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">Aktionen im Block</div>
+                    <div id="ultras-aktionen-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">Choreo & Duelle</div>
+                    <canvas id="ultras-canvas" width="640" height="240" aria-label="Animation: Choreo oder Duell der Fangruppen" style="display:block; width:100%; height:auto; border-radius:8px; margin-bottom:6px;"></canvas>
+                    <div id="ultras-duell-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">Fähigkeiten</div>
+                    <div id="ultras-skills-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">Ausrüstung</div>
+                    <div id="ultras-shop-box"></div>
+                </div>
+                <div class="panel">
+                    <div class="panel-header">Chronik</div>
+                    <div id="ultras-chronik-box"></div>
+                </div>
+            </div>
 
             <!-- PAKET-START:vereinswachstum -->
             <div id="screen-second-team" style="display:none;">
@@ -2908,6 +2937,7 @@
 <script src="js/startmenue.js?v=3.145"></script>
 <script src="js/einsteiger.js?v=3.146"></script>
 <script src="js/live-3d.js?v=3.146"></script>
+<script src="js/ultras.js?v=3.147"></script>
 <script src="js/youth.js?v=2.1"></script>
 <script src="js/youth-academy-extended.js?v=2.1"></script>
 <script src="js/youth-pathway.js?v=3.11"></script>
