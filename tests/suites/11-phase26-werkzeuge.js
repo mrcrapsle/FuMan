@@ -3825,15 +3825,19 @@ async function testStartmenue(browser) {
         out.jobAngenommen = game.clubName === j.verein && game.leagueLevel === CAREER_SCENARIOS.absteiger.level && game.scenario && game.scenario.id === 'absteiger' && game.money === 120000;
         // freshPage löscht beim Laden den Merker des letzten Stands, ohne ihn lädt der Start Slot 1
         saveGameToSlot(1);
+        out.gespeichert = !!safeLocalGet(SAVE_SLOT_PREFIX + '1') && getSlotMeta(1).clubName === game.clubName;
         return out;
     });
     Object.assign(r, jobs);
 
     // Nächster Start: Titel mit Weiterspielen
     await neuLaden(null);
+    await page.waitForFunction(() => !!document.getElementById('startmenue-weiter'), null, { timeout: 5000 }).catch(() => null);
     r.weiterAngebot = await page.evaluate(() => { const b = document.getElementById('startmenue-weiter'); return !!b && b.textContent.includes(game.clubName); });
-    await page.click('#startmenue-weiter');
-    r.weiter = !(await offen());
+    // Ohne den Knopf nicht 30 s warten, sondern festhalten, was beim Start fehlte
+    r.startStand = await page.evaluate(() => JSON.stringify({ offen: !document.getElementById('startmenue-overlay').hidden, schritt: startmenueSchritt, geladen: startmenueGeladen, slot1: !!safeLocalGet(SAVE_SLOT_PREFIX + '1'), verein: game.clubName, flag: window.anstossOhneStartmenue }));
+    if (r.weiterAngebot) await page.click('#startmenue-weiter');
+    r.weiter = r.weiterAngebot && !(await offen());
     // Laden-Seite
     r.laden = await page.evaluate(() => { oeffneStartmenue('laden'); const t = document.getElementById('startmenue-inhalt').textContent; const ok = t.includes('Slot 1: ' + game.clubName) && t.includes('Automatischer Spielstand'); schliesseStartmenue(); return ok; });
 
@@ -3847,10 +3851,10 @@ async function testStartmenue(browser) {
     });
     const K = ['titel', 'ohneTutorial', 'titelLayout', 'arten', 'gruendenKasten', 'gegruendet', 'direktImSpiel'];
     assert(K.every(k => r[k] === true), `Startmenü: Titel beim ersten Start, drei Karriere-Arten, Verein gründen mit eigenem Namen (${JSON.stringify(K.map(k => r[k]))})`);
-    const U = ['liste', 'ligaLayout', 'uebernommen', 'jobListe', 'jobLayout', 'jobAngenommen'];
+    const U = ['liste', 'ligaLayout', 'uebernommen', 'jobListe', 'jobLayout', 'jobAngenommen', 'gespeichert'];
     assert(U.every(k => r[k] === true), `Startmenü: Verein übernehmen und Trainer gesucht mit Ziel (${JSON.stringify(U.map(k => r[k]))})`);
     const W = ['weiterAngebot', 'weiter', 'laden', 'diamanten'];
-    assert(W.every(k => r[k] === true), `Startmenü: Weiterspielen und Laden; Testangebot 2 Mio. € für 1.000 Diamanten (${JSON.stringify(W.map(k => r[k]))})`);
+    assert(W.every(k => r[k] === true), `Startmenü: Weiterspielen und Laden; Testangebot 2 Mio. € für 1.000 Diamanten (${JSON.stringify(W.map(k => r[k]))}, Start: ${r.startStand})`);
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
     await page.close();
 }
