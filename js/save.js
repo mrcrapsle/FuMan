@@ -583,6 +583,7 @@
     function renderNewGameSetupOptions() {
         if (typeof renderNewGameScenarioOptions === 'function') renderNewGameScenarioOptions();
         if (typeof renderNewGameTempoOptions === 'function') renderNewGameTempoOptions();
+        if (typeof renderNewGameEinsteigerOptions === 'function') renderNewGameEinsteigerOptions();
         let cityBox = document.getElementById('new-game-city-box');
         if (cityBox && typeof getHomeCityOptions === 'function') {
             let info = HOME_CITIES[selectedNewGameCity];
@@ -624,6 +625,7 @@
         safeSessionSet('anstoss_fm13_newgame_money', String(szenario ? 150000 : selectedNewGameMoney));
         if (szenario) safeSessionSet('anstoss_fm13_newgame_scenario', szenario);
         safeSessionSet('anstoss_fm13_newgame_city', selectedNewGameCity);
+        if (typeof selectedNewGameEinsteiger !== 'undefined') safeSessionSet('anstoss_fm13_newgame_einsteiger', selectedNewGameEinsteiger ? '1' : '0');
         let nameFeld = document.getElementById('new-game-clubname');
         if (nameFeld && nameFeld.value.trim()) safeSessionSet('anstoss_fm13_newgame_clubname', nameFeld.value.trim());
         if (typeof selectedNewGameTempo !== 'undefined') safeSessionSet('anstoss_fm13_newgame_freischaltung', selectedNewGameTempo);

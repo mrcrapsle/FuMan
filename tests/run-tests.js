@@ -124,6 +124,7 @@ async function main() {
         S.testKopfzeilenFenster,
         S.testAusschreitungen,
         S.testStartmenue,
+        S.testEinsteiger,
         S.testAdminWerkzeuge,
         S.testPrivatlebenPlus,
         S.testOeffentlicheFassung,

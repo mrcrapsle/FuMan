@@ -457,7 +457,7 @@
             addInboxMessage('vertrag', '📋 Sponsoren-Angebote eingetroffen', isFreshGame
                 ? 'Dein neuer Klub hat noch keine Sponsoren - erste Angebote liegen bereit. Verhandle sie im Finanzen-Bereich, bevor die Saison beginnt!'
                 : 'Erste Sponsoren-Angebote für die neue Saison liegen bereit - verhandle sie im Finanzen-Bereich.', 'screen-sponsors');
-            if (isFreshGame) showToast('📋 Erste Sponsoren-Angebote sind eingetroffen - verhandle sie im Finanzen-Bereich!', 'success');
+            // Beim neuen Klub keine Meldung: die "Erste Schritte"-Liste führt zu den Angeboten (js/onboarding.js).
         }
     }
 

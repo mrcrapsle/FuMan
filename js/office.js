@@ -240,6 +240,9 @@
         }
     ];
 
+    // Schnellknöpfe nennen das Ziel ("Aktenschrank → Transfers"), damit man nicht raten muss.
+    const OFFICE_ZIEL_NAMEN = { 'screen-stadium': 'Stadion', 'screen-calendar': 'Kalender', 'screen-league': 'Tabelle & Trophäen', 'screen-manager-tree': 'Talentbaum', 'screen-squad': 'Kader', 'screen-training': 'Training', 'screen-transfer': 'Transfers', 'screen-finances': 'Finanzen', 'screen-dashboard': 'Übersicht', 'screen-inbox': 'Postfach' };
+
     function officeHotspotText(id, suffix) {
         return t('office_hs_' + id + (suffix || ''));
     }
@@ -334,7 +337,7 @@
             ? `<button class="office-quicknav-btn office-quicknav-alert" onclick="openOfficeEventPanel()">❗ ${wartet.person}</button>`
             : '')
             + OFFICE_HOTSPOTS.filter(h => h.target).map(h =>
-                `<button class="office-quicknav-btn" onclick="officeEnterHotspot('${h.id}')">${officeHotspotText(h.id)}</button>`
+                `<button class="office-quicknav-btn" onclick="officeEnterHotspot('${h.id}')">${officeHotspotText(h.id)}${OFFICE_ZIEL_NAMEN[h.target] ? `<small>→ ${OFFICE_ZIEL_NAMEN[h.target]}</small>` : ''}</button>`
             ).join('');
     }
 

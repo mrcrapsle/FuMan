@@ -3793,7 +3793,8 @@ async function testStartmenue(browser) {
     await Promise.all([page.waitForNavigation(), page.click('#btn-confirm-new-game')]);
     await page.waitForFunction(() => !document.getElementById('app-loading'), null, { timeout: 20000 }).catch(() => null);
     Object.assign(r, await page.evaluate(() => ({
-        gegruendet: game.clubName === 'SV Teststadt 07' && leaguesData[game.leagueLevel].some(t => t.name === 'SV Teststadt 07') && game.secondTeam.name === 'SV Teststadt 07 II',
+        gegruendet: game.clubName === 'SV Teststadt 07' && leaguesData[game.leagueLevel].some(t => t.name === 'SV Teststadt 07') && game.secondTeam.name === 'SV Teststadt 07 II'
+            && game.einsteiger === true && document.getElementById('screen-dashboard').style.display !== 'none',
         direktImSpiel: document.getElementById('startmenue-overlay').hidden
     })));
 
@@ -3854,6 +3855,73 @@ async function testStartmenue(browser) {
     await page.close();
 }
 
+async function testEinsteiger(browser) {
+    console.log('\n[26.27] Einsteiger: kompakter Spieltag, Kopfzeile, Übersicht, Menü, Kader, Büro-Ziele');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(R32_HILFEN);
+    const r = await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false;
+        const out = {};
+        const sichtbar = el => !!el && !el.hidden && el.offsetParent !== null;
+        // Ohne Einsteiger-Modus (alte Stände): alles wie gewohnt
+        out.ohne = game.einsteiger !== true && !document.documentElement.classList.contains('einsteiger-frueh') && !document.getElementById('nav-mehr').hidden;
+        // Einsteiger-Modus an
+        safeLocalRemove('anstoss_fm13_nav_mehr');
+        window.anstossTestAllesFrei = false;
+        setEinsteigerModus(true);
+        out.kopf = document.querySelector('.kpi-chip[data-kopf="holding"]').hidden === !istFreigeschaltet('holding') && document.querySelector('.kpi-chip[data-kopf="level"]').hidden;
+        window.anstossTestAllesFrei = true; updateUI();
+        showScreen('screen-dashboard');
+        out.profiWeg = [...document.querySelectorAll('#screen-dashboard .profi-abschnitt')].every(el => !sichtbar(el)) && document.getElementById('einsteiger-dash-hinweis').textContent.includes('Alles jetzt zeigen');
+        out.ersteSchritteOben = document.getElementById('dash-onboarding-box').compareDocumentPosition(document.getElementById('manager-assistant-box')) & Node.DOCUMENT_POSITION_FOLLOWING;
+        out.ersteSchritteOben = !!out.ersteSchritteOben;
+        out.einZiel = document.querySelectorAll('#screen-dashboard .panel-header').length > 0 && ![...document.querySelectorAll('#season-objectives-box h3')].some(h => h.textContent.includes('Saison-Ziele'));
+        // Menü: Wichtig oben, Rest eingeklappt
+        const nav = document.getElementById('app-sidebar');
+        const wichtig = [...nav.querySelectorAll(':scope > button.nav-btn')].map(b => (b.getAttribute('onclick').match(/'([^']+)'/) || [])[1]);
+        out.menue = ['screen-dashboard', 'screen-squad', 'screen-transfer', 'screen-inbox'].every(id => wichtig.includes(id)) && document.getElementById('nav-mehr').hidden
+            && !!document.querySelector('#nav-mehr [onclick*="screen-private"]');
+        document.getElementById('nav-mehr-knopf').click();
+        out.menueAuf = !document.getElementById('nav-mehr').hidden && safeLocalGet('anstoss_fm13_nav_mehr') === '1';
+        document.getElementById('nav-mehr-knopf').click();
+        // Kader: Aufstellung vor den Feinheiten
+        const fein = document.getElementById('kader-feinheiten');
+        out.kader = fein.tagName === 'DETAILS' && !!fein.querySelector('#sel-captain') && (document.getElementById('soccer-pitch').compareDocumentPosition(fein) & Node.DOCUMENT_POSITION_FOLLOWING) > 0;
+        // Spieltag kompakt mit Anleitung
+        startMatchdayFlow();
+        out.spieltag = sichtbar(document.getElementById('einsteiger-anpfiff')) && !sichtbar(document.getElementById('prematch-talk-box'))
+            && document.getElementById('einsteiger-spieltag-box').textContent.includes('So läuft ein Spieltag');
+        document.getElementById('einsteiger-vorbereitung-knopf').click();
+        out.vorbereitungAuf = document.getElementById('prematch-vorbereitung').style.display === '';
+        out.layout = ueberlauf() && woerter('#einsteiger-spieltag-box button').length === 0;
+        const md = game.matchday;
+        document.getElementById('einsteiger-anpfiff').click();
+        if (typeof simulateRestOfMatch === 'function' && game.matchday === md) simulateRestOfMatch();
+        out.gespielt = true;
+        // Ausschalten: alles sichtbar
+        setEinsteigerModus(false);
+        showScreen('screen-dashboard');
+        out.aus = !document.documentElement.classList.contains('einsteiger-frueh') && !document.querySelector('.kpi-chip[data-kopf="level"]').hidden
+            && document.getElementById('einsteiger-schalter').textContent.includes('AUS');
+        // Büro: Ziel unter den Schnellknöpfen
+        showScreen('screen-office');
+        const qn = document.getElementById('office-quicknav');
+        out.buero = qn.style.display === 'none' || qn.textContent.includes('→ Transfers');
+        // Fachwörter in den Tipps
+        game.onboarding.hints = {};
+        showScreen('screen-squad');
+        out.fachwort = !!document.querySelector('#screen-squad > .screen-hint .fachwort[data-fachwort="Tagesform"]');
+        return out;
+    });
+    const K = ['ohne', 'kopf', 'profiWeg', 'ersteSchritteOben', 'einZiel', 'menue', 'menueAuf', 'kader'];
+    assert(K.every(k => r[k] === true), `Einsteiger: Kopfzeile, Übersicht, Menü und Kader aufgeräumt (${JSON.stringify(K.map(k => r[k]))})`);
+    const S = ['spieltag', 'vorbereitungAuf', 'layout', 'gespielt', 'aus', 'buero', 'fachwort'];
+    assert(S.every(k => r[k] === true), `Einsteiger: kompakter Spieltag, Ausschalten, Büro-Ziele, Fachwörter (${JSON.stringify(S.map(k => r[k]))})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 module.exports = {
     testSpielvorbereitung,
     testVertragsWerkzeuge,
@@ -3879,6 +3947,7 @@ module.exports = {
     testKopfzeilenFenster,
     testAusschreitungen,
     testStartmenue,
+    testEinsteiger,
     testAdminWerkzeuge,
     testPrivatlebenPlus,
     testOeffentlicheFassung,

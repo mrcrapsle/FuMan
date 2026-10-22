@@ -682,6 +682,7 @@
 
             <div class="one-hand-settings">
                 <div class="nav-category">Einstellungen</div>
+                <div id="einsteiger-schalter"></div>
                 <div id="one-hand-settings-fab"></div>
                 <div id="one-hand-settings-toggles" class="one-hand-toggles"></div>
             </div>
@@ -886,6 +887,7 @@
                     </div>
                     <div class="dashboard-hero-bowl-wrapper"></div>
                 </div>
+                <div id="dash-onboarding-box"></div>
                 <div id="member-assembly-box" class="panel" style="display:none; border-color:var(--gold); margin-bottom:10px;"></div>
                 <div id="dashboard-freischaltung-box" style="display:none;"></div>
                 <div id="favoriten-box"></div>
@@ -920,10 +922,9 @@
                     <div id="dash-season-preview-box"></div>
                     <div id="dash-cup-final-box"></div>
                     <div id="dash-derby-box"></div>
-                    <div id="dash-transfer-strategy-box"></div>
+                    <div id="dash-transfer-strategy-box" class="profi-abschnitt"></div>
                     <div id="dash-winter-talk-box"></div>
                     <div id="dash-joboffer-box"></div>
-                    <div id="dash-onboarding-box"></div>
                     <div id="dash-autosave-line" style="font-size:var(--fs-small); color:var(--text-muted); padding:2px 4px;"></div>
                     <div id="dash-relegation-box"></div>
                     <div id="dash-season-events-box"></div>
@@ -937,7 +938,7 @@
                         <div class="panel-header">🎯 Nächste Ziele</div>
                         <div id="dash-next-goals-box"></div>
                     </div>
-                    <div class="panel">
+                    <div class="panel profi-abschnitt">
                         <div class="panel-header">📰 Wochenrückblick</div>
                         <div id="dash-weekly-recap-box"></div>
                     </div>
@@ -947,22 +948,23 @@
                         <div>Gehaltsbudget: <strong id="dash-wage-budget">15.000 € / SpT</strong></div>
                         <div>Monatssaldo (GuV): <strong id="dash-monthly-net" style="color:var(--accent);">+0 €</strong></div>
                     </div>
-                    <div class="panel">
+                    <div class="panel profi-abschnitt">
                         <div class="panel-header" style="color:var(--industry);">🏭 Industrie & Holding</div>
                         <div>Holding-Kapital: <strong id="dash-holding-cap" style="color:var(--industry);">50.000 €</strong></div>
                         <div>Aktive Fabriken: <strong id="dash-active-factories">0 / 4</strong></div>
                         <div>Lager-Rohstoffe: <strong id="dash-raw-total">1.750 kg</strong></div>
                     </div>
-                    <div class="panel">
+                    <div class="panel profi-abschnitt">
                         <div class="panel-header" style="color:var(--europe);">🌟 Europa & Manager</div>
                         <div>Champions Cup: <strong id="dash-europe-status" style="color:var(--europe);">Nicht qualifiziert</strong></div>
                         <div>Trainer-Perks: <strong id="dash-perks-count" style="color:var(--gold);">0 / 5 Aktiv</strong></div>
                     </div>
                     <div class="panel">
-                        <div class="panel-header">🎯 Saison-Ziele</div>
+                        <div class="panel-header">🏅 Saison-Aufgaben</div>
                         <div id="season-objectives-box"></div>
                     </div>
                 </div>
+                <div id="einsteiger-dash-hinweis"></div>
 
                 <div class="panel">
                     <div class="panel-header">💾 Speicherstände</div>
@@ -971,6 +973,8 @@
                     <div id="new-game-setup-box" class="box" style="display:none; margin-bottom:10px;">
                         <label for="new-game-clubname" style="display:block; font-size:var(--fs-small); font-weight:800; margin-bottom:4px;">Vereinsname:</label>
                         <input type="text" id="new-game-clubname" class="input-inline" maxlength="40" style="width:100%; margin-bottom:8px;" placeholder="z. B. FC Leipzig 1920">
+                        <div style="font-size:var(--fs-small); font-weight:800; margin-bottom:4px;">Erfahrung:</div>
+                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 8em), 1fr)); gap:4px; margin-bottom:8px;" id="new-game-einsteiger-btns"></div>
                         <div style="font-size:var(--fs-small); font-weight:800; margin-bottom:4px;">Spielart wählen:</div>
                         <div id="new-game-scenario-btns" style="margin-bottom:8px;"></div>
                         <div style="font-size:var(--fs-small); font-weight:800; margin-bottom:4px;">Heimatstadt (bestimmt Regionalliga, Oberliga und Landespokal):</div>
@@ -1470,17 +1474,8 @@
                 <div id="squad-tab-aufstellung">
                     <div class="panel">
                         <div class="panel-header">⚽ Kader & Aufstellung</div>
-                        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px; margin-bottom:6px;">
-                            <div>Kapitän: <select id="sel-captain" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
-                            <div>Elfmeter: <select id="sel-penalty" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
-                            <div>Freistöße: <select id="sel-freekick" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
-                            <div>Ecken: <select id="sel-corner" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
-                        </div>
-                        <div id="formation-cards-grid" style="display:grid; grid-template-columns: repeat(2, 1fr); gap:4px;"></div>
-                        <button onclick="openFormationModal()" class="btn-primary" style="margin-top:6px;">🎛️ Formation im Detail wählen (Grid + Vorschau)</button>
-                        <button onclick="autoLineup()" class="btn-action" style="margin-top:6px;">🤖 Trainer stellt Top-Elf auf</button>
+                        <button onclick="autoLineup()" class="btn-action">🤖 Trainer stellt Top-Elf auf</button>
                     </div>
-                    <div class="panel" id="lineup-presets-box"></div>
                     <div class="panel" style="text-align:center;">
                         <div class="panel-header"><span>🏟️ 3D-Taktiktafel (<span id="squad-form-name">4-4-2</span>)</span></div>
                         <div id="tactics-board-stat-bar" style="margin-bottom:8px;"></div>
@@ -1493,6 +1488,18 @@
                         </div>
                         <button onclick="shareLineup()" class="btn-secondary" style="margin-top:6px;">📋 Aufstellung teilen</button>
                     </div>
+                    <details class="panel kader-feinheiten" id="kader-feinheiten" open>
+                        <summary class="panel-header">⚙️ Formation und Standard-Schützen</summary>
+                        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:4px; margin-bottom:6px;">
+                            <div>Kapitän: <select id="sel-captain" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
+                            <div>Elfmeter: <select id="sel-penalty" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
+                            <div>Freistöße: <select id="sel-freekick" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
+                            <div>Ecken: <select id="sel-corner" class="input-inline" style="width:100%;" onchange="assignRoles()"></select></div>
+                        </div>
+                        <div id="formation-cards-grid" style="display:grid; grid-template-columns: repeat(2, 1fr); gap:4px;"></div>
+                        <button onclick="openFormationModal()" class="btn-primary" style="margin-top:6px;">🎛️ Formation im Detail wählen (Grid + Vorschau)</button>
+                    </details>
+                    <div class="panel" id="lineup-presets-box"></div>
                     <div class="panel">
                         <div class="panel-header">Kaderliste & Attribute</div>
                         <div id="role-fit-summary" style="font-size:var(--fs-caption); color:var(--accent); margin-bottom:6px;"></div>
@@ -2726,6 +2733,8 @@
 
             <!-- 28. PRE-MATCH & LIVESPIEL -->
             <div id="screen-prematch-press" style="display:none;">
+                <div id="einsteiger-spieltag-box"></div>
+                <div id="prematch-vorbereitung">
                 <div id="prematch-check-box"></div>
                 <div id="prematch-fatigue-box"></div>
                 <div id="prematch-analysis-box" style="margin-bottom:10px;"></div>
@@ -2737,6 +2746,7 @@
                     <div id="press-answers-container"></div>
                     <button onclick="skipPressAndPlay()" class="btn-secondary" style="margin-top:6px;">⏩ Direkt zum Spiel</button>
                     <button onclick="resolveMatchInstantly()" class="btn-primary" style="margin-top:6px;">⚡ Nur Ergebnis (kompletter Spielbericht sofort)</button>
+                </div>
                 </div>
             </div>
 
@@ -2886,6 +2896,7 @@
 <script src="js/fans.js?v=2.1"></script>
 <script src="js/ausschreitungen.js?v=3.144"></script>
 <script src="js/startmenue.js?v=3.145"></script>
+<script src="js/einsteiger.js?v=3.146"></script>
 <script src="js/youth.js?v=2.1"></script>
 <script src="js/youth-academy-extended.js?v=2.1"></script>
 <script src="js/youth-pathway.js?v=3.11"></script>
@@ -3048,6 +3059,10 @@
                     game.clubName = chosenName;
                     game.secondTeam.name = `${chosenName} II`;
                 }
+                // Einsteiger-Modus (js/einsteiger.js)
+                let chosenEinsteiger = safeStorageGet(sessionStorage, 'anstoss_fm13_newgame_einsteiger');
+                safeStorageRemove(sessionStorage, 'anstoss_fm13_newgame_einsteiger');
+                if (chosenEinsteiger !== null) game.einsteiger = chosenEinsteiger === '1';
                 if (typeof ensureHomeCity === 'function') { ensureHomeCity(); applyHomeRegion(); }
                 let chosenLevel = safeStorageGet(sessionStorage, 'anstoss_fm13_newgame_leaguelevel');
                 let chosenMoney = safeStorageGet(sessionStorage, 'anstoss_fm13_newgame_money');
@@ -3112,7 +3127,8 @@
                     showToast('🆕 Neuer Klub gestartet!', 'success');
                 }
                 updateUI();
-                showScreen('screen-office');
+                // Neue Karriere startet auf der Übersicht mit den ersten Schritten, nicht im Büro
+                showScreen('screen-dashboard');
             } else if (!(spielGeladen = (typeof loadMostRecentGame === 'function' ? loadMostRecentGame() : loadGame(true)))) {
                 if (typeof ensureHomeCity === 'function') { ensureHomeCity(); applyHomeRegion(); }
                 initDefaultSquad();

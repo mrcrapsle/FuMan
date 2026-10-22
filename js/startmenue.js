@@ -95,6 +95,7 @@ function renderStartmenue() {
     else if (s === 'jobs') html = startmenueJobsHtml();
     else if (s === 'laden') html = startmenueLadenHtml();
     inhalt.innerHTML = html;
+    if (s === 'karriere' && typeof renderNewGameEinsteigerOptions === 'function') renderNewGameEinsteigerOptions();
     if (s === 'gruenden') {
         const box = document.getElementById('new-game-setup-box');
         if (box) {
@@ -130,6 +131,7 @@ function startmenueKarriereHtml() {
             </select></label>`
         : '';
     return startmenueKopf('🆕 Neue Karriere', 'titel') + stadt
+        + '<div class="startmenue-feld">Erfahrung<div id="startmenue-einsteiger-btns" class="startmenue-ligen"></div></div>'
         + `<div class="startmenue-knoepfe">${Object.entries(STARTMENUE_ARTEN).map(([k, a]) =>
             `<button onclick="startmenueArtWaehlen('${k}')" id="startmenue-${k}" class="btn-secondary startmenue-gross">${a.titel}<span>${a.text}</span></button>`).join('')}</div>`;
 }
@@ -142,6 +144,7 @@ function startmenueArtWaehlen(art) {
     safeSessionSet(FORCE_NEW_GAME_FLAG, '1');
     safeSessionSet('anstoss_fm13_newgame_city', selectedNewGameCity);
     safeSessionSet('anstoss_fm13_newgame_modus', art);
+    if (typeof selectedNewGameEinsteiger !== 'undefined') safeSessionSet('anstoss_fm13_newgame_einsteiger', selectedNewGameEinsteiger ? '1' : '0');
     if (typeof selectedNewGameTempo !== 'undefined') safeSessionSet('anstoss_fm13_newgame_freischaltung', selectedNewGameTempo);
     location.reload();
 }
@@ -191,7 +194,7 @@ function startmenueAntreten(name, szenario) {
     startmenueLigaFilter = null;
     schliesseStartmenue();
     updateUI();
-    showScreen('screen-office');
+    showScreen('screen-dashboard');
     showToast(`🤝 Willkommen beim ${game.clubName}!`, 'success');
     if (typeof maybeShowTutorial === 'function') maybeShowTutorial();
     return true;

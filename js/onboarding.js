@@ -6,18 +6,21 @@
 const ONBOARDING_STEPS = [
     { key: 'kader', label: 'Kader und Aufstellung ansehen', screen: 'screen-squad' },
     { key: 'training', label: 'Trainingsschwerpunkt festlegen', screen: 'screen-training' },
-    { key: 'finanzen', label: 'Finanzen und Sponsoren prüfen', screen: 'screen-finances' },
+    { key: 'finanzen', label: 'Sponsoren-Angebote ansehen (Finanzen)', screen: 'screen-finances', link: 'screen-sponsors' },
     { key: 'transfer', label: 'Transfermarkt durchsehen', screen: 'screen-transfer' },
     { key: 'spiel', label: 'Erstes Ligaspiel bestreiten', screen: 'screen-dashboard' },
     { key: 'speichern', label: 'Spielstand speichern (💾 unten rechts)', screen: null }
 ];
 
+// Fachwort-Hilfe (js/insights.js) in den Tipps: antippen öffnet den Lexikon-Eintrag.
+function fwHint(wort) { return `<span class="fachwort" role="button" tabindex="0" data-fachwort="${wort}">${wort}</span>`; }
+
 const SCREEN_HINTS = {
-    'screen-squad': 'Die Startelf zählt: Stärke × Fitness × Tagesform. „Trainer stellt Top-Elf auf“ wählt automatisch die fitteste starke Elf. Formation und Spielstil ändern Angriff, Abwehr und Kraftverbrauch.',
-    'screen-transfer': 'Angebote für deine Spieler findest du unter „Angebote“. Neue Spieler gibt es im Transfermarkt (10 pro Fenster) - die Ablöse lässt sich mit 🃏 Verhandeln drücken, Sofortkauf zahlt die Forderung -, ablösefrei bei den Vereinslosen oder auf Leihbasis. Achte auf das Gehaltsbudget.',
-    'screen-finances': 'Jede Einnahme und Ausgabe steht im Buchungsjournal. Im Minus gilt eine Transfersperre; anhaltende Verluste bestraft das Financial Fairplay bis hin zum Punktabzug. Sponsoren-Angebote kannst du nachverhandeln.',
+    'screen-squad': 'Die Startelf zählt: ' + fwHint('Stärke') + ' × ' + fwHint('Fitness') + ' × ' + fwHint('Tagesform') + '. „Trainer stellt Top-Elf auf“ wählt automatisch die fitteste starke Elf. Formation und Spielstil ändern Angriff, Abwehr und Kraftverbrauch.',
+    'screen-transfer': 'Angebote für deine Spieler findest du unter „Angebote“. Neue Spieler gibt es im Transfermarkt (10 pro Fenster) - die Ablöse lässt sich mit 🃏 Verhandeln drücken, Sofortkauf zahlt die Forderung -, ablösefrei bei den Vereinslosen oder auf Leihbasis. Achte auf das ' + fwHint('Gehaltsbudget') + '.',
+    'screen-finances': 'Jede Einnahme und Ausgabe steht im Buchungsjournal. Im Minus gilt eine Transfersperre; anhaltende Verluste bestraft das ' + fwHint('Financial Fairplay') + ' bis hin zum Punktabzug. Sponsoren-Angebote kannst du nachverhandeln.',
     'screen-training': 'Der Wochenschwerpunkt wirkt nach jedem Spieltag: Kondition hilft der Fitness, Taktik sicher der Teamstärke, Match-Prep noch mehr - wenn du den Stil des nächsten Gegners richtig tippst, Erholung senkt das Verletzungsrisiko.',
-    'screen-stadium': 'Stadionausbau wird voll bezahlt, wenn er beginnt, und ist nach einigen Spieltagen fertig. Für den Aufstieg brauchst du Lizenzauflagen (z. B. Flutlicht für die 3. Liga) - die Übersicht steht hier.',
+    'screen-stadium': 'Stadionausbau wird voll bezahlt, wenn er beginnt, und ist nach einigen Spieltagen fertig. Für den Aufstieg brauchst du ' + fwHint('Lizenzauflagen') + ' (z. B. Flutlicht für die 3. Liga) - die Übersicht steht hier.',
     'screen-inbox': 'Im Postfach landen alle Ereignisse. Der Link in jeder Nachricht führt direkt zum passenden Bildschirm.',
     'screen-league': 'Platz 1-2 steigt direkt auf, Platz 3 spielt Relegation. Die letzten zwei steigen ab, Platz 16 muss in die Relegation.'
 };
@@ -47,6 +50,7 @@ function onScreenShown(screenId) {
     ONBOARDING_STEPS.forEach(s => { if (s.screen === screenId && s.key !== 'spiel') markOnboardingStep(s.key); });
     if (screenId === 'screen-sponsors') markOnboardingStep('finanzen');
     if (game.matchday > 1 || game.season > 1) markOnboardingStep('spiel');
+    if (screenId === 'screen-prematch-press' && typeof renderEinsteigerSpieltag === 'function') renderEinsteigerSpieltag();
     const screen = document.getElementById(screenId);
     if (!screen) return;
     let hint = screen.querySelector(':scope > .screen-hint');
@@ -87,7 +91,7 @@ function renderOnboardingBox() {
     box.innerHTML = `<div class="box" style="font-size:var(--fs-body); border-left-color:var(--teal); margin-bottom:6px;">
         🎓 <strong>Erste Schritte</strong> (${erledigt}/${ONBOARDING_STEPS.length})
         ${ONBOARDING_STEPS.map(s => `<div style="margin-top:4px;">${ob.done[s.key] ? '✅' : '⬜'} ${s.screen && !ob.done[s.key] && s.screen !== 'screen-dashboard'
-            ? `<a href="#" onclick="showScreen('${s.screen}'); return false;" style="color:var(--teal);">${s.label}</a>` : s.label}</div>`).join('')}
+            ? `<a href="#" onclick="showScreen('${s.link || s.screen}'); return false;" style="color:var(--teal);">${s.label}</a>` : s.label}</div>`).join('')}
         <button onclick="hideOnboardingChecklist()" class="btn-secondary" style="margin-top:6px; width:auto;">Ausblenden</button>
     </div>`;
 }

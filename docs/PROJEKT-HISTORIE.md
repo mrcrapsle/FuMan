@@ -851,3 +851,20 @@ Die Felder sind `role="button"` mit `tabindex="0"` und einem kleinen „›“; 
 - „Neue Karriere starten“ (früher „Neues Spiel starten“) öffnet das Menü bei der Karriere-Wahl.
 - Testangebot im Diamanten-Shop: 1.000 Diamanten gegen 2 Mio. € (`TESTANGEBOT_DIAMANTEN_GELD`).
 - Test `testStartmenue` ([26.26]); die übrigen Suiten starten ohne Menü (`window.anstossOhneStartmenue`).
+
+## Phase 26.27: Einsteiger-Hilfen nach der Neulings-Analyse (ungemergt)
+
+Analyse als Neuling (390 px, öffentliche Fassung): Start im Büro ohne Leiste, Kopfzeile mit gesperrter Holding, Übersicht 4,5 Handyhöhen mit doppeltem „Saison-Ziele“, Menü mit 20 Einträgen, Kader beginnt mit Schützen und zehn Formationen, vor Spiel 1 Notizbuch, Taktik-Duell, Ansprache und Presse.
+
+1. Einsteiger-Modus beim Karrierestart (Startmenü und Neues-Spiel-Kasten, Standard an): `js/einsteiger.js`, Schalter im Menü unter Einstellungen.
+2. Neue Karriere startet auf der Übersicht; Büro-Schnellknöpfe nennen das Ziel („Aktenschrank → Transfers“).
+3. Kopfzeile: Holding-Konto erst mit Freischaltung, Manager-Level im Einsteiger-Modus ab Level 2.
+4. „Erste Schritte“ ganz oben auf der Übersicht; Wochenrückblick, Industrie & Holding, Europa & Manager und Transferstrategie im Einsteiger-Modus bis Spieltag 17 ausgeblendet (mit Hinweis und „Alles jetzt zeigen“); das untere Panel heißt „Saison-Aufgaben“, die doppelte Überschrift ist weg.
+5. Menü „Wichtig“ (Übersicht, Kader, Training, Transfers, Finanzen, Postfach, Wettbewerbe) und „Mehr Bereiche“ (im Einsteiger-Modus zu, Zustand gemerkt).
+6. Kader: „Trainer stellt Top-Elf auf“ und Taktiktafel zuerst, Formation und Schützen im aufklappbaren Bereich (im Einsteiger-Modus zu).
+7. Spieltag: oben immer „Ohne Vorbereitung anpfeifen“ und „Nur Ergebnis“; im Einsteiger-Modus ist die Vorbereitung eingeklappt, die ersten drei Spiele erklären den Ablauf.
+8. Fachwörter: Stärke, Fitness, Tagesform, Gehaltsbudget, Financial Fairplay, Lizenzauflagen und Taktik-Duell öffnen den Lexikon-Eintrag; Formationskarten zeigen „Abwehr/Angriff“ statt „Def/Off“.
+9. Keine Sponsoren-Meldung beim neuen Klub mehr, der Schritt „Sponsoren-Angebote ansehen“ führt zu den Angeboten.
+10. Leitfaden für einen Kurztest mit Neulingen: `docs/EINSTEIGER-TEST.md`.
+
+Test `testEinsteiger` ([26.27]), `testStartmenue` prüft Einsteiger-Modus und Start auf der Übersicht.

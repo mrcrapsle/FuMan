@@ -457,7 +457,7 @@
             let active = f === game.formation;
             return `<div onclick="setFormation('${f}')" class="panel" style="cursor:pointer; margin:0; padding:8px; ${active ? 'border-color:var(--accent); border-width:2px;' : ''}">
                 <div style="font-weight:800; font-size:var(--fs-body-lg); ${active ? 'color:var(--accent);' : ''}">${f}</div>
-                <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:2px;">Def ${r.def} · Off ${r.off}</div>
+                <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:2px;">Abwehr ${r.def} · Angriff ${r.off}</div>
             </div>`;
         }).join('');
     }

@@ -343,6 +343,8 @@
             if (inboxUnread > 0) { inboxBadge.style.display = 'inline-block'; inboxBadge.innerText = inboxUnread; }
             else { inboxBadge.style.display = 'none'; }
         }
+        // Einsteiger-Hilfen (js/einsteiger.js): Kopfzeile, Übersicht, Menü
+        if (typeof wendeEinsteigerAn === 'function') wendeEinsteigerAn();
     }
 
 // Tastatur in Overlays (25.25): Beim Öffnen springt der Fokus in den Dialog, Tab bleibt darin,

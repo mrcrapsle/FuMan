@@ -328,7 +328,6 @@ function renderSeasonObjectivesPanel() {
     updateObjectiveProgress(false);
 
     let html = '<div class="panel-content">';
-    html += '<h3>🎯 Saison-Ziele</h3>';
 
     // Summary
     const summary = getSeasonObjectivesSummary();
