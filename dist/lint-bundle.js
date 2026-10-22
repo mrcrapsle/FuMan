@@ -22454,10 +22454,17 @@ const FAN_FEINDSCHAFTEN = [
     ['Eintracht Braunschweigh', 'VfL Osnabruk', 'Nord-Feindschaft'], ['Hansa Rostok', 'VfB Lubek', 'Ostsee-Feindschaft'],
     // West
     ['Rot-Weiss Essn', 'Alemannia Aachn', 'West-Feindschaft'], ['Rot-Weiss Essn', 'Wuppertaler SVV', 'West-Feindschaft'], ['KFC Uerdingenn 05', 'Fortuna Dusseldorf', 'Niederrhein-Feindschaft'],
-    ['Rot-Weiss Oberhausn', 'MSV Duisborg', 'Niederrhein-Feindschaft'], ['SC Verll', 'SC Wiedenbruk', 'OWL-Feindschaft'], ['Alemannia Aachn', 'Fortuna Kohln', 'Rheinland-Feindschaft'],
+    ['Rot-Weiss Oberhausn', 'MSV Duisborg', 'Niederrhein-Feindschaft'], ['SC Verll', 'SC Wiedenbruk', 'OWL-Feindschaft'], ['Alemannia Aachn', 'SC Fortuna Kohln', 'Rheinland-Feindschaft'],
     // Südwest
     ['Kickers Offenbachh', 'SV Waldhof Manheim', 'Südwest-Feindschaft'], ['Kickers Offenbachh', 'FSV Frankfurtt', 'Main-Feindschaft'], ['SV Waldhof Manheim', '1. FC Kaiserslauten', 'Südwest-Feindschaft'],
     ['Eintracht Trierr', '1. FC Saarbrukken', 'Mosel-Saar-Feindschaft'], ['FK Pirmasenss', '1. FC Kaiserslauten', 'Pfalz-Feindschaft'], ['Stuttgarter Kikkers', 'SSV Ulm 1847', 'Schwaben-Feindschaft'],
+    // Bundesliga, 2. und 3. Liga (recherchiert; Derbys und Traditionsduelle aus js/club-geo.js stehen nicht doppelt hier)
+    ['Borussia Dortmunt', 'RB Leibzig', 'Anti-RB-Feindschaft'], ['Hertha BSK', 'Hansa Rostok', 'Ost-West-Feindschaft'], ['Hertha BSK', 'Union Berlien', 'Berliner Feindschaft'],
+    ['Union Berlien', 'Hansa Rostok', 'Ost-Feindschaft'], ['Union Berlien', 'Dynamo Dressden', 'Ost-Feindschaft'], ['Hansa Rostok', '1. FC Magdeborg', 'Ost-Feindschaft'],
+    ['Hansa Rostok', 'Erzgebirge Aua', 'Ost-Feindschaft'], ['Dynamo Dressden', 'Hallescher FK 96', 'Ost-Feindschaft'], ['Dynamo Dressden', 'Erzgebirge Aua', 'Sachsen-Feindschaft'],
+    ['Hamburger SP', 'FC St. Paulli', 'Hamburger Feindschaft'], ['Bayern Munchen', 'TSV 1861 Munchen', 'Münchner Feindschaft'], ['1. FC Nurnberg', 'TSV 1861 Munchen', 'Süd-Feindschaft'],
+    ['Karlsruher SK', 'Hannover 97', 'Nord-Süd-Feindschaft'], ['SV Darmstadt 99', 'Kickers Offenbachh', 'Hessen-Feindschaft'], ['Arminia Bilefeld', 'VfL Osnabruk', 'Westfalen-Feindschaft'],
+    ['Alemannia Aachn', 'SC Preussen Munsterr', 'West-Feindschaft'],
     // Bayern
     ['TSV 1861 Munchen', 'FC Augsburgh', 'Bayern-Feindschaft'], ['TSV 1861 Munchen', 'SpVgg Unterhachingen', 'Münchner Vorort-Feindschaft'], ['TSV 1861 Munchen', 'Turkgucu Munchen', 'Münchner Feindschaft'],
     ['SpVgg Bayreuthh', 'SpVgg Bayern Hoff', 'Oberfranken-Feindschaft'], ['SpVgg Bayreuthh', '1. FC Nurnberg', 'Franken-Feindschaft']
@@ -23119,6 +23126,9 @@ const LIVE3D_GEGNER_FARBEN = ['#e53935', '#1e88e5', '#fdd835', '#43a047', '#fb8c
 const LIVE3D_ORDNUNG = [[0.04, 0.5], [0.2, 0.15], [0.18, 0.38], [0.18, 0.62], [0.2, 0.85], [0.42, 0.18], [0.38, 0.4], [0.38, 0.6], [0.42, 0.82], [0.6, 0.38], [0.6, 0.62]];
 
 let live3d = null;   // Zustand der Ansicht, nicht im Spielstand
+// Eigener Zufall der Ansicht: Math.random gehört der Spiellogik (Tests setzen dort feste Folgen).
+let live3dSaat = 0x9e3779b9;
+function live3dRnd() { live3dSaat = (live3dSaat * 1664525 + 1013904223) >>> 0; return live3dSaat / 4294967296; }
 
 function live3dAn() { return safeLocalGet(LIVE3D_KEY) !== '0'; }
 function live3dReduziert() {
@@ -23152,7 +23162,8 @@ function live3dNeu() {
     [0, 1].forEach(team => {
         LIVE3D_ORDNUNG.forEach((o, i) => {
             const haut = ['#f1c27d', '#e0ac69', '#c68642', '#8d5524', '#ffdbac'][live3dHash((team ? 'g' : 'h') + i + (m.homeName || '')) % 5];
-            spieler.push({ team, nr: i, x: 52.5, y: 34, zx: 52.5, zy: 34, phase: Math.random() * 6, haut, torwart: i === 0, karte: 0, jubel: 0, hecht: 0 });
+            spieler.push({ team, nr: i, x: 52.5, y: 34, zx: 52.5, zy: 34, phase: (i * 7 + team * 3) % 6,   // fest statt Math.random: die Ansicht zieht beim Anpfiff keine Zufallszahlen aus dem Spiel
+                 haut, torwart: i === 0, karte: 0, jubel: 0, hecht: 0 });
         });
     });
     live3d = {
@@ -23234,12 +23245,12 @@ function live3dStarteSzene(s) {
     s.schritte = [
         { ziel: angreifer.find(p => p.nr === 6) || vorne, dauer: 0.7 },
         { ziel: angreifer.find(p => p.nr === 9) || vorne, dauer: 0.7 },
-        { schuss: true, torX, torY: 34 + (Math.random() * 6 - 3), dauer: 0.55 }
+        { schuss: true, torX, torY: 34 + (live3dRnd() * 6 - 3), dauer: 0.55 }
     ];
     s.schritt = 0; s.start = live3d.zeit;
     if (s.art === 'karte') {
         s.schritte = [{ pause: true, dauer: 1.6 }];
-        const taeter = live3d.spieler.filter(p => p.team !== live3d.besitz && !p.torwart)[Math.floor(Math.random() * 10)];
+        const taeter = live3d.spieler.filter(p => p.team !== live3d.besitz && !p.torwart)[Math.floor(live3dRnd() * 10)];
         if (taeter) { taeter.karte = s.rot ? 2 : 1; s.taeter = taeter; }
     }
     live3d.szene = s;
@@ -23259,7 +23270,7 @@ function live3dSzeneWeiter(dt) {
     if (schritt.schuss) {
         const torwart = live3d.spieler.find(p => p.team !== s.team && p.torwart);
         const trifft = s.art === 'tor';
-        const zielY = trifft ? schritt.torY : (Math.random() < 0.5 ? torwart.y + (Math.random() * 2 - 1) : schritt.torY + (Math.random() < 0.5 ? -6 : 6));
+        const zielY = trifft ? schritt.torY : (live3dRnd() < 0.5 ? torwart.y + (live3dRnd() * 2 - 1) : schritt.torY + (live3dRnd() < 0.5 ? -6 : 6));
         const zielX = trifft ? schritt.torX + (schritt.torX > 50 ? 1.2 : -1.2) : (Math.abs(zielY - torwart.y) < 2 ? torwart.x : schritt.torX + (schritt.torX > 50 ? 2 : -2));
         live3dPass(b.halter, { x: zielX, y: zielY }, schritt.dauer, trifft ? 1.6 : 1.1);
         torwart.hecht = trifft || Math.abs(zielY - torwart.y) > 2 ? (zielY > torwart.y ? 1 : -1) : 0.01;
@@ -23335,9 +23346,9 @@ function live3dSchritt(dt) {
         const mit = d.spieler.filter(p => p.team === b.halter.team && p !== b.halter && !p.torwart);
         // eher nach vorn, aber nicht zu weit
         mit.sort((a, c) => ((c.x - b.halter.x) * r - Math.abs(c.y - b.halter.y) * 0.3) - ((a.x - b.halter.x) * r - Math.abs(a.y - b.halter.y) * 0.3));
-        let ziel = mit[Math.floor(Math.random() * Math.min(4, mit.length))];
+        let ziel = mit[Math.floor(live3dRnd() * Math.min(4, mit.length))];
         // Ballverlust ans pressende Team
-        if (Math.random() < 0.18) {
+        if (live3dRnd() < 0.18) {
             const gegner = d.spieler.filter(p => p.team !== b.halter.team && !p.torwart);
             ziel = gegner.sort((a, c) => Math.hypot(a.x - b.x, a.y - b.y) - Math.hypot(c.x - b.x, c.y - b.y))[0];
         }
@@ -23345,7 +23356,7 @@ function live3dSchritt(dt) {
         const toreX = r > 0 ? 88 : 17;
         if ((r > 0 && b.halter.x > toreX) || (r < 0 && b.halter.x < toreX)) ziel = mit.sort((a, c) => (a.x - c.x) * r)[0];
         live3dPass(b.halter, ziel, 0.5 + Math.hypot(ziel.x - b.x, ziel.y - b.y) / 40, Math.hypot(ziel.x - b.x, ziel.y - b.y) > 25 ? 2 : 0.3);
-        d.naechsterPass = d.zeit + 0.9 + Math.random() * 1.2;
+        d.naechsterPass = d.zeit + 0.9 + live3dRnd() * 1.2;
     }
 
     // Spieler: Grundordnung, zur Ballseite verschoben; der Nächste presst

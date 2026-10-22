@@ -28,10 +28,17 @@ const FAN_FEINDSCHAFTEN = [
     ['Eintracht Braunschweigh', 'VfL Osnabruk', 'Nord-Feindschaft'], ['Hansa Rostok', 'VfB Lubek', 'Ostsee-Feindschaft'],
     // West
     ['Rot-Weiss Essn', 'Alemannia Aachn', 'West-Feindschaft'], ['Rot-Weiss Essn', 'Wuppertaler SVV', 'West-Feindschaft'], ['KFC Uerdingenn 05', 'Fortuna Dusseldorf', 'Niederrhein-Feindschaft'],
-    ['Rot-Weiss Oberhausn', 'MSV Duisborg', 'Niederrhein-Feindschaft'], ['SC Verll', 'SC Wiedenbruk', 'OWL-Feindschaft'], ['Alemannia Aachn', 'Fortuna Kohln', 'Rheinland-Feindschaft'],
+    ['Rot-Weiss Oberhausn', 'MSV Duisborg', 'Niederrhein-Feindschaft'], ['SC Verll', 'SC Wiedenbruk', 'OWL-Feindschaft'], ['Alemannia Aachn', 'SC Fortuna Kohln', 'Rheinland-Feindschaft'],
     // Südwest
     ['Kickers Offenbachh', 'SV Waldhof Manheim', 'Südwest-Feindschaft'], ['Kickers Offenbachh', 'FSV Frankfurtt', 'Main-Feindschaft'], ['SV Waldhof Manheim', '1. FC Kaiserslauten', 'Südwest-Feindschaft'],
     ['Eintracht Trierr', '1. FC Saarbrukken', 'Mosel-Saar-Feindschaft'], ['FK Pirmasenss', '1. FC Kaiserslauten', 'Pfalz-Feindschaft'], ['Stuttgarter Kikkers', 'SSV Ulm 1847', 'Schwaben-Feindschaft'],
+    // Bundesliga, 2. und 3. Liga (recherchiert; Derbys und Traditionsduelle aus js/club-geo.js stehen nicht doppelt hier)
+    ['Borussia Dortmunt', 'RB Leibzig', 'Anti-RB-Feindschaft'], ['Hertha BSK', 'Hansa Rostok', 'Ost-West-Feindschaft'], ['Hertha BSK', 'Union Berlien', 'Berliner Feindschaft'],
+    ['Union Berlien', 'Hansa Rostok', 'Ost-Feindschaft'], ['Union Berlien', 'Dynamo Dressden', 'Ost-Feindschaft'], ['Hansa Rostok', '1. FC Magdeborg', 'Ost-Feindschaft'],
+    ['Hansa Rostok', 'Erzgebirge Aua', 'Ost-Feindschaft'], ['Dynamo Dressden', 'Hallescher FK 96', 'Ost-Feindschaft'], ['Dynamo Dressden', 'Erzgebirge Aua', 'Sachsen-Feindschaft'],
+    ['Hamburger SP', 'FC St. Paulli', 'Hamburger Feindschaft'], ['Bayern Munchen', 'TSV 1861 Munchen', 'Münchner Feindschaft'], ['1. FC Nurnberg', 'TSV 1861 Munchen', 'Süd-Feindschaft'],
+    ['Karlsruher SK', 'Hannover 97', 'Nord-Süd-Feindschaft'], ['SV Darmstadt 99', 'Kickers Offenbachh', 'Hessen-Feindschaft'], ['Arminia Bilefeld', 'VfL Osnabruk', 'Westfalen-Feindschaft'],
+    ['Alemannia Aachn', 'SC Preussen Munsterr', 'West-Feindschaft'],
     // Bayern
     ['TSV 1861 Munchen', 'FC Augsburgh', 'Bayern-Feindschaft'], ['TSV 1861 Munchen', 'SpVgg Unterhachingen', 'Münchner Vorort-Feindschaft'], ['TSV 1861 Munchen', 'Turkgucu Munchen', 'Münchner Feindschaft'],
     ['SpVgg Bayreuthh', 'SpVgg Bayern Hoff', 'Oberfranken-Feindschaft'], ['SpVgg Bayreuthh', '1. FC Nurnberg', 'Franken-Feindschaft']

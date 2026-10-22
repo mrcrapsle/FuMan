@@ -3723,6 +3723,9 @@ async function testAusschreitungen(browser) {
         const fh = getAusschreitungsLage({ gegner: 'Lokomotiv Leipzich', heim: true }), fa = getAusschreitungsLage({ gegner: 'Lokomotiv Leipzich', heim: false });
         out.feindschaft = fh.chance > 0 && fa.chance > 0 && fh.feindschaft === 'Ost-Feindschaft' && fh.faktoren[0].startsWith('Fan-Feindschaft')
             && Math.abs(fa.chance - 0.04) < 0.0001 && getAusschreitungsLage({ gegner: 'Hansa Rostok', heim: true }).chance === 0 && getFanFeindschaft('Lokomotiv Leipzich', 'BFC Dynamoo') === 'Ost-Feindschaft';
+        // Liste sauber: keine Paarung doppelt, keine schon als Traditionsduell geführt
+        const schluessel = FAN_FEINDSCHAFTEN.map(([a, b]) => [a, b].sort().join('|'));
+        out.feindschaftListe = FAN_FEINDSCHAFTEN.length >= 50 && new Set(schluessel).size === schluessel.length && FAN_FEINDSCHAFTEN.every(([a, b]) => !getTraditionDerby(a, b));
         game.clubName = nameAlt; isDerbyOpponent = (n) => n === gegner;
         fanCentralState.fanProjectFunded = false;
 
@@ -3766,7 +3769,7 @@ async function testAusschreitungen(browser) {
         isDerbyOpponent = derbyAlt;
         return out;
     });
-    const K = ['ruhig', 'derbys', 'fanprojekt', 'feindschaft', 'pyro', 'pyroZaehlt', 'leicht', 'schwer', 'auswaerts', 'bewaehrung', 'dialog', 'dialogEinmal', 'anzeige', 'layout'];
+    const K = ['ruhig', 'derbys', 'fanprojekt', 'feindschaft', 'feindschaftListe', 'pyro', 'pyroZaehlt', 'leicht', 'schwer', 'auswaerts', 'bewaehrung', 'dialog', 'dialogEinmal', 'anzeige', 'layout'];
     assert(K.every(k => r[k] === true), `Ausschreitungen: Risiko je Spiel, Stufen, Fanprojekt, Pyro, Bewährung, Fan-Dialog, Anzeige (${JSON.stringify(K.map(k => r[k]))})`);
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
     await page.close();
