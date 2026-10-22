@@ -718,6 +718,16 @@ async function testLexicon(browser) {
             const suche = document.getElementById('lexicon-search');
             suche.value = 'lizenz'; renderLexicon();
             out.sucheTrifft = liste().length >= 1 && liste().length < LEXICON_ENTRIES.length && document.getElementById('lexicon-list').innerText.includes('Lizenzauflagen');
+            suche.value = ''; renderLexicon();
+            // Neue Funktionen: eigene Einträge, Filter "Neu", Anzahl je Kategorie, Sprungknopf mit Ziel
+            out.neueEintraege = ['Ausschreitungen & Sicherheit', 'Freischaltungen', 'Startmenü & Karriere-Arten', 'Einsteiger-Modus'].every(t => LEXICON_ENTRIES.some(e => e.title === t && e.neu));
+            lexiconNurNeu = true; renderLexicon();
+            out.nurNeu = liste().length === LEXICON_ENTRIES.filter(e => e.neu).length && liste().length > 0;
+            setLexiconCategory('Alle');
+            out.anzahl = document.getElementById('lexicon-categories').textContent.includes(String(LEXICON_ENTRIES.length));
+            out.sprungZiel = document.getElementById('lexicon-list').textContent.includes('➜ Zum Kader');
+            suche.value = 'Geisterspiel'; renderLexicon();
+            out.sucheNeu = document.getElementById('lexicon-list').textContent.includes('Ausschreitungen & Sicherheit');
             suche.value = 'xyzkeintreffer'; renderLexicon();
             out.keinTreffer = liste().length === 0 && document.getElementById('lexicon-list').innerText.includes('Kein Eintrag');
             suche.value = ''; setLexiconCategory('Finanzen');
@@ -766,6 +776,8 @@ async function testLexicon(browser) {
     assert(r.menueAlle, 'Über das Menü geöffnet: wieder alle Einträge');
     assert(r.tippKnopf, 'Bildschirm-Tipp bietet „📖 Lexikon“ an');
     assert(r.geldGleich, 'Lexikon verändert kein Geld');
+    const N = ['neueEintraege', 'nurNeu', 'anzahl', 'sprungZiel', 'sucheNeu'];
+    assert(N.every(k => r[k] === true), `Lexikon aktuell: Einträge zu den neuen Funktionen, Filter „Neu“, Anzahl je Kategorie, Sprungknopf mit Ziel (${JSON.stringify(N.map(k => r[k]))})`);
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.slice(0, 2).join(' | ')})`);
     await page.close();
 }

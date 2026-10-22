@@ -1075,6 +1075,7 @@
         .was-jetzt > button { justify-self: start; width: auto; padding: 6px 14px; }
         .nav-btn.nav-gesperrt { opacity: 0.75; }
         .nav-btn.nav-gesperrt::after { content: "🔒"; margin-left: auto; }
+        .lexikon-anzahl { font-size: var(--fs-micro); opacity: 0.8; }
         .kader-feinheiten > summary { cursor: pointer; list-style: revert; }
         .office-quicknav-btn small { display: block; font-size: var(--fs-micro); font-weight: 400; opacity: 0.85; }
         .modal-avatar-photo {

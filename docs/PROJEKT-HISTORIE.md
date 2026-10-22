@@ -881,3 +881,10 @@ Test `testEinsteiger` ([26.27]), `testStartmenue` prüft Einsteiger-Modus und St
 8. Englische Texte für Startmenü, Einsteiger-Spieltag, Menü-Gruppen, Abschluss-Fenster und Erste Schritte.
 
 `testEinsteiger` prüft alle acht Punkte.
+
+## Lexikon auf Vordermann (ungemergt, Board-Karte tmvjzpzsss8cu)
+
+- 9 neue Einträge (Deutsch und Englisch, je mit Zahlen aus dem Code): Ausschreitungen & Sicherheit, Freischaltungen, Startmenü & Karriere-Arten, Einsteiger-Modus, Kopfzeile & Schnellfenster, Fans ohne Karte & Topspiel-Zuschlag, Spieler-Etiketten, Aufstellungs- und Taktikvorlagen, Liquiditäts-Vorschau & Konto-Alarm. Jetzt 72 statt 63 Einträge.
+- Veraltetes korrigiert: Heimatstadt und Karriere-Szenarien verweisen aufs Startmenü (Trainer gesucht), Speichern nennt „Weiterspielen“, Fanstimmung den Einfluss verärgerter Ultras auf Ausschreitungen.
+- Ansicht: Anzahl je Kategorie, Filter „🆕 Neu“ (Feld `neu`), „Neu“-Chip am Eintrag, Sprungknopf mit Ziel („➜ Zum Kader“ statt „Zum Bildschirm“).
+- `testLexicon` prüft neue Einträge, Neu-Filter, Anzahl und Sprungziel; `testLexiconEnglish` die Übersetzungen.

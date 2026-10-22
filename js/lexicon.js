@@ -89,14 +89,14 @@ const LEXICON_ENTRIES = [
         text: 'Das Spieler-Popup zeigt ein Karriereprofil: seit wann und wie der Spieler im Verein ist (Kauf mit Ablöse, ablösefrei, Vorvertrag, Rückkauf, Jugend, Leihe, Reserve), Saison für Saison Spiele, Tore, Vorlagen, Notenschnitt und Elf des Spieltags, Länderspiele sowie Titel und Auszeichnungen (Meister, Aufstieg, Pokalsieg, Spieler des Monats/der Saison). Ab 150 Pflichtspielen oder 6 Saisons im Verein ist er Vereinslegende: geht er - Verkauf oder Vertragsende -, sinken Fans (-8) und Vorstand (-2).',
         tips: ['Vor dem Verkauf eines langjährigen Stammspielers ins Profil schauen', 'Eine Legende mit auslaufendem Vertrag lieber rechtzeitig verlängern'] },
     { cat: 'Verein', title: 'Heimatstadt & regionale Ligen', screen: 'screen-league',
-        text: 'Liga 1 bis 3 sind bundesweit. Darunter ist der deutsche Fußball regional geteilt: welche Regionalliga (Nord, Nordost, West, Südwest, Bayern), Oberliga und 6. Liga du spielst und welcher Landespokal dich in den DFB-Pokal bringt, hängt an der Heimatstadt deines Vereins. Du wählst sie beim neuen Spiel. Jeder Verein hat eine echte Stadt; die Namen sind - wie die Spielernamen - leicht verfremdet. In den oberen Ligen stehen echte Vereine, in den unteren zusätzlich Vereine aus echten Orten der Gegend.',
+        text: 'Liga 1 bis 3 sind bundesweit. Darunter ist der deutsche Fußball regional geteilt: welche Regionalliga (Nord, Nordost, West, Südwest, Bayern), Oberliga und 6. Liga du spielst und welcher Landespokal dich in den DFB-Pokal bringt, hängt an der Heimatstadt deines Vereins. Du wählst sie im Startmenü bei der neuen Karriere. Jeder Verein hat eine echte Stadt; die Namen sind - wie die Spielernamen - leicht verfremdet. In den oberen Ligen stehen echte Vereine, in den unteren zusätzlich Vereine aus echten Orten der Gegend.',
         tips: ['Spielstände von vor Version 3.43 behalten ihre Ligen (Nordost/Sachsen)', 'In Großstädten wie Berlin oder Hamburg spielen viele Vereine derselben Stadt in einer Liga'] },
     { cat: 'Verein', title: 'Kabine, Cliquen & Kapitän', screen: 'screen-squad',
         text: 'Ein Mannschaftsrat: Kapitän plus die zwei Spieler mit der größten Führungsqualität (Leader-Eigenschaft, Alter, Erfahrung, Moral). Spieler gruppieren sich nach Nation und Alter; fällt die Stimmung einer Gruppe unter 40, rumort sie: Teamstärke sinkt, und jeden Monat färbt die Laune auf den Rest ab. Ein Kapitän mit Autorität (Moral ab 60) dämpft das. Verlässt der Kapitän den Kader oder fällt er verletzt aus, übernimmt vor dem Anpfiff der Spieler mit der größten Führungsqualität die Binde - nur ein Kapitän auf dem Platz bringt den Kapitänsbonus.',
         tips: ['Wortführer melden sich beim Mannschaftsrat (anhören oder klare Ansage)', 'Unzufriedene Leistungsträger kommen ins Büro: Einsatzgarantie, Leistung einfordern oder Wechsel erlauben', 'Kapitän wechseln kostet den alten Kapitän Moral - einen Neuling ohne Standing nimmt der Rat übel'] },
     { cat: 'Verein', title: 'Fanstimmung', screen: 'screen-fans',
         text: 'Wie zufrieden die Anhänger sind (0-100). Beeinflusst Zuschauer, Fanartikel und Mitgliederzahlen.',
-        tips: ['Mega-Choreo: +2 Stärke im nächsten Heimspiel', 'Sonderzug: +1,5 im nächsten Auswärtsspiel', 'Saisonziel bis Spieltag 6 setzen - Prämie bei Erfolg, Stimmungsverlust bei Misserfolg'] },
+        tips: ['Mega-Choreo: +2 Stärke im nächsten Heimspiel', 'Sonderzug: +1,5 im nächsten Auswärtsspiel', 'Saisonziel bis Spieltag 6 setzen - Prämie bei Erfolg, Stimmungsverlust bei Misserfolg', 'Verärgerte Ultras (unter 35 %) machen Ausschreitungen wahrscheinlicher'] },
     { cat: 'Verein', title: 'Medienimage', screen: 'screen-dashboard',
         text: 'Ein Wert für dein Bild in der Öffentlichkeit. Beeinflusst Sponsoren und Jobangebote.',
         tips: ['Pressekonferenzen und Interviews wirken direkt darauf'] },
@@ -182,7 +182,7 @@ const LEXICON_ENTRIES = [
         text: 'Erfolgreiche Manager bekommen Angebote von stärkeren Vereinen. Ein Wechsel nimmt Karriere und Trophäen mit, der Kader ist neu. Der neue Vorstand startet bei 60 Vertrauen mit einem Saisonziel für den neuen Kader.',
         tips: ['Ein Angebot gilt 6 Spieltage', 'Man kann es auch als Druckmittel für den Vorstand nutzen'] },
     { cat: 'Karriere', title: 'Karriere-Szenarien', screen: 'screen-dashboard',
-        text: 'Beim neuen Spiel wählbar: Absteiger retten, Pleiteklub sanieren, Traditionsverein zurückführen, Meister oder Chaos - mit Ziel, Frist und 1-3 Sternen.',
+        text: 'Im Startmenü unter „Trainer gesucht“ (jeweils bei einem echten Verein der passenden Liga) oder beim Gründen als Spielart wählbar: Absteiger retten, Pleiteklub sanieren, Traditionsverein zurückführen, Meister oder Chaos - mit Ziel, Frist und 1-3 Sternen.',
         tips: ['Danach geht die Karriere als freies Spiel weiter', 'Pleiteklub: Kredite zählen als Schulden, jeder Zwangsverkauf kostet einen Stern - zwei lassen die Sanierung scheitern'] },
     { cat: 'Bedienung', title: 'Tastatur und Fokus', screen: 'screen-dashboard',
         text: 'Fenster wie das Spielerprofil oder die Aufstellung setzen beim Öffnen den Fokus hinein. Tab bleibt im Fenster, und beim Schließen geht der Fokus zurück zu der Schaltfläche, die es geöffnet hat. Bei Tastaturbedienung zeigen Schaltflächen und Eingabefelder einen Rahmen.',
@@ -191,15 +191,49 @@ const LEXICON_ENTRIES = [
         text: 'Auf dem Handy liegt alles Wichtige im Daumenbereich: der Knopf „▶ Spieltag“ startet von jedem Bildschirm den nächsten Spieltag, „☰ Menü“ in der unteren Leiste öffnet alle Bereiche, Fenster fahren von unten ein und im Livespiel bleiben Szene, Pause und Abpfiff über der Leiste stehen. Die Zurück-Taste schließt Meldungen, Fenster und Menü oder geht einen Bildschirm zurück - erst zweimal Zurück auf dem Startbildschirm verlässt das Spiel.',
         tips: ['Linkshänder: Menü → Einstellungen → „Weiter-Knopf“ nach links stellen (oder ausblenden)', 'Fenster mit ✕ schließen auch per Tipp auf die dunkle Fläche daneben', 'Sprache und Ton stehen auf dem Handy im Menü unter Einstellungen', 'English: alle festen Texte (Menüs, Überschriften, Knöpfe) und dieses Lexikon wechseln, Meldungen und Spielberichte bleiben vorerst deutsch'] },
     { cat: 'Bedienung', title: 'Speichern', screen: 'screen-dashboard',
-        text: 'Drei Speicher-Slots plus automatisches Speichern alle 5 Spieltage. Beim Start wird immer der zuletzt gespeicherte Stand geladen - ist er beschädigt, der nächstneuere heile. Jeder Stand wird vor dem Laden geprüft: kaputte Stände lassen das laufende Spiel unangetastet, kleine Schäden werden repariert. Vor dem Laden, dem Überschreiben eines Slots und einem neuen Spiel entsteht eine Sicherheitskopie.',
-        tips: ['Wenn der Browser das Speichern blockiert, Spielstand als Datei exportieren', 'In der Dateivorschau mancher Handys geht Speichern nicht - im Browser öffnen', 'Der Füllstand steht unter den Speicherständen - ab 80 % warnt das Spiel, bei vollem Speicher weicht zuerst die Sicherheitskopie', 'Nur eine exportierte Datei übersteht das Leeren des Browserspeichers - das Spiel erinnert alle 3 Saisons daran'] }
+        text: 'Drei Speicher-Slots plus automatisches Speichern alle 5 Spieltage. Beim Start lädt das Spiel den zuletzt gespeicherten Stand - ist er beschädigt, den nächstneueren heilen - und bietet ihn im Startmenü unter „Weiterspielen“ an. Jeder Stand wird vor dem Laden geprüft: kaputte Stände lassen das laufende Spiel unangetastet, kleine Schäden werden repariert. Vor dem Laden, dem Überschreiben eines Slots und einem neuen Spiel entsteht eine Sicherheitskopie.',
+        tips: ['Wenn der Browser das Speichern blockiert, Spielstand als Datei exportieren', 'In der Dateivorschau mancher Handys geht Speichern nicht - im Browser öffnen', 'Der Füllstand steht unter den Speicherständen - ab 80 % warnt das Spiel, bei vollem Speicher weicht zuerst die Sicherheitskopie', 'Nur eine exportierte Datei übersteht das Leeren des Browserspeichers - das Spiel erinnert alle 3 Saisons daran'] },
+    { cat: 'Verein', title: 'Ausschreitungen & Sicherheit', screen: 'screen-fans', neu: true,
+        text: 'Nach eigenen Ligaspielen kann es im Fanblock krachen: im Heim-Derby mit 12 % Grundrisiko, im Auswärts-Derby mit 6 %, in Spitzenspielen und Abstiegsduellen (beide Teams oben oder unten, ab Spieltag 5) mit 4 % daheim und 2,5 % auswärts. Normale Spiele bleiben ruhig. Es gibt drei Stufen: Pyro (kleine Strafe), Krawall (Strafe, Fans und Vorstand verlieren) und schwere Ausschreitungen (daheim folgt ein Geisterspiel). Die Fan-Zentrale zeigt im Reiter Sicherheit das Risiko des nächsten Spiels mit allen Faktoren und die Chronik.',
+        tips: ['Ordner, Sicherheitstechnik und das Sicherheitskonzept der Derby-Woche wirken nur daheim', 'Fanprojekt ×0,75, Fanbeauftragter ×0,7, Fan-Dialog vor dem Spiel (3.000 €) ×0,6', 'Pyro-Verbot lockern ×1,4 für 3 Heimspiele, verärgerte Ultras (unter 35 %) ×1,25, Klatsche ×1,3', 'Ab 2 Krawallen in dieser und der Vorsaison gilt Bewährung: Risiko ×1,2 und schwerere Folgen'] },
+    { cat: 'Karriere', title: 'Freischaltungen', screen: 'screen-dashboard', neu: true,
+        text: 'Einige Bereiche öffnen sich erst im Laufe der Karriere: Sportwetten, zweite Mannschaft, Frauen, Immobilien, Stadion-Anlagen, Aktien, große Ausbauprojekte, Holding und Industrie. Die Bedingungen hängen an gespielten Ligaspielen, Ligen, Trophäen und dem Manager-Level. Was offen ist, bleibt offen, auch nach einem Vereinswechsel.',
+        tips: ['Die Übersicht zeigt die nächste Freischaltung mit Fortschritt', 'Gesperrte Bereiche stehen im Menü mit Schloss am Ende von „Mehr Bereiche“', 'Beim Karrierestart wählbar: Normal, Schnell (halbe Zahlen, eine Liga weniger) oder Alles offen'] },
+    { cat: 'Bedienung', title: 'Startmenü & Karriere-Arten', screen: 'screen-dashboard', neu: true,
+        text: 'Beim Start erscheint das Startmenü: Weiterspielen, Neue Karriere oder Spielstand laden. Eine neue Karriere beginnt mit der Heimatstadt und einer von drei Arten: einen eigenen Verein gründen (Name, Startliga, Startkapital), einen bestehenden Verein aus allen sechs Ligen übernehmen oder einen Job unter „Trainer gesucht“ annehmen, der ein Ziel mit Frist hat.',
+        tips: ['„Neue Karriere starten“ unter den Speicherständen öffnet das Menü ebenfalls', 'Das alte Spiel landet vorher als Sicherheitskopie in den Speicherständen'] },
+    { cat: 'Bedienung', title: 'Einsteiger-Modus', screen: 'screen-dashboard', neu: true,
+        text: 'Für den ersten Einstieg: Der Spieltag zeigt oben „Ohne Vorbereitung anpfeifen“ und „Nur Ergebnis“, Gegneranalyse, Ansprache und Presse sind eingeklappt. Die Übersicht blendet Holding, Europa, Wochenrückblick und Transferstrategie bis zum 17. Spieltag aus, das Menü zeigt zuerst nur die wichtigen Bereiche. Die ersten Spiele erklären kurz, was passiert ist.',
+        tips: ['Beim Karrierestart wählbar, später im Menü unter Einstellungen an- und abschaltbar', 'Nach der Hinrunde fragt das Spiel, ob der Modus aus soll', '„Was jetzt?“ oben auf der Übersicht nennt immer die wichtigste nächste Aufgabe'] },
+    { cat: 'Bedienung', title: 'Kopfzeile & Schnellfenster', screen: 'screen-dashboard', neu: true,
+        text: 'Die Kennzahlen oben (Vereinskonto, Holding, Manager-Level, Fans/Vorstand, Spieltag) lassen sich antippen. Jedes öffnet ein kleines Fenster mit den wichtigsten Zahlen, einer Schnellwahl und dem Weg zur passenden Seite.',
+        tips: ['Konto: Ticketpreise in drei Stufen setzen', 'Holding: 10.000, 50.000 oder 100.000 € überweisen', 'Spieltag: nächste Gegner und eine gespeicherte Aufstellungsvorlage laden'] },
+    { cat: 'Finanzen', title: 'Fans ohne Karte & Topspiel-Zuschlag', screen: 'screen-stadium', neu: true,
+        text: 'Ist das Stadion voll, kommen nicht alle Interessierten hinein. Das Stadion zeigt diese Fans ohne Karte je Heimspiel und über die Saison, dazu für jeden Ausbau die Rendite in Saisons. Mit dem Topspiel-Zuschlag kosten Tickets in Derbys und gegen die Top 3 mehr: +10, +20 oder +30 %. Höhere Preise senken die Nachfrage etwas.',
+        tips: ['Viele Fans ohne Karte sprechen für einen Ausbau', 'Den Zuschlag erst ab Spieltag 4 setzen, vorher zählt die Tabelle noch nicht', 'Die Bau-Chronik im Stadion listet alle fertigen Projekte'] },
+    { cat: 'Spieler', title: 'Spieler-Etiketten', screen: 'screen-squad', neu: true,
+        text: 'Jeder Spieler kann Etiketten tragen: Verkaufskandidat, Aufbauspieler, Stammkraft, Beobachten, Vertrag klären und Schonen. Sie helfen beim Filtern der Kaderliste und haben eine kleine Wirkung im Spiel.',
+        tips: ['Stammkraft: +1 Moral, wenn er spielt, -2 auf der Bank (nicht unter 45)', 'Aufbauspieler: +1 Moral, wenn er spielt', 'Schonen: spielt er trotzdem, ist das Verletzungsrisiko ×1,3'] },
+    { cat: 'Taktik', title: 'Aufstellungs- und Taktikvorlagen', screen: 'screen-squad', neu: true,
+        text: 'Im Kader lassen sich bis zu 5 Aufstellungen und 5 Taktiken unter einem Namen speichern und mit einem Tipp laden, zum Beispiel eine Elf für Heimspiele und eine für Auswärtsspiele. Das Spiel führt für jede Vorlage eine Bilanz aus Siegen, Unentschieden und Niederlagen.',
+        tips: ['Eine Vorlage ersetzt verletzte oder gesperrte Spieler automatisch durch Ersatz', 'Auch das Spieltag-Fenster oben in der Kopfzeile lädt Vorlagen'] },
+    { cat: 'Finanzen', title: 'Liquiditäts-Vorschau & Konto-Alarm', screen: 'screen-finances', neu: true,
+        text: 'Die Finanzen zeigen, wohin sich die Kasse in den nächsten Spieltagen entwickelt, gerechnet aus den letzten 6 Spieltagsabrechnungen. Mit dem Konto-Alarm meldet das Spiel sich, sobald die Kasse unter eine selbst gewählte Grenze fällt.',
+        tips: ['Im Minus gilt eine Transfersperre - der Alarm warnt vorher', 'Heimspiele bringen deutlich mehr ein als Auswärtsspiele, die Vorschau rechnet beides ein'] }
 ];
 
 let lexiconCategory = 'Alle';
+let lexiconNurNeu = false;   // nur Einträge zu neuen Funktionen (Feld neu)
+// Sprungknopf mit dem Namen des Ziels statt nur "Zum Bildschirm"
+const LEXIKON_ZIELE = { 'screen-squad': 'Zum Kader', 'screen-training': 'Zum Training', 'screen-transfer': 'Zu den Transfers', 'screen-finances': 'Zu den Finanzen',
+    'screen-stadium': 'Zum Stadion', 'screen-fans': 'Zur Fan-Zentrale', 'screen-dashboard': 'Zur Übersicht', 'screen-league': 'Zur Tabelle', 'screen-cup': 'Zum Pokal',
+    'screen-history': 'Zur Historie', 'screen-youth': 'Zur Jugend', 'screen-sponsors': 'Zu den Sponsoren', 'screen-inbox': 'Zum Postfach', 'screen-design': 'Zur Darstellung',
+    'screen-calendar': 'Zum Kalender', 'screen-contracts': 'Zu den Verträgen', 'screen-europe': 'Zum Champions Cup', 'screen-holding': 'Zur Holding', 'screen-squad-planning': 'Zur Kaderplanung' };
 let lexiconScreenFilter = null; // aus einem Bildschirm-Tipp geöffnet: nur Einträge zu diesem Bildschirm
 
 function setLexiconCategory(cat) {
     lexiconCategory = cat;
+    lexiconNurNeu = false;
     lexiconScreenFilter = null;
     renderLexicon();
 }
@@ -235,20 +269,23 @@ function renderLexicon() {
     const kategorien = ['Alle', ...new Set(LEXICON_ENTRIES.map(e => e.cat))];
     const chips = document.getElementById('lexicon-categories');
     const katLabel = k => (typeof currentLang !== 'undefined' && currentLang === 'en' && typeof LEXICON_CATEGORY_EN !== 'undefined' && LEXICON_CATEGORY_EN[k]) || k;
-    if (chips) chips.innerHTML = kategorien.map(k => `<button onclick="setLexiconCategory('${k}')" class="${k === lexiconCategory ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:var(--fs-caption); padding:4px 8px;">${katLabel(k)}</button>`).join('');
+    const anzahl = k => k === 'Alle' ? LEXICON_ENTRIES.length : LEXICON_ENTRIES.filter(e => e.cat === k).length;
+    if (chips) chips.innerHTML = kategorien.map(k => `<button onclick="setLexiconCategory('${k}')" class="${k === lexiconCategory && !lexiconNurNeu ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:var(--fs-caption); padding:4px 8px;">${katLabel(k)} <span class="lexikon-anzahl">${anzahl(k)}</span></button>`).join('')
+        + `<button onclick="lexiconNurNeu = !lexiconNurNeu; renderLexicon();" class="${lexiconNurNeu ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:var(--fs-caption); padding:4px 8px;">🆕 Neu <span class="lexikon-anzahl">${LEXICON_ENTRIES.filter(e => e.neu).length}</span></button>`;
     const filterHinweis = document.getElementById('lexicon-screen-filter');
     if (filterHinweis) filterHinweis.innerHTML = lexiconScreenFilter ? `<div class="box" style="font-size:var(--fs-small); display:flex; justify-content:space-between; align-items:center; gap:6px;"><span>Nur Einträge zum Bildschirm, von dem du kommst.</span><button onclick="setLexiconCategory('Alle')" class="btn-secondary" style="width:auto; font-size:var(--fs-caption);">Alle zeigen</button></div>` : '';
     // Englisch (js/lexicon-en.js, 25.22): Titel, Text und Tipps in der gewählten Sprache, auch für die Suche.
     const lokal = e => typeof getLexiconEntryLocalized === 'function' ? getLexiconEntryLocalized(e) : e;
     const treffer = LEXICON_ENTRIES.map(lokal).filter(e => (lexiconCategory === 'Alle' || e.cat === lexiconCategory)
         && (!lexiconScreenFilter || e.screen === lexiconScreenFilter)
+        && (!lexiconNurNeu || e.neu)
         && (!suche || normSuche(e.title + ' ' + e.text + ' ' + e.tips.join(' ')).includes(suche)));
     box.innerHTML = treffer.length ? treffer.map(e => `<div class="box" style="font-size:var(--fs-small);">
         <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
-            <strong style="color:var(--accent);">${e.title}</strong><span style="font-size:var(--fs-micro); color:var(--text-muted);">${e.catLabel || e.cat}</span>
+            <strong style="color:var(--accent);">${e.title}${e.neu ? ' ' + (typeof uiChip === 'function' ? uiChip('Neu', 'gut') : '🆕') : ''}</strong><span style="font-size:var(--fs-micro); color:var(--text-muted);">${e.catLabel || e.cat}</span>
         </div>
         <div style="margin-top:3px;">${e.text}</div>
         <ul style="margin:4px 0 0 0; padding-left:16px;">${e.tips.map(t => `<li>${t}</li>`).join('')}</ul>
-        <button onclick="showScreen('${e.screen}')" class="btn-secondary" style="width:auto; font-size:var(--fs-caption); margin-top:4px;">➜ Zum Bildschirm</button>
+        <button onclick="showScreen('${e.screen}')" class="btn-secondary" style="width:auto; font-size:var(--fs-caption); margin-top:4px;">➜ ${LEXIKON_ZIELE[e.screen] || 'Zum Bildschirm'}</button>
     </div>`).join('') : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Kein Eintrag gefunden. Anderen Begriff versuchen oder Kategorie „Alle“ wählen.</div>';
 }
