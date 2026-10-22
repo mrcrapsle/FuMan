@@ -70,7 +70,7 @@ function getDerbyBonus(oppName) {
     return (w.stimmung ? 1.5 : 0) + (w.presse === 'kampf' ? 1 : 0);
 }
 
-// Faktor für checkHooliganIncident() (Heim-Derby). Läuft NACH resolveDerbyWeek() im selben
+// Faktor für getAusschreitungsLage() (Heim-Derby, js/ausschreitungen.js). Läuft NACH resolveDerbyWeek() im selben
 // Spieltag, daher ohne die resolved-Sperre.
 function getDerbyRiskFactor() {
     const w = game.derbyWeek;

@@ -833,3 +833,12 @@ Wunsch aus dem Ausprobieren: Ein Tipp auf die Kennzahlen oben sollte nicht ins L
 - **Spieltag:** nächster Gegner mit Heim/Auswärts, Tabellenplatz und Derby, die drei Spiele danach, Probleme aus `getLineupProblems()`, gespeicherte Aufstellungsvorlagen zum Laden. → Aufstellung, Kalender.
 
 Die Felder sind `role="button"` mit `tabindex="0"` und einem kleinen „›“; Enter/Leertaste öffnen, Escape schließt und gibt den Fokus an das Feld zurück. Ansehen ändert nichts am Spielstand. Test: `testKopfzeilenFenster`.
+
+## Phase 26.25: Ausschreitungen ausgebaut (ungemergt, Board-Karte tmvjuiapap9y9)
+
+- Neues Modul `js/ausschreitungen.js` ersetzt `checkHooliganIncident()`. Bisher gab es nur einen Wurf im Heim-Derby (12 % vor Ordnern) mit immer gleicher Folge (Geisterspiel).
+- Risiko jetzt auch im Auswärts-Derby (6 %) und in Brisanzspielen (beide Top 4 oder beide letzte 4 ab Spieltag 5: 4 % daheim, 2,5 % auswärts). Ordner, Sicherheitstechnik und Derby-Woche wirken nur daheim.
+- Bisher wirkungslose Schalter wirken jetzt: Fanprojekt ×0,75; Pyro-Verbot lockern (Ultras-Aktion) ×1,4 für drei Heimspiele. Dazu verärgerte Ultras (<35 %) ×1,25, Bewährung (ab 2 Krawallen/schweren Vorfällen in dieser und der Vorsaison) ×1,2 und schwerere Stufen, Klatsche (≤ -3) ×1,3, Deckel 50 %.
+- Stufen: Pyro (Strafe 3.000 + 1.500 je früherem Vorfall, Fans -2), Krawall (6.000 + 3.000 je Vorfall, Fans -6, Vorstand -4), schwer (wie bisher, auswärts Strafe ×1,5 statt Geisterspiel). Strafen laufen über `bucheMitLabel('Verbandsstrafe Ausschreitungen')`.
+- Fan-Dialog (3.000 €) vor einem Risikospiel ×0,6. Panel „Ausschreitungen“ in der Fan-Zentrale (Reiter Sicherheit): Risiko des nächsten Spiels mit allen Faktoren, Bewährung, Pyro-Status, Chronik.
+- Test `testAusschreitungen` ([26.25]).

@@ -3692,6 +3692,76 @@ async function testKopfzeilenFenster(browser) {
     await page.close();
 }
 
+async function testAusschreitungen(browser) {
+    console.log('\n[26.25] Ausschreitungen: Derbys daheim und auswärts, drei Stufen, Fanprojekt, Pyro, Fan-Dialog, Chronik');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 320, height: 800 });
+    await page.evaluate(R32_HILFEN);
+    const r = await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false; simulateMatchdays(2);
+        const out = {};
+        const notices = []; showNotice = (t) => { notices.push(t); };
+        const zufallAlt = Math.random;
+        const spiel = ausschreitungNaechstesSpiel();
+        const gegner = spiel.gegner;
+        const derbyAlt = isDerbyOpponent;
+        isDerbyOpponent = () => false;
+        out.ruhig = getAusschreitungsLage({ gegner, heim: true }).chance === 0;
+        isDerbyOpponent = (n) => n === gegner;
+        game.stewards = 100; fanCentralState.fanProjectFunded = false; staffMembers.fanLiaison.hired = false;
+        const heim = getAusschreitungsLage({ gegner, heim: true });
+        const ausw = getAusschreitungsLage({ gegner, heim: false });
+        out.derbys = heim.chance > 0 && ausw.chance > 0 && heim.faktoren.some(f => f.startsWith('Ordner')) && !ausw.faktoren.some(f => f.startsWith('Ordner'));
+        fanCentralState.fanProjectFunded = true;
+        out.fanprojekt = Math.abs(getAusschreitungsLage({ gegner, heim: true }).chance / heim.chance - 0.75) < 0.001;
+        fanCentralState.fanProjectFunded = false;
+
+        // Pyro-Lockerung der Ultras wirkt drei Heimspiele lang
+        game.money = 500000;
+        runFanGroupAction('ultras');
+        out.pyro = fanCentralState.pyroLockerungSpiele === 3 && getAusschreitungsLage({ gegner, heim: true }).faktoren.some(f => f.startsWith('Pyro'));
+        Math.random = () => 0.99; // kein Vorfall
+        pruefeAusschreitungen({ gegner, heim: true, tordiff: 0 });
+        out.pyroZaehlt = fanCentralState.pyroLockerungSpiele === 2 && game.ausschreitungen.length === 0;
+        fanCentralState.pyroLockerungSpiele = 0;
+
+        // Leichter Vorfall: Pyro, Strafe mit Etikett, kein Geisterspiel
+        const geld = game.money; const riots = game.riotCount || 0;
+        Math.random = () => 0;
+        const v1 = pruefeAusschreitungen({ gegner, heim: true, tordiff: 0 });
+        out.leicht = v1 && v1.stufe === 'pyro' && game.money === geld - v1.strafe && !game.forcedGhostGame && (game.riotCount || 0) === riots && notices.length === 1;
+        // Schwerer Vorfall daheim: Geisterspiel, Zähler steigt
+        const folge = [0, 0.99]; Math.random = () => folge.length ? folge.shift() : 0.5;
+        const v2 = pruefeAusschreitungen({ gegner, heim: true, tordiff: -4 });
+        out.schwer = v2 && v2.stufe === 'schwer' && v2.geisterspiel && game.forcedGhostGame && game.riotCount === riots + 1;
+        // Auswärts: nie ein Geisterspiel
+        game.forcedGhostGame = false;
+        const folge2 = [0, 0.99]; Math.random = () => folge2.length ? folge2.shift() : 0.5;
+        const v3 = pruefeAusschreitungen({ gegner, heim: false, tordiff: 0 });
+        out.auswaerts = v3 && v3.stufe === 'schwer' && !v3.geisterspiel && !game.forcedGhostGame;
+        out.bewaehrung = getAusschreitungBewaehrung() === 2 && getAusschreitungsLage({ gegner, heim: true }).faktoren.some(f => f.startsWith('Bewährung'));
+        Math.random = zufallAlt;
+
+        // Fan-Dialog vor dem Risikospiel
+        const geld2 = game.money; const vorDialog = getAusschreitungsLage(spiel).chance;
+        fuehreFanDialog();
+        out.dialog = fanDialogAktiv() && game.money === geld2 - FAN_DIALOG_KOSTEN && Math.abs(getAusschreitungsLage(spiel).chance / vorDialog - 0.6) < 0.001;
+        fuehreFanDialog();
+        out.dialogEinmal = game.money === geld2 - FAN_DIALOG_KOSTEN;
+
+        showScreen('screen-fans'); setFansTab('sicherheit');
+        const box = document.getElementById('ausschreitungen-box');
+        out.anzeige = box.textContent.includes('Risiko') && box.textContent.includes('Bewährung') && box.querySelectorAll('.box').length >= 4;
+        out.layout = woerter('#ausschreitungen-box button').length === 0 && ueberlauf();
+        isDerbyOpponent = derbyAlt;
+        return out;
+    });
+    const K = ['ruhig', 'derbys', 'fanprojekt', 'pyro', 'pyroZaehlt', 'leicht', 'schwer', 'auswaerts', 'bewaehrung', 'dialog', 'dialogEinmal', 'anzeige', 'layout'];
+    assert(K.every(k => r[k] === true), `Ausschreitungen: Risiko je Spiel, Stufen, Fanprojekt, Pyro, Bewährung, Fan-Dialog, Anzeige (${JSON.stringify(K.map(k => r[k]))})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 module.exports = {
     testSpielvorbereitung,
     testVertragsWerkzeuge,
@@ -3715,6 +3785,7 @@ module.exports = {
     testFreischaltungenPlus,
     testGrundfassung,
     testKopfzeilenFenster,
+    testAusschreitungen,
     testAdminWerkzeuge,
     testPrivatlebenPlus,
     testOeffentlicheFassung,

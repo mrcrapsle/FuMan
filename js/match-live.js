@@ -500,7 +500,7 @@
         }
 
         applyMatchdayFinances(currentMatch.isHome, won, oppGoalsThisMatch === 0, isHomeDerby, opponentName, `${ourGoalsThisMatch}:${oppGoalsThisMatch}`);
-        processPostMatchRoutine(won ? 'win' : (drawn ? 'draw' : 'loss'), isHomeDerby, true, ourGoalsThisMatch - oppGoalsThisMatch, currentMatch.isHome, { total: currentMatch.homeGoals + currentMatch.awayGoals, bothScored: currentMatch.homeGoals > 0 && currentMatch.awayGoals > 0 });
+        processPostMatchRoutine(won ? 'win' : (drawn ? 'draw' : 'loss'), isHomeDerby, true, ourGoalsThisMatch - oppGoalsThisMatch, currentMatch.isHome, { total: currentMatch.homeGoals + currentMatch.awayGoals, bothScored: currentMatch.homeGoals > 0 && currentMatch.awayGoals > 0 }, opponentName);
         let bester = game.lastMatchBestPlayer;
         let log = document.getElementById('ticker-log');
         if (log && bester && bester.matchday === game.matchday - 1) {
@@ -877,35 +877,7 @@
         });
     }
 
-    // Ausschreitungen bei Heim-Derbys: Risiko sinkt deutlich mit mehr Ordnerdienst-Personal.
-    function checkHooliganIncident() {
-        // Eigene Sicherheitskräfte: feste Ordner zählen zur effektiven Ordnerzahl dazu,
-        // die Ausbildungsstufe macht jeden einzelnen Ordner zusätzlich wirksamer.
-        let effectiveStewards = (game.stewards || 0) + (typeof securityWorkforce !== 'undefined' ? securityWorkforce.permanentStewards : 0);
-        let skillMult = typeof securityWorkforce !== 'undefined' ? (1 + (securityWorkforce.skillLevel - 1) * 0.12) : 1;
-        let baseChance = 0.12 * (1 - Math.min(0.92, (effectiveStewards / 100) * 0.8 * skillMult));
-        if (staffMembers.fanLiaison.hired) baseChance *= 0.7; // Fanbeauftragter deeskaliert im Vorfeld
-        // Sicherheitslage beruhigen (Premium-Booster, NEU): stark reduziertes Risiko.
-        if (game.securityCalmNextMatch) baseChance *= 0.15;
-        // Stadion-Sicherheitstechnik: dauerhafte Risikosenkung durch gekaufte Anlagen.
-        if (typeof getStadiumSecurityBonus === 'function') baseChance *= (1 - getStadiumSecurityBonus());
-        // Derby-Woche: Choreo (Pyro) erhöht, Sicherheitskonzept/Respekt senken das Risiko.
-        if (typeof getDerbyRiskFactor === 'function') baseChance *= getDerbyRiskFactor();
-        if (Math.random() >= baseChance) return;
-
-        game.riotCount = (game.riotCount || 0) + 1;
-        let fine = Math.min(game.money, 8000 + game.riotCount * 4000);
-        // Sicherheitschef: verhandelt mit dem Verband nach - senkt die Höhe der Strafe
-        // spürbar (war bisher nur Text ohne tatsächliche Wirkung).
-        if (staffMembers.secChief.hired) fine = Math.round(fine * 0.5);
-        game.money = Math.max(0, game.money - fine);
-        game.fans = Math.max(game.fanBaseFloor, game.fans - 12);
-        game.boardSat = Math.max(10, game.boardSat - 8);
-        game.forcedGhostGame = true;
-        showNotice('🔥 Ausschreitungen im Derby', `Rivalisierende Fangruppen liefern sich Straßenschlachten rund ums Stadion.\n\nStrafe: ${formatVal(fine)}. Der Verband verhängt ein Geisterspiel für die nächste Heimpartie.` + (game.riotCount >= 3 ? '\n\n⚠️ Wiederholte Vorfälle: der Verband beobachtet euren Klub inzwischen sehr genau.' : ''), { typ: 'warn' });
-    }
-
-    function processPostMatchRoutine(matchResult = null, isHomeDerby = false, isLiveContext = false, matchMargin = 0, isHomeMatchParam = true, totalGoalsForBets = null) {
+    function processPostMatchRoutine(matchResult = null, isHomeDerby = false, isLiveContext = false, matchMargin = 0, isHomeMatchParam = true, totalGoalsForBets = null, opponentName = null) {
         if (typeof ensureCaptainPresent === 'function') ensureCaptainPresent();
         // Löst die Insider-Wette und die Spionage-Info fürs vergangene Spiel auf/zurück,
         // unabhängig davon ob live gespielt oder automatisch simuliert wurde - beide sind
@@ -1323,8 +1295,10 @@
             }
         }
 
-        // Ausschreitungen: nur relevant, wenn wir gerade ein Heim-Derby ausgetragen haben
-        if (isHomeDerby) checkHooliganIncident();
+        // Ausschreitungen (js/ausschreitungen.js): Derbys daheim und auswärts, dazu Brisanzspiele.
+        if (matchResult !== null && typeof pruefeAusschreitungen === 'function') {
+            pruefeAusschreitungen({ gegner: opponentName, heim: isHomeMatchParam, tordiff: matchMargin });
+        }
         // Ordner-Kosten (echte Abbuchung): bisher wurde nur im Finanz-Ausblick ein
         // Betrag angezeigt, aber nie wirklich abgebucht - ein weiterer "Phantom-Posten".
         if (typeof tickStewardCosts === 'function') tickStewardCosts(isHomeMatchParam);

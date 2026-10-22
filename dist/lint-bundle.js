@@ -644,6 +644,8 @@ function pruefeNeuePakete() {
         loanDebt: 0,
         forcedGhostGame: false,
         riotCount: 0,
+        ausschreitungen: [],
+        fanDialog: null,
         negativeStreak: 0,
         transferEmbargo: false,
         lastInsolvencyPenaltyAt: 0,
@@ -1092,6 +1094,7 @@ function pruefeNeuePakete() {
         memberships: 0,
         membershipFee: 8,
         fanProjectFunded: false,
+        pyroLockerungSpiele: 0,
         fanBusProgramActive: false,
         traditionClubStatus: false,
         seasonMoodTarget: null,
@@ -21875,6 +21878,7 @@ function renderFreischaltUebersicht() {
                 : (game.matchday <= 6 ? 'Saisonziel bis zum 6. Spieltag wählbar - Prämie bei Erfolg, Stimmungsverlust bei Misserfolg.' : 'Saisonziel nur bis zum 6. Spieltag wählbar.');
         }
         renderSecurityWorkforceBox();
+        if (typeof renderAusschreitungenBox === 'function') renderAusschreitungenBox();
         renderAttendanceChart();
         renderAttendanceRanking();
         renderFanFeed();
@@ -22161,7 +22165,7 @@ function renderFreischaltUebersicht() {
     // 1. Individuelle Fan-Gruppen-Aktionen: jede der vier Gruppen bekommt eine eigene,
     // spezifisch zu ihr passende Aktion statt nur eine statische Stimmungsanzeige zu sein.
     const FAN_GROUP_ACTIONS = {
-        ultras: { label: '🔥 Pyro-Verbot lockern', cost: 0, desc: 'Riskant: Ultras-Stimmung steigt deutlich, aber Ausschreitungsrisiko wächst.' },
+        ultras: { label: '🔥 Pyro-Verbot lockern', cost: 0, desc: 'Riskant: Ultras-Stimmung steigt deutlich, aber für 3 Heimspiele wächst das Ausschreitungsrisiko (×1,4).' },
         tradition: { label: '🏛️ Museums-Tag ausrichten', cost: 6000, desc: 'Freier Eintritt fürs Vereinsmuseum an einem Tag - Traditionsfans lieben es.' },
         families: { label: '🎈 Familientag veranstalten', cost: 9000, desc: 'Kinderschminken, Hüpfburg & Ermäßigungen - Familien-Stimmung steigt spürbar.' },
         vips: { label: '🥂 Business-Lunch ausrichten', cost: 15000, desc: 'Exklusives Networking-Event für Logengäste, stärkt VIP-Bindung & Sponsoring-Klima.' }
@@ -22176,6 +22180,7 @@ function renderFreischaltUebersicht() {
         group.mood = Math.min(100, group.mood + 12);
         if (groupId === 'ultras') {
             underworld.pressure = Math.min(100, underworld.pressure + 10);
+            fanCentralState.pyroLockerungSpiele = 3;
             pushFanFeedEntry('🔥 Ultras "Szene Nord" feiern die Lockerung der Pyro-Regeln - Stimmung schießt nach oben!');
         } else if (groupId === 'vips') {
             game.boardSat = Math.min(100, game.boardSat + 3);
@@ -22407,6 +22412,181 @@ function renderFreischaltUebersicht() {
             ? '<div class="box" style="font-size:var(--fs-small); color:var(--text-muted);">Noch keine Fan-Ereignisse.</div>'
             : feed.slice(0, 10).map(e => `<div class="box" style="font-size:var(--fs-small);"><span style="color:var(--text-muted);">S${e.season}/${e.matchday}:</span> ${e.text}</div>`).join('');
     }
+
+/* eslint-enable */
+// Ausschreitungen (Board-Karte "Ausschreitungen mehr ausbauen"):
+// - Risiko nicht mehr nur im Heim-Derby: auch Auswärts-Derbys und Brisanzspiele
+//   (Spitzenspiel oder Abstiegsduell, beide Teams oben bzw. unten) können eskalieren.
+// - Drei Stufen: Pyro (leicht), Krawall (mittel), schwere Ausschreitungen (Geisterspiel daheim).
+// - Fanprojekt und gelockertes Pyro-Verbot wirken jetzt wirklich, dazu Fan-Dialog vor einem
+//   Risikospiel, Bewährung nach wiederholten Vorfällen und eine Chronik (game.ausschreitungen).
+// Die Prüfung läuft aus processPostMatchRoutine() (js/match-live.js) nach jedem eigenen Ligaspiel.
+
+const AUSSCHREITUNG_STUFEN = {
+    pyro: { name: '🧨 Pyro im Block', ton: 'warn' },
+    krawall: { name: '👊 Krawall', ton: 'schlecht' },
+    schwer: { name: '🔥 Schwere Ausschreitungen', ton: 'schlecht' }
+};
+const FAN_DIALOG_KOSTEN = 3000;
+
+function ensureAusschreitungState() {
+    if (!Array.isArray(game.ausschreitungen)) game.ausschreitungen = [];
+    if (typeof fanCentralState.pyroLockerungSpiele !== 'number') fanCentralState.pyroLockerungSpiele = 0;
+}
+
+// Brisanz aus der Tabelle: beide Teams in den Top 4 oder beide in den letzten 4.
+function getAusschreitungBrisanz(gegner) {
+    if (!gegner || typeof sortedTable !== 'function') return null;
+    const tab = sortedTable(game.leagueLevel) || [];
+    const n = tab.length;
+    const ich = tab.findIndex(t => t.name === game.clubName);
+    const er = tab.findIndex(t => t.name === gegner);
+    if (n < 8 || ich < 0 || er < 0 || game.matchday < 5) return null;
+    if (ich < 4 && er < 4) return 'Spitzenspiel';
+    if (ich >= n - 4 && er >= n - 4) return 'Abstiegsduell';
+    return null;
+}
+
+// Vorfälle mit Krawall oder schlimmer in dieser und der Vorsaison.
+function getAusschreitungBewaehrung() {
+    ensureAusschreitungState();
+    return game.ausschreitungen.filter(v => v.stufe !== 'pyro' && v.season >= game.season - 1).length;
+}
+
+function fanDialogAktiv() {
+    const d = game.fanDialog;
+    return !!d && d.season === game.season && d.matchday === game.matchday;
+}
+
+// Risiko eines Spiels samt Faktoren für die Anzeige.
+// ctx: { gegner, heim, tordiff } (tordiff nur nach dem Spiel bekannt).
+function getAusschreitungsLage(ctx) {
+    ensureAusschreitungState();
+    const faktoren = [];
+    const derby = typeof isDerbyOpponent === 'function' && isDerbyOpponent(ctx.gegner);
+    const brisanz = derby ? null : getAusschreitungBrisanz(ctx.gegner);
+    let chance = 0;
+    if (derby && ctx.heim) { chance = 0.12; faktoren.push('Heim-Derby'); }
+    else if (derby) { chance = 0.06; faktoren.push('Auswärts-Derby'); }
+    else if (brisanz) { chance = ctx.heim ? 0.04 : 0.025; faktoren.push(brisanz); }
+    if (chance === 0) return { chance: 0, faktoren, derby, brisanz };
+
+    const mal = (f, text) => { chance *= f; faktoren.push(`${text} ×${f.toLocaleString('de-DE', { maximumFractionDigits: 2 })}`); };
+    if (ctx.heim) {
+        // Ordner wirken nur daheim; auswärts stellt der Gastgeber die Sicherheitskräfte.
+        const ordner = (game.stewards || 0) + (typeof securityWorkforce !== 'undefined' ? securityWorkforce.permanentStewards : 0);
+        const skill = typeof securityWorkforce !== 'undefined' ? (1 + (securityWorkforce.skillLevel - 1) * 0.12) : 1;
+        const f = 1 - Math.min(0.92, (ordner / 100) * 0.8 * skill);
+        if (f < 1) mal(Math.round(f * 100) / 100, `Ordner (${ordner})`);
+        if (typeof getStadiumSecurityBonus === 'function' && getStadiumSecurityBonus() > 0) mal(Math.round((1 - getStadiumSecurityBonus()) * 100) / 100, 'Sicherheitstechnik');
+        if (typeof getDerbyRiskFactor === 'function' && derby && getDerbyRiskFactor() !== 1) mal(Math.round(getDerbyRiskFactor() * 100) / 100, 'Derby-Woche');
+    }
+    if (staffMembers.fanLiaison && staffMembers.fanLiaison.hired) mal(0.7, 'Fanbeauftragter');
+    if (fanCentralState.fanProjectFunded) mal(0.75, 'Fanprojekt');
+    if (fanDialogAktiv()) mal(0.6, 'Fan-Dialog');
+    if (ctx.heim && game.securityCalmNextMatch) mal(0.15, 'Sicherheitslage beruhigt');
+    if (fanCentralState.pyroLockerungSpiele > 0) mal(1.4, 'Pyro-Verbot gelockert');
+    const ultras = (typeof fanGroups !== 'undefined' ? fanGroups : []).find(g => g.id === 'ultras');
+    if (ultras && ultras.mood < 35) mal(1.25, 'Ultras verärgert');
+    if (getAusschreitungBewaehrung() >= 2) mal(1.2, 'Bewährung');
+    if (typeof ctx.tordiff === 'number' && ctx.tordiff <= -3) mal(1.3, 'Klatsche');
+    return { chance: Math.min(0.5, chance), faktoren, derby, brisanz };
+}
+
+function pruefeAusschreitungen(ctx) {
+    const lage = getAusschreitungsLage(ctx);
+    if (ctx.heim && fanCentralState.pyroLockerungSpiele > 0) fanCentralState.pyroLockerungSpiele--;
+    if (lage.chance <= 0 || Math.random() >= lage.chance) return null;
+
+    const bewaehrung = getAusschreitungBewaehrung();
+    const wurf = Math.random() + bewaehrung * 0.1;
+    const stufe = wurf < 0.55 ? 'pyro' : (wurf < 0.85 ? 'krawall' : 'schwer');
+    if (stufe !== 'pyro') game.riotCount = (game.riotCount || 0) + 1;
+    const n = game.riotCount || 0;
+    let strafe = stufe === 'pyro' ? 3000 + n * 1500 : (stufe === 'krawall' ? 6000 + n * 3000 : 8000 + n * 4000);
+    if (stufe === 'schwer' && !ctx.heim) strafe = Math.round(strafe * 1.5);
+    // Sicherheitschef verhandelt mit dem Verband nach.
+    if (staffMembers.secChief && staffMembers.secChief.hired) strafe = Math.round(strafe * 0.5);
+    strafe = Math.min(Math.max(0, game.money), strafe);
+    if (strafe > 0) bucheMitLabel('Verbandsstrafe Ausschreitungen', -strafe);
+
+    const fansMinus = stufe === 'pyro' ? 2 : (stufe === 'krawall' ? 6 : 12);
+    const vorstandMinus = stufe === 'pyro' ? 0 : (stufe === 'krawall' ? 4 : 8);
+    game.fans = Math.max(game.fanBaseFloor || 0, game.fans - fansMinus);
+    game.boardSat = Math.max(10, game.boardSat - vorstandMinus);
+    const geisterspiel = stufe === 'schwer' && ctx.heim;
+    if (geisterspiel) game.forcedGhostGame = true;
+
+    const eintrag = { season: game.season, matchday: game.matchday, gegner: ctx.gegner || '', heim: !!ctx.heim, stufe, strafe, geisterspiel };
+    game.ausschreitungen.unshift(eintrag);
+    if (game.ausschreitungen.length > 30) game.ausschreitungen.length = 30;
+    if (typeof pushFanFeedEntry === 'function') pushFanFeedEntry(`${AUSSCHREITUNG_STUFEN[stufe].name} gegen ${ctx.gegner || 'den Gegner'}: Strafe ${formatVal(strafe)}.`);
+
+    const ort = ctx.heim ? 'rund ums Stadion' : 'im Gästeblock';
+    const texte = {
+        pyro: `Im Fanblock brennen Bengalos, das Spiel wird kurz unterbrochen.\n\nStrafe: ${formatVal(strafe)}. Fans -${fansMinus}.`,
+        krawall: `Fangruppen geraten ${ort} aneinander, die Polizei muss eingreifen.\n\nStrafe: ${formatVal(strafe)}. Fans -${fansMinus}, Vorstand -${vorstandMinus}.`,
+        schwer: `Rivalisierende Fangruppen liefern sich Straßenschlachten ${ort}.\n\nStrafe: ${formatVal(strafe)}. Fans -${fansMinus}, Vorstand -${vorstandMinus}.` + (geisterspiel ? ' Der Verband verhängt ein Geisterspiel für die nächste Heimpartie.' : '')
+    };
+    const warnung = bewaehrung + (stufe !== 'pyro' ? 1 : 0) >= 2 ? '\n\n⚠️ Der Verband hat euch auf Bewährung gesetzt: weitere Vorfälle werden wahrscheinlicher schwer.' : '';
+    showNotice(AUSSCHREITUNG_STUFEN[stufe].name, texte[stufe] + warnung, { typ: 'warn' });
+    return eintrag;
+}
+
+function ausschreitungNaechstesSpiel() {
+    const liga = leaguesData[game.leagueLevel] || [];
+    const tag = (fixturesData[game.leagueLevel] || [])[game.matchday - 1] || [];
+    const f = tag.find(x => liga[x.home]?.name === game.clubName || liga[x.away]?.name === game.clubName);
+    if (!f || f.played) return null;
+    const heim = liga[f.home].name === game.clubName;
+    return { gegner: liga[heim ? f.away : f.home].name, heim };
+}
+
+function fuehreFanDialog() {
+    const spiel = ausschreitungNaechstesSpiel();
+    if (!spiel) { showToast('Gerade steht kein Ligaspiel an.', 'error'); return; }
+    if (getAusschreitungsLage(spiel).chance <= 0) { showToast('Das nächste Spiel gilt nicht als Risikospiel, ein Fan-Dialog ist nicht nötig.', 'info'); return; }
+    if (fanDialogAktiv()) { showToast('Der Fan-Dialog für dieses Spiel läuft schon.', 'info'); return; }
+    if (game.money < FAN_DIALOG_KOSTEN) { showToast(`Nicht genug Geld: ${formatVal(FAN_DIALOG_KOSTEN)} nötig.`, 'error'); return; }
+    bucheMitLabel('Fan-Dialog', -FAN_DIALOG_KOSTEN);
+    game.fanDialog = { season: game.season, matchday: game.matchday };
+    if (typeof pushFanFeedEntry === 'function') pushFanFeedEntry(`🗣️ Fan-Dialog vor dem Spiel gegen ${spiel.gegner}: Szene und Polizei sprechen sich ab.`);
+    showToast('🗣️ Fan-Dialog geführt: Risiko fürs nächste Spiel deutlich gesenkt.', 'success');
+    renderAusschreitungenBox();
+    if (typeof updateUI === 'function') updateUI();
+}
+
+function renderAusschreitungenBox() {
+    const box = document.getElementById('ausschreitungen-box');
+    if (!box) return;
+    ensureAusschreitungState();
+    const spiel = ausschreitungNaechstesSpiel();
+    const lage = spiel ? getAusschreitungsLage(spiel) : null;
+    let html = '';
+    if (!spiel) {
+        html += '<div class="box">Kein Ligaspiel offen.</div>';
+    } else if (lage.chance <= 0) {
+        html += `<div class="box">Nächstes Spiel: ${mpEsc(spiel.gegner)} (${spiel.heim ? 'Heim' : 'Auswärts'}) ${uiChip('Kein Risikospiel', 'gut')}</div>`;
+    } else {
+        const p = Math.round(lage.chance * 1000) / 10;
+        const ton = p < 3 ? 'gut' : (p < 8 ? 'warn' : 'schlecht');
+        html += `<div class="box"><div>Nächstes Spiel: <strong>${mpEsc(spiel.gegner)}</strong> (${spiel.heim ? 'Heim' : 'Auswärts'}) ${uiChip(`Risiko ${p.toLocaleString('de-DE')} %`, ton)}</div>
+            <div style="color:var(--text-muted); font-size:var(--fs-caption); margin-top:3px;">${lage.faktoren.map(mpEsc).join(' · ')}</div>
+            <button onclick="fuehreFanDialog()" class="btn-secondary" style="margin-top:6px;" ${fanDialogAktiv() ? 'disabled' : ''}>${fanDialogAktiv() ? '🗣️ Fan-Dialog geführt (×0,6)' : `🗣️ Fan-Dialog führen [${formatVal(FAN_DIALOG_KOSTEN)}]`}</button></div>`;
+    }
+    const bew = getAusschreitungBewaehrung();
+    const extras = [];
+    if (bew >= 2) extras.push(uiChip(`Bewährung: ${bew} Vorfälle`, 'schlecht'));
+    else if (bew === 1) extras.push(uiChip('1 Vorfall, noch keine Bewährung', 'warn'));
+    if (fanCentralState.pyroLockerungSpiele > 0) extras.push(uiChip(`Pyro gelockert: noch ${fanCentralState.pyroLockerungSpiele} Heimspiele`, 'warn'));
+    if (game.forcedGhostGame) extras.push(uiChip('Nächstes Heimspiel: Geisterspiel', 'schlecht'));
+    if (extras.length) html += `<div style="display:flex; flex-wrap:wrap; gap:4px; margin:4px 0;">${extras.join('')}</div>`;
+    const liste = game.ausschreitungen.slice(0, 6);
+    html += liste.length
+        ? `<div style="font-size:var(--fs-small);">${liste.map(v => `<div class="box" style="display:flex; justify-content:space-between; gap:6px; flex-wrap:wrap;"><span>S${v.season}/${v.matchday}. ${AUSSCHREITUNG_STUFEN[v.stufe]?.name || v.stufe} · ${mpEsc(v.gegner)} (${v.heim ? 'H' : 'A'})</span><span style="color:var(--danger);">-${formatVal(v.strafe)}${v.geisterspiel ? ' · 👻' : ''}</span></div>`).join('')}</div>`
+        : '<div style="color:var(--text-muted); font-size:var(--fs-caption);">Bisher keine Vorfälle.</div>';
+    box.innerHTML = html;
+}
 
 /* eslint-enable */
 
@@ -28242,7 +28422,7 @@ function getDerbyBonus(oppName) {
     return (w.stimmung ? 1.5 : 0) + (w.presse === 'kampf' ? 1 : 0);
 }
 
-// Faktor für checkHooliganIncident() (Heim-Derby). Läuft NACH resolveDerbyWeek() im selben
+// Faktor für getAusschreitungsLage() (Heim-Derby, js/ausschreitungen.js). Läuft NACH resolveDerbyWeek() im selben
 // Spieltag, daher ohne die resolved-Sperre.
 function getDerbyRiskFactor() {
     const w = game.derbyWeek;
@@ -30288,7 +30468,7 @@ const I18N_UI_EN = {
     // Premium & Admin & Verschiedenes
     '💎 Premium-Shop': '💎 Premium shop', 'Dies ist eine reine Offline-App ohne echte Zahlungsanbindung. "Käufe" hier sind simuliert und buchen kein echtes Geld ab - die Premium-Punkte werden direkt gutgeschrieben.': 'This is an offline-only app with no real payments. "Purchases" here are simulated and charge no real money - premium points are credited directly.', 'Premium-Punkte "kaufen" (simuliert)': 'Premium points "buy" (simulated)', 'Booster einlösen': 'Redeem booster', '💎 Premium: Fan-Boost': '💎 Premium: fan boost', 'Sofortiger Fan-Zufriedenheits-Schub für Diamanten.': 'Instant fan satisfaction boost for diamonds.', '💎 Fan-Zufriedenheit +20 kaufen (90)': '💎 Buy fan satisfaction +20 (90)', '💎 Mit Diamanten sofort abschließen (150)': '💎 Finish now with diamonds (150)', '⭐ Zusätzliche Features': '⭐ Extra features', '💾 Speicherstände': '💾 Save games', '💾 Savegame-Export & JSON-Import': '💾 Save export & JSON import', '💾 Als Datei herunterladen': '💾 Download as file', '📤 Als Datei exportieren': '📤 Export as file', '📥 Aus Datei importieren': '📥 Import from file', '📤 Exportieren': '📤 Export', '📤 JSON Exportieren': '📤 Export JSON', '📥 JSON Importieren': '📥 Import JSON', '📸 Als Bild herunterladen': '📸 Download as image', '📋 Verlauf exportieren': '📋 Export history', '🆕 Neues Spiel starten (frischer Klub)': '🆕 Start a new game (fresh club)', '✅ Neues Spiel mit diesen Einstellungen starten': '✅ Start a new game with these settings', 'Startliga wählen:': 'Choose the starting league:', 'Startkapital wählen:': 'Choose the starting capital:', 'Heimatstadt (bestimmt Regionalliga, Oberliga und Landespokal):': 'Home city (determines the regional leagues and the state cup):', 'Aktueller Vereinsname:': 'Current club name:', '🧪 Szenario-Presets': '🧪 Scenario presets', 'Ausgewogenes Einsteigen ohne besondere Vor-/Nachteile.': 'A balanced start without special pros or cons.', 'Ausgewogener Ansatz ohne besondere Vor-/Nachteile.': 'A balanced approach without special pros or cons.', '🏷️ Vereinsidentität': '🏷️ Club identity', '🛡️ Vereins-Wappen': '🛡️ Club crest', '🖼️ Vereinsmuseum: Wappen-Historie': '🖼️ Club museum: crest history', 'Zweite Ebene: Muster-Badge': 'Second layer: pattern badge', 'Dritte Ebene: Tier-/Maskottchen-Symbol': 'Third layer: animal/mascot symbol', 'Symbol': 'Symbol', 'Farbe': 'Colour', 'Auswärtstrikot-Farbe': 'Away kit colour', '✏️ Umbenennen': '✏️ Rename', '🔄 Verein wechseln': '🔄 Change club', 'Eigene Vorlagen': 'Own templates', '✓ Alle als gelesen markieren': '✓ Mark all as read', '★ Wichtig': '★ Important', 'Was bedeutet ein Wert, wie wirkt er, wie beeinflusst man ihn? Suchen oder nach Bereich filtern.': 'What does a value mean, what does it do, how do you influence it? Search or filter by area.', '🛠️ Admin-Diagnose & Live-Inspector': '🛠️ Admin diagnostics & live inspector', 'Entwickler-Konsole Aktiv': 'Developer console active', '🔍 Struktur-Selbsttest': '🔍 Structure self-test', '🔍 Jetzt alle Screens testen': '🔍 Test all screens now', 'Prüft, ob jeder Screen nach dem Öffnen wirklich sichtbaren Inhalt zeigt - deckt versteckte HTML-Verschachtelungsfehler auf, bevor sie als "das Spiel geht nicht" auffallen.': 'Checks that every screen shows visible content when opened - finds hidden HTML nesting errors before they show up as "the game is broken".', 'Insolvenz-Test': 'Insolvency test', '💣 Komplett-Reset': '💣 Full reset', '⚠️ Technischer Fehler (bitte melden):': '⚠️ Technical error (please report):', 'Verlauf (letzte Läufe):': 'History (last runs):', 'Stimmung:': 'Mood:', 'Rangordnung': 'Hierarchy',
     // Teil 2 (25.21): Texte, die erst die Module rendern (Scan aller Bildschirme auf Englisch)
-    'Einlösen': 'Redeem', 'Spieler': 'Player', '🌟 Champions Cup Spieltag': '🌟 Champions Cup matchday', 'Kaufen für einen festen Geldbetrag (skaliert automatisch mit dem Kurs, egal wie teuer/günstig die Aktie ist):': 'Buy for a fixed amount (scales with the price automatically, however expensive or cheap the share is):', 'Aktueller Börsenkurs:': 'Current share price:', 'Noch nicht aufgestellt': 'Not in the line-up yet', 'Freistoß-Gott': 'Free-kick god', 'Noch kein Scout für diese Region.': 'No scout for this region yet.', 'Wintermütze': 'Winter hat', 'Auswärts-Schal': 'Away scarf', 'Leder-Geldbörse': 'Leather wallet', 'Schlüsselanhänger': 'Key ring', 'Mini-Ball für Kinder': 'Mini ball for kids', 'Handyhülle mit Wappen': 'Phone case with crest', 'Kapuzenpulli mit Wappen': 'Hoodie with crest', 'keine': 'none', 'Saison:': 'Season:', 'Eisenfuß': 'Iron foot', 'Präsident': 'President', 'Kapazität': 'Capacity', 'KAPAZITÄT': 'CAPACITY', 'nur mähen': 'mow only', 'Gründlich': 'Thorough', 'Millionär': 'Millionaire', '→ Höhepunkt': '→ Highlight', 'Vorverträge': 'Pre-contracts', '· Gästeblock': '· away block', 'Gesamtstärke': 'Overall strength', 'pro Spieltag': 'per matchday', '🌴 Südamerika': '🌴 South America', 'Gerüchteküche': 'Rumour mill', 'Presse-Tribüne': 'Press stand', '↺ Zurücksetzen': '↺ Reset', 'Höchster Sieg:': 'Biggest win:', 'Multimillionär': 'Multimillionaire', 'Rückkaufoption': 'Buy-back option', 'Saisoneröffnung': 'Season opening', 'Nicht gegründet': 'Not founded', 'Auswärtsbilanz:': 'Away record:', 'Nächstes Spiel:': 'Next match:', 'Nächste Lizenz:': 'Next licence:', 'Trophäen gesamt:': 'Total trophies:', '🍀 Glücksbringer': '🍀 Lucky charm', 'Vertragsgespräch': 'Contract talk', 'Auf- und Abstieg': 'Promotion and relegation', 'nur dieser Verein': 'this club only', '🎫 Ticketverkäufe': '🎫 Ticket sales', 'West-Haupttribüne': 'West main stand', 'Ernährungsberater': 'Nutritionist', 'Parkplatz-Gelände': 'Car park site', 'Nur mähen (leicht)': 'Mow only (light)', '💼 Gesamtgehälter:': '💼 Total wages:', 'Villa mit Seeblick': 'Villa with lake view', 'Abstellungsprämien': 'Release fees', 'Höchster Derbysieg:': 'Biggest derby win:', 'Auswärts-Spitzname:': 'Away nickname:', '🔝 Freistoßflanke ·': '🔝 Free-kick cross ·', 'Sanierungsbedürftig': 'Needs renovation', 'Nächste Ausbaustufe': 'Next upgrade', '✅ Preise übernehmen': '✅ Apply prices', 'Zustand des Geläufs': 'Pitch condition', 'Höchste Niederlage:': 'Heaviest defeat:', '💛 Loyalitäts-Bonus': '💛 Loyalty bonus', '🎤 Spieler-Interview': '🎤 Player interview', '↪️ Kurz ausgeführt ·': '↪️ Taken short ·', 'Präventionsprogramm:': 'Prevention programme:', 'Trainingsintensität:': 'Training intensity:', 'Einnahmen (Spieltag)': 'Income (matchday)', 'Bedarf nächste Saison': 'Needed next season', 'Noch keine Teilnahme.': 'No participation yet.', 'Finanzielle Stabilität': 'Financial stability', '⚽ Öffentliches Training': '⚽ Open training', 'Noch nicht genug Daten.': 'Not enough data yet.', '· nächste Auslosung aus': '· next draw from', 'Öffentliches Medienimage': 'Public media image', '✔ 🎯 Direkter Freistoß ·': '✔ 🎯 Direct free kick ·', '💡 Empfehlung übernehmen': '💡 Apply recommendation', '🅿️ Parkplätze & Zufahrt': '🅿️ Parking & access', 'Bedienung mit einer Hand': 'One-handed use', 'Gewinne die Meisterschaft': 'Win the championship', 'Spritzguss- & Zubehörwerk': 'Injection moulding & accessories plant', 'Einfamilienhaus im Grünen': 'Detached house in the countryside', 'Biografie veröffentlichen': 'Publish a biography', 'Kaderplanung & Kadergröße': 'Squad planning & squad size', 'Kabine, Cliquen & Kapitän': 'Dressing room, cliques & captain', '🔄 Alle Perks zurücksetzen': '🔄 Reset all perks', 'Verträge laufen bald aus ·': 'Contracts expiring soon ·', '👩 Frauenmannschaft gründen': '👩 FOUND A WOMEN\'S TEAM', 'Noch kein gemeinsames Spiel': 'No match together yet', 'Noch keine Heimspiel-Daten.': 'No home match data yet.', 'Bürokomplex \'Vereins-Tower\'': 'Office complex \'Club Tower\'', 'Noch keine Tendenz erkennbar': 'No trend yet', 'Noch kein Heimspiel gespielt': 'No home match played yet', '· Zahlungskräftiges Publikum': '· wealthy crowd', 'Länderspielpausen & Turniere': 'International breaks & tournaments', 'Kader und Aufstellung ansehen': 'View squad and line-up', 'Finanzen und Sponsoren prüfen': 'Check finances and sponsors', '⚠️ Höchstes Verletzungsrisiko': '⚠️ Highest injury risk', 'Gehälter jetzt (pro Spieltag)': 'Wages now (per matchday)', 'Bester Torschütze (Karriere):': 'Top scorer (career):', '💪 Fähigkeitstraining-Express': '💪 Skill training express', 'Noch keine Interviews gegeben.': 'No interviews given yet.', 'Trainingsgelände mit Flutlicht': 'Training ground with floodlights', '🤝 Jährliches Personal-Meeting': '🤝 Annual staff meeting', 'Verträge langfristig gesichert': 'Contracts secured long-term', 'Längste Serie ohne Niederlage:': 'Longest unbeaten run:', 'Sofortkauf zahlt die Forderung': 'Instant buy pays the asking price', 'Noch kein Selbsttest gelaufen.': 'No self-test run yet.', 'Wartet die ersten Spieltage ab.': 'Waiting for the first matchdays.', 'Noch kein Pokalfinale erreicht.': 'No cup final reached yet.', '👕 Doppelte Fanartikel-Verkäufe': '👕 Double merchandise sales', 'Wintergespräch mit dem Vorstand': 'Winter talk with the board', '- wie startet ihr in die Saison?': '- how do you start the season?', 'Leihspieler kehren ggf. zurück ·': 'Loan players may return ·', 'Noch keine abgeschlossenen Wetten.': 'No settled bets yet.', 'Noch keine Überraschung geschafft.': 'No upset achieved yet.', 'Persönlichen Werbedeal abschließen': 'Sign a personal endorsement deal', '📱 Soziale-Medien-Präsenz: INAKTIV': '📱 Social media presence: INACTIVE', '📋 Kostenlose Vertragsverlängerung': '📋 Free contract extension', 'Kostenlos: etwas Fannähe und Moral.': 'Free: a little fan closeness and morale.', 'Stabile Weltmärkte zu Saisonbeginn.': 'Stable world markets at the start of the season.', 'Noch keine aktiven Bandensponsoren.': 'No active board sponsors yet.', '(Hektisch) · 🟥 zückt schnell Karten': '(Hectic) · 🟥 quick with cards', 'Zufrieden mit der Gesamtentwicklung.': 'Happy with the overall development.', 'Keine laufenden Produktionsaufträge.': 'No running production orders.', 'Noch keine Pokale im Trophäenschrank.': 'No trophies in the cabinet yet.', 'gegen Vereine aus der eigenen Region.': 'against clubs from your own region.', 'Kostet Geld, bringt Fans und Stimmung.': 'Costs money, brings fans and atmosphere.', 'Fertigt Schals für Wolle-Rohstoffkosten': 'Makes scarves for the cost of wool', 'Halbiert die Ausfallzeit von Verletzten': 'Halves the time injured players are out', 'Näht Spielbälle für Leder-Rohstoffkosten': 'Sews match balls for the cost of leather', 'Noch keine eigenen Vorlagen gespeichert.': 'No own templates saved yet.', 'Ein Magazin zahlt gut für deine Geschichte.': 'A magazine pays well for your story.', 'Vereinsstadion (keine Namensrechte vergeben)': 'Club stadium (no naming rights sold)', 'Noch keine Einträge in der Talent-Datenbank.': 'No entries in the talent database yet.', 'Produziert Trikots für Baumwoll-Rohstoffkosten': 'Produces shirts for the cost of cotton', 'Eine Marke will dein Gesicht für ihre Kampagne.': 'A brand wants your face for its campaign.', 'Presst Caps & Wimpel für Kunststoff-Rohstoffkosten': 'Presses caps & pennants for the cost of plastic', 'Unternehmen zahlen gut für deine Erfolgsgeschichte.': 'Companies pay well for your success story.', 'Noch keine spielerspezifischen Trikot-Verkaufsdaten.': 'No shirt sales data per player yet.', 'Noch nichts nebenbei - vielleicht Zeit für ein Hobby?': 'Nothing on the side yet - maybe time for a hobby?', 'Aktuell wirken keine zusätzlichen Boni auf den Absatz.': 'No extra boosts on sales right now.', 'Diese Saison noch keine Trainerwechsel in deiner Liga.': 'No coaching changes in your league this season yet.', 'Derzeit liegen keine offiziellen Transferanfragen für deine Spieler vor.': 'There are no official transfer requests for your players at the moment.', 'Noch keine Scouting-Missionen abgeschlossen. Entsende oben deine Scouts!': 'No scouting missions completed yet. Send out your scouts above!', 'Tippe auf einen Vereinsnamen in der Tabelle für die Kopf-an-Kopf-Bilanz.': 'Tap a club name in the table for the head-to-head record.', 'Noch keine Verkäufe erfasst - nach dem ersten Spieltag erscheint hier der Verlauf.': 'No sales recorded yet - the history appears here after the first matchday.', '✓ Keine Position hat eine gefährliche Häufung auslaufender Verträge.': '✓ No position has a dangerous cluster of expiring contracts.', 'Trainingsplus:': 'Training gain:', 'Verdoppelt die Ticketeinnahmen beim nächsten Heimspiel.': 'Doubles ticket income at the next home match.', 'Verdoppelt den Fanartikel-Absatz im Stadion beim nächsten Heimspiel.': 'Doubles merchandise sales in the stadium at the next home match.', 'Senkt Verletzungs- und Kartenrisiko im nächsten Spiel spürbar.': 'Noticeably lowers injury and card risk in the next match.', 'Senkt das Ausschreitungsrisiko beim nächsten Heimspiel stark ab.': 'Strongly lowers the risk of riots at the next home match.', 'Schließt alle aktuell laufenden Scouting-Missionen sofort ab.': 'Completes all running scouting missions immediately.', 'Heilt alle Verletzungen und beendet alle Sperren des gesamten Kaders sofort.': 'Heals all injuries and ends all suspensions of the whole squad immediately.', 'Gewährt sofort eine zusätzliche Trainingseinheit, unabhängig vom Tageslimit.': 'Grants an extra training session immediately, regardless of the daily limit.', 'Deckt das Potenzial aller aktuellen Jugendspieler sofort und kostenlos auf.': 'Reveals the potential of all current youth players immediately and for free.', 'Garantiert sonniges Wetter beim nächsten Spiel - keine negativen Wettereffekte.': 'Guarantees sunny weather at the next match - no negative weather effects.', 'Setzt die Eingespieltheit aller aktuellen Startelf-Paarungen sofort auf Maximum.': 'Sets the understanding of all current starting pairings to maximum immediately.', 'Setzt deinen Stamm-Torwart sofort auf Top-Fitness und Top-Tagesform.': 'Puts your first-choice goalkeeper at top fitness and top form immediately.', 'Einmal pro Saison ein aktives Vertrags-Ultimatum kostenlos besänftigen.': 'Calm one active contract ultimatum for free once per season.', 'Sofortiger Bonus aufs Transferbudget, passend zu deiner aktuellen Liga-Stärke.': 'Instant bonus to the transfer budget, matched to your current league.', 'Der nächste abgeschlossene Scouting-Fund ist garantiert ein Spieler mit hoher Stärke.': 'The next completed scouting find is guaranteed to be a strong player.', 'Zusätzlicher Fitness-Erholungsbonus nach Spielen (stapelt mit Konditionstrainer)': 'Extra fitness recovery after matches (stacks with the fitness coach)', 'Vermietete Büroflächen an lokale Unternehmen - stabile, planbare Mieteinnahmen.': 'Office space let to local companies - stable, predictable rent.', 'Mietwohnungen in Stadionnähe - beliebt bei Fans, die nah am Verein wohnen wollen.': 'Rented flats near the stadium - popular with fans who want to live close to the club.', 'Mildert Zwangsverkäufe und Punktabzüge bei Zahlungsunfähigkeit spürbar ab.': 'Noticeably softens forced sales and point deductions when insolvent.', 'Dämpft negative Medienwirkung bei schlechten Ergebnissen & Skandalen': 'Softens negative media impact of bad results & scandals', 'Verbessert Elfmeter-, Freistoß- und Eckballqualität der Mannschaft': 'Improves the team\'s penalties, free kicks and corners', 'Verringert Verletzungszeiten und beschleunigt Regeneration': 'Shortens injury lay-offs and speeds up recovery', 'Erhöht Stärke und Potenzial neuer Nachwuchsspieler': 'Raises strength and potential of new youth players', 'Übernimmt automatisch eine wählbare Aufgabe im Fanshop': 'Automatically takes over a chosen task in the fan shop', 'Halbiert die Wahrscheinlichkeit für Vertrags-Ultimaten unzufriedener Stars - frühzeitige,': 'Halves the chance of contract ultimatums from unhappy stars - early,',
+    'Einlösen': 'Redeem', 'Spieler': 'Player', '🌟 Champions Cup Spieltag': '🌟 Champions Cup matchday', 'Kaufen für einen festen Geldbetrag (skaliert automatisch mit dem Kurs, egal wie teuer/günstig die Aktie ist):': 'Buy for a fixed amount (scales with the price automatically, however expensive or cheap the share is):', 'Aktueller Börsenkurs:': 'Current share price:', 'Noch nicht aufgestellt': 'Not in the line-up yet', 'Freistoß-Gott': 'Free-kick god', 'Noch kein Scout für diese Region.': 'No scout for this region yet.', 'Wintermütze': 'Winter hat', 'Auswärts-Schal': 'Away scarf', 'Leder-Geldbörse': 'Leather wallet', 'Schlüsselanhänger': 'Key ring', 'Mini-Ball für Kinder': 'Mini ball for kids', 'Handyhülle mit Wappen': 'Phone case with crest', 'Kapuzenpulli mit Wappen': 'Hoodie with crest', 'keine': 'none', 'Saison:': 'Season:', 'Eisenfuß': 'Iron foot', 'Präsident': 'President', 'Kapazität': 'Capacity', 'KAPAZITÄT': 'CAPACITY', 'nur mähen': 'mow only', 'Gründlich': 'Thorough', 'Millionär': 'Millionaire', '→ Höhepunkt': '→ Highlight', 'Vorverträge': 'Pre-contracts', '· Gästeblock': '· away block', 'Gesamtstärke': 'Overall strength', 'pro Spieltag': 'per matchday', '🌴 Südamerika': '🌴 South America', 'Gerüchteküche': 'Rumour mill', 'Presse-Tribüne': 'Press stand', '↺ Zurücksetzen': '↺ Reset', 'Höchster Sieg:': 'Biggest win:', 'Multimillionär': 'Multimillionaire', 'Rückkaufoption': 'Buy-back option', 'Saisoneröffnung': 'Season opening', 'Nicht gegründet': 'Not founded', 'Auswärtsbilanz:': 'Away record:', 'Nächstes Spiel:': 'Next match:', 'Nächste Lizenz:': 'Next licence:', 'Trophäen gesamt:': 'Total trophies:', '🍀 Glücksbringer': '🍀 Lucky charm', 'Vertragsgespräch': 'Contract talk', 'Auf- und Abstieg': 'Promotion and relegation', 'nur dieser Verein': 'this club only', '🎫 Ticketverkäufe': '🎫 Ticket sales', 'West-Haupttribüne': 'West main stand', 'Ernährungsberater': 'Nutritionist', 'Parkplatz-Gelände': 'Car park site', 'Nur mähen (leicht)': 'Mow only (light)', '💼 Gesamtgehälter:': '💼 Total wages:', 'Villa mit Seeblick': 'Villa with lake view', 'Abstellungsprämien': 'Release fees', 'Höchster Derbysieg:': 'Biggest derby win:', 'Auswärts-Spitzname:': 'Away nickname:', '🔝 Freistoßflanke ·': '🔝 Free-kick cross ·', 'Sanierungsbedürftig': 'Needs renovation', 'Nächste Ausbaustufe': 'Next upgrade', '✅ Preise übernehmen': '✅ Apply prices', 'Zustand des Geläufs': 'Pitch condition', 'Höchste Niederlage:': 'Heaviest defeat:', '💛 Loyalitäts-Bonus': '💛 Loyalty bonus', '🎤 Spieler-Interview': '🎤 Player interview', '↪️ Kurz ausgeführt ·': '↪️ Taken short ·', 'Präventionsprogramm:': 'Prevention programme:', '🚨 Ausschreitungen': '🚨 Riots', 'Bisher keine Vorfälle.': 'No incidents so far.', 'Kein Ligaspiel offen.': 'No league match pending.', 'Trainingsintensität:': 'Training intensity:', 'Einnahmen (Spieltag)': 'Income (matchday)', 'Bedarf nächste Saison': 'Needed next season', 'Noch keine Teilnahme.': 'No participation yet.', 'Finanzielle Stabilität': 'Financial stability', '⚽ Öffentliches Training': '⚽ Open training', 'Noch nicht genug Daten.': 'Not enough data yet.', '· nächste Auslosung aus': '· next draw from', 'Öffentliches Medienimage': 'Public media image', '✔ 🎯 Direkter Freistoß ·': '✔ 🎯 Direct free kick ·', '💡 Empfehlung übernehmen': '💡 Apply recommendation', '🅿️ Parkplätze & Zufahrt': '🅿️ Parking & access', 'Bedienung mit einer Hand': 'One-handed use', 'Gewinne die Meisterschaft': 'Win the championship', 'Spritzguss- & Zubehörwerk': 'Injection moulding & accessories plant', 'Einfamilienhaus im Grünen': 'Detached house in the countryside', 'Biografie veröffentlichen': 'Publish a biography', 'Kaderplanung & Kadergröße': 'Squad planning & squad size', 'Kabine, Cliquen & Kapitän': 'Dressing room, cliques & captain', '🔄 Alle Perks zurücksetzen': '🔄 Reset all perks', 'Verträge laufen bald aus ·': 'Contracts expiring soon ·', '👩 Frauenmannschaft gründen': '👩 FOUND A WOMEN\'S TEAM', 'Noch kein gemeinsames Spiel': 'No match together yet', 'Noch keine Heimspiel-Daten.': 'No home match data yet.', 'Bürokomplex \'Vereins-Tower\'': 'Office complex \'Club Tower\'', 'Noch keine Tendenz erkennbar': 'No trend yet', 'Noch kein Heimspiel gespielt': 'No home match played yet', '· Zahlungskräftiges Publikum': '· wealthy crowd', 'Länderspielpausen & Turniere': 'International breaks & tournaments', 'Kader und Aufstellung ansehen': 'View squad and line-up', 'Finanzen und Sponsoren prüfen': 'Check finances and sponsors', '⚠️ Höchstes Verletzungsrisiko': '⚠️ Highest injury risk', 'Gehälter jetzt (pro Spieltag)': 'Wages now (per matchday)', 'Bester Torschütze (Karriere):': 'Top scorer (career):', '💪 Fähigkeitstraining-Express': '💪 Skill training express', 'Noch keine Interviews gegeben.': 'No interviews given yet.', 'Trainingsgelände mit Flutlicht': 'Training ground with floodlights', '🤝 Jährliches Personal-Meeting': '🤝 Annual staff meeting', 'Verträge langfristig gesichert': 'Contracts secured long-term', 'Längste Serie ohne Niederlage:': 'Longest unbeaten run:', 'Sofortkauf zahlt die Forderung': 'Instant buy pays the asking price', 'Noch kein Selbsttest gelaufen.': 'No self-test run yet.', 'Wartet die ersten Spieltage ab.': 'Waiting for the first matchdays.', 'Noch kein Pokalfinale erreicht.': 'No cup final reached yet.', '👕 Doppelte Fanartikel-Verkäufe': '👕 Double merchandise sales', 'Wintergespräch mit dem Vorstand': 'Winter talk with the board', '- wie startet ihr in die Saison?': '- how do you start the season?', 'Leihspieler kehren ggf. zurück ·': 'Loan players may return ·', 'Noch keine abgeschlossenen Wetten.': 'No settled bets yet.', 'Noch keine Überraschung geschafft.': 'No upset achieved yet.', 'Persönlichen Werbedeal abschließen': 'Sign a personal endorsement deal', '📱 Soziale-Medien-Präsenz: INAKTIV': '📱 Social media presence: INACTIVE', '📋 Kostenlose Vertragsverlängerung': '📋 Free contract extension', 'Kostenlos: etwas Fannähe und Moral.': 'Free: a little fan closeness and morale.', 'Stabile Weltmärkte zu Saisonbeginn.': 'Stable world markets at the start of the season.', 'Noch keine aktiven Bandensponsoren.': 'No active board sponsors yet.', '(Hektisch) · 🟥 zückt schnell Karten': '(Hectic) · 🟥 quick with cards', 'Zufrieden mit der Gesamtentwicklung.': 'Happy with the overall development.', 'Keine laufenden Produktionsaufträge.': 'No running production orders.', 'Noch keine Pokale im Trophäenschrank.': 'No trophies in the cabinet yet.', 'gegen Vereine aus der eigenen Region.': 'against clubs from your own region.', 'Kostet Geld, bringt Fans und Stimmung.': 'Costs money, brings fans and atmosphere.', 'Fertigt Schals für Wolle-Rohstoffkosten': 'Makes scarves for the cost of wool', 'Halbiert die Ausfallzeit von Verletzten': 'Halves the time injured players are out', 'Näht Spielbälle für Leder-Rohstoffkosten': 'Sews match balls for the cost of leather', 'Noch keine eigenen Vorlagen gespeichert.': 'No own templates saved yet.', 'Ein Magazin zahlt gut für deine Geschichte.': 'A magazine pays well for your story.', 'Vereinsstadion (keine Namensrechte vergeben)': 'Club stadium (no naming rights sold)', 'Noch keine Einträge in der Talent-Datenbank.': 'No entries in the talent database yet.', 'Produziert Trikots für Baumwoll-Rohstoffkosten': 'Produces shirts for the cost of cotton', 'Eine Marke will dein Gesicht für ihre Kampagne.': 'A brand wants your face for its campaign.', 'Presst Caps & Wimpel für Kunststoff-Rohstoffkosten': 'Presses caps & pennants for the cost of plastic', 'Unternehmen zahlen gut für deine Erfolgsgeschichte.': 'Companies pay well for your success story.', 'Noch keine spielerspezifischen Trikot-Verkaufsdaten.': 'No shirt sales data per player yet.', 'Noch nichts nebenbei - vielleicht Zeit für ein Hobby?': 'Nothing on the side yet - maybe time for a hobby?', 'Aktuell wirken keine zusätzlichen Boni auf den Absatz.': 'No extra boosts on sales right now.', 'Diese Saison noch keine Trainerwechsel in deiner Liga.': 'No coaching changes in your league this season yet.', 'Derzeit liegen keine offiziellen Transferanfragen für deine Spieler vor.': 'There are no official transfer requests for your players at the moment.', 'Noch keine Scouting-Missionen abgeschlossen. Entsende oben deine Scouts!': 'No scouting missions completed yet. Send out your scouts above!', 'Tippe auf einen Vereinsnamen in der Tabelle für die Kopf-an-Kopf-Bilanz.': 'Tap a club name in the table for the head-to-head record.', 'Noch keine Verkäufe erfasst - nach dem ersten Spieltag erscheint hier der Verlauf.': 'No sales recorded yet - the history appears here after the first matchday.', '✓ Keine Position hat eine gefährliche Häufung auslaufender Verträge.': '✓ No position has a dangerous cluster of expiring contracts.', 'Trainingsplus:': 'Training gain:', 'Verdoppelt die Ticketeinnahmen beim nächsten Heimspiel.': 'Doubles ticket income at the next home match.', 'Verdoppelt den Fanartikel-Absatz im Stadion beim nächsten Heimspiel.': 'Doubles merchandise sales in the stadium at the next home match.', 'Senkt Verletzungs- und Kartenrisiko im nächsten Spiel spürbar.': 'Noticeably lowers injury and card risk in the next match.', 'Senkt das Ausschreitungsrisiko beim nächsten Heimspiel stark ab.': 'Strongly lowers the risk of riots at the next home match.', 'Schließt alle aktuell laufenden Scouting-Missionen sofort ab.': 'Completes all running scouting missions immediately.', 'Heilt alle Verletzungen und beendet alle Sperren des gesamten Kaders sofort.': 'Heals all injuries and ends all suspensions of the whole squad immediately.', 'Gewährt sofort eine zusätzliche Trainingseinheit, unabhängig vom Tageslimit.': 'Grants an extra training session immediately, regardless of the daily limit.', 'Deckt das Potenzial aller aktuellen Jugendspieler sofort und kostenlos auf.': 'Reveals the potential of all current youth players immediately and for free.', 'Garantiert sonniges Wetter beim nächsten Spiel - keine negativen Wettereffekte.': 'Guarantees sunny weather at the next match - no negative weather effects.', 'Setzt die Eingespieltheit aller aktuellen Startelf-Paarungen sofort auf Maximum.': 'Sets the understanding of all current starting pairings to maximum immediately.', 'Setzt deinen Stamm-Torwart sofort auf Top-Fitness und Top-Tagesform.': 'Puts your first-choice goalkeeper at top fitness and top form immediately.', 'Einmal pro Saison ein aktives Vertrags-Ultimatum kostenlos besänftigen.': 'Calm one active contract ultimatum for free once per season.', 'Sofortiger Bonus aufs Transferbudget, passend zu deiner aktuellen Liga-Stärke.': 'Instant bonus to the transfer budget, matched to your current league.', 'Der nächste abgeschlossene Scouting-Fund ist garantiert ein Spieler mit hoher Stärke.': 'The next completed scouting find is guaranteed to be a strong player.', 'Zusätzlicher Fitness-Erholungsbonus nach Spielen (stapelt mit Konditionstrainer)': 'Extra fitness recovery after matches (stacks with the fitness coach)', 'Vermietete Büroflächen an lokale Unternehmen - stabile, planbare Mieteinnahmen.': 'Office space let to local companies - stable, predictable rent.', 'Mietwohnungen in Stadionnähe - beliebt bei Fans, die nah am Verein wohnen wollen.': 'Rented flats near the stadium - popular with fans who want to live close to the club.', 'Mildert Zwangsverkäufe und Punktabzüge bei Zahlungsunfähigkeit spürbar ab.': 'Noticeably softens forced sales and point deductions when insolvent.', 'Dämpft negative Medienwirkung bei schlechten Ergebnissen & Skandalen': 'Softens negative media impact of bad results & scandals', 'Verbessert Elfmeter-, Freistoß- und Eckballqualität der Mannschaft': 'Improves the team\'s penalties, free kicks and corners', 'Verringert Verletzungszeiten und beschleunigt Regeneration': 'Shortens injury lay-offs and speeds up recovery', 'Erhöht Stärke und Potenzial neuer Nachwuchsspieler': 'Raises strength and potential of new youth players', 'Übernimmt automatisch eine wählbare Aufgabe im Fanshop': 'Automatically takes over a chosen task in the fan shop', 'Halbiert die Wahrscheinlichkeit für Vertrags-Ultimaten unzufriedener Stars - frühzeitige,': 'Halves the chance of contract ultimatums from unhappy stars - early,',
     // Teil 3 (25.22): Lexikon und Spieler-Popup
     '➜ Zum Bildschirm': '➜ Go to screen', 'Kein Eintrag gefunden. Anderen Begriff versuchen oder Kategorie „Alle“ wählen.': 'No entry found. Try another term or choose the category "All".', 'Nur Einträge zum Bildschirm, von dem du kommst.': 'Only entries for the screen you came from.', 'Alle zeigen': 'Show all', 'Potenzial:': 'Potential:',
 };
@@ -32897,7 +33077,7 @@ function cleanupLegacyScoutState() {
         }
 
         applyMatchdayFinances(currentMatch.isHome, won, oppGoalsThisMatch === 0, isHomeDerby, opponentName, `${ourGoalsThisMatch}:${oppGoalsThisMatch}`);
-        processPostMatchRoutine(won ? 'win' : (drawn ? 'draw' : 'loss'), isHomeDerby, true, ourGoalsThisMatch - oppGoalsThisMatch, currentMatch.isHome, { total: currentMatch.homeGoals + currentMatch.awayGoals, bothScored: currentMatch.homeGoals > 0 && currentMatch.awayGoals > 0 });
+        processPostMatchRoutine(won ? 'win' : (drawn ? 'draw' : 'loss'), isHomeDerby, true, ourGoalsThisMatch - oppGoalsThisMatch, currentMatch.isHome, { total: currentMatch.homeGoals + currentMatch.awayGoals, bothScored: currentMatch.homeGoals > 0 && currentMatch.awayGoals > 0 }, opponentName);
         let bester = game.lastMatchBestPlayer;
         let log = document.getElementById('ticker-log');
         if (log && bester && bester.matchday === game.matchday - 1) {
@@ -33274,35 +33454,7 @@ function cleanupLegacyScoutState() {
         });
     }
 
-    // Ausschreitungen bei Heim-Derbys: Risiko sinkt deutlich mit mehr Ordnerdienst-Personal.
-    function checkHooliganIncident() {
-        // Eigene Sicherheitskräfte: feste Ordner zählen zur effektiven Ordnerzahl dazu,
-        // die Ausbildungsstufe macht jeden einzelnen Ordner zusätzlich wirksamer.
-        let effectiveStewards = (game.stewards || 0) + (typeof securityWorkforce !== 'undefined' ? securityWorkforce.permanentStewards : 0);
-        let skillMult = typeof securityWorkforce !== 'undefined' ? (1 + (securityWorkforce.skillLevel - 1) * 0.12) : 1;
-        let baseChance = 0.12 * (1 - Math.min(0.92, (effectiveStewards / 100) * 0.8 * skillMult));
-        if (staffMembers.fanLiaison.hired) baseChance *= 0.7; // Fanbeauftragter deeskaliert im Vorfeld
-        // Sicherheitslage beruhigen (Premium-Booster, NEU): stark reduziertes Risiko.
-        if (game.securityCalmNextMatch) baseChance *= 0.15;
-        // Stadion-Sicherheitstechnik: dauerhafte Risikosenkung durch gekaufte Anlagen.
-        if (typeof getStadiumSecurityBonus === 'function') baseChance *= (1 - getStadiumSecurityBonus());
-        // Derby-Woche: Choreo (Pyro) erhöht, Sicherheitskonzept/Respekt senken das Risiko.
-        if (typeof getDerbyRiskFactor === 'function') baseChance *= getDerbyRiskFactor();
-        if (Math.random() >= baseChance) return;
-
-        game.riotCount = (game.riotCount || 0) + 1;
-        let fine = Math.min(game.money, 8000 + game.riotCount * 4000);
-        // Sicherheitschef: verhandelt mit dem Verband nach - senkt die Höhe der Strafe
-        // spürbar (war bisher nur Text ohne tatsächliche Wirkung).
-        if (staffMembers.secChief.hired) fine = Math.round(fine * 0.5);
-        game.money = Math.max(0, game.money - fine);
-        game.fans = Math.max(game.fanBaseFloor, game.fans - 12);
-        game.boardSat = Math.max(10, game.boardSat - 8);
-        game.forcedGhostGame = true;
-        showNotice('🔥 Ausschreitungen im Derby', `Rivalisierende Fangruppen liefern sich Straßenschlachten rund ums Stadion.\n\nStrafe: ${formatVal(fine)}. Der Verband verhängt ein Geisterspiel für die nächste Heimpartie.` + (game.riotCount >= 3 ? '\n\n⚠️ Wiederholte Vorfälle: der Verband beobachtet euren Klub inzwischen sehr genau.' : ''), { typ: 'warn' });
-    }
-
-    function processPostMatchRoutine(matchResult = null, isHomeDerby = false, isLiveContext = false, matchMargin = 0, isHomeMatchParam = true, totalGoalsForBets = null) {
+    function processPostMatchRoutine(matchResult = null, isHomeDerby = false, isLiveContext = false, matchMargin = 0, isHomeMatchParam = true, totalGoalsForBets = null, opponentName = null) {
         if (typeof ensureCaptainPresent === 'function') ensureCaptainPresent();
         // Löst die Insider-Wette und die Spionage-Info fürs vergangene Spiel auf/zurück,
         // unabhängig davon ob live gespielt oder automatisch simuliert wurde - beide sind
@@ -33720,8 +33872,10 @@ function cleanupLegacyScoutState() {
             }
         }
 
-        // Ausschreitungen: nur relevant, wenn wir gerade ein Heim-Derby ausgetragen haben
-        if (isHomeDerby) checkHooliganIncident();
+        // Ausschreitungen (js/ausschreitungen.js): Derbys daheim und auswärts, dazu Brisanzspiele.
+        if (matchResult !== null && typeof pruefeAusschreitungen === 'function') {
+            pruefeAusschreitungen({ gegner: opponentName, heim: isHomeMatchParam, tordiff: matchMargin });
+        }
         // Ordner-Kosten (echte Abbuchung): bisher wurde nur im Finanz-Ausblick ein
         // Betrag angezeigt, aber nie wirklich abgebucht - ein weiterer "Phantom-Posten".
         if (typeof tickStewardCosts === 'function') tickStewardCosts(isHomeMatchParam);
@@ -34469,7 +34623,7 @@ function cleanupLegacyScoutState() {
             if (simVorher && playedOurMatch) simSpiele.push({ md, gegner: opponentNameThisMatch, heim: isHome, tore: ourGoalsThisMatch, gegentore: oppGoalsThisMatch });
             if (playedOurMatch) attributeGoalsToScorers(ourGoalsThisMatch);
             applyMatchdayFinances(isHome, won, playedOurMatch && oppGoalsThisMatch === 0, isHomeDerby, opponentNameThisMatch, opponentNameThisMatch ? `${ourGoalsThisMatch}:${oppGoalsThisMatch}` : null);
-            processPostMatchRoutine(playedOurMatch ? (won ? 'win' : (drawn ? 'draw' : 'loss')) : null, isHomeDerby, false, ourGoalsThisMatch - oppGoalsThisMatch, isHome, playedOurMatch ? { total: ourGoalsThisMatch + oppGoalsThisMatch, bothScored: ourGoalsThisMatch > 0 && oppGoalsThisMatch > 0 } : null);
+            processPostMatchRoutine(playedOurMatch ? (won ? 'win' : (drawn ? 'draw' : 'loss')) : null, isHomeDerby, false, ourGoalsThisMatch - oppGoalsThisMatch, isHome, playedOurMatch ? { total: ourGoalsThisMatch + oppGoalsThisMatch, bothScored: ourGoalsThisMatch > 0 && oppGoalsThisMatch > 0 } : null, opponentNameThisMatch);
         }
         updateUI();
         showScreen('screen-dashboard');
@@ -37556,7 +37710,7 @@ function renderSeasonForecastHistory() {
             if (opponentNameThisMatch) recordRivalryResult(opponentNameThisMatch, ourGoalsThisMatch, oppGoalsThisMatch);
             if (playedOurMatch && typeof attributeGoalsToScorers === 'function') attributeGoalsToScorers(ourGoalsThisMatch);
             applyMatchdayFinances(isHome, won, playedOurMatch && oppGoalsThisMatch === 0, isHomeDerby, opponentNameThisMatch, opponentNameThisMatch ? `${ourGoalsThisMatch}:${oppGoalsThisMatch}` : null);
-            processPostMatchRoutine(playedOurMatch ? (won ? 'win' : (drawn ? 'draw' : 'loss')) : null, isHomeDerby, false, ourGoalsThisMatch - oppGoalsThisMatch, isHome, playedOurMatch ? { total: ourGoalsThisMatch + oppGoalsThisMatch, bothScored: ourGoalsThisMatch > 0 && oppGoalsThisMatch > 0 } : null);
+            processPostMatchRoutine(playedOurMatch ? (won ? 'win' : (drawn ? 'draw' : 'loss')) : null, isHomeDerby, false, ourGoalsThisMatch - oppGoalsThisMatch, isHome, playedOurMatch ? { total: ourGoalsThisMatch + oppGoalsThisMatch, bothScored: ourGoalsThisMatch > 0 && oppGoalsThisMatch > 0 } : null, opponentNameThisMatch);
         }
         updateUI();
         renderAdminView();

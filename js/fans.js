@@ -69,6 +69,7 @@
                 : (game.matchday <= 6 ? 'Saisonziel bis zum 6. Spieltag wählbar - Prämie bei Erfolg, Stimmungsverlust bei Misserfolg.' : 'Saisonziel nur bis zum 6. Spieltag wählbar.');
         }
         renderSecurityWorkforceBox();
+        if (typeof renderAusschreitungenBox === 'function') renderAusschreitungenBox();
         renderAttendanceChart();
         renderAttendanceRanking();
         renderFanFeed();
@@ -355,7 +356,7 @@
     // 1. Individuelle Fan-Gruppen-Aktionen: jede der vier Gruppen bekommt eine eigene,
     // spezifisch zu ihr passende Aktion statt nur eine statische Stimmungsanzeige zu sein.
     const FAN_GROUP_ACTIONS = {
-        ultras: { label: '🔥 Pyro-Verbot lockern', cost: 0, desc: 'Riskant: Ultras-Stimmung steigt deutlich, aber Ausschreitungsrisiko wächst.' },
+        ultras: { label: '🔥 Pyro-Verbot lockern', cost: 0, desc: 'Riskant: Ultras-Stimmung steigt deutlich, aber für 3 Heimspiele wächst das Ausschreitungsrisiko (×1,4).' },
         tradition: { label: '🏛️ Museums-Tag ausrichten', cost: 6000, desc: 'Freier Eintritt fürs Vereinsmuseum an einem Tag - Traditionsfans lieben es.' },
         families: { label: '🎈 Familientag veranstalten', cost: 9000, desc: 'Kinderschminken, Hüpfburg & Ermäßigungen - Familien-Stimmung steigt spürbar.' },
         vips: { label: '🥂 Business-Lunch ausrichten', cost: 15000, desc: 'Exklusives Networking-Event für Logengäste, stärkt VIP-Bindung & Sponsoring-Klima.' }
@@ -370,6 +371,7 @@
         group.mood = Math.min(100, group.mood + 12);
         if (groupId === 'ultras') {
             underworld.pressure = Math.min(100, underworld.pressure + 10);
+            fanCentralState.pyroLockerungSpiele = 3;
             pushFanFeedEntry('🔥 Ultras "Szene Nord" feiern die Lockerung der Pyro-Regeln - Stimmung schießt nach oben!');
         } else if (groupId === 'vips') {
             game.boardSat = Math.min(100, game.boardSat + 3);
