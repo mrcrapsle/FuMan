@@ -47,6 +47,13 @@
         { id: 'loyalty_boost', name: '💛 Loyalitäts-Bonus', cost: 90, desc: 'Erhöht die Moral des gesamten Kaders sofort um 15 Punkte - stärkt die Bindung an den Verein.' }
     ];
 
+    // Testangebot (auf Wunsch, nur vorübergehend): 1.000 Diamanten gegen 2 Mio. € aufs Vereinskonto.
+    // Zum Abschalten auf false setzen.
+    const TESTANGEBOT_DIAMANTEN_GELD = true;
+    if (TESTANGEBOT_DIAMANTEN_GELD) {
+        PREMIUM_BOOSTERS.unshift({ id: 'test_geld', name: '🧪 Testangebot: 2 Mio. €', cost: 1000, desc: 'Nur zum Testen: 2.000.000 € sofort aufs Vereinskonto.' });
+    }
+
     // "Kauf" von Premium-Punkten - SIMULIERT, siehe Hinweis oben. Gewährt die Punkte direkt.
     function purchasePremiumPackage(packageId) {
         let pkg = PREMIUM_POINT_PACKAGES.find(p => p.id === packageId);
@@ -112,6 +119,10 @@
                 showToast('🌍 Alle Scouting-Missionen sofort abgeschlossen!', 'success');
                 break;
             }
+            case 'test_geld':
+                bucheMitLabel('🧪 Testangebot Diamanten-Shop', 2000000);
+                showToast(`🧪 +${formatVal(2000000)} aufs Vereinskonto (Testangebot).`, 'success');
+                break;
             case 'transfer_injection': {
                 let scale = typeof leagueScaleFactor === 'function' ? leagueScaleFactor() : 1;
                 let bonus = Math.round(300000 * scale);

@@ -123,6 +123,7 @@ async function main() {
         S.testGrundfassung,
         S.testKopfzeilenFenster,
         S.testAusschreitungen,
+        S.testStartmenue,
         S.testAdminWerkzeuge,
         S.testPrivatlebenPlus,
         S.testOeffentlicheFassung,
@@ -255,10 +256,11 @@ async function main() {
             const suite = liste[naechste++];
             const ausgabe = [];
             const start = Date.now();
+            // Startmenü (js/startmenue.js) beim Start aus: die Suiten bedienen das Spiel direkt; testStartmenue schaltet es ein.
             // Freischaltungen (js/freischaltungen.js): die Suiten testen die Bereiche selbst, also alles offen;
             // testFreischaltungen nimmt das Kennzeichen wieder weg. Wirkt nur in der Entwickler-Fassung. Bewusst
             // nicht im localStorage: ein Schreiben vor dem Seitenstart verlor beim Neuladen andere frische Werte.
-            const allesFrei = async c => { await c.addInitScript(() => { window.anstossTestAllesFrei = true; }); return c; };
+            const allesFrei = async c => { await c.addInitScript(() => { window.anstossTestAllesFrei = true; window.anstossOhneStartmenue = true; }); return c; };
             const ctx = await allesFrei(await browser.newContext());
             // Eigene Kontexte (z.B. mit Viewport) gehören zur Suite und werden mit ihr geschlossen,
             // denn BrowserContext.newPage() nimmt keine Optionen.

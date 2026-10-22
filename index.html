@@ -95,6 +95,9 @@
     <span id="version-display"></span>
 </div>
 <div id="app-toast" class="app-toast" role="status" aria-live="polite" aria-atomic="true"></div>
+<div id="startmenue-overlay" class="startmenue-overlay" role="dialog" aria-modal="true" aria-label="Startmenü" hidden>
+    <div class="startmenue-box"><div id="startmenue-inhalt"></div></div>
+</div>
 <div id="tutorial-overlay" class="tutorial-overlay">
     <div class="tutorial-box">
         <div id="tutorial-title" style="font-size:var(--fs-title); font-weight:900; color:var(--accent); margin-bottom:8px;">⚽ Willkommen beim 1.FC Moritz Leipzig!</div>
@@ -963,8 +966,11 @@
 
                 <div class="panel">
                     <div class="panel-header">💾 Speicherstände</div>
-                    <button onclick="startNewGame()" id="btn-new-game" data-confirming="false" class="btn-danger" style="margin-bottom:10px;">🆕 Neues Spiel starten (frischer Klub)</button>
+                    <button onclick="startNewGame()" id="btn-new-game" data-confirming="false" class="btn-danger" style="margin-bottom:10px;">🆕 Neue Karriere starten</button>
+                    <div id="new-game-setup-heimat" hidden></div>
                     <div id="new-game-setup-box" class="box" style="display:none; margin-bottom:10px;">
+                        <label for="new-game-clubname" style="display:block; font-size:var(--fs-small); font-weight:800; margin-bottom:4px;">Vereinsname:</label>
+                        <input type="text" id="new-game-clubname" class="input-inline" maxlength="40" style="width:100%; margin-bottom:8px;" placeholder="z. B. FC Leipzig 1920">
                         <div style="font-size:var(--fs-small); font-weight:800; margin-bottom:4px;">Spielart wählen:</div>
                         <div id="new-game-scenario-btns" style="margin-bottom:8px;"></div>
                         <div style="font-size:var(--fs-small); font-weight:800; margin-bottom:4px;">Heimatstadt (bestimmt Regionalliga, Oberliga und Landespokal):</div>
@@ -2879,6 +2885,7 @@
 <script src="js/campus-staff.js?v=2.1"></script>
 <script src="js/fans.js?v=2.1"></script>
 <script src="js/ausschreitungen.js?v=3.144"></script>
+<script src="js/startmenue.js?v=3.145"></script>
 <script src="js/youth.js?v=2.1"></script>
 <script src="js/youth-academy-extended.js?v=2.1"></script>
 <script src="js/youth-pathway.js?v=3.11"></script>
@@ -3016,6 +3023,7 @@
             restoreGetters();
             mark('restoreGetters');
             let forceNewGame = safeStorageGet(sessionStorage, 'anstoss_fm13_force_new_game');
+            let spielGeladen = false;
             if (forceNewGame) {
                 safeStorageRemove(sessionStorage, 'anstoss_fm13_force_new_game');
                 // Startbedingungen konfigurierbar: nur gesetzt, wenn der Reset über
@@ -3031,6 +3039,14 @@
                         game.clubName = `1.FC Moritz ${chosenCity}`;
                         game.secondTeam.name = `${game.clubName} II`;
                     }
+                }
+                // Eigener Vereinsname aus dem Startmenü (Verein gründen), vor initLeagues()
+                let chosenName = safeStorageGet(sessionStorage, 'anstoss_fm13_newgame_clubname');
+                safeStorageRemove(sessionStorage, 'anstoss_fm13_newgame_clubname');
+                chosenName = (chosenName || '').replace(/[<>&"]/g, '').trim().slice(0, 40);
+                if (chosenName) {
+                    game.clubName = chosenName;
+                    game.secondTeam.name = `${chosenName} II`;
                 }
                 if (typeof ensureHomeCity === 'function') { ensureHomeCity(); applyHomeRegion(); }
                 let chosenLevel = safeStorageGet(sessionStorage, 'anstoss_fm13_newgame_leaguelevel');
@@ -3097,7 +3113,7 @@
                 }
                 updateUI();
                 showScreen('screen-office');
-            } else if (!(typeof loadMostRecentGame === 'function' ? loadMostRecentGame() : loadGame(true))) {
+            } else if (!(spielGeladen = (typeof loadMostRecentGame === 'function' ? loadMostRecentGame() : loadGame(true)))) {
                 if (typeof ensureHomeCity === 'function') { ensureHomeCity(); applyHomeRegion(); }
                 initDefaultSquad();
                 initLeagues();
@@ -3109,7 +3125,8 @@
             applyClubCrest();
             initLanguage();
             warnIfStorageBlocked();
-            maybeShowTutorial();
+            // Startmenü (js/startmenue.js) über dem geladenen Spiel; das Tutorial folgt nach der Wahl.
+            if (!(typeof zeigeStartmenueBeimStart === 'function' && zeigeStartmenueBeimStart(!!forceNewGame, spielGeladen))) maybeShowTutorial();
             if (typeof initOneHand === 'function') initOneHand();
             if (typeof initZugaenglichkeit === 'function') initZugaenglichkeit();
             // Kein Struktur-Selbsttest beim Start mehr: er öffnete alle Bildschirme und kostete

@@ -290,6 +290,8 @@ async function testConfigurableNewGameStart(browser) {
     // "Neues Spiel"-Knopf liegt dort und muss erst sichtbar geschaltet werden.
     await page.evaluate(() => showScreen('screen-dashboard'));
     await page.click('#btn-new-game');
+    // Seit dem Startmenü: erst die Karriere-Art wählen, "Verein gründen" zeigt den Einstellungs-Kasten
+    await page.click('#startmenue-gruenden');
     await page.waitForFunction(() => document.getElementById('new-game-setup-box').style.display === 'block', null, { timeout: 3000 }).catch(() => null);
     const boxVisible = await page.evaluate(() => document.getElementById('new-game-setup-box').style.display === 'block');
 

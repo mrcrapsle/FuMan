@@ -572,6 +572,8 @@
     let selectedNewGameMoney = 150000;
     let newGameConfirmTimer = null;
     function startNewGame() {
+        // Seit dem Startmenü (js/startmenue.js): Auswahl der Karriere-Art, "Verein gründen" zeigt diesen Kasten.
+        if (typeof oeffneStartmenue === 'function') { oeffneStartmenue('karriere'); renderNewGameSetupOptions(); return; }
         let box = document.getElementById('new-game-setup-box');
         if (!box) return;
         let show = box.style.display === 'none';
@@ -602,7 +604,9 @@
         }
     }
     function confirmNewGameWithSettings(btn) {
-        if (btn && btn.dataset.confirming !== 'true') {
+        // Ohne laufenden Spielstand (erster Start) gibt es nichts zu verlieren: keine Rückfrage.
+        const ohneStand = typeof startmenueErststart !== 'undefined' && startmenueErststart && startmenueSchritt === 'gruenden';
+        if (btn && btn.dataset.confirming !== 'true' && !ohneStand) {
             btn.dataset.confirming = 'true';
             btn.innerText = '⚠️ Wirklich? Fortschritt weg! Nochmal tippen zum Bestätigen';
             newGameConfirmTimer = setTimeout(() => {
@@ -620,6 +624,8 @@
         safeSessionSet('anstoss_fm13_newgame_money', String(szenario ? 150000 : selectedNewGameMoney));
         if (szenario) safeSessionSet('anstoss_fm13_newgame_scenario', szenario);
         safeSessionSet('anstoss_fm13_newgame_city', selectedNewGameCity);
+        let nameFeld = document.getElementById('new-game-clubname');
+        if (nameFeld && nameFeld.value.trim()) safeSessionSet('anstoss_fm13_newgame_clubname', nameFeld.value.trim());
         if (typeof selectedNewGameTempo !== 'undefined') safeSessionSet('anstoss_fm13_newgame_freischaltung', selectedNewGameTempo);
         location.reload();
     }

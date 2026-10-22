@@ -3764,6 +3764,96 @@ async function testAusschreitungen(browser) {
     await page.close();
 }
 
+async function testStartmenue(browser) {
+    console.log('\n[26.26] Startmenü: Titel, Verein gründen, übernehmen, Trainer gesucht, Laden; Testangebot im Diamanten-Shop');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 320, height: 800 });
+    // Die Suite blendet das Menü sonst aus (tests/run-tests.js)
+    await page.addInitScript(() => { window.anstossOhneStartmenue = false; });
+    const neuLaden = async (fn) => {
+        await Promise.all([page.waitForNavigation(), fn ? page.evaluate(fn) : page.reload()]);
+        await page.waitForFunction(() => !document.getElementById('app-loading'), null, { timeout: 20000 }).catch(() => null);
+        await page.evaluate(R32_HILFEN);
+    };
+    await neuLaden(null);
+    const offen = () => page.evaluate(() => !document.getElementById('startmenue-overlay').hidden);
+    const r = {};
+    // Erster Start: Titel ohne Weiterspielen, kein Tutorial darüber
+    Object.assign(r, await page.evaluate(() => ({
+        titel: !document.getElementById('startmenue-overlay').hidden && !!document.getElementById('startmenue-neu') && !!document.getElementById('startmenue-laden') && !document.getElementById('startmenue-weiter'),
+        ohneTutorial: !document.getElementById('tutorial-overlay').classList.contains('show'),
+        titelLayout: ueberlauf() && woerter('#startmenue-inhalt button').length === 0
+    })));
+    await page.click('#startmenue-neu');
+    r.arten = await page.evaluate(() => ['gruenden', 'uebernehmen', 'jobs'].every(k => !!document.getElementById('startmenue-' + k)) && !!document.getElementById('startmenue-stadt'));
+    await page.click('#startmenue-gruenden');
+    r.gruendenKasten = await page.evaluate(() => { const b = document.getElementById('new-game-setup-box'); return b.style.display === 'block' && !!b.closest('#startmenue-overlay') && ueberlauf(); });
+    await page.fill('#new-game-clubname', 'SV Teststadt 07');
+    // Erster Start: ein Tipp genügt, es geht nichts verloren
+    await Promise.all([page.waitForNavigation(), page.click('#btn-confirm-new-game')]);
+    await page.waitForFunction(() => !document.getElementById('app-loading'), null, { timeout: 20000 }).catch(() => null);
+    Object.assign(r, await page.evaluate(() => ({
+        gegruendet: game.clubName === 'SV Teststadt 07' && leaguesData[game.leagueLevel].some(t => t.name === 'SV Teststadt 07') && game.secondTeam.name === 'SV Teststadt 07 II',
+        direktImSpiel: document.getElementById('startmenue-overlay').hidden
+    })));
+
+    // Verein übernehmen: Neustart, dann Auswahl aus der Pyramide
+    await page.evaluate(() => { closeTutorial(); writeAutoSaveNow(); });
+    await neuLaden(() => { startNewGame(); startmenueArtWaehlen('uebernehmen'); });
+    const ueb = await page.evaluate(() => {
+        const out = { liste: !document.getElementById('startmenue-overlay').hidden && document.querySelectorAll('.startmenue-verein').length > 5 };
+        const startName = game.clubName;
+        startmenueLigaFilter = 2; renderStartmenue();
+        out.ligaLayout = ueberlauf() && woerter('#startmenue-inhalt button').length === 0;
+        const ziel = startmenueVereine(2)[3].name;
+        [...document.querySelectorAll('.startmenue-verein button')][3].click();
+        out.uebernommen = game.clubName === ziel && game.leagueLevel === 2 && game.money === getNewGameStartMoney(2, 150000)
+            && !leaguesData.some(t => t.some(x => x.name === startName)) && leaguesData[2].filter(t => t.name === ziel).length === 1
+            && document.getElementById('startmenue-overlay').hidden && squad.length >= 18;
+        return out;
+    });
+    Object.assign(r, ueb);
+
+    // Trainer gesucht: Angebote mit Ziel aus den Karriere-Szenarien
+    await neuLaden(() => { startNewGame(); startmenueArtWaehlen('jobs'); });
+    const jobs = await page.evaluate(() => {
+        const out = { jobListe: document.querySelectorAll('.startmenue-job').length === Object.keys(CAREER_SCENARIOS).length };
+        out.jobLayout = ueberlauf() && woerter('#startmenue-inhalt button').length === 0;
+        const j = startmenueJobs.find(x => x.key === 'absteiger');
+        startmenueJobAnnehmen(startmenueJobs.indexOf(j));
+        out.jobAngenommen = game.clubName === j.verein && game.leagueLevel === CAREER_SCENARIOS.absteiger.level && game.scenario && game.scenario.id === 'absteiger' && game.money === 120000;
+        // freshPage löscht beim Laden den Merker des letzten Stands, ohne ihn lädt der Start Slot 1
+        saveGameToSlot(1);
+        return out;
+    });
+    Object.assign(r, jobs);
+
+    // Nächster Start: Titel mit Weiterspielen
+    await neuLaden(null);
+    r.weiterAngebot = await page.evaluate(() => { const b = document.getElementById('startmenue-weiter'); return !!b && b.textContent.includes(game.clubName); });
+    await page.click('#startmenue-weiter');
+    r.weiter = !(await offen());
+    // Laden-Seite
+    r.laden = await page.evaluate(() => { oeffneStartmenue('laden'); const t = document.getElementById('startmenue-inhalt').textContent; const ok = t.includes('Slot 1: ' + game.clubName) && t.includes('Automatischer Spielstand'); schliesseStartmenue(); return ok; });
+
+    // Testangebot im Diamanten-Shop: 1.000 Diamanten gegen 2 Mio. €
+    r.diamanten = await page.evaluate(() => {
+        game.premiumPoints = 1000; const geld = game.money;
+        buyPremiumBooster('test_geld');
+        const ok = game.money === geld + 2000000 && game.premiumPoints === 0;
+        buyPremiumBooster('test_geld');
+        return ok && game.money === geld + 2000000;
+    });
+    const K = ['titel', 'ohneTutorial', 'titelLayout', 'arten', 'gruendenKasten', 'gegruendet', 'direktImSpiel'];
+    assert(K.every(k => r[k] === true), `Startmenü: Titel beim ersten Start, drei Karriere-Arten, Verein gründen mit eigenem Namen (${JSON.stringify(K.map(k => r[k]))})`);
+    const U = ['liste', 'ligaLayout', 'uebernommen', 'jobListe', 'jobLayout', 'jobAngenommen'];
+    assert(U.every(k => r[k] === true), `Startmenü: Verein übernehmen und Trainer gesucht mit Ziel (${JSON.stringify(U.map(k => r[k]))})`);
+    const W = ['weiterAngebot', 'weiter', 'laden', 'diamanten'];
+    assert(W.every(k => r[k] === true), `Startmenü: Weiterspielen und Laden; Testangebot 2 Mio. € für 1.000 Diamanten (${JSON.stringify(W.map(k => r[k]))})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 module.exports = {
     testSpielvorbereitung,
     testVertragsWerkzeuge,
@@ -3788,6 +3878,7 @@ module.exports = {
     testGrundfassung,
     testKopfzeilenFenster,
     testAusschreitungen,
+    testStartmenue,
     testAdminWerkzeuge,
     testPrivatlebenPlus,
     testOeffentlicheFassung,

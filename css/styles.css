@@ -1027,6 +1027,40 @@
             border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent); color: var(--text-main); width: 28px; height: 28px;
             border-radius: 50%; cursor: pointer; font-size: var(--fs-title-sm); line-height: 1;
         }
+        /* Startmenü (js/startmenue.js): Titelbildschirm über dem Spiel */
+        .startmenue-overlay {
+            position: fixed; inset: 0; z-index: 9800; display: flex; align-items: flex-start; justify-content: center;
+            padding: 16px; overflow-y: auto;
+            background: radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--accent) 22%, var(--surface-0)), var(--surface-0) 70%);
+        }
+        .startmenue-overlay[hidden] { display: none; }
+        /* Meldungen vom Spielstart (Sponsoren usw.) nicht über dem Titel */
+        body:has(.startmenue-overlay.show) .app-toast { display: none; }
+        .startmenue-box { width: 100%; max-width: 520px; margin: auto 0; padding: 8px 0 24px; color: var(--text-main); }
+        .startmenue-logo { font-size: var(--fs-display); text-align: center; margin-top: 12px; }
+        .startmenue-name { font-size: var(--fs-display); font-weight: 900; text-align: center; color: var(--accent); line-height: 1.1; }
+        .startmenue-unter { text-align: center; color: var(--text-muted); font-size: var(--fs-small); margin: 4px 0 18px; }
+        .startmenue-knoepfe { display: grid; gap: 8px; margin-top: 10px; }
+        .startmenue-gross { text-align: left; padding: 12px 14px; font-size: var(--fs-body-lg); font-weight: 800; }
+        .startmenue-gross span { display: block; font-size: var(--fs-small); font-weight: 400; color: inherit; opacity: 0.85; margin-top: 3px; }
+        .startmenue-kopf { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+        .startmenue-zurueck { flex: 0 0 auto; width: auto; padding: 6px 12px; }
+        .startmenue-titel { font-size: var(--fs-title); font-weight: 900; color: var(--accent); }
+        .startmenue-hinweis { font-size: var(--fs-small); color: var(--text-muted); margin: 4px 0; }
+        .startmenue-feld { display: grid; gap: 4px; font-size: var(--fs-small); font-weight: 800; margin-bottom: 6px; }
+        .startmenue-feld select { width: 100%; font-size: var(--fs-body); padding: 6px; }
+        .startmenue-ligen { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 8em), 1fr)); gap: 4px; margin: 8px 0; }
+        .startmenue-ligen button { font-size: var(--fs-caption); padding: 6px 4px; }
+        .startmenue-liste { display: grid; gap: 6px; }
+        .startmenue-verein { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 0; }
+        .startmenue-verein > div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+        .startmenue-verein > button { flex: 0 0 auto; width: auto; padding: 6px 12px; }
+        .startmenue-balken { height: 5px; border-radius: 3px; background: var(--chip-bg); margin-top: 5px; overflow: hidden; }
+        .startmenue-balken span { display: block; height: 100%; background: var(--accent); }
+        .startmenue-job { margin: 0; }
+        .startmenue-job-kopf { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+        .startmenue-job-auftrag { font-weight: 800; margin-top: 4px; }
+        .startmenue-job > button { margin-top: 6px; }
         .modal-avatar-photo {
             width: 84px; height: 84px; border-radius: 8px; margin: 0 auto 10px;
             background: linear-gradient(160deg, color-mix(in srgb, var(--industry) 30%, var(--surface-1)), var(--surface-0));

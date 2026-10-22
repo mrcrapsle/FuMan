@@ -842,3 +842,12 @@ Die Felder sind `role="button"` mit `tabindex="0"` und einem kleinen „›“; 
 - Stufen: Pyro (Strafe 3.000 + 1.500 je früherem Vorfall, Fans -2), Krawall (6.000 + 3.000 je Vorfall, Fans -6, Vorstand -4), schwer (wie bisher, auswärts Strafe ×1,5 statt Geisterspiel). Strafen laufen über `bucheMitLabel('Verbandsstrafe Ausschreitungen')`.
 - Fan-Dialog (3.000 €) vor einem Risikospiel ×0,6. Panel „Ausschreitungen“ in der Fan-Zentrale (Reiter Sicherheit): Risiko des nächsten Spiels mit allen Faktoren, Bewährung, Pyro-Status, Chronik.
 - Test `testAusschreitungen` ([26.25]).
+
+## Phase 26.26: Startmenü und Testangebot im Diamanten-Shop (ungemergt)
+
+- Titelbildschirm bei jedem Start (`js/startmenue.js`): Weiterspielen (mit Verein, Liga, Saison, Spieltag), Neue Karriere, Spielstand laden (Slots, Autosave, Datei). Beim ersten Start ohne Spielstand kein Weiterspielen; das Tutorial kommt erst nach der Wahl.
+- Neue Karriere: Heimatstadt plus drei Arten. Verein gründen nutzt den bisherigen Neues-Spiel-Kasten und neu einen eigenen Vereinsnamen (statt immer „1.FC Moritz …“), beim ersten Start ohne Rückfrage. Verein übernehmen: Neustart mit frischen Ligen der Stadt, dann freie Wahl aus allen sechs Ligen (Favorit/Mittelfeld/Abstiegskandidat, Stärkebalken). Trainer gesucht: je Karriere-Szenario ein passender Verein der Szenario-Liga (Absteiger/Pleite: schwache Vereine, Meister: Favoriten) mit Ziel und Frist.
+- Antritt bei einem bestehenden Verein über `switchToClub()`, Startkapital, Stadion und Lizenz wie beim Start in dieser Liga; der automatisch angelegte Startverein bleibt unter neuem Namen als Gegner.
+- „Neue Karriere starten“ (früher „Neues Spiel starten“) öffnet das Menü bei der Karriere-Wahl.
+- Testangebot im Diamanten-Shop: 1.000 Diamanten gegen 2 Mio. € (`TESTANGEBOT_DIAMANTEN_GELD`).
+- Test `testStartmenue` ([26.26]); die übrigen Suiten starten ohne Menü (`window.anstossOhneStartmenue`).

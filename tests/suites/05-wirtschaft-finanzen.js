@@ -1244,6 +1244,8 @@ async function testStadiumAusbau2(browser) {
     await page.evaluate(() => closeTutorial());
     await page.evaluate(() => showScreen('screen-dashboard'));
     await page.click('#btn-new-game');
+    // Seit dem Startmenü: erst die Karriere-Art wählen, "Verein gründen" zeigt den Einstellungs-Kasten
+    await page.click('#startmenue-gruenden');
     await page.waitForFunction(() => { const b = document.getElementById('btn-confirm-new-game'); return !!b && b.offsetParent !== null; }, null, { timeout: 5000 }).catch(() => null);
     await page.evaluate(() => { selectedNewGameLevel = 3; selectedNewGameMoney = 300000; renderNewGameSetupOptions(); });
     await page.click('#btn-confirm-new-game');
