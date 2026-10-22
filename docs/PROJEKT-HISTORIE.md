@@ -888,3 +888,12 @@ Test `testEinsteiger` ([26.27]), `testStartmenue` prüft Einsteiger-Modus und St
 - Veraltetes korrigiert: Heimatstadt und Karriere-Szenarien verweisen aufs Startmenü (Trainer gesucht), Speichern nennt „Weiterspielen“, Fanstimmung den Einfluss verärgerter Ultras auf Ausschreitungen.
 - Ansicht: Anzahl je Kategorie, Filter „🆕 Neu“ (Feld `neu`), „Neu“-Chip am Eintrag, Sprungknopf mit Ziel („➜ Zum Kader“ statt „Zum Bildschirm“).
 - `testLexicon` prüft neue Einträge, Neu-Filter, Anzahl und Sprungziel; `testLexiconEnglish` die Übersetzungen.
+
+## Phase 26.29: 3D-Livespiel (ungemergt, Board-Karte tmvjy5q6ljhwr)
+
+- Neues Modul `js/live-3d.js`: Canvas-Ansicht mit echter Perspektive (Kamera 45 m hinter der nahen Seitenlinie, an der nahen Linie 58 m im Bild), Tribüne mit Zuschauern, Rasen mit Mähstreifen, Linien, Strafräume, Tore mit Netz.
+- 22 Figuren mit Schatten, Laufanimation, Trikot in Vereinsfarbe (auswärts Auswärtsfarbe, Gegner mit gut unterscheidbarer Farbe), Torhüter in eigener Farbe. Grundordnung je Team, zur Ballseite verschoben, das Team im Ballbesitz rückt auf, der nächste Gegenspieler presst. Ruhiges Passspiel mit Ballverlusten zwischen den Szenen.
+- Szenen aus dem echten Spiel: Tor (Kombination über zwei Stationen, Schuss, Jubel, Anstoß), Chance (gehalten oder knapp vorbei, Torwart hechtet), Karte (Spielunterbrechung, Karte über dem Spieler), Halbzeit (Seitenwechsel), Abpfiff. Hinkt die Ansicht dem Ticker hinterher, läuft sie doppelt so schnell und lässt alte Chancen weg.
+- Leistung: rund 1-2 ms je Bild; der Lauf endet beim Verlassen des Livespiels und bei verstecktem Tab. Reduzierte Bewegung: nur Einzelbilder bei Ereignissen.
+- Umschalter „Taktiktafel zeigen / 3D-Ansicht zeigen“, gemerkt in `anstoss_fm13_live3d`.
+- Test `testLive3D` ([26.29]).

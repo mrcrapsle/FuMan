@@ -1076,6 +1076,10 @@
         .nav-btn.nav-gesperrt { opacity: 0.75; }
         .nav-btn.nav-gesperrt::after { content: "🔒"; margin-left: auto; }
         .lexikon-anzahl { font-size: var(--fs-micro); opacity: 0.8; }
+        /* 3D-Livespiel (js/live-3d.js) */
+        .live-3d-canvas { display: block; width: 100%; border-radius: 12px; margin-bottom: 6px; box-shadow: 0 4px 14px color-mix(in srgb, var(--shade) 60%, transparent); }
+        .live-3d-canvas[hidden] { display: none; }
+        .live-3d-umschalter { width: auto; font-size: var(--fs-caption); padding: 4px 10px; margin-bottom: 6px; }
         .kader-feinheiten > summary { cursor: pointer; list-style: revert; }
         .office-quicknav-btn small { display: block; font-size: var(--fs-micro); font-weight: 400; opacity: 0.85; }
         .modal-avatar-photo {

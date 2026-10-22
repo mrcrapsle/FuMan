@@ -125,6 +125,7 @@ async function main() {
         S.testAusschreitungen,
         S.testStartmenue,
         S.testEinsteiger,
+        S.testLive3D,
         S.testAdminWerkzeuge,
         S.testPrivatlebenPlus,
         S.testOeffentlicheFassung,

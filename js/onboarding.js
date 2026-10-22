@@ -51,6 +51,7 @@ function onScreenShown(screenId) {
     if (screenId === 'screen-sponsors') markOnboardingStep('finanzen');
     if (game.matchday > 1 || game.season > 1) markOnboardingStep('spiel');
     if (screenId === 'screen-prematch-press' && typeof renderEinsteigerSpieltag === 'function') renderEinsteigerSpieltag();
+    if (screenId === 'screen-matchday' && typeof live3dAnzeigen === 'function') live3dAnzeigen();
     const screen = document.getElementById(screenId);
     if (!screen) return;
     let hint = screen.querySelector(':scope > .screen-hint');

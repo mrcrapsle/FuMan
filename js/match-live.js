@@ -304,7 +304,7 @@
         // optisch mitverfolgen kann, wo gerade gespielt wird - Richtung/Position hängt vom
         // Spielgeschehen dieses Spielzugs ab (Angriff Richtung Tor bei einer Chance/einem Tor,
         // sonst eher Mittelfeld-Gerangel).
-        animateLiveBall(eventHandled ? (Math.random() < userFavoredProb ? 'home' : 'away') : (diff > 8 ? 'home' : (diff < -8 ? 'away' : 'midfield')));
+        animateLiveBall(eventHandled ? (Math.random() < userFavoredProb ? 'home' : 'away') : (diff > 8 ? 'home' : (diff < -8 ? 'away' : 'midfield')), eventHandled);
 
         if (currentMatch.minute >= 90) { endMatchSimulation(); }
         // Co-Trainer im Livespiel (js/co-trainer-live.js): Hinweis aus dem echten Spielstand.
@@ -315,7 +315,9 @@
     // Bewegt einen kleinen Ball-Indikator über das Live-Spielfeld (per CSS-Transition), damit
     // jeder Spielzug auch optisch als "hier passiert gerade etwas" wahrnehmbar ist, statt nur
     // als Text im Ticker zu erscheinen.
-    function animateLiveBall(direction) {
+    function animateLiveBall(direction, ereignis) {
+        // 3D-Ansicht (js/live-3d.js): Chancen und Tore als Szene
+        if (typeof live3dSpielzug === 'function') live3dSpielzug(direction, ereignis);
         let ball = document.getElementById('live-ball-indicator');
         if (!ball) return;
         let top, left;

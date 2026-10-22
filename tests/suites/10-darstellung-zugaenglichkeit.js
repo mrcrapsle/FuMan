@@ -22,7 +22,7 @@ function findeFesteFarben() {
     const fs = require('fs');
     const root = path.join(TESTS_DIR, '..');
     const literal = /#[0-9a-fA-F]{6}\b|#[0-9a-fA-F]{3}\b|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+/g;
-    const ausnahmeDateien = ['avatars.js', 'office.js', 'office-events.js', 'crest.js', 'stadium.js', 'career.js', 'design-settings.js'];
+    const ausnahmeDateien = ['avatars.js', 'office.js', 'office-events.js', 'crest.js', 'stadium.js', 'career.js', 'design-settings.js', 'live-3d.js'];
     const ausnahmeZeile = /ctx\.|fillStyle|strokeStyle|addColorStop|crest|theme-color|^\s*(\/\/|\*|\/\*)/i;
     const funde = [];
     const pruefe = (datei, text) => text.split('\n').forEach((zeile, i) => {

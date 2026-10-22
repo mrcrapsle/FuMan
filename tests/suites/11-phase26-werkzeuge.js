@@ -3962,6 +3962,72 @@ async function testEinsteiger(browser) {
     await page.close();
 }
 
+async function testLive3D(browser) {
+    console.log('\n[26.29] 3D-Livespiel: Figuren, Szenen aus dem Spielgeschehen, Umschalten, reduzierte Bewegung');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false; safeLocalRemove('anstoss_fm13_live3d');
+        document.documentElement.setAttribute('data-motion', 'normal');
+        startMatchdayFlow(); skipPressAndPlay(); stopLiveTickerAutoplay();
+    });
+    await page.waitForFunction(() => typeof live3d !== 'undefined' && live3d && live3d.frames > 5, null, { timeout: 8000 }).catch(() => null);
+    const r = await page.evaluate(() => {
+        const out = {};
+        const c = document.getElementById('live-3d-canvas');
+        out.laeuft = !!live3d && live3d.laeuft && live3d.frames > 5 && live3d.match === currentMatch;
+        out.canvas = !c.hidden && c.width > 0 && c.height > 0 && document.querySelector('#screen-matchday .live-stadium-frame').style.display === 'none';
+        out.figuren = live3d.spieler.length === 22 && live3d.spieler.filter(p => p.torwart).length === 2;
+        // Perspektive: nah ist größer als fern, beide Tore im Bild, wenn die Kamera mittig steht
+        live3d.kameraX = 52.5;
+        const P = live3dProjektion(390, 234);
+        out.perspektive = live3dPunkt(P, 52.5, 68).s > live3dPunkt(P, 52.5, 0).s * 2 && live3dPunkt(P, 0, 0).x > -40 && live3dPunkt(P, 105, 0).x < 430;
+        // Szenen aus dem Spielgeschehen
+        const vorher = live3d.szenen.length + (live3d.szene ? 1 : 0);
+        currentMatch.homeGoals++;
+        live3dPruefeSpielstand();
+        out.torSzene = live3d.szenen.some(x => x.art === 'tor' && x.team === 0) || (live3d.szene && live3d.szene.art === 'tor');
+        live3dSpielzug('away', true);
+        out.chance = live3d.szenen.some(x => x.art === 'chance') || (live3d.szene && live3d.szene.art === 'chance');
+        live3dSpielzug('home', false);
+        out.keineLeerChance = live3d.szenen.length + (live3d.szene ? 1 : 0) <= vorher + 2;
+        currentMatch.homeGoals--;
+        live3d.letzteTore = [currentMatch.homeGoals, currentMatch.awayGoals];
+        // Zeitraffer: Szene läuft durch bis zum Jubel
+        live3d.szenen = [{ art: 'tor', team: 1 }]; live3d.szene = null; live3d.jubelEnde = 0; live3d.ball.flug = null;
+        let jubel = false;
+        for (let i = 0; i < 400; i++) { live3dSchritt(0.05); if (live3d.spieler.some(p => p.jubel > 0 && p.team === 1)) { jubel = true; break; } }
+        out.jubel = jubel && (live3d.text === 'TOR!' || live3d.text === 'Gegentor');
+        out.ballImFeld = live3d.ball.x >= -3 && live3d.ball.x <= 108 && live3d.ball.y >= -1 && live3d.ball.y <= 69;
+        // Ein Bild dauert wenige Millisekunden
+        const ctx = c.getContext('2d');
+        const t0 = performance.now(); for (let i = 0; i < 30; i++) live3dZeichnen(ctx, P);
+        out.ms = (performance.now() - t0) / 30;
+        out.schnell = out.ms < 12;
+        // Umschalten auf die Taktiktafel und zurück
+        live3dUmschalten();
+        out.tafel = c.hidden && document.querySelector('#screen-matchday .live-stadium-frame').style.display === '' && safeLocalGet('anstoss_fm13_live3d') === '0' && !live3d.laeuft;
+        live3dUmschalten();
+        out.zurueck = !c.hidden && safeLocalGet('anstoss_fm13_live3d') === '1';
+        // Reduzierte Bewegung: kein Dauerlauf, Szenen springen ans Ende
+        document.documentElement.setAttribute('data-motion', 'reduziert');
+        live3d.laeuft = false; live3dAnzeigen();
+        live3dSzene({ art: 'chance', team: 0 });
+        out.reduziert = !live3d.laeuft && !live3d.szene && live3d.szenen.length === 0;
+        clearInterval(live3d.intervall);
+        document.documentElement.setAttribute('data-motion', 'normal');
+        return out;
+    });
+    // Läuft nicht weiter, wenn das Livespiel verlassen wird
+    await page.evaluate(() => { live3dAnzeigen(); showScreen('screen-dashboard'); });
+    await page.waitForFunction(() => !live3d.laeuft, null, { timeout: 3000 }).catch(() => null);
+    r.stopptAusserhalb = await page.evaluate(() => !live3d.laeuft);
+    const K = ['laeuft', 'canvas', 'figuren', 'perspektive', 'torSzene', 'chance', 'keineLeerChance', 'jubel', 'ballImFeld', 'schnell', 'tafel', 'zurueck', 'reduziert', 'stopptAusserhalb'];
+    assert(K.every(k => r[k] === true), `3D-Livespiel: Figuren, Szenen, Umschalten, reduzierte Bewegung, Leistung ${r.ms ? r.ms.toFixed(1) : '?'} ms/Bild (${JSON.stringify(K.map(k => r[k]))})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 module.exports = {
     testSpielvorbereitung,
     testVertragsWerkzeuge,
@@ -3988,6 +4054,7 @@ module.exports = {
     testAusschreitungen,
     testStartmenue,
     testEinsteiger,
+    testLive3D,
     testAdminWerkzeuge,
     testPrivatlebenPlus,
     testOeffentlicheFassung,
