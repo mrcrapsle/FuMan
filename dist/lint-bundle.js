@@ -22425,7 +22425,7 @@ function renderFreischaltUebersicht() {
 
 /* eslint-enable */
 // Ausschreitungen (Board-Karte "Ausschreitungen mehr ausbauen"):
-// - Risiko nicht mehr nur im Heim-Derby: auch Auswärts-Derbys und Brisanzspiele
+// - Risiko nicht mehr nur im Heim-Derby: auch Auswärts-Derbys, Fan-Feindschaften (FAN_FEINDSCHAFTEN) und Brisanzspiele
 //   (Spitzenspiel oder Abstiegsduell, beide Teams oben bzw. unten) können eskalieren.
 // - Drei Stufen: Pyro (leicht), Krawall (mittel), schwere Ausschreitungen (Geisterspiel daheim).
 // - Fanprojekt und gelockertes Pyro-Verbot wirken jetzt wirklich, dazu Fan-Dialog vor einem
@@ -22438,6 +22438,35 @@ const AUSSCHREITUNG_STUFEN = {
     schwer: { name: '🔥 Schwere Ausschreitungen', ton: 'schlecht' }
 };
 const FAN_DIALOG_KOSTEN = 3000;
+
+// Fan-Feindschaften: keine Derbys (die regelt isDerbyMatch in js/club-geo.js), aber verfeindete Fanszenen.
+// Risikospiel mit 8 % daheim und 4 % auswärts. Namen wie im Spiel (leicht verfremdet).
+const FAN_FEINDSCHAFTEN = [
+    // Nordost
+    ['BFC Dynamoo', 'Lokomotiv Leipzich', 'Ost-Feindschaft'], ['BFC Dynamoo', 'Dynamo Dressden', 'Dynamo-Duell'], ['BFC Dynamoo', 'FC Energie Cotbus', 'Ost-Feindschaft'],
+    ['Lokomotiv Leipzich', 'Hallescher FK 96', 'Mitteldeutsche Feindschaft'], ['Lokomotiv Leipzich', 'Carl Zeiss Jenna', 'Mitteldeutsche Feindschaft'],
+    ['BSG Chemie Leipzich', 'Carl Zeiss Jenna', 'Mitteldeutsche Feindschaft'], ['BSG Chemie Leipzich', 'Hallescher FK 96', 'Mitteldeutsche Feindschaft'],
+    ['Chemnitzer FCC', 'Lokomotiv Leipzich', 'Sachsen-Feindschaft'], ['Chemnitzer FCC', 'FSV Zwikau', 'Westsachsen-Feindschaft'],
+    ['FC Energie Cotbus', 'SV Babelsbergh 03', 'Brandenburg-Feindschaft'], ['Hansa Rostok', 'SV Babelsbergh 03', 'Ost-Feindschaft'],
+    ['1. FC Magdeborg', 'FC Energie Cotbus', 'Ost-Feindschaft'], ['Carl Zeiss Jenna', 'Hallescher FK 96', 'Mitteldeutsche Feindschaft'],
+    // Nord
+    ['VfB Oldenborg', 'SV Meppenn', 'Nordwest-Feindschaft'], ['VfB Oldenborg', 'VfL Osnabruk', 'Nordwest-Feindschaft'], ['VfB Oldenborg', 'Kickers Emdenn', 'Ostfriesland-Feindschaft'],
+    ['Eintracht Braunschweigh', 'VfL Osnabruk', 'Nord-Feindschaft'], ['Hansa Rostok', 'VfB Lubek', 'Ostsee-Feindschaft'],
+    // West
+    ['Rot-Weiss Essn', 'Alemannia Aachn', 'West-Feindschaft'], ['Rot-Weiss Essn', 'Wuppertaler SVV', 'West-Feindschaft'], ['KFC Uerdingenn 05', 'Fortuna Dusseldorf', 'Niederrhein-Feindschaft'],
+    ['Rot-Weiss Oberhausn', 'MSV Duisborg', 'Niederrhein-Feindschaft'], ['SC Verll', 'SC Wiedenbruk', 'OWL-Feindschaft'], ['Alemannia Aachn', 'Fortuna Kohln', 'Rheinland-Feindschaft'],
+    // Südwest
+    ['Kickers Offenbachh', 'SV Waldhof Manheim', 'Südwest-Feindschaft'], ['Kickers Offenbachh', 'FSV Frankfurtt', 'Main-Feindschaft'], ['SV Waldhof Manheim', '1. FC Kaiserslauten', 'Südwest-Feindschaft'],
+    ['Eintracht Trierr', '1. FC Saarbrukken', 'Mosel-Saar-Feindschaft'], ['FK Pirmasenss', '1. FC Kaiserslauten', 'Pfalz-Feindschaft'], ['Stuttgarter Kikkers', 'SSV Ulm 1847', 'Schwaben-Feindschaft'],
+    // Bayern
+    ['TSV 1861 Munchen', 'FC Augsburgh', 'Bayern-Feindschaft'], ['TSV 1861 Munchen', 'SpVgg Unterhachingen', 'Münchner Vorort-Feindschaft'], ['TSV 1861 Munchen', 'Turkgucu Munchen', 'Münchner Feindschaft'],
+    ['SpVgg Bayreuthh', 'SpVgg Bayern Hoff', 'Oberfranken-Feindschaft'], ['SpVgg Bayreuthh', '1. FC Nurnberg', 'Franken-Feindschaft']
+];
+
+function getFanFeindschaft(a, b) {
+    const f = FAN_FEINDSCHAFTEN.find(([x, y]) => (x === a && y === b) || (x === b && y === a));
+    return f ? f[2] : null;
+}
 
 function ensureAusschreitungState() {
     if (!Array.isArray(game.ausschreitungen)) game.ausschreitungen = [];
@@ -22474,12 +22503,14 @@ function getAusschreitungsLage(ctx) {
     ensureAusschreitungState();
     const faktoren = [];
     const derby = typeof isDerbyOpponent === 'function' && isDerbyOpponent(ctx.gegner);
-    const brisanz = derby ? null : getAusschreitungBrisanz(ctx.gegner);
+    const feindschaft = derby ? null : getFanFeindschaft(game.clubName, ctx.gegner);
+    const brisanz = derby || feindschaft ? null : getAusschreitungBrisanz(ctx.gegner);
     let chance = 0;
     if (derby && ctx.heim) { chance = 0.12; faktoren.push('Heim-Derby'); }
     else if (derby) { chance = 0.06; faktoren.push('Auswärts-Derby'); }
+    else if (feindschaft) { chance = ctx.heim ? 0.08 : 0.04; faktoren.push(`Fan-Feindschaft (${feindschaft})`); }
     else if (brisanz) { chance = ctx.heim ? 0.04 : 0.025; faktoren.push(brisanz); }
-    if (chance === 0) return { chance: 0, faktoren, derby, brisanz };
+    if (chance === 0) return { chance: 0, faktoren, derby, brisanz, feindschaft };
 
     const mal = (f, text) => { chance *= f; faktoren.push(`${text} ×${f.toLocaleString('de-DE', { maximumFractionDigits: 2 })}`); };
     if (ctx.heim) {
@@ -22500,7 +22531,7 @@ function getAusschreitungsLage(ctx) {
     if (ultras && ultras.mood < 35) mal(1.25, 'Ultras verärgert');
     if (getAusschreitungBewaehrung() >= 2) mal(1.2, 'Bewährung');
     if (typeof ctx.tordiff === 'number' && ctx.tordiff <= -3) mal(1.3, 'Klatsche');
-    return { chance: Math.min(0.5, chance), faktoren, derby, brisanz };
+    return { chance: Math.min(0.5, chance), faktoren, derby, brisanz, feindschaft };
 }
 
 function pruefeAusschreitungen(ctx) {
@@ -38052,7 +38083,7 @@ const LEXICON_ENTRIES = [
         text: 'Drei Speicher-Slots plus automatisches Speichern alle 5 Spieltage. Beim Start lädt das Spiel den zuletzt gespeicherten Stand - ist er beschädigt, den nächstneueren heilen - und bietet ihn im Startmenü unter „Weiterspielen“ an. Jeder Stand wird vor dem Laden geprüft: kaputte Stände lassen das laufende Spiel unangetastet, kleine Schäden werden repariert. Vor dem Laden, dem Überschreiben eines Slots und einem neuen Spiel entsteht eine Sicherheitskopie.',
         tips: ['Wenn der Browser das Speichern blockiert, Spielstand als Datei exportieren', 'In der Dateivorschau mancher Handys geht Speichern nicht - im Browser öffnen', 'Der Füllstand steht unter den Speicherständen - ab 80 % warnt das Spiel, bei vollem Speicher weicht zuerst die Sicherheitskopie', 'Nur eine exportierte Datei übersteht das Leeren des Browserspeichers - das Spiel erinnert alle 3 Saisons daran'] },
     { cat: 'Verein', title: 'Ausschreitungen & Sicherheit', screen: 'screen-fans', neu: true,
-        text: 'Nach eigenen Ligaspielen kann es im Fanblock krachen: im Heim-Derby mit 12 % Grundrisiko, im Auswärts-Derby mit 6 %, in Spitzenspielen und Abstiegsduellen (beide Teams oben oder unten, ab Spieltag 5) mit 4 % daheim und 2,5 % auswärts. Normale Spiele bleiben ruhig. Es gibt drei Stufen: Pyro (kleine Strafe), Krawall (Strafe, Fans und Vorstand verlieren) und schwere Ausschreitungen (daheim folgt ein Geisterspiel). Die Fan-Zentrale zeigt im Reiter Sicherheit das Risiko des nächsten Spiels mit allen Faktoren und die Chronik.',
+        text: 'Nach eigenen Ligaspielen kann es im Fanblock krachen: im Heim-Derby mit 12 % Grundrisiko, im Auswärts-Derby mit 6 %, gegen Vereine mit verfeindeter Fanszene (Fan-Feindschaft, z. B. BFC gegen Lok Leipzig) mit 8 % daheim und 4 % auswärts, in Spitzenspielen und Abstiegsduellen (beide Teams oben oder unten, ab Spieltag 5) mit 4 % daheim und 2,5 % auswärts. Normale Spiele bleiben ruhig. Es gibt drei Stufen: Pyro (kleine Strafe), Krawall (Strafe, Fans und Vorstand verlieren) und schwere Ausschreitungen (daheim folgt ein Geisterspiel). Die Fan-Zentrale zeigt im Reiter Sicherheit das Risiko des nächsten Spiels mit allen Faktoren und die Chronik.',
         tips: ['Ordner, Sicherheitstechnik und das Sicherheitskonzept der Derby-Woche wirken nur daheim', 'Fanprojekt ×0,75, Fanbeauftragter ×0,7, Fan-Dialog vor dem Spiel (3.000 €) ×0,6', 'Pyro-Verbot lockern ×1,4 für 3 Heimspiele, verärgerte Ultras (unter 35 %) ×1,25, Klatsche ×1,3', 'Ab 2 Krawallen in dieser und der Vorsaison gilt Bewährung: Risiko ×1,2 und schwerere Folgen'] },
     { cat: 'Karriere', title: 'Freischaltungen', screen: 'screen-dashboard', neu: true,
         text: 'Einige Bereiche öffnen sich erst im Laufe der Karriere: Sportwetten, zweite Mannschaft, Frauen, Immobilien, Stadion-Anlagen, Aktien, große Ausbauprojekte, Holding und Industrie. Die Bedingungen hängen an gespielten Ligaspielen, Ligen, Trophäen und dem Manager-Level. Was offen ist, bleibt offen, auch nach einem Vereinswechsel.',
@@ -38347,7 +38378,7 @@ const LEXICON_EN = {
         text: 'Three save slots plus automatic saving every 5 matchdays. At start-up the game loads the most recently saved game - if it is damaged, the next most recent intact one - and offers it under “Continue” in the start menu. Every save is checked before loading: broken saves leave the running game untouched, small damage is repaired. Before loading, overwriting a slot and a new game a backup is made.',
         tips: ['If the browser blocks saving, export the game as a file', 'In the file preview of some phones saving does not work - open it in the browser', 'The fill level is shown below the save slots - from 80 % the game warns, when storage is full the backup goes first', 'Only an exported file survives clearing the browser storage - the game reminds you every 3 seasons'] },
     'Ausschreitungen & Sicherheit': { title: 'Riots & security',
-        text: 'After your own league matches trouble can break out in the stands: in a home derby with a 12 % base risk, in an away derby with 6 %, in top matches and relegation battles (both teams at the top or bottom, from matchday 5) with 4 % at home and 2.5 % away. Normal matches stay calm. There are three levels: pyro (small fine), brawl (fine, fans and board lose) and serious riots (at home a closed-doors match follows). The fan centre shows the risk of the next match with all factors and the history in the Security tab.',
+        text: 'After your own league matches trouble can break out in the stands: in a home derby with a 12 % base risk, in an away derby with 6 %, against clubs with a hostile fan scene (fan feud, e.g. BFC against Lok Leipzig) with 8 % at home and 4 % away, in top matches and relegation battles (both teams at the top or bottom, from matchday 5) with 4 % at home and 2.5 % away. Normal matches stay calm. There are three levels: pyro (small fine), brawl (fine, fans and board lose) and serious riots (at home a closed-doors match follows). The fan centre shows the risk of the next match with all factors and the history in the Security tab.',
         tips: ['Stewards, security technology and the derby week security plan only work at home', 'Fan project ×0.75, fan liaison ×0.7, fan dialogue before the match (3,000 €) ×0.6', 'Relaxing the pyro ban ×1.4 for 3 home matches, angry ultras (below 35 %) ×1.25, heavy defeat ×1.3', 'From 2 brawls in this and last season you are on probation: risk ×1.2 and harsher consequences'] },
     'Freischaltungen': { title: 'Unlocks',
         text: 'Some areas only open during your career: sports betting, second team, women, real estate, stadium facilities, shares, large construction projects, holding and industry. The conditions depend on league matches played, leagues, trophies and the manager level. What is open stays open, even after changing clubs.',

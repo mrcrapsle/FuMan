@@ -1,5 +1,5 @@
 // Ausschreitungen (Board-Karte "Ausschreitungen mehr ausbauen"):
-// - Risiko nicht mehr nur im Heim-Derby: auch Auswärts-Derbys und Brisanzspiele
+// - Risiko nicht mehr nur im Heim-Derby: auch Auswärts-Derbys, Fan-Feindschaften (FAN_FEINDSCHAFTEN) und Brisanzspiele
 //   (Spitzenspiel oder Abstiegsduell, beide Teams oben bzw. unten) können eskalieren.
 // - Drei Stufen: Pyro (leicht), Krawall (mittel), schwere Ausschreitungen (Geisterspiel daheim).
 // - Fanprojekt und gelockertes Pyro-Verbot wirken jetzt wirklich, dazu Fan-Dialog vor einem
@@ -12,6 +12,35 @@ const AUSSCHREITUNG_STUFEN = {
     schwer: { name: '🔥 Schwere Ausschreitungen', ton: 'schlecht' }
 };
 const FAN_DIALOG_KOSTEN = 3000;
+
+// Fan-Feindschaften: keine Derbys (die regelt isDerbyMatch in js/club-geo.js), aber verfeindete Fanszenen.
+// Risikospiel mit 8 % daheim und 4 % auswärts. Namen wie im Spiel (leicht verfremdet).
+const FAN_FEINDSCHAFTEN = [
+    // Nordost
+    ['BFC Dynamoo', 'Lokomotiv Leipzich', 'Ost-Feindschaft'], ['BFC Dynamoo', 'Dynamo Dressden', 'Dynamo-Duell'], ['BFC Dynamoo', 'FC Energie Cotbus', 'Ost-Feindschaft'],
+    ['Lokomotiv Leipzich', 'Hallescher FK 96', 'Mitteldeutsche Feindschaft'], ['Lokomotiv Leipzich', 'Carl Zeiss Jenna', 'Mitteldeutsche Feindschaft'],
+    ['BSG Chemie Leipzich', 'Carl Zeiss Jenna', 'Mitteldeutsche Feindschaft'], ['BSG Chemie Leipzich', 'Hallescher FK 96', 'Mitteldeutsche Feindschaft'],
+    ['Chemnitzer FCC', 'Lokomotiv Leipzich', 'Sachsen-Feindschaft'], ['Chemnitzer FCC', 'FSV Zwikau', 'Westsachsen-Feindschaft'],
+    ['FC Energie Cotbus', 'SV Babelsbergh 03', 'Brandenburg-Feindschaft'], ['Hansa Rostok', 'SV Babelsbergh 03', 'Ost-Feindschaft'],
+    ['1. FC Magdeborg', 'FC Energie Cotbus', 'Ost-Feindschaft'], ['Carl Zeiss Jenna', 'Hallescher FK 96', 'Mitteldeutsche Feindschaft'],
+    // Nord
+    ['VfB Oldenborg', 'SV Meppenn', 'Nordwest-Feindschaft'], ['VfB Oldenborg', 'VfL Osnabruk', 'Nordwest-Feindschaft'], ['VfB Oldenborg', 'Kickers Emdenn', 'Ostfriesland-Feindschaft'],
+    ['Eintracht Braunschweigh', 'VfL Osnabruk', 'Nord-Feindschaft'], ['Hansa Rostok', 'VfB Lubek', 'Ostsee-Feindschaft'],
+    // West
+    ['Rot-Weiss Essn', 'Alemannia Aachn', 'West-Feindschaft'], ['Rot-Weiss Essn', 'Wuppertaler SVV', 'West-Feindschaft'], ['KFC Uerdingenn 05', 'Fortuna Dusseldorf', 'Niederrhein-Feindschaft'],
+    ['Rot-Weiss Oberhausn', 'MSV Duisborg', 'Niederrhein-Feindschaft'], ['SC Verll', 'SC Wiedenbruk', 'OWL-Feindschaft'], ['Alemannia Aachn', 'Fortuna Kohln', 'Rheinland-Feindschaft'],
+    // Südwest
+    ['Kickers Offenbachh', 'SV Waldhof Manheim', 'Südwest-Feindschaft'], ['Kickers Offenbachh', 'FSV Frankfurtt', 'Main-Feindschaft'], ['SV Waldhof Manheim', '1. FC Kaiserslauten', 'Südwest-Feindschaft'],
+    ['Eintracht Trierr', '1. FC Saarbrukken', 'Mosel-Saar-Feindschaft'], ['FK Pirmasenss', '1. FC Kaiserslauten', 'Pfalz-Feindschaft'], ['Stuttgarter Kikkers', 'SSV Ulm 1847', 'Schwaben-Feindschaft'],
+    // Bayern
+    ['TSV 1861 Munchen', 'FC Augsburgh', 'Bayern-Feindschaft'], ['TSV 1861 Munchen', 'SpVgg Unterhachingen', 'Münchner Vorort-Feindschaft'], ['TSV 1861 Munchen', 'Turkgucu Munchen', 'Münchner Feindschaft'],
+    ['SpVgg Bayreuthh', 'SpVgg Bayern Hoff', 'Oberfranken-Feindschaft'], ['SpVgg Bayreuthh', '1. FC Nurnberg', 'Franken-Feindschaft']
+];
+
+function getFanFeindschaft(a, b) {
+    const f = FAN_FEINDSCHAFTEN.find(([x, y]) => (x === a && y === b) || (x === b && y === a));
+    return f ? f[2] : null;
+}
 
 function ensureAusschreitungState() {
     if (!Array.isArray(game.ausschreitungen)) game.ausschreitungen = [];
@@ -48,12 +77,14 @@ function getAusschreitungsLage(ctx) {
     ensureAusschreitungState();
     const faktoren = [];
     const derby = typeof isDerbyOpponent === 'function' && isDerbyOpponent(ctx.gegner);
-    const brisanz = derby ? null : getAusschreitungBrisanz(ctx.gegner);
+    const feindschaft = derby ? null : getFanFeindschaft(game.clubName, ctx.gegner);
+    const brisanz = derby || feindschaft ? null : getAusschreitungBrisanz(ctx.gegner);
     let chance = 0;
     if (derby && ctx.heim) { chance = 0.12; faktoren.push('Heim-Derby'); }
     else if (derby) { chance = 0.06; faktoren.push('Auswärts-Derby'); }
+    else if (feindschaft) { chance = ctx.heim ? 0.08 : 0.04; faktoren.push(`Fan-Feindschaft (${feindschaft})`); }
     else if (brisanz) { chance = ctx.heim ? 0.04 : 0.025; faktoren.push(brisanz); }
-    if (chance === 0) return { chance: 0, faktoren, derby, brisanz };
+    if (chance === 0) return { chance: 0, faktoren, derby, brisanz, feindschaft };
 
     const mal = (f, text) => { chance *= f; faktoren.push(`${text} ×${f.toLocaleString('de-DE', { maximumFractionDigits: 2 })}`); };
     if (ctx.heim) {
@@ -74,7 +105,7 @@ function getAusschreitungsLage(ctx) {
     if (ultras && ultras.mood < 35) mal(1.25, 'Ultras verärgert');
     if (getAusschreitungBewaehrung() >= 2) mal(1.2, 'Bewährung');
     if (typeof ctx.tordiff === 'number' && ctx.tordiff <= -3) mal(1.3, 'Klatsche');
-    return { chance: Math.min(0.5, chance), faktoren, derby, brisanz };
+    return { chance: Math.min(0.5, chance), faktoren, derby, brisanz, feindschaft };
 }
 
 function pruefeAusschreitungen(ctx) {

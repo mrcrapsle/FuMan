@@ -3716,6 +3716,14 @@ async function testAusschreitungen(browser) {
         out.derbys = heim.chance > 0 && ausw.chance > 0 && heim.faktoren.some(f => f.startsWith('Ordner')) && !ausw.faktoren.some(f => f.startsWith('Ordner'));
         fanCentralState.fanProjectFunded = true;
         out.fanprojekt = Math.abs(getAusschreitungsLage({ gegner, heim: true }).chance / heim.chance - 0.75) < 0.001;
+        // Fan-Feindschaft: kein Derby, trotzdem Risikospiel (8 % daheim, 4 % auswärts vor den Faktoren)
+        fanCentralState.fanProjectFunded = false;
+        isDerbyOpponent = () => false;
+        const nameAlt = game.clubName; game.clubName = 'BFC Dynamoo';
+        const fh = getAusschreitungsLage({ gegner: 'Lokomotiv Leipzich', heim: true }), fa = getAusschreitungsLage({ gegner: 'Lokomotiv Leipzich', heim: false });
+        out.feindschaft = fh.chance > 0 && fa.chance > 0 && fh.feindschaft === 'Ost-Feindschaft' && fh.faktoren[0].startsWith('Fan-Feindschaft')
+            && Math.abs(fa.chance - 0.04) < 0.0001 && getAusschreitungsLage({ gegner: 'Hansa Rostok', heim: true }).chance === 0 && getFanFeindschaft('Lokomotiv Leipzich', 'BFC Dynamoo') === 'Ost-Feindschaft';
+        game.clubName = nameAlt; isDerbyOpponent = (n) => n === gegner;
         fanCentralState.fanProjectFunded = false;
 
         // Pyro-Lockerung der Ultras wirkt drei Heimspiele lang
@@ -3758,7 +3766,7 @@ async function testAusschreitungen(browser) {
         isDerbyOpponent = derbyAlt;
         return out;
     });
-    const K = ['ruhig', 'derbys', 'fanprojekt', 'pyro', 'pyroZaehlt', 'leicht', 'schwer', 'auswaerts', 'bewaehrung', 'dialog', 'dialogEinmal', 'anzeige', 'layout'];
+    const K = ['ruhig', 'derbys', 'fanprojekt', 'feindschaft', 'pyro', 'pyroZaehlt', 'leicht', 'schwer', 'auswaerts', 'bewaehrung', 'dialog', 'dialogEinmal', 'anzeige', 'layout'];
     assert(K.every(k => r[k] === true), `Ausschreitungen: Risiko je Spiel, Stufen, Fanprojekt, Pyro, Bewährung, Fan-Dialog, Anzeige (${JSON.stringify(K.map(k => r[k]))})`);
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
     await page.close();

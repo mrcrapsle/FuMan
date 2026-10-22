@@ -905,3 +905,8 @@ Test `testEinsteiger` ([26.27]), `testStartmenue` prüft Einsteiger-Modus und St
 - Fan-Zentrale (Sicherheit): Stadionkarte mit Heimkurve, Gästeblock, Haupttribüne und Gegengerade, gefärbt nach dem Risiko des nächsten Spiels, mit Symbolen für die Vorfälle dieser Saison.
 - Keine Regeländerung: der Wurf bleibt nach dem Abpfiff in `processPostMatchRoutine()`.
 - Test `testAusschreitungSzene` ([26.30]); `testAusschreitungen` fängt das neue Fenster wie die alte Meldung ab.
+
+## Fan-Feindschaften als Risikospiele (ungemergt, Regeländerung auf Wunsch)
+
+- `FAN_FEINDSCHAFTEN` in `js/ausschreitungen.js`: 36 Paarungen verfeindeter Fanszenen, die keine Derbys sind (z. B. BFC gegen Lok Leipzig, Lok gegen Jena und Halle, Cottbus gegen Babelsberg, Offenbach gegen Waldhof, 1860 gegen Augsburg). Grundrisiko 8 % daheim und 4 % auswärts, zwischen Derby (12/6) und Brisanzspiel (4/2,5); alle Faktoren (Ordner, Fanprojekt, Dialog …) gelten wie gehabt. Die Fan-Zentrale nennt die Feindschaft als Faktor.
+- Lexikon (DE/EN) ergänzt, `testAusschreitungen` prüft die Feindschaft.
