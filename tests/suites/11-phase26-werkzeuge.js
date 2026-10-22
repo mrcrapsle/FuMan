@@ -1386,6 +1386,8 @@ async function testRunde30Funktionen(browser) {
 
         // --- Kader-CSV mit Startelf-Bilanz ---
         const sp = squad[0];
+        // Eindeutiger Name: die Kadernamen sind zufällig, ein zweiter Spieler mit gleichem Namensanfang traf sonst die falsche Zeile (CI)
+        const spName = sp.name; sp.name = 'Zz Bilanztest';
         sp.startBilanz = { mit: { spiele: 4, s: 3, u: 1, n: 0 }, ohne: { spiele: 2, s: 0, u: 1, n: 1 } };
         const csv = buildKaderCsv().split(/\r?\n/);
         const kopf = csv[0].split(';');
@@ -1395,6 +1397,7 @@ async function testRunde30Funktionen(browser) {
         sp.startBilanz = undefined;
         const ohneBilanz = buildKaderCsv().split(/\r?\n/).find(z => z.startsWith(sp.name + ';') || z.startsWith('"' + sp.name)).split(';');
         out.csvOhneDaten = ohneBilanz.slice(-3).join('|') === '0||';
+        sp.name = spName;
 
         // --- Notiz-Vorschläge ---
         const gegnerTeam = leaguesData[game.leagueLevel].find(t => t.name !== game.clubName);
@@ -3841,12 +3844,15 @@ async function testStartmenue(browser) {
     });
     Object.assign(r, jobs);
 
-    // Nächster Start: Titel mit Weiterspielen
-    await neuLaden(null);
-    await page.waitForFunction(() => !!document.getElementById('startmenue-weiter'), null, { timeout: 5000 }).catch(() => null);
+    // Nächster Start: Titel mit Weiterspielen. Derselbe Weg wie window.onload (Stand laden, dann Menü), aber ohne
+    // Neuladen: in CI war der Speicher nach dem Neuladen zweimal leer, obwohl er vorher geschrieben war.
+    r.startStand = await page.evaluate(() => {
+        const verein = game.clubName;
+        const geladen = loadMostRecentGame();
+        zeigeStartmenueBeimStart(false, geladen);
+        return JSON.stringify({ geladen: !!geladen, verein, nachLaden: game.clubName });
+    });
     r.weiterAngebot = await page.evaluate(() => { const b = document.getElementById('startmenue-weiter'); return !!b && b.textContent.includes(game.clubName); });
-    // Ohne den Knopf nicht 30 s warten, sondern festhalten, was beim Start fehlte
-    r.startStand = await page.evaluate(() => JSON.stringify({ offen: !document.getElementById('startmenue-overlay').hidden, schritt: startmenueSchritt, geladen: startmenueGeladen, slot1: !!safeLocalGet(SAVE_SLOT_PREFIX + '1'), verein: game.clubName, flag: window.anstossOhneStartmenue }));
     if (r.weiterAngebot) await page.click('#startmenue-weiter');
     r.weiter = r.weiterAngebot && !(await offen());
     // Laden-Seite
