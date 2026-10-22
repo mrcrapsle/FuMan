@@ -584,7 +584,7 @@ function pruefeNeuePakete() {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.143', date: '19.10.2026', features: 'Freischaltungen 2: graue Vorschau, Namensrechte, Medienrechte, Luxus, NEU, Tempo, Erfolge; Grundfassung mit drei Update-Paketen' };
+    const GAME_VERSION = { number: '3.144', date: '22.10.2026', features: 'Kopfzeilen-Fenster per Tipp (Konto, Holding, Level, Stimmung, Spieltag); Ausschreitungen ausgebaut: Auswärts-Derbys, Brisanzspiele, drei Stufen, Fan-Dialog, Bewährung, Chronik' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

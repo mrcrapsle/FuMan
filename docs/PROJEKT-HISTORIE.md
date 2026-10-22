@@ -822,7 +822,7 @@ Auf „Alle“ zu neun Vorschlägen:
    - **Probelauf:** Grundspiel, Stufe 1 und Stufe 2 jeweils eine Saison mit Abschluss, alle Bildschirme, alter Spielstand: keine Fehler, alle onclick-Funktionen vorhanden.
 - Tests: `testFreischaltungen` (12 Bereiche, Vorschau statt Ausblenden), `testFreischaltungenPlus` (2 bis 8, inklusive Spielstart mit Tempo „Schnell“ über einen echten Neustart), `testGrundfassung` (Stufe 0 und Update-Fenster in der vollen Fassung).
 
-## Phase 26.24: Kopfzeilen-Fenster (ungemergt)
+## Phase 26.24: Kopfzeilen-Fenster (Version 3.144)
 
 Wunsch aus dem Ausprobieren: Ein Tipp auf die Kennzahlen oben sollte nicht ins Leere gehen, sondern einen leichten Einstieg bieten. `js/kopfzeile-fenster.js` öffnet je Feld ein kleines Fenster (`#kopf-fenster-overlay`, ein Overlay für alle fünf) mit den wichtigsten Zahlen, einer schnellen Einstellung und dem Weg zur vollen Seite:
 
@@ -834,7 +834,7 @@ Wunsch aus dem Ausprobieren: Ein Tipp auf die Kennzahlen oben sollte nicht ins L
 
 Die Felder sind `role="button"` mit `tabindex="0"` und einem kleinen „›“; Enter/Leertaste öffnen, Escape schließt und gibt den Fokus an das Feld zurück. Ansehen ändert nichts am Spielstand. Test: `testKopfzeilenFenster`.
 
-## Phase 26.25: Ausschreitungen ausgebaut (ungemergt, Board-Karte tmvjuiapap9y9)
+## Phase 26.25: Ausschreitungen ausgebaut (Version 3.144, Board-Karte tmvjuiapap9y9)
 
 - Neues Modul `js/ausschreitungen.js` ersetzt `checkHooliganIncident()`. Bisher gab es nur einen Wurf im Heim-Derby (12 % vor Ordnern) mit immer gleicher Folge (Geisterspiel).
 - Risiko jetzt auch im Auswärts-Derby (6 %) und in Brisanzspielen (beide Top 4 oder beide letzte 4 ab Spieltag 5: 4 % daheim, 2,5 % auswärts). Ordner, Sicherheitstechnik und Derby-Woche wirken nur daheim.

@@ -3109,7 +3109,9 @@ async function testStadionWerkzeuge(browser) {
         // --- Topspiel-Zuschlag ---
         const tab = sortedTable(game.leagueLevel).filter(t => t.name !== game.clubName);
         // Spitzenteam ohne Derby, damit der Grund "Platz …" lautet (die Tabelle ist zufällig)
-        const spitze = (tab.slice(0, 3).find(t => !isDerbyOpponent(t.name)) || tab[0]).name;
+        // Top 3 der ganzen Tabelle: steht der eigene Verein darin, wäre tab[2] sonst Platz 4
+        const top3 = sortedTable(game.leagueLevel).slice(0, 3).filter(t => t.name !== game.clubName);
+        const spitze = (top3.find(t => !isDerbyOpponent(t.name)) || top3[0]).name;
         const unten = tab.slice().reverse().find(t => !isDerbyOpponent(t.name)).name;
         game.topspielZuschlag = 0;
         out.tAus = getTopspielPreisMult(spitze) === 1 && (getTopspielGrund(spitze).startsWith('Platz ') || isDerbyOpponent(spitze));
