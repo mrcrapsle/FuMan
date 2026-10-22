@@ -27,7 +27,11 @@ const SEASON_OPENING_OPTIONS = {
 };
 
 function isSeasonOpeningOpen() {
-    return game.matchday === 1 && !(game.seasonOpening && game.seasonOpening.season === game.season);
+    if (game.seasonOpening && game.seasonOpening.season === game.season) return false;
+    // Einsteiger (js/einsteiger.js): in der ersten Saison bis zum 2. Spieltag wählbar, damit die Wahl
+    // nicht gleich neben der Kurzanleitung und den Ersten Schritten steht.
+    if (typeof einsteigerAktiv === 'function' && einsteigerAktiv() && game.season === 1) return game.matchday <= 2;
+    return game.matchday === 1;
 }
 
 function chooseSeasonOpening(key) {
@@ -209,7 +213,7 @@ function renderSeasonEventsBox() {
     const box = document.getElementById('dash-season-events-box');
     if (!box) return;
     const teile = [];
-    if (isSeasonOpeningOpen()) {
+    if (isSeasonOpeningOpen() && !(typeof einsteigerSaisonEroeffnungWarten === 'function' && einsteigerSaisonEroeffnungWarten())) {
         const skala = seasonEventScale();
         teile.push(`🎉 <strong>Saisoneröffnung</strong> - wie startet ihr in die Saison?
             <div style="display:flex; flex-direction:column; gap:4px; margin-top:4px;">${Object.entries(SEASON_OPENING_OPTIONS).map(([k, o]) => {

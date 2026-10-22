@@ -3876,6 +3876,25 @@ async function testEinsteiger(browser) {
         out.profiWeg = [...document.querySelectorAll('#screen-dashboard .profi-abschnitt')].every(el => !sichtbar(el)) && document.getElementById('einsteiger-dash-hinweis').textContent.includes('Alles jetzt zeigen');
         out.ersteSchritteOben = document.getElementById('dash-onboarding-box').compareDocumentPosition(document.getElementById('manager-assistant-box')) & Node.DOCUMENT_POSITION_FOLLOWING;
         out.ersteSchritteOben = !!out.ersteSchritteOben;
+        // Was jetzt? und Nächste Begegnung direkt unter den Ersten Schritten
+        const vor = (a, b) => (document.getElementById(a).compareDocumentPosition(document.getElementById(b)) & Node.DOCUMENT_POSITION_FOLLOWING) > 0;
+        out.wasJetzt = !!document.querySelector('#was-jetzt-box .was-jetzt button') && vor('was-jetzt-box', 'dash-onboarding-box') && vor('dash-onboarding-box', 'dash-next-match-panel') && vor('dash-next-match-panel', 'manager-assistant-box');
+        // Saisoneröffnung erst nach drei Ersten Schritten, dafür bis Spieltag 2
+        const obAlt = JSON.stringify(game.onboarding);
+        game.onboarding.done = {}; game.onboarding.finished = false; game.seasonOpening = null;
+        renderSeasonEventsBox();
+        const vorher = document.getElementById('dash-season-events-box').textContent.includes('Saisoneröffnung');
+        game.onboarding.done = { kader: true, training: true, finanzen: true };
+        renderSeasonEventsBox();
+        out.eroeffnung = !vorher && document.getElementById('dash-season-events-box').textContent.includes('Saisoneröffnung');
+        game.onboarding = JSON.parse(obAlt);
+        // Gesperrte Bereiche am Ende von "Mehr" mit Schloss
+        window.anstossTestAllesFrei = false; updateUI();
+        const mehrKnoepfe = [...document.querySelectorAll('#nav-mehr button.nav-btn')];
+        const gesperrt = mehrKnoepfe.filter(b => b.classList.contains('nav-gesperrt'));
+        out.schloss = gesperrt.length > 0 && mehrKnoepfe.slice(-gesperrt.length).every(b => b.classList.contains('nav-gesperrt'));
+        window.anstossTestAllesFrei = true; updateUI();
+        out.schlossWeg = !document.querySelector('#nav-mehr .nav-gesperrt');
         out.einZiel = document.querySelectorAll('#screen-dashboard .panel-header').length > 0 && ![...document.querySelectorAll('#season-objectives-box h3')].some(h => h.textContent.includes('Saison-Ziele'));
         // Menü: Wichtig oben, Rest eingeklappt
         const nav = document.getElementById('app-sidebar');
@@ -3899,6 +3918,16 @@ async function testEinsteiger(browser) {
         document.getElementById('einsteiger-anpfiff').click();
         if (typeof simulateRestOfMatch === 'function' && game.matchday === md) simulateRestOfMatch();
         out.gespielt = true;
+        // Einordnung nach dem ersten Spiel
+        const bericht = document.getElementById('einsteiger-bericht-box').textContent;
+        out.bericht = bericht.includes('so ordnest du das ein') && bericht.includes('Noten');
+        // Hinrunde geschafft: einmaliges Fenster
+        const mdAlt = game.matchday; game.matchday = 18; game.einsteigerAbschluss = false; updateUI();
+        out.abschluss = document.getElementById('einsteiger-abschluss-overlay').classList.contains('show') && game.einsteigerAbschluss === true
+            && !document.documentElement.classList.contains('einsteiger-frueh');
+        schliesseEinsteigerAbschluss(); updateUI();
+        out.abschlussEinmal = !document.getElementById('einsteiger-abschluss-overlay').classList.contains('show');
+        game.matchday = mdAlt; updateUI();
         // Ausschalten: alles sichtbar
         setEinsteigerModus(false);
         showScreen('screen-dashboard');
@@ -3912,11 +3941,22 @@ async function testEinsteiger(browser) {
         game.onboarding.hints = {};
         showScreen('screen-squad');
         out.fachwort = !!document.querySelector('#screen-squad > .screen-hint .fachwort[data-fachwort="Tagesform"]');
+        // Englisch: neue Texte übersetzt
+        applyUiTranslation('en');
+        oeffneStartmenue('karriere');
+        updateUI();
+        // Der MutationObserver übersetzt erst nach dem Skript; hier gleich nach dem Rendern
+        translateUiSubtree(document.body, 'en');
+        const t = document.getElementById('startmenue-inhalt').textContent;
+        out.englisch = t.includes('New career') && t.includes('Found a club') && t.includes('Coach wanted') && t.includes('Beginner')
+            && document.getElementById('nav-mehr-knopf').textContent.includes('areas');
+        schliesseStartmenue();
+        applyUiTranslation('de');
         return out;
     });
-    const K = ['ohne', 'kopf', 'profiWeg', 'ersteSchritteOben', 'einZiel', 'menue', 'menueAuf', 'kader'];
+    const K = ['ohne', 'kopf', 'profiWeg', 'ersteSchritteOben', 'wasJetzt', 'eroeffnung', 'schloss', 'schlossWeg', 'einZiel', 'menue', 'menueAuf', 'kader'];
     assert(K.every(k => r[k] === true), `Einsteiger: Kopfzeile, Übersicht, Menü und Kader aufgeräumt (${JSON.stringify(K.map(k => r[k]))})`);
-    const S = ['spieltag', 'vorbereitungAuf', 'layout', 'gespielt', 'aus', 'buero', 'fachwort'];
+    const S = ['spieltag', 'vorbereitungAuf', 'layout', 'gespielt', 'bericht', 'abschluss', 'abschlussEinmal', 'aus', 'buero', 'fachwort', 'englisch'];
     assert(S.every(k => r[k] === true), `Einsteiger: kompakter Spieltag, Ausschalten, Büro-Ziele, Fachwörter (${JSON.stringify(S.map(k => r[k]))})`);
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
     await page.close();

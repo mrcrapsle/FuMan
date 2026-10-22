@@ -445,6 +445,7 @@
 
         document.getElementById('btn-next-step').style.display = 'inline-block';
         document.getElementById('btn-finish-match').style.display = 'none';
+        const einsteigerBericht = document.getElementById('einsteiger-bericht-box'); if (einsteigerBericht) einsteigerBericht.innerHTML = '';
         const teilenKnopf = document.getElementById('btn-share-match'); if (teilenKnopf) teilenKnopf.style.display = 'none';
         const notizKnopf = document.getElementById('btn-gegner-notiz'); if (notizKnopf) notizKnopf.style.display = 'none';
         document.getElementById('btn-finish-match').innerText = '✔ Spielbericht schließen';

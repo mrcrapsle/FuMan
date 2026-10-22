@@ -868,3 +868,16 @@ Analyse als Neuling (390 px, öffentliche Fassung): Start im Büro ohne Leiste, 
 10. Leitfaden für einen Kurztest mit Neulingen: `docs/EINSTEIGER-TEST.md`.
 
 Test `testEinsteiger` ([26.27]), `testStartmenue` prüft Einsteiger-Modus und Start auf der Übersicht.
+
+## Phase 26.28: Einsteiger-Hilfen, zweite Runde (ungemergt)
+
+1. „Neuer Klub gestartet!“ nur noch 1,5 s.
+2. Saisoneröffnung im Einsteiger-Modus erst nach drei erledigten Ersten Schritten, dafür in der ersten Saison bis Spieltag 2 wählbar (`isSeasonOpeningOpen()`).
+3. Fenster nach der Hinrunde (Spieltag 18, einmal, `game.einsteigerAbschluss`): Grundlagen sitzen, neue Bereiche, Einsteiger-Modus ausschalten oder anlassen.
+4. Nach den ersten zwei Ligaspielen im Einsteiger-Modus eine Einordnung im Spielbericht: Stärkevergleich, Fitness der Startelf, Notenskala mit Lexikon-Link.
+5. „Was jetzt?“ ganz oben auf der Übersicht: die wichtigste Aufgabe des Manager-Assistenten mit Knopf, sonst der nächste Spieltag.
+6. Gesperrte Bereiche stehen am Ende von „Mehr Bereiche“ mit 🔒 und Hinweis.
+7. Nächste Begegnung mit den Spielknöpfen direkt unter den Ersten Schritten (für alle).
+8. Englische Texte für Startmenü, Einsteiger-Spieltag, Menü-Gruppen, Abschluss-Fenster und Erste Schritte.
+
+`testEinsteiger` prüft alle acht Punkte.

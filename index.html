@@ -95,6 +95,12 @@
     <span id="version-display"></span>
 </div>
 <div id="app-toast" class="app-toast" role="status" aria-live="polite" aria-atomic="true"></div>
+<div id="einsteiger-abschluss-overlay" class="generic-modal-overlay">
+    <div class="generic-modal-box">
+        <button class="generic-modal-close" onclick="schliesseEinsteigerAbschluss()" title="Schließen">×</button>
+        <div id="einsteiger-abschluss-inhalt"></div>
+    </div>
+</div>
 <div id="startmenue-overlay" class="startmenue-overlay" role="dialog" aria-modal="true" aria-label="Startmenü" hidden>
     <div class="startmenue-box"><div id="startmenue-inhalt"></div></div>
 </div>
@@ -887,15 +893,9 @@
                     </div>
                     <div class="dashboard-hero-bowl-wrapper"></div>
                 </div>
+                <div id="was-jetzt-box"></div>
                 <div id="dash-onboarding-box"></div>
-                <div id="member-assembly-box" class="panel" style="display:none; border-color:var(--gold); margin-bottom:10px;"></div>
-                <div id="dashboard-freischaltung-box" style="display:none;"></div>
-                <div id="favoriten-box"></div>
-                <div id="season-review-hint"></div>
-                <div id="manager-assistant-box" class="panel" style="margin-bottom:10px;"></div>
-                <div id="season-goal-box" class="panel" style="margin-bottom:10px;"></div>
-                <div id="rest-programm-box" class="panel" style="margin-bottom:10px;"></div>
-                <div class="panel">
+                <div class="panel" id="dash-next-match-panel">
                     <div class="panel-header">
                         <span>⚽ Nächste Begegnung (Spieltag <span id="dash-mday">1</span>)</span>
                         <span id="dash-league-name" style="color:var(--text-main); font-size:var(--fs-small);">4. Liga</span>
@@ -933,6 +933,13 @@
                     </div>
                 </div>
 
+                <div id="member-assembly-box" class="panel" style="display:none; border-color:var(--gold); margin-bottom:10px;"></div>
+                <div id="dashboard-freischaltung-box" style="display:none;"></div>
+                <div id="favoriten-box"></div>
+                <div id="season-review-hint"></div>
+                <div id="manager-assistant-box" class="panel" style="margin-bottom:10px;"></div>
+                <div id="season-goal-box" class="panel" style="margin-bottom:10px;"></div>
+                <div id="rest-programm-box" class="panel" style="margin-bottom:10px;"></div>
                 <div class="panel-grid">
                     <div class="panel">
                         <div class="panel-header">🎯 Nächste Ziele</div>
@@ -2820,6 +2827,7 @@
                         <button onclick="toggleLiveTickerAutoplay()" id="btn-toggle-autoplay" class="btn-secondary">⏸ Ticker pausieren</button>
                         <button onclick="simulateRestOfMatch()" class="btn-secondary">⚡ Spiel abpfeifen</button>
                     </div>
+                    <div id="einsteiger-bericht-box"></div>
                     <div id="ref-critique-box"></div>
                     <button onclick="openShareReport()" id="btn-share-match" style="display:none;" class="btn-secondary">📤 Spielbericht teilen</button>
                     <button onclick="openNachspielNotiz()" id="btn-gegner-notiz" style="display:none;" class="btn-secondary">📓 Notiz zum Gegner</button>
@@ -3124,7 +3132,8 @@
                         showToast(`🆕 Neuer Job gefunden! Deine Karriere (Lvl ${managerRPG.level}) und ${game.trophies.length} Trophäe(n) bleiben erhalten.`, 'success');
                     } catch (e) { console.error('Konnte Entlassungs-Karrieredaten nicht wiederherstellen', e); }
                 } else {
-                    showToast('🆕 Neuer Klub gestartet!', 'success');
+                    // Kurz: die Kurzanleitung begrüßt ohnehin, die Meldung soll nichts verdecken.
+                    showToast('🆕 Neuer Klub gestartet!', 'success', 1500);
                 }
                 updateUI();
                 // Neue Karriere startet auf der Übersicht mit den ersten Schritten, nicht im Büro

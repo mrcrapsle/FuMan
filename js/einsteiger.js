@@ -80,6 +80,8 @@ function wendeEinsteigerAn() {
     }
     ordneMenue();
     renderEinsteigerSchalter();
+    renderWasJetzt();
+    pruefeEinsteigerAbschluss();
 }
 
 // Menü: die wichtigsten Bildschirme oben, der Rest unter "Mehr" (im Einsteiger-Modus eingeklappt).
@@ -113,9 +115,86 @@ function ordneMenue() {
         const ende = nav.querySelector(':scope > .one-hand-settings');
         while (mehr.nextSibling && mehr.nextSibling !== ende) mehr.appendChild(mehr.nextSibling);
     }
+    markiereGesperrteMenuepunkte(mehr);
     const gemerkt = safeLocalGet('anstoss_fm13_nav_mehr');
     const offen = gemerkt === null ? !einsteigerAktiv() : gemerkt === '1';
     mehr.hidden = !offen;
     const k = document.getElementById('nav-mehr-knopf');
     if (k) { k.setAttribute('aria-expanded', String(offen)); k.textContent = offen ? '▴ Weniger anzeigen' : '▾ Mehr Bereiche'; }
+}
+
+// ---------- Saisoneröffnung, Spielbericht, Abschluss ----------
+// Einsteiger: die Wahl zur Saisoneröffnung erst, wenn drei der Ersten Schritte erledigt sind
+// (sie bleibt dafür bis zum 2. Spieltag offen, js/season-events.js).
+function einsteigerSaisonEroeffnungWarten() {
+    if (!einsteigerAktiv() || game.season !== 1 || game.matchday !== 1) return false;
+    const ob = typeof ensureOnboarding === 'function' ? ensureOnboarding() : null;
+    return !!ob && !ob.finished && Object.keys(ob.done || {}).length < 3;
+}
+
+// Aus endMatchSimulation(): kurze Einordnung nach den ersten zwei Ligaspielen.
+function renderEinsteigerBericht() {
+    const box = document.getElementById('einsteiger-bericht-box');
+    if (!box) return;
+    const m = typeof currentMatch !== 'undefined' ? currentMatch : null;
+    if (!einsteigerAktiv() || game.season !== 1 || game.matchday > 2 || !m || m.cupTie) { box.innerHTML = ''; return; }
+    const unsere = m.isHome ? m.homeGoals : m.awayGoals, gegner = m.isHome ? m.awayGoals : m.homeGoals;
+    const wir = Math.round(m.isHome ? m.homeStr : m.awayStr), sie = Math.round(m.isHome ? m.awayStr : m.homeStr);
+    const elf = squad.filter(p => lineup.includes(p.id));
+    const fit = elf.length ? Math.round(elf.reduce((a, p) => a + (p.fitness || 0), 0) / elf.length) : 0;
+    const gruende = [];
+    gruende.push(wir >= sie + 2 ? `Ihr wart stärker eingeschätzt (${wir} zu ${sie}).` : (sie >= wir + 2 ? `Der Gegner war stärker eingeschätzt (${sie} zu ${wir}) - Training und Verstärkungen helfen.` : `Beide Teams waren etwa gleich stark (${wir} zu ${sie}), da entscheiden Tagesform und Glück.`));
+    if (fit && fit < 80) gruende.push(`Die Startelf hatte im Schnitt nur ${fit} % Fitness. Rotation oder das Training „Kondition“ helfen.`);
+    const fwText = (label, term) => typeof fw === 'function' ? fw(label, term) : label;
+    box.innerHTML = `<div class="box einsteiger-anleitung">🎓 <strong>${unsere > gegner ? 'Sieg' : (unsere < gegner ? 'Niederlage' : 'Unentschieden')} - so ordnest du das ein:</strong>
+        <ul>${gruende.map(g => `<li>${g}</li>`).join('')}
+        <li>Die ${fwText('Noten', 'Kicker-Noten & Elf des Spieltags')} gehen von 1 (sehr gut) bis 6 (sehr schlecht), wie im Kicker.</li></ul>
+        Mit „Spielbericht schließen“ geht es zurück zur Übersicht.</div>`;
+}
+
+// Einmal nach der Hinrunde: die Grundlagen sitzen, mehr Bereiche erscheinen.
+function pruefeEinsteigerAbschluss() {
+    if (!einsteigerAktiv() || game.einsteigerAbschluss || game.season !== 1 || game.matchday <= EINSTEIGER_FRUEH_BIS) return;
+    const ov = document.getElementById('einsteiger-abschluss-overlay');
+    if (!ov) return;
+    game.einsteigerAbschluss = true;
+    document.getElementById('einsteiger-abschluss-inhalt').innerHTML = `<div class="panel-header">🎓 Hinrunde geschafft!</div>
+        <div style="font-size:var(--fs-body); margin-bottom:8px;">Du kennst jetzt die Grundlagen. Ab sofort siehst du auf der Übersicht auch den Wochenrückblick, die Transferstrategie, Holding und Europa.</div>
+        <div style="font-size:var(--fs-body); margin-bottom:10px;">Der Einsteiger-Modus hält die Spielvorbereitung (Gegner, Ansprache, Presse) weiter eingeklappt und das Menü kurz. Du kannst ihn jetzt ausschalten oder später im Menü unter Einstellungen.</div>
+        <div class="einsteiger-knoepfe">
+            <button onclick="setEinsteigerModus(false); schliesseEinsteigerAbschluss();" class="btn-action">🧠 Einsteiger-Modus aus</button>
+            <button onclick="schliesseEinsteigerAbschluss()" class="btn-secondary">🎓 Noch anlassen</button>
+        </div>`;
+    ov.classList.add('show');
+}
+
+function schliesseEinsteigerAbschluss() {
+    const ov = document.getElementById('einsteiger-abschluss-overlay');
+    if (ov) ov.classList.remove('show');
+}
+
+// ---------- Was jetzt? ----------
+// Die eine wichtigste nächste Handlung aus dem Manager-Assistenten (js/manager-tools.js), sonst der Spieltag.
+function renderWasJetzt() {
+    const box = document.getElementById('was-jetzt-box');
+    if (!box) return;
+    if (game.matchday > 34) { box.innerHTML = ''; return; }
+    const todo = typeof getManagerTodos === 'function' ? getManagerTodos()[0] : null;
+    box.innerHTML = todo
+        ? `<div class="box was-jetzt"><span class="ui-overline">Was jetzt?</span><div>${todo.icon} ${todo.text}</div><button onclick="${todo.aktion}" class="btn-action">${todo.label}</button></div>`
+        : `<div class="box was-jetzt"><span class="ui-overline">Was jetzt?</span><div>✅ Alles erledigt. Weiter geht es mit dem ${Math.min(34, game.matchday)}. Spieltag.</div><button onclick="startMatchdayFlow()" class="btn-action">▶ Spieltag ${Math.min(34, game.matchday)}</button></div>`;
+}
+
+// ---------- Gesperrte Bereiche im Menü ----------
+function markiereGesperrteMenuepunkte(mehr) {
+    if (typeof FREISCHALT_BEREICHE === 'undefined' || typeof istFreigeschaltet !== 'function') return;
+    const gesperrt = {};
+    FREISCHALT_BEREICHE.forEach(b => { if (!istFreigeschaltet(b.key)) b.screens.forEach(sc => { gesperrt[sc] = b; }); });
+    [...mehr.querySelectorAll('button.nav-btn')].forEach(btn => {
+        const m = (btn.getAttribute('onclick') || '').match(/showScreen\('([^']+)'\)/);
+        const b = m && gesperrt[m[1]];
+        btn.classList.toggle('nav-gesperrt', !!b);
+        if (b) { btn.title = `🔒 ${b.name}: noch gesperrt. Tippen zeigt, was fehlt.`; mehr.appendChild(btn); }
+        else if (btn.title && btn.title.startsWith('🔒')) btn.removeAttribute('title');
+    });
 }
