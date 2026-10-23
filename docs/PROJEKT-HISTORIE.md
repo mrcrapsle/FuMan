@@ -969,11 +969,11 @@ Gemeldet: In der Dateivorschau der Claude-App kam man nach „Verein übernehmen
 - Die Versionsprüfung (`js/neue-version.js`) fragt in solchen Ansichten (Herkunft „null“) nicht nach.
 - Speichern bleibt dort unmöglich (localStorage gesperrt, Hinweis wie bisher). Test `testGesperrterSpeicher` sperrt beide Speicher und spielt Startmenü, Neustart und Übernahme durch.
 
-## Stadion im Dashboard als Canvas (ungemergt)
+## Stadion im Dashboard als Canvas (Version 3.152)
 
 Wunsch: Das Stadion oben im Dashboard soll wie auf der Stadionseite mit Canvas gezeichnet sein. Die CSS-Schüssel (`.dashboard-hero-bowl-wrapper`) ist dort durch `#dash-stadion-canvas` ersetzt: `stadionDashboardZeichnen()` (`js/stadion-canvas.js`) zeichnet aus `renderDashboardView()` ein Standbild mit fester Kamera (Bauart nach Größe, Ränge, Flutlicht, Dach, Wetter, Gelände-Gebäude in der Nähe). Feste Auflösung 720 × 380, die Breite folgt per CSS, es werden keine Größen gelesen; Kamera und Auswahl der Stadionansicht bleiben unberührt. Ein Tipp auf das Bild öffnet die Stadionseite. Test `testDashboardStadion`.
 
-## Stadion-Vorschläge 1 bis 8 (ungemergt)
+## Stadion-Vorschläge 1 bis 8 (Version 3.152)
 
 - **Dashboard am Spieltag** (`stadionSpielBanner()`): Band unter dem Bild mit letztem Ergebnis (`game.letzterSpielstand`, von `recordOwnLeagueResult()` gesetzt), nächstem Spiel und Wetter.
 - **Anzeigetafel** zeigt das letzte Ergebnis (`stadion3dTafelText()`).

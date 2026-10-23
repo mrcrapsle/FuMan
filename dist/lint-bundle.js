@@ -584,7 +584,7 @@ function pruefeNeuePakete() {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.151', date: '23.10.2026', features: 'Vereinsgelände, Stadion nach Größe, neue Karriere in abgeschotteten Vorschauen' };
+    const GAME_VERSION = { number: '3.152', date: '23.10.2026', features: 'Stadion im Dashboard mit Ergebnisband und Gegnerstadion, Chronik, Ticketvorschau, Bauplätze, Sitzmuster, Bild speichern' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
