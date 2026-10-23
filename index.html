@@ -258,6 +258,21 @@
     </div>
 </div>
 
+<!-- VEREINSGELÄNDE IM EIGENEN FENSTER (js/stadion-canvas.js) -->
+<div id="stadion-gelaende-overlay" class="generic-modal-overlay" aria-label="Vereinsgelände">
+    <div class="generic-modal-box stadion-gelaende-box">
+        <button onclick="stadionGelaendeSchliessen()" class="generic-modal-close" aria-label="Schließen">✕</button>
+        <div class="panel-header">🗺️ Vereinsgelände</div>
+        <div id="stadion-gelaende-platz"></div>
+        <div class="stadion-3d-leiste">
+            <button onclick="stadionLicht()" id="stadion-gelaende-licht" class="btn-secondary" title="Tageszeit wechseln">☀️ Tag</button>
+            <button onclick="stadionZoom(1.2)" class="btn-secondary" title="Näher heran">➕</button>
+            <button onclick="stadionZoom(1 / 1.2)" class="btn-secondary" title="Weiter weg">➖</button>
+        </div>
+        <div id="stadion-gelaende-liste" class="stadion-3d-info"></div>
+    </div>
+</div>
+
 <!-- BLOCK DER STADIONANSICHT (js/stadion-canvas.js) -->
 <div id="stadion-block-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
@@ -1825,6 +1840,7 @@
                         <button onclick="stadionLicht()" id="stadion-3d-licht" class="btn-secondary" title="Tageszeit wechseln">☀️ Tag</button>
                         <button onclick="stadionRisikoEbene()" id="stadion-3d-risiko" class="btn-secondary" aria-pressed="false" title="Ausschreitungs-Risiko je Block">⚠️ Risiko</button>
                         <button onclick="stadionRundflug()" id="stadion-3d-flug" class="btn-secondary" title="Kamerafahrt um das Stadion">🎬 Rundflug</button>
+                        <button onclick="stadionGelaendeOeffnen()" id="stadion-3d-gelaende" class="btn-secondary" title="Campus, Jugendakademie und Immobilien rund ums Stadion">🗺️ Gelände</button>
                     </div>
                     <div class="stadion-3d-leiste stadion-3d-leiste-klein">
                         <button onclick="stadionSpielBlaettern(-1)" class="btn-secondary" title="Voriges Heimspiel">◀ Spiel</button>
@@ -2002,6 +2018,7 @@
                 </div>
             </div>
             <div id="screen-campus" style="display:none;">
+                <button onclick="stadionGelaendeOeffnen()" class="btn-secondary" style="margin-bottom:8px;">🗺️ Vereinsgelände ansehen</button>
                 <div class="panel">
                     <div class="panel-header" style="color:var(--gold);">🏗️ Laufende Campus-Bauprojekte</div>
                     <div id="campus-construction-box"></div>

@@ -951,3 +951,12 @@ Wunsch: Infrastruktur- und Campus-Gebäude mit auf das Stadiongelände setzen.
 - Ein Tipp auf ein Gebäude oder einen Platz öffnet das Fenster mit Stufe, Beschreibung, Bauzustand und dem Weg zur Seite (Campus, Jugend, Immobilien).
 - Vierte Kamera „Vereinsgelände“ mit Blick über das ganze Gelände; der Boden wird an der Kamera abgeschnitten statt bei einer Ecke hinter der Kamera ganz zu fehlen.
 - Test `testStadionGelaende`, Lexikon-Tipp.
+
+## Stadion nach Größe, Vereinsgelände im eigenen Fenster (ungemergt)
+
+Rückmeldung zum Teststand: „Das Stadion sieht nicht wirklich nach einem Stadion aus, beachte die verschiedenen Größen; das Gelände in einem eigenen Fenster.“
+
+- **Bauart nach Kapazität** (`STADION3D_STUFEN`, `stadion3dStufe()`): unter 20.000 Plätzen Sportplatz mit 400-m-Laufbahn (Tribünen weiter weg, nur die Haupttribüne überdacht, sonst Stehtraversen in Beton), bis 35.000 Fußballstadion mit Dach über Haupt- und Gegentribüne, bis 60.000 Arena mit geschlossenen Ecken und durchgehendem Dachring, darüber Großarena mit breiterem Dach und Pylonen. Startstadion (15.550) ist klein, 3. Liga (~21.800) und 2. Liga (~31.100) mittel, Bundesliga (~46.600) Arena.
+- **Aussehen:** Sitze in Vereinsfarbe, helle Fassaden mit Band in Vereinsfarbe statt brauner Kästen, Tribünendächer auf Stützen, Werbebanden ums Spielfeld, Trainerbänke vor der Haupttribüne. Die Komplett-Überdachung (Spezial-Installation) reicht weiter nach vorn.
+- **Vereinsgelände im eigenen Fenster** (`#stadion-gelaende-overlay`, `stadionGelaendeOeffnen()`): Knopf „🗺️ Gelände“ auf der Stadionseite und „🗺️ Vereinsgelände ansehen“ im Campus. Dieselbe Canvas wandert ins Fenster (Kamera über das ganze Gelände, Tageszeit, Zoom) und beim Schließen mit der vorigen Kamera zurück. Unter dem Bild jedes Gebäude als Knopf. Die vierte Kamera im Stadion entfällt.
+- Tests: `testStadionGelaende` prüft Fenster, Rückweg, Öffnen vom Campus und die Bauart bei 0,9-, 1,4-, 3- und 4,5-facher Größe.

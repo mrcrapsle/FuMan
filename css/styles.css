@@ -1092,6 +1092,9 @@
         .stadion-3d-vorschau[hidden] { display: none; }
         .stadion-3d-regler-zeile { display: flex; align-items: center; gap: 6px; margin: 4px 0; }
         .stadion-3d-regler-zeile input { flex: 1; min-width: 0; }
+        .stadion-gelaende-box { width: min(96vw, 760px); max-width: 96vw; }
+        .stadion-gelaende-knoepfe { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10em), 1fr)); gap: 4px; }
+        .stadion-gelaende-knoepfe button { font-size: var(--fs-caption); min-height: 34px; text-align: left; }
         .stadion-3d-info { font-size: var(--fs-caption); margin-top: 6px; line-height: 1.45; }
         .ausschreitung-karte { display: block; width: 100%; max-width: 300px; aspect-ratio: 300 / 170; margin: 6px auto 2px; border-radius: 8px; background: var(--surface-0); }
         .kader-feinheiten > summary { cursor: pointer; list-style: revert; }

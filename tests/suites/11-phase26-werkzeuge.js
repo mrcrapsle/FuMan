@@ -4289,9 +4289,12 @@ async function testStadionGelaende(browser) {
         const rects = plan.map(g => g.rect);
         out.ausserhalb = plan.every(g => Math.max(Math.abs(g.rect[0]), Math.abs(g.rect[2])) > a.layout.aussen.W || Math.max(Math.abs(g.rect[1]), Math.abs(g.rect[3])) > a.layout.aussen.N);
         out.keineUeberschneidung = rects.every((p, i) => rects.every((q, j) => i === j || p[2] <= q[0] || q[2] <= p[0] || p[3] <= q[1] || q[3] <= p[1]));
-        // Kamera Vereinsgelände
-        a.kamera = 2; stadionKamera();
-        out.kamera = a.kamera === 3 && document.getElementById('stadion-3d-kamera').textContent.includes('Vereinsgelände');
+        // Eigenes Fenster: die Canvas wandert hinein, Liste der Gebäude, beim Schließen zurück mit der alten Kamera
+        const kameraVorher = a.yaw;
+        stadionGelaendeOeffnen();
+        const ovG = document.getElementById('stadion-gelaende-overlay');
+        out.fenster1 = ovG.classList.contains('show') && !!document.querySelector('#stadion-gelaende-platz #stadion-3d-canvas') && a.dist === STADION3D_GELAENDE_KAMERA.dist
+            && document.querySelectorAll('#stadion-gelaende-liste button').length === a.szene.gelaende.length;
         // Antippen öffnet das Fenster mit dem Weg zur Seite
         stadion3dZeichneEinmal();
         out.treffer = a.treffer.some(t => t.key === 'campus:hotel') && a.treffer.some(t => t.key === 'jugend');
@@ -4300,16 +4303,30 @@ async function testStadionGelaende(browser) {
         out.fenster = ov.classList.contains('show') && document.getElementById('stadion-block-inhalt').textContent.includes(campusBuildings.hotel.name)
             && document.getElementById('stadion-block-inhalt').textContent.includes('Stufe 3/5');
         [...document.querySelectorAll('#stadion-block-inhalt button')].find(b => b.textContent.includes('Zum Campus')).click();
-        out.zumCampus = !ov.classList.contains('show') && aktiverScreen === 'screen-campus';
+        out.zumCampus = !ov.classList.contains('show') && aktiverScreen === 'screen-campus' && !ovG.classList.contains('show')
+            && !!document.querySelector('#stadion-3d-box #stadion-3d-canvas') && a.yaw === kameraVorher && !a.gelaendeFenster;
+        // Vom Campus aus öffnen
+        [...document.querySelectorAll('#screen-campus button')].find(b => b.textContent.includes('Vereinsgelände ansehen')).click();
+        out.vomCampus = ovG.classList.contains('show') && a.gelaendeFenster && a.frames > 0;
+        stadionGelaendeSchliessen();
         // Fertiger Campus-Bau: Rundflug beim nächsten Besuch, das Gebäude steht
         game.stadiumConstructionQueue[0].daysLeft = 1;
         tickStadiumConstruction();
         out.fertig = campusBuildings.reha.lvl === 1 && game.stadionRundflug && game.stadionRundflug.includes('Reha');
         out.karte = stadion3dFlugKarten().some(k => k[0].includes('Vereinsgelände'));
+        // Bauart nach Größe: Laufbahn, Dächer, Ecken, Dachring
+        const alt = Object.keys(stadium.blocks).map(k => [k, stadium.blocks[k].cap]);
+        const bauarten = [0.9, 1.4, 3, 4.5].map(f => {
+            alt.forEach(([k, c]) => { stadium.blocks[k].cap = Math.round(c * f); });
+            showScreen('screen-stadium'); stadion3dZeichneEinmal();
+            return [a.layout.stufe, a.szene.daecher.join(''), a.szene.ecken || 0, a.szene.dachring, a.layout.bauart.laufbahn];
+        });
+        alt.forEach(([k, c]) => { stadium.blocks[k].cap = c; });
+        out.stufen = JSON.stringify(bauarten) === JSON.stringify([['klein', 'W', 0, false, true], ['mittel', 'WE', 0, false, false], ['gross', 'WENS', 4, true, false], ['riesig', 'WENS', 4, true, false]]) || JSON.stringify(bauarten);
         document.documentElement.setAttribute('data-motion', 'normal');
         return out;
     });
-    const K = ['gebaeude', 'ungebautFehlt', 'baustelle', 'hoehe', 'ausserhalb', 'keineUeberschneidung', 'kamera', 'treffer', 'fenster', 'zumCampus', 'fertig', 'karte'];
+    const K = ['gebaeude', 'ungebautFehlt', 'baustelle', 'hoehe', 'ausserhalb', 'keineUeberschneidung', 'fenster1', 'treffer', 'fenster', 'zumCampus', 'vomCampus', 'fertig', 'karte', 'stufen'];
     assert(K.every(k => r[k] === true), `Vereinsgelände: Gebäude nach Stufe, Baustellen, Kamera, Antippen (${JSON.stringify(K.map(k => k + ':' + r[k]).filter(x => !x.endsWith(':true')))})`);
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
     await page.close();
