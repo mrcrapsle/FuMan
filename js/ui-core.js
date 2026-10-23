@@ -216,7 +216,7 @@
     // daraus ab, welchem Bereich eine Kontobewegung zuzuordnen ist.
     let aktiverScreen = 'screen-dashboard';
     function showScreen(screenId) {
-        // Öffentliche Fassung ohne Admin-Menü (build.py): ein Ziel aus Favoriten oder „Zuletzt geöffnet“ eines
+        // Öffentliche Fassung ohne Admin-Menü (build.py): ein Ziel aus den Favoriten eines
         // Entwickler-Geräts gibt es dort nicht - dann bleibt der aktuelle Bildschirm stehen statt einer leeren Seite.
         if (!document.getElementById((typeof SUB_SCREEN_TO_HUB !== 'undefined' && SUB_SCREEN_TO_HUB[screenId]) || screenId) || !document.getElementById(screenId)) {
             // Bereich aus einem Update, das diese Fassung noch nicht enthält (js/pakete.js)
@@ -229,7 +229,6 @@
         // Für die Zurück-Taste (js/one-hand.js): woher kam man?
         if (typeof recordScreenVisit === 'function') recordScreenVisit(aktiverScreen, screenId);
         aktiverScreen = screenId;
-        if (typeof aktualisiereZuletzt === 'function') aktualisiereZuletzt(screenId);
         if (typeof onScreenShown === 'function') onScreenShown(screenId);
         if (typeof loescheBuchungskontext === 'function') loescheBuchungskontext();
         const screens = [

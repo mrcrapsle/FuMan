@@ -60,45 +60,12 @@ function recordScreenVisit(vorher, neu) {
     if (oneHandScreenStack.length > ONE_HAND_STACK_MAX) oneHandScreenStack.shift();
 }
 
-// Jeder neu gezeigte Bildschirm kommt in die Liste „Zuletzt geöffnet“ (auch beim Zurückgehen), die Anzeige folgt gleich danach
-function aktualisiereZuletzt(neu) {
-    merkeZuletzt(neu);
-    renderZuletzt();
-}
-
-// ---------- Zuletzt geöffnet (Phase 26.16) ----------
-// Die letzten fünf besuchten Bildschirme stehen oben im Menü zum direkten Antippen. Eine Einstellung dieses Geräts
-// (localStorage), kein Spielstand. Nur Bildschirme mit Menüeintrag erscheinen; der aktuelle fehlt in der Liste.
-const ZULETZT_KEY = 'anstoss_fm13_zuletzt';
-const ZULETZT_MAX = 5;
-
-function getZuletzt() {
-    try {
-        const l = JSON.parse(safeLocalGet(ZULETZT_KEY) || '[]');
-        return Array.isArray(l) ? l.filter(x => typeof x === 'string').slice(0, ZULETZT_MAX + 3) : [];
-    } catch (e) { return []; }
-}
-
-function merkeZuletzt(screenId) {
-    if (!screenId || ONE_HAND_NO_HISTORY.includes(screenId)) return;
-    const l = [screenId, ...getZuletzt().filter(x => x !== screenId)].slice(0, ZULETZT_MAX + 3);
-    safeLocalSet(ZULETZT_KEY, JSON.stringify(l));
-}
-
 // Beschriftung aus dem Menüeintrag des Bildschirms (so stimmt auch die Sprache)
-function getZuletztLabel(screenId) {
+function getMenueLabel(screenId) {
     const knopf = [...document.querySelectorAll('#app-sidebar .nav-btn')].find(b => (b.getAttribute('onclick') || '').includes(`showScreen('${screenId}')`));
     if (!knopf) return '';
     const t = knopf.querySelector('[data-i18n]');
     return (t || knopf).textContent.replace(/\s+/g, ' ').trim();
-}
-
-function renderZuletzt() {
-    const box = document.getElementById('recent-screens-box');
-    if (!box) return;
-    const eintraege = getZuletzt().filter(id => id !== aktiverScreen).map(id => ({ id, label: getZuletztLabel(id) })).filter(e => e.label).slice(0, ZULETZT_MAX);
-    const html = eintraege.length ? `<div class="nav-category">Zuletzt geöffnet</div>` + eintraege.map(e => `<button class="nav-btn" data-s="${e.id}" onclick="showScreen(this.dataset.s)">${e.label}</button>`).join('') : '';
-    if (box.innerHTML !== html) box.innerHTML = html;
 }
 
 // ---------- Favoriten-Leiste (Phase 26.17) ----------
@@ -147,13 +114,13 @@ function renderFavoritenAuswahl() {
     const fav = getFavoriten();
     body.innerHTML = `<div class="panel-header">⭐ Favoriten (${fav.length}/${FAVORITEN_MAX})</div>
         <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Ausgewählte Bildschirme erscheinen als Schnellknöpfe im Dashboard.</div>
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 12em), 1fr)); gap:4px;">${getMenueBildschirme().map(id => `<button onclick="toggleFavorit(this.dataset.s)" data-s="${id}" class="${fav.includes(id) ? 'btn-action' : 'btn-secondary'}" aria-pressed="${fav.includes(id)}" style="text-align:left;">${fav.includes(id) ? '★' : '☆'} ${getZuletztLabel(id)}</button>`).join('')}</div>`;
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 12em), 1fr)); gap:4px;">${getMenueBildschirme().map(id => `<button onclick="toggleFavorit(this.dataset.s)" data-s="${id}" class="${fav.includes(id) ? 'btn-action' : 'btn-secondary'}" aria-pressed="${fav.includes(id)}" style="text-align:left;">${fav.includes(id) ? '★' : '☆'} ${getMenueLabel(id)}</button>`).join('')}</div>`;
 }
 
 function renderFavoritenLeiste() {
     const box = document.getElementById('favoriten-box');
     if (!box) return;
-    const fav = getFavoriten().map(id => ({ id, label: getZuletztLabel(id) })).filter(f => f.label);
+    const fav = getFavoriten().map(id => ({ id, label: getMenueLabel(id) })).filter(f => f.label);
     const html = `<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 9em), 1fr)); gap:6px; margin-bottom:10px;">${fav.map(f => `<button onclick="showScreen(this.dataset.s)" data-s="${f.id}" class="btn-secondary">${f.label}</button>`).join('')}<button onclick="openFavoritenAuswahl()" class="btn-secondary" title="Favoriten auswählen">${fav.length ? '⭐ Bearbeiten' : '⭐ Favoriten festlegen'}</button></div>`;
     if (box.innerHTML !== html) box.innerHTML = html;
 }
@@ -289,6 +256,8 @@ function aktualisiereKopfHinweis() {
 }
 
 function initOneHand() {
+    // „Zuletzt geöffnet“ im Menü wurde auf Wunsch entfernt (3.148): alten Geräte-Eintrag löschen
+    safeLocalRemove('anstoss_fm13_zuletzt');
     const kpis = document.querySelector('.header-kpis');
     if (kpis) {
         kpis.addEventListener('scroll', aktualisiereKopfHinweis, { passive: true });

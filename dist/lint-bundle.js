@@ -13032,7 +13032,7 @@ function renderBoardRoomPanel() {
     // daraus ab, welchem Bereich eine Kontobewegung zuzuordnen ist.
     let aktiverScreen = 'screen-dashboard';
     function showScreen(screenId) {
-        // Öffentliche Fassung ohne Admin-Menü (build.py): ein Ziel aus Favoriten oder „Zuletzt geöffnet“ eines
+        // Öffentliche Fassung ohne Admin-Menü (build.py): ein Ziel aus den Favoriten eines
         // Entwickler-Geräts gibt es dort nicht - dann bleibt der aktuelle Bildschirm stehen statt einer leeren Seite.
         if (!document.getElementById((typeof SUB_SCREEN_TO_HUB !== 'undefined' && SUB_SCREEN_TO_HUB[screenId]) || screenId) || !document.getElementById(screenId)) {
             // Bereich aus einem Update, das diese Fassung noch nicht enthält (js/pakete.js)
@@ -13045,7 +13045,6 @@ function renderBoardRoomPanel() {
         // Für die Zurück-Taste (js/one-hand.js): woher kam man?
         if (typeof recordScreenVisit === 'function') recordScreenVisit(aktiverScreen, screenId);
         aktiverScreen = screenId;
-        if (typeof aktualisiereZuletzt === 'function') aktualisiereZuletzt(screenId);
         if (typeof onScreenShown === 'function') onScreenShown(screenId);
         if (typeof loescheBuchungskontext === 'function') loescheBuchungskontext();
         const screens = [
@@ -13287,45 +13286,12 @@ function recordScreenVisit(vorher, neu) {
     if (oneHandScreenStack.length > ONE_HAND_STACK_MAX) oneHandScreenStack.shift();
 }
 
-// Jeder neu gezeigte Bildschirm kommt in die Liste „Zuletzt geöffnet“ (auch beim Zurückgehen), die Anzeige folgt gleich danach
-function aktualisiereZuletzt(neu) {
-    merkeZuletzt(neu);
-    renderZuletzt();
-}
-
-// ---------- Zuletzt geöffnet (Phase 26.16) ----------
-// Die letzten fünf besuchten Bildschirme stehen oben im Menü zum direkten Antippen. Eine Einstellung dieses Geräts
-// (localStorage), kein Spielstand. Nur Bildschirme mit Menüeintrag erscheinen; der aktuelle fehlt in der Liste.
-const ZULETZT_KEY = 'anstoss_fm13_zuletzt';
-const ZULETZT_MAX = 5;
-
-function getZuletzt() {
-    try {
-        const l = JSON.parse(safeLocalGet(ZULETZT_KEY) || '[]');
-        return Array.isArray(l) ? l.filter(x => typeof x === 'string').slice(0, ZULETZT_MAX + 3) : [];
-    } catch (e) { return []; }
-}
-
-function merkeZuletzt(screenId) {
-    if (!screenId || ONE_HAND_NO_HISTORY.includes(screenId)) return;
-    const l = [screenId, ...getZuletzt().filter(x => x !== screenId)].slice(0, ZULETZT_MAX + 3);
-    safeLocalSet(ZULETZT_KEY, JSON.stringify(l));
-}
-
 // Beschriftung aus dem Menüeintrag des Bildschirms (so stimmt auch die Sprache)
-function getZuletztLabel(screenId) {
+function getMenueLabel(screenId) {
     const knopf = [...document.querySelectorAll('#app-sidebar .nav-btn')].find(b => (b.getAttribute('onclick') || '').includes(`showScreen('${screenId}')`));
     if (!knopf) return '';
     const t = knopf.querySelector('[data-i18n]');
     return (t || knopf).textContent.replace(/\s+/g, ' ').trim();
-}
-
-function renderZuletzt() {
-    const box = document.getElementById('recent-screens-box');
-    if (!box) return;
-    const eintraege = getZuletzt().filter(id => id !== aktiverScreen).map(id => ({ id, label: getZuletztLabel(id) })).filter(e => e.label).slice(0, ZULETZT_MAX);
-    const html = eintraege.length ? `<div class="nav-category">Zuletzt geöffnet</div>` + eintraege.map(e => `<button class="nav-btn" data-s="${e.id}" onclick="showScreen(this.dataset.s)">${e.label}</button>`).join('') : '';
-    if (box.innerHTML !== html) box.innerHTML = html;
 }
 
 // ---------- Favoriten-Leiste (Phase 26.17) ----------
@@ -13374,13 +13340,13 @@ function renderFavoritenAuswahl() {
     const fav = getFavoriten();
     body.innerHTML = `<div class="panel-header">⭐ Favoriten (${fav.length}/${FAVORITEN_MAX})</div>
         <div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Ausgewählte Bildschirme erscheinen als Schnellknöpfe im Dashboard.</div>
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 12em), 1fr)); gap:4px;">${getMenueBildschirme().map(id => `<button onclick="toggleFavorit(this.dataset.s)" data-s="${id}" class="${fav.includes(id) ? 'btn-action' : 'btn-secondary'}" aria-pressed="${fav.includes(id)}" style="text-align:left;">${fav.includes(id) ? '★' : '☆'} ${getZuletztLabel(id)}</button>`).join('')}</div>`;
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 12em), 1fr)); gap:4px;">${getMenueBildschirme().map(id => `<button onclick="toggleFavorit(this.dataset.s)" data-s="${id}" class="${fav.includes(id) ? 'btn-action' : 'btn-secondary'}" aria-pressed="${fav.includes(id)}" style="text-align:left;">${fav.includes(id) ? '★' : '☆'} ${getMenueLabel(id)}</button>`).join('')}</div>`;
 }
 
 function renderFavoritenLeiste() {
     const box = document.getElementById('favoriten-box');
     if (!box) return;
-    const fav = getFavoriten().map(id => ({ id, label: getZuletztLabel(id) })).filter(f => f.label);
+    const fav = getFavoriten().map(id => ({ id, label: getMenueLabel(id) })).filter(f => f.label);
     const html = `<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 9em), 1fr)); gap:6px; margin-bottom:10px;">${fav.map(f => `<button onclick="showScreen(this.dataset.s)" data-s="${f.id}" class="btn-secondary">${f.label}</button>`).join('')}<button onclick="openFavoritenAuswahl()" class="btn-secondary" title="Favoriten auswählen">${fav.length ? '⭐ Bearbeiten' : '⭐ Favoriten festlegen'}</button></div>`;
     if (box.innerHTML !== html) box.innerHTML = html;
 }
@@ -13516,6 +13482,8 @@ function aktualisiereKopfHinweis() {
 }
 
 function initOneHand() {
+    // „Zuletzt geöffnet“ im Menü wurde auf Wunsch entfernt (3.148): alten Geräte-Eintrag löschen
+    safeLocalRemove('anstoss_fm13_zuletzt');
     const kpis = document.querySelector('.header-kpis');
     if (kpis) {
         kpis.addEventListener('scroll', aktualisiereKopfHinweis, { passive: true });
@@ -39154,7 +39122,7 @@ function renderSeasonForecastHistory() {
 // ============================================================================
 
 const ADMIN_POSITIONEN = ['TW', 'ABW', 'MIT', 'ST'];
-const ADMIN_BEDIEN_SCHLUESSEL = ['anstoss_fm13_favoriten', 'anstoss_fm13_zuletzt', 'anstoss_fm13_kaderansicht'];
+const ADMIN_BEDIEN_SCHLUESSEL = ['anstoss_fm13_favoriten', 'anstoss_fm13_kaderansicht'];
 let adminSpielerId = null;
 let adminZufallAlt = null;
 
@@ -39284,9 +39252,8 @@ function getAdminSpeicherDiagnose() {
 function adminBedienEinstellungenZuruecksetzen() {
     ADMIN_BEDIEN_SCHLUESSEL.forEach(k => safeLocalRemove(k));
     if (typeof renderFavoritenLeiste === 'function') renderFavoritenLeiste();
-    if (typeof renderZuletzt === 'function') renderZuletzt();
     renderAdminTools();
-    showToast('🧹 Favoriten, „Zuletzt geöffnet“ und Kaderansicht zurückgesetzt.', 'success');
+    showToast('🧹 Favoriten und Kaderansicht zurückgesetzt.', 'success');
 }
 
 // ---------- 10. Datenprüfung und Reparatur ----------
@@ -39459,7 +39426,7 @@ function renderAdminTools() {
         </details>
         <details class="ui-fold"><summary>💾 Speicher und Datenprüfung</summary>
             <div style="font-size:var(--fs-small); margin:4px 0;">Spielstand ${kb(speicher.gesamt)}. Größte Teile: ${speicher.teile.map(x => `${mpEsc(x.k)} ${kb(x.n)}`).join(', ')}.<br>Größte Felder in game: ${speicher.spiel.map(x => `${mpEsc(x.k)} ${kb(x.n)}`).join(', ')}.<br>Gerät: ${speicher.geraet.length ? speicher.geraet.map(x => `${mpEsc(x.k.replace('anstoss_fm13_', ''))} ${kb(x.n)}`).join(', ') : 'kein Zugriff auf den Gerätespeicher'}.</div>
-            <button onclick="adminBedienEinstellungenZuruecksetzen()" class="btn-secondary" style="margin:4px 0;">🧹 Favoriten, Zuletzt geöffnet und Kaderansicht zurücksetzen</button>
+            <button onclick="adminBedienEinstellungenZuruecksetzen()" class="btn-secondary" style="margin:4px 0;">🧹 Favoriten und Kaderansicht zurücksetzen</button>
             <div class="box" style="font-size:var(--fs-small); margin:4px 0; border-left-color:${befunde.length ? 'var(--danger)' : 'var(--primary)'};">${befunde.length ? `⚠️ ${befunde.length} Auffälligkeit${befunde.length === 1 ? '' : 'en'}: ${befunde.slice(0, 6).map(mpEsc).join('; ')}${befunde.length > 6 ? ' …' : ''}` : '✓ Kader, Aufstellung und Kassenwerte ohne Auffälligkeiten.'}</div>
             <button onclick="adminDatenReparieren()" class="btn-secondary">🔧 Daten reparieren</button>
         </details>

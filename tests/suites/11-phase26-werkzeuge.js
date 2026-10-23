@@ -1679,7 +1679,7 @@ async function testRunde30Funktionen(browser) {
 }
 
 async function testRunde31Funktionen(browser) {
-    console.log('\n[26.16] Aufstellung teilen, Zuletzt geöffnet, Leistbar-Chips, Rotation mit Ampel, Erinnerungen, Spielbericht-Archiv, Vertragsplan, Saisonziele');
+    console.log('\n[26.16] Aufstellung teilen, Zuletzt geöffnet entfernt, Leistbar-Chips, Rotation mit Ampel, Erinnerungen, Spielbericht-Archiv, Vertragsplan, Saisonziele');
     const { page, consoleErrors } = await freshPage(browser);
     await page.setViewportSize({ width: 320, height: 800 });
     const r = await page.evaluate(() => {
@@ -1716,27 +1716,10 @@ async function testRunde31Funktionen(browser) {
         const bankSpieler = squad.find(p => !lineup.includes(p.id)); bankSpieler.injured = 2;
         out.lVerletzteBank = buildLineupText().includes('(verletzt)'); bankSpieler.injured = 0;
 
-        // --- Zuletzt geöffnet ---
-        safeLocalSet(ZULETZT_KEY, '[]');
-        ['screen-dashboard', 'screen-squad', 'screen-transfer', 'screen-finances', 'screen-inbox', 'screen-calendar'].forEach(id => showScreen(id));
-        const z = getZuletzt();
-        out.zReihenfolge = z.slice(0, 6).join() === 'screen-calendar,screen-inbox,screen-finances,screen-transfer,screen-squad,screen-dashboard';
-        renderZuletzt();
-        const zb = document.getElementById('recent-screens-box');
-        out.zBox = zb.textContent.includes('Zuletzt geöffnet') && zb.querySelectorAll('button').length === 5 && !zb.querySelector('[data-s="screen-calendar"]');
-        out.zBeschriftung = [...zb.querySelectorAll('button')].every(b => b.textContent.trim().length > 2);
-        zb.querySelector('[data-s="screen-squad"]').click();
-        out.zKlick = aktiverScreen === 'screen-squad' && getZuletzt()[0] === 'screen-squad' && !document.getElementById('recent-screens-box').querySelector('[data-s="screen-squad"]');
-        out.zNachVorn = getZuletzt().filter(x => x === 'screen-squad').length === 1;
-        showScreen('screen-prematch-press'); showScreen('screen-matchday');
-        out.zOhneSpielflow = !getZuletzt().includes('screen-prematch-press') && !getZuletzt().includes('screen-matchday');
-        showScreen('screen-dashboard');
-        safeLocalSet(ZULETZT_KEY, '{kaputt'); out.zKaputt = Array.isArray(getZuletzt()) && getZuletzt().length === 0;
-        safeLocalSet(ZULETZT_KEY, JSON.stringify(['screen-gibtsnicht', 'screen-finances', 42])); renderZuletzt();
-        out.zUnbekannt = document.getElementById('recent-screens-box').querySelectorAll('button').length === 1;
-        merkeZuletzt(null); merkeZuletzt('screen-dashboard');
-        out.zBegrenzt = getZuletzt().length <= ZULETZT_MAX + 3;
-        out.wZuletzt = JSON.stringify(woerter('#recent-screens-box button'));
+        // --- Zuletzt geöffnet: auf Wunsch entfernt (3.148), weder Menü-Kasten noch Speicher-Eintrag ---
+        ['screen-squad', 'screen-transfer'].forEach(id => showScreen(id));
+        out.zEntfernt = !document.getElementById('recent-screens-box') && typeof renderZuletzt === 'undefined' && safeLocalGet('anstoss_fm13_zuletzt') === null
+            && !document.getElementById('app-sidebar').textContent.includes('Zuletzt geöffnet');
 
         // --- Leistbar-Chips auf Marktkarten ---
         if (!marketPlayers.length) refreshTransferMarket();
@@ -1932,8 +1915,7 @@ async function testRunde31Funktionen(browser) {
     const werte = ks => JSON.stringify(ks.map(k => r[k]));
     const A = ['lText', 'lKapitaen', 'lAlle', 'lFenster', 'lWenige', 'lLeer', 'lVerletzteBank'];
     assert(ok(...A), `Aufstellung teilen: Text mit Formation, Positionen, Kapitän, Bank; Fenster; zu wenige und keine Spieler (${werte(A)})`);
-    const B = ['zReihenfolge', 'zBox', 'zBeschriftung', 'zKlick', 'zNachVorn', 'zOhneSpielflow', 'zKaputt', 'zUnbekannt', 'zBegrenzt'];
-    assert(ok(...B), `Zuletzt geöffnet: Reihenfolge, Menü-Box ohne den aktuellen Bildschirm, Antippen, Spielablauf ausgenommen, kaputter Speicher (${werte(B)})`);
+    assert(r.zEntfernt === true, 'Zuletzt geöffnet ist entfernt: kein Menü-Kasten, keine Funktion, kein Speicher-Eintrag');
     const C = ['kOk', 'kKasse', 'kBudget', 'kGehalt', 'kSperre', 'kMehrere', 'kKarte', 'kKarteOk'];
     assert(ok(...C), `Leistbar-Chips: Gründe Kasse, Transferbudget, Gehaltsbudget, Sperre und Karten im Markt (${werte(C)})`);
     const C2 = ['kStimmt', 'kStimmtNicht'];
@@ -1950,7 +1932,7 @@ async function testRunde31Funktionen(browser) {
     assert(ok(...G), `Vertragsplan: auslaufende Verträge und Gehälter je Saison, kumulierter Spielraum im Verträge-Bildschirm (${werte(G)})`);
     const H = ['zAufstieg', 'zErreichbar', 'zInnen', 'zGesichert', 'zText', 'zUntersteLiga', 'zNichtMehr', 'zRestEinSpiel', 'zOhneSpiele', 'zNachSaison', 'zEuropa', 'zKlasse'];
     assert(ok(...H), `Saisonziel-Rechner: Rückstand, Vorsprung, gesichert, nicht mehr erreichbar, Europa und Klassenerhalt (${werte(H)})`);
-    assert(r.wZuletzt === '[]' && r.wKarten === '[]' && r.wRotation === '[]' && r.wErinnerung === '[]' && r.wArchiv === '[]', `Neue Knöpfe bei 320 px in breiter Schrift: kein Wort breiter als sein Knopf (${JSON.stringify([r.wZuletzt, r.wKarten, r.wRotation, r.wErinnerung, r.wArchiv])})`);
+    assert(r.wKarten === '[]' && r.wRotation === '[]' && r.wErinnerung === '[]' && r.wArchiv === '[]', `Neue Knöpfe bei 320 px in breiter Schrift: kein Wort breiter als sein Knopf (${JSON.stringify([r.wKarten, r.wRotation, r.wErinnerung, r.wArchiv])})`);
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
     await page.close();
 }
@@ -2947,9 +2929,8 @@ async function testOeffentlicheFassung(browser) {
         showScreen('screen-admin');
         out.adminAbgefangen = document.getElementById('screen-squad').style.display === 'block' && toasts.pop().includes('gibt es in dieser Fassung nicht');
         if (typeof renderFavoritenLeiste === 'function') renderFavoritenLeiste();
-        if (typeof renderZuletzt === 'function') renderZuletzt();
-        const kaesten = ['favoriten-box', 'recent-screens-box'].map(id => document.getElementById(id)).filter(Boolean);
-        out.keineAltlasten = kaesten.length === 2 && kaesten.every(el => !el.innerHTML.includes('screen-admin')) && document.getElementById('recent-screens-box').innerHTML.includes('screen-finances');
+        const fav = document.getElementById('favoriten-box');
+        out.keineAltlasten = !!fav && !fav.innerHTML.includes('screen-admin') && !document.getElementById('recent-screens-box');
         showScreen('screen-premium'); showScreen('screen-private'); showScreen('screen-finances');
         out.weitereBildschirme = document.getElementById('screen-finances').offsetParent !== null || document.getElementById('screen-finances').style.display !== 'none';
         // Der Entwickler-Schlüssel der Testsuite öffnet in der öffentlichen Fassung nichts

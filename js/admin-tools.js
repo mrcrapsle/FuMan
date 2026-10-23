@@ -4,7 +4,7 @@
 // ============================================================================
 
 const ADMIN_POSITIONEN = ['TW', 'ABW', 'MIT', 'ST'];
-const ADMIN_BEDIEN_SCHLUESSEL = ['anstoss_fm13_favoriten', 'anstoss_fm13_zuletzt', 'anstoss_fm13_kaderansicht'];
+const ADMIN_BEDIEN_SCHLUESSEL = ['anstoss_fm13_favoriten', 'anstoss_fm13_kaderansicht'];
 let adminSpielerId = null;
 let adminZufallAlt = null;
 
@@ -134,9 +134,8 @@ function getAdminSpeicherDiagnose() {
 function adminBedienEinstellungenZuruecksetzen() {
     ADMIN_BEDIEN_SCHLUESSEL.forEach(k => safeLocalRemove(k));
     if (typeof renderFavoritenLeiste === 'function') renderFavoritenLeiste();
-    if (typeof renderZuletzt === 'function') renderZuletzt();
     renderAdminTools();
-    showToast('🧹 Favoriten, „Zuletzt geöffnet“ und Kaderansicht zurückgesetzt.', 'success');
+    showToast('🧹 Favoriten und Kaderansicht zurückgesetzt.', 'success');
 }
 
 // ---------- 10. Datenprüfung und Reparatur ----------
@@ -309,7 +308,7 @@ function renderAdminTools() {
         </details>
         <details class="ui-fold"><summary>💾 Speicher und Datenprüfung</summary>
             <div style="font-size:var(--fs-small); margin:4px 0;">Spielstand ${kb(speicher.gesamt)}. Größte Teile: ${speicher.teile.map(x => `${mpEsc(x.k)} ${kb(x.n)}`).join(', ')}.<br>Größte Felder in game: ${speicher.spiel.map(x => `${mpEsc(x.k)} ${kb(x.n)}`).join(', ')}.<br>Gerät: ${speicher.geraet.length ? speicher.geraet.map(x => `${mpEsc(x.k.replace('anstoss_fm13_', ''))} ${kb(x.n)}`).join(', ') : 'kein Zugriff auf den Gerätespeicher'}.</div>
-            <button onclick="adminBedienEinstellungenZuruecksetzen()" class="btn-secondary" style="margin:4px 0;">🧹 Favoriten, Zuletzt geöffnet und Kaderansicht zurücksetzen</button>
+            <button onclick="adminBedienEinstellungenZuruecksetzen()" class="btn-secondary" style="margin:4px 0;">🧹 Favoriten und Kaderansicht zurücksetzen</button>
             <div class="box" style="font-size:var(--fs-small); margin:4px 0; border-left-color:${befunde.length ? 'var(--danger)' : 'var(--primary)'};">${befunde.length ? `⚠️ ${befunde.length} Auffälligkeit${befunde.length === 1 ? '' : 'en'}: ${befunde.slice(0, 6).map(mpEsc).join('; ')}${befunde.length > 6 ? ' …' : ''}` : '✓ Kader, Aufstellung und Kassenwerte ohne Auffälligkeiten.'}</div>
             <button onclick="adminDatenReparieren()" class="btn-secondary">🔧 Daten reparieren</button>
         </details>
