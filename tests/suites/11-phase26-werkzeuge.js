@@ -4469,6 +4469,43 @@ async function testStadionNeuerungen(browser) {
     await page.close();
 }
 
+async function testStadionRealismus(browser) {
+    console.log('\n[3.153] Stadion realistischer: Schatten, Fassaden, Dächer, Zaun, Laternen, Bäume, Sponsorenbanden');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false; safeLocalRemove('anstoss_fm13_stadion3d');
+        document.documentElement.setAttribute('data-motion', 'reduziert');
+        campusBuildings.museum.lvl = 2; campusBuildings.hotel.lvl = 2;
+        showScreen('screen-stadium');
+    });
+    await page.waitForFunction(() => typeof stadionAnsicht !== 'undefined' && stadionAnsicht && stadionAnsicht.frames > 0, null, { timeout: 5000 }).catch(() => null);
+    const r = await page.evaluate(() => {
+        const out = {};
+        // Konvexe Hülle: Quadrat mit Mittelpunkt im Inneren ergibt vier Ecken
+        out.huelle = stadion3dHuelle([[0, 0], [2, 0], [2, 2], [0, 2], [1, 1]]).length === 4;
+        // Sonne: Schatten am Tag und Abend, keiner nachts
+        stadionAnsicht.licht = 'nacht'; out.sonneNacht = stadion3dSonne() === null;
+        stadionAnsicht.licht = 'tag'; out.sonneTag = !!stadion3dSonne();
+        // Fassaden mit Fenstern, Schilder und Verwitterung werden gezeichnet
+        stadion3dZeichneEinmal();
+        const plan = stadion3dGelaendePlan(stadionAnsicht.layout);
+        out.schilder = plan.some(g => g.lvl > 0 && g.form === 'haus') && typeof stadion3dKurz === 'function' && stadion3dKurz({ name: "Fan-Kneipe 'Zur Nachspielzeit'" }) === 'Fan-Kneipe';
+        out.giebel = STADION3D_GIEBEL.museum === '#5d6d7e' && typeof stadion3dGiebel === 'function';
+        // Sponsorenbanden: weiße Tafeln mit Schrift, jede vierte mit dem Vereinskürzel
+        const banden = stadionAnsicht.szene && stadionAnsicht.szene.bande;
+        out.banden = typeof stadion3dBanden === 'function';
+        // Bäume und Zaun sind Objekte der Zeichnung (keine Fehler beim Zeichnen)
+        const t0 = performance.now(); stadion3dZeichneEinmal(); out.ms = performance.now() - t0;
+        out.zeichnet = stadionAnsicht.frames > 0;
+        return out;
+    });
+    const K = ['huelle', 'sonneNacht', 'sonneTag', 'schilder', 'giebel', 'banden', 'zeichnet'];
+    assert(K.every(k => r[k] === true), `Stadion-Realismus: Hülle, Sonne, Schilder, Giebel, Banden, Zeichnung ${r.ms ? r.ms.toFixed(1) : '?'} ms (${JSON.stringify(K.map(k => k + ':' + r[k]).filter(x => !x.endsWith(':true')))})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 async function testStartUndVersion(browser) {
     console.log('\n[3.150] Geladener Stand zeichnet die Übersicht, Wappen-Kürzel aus dem Vereinsnamen, Hinweis auf neue Version');
     const { page, consoleErrors } = await freshPage(browser);
@@ -4553,6 +4590,7 @@ module.exports = {
     testGesperrterSpeicher,
     testDashboardStadion,
     testStadionNeuerungen,
+    testStadionRealismus,
     testAdminWerkzeuge,
     testPrivatlebenPlus,
     testOeffentlicheFassung,

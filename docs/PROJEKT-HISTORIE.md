@@ -985,3 +985,19 @@ Wunsch: Das Stadion oben im Dashboard soll wie auf der Stadionseite mit Canvas g
 - **Gegnerstadion bei Auswärtsspielen** (`stadionGegnerZeichnen()`, `#dash-gegner-canvas`): Größe aus Name und Liga, fest je Gegner, Band mit dem Gegner.
 - Nicht umgesetzt: Gästeblock im 3D-Livespiel. Die Livespiel-Ansicht zeigt kein Stadion, nur Spielfeld und Figuren; ein Stadion dort wäre eine eigene Geometrie.
 - Tests: `testStadionNeuerungen`; `testStadionGelaende` prüft Bauplätze statt ausgelassener Gebäude.
+
+## Stadion und Gebäude realistischer (ungemergt)
+
+Wunsch: die Stadien und Gebäude sollen echter aussehen (Canvas). Umgesetzt in `js/stadion-canvas.js`:
+
+- **Fassaden:** Gebäude haben Fensterraster je Wand (`stadion3dFensterGitter()`), bei Nacht leuchtet jedes zweite Fenster warm. Das Emoji-Symbol auf dem Dach ist durch ein Schild über dem Eingang ersetzt (`stadion3dKurz()`, `schild`).
+- **Dächer:** Satteldach mit First und Giebeln (`stadion3dGiebel()`, Museum, Vereinsheim, Fan-Kneipe), Glasdach mit Streben im Megastore, Klimaanlagen auf den Flachdächern von Hotel, Parkhaus, Einkaufszentrum und Reha, Vordach am Eingang (`stadion3dVordach()`), Dachstreben unter den Tribünendächern.
+- **Tribünen:** Kanten um jeden Block, Trittkanten und Setzstufen, Gänge an den Blockenden und in langen Blöcken.
+- **Schatten:** Schlagschatten von Tribünen, Gebäuden und Blöcken auf Rasen und Gelände (`stadion3dSchatten()`); am Tag kurz, am Abend lang, nachts keine. Hülle aus Grundriss und verschobener Oberkante (`stadion3dHuelle()`).
+- **Umfeld:** Zaun mit Pfosten und zwei Latten um das Gelände, Laternen an Ecken und Seitenmitten (nachts mit Lichtkreis), 26 Bäume mit Stamm und drei Kronen (`stadion3dZaun()`, `stadion3dBaeume()`), Stellplatzlinien auf dem Parkplatz.
+- **Banden:** Weiße Sponsorentafeln mit farbigem Schriftzug, jede vierte mit dem Vereinskürzel (`stadion3dBanden()`).
+- **Flutlicht:** Mast mit breitem Fuß, Stromkasten, Leuchtenträger mit sechs Strahlern.
+- **Anzeigetafel:** Rahmen und zwei Stützen.
+- **Material:** Rasenkante, Verwitterungsflecken auf Betonwänden, Glasdach mit Streben.
+- Nicht umgesetzt: Straßen und Fußwege. Die Umgebung hat keine Straße und keinen Weg zum Stadion.
+- Tests: `testStadionRealismus`.

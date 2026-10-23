@@ -132,6 +132,7 @@ async function main() {
         S.testGesperrterSpeicher,
         S.testDashboardStadion,
         S.testStadionNeuerungen,
+        S.testStadionRealismus,
         S.testAusschreitungSzene,
         S.testAdminWerkzeuge,
         S.testPrivatlebenPlus,
