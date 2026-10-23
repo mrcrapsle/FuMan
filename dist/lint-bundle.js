@@ -584,7 +584,7 @@ function pruefeNeuePakete() {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.147', date: '23.10.2026', features: 'Ausschreitungen als Bild (Szene im Fanblock, Effekt im 3D-Livespiel, Stadionkarte), Fan-Feindschaften als Risikospiele in allen Ligen' };
+    const GAME_VERSION = { number: '3.148', date: '23.10.2026', features: 'Zuletzt geöffnet aus dem Menü entfernt' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

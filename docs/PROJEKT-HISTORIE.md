@@ -912,6 +912,6 @@ Test `testEinsteiger` ([26.27]), `testStartmenue` prüft Einsteiger-Modus und St
 - Lexikon (DE/EN) ergänzt, `testAusschreitungen` prüft die Feindschaft.
 - Erweitert auf alle Ligen (51 Paarungen, Recherche: Wikipedia „German football rivalries“, Fanfreundschaft-Übersichten, Polizei- und Regionalberichte): z. B. Dortmund gegen RB Leipzig, Hertha gegen Rostock und Union, Union gegen Rostock und Dresden, Rostock gegen Magdeburg und Aue, HSV gegen St. Pauli, Bayern und Nürnberg gegen 1860, KSC gegen Hannover, Darmstadt gegen Offenbach, Aachen gegen Münster. Ein Testlauf prüft, dass jeder Name im Spiel vorkommt und keine Paarung doppelt oder schon Traditionsduell ist.
 
-## „Zuletzt geöffnet“ entfernt (ungemergt)
+## „Zuletzt geöffnet“ entfernt (Version 3.148)
 
 - Auf Wunsch: die Liste der zuletzt geöffneten Bildschirme oben im Menü (Phase 26.16, `js/one-hand.js`, `#recent-screens-box`) ist entfernt; der alte Geräte-Eintrag `anstoss_fm13_zuletzt` wird beim Start einmal gelöscht. Favoriten bleiben.
