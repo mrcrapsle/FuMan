@@ -917,7 +917,8 @@ async function testTransferMarketFairness(browser) {
         // 3. Der Markt rotiert waehrend der Saison, bleibt aber gleich gross.
         let vorher = marketPlayers.map(p => p.name).join('|');
         let groesse = marketPlayers.length;
-        for (let i = 0; i < 25; i++) tickTransferMarketRotation();
+        // 20 % je Tick: bei 25 Ticks blieb der Markt in 0,4 % der Läufe gleich (0,8^25), bei 100 praktisch nie
+        for (let i = 0; i < 100; i++) tickTransferMarketRotation();
         out.marktRotiert = marketPlayers.map(p => p.name).join('|') !== vorher;
         out.marktGroesseStabil = marketPlayers.length === groesse;
 

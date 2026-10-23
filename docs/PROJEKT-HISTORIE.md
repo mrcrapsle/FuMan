@@ -916,7 +916,7 @@ Test `testEinsteiger` ([26.27]), `testStartmenue` prüft Einsteiger-Modus und St
 
 - Auf Wunsch: die Liste der zuletzt geöffneten Bildschirme oben im Menü (Phase 26.16, `js/one-hand.js`, `#recent-screens-box`) ist entfernt; der alte Geräte-Eintrag `anstoss_fm13_zuletzt` wird beim Start einmal gelöscht. Favoriten bleiben.
 
-## Phase 26.31: Stadionansicht als Canvas (ungemergt)
+## Phase 26.31: Stadionansicht als Canvas (Version 3.149)
 
 Wunsch: im Stadionbereich eine Canvas-Ansicht, in der man sich das Stadion ansehen kann. Umgesetzt wurden alle acht Vorschläge in `js/stadion-canvas.js` (Illustration, feste Farben erlaubt). Spielregeln unverändert, die Ansicht liest nur.
 
