@@ -3594,6 +3594,8 @@ async function testKopfzeilenFenster(browser) {
     await page.evaluate(R32_HILFEN);
     await page.evaluate(() => {
         closeTutorial(); game.sackPending = false; simulateMatchdays(2);
+        // Ein Derby kann zufällig Ausschreitungen auslösen; deren Fenster läge sonst über der Kopfzeile
+        if (typeof schliesseAusschreitungSzene === 'function') schliesseAusschreitungSzene();
         squad.forEach(p => { p.injured = 0; p.suspended = 0; p.fitness = 90; });
         game.formation = '4-4-2'; autoLineup(); updateUI();
     });
@@ -4364,6 +4366,40 @@ async function testGesperrterSpeicher(browser) {
     await page.close();
 }
 
+async function testDashboardStadion(browser) {
+    console.log('\n[3.152] Dashboard: Stadion als Canvas-Bild wie auf der Stadionseite');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const r = await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false;
+        const out = {};
+        showScreen('screen-stadium');
+        const yaw = stadionAnsicht.yaw, kamera = stadionAnsicht.kamera;
+        showScreen('screen-dashboard');
+        const c = document.getElementById('dash-stadion-canvas');
+        const px = c.getContext('2d').getImageData(360, 220, 1, 1).data;
+        out.gemalt = px[3] === 255 && c.width === 720 && c.dataset.stufe === stadion3dStufe(stadium.total) && c.getAttribute('aria-label').includes('Plätze');
+        out.kameraBleibt = stadionAnsicht.yaw === yaw && stadionAnsicht.kamera === kamera;
+        out.alteGrafikWeg = !document.querySelector('#screen-dashboard .dashboard-hero-bowl-wrapper');
+        // Größeres Stadion: andere Bauart im Bild
+        Object.keys(stadium.blocks).forEach(k => { stadium.blocks[k].cap *= 3; });
+        showScreen('screen-dashboard');
+        out.bauart = c.dataset.stufe === 'gross';
+        Object.keys(stadium.blocks).forEach(k => { stadium.blocks[k].cap /= 3; });
+        c.click();
+        out.zumStadion = aktiverScreen === 'screen-stadium';
+        // Ein Bild dauert wenige Millisekunden
+        const t0 = performance.now(); for (let i = 0; i < 10; i++) stadionDashboardZeichnen();
+        out.ms = (performance.now() - t0) / 10;
+        out.schnell = out.ms < 40;
+        return out;
+    });
+    const K = ['gemalt', 'kameraBleibt', 'alteGrafikWeg', 'bauart', 'zumStadion', 'schnell'];
+    assert(K.every(k => r[k] === true), `Dashboard-Stadion: Canvas-Bild, Bauart, Tipp zum Stadion, ${r.ms ? r.ms.toFixed(1) : '?'} ms (${JSON.stringify(K.map(k => k + ':' + r[k]).filter(x => !x.endsWith(':true')))})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 async function testStartUndVersion(browser) {
     console.log('\n[3.150] Geladener Stand zeichnet die Übersicht, Wappen-Kürzel aus dem Vereinsnamen, Hinweis auf neue Version');
     const { page, consoleErrors } = await freshPage(browser);
@@ -4446,6 +4482,7 @@ module.exports = {
     testStartUndVersion,
     testStadionGelaende,
     testGesperrterSpeicher,
+    testDashboardStadion,
     testAdminWerkzeuge,
     testPrivatlebenPlus,
     testOeffentlicheFassung,

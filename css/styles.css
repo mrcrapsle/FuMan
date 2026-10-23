@@ -750,6 +750,7 @@
             position: relative; display: flex; align-items: center; gap: 8px; margin-bottom: 8px; z-index: 2;
         }
         .dashboard-hero-club img, .dashboard-hero-club .crest-fallback { width: 34px; height: 34px; border-radius: 50%; background: rgba(0,0,0,0.3); }
+        .dash-stadion-canvas { display: block; position: relative; z-index: 2; width: 100%; height: auto; aspect-ratio: 720 / 380; margin-top: 10px; border-radius: 12px; cursor: pointer; box-shadow: 0 4px 14px color-mix(in srgb, var(--shade) 60%, transparent); }
         .dashboard-hero-bowl-wrapper { perspective: 700px; width: 100%; position: relative; z-index: 2; }
         .dashboard-hero-bowl {
             display: grid; grid-template-columns: 16% 1fr 1fr 16%; grid-template-rows: 20% 1fr 20%;

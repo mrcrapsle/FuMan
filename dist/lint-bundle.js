@@ -14030,7 +14030,7 @@ function initZugaenglichkeit() {
         if (heroSubline) heroSubline.innerText = `${leagueNames[game.leagueLevel]} · Spieltag ${Math.min(34, game.matchday)}/34`;
         let heroCrest = document.getElementById('dash-hero-crest');
         if (heroCrest && game.clubCrestAnimal) heroCrest.innerText = game.clubCrestAnimal;
-        if (typeof applyStadiumVisualTier === 'function') applyStadiumVisualTier('.dashboard-hero-bowl-wrapper');
+        if (typeof stadionDashboardZeichnen === 'function') stadionDashboardZeichnen();
         // Ablösen müssen Budget UND Kasse decken (finalizePlayerPurchase) - in der Bundesliga ist meist
         // die Kasse knapper (Langzeittest 25.18: 25-97 Mio. € Budget bei 10-50 Mio. € auf dem Konto).
         document.getElementById('dash-transfer-budget').innerText = formatVal(game.transferBudget)
@@ -25561,6 +25561,34 @@ function stadion3dGelaendeListe() {
     const gebaut = plan.filter(g => g.lvl > 0 || g.bau);
     box.innerHTML = `<div style="margin-bottom:4px;">${gebaut.length} ${gebaut.length === 1 ? 'Anlage' : 'Anlagen'} auf dem Gelände${plan.filter(g => g.bau).length ? `, ${plan.filter(g => g.bau).length} im Bau` : ''}. Weitere Gebäude baust du im Campus und bei den Immobilien.</div>
         <div class="stadion-gelaende-knoepfe">${gebaut.map(g => `<button onclick="stadionBlockOeffnen('${g.id}')" class="btn-secondary">${g.icon || '🏗️'} ${mpEscStadion(String(g.name).replace(/\s*['"„].*$/, ''))} ${g.lvl ? `· ${g.lvl}` : '· im Bau'}</button>`).join('')}</div>`;
+}
+
+// ---------- Stadionbild im Dashboard ----------
+// Ein Standbild des eigenen Stadions oben im Dashboard (#dash-stadion-canvas): dieselbe Zeichnung wie auf der Stadionseite
+// mit fester Kamera. Die Canvas hat eine feste Auflösung (720 x 380), es werden keine Größen gelesen; der Zustand der
+// Stadionansicht (Kamera, Auswahl, Treffer) bleibt unberührt.
+const STADION3D_DASHBOARD_KAMERA = { yaw: 0.62, pitch: 0.78, dist: 2.05, tx: 0, ty: 0, zoom: 1 };
+function stadionDashboardZeichnen() {
+    const c = document.getElementById('dash-stadion-canvas');
+    const ctx = c && c.getContext ? c.getContext('2d') : null;
+    if (!ctx) return false;
+    if (!stadionAnsicht) stadion3dNeu();
+    const a = stadionAnsicht;
+    const felder = ['yaw', 'pitch', 'dist', 'tx', 'ty', 'zoom', 'auswahl', 'vorschau', 'risiko', 'flug', 'szene', 'treffer', 'layout', 'P'];
+    const vorher = {};
+    felder.forEach(k => { vorher[k] = a[k]; });
+    try {
+        Object.assign(a, STADION3D_DASHBOARD_KAMERA, { auswahl: null, vorschau: null, risiko: false, flug: null, szene: {}, treffer: [] });
+        const W = 360, H = 190;
+        ctx.setTransform(c.width / W, 0, 0, c.height / H, 0, 0);
+        const layout = stadion3dLayout();
+        stadion3dZeichnen(ctx, stadion3dProjektion(W, H, layout), layout);
+        c.setAttribute('aria-label', stadion3dBeschreibung());
+        c.dataset.stufe = layout.stufe;
+    } finally {
+        felder.forEach(k => { a[k] = vorher[k]; });
+    }
+    return true;
 }
 
 /* eslint-enable */

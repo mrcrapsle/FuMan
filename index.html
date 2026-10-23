@@ -935,7 +935,8 @@
                             <div style="font-size:var(--fs-caption); color:color-mix(in srgb, var(--ink) 75%, transparent);" id="dash-hero-subline">6. Liga · Spieltag 1</div>
                         </div>
                     </div>
-                    <div class="dashboard-hero-bowl-wrapper"></div>
+                    <!-- Stadion als Canvas-Bild (js/stadion-canvas.js, stadionDashboardZeichnen); feste Auflösung, die Breite folgt per CSS -->
+                    <canvas id="dash-stadion-canvas" class="dash-stadion-canvas" width="720" height="380" role="img" aria-label="Dein Stadion" title="Zum Stadion" onclick="showScreen('screen-stadium')"></canvas>
                 </div>
                 <div id="was-jetzt-box"></div>
                 <div id="dash-onboarding-box"></div>

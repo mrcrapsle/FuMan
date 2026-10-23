@@ -968,3 +968,7 @@ Gemeldet: In der Dateivorschau der Claude-App kam man nach „Verein übernehmen
 - Neue Helfer `safeSessionGet()`/`safeSessionRemove()` (`index.html`), `safeSessionSet()` (`js/save.js`) greifen im `try` zu und fallen auf `window.name` zurück, das beim Neuladen derselben Ansicht erhalten bleibt. Alle Aufrufe mit `sessionStorage` als Argument sind umgestellt.
 - Die Versionsprüfung (`js/neue-version.js`) fragt in solchen Ansichten (Herkunft „null“) nicht nach.
 - Speichern bleibt dort unmöglich (localStorage gesperrt, Hinweis wie bisher). Test `testGesperrterSpeicher` sperrt beide Speicher und spielt Startmenü, Neustart und Übernahme durch.
+
+## Stadion im Dashboard als Canvas (ungemergt)
+
+Wunsch: Das Stadion oben im Dashboard soll wie auf der Stadionseite mit Canvas gezeichnet sein. Die CSS-Schüssel (`.dashboard-hero-bowl-wrapper`) ist dort durch `#dash-stadion-canvas` ersetzt: `stadionDashboardZeichnen()` (`js/stadion-canvas.js`) zeichnet aus `renderDashboardView()` ein Standbild mit fester Kamera (Bauart nach Größe, Ränge, Flutlicht, Dach, Wetter, Gelände-Gebäude in der Nähe). Feste Auflösung 720 × 380, die Breite folgt per CSS, es werden keine Größen gelesen; Kamera und Auswahl der Stadionansicht bleiben unberührt. Ein Tipp auf das Bild öffnet die Stadionseite. Test `testDashboardStadion`.

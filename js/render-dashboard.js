@@ -24,7 +24,7 @@
         if (heroSubline) heroSubline.innerText = `${leagueNames[game.leagueLevel]} · Spieltag ${Math.min(34, game.matchday)}/34`;
         let heroCrest = document.getElementById('dash-hero-crest');
         if (heroCrest && game.clubCrestAnimal) heroCrest.innerText = game.clubCrestAnimal;
-        if (typeof applyStadiumVisualTier === 'function') applyStadiumVisualTier('.dashboard-hero-bowl-wrapper');
+        if (typeof stadionDashboardZeichnen === 'function') stadionDashboardZeichnen();
         // Ablösen müssen Budget UND Kasse decken (finalizePlayerPurchase) - in der Bundesliga ist meist
         // die Kasse knapper (Langzeittest 25.18: 25-97 Mio. € Budget bei 10-50 Mio. € auf dem Konto).
         document.getElementById('dash-transfer-budget').innerText = formatVal(game.transferBudget)

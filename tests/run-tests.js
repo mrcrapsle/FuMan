@@ -130,6 +130,7 @@ async function main() {
         S.testStartUndVersion,
         S.testStadionGelaende,
         S.testGesperrterSpeicher,
+        S.testDashboardStadion,
         S.testAusschreitungSzene,
         S.testAdminWerkzeuge,
         S.testPrivatlebenPlus,
