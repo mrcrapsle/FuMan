@@ -11,11 +11,11 @@ Die Datei hat oben `<title>` und `<style>`, dann das HTML-Gerüst, dann ein `<sc
 | Block | Inhalt |
 |---|---|
 | basics | Canvas-Setup, Hilfsfunktionen (`rand`, `clamp`, `hash`, `shade`) |
-| data | `CLASSES` (ork, magier), `ABIL` (4 Fähigkeiten je Klasse), `UT` (Einheitentypen), `ITEMS` (Ausrüstung, Stufe 1–5), `BUILD` (6 Gebäude), `SKILLS` (Fähigkeitenbaum, 3 Zweige), `RIVALS` (6 Clans), `WILD` (Wildnis-Kämpfe), `RANKS` |
+| data | `CLASSES` (ork, magier), `ABIL` (4 Fähigkeiten je Klasse), `UT` (Einheitentypen), `ITEMS` (Ausrüstung, Stufe 1–5), `BUILD` (6 Gebäude), `SKILLS` (Fähigkeitenbaum, 3 Zweige), `RIVALS` (6 Clans), `WILD` (Wolfsjagd), `REGIONS`, `BOSS`, `RANKS` |
 | state | `newState()`, `save()`/`load()` über `localStorage` (Schlüssel `runenfeuer_v1`), `heroStats()`, Erfahrung/Level, Kosten |
 | power / difficulty | `playerPower()`, `cfgPower()`, `diffTag()`; Kampf-Konfigurationen `raidCfg()`, `wildCfg()`, `defenseCfg()` |
 | audio | WebAudio-Soundeffekte (`sfx(name)`), standardmäßig stumm |
-| HUD / UI | Sheets (Bottom-Panels) `shBurg`, `shTag`, `shHeld`, `shKrieg`, `shMarkt`; Aktionen, Tagesende mit Zufallsereignissen, Modals, Startbildschirm; zentraler Klick-Dispatcher `act(a, arg)` über `data-act`/`data-arg` |
+| HUD / UI | Sheets (Bottom-Panels) `shBurg`, `shTag`, `shHeld`, `shGebiete`, `shRegion`, `shMarkt`; Aktionen, Tagesende mit Zufallsereignissen, Modals, Startbildschirm; zentraler Klick-Dispatcher `act(a, arg)` über `data-act`/`data-arg` |
 | iso drawing helpers | `P(x,y,z)` = isometrische Projektion (Kachel 64×32 px bei Zoom 1), `isoBox`, `gable`, `pyramid`, `glow` |
 | figures | Zeichenfunktionen pro Körper: `drawOrk`, `drawMage`, `drawGolem`, `drawWolf`, `drawGhost`; `drawFigure()` macht Schatten, Lebensbalken, Status-Effekte |
 | hub | Burgansicht (13×13 Raster), Gebäude, laufende Clanmitglieder, Partikel, Antippen von Gebäuden |
@@ -29,40 +29,15 @@ Wichtige Konventionen:
 - Spielstand-Änderungen immer mit `refresh()` (rendert HUD und Sheet, speichert).
 - Jede Kampf-Aktion kostet eine Tagesaktion (`useAction()`).
 
-## Geplante Erweiterung (nächster Schritt)
+## Erweiterung (umgesetzt)
 
-### 1. Weltkarte mit 8 Gebieten
-Neue Szene `map` (Navigationspunkt „Karte“ ersetzt „Krieg“). Isometrische Insel als lang gezogener Streifen (25×25-Raster, Ellipse entlang der Diagonale), Gebiete per Voronoi um Startpunkte, Höhen pro Gelände, statische Karte in Offscreen-Canvas cachen, Animationen (Lava-Glühen, Wolken, Flaggen) live darüber. Ziehen zum Verschieben, Tippen öffnet das Gebiets-Panel.
+**Weltkarte** (`REGIONS`, Block „world map“): Szene `map` (Navigationspunkt „Karte“ ersetzt „Krieg“), 25×25-Raster als Streifen entlang der Diagonale. Gebiete per Voronoi um `seed`, Höhe über `h`. Die statische Karte steckt in einem Offscreen-Canvas (`mapBuildCache()`, neu gebaut, wenn sich `mapSig()` ändert; dafür wird `ctx` kurz getauscht), Lava, Wolken, Flaggen, Beschriftung und Auswahl laufen live darüber (`renderMap()`). Ziehen, Zwei-Finger-Zoom, Mausrad, Tippen öffnet das Gebietsfenster (`shRegion`); „Gebiete & Rangliste“ (`shGebiete`) enthält die Rivalen und die Rangliste.
+- Zustand: `S.regions[id].stage` (0 bis 2 = nächste Etappe, 3 = erobert; Heimattal startet erobert), `S.trophies`, `S.won`. `migrate()` ergänzt alte Spielstände beim Laden. Sichtbar ist ein Gebiet, wenn ein Vorgänger (`links`) erobert ist (`regionVisible`).
+- Feldzug: `regionCfg(id, stage, patrol)` mit Seed-Zufall (`rng(strHash(...))`), 3 Etappen, danach Patrouille und täglicher Tribut (`tributeSum()` in `endDay`). Ergebnis in `regionWon()`; Sieg über Brazgul setzt `S.victory` und zeigt über `checkVictory()` den Siegesbildschirm.
+- Rivalen haben ein Heimatgebiet (`RIVALS[].home`) und sind nur angreifbar, wenn es sichtbar ist.
 
-| Gebiet | Stufe | Gegner | Abschluss | Tribut/Tag |
-|---|---|---|---|---|
-| Heimattal | 1 | Wölfe | (Startgebiet) | – |
-| Grauwald | 2 | Wolf, Spinne, Ork-Krieger | Festung: Waldtroll Murg | 60 Gold, 2 Kristalle |
-| Aschensteppe | 3 | Ork-Krieger, Speerwerfer, Goblin-Sprenger, Schamane | Boss: Gorrak der Schlächter | 90 / 3 |
-| Nebelruinen | 5 | Geist, Lehrling, Golem | Festung: Uralter Golem | 80 / 10 |
-| Spinnenschlucht | 5 | Spinnen, Sprenger | Boss: Die Spinnenkönigin | 110 / 5 |
-| Sturmgipfel | 7 | Troll, Schildträger, Krieger, Wolf | Festung: Frostriese Hrymm | 140 / 8 |
-| Knochenmoor | 8 | Skelette, Nekromant, Geist | Boss: Morvath der Lichkönig | 130 / 14 |
-| Glutberge | 11 | Feuerelementar, Schildträger, Sprenger, Schamane | Boss: Brazgul der Feuerdämon | 220 / 20 |
+**Gegner** (`UT`): Skelettkrieger, Nekromant (beschwört, hält Abstand), Ork-Schamane (heilt), Riesenspinne (verlangsamt), Goblin-Sprenger (Zündschnur mit Warnkreis), Schildträger (blockt Projektile), Feuerelementar (explodiert). Sonderverhalten in `specialAct()` und `aiUpdate()`; neue Figuren `drawSkel`, `drawSpider`, `drawElem`, `drawDemon`, Ork-Waffen `stab`, `bombe`, `schild`.
 
-Verbindungen: Heimattal → Grauwald, Aschensteppe; Grauwald → Nebelruinen, Spinnenschlucht; Aschensteppe → Nebelruinen, Sturmgipfel; Nebelruinen → Knochenmoor; Spinnenschlucht → Knochenmoor; Sturmgipfel → Glutberge; Knochenmoor → Glutberge.
+**Bosse** (`BOSS`, `PAT`, `bossAct()`): Telegraphen (`B.tele`, werden in `resolveTele()` ausgelöst), Giftzonen (`B.zones`), Boss-Lebensbalken `#bossbar`, Phase 2 bei 50 % Leben, Betäubung nur zu 30 % (`stunU`). Gorrak, Spinnenkönigin, Morvath und Brazgul lassen Trophäen fallen (`ITEMS[].tro`, im Markt anlegbar); Murg, Uralter Golem und Hrymm sind Festungswächter ohne Trophäe. Neue Muster in `PAT` eintragen und in `BOSS[...].pats` nennen.
 
-- Jedes Gebiet hat 3 Etappen (Vorposten säubern, Lager stürmen, Boss/Festung). Danach erobert: täglicher Tribut, Nachbargebiete werden sichtbar, „Patrouille“ als wiederholbarer Kampf.
-- Gegnerlisten per Seed-Zufall erzeugen, damit die Schwierigkeitsanzeige nicht flackert.
-- Rivalen-Clans bekommen ein Heimatgebiet und sind nur angreifbar, wenn es sichtbar ist.
-- Besiegt man Brazgul, ist das Spiel gewonnen (Siegesbildschirm), danach geht es weiter.
-- Spielstand-Migration: alte Saves ohne `regions` bekommen Heimattal erobert, Rest Etappe 0.
-
-### 2. Neue Gegnertypen
-Skelettkrieger, Nekromant (beschwört Skelette), Ork-Schamane (heilt Verbündete), Riesenspinne (verlangsamt), Goblin-Sprenger (läuft auf dich zu, Zündschnur mit rotem Warnkreis, explodiert), Schildträger (blockt Projektile), Feuerelementar (explodiert beim Tod). Neue Zeichenfunktionen: Spinne, Skelett, Elementar, Dämon; Ork-Varianten mit Schild, Bombe, Schamanenstab.
-
-### 3. Bosse
-Gemeinsames System: **Telegraphen** (Warnkreise am Boden, die sich füllen und dann treffen), Giftzonen, eigener Boss-Lebensbalken oben, zweite Phase bei 50 % Leben, Betäubung wirkt nur abgeschwächt. Jeder Boss lässt eine Trophäe fallen (im Markt anlegbar).
-
-- **Gorrak der Schlächter:** Sprungangriff auf deine Position, Wirbelwind um sich, ruft in Phase 2 Krieger und Schamanen. Trophäe: Gorraks Kriegspanzer.
-- **Die Spinnenkönigin:** Netzschüsse im Fächer (verlangsamen), Giftlachen, brütet Spinnen aus, in Phase 2 schneller. Trophäe: Herz der Spinnenkönigin.
-- **Morvath der Lichkönig:** hält Abstand und teleportiert sich weg, grüne Geschosse, erweckt Skelette, Frostfeld auf deiner Position. Trophäe: Krone des Lichkönigs.
-- **Brazgul der Feuerdämon:** Meteoritenregen (mehrere Warnkreise), Flammenwelle im Kreis, Prankenhieb, ruft in Phase 2 Feuerelementare. Trophäe: Brazguls Glutaxt bzw. Höllenstab.
-
-### 4. Neue Kampfgelände
-Moor (Pfützen, tote Bäume, Nebel), Schlucht (rote Felsen, Spinnennetze, Staub), Gipfel (Schnee, Tannen, Schneefall), Glut (Basalt, Lavaspalten, Funkenflug).
+**Kampfgelände** (`THEMES`): Moor, Schlucht, Gipfel und Glut mit Bodenzeichen (`drawDecal`), Hindernissen (`deadTree`, `fir`, `basalt`, `rock` mit Farben) und Wetter (`drawAmbient`).
