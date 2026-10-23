@@ -932,7 +932,7 @@ Wunsch: im Stadionbereich eine Canvas-Ansicht, in der man sich das Stadion anseh
 - Leistung: rund 4–5 ms je Bild; gezeichnet wird nur bei Bewegung (Rundflug, Kamerafahrt, Wetter, Fahnen, Kran, Lichtshow), sonst bei Änderungen. Läuft nur, solange die Stadionseite im Hub sichtbar ist; bei reduzierter Bewegung Standbilder.
 - Test `testStadionAnsicht`, Lexikon-Eintrag „Stadionansicht“ (neu).
 
-## Start nach dem Laden, Wappen-Kürzel, Hinweis auf neue Version (ungemergt)
+## Start nach dem Laden, Wappen-Kürzel, Hinweis auf neue Version (Version 3.150)
 
 Gemeldet mit einem Screenshot (3.148 auf dem Handy, Lokomotiv Leipzig in der Regionalliga):
 
