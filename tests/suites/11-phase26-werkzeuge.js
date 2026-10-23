@@ -3811,7 +3811,8 @@ async function testStartmenue(browser) {
     Object.assign(r, ueb);
 
     // Trainer gesucht: Angebote mit Ziel aus den Karriere-Szenarien
-    await neuLaden(() => { startNewGame(); startmenueArtWaehlen('jobs'); });
+    // Wie in CI: ohne den Vermerk "Kurzanleitung gesehen" öffnet der Jobantritt die Kurzanleitung
+    await neuLaden(() => { safeLocalRemove('anstoss_fm13_tutorial_seen'); startNewGame(); startmenueArtWaehlen('jobs'); });
     const jobs = await page.evaluate(() => {
         const out = { jobListe: document.querySelectorAll('.startmenue-job').length === Object.keys(CAREER_SCENARIOS).length };
         out.jobLayout = ueberlauf() && woerter('#startmenue-inhalt button').length === 0;
@@ -3828,6 +3829,9 @@ async function testStartmenue(browser) {
     // Nächster Start: Titel mit Weiterspielen. Derselbe Weg wie window.onload (Stand laden, dann Menü), aber ohne
     // Neuladen: in CI war der Speicher nach dem Neuladen zweimal leer, obwohl er vorher geschrieben war.
     r.startStand = await page.evaluate(() => {
+        // In CI fehlt nach dem Neuladen auch der Vermerk "Kurzanleitung gesehen": dann öffnet der Jobantritt die
+        // Kurzanleitung, und sie läge über dem Titel. Beim echten Start gibt es nie beides zugleich.
+        closeTutorial();
         const verein = game.clubName;
         const geladen = loadMostRecentGame();
         zeigeStartmenueBeimStart(false, geladen);
