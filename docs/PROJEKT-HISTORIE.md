@@ -941,7 +941,7 @@ Gemeldet mit einem Screenshot (3.148 auf dem Handy, Lokomotiv Leipzig in der Reg
 - **Neue Version:** GitHub Pages lässt Browser die Seite bis zu 10 Minuten zwischenspeichern, direkt nach einem Deploy lief noch die alte Fassung. `js/neue-version.js` holt beim Start (nach 4 s) und beim Zurückkehren zur Seite (höchstens alle 30 Minuten) `version.json` ohne Zwischenspeicher; der Deploy schreibt sie aus `GAME_VERSION` (auch in den Entwickler-Pfad). Ist sie neuer, öffnet `#neue-version-overlay` mit „Jetzt neu laden“ (vorher `writeAutoSaveNow()`, dann eine eigene Adresse `?v=<version>`) und „Später“. Als Datei oder offline passiert nichts.
 - Test `testStartUndVersion`; dazu ein seltener Zufallsfehler in `testTransferMarketFairness` (Version 3.149).
 
-## Vereinsgelände in der Stadionansicht (ungemergt)
+## Vereinsgelände in der Stadionansicht (Version 3.151)
 
 Wunsch: Infrastruktur- und Campus-Gebäude mit auf das Stadiongelände setzen.
 
@@ -952,7 +952,7 @@ Wunsch: Infrastruktur- und Campus-Gebäude mit auf das Stadiongelände setzen.
 - Vierte Kamera „Vereinsgelände“ mit Blick über das ganze Gelände; der Boden wird an der Kamera abgeschnitten statt bei einer Ecke hinter der Kamera ganz zu fehlen.
 - Test `testStadionGelaende`, Lexikon-Tipp.
 
-## Stadion nach Größe, Vereinsgelände im eigenen Fenster (ungemergt)
+## Stadion nach Größe, Vereinsgelände im eigenen Fenster (Version 3.151)
 
 Rückmeldung zum Teststand: „Das Stadion sieht nicht wirklich nach einem Stadion aus, beachte die verschiedenen Größen; das Gelände in einem eigenen Fenster.“
 
@@ -961,7 +961,7 @@ Rückmeldung zum Teststand: „Das Stadion sieht nicht wirklich nach einem Stadi
 - **Vereinsgelände im eigenen Fenster** (`#stadion-gelaende-overlay`, `stadionGelaendeOeffnen()`): Knopf „🗺️ Gelände“ auf der Stadionseite und „🗺️ Vereinsgelände ansehen“ im Campus. Dieselbe Canvas wandert ins Fenster (Kamera über das ganze Gelände, Tageszeit, Zoom) und beim Schließen mit der vorigen Kamera zurück. Unter dem Bild jedes Gebäude als Knopf. Die vierte Kamera im Stadion entfällt.
 - Tests: `testStadionGelaende` prüft Fenster, Rückweg, Öffnen vom Campus und die Bauart bei 0,9-, 1,4-, 3- und 4,5-facher Größe.
 
-## Neue Karriere in abgeschotteten Vorschauen (ungemergt)
+## Neue Karriere in abgeschotteten Vorschauen (Version 3.151)
 
 Gemeldet: In der Dateivorschau der Claude-App kam man nach „Verein übernehmen“ nicht weiter. Ursache: In abgeschotteten Ansichten (iframe ohne `allow-same-origin`) wirft schon der Zugriff auf `window.sessionStorage`. Die Aufrufe `safeStorageGet(sessionStorage, …)` scheiterten deshalb, bevor die Absicherung griff (beim Start als „Boot-Fehler“), und die Marker für den Neustart (`anstoss_fm13_newgame_modus` usw.) gingen verloren: nach dem Neuladen stand wieder das Startmenü da.
 
