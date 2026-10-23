@@ -214,6 +214,7 @@
         fanBaseFloor: 10,
         clubCrestColor: '#f5b942',
         clubCrestSymbol: 'FCM',
+        clubCrestSymbolEigen: false,   // true: im Wappen-Editor selbst gewählt, sonst Kürzel aus dem Vereinsnamen (js/crest.js)
         clubCrestPattern: 'keins',
         loyaltyDeclineCount: 0,
         legendStatus: false,

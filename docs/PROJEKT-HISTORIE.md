@@ -931,3 +931,12 @@ Wunsch: im Stadionbereich eine Canvas-Ansicht, in der man sich das Stadion anseh
 - **Vorher/Nachher:** „Ausbau im Bild zeigen“ im Block-Fenster blendet den nächsten Rang als Geisterbild ein, ein Schieber wechselt zwischen heute und nach dem Ausbau; der Oberrang rückt mit.
 - Leistung: rund 4–5 ms je Bild; gezeichnet wird nur bei Bewegung (Rundflug, Kamerafahrt, Wetter, Fahnen, Kran, Lichtshow), sonst bei Änderungen. Läuft nur, solange die Stadionseite im Hub sichtbar ist; bei reduzierter Bewegung Standbilder.
 - Test `testStadionAnsicht`, Lexikon-Eintrag „Stadionansicht“ (neu).
+
+## Start nach dem Laden, Wappen-Kürzel, Hinweis auf neue Version (ungemergt)
+
+Gemeldet mit einem Screenshot (3.148 auf dem Handy, Lokomotiv Leipzig in der Regionalliga):
+
+- **Übersicht nach dem Laden:** `window.onload` zeigte bei einem geladenen Stand keinen Bildschirm an. Die Übersicht steht im Markup schon sichtbar, wurde aber nie gezeichnet; es blieben die Platzhalter „6. Liga · Spieltag 1“, „Gegner (Str: 58)“ stehen, bis man den Bildschirm wechselte. Der Fehler ist älter als das Startmenü. Jetzt `updateUI()` und `showScreen('screen-dashboard')` nach dem Laden.
+- **Wappen-Kürzel:** `game.clubCrestSymbol` hatte den Startwert „FCM“ für jeden Verein, auch nach „Verein übernehmen“ oder einem Jobwechsel. Neu `getWappenKuerzel()` und `vereinsKuerzelAusName()` (`js/crest.js`): ohne selbst gewähltes Kürzel aus dem Namen (FC, SV, BSG ganz, sonst Anfangsbuchstaben, höchstens drei Zeichen; Lokomotiv Leipzig → LL). Neues Feld `game.clubCrestSymbolEigen` (Wappen-Editor); alte Stände mit einem anderen Symbol als „FCM“ behalten es. `switchToClub()` setzt das Kürzel auf den neuen Verein zurück. Im Editor ist das erste Kürzel das des Vereins.
+- **Neue Version:** GitHub Pages lässt Browser die Seite bis zu 10 Minuten zwischenspeichern, direkt nach einem Deploy lief noch die alte Fassung. `js/neue-version.js` holt beim Start (nach 4 s) und beim Zurückkehren zur Seite (höchstens alle 30 Minuten) `version.json` ohne Zwischenspeicher; der Deploy schreibt sie aus `GAME_VERSION` (auch in den Entwickler-Pfad). Ist sie neuer, öffnet `#neue-version-overlay` mit „Jetzt neu laden“ (vorher `writeAutoSaveNow()`, dann eine eigene Adresse `?v=<version>`) und „Später“. Als Datei oder offline passiert nichts.
+- Test `testStartUndVersion`; dazu ein seltener Zufallsfehler in `testTransferMarketFairness` (Version 3.149).

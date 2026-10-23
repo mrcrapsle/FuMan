@@ -245,6 +245,19 @@
     </div>
 </div>
 
+<!-- NEUE VERSION (js/neue-version.js) -->
+<div id="neue-version-overlay" class="generic-modal-overlay" aria-label="Neue Version verfügbar">
+    <div class="generic-modal-box">
+        <button onclick="schliesseNeueVersion()" class="generic-modal-close" aria-label="Schließen">✕</button>
+        <div class="panel-header">🆕 Neue Version verfügbar</div>
+        <div id="neue-version-text" style="font-size:var(--fs-body); margin-bottom:8px;"></div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(min(100%, 9em), 1fr)); gap:6px;">
+            <button onclick="ladeNeueVersion()" class="btn-action">🔄 Jetzt neu laden</button>
+            <button onclick="schliesseNeueVersion()" class="btn-secondary">Später</button>
+        </div>
+    </div>
+</div>
+
 <!-- BLOCK DER STADIONANSICHT (js/stadion-canvas.js) -->
 <div id="stadion-block-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
@@ -2950,6 +2963,7 @@
 <script src="js/live-3d.js?v=3.146"></script>
 <script src="js/ausschreitungen-szene.js?v=3.147"></script>
 <script src="js/stadion-canvas.js?v=3.149"></script>
+<script src="js/neue-version.js?v=3.150"></script>
 <script src="js/youth.js?v=2.1"></script>
 <script src="js/youth-academy-extended.js?v=2.1"></script>
 <script src="js/youth-pathway.js?v=3.11"></script>
@@ -3191,6 +3205,11 @@
                 forceSponsorRenewalAtSeasonStart(true);
                 updateUI();
                 showScreen('screen-office');
+            } else {
+                // Geladener Stand: die Übersicht steht schon sichtbar im Markup, wurde aber nie gezeichnet. Ohne diesen
+                // Aufruf blieben Platzhalter wie "6. Liga · Spieltag 1" und "Gegner" stehen, bis man den Bildschirm wechselte.
+                updateUI();
+                showScreen('screen-dashboard');
             }
             applyClubCrest();
             initLanguage();

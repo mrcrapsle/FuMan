@@ -4257,6 +4257,56 @@ async function testStadionAnsicht(browser) {
     await page.close();
 }
 
+async function testStartUndVersion(browser) {
+    console.log('\n[3.150] Geladener Stand zeichnet die Übersicht, Wappen-Kürzel aus dem Vereinsnamen, Hinweis auf neue Version');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const r = await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false;
+        const out = {};
+        // Kürzel: FC/SV/BSG ganz, sonst Anfangsbuchstaben
+        out.kuerzel = vereinsKuerzelAusName('1.FC Moritz Leipzig') === 'FCM' && vereinsKuerzelAusName('Carl Zeiss Jena') === 'CZJ'
+            && vereinsKuerzelAusName('Lokomotiv Leipzig') === 'LL' && vereinsKuerzelAusName('SV Babelsberg 03') === 'SVB';
+        // Vereinswechsel: das Kürzel folgt dem neuen Verein, ein selbst gewähltes bleibt beim alten
+        setCrestSymbol('🦁');
+        out.eigenesSymbol = document.getElementById('club-logo-symbol-text').innerText === '🦁' && game.clubCrestSymbolEigen === true;
+        const ziel = leaguesData[3].find(t => t.name !== game.clubName).name;
+        switchToClub(ziel); applyClubCrest();
+        out.wechsel = document.getElementById('club-logo-symbol-text').innerText === vereinsKuerzelAusName(ziel) && getWappenKuerzel() !== '🦁';
+        // Alter Stand mit eigenem Symbol, aber ohne das neue Feld
+        game.clubCrestSymbol = '🐺'; delete game.clubCrestSymbolEigen;
+        out.alterStand = getWappenKuerzel() === '🐺';
+        game.clubCrestSymbol = 'FCM';
+        saveGameToSlot(1);   // freshPage löscht beim Laden den Merker des letzten Stands, Slot 1 wird trotzdem geladen
+        // Neue Version: nur neuere Versionen zählen, als Datei wird nicht nachgefragt
+        out.vergleich = neuereVersionAus({ version: '99.0' }) === '99.0' && neuereVersionAus({ version: GAME_VERSION.number }) === null
+            && neuereVersionAus({ version: 'x' }) === null && neuereVersionAus(null) === null;
+        zeigeNeueVersion('99.0');
+        const ov = document.getElementById('neue-version-overlay');
+        out.fenster = ov.classList.contains('show') && ov.getAttribute('role') === 'dialog' && document.getElementById('neue-version-text').textContent.includes('99.0');
+        return out;
+    });
+    await page.keyboard.press('Escape');
+    r.zu = await page.evaluate(() => !document.getElementById('neue-version-overlay').classList.contains('show'));
+    r.alsDatei = await page.evaluate(async () => (await pruefeNeueVersion(true)) === null);
+    // Neu laden: der geladene Stand zeichnet die Übersicht (vorher blieben "6. Liga · Spieltag 1" und "Gegner" stehen)
+    await page.reload();
+    await page.waitForFunction(() => typeof game !== 'undefined' && document.getElementById('dash-hero-subline'), null, { timeout: 8000 });
+    Object.assign(r, await page.evaluate(() => {
+        const sub = document.getElementById('dash-hero-subline').innerText, opp = document.getElementById('dash-opp-name').innerText;
+        // In der CI ging der Speicher nach einem Neuladen manchmal verloren (siehe testStartmenue): dann startet ein neues
+        // Spiel im Büro, und es gibt nichts zu prüfen
+        if (game.leagueLevel !== 3) return { geladen: true, ohneSpeicher: true };
+        return { geladen: (sub.startsWith(leagueNames[3]) && sub.includes('/34') && opp !== 'Gegner'
+            && document.getElementById('club-logo-symbol-text').innerText === vereinsKuerzelAusName(game.clubName)) || JSON.stringify([game.clubName, sub, opp]) };
+    }));
+    if (r.ohneSpeicher) console.log('  (Speicher nach dem Neuladen leer, Prüfung der Übersicht übersprungen)');
+    const K = ['kuerzel', 'eigenesSymbol', 'wechsel', 'alterStand', 'vergleich', 'fenster', 'zu', 'alsDatei', 'geladen'];
+    assert(K.every(k => r[k] === true), `Start: Übersicht nach dem Laden, Wappen-Kürzel, Hinweis auf neue Version (${JSON.stringify(K.map(k => k + ':' + r[k]).filter(x => !x.endsWith(':true')))})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 module.exports = {
     testSpielvorbereitung,
     testVertragsWerkzeuge,
@@ -4286,6 +4336,7 @@ module.exports = {
     testLive3D,
     testAusschreitungSzene,
     testStadionAnsicht,
+    testStartUndVersion,
     testAdminWerkzeuge,
     testPrivatlebenPlus,
     testOeffentlicheFassung,

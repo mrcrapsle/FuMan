@@ -129,7 +129,7 @@
                 let hasSponsor = game.sponsor && game.sponsor.base > 500;
                 return `<div class="off-crest-frame">
                             <div class="off-crest-shield${hasSponsor ? ' off-crest-sponsored' : ''}" style="background:${gradient};">
-                                <span class="off-crest-symbol">${game.clubCrestSymbol || 'FCM'}</span>
+                                <span class="off-crest-symbol">${typeof getWappenKuerzel === 'function' ? getWappenKuerzel() : (game.clubCrestSymbol || 'FCM')}</span>
                                 ${pattern && pattern.icon ? `<span class="off-crest-badge off-crest-badge-pattern">${pattern.icon}</span>` : ''}
                                 ${game.clubCrestAnimal ? `<span class="off-crest-badge off-crest-badge-animal">${game.clubCrestAnimal}</span>` : ''}
                             </div>

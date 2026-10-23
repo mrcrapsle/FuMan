@@ -59,6 +59,24 @@
         updateUI();
     }
 
+    // Kürzel aus dem Vereinsnamen: Kürzel wie FC, SV, BSG ganz, sonst Anfangsbuchstaben, höchstens drei Zeichen
+    // ("1.FC Moritz Leipzig" -> FCM, "Carl Zeiss Jena" -> CZJ, "Lokomotiv Leipzig" -> LL)
+    function vereinsKuerzelAusName(name) {
+        let kuerzel = '';
+        String(name || '').split(/[\s.\-/]+/).forEach(teil => {
+            const buchstaben = teil.replace(/[^A-Za-zÄÖÜäöüß]/g, '');
+            if (!buchstaben || kuerzel.length >= 3) return;
+            kuerzel += (buchstaben.length <= 3 && buchstaben === buchstaben.toUpperCase()) ? buchstaben : buchstaben[0].toUpperCase();
+        });
+        return kuerzel.slice(0, 3) || 'FC';
+    }
+    // Das Wappen-Kürzel: selbst gewählt (Wappen-Editor) oder aus dem Vereinsnamen. Der alte Startwert 'FCM'
+    // galt für jeden Verein, auch nach einem Wechsel (Lokomotiv Leipzig zeigte FCM).
+    function getWappenKuerzel() {
+        const eigen = game.clubCrestSymbolEigen || (game.clubCrestSymbol && game.clubCrestSymbol !== 'FCM');
+        return eigen && game.clubCrestSymbol ? game.clubCrestSymbol : vereinsKuerzelAusName(game.clubName);
+    }
+
     function hexToRgba(hex, alpha) {
         let r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
         return `rgba(${r},${g},${b},${alpha})`;
@@ -77,7 +95,7 @@
         if (!el) return;
         let color = game.clubCrestColor || '#f5b942';
         let symbolEl = document.getElementById('club-logo-symbol-text');
-        if (symbolEl) symbolEl.innerText = game.clubCrestSymbol || 'FCM';
+        if (symbolEl) symbolEl.innerText = getWappenKuerzel();
         // Bewusst OHNE color-mix()/CSS-Farbfunktionen (in älteren Android-WebViews evtl. nicht
         // unterstützt) - stattdessen simpler radialer Verlauf aus per-JS berechneten RGBA-Werten.
         let gradient = `radial-gradient(circle at 35% 30%, ${hexToRgba(color, 0.65)} 0%, ${color} 55%, ${hexToRgba(color, 0.75)} 100%)`;
@@ -116,7 +134,7 @@
         if (preview) {
             preview.style.background = gradient;
             preview.style.boxShadow = hasSponsor ? `0 0 0 5px var(--teal), 0 0 20px rgba(23,201,184,0.5)` : 'none';
-            if (previewSymbol) previewSymbol.innerText = game.clubCrestSymbol || 'FCM';
+            if (previewSymbol) previewSymbol.innerText = getWappenKuerzel();
             if (previewBadge) {
                 if (pattern && pattern.icon) { previewBadge.innerText = pattern.icon; previewBadge.style.display = 'flex'; }
                 else previewBadge.style.display = 'none';
@@ -204,6 +222,7 @@
         playSound('click');
         snapshotCurrentCrest();
         game.clubCrestSymbol = symbol;
+        game.clubCrestSymbolEigen = symbol !== vereinsKuerzelAusName(game.clubName);
         applyClubCrest();
         renderCrestEditor();
     }
@@ -241,7 +260,7 @@
             colorBox.innerHTML = CREST_COLOR_PRESETS.map(c => `<button onclick="setCrestColor('${c}')" style="width:32px; height:32px; border-radius:50%; background:${c}; border:${game.clubCrestColor === c ? '3px solid #fff' : '1px solid rgba(255,255,255,0.3)'}; cursor:pointer;"></button>`).join('');
         }
         if (symbolBox) {
-            symbolBox.innerHTML = CREST_SYMBOL_PRESETS.map(s => `<button onclick="setCrestSymbol('${s}')" class="${game.clubCrestSymbol === s ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:var(--fs-title); padding:6px 12px;">${s}</button>`).join('');
+            symbolBox.innerHTML = [vereinsKuerzelAusName(game.clubName), ...CREST_SYMBOL_PRESETS.slice(1)].map(s => `<button onclick="setCrestSymbol('${s}')" class="${getWappenKuerzel() === s ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:var(--fs-title); padding:6px 12px;">${s}</button>`).join('');
         }
         if (patternBox) {
             patternBox.innerHTML = CREST_PATTERN_PRESETS.filter(p => !p.locked || game.jubileePatternUnlocked).map(p => `<button onclick="setCrestPattern('${p.key}')" class="${(game.clubCrestPattern || 'keins') === p.key ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:var(--fs-title-sm); padding:6px 10px;">${p.icon ? p.icon + ' ' : ''}${p.label}</button>`).join('');

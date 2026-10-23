@@ -97,6 +97,9 @@ jobs:
         run: |
           mkdir -p site
           cp dist/anstoss-fm13-oeffentlich.html site/index.html
+          # Kleine Versionsdatei fuer den Hinweis "Neue Version verfuegbar" (js/neue-version.js)
+          VERSION=$(grep -oP "GAME_VERSION = \{ number: '\K[0-9.]+" js/state.js)
+          printf '{"version":"%s"}\n' "$VERSION" > site/version.json
           if [ -z "$DEV_PFAD" ]; then
             echo "::notice title=Entwickler-Seite::Secret DEV_PFAD fehlt - nur die oeffentliche Seite wird veroeffentlicht."
           elif ! printf '%s' "$DEV_PFAD" | grep -Eq '^[A-Za-z0-9-]{8,64}$'; then
@@ -105,6 +108,7 @@ jobs:
             [ -n "$DEV_PIN" ] || echo "::warning title=Entwickler-Seite::Secret DEV_PIN fehlt - das Admin-Menue ist dort ohne PIN offen."
             mkdir -p "site/$DEV_PFAD"
             DEV_AUSGABE="site/$DEV_PFAD/index.html" python3 build.py --nur-dev
+            cp site/version.json "site/$DEV_PFAD/version.json"
           fi
 
       - name: Configure Pages

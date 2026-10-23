@@ -83,6 +83,9 @@
         const alterName = game.clubName;
         game.clubName = targetName;
         game.leagueLevel = targetLevel;
+        // Das Wappen-Kürzel folgt dem neuen Verein (selbst gewählte Kürzel gehörten zum alten)
+        game.clubCrestSymbol = 'FCM';
+        game.clubCrestSymbolEigen = false;
         squad = generateSquadForLevel(targetLevel);
         // Leihen und offene Angebote gehören zum alten Verein (25.21): verliehene Profis kamen sonst
         // am 34. Spieltag zum neuen Verein zurück, sein Gehaltsanteil wurde weiter gebucht.
@@ -341,7 +344,7 @@
         ctx.textAlign = 'center';
         ctx.fillStyle = '#1a1200';
         ctx.font = 'bold 32px Arial';
-        ctx.fillText(game.clubCrestSymbol || 'FCM', canvas.width / 2, y + 72);
+        ctx.fillText(getWappenKuerzel(), canvas.width / 2, y + 72);
 
         // Wappen-Historie als kleine Zeitleiste unter dem aktuellen Wappen.
         if (crestHistory.length > 0) {
@@ -379,7 +382,7 @@
         ctx.fillText('Erstellt mit Anstoß Mobile Pro - FM13', canvas.width / 2, canvas.height - 30);
 
         let link = document.createElement('a');
-        link.download = `Karriere-Urkunde-${game.clubCrestSymbol || 'LokLeipzig'}-Saison${game.season}.png`;
+        link.download = `Karriere-Urkunde-${getWappenKuerzel()}-Saison${game.season}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
         showToast('📸 Karriere-Urkunde als Bild heruntergeladen!', 'success');
