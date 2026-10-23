@@ -25032,6 +25032,8 @@ function stadion3dZaun(liste, P, layout) {
         const n = Math.max(1, Math.round(Math.hypot(x1 - x0, y1 - y0) / 6));
         for (let k = 0; k < n; k++) {
             const px = x0 + (x1 - x0) * k / n, py = y0 + (y1 - y0) * k / n;
+            // Tor an der Südseite: freie Durchfahrt in der Mitte
+            if (s === 2 && Math.abs(px) < 2.6) continue;
             stadion3dObjekt(liste, P, [px, py, 0.9], ctx => {
                 const fuss = stadion3dPunkt(P, px, py, 0), kopf = stadion3dPunkt(P, px, py, 1.9);
                 if (!fuss || !kopf) return;
@@ -25050,6 +25052,70 @@ function stadion3dZaun(liste, P, layout) {
         });
         stadion3dLaterne(liste, P, x0, y0);
         stadion3dLaterne(liste, P, mx, my);
+    }
+}
+
+// Rechteck, außen um Stadion und Gelände: darauf liegt die Straßenring
+function stadion3dStrassenBox(layout, plan) {
+    const a = layout.aussen;
+    let x0 = -(a.W + 2), x1 = a.E + 2, y0 = -(a.N + 2), y1 = a.S + 2;
+    plan.forEach(g => { const r = g.rect; x0 = Math.min(x0, r[0]); y0 = Math.min(y0, r[1]); x1 = Math.max(x1, r[2]); y1 = Math.max(y1, r[3]); });
+    return { x0: x0 - 4, y0: y0 - 4, x1: x1 + 4, y1: y1 + 4 };
+}
+
+// Fläche zwischen zwei Abständen um das Rechteck (vier Trapeze), in Bodenkoordinaten
+function stadion3dRingFlaeche(ctx, P, box, o0, o1, farbe) {
+    const { x0, y0, x1, y1 } = box;
+    const seiten = [
+        [[x0 - o1, y0 - o1], [x1 + o1, y0 - o1], [x1 + o0, y0 - o0], [x0 - o0, y0 - o0]],
+        [[x0 - o0, y1 + o0], [x1 + o0, y1 + o0], [x1 + o1, y1 + o1], [x0 - o1, y1 + o1]],
+        [[x0 - o1, y0 - o1], [x0 - o0, y0 - o0], [x0 - o0, y1 + o0], [x0 - o1, y1 + o1]],
+        [[x1 + o0, y0 - o0], [x1 + o1, y0 - o1], [x1 + o1, y1 + o1], [x1 + o0, y1 + o0]]
+    ];
+    ctx.fillStyle = farbe;
+    seiten.forEach(pts => {
+        const pr = stadion3dPolyGeklippt(P, pts.map(([x, y]) => [x, y, 0.02]));
+        if (pr) { stadion3dPfad(ctx, pr); ctx.fill(); }
+    });
+}
+
+// Straßenring: Gehweg außen, Fahrbahn mit Mittelstreifen (gestrichelt), Bordsteinkanten, Eingangsweg
+function stadion3dStrassen(ctx, P, layout, plan) {
+    const f = stadion3dLichtFaktor(), box = stadion3dStrassenBox(layout, plan);
+    const dimm = s => stadion3dMisch(s, 1 - f, '#000000');
+    stadion3dRingFlaeche(ctx, P, box, 13, 15.5, dimm('#b5b9bc'));      // Gehweg außen
+    stadion3dRingFlaeche(ctx, P, box, 4, 13, dimm('#4a4f55'));         // Fahrbahn
+    stadion3dRingFlaeche(ctx, P, box, 12.6, 13, dimm('#8e9398'));      // Bordstein
+    // Mittelstreifen: gestrichelt entlang des Rings
+    const oc = 8.5, { x0, y0, x1, y1 } = box;
+    const ecken = [[x0 - oc, y0 - oc], [x1 + oc, y0 - oc], [x1 + oc, y1 + oc], [x0 - oc, y1 + oc]];
+    ctx.strokeStyle = `rgba(255,255,255,${0.55 + 0.25 * f})`; ctx.lineWidth = Math.max(0.6, P.fokus / 900);
+    for (let k = 0; k < 4; k++) {
+        const [ax, ay] = ecken[k], [bx, by] = ecken[(k + 1) % 4];
+        const len = Math.hypot(bx - ax, by - ay);
+        for (let t = 0; t + 5 < len; t += 9) {
+            const u0 = t / len, u1 = (t + 5) / len;
+            const a1 = stadion3dPunkt(P, ax + (bx - ax) * u0, ay + (by - ay) * u0, 0.03), b1 = stadion3dPunkt(P, ax + (bx - ax) * u1, ay + (by - ay) * u1, 0.03);
+            if (a1 && b1) { ctx.beginPath(); ctx.moveTo(a1.x, a1.y); ctx.lineTo(b1.x, b1.y); ctx.stroke(); }
+        }
+    }
+    // Eingangsweg: vom Tor an der Südseite des Zauns bis zum Gehweg
+    const gx = 0, gy0 = layout.aussen.S + 2, gy1 = box.y1 - 13;
+    const pfad = [[gx - 1.6, gy0, 0.03], [gx + 1.6, gy0, 0.03], [gx + 1.6, gy1, 0.03], [gx - 1.6, gy1, 0.03]];
+    const pr = stadion3dPolyGeklippt(P, pfad);
+    if (pr) { ctx.fillStyle = dimm('#c9c4b8'); stadion3dPfad(ctx, pr); ctx.fill(); }
+    // Gehweg um das Stadion außerhalb des Zauns
+    stadion3dRingFlaeche(ctx, P, { x0: -(layout.aussen.W + 2), y0: -(layout.aussen.N + 2), x1: layout.aussen.E + 2, y1: layout.aussen.S + 2 }, 2.4, 4.2, dimm('#c9cdd0'));
+}
+
+// Laternen am Straßenring, alle 22 m auf der Außenkante des Gehwegs
+function stadion3dStrassenLaternen(liste, P, layout, plan) {
+    const box = stadion3dStrassenBox(layout, plan), r = 14.6, { x0, y0, x1, y1 } = box;
+    const ecken = [[x0 - r, y0 - r], [x1 + r, y0 - r], [x1 + r, y1 + r], [x0 - r, y1 + r]];
+    for (let k = 0; k < 4; k++) {
+        const [ax, ay] = ecken[k], [bx, by] = ecken[(k + 1) % 4];
+        const len = Math.hypot(bx - ax, by - ay), n = Math.max(1, Math.round(len / 22));
+        for (let i = 0; i < n; i++) stadion3dLaterne(liste, P, ax + (bx - ax) * (i + 0.5) / n, ay + (by - ay) * (i + 0.5) / n);
     }
 }
 
@@ -25291,6 +25357,7 @@ function stadion3dSzeneBauen(P, layout, plan) {
     });
     stadion3dBaeume(liste, P, layout);
     stadion3dZaun(liste, P, layout);
+    stadion3dStrassenLaternen(liste, P, layout, plan || []);
     stadion3dTore(liste, P);
     a.szene = Object.assign(a.szene, szene);
     return liste;
@@ -25312,6 +25379,7 @@ function stadion3dZeichnen(ctx, P, layout) {
     stadion3dBoden(ctx, P, layout);
     a.treffer = [];
     const plan = stadion3dGelaendePlan(layout);
+    stadion3dStrassen(ctx, P, layout, plan);
     stadion3dGelaendeBoden(ctx, P, plan);
     stadion3dRasen(ctx, P, layout);
     stadion3dSchatten(ctx, P, layout, plan);

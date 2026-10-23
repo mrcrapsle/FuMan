@@ -1001,3 +1001,11 @@ Wunsch: die Stadien und Gebäude sollen echter aussehen (Canvas). Umgesetzt in `
 - **Material:** Rasenkante, Verwitterungsflecken auf Betonwänden, Glasdach mit Streben.
 - Nicht umgesetzt: Straßen und Fußwege. Die Umgebung hat keine Straße und keinen Weg zum Stadion.
 - Tests: `testStadionRealismus`.
+
+## Straßen und Fußwege um das Stadion (ungemergt)
+
+- `stadion3dStrassenBox()` legt den Straßenring außen um Stadion und Gelände (vier Meter Abstand zum äußersten Gebäude).
+- `stadion3dStrassen()` zeichnet auf dem Boden: Gehweg außen, Fahrbahn mit gestricheltem Mittelstreifen, Bordsteinkante, Eingangsweg vom Tor zum Ring und einen Gehweg um den Zaun.
+- `stadion3dStrassenLaternen()` setzt alle 22 m Laternen am Gehweg.
+- Das Tor an der Südseite des Zauns hat eine Durchfahrt (2,6 m zu jeder Seite offen).
+- Test: `testStadionRealismus` prüft den Ring.

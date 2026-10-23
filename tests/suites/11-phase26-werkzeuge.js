@@ -4498,9 +4498,13 @@ async function testStadionRealismus(browser) {
         // Bäume und Zaun sind Objekte der Zeichnung (keine Fehler beim Zeichnen)
         const t0 = performance.now(); stadion3dZeichneEinmal(); out.ms = performance.now() - t0;
         out.zeichnet = stadionAnsicht.frames > 0;
+        // Straßenring um Stadion und Gelände: liegt außen um alle Gebäude, Gehweg-Laternen vorhanden
+        const box = stadion3dStrassenBox(stadionAnsicht.layout, stadion3dGelaendePlan(stadionAnsicht.layout));
+        out.strassen = box.x0 < Math.min(...stadion3dGelaendePlan(stadionAnsicht.layout).map(g => g.rect[0])) && box.x1 > stadionAnsicht.layout.aussen.E
+            && typeof stadion3dStrassen === 'function' && typeof stadion3dStrassenLaternen === 'function';
         return out;
     });
-    const K = ['huelle', 'sonneNacht', 'sonneTag', 'schilder', 'giebel', 'banden', 'zeichnet'];
+    const K = ['huelle', 'sonneNacht', 'sonneTag', 'schilder', 'giebel', 'banden', 'zeichnet', 'strassen'];
     assert(K.every(k => r[k] === true), `Stadion-Realismus: Hülle, Sonne, Schilder, Giebel, Banden, Zeichnung ${r.ms ? r.ms.toFixed(1) : '?'} ms (${JSON.stringify(K.map(k => k + ':' + r[k]).filter(x => !x.endsWith(':true')))})`);
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
     await page.close();
