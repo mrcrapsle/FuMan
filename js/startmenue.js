@@ -26,8 +26,8 @@ function startmenueEl() { return document.getElementById('startmenue-overlay'); 
 // Aus window.onload (index.html). Gibt true zurück, wenn das Menü offen ist (dann kein Tutorial).
 function zeigeStartmenueBeimStart(neuesSpiel, geladen) {
     startmenueGeladen = !!geladen;
-    const modus = safeStorageGet(sessionStorage, 'anstoss_fm13_newgame_modus');
-    if (modus) safeStorageRemove(sessionStorage, 'anstoss_fm13_newgame_modus');
+    const modus = safeSessionGet('anstoss_fm13_newgame_modus');
+    if (modus) safeSessionRemove('anstoss_fm13_newgame_modus');
     if (modus === 'uebernehmen' || modus === 'jobs') {
         startmenueGeladen = false;
         startmenueErststart = true;

@@ -92,7 +92,7 @@ python3 scripts/auswertung.py <datei>…         # Zusammenfassung je Bot-Lauf (
 - **Darstellung doppelt gespeichert:** Theme, Textgröße und Bewegung liegen über `designLesen()`/`designSchreiben()` (`js/design-settings.js`) in localStorage und sessionStorage; nie direkt mit `safeLocalSet` schreiben. Das Theme „Automatisch“ löst `loeseThemeAuf()` über festgehaltene `matchMedia`-Objekte auf.
 - **Tests warten auf Zustände:** Statt `waitForTimeout` mit festen Zeiten `waitForFunction` auf den erwarteten Zustand (in CI scheiterten Tests an zu knappen 150 ms).
 - **Handy-Layout:** Kein horizontaler Überlauf, Knöpfe mindestens 32 px, Schrift mindestens 11 px. Knopfreihen mit langen Wörtern als `repeat(auto-fit, minmax(min(100%, Nem), 1fr))` statt fester Spalten, Knöpfe neben `flex:1`-Feldern mit `flex:0 0 auto` (`testKnopfWorteHandy` prüft 320/360/390 px, auch mit 9 % breiterer Schrift wie in der CI). Messungen mit Rückfall `el.offsetWidth || 320`, da Bildschirme ausgeblendet sein können.
-- **localStorage:** Auf `file://` blockiert Android WebView den Zugriff. Alle Zugriffe über `safeLocalSet()` und Gegenstücke.
+- **localStorage:** Auf `file://` blockiert Android WebView den Zugriff. Alle Zugriffe über `safeLocalSet()` und Gegenstücke. Sitzungsspeicher nur über `safeSessionGet()`/`safeSessionSet()`/`safeSessionRemove()` (Rückfall auf `window.name` für abgeschottete Vorschauen), nie `sessionStorage` als Argument übergeben.
 
 ## Tests
 

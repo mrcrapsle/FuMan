@@ -22670,8 +22670,8 @@ function startmenueEl() { return document.getElementById('startmenue-overlay'); 
 // Aus window.onload (index.html). Gibt true zurück, wenn das Menü offen ist (dann kein Tutorial).
 function zeigeStartmenueBeimStart(neuesSpiel, geladen) {
     startmenueGeladen = !!geladen;
-    const modus = safeStorageGet(sessionStorage, 'anstoss_fm13_newgame_modus');
-    if (modus) safeStorageRemove(sessionStorage, 'anstoss_fm13_newgame_modus');
+    const modus = safeSessionGet('anstoss_fm13_newgame_modus');
+    if (modus) safeSessionRemove('anstoss_fm13_newgame_modus');
     if (modus === 'uebernehmen' || modus === 'jobs') {
         startmenueGeladen = false;
         startmenueErststart = true;
@@ -25581,7 +25581,8 @@ function neuereVersionAus(daten) {
 }
 
 async function pruefeNeueVersion(sofort) {
-    if (!/^https?:$/.test(location.protocol) || typeof fetch !== 'function') return null;
+    // Nur auf der eigenen Seite: abgeschottete Vorschauen (Herkunft "null") dürfen version.json nicht lesen
+    if (!/^https?:$/.test(location.protocol) || location.origin === 'null' || typeof fetch !== 'function') return null;
     if (!sofort && Date.now() - neueVersionZuletzt < NEUE_VERSION_ABSTAND) return null;
     neueVersionZuletzt = Date.now();
     try {
@@ -41526,7 +41527,12 @@ function renderAdminTools() {
     // Not sofort neu geladen (initDefaultSquad() beim Boot greift dann ohnehin als
     // Fallback), statt dass der Klick auf "Neues Spiel"/Entlassung/Ruhestand lautlos wirkungslos bleibt.
     function safeSessionSet(key, value) {
-        try { sessionStorage.setItem(key, value); return true; } catch (e) { console.error('Session-Storage nicht verfügbar:', e); return false; }
+        try { window.sessionStorage.setItem(key, value); return true; } catch (e) { /* gesperrt: Rückfall auf window.name (index.html) */ }
+        if (typeof sitzungErsatzLesen !== 'function') return false;
+        const ersatz = sitzungErsatzLesen();
+        ersatz[key] = String(value);
+        sitzungErsatzSchreiben(ersatz);
+        return true;
     }
 
     // Spielpläne kompakt speichern: [heim, gast, heimtore, gasttore] statt Objekten mit
@@ -42494,6 +42500,27 @@ function renderSaveSafetyBox() {
     // file://-URLs komplett blockieren können (Exception statt einfach leerem Wert). Ohne
     // diese Absicherung würde das die GESAMTE Boot-Sequenz lautlos abbrechen lassen -
     // dann würde buchstäblich nichts im Spiel funktionieren, da nie initialisiert wurde.
+    // Sitzungsspeicher mit Rückfall: In abgeschotteten Vorschauen (Dateiansicht in Apps, iframe ohne allow-same-origin)
+    // wirft schon der Zugriff auf window.sessionStorage. Die Marker für "Neue Karriere", "Verein übernehmen" usw. müssen
+    // aber einen Neustart überstehen, sonst landet man wieder im Startmenü. Rückfall ist window.name: es bleibt beim
+    // Neuladen derselben Ansicht erhalten.
+    const SITZUNG_ERSATZ_PREFIX = 'anstossSitzung:';
+    function sitzungErsatzLesen() {
+        try { const n = window.name || ''; return n.indexOf(SITZUNG_ERSATZ_PREFIX) === 0 ? JSON.parse(n.slice(SITZUNG_ERSATZ_PREFIX.length)) : {}; } catch (e) { return {}; }
+    }
+    function sitzungErsatzSchreiben(werte) {
+        try { window.name = Object.keys(werte).length ? SITZUNG_ERSATZ_PREFIX + JSON.stringify(werte) : ''; } catch (e) { /* ignorieren */ }
+    }
+    function safeSessionGet(key) {
+        try { const v = window.sessionStorage.getItem(key); if (v !== null) return v; } catch (e) { /* gesperrt: Rückfall */ }
+        const ersatz = sitzungErsatzLesen();
+        return Object.prototype.hasOwnProperty.call(ersatz, key) ? ersatz[key] : null;
+    }
+    function safeSessionRemove(key) {
+        try { window.sessionStorage.removeItem(key); } catch (e) { /* gesperrt */ }
+        const ersatz = sitzungErsatzLesen();
+        if (Object.prototype.hasOwnProperty.call(ersatz, key)) { delete ersatz[key]; sitzungErsatzSchreiben(ersatz); }
+    }
     function safeStorageGet(store, key) {
         try { return store.getItem(key); } catch (e) { return null; }
     }
@@ -42554,17 +42581,17 @@ function renderSaveSafetyBox() {
         try {
             restoreGetters();
             mark('restoreGetters');
-            let forceNewGame = safeStorageGet(sessionStorage, 'anstoss_fm13_force_new_game');
+            let forceNewGame = safeSessionGet('anstoss_fm13_force_new_game');
             let spielGeladen = false;
             if (forceNewGame) {
-                safeStorageRemove(sessionStorage, 'anstoss_fm13_force_new_game');
+                safeSessionRemove('anstoss_fm13_force_new_game');
                 // Startbedingungen konfigurierbar: nur gesetzt, wenn der Reset über
                 // den "Neues Spiel starten"-Dialog mit Auswahl kam (siehe confirmNewGame
                 // WithSettings() in save.js) - beim Entlassungs-Reload (getSacked()) fehlen
                 // diese Marker, dann bleibt es beim alten Standardverhalten (6. Liga).
                 // Heimatstadt (js/club-geo.js) VOR initLeagues(): sie bestimmt die Ligen 4-6.
-                let chosenCity = safeStorageGet(sessionStorage, 'anstoss_fm13_newgame_city');
-                safeStorageRemove(sessionStorage, 'anstoss_fm13_newgame_city');
+                let chosenCity = safeSessionGet('anstoss_fm13_newgame_city');
+                safeSessionRemove('anstoss_fm13_newgame_city');
                 if (chosenCity && typeof HOME_CITIES !== 'undefined' && HOME_CITIES[chosenCity]) {
                     game.homeCity = chosenCity;
                     if (game.clubName === '1.FC Moritz Leipzig') {
@@ -42573,26 +42600,26 @@ function renderSaveSafetyBox() {
                     }
                 }
                 // Eigener Vereinsname aus dem Startmenü (Verein gründen), vor initLeagues()
-                let chosenName = safeStorageGet(sessionStorage, 'anstoss_fm13_newgame_clubname');
-                safeStorageRemove(sessionStorage, 'anstoss_fm13_newgame_clubname');
+                let chosenName = safeSessionGet('anstoss_fm13_newgame_clubname');
+                safeSessionRemove('anstoss_fm13_newgame_clubname');
                 chosenName = (chosenName || '').replace(/[<>&"]/g, '').trim().slice(0, 40);
                 if (chosenName) {
                     game.clubName = chosenName;
                     game.secondTeam.name = `${chosenName} II`;
                 }
                 // Einsteiger-Modus (js/einsteiger.js)
-                let chosenEinsteiger = safeStorageGet(sessionStorage, 'anstoss_fm13_newgame_einsteiger');
-                safeStorageRemove(sessionStorage, 'anstoss_fm13_newgame_einsteiger');
+                let chosenEinsteiger = safeSessionGet('anstoss_fm13_newgame_einsteiger');
+                safeSessionRemove('anstoss_fm13_newgame_einsteiger');
                 if (chosenEinsteiger !== null) game.einsteiger = chosenEinsteiger === '1';
                 if (typeof ensureHomeCity === 'function') { ensureHomeCity(); applyHomeRegion(); }
-                let chosenLevel = safeStorageGet(sessionStorage, 'anstoss_fm13_newgame_leaguelevel');
-                let chosenMoney = safeStorageGet(sessionStorage, 'anstoss_fm13_newgame_money');
-                safeStorageRemove(sessionStorage, 'anstoss_fm13_newgame_leaguelevel');
-                safeStorageRemove(sessionStorage, 'anstoss_fm13_newgame_money');
+                let chosenLevel = safeSessionGet('anstoss_fm13_newgame_leaguelevel');
+                let chosenMoney = safeSessionGet('anstoss_fm13_newgame_money');
+                safeSessionRemove('anstoss_fm13_newgame_leaguelevel');
+                safeSessionRemove('anstoss_fm13_newgame_money');
                 if (chosenLevel !== null) game.leagueLevel = parseInt(chosenLevel);
                 // Freischalt-Tempo (js/freischaltungen.js)
-                let chosenTempo = safeStorageGet(sessionStorage, 'anstoss_fm13_newgame_freischaltung');
-                safeStorageRemove(sessionStorage, 'anstoss_fm13_newgame_freischaltung');
+                let chosenTempo = safeSessionGet('anstoss_fm13_newgame_freischaltung');
+                safeSessionRemove('anstoss_fm13_newgame_freischaltung');
                 if (chosenTempo) game.freischaltTempo = chosenTempo;
                 // Startkapital und Stadiongroesse skalieren mit der gewaehlten Startliga
                 // (siehe getNewGameStartMoney()/scaleStadiumForLeague() in save.js).
@@ -42627,21 +42654,21 @@ function renderSaveSafetyBox() {
                 initLeagues();
                 refreshTransferMarket();
                 forceSponsorRenewalAtSeasonStart(true);
-                let chosenScenario = safeStorageGet(sessionStorage, 'anstoss_fm13_newgame_scenario');
-                safeStorageRemove(sessionStorage, 'anstoss_fm13_newgame_scenario');
+                let chosenScenario = safeSessionGet('anstoss_fm13_newgame_scenario');
+                safeSessionRemove('anstoss_fm13_newgame_scenario');
                 if (chosenScenario && typeof applyScenarioStart === 'function') applyScenarioStart(chosenScenario);
 
                 // Falls dieser Neustart durch eine Entlassung ausgelöst wurde: Karriere
                 // (Level/XP/Perks) & Trophäenschrank retten, alles andere bleibt frisch.
-                let sackedRPG = safeStorageGet(sessionStorage, 'anstoss_fm13_sacked_managerRPG');
+                let sackedRPG = safeSessionGet('anstoss_fm13_sacked_managerRPG');
                 if (sackedRPG) {
                     try {
                         Object.assign(managerRPG, JSON.parse(sackedRPG));
-                        game.trophies = JSON.parse(safeStorageGet(sessionStorage, 'anstoss_fm13_sacked_trophies') || '[]');
-                        game.timesSacked = parseInt(safeStorageGet(sessionStorage, 'anstoss_fm13_sacked_times') || '1');
-                        safeStorageRemove(sessionStorage, 'anstoss_fm13_sacked_managerRPG');
-                        safeStorageRemove(sessionStorage, 'anstoss_fm13_sacked_trophies');
-                        safeStorageRemove(sessionStorage, 'anstoss_fm13_sacked_times');
+                        game.trophies = JSON.parse(safeSessionGet('anstoss_fm13_sacked_trophies') || '[]');
+                        game.timesSacked = parseInt(safeSessionGet('anstoss_fm13_sacked_times') || '1');
+                        safeSessionRemove('anstoss_fm13_sacked_managerRPG');
+                        safeSessionRemove('anstoss_fm13_sacked_trophies');
+                        safeSessionRemove('anstoss_fm13_sacked_times');
                         showToast(`🆕 Neuer Job gefunden! Deine Karriere (Lvl ${managerRPG.level}) und ${game.trophies.length} Trophäe(n) bleiben erhalten.`, 'success');
                     } catch (e) { console.error('Konnte Entlassungs-Karrieredaten nicht wiederherstellen', e); }
                 } else {

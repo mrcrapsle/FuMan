@@ -15,7 +15,8 @@ function neuereVersionAus(daten) {
 }
 
 async function pruefeNeueVersion(sofort) {
-    if (!/^https?:$/.test(location.protocol) || typeof fetch !== 'function') return null;
+    // Nur auf der eigenen Seite: abgeschottete Vorschauen (Herkunft "null") dürfen version.json nicht lesen
+    if (!/^https?:$/.test(location.protocol) || location.origin === 'null' || typeof fetch !== 'function') return null;
     if (!sofort && Date.now() - neueVersionZuletzt < NEUE_VERSION_ABSTAND) return null;
     neueVersionZuletzt = Date.now();
     try {

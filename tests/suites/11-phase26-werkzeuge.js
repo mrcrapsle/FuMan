@@ -4332,6 +4332,38 @@ async function testStadionGelaende(browser) {
     await page.close();
 }
 
+async function testGesperrterSpeicher(browser) {
+    console.log('\n[3.151] Abgeschottete Vorschau ohne Speicher: Neue Karriere und Verein übernehmen kommen über den Neustart');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 390, height: 844 });
+    // Wie in der Dateivorschau einer App: schon der Zugriff auf den Speicher wirft
+    await page.addInitScript(() => {
+        const sperre = () => { throw new DOMException('The document is sandboxed', 'SecurityError'); };
+        Object.defineProperty(window, 'sessionStorage', { get: sperre, configurable: true });
+        Object.defineProperty(window, 'localStorage', { get: sperre, configurable: true });
+        window.anstossOhneStartmenue = false;
+    });
+    await page.reload();
+    await page.waitForFunction(() => typeof game !== 'undefined' && document.querySelector('#startmenue-overlay.show'), null, { timeout: 8000 }).catch(() => null);
+    const r = await page.evaluate(() => ({ menue: !!document.querySelector('#startmenue-overlay.show') && Array.isArray(squad) && squad.length > 0 }));
+    await page.evaluate(() => { oeffneStartmenue('karriere'); startmenueArtWaehlen('uebernehmen'); });
+    await page.waitForFunction(() => typeof startmenueSchritt !== 'undefined' && startmenueSchritt === 'uebernehmen', null, { timeout: 8000 }).catch(() => null);
+    Object.assign(r, await page.evaluate(() => {
+        const out = { auswahl: startmenueSchritt === 'uebernehmen' && document.getElementById('startmenue-inhalt').textContent.includes('Verein übernehmen') };
+        // Antreten klappt, der Marker ist danach verbraucht
+        const ziel = leaguesData[3][0].name;
+        startmenueVereinUebernehmen(ziel);
+        out.antreten = game.clubName === ziel && !document.querySelector('#startmenue-overlay.show');
+        out.markerWeg = safeSessionGet('anstoss_fm13_newgame_modus') === null;
+        return out;
+    }));
+    const K = ['menue', 'auswahl', 'antreten', 'markerWeg'];
+    assert(K.every(k => r[k] === true), `Gesperrter Speicher: Startmenü, Neustart mit Marker, Verein übernehmen (${JSON.stringify(K.map(k => k + ':' + r[k]))})`);
+    const fehler = consoleErrors.filter(e => !/LocalStorage nicht verfügbar|Speichern|Autosave|SecurityError/i.test(e));
+    assert(fehler.length === 0, `Keine weiteren JS-Fehler (${fehler.join(' | ')})`);
+    await page.close();
+}
+
 async function testStartUndVersion(browser) {
     console.log('\n[3.150] Geladener Stand zeichnet die Übersicht, Wappen-Kürzel aus dem Vereinsnamen, Hinweis auf neue Version');
     const { page, consoleErrors } = await freshPage(browser);
@@ -4413,6 +4445,7 @@ module.exports = {
     testStadionAnsicht,
     testStartUndVersion,
     testStadionGelaende,
+    testGesperrterSpeicher,
     testAdminWerkzeuge,
     testPrivatlebenPlus,
     testOeffentlicheFassung,

@@ -960,3 +960,11 @@ Rückmeldung zum Teststand: „Das Stadion sieht nicht wirklich nach einem Stadi
 - **Aussehen:** Sitze in Vereinsfarbe, helle Fassaden mit Band in Vereinsfarbe statt brauner Kästen, Tribünendächer auf Stützen, Werbebanden ums Spielfeld, Trainerbänke vor der Haupttribüne. Die Komplett-Überdachung (Spezial-Installation) reicht weiter nach vorn.
 - **Vereinsgelände im eigenen Fenster** (`#stadion-gelaende-overlay`, `stadionGelaendeOeffnen()`): Knopf „🗺️ Gelände“ auf der Stadionseite und „🗺️ Vereinsgelände ansehen“ im Campus. Dieselbe Canvas wandert ins Fenster (Kamera über das ganze Gelände, Tageszeit, Zoom) und beim Schließen mit der vorigen Kamera zurück. Unter dem Bild jedes Gebäude als Knopf. Die vierte Kamera im Stadion entfällt.
 - Tests: `testStadionGelaende` prüft Fenster, Rückweg, Öffnen vom Campus und die Bauart bei 0,9-, 1,4-, 3- und 4,5-facher Größe.
+
+## Neue Karriere in abgeschotteten Vorschauen (ungemergt)
+
+Gemeldet: In der Dateivorschau der Claude-App kam man nach „Verein übernehmen“ nicht weiter. Ursache: In abgeschotteten Ansichten (iframe ohne `allow-same-origin`) wirft schon der Zugriff auf `window.sessionStorage`. Die Aufrufe `safeStorageGet(sessionStorage, …)` scheiterten deshalb, bevor die Absicherung griff (beim Start als „Boot-Fehler“), und die Marker für den Neustart (`anstoss_fm13_newgame_modus` usw.) gingen verloren: nach dem Neuladen stand wieder das Startmenü da.
+
+- Neue Helfer `safeSessionGet()`/`safeSessionRemove()` (`index.html`), `safeSessionSet()` (`js/save.js`) greifen im `try` zu und fallen auf `window.name` zurück, das beim Neuladen derselben Ansicht erhalten bleibt. Alle Aufrufe mit `sessionStorage` als Argument sind umgestellt.
+- Die Versionsprüfung (`js/neue-version.js`) fragt in solchen Ansichten (Herkunft „null“) nicht nach.
+- Speichern bleibt dort unmöglich (localStorage gesperrt, Hinweis wie bisher). Test `testGesperrterSpeicher` sperrt beide Speicher und spielt Startmenü, Neustart und Übernahme durch.

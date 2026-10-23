@@ -48,7 +48,12 @@
     // Not sofort neu geladen (initDefaultSquad() beim Boot greift dann ohnehin als
     // Fallback), statt dass der Klick auf "Neues Spiel"/Entlassung/Ruhestand lautlos wirkungslos bleibt.
     function safeSessionSet(key, value) {
-        try { sessionStorage.setItem(key, value); return true; } catch (e) { console.error('Session-Storage nicht verfügbar:', e); return false; }
+        try { window.sessionStorage.setItem(key, value); return true; } catch (e) { /* gesperrt: Rückfall auf window.name (index.html) */ }
+        if (typeof sitzungErsatzLesen !== 'function') return false;
+        const ersatz = sitzungErsatzLesen();
+        ersatz[key] = String(value);
+        sitzungErsatzSchreiben(ersatz);
+        return true;
     }
 
     // Spielpläne kompakt speichern: [heim, gast, heimtore, gasttore] statt Objekten mit
