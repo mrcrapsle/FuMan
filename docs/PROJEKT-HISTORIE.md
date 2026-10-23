@@ -986,7 +986,7 @@ Wunsch: Das Stadion oben im Dashboard soll wie auf der Stadionseite mit Canvas g
 - Nicht umgesetzt: Gästeblock im 3D-Livespiel. Die Livespiel-Ansicht zeigt kein Stadion, nur Spielfeld und Figuren; ein Stadion dort wäre eine eigene Geometrie.
 - Tests: `testStadionNeuerungen`; `testStadionGelaende` prüft Bauplätze statt ausgelassener Gebäude.
 
-## Stadion und Gebäude realistischer (ungemergt)
+## Stadion und Gebäude realistischer (Version 3.153)
 
 Wunsch: die Stadien und Gebäude sollen echter aussehen (Canvas). Umgesetzt in `js/stadion-canvas.js`:
 
