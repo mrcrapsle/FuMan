@@ -4257,6 +4257,64 @@ async function testStadionAnsicht(browser) {
     await page.close();
 }
 
+async function testStadionGelaende(browser) {
+    console.log('\n[26.32] Vereinsgelände in der Stadionansicht: Campus, Jugendakademie, Immobilien, Baustellen, Antippen');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false; safeLocalRemove('anstoss_fm13_stadion3d');
+        document.documentElement.setAttribute('data-motion', 'reduziert');
+        Object.keys(campusBuildings).forEach(k => { campusBuildings[k].lvl = 0; });
+        campusBuildings.hotel.lvl = 3; campusBuildings.trainingground.lvl = 2; campusBuildings.foodtrucks.lvl = 2;
+        game.youthAcademyLvl = 2;
+        realEstatePortfolio.buerokomplex.owned = true; realEstatePortfolio.buerokomplex.lvl = 1;
+        game.stadiumConstructionQueue = [{ type: 'campusBuilding', params: { key: 'reha' }, totalCost: 1, downPayment: 1, remainingPayment: 0, daysLeft: 3, totalDays: 12, label: 'Reha-Klinik & Physio-Zentrum (Stufe 1)' }];
+        showScreen('screen-stadium');
+    });
+    await page.waitForFunction(() => typeof stadionAnsicht !== 'undefined' && stadionAnsicht && stadionAnsicht.frames > 0, null, { timeout: 5000 }).catch(() => null);
+    const r = await page.evaluate(() => {
+        const out = {};
+        const a = stadionAnsicht;
+        stadion3dZeichneEinmal();
+        const ids = a.szene.gelaende.map(g => g.id);
+        out.gebaeude = ['campus:hotel', 'campus:trainingground', 'campus:foodtrucks', 'jugend', 'immo:buerokomplex'].every(id => ids.includes(id));
+        out.ungebautFehlt = !ids.includes('campus:museum') && !ids.includes('immo:parkplatz');
+        const reha = a.szene.gelaende.find(g => g.id === 'campus:reha');
+        out.baustelle = !!reha && reha.lvl === 0 && reha.bau && a.szene.kraene.some(k => k.type === 'campusBuilding' && k.anteil === 75);
+        // Stufen verändern das Bild: das Hotel wächst
+        const plan = stadion3dGelaendePlan(a.layout);
+        const hotel = plan.find(g => g.id === 'campus:hotel');
+        out.hoehe = hotel.h(5) > hotel.h(3) && hotel.h(3) > hotel.h(1);
+        // Gebäude liegen außerhalb der Tribünen und überschneiden sich nicht
+        const rects = plan.map(g => g.rect);
+        out.ausserhalb = plan.every(g => Math.max(Math.abs(g.rect[0]), Math.abs(g.rect[2])) > a.layout.aussen.W || Math.max(Math.abs(g.rect[1]), Math.abs(g.rect[3])) > a.layout.aussen.N);
+        out.keineUeberschneidung = rects.every((p, i) => rects.every((q, j) => i === j || p[2] <= q[0] || q[2] <= p[0] || p[3] <= q[1] || q[3] <= p[1]));
+        // Kamera Vereinsgelände
+        a.kamera = 2; stadionKamera();
+        out.kamera = a.kamera === 3 && document.getElementById('stadion-3d-kamera').textContent.includes('Vereinsgelände');
+        // Antippen öffnet das Fenster mit dem Weg zur Seite
+        stadion3dZeichneEinmal();
+        out.treffer = a.treffer.some(t => t.key === 'campus:hotel') && a.treffer.some(t => t.key === 'jugend');
+        stadionBlockOeffnen('campus:hotel');
+        const ov = document.getElementById('stadion-block-overlay');
+        out.fenster = ov.classList.contains('show') && document.getElementById('stadion-block-inhalt').textContent.includes(campusBuildings.hotel.name)
+            && document.getElementById('stadion-block-inhalt').textContent.includes('Stufe 3/5');
+        [...document.querySelectorAll('#stadion-block-inhalt button')].find(b => b.textContent.includes('Zum Campus')).click();
+        out.zumCampus = !ov.classList.contains('show') && aktiverScreen === 'screen-campus';
+        // Fertiger Campus-Bau: Rundflug beim nächsten Besuch, das Gebäude steht
+        game.stadiumConstructionQueue[0].daysLeft = 1;
+        tickStadiumConstruction();
+        out.fertig = campusBuildings.reha.lvl === 1 && game.stadionRundflug && game.stadionRundflug.includes('Reha');
+        out.karte = stadion3dFlugKarten().some(k => k[0].includes('Vereinsgelände'));
+        document.documentElement.setAttribute('data-motion', 'normal');
+        return out;
+    });
+    const K = ['gebaeude', 'ungebautFehlt', 'baustelle', 'hoehe', 'ausserhalb', 'keineUeberschneidung', 'kamera', 'treffer', 'fenster', 'zumCampus', 'fertig', 'karte'];
+    assert(K.every(k => r[k] === true), `Vereinsgelände: Gebäude nach Stufe, Baustellen, Kamera, Antippen (${JSON.stringify(K.map(k => k + ':' + r[k]).filter(x => !x.endsWith(':true')))})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 async function testStartUndVersion(browser) {
     console.log('\n[3.150] Geladener Stand zeichnet die Übersicht, Wappen-Kürzel aus dem Vereinsnamen, Hinweis auf neue Version');
     const { page, consoleErrors } = await freshPage(browser);
@@ -4337,6 +4395,7 @@ module.exports = {
     testAusschreitungSzene,
     testStadionAnsicht,
     testStartUndVersion,
+    testStadionGelaende,
     testAdminWerkzeuge,
     testPrivatlebenPlus,
     testOeffentlicheFassung,

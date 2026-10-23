@@ -940,3 +940,14 @@ Gemeldet mit einem Screenshot (3.148 auf dem Handy, Lokomotiv Leipzig in der Reg
 - **Wappen-Kürzel:** `game.clubCrestSymbol` hatte den Startwert „FCM“ für jeden Verein, auch nach „Verein übernehmen“ oder einem Jobwechsel. Neu `getWappenKuerzel()` und `vereinsKuerzelAusName()` (`js/crest.js`): ohne selbst gewähltes Kürzel aus dem Namen (FC, SV, BSG ganz, sonst Anfangsbuchstaben, höchstens drei Zeichen; Lokomotiv Leipzig → LL). Neues Feld `game.clubCrestSymbolEigen` (Wappen-Editor); alte Stände mit einem anderen Symbol als „FCM“ behalten es. `switchToClub()` setzt das Kürzel auf den neuen Verein zurück. Im Editor ist das erste Kürzel das des Vereins.
 - **Neue Version:** GitHub Pages lässt Browser die Seite bis zu 10 Minuten zwischenspeichern, direkt nach einem Deploy lief noch die alte Fassung. `js/neue-version.js` holt beim Start (nach 4 s) und beim Zurückkehren zur Seite (höchstens alle 30 Minuten) `version.json` ohne Zwischenspeicher; der Deploy schreibt sie aus `GAME_VERSION` (auch in den Entwickler-Pfad). Ist sie neuer, öffnet `#neue-version-overlay` mit „Jetzt neu laden“ (vorher `writeAutoSaveNow()`, dann eine eigene Adresse `?v=<version>`) und „Später“. Als Datei oder offline passiert nichts.
 - Test `testStartUndVersion`; dazu ein seltener Zufallsfehler in `testTransferMarketFairness` (Version 3.149).
+
+## Vereinsgelände in der Stadionansicht (ungemergt)
+
+Wunsch: Infrastruktur- und Campus-Gebäude mit auf das Stadiongelände setzen.
+
+- `stadion3dGelaendePlan()` (`js/stadion-canvas.js`) legt alle gebauten Gebäude rund ums Stadion: die elf Campus-Gebäude (`STADION3D_CAMPUS`; Trainingsgelände als Platz mit Flutlichtmasten, ab Stufe 3 mit Funktionsgebäude; Hotel und Bürotürme mit Fensterreihen, nachts beleuchtet; Parkhaus mit Decks je Stufe; Foodtrucks und Einlasstore je Stufe), die Jugendakademie (Nachwuchsplatz und Vereinsheim, wächst mit `game.youthAcademyLvl`) und die Immobilien aus dem Paket (`STADION3D_IMMO`, in den Ecken und auf dem äußeren Ring; Parkplatz mit Autos, Wohnanlage und Gewerbepark als Blöcke je Stufe).
+- Lage relativ zum Außenrand der Tribünen: erster Ring (Stadion-Anlagen) bis 28 m, zweiter Ring (Campus) ab 34 m, Ecken für Immobilien. Geprüft ohne Überschneidung bei normaler und dreifacher Stadiongröße.
+- Laufende Bauten (Campus, Jugendakademie, Immobilien) zeigen ein Fundament und einen Kran mit Fortschritt; ein fertiger Campus- oder Immobilienbau startet beim nächsten Besuch den Rundflug, der Rundflug hat eine Karte zum Vereinsgelände.
+- Ein Tipp auf ein Gebäude oder einen Platz öffnet das Fenster mit Stufe, Beschreibung, Bauzustand und dem Weg zur Seite (Campus, Jugend, Immobilien).
+- Vierte Kamera „Vereinsgelände“ mit Blick über das ganze Gelände; der Boden wird an der Kamera abgeschnitten statt bei einer Ecke hinter der Kamera ganz zu fehlen.
+- Test `testStadionGelaende`, Lexikon-Tipp.

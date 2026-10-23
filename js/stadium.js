@@ -1099,7 +1099,7 @@
             game.boardSat = Math.min(100, game.boardSat + 2);
             if (typeof merkeBauChronik === 'function') merkeBauChronik(proj);
             // Stadionansicht (js/stadion-canvas.js): beim nächsten Besuch ein Rundflug über den fertigen Ausbau
-            if (['blockExpand', 'specialInstall', 'capacityProject', 'stadiumUpgrade'].includes(proj.type)) game.stadionRundflug = proj.label;
+            if (['blockExpand', 'specialInstall', 'capacityProject', 'stadiumUpgrade', 'campusBuilding', 'realEstate'].includes(proj.type)) game.stadionRundflug = proj.label;
             addInboxMessage('vertrag', `🏗️ Bauprojekt fertiggestellt: ${proj.label}!`,
                 (proj.remainingPayment > 0
                     ? `Die Bauarbeiten sind abgeschlossen, die offene Restzahlung von ${formatVal(proj.remainingPayment)} wurde beglichen.`

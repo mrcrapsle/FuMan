@@ -13,7 +13,8 @@ const STADION3D_KEY = 'anstoss_fm13_stadion3d';
 const STADION3D_KAMERAS = [
     { name: 'Luftbild', yaw: 0.6, pitch: 0.86, dist: 2.0, tx: 0, ty: 0 },
     { name: 'Haupttribüne', yaw: -Math.PI / 2, pitch: 0.44, dist: 0.95, tx: 14, ty: 0 },
-    { name: 'Hinter dem Tor', yaw: 0, pitch: 0.32, dist: 0.85, tx: 0, ty: 30 }
+    { name: 'Hinter dem Tor', yaw: 0, pitch: 0.32, dist: 0.85, tx: 0, ty: 30 },
+    { name: 'Vereinsgelände', yaw: 0.75, pitch: 0.95, dist: 3.4, tx: 10, ty: 0 }
 ];
 const STADION3D_LICHT = [
     { id: 'tag', name: '☀️ Tag' },
@@ -44,6 +45,32 @@ const STADION3D_ANLAGEN = {
     public_viewing: { seite: 'S', t: -24, b: 16, l: 8, h: 7, farbe: '#263238', icon: '📽️' },
     ladestationen: { seite: 'N', t: -22, b: 18, l: 10, h: 1.2, farbe: '#78909c', icon: '🔌' },
     bahnanbindung: { seite: 'N', t: 24, b: 16, l: 8, h: 5, farbe: '#5d4037', icon: '🚉' }
+};
+// Vereinsgelände (Campus, Jugendakademie, Immobilien): Lage als Rechteck an einer Seite (t entlang der Seite,
+// d vom Außenrand der Tribünen) oder in einer Ecke, Form und Höhe je Ausbaustufe
+const STADION3D_CAMPUS = {
+    trainingground: { seite: 'E', t: [-36, 36], d: [34, 80], form: 'platz', icon: '⚽', ziel: 'screen-campus' },
+    internat: { seite: 'E', t: [44, 64], d: [40, 56], form: 'haus', farbe: '#8d6e63', icon: '🏫', h: l => 6 + l * 2, ziel: 'screen-campus' },
+    museum: { seite: 'W', t: [-40, -22], d: [34, 48], form: 'haus', farbe: '#c9b38a', icon: '🏛️', h: l => 5 + l, ziel: 'screen-campus' },
+    megastore: { seite: 'W', t: [-12, 12], d: [34, 50], form: 'haus', farbe: '#e65100', icon: '🛍️', h: l => 6 + l * 1.5, ziel: 'screen-campus' },
+    fankneipe: { seite: 'W', t: [22, 34], d: [34, 44], form: 'haus', farbe: '#6d4c41', icon: '🍺', h: l => 4 + l * 0.6, ziel: 'screen-campus' },
+    foodtrucks: { seite: 'W', t: [42, 72], d: [34, 40], form: 'reihe', icon: '🌭', ziel: 'screen-campus' },
+    turnstiles: { seite: 'W', t: [-14, 14], d: [4, 6], form: 'tore', ziel: 'screen-campus' },
+    parkhaus: { seite: 'N', t: [-52, -20], d: [34, 58], form: 'haus', farbe: '#9e9e9e', icon: '🅿️', h: l => l * 3.2, deck: true, ziel: 'screen-campus' },
+    securityAcademy: { seite: 'N', t: [20, 44], d: [34, 48], form: 'haus', farbe: '#37474f', icon: '🛡️', h: l => 5 + l, ziel: 'screen-campus' },
+    hotel: { seite: 'S', t: [-44, -24], d: [34, 50], form: 'haus', farbe: '#b0bec5', icon: '🏨', h: l => 12 + l * 7, fenster: true, ziel: 'screen-campus' },
+    reha: { seite: 'S', t: [20, 46], d: [34, 50], form: 'haus', farbe: '#e3f2fd', icon: '🩺', h: l => 5 + l * 1.5, ziel: 'screen-campus' }
+};
+// Jugendakademie: kleiner Platz mit Vereinsheim, immer da (Stufe ab 1)
+const STADION3D_JUGEND = { seite: 'E', t: [-82, -46], d: [36, 60], heim: { t: [-82, -72], d: [62, 70] } };
+// Immobilien (Paket): in den Ecken und auf dem äußeren Ring; ecke [x, y] in Vielfachen von X/Y (siehe stadion3dGelaendePlan)
+const STADION3D_IMMO = {
+    parkplatz: { ecke: [-1, -1], groesse: [40, 30], form: 'parkplatz', icon: '🚗' },
+    buerokomplex: { ecke: [1, -1], groesse: [16, 16], form: 'haus', farbe: '#546e7a', icon: '🏢', h: l => 20 + l * 12, fenster: true },
+    wohnanlage: { ecke: [-1, 1], groesse: [36, 30], form: 'bloecke', farbe: '#d7ccc8', icon: '🏘️', h: () => 12 },
+    einkaufszentrum: { ecke: [1, 1], groesse: [40, 26], form: 'haus', farbe: '#ffcc80', icon: '🛒', h: l => 8 + l * 2 },
+    hotelbeteiligung: { seite: 'S', t: [58, 74], d: [40, 54], form: 'haus', farbe: '#90a4ae', icon: '🏨', h: l => 18 + l * 8, fenster: true },
+    gewerbepark: { seite: 'N', t: [56, 92], d: [36, 56], form: 'bloecke', farbe: '#a1887f', icon: '🏭', h: () => 7 }
 };
 const STADION3D_GEGNER_FARBEN = ['#e53935', '#1e88e5', '#fdd835', '#43a047', '#fb8c00', '#8e24aa', '#f5f5f5', '#212121', '#00acc1', '#c62828'];
 const STADION3D_KLEIDUNG = ['#37474f', '#eceff1', '#455a64', '#1565c0', '#6d4c41', '#212121', '#90a4ae', '#c62828'];
@@ -147,7 +174,7 @@ function stadion3dRisikoFarbe(r) { return r <= 0 ? '#4caf50' : (r < 0.03 ? '#9cc
 
 // Laufende Bauten mit Fortschritt
 function stadion3dBaustellen() {
-    return (game.stadiumConstructionQueue || []).filter(p => ['blockExpand', 'blockInfra', 'specialInstall', 'capacityProject', 'stadiumUpgrade'].includes(p.type))
+    return (game.stadiumConstructionQueue || []).filter(p => ['blockExpand', 'blockInfra', 'specialInstall', 'capacityProject', 'stadiumUpgrade', 'campusBuilding', 'youthAcademyLvl', 'youthCapacity', 'realEstate'].includes(p.type))
         .map(p => ({ p, anteil: Math.max(0, Math.min(1, 1 - (p.daysLeft || 0) / Math.max(1, p.totalDays || 1))) }));
 }
 
@@ -245,6 +272,20 @@ function stadion3dPunkt(P, x, y, z) {
     const ty = dx * P.u[0] + dy * P.u[1] + dz * P.u[2];
     return { x: P.cx + P.fokus * tx / tz, y: P.cy - P.fokus * ty / tz, s: P.fokus / tz, tz };
 }
+// Fläche mit Schnitt an der Kamera-Ebene (große Bodenflächen reichen hinter die Kamera)
+function stadion3dPolyGeklippt(P, punkte) {
+    const kam = punkte.map(([x, y, z]) => {
+        const dx = x - P.C[0], dy = y - P.C[1], dz = z - P.C[2];
+        return [dx * P.r[0] + dy * P.r[1] + dz * P.r[2], dx * P.u[0] + dy * P.u[1] + dz * P.u[2], dx * P.f[0] + dy * P.f[1] + dz * P.f[2]];
+    });
+    const nah = 1.5, aus = [];
+    for (let i = 0; i < kam.length; i++) {
+        const a = kam[i], b = kam[(i + 1) % kam.length];
+        if (a[2] >= nah) aus.push(a);
+        if ((a[2] >= nah) !== (b[2] >= nah)) { const t = (nah - a[2]) / (b[2] - a[2]); aus.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, nah]); }
+    }
+    return aus.length >= 3 ? aus.map(([tx, ty, tz]) => ({ x: P.cx + P.fokus * tx / tz, y: P.cy - P.fokus * ty / tz })) : null;
+}
 function stadion3dAbstandC(P, p) { return Math.hypot(p[0] - P.C[0], p[1] - P.C[1], p[2] - P.C[2]); }
 
 // ---------- Zeichnen ----------
@@ -329,14 +370,165 @@ function stadion3dHimmel(ctx, W, H) {
 }
 
 function stadion3dBoden(ctx, P, layout) {
-    const R = layout.radius * 1.6, f = stadion3dLichtFaktor();
-    const ecken = [[-R, -R, 0], [R, -R, 0], [R, R, 0], [-R, R, 0]].map(p => stadion3dPunkt(P, p[0], p[1], p[2]));
+    const R = layout.radius * 3, f = stadion3dLichtFaktor();
+    const ecken = stadion3dPolyGeklippt(P, [[-R, -R, 0], [R, -R, 0], [R, R, 0], [-R, R, 0]]);
     const winter = stadion3dWetter() === 'schnee';
-    if (ecken.every(Boolean)) { ctx.fillStyle = stadion3dMisch(winter ? '#dfe6ea' : '#55704a', 1 - f, '#000000'); stadion3dPfad(ctx, ecken); ctx.fill(); }
+    if (ecken) { ctx.fillStyle = stadion3dMisch(winter ? '#dfe6ea' : '#55704a', 1 - f, '#000000'); stadion3dPfad(ctx, ecken); ctx.fill(); }
     // Vorplatz rund ums Stadion
     const vx = layout.aussen.W + 14, ex = layout.aussen.E + 14, ny = layout.aussen.N + 12, sy = layout.aussen.S + 12;
-    const platz = [[-vx, -ny, 0], [ex, -ny, 0], [ex, sy, 0], [-vx, sy, 0]].map(p => stadion3dPunkt(P, p[0], p[1], p[2]));
-    if (platz.every(Boolean)) { ctx.fillStyle = stadion3dMisch('#9e9e9e', 1 - f * 0.95, '#000000'); stadion3dPfad(ctx, platz); ctx.fill(); }
+    const platz = stadion3dPolyGeklippt(P, [[-vx, -ny, 0], [ex, -ny, 0], [ex, sy, 0], [-vx, sy, 0]]);
+    if (platz) { ctx.fillStyle = stadion3dMisch('#9e9e9e', 1 - f * 0.95, '#000000'); stadion3dPfad(ctx, platz); ctx.fill(); }
+}
+
+// ---------- Vereinsgelände ----------
+function stadion3dRechteck(seite, t, d, aussen) {
+    const a = stadion3dWelt(seite, t[0], aussen + d[0], 0), b = stadion3dWelt(seite, t[1], aussen + d[1], 0);
+    return [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])];
+}
+
+// Alle Gebäude des Geländes mit Stufe, Lage und laufendem Bau. Ohne Stufe erscheint nur eine Baustelle.
+function stadion3dGelaendePlan(layout) {
+    const plan = [];
+    const bau = (typ, key) => (game.stadiumConstructionQueue || []).find(q => q.type === typ && (!key || (q.params && q.params.key === key)));
+    const anteil = q => q ? Math.max(0, Math.min(1, 1 - (q.daysLeft || 0) / Math.max(1, q.totalDays || 1))) : 0;
+    if (typeof campusBuildings !== 'undefined') {
+        Object.keys(STADION3D_CAMPUS).forEach(key => {
+            const b = campusBuildings[key], def = STADION3D_CAMPUS[key];
+            if (!b) return;
+            const q = bau('campusBuilding', key);
+            if (!b.lvl && !q) return;
+            plan.push(Object.assign({ id: 'campus:' + key, key, name: b.name, lvl: b.lvl || 0, max: b.max, desc: b.desc, bau: q, anteil: anteil(q),
+                rect: stadion3dRechteck(def.seite, def.t, def.d, layout.aussen[def.seite]) }, def));
+        });
+    }
+    const jq = bau('youthAcademyLvl') || bau('youthCapacity');
+    const J = STADION3D_JUGEND;
+    plan.push({ id: 'jugend', key: 'jugend', name: 'Jugendakademie', lvl: game.youthAcademyLvl || 1, max: typeof YOUTH_ACADEMY_MAX_LVL !== 'undefined' ? YOUTH_ACADEMY_MAX_LVL : 5,
+        desc: 'Nachwuchsplatz und Vereinsheim; die Stufe bestimmt, wie stark neue Talente starten.', form: 'jugend', icon: '🎓', ziel: 'screen-youth', bau: jq, anteil: anteil(jq),
+        rect: stadion3dRechteck(J.seite, J.t, J.d, layout.aussen[J.seite]), heim: stadion3dRechteck(J.seite, J.heim.t, J.heim.d, layout.aussen[J.seite]) });
+    if (typeof realEstatePortfolio !== 'undefined') {
+        const X = Math.max(layout.aussen.W, layout.aussen.E) + 50, Y = Math.max(layout.aussen.N, layout.aussen.S) + 40;
+        Object.keys(STADION3D_IMMO).forEach(key => {
+            const r = realEstatePortfolio[key], def = STADION3D_IMMO[key];
+            if (!r) return;
+            const q = bau('realEstate', key);
+            if (!(r.owned && r.lvl) && !q) return;
+            let rect;
+            if (def.ecke) {
+                const cx = def.ecke[0] * X, cy = def.ecke[1] * Y, [gx, gy] = def.groesse;
+                rect = [cx - gx / 2, cy - gy / 2, cx + gx / 2, cy + gy / 2];
+            } else rect = stadion3dRechteck(def.seite, def.t, def.d, layout.aussen[def.seite]);
+            plan.push(Object.assign({ id: 'immo:' + key, key, name: r.name, lvl: r.owned ? (r.lvl || 0) : 0, max: r.max, desc: r.desc, bau: q, anteil: anteil(q), rect, ziel: 'screen-real-estate' }, def));
+        });
+    }
+    return plan;
+}
+
+function stadion3dFlach(ctx, P, x0, y0, x1, y1, farbe, z) {
+    const pr = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].map(p => stadion3dPunkt(P, p[0], p[1], z || 0.05));
+    if (pr.some(p => !p)) return null;
+    ctx.fillStyle = farbe; stadion3dPfad(ctx, pr); ctx.fill();
+    return pr;
+}
+
+// Kleiner Fußballplatz (Trainingsgelände, Jugend): Rasen, Linien, Mittelkreis
+function stadion3dKleinfeld(ctx, P, r, f) {
+    const [x0, y0, x1, y1] = r;
+    const pr = stadion3dFlach(ctx, P, x0, y0, x1, y1, stadion3dMisch('#3a8f3e', 1 - f, '#000000'));
+    if (!pr) return null;
+    const lang = (x1 - x0) >= (y1 - y0);
+    ctx.strokeStyle = `rgba(255,255,255,${0.5 + 0.3 * f})`; ctx.lineWidth = Math.max(0.6, P.fokus / 900);
+    const m = 2;
+    const rand = [[x0 + m, y0 + m], [x1 - m, y0 + m], [x1 - m, y1 - m], [x0 + m, y1 - m], [x0 + m, y0 + m]].map(p => stadion3dPunkt(P, p[0], p[1], 0.08));
+    if (rand.every(Boolean)) { ctx.beginPath(); ctx.moveTo(rand[0].x, rand[0].y); rand.slice(1).forEach(p => ctx.lineTo(p.x, p.y)); ctx.stroke(); }
+    const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
+    const mitte = lang ? [[mx, y0 + m], [mx, y1 - m]] : [[x0 + m, my], [x1 - m, my]];
+    const ml = mitte.map(p => stadion3dPunkt(P, p[0], p[1], 0.08));
+    if (ml.every(Boolean)) { ctx.beginPath(); ctx.moveTo(ml[0].x, ml[0].y); ctx.lineTo(ml[1].x, ml[1].y); ctx.stroke(); }
+    const rk = Math.min(x1 - x0, y1 - y0) * 0.14, kreis = [];
+    for (let i = 0; i <= 20; i++) { const w = i / 20 * Math.PI * 2; const q = stadion3dPunkt(P, mx + Math.cos(w) * rk, my + Math.sin(w) * rk, 0.08); if (q) kreis.push(q); }
+    if (kreis.length > 3) { ctx.beginPath(); ctx.moveTo(kreis[0].x, kreis[0].y); kreis.slice(1).forEach(q => ctx.lineTo(q.x, q.y)); ctx.stroke(); }
+    return pr;
+}
+
+// Flache Teile des Geländes vor allen Gebäuden: Plätze, Parkplatz, Fundamente neuer Bauten
+function stadion3dGelaendeBoden(ctx, P, plan) {
+    const f = stadion3dLichtFaktor(), a = stadionAnsicht;
+    plan.forEach(g => {
+        const [x0, y0, x1, y1] = g.rect;
+        let pr = null;
+        if (!g.lvl) {
+            pr = stadion3dFlach(ctx, P, x0, y0, x1, y1, stadion3dMisch('#a1887f', 1 - f, '#000000'));
+            if (pr) { ctx.strokeStyle = '#ff9800'; ctx.setLineDash([5, 4]); ctx.lineWidth = 1.2; ctx.stroke(); ctx.setLineDash([]); }
+        } else if (g.form === 'platz' || g.form === 'jugend') pr = stadion3dKleinfeld(ctx, P, g.rect, f);
+        else if (g.form === 'parkplatz') {
+            // Größer mit jeder Stufe, Autos nach festem Muster
+            const w = (x1 - x0) * (0.55 + 0.15 * Math.min(3, g.lvl)), cx = (x0 + x1) / 2;
+            pr = stadion3dFlach(ctx, P, cx - w / 2, y0, cx + w / 2, y1, stadion3dMisch('#616161', 1 - f, '#000000'));
+            const farben = STADION3D_KLEIDUNG;
+            for (let i = 0; i < Math.round(w / 3.2); i++) for (let j = 0; j < 4; j++) {
+                if (stadion3dZufall('auto', i, j) > 0.7) continue;
+                const ax = cx - w / 2 + 1 + i * 3.2, ay = y0 + 2 + j * ((y1 - y0 - 4) / 4);
+                stadion3dFlach(ctx, P, ax, ay, ax + 2, ay + 4.2, stadion3dMisch(farben[(i + j) % farben.length], 1 - f, '#000000'), 0.4);
+            }
+        }
+        if (pr) { if (a.auswahl === g.id) { ctx.strokeStyle = '#ffd54f'; ctx.lineWidth = 2.5; stadion3dPfad(ctx, pr); ctx.stroke(); } a.treffer.push({ key: g.id, pr }); }
+    });
+}
+
+// Gebäude des Geländes in die Zeichenliste
+function stadion3dGelaendeBauen(liste, P, plan, layout, szene) {
+    const a = stadionAnsicht;
+    plan.forEach(g => {
+        const [x0, y0, x1, y1] = g.rect;
+        const stil = (farbe, extra) => Object.assign({ farbe, ziel: g.id, auswahl: a.auswahl === g.id }, extra || {});
+        if (g.lvl) {
+            if (g.form === 'haus') {
+                stadion3dQuader(liste, P, x0, y0, x1, y1, 0, g.h(g.lvl), stil(g.farbe, { icon: g.icon, fenster: g.fenster }));
+                if (g.deck) for (let i = 1; i < g.lvl; i++) stadion3dQuader(liste, P, x0 - 0.3, y0 - 0.3, x1 + 0.3, y1 + 0.3, i * 3.2 - 0.25, i * 3.2, stil('#757575'));
+            } else if (g.form === 'bloecke') {
+                const n = g.key === 'gewerbepark' ? g.lvl + 1 : g.lvl;
+                const lang = (x1 - x0) >= (y1 - y0), schritt = ((lang ? x1 - x0 : y1 - y0)) / n;
+                for (let i = 0; i < n; i++) {
+                    const s0 = (lang ? x0 : y0) + i * schritt + 1.2, s1 = s0 + schritt - 2.4;
+                    if (lang) stadion3dQuader(liste, P, s0, y0, s1, y1, 0, g.h(g.lvl), stil(g.farbe, { icon: i === 0 ? g.icon : null }));
+                    else stadion3dQuader(liste, P, x0, s0, x1, s1, 0, g.h(g.lvl), stil(g.farbe, { icon: i === 0 ? g.icon : null }));
+                }
+            } else if (g.form === 'reihe') {
+                const n = g.lvl * 2, lang = (x1 - x0) >= (y1 - y0), schritt = (lang ? x1 - x0 : y1 - y0) / n;
+                for (let i = 0; i < n; i++) {
+                    const s0 = (lang ? x0 : y0) + i * schritt + 0.5, s1 = s0 + Math.min(4, schritt - 1);
+                    const farbe = ['#ffb300', '#e53935', '#43a047', '#1e88e5'][i % 4];
+                    if (lang) stadion3dQuader(liste, P, s0, y0, s1, y1, 0, 2.8, stil(farbe, { icon: i === 0 ? g.icon : null }));
+                    else stadion3dQuader(liste, P, x0, s0, x1, s1, 0, 2.8, stil(farbe, { icon: i === 0 ? g.icon : null }));
+                }
+            } else if (g.form === 'tore') {
+                const n = g.lvl * 2, lang = (x1 - x0) >= (y1 - y0), schritt = (lang ? x1 - x0 : y1 - y0) / n;
+                for (let i = 0; i < n; i++) {
+                    const s0 = (lang ? x0 : y0) + i * schritt + schritt * 0.3, s1 = s0 + schritt * 0.4;
+                    if (lang) stadion3dQuader(liste, P, s0, y0, s1, y1, 0, 2.4, stil('#cfd8dc'));
+                    else stadion3dQuader(liste, P, x0, s0, x1, s1, 0, 2.4, stil('#cfd8dc'));
+                }
+            } else if (g.form === 'platz') {
+                // Trainingsgelände mit Flutlicht: vier Masten, ab Stufe 3 ein Funktionsgebäude
+                const h = 14 + g.lvl * 2;
+                [[x0, y0], [x1, y0], [x1, y1], [x0, y1]].forEach(([x, y]) => stadion3dMast(liste, P, x, y, h));
+                if (g.lvl >= 3) {
+                    const S = STADION3D_SEITEN.E, d = layout.aussen.E + 81;
+                    const p0 = [S.o[0] * d, -10], p1 = [S.o[0] * (d + 6), 10];
+                    stadion3dQuader(liste, P, p0[0], p0[1], p1[0], p1[1], 0, 3 + g.lvl * 0.5, stil('#8d6e63', { icon: g.icon }));
+                }
+            } else if (g.form === 'jugend' && g.heim) {
+                const [hx0, hy0, hx1, hy1] = g.heim;
+                stadion3dQuader(liste, P, hx0, hy0, hx1, hy1, 0, 3 + g.lvl, stil('#a1887f', { icon: g.icon }));
+            }
+        }
+        if (g.bau) {
+            stadion3dKran(liste, P, (x0 + x1) / 2, (y0 + y1) / 2, Math.max(26, (g.h ? g.h(g.lvl + 1) : 10) + 12), g.anteil, String(g.name).replace(/\s*(['"„&]|Stufe).*$/, '').slice(0, 22));
+            szene.kraene.push({ type: g.bau.type, anteil: Math.round(g.anteil * 100) });
+        }
+        szene.gelaende.push({ id: g.id, lvl: g.lvl, bau: !!g.bau });
+    });
 }
 
 function stadion3dRasen(ctx, P) {
@@ -452,7 +644,18 @@ function stadion3dZeichneFlaeche(ctx, P, e, f) {
             }
         }
     }
-    if (st.auswahl && (st.art === 'schraege' || st.art === 'glas')) {
+    if (st.fenster && st.art === 'wand') {
+        // Fensterreihen an Hotel und Bürotürmen, nachts beleuchtet
+        const [p0, p1, p2, p3] = e.pr;
+        ctx.globalAlpha = stadionAnsicht.licht === 'tag' ? 0.35 : 0.8;
+        ctx.strokeStyle = stadionAnsicht.licht === 'tag' ? '#263238' : '#ffe082'; ctx.lineWidth = 0.7;
+        for (let i = 1; i < 8; i++) {
+            const u = i / 8;
+            ctx.beginPath(); ctx.moveTo(p0.x + (p3.x - p0.x) * u, p0.y + (p3.y - p0.y) * u); ctx.lineTo(p1.x + (p2.x - p1.x) * u, p1.y + (p2.y - p1.y) * u); ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+    }
+    if (st.auswahl && (st.art === 'schraege' || st.art === 'glas' || (st.ziel && st.art === 'dach'))) {
         ctx.globalAlpha = 1; ctx.strokeStyle = '#ffd54f'; ctx.lineWidth = 2.5; stadion3dPfad(ctx, e.pr); ctx.stroke();
     }
     ctx.globalAlpha = 1;
@@ -531,7 +734,7 @@ function stadion3dFahnen(liste, P, seg, farben) {
     }
 }
 
-function stadion3dSzeneBauen(P, layout) {
+function stadion3dSzeneBauen(P, layout, plan) {
     const liste = [];
     const a = stadionAnsicht;
     const spiel = stadion3dSpiel();
@@ -539,7 +742,7 @@ function stadion3dSzeneBauen(P, layout) {
     const farben = stadion3dFarben(spiel.gegner);
     const choreo = stadion3dChoreo();
     const risiko = a.risiko ? stadion3dRisiko() : null;
-    const szene = { bloecke: [], kraene: [], anlagen: [], fahnen: false, choreo, flutlicht: !!stadium.flutlicht, dach: !!stadium.dach, anzeigen: !!stadium.videowalls, spiel, geist: null };
+    const szene = { bloecke: [], kraene: [], anlagen: [], gelaende: [], fahnen: false, choreo, flutlicht: !!stadium.flutlicht, dach: !!stadium.dach, anzeigen: !!stadium.videowalls, spiel, geist: null };
     layout.segmente.forEach(s => {
         const b = stadium.blocks[s.key];
         const sitz = s.key === 'kurve' || s.key === 'haupt' || s.key === 'suedOber' || s.key === 'hauptNord' ? stadion3dMisch(farben.eigene, 0.45, '#202020') : (s.key === 'gaeste' ? '#5f6b73' : '#7d8a93');
@@ -634,8 +837,10 @@ function stadion3dSzeneBauen(P, layout) {
         stadion3dQuaderSeite(liste, P, 'W', 15.3, 16.7, d + 1.3, d + 2.7, 1.2, 4.6, { farbe: '#c9a227', icon: '❤️' });
         szene.anlagen.push('denkmal');
     }
-    // Baustellen
-    stadion3dBaustellen().forEach(({ p, anteil }) => {
+    // Vereinsgelände: Campus, Jugendakademie, Immobilien (mit eigenen Kränen)
+    stadion3dGelaendeBauen(liste, P, plan || [], layout, szene);
+    // Baustellen am Stadion
+    stadion3dBaustellen().filter(x => !['campusBuilding', 'youthAcademyLvl', 'youthCapacity', 'realEstate'].includes(x.p.type)).forEach(({ p, anteil }) => {
         let ort = null;
         const seg = p.params && p.params.blockKey ? layout.segmente.find(s => s.key === p.params.blockKey) : null;
         const kasten = p.params && p.params.blockKey ? layout.kaesten.find(k => k.key === p.params.blockKey) : null;
@@ -672,10 +877,12 @@ function stadion3dZeichnen(ctx, P, layout) {
     a.szene = {};
     stadion3dHimmel(ctx, W, H);
     stadion3dBoden(ctx, P, layout);
-    stadion3dRasen(ctx, P);
-    const liste = stadion3dSzeneBauen(P, layout);
-    liste.sort((x, y) => y.abstand - x.abstand);
     a.treffer = [];
+    const plan = stadion3dGelaendePlan(layout);
+    stadion3dGelaendeBoden(ctx, P, plan);
+    stadion3dRasen(ctx, P);
+    const liste = stadion3dSzeneBauen(P, layout, plan);
+    liste.sort((x, y) => y.abstand - x.abstand);
     liste.forEach(e => {
         if (e.objekt) { e.objekt(ctx); return; }
         const st = e.stil;
@@ -708,6 +915,7 @@ function stadion3dZeichnen(ctx, P, layout) {
             }
         }
         if (st.key && (st.art === 'schraege' || st.art === 'glas' || (st.art === 'dach' && (st.key === 'vipLogen' || st.key === 'presse'))) && !st.geist) a.treffer.push({ key: st.key, pr: e.pr });
+        else if (st.ziel && (st.art === 'dach' || st.art === 'wand')) a.treffer.push({ key: st.ziel, pr: e.pr });
     });
     // Lichtshow bei Nacht
     if (a.licht === 'nacht' && stadium.upgrades && stadium.upgrades.lichtshow) {
@@ -761,6 +969,8 @@ function stadion3dFlugKarten() {
     if (stadionAnsicht.rundflugText) karten.push(['🏗️ Fertig gebaut', stadionAnsicht.rundflugText]);
     karten.push(['🏟️ ' + (stadium.name || 'Vereinsstadion'), stadium.namingRightsSponsor ? `Namensgeber: ${stadium.namingRightsSponsor}` : (game.clubName || '')]);
     karten.push(['👥 Kapazität', `${(stadium.total || 0).toLocaleString('de-DE')} Plätze`]);
+    const gelaende = typeof campusBuildings !== 'undefined' ? Object.keys(STADION3D_CAMPUS).filter(k => campusBuildings[k] && campusBuildings[k].lvl > 0).length : 0;
+    if (gelaende) karten.push(['🏫 Vereinsgelände', `${gelaende} Campus-Gebäude, Jugendakademie Stufe ${game.youthAcademyLvl || 1}`]);
     karten.push(['🏆 Zuschauerrekord', `${(game.recordAttendance || 0).toLocaleString('de-DE')} Zuschauer`]);
     if (typeof getStadiumMarketValue === 'function') karten.push(['💰 Stadionwert', `${(getStadiumMarketValue() / 1000000).toLocaleString('de-DE', { maximumFractionDigits: 1 })} Mio. €`]);
     return karten;
@@ -1123,20 +1333,41 @@ function mpEscStadion(t) { return typeof mpEsc === 'function' ? mpEsc(t) : Strin
 // ---------- Block-Fenster und Vorschau ----------
 function stadionBlockOeffnen(key) {
     const b = stadium.blocks && stadium.blocks[key];
-    if (!b || !stadionAnsicht) return;
+    const g = !b ? stadion3dGelaendeEintrag(key) : null;
+    if ((!b && !g) || !stadionAnsicht) return;
     stadionAnsicht.auswahl = key;
     stadionAnsicht.blockFenster = key;
     stadion3dBlockFensterInhalt(true);
     const ov = document.getElementById('stadion-block-overlay');
-    if (ov) { ov.setAttribute('aria-label', b.name); ov.classList.add('show'); }
+    if (ov) { ov.setAttribute('aria-label', b ? b.name : g.name); ov.classList.add('show'); }
     if (typeof mpFokusHalten === 'function') mpFokusHalten('stadion-block-overlay');
     stadion3dZeichneEinmal();
+}
+
+// Gebäude des Vereinsgeländes nach seiner Kennung (campus:…, immo:…, jugend)
+function stadion3dGelaendeEintrag(id) {
+    if (!stadionAnsicht) return null;
+    const layout = stadionAnsicht.layout || stadion3dLayout();
+    return stadion3dGelaendePlan(layout).find(g => g.id === id) || null;
+}
+
+function stadion3dGelaendeFensterInhalt(box, g) {
+    const ziel = g.ziel && document.getElementById(g.ziel) ? g.ziel : null;
+    const zielName = { 'screen-campus': 'Zum Campus', 'screen-youth': 'Zur Jugend', 'screen-real-estate': 'Zu den Immobilien' }[ziel] || 'Zur Seite';
+    box.innerHTML = `<div class="panel-header">${g.icon || '🏗️'} ${mpEscStadion(g.name)}</div>
+        <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px;">
+            ${uiChip(g.lvl ? `Stufe ${g.lvl}/${g.max}` : 'Noch nicht gebaut', g.lvl ? 'gut' : '')}
+            ${g.bau ? uiChip(`🏗️ Im Bau: noch ${g.bau.daysLeft} Spieltage`, 'warn') : ''}
+        </div>
+        <div style="font-size:var(--fs-small); margin-bottom:6px;">${mpEscStadion(g.desc || '')}</div>
+        ${ziel ? `<button onclick="schliesseStadionBlock(); showScreen('${ziel}')" class="btn-action">➜ ${zielName}</button>` : ''}`;
 }
 
 function stadion3dBlockFensterInhalt(mitKlang) {
     const key = stadionAnsicht && stadionAnsicht.blockFenster;
     const b = key && stadium.blocks[key];
     const box = document.getElementById('stadion-block-inhalt');
+    if (!b && key && box) { const g = stadion3dGelaendeEintrag(key); if (g) stadion3dGelaendeFensterInhalt(box, g); return; }
     if (!b || !box) return;
     const sp = stadion3dSpiel();
     const f = Math.round((stadion3dFuellung(sp)[key] || 0) * 100);
