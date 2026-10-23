@@ -3248,12 +3248,15 @@ async function testPostfachLoeschen(browser) {
         out.aZurueck = inboxArchive.length === 2 && inboxArchive.includes(a1) && inboxArchive.includes(a2);
 
         // --- Auswahl ---
+        // Eigene ungelesene Mails, damit sicher mehr als drei Karten da sind: nach den Löschschritten oben blieben
+        // genau drei, und fiel eine weg, brach der Test ab (CI, karten()[2] undefined)
+        ['scouting', 'vertrag', 'transfer'].forEach((kat, i) => addInboxMessage(kat, 'Auswahl ' + i, 'Text', null));
         setInboxFilter('alle');
         knopf('Auswählen').click();
         knopf('Ausgewählte löschen').click();
         out.sLeer = toasts.some(t => t.includes('Tippe zuerst'));
         const karten = () => [...document.querySelectorAll('#inbox-messages-list [role="checkbox"]')];
-        const ziel = [inboxMessages[0], inboxMessages[1]];
+        const ziel = getInboxAnsicht().slice(0, 2);   // Reihenfolge der Karten: wichtige zuerst
         karten()[0].click(); karten()[1].click();
         out.sGewaehlt = karten()[0].getAttribute('aria-checked') === 'true' && karten()[1].getAttribute('aria-checked') === 'true' && karten()[2].getAttribute('aria-checked') === 'false'
             && knopf('Ausgewählte löschen').textContent.includes('(2)');
@@ -3270,7 +3273,7 @@ async function testPostfachLoeschen(browser) {
         const n = inboxMessages.length;
         k = knopf('Ausgewählte löschen'); k.click(); k.click();
         out.sWeg = inboxMessages.length === n - 2 && ziel.every(m => !inboxMessages.includes(m)) && !document.querySelector('#inbox-messages-list [role="checkbox"]') && !!knopf('Auswählen');
-        out.sZurueck = (knopf('Rückgängig').click(), inboxMessages.length === n && inboxMessages[0] === ziel[0] && inboxMessages[1] === ziel[1]);
+        out.sZurueck = (knopf('Rückgängig').click(), inboxMessages.length === n && ziel.every(m => inboxMessages.includes(m)));
 
         // --- Laden verwirft Rückgängig und Auswahl ---
         const stand = JSON.parse(JSON.stringify(buildSaveState()));

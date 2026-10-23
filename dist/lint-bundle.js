@@ -1280,8 +1280,11 @@ function pruefeNeuePakete() {
     const MAX_INBOX_MESSAGES = 80;
 
     function addInboxMessage(category, title, body, screenLink) {
+        // Eindeutige ID: mehrere Mails in derselben Millisekunde bekamen sonst manchmal dieselbe
+        let id = Date.now() + Math.floor(Math.random() * 1000);
+        while (inboxMessages.some(m => m.id === id) || inboxArchive.some(m => m.id === id)) id++;
         inboxMessages.unshift({
-            id: Date.now() + Math.floor(Math.random() * 1000),
+            id,
             category, title, body, screenLink,
             read: false,
             important: false,
