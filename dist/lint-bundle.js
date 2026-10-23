@@ -16343,6 +16343,8 @@ function finishGoalkeeperGame() {
     }
 
     function renderTicketPriceSliders() {
+        // Vorschau: das Stadion zeigt die Zuschauer mit den Reglerpreisen (js/stadion-canvas.js)
+        if (typeof stadionAnsichtAktualisieren === 'function') stadionAnsichtAktualisieren();
         let box = document.getElementById('ticket-price-sliders-box');
         if (!box) return;
         let prices = ticketPricePreview || game.ticketPrices;
@@ -19903,6 +19905,7 @@ function finishGoalkeeperGame() {
         }
         if (typeof renderStadiumEventsPanel === 'function') renderStadiumEventsPanel();
         if (typeof stadionAnsichtAktualisieren === 'function') stadionAnsichtAktualisieren();
+        if (typeof stadionChronikAktualisieren === 'function') stadionChronikAktualisieren();
     }
 
     // zielId: anderer Kasten (Block-Fenster der Stadionansicht, js/stadion-canvas.js), leise: ohne Klick-Ton beim Auffrischen
@@ -24007,6 +24010,17 @@ function stadion3dFarben(gegnerName) {
     return { eigene, zweite, gegner };
 }
 
+// Zuschauer mit den Preisen aus dem Regler (Vorschau, ohne etwas zu speichern); null ohne Änderung
+function stadion3dPreisVorschau() {
+    if (typeof ticketPricePreview === 'undefined' || !ticketPricePreview) return null;
+    const alt = { steh: game.ticketPrices.steh, sitz: game.ticketPrices.sitz, vip: game.ticketPrices.vip };
+    try {
+        Object.assign(game.ticketPrices, { steh: ticketPricePreview.steh, sitz: ticketPricePreview.sitz, vip: ticketPricePreview.vip });
+        return calculateMatchAttendanceDetails(1, 1, 1).zuschauer;
+    } catch (e) { return null; }
+    finally { Object.assign(game.ticketPrices, alt); }
+}
+
 // Heimspiele zum Blättern: diese Saison, sonst die letzten der Vorsaison
 function stadion3dHeimspiele() {
     const alle = (game.attendanceHistory || []).filter(e => e && typeof e.attendance === 'number');
@@ -24025,8 +24039,9 @@ function stadion3dSpiel() {
     }
     let zuschauer = 0;
     try { if (typeof calculateMatchAttendanceDetails === 'function') zuschauer = calculateMatchAttendanceDetails(1, 1, 1).zuschauer; } catch (e) { zuschauer = 0; }
+    const vorschau = stadion3dPreisVorschau();
     const naechstes = typeof ausschreitungNaechstesSpiel === 'function' ? ausschreitungNaechstesSpiel() : null;
-    return { prognose: true, index: 0, anzahl: 0, zuschauer, kapazitaet: stadium.total || 1, gegner: naechstes && naechstes.heim ? naechstes.gegner : '' };
+    return { prognose: true, vorschau: vorschau !== null, index: 0, anzahl: 0, zuschauer: vorschau !== null ? vorschau : zuschauer, kapazitaet: stadium.total || 1, gegner: naechstes && naechstes.heim ? naechstes.gegner : '' };
 }
 
 // Auslastung je Block: Gewichte, gekappt bei voll, Summe gleich der echten Zuschauerzahl
@@ -24304,6 +24319,7 @@ function stadion3dRechteck(seite, t, d, aussen) {
 
 // Alle Gebäude des Geländes mit Stufe, Lage und laufendem Bau. Ohne Stufe erscheint nur eine Baustelle.
 function stadion3dGelaendePlan(layout) {
+    if (stadionAnsicht && stadionAnsicht.ohneGelaende) return [];
     const plan = [];
     const bau = (typ, key) => (game.stadiumConstructionQueue || []).find(q => q.type === typ && (!key || (q.params && q.params.key === key)));
     const anteil = q => q ? Math.max(0, Math.min(1, 1 - (q.daysLeft || 0) / Math.max(1, q.totalDays || 1))) : 0;
@@ -24312,8 +24328,7 @@ function stadion3dGelaendePlan(layout) {
             const b = campusBuildings[key], def = STADION3D_CAMPUS[key];
             if (!b) return;
             const q = bau('campusBuilding', key);
-            if (!b.lvl && !q) return;
-            plan.push(Object.assign({ id: 'campus:' + key, key, name: b.name, lvl: b.lvl || 0, max: b.max, desc: b.desc, bau: q, anteil: anteil(q),
+            plan.push(Object.assign({ id: 'campus:' + key, key, kauf: 'campus', name: b.name, lvl: b.lvl || 0, max: b.max, desc: b.desc, bau: q, anteil: anteil(q),
                 rect: stadion3dRechteck(def.seite, def.t, def.d, layout.aussen[def.seite]) }, def));
         });
     }
@@ -24328,13 +24343,12 @@ function stadion3dGelaendePlan(layout) {
             const r = realEstatePortfolio[key], def = STADION3D_IMMO[key];
             if (!r) return;
             const q = bau('realEstate', key);
-            if (!(r.owned && r.lvl) && !q) return;
             let rect;
             if (def.ecke) {
                 const cx = def.ecke[0] * X, cy = def.ecke[1] * Y, [gx, gy] = def.groesse;
                 rect = [cx - gx / 2, cy - gy / 2, cx + gx / 2, cy + gy / 2];
             } else rect = stadion3dRechteck(def.seite, def.t, def.d, layout.aussen[def.seite]);
-            plan.push(Object.assign({ id: 'immo:' + key, key, name: r.name, lvl: r.owned ? (r.lvl || 0) : 0, max: r.max, desc: r.desc, bau: q, anteil: anteil(q), rect, ziel: 'screen-real-estate' }, def));
+            plan.push(Object.assign({ id: 'immo:' + key, key, kauf: 'immo', name: r.name, lvl: r.owned ? (r.lvl || 0) : 0, max: r.max, desc: r.desc, bau: q, anteil: anteil(q), rect, ziel: 'screen-real-estate' }, def));
         });
     }
     return plan;
@@ -24489,7 +24503,7 @@ function stadion3dEckPublikum(ctx, P, st, f) {
             const q = stadion3dPunkt(P, p[0], p[1], e.z0 + (e.z1 - e.z0) * v + 0.4);
             if (!q) continue;
             const g = Math.max(0.9, q.s * 1.15);
-            const farbe = stadion3dZufall('e', i, j) < 0.35 ? farben.eigene : STADION3D_KLEIDUNG[(i * 7 + j) % STADION3D_KLEIDUNG.length];
+            const farbe = stadion3dSitzFarbe(i, st.key, farben) || (stadion3dZufall('e', i, j) < 0.35 ? farben.eigene : STADION3D_KLEIDUNG[(i * 7 + j) % STADION3D_KLEIDUNG.length]);
             ctx.fillStyle = stadion3dMisch(farbe, 1 - f, '#000000');
             ctx.fillRect(q.x - g / 2, q.y - g, g, g * 1.25);
         }
@@ -24584,6 +24598,81 @@ function stadion3dLaufbahn(ctx, P) {
     zeichne(B.r, '#3a8f3e');
 }
 
+// Ein eigenes Stadionobjekt mit denselben Feldern wie `stadium` (Gesamtkapazität als Getter)
+function stadion3dStadionObjekt(blocks, extra) {
+    const o = Object.assign({ blocks, bonusCapacity: 0, flutlicht: false, dach: false, videowalls: false, upgrades: {}, pitchCondition: 85, hybridrasen: false, name: '', namingRightsSponsor: null, events: [] }, extra || {});
+    Object.defineProperty(o, 'total', { get() { return Object.values(this.blocks).reduce((s, b) => s + (b.cap || 0), 0) + (this.bonusCapacity || 0); } });
+    Object.defineProperty(o, 'vipTotal', { get() { return (this.blocks && this.blocks.vipLogen && this.blocks.vipLogen.cap) || 50; } });
+    return o;
+}
+function stadion3dBasisBlocks() { return JSON.parse(JSON.stringify(stadium.blocks || {})); }
+
+// Zeichnet ein Stadion (eigenes Objekt) in eine Canvas, ohne den Zustand der Stadionansicht zu verändern.
+// opt: spiel (Füllung), farben, licht; ohne Gelände, Baustellen, Choreo und Risiko.
+function stadion3dFremdZeichnen(c, obj, opt) {
+    if (!stadionAnsicht) stadion3dNeu();
+    const a = stadionAnsicht;
+    const felder = ['yaw', 'pitch', 'dist', 'tx', 'ty', 'zoom', 'auswahl', 'vorschau', 'risiko', 'flug', 'szene', 'treffer', 'layout', 'P', 'licht', 'fremd', 'fremdSpiel', 'fremdFarben', 'ohneGelaende'];
+    const vorher = {};
+    felder.forEach(k => { vorher[k] = a[k]; });
+    const altStadium = stadium, altQueue = game.stadiumConstructionQueue;
+    try {
+        Object.assign(a, STADION3D_DASHBOARD_KAMERA, { auswahl: null, vorschau: null, risiko: false, flug: null, szene: {}, treffer: [],
+            licht: (opt && opt.licht) || 'tag', fremd: true, ohneGelaende: true, fremdSpiel: (opt && opt.spiel) || null, fremdFarben: (opt && opt.farben) || null });
+        stadium = obj; game.stadiumConstructionQueue = [];
+        const W = c.width / 2, H = c.height / 2;
+        const ctx = c.getContext('2d');
+        ctx.setTransform(c.width / W, 0, 0, c.height / H, 0, 0);
+        const layout = stadion3dLayout();
+        stadion3dZeichnen(ctx, stadion3dProjektion(W, H, layout), layout);
+        return layout;
+    } finally {
+        stadium = altStadium; game.stadiumConstructionQueue = altQueue;
+        felder.forEach(k => { a[k] = vorher[k]; });
+    }
+}
+
+// Schrift-Band unten im Bild (in Pixeln der Canvas)
+function stadion3dBanderole(c, zeilen) {
+    const ctx = c.getContext('2d');
+    const k = c.width / 720, h = Math.round(64 * k);
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = 'rgba(0,0,0,0.62)'; ctx.fillRect(0, c.height - h, c.width, h);
+    ctx.fillStyle = '#ffffff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.font = `800 ${Math.round(18 * k)}px system-ui, sans-serif`;
+    ctx.fillText(zeilen[0] || '', Math.round(16 * k), c.height - h + h * 0.34, c.width - 32 * k);
+    if (zeilen[1]) { ctx.font = `500 ${Math.round(14 * k)}px system-ui, sans-serif`; ctx.fillStyle = '#e0e0e0'; ctx.fillText(zeilen[1], Math.round(16 * k), c.height - h + h * 0.74, c.width - 32 * k); }
+    ctx.restore();
+}
+
+// Stadion des nächsten Gegners, nur bei Auswärtsspielen: Größe aus Name und Liga, fest je Gegner
+function stadionGegnerZeichnen() {
+    const c = document.getElementById('dash-gegner-canvas');
+    if (!c || !c.getContext) return;
+    const n = typeof ausschreitungNaechstesSpiel === 'function' ? ausschreitungNaechstesSpiel() : null;
+    if (!n || n.heim) { c.hidden = true; return; }
+    c.hidden = false;
+    const faktor = 0.85 + (stadion3dHash(n.gegner) % 40) / 100;
+    const blocks = stadion3dBasisBlocks();
+    Object.keys(blocks).forEach(k => { blocks[k].cap = Math.round((blocks[k].cap || 0) * faktor); });
+    const obj = stadion3dStadionObjekt(blocks, { name: `Stadion ${n.gegner}` });
+    const kap = obj.total;
+    stadion3dFremdZeichnen(c, obj, { spiel: { prognose: true, zuschauer: Math.round(kap * 0.7), kapazitaet: kap, gegner: n.gegner }, farben: stadion3dFarben(n.gegner) });
+    stadion3dBanderole(c, [`Auswärts bei ${n.gegner}`, `${kap.toLocaleString('de-DE')} Plätze · Gästeblock in deren Farben`]);
+}
+
+// Zeilen für das Dashboard-Band: letztes Ergebnis und nächstes Spiel mit Wetter
+function stadionSpielBanner() {
+    const zeilen = [];
+    const ls = game.letzterSpielstand;
+    if (ls) zeilen.push(`Letztes Spiel ${ls.ourGoals}:${ls.oppGoals} ${ls.isHome ? 'gegen' : 'bei'} ${ls.oppName}`);
+    const n = typeof ausschreitungNaechstesSpiel === 'function' ? ausschreitungNaechstesSpiel() : null;
+    const wetter = typeof currentWeather !== 'undefined' && currentWeather ? `${currentWeather.icon} ${currentWeather.name}` : '';
+    if (n) zeilen.push(`${n.heim ? 'Heim gegen' : 'Auswärts bei'} ${n.gegner}${wetter ? ' · ' + wetter : ''}`);
+    return zeilen;
+}
+
 function stadion3dRasen(ctx, P, layout) {
     const f = stadion3dLichtFaktor();
     const nachtHell = stadionAnsicht.licht === 'nacht' && stadium.flutlicht ? 1.25 : 1;
@@ -24640,6 +24729,14 @@ function stadion3dTore(liste, P) {
 }
 
 // Sitzschräge mit Publikum: Punkte je Sitzgruppe, besetzt nach der Auslastung des Blocks
+// Sitzmuster aus den Einstellungen: Streifen in den Vereinsfarben oder je Block eine Farbe; sonst null (Standard)
+function stadion3dSitzFarbe(i, key, farben) {
+    const muster = game.stadionMuster || 'standard';
+    if (muster === 'streifen') return i % 2 ? farben.zweite : farben.eigene;
+    if (muster === 'blockfarben') return [farben.eigene, farben.zweite, farben.gegner, '#f5f5f5', '#212121'][stadion3dHash(key) % 5];
+    return null;
+}
+
 function stadion3dPublikum(ctx, P, st, f) {
     const fuell = st.fuellung || 0, farben = st.farben;
     const [t0, t1] = st.t, [d0, d1] = st.d, [h0, h1] = st.h;
@@ -24657,6 +24754,7 @@ function stadion3dPublikum(ctx, P, st, f) {
             let farbe;
             if (choreo) farbe = (Math.floor(u * 8) % 2 === 0) ? farben.eigene : farben.zweite;
             else if (stadion3dZufall(st.key, i, j) >= fuell) continue;
+            else if (stadion3dSitzFarbe(i, st.key, farben)) farbe = stadion3dSitzFarbe(i, st.key, farben);
             else if (st.key === 'gaeste') farbe = stadion3dZufall(st.key, j, i) < 0.75 ? farben.gegner : STADION3D_KLEIDUNG[(i + j) % STADION3D_KLEIDUNG.length];
             else if (st.key === 'kurve' || st.key === 'suedOber') farbe = stadion3dZufall('k', i, j) < 0.7 ? farben.eigene : farben.zweite;
             else farbe = stadion3dZufall('m', i, j) < 0.35 ? farben.eigene : STADION3D_KLEIDUNG[stadion3dHash(st.key + i + '-' + j) % STADION3D_KLEIDUNG.length];
@@ -24811,10 +24909,10 @@ function stadion3dFahnen(liste, P, seg, farben) {
 function stadion3dSzeneBauen(P, layout, plan) {
     const liste = [];
     const a = stadionAnsicht;
-    const spiel = stadion3dSpiel();
+    const spiel = a.fremdSpiel || stadion3dSpiel();
     const fuellung = stadion3dFuellung(spiel);
-    const farben = stadion3dFarben(spiel.gegner);
-    const choreo = stadion3dChoreo();
+    const farben = a.fremdFarben || stadion3dFarben(spiel.gegner);
+    const choreo = a.fremd ? '' : stadion3dChoreo();
     const risiko = a.risiko ? stadion3dRisiko() : null;
     const szene = { bloecke: [], kraene: [], anlagen: [], gelaende: [], fahnen: false, choreo, flutlicht: !!stadium.flutlicht, dach: !!stadium.dach, anzeigen: !!stadium.videowalls, spiel, geist: null };
     layout.segmente.forEach(s => {
@@ -24911,7 +25009,7 @@ function stadion3dSzeneBauen(P, layout, plan) {
     }
     // Ehrenwand der Publikumslieblinge als Denkmal auf dem Vorplatz
     const lieblinge = [...new Set((game.crowdFavoriteHistory || []).map(x => x.name))];
-    if (lieblinge.length >= 3) {
+    if (lieblinge.length >= 3 && !a.ohneGelaende) {
         const d = layout.aussen.W + 8;
         stadion3dQuaderSeite(liste, P, 'W', 14, 18, d, d + 4, 0, 1.2, { farbe: '#9e9e9e' });
         stadion3dQuaderSeite(liste, P, 'W', 15.3, 16.7, d + 1.3, d + 2.7, 1.2, 4.6, { farbe: '#c9a227', icon: '❤️' });
@@ -24946,6 +25044,8 @@ function stadion3dSzeneBauen(P, layout, plan) {
 }
 
 function stadion3dTafelText(spiel) {
+    const ls = game.letzterSpielstand;
+    if (ls) return `${ls.ourGoals}:${ls.oppGoals} ${ls.oppName}`.slice(0, 28);
     const b = (game.spielberichte || []).find(x => !x.cup);
     if (b && b.titel) return String(b.titel).slice(0, 28);
     return spiel.prognose ? (stadium.name || game.clubName || 'Willkommen') : `${(spiel.zuschauer || 0).toLocaleString('de-DE')} Zuschauer`;
@@ -25202,6 +25302,7 @@ function stadion3dStarte() {
 // Aus onScreenShown('screen-stadium') und beim Umschalten
 function stadionAnsichtAnzeigen() {
     stadion3dUmschalterZeigen();
+    stadionMusterAnzeigen();
     if (!stadion3dAn()) return;
     if (!stadionAnsicht) stadion3dNeu();
     stadionAnsicht.groesse = stadion3dGroesse();
@@ -25397,7 +25498,7 @@ function stadion3dLeisteAktualisieren() {
             risikoText = r && r.spiel ? `<div style="margin-top:3px;">⚠️ Risiko je Block für ${mpEscStadion(r.spiel.gegner)} (${r.spiel.heim ? 'Heim' : 'Auswärts'}): ${(Math.round(r.chance * 1000) / 10).toLocaleString('de-DE')} % <span style="color:var(--text-muted);">· grün ruhig, rot hoch</span></div>` : '<div style="margin-top:3px;">⚠️ Gerade steht kein Ligaspiel an.</div>';
         }
         info.innerHTML = `<div><strong>${sp.prognose ? 'Prognose nächstes Heimspiel' : `Heimspiel ${sp.index + 1} von ${sp.anzahl}`}</strong>${sp.gegner ? ` gegen ${mpEscStadion(sp.gegner)}` : ''}${!sp.prognose && sp.matchday ? ` <span style="color:var(--text-muted);">(Saison ${sp.season}, ${sp.matchday}. Spieltag)</span>` : ''}</div>
-            <div>${(sp.zuschauer || 0).toLocaleString('de-DE')} von ${(sp.kapazitaet || 0).toLocaleString('de-DE')} Plätzen · ${quote} % Auslastung</div>
+            <div>${(sp.zuschauer || 0).toLocaleString('de-DE')} von ${(sp.kapazitaet || 0).toLocaleString('de-DE')} Plätzen · ${quote} % Auslastung${sp.vorschau ? ' <span style="color:var(--text-muted);">· mit deinen neuen Preisen</span>' : ''}</div>
             ${risikoText}
             ${chips.length ? `<div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;">${chips.join('')}</div>` : ''}`;
     }
@@ -25439,12 +25540,20 @@ function stadion3dGelaendeEintrag(id) {
 function stadion3dGelaendeFensterInhalt(box, g) {
     const ziel = g.ziel && document.getElementById(g.ziel) ? g.ziel : null;
     const zielName = { 'screen-campus': 'Zum Campus', 'screen-youth': 'Zur Jugend', 'screen-real-estate': 'Zu den Immobilien' }[ziel] || 'Zur Seite';
+    // Kauf und Ausbau direkt aus dem Fenster; die Kosten kommen aus denselben Rechnungen wie auf den Seiten selbst
+    let kauf = '';
+    if (g.kauf && !g.bau && g.lvl < g.max) {
+        const kosten = g.kauf === 'campus' ? getCampusUpgradeCost(g.key) : getRealEstateCost(g.key);
+        const aktion = g.kauf === 'campus' ? `upgradeCampusBuilding('${g.key}')` : `buyOrUpgradeRealEstate('${g.key}')`;
+        kauf = `<button onclick="schliesseStadionBlock(); ${aktion}" class="btn-action" style="margin-bottom:6px;">${g.lvl ? 'Ausbauen' : 'Bauen'} auf Stufe ${g.lvl + 1} [${formatVal(kosten)}] · Bauzeit ${getConstructionDays(kosten)} SpT</button>`;
+    }
     box.innerHTML = `<div class="panel-header">${g.icon || '🏗️'} ${mpEscStadion(g.name)}</div>
         <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px;">
             ${uiChip(g.lvl ? `Stufe ${g.lvl}/${g.max}` : 'Noch nicht gebaut', g.lvl ? 'gut' : '')}
             ${g.bau ? uiChip(`🏗️ Im Bau: noch ${g.bau.daysLeft} Spieltage`, 'warn') : ''}
         </div>
         <div style="font-size:var(--fs-small); margin-bottom:6px;">${mpEscStadion(g.desc || '')}</div>
+        ${kauf}
         ${ziel ? `<button onclick="schliesseStadionBlock(); stadionGelaendeSchliessen(); showScreen('${ziel}')" class="btn-action">➜ ${zielName}</button>` : ''}`;
 }
 
@@ -25558,9 +25667,10 @@ function stadion3dGelaendeListe() {
     const box = document.getElementById('stadion-gelaende-liste');
     if (!box || !stadionAnsicht) return;
     const plan = stadion3dGelaendePlan(stadionAnsicht.layout || stadion3dLayout());
-    const gebaut = plan.filter(g => g.lvl > 0 || g.bau);
-    box.innerHTML = `<div style="margin-bottom:4px;">${gebaut.length} ${gebaut.length === 1 ? 'Anlage' : 'Anlagen'} auf dem Gelände${plan.filter(g => g.bau).length ? `, ${plan.filter(g => g.bau).length} im Bau` : ''}. Weitere Gebäude baust du im Campus und bei den Immobilien.</div>
-        <div class="stadion-gelaende-knoepfe">${gebaut.map(g => `<button onclick="stadionBlockOeffnen('${g.id}')" class="btn-secondary">${g.icon || '🏗️'} ${mpEscStadion(String(g.name).replace(/\s*['"„].*$/, ''))} ${g.lvl ? `· ${g.lvl}` : '· im Bau'}</button>`).join('')}</div>`;
+    const gebaut = plan.filter(g => g.lvl > 0 || g.bau).length;
+    const im_bau = plan.filter(g => g.bau).length;
+    box.innerHTML = `<div style="margin-bottom:4px;">${gebaut} von ${plan.length} Anlagen stehen${im_bau ? `, ${im_bau} im Bau` : ''}. Freie Bauplätze sind gestrichelt; ein Tipp zeigt Kosten und Bauzeit.</div>
+        <div class="stadion-gelaende-knoepfe">${plan.map(g => `<button onclick="stadionBlockOeffnen('${g.id}')" class="btn-secondary">${g.icon || '🏗️'} ${mpEscStadion(String(g.name).replace(/\s*['"„].*$/, ''))} · ${g.bau ? 'im Bau' : (g.lvl ? `Stufe ${g.lvl}` : 'Bauplatz')}</button>`).join('')}</div>`;
 }
 
 // ---------- Stadionbild im Dashboard ----------
@@ -25570,25 +25680,89 @@ function stadion3dGelaendeListe() {
 const STADION3D_DASHBOARD_KAMERA = { yaw: 0.62, pitch: 0.78, dist: 2.05, tx: 0, ty: 0, zoom: 1 };
 function stadionDashboardZeichnen() {
     const c = document.getElementById('dash-stadion-canvas');
-    const ctx = c && c.getContext ? c.getContext('2d') : null;
-    if (!ctx) return false;
-    if (!stadionAnsicht) stadion3dNeu();
-    const a = stadionAnsicht;
-    const felder = ['yaw', 'pitch', 'dist', 'tx', 'ty', 'zoom', 'auswahl', 'vorschau', 'risiko', 'flug', 'szene', 'treffer', 'layout', 'P'];
-    const vorher = {};
-    felder.forEach(k => { vorher[k] = a[k]; });
-    try {
-        Object.assign(a, STADION3D_DASHBOARD_KAMERA, { auswahl: null, vorschau: null, risiko: false, flug: null, szene: {}, treffer: [] });
-        const W = 360, H = 190;
-        ctx.setTransform(c.width / W, 0, 0, c.height / H, 0, 0);
-        const layout = stadion3dLayout();
-        stadion3dZeichnen(ctx, stadion3dProjektion(W, H, layout), layout);
-        c.setAttribute('aria-label', stadion3dBeschreibung());
-        c.dataset.stufe = layout.stufe;
-    } finally {
-        felder.forEach(k => { a[k] = vorher[k]; });
-    }
+    if (!c || !c.getContext) return false;
+    stadion3dFremdZeichnen(c, stadium, {});
+    const zeilen = stadionSpielBanner();
+    stadion3dBanderole(c, zeilen.length ? zeilen : [stadium.name || 'Vereinsstadion']);
+    c.setAttribute('aria-label', stadion3dBeschreibung());
+    c.dataset.stufe = stadion3dStufe(stadium.total);
+    stadionGegnerZeichnen();
     return true;
+}
+
+// ---------- Sitzmuster, Bild speichern, Chronik ----------
+const STADION3D_MUSTER = ['standard', 'streifen', 'blockfarben'];
+function stadionMusterWaehlen(m) {
+    if (!STADION3D_MUSTER.includes(m)) return;
+    game.stadionMuster = m;
+    stadionMusterAnzeigen();
+    stadion3dZeichneEinmal();
+    if (typeof stadionChronikAktualisieren === 'function') stadionChronikAktualisieren();
+}
+function stadionMusterAnzeigen() {
+    STADION3D_MUSTER.forEach(m => {
+        const b = document.getElementById('stadion-muster-' + m);
+        if (b) b.className = (game.stadionMuster || 'standard') === m ? 'btn-action' : 'btn-secondary';
+    });
+}
+
+// Das Stadionbild als PNG mit Name, Kapazität und Saison darunter
+function stadionBildSpeichern() {
+    const c = stadion3dCanvas();
+    if (!c || !stadionAnsicht) return;
+    const f = document.createElement('canvas');
+    f.width = c.width; f.height = c.height + Math.round(c.height * 0.12);
+    const ctx = f.getContext('2d');
+    ctx.drawImage(c, 0, 0);
+    ctx.fillStyle = '#101418'; ctx.fillRect(0, c.height, f.width, f.height - c.height);
+    ctx.fillStyle = '#ffffff'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+    const k = c.width / 720, band = f.height - c.height;
+    ctx.font = `800 ${Math.round(22 * k)}px system-ui, sans-serif`;
+    ctx.fillText(stadium.name || 'Vereinsstadion', Math.round(16 * k), c.height + band * 0.36);
+    ctx.font = `500 ${Math.round(16 * k)}px system-ui, sans-serif`; ctx.fillStyle = '#e0e0e0';
+    ctx.fillText(`${(stadium.total || 0).toLocaleString('de-DE')} Plätze · Saison ${game.season}`, Math.round(16 * k), c.height + band * 0.72);
+    const a = document.createElement('a');
+    a.href = f.toDataURL('image/png');
+    a.download = `stadion-saison-${game.season}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+    showToast('📷 Stadionbild gespeichert.', 'success');
+}
+
+// Am Saisonende: Plätze je Block, Dach, Flutlicht und Anlagen festhalten (höchstens 30 Saisons)
+function stadionChronikSchnappschuss() {
+    if (!stadium || !stadium.blocks) return;
+    const caps = {};
+    Object.keys(stadium.blocks).forEach(k => { caps[k] = stadium.blocks[k].cap; });
+    const gelaende = typeof campusBuildings !== 'undefined' ? Object.keys(campusBuildings).filter(k => campusBuildings[k].lvl > 0).length : 0;
+    const eintrag = { season: game.season, total: stadium.total, caps, bonus: stadium.bonusCapacity || 0, dach: !!stadium.dach, flutlicht: !!stadium.flutlicht,
+        videowalls: !!stadium.videowalls, upgrades: Object.keys(stadium.upgrades || {}).filter(k => stadium.upgrades[k]), gelaende, muster: game.stadionMuster || 'standard' };
+    game.stadionChronik = (game.stadionChronik || []).filter(e => e.season !== game.season).concat([eintrag]).slice(-30);
+}
+
+// Zeichnet die Chronik-Saison mit dem Schieber; ohne Eintrag bleibt die Fläche leer
+function stadionChronikZeigen(index) {
+    const liste = game.stadionChronik || [];
+    const c = document.getElementById('stadion-chronik-canvas');
+    const text = document.getElementById('stadion-chronik-text');
+    const regler = document.getElementById('stadion-chronik-regler');
+    if (!c || !text || !regler) return;
+    regler.max = Math.max(0, liste.length - 1);
+    if (!liste.length) { text.textContent = 'Noch keine Saison abgeschlossen. Am Saisonende hält die Chronik das Stadion fest.'; return; }
+    const i = Math.max(0, Math.min(liste.length - 1, Number(index)));
+    regler.value = i;
+    const e = liste[i];
+    const basis = stadion3dBasisBlocks();
+    Object.keys(e.caps || {}).forEach(k => { if (basis[k]) basis[k].cap = e.caps[k]; });
+    const upg = {}; (e.upgrades || []).forEach(k => { upg[k] = true; });
+    const obj = stadion3dStadionObjekt(basis, { name: stadium.name || 'Vereinsstadion', bonusCapacity: e.bonus || 0, dach: e.dach, flutlicht: e.flutlicht, videowalls: e.videowalls, upgrades: upg });
+    stadion3dFremdZeichnen(c, obj, { spiel: { prognose: true, zuschauer: Math.round(obj.total * 0.6), kapazitaet: obj.total, gegner: '' } });
+    stadion3dBanderole(c, [`Saison ${e.season}`, `${(e.total || 0).toLocaleString('de-DE')} Plätze · ${e.gelaende || 0} Campus-Gebäude`]);
+    const seit = e.total - liste[0].total;
+    text.textContent = `Saison ${e.season}: ${(e.total || 0).toLocaleString('de-DE')} Plätze.` + (i > 0 ? ` Seit Saison ${liste[0].season}: ${seit >= 0 ? '+' : ''}${seit.toLocaleString('de-DE')} Plätze.` : '');
+}
+function stadionChronikAktualisieren() {
+    const liste = game.stadionChronik || [];
+    stadionChronikZeigen(liste.length ? liste.length - 1 : 0);
 }
 
 /* eslint-enable */
@@ -27488,6 +27662,7 @@ function ensureSerienState() {
 
 // Aus updateLeagueTable() nach jedem eigenen Ligaspiel (live und simuliert)
 function recordOwnLeagueResult(ourGoals, oppGoals, isHome, oppName) {
+    game.letzterSpielstand = { ourGoals, oppGoals, isHome: !!isHome, oppName, season: game.season, matchday: game.matchday };
     ensureSerienState();
     const s = game.serien.aktuell;
     const sieg = ourGoals > oppGoals, niederlage = ourGoals < oppGoals;
@@ -33526,7 +33701,7 @@ const I18N_UI_EN = {
     // Premium & Admin & Verschiedenes
     '💎 Premium-Shop': '💎 Premium shop', 'Dies ist eine reine Offline-App ohne echte Zahlungsanbindung. "Käufe" hier sind simuliert und buchen kein echtes Geld ab - die Premium-Punkte werden direkt gutgeschrieben.': 'This is an offline-only app with no real payments. "Purchases" here are simulated and charge no real money - premium points are credited directly.', 'Premium-Punkte "kaufen" (simuliert)': 'Premium points "buy" (simulated)', 'Booster einlösen': 'Redeem booster', '💎 Premium: Fan-Boost': '💎 Premium: fan boost', 'Sofortiger Fan-Zufriedenheits-Schub für Diamanten.': 'Instant fan satisfaction boost for diamonds.', '💎 Fan-Zufriedenheit +20 kaufen (90)': '💎 Buy fan satisfaction +20 (90)', '💎 Mit Diamanten sofort abschließen (150)': '💎 Finish now with diamonds (150)', '⭐ Zusätzliche Features': '⭐ Extra features', '💾 Speicherstände': '💾 Save games', '💾 Savegame-Export & JSON-Import': '💾 Save export & JSON import', '💾 Als Datei herunterladen': '💾 Download as file', '📤 Als Datei exportieren': '📤 Export as file', '📥 Aus Datei importieren': '📥 Import from file', '📤 Exportieren': '📤 Export', '📤 JSON Exportieren': '📤 Export JSON', '📥 JSON Importieren': '📥 Import JSON', '📸 Als Bild herunterladen': '📸 Download as image', '📋 Verlauf exportieren': '📋 Export history', '🆕 Neues Spiel starten (frischer Klub)': '🆕 Start a new game (fresh club)', '✅ Neues Spiel mit diesen Einstellungen starten': '✅ Start a new game with these settings', 'Startliga wählen:': 'Choose the starting league:', 'Startkapital wählen:': 'Choose the starting capital:', 'Heimatstadt (bestimmt Regionalliga, Oberliga und Landespokal):': 'Home city (determines the regional leagues and the state cup):', 'Aktueller Vereinsname:': 'Current club name:', '🧪 Szenario-Presets': '🧪 Scenario presets', 'Ausgewogenes Einsteigen ohne besondere Vor-/Nachteile.': 'A balanced start without special pros or cons.', 'Ausgewogener Ansatz ohne besondere Vor-/Nachteile.': 'A balanced approach without special pros or cons.', '🏷️ Vereinsidentität': '🏷️ Club identity', '🛡️ Vereins-Wappen': '🛡️ Club crest', '🖼️ Vereinsmuseum: Wappen-Historie': '🖼️ Club museum: crest history', 'Zweite Ebene: Muster-Badge': 'Second layer: pattern badge', 'Dritte Ebene: Tier-/Maskottchen-Symbol': 'Third layer: animal/mascot symbol', 'Symbol': 'Symbol', 'Farbe': 'Colour', 'Auswärtstrikot-Farbe': 'Away kit colour', '✏️ Umbenennen': '✏️ Rename', '🔄 Verein wechseln': '🔄 Change club', 'Eigene Vorlagen': 'Own templates', '✓ Alle als gelesen markieren': '✓ Mark all as read', '★ Wichtig': '★ Important', 'Was bedeutet ein Wert, wie wirkt er, wie beeinflusst man ihn? Suchen oder nach Bereich filtern.': 'What does a value mean, what does it do, how do you influence it? Search or filter by area.', '🛠️ Admin-Diagnose & Live-Inspector': '🛠️ Admin diagnostics & live inspector', 'Entwickler-Konsole Aktiv': 'Developer console active', '🔍 Struktur-Selbsttest': '🔍 Structure self-test', '🔍 Jetzt alle Screens testen': '🔍 Test all screens now', 'Prüft, ob jeder Screen nach dem Öffnen wirklich sichtbaren Inhalt zeigt - deckt versteckte HTML-Verschachtelungsfehler auf, bevor sie als "das Spiel geht nicht" auffallen.': 'Checks that every screen shows visible content when opened - finds hidden HTML nesting errors before they show up as "the game is broken".', 'Insolvenz-Test': 'Insolvency test', '💣 Komplett-Reset': '💣 Full reset', '⚠️ Technischer Fehler (bitte melden):': '⚠️ Technical error (please report):', 'Verlauf (letzte Läufe):': 'History (last runs):', 'Stimmung:': 'Mood:', 'Rangordnung': 'Hierarchy',
     // Teil 2 (25.21): Texte, die erst die Module rendern (Scan aller Bildschirme auf Englisch)
-    'Einlösen': 'Redeem', 'Spieler': 'Player', '🌟 Champions Cup Spieltag': '🌟 Champions Cup matchday', 'Kaufen für einen festen Geldbetrag (skaliert automatisch mit dem Kurs, egal wie teuer/günstig die Aktie ist):': 'Buy for a fixed amount (scales with the price automatically, however expensive or cheap the share is):', 'Aktueller Börsenkurs:': 'Current share price:', 'Noch nicht aufgestellt': 'Not in the line-up yet', 'Freistoß-Gott': 'Free-kick god', 'Noch kein Scout für diese Region.': 'No scout for this region yet.', 'Wintermütze': 'Winter hat', 'Auswärts-Schal': 'Away scarf', 'Leder-Geldbörse': 'Leather wallet', 'Schlüsselanhänger': 'Key ring', 'Mini-Ball für Kinder': 'Mini ball for kids', 'Handyhülle mit Wappen': 'Phone case with crest', 'Kapuzenpulli mit Wappen': 'Hoodie with crest', 'keine': 'none', 'Saison:': 'Season:', 'Eisenfuß': 'Iron foot', 'Präsident': 'President', 'Kapazität': 'Capacity', 'KAPAZITÄT': 'CAPACITY', 'nur mähen': 'mow only', 'Gründlich': 'Thorough', 'Millionär': 'Millionaire', '→ Höhepunkt': '→ Highlight', 'Vorverträge': 'Pre-contracts', '· Gästeblock': '· away block', 'Gesamtstärke': 'Overall strength', 'pro Spieltag': 'per matchday', '🌴 Südamerika': '🌴 South America', 'Gerüchteküche': 'Rumour mill', 'Presse-Tribüne': 'Press stand', '↺ Zurücksetzen': '↺ Reset', 'Höchster Sieg:': 'Biggest win:', 'Multimillionär': 'Multimillionaire', 'Rückkaufoption': 'Buy-back option', 'Saisoneröffnung': 'Season opening', 'Nicht gegründet': 'Not founded', 'Auswärtsbilanz:': 'Away record:', 'Nächstes Spiel:': 'Next match:', 'Nächste Lizenz:': 'Next licence:', 'Trophäen gesamt:': 'Total trophies:', '🍀 Glücksbringer': '🍀 Lucky charm', 'Vertragsgespräch': 'Contract talk', 'Auf- und Abstieg': 'Promotion and relegation', 'nur dieser Verein': 'this club only', '🎫 Ticketverkäufe': '🎫 Ticket sales', 'West-Haupttribüne': 'West main stand', 'Ernährungsberater': 'Nutritionist', 'Parkplatz-Gelände': 'Car park site', 'Nur mähen (leicht)': 'Mow only (light)', '💼 Gesamtgehälter:': '💼 Total wages:', 'Villa mit Seeblick': 'Villa with lake view', 'Abstellungsprämien': 'Release fees', 'Höchster Derbysieg:': 'Biggest derby win:', 'Auswärts-Spitzname:': 'Away nickname:', '🔝 Freistoßflanke ·': '🔝 Free-kick cross ·', 'Sanierungsbedürftig': 'Needs renovation', 'Nächste Ausbaustufe': 'Next upgrade', '✅ Preise übernehmen': '✅ Apply prices', 'Zustand des Geläufs': 'Pitch condition', 'Höchste Niederlage:': 'Heaviest defeat:', '💛 Loyalitäts-Bonus': '💛 Loyalty bonus', '🎤 Spieler-Interview': '🎤 Player interview', '↪️ Kurz ausgeführt ·': '↪️ Taken short ·', 'Präventionsprogramm:': 'Prevention programme:', 'Farbe je Block nach dem Risiko des nächsten Spiels (grün ruhig, rot hoch), Symbole für Vorfälle dieser Saison.': 'Colour per stand by the risk of the next match (green calm, red high), symbols for incidents this season.', '🧩 Taktiktafel zeigen': '🧩 Show tactics board', '🎥 3D-Ansicht zeigen': '🎥 Show 3D view', '🎥 Luftbild': '🎥 Aerial view', '☀️ Tag': '☀️ Day', '⚠️ Risiko': '⚠️ Risk', '🎬 Rundflug': '🎬 Fly-around', '◀ Spiel': '◀ Match', 'Spiel ▶': 'Match ▶', 'Heute': 'Today', 'Nach dem Ausbau': 'After the expansion', '✕ Vorschau beenden': '✕ End preview', 'Wischen dreht das Stadion, zwei Finger oder ➕/➖ zoomen, ein Tipp auf einen Block öffnet seinen Ausbau.': 'Swipe to turn the stadium, two fingers or ➕/➖ to zoom, tap a stand to open its expansion.', '🧩 Klassische Ansicht': '🧩 Classic view', '🗺️ Vereinsgelände': '🗺️ Club grounds', '🗺️ Gelände': '🗺️ Grounds', '🗺️ Vereinsgelände ansehen': '🗺️ View club grounds', '🆕 Neue Version verfügbar': '🆕 New version available', '🔄 Jetzt neu laden': '🔄 Reload now', 'Später': 'Later', '🎥 Stadionansicht zeigen': '🎥 Show stadium view', '🆕 Neu': '🆕 New', 'Neu': 'New', 'Zum Kader': 'To the squad', 'Zum Training': 'To training', 'Zu den Transfers': 'To transfers', 'Zu den Finanzen': 'To finances', 'Zum Stadion': 'To the stadium', 'Zur Fan-Zentrale': 'To the fan centre', 'Zur Übersicht': 'To the overview', 'Zur Tabelle': 'To the table', 'Zum Pokal': 'To the cup', 'Zur Historie': 'To the history', 'Zur Jugend': 'To the youth', 'Zu den Sponsoren': 'To the sponsors', 'Zum Postfach': 'To the inbox', 'Zur Darstellung': 'To display settings', 'Zum Kalender': 'To the calendar', 'Zu den Verträgen': 'To contracts', 'Zum Champions Cup': 'To the Champions Cup', 'Zur Holding': 'To the holding', 'Zur Kaderplanung': 'To squad planning', 'Anstoß Mobile Pro': 'Anstoß Mobile Pro', '▶ Weiterspielen': '▶ Continue', '🆕 Neue Karriere': '🆕 New career', 'Verein gründen, übernehmen oder einen Trainerjob annehmen': 'Found a club, take one over or accept a coaching job', '📂 Spielstand laden': '📂 Load game', 'Gespeicherte Stände oder eine Datei': 'Saved games or a file', 'Heimatstadt (bestimmt die Ligen deiner Region)': 'Home town (sets the leagues of your region)', 'Erfahrung': 'Experience', '🏗️ Verein gründen': '🏗️ Found a club', 'Eigener Verein mit eigenem Namen in deiner Heimatstadt. Du wählst Startliga, Startkapital und Freischalt-Tempo.': 'Your own club with your own name in your home town. You choose the starting league, starting capital and unlock pace.', '🤝 Verein übernehmen': '🤝 Take over a club', 'Werde Trainer eines bestehenden Vereins aus der Liga-Pyramide deiner Region, von der Kreisliga bis zur Bundesliga.': 'Become coach of an existing club in your region\'s league pyramid, from the lowest tier to the Bundesliga.', '📋 Trainer gesucht': '📋 Coach wanted', 'Vereine suchen gerade einen Trainer, jeder mit einem klaren Auftrag des Vorstands und einer Frist.': 'Clubs are looking for a coach right now, each with a clear brief from the board and a deadline.', 'Wähle eine Liga und einen Verein. Stärkere Vereine haben höhere Erwartungen, schwächere mehr Zeit.': 'Choose a league and a club. Stronger clubs expect more, weaker ones give you more time.', 'Übernehmen': 'Take over', 'Favorit': 'Favourite', 'Abstiegskandidat': 'Relegation candidate', 'Diese Vereine suchen gerade einen Trainer. Schaffst du das Ziel in der Frist, gibt es bis zu drei Sterne; danach geht die Karriere frei weiter.': 'These clubs are looking for a coach. Reach the goal in time for up to three stars; after that your career continues freely.', 'Job annehmen': 'Accept job', 'Automatischer Spielstand': 'Automatic save', 'Vereinsname:': 'Club name:', '🎓 Einsteiger': '🎓 Beginner', 'Kompakter Spieltag, weniger auf einmal': 'Compact matchday, less at once', '🧠 Erfahren': '🧠 Experienced', 'Alles von Anfang an': 'Everything from the start', 'So läuft ein Spieltag:': 'How a matchday works:', 'Anpfiff': 'Kick-off', 'Nur Ergebnis': 'Result only', '▶ Ohne Vorbereitung anpfeifen': '▶ Kick off without preparation', '⚡ Nur Ergebnis': '⚡ Result only', '🎙️ Vorbereitung zeigen (Gegner, Ansprache, Presse)': '🎙️ Show preparation (opponent, team talk, press)', '▴ Vorbereitung einklappen': '▴ Hide preparation', 'Danach geht es zurück zur Übersicht und zum nächsten Spieltag.': 'Then you return to the overview and the next matchday.', 'Ansprache, Pressekonferenz und Gegneranalyse sind freiwillig, sie bringen kleine Vorteile.': 'Team talk, press conference and opponent analysis are optional; they give small advantages.', 'Alles jetzt zeigen': 'Show everything now', 'Wichtig': 'Important', '▾ Mehr Bereiche': '▾ More areas', '▴ Weniger anzeigen': '▴ Show less', '🎓 Einsteiger-Modus: AN': '🎓 Beginner mode: ON', '🎓 Einsteiger-Modus: AUS': '🎓 Beginner mode: OFF', 'Was jetzt?': 'What now?', '🎓 Hinrunde geschafft!': '🎓 First half of the season done!', '🧠 Einsteiger-Modus aus': '🧠 Beginner mode off', '🎓 Noch anlassen': '🎓 Keep it on', 'Mit „Spielbericht schließen“ geht es zurück zur Übersicht.': '“Close match report” takes you back to the overview.', 'Sponsoren-Angebote ansehen (Finanzen)': 'View sponsor offers (finances)', 'Kein Risikospiel': 'No high-risk match', '🏅 Saison-Aufgaben': '🏅 Season tasks', 'Erfahrung:': 'Experience:', '⚙️ Formation und Standard-Schützen': '⚙️ Formation and set-piece takers', '🚨 Ausschreitungen': '🚨 Riots', 'Bisher keine Vorfälle.': 'No incidents so far.', 'Kein Ligaspiel offen.': 'No league match pending.', 'Trainingsintensität:': 'Training intensity:', 'Einnahmen (Spieltag)': 'Income (matchday)', 'Bedarf nächste Saison': 'Needed next season', 'Noch keine Teilnahme.': 'No participation yet.', 'Finanzielle Stabilität': 'Financial stability', '⚽ Öffentliches Training': '⚽ Open training', 'Noch nicht genug Daten.': 'Not enough data yet.', '· nächste Auslosung aus': '· next draw from', 'Öffentliches Medienimage': 'Public media image', '✔ 🎯 Direkter Freistoß ·': '✔ 🎯 Direct free kick ·', '💡 Empfehlung übernehmen': '💡 Apply recommendation', '🅿️ Parkplätze & Zufahrt': '🅿️ Parking & access', 'Bedienung mit einer Hand': 'One-handed use', 'Gewinne die Meisterschaft': 'Win the championship', 'Spritzguss- & Zubehörwerk': 'Injection moulding & accessories plant', 'Einfamilienhaus im Grünen': 'Detached house in the countryside', 'Biografie veröffentlichen': 'Publish a biography', 'Kaderplanung & Kadergröße': 'Squad planning & squad size', 'Kabine, Cliquen & Kapitän': 'Dressing room, cliques & captain', '🔄 Alle Perks zurücksetzen': '🔄 Reset all perks', 'Verträge laufen bald aus ·': 'Contracts expiring soon ·', '👩 Frauenmannschaft gründen': '👩 FOUND A WOMEN\'S TEAM', 'Noch kein gemeinsames Spiel': 'No match together yet', 'Noch keine Heimspiel-Daten.': 'No home match data yet.', 'Bürokomplex \'Vereins-Tower\'': 'Office complex \'Club Tower\'', 'Noch keine Tendenz erkennbar': 'No trend yet', 'Noch kein Heimspiel gespielt': 'No home match played yet', '· Zahlungskräftiges Publikum': '· wealthy crowd', 'Länderspielpausen & Turniere': 'International breaks & tournaments', 'Kader und Aufstellung ansehen': 'View squad and line-up', 'Finanzen und Sponsoren prüfen': 'Check finances and sponsors', '⚠️ Höchstes Verletzungsrisiko': '⚠️ Highest injury risk', 'Gehälter jetzt (pro Spieltag)': 'Wages now (per matchday)', 'Bester Torschütze (Karriere):': 'Top scorer (career):', '💪 Fähigkeitstraining-Express': '💪 Skill training express', 'Noch keine Interviews gegeben.': 'No interviews given yet.', 'Trainingsgelände mit Flutlicht': 'Training ground with floodlights', '🤝 Jährliches Personal-Meeting': '🤝 Annual staff meeting', 'Verträge langfristig gesichert': 'Contracts secured long-term', 'Längste Serie ohne Niederlage:': 'Longest unbeaten run:', 'Sofortkauf zahlt die Forderung': 'Instant buy pays the asking price', 'Noch kein Selbsttest gelaufen.': 'No self-test run yet.', 'Wartet die ersten Spieltage ab.': 'Waiting for the first matchdays.', 'Noch kein Pokalfinale erreicht.': 'No cup final reached yet.', '👕 Doppelte Fanartikel-Verkäufe': '👕 Double merchandise sales', 'Wintergespräch mit dem Vorstand': 'Winter talk with the board', '- wie startet ihr in die Saison?': '- how do you start the season?', 'Leihspieler kehren ggf. zurück ·': 'Loan players may return ·', 'Noch keine abgeschlossenen Wetten.': 'No settled bets yet.', 'Noch keine Überraschung geschafft.': 'No upset achieved yet.', 'Persönlichen Werbedeal abschließen': 'Sign a personal endorsement deal', '📱 Soziale-Medien-Präsenz: INAKTIV': '📱 Social media presence: INACTIVE', '📋 Kostenlose Vertragsverlängerung': '📋 Free contract extension', 'Kostenlos: etwas Fannähe und Moral.': 'Free: a little fan closeness and morale.', 'Stabile Weltmärkte zu Saisonbeginn.': 'Stable world markets at the start of the season.', 'Noch keine aktiven Bandensponsoren.': 'No active board sponsors yet.', '(Hektisch) · 🟥 zückt schnell Karten': '(Hectic) · 🟥 quick with cards', 'Zufrieden mit der Gesamtentwicklung.': 'Happy with the overall development.', 'Keine laufenden Produktionsaufträge.': 'No running production orders.', 'Noch keine Pokale im Trophäenschrank.': 'No trophies in the cabinet yet.', 'gegen Vereine aus der eigenen Region.': 'against clubs from your own region.', 'Kostet Geld, bringt Fans und Stimmung.': 'Costs money, brings fans and atmosphere.', 'Fertigt Schals für Wolle-Rohstoffkosten': 'Makes scarves for the cost of wool', 'Halbiert die Ausfallzeit von Verletzten': 'Halves the time injured players are out', 'Näht Spielbälle für Leder-Rohstoffkosten': 'Sews match balls for the cost of leather', 'Noch keine eigenen Vorlagen gespeichert.': 'No own templates saved yet.', 'Ein Magazin zahlt gut für deine Geschichte.': 'A magazine pays well for your story.', 'Vereinsstadion (keine Namensrechte vergeben)': 'Club stadium (no naming rights sold)', 'Noch keine Einträge in der Talent-Datenbank.': 'No entries in the talent database yet.', 'Produziert Trikots für Baumwoll-Rohstoffkosten': 'Produces shirts for the cost of cotton', 'Eine Marke will dein Gesicht für ihre Kampagne.': 'A brand wants your face for its campaign.', 'Presst Caps & Wimpel für Kunststoff-Rohstoffkosten': 'Presses caps & pennants for the cost of plastic', 'Unternehmen zahlen gut für deine Erfolgsgeschichte.': 'Companies pay well for your success story.', 'Noch keine spielerspezifischen Trikot-Verkaufsdaten.': 'No shirt sales data per player yet.', 'Noch nichts nebenbei - vielleicht Zeit für ein Hobby?': 'Nothing on the side yet - maybe time for a hobby?', 'Aktuell wirken keine zusätzlichen Boni auf den Absatz.': 'No extra boosts on sales right now.', 'Diese Saison noch keine Trainerwechsel in deiner Liga.': 'No coaching changes in your league this season yet.', 'Derzeit liegen keine offiziellen Transferanfragen für deine Spieler vor.': 'There are no official transfer requests for your players at the moment.', 'Noch keine Scouting-Missionen abgeschlossen. Entsende oben deine Scouts!': 'No scouting missions completed yet. Send out your scouts above!', 'Tippe auf einen Vereinsnamen in der Tabelle für die Kopf-an-Kopf-Bilanz.': 'Tap a club name in the table for the head-to-head record.', 'Noch keine Verkäufe erfasst - nach dem ersten Spieltag erscheint hier der Verlauf.': 'No sales recorded yet - the history appears here after the first matchday.', '✓ Keine Position hat eine gefährliche Häufung auslaufender Verträge.': '✓ No position has a dangerous cluster of expiring contracts.', 'Trainingsplus:': 'Training gain:', 'Verdoppelt die Ticketeinnahmen beim nächsten Heimspiel.': 'Doubles ticket income at the next home match.', 'Verdoppelt den Fanartikel-Absatz im Stadion beim nächsten Heimspiel.': 'Doubles merchandise sales in the stadium at the next home match.', 'Senkt Verletzungs- und Kartenrisiko im nächsten Spiel spürbar.': 'Noticeably lowers injury and card risk in the next match.', 'Senkt das Ausschreitungsrisiko beim nächsten Heimspiel stark ab.': 'Strongly lowers the risk of riots at the next home match.', 'Schließt alle aktuell laufenden Scouting-Missionen sofort ab.': 'Completes all running scouting missions immediately.', 'Heilt alle Verletzungen und beendet alle Sperren des gesamten Kaders sofort.': 'Heals all injuries and ends all suspensions of the whole squad immediately.', 'Gewährt sofort eine zusätzliche Trainingseinheit, unabhängig vom Tageslimit.': 'Grants an extra training session immediately, regardless of the daily limit.', 'Deckt das Potenzial aller aktuellen Jugendspieler sofort und kostenlos auf.': 'Reveals the potential of all current youth players immediately and for free.', 'Garantiert sonniges Wetter beim nächsten Spiel - keine negativen Wettereffekte.': 'Guarantees sunny weather at the next match - no negative weather effects.', 'Setzt die Eingespieltheit aller aktuellen Startelf-Paarungen sofort auf Maximum.': 'Sets the understanding of all current starting pairings to maximum immediately.', 'Setzt deinen Stamm-Torwart sofort auf Top-Fitness und Top-Tagesform.': 'Puts your first-choice goalkeeper at top fitness and top form immediately.', 'Einmal pro Saison ein aktives Vertrags-Ultimatum kostenlos besänftigen.': 'Calm one active contract ultimatum for free once per season.', 'Sofortiger Bonus aufs Transferbudget, passend zu deiner aktuellen Liga-Stärke.': 'Instant bonus to the transfer budget, matched to your current league.', 'Der nächste abgeschlossene Scouting-Fund ist garantiert ein Spieler mit hoher Stärke.': 'The next completed scouting find is guaranteed to be a strong player.', 'Zusätzlicher Fitness-Erholungsbonus nach Spielen (stapelt mit Konditionstrainer)': 'Extra fitness recovery after matches (stacks with the fitness coach)', 'Vermietete Büroflächen an lokale Unternehmen - stabile, planbare Mieteinnahmen.': 'Office space let to local companies - stable, predictable rent.', 'Mietwohnungen in Stadionnähe - beliebt bei Fans, die nah am Verein wohnen wollen.': 'Rented flats near the stadium - popular with fans who want to live close to the club.', 'Mildert Zwangsverkäufe und Punktabzüge bei Zahlungsunfähigkeit spürbar ab.': 'Noticeably softens forced sales and point deductions when insolvent.', 'Dämpft negative Medienwirkung bei schlechten Ergebnissen & Skandalen': 'Softens negative media impact of bad results & scandals', 'Verbessert Elfmeter-, Freistoß- und Eckballqualität der Mannschaft': 'Improves the team\'s penalties, free kicks and corners', 'Verringert Verletzungszeiten und beschleunigt Regeneration': 'Shortens injury lay-offs and speeds up recovery', 'Erhöht Stärke und Potenzial neuer Nachwuchsspieler': 'Raises strength and potential of new youth players', 'Übernimmt automatisch eine wählbare Aufgabe im Fanshop': 'Automatically takes over a chosen task in the fan shop', 'Halbiert die Wahrscheinlichkeit für Vertrags-Ultimaten unzufriedener Stars - frühzeitige,': 'Halves the chance of contract ultimatums from unhappy stars - early,',
+    'Einlösen': 'Redeem', 'Spieler': 'Player', '🌟 Champions Cup Spieltag': '🌟 Champions Cup matchday', 'Kaufen für einen festen Geldbetrag (skaliert automatisch mit dem Kurs, egal wie teuer/günstig die Aktie ist):': 'Buy for a fixed amount (scales with the price automatically, however expensive or cheap the share is):', 'Aktueller Börsenkurs:': 'Current share price:', 'Noch nicht aufgestellt': 'Not in the line-up yet', 'Freistoß-Gott': 'Free-kick god', 'Noch kein Scout für diese Region.': 'No scout for this region yet.', 'Wintermütze': 'Winter hat', 'Auswärts-Schal': 'Away scarf', 'Leder-Geldbörse': 'Leather wallet', 'Schlüsselanhänger': 'Key ring', 'Mini-Ball für Kinder': 'Mini ball for kids', 'Handyhülle mit Wappen': 'Phone case with crest', 'Kapuzenpulli mit Wappen': 'Hoodie with crest', 'keine': 'none', 'Saison:': 'Season:', 'Eisenfuß': 'Iron foot', 'Präsident': 'President', 'Kapazität': 'Capacity', 'KAPAZITÄT': 'CAPACITY', 'nur mähen': 'mow only', 'Gründlich': 'Thorough', 'Millionär': 'Millionaire', '→ Höhepunkt': '→ Highlight', 'Vorverträge': 'Pre-contracts', '· Gästeblock': '· away block', 'Gesamtstärke': 'Overall strength', 'pro Spieltag': 'per matchday', '🌴 Südamerika': '🌴 South America', 'Gerüchteküche': 'Rumour mill', 'Presse-Tribüne': 'Press stand', '↺ Zurücksetzen': '↺ Reset', 'Höchster Sieg:': 'Biggest win:', 'Multimillionär': 'Multimillionaire', 'Rückkaufoption': 'Buy-back option', 'Saisoneröffnung': 'Season opening', 'Nicht gegründet': 'Not founded', 'Auswärtsbilanz:': 'Away record:', 'Nächstes Spiel:': 'Next match:', 'Nächste Lizenz:': 'Next licence:', 'Trophäen gesamt:': 'Total trophies:', '🍀 Glücksbringer': '🍀 Lucky charm', 'Vertragsgespräch': 'Contract talk', 'Auf- und Abstieg': 'Promotion and relegation', 'nur dieser Verein': 'this club only', '🎫 Ticketverkäufe': '🎫 Ticket sales', 'West-Haupttribüne': 'West main stand', 'Ernährungsberater': 'Nutritionist', 'Parkplatz-Gelände': 'Car park site', 'Nur mähen (leicht)': 'Mow only (light)', '💼 Gesamtgehälter:': '💼 Total wages:', 'Villa mit Seeblick': 'Villa with lake view', 'Abstellungsprämien': 'Release fees', 'Höchster Derbysieg:': 'Biggest derby win:', 'Auswärts-Spitzname:': 'Away nickname:', '🔝 Freistoßflanke ·': '🔝 Free-kick cross ·', 'Sanierungsbedürftig': 'Needs renovation', 'Nächste Ausbaustufe': 'Next upgrade', '✅ Preise übernehmen': '✅ Apply prices', 'Zustand des Geläufs': 'Pitch condition', 'Höchste Niederlage:': 'Heaviest defeat:', '💛 Loyalitäts-Bonus': '💛 Loyalty bonus', '🎤 Spieler-Interview': '🎤 Player interview', '↪️ Kurz ausgeführt ·': '↪️ Taken short ·', 'Präventionsprogramm:': 'Prevention programme:', 'Farbe je Block nach dem Risiko des nächsten Spiels (grün ruhig, rot hoch), Symbole für Vorfälle dieser Saison.': 'Colour per stand by the risk of the next match (green calm, red high), symbols for incidents this season.', '🧩 Taktiktafel zeigen': '🧩 Show tactics board', '🎥 3D-Ansicht zeigen': '🎥 Show 3D view', '🎥 Luftbild': '🎥 Aerial view', '☀️ Tag': '☀️ Day', '⚠️ Risiko': '⚠️ Risk', '🎬 Rundflug': '🎬 Fly-around', '◀ Spiel': '◀ Match', 'Spiel ▶': 'Match ▶', 'Heute': 'Today', 'Nach dem Ausbau': 'After the expansion', '✕ Vorschau beenden': '✕ End preview', 'Wischen dreht das Stadion, zwei Finger oder ➕/➖ zoomen, ein Tipp auf einen Block öffnet seinen Ausbau.': 'Swipe to turn the stadium, two fingers or ➕/➖ to zoom, tap a stand to open its expansion.', '🧩 Klassische Ansicht': '🧩 Classic view', '🗺️ Vereinsgelände': '🗺️ Club grounds', '📷 Bild speichern': '📷 Save picture', 'Streifen': 'Stripes', 'Blockfarben': 'Block colours', '📜 Stadion-Chronik': '📜 Stadium chronicle', 'Saison wählen': 'Choose season', '🗺️ Gelände': '🗺️ Grounds', '🗺️ Vereinsgelände ansehen': '🗺️ View club grounds', '🆕 Neue Version verfügbar': '🆕 New version available', '🔄 Jetzt neu laden': '🔄 Reload now', 'Später': 'Later', '🎥 Stadionansicht zeigen': '🎥 Show stadium view', '🆕 Neu': '🆕 New', 'Neu': 'New', 'Zum Kader': 'To the squad', 'Zum Training': 'To training', 'Zu den Transfers': 'To transfers', 'Zu den Finanzen': 'To finances', 'Zum Stadion': 'To the stadium', 'Zur Fan-Zentrale': 'To the fan centre', 'Zur Übersicht': 'To the overview', 'Zur Tabelle': 'To the table', 'Zum Pokal': 'To the cup', 'Zur Historie': 'To the history', 'Zur Jugend': 'To the youth', 'Zu den Sponsoren': 'To the sponsors', 'Zum Postfach': 'To the inbox', 'Zur Darstellung': 'To display settings', 'Zum Kalender': 'To the calendar', 'Zu den Verträgen': 'To contracts', 'Zum Champions Cup': 'To the Champions Cup', 'Zur Holding': 'To the holding', 'Zur Kaderplanung': 'To squad planning', 'Anstoß Mobile Pro': 'Anstoß Mobile Pro', '▶ Weiterspielen': '▶ Continue', '🆕 Neue Karriere': '🆕 New career', 'Verein gründen, übernehmen oder einen Trainerjob annehmen': 'Found a club, take one over or accept a coaching job', '📂 Spielstand laden': '📂 Load game', 'Gespeicherte Stände oder eine Datei': 'Saved games or a file', 'Heimatstadt (bestimmt die Ligen deiner Region)': 'Home town (sets the leagues of your region)', 'Erfahrung': 'Experience', '🏗️ Verein gründen': '🏗️ Found a club', 'Eigener Verein mit eigenem Namen in deiner Heimatstadt. Du wählst Startliga, Startkapital und Freischalt-Tempo.': 'Your own club with your own name in your home town. You choose the starting league, starting capital and unlock pace.', '🤝 Verein übernehmen': '🤝 Take over a club', 'Werde Trainer eines bestehenden Vereins aus der Liga-Pyramide deiner Region, von der Kreisliga bis zur Bundesliga.': 'Become coach of an existing club in your region\'s league pyramid, from the lowest tier to the Bundesliga.', '📋 Trainer gesucht': '📋 Coach wanted', 'Vereine suchen gerade einen Trainer, jeder mit einem klaren Auftrag des Vorstands und einer Frist.': 'Clubs are looking for a coach right now, each with a clear brief from the board and a deadline.', 'Wähle eine Liga und einen Verein. Stärkere Vereine haben höhere Erwartungen, schwächere mehr Zeit.': 'Choose a league and a club. Stronger clubs expect more, weaker ones give you more time.', 'Übernehmen': 'Take over', 'Favorit': 'Favourite', 'Abstiegskandidat': 'Relegation candidate', 'Diese Vereine suchen gerade einen Trainer. Schaffst du das Ziel in der Frist, gibt es bis zu drei Sterne; danach geht die Karriere frei weiter.': 'These clubs are looking for a coach. Reach the goal in time for up to three stars; after that your career continues freely.', 'Job annehmen': 'Accept job', 'Automatischer Spielstand': 'Automatic save', 'Vereinsname:': 'Club name:', '🎓 Einsteiger': '🎓 Beginner', 'Kompakter Spieltag, weniger auf einmal': 'Compact matchday, less at once', '🧠 Erfahren': '🧠 Experienced', 'Alles von Anfang an': 'Everything from the start', 'So läuft ein Spieltag:': 'How a matchday works:', 'Anpfiff': 'Kick-off', 'Nur Ergebnis': 'Result only', '▶ Ohne Vorbereitung anpfeifen': '▶ Kick off without preparation', '⚡ Nur Ergebnis': '⚡ Result only', '🎙️ Vorbereitung zeigen (Gegner, Ansprache, Presse)': '🎙️ Show preparation (opponent, team talk, press)', '▴ Vorbereitung einklappen': '▴ Hide preparation', 'Danach geht es zurück zur Übersicht und zum nächsten Spieltag.': 'Then you return to the overview and the next matchday.', 'Ansprache, Pressekonferenz und Gegneranalyse sind freiwillig, sie bringen kleine Vorteile.': 'Team talk, press conference and opponent analysis are optional; they give small advantages.', 'Alles jetzt zeigen': 'Show everything now', 'Wichtig': 'Important', '▾ Mehr Bereiche': '▾ More areas', '▴ Weniger anzeigen': '▴ Show less', '🎓 Einsteiger-Modus: AN': '🎓 Beginner mode: ON', '🎓 Einsteiger-Modus: AUS': '🎓 Beginner mode: OFF', 'Was jetzt?': 'What now?', '🎓 Hinrunde geschafft!': '🎓 First half of the season done!', '🧠 Einsteiger-Modus aus': '🧠 Beginner mode off', '🎓 Noch anlassen': '🎓 Keep it on', 'Mit „Spielbericht schließen“ geht es zurück zur Übersicht.': '“Close match report” takes you back to the overview.', 'Sponsoren-Angebote ansehen (Finanzen)': 'View sponsor offers (finances)', 'Kein Risikospiel': 'No high-risk match', '🏅 Saison-Aufgaben': '🏅 Season tasks', 'Erfahrung:': 'Experience:', '⚙️ Formation und Standard-Schützen': '⚙️ Formation and set-piece takers', '🚨 Ausschreitungen': '🚨 Riots', 'Bisher keine Vorfälle.': 'No incidents so far.', 'Kein Ligaspiel offen.': 'No league match pending.', 'Trainingsintensität:': 'Training intensity:', 'Einnahmen (Spieltag)': 'Income (matchday)', 'Bedarf nächste Saison': 'Needed next season', 'Noch keine Teilnahme.': 'No participation yet.', 'Finanzielle Stabilität': 'Financial stability', '⚽ Öffentliches Training': '⚽ Open training', 'Noch nicht genug Daten.': 'Not enough data yet.', '· nächste Auslosung aus': '· next draw from', 'Öffentliches Medienimage': 'Public media image', '✔ 🎯 Direkter Freistoß ·': '✔ 🎯 Direct free kick ·', '💡 Empfehlung übernehmen': '💡 Apply recommendation', '🅿️ Parkplätze & Zufahrt': '🅿️ Parking & access', 'Bedienung mit einer Hand': 'One-handed use', 'Gewinne die Meisterschaft': 'Win the championship', 'Spritzguss- & Zubehörwerk': 'Injection moulding & accessories plant', 'Einfamilienhaus im Grünen': 'Detached house in the countryside', 'Biografie veröffentlichen': 'Publish a biography', 'Kaderplanung & Kadergröße': 'Squad planning & squad size', 'Kabine, Cliquen & Kapitän': 'Dressing room, cliques & captain', '🔄 Alle Perks zurücksetzen': '🔄 Reset all perks', 'Verträge laufen bald aus ·': 'Contracts expiring soon ·', '👩 Frauenmannschaft gründen': '👩 FOUND A WOMEN\'S TEAM', 'Noch kein gemeinsames Spiel': 'No match together yet', 'Noch keine Heimspiel-Daten.': 'No home match data yet.', 'Bürokomplex \'Vereins-Tower\'': 'Office complex \'Club Tower\'', 'Noch keine Tendenz erkennbar': 'No trend yet', 'Noch kein Heimspiel gespielt': 'No home match played yet', '· Zahlungskräftiges Publikum': '· wealthy crowd', 'Länderspielpausen & Turniere': 'International breaks & tournaments', 'Kader und Aufstellung ansehen': 'View squad and line-up', 'Finanzen und Sponsoren prüfen': 'Check finances and sponsors', '⚠️ Höchstes Verletzungsrisiko': '⚠️ Highest injury risk', 'Gehälter jetzt (pro Spieltag)': 'Wages now (per matchday)', 'Bester Torschütze (Karriere):': 'Top scorer (career):', '💪 Fähigkeitstraining-Express': '💪 Skill training express', 'Noch keine Interviews gegeben.': 'No interviews given yet.', 'Trainingsgelände mit Flutlicht': 'Training ground with floodlights', '🤝 Jährliches Personal-Meeting': '🤝 Annual staff meeting', 'Verträge langfristig gesichert': 'Contracts secured long-term', 'Längste Serie ohne Niederlage:': 'Longest unbeaten run:', 'Sofortkauf zahlt die Forderung': 'Instant buy pays the asking price', 'Noch kein Selbsttest gelaufen.': 'No self-test run yet.', 'Wartet die ersten Spieltage ab.': 'Waiting for the first matchdays.', 'Noch kein Pokalfinale erreicht.': 'No cup final reached yet.', '👕 Doppelte Fanartikel-Verkäufe': '👕 Double merchandise sales', 'Wintergespräch mit dem Vorstand': 'Winter talk with the board', '- wie startet ihr in die Saison?': '- how do you start the season?', 'Leihspieler kehren ggf. zurück ·': 'Loan players may return ·', 'Noch keine abgeschlossenen Wetten.': 'No settled bets yet.', 'Noch keine Überraschung geschafft.': 'No upset achieved yet.', 'Persönlichen Werbedeal abschließen': 'Sign a personal endorsement deal', '📱 Soziale-Medien-Präsenz: INAKTIV': '📱 Social media presence: INACTIVE', '📋 Kostenlose Vertragsverlängerung': '📋 Free contract extension', 'Kostenlos: etwas Fannähe und Moral.': 'Free: a little fan closeness and morale.', 'Stabile Weltmärkte zu Saisonbeginn.': 'Stable world markets at the start of the season.', 'Noch keine aktiven Bandensponsoren.': 'No active board sponsors yet.', '(Hektisch) · 🟥 zückt schnell Karten': '(Hectic) · 🟥 quick with cards', 'Zufrieden mit der Gesamtentwicklung.': 'Happy with the overall development.', 'Keine laufenden Produktionsaufträge.': 'No running production orders.', 'Noch keine Pokale im Trophäenschrank.': 'No trophies in the cabinet yet.', 'gegen Vereine aus der eigenen Region.': 'against clubs from your own region.', 'Kostet Geld, bringt Fans und Stimmung.': 'Costs money, brings fans and atmosphere.', 'Fertigt Schals für Wolle-Rohstoffkosten': 'Makes scarves for the cost of wool', 'Halbiert die Ausfallzeit von Verletzten': 'Halves the time injured players are out', 'Näht Spielbälle für Leder-Rohstoffkosten': 'Sews match balls for the cost of leather', 'Noch keine eigenen Vorlagen gespeichert.': 'No own templates saved yet.', 'Ein Magazin zahlt gut für deine Geschichte.': 'A magazine pays well for your story.', 'Vereinsstadion (keine Namensrechte vergeben)': 'Club stadium (no naming rights sold)', 'Noch keine Einträge in der Talent-Datenbank.': 'No entries in the talent database yet.', 'Produziert Trikots für Baumwoll-Rohstoffkosten': 'Produces shirts for the cost of cotton', 'Eine Marke will dein Gesicht für ihre Kampagne.': 'A brand wants your face for its campaign.', 'Presst Caps & Wimpel für Kunststoff-Rohstoffkosten': 'Presses caps & pennants for the cost of plastic', 'Unternehmen zahlen gut für deine Erfolgsgeschichte.': 'Companies pay well for your success story.', 'Noch keine spielerspezifischen Trikot-Verkaufsdaten.': 'No shirt sales data per player yet.', 'Noch nichts nebenbei - vielleicht Zeit für ein Hobby?': 'Nothing on the side yet - maybe time for a hobby?', 'Aktuell wirken keine zusätzlichen Boni auf den Absatz.': 'No extra boosts on sales right now.', 'Diese Saison noch keine Trainerwechsel in deiner Liga.': 'No coaching changes in your league this season yet.', 'Derzeit liegen keine offiziellen Transferanfragen für deine Spieler vor.': 'There are no official transfer requests for your players at the moment.', 'Noch keine Scouting-Missionen abgeschlossen. Entsende oben deine Scouts!': 'No scouting missions completed yet. Send out your scouts above!', 'Tippe auf einen Vereinsnamen in der Tabelle für die Kopf-an-Kopf-Bilanz.': 'Tap a club name in the table for the head-to-head record.', 'Noch keine Verkäufe erfasst - nach dem ersten Spieltag erscheint hier der Verlauf.': 'No sales recorded yet - the history appears here after the first matchday.', '✓ Keine Position hat eine gefährliche Häufung auslaufender Verträge.': '✓ No position has a dangerous cluster of expiring contracts.', 'Trainingsplus:': 'Training gain:', 'Verdoppelt die Ticketeinnahmen beim nächsten Heimspiel.': 'Doubles ticket income at the next home match.', 'Verdoppelt den Fanartikel-Absatz im Stadion beim nächsten Heimspiel.': 'Doubles merchandise sales in the stadium at the next home match.', 'Senkt Verletzungs- und Kartenrisiko im nächsten Spiel spürbar.': 'Noticeably lowers injury and card risk in the next match.', 'Senkt das Ausschreitungsrisiko beim nächsten Heimspiel stark ab.': 'Strongly lowers the risk of riots at the next home match.', 'Schließt alle aktuell laufenden Scouting-Missionen sofort ab.': 'Completes all running scouting missions immediately.', 'Heilt alle Verletzungen und beendet alle Sperren des gesamten Kaders sofort.': 'Heals all injuries and ends all suspensions of the whole squad immediately.', 'Gewährt sofort eine zusätzliche Trainingseinheit, unabhängig vom Tageslimit.': 'Grants an extra training session immediately, regardless of the daily limit.', 'Deckt das Potenzial aller aktuellen Jugendspieler sofort und kostenlos auf.': 'Reveals the potential of all current youth players immediately and for free.', 'Garantiert sonniges Wetter beim nächsten Spiel - keine negativen Wettereffekte.': 'Guarantees sunny weather at the next match - no negative weather effects.', 'Setzt die Eingespieltheit aller aktuellen Startelf-Paarungen sofort auf Maximum.': 'Sets the understanding of all current starting pairings to maximum immediately.', 'Setzt deinen Stamm-Torwart sofort auf Top-Fitness und Top-Tagesform.': 'Puts your first-choice goalkeeper at top fitness and top form immediately.', 'Einmal pro Saison ein aktives Vertrags-Ultimatum kostenlos besänftigen.': 'Calm one active contract ultimatum for free once per season.', 'Sofortiger Bonus aufs Transferbudget, passend zu deiner aktuellen Liga-Stärke.': 'Instant bonus to the transfer budget, matched to your current league.', 'Der nächste abgeschlossene Scouting-Fund ist garantiert ein Spieler mit hoher Stärke.': 'The next completed scouting find is guaranteed to be a strong player.', 'Zusätzlicher Fitness-Erholungsbonus nach Spielen (stapelt mit Konditionstrainer)': 'Extra fitness recovery after matches (stacks with the fitness coach)', 'Vermietete Büroflächen an lokale Unternehmen - stabile, planbare Mieteinnahmen.': 'Office space let to local companies - stable, predictable rent.', 'Mietwohnungen in Stadionnähe - beliebt bei Fans, die nah am Verein wohnen wollen.': 'Rented flats near the stadium - popular with fans who want to live close to the club.', 'Mildert Zwangsverkäufe und Punktabzüge bei Zahlungsunfähigkeit spürbar ab.': 'Noticeably softens forced sales and point deductions when insolvent.', 'Dämpft negative Medienwirkung bei schlechten Ergebnissen & Skandalen': 'Softens negative media impact of bad results & scandals', 'Verbessert Elfmeter-, Freistoß- und Eckballqualität der Mannschaft': 'Improves the team\'s penalties, free kicks and corners', 'Verringert Verletzungszeiten und beschleunigt Regeneration': 'Shortens injury lay-offs and speeds up recovery', 'Erhöht Stärke und Potenzial neuer Nachwuchsspieler': 'Raises strength and potential of new youth players', 'Übernimmt automatisch eine wählbare Aufgabe im Fanshop': 'Automatically takes over a chosen task in the fan shop', 'Halbiert die Wahrscheinlichkeit für Vertrags-Ultimaten unzufriedener Stars - frühzeitige,': 'Halves the chance of contract ultimatums from unhappy stars - early,',
     // Teil 3 (25.22): Lexikon und Spieler-Popup
     '➜ Zum Bildschirm': '➜ Go to screen', 'Kein Eintrag gefunden. Anderen Begriff versuchen oder Kategorie „Alle“ wählen.': 'No entry found. Try another term or choose the category "All".', 'Nur Einträge zum Bildschirm, von dem du kommst.': 'Only entries for the screen you came from.', 'Alle zeigen': 'Show all', 'Potenzial:': 'Potential:',
 };
@@ -38154,6 +38329,7 @@ function applyCashSurplusBudgets() {
 const EMERGENCY_WAGE_FLOOR = [50000, 15000, 3000, 1000, 400, 150];
 
 function concludeSeasonAndAdvance() {
+        if (typeof stadionChronikSchnappschuss === 'function') stadionChronikSchnappschuss();
         if (typeof archiveTransferBilanz === 'function') archiveTransferBilanz();
         if (typeof archiveVorlageBilanz === 'function') archiveVorlageBilanz();
         if (typeof archiveTagBilanz === 'function') archiveTagBilanz();
@@ -39850,6 +40026,9 @@ const LEXICON_ENTRIES = [
     { cat: 'Bedienung', title: 'Speichern', screen: 'screen-dashboard',
         text: 'Drei Speicher-Slots plus automatisches Speichern alle 5 Spieltage. Beim Start lädt das Spiel den zuletzt gespeicherten Stand - ist er beschädigt, den nächstneueren heilen - und bietet ihn im Startmenü unter „Weiterspielen“ an. Jeder Stand wird vor dem Laden geprüft: kaputte Stände lassen das laufende Spiel unangetastet, kleine Schäden werden repariert. Vor dem Laden, dem Überschreiben eines Slots und einem neuen Spiel entsteht eine Sicherheitskopie.',
         tips: ['Wenn der Browser das Speichern blockiert, Spielstand als Datei exportieren', 'In der Dateivorschau mancher Handys geht Speichern nicht - im Browser öffnen', 'Der Füllstand steht unter den Speicherständen - ab 80 % warnt das Spiel, bei vollem Speicher weicht zuerst die Sicherheitskopie', 'Nur eine exportierte Datei übersteht das Leeren des Browserspeichers - das Spiel erinnert alle 3 Saisons daran'] },
+    { cat: 'Verein', title: 'Stadionbild, Chronik & Sitzmuster', screen: 'screen-stadium', neu: true,
+        text: 'Das Stadion steht im Dashboard als Bild mit Band: letztes Ergebnis und nächstes Spiel mit Wetter. Die Anzeigetafel zeigt das letzte Ergebnis. Die Chronik hält am Saisonende fest, wie das Stadion gewachsen ist, und lässt sich mit dem Schieber durchblättern. Sitzmuster, Bild als PNG und die Ticketvorschau sind im Stadion.',
+        tips: ['Preise im Regler verschieben: das Stadion zeigt die Zuschauer mit diesen Preisen, ohne etwas zu speichern', 'Bauplätze im Gelände sind gestrichelt; das Fenster zeigt Kosten und Bauzeit', 'Bei Auswärtsspielen zeigt das Dashboard das Stadion des Gegners'] },
     { cat: 'Verein', title: 'Stadionansicht', screen: 'screen-stadium', neu: true,
         text: 'Oben auf der Stadionseite steht dein Stadion als Bild. Tribünen wachsen mit den Plätzen je Block, die Ränge füllen sich nach den echten Zuschauern der Heimspiele, Flutlicht, Dach, Anzeigetafeln, Rasenzustand, Wetter, Baustellen und gebaute Anlagen sind zu sehen. Ein Tipp auf einen Block öffnet seinen Ausbau.',
         tips: ['Wischen dreht, zwei Finger oder ➕/➖ zoomen, 3 Kameras: Luftbild, Haupttribüne, hinter dem Tor', 'Mit ◀/▶ durch die Heimspiele der Saison blättern', '„Ausbau im Bild zeigen“ blendet den neuen Rang mit einem Schieber ein', 'Nach einem fertigen Ausbau startet ein Rundflug von 15 Sekunden', 'Die Risiko-Ebene färbt die Blöcke nach dem Ausschreitungsrisiko des nächsten Spiels', '🗺️ Gelände öffnet das Vereinsgelände mit Campus, Jugendakademie und Immobilien im eigenen Fenster; ein Tipp öffnet das Gebäude'] },
@@ -40160,6 +40339,9 @@ const LEXICON_EN = {
     'Einsteiger-Modus': { title: 'Beginner mode',
         text: 'For your first steps: the matchday shows “Kick off without preparation” and “Result only” at the top, opponent analysis, team talk and press are collapsed. The overview hides holding, Europe, weekly review and transfer strategy until matchday 17, the menu first shows only the important areas. The first matches briefly explain what happened.',
         tips: ['Selectable when starting a career, later switchable in the menu under Settings', 'After the first half of the season the game asks whether to switch it off', '“What now?” at the top of the overview always names the most important next task'] },
+    'Stadionbild, Chronik & Sitzmuster': { title: 'Stadium picture, chronicle & seating pattern',
+        text: 'The stadium appears in the dashboard as a picture with a band: last result and next match with weather. The scoreboard shows the last result. At season end the chronicle keeps how the stadium has grown, and the slider pages through it. Seating pattern, picture as PNG and the ticket preview are in the stadium.',
+        tips: ['Move the price slider: the stadium shows the attendance at these prices without saving anything', 'Empty plots in the grounds are dashed; the window shows cost and build time', 'For away matches the dashboard shows the opponent\'s stadium'] },
     'Stadionansicht': { title: 'Stadium view',
         text: 'Your stadium is shown as a picture at the top of the stadium page. Stands grow with the seats per block, the rows fill up with the real crowds of your home matches, and floodlights, roof, scoreboards, pitch condition, weather, building sites and finished facilities are visible. Tap a stand to open its expansion.',
         tips: ['Swipe to turn, two fingers or ➕/➖ to zoom, 3 cameras: aerial view, main stand, behind the goal', 'Use ◀/▶ to page through the home matches of the season', '“Show expansion in the picture” blends in the new tier with a slider', 'After a finished expansion a 15-second fly-around starts', 'The risk layer colours the stands by the riot risk of the next match', '🗺️ Grounds opens the club grounds with campus, youth academy and real estate in their own window; tap a building to open it'] },

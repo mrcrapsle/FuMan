@@ -940,6 +940,7 @@
                 </div>
                 <div id="was-jetzt-box"></div>
                 <div id="dash-onboarding-box"></div>
+                <canvas id="dash-gegner-canvas" class="dash-stadion-canvas" width="720" height="380" role="img" aria-label="Stadion des nächsten Gegners" hidden></canvas>
                 <div class="panel" id="dash-next-match-panel">
                     <div class="panel-header">
                         <span>⚽ Nächste Begegnung (Spieltag <span id="dash-mday">1</span>)</span>
@@ -1842,6 +1843,7 @@
                         <button onclick="stadionRisikoEbene()" id="stadion-3d-risiko" class="btn-secondary" aria-pressed="false" title="Ausschreitungs-Risiko je Block">⚠️ Risiko</button>
                         <button onclick="stadionRundflug()" id="stadion-3d-flug" class="btn-secondary" title="Kamerafahrt um das Stadion">🎬 Rundflug</button>
                         <button onclick="stadionGelaendeOeffnen()" id="stadion-3d-gelaende" class="btn-secondary" title="Campus, Jugendakademie und Immobilien rund ums Stadion">🗺️ Gelände</button>
+                        <button onclick="stadionBildSpeichern()" id="stadion-3d-foto" class="btn-secondary" title="Stadionbild als PNG speichern">📷 Bild speichern</button>
                     </div>
                     <div class="stadion-3d-leiste stadion-3d-leiste-klein">
                         <button onclick="stadionSpielBlaettern(-1)" class="btn-secondary" title="Voriges Heimspiel">◀ Spiel</button>
@@ -1855,9 +1857,20 @@
                         <button onclick="stadionVorschauEnde()" class="btn-secondary">✕ Vorschau beenden</button>
                     </div>
                     <div id="stadion-3d-info" class="stadion-3d-info"></div>
+                    <div class="stadion-3d-leiste">
+                        <button onclick="stadionMusterWaehlen('standard')" id="stadion-muster-standard" class="btn-secondary" title="Sitze in den Vereinsfarben und Gästeblock">Standard</button>
+                        <button onclick="stadionMusterWaehlen('streifen')" id="stadion-muster-streifen" class="btn-secondary" title="Sitze im Streifenmuster der Vereinsfarben">Streifen</button>
+                        <button onclick="stadionMusterWaehlen('blockfarben')" id="stadion-muster-blockfarben" class="btn-secondary" title="Jeder Block in einer eigenen Farbe">Blockfarben</button>
+                    </div>
                     <div class="startmenue-hinweis">Wischen dreht das Stadion, zwei Finger oder ➕/➖ zoomen, ein Tipp auf einen Block öffnet seinen Ausbau.</div>
                 </div>
                 <button onclick="stadion3dUmschalten()" id="stadion-3d-umschalter" class="btn-secondary live-3d-umschalter">🧩 Klassische Ansicht</button>
+                <div class="panel" id="stadion-chronik-box">
+                    <div class="panel-header">📜 Stadion-Chronik</div>
+                    <canvas id="stadion-chronik-canvas" class="dash-stadion-canvas" width="720" height="380" role="img" aria-label="Stadion in einer früheren Saison"></canvas>
+                    <input type="range" id="stadion-chronik-regler" min="0" max="0" value="0" oninput="stadionChronikZeigen(this.value)" aria-label="Saison wählen" style="width:100%; margin-top:6px;">
+                    <div id="stadion-chronik-text" class="stadion-3d-info"></div>
+                </div>
 
                 <!-- Accordion Section: Übersicht -->
                 <div class="accordion-section">

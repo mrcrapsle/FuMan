@@ -334,6 +334,8 @@
     }
 
     function renderTicketPriceSliders() {
+        // Vorschau: das Stadion zeigt die Zuschauer mit den Reglerpreisen (js/stadion-canvas.js)
+        if (typeof stadionAnsichtAktualisieren === 'function') stadionAnsichtAktualisieren();
         let box = document.getElementById('ticket-price-sliders-box');
         if (!box) return;
         let prices = ticketPricePreview || game.ticketPrices;

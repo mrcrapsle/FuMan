@@ -233,6 +233,7 @@ function applyCashSurplusBudgets() {
 const EMERGENCY_WAGE_FLOOR = [50000, 15000, 3000, 1000, 400, 150];
 
 function concludeSeasonAndAdvance() {
+        if (typeof stadionChronikSchnappschuss === 'function') stadionChronikSchnappschuss();
         if (typeof archiveTransferBilanz === 'function') archiveTransferBilanz();
         if (typeof archiveVorlageBilanz === 'function') archiveVorlageBilanz();
         if (typeof archiveTagBilanz === 'function') archiveTagBilanz();

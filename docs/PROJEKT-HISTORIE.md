@@ -972,3 +972,16 @@ Gemeldet: In der Dateivorschau der Claude-App kam man nach „Verein übernehmen
 ## Stadion im Dashboard als Canvas (ungemergt)
 
 Wunsch: Das Stadion oben im Dashboard soll wie auf der Stadionseite mit Canvas gezeichnet sein. Die CSS-Schüssel (`.dashboard-hero-bowl-wrapper`) ist dort durch `#dash-stadion-canvas` ersetzt: `stadionDashboardZeichnen()` (`js/stadion-canvas.js`) zeichnet aus `renderDashboardView()` ein Standbild mit fester Kamera (Bauart nach Größe, Ränge, Flutlicht, Dach, Wetter, Gelände-Gebäude in der Nähe). Feste Auflösung 720 × 380, die Breite folgt per CSS, es werden keine Größen gelesen; Kamera und Auswahl der Stadionansicht bleiben unberührt. Ein Tipp auf das Bild öffnet die Stadionseite. Test `testDashboardStadion`.
+
+## Stadion-Vorschläge 1 bis 8 (ungemergt)
+
+- **Dashboard am Spieltag** (`stadionSpielBanner()`): Band unter dem Bild mit letztem Ergebnis (`game.letzterSpielstand`, von `recordOwnLeagueResult()` gesetzt), nächstem Spiel und Wetter.
+- **Anzeigetafel** zeigt das letzte Ergebnis (`stadion3dTafelText()`).
+- **Ticketvorschau** (`stadion3dPreisVorschau()`): Der Preisregler (`ticketPricePreview`) zeigt die Zuschauer mit den Reglerpreisen, ohne etwas zu speichern. Die Zuschauerrechnung liest die Preise aus `game.ticketPrices`; die Vorschau setzt sie nur für die Rechnung und stellt sie danach wieder her.
+- **Freie Bauplätze**: Unbebaute Campus-Gebäude und Immobilien stehen im Gelände als gestrichelte Plätze. Das Fenster zeigt Kosten und Bauzeit und gibt über `upgradeCampusBuilding()` bzw. `buyOrUpgradeRealEstate()` in Auftrag.
+- **Chronik** (`stadionChronikSchnappschuss()` am Saisonende in `concludeSeasonAndAdvance()`, `game.stadionChronik`, höchstens 30 Saisons): Schieber `#stadion-chronik-regler` zeichnet die frühere Saison mit `stadionChronikZeigen()`.
+- **Sitzmuster** (`game.stadionMuster`: standard, streifen, blockfarben; `stadion3dSitzFarbe()`) für Tribünen und Ecken.
+- **Bild speichern** (`stadionBildSpeichern()`): PNG mit Name, Kapazität und Saison darunter.
+- **Gegnerstadion bei Auswärtsspielen** (`stadionGegnerZeichnen()`, `#dash-gegner-canvas`): Größe aus Name und Liga, fest je Gegner, Band mit dem Gegner.
+- Nicht umgesetzt: Gästeblock im 3D-Livespiel. Die Livespiel-Ansicht zeigt kein Stadion, nur Spielfeld und Figuren; ein Stadion dort wäre eine eigene Geometrie.
+- Tests: `testStadionNeuerungen`; `testStadionGelaende` prüft Bauplätze statt ausgelassener Gebäude.

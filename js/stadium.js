@@ -915,6 +915,7 @@
         }
         if (typeof renderStadiumEventsPanel === 'function') renderStadiumEventsPanel();
         if (typeof stadionAnsichtAktualisieren === 'function') stadionAnsichtAktualisieren();
+        if (typeof stadionChronikAktualisieren === 'function') stadionChronikAktualisieren();
     }
 
     // zielId: anderer Kasten (Block-Fenster der Stadionansicht, js/stadion-canvas.js), leise: ohne Klick-Ton beim Auffrischen

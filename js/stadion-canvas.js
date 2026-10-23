@@ -114,6 +114,17 @@ function stadion3dFarben(gegnerName) {
     return { eigene, zweite, gegner };
 }
 
+// Zuschauer mit den Preisen aus dem Regler (Vorschau, ohne etwas zu speichern); null ohne Änderung
+function stadion3dPreisVorschau() {
+    if (typeof ticketPricePreview === 'undefined' || !ticketPricePreview) return null;
+    const alt = { steh: game.ticketPrices.steh, sitz: game.ticketPrices.sitz, vip: game.ticketPrices.vip };
+    try {
+        Object.assign(game.ticketPrices, { steh: ticketPricePreview.steh, sitz: ticketPricePreview.sitz, vip: ticketPricePreview.vip });
+        return calculateMatchAttendanceDetails(1, 1, 1).zuschauer;
+    } catch (e) { return null; }
+    finally { Object.assign(game.ticketPrices, alt); }
+}
+
 // Heimspiele zum Blättern: diese Saison, sonst die letzten der Vorsaison
 function stadion3dHeimspiele() {
     const alle = (game.attendanceHistory || []).filter(e => e && typeof e.attendance === 'number');
@@ -132,8 +143,9 @@ function stadion3dSpiel() {
     }
     let zuschauer = 0;
     try { if (typeof calculateMatchAttendanceDetails === 'function') zuschauer = calculateMatchAttendanceDetails(1, 1, 1).zuschauer; } catch (e) { zuschauer = 0; }
+    const vorschau = stadion3dPreisVorschau();
     const naechstes = typeof ausschreitungNaechstesSpiel === 'function' ? ausschreitungNaechstesSpiel() : null;
-    return { prognose: true, index: 0, anzahl: 0, zuschauer, kapazitaet: stadium.total || 1, gegner: naechstes && naechstes.heim ? naechstes.gegner : '' };
+    return { prognose: true, vorschau: vorschau !== null, index: 0, anzahl: 0, zuschauer: vorschau !== null ? vorschau : zuschauer, kapazitaet: stadium.total || 1, gegner: naechstes && naechstes.heim ? naechstes.gegner : '' };
 }
 
 // Auslastung je Block: Gewichte, gekappt bei voll, Summe gleich der echten Zuschauerzahl
@@ -411,6 +423,7 @@ function stadion3dRechteck(seite, t, d, aussen) {
 
 // Alle Gebäude des Geländes mit Stufe, Lage und laufendem Bau. Ohne Stufe erscheint nur eine Baustelle.
 function stadion3dGelaendePlan(layout) {
+    if (stadionAnsicht && stadionAnsicht.ohneGelaende) return [];
     const plan = [];
     const bau = (typ, key) => (game.stadiumConstructionQueue || []).find(q => q.type === typ && (!key || (q.params && q.params.key === key)));
     const anteil = q => q ? Math.max(0, Math.min(1, 1 - (q.daysLeft || 0) / Math.max(1, q.totalDays || 1))) : 0;
@@ -419,8 +432,7 @@ function stadion3dGelaendePlan(layout) {
             const b = campusBuildings[key], def = STADION3D_CAMPUS[key];
             if (!b) return;
             const q = bau('campusBuilding', key);
-            if (!b.lvl && !q) return;
-            plan.push(Object.assign({ id: 'campus:' + key, key, name: b.name, lvl: b.lvl || 0, max: b.max, desc: b.desc, bau: q, anteil: anteil(q),
+            plan.push(Object.assign({ id: 'campus:' + key, key, kauf: 'campus', name: b.name, lvl: b.lvl || 0, max: b.max, desc: b.desc, bau: q, anteil: anteil(q),
                 rect: stadion3dRechteck(def.seite, def.t, def.d, layout.aussen[def.seite]) }, def));
         });
     }
@@ -435,13 +447,12 @@ function stadion3dGelaendePlan(layout) {
             const r = realEstatePortfolio[key], def = STADION3D_IMMO[key];
             if (!r) return;
             const q = bau('realEstate', key);
-            if (!(r.owned && r.lvl) && !q) return;
             let rect;
             if (def.ecke) {
                 const cx = def.ecke[0] * X, cy = def.ecke[1] * Y, [gx, gy] = def.groesse;
                 rect = [cx - gx / 2, cy - gy / 2, cx + gx / 2, cy + gy / 2];
             } else rect = stadion3dRechteck(def.seite, def.t, def.d, layout.aussen[def.seite]);
-            plan.push(Object.assign({ id: 'immo:' + key, key, name: r.name, lvl: r.owned ? (r.lvl || 0) : 0, max: r.max, desc: r.desc, bau: q, anteil: anteil(q), rect, ziel: 'screen-real-estate' }, def));
+            plan.push(Object.assign({ id: 'immo:' + key, key, kauf: 'immo', name: r.name, lvl: r.owned ? (r.lvl || 0) : 0, max: r.max, desc: r.desc, bau: q, anteil: anteil(q), rect, ziel: 'screen-real-estate' }, def));
         });
     }
     return plan;
@@ -596,7 +607,7 @@ function stadion3dEckPublikum(ctx, P, st, f) {
             const q = stadion3dPunkt(P, p[0], p[1], e.z0 + (e.z1 - e.z0) * v + 0.4);
             if (!q) continue;
             const g = Math.max(0.9, q.s * 1.15);
-            const farbe = stadion3dZufall('e', i, j) < 0.35 ? farben.eigene : STADION3D_KLEIDUNG[(i * 7 + j) % STADION3D_KLEIDUNG.length];
+            const farbe = stadion3dSitzFarbe(i, st.key, farben) || (stadion3dZufall('e', i, j) < 0.35 ? farben.eigene : STADION3D_KLEIDUNG[(i * 7 + j) % STADION3D_KLEIDUNG.length]);
             ctx.fillStyle = stadion3dMisch(farbe, 1 - f, '#000000');
             ctx.fillRect(q.x - g / 2, q.y - g, g, g * 1.25);
         }
@@ -691,6 +702,81 @@ function stadion3dLaufbahn(ctx, P) {
     zeichne(B.r, '#3a8f3e');
 }
 
+// Ein eigenes Stadionobjekt mit denselben Feldern wie `stadium` (Gesamtkapazität als Getter)
+function stadion3dStadionObjekt(blocks, extra) {
+    const o = Object.assign({ blocks, bonusCapacity: 0, flutlicht: false, dach: false, videowalls: false, upgrades: {}, pitchCondition: 85, hybridrasen: false, name: '', namingRightsSponsor: null, events: [] }, extra || {});
+    Object.defineProperty(o, 'total', { get() { return Object.values(this.blocks).reduce((s, b) => s + (b.cap || 0), 0) + (this.bonusCapacity || 0); } });
+    Object.defineProperty(o, 'vipTotal', { get() { return (this.blocks && this.blocks.vipLogen && this.blocks.vipLogen.cap) || 50; } });
+    return o;
+}
+function stadion3dBasisBlocks() { return JSON.parse(JSON.stringify(stadium.blocks || {})); }
+
+// Zeichnet ein Stadion (eigenes Objekt) in eine Canvas, ohne den Zustand der Stadionansicht zu verändern.
+// opt: spiel (Füllung), farben, licht; ohne Gelände, Baustellen, Choreo und Risiko.
+function stadion3dFremdZeichnen(c, obj, opt) {
+    if (!stadionAnsicht) stadion3dNeu();
+    const a = stadionAnsicht;
+    const felder = ['yaw', 'pitch', 'dist', 'tx', 'ty', 'zoom', 'auswahl', 'vorschau', 'risiko', 'flug', 'szene', 'treffer', 'layout', 'P', 'licht', 'fremd', 'fremdSpiel', 'fremdFarben', 'ohneGelaende'];
+    const vorher = {};
+    felder.forEach(k => { vorher[k] = a[k]; });
+    const altStadium = stadium, altQueue = game.stadiumConstructionQueue;
+    try {
+        Object.assign(a, STADION3D_DASHBOARD_KAMERA, { auswahl: null, vorschau: null, risiko: false, flug: null, szene: {}, treffer: [],
+            licht: (opt && opt.licht) || 'tag', fremd: true, ohneGelaende: true, fremdSpiel: (opt && opt.spiel) || null, fremdFarben: (opt && opt.farben) || null });
+        stadium = obj; game.stadiumConstructionQueue = [];
+        const W = c.width / 2, H = c.height / 2;
+        const ctx = c.getContext('2d');
+        ctx.setTransform(c.width / W, 0, 0, c.height / H, 0, 0);
+        const layout = stadion3dLayout();
+        stadion3dZeichnen(ctx, stadion3dProjektion(W, H, layout), layout);
+        return layout;
+    } finally {
+        stadium = altStadium; game.stadiumConstructionQueue = altQueue;
+        felder.forEach(k => { a[k] = vorher[k]; });
+    }
+}
+
+// Schrift-Band unten im Bild (in Pixeln der Canvas)
+function stadion3dBanderole(c, zeilen) {
+    const ctx = c.getContext('2d');
+    const k = c.width / 720, h = Math.round(64 * k);
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = 'rgba(0,0,0,0.62)'; ctx.fillRect(0, c.height - h, c.width, h);
+    ctx.fillStyle = '#ffffff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.font = `800 ${Math.round(18 * k)}px system-ui, sans-serif`;
+    ctx.fillText(zeilen[0] || '', Math.round(16 * k), c.height - h + h * 0.34, c.width - 32 * k);
+    if (zeilen[1]) { ctx.font = `500 ${Math.round(14 * k)}px system-ui, sans-serif`; ctx.fillStyle = '#e0e0e0'; ctx.fillText(zeilen[1], Math.round(16 * k), c.height - h + h * 0.74, c.width - 32 * k); }
+    ctx.restore();
+}
+
+// Stadion des nächsten Gegners, nur bei Auswärtsspielen: Größe aus Name und Liga, fest je Gegner
+function stadionGegnerZeichnen() {
+    const c = document.getElementById('dash-gegner-canvas');
+    if (!c || !c.getContext) return;
+    const n = typeof ausschreitungNaechstesSpiel === 'function' ? ausschreitungNaechstesSpiel() : null;
+    if (!n || n.heim) { c.hidden = true; return; }
+    c.hidden = false;
+    const faktor = 0.85 + (stadion3dHash(n.gegner) % 40) / 100;
+    const blocks = stadion3dBasisBlocks();
+    Object.keys(blocks).forEach(k => { blocks[k].cap = Math.round((blocks[k].cap || 0) * faktor); });
+    const obj = stadion3dStadionObjekt(blocks, { name: `Stadion ${n.gegner}` });
+    const kap = obj.total;
+    stadion3dFremdZeichnen(c, obj, { spiel: { prognose: true, zuschauer: Math.round(kap * 0.7), kapazitaet: kap, gegner: n.gegner }, farben: stadion3dFarben(n.gegner) });
+    stadion3dBanderole(c, [`Auswärts bei ${n.gegner}`, `${kap.toLocaleString('de-DE')} Plätze · Gästeblock in deren Farben`]);
+}
+
+// Zeilen für das Dashboard-Band: letztes Ergebnis und nächstes Spiel mit Wetter
+function stadionSpielBanner() {
+    const zeilen = [];
+    const ls = game.letzterSpielstand;
+    if (ls) zeilen.push(`Letztes Spiel ${ls.ourGoals}:${ls.oppGoals} ${ls.isHome ? 'gegen' : 'bei'} ${ls.oppName}`);
+    const n = typeof ausschreitungNaechstesSpiel === 'function' ? ausschreitungNaechstesSpiel() : null;
+    const wetter = typeof currentWeather !== 'undefined' && currentWeather ? `${currentWeather.icon} ${currentWeather.name}` : '';
+    if (n) zeilen.push(`${n.heim ? 'Heim gegen' : 'Auswärts bei'} ${n.gegner}${wetter ? ' · ' + wetter : ''}`);
+    return zeilen;
+}
+
 function stadion3dRasen(ctx, P, layout) {
     const f = stadion3dLichtFaktor();
     const nachtHell = stadionAnsicht.licht === 'nacht' && stadium.flutlicht ? 1.25 : 1;
@@ -747,6 +833,14 @@ function stadion3dTore(liste, P) {
 }
 
 // Sitzschräge mit Publikum: Punkte je Sitzgruppe, besetzt nach der Auslastung des Blocks
+// Sitzmuster aus den Einstellungen: Streifen in den Vereinsfarben oder je Block eine Farbe; sonst null (Standard)
+function stadion3dSitzFarbe(i, key, farben) {
+    const muster = game.stadionMuster || 'standard';
+    if (muster === 'streifen') return i % 2 ? farben.zweite : farben.eigene;
+    if (muster === 'blockfarben') return [farben.eigene, farben.zweite, farben.gegner, '#f5f5f5', '#212121'][stadion3dHash(key) % 5];
+    return null;
+}
+
 function stadion3dPublikum(ctx, P, st, f) {
     const fuell = st.fuellung || 0, farben = st.farben;
     const [t0, t1] = st.t, [d0, d1] = st.d, [h0, h1] = st.h;
@@ -764,6 +858,7 @@ function stadion3dPublikum(ctx, P, st, f) {
             let farbe;
             if (choreo) farbe = (Math.floor(u * 8) % 2 === 0) ? farben.eigene : farben.zweite;
             else if (stadion3dZufall(st.key, i, j) >= fuell) continue;
+            else if (stadion3dSitzFarbe(i, st.key, farben)) farbe = stadion3dSitzFarbe(i, st.key, farben);
             else if (st.key === 'gaeste') farbe = stadion3dZufall(st.key, j, i) < 0.75 ? farben.gegner : STADION3D_KLEIDUNG[(i + j) % STADION3D_KLEIDUNG.length];
             else if (st.key === 'kurve' || st.key === 'suedOber') farbe = stadion3dZufall('k', i, j) < 0.7 ? farben.eigene : farben.zweite;
             else farbe = stadion3dZufall('m', i, j) < 0.35 ? farben.eigene : STADION3D_KLEIDUNG[stadion3dHash(st.key + i + '-' + j) % STADION3D_KLEIDUNG.length];
@@ -918,10 +1013,10 @@ function stadion3dFahnen(liste, P, seg, farben) {
 function stadion3dSzeneBauen(P, layout, plan) {
     const liste = [];
     const a = stadionAnsicht;
-    const spiel = stadion3dSpiel();
+    const spiel = a.fremdSpiel || stadion3dSpiel();
     const fuellung = stadion3dFuellung(spiel);
-    const farben = stadion3dFarben(spiel.gegner);
-    const choreo = stadion3dChoreo();
+    const farben = a.fremdFarben || stadion3dFarben(spiel.gegner);
+    const choreo = a.fremd ? '' : stadion3dChoreo();
     const risiko = a.risiko ? stadion3dRisiko() : null;
     const szene = { bloecke: [], kraene: [], anlagen: [], gelaende: [], fahnen: false, choreo, flutlicht: !!stadium.flutlicht, dach: !!stadium.dach, anzeigen: !!stadium.videowalls, spiel, geist: null };
     layout.segmente.forEach(s => {
@@ -1018,7 +1113,7 @@ function stadion3dSzeneBauen(P, layout, plan) {
     }
     // Ehrenwand der Publikumslieblinge als Denkmal auf dem Vorplatz
     const lieblinge = [...new Set((game.crowdFavoriteHistory || []).map(x => x.name))];
-    if (lieblinge.length >= 3) {
+    if (lieblinge.length >= 3 && !a.ohneGelaende) {
         const d = layout.aussen.W + 8;
         stadion3dQuaderSeite(liste, P, 'W', 14, 18, d, d + 4, 0, 1.2, { farbe: '#9e9e9e' });
         stadion3dQuaderSeite(liste, P, 'W', 15.3, 16.7, d + 1.3, d + 2.7, 1.2, 4.6, { farbe: '#c9a227', icon: '❤️' });
@@ -1053,6 +1148,8 @@ function stadion3dSzeneBauen(P, layout, plan) {
 }
 
 function stadion3dTafelText(spiel) {
+    const ls = game.letzterSpielstand;
+    if (ls) return `${ls.ourGoals}:${ls.oppGoals} ${ls.oppName}`.slice(0, 28);
     const b = (game.spielberichte || []).find(x => !x.cup);
     if (b && b.titel) return String(b.titel).slice(0, 28);
     return spiel.prognose ? (stadium.name || game.clubName || 'Willkommen') : `${(spiel.zuschauer || 0).toLocaleString('de-DE')} Zuschauer`;
@@ -1309,6 +1406,7 @@ function stadion3dStarte() {
 // Aus onScreenShown('screen-stadium') und beim Umschalten
 function stadionAnsichtAnzeigen() {
     stadion3dUmschalterZeigen();
+    stadionMusterAnzeigen();
     if (!stadion3dAn()) return;
     if (!stadionAnsicht) stadion3dNeu();
     stadionAnsicht.groesse = stadion3dGroesse();
@@ -1504,7 +1602,7 @@ function stadion3dLeisteAktualisieren() {
             risikoText = r && r.spiel ? `<div style="margin-top:3px;">⚠️ Risiko je Block für ${mpEscStadion(r.spiel.gegner)} (${r.spiel.heim ? 'Heim' : 'Auswärts'}): ${(Math.round(r.chance * 1000) / 10).toLocaleString('de-DE')} % <span style="color:var(--text-muted);">· grün ruhig, rot hoch</span></div>` : '<div style="margin-top:3px;">⚠️ Gerade steht kein Ligaspiel an.</div>';
         }
         info.innerHTML = `<div><strong>${sp.prognose ? 'Prognose nächstes Heimspiel' : `Heimspiel ${sp.index + 1} von ${sp.anzahl}`}</strong>${sp.gegner ? ` gegen ${mpEscStadion(sp.gegner)}` : ''}${!sp.prognose && sp.matchday ? ` <span style="color:var(--text-muted);">(Saison ${sp.season}, ${sp.matchday}. Spieltag)</span>` : ''}</div>
-            <div>${(sp.zuschauer || 0).toLocaleString('de-DE')} von ${(sp.kapazitaet || 0).toLocaleString('de-DE')} Plätzen · ${quote} % Auslastung</div>
+            <div>${(sp.zuschauer || 0).toLocaleString('de-DE')} von ${(sp.kapazitaet || 0).toLocaleString('de-DE')} Plätzen · ${quote} % Auslastung${sp.vorschau ? ' <span style="color:var(--text-muted);">· mit deinen neuen Preisen</span>' : ''}</div>
             ${risikoText}
             ${chips.length ? `<div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:4px;">${chips.join('')}</div>` : ''}`;
     }
@@ -1546,12 +1644,20 @@ function stadion3dGelaendeEintrag(id) {
 function stadion3dGelaendeFensterInhalt(box, g) {
     const ziel = g.ziel && document.getElementById(g.ziel) ? g.ziel : null;
     const zielName = { 'screen-campus': 'Zum Campus', 'screen-youth': 'Zur Jugend', 'screen-real-estate': 'Zu den Immobilien' }[ziel] || 'Zur Seite';
+    // Kauf und Ausbau direkt aus dem Fenster; die Kosten kommen aus denselben Rechnungen wie auf den Seiten selbst
+    let kauf = '';
+    if (g.kauf && !g.bau && g.lvl < g.max) {
+        const kosten = g.kauf === 'campus' ? getCampusUpgradeCost(g.key) : getRealEstateCost(g.key);
+        const aktion = g.kauf === 'campus' ? `upgradeCampusBuilding('${g.key}')` : `buyOrUpgradeRealEstate('${g.key}')`;
+        kauf = `<button onclick="schliesseStadionBlock(); ${aktion}" class="btn-action" style="margin-bottom:6px;">${g.lvl ? 'Ausbauen' : 'Bauen'} auf Stufe ${g.lvl + 1} [${formatVal(kosten)}] · Bauzeit ${getConstructionDays(kosten)} SpT</button>`;
+    }
     box.innerHTML = `<div class="panel-header">${g.icon || '🏗️'} ${mpEscStadion(g.name)}</div>
         <div style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:6px;">
             ${uiChip(g.lvl ? `Stufe ${g.lvl}/${g.max}` : 'Noch nicht gebaut', g.lvl ? 'gut' : '')}
             ${g.bau ? uiChip(`🏗️ Im Bau: noch ${g.bau.daysLeft} Spieltage`, 'warn') : ''}
         </div>
         <div style="font-size:var(--fs-small); margin-bottom:6px;">${mpEscStadion(g.desc || '')}</div>
+        ${kauf}
         ${ziel ? `<button onclick="schliesseStadionBlock(); stadionGelaendeSchliessen(); showScreen('${ziel}')" class="btn-action">➜ ${zielName}</button>` : ''}`;
 }
 
@@ -1665,9 +1771,10 @@ function stadion3dGelaendeListe() {
     const box = document.getElementById('stadion-gelaende-liste');
     if (!box || !stadionAnsicht) return;
     const plan = stadion3dGelaendePlan(stadionAnsicht.layout || stadion3dLayout());
-    const gebaut = plan.filter(g => g.lvl > 0 || g.bau);
-    box.innerHTML = `<div style="margin-bottom:4px;">${gebaut.length} ${gebaut.length === 1 ? 'Anlage' : 'Anlagen'} auf dem Gelände${plan.filter(g => g.bau).length ? `, ${plan.filter(g => g.bau).length} im Bau` : ''}. Weitere Gebäude baust du im Campus und bei den Immobilien.</div>
-        <div class="stadion-gelaende-knoepfe">${gebaut.map(g => `<button onclick="stadionBlockOeffnen('${g.id}')" class="btn-secondary">${g.icon || '🏗️'} ${mpEscStadion(String(g.name).replace(/\s*['"„].*$/, ''))} ${g.lvl ? `· ${g.lvl}` : '· im Bau'}</button>`).join('')}</div>`;
+    const gebaut = plan.filter(g => g.lvl > 0 || g.bau).length;
+    const im_bau = plan.filter(g => g.bau).length;
+    box.innerHTML = `<div style="margin-bottom:4px;">${gebaut} von ${plan.length} Anlagen stehen${im_bau ? `, ${im_bau} im Bau` : ''}. Freie Bauplätze sind gestrichelt; ein Tipp zeigt Kosten und Bauzeit.</div>
+        <div class="stadion-gelaende-knoepfe">${plan.map(g => `<button onclick="stadionBlockOeffnen('${g.id}')" class="btn-secondary">${g.icon || '🏗️'} ${mpEscStadion(String(g.name).replace(/\s*['"„].*$/, ''))} · ${g.bau ? 'im Bau' : (g.lvl ? `Stufe ${g.lvl}` : 'Bauplatz')}</button>`).join('')}</div>`;
 }
 
 // ---------- Stadionbild im Dashboard ----------
@@ -1677,23 +1784,87 @@ function stadion3dGelaendeListe() {
 const STADION3D_DASHBOARD_KAMERA = { yaw: 0.62, pitch: 0.78, dist: 2.05, tx: 0, ty: 0, zoom: 1 };
 function stadionDashboardZeichnen() {
     const c = document.getElementById('dash-stadion-canvas');
-    const ctx = c && c.getContext ? c.getContext('2d') : null;
-    if (!ctx) return false;
-    if (!stadionAnsicht) stadion3dNeu();
-    const a = stadionAnsicht;
-    const felder = ['yaw', 'pitch', 'dist', 'tx', 'ty', 'zoom', 'auswahl', 'vorschau', 'risiko', 'flug', 'szene', 'treffer', 'layout', 'P'];
-    const vorher = {};
-    felder.forEach(k => { vorher[k] = a[k]; });
-    try {
-        Object.assign(a, STADION3D_DASHBOARD_KAMERA, { auswahl: null, vorschau: null, risiko: false, flug: null, szene: {}, treffer: [] });
-        const W = 360, H = 190;
-        ctx.setTransform(c.width / W, 0, 0, c.height / H, 0, 0);
-        const layout = stadion3dLayout();
-        stadion3dZeichnen(ctx, stadion3dProjektion(W, H, layout), layout);
-        c.setAttribute('aria-label', stadion3dBeschreibung());
-        c.dataset.stufe = layout.stufe;
-    } finally {
-        felder.forEach(k => { a[k] = vorher[k]; });
-    }
+    if (!c || !c.getContext) return false;
+    stadion3dFremdZeichnen(c, stadium, {});
+    const zeilen = stadionSpielBanner();
+    stadion3dBanderole(c, zeilen.length ? zeilen : [stadium.name || 'Vereinsstadion']);
+    c.setAttribute('aria-label', stadion3dBeschreibung());
+    c.dataset.stufe = stadion3dStufe(stadium.total);
+    stadionGegnerZeichnen();
     return true;
+}
+
+// ---------- Sitzmuster, Bild speichern, Chronik ----------
+const STADION3D_MUSTER = ['standard', 'streifen', 'blockfarben'];
+function stadionMusterWaehlen(m) {
+    if (!STADION3D_MUSTER.includes(m)) return;
+    game.stadionMuster = m;
+    stadionMusterAnzeigen();
+    stadion3dZeichneEinmal();
+    if (typeof stadionChronikAktualisieren === 'function') stadionChronikAktualisieren();
+}
+function stadionMusterAnzeigen() {
+    STADION3D_MUSTER.forEach(m => {
+        const b = document.getElementById('stadion-muster-' + m);
+        if (b) b.className = (game.stadionMuster || 'standard') === m ? 'btn-action' : 'btn-secondary';
+    });
+}
+
+// Das Stadionbild als PNG mit Name, Kapazität und Saison darunter
+function stadionBildSpeichern() {
+    const c = stadion3dCanvas();
+    if (!c || !stadionAnsicht) return;
+    const f = document.createElement('canvas');
+    f.width = c.width; f.height = c.height + Math.round(c.height * 0.12);
+    const ctx = f.getContext('2d');
+    ctx.drawImage(c, 0, 0);
+    ctx.fillStyle = '#101418'; ctx.fillRect(0, c.height, f.width, f.height - c.height);
+    ctx.fillStyle = '#ffffff'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+    const k = c.width / 720, band = f.height - c.height;
+    ctx.font = `800 ${Math.round(22 * k)}px system-ui, sans-serif`;
+    ctx.fillText(stadium.name || 'Vereinsstadion', Math.round(16 * k), c.height + band * 0.36);
+    ctx.font = `500 ${Math.round(16 * k)}px system-ui, sans-serif`; ctx.fillStyle = '#e0e0e0';
+    ctx.fillText(`${(stadium.total || 0).toLocaleString('de-DE')} Plätze · Saison ${game.season}`, Math.round(16 * k), c.height + band * 0.72);
+    const a = document.createElement('a');
+    a.href = f.toDataURL('image/png');
+    a.download = `stadion-saison-${game.season}.png`;
+    document.body.appendChild(a); a.click(); a.remove();
+    showToast('📷 Stadionbild gespeichert.', 'success');
+}
+
+// Am Saisonende: Plätze je Block, Dach, Flutlicht und Anlagen festhalten (höchstens 30 Saisons)
+function stadionChronikSchnappschuss() {
+    if (!stadium || !stadium.blocks) return;
+    const caps = {};
+    Object.keys(stadium.blocks).forEach(k => { caps[k] = stadium.blocks[k].cap; });
+    const gelaende = typeof campusBuildings !== 'undefined' ? Object.keys(campusBuildings).filter(k => campusBuildings[k].lvl > 0).length : 0;
+    const eintrag = { season: game.season, total: stadium.total, caps, bonus: stadium.bonusCapacity || 0, dach: !!stadium.dach, flutlicht: !!stadium.flutlicht,
+        videowalls: !!stadium.videowalls, upgrades: Object.keys(stadium.upgrades || {}).filter(k => stadium.upgrades[k]), gelaende, muster: game.stadionMuster || 'standard' };
+    game.stadionChronik = (game.stadionChronik || []).filter(e => e.season !== game.season).concat([eintrag]).slice(-30);
+}
+
+// Zeichnet die Chronik-Saison mit dem Schieber; ohne Eintrag bleibt die Fläche leer
+function stadionChronikZeigen(index) {
+    const liste = game.stadionChronik || [];
+    const c = document.getElementById('stadion-chronik-canvas');
+    const text = document.getElementById('stadion-chronik-text');
+    const regler = document.getElementById('stadion-chronik-regler');
+    if (!c || !text || !regler) return;
+    regler.max = Math.max(0, liste.length - 1);
+    if (!liste.length) { text.textContent = 'Noch keine Saison abgeschlossen. Am Saisonende hält die Chronik das Stadion fest.'; return; }
+    const i = Math.max(0, Math.min(liste.length - 1, Number(index)));
+    regler.value = i;
+    const e = liste[i];
+    const basis = stadion3dBasisBlocks();
+    Object.keys(e.caps || {}).forEach(k => { if (basis[k]) basis[k].cap = e.caps[k]; });
+    const upg = {}; (e.upgrades || []).forEach(k => { upg[k] = true; });
+    const obj = stadion3dStadionObjekt(basis, { name: stadium.name || 'Vereinsstadion', bonusCapacity: e.bonus || 0, dach: e.dach, flutlicht: e.flutlicht, videowalls: e.videowalls, upgrades: upg });
+    stadion3dFremdZeichnen(c, obj, { spiel: { prognose: true, zuschauer: Math.round(obj.total * 0.6), kapazitaet: obj.total, gegner: '' } });
+    stadion3dBanderole(c, [`Saison ${e.season}`, `${(e.total || 0).toLocaleString('de-DE')} Plätze · ${e.gelaende || 0} Campus-Gebäude`]);
+    const seit = e.total - liste[0].total;
+    text.textContent = `Saison ${e.season}: ${(e.total || 0).toLocaleString('de-DE')} Plätze.` + (i > 0 ? ` Seit Saison ${liste[0].season}: ${seit >= 0 ? '+' : ''}${seit.toLocaleString('de-DE')} Plätze.` : '');
+}
+function stadionChronikAktualisieren() {
+    const liste = game.stadionChronik || [];
+    stadionChronikZeigen(liste.length ? liste.length - 1 : 0);
 }

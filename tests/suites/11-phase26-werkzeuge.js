@@ -4280,7 +4280,9 @@ async function testStadionGelaende(browser) {
         stadion3dZeichneEinmal();
         const ids = a.szene.gelaende.map(g => g.id);
         out.gebaeude = ['campus:hotel', 'campus:trainingground', 'campus:foodtrucks', 'jugend', 'immo:buerokomplex'].every(id => ids.includes(id));
-        out.ungebautFehlt = !ids.includes('campus:museum') && !ids.includes('immo:parkplatz');
+        // Unbebaute Gebäude stehen als Bauplatz im Gelände (lvl 0, ohne Baustelle)
+        const museum = a.szene.gelaende.find(g => g.id === 'campus:museum');
+        out.ungebautFehlt = !!museum && museum.lvl === 0 && !museum.bau && !!a.szene.gelaende.find(g => g.id === 'immo:parkplatz' && g.lvl === 0);
         const reha = a.szene.gelaende.find(g => g.id === 'campus:reha');
         out.baustelle = !!reha && reha.lvl === 0 && reha.bau && a.szene.kraene.some(k => k.type === 'campusBuilding' && k.anteil === 75);
         // Stufen verändern das Bild: das Hotel wächst
@@ -4400,6 +4402,73 @@ async function testDashboardStadion(browser) {
     await page.close();
 }
 
+async function testStadionNeuerungen(browser) {
+    console.log('\n[3.152] Stadion: Anzeigetafel und Dashboard-Band, Ticketvorschau, Bauplatz kaufen, Chronik, Sitzmuster, Bild speichern, Gegnerstadion');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false; safeLocalRemove('anstoss_fm13_stadion3d');
+        document.documentElement.setAttribute('data-motion', 'reduziert');
+        game.money = 900000000; game.stadionChronik = []; game.stadionMuster = 'standard';
+        game.attendanceHistory = [{ season: game.season, matchday: 2, opponent: 'Testgegner', attendance: 9000, capacity: stadium.total }];
+        game.letzterSpielstand = { ourGoals: 2, oppGoals: 1, isHome: true, oppName: 'FC Test', season: game.season, matchday: game.matchday };
+        showScreen('screen-stadium');
+    });
+    await page.waitForFunction(() => typeof stadionAnsicht !== 'undefined' && stadionAnsicht && stadionAnsicht.frames > 0, null, { timeout: 5000 }).catch(() => null);
+    const r = await page.evaluate(() => {
+        const out = {};
+        // Anzeigetafel und Band mit letztem Ergebnis
+        out.tafel = stadion3dTafelText({}).startsWith('2:1');
+        out.band = stadionSpielBanner().some(z => z.includes('Letztes Spiel 2:1'));
+        stadionDashboardZeichnen();
+        out.dashBand = document.getElementById('dash-stadion-canvas').getAttribute('aria-label').includes('Plätze');
+        // Gegnerstadion: nur bei Auswärtsspielen sichtbar
+        stadionGegnerZeichnen();
+        const n = ausschreitungNaechstesSpiel();
+        out.gegnerLogik = document.getElementById('dash-gegner-canvas').hidden === !(n && !n.heim);
+        // Ticketvorschau: höhere Preise, weniger Zuschauer; die echten Preise bleiben unverändert
+        const basis = calculateMatchAttendanceDetails(1, 1, 1).zuschauer;
+        const preise = { ...game.ticketPrices };
+        ticketPricePreview = { steh: 120, sitz: 200, vip: 900, dauerkarte: preise.dauerkarte };
+        const mitPreis = stadion3dPreisVorschau();
+        ticketPricePreview = null;
+        out.vorschau = mitPreis !== null && mitPreis < basis && game.ticketPrices.steh === preise.steh && game.ticketPrices.sitz === preise.sitz;
+        // Bauplatz im Gelände: Fenster zeigt Kosten, der Knopf gibt den Bau in Auftrag
+        campusBuildings.museum.lvl = 0;
+        stadionGelaendeOeffnen(); schliesseStadionBlock && stadionGelaendeSchliessen();
+        stadionBlockOeffnen('campus:museum');
+        const knopf = [...document.querySelectorAll('#stadion-block-inhalt button')].find(b => b.textContent.includes('Bauen auf Stufe 1'));
+        out.bauplatz = !!knopf && document.getElementById('stadion-block-inhalt').textContent.includes('Noch nicht gebaut');
+        if (knopf) knopf.click();
+        out.bauAuftrag = game.stadiumConstructionQueue.some(p => p.type === 'campusBuilding' && p.params.key === 'museum');
+        // Chronik: Saisonschnappschuss, eine Eintragung je Saison, Schieber zeigt die frühere Saison
+        game.stadionChronik = [];
+        stadionChronikSchnappschuss(); stadionChronikSchnappschuss();
+        const eins = game.stadionChronik.length === 1;
+        const altSaison = game.season; game.season += 1; stadionChronikSchnappschuss(); game.season = altSaison;
+        stadionChronikZeigen(0);
+        out.chronik = eins && game.stadionChronik.length === 2 && document.getElementById('stadion-chronik-text').textContent.includes('Saison ' + game.stadionChronik[0].season);
+        // Sitzmuster: Knopf zeigt den Zustand, die Zeichnung läuft mit jedem Muster
+        stadionMusterWaehlen('streifen');
+        out.muster = game.stadionMuster === 'streifen' && document.getElementById('stadion-muster-streifen').className === 'btn-action'
+            && stadion3dSitzFarbe(1, 'kurve', stadion3dFarben('X')) === stadion3dFarben('X').zweite;
+        stadionMusterWaehlen('blockfarben'); stadionMusterWaehlen('standard');
+        out.musterStandard = game.stadionMuster === 'standard' && stadion3dSitzFarbe(1, 'kurve', stadion3dFarben('X')) === null;
+        // Bild speichern: ohne Fehler, mit Rückmeldung
+        let gespeichert = false;
+        const alt = showToast; showToast = t => { if (t.includes('gespeichert')) gespeichert = true; };
+        try { stadionBildSpeichern(); } catch (e) { gespeichert = false; }
+        showToast = alt;
+        out.foto = gespeichert;
+        campusBuildings.museum.lvl = 0;
+        return out;
+    });
+    const K = ['tafel', 'band', 'dashBand', 'gegnerLogik', 'vorschau', 'bauplatz', 'bauAuftrag', 'chronik', 'muster', 'musterStandard', 'foto'];
+    assert(K.every(k => r[k] === true), `Stadion-Neuerungen: Tafel, Band, Gegner, Ticketvorschau, Bauplatz, Chronik, Sitzmuster, Foto (${JSON.stringify(K.map(k => k + ':' + r[k]).filter(x => !x.endsWith(':true')))})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 async function testStartUndVersion(browser) {
     console.log('\n[3.150] Geladener Stand zeichnet die Übersicht, Wappen-Kürzel aus dem Vereinsnamen, Hinweis auf neue Version');
     const { page, consoleErrors } = await freshPage(browser);
@@ -4483,6 +4552,7 @@ module.exports = {
     testStadionGelaende,
     testGesperrterSpeicher,
     testDashboardStadion,
+    testStadionNeuerungen,
     testAdminWerkzeuge,
     testPrivatlebenPlus,
     testOeffentlicheFassung,

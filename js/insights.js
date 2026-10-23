@@ -25,6 +25,7 @@ function ensureSerienState() {
 
 // Aus updateLeagueTable() nach jedem eigenen Ligaspiel (live und simuliert)
 function recordOwnLeagueResult(ourGoals, oppGoals, isHome, oppName) {
+    game.letzterSpielstand = { ourGoals, oppGoals, isHome: !!isHome, oppName, season: game.season, matchday: game.matchday };
     ensureSerienState();
     const s = game.serien.aktuell;
     const sieg = ourGoals > oppGoals, niederlage = ourGoals < oppGoals;
