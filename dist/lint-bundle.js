@@ -584,7 +584,7 @@ function pruefeNeuePakete() {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.148', date: '23.10.2026', features: 'Zuletzt geöffnet aus dem Menü entfernt' };
+    const GAME_VERSION = { number: '3.149', date: '23.10.2026', features: 'Runenfeuer als eigenes Spiel im Ordner runenfeuer/ importiert' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
