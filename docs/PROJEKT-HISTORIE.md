@@ -915,3 +915,19 @@ Test `testEinsteiger` ([26.27]), `testStartmenue` prüft Einsteiger-Modus und St
 ## „Zuletzt geöffnet“ entfernt (Version 3.148)
 
 - Auf Wunsch: die Liste der zuletzt geöffneten Bildschirme oben im Menü (Phase 26.16, `js/one-hand.js`, `#recent-screens-box`) ist entfernt; der alte Geräte-Eintrag `anstoss_fm13_zuletzt` wird beim Start einmal gelöscht. Favoriten bleiben.
+
+## Phase 26.31: Stadionansicht als Canvas (ungemergt)
+
+Wunsch: im Stadionbereich eine Canvas-Ansicht, in der man sich das Stadion ansehen kann. Umgesetzt wurden alle acht Vorschläge in `js/stadion-canvas.js` (Illustration, feste Farben erlaubt). Spielregeln unverändert, die Ansicht liest nur.
+
+- **Drehbares Stadion** oben auf der Stadionseite (`#stadion-3d-box`, ersetzt die CSS-Schüssel; Umschalter `anstoss_fm13_stadion3d` zur klassischen Ansicht). Perspektive mit Kamera auf einer Kreisbahn, drei Kameras (Luftbild, Haupttribüne, hinter dem Tor), Wischen dreht, zwei Finger, Mausrad oder ➕/➖ zoomen, Pfeiltasten drehen. Flächen werden mit Normalen gefiltert und von hinten nach vorn gezeichnet.
+- **Tribünen aus den echten Plätzen:** 0,5 m je Sitz, 0,8 m je Reihe; Oberränge rücken hinter den Unterrang, die Logen sind ein Glasband auf der Haupttribüne, die Presse daneben, `bonusCapacity` verteilt sich auf beide Hintertortribünen.
+- **Blöcke antippen:** Treffer über die gezeichneten Flächen, das Fenster `#stadion-block-overlay` zeigt Plätze, Auslastung, Fankultur, Risiko, laufende Bauten und den bisherigen Ausbau (`selectStadiumBlock(key, zielId, leise)`). Imbiss, Fanshop und Toiletten stehen je Stufe als Buden hinter dem Block.
+- **Ränge nach den Heimspielen:** Auslastung aus `game.attendanceHistory` (diese Saison, sonst die letzten der Vorsaison, ohne Heimspiel die Prognose aus `calculateMatchAttendanceDetails`), je Block gewichtet (Kurve zuerst voll, Gästeblock zuletzt), die Summe entspricht der echten Zahl. Blättern mit ◀/▶.
+- **Tag, Abend, Nacht und Wetter:** Flutlichtmasten mit Lichtkegeln (nachts ohne Flutlicht dunkel mit Hinweis), Regen, Schnee und Sturm aus `currentWeather`, Abnutzung des Rasens nach `stadium.pitchCondition`.
+- **Baustellen und Anlagen:** Kran mit Fortschrittsbalken je Bau aus `game.stadiumConstructionQueue`, beim Rangausbau ein Gerüst über dem neuen Rang; gebaute Anlagen (Museum, Flagship-Store, Pressezentrum, Ladestationen, Bahnhof, Public Viewing …) als Gebäude, Dach mit Solarfeld, Anzeigetafeln mit dem letzten Ergebnis, Lichtshow bei Nacht, Denkmal der Publikumslieblinge.
+- **Kurve:** Choreo in Vereinsfarben vor einem Heim-Derby oder nach drei Siegen in Folge, Fahnen ab Fankultur 50, Gästeblock in den Farben des Gegners mit Zaun; Risiko-Ebene färbt die Blöcke nach `getAusschreitungsLage()` für das nächste Spiel.
+- **Rundflug:** 15 Sekunden um das Stadion mit Name, Namensgeber, Kapazität, Zuschauerrekord und Stadionwert. Fertige Ausbauten (Rang, Spezial-Installation, Kapazitätsprojekt, Erweiterung) setzen `game.stadionRundflug`; beim nächsten Besuch startet der Rundflug und der Marker wird gelöscht.
+- **Vorher/Nachher:** „Ausbau im Bild zeigen“ im Block-Fenster blendet den nächsten Rang als Geisterbild ein, ein Schieber wechselt zwischen heute und nach dem Ausbau; der Oberrang rückt mit.
+- Leistung: rund 4–5 ms je Bild; gezeichnet wird nur bei Bewegung (Rundflug, Kamerafahrt, Wetter, Fahnen, Kran, Lichtshow), sonst bei Änderungen. Läuft nur, solange die Stadionseite im Hub sichtbar ist; bei reduzierter Bewegung Standbilder.
+- Test `testStadionAnsicht`, Lexikon-Eintrag „Stadionansicht“ (neu).

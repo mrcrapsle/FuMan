@@ -1080,6 +1080,19 @@
         .live-3d-canvas { display: block; width: 100%; border-radius: 12px; margin-bottom: 6px; box-shadow: 0 4px 14px color-mix(in srgb, var(--shade) 60%, transparent); }
         .live-3d-canvas[hidden] { display: none; }
         .live-3d-umschalter { width: auto; font-size: var(--fs-caption); padding: 4px 10px; margin-bottom: 6px; }
+        /* Stadionansicht (js/stadion-canvas.js) */
+        .stadion-3d-box { margin-bottom: 6px; }
+        .stadion-3d-box[hidden] { display: none; }
+        .stadion-3d-canvas { display: block; width: 100%; border-radius: 14px; touch-action: pan-y; cursor: grab; box-shadow: 0 4px 14px color-mix(in srgb, var(--shade) 60%, transparent); }
+        .stadion-3d-canvas:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+        .stadion-3d-leiste { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 6.6em), 1fr)); gap: 4px; margin-top: 6px; }
+        .stadion-3d-leiste-klein { grid-template-columns: repeat(auto-fit, minmax(min(100%, 4.5em), 1fr)); }
+        .stadion-3d-leiste button { font-size: var(--fs-caption); min-height: 34px; padding: 4px 6px; }
+        .stadion-3d-vorschau { margin-top: 6px; font-size: var(--fs-caption); }
+        .stadion-3d-vorschau[hidden] { display: none; }
+        .stadion-3d-regler-zeile { display: flex; align-items: center; gap: 6px; margin: 4px 0; }
+        .stadion-3d-regler-zeile input { flex: 1; min-width: 0; }
+        .stadion-3d-info { font-size: var(--fs-caption); margin-top: 6px; line-height: 1.45; }
         .ausschreitung-karte { display: block; width: 100%; max-width: 300px; aspect-ratio: 300 / 170; margin: 6px auto 2px; border-radius: 8px; background: var(--surface-0); }
         .kader-feinheiten > summary { cursor: pointer; list-style: revert; }
         .office-quicknav-btn small { display: block; font-size: var(--fs-micro); font-weight: 400; opacity: 0.85; }

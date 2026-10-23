@@ -4097,6 +4097,166 @@ async function testAusschreitungSzene(browser) {
     await page.close();
 }
 
+async function testStadionAnsicht(browser) {
+    console.log('\n[26.31] Stadionansicht: Tribünen nach Plätzen, Auslastung, Blöcke antippen, Licht, Baustellen, Rundflug, Vorschau');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.evaluate(() => {
+        closeTutorial(); game.sackPending = false; safeLocalRemove('anstoss_fm13_stadion3d');
+        document.documentElement.setAttribute('data-motion', 'normal');
+        currentWeather = WEATHER_TYPES[0];
+        game.attendanceHistory = [
+            { season: game.season, matchday: 1, opponent: 'Testgegner A', attendance: 6000, capacity: stadium.total },
+            { season: game.season, matchday: 3, opponent: 'Testgegner B', attendance: 12000, capacity: stadium.total }
+        ];
+        showScreen('screen-stadium');
+    });
+    await page.waitForFunction(() => typeof stadionAnsicht !== 'undefined' && stadionAnsicht && stadionAnsicht.frames > 0, null, { timeout: 5000 }).catch(() => null);
+    const r = await page.evaluate(() => {
+        const out = {};
+        const c = document.getElementById('stadion-3d-canvas');
+        const a = stadionAnsicht;
+        out.sichtbar = !document.getElementById('stadion-3d-box').hidden && c.width > 0 && c.height > 0
+            && document.querySelector('#screen-stadium .stadium-hero-visual-wrapper').style.display === 'none';
+        const px = c.getContext('2d').getImageData(Math.round(c.width / 2), Math.round(c.height / 2), 1, 1).data;
+        out.gemalt = px[3] === 255;
+        out.beschrieben = c.getAttribute('role') === 'img' && c.getAttribute('aria-label').includes('Plätze');
+        // Tribünen wachsen mit den Plätzen, der Oberrang rückt nach hinten
+        const vorher = stadion3dLayout();
+        const kv = vorher.segmente.find(s => s.key === 'kurve'), ov = vorher.segmente.find(s => s.key === 'suedOber');
+        stadium.blocks.kurve.cap += 2000;
+        const nachher = stadion3dLayout();
+        const kn = nachher.segmente.find(s => s.key === 'kurve'), on = nachher.segmente.find(s => s.key === 'suedOber');
+        out.waechst = kn.reihen > kv.reihen && on.a > ov.a && on.h0 > ov.h0;
+        stadium.blocks.kurve.cap -= 2000;
+        // Auslastung: Summe der Blöcke entspricht der echten Zahl, die Kurve ist voller als der Gästeblock
+        const sp = stadion3dSpiel();
+        const f = stadion3dFuellung(sp);
+        const kapBloecke = Object.keys(stadium.blocks).reduce((s, k) => s + stadium.blocks[k].cap, 0);
+        const besetzt = Object.keys(stadium.blocks).reduce((s, k) => s + f[k] * stadium.blocks[k].cap, 0);
+        out.auslastung = !sp.prognose && sp.zuschauer === 12000 && Math.abs(besetzt - 12000 / sp.kapazitaet * kapBloecke) < kapBloecke * 0.02 && f.kurve >= f.gaeste;
+        // Blättern durch die Heimspiele
+        const toasts = []; const alt = showToast; showToast = t => toasts.push(t);
+        stadionSpielBlaettern(-1);
+        out.blaettern = stadion3dSpiel().zuschauer === 6000 && document.getElementById('stadion-3d-info').textContent.includes('Heimspiel 1 von 2');
+        stadionSpielBlaettern(-1);
+        out.blaetternEnde = toasts.some(t => t.includes('erste Heimspiel'));
+        stadionSpielBlaettern(1);
+        // Buden hinter dem Block je Ausbaustufe
+        stadium.blocks.haupt.foodLvl = 2; stadium.blocks.haupt.merchLvl = 1;
+        stadion3dZeichneEinmal();
+        out.buden = a.szene.bloecke.find(b => b.key === 'haupt').buden === 3;
+        // Licht: Nacht ohne Flutlicht meldet sich, mit Flutlicht Masten
+        a.licht = 'abend'; stadionLicht();
+        out.nachtOhne = a.licht === 'nacht' && toasts.some(t => t.includes('Ohne Flutlicht'));
+        stadium.flutlicht = true; stadion3dZeichneEinmal();
+        out.flutlicht = a.szene.flutlicht === true && a.szene.licht === 'nacht';
+        stadionLicht();
+        out.tag = a.licht === 'tag';
+        // Wetter und Rasen
+        currentWeather = WEATHER_TYPES[2]; stadium.pitchCondition = 30; stadion3dZeichneEinmal();
+        out.wetter = a.szene.wetter === 'regen' && stadion3dBewegt() && a.szene.rasen.flecken > 0;
+        currentWeather = WEATHER_TYPES[0]; stadium.pitchCondition = 90; stadion3dZeichneEinmal();
+        out.rasenGut = a.szene.rasen.flecken === 0;
+        // Baustelle mit Kran und Gerüst, gebaute Anlagen, Choreo und Fahnen
+        game.stadiumConstructionQueue.push({ type: 'blockExpand', params: { blockKey: 'gegen', seats: 1000 }, totalCost: 1, downPayment: 1, remainingPayment: 0, daysLeft: 5, totalDays: 20, label: 'Test-Ausbau' });
+        stadium.upgrades = Object.assign({}, stadium.upgrades, { stadion_museum: true });
+        game.serien = { aktuell: { sieg: 3 }, rekord: {} };
+        stadium.blocks.kurve.cultureStrength = 70;
+        stadionAnsichtAktualisieren();
+        out.kran = a.szene.kraene.length === 1 && a.szene.kraene[0].anteil === 75 && a.szene.geist && a.szene.geist.key === 'gegen' && a.szene.geist.art === 'bau';
+        out.anlage = a.szene.anlagen.includes('stadion_museum');
+        out.choreo = /Choreo/.test(a.szene.choreo) && a.szene.fahnen === true && document.getElementById('stadion-3d-info').textContent.includes(a.szene.choreo);
+        // Fertiger Ausbau merkt sich den Rundflug
+        game.stadiumConstructionQueue[game.stadiumConstructionQueue.length - 1].daysLeft = 1;
+        tickStadiumConstruction();
+        out.rundflugMarker = game.stadionRundflug === 'Test-Ausbau' && stadium.blocks.gegen.cap === 4000;
+        // Risiko-Ebene
+        stadionRisikoEbene();
+        out.risiko = a.risiko && document.getElementById('stadion-3d-risiko').getAttribute('aria-pressed') === 'true' && /Risiko je Block|kein Ligaspiel/.test(document.getElementById('stadion-3d-info').textContent);
+        stadionRisikoEbene();
+        // Kamera wechseln
+        stadionKamera();
+        out.kamera = a.kamera === 1 && document.getElementById('stadion-3d-kamera').textContent.includes('Haupttribüne');
+        a.ziel = null; a.kamera = 0; Object.assign(a, { yaw: STADION3D_KAMERAS[0].yaw, pitch: STADION3D_KAMERAS[0].pitch, dist: STADION3D_KAMERAS[0].dist, tx: 0, ty: 0, zoom: 1 });
+        // Ein Bild dauert wenige Millisekunden
+        const ctx = c.getContext('2d'), layout = stadion3dLayout(), P = stadion3dProjektion(390, 265, layout);
+        const t0 = performance.now(); for (let i = 0; i < 15; i++) stadion3dZeichnen(ctx, P, layout);
+        out.ms = (performance.now() - t0) / 15;
+        out.schnell = out.ms < 30;
+        showToast = alt;
+        return out;
+    });
+    // Ein Tipp auf die Kurve öffnet ihr Fenster mit dem Ausbau, Escape schließt es (Pointer-Ereignisse direkt auf
+    // der Canvas: ein Mausklick auf Bildschirmkoordinaten traf im Parallellauf nicht immer die Canvas)
+    Object.assign(r, await page.evaluate(() => {
+        stadion3dZeichneEinmal();
+        const c = document.getElementById('stadion-3d-canvas');
+        const t = stadionAnsicht.treffer.filter(x => x.key === 'kurve').pop();
+        const mx = t.pr.reduce((s, p) => s + p.x, 0) / t.pr.length, my = t.pr.reduce((s, p) => s + p.y, 0) / t.pr.length;
+        const rect = c.getBoundingClientRect();
+        const opt = { pointerId: 7, pointerType: 'touch', clientX: rect.left + mx, clientY: rect.top + my, bubbles: true, isPrimary: true };
+        c.dispatchEvent(new PointerEvent('pointerdown', opt));
+        c.dispatchEvent(new PointerEvent('pointerup', opt));
+        return { trefferTest: stadion3dTreffer(mx, my) === 'kurve' };
+    }));
+    await page.waitForFunction(() => document.getElementById('stadion-block-overlay').classList.contains('show'), null, { timeout: 3000 }).catch(() => null);
+    Object.assign(r, await page.evaluate(() => {
+        const ov = document.getElementById('stadion-block-overlay');
+        return {
+            fenster: ov.classList.contains('show') && ov.getAttribute('role') === 'dialog' && document.getElementById('stadion-block-inhalt').textContent.includes(stadium.blocks.kurve.name)
+                && !!document.querySelector('#stadion-block-aktionen button') && stadionAnsicht.auswahl === 'kurve'
+        };
+    }));
+    await page.keyboard.press('Escape');
+    Object.assign(r, await page.evaluate(() => {
+        const out = { zu: !document.getElementById('stadion-block-overlay').classList.contains('show') && stadionAnsicht.auswahl === null };
+        // Vorher/Nachher für den nächsten Rangausbau
+        stadionBlockOeffnen('kurve');
+        stadionVorschauStarten('kurve');
+        const vb = document.getElementById('stadion-3d-vorschau');
+        stadion3dZeichneEinmal();
+        out.vorschau = !vb.hidden && !document.getElementById('stadion-block-overlay').classList.contains('show') && stadionAnsicht.szene.geist && stadionAnsicht.szene.geist.art === 'vorschau'
+            && document.getElementById('stadion-3d-vorschau-text').textContent.includes('→');
+        stadionVorschauRegler(0);
+        out.regler = !stadionAnsicht.szene.geist;
+        stadionVorschauEnde();
+        out.vorschauEnde = vb.hidden && stadionAnsicht.vorschau === null;
+        // Rundflug beim nächsten Besuch nach dem fertigen Ausbau
+        showScreen('screen-dashboard'); showScreen('screen-stadium');
+        out.rundflug = !!stadionAnsicht.flug && game.stadionRundflug === null && stadionAnsicht.flug.karten[0][1] === 'Test-Ausbau'
+            && document.getElementById('stadion-3d-flug').textContent.includes('läuft');
+        stadion3dFlugSchritt(16);
+        out.rundflugEnde = stadionAnsicht.flug === null;
+        // Umschalten zur klassischen Ansicht und zurück
+        stadion3dUmschalten();
+        out.klassisch = document.getElementById('stadion-3d-box').hidden && document.querySelector('#screen-stadium .stadium-hero-visual-wrapper').style.display === '' && safeLocalGet('anstoss_fm13_stadion3d') === '0';
+        stadion3dUmschalten();
+        out.zurueck = !document.getElementById('stadion-3d-box').hidden && safeLocalGet('anstoss_fm13_stadion3d') === '1';
+        // Reduzierte Bewegung: kein Dauerlauf
+        document.documentElement.setAttribute('data-motion', 'reduziert');
+        out.reduziert = !stadion3dBewegt();
+        document.documentElement.setAttribute('data-motion', 'normal');
+        return out;
+    }));
+    // Läuft nicht weiter, wenn die Stadionseite verlassen wird; Handy 320 px ohne Überlauf
+    await page.evaluate(() => { stadionRundflug(); showScreen('screen-dashboard'); });
+    await page.waitForFunction(() => !stadionAnsicht.laeuft, null, { timeout: 3000 }).catch(() => null);
+    r.stopptAusserhalb = await page.evaluate(() => !stadionAnsicht.laeuft || JSON.stringify({ l: stadionAnsicht.laeuft, f: !!stadionAnsicht.flug, fr: stadionAnsicht.frames, s: document.getElementById('screen-stadium').style.display }));
+    await page.setViewportSize({ width: 320, height: 700 });
+    await page.evaluate(R32_HILFEN);
+    Object.assign(r, await page.evaluate(() => {
+        stadionAnsicht.flug = null; showScreen('screen-stadium');
+        const w = woerter('#stadion-3d-box button'), klein = [...document.querySelectorAll('#stadion-3d-box button')].filter(b => b.offsetParent && b.offsetHeight < 32).map(b => b.textContent);
+        return { handy: (ueberlauf() && w.length === 0 && klein.length === 0) || JSON.stringify({ u: ueberlauf(), w, klein }) };
+    }));
+    const K = ['sichtbar', 'gemalt', 'beschrieben', 'waechst', 'auslastung', 'blaettern', 'blaetternEnde', 'buden', 'nachtOhne', 'flutlicht', 'tag', 'wetter', 'rasenGut', 'kran', 'anlage', 'choreo', 'rundflugMarker', 'risiko', 'kamera', 'schnell',
+        'trefferTest', 'fenster', 'zu', 'vorschau', 'regler', 'vorschauEnde', 'rundflug', 'rundflugEnde', 'klassisch', 'zurueck', 'reduziert', 'stopptAusserhalb', 'handy'];
+    assert(K.every(k => r[k] === true), `Stadionansicht: Tribünen, Auslastung, Tipp auf Block, Licht, Wetter, Baustelle, Rundflug, Vorschau, Leistung ${r.ms ? r.ms.toFixed(1) : '?'} ms/Bild (${JSON.stringify(K.map(k => k + ':' + r[k]).filter(x => !x.endsWith(':true')))})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 module.exports = {
     testSpielvorbereitung,
     testVertragsWerkzeuge,
@@ -4125,6 +4285,7 @@ module.exports = {
     testEinsteiger,
     testLive3D,
     testAusschreitungSzene,
+    testStadionAnsicht,
     testAdminWerkzeuge,
     testPrivatlebenPlus,
     testOeffentlicheFassung,

@@ -914,10 +914,12 @@
             }
         }
         if (typeof renderStadiumEventsPanel === 'function') renderStadiumEventsPanel();
+        if (typeof stadionAnsichtAktualisieren === 'function') stadionAnsichtAktualisieren();
     }
 
-    function selectStadiumBlock(blockKey) {
-        playSound('click');
+    // zielId: anderer Kasten (Block-Fenster der Stadionansicht, js/stadion-canvas.js), leise: ohne Klick-Ton beim Auffrischen
+    function selectStadiumBlock(blockKey, zielId, leise) {
+        if (!leise) playSound('click');
         let b = stadium.blocks[blockKey];
         let comfort = Math.round(((b.foodLvl + b.merchLvl + b.toiletLvl) / 9) * 100);
         let maxExpansions = 5;
@@ -929,7 +931,8 @@
         let foodCost = Math.max(50000, Math.round(15000 * scale * 20));
         let merchCost = Math.max(40000, Math.round(12000 * scale * 20));
         let toiletCost = Math.max(35000, Math.round(10000 * scale * 20));
-        let box = document.getElementById('stadium-action-box');
+        let box = document.getElementById(zielId || 'stadium-action-box');
+        if (!box) return;
         box.innerHTML = `
             <div style="font-size:var(--fs-body-lg); font-weight:bold; color:var(--accent);">${b.name} (${b.cap.toLocaleString()} Plätze)</div>
             <div>Wohlfühlfaktor: <strong style="color:var(--primary);">${comfort}%</strong> <span style="font-size:var(--fs-micro); color:var(--text-muted);">(wirkt sich stadionweit leicht auf die Zuschauerzahl aus)</span></div>
@@ -1095,6 +1098,8 @@
             }
             game.boardSat = Math.min(100, game.boardSat + 2);
             if (typeof merkeBauChronik === 'function') merkeBauChronik(proj);
+            // Stadionansicht (js/stadion-canvas.js): beim nächsten Besuch ein Rundflug über den fertigen Ausbau
+            if (['blockExpand', 'specialInstall', 'capacityProject', 'stadiumUpgrade'].includes(proj.type)) game.stadionRundflug = proj.label;
             addInboxMessage('vertrag', `🏗️ Bauprojekt fertiggestellt: ${proj.label}!`,
                 (proj.remainingPayment > 0
                     ? `Die Bauarbeiten sind abgeschlossen, die offene Restzahlung von ${formatVal(proj.remainingPayment)} wurde beglichen.`

@@ -245,6 +245,14 @@
     </div>
 </div>
 
+<!-- BLOCK DER STADIONANSICHT (js/stadion-canvas.js) -->
+<div id="stadion-block-overlay" class="generic-modal-overlay">
+    <div class="generic-modal-box">
+        <button onclick="schliesseStadionBlock()" class="generic-modal-close" aria-label="Schließen">✕</button>
+        <div id="stadion-block-inhalt"></div>
+    </div>
+</div>
+
 <!-- VERLÄNGERUNGS-ASSISTENT (js/contract-tools.js) -->
 <div id="renewal-assistant-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
@@ -1796,6 +1804,30 @@
                         <div class="dashboard-hero-bowl-wrapper" id="stadium-hero-bowl-wrapper"></div>
                     </div>
                 </div>
+                <!-- Stadionansicht (js/stadion-canvas.js) -->
+                <div id="stadion-3d-box" class="stadion-3d-box">
+                    <canvas id="stadion-3d-canvas" class="stadion-3d-canvas" role="img" tabindex="0" aria-label="Stadionansicht"></canvas>
+                    <div class="stadion-3d-leiste">
+                        <button onclick="stadionKamera()" id="stadion-3d-kamera" class="btn-secondary" title="Kamera wechseln">🎥 Luftbild</button>
+                        <button onclick="stadionLicht()" id="stadion-3d-licht" class="btn-secondary" title="Tageszeit wechseln">☀️ Tag</button>
+                        <button onclick="stadionRisikoEbene()" id="stadion-3d-risiko" class="btn-secondary" aria-pressed="false" title="Ausschreitungs-Risiko je Block">⚠️ Risiko</button>
+                        <button onclick="stadionRundflug()" id="stadion-3d-flug" class="btn-secondary" title="Kamerafahrt um das Stadion">🎬 Rundflug</button>
+                    </div>
+                    <div class="stadion-3d-leiste stadion-3d-leiste-klein">
+                        <button onclick="stadionSpielBlaettern(-1)" class="btn-secondary" title="Voriges Heimspiel">◀ Spiel</button>
+                        <button onclick="stadionSpielBlaettern(1)" class="btn-secondary" title="Nächstes Heimspiel">Spiel ▶</button>
+                        <button onclick="stadionZoom(1.2)" class="btn-secondary" title="Näher heran">➕</button>
+                        <button onclick="stadionZoom(1 / 1.2)" class="btn-secondary" title="Weiter weg">➖</button>
+                    </div>
+                    <div id="stadion-3d-vorschau" class="box stadion-3d-vorschau" hidden>
+                        <div id="stadion-3d-vorschau-text" style="font-weight:700;"></div>
+                        <div class="stadion-3d-regler-zeile"><span>Heute</span><input type="range" id="stadion-3d-vorschau-regler" min="0" max="100" value="100" oninput="stadionVorschauRegler(this.value)" aria-label="Vorher oder nach dem Ausbau"><span>Nach dem Ausbau</span></div>
+                        <button onclick="stadionVorschauEnde()" class="btn-secondary">✕ Vorschau beenden</button>
+                    </div>
+                    <div id="stadion-3d-info" class="stadion-3d-info"></div>
+                    <div class="startmenue-hinweis">Wischen dreht das Stadion, zwei Finger oder ➕/➖ zoomen, ein Tipp auf einen Block öffnet seinen Ausbau.</div>
+                </div>
+                <button onclick="stadion3dUmschalten()" id="stadion-3d-umschalter" class="btn-secondary live-3d-umschalter">🧩 Klassische Ansicht</button>
 
                 <!-- Accordion Section: Übersicht -->
                 <div class="accordion-section">
@@ -2917,6 +2949,7 @@
 <script src="js/einsteiger.js?v=3.146"></script>
 <script src="js/live-3d.js?v=3.146"></script>
 <script src="js/ausschreitungen-szene.js?v=3.147"></script>
+<script src="js/stadion-canvas.js?v=3.149"></script>
 <script src="js/youth.js?v=2.1"></script>
 <script src="js/youth-academy-extended.js?v=2.1"></script>
 <script src="js/youth-pathway.js?v=3.11"></script>
