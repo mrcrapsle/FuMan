@@ -1010,7 +1010,7 @@ Wunsch: die Stadien und Gebäude sollen echter aussehen (Canvas). Umgesetzt in `
 - Das Tor an der Südseite des Zauns hat eine Durchfahrt (2,6 m zu jeder Seite offen).
 - Test: `testStadionRealismus` prüft den Ring.
 
-## Spielphysik im Livespiel und Reaktionsspiele bei Standards (ungemergt)
+## Spielphysik im Livespiel und Reaktionsspiele bei Standards (Version 3.155)
 
 Auftrag: Beim Anpfiff landete man unten auf der Seite und sah das Spielfeld nicht; die Szenen im Bild passten nicht zum Ticker. Gewünscht: das Spiel physikalisch berechnen, der Ball ist dort, wo das Spiel ihn berechnet, und Standards als Reaktionsspiel (Cursor links-rechts, dann oben-unten).
 

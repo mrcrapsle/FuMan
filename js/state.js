@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.154', date: '23.10.2026', features: 'Straßen und Fußwege um das Stadion: Straßenring, Gehwege, Eingangsweg und Laternen am Ring' };
+    const GAME_VERSION = { number: '3.155', date: '24.10.2026', features: 'Livespiel mit Ballphysik: Ticker folgt dem Ball, Reaktionsspiele bei Elfmeter, Freistoß und Ecke, Anpfiff oben' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
