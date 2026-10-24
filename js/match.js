@@ -389,6 +389,9 @@
             stats: newLiveMatchStats()
         };
         showScreen('screen-matchday');
+        // Anpfiff oben beginnen: sonst blieb die Seite unten beim Knopf stehen und man sah das Spielfeld nicht
+        const inhalt = document.getElementById('main-content'); if (inhalt) inhalt.scrollTop = 0;
+        if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
         document.getElementById('match-title').innerText = homeName + " vs " + awayName;
         document.getElementById('live-home-name').innerText = homeName;
         document.getElementById('live-away-name').innerText = awayName;

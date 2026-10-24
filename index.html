@@ -478,6 +478,16 @@
     </div>
 </div>
 
+<!-- REAKTIONSSPIEL BEI STANDARDS (js/reaktionsspiel.js) -->
+<div id="reaktion-overlay" class="generic-modal-overlay">
+    <div class="generic-modal-box reaktion-box">
+        <button class="generic-modal-close" onclick="reaktionsspielAbbrechen()" title="Schließen">×</button>
+        <div style="font-size:var(--fs-title); font-weight:900; color:var(--text-main); margin-bottom:6px;" id="reaktion-titel">Standard</div>
+        <div id="reaktion-feld"></div>
+        <button onclick="reaktionsspielAbbrechen()" class="btn-secondary" style="width:auto; font-size:var(--fs-caption); margin-top:8px;">Automatisch ausführen</button>
+    </div>
+</div>
+
 <!-- MANAGER-INTERVIEW (POST-MATCH) -->
 <div id="interview-overlay" class="generic-modal-overlay">
     <div class="generic-modal-box">
@@ -2845,7 +2855,15 @@
                 <div class="panel">
                     <div class="panel-header" id="match-title">Livespiel</div>
                     <canvas id="live-3d-canvas" class="live-3d-canvas" aria-label="3D-Ansicht des Spiels" role="img"></canvas>
-                    <button onclick="live3dUmschalten()" id="live-3d-umschalter" class="btn-secondary live-3d-umschalter">🧩 Taktiktafel zeigen</button>
+                    <div class="live-3d-leiste">
+                        <button onclick="live3dUmschalten()" id="live-3d-umschalter" class="btn-secondary live-3d-umschalter">🧩 Taktiktafel zeigen</button>
+                        <div id="live-tempo-box" class="live-tempo-box" hidden>
+                            <span class="ui-overline">Tempo</span>
+                            <button onclick="spielTempoSetzen(1)" id="live-tempo-1" class="btn-action" title="Normales Tempo">1×</button>
+                            <button onclick="spielTempoSetzen(2)" id="live-tempo-2" class="btn-secondary" title="Doppeltes Tempo">2×</button>
+                            <button onclick="spielTempoSetzen(4)" id="live-tempo-4" class="btn-secondary" title="Vierfaches Tempo">4×</button>
+                        </div>
+                    </div>
                     <div class="live-stadium-frame">
                         <div class="live-stadium-floodlight" style="top:2%; left:3%;"></div>
                         <div class="live-stadium-floodlight" style="top:2%; right:3%;"></div>
@@ -2991,7 +3009,8 @@
 <script src="js/ausschreitungen.js?v=3.144"></script>
 <script src="js/startmenue.js?v=3.145"></script>
 <script src="js/einsteiger.js?v=3.146"></script>
-<script src="js/live-3d.js?v=3.146"></script>
+<script src="js/spielphysik.js?v=3.155"></script>
+<script src="js/live-3d.js?v=3.155"></script>
 <script src="js/ausschreitungen-szene.js?v=3.147"></script>
 <script src="js/stadion-canvas.js?v=3.149"></script>
 <script src="js/neue-version.js?v=3.150"></script>
@@ -3014,7 +3033,8 @@
 <script src="js/season-objectives.js?v=2.1"></script>
 <script src="js/team-council.js?v=2.1"></script>
 <script src="js/locker-room.js?v=3.23"></script>
-<script src="js/set-pieces.js?v=3.24"></script>
+<script src="js/set-pieces.js?v=3.155"></script>
+<script src="js/reaktionsspiel.js?v=3.155"></script>
 <script src="js/cup-final.js?v=3.25"></script>
 <script src="js/derby-week.js?v=3.30"></script>
 <script src="js/co-trainer-live.js?v=3.32"></script>
@@ -3046,7 +3066,7 @@
 <script src="js/opponent-tactics.js?v=3.15"></script>
 <script src="js/match-scout.js?v=2.1"></script>
 <script src="js/match.js?v=2.1"></script>
-<script src="js/match-live.js?v=2.1"></script>
+<script src="js/match-live.js?v=3.155"></script>
 <script src="js/match-post.js?v=2.1"></script>
 <script src="js/contract-ultimatum.js?v=2.1"></script>
 <script src="js/season-end.js?v=2.1"></script>

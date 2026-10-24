@@ -3974,13 +3974,14 @@ async function testEinsteiger(browser) {
 }
 
 async function testLive3D(browser) {
-    console.log('\n[26.29] 3D-Livespiel: Figuren, Szenen aus dem Spielgeschehen, Umschalten, reduzierte Bewegung');
+    console.log('\n[26.29/3.155] 3D-Livespiel: Figuren aus der Spielphysik, Perspektive, Umschalten, reduzierte Bewegung');
     const { page, consoleErrors } = await freshPage(browser);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.evaluate(() => {
+        window.anstossOhnePhysik = false;
         closeTutorial(); game.sackPending = false; safeLocalRemove('anstoss_fm13_live3d');
         document.documentElement.setAttribute('data-motion', 'normal');
-        startMatchdayFlow(); skipPressAndPlay(); stopLiveTickerAutoplay();
+        startMatchdayFlow(); skipPressAndPlay();
     });
     await page.waitForFunction(() => typeof live3d !== 'undefined' && live3d && live3d.frames > 5, null, { timeout: 8000 }).catch(() => null);
     const r = await page.evaluate(() => {
@@ -3988,43 +3989,32 @@ async function testLive3D(browser) {
         const c = document.getElementById('live-3d-canvas');
         out.laeuft = !!live3d && live3d.laeuft && live3d.frames > 5 && live3d.match === currentMatch;
         out.canvas = !c.hidden && c.width > 0 && c.height > 0 && document.querySelector('#screen-matchday .live-stadium-frame').style.display === 'none';
-        out.figuren = live3d.spieler.length === 22 && live3d.spieler.filter(p => p.torwart).length === 2;
+        out.figuren = livePhysik.f.length === 22 && livePhysik.f.filter(p => p.torwart).length === 2;
+        // Eigene Figuren tragen die echten Spieler der Startelf
+        out.namen = livePhysik.f.filter(f => f.team === livePhysik.eigen && f.id && lineup.includes(f.id)).length === 11;
+        // Tempo-Knöpfe nur mit Physik
+        out.tempo = !document.getElementById('live-tempo-box').hidden;
         // Perspektive: nah ist größer als fern, beide Tore im Bild, wenn die Kamera mittig steht
         live3d.kameraX = 52.5;
         const P = live3dProjektion(390, 234);
         out.perspektive = live3dPunkt(P, 52.5, 68).s > live3dPunkt(P, 52.5, 0).s * 2 && live3dPunkt(P, 0, 0).x > -40 && live3dPunkt(P, 105, 0).x < 430;
-        // Szenen aus dem Spielgeschehen
-        const vorher = live3d.szenen.length + (live3d.szene ? 1 : 0);
-        currentMatch.homeGoals++;
-        live3dPruefeSpielstand();
-        out.torSzene = live3d.szenen.some(x => x.art === 'tor' && x.team === 0) || (live3d.szene && live3d.szene.art === 'tor');
-        live3dSpielzug('away', true);
-        out.chance = live3d.szenen.some(x => x.art === 'chance') || (live3d.szene && live3d.szene.art === 'chance');
-        live3dSpielzug('home', false);
-        out.keineLeerChance = live3d.szenen.length + (live3d.szene ? 1 : 0) <= vorher + 2;
-        currentMatch.homeGoals--;
-        live3d.letzteTore = [currentMatch.homeGoals, currentMatch.awayGoals];
-        // Zeitraffer: Szene läuft durch bis zum Jubel
-        live3d.szenen = [{ art: 'tor', team: 1 }]; live3d.szene = null; live3d.jubelEnde = 0; live3d.ball.flug = null;
-        let jubel = false;
-        for (let i = 0; i < 400; i++) { live3dSchritt(0.05); if (live3d.spieler.some(p => p.jubel > 0 && p.team === 1)) { jubel = true; break; } }
-        out.jubel = jubel && (live3d.text === 'TOR!' || live3d.text === 'Gegentor');
-        out.ballImFeld = live3d.ball.x >= -3 && live3d.ball.x <= 108 && live3d.ball.y >= -1 && live3d.ball.y <= 69;
         // Ein Bild dauert wenige Millisekunden
         const ctx = c.getContext('2d');
         const t0 = performance.now(); for (let i = 0; i < 30; i++) live3dZeichnen(ctx, P);
         out.ms = (performance.now() - t0) / 30;
         out.schnell = out.ms < 12;
-        // Umschalten auf die Taktiktafel und zurück
+        // Umschalten auf die Taktiktafel: alles Offene erscheint, der alte Ticker übernimmt
+        livePhysik.queue.push({ art: 'info', html: '<div id="offene-zeile">offen</div>', minute: 99 });
         live3dUmschalten();
         out.tafel = c.hidden && document.querySelector('#screen-matchday .live-stadium-frame').style.display === '' && safeLocalGet('anstoss_fm13_live3d') === '0' && !live3d.laeuft;
+        out.aufgeholt = !!document.getElementById('offene-zeile') && livePhysik === null && liveTickerTimer !== null;
         live3dUmschalten();
-        out.zurueck = !c.hidden && safeLocalGet('anstoss_fm13_live3d') === '1';
-        // Reduzierte Bewegung: kein Dauerlauf, Szenen springen ans Ende
+        out.zurueck = !c.hidden && safeLocalGet('anstoss_fm13_live3d') === '1' && !!livePhysik && liveTickerTimer === null;
+        // Reduzierte Bewegung: kein Dauerlauf, keine Physik, Ticker wie bisher
+        stopLiveTickerAutoplay();
         document.documentElement.setAttribute('data-motion', 'reduziert');
         live3d.laeuft = false; live3dAnzeigen();
-        live3dSzene({ art: 'chance', team: 0 });
-        out.reduziert = !live3d.laeuft && !live3d.szene && live3d.szenen.length === 0;
+        out.reduziert = !live3d.laeuft && !spielphysikAktiv();
         clearInterval(live3d.intervall);
         document.documentElement.setAttribute('data-motion', 'normal');
         return out;
@@ -4033,8 +4023,212 @@ async function testLive3D(browser) {
     await page.evaluate(() => { live3dAnzeigen(); showScreen('screen-dashboard'); });
     await page.waitForFunction(() => !live3d.laeuft, null, { timeout: 3000 }).catch(() => null);
     r.stopptAusserhalb = await page.evaluate(() => !live3d.laeuft);
-    const K = ['laeuft', 'canvas', 'figuren', 'perspektive', 'torSzene', 'chance', 'keineLeerChance', 'jubel', 'ballImFeld', 'schnell', 'tafel', 'zurueck', 'reduziert', 'stopptAusserhalb'];
-    assert(K.every(k => r[k] === true), `3D-Livespiel: Figuren, Szenen, Umschalten, reduzierte Bewegung, Leistung ${r.ms ? r.ms.toFixed(1) : '?'} ms/Bild (${JSON.stringify(K.map(k => r[k]))})`);
+    const K = ['laeuft', 'canvas', 'figuren', 'namen', 'tempo', 'perspektive', 'schnell', 'tafel', 'aufgeholt', 'zurueck', 'reduziert', 'stopptAusserhalb'];
+    assert(K.every(k => r[k] === true), `3D-Livespiel: Figuren, Umschalten, reduzierte Bewegung, Leistung ${r.ms ? r.ms.toFixed(1) : '?'} ms/Bild (${JSON.stringify(K.map(k => r[k]))})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
+// Spielphysik (js/spielphysik.js): Ticker und Anzeige folgen dem Ball, jedes Tor geht physikalisch ins Netz.
+async function testSpielphysik(browser) {
+    console.log('\n[3.155] Spielphysik: Drehbuch, Tor erst im Netz, Szenen zum Tickertext, ganzes Spiel, Sprung nach oben');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const r = await page.evaluate(() => {
+        const out = {};
+        window.anstossOhnePhysik = false;
+        closeTutorial(); game.sackPending = false;
+        document.documentElement.setAttribute('data-motion', 'normal');
+        safeLocalSet('anstoss_fm13_reaktionsspiel', '0');
+        // Anpfiff beginnt oben, auch wenn die Seite vorher unten stand
+        const inhalt = document.getElementById('main-content');
+        startMatchdayFlow();
+        if (inhalt) inhalt.scrollTop = 5000;
+        if (document.scrollingElement) document.scrollingElement.scrollTop = 5000;
+        skipPressAndPlay();
+        out.oben = (!inhalt || inhalt.scrollTop === 0) && (!document.scrollingElement || document.scrollingElement.scrollTop === 0);
+        live3d.laeuft = false;   // die Test-Schleife treibt die Physik selbst
+        const lp = livePhysik;
+        out.aktiv = !!lp && spielphysikLaeuft() && liveTickerTimer === null;
+        const log = document.getElementById('ticker-log');
+        // Physik: Flachpass kommt nach T Sekunden am Ziel an, Schuss erreicht die verlangte Höhe
+        const v = spFlachLoesen(20, 1.5);
+        out.flachpass = Math.abs(spRollWeg(v, 1.5) - 20) < 0.2;
+        const vz = spVzLoesen(24, 16, 1.2, 0.11);
+        out.schuss = Math.abs(spFlug(24, vz, 16, 0.11).z - 1.2) < 0.05;
+        // Drehbuch: ein Spielzug mit Physik schreibt nicht sofort in den Ticker
+        const zeilenVorher = log.children.length;
+        currentMatch.drehbuch = [];
+        liveTicker('<div id="test-tor">TOR</div>', { art: 'tor', team: 0, stil: 'mit einem Flachschuss ins lange Eck', stand: [1, 0], minute: 3 });
+        const liste = currentMatch.drehbuch; currentMatch.drehbuch = null;
+        out.gepuffert = log.children.length === zeilenVorher && liste.length === 1;
+        lp.queue = []; lp.uhr = 1; lp.ende = 3;
+        spielphysikDrehbuch(liste, 1, 3);
+        // Tor erscheint erst, wenn der Ball im Netz ist
+        let imNetzBeimTor = null, vorherSichtbar = false;
+        for (let i = 0; i < 60 * 25 && !document.getElementById('test-tor'); i++) {
+            spielphysikTakt(1 / 60);
+            if (document.getElementById('test-tor')) imNetzBeimTor = lp.ball.imNetz;
+            if (document.getElementById('live-score').innerText.startsWith('1') && !document.getElementById('test-tor')) vorherSichtbar = true;
+        }
+        out.torImNetz = !!document.getElementById('test-tor') && imNetzBeimTor !== null && !vorherSichtbar;
+        out.anzeige = document.getElementById('live-score').innerText.replace(/\s/g, '') === '1:0';
+        // Alle Torarten und Chancen laufen durch, jedes Tor landet im Netz
+        const lauf = ev => {
+            lp.ende = 999; lp.queue = [ev]; lp.szene = null; ev.minute = Math.floor(lp.uhr) + 1;
+            let netz;
+            for (let i = 0; i < 60 * 40; i++) {
+                spielphysikTakt(1 / 60);
+                if (ev.aufgedeckt && netz === undefined) netz = lp.ball.imNetz;
+                if (ev.aufgedeckt && !lp.szene && !lp.queue.length) break;
+            }
+            return { ok: !!ev.aufgedeckt && !lp.szene, netz };
+        };
+        out.torArten = GOAL_STYLES.every((stil, i) => { const x = lauf({ art: 'tor', team: i % 2, stil, html: '' }); return x.ok && x.netz !== null; });
+        out.chancen = [...OUR_CHANCE_EVENTS, ...OPP_CHANCE_EVENTS, ...NEUTRAL_FLAVOR_EVENTS].every((text, i) => lauf({ art: 'chance', team: i % 2, text, html: '' }).ok);
+        currentMatch.stats.red[1]++;   // wie in simulateMatchStep(): Platzverweis beim Gast
+        out.karte = lauf({ art: 'karte', team: 1, rot: true, html: '' }).ok && lp.f.filter(f => f.team === 1 && !f.aktiv).length === 1;
+        out.standards = ['elfmeter', 'freistoss'].every(standard => ['tor', 'mauer', 'parade'].every(ergebnis => { const x = lauf({ art: 'standard-gegner', standard, team: 1, ergebnis, html: '' }); return x.ok && (ergebnis !== 'tor' || x.netz !== null); }));
+        // "Nächste Szene" zeigt Offenes sofort
+        lp.queue = [{ art: 'info', html: '<div id="test-offen">offen</div>', minute: 80 }]; lp.ende = 80;
+        simulateMatchStep();
+        out.aufholen = !!document.getElementById('test-offen');
+        return out;
+    });
+    // Ganzes Spiel mit Physik im Zeitraffer: Ticker und Anzeige stimmen am Ende mit dem Ergebnis überein
+    const spiel = await page.evaluate(() => {
+        const out = {};
+        currentMatch = null; livePhysik = null;
+        startMatchdayFlow(); skipPressAndPlay();
+        live3d.laeuft = false;
+        safeLocalSet('anstoss_fm13_live_tempo', '4');
+        let schritte = 0;
+        while (document.getElementById('btn-finish-match').style.display === 'none' && schritte < 60 * 60 * 6) {
+            if (currentMatch.awaitingHalftimeTalk && document.getElementById('halftime-talk-overlay').classList.contains('show')) chooseHalftimeTalk('ruhig');
+            if (currentMatch.awaitingSetPiece && document.getElementById('setpiece-overlay').classList.contains('show')) standardWaehlen(defaultSetPieceChoice(currentMatch.setPiece));
+            spielphysikTakt(1 / 60); schritte++;
+        }
+        out.fertig = document.getElementById('btn-finish-match').style.display !== 'none';
+        out.anzeige = document.getElementById('live-score').innerText.replace(/\s/g, '') === `${currentMatch.homeGoals}:${currentMatch.awayGoals}`;
+        const text = document.getElementById('ticker-log').innerText;
+        out.tore = (text.match(/TOR!|Gegentor|Verwandelt/g) || []).length >= currentMatch.homeGoals + currentMatch.awayGoals;
+        out.abpfiff = text.includes('Abpfiff');
+        out.minute = document.getElementById('live-minute').innerText.startsWith('90');
+        out.dauer = Math.round(schritte / 60);
+        safeLocalSet('anstoss_fm13_live_tempo', '1');
+        return out;
+    });
+    Object.assign(r, Object.fromEntries(Object.entries(spiel).map(([k, v]) => ['spiel_' + k, v])));
+    const K = ['oben', 'aktiv', 'flachpass', 'schuss', 'gepuffert', 'torImNetz', 'anzeige', 'torArten', 'chancen', 'karte', 'standards', 'aufholen', 'spiel_fertig', 'spiel_anzeige', 'spiel_tore', 'spiel_abpfiff', 'spiel_minute'];
+    assert(K.every(k => r[k] === true), `Spielphysik: Ticker folgt dem Ball, Tore im Netz, ganzes Spiel in ${r.spiel_dauer} s Spielzeit (${JSON.stringify(K.map(k => r[k]))})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
+// Reaktionsspiele bei Standards (js/reaktionsspiel.js)
+async function testReaktionsspiel(browser) {
+    console.log('\n[3.155] Reaktionsspiele: Cursor, Trefferchance, Elfmeter, Torwart, Abbrechen, Ecken nur mit Physik');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const r = await page.evaluate(() => {
+        const out = {};
+        closeTutorial(); game.sackPending = false;
+        safeLocalRemove('anstoss_fm13_reaktionsspiel');
+        startMatchdayFlow(); skipPressAndPlay(); stopLiveTickerAutoplay();
+        // Trefferchance: Mitte hilft, daneben schadet, Grenzen halten
+        out.chance = reaktionsChance(0.6, { q: 1 }) > 0.6 && reaktionsChance(0.6, { q: 0 }) < 0.6 && reaktionsChance(0.6, null) === 0.6
+            && reaktionsChance(0.05, { q: 0 }) >= 0.02 && reaktionsChance(0.95, { q: 1 }) <= 0.97
+            && reaktionsChance(0.7, { q: 0.7, ecke: 1, twEcke: 1 }) < reaktionsChance(0.7, { q: 0.7, ecke: 1, twEcke: -1 });
+        // Gute Schützen: langsamerer Cursor, breitere Mitte
+        out.koennen = reaktionsTempo(85).dauer > reaktionsTempo(45).dauer && reaktionsTempo(85).zone > reaktionsTempo(45).zone;
+        // Cursor: Dreieckswelle zwischen -1 und 1
+        const st = { dauer: 1 };
+        out.cursor = reaktionsLage(st, 0) === -1 && Math.abs(reaktionsLage(st, 500)) < 1e-9 && reaktionsLage(st, 1000) === 1 && Math.abs(reaktionsLage(st, 1500)) < 1e-9;
+        // Elfmeter mit Reaktionsspiel
+        const schuetze = squad.find(p => lineup.includes(p.id) && p.pos !== 'TW');
+        currentMatch.setPiece = { type: 'elfmeter', gefoultId: schuetze.id, minute: 30 };
+        currentMatch.awaitingSetPiece = true;
+        showSetPiecePanel();
+        out.fenster = document.getElementById('setpiece-overlay').classList.contains('show') && document.getElementById('setpiece-options').innerHTML.includes('standardWaehlen');
+        standardWaehlen(String(schuetze.id));
+        out.reaktion = document.getElementById('reaktion-overlay').classList.contains('show') && !document.getElementById('setpiece-overlay').classList.contains('show') && reaktion.plan.stufen.length === 3;
+        return out;
+    });
+    // Ecke wählen, dann zweimal genau in der Mitte tippen
+    await page.evaluate(() => reaktionsEcke(1));
+    for (let i = 0; i < 2; i++) {
+        await page.waitForFunction(n => reaktion && reaktion.stufe === n && reaktion.laeuft, i + 1, { timeout: 3000 }).catch(() => null);
+        await page.evaluate(() => { const st = reaktion.plan.stufen[reaktion.stufe]; reaktion.start = performance.now() - st.dauer * 500; reaktionsTippen(); });
+    }
+    await page.waitForFunction(() => !document.getElementById('reaktion-overlay').classList.contains('show'), null, { timeout: 6000 }).catch(() => null);
+    Object.assign(r, await page.evaluate(() => {
+        const out = {};
+        const b = game.reaktionsBilanz || {};
+        out.elfmeter = !currentMatch.setPiece && !currentMatch.awaitingSetPiece && b.versuche === 1 && b.perfekt === 1;
+        // Schließen-Knopf führt automatisch aus
+        currentMatch.setPiece = { type: 'freistoss', minute: 40 };
+        currentMatch.awaitingSetPiece = true;
+        standardWaehlen('direkt');
+        out.freistossPlan = reaktion && reaktion.plan.stufen.map(s => s.art).join() === 'quer,hoch';
+        document.querySelector('#reaktion-overlay .generic-modal-close').click();
+        out.abbrechen = !currentMatch.setPiece && !document.getElementById('reaktion-overlay').classList.contains('show') && (game.reaktionsBilanz.versuche === 1);
+        // Schalter aus: ohne Reaktionsspiel sofort ausgeführt
+        reaktionsspielUmschalten();
+        out.schalter = !reaktionsspielAn();
+        currentMatch.setPiece = { type: 'freistoss', minute: 41 };
+        currentMatch.awaitingSetPiece = true;
+        standardWaehlen('flanke');
+        out.ohne = !currentMatch.setPiece && !document.getElementById('reaktion-overlay').classList.contains('show');
+        reaktionsspielUmschalten();
+        // Torwart beim Elfmeter gegen uns: richtig geraten hält er viel öfter
+        const alt = Math.random;
+        let toreRichtig = 0, toreFalsch = 0;
+        const gegner = () => (currentMatch.isHome ? currentMatch.awayGoals : currentMatch.homeGoals);
+        for (let i = 0; i < 40; i++) {
+            const w = (i + 0.5) / 40;
+            Math.random = () => w;
+            let v = gegner(); playOpponentPenalty({ ecke: 1, twEcke: 1 }, true); toreRichtig += gegner() - v;
+            v = gegner(); playOpponentPenalty({ ecke: 1, twEcke: -1 }, true); toreFalsch += gegner() - v;
+        }
+        Math.random = alt;
+        out.torwart = toreRichtig < toreFalsch;
+        // Torwartspiel: Wahl aus Sicht des Torwarts, gespeichert aus Sicht des Schützen
+        currentMatch.setPiece = { type: 'elfmeter-gegner', minute: 50 };
+        currentMatch.awaitingSetPiece = true;
+        let z = null;
+        reaktionsspielStarten(currentMatch.setPiece, 'torwart', erg => { z = erg; });
+        reaktionsEcke(-1);
+        out.torwartSicht = reaktion && reaktion.twEcke === 1;
+        window.__twZ = () => z;
+        // Ecken als Standard gibt es nur, wenn die Physik das Spiel zeigt
+        currentMatch.setPiece = null; currentMatch.awaitingSetPiece = false;
+        Math.random = () => 0.17;
+        const ohnePhysik = rollLiveSetPiece(0);
+        currentMatch.drehbuch = [];
+        const mitPhysik = rollLiveSetPiece(0);
+        currentMatch.drehbuch = null;
+        Math.random = alt;
+        out.ecke = ohnePhysik === false && mitPhysik === true && currentMatch.setPiece && currentMatch.setPiece.type === 'ecke';
+        out.eckOptionen = Object.keys(getCornerOptions()).join() === 'flanke,kurz';
+        currentMatch.setPiece = null; currentMatch.awaitingSetPiece = false;
+        return out;
+    }));
+    await page.waitForFunction(() => window.__twZ && window.__twZ(), null, { timeout: 4000 }).catch(() => null);
+    r.torwartErgebnis = await page.evaluate(() => { const z = window.__twZ(); return !!z && z.twEcke === 1 && [-1, 0, 1].includes(z.ecke); });
+    // Handy: Leiste und Knöpfe passen ohne Überlauf
+    Object.assign(r, await page.evaluate(() => {
+        const out = {};
+        currentMatch.setPiece = { type: 'freistoss', minute: 60 }; currentMatch.awaitingSetPiece = true;
+        standardWaehlen('direkt');
+        const box = document.querySelector('#reaktion-overlay .generic-modal-box');
+        const leiste = document.querySelector('.reaktion-leiste');
+        const knopf = document.getElementById('reaktion-jetzt');
+        out.handy = !!leiste && leiste.getBoundingClientRect().width <= box.getBoundingClientRect().width && knopf.getBoundingClientRect().height >= 32 && document.documentElement.scrollWidth <= window.innerWidth;
+        reaktionsspielAbbrechen();
+        return out;
+    }));
+    const K = ['chance', 'koennen', 'cursor', 'fenster', 'reaktion', 'elfmeter', 'freistossPlan', 'abbrechen', 'schalter', 'ohne', 'torwart', 'torwartSicht', 'torwartErgebnis', 'ecke', 'eckOptionen', 'handy'];
+    assert(K.every(k => r[k] === true), `Reaktionsspiele: Cursor, Chance, Elfmeter, Torwart, Abbrechen, Ecken (${JSON.stringify(K.map(k => r[k]))})`);
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
     await page.close();
 }
@@ -4587,6 +4781,8 @@ module.exports = {
     testStartmenue,
     testEinsteiger,
     testLive3D,
+    testSpielphysik,
+    testReaktionsspiel,
     testAusschreitungSzene,
     testStadionAnsicht,
     testStartUndVersion,

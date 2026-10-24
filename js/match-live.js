@@ -74,6 +74,15 @@
         return pool[Math.floor(Math.random() * pool.length)];
     }
 
+    // Tickerzeile mit Ereignis: läuft die Spielphysik (js/spielphysik.js), wandert sie ins Drehbuch
+    // und erscheint, wenn die Szene auf dem Platz so weit ist; sonst sofort wie bisher.
+    function liveTicker(html, ereignis) {
+        if (currentMatch && currentMatch.drehbuch) { currentMatch.drehbuch.push(Object.assign({ html }, ereignis || {})); return; }
+        const log = document.getElementById('ticker-log');
+        if (log && html) { log.innerHTML += html; log.scrollTop = log.scrollHeight; }
+        if (ereignis && ereignis.aktion) ereignis.aktion();
+    }
+
     function pickWeightedScorer(players) {
         // Stürmer treffen am häufigsten, dann Mittelfeld, selten Abwehr, sehr selten der Torwart.
         // Ein "Eisenfuß" ist für seine überraschenden Distanzschüsse/Standards bekannt und
@@ -90,7 +99,26 @@
         return pool[Math.floor(Math.random() * pool.length)];
     }
 
-    function simulateMatchStep() {
+    // mitPhysik = true nur aus der Spielphysik: dann schreibt der Spielzug ins Drehbuch. Ohne (Knopf
+    // "Nächste Szene", Durchspielen, Tests) wird erst alles Offene gezeigt, dann läuft er sofort.
+    function simulateMatchStep(mitPhysik) {
+        if (mitPhysik !== true && typeof spielphysikAufholen === 'function') spielphysikAufholen();
+        const regie = mitPhysik === true && !!currentMatch && typeof spielphysikLaeuft === 'function' && spielphysikLaeuft();
+        if (!regie && currentMatch) currentMatch.drehbuch = null;
+        if (regie) currentMatch.drehbuch = [];
+        const von = currentMatch ? currentMatch.minute : 0;
+        try {
+            simulateMatchStepIntern(regie);
+        } finally {
+            if (regie && currentMatch) {
+                const liste = currentMatch.drehbuch || [];
+                currentMatch.drehbuch = null;
+                spielphysikDrehbuch(liste, von, currentMatch.minute);
+            }
+        }
+    }
+
+    function simulateMatchStepIntern(regie) {
         if (!currentMatch || currentMatch.minute >= 90) return; // nach dem Abpfiff keine Szenen mehr
         if (currentMatch.awaitingHalftimeTalk) return; // wartet auf die Halbzeit-Ansprache-Auswahl
         // Wartet auf die Entscheidung beim Standard (js/set-pieces.js) - "Nächste Szene" zeigt sie erneut an.
@@ -98,15 +126,16 @@
         let prevMinute = currentMatch.minute;
         currentMatch.minute += Math.floor(Math.random() * 14) + 8;
         if (currentMatch.minute >= 90) { currentMatch.minute = 90; }
-        document.getElementById('live-minute').innerText = currentMatch.minute + ". Minute";
+        if (!regie) document.getElementById('live-minute').innerText = currentMatch.minute + ". Minute";
+        // Minute eines Ereignisses: mit Spielphysik verteilt über den Spielzug, sonst sein Ende
+        let zeit = () => regie ? spielphysikMinute(prevMinute, currentMatch.minute) : currentMatch.minute;
 
         // Halbzeit-Marker, sobald die 45. Minute überschritten wird
         if (!currentMatch.halftimeShown && prevMinute < 45 && currentMatch.minute >= 45) {
-            document.getElementById('ticker-log').innerHTML += `<div style="color:var(--blue); font-weight:bold;">⏸️ HALBZEITPAUSE (${currentMatch.homeGoals}:${currentMatch.awayGoals})</div>`;
             currentMatch.halftimeShown = true;
             currentMatch.awaitingHalftimeTalk = true;
             currentMatch.carrySpan = currentMatch.minute - prevMinute; // Minuten zählen im nächsten Zug
-            showHalftimeTalkModal();
+            liveTicker(`<div style="color:var(--blue); font-weight:bold;">⏸️ HALBZEITPAUSE (${currentMatch.homeGoals}:${currentMatch.awayGoals})</div>`, { art: 'halbzeit', minute: 45, aktion: showHalftimeTalkModal });
             return; // dieser Schritt endet hier - Tor/Karten-Auswertung erst nach der Ansprache
         }
 
@@ -167,8 +196,10 @@
         // Standards (Elfmeter, Freistoß): unterbrechen den Spielzug und warten auf die Entscheidung.
         if (currentMatch.minute < 88 && typeof rollLiveSetPiece === 'function' && rollLiveSetPiece(currentMatch.isHome ? diff : -diff)) {
             currentMatch.carrySpan = spanMin; // die Minuten des Spielzugs laufen im nächsten weiter
-            document.getElementById('live-score').innerText = currentMatch.homeGoals + " : " + currentMatch.awayGoals;
-            renderLiveMatchStats();
+            if (!regie) {
+                document.getElementById('live-score').innerText = currentMatch.homeGoals + " : " + currentMatch.awayGoals;
+                renderLiveMatchStats();
+            }
             return;
         }
 
@@ -186,8 +217,10 @@
         torEreignisse.forEach(wirTreffen => {
             eventHandled = true;
             let art = GOAL_STYLES[Math.floor(Math.random() * GOAL_STYLES.length)];
+            let minute = zeit();
+            let team = wirTreffen === currentMatch.isHome ? 0 : 1;
             // Videobeweis (js/set-pieces.js): ein Teil der Tore wird wegen Abseits zurückgenommen.
-            let annulliert = typeof varOverturnsGoal === 'function' && varOverturnsGoal(wirTreffen);
+            let annulliert = typeof varOverturnsGoal === 'function' && varOverturnsGoal(wirTreffen, minute);
             if (annulliert) {
                 recordLiveShot(wirTreffen === currentMatch.isHome, true);
                 if (wirTreffen && typeof noteRefereeControversy === 'function') noteRefereeControversy('var');
@@ -198,12 +231,14 @@
                 let { scorer, assist } = creditOwnGoal(onPitch);
                 if (hasFkGod && Math.random() < 0.3) art = 'mit einem traumhaften direkten Freistoß';
                 let scorerText = scorer ? `${scorer.name} trifft ${art}${assist ? ` (Vorlage: ${assist.name})` : ''}` : `Tor ${art}`;
-                document.getElementById('ticker-log').innerHTML += `<div style="color:var(--primary); font-weight:bold;">⚽ ${currentMatch.minute}. Min: TOR! ${scorerText} für ${ourName}!</div>`;
+                liveTicker(`<div style="color:var(--primary); font-weight:bold;">⚽ ${minute}. Min: TOR! ${scorerText} für ${ourName}!</div>`,
+                    { art: 'tor', team, minute, stil: art, spielerId: scorer ? scorer.id : null, stand: [currentMatch.homeGoals, currentMatch.awayGoals] });
             } else {
                 if (currentMatch.isHome) currentMatch.awayGoals++; else currentMatch.homeGoals++;
                 recordLiveShot(!currentMatch.isHome, true);
                 playSound('goal');
-                document.getElementById('ticker-log').innerHTML += `<div style="color:var(--danger);">⚽ ${currentMatch.minute}. Min: Gegentor - ${oppName} trifft ${art}.</div>`;
+                liveTicker(`<div style="color:var(--danger);">⚽ ${minute}. Min: Gegentor - ${oppName} trifft ${art}.</div>`,
+                    { art: 'tor', team, minute, stil: art, stand: [currentMatch.homeGoals, currentMatch.awayGoals] });
             }
         });
 
@@ -227,6 +262,8 @@
             // Spiel unter besonderer psychischer Anspannung - hitzköpfige Spieler geraten
             // dabei eher in Zweikämpfe außer Kontrolle, ruhige Charaktere bleiben unberührt.
             let isNervenkriegMatch = isDerbyOpponent(currentMatch.isHome ? currentMatch.awayName : currentMatch.homeName) && (rivalryRecord.shootoutsVsRival || 0) >= 2;
+            let kartenMinute = zeit();
+            let eigenesTeam = currentMatch.isHome ? 0 : 1;
             if (ourCardRoll < ourCardThreshold && onPitch.length > 0) {
                 eventHandled = true;
                 let culprit;
@@ -246,11 +283,11 @@
                     if (typeof noteRefereeControversy === 'function') noteRefereeControversy('rot', { playerId: culprit.id, name: culprit.name });
                     if (currentMatch.isHome) currentMatch.homeStrPenalty += 6; else currentMatch.awayStrPenalty += 6;
                     let label = isSecondYellow ? "🟨🟥 Gelb-Rote Karte" : "🟥 Platzverweis";
-                    document.getElementById('ticker-log').innerHTML += `<div style="color:var(--danger); font-weight:bold;">${label} für ${culprit.name}! Wir spielen in Unterzahl weiter.</div>`;
+                    liveTicker(`<div style="color:var(--danger); font-weight:bold;">${label} für ${culprit.name}! Wir spielen in Unterzahl weiter.</div>`, { art: 'karte', team: eigenesTeam, spielerId: culprit.id, rot: true, minute: kartenMinute });
                 } else {
                     currentMatch.yellowCards[culprit.id] = (currentMatch.yellowCards[culprit.id] || 0) + 1;
                     currentMatch.stats.yellow[liveStatsSide(currentMatch.isHome)]++;
-                    document.getElementById('ticker-log').innerHTML += `<div style="color:var(--accent);">🟨 ${currentMatch.minute}. Min: Gelbe Karte für ${culprit.name}.</div>`;
+                    liveTicker(`<div style="color:var(--accent);">🟨 ${kartenMinute}. Min: Gelbe Karte für ${culprit.name}.</div>`, { art: 'karte', team: eigenesTeam, spielerId: culprit.id, rot: false, minute: kartenMinute });
                 }
             } else if (ourCardRoll < 0.11 * refCardMult) {
                 // Gegnerische Karte - kein individueller Spieler, aber wirkt sich leicht auf Spielverlauf aus
@@ -260,10 +297,10 @@
                 if (isRed) {
                     if (currentMatch.isHome) currentMatch.awayStrPenalty += 6; else currentMatch.homeStrPenalty += 6;
                     let oppName = currentMatch.isHome ? currentMatch.awayName : currentMatch.homeName;
-                    document.getElementById('ticker-log').innerHTML += `<div style="color:var(--blue);">🟥 ${currentMatch.minute}. Min: Platzverweis bei ${oppName}! Der Gegner muss in Unterzahl weiterspielen.</div>`;
+                    liveTicker(`<div style="color:var(--blue);">🟥 ${kartenMinute}. Min: Platzverweis bei ${oppName}! Der Gegner muss in Unterzahl weiterspielen.</div>`, { art: 'karte', team: 1 - eigenesTeam, rot: true, minute: kartenMinute });
                 } else {
                     let oppName = currentMatch.isHome ? currentMatch.awayName : currentMatch.homeName;
-                    document.getElementById('ticker-log').innerHTML += `<div style="color:var(--text-muted);">🟨 ${currentMatch.minute}. Min: Gelbe Karte bei ${oppName}.</div>`;
+                    liveTicker(`<div style="color:var(--text-muted);">🟨 ${kartenMinute}. Min: Gelbe Karte bei ${oppName}.</div>`, { art: 'karte', team: 1 - eigenesTeam, rot: false, minute: kartenMinute });
                 }
             }
         }
@@ -276,48 +313,48 @@
             let line = pool[Math.floor(Math.random() * pool.length)];
             if (pool === OUR_CHANCE_EVENTS) recordLiveShot(currentMatch.isHome, Math.random() < 0.45);
             if (pool === OPP_CHANCE_EVENTS) recordLiveShot(!currentMatch.isHome, Math.random() < 0.45);
-            document.getElementById('ticker-log').innerHTML += `<div style="color:var(--text-muted); font-size:var(--fs-small);">${currentMatch.minute}. Min: ${line}</div>`;
+            let chancenMinute = zeit();
+            let chancenTeam = pool === OUR_CHANCE_EVENTS ? (currentMatch.isHome ? 0 : 1) : (pool === OPP_CHANCE_EVENTS ? (currentMatch.isHome ? 1 : 0) : null);
+            liveTicker(`<div style="color:var(--text-muted); font-size:var(--fs-small);">${chancenMinute}. Min: ${line}</div>`, { art: 'chance', team: chancenTeam, text: line, minute: chancenMinute });
         }
 
         document.getElementById('ticker-log').scrollTop = document.getElementById('ticker-log').scrollHeight;
-        document.getElementById('live-score').innerText = currentMatch.homeGoals + " : " + currentMatch.awayGoals;
+        if (!regie) document.getElementById('live-score').innerText = currentMatch.homeGoals + " : " + currentMatch.awayGoals;
         // Ballbesitz folgt dem Kräfteverhältnis (Heimsicht), Bus parken gibt ihn bewusst ab.
         let heimBesitz = 50 + diff * 1.1 + (Math.random() * 10 - 5);
         if (activeLiveShout === 'bus') heimBesitz += currentMatch.isHome ? -8 : 8;
         if (activeLiveShout === 'pressing') heimBesitz += currentMatch.isHome ? 4 : -4;
         currentMatch.stats.possSum += Math.max(25, Math.min(75, heimBesitz));
         currentMatch.stats.possSteps++;
-        // Abschlüsse, die nicht im Ticker landen (geblockt, drüber, vorbei)
-        if (Math.random() < 0.3 + Math.max(0, diff) * 0.01) recordLiveShot(true, Math.random() < 0.3);
-        if (Math.random() < 0.3 + Math.max(0, -diff) * 0.01) recordLiveShot(false, Math.random() < 0.3);
-        renderLiveMatchStats();
+        currentMatch.letzterBesitz = Math.max(25, Math.min(75, heimBesitz));
+        // Abschlüsse, die nicht im Ticker landen (geblockt, drüber, vorbei); mit Spielphysik als Szene ohne Zeile
+        if (Math.random() < 0.3 + Math.max(0, diff) * 0.01) { recordLiveShot(true, Math.random() < 0.3); if (regie) liveTicker('', { art: 'schuss', team: 0, minute: zeit() }); }
+        if (Math.random() < 0.3 + Math.max(0, -diff) * 0.01) { recordLiveShot(false, Math.random() < 0.3); if (regie) liveTicker('', { art: 'schuss', team: 1, minute: zeit() }); }
+        if (!regie) renderLiveMatchStats();
         applyTacticAutomation();
 
         // Co-Kommentator: unabhängig vom Spielgeschehen, ca. jeder 5. Spielzug
         if (Math.random() < 0.2) {
             let line = pickContextualCommentaryLine();
-            document.getElementById('ticker-log').innerHTML += `<div style="color:var(--teal); font-size:var(--fs-caption); font-style:italic;">${line}</div>`;
-            document.getElementById('ticker-log').scrollTop = document.getElementById('ticker-log').scrollHeight;
+            liveTicker(`<div style="color:var(--teal); font-size:var(--fs-caption); font-style:italic;">${line}</div>`, { art: 'info', minute: zeit() });
         }
 
         // Spielfeld-Animation: der Ball bewegt sich sichtbar über das Feld, damit man auch
         // optisch mitverfolgen kann, wo gerade gespielt wird - Richtung/Position hängt vom
         // Spielgeschehen dieses Spielzugs ab (Angriff Richtung Tor bei einer Chance/einem Tor,
         // sonst eher Mittelfeld-Gerangel).
-        animateLiveBall(eventHandled ? (Math.random() < userFavoredProb ? 'home' : 'away') : (diff > 8 ? 'home' : (diff < -8 ? 'away' : 'midfield')), eventHandled);
+        animateLiveBall(eventHandled ? (Math.random() < userFavoredProb ? 'home' : 'away') : (diff > 8 ? 'home' : (diff < -8 ? 'away' : 'midfield')));
 
-        if (currentMatch.minute >= 90) { endMatchSimulation(); }
+        if (currentMatch.minute >= 90) liveTicker('', { art: 'abpfiff', minute: 90, aktion: endMatchSimulation });
         // Co-Trainer im Livespiel (js/co-trainer-live.js): Hinweis aus dem echten Spielstand.
-        if (typeof tickCoTrainerLive === 'function') tickCoTrainerLive();
+        if (typeof tickCoTrainerLive === 'function') liveTicker('', { art: 'cotrainer', minute: currentMatch.minute, aktion: tickCoTrainerLive });
     }
 
     // ---------- SPIELFELD-BALL-ANIMATION ----------
     // Bewegt einen kleinen Ball-Indikator über das Live-Spielfeld (per CSS-Transition), damit
     // jeder Spielzug auch optisch als "hier passiert gerade etwas" wahrnehmbar ist, statt nur
     // als Text im Ticker zu erscheinen.
-    function animateLiveBall(direction, ereignis) {
-        // 3D-Ansicht (js/live-3d.js): Chancen und Tore als Szene
-        if (typeof live3dSpielzug === 'function') live3dSpielzug(direction, ereignis);
+    function animateLiveBall(direction) {
         let ball = document.getElementById('live-ball-indicator');
         if (!ball) return;
         let top, left;
@@ -338,6 +375,12 @@
         stopLiveTickerAutoplay();
         liveTickerPaused = false;
         updateLiveTickerPauseButton();
+        // Mit 3D-Ansicht führt die Spielphysik (js/spielphysik.js) den Takt: der nächste Spielzug
+        // kommt, wenn der vorige auf dem Platz zu Ende gespielt ist.
+        if (typeof spielphysikStart === 'function' && spielphysikStart()) {
+            if (typeof live3dAnzeigen === 'function') live3dAnzeigen();
+            return;
+        }
         liveTickerTimer = setInterval(() => {
             if (!currentMatch || liveTickerPaused || currentMatch.awaitingHalftimeTalk || currentMatch.awaitingSetPiece || currentMatch.minute >= 90) return;
             simulateMatchStep();
@@ -356,6 +399,7 @@
     }
 
     function simulateRestOfMatch() {
+        if (typeof spielphysikAufholen === 'function') spielphysikAufholen();
         while (currentMatch.minute < 90) {
             // Beim schnellen Durchspielen wird "Ruhig bleiben" automatisch (neutral) gewählt,
             // damit kein Modal den Ablauf unterbricht.

@@ -23111,27 +23111,1442 @@ function markiereGesperrteMenuepunkte(mehr) {
 }
 
 /* eslint-enable */
+// Spielphysik im Livespiel: Ball und 22 Spieler werden physikalisch berechnet (Schwerkraft,
+// Luftwiderstand, Rollreibung, Aufsprung, Pfosten, Latte, Netz, Laufen mit begrenzter
+// Beschleunigung). Die Spiellogik (simulateMatchStep() in js/match-live.js) legt wie bisher fest,
+// WAS in einem Spielzug passiert (Tore aus getExpectedGoals(), Karten, Chancen, Standards), und
+// schreibt es mit Minute ins Drehbuch. Die Regie hier spielt das Drehbuch auf dem Platz nach:
+// Ein Tor erscheint im Ticker und auf der Anzeigetafel erst, wenn der Ball im Bild die Torlinie
+// überquert; Chancen, Karten und Standards erscheinen, wenn sie auf dem Platz passieren. Die Art
+// der Szene folgt dem Tickertext (Kopfball nach Ecke, Konter, Distanzschuss, Pfosten ...).
+// js/live-3d.js zeichnet nur diesen Zustand. Ohne 3D-Ansicht, bei reduzierter Bewegung, beim
+// schnellen Durchspielen und mit "Nächste Szene" läuft alles sofort wie vorher.
+// Eigener Zufall (spRnd): Math.random gehört der Spiellogik, die Physik ändert keine Ergebnisse.
+
+const SP_L = 105, SP_B = 68, SP_G = 9.81;
+const SP_PFOSTEN = [30.34, 37.66], SP_LATTE = 2.44;
+const SP_ROLL = 1.6;          // Rollreibung auf Rasen in m/s²
+const SP_LUFT = 0.011;        // Luftwiderstand (Verzögerung = SP_LUFT · v²)
+const SP_DT = 1 / 120;        // fester Physik-Takt in Sekunden
+const SP_TEMPO_KEY = 'anstoss_fm13_live_tempo';
+// Sekunden je Spielminute und Faktor für die Physik je Tempostufe
+const SP_TEMPI = { 1: { sek: 0.9, physik: 1 }, 2: { sek: 0.45, physik: 1.35 }, 4: { sek: 0.2, physik: 1.8 } };
+// Wie fällt das Tor? Tickertext (GOAL_STYLES in js/match.js) -> Szene
+const SP_TOR_SZENEN = {
+    'per Kopfball nach einer Ecke': 'ecke', 'mit einem Flachschuss ins lange Eck': 'flach', 'nach einem blitzschnellen Konter': 'konter',
+    'mit einem Distanzschuss aus 20 Metern': 'distanz', 'als Abstauber nach einer Torwartparade': 'abstauber', 'nach einem feinen Doppelpass': 'doppelpass',
+    'mit einem sehenswerten Volley': 'volley', 'per Elfmeter': 'elfmeter', 'mit einem direkten Freistoß': 'freistoss',
+    'mit einem traumhaften direkten Freistoß': 'freistoss', 'nach einer Flanke von außen': 'flanke'
+};
+// Chancen und Füllzeilen (js/match.js) -> Szene und Ausgang
+const SP_CHANCEN_SZENEN = {
+    'Gute Kombination, aber der letzte Pass sitzt nicht.': ['fehlpass'],
+    'Distanzschuss geht knapp über die Latte!': ['distanz', 'drueber'],
+    'Der gegnerische Torwart klärt in höchster Not zur Ecke.': ['kombination', 'parade'],
+    'Kopfball nach Ecke – knapp vorbei!': ['ecke', 'vorbei'],
+    'Der Pfosten rettet für den Gegner!': ['kombination', 'pfosten'],
+    'Flanke von rechts, der Kopfball streicht knapp am Tor vorbei.': ['flanke', 'vorbei'],
+    'Schneller Konter - im letzten Moment noch abgelaufen.': ['konter-abgelaufen'],
+    'Freistoß aus 18 Metern, der Torwart lenkt ihn über die Latte!': ['freistoss', 'parade'],
+    'Doppelpass im Strafraum, aber der Abschluss ist zu harmlos.': ['doppelpass', 'harmlos'],
+    'Ein Schuss wird im letzten Moment noch geblockt.': ['kombination', 'geblockt'],
+    'Gefährlicher Konter, aber unsere Abwehr klärt in letzter Sekunde.': ['konter-abgelaufen'],
+    'Fernschuss des Gegners geht knapp drüber.': ['distanz', 'drueber'],
+    'Unser Torwart pariert stark!': ['kombination', 'parade'],
+    'Der Gegner vergibt eine Großchance freistehend!': ['kombination', 'vorbei'],
+    'Gefährliche Flanke in unseren Strafraum - geklärt!': ['flanke-geklaert'],
+    'Der Gegner trifft nur das Außennetz.': ['kombination', 'aussennetz'],
+    'Unsere Abwehr steht nach einem Ballverlust weit offen - Glück gehabt!': ['konter', 'vorbei'],
+    'Ein Kopfball des Gegners landet auf der Latte!': ['flanke', 'latte'],
+    'Ecke wird ungefährlich geklärt.': ['ecke-geklaert'],
+    'Zweikampf im Mittelfeld, Ball geht ins Toraus.': ['seitenaus'],
+    'Ein Freistoß aus dem Halbfeld segelt ins Toraus.': ['halbfeld-freistoss'],
+    'Abseits! Der Linienrichter hebt die Fahne.': ['abseits'],
+    'Ein Spieler bleibt kurz liegen, geht dann aber weiter.': ['liegen'],
+    'Der Schiedsrichter lässt eine Rudelbildung schlichten.': ['rudel'],
+    'Hektische Szene an der Mittellinie, der Schiedsrichter beruhigt.': ['rudel']
+};
+// Ungefähre Dauer einer Szene in Sekunden: so früh beginnt sie vor ihrer Minute
+const SP_SZENEN_DAUER = { tor: 7, chance: 6, schuss: 5, karte: 5, standard: 6, 'standard-gegner': 8, var: 9 };
+
+let livePhysik = null;   // Zustand des laufenden Livespiels, nicht im Spielstand
+let spSaat = 0x2545f491;
+function spRnd() { spSaat = (spSaat * 1664525 + 1013904223) >>> 0; return spSaat / 4294967296; }
+function spKlemme(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+// ---------- Schalter ----------
+function spielphysikAktiv() {
+    if (window.anstossOhnePhysik) return false;
+    if (typeof live3dAn !== 'function' || !live3dAn() || live3dReduziert()) return false;
+    return !!document.getElementById('live-3d-canvas');
+}
+function spTempo() {
+    const t = Number(typeof safeLocalGet === 'function' ? safeLocalGet(SP_TEMPO_KEY) : 1);
+    return SP_TEMPI[t] ? t : 1;
+}
+function spielTempoSetzen(t) {
+    if (!SP_TEMPI[t]) return;
+    safeLocalSet(SP_TEMPO_KEY, String(t));
+    spTempoKnoepfe();
+    showToast(`Spieltempo ${t}×`, 'info', 1500);
+}
+function spTempoKnoepfe() {
+    const box = document.getElementById('live-tempo-box');
+    if (!box) return;
+    box.hidden = !spielphysikAktiv();
+    const t = spTempo();
+    [1, 2, 4].forEach(n => { const b = document.getElementById('live-tempo-' + n); if (b) b.className = n === t ? 'btn-action' : 'btn-secondary'; });
+}
+
+// ---------- Koordinaten ----------
+// Team 0 (Heim) spielt in der ersten Halbzeit nach rechts.
+function spR(team) { return (team === 0) !== !!(livePhysik && livePhysik.zweite) ? 1 : -1; }
+// Angriffssicht (ax ab dem eigenen Tor, ay von links in Laufrichtung) -> Platz
+function spW(team, ax, ay) { return spR(team) > 0 ? { x: ax, y: ay } : { x: SP_L - ax, y: SP_B - ay }; }
+function spA(team, x, y) { return spW(team, x, y); }
+function spTorX(team) { return spR(team) > 0 ? SP_L : 0; }   // Tor, auf das team schießt
+
+// ---------- Aufbau ----------
+function spSlots(formation) {
+    const coords = typeof getFormationCoords === 'function' ? getFormationCoords(formation || '4-4-2') : null;
+    const liste = (coords && coords.length === 11 ? coords : [{ top: 88, left: 50 }, { top: 70, left: 18 }, { top: 70, left: 39 }, { top: 70, left: 61 }, { top: 70, left: 82 },
+        { top: 45, left: 18 }, { top: 45, left: 39 }, { top: 45, left: 61 }, { top: 45, left: 82 }, { top: 18, left: 35 }, { top: 18, left: 65 }]);
+    return liste.map((c, i) => ({
+        fx: i === 0 ? 0.025 : spKlemme(0.03 + (90 - c.top) / 76 * 0.6, 0.12, 0.66),
+        fy: c.left / 100,
+        rolle: i === 0 ? 'TW' : (c.top >= 60 ? 'ABW' : (c.top >= 30 ? 'MIT' : 'ST'))
+    }));
+}
+
+function spEigeneAufPlatz() {
+    const m = currentMatch;
+    const ordnung = { TW: 0, ABW: 1, MIT: 2, ST: 3 };
+    return squad.filter(p => lineup.includes(p.id) && !(m.sentOff || []).includes(p.id))
+        .sort((a, b) => (ordnung[a.pos] - ordnung[b.pos]) || (b.strength - a.strength));
+}
+
+function spNeu(m) {
+    const eigen = m.isHome ? 0 : 1;
+    const figuren = [];
+    [0, 1].forEach(team => {
+        const slots = spSlots(team === eigen ? game.formation : '4-4-2');
+        slots.forEach((s, i) => {
+            const haut = typeof live3dHaut === 'function' ? live3dHaut(team, i, m.homeName) : '';
+            figuren.push({ team, nr: i, rolle: s.rolle, fx: s.fx, fy: s.fy, torwart: i === 0, x: 52.5, y: 34, vx: 0, vy: 0, zx: 52.5, zy: 34,
+                phase: (i * 7 + team * 3) % 6, haut, id: null, name: '', karte: 0, karteBis: 0, jubel: 0, hecht: 0, hechtZeit: 0, liegt: 0, sprint: false, aktiv: true });
+        });
+    });
+    livePhysik = {
+        match: m, f: figuren, eigen,
+        ball: { x: 52.5, y: 34, z: 0, vx: 0, vy: 0, vz: 0, halter: null, letzter: 0, imNetz: null, aus: null },
+        schiri: { x: 48, y: 30, vx: 0, vy: 0, zx: 48, zy: 30, phase: 0 },
+        t: 0, rest: 0, uhr: m.minute || 0, ende: m.minute || 0, anzeige: [m.homeGoals, m.awayGoals],
+        besitz: 0, zielBesitz: 50, pass: null, naechsterPass: 0, schuss: null,
+        queue: [], szene: null, text: null, textBis: 0, zweite: !!(m.halftimeShown && m.minute >= 45),
+        halbzeitWartet: false, abpfiff: m.minute >= 90, angezeigteMinute: -1, roteGegner: 0
+    };
+    spKaderAbgleich();
+    spAnstoss(0, true);
+}
+
+// Eigene Figuren tragen die echten Spieler (Namen über dem Ballführenden, Torschütze schießt selbst).
+function spKaderAbgleich() {
+    const lp = livePhysik, m = lp.match;
+    const auf = spEigeneAufPlatz();
+    const eigene = lp.f.filter(f => f.team === lp.eigen);
+    const vergeben = new Set();
+    eigene.forEach(f => { if (f.id && auf.some(p => p.id === f.id)) vergeben.add(f.id); else f.id = null; });
+    const frei = auf.filter(p => !vergeben.has(p.id));
+    eigene.forEach(f => {
+        if (f.id) return;
+        const passend = frei.find(p => (p.pos === 'TW') === f.torwart) || (f.torwart ? null : frei.find(p => p.pos !== 'TW'));
+        if (passend) { f.id = passend.id; frei.splice(frei.indexOf(passend), 1); }
+    });
+    eigene.forEach(f => {
+        const p = f.id ? squad.find(x => x.id === f.id) : null;
+        f.name = p ? String(p.name).split(' ').slice(-1)[0] : '';
+        f.aktiv = !!p;
+    });
+    // Platzverweise beim Gegner: je Rot fehlt eine Figur
+    const gegnerSeite = lp.eigen === 0 ? 1 : 0;
+    const rote = m.stats ? m.stats.red[gegnerSeite] || 0 : 0;
+    const gegner = lp.f.filter(f => f.team !== lp.eigen && !f.torwart);
+    const raus = gegner.filter(f => f.rolle !== 'ABW').slice(0, rote);
+    gegner.forEach(f => { f.aktiv = !raus.includes(f); });
+}
+
+function spAktive(team) { return livePhysik.f.filter(f => f.aktiv && (team === undefined || f.team === team)); }
+function spFeld(team) { return spAktive(team).filter(f => !f.torwart); }
+function spTorwart(team) { return livePhysik.f.find(f => f.team === team && f.torwart); }
+function spDist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+function spNaechster(liste, p) { return liste.reduce((a, c) => (!a || spDist(c, p) < spDist(a, p) ? c : a), null); }
+
+// ---------- Anstoß ----------
+function spAnstoss(team, sofort) {
+    const lp = livePhysik;
+    lp.besitz = team; lp.pass = null; lp.schuss = null;
+    lp.f.forEach(f => {
+        const ax = f.torwart ? 1.5 : f.fx * SP_L * 0.72;
+        const w = spW(f.team, Math.min(ax, 50), f.fy * SP_B);
+        f.zx = w.x; f.zy = w.y; f.jubel = 0; f.hecht = 0; f.liegt = 0; f.sprint = false;
+        if (sofort) { f.x = w.x; f.y = w.y; f.vx = 0; f.vy = 0; }
+    });
+    const st = spFeld(team).filter(f => f.rolle === 'ST')[0] || spFeld(team)[0];
+    if (st) { st.zx = 52.5 - spR(team) * 0.6; st.zy = 34; if (sofort) { st.x = st.zx; st.y = st.zy; } }
+    const b = lp.ball;
+    Object.assign(b, { x: 52.5, y: 34, z: 0, vx: 0, vy: 0, vz: 0, halter: sofort ? st : null, imNetz: null, aus: null, letzter: team });
+    lp.anstossFigur = st;
+    lp.naechsterPass = lp.t + 1.2;
+}
+
+// ---------- Ballphysik ----------
+function spBallSchritt(b, dt) {
+    if (b.z > 0.0001 || b.vz > 0) {
+        b.vz -= SP_G * dt;
+        const v = Math.hypot(b.vx, b.vy, b.vz), k = Math.max(0, 1 - SP_LUFT * v * dt);
+        b.vx *= k; b.vy *= k; b.vz *= k;
+        b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt;
+        if (b.z <= 0) {
+            b.z = 0;
+            if (b.vz < -1.8) { b.vz = -b.vz * 0.5; b.vx *= 0.82; b.vy *= 0.82; } else b.vz = 0;
+        }
+    } else {
+        const v = Math.hypot(b.vx, b.vy);
+        if (v > 0) {
+            const nv = Math.max(0, v - (SP_ROLL + SP_LUFT * 0.5 * v * v) * dt);
+            b.vx *= nv / v; b.vy *= nv / v;
+        }
+        b.x += b.vx * dt; b.y += b.vy * dt;
+    }
+}
+
+// Flachpass: Startgeschwindigkeit, mit der der Ball nach T Sekunden d Meter weit gerollt ist.
+function spRollWeg(v0, T) {
+    const b = { x: 0, y: 0, z: 0, vx: v0, vy: 0, vz: 0 };
+    for (let t = 0; t < T; t += SP_DT) spBallSchritt(b, SP_DT);
+    return b.x;
+}
+function spFlachLoesen(d, T) {
+    let lo = 0.3, hi = 42;
+    if (spRollWeg(hi, T) < d) return hi;
+    for (let i = 0; i < 22; i++) { const mid = (lo + hi) / 2; if (spRollWeg(mid, T) < d) lo = mid; else hi = mid; }
+    return (lo + hi) / 2;
+}
+// Flug mit horizontaler Startgeschwindigkeit s und vz: Höhe und Zeit, wenn der Ball d Meter weit ist.
+// Landet er vorher, zählt das als negative Höhe (damit die Suche über vz eindeutig bleibt).
+function spFlug(s, vz, d, z0) {
+    const b = { x: 0, y: 0, z: Math.max(0.11, z0 || 0), vx: s, vy: 0, vz };
+    let t = 0, gelandet = false;
+    while (b.x < d && t < 8) {
+        const px = b.x, pz = b.z;
+        spBallSchritt(b, SP_DT); t += SP_DT;
+        if (b.z === 0 && !gelandet && t > 0.05) gelandet = true;
+        if (b.x >= d) { const f = (d - px) / Math.max(1e-6, b.x - px); return { t, z: gelandet ? -1 - (d - b.x) : pz + (b.z - pz) * f }; }
+        if (Math.hypot(b.vx, b.vy) < 0.05) break;
+    }
+    return { t, z: -1 - Math.max(0, d - b.x) };
+}
+function spVzLoesen(s, d, zZiel, z0) {
+    let lo = -8, hi = 26;
+    for (let i = 0; i < 24; i++) { const mid = (lo + hi) / 2; if (spFlug(s, mid, d, z0).z < zZiel) lo = mid; else hi = mid; }
+    return (lo + hi) / 2;
+}
+// Hoher Ball: kommt nach etwa T Sekunden in Höhe zZiel bei d Metern an.
+function spHochLoesen(d, zZiel, T, z0) {
+    let s = Math.max(4, d / T * 1.15), vz = 0;
+    for (let k = 0; k < 5; k++) {
+        vz = spVzLoesen(s, d, zZiel, z0);
+        const t = spFlug(s, vz, d, z0).t;
+        s = spKlemme(s * t / T, 4, 40);
+    }
+    return { s, vz: spVzLoesen(s, d, zZiel, z0) };
+}
+
+// Schießt den Ball von seiner Lage zum Punkt (x, y, z); hoch = Bogen, sonst flach bzw. als Schuss.
+function spSpielen(ziel, opt) {
+    const lp = livePhysik, b = lp.ball;
+    const von = b.halter;
+    if (von) { b.letzter = von.team; b.z = Math.max(b.z, 0); }
+    b.halter = null; b.imNetz = null; b.aus = null;
+    const dx = ziel.x - b.x, dy = ziel.y - b.y, d = Math.max(0.5, Math.hypot(dx, dy));
+    const ux = dx / d, uy = dy / d;
+    if (opt.schuss) {
+        const s = opt.tempo || 24;
+        const vz = spVzLoesen(s, d, ziel.z === undefined ? 0.5 : ziel.z, b.z);
+        b.vx = ux * s; b.vy = uy * s; b.vz = vz;
+        if (b.z < 0.02 && vz < 0) b.vz = 0;
+    } else if (opt.hoch) {
+        const T = opt.dauer || spKlemme(d / 18 + 0.6, 0.9, 2.8);
+        const l = spHochLoesen(d, ziel.z === undefined ? 0.3 : ziel.z, T, b.z);
+        b.vx = ux * l.s; b.vy = uy * l.s; b.vz = l.vz;
+    } else {
+        const T = opt.dauer || spKlemme(d / 15 + 0.3, 0.55, 2.2);
+        const v = spFlachLoesen(d, T);
+        b.vx = ux * v; b.vy = uy * v; b.vz = 0; b.z = 0;
+    }
+    if (von) von.schussZeit = lp.t;
+}
+
+// Zuspiel zu figur Richtung (x, y): das Ziel rückt so nah, dass er es rechtzeitig erreicht.
+function spZuspiel(figur, x, y, opt) {
+    opt = opt || {};
+    const lp = livePhysik, b = lp.ball;
+    let zx = x, zy = y;
+    if (figur) {
+        const dx = x - figur.x, dy = y - figur.y, weg = Math.hypot(dx, dy);
+        const maxWeg = (opt.maxZeit || 2.3) * 7.2;
+        if (weg > maxWeg) { zx = figur.x + dx / weg * maxWeg; zy = figur.y + dy / weg * maxWeg; }
+    }
+    const d = Math.hypot(zx - b.x, zy - b.y);
+    const hoch = opt.hoch !== undefined ? opt.hoch : d > 28;
+    let T = opt.dauer || (hoch ? spKlemme(d / 18 + 0.6, 0.9, 2.8) : spKlemme(d / 15 + 0.3, 0.55, 2.2));
+    if (figur) T = Math.min(3.2, Math.max(T, Math.hypot(figur.x - zx, figur.y - zy) / 7 + 0.35));
+    spSpielen({ x: zx, y: zy, z: opt.z !== undefined ? opt.z : 0.3 }, { hoch, dauer: T });
+    if (figur) { figur.zx = zx; figur.zy = zy; figur.sprint = Math.hypot(figur.x - zx, figur.y - zy) > 6; }
+    lp.pass = figur ? { figur, x: zx, y: zy, bis: lp.t + T } : null;
+    return { x: zx, y: zy, T };
+}
+
+// Torrahmen, Netz und Aus nach jedem Ballschritt
+function spRahmen(b, px, py, pz) {
+    if (b.imNetz !== null) {
+        const tiefe = Math.abs(b.x - b.imNetz);
+        if (tiefe > 1.9) { b.x = b.imNetz + (b.imNetz ? 1.9 : -1.9); b.vx *= -0.15; b.vy *= 0.4; }
+        if (b.y < SP_PFOSTEN[0] + 0.1 || b.y > SP_PFOSTEN[1] - 0.1) { b.y = spKlemme(b.y, SP_PFOSTEN[0] + 0.1, SP_PFOSTEN[1] - 0.1); b.vy *= -0.3; }
+        if (b.z > 2.2) { b.z = 2.2; b.vz = -Math.abs(b.vz) * 0.3; }
+        return null;
+    }
+    for (const linie of [0, SP_L]) {
+        const quer = linie === 0 ? (px > 0 && b.x <= 0) : (px < SP_L && b.x >= SP_L);
+        if (!quer) continue;
+        const f = (linie - px) / (b.x - px);
+        const yc = py + (b.y - py) * f, zc = pz + (b.z - pz) * f;
+        const pfosten = Math.min(Math.abs(yc - SP_PFOSTEN[0]), Math.abs(yc - SP_PFOSTEN[1])) < 0.17 && zc < SP_LATTE + 0.06;
+        const latte = yc > SP_PFOSTEN[0] && yc < SP_PFOSTEN[1] && Math.abs(zc - SP_LATTE) < 0.17;
+        if (pfosten || latte) {
+            b.x = linie + (linie ? -0.15 : 0.15); b.vx *= -0.55;
+            if (latte) b.vz = -Math.abs(b.vz) * 0.4 - 1;
+            b.vy += (spRnd() - 0.5) * 4;
+            return 'aluminium';
+        }
+        if (yc > SP_PFOSTEN[0] && yc < SP_PFOSTEN[1] && zc < SP_LATTE) { b.imNetz = linie; return 'tor'; }
+        b.aus = 'tor';
+        return 'aus';
+    }
+    if (b.y < -0.3 || b.y > SP_B + 0.3) { b.aus = 'seite'; return 'aus'; }
+    return null;
+}
+
+// ---------- Drehbuch ----------
+// Aus simulateMatchStep(): Minute für ein Ereignis im laufenden Spielzug.
+function spielphysikMinute(von, bis) {
+    if (bis <= von + 1) return Math.max(1, bis);
+    return Math.max(1, Math.min(bis, von + 1 + Math.floor(spRnd() * (bis - von))));
+}
+
+// Übernimmt die Ereignisse eines Spielzugs (Minuten von..bis).
+function spielphysikDrehbuch(liste, von, bis) {
+    const lp = livePhysik;
+    if (!lp || lp.match !== currentMatch) { (liste || []).forEach(spAufdecken); spAnzeigeSync(); return; }
+    // Ein annulliertes oder bestätigtes Tor zieht die Zeile des Videobeweises hinter sich her.
+    const ordnung = [];
+    let vorab = [];
+    (liste || []).forEach(ev => {
+        if (ev.minute === undefined) ev.minute = bis;
+        // Ankündigung ("Elfmeter für ...") erscheint, sobald der Ball auf dem Punkt liegt
+        if (ev.art === 'vorab') { vorab.push(ev); return; }
+        if (vorab.length) { ev.vorher = vorab; vorab = []; }
+        const letztes = ordnung[ordnung.length - 1];
+        if (letztes && letztes.art === 'var' && ev.art === 'tor' && !ev.annulliert) { ordnung.pop(); ev.nachher = [letztes]; ev.var = true; }
+        if (ev.art === 'var' && ev.zurueck) { ordnung.push({ art: 'tor', annulliert: true, team: ev.team, minute: ev.minute, nachher: [ev], var: true }); return; }
+        ordnung.push(ev);
+    });
+    if (vorab.length) ordnung.push(...vorab.map(v => Object.assign(v, { art: 'info' })));
+    ordnung.forEach((ev, i) => { ev.reihe = i; });
+    ordnung.sort((a, b) => (a.minute - b.minute) || (a.reihe - b.reihe));
+    lp.queue.push(...ordnung);
+    lp.ende = Math.max(lp.ende, bis);
+    lp.zielBesitz = currentMatch.letzterBesitz || 50;
+}
+
+// Ereignisse aus einer Standard-Entscheidung (nach dem Reaktionsspiel): kommen sofort dran.
+function spielphysikStandardDrehbuch(liste, zielung) {
+    const lp = livePhysik;
+    if (!lp || lp.match !== currentMatch) { (liste || []).forEach(spAufdecken); spAnzeigeSync(); return; }
+    const m = currentMatch.minute;
+    let vorab = [];
+    liste = (liste || []).filter(ev => {
+        if (ev.minute === undefined) ev.minute = m;
+        if (ev.art === 'vorab') { vorab.push(ev); return false; }
+        if (vorab.length) { ev.vorher = vorab; vorab = []; }
+        return true;
+    });
+    const haupt = liste.find(ev => ev.standardSchuss) || liste[0];
+    if (haupt) haupt.zielung = zielung || null;
+    lp.queue.unshift(...liste);
+}
+
+function spAufdecken(ev) {
+    if (!ev || ev.aufgedeckt) return;
+    ev.aufgedeckt = true;
+    (ev.vorher || []).forEach(spAufdecken);
+    if (ev.html) {
+        const log = document.getElementById('ticker-log');
+        if (log) { log.innerHTML += ev.html; log.scrollTop = log.scrollHeight; }
+    }
+    if (ev.stand && livePhysik) { livePhysik.anzeige = ev.stand.slice(); spAnzeigeSchreiben(); }
+    (ev.nachher || []).forEach(spAufdecken);
+    if (ev.aktion) ev.aktion();
+}
+
+// Alles Offene sofort zeigen ("Nächste Szene", "Spiel abpfeifen", Umschalten auf die Taktiktafel).
+function spielphysikAufholen() {
+    const lp = livePhysik;
+    if (!lp) return;
+    const offen = [];
+    if (lp.szene && lp.szene.ev) offen.push(lp.szene.ev);
+    offen.push(...lp.queue);
+    lp.queue = []; lp.szene = null; lp.schuss = null; lp.pass = null;
+    offen.forEach(spAufdecken);
+    lp.uhr = Math.max(lp.uhr, currentMatch ? currentMatch.minute : lp.uhr);
+    lp.ende = lp.uhr;
+    spAnzeigeSync();
+    if (currentMatch && currentMatch.minute < 90 && !lp.halbzeitWartet) spAnstoss(lp.besitz, true);
+}
+
+function spAnzeigeSync() {
+    if (!currentMatch) return;
+    if (livePhysik && livePhysik.match === currentMatch) livePhysik.anzeige = [currentMatch.homeGoals, currentMatch.awayGoals];
+    const el = document.getElementById('live-score');
+    if (el) el.innerText = currentMatch.homeGoals + ' : ' + currentMatch.awayGoals;
+    if (typeof renderLiveMatchStats === 'function') renderLiveMatchStats();
+}
+function spAnzeigeSchreiben() {
+    const el = document.getElementById('live-score');
+    if (el && livePhysik) el.innerText = livePhysik.anzeige[0] + ' : ' + livePhysik.anzeige[1];
+}
+
+// ---------- Regie: Szenen ----------
+function spText(text, sek) { livePhysik.text = text; livePhysik.textBis = livePhysik.t + sek; }
+
+function spSchuetze(team, spielerId) {
+    const lp = livePhysik;
+    const feste = spielerId ? lp.f.find(f => f.aktiv && f.team === team && f.id === spielerId && !f.torwart) : null;
+    if (feste) return feste;
+    const feld = spFeld(team);
+    const sturm = feld.filter(f => f.rolle === 'ST');
+    const r = spR(team);
+    return (sturm.length ? sturm : feld).sort((a, b) => (b.x - a.x) * r)[0];
+}
+// Mitspieler nahe einem Punkt (Angriffssicht), bevorzugt mit der Rolle
+function spAnspiel(team, ax, ay, rolle, ohne) {
+    const ziel = spW(team, ax, ay);
+    let liste = spFeld(team).filter(f => f !== livePhysik.ball.halter && !(ohne || []).includes(f));
+    const mitRolle = rolle ? liste.filter(f => f.rolle === rolle) : [];
+    if (mitRolle.length) liste = mitRolle;
+    const figur = spNaechster(liste, ziel) || spFeld(team)[0];
+    return { figur, x: ziel.x, y: ziel.y };
+}
+
+function spSzeneBauen(ev) {
+    const lp = livePhysik;
+    const A = [];
+    const team = ev.team === undefined || ev.team === null ? (spRnd() < lp.zielBesitz / 100 ? 0 : 1) : ev.team;
+    const gegner = 1 - team;
+    let art = 'kombination', ergebnis = 'vorbei';
+    if (ev.art === 'tor') { art = ev.standard || SP_TOR_SZENEN[ev.stil] || 'kombination'; ergebnis = 'tor'; }
+    else if (ev.art === 'chance') { const z = SP_CHANCEN_SZENEN[ev.text] || ['kombination', ['vorbei', 'gehalten', 'drueber'][Math.floor(spRnd() * 3)]]; art = z[0]; ergebnis = z[1] || 'vorbei'; }
+    else if (ev.art === 'schuss') { art = spRnd() < 0.5 ? 'distanz' : 'kombination'; ergebnis = ['vorbei', 'drueber', 'gehalten', 'geblockt'][Math.floor(spRnd() * 4)]; }
+    else if (ev.art === 'standard-gegner') { art = ev.standard; ergebnis = ev.ergebnis; }
+    if (ev.standardSchuss) { art = ev.standard || 'freistoss'; ergebnis = ev.art === 'tor' ? 'tor' : (ev.ergebnis || 'verschossen'); }
+    // Vergeben nach dem Reaktionsspiel: wohin der Ball geht, sagt die Zielung
+    if (ergebnis === 'verschossen') {
+        const z = ev.zielung;
+        if (z && Math.abs(z.v || 0) > 0.5 && Math.abs(z.v) >= Math.abs(z.h || 0)) ergebnis = 'drueber';
+        else if (z && Math.abs(z.h || 0) > 0.5) ergebnis = 'vorbei';
+        else ergebnis = art === 'freistoss' && spRnd() < 0.4 ? 'mauer' : (spRnd() < 0.55 ? 'gehalten' : 'parade');
+    }
+    const sz = { ev, art, ergebnis, team, aktionen: A, i: 0, start: lp.t };
+    const schuetze = () => spSchuetze(team, ev.spielerId);
+    if (ev.standardSchuss) { spStandardAbschluss(sz, art, ergebnis); return sz; }
+    if (art === 'kurz') art = 'kombination';
+
+    // Karten: Foul, Pfiff, Karte, Freistoß
+    if (ev.art === 'karte') {
+        const taeter = (ev.spielerId && lp.f.find(f => f.id === ev.spielerId && f.aktiv)) || spNaechster(spFeld(ev.team), lp.ball);
+        A.push(aFoul(ev.team, taeter));
+        A.push(aKarte(taeter, ev.rot, ev));
+        A.push(aFreistossKurz(1 - ev.team));
+        return sz;
+    }
+    // Eigener Standard beginnt: Foul bzw. Ecke, Aufstellung, dann wartet das Spiel auf die Entscheidung
+    if (ev.art === 'standard') {
+        if (ev.typ === 'ecke') { A.push(aBallGewinn(team)); A.push(aPass(() => spAnspiel(team, 88, spRnd() < 0.5 ? 8 : 60, 'MIT'))); A.push(aAus('ecke', team)); }
+        else {
+            const opfer = () => (ev.spielerId && lp.f.find(f => f.id === ev.spielerId && f.aktiv)) || schuetze();
+            A.push(aBallGewinn(team));
+            A.push(aPass(() => { const o = opfer(); const p = spW(team, ev.typ === 'elfmeter' ? 92 : 82, 28 + spRnd() * 12); return { figur: o, x: p.x, y: p.y }; }));
+            A.push(aFoul(gegner, null));
+        }
+        A.push(aAufstellen(ev.typ, team));
+        A.push(aAufdecken());
+        return sz;
+    }
+    // Gegnerischer Elfmeter mit Torwart-Reaktionsspiel: Aufstellen, dann Entscheidung
+    if (ev.art === 'standard-gegner-start') {
+        A.push(aBallGewinn(team));
+        A.push(aPass(() => { const p = spW(team, 92, 30 + spRnd() * 8); return { figur: schuetze(), x: p.x, y: p.y }; }));
+        A.push(aFoul(gegner, null));
+        A.push(aAufstellen('elfmeter', team));
+        A.push(aAufdecken());
+        return sz;
+    }
+    if (art === 'fehlpass' || art === 'konter-abgelaufen' || art === 'flanke-geklaert' || art === 'ecke-geklaert' || art === 'abseits' || art === 'seitenaus' || art === 'halbfeld-freistoss' || art === 'liegen' || art === 'rudel') {
+        spSzeneOhneSchuss(sz, art);
+        return sz;
+    }
+    // Standards im Spielfluss (Tor "per Elfmeter", "mit einem direkten Freistoß", gegnerische Standards)
+    if (art === 'elfmeter' || art === 'freistoss' || art === 'ecke' || art === 'flanke-standard') {
+        A.push(aBallGewinn(team));
+        if (art === 'ecke') { A.push(aPass(() => spAnspiel(team, 86, spRnd() < 0.5 ? 10 : 58, 'MIT'))); A.push(aAus('ecke', team)); }
+        else {
+            A.push(aPass(() => { const p = spW(team, art === 'elfmeter' ? 92 : 80 + spRnd() * 4, 26 + spRnd() * 16); return { figur: schuetze(), x: p.x, y: p.y }; }));
+            A.push(aFoul(gegner, null));
+        }
+        A.push(aAufstellen(art === 'flanke-standard' ? 'freistoss' : art, team));
+        spStandardAbschluss(sz, art, ergebnis);
+        return sz;
+    }
+    // Aus dem Spiel heraus
+    A.push(aBallGewinn(team));
+    if (art === 'konter') {
+        A.push(aPass(() => { const s = schuetze(); const p = spW(team, 74 + spRnd() * 8, 20 + spRnd() * 28); return { figur: s, x: p.x, y: p.y }; }, { hoch: true, sprint: true }));
+        A.push(aDribbel(() => spW(team, 86 + spRnd() * 4, 28 + spRnd() * 12), 0.8));
+    } else if (art === 'flanke' || art === 'volley') {
+        const links = spRnd() < 0.5;
+        A.push(aPass(() => spAnspiel(team, 58 + spRnd() * 8, links ? 14 : 54, 'MIT')));
+        A.push(aPass(() => { const p = spW(team, 88 + spRnd() * 5, links ? 4 + spRnd() * 4 : 60 + spRnd() * 4); const f = spNaechster(spFeld(team).filter(x => x !== lp.ball.halter), p); return { figur: f, x: p.x, y: p.y }; }, { sprint: true }));
+        A.push(aPass(() => { const s = schuetze(); const p = spW(team, 93 + spRnd() * 3, 29 + spRnd() * 10); return { figur: s, x: p.x, y: p.y, z: art === 'volley' ? 0.9 : 1.9 }; }, { hoch: true, direkt: true, sprint: true }));
+    } else if (art === 'doppelpass' || art === 'abstauber') {
+        A.push(aPass(() => spAnspiel(team, 66 + spRnd() * 6, 22 + spRnd() * 24, 'MIT')));
+        const partner = { f: null };
+        A.push(aPass(() => { const s = schuetze(); const p = spW(team, 78 + spRnd() * 4, 24 + spRnd() * 20); return { figur: s, x: p.x, y: p.y }; }));
+        A.push(aPass(() => { const z = spAnspiel(team, 84, 34 + (spRnd() - 0.5) * 18, null, [schuetze()]); partner.f = z.figur; return z; }));
+        A.push(aPass(() => { const s = schuetze(); const p = spW(team, 91 + spRnd() * 3, 28 + spRnd() * 12); return { figur: s, x: p.x, y: p.y }; }, { sprint: true }));
+    } else if (art === 'distanz') {
+        A.push(aPass(() => spAnspiel(team, 60 + spRnd() * 6, 20 + spRnd() * 28, 'MIT')));
+        A.push(aPass(() => { const p = spW(team, 80 + spRnd() * 3, 24 + spRnd() * 20); const f = spNaechster(spFeld(team).filter(x => x !== lp.ball.halter && (x.rolle === 'MIT' || x.id === ev.spielerId)), p) || schuetze(); return { figur: ev.spielerId ? schuetze() : f, x: p.x, y: p.y }; }));
+        A.push(aDribbel(() => spW(team, 83, 34 + (spRnd() - 0.5) * 14), 0.5));
+    } else {
+        A.push(aPass(() => spAnspiel(team, 56 + spRnd() * 10, 16 + spRnd() * 36, 'MIT')));
+        A.push(aPass(() => { const s = schuetze(); const p = spW(team, 84 + spRnd() * 4, 22 + spRnd() * 24); return { figur: s, x: p.x, y: p.y }; }, { sprint: true }));
+        A.push(aDribbel(() => spW(team, 89 + spRnd() * 3, 27 + spRnd() * 14), 0.6));
+    }
+    if (art === 'abstauber' && ergebnis === 'tor') {
+        A.push(aSchuss(team, 'parade-abpraller'));
+        A.push(aAbstauber(team, schuetze));
+    }
+    const tempo = art === 'distanz' ? 27 : (art === 'flanke' ? 17 : (art === 'volley' ? 23 : (ergebnis === 'harmlos' ? 12 : 23)));
+    A.push(aSchuss(team, ergebnis, { tempo, flach: art === 'flach', kopf: art === 'flanke' }));
+    A.push(aNachSchuss(team));
+    return sz;
+}
+
+function spStandardAbschluss(sz, art, ergebnis) {
+    const A = sz.aktionen, team = sz.team;
+    const ev = sz.ev;
+    const z = ev.zielung || null;
+    if (ergebnis === 'geklaert') {
+        A.push(aPass(() => { const p = spW(team, 93, 30 + spRnd() * 8); return { figur: spNaechster(spFeld(1 - team), p), x: p.x, y: p.y, z: 1.9 }; }, { hoch: true, direkt: true }));
+        A.push(aKopfballWeg(1 - team));
+        A.push(aAufdecken());
+        A.push(aNachSchuss(team));
+        return;
+    }
+    if (art === 'kurz') {
+        A.push(aPass(() => spAnspiel(team, spA(team, livePhysik.ball.x, livePhysik.ball.y).x + 2, spA(team, livePhysik.ball.x, livePhysik.ball.y).y + 6, null, [livePhysik.standardSchuetze])));
+        A.push(aDribbel(() => spW(team, 86, 30 + spRnd() * 8), 0.5));
+        A.push(aSchuss(team, ergebnis, { tempo: 22, zielung: z }));
+    } else if (art === 'ecke' || art === 'flanke' || art === 'flanke-standard') {
+        // Flanke vom Punkt auf den Kopfballspieler
+        A.push(aPass(() => {
+            const s = spSchuetze(team, ev.spielerId);
+            const p = spW(team, 93 + spRnd() * 3, 30 + spRnd() * 8 + (z ? z.h * 3 : 0));
+            return { figur: s, x: p.x, y: p.y, z: 1.9 };
+        }, { hoch: true, direkt: true, sprint: true }));
+        A.push(aSchuss(team, ergebnis, { tempo: 17, kopf: true, zielung: z }));
+    } else if (art === 'elfmeter') {
+        A.push(aWarten(0.6));
+        A.push(aSchuss(team, ergebnis, { tempo: 25, zielung: z, elfmeter: true }));
+    } else {
+        A.push(aWarten(0.5));
+        A.push(aSchuss(team, ergebnis, { tempo: 25, zielung: z, ueberMauer: true }));
+    }
+    A.push(aNachSchuss(team));
+}
+
+function spSzeneOhneSchuss(sz, art) {
+    const A = sz.aktionen, team = sz.team, gegner = 1 - team;
+    const lp = livePhysik;
+    if (art === 'fehlpass' || art === 'konter-abgelaufen') {
+        A.push(aBallGewinn(team));
+        A.push(aPass(() => spAnspiel(team, 64 + spRnd() * 6, 20 + spRnd() * 28, 'MIT')));
+        // Der letzte Pass landet beim Verteidiger
+        A.push(aPass(() => { const p = spW(team, 86 + spRnd() * 4, 28 + spRnd() * 12); const v = spNaechster(spFeld(gegner), p); return { figur: v, x: p.x, y: p.y }; }, { sprint: true }));
+        A.push(aAufdecken());
+        A.push(aKlaeren(gegner));
+    } else if (art === 'flanke-geklaert' || art === 'ecke-geklaert') {
+        A.push(aBallGewinn(team));
+        if (art === 'ecke-geklaert') { A.push(aPass(() => spAnspiel(team, 86, spRnd() < 0.5 ? 10 : 58, 'MIT'))); A.push(aAus('ecke', team)); A.push(aAufstellen('ecke', team)); }
+        else A.push(aPass(() => { const p = spW(team, 88, spRnd() < 0.5 ? 6 : 62); return { figur: spNaechster(spFeld(team).filter(x => x !== lp.ball.halter), p), x: p.x, y: p.y }; }, { sprint: true }));
+        A.push(aPass(() => { const p = spW(team, 94, 30 + spRnd() * 8); return { figur: spNaechster(spFeld(gegner), p), x: p.x, y: p.y, z: 1.9 }; }, { hoch: true, direkt: true }));
+        A.push(aKopfballWeg(gegner));
+        A.push(aAufdecken());
+    } else if (art === 'abseits') {
+        A.push(aBallGewinn(team));
+        A.push(aPass(() => { const s = spSchuetze(team); const p = spW(team, 84 + spRnd() * 4, 26 + spRnd() * 16); return { figur: s, x: p.x, y: p.y }; }, { hoch: true, sprint: true }));
+        A.push(aPfiff('Abseits'));
+        A.push(aAufdecken());
+        A.push(aFreistossKurz(gegner));
+    } else if (art === 'seitenaus') {
+        A.push(aZweikampfAus());
+        A.push(aAufdecken());
+        A.push(aEinwurf());
+    } else if (art === 'halbfeld-freistoss') {
+        A.push(aFoul(gegner, null));
+        A.push(aAufdecken());
+        A.push(aPass(() => { const p = spW(team, 107, 20 + spRnd() * 28); return { figur: null, x: p.x, y: p.y, z: 0.2 }; }, { hoch: true }));
+        A.push(aNachSchuss(team));
+    } else if (art === 'liegen') {
+        A.push(aFoul(gegner, null, 2.2));
+        A.push(aAufdecken());
+        A.push(aFreistossKurz(team));
+    } else {
+        A.push(aFoul(gegner, null));
+        A.push(aRudel());
+        A.push(aAufdecken());
+        A.push(aFreistossKurz(team));
+    }
+}
+
+// ---------- Aktionen ----------
+// Jede Aktion: start(), fertig() -> true, wenn sie durch ist; max = Notbremse in Sekunden.
+function aWarten(sek) { return { max: sek, fertig: () => false }; }
+function aAufdecken() { return { start: () => { const sz = livePhysik.szene; if (sz) spAufdecken(sz.ev); }, fertig: () => true }; }
+function aPfiff(text) { return { start: () => { spText(text, 1.6); if (typeof playSound === 'function') playSound('whistle'); livePhysik.ball.halter = null; }, max: 1.2, fertig: () => false }; }
+
+function aBallGewinn(team) {
+    let jaeger = null, fehlpass = false;
+    // Hat der Gegner den Ball, spielt er einen Fehlpass, den unser Mann abfängt
+    const abfangen = () => {
+        const lp = livePhysik, b = lp.ball, h = b.halter;
+        fehlpass = true;
+        const dd = Math.max(0.1, spDist(h, jaeger)), lauf = Math.min(dd * 0.45, 11);
+        const p = { x: jaeger.x + (h.x - jaeger.x) / dd * lauf, y: jaeger.y + (h.y - jaeger.y) / dd * lauf };
+        const T = spKlemme(Math.hypot(jaeger.x - p.x, jaeger.y - p.y) / 7 + 0.35, 0.5, 2);
+        spSpielen(p, { dauer: T });
+        jaeger.zx = p.x; jaeger.zy = p.y;
+        lp.pass = { figur: jaeger, x: p.x, y: p.y, bis: lp.t + T };
+    };
+    return {
+        max: 3,
+        start: () => {
+            const lp = livePhysik, b = lp.ball;
+            if (b.halter && b.halter.team === team) return;
+            // Ein Pass zum eigenen Mann ist schon unterwegs: der nimmt ihn an
+            const unterwegs = !b.halter && lp.pass && lp.pass.figur && lp.pass.figur.team === team;
+            jaeger = unterwegs ? lp.pass.figur : spNaechster(spFeld(team), b);
+            if (!jaeger) return;
+            jaeger.sprint = true;
+            if (unterwegs) { jaeger.zx = lp.pass.x; jaeger.zy = lp.pass.y; }
+            else if (b.halter) abfangen();
+        },
+        jeBild: () => {
+            const lp = livePhysik, b = lp.ball;
+            if (!jaeger || (b.halter && b.halter.team === team)) return;
+            if (b.halter && !fehlpass) { abfangen(); return; }
+            if (lp.pass && lp.pass.figur === jaeger) { jaeger.zx = lp.pass.x; jaeger.zy = lp.pass.y; return; }
+            // Dem rollenden Ball entgegen: dorthin, wo er gleich ist
+            const vor = Math.min(1.2, spDist(jaeger, b) / 7);
+            jaeger.zx = b.x + b.vx * vor; jaeger.zy = b.y + b.vy * vor;
+        },
+        fertig: () => {
+            const lp = livePhysik, b = lp.ball;
+            if (b.halter && b.halter.team === team) return true;
+            if (jaeger && spDist(jaeger, b) < 1.5 && b.z < 1.4 && !(b.halter && b.halter.team !== team && !fehlpass)) {
+                if (b.halter) { b.halter.liegt = 0.6; }
+                spAnnehmen(jaeger); jaeger.sprint = false;
+                return true;
+            }
+            return false;
+        },
+        ende: () => {
+            const lp = livePhysik, b = lp.ball;
+            if (!(b.halter && b.halter.team === team) && jaeger) { jaeger.x = b.x; jaeger.y = b.y; b.z = 0; spAnnehmen(jaeger); }
+            if (jaeger) jaeger.sprint = false;
+            lp.besitz = team;
+        }
+    };
+}
+
+// Pass zu figur nach (x, y); opt.hoch = Bogen, opt.direkt = Ball wird nicht angenommen (Kopfball/Volley folgt)
+function aPass(zielFn, opt) {
+    opt = opt || {};
+    let ziel = null, T = 1, selbst = false;
+    return {
+        max: 4.2,
+        start: () => {
+            const lp = livePhysik, b = lp.ball;
+            ziel = zielFn();
+            if (!ziel) return;
+            if (!b.halter && b.z < 0.5 && Math.hypot(b.vx, b.vy) < 2) b.halter = spNaechster(spFeld(lp.besitz), b);
+            // Hat der Empfänger den Ball schon, läuft er selbst mit ihm dorthin
+            if (ziel.figur && ziel.figur === b.halter && !opt.direkt) { selbst = true; ziel.figur.sprint = true; ziel.figur.zx = ziel.x; ziel.figur.zy = ziel.y; return; }
+            // Ziel so wählen, dass der Empfänger es in gut zwei Sekunden erreicht (sonst rollt der Ball ins Leere)
+            let sprint = !!opt.sprint;
+            if (ziel.figur) {
+                const dx = ziel.x - ziel.figur.x, dy = ziel.y - ziel.figur.y, weg = Math.hypot(dx, dy);
+                if (weg > 9) sprint = true;
+                const maxWeg = 2.3 * (sprint ? 7.4 : 5.8);
+                if (weg > maxWeg) { ziel.x = ziel.figur.x + dx / weg * maxWeg; ziel.y = ziel.figur.y + dy / weg * maxWeg; }
+            }
+            const d = Math.hypot(ziel.x - b.x, ziel.y - b.y);
+            T = opt.hoch ? spKlemme(d / 18 + 0.6, 0.9, 2.8) : spKlemme(d / 15 + 0.3, 0.55, 2.2);
+            // Der Ball kommt an, wenn der Empfänger dort sein kann
+            if (ziel.figur) {
+                const lauf = Math.hypot(ziel.figur.x - ziel.x, ziel.figur.y - ziel.y) / (sprint ? 7.0 : 5.4);
+                T = Math.min(3.2, Math.max(T, lauf + 0.35));
+            }
+            spSpielen({ x: ziel.x, y: ziel.y, z: ziel.z }, { hoch: opt.hoch, dauer: T });
+            if (ziel.figur) { ziel.figur.zx = ziel.x; ziel.figur.zy = ziel.y; ziel.figur.sprint = sprint || d > 25; lp.pass = { figur: ziel.figur, x: ziel.x, y: ziel.y, direkt: !!opt.direkt, bis: lp.t + T }; }
+            else lp.pass = null;
+        },
+        jeBild: () => { if (ziel && ziel.figur) { ziel.figur.zx = ziel.x; ziel.figur.zy = ziel.y; } },
+        fertig: () => {
+            const lp = livePhysik, b = lp.ball;
+            if (!ziel) return true;
+            if (selbst) return Math.hypot(ziel.figur.x - ziel.x, ziel.figur.y - ziel.y) < 1.5 || lp.t - lp.szene.aktionen[lp.szene.i].t0 > 1.6;
+            if (!ziel.figur) return !!b.aus || (Math.hypot(b.vx, b.vy) < 0.3 && b.z < 0.05);
+            const nah = Math.hypot(b.x - ziel.figur.x, b.y - ziel.figur.y) < 1.5;
+            if (opt.direkt) return nah && b.z < 2.4 && b.z > (ziel.z || 0) - 0.6 || Math.hypot(b.x - ziel.x, b.y - ziel.y) < 0.8;
+            if (nah && b.z < 1.5) { spAnnehmen(ziel.figur); return true; }
+            return false;
+        },
+        ende: () => {
+            const lp = livePhysik, b = lp.ball;
+            if (ziel && ziel.figur) ziel.figur.sprint = false;
+            if (selbst) return;
+            if (ziel && ziel.figur && !opt.direkt && b.halter !== ziel.figur) { b.x = ziel.figur.x; b.y = ziel.figur.y; b.z = 0; spAnnehmen(ziel.figur); }
+            if (ziel && ziel.figur && opt.direkt && Math.hypot(b.x - ziel.figur.x, b.y - ziel.figur.y) > 1.5) { ziel.figur.x = b.x - spR(ziel.figur.team) * 0.4; ziel.figur.y = b.y; }
+            lp.pass = null;
+        }
+    };
+}
+function spAnnehmen(f) {
+    const lp = livePhysik, b = lp.ball;
+    f.sprint = false;
+    b.halter = f; b.vx = b.vy = b.vz = 0; b.z = 0; b.letzter = f.team; lp.besitz = f.team; lp.pass = null;
+}
+
+function aDribbel(zielFn, sek) {
+    let ziel = null;
+    return {
+        max: sek,
+        start: () => { ziel = zielFn(); const h = livePhysik.ball.halter; if (h) h.sprint = true; },
+        jeBild: () => { const h = livePhysik.ball.halter; if (h && ziel) { h.zx = ziel.x; h.zy = ziel.y; } },
+        fertig: () => false,
+        ende: () => { const h = livePhysik.ball.halter; if (h) h.sprint = false; }
+    };
+}
+
+// Torschuss. ergebnis: tor, gehalten, harmlos, parade, parade-abpraller, vorbei, drueber, pfosten, latte, aussennetz, geblockt, mauer
+function aSchuss(team, ergebnis, opt) {
+    opt = opt || {};
+    let t0 = 0;
+    return {
+        max: 4,
+        start: () => {
+            const lp = livePhysik, b = lp.ball;
+            t0 = lp.t;
+            const tw = spTorwart(1 - team);
+            const torX = spTorX(team);
+            const twY = tw ? tw.y : 34;
+            const seite = spRnd() < 0.5 ? -1 : 1;
+            const z = opt.zielung;
+            // Links/rechts aus Sicht des Schützen -> Platz (Schütze nach rechts: links = kleines y)
+            const r = spR(team);
+            const sicht = ys => 34 + (ys - 34) * r;
+            // Elfmeter: Torwart wählt eine Ecke (aus dem Reaktionsspiel oder zufällig)
+            if (opt.elfmeter && tw) {
+                const twEcke = z && z.twEcke !== undefined ? z.twEcke : (spRnd() < 0.4 ? -1 : (spRnd() < 0.67 ? 1 : 0));
+                tw.elfY = sicht(34 + twEcke * 2.6);
+            }
+            // Zielpunkt auf der Torlinie
+            let y = 34, h = 0.5;
+            if (ergebnis === 'tor') {
+                // weg vom Torwart, in die Ecke; mit Zielung aus dem Reaktionsspiel dorthin
+                if (z && z.ecke !== undefined) y = sicht(z.ecke === 0 ? 34 + (spRnd() - 0.5) * 1.2 : 34 + z.ecke * (2.3 + spRnd() * 0.9));
+                else { const ecke = (twY > 34 ? -1 : 1) * (spRnd() < 0.8 ? 1 : -1); y = 34 + ecke * (2.3 + spRnd() * 0.9); }
+                h = opt.flach ? 0.2 : (opt.kopf ? 0.4 + spRnd() * 0.9 : 0.25 + spRnd() * 1.6);
+                if (z && z.v !== undefined) h = spKlemme(1.15 - z.v * 0.9, 0.15, 2.05);
+            } else if (opt.elfmeter && tw && ['gehalten', 'harmlos', 'parade'].includes(ergebnis)) { y = tw.elfY + (spRnd() - 0.5) * 0.8; h = 0.4 + spRnd() * 0.8; }
+            else if (ergebnis === 'gehalten' || ergebnis === 'harmlos') { y = twY + (spRnd() - 0.5) * 1.0; h = 0.4 + spRnd() * 0.9; }
+            else if (ergebnis === 'parade' || ergebnis === 'parade-abpraller') { y = twY + seite * (1.4 + spRnd() * 0.6); h = 0.5 + spRnd() * 1.2; }
+            else if (ergebnis === 'pfosten') { y = seite < 0 ? SP_PFOSTEN[0] : SP_PFOSTEN[1]; h = 0.6 + spRnd() * 1.2; }
+            else if (ergebnis === 'latte') { y = 32 + spRnd() * 4; h = SP_LATTE; }
+            else if (ergebnis === 'drueber') { y = 31.5 + spRnd() * 5; h = 2.9 + spRnd() * 0.8; }
+            else if (ergebnis === 'aussennetz') { y = seite < 0 ? SP_PFOSTEN[0] - 0.45 : SP_PFOSTEN[1] + 0.45; h = 0.4 + spRnd() * 0.8; }
+            else { y = seite < 0 ? SP_PFOSTEN[0] - 0.8 - spRnd() * 2 : SP_PFOSTEN[1] + 0.8 + spRnd() * 2; h = 0.3 + spRnd() * 1.4; }
+            // Daneben nach dem Reaktionsspiel: in die Richtung, in die der Cursor daneben lag
+            if (z && ergebnis !== 'tor' && z.h !== undefined && Math.abs(z.h) > 0.45 && (ergebnis === 'vorbei' || ergebnis === 'drueber')) {
+                if (Math.abs(z.v || 0) > Math.abs(z.h)) { h = 2.9 + Math.abs(z.v) * 0.8; y = sicht(34 + z.h * 3); }
+                else y = sicht(z.h < 0 ? SP_PFOSTEN[0] - 0.6 - Math.abs(z.h) * 1.5 : SP_PFOSTEN[1] + 0.6 + Math.abs(z.h) * 1.5);
+            }
+            const blocker = ergebnis === 'geblockt' || ergebnis === 'mauer' ? spNaechster(spFeld(1 - team), b) : null;
+            if (blocker) { const r = spR(team); blocker.x = b.x + r * 2.2; blocker.y = b.y + (spRnd() - 0.5) * 0.6; blocker.zx = blocker.x; blocker.zy = blocker.y; }
+            const tempo = ergebnis === 'harmlos' ? 13 : (opt.tempo || 23);
+            spSpielen({ x: torX, y, z: h }, { schuss: true, tempo });
+            lp.schuss = { team, ergebnis, zielY: y, zielZ: h, torwart: tw, blocker, t0, elfmeter: !!opt.elfmeter, abgewehrt: false };
+            if (typeof playSound === 'function' && ergebnis !== 'harmlos') playSound('kick');
+        },
+        fertig: () => {
+            const lp = livePhysik, b = lp.ball, s = lp.schuss;
+            if (!s) return true;
+            if (s.ergebnis === 'tor') return b.imNetz !== null && livePhysik.t - t0 > 0.15 && Math.hypot(b.vx, b.vy) < 6;
+            if (s.abgewehrt && livePhysik.t - s.abgewehrt > 0.7) return true;
+            if (b.halter) return true;
+            if (b.aus) return true;
+            return false;
+        },
+        ende: () => {
+            const lp = livePhysik;
+            // Notfall: der Ball ist nicht im Netz gelandet (sollte nicht vorkommen) - Tor trotzdem zeigen
+            if (lp.schuss && lp.schuss.ergebnis === 'tor' && lp.ball.imNetz === null) spTorErkannt();
+            if (lp.szene && lp.szene.ev && lp.schuss && lp.schuss.ergebnis !== 'tor' && lp.schuss.ergebnis !== 'parade-abpraller') spAufdecken(lp.szene.ev);
+            lp.schuss = null;
+        }
+    };
+}
+
+// Abpraller nach der Parade: der Schütze staubt ab (das eigentliche Tor folgt im nächsten Schuss)
+function aAbstauber(team, schuetzeFn) {
+    let s = null;
+    return {
+        max: 2.2,
+        start: () => { s = schuetzeFn(); if (s) s.sprint = true; },
+        jeBild: () => { const b = livePhysik.ball; if (s) { s.zx = b.x; s.zy = b.y; } },
+        fertig: () => { const b = livePhysik.ball; if (s && spDist(s, b) < 1 && b.z < 1.2) { spAnnehmen(s); return true; } return false; },
+        ende: () => { const b = livePhysik.ball; if (s && b.halter !== s) { s.x = b.x - spR(team) * 0.5; s.y = b.y; b.z = 0; spAnnehmen(s); } }
+    };
+}
+
+function aNachSchuss(team) {
+    return {
+        start: () => {
+            const lp = livePhysik, b = lp.ball, sz = lp.szene;
+            lp.standardHalten = false;
+            if (!sz) return;
+            const rest = [];
+            const verteidiger = 1 - team;
+            if (b.imNetz !== null) { rest.push(aJubel(team)); rest.push(aAnstossAktion(verteidiger)); }
+            else if (b.halter && b.halter.torwart) { rest.push(aWarten(1.1)); rest.push(aAbwurf(b.halter.team)); }
+            else if (b.aus === 'tor') rest.push(aAbstoss(b.letzter === verteidiger ? verteidiger : verteidiger));
+            else if (b.aus === 'seite') rest.push(aEinwurf());
+            else rest.push(aKlaeren(verteidiger));
+            sz.aktionen.splice(sz.i + 1, 0, ...rest);
+        },
+        fertig: () => true
+    };
+}
+
+function aJubel(team) {
+    return {
+        max: 2.6,
+        start: () => {
+            const lp = livePhysik;
+            const eigen = team === lp.eigen;
+            const sz = lp.szene;
+            const annulliert = sz && sz.ev && sz.ev.annulliert;
+            spText(annulliert ? 'Videobeweis …' : (eigen ? 'TOR!' : 'Gegentor'), annulliert ? 2.8 : 2.6);
+            const fahne = spW(team, 103, spRnd() < 0.5 ? 2 : 66);
+            lp.f.forEach(f => { if (f.team === team && f.aktiv && !f.torwart) { f.jubel = 3; f.zx = fahne.x + (spRnd() - 0.5) * 6; f.zy = fahne.y + (spRnd() - 0.5) * 6; f.sprint = true; } });
+        },
+        fertig: () => false,
+        ende: () => {
+            const lp = livePhysik;
+            lp.f.forEach(f => { f.jubel = 0; f.sprint = false; });
+            const sz = lp.szene;
+            if (sz && sz.ev && sz.ev.annulliert) { spText('Kein Tor – Abseits', 2); spAufdecken(sz.ev); }
+        }
+    };
+}
+
+function aAnstossAktion(team) {
+    return { max: 1.2, start: () => spAnstoss(team, false), fertig: () => false,
+        ende: () => { const lp = livePhysik, st = lp.anstossFigur; if (st) { st.x = st.zx; st.y = st.zy; spAnnehmen(st); lp.ball.x = 52.5; lp.ball.y = 34; } } };
+}
+
+function aAbwurf(team) {
+    return { start: () => { const z = spAnspiel(team, 30 + spRnd() * 12, 12 + spRnd() * 44, 'ABW'); spZuspiel(z.figur, z.x, z.y, { hoch: spRnd() < 0.5, z: 0.2 }); livePhysik.besitz = team; },
+        max: 0.3, fertig: () => false };
+}
+function aAbstoss(team) {
+    return {
+        max: 2.4,
+        start: () => {
+            const lp = livePhysik, b = lp.ball, tw = spTorwart(team);
+            const p = spW(team, 5.5, 34 + (spRnd() < 0.5 ? -8 : 8));
+            Object.assign(b, { x: p.x, y: p.y, z: 0, vx: 0, vy: 0, vz: 0, halter: null, aus: null, imNetz: null });
+            if (tw) { tw.zx = p.x - spR(team) * 1.5; tw.zy = p.y; }
+            lp.abstossT = lp.t + 1.1;
+            lp.besitz = team;
+        },
+        jeBild: () => {
+            const lp = livePhysik, tw = spTorwart(team);
+            if (lp.abstossT && lp.t >= lp.abstossT && tw) {
+                lp.abstossT = 0;
+                tw.x = lp.ball.x - spR(team) * 0.6; tw.y = lp.ball.y;
+                const z = spAnspiel(team, 40 + spRnd() * 10, 14 + spRnd() * 40, 'MIT');
+                spZuspiel(z.figur, z.x, z.y, { hoch: true, z: 0.4, maxZeit: 2.8 });
+            }
+        },
+        fertig: () => false
+    };
+}
+function aEinwurf() {
+    return {
+        max: 2.4,
+        start: () => {
+            const lp = livePhysik, b = lp.ball;
+            const team = 1 - (b.letzter || 0);
+            const p = { x: spKlemme(b.x, 3, 102), y: b.y < 34 ? 0.2 : SP_B - 0.2 };
+            Object.assign(b, { x: p.x, y: p.y, z: 0, vx: 0, vy: 0, vz: 0, aus: null, imNetz: null });
+            const w = spNaechster(spFeld(team), p);
+            if (w) { w.zx = p.x; w.zy = p.y; }
+            lp.einwurf = { team, werfer: w, t: lp.t + 1.4 };
+            lp.besitz = team;
+        },
+        jeBild: () => {
+            const lp = livePhysik, e = lp.einwurf;
+            if (e && lp.t >= e.t && e.werfer) {
+                lp.einwurf = null;
+                e.werfer.x = lp.ball.x; e.werfer.y = lp.ball.y;
+                const z = spAnspiel(e.team, spA(e.team, lp.ball.x, 0).x + 4, lp.ball.y < 34 ? 10 : 58, null, [e.werfer]);
+                spZuspiel(z.figur, z.x, z.y, { hoch: true, dauer: 0.9 });
+            }
+        },
+        fertig: () => false
+    };
+}
+// Verteidiger schlägt den Ball weit weg ins Mittelfeld
+function aKlaeren(team) {
+    let v = null;
+    return {
+        max: 3,
+        start: () => { const b = livePhysik.ball; v = b.halter && b.halter.team === team ? b.halter : spNaechster(spFeld(team), b); if (v) v.sprint = true; },
+        jeBild: () => { const b = livePhysik.ball; if (v && b.halter !== v) { v.zx = b.x; v.zy = b.y; } },
+        fertig: () => {
+            const lp = livePhysik, b = lp.ball;
+            if (!v) return true;
+            if (b.aus) return true;
+            if ((spDist(v, b) < 1.2 && b.z < 2) || b.halter === v) {
+                b.halter = v;
+                const z = spAnspiel(team, 45 + spRnd() * 12, 10 + spRnd() * 48, 'MIT');
+                spZuspiel(z.figur, z.x, z.y, { hoch: true, z: 0.4, maxZeit: 2.8 });
+                lp.besitz = team; v.sprint = false;
+                return true;
+            }
+            return false;
+        },
+        ende: () => { if (v) v.sprint = false; }
+    };
+}
+function aKopfballWeg(team) {
+    return {
+        max: 1.2,
+        fertig: () => {
+            const lp = livePhysik, b = lp.ball;
+            const v = spNaechster(spFeld(team), b);
+            if (v && spDist(v, b) < 1.4) {
+                b.halter = null;
+                const z = spAnspiel(team, 40 + spRnd() * 10, 10 + spRnd() * 48, 'MIT');
+                spZuspiel(z.figur, z.x, z.y, { hoch: true, z: 0.4, maxZeit: 2.8 });
+                lp.besitz = team;
+                return true;
+            }
+            return false;
+        }
+    };
+}
+// Ball geht über die Grundlinie (für die Ecke)
+function aAus(art, team) {
+    return {
+        max: 1.4,
+        start: () => {
+            const lp = livePhysik, b = lp.ball;
+            const ziel = spW(team, 107, spA(team, b.x, b.y).y < 34 ? 6 : 62);
+            spSpielen({ x: ziel.x, y: ziel.y, z: 0.1 }, { dauer: 0.9 });
+            b.letzter = 1 - team;
+        },
+        fertig: () => !!livePhysik.ball.aus
+    };
+}
+function aZweikampfAus() {
+    return {
+        max: 2.2,
+        start: () => {
+            const lp = livePhysik, b = lp.ball;
+            const h = b.halter || spNaechster(spAktive(), b);
+            const nahe = b.y < 34 ? -2 : SP_B + 2;
+            const v = spNaechster(spFeld(1 - (h ? h.team : 0)), b);
+            if (v) { v.zx = b.x; v.zy = b.y; v.sprint = true; }
+            spSpielen({ x: b.x + (spRnd() - 0.5) * 8, y: nahe }, { dauer: 1 });
+            b.letzter = v ? v.team : 0;
+        },
+        fertig: () => !!livePhysik.ball.aus
+    };
+}
+function aAufstellen(typ, team) {
+    return {
+        max: 2.2,
+        start: () => {
+            const lp = livePhysik, b = lp.ball;
+            const gegner = 1 - team;
+            const r = spR(team);
+            let spot;
+            if (typ === 'elfmeter') spot = spW(team, 94, 34);
+            else if (typ === 'ecke') spot = spW(team, 104.6, spA(team, b.x, b.y).y < 34 ? 0.4 : 67.6);
+            else spot = { x: spKlemme(b.x, 3, 102), y: spKlemme(b.y, 3, 65) };
+            Object.assign(b, { x: spot.x, y: spot.y, z: 0, vx: 0, vy: 0, vz: 0, halter: null, aus: null, imNetz: null });
+            lp.besitz = team; lp.standardOrt = spot;
+            const schuetze = spSchuetze(team, lp.szene && lp.szene.ev ? lp.szene.ev.schuetzeId : null);
+            const angreifer = spFeld(team), abwehr = spFeld(gegner);
+            const tw = spTorwart(gegner);
+            if (tw) { const t = spW(gegner, 0.5, 34); tw.zx = t.x; tw.zy = t.y; }
+            // Ausführender an den Ball
+            const ausf = typ === 'ecke' ? spNaechster(angreifer.filter(f => f.rolle !== 'ABW' || angreifer.length < 4), spot) : schuetze;
+            lp.standardSchuetze = ausf;
+            angreifer.forEach((f, i) => {
+                if (f === ausf) { f.zx = spot.x - r * 0.8; f.zy = spot.y; return; }
+                let p;
+                if (typ === 'elfmeter') p = spW(team, 83 + (i % 2) * 1.5, 16 + i * 4.2);
+                else if (typ === 'ecke' || spA(team, spot.x, spot.y).x > 70) p = spW(team, 88 + (i % 4) * 2, 26 + (i * 2.3) % 16);
+                else p = spW(team, spA(team, spot.x, spot.y).x + 12 + (i % 3) * 3, 18 + i * 3);
+                f.zx = p.x; f.zy = p.y;
+            });
+            abwehr.forEach((f, i) => {
+                let p;
+                if (typ === 'elfmeter') p = spW(team, 82.5 + (i % 2) * 1.5, 14 + i * 4.2);
+                else if (typ === 'freistoss' && i < 4) {
+                    // Mauer 9,15 m vor dem Ball Richtung Tor
+                    const torX = spTorX(team), dx = torX - spot.x, dy = 34 - spot.y, d = Math.hypot(dx, dy);
+                    p = { x: spot.x + dx / d * 9.15 - dy / d * (i - 1.5) * 0.7, y: spot.y + dy / d * 9.15 + dx / d * (i - 1.5) * 0.7 };
+                } else p = spW(team, 90 + (i % 3) * 2.5, 27 + (i * 2.1) % 14);
+                f.zx = p.x; f.zy = p.y;
+            });
+            lp.standardHalten = true;
+        },
+        fertig: () => {
+            const lp = livePhysik;
+            return lp.f.every(f => !f.aktiv || Math.hypot(f.zx - f.x, f.zy - f.y) < 2.5);
+        },
+        ende: () => {
+            const lp = livePhysik;
+            if (lp.standardSchuetze) { lp.standardSchuetze.x = lp.standardSchuetze.zx; lp.standardSchuetze.y = lp.standardSchuetze.zy; lp.ball.halter = null; }
+            if (lp.szene && lp.szene.ev) (lp.szene.ev.vorher || []).forEach(spAufdecken);
+        }
+    };
+}
+
+function aFoul(taeterTeam, taeter, liegen) {
+    let t = taeter, opfer = null;
+    return {
+        max: 2.5,
+        start: () => {
+            const lp = livePhysik, b = lp.ball;
+            opfer = b.halter && b.halter.team !== taeterTeam ? b.halter : spNaechster(spFeld(1 - taeterTeam), b);
+            if (!t) t = spNaechster(spFeld(taeterTeam), opfer || b);
+            if (t) t.sprint = true;
+        },
+        jeBild: () => { if (t && opfer) { t.zx = opfer.x; t.zy = opfer.y; } },
+        fertig: () => t && opfer && spDist(t, opfer) < 1.3,
+        ende: () => {
+            const lp = livePhysik, b = lp.ball;
+            if (opfer) { opfer.liegt = liegen || 1.4; b.x = opfer.x; b.y = opfer.y; }
+            if (t) t.sprint = false;
+            b.halter = null; b.vx = b.vy = b.vz = 0; b.z = 0;
+            lp.schiri.zx = b.x + 3; lp.schiri.zy = b.y - 2; lp.schiriBis = lp.t + 3;
+            if (typeof playSound === 'function') playSound('whistle');
+            spText('Foul', 1.2);
+        }
+    };
+}
+function aKarte(figur, rot, ev) {
+    return {
+        max: 2.6,
+        start: () => {
+            const lp = livePhysik;
+            lp.schiriBis = lp.t + 3;
+            if (figur) { lp.schiri.zx = figur.x + 1.5; lp.schiri.zy = figur.y; figur.karte = rot ? 2 : 1; figur.karteBis = lp.t + 2.4; }
+            spAufdecken(ev);
+            spText(rot ? 'Rote Karte' : 'Gelbe Karte', 1.8);
+        },
+        fertig: () => false,
+        ende: () => { if (figur) { figur.karte = 0; if (rot) { figur.aktiv = false; if (livePhysik.ball.halter === figur) livePhysik.ball.halter = null; } } }
+    };
+}
+function aFreistossKurz(team) {
+    return {
+        max: 1.8,
+        start: () => {
+            const lp = livePhysik, b = lp.ball;
+            const f = spNaechster(spFeld(team), b);
+            if (f) { f.zx = b.x - spR(team) * 0.5; f.zy = b.y; }
+            lp.freistossKurz = { team, f, t: lp.t + 1.2 };
+            lp.besitz = team;
+        },
+        jeBild: () => {
+            const lp = livePhysik, k = lp.freistossKurz;
+            if (k && lp.t >= k.t && k.f) {
+                lp.freistossKurz = null;
+                k.f.x = lp.ball.x - spR(team) * 0.5; k.f.y = lp.ball.y;
+                const z = spAnspiel(team, spA(team, lp.ball.x, lp.ball.y).x - 6, spA(team, lp.ball.x, lp.ball.y).y + (spRnd() - 0.5) * 16, null, [k.f]);
+                spZuspiel(z.figur, z.x, z.y, { hoch: false });
+            }
+        },
+        fertig: () => false
+    };
+}
+function aRudel() {
+    return {
+        max: 2.2,
+        start: () => {
+            const b = livePhysik.ball;
+            spAktive().filter(f => !f.torwart).sort((a, c) => spDist(a, b) - spDist(c, b)).slice(0, 6).forEach((f, i) => { f.zx = b.x + Math.cos(i) * 1.6; f.zy = b.y + Math.sin(i) * 1.6; });
+            livePhysik.schiri.zx = b.x; livePhysik.schiri.zy = b.y + 1; livePhysik.schiriBis = livePhysik.t + 3;
+        },
+        fertig: () => false
+    };
+}
+
+// ---------- Tor ----------
+function spTorErkannt() {
+    const lp = livePhysik, sz = lp.szene;
+    if (!sz || !sz.ev || sz.torGezeigt) return;
+    sz.torGezeigt = true;
+    if (sz.ev.annulliert) { spText('Tor?', 1.2); return; }   // Videobeweis folgt im Jubel
+    spAufdecken(sz.ev);
+}
+
+// ---------- Takt ----------
+// Ein Bild: dt in Sekunden (echte Zeit). Aus live3dFrame().
+function spielphysikTakt(dtEcht) {
+    const lp = livePhysik;
+    const m = typeof currentMatch !== 'undefined' ? currentMatch : null;
+    if (!lp || !m || lp.match !== m || !spielphysikAktiv()) return;
+    if (typeof liveTickerPaused !== 'undefined' && liveTickerPaused && !lp.abpfiff) return;
+    const tempo = SP_TEMPI[spTempo()];
+    lp.rest += Math.min(0.1, dtEcht) * tempo.physik;
+    let schritte = 0;
+    while (lp.rest >= SP_DT && schritte < 40) { lp.rest -= SP_DT; schritte++; spSchritt(SP_DT, tempo); }
+}
+
+function spSchritt(dt, tempo) {
+    const lp = livePhysik, m = lp.match;
+    lp.t += dt;
+    if (lp.f.some(f => f.team === lp.eigen && f.aktiv && f.id && !lineup.includes(f.id)) || (lp.t % 1 < dt)) spKaderAbgleich();
+    // Halbzeit: weiter erst, wenn die Ansprache gewählt ist
+    if (lp.halbzeitWartet && !m.awaitingHalftimeTalk) { lp.halbzeitWartet = false; lp.zweite = true; spAnstoss(1, false); }
+    // Halbzeit oder Abpfiff ohne Drehbuch ("Nächste Szene"): Seiten wechseln bzw. stehen bleiben
+    if (!lp.zweite && !lp.halbzeitWartet && m.halftimeShown && !m.awaitingHalftimeTalk && lp.uhr >= 45 && !lp.szene && !lp.queue.some(e => e.art === 'halbzeit')) { lp.zweite = true; spAnstoss(1, true); }
+    if (!lp.abpfiff && m.minute >= 90 && !lp.szene && !lp.queue.length && lp.uhr >= 90) { lp.abpfiff = true; spText('Abpfiff', 99); }
+    const entscheidung = (m.awaitingHalftimeTalk || m.awaitingSetPiece) && !lp.szene && !lp.queue.length;
+    const wartet = lp.halbzeitWartet || entscheidung || lp.abpfiff;
+
+    // Uhr: läuft bis zur Minute des nächsten offenen Ereignisses bzw. bis zum Ende des Spielzugs
+    if (!wartet) {
+        const naechstes = lp.szene ? lp.szene.ev : lp.queue[0];
+        const deckel = naechstes ? naechstes.minute : lp.ende;
+        lp.uhr = Math.min(deckel, lp.uhr + dt / tempo.sek / tempo.physik);
+        if (lp.szene && lp.szene.ev && lp.szene.ev.aufgedeckt && !lp.queue.length) lp.uhr = Math.min(lp.ende, lp.uhr);
+    }
+    spMinuteZeigen();
+
+    // Nächste Szene starten
+    if (!lp.szene && lp.queue.length && !lp.halbzeitWartet) {
+        const ev = lp.queue[0];
+        if (spOhneSzene(ev)) {
+            if (lp.uhr >= ev.minute - 0.01) { lp.queue.shift(); spOhneSzeneAufdecken(ev); }
+        } else {
+            const vorlauf = (SP_SZENEN_DAUER[ev.art] || 6) / tempo.sek / tempo.physik;
+            if (lp.uhr >= ev.minute - vorlauf || ev.sofort || ev.standardSchuss || ev.ausAufstellung) {
+                lp.queue.shift();
+                lp.standardHalten = !!ev.standardSchuss && lp.standardHalten;
+                lp.szene = spSzeneBauen(ev);
+            }
+        }
+    }
+    if (lp.szene) spSzeneLauf();
+    else if (!wartet && !lp.standardHalten) spFueller();
+
+    // Physik
+    spBallLauf(dt);
+    spFigurenLauf(dt);
+
+    // Spielzug durch: Anzeige angleichen, nächsten Spielzug holen
+    if (!lp.szene && !lp.queue.length && !wartet && lp.uhr >= lp.ende - 0.001) {
+        if (!lp.syncNach || lp.syncNach !== lp.ende) { lp.syncNach = lp.ende; spAnzeigeSync(); }
+        if (m.minute < 90 && !m.awaitingHalftimeTalk && !m.awaitingSetPiece && typeof simulateMatchStep === 'function') {
+            simulateMatchStep(true);
+        }
+    }
+}
+
+function spOhneSzene(ev) { return ['info', 'halbzeit', 'abpfiff', 'cotrainer'].includes(ev.art) || (ev.art === 'standard-gegner' && !ev.standard); }
+function spOhneSzeneAufdecken(ev) {
+    const lp = livePhysik;
+    if (ev.art === 'halbzeit') { lp.halbzeitWartet = true; lp.uhr = 45; spText('Halbzeit', 3); }
+    if (ev.art === 'abpfiff') { lp.abpfiff = true; lp.uhr = 90; spText('Abpfiff', 99); lp.ball.halter = null; }
+    spMinuteZeigen();
+    spAufdecken(ev);
+    if (ev.art === 'abpfiff') spAnzeigeSync();
+}
+
+function spMinuteZeigen() {
+    const lp = livePhysik;
+    const min = Math.max(1, Math.floor(lp.uhr));
+    if (min === lp.angezeigteMinute) return;
+    lp.angezeigteMinute = min;
+    const el = document.getElementById('live-minute');
+    if (el) el.innerText = min + '. Minute';
+}
+
+function spSzeneLauf() {
+    const lp = livePhysik, sz = lp.szene;
+    const a = sz.aktionen[sz.i];
+    if (!a) { spSzeneEnde(); return; }
+    if (!a.laeuft) { a.laeuft = true; a.t0 = lp.t; if (a.start) a.start(); }
+    if (a.jeBild) a.jeBild();
+    const fertig = a.fertig ? a.fertig() : true;
+    if (fertig || lp.t - a.t0 > (a.max || 5)) {
+        if (a.ende) a.ende();
+        sz.i++;
+    }
+    // Notbremse für die ganze Szene
+    if (lp.t - sz.start > 30) spSzeneEnde();
+}
+function spSzeneEnde() {
+    const lp = livePhysik, sz = lp.szene;
+    lp.szene = null;
+    lp.schuss = null;
+    // Nach dem Aufstellen eines Standards bleiben alle stehen, bis entschieden ist
+    lp.standardHalten = !!(sz && sz.ev && (sz.ev.art === 'standard' || sz.ev.art === 'standard-gegner-start'));
+    if (sz && sz.ev && !sz.ev.aufgedeckt) spAufdecken(sz.ev);
+    lp.f.forEach(f => { f.sprint = false; f.jubel = 0; });
+    if (lp.ball.aus) { lp.ball.aus = null; const h = spNaechster(spFeld(1 - (lp.ball.letzter || 0)), lp.ball); if (h) { lp.ball.x = spKlemme(lp.ball.x, 1, 104); lp.ball.y = spKlemme(lp.ball.y, 1, 67); spAnnehmen(h); } }
+    if (lp.ball.imNetz !== null) spAnstoss(1 - (sz ? sz.team : 0), true);
+    lp.naechsterPass = lp.t + 0.8;
+}
+
+// Ballbesitz zwischen den Szenen: Passspiel im Mittelfeld, Ballverluste nach dem Ballbesitz-Anteil aus der Spiellogik
+function spFueller() {
+    const lp = livePhysik, b = lp.ball;
+    if (b.aus) {
+        b.aus = null; b.imNetz = null;
+        const team = 1 - (b.letzter || 0);
+        b.x = spKlemme(b.x, 1, 104); b.y = spKlemme(b.y, 0.5, 67.5); b.z = 0; b.vx = b.vy = b.vz = 0;
+        const h = spNaechster(spFeld(team), b);
+        if (h) { h.x = b.x; h.y = b.y; spAnnehmen(h); }
+        lp.naechsterPass = lp.t + 1;
+        return;
+    }
+    if (b.halter) {
+        const h = b.halter, r = spR(h.team);
+        const hA = spA(h.team, h.x, h.y);
+        if (!h.torwart) {
+            const ziel = spW(h.team, Math.min(hA.x + 3, 72), hA.y);
+            h.zx = ziel.x; h.zy = ziel.y;
+        }
+        if (lp.t < lp.naechsterPass) return;
+        const anteil = h.team === 0 ? lp.zielBesitz / 100 : 1 - lp.zielBesitz / 100;
+        const mit = spFeld(h.team).filter(f => f !== h);
+        // nach vorn, aber nicht in den Strafraum (Abschlüsse gehören den echten Chancen)
+        const kandidaten = mit.filter(f => spA(f.team, f.x, f.y).x < 78).sort((a, c) => {
+            const wa = (a.x - h.x) * r - Math.abs(a.y - h.y) * 0.4 - Math.abs(spDist(a, h) - 16) * 0.5;
+            const wc = (c.x - h.x) * r - Math.abs(c.y - h.y) * 0.4 - Math.abs(spDist(c, h) - 16) * 0.5;
+            return wc - wa;
+        });
+        let ziel = kandidaten[Math.floor(spRnd() * Math.min(4, kandidaten.length))] || mit[0];
+        if (!ziel) return;
+        let zx = ziel.x + r * 2, zy = ziel.y;
+        // Ballverlust: der Pass landet beim Gegner
+        if (spRnd() < 0.42 * (1 - anteil) + 0.04) {
+            const mitte = { x: (h.x + zx) / 2, y: (h.y + zy) / 2 };
+            const dieb = spNaechster(spFeld(1 - h.team), mitte);
+            if (dieb) { ziel = dieb; zx = mitte.x + (dieb.x - mitte.x) * 0.3; zy = mitte.y + (dieb.y - mitte.y) * 0.3; }
+        }
+        spZuspiel(ziel, zx, zy);
+        lp.naechsterPass = lp.t + 1.6 + spRnd() * 1.6;
+    } else if (!lp.pass && Math.hypot(b.vx, b.vy) < 3 && b.z < 0.6) {
+        // freier Ball: der Nächste holt ihn
+        const f = spNaechster(spFeld(), b);
+        if (f) { f.zx = b.x; f.zy = b.y; if (spDist(f, b) < 0.9) { spAnnehmen(f); lp.naechsterPass = lp.t + 1 + spRnd(); } }
+    }
+}
+
+function spBallLauf(dt) {
+    const lp = livePhysik, b = lp.ball;
+    if (b.halter) {
+        const h = b.halter;
+        const v = Math.hypot(h.vx, h.vy);
+        const ux = v > 0.3 ? h.vx / v : spR(h.team), uy = v > 0.3 ? h.vy / v : 0;
+        b.x += (h.x + ux * 0.55 - b.x) * Math.min(1, dt * 14);
+        b.y += (h.y + uy * 0.55 - b.y) * Math.min(1, dt * 14);
+        b.z = 0; b.vx = h.vx; b.vy = h.vy; b.vz = 0;
+        return;
+    }
+    const px = b.x, py = b.y, pz = b.z;
+    spBallSchritt(b, dt);
+    // Weit im Aus bleibt der Ball liegen (Bande)
+    if (b.aus && (b.x < -4 || b.x > SP_L + 4 || b.y < -4 || b.y > SP_B + 4)) { b.x = spKlemme(b.x, -4, SP_L + 4); b.y = spKlemme(b.y, -4, SP_B + 4); b.vx = b.vy = b.vz = 0; b.z = 0; }
+    const treffer = spRahmen(b, px, py, pz);
+    if (treffer === 'tor') spTorErkannt();
+    if (treffer === 'aluminium') { spText(b.z > 2 ? 'Latte!' : 'Pfosten!', 1.2); if (lp.schuss) lp.schuss.abgewehrt = lp.t; }
+    if (treffer === 'aus' && lp.schuss && !lp.schuss.abgewehrt) lp.schuss.abgewehrt = lp.t;
+    // Torwart und Blocker beim Schuss
+    const s = lp.schuss;
+    if (s && !s.abgewehrt) {
+        const tw = s.torwart;
+        if (s.blocker && spDist(s.blocker, b) < 0.8 && b.z < 1.9) {
+            b.vx *= -0.35; b.vy = b.vy * 0.4 + (spRnd() - 0.5) * 8; b.vz = Math.abs(b.vz) * 0.4 + 2;
+            s.abgewehrt = lp.t; spText('Geblockt', 1);
+        } else if (tw && ['gehalten', 'harmlos', 'parade', 'parade-abpraller'].includes(s.ergebnis) && Math.hypot(b.x - tw.x, b.y - tw.y) < 1.15 && b.z < 2.4) {
+            if (s.ergebnis === 'gehalten' || s.ergebnis === 'harmlos') { b.halter = tw; b.vx = b.vy = b.vz = 0; b.z = 0; lp.besitz = tw.team; spText('Gehalten!', 1.2); }
+            else {
+                const r = spR(s.team);
+                b.vx = -r * (3 + spRnd() * 3); b.vy = (b.y < 34 ? -1 : 1) * (4 + spRnd() * 3); b.vz = 3 + spRnd() * 2;
+                if (s.ergebnis === 'parade' && spRnd() < 0.5) { b.vx = r * 2; b.vz = 6; }
+                spText('Parade!', 1.2);
+            }
+            s.abgewehrt = lp.t;
+        }
+    }
+    // Pass angekommen?
+    const p = lp.pass;
+    if (p && p.figur && !p.direkt && !lp.szene) {
+        if (Math.hypot(b.x - p.figur.x, b.y - p.figur.y) < 1.2 && b.z < 1.3) spAnnehmen(p.figur);
+        else if (lp.t > p.bis + 1.5) lp.pass = null;
+    }
+}
+
+function spFigurenLauf(dt) {
+    const lp = livePhysik, b = lp.ball;
+    const aktive = spAktive();
+    // Wer presst? Der Nächste des Teams ohne Ball
+    const presser = [0, 1].map(team => team === lp.besitz ? null : spNaechster(spFeld(team), b));
+    const sz = lp.szene;
+    aktive.forEach(f => {
+        const gesteuert = (sz && (f.sprint || f.jubel > 0)) || lp.standardHalten || (lp.pass && lp.pass.figur === f) || b.halter === f || f.liegt > 0;
+        if (!gesteuert && !lp.abpfiff) {
+            const g = spGrundziel(f);
+            f.zx = g.x; f.zy = g.y;
+            if (f === presser[f.team] && !lp.halbzeitWartet) { f.zx = b.x - spR(f.team) * 1.2; f.zy = b.y; }
+        }
+        // Torwart beim Schuss: Hechtsprung
+        const s = lp.schuss;
+        if (f.torwart && s && s.torwart === f && !s.abgewehrt) {
+            const reaktion = lp.t - s.t0 > 0.12;
+            let zielY = s.zielY;
+            if (s.elfmeter && f.elfY !== undefined) zielY = f.elfY;
+            else if (s.ergebnis === 'tor') zielY = f.y + Math.sign(s.zielY - f.y) * Math.max(0, Math.min(Math.abs(s.zielY - f.y) - 1.6, 1.4));
+            else if (!['gehalten', 'harmlos', 'parade', 'parade-abpraller'].includes(s.ergebnis)) zielY = f.y + (s.zielY - f.y) * 0.3;
+            if (reaktion) { f.zy = zielY; f.zx = f.x; if (Math.abs(zielY - f.y) > 0.8 && !f.hecht) f.hecht = zielY > f.y ? 1 : -1; f.sprint = true; }
+        }
+        if (f.hecht) { f.hechtZeit += dt; if (f.hechtZeit > 1.3) { f.hecht = 0; f.hechtZeit = 0; if (f.torwart) f.sprint = false; } }
+        spBewegen(f, dt);
+        if (f.jubel > 0) f.jubel = Math.max(0.01, f.jubel - dt);
+    });
+    // Abstand halten
+    for (let i = 0; i < aktive.length; i++) {
+        for (let j = i + 1; j < aktive.length; j++) {
+            const a = aktive[i], c = aktive[j];
+            if (a.sprint || c.sprint) continue;   // Zweikampf und Laufduell: dürfen nah heran
+            const dx = c.x - a.x, dy = c.y - a.y, d = Math.hypot(dx, dy);
+            if (d > 0.001 && d < 0.9) {
+                const k = (0.9 - d) * 0.5;
+                if (b.halter !== a && !a.torwart) { a.x -= dx / d * k; a.y -= dy / d * k; }
+                if (b.halter !== c && !c.torwart) { c.x += dx / d * k; c.y += dy / d * k; }
+            }
+        }
+    }
+    // Schiedsrichter läuft mit dem Spiel
+    const sr = lp.schiri;
+    if (!(lp.schiriBis > lp.t)) { sr.zx = b.x - 8; sr.zy = spKlemme(b.y + 10, 6, 62); }
+    const dx = sr.zx - sr.x, dy = sr.zy - sr.y, d = Math.hypot(dx, dy);
+    if (d > 0.3) { const s = Math.min(6, d * 1.5) * dt; sr.x += dx / d * s; sr.y += dy / d * s; sr.phase += s * 2; }
+}
+
+function spGrundziel(f) {
+    const lp = livePhysik, b = lp.ball;
+    const imBesitz = lp.besitz === f.team;
+    const bA = spA(f.team, b.x, b.y);
+    let ax, ay;
+    if (f.torwart) {
+        ax = 1.2 + spKlemme((45 - bA.x) / 45, 0, 1) * 4;
+        ay = 34 + (bA.y - 34) * 0.16;
+    } else {
+        ax = f.fx * SP_L + (bA.x - 52.5) * 0.55 + (imBesitz ? 7 : -5);
+        ay = f.fy * SP_B + (bA.y - 34) * 0.3;
+        if (imBesitz) ay = 34 + (ay - 34) * 1.1;
+        ax = spKlemme(ax, 6, 99); ay = spKlemme(ay, 2, 66);
+    }
+    return spW(f.team, ax, ay);
+}
+
+function spBewegen(f, dt) {
+    if (f.liegt > 0) { f.liegt -= dt; f.vx *= 0.8; f.vy *= 0.8; f.x += f.vx * dt; f.y += f.vy * dt; return; }
+    const dx = f.zx - f.x, dy = f.zy - f.y, d = Math.hypot(dx, dy);
+    const vmax = f.hecht ? 7 : (f.sprint ? 8.2 : (f.torwart ? 5 : 6.2));
+    let wx = 0, wy = 0;
+    if (d > 0.05) { const s = Math.min(vmax, d * 2.4); wx = dx / d * s; wy = dy / d * s; }
+    const ax = wx - f.vx, ay = wy - f.vy, a = Math.hypot(ax, ay), amax = (f.hecht ? 30 : 10) * dt;
+    if (a > amax) { f.vx += ax / a * amax; f.vy += ay / a * amax; } else { f.vx = wx; f.vy = wy; }
+    f.x += f.vx * dt; f.y += f.vy * dt;
+    f.x = spKlemme(f.x, -2, SP_L + 2); f.y = spKlemme(f.y, -2, SP_B + 2);
+    f.phase += Math.hypot(f.vx, f.vy) * dt * 1.9;
+}
+
+// ---------- Start und Ende ----------
+// Aus startLiveTickerAutoplay(): übernimmt den Ablauf, wenn die Physik läuft.
+function spielphysikStart() {
+    if (!spielphysikAktiv() || typeof currentMatch === 'undefined' || !currentMatch) { livePhysik = null; return false; }
+    spNeu(currentMatch);
+    spTempoKnoepfe();
+    return true;
+}
+function spielphysikLaeuft() { return !!livePhysik && typeof currentMatch !== 'undefined' && livePhysik.match === currentMatch && spielphysikAktiv(); }
+// Beim Umschalten auf die Taktiktafel: alles Offene zeigen, dann wieder der alte Ticker-Takt
+function spielphysikBeenden() {
+    if (!livePhysik) return;
+    spielphysikAufholen();
+    livePhysik = null;
+}
+
+/* eslint-enable */
 // 3D-Livespiel (Board-Karte "Live Spiel mehr animiert, 3D-Figuren"): Canvas mit echter Perspektive
-// wie eine TV-Kamera von der Haupttribüne. 22 Figuren mit Laufanimation spielen sich den Ball zu,
-// pressen, schießen aufs Tor, der Torwart pariert, Tore werden gefeiert. Die Szenen folgen dem echten
-// Spielgeschehen: Tore, Karten, Halbzeit und Abpfiff liest der Lauf aus currentMatch, Torchancen
-// meldet simulateMatchStep() über live3dSpielzug(). Das Ergebnis berechnet weiter allein die
-// Spiellogik (js/match-live.js), die Ansicht verändert nichts.
-// Läuft nur, solange das Livespiel sichtbar ist. Bei reduzierter Bewegung wird nur bei Ereignissen
-// neu gezeichnet. Umschalten zur bisherigen Taktiktafel über #live-3d-umschalter.
+// wie eine TV-Kamera von der Haupttribüne. Gezeichnet wird der Zustand der Spielphysik
+// (js/spielphysik.js): Ball mit Höhe und Schatten, 22 Spieler, Schiedsrichter. Ticker und Anzeigetafel
+// folgen dort dem Ball; die Ansicht selbst verändert nichts am Spiel.
+// Läuft nur, solange das Livespiel sichtbar ist. Bei reduzierter Bewegung gibt es nur Standbilder
+// (die Physik läuft dann nicht, der Ticker wie früher). Umschalten zur Taktiktafel über #live-3d-umschalter.
 
 const LIVE3D_LAENGE = 105, LIVE3D_BREITE = 68;
 const LIVE3D_KAMERA_ABSTAND = 45;          // Meter von der nahen Seitenlinie bis zur Kamera
 const LIVE3D_FIGUR = 2.7;                   // Figuren etwas größer als maßstäblich, sonst sind sie auf dem Handy winzig
 const LIVE3D_KEY = 'anstoss_fm13_live3d';
 const LIVE3D_GEGNER_FARBEN = ['#e53935', '#1e88e5', '#fdd835', '#43a047', '#fb8c00', '#8e24aa', '#f5f5f5', '#212121', '#00acc1', '#c62828'];
-// Grundordnung (Anteile von Länge/Breite, Angriff nach rechts): Torwart, Abwehr, Mittelfeld, Sturm
-const LIVE3D_ORDNUNG = [[0.04, 0.5], [0.2, 0.15], [0.18, 0.38], [0.18, 0.62], [0.2, 0.85], [0.42, 0.18], [0.38, 0.4], [0.38, 0.6], [0.42, 0.82], [0.6, 0.38], [0.6, 0.62]];
 
 let live3d = null;   // Zustand der Ansicht, nicht im Spielstand
-// Eigener Zufall der Ansicht: Math.random gehört der Spiellogik (Tests setzen dort feste Folgen).
-let live3dSaat = 0x9e3779b9;
-function live3dRnd() { live3dSaat = (live3dSaat * 1664525 + 1013904223) >>> 0; return live3dSaat / 4294967296; }
 
 function live3dAn() { return safeLocalGet(LIVE3D_KEY) !== '0'; }
 function live3dReduziert() {
@@ -23143,6 +24558,11 @@ function live3dReduziert() {
 
 // ---------- Aufbau ----------
 function live3dHash(text) { let h = 0; for (const c of String(text || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; }
+
+// Hautton einer Figur (fest je Spiel, damit sich nichts bei jedem Bild ändert)
+function live3dHaut(team, i, heimName) {
+    return ['#f1c27d', '#e0ac69', '#c68642', '#8d5524', '#ffdbac'][live3dHash((team ? 'g' : 'h') + i + (heimName || '')) % 5];
+}
 
 function live3dFarben() {
     const m = typeof currentMatch !== 'undefined' ? currentMatch : null;
@@ -23160,231 +24580,20 @@ function live3dDunkler(hex, f) { const [r, g, b] = live3dRgb(hex); return `rgb($
 
 function live3dNeu() {
     const m = currentMatch;
-    const farben = live3dFarben();
-    const spieler = [];
-    [0, 1].forEach(team => {
-        LIVE3D_ORDNUNG.forEach((o, i) => {
-            const haut = ['#f1c27d', '#e0ac69', '#c68642', '#8d5524', '#ffdbac'][live3dHash((team ? 'g' : 'h') + i + (m.homeName || '')) % 5];
-            spieler.push({ team, nr: i, x: 52.5, y: 34, zx: 52.5, zy: 34, phase: (i * 7 + team * 3) % 6,   // fest statt Math.random: die Ansicht zieht beim Anpfiff keine Zufallszahlen aus dem Spiel
-                 haut, torwart: i === 0, karte: 0, jubel: 0, hecht: 0 });
-        });
-    });
-    live3d = {
-        match: m, spieler, farben,
-        ball: { x: 52.5, y: 34, h: 0, flug: null, halter: null },
-        besitz: 0, kameraX: 52.5, szenen: [], szene: null, text: null, textBis: 0,
-        letzteTore: [m.homeGoals, m.awayGoals], letzteKarten: Object.keys(m.yellowCards || {}).length + (m.sentOff || []).length,
-        halbzeit: !!m.halftimeShown, abpfiff: m.minute >= 90, naechsterPass: 0, zeit: 0, letzterFrame: 0, laeuft: false, frames: 0
-    };
-    live3dAnstoss(0);
-}
-
-// Angriffsrichtung: Heim spielt in der ersten Halbzeit nach rechts.
-function live3dRichtung(team) {
-    const zweite = live3d && live3d.match && live3d.match.minute >= 45 && live3d.match.halftimeShown;
-    const heimRechts = !zweite;
-    return (team === 0) === heimRechts ? 1 : -1;
-}
-
-function live3dGrundposition(s) {
-    const o = LIVE3D_ORDNUNG[s.nr];
-    const r = live3dRichtung(s.team);
-    return { x: r > 0 ? o[0] * LIVE3D_LAENGE : LIVE3D_LAENGE - o[0] * LIVE3D_LAENGE, y: o[1] * LIVE3D_BREITE };
-}
-
-function live3dAnstoss(team) {
-    live3d.besitz = team;
-    live3d.spieler.forEach(s => { const g = live3dGrundposition(s); s.x = g.x; s.y = g.y; s.jubel = 0; s.hecht = 0; });
-    const stuermer = live3d.spieler.find(s => s.team === team && s.nr === 9);
-    stuermer.x = 52.5; stuermer.y = 34;
-    live3d.ball = { x: 52.5, y: 34, h: 0, flug: null, halter: stuermer };
-    live3d.naechsterPass = live3d.zeit + 0.8;
-}
-
-// ---------- Ereignisse ----------
-// Aus simulateMatchStep() (js/match-live.js): 'home' = Angriff des eigenen Teams, 'away' = des Gegners.
-function live3dSpielzug(richtung, ereignis) {
-    if (!live3d || !ereignis || richtung === 'midfield') return;
-    const m = live3d.match;
-    const eigenesTeam = m.isHome ? 0 : 1;
-    const team = richtung === 'home' ? eigenesTeam : 1 - eigenesTeam;
-    // Tore erkennt live3dPruefeSpielstand() am Spielstand; fiel in diesem Spielzug keins, wird es eine Chance.
-    if (live3d.match !== m) return;
-    const vorher = live3d.letzteTore[0] + live3d.letzteTore[1];
-    live3dPruefeSpielstand();
-    if (live3d.letzteTore[0] + live3d.letzteTore[1] === vorher) live3dSzene({ art: 'chance', team });
-}
-
-function live3dSzene(s) {
-    if (!live3d) return;
-    // Bei vielen Szenen auf einmal (Ticker schneller als die Bilder) fallen alte Chancen weg.
-    live3d.szenen = live3d.szenen.filter(x => x.art !== 'chance').slice(-2);
-    live3d.szenen.push(s);
-    if (live3dReduziert()) live3dZeichneEinmal();
-}
-
-function live3dPruefeSpielstand() {
-    const m = live3d.match;
-    if (m.homeGoals > live3d.letzteTore[0]) live3dSzene({ art: 'tor', team: 0 });
-    if (m.awayGoals > live3d.letzteTore[1]) live3dSzene({ art: 'tor', team: 1 });
-    live3d.letzteTore = [m.homeGoals, m.awayGoals];
-    const karten = Object.keys(m.yellowCards || {}).length + (m.sentOff || []).length;
-    if (karten > live3d.letzteKarten) live3dSzene({ art: 'karte', rot: (m.sentOff || []).length > (live3d.rote || 0) });
-    live3d.rote = (m.sentOff || []).length;
-    live3d.letzteKarten = karten;
-    if (m.halftimeShown && !live3d.halbzeit) { live3d.halbzeit = true; live3dText('Halbzeit', 2.5); live3dAnstoss(1); }
-    if (m.minute >= 90 && !live3d.abpfiff) { live3d.abpfiff = true; live3d.szenen = []; live3dText('Abpfiff', 99); }
+    live3d = { match: m, farben: live3dFarben(), kameraX: 52.5, text: null, textBis: 0, zeit: 0, letzterFrame: 0, laeuft: false, frames: 0 };
+    // Ohne laufende Physik (reduzierte Bewegung) trotzdem Aufstellung für das Standbild
+    if (typeof spNeu === 'function' && (typeof livePhysik === 'undefined' || !livePhysik || livePhysik.match !== m)) spNeu(m);
 }
 
 function live3dText(text, sekunden) { live3d.text = text; live3d.textBis = live3d.zeit + sekunden; }
 
-// Startet eine Szene: Angriff über zwei, drei Stationen bis zum Abschluss.
-function live3dStarteSzene(s) {
-    const r = live3dRichtung(s.team);
-    const torX = r > 0 ? LIVE3D_LAENGE : 0;
-    const angreifer = live3d.spieler.filter(p => p.team === s.team && !p.torwart);
-    const vorne = angreifer.sort((a, b) => (b.x - a.x) * r)[0];
-    live3d.besitz = s.team;
-    s.schritte = [
-        { ziel: angreifer.find(p => p.nr === 6) || vorne, dauer: 0.7 },
-        { ziel: angreifer.find(p => p.nr === 9) || vorne, dauer: 0.7 },
-        { schuss: true, torX, torY: 34 + (live3dRnd() * 6 - 3), dauer: 0.55 }
-    ];
-    s.schritt = 0; s.start = live3d.zeit;
-    if (s.art === 'karte') {
-        s.schritte = [{ pause: true, dauer: 1.6 }];
-        const taeter = live3d.spieler.filter(p => p.team !== live3d.besitz && !p.torwart)[Math.floor(live3dRnd() * 10)];
-        if (taeter) { taeter.karte = s.rot ? 2 : 1; s.taeter = taeter; }
-    }
-    live3d.szene = s;
-}
-
-function live3dSzeneWeiter(dt) {
-    const s = live3d.szene;
-    const b = live3d.ball;
-    if (b.flug) return;   // erst landen lassen
-    const schritt = s.schritte[s.schritt];
-    if (!schritt) { live3dSzeneEnde(s); return; }
-    if (schritt.pause) {
-        schritt.dauer -= dt;
-        if (schritt.dauer <= 0) { if (s.taeter) s.taeter.karte = 0; s.schritt++; }
-        return;
-    }
-    if (schritt.schuss) {
-        const torwart = live3d.spieler.find(p => p.team !== s.team && p.torwart);
-        const trifft = s.art === 'tor';
-        const zielY = trifft ? schritt.torY : (live3dRnd() < 0.5 ? torwart.y + (live3dRnd() * 2 - 1) : schritt.torY + (live3dRnd() < 0.5 ? -6 : 6));
-        const zielX = trifft ? schritt.torX + (schritt.torX > 50 ? 1.2 : -1.2) : (Math.abs(zielY - torwart.y) < 2 ? torwart.x : schritt.torX + (schritt.torX > 50 ? 2 : -2));
-        live3dPass(b.halter, { x: zielX, y: zielY }, schritt.dauer, trifft ? 1.6 : 1.1);
-        torwart.hecht = trifft || Math.abs(zielY - torwart.y) > 2 ? (zielY > torwart.y ? 1 : -1) : 0.01;
-        s.ergebnis = trifft ? 'tor' : (Math.abs(zielY - torwart.y) < 2 ? 'gehalten' : 'vorbei');
-        s.torwart = torwart;
-        s.schritt++;
-        return;
-    }
-    live3dPass(b.halter, schritt.ziel, schritt.dauer, 0.6);
-    s.schritt++;
-}
-
-function live3dSzeneEnde(s) {
-    live3d.szene = null;
-    if (s.art === 'tor') {
-        const m = live3d.match;
-        const eigen = (m.isHome ? 0 : 1) === s.team;
-        live3dText(eigen ? 'TOR!' : 'Gegentor', 2.2);
-        live3d.spieler.forEach(p => { if (p.team === s.team) p.jubel = 2.2; });
-        live3d.jubelEnde = live3d.zeit + 2.2;
-        live3d.anstossNach = 1 - s.team;
-    } else if (s.art === 'chance') {
-        if (s.ergebnis === 'gehalten' && s.torwart) { live3dText('Gehalten!', 1.2); live3d.ball.halter = s.torwart; live3d.besitz = s.torwart.team; }
-        else { live3dText('Knapp vorbei', 1.2); const tw = live3d.spieler.find(p => p.team !== s.team && p.torwart); live3d.ball.halter = tw; live3d.besitz = tw.team; live3d.ball.x = tw.x; live3d.ball.y = tw.y; live3d.ball.h = 0; }
-        live3d.naechsterPass = live3d.zeit + 1;
-    } else if (s.art === 'karte') {
-        live3d.naechsterPass = live3d.zeit + 0.4;
-    }
-}
-
-// ---------- Bewegung ----------
-function live3dPass(von, ziel, dauer, bogen) {
-    const b = live3d.ball;
-    b.flug = { ax: b.x, ay: b.y, bx: ziel.x, by: ziel.y, t: 0, dauer, bogen, empfaenger: ziel.team !== undefined ? ziel : null };
-    b.halter = null;
-}
-
+// Ein Bild weiter: Physik rechnen (js/spielphysik.js), Kamera folgt dem Ball.
 function live3dSchritt(dt) {
     const d = live3d;
     d.zeit += dt;
-    live3dPruefeSpielstand();
-    const b = d.ball;
-
-    // Jubel vorbei -> Anstoß
-    if (d.jubelEnde && d.zeit >= d.jubelEnde) { d.jubelEnde = 0; live3dAnstoss(d.anstossNach); }
-
-    if (!d.szene && !d.jubelEnde && d.szenen.length && !b.flug && !d.abpfiff) live3dStarteSzene(d.szenen.shift());
-    if (d.szene) live3dSzeneWeiter(dt);
-
-    // Ball
-    if (b.flug) {
-        const f = b.flug;
-        f.t += dt / f.dauer;
-        const t = Math.min(1, f.t);
-        b.x = f.ax + (f.bx - f.ax) * t;
-        b.y = f.ay + (f.by - f.ay) * t;
-        b.h = Math.sin(Math.PI * t) * f.bogen * 3;
-        if (t >= 1) {
-            b.flug = null; b.h = 0;
-            if (f.empfaenger) { b.halter = f.empfaenger; d.besitz = f.empfaenger.team; }
-        }
-    } else if (b.halter) {
-        // Dribbeln: der Ballführende trägt den Ball langsam Richtung Tor
-        const r = live3dRichtung(b.halter.team);
-        if (!d.szene && !d.jubelEnde && !d.abpfiff && !b.halter.torwart) b.halter.zx = Math.max(3, Math.min(102, b.halter.x + r * 3));
-        b.x += (b.halter.x + 0.6 * r - b.x) * Math.min(1, dt * 8);
-        b.y += (b.halter.y + 0.3 - b.y) * Math.min(1, dt * 8);
-    }
-
-    // Ruhiges Passspiel zwischen den Szenen
-    if (!d.szene && !d.jubelEnde && !d.abpfiff && b.halter && !b.flug && d.zeit >= d.naechsterPass) {
-        const r = live3dRichtung(b.halter.team);
-        const mit = d.spieler.filter(p => p.team === b.halter.team && p !== b.halter && !p.torwart);
-        // eher nach vorn, aber nicht zu weit
-        mit.sort((a, c) => ((c.x - b.halter.x) * r - Math.abs(c.y - b.halter.y) * 0.3) - ((a.x - b.halter.x) * r - Math.abs(a.y - b.halter.y) * 0.3));
-        let ziel = mit[Math.floor(live3dRnd() * Math.min(4, mit.length))];
-        // Ballverlust ans pressende Team
-        if (live3dRnd() < 0.18) {
-            const gegner = d.spieler.filter(p => p.team !== b.halter.team && !p.torwart);
-            ziel = gegner.sort((a, c) => Math.hypot(a.x - b.x, a.y - b.y) - Math.hypot(c.x - b.x, c.y - b.y))[0];
-        }
-        // Weit vorn ohne Szene: zurück ins Mittelfeld, damit Abschlüsse den echten Chancen vorbehalten bleiben
-        const toreX = r > 0 ? 88 : 17;
-        if ((r > 0 && b.halter.x > toreX) || (r < 0 && b.halter.x < toreX)) ziel = mit.sort((a, c) => (a.x - c.x) * r)[0];
-        live3dPass(b.halter, ziel, 0.5 + Math.hypot(ziel.x - b.x, ziel.y - b.y) / 40, Math.hypot(ziel.x - b.x, ziel.y - b.y) > 25 ? 2 : 0.3);
-        d.naechsterPass = d.zeit + 0.9 + live3dRnd() * 1.2;
-    }
-
-    // Spieler: Grundordnung, zur Ballseite verschoben; der Nächste presst
-    const bx = b.x, by = b.y;
-    const naechster = [0, 1].map(team => d.spieler.filter(p => p.team === team && !p.torwart)
-        .reduce((a, c) => (Math.hypot(c.x - bx, c.y - by) < Math.hypot(a.x - bx, a.y - by) ? c : a)));
-    d.spieler.forEach(p => {
-        const g = live3dGrundposition(p);
-        const r = live3dRichtung(p.team);
-        const imBesitz = d.besitz === p.team;
-        let zx = g.x + (bx - 52.5) * 0.45 + (imBesitz ? 8 * r : -4 * r);
-        let zy = g.y + (by - 34) * 0.25;
-        if (p.torwart) { zx = g.x + (bx - 52.5) * 0.06; zy = 34 + (by - 34) * 0.15; }
-        if (p === naechster[p.team] && !imBesitz) { zx = bx - r * 1.2; zy = by; }
-        if (b.flug && b.flug.empfaenger === p) { zx = b.flug.bx; zy = b.flug.by; }
-        if (b.halter === p && !p.torwart) { zx = p.zx; zy = p.y; }
-        if (p.jubel > 0) { p.jubel -= dt; zx = p.x; zy = p.y; }
-        zx = Math.max(1, Math.min(104, zx)); zy = Math.max(1, Math.min(67, zy));
-        const dx = zx - p.x, dy = zy - p.y, dist = Math.hypot(dx, dy);
-        const tempo = (p.torwart ? 5 : 7.5) * dt;
-        if (dist > 0.05) { const k = Math.min(1, tempo / dist); p.x += dx * k; p.y += dy * k; p.phase += Math.min(dist, tempo) * 2.2; }
-        if (p.hecht) { p.hechtZeit = (p.hechtZeit || 0) + dt; if (p.hechtZeit > 1.2) { p.hecht = 0; p.hechtZeit = 0; } }
-    });
-
-    // Kamera folgt dem Ball
+    if (typeof spielphysikTakt === 'function') spielphysikTakt(dt);
+    const lp = typeof livePhysik !== 'undefined' ? livePhysik : null;
+    const bx = lp ? lp.ball.x : 52.5;
     // Bei Ausschreitungen nach dem Abpfiff schwenkt die Kamera zur betroffenen Kurve
     const kz = Math.max(24, Math.min(81, d.krawall ? d.krawall.x : bx));
     d.kameraX += (kz - d.kameraX) * Math.min(1, dt * 2.2);
@@ -23442,26 +24651,51 @@ function live3dZeichnen(ctx, P) {
         linie([[x, 13.85], [x + 16.5 * r, 13.85], [x + 16.5 * r, 54.15], [x, 54.15]]);
         linie([[x, 24.85], [x + 5.5 * r, 24.85], [x + 5.5 * r, 43.15], [x, 43.15]]);
     });
-    // Figuren und Tore nach Tiefe sortiert
-    const dinge = live3d.spieler.map(p => ({ y: p.y, mal: () => live3dFigur(ctx, P, p) }));
+    // Eckfahnen
+    [[0, 0], [105, 0], [0, 68], [105, 68]].forEach(([x, y]) => {
+        const f = live3dPunkt(P, x, y, 0), k = live3dPunkt(P, x, y, 1.5);
+        ctx.strokeStyle = '#eeeeee'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(f.x, f.y); ctx.lineTo(k.x, k.y); ctx.stroke();
+        ctx.fillStyle = '#ffd54f'; ctx.fillRect(k.x, k.y, Math.max(3, k.s * 0.5), Math.max(2, k.s * 0.35));
+    });
+    // Figuren, Schiedsrichter, Tore und Ball nach Tiefe sortiert
+    const lp = typeof livePhysik !== 'undefined' && livePhysik && livePhysik.match === live3d.match ? livePhysik : null;
+    const dinge = [];
+    if (lp) {
+        lp.f.forEach(p => { if (p.aktiv) dinge.push({ y: p.y, mal: () => live3dFigur(ctx, P, p, lp) }); });
+        dinge.push({ y: lp.schiri.y, mal: () => live3dFigur(ctx, P, Object.assign({ team: -1, nr: 0, haut: '#e0ac69', jubel: 0, hecht: 0, karte: 0, liegt: 0 }, lp.schiri), lp) });
+        dinge.push({ y: lp.ball.y + 0.01, mal: () => live3dBall(ctx, P, lp.ball) });
+    }
     [0, 105].forEach(x => { dinge.push({ y: 30.3, mal: () => live3dTor(ctx, P, x, 'hinten') }); dinge.push({ y: 37.7, mal: () => live3dTor(ctx, P, x, 'vorn') }); });
-    dinge.push({ y: live3d.ball.y + 0.01, mal: () => live3dBall(ctx, P) });
     dinge.sort((a, b) => a.y - b.y).forEach(x => x.mal());
+    // Name des eigenen Ballführenden
+    if (lp && lp.ball.halter && lp.ball.halter.name && lp.ball.halter.team === lp.eigen) {
+        const h = lp.ball.halter, k = live3dPunkt(P, h.x, h.y, LIVE3D_FIGUR * 2.2);
+        ctx.font = `700 ${Math.round(Math.max(10, H * 0.042))}px system-ui, sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+        const bw = ctx.measureText(h.name).width + 8;
+        ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(k.x - bw / 2, k.y - Math.max(10, H * 0.042) - 4, bw, Math.max(10, H * 0.042) + 4);
+        ctx.fillStyle = '#ffffff'; ctx.fillText(h.name, k.x, k.y - 1);
+    }
     // Ausschreitungen nach dem Abpfiff (js/ausschreitungen-szene.js)
     if (live3d.krawall && typeof live3dZeichneKrawall === 'function') live3dZeichneKrawall(ctx, P);
-    // Einblendung
-    if (live3d.text && live3d.zeit < live3d.textBis) {
-        const gross = live3d.text === 'TOR!' || live3d.text === 'Gegentor';
+    // Einblendung: eigene der Ansicht (Ausschreitungen) vor der aus der Physik
+    let text = null;
+    if (live3d.text && live3d.zeit < live3d.textBis) text = live3d.text;
+    else if (lp && lp.text && lp.t < lp.textBis) text = lp.text;
+    if (text) {
+        const gross = text === 'TOR!' || text === 'Gegentor';
         ctx.font = `900 ${Math.round(H * (gross ? 0.16 : 0.09))}px system-ui, sans-serif`;
         ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillText(live3d.text, W / 2 + 2, H * 0.42 + 2);
-        ctx.fillStyle = live3d.text === 'TOR!' ? '#ffd54f' : '#ffffff'; ctx.fillText(live3d.text, W / 2, H * 0.42);
+        ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillText(text, W / 2 + 2, H * 0.42 + 2);
+        ctx.fillStyle = text === 'TOR!' ? '#ffd54f' : '#ffffff'; ctx.fillText(text, W / 2, H * 0.42);
     }
-    // Spielstand oben links
+    // Spielstand oben links: Uhr und Tore so, wie sie auf dem Platz gefallen sind
     const m = live3d.match;
     ctx.font = `700 ${Math.round(Math.max(11, H * 0.055))}px system-ui, sans-serif`;
     ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-    const zeile = `${m.minute}'  ${m.homeGoals}:${m.awayGoals}`;
+    const minute = lp ? Math.max(1, Math.floor(lp.uhr)) : m.minute;
+    const stand = lp ? lp.anzeige : [m.homeGoals, m.awayGoals];
+    const zeile = `${minute}'  ${stand[0]}:${stand[1]}`;
     ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(6, 6, ctx.measureText(zeile).width + 12, Math.max(11, H * 0.055) + 8);
     ctx.fillStyle = '#ffffff'; ctx.fillText(zeile, 12, 10);
 }
@@ -23489,10 +24723,12 @@ function live3dFigur(ctx, P, p) {
     if (fuss.x < -20 || fuss.x > P.W + 20) return;
     const g = LIVE3D_FIGUR * fuss.s;     // Pixel je Meter Figur
     const hoehe = 1.8 * g;
-    const farbe = p.torwart ? (p.team === 0 ? '#c0ca33' : '#ff7043') : (p.team === 0 ? live3d.farben.heim : live3d.farben.gast);
+    // team -1 = Schiedsrichter in Schwarz
+    const farbe = p.team === -1 ? '#212121' : (p.torwart ? (p.team === 0 ? '#c0ca33' : '#ff7043') : (p.team === 0 ? live3d.farben.heim : live3d.farben.gast));
     const schwung = Math.sin(p.phase) * 0.28 * g;
     const sprung = p.jubel > 0 ? Math.abs(Math.sin(live3d.zeit * 9 + p.nr)) * 0.5 * g : 0;
-    const neigung = p.hecht ? p.hecht * Math.min(1, (p.hechtZeit || 0) * 4) * 0.9 : 0;
+    // Hechtsprung kippt zur Seite, ein gefoulter Spieler liegt am Boden
+    const neigung = p.liegt > 0 ? 1.45 : (p.hecht ? p.hecht * Math.min(1, (p.hechtZeit || 0) * 4) * 0.9 : 0);
     // Schatten
     ctx.fillStyle = 'rgba(0,0,0,0.28)';
     ctx.beginPath(); ctx.ellipse(fuss.x, fuss.y, 0.42 * g, 0.14 * g, 0, 0, Math.PI * 2); ctx.fill();
@@ -23529,9 +24765,8 @@ function live3dFigur(ctx, P, p) {
     }
 }
 
-function live3dBall(ctx, P) {
-    const b = live3d.ball;
-    const boden = live3dPunkt(P, b.x, b.y, 0), luft = live3dPunkt(P, b.x, b.y, b.h + 0.22);
+function live3dBall(ctx, P, b) {
+    const boden = live3dPunkt(P, b.x, b.y, 0), luft = live3dPunkt(P, b.x, b.y, (b.z || 0) + 0.22);
     const r = Math.max(2, 0.22 * LIVE3D_FIGUR * boden.s);
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath(); ctx.ellipse(boden.x, boden.y, r, r * 0.4, 0, 0, Math.PI * 2); ctx.fill();
@@ -23564,10 +24799,6 @@ function live3dZeichneEinmal() {
     const ctx = c.getContext('2d');
     if (!ctx) return;
     ctx.setTransform(g.dpr, 0, 0, g.dpr, 0, 0);
-    // Reduzierte Bewegung: Szenen springen ans Ende
-    if (live3dReduziert()) {
-        for (let i = 0; i < 400 && (live3d.szene || live3d.szenen.length || live3d.ball.flug); i++) live3dSchritt(0.05);
-    }
     live3dZeichnen(ctx, live3dProjektion(g.W, g.H));
     live3d.frames++;
 }
@@ -23584,9 +24815,7 @@ function live3dFrame(t) {
     if (currentMatch !== live3d.match) { live3dNeu(); live3d.laeuft = true; live3d.groesse = live3dGroesse(); }
     const dt = Math.min(0.05, live3d.letzterFrame ? (t - live3d.letzterFrame) / 1000 : 0.016);
     live3d.letzterFrame = t;
-    // Hinkt die Ansicht dem Ticker hinterher, läuft sie schneller
-    const tempo = live3d.szenen.length > 1 ? 2 : 1;
-    live3dSchritt(dt * tempo);
+    live3dSchritt(dt);
     live3dZeichneEinmal();
     requestAnimationFrame(live3dFrame);
 }
@@ -23604,9 +24833,12 @@ function live3dAnzeigen() {
         clearInterval(live3d.intervall);
         live3d.intervall = setInterval(() => {
             if (!live3d || !live3dSichtbar() || currentMatch !== live3d.match) { clearInterval(live3d && live3d.intervall); return; }
-            const vorher = JSON.stringify([live3d.letzteTore, live3d.letzteKarten, live3d.match.minute]);
-            live3dPruefeSpielstand();
-            if (vorher !== JSON.stringify([live3d.letzteTore, live3d.letzteKarten, live3d.match.minute])) live3dZeichneEinmal();
+            const stand = JSON.stringify([live3d.match.homeGoals, live3d.match.awayGoals, live3d.match.minute, (live3d.match.sentOff || []).length]);
+            if (stand !== live3d.letzterStand) {
+                live3d.letzterStand = stand;
+                if (typeof livePhysik !== 'undefined' && livePhysik) { livePhysik.anzeige = [live3d.match.homeGoals, live3d.match.awayGoals]; livePhysik.uhr = live3d.match.minute; }
+                live3dZeichneEinmal();
+            }
         }, 600);
         return;
     }
@@ -23624,7 +24856,16 @@ function live3dUmschalterZeigen() {
 function live3dUmschalten() {
     safeLocalSet(LIVE3D_KEY, live3dAn() ? '0' : '1');
     if (live3d) live3d.laeuft = false;
+    // Läuft gerade ein Spiel, übernimmt der passende Takt: Spielphysik mit 3D, sonst der alte Ticker
+    const laeuft = typeof currentMatch !== 'undefined' && currentMatch && currentMatch.minute < 90;
+    if (!live3dAn() && typeof spielphysikBeenden === 'function') spielphysikBeenden();
     live3dAnzeigen();
+    if (laeuft && typeof startLiveTickerAutoplay === 'function' && (!live3dAn() || (typeof spielphysikAktiv === 'function' && spielphysikAktiv()))) {
+        const pause = typeof liveTickerPaused !== 'undefined' && liveTickerPaused;
+        startLiveTickerAutoplay();
+        if (pause && typeof toggleLiveTickerAutoplay === 'function') toggleLiveTickerAutoplay();
+    }
+    if (typeof spTempoKnoepfe === 'function') spTempoKnoepfe();
     if (!live3dAn() && typeof render3DPitch === 'function') render3DPitch('live-pitch');
 }
 
@@ -31488,6 +32729,9 @@ function tickLockerFriendships() {
 
 const SET_PIECE_PENALTY_BASE = 0.02;   // je Spielzug, skaliert mit der Überlegenheit
 const SET_PIECE_FREEKICK_CHANCE = 0.06;
+// Ecken als eigene Entscheidung gibt es nur, wenn die Spielphysik das Spiel zeigt (js/spielphysik.js);
+// sonst stecken sie wie bisher als kleiner Bonus in den erwarteten Toren.
+const SET_PIECE_CORNER_CHANCE = 0.09;
 const VAR_CHECK_CHANCE = 0.07;          // je Tor, davon wird gut ein Drittel zurückgenommen
 
 function setPieceOnPitch() {
@@ -31527,6 +32771,20 @@ function getFreeKickOptions() {
     };
 }
 
+function getCornerOptions() {
+    const onPitch = setPieceOnPitch();
+    const coach = staffMembers.setPieceCoach && staffMembers.setPieceCoach.hired ? 0.02 : 0;
+    const flanker = onPitch.find(p => p.id === game.cornerTakerId) || [...onPitch].filter(p => p.pos !== 'TW').sort((a, b) => (b.passing || 0) - (a.passing || 0))[0];
+    const kopfball = [...onPitch].filter(p => (p.pos === 'ABW' || p.pos === 'ST') && p !== flanker).sort((a, b) => b.strength - a.strength)[0] || flanker;
+    const geuebt = typeof getDrillMastery === 'function' ? getDrillMastery('ecke') : 0;
+    return {
+        flanke: { label: `🔝 Flanke auf ${kopfball ? kopfball.name : 'den Kopfballspieler'}`, schuetze: kopfball, vorlage: flanker,
+            prob: Math.max(0.04, Math.min(0.2, 0.06 + ((kopfball ? kopfball.strength : 50) - 60) * 0.002 + (flanker && flanker.passing >= 75 ? 0.02 : 0) + coach + 0.05 * geuebt)),
+            risiko: 0, hinweis: 'Hoch in den Strafraum' },
+        kurz: { label: '↪️ Kurz ausführen', schuetze: null, prob: 0.03 + 0.04 * geuebt, risiko: 0, hinweis: 'Sicher, aber selten gefährlich' }
+    };
+}
+
 function getPenaltyCandidates(gefoultId) {
     const onPitch = setPieceOnPitch().filter(p => p.pos !== 'TW');
     const liste = [];
@@ -31551,29 +32809,51 @@ function rollLiveSetPiece(ourDiff) {
     const freistossUns = SET_PIECE_FREEKICK_CHANCE * (ourDiff > -8 ? 1 : 0.5);
     const freistossGegner = SET_PIECE_FREEKICK_CHANCE * (ourDiff < 8 ? 1 : 0.5);
     const wurf = Math.random();
+    const eigen = currentMatch.isHome ? 0 : 1;
+    const regie = !!currentMatch.drehbuch;   // das Spiel läuft gerade auf dem Platz (js/spielphysik.js)
+    const anzeigen = { aktion: showSetPiecePanel };
     if (wurf < elfmeterUns) {
         const gefoult = onPitch[Math.floor(Math.random() * onPitch.length)];
         const nachVar = Math.random() < 0.25;
         currentMatch.setPiece = { type: 'elfmeter', gefoultId: gefoult.id, minute: currentMatch.minute };
-        tickerLine(`<div style="color:var(--gold); font-weight:bold;">❗ ${currentMatch.minute}. Min: ${nachVar ? '📺 Nach Videobeweis: ' : ''}ELFMETER für uns! ${gefoult.name} wird im Strafraum gelegt.</div>`);
+        currentMatch.awaitingSetPiece = true;
+        tickerLine(`<div style="color:var(--gold); font-weight:bold;">❗ ${currentMatch.minute}. Min: ${nachVar ? '📺 Nach Videobeweis: ' : ''}ELFMETER für uns! ${gefoult.name} wird im Strafraum gelegt.</div>`,
+            Object.assign({ art: 'standard', typ: 'elfmeter', team: eigen, spielerId: gefoult.id }, anzeigen));
     } else if (wurf < elfmeterUns + elfmeterGegner) {
+        // Mit Spielphysik und Reaktionsspielen entscheidet man, wohin der eigene Torwart springt
+        if (regie && typeof reaktionsspielAn === 'function' && reaktionsspielAn()) {
+            const oppName = currentMatch.isHome ? currentMatch.awayName : currentMatch.homeName;
+            currentMatch.setPiece = { type: 'elfmeter-gegner', minute: currentMatch.minute };
+            currentMatch.awaitingSetPiece = true;
+            tickerLine(`<div style="color:var(--danger);">❗ ${currentMatch.minute}. Min: Elfmeter für ${oppName}...</div>`,
+                Object.assign({ art: 'standard-gegner-start', team: 1 - eigen }, anzeigen));
+            if (typeof noteRefereeControversy === 'function') noteRefereeControversy('elfmeter');
+            return true;
+        }
         playOpponentPenalty();
         return true;
     } else if (wurf < elfmeterUns + elfmeterGegner + freistossUns) {
         currentMatch.setPiece = { type: 'freistoss', minute: currentMatch.minute };
-        tickerLine(`<div style="color:var(--gold);">🎯 ${currentMatch.minute}. Min: Freistoß in aussichtsreicher Position, 20 Meter vor dem Tor!</div>`);
+        currentMatch.awaitingSetPiece = true;
+        tickerLine(`<div style="color:var(--gold);">🎯 ${currentMatch.minute}. Min: Freistoß in aussichtsreicher Position, 20 Meter vor dem Tor!</div>`,
+            Object.assign({ art: 'standard', typ: 'freistoss', team: eigen }, anzeigen));
     } else if (wurf < elfmeterUns + elfmeterGegner + freistossUns + freistossGegner) {
         playOpponentFreeKick();
         return true;
+    } else if (regie && wurf < elfmeterUns + elfmeterGegner + freistossUns + freistossGegner + SET_PIECE_CORNER_CHANCE * (ourDiff > -8 ? 1 : 0.5)) {
+        currentMatch.setPiece = { type: 'ecke', minute: currentMatch.minute };
+        currentMatch.awaitingSetPiece = true;
+        tickerLine(`<div style="color:var(--gold);">🚩 ${currentMatch.minute}. Min: Ecke für uns!</div>`,
+            Object.assign({ art: 'standard', typ: 'ecke', team: eigen }, anzeigen));
     } else {
         return false;
     }
-    currentMatch.awaitingSetPiece = true;
-    showSetPiecePanel();
     return true;
 }
 
-function tickerLine(html) {
+// ereignis: was auf dem Platz passiert (für js/spielphysik.js), siehe liveTicker() in js/match-live.js
+function tickerLine(html, ereignis) {
+    if (typeof liveTicker === 'function') { liveTicker(html, ereignis); return; }
     const log = document.getElementById('ticker-log');
     if (!log) return;
     log.innerHTML += html;
@@ -31581,32 +32861,48 @@ function tickerLine(html) {
 }
 
 function refreshLiveScore() {
+    if (currentMatch && currentMatch.drehbuch) return;   // mit Spielphysik zeigt die Anzeige erst, was auf dem Platz passiert ist
     const el = document.getElementById('live-score');
     if (el) el.innerText = currentMatch.homeGoals + ' : ' + currentMatch.awayGoals;
 }
 
-function ownSetPieceGoal(scorer, assist, text) {
+function ownSetPieceGoal(scorer, assist, text, standard) {
     if (currentMatch.isHome) currentMatch.homeGoals++; else currentMatch.awayGoals++;
     if (typeof recordLiveShot === 'function') recordLiveShot(currentMatch.isHome, true);
     playSound('goal');
     if (scorer) creditOwnGoal(setPieceOnPitch(), scorer, assist || null);
     const ourName = currentMatch.isHome ? currentMatch.homeName : currentMatch.awayName;
-    tickerLine(`<div style="color:var(--primary); font-weight:bold;">⚽ ${currentMatch.minute}. Min: TOR! ${text} für ${ourName}!</div>`);
+    tickerLine(`<div style="color:var(--primary); font-weight:bold;">⚽ ${currentMatch.minute}. Min: TOR! ${text} für ${ourName}!</div>`,
+        { art: 'tor', team: currentMatch.isHome ? 0 : 1, spielerId: scorer ? scorer.id : null, standard, standardSchuss: true, stand: [currentMatch.homeGoals, currentMatch.awayGoals] });
 }
 
-function playOpponentPenalty() {
+function getOpponentPenaltyChance() {
     const keeper = setPieceOnPitch().find(p => p.pos === 'TW');
-    let prob = 0.76 - (keeper && keeper.trait === 'Elfmeter-Killer' ? 0.12 : 0) - (staffMembers.twTrainer && staffMembers.twTrainer.hired ? getTwTrainerEffekt().elfmeter : 0);
+    return 0.76 - (keeper && keeper.trait === 'Elfmeter-Killer' ? 0.12 : 0) - (staffMembers.twTrainer && staffMembers.twTrainer.hired ? getTwTrainerEffekt().elfmeter : 0);
+}
+
+// Gegnerischer Elfmeter. zielung (Torwart-Reaktionsspiel): twEcke = wohin unser Torwart springt,
+// ecke = wohin der Schütze schießt; richtig geraten hält er viel öfter.
+function playOpponentPenalty(zielung, ohneAnkuendigung) {
+    const keeper = setPieceOnPitch().find(p => p.pos === 'TW');
+    let prob = getOpponentPenaltyChance();
+    if (zielung && zielung.twEcke !== undefined && zielung.twEcke !== null) prob = zielung.twEcke === zielung.ecke ? Math.max(0.2, prob - 0.4) : Math.min(0.93, prob + 0.1);
     const oppName = currentMatch.isHome ? currentMatch.awayName : currentMatch.homeName;
-    tickerLine(`<div style="color:var(--danger);">❗ ${currentMatch.minute}. Min: Elfmeter für ${oppName}...</div>`);
-    if (typeof noteRefereeControversy === 'function') noteRefereeControversy('elfmeter');
+    const gegnerTeam = currentMatch.isHome ? 1 : 0;
+    if (!ohneAnkuendigung) {
+        tickerLine(`<div style="color:var(--danger);">❗ ${currentMatch.minute}. Min: Elfmeter für ${oppName}...</div>`, { art: 'vorab' });
+        if (typeof noteRefereeControversy === 'function') noteRefereeControversy('elfmeter');
+    }
+    const ereignis = { art: 'standard-gegner', standard: 'elfmeter', team: gegnerTeam, standardSchuss: !!ohneAnkuendigung };
     if (Math.random() < prob) {
         if (currentMatch.isHome) currentMatch.awayGoals++; else currentMatch.homeGoals++;
         if (typeof recordLiveShot === 'function') recordLiveShot(!currentMatch.isHome, true);
         playSound('goal');
-        tickerLine(`<div style="color:var(--danger);">⚽ ${currentMatch.minute}. Min: Verwandelt. Gegentor vom Punkt.</div>`);
+        tickerLine(`<div style="color:var(--danger);">⚽ ${currentMatch.minute}. Min: Verwandelt. Gegentor vom Punkt.</div>`,
+            Object.assign(ereignis, { ergebnis: 'tor', stand: [currentMatch.homeGoals, currentMatch.awayGoals] }));
     } else {
-        tickerLine(`<div style="color:var(--blue); font-weight:bold;">🧤 ${currentMatch.minute}. Min: GEHALTEN! ${keeper ? keeper.name : 'Unser Torwart'} pariert den Elfmeter!</div>`);
+        tickerLine(`<div style="color:var(--blue); font-weight:bold;">🧤 ${currentMatch.minute}. Min: GEHALTEN! ${keeper ? keeper.name : 'Unser Torwart'} pariert den Elfmeter!</div>`,
+            Object.assign(ereignis, { ergebnis: 'parade' }));
         if (keeper) keeper.morale = Math.min(100, (keeper.morale || 50) + 5);
     }
     refreshLiveScore();
@@ -31617,22 +32913,27 @@ function playOpponentPenalty() {
 function playOpponentFreeKick() {
     const oppName = currentMatch.isHome ? currentMatch.awayName : currentMatch.homeName;
     const prob = 0.08 - (staffMembers.twTrainer && staffMembers.twTrainer.hired ? 0.02 : 0);
+    const ereignis = { art: 'standard-gegner', standard: 'freistoss', team: currentMatch.isHome ? 1 : 0 };
     if (Math.random() < prob) {
         if (currentMatch.isHome) currentMatch.awayGoals++; else currentMatch.homeGoals++;
         if (typeof recordLiveShot === 'function') recordLiveShot(!currentMatch.isHome, true);
         playSound('goal');
-        tickerLine(`<div style="color:var(--danger);">⚽ ${currentMatch.minute}. Min: Freistoß für ${oppName} - direkt verwandelt.</div>`);
+        tickerLine(`<div style="color:var(--danger);">⚽ ${currentMatch.minute}. Min: Freistoß für ${oppName} - direkt verwandelt.</div>`,
+            Object.assign(ereignis, { ergebnis: 'tor', stand: [currentMatch.homeGoals, currentMatch.awayGoals] }));
     } else {
-        tickerLine(`<div style="color:var(--text-muted); font-size:var(--fs-small);">${currentMatch.minute}. Min: Freistoß für ${oppName} - die Mauer steht.</div>`);
+        tickerLine(`<div style="color:var(--text-muted); font-size:var(--fs-small);">${currentMatch.minute}. Min: Freistoß für ${oppName} - die Mauer steht.</div>`,
+            Object.assign(ereignis, { ergebnis: 'mauer' }));
     }
     refreshLiveScore();
 }
 
 // Videobeweis vor einem Tor (simulateMatchStep): true = das Tor zählt nicht.
-function varOverturnsGoal(ourGoal) {
+function varOverturnsGoal(ourGoal, minute) {
     if (Math.random() >= VAR_CHECK_CHANCE) return false;
     const zurueck = Math.random() < 0.4;
-    tickerLine(`<div style="color:var(--text-muted);">📺 ${currentMatch.minute}. Min: Der Videoassistent prüft das Tor${ourGoal ? '' : ' des Gegners'}... ${zurueck ? '<strong>Abseits - Tor zurückgenommen!</strong>' : 'Tor zählt!'}</div>`);
+    const min = minute || currentMatch.minute;
+    tickerLine(`<div style="color:var(--text-muted);">📺 ${min}. Min: Der Videoassistent prüft das Tor${ourGoal ? '' : ' des Gegners'}... ${zurueck ? '<strong>Abseits - Tor zurückgenommen!</strong>' : 'Tor zählt!'}</div>`,
+        { art: 'var', zurueck, minute: min, team: ourGoal === currentMatch.isHome ? 0 : 1 });
     return zurueck;
 }
 
@@ -31641,62 +32942,127 @@ function showSetPiecePanel() {
     const box = document.getElementById('setpiece-options');
     const titel = document.getElementById('setpiece-title');
     if (!sp || !box || !titel) return;
+    const knopf = (wahl, inhalt) => `<button onclick="standardWaehlen('${wahl}')" class="btn-secondary" style="text-align:left; margin-bottom:4px;">${inhalt}</button>`;
+    const reaktion = typeof reaktionsspielAn === 'function' && reaktionsspielAn();
     if (sp.type === 'elfmeter') {
         titel.innerText = '❗ Elfmeter - wer schießt?';
-        box.innerHTML = getPenaltyCandidates(sp.gefoultId).map(c => `<button onclick="resolveSetPiece('${c.p.id}')" class="btn-secondary" style="text-align:left; margin-bottom:4px;">
-            <strong>${c.p.name}</strong> · ${Math.round(c.prob * 100)} % <span style="font-size:var(--fs-caption); color:var(--text-muted);">(${c.grund})</span></button>`).join('');
+        box.innerHTML = getPenaltyCandidates(sp.gefoultId).map(c => knopf(c.p.id,
+            `<strong>${c.p.name}</strong> · ${Math.round(c.prob * 100)} % <span style="font-size:var(--fs-caption); color:var(--text-muted);">(${c.grund})</span>`)).join('');
+    } else if (sp.type === 'elfmeter-gegner') {
+        titel.innerText = '🧤 Elfmeter gegen uns';
+        box.innerHTML = knopf('torwart', `<strong>🧤 Selbst im Tor stehen</strong><br><span style="font-size:var(--fs-caption); color:var(--text-muted);">Du wählst, wohin der Torwart springt. Richtig geraten hält er viel öfter.</span>`)
+            + `<button onclick="standardAusfuehren('torwart', null)" class="btn-secondary" style="text-align:left; margin-bottom:4px;"><strong>Dem Torwart vertrauen</strong> · ${Math.round((1 - getOpponentPenaltyChance()) * 100)} % gehalten</button>`;
     } else {
-        titel.innerText = '🎯 Freistoß - wie ausführen?';
-        box.innerHTML = Object.entries(getFreeKickOptions()).map(([k, o]) => `<button onclick="resolveSetPiece('${k}')" class="btn-secondary" style="text-align:left; margin-bottom:4px;">
-            <strong>${o.label}</strong> · ${Math.round(o.prob * 100)} % Torchance<br><span style="font-size:var(--fs-caption); color:var(--text-muted);">${o.hinweis}${o.risiko ? ` (Konterrisiko ${Math.round(o.risiko * 100)} %)` : ''}</span></button>`).join('');
+        const ecke = sp.type === 'ecke';
+        titel.innerText = ecke ? '🚩 Ecke - wie ausführen?' : '🎯 Freistoß - wie ausführen?';
+        const optionen = ecke ? getCornerOptions() : getFreeKickOptions();
+        box.innerHTML = Object.entries(optionen).map(([k, o]) => knopf(k,
+            `<strong>${o.label}</strong> · ${Math.round(o.prob * 100)} % Torchance<br><span style="font-size:var(--fs-caption); color:var(--text-muted);">${o.hinweis}${o.risiko ? ` (Konterrisiko ${Math.round(o.risiko * 100)} %)` : ''}</span>`)).join('');
     }
+    if (reaktion && sp.type !== 'elfmeter-gegner') box.innerHTML += `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-top:4px;">🎮 Danach führst du selbst aus: im richtigen Moment tippen (außer bei „Kurz ausführen“).</div>`;
+    box.innerHTML += `<button onclick="reaktionsspielUmschalten()" class="btn-secondary" style="width:auto; font-size:var(--fs-caption); margin-top:6px;">${reaktion ? '🎮 Reaktionsspiele aus' : '🎮 Reaktionsspiele an'}</button>`;
     const ov = document.getElementById('setpiece-overlay');
     if (ov) ov.classList.add('show');
 }
 
 function defaultSetPieceChoice(sp) {
     if (sp.type === 'elfmeter') return String(getPenaltyCandidates(sp.gefoultId)[0].p.id);
+    if (sp.type === 'elfmeter-gegner') return 'torwart';
+    if (sp.type === 'ecke') return 'flanke';
     const o = getFreeKickOptions();
     return o.direkt.prob >= o.flanke.prob ? 'direkt' : 'flanke';
 }
 
-function resolveSetPiece(choice, silent) {
+// Trefferchance nach dem Reaktionsspiel (js/reaktionsspiel.js): q = 0 (daneben) bis 1 (genau in der Mitte).
+function reaktionsChance(prob, zielung) {
+    if (!zielung || typeof zielung.q !== 'number') return prob;
+    let p = prob + (zielung.q - 0.55) * 0.4;
+    // Elfmeter: Ahnt der Torwart die Ecke, muss der Schuss sehr genau sein
+    if (zielung.twEcke !== undefined && zielung.ecke !== undefined) {
+        if (zielung.twEcke === zielung.ecke) p -= zielung.q > 0.85 ? 0.05 : 0.22;
+        else p += 0.05;
+    }
+    return Math.max(prob * 0.4, Math.min(Math.min(0.97, prob + 0.25), p));
+}
+
+// Ausführen nach der Wahl im Fenster: erst das Reaktionsspiel, dann die Auswertung.
+function standardWaehlen(choice) {
+    const sp = currentMatch && currentMatch.setPiece;
+    if (!sp) { showToast('Dieser Standard ist schon vorbei.', 'error'); return; }
+    if (choice === 'kurz' || typeof reaktionsspielAn !== 'function' || !reaktionsspielAn() || typeof reaktionsspielStarten !== 'function') { standardAusfuehren(choice, null); return; }
+    const ov = document.getElementById('setpiece-overlay');
+    if (ov) ov.classList.remove('show');
+    reaktionsspielStarten(sp, choice, zielung => standardAusfuehren(choice, zielung));
+}
+
+// Wertet aus; läuft die Spielphysik, wandert das Ergebnis ins Drehbuch und wird auf dem Platz gespielt.
+function standardAusfuehren(choice, zielung) {
+    if (!currentMatch || !currentMatch.setPiece) return;
+    const regie = typeof spielphysikLaeuft === 'function' && spielphysikLaeuft();
+    if (regie) currentMatch.drehbuch = [];
+    try {
+        resolveSetPiece(choice, false, zielung);
+    } finally {
+        if (regie && currentMatch) {
+            const liste = currentMatch.drehbuch || [];
+            currentMatch.drehbuch = null;
+            spielphysikStandardDrehbuch(liste, zielung);
+        }
+    }
+}
+
+function resolveSetPiece(choice, silent, zielung) {
     const sp = currentMatch && currentMatch.setPiece;
     if (!sp) return;
     const ov = document.getElementById('setpiece-overlay');
     if (ov) ov.classList.remove('show');
     if (choice === undefined || choice === null) choice = defaultSetPieceChoice(sp);
+    const eigen = currentMatch.isHome ? 0 : 1;
+    const tore = () => [currentMatch.isHome ? currentMatch.homeGoals : currentMatch.awayGoals, currentMatch.isHome ? currentMatch.awayGoals : currentMatch.homeGoals];
+    const torVorher = tore();
+    const daneben = (standard, extra) => Object.assign({ art: 'chance', team: eigen, standard, standardSchuss: true, ergebnis: 'verschossen' }, extra || {});
     if (sp.type === 'elfmeter') {
         const kandidat = getPenaltyCandidates(sp.gefoultId).find(c => String(c.p.id) === String(choice)) || getPenaltyCandidates(sp.gefoultId)[0];
         const p = kandidat.p;
         p.penaltiesTaken = (p.penaltiesTaken || 0) + 1;
-        if (Math.random() < kandidat.prob) {
+        if (Math.random() < reaktionsChance(kandidat.prob, zielung)) {
             p.penaltiesScored = (p.penaltiesScored || 0) + 1;
             if (p.id === sp.gefoultId) p.morale = Math.min(100, (p.morale || 50) + 6);
-            ownSetPieceGoal(p, null, `${p.name} verwandelt den Elfmeter`);
+            ownSetPieceGoal(p, null, `${p.name} verwandelt den Elfmeter`, 'elfmeter');
         } else {
             p.morale = Math.max(10, (p.morale || 50) - 5);
-            tickerLine(`<div style="color:var(--danger); font-weight:bold;">❌ ${sp.minute}. Min: ${p.name} vergibt den Elfmeter!</div>`);
+            tickerLine(`<div style="color:var(--danger); font-weight:bold;">❌ ${sp.minute}. Min: ${p.name} vergibt den Elfmeter!</div>`, daneben('elfmeter', { spielerId: p.id }));
         }
+    } else if (sp.type === 'elfmeter-gegner') {
+        playOpponentPenalty(zielung, true);
     } else {
-        const o = getFreeKickOptions()[choice] || getFreeKickOptions().direkt;
-        if (Math.random() < o.prob) {
-            ownSetPieceGoal(o.schuetze, o.vorlage, choice === 'direkt' ? `${o.schuetze.name} zirkelt den Freistoß direkt ins Tor` : (choice === 'flanke' ? `${o.schuetze.name} köpft die Freistoßflanke ein` : 'Kurz ausgeführt, abgefälscht'));
+        const ecke = sp.type === 'ecke';
+        const optionen = ecke ? getCornerOptions() : getFreeKickOptions();
+        const o = optionen[choice] || optionen[ecke ? 'flanke' : 'direkt'];
+        const standard = ecke ? (choice === 'kurz' ? 'kurz' : 'ecke') : (choice === 'direkt' ? 'freistoss' : (choice === 'flanke' ? 'flanke-standard' : 'kurz'));
+        if (Math.random() < reaktionsChance(o.prob, zielung)) {
+            const text = ecke
+                ? (choice === 'kurz' ? 'Ecke kurz ausgeführt, flach ins Tor' : `${o.schuetze.name} köpft die Ecke ein`)
+                : (choice === 'direkt' ? `${o.schuetze.name} zirkelt den Freistoß direkt ins Tor` : (choice === 'flanke' ? `${o.schuetze.name} köpft die Freistoßflanke ein` : 'Kurz ausgeführt, abgefälscht'));
+            ownSetPieceGoal(o.schuetze, o.vorlage, text, standard);
         } else if (o.risiko && Math.random() < 0.15 * (o.risiko / 0.04)) { // geklärte Flanke: Konter, ~4 % Gegentor (einstudiert weniger)
-            tickerLine(`<div style="color:var(--danger);">⚡ ${sp.minute}. Min: Flanke geklärt - Konter!</div>`);
+            tickerLine(`<div style="color:var(--danger);">⚡ ${sp.minute}. Min: Flanke geklärt - Konter!</div>`, daneben(standard, { ergebnis: 'geklaert' }));
             if (Math.random() < 0.27) {
                 if (currentMatch.isHome) currentMatch.awayGoals++; else currentMatch.homeGoals++;
                 playSound('goal');
-                tickerLine(`<div style="color:var(--danger);">⚽ ${sp.minute}. Min: Gegentor nach dem Konter.</div>`);
+                tickerLine(`<div style="color:var(--danger);">⚽ ${sp.minute}. Min: Gegentor nach dem Konter.</div>`,
+                    { art: 'tor', team: 1 - eigen, stil: 'nach einem blitzschnellen Konter', stand: [currentMatch.homeGoals, currentMatch.awayGoals], sofort: true });
             }
         } else {
-            tickerLine(`<div style="color:var(--text-muted); font-size:var(--fs-small);">${sp.minute}. Min: Der Freistoß bringt nichts ein.</div>`);
+            tickerLine(`<div style="color:var(--text-muted); font-size:var(--fs-small);">${sp.minute}. Min: ${ecke ? 'Die Ecke bringt nichts ein.' : 'Der Freistoß bringt nichts ein.'}</div>`, daneben(standard, o.schuetze ? { spielerId: o.schuetze.id } : null));
         }
     }
+    // Bilanz der Reaktionsspiele: Treffer bzw. gehaltener Elfmeter
+    if (zielung && typeof reaktionsBilanzBuchen === 'function') reaktionsBilanzBuchen(zielung, sp.type === 'elfmeter-gegner' ? tore()[1] === torVorher[1] : tore()[0] > torVorher[0]);
     currentMatch.setPiece = null;
     currentMatch.awaitingSetPiece = false;
     refreshLiveScore();
-    if (!silent && typeof renderLiveMatchStats === 'function') renderLiveMatchStats();
+    if (!silent && !currentMatch.drehbuch && typeof renderLiveMatchStats === 'function') renderLiveMatchStats();
 }
 
 // Elfmeterschießen: Wirkung unseres Torwarts auf die gegnerische Trefferquote.
@@ -31726,6 +33092,242 @@ function renderShootoutKeeperChoice() {
         return `<button onclick="chooseShootoutKeeper('${k.id}')" class="${aktuell && aktuell.id === k.id ? 'btn-action' : 'btn-secondary'}" style="width:auto; font-size:var(--fs-caption); margin:0 4px 4px 0;">🧤 ${k.name} (${k.strength}${k.trait === 'Elfmeter-Killer' ? ', Elfmeter-Killer' : ''})${imSpiel ? '' : ' · Einwechslung'}</button>`;
     }).join('');
 }
+
+/* eslint-enable */
+// Reaktionsspiele bei Standards (Elfmeter, Freistoß, Ecke): Ein Cursor läuft über eine Leiste,
+// erst von links nach rechts, dann von oben nach unten; wer ihn in der Mitte stoppt, schießt genau.
+// Elfmeter: vorher die Ecke wählen, der Torwart ahnt manchmal richtig. Elfmeter gegen uns: wohin
+// springt unser Torwart? Das Ergebnis (zielung) verschiebt die Trefferchance (reaktionsChance() in
+// js/set-pieces.js) und bestimmt in der Spielphysik, wohin der Ball fliegt.
+// Gute Schützen bewegen den Cursor langsamer und haben eine breitere Mitte.
+// Ohne Reaktionsspiel (Schalter, "Kurz ausführen", schnelles Durchspielen) bleibt alles wie bisher.
+
+const REAKTION_KEY = 'anstoss_fm13_reaktionsspiel';
+let reaktion = null;   // laufendes Reaktionsspiel, nicht im Spielstand
+let reaktionSaat = 0x6d2b79f5;
+function reaktionRnd() { reaktionSaat = (reaktionSaat * 1664525 + 1013904223) >>> 0; return reaktionSaat / 4294967296; }
+
+function reaktionsspielAn() { return safeLocalGet(REAKTION_KEY) !== '0'; }
+function reaktionsspielUmschalten() {
+    safeLocalSet(REAKTION_KEY, reaktionsspielAn() ? '0' : '1');
+    showToast(reaktionsspielAn() ? '🎮 Reaktionsspiele bei Standards an' : 'Reaktionsspiele aus: Standards laufen automatisch', 'info');
+    if (typeof showSetPiecePanel === 'function' && typeof currentMatch !== 'undefined' && currentMatch && currentMatch.setPiece) showSetPiecePanel();
+}
+
+function reaktionsBilanz() {
+    if (!game.reaktionsBilanz) game.reaktionsBilanz = { versuche: 0, perfekt: 0, erfolge: 0 };
+    return game.reaktionsBilanz;
+}
+function reaktionsBilanzBuchen(zielung, erfolg) {
+    const b = reaktionsBilanz();
+    b.versuche++;
+    if (typeof zielung.q === 'number' && zielung.q >= 0.9) b.perfekt++;
+    if (erfolg) b.erfolge++;
+}
+
+// Schwierigkeit aus dem Können: Zeit für einen Weg über die Leiste und Breite der Mitte
+function reaktionsTempo(wert) {
+    const w = Number(wert) || 50;
+    return { dauer: Math.max(0.55, Math.min(1.4, 0.95 + (w - 60) * 0.008)), zone: Math.max(0.08, Math.min(0.24, 0.14 + (w - 60) * 0.0025)) };
+}
+
+// Ablauf je Standard: Stufen (ecke = Ecke wählen, quer/hoch = Leisten, torwart = Sprung wählen)
+function reaktionsPlan(sp, choice) {
+    if (sp.type === 'elfmeter') {
+        const kandidat = getPenaltyCandidates(sp.gefoultId).find(c => String(c.p.id) === String(choice)) || getPenaltyCandidates(sp.gefoultId)[0];
+        const p = kandidat.p;
+        return { titel: `❗ Elfmeter: ${p.name}`, prob: kandidat.prob, stufen: [
+            { art: 'ecke', text: 'Wohin schießt du? (aus Sicht des Schützen)' },
+            { art: 'quer', text: 'Platzierung: tippe, wenn der Cursor in der Mitte ist', ...reaktionsTempo(p.shooting) },
+            { art: 'hoch', text: 'Schusskraft: tippe in der Mitte', ...reaktionsTempo(p.shooting) }
+        ], twRaten: true };
+    }
+    if (sp.type === 'elfmeter-gegner') {
+        return { titel: '🧤 Elfmeter gegen uns', prob: 1 - getOpponentPenaltyChance(), stufen: [{ art: 'torwart', text: 'Wohin springt dein Torwart? (aus seiner Sicht)', zeit: 2.6 }] };
+    }
+    const ecke = sp.type === 'ecke';
+    const optionen = ecke ? getCornerOptions() : getFreeKickOptions();
+    const o = optionen[choice] || optionen[ecke ? 'flanke' : 'direkt'];
+    if (choice === 'direkt') {
+        const s = o.schuetze || {};
+        return { titel: `🎯 Freistoß direkt: ${s.name || ''}`, prob: o.prob, stufen: [
+            { art: 'quer', text: 'Richtung: tippe in der Mitte', ...reaktionsTempo(s.shooting) },
+            { art: 'hoch', text: 'Über die Mauer: tippe in der Mitte', ...reaktionsTempo(s.shooting) }
+        ] };
+    }
+    const flanker = o.vorlage || o.schuetze || {}, kopf = o.schuetze || {};
+    return { titel: `${ecke ? '🚩 Ecke' : '🔝 Freistoßflanke'} auf ${kopf.name || 'den Kopfballspieler'}`, prob: o.prob, stufen: [
+        { art: 'quer', text: `Flanke von ${flanker.name || 'außen'}: tippe in der Mitte`, ...reaktionsTempo(flanker.passing) },
+        { art: 'hoch', text: `Kopfball ${kopf.name || ''}: tippe in der Mitte`, ...reaktionsTempo(kopf.strength) }
+    ] };
+}
+
+function reaktionsspielStarten(sp, choice, fertig) {
+    const plan = reaktionsPlan(sp, choice);
+    reaktion = { sp, choice, plan, fertig, stufe: 0, werte: [], ecke: undefined, twEcke: undefined, laeuft: false, start: 0, gestoppt: false };
+    // Elfmeter: Ahnt der Torwart die Ecke? (eigener Zufall, damit die Spiellogik ihre Folge behält)
+    if (plan.twRaten) { const w = reaktionRnd(); reaktion.twEcke = w < 0.42 ? -1 : (w < 0.84 ? 1 : 0); }
+    if (sp.type === 'elfmeter-gegner') { const w = reaktionRnd(); reaktion.schussEcke = w < 0.4 ? -1 : (w < 0.8 ? 1 : 0); }
+    const ov = document.getElementById('reaktion-overlay');
+    if (ov) ov.classList.add('show');
+    reaktionsStufeZeigen();
+}
+
+function reaktionsStufeZeigen() {
+    const r = reaktion;
+    if (!r) return;
+    const st = r.plan.stufen[r.stufe];
+    const titel = document.getElementById('reaktion-titel');
+    const box = document.getElementById('reaktion-feld');
+    if (!titel || !box) return;
+    titel.innerText = r.plan.titel;
+    const b = reaktionsBilanz();
+    const bilanz = b.versuche ? `Deine Bilanz: ${b.erfolge} von ${b.versuche} geglückt, ${b.perfekt}× perfekt` : 'Erster Versuch - viel Glück!';
+    const kopf = `<div style="font-size:var(--fs-caption); color:var(--text-muted); margin-bottom:6px;">Schritt ${r.stufe + 1} von ${r.plan.stufen.length} · ${bilanz}</div>
+        <div style="font-size:var(--fs-body); font-weight:700; margin-bottom:8px;">${st.text}</div>`;
+    if (st.art === 'ecke' || st.art === 'torwart') {
+        box.innerHTML = kopf + `<div class="reaktion-tor" aria-hidden="true"><span></span><span></span><span></span></div>
+            <div class="reaktion-ecken">
+                <button onclick="reaktionsEcke(-1)" class="btn-action">⬅️ Links</button>
+                <button onclick="reaktionsEcke(0)" class="btn-secondary">⬆️ Mitte</button>
+                <button onclick="reaktionsEcke(1)" class="btn-action">Rechts ➡️</button>
+            </div>${st.art === 'torwart' ? '<div class="reaktion-uhr" id="reaktion-uhr"><div id="reaktion-uhr-balken"></div></div>' : ''}
+            <div id="reaktion-ergebnis" class="reaktion-ergebnis" role="status"></div>`;
+        r.start = performance.now();
+        r.laeuft = st.art === 'torwart';
+        if (r.laeuft) requestAnimationFrame(reaktionsTakt);
+        return;
+    }
+    const quer = st.art === 'quer';
+    box.innerHTML = kopf + `<div class="reaktion-leiste ${quer ? 'quer' : 'hoch'}" onclick="reaktionsTippen()" role="button" aria-label="Jetzt tippen">
+            <div class="reaktion-zone" style="${quer ? `left:${50 - st.zone * 50}%; width:${st.zone * 100}%` : `top:${50 - st.zone * 50}%; height:${st.zone * 100}%`};"></div>
+            <div class="reaktion-cursor" id="reaktion-cursor"></div>
+        </div>
+        <button onclick="reaktionsTippen()" class="btn-primary reaktion-jetzt" id="reaktion-jetzt">👆 Jetzt!</button>
+        <div id="reaktion-ergebnis" class="reaktion-ergebnis" role="status"></div>`;
+    r.start = performance.now();
+    r.gestoppt = false;
+    r.laeuft = true;
+    requestAnimationFrame(reaktionsTakt);
+    const k = document.getElementById('reaktion-jetzt');
+    if (k) k.focus();
+}
+
+// Lage des Cursors: Dreieckswelle zwischen -1 und 1
+function reaktionsLage(st, ms) {
+    const p = (ms / 1000) / st.dauer;
+    const t = p % 2;
+    return t < 1 ? -1 + 2 * t : 3 - 2 * t;
+}
+
+function reaktionsTakt(jetzt) {
+    const r = reaktion;
+    if (!r || !r.laeuft) return;
+    const st = r.plan.stufen[r.stufe];
+    if (st.art === 'torwart') {
+        const rest = Math.max(0, 1 - (jetzt - r.start) / 1000 / st.zeit);
+        const balken = document.getElementById('reaktion-uhr-balken');
+        if (balken) balken.style.width = (rest * 100) + '%';
+        if (rest <= 0) { r.laeuft = false; reaktionsEcke(null); return; }
+    } else {
+        const lage = reaktionsLage(st, jetzt - r.start);
+        const c = document.getElementById('reaktion-cursor');
+        if (c) { if (st.art === 'quer') c.style.left = (50 + lage * 46) + '%'; else c.style.top = (50 + lage * 46) + '%'; }
+    }
+    requestAnimationFrame(reaktionsTakt);
+}
+
+function reaktionsTippen() {
+    const r = reaktion;
+    if (!r || !r.laeuft || r.gestoppt) return;
+    const st = r.plan.stufen[r.stufe];
+    if (st.art !== 'quer' && st.art !== 'hoch') return;
+    r.gestoppt = true; r.laeuft = false;
+    const lage = reaktionsLage(st, performance.now() - r.start);
+    const genau = Math.abs(lage) <= st.zone ? 1 : Math.max(0, 1 - (Math.abs(lage) - st.zone) / (1 - st.zone));
+    r.werte.push({ art: st.art, lage, genau });
+    if (navigator.vibrate) { try { navigator.vibrate(genau >= 1 ? [20, 30, 20] : 25); } catch (e) { /* egal */ } }
+    const erg = document.getElementById('reaktion-ergebnis');
+    if (erg) {
+        const wort = genau >= 1 ? '✨ Perfekt!' : (genau > 0.6 ? '👍 Gut' : (genau > 0.3 ? '😬 Knapp' : '❌ Daneben'));
+        erg.innerHTML = `<strong style="color:${genau > 0.6 ? 'var(--primary)' : (genau > 0.3 ? 'var(--accent)' : 'var(--danger)')};">${wort}</strong>`;
+    }
+    setTimeout(reaktionsWeiter, 650);
+}
+
+function reaktionsEcke(ecke) {
+    const r = reaktion;
+    if (!r) return;
+    const st = r.plan.stufen[r.stufe];
+    r.laeuft = false;
+    if (st.art === 'torwart') {
+        // Der Spieler wählt aus Sicht des Torwarts; gespeichert wird aus Sicht des Schützen
+        r.twEcke = ecke === null ? 0 : -ecke;
+        const erg = document.getElementById('reaktion-ergebnis');
+        if (erg) erg.innerHTML = ecke === null ? 'Zu spät - der Torwart bleibt stehen.' : 'Der Schütze läuft an …';
+    } else r.ecke = ecke === null ? 0 : ecke;
+    setTimeout(reaktionsWeiter, st.art === 'torwart' ? 500 : 200);
+}
+
+function reaktionsWeiter() {
+    const r = reaktion;
+    if (!r) return;
+    r.stufe++;
+    if (r.stufe < r.plan.stufen.length) { reaktionsStufeZeigen(); return; }
+    reaktionsAbschluss();
+}
+
+function reaktionsZielung() {
+    const r = reaktion;
+    const quer = r.werte.find(w => w.art === 'quer'), hoch = r.werte.find(w => w.art === 'hoch');
+    const z = {};
+    if (quer || hoch) {
+        z.h = quer ? quer.lage : 0;
+        z.v = hoch ? hoch.lage : 0;
+        z.q = ((quer ? quer.genau : 1) + (hoch ? hoch.genau : 1)) / 2;
+    }
+    if (r.sp.type === 'elfmeter') { z.ecke = r.ecke === undefined ? 0 : r.ecke; z.twEcke = r.twEcke; }
+    if (r.sp.type === 'elfmeter-gegner') { z.ecke = r.schussEcke; z.twEcke = r.twEcke === undefined ? 0 : r.twEcke; }
+    return z;
+}
+
+function reaktionsAbschluss() {
+    const r = reaktion;
+    const z = reaktionsZielung();
+    const box = document.getElementById('reaktion-feld');
+    let chance;
+    if (r.sp.type === 'elfmeter-gegner') {
+        const gegner = getOpponentPenaltyChance();
+        const tor = z.twEcke === z.ecke ? Math.max(0.2, gegner - 0.4) : Math.min(0.93, gegner + 0.1);
+        chance = `Abwehrchance jetzt ${Math.round((1 - tor) * 100)} % ${z.twEcke === z.ecke ? '- richtig geahnt!' : ''}`;
+    } else {
+        chance = `Trefferchance jetzt ${Math.round(reaktionsChance(r.plan.prob, z) * 100)} % (vorher ${Math.round(r.plan.prob * 100)} %)`;
+        if (z.twEcke !== undefined && z.ecke !== undefined) chance += z.twEcke === z.ecke ? ' · Der Torwart ahnt die Ecke!' : ' · Der Torwart springt falsch.';
+    }
+    if (box) box.innerHTML = `<div style="font-size:var(--fs-body-lg); font-weight:800; margin:10px 0;">${chance}</div>`;
+    setTimeout(() => reaktionsBeenden(z), 1100);
+}
+
+function reaktionsBeenden(z) {
+    const r = reaktion;
+    reaktion = null;
+    const ov = document.getElementById('reaktion-overlay');
+    if (ov) ov.classList.remove('show');
+    if (r && r.fertig) r.fertig(z);
+}
+
+// Schließen-Knopf und Escape: der Standard wird automatisch ausgeführt
+function reaktionsspielAbbrechen() {
+    if (!reaktion) { const ov = document.getElementById('reaktion-overlay'); if (ov) ov.classList.remove('show'); return; }
+    reaktion.laeuft = false;
+    reaktionsBeenden(null);
+}
+
+document.addEventListener('keydown', e => {
+    if (!reaktion || (e.key !== ' ' && e.key !== 'Enter')) return;
+    const st = reaktion.plan.stufen[reaktion.stufe];
+    if (st && (st.art === 'quer' || st.art === 'hoch')) { e.preventDefault(); reaktionsTippen(); }
+});
 
 /* eslint-enable */
 /* eslint-disable no-undef */
@@ -34030,7 +35632,7 @@ const I18N_UI_EN = {
     // Premium & Admin & Verschiedenes
     '💎 Premium-Shop': '💎 Premium shop', 'Dies ist eine reine Offline-App ohne echte Zahlungsanbindung. "Käufe" hier sind simuliert und buchen kein echtes Geld ab - die Premium-Punkte werden direkt gutgeschrieben.': 'This is an offline-only app with no real payments. "Purchases" here are simulated and charge no real money - premium points are credited directly.', 'Premium-Punkte "kaufen" (simuliert)': 'Premium points "buy" (simulated)', 'Booster einlösen': 'Redeem booster', '💎 Premium: Fan-Boost': '💎 Premium: fan boost', 'Sofortiger Fan-Zufriedenheits-Schub für Diamanten.': 'Instant fan satisfaction boost for diamonds.', '💎 Fan-Zufriedenheit +20 kaufen (90)': '💎 Buy fan satisfaction +20 (90)', '💎 Mit Diamanten sofort abschließen (150)': '💎 Finish now with diamonds (150)', '⭐ Zusätzliche Features': '⭐ Extra features', '💾 Speicherstände': '💾 Save games', '💾 Savegame-Export & JSON-Import': '💾 Save export & JSON import', '💾 Als Datei herunterladen': '💾 Download as file', '📤 Als Datei exportieren': '📤 Export as file', '📥 Aus Datei importieren': '📥 Import from file', '📤 Exportieren': '📤 Export', '📤 JSON Exportieren': '📤 Export JSON', '📥 JSON Importieren': '📥 Import JSON', '📸 Als Bild herunterladen': '📸 Download as image', '📋 Verlauf exportieren': '📋 Export history', '🆕 Neues Spiel starten (frischer Klub)': '🆕 Start a new game (fresh club)', '✅ Neues Spiel mit diesen Einstellungen starten': '✅ Start a new game with these settings', 'Startliga wählen:': 'Choose the starting league:', 'Startkapital wählen:': 'Choose the starting capital:', 'Heimatstadt (bestimmt Regionalliga, Oberliga und Landespokal):': 'Home city (determines the regional leagues and the state cup):', 'Aktueller Vereinsname:': 'Current club name:', '🧪 Szenario-Presets': '🧪 Scenario presets', 'Ausgewogenes Einsteigen ohne besondere Vor-/Nachteile.': 'A balanced start without special pros or cons.', 'Ausgewogener Ansatz ohne besondere Vor-/Nachteile.': 'A balanced approach without special pros or cons.', '🏷️ Vereinsidentität': '🏷️ Club identity', '🛡️ Vereins-Wappen': '🛡️ Club crest', '🖼️ Vereinsmuseum: Wappen-Historie': '🖼️ Club museum: crest history', 'Zweite Ebene: Muster-Badge': 'Second layer: pattern badge', 'Dritte Ebene: Tier-/Maskottchen-Symbol': 'Third layer: animal/mascot symbol', 'Symbol': 'Symbol', 'Farbe': 'Colour', 'Auswärtstrikot-Farbe': 'Away kit colour', '✏️ Umbenennen': '✏️ Rename', '🔄 Verein wechseln': '🔄 Change club', 'Eigene Vorlagen': 'Own templates', '✓ Alle als gelesen markieren': '✓ Mark all as read', '★ Wichtig': '★ Important', 'Was bedeutet ein Wert, wie wirkt er, wie beeinflusst man ihn? Suchen oder nach Bereich filtern.': 'What does a value mean, what does it do, how do you influence it? Search or filter by area.', '🛠️ Admin-Diagnose & Live-Inspector': '🛠️ Admin diagnostics & live inspector', 'Entwickler-Konsole Aktiv': 'Developer console active', '🔍 Struktur-Selbsttest': '🔍 Structure self-test', '🔍 Jetzt alle Screens testen': '🔍 Test all screens now', 'Prüft, ob jeder Screen nach dem Öffnen wirklich sichtbaren Inhalt zeigt - deckt versteckte HTML-Verschachtelungsfehler auf, bevor sie als "das Spiel geht nicht" auffallen.': 'Checks that every screen shows visible content when opened - finds hidden HTML nesting errors before they show up as "the game is broken".', 'Insolvenz-Test': 'Insolvency test', '💣 Komplett-Reset': '💣 Full reset', '⚠️ Technischer Fehler (bitte melden):': '⚠️ Technical error (please report):', 'Verlauf (letzte Läufe):': 'History (last runs):', 'Stimmung:': 'Mood:', 'Rangordnung': 'Hierarchy',
     // Teil 2 (25.21): Texte, die erst die Module rendern (Scan aller Bildschirme auf Englisch)
-    'Einlösen': 'Redeem', 'Spieler': 'Player', '🌟 Champions Cup Spieltag': '🌟 Champions Cup matchday', 'Kaufen für einen festen Geldbetrag (skaliert automatisch mit dem Kurs, egal wie teuer/günstig die Aktie ist):': 'Buy for a fixed amount (scales with the price automatically, however expensive or cheap the share is):', 'Aktueller Börsenkurs:': 'Current share price:', 'Noch nicht aufgestellt': 'Not in the line-up yet', 'Freistoß-Gott': 'Free-kick god', 'Noch kein Scout für diese Region.': 'No scout for this region yet.', 'Wintermütze': 'Winter hat', 'Auswärts-Schal': 'Away scarf', 'Leder-Geldbörse': 'Leather wallet', 'Schlüsselanhänger': 'Key ring', 'Mini-Ball für Kinder': 'Mini ball for kids', 'Handyhülle mit Wappen': 'Phone case with crest', 'Kapuzenpulli mit Wappen': 'Hoodie with crest', 'keine': 'none', 'Saison:': 'Season:', 'Eisenfuß': 'Iron foot', 'Präsident': 'President', 'Kapazität': 'Capacity', 'KAPAZITÄT': 'CAPACITY', 'nur mähen': 'mow only', 'Gründlich': 'Thorough', 'Millionär': 'Millionaire', '→ Höhepunkt': '→ Highlight', 'Vorverträge': 'Pre-contracts', '· Gästeblock': '· away block', 'Gesamtstärke': 'Overall strength', 'pro Spieltag': 'per matchday', '🌴 Südamerika': '🌴 South America', 'Gerüchteküche': 'Rumour mill', 'Presse-Tribüne': 'Press stand', '↺ Zurücksetzen': '↺ Reset', 'Höchster Sieg:': 'Biggest win:', 'Multimillionär': 'Multimillionaire', 'Rückkaufoption': 'Buy-back option', 'Saisoneröffnung': 'Season opening', 'Nicht gegründet': 'Not founded', 'Auswärtsbilanz:': 'Away record:', 'Nächstes Spiel:': 'Next match:', 'Nächste Lizenz:': 'Next licence:', 'Trophäen gesamt:': 'Total trophies:', '🍀 Glücksbringer': '🍀 Lucky charm', 'Vertragsgespräch': 'Contract talk', 'Auf- und Abstieg': 'Promotion and relegation', 'nur dieser Verein': 'this club only', '🎫 Ticketverkäufe': '🎫 Ticket sales', 'West-Haupttribüne': 'West main stand', 'Ernährungsberater': 'Nutritionist', 'Parkplatz-Gelände': 'Car park site', 'Nur mähen (leicht)': 'Mow only (light)', '💼 Gesamtgehälter:': '💼 Total wages:', 'Villa mit Seeblick': 'Villa with lake view', 'Abstellungsprämien': 'Release fees', 'Höchster Derbysieg:': 'Biggest derby win:', 'Auswärts-Spitzname:': 'Away nickname:', '🔝 Freistoßflanke ·': '🔝 Free-kick cross ·', 'Sanierungsbedürftig': 'Needs renovation', 'Nächste Ausbaustufe': 'Next upgrade', '✅ Preise übernehmen': '✅ Apply prices', 'Zustand des Geläufs': 'Pitch condition', 'Höchste Niederlage:': 'Heaviest defeat:', '💛 Loyalitäts-Bonus': '💛 Loyalty bonus', '🎤 Spieler-Interview': '🎤 Player interview', '↪️ Kurz ausgeführt ·': '↪️ Taken short ·', 'Präventionsprogramm:': 'Prevention programme:', 'Farbe je Block nach dem Risiko des nächsten Spiels (grün ruhig, rot hoch), Symbole für Vorfälle dieser Saison.': 'Colour per stand by the risk of the next match (green calm, red high), symbols for incidents this season.', '🧩 Taktiktafel zeigen': '🧩 Show tactics board', '🎥 3D-Ansicht zeigen': '🎥 Show 3D view', '🎥 Luftbild': '🎥 Aerial view', '☀️ Tag': '☀️ Day', '⚠️ Risiko': '⚠️ Risk', '🎬 Rundflug': '🎬 Fly-around', '◀ Spiel': '◀ Match', 'Spiel ▶': 'Match ▶', 'Heute': 'Today', 'Nach dem Ausbau': 'After the expansion', '✕ Vorschau beenden': '✕ End preview', 'Wischen dreht das Stadion, zwei Finger oder ➕/➖ zoomen, ein Tipp auf einen Block öffnet seinen Ausbau.': 'Swipe to turn the stadium, two fingers or ➕/➖ to zoom, tap a stand to open its expansion.', '🧩 Klassische Ansicht': '🧩 Classic view', '🗺️ Vereinsgelände': '🗺️ Club grounds', '📷 Bild speichern': '📷 Save picture', 'Streifen': 'Stripes', 'Blockfarben': 'Block colours', '📜 Stadion-Chronik': '📜 Stadium chronicle', 'Saison wählen': 'Choose season', '🗺️ Gelände': '🗺️ Grounds', '🗺️ Vereinsgelände ansehen': '🗺️ View club grounds', '🆕 Neue Version verfügbar': '🆕 New version available', '🔄 Jetzt neu laden': '🔄 Reload now', 'Später': 'Later', '🎥 Stadionansicht zeigen': '🎥 Show stadium view', '🆕 Neu': '🆕 New', 'Neu': 'New', 'Zum Kader': 'To the squad', 'Zum Training': 'To training', 'Zu den Transfers': 'To transfers', 'Zu den Finanzen': 'To finances', 'Zum Stadion': 'To the stadium', 'Zur Fan-Zentrale': 'To the fan centre', 'Zur Übersicht': 'To the overview', 'Zur Tabelle': 'To the table', 'Zum Pokal': 'To the cup', 'Zur Historie': 'To the history', 'Zur Jugend': 'To the youth', 'Zu den Sponsoren': 'To the sponsors', 'Zum Postfach': 'To the inbox', 'Zur Darstellung': 'To display settings', 'Zum Kalender': 'To the calendar', 'Zu den Verträgen': 'To contracts', 'Zum Champions Cup': 'To the Champions Cup', 'Zur Holding': 'To the holding', 'Zur Kaderplanung': 'To squad planning', 'Anstoß Mobile Pro': 'Anstoß Mobile Pro', '▶ Weiterspielen': '▶ Continue', '🆕 Neue Karriere': '🆕 New career', 'Verein gründen, übernehmen oder einen Trainerjob annehmen': 'Found a club, take one over or accept a coaching job', '📂 Spielstand laden': '📂 Load game', 'Gespeicherte Stände oder eine Datei': 'Saved games or a file', 'Heimatstadt (bestimmt die Ligen deiner Region)': 'Home town (sets the leagues of your region)', 'Erfahrung': 'Experience', '🏗️ Verein gründen': '🏗️ Found a club', 'Eigener Verein mit eigenem Namen in deiner Heimatstadt. Du wählst Startliga, Startkapital und Freischalt-Tempo.': 'Your own club with your own name in your home town. You choose the starting league, starting capital and unlock pace.', '🤝 Verein übernehmen': '🤝 Take over a club', 'Werde Trainer eines bestehenden Vereins aus der Liga-Pyramide deiner Region, von der Kreisliga bis zur Bundesliga.': 'Become coach of an existing club in your region\'s league pyramid, from the lowest tier to the Bundesliga.', '📋 Trainer gesucht': '📋 Coach wanted', 'Vereine suchen gerade einen Trainer, jeder mit einem klaren Auftrag des Vorstands und einer Frist.': 'Clubs are looking for a coach right now, each with a clear brief from the board and a deadline.', 'Wähle eine Liga und einen Verein. Stärkere Vereine haben höhere Erwartungen, schwächere mehr Zeit.': 'Choose a league and a club. Stronger clubs expect more, weaker ones give you more time.', 'Übernehmen': 'Take over', 'Favorit': 'Favourite', 'Abstiegskandidat': 'Relegation candidate', 'Diese Vereine suchen gerade einen Trainer. Schaffst du das Ziel in der Frist, gibt es bis zu drei Sterne; danach geht die Karriere frei weiter.': 'These clubs are looking for a coach. Reach the goal in time for up to three stars; after that your career continues freely.', 'Job annehmen': 'Accept job', 'Automatischer Spielstand': 'Automatic save', 'Vereinsname:': 'Club name:', '🎓 Einsteiger': '🎓 Beginner', 'Kompakter Spieltag, weniger auf einmal': 'Compact matchday, less at once', '🧠 Erfahren': '🧠 Experienced', 'Alles von Anfang an': 'Everything from the start', 'So läuft ein Spieltag:': 'How a matchday works:', 'Anpfiff': 'Kick-off', 'Nur Ergebnis': 'Result only', '▶ Ohne Vorbereitung anpfeifen': '▶ Kick off without preparation', '⚡ Nur Ergebnis': '⚡ Result only', '🎙️ Vorbereitung zeigen (Gegner, Ansprache, Presse)': '🎙️ Show preparation (opponent, team talk, press)', '▴ Vorbereitung einklappen': '▴ Hide preparation', 'Danach geht es zurück zur Übersicht und zum nächsten Spieltag.': 'Then you return to the overview and the next matchday.', 'Ansprache, Pressekonferenz und Gegneranalyse sind freiwillig, sie bringen kleine Vorteile.': 'Team talk, press conference and opponent analysis are optional; they give small advantages.', 'Alles jetzt zeigen': 'Show everything now', 'Wichtig': 'Important', '▾ Mehr Bereiche': '▾ More areas', '▴ Weniger anzeigen': '▴ Show less', '🎓 Einsteiger-Modus: AN': '🎓 Beginner mode: ON', '🎓 Einsteiger-Modus: AUS': '🎓 Beginner mode: OFF', 'Was jetzt?': 'What now?', '🎓 Hinrunde geschafft!': '🎓 First half of the season done!', '🧠 Einsteiger-Modus aus': '🧠 Beginner mode off', '🎓 Noch anlassen': '🎓 Keep it on', 'Mit „Spielbericht schließen“ geht es zurück zur Übersicht.': '“Close match report” takes you back to the overview.', 'Sponsoren-Angebote ansehen (Finanzen)': 'View sponsor offers (finances)', 'Kein Risikospiel': 'No high-risk match', '🏅 Saison-Aufgaben': '🏅 Season tasks', 'Erfahrung:': 'Experience:', '⚙️ Formation und Standard-Schützen': '⚙️ Formation and set-piece takers', '🚨 Ausschreitungen': '🚨 Riots', 'Bisher keine Vorfälle.': 'No incidents so far.', 'Kein Ligaspiel offen.': 'No league match pending.', 'Trainingsintensität:': 'Training intensity:', 'Einnahmen (Spieltag)': 'Income (matchday)', 'Bedarf nächste Saison': 'Needed next season', 'Noch keine Teilnahme.': 'No participation yet.', 'Finanzielle Stabilität': 'Financial stability', '⚽ Öffentliches Training': '⚽ Open training', 'Noch nicht genug Daten.': 'Not enough data yet.', '· nächste Auslosung aus': '· next draw from', 'Öffentliches Medienimage': 'Public media image', '✔ 🎯 Direkter Freistoß ·': '✔ 🎯 Direct free kick ·', '💡 Empfehlung übernehmen': '💡 Apply recommendation', '🅿️ Parkplätze & Zufahrt': '🅿️ Parking & access', 'Bedienung mit einer Hand': 'One-handed use', 'Gewinne die Meisterschaft': 'Win the championship', 'Spritzguss- & Zubehörwerk': 'Injection moulding & accessories plant', 'Einfamilienhaus im Grünen': 'Detached house in the countryside', 'Biografie veröffentlichen': 'Publish a biography', 'Kaderplanung & Kadergröße': 'Squad planning & squad size', 'Kabine, Cliquen & Kapitän': 'Dressing room, cliques & captain', '🔄 Alle Perks zurücksetzen': '🔄 Reset all perks', 'Verträge laufen bald aus ·': 'Contracts expiring soon ·', '👩 Frauenmannschaft gründen': '👩 FOUND A WOMEN\'S TEAM', 'Noch kein gemeinsames Spiel': 'No match together yet', 'Noch keine Heimspiel-Daten.': 'No home match data yet.', 'Bürokomplex \'Vereins-Tower\'': 'Office complex \'Club Tower\'', 'Noch keine Tendenz erkennbar': 'No trend yet', 'Noch kein Heimspiel gespielt': 'No home match played yet', '· Zahlungskräftiges Publikum': '· wealthy crowd', 'Länderspielpausen & Turniere': 'International breaks & tournaments', 'Kader und Aufstellung ansehen': 'View squad and line-up', 'Finanzen und Sponsoren prüfen': 'Check finances and sponsors', '⚠️ Höchstes Verletzungsrisiko': '⚠️ Highest injury risk', 'Gehälter jetzt (pro Spieltag)': 'Wages now (per matchday)', 'Bester Torschütze (Karriere):': 'Top scorer (career):', '💪 Fähigkeitstraining-Express': '💪 Skill training express', 'Noch keine Interviews gegeben.': 'No interviews given yet.', 'Trainingsgelände mit Flutlicht': 'Training ground with floodlights', '🤝 Jährliches Personal-Meeting': '🤝 Annual staff meeting', 'Verträge langfristig gesichert': 'Contracts secured long-term', 'Längste Serie ohne Niederlage:': 'Longest unbeaten run:', 'Sofortkauf zahlt die Forderung': 'Instant buy pays the asking price', 'Noch kein Selbsttest gelaufen.': 'No self-test run yet.', 'Wartet die ersten Spieltage ab.': 'Waiting for the first matchdays.', 'Noch kein Pokalfinale erreicht.': 'No cup final reached yet.', '👕 Doppelte Fanartikel-Verkäufe': '👕 Double merchandise sales', 'Wintergespräch mit dem Vorstand': 'Winter talk with the board', '- wie startet ihr in die Saison?': '- how do you start the season?', 'Leihspieler kehren ggf. zurück ·': 'Loan players may return ·', 'Noch keine abgeschlossenen Wetten.': 'No settled bets yet.', 'Noch keine Überraschung geschafft.': 'No upset achieved yet.', 'Persönlichen Werbedeal abschließen': 'Sign a personal endorsement deal', '📱 Soziale-Medien-Präsenz: INAKTIV': '📱 Social media presence: INACTIVE', '📋 Kostenlose Vertragsverlängerung': '📋 Free contract extension', 'Kostenlos: etwas Fannähe und Moral.': 'Free: a little fan closeness and morale.', 'Stabile Weltmärkte zu Saisonbeginn.': 'Stable world markets at the start of the season.', 'Noch keine aktiven Bandensponsoren.': 'No active board sponsors yet.', '(Hektisch) · 🟥 zückt schnell Karten': '(Hectic) · 🟥 quick with cards', 'Zufrieden mit der Gesamtentwicklung.': 'Happy with the overall development.', 'Keine laufenden Produktionsaufträge.': 'No running production orders.', 'Noch keine Pokale im Trophäenschrank.': 'No trophies in the cabinet yet.', 'gegen Vereine aus der eigenen Region.': 'against clubs from your own region.', 'Kostet Geld, bringt Fans und Stimmung.': 'Costs money, brings fans and atmosphere.', 'Fertigt Schals für Wolle-Rohstoffkosten': 'Makes scarves for the cost of wool', 'Halbiert die Ausfallzeit von Verletzten': 'Halves the time injured players are out', 'Näht Spielbälle für Leder-Rohstoffkosten': 'Sews match balls for the cost of leather', 'Noch keine eigenen Vorlagen gespeichert.': 'No own templates saved yet.', 'Ein Magazin zahlt gut für deine Geschichte.': 'A magazine pays well for your story.', 'Vereinsstadion (keine Namensrechte vergeben)': 'Club stadium (no naming rights sold)', 'Noch keine Einträge in der Talent-Datenbank.': 'No entries in the talent database yet.', 'Produziert Trikots für Baumwoll-Rohstoffkosten': 'Produces shirts for the cost of cotton', 'Eine Marke will dein Gesicht für ihre Kampagne.': 'A brand wants your face for its campaign.', 'Presst Caps & Wimpel für Kunststoff-Rohstoffkosten': 'Presses caps & pennants for the cost of plastic', 'Unternehmen zahlen gut für deine Erfolgsgeschichte.': 'Companies pay well for your success story.', 'Noch keine spielerspezifischen Trikot-Verkaufsdaten.': 'No shirt sales data per player yet.', 'Noch nichts nebenbei - vielleicht Zeit für ein Hobby?': 'Nothing on the side yet - maybe time for a hobby?', 'Aktuell wirken keine zusätzlichen Boni auf den Absatz.': 'No extra boosts on sales right now.', 'Diese Saison noch keine Trainerwechsel in deiner Liga.': 'No coaching changes in your league this season yet.', 'Derzeit liegen keine offiziellen Transferanfragen für deine Spieler vor.': 'There are no official transfer requests for your players at the moment.', 'Noch keine Scouting-Missionen abgeschlossen. Entsende oben deine Scouts!': 'No scouting missions completed yet. Send out your scouts above!', 'Tippe auf einen Vereinsnamen in der Tabelle für die Kopf-an-Kopf-Bilanz.': 'Tap a club name in the table for the head-to-head record.', 'Noch keine Verkäufe erfasst - nach dem ersten Spieltag erscheint hier der Verlauf.': 'No sales recorded yet - the history appears here after the first matchday.', '✓ Keine Position hat eine gefährliche Häufung auslaufender Verträge.': '✓ No position has a dangerous cluster of expiring contracts.', 'Trainingsplus:': 'Training gain:', 'Verdoppelt die Ticketeinnahmen beim nächsten Heimspiel.': 'Doubles ticket income at the next home match.', 'Verdoppelt den Fanartikel-Absatz im Stadion beim nächsten Heimspiel.': 'Doubles merchandise sales in the stadium at the next home match.', 'Senkt Verletzungs- und Kartenrisiko im nächsten Spiel spürbar.': 'Noticeably lowers injury and card risk in the next match.', 'Senkt das Ausschreitungsrisiko beim nächsten Heimspiel stark ab.': 'Strongly lowers the risk of riots at the next home match.', 'Schließt alle aktuell laufenden Scouting-Missionen sofort ab.': 'Completes all running scouting missions immediately.', 'Heilt alle Verletzungen und beendet alle Sperren des gesamten Kaders sofort.': 'Heals all injuries and ends all suspensions of the whole squad immediately.', 'Gewährt sofort eine zusätzliche Trainingseinheit, unabhängig vom Tageslimit.': 'Grants an extra training session immediately, regardless of the daily limit.', 'Deckt das Potenzial aller aktuellen Jugendspieler sofort und kostenlos auf.': 'Reveals the potential of all current youth players immediately and for free.', 'Garantiert sonniges Wetter beim nächsten Spiel - keine negativen Wettereffekte.': 'Guarantees sunny weather at the next match - no negative weather effects.', 'Setzt die Eingespieltheit aller aktuellen Startelf-Paarungen sofort auf Maximum.': 'Sets the understanding of all current starting pairings to maximum immediately.', 'Setzt deinen Stamm-Torwart sofort auf Top-Fitness und Top-Tagesform.': 'Puts your first-choice goalkeeper at top fitness and top form immediately.', 'Einmal pro Saison ein aktives Vertrags-Ultimatum kostenlos besänftigen.': 'Calm one active contract ultimatum for free once per season.', 'Sofortiger Bonus aufs Transferbudget, passend zu deiner aktuellen Liga-Stärke.': 'Instant bonus to the transfer budget, matched to your current league.', 'Der nächste abgeschlossene Scouting-Fund ist garantiert ein Spieler mit hoher Stärke.': 'The next completed scouting find is guaranteed to be a strong player.', 'Zusätzlicher Fitness-Erholungsbonus nach Spielen (stapelt mit Konditionstrainer)': 'Extra fitness recovery after matches (stacks with the fitness coach)', 'Vermietete Büroflächen an lokale Unternehmen - stabile, planbare Mieteinnahmen.': 'Office space let to local companies - stable, predictable rent.', 'Mietwohnungen in Stadionnähe - beliebt bei Fans, die nah am Verein wohnen wollen.': 'Rented flats near the stadium - popular with fans who want to live close to the club.', 'Mildert Zwangsverkäufe und Punktabzüge bei Zahlungsunfähigkeit spürbar ab.': 'Noticeably softens forced sales and point deductions when insolvent.', 'Dämpft negative Medienwirkung bei schlechten Ergebnissen & Skandalen': 'Softens negative media impact of bad results & scandals', 'Verbessert Elfmeter-, Freistoß- und Eckballqualität der Mannschaft': 'Improves the team\'s penalties, free kicks and corners', 'Verringert Verletzungszeiten und beschleunigt Regeneration': 'Shortens injury lay-offs and speeds up recovery', 'Erhöht Stärke und Potenzial neuer Nachwuchsspieler': 'Raises strength and potential of new youth players', 'Übernimmt automatisch eine wählbare Aufgabe im Fanshop': 'Automatically takes over a chosen task in the fan shop', 'Halbiert die Wahrscheinlichkeit für Vertrags-Ultimaten unzufriedener Stars - frühzeitige,': 'Halves the chance of contract ultimatums from unhappy stars - early,',
+    'Einlösen': 'Redeem', 'Spieler': 'Player', '🌟 Champions Cup Spieltag': '🌟 Champions Cup matchday', 'Kaufen für einen festen Geldbetrag (skaliert automatisch mit dem Kurs, egal wie teuer/günstig die Aktie ist):': 'Buy for a fixed amount (scales with the price automatically, however expensive or cheap the share is):', 'Aktueller Börsenkurs:': 'Current share price:', 'Noch nicht aufgestellt': 'Not in the line-up yet', 'Freistoß-Gott': 'Free-kick god', 'Noch kein Scout für diese Region.': 'No scout for this region yet.', 'Wintermütze': 'Winter hat', 'Auswärts-Schal': 'Away scarf', 'Leder-Geldbörse': 'Leather wallet', 'Schlüsselanhänger': 'Key ring', 'Mini-Ball für Kinder': 'Mini ball for kids', 'Handyhülle mit Wappen': 'Phone case with crest', 'Kapuzenpulli mit Wappen': 'Hoodie with crest', 'keine': 'none', 'Saison:': 'Season:', 'Eisenfuß': 'Iron foot', 'Präsident': 'President', 'Kapazität': 'Capacity', 'KAPAZITÄT': 'CAPACITY', 'nur mähen': 'mow only', 'Gründlich': 'Thorough', 'Millionär': 'Millionaire', '→ Höhepunkt': '→ Highlight', 'Vorverträge': 'Pre-contracts', '· Gästeblock': '· away block', 'Gesamtstärke': 'Overall strength', 'pro Spieltag': 'per matchday', '🌴 Südamerika': '🌴 South America', 'Gerüchteküche': 'Rumour mill', 'Presse-Tribüne': 'Press stand', '↺ Zurücksetzen': '↺ Reset', 'Höchster Sieg:': 'Biggest win:', 'Multimillionär': 'Multimillionaire', 'Rückkaufoption': 'Buy-back option', 'Saisoneröffnung': 'Season opening', 'Nicht gegründet': 'Not founded', 'Auswärtsbilanz:': 'Away record:', 'Nächstes Spiel:': 'Next match:', 'Nächste Lizenz:': 'Next licence:', 'Trophäen gesamt:': 'Total trophies:', '🍀 Glücksbringer': '🍀 Lucky charm', 'Vertragsgespräch': 'Contract talk', 'Auf- und Abstieg': 'Promotion and relegation', 'nur dieser Verein': 'this club only', '🎫 Ticketverkäufe': '🎫 Ticket sales', 'West-Haupttribüne': 'West main stand', 'Ernährungsberater': 'Nutritionist', 'Parkplatz-Gelände': 'Car park site', 'Nur mähen (leicht)': 'Mow only (light)', '💼 Gesamtgehälter:': '💼 Total wages:', 'Villa mit Seeblick': 'Villa with lake view', 'Abstellungsprämien': 'Release fees', 'Höchster Derbysieg:': 'Biggest derby win:', 'Auswärts-Spitzname:': 'Away nickname:', '🔝 Freistoßflanke ·': '🔝 Free-kick cross ·', 'Sanierungsbedürftig': 'Needs renovation', 'Nächste Ausbaustufe': 'Next upgrade', '✅ Preise übernehmen': '✅ Apply prices', 'Zustand des Geläufs': 'Pitch condition', 'Höchste Niederlage:': 'Heaviest defeat:', '💛 Loyalitäts-Bonus': '💛 Loyalty bonus', '🎤 Spieler-Interview': '🎤 Player interview', '↪️ Kurz ausgeführt ·': '↪️ Taken short ·', 'Präventionsprogramm:': 'Prevention programme:', 'Farbe je Block nach dem Risiko des nächsten Spiels (grün ruhig, rot hoch), Symbole für Vorfälle dieser Saison.': 'Colour per stand by the risk of the next match (green calm, red high), symbols for incidents this season.', '🧩 Taktiktafel zeigen': '🧩 Show tactics board', '🎥 3D-Ansicht zeigen': '🎥 Show 3D view', '🎥 Luftbild': '🎥 Aerial view', '☀️ Tag': '☀️ Day', '⚠️ Risiko': '⚠️ Risk', '🎬 Rundflug': '🎬 Fly-around', '◀ Spiel': '◀ Match', 'Spiel ▶': 'Match ▶', 'Heute': 'Today', 'Nach dem Ausbau': 'After the expansion', '✕ Vorschau beenden': '✕ End preview', 'Wischen dreht das Stadion, zwei Finger oder ➕/➖ zoomen, ein Tipp auf einen Block öffnet seinen Ausbau.': 'Swipe to turn the stadium, two fingers or ➕/➖ to zoom, tap a stand to open its expansion.', '🧩 Klassische Ansicht': '🧩 Classic view', '🗺️ Vereinsgelände': '🗺️ Club grounds', '📷 Bild speichern': '📷 Save picture', 'Streifen': 'Stripes', 'Blockfarben': 'Block colours', '📜 Stadion-Chronik': '📜 Stadium chronicle', 'Saison wählen': 'Choose season', '🗺️ Gelände': '🗺️ Grounds', '🗺️ Vereinsgelände ansehen': '🗺️ View club grounds', '🆕 Neue Version verfügbar': '🆕 New version available', '🔄 Jetzt neu laden': '🔄 Reload now', 'Später': 'Later', '🎥 Stadionansicht zeigen': '🎥 Show stadium view', 'Tempo': 'Speed', 'Automatisch ausführen': 'Take automatically', '👆 Jetzt!': '👆 Now!', '⬅️ Links': '⬅️ Left', '⬆️ Mitte': '⬆️ Middle', 'Rechts ➡️': 'Right ➡️', '🎮 Reaktionsspiele aus': '🎮 Reaction games off', '🎮 Reaktionsspiele an': '🎮 Reaction games on', 'Dem Torwart vertrauen': 'Trust the keeper', '🧤 Selbst im Tor stehen': '🧤 Stand in goal yourself', 'Wohin schießt du? (aus Sicht des Schützen)': 'Where do you shoot? (from the taker\'s view)', 'Wohin springt dein Torwart? (aus seiner Sicht)': 'Where does your keeper dive? (from his view)', '✨ Perfekt!': '✨ Perfect!', '👍 Gut': '👍 Good', '😬 Knapp': '😬 Close', '❌ Daneben': '❌ Off target', '🚩 Ecke - wie ausführen?': '🚩 Corner - how to take it?', '🧤 Elfmeter gegen uns': '🧤 Penalty against us', 'Erster Versuch - viel Glück!': 'First attempt - good luck!', '🆕 Neu': '🆕 New', 'Neu': 'New', 'Zum Kader': 'To the squad', 'Zum Training': 'To training', 'Zu den Transfers': 'To transfers', 'Zu den Finanzen': 'To finances', 'Zum Stadion': 'To the stadium', 'Zur Fan-Zentrale': 'To the fan centre', 'Zur Übersicht': 'To the overview', 'Zur Tabelle': 'To the table', 'Zum Pokal': 'To the cup', 'Zur Historie': 'To the history', 'Zur Jugend': 'To the youth', 'Zu den Sponsoren': 'To the sponsors', 'Zum Postfach': 'To the inbox', 'Zur Darstellung': 'To display settings', 'Zum Kalender': 'To the calendar', 'Zu den Verträgen': 'To contracts', 'Zum Champions Cup': 'To the Champions Cup', 'Zur Holding': 'To the holding', 'Zur Kaderplanung': 'To squad planning', 'Anstoß Mobile Pro': 'Anstoß Mobile Pro', '▶ Weiterspielen': '▶ Continue', '🆕 Neue Karriere': '🆕 New career', 'Verein gründen, übernehmen oder einen Trainerjob annehmen': 'Found a club, take one over or accept a coaching job', '📂 Spielstand laden': '📂 Load game', 'Gespeicherte Stände oder eine Datei': 'Saved games or a file', 'Heimatstadt (bestimmt die Ligen deiner Region)': 'Home town (sets the leagues of your region)', 'Erfahrung': 'Experience', '🏗️ Verein gründen': '🏗️ Found a club', 'Eigener Verein mit eigenem Namen in deiner Heimatstadt. Du wählst Startliga, Startkapital und Freischalt-Tempo.': 'Your own club with your own name in your home town. You choose the starting league, starting capital and unlock pace.', '🤝 Verein übernehmen': '🤝 Take over a club', 'Werde Trainer eines bestehenden Vereins aus der Liga-Pyramide deiner Region, von der Kreisliga bis zur Bundesliga.': 'Become coach of an existing club in your region\'s league pyramid, from the lowest tier to the Bundesliga.', '📋 Trainer gesucht': '📋 Coach wanted', 'Vereine suchen gerade einen Trainer, jeder mit einem klaren Auftrag des Vorstands und einer Frist.': 'Clubs are looking for a coach right now, each with a clear brief from the board and a deadline.', 'Wähle eine Liga und einen Verein. Stärkere Vereine haben höhere Erwartungen, schwächere mehr Zeit.': 'Choose a league and a club. Stronger clubs expect more, weaker ones give you more time.', 'Übernehmen': 'Take over', 'Favorit': 'Favourite', 'Abstiegskandidat': 'Relegation candidate', 'Diese Vereine suchen gerade einen Trainer. Schaffst du das Ziel in der Frist, gibt es bis zu drei Sterne; danach geht die Karriere frei weiter.': 'These clubs are looking for a coach. Reach the goal in time for up to three stars; after that your career continues freely.', 'Job annehmen': 'Accept job', 'Automatischer Spielstand': 'Automatic save', 'Vereinsname:': 'Club name:', '🎓 Einsteiger': '🎓 Beginner', 'Kompakter Spieltag, weniger auf einmal': 'Compact matchday, less at once', '🧠 Erfahren': '🧠 Experienced', 'Alles von Anfang an': 'Everything from the start', 'So läuft ein Spieltag:': 'How a matchday works:', 'Anpfiff': 'Kick-off', 'Nur Ergebnis': 'Result only', '▶ Ohne Vorbereitung anpfeifen': '▶ Kick off without preparation', '⚡ Nur Ergebnis': '⚡ Result only', '🎙️ Vorbereitung zeigen (Gegner, Ansprache, Presse)': '🎙️ Show preparation (opponent, team talk, press)', '▴ Vorbereitung einklappen': '▴ Hide preparation', 'Danach geht es zurück zur Übersicht und zum nächsten Spieltag.': 'Then you return to the overview and the next matchday.', 'Ansprache, Pressekonferenz und Gegneranalyse sind freiwillig, sie bringen kleine Vorteile.': 'Team talk, press conference and opponent analysis are optional; they give small advantages.', 'Alles jetzt zeigen': 'Show everything now', 'Wichtig': 'Important', '▾ Mehr Bereiche': '▾ More areas', '▴ Weniger anzeigen': '▴ Show less', '🎓 Einsteiger-Modus: AN': '🎓 Beginner mode: ON', '🎓 Einsteiger-Modus: AUS': '🎓 Beginner mode: OFF', 'Was jetzt?': 'What now?', '🎓 Hinrunde geschafft!': '🎓 First half of the season done!', '🧠 Einsteiger-Modus aus': '🧠 Beginner mode off', '🎓 Noch anlassen': '🎓 Keep it on', 'Mit „Spielbericht schließen“ geht es zurück zur Übersicht.': '“Close match report” takes you back to the overview.', 'Sponsoren-Angebote ansehen (Finanzen)': 'View sponsor offers (finances)', 'Kein Risikospiel': 'No high-risk match', '🏅 Saison-Aufgaben': '🏅 Season tasks', 'Erfahrung:': 'Experience:', '⚙️ Formation und Standard-Schützen': '⚙️ Formation and set-piece takers', '🚨 Ausschreitungen': '🚨 Riots', 'Bisher keine Vorfälle.': 'No incidents so far.', 'Kein Ligaspiel offen.': 'No league match pending.', 'Trainingsintensität:': 'Training intensity:', 'Einnahmen (Spieltag)': 'Income (matchday)', 'Bedarf nächste Saison': 'Needed next season', 'Noch keine Teilnahme.': 'No participation yet.', 'Finanzielle Stabilität': 'Financial stability', '⚽ Öffentliches Training': '⚽ Open training', 'Noch nicht genug Daten.': 'Not enough data yet.', '· nächste Auslosung aus': '· next draw from', 'Öffentliches Medienimage': 'Public media image', '✔ 🎯 Direkter Freistoß ·': '✔ 🎯 Direct free kick ·', '💡 Empfehlung übernehmen': '💡 Apply recommendation', '🅿️ Parkplätze & Zufahrt': '🅿️ Parking & access', 'Bedienung mit einer Hand': 'One-handed use', 'Gewinne die Meisterschaft': 'Win the championship', 'Spritzguss- & Zubehörwerk': 'Injection moulding & accessories plant', 'Einfamilienhaus im Grünen': 'Detached house in the countryside', 'Biografie veröffentlichen': 'Publish a biography', 'Kaderplanung & Kadergröße': 'Squad planning & squad size', 'Kabine, Cliquen & Kapitän': 'Dressing room, cliques & captain', '🔄 Alle Perks zurücksetzen': '🔄 Reset all perks', 'Verträge laufen bald aus ·': 'Contracts expiring soon ·', '👩 Frauenmannschaft gründen': '👩 FOUND A WOMEN\'S TEAM', 'Noch kein gemeinsames Spiel': 'No match together yet', 'Noch keine Heimspiel-Daten.': 'No home match data yet.', 'Bürokomplex \'Vereins-Tower\'': 'Office complex \'Club Tower\'', 'Noch keine Tendenz erkennbar': 'No trend yet', 'Noch kein Heimspiel gespielt': 'No home match played yet', '· Zahlungskräftiges Publikum': '· wealthy crowd', 'Länderspielpausen & Turniere': 'International breaks & tournaments', 'Kader und Aufstellung ansehen': 'View squad and line-up', 'Finanzen und Sponsoren prüfen': 'Check finances and sponsors', '⚠️ Höchstes Verletzungsrisiko': '⚠️ Highest injury risk', 'Gehälter jetzt (pro Spieltag)': 'Wages now (per matchday)', 'Bester Torschütze (Karriere):': 'Top scorer (career):', '💪 Fähigkeitstraining-Express': '💪 Skill training express', 'Noch keine Interviews gegeben.': 'No interviews given yet.', 'Trainingsgelände mit Flutlicht': 'Training ground with floodlights', '🤝 Jährliches Personal-Meeting': '🤝 Annual staff meeting', 'Verträge langfristig gesichert': 'Contracts secured long-term', 'Längste Serie ohne Niederlage:': 'Longest unbeaten run:', 'Sofortkauf zahlt die Forderung': 'Instant buy pays the asking price', 'Noch kein Selbsttest gelaufen.': 'No self-test run yet.', 'Wartet die ersten Spieltage ab.': 'Waiting for the first matchdays.', 'Noch kein Pokalfinale erreicht.': 'No cup final reached yet.', '👕 Doppelte Fanartikel-Verkäufe': '👕 Double merchandise sales', 'Wintergespräch mit dem Vorstand': 'Winter talk with the board', '- wie startet ihr in die Saison?': '- how do you start the season?', 'Leihspieler kehren ggf. zurück ·': 'Loan players may return ·', 'Noch keine abgeschlossenen Wetten.': 'No settled bets yet.', 'Noch keine Überraschung geschafft.': 'No upset achieved yet.', 'Persönlichen Werbedeal abschließen': 'Sign a personal endorsement deal', '📱 Soziale-Medien-Präsenz: INAKTIV': '📱 Social media presence: INACTIVE', '📋 Kostenlose Vertragsverlängerung': '📋 Free contract extension', 'Kostenlos: etwas Fannähe und Moral.': 'Free: a little fan closeness and morale.', 'Stabile Weltmärkte zu Saisonbeginn.': 'Stable world markets at the start of the season.', 'Noch keine aktiven Bandensponsoren.': 'No active board sponsors yet.', '(Hektisch) · 🟥 zückt schnell Karten': '(Hectic) · 🟥 quick with cards', 'Zufrieden mit der Gesamtentwicklung.': 'Happy with the overall development.', 'Keine laufenden Produktionsaufträge.': 'No running production orders.', 'Noch keine Pokale im Trophäenschrank.': 'No trophies in the cabinet yet.', 'gegen Vereine aus der eigenen Region.': 'against clubs from your own region.', 'Kostet Geld, bringt Fans und Stimmung.': 'Costs money, brings fans and atmosphere.', 'Fertigt Schals für Wolle-Rohstoffkosten': 'Makes scarves for the cost of wool', 'Halbiert die Ausfallzeit von Verletzten': 'Halves the time injured players are out', 'Näht Spielbälle für Leder-Rohstoffkosten': 'Sews match balls for the cost of leather', 'Noch keine eigenen Vorlagen gespeichert.': 'No own templates saved yet.', 'Ein Magazin zahlt gut für deine Geschichte.': 'A magazine pays well for your story.', 'Vereinsstadion (keine Namensrechte vergeben)': 'Club stadium (no naming rights sold)', 'Noch keine Einträge in der Talent-Datenbank.': 'No entries in the talent database yet.', 'Produziert Trikots für Baumwoll-Rohstoffkosten': 'Produces shirts for the cost of cotton', 'Eine Marke will dein Gesicht für ihre Kampagne.': 'A brand wants your face for its campaign.', 'Presst Caps & Wimpel für Kunststoff-Rohstoffkosten': 'Presses caps & pennants for the cost of plastic', 'Unternehmen zahlen gut für deine Erfolgsgeschichte.': 'Companies pay well for your success story.', 'Noch keine spielerspezifischen Trikot-Verkaufsdaten.': 'No shirt sales data per player yet.', 'Noch nichts nebenbei - vielleicht Zeit für ein Hobby?': 'Nothing on the side yet - maybe time for a hobby?', 'Aktuell wirken keine zusätzlichen Boni auf den Absatz.': 'No extra boosts on sales right now.', 'Diese Saison noch keine Trainerwechsel in deiner Liga.': 'No coaching changes in your league this season yet.', 'Derzeit liegen keine offiziellen Transferanfragen für deine Spieler vor.': 'There are no official transfer requests for your players at the moment.', 'Noch keine Scouting-Missionen abgeschlossen. Entsende oben deine Scouts!': 'No scouting missions completed yet. Send out your scouts above!', 'Tippe auf einen Vereinsnamen in der Tabelle für die Kopf-an-Kopf-Bilanz.': 'Tap a club name in the table for the head-to-head record.', 'Noch keine Verkäufe erfasst - nach dem ersten Spieltag erscheint hier der Verlauf.': 'No sales recorded yet - the history appears here after the first matchday.', '✓ Keine Position hat eine gefährliche Häufung auslaufender Verträge.': '✓ No position has a dangerous cluster of expiring contracts.', 'Trainingsplus:': 'Training gain:', 'Verdoppelt die Ticketeinnahmen beim nächsten Heimspiel.': 'Doubles ticket income at the next home match.', 'Verdoppelt den Fanartikel-Absatz im Stadion beim nächsten Heimspiel.': 'Doubles merchandise sales in the stadium at the next home match.', 'Senkt Verletzungs- und Kartenrisiko im nächsten Spiel spürbar.': 'Noticeably lowers injury and card risk in the next match.', 'Senkt das Ausschreitungsrisiko beim nächsten Heimspiel stark ab.': 'Strongly lowers the risk of riots at the next home match.', 'Schließt alle aktuell laufenden Scouting-Missionen sofort ab.': 'Completes all running scouting missions immediately.', 'Heilt alle Verletzungen und beendet alle Sperren des gesamten Kaders sofort.': 'Heals all injuries and ends all suspensions of the whole squad immediately.', 'Gewährt sofort eine zusätzliche Trainingseinheit, unabhängig vom Tageslimit.': 'Grants an extra training session immediately, regardless of the daily limit.', 'Deckt das Potenzial aller aktuellen Jugendspieler sofort und kostenlos auf.': 'Reveals the potential of all current youth players immediately and for free.', 'Garantiert sonniges Wetter beim nächsten Spiel - keine negativen Wettereffekte.': 'Guarantees sunny weather at the next match - no negative weather effects.', 'Setzt die Eingespieltheit aller aktuellen Startelf-Paarungen sofort auf Maximum.': 'Sets the understanding of all current starting pairings to maximum immediately.', 'Setzt deinen Stamm-Torwart sofort auf Top-Fitness und Top-Tagesform.': 'Puts your first-choice goalkeeper at top fitness and top form immediately.', 'Einmal pro Saison ein aktives Vertrags-Ultimatum kostenlos besänftigen.': 'Calm one active contract ultimatum for free once per season.', 'Sofortiger Bonus aufs Transferbudget, passend zu deiner aktuellen Liga-Stärke.': 'Instant bonus to the transfer budget, matched to your current league.', 'Der nächste abgeschlossene Scouting-Fund ist garantiert ein Spieler mit hoher Stärke.': 'The next completed scouting find is guaranteed to be a strong player.', 'Zusätzlicher Fitness-Erholungsbonus nach Spielen (stapelt mit Konditionstrainer)': 'Extra fitness recovery after matches (stacks with the fitness coach)', 'Vermietete Büroflächen an lokale Unternehmen - stabile, planbare Mieteinnahmen.': 'Office space let to local companies - stable, predictable rent.', 'Mietwohnungen in Stadionnähe - beliebt bei Fans, die nah am Verein wohnen wollen.': 'Rented flats near the stadium - popular with fans who want to live close to the club.', 'Mildert Zwangsverkäufe und Punktabzüge bei Zahlungsunfähigkeit spürbar ab.': 'Noticeably softens forced sales and point deductions when insolvent.', 'Dämpft negative Medienwirkung bei schlechten Ergebnissen & Skandalen': 'Softens negative media impact of bad results & scandals', 'Verbessert Elfmeter-, Freistoß- und Eckballqualität der Mannschaft': 'Improves the team\'s penalties, free kicks and corners', 'Verringert Verletzungszeiten und beschleunigt Regeneration': 'Shortens injury lay-offs and speeds up recovery', 'Erhöht Stärke und Potenzial neuer Nachwuchsspieler': 'Raises strength and potential of new youth players', 'Übernimmt automatisch eine wählbare Aufgabe im Fanshop': 'Automatically takes over a chosen task in the fan shop', 'Halbiert die Wahrscheinlichkeit für Vertrags-Ultimaten unzufriedener Stars - frühzeitige,': 'Halves the chance of contract ultimatums from unhappy stars - early,',
     // Teil 3 (25.22): Lexikon und Spieler-Popup
     '➜ Zum Bildschirm': '➜ Go to screen', 'Kein Eintrag gefunden. Anderen Begriff versuchen oder Kategorie „Alle“ wählen.': 'No entry found. Try another term or choose the category "All".', 'Nur Einträge zum Bildschirm, von dem du kommst.': 'Only entries for the screen you came from.', 'Alle zeigen': 'Show all', 'Potenzial:': 'Potential:',
 };
@@ -35900,6 +37502,9 @@ function cleanupLegacyScoutState() {
             stats: newLiveMatchStats()
         };
         showScreen('screen-matchday');
+        // Anpfiff oben beginnen: sonst blieb die Seite unten beim Knopf stehen und man sah das Spielfeld nicht
+        const inhalt = document.getElementById('main-content'); if (inhalt) inhalt.scrollTop = 0;
+        if (document.scrollingElement) document.scrollingElement.scrollTop = 0;
         document.getElementById('match-title').innerText = homeName + " vs " + awayName;
         document.getElementById('live-home-name').innerText = homeName;
         document.getElementById('live-away-name').innerText = awayName;
@@ -36214,6 +37819,15 @@ function cleanupLegacyScoutState() {
         return pool[Math.floor(Math.random() * pool.length)];
     }
 
+    // Tickerzeile mit Ereignis: läuft die Spielphysik (js/spielphysik.js), wandert sie ins Drehbuch
+    // und erscheint, wenn die Szene auf dem Platz so weit ist; sonst sofort wie bisher.
+    function liveTicker(html, ereignis) {
+        if (currentMatch && currentMatch.drehbuch) { currentMatch.drehbuch.push(Object.assign({ html }, ereignis || {})); return; }
+        const log = document.getElementById('ticker-log');
+        if (log && html) { log.innerHTML += html; log.scrollTop = log.scrollHeight; }
+        if (ereignis && ereignis.aktion) ereignis.aktion();
+    }
+
     function pickWeightedScorer(players) {
         // Stürmer treffen am häufigsten, dann Mittelfeld, selten Abwehr, sehr selten der Torwart.
         // Ein "Eisenfuß" ist für seine überraschenden Distanzschüsse/Standards bekannt und
@@ -36230,7 +37844,26 @@ function cleanupLegacyScoutState() {
         return pool[Math.floor(Math.random() * pool.length)];
     }
 
-    function simulateMatchStep() {
+    // mitPhysik = true nur aus der Spielphysik: dann schreibt der Spielzug ins Drehbuch. Ohne (Knopf
+    // "Nächste Szene", Durchspielen, Tests) wird erst alles Offene gezeigt, dann läuft er sofort.
+    function simulateMatchStep(mitPhysik) {
+        if (mitPhysik !== true && typeof spielphysikAufholen === 'function') spielphysikAufholen();
+        const regie = mitPhysik === true && !!currentMatch && typeof spielphysikLaeuft === 'function' && spielphysikLaeuft();
+        if (!regie && currentMatch) currentMatch.drehbuch = null;
+        if (regie) currentMatch.drehbuch = [];
+        const von = currentMatch ? currentMatch.minute : 0;
+        try {
+            simulateMatchStepIntern(regie);
+        } finally {
+            if (regie && currentMatch) {
+                const liste = currentMatch.drehbuch || [];
+                currentMatch.drehbuch = null;
+                spielphysikDrehbuch(liste, von, currentMatch.minute);
+            }
+        }
+    }
+
+    function simulateMatchStepIntern(regie) {
         if (!currentMatch || currentMatch.minute >= 90) return; // nach dem Abpfiff keine Szenen mehr
         if (currentMatch.awaitingHalftimeTalk) return; // wartet auf die Halbzeit-Ansprache-Auswahl
         // Wartet auf die Entscheidung beim Standard (js/set-pieces.js) - "Nächste Szene" zeigt sie erneut an.
@@ -36238,15 +37871,16 @@ function cleanupLegacyScoutState() {
         let prevMinute = currentMatch.minute;
         currentMatch.minute += Math.floor(Math.random() * 14) + 8;
         if (currentMatch.minute >= 90) { currentMatch.minute = 90; }
-        document.getElementById('live-minute').innerText = currentMatch.minute + ". Minute";
+        if (!regie) document.getElementById('live-minute').innerText = currentMatch.minute + ". Minute";
+        // Minute eines Ereignisses: mit Spielphysik verteilt über den Spielzug, sonst sein Ende
+        let zeit = () => regie ? spielphysikMinute(prevMinute, currentMatch.minute) : currentMatch.minute;
 
         // Halbzeit-Marker, sobald die 45. Minute überschritten wird
         if (!currentMatch.halftimeShown && prevMinute < 45 && currentMatch.minute >= 45) {
-            document.getElementById('ticker-log').innerHTML += `<div style="color:var(--blue); font-weight:bold;">⏸️ HALBZEITPAUSE (${currentMatch.homeGoals}:${currentMatch.awayGoals})</div>`;
             currentMatch.halftimeShown = true;
             currentMatch.awaitingHalftimeTalk = true;
             currentMatch.carrySpan = currentMatch.minute - prevMinute; // Minuten zählen im nächsten Zug
-            showHalftimeTalkModal();
+            liveTicker(`<div style="color:var(--blue); font-weight:bold;">⏸️ HALBZEITPAUSE (${currentMatch.homeGoals}:${currentMatch.awayGoals})</div>`, { art: 'halbzeit', minute: 45, aktion: showHalftimeTalkModal });
             return; // dieser Schritt endet hier - Tor/Karten-Auswertung erst nach der Ansprache
         }
 
@@ -36307,8 +37941,10 @@ function cleanupLegacyScoutState() {
         // Standards (Elfmeter, Freistoß): unterbrechen den Spielzug und warten auf die Entscheidung.
         if (currentMatch.minute < 88 && typeof rollLiveSetPiece === 'function' && rollLiveSetPiece(currentMatch.isHome ? diff : -diff)) {
             currentMatch.carrySpan = spanMin; // die Minuten des Spielzugs laufen im nächsten weiter
-            document.getElementById('live-score').innerText = currentMatch.homeGoals + " : " + currentMatch.awayGoals;
-            renderLiveMatchStats();
+            if (!regie) {
+                document.getElementById('live-score').innerText = currentMatch.homeGoals + " : " + currentMatch.awayGoals;
+                renderLiveMatchStats();
+            }
             return;
         }
 
@@ -36326,8 +37962,10 @@ function cleanupLegacyScoutState() {
         torEreignisse.forEach(wirTreffen => {
             eventHandled = true;
             let art = GOAL_STYLES[Math.floor(Math.random() * GOAL_STYLES.length)];
+            let minute = zeit();
+            let team = wirTreffen === currentMatch.isHome ? 0 : 1;
             // Videobeweis (js/set-pieces.js): ein Teil der Tore wird wegen Abseits zurückgenommen.
-            let annulliert = typeof varOverturnsGoal === 'function' && varOverturnsGoal(wirTreffen);
+            let annulliert = typeof varOverturnsGoal === 'function' && varOverturnsGoal(wirTreffen, minute);
             if (annulliert) {
                 recordLiveShot(wirTreffen === currentMatch.isHome, true);
                 if (wirTreffen && typeof noteRefereeControversy === 'function') noteRefereeControversy('var');
@@ -36338,12 +37976,14 @@ function cleanupLegacyScoutState() {
                 let { scorer, assist } = creditOwnGoal(onPitch);
                 if (hasFkGod && Math.random() < 0.3) art = 'mit einem traumhaften direkten Freistoß';
                 let scorerText = scorer ? `${scorer.name} trifft ${art}${assist ? ` (Vorlage: ${assist.name})` : ''}` : `Tor ${art}`;
-                document.getElementById('ticker-log').innerHTML += `<div style="color:var(--primary); font-weight:bold;">⚽ ${currentMatch.minute}. Min: TOR! ${scorerText} für ${ourName}!</div>`;
+                liveTicker(`<div style="color:var(--primary); font-weight:bold;">⚽ ${minute}. Min: TOR! ${scorerText} für ${ourName}!</div>`,
+                    { art: 'tor', team, minute, stil: art, spielerId: scorer ? scorer.id : null, stand: [currentMatch.homeGoals, currentMatch.awayGoals] });
             } else {
                 if (currentMatch.isHome) currentMatch.awayGoals++; else currentMatch.homeGoals++;
                 recordLiveShot(!currentMatch.isHome, true);
                 playSound('goal');
-                document.getElementById('ticker-log').innerHTML += `<div style="color:var(--danger);">⚽ ${currentMatch.minute}. Min: Gegentor - ${oppName} trifft ${art}.</div>`;
+                liveTicker(`<div style="color:var(--danger);">⚽ ${minute}. Min: Gegentor - ${oppName} trifft ${art}.</div>`,
+                    { art: 'tor', team, minute, stil: art, stand: [currentMatch.homeGoals, currentMatch.awayGoals] });
             }
         });
 
@@ -36367,6 +38007,8 @@ function cleanupLegacyScoutState() {
             // Spiel unter besonderer psychischer Anspannung - hitzköpfige Spieler geraten
             // dabei eher in Zweikämpfe außer Kontrolle, ruhige Charaktere bleiben unberührt.
             let isNervenkriegMatch = isDerbyOpponent(currentMatch.isHome ? currentMatch.awayName : currentMatch.homeName) && (rivalryRecord.shootoutsVsRival || 0) >= 2;
+            let kartenMinute = zeit();
+            let eigenesTeam = currentMatch.isHome ? 0 : 1;
             if (ourCardRoll < ourCardThreshold && onPitch.length > 0) {
                 eventHandled = true;
                 let culprit;
@@ -36386,11 +38028,11 @@ function cleanupLegacyScoutState() {
                     if (typeof noteRefereeControversy === 'function') noteRefereeControversy('rot', { playerId: culprit.id, name: culprit.name });
                     if (currentMatch.isHome) currentMatch.homeStrPenalty += 6; else currentMatch.awayStrPenalty += 6;
                     let label = isSecondYellow ? "🟨🟥 Gelb-Rote Karte" : "🟥 Platzverweis";
-                    document.getElementById('ticker-log').innerHTML += `<div style="color:var(--danger); font-weight:bold;">${label} für ${culprit.name}! Wir spielen in Unterzahl weiter.</div>`;
+                    liveTicker(`<div style="color:var(--danger); font-weight:bold;">${label} für ${culprit.name}! Wir spielen in Unterzahl weiter.</div>`, { art: 'karte', team: eigenesTeam, spielerId: culprit.id, rot: true, minute: kartenMinute });
                 } else {
                     currentMatch.yellowCards[culprit.id] = (currentMatch.yellowCards[culprit.id] || 0) + 1;
                     currentMatch.stats.yellow[liveStatsSide(currentMatch.isHome)]++;
-                    document.getElementById('ticker-log').innerHTML += `<div style="color:var(--accent);">🟨 ${currentMatch.minute}. Min: Gelbe Karte für ${culprit.name}.</div>`;
+                    liveTicker(`<div style="color:var(--accent);">🟨 ${kartenMinute}. Min: Gelbe Karte für ${culprit.name}.</div>`, { art: 'karte', team: eigenesTeam, spielerId: culprit.id, rot: false, minute: kartenMinute });
                 }
             } else if (ourCardRoll < 0.11 * refCardMult) {
                 // Gegnerische Karte - kein individueller Spieler, aber wirkt sich leicht auf Spielverlauf aus
@@ -36400,10 +38042,10 @@ function cleanupLegacyScoutState() {
                 if (isRed) {
                     if (currentMatch.isHome) currentMatch.awayStrPenalty += 6; else currentMatch.homeStrPenalty += 6;
                     let oppName = currentMatch.isHome ? currentMatch.awayName : currentMatch.homeName;
-                    document.getElementById('ticker-log').innerHTML += `<div style="color:var(--blue);">🟥 ${currentMatch.minute}. Min: Platzverweis bei ${oppName}! Der Gegner muss in Unterzahl weiterspielen.</div>`;
+                    liveTicker(`<div style="color:var(--blue);">🟥 ${kartenMinute}. Min: Platzverweis bei ${oppName}! Der Gegner muss in Unterzahl weiterspielen.</div>`, { art: 'karte', team: 1 - eigenesTeam, rot: true, minute: kartenMinute });
                 } else {
                     let oppName = currentMatch.isHome ? currentMatch.awayName : currentMatch.homeName;
-                    document.getElementById('ticker-log').innerHTML += `<div style="color:var(--text-muted);">🟨 ${currentMatch.minute}. Min: Gelbe Karte bei ${oppName}.</div>`;
+                    liveTicker(`<div style="color:var(--text-muted);">🟨 ${kartenMinute}. Min: Gelbe Karte bei ${oppName}.</div>`, { art: 'karte', team: 1 - eigenesTeam, rot: false, minute: kartenMinute });
                 }
             }
         }
@@ -36416,48 +38058,48 @@ function cleanupLegacyScoutState() {
             let line = pool[Math.floor(Math.random() * pool.length)];
             if (pool === OUR_CHANCE_EVENTS) recordLiveShot(currentMatch.isHome, Math.random() < 0.45);
             if (pool === OPP_CHANCE_EVENTS) recordLiveShot(!currentMatch.isHome, Math.random() < 0.45);
-            document.getElementById('ticker-log').innerHTML += `<div style="color:var(--text-muted); font-size:var(--fs-small);">${currentMatch.minute}. Min: ${line}</div>`;
+            let chancenMinute = zeit();
+            let chancenTeam = pool === OUR_CHANCE_EVENTS ? (currentMatch.isHome ? 0 : 1) : (pool === OPP_CHANCE_EVENTS ? (currentMatch.isHome ? 1 : 0) : null);
+            liveTicker(`<div style="color:var(--text-muted); font-size:var(--fs-small);">${chancenMinute}. Min: ${line}</div>`, { art: 'chance', team: chancenTeam, text: line, minute: chancenMinute });
         }
 
         document.getElementById('ticker-log').scrollTop = document.getElementById('ticker-log').scrollHeight;
-        document.getElementById('live-score').innerText = currentMatch.homeGoals + " : " + currentMatch.awayGoals;
+        if (!regie) document.getElementById('live-score').innerText = currentMatch.homeGoals + " : " + currentMatch.awayGoals;
         // Ballbesitz folgt dem Kräfteverhältnis (Heimsicht), Bus parken gibt ihn bewusst ab.
         let heimBesitz = 50 + diff * 1.1 + (Math.random() * 10 - 5);
         if (activeLiveShout === 'bus') heimBesitz += currentMatch.isHome ? -8 : 8;
         if (activeLiveShout === 'pressing') heimBesitz += currentMatch.isHome ? 4 : -4;
         currentMatch.stats.possSum += Math.max(25, Math.min(75, heimBesitz));
         currentMatch.stats.possSteps++;
-        // Abschlüsse, die nicht im Ticker landen (geblockt, drüber, vorbei)
-        if (Math.random() < 0.3 + Math.max(0, diff) * 0.01) recordLiveShot(true, Math.random() < 0.3);
-        if (Math.random() < 0.3 + Math.max(0, -diff) * 0.01) recordLiveShot(false, Math.random() < 0.3);
-        renderLiveMatchStats();
+        currentMatch.letzterBesitz = Math.max(25, Math.min(75, heimBesitz));
+        // Abschlüsse, die nicht im Ticker landen (geblockt, drüber, vorbei); mit Spielphysik als Szene ohne Zeile
+        if (Math.random() < 0.3 + Math.max(0, diff) * 0.01) { recordLiveShot(true, Math.random() < 0.3); if (regie) liveTicker('', { art: 'schuss', team: 0, minute: zeit() }); }
+        if (Math.random() < 0.3 + Math.max(0, -diff) * 0.01) { recordLiveShot(false, Math.random() < 0.3); if (regie) liveTicker('', { art: 'schuss', team: 1, minute: zeit() }); }
+        if (!regie) renderLiveMatchStats();
         applyTacticAutomation();
 
         // Co-Kommentator: unabhängig vom Spielgeschehen, ca. jeder 5. Spielzug
         if (Math.random() < 0.2) {
             let line = pickContextualCommentaryLine();
-            document.getElementById('ticker-log').innerHTML += `<div style="color:var(--teal); font-size:var(--fs-caption); font-style:italic;">${line}</div>`;
-            document.getElementById('ticker-log').scrollTop = document.getElementById('ticker-log').scrollHeight;
+            liveTicker(`<div style="color:var(--teal); font-size:var(--fs-caption); font-style:italic;">${line}</div>`, { art: 'info', minute: zeit() });
         }
 
         // Spielfeld-Animation: der Ball bewegt sich sichtbar über das Feld, damit man auch
         // optisch mitverfolgen kann, wo gerade gespielt wird - Richtung/Position hängt vom
         // Spielgeschehen dieses Spielzugs ab (Angriff Richtung Tor bei einer Chance/einem Tor,
         // sonst eher Mittelfeld-Gerangel).
-        animateLiveBall(eventHandled ? (Math.random() < userFavoredProb ? 'home' : 'away') : (diff > 8 ? 'home' : (diff < -8 ? 'away' : 'midfield')), eventHandled);
+        animateLiveBall(eventHandled ? (Math.random() < userFavoredProb ? 'home' : 'away') : (diff > 8 ? 'home' : (diff < -8 ? 'away' : 'midfield')));
 
-        if (currentMatch.minute >= 90) { endMatchSimulation(); }
+        if (currentMatch.minute >= 90) liveTicker('', { art: 'abpfiff', minute: 90, aktion: endMatchSimulation });
         // Co-Trainer im Livespiel (js/co-trainer-live.js): Hinweis aus dem echten Spielstand.
-        if (typeof tickCoTrainerLive === 'function') tickCoTrainerLive();
+        if (typeof tickCoTrainerLive === 'function') liveTicker('', { art: 'cotrainer', minute: currentMatch.minute, aktion: tickCoTrainerLive });
     }
 
     // ---------- SPIELFELD-BALL-ANIMATION ----------
     // Bewegt einen kleinen Ball-Indikator über das Live-Spielfeld (per CSS-Transition), damit
     // jeder Spielzug auch optisch als "hier passiert gerade etwas" wahrnehmbar ist, statt nur
     // als Text im Ticker zu erscheinen.
-    function animateLiveBall(direction, ereignis) {
-        // 3D-Ansicht (js/live-3d.js): Chancen und Tore als Szene
-        if (typeof live3dSpielzug === 'function') live3dSpielzug(direction, ereignis);
+    function animateLiveBall(direction) {
         let ball = document.getElementById('live-ball-indicator');
         if (!ball) return;
         let top, left;
@@ -36478,6 +38120,12 @@ function cleanupLegacyScoutState() {
         stopLiveTickerAutoplay();
         liveTickerPaused = false;
         updateLiveTickerPauseButton();
+        // Mit 3D-Ansicht führt die Spielphysik (js/spielphysik.js) den Takt: der nächste Spielzug
+        // kommt, wenn der vorige auf dem Platz zu Ende gespielt ist.
+        if (typeof spielphysikStart === 'function' && spielphysikStart()) {
+            if (typeof live3dAnzeigen === 'function') live3dAnzeigen();
+            return;
+        }
         liveTickerTimer = setInterval(() => {
             if (!currentMatch || liveTickerPaused || currentMatch.awaitingHalftimeTalk || currentMatch.awaitingSetPiece || currentMatch.minute >= 90) return;
             simulateMatchStep();
@@ -36496,6 +38144,7 @@ function cleanupLegacyScoutState() {
     }
 
     function simulateRestOfMatch() {
+        if (typeof spielphysikAufholen === 'function') spielphysikAufholen();
         while (currentMatch.minute < 90) {
             // Beim schnellen Durchspielen wird "Ruhig bleiben" automatisch (neutral) gewählt,
             // damit kein Modal den Ablauf unterbricht.
@@ -40355,6 +42004,9 @@ const LEXICON_ENTRIES = [
     { cat: 'Bedienung', title: 'Speichern', screen: 'screen-dashboard',
         text: 'Drei Speicher-Slots plus automatisches Speichern alle 5 Spieltage. Beim Start lädt das Spiel den zuletzt gespeicherten Stand - ist er beschädigt, den nächstneueren heilen - und bietet ihn im Startmenü unter „Weiterspielen“ an. Jeder Stand wird vor dem Laden geprüft: kaputte Stände lassen das laufende Spiel unangetastet, kleine Schäden werden repariert. Vor dem Laden, dem Überschreiben eines Slots und einem neuen Spiel entsteht eine Sicherheitskopie.',
         tips: ['Wenn der Browser das Speichern blockiert, Spielstand als Datei exportieren', 'In der Dateivorschau mancher Handys geht Speichern nicht - im Browser öffnen', 'Der Füllstand steht unter den Speicherständen - ab 80 % warnt das Spiel, bei vollem Speicher weicht zuerst die Sicherheitskopie', 'Nur eine exportierte Datei übersteht das Leeren des Browserspeichers - das Spiel erinnert alle 3 Saisons daran'] },
+    { cat: 'Taktik', title: 'Livespiel: Ballphysik & Reaktionsspiele', screen: 'screen-squad', neu: true,
+        text: 'In der 3D-Ansicht wird das Livespiel auf dem Platz nachgespielt: Ball und Spieler laufen mit echter Physik (Schwerkraft, Luftwiderstand, Rollreibung, Pfosten, Latte, Netz). Ticker und Anzeigetafel folgen dem Ball - ein Tor erscheint erst, wenn der Ball im Bild über die Linie geht, und die Szene passt zum Text (Kopfball nach Ecke, Konter, Distanzschuss ...). Bei Elfmeter, Freistoß und Ecke führst du selbst aus: Ein Cursor läuft erst von links nach rechts, dann von oben nach unten; triffst du die Mitte, steigt die Trefferchance. Beim Elfmeter wählst du vorher die Ecke, beim Elfmeter gegen dich springt dein Torwart dorthin, wo du tippst.',
+        tips: ['Tempo 1×, 2× oder 4× neben dem Umschalter wählen', 'Gute Schützen bewegen den Cursor langsamer und haben eine breitere Mitte', 'Ahnt der Torwart die Ecke, muss der Schuss sehr genau sein', '„Automatisch ausführen“ oder der Schalter im Standard-Fenster schaltet die Reaktionsspiele aus', 'Ohne 3D-Ansicht oder mit reduzierter Bewegung läuft der Ticker wie bisher'] },
     { cat: 'Verein', title: 'Stadionbild, Chronik & Sitzmuster', screen: 'screen-stadium', neu: true,
         text: 'Das Stadion steht im Dashboard als Bild mit Band: letztes Ergebnis und nächstes Spiel mit Wetter. Die Anzeigetafel zeigt das letzte Ergebnis. Die Chronik hält am Saisonende fest, wie das Stadion gewachsen ist, und lässt sich mit dem Schieber durchblättern. Sitzmuster, Bild als PNG und die Ticketvorschau sind im Stadion.',
         tips: ['Preise im Regler verschieben: das Stadion zeigt die Zuschauer mit diesen Preisen, ohne etwas zu speichern', 'Bauplätze im Gelände sind gestrichelt; das Fenster zeigt Kosten und Bauzeit', 'Bei Auswärtsspielen zeigt das Dashboard das Stadion des Gegners'] },
@@ -40668,6 +42320,9 @@ const LEXICON_EN = {
     'Einsteiger-Modus': { title: 'Beginner mode',
         text: 'For your first steps: the matchday shows “Kick off without preparation” and “Result only” at the top, opponent analysis, team talk and press are collapsed. The overview hides holding, Europe, weekly review and transfer strategy until matchday 17, the menu first shows only the important areas. The first matches briefly explain what happened.',
         tips: ['Selectable when starting a career, later switchable in the menu under Settings', 'After the first half of the season the game asks whether to switch it off', '“What now?” at the top of the overview always names the most important next task'] },
+    'Livespiel: Ballphysik & Reaktionsspiele': { title: 'Live match: ball physics & reaction games',
+        text: 'In the 3D view the live match is played out on the pitch: ball and players move with real physics (gravity, air drag, rolling friction, posts, crossbar, net). Ticker and scoreboard follow the ball - a goal only appears once the ball crosses the line on screen, and the scene matches the text (header from a corner, counter-attack, long shot ...). For penalties, free kicks and corners you take them yourself: a cursor runs first from left to right, then from top to bottom; hit the middle and the scoring chance rises. For a penalty you pick the corner first; for a penalty against you, your keeper dives where you tap.',
+        tips: ['Choose speed 1×, 2× or 4× next to the view switch', 'Good takers move the cursor more slowly and have a wider middle', 'If the keeper guesses the corner, the shot has to be very precise', '"Take automatically" or the switch in the set-piece window turns the reaction games off', 'Without the 3D view or with reduced motion the ticker runs as before'] },
     'Stadionbild, Chronik & Sitzmuster': { title: 'Stadium picture, chronicle & seating pattern',
         text: 'The stadium appears in the dashboard as a picture with a band: last result and next match with weather. The scoreboard shows the last result. At season end the chronicle keeps how the stadium has grown, and the slider pages through it. Seating pattern, picture as PNG and the ticket preview are in the stadium.',
         tips: ['Move the price slider: the stadium shows the attendance at these prices without saving anything', 'Empty plots in the grounds are dashed; the window shows cost and build time', 'For away matches the dashboard shows the opponent\'s stadium'] },

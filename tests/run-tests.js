@@ -126,6 +126,8 @@ async function main() {
         S.testStartmenue,
         S.testEinsteiger,
         S.testLive3D,
+        S.testSpielphysik,
+        S.testReaktionsspiel,
         S.testStadionAnsicht,
         S.testStartUndVersion,
         S.testStadionGelaende,
@@ -270,7 +272,8 @@ async function main() {
             // Freischaltungen (js/freischaltungen.js): die Suiten testen die Bereiche selbst, also alles offen;
             // testFreischaltungen nimmt das Kennzeichen wieder weg. Wirkt nur in der Entwickler-Fassung. Bewusst
             // nicht im localStorage: ein Schreiben vor dem Seitenstart verlor beim Neuladen andere frische Werte.
-            const allesFrei = async c => { await c.addInitScript(() => { window.anstossTestAllesFrei = true; window.anstossOhneStartmenue = true; }); return c; };
+            // Spielphysik (js/spielphysik.js) aus: die Suiten erwarten den sofortigen Ticker; testSpielphysik schaltet sie ein.
+            const allesFrei = async c => { await c.addInitScript(() => { window.anstossTestAllesFrei = true; window.anstossOhneStartmenue = true; window.anstossOhnePhysik = true; }); return c; };
             const ctx = await allesFrei(await browser.newContext());
             // Eigene Kontexte (z.B. mit Viewport) gehören zur Suite und werden mit ihr geschlossen,
             // denn BrowserContext.newPage() nimmt keine Optionen.

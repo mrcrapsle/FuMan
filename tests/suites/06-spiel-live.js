@@ -683,7 +683,7 @@ async function testSetPieces(browser) {
             game.freeKickTakerId = onPitch[1].id;
             currentMatch.setPiece = { type: 'freistoss', minute: 40 }; currentMatch.awaitingSetPiece = true;
             showSetPiecePanel();
-            out.freistossOptionen = document.querySelectorAll('#setpiece-options button').length === 3;
+            out.freistossOptionen = document.querySelectorAll('#setpiece-options button[onclick^="standardWaehlen"]').length === 3;   // dazu der Schalter für die Reaktionsspiele
             const fk = onPitch[1], fkTore = fk.goalsSeason || 0;
             Math.random = () => 0;
             resolveSetPiece('direkt');

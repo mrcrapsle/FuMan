@@ -1009,3 +1009,15 @@ Wunsch: die Stadien und Gebäude sollen echter aussehen (Canvas). Umgesetzt in `
 - `stadion3dStrassenLaternen()` setzt alle 22 m Laternen am Gehweg.
 - Das Tor an der Südseite des Zauns hat eine Durchfahrt (2,6 m zu jeder Seite offen).
 - Test: `testStadionRealismus` prüft den Ring.
+
+## Spielphysik im Livespiel und Reaktionsspiele bei Standards (ungemergt)
+
+Auftrag: Beim Anpfiff landete man unten auf der Seite und sah das Spielfeld nicht; die Szenen im Bild passten nicht zum Ticker. Gewünscht: das Spiel physikalisch berechnen, der Ball ist dort, wo das Spiel ihn berechnet, und Standards als Reaktionsspiel (Cursor links-rechts, dann oben-unten).
+
+- Anpfiff: `setupMatch()` setzt `#main-content` und die Seite nach oben.
+- `js/spielphysik.js`: Ball mit Schwerkraft, Luftwiderstand (0,011·v²), Rollreibung (1,6 m/s²), Aufsprung, Pfosten, Latte und Netz in festem Takt (1/120 s); Pässe und Schüsse werden über dieselbe Ballrechnung gelöst (Bisektion), damit der Ball genau am Ziel bzw. in der Torhöhe ankommt. 22 Spieler mit begrenzter Beschleunigung, Formation aus `game.formation`, Pressing, Abstand halten; eigene Figuren tragen die echten Spieler (Torschütze schießt selbst). Schiedsrichter läuft mit.
+- Drehbuch statt Raten: `simulateMatchStep(true)` schreibt Tore, Karten, Chancen, Standards, Halbzeit und Abpfiff mit eigener Minute ins Drehbuch. Die Regie spielt jede Zeile als passende Szene (Kopfball nach Ecke, Konter, Distanzschuss, Abstauber, Doppelpass, Volley, Elfmeter, Freistoß mit Mauer, Pfosten, Latte, Außennetz, Abseits, Rudelbildung ...). Zeile und Anzeigetafel erscheinen erst, wenn es auf dem Platz passiert; ein Tor genau dann, wenn der Ball die Torlinie überquert (Videobeweis: erst Jubel, dann „Kein Tor“). Der nächste Spielzug kommt, wenn der vorige zu Ende gespielt ist. Ergebnisse unverändert aus der Spiellogik, Physik mit eigenem Zufall.
+- Prüfung: 178 Szenen (alle Torarten beider Teams, alle Chancen- und Füllzeilen, Karten, Schüsse, gegnerische Standards) laufen durch, jedes Tor geht physikalisch ins Netz, keine Szene hängt. Ein ganzes Spiel dauert bei 1× etwa 1,5 bis 2 Minuten, bei 4× gut eine Minute.
+- Reaktionsspiele (`js/reaktionsspiel.js`): Elfmeter (Ecke wählen, Platzierung, Schusskraft; der Torwart ahnt manchmal die Ecke), direkter Freistoß (Richtung, über die Mauer), Freistoßflanke und Ecke (Flanke, Kopfball), Elfmeter gegen uns (wohin springt der Torwart, 2,6 s). Gute Schützen: langsamerer Cursor, breitere Mitte. Trefferchance ±(q−0,55)·0,4, begrenzt; Bilanz in `game.reaktionsBilanz`. Schließen oder „Automatisch ausführen“ führt ohne Spiel aus; Schalter im Standard-Fenster.
+- Ecken als eigene Entscheidung nur mit Physik (sonst Bonus in den erwarteten Toren wie bisher).
+
