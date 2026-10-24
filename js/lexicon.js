@@ -193,6 +193,9 @@ const LEXICON_ENTRIES = [
     { cat: 'Bedienung', title: 'Speichern', screen: 'screen-dashboard',
         text: 'Drei Speicher-Slots plus automatisches Speichern alle 5 Spieltage. Beim Start lädt das Spiel den zuletzt gespeicherten Stand - ist er beschädigt, den nächstneueren heilen - und bietet ihn im Startmenü unter „Weiterspielen“ an. Jeder Stand wird vor dem Laden geprüft: kaputte Stände lassen das laufende Spiel unangetastet, kleine Schäden werden repariert. Vor dem Laden, dem Überschreiben eines Slots und einem neuen Spiel entsteht eine Sicherheitskopie.',
         tips: ['Wenn der Browser das Speichern blockiert, Spielstand als Datei exportieren', 'In der Dateivorschau mancher Handys geht Speichern nicht - im Browser öffnen', 'Der Füllstand steht unter den Speicherständen - ab 80 % warnt das Spiel, bei vollem Speicher weicht zuerst die Sicherheitskopie', 'Nur eine exportierte Datei übersteht das Leeren des Browserspeichers - das Spiel erinnert alle 3 Saisons daran'] },
+    { cat: 'Bedienung', title: 'Bereiche & aufklappbare Karten', screen: 'screen-manager-tree', neu: true,
+        text: 'Lange Seiten zeigen oben eine Leiste mit ihren Bereichen, etwa Manager mit Freischaltungen, Wappen, Medien und Talentbaum. Ein Tipp zeigt genau diesen Bereich, „☰ Alle“ zeigt alles untereinander; die Wahl bleibt je Seite gemerkt. Lange Listen (Fanshop, Booster, Produktion, Verträge) zeigen nur die Kopfzeilen, ein Tipp klappt eine Karte auf. Das Lexikon klappt Einträge zu, die Suche öffnet die Treffer.',
+        tips: ['Der Talentbaum hat je Zweig einen Reiter', 'Der Kalender zeigt die nächsten Spieltage, der Rest auf Knopfdruck', 'Auf dem Handy ist die Kaderliste kompakt; der Umschalter im Kader ändert das'] },
     { cat: 'Taktik', title: 'Livespiel: Ballphysik & Reaktionsspiele', screen: 'screen-squad', neu: true,
         text: 'In der 3D-Ansicht wird das Livespiel auf dem Platz nachgespielt: Ball und Spieler laufen mit echter Physik (Schwerkraft, Luftwiderstand, Rollreibung, Pfosten, Latte, Netz). Ticker und Anzeigetafel folgen dem Ball - ein Tor erscheint erst, wenn der Ball im Bild über die Linie geht, und die Szene passt zum Text (Kopfball nach Ecke, Konter, Distanzschuss ...). Bei Elfmeter, Freistoß und Ecke führst du selbst aus: Ein Cursor läuft erst von links nach rechts, dann von oben nach unten; triffst du die Mitte, steigt die Trefferchance. Beim Elfmeter wählst du vorher die Ecke, beim Elfmeter gegen dich springt dein Torwart dorthin, wo du tippst.',
         tips: ['Tempo 1×, 2× oder 4× neben dem Umschalter wählen', 'Gute Schützen bewegen den Cursor langsamer und haben eine breitere Mitte', 'Ahnt der Torwart die Ecke, muss der Schuss sehr genau sein', '„Automatisch ausführen“ oder der Schalter im Standard-Fenster schaltet die Reaktionsspiele aus', 'Ohne 3D-Ansicht oder mit reduzierter Bewegung läuft der Ticker wie bisher'] },
@@ -289,12 +292,15 @@ function renderLexicon() {
         && (!lexiconScreenFilter || e.screen === lexiconScreenFilter)
         && (!lexiconNurNeu || e.neu)
         && (!suche || normSuche(e.title + ' ' + e.text + ' ' + e.tips.join(' ')).includes(suche)));
-    box.innerHTML = treffer.length ? treffer.map(e => `<div class="box" style="font-size:var(--fs-small);">
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
+    // Einträge zugeklappt (3.156, weniger Scrollen): Titel sichtbar, Text auf Tipp; bei Suche oder
+    // wenigen Treffern offen. Testmodus window.anstossOhneKompakt zeigt alles offen.
+    const offen = !!suche || treffer.length <= 3 || !!window.anstossOhneKompakt;
+    box.innerHTML = treffer.length ? treffer.map(e => `<details class="box lexikon-eintrag" style="font-size:var(--fs-small);"${offen ? ' open' : ''}>
+        <summary style="display:flex; justify-content:space-between; align-items:center; gap:6px; cursor:pointer;">
             <strong style="color:var(--accent);">${e.title}${e.neu ? ' ' + (typeof uiChip === 'function' ? uiChip('Neu', 'gut') : '🆕') : ''}</strong><span style="font-size:var(--fs-micro); color:var(--text-muted);">${e.catLabel || e.cat}</span>
-        </div>
+        </summary>
         <div style="margin-top:3px;">${e.text}</div>
         <ul style="margin:4px 0 0 0; padding-left:16px;">${e.tips.map(t => `<li>${t}</li>`).join('')}</ul>
         <button onclick="showScreen('${e.screen}')" class="btn-secondary" style="width:auto; font-size:var(--fs-caption); margin-top:4px;">➜ ${LEXIKON_ZIELE[e.screen] || 'Zum Bildschirm'}</button>
-    </div>`).join('') : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Kein Eintrag gefunden. Anderen Begriff versuchen oder Kategorie „Alle“ wählen.</div>';
+    </details>`).join('') : '<div style="font-size:var(--fs-small); color:var(--text-muted);">Kein Eintrag gefunden. Anderen Begriff versuchen oder Kategorie „Alle“ wählen.</div>';
 }

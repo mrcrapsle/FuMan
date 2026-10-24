@@ -86,6 +86,8 @@
             list.appendChild(row);
         });
 
+        // Lange Liste: Karten zuklappen (js/abschnitte.js)
+        if (typeof kompaktKarten === 'function') kompaktKarten('contracts-list');
     }
 
     // Alte Spielstände: Daten von drei abgelösten Vertragsmodulen, die eigene Scheinverträge

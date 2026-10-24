@@ -305,6 +305,8 @@
         if (screenId === 'screen-manager-tree' && typeof renderFreischaltUebersicht === 'function') renderFreischaltUebersicht();
         // Gesperrte Bereiche (js/freischaltungen.js) zeigen nach dem Zeichnen nur ihre Bedingungen.
         if (typeof aktualisiereFreischaltSperren === 'function') aktualisiereFreischaltSperren(screenId);
+        // Lange Seiten: Abschnitts-Leiste statt Scrollen (js/abschnitte.js)
+        if (typeof abschnitteAnwenden === 'function') abschnitteAnwenden(screenId);
         updateUI();
     }
 

@@ -335,6 +335,8 @@
             `;
             grid.appendChild(card);
         }
+        // Lange Liste: Karten zuklappen (js/abschnitte.js)
+        if (typeof kompaktKarten === 'function') kompaktKarten('merch-items-grid');
     }
 
     function setMerchPrice(key, price) {

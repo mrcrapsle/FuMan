@@ -2021,3 +2021,22 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .pd-nav button { width: auto; flex: 0 0 auto; min-width: 2.6em; }
 .spieler-suche-treffer { display: flex; flex-direction: column; gap: 2px; margin: 4px 0 6px; }
 .spieler-suche-treffer button { text-align: left; overflow-wrap: anywhere; }
+
+/* Weniger Scrollen (js/abschnitte.js): Abschnitts-Leiste und aufklappbare Karten */
+.abschnitt-leiste { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 8px 0; padding: 6px; border-radius: 12px; background: var(--surface-panel); border: 1px solid var(--border); position: sticky; top: 0; z-index: 5; }
+.abschnitt-leiste button { width: auto; min-height: 32px; font-size: var(--fs-caption); padding: 4px 9px; margin: 0; white-space: nowrap; }
+.abschnitt-aus { display: none !important; }
+.kompakt-karte:not(.offen) > :not(:first-child) { display: none !important; }
+.kompakt-karte:not(.offen) { padding-bottom: 6px; contain-intrinsic-size: auto 72px !important; }
+.kompakt-karte > :first-child { cursor: pointer; }
+.kompakt-pfeil { margin-left: auto; padding-left: 6px; color: var(--text-muted); font-size: var(--fs-small); transition: transform 0.15s; }
+.kompakt-karte.offen .kompakt-pfeil { transform: rotate(180deg); }
+.kompakt-kopf:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.talent-reiter { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10em), 1fr)); gap: 6px; margin-bottom: 4px; }
+.talent-reiter button { margin: 0; min-height: 36px; }
+.talent-karte { margin-bottom: 6px; }
+.talent-zeile { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.talent-zeile > div { flex: 1 1 12em; min-width: 0; }
+.talent-zeile button { flex: 0 0 auto; width: auto; margin: 0; }
+@media (max-width: 420px) { .talent-zeile { flex-direction: column; align-items: stretch; } .talent-zeile button { width: 100%; } }
+

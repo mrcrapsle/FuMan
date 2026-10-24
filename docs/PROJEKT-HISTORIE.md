@@ -1021,3 +1021,11 @@ Auftrag: Beim Anpfiff landete man unten auf der Seite und sah das Spielfeld nich
 - Reaktionsspiele (`js/reaktionsspiel.js`): Elfmeter (Ecke wählen, Platzierung, Schusskraft; der Torwart ahnt manchmal die Ecke), direkter Freistoß (Richtung, über die Mauer), Freistoßflanke und Ecke (Flanke, Kopfball), Elfmeter gegen uns (wohin springt der Torwart, 2,6 s). Gute Schützen: langsamerer Cursor, breitere Mitte. Trefferchance ±(q−0,55)·0,4, begrenzt; Bilanz in `game.reaktionsBilanz`. Schließen oder „Automatisch ausführen“ führt ohne Spiel aus; Schalter im Standard-Fenster.
 - Ecken als eigene Entscheidung nur mit Physik (sonst Bonus in den erwarteten Toren wie bisher).
 
+## Weniger Scrollen in den Menüpunkten (ungemergt)
+
+Auftrag: Menüpunkte wie Manager/Talentbaum zwangen zu sehr langem Scrollen; einfacher und professioneller machen. Messung auf 390 px Breite (Seitenhöhe vorher → nachher): Lexikon 24.174 → 3.050, Manager 4.498 → 1.286, Merch 5.808 → 2.146, Industrie 5.023 → 1.115, Privatleben 4.904 → 1.008, Premium 4.734 → 2.263, Verträge 4.432 → unter 3.600, Stadion 4.995 → 1.830, Kader 5.960 → 4.727, Dashboard 4.286 → 3.520.
+
+- `js/abschnitte.js`: Abschnitts-Leiste (Bereiche als Knöpfe, „☰ Alle“, gemerkt je Seite) auf Manager, Privatleben, Merch, Premium, Verträge, Industrie, Stadion, Campus, Sponsoren, Börse, Kaderplanung; kurze Namen über `data-abschnitt`.
+- Aufklappbare Karten für Fanshop-Artikel, Booster, Produktionsrezepte, Verträge und Dashboard-Kästen (Wochenrückblick, Industrie, Europa, Saison-Aufgaben, Speicherstände) und die Aufstellungsvorlagen.
+- Talentbaum: Reiter je Zweig, kompakte Karten. Lexikon: Einträge zugeklappt, Suche öffnet. Kalender: nächste acht Spieltage, alle auf Knopfdruck. Kader auf dem Handy standardmäßig kompakt.
+

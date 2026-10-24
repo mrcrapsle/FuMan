@@ -4233,6 +4233,98 @@ async function testReaktionsspiel(browser) {
     await page.close();
 }
 
+// Weniger Scrollen (js/abschnitte.js): Abschnitts-Leisten, zugeklappte Karten, Talentbaum-Reiter, Lexikon, Kalender
+async function testAbschnitte(browser) {
+    console.log('\n[3.156] Weniger Scrollen: Abschnitts-Leisten, aufklappbare Karten, Talentbaum, Lexikon, Kalender');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const r = await page.evaluate(() => {
+        const out = {};
+        window.anstossOhneKompakt = false;
+        closeTutorial(); game.sackPending = false;
+        ABSCHNITT_SEITEN.forEach(s => safeLocalRemove(ABSCHNITT_KEY + s));
+        const hoehe = () => Math.max(document.getElementById('main-content').scrollHeight, document.documentElement.scrollHeight);
+        // Manager: Leiste mit allen Bereichen, sichtbar ist einer
+        showScreen('screen-manager-tree');
+        const sc = document.getElementById('screen-manager-tree');
+        const leiste = sc.querySelector(':scope > .abschnitt-leiste');
+        const namen = leiste ? [...leiste.querySelectorAll('button')].map(b => b.textContent.trim()) : [];
+        out.leiste = namen.includes('🌳 Talentbaum') && namen.includes('☰ Alle') && namen.length === 8;
+        const sichtbar = () => [...sc.children].filter(k => k.matches('.panel') && getComputedStyle(k).display !== 'none').length;
+        out.einer = sichtbar() === 1;
+        // Talentbaum mit einem Tipp, gemerkt
+        const talent = [...leiste.querySelectorAll('button')].find(b => b.textContent.includes('Talentbaum'));
+        talent.click();
+        out.talent = sichtbar() === 1 && getComputedStyle(document.getElementById('manager-perks-grid').closest('.panel')).display !== 'none'
+            && safeLocalGet(ABSCHNITT_KEY + 'screen-manager-tree') === '🌳 Talentbaum';
+        showScreen('screen-dashboard'); showScreen('screen-manager-tree');
+        out.gemerkt = getComputedStyle(document.getElementById('manager-perks-grid').closest('.panel')).display !== 'none';
+        // Talentbaum: Reiter je Zweig, nur dessen Perks
+        const zweigKarten = () => document.querySelectorAll('#manager-perks-grid .talent-karte').length;
+        const aufbau = zweigKarten();
+        talentZweigWaehlen('krise');
+        out.zweige = aufbau > 0 && zweigKarten() > 0 && document.getElementById('btn-tab-talent-krise').classList.contains('btn-action');
+        talentZweigWaehlen('aufbau');
+        // „Alle“ zeigt wieder alles
+        [...sc.querySelector(':scope > .abschnitt-leiste').querySelectorAll('button')].pop().click();
+        out.alle = sichtbar() === 7;
+        // Reiter-Namen für Screenreader (js/a11y.js) und Zugänglichkeit
+        out.knoepfe = [...sc.querySelectorAll('.abschnitt-leiste button')].every(b => /^btn-tab-abschnitt-/.test(b.id) && b.getBoundingClientRect().height >= 32);
+        // Lange Listen: Karten zugeklappt, Tipp öffnet, bleibt nach Neuzeichnen offen
+        showScreen('screen-merch');
+        const karten = [...document.querySelectorAll('#merch-items-grid > .kompakt-karte')];
+        out.zu = karten.length > 5 && karten.every(k => !k.classList.contains('offen'));
+        karten[0].firstElementChild.click();
+        out.auf = karten[0].classList.contains('offen') && getComputedStyle(karten[0].children[1]).display !== 'none';
+        renderMerchView();
+        const neu = document.querySelector('#merch-items-grid > .kompakt-karte');
+        out.bleibtOffen = !!neu && neu.classList.contains('offen');
+        // Ein Knopf in einer offenen Karte tut weiter das Seine (klappt nicht zu)
+        const geld = game.money;
+        game.money = 1e9;
+        neu.querySelector('button[onclick^="orderMerchBatch"]').click();
+        out.knopf = document.querySelector('#merch-items-grid > .kompakt-karte').classList.contains('offen');
+        game.money = geld;
+        // Verträge: erster Besuch zeigt die Liste
+        showScreen('screen-contracts');
+        out.vertraege = getComputedStyle(document.getElementById('contracts-list').closest('.panel')).display !== 'none';
+        // Dashboard: Speicherstände zugeklappt
+        showScreen('screen-dashboard');
+        const speicher = [...document.querySelectorAll('#screen-dashboard [data-kompakt]')].find(p => p.textContent.includes('Speicherstände'));
+        out.dashboard = !!speicher && speicher.classList.contains('kompakt-karte') && !speicher.classList.contains('offen');
+        // Lexikon: Einträge zugeklappt, Suche öffnet
+        showScreen('screen-lexicon');
+        const eintraege = document.querySelectorAll('#lexicon-list details.lexikon-eintrag');
+        out.lexikon = eintraege.length > 20 && [...eintraege].every(d => !d.open) && hoehe() < 6000;
+        document.getElementById('lexicon-search').value = 'Talentbaum'; renderLexicon();
+        out.lexikonSuche = [...document.querySelectorAll('#lexicon-list details.lexikon-eintrag')].every(d => d.open);
+        document.getElementById('lexicon-search').value = ''; renderLexicon();
+        // Kalender: nächste Spieltage, Rest auf Wunsch
+        showScreen('screen-calendar');
+        const zeilen = () => document.querySelectorAll('#cal-schedule-list .player-row').length;
+        const wenige = zeilen();
+        const mehr = [...document.querySelectorAll('#cal-schedule-list button')].find(b => b.textContent.includes('34'));
+        mehr.click();
+        out.kalender = wenige <= 9 && zeilen() === 34;
+        kalenderAlle = false;
+        // Höhe der früher längsten Seiten auf dem Handy
+        out.hoehen = {};
+        ['screen-manager-tree', 'screen-private', 'screen-merch', 'screen-industry', 'screen-premium', 'screen-contracts', 'screen-lexicon'].forEach(s => {
+            safeLocalRemove(ABSCHNITT_KEY + s); showScreen(s); out.hoehen[s] = hoehe();
+        });
+        out.kurz = Object.values(out.hoehen).every(h => h < 3600);
+        return out;
+    });
+    const K = ['leiste', 'einer', 'talent', 'gemerkt', 'zweige', 'alle', 'knoepfe', 'zu', 'auf', 'bleibtOffen', 'knopf', 'vertraege', 'dashboard', 'lexikon', 'lexikonSuche', 'kalender', 'kurz'];
+    assert(K.every(k => r[k] === true), `Weniger Scrollen: Leisten, Karten, Talentbaum, Lexikon, Kalender, Höhen ${JSON.stringify(r.hoehen)} (${JSON.stringify(K.map(k => r[k]))})`);
+    // Kein waagrechter Überlauf mit Leiste auf 320 px
+    await page.setViewportSize({ width: 320, height: 700 });
+    const breit = await page.evaluate(() => ['screen-manager-tree', 'screen-private', 'screen-stadium'].every(s => { showScreen(s); return document.documentElement.scrollWidth <= window.innerWidth + 1; }));
+    assert(breit, 'Abschnitts-Leisten ohne waagrechten Überlauf auf 320 px');
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 async function testAusschreitungSzene(browser) {
     console.log('\n[26.30] Ausschreitungen als Bild: Szene im Fanblock, Effekt im 3D-Livespiel, Stadionkarte');
     const { page, consoleErrors } = await freshPage(browser);
@@ -4783,6 +4875,7 @@ module.exports = {
     testLive3D,
     testSpielphysik,
     testReaktionsspiel,
+    testAbschnitte,
     testAusschreitungSzene,
     testStadionAnsicht,
     testStartUndVersion,

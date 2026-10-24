@@ -222,7 +222,10 @@ function setSquadBelastungFilter() {
 // Kaderansicht (Phase 26.17): Karten oder kompakte Liste; Einstellung dieses Geräts
 const KADER_ANSICHT_KEY = 'anstoss_fm13_kaderansicht';
 function getKaderAnsicht() {
-    return (typeof safeLocalGet === 'function' ? safeLocalGet(KADER_ANSICHT_KEY) : null) === 'kompakt' ? 'kompakt' : 'karten';
+    const wahl = typeof safeLocalGet === 'function' ? safeLocalGet(KADER_ANSICHT_KEY) : null;
+    if (wahl === 'kompakt' || wahl === 'karten') return wahl;
+    // Ohne eigene Wahl auf dem Handy kompakt (3.156: weniger Scrollen); Testmodus wie früher
+    return !window.anstossOhneKompakt && (window.innerWidth || 1024) <= 650 ? 'kompakt' : 'karten';
 }
 function toggleKaderAnsicht() {
     const neu = getKaderAnsicht() === 'kompakt' ? 'karten' : 'kompakt';

@@ -13,7 +13,10 @@
         list.innerHTML = '';
         const en = typeof currentLang !== 'undefined' && currentLang === 'en';
         const L = (de, eng) => en ? eng : de;
-        for (let i = 1; i <= 34; i++) {
+        // Weniger Scrollen (3.156): vergangene Spieltage und die ferne Zukunft auf Wunsch
+        const von = kalenderAlle || window.anstossOhneKompakt ? 1 : Math.max(1, game.matchday - 1);
+        const bis = kalenderAlle || window.anstossOhneKompakt ? 34 : Math.min(34, game.matchday + 7);
+        for (let i = von; i <= bis; i++) {
             let item = document.createElement('div');
             item.className = 'player-row';
             let isCurrent = (i === game.matchday);
@@ -54,7 +57,23 @@
             if (isCurrent) item.style.borderColor = "var(--primary)";
             list.appendChild(item);
         }
+        if (von > 1 || bis < 34) {
+            const mehr = document.createElement('button');
+            mehr.className = 'btn-secondary';
+            mehr.style.marginTop = '6px';
+            mehr.innerText = L(`📅 Alle 34 Spieltage zeigen (${34 - (bis - von + 1)} weitere)`, `📅 Show all 34 matchdays (${34 - (bis - von + 1)} more)`);
+            mehr.onclick = () => { kalenderAlle = true; renderCalendarView(); };
+            list.appendChild(mehr);
+        } else if (kalenderAlle && !window.anstossOhneKompakt) {
+            const weniger = document.createElement('button');
+            weniger.className = 'btn-secondary';
+            weniger.style.marginTop = '6px';
+            weniger.innerText = L('▴ Nur die nächsten Spieltage', '▴ Only the next matchdays');
+            weniger.onclick = () => { kalenderAlle = false; renderCalendarView(); };
+            list.appendChild(weniger);
+        }
     }
+    let kalenderAlle = false;
 
     // Erster Spieltag, an dem ein verletzter oder gesperrter Spieler wieder spielen darf (0 = einsatzbereit)
     function getRueckkehrSpieltag(p) {

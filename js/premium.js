@@ -258,5 +258,7 @@
                 </div>
             `).join('');
         }
+        // Lange Liste: Karten zuklappen (js/abschnitte.js)
+        if (typeof kompaktKarten === 'function') kompaktKarten('premium-boosters-box');
     }
 

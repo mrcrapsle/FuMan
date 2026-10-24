@@ -98,45 +98,42 @@
         }
         // Zwei Talentbaum-Zweige: "Aufbau-Spezialist" (Wirtschaft & Kader-Aufbau) und
         // "Krisenmanager" (Stabilität & Schadensbegrenzung) - unabhängig kombinierbar, keine
-        // exklusive Wahl, aber klar erkennbar als zwei unterschiedliche Spielstile.
-        let aufbauHeader = document.createElement('div');
-        aufbauHeader.className = 'ui-overline';
-        aufbauHeader.style.cssText = 'grid-column:1 / -1; font-size:var(--fs-body); font-weight:800; color:var(--primary); margin:8px 0 4px 4px;';
-        aufbauHeader.innerText = '🏗️ Zweig: Aufbau-Spezialist';
-        grid.appendChild(aufbauHeader);
-        perkData.filter(p => p.branch === 'aufbau').forEach(p => {
+        // exklusive Wahl. Je Zweig ein Reiter statt einer langen Liste (3.156: weniger Scrollen).
+        const zweige = [
+            { key: 'aufbau', label: '🏗️ Aufbau-Spezialist', farbe: 'var(--primary)' },
+            { key: 'krise', label: '🛡️ Krisenmanager', farbe: 'var(--danger)' }
+        ];
+        if (!zweige.some(z => z.key === talentZweig)) talentZweig = 'aufbau';
+        let reiter = document.createElement('div');
+        reiter.className = 'talent-reiter';
+        reiter.style.gridColumn = '1 / -1';
+        reiter.innerHTML = zweige.map(z => {
+            const anzahl = perkData.filter(p => p.branch === z.key).length;
+            const aktiv = perkData.filter(p => p.branch === z.key && managerRPG.perks[p.id]).length;
+            return `<button id="btn-tab-talent-${z.key}" onclick="talentZweigWaehlen('${z.key}')" class="${z.key === talentZweig ? 'btn-action' : 'btn-secondary'}">${z.label} <span class="lexikon-anzahl">${aktiv}/${anzahl}</span></button>`;
+        }).join('');
+        grid.appendChild(reiter);
+        const zweig = zweige.find(z => z.key === talentZweig);
+        perkData.filter(p => p.branch === talentZweig).forEach(p => {
             let active = managerRPG.perks[p.id];
             let card = document.createElement('div');
-            card.className = 'panel';
-            card.style.borderColor = active ? 'var(--primary)' : 'var(--border)';
+            card.className = 'panel talent-karte';
+            card.style.borderColor = active ? zweig.farbe : 'var(--border)';
             card.innerHTML = `
-                <div class="panel-header"><span>${p.name}</span><strong style="color:${active?'var(--primary)':'var(--text-muted)'};">${active?'Aktiviert ✓':'Gesperrt'}</strong></div>
-                <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:6px;">${p.desc}</div>
-                <button onclick="unlockManagerPerk('${p.id}')" class="${active?'btn-secondary':'btn-action'}" ${active||managerRPG.points<1?'disabled':''}>
-                    ${active ? 'Bereits freigeschaltet' : 'Freischalten (1 Skill-Punkt)'}
-                </button>
+                <div class="panel-header"><span>${p.name}</span><strong style="color:${active ? zweig.farbe : 'var(--text-muted)'};">${active ? 'Aktiviert ✓' : 'Gesperrt'}</strong></div>
+                <div class="talent-zeile">
+                    <div style="font-size:var(--fs-small); color:var(--text-muted);">${p.desc}</div>
+                    ${active ? '' : `<button onclick="unlockManagerPerk('${p.id}')" class="btn-action" ${managerRPG.points < 1 ? 'disabled' : ''}>Freischalten (1 Punkt)</button>`}
+                </div>
             `;
             grid.appendChild(card);
         });
-        let kriseHeader = document.createElement('div');
-        kriseHeader.className = 'ui-overline';
-        kriseHeader.style.cssText = 'grid-column:1 / -1; font-size:var(--fs-body); font-weight:800; color:var(--danger); margin:12px 0 4px 4px;';
-        kriseHeader.innerText = '🛡️ Zweig: Krisenmanager';
-        grid.appendChild(kriseHeader);
-        perkData.filter(p => p.branch === 'krise').forEach(p => {
-            let active = managerRPG.perks[p.id];
-            let card = document.createElement('div');
-            card.className = 'panel';
-            card.style.borderColor = active ? 'var(--danger)' : 'var(--border)';
-            card.innerHTML = `
-                <div class="panel-header"><span>${p.name}</span><strong style="color:${active?'var(--danger)':'var(--text-muted)'};">${active?'Aktiviert ✓':'Gesperrt'}</strong></div>
-                <div style="font-size:var(--fs-small); color:var(--text-muted); margin-bottom:6px;">${p.desc}</div>
-                <button onclick="unlockManagerPerk('${p.id}')" class="${active?'btn-secondary':'btn-action'}" ${active||managerRPG.points<1?'disabled':''}>
-                    ${active ? 'Bereits freigeschaltet' : 'Freischalten (1 Skill-Punkt)'}
-                </button>
-            `;
-            grid.appendChild(card);
-        });
+    }
+
+    let talentZweig = 'aufbau';
+    function talentZweigWaehlen(key) {
+        talentZweig = key;
+        renderManagerRPGView();
     }
 
     function unlockManagerPerk(perkId) {

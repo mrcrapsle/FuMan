@@ -363,6 +363,8 @@
             });
             container.appendChild(row);
         }
+        // Lange Liste: Karten zuklappen (js/abschnitte.js)
+        if (typeof kompaktKarten === 'function') kompaktKarten('staff-list-container');
     }
 
     // Kabinen-Dynamik (Cliquen, Rangordnung, Kapitänsfrage) liegt seit Phase 20.2 in

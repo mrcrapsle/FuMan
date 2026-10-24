@@ -49,6 +49,8 @@
             `;
             recList.appendChild(row);
         }
+        // Lange Liste: Karten zuklappen (js/abschnitte.js)
+        if (typeof kompaktKarten === 'function') kompaktKarten('production-recipes-list');
     }
 
     function buyFactory(key) {
