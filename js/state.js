@@ -4,7 +4,7 @@
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.155', date: '24.10.2026', features: 'Livespiel mit Ballphysik: Ticker folgt dem Ball, Reaktionsspiele bei Elfmeter, Freistoß und Ecke, Anpfiff oben' };
+    const GAME_VERSION = { number: '3.157', date: '26.10.2026', features: 'Livespiel im eigenen Fenster mit Ausblenden und Band auf der Übersicht; weniger Scrollen (Abschnitts-Leisten, aufklappbare Karten, Talentbaum-Reiter); Spiel friert nach dem Abpfiff ein' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
