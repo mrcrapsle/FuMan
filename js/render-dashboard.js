@@ -1,5 +1,6 @@
 
     function renderDashboardView() {
+        if (typeof liveFensterBandZeichnen === 'function') liveFensterBandZeichnen();
         if (typeof renderSaisonZiele === 'function') renderSaisonZiele();
         if (typeof renderNaechsteFreischaltung === 'function') renderNaechsteFreischaltung();
         if (typeof renderRestprogramm === 'function') renderRestprogramm();

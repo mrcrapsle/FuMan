@@ -129,6 +129,7 @@ async function main() {
         S.testSpielphysik,
         S.testReaktionsspiel,
         S.testAbschnitte,
+        S.testLiveFenster,
         S.testStadionAnsicht,
         S.testStartUndVersion,
         S.testStadionGelaende,

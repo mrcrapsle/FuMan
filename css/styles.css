@@ -2040,3 +2040,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .talent-zeile button { flex: 0 0 auto; width: auto; margin: 0; }
 @media (max-width: 420px) { .talent-zeile { flex-direction: column; align-items: stretch; } .talent-zeile button { width: 100%; } }
 
+/* Livespiel im eigenen Fenster (js/live-fenster.js) */
+.live-fenster { position: fixed; inset: 0; z-index: 950; flex-direction: column; background: var(--surface-app); }
+.live-fenster-kopf { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 12px; background: var(--surface-panel); border-bottom: 1px solid var(--border); }
+.live-fenster-kopf button { width: auto; min-height: 36px; margin: 0; }
+.live-fenster-huelle { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 8px 12px calc(16px + env(safe-area-inset-bottom)); max-width: 900px; width: 100%; margin: 0 auto; }
+#live-band { margin-bottom: 10px; }
+

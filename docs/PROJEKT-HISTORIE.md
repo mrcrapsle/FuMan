@@ -1021,6 +1021,14 @@ Auftrag: Beim Anpfiff landete man unten auf der Seite und sah das Spielfeld nich
 - Reaktionsspiele (`js/reaktionsspiel.js`): Elfmeter (Ecke wählen, Platzierung, Schusskraft; der Torwart ahnt manchmal die Ecke), direkter Freistoß (Richtung, über die Mauer), Freistoßflanke und Ecke (Flanke, Kopfball), Elfmeter gegen uns (wohin springt der Torwart, 2,6 s). Gute Schützen: langsamerer Cursor, breitere Mitte. Trefferchance ±(q−0,55)·0,4, begrenzt; Bilanz in `game.reaktionsBilanz`. Schließen oder „Automatisch ausführen“ führt ohne Spiel aus; Schalter im Standard-Fenster.
 - Ecken als eigene Entscheidung nur mit Physik (sonst Bonus in den erwarteten Toren wie bisher).
 
+## Livespiel im eigenen Fenster (ungemergt)
+
+Auftrag: Das Livespiel soll nicht den Bildschirm ersetzen, sondern in einem eigenen Fenster laufen, in dem man eingreifen kann.
+
+- `js/live-fenster.js`: Vollbild-Fenster über der Übersicht. Der bisherige Bildschirm `#screen-matchday` wird beim Öffnen hineinverschoben und beim Schließen an seine Stelle gesetzt, so bleiben alle Funktionen (Taktik, Wechsel, Coaching, Standards, 3D-Ansicht) unverändert.
+- „Ausblenden“ schließt das Fenster und pausiert den Ticker; die Übersicht zeigt ein Band mit Minute und Stand, „Spiel öffnen“ holt das Spiel zurück. Nach dem Abpfiff bleibt das Band, bis der Spielbericht geschlossen ist.
+- Nebenbei: Die Testsuite zu Länderspielpausen setzt jetzt einen festen Zufallswert (sie wackelte durch Verletzungen).
+
 ## Weniger Scrollen in den Menüpunkten (ungemergt)
 
 Auftrag: Menüpunkte wie Manager/Talentbaum zwangen zu sehr langem Scrollen; einfacher und professioneller machen. Messung auf 390 px Breite (Seitenhöhe vorher → nachher): Lexikon 24.174 → 3.050, Manager 4.498 → 1.286, Merch 5.808 → 2.146, Industrie 5.023 → 1.115, Privatleben 4.904 → 1.008, Premium 4.734 → 2.263, Verträge 4.432 → unter 3.600, Stadion 4.995 → 1.830, Kader 5.960 → 4.727, Dashboard 4.286 → 3.520.

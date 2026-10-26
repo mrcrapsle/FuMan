@@ -4241,6 +4241,48 @@ async function testReaktionsspiel(browser) {
     await page.close();
 }
 
+// Livespiel im eigenen Fenster (js/live-fenster.js): öffnen, ausblenden, Band auf der Übersicht, wieder öffnen, Spielbericht schließen
+async function testLiveFenster(browser) {
+    console.log('\n[3.157] Livespiel im eigenen Fenster: öffnen, ausblenden, Band, wieder öffnen, Spielbericht schließen');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const r = await page.evaluate(() => {
+        const out = {};
+        window.anstossOhnePhysik = true;
+        closeTutorial(); game.sackPending = false;
+        document.documentElement.setAttribute('data-motion', 'normal');
+        startMatchdayFlow(); skipPressAndPlay(); stopLiveTickerAutoplay();
+        const fenster = document.getElementById('live-fenster');
+        const sc = document.getElementById('screen-matchday');
+        out.offen = !!fenster && fenster.style.display === 'flex' && fenster.contains(sc) && document.body.classList.contains('live-fenster-offen');
+        out.inhaltDa = !!document.getElementById('ticker-log') && !!document.getElementById('btn-next-step') && fenster.contains(document.getElementById('ticker-log'));
+        // Ausblenden: Fenster zu, Spiel steht, Band auf der Übersicht
+        const minute = currentMatch.minute;
+        document.getElementById('live-fenster-ausblenden').click();
+        out.zu = fenster.style.display === 'none' && !document.body.classList.contains('live-fenster-offen');
+        out.zurueckAufDemPlatz = document.getElementById('screen-matchday').parentElement === document.getElementById('main-content') || !!document.getElementById('screen-matchday').closest('#main-content');
+        out.band = document.getElementById('live-band').style.display === 'block' && document.getElementById('live-band').textContent.includes('Spiel öffnen');
+        out.pausiert = liveTickerPaused === true && currentMatch.minute === minute;
+        // Wieder öffnen: Ticker läuft wieder, Band weg
+        document.querySelector('#live-band button').click();
+        out.wieder = fenster.style.display === 'flex' && fenster.contains(document.getElementById('screen-matchday')) && document.getElementById('live-band').style.display === 'none' && liveTickerPaused === false;
+        // Spielende: der Bericht bleibt offen, auch wenn das Fenster ausgeblendet wird
+        resolveMatchInstantly();
+        document.getElementById('live-fenster-ausblenden').click();
+        out.nachAbpfiff = document.getElementById('live-band').style.display === 'block' && document.getElementById('live-band').textContent.includes('Spiel öffnen');
+        document.querySelector('#live-band button').click();
+        out.spielberichtOffen = fenster.style.display === 'flex' && document.getElementById('btn-finish-match').style.display !== 'none';
+        finishMatch();
+        out.geschlossen = fenster.style.display === 'none' && !document.body.classList.contains('live-fenster-offen') && document.getElementById('screen-matchday').style.display === 'none';
+        out.bandWeg = document.getElementById('live-band').style.display === 'none';
+        return out;
+    });
+    const K = ['offen', 'inhaltDa', 'zu', 'zurueckAufDemPlatz', 'band', 'pausiert', 'wieder', 'nachAbpfiff', 'spielberichtOffen', 'geschlossen', 'bandWeg'];
+    assert(K.every(k => r[k] === true), `Livespiel im Fenster: öffnen, ausblenden, Band, wieder öffnen, Spielbericht (${JSON.stringify(K.map(k => r[k]))})`);
+    assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 // Weniger Scrollen (js/abschnitte.js): Abschnitts-Leisten, zugeklappte Karten, Talentbaum-Reiter, Lexikon, Kalender
 async function testAbschnitte(browser) {
     console.log('\n[3.156] Weniger Scrollen: Abschnitts-Leisten, aufklappbare Karten, Talentbaum, Lexikon, Kalender');
@@ -4884,6 +4926,7 @@ module.exports = {
     testSpielphysik,
     testReaktionsspiel,
     testAbschnitte,
+    testLiveFenster,
     testAusschreitungSzene,
     testStadionAnsicht,
     testStartUndVersion,

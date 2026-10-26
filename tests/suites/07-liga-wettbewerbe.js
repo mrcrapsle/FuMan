@@ -57,7 +57,11 @@ async function testNationalTeam(browser) {
             const originalPause = window.tickInternationalBreak;
             let pausen = 0;
             window.tickInternationalBreak = function () { const k = originalPause(); if (k) pausen++; return k; };
-            try { simulateFullSeason(); } finally { window.tickInternationalBreak = originalPause; }
+            // Fester Zufall: Verletzungen während der Saison entscheiden, ob eine Pause ausfällt (sonst wackelt der Test)
+            const zufallVorher = Math.random;
+            let saat = 42;
+            Math.random = () => { saat = (saat * 16807) % 2147483647; return saat / 2147483647; };
+            try { simulateFullSeason(); } finally { window.tickInternationalBreak = originalPause; Math.random = zufallVorher; }
             // (Zufallsverletzungen dürfen die Turnierteilnahme im Test nicht verhindern)
             if (squad.includes(star)) { star.strength = Math.max(star.strength, 85); star.injured = 0; }
             concludeSeasonAndAdvance();

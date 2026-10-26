@@ -388,7 +388,9 @@
             yellowCards: {}, sentOff: [], halftimeShown: false,
             stats: newLiveMatchStats()
         };
-        showScreen('screen-matchday');
+        // Das Livespiel öffnet als eigenes Fenster über der Seite (js/live-fenster.js); darunter die Übersicht.
+        showScreen('screen-dashboard');
+        if (typeof liveFensterOeffnen === 'function') liveFensterOeffnen(); else showScreen('screen-matchday');
         // Anpfiff oben beginnen: sonst blieb die Seite unten beim Knopf stehen und man sah das Spielfeld nicht
         const inhalt = document.getElementById('main-content'); if (inhalt) inhalt.scrollTop = 0;
         if (document.scrollingElement) document.scrollingElement.scrollTop = 0;

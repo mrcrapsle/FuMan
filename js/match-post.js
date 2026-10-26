@@ -419,6 +419,7 @@
 
     function finishMatch() {
         // Nach dem live gespielten Pokalspiel geht es direkt zum Ligaspiel desselben Spieltags.
+        if (typeof liveFensterSchliessen === 'function') liveFensterSchliessen(true);
         if (typeof currentMatch !== 'undefined' && currentMatch && currentMatch.cupTie && !currentMatch.cupWeiter) {
             currentMatch.cupWeiter = true;
             startMatchdayFlow();

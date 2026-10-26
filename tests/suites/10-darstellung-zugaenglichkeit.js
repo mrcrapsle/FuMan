@@ -98,7 +98,9 @@ async function testOneHandControls(browser) {
             window.scrollTo(0, 0);
             const fabEl = document.getElementById('one-hand-fab');
             const fabSichtbar = fabEl && getComputedStyle(fabEl).display !== 'none' && fabEl.getBoundingClientRect().height > 0;
-            const navTop = Math.min(document.querySelector('.bottom-nav-bar').getBoundingClientRect().top, fabSichtbar ? fabEl.getBoundingClientRect().top : 99999);
+            // Seit 3.157 läuft das Spiel im eigenen Fenster, das die untere Leiste verdeckt: dort zählt die Fensterkante
+            const fensterOffen = document.getElementById('live-fenster').style.display === 'flex';
+            const navTop = fensterOffen ? window.innerHeight : Math.min(document.querySelector('.bottom-nav-bar').getBoundingClientRect().top, fabSichtbar ? fabEl.getBoundingClientRect().top : 99999);
             const szene = document.getElementById('btn-next-step').getBoundingClientRect();
             out.liveLeiste = szene.height > 0 && szene.bottom <= navTop + 1 && szene.top > H / 2;
             simulateRestOfMatch();
