@@ -389,7 +389,7 @@ function spAufdecken(ev) {
 // Alles Offene sofort zeigen ("Nächste Szene", "Spiel abpfeifen", Umschalten auf die Taktiktafel).
 function spielphysikAufholen() {
     const lp = livePhysik;
-    if (!lp) return;
+    if (!lp || lp.eingefroren) return;
     const offen = [];
     if (lp.szene && lp.szene.ev) offen.push(lp.szene.ev);
     offen.push(...lp.queue);
@@ -1129,6 +1129,7 @@ function spTorErkannt() {
 // Ein Bild: dt in Sekunden (echte Zeit). Aus live3dFrame().
 function spielphysikTakt(dtEcht) {
     const lp = livePhysik;
+    if (lp && lp.eingefroren) return;
     const m = typeof currentMatch !== 'undefined' ? currentMatch : null;
     if (!lp || !m || lp.match !== m || !spielphysikAktiv()) return;
     if (typeof liveTickerPaused !== 'undefined' && liveTickerPaused && !lp.abpfiff) return;
@@ -1412,6 +1413,20 @@ function spielphysikStart() {
     return true;
 }
 function spielphysikLaeuft() { return !!livePhysik && typeof currentMatch !== 'undefined' && livePhysik.match === currentMatch && spielphysikAktiv(); }
+// Nach dem Abpfiff (endMatchSimulation): nichts läuft mehr auf dem Platz. Ball und Spieler bleiben
+// stehen, die Bildschleife der 3D-Ansicht endet (live3dFrame prüft lp.eingefroren).
+function spielphysikEnde() {
+    const lp = livePhysik;
+    if (!lp) return;
+    lp.queue = []; lp.szene = null; lp.schuss = null; lp.pass = null; lp.standardHalten = false;
+    lp.abpfiff = true; lp.uhr = 90; lp.ende = 90; lp.halbzeitWartet = false;
+    const b = lp.ball;
+    Object.assign(b, { halter: null, vx: 0, vy: 0, vz: 0, z: 0, aus: null });
+    lp.f.forEach(f => { f.vx = 0; f.vy = 0; f.sprint = false; f.jubel = 0; f.hecht = 0; f.liegt = 0; f.zx = f.x; f.zy = f.y; });
+    lp.eingefroren = true;
+    spAnzeigeSync();
+    spMinuteZeigen();
+}
 // Beim Umschalten auf die Taktiktafel: alles Offene zeigen, dann wieder der alte Ticker-Takt
 function spielphysikBeenden() {
     if (!livePhysik) return;

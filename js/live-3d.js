@@ -282,6 +282,8 @@ function live3dFrame(t) {
     live3d.letzterFrame = t;
     live3dSchritt(dt);
     live3dZeichneEinmal();
+    // Abpfiff: das Bild steht, die Schleife endet
+    if (typeof livePhysik !== 'undefined' && livePhysik && livePhysik.eingefroren) { live3d.laeuft = false; return; }
     requestAnimationFrame(live3dFrame);
 }
 

@@ -4115,11 +4115,19 @@ async function testSpielphysik(browser) {
         out.abpfiff = text.includes('Abpfiff');
         out.minute = document.getElementById('live-minute').innerText.startsWith('90');
         out.dauer = Math.round(schritte / 60);
+        out.eingefroren = livePhysik.eingefroren === true && live3d.laeuft === false;
+        // „Nur Ergebnis“: sofort zum Spielbericht, danach steht das Bild (kein Nachlaufen von Ball und Spielern)
+        currentMatch = null; livePhysik = null;
+        startMatchdayFlow(); skipPressAndPlay();
+        resolveMatchInstantly();
+        const ball = [livePhysik.ball.x, livePhysik.ball.y];
+        out.schnell = livePhysik.eingefroren === true && document.getElementById('btn-finish-match').style.display !== 'none';
+        out.schnellRuht = livePhysik.ball.x === ball[0] && livePhysik.ball.y === ball[1];
         safeLocalSet('anstoss_fm13_live_tempo', '1');
         return out;
     });
     Object.assign(r, Object.fromEntries(Object.entries(spiel).map(([k, v]) => ['spiel_' + k, v])));
-    const K = ['oben', 'aktiv', 'flachpass', 'schuss', 'gepuffert', 'torImNetz', 'anzeige', 'torArten', 'chancen', 'karte', 'standards', 'aufholen', 'spiel_fertig', 'spiel_anzeige', 'spiel_tore', 'spiel_abpfiff', 'spiel_minute'];
+    const K = ['oben', 'aktiv', 'flachpass', 'schuss', 'gepuffert', 'torImNetz', 'anzeige', 'torArten', 'chancen', 'karte', 'standards', 'aufholen', 'spiel_fertig', 'spiel_anzeige', 'spiel_tore', 'spiel_abpfiff', 'spiel_minute', 'spiel_eingefroren', 'spiel_schnell', 'spiel_schnellRuht'];
     assert(K.every(k => r[k] === true), `Spielphysik: Ticker folgt dem Ball, Tore im Netz, ganzes Spiel in ${r.spiel_dauer} s Spielzeit (${JSON.stringify(K.map(k => r[k]))})`);
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
     await page.close();

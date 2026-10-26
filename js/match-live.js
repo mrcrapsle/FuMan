@@ -492,6 +492,7 @@
         playSound('whistle');
         if (typeof resolvePregameTalk === 'function') resolvePregameTalk();
         stopLiveTickerAutoplay();
+        if (typeof spielphysikEnde === 'function') spielphysikEnde();
         if (currentMatch.stats) {
             let log = document.getElementById('ticker-log');
             if (log) log.innerHTML += `<div style="color:var(--accent); font-weight:bold;">🏁 Abpfiff! ${currentMatch.homeName} ${currentMatch.homeGoals}:${currentMatch.awayGoals} ${currentMatch.awayName}</div><div style="font-size:var(--fs-small); color:var(--text-muted);">${liveStatsSummaryLine()}</div>`;
