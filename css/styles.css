@@ -2041,9 +2041,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 @media (max-width: 420px) { .talent-zeile { flex-direction: column; align-items: stretch; } .talent-zeile button { width: 100%; } }
 
 /* Livespiel im eigenen Fenster (js/live-fenster.js) */
-.live-fenster { position: fixed; inset: 0; z-index: 950; flex-direction: column; background: var(--surface-app); }
+.live-fenster { position: fixed; inset: 0; height: 100vh; height: 100dvh; z-index: 950; flex-direction: column; background: var(--surface-app); overscroll-behavior: contain; touch-action: pan-y; }
+html.live-fenster-offen, body.live-fenster-offen { overflow: hidden; overscroll-behavior: none; height: 100%; }
+body.live-fenster-offen { position: fixed; inset: 0; width: 100%; }
 .live-fenster-kopf { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 12px; background: var(--surface-panel); border-bottom: 1px solid var(--border); }
 .live-fenster-kopf button { width: auto; min-height: 36px; margin: 0; }
-.live-fenster-huelle { flex: 1 1 auto; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 8px 12px calc(16px + env(safe-area-inset-bottom)); max-width: 900px; width: 100%; margin: 0 auto; }
+.live-fenster-huelle { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 8px 12px calc(16px + env(safe-area-inset-bottom)); max-width: 900px; width: 100%; margin: 0 auto; }
 #live-band { margin-bottom: 10px; }
 

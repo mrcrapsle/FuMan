@@ -7,7 +7,7 @@
 
 const SWIPE_KEY = 'anstoss_fm13_wischen';
 const SWIPE_MIN_DX = 70, SWIPE_MAX_DY = 45, SWIPE_MAX_MS = 700, SWIPE_EDGE = 24;
-const SWIPE_GESPERRT = 'input, textarea, select, [contenteditable="true"], .generic-modal-overlay.show, #app-notice, .soccer-pitch, canvas, svg, .bottom-nav-bar';
+const SWIPE_GESPERRT = 'input, textarea, select, [contenteditable="true"], .generic-modal-overlay.show, #app-notice, .soccer-pitch, canvas, svg, .bottom-nav-bar, #live-fenster';
 let swipeStart = null;
 
 function getWischen() {

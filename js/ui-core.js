@@ -225,6 +225,8 @@
             return;
         }
         if (screenId === 'screen-admin' && typeof adminZugangFrei === 'function' && !adminZugangFrei()) { openAdminPin(); return; }
+        // Ein laufendes Spiel im eigenen Fenster hält die Seite fest (js/live-fenster.js)
+        if (typeof liveFensterBlockiert === 'function' && liveFensterBlockiert(screenId)) return;
         playSound('click');
         // Für die Zurück-Taste (js/one-hand.js): woher kam man?
         if (typeof recordScreenVisit === 'function') recordScreenVisit(aktiverScreen, screenId);

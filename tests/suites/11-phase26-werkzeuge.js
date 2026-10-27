@@ -3948,7 +3948,8 @@ async function testEinsteiger(browser) {
         showScreen('screen-office');
         const qn = document.getElementById('office-quicknav');
         out.buero = qn.style.display === 'none' || qn.textContent.includes('→ Transfers');
-        // Fachwörter in den Tipps
+        // Fachwörter in den Tipps (ein Spiel im Fenster schließen, bevor die Seite wechselt)
+        if (typeof liveFensterSchliessen === 'function') liveFensterSchliessen(true);
         game.onboarding.hints = {};
         showScreen('screen-squad');
         out.fachwort = !!document.querySelector('#screen-squad > .screen-hint .fachwort[data-fachwort="Tagesform"]');
@@ -4020,7 +4021,7 @@ async function testLive3D(browser) {
         return out;
     });
     // Läuft nicht weiter, wenn das Livespiel verlassen wird
-    await page.evaluate(() => { live3dAnzeigen(); showScreen('screen-dashboard'); });
+    await page.evaluate(() => { live3dAnzeigen(); liveFensterAusblenden(); });
     await page.waitForFunction(() => !live3d.laeuft, null, { timeout: 3000 }).catch(() => null);
     r.stopptAusserhalb = await page.evaluate(() => !live3d.laeuft);
     const K = ['laeuft', 'canvas', 'figuren', 'namen', 'tempo', 'perspektive', 'schnell', 'tafel', 'aufgeholt', 'zurueck', 'reduziert', 'stopptAusserhalb'];
@@ -4256,6 +4257,9 @@ async function testLiveFenster(browser) {
         const sc = document.getElementById('screen-matchday');
         out.offen = !!fenster && fenster.style.display === 'flex' && fenster.contains(sc) && document.body.classList.contains('live-fenster-offen');
         out.inhaltDa = !!document.getElementById('ticker-log') && !!document.getElementById('btn-next-step') && fenster.contains(document.getElementById('ticker-log'));
+        // Seitenwechsel im laufenden Spiel bleibt im Fenster (sonst leeres Fenster, Bug auf dem iPhone)
+        showScreen('screen-squad');
+        out.festgehalten = fenster.style.display === 'flex' && document.getElementById('screen-matchday').style.display === 'block' && aktiverScreen === 'screen-matchday';
         // Ausblenden: Fenster zu, Spiel steht, Band auf der Übersicht
         const minute = currentMatch.minute;
         document.getElementById('live-fenster-ausblenden').click();
@@ -4277,7 +4281,7 @@ async function testLiveFenster(browser) {
         out.bandWeg = document.getElementById('live-band').style.display === 'none';
         return out;
     });
-    const K = ['offen', 'inhaltDa', 'zu', 'zurueckAufDemPlatz', 'band', 'pausiert', 'wieder', 'nachAbpfiff', 'spielberichtOffen', 'geschlossen', 'bandWeg'];
+    const K = ['offen', 'inhaltDa', 'festgehalten', 'zu', 'zurueckAufDemPlatz', 'band', 'pausiert', 'wieder', 'nachAbpfiff', 'spielberichtOffen', 'geschlossen', 'bandWeg'];
     assert(K.every(k => r[k] === true), `Livespiel im Fenster: öffnen, ausblenden, Band, wieder öffnen, Spielbericht (${JSON.stringify(K.map(k => r[k]))})`);
     assert(consoleErrors.length === 0, `Keine JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
     await page.close();

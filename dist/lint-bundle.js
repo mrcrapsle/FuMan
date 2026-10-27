@@ -13067,6 +13067,8 @@ function renderBoardRoomPanel() {
             return;
         }
         if (screenId === 'screen-admin' && typeof adminZugangFrei === 'function' && !adminZugangFrei()) { openAdminPin(); return; }
+        // Ein laufendes Spiel im eigenen Fenster hält die Seite fest (js/live-fenster.js)
+        if (typeof liveFensterBlockiert === 'function' && liveFensterBlockiert(screenId)) return;
         playSound('click');
         // Für die Zurück-Taste (js/one-hand.js): woher kam man?
         if (typeof recordScreenVisit === 'function') recordScreenVisit(aktiverScreen, screenId);
@@ -13713,7 +13715,7 @@ function initOneHand() {
 
 const SWIPE_KEY = 'anstoss_fm13_wischen';
 const SWIPE_MIN_DX = 70, SWIPE_MAX_DY = 45, SWIPE_MAX_MS = 700, SWIPE_EDGE = 24;
-const SWIPE_GESPERRT = 'input, textarea, select, [contenteditable="true"], .generic-modal-overlay.show, #app-notice, .soccer-pitch, canvas, svg, .bottom-nav-bar';
+const SWIPE_GESPERRT = 'input, textarea, select, [contenteditable="true"], .generic-modal-overlay.show, #app-notice, .soccer-pitch, canvas, svg, .bottom-nav-bar, #live-fenster';
 let swipeStart = null;
 
 function getWischen() {
@@ -33583,6 +33585,7 @@ function liveFensterOeffnen() {
     sc.style.display = 'block';
     fenster.style.display = 'flex';
     document.body.classList.add('live-fenster-offen');
+    if (typeof updateOneHandFab === 'function') updateOneHandFab();
     // Das Spiel gilt als aktueller Bildschirm (Kontoauszug, Zurück-Taste)
     if (typeof aktiverScreen !== 'undefined') aktiverScreen = 'screen-matchday';
     const inhalt = fenster.querySelector('.live-fenster-huelle');
@@ -33593,6 +33596,19 @@ function liveFensterOeffnen() {
     const kopf = document.getElementById('live-fenster-ausblenden');
     if (kopf) kopf.focus();
     liveFensterBandAktualisieren();
+}
+
+// Ist das Spiel gerade im Fenster offen?
+function liveFensterOffen() {
+    return document.body.classList.contains('live-fenster-offen');
+}
+
+// Aus showScreen(): solange das Spiel im Fenster läuft, bleibt man darin. Eine andere Seite würde den
+// Spielinhalt ausblenden und das Fenster leer zurücklassen (Wisch, Zurück-Taste, Knöpfe darunter).
+function liveFensterBlockiert(screenId) {
+    if (!liveFensterOffen() || screenId === 'screen-matchday') return false;
+    showToast('Das Spiel läuft im Fenster - erst ausblenden oder den Spielbericht schließen.', 'info', 3000);
+    return true;
 }
 
 // Schließt das Fenster und setzt das Spiel an seine Stelle zurück. beendet = true nach „Spielbericht
@@ -33609,6 +33625,7 @@ function liveFensterSchliessen(beendet) {
     liveFensterHeimat = null;
     if (fenster) fenster.style.display = 'none';
     document.body.classList.remove('live-fenster-offen');
+    if (typeof updateOneHandFab === 'function') updateOneHandFab();
     liveFensterBandAktualisieren();
 }
 
