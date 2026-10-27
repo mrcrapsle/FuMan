@@ -584,7 +584,7 @@ function pruefeNeuePakete() {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.158', date: '27.10.2026', features: 'Livespiel bleibt im Fenster: Seitenwechsel und Wischen im Spiel gesperrt, Spieltag-Knopf ausgeblendet; Livespiel im eigenen Fenster; weniger Scrollen' };
+    const GAME_VERSION = { number: '3.159', date: '27.10.2026', features: 'Eingangsweg am Stadion besser sichtbar; Fanblöcke hinter den Toren im 3D-Livespiel; Livespiel bleibt im Fenster' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================

@@ -1021,6 +1021,11 @@ Auftrag: Beim Anpfiff landete man unten auf der Seite und sah das Spielfeld nich
 - Reaktionsspiele (`js/reaktionsspiel.js`): Elfmeter (Ecke wählen, Platzierung, Schusskraft; der Torwart ahnt manchmal die Ecke), direkter Freistoß (Richtung, über die Mauer), Freistoßflanke und Ecke (Flanke, Kopfball), Elfmeter gegen uns (wohin springt der Torwart, 2,6 s). Gute Schützen: langsamerer Cursor, breitere Mitte. Trefferchance ±(q−0,55)·0,4, begrenzt; Bilanz in `game.reaktionsBilanz`. Schließen oder „Automatisch ausführen“ führt ohne Spiel aus; Schalter im Standard-Fenster.
 - Ecken als eigene Entscheidung nur mit Physik (sonst Bonus in den erwarteten Toren wie bisher).
 
+## Offene Punkte aus früheren Runden (Version 3.159)
+
+- Eingangsweg am Stadion: warmer Sandton mit dunklen Randlinien, Mindestbreite auf dem Bildschirm (`stadion3dStrassen()`). Bei der Standard-Kamera bleibt er klein; eine Nahansicht wäre der nächste Schritt.
+- Gästeblock im 3D-Livespiel: hinter den Toren stehen Fanblöcke in den Farben der Teams (`live3dZeichnen()`), nur am Bildrand sichtbar, weil die Kamera in der Mitte bleibt.
+
 ## Livespiel im eigenen Fenster (Version 3.157 und 3.158)
 
 Nachtrag 3.158 (iPhone): Ein Seitenwechsel während des Spiels blendete den Spielinhalt aus und ließ das Fenster leer zurück. Jetzt hält `liveFensterBlockiert()` in `showScreen()` die Seite im Spiel fest. Wischen über `#live-fenster` ist aus, der Spieltag-Knopf ist ausgeblendet, solange das Fenster offen ist.
