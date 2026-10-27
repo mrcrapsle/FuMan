@@ -96,6 +96,18 @@ function live3dZeichnen(ctx, P) {
         ctx.fillStyle = ['#c9d2e3', '#e57373', '#90caf9', '#ffe082', '#a5d6a7'][(i * 13) % 5];
         ctx.fillRect(p.x, p.y, Math.max(1.5, p.s * 0.7), Math.max(1.5, p.s * 0.9));
     }
+    // Fanblöcke hinter den Toren: Heimblock in der eigenen Farbe, Gästeblock in der Gastfarbe (3.159)
+    const blockFarben = [[-17, -4, live3d.farben.heim], [108, 121, live3d.farben.gast]];
+    blockFarben.forEach(([x0, x1, farbe], b) => {
+        for (let i = 0; i < 90; i++) {
+            const wx = x0 + ((i * 7.7 + b * 3.1) % (x1 - x0)), reihe = i % 5;
+            const wy = 12 + ((i * 13.3) % 44);
+            const p = live3dPunkt(P, wx, wy, 1.2 + reihe * 1.5);
+            if (p.x < -4 || p.x > W + 4) continue;
+            ctx.fillStyle = (i % 4) ? farbe : '#ffffff';   // jeder vierte Fan im Schal oder Trikot-Weiß
+            ctx.fillRect(p.x, p.y, Math.max(1.5, p.s * 0.8), Math.max(1.5, p.s * 1.0));
+        }
+    });
     // Rasen mit Mähstreifen
     for (let i = 0; i < 12; i++) {
         const x0 = i * LIVE3D_LAENGE / 12 - 0.01, x1 = (i + 1) * LIVE3D_LAENGE / 12;

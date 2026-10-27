@@ -24838,6 +24838,18 @@ function live3dZeichnen(ctx, P) {
         ctx.fillStyle = ['#c9d2e3', '#e57373', '#90caf9', '#ffe082', '#a5d6a7'][(i * 13) % 5];
         ctx.fillRect(p.x, p.y, Math.max(1.5, p.s * 0.7), Math.max(1.5, p.s * 0.9));
     }
+    // Fanblöcke hinter den Toren: Heimblock in der eigenen Farbe, Gästeblock in der Gastfarbe (3.159)
+    const blockFarben = [[-17, -4, live3d.farben.heim], [108, 121, live3d.farben.gast]];
+    blockFarben.forEach(([x0, x1, farbe], b) => {
+        for (let i = 0; i < 90; i++) {
+            const wx = x0 + ((i * 7.7 + b * 3.1) % (x1 - x0)), reihe = i % 5;
+            const wy = 12 + ((i * 13.3) % 44);
+            const p = live3dPunkt(P, wx, wy, 1.2 + reihe * 1.5);
+            if (p.x < -4 || p.x > W + 4) continue;
+            ctx.fillStyle = (i % 4) ? farbe : '#ffffff';   // jeder vierte Fan im Schal oder Trikot-Weiß
+            ctx.fillRect(p.x, p.y, Math.max(1.5, p.s * 0.8), Math.max(1.5, p.s * 1.0));
+        }
+    });
     // Rasen mit Mähstreifen
     for (let i = 0; i < 12; i++) {
         const x0 = i * LIVE3D_LAENGE / 12 - 0.01, x1 = (i + 1) * LIVE3D_LAENGE / 12;
@@ -26550,10 +26562,26 @@ function stadion3dStrassen(ctx, P, layout, plan) {
         }
     }
     // Eingangsweg: vom Tor an der Südseite des Zauns bis zum Gehweg
-    const gx = 0, gy0 = layout.aussen.S + 2, gy1 = box.y1 - 13;
-    const pfad = [[gx - 1.6, gy0, 0.03], [gx + 1.6, gy0, 0.03], [gx + 1.6, gy1, 0.03], [gx - 1.6, gy1, 0.03]];
+    // Warmer Sandton mit dunklen Randlinien, damit er sich von Gehweg und Fahrbahn klar abhebt
+    const gx = 0, gy0 = layout.aussen.S + 2, gy1 = box.y1 - 13, bw = 1.8;
+    const pfad = [[gx - bw, gy0, 0.03], [gx + bw, gy0, 0.03], [gx + bw, gy1, 0.03], [gx - bw, gy1, 0.03]];
     const pr = stadion3dPolyGeklippt(P, pfad);
-    if (pr) { ctx.fillStyle = dimm('#c9c4b8'); stadion3dPfad(ctx, pr); ctx.fill(); }
+    if (pr) {
+        ctx.fillStyle = dimm('#e3b96b'); stadion3dPfad(ctx, pr); ctx.fill();
+        ctx.strokeStyle = dimm('#6b4f22'); ctx.lineWidth = Math.max(0.8, P.fokus / 700);
+        ctx.beginPath();
+        [[gx - bw, gy0, gx - bw, gy1], [gx + bw, gy0, gx + bw, gy1]].forEach(([ax, ay, bx, by]) => {
+            const a1 = stadion3dPunkt(P, ax, ay, 0.04), b1 = stadion3dPunkt(P, bx, by, 0.04);
+            if (a1 && b1) { ctx.moveTo(a1.x, a1.y); ctx.lineTo(b1.x, b1.y); }
+        });
+        ctx.stroke();
+        // Mindestbreite auf dem Bildschirm: bei der Übersichtskamera ist der Weg sonst nur einen Pixel breit
+        const oben = stadion3dPunkt(P, gx, gy0, 0.04), unten = stadion3dPunkt(P, gx, gy1, 0.04);
+        if (oben && unten) {
+            ctx.strokeStyle = dimm('#e3b96b'); ctx.lineWidth = Math.max(3, P.fokus / 260); ctx.lineCap = 'butt';
+            ctx.beginPath(); ctx.moveTo(oben.x, oben.y); ctx.lineTo(unten.x, unten.y); ctx.stroke();
+        }
+    }
     // Gehweg um das Stadion außerhalb des Zauns
     stadion3dRingFlaeche(ctx, P, { x0: -(layout.aussen.W + 2), y0: -(layout.aussen.N + 2), x1: layout.aussen.E + 2, y1: layout.aussen.S + 2 }, 2.4, 4.2, dimm('#c9cdd0'));
 }
