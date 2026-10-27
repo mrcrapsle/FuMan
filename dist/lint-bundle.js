@@ -584,7 +584,7 @@ function pruefeNeuePakete() {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.157', date: '26.10.2026', features: 'Livespiel im eigenen Fenster mit Ausblenden und Band auf der Übersicht; weniger Scrollen (Abschnitts-Leisten, aufklappbare Karten, Talentbaum-Reiter); Spiel friert nach dem Abpfiff ein' };
+    const GAME_VERSION = { number: '3.158', date: '27.10.2026', features: 'Livespiel bleibt im Fenster: Seitenwechsel und Wischen im Spiel gesperrt, Spieltag-Knopf ausgeblendet; Livespiel im eigenen Fenster; weniger Scrollen' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
