@@ -13,8 +13,16 @@ const STADION3D_KEY = 'anstoss_fm13_stadion3d';
 const STADION3D_KAMERAS = [
     { name: 'Luftbild', yaw: 0.6, pitch: 0.86, dist: 2.0, tx: 0, ty: 0 },
     { name: 'Haupttribüne', yaw: -Math.PI / 2, pitch: 0.44, dist: 0.95, tx: 14, ty: 0 },
-    { name: 'Hinter dem Tor', yaw: 0, pitch: 0.32, dist: 0.85, tx: 0, ty: 30 }
+    { name: 'Hinter dem Tor', yaw: 0, pitch: 0.32, dist: 0.85, tx: 0, ty: 30 },
+    // Nahansicht des Eingangs (3.160): von außen auf das Tor an der Südseite, Ziel wird aus dem Layout berechnet
+    { name: 'Eingang', yaw: Math.PI, pitch: 0.5, dist: 0.2, tx: 0, ty: 0, eingang: true }
 ];
+// Kameraziel eines Eintrags; der Eingang hängt vom Layout ab (Südseite, wenige Meter vor dem Zaun)
+function stadion3dKameraZiel(k) {
+    const z = { yaw: k.yaw, pitch: k.pitch, dist: k.dist, tx: k.tx, ty: k.ty };
+    if (k.eingang) { const L = stadion3dLayout(); z.tx = 0; z.ty = L.aussen.S + 5; }
+    return z;
+}
 // Kamera im eigenen Fenster "Vereinsgelände" (stadionGelaendeOeffnen)
 const STADION3D_GELAENDE_KAMERA = { yaw: 0.75, pitch: 0.95, dist: 3.9, tx: 10, ty: 0 };
 const STADION3D_LICHT = [
@@ -1649,8 +1657,7 @@ function stadion3dFlugSchritt(dt) {
     a.zoom = 1 + Math.sin(u * Math.PI * 2) * 0.25;
     if (u >= 1) {
         a.flug = null; a.zoom = 1;
-        const k = STADION3D_KAMERAS[a.kamera];
-        a.ziel = { yaw: k.yaw, pitch: k.pitch, dist: k.dist, tx: k.tx, ty: k.ty };
+        a.ziel = stadion3dKameraZiel(STADION3D_KAMERAS[a.kamera]);
         stadion3dLeisteAktualisieren();
     }
 }
@@ -1797,10 +1804,10 @@ function stadionKamera() {
     if (!a) return;
     if (a.flug) { showToast('Der Rundflug läuft noch.', 'info'); return; }
     a.kamera = (a.kamera + 1) % STADION3D_KAMERAS.length;
-    const k = STADION3D_KAMERAS[a.kamera];
+    const k = stadion3dKameraZiel(STADION3D_KAMERAS[a.kamera]);
     a.zoom = 1;
-    if (stadion3dReduziert()) { Object.assign(a, { yaw: k.yaw, pitch: k.pitch, dist: k.dist, tx: k.tx, ty: k.ty }); a.ziel = null; }
-    else a.ziel = { yaw: k.yaw, pitch: k.pitch, dist: k.dist, tx: k.tx, ty: k.ty };
+    if (stadion3dReduziert()) { Object.assign(a, k); a.ziel = null; }
+    else a.ziel = k;
     stadion3dLeisteAktualisieren();
     stadion3dZeichneEinmal();
     stadion3dStarte();
