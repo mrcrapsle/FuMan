@@ -60,8 +60,14 @@ function live3dSchritt(dt) {
     const lp = typeof livePhysik !== 'undefined' ? livePhysik : null;
     const bx = lp ? lp.ball.x : 52.5;
     // Bei Ausschreitungen nach dem Abpfiff schwenkt die Kamera zur betroffenen Kurve
-    const kz = Math.max(24, Math.min(81, d.krawall ? d.krawall.x : bx));
-    d.kameraX += (kz - d.kameraX) * Math.min(1, dt * 2.2);
+    // Nahansicht beim Torschuss (3.160): die Kamera rückt zum Tor, der Fanblock dahinter ist im Bild
+    const phys = typeof livePhysik !== 'undefined' ? livePhysik : null;
+    const nah = !!(phys && phys.nah && phys.t < phys.nah.bis && phys.match === d.match);
+    const vwZiel = nah ? 34 : 58;
+    d.vw = (d.vw || 58) + (vwZiel - (d.vw || 58)) * Math.min(1, dt * 3);
+    let kz = Math.max(24, Math.min(81, d.krawall ? d.krawall.x : bx));
+    if (nah && !d.krawall) kz = phys.nah.x > 52 ? 98 : 7;
+    d.kameraX += (kz - d.kameraX) * Math.min(1, dt * (nah ? 4 : 2.2));
 }
 
 // ---------- Zeichnen ----------
@@ -70,7 +76,8 @@ function live3dProjektion(W, H) {
     const dNah = LIVE3D_KAMERA_ABSTAND, dFern = LIVE3D_KAMERA_ABSTAND + LIVE3D_BREITE;
     const K = (0.96 - 0.24) * H / (1 / dNah - 1 / dFern);
     const horizont = 0.96 * H - K / dNah;
-    const F = W * dNah / 58;   // an der nahen Seitenlinie sind 58 m zu sehen
+    // An der nahen Seitenlinie sind 58 m zu sehen, beim Torschuss nur noch rund 34 m (live3d.vw, 3.160)
+    const F = W * dNah / (live3d && live3d.vw ? live3d.vw : 58);
     return { W, H, K, horizont, F };
 }
 function live3dPunkt(P, x, y, h) {
@@ -96,16 +103,19 @@ function live3dZeichnen(ctx, P) {
         ctx.fillStyle = ['#c9d2e3', '#e57373', '#90caf9', '#ffe082', '#a5d6a7'][(i * 13) % 5];
         ctx.fillRect(p.x, p.y, Math.max(1.5, p.s * 0.7), Math.max(1.5, p.s * 0.9));
     }
-    // Fanblöcke hinter den Toren: Heimblock in der eigenen Farbe, Gästeblock in der Gastfarbe (3.159)
-    const blockFarben = [[-17, -4, live3d.farben.heim], [108, 121, live3d.farben.gast]];
-    blockFarben.forEach(([x0, x1, farbe], b) => {
-        for (let i = 0; i < 90; i++) {
-            const wx = x0 + ((i * 7.7 + b * 3.1) % (x1 - x0)), reihe = i % 5;
-            const wy = 12 + ((i * 13.3) % 44);
-            const p = live3dPunkt(P, wx, wy, 1.2 + reihe * 1.5);
-            if (p.x < -4 || p.x > W + 4) continue;
-            ctx.fillStyle = (i % 4) ? farbe : '#ffffff';   // jeder vierte Fan im Schal oder Trikot-Weiß
-            ctx.fillRect(p.x, p.y, Math.max(1.5, p.s * 0.8), Math.max(1.5, p.s * 1.0));
+    // Fanblöcke hinter den Toren (3.160): Tribüne mit sechs ansteigenden Reihen, links der Heimblock in der
+    // eigenen Farbe, rechts der Gästeblock in der Gastfarbe; jeder vierte Fan im Schal oder Trikot-Weiß.
+    const tribuenen = [{ tor: -4, richtung: -1, farbe: live3d.farben.heim }, { tor: 108, richtung: 1, farbe: live3d.farben.gast }];
+    tribuenen.forEach(({ tor, richtung, farbe }, b) => {
+        for (let reihe = 5; reihe >= 0; reihe--) {
+            const x = tor + richtung * (2 + reihe * 2.4), h = 0.8 + reihe * 1.2;
+            for (let k = 0; k < 16; k++) {
+                const wy = 14 + k * 2.6 + ((reihe * 7 + b * 3) % 5) * 0.4;
+                const p = live3dPunkt(P, x, wy, h);
+                if (p.x < -4 || p.x > W + 4) continue;
+                ctx.fillStyle = (k + reihe + b) % 4 === 0 ? '#ffffff' : farbe;
+                ctx.fillRect(p.x, p.y, Math.max(2, p.s * 1.1), Math.max(2, p.s * 1.3));
+            }
         }
     });
     // Rasen mit Mähstreifen

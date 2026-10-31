@@ -757,6 +757,8 @@ function aSchuss(team, ergebnis, opt) {
             t0 = lp.t;
             const tw = spTorwart(1 - team);
             const torX = spTorX(team);
+            // Nahansicht: die Kamera rückt für ein paar Sekunden zum Tor (js/live-3d.js, live3dSchritt)
+            lp.nah = { x: torX, bis: lp.t + 2.6 };
             const twY = tw ? tw.y : 34;
             const seite = spRnd() < 0.5 ? -1 : 1;
             const z = opt.zielung;
