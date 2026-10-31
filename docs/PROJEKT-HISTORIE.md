@@ -1021,6 +1021,12 @@ Auftrag: Beim Anpfiff landete man unten auf der Seite und sah das Spielfeld nich
 - Reaktionsspiele (`js/reaktionsspiel.js`): Elfmeter (Ecke wählen, Platzierung, Schusskraft; der Torwart ahnt manchmal die Ecke), direkter Freistoß (Richtung, über die Mauer), Freistoßflanke und Ecke (Flanke, Kopfball), Elfmeter gegen uns (wohin springt der Torwart, 2,6 s). Gute Schützen: langsamerer Cursor, breitere Mitte. Trefferchance ±(q−0,55)·0,4, begrenzt; Bilanz in `game.reaktionsBilanz`. Schließen oder „Automatisch ausführen“ führt ohne Spiel aus; Schalter im Standard-Fenster.
 - Ecken als eigene Entscheidung nur mit Physik (sonst Bonus in den erwarteten Toren wie bisher).
 
+## Nahansichten und Gästeblock (Version 3.160)
+
+- Stadion: Kameraposition „Eingang“ (`STADION3D_KAMERAS`, `stadion3dKameraZiel()`), von außen auf das Tor an der Südseite, Ziel aus dem Layout.
+- 3D-Livespiel: beim Torschuss rückt die Kamera für gut zwei Sekunden zum Tor (`live3dSchritt()` setzt `live3d.vw` von 58 auf 34 m; `lp.nah` aus `aSchuss()`).
+- Gästeblock: hinter jedem Tor sechs ansteigende Fanreihen in den Farben der Teams (`live3dZeichnen()`).
+
 ## Offene Punkte aus früheren Runden (Version 3.159)
 
 - Eingangsweg am Stadion: warmer Sandton mit dunklen Randlinien, Mindestbreite auf dem Bildschirm (`stadion3dStrassen()`). Bei der Standard-Kamera bleibt er klein; eine Nahansicht wäre der nächste Schritt.
