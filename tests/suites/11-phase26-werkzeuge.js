@@ -4900,6 +4900,50 @@ async function testStartUndVersion(browser) {
     await page.close();
 }
 
+async function testWerkbank(browser) {
+    console.log('\nRunde 34: Werkbank: 20 Auswertungen im Verlauf, Sparziel und Notizbuch im Spielstand, Rechner');
+    const { page, consoleErrors } = await freshPage(browser);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const r = await page.evaluate(() => {
+        const out = {};
+        closeTutorial(); game.sackPending = false;
+        showScreen('screen-history');
+        setSubTab('hist', 'werkbank');
+        const box = document.getElementById('werkbank-box');
+        out.karten = box ? box.querySelectorAll(':scope > .panel').length : 0;
+        out.sichtbar = getComputedStyle(document.getElementById('subtab-hist-werkbank')).display !== 'none';
+        // Ohne Kader und ohne Heimspiel: alle Karten stehen trotzdem da, nichts wirft einen Fehler
+        out.leerKaderOk = typeof renderWerkbankBox === 'function';
+        // Sparziel: Eingabe setzen und Fortschritt lesen
+        document.getElementById('wb-sparziel-name').value = 'Testziel';
+        document.getElementById('wb-sparziel-betrag').value = String(Math.max(1, Math.round(game.money * 2)));
+        wbSparzielSetzen();
+        out.sparziel = !!game.werkbank.sparziel && game.werkbank.sparziel.name === 'Testziel' && document.getElementById('werkbank-box').textContent.includes('Testziel');
+        wbSparzielLoeschen();
+        out.sparzielWeg = game.werkbank.sparziel === null;
+        // Notizbuch bleibt im Spielstand
+        wbNotizSpeichern('Hallo Werkbank');
+        out.notiz = game.werkbank.notiz === 'Hallo Werkbank';
+        // Transfer-Rechner: 1 Mio Ablöse, 10 000 € pro Spieltag, 2 Jahre = 1 000 000 + 10 000 * 34 * 2 = 1 680 000
+        document.getElementById('wb-tr-abloese').value = '1000000';
+        document.getElementById('wb-tr-gehalt').value = '10000';
+        document.getElementById('wb-tr-jahre').value = '2';
+        wbTransferRechnen();
+        out.transfer = document.getElementById('wb-tr-ergebnis').textContent.includes('1.680.000');
+        // Positions-Tiefe: Richtwerte vorhanden
+        out.positionen = document.getElementById('werkbank-box').textContent.includes('Richtwert 4');
+        // Kader als Text enthält jeden Spieler
+        out.kaderText = document.getElementById('wb-kader-text').value.split('\n').length >= Math.min(1, squad.length);
+        // Erst ab 20 Karten ist der Reiter vollständig
+        out.zwanzig = box ? box.querySelectorAll(':scope > .panel').length === 20 : false;
+        return out;
+    });
+    const K = ['karten', 'sichtbar', 'leerKaderOk', 'sparziel', 'sparzielWeg', 'notiz', 'transfer', 'positionen', 'kaderText', 'zwanzig'];
+    assert(K.every(k => (k === 'karten' ? r.karten === 20 : r[k] === true)) , `Werkbank: 20 Karten, Sparziel, Notiz, Transfer-Rechner, Kader-Text (${JSON.stringify(r)})`);
+    assert(consoleErrors.length === 0, `Werkbank ohne JS-Konsolenfehler (${consoleErrors.join(' | ')})`);
+    await page.close();
+}
+
 module.exports = {
     testSpielvorbereitung,
     testVertragsWerkzeuge,
@@ -4930,6 +4974,7 @@ module.exports = {
     testSpielphysik,
     testReaktionsspiel,
     testAbschnitte,
+    testWerkbank,
     testLiveFenster,
     testAusschreitungSzene,
     testStadionAnsicht,

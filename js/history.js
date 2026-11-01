@@ -92,6 +92,7 @@
 
     function renderHistoryView() {
         renderClubRecordsBox();
+        if (typeof renderWerkbankBox === 'function') renderWerkbankBox();
         if (typeof renderAchievementsBox === 'function') renderAchievementsBox();
         renderLeagueChronikBox();
         if (typeof renderPlayerOfMonthBox === 'function') renderPlayerOfMonthBox();
