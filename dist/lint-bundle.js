@@ -584,7 +584,7 @@ function pruefeNeuePakete() {
 // ==========================================
     // Versionskennung mit Datum (auf Wunsch): wird bei jeder Code-Änderung
     // aktualisiert, damit immer klar erkennbar ist, welcher Stand gerade läuft.
-    const GAME_VERSION = { number: '3.160', date: '27.10.2026', features: 'Stadion: Nahansicht des Eingangs als Kameraposition; 3D-Livespiel: Nahansicht beim Torschuss und Fanblöcke als Tribüne' };
+    const GAME_VERSION = { number: '3.161', date: '01.11.2026', features: 'Werkbank im Verlauf: 20 Auswertungen (Kader, Finanzen, Stadion, Rekorde), Sparziel, Notizbuch und Rechner' };
     // ==========================================
     // SPIELZUSTAND & ERWEITERTE DATENMODELLE
     // ==========================================
