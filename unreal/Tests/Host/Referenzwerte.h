@@ -1,6 +1,6 @@
 #pragma once
 // Erzeugt aus den Originalformeln des Browserspiels (js/entities.js, js/media-rights.js), Zufall fest auf 0,5.
-// Neu erzeugen: node unreal/Tests/Host/referenz.js > ... (siehe README)
+// Neu erzeugen aus dem Repo-Stamm: node unreal/Tests/Host/referenz.js
 struct FRefWert { int32 Staerke; long long Marktwert; int32 Gehalt; };
 static const FRefWert RefWerte[] = {
 	{ 20, 15000LL, 200 },
