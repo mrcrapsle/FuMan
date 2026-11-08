@@ -11,3 +11,11 @@ dist/anstoss-fm13-dev.min.html
 # Grundfassung mit Updates: Test- und Ansichtsfassungen der Ausbaustufen
 dist/anstoss-fm13-grundspiel.html
 dist/anstoss-fm13-stufe-*.html
+
+# Unreal Engine (Port in unreal/)
+unreal/Binaries/
+unreal/Intermediate/
+unreal/Saved/
+unreal/DerivedDataCache/
+unreal/.vs/
+unreal/*.sln
