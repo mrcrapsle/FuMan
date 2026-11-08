@@ -1,0 +1,15 @@
+{
+	"FileVersion": 3,
+	"EngineAssociation": "5.4",
+	"Category": "",
+	"Description": "Anstoß Mobile Pro - FM13: Fußballmanager (Portierung aus dem Browserspiel)",
+	"Modules": [
+		{
+			"Name": "AnstossFM13",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"AdditionalDependencies": [ "Engine" ]
+		}
+	],
+	"Plugins": []
+}
