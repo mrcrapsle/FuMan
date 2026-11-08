@@ -17,7 +17,7 @@ namespace
 	TArray<int32> BestEleven(const TArray<FFM13Player>& Squad, int32& OutStrength)
 	{
 		TArray<int32> Idx;
-		for (int32 i = 0; i < Squad.Num(); ++i) Idx.Add(i);
+		for (int32 i = 0; i < Squad.Num(); ++i) if (Squad[i].InjuredMatchdays <= 0) Idx.Add(i);
 		Idx.Sort([&Squad](int32 A, int32 B) { return Squad[A].Strength > Squad[B].Strength; });
 
 		TArray<int32> Elf;
@@ -49,7 +49,7 @@ namespace
 			--Offen;
 		}
 		// Weniger als elf Spieler: leere Plätze zählen mit Stärke 0
-		OutStrength = Squad.Num() > 0 ? FMath::RoundToInt((float)Summe / 11.f) : 0;
+		OutStrength = Idx.Num() > 0 ? FMath::RoundToInt((float)Summe / 11.f) : 0;
 		return Elf;
 	}
 
@@ -77,6 +77,7 @@ void FFM13World::NewGame(const FString& InClubName, int32 Seed, int32 StartLevel
 		for (int32 n = 0; n < Anzahl[Pos]; ++n)
 			Squad.Add(CreatePlayer((EFM13Position)Pos, Basis - 3, Basis + 4, 18, 32));
 
+	InitCups();
 	PlanSeason();
 	RefreshMarket();
 	AddMessage(TEXT("Willkommen"), FString::Printf(TEXT("Der Vorstand begruesst dich als neuen Trainer von %s in der %s."), *ClubName, FM13::LeagueName(LeagueLevel)));
@@ -133,6 +134,10 @@ bool FFM13World::PlayMatchday()
 {
 	if (bSacked || IsSeasonFinished() || Leagues.Num() != FM13::NumLeagues) return false;
 	LastReport = FFM13OwnMatchReport();
+	LastCupReport = FFM13OwnMatchReport();
+
+	if (DfbPokal.NextMatchday() == Matchday) PlayCupRound(DfbPokal, true);
+	if (Landespokal.NextMatchday() == Matchday) PlayCupRound(Landespokal, false);
 
 	for (FFM13League& L : Leagues)
 	{
@@ -167,6 +172,8 @@ bool FFM13World::PlayMatchday()
 	}
 
 	TrainPlayers();
+	// Verletzte erholen sich: wer heute verletzt wurde, fällt ab dem nächsten Spieltag aus
+	for (FFM13Player& P : Squad) if (P.InjuredMatchdays > 0) P.InjuredMatchdays--;
 	if (Matchday % 4 == 0) RefreshMarket();
 	++Matchday;
 	CheckJobSecurity();
@@ -203,15 +210,44 @@ void FFM13World::PlayOwnFixture(FFM13League& L, FFM13Fixture& F)
 	const int32 Att = bHome ? FM13Economy::Attendance(StadiumCapacity, Fans, LeagueLevel, OwnRank(), TicketPrice) : 0;
 	ApplyMatchdayFinances(bHome, OwnGoals > OppGoals, Att);
 
-	LastReport.bPlayed = true;
-	LastReport.bHome = bHome;
-	LastReport.Opponent = OppName;
+	LastReport.Competition = TEXT("Liga");
 	LastReport.OwnGoals = OwnGoals;
 	LastReport.OppGoals = OppGoals;
 	LastReport.OwnStrength = Own;
 	LastReport.OppStrength = OppStr;
 	LastReport.Attendance = Att;
 	LastReport.BoardShift = Shift;
+	FinishOwnReport(LastReport, OppName, bHome);
+	RollInjuries(LastReport);
+}
+
+void FFM13World::FinishOwnReport(FFM13OwnMatchReport& Report, const FString& OppName, bool bHome)
+{
+	Report.bPlayed = true;
+	Report.bHome = bHome;
+	Report.Opponent = OppName;
+	TArray<FString> Elf;
+	for (int32 Id : StartingEleven()) if (const FFM13Player* P = FindPlayer(Id)) Elf.Add(P->Name);
+	Report.Ticker = FM13Match::BuildTicker(Rng, ClubName, OppName, bHome, Report.Scorers, Report.OppGoals, Elf);
+	if (Report.bPenalties)
+		Report.Ticker.Add(Report.bAdvanced ? TEXT("Elfmeterschiessen gewonnen!") : TEXT("Im Elfmeterschiessen ausgeschieden."));
+}
+
+void FFM13World::RollInjuries(FFM13OwnMatchReport& Report)
+{
+	// Rolle nach dem Spiel wie in processPostMatchRoutine(): Startelf, ältere Spieler etwas anfälliger
+	for (int32 Id : StartingEleven())
+	{
+		FFM13Player* P = FindPlayer(Id);
+		if (!P) continue;
+		const float Chance = 0.02f + (float)FMath::Max(0, P->Age - 30) * 0.004f;
+		if (Rng.FRand() >= Chance) continue;
+		const float Schwere = Rng.FRand();
+		const int32 Dauer = Schwere < 0.6f ? Rng.RandRange(1, 2) : (Schwere < 0.9f ? Rng.RandRange(3, 5) : Rng.RandRange(6, 10));
+		P->InjuredMatchdays = Dauer + 1; // +1: der Abbau am Ende dieses Spieltags zählt nicht als Ausfall
+		Report.Injuries.Add(FString::Printf(TEXT("%s (%d Spieltage)"), *P->Name, Dauer));
+		AddMessage(TEXT("Verletzung"), FString::Printf(TEXT("%s faellt %d Spieltage aus."), *P->Name, Dauer));
+	}
 }
 
 void FFM13World::ApplyMatchdayFinances(bool bHome, bool bWin, int32 Att)
@@ -348,6 +384,7 @@ FFM13SeasonSummary FFM13World::ConcludeSeason()
 		L.ResetStats();
 		L.BuildSchedule(Rng);
 	}
+	InitCups();
 	PlanSeason();
 	RefreshMarket();
 
@@ -440,6 +477,7 @@ void FFM13World::DevelopPlayers(FFM13SeasonSummary& S)
 		P.GoalsSeason = 0;
 		P.Appearances = 0;
 		P.ContractYears--;
+		P.InjuredMatchdays = FMath::Max(0, P.InjuredMatchdays - 6); // Sommerpause
 	}
 
 	// Vertragsende und Karriereende
@@ -501,6 +539,148 @@ int32 FFM13World::OwnStrength() const
 	int32 Staerke = 0;
 	BestEleven(Squad, Staerke);
 	return Staerke;
+}
+
+TArray<int32> FFM13World::StartingEleven() const
+{
+	int32 Dummy = 0;
+	TArray<int32> Ids;
+	for (int32 i : BestEleven(Squad, Dummy)) Ids.Add(Squad[i].Id);
+	return Ids;
+}
+
+int32 FFM13World::ClubStrength(const FString& Name, EFM13Playstyle& OutStyle) const
+{
+	OutStyle = EFM13Playstyle::Ausgeglichen;
+	if (Name == ClubName) return OwnStrength();
+	for (const FFM13League& L : Leagues)
+	{
+		const int32 i = L.FindClub(Name);
+		if (i >= 0) { OutStyle = L.Clubs[i].Playstyle; return L.Clubs[i].Strength; }
+	}
+	return 40;
+}
+
+// ---------- Pokale ----------
+
+void FFM13World::InitCups()
+{
+	// DFB-Pokal: 18/8/4/2 Vereine aus den Ligen 1 bis 4, der eigene ab der 3. Liga oder als Landespokalsieger
+	DfbPokal = FM13CupRules::MakeDfbPokal();
+	const bool bDfbDabei = LeagueLevel <= FM13CupRules::DfbDirectFromLevel || bDfbViaLandespokal;
+	bDfbViaLandespokal = false; // Startplatz eingelöst
+	DfbPokal.bOwnEntered = bDfbDabei;
+	DfbPokal.bOwnAlive = bDfbDabei;
+	if (bDfbDabei) DfbPokal.Alive.Add(ClubName);
+	static const int32 Quoten[4] = { 18, 8, 4, 2 };
+	for (int32 L = 0; L < 4 && L < Leagues.Num(); ++L)
+	{
+		TArray<FString> Pool;
+		for (const FFM13Club& C : Leagues[L].Clubs) if (!C.bOwn) Pool.Add(C.Name);
+		for (int32 i = Pool.Num() - 1; i > 0; --i) Swap(Pool[i], Pool[Rng.RandRange(0, i)]);
+		const int32 Frei = Quoten[L] - (bDfbDabei && LeagueLevel == L ? 1 : 0);
+		for (int32 i = 0; i < Frei && i < Pool.Num() && DfbPokal.Alive.Num() < 32; ++i) DfbPokal.Alive.Add(Pool[i]);
+	}
+
+	// Landespokal: nur für Vereine unterhalb der 3. Liga, 16 Teilnehmer aus den Ligen 4 bis 6
+	Landespokal = FM13CupRules::MakeLandespokal();
+	if (LeagueLevel > FM13CupRules::DfbDirectFromLevel)
+	{
+		Landespokal.bOwnEntered = true;
+		Landespokal.bOwnAlive = true;
+		Landespokal.Alive.Add(ClubName);
+		TArray<FString> Pool;
+		for (int32 L = 3; L < FM13::NumLeagues; ++L) for (const FFM13Club& C : Leagues[L].Clubs) if (!C.bOwn) Pool.Add(C.Name);
+		for (int32 i = Pool.Num() - 1; i > 0; --i) Swap(Pool[i], Pool[Rng.RandRange(0, i)]);
+		for (int32 i = 0; i < 15 && i < Pool.Num(); ++i) Landespokal.Alive.Add(Pool[i]);
+	}
+	else
+	{
+		Landespokal.Round = Landespokal.RoundMatchdays.Num(); // nicht dabei
+	}
+}
+
+void FFM13World::PlayCupRound(FFM13Cup& Cup, bool bDfb)
+{
+	if (Cup.IsFinished() || Cup.Alive.Num() < 2) return;
+	// Auslosung
+	TArray<FString> Lostopf = Cup.Alive;
+	for (int32 i = Lostopf.Num() - 1; i > 0; --i) Swap(Lostopf[i], Lostopf[Rng.RandRange(0, i)]);
+	Cup.LastRound.Reset();
+	TArray<FString> Weiter;
+	const FString Runde = Cup.RoundNames[Cup.Round];
+	const int64 Praemie = Cup.Prizes[Cup.Round];
+	for (int32 i = 0; i + 1 < Lostopf.Num(); i += 2)
+	{
+		FFM13CupMatch M;
+		M.Home = Lostopf[i];
+		M.Away = Lostopf[i + 1];
+		EFM13Playstyle HS, AS;
+		const int32 HStr = ClubStrength(M.Home, HS);
+		const int32 AStr = ClubStrength(M.Away, AS);
+		const FM13Match::FExpectedGoals Xg = FM13Match::ExpectedGoals(HStr, AStr, HS, AS);
+		M.HomeGoals = FM13Match::Poisson(Rng, Xg.Home);
+		M.AwayGoals = FM13Match::Poisson(Rng, Xg.Away);
+		if (M.HomeGoals == M.AwayGoals)
+		{
+			M.bPenalties = true;
+			M.Winner = Rng.FRand() < FM13CupRules::PenaltyWinChance(HStr, AStr) ? M.Home : M.Away;
+		}
+		else M.Winner = M.HomeGoals > M.AwayGoals ? M.Home : M.Away;
+		Weiter.Add(M.Winner);
+		Cup.LastRound.Add(M);
+
+		const bool bHome = M.Home == ClubName;
+		if (!bHome && M.Away != ClubName) continue;
+
+		// Eigenes Pokalspiel
+		FFM13OwnMatchReport& R = LastCupReport;
+		R = FFM13OwnMatchReport();
+		R.Competition = Cup.Name;
+		R.OwnGoals = bHome ? M.HomeGoals : M.AwayGoals;
+		R.OppGoals = bHome ? M.AwayGoals : M.HomeGoals;
+		R.OwnStrength = bHome ? HStr : AStr;
+		R.OppStrength = bHome ? AStr : HStr;
+		R.bPenalties = M.bPenalties;
+		R.bAdvanced = M.Winner == ClubName;
+		PickScorers(R.OwnGoals, R.Scorers);
+		if (bHome)
+		{
+			// Pokal-Heimspiel: Zuschauer wie in der Liga, im Pokal etwas mehr Andrang
+			R.Attendance = FMath::Min(StadiumCapacity, FM13Economy::Attendance(StadiumCapacity, Fans, LeagueLevel, OwnRank(), TicketPrice) * 6 / 5);
+			const int64 Tickets = (int64)R.Attendance * TicketPrice;
+			Book(Cup.Name + TEXT(": Ticketeinnahmen"), Tickets);
+			R.Income += Tickets;
+		}
+		if (R.bAdvanced)
+		{
+			Book(Cup.Name + TEXT(": Praemie ") + Runde, Praemie);
+			R.Income += Praemie;
+			BoardSat = FMath::Min(100, BoardSat + 3);
+			Fans = FMath::Min(100, Fans + 2);
+		}
+		else
+		{
+			Cup.bOwnAlive = false;
+			AddMessage(Cup.Name, FString::Printf(TEXT("Aus in der Runde %s gegen %s."), *Runde, *(bHome ? M.Away : M.Home)));
+		}
+		FinishOwnReport(R, bHome ? M.Away : M.Home, bHome);
+		RollInjuries(R);
+	}
+	if (Lostopf.Num() % 2 == 1) Weiter.Add(Lostopf.Last()); // Freilos
+	Cup.Alive = Weiter;
+	Cup.Round++;
+	if (Cup.Alive.Num() == 1)
+	{
+		Cup.Winner = Cup.Alive[0];
+		if (Cup.Winner == ClubName)
+		{
+			AddMessage(FString::Printf(TEXT("%s gewonnen!"), *Cup.Name), bDfb ? TEXT("Der Verein holt den DFB-Pokal!") : TEXT("Landespokalsieger: naechste Saison spielt der Verein im DFB-Pokal."));
+			if (!bDfb) bDfbViaLandespokal = true;
+			BoardSat = FMath::Min(100, BoardSat + 10);
+			Fans = FMath::Min(100, Fans + 8);
+		}
+	}
 }
 
 int32 FFM13World::OwnRank() const
@@ -679,6 +859,7 @@ void FFM13World::TrainPlayers()
 	const float Chance = 0.04f + 0.015f * (float)TrainingLevel;
 	for (FFM13Player& P : Squad)
 	{
+		if (P.InjuredMatchdays > 0) continue;
 		if (P.Age <= 27 && P.Strength < P.Potential && Rng.FRand() < Chance) P.Strength++;
 		else if (P.Age >= 31 && Rng.FRand() < 0.03f) P.Strength = FMath::Max(1, P.Strength - 1);
 	}

@@ -2,6 +2,7 @@
 
 #include "FM13Types.h"
 #include "FM13League.h"
+#include "FM13Cup.h"
 
 // Der gesamte Spielzustand (entspricht dem globalen game-Objekt plus squad und leaguesData)
 // und alle Abläufe. Die Oberfläche ruft nur diese Funktionen auf; Render-Code ändert nie Geld.
@@ -42,7 +43,12 @@ public:
 	TArray<FFM13SeasonRecord> History;
 	TArray<FString> UsedClubNames;
 
+	FFM13Cup DfbPokal;
+	FFM13Cup Landespokal;
+	bool bDfbViaLandespokal = false;     // Landespokal gewonnen: Startplatz im DFB-Pokal der nächsten Saison
+
 	FFM13OwnMatchReport LastReport;
+	FFM13OwnMatchReport LastCupReport;   // eigenes Pokalspiel dieses Spieltags (bPlayed = false, wenn keins)
 	FRandomStream Rng;
 
 	// ---------- Ablauf ----------
@@ -56,7 +62,9 @@ public:
 	FFM13SeasonSummary ConcludeSeason();
 
 	// ---------- Kader und Transfers ----------
-	int32 OwnStrength() const;               // beste Elf im 4-4-2
+	int32 OwnStrength() const;               // beste Elf im 4-4-2 (ohne Verletzte)
+	TArray<int32> StartingEleven() const;    // Ids der besten Elf
+	int32 ClubStrength(const FString& Name, EFM13Playstyle& OutStyle) const;
 	int32 OwnRank() const;
 	const FFM13League& OwnLeague() const { return Leagues[LeagueLevel]; }
 	FFM13League& OwnLeague() { return Leagues[LeagueLevel]; }
@@ -101,4 +109,8 @@ private:
 	void DevelopPlayers(FFM13SeasonSummary& Summary);
 	void YouthIntake(FFM13SeasonSummary& Summary);
 	void PickScorers(int32 Goals, TArray<FString>& OutNames);
+	void InitCups();
+	void PlayCupRound(FFM13Cup& Cup, bool bDfb);
+	void RollInjuries(FFM13OwnMatchReport& Report);
+	void FinishOwnReport(FFM13OwnMatchReport& Report, const FString& OppName, bool bHome);
 };

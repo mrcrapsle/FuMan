@@ -1,15 +1,16 @@
 // Tests des Spielkerns ohne Unreal Engine: g++ mit der Nachbildung in CoreMinimal.h.
 // Bauen und starten: unreal/Tests/Host/run.sh
 #include "CoreMinimal.h"
-#include "../../Source/AnstossFM13/Core/FM13Economy.h"
-#include "../../Source/AnstossFM13/Core/FM13Match.h"
-#include "../../Source/AnstossFM13/Core/FM13World.h"
+#include "../../Source/AnstossFM13/FM13Core/FM13Economy.h"
+#include "../../Source/AnstossFM13/FM13Core/FM13Match.h"
+#include "../../Source/AnstossFM13/FM13Core/FM13World.h"
+#include "../../Source/AnstossFM13/FM13Core/FM13SaveCodec.h"
 #include "Referenzwerte.h"
 #include <map>
 #include <set>
 
-static int Bestanden = 0, Fehler = 0;
-#define PRUEFE(Bed, ...) do { if (Bed) { ++Bestanden; } else { ++Fehler; std::printf("  FEHLER %s:%d: ", __FILE__, __LINE__); std::printf(__VA_ARGS__); std::printf("\n"); } } while (0)
+static int GBestanden = 0, GFehler = 0;
+#define PRUEFE(Bed, ...) do { if (Bed) { ++GBestanden; } else { ++GFehler; std::printf("  FEHLER %s:%d: ", __FILE__, __LINE__); std::printf(__VA_ARGS__); std::printf("\n"); } } while (0)
 
 static void TestFormeln()
 {
@@ -107,9 +108,11 @@ static void TestFinanzen()
 	W.NewGame(TEXT("Testverein"), 3);
 	const int64 Start = W.Money;
 	int Heim = 0;
+	int Pokaltore = 0;
 	for (int i = 0; i < 34; ++i)
 	{
 		W.PlayMatchday();
+		if (W.LastCupReport.bPlayed) Pokaltore += W.LastCupReport.OwnGoals;
 		if (W.LastReport.bHome)
 		{
 			++Heim;
@@ -124,7 +127,7 @@ static void TestFinanzen()
 	PRUEFE(Start + Summe == W.Money, "Kontostand = Start + Buchungen");
 	int ToreKader = 0;
 	for (const FFM13Player& P : W.Squad) ToreKader += P.GoalsSeason;
-	PRUEFE(ToreKader == W.OwnLeague().Clubs[W.OwnLeague().FindOwn()].GoalsFor, "Saisontore der Spieler = Tore des Vereins");
+	PRUEFE(ToreKader == W.OwnLeague().Clubs[W.OwnLeague().FindOwn()].GoalsFor + Pokaltore, "Saisontore der Spieler = Liga- plus Pokaltore");
 	std::printf("  Saison 1 in der 6. Liga: Kontostand %lld -> %lld, Platz %d\n", (long long)Start, (long long)W.Money, W.OwnRank());
 }
 
@@ -240,9 +243,18 @@ static void TestEntlassung()
 	PRUEFE(!W.bSacked, "Waehrend der Saison keine Entlassung");
 	PRUEFE(W.LowBoardSatStreak >= 6, "Serie unter der Schwelle gezaehlt (%d)", W.LowBoardSatStreak);
 	while (W.PlayMatchday()) {}
+	// Verlauf festlegen: vor sechs Spielen 20, jetzt 10 = keine Erholung
+	FFM13World Erholt = W;
+	W.BoardHistory = { 20, 18, 15, 12, 10, 10, 10 };
+	W.BoardSat = 10;
 	W.ConcludeSeason();
 	PRUEFE(W.bSacked, "Am Saisonende entlassen");
 	PRUEFE(!W.PlayMatchday(), "Nach Entlassung kein Spieltag");
+	// Erholung: Vertrauen über dem Wert von vor sechs Spielen schützt (wie im Browserspiel)
+	Erholt.BoardHistory = { 8, 9, 10, 10, 11, 12, 12 };
+	Erholt.BoardSat = 12;
+	Erholt.ConcludeSeason();
+	PRUEFE(!Erholt.bSacked, "Erholtes Vertrauen schuetzt vor der Entlassung");
 
 	// Ziel erreicht schützt: gleiche Lage, aber das Ziel ist der letzte Platz
 	FFM13World Z;
@@ -254,6 +266,124 @@ static void TestEntlassung()
 	Z.SeasonTarget = 18;
 	Z.ConcludeSeason();
 	PRUEFE(!Z.bSacked, "Saisonziel erreicht: keine Entlassung");
+}
+
+static void TestSpielstand()
+{
+	std::printf("Spielstand: Speichern, Laden, Weiterspielen\n");
+	FFM13World W;
+	W.NewGame(TEXT("Verein mit \"Zeichen\" \\ und\nZeile"), 77);
+	FString Grund;
+	W.Money = 5000000;
+	W.WageBudget = 10000000;
+	for (int i = 0; i < 20; ++i) W.PlayMatchday();
+	W.BuyPlayer(0, Grund);
+	W.ExpandStadium(1500, Grund);
+
+	const FString Text = FM13Save::Encode(W);
+	FFM13World L;
+	FString Fehler;
+	PRUEFE(FM13Save::Decode(Text, L, Fehler), "Laden klappt (%s)", *Fehler);
+	PRUEFE(FM13Save::Encode(L) == Text, "Gespeichert = neu kodiert (Rundlauf ohne Verlust)");
+	PRUEFE(L.ClubName == W.ClubName, "Sonderzeichen im Namen bleiben");
+	// Weiterspielen: beide Welten laufen gleich weiter, auch über das Saisonende
+	while (W.PlayMatchday()) {}
+	while (L.PlayMatchday()) {}
+	W.ConcludeSeason();
+	L.ConcludeSeason();
+	for (int i = 0; i < 10; ++i) { W.PlayMatchday(); L.PlayMatchday(); }
+	PRUEFE(W.Money == L.Money && W.OwnRank() == L.OwnRank() && W.Season == L.Season && W.LeagueLevel == L.LeagueLevel, "Geladener Stand spielt identisch weiter");
+	PRUEFE(FM13Save::Encode(W) == FM13Save::Encode(L), "Nach 44 Spieltagen identisch");
+
+	// Kaputte Stände werden abgelehnt, das Ziel bleibt unverändert
+	FFM13World Ziel;
+	Ziel.NewGame(TEXT("Bleibt"), 1);
+	const FString Vorher = FM13Save::Encode(Ziel);
+	PRUEFE(!FM13Save::Decode(TEXT("{kaputt"), Ziel, Fehler), "Kaputtes JSON abgelehnt");
+	PRUEFE(!FM13Save::Decode(TEXT("{\"foo\":1}"), Ziel, Fehler), "Fremdes JSON abgelehnt");
+	PRUEFE(!FM13Save::Decode(Text.S.substr(0, Text.Len() / 2).c_str(), Ziel, Fehler), "Halber Spielstand abgelehnt");
+	FString OhneLiga = Text;
+	{
+		const std::string::size_type Pos = OhneLiga.S.find("\"leagues\":[");
+		OhneLiga.S.replace(Pos, 11, "\"leaguesX\":[");
+	}
+	PRUEFE(!FM13Save::Decode(OhneLiga, Ziel, Fehler) && Fehler.Contains(TEXT("Ligen")), "Fehlende Ligen erkannt (%s)", *Fehler);
+	PRUEFE(FM13Save::Encode(Ziel) == Vorher, "Ziel nach Fehlern unveraendert");
+
+	// Alter Stand ohne neue Felder: Standardwerte greifen
+	FString Alt = Text;
+	{
+		const std::string::size_type Pos = Alt.S.find("\"training\":");
+		const std::string::size_type Ende = Alt.S.find(',', Pos);
+		Alt.S.erase(Pos, Ende - Pos + 1);
+	}
+	FFM13World A;
+	PRUEFE(FM13Save::Decode(Alt, A, Fehler) && A.TrainingLevel == 1, "Fehlendes Feld bekommt den Startwert");
+	std::printf("  Groesse eines Spielstands: %d Zeichen\n", Text.Len());
+}
+
+static void TestPokalUndVerletzungen()
+{
+	std::printf("Pokale, Verletzungen, Live-Ticker\n");
+	FFM13World W;
+	W.NewGame(TEXT("Testverein"), 31);
+	PRUEFE(!W.DfbPokal.bOwnEntered, "6. Liga: nicht im DFB-Pokal");
+	PRUEFE(W.DfbPokal.Alive.Num() == 32, "DFB-Pokal mit 32 Vereinen (%d)", W.DfbPokal.Alive.Num());
+	PRUEFE(W.Landespokal.bOwnEntered && W.Landespokal.Alive.Num() == 16, "Landespokal mit 16 Vereinen");
+	int Pokalspiele = 0, Tickerfehler = 0;
+	while (W.PlayMatchday())
+	{
+		for (const FFM13OwnMatchReport* R : { &W.LastReport, &W.LastCupReport })
+		{
+			if (!R->bPlayed) continue;
+			int Tore = 0;
+			for (const FString& Zeile : R->Ticker) if (Zeile.Contains(TEXT("TOR fuer")) || Zeile.Contains(TEXT("Gegentor"))) ++Tore;
+			bool bAbpfiff = false;
+			for (const FString& Zeile : R->Ticker) if (Zeile.Contains(TEXT("Abpfiff"))) bAbpfiff = true;
+			if (Tore != R->OwnGoals + R->OppGoals || !bAbpfiff) ++Tickerfehler;
+			if (R == &W.LastCupReport) ++Pokalspiele;
+		}
+		// Verletzte stehen nie in der Startelf
+		for (int32 Id : W.StartingEleven()) PRUEFE(W.FindPlayer(Id)->InjuredMatchdays == 0, "Verletzter in der Startelf");
+	}
+	PRUEFE(Tickerfehler == 0, "Ticker zeigt alle Tore und den Abpfiff (%d Fehler)", Tickerfehler);
+	PRUEFE(Pokalspiele >= 1 && Pokalspiele <= 4, "Eigene Landespokalspiele: %d", Pokalspiele);
+	PRUEFE(!W.Landespokal.Winner.IsEmpty() && !W.DfbPokal.Winner.IsEmpty(), "Beide Pokale haben einen Sieger");
+	PRUEFE(W.Landespokal.Alive.Num() == 1 && W.DfbPokal.Alive.Num() == 1, "Am Ende bleibt je ein Verein");
+	std::printf("  Landespokal: %s, DFB-Pokal: %s, eigene Pokalspiele %d\n", *W.Landespokal.Winner, *W.DfbPokal.Winner, Pokalspiele);
+
+	// Landespokalsieg bringt den DFB-Pokal der nächsten Saison
+	int Versuche = 0;
+	bool bGeschafft = false;
+	for (int32 Seed = 100; Seed < 160 && !bGeschafft; ++Seed)
+	{
+		FFM13World V;
+		V.NewGame(TEXT("Pokalteam"), Seed);
+		for (FFM13Player& P : V.Squad) P.Strength = 60; // klar stärker als die Unterklassen
+		while (V.PlayMatchday()) {}
+		++Versuche;
+		if (V.Landespokal.Winner == V.ClubName)
+		{
+			PRUEFE(V.bDfbViaLandespokal, "Landespokalsieger merkt sich den DFB-Startplatz");
+			const int64 Vorher = V.Money;
+			V.ConcludeSeason();
+			PRUEFE(V.DfbPokal.bOwnEntered && V.DfbPokal.Alive.Contains(V.ClubName), "Naechste Saison im DFB-Pokal");
+			PRUEFE(!V.bDfbViaLandespokal, "Startplatz eingeloest");
+			(void)Vorher;
+			bGeschafft = true;
+		}
+	}
+	PRUEFE(bGeschafft, "Ein starkes Team gewinnt den Landespokal (%d Versuche)", Versuche);
+
+	// Ab der 3. Liga direkt im DFB-Pokal
+	FFM13World D;
+	D.NewGame(TEXT("Drittligist"), 7, 2);
+	PRUEFE(D.DfbPokal.bOwnEntered && D.DfbPokal.Alive.Num() == 32, "3. Liga: direkt im DFB-Pokal mit 32 Vereinen");
+	PRUEFE(!D.Landespokal.bOwnEntered && D.Landespokal.IsFinished(), "3. Liga: kein Landespokal");
+	bool bPraemie = false;
+	while (D.PlayMatchday()) {}
+	for (const FFM13Booking& B : D.Bookings) if (B.Label.Contains(TEXT("DFB-Pokal: Praemie"))) bPraemie = true;
+	PRUEFE(bPraemie || !D.DfbPokal.bOwnAlive, "Weiterkommen bringt Praemie");
 }
 
 // Einfacher Manager wie scripts/longrun-bundesliga.js (aktiv): kauft Verstärkungen, verlängert Stammkräfte,
@@ -327,7 +457,9 @@ int main()
 	TestKaderAktionen();
 	TestDeterminismus();
 	TestEntlassung();
+	TestPokalUndVerletzungen();
+	TestSpielstand();
 	TestBotKarriere();
-	std::printf("\nERGEBNIS: %d bestanden, %d fehlgeschlagen\n", Bestanden, Fehler);
-	return Fehler == 0 ? 0 : 1;
+	std::printf("\nERGEBNIS: %d bestanden, %d fehlgeschlagen\n", GBestanden, GFehler);
+	return GFehler == 0 ? 0 : 1;
 }

@@ -46,6 +46,7 @@ struct FFM13Player
 	int64 MarketValue = 15000;
 	int32 Wage = 250;         // Euro pro Spieltag
 	int32 ContractYears = 2;  // Restlaufzeit in Saisons
+	int32 InjuredMatchdays = 0; // fällt so viele Spieltage aus (0 = fit)
 };
 
 // Tabellenzeile und Verein in einem, wie in leaguesData.
@@ -125,6 +126,11 @@ struct FFM13OwnMatchReport
 	int64 Expenses = 0;
 	int32 BoardShift = 0;
 	TArray<FString> Scorers;
+	TArray<FString> Ticker;     // Spielverlauf Minute für Minute
+	TArray<FString> Injuries;   // in diesem Spiel verletzt
+	FString Competition;        // "Liga", "DFB-Pokal", "Landespokal"
+	bool bPenalties = false;
+	bool bAdvanced = false;     // Pokal: weiter
 };
 
 struct FFM13SeasonSummary

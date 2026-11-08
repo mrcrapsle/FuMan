@@ -21,4 +21,9 @@ namespace FM13Match
 	// Erwartung vor dem Spiel und Vorstandsreaktion danach (match-live.js, boardShift)
 	EFM13Expectation Expectation(int32 OwnStrength, int32 OppStrength);
 	int32 BoardShift(EFM13Expectation Erwartung, int32 OwnGoals, int32 OppGoals);
+
+	// Live-Ticker: verteilt die feststehenden Tore auf Minuten und ergänzt Chancen, Karten und Pausenstand.
+	// Wie im Browserspiel kommt das Ergebnis allein aus der Torformel, der Ticker erzählt es nur.
+	TArray<FString> BuildTicker(FRandomStream& Rng, const FString& OwnName, const FString& OppName, bool bHome,
+		const TArray<FString>& OwnScorers, int32 OppGoals, const TArray<FString>& OwnPlayers);
 }

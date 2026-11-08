@@ -20,6 +20,7 @@ typedef char TCHAR;
 #define check(x) do { if (!(x)) { std::fprintf(stderr, "check failed: %s\n", #x); std::abort(); } } while (0)
 
 template <typename T> inline void Swap(T& A, T& B) { std::swap(A, B); }
+template <typename T> class TArray;
 
 class FString
 {
@@ -37,7 +38,11 @@ public:
 	FString operator+(const FString& O) const { return FString(S + O.S); }
 	FString& operator+=(const FString& O) { S += O.S; return *this; }
 	bool Contains(const FString& O) const { return S.find(O.S) != std::string::npos; }
+	void AppendChar(char C) { S.push_back(C); }
+	char& operator[](int32 I) { check(I >= 0 && I < Len()); return S[I]; }
+	const char& operator[](int32 I) const { check(I >= 0 && I < Len()); return S[I]; }
 	static FString FromInt(int64 V) { return FString(std::to_string(V)); }
+	static FString Join(const TArray<FString>& A, const char* Sep);
 	static FString Printf(const char* Fmt, ...)
 	{
 		char Buf[4096];
@@ -81,6 +86,8 @@ public:
 	typename std::vector<T>::const_iterator begin() const { return V.begin(); }
 	typename std::vector<T>::const_iterator end() const { return V.end(); }
 };
+
+inline FString FString::Join(const TArray<FString>& A, const char* Sep) { FString Out; for (int32 i = 0; i < A.Num(); ++i) { if (i) Out += FString(Sep); Out += A[i]; } return Out; }
 
 struct FMath
 {
