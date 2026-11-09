@@ -6,6 +6,8 @@
 #include "../../Source/AnstossFM13/FM13Core/FM13World.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13SaveCodec.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13BrowserImport.h"
+#include "../../Source/AnstossFM13/FM13Core/FM13Tactics.h"
+#include "../../Source/AnstossFM13/FM13Core/FM13Development.h"
 #include <dirent.h>
 #include <fstream>
 #include <sstream>
@@ -429,6 +431,11 @@ static void TestBrowserImport()
 		// Gleiche Namen und Zahlen wie in der Datei
 		PRUEFE(B.str().find("\"clubName\":\"" + W.ClubName.S + "\"") != std::string::npos, "%s: Vereinsname", Name.c_str());
 		PRUEFE(B.str().find(W.Squad[0].Name.S) != std::string::npos, "%s: Spielername %s", Name.c_str(), *W.Squad[0].Name);
+		if (Name == "karriere-liga4-v3.104-s3.json")
+		{
+			PRUEFE(W.Records.BiggestWinFor == 5 && W.Records.BiggestWinOpponent == FString(TEXT("Viktoria Berlien")) && W.Records.RecordAttendance == 6980, "%s: Rekorde uebernommen", Name.c_str());
+			PRUEFE(W.Achievements.Num() == 2 && W.Sponsor.MatchdaysLeft == 0, "%s: Erfolge und Sponsorlage uebernommen", Name.c_str());
+		}
 		// Weiterspielen und speichern
 		FFM13World Kopie;
 		FString F2;
@@ -443,6 +450,133 @@ static void TestBrowserImport()
 	FFM13World X; FString Fehler; TArray<FString> H;
 	PRUEFE(!FM13BrowserImport::Import(TEXT("{\"foo\":1}"), X, Fehler, H) && Fehler.Contains(TEXT("kein exportierter")), "Fremdes JSON abgelehnt");
 	PRUEFE(!FM13BrowserImport::Import(TEXT("{kaputt"), X, Fehler, H), "Kaputtes JSON abgelehnt");
+}
+
+static void TestRundeA()
+{
+	std::printf("Runde A: Taktik, Wetter, Schiedsrichter, Karten, Sponsor, Angebote, Entwicklung, Erfolge, Relegation\n");
+	// Spielstil-Boni wie getTacticStyleBonus(): round(((tempo-50)+(press-50))/25)
+	PRUEFE(FM13Tactics::StyleBonus(TEXT("pressing")) == 2 && FM13Tactics::StyleBonus(TEXT("defensiv")) == -2 && FM13Tactics::StyleBonus(TEXT("konter")) == 0
+		&& FM13Tactics::StyleBonus(TEXT("kickrush")) == 2 && FM13Tactics::StyleBonus(TEXT("umschaltspiel")) == 1 && FM13Tactics::StyleBonus(TEXT("ballbesitz")) == 0, "Spielstil-Boni");
+	PRUEFE(std::fabs(FM13Tactics::StyleFitnessMultiplier(TEXT("pressing")) - 1.14f) < 1e-4f, "Pressing kostet 14 Prozent mehr Kraft");
+	PRUEFE(std::fabs(FM13Tactics::FormationOffBonus(TEXT("3-4-3")) - 0.72f) < 1e-4f && std::fabs(FM13Tactics::FormationDefBonus(TEXT("5-4-1")) - 1.12f) < 1e-4f, "Formationsboni");
+	// Schere-Stein-Papier: Pressing > Ballbesitz > Konter > Pressing
+	PRUEFE(FM13Tactics::MatchupBonus(TEXT("pressing"), TEXT('B')) == 2 && FM13Tactics::MatchupBonus(TEXT("pressing"), TEXT('K')) == -2
+		&& FM13Tactics::MatchupBonus(TEXT("ausgeglichen"), TEXT('P')) == 0 && FM13Tactics::MatchupBonus(TEXT("ballbesitz"), TEXT('K')) == 2, "Taktik-Duell");
+	PRUEFE(FM13Tactics::PredictableArchetype({ TEXT("pressing"), TEXT("offensiv"), TEXT("defensiv"), TEXT("umschaltspiel") }) == TEXT('P'), "Berechenbar: 3x Pressing-Ansatz");
+	PRUEFE(FM13Tactics::PredictableArchetype({ TEXT("pressing"), TEXT("defensiv"), TEXT("ballbesitz") }) == 0, "Nicht berechenbar");
+	PRUEFE(FM13Tactics::CounterTo(TEXT('P')) == TEXT('K'), "Konter schlaegt Pressing");
+
+	// Entwicklungstypen wie getDevelopmentRange()
+	int32 Mi = 0, Ma = 0;
+	FM13Dev::DevelopmentRange(20, 0, Mi, Ma); PRUEFE(Mi == 1 && Ma == 2, "Konstanter Profi mit 20: +1 bis +2 (%d..%d)", Mi, Ma);
+	FM13Dev::DevelopmentRange(29, 0, Mi, Ma); PRUEFE(Mi == 0 && Ma == 0, "Am Hoehepunkt keine Aenderung");
+	FM13Dev::DevelopmentRange(32, 0, Mi, Ma); PRUEFE(Mi == -2 && Ma == -1, "Konstanter Profi mit 32: -2 bis -1 (%d..%d)", Mi, Ma);
+	FM13Dev::DevelopmentRange(20, 3, Mi, Ma); PRUEFE(Mi == 1 && Ma == 4, "Wunderkind mit 20: +1 bis +4 (%d..%d)", Mi, Ma);
+	int32 Typen[5] = { 0, 0, 0, 0, 0 };
+	for (int32 Id = 1; Id <= 5000; ++Id) Typen[FM13Dev::ArchetypeFor(Id)]++;
+	PRUEFE(Typen[0] > 1500 && Typen[0] < 2500 && Typen[3] > 200 && Typen[3] < 700, "Typen etwa nach Gewicht verteilt (%d %d %d %d %d)", Typen[0], Typen[1], Typen[2], Typen[3], Typen[4]);
+
+	// Wetter und Schiedsrichter
+	FRandomStream Rng(3);
+	int32 Wetter[6] = { 0, 0, 0, 0, 0, 0 };
+	for (int32 i = 0; i < 10000; ++i) Wetter[FM13Match::RollWeather(Rng)]++;
+	PRUEFE(Wetter[0] > 3000 && Wetter[0] < 4000 && Wetter[5] > 150 && Wetter[5] < 450, "Wetter nach Gewicht (Sonne %d, Sturm %d)", Wetter[0], Wetter[5]);
+	PRUEFE(FString(FM13Match::RefereeFor(2, 5, 5, 19).Name) == FString(FM13Match::RefereeFor(2, 5, 5, 19).Name), "Schiedsrichter fest angesetzt");
+	for (int32 L = 0; L < 6; ++L) { const FM13Match::FReferee& Ref = FM13Match::RefereeFor(1, 7, L, 10); PRUEFE(L >= Ref.MinLeague && L <= Ref.MaxLeague, "Schiedsrichter pfeift in seiner Liga"); }
+
+	// Formation bestimmt die Startelf
+	FFM13World W;
+	W.NewGame(TEXT("Taktikverein"), 8);
+	FString Grund;
+	PRUEFE(W.SetFormation(TEXT("4-3-3"), Grund) && W.Formation == FString(TEXT("4-3-3")), "Formation setzen");
+	PRUEFE(!W.SetFormation(TEXT("2-2-6"), Grund) && !Grund.IsEmpty(), "Unbekannte Formation abgelehnt");
+	int32 St = 0;
+	for (int32 Id : W.StartingEleven()) if (W.FindPlayer(Id)->Pos == EFM13Position::ST) ++St;
+	PRUEFE(St == 3, "4-3-3 stellt 3 Stuermer auf (%d)", St);
+	PRUEFE(W.SetTacticStyle(TEXT("pressing"), Grund) && W.OwnMatchStrength(TEXT('B')) == W.OwnStrength() + 2 + FMath::RoundToInt(0.48f - 0.12f) + 2, "Spielstaerke mit Stil, Formation und Duell");
+	PRUEFE(W.NextLeagueOpponent() != nullptr && W.OppPlanArchetype != 0, "Gegnerplan fuer das naechste Ligaspiel");
+
+	// Gesperrte und Verletzte spielen nicht; Karten im Spiel
+	W.Squad[0].SuspendedMatchdays = 2;
+	PRUEFE(!W.StartingEleven().Contains(W.Squad[0].Id), "Gesperrter Spieler nicht in der Startelf");
+	int32 Gelb = 0, Rot = 0, WetterGesehen = 0;
+	for (int32 i = 0; i < 34; ++i)
+	{
+		W.PlayMatchday();
+		for (const FString& Z : W.LastReport.Ticker) { if (Z.Contains(TEXT("Gelbe Karte"))) ++Gelb; if (Z.Contains(TEXT("ROTE KARTE"))) ++Rot; if (Z.Contains(TEXT("Wetter:"))) ++WetterGesehen; }
+	}
+	PRUEFE(Gelb > 20 && Gelb < 140, "Gelbe Karten in einer Saison: %d", Gelb);
+	PRUEFE(WetterGesehen == 34, "Wetter und Schiedsrichter im Ticker (%d)", WetterGesehen);
+	std::printf("  Saison mit 4-3-3 Pressing: %d Gelbe, %d Rote\n", Gelb, Rot);
+
+	// Sponsor: Startvertrag 34 Spieltage, danach Angebote; Wechsel nur kurz vor Ende
+	PRUEFE(W.Sponsor.Name == FString(TEXT("Kein Hauptsponsor")) && W.SponsorOffers.Num() == 3, "Nach 34 Spieltagen: Vertrag aus, drei Angebote (%s, %d)", *W.Sponsor.Name, W.SponsorOffers.Num());
+	const FFM13Sponsor Lang = W.SponsorOffers[2];
+	const int64 Vorher = W.Money;
+	PRUEFE(W.AcceptSponsorOffer(2, Grund) && W.Sponsor.Name == Lang.Name && W.Sponsor.MatchdaysLeft == 68 && W.Money == Vorher + Lang.SignOn, "Langer Vertrag mit Handgeld");
+	PRUEFE(Lang.Base >= 1500 && Lang.Base <= 4100, "Grundbetrag in der 6. Liga im Rahmen (%d)", Lang.Base);
+	W.SponsorOffers.Add(Lang);
+	PRUEFE(!W.AcceptSponsorOffer(0, Grund) && Grund.Contains(TEXT("laeuft noch")), "Laufender Vertrag laesst keinen Wechsel zu");
+
+	// Angebote für eigene Spieler
+	FFM13IncomingOffer O;
+	O.PlayerId = W.Squad[3].Id; O.PlayerName = W.Squad[3].Name; O.Club = TEXT("Testclub"); O.Price = 777000; O.ExpiresMatchday = 99;
+	W.IncomingOffers.Add(O);
+	const int32 Kader = W.Squad.Num();
+	const int64 Geld = W.Money;
+	PRUEFE(W.AcceptIncomingOffer(W.IncomingOffers.Num() - 1, Grund) && W.Squad.Num() == Kader - 1 && W.Money == Geld + 777000, "Angebot angenommen (%s)", *Grund);
+	PRUEFE(W.Records.RecordTransferFee >= 777000, "Rekordablöse gemerkt");
+
+	// Erfolge und Rekorde
+	W.Money = 2000000;
+	W.ConcludeSeason(); // Saison 1 ist vorbei: Abschluss prüft die Erfolge
+	W.PlayMatchday();
+	PRUEFE(W.Achievements.ContainsByPredicate([](const FFM13Achievement& A) { return A.Id == FString(TEXT("millionaer")); }), "Erfolg Millionaer");
+	PRUEFE(FFM13World::AchievementCount() == 13 && FFM13World::AchievementLabel(TEXT("meister")).Contains(TEXT("Meister")), "Erfolgsliste");
+	PRUEFE(W.Records.LongestUnbeatenStreak >= W.Records.UnbeatenStreak, "Serie ohne Niederlage gefuehrt");
+
+	// Saisonende: Entwicklung, Legenden, Relegation
+	FFM13World V;
+	V.NewGame(TEXT("Legendenverein"), 12);
+	V.Squad[0].Age = 37; V.Squad[0].SeasonsAtClub = 6; V.Squad[0].GoalsCareer = 12;
+	const FString LegName = V.Squad[0].Name;
+	while (V.PlayMatchday()) {}
+	const FFM13SeasonSummary S = V.ConcludeSeason();
+	PRUEFE(V.Legends.Num() >= 1 && V.Legends[0].Name == LegName && S.NewLegends.Contains(LegName), "Vereinslegende beim Karriereende");
+	int32 MitSaison = 0;
+	for (const FFM13Player& P : V.Squad) if (P.SeasonsAtClub >= 1) ++MitSaison;
+	PRUEFE(MitSaison >= 12, "Saisons im Verein werden gezaehlt (%d Spieler mit einer Saison)", MitSaison);
+
+	// Relegation: Platz 16 bzw. 3 spielen zwei Partien
+	int32 Relegationen = 0, Gewonnen = 0;
+	for (int32 Seed = 200; Seed < 260; ++Seed)
+	{
+		FFM13World X;
+		X.NewGame(TEXT("Relegationsverein"), Seed, 3);
+		while (X.PlayMatchday()) {}
+		const int32 Platz = X.OwnRank();
+		const int32 Liga = X.LeagueLevel;
+		const FFM13SeasonSummary T = X.ConcludeSeason();
+		if (Platz == 16 || Platz == 3)
+		{
+			++Relegationen;
+			PRUEFE(T.Relegation.bPlayed && T.Relegation.bForPromotion == (Platz == 3), "Relegation bei Platz %d", Platz);
+			if (T.Relegation.bWon) ++Gewonnen;
+			if (Platz == 16) PRUEFE(X.LeagueLevel == (T.Relegation.bWon ? Liga : Liga + 1), "Platz 16: Klassenerhalt nur mit Sieg");
+			if (Platz == 3) PRUEFE(X.LeagueLevel == (T.Relegation.bWon ? Liga - 1 : Liga), "Platz 3: Aufstieg nur mit Sieg");
+		}
+		else PRUEFE(!T.Relegation.bPlayed, "Keine Relegation auf Platz %d", Platz);
+	}
+	PRUEFE(Relegationen >= 3, "Relegation kommt vor (%d von 60)", Relegationen);
+	std::printf("  Relegation: %d gespielt, %d gewonnen\n", Relegationen, Gewonnen);
+
+	// Spielstand behält alles
+	const FString Text = FM13Save::Encode(W);
+	FFM13World L;
+	FString F;
+	PRUEFE(FM13Save::Decode(Text, L, F) && FM13Save::Encode(L) == Text, "Spielstand mit Taktik, Sponsor, Angeboten, Erfolgen (%s)", *F);
+	PRUEFE(L.Formation == W.Formation && L.Sponsor.Name == W.Sponsor.Name && L.Achievements.Num() == W.Achievements.Num(), "Neue Felder nach dem Laden");
 }
 
 // Einfacher Manager wie scripts/longrun-bundesliga.js (aktiv): kauft Verstärkungen, verlängert Stammkräfte,
@@ -517,6 +651,7 @@ int main()
 	TestDeterminismus();
 	TestEntlassung();
 	TestPokalUndVerletzungen();
+	TestRundeA();
 	TestSpielstand();
 	TestBrowserImport();
 	TestBotKarriere();

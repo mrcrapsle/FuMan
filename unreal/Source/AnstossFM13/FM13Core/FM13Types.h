@@ -47,6 +47,73 @@ struct FFM13Player
 	int32 Wage = 250;         // Euro pro Spieltag
 	int32 ContractYears = 2;  // Restlaufzeit in Saisons
 	int32 InjuredMatchdays = 0; // fällt so viele Spieltage aus (0 = fit)
+	int32 SuspendedMatchdays = 0; // gesperrt (Rot oder fünfte Gelbe)
+	int32 YellowCards = 0;      // Gelbe Karten der Saison, jede fünfte sperrt
+	int32 SeasonsAtClub = 0;    // für Legenden beim Karriereende
+	uint8 Archetype = 0;        // Entwicklungstyp (FM13Dev), aus der Id abgeleitet
+
+	bool IsAvailable() const { return InjuredMatchdays <= 0 && SuspendedMatchdays <= 0; }
+};
+
+// Hauptsponsor (js/sponsors.js, vereinfacht: keine Verhandlung, keine Themenboni)
+struct FFM13Sponsor
+{
+	FString Name;
+	int32 Base = 0;           // pro Spieltag
+	int32 WinBonus = 0;       // pro Sieg
+	int32 PromotionBonus = 0; // beim Aufstieg
+	int32 SignOn = 0;         // Handgeld bei Unterschrift
+	int32 MatchdaysLeft = 0;  // Restlaufzeit in Spieltagen
+	FString Tier;             // "kurz", "mittel", "lang"
+};
+
+// Angebot eines KI-Vereins für einen eigenen Spieler oder ein Talent (transfermarket.js, youth-sales.js)
+struct FFM13IncomingOffer
+{
+	int32 PlayerId = 0;
+	bool bYouth = false;
+	FString PlayerName;
+	FString Club;
+	int64 Price = 0;
+	int32 ExpiresMatchday = 0; // gilt bis einschließlich dieses Spieltags
+};
+
+struct FFM13ClubRecords
+{
+	int32 BiggestWinFor = 0, BiggestWinAgainst = 0;
+	FString BiggestWinOpponent;
+	int32 BiggestWinSeason = 0;
+	int32 UnbeatenStreak = 0;
+	int32 LongestUnbeatenStreak = 0;
+	int32 RecordAttendance = 0;
+	int64 RecordTransferFee = 0;
+};
+
+struct FFM13Achievement
+{
+	FString Id;
+	int32 Season = 0;
+	int32 Matchday = 0;
+};
+
+struct FFM13Legend
+{
+	FString Name;
+	FString Position;
+	int32 Seasons = 0;
+	int32 Goals = 0;
+	int32 BestStrength = 0;
+	int32 RetiredSeason = 0;
+};
+
+struct FFM13RelegationResult
+{
+	bool bPlayed = false;
+	bool bForPromotion = false;  // true: eigener Dritter gegen den 16. der Liga darüber
+	FString Opponent;
+	int32 Leg1Own = 0, Leg1Opp = 0, Leg2Own = 0, Leg2Opp = 0;
+	bool bPenalties = false;
+	bool bWon = false;
 };
 
 // Tabellenzeile und Verein in einem, wie in leaguesData.
@@ -127,6 +194,11 @@ struct FFM13OwnMatchReport
 	int32 BoardShift = 0;
 	TArray<FString> Scorers;
 	TArray<FString> Ticker;     // Spielverlauf Minute für Minute
+	FString Weather;
+	FString Referee;
+	FString OppArchetype;       // geplanter Ansatz des Gegners (Pressing, Ballbesitz, Konter, neutral)
+	int32 TacticBonus = 0;      // Taktik-Duell: +2, 0 oder -2
+	TArray<FString> Cards;      // Rote Karten und Sperren
 	TArray<FString> Injuries;   // in diesem Spiel verletzt
 	FString Competition;        // "Liga", "DFB-Pokal", "Landespokal"
 	bool bPenalties = false;
@@ -143,4 +215,7 @@ struct FFM13SeasonSummary
 	int64 TvPayout = 0;
 	TArray<FString> Left;      // Spieler, die gegangen sind (Vertragsende, Ruhestand)
 	TArray<FString> NewYouth;  // neue Talente
+	TArray<FString> NewLegends;
+	TArray<FString> NewAchievements;
+	FFM13RelegationResult Relegation;
 };

@@ -76,9 +76,10 @@ namespace FM13Match
 	}
 
 	TArray<FString> BuildTicker(FRandomStream& Rng, const FString& OwnName, const FString& OppName, bool bHome,
-		const TArray<FString>& OwnScorers, int32 OppGoals, const TArray<FString>& OwnPlayers)
+		const TArray<FString>& OwnScorers, int32 OppGoals, const TArray<FString>& OwnPlayers,
+		const TArray<FString>& YellowCards, const TArray<FString>& RedCards, const FString& Weather, const FString& Referee)
 	{
-		struct FEreignis { int32 Minute; int32 Art; FString Name; }; // Art: 0 eigenes Tor, 1 Gegentor, 2 Chance, 3 Gegnerchance, 4 Gelb
+		struct FEreignis { int32 Minute; int32 Art; FString Name; }; // Art: 0 eigenes Tor, 1 Gegentor, 2 Chance, 3 Gegnerchance, 4 Gelb, 5 Rot
 		TArray<FEreignis> Liste;
 		TArray<int32> Belegt;
 		auto FreieMinute = [&Rng, &Belegt]()
@@ -99,14 +100,16 @@ namespace FM13Match
 			const FString Name = bEigen && OwnPlayers.Num() ? OwnPlayers[Rng.RandRange(0, OwnPlayers.Num() - 1)] : FM13Names::PlayerName(Rng);
 			Liste.Add({ FreieMinute(), bEigen ? 2 : 3, Name });
 		}
-		const int32 Karten = Rng.RandRange(0, 2);
-		for (int32 k = 0; k < Karten && OwnPlayers.Num(); ++k) Liste.Add({ FreieMinute(), 4, OwnPlayers[Rng.RandRange(0, OwnPlayers.Num() - 1)] });
+		for (const FString& N : YellowCards) Liste.Add({ FreieMinute(), 4, N });
+		for (const FString& N : RedCards) Liste.Add({ FreieMinute(), 5, N });
 		Liste.Sort([](const FEreignis& A, const FEreignis& B) { return A.Minute < B.Minute; });
 
 		const FString& Heim = bHome ? OwnName : OppName;
 		const FString& Gast = bHome ? OppName : OwnName;
 		TArray<FString> Out;
 		Out.Add(FString::Printf(TEXT("1'  Anpfiff: %s gegen %s"), *Heim, *Gast));
+		if (!Weather.IsEmpty() || !Referee.IsEmpty())
+			Out.Add(FString::Printf(TEXT("    Wetter: %s, Schiedsrichter: %s"), Weather.IsEmpty() ? TEXT("-") : *Weather, Referee.IsEmpty() ? TEXT("-") : *Referee));
 		int32 Eigen = 0, Gegner = 0;
 		bool bPause = false;
 		auto Stand = [&]() { return bHome ? FString::Printf(TEXT("%d:%d"), Eigen, Gegner) : FString::Printf(TEXT("%d:%d"), Gegner, Eigen); };
@@ -119,11 +122,55 @@ namespace FM13Match
 			case 1: ++Gegner; Out.Add(FString::Printf(TEXT("%d'  Gegentor: %s trifft fuer %s, %s"), E.Minute, *E.Name, *OppName, *Stand())); break;
 			case 2: Out.Add(FString::Printf(TEXT("%d'  Chance: %s scheitert knapp"), E.Minute, *E.Name)); break;
 			case 3: Out.Add(FString::Printf(TEXT("%d'  %s hat eine Chance, aber vorbei"), E.Minute, *OppName)); break;
+			case 5: Out.Add(FString::Printf(TEXT("%d'  ROTE KARTE fuer %s"), E.Minute, *E.Name)); break;
 			default: Out.Add(FString::Printf(TEXT("%d'  Gelbe Karte fuer %s"), E.Minute, *E.Name)); break;
 			}
 		}
 		if (!bPause) Out.Add(FString::Printf(TEXT("45'  Halbzeit, Stand %s"), *Stand()));
 		Out.Add(FString::Printf(TEXT("90'  Abpfiff, Endstand %s"), *Stand()));
 		return Out;
+	}
+
+	const TArray<FWeather>& Weathers()
+	{
+		static const TArray<FWeather> Liste = {
+			{ TEXT("Sonnig"), 35, 1.0f, 1.0f, 1.0f, 1.0f },
+			{ TEXT("Bewoelkt"), 30, 1.0f, 1.0f, 1.0f, 1.0f },
+			{ TEXT("Regen"), 18, 1.15f, 1.15f, 0.95f, 0.93f },
+			{ TEXT("Schnee"), 7, 1.2f, 1.2f, 0.85f, 0.88f },
+			{ TEXT("Hitze"), 10, 1.05f, 1.0f, 1.0f, 0.96f },
+			{ TEXT("Sturm"), 3, 1.35f, 1.1f, 0.8f, 0.7f }
+		};
+		return Liste;
+	}
+
+	int32 RollWeather(FRandomStream& Rng)
+	{
+		int32 Summe = 0;
+		for (const FWeather& W : Weathers()) Summe += W.Weight;
+		int32 Wurf = Rng.RandRange(0, Summe - 1);
+		for (int32 i = 0; i < Weathers().Num(); ++i)
+		{
+			if (Wurf < Weathers()[i].Weight) return i;
+			Wurf -= Weathers()[i].Weight;
+		}
+		return 0;
+	}
+
+	const FReferee& RefereeFor(int32 Season, int32 Matchday, int32 Level, int32 ClubNameLength)
+	{
+		static const TArray<FReferee> Alle = {
+			{ TEXT("Tobias Hartung"), TEXT("Kleinlich"), 1.4f, 0, 2 }, { TEXT("Felix Brenner"), TEXT("Souveraen"), 0.9f, 0, 1 },
+			{ TEXT("Deniz Aydin"), TEXT("Grosszuegig"), 0.7f, 0, 2 }, { TEXT("Marco Wendt"), TEXT("Konsequent"), 1.2f, 0, 3 },
+			{ TEXT("Sabine Lorenz"), TEXT("Souveraen"), 1.0f, 0, 3 }, { TEXT("Luka Petrovic"), TEXT("Laesst laufen"), 0.75f, 1, 4 },
+			{ TEXT("Jens Krause"), TEXT("Kleinlich"), 1.35f, 2, 5 }, { TEXT("Nina Haas"), TEXT("Konsequent"), 1.15f, 2, 5 },
+			{ TEXT("Uwe Schubert"), TEXT("Grosszuegig"), 0.8f, 3, 5 }, { TEXT("Kerem Demir"), TEXT("Souveraen"), 1.0f, 3, 5 },
+			{ TEXT("Heiko Vogt"), TEXT("Hektisch"), 1.3f, 4, 5 }, { TEXT("Paula Ernst"), TEXT("Laesst laufen"), 0.85f, 4, 5 }
+		};
+		TArray<int32> Pool;
+		for (int32 i = 0; i < Alle.Num(); ++i) if (Level >= Alle[i].MinLeague && Level <= Alle[i].MaxLeague) Pool.Add(i);
+		// Gleiche Formel wie getRefereeFor(): feste Ansetzung ohne Zufall
+		const uint32 Seed = (uint32)(Season * 131 + Matchday * 17 + Level * 7 + ClubNameLength);
+		return Alle[Pool[(int32)(Seed % (uint32)Pool.Num())]];
 	}
 }

@@ -61,7 +61,17 @@ namespace
 		W.Field(TEXT("wage"), P.Wage);
 		W.Field(TEXT("contract"), P.ContractYears);
 		W.Field(TEXT("inj"), P.InjuredMatchdays);
+		W.Field(TEXT("susp"), P.SuspendedMatchdays);
+		W.Field(TEXT("yel"), P.YellowCards);
+		W.Field(TEXT("seasons"), P.SeasonsAtClub);
+		W.Field(TEXT("arch"), (int64)P.Archetype);
 		W.EndObject();
+	}
+
+	void WriteSponsor(FWriter& W, const FFM13Sponsor& S)
+	{
+		W.Field(TEXT("name"), S.Name); W.Field(TEXT("base"), S.Base); W.Field(TEXT("win"), S.WinBonus);
+		W.Field(TEXT("promo"), S.PromotionBonus); W.Field(TEXT("signOn"), S.SignOn); W.Field(TEXT("left"), S.MatchdaysLeft); W.Field(TEXT("tier"), S.Tier);
 	}
 
 	void WriteCup(FWriter& W, const TCHAR* Key, const FFM13Cup& C)
@@ -120,6 +130,45 @@ namespace FM13Save
 		W.Field(TEXT("nextPlayerId"), S.NextPlayerId);
 		W.Field(TEXT("rngSeed"), (int64)S.Rng.GetCurrentSeed());
 		W.FieldBool(TEXT("dfbViaLandespokal"), S.bDfbViaLandespokal);
+		W.Field(TEXT("formation"), S.Formation);
+		W.Field(TEXT("tacticStyle"), S.TacticStyle);
+		W.ArrayKey(TEXT("recentStyles"));
+		for (const FString& St : S.RecentStyles) W.ElementStr(St);
+		W.EndArray();
+		W.Field(TEXT("oppPlan"), (int64)S.OppPlanArchetype);
+		W.FieldBool(TEXT("oppPlanReacted"), S.bOppPlanReacted);
+		W.Field(TEXT("weather"), S.WeatherIndex);
+		W.ObjectKey(TEXT("sponsor")); WriteSponsor(W, S.Sponsor); W.EndObject();
+		W.ArrayKey(TEXT("sponsorOffers"));
+		for (const FFM13Sponsor& O : S.SponsorOffers) { W.ElementObject(); WriteSponsor(W, O); W.EndObject(); }
+		W.EndArray();
+		W.ArrayKey(TEXT("incomingOffers"));
+		for (const FFM13IncomingOffer& O : S.IncomingOffers)
+		{
+			W.ElementObject();
+			W.Field(TEXT("id"), O.PlayerId); W.FieldBool(TEXT("youth"), O.bYouth); W.Field(TEXT("name"), O.PlayerName);
+			W.Field(TEXT("club"), O.Club); W.Field(TEXT("price"), O.Price); W.Field(TEXT("until"), O.ExpiresMatchday);
+			W.EndObject();
+		}
+		W.EndArray();
+		W.ObjectKey(TEXT("records"));
+		W.Field(TEXT("winFor"), S.Records.BiggestWinFor); W.Field(TEXT("winAgainst"), S.Records.BiggestWinAgainst);
+		W.Field(TEXT("winOpp"), S.Records.BiggestWinOpponent); W.Field(TEXT("winSeason"), S.Records.BiggestWinSeason);
+		W.Field(TEXT("unbeaten"), S.Records.UnbeatenStreak); W.Field(TEXT("longestUnbeaten"), S.Records.LongestUnbeatenStreak);
+		W.Field(TEXT("attendance"), S.Records.RecordAttendance); W.Field(TEXT("fee"), S.Records.RecordTransferFee);
+		W.EndObject();
+		W.ArrayKey(TEXT("achievements"));
+		for (const FFM13Achievement& A : S.Achievements) { W.ElementObject(); W.Field(TEXT("id"), A.Id); W.Field(TEXT("season"), A.Season); W.Field(TEXT("matchday"), A.Matchday); W.EndObject(); }
+		W.EndArray();
+		W.ArrayKey(TEXT("legends"));
+		for (const FFM13Legend& L : S.Legends)
+		{
+			W.ElementObject();
+			W.Field(TEXT("name"), L.Name); W.Field(TEXT("pos"), L.Position); W.Field(TEXT("seasons"), L.Seasons);
+			W.Field(TEXT("goals"), L.Goals); W.Field(TEXT("best"), L.BestStrength); W.Field(TEXT("retired"), L.RetiredSeason);
+			W.EndObject();
+		}
+		W.EndArray();
 		WriteCup(W, TEXT("dfbPokal"), S.DfbPokal);
 		WriteCup(W, TEXT("landespokal"), S.Landespokal);
 
@@ -237,7 +286,20 @@ namespace
 		P.Wage = (int32)R.Int(Obj, TEXT("wage"), 250);
 		P.ContractYears = (int32)R.Int(Obj, TEXT("contract"), 1);
 		P.InjuredMatchdays = (int32)R.Int(Obj, TEXT("inj"), 0);
+		P.SuspendedMatchdays = (int32)R.Int(Obj, TEXT("susp"), 0);
+		P.YellowCards = (int32)R.Int(Obj, TEXT("yel"), 0);
+		P.SeasonsAtClub = (int32)R.Int(Obj, TEXT("seasons"), 0);
+		P.Archetype = (uint8)FMath::Clamp((int32)R.Int(Obj, TEXT("arch"), 0), 0, 4);
 		return P;
+	}
+
+	FFM13Sponsor ReadSponsor(const FReader& R, int32 N)
+	{
+		FFM13Sponsor S;
+		S.Name = R.Str(N, TEXT("name"), TEXT("Kein Hauptsponsor")); S.Base = (int32)R.Int(N, TEXT("base"), 500); S.WinBonus = (int32)R.Int(N, TEXT("win"), 200);
+		S.PromotionBonus = (int32)R.Int(N, TEXT("promo"), 0); S.SignOn = (int32)R.Int(N, TEXT("signOn"), 0); S.MatchdaysLeft = (int32)R.Int(N, TEXT("left"), 0);
+		S.Tier = R.Str(N, TEXT("tier"), TEXT(""));
+		return S;
 	}
 
 	// Pokal: Regeln (Runden, Spieltage, Prämien) kommen aus dem Code, gespeichert ist nur der Stand
@@ -299,6 +361,41 @@ namespace FM13Save
 		W.NextPlayerId = (int32)R.Int(Root, TEXT("nextPlayerId"), 1);
 		W.Rng.Initialize((int32)R.Int(Root, TEXT("rngSeed"), 1));
 		W.bDfbViaLandespokal = R.Bool(Root, TEXT("dfbViaLandespokal"), false);
+		W.Formation = R.Str(Root, TEXT("formation"), TEXT("4-4-2"));
+		W.TacticStyle = R.Str(Root, TEXT("tacticStyle"), TEXT("ausgeglichen"));
+		for (int32 N : R.Items(Root, TEXT("recentStyles"))) W.RecentStyles.Add(P.Nodes[N].Text);
+		W.OppPlanArchetype = (TCHAR)R.Int(Root, TEXT("oppPlan"), 0);
+		W.bOppPlanReacted = R.Bool(Root, TEXT("oppPlanReacted"), false);
+		W.WeatherIndex = FMath::Clamp((int32)R.Int(Root, TEXT("weather"), 0), 0, 5);
+		const int32 Sp = R.Find(Root, TEXT("sponsor"));
+		if (Sp >= 0) W.Sponsor = ReadSponsor(R, Sp);
+		else { W.Sponsor.Name = TEXT("Kein Hauptsponsor"); W.Sponsor.Base = 500; W.Sponsor.WinBonus = 200; }
+		for (int32 N : R.Items(Root, TEXT("sponsorOffers"))) W.SponsorOffers.Add(ReadSponsor(R, N));
+		for (int32 N : R.Items(Root, TEXT("incomingOffers")))
+		{
+			FFM13IncomingOffer O;
+			O.PlayerId = (int32)R.Int(N, TEXT("id"), 0); O.bYouth = R.Bool(N, TEXT("youth"), false); O.PlayerName = R.Str(N, TEXT("name"), TEXT(""));
+			O.Club = R.Str(N, TEXT("club"), TEXT("")); O.Price = R.Int(N, TEXT("price"), 0); O.ExpiresMatchday = (int32)R.Int(N, TEXT("until"), 0);
+			W.IncomingOffers.Add(O);
+		}
+		const int32 Rk = R.Find(Root, TEXT("records"));
+		W.Records.BiggestWinFor = (int32)R.Int(Rk, TEXT("winFor"), 0); W.Records.BiggestWinAgainst = (int32)R.Int(Rk, TEXT("winAgainst"), 0);
+		W.Records.BiggestWinOpponent = R.Str(Rk, TEXT("winOpp"), TEXT("")); W.Records.BiggestWinSeason = (int32)R.Int(Rk, TEXT("winSeason"), 0);
+		W.Records.UnbeatenStreak = (int32)R.Int(Rk, TEXT("unbeaten"), 0); W.Records.LongestUnbeatenStreak = (int32)R.Int(Rk, TEXT("longestUnbeaten"), 0);
+		W.Records.RecordAttendance = (int32)R.Int(Rk, TEXT("attendance"), 0); W.Records.RecordTransferFee = R.Int(Rk, TEXT("fee"), 0);
+		for (int32 N : R.Items(Root, TEXT("achievements")))
+		{
+			FFM13Achievement A;
+			A.Id = R.Str(N, TEXT("id"), TEXT("")); A.Season = (int32)R.Int(N, TEXT("season"), 0); A.Matchday = (int32)R.Int(N, TEXT("matchday"), 0);
+			if (!A.Id.IsEmpty()) W.Achievements.Add(A);
+		}
+		for (int32 N : R.Items(Root, TEXT("legends")))
+		{
+			FFM13Legend L;
+			L.Name = R.Str(N, TEXT("name"), TEXT("")); L.Position = R.Str(N, TEXT("pos"), TEXT("")); L.Seasons = (int32)R.Int(N, TEXT("seasons"), 0);
+			L.Goals = (int32)R.Int(N, TEXT("goals"), 0); L.BestStrength = (int32)R.Int(N, TEXT("best"), 0); L.RetiredSeason = (int32)R.Int(N, TEXT("retired"), 0);
+			W.Legends.Add(L);
+		}
 		W.DfbPokal = FM13CupRules::MakeDfbPokal();
 		W.Landespokal = FM13CupRules::MakeLandespokal();
 		// Ältere Stände ohne Pokal: Wettbewerbe dieser Saison gelten als beendet (ab der nächsten Saison normal)

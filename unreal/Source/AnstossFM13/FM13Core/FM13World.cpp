@@ -2,6 +2,8 @@
 #include "FM13Economy.h"
 #include "FM13Match.h"
 #include "FM13Names.h"
+#include "FM13Tactics.h"
+#include "FM13Development.h"
 
 namespace
 {
@@ -9,15 +11,17 @@ namespace
 	const int64 StartMoney[FM13::NumLeagues] = { 30000000, 6000000, 1500000, 600000, 250000, 150000 };
 	const int32 StartCapacity[FM13::NumLeagues] = { 60000, 30000, 15000, 8000, 5000, 4000 };
 
-	// Formation 4-4-2: so viele Plätze je Position (TW, ABW, MIT, ST)
-	const int32 Slots[4] = { 1, 4, 4, 2 };
+	// Sponsor-Faktor je Liga (SPONSOR_LEAGUE_FACTOR in js/sponsors.js)
+	const float SponsorLeagueFactor[FM13::NumLeagues] = { 74.f, 20.f, 6.5f, 3.2f, 1.0f, 0.75f };
 
 	// Beste Elf: je Position die Stärksten; fehlt ein Spieler, rückt der beste Rest mit -10 auf die Position.
 	// Gibt Indizes in Squad zurück, OutStrength ist der Schnitt der Elf.
-	TArray<int32> BestEleven(const TArray<FFM13Player>& Squad, int32& OutStrength)
+	// Beste Elf in der gewählten Formation: je Position die Stärksten (Verletzte und Gesperrte fehlen)
+	TArray<int32> BestEleven(const TArray<FFM13Player>& Squad, const FString& Formation, int32& OutStrength)
 	{
+		const int32* Slots = FM13Tactics::Formation(Formation).Slots;
 		TArray<int32> Idx;
-		for (int32 i = 0; i < Squad.Num(); ++i) if (Squad[i].InjuredMatchdays <= 0) Idx.Add(i);
+		for (int32 i = 0; i < Squad.Num(); ++i) if (Squad[i].IsAvailable()) Idx.Add(i);
 		Idx.Sort([&Squad](int32 A, int32 B) { return Squad[A].Strength > Squad[B].Strength; });
 
 		TArray<int32> Elf;
@@ -77,9 +81,18 @@ void FFM13World::NewGame(const FString& InClubName, int32 Seed, int32 StartLevel
 		for (int32 n = 0; n < Anzahl[Pos]; ++n)
 			Squad.Add(CreatePlayer((EFM13Position)Pos, Basis - 3, Basis + 4, 18, 32));
 
+	// Startsponsor wie im Browserspiel (Stadtwerke & Regionalbank), auf die Liga hochgerechnet
+	const float Faktor = SponsorLeagueFactor[LeagueLevel] / SponsorLeagueFactor[FM13::NumLeagues - 1];
+	Sponsor.Name = TEXT("Stadtwerke & Regionalbank");
+	Sponsor.Base = (int32)(FMath::RoundToInt(3000.f * Faktor / 100.f) * 100);
+	Sponsor.WinBonus = (int32)(FMath::RoundToInt(1500.f * Faktor / 100.f) * 100);
+	Sponsor.PromotionBonus = (int32)(FMath::RoundToInt(20000.f * Faktor / 500.f) * 500);
+	Sponsor.MatchdaysLeft = FM13::MatchdaysPerSeason;
+	Sponsor.Tier = TEXT("mittel");
 	InitCups();
 	PlanSeason();
 	RefreshMarket();
+	PrepareOppPlan();
 	AddMessage(TEXT("Willkommen"), FString::Printf(TEXT("Der Vorstand begruesst dich als neuen Trainer von %s in der %s."), *ClubName, FM13::LeagueName(LeagueLevel)));
 }
 
@@ -96,6 +109,7 @@ FFM13Player FFM13World::CreatePlayer(EFM13Position Pos, int32 MinStr, int32 MaxS
 	P.MarketValue = FM13Economy::MarketValue(P.Strength, &Rng);
 	P.Wage = FM13Economy::Wage(P.MarketValue, P.Strength);
 	P.ContractYears = Rng.RandRange(1, 3);
+	P.Archetype = FM13Dev::ArchetypeFor(P.Id);
 	return P;
 }
 
@@ -135,6 +149,7 @@ bool FFM13World::PlayMatchday()
 	if (bSacked || IsSeasonFinished() || Leagues.Num() != FM13::NumLeagues) return false;
 	LastReport = FFM13OwnMatchReport();
 	LastCupReport = FFM13OwnMatchReport();
+	WeatherIndex = FM13Match::RollWeather(Rng);
 
 	if (DfbPokal.NextMatchday() == Matchday) PlayCupRound(DfbPokal, true);
 	if (Landespokal.NextMatchday() == Matchday) PlayCupRound(Landespokal, false);
@@ -173,10 +188,17 @@ bool FFM13World::PlayMatchday()
 
 	TrainPlayers();
 	// Verletzte erholen sich: wer heute verletzt wurde, fällt ab dem nächsten Spieltag aus
-	for (FFM13Player& P : Squad) if (P.InjuredMatchdays > 0) P.InjuredMatchdays--;
+	for (FFM13Player& P : Squad)
+	{
+		if (P.InjuredMatchdays > 0) P.InjuredMatchdays--;
+		if (P.SuspendedMatchdays > 0) P.SuspendedMatchdays--;
+	}
+	TickIncomingOffers();
 	if (Matchday % 4 == 0) RefreshMarket();
 	++Matchday;
 	CheckJobSecurity();
+	CheckAchievements(false, OwnRank(), EFM13SeasonOutcome::Stayed);
+	PrepareOppPlan();
 	return true;
 }
 
@@ -184,13 +206,17 @@ void FFM13World::PlayOwnFixture(FFM13League& L, FFM13Fixture& F)
 {
 	const bool bHome = L.Clubs[F.Home].bOwn;
 	const FFM13Club& Opp = bHome ? L.Clubs[F.Away] : L.Clubs[F.Home];
-	const int32 Own = OwnStrength();
+	const int32 Elf = OwnStrength();
+	const int32 Own = OwnMatchStrength(OppPlanArchetype);
 	const int32 OppStr = Opp.Strength;
 	const FString OppName = Opp.Name;
+	const FM13Match::FWeather& Wetter = FM13Match::Weathers()[WeatherIndex];
 
-	const FM13Match::FExpectedGoals Xg = bHome
+	FM13Match::FExpectedGoals Xg = bHome
 		? FM13Match::ExpectedGoals(Own, OppStr, EFM13Playstyle::Ausgeglichen, Opp.Playstyle)
 		: FM13Match::ExpectedGoals(OppStr, Own, Opp.Playstyle, EFM13Playstyle::Ausgeglichen);
+	Xg.Home *= Wetter.GoalMult;
+	Xg.Away *= Wetter.GoalMult;
 	const int32 HG = FM13Match::Poisson(Rng, Xg.Home);
 	const int32 AG = FM13Match::Poisson(Rng, Xg.Away);
 	L.ApplyResult(F, HG, AG);
@@ -199,16 +225,22 @@ void FFM13World::PlayOwnFixture(FFM13League& L, FFM13Fixture& F)
 	const int32 OppGoals = bHome ? AG : HG;
 
 	int32 Dummy = 0;
-	for (int32 i : BestEleven(Squad, Dummy)) Squad[i].Appearances++;
+	for (int32 i : BestEleven(Squad, Formation, Dummy)) Squad[i].Appearances++;
 	PickScorers(OwnGoals, LastReport.Scorers);
 
-	const int32 Shift = FM13Match::BoardShift(FM13Match::Expectation(Own, OppStr), OwnGoals, OppGoals);
+	// Vorstand: Erwartung aus der Elf ohne Taktik (wie getOwnMatchExpectation)
+	const int32 Shift = FM13Match::BoardShift(FM13Match::Expectation(Elf, OppStr), OwnGoals, OppGoals);
 	BoardSat = FMath::Clamp(BoardSat + Shift, 10, 100);
 	if (OwnGoals > OppGoals) Fans = FMath::Min(100, Fans + 1);
 	else if (OwnGoals < OppGoals) Fans = FMath::Max(0, Fans - 1);
 
-	const int32 Att = bHome ? FM13Economy::Attendance(StadiumCapacity, Fans, LeagueLevel, OwnRank(), TicketPrice) : 0;
+	const int32 Att = bHome ? FMath::Min(StadiumCapacity, FMath::RoundToInt((float)FM13Economy::Attendance(StadiumCapacity, Fans, LeagueLevel, OwnRank(), TicketPrice) * Wetter.AttendanceMult)) : 0;
 	ApplyMatchdayFinances(bHome, OwnGoals > OppGoals, Att);
+	TickSponsor();
+
+	RecentStyles.Add(TacticStyle);
+	if (RecentStyles.Num() > 6) RecentStyles.RemoveAt(0);
+	UpdateRecords(OwnGoals, OppGoals, OppName, Att);
 
 	LastReport.Competition = TEXT("Liga");
 	LastReport.OwnGoals = OwnGoals;
@@ -217,18 +249,24 @@ void FFM13World::PlayOwnFixture(FFM13League& L, FFM13Fixture& F)
 	LastReport.OppStrength = OppStr;
 	LastReport.Attendance = Att;
 	LastReport.BoardShift = Shift;
-	FinishOwnReport(LastReport, OppName, bHome);
+	LastReport.Weather = Wetter.Name;
+	LastReport.Referee = RefereeName();
+	LastReport.OppArchetype = FM13Tactics::ArchetypeLabel(OppPlanArchetype);
+	LastReport.TacticBonus = FM13Tactics::MatchupBonus(TacticStyle, OppPlanArchetype);
+	TArray<FString> Gelb, Rot;
+	RollCards(LastReport, Gelb, Rot);
+	FinishOwnReport(LastReport, OppName, bHome, Gelb, Rot);
 	RollInjuries(LastReport);
 }
 
-void FFM13World::FinishOwnReport(FFM13OwnMatchReport& Report, const FString& OppName, bool bHome)
+void FFM13World::FinishOwnReport(FFM13OwnMatchReport& Report, const FString& OppName, bool bHome, const TArray<FString>& Yellow, const TArray<FString>& Red)
 {
 	Report.bPlayed = true;
 	Report.bHome = bHome;
 	Report.Opponent = OppName;
 	TArray<FString> Elf;
 	for (int32 Id : StartingEleven()) if (const FFM13Player* P = FindPlayer(Id)) Elf.Add(P->Name);
-	Report.Ticker = FM13Match::BuildTicker(Rng, ClubName, OppName, bHome, Report.Scorers, Report.OppGoals, Elf);
+	Report.Ticker = FM13Match::BuildTicker(Rng, ClubName, OppName, bHome, Report.Scorers, Report.OppGoals, Elf, Yellow, Red, Report.Weather, Report.Referee);
 	if (Report.bPenalties)
 		Report.Ticker.Add(Report.bAdvanced ? TEXT("Elfmeterschiessen gewonnen!") : TEXT("Im Elfmeterschiessen ausgeschieden."));
 }
@@ -240,7 +278,8 @@ void FFM13World::RollInjuries(FFM13OwnMatchReport& Report)
 	{
 		FFM13Player* P = FindPlayer(Id);
 		if (!P) continue;
-		const float Chance = 0.02f + (float)FMath::Max(0, P->Age - 30) * 0.004f;
+		const float Chance = (0.02f + (float)FMath::Max(0, P->Age - 30) * 0.004f)
+			* FM13Match::Weathers()[WeatherIndex].InjuryMult * FM13Tactics::StyleFitnessMultiplier(TacticStyle);
 		if (Rng.FRand() >= Chance) continue;
 		const float Schwere = Rng.FRand();
 		const int32 Dauer = Schwere < 0.6f ? Rng.RandRange(1, 2) : (Schwere < 0.9f ? Rng.RandRange(3, 5) : Rng.RandRange(6, 10));
@@ -259,8 +298,8 @@ void FFM13World::ApplyMatchdayFinances(bool bHome, bool bWin, int32 Att)
 		if (Betrag > 0) LastReport.Income += Betrag; else LastReport.Expenses -= Betrag;
 	};
 	if (bHome) Buche(TEXT("Ticketeinnahmen"), (int64)Att * TicketPrice);
-	Buche(TEXT("Sponsor Grundbetrag"), FM13Economy::SponsorBase(LeagueLevel));
-	if (bWin) Buche(TEXT("Sponsor Siegpraemie"), FM13Economy::SponsorWinBonus(LeagueLevel));
+	Buche(TEXT("Sponsor Grundbetrag"), Sponsor.Base);
+	if (bWin) Buche(TEXT("Sponsor Siegpraemie"), Sponsor.WinBonus);
 	Buche(TEXT("Gehaelter"), -WagesPerMatchday());
 	Buche(TEXT("Stadion-Unterhalt"), -(int64)(StadiumCapacity / 8));
 	Buche(TEXT("Jugendakademie"), -(int64)YouthAcademyLevel * 250);
@@ -307,7 +346,7 @@ void FFM13World::CheckSeasonEndSacking(int32 Rank)
 void FFM13World::PickScorers(int32 Goals, TArray<FString>& OutNames)
 {
 	int32 Dummy = 0;
-	const TArray<int32> Elf = BestEleven(Squad, Dummy);
+	const TArray<int32> Elf = BestEleven(Squad, Formation, Dummy);
 	static const int32 Gewicht[4] = { 0, 1, 3, 5 }; // TW, ABW, MIT, ST
 	int32 Summe = 0;
 	for (int32 i : Elf) Summe += Gewicht[(int32)Squad[i].Pos];
@@ -351,7 +390,17 @@ FFM13SeasonSummary FFM13World::ConcludeSeason()
 	EFM13SeasonOutcome Outcome = EFM13SeasonOutcome::Stayed;
 	if (Rank <= 2 && LeagueLevel > 0) Outcome = EFM13SeasonOutcome::Promoted;
 	else if (Rank >= FM13::TeamsPerLeague - 1 && LeagueLevel < FM13::NumLeagues - 1) Outcome = EFM13SeasonOutcome::Relegated;
+	// Relegation (js/relegation.js): Platz 16 gegen den Dritten darunter, Platz 3 gegen den 16. darüber
+	LastRelegation = PlayRelegation(Rank);
+	S.Relegation = LastRelegation;
+	if (LastRelegation.bPlayed)
+	{
+		if (LastRelegation.bForPromotion && LastRelegation.bWon) Outcome = EFM13SeasonOutcome::Promoted;
+		if (!LastRelegation.bForPromotion && !LastRelegation.bWon) Outcome = EFM13SeasonOutcome::Relegated;
+		if (LastRelegation.bWon) Unlock(TEXT("relegation"), &S.NewAchievements);
+	}
 	S.Outcome = Outcome;
+	if (Outcome == EFM13SeasonOutcome::Promoted && Sponsor.PromotionBonus > 0) Book(TEXT("Sponsor Aufstiegspraemie"), Sponsor.PromotionBonus);
 
 	FFM13SeasonRecord Rec;
 	Rec.Season = Season; Rec.Level = LeagueLevel; Rec.Rank = Rank; Rec.Points = S.Points; Rec.Outcome = Outcome;
@@ -373,7 +422,9 @@ FFM13SeasonSummary FFM13World::ConcludeSeason()
 	if (Rank == 1) { BoardSat = FMath::Min(100, BoardSat + 5); Fans = FMath::Min(100, Fans + 5); }
 	LowBoardSatStreak = 0;
 
+	CheckAchievements(true, Rank, Outcome, &S.NewAchievements);
 	AdvanceLeagues(Rank, Outcome);
+	if (Outcome == EFM13SeasonOutcome::Promoted && LeagueLevel == 0) Unlock(TEXT("bundesliga"), &S.NewAchievements);
 	DevelopPlayers(S);
 	YouthIntake(S);
 
@@ -387,6 +438,10 @@ FFM13SeasonSummary FFM13World::ConcludeSeason()
 	InitCups();
 	PlanSeason();
 	RefreshMarket();
+	IncomingOffers.Reset();
+	RecentStyles.Reset();
+	if (Sponsor.MatchdaysLeft <= 0 && !SponsorOffers.Num()) MakeSponsorOffers();
+	PrepareOppPlan();
 
 	const TCHAR* Text = Outcome == EFM13SeasonOutcome::Promoted ? TEXT("Aufstieg") : (Outcome == EFM13SeasonOutcome::Relegated ? TEXT("Abstieg") : TEXT("Klassenerhalt"));
 	AddMessage(FString::Printf(TEXT("Saison %d beendet: Platz %d"), S.Season, Rank),
@@ -463,15 +518,14 @@ void FFM13World::DevelopPlayers(FFM13SeasonSummary& S)
 {
 	for (FFM13Player& P : Squad)
 	{
+		// Entwicklungstyp (js/player-development.js): Änderung nach dem Abstand zum Höhepunkt
+		int32 Min = 0, Max = 0;
+		FM13Dev::DevelopmentRange(P.Age, P.Archetype, Min, Max);
 		P.Age++;
-		int32 Delta;
-		if (P.Age <= 23) Delta = P.Strength < P.Potential ? Rng.RandRange(1, 4) : Rng.RandRange(-1, 1);
-		else if (P.Age <= 29) Delta = Rng.RandRange(-1, 2);
-		else if (P.Age <= 32) Delta = Rng.RandRange(-3, 0);
-		else Delta = Rng.RandRange(-5, -1);
-		int32 Neu = P.Strength + Delta;
-		if (P.Age <= 23) Neu = FMath::Min(Neu, FMath::Max(P.Potential, P.Strength));
-		P.Strength = FMath::Clamp(Neu, 1, 99);
+		P.Strength = FMath::Clamp(P.Strength + Rng.RandRange(Min, Max), 20, 99);
+		P.Potential = FMath::Max(P.Potential, P.Strength);
+		P.SeasonsAtClub++;
+		P.YellowCards = 0;
 		P.MarketValue = FM13Economy::MarketValue(P.Strength, &Rng);
 		P.GoalsCareer += P.GoalsSeason;
 		P.GoalsSeason = 0;
@@ -485,7 +539,22 @@ void FFM13World::DevelopPlayers(FFM13SeasonSummary& S)
 	for (const FFM13Player& P : Squad)
 	{
 		const bool bRuhestand = P.Age >= 37 || (P.Age >= 35 && Rng.RandRange(0, 1) == 1);
-		if (bRuhestand) { S.Left.Add(P.Name + TEXT(" (Karriereende)")); continue; }
+		if (bRuhestand)
+		{
+			S.Left.Add(P.Name + TEXT(" (Karriereende)"));
+			// Legende (js/player-retirement.js): lange im Verein oder viele Tore
+			if (P.SeasonsAtClub >= 5 || P.GoalsCareer >= 50)
+			{
+				FFM13Legend L;
+				L.Name = P.Name; L.Position = FM13PositionName(P.Pos); L.Seasons = P.SeasonsAtClub;
+				L.Goals = P.GoalsCareer; L.BestStrength = P.Strength; L.RetiredSeason = Season;
+				Legends.Add(L);
+				S.NewLegends.Add(P.Name);
+				AddMessage(TEXT("Neue Vereinslegende"), FString::Printf(TEXT("%s beendet die Karriere nach %d Saisons und %d Toren."), *P.Name, P.SeasonsAtClub, P.GoalsCareer));
+				Unlock(TEXT("legende"), &S.NewAchievements);
+			}
+			continue;
+		}
 		if (P.ContractYears <= 0) { S.Left.Add(P.Name + TEXT(" (Vertragsende)")); continue; }
 		Bleiben.Add(P);
 	}
@@ -537,7 +606,7 @@ void FFM13World::YouthIntake(FFM13SeasonSummary& S)
 int32 FFM13World::OwnStrength() const
 {
 	int32 Staerke = 0;
-	BestEleven(Squad, Staerke);
+	BestEleven(Squad, Formation, Staerke);
 	return Staerke;
 }
 
@@ -545,7 +614,7 @@ TArray<int32> FFM13World::StartingEleven() const
 {
 	int32 Dummy = 0;
 	TArray<int32> Ids;
-	for (int32 i : BestEleven(Squad, Dummy)) Ids.Add(Squad[i].Id);
+	for (int32 i : BestEleven(Squad, Formation, Dummy)) Ids.Add(Squad[i].Id);
 	return Ids;
 }
 
@@ -664,7 +733,8 @@ void FFM13World::PlayCupRound(FFM13Cup& Cup, bool bDfb)
 			Cup.bOwnAlive = false;
 			AddMessage(Cup.Name, FString::Printf(TEXT("Aus in der Runde %s gegen %s."), *Runde, *(bHome ? M.Away : M.Home)));
 		}
-		FinishOwnReport(R, bHome ? M.Away : M.Home, bHome);
+		R.Weather = FM13Match::Weathers()[WeatherIndex].Name;
+		FinishOwnReport(R, bHome ? M.Away : M.Home, bHome, TArray<FString>(), TArray<FString>());
 		RollInjuries(R);
 	}
 	if (Lostopf.Num() % 2 == 1) Weiter.Add(Lostopf.Last()); // Freilos
@@ -677,6 +747,7 @@ void FFM13World::PlayCupRound(FFM13Cup& Cup, bool bDfb)
 		{
 			AddMessage(FString::Printf(TEXT("%s gewonnen!"), *Cup.Name), bDfb ? TEXT("Der Verein holt den DFB-Pokal!") : TEXT("Landespokalsieger: naechste Saison spielt der Verein im DFB-Pokal."));
 			if (!bDfb) bDfbViaLandespokal = true;
+			Unlock(bDfb ? TEXT("pokalsieger") : TEXT("landespokal"), nullptr);
 			BoardSat = FMath::Min(100, BoardSat + 10);
 			Fans = FMath::Min(100, Fans + 8);
 		}
@@ -752,6 +823,7 @@ bool FFM13World::SellPlayer(int32 PlayerId, FString& OutReason)
 	const int64 Erloes = RoundTo((int64)((double)P.MarketValue * 0.9), 5000);
 	Book(FString(TEXT("Verkauf: ")) + P.Name, Erloes);
 	Squad.RemoveAt(Idx);
+	IncomingOffers.RemoveAll([PlayerId](const FFM13IncomingOffer& O) { return !O.bYouth && O.PlayerId == PlayerId; });
 	return true;
 }
 
@@ -784,6 +856,7 @@ bool FFM13World::PromoteYouth(int32 YouthIndex, FString& OutReason)
 	if (!FitsWageBudget(P.Wage)) { OutReason = TEXT("Das Gehalt sprengt das Gehaltsbudget des Vorstands."); return false; }
 	P.ContractYears = 3;
 	Squad.Add(P);
+	IncomingOffers.RemoveAll([&P](const FFM13IncomingOffer& O) { return O.bYouth && O.PlayerId == P.Id; });
 	YouthTalents.RemoveAt(YouthIndex);
 	AddMessage(TEXT("Aus der Jugend"), P.Name + TEXT(" rueckt in den Profikader auf."));
 	return true;
@@ -792,6 +865,8 @@ bool FFM13World::PromoteYouth(int32 YouthIndex, FString& OutReason)
 bool FFM13World::ReleaseYouth(int32 YouthIndex, FString& OutReason)
 {
 	if (!YouthTalents.IsValidIndex(YouthIndex)) { OutReason = TEXT("Dieses Talent gibt es nicht."); return false; }
+	const int32 Id = YouthTalents[YouthIndex].Id;
+	IncomingOffers.RemoveAll([Id](const FFM13IncomingOffer& O) { return O.bYouth && O.PlayerId == Id; });
 	YouthTalents.RemoveAt(YouthIndex);
 	return true;
 }
@@ -845,7 +920,7 @@ void FFM13World::PlanSeason()
 	// Gehaltsbudget (vereinfacht getWageBudgetFloor/applyCashSurplusBudgets in js/season-end.js):
 	// 70 % der erwarteten Einnahmen pro Spieltag, nie unter den laufenden Gehältern
 	const int32 Zuschauer = FM13Economy::Attendance(StadiumCapacity, Fans, LeagueLevel, 9, TicketPrice);
-	const int64 Einnahmen = FM13Economy::SponsorBase(LeagueLevel) + FM13Economy::TvMoney(LeagueLevel, 9) / FM13::MatchdaysPerSeason
+	const int64 Einnahmen = (int64)FMath::Max(Sponsor.Base, 500) + FM13Economy::TvMoney(LeagueLevel, 9) / FM13::MatchdaysPerSeason
 		+ (int64)Zuschauer * TicketPrice / 2;
 	const int64 Reserve = FMath::Max<int64>(0, Money) / (FM13::MatchdaysPerSeason * 3); // ein Drittel des Polsters verteilt auf drei Saisons
 	WageBudget = FMath::Max<int64>(WagesPerMatchday(), Einnahmen * 7 / 10 + Reserve);
@@ -880,6 +955,363 @@ bool FFM13World::UpgradeTraining(FString& OutReason)
 	Book(TEXT("Ausbau Trainingsplatz"), -Kosten);
 	TrainingLevel++;
 	return true;
+}
+
+// ---------- Taktik ----------
+
+bool FFM13World::SetFormation(const FString& Name, FString& OutReason)
+{
+	for (const FM13Tactics::FFormation& F : FM13Tactics::Formations())
+		if (Name == F.Name) { Formation = Name; return true; }
+	OutReason = TEXT("Diese Formation gibt es nicht.");
+	return false;
+}
+
+bool FFM13World::SetTacticStyle(const FString& Key, FString& OutReason)
+{
+	for (const FM13Tactics::FStyle& St : FM13Tactics::Styles())
+		if (Key == St.Key) { TacticStyle = Key; return true; }
+	OutReason = TEXT("Diesen Spielstil gibt es nicht.");
+	return false;
+}
+
+int32 FFM13World::OwnMatchStrength(TCHAR OppArchetype) const
+{
+	// calcTeamStrength + getTacticStyleBonus + Formationsboni + Taktik-Duell (getOwnLeagueMatchStrength)
+	const float Formationen = FM13Tactics::FormationOffBonus(Formation) + FM13Tactics::FormationDefBonus(Formation) * 0.6f;
+	return OwnStrength() + FM13Tactics::StyleBonus(TacticStyle) + FMath::RoundToInt(Formationen) + FM13Tactics::MatchupBonus(TacticStyle, OppArchetype);
+}
+
+const FFM13Club* FFM13World::NextLeagueOpponent(bool* OutHome) const
+{
+	if (!Leagues.IsValidIndex(LeagueLevel)) return nullptr;
+	const FFM13League& L = Leagues[LeagueLevel];
+	for (const FFM13Fixture& F : L.Fixtures)
+	{
+		if (F.Matchday != Matchday || F.bPlayed) continue;
+		if (L.Clubs[F.Home].bOwn) { if (OutHome) *OutHome = true; return &L.Clubs[F.Away]; }
+		if (L.Clubs[F.Away].bOwn) { if (OutHome) *OutHome = false; return &L.Clubs[F.Home]; }
+	}
+	return nullptr;
+}
+
+FString FFM13World::RefereeName() const
+{
+	return FM13Match::RefereeFor(Season, Matchday, LeagueLevel, ClubName.Len()).Name;
+}
+
+void FFM13World::PrepareOppPlan()
+{
+	// getOppTacticPlan(): wer berechenbar ist (3 von 5 Spielen gleicher Ansatz), gegen den stellt sich
+	// der Gegner mit 35 % ein, Teams aus der oberen Tabellenhälfte mit 60 %
+	OppPlanArchetype = 0;
+	bOppPlanReacted = false;
+	const FFM13Club* Opp = NextLeagueOpponent();
+	if (!Opp) return;
+	const TCHAR Basis = FM13Tactics::AiArchetype(Opp->Playstyle);
+	OppPlanArchetype = Basis;
+	const TCHAR Lesbar = FM13Tactics::PredictableArchetype(RecentStyles);
+	if (!Lesbar) return;
+	const FFM13League& L = OwnLeague();
+	const int32 Platz = L.RankOf(L.FindClub(Opp->Name));
+	const float Chance = 0.35f + (Platz > 0 && Platz <= FM13::TeamsPerLeague / 2 ? 0.25f : 0.f);
+	const TCHAR Konter = FM13Tactics::CounterTo(Lesbar);
+	if (Konter && Konter != Basis && Rng.FRand() < Chance)
+	{
+		OppPlanArchetype = Konter;
+		bOppPlanReacted = true;
+	}
+}
+
+void FFM13World::RollCards(FFM13OwnMatchReport& Report, TArray<FString>& OutYellow, TArray<FString>& OutRed)
+{
+	// Schiedsrichter-Strenge und Wetter wirken auf die Karten (js/referees.js, js/weather.js)
+	const float Mult = FM13Match::RefereeFor(Season, Matchday, LeagueLevel, ClubName.Len()).CardMult * FM13Match::Weathers()[WeatherIndex].CardMult;
+	const TArray<int32> Elf = StartingEleven();
+	if (!Elf.Num()) return;
+	const int32 Gelbe = FMath::Min(5, FM13Match::Poisson(Rng, 1.6f * Mult));
+	for (int32 k = 0; k < Gelbe; ++k)
+	{
+		FFM13Player* P = FindPlayer(Elf[Rng.RandRange(0, Elf.Num() - 1)]);
+		if (!P) continue;
+		P->YellowCards++;
+		OutYellow.Add(P->Name);
+		if (P->YellowCards % 5 == 0)
+		{
+			P->SuspendedMatchdays = FMath::Max(P->SuspendedMatchdays, 2); // +1: der Abbau am Ende dieses Spieltags
+			Report.Cards.Add(FString::Printf(TEXT("%s: fuenfte Gelbe Karte, 1 Spiel gesperrt"), *P->Name));
+		}
+	}
+	if (Rng.FRand() < 0.04f * Mult)
+	{
+		FFM13Player* P = FindPlayer(Elf[Rng.RandRange(0, Elf.Num() - 1)]);
+		if (P)
+		{
+			const int32 Spiele = Rng.RandRange(1, 3);
+			P->SuspendedMatchdays = FMath::Max(P->SuspendedMatchdays, Spiele + 1);
+			OutRed.Add(P->Name);
+			Report.Cards.Add(FString::Printf(TEXT("%s: Rote Karte, %d Spiele gesperrt"), *P->Name, Spiele));
+			AddMessage(TEXT("Rote Karte"), FString::Printf(TEXT("%s ist fuer %d Spiele gesperrt."), *P->Name, Spiele));
+		}
+	}
+}
+
+// ---------- Sponsor ----------
+
+void FFM13World::MakeSponsorOffers()
+{
+	// checkIncomingSponsorOffers(): Grundbetrag und Siegprämie nach Liga-Faktor, Laufzeit als Stufe
+	struct FStufe { const TCHAR* Name; int32 Spieltage; float Pay; float SignOn; };
+	const FStufe Stufen[3] = { { TEXT("kurz"), 17, 1.0f, 0.f }, { TEXT("mittel"), 34, 1.1f, 0.5f }, { TEXT("lang"), 68, 1.2f, 1.f } };
+	static const TCHAR* Vorne[] = { TEXT("Nord"), TEXT("Rhein"), TEXT("Metro"), TEXT("City"), TEXT("Regio"), TEXT("Vital"), TEXT("Elektro"), TEXT("Bau"), TEXT("Agrar"), TEXT("Media") };
+	static const TCHAR* Hinten[] = { TEXT("Energie"), TEXT("Bank"), TEXT("Bau AG"), TEXT("Logistik"), TEXT("Versicherung"), TEXT("Technik"), TEXT("Finanz"), TEXT("Handel"), TEXT("Werke"), TEXT("Digital") };
+	const float Lf = SponsorLeagueFactor[LeagueLevel];
+	SponsorOffers.Reset();
+	for (const FStufe& St : Stufen)
+	{
+		FFM13Sponsor O;
+		O.Name = FString(Vorne[Rng.RandRange(0, 9)]) + Hinten[Rng.RandRange(0, 9)];
+		O.Tier = St.Name;
+		O.MatchdaysLeft = St.Spieltage;
+		O.Base = FMath::RoundToInt((2000.f + Rng.FRand() * 2500.f) * Lf * St.Pay / 100.f) * 100;
+		O.WinBonus = FMath::RoundToInt((800.f + Rng.FRand() * 1500.f) * Lf * St.Pay / 100.f) * 100;
+		O.PromotionBonus = FMath::RoundToInt((12000.f + Rng.FRand() * 18000.f) * Lf / 500.f) * 500;
+		O.SignOn = St.SignOn > 0.f ? FMath::RoundToInt((float)O.Base * 8.f * St.SignOn / 100.f) * 100 : 0;
+		SponsorOffers.Add(O);
+	}
+	AddMessage(TEXT("Sponsorenangebote"), TEXT("Drei Unternehmen wollen Hauptsponsor werden. Die Angebote stehen unter Verein."));
+}
+
+void FFM13World::TickSponsor()
+{
+	// Ohne Vertrag (auch nach einem Import) liegen immer Angebote bereit
+	if (Sponsor.MatchdaysLeft <= 0) { if (!SponsorOffers.Num()) MakeSponsorOffers(); return; }
+	Sponsor.MatchdaysLeft--;
+	if (Sponsor.MatchdaysLeft == 4 && !SponsorOffers.Num()) MakeSponsorOffers();
+	if (Sponsor.MatchdaysLeft == 0)
+	{
+		AddMessage(TEXT("Sponsorvertrag ausgelaufen"), FString::Printf(TEXT("Der Vertrag mit %s ist beendet. Bis zum naechsten Vertrag zahlt nur ein kleiner Ausruester."), *Sponsor.Name));
+		Sponsor.Name = TEXT("Kein Hauptsponsor");
+		Sponsor.Base = 500; Sponsor.WinBonus = 200; Sponsor.PromotionBonus = 0; Sponsor.SignOn = 0; Sponsor.Tier = TEXT("");
+		if (!SponsorOffers.Num()) MakeSponsorOffers();
+	}
+}
+
+bool FFM13World::AcceptSponsorOffer(int32 Index, FString& OutReason)
+{
+	if (!SponsorOffers.IsValidIndex(Index)) { OutReason = TEXT("Dieses Angebot gibt es nicht mehr."); return false; }
+	if (Sponsor.MatchdaysLeft > 4) { OutReason = FString::Printf(TEXT("Der Vertrag mit %s laeuft noch %d Spieltage."), *Sponsor.Name, Sponsor.MatchdaysLeft); return false; }
+	Sponsor = SponsorOffers[Index];
+	SponsorOffers.Reset();
+	if (Sponsor.SignOn > 0) Book(TEXT("Sponsor Handgeld"), Sponsor.SignOn);
+	AddMessage(TEXT("Neuer Hauptsponsor"), FString::Printf(TEXT("%s zahlt %d Euro pro Spieltag und %d Euro pro Sieg, %d Spieltage lang."), *Sponsor.Name, Sponsor.Base, Sponsor.WinBonus, Sponsor.MatchdaysLeft));
+	return true;
+}
+
+// ---------- Angebote für eigene Spieler ----------
+
+void FFM13World::TickIncomingOffers()
+{
+	IncomingOffers.RemoveAll([this](const FFM13IncomingOffer& O) { return O.ExpiresMatchday < Matchday; });
+	if (IncomingOffers.Num() >= 4) return;
+	auto KiVerein = [this]()
+	{
+		const int32 L = FMath::Clamp(LeagueLevel - Rng.RandRange(0, 1), 0, FM13::NumLeagues - 1);
+		TArray<FString> Namen;
+		for (const FFM13Club& C : Leagues[L].Clubs) if (!C.bOwn) Namen.Add(C.Name);
+		return Namen.Num() ? Namen[Rng.RandRange(0, Namen.Num() - 1)] : FString(TEXT("KI-Verein"));
+	};
+	auto SchonAngefragt = [this](int32 Id, bool bYouth) { return IncomingOffers.ContainsByPredicate([Id, bYouth](const FFM13IncomingOffer& O) { return O.PlayerId == Id && O.bYouth == bYouth; }); };
+
+	// Profis: gute Spieler wecken Interesse (transfermarket.js, vereinfacht)
+	if (Squad.Num() > FM13::MinSquadSize + 1 && Rng.FRand() < 0.10f)
+	{
+		const int32 Elf = OwnStrength();
+		TArray<int32> Kandidaten;
+		for (int32 i = 0; i < Squad.Num(); ++i) if (Squad[i].Strength >= Elf - 6 && !SchonAngefragt(Squad[i].Id, false)) Kandidaten.Add(i);
+		if (Kandidaten.Num())
+		{
+			const FFM13Player& P = Squad[Kandidaten[Rng.RandRange(0, Kandidaten.Num() - 1)]];
+			FFM13IncomingOffer O;
+			O.PlayerId = P.Id; O.PlayerName = P.Name; O.Club = KiVerein();
+			O.Price = FMath::Max<int64>(10000, FMath::RoundToInt64((double)P.MarketValue * (0.85 + Rng.FRand() * 0.55) / 5000.0) * 5000);
+			O.ExpiresMatchday = Matchday + 3;
+			IncomingOffers.Add(O);
+			AddMessage(TEXT("Angebot fuer einen Spieler"), FString::Printf(TEXT("%s bietet %lld Euro fuer %s. Das Angebot gilt 3 Spieltage."), *O.Club, (long long)O.Price, *O.PlayerName));
+		}
+	}
+	// Talente (js/youth-sales.js): KI-Vereine bieten für Akademie-Talente
+	if (YouthTalents.Num() && Rng.FRand() < 0.05f)
+	{
+		const FFM13Player& T = YouthTalents[Rng.RandRange(0, YouthTalents.Num() - 1)];
+		if (!SchonAngefragt(T.Id, true))
+		{
+			FFM13IncomingOffer O;
+			O.PlayerId = T.Id; O.bYouth = true; O.PlayerName = T.Name; O.Club = KiVerein();
+			const double Wert = (double)FM13Economy::MarketValue(FMath::Max(T.Strength, (T.Strength + T.Potential) / 2), nullptr);
+			O.Price = FMath::Max<int64>(25000, FMath::RoundToInt64(Wert * (1.0 + Rng.FRand() * 0.8) / 5000.0) * 5000);
+			O.ExpiresMatchday = Matchday + 3;
+			IncomingOffers.Add(O);
+			AddMessage(TEXT("Angebot fuer ein Talent"), FString::Printf(TEXT("%s bietet %lld Euro fuer das Talent %s."), *O.Club, (long long)O.Price, *O.PlayerName));
+		}
+	}
+}
+
+bool FFM13World::AcceptIncomingOffer(int32 Index, FString& OutReason)
+{
+	if (!IncomingOffers.IsValidIndex(Index)) { OutReason = TEXT("Dieses Angebot gibt es nicht mehr."); return false; }
+	const FFM13IncomingOffer O = IncomingOffers[Index];
+	if (O.bYouth)
+	{
+		const int32 i = YouthTalents.IndexOfByPredicate([&O](const FFM13Player& P) { return P.Id == O.PlayerId; });
+		if (i < 0) { OutReason = TEXT("Das Talent ist nicht mehr im Verein."); IncomingOffers.RemoveAt(Index); return false; }
+		YouthTalents.RemoveAt(i);
+		Book(FString::Printf(TEXT("Talentverkauf an %s: %s"), *O.Club, *O.PlayerName), O.Price);
+	}
+	else
+	{
+		const int32 i = Squad.IndexOfByPredicate([&O](const FFM13Player& P) { return P.Id == O.PlayerId; });
+		if (i < 0) { OutReason = TEXT("Der Spieler ist nicht mehr im Verein."); IncomingOffers.RemoveAt(Index); return false; }
+		if (Squad.Num() <= FM13::MinSquadSize) { OutReason = TEXT("Mindestens 16 Spieler muessen bleiben."); return false; }
+		Squad.RemoveAt(i);
+		Book(FString::Printf(TEXT("Verkauf an %s: %s"), *O.Club, *O.PlayerName), O.Price);
+	}
+	Records.RecordTransferFee = FMath::Max(Records.RecordTransferFee, O.Price);
+	IncomingOffers.RemoveAll([&O](const FFM13IncomingOffer& X) { return X.PlayerId == O.PlayerId && X.bYouth == O.bYouth; });
+	AddMessage(TEXT("Verkauf"), FString::Printf(TEXT("%s wechselt fuer %lld Euro zu %s."), *O.PlayerName, (long long)O.Price, *O.Club));
+	return true;
+}
+
+bool FFM13World::DeclineIncomingOffer(int32 Index, FString& OutReason)
+{
+	if (!IncomingOffers.IsValidIndex(Index)) { OutReason = TEXT("Dieses Angebot gibt es nicht mehr."); return false; }
+	IncomingOffers.RemoveAt(Index);
+	return true;
+}
+
+// ---------- Rekorde und Erfolge ----------
+
+void FFM13World::UpdateRecords(int32 OwnGoals, int32 OppGoals, const FString& Opp, int32 Attendance)
+{
+	Records.UnbeatenStreak = OwnGoals >= OppGoals ? Records.UnbeatenStreak + 1 : 0;
+	Records.LongestUnbeatenStreak = FMath::Max(Records.LongestUnbeatenStreak, Records.UnbeatenStreak);
+	const int32 Diff = OwnGoals - OppGoals;
+	const int32 Alt = Records.BiggestWinFor - Records.BiggestWinAgainst;
+	if (Diff > 0 && (Diff > Alt || (Diff == Alt && OwnGoals > Records.BiggestWinFor)))
+	{
+		Records.BiggestWinFor = OwnGoals; Records.BiggestWinAgainst = OppGoals;
+		Records.BiggestWinOpponent = Opp; Records.BiggestWinSeason = Season;
+	}
+	if (Attendance > Records.RecordAttendance)
+	{
+		if (Records.RecordAttendance > 0) AddMessage(TEXT("Zuschauerrekord"), FString::Printf(TEXT("%d Zuschauer, so viele wie nie."), Attendance));
+		Records.RecordAttendance = Attendance;
+	}
+}
+
+namespace
+{
+	struct FErfolg { const TCHAR* Id; const TCHAR* Label; };
+	const FErfolg Erfolge[] = {
+		{ TEXT("millionaer"), TEXT("Millionaer: Vereinskonto 1 Mio. Euro") },
+		{ TEXT("multimillionaer"), TEXT("Multimillionaer: Vereinskonto 10 Mio. Euro") },
+		{ TEXT("aufstieg"), TEXT("Aufsteiger: erster Aufstieg") },
+		{ TEXT("bundesliga"), TEXT("Ganz oben angekommen: Bundesliga") },
+		{ TEXT("meister"), TEXT("Meister: Platz 1 am Saisonende") },
+		{ TEXT("pokalsieger"), TEXT("Pokalheld: DFB-Pokal gewonnen") },
+		{ TEXT("landespokal"), TEXT("Landespokalsieger") },
+		{ TEXT("relegation"), TEXT("Nervenstark: Relegation gewonnen") },
+		{ TEXT("unbeaten-10"), TEXT("Unbezwingbar: 10 Spiele ohne Niederlage") },
+		{ TEXT("unbeaten-20"), TEXT("Wall aus Stahl: 20 Spiele ohne Niederlage") },
+		{ TEXT("talentschmiede"), TEXT("Talentschmiede: Jugendakademie Stufe 3") },
+		{ TEXT("grosses-stadion"), TEXT("Grosse Buehne: 25.000 Plaetze") },
+		{ TEXT("legende"), TEXT("Vereinslegende verabschiedet") }
+	};
+}
+
+FString FFM13World::AchievementLabel(const FString& Id)
+{
+	for (const FErfolg& E : Erfolge) if (Id == E.Id) return E.Label;
+	return Id;
+}
+
+int32 FFM13World::AchievementCount()
+{
+	return (int32)(sizeof(Erfolge) / sizeof(Erfolge[0]));
+}
+
+void FFM13World::Unlock(const FString& Id, TArray<FString>* OutNew)
+{
+	if (Achievements.ContainsByPredicate([&Id](const FFM13Achievement& A) { return A.Id == Id; })) return;
+	FFM13Achievement A;
+	A.Id = Id; A.Season = Season; A.Matchday = Matchday;
+	Achievements.Add(A);
+	AddMessage(TEXT("Erfolg freigeschaltet"), AchievementLabel(Id));
+	if (OutNew) OutNew->Add(AchievementLabel(Id));
+}
+
+void FFM13World::CheckAchievements(bool bSeasonEnd, int32 Rank, EFM13SeasonOutcome Outcome, TArray<FString>* OutNew)
+{
+	if (Money >= 1000000) Unlock(TEXT("millionaer"), OutNew);
+	if (Money >= 10000000) Unlock(TEXT("multimillionaer"), OutNew);
+	if (Records.LongestUnbeatenStreak >= 10) Unlock(TEXT("unbeaten-10"), OutNew);
+	if (Records.LongestUnbeatenStreak >= 20) Unlock(TEXT("unbeaten-20"), OutNew);
+	if (YouthAcademyLevel >= 3) Unlock(TEXT("talentschmiede"), OutNew);
+	if (StadiumCapacity >= 25000) Unlock(TEXT("grosses-stadion"), OutNew);
+	if (!bSeasonEnd) return;
+	if (Rank == 1) Unlock(TEXT("meister"), OutNew);
+	if (Outcome == EFM13SeasonOutcome::Promoted) Unlock(TEXT("aufstieg"), OutNew);
+}
+
+// ---------- Relegation ----------
+
+FFM13RelegationResult FFM13World::PlayRelegation(int32 Rank)
+{
+	FFM13RelegationResult R;
+	int32 Gegnerliga = -1;
+	if (Rank == 16 && LeagueLevel < FM13::NumLeagues - 1) { Gegnerliga = LeagueLevel + 1; R.bForPromotion = false; }
+	else if (Rank == 3 && LeagueLevel > 0) { Gegnerliga = LeagueLevel - 1; R.bForPromotion = true; }
+	if (Gegnerliga < 0) return R;
+	const FFM13League& L = Leagues[Gegnerliga];
+	TArray<int32> Tabelle;
+	for (int32 i : L.SortedIndices()) if (!L.Clubs[i].bOwn) Tabelle.Add(i);
+	if (Tabelle.Num() < 3) return R;
+	// Gegner: Dritter der Liga darunter bzw. Drittletzter (16.) der Liga darüber
+	const FFM13Club& Gegner = L.Clubs[R.bForPromotion ? Tabelle[Tabelle.Num() - 3] : Tabelle[2]];
+	R.bPlayed = true;
+	R.Opponent = Gegner.Name;
+	const int32 Eigen = OwnMatchStrength(0);
+	int32 Tore[2][2] = { { 0, 0 }, { 0, 0 } };
+	for (int32 Leg = 0; Leg < 2; ++Leg)
+	{
+		// Der Verein aus der unteren Liga hat im Hinspiel Heimrecht
+		const bool bHeim = R.bForPromotion == (Leg == 0);
+		const FM13Match::FExpectedGoals Xg = bHeim
+			? FM13Match::ExpectedGoals(Eigen, Gegner.Strength, EFM13Playstyle::Ausgeglichen, Gegner.Playstyle)
+			: FM13Match::ExpectedGoals(Gegner.Strength, Eigen, Gegner.Playstyle, EFM13Playstyle::Ausgeglichen);
+		const int32 H = FM13Match::Poisson(Rng, Xg.Home), A = FM13Match::Poisson(Rng, Xg.Away);
+		Tore[Leg][0] = bHeim ? H : A;
+		Tore[Leg][1] = bHeim ? A : H;
+		if (bHeim)
+		{
+			const int32 Zuschauer = StadiumCapacity; // Relegation: ausverkauft
+			Book(TEXT("Relegation: Ticketeinnahmen"), (int64)Zuschauer * TicketPrice);
+		}
+	}
+	R.Leg1Own = Tore[0][0]; R.Leg1Opp = Tore[0][1]; R.Leg2Own = Tore[1][0]; R.Leg2Opp = Tore[1][1];
+	const int32 Eigene = R.Leg1Own + R.Leg2Own, Fremde = R.Leg1Opp + R.Leg2Opp;
+	R.bWon = Eigene > Fremde;
+	if (Eigene == Fremde)
+	{
+		R.bPenalties = true;
+		R.bWon = Rng.FRand() < 0.5f + FMath::Clamp((float)(Eigen - Gegner.Strength) / 100.f, -0.15f, 0.15f);
+	}
+	Fans = FMath::Clamp(Fans + (R.bWon ? 4 : -4), 0, 100);
+	const TCHAR* Titel = R.bForPromotion ? (R.bWon ? TEXT("Aufstieg ueber die Relegation!") : TEXT("Relegation verloren, kein Aufstieg"))
+		: (R.bWon ? TEXT("Klassenerhalt in der Relegation!") : TEXT("Abstieg nach Relegation"));
+	AddMessage(Titel, FString::Printf(TEXT("Gegen %s: Hinspiel %d:%d, Rueckspiel %d:%d%s."), *R.Opponent, R.Leg1Own, R.Leg1Opp, R.Leg2Own, R.Leg2Opp,
+		R.bPenalties ? TEXT(", Elfmeterschiessen") : TEXT("")));
+	return R;
 }
 
 // ---------- Hilfen ----------

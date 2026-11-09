@@ -22,8 +22,19 @@ namespace FM13Match
 	EFM13Expectation Expectation(int32 OwnStrength, int32 OppStrength);
 	int32 BoardShift(EFM13Expectation Erwartung, int32 OwnGoals, int32 OppGoals);
 
+	// Wetter (js/weather.js): wird je Spieltag gewürfelt und wirkt auf das eigene Spiel
+	struct FWeather { const TCHAR* Name; int32 Weight; float InjuryMult; float CardMult; float GoalMult; float AttendanceMult; };
+	const TArray<FWeather>& Weathers();
+	int32 RollWeather(FRandomStream& Rng);
+
+	// Schiedsrichter (js/referees.js): feste Ansetzung je Saison, Spieltag und Liga
+	struct FReferee { const TCHAR* Name; const TCHAR* Style; float CardMult; int32 MinLeague; int32 MaxLeague; };
+	const FReferee& RefereeFor(int32 Season, int32 Matchday, int32 Level, int32 ClubNameLength);
+
 	// Live-Ticker: verteilt die feststehenden Tore auf Minuten und ergänzt Chancen, Karten und Pausenstand.
 	// Wie im Browserspiel kommt das Ergebnis allein aus der Torformel, der Ticker erzählt es nur.
 	TArray<FString> BuildTicker(FRandomStream& Rng, const FString& OwnName, const FString& OppName, bool bHome,
-		const TArray<FString>& OwnScorers, int32 OppGoals, const TArray<FString>& OwnPlayers);
+		const TArray<FString>& OwnScorers, int32 OppGoals, const TArray<FString>& OwnPlayers,
+		const TArray<FString>& YellowCards = TArray<FString>(), const TArray<FString>& RedCards = TArray<FString>(),
+		const FString& Weather = FString(), const FString& Referee = FString());
 }

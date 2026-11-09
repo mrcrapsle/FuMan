@@ -43,6 +43,23 @@ public:
 	TArray<FFM13SeasonRecord> History;
 	TArray<FString> UsedClubNames;
 
+	// Taktik (js/squad.js, js/match.js, js/opponent-tactics.js)
+	FString Formation = TEXT("4-4-2");
+	FString TacticStyle = TEXT("ausgeglichen");
+	TArray<FString> RecentStyles;           // Spielstile der letzten Ligaspiele (für die Gegner-Analyse)
+	TCHAR OppPlanArchetype = 0;             // geplanter Ansatz des nächsten Liga-Gegners
+	bool bOppPlanReacted = false;           // der Gegner hat sich auf dich eingestellt
+	int32 WeatherIndex = 0;                 // Wetter des aktuellen Spieltags (FM13Match::Weathers)
+
+	// Sponsor, Angebote, Ehrungen
+	FFM13Sponsor Sponsor;
+	TArray<FFM13Sponsor> SponsorOffers;
+	TArray<FFM13IncomingOffer> IncomingOffers;
+	FFM13ClubRecords Records;
+	TArray<FFM13Achievement> Achievements;
+	TArray<FFM13Legend> Legends;
+	FFM13RelegationResult LastRelegation;
+
 	FFM13Cup DfbPokal;
 	FFM13Cup Landespokal;
 	bool bDfbViaLandespokal = false;     // Landespokal gewonnen: Startplatz im DFB-Pokal der nächsten Saison
@@ -81,6 +98,20 @@ public:
 	bool PromoteYouth(int32 YouthIndex, FString& OutReason);
 	bool ReleaseYouth(int32 YouthIndex, FString& OutReason);
 
+	// ---------- Taktik ----------
+	bool SetFormation(const FString& Name, FString& OutReason);
+	bool SetTacticStyle(const FString& Key, FString& OutReason);
+	int32 OwnMatchStrength(TCHAR OppArchetype) const;     // Elf + Spielstil + Formation + Taktik-Duell
+	const FFM13Club* NextLeagueOpponent(bool* OutHome = nullptr) const;
+	FString RefereeName() const;
+
+	// ---------- Angebote ----------
+	bool AcceptSponsorOffer(int32 Index, FString& OutReason);
+	bool AcceptIncomingOffer(int32 Index, FString& OutReason);
+	bool DeclineIncomingOffer(int32 Index, FString& OutReason);
+	static FString AchievementLabel(const FString& Id);
+	static int32 AchievementCount();
+
 	// ---------- Verein ----------
 	bool SetTicketPrice(int32 Price, FString& OutReason);
 	bool ExpandStadium(int32 Seats, FString& OutReason);
@@ -91,6 +122,8 @@ public:
 
 	// Pokale der laufenden Saison neu auslosen (auch für den Import aus dem Browserspiel)
 	void InitCups();
+	// Plan des nächsten Liga-Gegners festlegen (nach jedem Spieltag, Saisonstart und Import)
+	void PrepareOppPlan();
 
 	// ---------- Hilfen ----------
 	FFM13Player* FindPlayer(int32 Id);
@@ -106,6 +139,14 @@ private:
 	void CheckJobSecurity();
 	void TrainPlayers();
 	void PlanSeason();
+	void RollCards(FFM13OwnMatchReport& Report, TArray<FString>& OutYellow, TArray<FString>& OutRed);
+	void MakeSponsorOffers();
+	void TickSponsor();
+	void TickIncomingOffers();
+	void UpdateRecords(int32 OwnGoals, int32 OppGoals, const FString& Opp, int32 Attendance);
+	void CheckAchievements(bool bSeasonEnd, int32 Rank, EFM13SeasonOutcome Outcome, TArray<FString>* OutNew = nullptr);
+	void Unlock(const FString& Id, TArray<FString>* OutNew);
+	FFM13RelegationResult PlayRelegation(int32 Rank);
 	void CheckSeasonEndSacking(int32 Rank);
 	void AdvanceLeagues(int32 OwnRank, EFM13SeasonOutcome OwnOutcome);
 	void EvolveAiClub(FFM13Club& C, int32 Rank, int32 OldLevel, EFM13SeasonOutcome Outcome);
@@ -114,5 +155,5 @@ private:
 	void PickScorers(int32 Goals, TArray<FString>& OutNames);
 	void PlayCupRound(FFM13Cup& Cup, bool bDfb);
 	void RollInjuries(FFM13OwnMatchReport& Report);
-	void FinishOwnReport(FFM13OwnMatchReport& Report, const FString& OppName, bool bHome);
+	void FinishOwnReport(FFM13OwnMatchReport& Report, const FString& OppName, bool bHome, const TArray<FString>& Yellow, const TArray<FString>& Red);
 };

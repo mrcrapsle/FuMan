@@ -1,6 +1,7 @@
 #include "FM13BrowserImport.h"
 #include "FM13Economy.h"
 #include "FM13Json.h"
+#include "FM13Development.h"
 
 namespace
 {
@@ -40,6 +41,10 @@ namespace
 		P.Wage = bYouth ? 0 : FMath::Max(0, (int32)R.Int(N, TEXT("wage"), FM13Economy::Wage(P.MarketValue, P.Strength)));
 		P.ContractYears = bYouth ? 0 : FMath::Clamp((int32)R.Int(N, TEXT("contracts"), 2), 1, 5);
 		P.InjuredMatchdays = FMath::Clamp((int32)R.Int(N, TEXT("injured"), 0), 0, 34);
+		P.SuspendedMatchdays = FMath::Clamp((int32)R.Int(N, TEXT("suspended"), 0), 0, 10);
+		P.Archetype = FM13Dev::ArchetypeFor(NewId);
+		// Saisons im Verein: aus der Stärke-Historie (ein Eintrag je Saison)
+		P.SeasonsAtClub = FMath::Max(0, R.Items(N, TEXT("strengthHistory")).Num() - 1);
 		return P;
 	}
 
@@ -252,6 +257,47 @@ namespace FM13BrowserImport
 			M.Matchday = W.Matchday;
 			if (!M.Title.IsEmpty()) W.Messages.Add(M);
 		}
+
+		// Taktik, Sponsor, Rekorde, Erfolge
+		FString Egal;
+		W.SetFormation(R.Str(G, TEXT("formation"), TEXT("4-4-2")), Egal);
+		W.SetTacticStyle(R.Str(G, TEXT("tacticStyle"), TEXT("ausgeglichen")), Egal);
+		for (int32 N : R.Items(G, TEXT("recentTacticStyles"))) W.RecentStyles.Add(Doc.Nodes[N].Text);
+		const int32 Sp = R.Find(G, TEXT("sponsor"));
+		W.Sponsor.Name = R.Str(Sp, TEXT("name"), TEXT("Kein Hauptsponsor"));
+		W.Sponsor.Base = (int32)R.Int(Sp, TEXT("base"), 500);
+		W.Sponsor.WinBonus = (int32)R.Int(Sp, TEXT("winBonus"), 200);
+		W.Sponsor.PromotionBonus = (int32)R.Int(Sp, TEXT("promotionBonus"), 0);
+		W.Sponsor.Tier = R.Str(Sp, TEXT("tier"), TEXT(""));
+		const int32 Laufzeit = (int32)R.Int(Sp, TEXT("duration"), 0);
+		// „Kein Hauptsponsor“ hat im Browserspiel die Laufzeit 999
+		W.Sponsor.MatchdaysLeft = (W.Sponsor.Name.Contains(TEXT("Kein Hauptsponsor")) || Laufzeit >= 999) ? 0 : FMath::Clamp(Laufzeit, 0, 102);
+		const int32 Rk = R.Find(G, TEXT("clubRecords"));
+		const int32 Sieg = R.Find(Rk, TEXT("biggestWin"));
+		W.Records.BiggestWinFor = (int32)R.Int(Sieg, TEXT("ourGoals"), 0);
+		W.Records.BiggestWinAgainst = (int32)R.Int(Sieg, TEXT("oppGoals"), 0);
+		W.Records.BiggestWinOpponent = R.Str(Sieg, TEXT("opponent"), TEXT(""));
+		W.Records.BiggestWinSeason = (int32)R.Int(Sieg, TEXT("season"), 0);
+		W.Records.UnbeatenStreak = (int32)R.Int(Rk, TEXT("currentUnbeatenStreak"), 0);
+		W.Records.LongestUnbeatenStreak = (int32)R.Int(Rk, TEXT("longestUnbeatenStreak"), 0);
+		W.Records.RecordAttendance = (int32)R.Int(G, TEXT("recordAttendance"), 0);
+		const TCHAR* ErfolgIds[][2] = {
+			{ TEXT("millionaire"), TEXT("millionaer") }, { TEXT("multimillionaire"), TEXT("multimillionaer") }, { TEXT("bundesliga"), TEXT("bundesliga") },
+			{ TEXT("cup-winner"), TEXT("pokalsieger") }, { TEXT("unbeaten-10"), TEXT("unbeaten-10") }, { TEXT("unbeaten-20"), TEXT("unbeaten-20") },
+			{ TEXT("youth-academy"), TEXT("talentschmiede") }, { TEXT("legend"), TEXT("legende") }
+		};
+		for (int32 N : R.Items(G, TEXT("achievements")))
+		{
+			const FString Id = R.Str(N, TEXT("id"), TEXT(""));
+			for (const auto& E : ErfolgIds)
+				if (Id == E[0])
+				{
+					FFM13Achievement A;
+					A.Id = E[1]; A.Season = (int32)R.Int(N, TEXT("season"), 1); A.Matchday = (int32)R.Int(N, TEXT("matchday"), 1);
+					W.Achievements.Add(A);
+				}
+		}
+		W.PrepareOppPlan();
 
 		W.RefreshMarket();
 		W.AddMessage(TEXT("Spielstand uebernommen"), FString::Printf(TEXT("%s, Saison %d, Spieltag %d, %s: %d Spieler, %d Talente."),
