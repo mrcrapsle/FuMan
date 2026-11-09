@@ -614,6 +614,23 @@ static void TestKondition()
 	FKraftEingabe Alles = E; Alles.Intensitaet = TEXT("hart"); Alles.Tempo = 68; Alles.Pressing = 88; Alles.WetterFaktor = 1.25; Alles.bAuswaerts = true;
 	PRUEFE(Verlust(Alles) == 19, "Hart, Pressing, Hitze, auswaerts: 11, 13, 16, +3 = 19");
 
+	// Personal und Perk (js/match-live.js: Athletik 0,7, Ernaehrung, Physio, Greenkeeper; Perk Fitness-Guru)
+	FKraftEingabe Athletik = E; Athletik.bAthletiktrainer = true;
+	PRUEFE(Verlust(Athletik) == 6, "Athletiktrainer: round(9 x 0,7) = 6");
+	FKraftEingabe Ernaehr = E; Ernaehr.bErnaehrung = true; Ernaehr.ErnaehrungStufe = 1;
+	PRUEFE(Verlust(Ernaehr) == 8, "Ernaehrung Stufe 1 Standard: round(9 x 0,88) = 8");
+	Ernaehr.bErnaehrungLeistung = true;
+	PRUEFE(Verlust(Ernaehr) == 9, "Ernaehrung Leistungskueche Stufe 1: round(9 x 0,96) = 9");
+	Ernaehr.ErnaehrungStufe = 3; Ernaehr.bErnaehrungLeistung = false;
+	PRUEFE(Verlust(Ernaehr) == 7, "Ernaehrung Standard Stufe 3: round(9 x 0,80) = 7");
+	FKraftEingabe Phys = E; Phys.bPhysio = true; Phys.bPhysioBelastung = true;
+	PRUEFE(Verlust(Phys) == 8, "Physio Belastungssteuerung: round(8,1) = 8");
+	FKraftEingabe Green = E; Green.bGreenkeeper = true; Green.bGreenkeeperTempo = true;
+	PRUEFE(Verlust(Green) == 10, "Greenkeeper Tempo zu Hause: round(9,9) = 10");
+	Green.bAuswaerts = true;
+	PRUEFE(Verlust(Green) == 12, "Greenkeeper wirkt nicht auswaerts: 9 + 3 = 12");
+	FKraftEingabe Guru = E; Guru.bFitnessGuru = true; Guru.bAthletiktrainer = true;
+	PRUEFE(Verlust(Guru) == 4, "Fitness-Guru und Athletik: round(6 x 0,7) = 4");
 	PRUEFE(Erholung(TEXT("kondition")) == 31 && Erholung(TEXT("ausgeglichen")) == 26, "Erholung der Bank 31 oder 26");
 	PRUEFE(NachSpiel(100, true, 9, TEXT("ausgeglichen")) == 98, "Startelf 100 - 9 + round(6,5) = 98");
 	PRUEFE(NachSpiel(100, true, 9, TEXT("kondition")) == 99, "Kondition: 100 - 9 + round(7,75) = 99");
@@ -642,6 +659,16 @@ static void TestKonditionSaison()
 		if (P.Fitness < 40) ++Kondition10;
 	}
 	PRUEFE(bGrenzen, "Kondition 10-100 und Tagesform 5-95 nach einer Saison");
+	// Personal und Perk überstehen den Spielstand
+	FFM13World Stab;
+	Stab.NewGame(TEXT("Stabverein"), 92);
+	Stab.AthletikTrainer.bHired = true; Stab.Ernaehrungsberater.bHired = true; Stab.Ernaehrungsberater.Level = 3;
+	Stab.Ernaehrungsberater.Task = TEXT("leistung"); Stab.bFitnessGuru = true; Stab.Greenkeeper.bHired = true; Stab.Greenkeeper.Task = TEXT("tempo");
+	FFM13World Lade;
+	FString Fehler;
+	const bool bGelesen = FM13Save::Decode(FM13Save::Encode(Stab), Lade, Fehler);
+	PRUEFE(bGelesen && Lade.AthletikTrainer.bHired && Lade.Ernaehrungsberater.Level == 3 && Lade.Ernaehrungsberater.Task == TEXT("leistung") && Lade.bFitnessGuru && Lade.Greenkeeper.Task == TEXT("tempo") && !Lade.Physio.bHired,
+		"Personal und Perk bleiben im Spielstand erhalten (%s)", *Fehler);
 	W.ConcludeSeason();
 	bool bSommer = true;
 	for (const FFM13Player& P : W.Squad) if (P.Fitness != 100) bSommer = false;

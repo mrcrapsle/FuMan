@@ -136,7 +136,7 @@ Stand nach Runde B: **16 portiert, 28 teilweise, 90 offen, 11 entfallen** (von 1
 | `youth-pathway.js` | 293 | offen | Jugend-Laufbahn: macht den Weg eines Talents sichtbar. |  |
 | `youth-academy-extended.js` | 248 | offen | Jugendakademie ERWEITERTE FUNKTIONEN |  |
 | `academy-ranking.js` | 138 | offen | Akademie-Rangliste |  |
-| `training.js` | 874 | teilweise | Training | Intensität und Teamtraining als Zustand, Kondition nach dem Spiel, Tagesform (Wochen-Auswertung, Trainerstab, Perks offen) |
+| `training.js` | 874 | teilweise | Training | Intensität, Teamtraining, Kondition und Tagesform; Personal (Athletik, Ernährung, Physio, Greenkeeper) und Perk Fitness-Guru im Kraftverlust. Offen: Wochen-Auswertung, Einstellen und Ausbau, Stärke-Effekte des Personals, Perk-Freischaltung |
 | `training-games.js` | 299 | offen | TRAINING-MINISPIELE (Elfmeterschießen & Flankentraining) |  |
 | `medical-department.js` | 126 | teilweise | Verletzungen | Verletzungswurf nach dem Spiel (Abteilung offen) |
 

@@ -51,6 +51,8 @@ public:
 	bool bBusTravel = false;                        // Reisemodus Bus statt Flugzeug
 	bool bBusSponsor = false;                       // gesponserter Bus
 	bool bBusBanden = false;                        // Bandensponsor-Variante
+	FFM13Staff AthletikTrainer, Ernaehrungsberater, Physio, Greenkeeper; // Personal im Campus
+	bool bFitnessGuru = false;                      // Perk Fitness-Guru
 	TArray<FString> RecentStyles;           // Spielstile der letzten Ligaspiele (für die Gegner-Analyse)
 	TCHAR OppPlanArchetype = 0;             // geplanter Ansatz des nächsten Liga-Gegners
 	bool bOppPlanReacted = false;           // der Gegner hat sich auf dich eingestellt

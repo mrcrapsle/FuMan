@@ -425,7 +425,15 @@ void FFM13World::ApplyFitnessAfterMatchday(bool bHome)
 	}
 
 	FM13Fitness::FKraftEingabe E;
-	E.bFitnessGuru = false;
+	E.bFitnessGuru = bFitnessGuru;
+	E.bAthletiktrainer = AthletikTrainer.bHired;
+	E.bErnaehrung = Ernaehrungsberater.bHired;
+	E.ErnaehrungStufe = Ernaehrungsberater.Level;
+	E.bErnaehrungLeistung = Ernaehrungsberater.Task == TEXT("leistung");
+	E.bPhysio = Physio.bHired;
+	E.bPhysioBelastung = Physio.Task == TEXT("belastung");
+	E.bGreenkeeper = Greenkeeper.bHired;
+	E.bGreenkeeperTempo = Greenkeeper.Task == TEXT("tempo");
 	E.Intensitaet = TrainingIntensity;
 	E.Teamtraining = TeamTraining;
 	E.Tempo = FM13Tactics::Style(TacticStyle).Tempo;

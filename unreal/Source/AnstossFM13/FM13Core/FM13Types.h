@@ -65,6 +65,14 @@ struct FFM13Player
 	bool IsAvailable() const { return InjuredMatchdays <= 0 && SuspendedMatchdays <= 0; }
 };
 
+// Personal im Campus (js/campus-staff.js): eingestellt, Ausbaustufe 1 bis 3, Automatik-Aufgabe ("" = Standard)
+struct FFM13Staff
+{
+	bool bHired = false;
+	int32 Level = 1;
+	FString Task;
+};
+
 // Hauptsponsor (js/sponsors.js, vereinfacht: keine Verhandlung, keine Themenboni)
 struct FFM13Sponsor
 {

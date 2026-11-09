@@ -160,6 +160,15 @@ namespace FM13Save
 		W.FieldBool(TEXT("busTravel"), S.bBusTravel);
 		W.FieldBool(TEXT("busSponsor"), S.bBusSponsor);
 		W.FieldBool(TEXT("busBanden"), S.bBusBanden);
+		W.FieldBool(TEXT("fitnessGuru"), S.bFitnessGuru);
+		const FFM13Staff* Personal[4] = { &S.AthletikTrainer, &S.Ernaehrungsberater, &S.Physio, &S.Greenkeeper };
+		const TCHAR* PersonalKeys[4] = { TEXT("athletik"), TEXT("ernaehrung"), TEXT("physio"), TEXT("greenkeeper") };
+		for (int32 i = 0; i < 4; ++i)
+		{
+			W.FieldBool(*(FString(PersonalKeys[i]) + TEXT("Hired")), Personal[i]->bHired);
+			W.Field(*(FString(PersonalKeys[i]) + TEXT("Level")), Personal[i]->Level);
+			W.Field(*(FString(PersonalKeys[i]) + TEXT("Task")), Personal[i]->Task);
+		}
 		W.ArrayKey(TEXT("recentStyles"));
 		for (const FString& St : S.RecentStyles) W.ElementStr(St);
 		W.EndArray();
@@ -454,6 +463,15 @@ namespace FM13Save
 		W.bBusTravel = R.Bool(Root, TEXT("busTravel"), false);
 		W.bBusSponsor = R.Bool(Root, TEXT("busSponsor"), false);
 		W.bBusBanden = R.Bool(Root, TEXT("busBanden"), false);
+		W.bFitnessGuru = R.Bool(Root, TEXT("fitnessGuru"), false);
+		FFM13Staff* Personal[4] = { &W.AthletikTrainer, &W.Ernaehrungsberater, &W.Physio, &W.Greenkeeper };
+		const TCHAR* PersonalKeys[4] = { TEXT("athletik"), TEXT("ernaehrung"), TEXT("physio"), TEXT("greenkeeper") };
+		for (int32 i = 0; i < 4; ++i)
+		{
+			Personal[i]->bHired = R.Bool(Root, *(FString(PersonalKeys[i]) + TEXT("Hired")), false);
+			Personal[i]->Level = FMath::Clamp((int32)R.Int(Root, *(FString(PersonalKeys[i]) + TEXT("Level")), 1), 1, 3);
+			Personal[i]->Task = R.Str(Root, *(FString(PersonalKeys[i]) + TEXT("Task")), TEXT(""));
+		}
 		for (int32 N : R.Items(Root, TEXT("recentStyles"))) W.RecentStyles.Add(P.Nodes[N].Text);
 		W.OppPlanArchetype = (TCHAR)R.Int(Root, TEXT("oppPlan"), 0);
 		W.bOppPlanReacted = R.Bool(Root, TEXT("oppPlanReacted"), false);

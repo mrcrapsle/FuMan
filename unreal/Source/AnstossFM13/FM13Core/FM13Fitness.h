@@ -10,7 +10,6 @@ namespace FM13Fitness
 	// Eingaben des Kraftverlusts. Trainerstab und Perks folgen mit ihrem Abschnitt.
 	struct FKraftEingabe
 	{
-		bool bFitnessGuru = false;             // Perk: Grundverlust 6 statt 9
 		FString Intensitaet = TEXT("normal");  // Trainingsintensität: hart 1,25, locker 0,75
 		FString Teamtraining = TEXT("ausgeglichen");
 		int32 Tempo = 50;                      // Spielstil (FM13Tactics), Tempo und Pressing 0-100
@@ -21,6 +20,16 @@ namespace FM13Fitness
 		bool bBus = false;                     // Reisemodus Bus statt Flugzeug
 		bool bBusSponsor = false;              // gesponserter Bus halbiert den Malus zur Hälfte
 		bool bBusBanden = false;               // Bandensponsor-Variante mildert etwas weniger
+		// Personal und Perks (vor allem der Athletiktrainer, der Ernährungsberater, der Physio und der Greenkeeper)
+		bool bFitnessGuru = false;             // Perk: Grundverlust 6 statt 9
+		bool bAthletiktrainer = false;         // -30 Prozent
+		bool bErnaehrung = false;              // Ernährungsberater eingestellt
+		int32 ErnaehrungStufe = 1;
+		bool bErnaehrungLeistung = false;      // Aufgabe Leistungsküche statt Fitness-Ernährung
+		bool bPhysio = false;                  // Chef-Physio: Faktor 1 (Standard) oder 0,9 (Belastungssteuerung)
+		bool bPhysioBelastung = false;
+		bool bGreenkeeper = false;             // Greenkeeper: Ermüdung 1,1 mit Tempo-Aufgabe, nur bei Heimspielen
+		bool bGreenkeeperTempo = false;
 	};
 
 	int32 Runden(double Wert);                 // Math.round() für positive Werte

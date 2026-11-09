@@ -9,11 +9,20 @@ namespace FM13Fitness
 		return (int32)std::floor(Wert + 0.5);
 	}
 
-	// Reihenfolge wie in processPostMatchRoutine(): Grundwert, Intensität, Erholungsschwerpunkt,
-	// Spielstil, Wetter, Reisemüdigkeit. Trainerstab, Live-Zurufe und Team-Anweisungen fehlen noch.
+	// Reihenfolge wie in processPostMatchRoutine(): Grundwert, Personal (Athletik, Ernährung, Physio, Greenkeeper),
+	// Intensität, Erholungsschwerpunkt, Spielstil, Wetter, Reisemüdigkeit. Live-Zurufe und Team-Anweisungen fehlen noch.
 	int32 Verlust(const FKraftEingabe& E)
 	{
 		int32 F = E.bFitnessGuru ? 6 : 9;
+
+		if (E.bAthletiktrainer) F = Runden(F * 0.7);
+		if (E.bErnaehrung)
+		{
+			const double Ermuedung = E.bErnaehrungLeistung ? 0.98 - 0.02 * E.ErnaehrungStufe : 0.92 - 0.04 * E.ErnaehrungStufe;
+			F = Runden(F * Ermuedung);
+		}
+		if (E.bPhysio) F = Runden(F * (E.bPhysioBelastung ? 0.9 : 1.0));
+		if (E.bGreenkeeper && !E.bAuswaerts) F = Runden(F * (E.bGreenkeeperTempo ? 1.1 : 1.0));
 
 		double IntensitaetFaktor = 1.0;
 		if (E.Intensitaet == TEXT("hart")) IntensitaetFaktor = 1.25;

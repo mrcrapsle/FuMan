@@ -280,6 +280,20 @@ namespace FM13BrowserImport
 		W.TrainingIntensity = R.Str(G, TEXT("trainingIntensity"), TEXT("normal"));
 		W.bBusTravel = R.Str(G, TEXT("travelMode"), TEXT("flugzeug")) == TEXT("bus");
 		W.bBusSponsor = R.Bool(G, TEXT("busSponsorActive"), false);
+		// Personal: staffMembers (hired, task) und staffMeta (level), Perk aus managerRPG.perks
+		const int32 Personal = R.Find(Root, TEXT("staffMembers"));
+		const int32 Meta = R.Find(Root, TEXT("staffMeta"));
+		const int32 Rpg = R.Find(R.Find(Root, TEXT("managerRPG")), TEXT("perks"));
+		W.bFitnessGuru = R.Bool(Rpg, TEXT("fitnessGuru"), false);
+		FFM13Staff* Stab[4] = { &W.AthletikTrainer, &W.Ernaehrungsberater, &W.Physio, &W.Greenkeeper };
+		const TCHAR* Schluessel[4] = { TEXT("fitCoach"), TEXT("nutritionist"), TEXT("physio"), TEXT("greenkeeper") };
+		for (int32 i = 0; i < 4; ++i)
+		{
+			const int32 S = R.Find(Personal, Schluessel[i]);
+			Stab[i]->bHired = R.Bool(S, TEXT("hired"), false);
+			Stab[i]->Task = R.Str(S, TEXT("task"), TEXT(""));
+			Stab[i]->Level = FMath::Clamp((int32)R.Int(R.Find(Meta, Schluessel[i]), TEXT("level"), 1), 1, 3);
+		}
 		W.bBusBanden = R.Bool(G, TEXT("busSponsorViaBanden"), false);
 		for (int32 N : R.Items(G, TEXT("recentTacticStyles"))) W.RecentStyles.Add(Doc.Nodes[N].Text);
 		const int32 Sp = R.Find(G, TEXT("sponsor"));
